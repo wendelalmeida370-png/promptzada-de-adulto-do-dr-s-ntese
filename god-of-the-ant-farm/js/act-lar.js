@@ -418,7 +418,7 @@
     const In = G.Interiors; if (!In || !In.plan || !b || !b.built || b.type !== 'temple') return false;
     const p = In.plan(b); if (!p || !p.ok) return false;
     const uses = priest ? ['oficiar'] : ['rezar', 'sentar'];
-    let n = 0; for (const it of p.items) for (const sp of it.spots) if (uses.includes(sp.use)) n++;
+    let n = 0; for (const u of uses) n += In.slots(b, u).length;
     if (!n) return false;
     const o = index(); let e = o.house.get(b.id); if (!e) o.house.set(b.id, e = HOUSE());
     const t = v.task; const mine = t && t.type === 'pray' && t.inT === b.id && !!t.priest === !!priest ? 1 : 0;

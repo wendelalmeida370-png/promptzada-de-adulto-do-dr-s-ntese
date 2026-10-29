@@ -128,9 +128,10 @@
   // the grain of a farm for the views (L-394): what Estates.grainOf works out, on a copy — never kept on the farm. grainOf keeps
   // it (b.grain) the first time it is asked: a picture that asked first gave the farm the grain of whoever held its town when
   // it was first seen, and the same world, watched or not, named its farms apart (qa/grao.js). The god's farm, the 3D's ground
-  // and its fields read it here
+  // and its fields read it here; and the farm's name — the card, the sign of a work done, the body's words ask it: the
+  // interface writes nothing on the world either (L-394)
   Es.grainFor = b => Es.grainOf(Object.assign({}, b));
-  G.Village.nameOf = (function (prev) { return function (type, b) { if (type === 'farm' && b && b.built !== undefined && b.set !== undefined && b.x !== undefined) return Es.grainOf(b).name; return prev(type, b); }; })(G.Village.nameOf);
+  G.Village.nameOf = (function (prev) { return function (type, b) { if (type === 'farm' && b && b.built !== undefined && b.set !== undefined && b.x !== undefined) return Es.grainFor(b).name; return prev(type, b); }; })(G.Village.nameOf);
 
   // ------------------------------ silk: a secret that is found, or stolen ------------------------------
   function mulberriesNear(set, r) {
