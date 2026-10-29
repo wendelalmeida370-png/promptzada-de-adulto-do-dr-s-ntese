@@ -207,8 +207,11 @@ const fieldAt = b => [b.x + 1, b.y + 1];
   for (const id of ids) {
     const P = estSetup(id, b => { for (let k = 0; k < 9; k++) { const p = b.pl[k]; if (p.g < 0) continue; p.g = 1; p.f = k < 3 ? 1.5 : 0; } });
     const b = P.b; const c = Es.CROPS[b.crop]; const k = c.out; const Hd = watchHands(P.ws.map(x => x.id));
+    // (a tree a trip, as the hives: early in the morning, and the time of three trips and a night — with the meals of the
+    // house, the P1's, the day of the generation 7's Tenochtitlan gave the banana grove one trip of three in 180 s, T-269)
+    S().time = 0.08;
     send(P.ws[0], b, fieldAt(b));
-    live(180, Hd.step, () => b.pl.slice(0, 3).every(p => p.f < 1) && P.ws.every(x => !(held(x)[k] > 0)));
+    live(400, Hd.step, () => b.pl.slice(0, 3).every(p => p.f < 1) && P.ws.every(x => !(held(x)[k] > 0)));
     const picked = b.pl.slice(0, 3).filter(p => p.f < 1).length; const lost = Hd.lost(); const bad = newBad(P.base);
     const okk = picked === 3 && Hd.born(k) > 0 && Hd.reached(k) && !lost.length && !bad.length; good = good && okk;
     out.push(`${V.buildName(b)} #${b.id}: colhidos ${picked} de 3 pés maduros; ${Hd.say(k)}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
@@ -278,8 +281,12 @@ else {
   if (!id) ok('c9', false, `${world}: nenhum apiário com apicultor`);
   else {
     const P = estSetup(id, b => { b.hv = [1.6, 1.6, 0, 0]; }); const b = P.b; const Hd = watchHands(P.ws.map(x => x.id));
+    // (a hive a trip, and a trip is the walk to the store and back: with the store of the generation 7's Tenochtitlan, a trip is
+    // a quarter of a day, and the evening takes the keeper home after the first — the case starts early in the morning, and has
+    // the time of two trips and a night, if it comes, T-269)
+    S().time = 0.08;
     send(P.ws[0], b, fieldAt(b));
-    live(150, Hd.step, () => b.hv[0] < 1 && b.hv[1] < 1 && P.ws.every(x => !(held(x).mel > 0)));
+    live(400, Hd.step, () => b.hv[0] < 1 && b.hv[1] < 1 && P.ws.every(x => !(held(x).mel > 0)));
     const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c9', b.hv[0] < 1 && b.hv[1] < 1 && Hd.born('mel') > 0 && Hd.reached('mel') && !lost.length && !bad.length,
       `${V.buildName(b)} #${b.id}: as colmeias ${b.hv.map(r2).join('/')}; ${Hd.say('mel')}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
