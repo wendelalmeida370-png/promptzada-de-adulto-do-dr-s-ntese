@@ -17,6 +17,7 @@
 //     ninguém — o próximo prensa
 //  c9 o apiário: o mel ao armazém
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
+// (Quem leva comida nas mãos e sente fome come dela: a c1 e a c2 pedem que seja pelo livro — a L-385, a troca do eatTask.)
 // O corpo do deus não lavra (o interact.js não tem o verbo): o salto é das vidas longas da regressão.
 //   node qa/campo.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/campo.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true });
@@ -58,7 +59,7 @@ function watchHands(ids) {
   const mine = ref => String(ref).startsWith('v:') && H.has(+String(ref).slice(2));
   // (the flow of a good through the hands watched since the watch began: into them by the ledger; out of them to a people's
   // store — a delivery, an inheritance, or lost at its door with the cause, 'sem-lugar' —; eaten from them, with its line
-  // ('refeicao': the one who carries food eats from it when hungry); out of them anywhere else)
+  // ('refeicao': the one who carries food eats from it when hungry — by the ledger since L-385); out of them anywhere else)
   const flow = k => {
     let inL = 0, toF = 0, eaten = 0, other = 0;
     for (let i = L0; i < seen.length; i++) { const e = seen[i]; if (e[5] !== k) continue; if (mine(e[4])) inL += e[6]; if (mine(e[3])) { if (String(e[4]).startsWith('f:') || e[8] === 'sem-lugar') toF += e[6]; else if (e[4] === '@uso' && e[8] === 'refeicao') eaten += e[6]; else other += e[6]; } }
