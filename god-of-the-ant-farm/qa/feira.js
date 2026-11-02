@@ -14,7 +14,10 @@ const M = require('./nodemundo.js'); const G = M.load({ qa: true });
 const D = G.Depot, E = G.Eco, V = G.Village;
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | feira ${name} | ${info}`); if (!c) fails.push(name); };
 const world = process.argv[2] || 'metropole';
-M.pronto(world); M.viver(1);
+// (the snapshot after the trades the world's own step deals out once the world is open — a load gives them back as they
+// were saved, L-419, and the ready worlds of the generation 7 are older than the trades of the Patch 2, which the load of
+// before dealt at once; the twelve seconds stay for any world, a save of before too, T-298)
+M.pronto(world); M.viver(12);
 const snap = G.Save.serialize();
 const fresh = () => { M.reseed(4242); G.Save.apply(JSON.parse(snap)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); };
 const S = () => G.S;
