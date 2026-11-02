@@ -9,8 +9,10 @@
 //      a levou a um lado onde a entrada cabe —; a das pessoas (Vg.door) é a da planta
 //   2. o estado das portas: a que alguém abriu, aberta ainda, pelo mesmo índice; nenhuma porta guardada que a planta não tem
 //   3. quem estava dentro: o corpo — num lugar onde a planta nova o deixa ficar, ou posto para fora pela porta nova, nunca
-//      numa parede —, e sai andando pela porta nova; a pessoa do mundo, que o save pôs na porta de então, num chão que se
-//      anda, e a porta por onde ela entra e sai do mercado é a nova
+//      numa parede —, e sai andando pela porta nova (o mercado de antes abre como o da forma, um chão aberto, fase E: o mundo
+//      põe o corpo dentro de um chão aberto só por um lugar dele, D-044 — sem lugar, fora, no chão dele, onde a planta o deixa
+//      ficar, Possess.onPlan; T-291); a pessoa do mundo, que o save pôs na porta de então, num chão que se anda, e a porta por
+//      onde ela entra e sai do mercado é a nova
 //   4. a banca do mercado: o lugar do vendedor e o do freguês num chão que se anda, e a fila dela
 //   5. o verificador limpo; salvar e carregar e a virada do dia não mudam a porta; nenhum erro de módulo
 //   node qa/visual/porta-velha.js
@@ -51,16 +53,25 @@ ok('2. o estado das portas', In.doorState(B, e.door).state === 'aberta' && !miss
   const g0 = guest ? [guest.x, guest.y, guest.inside] : null;
   for (let n = 0; n < 6; n++) god(() => G.debug.step(0.1));
   const lv = S.avatar ? S.avatar.lv : undefined; const ins = body.inside ? Sp.indoor(body.x * TL, body.y * TL, lv, B.id) : null;
-  const where = body.inside ? (ins && ins.b === B && ins.walk ? 'dentro, onde a planta nova anda' : 'DENTRO NUMA PAREDE') : (near([body.x, body.y], vd) ? 'fora, pela porta nova' : W.walkableXY(body.x, body.y) ? 'fora, num chão que se anda' : 'FORA NUM CHÃO QUE NÃO SE ANDA');
-  const okIn = body.inside ? !!(ins && ins.b === B && ins.walk) : W.walkableXY(body.x, body.y);
-  // (and out on its feet, as a player goes: to the door's middle and a stride out — the new door)
+  // (the market of before opens as the form's (phase E, In.migrate): an open ground, which the world has the body in only by a
+  // place of it (Possess.use), as a square or a fair (D-044). With none, the world has it out — v.inside 0 — where it stood: on
+  // the market's pavement, where the plan lets it stand (Possess.onPlan: its floor, come in by its door), as one who walked on
+  // to it by its way in. That is a place the new plan lets it be — the proof took 'out' for ground the world walks only, and
+  // found Solveig#193 out on ground no one walks: the lot of an open ground by its form is no one's but the plan's —; and it
+  // walks out by the new door all the same: off the floor through its opening — T-291)
+  const onFloor = () => { const q = Sp.indoor(body.x * TL, body.y * TL, undefined, B.id); return !!q && q.b === B && q.shell && q.walk; };
+  const open = p.shell.kind === 'aberta' && !body.inside && G.Possess.onPlan(body) && onFloor();
+  const where = body.inside ? (ins && ins.b === B && ins.walk ? 'dentro, onde a planta nova anda' : 'DENTRO NUMA PAREDE') : (near([body.x, body.y], vd) ? 'fora, pela porta nova' : W.walkableXY(body.x, body.y) ? 'fora, num chão que se anda' : open ? 'fora, no chão aberto do mercado, onde a planta o deixa ficar' : 'FORA NUM CHÃO QUE NÃO SE ANDA');
+  const okIn = body.inside ? !!(ins && ins.b === B && ins.walk) : W.walkableXY(body.x, body.y) || open;
+  // (and out on its feet, as a player goes: to the door's middle and a stride out — the new door; off an open ground, where
+  // it steps off its floor)
   let outOk = !body.inside, passed = null;
-  if (body.inside) {
+  if (body.inside || open) {
     G.Avatar.attach(body, 0); const h = p.holes.find(q => q.door === e.door && q.kind !== 'janela'); const w = p.walls[h.wall]; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1;
     const D = [B.x * TL + w.a[0] + (w.b[0] - w.a[0]) * h.at / L, B.y * TL + w.a[1] + (w.b[1] - w.a[1]) * h.at / L]; const O = [out[0] * TL, out[1] * TL];
     const ul = Math.hypot(O[0] - D[0], O[1] - D[1]) || 1, u = [(O[0] - D[0]) / ul, (O[1] - D[1]) / ul]; // (out of the door)
     const pts = [[D[0] - u[0] * 1.2, D[1] - u[1] * 1.2], D, [D[0] + (O[0] - D[0]) * 0.6, D[1] + (O[1] - D[1]) * 0.6]];
-    for (const q of pts) for (let n = 0; n < 300; n++) { const s = G.Avatar.state(); const dx = q[0] - s.X, dz = q[1] - s.Z; if (Math.hypot(dx, dz) < 0.15) break; IN.camYaw = Math.atan2(dz, dx); IN.mx = 0; IN.mz = 1; s.yaw = IN.camYaw; frame(); if (!body.inside && passed === null) passed = [body.x, body.y]; }
+    for (const q of pts) for (let n = 0; n < 300; n++) { const s = G.Avatar.state(); const dx = q[0] - s.X, dz = q[1] - s.Z; if (Math.hypot(dx, dz) < 0.15) break; IN.camYaw = Math.atan2(dz, dx); IN.mx = 0; IN.mz = 1; s.yaw = IN.camYaw; frame(); if (passed === null && (open ? !onFloor() : !body.inside)) passed = [body.x, body.y]; }
     IN.mz = 0; for (let n = 0; n < 6; n++) frame(); outOk = !body.inside && !!passed && Math.hypot(passed[0] * TL - D[0], passed[1] * TL - D[1]) < h.w / 2 + 1.2;
   }
   ok('3. o corpo que estava dentro', okIn && outOk, `${body.name}#${body.id}: ${where}; ${outOk ? 'saiu andando pela porta nova' : `NÃO SAIU pela porta nova (dentro ${body.inside}, em ${body.x.toFixed(2)},${body.y.toFixed(2)})`}`);
