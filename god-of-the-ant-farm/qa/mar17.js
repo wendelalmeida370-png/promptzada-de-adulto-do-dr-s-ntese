@@ -54,6 +54,8 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
       out.p0 = G.Expe.pressure(f); out.prof = Object.assign({}, G.Expe.prof(f)); delete out.prof.lostDirs;
       window._F = f.id; return out;
     }, CASE);
+    // (each colony of the people, with its reason and the land pressure the moment it was planned: T-317)
+    await R(() => { window.__col = []; const X = G.Expe; const oc = X.colony; X.colony = function (f, best) { const e = oc.apply(this, arguments); if (e && f.id === window._F) window.__col.push({ day: +(G.S.day + G.S.time).toFixed(1), motive: best.motive, terra: +X.pressure(f).terra.toFixed(2), name: e.colName || e.name }); return e; }; });
     const t = await R(c => { const f = G.Fac.get(window._F); const own = G.Expe.ownRegions(f.id); return T.run(12, c === 'iron' ? () => { if ((f.stock.minerio || 0) > 2 && !(G.S.ores || []).some(o => o.kind === 'ferro' && o.amt > 0 && G.Know.knowsOre(f.id, o.id) && !own.has(G.Know.at(o.x, o.y)))) f.stock.minerio = 2; return false; } : window._cauto); }, CASE);
     const res = await R(() => {
       const S = G.S; const f = G.Fac.get(window._F); const ex = T.exps(f.id);
@@ -61,7 +63,12 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
       const ironKnownAbroad = (S.ores || []).filter(o => o.kind === 'ferro' && G.Know.knowsOre(f.id, o.id) && !own.has(G.Know.at(o.x, o.y))).length;
       return { n: ex.length, why: ex.map(e => (e.kind === 'colonia' ? 'colônia' : e.obj && e.obj.why) + ':' + e.status).join(', '), colonies: (S.colonies || []).filter(c => c.fac === f.id).map(c => c.name + ':' + c.st), sets: G.Fac.settlementsOf(f.id).length, p: G.Expe.pressure(f), ironAbroad: ironKnownAbroad, minerio: f.stock.minerio || 0, routes: (S.routes || []).filter(r => r.a === f.id || r.b === f.id || r.fac === f.id).length };
     });
-    if (CASE === 'rich') ok('1 ilha rica não coloniza tudo', res.colonies.length <= 1 && res.n <= 10, `12 anos: ${res.n} expedições (${res.why || 'nenhuma'}); colônias: ${res.colonies.join(', ') || 'nenhuma'}; pressão inicial terra ${R2(res.p.terra)} ferro ${R2(res.p.ferro)}; ${t.ms.toFixed(1)} ms/passo`);
+    // (the reason of each colony, not how many: a rich island that grows crowded seeks land like any other — the case gives it
+    // 3000 of food —; what it must not do is colonize for what it has (iron, food), nor for glory under the cautious ruler
+    // (T-124). Counting them (at most one) held while the colonists left their babies behind (L-442): with the family going
+    // whole the young families stay, the island fills, and a second colony leaves on the year 10 at 0.62 of land pressure — T-317)
+    if (CASE === 'rich') { const cols = await R(() => window.__col); const greed = cols.filter(c => !(c.motive === 'terra' && c.terra > 0.25));
+      ok('1 ilha rica não coloniza tudo', !greed.length && res.n <= 10, `12 anos: ${res.n} expedições (${res.why || 'nenhuma'}); colônias: ${res.colonies.join(', ') || 'nenhuma'} — ${cols.map(c => `uma no ano ${c.day}, por ${c.motive} (pressão de terra ${c.terra})`).join("; ") || "nenhuma"}; pressão no fim: terra ${R2(res.p.terra)}, ferro ${R2(res.p.ferro)}; ${t.ms.toFixed(1)} ms/passo`); }
     else ok('2 ilha sem ferro busca solução no mar', /ferro/.test(res.why) || res.ironAbroad > 0, `12 anos: ${res.n} expedições (${res.why || 'nenhuma'}); ferro conhecido além-mar: ${res.ironAbroad}; colônias: ${res.colonies.join(', ') || 'nenhuma'}; minério no estoque ${Math.round(res.minerio)}`);
   }
 

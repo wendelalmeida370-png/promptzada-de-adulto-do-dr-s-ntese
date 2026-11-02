@@ -1,7 +1,8 @@
 // vira: node qa/vira.js — quando um povo muda de mãos ou acaba, no mundo pronto «guerra mundial»:
 // 1 o guerreiro cuja cidade passa a outro povo no meio de um saque (uma secessão, uma conquista) sai do bando e volta para
 //   casa — ninguém marcha com um bando que não o tem na lista (L-088);
-// 2 morre a última alma de um povo: o povo acaba junto, não um minuto depois (L-090);
+// 2 morre a última alma de um povo (o menor que não tem cativos nas suas cidades, T-318): o povo acaba junto, não um minuto
+//   depois (L-090);
 // 3 morre a última alma livre de um povo que tinha cativos nas suas cidades: os cativos ficam livres, e a cidade é deles;
 // e o verificador fica limpo nos dois.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
@@ -33,8 +34,12 @@ const ROOT = path.resolve(__dirname, '..');
   console.log(`${r.ok ? 'PASSOU' : 'FALHOU'} | guerreiro que muda de povo sai do bando | ${r.info}`);
   const r2 = await page.evaluate(() => {
     const S = G.S; const F = G.Fac.all().filter(f => f.alive);
-    // the smallest people of the world loses its people one by one
-    const f = F.sort((a, b) => G.Fac.pop(a.id) - G.Fac.pop(b.id))[0];
+    // the smallest people of the world that holds no captives in its towns loses its people one by one (one that holds captives
+    // does not end with its last free soul: they inherit its town — the case 3 below; on the «guerra mundial» of the generation
+    // 9 the smallest, the Casa de Amon, held 2, and lived on with them — T-318)
+    const holds = o => [...S.villagers.values()].some(v => v.captive && (S.settlements.get(v.set) || {}).fac === o.id);
+    const f = F.filter(o => !holds(o)).sort((a, b) => G.Fac.pop(a.id) - G.Fac.pop(b.id))[0];
+    if (!f) return { ok: false, info: 'nenhum povo sem cativos nas suas cidades' };
     const mine = [...S.villagers.values()].filter(v => !v.captive && G.Fac.idOfV(v) === f.id);
     for (const v of mine.slice(0, -1)) G.Village.kill(v, 'sick');
     const before = f.alive; G.Village.kill(mine[mine.length - 1], 'sick');

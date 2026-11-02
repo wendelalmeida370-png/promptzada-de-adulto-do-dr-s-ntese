@@ -45,7 +45,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     const f4 = get(fl.id);
     return { l1, fdiff, l3, l4: { left, at: +at.toFixed(1), st: f4 ? f4.st : '-' }, bad: QA.check().filter(e => e.sev <= 2).map(e => e.msg).slice(0, 4) };
   }, WORLD);
-  if (r.err) { ok('l0 o caso', false, r.err); console.log('FALHOU: l0'); await browser.close(); process.exit(1); }
+  if (r.err) { ok('l0 o caso', false, r.err); await browser.close(); process.exit(1); }
   const loose = r.l1.filter(x => !x.battle), closed = r.l1.filter(x => x.battle && !x.open), kept = r.l1.filter(x => x.battle && x.open);
   if (!r.l1.length) console.log(`INFO | frota-luta l1 | o save do «${WORLD}» não guarda nenhuma frota lutando`);
   else ok('l1 a frota que o save guarda lutando sem batalha de registro continua lutando depois de carregar', loose.every(x => x.now === 'combate') && closed.every(x => x.now !== 'combate') && kept.every(x => x.now === 'combate'),
@@ -54,6 +54,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
   ok('l3 uma frota posta a lutar (sem batalha) passa pelo save ainda lutando', r.l3.after === 'combate', `frota ${r.l3.id} (antes «${r.l3.prev}»): depois do save «${r.l3.after}»`);
   ok('l4 a luta acaba como no mundo vivo; verificador limpo', r.l4.left && r.l4.at <= 50 && !r.bad.length && !errs.length,
     `${r.l4.left ? `deixou a luta aos ${r.l4.at} s` : 'ainda lutando depois de 60 s'} (agora «${r.l4.st}»); ${r.bad.join(' | ') || 'verificador limpo'}; ${errs.slice(0, 3).join(' · ') || 'sem erro de página'}`);
-  console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'TUDO PASSOU');
+  // (no summary line: the sea's files are counted line by line, as the mar17.js cases — the exit code tells it all)
+  console.log('erros', errs.length ? errs.slice(0, 6).join(' || ') : 'nenhum');
   await browser.close(); process.exit(fails.length ? 1 : 0);
 })();
