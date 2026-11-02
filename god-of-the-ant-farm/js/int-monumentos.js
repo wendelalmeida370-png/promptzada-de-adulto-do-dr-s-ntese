@@ -60,20 +60,24 @@
     return true;
   }
   // (the way in from the street: the shell's front edge, at v from u0 to u1 — a wall of kind 'borda', of no height, inside the
-  // edge as a house's front wall is —, its openings the stretches one comes in by, each a 'vao' (P4's platform's), the first
-  // the entrance: a monument blocks the world's walk on its lot, so the body comes on to its open ground by a door, through its
-  // opening, the doorstep before it the street's (Possess.onPlan); an open shell with no door has none — a square's, a fair's,
-  // the town walks across)
+  // edge as a house's front wall is —, its opening the stretch one comes in by, a 'vao' (P4's platform's), the entrance: a
+  // monument blocks the world's walk on its lot, so the body comes on to its open ground by a door, through its opening, the
+  // doorstep before it the street's (Possess.onPlan); an open shell with no door has none — a square's, a fair's, the town walks
+  // across. One opening, as a house has one door (L-207): of the stretches the front leaves free, the widest — of two as wide,
+  // the nearer its middle. Where the lot falls away to the street each opening has its steps down to it (Space.doorFlight,
+  // L-390), reckoned each on its own: the market's, between its stalls, side by side with no room before the front, all went
+  // along it to the same side, and the treads of one ran under the landing of the next — up to a metre below it: the feet met
+  // a ledge, climbed with the hands (L-413))
   function wayIn(P, u0, u1, v, spans) {
-    const tb = 0.1; const bw = P.wall(0, [u1, v - tb / 2], [u0, v - tb / 2], tb, 0, 1, 'borda'); let first = null;
-    for (const [s0, s1] of spans) {
-      const d = P.door(bw, P.atOf(bw, [(s0 + s1) / 2, v - tb / 2]), r2(s1 - s0), In.DOOR_MIN + 0.45, -1, 'rua', 1, 'vao');
-      if (!first) first = { door: d, u: r2((s0 + s1) / 2), v, w: r2(s1 - s0), lv: 0 };
-    }
-    P.entrance = first;
+    const tb = 0.1; const bw = P.wall(0, [u1, v - tb / 2], [u0, v - tb / 2], tb, 0, 1, 'borda');
+    const mid = (u0 + u1) / 2, wide = s => s[1] - s[0], off = s => Math.abs((s[0] + s[1]) / 2 - mid);
+    const [s0, s1] = spans.reduce((q, s) => (wide(s) > wide(q) + 0.01 || (wide(s) > wide(q) - 0.01 && off(s) < off(q)) ? s : q));
+    const d = P.door(bw, P.atOf(bw, [(s0 + s1) / 2, v - tb / 2]), r2(s1 - s0), In.DOOR_MIN + 0.45, -1, 'rua', 1, 'vao');
+    P.entrance = { door: d, u: r2((s0 + s1) / 2), v, w: r2(s1 - s0), lv: 0 };
   }
-  // (the stretches of the front edge one comes in by: where nothing of the form stands within the clear way a door keeps
-  // before it — 0.9 m in from its wall, 0.12 m past its ends —, each 0.9 m wide at least; the lot's edge a hand off)
+  // (the stretches of the front edge one could come in by — the way in the widest of them, wayIn —: where nothing of the form
+  // stands within the clear way a door keeps before it — 0.9 m in from its wall, 0.12 m past its ends —, each 0.9 m wide at
+  // least; the lot's edge a hand off)
   function frontSpans(F, sh, y) {
     const v = sh[3]; let spans = [[sh[0] + 0.05, sh[2] - 0.05]];
     for (const s of G.Forma.solids(F, y)) {
@@ -542,7 +546,8 @@
   // its ground the form's pavement; each stall of the form a stall of P4's where its counter is ('banca', FM: the one who sells
   // under the cloth behind it, the buyers before it), each bay of the people's store a bay of P4's ('baia', FM: 30 each, the
   // market keeps 50) — a body's room where one stands at each —; what else stands on the pavement solid (the posts, the
-  // macellum, the stoa's walls and columns, the jars, the barrels, the palm); the way in the front, where nothing stands
+  // macellum, the stoa's walls and columns, the jars, the barrels, the palm); the way in the front's widest stretch where
+  // nothing stands
   function marketForm(P) {
     const F = G.Forma.of(P.rec.t, P.rec.c); const U = G.Forma.uses(F).filter(u => u.uso === 'banca' || u.uso === 'baia'); if (!U.length) { P.errs.push('o mercado sem bancas'); return; }
     const L = P.L, c = L / 2, area = r => (r[2] - r[0]) * (r[3] - r[1]); let fl = null;
@@ -551,7 +556,8 @@
     const sh = fl.r.map(r2), y = fl.y1;
     P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y), baseH: y, floors: 1, eave: 0 }; P.roof = null;
     P.level(0, y, 3.0, 'chao', sh); P.entryLv = 0;
-    // (the front where nothing stands — of the form's solids nor of its stalls' counters —: the stretches one comes in by)
+    // (the front where nothing stands — of the form's solids nor of its stalls' counters —: the stretches one could come in by,
+    // the way in the widest of them — wayIn: one, L-413)
     let spans = frontSpans(F, sh, y);
     for (const u of U) { const a = u.r[0] - 0.15, b = u.r[2] + 0.15; if (u.r[3] < sh[3] - 1.0) continue; spans = spans.flatMap(([s0, s1]) => (b <= s0 || a >= s1 ? [[s0, s1]] : [[s0, a], [b, s1]])); }
     spans = spans.filter(([s0, s1]) => s1 - s0 >= 0.9).map(q => q.map(r2)); if (!spans.length) { P.errs.push('a frente do mercado fechada'); return; }
