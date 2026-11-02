@@ -1039,8 +1039,11 @@
           // map of regions — the town cut from all its stores by the water, a wall or the god —: a plain load is set down
           // where one stands, for a hand later — water is poured out —, and the hands are free for the work that brings a
           // store back — L-169. With the stores out of reach, a builder with wood in the hands never built the fire of the
-          // streets: the work sent him to deliver first, and the delivery had nowhere to go, L-406)
-          if (!d || !W.reaches(v, ...G.Village.frontTile(d))) { const c = v.carry; if (c && c.n > 0 && !c.op && !c.to && !c.cid) { if (c.k === 'water') G.Depot.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); else G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); } return end(v); }
+          // streets: the work sent him to deliver first, and the delivery had nowhere to go, L-406. Plain is a load of no
+          // operation and no destination: the id of the thing it was on the ground, which a load taken up from it keeps (cid),
+          // does not bind it — Óstia's three builders, with what they had taken up from the ground (L-408) in the hands, never
+          // set it down when the god pulled the fire down, and nobody raised it again, L-433)
+          if (!d || !W.reaches(v, ...G.Village.frontTile(d))) { const c = v.carry; if (c && c.n > 0 && !c.op && !c.to) { if (c.k === 'water') G.Depot.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); else G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); } return end(v); }
           t.drop = d.id; const [fx, fy] = G.Village.frontTile(d);
           // (the store out of reach: not asked again at once — a child would ask at each look, L-186 —, as the meal does)
           if (!Vg.goto(v, fx, fy, true)) { v._noStore = S.clock + 12; return end(v); }

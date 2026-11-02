@@ -29,7 +29,7 @@ const rule = QA.oficio; // (the trades' rule by its name: oficio-inv.js has more
 const watch = () => rule((sys, sev, msg) => { if (sys === 'oficio' && sev <= 2 && mid.length < 6 && !mid.includes(`S${sev} ${msg}`)) mid.push(`S${sev} ${msg}`); }, G.S);
 const world = process.argv[2] || 'cidade';
 M.pronto(world); let S = G.S; M.viver(2); G.inSim++;
-const live = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (k % 20 === 19) watch(); if (until && until()) { watch(); return true; } } watch(); return false; };
+const live = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); holdWalls(); if (k % 20 === 19) watch(); if (until && until()) { watch(); return true; } } watch(); return false; };
 // (what the ledger writes, as it is written — the ledger itself is trimmed in a busy town —, from the start of each case)
 const seen = []; D.onMove.push(e => { seen.push(e); });
 const TO_STORE = { 'sobra-obra': 1, entrega: 1, herdado: 1, 'sem-lugar': 1 };
@@ -41,6 +41,11 @@ const builders = s => [...S.villagers.values()].filter(v => v.set === s.id && v.
 let set0 = [...S.settlements.values()].filter(s => builders(s).length >= 2 && V.dropoffs(s.id).length).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0];
 if (!set0) { console.log('FALHOU | obra | nenhuma cidade com construtores e armazém'); process.exit(1); }
 let f0 = G.Fac.get(set0.fac);
+// (the town's walls held in every case — siege.js raises them straight from the store, two stones a tile as soon as it has three,
+// with no hands, before any work (L-420, open) —: with the tip a39483e proud Roma began a stone wall in the b1, and the wall took
+// the 60 of stone the case had put in the store within the 120 s, and the well of the b2 waited its 300 s for 11. The b8 held
+// them already (T-293); the cases are the works, not who gets the stone first, T-312)
+function holdWalls() { for (const q of S.walls || []) if (!q.done && q.set === set0.id) q.done = true; }
 const reload = () => { G.inSim--; M.salvarCarregar(); G.inSim++; S = G.S; set0 = S.settlements.get(set0.id); f0 = G.Fac.get(f0.id); };
 console.log(`(${world}: ${set0.name}, de ${f0.name}: ${V.pop(set0.id)} habitantes, ${builders(set0).length} construtores)`);
 // (wood and stone in the store for the works of the cases)
