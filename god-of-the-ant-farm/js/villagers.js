@@ -50,6 +50,8 @@
     'ruaEnd', 'ruaWhy', 'saw', 'sceneHold', 'secret', 'seekT', 'seen', 'shackTry', 'skill', 'stagT', 'thefts',
     'torch', 'traits', 'ug', 'unit', 'unmask', 'unpaid', 'vet', 'voyages', 'wound', 'wrecked',
     'diary', '_hungerT',
+    // (the day of a thing done once a day: the bath, the drill, the show, the reading, the speech at the plaza — P2)
+    'bathDay', 'trainDay', 'showDay', 'readDay', 'speakDay',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
@@ -159,9 +161,28 @@
   Vg.give = function (v, t) {
     // (the body the player lives: a request is a call it may answer; a force of the world goes through setTask and takes it)
     if (G.S.avatar && G.S.avatar.id === v.id && G.Possess) { if (!G.Possess.FORCE[t.type]) { G.Possess.ask(v, t); return false; } setTask(v, t); return true; }
-    if (v.task && v.task.pri >= (t.pri || 0) + 0.01 && v.task.pri >= 2) return false; if (v.sleeping || v.inside || v.air || v.held || v.age < 3) return false;
-    if (busyHands(v, t)) return false;
+    if (v.sleeping || v.inside || v.air || v.held || v.age < 3) return false;
+    if (Vg.busy(v, t)) return false;
     setTask(v, t); return true; };
+  // (the hands busy, D-094: an errand from outside — Vg.give, and the calls of the square other modules give by setTask, who
+  // ask this first — takes one only from a task of less priority than its own, never from a load that has somewhere to go,
+  // nor from the leg of an operation under way (G.Act.leg: the crate kept for one until it is delivered, the material
+  // fetched for a work until it is there, a sale at the counter — not the work of days, not the day at the stall); what
+  // cannot wait — 3 or more: fire, panic, war, a dragon — passes, and an operation's own next step for one of its people.
+  // The body the player lives is never asked: what the world sends it is a call (Vg.give, above). A funeral (1,1) took a
+  // docker on his way to the crate kept for him (1,1), a cave (1,25) another, an execution (1,95) one with a purchase in his
+  // hands on his way home)
+  Vg.busy = function (v, t) {
+    const p = t.pri || 0; if (p >= 3 || (G.S.avatar && G.S.avatar.id === v.id)) return false;
+    const own = !!(t.op && v.task && v.task.op === t.op);
+    if (v.task && !own && (v.task.pri || 0) >= p) return true;
+    if (busyHands(v, t)) return true;
+    return !own && !!(G.Act && G.Act.leg && G.Act.leg(v));
+  };
+  // (the hands alone: a load that has somewhere to go, or a leg under way — for a call above 3 that still waits for them, the
+  // feast's)
+  const HANDS = { type: '', pri: 0 };
+  Vg.handsBusy = v => !(G.S.avatar && G.S.avatar.id === v.id) && (busyHands(v, HANDS) || !!(G.Act && G.Act.leg && G.Act.leg(v)));
   // (hands busy with a load that has somewhere to go — an operation's crate, a purchase on its way home, goods for a stall:
   // an errand from outside waits until it is there, unless it is about that load or cannot wait; an errand that takes the
   // hands — a cave, a whale, a theft — would put its own things in them over it, and the load would be gone unwritten)
@@ -197,8 +218,12 @@
     else if (t.type === 'fish' || t.type === 'quarry') { Vg.fishSpots.delete(t.spot); }
     else if ((t.type === 'mariscar' || t.type === 'pocas') && t.bx !== undefined && t.k > 0) { v.x = t.bx; v.y = t.by; } // (called away from the flats: back on the beach)
     else if (t.type === 'build') {
+      // (the load counted on its way to the work, by what was counted — not by the hands: a builder who dies carrying has
+      // given the load to the store before the task ends, and the work waited for it for ever; an errand given back later
+      // counts its load again)
       const b = S.buildings.get(t.id);
-      if (b && t.counted && v.carry && b.incoming[v.carry.k] !== undefined) b.incoming[v.carry.k] = Math.max(0, b.incoming[v.carry.k] - v.carry.n);
+      if (b && t.counted && t.mat && b.incoming && b.incoming[t.mat] !== undefined) b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - (t.cn || 0));
+      t.counted = false;
     }
     if (v.inside && !(o && o.stay === v.inside)) leave(v);
     v.sleeping = false;
@@ -541,6 +566,8 @@
       // the working day ends: home, or a cup at the tavern
       if (eve && v.home) opt(0.55 + G.R() * 0.4, 0.45, 'home');
       if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0), 0.4, 'tavern');
+      // (the theatre's show of the day, its doors open: an evening out — act-lazer.js)
+      if (G.Teatro) { const u = G.Teatro.urge(v, cur); if (u > 0) opt(u, 0.45, 'teatro'); }
       if (G.Eco && !eve) opt(0.16 * G.R() * 1.6, 0.35, 'shop');
       // (the house lacks something it uses up, and can pay: one of the family goes to buy it — act-compras.js)
       if (G.Compras) { const u = G.Compras.urge(v); if (u > 0) opt(u, 0.6, 'compras'); }
@@ -581,6 +608,7 @@
       case 'home': t = (G.Lar && G.Lar.task(v, H, 'tarde', true)) || (G.Urban && G.R() < (G.Urban.gardenDue(v) ? 0.75 : 0) && G.Urban.gardenTask(v, H)) || (G.Life && G.Life.familyTask(v, H)) || (G.Lar && G.Lar.task(v, H, 'tarde')) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
       case 'tavern': t = G.Eco && G.Eco.tavernTask(v, H); break;
       case 'shop': t = G.Eco && G.Eco.shopTask(v, H); break;
+      case 'teatro': t = G.Teatro && G.Teatro.go(v, H); break;
       case 'compras': t = G.Compras && G.Compras.task(v, H); break;
       case 'garden': t = G.Urban && G.Urban.gardenTask(v, H); break;
       case 'saga': t = G.Stories && G.Stories.task(v, H); break;
@@ -834,14 +862,16 @@
     return false;
   }
   Vg.gotoB = gotoB;
-  // a site nobody can reach (walled in, cut off by the sea) is given up and its materials go back to the store
+  // a site nobody can reach (walled in, cut off by the sea) is given up and its materials go back to the store — what was
+  // delivered, by the work's own bill (the brick that took the place of stone counted as brick: D-075), in the ledger; a
+  // reform given up too: the house stands as it was, and what came for the new one goes back (it was lost: L-246)
   function abandonSite(b) {
-    const def = G.BDEF[b.type]; const fid = G.Village.facOfSet(b.set);
     if (b.upgradeFrom) {
       const od = G.BDEF[b.upgradeFrom]; if (!od || od.w !== b.w || od.h !== b.h) return;
+      G.Village.siteBack(b, 'obra-largada');
       b.type = b.upgradeFrom; b.upgradeFrom = null; b.built = true; b.progress = 1; b.need = { wood: 0, stone: 0 }; b.incoming = { wood: 0, stone: 0 }; b.unreach = 0;
     } else {
-      for (const k in def.cost) { const got = Math.max(0, (def.cost[k] || 0) - (b.need[k] || 0)); if (got > 0) G.Village.addStock(k, got, fid); }
+      G.Village.siteBack(b, 'obra-largada');
       G.Village.removeBuilding(b);
     }
     for (const o of G.S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) end(o);
@@ -854,7 +884,7 @@
       const st = G.Fac.stockOfSet(b.set);
       let needMat = false; for (const k in b.need) if (b.need[k] - (b.incoming[k] || 0) > 0 && G.Fac.free(b.set, k) >= 1) { needMat = true; break; }
       const work = canWork(b);
-      const carryFits = v.carry && b.need[v.carry.k] > 0;
+      const carryFits = Vg.plainLoad(v) && b.need[v.carry.k] > 0;
       if (!needMat && !work && !carryFits) continue;
       let builders = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) builders++;
       const [cx, cy] = G.Village.center(b);
@@ -914,6 +944,30 @@
   let preyN = 0, preyT = -1;
   G.worldHooks.push(() => { preyN = 0; preyT = -1; }); // (a new world, or a save loaded: it starts over)
   function preyCount() { const S = G.S; if (preyT !== S.clock) { preyT = S.clock; preyN = 0; for (const a of S.animals.values()) if (!a.dead && G.Animals.huntable(a)) preyN++; } return preyN; }
+  // a plain load of the people on the ground — set down with no store within reach (L-169, L-406), or left there by an
+  // operation that ended —: whoever goes to work with empty hands, reaching it and a store of his town, picks it up first
+  // and takes it to the store as any load; the nearest within a work's walk, then the first set down — no chance drawn —, and
+  // not one another is on his way to. Only what has no operation: the porters' crates ('pegarChao') and the workshops' input
+  // ('chao') are their operations' to pick up. Nothing picked it up before: it lay there for ever, L-408
+  const PICK_R = 30; Vg.PICK_R = PICK_R;
+  const picking = (gid, v) => { for (const o of G.S.villagers.values()) if (o !== v && o.task && o.task.type === 'apanhar' && o.task.g === gid) return true; return false; };
+  Vg.groundLoad = o => !!(o && !o.op && o.k !== 'water' && o.fac && o.n > 1e-6);
+  function pickupTask(v) {
+    const L = G.S.loose; if (!L || !L.length || (v.carry && v.carry.n > 1e-6)) return null;
+    const fid = G.Fac.idOfV(v); let best = null, bd = PICK_R * PICK_R;
+    for (const o of L) {
+      if (!Vg.groundLoad(o) || o.fac !== fid) continue;
+      // (not the one whose way this person has just failed to find — the map of regions says it is reached, the search of a
+      // short way round a flooded store spent its budget —: in the cidade-cortada's c6 one chose it again at every look, and
+      // did nothing else, 74 times in 13 s)
+      if (v._pfI === W.idx(o.x, o.y) * 2 + 1 && G.S.clock - v._pfT < 12) continue;
+      const d = G.dist2(v.x, v.y, o.x, o.y); if (d >= bd || !W.reaches(v, o.x, o.y) || picking(o.id, v)) continue;
+      best = o; bd = d;
+    }
+    if (!best) return null;
+    const st = G.Village.nearestDropoff(v.x, v.y, v.set, v); if (!st || !W.reaches(v, ...G.Village.frontTile(st))) return null;
+    return setTask(v, { type: 'apanhar', g: best.id, pri: 1, st: 0 });
+  }
   function workTask(v) {
     const S = G.S; const fac = G.Fac.ofV(v); if (!fac) return null;
     const st = fac.stock; const capS = G.Village.cap(fac.id);
@@ -924,6 +978,8 @@
       if (v.role === 'construtor') { const t = buildTask(v); if (t) return t; }
       return deliverTask(v);
     }
+    // (a plain load of the people on the ground first, L-408)
+    if (!v.captive) { const t = pickupTask(v); if (t) return t; }
     const tg = fac.targets || { food: 60, wood: 60, stone: 30 };
     const need = k => st[k] < Math.min(capS - 1, tg[k]);
     let t = null;
@@ -974,16 +1030,30 @@
         if (t.st === 0 && (v.carry.op || v.carry.to) && G.Act) { if (G.Act.resumeCarry(v, H) || G.Act.holdCarry(v, H)) return; if (!v.carry) return end(v); }
         if (t.st === 0) {
           const d = G.Village.nearestDropoff(v.x, v.y, v.set, v);
-          // (no store of the people anywhere — a town whose only fire fell, one just founded —: a plain load is set down where
-          // one stands, for a hand later — water is poured out —, and the hands are free for the work that brings a store
-          // back — L-169)
-          if (!d) { const c = v.carry; if (c && c.n > 0 && !c.op && !c.to && !c.cid) { if (c.k === 'water') G.Depot.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); else G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); } return end(v); }
+          // (no store of the people anywhere — a town whose only fire fell, one just founded —, or none within reach by the
+          // map of regions — the town cut from all its stores by the water, a wall or the god —: a plain load is set down
+          // where one stands, for a hand later — water is poured out —, and the hands are free for the work that brings a
+          // store back — L-169. With the stores out of reach, a builder with wood in the hands never built the fire of the
+          // streets: the work sent him to deliver first, and the delivery had nowhere to go, L-406)
+          if (!d || !W.reaches(v, ...G.Village.frontTile(d))) { const c = v.carry; if (c && c.n > 0 && !c.op && !c.to && !c.cid) { if (c.k === 'water') G.Depot.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true }); else G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); } return end(v); }
           t.drop = d.id; const [fx, fy] = G.Village.frontTile(d);
           // (the store out of reach: not asked again at once — a child would ask at each look, L-186 —, as the meal does)
           if (!Vg.goto(v, fx, fy, true)) { v._noStore = S.clock + 12; return end(v); }
           t.st = 1;
         } else if (move(v, dt)) { deliverPlain(v, G.Fac.idOfV(v)); end(v); }
         break;
+      }
+      case 'apanhar': {
+        // (the plain load on the ground: to it, and up into the hands by the depot — 'apanhou' —; the next look takes it to
+        // the store as any load. Gone, or taken by an operation, or the hands full meanwhile: the errand is over — L-408)
+        const o = (S.loose || []).find(x => x.id === t.g);
+        if (!Vg.groundLoad(o) || (v.carry && v.carry.n > 1e-6)) return end(v);
+        if (t.st === 0) { if (!Vg.goto(v, o.x, o.y, true)) return end(v); t.st = 1; break; }
+        if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; } break; }
+        v.act = 'gather'; if (v.actT < 0.8) break;
+        const n = Math.min(o.n, Math.floor(G.Depot.room('v:' + v.id, o.k) + 1e-9));
+        if (n > 0) G.Depot.move('g:' + o.id, 'v:' + v.id, o.k, n, { code: 'apanhou', by: v.id });
+        end(v); break;
       }
       case 'chop': {
         const tr = S.trees.get(t.id);
@@ -1454,11 +1524,12 @@
     if (!b || b.built || b.type === 'ruin') return end(v);
     const def = G.BDEF[b.type];
     if (t.st === 0) {
-      if (v.carry && b.need[v.carry.k] !== undefined && v.carry.k !== 'food') {
+      // (only a plain load goes into a work: an operation's crate, a purchase for a house, are not the builder's to use)
+      if (v.carry && Vg.plainLoad(v) && b.need[v.carry.k] !== undefined && v.carry.k !== 'food') {
         if (b.need[v.carry.k] > 0) {
           t.mat = v.carry.k;
-          if (!t.counted) { b.incoming[t.mat] = (b.incoming[t.mat] || 0) + v.carry.n; t.counted = true; }
-          if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - v.carry.n); t.counted = false; end(v); return deliverTask(v); }
+          if (!t.counted) { t.cn = v.carry.n; b.incoming[t.mat] = (b.incoming[t.mat] || 0) + t.cn; t.counted = true; }
+          if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - t.cn); t.counted = false; end(v); return deliverTask(v); }
           t.st = 2; return;
         }
         return deliverTask(v);
@@ -1477,21 +1548,24 @@
     }
     if (t.st === 1) {
       if (!move(v, dt)) return;
-      const stk = G.Fac.stockOfSet(b.set);
       const n = Math.min(cap(v), Math.ceil(b.need[t.mat] - (b.incoming[t.mat] || 0)), Math.floor(G.Fac.free(b.set, t.mat)));
       if (n <= 0) { t.st = 0; return; }
-      stk[t.mat] -= n; v.carry = { k: t.mat, n }; b.incoming[t.mat] = (b.incoming[t.mat] || 0) + n; t.counted = true;
-      if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - n); t.counted = false; end(v); return deliverTask(v); }
+      // (out of the store into the hands, in the ledger — the builder's load by its own measure, cap(v), as it always was)
+      const r = G.Depot.move('f:' + G.Village.facOfSet(b.set), 'v:' + v.id, t.mat, n, { code: 'obra', by: v.id, pack: true, part: true });
+      if (!r.ok) return end(v);
+      t.cn = r.n; b.incoming[t.mat] = (b.incoming[t.mat] || 0) + t.cn; t.counted = true;
+      if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - t.cn); t.counted = false; end(v); return deliverTask(v); }
       t.st = 2; return;
     }
     if (t.st === 2) {
       if (!move(v, dt)) return;
       if (v.carry) {
-        const n = v.carry.n; const k = v.carry.k;
-        b.incoming[k] = Math.max(0, (b.incoming[k] || 0) - n);
-        const used = Math.min(n, b.need[k]); b.need[k] -= used;
-        v.carry = null; t.counted = false;
-        if (n - used > 0) G.Village.addStock(k, n - used, G.Village.facOfSet(b.set));
+        const k = v.carry.k;
+        if (t.counted) { b.incoming[t.mat] = Math.max(0, (b.incoming[t.mat] || 0) - (t.cn || 0)); t.counted = false; }
+        // (the load into the work, and what it no longer needs back to the store at once, as it always went — in the ledger)
+        const used = Math.min(v.carry.n, Math.max(0, b.need[k] || 0));
+        if (used > 0 && Vg.plainLoad(v)) G.Depot.move('v:' + v.id, 'o:' + b.id, k, used, { code: 'obra', by: v.id });
+        if (v.carry && Vg.plainLoad(v)) Vg.toStore(v, G.Village.facOfSet(b.set), 'sobra-obra');
         G.FX && G.FX.chips((b.x + b.w / 2), (b.y + b.h / 2), k === 'wood' ? '#a67c4e' : '#9a9a9a');
       }
       t.st = canWork(b) ? 4 : 0;
@@ -1934,6 +2008,7 @@
       case 'idle': return 'Descansando';
       case 'wander': return 'Passeando';
       case 'deliver': { const d = S.buildings.get(t.drop); return v.carry ? `Levando ${MAT[v.carry.k]} ${d && d.type === 'storehouse' ? 'ao armazém' : 'à fogueira'}` : 'Guardando recursos'; }
+      case 'apanhar': { const o = (S.loose || []).find(x => x.id === t.g); return o ? `Apanhando ${MAT[o.k]} do chão` : 'Apanhando o que ficou no chão'; }
       case 'chop': return t.st < 2 ? 'Indo cortar uma árvore' : 'Cortando lenha';
       case 'gather': return t.kind === 'help' ? 'Ajudando a colher frutas' : 'Colhendo frutas silvestres';
       case 'forage': return 'Procurando algo para comer';

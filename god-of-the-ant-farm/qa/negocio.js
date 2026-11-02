@@ -285,8 +285,13 @@ function attempt(hour, one, done) {
 // ---------------- n4: a buyer comes, asks, buys, pays the seller's house, carries it home
 {
   let k, h, sellerHouse, have0, n0, L0, t0, sold = false;
+  let asked = 0, asked10 = 0;
   const v = attempt(0.15, not => {
-    k = goodOf(); z1.margin[k] = -0.1; // (cheap today)
+    // (cheap today, for whoever comes: a buyer gives 90% of the town's price and more for what his house lacks and the coins
+    // it has, times his nature — a sceptic gives 7% less (wtp) —; at −10%, in the branch of the Patch 2, the generation 7's
+    // Argos asked 0,99 of 1,1 and the buyer the case found would not give it: he haggled, heard the counter and went. The case
+    // is the deal, the haggling is the n5's, T-271)
+    k = goodOf(); z1.margin[k] = -0.1; asked10 = B.price(z1, k); z1.margin[k] = -0.35; asked = B.price(z1, k);
     const b = buyerFor(k, 30, not); if (!b) return null; h = E.homeOf(b); sellerHouse = E.homeOf(m1) ? 'h:' + m1.home : 'p:' + m1.id;
     have0 = D.get('h:' + h.id, k); n0 = z1.day.n; L0 = S.ledgerN; t0 = S.clock;
     G.Vg.setTask(b, { type: 'compra', biz: z1.id, k, pri: 1.3, st: 0 });
@@ -310,7 +315,7 @@ function attempt(hour, one, done) {
   // (the payment is the ledger's line, from the buyer's house to the seller's, right after the goods: the houses' coins
   // move for other reasons meanwhile — a wage, a family's errand — so they are not counted)
   ok('n4 o cliente compra', sold && !!sale && !!pay && pay[3] === 'h:' + h.id && pay[4] === sellerHouse && pay[5] === 'moedas' && pay[6] > 0 && pay[8] === 'venda' && carry && home && talk.includes('perguntar') && talk.includes('preco') && !bad().length,
-    sale ? `${v.name} perguntou e comprou ${sale[6]} de ${E.name(k)} de ${m1.name} por ${pay ? pay[6] : '?'} ${B.money(fac.id).plural} (da casa dele à do vendedor); levou nas mãos marcado para casa (${carry ? 'sim' : 'NÃO'}) e ${home ? `chegou lá em ${took4} s` : `NÃO chegou em ${took4} s`}${away4.length ? ` (no caminho, chamado para ${away4.map(a => `${a[0]} ${Math.round(a[1])} s`).join(', ')})` : ''}; falas: ${talk.join(', ')}` : `não comprou (${v.task ? v.task.type + ' ' + v.task.talk : 'sem tarefa'}; ${talk.join(', ')})`);
+    sale ? `${v.name} perguntou e comprou ${sale[6]} de ${E.name(k)} de ${m1.name} por ${pay ? pay[6] : '?'} ${B.money(fac.id).plural} (da casa dele à do vendedor); levou nas mãos marcado para casa (${carry ? 'sim' : 'NÃO'}) e ${home ? `chegou lá em ${took4} s` : `NÃO chegou em ${took4} s`}${away4.length ? ` (no caminho, chamado para ${away4.map(a => `${a[0]} ${Math.round(a[1])} s`).join(', ')})` : ''}; falas: ${talk.join(', ')} (o preço pedido ${asked}; com a margem de antes, −10%, seria ${asked10}; o preço da cidade ${E.PRICE[k]})` : `não comprou (${v.task ? v.task.type + ' ' + v.task.talk : 'sem tarefa'}; o preço pedido ${asked}, o preço da cidade ${E.PRICE[k]}; ${talk.join(', ')})`);
 }
 // the price that makes a buyer haggle, refuse: the margin set so the stall asks f × what the buyer would give
 function priceAt(k, v, f) { const h = E.homeOf(v); const w = B.wtp(v, h, z1, k); z1.margin[k] = 0; const p0 = B.price(z1, k); const base = E.PRICE[k] || 0.3; z1.margin[k] = r2((w * f) / base - p0 / base); return { w, p: B.price(z1, k) }; }

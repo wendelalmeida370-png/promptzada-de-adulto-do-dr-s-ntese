@@ -77,6 +77,12 @@
   };
 
   // ------------------------------ buildings ------------------------------
+  // (a log of a grown tree cleared for a work, into its people's store: born of the world, in the ledger — up to the
+  // store's room, and counted in the town's tally, as the store's own count always did)
+  function clearing(fid) {
+    const D = G.Depot; if (!D || !G.Fac.get(fid)) return;
+    const r = D.make('f:' + fid, 'wood', 1, { code: 'clareira', part: true }); if (r.ok && G.S.stats) G.S.stats.woodProduced += r.n;
+  }
   V.addBuilding = function (type, x, y, setId, built) {
     const S = G.S; const def = G.BDEF[type];
     const b = {
@@ -92,7 +98,8 @@
     for (let ty = y; ty < y + b.h; ty++) for (let tx = x; tx < x + b.w; tx++) {
       const i = ty * N + tx;
       S.occ[i] = b.id;
-      const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) { G.Nature.removeTree(t); if (t.stage === 'grow' && t.size > 0.5) V.addStock('wood', 1, V.facOfSet(setId)); G.FX && G.FX.poof(tx + 0.5, ty + 0.5, '#6d8f3c'); } }
+      // (a grown tree where the work goes is a log for the store — born of the world, in the ledger)
+      const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) { G.Nature.removeTree(t); if (t.stage === 'grow' && t.size > 0.5) clearing(V.facOfSet(setId)); G.FX && G.FX.poof(tx + 0.5, ty + 0.5, '#6d8f3c'); } }
       const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); if (bu) G.Nature.removeBush(bu); }
     }
     W.touchWalk();
@@ -100,8 +107,124 @@
     // ground as it will be, L-382)
     G.Siege && G.Siege.placed(b);
     G.Interiors && G.Interiors.found(b); // (the plan's record, frozen the day it is placed)
+    if (!built) V.brickSwap(b); // (where its people builds with brick, part of the stone is brick: D-075)
     return b;
   };
+
+  // ------------------------------ the brick of the works (D-075) ------------------------------
+  // where a people builds with brick — the sun-dried adobe of the Nile and of the lakes, the fired brick of the Greeks and the
+  // Romans (G.Eco.BRICK) — and its town has a pottery standing (or the bricks in its store), a work founded there takes part
+  // of its stone as brick, a unit for a unit (the work's total does not change: the progress the materials allow is the
+  // same): the houses most, the halls of work and of trade half, the temples and palaces less — their noble stone stays —, and
+  // none where only stone serves (a well, a tower, a quay, an aqueduct, a wall, the fields). Decided once, at the foundation
+  // or when a reform begins (V.refound), and kept on the work: b.brick = { k, n, day }
+  const BRICK_SHARE = { house: 0.6, sobrado: 0.6, insula: 0.6, quarteirao: 0.6, storehouse: 0.5, celeiro: 0.5, armazem: 0.5, workshop: 0.5, mercado: 0.5, taverna: 0.5, olaria: 0.5, tecelagem: 0.5, acougue: 0.5, estabulo: 0.5, sericultura: 0.5, salga: 0.5, forja: 0.4, ourives: 0.4, quartel: 0.4, administracao: 0.4, coletoria: 0.4, paco: 0.4, banhos: 0.4, cadeia: 0.3, temple: 0.3, biblioteca: 0.3, teatro: 0.3, palacio: 0.3, grande_palacio: 0.3, palacio_colossal: 0.3, maravilha: 0.3 };
+  V.BRICK_SHARE = BRICK_SHARE;
+  const potteryIn = setId => { for (const o of G.S.buildings.values()) if (o.set === setId && o.type === 'olaria' && o.built) return true; return false; };
+  V.brickSwap = function (b) {
+    if (!b || b.built || b.brick || !b.need) return null;
+    const share = BRICK_SHARE[b.type] || 0; if (!(share > 0)) return null;
+    const fid = V.facOfSet(b.set); const k = G.Eco && G.Eco.brickOf ? G.Eco.brickOf(fid) : null; if (!k) return null;
+    const f = G.Fac.get(fid); if (!potteryIn(b.set) && !(f && (f.stock[k] || 0) >= 1)) return null;
+    const n = Math.floor((b.need.stone || 0) * share); if (n < 1) return null;
+    b.need.stone -= n; b.need[k] = (b.need[k] || 0) + n; if (!b.incoming) b.incoming = {}; if (b.incoming[k] === undefined) b.incoming[k] = 0;
+    b.brick = { k, n, day: G.S.day };
+    return b.brick;
+  };
+  // the bill of a work begun again in place (a hut rebuilt as a house, a house raised a floor): what its type costs, the brick
+  // decided anew
+  V.refound = function (b) {
+    const def = G.BDEF[b.type];
+    b.need = Object.assign({ wood: 0, stone: 0 }, def.cost); b.incoming = { wood: 0, stone: 0 }; b.brick = null; b.troca = null;
+    V.brickSwap(b);
+  };
+  // a material a work still needs traded for another on the way — the quay finished in stone where the people has no timber
+  // (naval.js): what the work costs and what it still needs change together, kept on the work (b.troca: what each material
+  // went up or down by), so that what it got stays what the ledger brought it. The need alone changed made wood come into the
+  // work with no line and stone vanish in it, L-416. → whether it traded
+  V.swapBill = function (b, from, n, to, m) {
+    if (!b || b.built || !b.need || !(n > 0) || !(m >= 0)) return false;
+    b.need[from] = (b.need[from] || 0) - n; b.need[to] = (b.need[to] || 0) + m;
+    const t = b.troca || (b.troca = {}); t[from] = (t[from] || 0) - n; t[to] = (t[to] || 0) + m;
+    if (!b.incoming) b.incoming = {}; if (b.incoming[to] === undefined) b.incoming[to] = 0;
+    return true;
+  };
+  // what a work's bill is: its type's cost, with the brick that took the place of stone and the materials traded on the way
+  V.bill = function (b) {
+    const def = G.BDEF[b.type] || { cost: {} }; const out = Object.assign({}, def.cost);
+    if (b.brick && b.brick.n > 0) { out.stone = Math.max(0, (out.stone || 0) - b.brick.n); out[b.brick.k] = (out[b.brick.k] || 0) + b.brick.n; }
+    if (b.troca) for (const k in b.troca) { const d = b.troca[k]; if (typeof d === 'number' && isFinite(d)) out[k] = Math.max(0, (out[k] || 0) + d); }
+    return out;
+  };
+  // what was delivered to a work: its bill less what it still needs — what goes back to the store when the work is given
+  // up (the type's cost alone would give back stone that never came, where brick took its place)
+  V.delivered = function (b) {
+    const bill = V.bill(b); const out = {};
+    for (const k in bill) { const n = Math.max(0, (bill[k] || 0) - ((b.need && b.need[k]) || 0)); if (n > 0) out[k] = n; }
+    return out;
+  };
+  // the work's materials, a holder of the depot ('o', the work's id): what came to a site and is not built in yet — its bill
+  // less what it still needs —, so that what the builders and the god's body bring to a work, and what comes back of one
+  // let go, is in the ledger with its cause: nothing a work got is lost, or born, with no line (L-246). A work takes only
+  // what it still needs; what is taken from it is needed again — always, so that what it holds is always its bill less its
+  // need (the work that stands has its need cleared after: completeBuilding). (Registered with the first world: the depot,
+  // activity.js, loads after this file)
+  const r4 = x => Math.round(x * 1e4) / 1e4;
+  const isSite = b => !!b && !b.built && !!b.need && b.type !== 'ruin';
+  const SITE = {
+    obj: id => { const b = G.S.buildings.get(id); return isSite(b) ? b : null; },
+    get: (b, k) => V.delivered(b)[k] || 0,
+    room: (b, k) => Math.max(0, b.need[k] || 0),
+    take: (b, k, n) => { b.need[k] = r4((b.need[k] || 0) + n); },
+    put: (b, rec) => { b.need[rec.k] = r4(Math.max(0, (b.need[rec.k] || 0) - rec.n)); },
+    list: b => V.delivered(b),
+    owner: b => ({ fac: V.facOfSet(b.set), bld: b.id }),
+    place: b => b,
+    all: () => { const out = []; for (const b of G.S.buildings.values()) if (isSite(b)) out.push(b); return out; },
+  };
+  G.worldHooks.push(() => { if (G.Depot && G.Depot.addKind && !G.Depot.KINDS.includes('o')) G.Depot.addKind('o', SITE); });
+  // what a work got goes back to its people's store, in the ledger — a work given up, a reform let go (what the store has
+  // no room for is lost with its cause, as in any delivery); with its people gone, lost with the work
+  V.siteBack = function (b, code) {
+    const D = G.Depot; const ref = 'o:' + b.id; if (!D || !D.exists(ref)) return;
+    const fid = V.facOfSet(b.set); const got = V.delivered(b);
+    for (const k of Object.keys(got).sort()) {
+      if (fid && D.exists('f:' + fid)) D.store(ref, fid, k, got[k], { code });
+      else D.use(ref, k, got[k], { code, mine: true });
+    }
+  };
+  // what a work got is gone with it — it burnt, it fell, it was left to the wind; or it stands, and is what it was made of
+  V.siteGone = function (b, code) {
+    const D = G.Depot; const ref = 'o:' + b.id; if (!D || !D.exists(ref)) return;
+    const got = V.delivered(b); for (const k of Object.keys(got).sort()) D.use(ref, k, got[k], { code, mine: true });
+  };
+  // what a building keeps — a house's pantry and chest, a shelf of work, a temple's treasure — is lost with it, in the ledger:
+  // a ruin keeps nothing (the coins of a house have their own line). It went unwritten with a house that fell and with a town
+  // left to the wind, and the ruin cleared away took it, L-377
+  V.keptGone = function (b, code) {
+    const D = G.Depot; if (!D || !b) return;
+    const home = !!(G.BDEF[b.type] && G.BDEF[b.type].housing); const ref = (home ? 'h:' : 'b:') + b.id; if (!D.exists(ref)) return;
+    const L = D.list(ref); for (const k of Object.keys(L).sort()) if (L[k] > 1e-6 && !(home && k === 'moedas')) D.use(ref, k, L[k], { code, mine: true });
+  };
+  // the town's works still waiting for this brick (what is not on its way already)
+  V.brickWant = function (set, k) {
+    let n = 0; const id = set && (set.id || set);
+    for (const o of G.S.buildings.values()) if (o.set === id && !o.built && o.type !== 'ruin' && o.need && o.need[k] > 0) n += Math.max(0, o.need[k] - ((o.incoming && o.incoming[k]) || 0));
+    return n;
+  };
+  // a work waiting for brick a whole day with none to come — no brick in the store, no pottery standing in the town — goes
+  // back to stone for what it still lacks: no work waits for ever on a brick nobody makes
+  function brickBack() {
+    const S = G.S;
+    for (const b of S.buildings.values()) {
+      if (b.built || !b.brick || !b.need || b.type === 'ruin') continue;
+      const k = b.brick.k; const left = Math.max(0, (b.need[k] || 0) - ((b.incoming && b.incoming[k]) || 0)); if (!(left > 0)) continue;
+      if (S.day - (b.brick.day || 0) < 1) continue;
+      // (bricks in the store, or a batch of them under way in the town: it waits for them)
+      const f = G.Fac.get(V.facOfSet(b.set)); if ((f && (f.stock[k] || 0) >= 1) || (G.Oficio && G.Oficio.making(b.set, k))) continue;
+      b.need[k] -= left; b.need.stone = (b.need.stone || 0) + left; b.brick.n -= left; b.brick.back = (b.brick.back || 0) + left;
+    }
+  }
   V.center = b => [b.x + b.w / 2, b.y + b.h / 2];
   V.door = b => [b.x + b.w - 0.5, b.y + b.h + 0.05]; // front-left side
   V.frontTile = b => {
@@ -128,7 +251,9 @@
   V.livable = b => !!b && b.type !== 'ruin' && !!G.BDEF[b.type] && !!G.BDEF[b.type].housing && (b.built || !!b.upgradeFrom);
 
   V.completeBuilding = function (b) {
-    const S = G.S; b.built = true; b.progress = 1; b.need.wood = 0; b.need.stone = 0; b.upgradeFrom = null;
+    const S = G.S; b.progress = 1;
+    V.siteGone(b, 'obra-feita'); // (what the work got is built in: out of its holder, in the ledger — and it needs nothing)
+    b.built = true; for (const k in b.need) b.need[k] = 0; b.upgradeFrom = null;
     G.Siege && G.Siege.keepWays(b.set); // (a building of the town now, to be reached: one finished in a pocket its wall shuts gets its gate, L-382)
     G.Interiors && G.Interiors.complete(b); // (a fact of its life; a type made over — a hut become a house — a new plan)
     S.stats.built++;
@@ -178,6 +303,8 @@
     }
     // (the coins kept in a house that falls are lost with it — in the ledger: the ruin is no house to hold them)
     if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
+    V.keptGone(b, 'ruina'); // (and what it kept, the house's pantry and chest or the shelf, L-377)
+    V.siteGone(b, 'ruina'); // (and what a work had got falls with it, in the ledger)
     if (b.type === 'farm' || b.type === 'campfire') {
       V.removeBuilding(b);
       if (b.type === 'campfire' && set) set.campfire = 0;
@@ -445,6 +572,9 @@
       // (the family's savings do not come down with the house: the eldest carries them in his purse — with nobody, the
       // people's treasury keeps them —, in the ledger)
       if (o.coin > 0) G.Depot.move('h:' + o.id, head ? 'p:' + head.id : 'f:' + set.fac, 'moedas', o.coin, { code: 'obra-da-cidade', by: head ? head.id : 0, part: true });
+      // (and what the house kept — the pantry, the chest — comes down with it, in the ledger: the family's, not the people's
+      // (D-059), and the ground keeps no owner nor anyone to pick it up for the family — it went unwritten, L-377)
+      V.keptGone(o, 'obra-da-cidade');
       if (o.type === 'farm') fields++; else homes++;
       [cx, cy] = V.center(o);
       G.FX && G.FX.dust(cx, cy, 4);
@@ -520,7 +650,7 @@
         for (const b of S.buildings.values()) if (b.set === set.id && b.type === 'hut' && b.built && (!old || b.born < old.born)) old = b;
         if (old) {
           old.type = 'house'; old.built = false; old.progress = 0; old.upgradeFrom = 'hut';
-          old.need = Object.assign({ wood: 0, stone: 0 }, G.BDEF.house.cost); old.incoming = { wood: 0, stone: 0 };
+          V.refound(old);
           old.hp = G.BDEF.house.hp; old.maxHp = old.hp;
           return true;
         }
@@ -554,6 +684,13 @@
   // ------------------------------ jobs ------------------------------
   const BASE_ROLES = ['lenhador', 'coletor', 'agricultor', 'construtor', 'mineiro', 'cacador', 'sacerdote', 'guerreiro'];
   let WORK_ROLES = BASE_ROLES;
+  // who can walk to a work — to its front, or to any free side of it (the builder's own rule, Vg.gotoB) —, and can the town
+  // (its streets, W.townRegion): by the map of regions, never «the same island» (L-389)
+  const ringOf = b => { const out = []; for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) { if (y >= b.y && y < b.y + b.h && x >= b.x && x < b.x + b.w) continue; if (W.inb(x, y) && W.walkable(W.idx(x, y))) out.push([x + 0.5, y + 0.5]); } return out; };
+  V.reachesWork = function (v, b) { const [fx, fy] = V.frontTile(b); return W.reaches(v, fx, fy) || ringOf(b).some(p => W.reaches(v, p[0], p[1])); };
+  V.townReachesWork = function (set, b) { const [fx, fy] = V.frontTile(b); return W.townReaches(set, fx, fy) || ringOf(b).some(p => W.townReaches(set, p[0], p[1])); };
+  // the works of a town its streets reach (a site across the water is none of them: it is given up after its tries, L-349)
+  const townWorks = set => { const out = []; for (const b of G.S.buildings.values()) if (b.set === set.id && !b.built && b.type !== 'ruin' && V.townReachesWork(set, b)) out.push(b); return out; };
   function assignJobs(set, keep) {
     const S = G.S;
     // (the trades of the economy module load after this file)
@@ -581,8 +718,8 @@
     let templeBuilt = false; for (const b of S.buildings.values()) if (b.set === set.id && (b.type === 'temple') && b.built) templeBuilt = true;
     let threats = 0; for (const a of S.animals.values()) if (!a.dead && (G.Animals.danger(a) || (G.Animals.DEF[a.kind] && G.Animals.DEF[a.kind].bold > 0.3)) && G.dist(a.x, a.y, set.cx, set.cy) < 20) threats++;
     const want = {}; for (const r of WORK_ROLES) want[r] = 0;
-    // workplaces: shepherds, weavers, smiths, merchants...
-    const eco = G.Eco ? G.Eco.demand(set, fac, A) : {};
+    // workplaces: shepherds, weavers, smiths, merchants... — what they ask, under the ceiling of the trades once (D-090)
+    const eco = G.Eco ? (G.Eco.share ? G.Eco.share(G.Eco.demand(set, fac, A), set, fac, A) : G.Eco.demand(set, fac, A)) : {};
     let ecoN = 0; for (const r in eco) { if (r === 'mineiro') continue; want[r] = eco[r]; ecoN += eco[r]; }
     const mineJobs = eco.mineiro || 0;
     want.sacerdote = templeBuilt ? (pop >= 45 ? 2 : 1) : 0;
@@ -601,11 +738,11 @@
     if (rest < MIN_REST) { want.construtor = Math.min(want.construtor, Math.max(1, Math.floor(A * 0.2))); want.cacador = Math.min(want.cacador, 1 + (threats > 1 ? 1 : 0)); rest = restOf(); }
     if (rest < MIN_REST) { want.guerreiro = Math.max(0, want.guerreiro - 1); rest = restOf(); }
     if (rest < MIN_REST) {
-      for (const r of ['contrabandista', 'escriba', 'taverneiro', 'mergulhador', 'sericultor', 'salgador', 'salineiro', 'vinhateiro', 'apicultor', 'fruticultor', 'lavrador', 'ourives', 'feirante', 'oleiro', 'cavalarico', 'mercador', 'cobrador', 'tecelao', 'acougueiro', 'ferreiro']) {
-        if (rest >= MIN_REST) break;
-        if (!(want[r] > 0)) continue;
-        const cut = Math.min(want[r], MIN_REST - rest); want[r] -= cut; ecoN -= cut; rest += cut;
-      }
+      // (the smugglers first — nobody is ordered into crime —, then the trades by the rule of the sharing, G.Eco.cut — D-090:
+      // a trade of one hand is not cut before one of four, and the tavern, the market and the fair go last; the tavern's
+      // keeper was the third to go, whatever the rest)
+      if (want.contrabandista > 0) { const cut = Math.min(want.contrabandista, MIN_REST - rest); want.contrabandista -= cut; ecoN -= cut; rest += cut; }
+      if (rest < MIN_REST && G.Eco && G.Eco.cut) { const cut = G.Eco.cut(want, MIN_REST - rest); ecoN -= cut; rest += cut; }
     }
     let rocks = 0; for (const r of S.rocks.values()) if (G.dist(r.x, r.y, set.cx, set.cy) < 26) { rocks++; if (rocks > 2) break; }
     if (!rocks && G.Vg.canQuarry(set)) rocks = 1;
@@ -634,11 +771,38 @@
     const have = {}; for (const r of WORK_ROLES) have[r] = [];
     const none = [];
     for (const v of adults) { if (v.role) have[v.role].push(v); else none.push(v); }
+    // (the builders counted by the side of the works: a town cut in two by the water, a wall or the god, its builders on the far
+    // side, had the builders it wanted counted for the whole town, and the works its streets reach stood still — L-389. A builder
+    // who can walk to none of them changes trades with a forager or a woodcutter of the streets — the one nearest a work he
+    // reaches, by the distance and then the id, no chance drawn —: the counts of the trades stay, and a town with no hand to
+    // spare has its builder at once (with the trade left to the deficit, its foragers' want took the islet's builders and the
+    // streets had none). With no such one on the streets, the builder is left without a trade, and a new builder is one who
+    // reaches the works: the first of them no builder reaches, while there is one. With no work the streets reach, nothing
+    // changes; and one at sea, underground or held is not judged: the map does not see where he stands. Never at a load (keep):
+    // the trades come back as they were saved, and the world's own step makes the swap, as it deals the trades out, L-419)
+    const works = townWorks(set); const left = new Set();
+    const swapFor = () => {
+      let best = null, bd = Infinity;
+      for (const r of ['coletor', 'lenhador']) for (const o of have[r]) {
+        if (o.aboard || o.ug || o.held) continue;
+        for (const b of works) { if (!V.reachesWork(o, b)) continue; const f = V.frontTile(b); const d = G.dist(o.x, o.y, f[0], f[1]); if (d < bd || (d === bd && best && o.id < best.o.id)) { bd = d; best = { o, r }; } }
+      }
+      return best;
+    };
+    if (works.length && !keep) for (const v of have.construtor.slice()) if (!v.aboard && !v.ug && !v.held && !works.some(b => V.reachesWork(v, b))) {
+      have.construtor.splice(have.construtor.indexOf(v), 1); v.job = 0;
+      const p = swapFor();
+      if (p) { have[p.r].splice(have[p.r].indexOf(p.o), 1); p.o.role = 'construtor'; p.o.job = 0; have.construtor.push(p.o); v.role = p.r; have[p.r].push(v); G.Life && G.Life.onRole(p.o, p.r); G.Life && G.Life.onRole(v, 'construtor'); }
+      else { v.role = null; none.push(v); left.add(v); }
+    }
+    let lone = null; const uncovered = () => { lone = works.find(b => !have.construtor.some(o => V.reachesWork(o, b))) || null; };
+    const fits = (v, r) => r !== 'construtor' || !works.length || (lone ? V.reachesWork(v, lone) : works.some(b => V.reachesWork(v, b)));
     // unassigned first
     const deficit = () => WORK_ROLES.filter(r => have[r].length < want[r]).sort((a, b) => (have[a].length - want[a]) - (have[b].length - want[b]));
     for (const v of none) {
-      const d = deficit(); const r = d.length ? pickRoleFor(v, d) : 'coletor';
-      v.role = r; have[r].push(v); G.Life && G.Life.onRole(v, null);
+      if (works.length) uncovered();
+      const d = deficit().filter(r => fits(v, r)); const r = d.length ? pickRoleFor(v, d) : 'coletor';
+      v.role = r; have[r].push(v); G.Life && G.Life.onRole(v, left.has(v) ? 'construtor' : null);
     }
     // move surplus to deficit (max 3 changes) — never at a load (keep): the trades come back as they were saved, and the
     // world's own step deals them out anew, four seconds on (L-419)
@@ -649,7 +813,8 @@
       if (!sur.length) break;
       // choose surplus role with biggest surplus
       sur.sort((a, b) => (have[b].length - want[b]) - (have[a].length - want[a]));
-      const from = sur[0]; const to = pickRoleForList(have[from], d);
+      if (works.length) uncovered();
+      const from = sur[0]; const to = pickRoleForList(have[from], d, fits); if (!to) break;
       const v = to.v; const r = to.r;
       have[from].splice(have[from].indexOf(v), 1); v.role = r; v.job = 0; have[r].push(v); changes++; G.Life && G.Life.onRole(v, from);
     }
@@ -664,12 +829,15 @@
     if (roles.includes('sacerdote') && v.traits.includes('Devoto')) return 'sacerdote';
     return roles[0];
   }
-  function pickRoleForList(list, roles) {
+  function pickRoleForList(list, roles, fits) {
     // prefer a villager who isn't busy with a task
     let best = null, bs = -1e9;
     for (const v of list) {
       for (const r of roles) {
         let s = (v.task ? 0 : 2) + G.R();
+        // (one who cannot take this trade here — a builder who reaches none of the town's works, L-389 —: after the draw, so
+        // the world's chance runs the same whoever is left out)
+        if (fits && !fits(v, r)) continue;
         if (r === 'cacador') s += v.courage * 3;
         if (r === 'guerreiro') s += v.courage * 3 + (v.g === 'm' ? 1 : 0) + (v.kills || 0) * 0.5;
         if (r === 'sacerdote' && v.traits.includes('Devoto')) s += 3;
@@ -998,6 +1166,8 @@
     for (const b of [...S.buildings.values()]) {
       if (b.set !== s.id) continue;
       if (b.type === 'cemetery') { b.set = 0; continue; }
+      V.siteGone(b, 'abandono'); // (what a work had got is left to the wind with it, in the ledger)
+      V.keptGone(b, 'abandono'); // (and what a house or a shelf kept: a ruin keeps nothing, L-377)
       if (b.type === 'farm' || b.type === 'campfire' || !b.built) { V.removeBuilding(b); continue; }
       // (a house left to the wind keeps no coins: what was in it is lost, in the ledger)
       if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
@@ -1101,6 +1271,7 @@
   V.onNewDay = function () {
     V.forget();
     strays();
+    brickBack();
     checkExpansion();
     V.updateEra();
     G.Politics.onNewDay();

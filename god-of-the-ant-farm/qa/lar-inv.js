@@ -16,9 +16,9 @@
   // (what keeps someone in a house: asleep, the evening at home, sheltering from a storm, the end of the day's work, hiding
   // from an enemy, a secret meeting in a house that is a front, the god's body)
   const IN_OK = { sleep: 1, lar: 1, shelter: 1, goHome: 1, hide: 1, conclave: 1, avatar: 1 };
-  // (the pantries changed outside the ledger by the files of other owners still name their places: T-130 — the rule says
-  // so at S4 until they close; then it is S2)
-  const PANTRY_SEV = 4;
+  // (a pantry changed outside the ledger: S2 — the last two writes by hand, the end of the day at home and the tribute,
+  // passed through the ledger in the Patch 2, T-130)
+  const PANTRY_SEV = 2;
   let night0 = new Map(), night0S = null; // (since when each grown one has been out at night with nothing to do)
   let held0 = new Map(), held0S = null; // (since when each little one has been kept at home by day with nobody minding)
   let baby0 = new Map(), baby0S = null; // (since when each baby has been in the wrong arms — or in none — with the right ones within reach)

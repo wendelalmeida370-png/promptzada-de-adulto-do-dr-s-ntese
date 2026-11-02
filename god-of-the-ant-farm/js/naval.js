@@ -872,7 +872,9 @@
       if (f.stock.wood < 4 && f.stock.stone >= 12) for (const b of S.buildings.values()) {
         if (b.type !== 'doca' || b.built || G.Village.facOfSet(b.set) !== f.id) continue;
         const r = Math.min(4, Math.floor(b.need.wood - (b.incoming.wood || 0)));
-        if (r >= 1) { b.need.wood -= r; b.need.stone += Math.ceil(r * 1.5); }
+        // (the work's bill and its need together, by the village: the need alone traded made wood come into the quay with
+        // no line in the ledger, and stone vanish in it, L-416)
+        if (r >= 1) G.Village.swapBill(b, 'wood', r, 'stone', Math.ceil(r * 1.5));
         break;
       }
       const docks = Nv.docksOf(f.id); if (!docks.length) continue;

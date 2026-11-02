@@ -477,13 +477,19 @@
   // ------------------------------ the people's errands below ------------------------------
   // kind: explore · paint · guano · pilgrim · oracle · tomb · refuge · mine · raid (against outlaws)
   const ACT = { explore: '', paint: 'craft', guano: 'dig', pilgrim: 'pray', oracle: 'pray', tomb: 'mourn', refuge: 'sittalk', mine: 'mine', raid: 'fight', treasure: 'dig' };
-  // (o.force: given over what one does — but an errand from outside asks first the hands' rule, D-094: the leg of an operation
-  // under way, a load with somewhere to go, a task of more priority wait; the miner's shift is his own trade (o.job), and the
-  // flight from an attack cannot wait (o.urge))
+  // (o.force: given over what one does — but an errand from outside asks first the hands' rule, D-094, each by what it is
+  // (D-100): the oracle going up and the children's dare ask the whole of it — the leg of an operation under way, a load with
+  // somewhere to go, a task of more priority wait —; the miner's shift is his own trade (o.job) and waits only for busy hands
+  // below 3 — a purchase does not go down the gallery: the oracle's call took a woman with one on its way home, and it sat
+  // with her in the cave all day, L-395 —; and the flight from an attack cannot wait (o.urge): the load goes with them, and
+  // gets where it goes when they come out)
   C.give = function (v, kind, cv, goal, o) {
     const m = nearestMouth(cv, v.x, v.y); if (!m) return false;
     const t = Object.assign({ type: 'caverna', kind, cave: cv.id, goal, pri: 1.3, st: 0, stay: rr(8, 14), torch: 1, mouth: m }, o || {});
-    if (o && o.force) { if (!o.job && !o.urge && G.Vg.busy && G.Vg.busy(v, t)) return false; G.Vg.setTask(v, t); return true; }
+    if (o && o.force) {
+      const wait = o.urge ? false : o.job ? ((t.pri || 0) < 3 && G.Vg.handsBusy && G.Vg.handsBusy(v)) : (G.Vg.busy && G.Vg.busy(v, t));
+      if (wait) return false; G.Vg.setTask(v, t); return true;
+    }
     return G.Vg.give(v, t);
   };
   C.run = function (v, t, dt, H) {
@@ -514,11 +520,20 @@
       case 4: if (walkUG(v, t, dt)) {
         exit(v); const carry = t.carry; H.end(v);
         if (carry && carry.k === 'guano') manure(v, carry.n, cv);
-        // (the find into the hands — free, or holding the same plain good —; with another thing in them it stays in the rock,
-        // the deposit given it back: the find was written over the hands, and what they held went with no line, L-202)
+        // (the mine's ore leaves the vein here, into the hands, in the ledger — 'mina', as at the pithead in the skip —, and
+        // only then the town counts it and pays the miner (G.Eco.mined); with the hands holding something else it stays in
+        // the vein. Never at the face: a death, a save or busy hands kept it in the rock, counted and paid — L-381)
+        else if (carry && carry.dep) {
+          const dep = (G.S.ores || []).find(q => q.id === carry.dep); const n = dep ? Math.min(carry.n, dep.amt) : 0; const D = G.Depot;
+          if (n > 0 && D.room('v:' + v.id, carry.k, { pack: true }) + 1e-6 >= n) {
+            dep.amt -= n; const r = D.make('v:' + v.id, carry.k, n, { code: 'mina', by: v.id, pack: true });
+            if (r.ok) { G.Eco && G.Eco.mined && G.Eco.mined(v, cv.mine, dep, r.n); G.Vg.setTask(v, { type: 'deliver', pri: 1.1 }); }
+          }
+        }
+        // (a cave's find into the hands — free, or holding the same plain good —; with another thing in them it stays in the
+        // rock: the find was written over the hands, and what they held went with no line, L-202)
         else if (carry && carry.n > 0) {
           if (G.Vg.fillHands(v, carry.k, carry.n)) G.Vg.setTask(v, { type: 'deliver', pri: 1.1 });
-          else { const dep = cv.mine && (G.S.ores || []).find(q => q.id === cv.deposit); if (dep && (carry.k === 'minerio' || carry.k === 'ouro')) dep.amt += carry.n; }
         }
         after(v, t, cv);
       } break;
@@ -562,8 +577,9 @@
         const o = U.ore[t.vein]; const def = ORES[o];
         const dep = cv.mine && (G.S.ores || []).find(q => q.id === cv.deposit);
         if (dep) {
-          // the mine's deposit: what comes out of the face is what the town counts
-          if (dep.amt > 0) { const n = Math.min(dep.amt, dep.kind === 'ouro' ? 1 + (G.R() < 0.4 ? 1 : 0) : 2 + (G.R() < 0.5 ? 1 : 0)); dep.amt -= n; t.carry = { k: dep.kind === 'ouro' ? 'ouro' : 'minerio', n }; t.ore = o; G.Eco && G.Eco.mined && G.Eco.mined(v, cv.mine, dep, n); }
+          // the mine's deposit: the face only marks what the miner will bring out — the vein gives it, and the town counts it,
+          // when it comes out in the hands (the way out, case 4: L-381)
+          if (dep.amt > 0) { const n = Math.min(dep.amt, dep.kind === 'ouro' ? 1 + (G.R() < 0.4 ? 1 : 0) : 2 + (G.R() < 0.5 ? 1 : 0)); t.carry = { k: dep.kind === 'ouro' ? 'ouro' : 'minerio', n, dep: dep.id }; t.ore = o; }
         } else if (def) { t.carry = { k: def.good, n: def.good === 'food' ? 4 : def.good === 'joias' ? 1 : def.good === 'ouro' ? 1 : 2 }; t.ore = o; }
         U.oreN[t.vein] = Math.max(0, U.oreN[t.vein] - 1);
         // the vein gives out: the miners have dug a new gallery into the rock
@@ -571,7 +587,7 @@
           const vx = t.vein % N, vy = (t.vein / N) | 0;
           for (const [dx, dy] of D4) { const j = (vy + dy) * N + vx + dx; if (U.id[j] && U.id[j] !== cv.id && cv.mine) linkCave(cv, C.get(U.id[j]), vx, vy); }
           U.ore[t.vein] = 0; U.k[t.vein] = DUG; U.id[t.vein] = cv.id; cv.n++; cv.dug = (cv.dug || 0) + 1; U.ver++;
-          if (dep) { if (dep.amt > 0) seedDeposit(cv, dep, 2); } else seedVeins(t.vein, cv);
+          if (dep) { if (dep.amt - (t.carry ? t.carry.n : 0) > 0) seedDeposit(cv, dep, 2); } else seedVeins(t.vein, cv);
         }
         t.done = true;
       }

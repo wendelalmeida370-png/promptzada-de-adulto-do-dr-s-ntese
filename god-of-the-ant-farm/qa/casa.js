@@ -222,13 +222,17 @@ if (hb) {
     const from = hHome; const L0 = S.ledgerN; const pantry0 = D.get('h:' + from.id, 'food');
     // (up to h7's time: a small town of few builders takes longer — Hedeby, of 13 people, in the final metrópole, T-201)
     const done = fine(3000, () => hb.built);
-    const moved = book(e => e[0] > L0 && e[8] === 'mudança' && e[3] === 'h:' + from.id && e[4] === 'h:' + hb.id);
+    // (the move into the new house, from the house the family lives in when it stands — in the generation 7's metrópole the
+    // family's house was bought in the middle, the land dear, and the family lived the last days of the work in another,
+    // #3270: the move came from there, T-270)
+    const moved = book(e => e[0] > L0 && e[8] === 'mudança' && /^h:/.test(e[3]) && e[3] !== 'h:' + hb.id && e[4] === 'h:' + hb.id);
+    const via = [...new Set(moved.map(e => e[3]).filter(r => r !== 'h:' + from.id))];
     const fam = [hv, S.villagers.get(hv.partner)].filter(Boolean);
     const arranged = (hv.diary || []).some(e => /Arrumamos a casa nova/.test(e.txt));
     const people = book(e => e[0] > L0 && e[8] === 'obra-casa' && e[3] === 'h:' + hb.id && e[4] === 'f:' + set.fac)[0]; // (the coins set aside, to the people)
     // (what the house cost the family is kept with it: the materials and the ground it paid — L-236)
     fine4 = done && fam.every(v => v.home === hb.id) && hb.dono === hv.id && !hb.encomenda && moved.length >= 1 && arranged && !!people && hPaid > 0 && Math.abs(costOf(hb) - hPaid) < 0.01;
-    info = `${done ? `levantada no dia ${Math.round(S.day)}` : 'NÃO terminou em 3000 s'}: ${fam.map(v => `${v.name} mora ${v.home === hb.id ? 'nela' : 'em #' + v.home}`).join(', ')}; a mudança no livro: ${moved.map(e => `${e[6]} ${e[5]}`).join(', ') || 'NADA'} (a despensa da casa velha tinha ${r2(pantry0)}); dona: ${hb.dono === hv.id ? 'a família' : hb.dono}; no diário: ${arranged ? '«Arrumamos a casa nova…»' : 'NADA da arrumação'}; as moedas guardadas na obra ao povo: ${people ? people[6] + ' (livro ' + people[0] + ')' : 'NADA'}; o custo guardado: ${costOf(hb)} (pagou ${hPaid})`;
+    info = `${done ? `levantada no dia ${Math.round(S.day)}` : 'NÃO terminou em 3000 s'}: ${fam.map(v => `${v.name} mora ${v.home === hb.id ? 'nela' : 'em #' + v.home}`).join(', ')}; a mudança no livro: ${moved.map(e => `${e[6]} ${e[5]}`).join(', ') || 'NADA'} (a despensa da casa velha tinha ${r2(pantry0)}${via.length ? `; a mudança veio de ${via.join(', ')}, a casa onde a família morava quando a obra ficou pronta` : ''}); dona: ${hb.dono === hv.id ? 'a família' : hb.dono}; no diário: ${arranged ? '«Arrumamos a casa nova…»' : 'NADA da arrumação'}; as moedas guardadas na obra ao povo: ${people ? people[6] + ' (livro ' + people[0] + ')' : 'NADA'}; o custo guardado: ${costOf(hb)} (pagou ${hPaid})`;
   }
   ok('h4 levantar e mudar', fine4 && !bad().length, info);
 }
@@ -311,10 +315,18 @@ if (hb) {
     K.order(v);
     const b = K.waiting(v); const p = S.villagers.get(v.partner);
     if (b && p) {
-      G.Village.kill(v, 'teste'); const t0 = S.clock;
-      const done = fine(3000, () => b.built || !S.buildings.has(b.id));
-      fine7 = done && b.built && p.home === b.id && b.dono === p.id;
-      info = `${v.name} encomendou a casa #${b.id} e morreu no meio da obra: ${b.built ? 'a obra terminou' : S.buildings.has(b.id) ? `a obra NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'a obra SUMIU'}; ${p.name} ${p.home === b.id ? 'mudou para ela' : 'NÃO mudou (mora em #' + p.home + ')'} e é ${b.dono === p.id ? 'a dona' : 'NÃO a dona (' + b.dono + ')'}${warNote(w, t0)}`;
+      G.Village.kill(v, 'teste'); const t0 = S.clock; const fam0 = b.encomenda ? b.encomenda.fam.slice() : [];
+      // (the partner moves and owns it; when the world took the partner too before it stood — a war in the middle: in the
+      // generation 7's Tenochtitlan, with the pasture's minimum, L-396, the Guerra do Monte Barune called Tenoch to arms on day
+      // 64, and he fell —, the family left of the commission moves, and the house is the first of it's, as act-casa.js says:
+      // T-280)
+      let gone = null; const away = () => !S.villagers.has(p.id) || p.captive;
+      const done = fine(3000, () => { if (!gone && away()) gone = { d: Math.round(S.day), how: p.captive ? 'cativo' : ((S.dead && S.dead.get && S.dead.get(p.id)) || {}).cause || '?' }; return b.built || !S.buildings.has(b.id); });
+      const left = fam0.map(id => S.villagers.get(id)).filter(o => o && !o.captive && o.set === b.set);
+      fine7 = done && b.built && (!away() ? p.home === b.id && b.dono === p.id : left.length > 0 && left.every(o => o.home === b.id) && b.dono === left[0].id);
+      const whose = !away() ? `${p.name} ${p.home === b.id ? 'mudou para ela' : 'NÃO mudou (mora em #' + p.home + ')'} e é ${b.dono === p.id ? 'a dona' : 'NÃO a dona (' + b.dono + ')'}`
+        : `${p.name} ${gone && gone.how === 'cativo' ? 'foi levado cativo' : `morreu (${gone ? gone.how : '?'})`} no dia ${gone ? gone.d : '?'}, antes de a casa ficar pronta: a família da encomenda que sobrou (${left.map(o => o.name).join(', ') || 'ninguém'}) ${left.length && left.every(o => o.home === b.id) ? 'mudou para ela' : 'NÃO mudou'}, e a dona é ${left.length && b.dono === left[0].id ? left[0].name + ' (a primeira dela)' : 'OUTRA (' + b.dono + ')'}`;
+      info = `${v.name} encomendou a casa #${b.id} e morreu no meio da obra: ${b.built ? 'a obra terminou' : S.buildings.has(b.id) ? `a obra NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'a obra SUMIU'}; ${whose}${warNote(w, t0)}`;
     } else info = `${v.name}: nenhuma obra encomendada`;
   }
   ok('h7 morre no meio da obra', fine7 && !bad().length, info);

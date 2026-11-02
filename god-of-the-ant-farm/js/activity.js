@@ -256,7 +256,7 @@
 
   // ------------------------------ weight, packing, strength ------------------------------
   // (a unit of each good, as a load in the arms: stone and ore are heavy, cloth and jewels light)
-  const WT = { food: 1, wood: 1.6, stone: 3, minerio: 3, ouro: 3.2, argila: 2.5, sal: 1.6, vinho: 2.2, azeite: 2.2, mel: 2, cerveja: 2, pulque: 2, tecido: 0.6, la: 0.5, seda: 0.3, joias: 0.2, moedas: 0.05, ferramentas: 2, armas: 2.2, ceramica: 1.2, couro: 0.8, peles: 0.8, marfim: 2.5, perolas: 0.1, coral: 0.8, bacalhau: 1, atum: 1.2, carne_seca: 1, queijo: 1, cera: 0.8, incenso: 0.6, especiarias: 0.6, cafe: 1, cacau: 1, tamaras: 1, plumas: 0.2, chifre: 1.5, pele_rara: 1, couro_exotico: 0.9, oleo: 2.2, camarao: 1, cocar: 0.3 };
+  const WT = { food: 1, wood: 1.6, stone: 3, minerio: 3, ouro: 3.2, argila: 2.5, tijolo: 2.4, adobe: 2.8, sal: 1.6, vinho: 2.2, azeite: 2.2, mel: 2, cerveja: 2, pulque: 2, tecido: 0.6, la: 0.5, seda: 0.3, joias: 0.2, moedas: 0.05, ferramentas: 2, armas: 2.2, ceramica: 1.2, couro: 0.8, peles: 0.8, marfim: 2.5, perolas: 0.1, coral: 0.8, bacalhau: 1, atum: 1.2, carne_seca: 1, queijo: 1, cera: 0.8, incenso: 0.6, especiarias: 0.6, cafe: 1, cacau: 1, tamaras: 1, plumas: 0.2, chifre: 1.5, pele_rara: 1, couro_exotico: 0.9, oleo: 2.2, camarao: 1, cocar: 0.3 };
   D.weight = (k, n) => (WT[k] === undefined ? 1 : WT[k]) * (n || 0);
   // what one body can lift: a grown body more than a child or an old one; a lost arm, sickness and tiredness count
   D.strength = function (v) {
@@ -299,6 +299,8 @@
   function keyStore(c) { const op = c && c.op ? A.get(c.op) : null; if (op) return op.keys || (op.keys = []); const S = G.S; return S.actKeys || (S.actKeys = []); }
   function seen(c) { if (!c || !c.key) return null; const L = keyStore(c); for (let i = L.length - 1; i >= 0; i--) if (L[i][0] === c.key) return L[i]; return null; }
   function remember(c, n) { if (!c || !c.key) return; const L = keyStore(c); L.push([c.key, r4(n)]); if (L.length > 160) L.splice(0, L.length - 120); }
+  // (a step undone is no step taken: its key is let go, so that the same step tried again happens — L-240)
+  function forget(c) { if (!c || !c.key) return; const L = keyStore(c); for (let i = L.length - 1; i >= 0; i--) if (L[i][0] === c.key) { L.splice(i, 1); return; } }
 
   // ============================== writing ==============================
   // a transfer: checked whole first (the source has it, free of others' reservations; the destination has room; the
@@ -394,14 +396,19 @@
     if (add > 0 && S.stats) { if (k === 'food') S.stats.foodProduced += add; if (k === 'wood') S.stats.woodProduced += add; if (k === 'stone') S.stats.stoneProduced += add; }
     return add;
   };
-  // two transfers that are one deal (goods for coin): both or neither
+  // two transfers that are one deal (goods for coin): both or neither. With a key, the deal is applied once: done again it
+  // does nothing; undone, it was never done — the first leg's key is let go with it (L-240: it stayed, and the same deal
+  // tried again moved the coins and not the goods)
   D.swap = function (x, y, c) {
+    c = c || {}; const ca = Object.assign({}, c, { key: c.key ? c.key + ':a' : undefined }), cb = Object.assign({}, c, { key: c.key ? c.key + ':b' : undefined });
+    // (both legs already applied: the deal was done; one leg only is no deal — it is let go, and the deal is made whole)
+    if (c.key) { const a = seen(ca), b = seen(cb); if (a && b) return { ok: true, n: a[1], m: b[1], again: true }; if (a || b) { forget(ca); forget(cb); } }
     const okX = D.can(x[0], x[1], x[2], x[3], c), okY = D.can(y[0], y[1], y[2], y[3], c);
     if (!okX.ok) return okX; if (!okY.ok) return okY;
-    const r1 = D.move(x[0], x[1], x[2], x[3], Object.assign({}, c, { key: c.key ? c.key + ':a' : undefined }));
+    const r1 = D.move(x[0], x[1], x[2], x[3], ca);
     if (!r1.ok) return r1;
-    const r2 = D.move(y[0], y[1], y[2], y[3], Object.assign({}, c, { key: c.key ? c.key + ':b' : undefined }));
-    if (!r2.ok) { D.move(x[1], x[0], x[2], r1.n, Object.assign({}, c, { code: 'desfeito', key: undefined })); return r2; } // (checked a moment ago: cannot fail, but never half a deal)
+    const r2 = D.move(y[0], y[1], y[2], y[3], cb);
+    if (!r2.ok) { D.move(x[1], x[0], x[2], r1.n, Object.assign({}, c, { code: 'desfeito', key: undefined })); forget(ca); return r2; } // (checked a moment ago: cannot fail, but never half a deal)
     return { ok: true, n: r1.n, m: r2.n };
   };
   // would it go through? (the same checks as move, nothing changed)
@@ -471,7 +478,7 @@
 
   // ============================== operations ==============================
   // (the modules of the activities hang their parts here: a body taken or given back, the diary, the canon, the checker)
-  A.hooks = { possess: [], diary: [], canon: [], tick: [], gone: [] }; // (tick: once a second of the world; gone: (v, why) when one leaves for good or is taken)
+  A.hooks = { possess: [], diary: [], canon: [], tick: [], gone: [], leg: [] }; // (tick: once a second of the world; gone: (v, why) when one leaves for good or is taken; leg: (v) → the leg one holds outside an operation of here, or null)
   const ops = () => G.S.acts || (G.S.acts = []);
   const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
   const live = op => !!(op && LIVE[op.st]);
@@ -546,6 +553,20 @@
     return { op, role: op.roles[v.id || v].r, me: op.roles[v.id || v] };
   };
   A.role = v => { const r = A.roleOf(v); return r ? { op: r.op.id, def: r.op.def, role: r.role, step: v.task && v.task.op === r.op.id ? v.task.st : null } : null; };
+  // the leg of an operation under way that this person holds now — the crate kept for one until it is delivered, the
+  // material fetched for a work until it is there, a sale at the counter —, or null: what makes the hands busy for an errand
+  // from outside (Vg.busy, D-094). The operation's own definition says it (def.leg(op, v) → a word, or null), read from the
+  // operation, not from the task (a body given back holds what it took); a leg that is no operation of here — a sale at a
+  // stall, a work's load — says it by its hook. Read from the world at the moment: nothing kept
+  A.leg = function (v) {
+    if (!v) return null;
+    const r = A.roleOf(v); if (r) { const def = A.DEFS[r.op.def]; const l = def && def.leg ? def.leg(r.op, v) : null; if (l) return l; }
+    for (const f of A.hooks.leg) { const l = f(v); if (l) return l; }
+    return null;
+  };
+  // (the material fetched for a work — the builder's walk to the store and back with it to the site, villagers.js runBuild st
+  // 1 and 2 — is a leg until it is there; the work of days at the site is not)
+  A.hooks.leg.push(v => { const t = v.task; return t && t.type === 'build' && (t.st === 1 || t.st === 2) ? 'obra' : null; });
   A.of = v => ops().filter(op => op.roles && op.roles[v.id || v]);
   // who can still work: alive, free, not a captive, not jailed, not at sea, not in a cave
   A.able = function (v) { return !!(v && G.S.villagers.has(v.id) && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && v.age >= 12 && v.hp > 15); };
@@ -703,6 +724,17 @@
     vender: { act: 'sell', dur: 0, contact: 0, hands: 0 },
     comprar: { act: 'buy', dur: 0, contact: 0, hands: 0 },
   };
+  // a gesture another module needs (the trades, the house, the tavern): registered once, by its name — the first one stands
+  // (a second with another act would change what the first one's people do, in silence). Its act must be one the 3D poses
+  // (people3d.js; the coverage matrix, qa/matriz.js, fails on an act with no pose)
+  A.addAnim = function (name, spec) {
+    if (!name || !spec || typeof spec.act !== 'string') return null;
+    if (A.ANIM[name]) { if (A.ANIM[name].act !== spec.act) oops('gesto ' + name + ' já existe com outro ato', new Error(A.ANIM[name].act + ' ≠ ' + spec.act)); return A.ANIM[name]; }
+    return (A.ANIM[name] = { act: spec.act, dur: fin(spec.dur) ? spec.dur : 0, contact: fin(spec.contact) ? spec.contact : 0, hands: spec.hands || 0 });
+  };
+  // (the house's own gestures, asked by act-lar.js: eating and sitting, on acts the 3D already poses)
+  A.addAnim('comer', { act: 'eat', dur: 1.6, contact: 1.2, hands: 1 });
+  A.addAnim('sentar', { act: 'sit', dur: 0, contact: 0, hands: 0 });
 
   // ============================== the body: offers, begin, commit ==============================
   // (what the god's body can do here, by the same steps the people use; offers only read and may be asked from a frame,

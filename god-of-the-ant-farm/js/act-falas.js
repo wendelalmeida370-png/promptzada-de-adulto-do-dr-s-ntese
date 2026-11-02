@@ -58,6 +58,22 @@
       // a people without coin: exchange, not price
       troca_preco: ['{bem}? Troco por {preco}.', 'Dou {bem} por {preco}.'],
       troca_pechinchar: ['{preco} é muito. Te dou {oferta}.', 'Aceita {oferta} em troca?'],
+      // the tavern (act-taverna.js)
+      pedir_taverna: ['Me vê {bem}!', '{bem}, por favor.', 'Hoje eu quero {bem}.'],
+      servir_taverna: ['Aqui está: {bem}.', 'Saindo {bem}! Bom proveito.', '{bem}, como pediu.'],
+      acabou: ['Acabou {bem}! Só amanhã.', 'Hoje não tem mais {bem}, amigo.'],
+      cheia: ['Está lotado! Volte mais tarde.', 'Não cabe mais ninguém hoje.'],
+      fechando: ['Vamos fechar! Todo mundo para casa.', 'Última rodada já foi. Boa noite a todos!'],
+      sem_servico: ['Ninguém vem servir... vou embora.', 'Cansei de esperar.'],
+      // the baths (act-servicos.js)
+      banho_quente: ['Ah, a água está quente hoje!', 'Que calor bom nesta água.', 'Isto sim é descanso.'],
+      banho_frio: ['Brr! A água está fria hoje.', 'Sem fogo na fornalha... água gelada.', 'Fria, mas lava do mesmo jeito.'],
+      termas_cheia: ['Está cheio. Volto outra hora.', 'Não cabe mais ninguém na água.'],
+      // the theatre (act-lazer.js)
+      teatro_comeca: ['Silêncio! Vai começar.', 'Atenção, povo: a peça começa!', 'Que comece o espetáculo!'],
+      teatro_aplausos: ['Bravo! Bravo!', 'Que peça! Valeu cada moeda.', 'Mais uma! Mais uma!'],
+      teatro_cheio: ['Não cabe mais ninguém nas fileiras.', 'Lotado. Fica para amanhã.'],
+      teatro_sem_peca: ['Não veio ator nenhum... hoje não tem peça.', 'Sem atores, sem espetáculo. Devolvem a entrada.'],
     },
     grego: {
       pregao: ['Olha o {bem}! Melhor que o de Corinto!', '{bem} da ágora! Quem vai querer?'],
@@ -74,6 +90,8 @@
       conferido: ['O escriba pode anotar: {got}. Tudo certo.', 'Contado e certo: {got}.'],
     },
     nordico: {
+      pedir_taverna: ['Mais {bem}, taverneiro!', 'Enche o meu corno: {bem}!'],
+      fechando: ['Fora, todos! O salão fecha.', 'Chega de hidromel por hoje. Para casa!'],
       pedir_ajuda: ['Ei! Uma mão nesta caixa de {bem}, que pesa como um touro.', 'Preciso de outro braço aqui!'],
       pregao: ['{bem}! Pesado na balança, honesto no preço!', 'Olha o {bem}, trazido pelo mar!'],
       preco: ['{bem}? {preco}, pesadas na balança.', '{preco}. Pode pesar.'],

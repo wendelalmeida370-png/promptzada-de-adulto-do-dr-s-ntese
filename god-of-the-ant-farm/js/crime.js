@@ -176,6 +176,9 @@
     if (t.k >= t.pts.length) { const set = S.settlements.get(v.set); if (!t.loop || !set || !(G.isNight() || G.isEvening())) return H.end(v); t.pts = rondaPoints(set); t.k = 0; t.st = 0; return; }
     if (t.loop && !(G.isNight() || G.isEvening())) return H.end(v);
     if (G.isNight()) v.torch = true;
+    // (on the way and at each crossing, the round sees what the soldier's post sees: a smuggler with the stolen load — the
+    // theft is a night's work, L-386, and the post sleeps; one rule for both, E.spotSmuggler, L-405)
+    if (t.st > 0) E.spotSmuggler(v, dt);
     if (t.st === 0) { const [x, y] = t.pts[t.k]; if (!H.goto(v, x, y, false, 4000)) { t.k++; return; } t.st = 1; t.walk = 0; return; }
     if (t.st === 1) { t.walk += dt; if (H.move(v, dt, 0.85)) { t.st = 2; v.actT = 0; } else if (t.walk > 60) { t.k++; t.st = 0; } return; }
     v.act = 'guard'; v.moving = false;
@@ -280,7 +283,8 @@
   }
   // the bread of whoever is held — in a cell, bound, condemned —, from the town's store: one rule for every hand that
   // holds someone (the cells here; justice.js's bound and condemned, who waited for their hour with nothing — L-170)
-  Cr.feed = function (v, setId) { if (v.hunger > 60) { const f = G.Fac.ofSet(setId); if (f && f.stock.food >= 1) { f.stock.food -= 1; v.hunger = Math.max(0, v.hunger - 45); } } };
+  // (the prisoner's bread, from the town's store — in the ledger: 'preso')
+  Cr.feed = function (v, setId) { if (v.hunger > 60) { const f = G.Fac.ofSet(setId); if (f && G.Depot.get('f:' + f.id, 'food') >= 1 && G.Depot.use('f:' + f.id, 'food', 1, { code: 'preso', by: v.id }).ok) v.hunger = Math.max(0, v.hunger - 45); } };
   function release(v, b, how, H) {
     const S = G.S; const [dx, dy] = G.Vg.door(b);
     v.jail = 0; v.jailUntil = 0; v.inside = 0; v.sleeping = false; v.x = dx; v.y = dy;

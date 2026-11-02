@@ -40,8 +40,9 @@ function houseIn(set, min, pred, what) {
   taken.add(h.id); return h;
 }
 // (a house that can send one of its own by the game's rule: a grown one with no trade, and no hard worker — the wish to shop
-// outweighs the work only for such a one; a house of tradesmen and hard workers sends nobody, L-331, open: in the new
-// metropolis the first house of the town had a weaver and a hard-working farmer, and nobody went in 90 s, T-179. Grown is
+// outweighs the work only for such a one, until the house's wait grows past its gap (L-331, fixed in the Patch 2: before it a
+// house of tradesmen and hard workers sent nobody ever); in the new metropolis the first house of the town had a weaver and a
+// hard-working farmer, and nobody went in 90 s, T-179. Grown is
 // 16 or more: under it the child's choice — childDecide — never asks the wish to shop, though the wish counts from 14)
 const grown16 = h => adults(h).filter(v => v.age >= 16);
 const canSend = h => grown16(h).some(v => !(v.job || (E.isJobRole && E.isJobRole(v.role))) && !(v.work > 1));
@@ -93,8 +94,8 @@ const calm = (set, h) => !(S.execs || []).some(e => e.set === set.id && e.phase 
 // fed, hands free, not called to the square, not under the world's hand (a sentence, a storm, anything that does not wait)
 // — through the house's own errand door, up to three times. In the old metropolis a storm took the one sent in c8, the execution of two of the house took
 // the rest of the day, and the next morning the house tried at 0,06, before any stall or the fair opened, and waited half
-// a day (L-345, open); in c9 the builder of the house went from obra to obra and the fisher's work outweighed the wish
-// (L-331, open): T-185)
+// a day (before the L-345); in c9 the builder of the house went from obra to obra and the fisher's work outweighed the wish
+// (before the L-331): T-185)
 function hand(h, done) {
   const r = { sent: [], t: S.clock };
   const free = q => !(q.task && (GATHER[q.task.type] || q.task.type === 'shelter' || (q.task.pri || 0) >= 2)) && !(q.carry && q.carry.n > 0);
@@ -292,7 +293,11 @@ const fair = stockFair(set);
   if (carrier) {
     const k = carrier.carry.k, n = carrier.carry.n; const L2 = S.ledgerN;
     mode = 'fixa'; cap = held(); const room0 = D.room(H, k);
-    const home = fine(240, () => book(e => e[0] > L2 && e[3] === 'v:' + carrier.id && e[5] === k).length > 0 || watch());
+    // (and it stays as full as the house until the purchase is home: what the family eats from the house on the way is room
+    // the test's hand takes again — the case is a purchase that does not fit. In the P2's final tree the family ate 1 of food
+    // while Cassandra walked 38 tiles home with 1 of cloth, and the cloth fitted in the chest: nothing on the floor, T-289)
+    const arrived = () => book(e => e[0] > L2 && e[3] === 'v:' + carrier.id && e[5] === k).length > 0;
+    const home = fine(240, () => { if (arrived()) return true; cap = Math.min(cap, held()); return watch(); });
     const lines = book(e => e[0] > L2 && e[3] === 'v:' + carrier.id && e[5] === k);
     const inHouse = lines.filter(e => e[4] === H && e[8] === 'compra-em-casa').reduce((a, e) => a + e[6], 0);
     const toStore = lines.filter(e => e[4][0] === 'f');
@@ -353,10 +358,13 @@ const fair = stockFair(set);
 // ---------------- c7: a save in the middle of the errand: the errand lost does not hold the house; it buys again, one at a time
 {
   S.time = 0.15; stockFair(set);
-  const h = houseLacking(set, 2, 30); const hid = h.id;
+  // (a house that can send one of its own right after an errand, as the c1's since T-179: then the house's wait has not grown
+  // yet — L-331 —, and the wish of one with a trade, 0,41, is under the day's work, 0,55. In the P2's branch joined with
+  // 4b713db the house of the case had a potter and a fair-keeper, and nobody went in the 120 s after the load, T-290)
+  const h = houseLacking(set, 2, 30, canSend, 'que possa mandar alguém logo depois de um recado (um adulto sem ofício e não trabalhador)'); const hid = h.id;
   // (the errand out at the save is the case's premise: the house sends by its own rule, or the hand of c15 does, with the
-  // clock held in the fair's hours — in the old metropolis on the tip of L-349 the house of c7 sent nobody in 90 s, the
-  // L-331, open, T-185 —; after the load, the house sends again by its own rule: that is the case)
+  // clock held in the fair's hours — in the old metropolis on the tip of L-349 the house of c7 sent nobody in 90 s, before
+  // the L-331, T-185 —; after the load, the house sends again by its own rule: that is the case)
   const hd7 = hand(h, () => false);
   const sent = fine(90, atHour(0.3, () => { hd7.step(); return !!errandOf(h) || watch(); }));
   const str = G.Save.serialize(); if (G.UI && G.UI.select) G.UI.select(null); G.Save.apply(JSON.parse(str)); G.Main.mode = 'game';

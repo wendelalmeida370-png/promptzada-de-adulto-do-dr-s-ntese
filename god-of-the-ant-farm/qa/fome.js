@@ -8,11 +8,13 @@
 // h3 a obra que espera um material que o povo não tem: continua esperando (ninguém fica nela sem fazer nada), e anda quando
 //    o material chega
 // h4 o povo livre fundado de propósito (G.War.foundFree), com fome: sem armazém ninguém escolhe «comer no armazém»; a
-//    fogueira parada no último golpe (o construtor chamado embora), salva e carregada no meio, fica pronta; comem; o deus
+//    fogueira parada no último golpe (o construtor chamado embora), salva e carregada no meio, fica pronta; comem (de dia,
+//    T-299); o deus
 //    derruba a fogueira e, de novo, ninguém fica preso a um comer impossível, e ela volta — os construtores com carga nas
 //    mãos a pousam no chão (L-169); quem a levanta morre no meio e outro termina; um dia inteiro pelo salto sem ninguém
 //    morrer de fome
-// h5 a regra S1 do verificador: uma cidade cujo povo morre de fome com comida no estoque e nenhum armazém
+// h5 a regra S1 do verificador: uma cidade cujo povo morre de fome com comida no estoque e nenhum armazém (a mão da prova tira,
+//    para a olhada, todo armazém do povo — também os das outras cidades dele, que a regra conta —, T-294)
 // h6 a regra S2: alguém morrendo de fome com comida ao alcance, livre, numa cidade calma, preso a outra coisa ou sem afazer
 //    depois de escolher — e não quem vai comer, foge, luta, está entre dois afazeres, condenado ou cativo, nem quem está
 //    numa cidade atacada ou em fogo
@@ -53,37 +55,59 @@ const project = type => { for (const t of [type, 'hut', 'well', 'house']) { cons
 const builtNow = id => { const b = S.buildings.get(id); return !!(b && b.built); };
 const onIt = id => [...S.villagers.values()].filter(v => v.task && v.task.type === 'build' && v.task.id === id);
 const leaveIt = b => { for (const v of onIt(b.id)) Vg.endTask(v); }; // (the builder called away)
-const allIn = b => { for (const k in b.need) b.need[k] = 0; b.incoming = {}; }; // (every material delivered)
+// (every material delivered: into the work, by the ledger — the work is a holder of the depot, 'o:', L-246; what was on its
+// way is let go by the builders' errands ending, leaveIt)
+const allIn = b => { for (const k of Object.keys(b.need)) if (b.need[k] > 0) D.make('o:' + b.id, k, b.need[k], { code: 'teste' }); };
+// (the next builder, on purpose: waiting for one of the town's builders to come free left the case to luck — with the busy
+// hands of the D-094 the world took another way from the first seconds (a farmer kept his errand to a cave against a second
+// call to it), and the two builders of Roma were each on a site of their own till the night: nobody came to the hut in 120 s,
+// T-244. The town's builder nearest the work, by day, rested and fed, his errand ended, beside it — and the work he takes is
+// the world's own choice, by the door of his trade, Vg.H.workTask)
+const beside = b => { const [cx, cy] = V.center(b); let best = null, bd = 1e9; for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) { if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) continue; if (!W.walkableXY(x + 0.5, y + 0.5)) continue; const d = G.dist(x + 0.5, y + 0.5, cx, cy); if (d < bd) { bd = d; best = [x + 0.5, y + 0.5]; } } return best; };
+function nextBuilder(b) {
+  const [cx, cy] = V.center(b); const far = v => G.dist(v.x, v.y, cx, cy); const full = v => (v.carry && v.carry.n > 1e-6 ? 1 : 0);
+  const o = [...S.villagers.values()].filter(v => v.set === set0.id && v.role === 'construtor' && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && v.hp > 50).sort((p, q) => full(p) - full(q) || far(p) - far(q) || p.id - q.id)[0];
+  const at = beside(b); if (!o || !at) return { o, why: !o ? 'nenhum construtor' : 'nenhum chão ao lado da obra' };
+  if (G.isNight() || S.time > 0.6) S.time = 0.3;
+  Vg.endTask(o); o.sleeping = false; o.inside = 0; o.energy = Math.max(o.energy, 90); o.hunger = Math.min(o.hunger, 20);
+  o.x = at[0]; o.y = at[1]; o.path = null;
+  // (what he carries with no place to go, into the people's store first, by the ledger: with it in his hands the door of his
+  // trade sends him to deliver it, and then to another work — in the P1's branch, with the worlds of the generation 7, Quinto
+  // of Roma came with 2 of stone and the case's work stayed at 0,7. A load with a destination stays: it goes where it goes)
+  if (o.carry && o.carry.n > 1e-6 && o.carry.k !== 'water' && !o.carry.op && !o.carry.to) Vg.toStore(o, f0.id, 'teste');
+  Vg.H.workTask(o);
+  return { o, why: o.task ? (o.task.type === 'build' ? (o.task.id === b.id ? 'tomou a obra' : 'tomou outra obra, #' + o.task.id) : 'foi a ' + o.task.type) : 'ficou sem afazer' };
+}
 
 // ---------------- h1 six sixths ----------------
 let six = 0; for (let k = 0; k < 6; k++) six = Math.min(1, six + 0.5 / 3); // (the strokes of the skip's half steps on a work of 3)
 {
-  const b = project('hut'); let n = 0, done = false;
-  if (b) { allIn(b); b.progress = six; leaveIt(b); done = live(120, () => builtNow(b.id)); n = b.id; }
-  ok('h1 a obra de seis sextos', !!b && six < 1 && done, `seis golpes de 1/6 somam ${six} (${six >= 1 ? 'chega' : 'não chega'} a 1); ${b ? `${b.type}#${n}, todo o material entregue, deixada ali pelo construtor: ${done ? 'outro construtor a terminou' : 'ninguém mais voltou a ela em 120 s'}` : 'nenhuma obra possível'}`);
+  const b = project('hut'); let n = 0, done = false, nb = null;
+  if (b) { allIn(b); b.progress = six; leaveIt(b); nb = nextBuilder(b); done = live(120, () => builtNow(b.id)); n = b.id; }
+  ok('h1 a obra de seis sextos', !!b && six < 1 && done, `seis golpes de 1/6 somam ${six} (${six >= 1 ? 'chega' : 'não chega'} a 1); ${b ? `${b.type}#${n}, todo o material entregue, deixada ali pelo construtor: o próximo, ${nb && nb.o ? nb.o.name : '-'}, ao lado dela, ${nb ? nb.why : '-'}; ${done ? 'e a terminou' : 'e ela NÃO ficou pronta em 120 s'}` : 'nenhuma obra possível'}`);
 }
 
 // ---------------- h2 the last thousandth, in an old save ----------------
 {
-  const b = project('hut'); let done = false, id = 0;
-  if (b) { allIn(b); b.progress = 0.9991666666666666; leaveIt(b); id = b.id; reload(); done = live(120, () => builtNow(id)); }
+  const b = project('hut'); let done = false, id = 0, nb = null;
+  if (b) { allIn(b); b.progress = 0.9991666666666666; leaveIt(b); id = b.id; reload(); const ob = S.buildings.get(id); nb = ob ? nextBuilder(ob) : null; done = live(120, () => builtNow(id)); }
   const o = S.buildings.get(id);
-  ok('h2 a obra parada no último milésimo de um save velho volta a andar sozinha', !!b && done, b ? `${o ? o.type : '-'}#${id} a 0,99917 com todo o material, salva e carregada: ${done ? 'pronta' : 'ainda a ' + (o ? o.progress : '-')}` : 'nenhuma obra possível');
+  ok('h2 a obra parada no último milésimo de um save velho volta a andar sozinha', !!b && done, b ? `${o ? o.type : '-'}#${id} a 0,99917 com todo o material, salva e carregada; o próximo construtor, ${nb && nb.o ? nb.o.name : '-'}, ao lado dela, ${nb ? nb.why : '-'}: ${done ? 'pronta' : 'ainda a ' + (o ? o.progress : '-')}` : 'nenhuma obra possível');
 }
 
 // ---------------- h3 waiting for a material the people do not have ----------------
 {
   const b = project('hut'); const RARE = ['marfim', 'perolas', 'coral', 'seda', 'joias', 'ouro']; const k = RARE.find(q => !((f0.stock[q] || 0) >= 1));
-  let waited = false, onAll = 0, looks = 0, prog0 = 0, came = false, id = 0;
+  let waited = false, onAll = 0, looks = 0, prog0 = 0, came = false, id = 0, nb = null;
   if (b && k) {
     id = b.id; allIn(b); b.need[k] = 3; // (three of a thing the people lack: what it allows is the rest)
     const al = Vg.allowedProgress(b); b.progress = al; prog0 = b.progress; leaveIt(b);
     for (let t = 0; t < 30; t++) { live(1); looks++; if (onIt(id).length) onAll++; }
     waited = !builtNow(id) && Math.abs(S.buildings.get(id).progress - prog0) < 1e-9 && onAll === 0;
     D.make('f:' + f0.id, k, 3, { code: 'teste' }); // (the material comes to the store)
-    came = live(150, () => builtNow(id));
+    nb = nextBuilder(S.buildings.get(id)); came = live(150, () => builtNow(id));
   }
-  ok('h3 a obra sem o material continua esperando, sem ninguém preso nela, e anda quando ele chega', !!b && !!k && waited && came, b && k ? `faltando 3 de ${k} (o povo tem ${Math.floor(f0.stock[k] || 0)} agora): ${waited ? 'esperou' : 'não esperou'} (construtores nela em ${onAll} de ${looks} olhadas, o progresso ${r2(prog0)} → ${r2((S.buildings.get(id) || {}).progress || 0)}); com o material: ${came ? 'pronta' : 'não ficou pronta'}` : 'sem obra ou sem um material que falte');
+  ok('h3 a obra sem o material continua esperando, sem ninguém preso nela, e anda quando ele chega', !!b && !!k && waited && came, b && k ? `faltando 3 de ${k} (o povo tem ${Math.floor(f0.stock[k] || 0)} agora): ${waited ? 'esperou' : 'não esperou'} (construtores nela em ${onAll} de ${looks} olhadas, o progresso ${r2(prog0)} → ${r2((S.buildings.get(id) || {}).progress || 0)}); com o material, o próximo construtor, ${nb && nb.o ? nb.o.name : '-'}, ao lado dela, ${nb ? nb.why : '-'}: ${came ? 'pronta' : 'não ficou pronta'}` : 'sem obra ou sem um material que falte');
 }
 
 // ---------------- h4 a free people founded on purpose ----------------
@@ -124,6 +148,10 @@ if (fset) {
   // stock by hand, and the gatherers deliver to the fire while the hungry eat: in the cidade of before the 28/10 worlds, a
   // minute of 11 meals in which 13 of food came in, and the stock went up, T-181)
   const fRef = 'f:' + ffac.id; let fin = 0, fout = 0; const book = e => { if (e[5] !== 'food') return; if (e[4] === fRef) fin += e[6]; if (e[3] === fRef) fout += e[6]; };
+  // (the minute of the count by day: in the evening the hungry go to bed before they eat — the night's sleep, 1,5, over a
+  // meal, 1,2, for one not starving —; in the P2's branch joined with 624e83f the fire was lit at 0,70, three went to eat and
+  // were in bed before the meal, and nobody ate from the store in the minute, T-299)
+  if (G.isNight() || S.time > 0.6) S.time = 0.3;
   D.onMove.push(book); const food0 = food(); live(60); const food1 = food(); D.onMove.splice(D.onMove.indexOf(book), 1); const ate = food0 + fin - fout - food1;
   ok('h4 o povo livre: ninguém escolhe comer num armazém que não existe; a fogueira parada no último golpe (e salva) fica pronta, e comem', !!cf && lit && eatGot === 0 && eatAsked > 0 && ate > 0.5 && !hungerDead,
     `${cf ? 'a fogueira #' + cf.id + ' deixada em ' + six + ', o save carregado: ' + (lit ? 'pronta' : 'não ficou pronta') : 'o planejador não pôs a fogueira'}; sem armazém, ${eatAsked} perguntas de comer a quem tinha fome, ${eatGot} «comer no armazém»; o estoque do povo ${Math.floor(food0)} → ${Math.floor(food1)} (pelo livro entrou ${r2(fin)} e saiu ${r2(fout)}: comeram ${r2(ate)}); mortes de fome ${hungerDead}`);
@@ -155,11 +183,13 @@ if (fset) {
     const ppl = people().filter(v => v.age >= 6).slice(0, 3); const keep = ppl.map(v => [v.hunger, v.hp]);
     for (const v of ppl) { v.hunger = 100; v.hp = 35; }
     none = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
-    // (the town without a store, for the look — every store of it: its fire, and a storehouse its builders may have raised in
-    // the day of the skip, as with the final worlds, T-203 —: put back at once)
+    // (the town without a store, for the look — every store of its people: its fire, a storehouse its builders may have raised
+    // in the day of the skip, as with the final worlds, T-203, and the stores of the people's other towns, which the rule
+    // counts as the game's own nearestDropoff does: in the P2's branch joined with b8c072c the free people took Roma in a war
+    // on the day 16, and the rule found Roma's dock, T-294 —: put back at once)
     // (and the fire as one rising for three days — a town that did not light it again in all that time; one rising since
     // today, its stores taken by a disaster this very day, is a town lighting it, and the rule waits for it, T-225)
-    const stores = V.dropoffs(fset.id); const born = stores.map(b => b.born); for (const b of stores) { b.built = false; b.born = S.day - 3; }
+    const stores = G.Fac.settlementsOf(V.facOfSet(fset.id)).flatMap(q => V.dropoffs(q.id)); const born = stores.map(b => b.born); for (const b of stores) { b.built = false; b.born = S.day - 3; }
     got = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
     for (const b of stores) b.born = S.day;
     lighting = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));

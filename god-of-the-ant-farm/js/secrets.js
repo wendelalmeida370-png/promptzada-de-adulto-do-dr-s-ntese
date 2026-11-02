@@ -189,9 +189,10 @@
   function meetOf(l) { return st().meets.find(m => m.lodge === l.id) || null; }
   // (who is on the way to a meal, or at the top of hunger with the life going, eats first: a meeting that begins then does not
   // call them, lure them or keep them up — the festival's rule, L-234: a conclave took Túlia #1709 of Roma on her way to the
-  // store, hunger 100 and life 30, and she starved at it with 390 of food in the store, L-397)
+  // store, hunger 100 and life 30, and she starved at it with 390 of food in the store, L-397); nor one with busy hands — the
+  // leg of an operation, the actor on the stage of a show among them —, as the feast does not, D-094, L-426)
   const MEAL = { eat: 1, forage: 1 };
-  const meal = v => !!(v.task && MEAL[v.task.type]) || (v.hunger >= 99.9 && v.hp < 60);
+  const meal = v => !!(v.task && MEAL[v.task.type]) || (v.hunger >= 99.9 && v.hp < 60) || !!(G.Vg.handsBusy && G.Vg.handsBusy(v));
   function startMeet(q, l) {
     const S = G.S;
     const go = Sc.membersOf(q).filter(v => G.dist(v.x, v.y, l.x, l.y) < 34 && !v.captive && !v.aboard && !v.held && !v.ug && !(v.task && v.task.pri >= 3) && !meal(v));
