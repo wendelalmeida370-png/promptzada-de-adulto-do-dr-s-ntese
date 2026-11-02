@@ -108,10 +108,10 @@ const PLACE_READ = /\b(?:it|item|piece)\.spots\b|\.it\.spots\b|\bbedOf\s*\([^)]*
 const PLACE_WRITE = /\b(?:v|o|h|w|q|who|kid|baby|vill|person)\.(?:place|seat|bed)\s*=(?!=)/;
 const PLACE_FILES = f => f === 'interiors.js' || /^int-[\w-]+\.js$/.test(f);
 // 31. "a despensa só pelo livro": a despensa de uma casa (h.pantry) muda só pelo G.Depot — os adaptadores do depósito
-// (activity.js) são a escrita; fora dele, nenhuma escrita à mão. As duas que restam são do trabalho (T-130: o fim do dia em
-// casa e o tributo), nomeadas até passarem pelo livro — então a lista fica vazia
+// (activity.js) são a escrita; fora dele, nenhuma escrita à mão (o fim do dia em casa e o tributo, as duas últimas, passaram
+// pelo livro no Patch 2: T-130)
 const PANTRY_WRITE = /\.pantry\s*(=(?!=)|\+=|-=|\+\+|--)/;
-const PANTRY_OK = [['economy.js', 'h.pantry -= 1; v.hunger'], ['court.js', 'h.pantry -= n; t.bag += n']]; // (T-130)
+const PANTRY_OK = []; // ([arquivo, pedaço da linha] com o motivo, se um dia precisar)
 // 32. "a noite em casa é do act-lar.js": a tarefa 'lar' (a ceia, cozinhar, conversar, descansar, ninar, esperar, de cama, de
 // luto, cuidar dos pequenos) só o act-lar.js dá — pela setTask, no passo do mundo, e no gancho do save (D-070)
 const LAR_TASK = /type:\s*'lar'/;
@@ -204,5 +204,59 @@ for (const f of files) src[f].forEach((line, k) => {
 // 30. "um nome, uma função" (L-320): duas declarações function com o mesmo nome no mesmo arquivo e na mesma margem — no
 // JavaScript a última vence, em silêncio, e quem chamava a primeira passa a chamar a outra (a vez da história no lugar da batida)
 for (const f of files) { const seen = new Map(); src[f].forEach((line, k) => { const m = line.match(/^(\s*)(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)\s*\(/); if (!m) return; const key = m[1].length + ':' + m[2]; if (seen.has(key)) fails.push(`um nome, uma função: ${f}:${k + 1} declara de novo a função ${m[2]} (a outra está na linha ${seen.get(key) + 1}; a última toma o lugar da primeira)`); else seen.set(key, k); }); }
+// 25. "a operação nasce no seu arquivo" (D-076, D-077): uma operação do G.Act começa (A.start / G.Act.start com o nome escrito)
+// só no arquivo que a define (A.def com o mesmo nome) — a fornada no act-oficio.js, a taverna no act-taverna.js, os banhos e a
+// lenha deles no act-servicos.js, o espetáculo no act-lazer.js, a descarga no act-porto.js —; e o livro de cada uma só o seu
+// arquivo escreve: os montes da fornada (massa, cru, forno, feitos, quebrados) só no act-oficio.js, e o livro do dia da
+// taverna (servidos, faltas, recusas) só no act-taverna.js
+{ const DEFS = {}; for (const f of files) src[f].forEach(l => { const m = l.match(/\bA\.def\('([a-zA-Z]+)'/); if (m) DEFS[m[1]] = f; });
+  const START = /(?:G\.Act|\bA)\.start\('([a-zA-Z]+)'/g;
+  const BATCH = /\.(massa|cru|forno|feitos|quebrados)\s*(=(?!=)|\+=|-=|\+\+|--)/;
+  const TAVBOOK = /\.(servidos|faltas|recusas)\s*(=(?!=)|\+=|-=|\+\+|--)/;
+  for (const f of files) src[f].forEach((line, k) => {
+    if (/^\s*\/\//.test(line)) return;
+    for (const m of line.matchAll(START)) { const home = DEFS[m[1]]; if (home && home !== f) fails.push(`operação: ${f}:${k + 1} começa a operação '${m[1]}', que é do ${home} (uma operação nasce no arquivo que a define): ${line.trim().slice(0, 100)}`); }
+    if (BATCH.test(line) && f !== 'act-oficio.js') fails.push(`fornada: ${f}:${k + 1} escreve um monte da fornada fora do act-oficio.js: ${line.trim().slice(0, 100)}`);
+    if (TAVBOOK.test(line) && f !== 'act-taverna.js') fails.push(`taverna: ${f}:${k + 1} escreve o livro do dia da taverna fora do act-taverna.js: ${line.trim().slice(0, 100)}`);
+  }); }
+// 26. "a conta da obra é do village.js" (D-075, L-416): o que uma obra pede (b.need), o registro do tijolo que tomou o lugar
+// da pedra (b.brick) e o da troca de um material por outro no caminho (b.troca) só o village.js escreve — a fundação troca, a
+// reforma refaz, a conta paga, a entrega desconta, a virada do dia destroca, a doca terminada em pedra troca (V.swapBill, que
+// o naval.js chama: com o b.need escrito à mão a madeira entrava na doca sem linha no livro e a pedra sumia nela, L-416).
+// Exceções nomeadas: o que um navio pede para ficar pronto (s.need, naval.js: não é uma obra) e a reforma largada (a casa
+// volta a ser o que era, de pé, depois que o que veio para a nova voltou ao armazém pelo livro: villagers.js, abandonSite)
+const WORK_OK26 = [
+  ['naval.js', 's.need = def.build'],                                                // (um navio, não uma obra)
+  ['villagers.js', 'b.type = b.upgradeFrom; b.upgradeFrom = null; b.built = true'], // (a reforma largada, depois do siteBack)
+];
+{ const WORK26 = [/\.(brick|troca)\s*=(?!=)/, /\.(brick|troca)(\.\w+|\[[^\]]+\])\s*(=(?!=)|\+=|-=|\+\+|--)/, /\.need\s*=(?!=)(?!\s*function)/, /\.need(\.\w+|\[[^\]]+\])\s*(=(?!=)|\+=|-=|\+\+|--)/];
+  for (const f of files) src[f].forEach((line, k) => { if (/^\s*\/\//.test(line) || !WORK26.some(r => r.test(line))) return; if (f !== 'village.js' && !ok(WORK_OK26, f, line)) fails.push(`obra: ${f}:${k + 1} escreve a conta da obra (o que ela pede, o tijolo, a troca) fora do village.js: ${line.trim().slice(0, 100)}`); }); }
+// 27. "o livro-razão também no economy.js, no tavern.js e no court.js": a regra 12 (estoque, prateleira, despensa, moedas,
+// bolsa, carga e caixas só pelo G.Depot) vale também para os três arquivos da economia que vieram de antes das atividades —
+// passados para o livro no Patch 2 (as mãos do economy.js, L-244; o goHome, o consumo da casa, o pão do preso, o tributo e a
+// despensa da corte, T-130, L-243; a taverna, D-077). Exceções nomeadas: o molde do estoque (uma chave que falta nasce em 0),
+// o nome da função da bolsa e o conserto do save de antes (um número que não é número volta a 0). Vê também a forma com
+// ponto (f.stock.food -= 1), que a regra 12 de hoje não vê
+const LEDGER_OK27 = [
+  ['economy.js', "if (typeof f.stock[k] !== 'number') f.stock[k] = 0"], // (o molde do estoque: E.ensure)
+  ['economy.js', 'E.purse = purse;'],                                 // (o nome da função, não a bolsa)
+  ['economy.js', '!isFinite(f.stock[k])) f.stock[k] = 0'],             // (o save de antes com um NaN no estoque)
+];
+{ const LEDGER27 = /(\.stock(\[[^\]]+\]|\.\w+)|\.inv(\[[^\]]+\]|\.\w+)|\.pantry|\.coin|\.purse|\.carry|\.crates|\.goods)\s*(=(?!=)|\+=|-=|\+\+|--)|\.crates\.(push|unshift|splice|shift|pop)\(/;
+  for (const f of ['economy.js', 'tavern.js', 'court.js']) (src[f] || []).forEach((line, k) => { if (/^\s*\/\//.test(line) || !LEDGER27.test(line)) return; if (!ok(LEDGER_OK27, f, line)) fails.push(`livro-razão: ${f}:${k + 1} escreve estoque/despensa/moedas/carga à mão (use o G.Depot): ${line.trim().slice(0, 100)}`); }); }
+// 38. "as mãos ocupadas" (D-094): (1) um chamado da praça abaixo de 3 dado por setTask direto de outro módulo — a execução, a
+// assembleia, o funeral, a celebração, a petição — pergunta antes ao Vg.busy (ou ao Vg.handsBusy), nas oito linhas antes dele,
+// como o Vg.give pergunta; (2) a festa da cidade (3,2) só toma quem o free() dela acha livre, e o free() pergunta ao
+// Vg.handsBusy; (3) o enlist da festa pergunta ao free(); (4) o carrasco e o arauto da execução (5 e 4,5) são escolhidos com
+// as mãos livres (o pickExecutioner e o pickHerald perguntam ao handsBusy)
+{ const RX = /G\.Vg\.setTask\(.*?type:\s*'(justice|assembly|funeral|celebrate|petition)'.*?pri:\s*([0-9.]+)/;
+  for (const f of files) { if (f === 'villagers.js') continue; src[f].forEach((line, k) => { const m = line.match(RX); if (!m || +m[2] >= 3) return; const near = src[f].slice(Math.max(0, k - 8), k + 1).join('\n'); if (!/Vg\.(busy|handsBusy)\(/.test(near)) fails.push(`mãos ocupadas: ${f}:${k + 1} chama alguém para ${m[1]} (${m[2]}) por setTask sem perguntar ao Vg.busy (D-094): ${line.trim().slice(0, 100)}`); }); }
+  const fe = src['festivals.js'] || []; const fr = fe.findIndex(l => /^\s*function free\(v\)/.test(l));
+  if (fr < 0) fails.push('mãos ocupadas: festivals.js sem o function free(v) — quem a festa toma pergunta ao Vg.handsBusy (D-094)');
+  else if (!/Vg\.handsBusy\(/.test(fe[fr])) fails.push(`mãos ocupadas: festivals.js:${fr + 1} o free() da festa não pergunta ao Vg.handsBusy (D-094): ${fe[fr].trim().slice(0, 100)}`);
+  const en = fe.findIndex(l => /^\s*function enlist\(/.test(l));
+  if (en >= 0 && !/!free\(v\)/.test(fe.slice(en, en + 3).join('\n'))) fails.push(`mãos ocupadas: festivals.js:${en + 1} o enlist não pergunta ao free() (D-094)`);
+  const ju = src['justice.js'] || [];
+  for (const fn of ['pickExecutioner', 'pickHerald']) { const k = ju.findIndex(l => l.includes('function ' + fn + '(')); if (k >= 0 && !/handsBusy\(/.test(ju.slice(k, k + 8).join('\n'))) fails.push(`mãos ocupadas: justice.js:${k + 1} o ${fn} escolhe sem perguntar ao Vg.handsBusy (D-094)`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
