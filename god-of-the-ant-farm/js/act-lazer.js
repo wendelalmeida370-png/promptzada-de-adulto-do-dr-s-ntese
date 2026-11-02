@@ -64,6 +64,7 @@
   Tt.CAP = 24;     // (the seats of a theatre whose plan does not say)
   Tt.LATE = 6;     // (one may still come in this long after the play began)
   Tt.STOP = 6;     // (the stage empty this long: the play stopped there)
+  Tt.STAGE = 1.6;  // (the actor on the stage, the doors open or the play on: what can wait waits — L-426)
   A.addAnim('assistir', { act: 'sit', dur: 2, contact: 1.2, hands: 0 });
   A.addAnim('atuar', { act: 'talk', dur: 6, contact: 5.4, hands: 2 });
   A.addAnim('lutarJogo', { act: 'fight', dur: 4, contact: 3.6, hands: 2 });
@@ -80,7 +81,19 @@
   // city a walk takes longer than the doors give them)
   Tt.horas = b => ({ prep: 0.5, abre: 0.56, peca: 0.6, fecha: 0.73 });
   Tt.WAITS = 0.03; // (the play begins at its hour with an actor on the stage; this long after it with none, there is no play)
-  const inHours = b => { const h = Tt.horas(b); const t = S_().time; return t >= h.prep - EPS && t < h.fecha; };
+  // (the preparation opens in time for the farthest actor of the theatre to walk to the stage — 1,3 s a tile on the straight
+  // line, the streets go round, and 8 s to spare —, never before 0,40, the end of the working afternoon, nor after its hour:
+  // called at 0,50, an actor more than some 29 tiles off never came by the cancelling at 0,63, and in the mega three shows of
+  // five were cancelled «sem atores», L-425. One asleep is not called, and is not waited for)
+  Tt.WALK = 1.3; Tt.EARLY = 0.4;
+  const opensAt = b => {
+    const h = Tt.horas(b); const dr = G.Vg.door(b); let far = 0;
+    for (const v of actorsOf(b)) if (!v.sleeping) far = Math.max(far, G.dist(v.x, v.y, dr[0], dr[1]));
+    return Math.max(Tt.EARLY, Math.min(h.prep, h.peca - (far * Tt.WALK + 8) / G.DAY_LEN));
+  };
+  Tt.opensAt = opensAt;
+  // (in its hours: from the preparation to the closing; a preparation opened early for a far actor stays open)
+  const inHours = b => { const h = Tt.horas(b); const t = S_().time; if (t >= h.fecha || t < Tt.EARLY - EPS) return false; if (t >= h.prep - EPS) return true; return !!Tt.dia(b) || t >= opensAt(b) - EPS; };
   Tt.inHours = inHours;
   let dIdx = null, dS = null, dN = -1, dT = -1;
   G.worldHooks.push(() => { dIdx = null; dS = null; dN = -1; dT = -1; });
@@ -288,6 +301,12 @@
       t.st = 1; v.actT = 0; return;
     }
     if (!d.atores[v.id]) return H.end(v);
+    // (on the stage, the doors open or the play on, the actor stays over what can wait — a meal of one not starving (1,2), the
+    // bed of his hour (1,5) or of a common tiredness, the house's water and purchases —; the starving (2,5), the worn out
+    // (2,5) and what weighs more go: a meal at hunger 75 took the one actor of Tenochtitlan from the stage four seconds from
+    // the end, and the play stopped, three days of three, L-426. Behind the closed doors he may still go and eat, and is
+    // called again)
+    t.pri = d.fase === 'preparo' ? 1.05 : Tt.STAGE;
     v.act = d.fase === 'peca' ? (stageUse(b) === 'lutar' ? AN_.lutarJogo.act : AN_.atuar.act) : 'wait';
   }
   const AN_ = A.ANIM;
@@ -388,6 +407,9 @@
     name: 'Espetáculo', conserve: false, many: false,
     purpose: 'O espetáculo do dia de um teatro: as portas abrem, os atores sobem ao palco, o público paga a entrada (num povo de moeda), senta, assiste e aplaude; os atores recebem do tesouro.',
     needs: 'um teatro com os seus atores',
+    // (the actor on the stage, the doors open or the play on, is in the leg of the show: a call from outside below 3 does not
+    // take him from it — the feast, a secret meeting, a funeral —, D-094, L-426)
+    leg(op, v) { const d = op.data; const m = d && d.atores && d.atores[v.id]; return m && !m.body && (d.fase === 'portas' || d.fase === 'peca') ? 'palco' : null; },
     title(op) { const S = S_(); const b = S.buildings.get(op.at); const d = op.data; return `O espetáculo ${b ? de(b) : 'do teatro'}: ${d.fase === 'preparo' ? 'os atores se preparam' : d.fase === 'portas' ? 'as portas abertas' : d.fase === 'peca' ? 'a peça em cena' : 'os aplausos'}, ${Object.keys(d.plateia).length} na plateia`; },
     avail(c, v, set) {
       for (const b of E.byType(set.id, 'teatro')) { const op = Tt.dia(b); if (!op) continue; const ok = aberto(b, op); return { ok, why: ok ? '' : shut(op), txt: `Há espetáculo ${n_(b)} de ${set.name} hoje`, known: G.dist(v.x, v.y, b.x, b.y) < 30 }; }
