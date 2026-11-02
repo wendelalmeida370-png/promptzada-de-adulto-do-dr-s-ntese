@@ -134,11 +134,13 @@ function stealNow(P, v) {
   while (tries < 3 && !caught && w && G.isNight() && crook0 && v.role === 'contrabandista' && S().villagers.has(v.id)) {
     const r = stealNow(P, v); if (!r.got) break; got = true; tries++; n = r2(v.carry.n); k = v.carry.k;
     if (!(w.task && w.task.type === 'ronda')) break;
-    // (the round held above the town's calls below 3, the line of the D-094: in the generation 7's Tenochtitlan the people's
-    // assembly at the palace — Po.crowd, 1,7 — took the watchman from the round at 0,75, eight steps after he met the
-    // smuggler at the store's door; the case is the catch, not who calls the watchman away)
+    // (the round held at 3, above the town's calls below 3, the line of the D-094, and out of a feast's reach — festivals.js
+    // takes who has a task below 3: in the generation 7's Tenochtitlan the people's assembly at the palace — Po.crowd, 1,7 —
+    // took the watchman from the round at 0,75, eight steps after he met the smuggler at the store's door; and with the quay's
+    // dockers of L-428, a Toxcatl begun at night took him for a priest's aide two seconds after, T-303; the case is the catch,
+    // not who calls the watchman away)
     const [mx, my] = V.frontTile(P.b); w.x = v.x; w.y = v.y; w.path = null; w.inside = 0;
-    Object.assign(w.task, { pts: [[mx + 0.5, my + 0.5]], k: 0, st: 0, pri: 2.9 });
+    Object.assign(w.task, { pts: [[mx + 0.5, my + 0.5]], k: 0, st: 0, pri: 3 });
     live(120, null, () => { const c = seenIt(); if (c) byRound = !!(w.task && w.task.type === 'ronda'); return c || !stolenIn(v); });
     caught = seenIt();
   }

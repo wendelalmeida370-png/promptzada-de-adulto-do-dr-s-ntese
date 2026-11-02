@@ -236,7 +236,8 @@
   // watch, the docks, the estates, the stokers...). First one hand for each kind of workplace the town has, while the
   // ceiling holds them, in the fixed order below — the docks, the jail and the watch, the baths, the tavern, the market and
   // the fair first: a town's flows live from them; then the crafts —, so that no kind of place stands all empty for being
-  // small (the warehouse lost its dockers to the potters' shares); then the rest by the largest remainder: each trade its
+  // small (the warehouse lost its dockers to the potters' shares); then the quay's, whole: the dockers the crates waiting on
+  // it ask (L-428); then the rest by the largest remainder: each trade its
   // floor, then one hand more to the largest fractions, in a fixed order (the role's name), no chance (the floor of each
   // share alone gave none to the trades of one hand: the taverns, the goldsmiths, the butchers, the markets stood empty most
   // of the time, and what the other modules added after the ceiling was outside it). The trades that bring food — the
@@ -254,6 +255,10 @@
     if (!tot || tot <= capN) return out;
     const got = {}; let given = 0;
     for (const k of keys.slice().sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : 1))) { if (given >= capN) break; got[k] = 1; given++; }
+    // (then the quay's hands, whole, while the ceiling holds them: as many as the crates waiting on it ask — harbor.js, up to
+    // three a store —, the flow a ship brings; by the remainder, a town at its ceiling gave a ship's eight crates two of the
+    // three dockers they ask, and sent one home with six still on the quay. A clean quay asks one, its first hand: L-428)
+    if (got.estivador && out.estivador > 1) { const n = Math.min(out.estivador - 1, capN - given); if (n > 0) { got.estivador += n; given += n; } }
     // (the rest of the ceiling by the largest remainder, over what each still asks)
     let tot2 = 0; for (const k of keys) tot2 += out[k] - (got[k] || 0);
     const left = capN - given;

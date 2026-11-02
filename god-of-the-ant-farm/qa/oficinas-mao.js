@@ -99,6 +99,10 @@ ok('verificador', !bad.length, bad.slice(0, 4).join(' | ') || 'limpo em todos os
   // remainders of 0.5 by name, the mine first)
   const big = E.share({ oleiro: 4, mineiro: 2, taverneiro: 1, mercador: 1, ourives: 1 }, set, f, 20);
   ok('teto-maior-resto', big.oleiro === 2 && big.mineiro === 2 && big.taverneiro === 1 && big.mercador === 1 && big.ourives === 1, `o teto ${Math.floor(20 * 0.38)}: ${JSON.stringify(big)}`);
+  // (the quay's hands, whole, after the first of each kind: the crates of a ship ask three dockers — the same ceiling of 7 holds
+  // one of each of the 5 kinds, then the two more the quay asks, and nothing is left for the remainder: L-428)
+  const quay = E.share({ estivador: 3, oleiro: 4, mineiro: 2, taverneiro: 1, mercador: 1 }, set, f, 20);
+  ok('teto-o-cais-inteiro', quay.estivador === 3 && quay.oleiro === 1 && quay.mineiro === 1 && quay.taverneiro === 1 && quay.mercador === 1, `o teto ${Math.floor(20 * 0.38)}, com as caixas de um navio no cais: ${JSON.stringify(quay)}`);
   const pop = G.Village.pop(set.id); f.stock.food = pop * 1.5 - 1; // (a hungry town: the ceiling 18% — one hand)
   const hun = E.share({ oleiro: 2, ourives: 1, mercador: 1, pescador: 4 }, set, f, A0);
   ok('teto-com-fome', hun.oleiro + hun.ourives + hun.mercador === 1 && hun.pescador === 4, `com fome (${f.stock.food} de comida para ${pop}): ${JSON.stringify(hun)}`);

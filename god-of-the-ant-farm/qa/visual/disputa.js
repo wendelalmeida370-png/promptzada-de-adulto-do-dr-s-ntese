@@ -81,12 +81,19 @@ const loaded = o => !!(o.carry && o.carry.n > 0);
 const able = o => o.set === set.id && o.role === 'estivador' && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1]);
 // (the stevedores of a town are as many as the crates waiting on its quays ask, up to three a store — harbor.js, the town's job
 // board every 4 s of the world —: a clean quay asks one. Fewer than the proof needs: the god lands a catch on the quay — the
-// one the proof lands first anyway — and the town calls its hands by its own rule, in 30 s at most: T-224)
+// one the proof lands first anyway — and the town calls its hands by its own rule, in 30 s at most: T-224. But first the board
+// quiet: after a load it deals the trades of the saved world anew (L-419), three changes a pass, the largest want first and
+// then its own chance — and a ready world saved by another version has many to deal: in Mênfis the third docker waited
+// behind six trades one hand short and the works' builders, and by the time the board was free the dockers had taken two
+// crates and the quay asked two. The world lives until no trade of the town changes for two passes of the board (9 s), a
+// minute at most: T-303)
 let called = '';
 if ([...S.villagers.values()].filter(able).length < 3) {
+  const trades = () => [...S.villagers.values()].filter(o => o.set === set.id).map(o => o.id + ':' + o.role).join(',');
+  let w = 0; for (let quiet = 0, r0 = trades(); w < 60 && quiet < 9; w++) { M.viver(1); const r1 = trades(); quiet = r1 === r0 ? quiet + 1 : 0; r0 = r1; }
   const n0 = [...S.villagers.values()].filter(able).length; god(() => { S.time = 0.15; P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); });
   let t = 0; for (; t < 30 && [...S.villagers.values()].filter(able).length < 3; t++) M.viver(1);
-  called = ` (eram ${n0}: com um barco no cais a cidade chamou mais em ${t} s)`;
+  called = ` (o quadro dos ofícios quieto depois de ${w} s; eram ${n0}: com um barco no cais a cidade chamou mais em ${t} s)`;
 }
 const cands = [...S.villagers.values()].filter(able).sort((a, b) => loaded(a) - loaded(b) || a.id - b.id);
 if (cands.length < 3) { ok('um estivador para viver e dois carregadores do mundo', false, `${cands.length} em ${set.name}${called || ''}`); process.exit(1); }

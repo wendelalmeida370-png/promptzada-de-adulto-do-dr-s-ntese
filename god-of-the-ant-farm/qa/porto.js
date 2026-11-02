@@ -249,8 +249,15 @@ function midway(op, sec) {
 }
 // where a crate went when its porter let go of it: the ledger says (the ground, back on the quay, into the store)
 const fateOf = (op, v, n0) => { const e = D.ledger().filter(q => q[7] === op.id && q[9] === v.id && q[3] === 'v:' + v.id && q[0] > n0).pop(); return e ? { code: e[8], to: e[4] } : null; };
+// (the body's take of a crate, the call in the middle, the boat's catch and the cases of the bad days start from the ready
+// world again: what the days before brought to the town — a raid that took its porters, a band at the gates, the nights — is
+// another story, and would decide them instead; with the plan's doors on, the world's chance brought a band to the quay's
+// town in the middle of the boat's unloading: T-074; and after the cases before p8, with the quay's dockers of L-428, a war
+// to Mênfis — a quarter of its grown people gone, its one docker hiding, spent — and nobody carried a crate in p8: T-303)
+const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim || 0, 1); refresh(); };
 // ---------------- p8: the god's body takes over a stevedore's crate, by the same doors; given back, the person goes on
 {
+  fresh();
   const op8 = land('sal', 14); fac.stock.sal = Math.min(fac.stock.sal, 20);
   const dest = P.destOf(op8); const [fx, fy] = G.Village.frontTile(dest); const qs = G.Fishers.crateSpot(dock);
   const pv = midway(op8, 150); let info = '', fine = false;
@@ -294,6 +301,7 @@ const fateOf = (op, v, n0) => { const e = D.ledger().filter(q => q[7] === op.id 
 }
 // ---------------- p9: called away in the middle: the crate is set down where the porter is, and another hand takes it on
 {
+  fresh();
   const op9 = land('sal', 14); fac.stock.sal = Math.min(fac.stock.sal, 20);
   const pv = midway(op9, 150); let info = '', fine = false;
   if (pv) {
@@ -320,11 +328,6 @@ const fateOf = (op, v, n0) => { const e = D.ledger().filter(q => q[7] === op.id 
   } else info = 'ninguém carregou uma caixa';
   ok('p9 chamado no meio', fine, info);
 }
-// (the boat's catch and the cases of the bad days start from the ready world again: what the days before brought to the
-// town — a raid that took its porters, a band at the gates, the nights — is another story, and would decide them instead;
-// with the plan's doors on, the world's chance brought a band to the quay's town in the middle of the boat's unloading:
-// T-074)
-const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim || 0, 1); refresh(); };
 // ---------------- p11: the catch of a boat comes up as an unloading of its own
 {
   let info = 'nenhum barco de pesca neste cais', fine = false, before = '';
