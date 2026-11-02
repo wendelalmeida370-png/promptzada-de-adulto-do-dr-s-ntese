@@ -741,8 +741,9 @@
     hug: 'hug', embrace: 'hug', sleep: 'sleep', zzz: 'sleep', throw: 'throw', swim: 'swim', dive: 'swim', bound: 'bound', sneak: 'sneak', run: 'run', climb: 'interact', knock: 'interact', look: 'idle',
     // (the gestures of the activities, G.Act.ANIM, as the body makes them — Interact.GEST —: paying and taking the coins, the
     // hand out; haggling, talking; looking the goods over and counting the crates at the door, the hand to them; waiting,
-    // standing; the second pair of hands under a heavy crate, a carrier's arms — L-205, L-210)
-    pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', wait: 'idle', carry2: 'carry',
+    // standing; the second pair of hands under a heavy crate, a carrier's arms — L-205, L-210; the clothes off and on at the
+    // pegs of the baths, the hand to them — L-429)
+    pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', wait: 'idle', carry2: 'carry', undress: 'interact',
   };
   // (the acts that carry what the world has in someone else's hands: walking, a carrier's walk — the helper of a pair)
   const CARRY_ACTS = new Set(['carry2']);

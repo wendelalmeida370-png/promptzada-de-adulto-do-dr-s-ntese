@@ -48,7 +48,9 @@
   const LOW = 20;   // (the stoker feeds the furnace when less than this is left)
   const SPARE = 10; // (the wood the people's store keeps for its works: the baths take only what is beyond it)
 
-  A.addAnim('despir', { act: 'interact', dur: 2, contact: 1.5, hands: 2 });
+  // (the clothes off and on at the pegs: an act of the world's own, which the 3D shows with the hand to the pegs — Anim3D's
+  // ACT; 'interact' is a pose of the drawing, not an act: a bather undressing stood idle in it, L-429)
+  A.addAnim('despir', { act: 'undress', dur: 2, contact: 1.5, hands: 2 });
   A.addAnim('banhar', { act: 'sit', dur: 8, contact: 7.5, hands: 0 });
 
   // ------------------------------ the stoker: a trade of the town ------------------------------
