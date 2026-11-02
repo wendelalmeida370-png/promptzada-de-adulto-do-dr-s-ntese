@@ -17,13 +17,14 @@ echo "== vigia do código"; node guard.js "${GAMEDIR:-$(dirname "$PWD")}" > "$OU
 # (o navegador das provas: o mundo da mesma semente é o mesmo só no mesmo motor de JavaScript — as contas do Math mudam de
 # um V8 para outro, T-123 —; a versão vai no resumo, e uma troca dela aparece entre as diferenças da linha de base)
 node -e "require(process.env.PLAYWRIGHT || 'playwright').chromium.launch().then(async b => { console.log(b.version()); await b.close(); })" > "$OUT/navegador.txt" 2>&1; echo "== navegador $(head -1 "$OUT/navegador.txt")"
-# 1. o mar: 17 provas, quatro de cada vez
+# 1. o mar: 17 provas, quatro de cada vez (e a luta de uma frota que atravessa o save: frota-luta.js)
 m17() { DET=1 timeout 1500 node mar17.js $1 $2 > "$OUT/mar_$1.txt" 2>&1; }
 if ! skip mar; then
 (m17 rich 7; m17 iron 7; m17 temper 11; m17 fisher 3) &
 (m17 solo 7; m17 grand 11; m17 know 7; m17 dead 11) &
 (m17 colony 7; m17 invasion 7; m17 bigbattle 7; m17 sink 7) &
 (m17 saveexp 7; m17 savewar 7; m17 skip 7) &
+(timeout 900 node frota-luta.js > "$OUT/mar_luta.txt" 2>&1) &
 wait; echo "== mar: $(cat "$OUT"/mar_*.txt | grep -c PASSOU) passaram, $(cat "$OUT"/mar_*.txt | grep -c FALHOU) falharam"
 fi
 # 2. a guerra: 10 provas em quatro mundos

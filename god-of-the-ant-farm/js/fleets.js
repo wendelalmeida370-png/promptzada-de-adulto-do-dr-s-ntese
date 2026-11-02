@@ -811,8 +811,10 @@
       const S = G.S; S.fleets = o.fleets || []; Fl.reset();
       for (const fl of S.fleets) {
         if (!Fl.live(fl)) continue;
-        // a battle in progress resumes as soon as the lines see each other again
-        if (fl.st === 'combate') { const bt = fl.battle && Wz.battle(fl.battle); if (!bt || !bt.open) { fl.st = fl.prevSt || 'navegar'; fl.battle = 0; } }
+        // a battle in progress resumes as soon as the lines see each other again; a fight with no battle of record (a patrol on a
+        // lone boat, two ships in a skirmish) goes on as it was, and the battleTick ends it as in the living world — the foes
+        // gone, or 45 s after the first blow. The load put it back on its old course and the fight was lost (L-443)
+        if (fl.st === 'combate' && fl.battle) { const bt = Wz.battle(fl.battle); if (!bt || !bt.open) { fl.st = fl.prevSt || 'navegar'; fl.battle = 0; } }
         for (const s of fl.ships.map(ship).filter(Boolean)) { s.grapple = 0; s.target = 0; s.path = null; }
         if (fl.st === 'navegar' || fl.st === 'casa' || fl.st === 'retirada') { const tg = fl.st === 'navegar' ? target(fl) : (() => { const d = S.buildings.get(fl.dock); const di = d && Nv.dockInfo(d); return di && di.moor; })(); if (tg) course(fl, tg[0], tg[1]); }
         if (fl.st === 'travessia' && fl.land) course(fl, fl.land.water[0], fl.land.water[1]);
