@@ -29,15 +29,40 @@ live(5);
 
 const Wz = () => G.Wars; const Wr = () => G.War;
 const FIELD = ['marcha', 'acampado', 'batalha', 'cerco', 'assalto', 'guerrilha', 'reunir'];
+// (the war at home: the enemy's fighters near the realm's people call them, over any errand, to fight, to hide or to flee —
+// Wr.emergency, war.js)
+const ASTIR = { combat: 1, flee: 1, hide: 1 };
+const astir = () => [...G.S.villagers.values()].filter(v => G.Fac.idOfV(v) === A.id && v.task && ASTIR[v.task.type]).length;
 // an army of A raised against B's capital, and marched until it is out in the field (its band alive, past the muster)
-const raise = () => {
+const raise1 = () => {
   const w = Wz().warOf(A.id, B.id); const tg = G.Fac.capitalOf(B.id);
   const a = w && tg && Wz().mobilize(w, G.Fac.get(A.id), 'campanha', tg, {});
+  raise.home = 0;
   if (!a) { raise.why = !w ? 'sem guerra' : !tg ? 'sem capital do inimigo' : `${A.name} não convocou ninguém (${G.Fac.pop(A.id)} almas)`; return null; }
   const out = () => a.band && Wr().bands.has(a.band) && FIELD.includes(a.phase) && a.phase !== 'reunir';
-  live(G.DAY_LEN * 1.2, () => a.done || out());
-  if (!out()) raise.why = a.done ? `o exército convocado se desfez (${a.phase}, ${a.members.length} de ${a.n0 || '?'})` : `o exército ficou em ${a.phase}`;
+  // (how many of the levy the war at home took at most, while it gathered and marched)
+  const homeNow = () => a.members.filter(id => { const v = G.S.villagers.get(id); return v && v.task && ASTIR[v.task.type]; }).length;
+  live(G.DAY_LEN * 1.2, () => { raise.home = Math.max(raise.home, homeNow()); return a.done || out(); });
+  raise.ended = !Wz().warOf(A.id, B.id) && G.Fac.get(A.id).alive && G.Fac.get(B.id).alive;
+  if (!out()) raise.why = a.done ? `o exército convocado se desfez (${a.phase}, ${a.members.length} de ${a.n0 || '?'}${raise.home ? `; ${raise.home} chamados a lutar, fugir ou se esconder pelo inimigo à porta` : ''}${raise.ended ? '; a guerra acabou enquanto ele se reunia' : ''})` : `o exército ficou em ${a.phase}`;
+  if (!out()) raise.atHome = a.done && raise.home >= (a.n0 || a.members.length) * 0.5;
   return out() ? a : null;
+};
+// (the muster broken by the war itself — the enemy at the gates as the levy gathers, or the peace made by the realms while it
+// formed: with the code of the Patch 2, seed 7, the third levy of Altepetl de Tenoch, 35, mustered as Casa de Amon's fighters
+// came to its lands, and all of them left the muster to fight (18), flee (16) or hide (1); at the 4c32ea2 the fourth formed and,
+// four seconds later, the war was over and it turned home — is the world of the seed, not what the case looks at: the realm at
+// rest first, the war declared again by the test's hand if it is over (as T-240), and the call again; up to three calls, T-292)
+const raise = () => {
+  const whys = [];
+  for (let k = 0; k < 3; k++) {
+    const a = raise1(); if (a) { if (whys.length) console.log(`(a convocação ${k + 1} chegou a campo; antes: ${whys.join(' · ')})`); return a; }
+    whys.push(raise.why); if (!raise.atHome && !raise.ended) break;
+    live(G.DAY_LEN * 1.5, () => astir() < 10);
+    if (!Wz().warOf(A.id, B.id) && G.Fac.get(A.id).alive && G.Fac.get(B.id).alive) { G.Politics.declareWar(G.Fac.get(A.id), G.Fac.get(B.id), 'ambicao'); live(5); }
+  }
+  raise.why = whys.join(' · ');
+  return null;
 };
 // the jobs settled before a save: a town grown all at once still moves three people a round, for many rounds, and the round
 // trip settles only thirty — what the load's own round moves is the town settling, not the save losing (T-092)
@@ -111,7 +136,6 @@ grow(G.Fac.get(A.id), G.Fac.pop(A.id) + 150); live(10);
 // 7, the war of Casa de Amon came to the gates of Tenochtitlan at night, 112 of its grown-ups fighting, 149 running and 23
 // hidden, and the fourth levy found nobody. The fight over, the war may be over too: then it is declared again, by the test's
 // hand, as at the start — T-240)
-const astir = () => [...G.S.villagers.values()].filter(v => G.Fac.idOfV(v) === A.id && v.task && (v.task.type === 'combat' || v.task.type === 'flee' || v.task.type === 'hide')).length;
 const stir3 = astir(); live(G.DAY_LEN * 1.5, () => astir() < 10);
 const again3 = !Wz().warOf(A.id, B.id) && G.Fac.get(A.id).alive && G.Fac.get(B.id).alive;
 if (again3) { G.Politics.declareWar(G.Fac.get(A.id), G.Fac.get(B.id), 'ambicao'); live(5); }
