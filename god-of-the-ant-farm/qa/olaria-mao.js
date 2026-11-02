@@ -73,6 +73,52 @@ ok('verificador', !bad.length, bad.slice(0, 4).join(' | ') || 'limpo em todos os
 // (and the checker says so when the books do not close: a pot from nowhere in a batch)
 const op3 = O.start(ol, 'ceramica', v); op3.data.cru = 3; const n0 = bad.length; inv();
 ok('verificador-acusa', bad.length > n0 && /não fecham/.test(bad[bad.length - 1]), bad[bad.length - 1] || 'nada acusado');
+// ---------------- two batches and one kiln (L-436): one batch in it at a time
+// (the pots, out of the sun first — they dry 40 s, the bricks 60 —, go into the kiln; the bricks, dry with the pots still
+// burning, wait at its door until it is let go. Nothing kept them out: the kiln, the older batch's by kilnOf, took the bricks
+// in over the pots, and the checker said «2 fornadas no forno ao mesmo tempo» — in the mega 3306, the pottery #4244. And the
+// mild one: the bricks burning, the pots dry wait — they went to the kiln's stage and waited there, two at its stages. Both
+// to the end, the checker every second)
+{
+  const kb = []; const kinv = () => rule((sys, sev, msg) => { if (sys === 'oficio' && !kb.includes(`S${sev} ${msg}`)) kb.push(`S${sev} ${msg}`); }, G.S);
+  const ksec = n => { for (let k = 0; k < n; k++) { G.S.clock += 1; G.S.time = 0.3; A.update(1); kinv(); } }; // (by day: the sun dries)
+  const id = op => (A.live(op) ? (O.stage(op) ? O.stage(op).id : '(fim)') : op.st) + (op.st === 'wait' ? ` [${op.wait}]` : '');
+  const clay = (op, v, n, per) => { for (let k = 0; k < n; k++) { D.make('v:4', 'argila', per, { op: op.id, code: 'barreiro', by: 4, to: 'b:3' }); A.DEFS.oficio.acts.argila.run(v, { op: op.id }); } };
+  const hands = (op, v) => { for (let k = 0; k < 20 && A.live(op) && O.stage(op).kind === 'mao' && !O.stage(op).kiln; k++) if (!O.unit(op, v).ok) break; };
+  // (the hands of the pottery for both, each second: a unit where a hand stage lets one, wood where a fire wants it)
+  const drive = (ops, v, max) => {
+    for (let k = 0; k < max && ops.some(op => A.live(op)); k++) {
+      for (const op of ops) {
+        if (!A.live(op)) continue; const s = O.stage(op);
+        if (s.kind === 'mao') { for (let u = 0; u < 4 && A.live(op) && O.stage(op) === s && O.unit(op, v).ok; u++); }
+        else if (s.kind === 'fogo' && op.data.calor < s.burn) { if (!v.carry) D.move('f:1', 'v:4', 'wood', 1, { op: op.id, code: 'buscar', by: 4, to: 'b:3' }); A.DEFS.oficio.acts.lenha.run(v, { op: op.id }); }
+      }
+      ksec(1);
+    }
+  };
+  const whole = op => op.st === 'ok' && op.data.feitos + op.data.quebrados === op.data.n;
+  {
+    const { ol, v } = world();
+    const X = O.start(ol, 'tijolo', v); clay(X, v, 2, 3); hands(X, v);
+    const Y = O.start(ol, 'ceramica', v); clay(Y, v, 2, 4); hands(Y, v);
+    ksec(41); for (let k = 0; k < 3 && O.stage(Y).id === 'enfornar'; k++) O.unit(Y, v);
+    const pots = Y.data.forno; ksec(20);
+    const at = `tijolos ${id(X)}, potes ${id(Y)}`; const tried = O.unit(X, v); const inK = [X.data.forno, Y.data.forno];
+    const waits = O.stage(X).id === 'secar' && X.st === 'wait' && X.wait === 'forno' && !tried.ok && !inK[0];
+    drive([X, Y], v, 400);
+    ok('dois-no-forno', pots === 8 && waits && whole(X) && whole(Y) && !kb.length, `os potes no forno (${pots}); 20 s depois, secos os tijolos: ${at}, enfornar ${tried.ok ? 'DEIXOU' : 'não deixa'} (no forno: tijolos ${inK[0]}, potes ${inK[1]}); no fim os tijolos ${X.st} (${X.data.feitos} + ${X.data.quebrados} de ${X.data.n}), os potes ${Y.st} (${Y.data.feitos} + ${Y.data.quebrados} de ${Y.data.n}); ${kb.slice(0, 2).join(' | ') || 'verificador limpo em todos os segundos'}`);
+  }
+  kb.length = 0;
+  {
+    const { ol, v } = world();
+    const X = O.start(ol, 'tijolo', v); clay(X, v, 2, 3); hands(X, v); ksec(61); for (let k = 0; k < 4 && O.stage(X).id === 'enfornar'; k++) O.unit(X, v);
+    const Y = O.start(ol, 'ceramica', v); clay(Y, v, 2, 4); hands(Y, v); ksec(41);
+    const at = `tijolos ${id(X)} (no forno ${X.data.forno}), potes ${id(Y)}`;
+    const waits = !!Y && O.stage(X).id === 'queimar' && O.stage(Y).id === 'secar' && Y.st === 'wait' && Y.wait === 'forno';
+    drive([X, Y], v, 400);
+    ok('forno-ocupado-espera', waits && whole(X) && whole(Y) && !kb.length, `os tijolos no fogo, os potes secos: ${at}; no fim os tijolos ${X.st}, os potes ${Y ? Y.st : '-'}; ${kb.slice(0, 2).join(' | ') || 'verificador limpo em todos os segundos'}`);
+  }
+}
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `OLARIA-MAO: FALHOU (${fails.join(', ')})` : 'OLARIA-MAO: ok');
 process.exit(fails.length ? 1 : 0);
