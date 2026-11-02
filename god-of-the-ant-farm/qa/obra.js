@@ -10,7 +10,8 @@
 //  b6 o construtor morre com a carga a caminho: a carga vai ao estoque ('herdado'), e a obra não espera mais por ela — o que
 //     ela espera a caminho é o que os construtores trazem (esperava para sempre)
 //  b7 a sobra: outra mão encheu a obra enquanto o construtor vinha — o que ela não pede mais volta ao estoque ('sobra-obra')
-//  b8 um save no meio da entrega, carregado: a obra fica pronta
+//  b8 um save no meio da entrega, carregado: a obra fica pronta (as muralhas da cidade, que tiram a pedra do armazém antes de
+//     toda obra, seguradas no caso, T-293)
 //  b9 a carroça de comércio sai com a carga pelo livro ('carroca', f: → c:): a carroça é lugar do depósito desde o primeiro
 //     mundo (registrada antes do depósito existir, nunca foi, e nenhuma carroça de comércio saía)
 //  b10 a cidade abandonada com uma obra: o que ela tinha fica ao vento, pelo livro ('abandono')
@@ -57,7 +58,11 @@ const nextLooks = () => { const w = freeBuilder(0); if (w) { Vg.endTask(w); Vg.H
 const send = b => {
   if (S.time < 0.25 || S.time > 0.6) { S.time = 0.27; live(3); }
   let w = null; for (let k = 0; k < 30 && !(w = freeBuilder(b.id)); k++) live(1); // (one with free hands: the other may be carrying)
-  if (w) { Vg.endTask(w); Vg.H.setTask(w, { type: 'build', id: b.id, pri: 1, st: 0 }); } return w;
+  // (rested and fed, as the planner's builder of a morning — the test's hand: in the branch joined with b8c072c the builder
+  // sent to the well, Sabina, went to bed 5 s later, her morning's energy spent, and then to a cave and to eat, and nobody
+  // brought a load to it in 120 s: the case is the load on its way, not who is fit to carry it. A work left by one who goes to
+  // bed is taken by the next builder — the fome.js h1 and h3, T-244 —, T-293)
+  if (w) { w.energy = Math.max(w.energy, 70); w.hunger = Math.min(w.hunger, 30); w.sleeping = false; Vg.endTask(w); Vg.H.setTask(w, { type: 'build', id: b.id, pri: 1, st: 0 }); } return w;
 };
 
 // ---------------- b1 the delivery; b2 the work stands ----------------
@@ -74,13 +79,19 @@ const send = b => {
 }
 // ---------------- b8 a save in the middle of a delivery (while the town's builders are free of other works) ----------------
 {
-  stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0;
+  // (the town's walls held for the case — one it begins in the middle of it too —, and given back after it: siege.js raises
+  // them straight from the store, two stones a tile as soon as it has three, with no hands, before any work, L-420; in the
+  // branch joined with b8c072c proud Roma, with the 60 of stone the case puts in its store, began a stone wall a few seconds
+  // after the load, and the wall took the 60 in 9 s and every stone after it: the well waited the 400 s for its 12. The case
+  // is the save in the middle of a delivery, not who gets the stone first, T-293)
+  const held = []; const hold = () => { (S.walls || []).forEach((q, i) => { if (!q.done && q.set === set0.id) { q.done = true; held.push(i); } }); };
+  hold(); stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0;
   if (b) send(b);
-  const mid0 = !!b && live(240, () => !!carrying(id));
+  const mid0 = !!b && live(240, () => { hold(); return !!carrying(id); });
   const w = b && carrying(id); const was = w ? `${w.carry.n} de ${w.carry.k} nas mãos de ${w.name}` : 'ninguém carregando';
   if (b) reload();
-  const done = !!b && live(400, () => !site(id));
-  const o = S.buildings.get(id);
+  const done = !!b && live(400, () => { hold(); return !site(id); });
+  const o = S.buildings.get(id); for (const i of held) if (S.walls[i]) S.walls[i].done = false;
   ok('b8 save-no-meio-da-entrega', mid0 && done && !!o && o.built, b ? `${b.type}#${id}, salva com ${was}, carregada: ${o && o.built ? 'pronta' : o ? 'ainda a ' + Math.round(o.progress * 100) + '%' : 'sumiu'}` : 'nenhuma obra possível');
 }
 // ---------------- b3 a reform given up (L-246) ----------------
