@@ -1228,9 +1228,10 @@
     // (and where a storey has rows of seats, its heights over its floor on the same cells: plan.hgt[lv], metres)
     for (const l of P.levels) { const h = hgtOf(P, l.lv, n); if (!h) continue; if (!plan.hgt) plan.hgt = {}; const o = new Float32Array(m.length); for (let k = 0; k < m.length; k++) o[k] = h[m[k]]; plan.hgt[l.lv] = o; }
   }
-  // the walk from the entrance in the plan's own frame, on those same cells, from its own door and stairs
-  function reachCan(P) {
-    const n = Math.round(P.L / CS); const grid = { n, lv: {} }; const hgt = {}; for (const l of P.levels) { const dr = draft(P, l.lv); if (dr) { grid.lv[l.lv] = dr.g; if (dr.hgt) hgt[l.lv] = dr.hgt; } }
+  // the walk from the entrance in the plan's own frame, on those same cells, from its own door and stairs (keep: the pieces
+  // stamped on them, all when not said — the house given up, without what its family took: leftOf)
+  function reachCan(P, keep) {
+    const n = Math.round(P.L / CS); const grid = { n, lv: {} }; const hgt = {}; for (const l of P.levels) { const dr = draft(P, l.lv, keep); if (dr) { grid.lv[l.lv] = dr.g; if (dr.hgt) hgt[l.lv] = dr.hgt; } }
     const e = P.entrance; const pc = { grid, hgt, levels: P.levels, entrance: e ? { x: e.u, z: e.v, lv: e.lv || 0 } : null, stairs: P.stairs.map(st => ({ kind: st.kind, lv0: st.lv0, lv1: st.lv1, a: st.foot, b: st.top })) };
     return { pc, seen: reach(pc) };
   }
@@ -1530,6 +1531,9 @@
     // a wall on the other side of a cell's middle now and then — the top of the stair of the sobrado#6003 of the metropole a
     // wall's cell from where the body stands, in the house given up and not in the one lived in)
     gridOf(o, p._P, it => !ITEMS[it.kind].leva);
+    // (and the walk from the door on those cells: the floor the things taken leave free is walked — the map kept from the house
+    // lived in left it out, the back of the hut#4209 of the metropole behind the ladder, where the body walks: L-423)
+    const { seen } = reachCan(p._P, it => !ITEMS[it.kind].leva); const m = turnOf(o.side, o.lot.w); o.reach = {}; for (const lv in seen) o.reach[lv] = turn(seen[lv], m);
     return o;
   }
   // ------------------------------ the ruin of a plan ------------------------------
@@ -1696,6 +1700,7 @@
   const RIM9 = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]];
   const standsAt = (p, lv, x, z, r) => { const cr = crawl(p, lv); return RIM9.every(([dx, dz]) => openCode(codeAt(p, lv, x + dx * r, z + dz * r), cr)); };
   In.standsAt = standsAt; // (for the proofs)
+  In.passable = passable; // (for the proofs: the walk's own rule on a cell of a plan's grid — itself and its four neighbours open, off a flight's corner)
   // where one standing at a piece stands: its place of use, or — that point on a flight, a wall, another piece, as the plan's
   // walk lets it be (a reached cell within 0.3 m of it is all the walk asks) — the nearest point within 0.4 m where the feet
   // stand on open floor the door reaches, never in the piece; null where there is none (L-282)
