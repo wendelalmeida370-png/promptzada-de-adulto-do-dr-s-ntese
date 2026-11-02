@@ -85,12 +85,19 @@ if (!NOPLAN) for (const t of Object.keys(In.TYPES)) {
   }
   SAMPLE.set(t, o);
 }
-// (a proof's outcome in the regression's folder: its own file — qa/x.js, x.txt or x_….txt —, passed with no failure)
+// (the names the regression gives each proof's outcome, read from the regress.sh itself: «F nome arquivo» writes
+// fund_nome.txt, «node … arquivo … > "$OUT/x.txt"» writes x.txt — the fundação's files never matched qa/x.js by name)
+const REG = new Map();
+try { const s = fs.readFileSync(path.join(__dirname, 'regress.sh'), 'utf8'); const add = (js, out) => { const k = path.join('qa', js); if (!REG.has(k)) REG.set(k, []); REG.get(k).push(out); };
+  for (const r of s.matchAll(/\bF ([\w.-]+) ([\w./-]+\.js)\b/g)) add(r[2], `fund_${r[1]}.txt`);
+  for (const r of s.matchAll(/\bnode ([^>&|;()]*?) > "\$OUT\/([^"]+)"/g)) for (const t of r[1].split(/\s+/)) if (/\.js$/.test(t)) add(t, r[2]); } catch (e) { /* (no regress.sh: the names alone) */ }
+// (a proof's outcome in the regression's folder: its own files — the regress.sh's names, or x.txt and x_….txt for qa/x.js —,
+// passed with no failure and, in the fundação's, the process out clean)
 const passed = f => {
-  if (!RES || RES === true) return null; const base = path.basename(f, '.js'); let files = [];
-  try { files = fs.readdirSync(RES).filter(n => n === base + '.txt' || n.startsWith(base + '_')); } catch (e) { return null; }
+  if (!RES || RES === true) return null; const base = path.basename(f, '.js'), mine = REG.get(path.normalize(f)) || []; let files = [];
+  try { files = fs.readdirSync(RES).filter(n => n === base + '.txt' || n.startsWith(base + '_') || mine.includes(n)); } catch (e) { return null; }
   if (!files.length) return null; const all = files.map(n => fs.readFileSync(path.join(RES, n), 'utf8')).join('\n');
-  return /^PASSOU/m.test(all) && !/^FALHOU/m.test(all);
+  return /^PASSOU/m.test(all) && !/^FALHOU/m.test(all) && !/^saída [1-9]/m.test(all);
 };
 
 // ------------------------------ the sheets ------------------------------
