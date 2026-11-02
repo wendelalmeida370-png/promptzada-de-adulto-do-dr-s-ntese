@@ -192,8 +192,9 @@
     palaceFurnish(P, rooms);
   }
   // the flight up, along the back wall from the left end of the back wing: where it starts, how long and wide it runs, and
-  // where the room it climbs from and the one it lands in must reach to (its top, a step past it, inside the room)
-  const FLIGHT = { at: 0.7, run: 1.6, w: 0.75, end: 0.7 + 1.6 + 0.35 + 0.2 };
+  // where the room it climbs from and the one it lands in must reach to (its top, a step past it, inside the room) — its foot
+  // 0.85 m from the wing's end wall, room for a body before it, off the flight (L-391: at 0.7 m the body had no place there)
+  const FLIGHT = { at: 0.85, run: 1.6, w: 0.75 }; FLIGHT.end = FLIGHT.at + FLIGHT.run + 0.35 + 0.2;
   // the corner of the back wing the stair takes (both lanes, their feet and tops)
   function colOf(R) { const u0 = R[0] + FLIGHT.at; return [u0 - 0.6, R[1], u0 + FLIGHT.run + 0.6, R[1] + 1.55]; }
   function flight(P, lv0, lv1, R) {

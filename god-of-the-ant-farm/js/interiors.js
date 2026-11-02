@@ -413,6 +413,19 @@
     },
     // the inner rectangle of the main shell (the walls' insides)
     inner() { const s = this.shell; const t = s.t; return [s.r[0] + t, s.r[1] + t, s.r[2] - t, s.r[3] - t]; },
+    // whether a body stands before the foot of a flight laid at r going up (du, dv) from storey lv, as the storey stands now:
+    // where it takes the flight from (Avatar's atFoot: before its first step, up to 0.7 m, across its width), its rim on the
+    // storey's open floor and off the flights (this one and the others of the storey) — the flights are laid with their foot
+    // where the body can take them (L-391); the furniture keeps that place clear after (keepClear: the foot's)
+    footFree(lv, r, du, dv) {
+      const dr = draft(this, lv); if (!dr) return false; const { g, n } = dr; const cr = dr.crawl;
+      const fl = this.stairs.filter(s => s.kind !== 'degraus' && s.lv0 === lv).map(s => s.r).concat([r]);
+      const e0 = du ? (du > 0 ? r[0] : r[2]) : (dv > 0 ? r[1] : r[3]); const mid = du ? (r[1] + r[3]) / 2 : (r[0] + r[2]) / 2; const hw = (du ? r[3] - r[1] : r[2] - r[0]) / 2 + 0.05;
+      const at = (x, z) => { const cx = Math.floor(x / CS), cz = Math.floor(z / CS); return cx < 0 || cz < 0 || cx >= n || cz >= n ? C.OUT : g[cz * n + cx]; };
+      const rim = (x, z) => RIM9.every(([dx, dz]) => { const X = x + dx * BODY.r, Z = z + dz * BODY.r; const c = at(X, Z); return (c === C.FLOOR || c === C.DOOR || c === C.HATCH || c === C.STAIR || (cr && c === C.LOWROOF)) && !fl.some(f => X > f[0] && X < f[2] && Z > f[1] && Z < f[3]); });
+      for (let e = BODY.r; e < 0.7 - 1e-9; e += 0.02) for (let l = -hw + 0.01; l <= hw - 0.01 + 1e-9; l += 0.05) if (rim(du ? e0 - du * e : mid + l, du ? mid + l : e0 - dv * e)) return true;
+      return false;
+    },
     // the clear zones a door and a stair keep (no furniture there) — not the space between two columns of a colonnade where the
     // street does not come in (a form's porch, its peristyle: the edge of its floor, no way in; the walk from the door proves what
     // must be open — the Norse gallery's, whose staves stand 0.70 m from the walls, kept the nave's back clear through its wall)
@@ -525,30 +538,25 @@
     // stairs' ends on the others
     walks(lv) {
       const dr = draft(this, lv); if (!dr) return true; const { g, n } = dr; const cr = dr.crawl; const H = dr.hgt;
-      const seen = new Uint8Array(n * n); const q = [];
-      const pass = (x, z) => {
-        const c = g[z * n + x]; if (cr) return c === C.FLOOR || c === C.LOWROOF || c === C.DOOR || c === C.HATCH;
-        if (!(c === C.FLOOR || c === C.DOOR || c === C.HATCH)) return false;
-        if (x < 1 || z < 1 || x >= n - 1 || z >= n - 1) return false;
-        const a = g[z * n + x + 1], b = g[z * n + x - 1], c2 = g[(z + 1) * n + x], d = g[(z - 1) * n + x];
-        return NEAR(a) && NEAR(b) && NEAR(c2) && NEAR(d);
-      };
+      const seen = new Uint8Array(n * n); const q = []; const edge = openEdge(this, lv); const ups = upsFrom(this, lv);
+      const pass = (x, z) => passCell(g, n, x, z, cr, edge, ups);
       const push = (x, z, from) => { if (x < 0 || z < 0 || x >= n || z >= n || seen[z * n + x] || !pass(x, z) || (from !== undefined ? !stepOK(H, from, z * n + x) : !floorStep(H, z * n + x))) return; seen[z * n + x] = 1; q.push(x, z); };
-      const near = (p, rad) => { const cx = Math.floor(p[0] / CS), cz = Math.floor(p[1] / CS); const k = Math.ceil(rad / CS); for (let dz = -k; dz <= k; dz++) for (let dx = -k; dx <= k; dx++) { const x = cx + dx, z = cz + dz; if (x >= 0 && z >= 0 && x < n && z < n && seen[z * n + x]) return true; } return false; };
+      // (a flight's foot, st: reached only from a cell the body takes it from, as the walk of the plan made has it — footCell)
+      const near = (p, rad, st) => { const cx = Math.floor(p[0] / CS), cz = Math.floor(p[1] / CS); const k = Math.ceil(rad / CS); for (let dz = -k; dz <= k; dz++) for (let dx = -k; dx <= k; dx++) { const x = cx + dx, z = cz + dz; if (x >= 0 && z >= 0 && x < n && z < n && seen[z * n + x] && (!st || footCell(st, x, z))) return true; } return false; };
       // (the ways in to this storey: from the street on the entrance one; elsewhere the end of the flight that comes from the
       // side of the entrance — the others, the flights going on, are ends to reach)
       const e0 = this.entryLv || 0; const ins = [], ends = [];
       for (const st of this.stairs) {
         if (st.kind === 'degraus') continue;
         if (st.lv1 === lv) (lv > e0 && st.lv0 < lv ? ins : ends).push(st.top);
-        if (st.lv0 === lv) (lv < e0 && st.lv1 > lv ? ins : ends).push(st.foot);
+        if (st.lv0 === lv) { if (lv < e0 && st.lv1 > lv) ins.push(st.foot); else { const f = st.foot.slice(); f.st = st; ends.push(f); } }
       }
       const entry = lv === (this.entryLv || 0) && this.entrance;
       if (entry) { const e = this.entrance; const ex = Math.floor(e.u / CS), ez = Math.floor(e.v / CS); for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) if (Math.hypot(dx, dz) * CS <= 1.25) push(ex + dx, ez + dz); }
       else for (const p of ins) { const cx = Math.floor(p[0] / CS), cz = Math.floor(p[1] / CS); for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) push(cx + dx, cz + dz); }
       if (!q.length) return !entry && !ins.length && !ends.length;
       for (let k = 0; k < q.length; k += 2) { const x = q[k], z = q[k + 1], k0 = z * n + x; push(x + 1, z, k0); push(x - 1, z, k0); push(x, z + 1, k0); push(x, z - 1, k0); }
-      for (const p of ends) if (!near(p, 0.45)) return false;
+      for (const p of ends) if (!near(p, 0.45, p.st)) return false;
       for (const m of this.rooms) {
         if (m.lv !== lv) continue; let ok = false;
         const x0 = Math.max(0, Math.floor((m.r[0] + 0.01) / CS)), x1 = Math.min(n - 1, Math.floor((m.r[2] - 0.01) / CS)), z0 = Math.max(0, Math.floor((m.r[1] + 0.01) / CS)), z1 = Math.min(n - 1, Math.floor((m.r[3] - 0.01) / CS));
@@ -570,19 +578,16 @@
     walksIn(lv, room) {
       const dr = draft(this, lv); if (!dr) return true; const { g, n } = dr; const cr = dr.crawl; const H = dr.hgt; const R = this.rooms[room].r;
       const x0 = Math.max(0, Math.floor(R[0] / CS) - 1), x1 = Math.min(n - 1, Math.floor(R[2] / CS) + 1), z0 = Math.max(0, Math.floor(R[1] / CS) - 1), z1 = Math.min(n - 1, Math.floor(R[3] / CS) + 1);
-      const pass = (x, z) => {
-        const c = g[z * n + x]; if (cr) return c === C.FLOOR || c === C.LOWROOF || c === C.DOOR || c === C.HATCH;
-        if (!(c === C.FLOOR || c === C.DOOR || c === C.HATCH)) return false;
-        if (x < 1 || z < 1 || x >= n - 1 || z >= n - 1) return false;
-        return NEAR(g[z * n + x + 1]) && NEAR(g[z * n + x - 1]) && NEAR(g[(z + 1) * n + x]) && NEAR(g[(z - 1) * n + x]);
-      };
+      const edge = openEdge(this, lv), ups = upsFrom(this, lv);
+      const pass = (x, z) => passCell(g, n, x, z, cr, edge, ups);
       const seen = new Uint8Array(n * n); const q = [];
       const push = (x, z, from) => { if (x < x0 || z < z0 || x > x1 || z > z1 || seen[z * n + x] || !pass(x, z) || (from !== undefined ? !stepOK(H, from, z * n + x) : !floorStep(H, z * n + x))) return; seen[z * n + x] = 1; q.push(x, z); };
       // (its ways in: the door cells on its walls, the stairs' ends in it, the street door's ground)
       const ports = [];
       for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (g[z * n + x] === C.DOOR && pass(x, z)) ports.push([[x, z]]);
       const near = (p, k) => { const cx = Math.floor(p[0] / CS), cz = Math.floor(p[1] / CS); const out = []; for (let dz = -k; dz <= k; dz++) for (let dx = -k; dx <= k; dx++) { const x = cx + dx, z = cz + dz; if (x >= x0 && z >= z0 && x <= x1 && z <= z1 && pass(x, z)) out.push([x, z]); } return out; };
-      for (const st of this.stairs) { if (st.kind === 'degraus') continue; if (st.lv0 === lv && ptIn(st.foot, R, 0.3)) ports.push(near(st.foot, 2)); if (st.lv1 === lv && ptIn(st.top, R, 0.3)) ports.push(near(st.top, 2)); }
+      // (a flight's foot only by the cells the body takes it from — footCell —: a cell past the corner of the flight is no way to it)
+      for (const st of this.stairs) { if (st.kind === 'degraus') continue; if (st.lv0 === lv && ptIn(st.foot, R, 0.3)) ports.push(near(st.foot, 2).filter(([x, z]) => footCell(st, x, z))); if (st.lv1 === lv && ptIn(st.top, R, 0.3)) ports.push(near(st.top, 2)); }
       if (lv === (this.entryLv || 0) && this.entrance && ptIn([this.entrance.u, this.entrance.v], R, 1.0)) ports.push(near([this.entrance.u, this.entrance.v - 0.3], 5));
       if (!ports.length) return this.walks(lv);
       if (ports.some(p => !p.length)) return false;
@@ -1232,20 +1237,45 @@
   // stamped on them, all when not said — the house given up, without what its family took: leftOf)
   function reachCan(P, keep) {
     const n = Math.round(P.L / CS); const grid = { n, lv: {} }; const hgt = {}; for (const l of P.levels) { const dr = draft(P, l.lv, keep); if (dr) { grid.lv[l.lv] = dr.g; if (dr.hgt) hgt[l.lv] = dr.hgt; } }
-    const e = P.entrance; const pc = { grid, hgt, levels: P.levels, entrance: e ? { x: e.u, z: e.v, lv: e.lv || 0 } : null, stairs: P.stairs.map(st => ({ kind: st.kind, lv0: st.lv0, lv1: st.lv1, a: st.foot, b: st.top })) };
+    const e = P.entrance; const pc = { grid, hgt, levels: P.levels, entrance: e ? { x: e.u, z: e.v, lv: e.lv || 0 } : null, stairs: P.stairs.map(st => ({ kind: st.kind, lv0: st.lv0, lv1: st.lv1, a: st.foot, b: st.top, r: st.r, dir: st.dir })), shell: P.shell, entryLv: P.entryLv, type: P.rec.t }; // (its shell, storey and type: an open ground's edge, openEdge)
     return { pc, seen: reach(pc) };
   }
   const PASS = c => c === C.FLOOR || c === C.DOOR || c === C.HATCH;
-  const NEAR = c => c === C.FLOOR || c === C.DOOR || c === C.STAIR || c === C.HATCH;
+  // (and the cells round it, where the rim of the body is: open floor too — never the footprint of a flight on the storey it
+  // goes up from, which the body takes whole, from its foot (Avatar's solidAt): a way beside a flight is one of floor, L-391)
+  const NEAR = c => c === C.FLOOR || c === C.DOOR || c === C.HATCH;
+  // (and the cells across its corners — where the rim of the body reaches too, 0.23 m each way —: never a flight's, so the walk
+  // does not slip past a flight's corner where a body does not — the house#2940 of the metropole, a hearth's corner and the
+  // flight's 0.46 m apart)
+  // (asked of every cell the walk passes: no array made in it — it was a third of a tall block's plan, with the collector)
+  const offFlight = (g, n, x, z) => {
+    const S = C.STAIR, xa = x - 1, xb = x + 1;
+    if (z > 0) { const k = (z - 1) * n; if ((xa >= 0 && g[k + xa] === S) || (xb < n && g[k + xb] === S)) return false; }
+    if (z < n - 1) { const k = (z + 1) * n; if ((xa >= 0 && g[k + xa] === S) || (xb < n && g[k + xb] === S)) return false; }
+    return true;
+  };
+  // (on the ground storey of an open ground the world walks across — the square, the fair —, out of its floor and out of its
+  // lot is the street's, where the feet walk on, L-410: the foot of the rostra at the lot's edge is come to from there)
+  const openEdge = (o, lv) => !!o.shell && o.shell.kind === 'aberta' && lv === (o.entryLv || 0) && !(G.BDEF[o.rec ? o.rec.t : o.type] && G.BDEF[o.rec ? o.rec.t : o.type].blocks);
+  const nearAt = (g, n, X, Z, edge) => (X < 0 || Z < 0 || X >= n || Z >= n ? edge : NEAR(g[Z * n + X]) || (edge && g[Z * n + X] === C.OUT));
+  // (whether a storey has a flight going up from it: only then its grid has a flight's cells, for offFlight to look at)
+  const upsFrom = (o, lv) => o.stairs.some(s => s.kind !== 'degraus' && s.lv0 === lv);
+  // the walk's rule on one cell of a storey's grid (cr: a loft, crawled; edge: an open ground's, openEdge; ups: upsFrom) — the
+  // one the placing of each piece and the walk of the plan made ask, the same: the cell open, its four neighbours open too
+  // (passages of 0.75 m and more), off a flight's corner
+  function passCell(g, n, x, z, cr, edge, ups) {
+    const k = z * n + x, c = g[k]; if (cr) return c === C.FLOOR || c === C.LOWROOF || c === C.DOOR || c === C.HATCH;
+    if (!PASS(c)) return false;
+    if (edge) { if (!(nearAt(g, n, x + 1, z, edge) && nearAt(g, n, x - 1, z, edge) && nearAt(g, n, x, z + 1, edge) && nearAt(g, n, x, z - 1, edge))) return false; }
+    else if (x < 1 || z < 1 || x >= n - 1 || z >= n - 1 || !NEAR(g[k + 1]) || !NEAR(g[k - 1]) || !NEAR(g[k + n]) || !NEAR(g[k - n])) return false;
+    return !ups || offFlight(g, n, x, z);
+  }
   // a loft is crawled, not walked: there a cell is enough (under the low roof too)
   const crawl = (plan, lv) => { const l = plan.levels.find(q => q.lv === lv); return !!(l && l.kind === 'jirau'); };
   // a cell one can stand on with a body of 0.32 m: itself and its four neighbours open (passages of 0.75 m and more)
   function passable(plan, lv, x, z) {
     const n = plan.grid.n; const g = plan.grid.lv[lv]; if (!g || x < 0 || z < 0 || x >= n || z >= n) return false;
-    if (crawl(plan, lv)) { const c = g[z * n + x]; return c === C.FLOOR || c === C.LOWROOF || c === C.DOOR || c === C.HATCH; }
-    if (!PASS(g[z * n + x])) return false;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Z = z + dz; if (X < 0 || Z < 0 || X >= n || Z >= n) return false; if (!NEAR(g[Z * n + X])) return false; }
-    return true;
+    return passCell(g, n, x, z, crawl(plan, lv), openEdge(plan, lv), true);
   }
   const cellAt = (plan, p) => [Math.floor(p[0] / CS), Math.floor(p[1] / CS)];
   // the walk from the entrance: every storey's cells one reaches on foot (by the stairs between them)
@@ -1265,12 +1295,18 @@
       push(lv, x + 1, z, k0); push(lv, x - 1, z, k0); push(lv, x, z + 1, k0); push(lv, x, z - 1, k0);
       for (const L of links) {
         if (L.s.kind === 'degraus') continue;
-        if (lv === L.s.lv0 && Math.abs(x - L.f[0]) <= 2 && Math.abs(z - L.f[1]) <= 2) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) push(L.s.lv1, L.t[0] + dx, L.t[1] + dz);
+        if (lv === L.s.lv0 && Math.abs(x - L.f[0]) <= 2 && Math.abs(z - L.f[1]) <= 2 && footCell(L.s, x, z)) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) push(L.s.lv1, L.t[0] + dx, L.t[1] + dz);
         if (lv === L.s.lv1 && Math.abs(x - L.t[0]) <= 2 && Math.abs(z - L.t[1]) <= 2) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) push(L.s.lv0, L.f[0] + dx, L.f[1] + dz);
       }
     }
     return seen;
   }
+  // (a cell the body takes a flight up from: its middle before the flight's first step, up to 0.7 m, across its width — Avatar's
+  // atFoot —, half a cell more each way for the grid: a flight is not taken from beside it, L-391 — the sobrado#21167 of the
+  // metropole, its ladder's foot behind a hearth, was reached by the walk from a cell off the ladder's side)
+  const footCell = (s, x, z) => { if (!s.r || !s.dir) return true; const px = (x + 0.5) * CS, pz = (z + 0.5) * CS; const r = s.r, dx = s.dir[0], dz = s.dir[1], h = CS / 2;
+    if (dx) { const e = dx > 0 ? r[0] - px : px - r[2]; return e >= -0.05 - h && e < 0.7 + h && pz > r[1] - 0.05 - h && pz < r[3] + 0.05 + h; }
+    const e = dz > 0 ? r[1] - pz : pz - r[3]; return e >= -0.05 - h && e < 0.7 + h && px > r[0] - 0.05 - h && px < r[2] + 0.05 + h; };
   const reachedNear = (plan, seen, lv, p, r) => { const n = plan.grid.n; const s = seen[lv]; if (!s) return false; const [cx, cz] = cellAt(plan, p); const k = Math.ceil((r || 0.3) / CS); for (let dz = -k; dz <= k; dz++) for (let dx = -k; dx <= k; dx++) { const x = cx + dx, z = cz + dz; if (x >= 0 && z >= 0 && x < n && z < n && s[z * n + x]) return true; } return false; };
 
   // ------------------------------ validation ------------------------------
@@ -1399,9 +1435,10 @@
   }
   // the body's own places in a plan made (L-281, L-282), on the lot's cells and the walk from the door: each place of use one
   // stands at moved to the nearest point within BODY.fit where the feet stand on open floor the door reaches — never in its
-  // piece —, ok or not; a place on a piece ok where one of the piece's own standing places is; each flight's foot and top moved
-  // along the flight's line (and across it, within its width) to where the body's rim stands. Every use of every piece needs
-  // a place ok, every flight both ends: else the plan is refused and laid out again (D-088)
+  // piece —, ok or not; a place on a piece ok where one of the piece's own standing places is; each flight's foot to where the
+  // body takes it from, its rim off the flight (L-391), its top along the flight's line (and across it) to where the body's
+  // rim stands (fitLanding). Every use of every piece needs a place ok, every flight both ends: else the plan is refused and
+  // laid out again (D-088)
   function fitBody(plan, E) {
     for (const M of plan.marks || []) {
       let any = 0; for (const q of M.pts) { const pt = fitStand(plan, M.lv, q.x, q.z, null); q.ok = pt ? 1 : 0; if (pt) { q.x = pt[0]; q.z = pt[1]; any = 1; } }
@@ -1423,22 +1460,39 @@
       if (b) s.b = b; else E.push(`o corpo não cabe no topo do lance (piso ${s.lv1})`);
     }
   }
-  // (a flight's end: its point, then along the flight's line away from it (out: -1 the foot, 1 the top) and back onto its
-  // last steps, and across it — within its width, or a side step off it: where the floor beyond a flight's top is shallower
-  // than the body, one steps off it sideways —, the nearest first, where the body's rim stands on open floor, the flight's
-  // own cells open to it, and the door reaches)
+  // (where the rim of the body stands at a flight's end: on open floor — a flight's cells beyond its footprint too, the grid's
+  // rounding, as the body walks them (Space.indoor) —, never in the footprint of a flight on the storey it goes up from, to the
+  // centimetre as the body has it (Avatar's solidAt): the body takes a flight whole, from its foot — L-391)
   const LAND = c => c === C.FLOOR || c === C.DOOR || c === C.STAIR || c === C.HATCH;
+  const inFlight = (plan, lv, x, z) => plan.stairs.some(s => s.kind !== 'degraus' && s.lv0 === lv && x > s.r[0] && x < s.r[2] && z > s.r[1] && z < s.r[3]);
+  // (on the ground storey of an open ground the world walks across — the square, the fair —, out of its floor is the street's,
+  // as the feet have it: L-410 — the foot of the rostra at the lot's edge)
+  const streetOf = (plan, lv) => openEdge(plan, lv);
+  const landsRim = (plan, lv, x, z) => { const cr = crawl(plan, lv), og = streetOf(plan, lv); return RIM9.every(([dx, dz]) => { const X = x + dx * BODY.r, Z = z + dz * BODY.r; const c = codeAt(plan, lv, X, Z); return (LAND(c) || (cr && c === C.LOWROOF) || (og && c === C.OUT)) && !inFlight(plan, lv, X, Z); }); };
+  // (a flight's end where the body stands: the foot where the body takes the flight from — Avatar's atFoot: before its first
+  // step, up to 0.7 m, across its width —, its rim off the flight; the top: its point, then along the flight's line away from
+  // it and back onto its last steps, and across it — within its width, or a side step off it: where the floor beyond a
+  // flight's top is shallower than the body, one steps off it sideways —; the nearest first, where the rim stands (landsRim)
+  // and the door reaches)
   function fitLanding(plan, s, lv, p0, out) {
-    const [du, dv] = s.dir; const cu = -dv, cv = du; const half = (s.w || 0.8) / 2 + BODY.r + 0.15; const cr = crawl(plan, lv);
-    const ok = (x, z) => RIM9.every(([dx, dz]) => { const c = codeAt(plan, lv, x + dx * BODY.r, z + dz * BODY.r); return LAND(c) || (cr && c === C.LOWROOF); }) && reachedNear(plan, plan.reach || {}, lv, [x, z], 0.3);
+    const [du, dv] = s.dir; const cu = -dv, cv = du; const half = (s.w || 0.8) / 2 + BODY.r + 0.15;
+    const ok = (x, z) => landsRim(plan, lv, x, z) && reachedNear(plan, plan.reach || {}, lv, [x, z], 0.3);
+    // (the foot only where the body takes the flight from: before its first step, from a rim off it to 0.7 m, across its width)
+    const r = s.r, e0 = du ? (du > 0 ? r[0] : r[2]) : (dv > 0 ? r[1] : r[3]), mid = du ? (r[1] + r[3]) / 2 : (r[0] + r[2]) / 2, hw = (s.w || 0.8) / 2 + 0.05;
+    const win = (x, z) => { if (out > 0) return true; const e = du ? (du > 0 ? e0 - x : x - e0) : (dv > 0 ? e0 - z : z - e0); return e >= BODY.r - 1e-9 && e < 0.7 && Math.abs(du ? z - mid : x - mid) <= hw + 1e-9; };
     const cands = [];
     for (let t = -0.35; t <= BODY.fit + 1e-9; t += 0.05) for (let l = -half; l <= half + 1e-9; l += 0.05) cands.push([Math.hypot(t, l), t, l]);
     cands.sort((A, B2) => A[0] - B2[0] || A[1] - B2[1] || A[2] - B2[2]);
-    for (const [, t, l] of cands) { const x = r2(p0[0] + out * du * t + cu * l), z = r2(p0[1] + out * dv * t + cv * l); if (ok(x, z)) return [x, z]; } // (the point as the plan keeps it: to the centimetre)
+    for (const [, t, l] of cands) { const x = r2(p0[0] + out * du * t + cu * l), z = r2(p0[1] + out * dv * t + cv * l); if (win(x, z) && ok(x, z)) return [x, z]; } // (the point as the plan keeps it: to the centimetre)
+    // (a foot whose place is narrower than those steps: every 2 cm along it and 5 cm across it, from its middle)
+    if (out < 0) { const fc = [];
+      for (let k = 0; BODY.r + k * 0.02 < 0.7 - 1e-9; k++) for (let q = -Math.floor(hw / 0.05); q * 0.05 <= hw + 1e-9; q++) { const e = BODY.r + k * 0.02, l = q * 0.05; const x = du ? e0 - du * e : mid + l, z = du ? mid + l : e0 - dv * e; fc.push([Math.hypot(x - p0[0], z - p0[1]), x, z]); }
+      fc.sort((A, B2) => A[0] - B2[0] || A[1] - B2[1] || A[2] - B2[2]);
+      for (const [, x0, z0] of fc) { const x = r2(x0), z = r2(z0); if (win(x, z) && ok(x, z)) return [x, z]; } }
     return null;
   }
   // (whether the body's rim stands at a flight's end of a plan made: for the proofs and the checker)
-  In.landsAt = (plan, lv, x, z) => { const cr = crawl(plan, lv); return RIM9.every(([dx, dz]) => { const c = codeAt(plan, lv, x + dx * BODY.r, z + dz * BODY.r); return LAND(c) || (cr && c === C.LOWROOF); }); };
+  In.landsAt = (plan, lv, x, z) => landsRim(plan, lv, x, z);
   // the geometric report of one building's plan (Parte 7.4, D-087): each finding a FALHA (a defect) or an ESCOLHA (legitimate,
   // said with its reason) — for qa/geometria.js and for the plan the god looks at in the dev mode (int-planta.js); it only
   // reads. o.world: the building stands in a world (its entrance against the ground, the door people leave by); o.rec: the

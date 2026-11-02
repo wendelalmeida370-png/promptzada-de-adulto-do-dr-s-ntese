@@ -306,6 +306,7 @@
       if (!roomHolding(P, lv0, r)) continue;
       if (P.keepClear(lv0).some(z => P.ovr(r, z)) || (hole && P.keepClear(lv1).some(z => P.ovr(hole, z)))) continue;
       const fr = P.rooms.find(m => m.lv === lv0 && ptInR(foot, m.r, 0.2)); if (!fr) continue;
+      if (!P.footFree(lv0, r, du, dv)) continue; // (a body stands before its foot, off the flight: L-391)
       const tr = P.rooms.find(m => m.lv === lv1 && ptInR(tp, m.r, 0.15) && (!top || top(m))); if (!tr) continue;
       if (hole && !roomHolding(P, lv1, hole) && !P.rooms.some(m => m.lv === lv1 && P.ovr(hole, m.r))) continue;
       return P.stair(kind || 'escada-de-mao', lv0, lv1, r, du, dv, hole);
