@@ -175,12 +175,16 @@ function fishPlace() {
   if (!st || !v || !f || G.Village.facOfSet(st.set) !== fid) ok('guardar no armazém: a entrega do mundo', false, 'nenhum armazém do povo ao lado');
   else {
     const d = G.Vg.door(st); const b = G.Avatar.state(); b.yaw = Math.atan2(d[1] * L - b.Z, d[0] * L - b.X); v.hunger = 5;
-    v.carry = { k: 'wood', n: 3 }; const w0 = f.stock.wood || 0, t0 = v.st.wood || 0; const want = Math.max(0, Math.min(3 * (S.blessed ? 2 : 1), G.Village.cap(fid) - w0));
+    v.carry = { k: 'wood', n: 3 };
+    // (someone within arm's reach of the body — a child at play by the fire, at its back —: «E» is theirs by the rule of the
+    // hands, as in T-121; the world goes on until the door is what «E» means here, as a player waits for the way to clear, T-304)
+    let waited = 0; for (let b1 = G.Interact.best(); waited < 600 && !(b1 && b1.id === 'porta'); waited++) { frame(); b1 = G.Interact.best(); }
+    const w0 = f.stock.wood || 0, t0 = v.st.wood || 0; const want = Math.max(0, Math.min(3 * (S.blessed ? 2 : 1), G.Village.cap(fid) - w0));
     const c = holdE('porta');
     // (90 frames — three seconds of the body, longer than the act — without the world: the load still in the hands, the stock as it was)
     for (let k = 0; k < 90; k++) frame(false);
     const held = G.People3D.look(v).held; const still = !!(v.carry && v.carry.n === 3 && held && held.grip !== 'chao') && (f.stock.wood || 0) === w0 && G.Avatar.busy();
-    ok('guardar no armazém: com o mundo parado, as mãos esperam na porta com a carga (nada entra no estoque antes)', !!(c && c.ok) && still, `${c ? c.label : '-'}: a carga ${v.carry ? v.carry.n + ' de lenha nas mãos' : 'sumiu'}, o estoque ${(f.stock.wood || 0) === w0 ? 'igual' : 'mudou'}, o ato ${G.Avatar.busy() ? 'esperando o mundo' : 'acabou'}`);
+    ok('guardar no armazém: com o mundo parado, as mãos esperam na porta com a carga (nada entra no estoque antes)', !!(c && c.ok) && still, `${waited ? `(a frente da porta livre depois de ${waited} quadros) ` : ''}${c ? c.label : '-'}: a carga ${v.carry ? v.carry.n + ' de lenha nas mãos' : 'sumiu'}, o estoque ${(f.stock.wood || 0) === w0 ? 'igual' : 'mudou'}, o ato ${G.Avatar.busy() ? 'esperando o mundo' : 'acabou'}`);
     for (let k = 0; k < 300 && G.Avatar.busy(); k++) frame();
     const got = (f.stock.wood || 0) - w0;
     ok('guardar no armazém: a entrega conta como a de qualquer morador (o estoque do povo, a conta da pessoa)', !v.carry && got === want && (v.st.wood || 0) === t0 + 3, `estoque +${got} (a entrega de um morador: +${want}), a conta da pessoa +${(v.st.wood || 0) - t0}, ${v.carry ? 'a carga ainda nas mãos' : 'as mãos vazias'}`);
