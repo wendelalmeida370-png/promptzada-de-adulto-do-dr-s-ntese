@@ -64,33 +64,43 @@ const VERBS = new Set(); for (const m of src('js/interact.js').matchAll(/I\.add\
 const SYSTEMS = new Set(); for (const [, s] of JS) for (const m of s.matchAll(/G\.([A-Z][A-Za-z0-9]*)\s*=/g)) SYSTEMS.add('G.' + m[1]);
 // (the uses of the pieces, at their own size)
 const USES = new Map(); for (const k in In.ITEMS) { const D = In.ITEMS[k]; let sp = []; try { sp = D.spots ? D.spots({ w: D.w || 1.2, d: D.d || 0.8, h: D.h || 0.5 }) : []; } catch (e) { sp = []; } for (const s of sp) { if (!USES.has(s.use)) USES.set(s.use, new Set()); USES.get(s.use).add(k); } }
-// (the plans of each type that has them: one of each people, the first family its rules allow that is laid out — the pieces
-// in them, the uses of their places: of the pieces, the rows of seats, the places with no piece)
+// (the plans of each type that has them: for each people, every family its rules allow there that is laid out — the pieces
+// in them, the uses of their places: of the pieces, the rows of seats, the places with no piece: what one family puts in
+// and the first does not — a home's table, its comfort, where there is room — the real homes have too, T-306 —; and the
+// geometric report of the first of them, within three tries, as always)
 const SAMPLE = new Map(); // type → { pieces: Set, uses: Set, fams: n, made: n, geoF, geoE: the geometric report's failures and choices, why }
 if (!NOPLAN) for (const t of Object.keys(In.TYPES)) {
   const T = In.TYPES[t]; const def = G.BDEF[t]; if (!def) continue; const o = { pieces: new Set(), uses: new Set(), fams: (T.fams || []).length, made: 0, peoples: [], geoF: 0, geoE: 0, why: [] };
   for (const c of Object.keys(In.TRAD)) {
     const rec = { v: 4, f: '', r: 0, t, u: T.use, s: 'S', o: 0, c, e: 3, k: 'ae', cl: 't', fl: 0, d: 3, w: 0, pw: 0, h: [], m: 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
-    let tries = 0;
+    let tries = 0, first = false;
     for (const f of T.fams || []) {
-      const F = In.FAMS[f]; if (!F || (F.can && F.can(rec, T, In.TRAD[c]))) continue; if (++tries > 3) break;
+      const F = In.FAMS[f]; if (!F || (F.can && F.can(rec, T, In.TRAD[c]))) continue; if (!first && ++tries > 3) break;
       const b0 = { id: 101, type: t, x: 8, y: 8, w: def.w, h: def.h }; const p = In.makeFam(b0, Object.assign({}, rec, { f }), f); if (!p.ok) continue;
-      o.made++; o.peoples.push(c);
-      for (const g of In.report(b0, p, { rec: Object.assign({}, rec, { f }) })) { if (g.k === 'FALHA') { o.geoF++; if (o.why.length < 2) o.why.push(`${c}: ${g.what}`); } else o.geoE++; }
+      if (!first) {
+        first = true; o.made++; o.peoples.push(c);
+        for (const g of In.report(b0, p, { rec: Object.assign({}, rec, { f }) })) { if (g.k === 'FALHA') { o.geoF++; if (o.why.length < 2) o.why.push(`${c}: ${g.what}`); } else o.geoE++; }
+      }
       for (const it of p.items) { o.pieces.add(it.kind); for (const s of it.spots) o.uses.add(s.use); }
       for (const T2 of p.tiers || []) o.uses.add(T2.use || 'assistir');
       for (const M2 of p.marks || []) o.uses.add(M2.use);
-      break;
     }
   }
   SAMPLE.set(t, o);
 }
-// (a proof's outcome in the regression's folder: its own file — qa/x.js, x.txt or x_….txt —, passed with no failure)
+// (the names the regression gives each proof's outcome, read from the regress.sh itself: «F nome arquivo» writes
+// fund_nome.txt, «node … arquivo … > "$OUT/x.txt"» writes x.txt — the fundação's files never matched qa/x.js by name)
+const REG = new Map();
+try { const s = fs.readFileSync(path.join(__dirname, 'regress.sh'), 'utf8'); const add = (js, out) => { const k = path.join('qa', js); if (!REG.has(k)) REG.set(k, []); REG.get(k).push(out); };
+  for (const r of s.matchAll(/\bF ([\w.-]+) ([\w./-]+\.js)\b/g)) add(r[2], `fund_${r[1]}.txt`);
+  for (const r of s.matchAll(/\bnode ([^>&|;()]*?) > "\$OUT\/([^"]+)"/g)) for (const t of r[1].split(/\s+/)) if (/\.js$/.test(t)) add(t, r[2]); } catch (e) { /* (no regress.sh: the names alone) */ }
+// (a proof's outcome in the regression's folder: its own files — the regress.sh's names, or x.txt and x_….txt for qa/x.js —,
+// passed with no failure and, in the fundação's, the process out clean)
 const passed = f => {
-  if (!RES || RES === true) return null; const base = path.basename(f, '.js'); let files = [];
-  try { files = fs.readdirSync(RES).filter(n => n === base + '.txt' || n.startsWith(base + '_')); } catch (e) { return null; }
+  if (!RES || RES === true) return null; const base = path.basename(f, '.js'), mine = REG.get(path.normalize(f)) || []; let files = [];
+  try { files = fs.readdirSync(RES).filter(n => n === base + '.txt' || n.startsWith(base + '_') || mine.includes(n)); } catch (e) { return null; }
   if (!files.length) return null; const all = files.map(n => fs.readFileSync(path.join(RES, n), 'utf8')).join('\n');
-  return /^PASSOU/m.test(all) && !/^FALHOU/m.test(all);
+  return /^PASSOU/m.test(all) && !/^FALHOU/m.test(all) && !/^saída [1-9]/m.test(all);
 };
 
 // ------------------------------ the sheets ------------------------------

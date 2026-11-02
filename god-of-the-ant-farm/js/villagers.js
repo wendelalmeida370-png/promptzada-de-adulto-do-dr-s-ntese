@@ -121,6 +121,14 @@
     p.to = [x, y, !!adj];
     v.path = p; v.pi = 0; v._pfN = 0; return true;
   };
+  // a way found again on the road goes where the way was asked to go — beside it only if that is blocked now —, never beside
+  // the end of the way it had: each new way ended one tile nearer (L-352), and the step that would enter a tile a building
+  // came up on found its way to beside the end of the old one — the woman sent twelve tiles up a lane, a well risen in it,
+  // stood a tile and a half short, told she was there (L-431)
+  function wayAgain(v) {
+    const to = v.path.to, last = v.path[v.path.length - 1];
+    return to ? Vg.goto(v, to[0], to[1], to[2] || !W.walkableXY(to[0], to[1])) : Vg.goto(v, last[0], last[1], true);
+  }
   // a tree, bush or boulder up on a ledge nobody from this town can climb to: for a day they go for another one
   const cantReach = (o, v) => !!o.noPath && G.S.clock - (o.noPath[v.set] || -1e9) < G.DAY_LEN;
   const noReach = (o, v) => { (o.noPath || (o.noPath = {}))[v.set] = G.S.clock; };
@@ -332,7 +340,7 @@
     // building after it: L-354)
     const reach = d <= step || d < 0.001; const nx = reach ? p[0] : v.x + dx / d * step, ny = reach ? p[1] : v.y + dy / d * step;
     if (W.walkable(i) && !W.walkableXY(nx, ny)) {
-      const last = v.path[v.path.length - 1]; if (!Vg.goto(v, last[0], last[1], true)) v.path = null;
+      if (!wayAgain(v)) v.path = null;
       v.moving = false; return v.pi >= (v.path ? v.path.length : 0);
     }
     if (reach) { v.x = p[0]; v.y = p[1]; v.pi++; }
@@ -351,10 +359,7 @@
     // blocked now: beside the end of the way it had, each new way ended one tile nearer, and a woman sent to the middle of
     // the ice, her way clipping the corner of her house, stood on the shore three tiles short of it, L-352
     const ni = W.idx(v.x, v.y);
-    if (!W.walkable(ni) && v.pi < v.path.length) {
-      const to = v.path.to, last = v.path[v.path.length - 1];
-      if (!(to ? Vg.goto(v, to[0], to[1], to[2] || !W.walkableXY(to[0], to[1])) : Vg.goto(v, last[0], last[1], true))) { v.path = null; }
-    }
+    if (!W.walkable(ni) && v.pi < v.path.length && !wayAgain(v)) v.path = null;
     return v.pi >= (v.path ? v.path.length : 0);
   }
 

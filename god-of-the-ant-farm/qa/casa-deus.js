@@ -14,6 +14,8 @@
 //   6. a cabana redonda do deus (T-161, com o P3): fora do centro, no lote inteiro, o fogo de chão no meio, 3 esteiras de 1,7 m
 //      ao longo do anel e 1 no chão guardado diante da porta, o corpo chegando a cada esteira (0,5 m de chão em volta de um ponto
 //      de pé dela, e o corpo inteiro a 0,7 m de um); no centro não é oferecida
+//   7. a casa abandonada: o mapa do alcance é o da planta sem as coisas levadas (L-423) — toda casa da grade que a regra da
+//      caminhada passa (In.passable) a partir de uma casa do mapa está no mapa, e nenhuma do mapa da habitada se perde
 //   node qa/casa-deus.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -121,6 +123,29 @@ const L = 4;
   }
   const mid = POVOS.filter(c => In.TRAD[c].round).filter(c => In.familiesFor(rec('hut', c, MID)).ok.some(f => f.startsWith('redonda')));
   ok('6 a cabana redonda do deus: o fogo no meio, 3 esteiras de 1,7 m em volta e 1 no chão, o corpo chegando a cada esteira; no centro não', n > 0 && !bad.length && !mid.length, `${n} cabanas redondas fora do centro (os povos de cabana redonda, terra e frio, térrea e funda, cada lado): ${n - bad.length} com tudo; no centro oferecida em ${mid.length ? mid.join(', ') : 'nenhum povo'}${bad.length ? '; ' + bad.slice(0, 3).join(' · ') : ''}`);
+}
+// ---------------------------------------------------------------- 7. the house given up: its reach map, on its own cells
+{
+  // (L-423: the plan of a house given up — what the family takes gone, leftOf — kept the walk from the door of the house lived
+  // in, and the floor the things taken leave free was out of its map: the back of the hut#4209 of the metropole, behind the
+  // ladder, where the body walks. Every cell the walk's own rule passes (In.passable) from a cell of the map is on the map, and
+  // the map keeps every cell of the house lived in's. Each type of house, each people, each side)
+  let n = 0, more = 0; const bad = [];
+  for (const t of ['hut', 'house', 'sobrado', 'insula']) for (const c of POVOS) for (const [q, s] of ['S', 'E', 'W', 'N'].entries()) {
+    const r0 = rec(t, c, OUT, '', s); const fams = In.familiesFor(r0).ok; if (!fams.length) continue;
+    const f = fams[(c.length * 5 + q) % fams.length]; const b = { id: 8001 + n * 37 + q, type: t, x: 10, y: 10, w: 1, h: 1, built: true };
+    const h = In.make(b, Object.assign({}, r0, { f })), a = In.make(b, Object.assign({}, r0, { f, ab: 40 })); if (!h.ok || !a.ok || !a.left || !a.reach || !h.reach) continue; n++;
+    const N = a.grid.n;
+    for (const l of a.levels) {
+      const R = a.reach[l.lv], R0 = h.reach[l.lv]; if (!R) continue; const seen = new Uint8Array(N * N); const qq = [];
+      for (let k = 0; k < N * N; k++) if (R[k]) { seen[k] = 1; qq.push(k); }
+      let out = 0; for (let i = 0; i < qq.length; i++) { const k = qq[i], x = k % N, z = Math.floor(k / N);
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Z = z + dz, j = Z * N + X; if (X < 0 || Z < 0 || X >= N || Z >= N || seen[j] || !In.passable(a, l.lv, X, Z)) continue; seen[j] = 1; qq.push(j); out++; } }
+      let lost = 0; if (R0) for (let k = 0; k < N * N; k++) { if (R0[k] && !R[k]) lost++; if (R[k] && !R0[k]) more++; }
+      if (out || lost) { bad.push(`${t}/${c}/${s} ${f} piso ${l.lv}: ${out} casas que a caminhada passa fora do mapa${lost ? `, ${lost} do mapa da habitada perdidas` : ''}`); break; }
+    }
+  }
+  ok('7 a casa abandonada: o mapa do alcance é o da planta sem as coisas levadas, todo chão que a caminhada da porta passa', n > 0 && !bad.length, `${n} casas abandonadas (cabana, casa, sobrado e ínsula, cada povo, cada lado): ${more} casas de chão no mapa além das da habitada${bad.length ? `; ${bad.length} com chão fora do mapa — ` + bad.slice(0, 3).join(' · ') : ''}`);
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
