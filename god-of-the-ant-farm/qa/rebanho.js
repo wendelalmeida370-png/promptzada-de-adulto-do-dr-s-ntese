@@ -61,6 +61,11 @@ function setup(time, hunger, pen) {
   const herd = E.penAnimals(b).filter(a => !a.dead).sort((p, q) => p.id - q.id);
   for (const a of herd) { a.state = 'pen'; a.herder = 0; a.ledBy = 0; a.hold = 0; a.x = b.x + 0.5 + ((a.id * 7) % (b.w * 10 - 10)) / 10; a.y = b.y + 0.5 + ((a.id * 3) % (b.h * 10 - 10)) / 10; if (hunger !== undefined) a.hunger = hunger; }
   b.herdCD = 0; b.fedT = 0; E.penDirty();
+  // (the beasts of prey round the pen sent away by the god's hand for the case: in the branch joined with 8e432b8 a wolf
+  // came on the flock at pasture at 0,20, the herder fought it and hunted it, the flock went home hungry, and the morning's
+  // pasture was gone — the r1, the r4 and the r5 are the pasture, not the wolf; the herder driving one off is the world's,
+  // T-268 —, T-302)
+  for (const a of [...S().animals.values()]) if (!a.dead && G.Animals.predator(a.kind) && G.dist2(a.x, a.y, b.x, b.y) < 40 * 40) G.Animals.remove(a);
   return { b, v, herd, ids: herd.map(a => a.id), base: base() };
 }
 function send(v, b) {
@@ -116,13 +121,17 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   for (const a of ready) { a[GIVES[a.kind]] = 1.5; a.tended = 0; if (a.kind === 'ovelha') a.shorn = 0; }
   const L0 = seen.length;
   send(P.v, P.b);
-  live(300, null, () => ready.every(a => a[GIVES[a.kind]] < 1) && !(P.v.carry && P.v.carry.n > 1e-6));
+  // (one of the three dead of old age in the case gives nothing, and is no fault of the herder's — the oldest ewe of Birka dies
+  // in the first minute, T-268 —: the others give; the case waits for them, not for the dead one, T-302)
+  const dueNow = () => ready.filter(a => !(a.dead && a.cause === 'old'));
+  live(300, null, () => dueNow().every(a => a[GIVES[a.kind]] < 1) && !(P.v.carry && P.v.carry.n > 1e-6));
   const made = {}, sent = {}; const L = seen.slice(L0);
   for (const e of L) { if (e[3] === '@mundo' && e[4] === 'v:' + P.v.id && ['tosquia', 'ordenha', 'ovos'].includes(e[8])) made[e[5]] = r2((made[e[5]] || 0) + e[6]); if (e[3] === 'v:' + P.v.id && String(e[4]).startsWith('f:') && e[8] === 'entrega') sent[e[5]] = r2((sent[e[5]] || 0) + e[6]); }
-  const given = ready.filter(a => a[GIVES[a.kind]] < 1).length; const bad = newBad(P.base);
+  const due = dueNow();
+  const given = due.filter(a => a[GIVES[a.kind]] < 1).length; const bad = newBad(P.base);
   const same = Object.keys(made).length > 0 && Object.keys(made).every(k => Math.abs((sent[k] || 0) - made[k]) < 0.01);
-  ok('r3', ready.length > 0 && given === ready.length && same && !(P.v.carry && P.v.carry.n > 1e-6) && !bad.length,
-    `${ready.length} bicho(s) prontos (${[...new Set(ready.map(a => a.kind))].join(', ')}): deram ${given}; nasceu nas mãos pelo livro ${JSON.stringify(made)}, ao armazém ${JSON.stringify(sent)}; ${f ? '' : 'sem povo; '}nas mãos no fim ${P.v.carry ? r2(P.v.carry.n) + ' de ' + P.v.carry.k : 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  ok('r3', due.length > 0 && given === due.length && same && !(P.v.carry && P.v.carry.n > 1e-6) && !bad.length,
+    `${ready.length} bicho(s) prontos (${[...new Set(ready.map(a => a.kind))].join(', ')})${ready.length > due.length ? `, ${ready.length - due.length} morreu de velhice no caso` : ''}: deram ${given} de ${due.length}; nasceu nas mãos pelo livro ${JSON.stringify(made)}, ao armazém ${JSON.stringify(sent)}; ${f ? '' : 'sem povo; '}nas mãos no fim ${P.v.carry ? r2(P.v.carry.n) + ' de ' + P.v.carry.k : 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
 // r4 a save with the flock out at pasture
 {
