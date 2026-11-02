@@ -61,6 +61,11 @@ function audience(b, n) {
   }
   return out;
 }
+// (the company's other actors held from the stage by the hand of the proof while a case of its own cast is on: the town keeps
+// two actors for each theatre and names new ones when a case takes its cast away — dead, sent to eat —, and one of them on his
+// way to the stage took it six seconds later, and the play went on: in the branch with the quay's dockers of L-428, both l3
+// and l8. A weightier errand a while, on the way or on the stage — the stage lets go of who left it, at its next look: T-303)
+const holdOthers = (b, keep) => { for (const o of S().villagers.values()) if (o.role === 'ator' && o.job === b.id && !keep.includes(o.id) && o.task && o.task.type === 'atuar') G.Vg.give(o, { type: 'idle', pri: 3, wait: 10 }); };
 const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.data.receita, op.data.pagos, op.data.vistos, Object.keys(op.data.plateia).sort(), Object.keys(op.data.atores).sort(), S().rng]);
 
 // ---------------- l1 a whole show ----------------
@@ -96,8 +101,8 @@ const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.d
   liveSec(20, () => !!Tt.dia(b)); const op = Tt.dia(b);
   if (op) { audience(b, 6); liveSec(80, () => !A.live(op) || op.data.fase === 'peca'); }
   const playing = !!op && A.live(op) && op.data.fase === 'peca'; const had = op ? Object.keys(op.data.plateia).length : 0;
-  if (playing) for (const id of Object.keys(op.data.atores)) { const v = S().villagers.get(+id); if (v) V.kill(v, 'teste', true); }
-  const stopped = playing && liveSec(40, () => !A.live(op), bad);
+  if (playing) { for (const id of Object.keys(op.data.atores)) { const v = S().villagers.get(+id); if (v) V.kill(v, 'teste', true); } holdOthers(b, []); }
+  const stopped = playing && liveSec(40, () => !A.live(op), bad, () => holdOthers(b, []));
   const stuck = [...S().villagers.values()].filter(v => v.task && v.task.type === 'teatro' && v.task.id === b.id).length;
   ok('l3 os-atores-morrem', playing && stopped && op.st === 'int' && !stuck && !bad.length, playing ? `${had} na plateia: a peça ${op.st} (${op.end ? op.end.why : ''}), ${stuck} ainda lá; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'a peça não chegou a começar');
 }
@@ -159,8 +164,10 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, b
   const cast = actors(b); const a = cast.length ? solo(b, cast) : null; const sp = a ? farSpot(b, a) : null; const bad = [];
   if (a && sp) { G.Vg.endTask(a); a.x = sp[0]; a.y = sp[1]; a.path = null; a.inside = 0; a.sleeping = false; a.energy = 90; a.hunger = 20; }
   const dr = G.Vg.door(b); const far = a ? Math.round(G.dist(a.x, a.y, dr[0], dr[1])) : 0; const at = Tt.opensAt(b);
-  let on = false; liveSec(200, () => { const o = Tt.dia(b); if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!o && !A.live(o); }, bad);
-  const op = A.all().filter(o => o.def === 'espetaculo' && o.at === b.id).sort((p, q) => q.id - p.id)[0];
+  // (the case's own show, kept when it opens, and its end waited for: Tt.dia gives only a show alive, and the wait for its end
+  // on it never ended — the case lived its 200 s and took the theatre's newest show, which in the tip a39483e, the case begun
+  // later, was the next day's preparation, «on», T-310)
+  let on = false, op = null; liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad);
   ok('l7 o-ator-de-longe', !!a && !!sp && !!op && op.st === 'ok' && on && at < Tt.horas(b).prep && !bad.length, a && sp ? `${a.name}, o ator do dia, a ${far} casas da porta: o preparo abriu às ${r2(at)} (antes ${Tt.horas(b).prep}); ${on ? 'no palco na peça' : 'não chegou à peça'}; o espetáculo ${op ? op.st + ' (' + (op.end ? op.end.why : '') + ')' : 'não abriu'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'sem ator ou sem lugar longe');
 }
 // ---------------- l8 the hungry actor on the stage (L-426) ----------------
@@ -169,11 +176,12 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, b
 function hungryActor(hunger) {
   fresh(); const b = S().buildings.get(P.id); const cast = ready(b); const a = cast.length ? solo(b, cast) : null; const bad = [];
   if (a) { a.energy = 90; a.hunger = 20; }
-  liveSec(60, () => { const o = Tt.dia(b); return !!o && o.data.fase === 'peca' && !!o.data.atores[a.id]; }, bad);
+  const keep = a ? [a.id] : []; holdOthers(b, keep);
+  liveSec(60, () => { const o = Tt.dia(b); return !!o && o.data.fase === 'peca' && !!o.data.atores[a.id]; }, bad, () => holdOthers(b, keep));
   const op = Tt.dia(b); const started = !!op && op.data.fase === 'peca' && !!a && !!op.data.atores[a.id];
   if (started) a.hunger = hunger;
   // (who leaves the stage while the play is on — after the applause the stage is left anyway)
-  let left = null; if (started) liveSec(60, () => { if (!left && op.data.fase === 'peca' && !op.data.atores[a.id] && a.task) left = a.task.type; return !A.live(op); }, bad);
+  let left = null; if (started) liveSec(60, () => { if (!left && op.data.fase === 'peca' && !op.data.atores[a.id] && a.task) left = a.task.type; return !A.live(op); }, bad, () => holdOthers(b, keep));
   return { a, op, started, left, bad };
 }
 {

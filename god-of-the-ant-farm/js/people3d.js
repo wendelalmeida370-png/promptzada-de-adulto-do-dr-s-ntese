@@ -641,6 +641,9 @@
     throw: (t) => { const k = (t * 1.6) % 1; return { shRp: -2.8 + k * 3, elR: 0.4, shLp: -0.6, lean: k * 0.3 - 0.1, twist: -0.4 + k * 0.6 }; },
     bound: () => ({ shLp: 0.55, shRp: 0.55, shLr: -0.35, shRr: 0.35, elL: 1.2, elR: 1.2, neck: 0.25 }),
     interact: (t) => ({ ...ST.idle(t), shRp: -1.35, shRr: -0.1, elR: 0.25, lean: 0.12 }),
+    // (playing the lute — the tavern's song, G.Act.ANIM.tocar, as the god's view draws it: the left hand up the neck, the right
+    // strumming at the belly, the head bent to the strings; it danced before — L-432)
+    strum: (t) => ({ ...ST.idle(t), shLp: -0.9, shLr: 0.1, elL: 1.3, shRp: -0.5, shRr: -0.15, elR: 1.35 + Math.sin(t * 9) * 0.15, neck: 0.15, lean: 0.04 }),
     fight: (t) => ({ ...ST.swing(t), crouch: 0.08, hipL: -0.35, hipR: 0.35, knL: 0.45, knR: 0.25, tool: 1 }),
     // (turning on the spot: small steps in place, the body leading)
     turn: (t) => ({ hipL: Math.sin(t) * 0.2, hipR: -Math.sin(t) * 0.2, knL: Math.max(0, -Math.cos(t)) * 0.4 + 0.08, knR: Math.max(0, Math.cos(t)) * 0.4 + 0.08, shLp: 0.05, shRp: 0.05, shLr: 0.08, shRr: -0.08, elL: 0.22, elR: 0.22, twist: 0.14 }),
@@ -737,12 +740,13 @@
     haul: 'carry', lift: 'carry', drag: 'carry', hold: 'carry', pray: 'pray', kneel: 'pray', swear: 'pray', beg: 'pray', weepk: 'pray',
     sit: 'sit', sittalk: 'sit', story: 'sit', read: 'sit', write: 'sit', eat: 'eat', drink: 'talk', listen: 'talk', cook: 'cook', rock: 'rock',
     talk: 'talk', chat: 'talk', call: 'talk', shout: 'talk', wave: 'talk', point: 'talk', question: 'talk', sell: 'talk', buy: 'talk', serve: 'talk',
-    dance: 'dance', joy: 'dance', play: 'dance', mourn: 'mourn', weep: 'mourn', sad: 'mourn', cower: 'mourn', sick: 'mourn',
+    dance: 'dance', joy: 'dance', play: 'strum', mourn: 'mourn', weep: 'mourn', sad: 'mourn', cower: 'mourn', sick: 'mourn',
     hug: 'hug', embrace: 'hug', sleep: 'sleep', zzz: 'sleep', throw: 'throw', swim: 'swim', dive: 'swim', bound: 'bound', sneak: 'sneak', run: 'run', climb: 'interact', knock: 'interact', look: 'idle',
     // (the gestures of the activities, G.Act.ANIM, as the body makes them — Interact.GEST —: paying and taking the coins, the
     // hand out; haggling, talking; looking the goods over and counting the crates at the door, the hand to them; waiting,
-    // standing; the second pair of hands under a heavy crate, a carrier's arms — L-205, L-210)
-    pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', wait: 'idle', carry2: 'carry',
+    // standing; the second pair of hands under a heavy crate, a carrier's arms — L-205, L-210; the clothes off and on at the
+    // pegs of the baths, the hand to them — L-429)
+    pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', wait: 'idle', carry2: 'carry', undress: 'interact',
   };
   // (the acts that carry what the world has in someone else's hands: walking, a carrier's walk — the helper of a pair)
   const CARRY_ACTS = new Set(['carry2']);

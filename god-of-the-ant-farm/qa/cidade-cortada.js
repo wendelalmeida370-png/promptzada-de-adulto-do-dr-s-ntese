@@ -124,7 +124,10 @@ for (const saved of [false, true]) {
     // ---------------- c3 the water goes away: no coming and going ----------------
     const B3 = base(); const set = S.settlements.get(after1.sid); said = [];
     const changes = new Map(); const on0 = G.Life && G.Life.onRole;
-    if (on0) G.Life.onRole = function (v, prev) { if (v && v.set === set.id && v.role !== prev) changes.set(v.id, (changes.get(v.id) || 0) + 1); return on0.apply(this, arguments); };
+    // (the coming and going is of who had a trade: a first trade — a boy who turns 16, given one by the board — is no change of
+    // trade; the islet's builder, construtor → without one → construtor, still counts twice. With the tip a39483e, Cneu got his
+    // first trade, mineiro, and the board took him to the hunt 16 s later: T-314)
+    if (on0) G.Life.onRole = function (v, prev) { if (v && v.set === set.id && prev && v.role !== prev) changes.set(v.id, (changes.get(v.id) || 0) + 1); return on0.apply(this, arguments); };
     unflood(after1.was); live(60);
     if (on0) G.Life.onRole = on0;
     const twice = [...changes].filter(([, n]) => n > 1).map(([id]) => P(id)).filter(Boolean);

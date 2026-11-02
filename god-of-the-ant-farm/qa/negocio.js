@@ -271,6 +271,12 @@ const goodOf = (zz = z1) => Object.keys(zz.inv).filter(k => zz.inv[k] >= 1 && k 
 // bed, a fire) starts over — the town calm, the merchant back, another buyer — up to three times, told in the case
 // (a buyer called away: his errand now above the purchase's, before he bought)
 const awayBy = v => (!!v && !(v.carry && v.carry.bought) && !!v.task && v.task.type !== 'compra' && (v.task.pri || 0) > 1.3) ? v.task.type : '';
+// (the case's good on the stall by the hand of the proof, enough for the world's buyers of the morning too, and the case
+// waiting for its own buyer's deal, not for the stall's next sale: in the branch with the quay's dockers of L-428 eight
+// buyers came to the market at the case's hour — Clio took its one piece of pottery four seconds before the case's buyer
+// reached the counter, and the first sale to another ended the wait of the n4 and the n5 while their buyers stood in line:
+// T-303)
+const stockUp = (k, n) => { const m = n - (z1.inv[k] || 0); if (m > 0) { roomOn(z1, k, m); D.make('z:' + z1.id, k, m, { code: 'teste', part: true }); } };
 // (one(not) sends a buyer — none of the ones before — and lives the case; done(v) says the case's deal happened)
 function attempt(hour, one, done) {
   const tried = []; let v = null, again = '';
@@ -291,11 +297,11 @@ function attempt(hour, one, done) {
     // it has, times his nature — a sceptic gives 7% less (wtp) —; at −10%, in the branch of the Patch 2, the generation 7's
     // Argos asked 0,99 of 1,1 and the buyer the case found would not give it: he haggled, heard the counter and went. The case
     // is the deal, the haggling is the n5's, T-271)
-    k = goodOf(); z1.margin[k] = -0.1; asked10 = B.price(z1, k); z1.margin[k] = -0.35; asked = B.price(z1, k);
+    k = goodOf(); stockUp(k, 3); z1.margin[k] = -0.1; asked10 = B.price(z1, k); z1.margin[k] = -0.35; asked = B.price(z1, k);
     const b = buyerFor(k, 30, not); if (!b) return null; h = E.homeOf(b); sellerHouse = E.homeOf(m1) ? 'h:' + m1.home : 'p:' + m1.id;
     have0 = D.get('h:' + h.id, k); n0 = z1.day.n; L0 = S.ledgerN; t0 = S.clock;
     G.Vg.setTask(b, { type: 'compra', biz: z1.id, k, pri: 1.3, st: 0 });
-    sold = fine(120, () => z1.day.n > n0 || !b.task || awayBy(b) || watch());
+    sold = fine(120, () => !!(b.carry && b.carry.bought) || !b.task || awayBy(b) || watch());
     return b;
   }, b => !!(b.carry && b.carry.bought));
   const sale = book('venda', e => e[0] > L0 && e[3] === 'z:' + z1.id && e[4] === 'v:' + v.id)[0];
@@ -323,10 +329,10 @@ function priceAt(k, v, f) { const h = E.homeOf(v); const w = B.wtp(v, h, z1, k);
 {
   let k, w, p, n0, h0, L0, t0, t5;
   const v = attempt(0.2, not => {
-    k = goodOf(); const b = buyerFor(k, 30, not); if (!b) return null; ({ w, p } = priceAt(k, b, 1.03));
+    k = goodOf(); stockUp(k, 3); const b = buyerFor(k, 30, not); if (!b) return null; ({ w, p } = priceAt(k, b, 1.03));
     n0 = z1.day.n; h0 = z1.day.hag; L0 = S.ledgerN; t0 = S.clock;
     t5 = G.Vg.setTask(b, { type: 'compra', biz: z1.id, k, pri: 1.3, st: 0 });
-    fine(120, () => z1.day.n > n0 || !b.task || b.task.type !== 'compra' || watch());
+    fine(120, () => !b.task || b.task.type !== 'compra' || watch());
     return b;
   }, b => !!book('venda', e => e[0] > L0 && e[4] === 'v:' + b.id).length);
   const sale = book('venda', e => e[0] > L0 && e[3] === 'z:' + z1.id && e[4] === 'v:' + v.id)[0]; const pay = sale && D.ledger().find(e => e[0] === sale[0] + 1);
@@ -380,11 +386,16 @@ function priceAt(k, v, f) { const h = E.homeOf(v); const w = B.wtp(v, h, z1, k);
   const v2 = S.villagers.get(vid); const L8 = S.ledgerN;
   // (where the load went, by the ledger: to the house, never into the people's store — the house may use it the same moment)
   const went = () => D.ledger().filter(e => e[0] > L8 && e[3] === 'v:' + vid && e[5] === k);
-  live(150, () => went().length > 0 || watch());
+  // (the walk home after the load is the world's, as in the n4 (T-188): a call on the way — the square, a meal, the bed —
+  // takes the buyer with the purchase in the hands, marked for home, and the buyer comes back to it; the case waits while it
+  // stays so, the clock held at the case's hour, up to ten minutes — in the branch with the quay's dockers of L-428 the 150 s
+  // ended with Helena's incense still in her hands, marked for home: T-303)
+  const keeps8 = () => !!(v2 && v2.carry && v2.carry.k === k && v2.carry.bought && v2.carry.to === 'h:' + hid); const away8 = [];
+  live(600, held(S.time, () => { const ty = v2 && v2.task ? v2.task.type : '-'; if (keeps8() && ty !== 'carga' && away8[away8.length - 1] !== ty) away8.push(ty); return went().length > 0 || !keeps8() || watch(); }));
   const toStore = went().filter(e => e[4][0] === 'f'), toHome = went().filter(e => e[4] === 'h:' + hid);
   const home = toHome.length >= 1;
   ok('n8 save no meio da compra', carrying && home && !toStore.length && toHome.length >= 1 && !bad().length,
-    `${v2 ? v2.name : '#' + vid} levava ${n} de ${E.name(k)} comprados (marcados para a casa) na hora do save; depois do load ${home ? 'chegaram em casa' : 'NÃO chegaram em casa'} (${toHome.map(e => e[8]).join(', ')}); ao armazém do povo: ${toStore.length ? 'FOI' : 'nada'}`);
+    `${v2 ? v2.name : '#' + vid} levava ${n} de ${E.name(k)} comprados (marcados para a casa) na hora do save; depois do load ${home ? 'chegaram em casa' : 'NÃO chegaram em casa'} (${toHome.map(e => e[8]).join(', ')})${away8.length ? ` (no caminho, chamad${v2 && v2.g === 'f' ? 'a' : 'o'} para ${away8.join(', ')})` : ''}; ao armazém do povo: ${toStore.length ? 'FOI' : 'nada'}`);
 }
 // (after a load: the objects are new. The cases past n8 go on at the first stall while the world keeps it open; if the
 // world closed it — its merchant named to another trade, his death —, at the stall of a merchant the town has now, or the
@@ -441,8 +452,11 @@ function stallNow() {
   // corner of a house, and the take says no for that instant. With the final worlds Heráclito stood 0,05 inside the corner
   // of a sobrado on his way to the store — «não está em chão firme» —, the case went on without the body, set out the stall
   // by the god's hand on him and stood him at the counter, and every buyer waited for a seller who was not there, T-213)
-  let tk = G.Possess.take(m), took12 = 1; const no12 = tk.ok ? '' : tk.why;
-  for (; !tk.ok && took12 < 50; took12++) { M.viver(0.1); tk = G.Possess.take(m); }
+  // (and one gone down a cave by himself — the world's people explore —: the body is not taken underground; brought out first,
+  // as the god's hand would, as the disputa does (T-154): in the tip 5f8c073 Castor was in a cave for the whole 5 s, T-309)
+  const up12 = () => { if (m.ug && G.Caves) G.Caves.exitNow(m); };
+  up12(); let tk = G.Possess.take(m), took12 = 1; const no12 = tk.ok ? '' : tk.why;
+  for (; !tk.ok && took12 < 50; took12++) { M.viver(0.1); up12(); tk = G.Possess.take(m); }
   M.viver(0.2);
   if (!tk.ok) { ok('n12 o corpo é o mercador', false, `o deus NÃO tomou ${m.name} em 5 s: ${tk.why}`); } else {
   // (to the store's door, wholesale; to the stall, set it out; open)

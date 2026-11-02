@@ -271,10 +271,17 @@ else {
     const b2 = S().buildings.get(PRESS); const a2 = S().villagers.get(a.id); const nx = P.ws[1] ? S().villagers.get(P.ws[1].id) : a2;
     const away = () => { if (a2 && nx !== a2 && !(a2.task && a2.task.type === 'rest')) { G.Vg.endTask(a2); G.Vg.setTask(a2, { type: 'rest', pri: 2.5 }); } };
     away(); const L0 = seen.length; if (nx) send(nx, b2, fieldAt(b2));
-    live(90, away, () => pressedBy(L0, b2).length > 0);
+    // (the case's hand kept at the vat by the hand of the proof — sent back to it when the world calls it away before it
+    // presses, or, taken from the trade, the next hand of it: in the tip a39483e joined with the quay's dockers of L-428 the
+    // house sent Citlalin for its water (1,05, over the estate's 1) 0,9 s from pressing, and then the board made her an
+    // actor. The case is the vat held across a save, not who calls the hand away, T-313)
+    let hand = nx, back = 0; const keep = () => { away(); if (!hand || pressedBy(L0, b2).length || (hand.task && hand.task.type === 'estate')) return;
+      const h2 = hand.job === b2.id && fit(hand) ? hand : P.ws.map(w => S().villagers.get(w.id)).find(w => w && w !== a2 && w.job === b2.id && fit(w));
+      if (h2) { hand = h2; back++; send(hand, b2, fieldAt(b2)); } };
+    live(90, keep, () => pressedBy(L0, b2).length > 0);
     const by = pressedBy(L0, b2); const bad = newBad(P.base);
-    good = good && !!heldBy && !!nx && by.includes(nx.id) && !bad.length;
-    parts.push(`save com a tina segura (${heldBy ? '#' + heldBy : 'por ninguém'}): ${by.length ? 'prensada depois do load por #' + by[0] + (nx && by.includes(nx.id) ? (nx === a2 ? ' (a mesma mão: não há outra)' : ' (a outra mão)') : '') : 'ninguém prensou depois do load'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    good = good && !!heldBy && !!hand && by.includes(hand.id) && !bad.length;
+    parts.push(`save com a tina segura (${heldBy ? '#' + heldBy : 'por ninguém'}): ${by.length ? 'prensada depois do load por #' + by[0] + (hand && by.includes(hand.id) ? (hand === a2 ? ' (a mesma mão: não há outra)' : ' (a outra mão)') : '') : 'ninguém prensou depois do load'}${back ? ` (a mão do caso mandada de volta à tina ${back} vez(es)${hand !== nx ? ', a seguinte do ofício: #' + hand.id : ''})` : ''}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   ok('c8', good, parts.join(' · '));
 }
