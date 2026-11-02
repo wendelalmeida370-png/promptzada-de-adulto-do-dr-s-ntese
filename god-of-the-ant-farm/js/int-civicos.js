@@ -254,7 +254,8 @@
   // each of the plan's columns where the form's stands, the spaces between them as wide as the form has them (the Norse
   // gallery's portal, a post left out), as high as the columns: the beam over them is the form's —, along u from its right end,
   // along v from its back end; o.rua: the bay nearest uIn the street's way in; o.bay: that bay a door all the same, onto what
-  // stands before the porch — the Egyptian palace's passage through its pylon. → { door, u: that bay's middle })
+  // stands before the porch — the Egyptian palace's passage through its pylon. → { door, u: that bay's middle, doors: all its
+  // bays })
   function colRow(P, cols, h, o, uIn) {
     const alongU = Math.abs(cols[0].c[1] - cols[cols.length - 1].c[1]) < 0.05; const k = alongU ? 0 : 1;
     const s = cols.slice().sort((a, b) => a.c[k] - b.c[k]); const n = s.length, rc = s[0].r, at = s[0].c[1 - k];
@@ -264,7 +265,7 @@
     let door; let u = null;
     if (o.rua || o.bay) { let best = Infinity; for (let q = 0; q < n - 1; q++) { const m = (s[n - 1 - q].c[0] + s[n - 2 - q].c[0]) / 2; if (Math.abs(m - uIn) < best) { best = Math.abs(m - uIn); door = q; u = m; } } }
     const C = P.colonnade(0, A, B, { at: pos, col: 2 * rc, h, dh: h, outer: 1, door, rua: !!o.rua });
-    return { door: C.door, u };
+    return { door: C.door, u, doors: C.doors };
   }
   function formHall(P) {
     const rec = P.rec, tr = P.tr; const F = G.Forma && G.Forma.of(rec.t, rec.c); const B = F && G.Forma.body(F); if (!B) { P.errs.push('a forma do prédio sem corpo'); return; }
@@ -298,6 +299,12 @@
       P.annex.push({ r: porch.r.slice(), h: porch.y1 - y0, fn: 'portico', lv: 0, roof: 'portico' });
       const R = colRow(P, porch.colunas, porch.y1 - y0, bare ? { bay: true } : { rua: true }, uIn);
       if (!bare) entry = { door: R.door, u: R.u, w: P.doors[R.door].w, v: porch.r[3] };
+      // (the pylon before the porch with no court — the Egyptian palace's —: its bays no way out of the building, the towers
+      // against them and the passage between them a room of the plan — openings between the porch and the passage, or onto the
+      // towers' backs. As ways out each had its doorstep and its steps down to the street (Space), laid into the towers' mass
+      // and the passage, under the gate's wall and its steps: the body walked into the pylon — the palacio#23899 of the
+      // mundial, L-417)
+      else for (const id of R.doors) P.doors[id].outer = 0;
     }
     const strips = [];
     if (peri) {
