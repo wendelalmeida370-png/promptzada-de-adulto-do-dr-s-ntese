@@ -12,7 +12,8 @@
 //    derruba a fogueira e, de novo, ninguém fica preso a um comer impossível, e ela volta — os construtores com carga nas
 //    mãos a pousam no chão (L-169); quem a levanta morre no meio e outro termina; um dia inteiro pelo salto sem ninguém
 //    morrer de fome
-// h5 a regra S1 do verificador: uma cidade cujo povo morre de fome com comida no estoque e nenhum armazém
+// h5 a regra S1 do verificador: uma cidade cujo povo morre de fome com comida no estoque e nenhum armazém (a mão da prova tira,
+//    para a olhada, todo armazém do povo — também os das outras cidades dele, que a regra conta —, T-294)
 // h6 a regra S2: alguém morrendo de fome com comida ao alcance, livre, numa cidade calma, preso a outra coisa ou sem afazer
 //    depois de escolher — e não quem vai comer, foge, luta, está entre dois afazeres, condenado ou cativo, nem quem está
 //    numa cidade atacada ou em fogo
@@ -177,11 +178,13 @@ if (fset) {
     const ppl = people().filter(v => v.age >= 6).slice(0, 3); const keep = ppl.map(v => [v.hunger, v.hp]);
     for (const v of ppl) { v.hunger = 100; v.hp = 35; }
     none = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
-    // (the town without a store, for the look — every store of it: its fire, and a storehouse its builders may have raised in
-    // the day of the skip, as with the final worlds, T-203 —: put back at once)
+    // (the town without a store, for the look — every store of its people: its fire, a storehouse its builders may have raised
+    // in the day of the skip, as with the final worlds, T-203, and the stores of the people's other towns, which the rule
+    // counts as the game's own nearestDropoff does: in the P2's branch joined with b8c072c the free people took Roma in a war
+    // on the day 16, and the rule found Roma's dock, T-294 —: put back at once)
     // (and the fire as one rising for three days — a town that did not light it again in all that time; one rising since
     // today, its stores taken by a disaster this very day, is a town lighting it, and the rule waits for it, T-225)
-    const stores = V.dropoffs(fset.id); const born = stores.map(b => b.born); for (const b of stores) { b.built = false; b.born = S.day - 3; }
+    const stores = G.Fac.settlementsOf(V.facOfSet(fset.id)).flatMap(q => V.dropoffs(q.id)); const born = stores.map(b => b.born); for (const b of stores) { b.built = false; b.born = S.day - 3; }
     got = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
     for (const b of stores) b.born = S.day;
     lighting = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
