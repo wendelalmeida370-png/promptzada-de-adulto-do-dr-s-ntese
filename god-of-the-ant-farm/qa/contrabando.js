@@ -21,7 +21,10 @@ const M = require('./nodemundo.js'); const G = M.load({ qa: true });
 const D = G.Depot, E = G.Eco, V = G.Village;
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | contrabando ${name} | ${info}`); if (!c) fails.push(name); };
 const world = process.argv[2] || 'metropole';
-M.pronto(world); M.viver(1);
+// (the snapshot after the trades the world's own step deals out once the world is open — a load gives them back as they
+// were saved, L-419, and the ready worlds of the generation 7 are older than the trades of the Patch 2, which the load of
+// before dealt at once; the twelve seconds stay for any world, a save of before too, T-298)
+M.pronto(world); M.viver(12);
 const S = () => G.S;
 const r2 = x => Math.round(x * 100) / 100;
 G.inSim++;
@@ -99,7 +102,9 @@ function stealNow(P, v) {
   live(150, null, () => buyer && lines(P, e => e[8] === 'compra' && e[4] === 'v:' + buyer.id).length > 0);
   live(120, null, () => buyer && !(buyer.carry && buyer.carry.n > 1e-6));
   const goods = sum(lines(P, e => e[8] === 'compra' && e[3] === 'b:' + P.b.id && buyer && e[4] === 'v:' + buyer.id));
-  const pay = lines(P, e => e[8] === 'compra' && e[5] === 'moedas' && buyer && e[3] === 'h:' + buyer.home);
+  // (what the buyer paid for it — the line's who: in the branch joined with 624e83f another of his house bought at the
+  // market twelve seconds later, 0,5 to the treasury, and it was counted as his, T-300)
+  const pay = lines(P, e => e[8] === 'compra' && e[5] === 'moedas' && buyer && e[3] === 'h:' + buyer.home && e[9] === buyer.id);
   const toCrook = sum(pay.filter(e => sh ? e[4] === 'h:' + sh.id : String(e[4]).startsWith('p:')));
   const toState = sum(pay.filter(e => String(e[4]).startsWith('f:')));
   const home = sum(lines(P, e => buyer && e[3] === 'v:' + buyer.id && e[4] === 'h:' + buyer.home && e[5] === k));
@@ -121,15 +126,19 @@ function stealNow(P, v) {
   let w = null; live(30, null, () => { w = roundOf() || null; return !!w && G.isNight(); });
   const v = P.crew.find(c => S().villagers.has(c.id) && c.role === 'contrabandista' && fit(c)) || P.crew[0]; const crook0 = v.role === 'contrabandista';
   const h = v.home && S().buildings.get(v.home); const coins0 = h ? D.get('h:' + h.id, 'moedas') : 0;
-  const { got } = w && G.isNight() && crook0 ? stealNow(P, v) : { got: false }; const n = got ? r2(v.carry.n) : 0; const k = got ? v.carry.k : null;
-  let caught = false, byRound = false; const L1 = seen.length; const n0 = S().logN || 0;
-  if (w && got && w.task && w.task.type === 'ronda') {
+  // (the catch is a chance with the smuggler in sight — a twentieth a step, the game's rule —: in the branch joined with
+  // 624e83f the watchman walked beside him to the market for five seconds and the chance did not come. The case is that the
+  // round catches him: up to three thefts, each with the watchman at his side, T-300)
+  let got = false, n = 0, k = null, caught = false, byRound = false, tries = 0; const L1 = seen.length; const n0 = S().logN || 0;
+  const seenIt = () => seen.slice(L1).some(e => e[8] === 'apreendido' && e[3] === 'v:' + v.id);
+  while (tries < 3 && !caught && w && G.isNight() && crook0 && v.role === 'contrabandista' && S().villagers.has(v.id)) {
+    const r = stealNow(P, v); if (!r.got) break; got = true; tries++; n = r2(v.carry.n); k = v.carry.k;
+    if (!(w.task && w.task.type === 'ronda')) break;
     // (the round held above the town's calls below 3, the line of the D-094: in the generation 7's Tenochtitlan the people's
     // assembly at the palace — Po.crowd, 1,7 — took the watchman from the round at 0,75, eight steps after he met the
     // smuggler at the store's door; the case is the catch, not who calls the watchman away)
     const [mx, my] = V.frontTile(P.b); w.x = v.x; w.y = v.y; w.path = null; w.inside = 0;
     Object.assign(w.task, { pts: [[mx + 0.5, my + 0.5]], k: 0, st: 0, pri: 2.9 });
-    const seenIt = () => seen.slice(L1).some(e => e[8] === 'apreendido' && e[3] === 'v:' + v.id);
     live(120, null, () => { const c = seenIt(); if (c) byRound = !!(w.task && w.task.type === 'ronda'); return c || !stolenIn(v); });
     caught = seenIt();
   }
