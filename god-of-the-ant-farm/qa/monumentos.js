@@ -52,16 +52,20 @@ const tag = m => `${m.t}/${m.c}`;
   const S0 = made.filter(m => m.s === 'S' && m.p && m.p.ok); const out = []; const said = [];
   const marksOf = (p, use) => (p.marks || []).filter(M2 => M2.use === use).flatMap(M2 => M2.pts.filter(q => q.ok));
   const itemsOf = (p, kind) => p.items.filter(i => i.kind === kind);
+  // (who acts or fights on a stage: the actors' posts — a piece with the trade at the first places of the stage, as many as the
+  // theatre employs, L-421 — and the marks left over; counting the marks alone, a theatre with P2's two actors had lost two of
+  // its three places in the count, not in the plan — T-307)
+  const stageOf = (p, use) => marksOf(p, use).concat(p.items.filter(i => i.kind === 'cena' || i.kind === 'luta').flatMap(i => (i.spots || []).filter(q => q.use === use && q.ok)));
   // (what each one has at least: the theatres', the wonders')
   const NEED = {
-    'teatro/grego': p => [['assistir (fileiras)', p.cap.watch, 40], ['atuar', marksOf(p, 'atuar').length, 3]], 'teatro/classico': p => [['assistir (fileiras)', p.cap.watch, 40], ['atuar', marksOf(p, 'atuar').length, 3]],
-    'teatro/egipcio': p => [['atuar', marksOf(p, 'atuar').length, 1], ['assistir', marksOf(p, 'assistir').length, 4]], 'teatro/asteca': p => [['atuar', marksOf(p, 'atuar').length, 1], ['assistir', marksOf(p, 'assistir').length, 4]],
-    'teatro/nordico': p => [['bancos', itemsOf(p, 'banco').length, 4], ['atuar', marksOf(p, 'atuar').length, 1]],
-    'teatro/romano': p => [['lutar', marksOf(p, 'lutar').length, 2], ['assistir', marksOf(p, 'assistir').length, 10]], 'maravilha/romano': p => [['lutar', marksOf(p, 'lutar').length, 2], ['assistir', marksOf(p, 'assistir').length, 12]],
+    'teatro/grego': p => [['assistir (fileiras)', p.cap.watch, 40], ['atuar', stageOf(p, 'atuar').length, 3]], 'teatro/classico': p => [['assistir (fileiras)', p.cap.watch, 40], ['atuar', stageOf(p, 'atuar').length, 3]],
+    'teatro/egipcio': p => [['atuar', stageOf(p, 'atuar').length, 1], ['assistir', marksOf(p, 'assistir').length, 4]], 'teatro/asteca': p => [['atuar', stageOf(p, 'atuar').length, 1], ['assistir', marksOf(p, 'assistir').length, 4]],
+    'teatro/nordico': p => [['bancos', itemsOf(p, 'banco').length, 4], ['atuar', stageOf(p, 'atuar').length, 1]],
+    'teatro/romano': p => [['lutar', stageOf(p, 'lutar').length, 2], ['assistir', marksOf(p, 'assistir').length, 10]], 'maravilha/romano': p => [['lutar', stageOf(p, 'lutar').length, 2], ['assistir', marksOf(p, 'assistir').length, 12]],
     'maravilha/asteca': p => [['oficiar', marksOf(p, 'oficiar').length, 2], ['acender', marksOf(p, 'acender').length, 2], ['topo', marksOf(p, 'topo').length, 2]],
     'maravilha/classico': p => [['rezar', marksOf(p, 'rezar').length, 3], ['topo', marksOf(p, 'topo').length, 1]],
     'maravilha/egipcio': p => [['ofertar', marksOf(p, 'ofertar').length, 1], ['rezar', marksOf(p, 'rezar').length, 3]],
-    'maravilha/nordico': p => [['assento do rei', itemsOf(p, 'trono').length, 1], ['bancos', itemsOf(p, 'banco').length, 6], ['atuar', marksOf(p, 'atuar').length, 1]],
+    'maravilha/nordico': p => [['assento do rei', itemsOf(p, 'trono').length, 1], ['bancos', itemsOf(p, 'banco').length, 6], ['atuar', stageOf(p, 'atuar').length, 1]],
     'maravilha/grego': p => [['rezar', marksOf(p, 'rezar').length, 2], ['ofertar', marksOf(p, 'ofertar').length, 1], ['topo', marksOf(p, 'topo').length, 1]],
   };
   for (const c of POVOS) NEED['monument/' + c] = p => [['rezar', marksOf(p, 'rezar').length, 3], ['ofertar', marksOf(p, 'ofertar').length, 1]];

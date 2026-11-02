@@ -1221,7 +1221,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     out.people = { n: home.length, placed: home.filter(o => { const q = B3.openPlace(o); return q && q.X > b.x * TL && q.X < (b.x + b.w) * TL && q.Z > b.y * TL && q.Z < (b.y + b.h) * TL; }).length };
     // 5. up the stair from its foot (the flight whole): its lid, where it has one, lifts while the body goes through
     const s = p.stairs.find(q => q.kind === 'escada' && q.lv0 === G.Possess.level());
-    if (s) { const n = p.grid.n, cs = p.grid.cs; const fits = (x, z) => { for (const [ax, az] of [[0, 0], [0.32, 0], [-0.32, 0], [0, 0.32], [0, -0.32]]) { const q = Sp.indoor(b.x * TL + x + ax, b.y * TL + z + az, G.Possess.level(), b.id); if (!q || !q.walk) return false; } return true; };
+    // (the way by the body's rule: its rim on what the feet walk, never over a flight going up from the storey — the body takes a
+    // flight whole, from its foot: L-391)
+    if (s) { const n = p.grid.n, cs = p.grid.cs; const fl = p.stairs.filter(q => q.kind !== 'degraus' && q.lv0 === G.Possess.level());
+      const fits = (x, z) => { for (const [ax, az] of [[0, 0], [0.32, 0], [-0.32, 0], [0, 0.32], [0, -0.32]]) { const X = x + ax, Z = z + az; if (fl.some(f => X > f.r[0] - 0.02 && X < f.r[2] + 0.02 && Z > f.r[1] - 0.02 && Z < f.r[3] + 0.02)) return false; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, G.Possess.level(), b.id); if (!q || !q.walk) return false; } return true; };
       const cell = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const key = (x, z) => z * n + x;
       // (the shut doors of the storey, by their middle and their wall's normal: a cell by one is passed through it, once open)
       const shut = []; for (const dr of p.doors) { const ww = p.walls[dr.wall]; if (dr.kind === 'vao' || dr.id === e.door || !ww || ww.lv !== G.Possess.level() || In.doorState(b, dr.id).state === 'aberta') continue; const LL = Math.hypot(ww.b[0] - ww.a[0], ww.b[1] - ww.a[1]) || 1; const ux = (ww.b[0] - ww.a[0]) / LL, uz = (ww.b[1] - ww.a[1]) / LL; shut.push({ id: dr.id, x: ww.a[0] + ux * dr.at, z: ww.a[1] + uz * dr.at, nx: -uz, nz: ux }); }

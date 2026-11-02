@@ -173,13 +173,15 @@
     if (SV.top === 'terraco') { flight(P, lvT, lvR, W.back, 'back'); if (H === 'barras') flight(P, lvT, lvR, W.front, 'front'); }
     furnishBlock(P, rooms, need);
   }
-  // the corner a wing's stair column takes (both lanes, their feet and tops)
-  function colOf(R, which) { const run = 1.45; const u0 = which === 'back' ? R[0] + 0.65 : R[2] - 0.65 - run; return which === 'back' ? [u0 - 0.6, R[1], u0 + run + 0.6, R[1] + 1.45] : [u0 - 0.6, R[3] - 1.45, u0 + run + 0.6, R[3]]; }
+  // the corner a wing's stair column takes (both lanes, their feet and tops) — the foot against the wing's end wall with room
+  // for a body before it, off the flight (L-391: at 0.65 m the body had no place there)
+  const COL_AT = 0.85;
+  function colOf(R, which) { const run = 1.45; const u0 = which === 'back' ? R[0] + COL_AT : R[2] - COL_AT - run; return which === 'back' ? [u0 - 0.6, R[1], u0 + run + 0.6, R[1] + 1.45] : [u0 - 0.6, R[3] - 1.45, u0 + run + 0.6, R[3]]; }
   // one flight of the stacked stair in a wing's end: along the back wall, the two lanes going up the other way in turn
   function flight(P, lv0, lv1, R, which) {
     const lane = (lv1 - 1) % 2; const run = 1.45; const w = 0.65;
     const v0 = which === 'back' ? R[1] + 0.03 + lane * (w + 0.1) : R[3] - 0.03 - w - lane * (w + 0.1); // (the lanes a hand apart: one's top, the other's foot)
-    const u0 = which === 'back' ? R[0] + 0.65 : R[2] - 0.65 - run;
+    const u0 = which === 'back' ? R[0] + COL_AT : R[2] - COL_AT - run;
     const r = [u0, v0, u0 + run, v0 + w]; const du = (which === 'back') === (lane === 0) ? 1 : -1;
     if (!K.ladderAt(P, lv0, lv1, [{ r, du, dv: 0, hole: r }], null, 'escada')) P.errs.push(`não cabe a escada do ${lv1}º pavimento`);
   }

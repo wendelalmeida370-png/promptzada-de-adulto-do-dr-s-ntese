@@ -15,7 +15,7 @@ module.exports = {
       atividades: [
         { id: 'assistir', o: 'assistir de um lugar da plateia: sentado nas fileiras do teatro grego e clássico, em pé no pódio da arena e do Coliseu, em volta do jardim sagrado e nas pontas do campo de pelota', essencial: true, tipos: ['teatro', 'maravilha'], usos: ['assistir'], corpo: 'lugar',
           resultado: 'o corpo num lugar de onde se vê o espetáculo, virado para ele (o povo, pelas festas do P1)', condicao: 'o teatro ou a arena de pé, com planta', feito: true, provas: ['qa/monumentos.js'] },
-        { id: 'atuar', o: 'atuar: na orquestra, diante do tanque do jardim, no corredor do campo de pelota, o escaldo junto ao fogo do salão do hidromel e entre os fogos de Valhala', essencial: true, tipos: ['teatro'], usos: ['atuar'], corpo: 'lugar',
+        { id: 'palco', o: 'o lugar de quem atua (o ato de atuar, a peça do dia, é o «atuar» do P2): na orquestra, diante do tanque do jardim, no corredor do campo de pelota, o escaldo junto ao fogo do salão do hidromel e entre os fogos de Valhala', essencial: true, tipos: ['teatro'], usos: ['atuar'], corpo: 'lugar',
           resultado: 'o corpo no lugar de quem se apresenta, virado para o público', condicao: 'o teatro de pé, com planta', feito: true, provas: ['qa/monumentos.js'] },
         { id: 'lutar', o: 'lutar na areia da arena e do Coliseu, dois a dois junto ao alçapão do subsolo', tipos: ['teatro', 'maravilha'], usos: ['lutar'], corpo: 'lugar',
           resultado: 'o corpo na areia, diante do adversário', condicao: 'a arena ou o Coliseu de pé (romano)', feito: true, provas: ['qa/monumentos.js'] },

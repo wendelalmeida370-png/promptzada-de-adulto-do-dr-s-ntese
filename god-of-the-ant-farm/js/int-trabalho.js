@@ -293,7 +293,10 @@
       for (const id of [il, ir]) { const r = P.rooms[id].r; P.door(wb, P.atOf(wb, [P.rr(r[0] + 0.55, r[2] - 0.55), C[1] - ti / 2]), 0.85, Math.min(2.05, L1.h - 0.15), ib, id, 0, 'porta'); }
     } else rooms.up = [P.room(1, 'sobrado', I1)];
     const sw = 0.75, run = P.rr(1.5, 1.8); const cands = [], lc = [];
-    const downs = [rooms.main].concat(P.T.cells ? [] : rooms.cells, rooms.front !== undefined && rooms.front !== null ? [rooms.front] : []);
+    // (a temple's never in the cella where the image and the altar stand, where there is a room beside it — as its cellar's
+    // hatch —: up the cella's back the stair took the priest's way to his place behind the altar, L-391)
+    const altar = !!(PROG[P.rec.t].need || {}).altar;
+    const downs = [rooms.main].concat(P.T.cells ? [] : rooms.cells, rooms.front !== undefined && rooms.front !== null ? [rooms.front] : []).filter((id, q, a) => !(altar && id === rooms.main && a.length > 1));
     for (const id of downs) {
       const M = P.rooms[id].r; if (P.rooms[id].open) continue;
       for (const u0 of P.shuffle([M[0] + 0.03, M[2] - 0.03 - sw])) for (const v0 of [M[1] + 0.6, M[1] + 1.2, M[3] - run - 0.7]) { const r = [u0, v0, u0 + sw, v0 + run]; cands.push({ r, du: 0, dv: -1, hole: r }); }

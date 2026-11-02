@@ -35,12 +35,14 @@ const qa = [];
     const lit = god(() => G.Nature.ignite(i, 0.9));
     let filled = null, threw = 0, fighters = new Set(), out = -1;
     const fireNear = () => { for (const j of G.Nature.fireSet) { const fx = j % N, fy = (j / N) | 0; if (Math.abs(fx - x) <= 6 && Math.abs(fy - y) <= 6) return true; } return false; };
-    for (let k = 0; k < 240; k++) { // (up to two minutes of the world, half a second at a time)
-      M.viver(0.5);
+    // (up to two minutes of the world, looked at every step of it: the throw is a step or two of the task — looked at every
+    // half a second it was seen or not by the luck of where the half second fell, 1 frame on the P4's branch, 0 in the junction)
+    for (let k = 0; k < 1200; k++) {
+      M.viver(0.1);
       for (const v of S.villagers.values()) { const t = v.task; if (!t || t.type !== 'fire') continue; fighters.add(v.id);
         if (t.st === 2 && v.act === 'fill' && G.dist(v.x, v.y, front[0], front[1]) < 1.6 && !filled) filled = v.name;
         if (t.st === 5 && !t.beat && v.act === 'throw') threw++; }
-      if (!fireNear()) { out = (k + 1) * 0.5; break; }
+      if (!fireNear()) { out = +((k + 1) * 0.1).toFixed(1); break; }
     }
     ok('c1 o balde do poço contra o fogo: quem o combate enche o balde no poço, joga a água, e o fogo apaga', lit && !!filled && threw > 0 && out > 0,
       `${pick.fu} a ${G.dist(x + 0.5, y + 0.5, w.x + 0.5, w.y + 0.5).toFixed(1)} casas do poço #${w.id}: ${lit ? 'aceso' : 'não acendeu'}; ${fighters.size} combatendo; ${filled ? filled + ' encheu o balde no poço' : 'ninguém encheu o balde no poço'}; ${threw} quadros jogando água; ${out > 0 ? 'apagado em ' + out + ' s' : 'ainda queimando em 120 s'}`);

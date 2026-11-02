@@ -151,7 +151,10 @@
   // (up from the bed: the nearest point of the room the body can stand on, all round it — one the house's door reaches on foot,
   // Interiors' own walk from the entrance: never a nook shut in by the furniture)
   const reached = (q) => { const R = q.p.reach && q.p.reach[q.lv]; if (!R) return true; const n = q.p.grid.n, cs = q.p.grid.cs; return !!R[Math.floor(q.z / cs) * n + Math.floor(q.x / cs)]; };
-  const fits = (X, Z) => { const c = indoorAt(X, Z); if (!c || !c.walk || !c.shell || !reached(c)) return false; return RIM.every(([dx, dz]) => { const q = indoorAt(X + dx * TUNE.radius, Z + dz * TUNE.radius); return q && q.walk && q.shell; }); };
+  // (nor in the footprint of a flight on the storey it goes up from: the body takes a flight whole, from its foot — solidAt —,
+  // and put down in one it could never step out: L-391)
+  const onFlight = q => q.p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === q.lv && q.x > s.r[0] && q.x < s.r[2] && q.z > s.r[1] && q.z < s.r[3]);
+  const fits = (X, Z) => { const c = indoorAt(X, Z); if (!c || !c.walk || !c.shell || !reached(c) || onFlight(c)) return false; return RIM.every(([dx, dz]) => { const q = indoorAt(X + dx * TUNE.radius, Z + dz * TUNE.radius); return q && q.walk && q.shell && !onFlight(q); }); };
   function floorNear(X0, Z0) {
     for (let r = 0.3; r <= 1.8; r += 0.15) for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; const X = X0 + Math.cos(a) * r, Z = Z0 + Math.sin(a) * r; if (fits(X, Z)) return [X, Z]; }
     return null;
@@ -212,10 +215,11 @@
     };
     { const B = v.inside && G.S.buildings.get(v.inside); if (B && G.Space.plan(B)) { b.inB = B; b.inP = G.Space.plan(B); } b.Y = b.pY = floorAt(X, Z); indoorAfter(v);
       // (at the place its hands held — a game loaded with the body seated: Possess's load holds it again —: on it again; else,
-      // indoors on a piece of furniture — a game loaded with the body in its bed —: up beside it)
+      // indoors on a piece of furniture — a game loaded with the body in its bed —, or where the plan of now has a wall, a piece
+      // or a flight going up — a game saved before the plan was made over (L-391), or on its way up a flight —: up beside it)
       const u = G.Possess.useOf(); const pl = u && B && b.inB === B && !v.sleeping && G.Interiors.placeFor ? G.Interiors.placeFor(B, u.it, u.q, X - B.x * TL(), Z - B.y * TL()) : null;
       if (pl && u.st) pl.st = u.st;
-      if (!(pl && Av.seatAt(B, pl, true, v)) && b.inShell && !v.sleeping) { const q = indoorAt(b.X, b.Z); if (!q || !q.walk) offBed(); } }
+      if (!(pl && Av.seatAt(B, pl, true, v)) && b.inShell && !v.sleeping) { const q = indoorAt(b.X, b.Z); if (!q || !q.walk || onFlight(q)) offBed(); } }
     Av.on = true;
     return b;
   };
@@ -231,6 +235,9 @@
     if (b && b.inB && b.inP) { const L = TL(); const x = X - b.inB.x * L, z = Z - b.inB.y * L;
       for (const q of b.inP.stairs) { if (q.kind === 'degraus' || q.lv0 !== b.lv) continue; const r = q.r; if (x > r[0] && x < r[2] && z > r[1] && z < r[3]) { b.stairHit = q; return 'stair'; } } }
     const ins = indoorAt(X, Z);
+    // (and a flight of another building, at the point — an open ground's, with no wall round it: the rostra of a square —, as
+    // solid: taken only from within its building, at its foot; never where the feet land climbing up to it — L-411)
+    if (ins && ins.b !== (b && b.inB)) for (const q of ins.p.stairs) { if (q.kind === 'degraus' || q.lv0 !== ins.lv) continue; const r = q.r; if (ins.x > r[0] && ins.x < r[2] && ins.z > r[1] && ins.z < r[3]) return 'stair'; }
     if (ins) { if (!ins.walk) return ins.shell ? 'wall' : 'building'; return ins.y > feet + TUNE.stepUp ? 'ledge' : null; }
     const s = G.Space.surface(X, Z);
     // (water the world does not walk — the sea, a lake, a deep river — is no wall to a body that swims: in it goes)
