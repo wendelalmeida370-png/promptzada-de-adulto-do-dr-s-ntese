@@ -555,14 +555,14 @@
   function celeiro(c, m, p, st) {
     if (st === 'egipcio') {
       // (the domes 6 px round — before them and between them the base has room for a body, the plan's way to their mouths —, the
-      // flight up the base's front from the street: as its form)
+      // flight up the base's front from the street, to a hand off the lot's edge: as its form, L-414)
       box(c, -0.85, -0.85, 0.85, 0.85, 0, 2.5, p.base[0], p.base[1], p.base[2]);
       for (const [x, y] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) {
         const b = P(x, y, 2.5); const g = c.createLinearGradient(b[0] - 6, 0, b[0] + 6, 0); g.addColorStop(0, p.wl); g.addColorStop(1, p.wr);
         c.fillStyle = g; c.beginPath(); c.moveTo(b[0] - 6, b[1]); c.bezierCurveTo(b[0] - 6, b[1] - 14, b[0] - 2.6, b[1] - 20, b[0], b[1] - 21); c.bezierCurveTo(b[0] + 2.6, b[1] - 20, b[0] + 6, b[1] - 14, b[0] + 6, b[1]); c.fill();
         c.fillStyle = '#3a2a1c'; c.beginPath(); c.arc(b[0] - 1.5, b[1] - 15, 1.2, 0, TAU); c.fill();
       }
-      treads(c, p, -0.15, 0.15, 1.0, 2.5, 3);
+      treads(c, p, -0.15, 0.15, 0.975, 2.5, 3, 0.0625);
       return 24;
     }
     if (st === 'asteca') {
@@ -752,8 +752,8 @@
     if (st === 'egipcio') { const q = P(0.76, -0.25, 0.4); palm(c, q[0], q[1], 1); } // (beside the bays: its form's)
     return 26;
   }
-  // (the treads of a plinth's front: from its top at z px down in n − 1 treads of 0.075 tiles, the front at y, x0..x1 — G.Forma's)
-  function treads(c, p, x0, x1, y, z, n) { for (let k = 1; k < n; k++) box(c, x0, y - 0.075 * (n - k), x1, y - 0.075 * (n - k - 1), 0, z * (n - k) / n, p.base[0], p.base[1], p.base[2]); }
+  // (the treads of a plinth's front: from its top at z px down in n − 1 treads of d tiles (0.075), the front at y, x0..x1 — G.Forma's)
+  function treads(c, p, x0, x1, y, z, n, d = 0.075) { for (let k = 1; k < n; k++) box(c, x0, y - d * (n - k), x1, y - d * (n - k - 1), 0, z * (n - k) / n, p.base[0], p.base[1], p.base[2]); }
   function biblioteca(c, m, p, st) {
     if (st === 'egipcio' || st === 'asteca') {
       const z = hall(c, m, p, st, { x0: -0.8, y0: -0.8, x1: 0.8, y1: 0.35, H: 16 });

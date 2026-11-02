@@ -14,7 +14,9 @@
 //   2. 50 times in and out through doors, one after another: never pushed, no step climbed with the hands, in each time, out
 //      each time
 //   3. every kind of store with a plan, its door open: the body walks in from the street — up the steps before the door, or
-//      before the foot of its outside flight, where it has them, as a player goes —, climbing none
+//      before the foot of its outside flight, where it has them, as a player goes: up their own line, T-288 —, climbing none
+//      (into an open ground — the granary by its form —: on to its floor, which the world has the body in only by a place of
+//      it, D-044 — T-291)
 //   4. the steps the feet go up are the ones the 3D lays (Space.doorFlight): over each tread the body's floor is its top, and
 //      the drawing has a face there; and every flight before a door in the world whose way in the world says fits (its feet
 //      walk, ground a stride before them, the body standing on each tread: Space.entryFits, L-195, L-207) is walked up, from
@@ -69,18 +71,27 @@ function door(b) {
   const st = !fl ? p.stairs.find(q => q.kind === 'degraus' && q.lv1 === w.lv) : null;
   return { b, p, e, h, w, D, O, u, fl, st, hw: h.w };
 }
-// (the way in, as a player takes it — world metres: up the side flight from its lowest tread; up an outside flight from before
-// its foot; else straight at the door, as far to one side of its middle as keeps clear of what the street has beside it)
+// (up a flight of Space's steps as a player goes up it — as the 4b does —: from a stride past its foot, the lowest tread; a side
+// flight over each of its treads, a straight one up its own line; to a stride out of the middle of its door, or of the foot of
+// the outside flight it is before. Its own line, not the door's middle: where the street slopes across, a straight flight
+// stands to one side of the door's middle and narrows to its foot, and the door's middle went by beside its last tread — the
+// step up from the street there 0.63 m, climbed with the hands: the armazem#27908 of the 09cccff, its sixteen treads half a
+// metre to the side, the last two of 1.13 and 0.51 m; the 4b went up the same flight on its line — T-288)
+const upFlight = (fl, Wd) => { const T = fl.treads.slice().sort((a, c) => a.y - c.y), lo = T[0]; const side = fl.treads.filter(t => t.kind === 'side').sort((a, c) => c.k - a.k);
+  return [Wd(fl.P(lo.a, lo.n + lo.wn / 2 + 0.5))].concat(side.length ? side.map(t => Wd(fl.P(t.a, t.n))) : [Wd(fl.P(lo.a, 0.3))], [Wd(fl.P(0, 0.3))]); };
+// (the way in, as a player takes it — world metres: up the steps before the door (upFlight); up an outside flight, by the steps
+// before its foot; else — no steps — straight at the door, as far to one side of its middle as keeps clear of what the street
+// has beside it)
 function wayIn(d) {
   const { b, fl, st, D, u } = d; const Wd = q => [b.x * TL + q[0], b.y * TL + q[1]]; const pts = [];
   const clearAt = (X, Z) => { const x = X / TL, y = Z / TL; if (!W.inb(x, y)) return false; const id = S.occ[W.idx(x, y)]; if (id === b.id) { const q = Sp.indoor(X, Z); return !!q && q.walk; } return W.walkableXY(x, y); };
-  if (fl && fl.treads.some(t => t.kind === 'side')) { const side = fl.treads.filter(t => t.kind === 'side').sort((a, c) => c.k - a.k); const lo = side[0];
-    pts.push(Wd(fl.P(lo.a, lo.n + lo.wn / 2 + 0.5))); for (const t of side) pts.push(Wd(fl.P(t.a, t.n))); pts.push(Wd(fl.P(0, 0.3))); }
+  if (fl && fl.treads.length) pts.push(...upFlight(fl, Wd));
   else if (st) { const r = st.r, dx = st.dir[0], dz = st.dir[1]; const f = dx ? [dx > 0 ? r[0] : r[2], (r[1] + r[3]) / 2] : [(r[0] + r[2]) / 2, dz > 0 ? r[1] : r[3]]; const t = dx ? [dx > 0 ? r[2] : r[0], f[1]] : [f[0], dz > 0 ? r[3] : r[1]];
-    const fo = Sp.feet(st); const ff = Sp.doorFlight(b, d.p.shell, { w: b.w * TL, d: b.h * TL }, fo.w, fo.h, 0, false, fo.F, fo.uc); const far = ff && ff.treads.length ? Math.max(...ff.treads.map(q => q.n + q.wn / 2)) + 0.5 : 0.6;
-    pts.push(Wd([f[0] - dx * far, f[1] - dz * far]), Wd([f[0] + dx * 0.1, f[1] + dz * 0.1]), Wd([t[0] - dx * 0.2, t[1] - dz * 0.2])); }
+    const fo = Sp.feet(st); const ff = Sp.doorFlight(b, d.p.shell, { w: b.w * TL, d: b.h * TL }, fo.w, fo.h, 0, false, fo.F, fo.uc);
+    if (ff && ff.treads.length) pts.push(...upFlight(ff, Wd)); else pts.push(Wd([f[0] - dx * 0.6, f[1] - dz * 0.6]));
+    pts.push(Wd([f[0] + dx * 0.1, f[1] + dz * 0.1]), Wd([t[0] - dx * 0.2, t[1] - dz * 0.2])); }
   else {
-    const far = Math.max(1.4, fl && fl.treads.length ? Math.max(...fl.treads.map(q => q.n + q.wn / 2)) + 0.6 : 0);
+    const far = 1.4;
     const lat = [-u[1], u[0]]; let a = 0;
     for (const a0 of [0, 0.25, -0.25, 0.45, -0.45, 0.6, -0.6]) { if (Math.abs(a0) > d.hw / 2 - 0.3 && a0) continue; let good = true;
       for (let s = 0.3; s <= far + 0.01 && good; s += 0.15) for (const e of [-0.36, 0, 0.36]) { const X = D[0] + u[0] * s + lat[0] * (a0 + e), Z = D[1] + u[1] * s + lat[1] * (a0 + e); if (!clearAt(X, Z)) { good = false; break; } }
@@ -109,7 +120,7 @@ const watch = () => { const P = [v.x, v.y, v.inside]; if (last) { const j = Math
   if (pushedAt.length < 3) { const q = Sp.indoor(last[0] * TL, last[1] * TL); const B = S.buildings.get(S.occ[W.idx(last[0], last[1])]); pushedAt.push(`${j.toFixed(2)} m de ${last[0].toFixed(2)},${last[1].toFixed(2)} (dentro ${last[2] || 0}; ladrilho ${B ? B.type + '#' + B.id : '-'}; planta ${q ? `${q.b.type}#${q.b.id} walk ${q.walk} casca ${q.shell}` : '-'}; o mundo anda ${W.walkableXY(last[0], last[1])}) a ${P[0].toFixed(2)},${P[1].toFixed(2)} (dentro ${P[2] || 0})`); } } } last = P; };
 const st = () => G.Avatar.state();
 function walk(X, Z, max, stopIn) {
-  let k = 0; for (; k < (max || 240); k++) { const s = st(); const dx = X - s.X, dz = Z - s.Z; if (Math.hypot(dx, dz) < 0.15 || (stopIn && v.inside)) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; s.yaw = yaw; frame(); watch();
+  let k = 0; for (; k < (max || 240); k++) { const s = st(); const dx = X - s.X, dz = Z - s.Z; if (Math.hypot(dx, dz) < 0.15 || (stopIn && (stopIn === true ? v.inside : stopIn()))) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; s.yaw = yaw; frame(); watch();
     const c = st().loco === 'climb'; if (inWay && c && !wasClimb) climbs++; wasClimb = c; }
   IN.mz = 0; return k;
 }
@@ -120,7 +131,13 @@ const pathTo = (X, Z) => { const p = W.findPath(v.x, v.y, X / TL, Z / TL, true, 
 let reopened = 0; const keepOpen = d => { if (In.doorState(d.b, d.e.door).state !== 'aberta') { reopened++; setDoor(d, true); } };
 // (the stride through the door until the world has the body indoors — not on: a house's stair rising from before its door, in
 // the line of one coming in, takes a body pushed against its foot up to the storey above, where the way out is none — T-114)
-function goIn(d) { const pts = wayIn(d); pathTo(pts[0][0], pts[0][1]); inWay = true; for (const q of pts.slice(0, -1)) walk(q[0], q[1], 260); keepOpen(d); const q = pts[pts.length - 1]; walk(q[0], q[1], 260, true); inWay = false; for (let k = 0; k < 6; k++) { frame(); watch(); } return v.inside === d.b.id; }
+// (indoors: within the building's walls, v.inside; on an open ground — the granary of the Egyptians and of the Aztecs by its
+// form, phase E: a floor with no walls —, on its floor, within its shell (Avatar.indoors), come by its way in. The world has a
+// body in an open ground only by a place of it — Possess.use: a bin taken —, as on a square or a fair (D-044), never by
+// walking on it; walked on to, its floor is where the plan lets the body stand (Possess.onPlan), out for the world. The proof
+// waited for v.inside, and gave the Aztec granary#5938 for stopped — the body on its floor, against its front pot — T-291)
+const isIn = d => { if (v.inside === d.b.id) return true; const q = d.p.shell.kind === 'aberta' && G.Avatar.indoors(); return !!q && q.b.id === d.b.id; };
+function goIn(d) { const pts = wayIn(d); pathTo(pts[0][0], pts[0][1]); inWay = true; for (const q of pts.slice(0, -1)) walk(q[0], q[1], 260); keepOpen(d); const q = pts[pts.length - 1]; walk(q[0], q[1], 260, () => isIn(d)); inWay = false; for (let k = 0; k < 6; k++) { frame(); watch(); } return isIn(d); }
 function goOut(d) { const pts = wayIn(d).slice(0, -1).reverse(); keepOpen(d); inWay = true; for (const q of pts) walk(q[0], q[1], 260); walk(d.O[0], d.O[1], 260); inWay = false; for (let k = 0; k < 6; k++) { frame(); watch(); } return !v.inside; }
 const houses = [...S.buildings.values()].filter(q => q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado') && In.planDoor(q)).sort((a, c) => a.id - c.id);
 

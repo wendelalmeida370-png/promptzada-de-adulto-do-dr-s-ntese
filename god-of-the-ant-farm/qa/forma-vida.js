@@ -14,6 +14,9 @@
 //   7. a vida anda e quem está num desses prédios morre no meio: o verificador limpo, nenhum erro de módulo
 //   8. onde a rua diante da entrada está mais de um passo abaixo do chão (o lote caindo para ela), os degraus que o corpo sobe
 //      (Space.entryFits): diante da porta de um chão de base própria, ou do pé do lance da forma sobre uma base maciça
+//   9. em todos os mundos prontos, os degraus que o Space põe diante de cada porta de fora dos prédios pela forma (e do pé do
+//      lance dela fora das paredes): nenhum se choca com outro a outra altura (os vãos do mercado lado a lado, L-413), nenhum
+//      dentro do corpo da planta nem sobre o que a forma tem em pé (os vãos do pórtico atrás do pilone, L-417)
 //   node qa/forma-vida.js [mundo]     (mundial: os tipos em vários povos)
 'use strict';
 const M = require('./nodemundo.js');
@@ -135,6 +138,46 @@ M.pronto(KEY); In.uncache();
     const ef = Sp.entryFits(b, p); if (ef.kind === 'nenhum' || !ef.ok) out.push(`${b.type}#${b.id} (${b.style}, ${b.ip.f}): a rua ${drop.toFixed(2)} m abaixo do alto do plinto, ${ef.kind === 'nenhum' ? 'sem degraus' : `degraus que não cabem (${ef.kind}, o pé ${ef.foot} m)`}`);
   }
   ok('8 diante de toda entrada com a rua mais de um passo abaixo do chão da forma, os degraus que o corpo sobe', n && !out.length, `${low} de ${n} entradas sobre a rua${out.length ? '; ' + some(out).join(' / ') + (out.length > 3 ? ` (e mais ${out.length - 3})` : '') : ''}`);
+}
+// ---------------------------------------------------------------- 9. the steps before every door out, in every ready world
+// (the steps Space lays before each door out of a building by its form — and before the foot of each flight of the form
+// outside its walls —, the 3D's and the feet's, in every ready world: none running into another's at another height — the
+// market's ways in side by side over a slope, each flight along the front to the same side, the treads of one under the
+// landing of the next: L-413 —, none inside the plan's body — its shell, its annexes, its yard — nor on what the form has
+// standing on its ground — the bays of the porch behind the Egyptian palace's pylon, ways out with their doorsteps and their
+// steps laid into the towers' mass and into the passage, under the gate's steps: L-417)
+{
+  const fs = require('fs'), path = require('path'); const TL = Sp.TILE;
+  const worlds = [...fs.readFileSync(path.join(__dirname, '..', 'worlds', 'lista.js'), 'utf8').matchAll(/^ "([a-z0-9]+)": \{/gm)].map(m => m[1]);
+  // (as Space reckons them: a floor on posts or on a solid base has its own flight up to its door, no steps before it)
+  const raisedOf = p => { const l0 = p.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y)[0] || p.levels[0]; return !!l0 && (l0.kind === 'elevado' || p.shell.base === 'esteios' || p.shell.base === 'macica'); };
+  const inShell = (sh, st) => { const cx = (st.r[0] + st.r[2]) / 2, cz = (st.r[1] + st.r[3]) / 2; return sh.kind === 'round' ? Math.hypot(cx - sh.cx, cz - sh.cz) < sh.r : cx > sh.r[0] && cx < sh.r[2] && cz > sh.r[1] && cz < sh.r[3]; };
+  const over = (A, B) => Math.min(A[2], B[2]) - Math.max(A[0], B[0]) > 0.02 && Math.min(A[3], B[3]) - Math.max(A[1], B[1]) > 0.02;
+  const inCirc = (A, c, r) => Math.hypot(Math.max(A[0] - c[0], 0, c[0] - A[2]), Math.max(A[1] - c[1], 0, c[1] - A[3])) < r - 0.02;
+  const out = []; let nb = 0, nf = 0, nt = 0;
+  for (const k of worlds) {
+    M.pronto(k); In.uncache();
+    for (const b of formed()) {
+      const p = In.plan(b); if (!p || !p.ok) continue; nb++;
+      const lot = { w: b.w * TL, d: b.h * TL }, L = lot.w, tag = `${b.type}#${b.id} (${b.style}, ${k})`; const fls = [];
+      for (const h of p.holes) { const d = h.door >= 0 ? p.doors[h.door] : null; if (!d || !d.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue; const l = p.levels.find(q => q.lv === w.lv);
+        const fl = Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, raisedOf(p)); if (fl && fl.treads.length) fls.push({ fl, de: `a porta ${h.door}` }); }
+      for (const st of p.stairs) { if (st.kind !== 'degraus' || inShell(p.shell, st)) continue; const f = Sp.feet(st); const fl = Sp.doorFlight(b, p.shell, lot, f.w, f.h, 0, false, f.F, f.uc); if (fl && fl.treads.length) fls.push({ fl, de: `o pé do lance ${st.id}` }); }
+      // (each tread a rectangle of the lot; the plan's body — its shell, its annexes, its yard —; what stands on the form's ground,
+      // turned to the lot as the plan is)
+      const rect = (fl, t) => { const a = fl.P(t.a - t.wa / 2, t.n - t.wn / 2), c = fl.P(t.a + t.wa / 2, t.n + t.wn / 2); return [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[0], c[0]), Math.max(a[1], c[1])]; };
+      const body = (p.shell.kind === 'round' ? [] : [p.shell.r]).concat((p.shell.annex || []).map(a => a.r), p.shell.yard ? [p.shell.yard.r] : []);
+      const loc = (x, z) => In.toLoc(b.ip.s, L, x, z); const sol = G.Forma.solids(G.Forma.of(b.type, b.style)).map(q => (q.k === 'rect' ? { r: (() => { const a = loc(q.r[0], q.r[1]), c = loc(q.r[2], q.r[3]); return [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[0], c[0]), Math.max(a[1], c[1])]; })() } : { c: loc(q.c[0], q.c[1]), rr: q.r }));
+      const bad = new Set();
+      fls.forEach(({ fl, de }, i) => { nf++; for (const t of fl.treads) { nt++; const R = rect(fl, t);
+        if (body.some(q => over(R, q)) || (p.shell.kind === 'round' && inCirc(R, [p.shell.cx, p.shell.cz], p.shell.r))) bad.add(`${de}: o degrau ${t.kind}${t.k} dentro do corpo da planta`);
+        if (sol.some(q => (q.r ? over(R, q.r) : inCirc(R, q.c, q.rr)))) bad.add(`${de}: o degrau ${t.kind}${t.k} sobre o que a forma tem em pé`);
+        for (const o of fls.slice(i + 1)) for (const u of o.fl.treads) if (over(R, rect(o.fl, u)) && Math.abs(t.y - u.y) > 0.05) bad.add(`os degraus de ${de} e de ${o.de} se chocam (${t.kind}${t.k} a ${t.y.toFixed(2)}, ${u.kind}${u.k} a ${u.y.toFixed(2)})`); } });
+      if (bad.size) out.push(`${tag}: ${[...bad].slice(0, 3).join('; ')}${bad.size > 3 ? ` (e mais ${bad.size - 3})` : ''}`);
+    }
+  }
+  ok('9 em todos os mundos prontos, os degraus diante de cada porta de fora dos prédios pela forma (e do pé do lance dela fora das paredes): nenhum se choca com outro, nenhum dentro do corpo da planta nem sobre o que a forma tem em pé', nb && nf && !out.length,
+    `${nb} prédios em ${worlds.length} mundos, ${nf} lances, ${nt} degraus${out.length ? '; ' + some(out).join(' / ') + (out.length > 3 ? ` (e mais ${out.length - 3})` : '') : ''}`);
 }
 const err = M.erros(); ok('sem erros de módulo', M.limpo(), M.limpo() ? 'nenhum' : JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');

@@ -691,7 +691,7 @@
   V.townReachesWork = function (set, b) { const [fx, fy] = V.frontTile(b); return W.townReaches(set, fx, fy) || ringOf(b).some(p => W.townReaches(set, p[0], p[1])); };
   // the works of a town its streets reach (a site across the water is none of them: it is given up after its tries, L-349)
   const townWorks = set => { const out = []; for (const b of G.S.buildings.values()) if (b.set === set.id && !b.built && b.type !== 'ruin' && V.townReachesWork(set, b)) out.push(b); return out; };
-  function assignJobs(set) {
+  function assignJobs(set, keep) {
     const S = G.S;
     // (the trades of the economy module load after this file)
     if (WORK_ROLES === BASE_ROLES && G.Eco) WORK_ROLES = BASE_ROLES.concat(G.Eco.JOB_ROLES);
@@ -778,7 +778,8 @@
     // spare has its builder at once (with the trade left to the deficit, its foragers' want took the islet's builders and the
     // streets had none). With no such one on the streets, the builder is left without a trade, and a new builder is one who
     // reaches the works: the first of them no builder reaches, while there is one. With no work the streets reach, nothing
-    // changes; and one at sea, underground or held is not judged: the map does not see where he stands)
+    // changes; and one at sea, underground or held is not judged: the map does not see where he stands. Never at a load (keep):
+    // the trades come back as they were saved, and the world's own step makes the swap, as it deals the trades out, L-419)
     const works = townWorks(set); const left = new Set();
     const swapFor = () => {
       let best = null, bd = Infinity;
@@ -788,7 +789,7 @@
       }
       return best;
     };
-    if (works.length) for (const v of have.construtor.slice()) if (!v.aboard && !v.ug && !v.held && !works.some(b => V.reachesWork(v, b))) {
+    if (works.length && !keep) for (const v of have.construtor.slice()) if (!v.aboard && !v.ug && !v.held && !works.some(b => V.reachesWork(v, b))) {
       have.construtor.splice(have.construtor.indexOf(v), 1); v.job = 0;
       const p = swapFor();
       if (p) { have[p.r].splice(have[p.r].indexOf(p.o), 1); p.o.role = 'construtor'; p.o.job = 0; have.construtor.push(p.o); v.role = p.r; have[p.r].push(v); G.Life && G.Life.onRole(p.o, p.r); G.Life && G.Life.onRole(v, 'construtor'); }
@@ -803,9 +804,10 @@
       const d = deficit().filter(r => fits(v, r)); const r = d.length ? pickRoleFor(v, d) : 'coletor';
       v.role = r; have[r].push(v); G.Life && G.Life.onRole(v, left.has(v) ? 'construtor' : null);
     }
-    // move surplus to deficit (max 3 changes)
+    // move surplus to deficit (max 3 changes) — never at a load (keep): the trades come back as they were saved, and the
+    // world's own step deals them out anew, four seconds on (L-419)
     let changes = 0;
-    while (changes < 3) {
+    while (!keep && changes < 3) {
       const d = deficit(); if (!d.length) break;
       const sur = WORK_ROLES.filter(r => have[r].length > want[r]);
       if (!sur.length) break;
@@ -1177,8 +1179,10 @@
     if (f && !G.Fac.settlementsOf(f.id).length) G.Politics ? G.Politics.extinct(f, null) : (f.alive = false);
     G.Fac.updateTerritory();
   };
-  V.forceUpdate = function () {
-    for (const s of G.S.settlements.values()) { assignHousing(s); assignJobs(s); }
+  // (keep: a load — the homes and the trades given back as they were saved, mended where a saved one no longer fits, never dealt
+  // out anew: that is the world's own step, L-419)
+  V.forceUpdate = function (keep) {
+    for (const s of G.S.settlements.values()) { assignHousing(s); assignJobs(s, keep); }
     V.updateEra();
   };
   // someone who lives in a town across the water they cannot walk to (a captive freed overseas, a migrant whose road broke):

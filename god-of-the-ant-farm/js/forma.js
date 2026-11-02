@@ -510,9 +510,9 @@
   });
 
   // ------------------------------ the library (arch.js biblioteca) ------------------------------
-  // (the treads of a plinth's front, from its top at z px down to the ground in n − 1 treads of 0.075 tiles — 0.3 m: the body's
-  // flight, no riser over 0.3 m, D-093 —, the plinth's front at y tiles, from x0 to x1; the first tread's back at y − 0.075·(n − 1))
-  const treadsF = (L, x0, x1, y, z, n) => { const out = []; for (let k = 1; k < n; k++) out.push(blocoF(L, x0, y - 0.075 * (n - k), x1, y - 0.075 * (n - k - 1), 0, z * (n - k) / n, BASE, { degrau: 1 })); return out; };
+  // (the treads of a plinth's front, from its top at z px down to the ground in n − 1 treads of d tiles — 0.075, 0.3 m: the body's
+  // flight, no riser over 0.3 m, D-093 —, the plinth's front at y tiles, from x0 to x1; the first tread's back at y − d·(n − 1))
+  const treadsF = (L, x0, x1, y, z, n, d = 0.075) => { const out = []; for (let k = 1; k < n; k++) out.push(blocoF(L, x0, y - d * (n - k), x1, y - d * (n - k - 1), 0, z * (n - k) / n, BASE, { degrau: 1 })); return out; };
   // the classical one (and the Greek's, the Roman's): its plinth of 0.85 tiles and 2.5 px — its front the two treads down to the
   // street, three risers of 0.27 m (D-093: the body climbs it) —, the hall of 1.45 × 1.1 tiles to 17 px with the door behind the
   // portico and two windows a side, the portico of five columns along the front, the entablature to 19 px and over all the roof
@@ -1361,10 +1361,12 @@
   // for a body, the plan's way to their mouths) —, the dark hole each is filled by high on its front (where the god paints it,
   // 1.5 px left of the axis and 15 over the foot: on the round 20° east of its front, 5.5 m up; as dark and as big as the god's,
   // half in the dome — a flat disc on the round sank in it, and the god's 4 holes were none in the 3D); the flight of three
-  // risers of 0.27 m before the base's middle, up from the street. Each dome a bin of the people's grain (uso 'tulha': the
-  // plan's, its mouth on its front)
+  // risers of 0.27 m before the base's middle, up from the street, its two treads of 0.25 m to a hand off the lot's edge (the
+  // steps Space lays before the foot of a flight, down to a street that falls away, start a hand out of its line — that hand the
+  // lot's own ground, the doorstep —: at the edge, it was the street's, 0.4 m below on a slope, and the feet fell in it and met
+  // the first riser as a ledge — L-414). Each dome a bin of the people's grain (uso 'tulha': the plan's, its mouth on its front)
   def('celeiro', 'egipcio', L => {
-    const els = [blocoF(L, -0.85, -0.85, 0.85, 0.85, 0, 2.5, BASE), ...treadsF(L, -0.15, 0.15, 1.0, 2.5, 3)]; const [hu, hv, hy] = holeOn(6, 21, -1.5, 15);
+    const els = [blocoF(L, -0.85, -0.85, 0.85, 0.85, 0, 2.5, BASE), ...treadsF(L, -0.15, 0.15, 0.975, 2.5, 3, 0.0625)]; const [hu, hv, hy] = holeOn(6, 21, -1.5, 15);
     for (const [x, y] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) { const d = domeF(L, x, y, 6, 2.5, 21, ['wl', 'wr'], 'mud'); Object.assign(d[0], { uso: 'tulha', vira: [0, 1] });
       els.push(...d, { k: 'bola', c: [at(L, x) + hu, at(L, y) + hv, px(2.5) + hy], r: 1.2 * PXM, ry: 0.34, cor: '#3a2a1c' }); }
     return { els };
