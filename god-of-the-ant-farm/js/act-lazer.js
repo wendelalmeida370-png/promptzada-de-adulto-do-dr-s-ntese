@@ -377,6 +377,18 @@
     if (v.readDay !== S.day) { v.readDay = S.day; A.note(v, 'memory', `Li um rolo ${n_(b)}.`); }
     return out();
   }
+  // (who reads at a table of this library now: the errand of it, seated)
+  const reading = (v, b) => !!(v && v.task && v.task.type === 'ler' && v.task.id === b.id && v.task.st >= 1);
+  // once a second: whoever left the reading by another door — an elder's bed before the library shuts, the family at the
+  // door, an errand that weighs more — is no longer at its tables. The book kept them for ever: a library with no plan full
+  // of nobody, and the load sat them down to read again, out of their beds (L-435)
+  A.hooks.tick.push(function () {
+    const S = S_();
+    for (const set of S.settlements.values()) for (const b of E.byType(set.id, 'biblioteca')) {
+      const q = b.livros && b.livros.quem; if (!q) continue;
+      for (const id of Object.keys(q)) if (!reading(S.villagers.get(+id), b)) delete q[id];
+    }
+  });
   // ---- the copyist (the errand 'copiar' at the scribe's desk, 'escrever')
   Bi.task = function (v, b, f, H) {
     if (!libOpen(b) || book(b).copias >= Bi.MAX - 2) return null;
@@ -552,21 +564,40 @@
 
   // ============================== the save ==============================
   // (the errands are not saved: the audience and the actors of a show under way are put back where they were, the readers at
-  // their tables — and the show and the reading go on; L-190's rule)
+  // their tables — and the show and the reading go on; L-190's rule. Only who was there at the save: the rows, the stage and
+  // the library's book keep for a second whoever left by another door — to bed, to the family at the door, to eat —, and the
+  // load sat them down again, out of their beds; the save says who was there by the errand each one had, and the one who had
+  // left is let go at the next look, as the world without the save does — L-435)
   (G.saveHooks = G.saveHooks || []).push({
-    save() { },
-    load() {
+    save(out) {
+      const S = S_(); const plateia = [], atores = [], ler = [];
+      for (const op of A.all()) {
+        if (op.def !== 'espetaculo' || !live(op)) continue;
+        const d = op.data; const b = S.buildings.get(op.at);
+        for (const id in d.plateia || {}) { const v = S.villagers.get(+id); if (v && !d.plateia[id].body && seated(v, op, b)) plateia.push(op.id + ':' + id); }
+        for (const id in d.atores || {}) { const v = S.villagers.get(+id); if (v && !d.atores[id].body && onStage(v, op, b)) atores.push(op.id + ':' + id); }
+      }
+      for (const b of S.buildings.values()) if (b.type === 'biblioteca' && b.livros && b.livros.quem) for (const id in b.livros.quem) if (reading(S.villagers.get(+id), b)) ler.push(b.id + ':' + id);
+      out.lazer = { plateia, atores, ler };
+    },
+    load(o) {
       const S = S_();
+      // (a save of before has no lists: everyone the rows, the stage and the book had, as it always loaded)
+      const sv = o && o.lazer && typeof o.lazer === 'object' ? o.lazer : null;
+      const list = k => (sv && Array.isArray(sv[k]) ? new Set(sv[k]) : null);
+      const kp = list('plateia'), ka = list('atores'), kl = list('ler');
       for (const op of A.all()) {
         if (op.def !== 'espetaculo' || !live(op)) continue;
         const d = op.data; d.plateia = d.plateia && typeof d.plateia === 'object' ? d.plateia : {}; d.atores = d.atores && typeof d.atores === 'object' ? d.atores : {};
         for (const [id, m] of Object.entries(d.plateia)) {
           const v = S.villagers.get(+id); if (!v || m.body || v.captive || v.jail) { delete d.plateia[id]; continue; }
+          if (kp && !kp.has(op.id + ':' + id)) continue;
           G.Vg.setTask(v, { type: 'teatro', id: op.at, op: op.id, pri: 0.45, st: m.st === 2 ? 2 : 1, use: 'assistir', kind: 'leisure' });
           if (v.task && v.task.type === 'teatro') v.inside = op.at; else delete d.plateia[id];
         }
         for (const [id, m] of Object.entries(d.atores)) {
           const v = S.villagers.get(+id); if (!v || m.body || v.captive || v.jail) { delete d.atores[id]; continue; }
+          if (ka && !ka.has(op.id + ':' + id)) continue;
           G.Vg.setTask(v, { type: 'atuar', id: op.at, op: op.id, pri: 1.05, st: 1, use: 'atuar', kind: 'work' });
           if (v.task && v.task.type === 'atuar') v.inside = op.at; else delete d.atores[id];
         }
@@ -575,6 +606,7 @@
         if (b.type !== 'biblioteca' || !b.livros || !b.livros.quem) continue;
         for (const [id, m] of Object.entries(b.livros.quem)) {
           const v = S.villagers.get(+id); if (!v || v.captive || v.jail) { delete b.livros.quem[id]; continue; }
+          if (kl && !kl.has(b.id + ':' + id)) continue;
           G.Vg.setTask(v, { type: 'ler', id: b.id, pri: 0.35, st: 1, use: 'ler', kind: 'leisure' });
           if (v.task && v.task.type === 'ler') { v.inside = b.id; v.actT = Math.max(0, S.clock - (m.t || S.clock)); } else delete b.livros.quem[id];
         }

@@ -86,6 +86,19 @@ const sum = L => r2(L.reduce((n, e) => n + e[6], 0));
   for (const v of S.villagers.values()) v.task = null;
   const hook = G.saveHooks.find(h => /espetaculo/.test(String(h.load)) && /plateia/.test(String(h.load))); hook.load({});
   ok('save-devolve-a-plateia', !!op3 && c3.every(v => v.task && v.task.type === 'teatro' && v.task.op === op3.id && v.inside === te.id) && [a1, a2].every(v => v.task && v.task.type === 'atuar'), `depois do gancho: na plateia ${c3.filter(v => v.task && v.task.type === 'teatro').length} de 2, no palco ${[a1, a2].filter(v => v.task && v.task.type === 'atuar').length} de 2`);
+  // ---- the save says who is there: one in the rows taken by the bed of her hour and one actor by a call that cannot wait, a
+  // moment before it — the rows and the stage keep them until their next look —: the load does not sit them down again, and
+  // the others it does (L-435). Then the case given back as a save of before loads it: everyone the lists still have
+  {
+    const gone = c3[0]; const sv = {};
+    G.Vg.setTask(gone, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: gone.home }); G.Vg.setTask(a2, { type: 'idle', pri: 3, wait: 10 });
+    const held = !!op3.data.plateia[gone.id] && !!op3.data.atores[a2.id];
+    hook.save(sv); for (const v of S.villagers.values()) v.task = null; hook.load(sv);
+    const back = v => !!v.task && (v.task.type === 'teatro' || v.task.type === 'atuar');
+    const stayed = c3.slice(1).every(v => v.task && v.task.type === 'teatro' && v.inside === te.id) && a1.task && a1.task.type === 'atuar';
+    ok('save-so-quem-estava', held && !back(gone) && !back(a2) && gone.inside !== te.id && a2.inside !== te.id && stayed, `chamados um momento antes do save, ainda nas listas: ${held ? 'sim' : 'NÃO'}; depois do gancho: ${gone.name} ${back(gone) ? 'DE VOLTA À PLATEIA' : 'fora'}, ${a2.name} ${back(a2) ? 'DE VOLTA AO PALCO' : 'fora'}; os outros ${stayed ? 'nos seus lugares' : 'FORA DOS SEUS LUGARES'}`);
+    hook.load({});
+  }
   // ---- the god's body: in the audience; and the body that is an actor, on the stage
   const me = person('Corpo', 3); S.avatar = { id: me.id, deeds: {} }; const at = G.Vg.door(te); me.x = at[0]; me.y = at[1];
   const offer = (v, act) => A.offers(v, v.x, v.y, 2.5).find(o => o.def === 'espetaculo' && o.act === act);
@@ -123,6 +136,21 @@ const sum = L => r2(L.reduce((n, e) => n + e[6], 0));
   const cp = person('Copista', 1, { job: 4, role: 'copista' }); const p0 = f.tech.pts;
   E.jobTask(cp, H); const tc = cp.task && cp.task.type; sec(40, [cp]);
   ok('copista', tc === 'copiar' && r2(f.tech.pts - p0) === Bi.COPY && Bi.book(bi).copias === 1, `tarefa ${tc}; a pesquisa +${r2(f.tech.pts - p0)}`);
+  // (who leaves the reading by another door — the bed, a call — is let go by the library's book at its next look, and a save
+  // in that moment sits nobody down again: the book of a library with no plan kept them for ever, full of nobody, and the load
+  // sat them all down to read, out of their beds — L-435)
+  {
+    G.S.time = 0.4; const gh = []; for (let i = 0; i < Bi.CAP; i++) { const p = person('Chamado' + i, 1); Bi.visit(p, bi, H); gh.push(p); }
+    sec(1, gh); const sat0 = gh.filter(p => Bi.book(bi).quem[p.id]).length;
+    for (const p of gh) G.Vg.setTask(p, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: p.home });
+    const kept = gh.filter(p => Bi.book(bi).quem[p.id]).length;
+    const hook = G.saveHooks.find(h => /biblioteca/.test(String(h.load)) && /quem/.test(String(h.load))); const sv = {};
+    hook.save(sv); for (const p of gh) p.task = null; hook.load(sv);
+    const sat = gh.filter(p => p.task && p.task.type === 'ler').length;
+    sec(1, []); const left = Object.keys(Bi.book(bi).quem).length; const nx = person('Depois', 1); const tn = Bi.visit(nx, bi, H);
+    ok('livro-solta-quem-saiu', sat0 === Bi.CAP && kept === Bi.CAP && !sat && !left && !!tn, `${sat0} lendo, todos chamados (${kept} ainda no livro naquele momento): o save senta ${sat} de novo; no livro um segundo depois ${left}; um leitor novo ${tn ? 'entra' : 'NÃO ENTRA (a biblioteca cheia de ninguém)'}`);
+    if (nx.task) G.Vg.endTask(nx);
+  }
   G.S.time = 0.8; const late = person('Tarde', 1); ok('fechada-a-noite', !Bi.visit(late, bi, H), 'às 0,8: ninguém começa a ler');
   void S;
 }

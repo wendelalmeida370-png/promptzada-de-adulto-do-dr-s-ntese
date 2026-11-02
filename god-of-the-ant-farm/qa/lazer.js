@@ -190,6 +190,85 @@ function hungryActor(hunger) {
   const q = hungryActor(90);
   ok('l8 com-fome-90-sai', q.started && q.left === 'eat' && q.op.st === 'int' && !q.bad.length, q.started ? `${q.a.name}, com fome 90 no palco no começo da peça: ${q.left ? 'saiu para ' + q.left : 'ficou'}; o espetáculo ${q.op.st} (${q.op.end ? q.op.end.why : ''}); ${q.bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'a peça não começou com ele no palco');
 }
+// ---------------- l9 the reader the evening takes home (L-435) ----------------
+// (an elder whose bed time comes before the library shuts — at 0,72 —, set down by its door a little before it, reads: the
+// world takes her from the reading by its own calls — the family at the door, the bed — and she goes home to sleep. Asleep in
+// her house, the library's book no longer has her, and the round trip through the save puts nobody out of bed. Khufu of the
+// mundial, an elder, slept in his ínsula and woke from the load reading in the library: its book kept everyone who ever left
+// the reading by another door, and the load sat them all down again)
+const writers = () => [...S().buildings.values()].filter(b => { if (b.type !== 'biblioteca' || !b.built) return false; const f = G.Fac.get(V.facOfSet(b.set)); return !!(f && f.tech && f.tech.known && f.tech.known.escrita); });
+const free = v => !(v.captive || v.jail || v.aboard || v.sleeping || v.merchant || (v.carry && v.carry.n > 1e-6) || A.isBody(v) || !V.livable(S().buildings.get(v.home)));
+{
+  fresh(); let pick = null;
+  for (const lib of writers()) {
+    const dr = G.Vg.door(lib);
+    for (const v of [...S().villagers.values()].sort((a, c) => a.id - c.id)) if (v.set === lib.set && v.age >= 62 && free(v) && G.Lar.clock(v).bed < 0.712 && G.W.reaches(v, dr[0], dr[1])) { pick = { lib, v }; break; }
+    if (pick) break;
+  }
+  if (!pick) ok('l9 a-leitora-vai-dormir', true, 'nenhum ancião de um povo com escrita que durma antes de a biblioteca fechar: sem o caso');
+  else {
+    const { lib, v } = pick; const dr = G.Vg.door(lib); const bed = G.Lar.clock(v).bed;
+    S().time = bed - 0.04; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
+    G.Vg.endTask(v); v.x = dr[0]; v.y = dr[1]; v.path = null; v.inside = 0; v.energy = 70; v.hunger = 20;
+    const t = Bi.visit(v, lib); let read = false; const calls = []; const bad = [];
+    const home = () => !!v.task && v.task.type === 'sleep' && v.task.st >= 2 && v.sleeping && v.inside === v.home;
+    // (a tenth of a second at a time: the reading may last a moment only — the family at the door took Citlali a second in)
+    for (let k = 0; k < 1600 && !home(); k++) { M.viver(0.1); if (k % 50 === 49) watch(bad); const tt = v.task; if (tt && tt.type === 'ler' && tt.st >= 1) read = true; else if (read && tt && !calls.includes(tt.type)) calls.push(tt.type); }
+    const asleep = home(); const kept = !!Bi.book(lib).quem[v.id];
+    const r = asleep ? QA.roundTrip() : { diff: ['ela não chegou a dormir em casa'] };
+    const w = S().villagers.get(v.id); const after = w && w.task ? `${w.task.type}/${w.task.st}` : 'sem tarefa';
+    const back = !!w && !!w.task && w.task.type === 'sleep' && w.sleeping && w.inside === w.home;
+    ok('l9 a-leitora-vai-dormir', !!t && read && asleep && !kept && !r.diff.length && back && !bad.length, `${bad.length ? bad.slice(0, 2).join(' | ') + '; ' : ''}${v.name}, ${Math.floor(v.age)} anos, dorme às ${r2(bed)}: ${read ? 'leu' : 'NÃO LEU'} ${n(lib)}, o mundo a chamou (${calls.join(', ') || '-'}) e ela ${asleep ? 'dorme em casa' : 'NÃO DORME EM CASA'}; no livro da biblioteca: ${kept ? 'AINDA' : 'não'}; a ida e volta: ${r.diff.length ? r.diff.join(' | ').slice(0, 300) : 'igual'}; depois do load: ${after}${w && w.inside === lib.id ? ' NA BIBLIOTECA' : back ? ' em casa' : ''}`);
+  }
+}
+// ---------------- l10 the spectator, the actor and the reader called away a moment before the save (L-435) ----------------
+// (the rows, the stage and the library's book let go of who left by another door at their next look, within the second; a
+// save in that second sat them down again: the spectator taken by the bed of her hour, the actor by a call that cannot wait,
+// the reader by the bed. After the load none of them is back where they had left, the others are, the lists let go of them at
+// their next look, as the world without the save does, and the house's and the operations' parts of the round trip are the
+// same. The jobs of the town are not settled first, as QA.roundTrip does: the case is the moment of the call)
+const part = c => JSON.stringify(c.more.filter(([k]) => k === 'lar' || k === 'acts'));
+const across = () => { const a = QA.canon(); G.Save.apply(JSON.parse(G.Save.serialize())); G.Main.mode = 'game'; return part(a) === part(QA.canon()); };
+const backTo = (w, ty) => !!w && !!w.task && w.task.type === ty;
+{
+  fresh(); const b = S().buildings.get(P.id); ready(b); const bad = [];
+  liveSec(20, () => !!Tt.dia(b), bad); const op = Tt.dia(b);
+  if (op) { liveSec(60, () => !A.live(op) || op.data.fase !== 'preparo', bad); audience(b, 6); liveSec(4, null, bad); audience(b, 4); liveSec(60, () => !A.live(op) || Object.keys(op.data.plateia).length >= 2, bad); }
+  const inRow = op && A.live(op) ? Object.keys(op.data.plateia).map(id => S().villagers.get(+id)).filter(v => v && backTo(v, 'teatro') && v.task.st >= 1 && v.home) : [];
+  const onSt = op && A.live(op) ? Object.keys(op.data.atores).map(id => S().villagers.get(+id)).filter(v => v && backTo(v, 'atuar') && v.task.st >= 1) : [];
+  const gone = inRow[0], actor = onSt[0];
+  if (!gone || !actor || inRow.length < 2) ok('l10 chamados-antes-do-save', false, `sem a plateia (${inRow.length} sentados) e o ator no palco (${onSt.length}) do caso: ${op ? op.data.fase : 'o teatro não abriu'}`);
+  else {
+    const stay = inRow[1];
+    G.Vg.setTask(gone, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: gone.home }); G.Vg.setTask(actor, { type: 'idle', pri: 3, wait: 10 });
+    const held = !!op.data.plateia[gone.id] && !!op.data.atores[actor.id];
+    const same = across(); const o2 = A.get(op.id);
+    const g2 = S().villagers.get(gone.id), c2 = S().villagers.get(actor.id), s2 = S().villagers.get(stay.id);
+    const out = !backTo(g2, 'teatro') && !backTo(c2, 'atuar') && g2.inside !== b.id && c2.inside !== b.id; const kept = backTo(s2, 'teatro') && s2.inside === b.id;
+    liveSec(2, null, bad); const let_go = !!o2 && !o2.data.plateia[gone.id] && !o2.data.atores[actor.id];
+    ok('l10 chamados-antes-do-save', held && same && out && kept && let_go && !bad.length, `${gone.name} (na plateia) à cama e ${actor.name} (no palco) por um chamado que não espera, um momento antes do save — ainda nas listas: ${held ? 'sim' : 'NÃO'}; depois do load: ${backTo(g2, 'teatro') ? `${gone.name} DE VOLTA À PLATEIA` : `${gone.name} fora`}, ${backTo(c2, 'atuar') ? `${actor.name} DE VOLTA AO PALCO` : `${actor.name} fora`}, ${stay.name} ${kept ? 'na plateia' : 'FORA DA PLATEIA'}; dois segundos depois as listas ${let_go ? 'os soltaram' : 'AINDA OS TÊM'}; a casa e as operações na ida e volta: ${same ? 'iguais' : 'DIFERENTES'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}`);
+  }
+}
+{
+  fresh(); const lib = writers()[0]; let rd = null;
+  if (lib) {
+    S().time = 0.4; const dr = G.Vg.door(lib);
+    for (const v of [...S().villagers.values()].sort((a, c) => G.dist2(a.x, a.y, dr[0], dr[1]) - G.dist2(c.x, c.y, dr[0], dr[1]) || a.id - c.id)) if (v.set === lib.set && v.age >= 16 && free(v) && !v.inside && !(v.task && (v.task.pri || 0) >= 1) && G.W.reaches(v, dr[0], dr[1])) { rd = v; break; }
+  }
+  if (!rd) ok('l11 leitor-chamado-antes-do-save', true, 'nenhuma biblioteca de um povo com escrita, com um leitor livre: sem o caso');
+  else {
+    G.Vg.endTask(rd); const dr = G.Vg.door(lib); rd.x = dr[0]; rd.y = dr[1]; rd.path = null; rd.energy = 70; rd.hunger = 20;
+    const t = Bi.visit(rd, lib); if (t) { t.kind = 'work'; t.leisure = true; t.pri = 2.9; } // (held above the day's calls, as l5)
+    liveSec(20, () => backTo(rd, 'ler') && rd.task.st >= 1);
+    const reading = backTo(rd, 'ler') && rd.task.st >= 1;
+    if (reading) G.Vg.setTask(rd, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: rd.home });
+    const held = reading && !!Bi.book(lib).quem[rd.id];
+    const same = reading && across(); const w = S().villagers.get(rd.id);
+    const out = !backTo(w, 'ler') && w.inside !== lib.id;
+    liveSec(2); const let_go = !Bi.book(S().buildings.get(lib.id)).quem[rd.id];
+    ok('l11 leitor-chamado-antes-do-save', reading && held && same && out && let_go, `${rd.name} lendo ${n(lib)}: ${reading ? 'sim' : 'NÃO'}; à cama um momento antes do save (ainda no livro: ${held ? 'sim' : 'NÃO'}); depois do load ${out ? 'fora da biblioteca' : 'DE VOLTA À LEITURA'}; dois segundos depois o livro ${let_go ? 'o soltou' : 'AINDA O TEM'}; a casa e as operações na ida e volta: ${same ? 'iguais' : 'DIFERENTES'}`);
+  }
+}
 function n(b) { return 'n' + (G.gen(V.buildName(b)) === 'a' ? 'a ' : 'o ') + V.buildName(b).toLowerCase(); }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `LAZER: FALHOU (${fails.join(', ')})` : 'LAZER: ok');

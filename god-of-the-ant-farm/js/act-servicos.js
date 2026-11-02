@@ -403,17 +403,26 @@
 
   // ------------------------------ the save ------------------------------
   // (the errands are not saved: the bathers of an open day are put back where they were — at the pegs, in the water, dressing
-  // — and the day goes on; L-190's rule)
+  // — and the day goes on; L-190's rule. Only who was in the baths at the save: the book of the day keeps for a second
+  // whoever left by another door, and the load put them back in the water; the save says who was in by the errand each one
+  // had, and the one who had left is let go at the next look — L-435)
   (G.saveHooks = G.saveHooks || []).push({
-    save() { },
-    load() {
+    save(out) {
+      const S = S_(); const L = [];
+      for (const op of A.all()) if (op.def === 'termas' && live(op)) for (const id in op.data.banho || {}) { const v = S.villagers.get(+id); if (v && !op.data.banho[id].body && inside(v, op)) L.push(op.id + ':' + id); }
+      out.termas = L;
+    },
+    load(o) {
       const S = S_();
+      // (a save of before has no list: everyone in the book of the day, as it always loaded)
+      const keep = o && Array.isArray(o.termas) ? new Set(o.termas) : null;
       for (const op of A.all()) {
         if (op.def !== 'termas' || !live(op)) continue;
         const d = op.data; d.banho = d.banho && typeof d.banho === 'object' ? d.banho : {};
         for (const id of Object.keys(d.banho)) {
           const v = S.villagers.get(+id); const m = d.banho[id];
           if (!v || m.body || v.captive || v.jail) { delete d.banho[id]; continue; }
+          if (keep && !keep.has(op.id + ':' + id)) continue;
           const st = Math.max(1, Math.min(3, m.st || 1));
           G.Vg.setTask(v, { type: 'termas', id: op.at, op: op.id, pri: 0.4, st, use: st === 2 ? 'banhar' : 'despir', kind: 'leisure' });
           if (v.task && v.task.type === 'termas') { v.inside = op.at; if (st === 2) v.actT = Math.max(0, S.clock - (m.t2 || S.clock)); } else delete d.banho[id];
