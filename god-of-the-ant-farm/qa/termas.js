@@ -63,12 +63,12 @@ const inWater = op => Object.values(op.data.banho).filter(m => m.st === 2).lengt
 // the house: by the door of the city's leisure, as the world gives it — the errand of the kind 'work', a leisure, which the
 // next look of decide does not take for the work: given bare, the morning's work took every bather on the way, T-d)
 // (pri: the errand held above the day's calls, for a case whose question is the bath itself, not who stops the bather on the
-// way — T-281)
+// way — T-281; no caravan's merchant: the next caravan asks first who went before, T-301)
 function bathers(b, n, pri) {
   const out = [];
   for (const v of [...S().villagers.values()].sort((a, c) => a.id - c.id)) {
     if (out.length >= n) break;
-    if (v.set !== b.set || v.age < 16 || v.age > 60 || v.captive || v.jail || v.aboard || v.sleeping || v.inside || (v.task && (v.task.pri || 0) > 1) || v.role === 'foguista' || (v.carry && v.carry.n > 1e-6)) continue;
+    if (v.set !== b.set || v.age < 16 || v.age > 60 || v.captive || v.jail || v.aboard || v.sleeping || v.inside || (v.task && (v.task.pri || 0) > 1) || v.role === 'foguista' || (v.carry && v.carry.n > 1e-6) || v.merchant) continue;
     const t = Te.visit(v, b); if (t) { t.kind = 'work'; t.leisure = true; if (pri) t.pri = pri; out.push(v); }
   }
   return out;
@@ -79,11 +79,17 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
 // ---------------- e1 a day of the baths ----------------
 {
   fresh(); const b = S().buildings.get(P.id); ready(b); const bad = []; seen.length = 0;
+  // (the stoker free at the opening, his house's chores done: in the branch joined with 8e432b8 she was fetching the house's
+  // water at the opening, and in her 30 s the city's works took the store's wood beyond what it keeps for them — she looked
+  // for it after, found none to spare, and the baths were cold all day. The wood is still the world's, with no hand of the test
+  // on it: what the stoker sets out for is hers, L-400; the bathers' errand held above the day's calls — the purchases of the
+  // houses took five of the six on the way, at 0,41 —, as the e2's, T-301)
+  for (const v of S().villagers.values()) if (v.job === b.id && v.role === 'foguista') G.Vg.endTask(v);
   const opened = liveSec(30, () => !!Te.dia(b), bad); const op = Te.dia(b);
   let most = 0, strangers = 0, over = 0, sick = null, dSick = null, dEn = null; const prev = {};
   if (op) {
     liveSec(40, () => op.data.lenha >= 1 || !A.live(op), bad); // (the stoker lights the furnace first)
-    const L = bathers(b, 6); sick = L[0] || null;
+    const L = bathers(b, 6, 2.9); sick = L[0] || null;
     // (each bather tired — not so tired that the tiredness under 22 sends one to bed before the bath ends: at 40 the one
     // watched went to bed from the water after 30 s —, and sick as one still up is: a light sickness, under the fever that
     // puts one in bed at home (G.Lar.fever, L-227 — the 120 of before sent all six home to bed on the way), given as each
