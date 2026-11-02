@@ -44,6 +44,9 @@ const sec = (n, people) => { for (let k = 0; k < n; k++) { G.S.clock += 1; G.S.t
 const lines = (code, op) => G.S.ledger.filter(e => e[8] === code && (!op || e[7] === op));
 const r2 = x => Math.round(x * 100) / 100;
 const sum = L => r2(L.reduce((n, e) => n + e[6], 0));
+// (the checker's look at the lists of the places, apart from the cases' own: what it says of a list that lies — L-435)
+const liars = []; const look = () => rule((sys, sev, msg) => { if (sys === 'oficio' && /L-435/.test(msg)) liars.push(`S${sev} ${msg}`); }, G.S);
+const quiet = n => { for (let k = 0; k < n; k++) { G.S.clock += 1; G.S.time = (G.S.time + 1 / G.DAY_LEN) % 1; A.update(1); look(); } };
 // ---------------- a show in a people of coin
 {
   const { S, f, set, te, person } = world('romano', true, true);
@@ -123,6 +126,23 @@ const sum = L => r2(L.reduce((n, e) => n + e[6], 0));
   sec(Tt.STOP + 2, all3);
   ok('palco-vazio', !A.live(op3) && op3.st === 'int' && /parou/.test(op3.end.why) && op3.data.vistos === 0 && !op3.data.pagos, `o espetáculo ${op3.st} (${op3.end ? op3.end.why : ''}); vistos ${op3.data.vistos}, cachês ${op3.data.pagos}`);
 }
+// ---------------- the checker sees a list of the show lie (L-435): the hand of the proof writes an old name in the rows and one
+// on the stage, and takes out the show's look that lets go of them — within 3 s nothing, after them the S2 for each; with the
+// look back they are let go at once, and old names written again are let go before anything is said
+{
+  const { te, person } = world('romano', true, true);
+  const a1 = person('Ator Um', 1, { job: 3, role: 'ator' });
+  G.S.time = Tt.horas(te).prep + 0.005; sec(2, [a1]); const op = Tt.dia(te);
+  const tick0 = A.DEFS.espetaculo.tick; A.DEFS.espetaculo.tick = () => { };
+  const o1 = person('Fora da Plateia', 3), o2 = person('Fora do Palco', 3);
+  if (op) { op.data.plateia[o1.id] = { t: G.S.clock, st: 1, paid: 0 }; op.data.atores[o2.id] = { t: G.S.clock }; }
+  liars.length = 0; look(); quiet(3); const early = liars.length; quiet(1); const said = liars.slice();
+  A.DEFS.espetaculo.tick = tick0; quiet(1); const gone = !!op && !op.data.plateia[o1.id] && !op.data.atores[o2.id];
+  liars.length = 0; const o3 = person('Outro da Plateia', 3), o4 = person('Outro do Palco', 3);
+  if (op) { op.data.plateia[o3.id] = { t: G.S.clock, st: 1, paid: 0 }; op.data.atores[o4.id] = { t: G.S.clock }; }
+  look(); quiet(6); const let_go = !!op && !op.data.plateia[o3.id] && !op.data.atores[o4.id];
+  ok('verificador-listas-do-teatro', !!op && !early && said.length === 2 && said.some(m => /na plateia há 4 s/.test(m)) && said.some(m => /no palco há 4 s/.test(m)) && gone && let_go && !liars.length, op ? `sem o olhar do espetáculo: em 3 s ${early ? `JÁ ACUSOU (${early})` : 'nada'}, aos 4 s ${said.length ? said.join(' | ') : 'NADA'}; com o olhar de volta: ${gone ? 'soltos' : 'AINDA NAS LISTAS'}, os nomes velhos de novo ${let_go ? 'soltos' : 'AINDA NAS LISTAS'}, ${liars.length ? 'ACUSOU: ' + liars[0] : 'nada acusado'}` : 'o espetáculo não abriu');
+}
 // ---------------- the library: reading, the day's ceiling, a people without writing, the copyist
 {
   const { S, f, bi, person } = world('grego', true, true);
@@ -150,6 +170,18 @@ const sum = L => r2(L.reduce((n, e) => n + e[6], 0));
     sec(1, []); const left = Object.keys(Bi.book(bi).quem).length; const nx = person('Depois', 1); const tn = Bi.visit(nx, bi, H);
     ok('livro-solta-quem-saiu', sat0 === Bi.CAP && kept === Bi.CAP && !sat && !left && !!tn, `${sat0} lendo, todos chamados (${kept} ainda no livro naquele momento): o save senta ${sat} de novo; no livro um segundo depois ${left}; um leitor novo ${tn ? 'entra' : 'NÃO ENTRA (a biblioteca cheia de ninguém)'}`);
     if (nx.task) G.Vg.endTask(nx);
+  }
+  // (the checker sees the book lie, L-435: an old name written in it by the hand of the proof, and the book's look that lets go
+  // taken out — within 3 s nothing, after them the S2; with the look back it is let go, and a new old name is let go before
+  // anything is said)
+  {
+    G.S.time = 0.4; const i = A.hooks.tick.findIndex(f => /quem/.test(String(f)) && /reading/.test(String(f))); const hk = i >= 0 ? A.hooks.tick.splice(i, 1)[0] : null;
+    const old = person('Nome Velho', 1); Bi.book(bi).quem[old.id] = { t: G.S.clock, dur: 30 };
+    liars.length = 0; look(); quiet(3); const early = liars.length; quiet(1); const said = liars.slice();
+    if (hk) A.hooks.tick.splice(i, 0, hk); quiet(1); const gone = !Bi.book(bi).quem[old.id];
+    liars.length = 0; const old2 = person('Outro Nome Velho', 1); Bi.book(bi).quem[old2.id] = { t: G.S.clock, dur: 30 }; look(); quiet(6);
+    const let_go = !Bi.book(bi).quem[old2.id];
+    ok('verificador-livro-velho', !!hk && !early && said.length === 1 && /no livro há 4 s/.test(said[0]) && gone && let_go && !liars.length, hk ? `sem o olhar do livro: em 3 s ${early ? `JÁ ACUSOU (${early})` : 'nada'}, aos 4 s ${said.length ? said.join(' | ') : 'NADA'}; com o olhar de volta: ${gone ? 'solto' : 'AINDA NO LIVRO'}, um nome velho de novo ${let_go ? 'solto' : 'AINDA NO LIVRO'}, ${liars.length ? 'ACUSOU: ' + liars[0] : 'nada acusado'}` : 'não achei o olhar do livro');
   }
   G.S.time = 0.8; const late = person('Tarde', 1); ok('fechada-a-noite', !Bi.visit(late, bi, H), 'às 0,8: ninguém começa a ler');
   void S;

@@ -133,6 +133,23 @@ const lines = (code) => G.S.ledger.filter(e => e[8] === code);
   ok('cerveja-fica', !k.carry, 'a cerveja fica na prateleira da taverna (não vai ao armazém)');
   void t; void S;
 }
+// ---------------- the checker sees a table lie (L-435): an old name at a table written by the hand of the proof, and the
+// tavern's look that lets go taken out — within 3 s nothing, after them the S2; with the look back it is let go at once, and a
+// new old name is let go before anything is said (the cases' own checker apart: what it says of the tables)
+{
+  const { tv, person } = world('grego', true);
+  person('Taverneiro', 6, { job: 3, role: 'taverneiro' });
+  D.make('b:3', 'food', 2, { code: 'teste' }); G.S.time = 0.6; A.update(1); const op = T.dia(tv);
+  const liars = []; const look = () => rule((sys, sev, msg) => { if (sys === 'oficio' && /L-435/.test(msg)) liars.push(`S${sev} ${msg}`); }, G.S);
+  const quiet = n => { for (let k = 0; k < n; k++) { G.S.clock += 1; G.S.time = (G.S.time + 1 / G.DAY_LEN) % 1; A.update(1); look(); } };
+  const tick0 = A.DEFS.taverna.tick; A.DEFS.taverna.tick = () => { };
+  const o1 = person('Fora da Mesa', 3); if (op) op.data.mesa[o1.id] = { t: G.S.clock, r: 0, want: 'drink', st: 2 };
+  look(); quiet(3); const early = liars.length; quiet(1); const said = liars.slice();
+  A.DEFS.taverna.tick = tick0; quiet(1); const gone = !!op && !op.data.mesa[o1.id];
+  liars.length = 0; const o2 = person('Outro Fora da Mesa', 3); if (op) op.data.mesa[o2.id] = { t: G.S.clock, r: 0, want: 'drink', st: 2 };
+  look(); quiet(6); const let_go = !!op && !op.data.mesa[o2.id];
+  ok('verificador-mesa-velha', !!op && !early && said.length === 1 && /à mesa há 4 s/.test(said[0]) && gone && let_go && !liars.length, op ? `sem o olhar da taverna: em 3 s ${early ? `JÁ ACUSOU (${early})` : 'nada'}, aos 4 s ${said.length ? said.join(' | ') : 'NADA'}; com o olhar de volta: ${gone ? 'solto' : 'AINDA À MESA'}, um nome velho de novo ${let_go ? 'solto' : 'AINDA À MESA'}, ${liars.length ? 'ACUSOU: ' + liars[0] : 'nada acusado'}` : 'a taverna não abriu');
+}
 ok('verificador', !bad.length, bad.slice(0, 4).join(' | ') || 'limpo em todos os segundos');
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `TAVERNA-MAO: FALHOU (${fails.join(', ')})` : 'TAVERNA-MAO: ok');

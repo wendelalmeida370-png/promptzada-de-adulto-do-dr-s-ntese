@@ -184,6 +184,23 @@ const r2 = x => Math.round(x * 100) / 100;
   ok('corpo-escreve-e-treina', rw.ok && f._scribes === S.clock && rt.ok && (sc.diary || []).some(e => /Treinei/.test(e.txt)), `escrever: ${rw.ok ? rw.msg : rw.why} (a ordem dos escribas marcada: ${f._scribes === S.clock}); treinar: ${rt.ok ? rt.msg : rt.why}`);
   S.avatar = null;
 }
+// ---------------- the checker sees the baths' book lie (L-435): an old name in it written by the hand of the proof, and the
+// baths' look that lets go taken out — within 3 s nothing, after them the S2; with the look back it is let go at once, and a
+// new old name is let go before anything is said (the cases' own checker apart: what it says of the book of the day)
+{
+  const { ba, person } = world('romano', true);
+  person('Foguista', 2, { job: 3, role: 'foguista' });
+  G.S.time = 0.3; A.update(1); const op = Te.dia(ba);
+  const liars = []; const look = () => rule((sys, sev, msg) => { if (sys === 'oficio' && /L-435/.test(msg)) liars.push(`S${sev} ${msg}`); }, G.S);
+  const quiet = n => { for (let k = 0; k < n; k++) { G.S.clock += 1; G.S.time = (G.S.time + 1 / G.DAY_LEN) % 1; A.update(1); look(); } };
+  const tick0 = A.DEFS.termas.tick; A.DEFS.termas.tick = () => { };
+  const o1 = person('Fora da Água', 3); if (op) op.data.banho[o1.id] = { t: G.S.clock, st: 1, hot: 0, dur: 20, paid: 0 };
+  look(); quiet(3); const early = liars.length; quiet(1); const said = liars.slice();
+  A.DEFS.termas.tick = tick0; quiet(1); const gone = !!op && !op.data.banho[o1.id];
+  liars.length = 0; const o2 = person('Outro Fora da Água', 3); if (op) op.data.banho[o2.id] = { t: G.S.clock, st: 1, hot: 0, dur: 20, paid: 0 };
+  look(); quiet(6); const let_go = !!op && !op.data.banho[o2.id];
+  ok('verificador-banho-velho', !!op && !early && said.length === 1 && /nos banhos há 4 s/.test(said[0]) && gone && let_go && !liars.length, op ? `sem o olhar dos banhos: em 3 s ${early ? `JÁ ACUSOU (${early})` : 'nada'}, aos 4 s ${said.length ? said.join(' | ') : 'NADA'}; com o olhar de volta: ${gone ? 'solto' : 'AINDA NO LIVRO DO DIA'}, um nome velho de novo ${let_go ? 'solto' : 'AINDA NO LIVRO DO DIA'}, ${liars.length ? 'ACUSOU: ' + liars[0] : 'nada acusado'}` : 'os banhos não abriram');
+}
 ok('verificador', !bad.length, bad.slice(0, 4).join(' | ') || 'limpo em todos os segundos');
 // (and the checker sees a till that lies)
 {
