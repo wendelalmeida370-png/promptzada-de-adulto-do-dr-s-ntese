@@ -203,7 +203,10 @@
     if (o.cam) { G.Render.cam.x = o.cam.x; G.Render.cam.y = o.cam.y; G.Render.cam.zoom = G.Render.cam.tz = o.cam.zoom; }
     for (const f of S.factions.values()) { if (f.civ === undefined) f.civ = null; G.Civ.initTech(f); }
     for (const h of G.saveHooks || []) h.load(o);
-    G.Village.forceUpdate();
+    // (the trades as they were saved — a load decides nothing: a wolf a hair inside a town's twenty tiles, saved a hair outside
+    // (the save keeps a hundredth of a tile), turned a huntress into a stallholder at the load; the world deals the trades out
+    // anew in its own step — L-419)
+    G.Village.forceUpdate(true);
     G.Politics && G.Politics.afterLoad && G.Politics.afterLoad();
     G.Fac.updateTerritory();
     S.rng = rng0; // (whatever loading drew, the world's chance resumes exactly where it was saved)
