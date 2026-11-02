@@ -695,9 +695,12 @@
     if (bt.kind !== 'refrega' && (tot >= 12 || dead >= 3)) {
       const W0 = F(win); const forces = facs.map(k => `${(F(k) || {}).name || '?'}: ${bt.sides[k].n}`).join(' · ');
       const L0 = F(facs.find(k => k !== win));
-      const txt = dead + capd === 0 ? `${cap1(placeOf(bt.x, bt.y).of.replace(/^de /, 'em ').replace(/^(d)(o|a|os|as) /, (m, d0, a) => 'n' + a + ' '))}, ${facs.map(k => (F(k) || {}).name).join(' e ')} formaram as linhas frente a frente${W0 && L0 ? `; ${L0.name} recuou sem combate` : ', e ninguém avançou'}.`
+      // (lines that faced each other and parted with no one hurt are a standoff; one wounded is a fight — the Lago dos Juncos,
+      // 4 wounded and 59 who broke and ran, was written down as «recuou sem combate»: L-441)
+      const blood = dead + capd + wounded;
+      const txt = blood === 0 ? `${cap1(placeOf(bt.x, bt.y).of.replace(/^de /, 'em ').replace(/^(d)(o|a|os|as) /, (m, d0, a) => 'n' + a + ' '))}, ${facs.map(k => (F(k) || {}).name).join(' e ')} formaram as linhas frente a frente${W0 && L0 ? `; ${L0.name} recuou sem combate` : ', e ninguém avançou'}.`
         : `${cap1(bt.name)} terminou${W0 ? ' — vitória de ' + W0.name : ' sem vencedor'}. ${forces}. Mortos: ${dead}${wounded ? ', feridos: ' + wounded : ''}${capd ? ', capturados: ' + capd : ''}${bt.civ ? ` — e ${bt.civ} ${bt.civ > 1 ? 'civis' : 'civil'} morreram em volta` : ''}.`;
-      if (dead + capd === 0) bt.kind = 'confronto';
+      if (blood === 0) bt.kind = 'confronto';
       event(w, txt, bt.x, bt.y, 'battle');
       if (tot >= 40 && G.UI) G.UI.toast(cap1(bt.name).replace(/^A /, ''), W0 ? `Vitória de ${W0.name}. ${dead} mortos.` : `${dead} mortos, sem vencedor.`, 'war');
       if (dead >= 15 && G.Lore && G.Lore.legend) G.Lore.legend('bt' + bt.id, cap1(bt.name).replace(/^A /, ''), `No dia ${bt.d}, ${forces}. ${W0 ? W0.name + ' ficou com o campo.' : 'Ninguém ficou com o campo.'} ${dead} morreram ali.`, { kind: 'war' });
@@ -740,6 +743,13 @@
     if (bt && bt.open && bt.sides[f0]) bt.sides[f0].dead++;
     else if (!b) { const nb = st().battles.find(x => x.open && dist(x.x, x.y, v.x, v.y) < 18); if (nb) nb.civ = (nb.civ || 0) + 1; }
     const a = b ? Wz.armyOfBand(b) : null; if (a) a.dead++;
+  };
+  // who dies leaves the army's list then and there, as the band's (L-191): the army copied its band's list only at its own
+  // tick, every half second, and between the two an army whose soldiers were all dead stood in the field, its dead counted
+  // among the men away (L-438). (A new list, not a splice: a loop over the old one may be running.)
+  Wz.onGone = function (v) {
+    const z = G.S.wz; if (!z) return;
+    for (const a of z.armies) if (!a.done && a.members.includes(v.id)) a.members = a.members.filter(id => id !== v.id);
   };
   // a soldier who leaves the field running (a broken company, a wound): counted once
   Wz.onFlee = function (v, b) { const bt = b && b.battle ? Wz.battle(b.battle) : null; if (bt && bt.open && bt.sides[b.fac]) bt.sides[b.fac].fled++; };

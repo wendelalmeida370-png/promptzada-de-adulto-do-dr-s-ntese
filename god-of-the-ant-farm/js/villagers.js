@@ -191,6 +191,17 @@
   // feast's)
   const HANDS = { type: '', pri: 0 };
   Vg.handsBusy = v => !(G.S.avatar && G.S.avatar.id === v.id) && (busyHands(v, HANDS) || !!(G.Act && G.Act.leg && G.Act.leg(v)));
+  // who a town can send away for good — the founders of a new village, the colonists of a ship —: one here and at liberty, not
+  // in the middle of something. Never the god's body (the player takes it where it goes, D-098), one in the cell (only
+  // crime.js opens it), aboard, in the god's hand, in the air or under the ground, a captive, one of a voyage, nor one on an
+  // errand that cannot wait — a soldier, an envoy, a caravan, a load on its way. The founders took them all: the body walked
+  // off and the god was put out of it, the prisoner walked out of the cell, the peace went unsaid (L-440)
+  Vg.canSend = function (v) {
+    if (!v || v.captive || v.jail || v.aboard || v.held || v.air || v.ug || (G.S.avatar && G.S.avatar.id === v.id)) return false;
+    if (v.task && ((v.task.pri || 0) >= 3 || (G.War && G.War.busyDiplomat(v)))) return false;
+    if (G.Expe && G.Expe.memberOf(v.id)) return false;
+    return !Vg.handsBusy(v);
+  };
   // (hands busy with a load that has somewhere to go — an operation's crate, a purchase on its way home, goods for a stall:
   // an errand from outside waits until it is there, unless it is about that load or cannot wait; an errand that takes the
   // hands — a cave, a whale, a theft — would put its own things in them over it, and the load would be gone unwritten)

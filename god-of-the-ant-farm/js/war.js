@@ -51,6 +51,7 @@
   const fid = v => G.Fac.idOfV(v);
   const hostile = (a, b) => G.Fac.atWar(a, b);
   const busyDiplomat = o => o.task && (o.task.type === 'envoy' || o.task.type === 'trade');
+  Wr.busyDiplomat = busyDiplomat; // (the fleet's crews ask too: L-439)
   const fighting = o => o.task && (o.task.type === 'combat' || o.task.type === 'band');
   // a duel (a vengeance face to face, staged or fought): nobody else steps in between the two
   const dueling = (o, v) => { const t = o.task; if (!t) return false; if (t.type === 'scene' && t.calm) return true; return !!t.duel && !(v && t.id === v.id); };
@@ -885,9 +886,10 @@
   function captorLost(v) { const dest = destFor(v); if (dest) { log(`Com a morte de seu captor, ${v.name} conseguiu fugir.`, 'free', v.x, v.y); Wr.freeCaptive(v, dest); } else { G.Vg.endTask(v); v.think = Math.min(v.think, 0.2); } }
   // who dies leaves the band then and there, and the captive he led learns of it at once: the band's own tick (every half
   // second) and the captive's came after — between them the dead stood in the band and led the captive (L-191). (A new
-  // list, not a splice: a loop over the old one may be running.)
+  // list, not a splice: a loop over the old one may be running.) And the army of the campaign too (L-438).
   Wr.onGone = function (v) {
     for (const b of Wr.bands.values()) if (b.members.includes(v.id)) b.members = b.members.filter(id => id !== v.id);
+    G.Wars && G.Wars.onGone(v);
     for (const o of G.S.villagers.values()) if (o.captive && o.task && o.task.type === 'escorted' && o.task.by === v.id) captorLost(o);
   };
   function runEscorted(v, t, dt, H) {

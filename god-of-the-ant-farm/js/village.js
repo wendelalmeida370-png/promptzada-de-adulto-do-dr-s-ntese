@@ -901,6 +901,28 @@
   }
 
   // ------------------------------ expansion ------------------------------
+  // the founders of a new village: young couples with their children first, then singles — only who the town can send, and
+  // a family only whole (G.Vg.canSend: never the god's body, one in the cell, a soldier, an envoy…: L-440; qa/fundadores.js)
+  V.pickFounders = function (set, pop) {
+    const S = G.S;
+    const members = [...S.villagers.values()].filter(v => v.set === set.id);
+    const target = G.clamp(Math.round(pop * 0.33), 6, 14);
+    const chosen = new Set();
+    const couples = members.filter(v => v.g === 'f' && v.partner && !v.captive && v.age < 42 && S.villagers.get(v.partner));
+    G.shuffle(couples);
+    for (const m of couples) {
+      if (chosen.size >= target) break;
+      const f = S.villagers.get(m.partner); if (f.set !== set.id) continue;
+      const kids = members.filter(k => (k.mother === m.id || k.father === f.id) && k.age < 16);
+      if (!G.Vg.canSend(m) || !G.Vg.canSend(f) || !kids.every(k => G.Vg.canSend(k))) continue;
+      chosen.add(m); chosen.add(f);
+      for (const k of kids) chosen.add(k);
+    }
+    for (const v of G.shuffle(members.filter(v => !v.partner && !v.captive && v.age >= 17 && v.age < 32))) {
+      if (chosen.size >= target) break; if (G.Vg.canSend(v)) chosen.add(v);
+    }
+    return chosen;
+  };
   function checkExpansion() {
     const S = G.S;
     const maxSets = N >= 192 ? 24 : N >= 160 ? 19 : N >= 128 ? 14 : N >= 96 ? 9 : N >= 80 ? 7 : 5;
@@ -946,21 +968,7 @@
       if (!reachable) { set.fails = 0; continue; }
       const name = V.newSettlementName(set.fac);
       const ns = V.addSettlement(name, best[0], best[1], set.fac);
-      // pick migrants: young couples with kids first, then singles
-      const members = [...S.villagers.values()].filter(v => v.set === set.id);
-      const target = G.clamp(Math.round(pop * 0.33), 6, 14);
-      const chosen = new Set();
-      const couples = members.filter(v => v.g === 'f' && v.partner && !v.captive && v.age < 42 && S.villagers.get(v.partner));
-      G.shuffle(couples);
-      for (const m of couples) {
-        if (chosen.size >= target) break;
-        const f = S.villagers.get(m.partner); if (f.set !== set.id) continue;
-        chosen.add(m); chosen.add(f);
-        for (const k of members) if ((k.mother === m.id || k.father === f.id) && k.age < 16) chosen.add(k);
-      }
-      for (const v of G.shuffle(members.filter(v => !v.partner && !v.captive && v.age >= 17 && v.age < 32))) {
-        if (chosen.size >= target) break; chosen.add(v);
-      }
+      const chosen = V.pickFounders(set, pop);
       if (chosen.size < 4) { S.settlements.delete(ns.id); continue; }
       for (const v of chosen) { G.Vg.endTask(v); v.set = ns.id; v.home = 0; v.sleeping = false; v.inside = 0; v.task = { type: 'migrate', pri: 1.5 }; }
       set.fails = 0;

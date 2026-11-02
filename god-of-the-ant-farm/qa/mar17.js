@@ -66,23 +66,34 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
   }
 
   if (CASE === 'temper') {
-    // 3. an adventurous culture explores more / 4. a non-maritime one less — the same sea world, the cultures as they are
-    await newGame({ tribes: 5, size: 160 });
-    const t0 = Date.now();
-    await page.evaluate(() => { G.Skip.GOALS.tst = { years: 25 }; G.Skip.start('tst', 'livre'); });
-    for (let k = 0; k < 6000; k++) { const on = await page.evaluate(() => G.Skip.on); if (!on) break; await page.waitForTimeout(500); }
-    // (the voyages of exploration: a colony is a voyage of settling, which the people's plans of expansion send, not its love
-    // of the sea — X.consider counts it apart too; on the line's 47aac4a the egípcios' colony of the year 21 tied them with
-    // the Norse, 9 and 9 — T-189)
-    const r = await R(() => {
-      const out = []; for (const f of G.Fac.all()) { const c = G.CIVS[f.civ]; const ex = T.exps(f.id); out.push({ n: f.name, civ: f.civ, naval: c && c.traits.naval || 1, aff: +G.Expe.prof(f).aff.toFixed(2), exps: ex.filter(e => e.kind !== 'colonia').length, cols: ex.filter(e => e.kind === 'colonia').length, boats: G.S.ships.filter(s => s.fac === f.id && s.kind === 'pesca').length }); }
-      return out.sort((a, b) => b.naval - a.naval);
-    });
-    const sea = r.filter(x => x.naval >= 1.2), land = r.filter(x => x.naval <= 0.8);
-    const a = sea.length ? Math.max(...sea.map(x => x.exps)) : 0, b = land.length ? Math.min(...land.map(x => x.exps)) : 99;
-    const line = r.map(x => `${x.civ} (tradição naval ${x.naval}, afinidade ${x.aff}): ${x.exps} expedições${x.cols ? ` (e ${x.cols} de colônia)` : ''}, ${x.boats} barcos de pesca`).join(' · ');
-    ok('3 cultura aventureira explora mais', sea.length && land.length && a >= b * 1.5 && a >= 4, `25 anos num mundo de ilhas (${((Date.now() - t0) / 1000).toFixed(0)} s): ${line}`);
-    ok('4 cultura não marítima explora menos', land.length && land.every(x => x.exps < a) && land.every(x => x.boats >= 1), `as de pouca tradição naval exploram menos que as do mar — mas, vivendo em ilhas, todas pescam e se lançam ao mar (${land.map(x => x.civ + ': ' + x.exps).join(', ')})`);
+    // 3. an adventurous culture explores more / 4. a non-maritime one less — sea worlds, the cultures as they are
+    // (five worlds, not one: on an island the place weighs more than the tradition, the love of the sea of every people climbs
+    // near the top, and in 25 years the culture moves the count by a voyage or two — about what the dice of a single world
+    // move it: on the line's edbbb5f the egípcios' 7 tied the gregos' 7, and the Norse had 6 (T-316). The proof of one world
+    // — the best of the sea peoples against each of the others — is summed over five, each world as it comes)
+    const NW = 5, t0 = Date.now(); const worlds = [];
+    for (let w = 0; w < NW; w++) {
+      await newGame({ tribes: 5, size: 160 });
+      await page.evaluate(() => { G.Skip.GOALS.tst = { years: 25 }; G.Skip.start('tst', 'livre'); });
+      for (let k = 0; k < 6000; k++) { const on = await page.evaluate(() => G.Skip.on); if (!on) break; await page.waitForTimeout(500); }
+      // (the voyages of exploration: a colony is a voyage of settling, which the people's plans of expansion send, not its love
+      // of the sea — X.consider counts it apart too; on the line's 47aac4a the egípcios' colony of the year 21 tied them with
+      // the Norse, 9 and 9 — T-189)
+      worlds.push(await R(() => {
+        const out = []; for (const f of G.Fac.all()) { const c = G.CIVS[f.civ]; const ex = T.exps(f.id); out.push({ n: f.name, civ: f.civ, naval: c && c.traits.naval || 1, aff: +G.Expe.prof(f).aff.toFixed(2), exps: ex.filter(e => e.kind !== 'colonia').length, cols: ex.filter(e => e.kind === 'colonia').length, boats: G.S.ships.filter(s => s.fac === f.id && s.kind === 'pesca').length }); }
+        return out.sort((a, b) => b.naval - a.naval);
+      }));
+    }
+    // each world's own measure (the best sea people's count, the least of the others'), then the sums
+    const per = worlds.map(r => { const sea = r.filter(x => x.naval >= 1.2), land = r.filter(x => x.naval <= 0.8); return { sea, land, a: sea.length ? Math.max(...sea.map(x => x.exps)) : 0, b: land.length ? Math.min(...land.map(x => x.exps)) : 99 }; });
+    const A = per.reduce((n, p) => n + p.a, 0), B = per.reduce((n, p) => n + p.b, 0);
+    const civs = {}; for (const r of worlds) for (const x of r) { const c = civs[x.civ] || (civs[x.civ] = { civ: x.civ, naval: x.naval, exps: [], cols: 0, boats: [], aff: [] }); c.exps.push(x.exps); c.cols += x.cols; c.boats.push(x.boats); c.aff.push(x.aff); }
+    const all = Object.values(civs).sort((a, b) => b.naval - a.naval), land = all.filter(x => x.naval <= 0.8);
+    const sum = x => x.exps.reduce((n, k) => n + k, 0);
+    const line = all.map(x => `${x.civ} (tradição naval ${x.naval}, afinidade ${Math.min(...x.aff)}–${Math.max(...x.aff)}): ${x.exps.join('+')} = ${sum(x)} expedições${x.cols ? ` (e ${x.cols} de colônia)` : ''}, barcos de pesca ${x.boats.join('/')}`).join(' · ');
+    const shaped = per.every(p => p.sea.length && p.land.length);
+    ok('3 cultura aventureira explora mais', shaped && A >= B * 1.5 && A >= 4 * NW, `${NW} mundos de ilhas, 25 anos cada (${((Date.now() - t0) / 1000).toFixed(0)} s): ${line} · a melhor do mar em cada mundo ${per.map(p => p.a).join('+')} = ${A}, a que menos foi ${per.map(p => p.b).join('+')} = ${B}`);
+    ok('4 cultura não marítima explora menos', shaped && land.every(x => sum(x) < A) && per.every(p => p.land.every(x => x.boats >= 1)), `as de pouca tradição naval exploram menos que as do mar — mas, vivendo em ilhas, todas pescam e se lançam ao mar (${land.map(x => x.civ + ': ' + sum(x)).join(', ')}, contra ${A} da melhor do mar em cada mundo)`);
   }
 
   if (CASE === 'fisher') {
@@ -136,11 +147,13 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
     await R(() => { const fs = G.Fac.all(); const f = fs[0]; T.prep(f, { tech: ['bronze'], fam: 14, food: 900, wood: 500 }); window._F = f.id; window._O = fs.slice(1).map(o => o.id); });
     const r = await R(c => {
       const S = G.S; const K = G.Know; const f = G.Fac.get(window._F); let e = null; let g = 0;
-      while (!e && g++ < 60) { e = G.Expe.consider(f, { scale: 'grande' }); if (!e) T.run(0.02); }
+      // (while we watch, this is the only voyage at sea: a second one of this people that sails to the same island and comes
+      // back would bring home, honestly, what this one saw (T-024), and another people's own voyage there teaches that people
+      // the island (T-315) — the proof could not tell either from telepathy. The others sail none, this people none but this)
+      let mine = false; const oc = G.Expe.consider;
+      G.Expe.consider = function () { return mine ? oc.apply(this, arguments) : null; }; G.Expe.colonyPlan = () => null;
+      while (!e && g++ < 60) { mine = true; e = G.Expe.consider(f, { scale: 'grande' }); mine = false; if (!e) T.run(0.02); }
       if (!e) return { err: 'nenhuma' };
-      // (one voyage at sea for this people while we watch: a second one that sails to the same island and comes back
-      // would bring home, honestly, what this one saw — and the proof could not tell it from telepathy: T-024)
-      if (c === 'dead') { const oc = G.Expe.consider, op = G.Expe.colonyPlan; G.Expe.consider = function (ff) { return ff && ff.id === f.id ? null : oc.apply(this, arguments); }; G.Expe.colonyPlan = function (ff) { return ff && ff.id === f.id ? null : op.apply(this, arguments); }; }
       const snap = () => K.regions().filter(K.big).map(q => K.state(f.id, q));
       const before = snap(); const others0 = window._O.map(id => K.regions().filter(K.big).map(q => K.state(id, q)));
       const out = { name: e.name };

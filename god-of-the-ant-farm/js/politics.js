@@ -926,6 +926,9 @@
     for (const x of ka) for (const y of kb) {
       if (x.g === y.g || isKin(x, y)) continue;
       const [stay, move, mf] = P.strength(a.id) >= P.strength(b.id) ? [x, y, a] : [y, x, b];
+      // (the one who goes to live with the other people goes for good: only one the town can send — never the god's body, one
+      // in the cell, a soldier, an envoy: G.Vg.canSend, L-440)
+      if (!G.Vg.canSend(move)) continue;
       const dest = S.settlements.get(stay.set);
       move.set = stay.set; move.home = 0; G.Vg.endTask(move); G.Vg.setTask(move, { type: 'migrate', pri: 1.6 });
       move.partner = stay.id; stay.partner = move.id; move.widow = 0; stay.widow = 0;

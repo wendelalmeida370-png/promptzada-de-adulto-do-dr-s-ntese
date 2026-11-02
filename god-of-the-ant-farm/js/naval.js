@@ -715,14 +715,18 @@
     }
     if (!best) return false;
     const crew = [];
-    const members = [...S.villagers.values()].filter(v => v.set === set.id && !v.captive && !v.aboard);
+    // (only who the town can send, and a family only whole: G.Vg.canSend, L-440)
+    const town = [...S.villagers.values()].filter(v => v.set === set.id);
+    const members = town.filter(v => !v.captive && !v.aboard);
     for (const m of G.shuffle(members.filter(v => v.g === 'f' && v.partner && v.age < 42))) {
       if (crew.length >= 10) break;
       const p = S.villagers.get(m.partner); if (!p || p.set !== set.id || p.aboard || p.id === fac.leader) continue;
+      const kids = town.filter(k => (k.mother === m.id || k.father === p.id) && k.age < 16 && k.age >= 2);
+      if (!G.Vg.canSend(m) || !G.Vg.canSend(p) || !kids.every(k => G.Vg.canSend(k))) continue;
       crew.push(m, p);
-      for (const k of members) if ((k.mother === m.id || k.father === p.id) && k.age < 16 && k.age >= 2 && crew.length < 12) crew.push(k);
+      for (const k of kids) if (crew.length < 12) crew.push(k);
     }
-    for (const v of members.filter(v => !v.partner && v.age >= 17 && v.age < 35 && v.id !== fac.leader)) { if (crew.length >= 10) break; if (!crew.includes(v)) crew.push(v); }
+    for (const v of members.filter(v => !v.partner && v.age >= 17 && v.age < 35 && v.id !== fac.leader)) { if (crew.length >= 10) break; if (!crew.includes(v) && G.Vg.canSend(v)) crew.push(v); }
     if (crew.length < 5) return false;
     const ship = spawn('transporte', fac, dock, { st: 'embark', purpose: 'colony', site: [best.x, best.y], land: best.l.land, water: best.l.water });
     if (!ship) return false;
