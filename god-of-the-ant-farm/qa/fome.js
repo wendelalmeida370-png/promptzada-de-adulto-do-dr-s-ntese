@@ -8,7 +8,8 @@
 // h3 a obra que espera um material que o povo não tem: continua esperando (ninguém fica nela sem fazer nada), e anda quando
 //    o material chega
 // h4 o povo livre fundado de propósito (G.War.foundFree), com fome: sem armazém ninguém escolhe «comer no armazém»; a
-//    fogueira parada no último golpe (o construtor chamado embora), salva e carregada no meio, fica pronta; comem; o deus
+//    fogueira parada no último golpe (o construtor chamado embora), salva e carregada no meio, fica pronta; comem (de dia,
+//    T-299); o deus
 //    derruba a fogueira e, de novo, ninguém fica preso a um comer impossível, e ela volta — os construtores com carga nas
 //    mãos a pousam no chão (L-169); quem a levanta morre no meio e outro termina; um dia inteiro pelo salto sem ninguém
 //    morrer de fome
@@ -147,6 +148,10 @@ if (fset) {
   // stock by hand, and the gatherers deliver to the fire while the hungry eat: in the cidade of before the 28/10 worlds, a
   // minute of 11 meals in which 13 of food came in, and the stock went up, T-181)
   const fRef = 'f:' + ffac.id; let fin = 0, fout = 0; const book = e => { if (e[5] !== 'food') return; if (e[4] === fRef) fin += e[6]; if (e[3] === fRef) fout += e[6]; };
+  // (the minute of the count by day: in the evening the hungry go to bed before they eat — the night's sleep, 1,5, over a
+  // meal, 1,2, for one not starving —; in the P2's branch joined with 624e83f the fire was lit at 0,70, three went to eat and
+  // were in bed before the meal, and nobody ate from the store in the minute, T-299)
+  if (G.isNight() || S.time > 0.6) S.time = 0.3;
   D.onMove.push(book); const food0 = food(); live(60); const food1 = food(); D.onMove.splice(D.onMove.indexOf(book), 1); const ate = food0 + fin - fout - food1;
   ok('h4 o povo livre: ninguém escolhe comer num armazém que não existe; a fogueira parada no último golpe (e salva) fica pronta, e comem', !!cf && lit && eatGot === 0 && eatAsked > 0 && ate > 0.5 && !hungerDead,
     `${cf ? 'a fogueira #' + cf.id + ' deixada em ' + six + ', o save carregado: ' + (lit ? 'pronta' : 'não ficou pronta') : 'o planejador não pôs a fogueira'}; sem armazém, ${eatAsked} perguntas de comer a quem tinha fome, ${eatGot} «comer no armazém»; o estoque do povo ${Math.floor(food0)} → ${Math.floor(food1)} (pelo livro entrou ${r2(fin)} e saiu ${r2(fout)}: comeram ${r2(ate)}); mortes de fome ${hungerDead}`);
