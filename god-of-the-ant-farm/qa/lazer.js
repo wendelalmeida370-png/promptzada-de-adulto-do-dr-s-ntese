@@ -164,8 +164,10 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, b
   const cast = actors(b); const a = cast.length ? solo(b, cast) : null; const sp = a ? farSpot(b, a) : null; const bad = [];
   if (a && sp) { G.Vg.endTask(a); a.x = sp[0]; a.y = sp[1]; a.path = null; a.inside = 0; a.sleeping = false; a.energy = 90; a.hunger = 20; }
   const dr = G.Vg.door(b); const far = a ? Math.round(G.dist(a.x, a.y, dr[0], dr[1])) : 0; const at = Tt.opensAt(b);
-  let on = false; liveSec(200, () => { const o = Tt.dia(b); if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!o && !A.live(o); }, bad);
-  const op = A.all().filter(o => o.def === 'espetaculo' && o.at === b.id).sort((p, q) => q.id - p.id)[0];
+  // (the case's own show, kept when it opens, and its end waited for: Tt.dia gives only a show alive, and the wait for its end
+  // on it never ended — the case lived its 200 s and took the theatre's newest show, which in the tip a39483e, the case begun
+  // later, was the next day's preparation, «on», T-310)
+  let on = false, op = null; liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad);
   ok('l7 o-ator-de-longe', !!a && !!sp && !!op && op.st === 'ok' && on && at < Tt.horas(b).prep && !bad.length, a && sp ? `${a.name}, o ator do dia, a ${far} casas da porta: o preparo abriu às ${r2(at)} (antes ${Tt.horas(b).prep}); ${on ? 'no palco na peça' : 'não chegou à peça'}; o espetáculo ${op ? op.st + ' (' + (op.end ? op.end.why : '') + ')' : 'não abriu'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'sem ator ou sem lugar longe');
 }
 // ---------------- l8 the hungry actor on the stage (L-426) ----------------

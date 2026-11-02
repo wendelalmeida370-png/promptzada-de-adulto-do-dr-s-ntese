@@ -43,6 +43,9 @@
   A.addAnim('servir', { act: 'serve', dur: 2, contact: 1.4, hands: 1 });
   A.addAnim('beber', { act: 'drink', dur: 6, contact: 5.4, hands: 1 });
   A.addAnim('encher', { act: 'fill', dur: 3, contact: 2.6, hands: 2 });
+  // (the song of a full room at night: the lute in the arms, one hand strumming, as the god's view draws it — a gesture of the
+  // world's own, with its pose in the 3D; the act stood outside G.Act.ANIM, and the 3D danced it: L-432)
+  A.addAnim('tocar', { act: 'play', dur: 4, contact: 3.6, hands: 2 });
 
   // ------------------------------ the vat (a trade of the tavern's own, on the engine of the trades) ------------------------------
   // the town's beer or pulque, brewed from the grain on the tavern's shelf — bought by its keeper: nothing is fetched for it
@@ -308,7 +311,7 @@
       b._music = n >= 3 && cand ? cand.id : 0;
     }
     if (b._music === v.id) {
-      v.act = 'play'; G.faceTo(v, 1, 1);
+      v.act = AN.tocar.act; G.faceTo(v, 1, 1);
       if (G.R() < dt * 0.8 && G.FX && G.FX.floater) G.FX.floater(v.x + G.rr(-0.2, 0.3), v.y - 0.1, G.pick(['♪', '♫']), '#ffe9a8', 1.6);
       if (!night || v.actT > 15) b._music = 0;
       return;

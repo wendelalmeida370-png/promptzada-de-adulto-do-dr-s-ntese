@@ -49,6 +49,12 @@ const fnBody = (s, name) => { const m = new RegExp('function\\s+' + name + '\\s*
 // (the expression after a key, to its end at the top level: up to a ',', a ';', or the closing of what holds it)
 function exprAt(s, i) { let d = 0; for (let k = i; k < s.length; k++) { const c = s[k]; if (c === "'" || c === '"') { for (k++; k < s.length && s[k] !== c; k++) if (s[k] === '\\') k++; continue; } if (c === '`') { for (k++; k < s.length && s[k] !== '`'; k++) if (s[k] === '\\') k++; continue; } if ('([{'.includes(c)) d++; else if (')]}'.includes(c)) { if (d === 0) return s.slice(i, k); d--; } else if ((c === ',' || c === ';') && d === 0) return s.slice(i, k); } return s.slice(i); }
 const quoted = e => [...e.matchAll(/'([^'\\]*)'/g)].map(m => m[1]);
+// (what an expression gives, not what it only compares with: `d.fase === 'peca' ? AN.atuar.act : 'wait'` gives 'wait' — the
+// codes were read so already; the acts and the gestures of the offers too: T-311)
+const given = e => quoted(e.replace(/[=!]==?\s*'[^']*'|'[^']*'\s*[=!]==?/g, ''));
+// (the trades' units play the gesture of the batch's stage — the offer `anim: s.anim`, the step `AN[s.anim]`, s the stage of
+// stageOf —: every stage of every trade of the registry, G.Oficio.DEFS, by its anim; the matrix read none there: T-311)
+const STAGE_ANIMS = new Set(); if (G.Oficio && G.Oficio.DEFS) for (const id in G.Oficio.DEFS) for (const p in G.Oficio.DEFS[id].rx || {}) for (const s of G.Oficio.DEFS[id].rx[p].st || []) if (s.anim) STAGE_ANIMS.add(s.anim);
 const words = t => t.replace(/\$\{[^}]*\}/g, '…').replace(/\s+/g, ' ').trim();
 // (the texts of an expression: its quoted strings and its templates)
 const texts = e => [...e.matchAll(/`([^`]*)`|'([^'\\]*)'/g)].map(m => words(m[1] !== undefined ? m[1] : m[2])).filter(Boolean);
@@ -60,8 +66,10 @@ function deep(code, F, seen) { seen = seen || new Set(); let all = code; for (co
 // sounds, the signs over heads, the ledger's codes, the errands it hands on, why it stops, its words
 function feats(code) {
   const f = { anims: new Set(), acts: new Set(), says: new Set(), fx: new Set(), fx3d: new Set(), sounds: new Set(), emotes: new Set(), codes: new Set(), tasks: new Set(), drops: new Set(), pauses: new Set(), whys: [], msgs: [], holders: new Set(), ends: 0, body: [], hud: 0, deny: 0 };
-  for (const m of code.matchAll(/\b(?:AN|A\.ANIM|G\.Act\.ANIM)\.([A-Za-z]\w*)/g)) f.anims.add(m[1]);
-  for (const m of code.matchAll(/\bv\.act\s*=\s*/g)) for (const q of quoted(exprAt(code, m.index + m[0].length))) if (q) f.acts.add(q);
+  // (the table by the name its file gives it — AN, or AN_ in the leisure's —, and the stage's gesture of a trade's unit: T-311)
+  for (const m of code.matchAll(/\b(?:AN_?|A\.ANIM|G\.Act\.ANIM)\.([A-Za-z]\w*)/g)) f.anims.add(m[1]);
+  if (/\bAN\[s\.anim\]/.test(code)) for (const k of STAGE_ANIMS) f.anims.add(k);
+  for (const m of code.matchAll(/\bv\.act\s*=\s*/g)) for (const q of given(exprAt(code, m.index + m[0].length))) if (q) f.acts.add(q);
   for (const m of code.matchAll(/\b(?:say|F\.say|G\.Falas\.say)\(/g)) { const a = exprAt(code, m.index + m[0].length); const rest = code.slice(m.index + m[0].length + a.length + 1); const k = exprAt(rest, 0); for (const q of quoted(k)) if (/^[a-z_]+$/.test(q)) f.says.add(q); }
   for (const m of code.matchAll(/\bG\.FX\.(\w+)\(/g)) f.fx.add(m[1]);
   for (const m of code.matchAll(/\bG\.FX3D\.(\w+)\(/g)) f.fx3d.add(m[1]);
@@ -113,7 +121,11 @@ const ACTS = [];
 for (const id of Object.keys(A.DEFS)) {
   const def = A.DEFS[id]; const off = def.offers ? def.offers.toString() : '';
   // (the offers in the code: each object an offers() builds — its act and its gesture)
-  const inCode = []; for (const m of off.matchAll(/\{\s*id:\s*'/g)) { const e = blockEnd(off, m.index); if (e < 0) continue; const o = off.slice(m.index, e + 1); const ac = /\bact:\s*'(\w+)'/.exec(o), an = /\banim:\s*'(\w+)'/.exec(o); if (ac) inCode.push({ act: ac[1], anim: an ? an[1] : '' }); }
+  // (its gesture: a name, or what an expression gives — each branch of a choice, `c.k === 'food' ? 'comer' : 'beber'`; a trade's
+  // unit, `s.anim`, the gesture of every stage — T-311; none of them, '(nenhum)')
+  const inCode = []; for (const m of off.matchAll(/\{\s*id:\s*'/g)) { const e = blockEnd(off, m.index); if (e < 0) continue; const o = off.slice(m.index, e + 1); const ac = /\bact:\s*'(\w+)'/.exec(o); if (!ac) continue;
+    const am = /\banim:\s*/.exec(o); const ex = am ? exprAt(o, am.index + am[0].length).trim() : ''; const ks = !am ? [] : ex === 's.anim' ? [...STAGE_ANIMS] : given(ex);
+    if (!ks.length) inCode.push({ act: ac[1], anim: '' }); for (const k of ks) inCode.push({ act: ac[1], anim: k }); }
   const F = (FILE[fileOf(id)] || {}).F || new Map();
   for (const k of Object.keys(def.acts || {})) {
     const a = def.acts[k]; const fs0 = ['can', 'begin', 'run', 'abort'].map(n => (a[n] ? feats(deep(a[n].toString(), F)) : feats('')));
