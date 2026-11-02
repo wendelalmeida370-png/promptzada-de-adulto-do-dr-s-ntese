@@ -1170,18 +1170,34 @@
 })();
   // ---- qa/oficio-inv.js ----
 // oficio-inv: the checker's rules for the trades (P2) — the batches of a workshop (G.Oficio: the pottery's bricks, adobes and
-// pots), the brick of the works (D-075) — and the busy hands (D-094), what a ruin keeps (L-377), the builders on the side
-// of the works (L-389) and a plain load left on the ground (L-408). Loaded after qa/qa.js (QA.more); copied into qa.js by
-// qa/junta-inv.js. It reads the world's fields directly: a fault in the trades' own code is not hidden by the code it checks.
-// Each rule has its name (QA.oficio, QA.maos, QA.ruina, QA.obras, QA.chao): a proof asks for the one it watches by it, not by
-// its place in QA.more
+// pots), the days of the tavern, the baths and the theatre and the library's book (who is on their lists is there by the errand
+// of the place, L-435), the brick of the works (D-075) — and the busy hands (D-094), what a ruin keeps (L-377), the builders
+// on the side of the works (L-389) and a plain load left on the ground (L-408). Loaded after qa/qa.js (QA.more); copied into
+// qa.js by qa/junta-inv.js. It reads the world's fields directly: a fault in the trades' own code is not hidden by the code it
+// checks. Each rule has its name (QA.oficio, QA.maos, QA.ruina, QA.obras, QA.chao): a proof asks for the one it watches by it,
+// not by its place in QA.more
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = x => typeof x === 'number' && isFinite(x);
   const EPS = 1e-4;
+  let lista0 = new Map(), lista0S = null; // (since when each one on a list of a place has been there without its errand)
   QA.more.push(QA.oficio = function (add, s) {
     const O = G.Oficio; if (!O || !G.Act) return;
     const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
+    // (who is on the list of a place — the rows, the stage, a table, the water, the library's book — is there by the errand of
+    // it, seated, or is the god's body at its door: one who left by another door is let go at the place's next look, within
+    // the second. On a list for more than 3 s without it, the list lies, and a load sat them down there again: Khufu of the
+    // mundial, in bed in his ínsula, woke from the load reading in the library — L-435. Since when each one has been so,
+    // kept from look to look)
+    if (lista0S !== s) { lista0S = s; lista0 = new Map(); }
+    const lista = new Map();
+    const atDoor = (v, b) => !!b && (v.inside === b.id || Math.hypot(v.x - (b.x + b.w / 2), v.y - (b.y + b.h / 2)) < Math.max(b.w, b.h) + 2.5);
+    const fine = (v, m, b, ty, opId, bId) => (m && m.body ? !!(s.avatar && s.avatar.id === v.id) && atDoor(v, b) : !!(v.task && v.task.type === ty && (opId ? v.task.op === opId : v.task.id === bId) && v.task.st >= 1));
+    const listed = (key, ok, msg) => {
+      if (ok) return;
+      const since = lista0.has(key) ? lista0.get(key) : s.clock; lista.set(key, since);
+      if (s.clock - since > 3) add('oficio', 2, `${msg} há ${Math.round(s.clock - since)} s sem a tarefa daquele lugar (L-435)`);
+    };
     const ops = (s.acts || []).filter(op => op.def === 'oficio' && LIVE[op.st]);
     const per = new Map();
     for (const op of ops) {
@@ -1233,7 +1249,7 @@
         if (days.has(op.at)) add('oficio', 2, `taverna #${op.at}: dois dias abertos (#${days.get(op.at)} e #${op.id})`); days.set(op.at, op.id);
         if (!b || b.type !== 'taverna' || !b.built) { add('oficio', 2, `${nm}: a taverna ${op.at} ${!b ? 'não existe' : 'não está de pé'} e o dia segue`); continue; }
         for (const k of ['servidos', 'receita', 'gasto', 'faltas', 'recusas']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
-        for (const id in d.mesa || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} à mesa não existe`);
+        for (const id in d.mesa || {}) { const v = s.villagers.get(+id); if (!v) { add('oficio', 2, `${nm}: #${id} à mesa não existe`); continue; } listed(`mesa:${op.id}:${id}`, fine(v, d.mesa[id], b, 'tavern', op.id), `${nm}: ${v.name} #${id} à mesa`); }
         for (const id of d.fila || []) if (!(d.mesa || {})[id]) add('oficio', 3, `${nm}: #${id} na fila sem estar à mesa`);
         const led = s.ledger || [];
         if (led.length && (led[0][1] < op.born || (led[0][1] === op.born && led[0][2] <= op.t0))) {
@@ -1258,7 +1274,7 @@
         if (!b || b.type !== 'banhos' || !b.built) { add('oficio', 2, `${nm}: os banhos ${op.at} ${!b ? 'não existem' : 'não estão de pé'} e o dia segue`); continue; }
         for (const k of ['entradas', 'receita', 'lenha', 'calor', 'quentes', 'frios']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
         if (d.calor > 2 * G.Termas.BURN + EPS) add('oficio', 2, `${nm}: ${d.calor} s de fogo, mais que a fornalha leva (${2 * G.Termas.BURN})`);
-        for (const id in d.banho || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} nos banhos não existe`);
+        for (const id in d.banho || {}) { const v = s.villagers.get(+id); if (!v) { add('oficio', 2, `${nm}: #${id} nos banhos não existe`); continue; } listed(`banho:${op.id}:${id}`, fine(v, d.banho[id], b, 'termas', op.id), `${nm}: ${v.name} #${id} nos banhos`); }
         const led = s.ledger || [];
         if (led.length && (led[0][1] < op.born || (led[0][1] === op.born && led[0][2] <= op.t0))) {
           // (the entries less the entries given back to one who found no place in the water)
@@ -1282,8 +1298,8 @@
         if (!b || b.type !== 'teatro' || !b.built) { add('oficio', 2, `${nm}: o teatro ${op.at} ${!b ? 'não existe' : 'não está de pé'} e o espetáculo segue`); continue; }
         for (const k of ['entradas', 'receita', 'voltas', 'pagos']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
         if (!{ preparo: 1, portas: 1, peca: 1, fim: 1 }[d.fase]) add('oficio', 1, `${nm}: fase ${d.fase}`);
-        for (const id in d.plateia || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} na plateia não existe`);
-        for (const id in d.atores || {}) if (!s.villagers.has(+id)) add('oficio', 2, `${nm}: #${id} no palco não existe`);
+        for (const id in d.plateia || {}) { const v = s.villagers.get(+id); if (!v) { add('oficio', 2, `${nm}: #${id} na plateia não existe`); continue; } listed(`plateia:${op.id}:${id}`, fine(v, d.plateia[id], b, 'teatro', op.id), `${nm}: ${v.name} #${id} na plateia`); }
+        for (const id in d.atores || {}) { const v = s.villagers.get(+id); if (!v) { add('oficio', 2, `${nm}: #${id} no palco não existe`); continue; } listed(`palco:${op.id}:${id}`, fine(v, d.atores[id], b, 'atuar', op.id), `${nm}: ${v.name} #${id} no palco`); }
         const led = s.ledger || [];
         if (led.length && (led[0][1] < op.born || (led[0][1] === op.born && led[0][2] <= op.t0))) {
           let paid = 0, wages = 0; for (const e of led) { if (e[7] !== op.id || e[5] !== 'moedas') continue; if (e[8] === 'teatro') paid += e[6]; if (e[8] === 'teatro-volta') paid -= e[6]; if (e[8] === 'salario') wages += e[6]; }
@@ -1301,7 +1317,8 @@
       for (const b of s.buildings.values()) {
         const k = b.livros; if (b.type !== 'biblioteca' || !k) continue;
         if (!fin(k.lidos) || k.lidos < 0 || k.lidos > G.Biblioteca.MAX || !fin(k.copias) || k.copias < 0 || k.copias > G.Biblioteca.MAX - 2) add('oficio', 2, `biblioteca #${b.id}: ${k.lidos} leituras e ${k.copias} cópias num dia (o dia conta ${G.Biblioteca.MAX} e ${G.Biblioteca.MAX - 2})`);
-        for (const id in k.quem || {}) if (!s.villagers.has(+id)) add('oficio', 2, `biblioteca #${b.id}: #${id} lendo não existe`);
+        // (and only who reads there: the errand of reading in this library, seated — the rule the library's look lets go by)
+        for (const id in k.quem || {}) { const v = s.villagers.get(+id); if (!v) { add('oficio', 2, `biblioteca #${b.id}: #${id} lendo não existe`); continue; } listed(`livro:${b.id}:${id}`, fine(v, null, b, 'ler', 0, b.id), `biblioteca #${b.id}: ${v.name} #${id} no livro`); }
       }
     }
     // the brick of a work: what the foundation took of the stone, and no more
@@ -1351,7 +1368,9 @@
         sites.delete(id);
       }
     }
+    lista0 = lista;
   });
+  if (G.worldHooks) G.worldHooks.push(() => { lista0 = new Map(); lista0S = null; });
   // (what the ledger moves in and out of each work, from the checker's first look at it; a work first met by a line is met
   // with what it had before that line)
   const sites = new Map();

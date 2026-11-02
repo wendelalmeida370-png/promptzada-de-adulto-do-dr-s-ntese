@@ -159,7 +159,7 @@
   // ------------------------------ Grande Migração ------------------------------
   P.migrate = function (x, y, k) {
     const S = G.S; const d = SP()[k]; if (!d) return;
-    const herd = [...S.animals.values()].filter(a => a.kind === k && !a.dead && !a.tamed && !a.held && G.dist(a.x, a.y, x, y) > 6).sort(() => G.R() - 0.5);
+    const herd = G.shuffle([...S.animals.values()].filter(a => a.kind === k && !a.dead && !a.tamed && !a.held && G.dist(a.x, a.y, x, y) > 6));
     const take = herd.slice(0, Math.max(3, Math.ceil(herd.length * 0.7)));
     for (const a of take) { a.hx = x + G.rr(-3, 3); a.hy = y + G.rr(-3, 3); a.mig = true; a.state = 'idle'; a.t = G.rr(0, 2); }
     // the hunters follow the herds

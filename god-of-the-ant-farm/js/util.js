@@ -36,6 +36,11 @@ window.G = window.G || {};
   G.ri = (a, b) => Math.floor(a + R() * (b - a + 1));
   G.pick = arr => arr[Math.floor(R() * arr.length)];
   G.chance = p => R() < p;
+  // a shuffle by the world's chance: always n - 1 draws and, for the same chance, the same order. A sort with a comparator
+  // that draws (sort(() => G.R() - 0.5)) is no shuffle: how often the engine asks it and what order comes out are the
+  // engine's — and V8 sorts one way in its interpreter and another once the code is optimized, so the same seed made two
+  // worlds, by when the machine had optimized the line (the migrants of a new town, L-437)
+  G.shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); const t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; };
   // what only shows or sounds (particles, sky, the camera, music) draws from its own: watching never changes what happens
   let look = (Math.random() * 4294967296) | 0;
   const VR = () => {
@@ -50,6 +55,7 @@ window.G = window.G || {};
   G.vri = (a, b) => Math.floor(a + VR() * (b - a + 1));
   G.vpick = arr => arr[Math.floor(VR() * arr.length)];
   G.vchance = p => VR() < p;
+  G.vshuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(VR() * (i + 1)); const t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; }; // (the same, for what only shows)
   // the world's seed for its generator (a new world, or a save from before the generator was saved)
   G.rngSeed = (seed, day) => ((seed ^ 0x2545F491) + Math.imul(day | 0, 0x9E3779B1)) | 0;
   // (the QA tools set G.rngWatch to see who draws from which generator, and G.inSim says whether the world is living a step)

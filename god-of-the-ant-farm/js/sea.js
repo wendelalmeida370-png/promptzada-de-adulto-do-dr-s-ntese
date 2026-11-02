@@ -595,7 +595,7 @@
     n.set = set ? set.id : 0;
     if (set) {
       const kids = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 4 && v.age < 15 && !v.inside && !v.sleeping && !v.held && !v.air && !v.dead && G.dist2(v.x, v.y, n.x, n.y) < 18 * 18);
-      kids.sort(() => G.R() - 0.5);
+      G.shuffle(kids);
       for (const v of kids.slice(0, 5)) {
         const side = (G.R() - 0.5) * 1.6, px = n.x - n.nx * 0.9 + n.ny * side, py = n.y - n.ny * 0.9 + n.nx * side;
         if (G.Vg.give(v, { type: 'olhar', x: px, y: py, fx: n.x, fy: n.y, pri: 1.1, until: S.clock + 55, what: 'tartarugas', ev: n.id })) n.kids.push(v.id);

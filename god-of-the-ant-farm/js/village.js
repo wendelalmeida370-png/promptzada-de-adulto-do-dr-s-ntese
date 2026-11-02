@@ -951,14 +951,14 @@
       const target = G.clamp(Math.round(pop * 0.33), 6, 14);
       const chosen = new Set();
       const couples = members.filter(v => v.g === 'f' && v.partner && !v.captive && v.age < 42 && S.villagers.get(v.partner));
-      couples.sort(() => G.R() - 0.5);
+      G.shuffle(couples);
       for (const m of couples) {
         if (chosen.size >= target) break;
         const f = S.villagers.get(m.partner); if (f.set !== set.id) continue;
         chosen.add(m); chosen.add(f);
         for (const k of members) if ((k.mother === m.id || k.father === f.id) && k.age < 16) chosen.add(k);
       }
-      for (const v of members.filter(v => !v.partner && !v.captive && v.age >= 17 && v.age < 32).sort(() => G.R() - 0.5)) {
+      for (const v of G.shuffle(members.filter(v => !v.partner && !v.captive && v.age >= 17 && v.age < 32))) {
         if (chosen.size >= target) break; chosen.add(v);
       }
       if (chosen.size < 4) { S.settlements.delete(ns.id); continue; }

@@ -152,7 +152,7 @@
     // not the whole town: the neighbours of the square, the devout, children, elders and whoever is off duty
     const free0 = pop.filter(v => !v.captive).length;
     const cap = Math.min(60, Math.max(8, Math.round(free0 * (d.sacred ? 0.42 : 0.32))));
-    const crowd = pop.filter(v => !v.captive).sort(() => G.R() - 0.5);
+    const crowd = G.shuffle(pop.filter(v => !v.captive));
     const adults = crowd.filter(v => v.age >= 16 && v.age < 60);
     const priest = crowd.find(v => v.role === 'sacerdote' && v.age >= 16) || crowd.find(v => v.age >= 40) || adults[0];
     const ruler = S.villagers.get(f.leader);

@@ -330,7 +330,7 @@
         if (first) d.sawFirst = 1;
         if (f.h === 'Terra à vista') s.phase = 'terra';
         const extra = vars(s, { FIRST: first ? 1 : 0 });
-        let line = null; for (const fn of LIVED[f.h].slice().sort(() => G.R() - 0.5)) { try { line = fn(Object.assign({ P: p ? p.name : (PD(s.protag) || {}).name, o: oa(PD(s.protag)) }, extra)); } catch (er) { line = null; } if (line) break; }
+        let line = null; for (const fn of G.shuffle(LIVED[f.h].slice())) { try { line = fn(Object.assign({ P: p ? p.name : (PD(s.protag) || {}).name, o: oa(PD(s.protag)) }, extra)); } catch (er) { line = null; } if (line) break; }
         if (!line) return false;
         d.dn = (d.dn || 0) + 1; d.dT = G.S.clock; (d.hs = d.hs || []).push(f.h);
         St.chapter(s, `${f.txt} ${line}`, { k: 'hz-diario', x: f.x, y: f.y });

@@ -507,7 +507,7 @@
       const alive = f.rev.rebels.map(id => S.villagers.get(id)).filter(v => v && !v.captive);
       endRevolution(f);
       let n = 0;
-      const doomed = alive.sort(() => G.R() - 0.5).slice(0, 3);
+      const doomed = G.shuffle(alive).slice(0, 3);
       if (G.Polity && G.Polity.sentence && doomed.length && G.Polity.sentence(f, doomed, 'por se levantarem contra ' + P.styled(f, tyrant))) n = doomed.length;
       else for (const v of doomed) { G.FX && G.FX.blood(v.x, v.y); G.Vg.damage(v, 999, 'execution', false, tyrant.id); n++; }
       f.terror = Math.min(100, f.terror + 40); f.st.executions += n;

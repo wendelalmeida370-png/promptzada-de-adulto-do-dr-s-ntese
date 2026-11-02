@@ -716,7 +716,7 @@
     if (!best) return false;
     const crew = [];
     const members = [...S.villagers.values()].filter(v => v.set === set.id && !v.captive && !v.aboard);
-    for (const m of members.filter(v => v.g === 'f' && v.partner && v.age < 42).sort(() => G.R() - 0.5)) {
+    for (const m of G.shuffle(members.filter(v => v.g === 'f' && v.partner && v.age < 42))) {
       if (crew.length >= 10) break;
       const p = S.villagers.get(m.partner); if (!p || p.set !== set.id || p.aboard || p.id === fac.leader) continue;
       crew.push(m, p);

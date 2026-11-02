@@ -27,6 +27,7 @@ Três famílias inteiras de bugs foram eliminadas reconstruindo a base. Código 
   - o **mundo** sorteia com `G.R()`, `G.rr`, `G.ri`, `G.pick`, `G.chance` — semeado pela semente do mundo, guardado em `S.rng` e no save;
   - o que **só se vê ou se ouve** (desenho, partículas, céu, câmera, cinema, música, interface) usa `G.VR()`, `G.vrr`, `G.vri`, `G.vpick`, `G.vchance`;
   - **nunca** `Math.random` (o `guard.js` cobra).
+  - **embaralhar é `G.shuffle`** (o do mundo) **ou `G.vshuffle`** (o do que só se vê) — nunca um `sort` com comparador que sorteia: a ordem e os sorteios ficam a cargo do motor, e o V8 ordena de um jeito no interpretador e de outro no código otimizado (a mesma semente fazia dois mundos, L-437; o `guard.js` cobra, regra 39; `qa/salto-igual.js` prova).
   - Desenho e interface **não mudam o mundo**: não gravam campos que a simulação lê, não disparam reconstruções de listas da simulação (se uma consulta pode vir de fora do passo do mundo, teste `G.inSim`).
   - **Estado de módulo começa de novo a cada mundo:** relógio, contador, lista ou cache guardado num módulo (`let tAlgo = 0` etc.) precisa ser zerado num `G.worldHooks.push(() => { ... })` — que roda ao criar um mundo e ao carregar um save. Identidades novas vêm de `G.S.nextId++`.
   - Resultado: a mesma semente faz o mesmo mundo, com ou sem gente olhando, e o mesmo save carregado duas vezes vive o mesmo futuro. `qa/det3.js` prova isso; `qa/detloc.js` aponta o passo e a linha exatos onde duas vidas que deveriam ser iguais se separam; `qa/rngtrace.js` mostra quem sorteia de qual acaso.

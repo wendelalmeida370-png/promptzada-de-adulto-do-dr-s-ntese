@@ -190,7 +190,7 @@
   };
   // pick civilizations for a new world (explicit choices first, then distinct random ones)
   C.assign = function (choices, n) {
-    const out = []; const pool = C.IDS.slice().sort(() => G.R() - 0.5);
+    const out = []; const pool = G.shuffle(C.IDS.slice());
     for (let k = 0; k < n; k++) {
       const want = choices && choices[k];
       if (want && G.CIVS[want]) out.push(want);

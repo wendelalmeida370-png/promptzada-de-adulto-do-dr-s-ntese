@@ -142,6 +142,11 @@ const FORMA_ASK = ['of', 'has', 'body', 'uses', 'solids', 'flight', 'toLot', 'di
 // (b.grain) na primeira vez; o que só se vê ou se ouve (a lista LOOK da regra 3) e o cartão do corpo (interact.js) leem pelo
 // Estates.grainFor, que não guarda nada — o nome da fazenda também (Village.nameOf)
 const GRAIN_LOOK = LOOK.concat(['interact.js']);
+// 39. "o embaralhamento é G.shuffle" (L-437): um .sort cujo comparador tira do acaso (G.R, rr, ri, pick, chance, R(); VR e
+// os seus; Math.random) não embaralha: quantas vezes o motor o chama e que ordem sai são do motor — o V8 ordena de um jeito no
+// interpretador e de outro no código otimizado, e a mesma semente fazia dois mundos, conforme a máquina tinha otimizado a
+// linha. Embaralhar é G.shuffle (o acaso do mundo) ou G.vshuffle (o do que só se vê): sempre os mesmos sorteios
+const SORT_CHANCE = /\.sort\(\s*(?:\([^)]*\)|\w+)\s*=>[^;]*?(?:\bG\.(?:R|rr|ri|pick|chance|VR|vrr|vri|vpick|vchance)\(|\bV?R\(\)|Math\.random\()/;
 for (const f of files) src[f].forEach((line, k) => {
   if (/^\s*\/\//.test(line)) return;
   if (IP_WRITE.test(line) && !IP_FILES.includes(f)) fails.push(`planta: ${f}:${k + 1} escreve o registro de um prédio (b.ip) fora de interiors.js (a planta é do registro; peça pelas portas do G.Interiors): ${line.trim().slice(0, 110)}`);
@@ -157,6 +162,7 @@ for (const f of files) src[f].forEach((line, k) => {
   if (LOOSE_WRITE.test(line) && f !== 'activity.js') fails.push(`chão: ${f}:${k + 1} escreve o que está no chão (S.loose) fora de activity.js (pôr e tirar do chão passa pelo G.Depot): ${line.trim().slice(0, 110)}`);
   if (!PLACE_FILES(f) && !LOOK.includes(f) && !SPACE_BODY.includes(f) && [PLACE_READ, PLACE_WRITE].some(r => r.test(line.replace(/(^|\s)\/\/\s.*$/, '')))) fails.push(`lugar: ${f}:${k + 1} põe ou lê à mão o lugar de alguém num prédio de planta (o lugar de alguém é o que o repartidor dá: In.places, In.freePlace, In.freeFor, In.placeFor — D-085): ${line.trim().slice(0, 110)}`);
   if (PANTRY_WRITE.test(line) && f !== 'activity.js' && !ok(PANTRY_OK, f, line)) fails.push(`despensa: ${f}:${k + 1} escreve a despensa de uma casa à mão (use G.Depot.move/make/use, que anota a causa): ${line.trim().slice(0, 110)}`);
+  if (SORT_CHANCE.test(line.replace(/(^|\s)\/\/\s.*$/, ''))) fails.push(`embaralhar: ${f}:${k + 1} ordena com um comparador que tira do acaso (a ordem e os sorteios são do motor, que muda ao otimizar: G.shuffle / G.vshuffle): ${line.trim().slice(0, 110)}`);
   if (LAR_TASK.test(line) && f !== 'act-lar.js') fails.push(`lar: ${f}:${k + 1} dá a tarefa 'lar' fora de act-lar.js (a noite em casa é do G.Lar): ${line.trim().slice(0, 110)}`);
   if (FEST_TASK.test(line) && f !== 'festivals.js') fails.push(`festa: ${f}:${k + 1} dá a tarefa 'fest' fora de festivals.js (quem entra na festa passa pelo free() dela): ${line.trim().slice(0, 110)}`);
   if (CARRIER_WRITE.test(line) && f !== 'villagers.js') fails.push(`colo: ${f}:${k + 1} escreve quem segura um bebê (.carrier) fora de villagers.js (use G.Vg.handBaby): ${line.trim().slice(0, 110)}`);

@@ -45,7 +45,10 @@ if ! skip estado; then
 (timeout 900 node ev.js 5 continente 128 4 2 ilhado.js > "$OUT/ilhado.txt" 2>&1) &
 (timeout 1700 node det3.js 77 arquipelago 96 3 2 > "$OUT/determinismo.txt" 2>&1) &
 (timeout 2400 node salto.js 41 > "$OUT/salto.txt" 2>&1) &
-wait; echo "== saves danificados, alcance, a bordo, isolados, determinismo, o salto em dois ritmos"
+wait
+# (the same seed in two states of the engine — only TurboFan, only Maglev —: two browsers of its own, after the others, L-437)
+timeout 1800 node salto-igual.js > "$OUT/salto-igual.txt" 2>&1
+echo "== saves danificados, alcance, a bordo, isolados, determinismo, o salto em dois ritmos, o salto com o motor em dois estados"
 fi
 # 5. o que o jogador vê: painéis, desenho, o macaco, o fim do mundo
 if ! skip tela; then
@@ -103,6 +106,7 @@ skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/m
   for f in "$OUT"/mar_*.txt; do grep -h "PASSOU\|FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | mar \2/'; done
   for f in "$OUT"/cidade_*.txt; do [ -f "$f" ] && grep -h "^PASSOU\|^FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | cidade \2/'; done
   [ -f "$OUT/salto.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/salto.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | salto \2/'
+  [ -f "$OUT/salto-igual.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/salto-igual.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'
   [ -f "$OUT/vira.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/vira.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | guerra \2/'
   [ -f "$OUT/cativos.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/cativos.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | cativos \2/'
   [ -f "$OUT/poderes.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/poderes.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | poderes \2/'

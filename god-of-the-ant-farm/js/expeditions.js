@@ -1444,7 +1444,7 @@
     const members = [...S.villagers.values()].filter(v => v.set === from.id && free(v, f, { minAge: 2, maxAge: 50 }) || (v.set === from.id && v.age < 16 && v.age >= 2 && !v.captive && !v.aboard));
     const crew = [];
     // families first: couples with their small children
-    for (const m of members.filter(v => v.g === 'f' && v.partner && v.age >= 17).sort(() => G.R() - 0.5)) {
+    for (const m of G.shuffle(members.filter(v => v.g === 'f' && v.partner && v.age >= 17))) {
       if (crew.length >= n) break; const p = P(m.partner); if (!p || !members.includes(p) || crew.includes(p)) continue;
       crew.push(m, p); for (const k of members) if ((k.mother === m.id || k.father === p.id) && k.age < 16 && crew.length < n + 4) crew.push(k);
     }
