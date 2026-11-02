@@ -43,6 +43,16 @@ function builder(not) { return [...S.villagers.values()].filter(o => able(o) && 
 // (the free stone, not the whole: in the metropole of the v37's last worlds Tenochtitlan's works had all of it reserved, and the
 // builder had no stone to fetch — the task ended in a second, T-261)
 const keep = () => { const fr = D.free(f, 'stone'); if (fr < 30) D.make(f, 'stone', 60 - fr, { code: 'teste', part: true }); };
+// (the test's hand fills a work by the ledger, as a builder does ('o:'), leaving only `stone` of stone to come: written by
+// hand, the need made the stone and the wood come into the work with no line, and the work stood with them — the S2 of the
+// works' ledger, QA.oficio —; and a work that took brick for part of its stone at its foundation (D-075: Alba Longa has a
+// pottery) has it traded back to stone by the work's own door, V.swapBill (L-416): the case is a work of stone — with the
+// brick it had 15 stone to come, too little to carry past the 70 s — T-308)
+const fill = (b, stone) => {
+  if (b.brick && b.need[b.brick.k] > 0) V.swapBill(b, b.brick.k, b.need[b.brick.k], 'stone', b.need[b.brick.k]);
+  for (const k of Object.keys(b.need).sort()) { const n = (b.need[k] || 0) - (k === 'stone' ? stone : 0); if (n > 0) D.make('o:' + b.id, k, n, { code: 'teste' }); }
+  b.incoming = { wood: 0, stone: 0 };
+};
 function give(v, b) {
   G.Vg.endTask(v); v.sleeping = false; v.inside = 0; v.hunger = 0; v.path = null;
   // (and the jar at home full: in the same metropole the houses of Tenochtitlan were low on water, and Citlalin left the work
@@ -56,9 +66,10 @@ function give(v, b) {
 let v1 = null;
 {
   const per = 2 * site.d / 1.3 + 3; // (a load: there and back at a walk, and its share of the work)
-  const loads = Math.max(3, Math.ceil(150 / per)); // (the whole task well past 70 s)
+  // (the whole task well past 70 s — within the stone an insula's bill has)
+  const loads = Math.min(Math.floor((G.BDEF.insula.cost.stone || 0) / 4), Math.max(3, Math.ceil(150 / per)));
   const b = V.addBuilding('insula', site.pos[0], site.pos[1], set.id, false);
-  b.need = { wood: 0, stone: loads * 4 }; b.incoming = { wood: 0, stone: 0 }; // (the test's hand: the wood in, only stone missing)
+  fill(b, loads * 4); // (the test's hand: the wood in, only stone missing)
   keep();
   const v = builder(0); const t = v && give(v, b); v1 = v;
   let info = v ? '' : 'ninguém para construir', fine1 = false;
@@ -93,7 +104,7 @@ let v1 = null;
   for (let n = 0; n < 4 && !fine2; n++) {
     const pos = V.findSite(set2, 'house'); if (!pos || pos.demolish) break;
     const b = V.addBuilding('insula', pos[0], pos[1], set2.id, false);
-    b.need = { wood: 0, stone: 8 }; b.incoming = { wood: 0, stone: 0 };
+    fill(b, 8);
     keep();
     const v = [...S.villagers.values()].filter(o => able(o) && !used.has(o.id)).sort((a, c) => (a.role === 'construtor' ? 0 : 1) - (c.role === 'construtor' ? 0 : 1) || a.id - c.id)[0];
     if (!v) { info = 'ninguém para construir'; break; } used.add(v.id);
