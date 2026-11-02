@@ -98,6 +98,26 @@
   }
 
   // ------------------------------ the theatre ------------------------------
+  // (who acts there for a living — the actors a theatre employs, P2's trade: the type's number of jobs, else the building's
+  // (G.BDEF.teatro.jobs), as the validator counts them (cap.jobs) —: a post each, a piece of the plan with its job, at the first
+  // places of the stage — of the sand, to fight ('lutar') —, facing the way the place does; the places left over marks, for
+  // whoever comes, the body too. A post is a place on the form's floor: no piece the form or the 3D draws (FM), no foot the
+  // feet walk round. With none, the plan of a theatre that employs two was refused: «só 0 postos de trabalho» — L-421)
+  In.addItems({
+    cena: { name: 'Lugar de cena', w: 0, d: 0, h: 0, job: 1, spots: () => [{ use: 'atuar', a: 0, n: 0 }] },
+    luta: { name: 'Lugar de luta', w: 0, d: 0, h: 0, job: 1, spots: () => [{ use: 'lutar', a: 0, n: 0 }] },
+  });
+  const jobsOf = P => { const T = In.TYPES[P.rec.t]; return (T && T.jobs !== undefined ? T.jobs : (G.BDEF[P.rec.t] || {}).jobs) || 0; };
+  // (the places of a stage — [u, v, ry] as P.marks has them —: the posts first, then the marks; one stands at a post facing away
+  // from its front, the piece turned so: ry the way one faces)
+  function stage(P, lv, room, use, pts, o) {
+    const n = Math.min(jobsOf(P), pts.length);
+    for (const [u, v, ry] of pts.slice(0, n)) {
+      if (P.at(use === 'lutar' ? 'luta' : 'cena', lv, room, [u, v, u, v].map(r2), -Math.round(Math.sin(ry)), -Math.round(Math.cos(ry)), FM)) continue;
+      P.errs.push(`o posto de quem ${use === 'lutar' ? 'luta' : 'atua'} onde a planta não o põe (${r2(u)}, ${r2(v)})`); return;
+    }
+    if (pts.length > n) P.marks(lv, room, use, pts.slice(n), o);
+  }
   // the Greek's and the classical people's (the form's half bowl, D-084: the rows of a real one, 0.70 m deep and 0.40 m up):
   // the rows of seats where the form has them — each ring of the form a block of P.tiers, the whole ones round the back half,
   // the outer ones cut where they would leave the lot —, four aisles up through them all (the kerkides: half a row at a step,
@@ -117,7 +137,7 @@
     if (!solids(P, F, id)) return;
     // (who acts: in the orchestra, before its middle, facing the rows — three abreast)
     const o = F.els.find(e => e.k === 'arena'); if (!o) { P.errs.push('a forma do teatro sem orquestra'); return; }
-    const [cu, cv] = o.c; P.marks(0, id, 'atuar', [[cu, cv + 0.3, Math.PI], [cu - 1.0, cv + 0.6, Math.PI], [cu + 1.0, cv + 0.6, Math.PI]]);
+    const [cu, cv] = o.c; stage(P, 0, id, 'atuar', [[cu, cv + 0.3, Math.PI], [cu - 1.0, cv + 0.6, Math.PI], [cu + 1.0, cv + 0.6, Math.PI]]);
   }
   // the Egyptian's sacred garden: its lawn, the pool in its stone rim, the palms, the sphinx, the walls at the back and the left
   // — all solid, as the form has them —; who performs the rite at the pool's front (atuar), and round it those who watch it,
@@ -128,7 +148,7 @@
     const rim = F.els.filter(e => e.k === 'bloco' && e.y1 > 0.3 && e.y1 < 1.0); if (!rim.length) { P.errs.push('a forma do jardim sem o tanque'); return; }
     const R = rim.reduce((a, e) => [Math.min(a[0], e.r[0]), Math.min(a[1], e.r[1]), Math.max(a[2], e.r[2]), Math.max(a[3], e.r[3])], [Infinity, Infinity, -Infinity, -Infinity]);
     const cu = (R[0] + R[2]) / 2, cv = (R[1] + R[3]) / 2;
-    P.marks(0, id, 'atuar', [[cu, R[3] + 0.6, Math.PI]]);
+    stage(P, 0, id, 'atuar', jobsOf(P) > 1 ? [[cu - 0.5, R[3] + 0.6, Math.PI], [cu + 0.5, R[3] + 0.6, Math.PI]] : [[cu, R[3] + 0.6, Math.PI]]); // (two side by side where two act)
     const watch = []; for (const du of [-2.4, -1.2, 1.2, 2.4]) watch.push([cu + du, R[3] + 1.6, Math.PI]);
     for (const s of [-1, 1]) watch.push([s < 0 ? R[0] - 0.7 : R[2] + 0.7, cv, s < 0 ? Math.PI / 2 : -Math.PI / 2]);
     P.marks(0, id, 'assistir', watch, { st: 'idle' });
@@ -141,7 +161,7 @@
     const walls = F.els.filter(e => e.k === 'talude'); if (walls.length < 2) { P.errs.push('a forma do campo sem os muros'); return; }
     const u0 = Math.min(...walls.map(e => e.r[0])), u1 = Math.max(...walls.map(e => e.r[2])); const v0 = Math.max(...walls.filter(e => e.r[3] < P.L / 2).map(e => e.r[3])), v1 = Math.min(...walls.filter(e => e.r[1] > P.L / 2).map(e => e.r[1]));
     const cv = (v0 + v1) / 2, cu = (u0 + u1) / 2;
-    P.marks(0, id, 'atuar', [[cu - 1.6, cv, Math.PI / 2], [cu + 1.6, cv, -Math.PI / 2], [cu - 3.2, cv, Math.PI / 2], [cu + 3.2, cv, -Math.PI / 2]]);
+    stage(P, 0, id, 'atuar', [[cu - 1.6, cv, Math.PI / 2], [cu + 1.6, cv, -Math.PI / 2], [cu - 3.2, cv, Math.PI / 2], [cu + 3.2, cv, -Math.PI / 2]]);
     const watch = []; for (const [u, f] of [[u0 - 0.5, Math.PI / 2], [u1 + 0.5, -Math.PI / 2]]) for (const dv of [-0.5, 0.5]) watch.push([u, cv + dv, f]);
     P.marks(0, id, 'assistir', watch, { st: 'idle' });
   }
@@ -174,7 +194,7 @@
     if (!fire) { P.errs.push('sem lugar para o fogo do salão'); return; }
     let n = 0; for (const s of ['fundo', 'frente']) for (let k = 0; k < 4; k++) if (P.place('banco', 0, id, { sides: [s] })) n++;
     if (n < 4) { P.errs.push(`só ${n} bancos no salão do hidromel`); return; }
-    const fu = (fire.r[0] + fire.r[2]) / 2; P.marks(0, id, 'atuar', [[fu - 1.4, (I[1] + I[3]) / 2, Math.PI / 2]]);
+    const fu = (fire.r[0] + fire.r[2]) / 2, fv = (I[1] + I[3]) / 2; stage(P, 0, id, 'atuar', [[fu - 1.4, fv, Math.PI / 2]].concat(jobsOf(P) > 1 ? [[fu + 1.4, fv, -Math.PI / 2]] : [])); // (and at its other end where two act)
   }
   // the Roman's arena — and the Colosseum, by the same form (amphi: D-095): the way in from the street through the arch of the
   // drum before it, the passage through the substructure, the flight of the undercroft up through the hatch into the arena;
@@ -211,7 +231,7 @@
     const ar = P.room(1, 'arena', [cu - A.fundo, cv - A.fundo, cu + A.fundo, cv + A.fundo], 1, [cu, cv, A.fundo]);
     const po = P.room(2, 'podio', [cu - ro, cv - ro, cu + ro, cv + ro], 1, [cu, cv, ro, A.fundo]);
     // (who fights: on the sand, right of the hatch, facing each other)
-    const fx = cu + (A.fundo + hw) / 2; P.marks(1, ar, 'lutar', [[fx, cv - 0.55, 0], [fx, cv + 0.55, Math.PI]], { st: 'fight' });
+    const fx = cu + (A.fundo + hw) / 2; stage(P, 1, ar, 'lutar', [[fx, cv - 0.55, 0], [fx, cv + 0.55, Math.PI]], { st: 'fight' });
     // (who watches: along the podium's walk, 0.4 m from its parapet, every 0.8 m, facing the middle — standing at it —; none
     // where the steps come up)
     const rw = A.fundo + 0.12 + 0.4; const nw = Math.floor(TAU * rw / 0.8); const watch = [];

@@ -21,6 +21,9 @@
 //      Valhala, da rua à frente da pirâmide; da rua pelos degraus partidos do monumento (D-097) até o degrau de cima, cada
 //      degrau um passo do corpo
 //   5. o 3D desenha o teatro, a maravilha e o monumento com planta pela forma (Build3D.byForm)
+//   6. com os ofícios do P2 na mão da prova (o teatro emprega dois atores, a biblioteca um copista): todo teatro e toda
+//      biblioteca pela forma válidos, um posto (uma peça com ofício) para cada um — os dos atores no palco, onde se atua, e na
+//      arena romana onde se luta (L-421)
 //   node qa/monumentos.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -184,6 +187,35 @@ const tag = m => `${m.t}/${m.c}`;
   const B3 = G.Build3D; const out = [];
   if (B3 && B3.byForm) for (const m of made.filter(q => q.s === 'S' && q.p && q.p.ok)) if (!B3.byForm(m.b)) out.push(tag(m));
   ok('5a o 3D desenha o teatro, a maravilha e o monumento com planta pela forma', !!(B3 && B3.byForm) ? !out.length : true, B3 && B3.byForm ? (out.length ? `não: ${out.join(', ')}` : 'nos seis povos (casca aberta, ou a casca levantada sobre o corpo da forma)') : 'sem o 3D carregado (a fidelidade cobre)');
+}
+// ---------------------------------------------------------------- 6. who works there: the actors' posts, the copyist's desk
+// (with P2's trades in the proof's hand — the theatre employs two actors, the library one copyist: G.BDEF.teatro.jobs and
+// G.BDEF.biblioteca.jobs, as the P2's act-lazer.js sets them —, the validator counts a post for each, a piece with its job
+// (cap.jobs): every theatre and library by its form, each people, each side, valid with them; the actors' posts where one acts
+// on the stage ('atuar') — on the sand, to fight ('lutar'), the Roman's —, reached from the way in, facing as the places do.
+// Without them the theatre by its form did not stand: «só 0 postos de trabalho (o prédio emprega 2)» — L-421)
+{
+  const was = { t: G.BDEF.teatro.jobs, b: G.BDEF.biblioteca.jobs }; G.BDEF.teatro.jobs = 2; G.BDEF.biblioteca.jobs = 1; In.uncache();
+  const out = []; let n = 0, nPost = 0;
+  for (const t of ['teatro', 'biblioteca'].filter(q => In.TYPES[q])) for (const c of POVOS) {
+    const fam = In.familiesFor(rec(t, c, '', 'S')); const ff = (fam.ok || []).filter(f => /^forma\./.test(f));
+    if (!ff.length) { out.push(`${t}/${c}: sem a família da forma (${JSON.stringify(fam.why || {}).slice(0, 120)})`); continue; }
+    for (const f of ff) for (const s of LADOS) {
+      const def = G.BDEF[t]; const b = { id: (nid += 41), type: t, style: c, x: 8, y: 8, w: def.w, h: def.h, built: true }; b.ip = rec(t, c, f, s);
+      const p = In.makeFam(b, b.ip, f); G.S.buildings.set(b.id, b); n++; const J = def.jobs, posts = p ? p.items.filter(i => i.job) : [];
+      if (!p || !p.ok) { out.push(`${t}/${c} ${s}: ${p ? (p.errs || []).slice(0, 2).join('; ') : 'sem planta'}`); continue; }
+      if (posts.length < J) { out.push(`${t}/${c} ${s}: ${posts.length} postos (emprega ${J})`); continue; }
+      nPost += posts.length;
+      if (t !== 'teatro') continue;
+      // (the actors': where one acts, its places reached — the validator's walk from the way in —, as the stage's places face)
+      const use = c === 'romano' ? 'lutar' : 'atuar';
+      for (const it of posts) { const sp = (it.spots || [])[0]; if (!sp || sp.use !== use) out.push(`${t}/${c} ${s}: o posto ${it.kind} sem o lugar de ${use}`); }
+      const free = In.freePlace(b, use); if (!free) out.push(`${t}/${c} ${s}: nenhum lugar livre de ${use}`);
+    }
+  }
+  G.BDEF.teatro.jobs = was.t; G.BDEF.biblioteca.jobs = was.b; In.uncache();
+  ok('6a com os ofícios do P2 na mão (o teatro emprega dois atores, a biblioteca um copista): todo teatro e toda biblioteca pela forma, de cada povo e lado, válidos, com um posto para cada um — os dos atores onde se atua no palco (na arena romana, onde se luta) (L-421)', n >= 48 && !out.length,
+    out.slice(0, 4).join(' · ') || `${n} plantas, ${nPost} postos`);
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
