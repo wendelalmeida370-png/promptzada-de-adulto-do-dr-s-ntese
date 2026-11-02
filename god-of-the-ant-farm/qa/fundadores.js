@@ -2,8 +2,8 @@
 // (G.Village.pickFounders, a escolha do checkExpansion) e os colonos de um navio (G.Expe.colony, para onde o Naval.colonize
 // das vilas leva) são só quem a cidade pode mandar (G.Vg.canSend), e uma família vai inteira. Antes, os fundadores eram quem
 // estivesse à mão — o corpo do deus saía andando (e o deus era posto para fora dele), o preso saía da cela, o emissário
-// largava a paz no caminho, o soldado deixava o bando —, entre os colonos ia a criança que fosse o corpo do deus, e o casamento
-// real mandava o corpo morar com o outro povo.
+// largava a paz no caminho, o soldado deixava o bando —, entre os colonos ia a criança que fosse o corpo do deus (e os pais
+// partiam deixando os bebês: L-442), e o casamento real mandava o corpo morar com o outro povo.
 // Cinco que não podem ir — o corpo do deus, um preso na cela, um emissário a caminho, um soldado de um bando e um mercador
 // com a sua caravana:
 //  f1 no mundo pronto (a «mega», por padrão), na maior cidade com cadeia, o corpo uma moça casada: nenhum dos cinco está entre
@@ -11,7 +11,7 @@
 //  f2 entre os fundadores, todos podem ir, e cada casal leva os filhos pequenos que estão na cidade;
 //  f3 os colonos de um navio — num mundo de ilhas (num continente dos mundos prontos não sobra praia livre: toda relva fica a
 //     menos de 16 casas de uma cidade), numa cidade com cais e cadeia, o corpo uma criança: os cinco ficam, e os pais da
-//     criança com ela; nenhum colono que não pudesse ir; cada casal leva os seus;
+//     criança com ela; nenhum colono que não pudesse ir; cada casal leva os seus, e nenhum deixa um bebê para trás (L-442);
 //  f4 um tempo de mundo depois (30 s no mundo pronto, 10 s no das ilhas): o corpo ainda é do deus, o preso na cela, o
 //     emissário a caminho (no mundo pronto: nas ilhas ele não tem caminho a pé até o outro povo e desiste sozinho), o soldado
 //     no bando, e o verificador limpo (S0–S2), sem erro de página nem aviso no console.
@@ -100,6 +100,8 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     // (families as the sea's proofs grow them, qa/mar17.js — each with a child here, the parents old enough for it)
     for (let k = 0; k < 16; k++) { const p0 = G.W.nearestLand(set.cx + G.rr(-6, 6), set.cy + G.rr(-6, 6), 5); if (!p0) continue; const a = G.Vg.create({ set: set.id, x: p0[0], y: p0[1], age: 27 + G.R() * 12, g: 'm' }); const b = G.Vg.create({ set: set.id, x: p0[0] + 0.5, y: p0[1], age: 27 + G.R() * 12, g: 'f' }); a.partner = b.id; b.partner = a.id; const ch = G.Vg.create({ set: set.id, x: p0[0], y: p0[1] + 0.5, age: 7 + G.R() * 6, mother: b.id, father: a.id }); a.kids.push(ch.id); b.kids.push(ch.id); }
     for (let k = 0; k < 6; k++) { const p0 = G.W.nearestLand(set.cx + G.rr(-6, 6), set.cy + G.rr(-6, 6), 5); if (p0) G.Vg.create({ set: set.id, x: p0[0], y: p0[1], age: 18 + G.R() * 10, g: k % 2 ? 'm' : 'f' }); }
+    // (and three with a baby under two: the ship took the parents and left the babies, L-442)
+    for (let k = 0; k < 3; k++) { const p0 = G.W.nearestLand(set.cx + G.rr(-6, 6), set.cy + G.rr(-6, 6), 5); if (!p0) continue; const a = G.Vg.create({ set: set.id, x: p0[0], y: p0[1], age: 24 + G.R() * 8, g: 'm' }); const b = G.Vg.create({ set: set.id, x: p0[0] + 0.5, y: p0[1], age: 22 + G.R() * 8, g: 'f' }); a.partner = b.id; b.partner = a.id; const ch = G.Vg.create({ set: set.id, x: p0[0], y: p0[1] + 0.5, age: 0.6, mother: b.id, father: a.id }); a.kids.push(ch.id); b.kids.push(ch.id); }
     let dock = null; const r0 = set.radius; for (const R of [8, 14, 20, 28, 36]) { set.radius = R; const site = G.City.dockSite(set); if (site) { dock = G.Village.addBuilding('doca', site[0], site[1], set.id, true); break; } } set.radius = r0;
     const js = G.Village.findSite(set, 'cadeia'); const jail = js ? G.Village.addBuilding('cadeia', js[0], js[1], set.id, true) : null;
     G.W.touchWalk();
@@ -115,7 +117,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     if (!e) return { err: `nenhuma colônia saiu de ${set.name}`, t0 };
     const crew = e.crew.map(id => S.villagers.get(id)).filter(Boolean);
     const parents = [c.body.mother, c.body.father].filter(id => e.crew.includes(id)).map(id => S.villagers.get(id).name);
-    const kids = []; for (const v of crew) if (v.g === 'f' && v.partner && e.crew.includes(v.partner)) { const p = S.villagers.get(v.partner); for (const k of S.villagers.values()) if (k.set === set.id && k.age >= 2 && k.age < 16 && (k.mother === v.id || k.father === p.id) && !e.crew.includes(k.id)) kids.push(k.name + '#' + k.id); }
+    const kids = []; for (const v of crew) if (v.g === 'f' && v.partner && e.crew.includes(v.partner)) { const p = S.villagers.get(v.partner); for (const k of S.villagers.values()) if (k.set === set.id && k.age < 16 && (k.mother === v.id || k.father === p.id) && !e.crew.includes(k.id)) kids.push(k.name + '#' + k.id + (k.age < 2 ? ' (bebê)' : '')); }
     const out = { town: set.name, t0, n: crew.length, child: c.body.name + ' (' + Math.floor(c.body.age) + ' anos)', five: crew.filter(v => c.ids.has(v.id)).map(v => v.name), parents, bad: crew.filter(v => v.captive || v.jail || v.held || v.ug || v.air || (S.avatar && S.avatar.id === v.id)).map(v => v.name), kids };
     G.Vg.endTask(c.merc);
     for (let k = 0; k < 100; k++) G.debug.step(0.1);

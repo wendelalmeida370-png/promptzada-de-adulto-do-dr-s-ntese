@@ -723,6 +723,7 @@
       const p = S.villagers.get(m.partner); if (!p || p.set !== set.id || p.aboard || p.id === fac.leader) continue;
       const kids = town.filter(k => (k.mother === m.id || k.father === p.id) && k.age < 16 && k.age >= 2);
       if (!G.Vg.canSend(m) || !G.Vg.canSend(p) || !kids.every(k => G.Vg.canSend(k))) continue;
+      if (town.some(k => (k.mother === m.id || k.father === p.id) && k.age < 2)) continue; // (nor a baby left behind: L-442)
       crew.push(m, p);
       for (const k of kids) if (crew.length < 12) crew.push(k);
     }

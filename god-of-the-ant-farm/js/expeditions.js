@@ -1449,7 +1449,9 @@
     for (const m of G.shuffle(members.filter(v => v.g === 'f' && v.partner && v.age >= 17))) {
       if (crew.length >= n) break; const p = P(m.partner); if (!p || !members.includes(p) || crew.includes(p)) continue;
       const kids = members.filter(k => (k.mother === m.id || k.father === p.id) && k.age < 16);
-      if ([...S.villagers.values()].some(k => k.set === from.id && (k.mother === m.id || k.father === p.id) && k.age < 16 && k.age >= 2 && !kids.includes(k))) continue;
+      // (a little one under two does not board — and its parents do not leave it: the ship took them and left six babies
+      // behind, L-442)
+      if ([...S.villagers.values()].some(k => k.set === from.id && (k.mother === m.id || k.father === p.id) && k.age < 16 && !kids.includes(k))) continue;
       crew.push(m, p); for (const k of kids) if (crew.length < n + 4) crew.push(k);
     }
     for (const v of members.filter(v => !v.partner && v.age >= 17 && v.age < 40)) { if (crew.length >= n) break; if (!crew.includes(v)) crew.push(v); }
