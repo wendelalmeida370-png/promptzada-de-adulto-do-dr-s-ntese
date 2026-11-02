@@ -1,8 +1,10 @@
 // olaria: a olaria de ponta a ponta num mundo pronto (G.Oficio; D-075, D-076, D-078), em Node, pelo qa/nodemundo.js — o
 // mundo de verdade: as mãos dos oleiros pelas tarefas deles, o sol e a noite, a lenha do armazém, o verificador dos ofícios.
 //  o1 uma fornada de tijolo (ou de adobe, ou de potes, o que o povo faz) numa olaria com oleiro: da argila ao forno; um save
-//     no meio da queima, carregado duas vezes, vive o mesmo futuro; a fornada acaba e as contas fecham (feitos + quebrados)
-//  o2 o oleiro morre no meio da fornada: ela espera, sem perder nem repetir nada; outro oleiro a toma de onde parou
+//     no meio da queima, carregado duas vezes, vive o mesmo futuro; a fornada acaba e as contas fecham (feitos + quebrados) —
+//     com a paz do deus sobre o caso (uma guerra no meio leva o oleiro à mobilização, T-295)
+//  o2 o oleiro morre no meio da fornada: ela espera, sem perder nem repetir nada; outro oleiro a toma de onde parou (um da
+//     cidade de mãos livres, que não é mercador de caravana, T-296)
 //  o3 o deus derruba a olaria no meio da queima: a fornada acaba ali, o que ela tinha é dito perdido, e a prateleira sai pelo
 //     livro ('ruina')
 //  o4 o tijolo da obra (D-075): uma casa fundada numa cidade de olaria troca parte da pedra por tijolo, o total da obra é o
@@ -56,6 +58,11 @@ console.log(`${world}: ${V.buildName(P.b)} #${P.b.id} de ${S().settlements.get(P
 // ---------------- o1 a batch, from the clay to the kiln; a save in the middle of the firing, loaded twice
 {
   fresh(); const b = S().buildings.get(P.b.id); ready(b, 12); const bad = [];
+  // (the god's peace over the case — no war declared while the batch is made: in the branch joined with b8c072c Argos went to
+  // war, its only potter was called to the muster at the dawn of the day 63 and made a warrior, nobody worked the olaria for
+  // two days and the batch was let go ('abandonada'), as the game says. The case is the batch and the save in the middle of
+  // its firing, T-295)
+  S().divinePeace = G.DAY_LEN * 5;
   const op = O.start(b, p, potters(b)[0]);
   const kind = () => (O.stage(op) || {}).kind;
   const fired = O.rx(op).st.some(s => s.kind === 'fogo');
@@ -79,8 +86,10 @@ console.log(`${world}: ${V.buildName(P.b)} #${P.b.id} de ${S().settlements.get(P
   for (const v of potters(b)) V.kill(v, 'teste', true);
   liveSec(20); const q1 = op.data.q;
   ok('o2 sem-oleiro-espera', A.live(op) && q1 >= q0 && op.data.s === s0, `a fornada viva: ${A.live(op)}, na mesma etapa; unidades ${q0} → ${q1}`);
-  // (another of the town takes up the trade)
-  const nv = [...S().villagers.values()].find(v => v.set === b.set && v.age >= 18 && v.age < 50 && A.able(v) && !v.captive && v.role !== 'oleiro');
+  // (another of the town takes up the trade — one with free hands, not a caravan's merchant: the first of the town, Dimitri,
+  // was on a caravan with 7 of incense for another people, and a load with a destination goes there first, and the next
+  // caravan asks first who went before — he never came to the wheel in 200 s, T-296)
+  const nv = [...S().villagers.values()].find(v => v.set === b.set && v.age >= 18 && v.age < 50 && A.able(v) && !v.captive && v.role !== 'oleiro' && !(v.carry && v.carry.n > 1e-6) && !v.merchant);
   if (nv) { nv.role = 'oleiro'; nv.job = b.id; G.Vg.endTask(nv); }
   liveSec(200, () => !A.live(op) || op.data.s > s0, bad);
   ok('o2 outro-toma', !!nv && (op.data.s > s0 || !A.live(op)) && op.data.q > q1 && !bad.length, `${nv ? nv.name : 'ninguém'}: etapa ${s0} → ${op.data.s}, unidades ${q1} → ${op.data.q}; ${bad.slice(0, 2).join(' | ') || 'as contas fecham'}`);
