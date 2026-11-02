@@ -98,6 +98,15 @@ const r2 = x => Math.round(x * 100) / 100;
   for (const p of S.villagers.values()) p.task = null;
   const hook = G.saveHooks.find(h => /termas/.test(String(h.load)) && /banho/.test(String(h.load))); hook.load({});
   ok('save-devolve-a-agua', inWater === Te.CAP && crowd.every(p => p.task && p.task.type === 'termas' && p.task.op === op.id && p.task.st === 2 && p.task.use === 'banhar' && p.inside === ba.id), `${inWater} na água antes; depois do gancho: ${crowd.filter(p => p.task && p.task.st === 2).length} de volta na água`);
+  // (the save says who is in the baths: one called away a moment before it — the book of the day keeps them until its next
+  // look — is not put back in the water, the others are; at the next look the book lets go of who left — L-435)
+  {
+    const gone = crowd[0]; G.Vg.setTask(gone, { type: 'idle', pri: 3, wait: 10 }); const held = !!op.data.banho[gone.id];
+    const sv = {}; hook.save(sv); for (const p of S.villagers.values()) p.task = null; hook.load(sv);
+    const back = !!gone.task && gone.task.type === 'termas'; const rest = crowd.slice(1).every(p => p.task && p.task.type === 'termas' && p.inside === ba.id);
+    sec(1, crowd.slice(1)); const let_go = !op.data.banho[gone.id];
+    ok('save-so-quem-estava', held && !back && gone.inside !== ba.id && rest && let_go, `${gone.name} chamado um momento antes do save (ainda no livro do dia: ${held ? 'sim' : 'NÃO'}); depois do gancho: ${back ? 'DE VOLTA À ÁGUA' : 'fora'}; os outros ${rest ? 'na água' : 'FORA DA ÁGUA'}; um segundo depois o livro ${let_go ? 'o soltou' : 'AINDA O TEM'}`);
+  }
 }
 // ---------------- a place in the water, by the interiors' allotter (In.freePlace, P4: each one inside holds the place of
 // their use — who is at the pegs holds a peg, not a place in the water): two come in for one place; the second, undressed,

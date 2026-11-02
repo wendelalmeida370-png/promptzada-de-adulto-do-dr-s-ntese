@@ -191,9 +191,15 @@
     if (op) A.log(op, 'fornada', p, R.n);
     return op;
   };
-  // the next stage; past the last, the batch is counted and done
+  // the next stage; past the last, the batch is counted and done. Into the kiln only when it is free — one batch in it at a
+  // time: the next one waits at its door, its stage done, until the kiln is let go. Nothing kept them out: the pots out of the
+  // sun went into the kiln, the bricks came out of the sun with the pots still burning, and the kiln, the older batch's by
+  // kilnOf, took the bricks in over them (L-436)
   function next(op) {
-    const R = rxOf(op); const d = op.data; d.s++; d.t = 0;
+    const R = rxOf(op); const d = op.data;
+    const s0 = R.st[d.s], s1 = R.st[d.s + 1];
+    if (s1 && s1.kiln && !(s0 && s0.kiln)) { const b = S_().buildings.get(op.at); const k = b ? kilnOf(b) : null; if (k && k !== op) { if (op.st !== 'wait' || op.wait !== 'forno') A.pause(op, 'forno'); return; } }
+    d.s++; d.t = 0;
     if (op.st === 'wait') A.resume(op);
     if (d.s >= R.st.length) return finish(op);
     A.log(op, 'etapa', R.st[d.s].id);
@@ -318,7 +324,7 @@
     } else if (s.kind === 'espera') {
       if (s.sun && S.weather && S.weather.rain > 0.5) why = 'chuva';
       else if (s.sun && G.isNight()) why = 'noite';
-      else { d.t = r2(d.t + step); if (d.t + EPS >= s.wait) return next(op); }
+      else { d.t = r2(Math.min(s.wait, d.t + step)); if (d.t + EPS >= s.wait) return next(op); } // (dry, and the kiln busy: it waits there, dry)
     } else if (s.kind === 'fogo') {
       if (d.calor > EPS) { const h = Math.min(step, d.calor); d.calor = r2(d.calor - h); d.fogo = r2(d.fogo + h); }
       if (d.fogo + EPS >= s.fire) { d.calor = 0; return next(op); }

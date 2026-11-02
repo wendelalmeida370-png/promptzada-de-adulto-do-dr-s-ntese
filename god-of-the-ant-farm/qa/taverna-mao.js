@@ -94,6 +94,16 @@ const lines = (code) => G.S.ledger.filter(e => e[8] === code);
   for (const v of S.villagers.values()) { v.task = null; } const hook = G.saveHooks.find(h => /taverna/.test(String(h.load)) && /mesa/.test(String(h.load)));
   hook.load({});
   ok('save-devolve-a-mesa', was && sit.task && sit.task.type === 'tavern' && sit.task.op === op.id && sit.task.st === 2 && sit.inside === tv.id, `${sit.name}: ${sit.task ? sit.task.type + ' st ' + sit.task.st : 'sem tarefa'}, dentro ${sit.inside === tv.id}`);
+  // (the save says who sits at a table: one called away a moment before it — the tables keep them until their next look — is
+  // not sat down again, and the one still there is; at the next look the table lets go of who left — L-435)
+  {
+    const gone = person('Chamado', 3); T.visitTask(gone, H); sec(1, [gone]); const was2 = !!op.data.mesa[gone.id];
+    G.Vg.setTask(gone, { type: 'idle', pri: 3, wait: 10 }); const held = !!op.data.mesa[gone.id];
+    const sv = {}; hook.save(sv); for (const v of S.villagers.values()) v.task = null; hook.load(sv);
+    const back = !!gone.task && gone.task.type === 'tavern'; const stays = !!sit.task && sit.task.type === 'tavern' && sit.inside === tv.id;
+    sec(1, [k, sit]); const let_go = !op.data.mesa[gone.id];
+    ok('save-so-quem-estava', was2 && held && !back && gone.inside !== tv.id && stays && let_go, `${gone.name} à mesa ${was2 ? 'sim' : 'NÃO'}, chamado um momento antes do save (ainda na mesa: ${held ? 'sim' : 'NÃO'}); depois do gancho: ${back ? 'DE VOLTA À MESA' : 'fora'}; ${sit.name} ${stays ? 'à mesa' : 'FORA DA MESA'}; um segundo depois a mesa ${let_go ? 'o soltou' : 'AINDA O TEM'}`);
+  }
   // a day saved before its book said «gasto»: what the keeper paid was «custo» there — the load takes the old word, and the
   // checker sees the day's book whole (every second after it)
   op.data.custo = 1.5; delete op.data.gasto; hook.load({}); sec(1, [k, sit]);

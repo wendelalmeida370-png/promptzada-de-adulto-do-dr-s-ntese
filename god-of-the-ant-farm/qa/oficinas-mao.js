@@ -82,6 +82,20 @@ const sum = (L, k) => Math.round(L.filter(e => !k || e[5] === k).reduce((n, e) =
   ok('corpo-tece', !!o && r.ok && op.data.q === q1 + 1 && (O.stage(op) ? op.data.feitos >= f1 : true), `${o ? o.label : 'sem oferta'} → ${r.ok ? r.msg : r.why}; feitos ${f1} → ${op.data.feitos}`);
   S.avatar = null;
 }
+// ---------------- two batches and one forge (L-436): the second, its ore in, waits at the door of the fire until the first is
+// forged — nothing kept it out, and the forge was lit for both at once, two batches at its stages
+{
+  const { person, forja } = world();
+  const fe = person('Hefesto', { job: 5, role: 'ferreiro' });
+  const X = O.start(forja, 'armas', fe); let Y = null, most = 0, waited = false;
+  for (let k = 0; k < 240 && (!Y || A.live(X) || A.live(Y)); k++) {
+    if (!Y && A.live(X) && O.stage(X).kiln) Y = O.start(forja, 'ferramentas', fe);
+    sec(1, [fe]);
+    most = Math.max(most, O.batches(forja).filter(op => O.stage(op) && O.stage(op).kiln).length);
+    if (Y && A.live(Y) && Y.st === 'wait' && Y.wait === 'forno') waited = true;
+  }
+  ok('forja-uma-de-cada-vez', !!Y && most === 1 && waited && X.st === 'ok' && Y.st === 'ok' && X.data.feitos === 6 && Y.data.feitos === 6, Y ? `as armas e as ferramentas: ${most} fornada${most > 1 ? 's' : ''} na forja ao mesmo tempo, no máximo; as ferramentas ${waited ? 'esperaram a forja' : 'NÃO ESPERARAM'}; armas ${X.st} (${X.data.feitos}), ferramentas ${Y.st} (${Y.data.feitos})` : 'a segunda fornada não começou');
+}
 ok('verificador', !bad.length, bad.slice(0, 4).join(' | ') || 'limpo em todos os segundos');
 // ---------------- the ceiling of the trades (D-090): once, over all of them, by the largest remainder
 {

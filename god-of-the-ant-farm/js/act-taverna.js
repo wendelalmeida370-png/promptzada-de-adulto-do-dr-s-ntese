@@ -524,11 +524,19 @@
 
   // ------------------------------ the save ------------------------------
   // (the errands are not saved: the people at the tables of an open day are seated again, as they were — waiting, or with
-  // what was served in their hands —; a day of a tavern is the world's, never ended by a save. L-190's rule)
+  // what was served in their hands —; a day of a tavern is the world's, never ended by a save. L-190's rule. Only who was
+  // at a table at the save: the tables keep for a second whoever left by another door, and the load sat them down again;
+  // the save says who sat there by the errand each one had, and the one who had left is let go at the next look — L-435)
   (G.saveHooks = G.saveHooks || []).push({
-    save() { },
-    load() {
+    save(out) {
+      const S = S_(); const L = [];
+      for (const op of A.all()) if (op.def === 'taverna' && live(op)) for (const id in op.data.mesa || {}) { const v = S.villagers.get(+id); if (v && !op.data.mesa[id].body && atTable(v, op)) L.push(op.id + ':' + id); }
+      out.taverna = L;
+    },
+    load(o) {
       const S = S_();
+      // (a save of before has no list: everyone at the tables, as it always loaded)
+      const keep = o && Array.isArray(o.taverna) ? new Set(o.taverna) : null;
       for (const op of A.all()) {
         if (op.def !== 'taverna') continue;
         // (a day saved before its book said «gasto» has what the keeper paid as «custo» — the word went to what a house cost
@@ -539,6 +547,7 @@
         for (const id of Object.keys(d.mesa)) {
           const v = S.villagers.get(+id); const m = d.mesa[id];
           if (!v || m.body || v.captive || v.jail) { delete d.mesa[id]; continue; }
+          if (keep && !keep.has(op.id + ':' + id)) continue;
           const st = v.carry && v.carry.op === op.id ? 3 : 2;
           G.Vg.setTask(v, { type: 'tavern', id: op.at, op: op.id, pri: 0.5, st, wt: 0, use: st === 3 && v.carry.k === 'food' ? 'comer' : 'sentar', kind: 'tavern' });
           if (v.task && v.task.type === 'tavern') v.inside = op.at; else delete d.mesa[id];
