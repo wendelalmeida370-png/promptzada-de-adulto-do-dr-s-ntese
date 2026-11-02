@@ -1435,20 +1435,24 @@
   }
   // the body's own places in a plan made (L-281, L-282), on the lot's cells and the walk from the door: each place of use one
   // stands at moved to the nearest point within BODY.fit where the feet stand on open floor the door reaches — never in its
-  // piece —, ok or not; a place on a piece ok where one of the piece's own standing places is; each flight's foot to where the
+  // piece —, ok where the whole body takes it from, its rim on open floor at the point or round it (rimNear: In.standFor's
+  // own reach — where only the feet fit, no place, L-430); a place on a piece ok where one of the piece's own standing places
+  // is (the way onto it, the feet's); each flight's foot to where the
   // body takes it from, its rim off the flight (L-391), its top along the flight's line (and across it) to where the body's
   // rim stands (fitLanding). Every use of every piece needs a place ok, every flight both ends: else the plan is refused and
   // laid out again (D-088)
   function fitBody(plan, E) {
     for (const M of plan.marks || []) {
-      let any = 0; for (const q of M.pts) { const pt = fitStand(plan, M.lv, q.x, q.z, null); q.ok = pt ? 1 : 0; if (pt) { q.x = pt[0]; q.z = pt[1]; any = 1; } }
+      let any = 0; for (const q of M.pts) { const pt = fitStand(plan, M.lv, q.x, q.z, null); q.ok = pt && rimNear(plan, M.lv, pt[0], pt[1]) ? 1 : 0; if (pt) { q.x = pt[0]; q.z = pt[1]; } if (q.ok) any = 1; }
       if (!any) E.push(`o corpo não fica nos lugares de ${M.use} (piso ${M.lv})`);
     }
     for (const it of plan.items) {
       const own = new Map(); let any = 0;
       for (const sp of it.spots) {
         if (sp.on) continue; const pt = fitStand(plan, it.lv, sp.x, sp.z, it.niche ? null : it.r);
-        sp.ok = pt ? 1 : 0; if (pt) { sp.x = pt[0]; sp.z = pt[1]; any = 1; } own.set(sp.use, (own.get(sp.use) || 0) | sp.ok);
+        // (a place of use one stands at — behind the counter, at the fire —: where the whole body takes it from; the way onto a
+        // piece, where the feet stand — the body is laid in its bed, and sits on a bench from a stride off: interact.js)
+        sp.ok = pt && (APPROACH[sp.use] || rimNear(plan, it.lv, pt[0], pt[1])) ? 1 : 0; if (pt) { sp.x = pt[0]; sp.z = pt[1]; any = 1; } own.set(sp.use, (own.get(sp.use) || 0) | sp.ok);
       }
       for (const sp of it.spots) if (sp.on) { sp.ok = any; own.set(sp.use, (own.get(sp.use) || 0) | any); }
       for (const [use, ok] of own) if (!ok && !APPROACH[use]) { E.push(`o corpo não fica em ${ITEMS[it.kind].name.toLowerCase()} (${use}, piso ${it.lv})`); break; }
@@ -1754,6 +1758,25 @@
   const RIM9 = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]];
   const standsAt = (p, lv, x, z, r) => { const cr = crawl(p, lv); return RIM9.every(([dx, dz]) => openCode(codeAt(p, lv, x + dx * r, z + dz * r), cr)); };
   In.standsAt = standsAt; // (for the proofs)
+  // (where the body takes a place from — In.standFor, the controller's own reach to a place —: its whole rim on open floor,
+  // reached from the door, at the point or within 0.7 m round it, ring by ring, each point rounded as it is given — the point
+  // given is the point judged. A place where the feet fit and the whole body does not is no place: the seller of the
+  // tavern#258 behind its counter, 0.63 m between the counter and a table — L-430)
+  // (the test of one storey, its lookups made once — the same answer as standsAt(…, BODY.r) and reachedNear(…, 0.3) — for the
+  // 312 points of a place's rings: made point by point, they were a third of the dearest attempt of qa/plantas.js)
+  const rimOn = (p, lv) => {
+    const g = p.grid && p.grid.lv[lv], s = (p.reach || {})[lv]; if (!g || !s) return () => false;
+    const n = p.grid.n, cr = crawl(p, lv), R = BODY.r, K = Math.ceil(0.3 / CS);
+    const open = (x, z) => { const cx = Math.floor(x / CS), cz = Math.floor(z / CS); return cx >= 0 && cz >= 0 && cx < n && cz < n && openCode(g[cz * n + cx], cr); };
+    return (u, v) => {
+      for (let i = 0; i < RIM9.length; i++) if (!open(u + RIM9[i][0] * R, v + RIM9[i][1] * R)) return false;
+      const cx = Math.floor(u / CS), cz = Math.floor(v / CS);
+      for (let dz = -K; dz <= K; dz++) for (let dx = -K; dx <= K; dx++) { const x = cx + dx, z = cz + dz; if (x >= 0 && z >= 0 && x < n && z < n && s[z * n + x]) return true; }
+      return false;
+    };
+  };
+  const RINGS = []; for (let r = 0.1; r <= 0.7 + 1e-6; r += 0.05) { const L = []; for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2; L.push([Math.cos(a) * r, Math.sin(a) * r]); } RINGS.push(L); }
+  const rimNear = (p, lv, x, z) => { const at = rimOn(p, lv); if (at(x, z)) return true; for (const L of RINGS) for (const d of L) if (at(r2(x + d[0]), r2(z + d[1]))) return true; return false; };
   In.passable = passable; // (for the proofs: the walk's own rule on a cell of a plan's grid — itself and its four neighbours open, off a flight's corner)
   // where one standing at a piece stands: its place of use, or — that point on a flight, a wall, another piece, as the plan's
   // walk lets it be (a reached cell within 0.3 m of it is all the walk asks) — the nearest point within 0.4 m where the feet
@@ -2107,11 +2130,11 @@
   // table and a wall —, the nearest such point round the place, up to 0.7 m; the place itself where there is none
   In.standFor = function (b, pl, x, z) {
     const p = b && pl ? In.plan(b) : null; if (!p || !p.ok || !p.grid) return pl ? [pl.x, pl.z] : null;
-    const lv = pl.lv, seen = p.reach || {}; const okAt = (u, v) => standsAt(p, lv, u, v, BODY.r) && reachedNear(p, seen, lv, [u, v], 0.3);
+    const lv = pl.lv; const okAt = rimOn(p, lv); // (the plan's own rule for it: rimNear, L-430)
     const cand = []; if (pl.on && !pl.it.mark && !pl.it.tier) { for (const sp of pl.it.spots) if (!sp.on && sp.ok) cand.push([sp.x, sp.z]); } else cand.push([pl.x, pl.z]);
     cand.sort((a, c) => Math.hypot(a[0] - x, a[1] - z) - Math.hypot(c[0] - x, c[1] - z));
     for (const c of cand) if (okAt(c[0], c[1])) return c;
-    for (let r = 0.1; r <= 0.7 + 1e-6; r += 0.05) { let best = null, bd = Infinity; for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2; const u = pl.x + Math.cos(a) * r, v = pl.z + Math.sin(a) * r; if (!okAt(u, v)) continue; const d = Math.hypot(u - x, v - z); if (d < bd) { bd = d; best = [r2(u), r2(v)]; } } if (best) return best; }
+    for (const L of RINGS) { let best = null, bd = Infinity; for (const [dx, dz] of L) { const u = r2(pl.x + dx), v = r2(pl.z + dz); if (!okAt(u, v)) continue; const d = Math.hypot(u - x, v - z); if (d < bd) { bd = d; best = [u, v]; } } if (best) return best; }
     return cand[0] || [pl.x, pl.z];
   };
   // the metres of the walk from the way in to a place (In.places' or In.freePlace's) — the plan's walk for a body, the flights

@@ -17,7 +17,8 @@
 //   9. o caminho da porta ao lugar: os metros (In.walkIn, guardados com os lugares) e os pontos (In.pathIn), pelo lance
 //  10. os lugares do corpo (o verbo 'lugar', fase C): acordado, nenhum lugar que a regra dê (só as mãos tomam um, L-286);
 //      dormindo, a própria cama; os livres em volta de um ponto (In.freeNear: nunca o de alguém, o mais perto primeiro; sobe-se
-//      de onde o corpo inteiro fica, In.standFor); na hora de tomar, livre (In.freeFor); tomado, dele e de mais ninguém
+//      de onde o corpo inteiro fica, In.standFor — na taverna do caso e numa varredura de tavernas de todos os povos, L-430);
+//      na hora de tomar, livre (In.freeFor); tomado, dele e de mais ninguém
 //   node qa/lugares.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -28,13 +29,15 @@ G.S = { villagers: new Map(), buildings: new Map(), dead: new Map(), settlements
 let nid = 1;
 const ctx = { k: 'ae', cl: 't', fl: 0, d: 1, w: 2, e: 3 };
 const rec = (type, c, f, s) => ({ v: 3, f, r: 0, t: type, u: In.TYPES[type].use, s: s || 'S', o: 0, c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: 0, h: [], m: 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 });
-const building = (type, c, f, x, y, s) => { const def = G.BDEF[type]; const b = { id: nid++, type, x, y, w: def.w, h: def.h, built: true, blocks: true, hp: 100, maxHp: 100, set: 0 }; b.ip = rec(type, c, f, s); G.S.buildings.set(b.id, b); return b; };
+const building = (type, c, f, x, y, s, id) => { const def = G.BDEF[type]; const b = { id: id || nid++, type, x, y, w: def.w, h: def.h, built: true, blocks: true, hp: 100, maxHp: 100, set: 0 }; b.ip = rec(type, c, f, s); G.S.buildings.set(b.id, b); return b; };
 const person = (o) => { const v = Object.assign({ id: nid++, name: 'P' + nid, g: 'm', age: 30, home: 0, inside: 0, sleeping: false, partner: 0, task: null, job: 0, jail: 0, sick: 0, x: 0, y: 0 }, o); G.S.villagers.set(v.id, v); return v; };
 const reset = () => { G.S.villagers.clear(); G.S.avatar = null; G.S.clock += 1; In.placeRule('casa', null); In.placeRule('taverna', null); In.bedRule(null); };
 // (the first family of a type and people whose plan has what the case needs)
 // (a family of the type and people whose plan, on the building's own id — the id given, as each case's building takes the
 // next —, has what the case needs: the families tried in their order, the ids of a few buildings each)
 const famWith = (type, c, need, side) => { for (let k = 0; k < 12; k++) for (const f of In.TYPES[type].fams) { const b = { id: nid + k * 7, type, x: 5, y: 5, w: G.BDEF[type].w, h: G.BDEF[type].h }; const p = In.make(b, rec(type, c, f, side)); if (p.ok && p.fam === f && need(p)) { nid += k * 7; return f; } } return null; };
+// (and on a building of its own, the id given: a case kept on the plan it was written on, whatever the cases before it take)
+const famAt = (type, c, need, side, id) => In.TYPES[type].fams.find(f => { const p = In.make({ id, type, x: 5, y: 5, w: G.BDEF[type].w, h: G.BDEF[type].h }, rec(type, c, f, side)); return p.ok && p.fam === f && need(p); }) || null;
 // the checks every case makes of its answer: one person a point, every place a place
 const BN = In.ITEMS;
 function sound(b, P, tag) {
@@ -246,9 +249,11 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   // (b: the places free for the body about a point — In.freeNear —: never one someone holds, nor one a stride from where
   // someone is (the share-out's own test), the nearest first, each usable; where one gets onto a place on a piece, a point of
   // the piece where a body stands. The body at the way in, where its point is no place's)
+  // (the tavern this case was written on, #244 — kept on it: on the ids the cases before it take, it moved to another with
+  // each case added, and came to one whose seller behind the counter had the feet's room and not the body's, L-430)
   reset();
-  const f = famWith('taverna', 'romano', p => p.items.filter(i => i.spots.some(s => s.use === 'sentar')).length >= 2);
-  const b = building('taverna', 'romano', f, 120, 10, 'S'); const p = In.plan(b); const T = In.table(b);
+  const TAV = 244; const f = famAt('taverna', 'romano', p => p.items.filter(i => i.spots.some(s => s.use === 'sentar')).length >= 2, 'S', TAV);
+  const b = building('taverna', 'romano', f, 120, 10, 'S', TAV); const p = In.plan(b); const T = In.table(b);
   const seat = T.byUse.get('sentar')[0]; const en = T.entry;
   const me = person({ age: 30, inside: b.id, x: b.x + en.x / 4, y: b.y + en.z / 4 }); G.S.avatar = { id: me.id, lv: en.lv, use: null };
   const others = [1, 2, 3, 4, 5].map(k => person({ age: 20 + k, inside: b.id, task: { type: 'tavern', id: b.id } }));
@@ -258,7 +263,20 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   const order = near.every((pl, k) => !k || near[k - 1].d <= pl.d + 1e-9);
   // (where one gets onto each: a point the body's whole rim stands on — In.standFor, BODY.r)
   const atBad = near.filter(pl => { const at = In.standFor(b, pl, seat.x, seat.z); return !at || !In.standsAt(p, pl.lv, at[0], at[1], In.BODY.r); });
-  ok('10b os lugares livres do corpo (In.freeNear)', near.length >= 1 && !clash.length && order && !atBad.length && others.every(v => P.by.get(v.id)), `${f}: ${near.length} livres em 9 m (de ${T.spots.filter(e => e.ok).length} lugares, ${held.length} ocupados); sobre alguém: ${clash.length}; em ordem: ${order}; subir de onde não se fica: ${atBad.length}`);
+  // (and the sweep: taverns of every people, each family the record takes there, each side, a few ids — every place of use
+  // the table offers where one stands, behind the counter, at the fire, at the casks, and every place with no piece, is
+  // taken from a point the body's whole rim stands on: a place where only the feet fit is no place, L-430)
+  const SW = { plans: 0, places: 0, bad: [] };
+  for (const c of Object.keys(In.TRAD)) for (const [fi, fam] of In.familiesFor(rec('taverna', c, '', 'S')).ok.entries()) for (let q = 0; q < 2; q++) {
+    const id = 3000 + (fi * 2 + q) * 7919 + c.length * 31, s = ['S', 'E', 'W', 'N'][(q + fi) % 4];
+    const sb = building('taverna', c, fam, 140, 10, s, id); const sp = In.plan(sb); SW.plans++;
+    if (sp && sp.ok) for (const e of In.table(sb).spots) {
+      if (!e.ok || (e.on && !e.it.mark)) continue; SW.places++; const pl = In.placeFor(sb, e.it.id, e.q); const at = pl && pl.at;
+      if (!at || !In.standsAt(sp, pl.lv, at[0], at[1], In.BODY.r)) SW.bad.push(`${c}/${sp.fam}/${s} #${id} ${e.it.kind}:${e.use}`);
+    }
+    G.S.buildings.delete(id);
+  }
+  ok('10b os lugares livres do corpo (In.freeNear)', near.length >= 1 && !clash.length && order && !atBad.length && !SW.bad.length && others.every(v => P.by.get(v.id)), `${f} #${b.id}: ${near.length} livres em 9 m (de ${T.spots.filter(e => e.ok).length} lugares, ${held.length} ocupados); sobre alguém: ${clash.length}; em ordem: ${order}; subir de onde não se fica: ${atBad.length}; na varredura (${SW.plans} tavernas de todos os povos, ${SW.places} lugares onde se fica), tomados de onde o corpo inteiro não fica: ${SW.bad.length}${SW.bad.length ? ' — ' + SW.bad.slice(0, 3).join(' · ') : ''}`);
   // (c: freeFor, asked again at the take: a place someone holds is not free; one nobody holds is; placeFor, the body's own
   // held one, whatever is round it; and once taken — S.avatar.use —, the place is the body's, and nobody else's)
   const h0 = held.find(h => h.it); const fr = near[0];
