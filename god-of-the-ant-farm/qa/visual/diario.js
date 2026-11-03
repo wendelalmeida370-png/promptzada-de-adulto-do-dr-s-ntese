@@ -2,11 +2,12 @@
 //   bash qa/navegador.sh node qa/visual/diario.js [PASTA_DO_JOGO] [SAIDA]
 // The page of a life's diary (js/diario-ui.js), read from the world's own record of it (G.Act.diary: only what the person
 // knows), over the body's eyes and in the god's view. Two families of a town of coin that need a house: one with the coins for
-// it, lived first; one saving for it, lived after. The proofs:
+// it, lived first (where the builders have room for it); one the town's day put to saving for it, lived after. The proofs:
 //   1. the panel over the body's eyes: its key (J) opens and closes it, the HUD's button and the self card's open it; each line
 //      of it says where it came from and the day; only the kinds of the diary the world has lines of (SAIDA/diario-antes.png)
 //   2. the body accepts a purchase — a house for the family, by the house's own offer at the people's store, the act of the
-//      hands done by the world in its step —: its line in the diary, from the house, today (SAIDA/diario-compra.png)
+//      hands done by the world in its step —: its line in the diary, from the house, today (SAIDA/diario-compra.png); and
+//      before it, the offer says what the decision would: with the builders taking no more houses, not lit (L-451)
 //   3. the page only reads: the world stopped (the menu over the body), frames drawn with the page open and read again — the
 //      world's fingerprint (QA.canon), its chance and its clock the same
 //   4. the other family's body: its goal of a house, with the button to let it go; let go by the body's hands — asked, and
@@ -41,11 +42,20 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       for (const t of [...S.settlements.values()].filter(t => coin(t.id)).sort((a, c) => a.id - c.id)) god(() => K.day(t));
       const free = o => o.age >= 18 && o.age < 55 && !o.inside && !o.sleeping && !o.aboard && !o.captive && !o.jail && G.Possess.can(o).ok;
       const L = [...S.villagers.values()].filter(o => coin(o.set) && free(o) && K.need(o) && !K.waiting(o) && !K.gaveUp(o) && o.home && S.buildings.get(o.home)).sort((a, c) => a.id - c.id);
-      const A = L.find(o => K.can(o).ok);
       const fam = o => K.family(o).map(m => m.id);
-      const B = L.find(o => A && o.home !== A.home && !fam(A).includes(o.id) && o.set === A.set && /Falta dinheiro/.test(K.can(o).why || '')) || L.find(o => A && o.home !== A.home && !fam(A).includes(o.id) && /Falta dinheiro/.test(K.can(o).why || ''));
-      if (!A || !B) return { err: `famílias que precisam de casa numa cidade de moeda: ${L.length}; com com que pagar: ${A ? A.name : 'nenhuma'}; juntando: ${B ? B.name : 'nenhuma'}` };
-      // (the family short of coin decides now what any family of its town would — to save: the town's own decision, by the god's hand)
+      // (the town's day comes once more before the cases: a save loaded starts the world's daily rounds over, the houses' one
+      // too — each town decides again, one family each. A, with the coins: the offer lit — it says what the decision would,
+      // L-451 —, in a town whose builders have room for two houses more, the one that day may take and A's. B, short of coin:
+      // a family the town's own day put to saving — the house saves for it (h.poupa) —: of a house too full the day asks only
+      // its youngest family (D-098), and an older one made to save by the god's hand saw the next day of its town give the
+      // saving back to the young, T-341)
+      const works = id => { let n = 0; for (const b of S.buildings.values()) if (b.set === id && b.encomenda && !b.built) n++; return n; };
+      const saves = o => { const h = S.buildings.get(o.home); return !!(h && h.poupa && fam(o).includes(h.poupa.by)); };
+      const short = o => /Falta dinheiro/.test(K.can(o).why || '');
+      const A = L.find(o => K.can(o).ok && works(o.set) + 2 <= K.MAX_WORKS);
+      const B = L.find(o => A && o.home !== A.home && !fam(A).includes(o.id) && o.set === A.set && saves(o) && short(o)) || L.find(o => A && o.home !== A.home && !fam(A).includes(o.id) && saves(o) && short(o));
+      if (!A || !B) return { err: `famílias que precisam de casa numa cidade de moeda: ${L.length}; com com que pagar, numa cidade com construtores para mais duas: ${A ? A.name : 'nenhuma'} (com com que pagar: ${L.filter(o => K.can(o).ok).length}); juntando pelo dia da cidade: ${B ? B.name : 'nenhuma'} (juntando: ${L.filter(saves).length})` };
+      // (the family short of coin decides now what the day of its town decided — to save: by the god's hand)
       const rb = god(() => K.order(B)); const hb = S.buildings.get(B.home);
       // (what the checker said of the activities before the cases: only what comes after counts)
       window.__D = { A: A.id, B: B.id, setA: A.set, setB: B.set, hb: hb.id, bad0: QA.check().filter(x => x.sys === 'act').map(x => x.msg) };
@@ -90,21 +100,34 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       const o = G.Act.offers(v, v.x, v.y, 2.6 / TL + 2).find(q => q.def === 'casa' && q.act === 'encomendar');
       if (!o) return { err: 'nenhuma oferta da casa diante do armazém: ' + G.Act.offers(v, v.x, v.y, 2.6 / TL + 2).map(q => q.def + '.' + q.act).join(', ') };
       if (o.ok === false) return { err: 'a oferta da casa recusada: ' + o.why };
+      // (the offer says what the decision would — one rule, L-451: the people's builders taking no more houses, their bound at
+      // zero by the god's hand for a moment, the offer is not lit and the decision refuses the same, the world unchanged)
+      const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
+      const fp = () => { const s = JSON.stringify(QA.canon()); let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+      const max0 = K.MAX_WORKS; let full = null;
+      try {
+        K.MAX_WORKS = 0; const f0 = fp();
+        const of = G.Act.offers(v, v.x, v.y, 2.6 / TL + 2).find(q => q.def === 'casa' && q.act === 'encomendar'); const rd = god(() => K.order(v, { now: true }));
+        full = { lit: of ? of.ok !== false : null, why: of ? of.why || '' : '', dec: rd.ok ? 'pagou' : rd.why || '', same: fp() === f0 };
+      } finally { K.MAX_WORKS = max0; }
       // (facing the place of the offer, as a player turns to it)
       { const b = G.Avatar.state(); if (b) b.yaw = Math.atan2(o.at[1] * TL - b.Z, o.at[0] * TL - b.X); }
       const n0 = (v.diary || []).length, d0 = S.day; const r = G.Interact.run({ id: 'atividade', t: { o, X: o.at[0] * TL, Z: o.at[1] * TL } });
       if (!r || !r.ok) return { err: `a oferta da casa não foi feita: ${r ? r.msg || '' : 'nenhuma resposta'}` };
       const k = window.__VIS.until(() => (v.diary || []).length > n0 && v.diary[v.diary.length - 1].src === 'casa', 400);
       const e = (v.diary || [])[v.diary.length - 1];
-      return { label: o.label, run: !!(r && r.ok), why: r && !r.ok ? r.msg : '', k, note: e && e.src === 'casa' ? e.txt : null, day: e ? e.day : null, d0, waiting: !!K.waiting(v), need: K.need(v) };
+      return { label: o.label, run: !!(r && r.ok), why: r && !r.ok ? r.msg : '', k, note: e && e.src === 'casa' ? e.txt : null, day: e ? e.day : null, d0, waiting: !!K.waiting(v), need: K.need(v), full };
     });
+    // (with the builders taking no more: the offer not lit, saying why, and the decision refusing the same — L-451)
+    const fullOK = f => !!f && f.lit === false && !!f.why && f.why === f.dec && f.same;
+    const fullTxt = f => (f ? `com os construtores sem vaga (a mão do deus): a oferta ${f.lit === null ? 'SUMIU' : f.lit ? 'ACESA' : 'apagada'}${f.why ? ` («${f.why}»)` : ''}, a decisão «${f.dec}»${f.same ? '' : ', e o mundo MUDOU'}` : '');
     if (buy.err) ok('2. a compra', false, buy.err);
     else {
       await page.keyboard.press('j'); await frames(1); const p2 = await panel();
       const line = p2.rows.find(r => r.txt === buy.note);
       await shot('diario-compra');
-      ok('2. o corpo aceita uma compra (pagar uma casa para a família, pela oferta da casa no armazém): a linha dela no diário, da casa, de hoje', buy.run && buy.k >= 0 && !!line && /a casa/.test(line.meta) && /hoje/.test(line.meta),
-        `«${buy.label}»${buy.run ? '' : ' RECUSADA: ' + buy.why} (${buy.k} quadros): no diário «${line ? line.txt : buy.note || '—'}» (${line ? line.meta : 'não aparece no painel'}); depois: ${buy.waiting ? 'a casa sendo levantada' : buy.need ? 'ainda precisa de casa' : 'a família tem casa'}`);
+      ok('2. o corpo aceita uma compra (pagar uma casa para a família, pela oferta da casa no armazém): a linha dela no diário, da casa, de hoje', buy.run && buy.k >= 0 && !!line && /a casa/.test(line.meta) && /hoje/.test(line.meta) && fullOK(buy.full),
+        `«${buy.label}»${buy.run ? '' : ' RECUSADA: ' + buy.why} (${buy.k} quadros): no diário «${line ? line.txt : buy.note || '—'}» (${line ? line.meta : 'não aparece no painel'}); depois: ${buy.waiting ? 'a casa sendo levantada' : buy.need ? 'ainda precisa de casa' : 'a família tem casa'}; antes, ${fullTxt(buy.full)}`);
     }
 
     // ------------------------------ 3. the page only reads: the world stopped, the page drawn ------------------------------

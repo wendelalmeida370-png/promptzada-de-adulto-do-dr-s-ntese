@@ -18,7 +18,8 @@
 // e a família muda (vista quando a casa fica pronta: a terra cara pode mandá-la adiante, T-139; a mão da prova mantém a
 // pedra e a madeira do povo enquanto o salto roda, T-202); h16 a ruína (a casa que caiu, a da cidade abandonada) sem dono
 // quando o dono morre (L-304); h9 um povo sem moeda: o povo levanta com o que tem; o h10 vê, quando a terra cara compra a
-// casa nova, que pagou pelo menos o que a família pagou por ela;
+// casa nova, que pagou pelo menos o que a família pagou por ela; h18 o dia da cidade não decide a casa da família do corpo,
+// nem com o par do corpo à frente dela na fila (L-452);
 // e o verificador limpo. Os casos que vivem dias do mundo (h7, h8, h15, h14, h10) partem do mundo pronto de novo, e o h7
 // e o h10 preparam a cidade pelas portas do mundo: em paz, com os materiais de uma casa no armazém (a guerra que vier no
 // meio só faz esperar mais).
@@ -691,6 +692,38 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
     } else info = `${noCoin.map(s => s.name).join(', ')}: nenhum casal numa casa cheia, nem família que o dia da cidade pergunte`;
   }
   ok('h9 um povo sem moeda', fine9 && !bad().length, info);
+}
+// ---------------- h18: the town's day leaves the house of the body's family to the body, whoever of its grown ones heads it in
+// the day's queue (L-452: with the partner at the head, the day rented, bought or raised for the family and moved the body)
+{
+  reload(); G.inSim = Math.max(G.inSim, 1);
+  // (a family the day asks — the only one it asks of its house —, with a partner at home who can be lived: the body is the
+  // partner, not the head the queue names; the first such family of the towns of coin, in their order)
+  const ref = o => (o.home && G.Village.livable(S.buildings.get(o.home)) ? 'h:' + o.home : 'p:' + o.id);
+  let t18 = null, head = null, body = null, why18 = '';
+  for (const tw of [...S.settlements.values()].filter(s => E.coinage(s.fac)).sort((a, b) => a.id - b.id)) {
+    const q = K.queue(tw);
+    for (const [h, w] of q) { const p = S.villagers.get(h.partner); if (h.home && p && p.home === h.home && !K.waiting(h) && !K.gaveUp(h) && q.filter(e => e[0].home === h.home).length === 1 && G.Possess.can(p).ok) { t18 = tw; head = h; body = p; why18 = w; break; } }
+    if (t18) break;
+  }
+  let info = 'nenhuma família da fila do dia com o par em casa para viver', fine18 = false;
+  if (t18) {
+    // (the test's hand: the builders free, no empty house of the people, the family with the coins for one of its own — a good
+    // year — and the town's other families in need with none — a poor one —: the day can decide only for this one)
+    set = t18; clearWay(head);
+    for (const [o] of K.queue(t18)) if (o !== head) setCoins(ref(o), 0);
+    setCoins(ref(head), 200);
+    const home0 = head.home, c0 = coins(ref(head));
+    const what = () => { const w = K.waiting(head); return w ? `mandou levantar ${G.Village.buildName(w).toLowerCase().replace(/ \(obra\)$/, '')} #${w.id}` : head.home !== home0 ? `mudou para a casa #${head.home}` : ''; };
+    const took = G.Possess.take(body);
+    K.day(t18); const withBody = what(); const kept = !withBody && body.home === home0 && Math.abs(coins(ref(head)) - c0) < 0.01;
+    if (took.ok) G.Possess.release('deus');
+    // (the god's view back: the same day decides for the family — the case would show nothing if it did not)
+    K.day(t18); const without = what();
+    fine18 = !!took.ok && kept && !!without;
+    info = `${t18.name}: a família de ${head.name} #${head.id} (a cabeça na fila do dia: ${why18}), o corpo ${body.name} #${body.id}, o par${took.ok ? '' : ' (NÃO tomado: ' + took.why + ')'}: com o corpo, o dia ${kept ? 'deixou a casa da família ao corpo' : `DECIDIU por ela: ${withBody || 'as moedas da casa mexidas'}${body.home !== home0 ? ', e o corpo mudou de casa' : ''}`}; sem o corpo, o mesmo dia ${without || 'NÃO decidiu (o caso não mostra nada)'}`;
+  }
+  ok('h18 o dia da cidade deixa a casa da família do corpo ao corpo, mesmo com o par à frente na fila (L-452)', fine18 && !bad().length, info);
 }
 const e = M.erros();
 ok('limpo', M.limpo() && !bad().length, M.limpo() ? 'sem erro de módulo nem aviso no console' : `erros de módulo ${JSON.stringify(e.mod)}; console: ${e.console.slice(0, 3).join(' | ')}`);

@@ -2,7 +2,8 @@
 //   bash qa/navegador.sh node qa/visual/baloes.js [PASTA_DO_JOGO] [SAIDA]
 // The god's view draws over the world the words said (G.Talk: a bubble over the one who speaks, typed out letter by letter) and
 // the little texts that rise where something happens (G.FX.floaters: a load put in the store, the coins of a sale); the 3D of
-// the Modo Encarnado draws the same lists (incui.js, the bubbles by the god's own hand, Talk.paint), only reading them. At the
+// the Modo Encarnado draws the same lists (incui.js, the bubbles by the god's own hand, Talk.paint), only reading them. The world
+// lives on from its save to the market's hours (its own step: the town awake and out). At the
 // market of a merchant of the town — the first by id; his stall opened by the god's hand where it is not, and held open (the
 // merchant fed and at his counter: the god's hand) — someone of the town of another house is lived and haggles there, through
 // the stall's own offer (G.Act: the body's offer and the merchant's answer said through G.Talk, as anyone's). The market is
@@ -32,12 +33,15 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       const V = window.__VIS; G.Realm.setQuality(Q);
       G.Save.apply(JSON.parse(G.Ready.data.metropole)); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden'); G.UI.showHUD(true); G.UI.setSpeed(1); if (G.Audio) G.Audio.mute = true;
       const S = G.S, D = G.Depot; const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
-      god(() => { S.time = 0.3; }); // (market hours)
       const free = o => o.age >= 18 && o.age < 55 && !o.inside && !o.sleeping && !o.aboard && !o.captive && !o.jail;
-      const mks = new Map([...S.buildings.values()].filter(b => b.type === 'mercado' && b.built).map(b => [b.id, b]));
-      const owner = [...S.villagers.values()].filter(o => o.role === 'mercador' && mks.has(o.job) && G.Eco.homeOf(o) && free(o)).sort((a, c) => a.id - c.id)[0];
-      if (!owner) return { err: 'nenhum mercador com emprego num mercado' };
-      const mk = mks.get(owner.job); let z = G.Biz.of(owner); if (!z) z = god(() => G.Biz.open(owner, mk)); if (!z) return { err: 'o mercador sem banca' };
+      const market = id => { const b = S.buildings.get(id); return !!b && b.type === 'mercado' && b.built; };
+      const merchant = () => [...S.villagers.values()].filter(o => o.role === 'mercador' && market(o.job) && G.Eco.homeOf(o) && free(o)).sort((a, c) => a.id - c.id)[0];
+      // (the market's hours as the world lives them: from the hour of the save, the world's own step runs on — the town wakes and
+      // goes out — to the middle of the morning, and on through the market's hours until a merchant with a job at a market is
+      // out and free. A ready world saved at night had them all asleep at home, and an hour set by hand woke no one: T-342)
+      let owner = null; for (let k = 0; k < 4000; k++) { if (G.Biz.hours() && S.time >= 0.3 && (owner = merchant())) break; G.debug.step(0.1); }
+      if (!owner) return { err: `nenhum mercador com emprego num mercado, fora de casa e livre, nas horas do mercado (dia ${S.day}, ${S.time.toFixed(3)})` };
+      const mk = S.buildings.get(owner.job); let z = G.Biz.of(owner); if (!z) z = god(() => G.Biz.open(owner, mk)); if (!z) return { err: 'o mercador sem banca' };
       // the body: someone of the town of another house, with empty hands — lived first (the way down into the body takes a moment
       // of the world), then put before the counter
       const home = q => (G.Eco.homeOf(q) || {}).id;

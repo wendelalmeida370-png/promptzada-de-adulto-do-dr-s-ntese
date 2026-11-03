@@ -137,8 +137,10 @@
     for (const b of homes) if (lived(b)) { settleOwner(b, res.get(b.id) || []); rent(b, set, res.get(b.id) || []); }
     // a house paid for and not built: after a few days with no hands for it, the people give back what the family paid
     for (const b of homes) if (b.encomenda && !b.built && S.day - b.encomenda.d > K.MAX_WAIT && !b.progress) refund(b, set);
-    // the families in need, the most urgent first (one decision a day per town — the dear ground of a city moves slowly)
-    for (const [v] of K.queue(set)) { if (A.isBody(v)) continue; const r = K.order(v); if (r.ok) break; }
+    // the families in need, the most urgent first (one decision a day per town — the dear ground of a city moves slowly); the
+    // body's family is the body's to decide (its offer at the store), whoever of its grown ones heads it in the queue — with the
+    // partner at the head, the day moved the body to a house the player never chose (L-452)
+    for (const [v] of K.queue(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; const r = K.order(v); if (r.ok) break; }
   }
   // the families in need of a town, in the order the day asks them: [head, why], the most urgent first. Of a house too many
   // for its beds, or full with a couple of others, only its youngest family — its eldest grown one's age —: the old ones of
@@ -177,9 +179,7 @@
       return { ok: false, why: `Falta dinheiro: uma casa custa ${plan.price} moedas e a família tem ${Math.floor(has)}.`, saving: 1 };
     }
     if (plan.free) { const ok = buy(v, fam, plan.free, set, plan.price, why); if (ok && h) h.poupa = null; return ok ? { ok: true, b: plan.free, bought: 1, price: plan.price } : { ok: false, why: 'A compra não deu.' }; }
-    const open = [...S.buildings.values()].filter(b => b.set === set.id && b.encomenda && !b.built).length;
-    if (open >= 2) return { ok: false, why: 'Os construtores do povo já têm casas demais para levantar agora.' };
-    if (!coin) { const f = G.Fac.get(set.fac); const def = G.BDEF[plan.type]; if (!f || Object.keys(def.cost).some(k => (f.stock[k] || 0) < def.cost[k] * 1.5)) return { ok: false, why: 'O povo não tem madeira e pedra que cheguem para uma casa agora.' }; }
+    const no = K.cannotRaise(set, plan.type); if (no) return { ok: false, why: no };
     const b = raise(v, fam, set, plan.type, why); if (b && h) h.poupa = null;
     return b ? { ok: true, b, price: b.encomenda ? b.encomenda.paid : 0 } : { ok: false, why: 'A cidade não achou lugar para mais uma casa agora.' };
   };
@@ -203,6 +203,16 @@
   };
   // (the family's house, still being raised)
   K.waiting = v => { for (const b of G.S.buildings.values()) if (b.encomenda && !b.built && b.encomenda.fam.includes(v.id)) return b; return null; };
+  // why the people cannot raise a new house now (read only; '' when they can): their builders take two paid houses at a time,
+  // and a people without coin raises one from its own store. One rule for the town's day and for the body's offer — the offer
+  // lit while the builders were full let the body pay with its hands and be refused, again and again (L-451)
+  K.MAX_WORKS = 2;
+  K.cannotRaise = function (set, type) {
+    let open = 0; for (const b of G.S.buildings.values()) if (b.set === set.id && b.encomenda && !b.built) open++;
+    if (open >= K.MAX_WORKS) return 'Os construtores do povo já têm casas demais para levantar agora.';
+    if (!coinPeople(set)) { const f = G.Fac.get(set.fac); const def = G.BDEF[type]; if (!f || Object.keys(def.cost).some(k => (f.stock[k] || 0) < def.cost[k] * 1.5)) return 'O povo não tem madeira e pedra que cheguem para uma casa agora.'; }
+    return '';
+  };
 
   // ------------------------------ buying, renting, raising, moving ------------------------------
   // the coins of the household to the people's treasury, in the ledger (the house was the people's)
@@ -351,6 +361,8 @@
       if (plan.lease && has + EPS >= plan.rent * 3) return { ok: true, price: plan.price, rent: plan.rent, lease: plan.lease, why };
       return { ok: false, why: `Falta dinheiro: uma casa custa uns ${Math.ceil(plan.price)} moedas e a família tem ${Math.floor(has)}.`, price: plan.price };
     }
+    // (a new house: the people must be able to raise it now, as the decision asks — L-451)
+    if (!plan.free) { const no = K.cannotRaise(set, plan.type); if (no) return { ok: false, why: no, price: plan.price }; }
     return { ok: true, price: plan.price, free: plan.free, why };
   };
   // ------------------------------ the new house let go, for now (D-061) ------------------------------
