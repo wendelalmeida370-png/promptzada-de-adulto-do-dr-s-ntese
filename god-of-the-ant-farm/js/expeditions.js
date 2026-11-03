@@ -220,6 +220,10 @@
     if (v.age < (o.minAge || 17) || v.age > (o.maxAge || 56)) return false;
     if (G.Fac.idOfV(v) !== f.id || v.id === f.leader) return false;
     if (v.task && (BUSY[v.task.type] || v.task.pri >= 3.2)) return false;
+    // (nor hands busy with a load that has somewhere to go — a purchase on its way home, a crate of an unloading —, nor the leg
+    // of an operation under way (G.Vg.handsBusy, D-094): the crew's call to the quay (3,25) does not wait for them, and the
+    // load went aboard — a woman of Mênfis, on her way to the cave's refuge with a purchase in her hands, L-458)
+    if (G.Vg.handsBusy(v)) return false;
     if (X.memberOf(v.id)) return false;
     if (v.expCD && G.S.day - v.expCD < 3) return false;
     return true;

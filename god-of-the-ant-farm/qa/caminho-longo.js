@@ -4,8 +4,9 @@
 // de Hedeby, voltando de uma caravana, ficou dois minutos dentro dos muros da cidade com que tinha negociado, cada busca do
 // caminho de casa gasta (o S3 «9 caminhos falhos seguidos» do agua-solta), e depois ficou por lá. Agora o Vg.goto busca de novo,
 // uma vez, mais guloso (como o salto busca todo caminho), quando o caminho é longo e o mapa de regiões diz que se chega.
-//  l1 o caso da Liv, montado: alguém posto no meio de uma cidade murada longe da sua, o caminho de casa (a frente do armazém)
-//     que o mapa diz aberto e a busca exata sozinha não acha no orçamento: o Vg.goto acha
+//  l1 o caso da Liv, montado: alguém posto no meio de uma cidade murada longe da sua (sem uma assim no mundo, no coração de
+//     uma cidade longe), o caminho de casa (a frente do armazém) que o mapa diz aberto e a busca exata sozinha não acha no
+//     orçamento: o Vg.goto acha
 //  l2 ela vive o mundo dali: chega à cidade dela, sem 6 caminhos falhos seguidos
 //  l3 300 pares longos (24 casas ou mais) do mundo, de pessoas a portas de prédios: todo par que tem caminho (a busca sem
 //     orçamento) o Vg.goto acha; quantos a busca exata sozinha acharia, e o tempo das duas
@@ -28,25 +29,29 @@ let pick = null;
 {
   const walled = S.walls.filter(w => w.done && w.tiles.some(i => S.wall[i] === 1)).map(w => S.settlements.get(w.set)).filter(Boolean).sort((a, b) => a.id - b.id);
   const towns = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && home(s)).sort((a, b) => a.id - b.id);
-  for (const b of walled) {
-    const box = G.Siege.wallOf(b.id).box; let spot = null;
-    for (let r = 0; r < 6 && !spot; r++) for (let dy = -r; dy <= r && !spot; dy++) for (let dx = -r; dx <= r && !spot; dx++) { const x = Math.floor(b.cx) + dx + 0.5, y = Math.floor(b.cy) + dy + 0.5; if (x > box[0] + 1 && x < box[2] && y > box[1] + 1 && y < box[3] && W.walkableXY(x, y) && !S.occ[W.idx(x, y)]) spot = [x, y]; }
+  const scan = (list, walls) => { for (const b of list) {
+    const box = walls ? G.Siege.wallOf(b.id).box : null; let spot = null;
+    for (let r = 0; r < 6 && !spot; r++) for (let dy = -r; dy <= r && !spot; dy++) for (let dx = -r; dx <= r && !spot; dx++) { const x = Math.floor(b.cx) + dx + 0.5, y = Math.floor(b.cy) + dy + 0.5; if ((!box || (x > box[0] + 1 && x < box[2] && y > box[1] + 1 && y < box[3])) && W.walkableXY(x, y) && !S.occ[W.idx(x, y)]) spot = [x, y]; }
     if (!spot) continue;
     for (const a of towns) {
       if (a.id === b.id) continue; const t = home(a); const d = G.dist(spot[0], spot[1], t[0], t[1]); if (d < 40) continue;
       if (!W.canWalk(spot[0], spot[1], t[0], t[1], true) || exact(spot[0], spot[1], t[0], t[1], true)) continue;
-      if (!pick || d > pick.d) pick = { a, b, spot, t, d };
+      if (!pick || d > pick.d) pick = { a, b, spot, t, d, walls };
     }
-  }
+  } };
+  scan(walled, true);
+  // (with no walled town whose way home is too long for the exact search — the metropolis of the generation 10 had none —, the
+  // heart of a town far from hers, by the same rule: the long way the map says open is the case, the walls were Liv's)
+  if (!pick) scan([...S.settlements.values()].filter(s => !walled.includes(s)).sort((a, b) => a.id - b.id), false);
 }
 const who = pick && [...S.villagers.values()].filter(v => v.set === pick.a.id && v.age >= 18 && v.age < 50 && !v.captive && !v.aboard && !v.ug && !v.jail && !v.inside && !(S.avatar && S.avatar.id === v.id)).sort((p, q) => p.id - q.id)[0];
-if (!pick || !who) ok('l1 o caminho de casa de dentro de uma cidade murada longe: o mapa diz aberto, a busca exata não acha, o Vg.goto acha', false, !pick ? 'nenhum par de cidade murada e cidade longe com o caminho longo demais para a busca exata' : 'a cidade não tem adulto livre');
+if (!pick || !who) ok('l1 o caminho de casa de dentro de uma cidade murada longe: o mapa diz aberto, a busca exata não acha, o Vg.goto acha', false, !pick ? 'nenhum par de cidade (murada ou não) e cidade longe com o caminho longo demais para a busca exata' : 'a cidade não tem adulto livre');
 else {
-  const { a, b, spot, t, d } = pick;
+  const { a, b, spot, t, d, walls } = pick;
   Vg.endTask(who); who.x = spot[0]; who.y = spot[1]; who.path = null; who._pfN = 0; who._pfI = -1; who.carry = who.carry && who.carry.n > 0 ? who.carry : null;
   const found = Vg.goto(who, t[0], t[1], true); const len = found && who.path ? who.path.length : 0; who.path = null;
   ok('l1 o caminho de casa de dentro de uma cidade murada longe: o mapa diz aberto, a busca exata não acha, o Vg.goto acha', found,
-    `${who.name} de ${a.name}, no meio de ${b.name} (dentro dos muros), a ${d.toFixed(0)} casas da frente do armazém de casa: a busca exata (3500) não acha; o Vg.goto ${found ? 'acha (' + len + ' pontos)' : 'NÃO acha'}`);
+    `${who.name} de ${a.name}, no meio de ${b.name} (${walls ? 'dentro dos muros' : 'no coração dela, sem muro'}), a ${d.toFixed(0)} casas da frente do armazém de casa: a busca exata (3500) não acha; o Vg.goto ${found ? 'acha (' + len + ' pontos)' : 'NÃO acha'}`);
   // l2 — she lives the world from there: home, never six failed searches in a row
   let maxPf = 0, n = 0; const atHome = () => G.dist(who.x, who.y, a.cx, a.cy) < (a.radius || 8) + 4;
   while (n++ < 4000 && S.villagers.has(who.id) && !atHome()) { G.debug.step(0.1); maxPf = Math.max(maxPf, who._pfN || 0); }

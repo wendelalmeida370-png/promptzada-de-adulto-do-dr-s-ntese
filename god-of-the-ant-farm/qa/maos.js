@@ -122,15 +122,23 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
   }
 }
 // ---------------- m4: the execution waits for the hands; it calls the others, and the one whose purchase got home ----------------
+// (the town of the case: the first of the execution's towns — the order of the towns, from SET4 — with three of its people
+// free near the scaffold to carry purchases by it: in the metropolis of the generation 10, Birka, the first of 15 to 55
+// people, had only two, T-329)
 {
-  fresh(); set = S.settlements.get(SET4); const f = G.Fac.get(set.fac);
-  for (const e of (S.execs || []).filter(q => q.fac === f.id).slice()) J.cancel(e); f.exec = null; f.execQ = [];
-  const victim = take(v => v.id !== f.leader && v.age >= 20);
-  const set0 = victim && J.sentence(f, [victim], 'por teste', { set: set.id, soon: true, quiet: true });
-  const e = set0 ? (S.execs || []).find(q => q.ids.includes(victim.id)) : null;
-  const car = [];
-  if (e) for (let k = 0; k < 3; k++) { const v = take(q => G.dist(q.x, q.y, e.x, e.y) < 30); if (v) { purchase(v); car.push(v); } }
-  if (!e || car.length < 3) ok('m4 a execução', false, `${set.name}: ${!victim ? 'ninguém para a sentença' : !e ? 'a sentença não marcou a execução' : `só ${car.length} de 3 perto do cadafalso`}`);
+  const tried = []; let f = null, victim = null, e = null, car = [];
+  for (const s4 of [SET4].concat(towns.filter(s => s.id !== SET4 && pop(s) >= 15 && pop(s) <= 55).map(s => s.id))) {
+    fresh(); set = S.settlements.get(s4); f = G.Fac.get(set.fac);
+    for (const q of (S.execs || []).filter(q => q.fac === f.id).slice()) J.cancel(q); f.exec = null; f.execQ = [];
+    victim = take(v => v.id !== f.leader && v.age >= 20);
+    const set0 = victim && J.sentence(f, [victim], 'por teste', { set: set.id, soon: true, quiet: true });
+    e = set0 ? (S.execs || []).find(q => q.ids.includes(victim.id)) : null;
+    car = [];
+    if (e) for (let k = 0; k < 3; k++) { const v = take(q => G.dist(q.x, q.y, e.x, e.y) < 30); if (v) { purchase(v); car.push(v); } }
+    if (e && car.length >= 3) break;
+    tried.push(`${set.name}: ${!victim ? 'ninguém para a sentença' : !e ? 'a sentença não marcou a execução' : `só ${car.length} de 3 perto do cadafalso`}`);
+  }
+  if (!e || car.length < 3) ok('m4 a execução', false, tried.join(' · '));
   else {
     const homeOf = car.map(v => v.home);
     if (e.start > S.clock + 22) e.start = S.clock + 22; // (the gathering now: a story's «soon»)
@@ -149,7 +157,7 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
     const watchers = [...S.villagers.values()].filter(v => v.task && v.task.type === 'justice' && v.task.j === e.id).length;
     const b4 = bad(); J.cancel(e);
     ok('m4 a execução', !first.length && called0 >= 1 && !wrong && late !== null && went && Math.abs(heir - n1) < 0.01 && c2s !== 'SEM a compra' && !b4.length,
-      `${set.name} (${pop(set)} habitantes): ${car.map(v => v.name).join(', ')} levando compras para casa perto do cadafalso: na primeira chamada ${first.length ? 'CHAMADOS ' + first.join(', ') : 'nenhum chamado'}, ${called0} outros vieram; com as mãos ocupadas e chamados: ${wrong}; ${c0.name}, com a compra em casa, ${late !== null ? `chamado ${late} s depois` : 'NÃO chamado em 5 s'}; ${c1.name} morreu com ${n1} de tecido: ${heir} foram para a casa (herdado); ${c2.name} ${c2s}; a execução ${went ? 'seguiu até a leitura' : 'NÃO chegou à leitura'} com ${watchers} na praça${b4.length ? '; o verificador: ' + b4.slice(0, 2).join(' · ') : ''}`);
+      `${tried.length ? `(antes: ${tried.join(' · ')}) ` : ''}${set.name} (${pop(set)} habitantes): ${car.map(v => v.name).join(', ')} levando compras para casa perto do cadafalso: na primeira chamada ${first.length ? 'CHAMADOS ' + first.join(', ') : 'nenhum chamado'}, ${called0} outros vieram; com as mãos ocupadas e chamados: ${wrong}; ${c0.name}, com a compra em casa, ${late !== null ? `chamado ${late} s depois` : 'NÃO chamado em 5 s'}; ${c1.name} morreu com ${n1} de tecido: ${heir} foram para a casa (herdado); ${c2.name} ${c2s}; a execução ${went ? 'seguiu até a leitura' : 'NÃO chegou à leitura'} com ${watchers} na praça${b4.length ? '; o verificador: ' + b4.slice(0, 2).join(' · ') : ''}`);
   }
 }
 // ---------------- m5: the feast of the town leaves out who carries a purchase home ----------------

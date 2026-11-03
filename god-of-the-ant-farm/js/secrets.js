@@ -289,7 +289,12 @@
         if (w.hunter) continue;
         const hunter = Sc.membersOf(q).filter(o => o.id !== q.master && !o.captive && !o.held && !o.aboard && o.age < 60).sort((a, b) => (P.persona(b).cru + P.persona(b).agg) - (P.persona(a).cru + P.persona(a).agg))[0] || person(q.master);
         if (!hunter || hunter.captive) { w.fate = 'fala'; continue; }
-        w.hunter = hunter.id; G.Vg.endTask(hunter); G.Vg.setTask(hunter, { type: 'stalk', target: v.id, soc: q.id, pri: 2.6, st: 0, kind: 'stalk', w: w.id });
+        // (the order's man goes when nothing weightier holds him — a call from outside takes only an errand of less weight than
+        // its own, never hands with a load on its way (Vg.busy, D-094) —: the order took a rioter of Mênfis out of the square,
+        // and the levy that came for the town took him, L-456. The witness waits)
+        const t = { type: 'stalk', target: v.id, soc: q.id, pri: 2.6, st: 0, kind: 'stalk', w: w.id };
+        if (G.Vg.busy(hunter, t)) continue;
+        w.hunter = hunter.id; G.Vg.endTask(hunter); G.Vg.setTask(hunter, t);
         continue;
       }
       if (w.fate === 'fala') {
@@ -429,8 +434,14 @@
     if (q && i.clue > 0.45 && !i.hunted && q.lodges.length) {
       const mst = person(q.master); if (mst && P.persona(mst).cru > 0.5 && G.R() < 0.5) {
         i.hunted = 1; const hunter = Sc.membersOf(q).filter(o => !o.captive && o.age < 60).sort((a, b) => P.persona(b).cru - P.persona(a).cru)[0];
-        if (hunter) { G.Vg.endTask(hunter); G.Vg.setTask(hunter, { type: 'stalk', target: inv.id, soc: q.id, pri: 2.6, st: 0, kind: 'stalk', inq: i.id }); }
+        if (hunter) i.hunter = hunter.id;
       } else i.hunted = 1;
+    }
+    // (the order's man goes when nothing weightier holds him, as the witness's — Vg.busy, D-094 —; L-456)
+    if (i.hunter) {
+      const h = person(i.hunter); const t = q && { type: 'stalk', target: inv.id, soc: q.id, pri: 2.6, st: 0, kind: 'stalk', inq: i.id };
+      if (!h || h.captive || !t) i.hunter = 0;
+      else if (!G.Vg.busy(h, t)) { i.hunter = 0; G.Vg.endTask(h); G.Vg.setTask(h, t); }
     }
     // found: a meeting in the act, with the investigator watching
     if (q && !i.found && !(i.hold && G.S.clock < i.hold)) for (const m of s.meets) {

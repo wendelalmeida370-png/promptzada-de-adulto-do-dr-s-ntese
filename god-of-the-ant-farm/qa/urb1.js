@@ -74,12 +74,17 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
   ok('1 bairros nascem do que a cidade tem', towns.length > 0 && all.length >= 3 && kinds.length >= 3 && !bad.length, `${all.length} bairros em ${towns.length} cidades, vocações: ${kinds.join(', ')}${bad.length ? ' · sem o que os define: ' + bad.map(d => d.name + ':' + d.k).join(', ') : ''}`);
   // 2 names unique in each town, kept by the save
   const dup = towns.filter(t => new Set(t.ds.map(d => d.name.toLowerCase())).size !== t.ds.length);
-  await page.evaluate(() => G.Save.save(true));
-  await page.evaluate(() => { G.Main.continueGame(); G.UI.setSpeed(0); });
+  // (the quarters read once the save is loaded — the world in memory replaced —, not at the call: a big world is saved
+  // compressed, a moment later, and the continue reads it once it is there (L-457). Read at the call, they were the world
+  // before the load; and the load, a moment later, brought back the save before this one: every quarter «changed»)
+  const clock0 = await page.evaluate(() => { const c = G.S.clock; G.Save.save(true); window.__S0 = G.S; G.Main.continueGame(); return c; });
+  for (let k = 0; k < 600 && await page.evaluate(() => G.S === window.__S0); k++) await page.waitForTimeout(100);
+  const clock1 = await page.evaluate(() => { G.UI.setSpeed(0); return G.S === window.__S0 ? null : G.S.clock; });
   const after = await page.evaluate(() => [...G.S.settlements.values()].flatMap(s => G.Urban.districtsOf(s).map(d => [d.id, d.name, d.k, d.born, d.cells.length, (d.hist || []).length])));
   const before = all.map(d => [d.id, d.name, d.k, d.born, d.cells, d.hist]);
   const lost = before.filter(b => !after.some(a => JSON.stringify(a) === JSON.stringify(b)));
-  ok('2 nomes únicos e guardados no save', !dup.length && !lost.length && all.length > 0, `${all.length} bairros; repetidos: ${dup.map(t => t.name).join(', ') || 'nenhum'}; mudaram no save: ${lost.map(b => b[1]).join(', ') || 'nenhum'}`);
+  const back = clock1 !== null && Math.abs(clock1 - clock0) < 1e-6;
+  ok('2 nomes únicos e guardados no save', !dup.length && !lost.length && all.length > 0 && back, `${all.length} bairros; repetidos: ${dup.map(t => t.name).join(', ') || 'nenhum'}; mudaram no save: ${lost.map(b => b[1]).join(', ') || 'nenhum'}; ${clock1 === null ? 'o save NÃO carregou em 60 s' : back ? 'carregado o save de agora' : `carregado OUTRO save (relógio ${Math.round(clock1)}, salvo no ${Math.round(clock0)})`}`);
   // 3 the noble quarters' land is dearer
   const val = k => { const l = all.filter(d => d.k === k && d.st); return l.length ? l.reduce((n, d) => n + d.st.value, 0) / l.length : null; };
   const vn = val('nobre'), vp = val('popular'), vc = val('centro');

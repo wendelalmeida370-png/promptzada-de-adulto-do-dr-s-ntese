@@ -277,14 +277,22 @@ const key = process.argv[2] || 'cidade';
       // the father's side, and in the «cidade» of the v37 the widower Creonte was married to his daughter Penélope, T-190)
       const canWed = (m, o) => o.set === m.set && o.g !== m.g && !o.partner && o.age >= 18 && !G.Vg.relatedClose(m, o);
       const set = H.town(); const all = [...S.villagers.values()];
-      const v = all.filter(q => q.partner && S.villagers.has(q.partner) && q.age >= 18 && q.age < 55 && !q.captive && !q.aboard && !q.ug && !q.jail && !q.inside && !(q.task && q.task.type === 'scene')).sort((a, b) => (a.set === set.id ? 0 : 1) - (b.set === set.id ? 0 : 1) || a.id - b.id).find(q => { const m = S.villagers.get(q.partner); return all.some(o => o !== q && canWed(m, o)); });
+      const wed = q => q.partner && S.villagers.has(q.partner) && q.age >= 18 && q.age < 55 && !q.captive && !q.aboard && !q.ug && !q.jail && !q.inside && !(q.task && q.task.type === 'scene');
+      const order = (a, b) => (a.set === set.id ? 0 : 1) - (b.set === set.id ? 0 : 1) || a.id - b.id;
+      let v = all.filter(wed).sort(order).find(q => { const m = S.villagers.get(q.partner); return all.some(o => o !== q && canWed(m, o)); });
+      // (a world with no single grown-up — the «cidade» of the generation 10: 141 souls and every grown-up married —: the
+      // widow's new husband is a widower, by the test's hand — one of another couple of her town whom she could marry were he
+      // free, the first by id, loses the partner first, a death of the world —, T-332)
+      let widower = null;
+      if (!v) for (const q of all.filter(wed).sort(order)) { const m = S.villagers.get(q.partner); const o = all.filter(x => x !== q && x !== m && x.set === m.set && x.g !== m.g && x.age >= 18 && x.partner && x.partner !== q.id && S.villagers.has(x.partner) && !G.Vg.relatedClose(m, x)).sort((a, b) => a.id - b.id)[0]; if (o) { v = q; widower = o; break; } }
       if (!v) return { none: true };
+      if (widower) { G.Village.kill(S.villagers.get(widower.partner), 'sick', true); H.run(0.5); }
       const id = v.id, name = v.name, mateId = v.partner;
       G.Village.kill(v, 'sick', true); H.run(0.5);
       const rec = S.dead.get(id); const cem = rec && S.buildings.get(rec.grave); if (!cem) return { name, grave: false };
       // the widow marries again before the god acts: she does not go back
       const mate = S.villagers.get(mateId); const other = [...S.villagers.values()].find(o => canWed(mate, o));
-      if (other) { mate.partner = other.id; other.partner = mate.id; mate.widow = 0; }
+      if (other) { mate.partner = other.id; other.partner = mate.id; mate.widow = 0; other.widow = 0; }
       const [cx, cy] = G.Village.center(cem);
       const cast = H.raise(cx, cy, id); H.run(2);
       const w = S.villagers.get(id);
@@ -292,10 +300,10 @@ const key = process.argv[2] || 'cidade';
       // the world with them back goes through a save
       const back = JSON.parse(G.Save.serialize()); G.Save.apply(back); G.Main.mode = 'game'; G.UI.setSpeed(0); H.run(1);
       const w2 = G.S.villagers.get(id);
-      return { name, grave: true, cast, back: !!w, empty, single: w ? !w.partner : null, mateStays: other ? G.S.villagers.get(mateId).partner === other.id : 'sem par', saved: !!(w2 && w2.name === name), qa: H.qa() };
+      return { name, grave: true, cast, back: !!w, empty, single: w ? !w.partner : null, mateStays: other ? G.S.villagers.get(mateId).partner === other.id : 'sem par', saved: !!(w2 && w2.name === name), widower: widower && other === widower ? widower.name : null, qa: H.qa() };
     });
     if (r && r.none) ok('r2 ressurreição da cova: a cova fica vazia; a viúva casada de novo não volta', false, 'nenhum casal no mundo cuja viúva possa casar de novo');
-    else if (r) ok('r2 ressurreição da cova: a cova fica vazia; a viúva casada de novo não volta', r.grave && r.cast === true && r.back && r.empty && r.single && r.mateStays === true && r.saved && !r.qa.length, `${r.name}: cova ${r.grave}; lançado ${r.cast}; vivo ${r.back}; cova vazia ${r.empty}; sozinho ${r.single}; o par fica com o novo ${r.mateStays}; passou pelo save ${r.saved}; ${(r.qa || []).slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+    else if (r) ok('r2 ressurreição da cova: a cova fica vazia; a viúva casada de novo não volta', r.grave && r.cast === true && r.back && r.empty && r.single && r.mateStays === true && r.saved && !r.qa.length, `${r.name}${r.widower ? ` (a viúva casou de novo com ${r.widower}, viúvo pela mão da prova)` : ''}: cova ${r.grave}; lançado ${r.cast}; vivo ${r.back}; cova vazia ${r.empty}; sozinho ${r.single}; o par fica com o novo ${r.mateStays}; passou pelo save ${r.saved}; ${(r.qa || []).slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
   }
   {
     const r = await page.evaluate(() => {

@@ -254,7 +254,8 @@ const LEDGER_OK27 = [
 // assembleia, o funeral, a celebração, a petição — pergunta antes ao Vg.busy (ou ao Vg.handsBusy), nas oito linhas antes dele,
 // como o Vg.give pergunta; (2) a festa da cidade (3,2) só toma quem o free() dela acha livre, e o free() pergunta ao
 // Vg.handsBusy; (3) o enlist da festa pergunta ao free(); (4) o carrasco e o arauto da execução (5 e 4,5) são escolhidos com
-// as mãos livres (o pickExecutioner e o pickHerald perguntam ao handsBusy)
+// as mãos livres (o pickExecutioner e o pickHerald perguntam ao handsBusy); (5) o homem da ordem secreta pergunta ao Vg.busy
+// antes de seguir alguém (L-456); (6) a tripulação de uma viagem não leva mãos ocupadas (L-458)
 { const RX = /G\.Vg\.setTask\(.*?type:\s*'(justice|assembly|funeral|celebrate|petition)'.*?pri:\s*([0-9.]+)/;
   for (const f of files) { if (f === 'villagers.js') continue; src[f].forEach((line, k) => { const m = line.match(RX); if (!m || +m[2] >= 3) return; const near = src[f].slice(Math.max(0, k - 8), k + 1).join('\n'); if (!/Vg\.(busy|handsBusy)\(/.test(near)) fails.push(`mãos ocupadas: ${f}:${k + 1} chama alguém para ${m[1]} (${m[2]}) por setTask sem perguntar ao Vg.busy (D-094): ${line.trim().slice(0, 100)}`); }); }
   const fe = src['festivals.js'] || []; const fr = fe.findIndex(l => /^\s*function free\(v\)/.test(l));
@@ -263,7 +264,16 @@ const LEDGER_OK27 = [
   const en = fe.findIndex(l => /^\s*function enlist\(/.test(l));
   if (en >= 0 && !/!free\(v\)/.test(fe.slice(en, en + 3).join('\n'))) fails.push(`mãos ocupadas: festivals.js:${en + 1} o enlist não pergunta ao free() (D-094)`);
   const ju = src['justice.js'] || [];
-  for (const fn of ['pickExecutioner', 'pickHerald']) { const k = ju.findIndex(l => l.includes('function ' + fn + '(')); if (k >= 0 && !/handsBusy\(/.test(ju.slice(k, k + 8).join('\n'))) fails.push(`mãos ocupadas: justice.js:${k + 1} o ${fn} escolhe sem perguntar ao Vg.handsBusy (D-094)`); } }
+  for (const fn of ['pickExecutioner', 'pickHerald']) { const k = ju.findIndex(l => l.includes('function ' + fn + '(')); if (k >= 0 && !/handsBusy\(/.test(ju.slice(k, k + 8).join('\n'))) fails.push(`mãos ocupadas: justice.js:${k + 1} o ${fn} escolhe sem perguntar ao Vg.handsBusy (D-094)`); }
+  // (5) o homem da ordem secreta (secrets.js: a testemunha a calar, o inquérito) só vai seguir alguém quando o Vg.busy deixa,
+  // nas três linhas depois do afazer — a ordem tirava um amotinado da praça, e a convocação o levava (L-456)
+  const se = src['secrets.js'] || [];
+  se.forEach((l, k) => { if (/type:\s*'stalk'/.test(l) && !/Vg\.busy\(/.test(se.slice(k, k + 4).join('\n'))) fails.push(`mãos ocupadas: secrets.js:${k + 1} o homem da ordem vai seguir alguém sem perguntar ao Vg.busy (D-094, L-456): ${l.trim().slice(0, 100)}`); });
+  // (6) a tripulação de uma viagem (expeditions.js, o free() de quem pode ir) não leva mãos ocupadas — o Vg.handsBusy, no corpo
+  // do free(): a carga com destino ia a bordo (L-458)
+  const ex = src['expeditions.js'] || []; const xf = ex.findIndex(l => /^\s*function free\(v, f, o\)/.test(l));
+  if (xf < 0) fails.push('mãos ocupadas: expeditions.js sem o function free(v, f, o) — quem a viagem leva pergunta ao Vg.handsBusy (L-458)');
+  else if (!/Vg\.handsBusy\(/.test(ex.slice(xf, xf + 14).join('\n'))) fails.push(`mãos ocupadas: expeditions.js:${xf + 1} o free() da tripulação não pergunta ao Vg.handsBusy (D-094, L-458)`); }
 // 40. "quem a cidade manda embora" (L-440): a escolha dos fundadores de uma vila nova (village.js V.pickFounders), a dos
 // colonos de um navio (expeditions.js X.colony) e a de quem vai morar com o outro povo num casamento real (politics.js
 // royalMarriage) perguntam ao G.Vg.canSend — nunca o corpo do deus, o preso, o soldado, o emissário, quem está no meio de algo

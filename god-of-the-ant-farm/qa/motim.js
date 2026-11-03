@@ -3,7 +3,8 @@
 // a rua ficava calma de repente, sem desfecho nenhum — e a ida e volta acusava (QA.roundTrip, riots).
 // m1 save/load na concentração; m2 na marcha; m3 na fúria, com a guarda na praça; m4 o líder morre no meio, e o save vem
 // logo depois; m5 um save antigo (o motim sem as tarefas guardadas) carrega como antes: a rua calma; m6 uma guerra convoca o
-// povo no meio do motim: os amotinados ficam na praça (L-366); e o verificador limpo.
+// povo no meio do motim: os amotinados ficam na praça (L-366); m7 a fome na praça: um guarda e um amotinado com a fome em 95
+// comem do estoque do povo sem sair dela, como quem está em campo (L-455); e o verificador limpo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const world = process.argv[2] || 'cidade';
@@ -135,6 +136,30 @@ const lastLog = () => (G.S.history.slice(-6).map(e => e.t || e.txt || '').filter
     const n1 = inIt(R); const took = A ? A.members.filter(id => R.ids.includes(id)).length : 0;
     const e = toEnd(R.id);
     ok('m6 a convocação no meio do motim: a multidão fica na praça', !!A && n1 === n0 && !took && e.over && !e.stale, `${where}: ${A ? `${A.name} convocou ${A.members.length}` : `NENHUMA convocação (${foe ? 'a levada não saiu' : 'nenhum outro povo'})`}; no motim ${n0} → ${n1}, ${took} amotinado(s) levado(s); ${e.over ? 'o motim acabou' : 'não acabou em 200 s'}, ${e.stale} ainda com a tarefa do motim`);
+  }
+  undo();
+}
+
+// ---------------- m7 the hunger in the square: the guard and the crowd eat where they are (L-455) ----------------
+// (the riot is two minutes and more of an errand the hunger cannot outweigh — the crowd's 3,4, the guard's 4,3 —: a soldier of
+// Mênfis, hungry when the guard took him, starved in the square with the store in reach. A guard and a rioter with the hunger
+// at 95, by the test's hand, in the rage: they eat of their people's stock without leaving the square, as the field does)
+{
+  fresh();
+  const { R, where, undo } = rise(true);
+  if (!R) ok('m7 a fome na praça: a guarda e a multidão comem onde estão', false, 'precondição: ' + rise.why);
+  else {
+    live(80, () => R.phase === 'rage' && guarding(R) > 0);
+    const g = R.guards.map(i => G.S.villagers.get(i)).find(v => v && v.task && v.task.type === 'riotguard' && v.task.r === R.id);
+    const r = R.ids.map(i => G.S.villagers.get(i)).find(v => v && v.task && v.task.type === 'riot' && v.task.r === R.id && v.id !== R.lead);
+    const f = G.Fac.get(R.fac); const food0 = f.stock.food;
+    if (g) g.hunger = 95; if (r) r.hunger = 95;
+    live(2);
+    const gIn = !!g && !!g.task && g.task.type === 'riotguard', rIn = !!r && !!r.task && r.task.type === 'riot', gH = g ? g.hunger : 0, rH = r ? r.hunger : 0;
+    const gOk = !!g && G.S.villagers.has(g.id) && gH < 80 && gIn;
+    const rOk = !!r && G.S.villagers.has(r.id) && rH < 80 && (!riot(R.id) || rIn);
+    const e = toEnd(R.id);
+    ok('m7 a fome na praça: a guarda e a multidão comem onde estão', gOk && rOk && e.over && !e.stale, `${where}: ${g ? `o guarda ${g.name}, com a fome em 95: ${gH < 80 ? 'comeu' : 'NÃO comeu'} (fome ${Math.round(gH)} 2 s depois), ${gIn ? 'ainda na guarda' : 'FORA da guarda'}` : 'NENHUM guarda na praça'}; ${r ? `${r.name}, na multidão, com a fome em 95: ${rH < 80 ? 'comeu' : 'NÃO comeu'} (fome ${Math.round(rH)}), ${rIn ? 'ainda no motim' : 'fora do motim'}` : 'NENHUM amotinado'}; o estoque ${Math.round(food0)} → ${Math.round(f.stock.food)}; ${e.over ? 'o motim acabou' : 'não acabou em 200 s'}, ${e.stale} ainda com a tarefa do motim`);
   }
   undo();
 }

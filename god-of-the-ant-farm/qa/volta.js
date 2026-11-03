@@ -37,8 +37,8 @@ const astir = () => [...G.S.villagers.values()].filter(v => G.Fac.idOfV(v) === A
 const raise1 = () => {
   const w = Wz().warOf(A.id, B.id); const tg = G.Fac.capitalOf(B.id);
   const a = w && tg && Wz().mobilize(w, G.Fac.get(A.id), 'campanha', tg, {});
-  raise.home = 0;
-  if (!a) { raise.why = !w ? 'sem guerra' : !tg ? 'sem capital do inimigo' : `${A.name} não convocou ninguém (${G.Fac.pop(A.id)} almas)`; return null; }
+  raise.home = 0; raise.atHome = false; raise.ended = false; raise.none = false;
+  if (!a) { raise.none = !!(w && tg); raise.why = !w ? 'sem guerra' : !tg ? 'sem capital do inimigo' : `${A.name} não convocou ninguém (${G.Fac.pop(A.id)} almas, ${Math.floor(G.Fac.get(A.id).stock.food)} de comida no estoque)`; return null; }
   const out = () => a.band && Wr().bands.has(a.band) && FIELD.includes(a.phase) && a.phase !== 'reunir';
   // (how many of the levy the war at home took at most, while it gathered and marched)
   const homeNow = () => a.members.filter(id => { const v = G.S.villagers.get(id); return v && v.task && ASTIR[v.task.type]; }).length;
@@ -52,12 +52,17 @@ const raise1 = () => {
 // formed: with the code of the Patch 2, seed 7, the third levy of Altepetl de Tenoch, 35, mustered as Casa de Amon's fighters
 // came to its lands, and all of them left the muster to fight (18), flee (16) or hide (1); at the 4c32ea2 the fourth formed and,
 // four seconds later, the war was over and it turned home — is the world of the seed, not what the case looks at: the realm at
-// rest first, the war declared again by the test's hand if it is over (as T-240), and the call again; up to three calls, T-292)
+// rest first, the war declared again by the test's hand if it is over (as T-240), and the call again; up to three calls, T-292.
+// A call that found nobody is the realm's granary: an army that cannot be fed is not raised — two days of food in the wagons
+// at the very least (Wars.levySize) —; with the code of the fechamento do Patch 2 (69f876f), seed 7, after two hosts and a riot
+// of 39 in its capital, Altepetl de Tenoch had 16 of food for its levy of v2, and called nobody. The granary filled again by
+// the test's hand, as at the start (grow), the realm at rest, and the call again: T-330)
 const raise = () => {
   const whys = [];
   for (let k = 0; k < 3; k++) {
     const a = raise1(); if (a) { if (whys.length) console.log(`(a convocação ${k + 1} chegou a campo; antes: ${whys.join(' · ')})`); return a; }
-    whys.push(raise.why); if (!raise.atHome && !raise.ended) break;
+    whys.push(raise.why); if (!raise.atHome && !raise.ended && !raise.none) break;
+    if (raise.none) { const f = G.Fac.get(A.id); f.stock.food = Math.max(f.stock.food, G.Fac.pop(A.id) * 7); }
     live(G.DAY_LEN * 1.5, () => astir() < 10);
     if (!Wz().warOf(A.id, B.id) && G.Fac.get(A.id).alive && G.Fac.get(B.id).alive) { G.Politics.declareWar(G.Fac.get(A.id), G.Fac.get(B.id), 'ambicao'); live(5); }
   }

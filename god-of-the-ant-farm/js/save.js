@@ -120,6 +120,9 @@
   };
   // the last save as an object, to cb (a compressed one comes a moment later; cb(null) when there is none or it is damaged)
   Sv.read = function (cb) {
+    // (a compressed save still being written is the last save: it is read once it is there — the «continuar» a moment after
+    // a save brought back the one before it, and the god lost what was saved, L-457)
+    if (Sv.pending) { Sv.pending.then(() => Sv.read(cb)); return; }
     let s = null; try { s = localStorage.getItem(KEY); } catch (e) { s = null; }
     if (!s) return cb(null);
     if (!s.startsWith('gz1:')) { let o = null; try { o = JSON.parse(s); } catch (e) { console.warn('load failed', e); } return cb(o); }

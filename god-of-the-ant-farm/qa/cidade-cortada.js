@@ -97,7 +97,11 @@ for (const saved of [false, true]) {
     // (the town's next count of its trades — every 4 s, 8 s in the skip —, read while the islet holds: the world sets down on
     // the shore whoever stands where every errand fails (the stuck of villagers.js, L-306) — in the generation 7's Roma, Túlia
     // at 5 s and Quinto at 10 s —, and from the shore they reach the works again. The ones on the islet then, the builders on
-    // the streets then)
+    // the streets then. In the generation 10's Mênfis the shore came first: Amenhotep, hungry, set down in the first tenth of a
+    // second (no way to the store) and, fed, at 2,3 s (every errand failing), the count 4 s after the load (its clock starts
+    // over with the world, worldHooks): the count of the trades is asked at once, the world's own (V.forceUpdate, the homes
+    // and the trades of every town), while the islet holds them all, T-331)
+    V.forceUpdate();
     const still = () => roleOf(gone).filter(v => site(bid) && !reachV(v, site(bid)));
     const t0 = S.clock; live(9, () => roleOf(gone).every(v => v.role !== 'construtor') || still().length < gone.length);
     const held = still(); const left = held.filter(v => v.role !== 'construtor'); const tSwap = Math.round(S.clock - t0); const heldRoles = held.map(v => v.role || 'sem ofício');

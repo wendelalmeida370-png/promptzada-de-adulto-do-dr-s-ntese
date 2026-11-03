@@ -413,8 +413,10 @@
 
   // (the crew waiting on the quay for its voyage — 'cais', an errand of 3,25 that the hunger cannot outweigh — is in the field
   // too: a voyage made ready for a day and more kept them from every meal, and Solveig of Birka starved on the quay with the
-  // store seven steps away, L-201)
-  const FIELD = { praia: 1, reembarque: 1, expl: 1, naufrago: 1, saga: 1, scene: 1, band: 1, muster: 1, refugio: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1, cais: 1 };
+  // store seven steps away, L-201). The square in a riot too — the crowd (3,4) and the guard sent to it (4,3), two minutes and
+  // more that the hunger cannot outweigh: a soldier of Mênfis, hungry when the guard took him, starved in the square with the
+  // store in reach, L-455
+  const FIELD = { praia: 1, reembarque: 1, expl: 1, naufrago: 1, saga: 1, scene: 1, band: 1, muster: 1, refugio: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1, cais: 1, riot: 1, riotguard: 1 };
   // ------------------------------ emergencies ------------------------------
   Vg.alarms = new Map(); // settlement id -> [tile indices]
   Vg.fireFighters = new Map();

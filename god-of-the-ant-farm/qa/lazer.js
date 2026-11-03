@@ -233,20 +233,30 @@ const backTo = (w, ty) => !!w && !!w.task && w.task.type === ty;
 {
   fresh(); const b = S().buildings.get(P.id); ready(b); const bad = [];
   liveSec(20, () => !!Tt.dia(b), bad); const op = Tt.dia(b);
-  if (op) { liveSec(60, () => !A.live(op) || op.data.fase !== 'preparo', bad); audience(b, 6); liveSec(4, null, bad); audience(b, 4); liveSec(60, () => !A.live(op) || Object.keys(op.data.plateia).length >= 2, bad); }
-  const inRow = op && A.live(op) ? Object.keys(op.data.plateia).map(id => S().villagers.get(+id)).filter(v => v && backTo(v, 'teatro') && v.task.st >= 1 && v.home) : [];
-  const onSt = op && A.live(op) ? Object.keys(op.data.atores).map(id => S().villagers.get(+id)).filter(v => v && backTo(v, 'atuar') && v.task.st >= 1) : [];
+  // (two seated and an actor on the stage, both waited for: with the fixes of the fechamento (L-455, L-456) the metropolis
+  // had six seated in the doors and Senusret still on his way to the stage — the case read the stage empty, T-333)
+  const rows = () => (op && A.live(op) ? Object.keys(op.data.plateia).map(id => S().villagers.get(+id)).filter(v => v && backTo(v, 'teatro') && v.task.st >= 1 && v.home) : []);
+  const stage = () => (op && A.live(op) ? Object.keys(op.data.atores).map(id => S().villagers.get(+id)).filter(v => v && backTo(v, 'atuar') && v.task.st >= 1) : []);
+  if (op) { liveSec(60, () => !A.live(op) || op.data.fase !== 'preparo', bad); audience(b, 6); liveSec(4, null, bad); audience(b, 4); liveSec(60, () => !A.live(op) || (rows().length >= 2 && stage().length >= 1), bad); }
+  const inRow = rows(), onSt = stage();
   const gone = inRow[0], actor = onSt[0];
   if (!gone || !actor || inRow.length < 2) ok('l10 chamados-antes-do-save', false, `sem a plateia (${inRow.length} sentados) e o ator no palco (${onSt.length}) do caso: ${op ? op.data.fase : 'o teatro não abriu'}`);
   else {
     const stay = inRow[1];
     G.Vg.setTask(gone, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: gone.home }); G.Vg.setTask(actor, { type: 'idle', pri: 3, wait: 10 });
     const held = !!op.data.plateia[gone.id] && !!op.data.atores[actor.id];
-    const same = across(); const o2 = A.get(op.id);
+    const same = across(); const o2 = A.get(op.id); const tLoad = S().clock;
     const g2 = S().villagers.get(gone.id), c2 = S().villagers.get(actor.id), s2 = S().villagers.get(stay.id);
-    const out = !backTo(g2, 'teatro') && !backTo(c2, 'atuar') && g2.inside !== b.id && c2.inside !== b.id; const kept = backTo(s2, 'teatro') && s2.inside === b.id;
-    liveSec(2, null, bad); const let_go = !!o2 && !o2.data.plateia[gone.id] && !o2.data.atores[actor.id];
-    ok('l10 chamados-antes-do-save', held && same && out && kept && let_go && !bad.length, `${gone.name} (na plateia) à cama e ${actor.name} (no palco) por um chamado que não espera, um momento antes do save — ainda nas listas: ${held ? 'sim' : 'NÃO'}; depois do load: ${backTo(g2, 'teatro') ? `${gone.name} DE VOLTA À PLATEIA` : `${gone.name} fora`}, ${backTo(c2, 'atuar') ? `${actor.name} DE VOLTA AO PALCO` : `${actor.name} fora`}, ${stay.name} ${kept ? 'na plateia' : 'FORA DA PLATEIA'}; dois segundos depois as listas ${let_go ? 'os soltaram' : 'AINDA OS TÊM'}; a casa e as operações na ida e volta: ${same ? 'iguais' : 'DIFERENTES'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}`);
+    const gBack = backTo(g2, 'teatro') || g2.inside === b.id, cBack = backTo(c2, 'atuar') || c2.inside === b.id;
+    const out = !gBack && !cBack; const kept = backTo(s2, 'teatro') && s2.inside === b.id;
+    // (the lists let go of the old places at their next look — the calls of the case are not saved, as no errand is: free
+    // after the load, the two may choose the show again, by the theatre's own door — an evening out, the actor's day —, and a
+    // place taken after the load is a new one; with the code of 3654493 Sitamun was on the stage again a second after the load,
+    // by her own work, T-333)
+    liveSec(2, null, bad); const old = m => !!m && !(m.t > tLoad + 0.05); // (the place's time is kept to a tenth of a second)
+    const let_go = !!o2 && !old(o2.data.plateia[gone.id]) && !old(o2.data.atores[actor.id]);
+    const again = [o2 && o2.data.plateia[gone.id] && gone.name, o2 && o2.data.atores[actor.id] && actor.name].filter(Boolean);
+    ok('l10 chamados-antes-do-save', held && same && out && kept && let_go && !bad.length, `${gone.name} (na plateia) à cama e ${actor.name} (no palco) por um chamado que não espera, um momento antes do save — ainda nas listas: ${held ? 'sim' : 'NÃO'}; depois do load: ${gBack ? `${gone.name} DE VOLTA À PLATEIA` : `${gone.name} fora`}, ${cBack ? `${actor.name} DE VOLTA AO PALCO` : `${actor.name} fora`}, ${stay.name} ${kept ? 'na plateia' : 'FORA DA PLATEIA'}; dois segundos depois as listas ${let_go ? `soltaram os lugares de antes${again.length ? ` (${again.join(' e ')} de novo lá, por escolha depois do load)` : ''}` : 'AINDA TÊM OS LUGARES DE ANTES'}; a casa e as operações na ida e volta: ${same ? 'iguais' : 'DIFERENTES'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}`);
   }
 }
 {
