@@ -45,7 +45,13 @@ M.viver(1);
 const snap = G.Save.serialize();
 const fresh = () => { M.reseed(4242); G.Save.apply(JSON.parse(snap)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); };
 const seen = []; D.onMove.push(e => { seen.push(e); });
-const live = (sec, each, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (each) each(); if (until && until()) return true; } return false; };
+// (the smugglers' trade held by the god's hand while a case lasts — the town's board orders nobody into crime and cuts the
+// smugglers first when it needs hands (D-090, village.js): in the generation-13 metropole both smugglers of Tebas' market had
+// left the trade before the night of k3, and the sale of k2 paid the treasury, there being no smuggler of the market to pay,
+// T-391 — until the law takes it: a seizure from his hands, k3)
+let HOLD = null;
+const hold = () => { if (!HOLD) return; for (const id of HOLD.ids.slice()) { if (seen.slice(HOLD.L0).some(e => e[8] === 'apreendido' && e[3] === 'v:' + id)) { HOLD.ids.splice(HOLD.ids.indexOf(id), 1); continue; } const v = S().villagers.get(id); if (v && fit(v) && (v.role !== 'contrabandista' || v.job !== HOLD.mk)) { v.role = 'contrabandista'; v.job = HOLD.mk; } } };
+const live = (sec, each, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); hold(); if (each) each(); if (until && until()) return true; } return false; };
 const base = () => new Set(QA.check().filter(q => q.sev <= 2).map(q => `${q.sys}|${q.msg}`));
 const newBad = B => QA.check().filter(q => q.sev <= 2 && !B.has(`${q.sys}|${q.msg}`)).slice(0, 3).map(q => `S${q.sev} ${q.sys} ${q.msg}`);
 { const b = S().buildings.get(MK.id); console.log(`${world}: o mercado clandestino #${b.id} de ${S().settlements.get(b.set).name}${MK.opened ? ' (aberto pela prova, como o mundo abre)' : ''}`); }
@@ -57,6 +63,7 @@ function setup(time) {
   const crew = [...S().villagers.values()].filter(v => v.job === b.id && v.role === 'contrabandista' && fit(v)).sort((p, q) => p.id - q.id);
   for (const k of ['tecido', 'ceramica']) if (D.free('f:' + f.id, k) < 6) D.make('f:' + f.id, k, 6, { code: 'teste', part: true });
   const I = b.inv || (b.inv = {}); for (const k of GOODS) if (I[k] > 0) D.use('b:' + b.id, k, I[k], { code: 'teste', mine: true });
+  HOLD = { mk: b.id, ids: crew.map(v => v.id), L0: seen.length };
   return { b, f, crew, L0: seen.length, base: base() };
 }
 function send(v, at) {

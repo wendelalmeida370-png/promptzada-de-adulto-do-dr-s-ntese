@@ -168,7 +168,12 @@ const solo = (b, cast) => { const a = cast[0]; for (const o of cast.slice(1)) { 
 const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, bd = Infinity; for (let y = 0; y < G.N; y++) for (let x = 0; x < G.N; x++) { const d = Math.hypot(x + 0.5 - dr[0], y + 0.5 - dr[1]); if (d < 38 || d > 44 || Math.abs(d - 40) >= bd) continue; const i = W.idx(x, y); if (!W.walkable(i) || S().occ[i] || !W.reaches(v, x + 0.5, y + 0.5)) continue; best = [x + 0.5, y + 0.5]; bd = Math.abs(d - 40); } return best; };
 {
   fresh(); const b = S().buildings.get(P.id); S().time = Tt.EARLY - 0.02; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
-  const cast = actors(b); const a = cast.length ? solo(b, cast) : null; const sp = a ? farSpot(b, a) : null; const bad = [];
+  const cast = actors(b);
+  // (the clock set again once the actors are known, as ready() does: the theatre of the generation-13 metropole is Mênfis', whose
+  // ceiling of the trades gives it no actor (D-090), and the twelve seconds actors() waits for the town's own ate the walk the
+  // preparation gives the far one — called at 0,45, Ankhesen came to the door at 0,635, after the cancelling at 0,63, T-392)
+  S().time = Tt.EARLY - 0.02; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
+  const a = cast.length ? solo(b, cast) : null; const sp = a ? farSpot(b, a) : null; const bad = [];
   if (a && sp) { G.Vg.endTask(a); a.x = sp[0]; a.y = sp[1]; a.path = null; a.inside = 0; a.sleeping = false; a.energy = 90; a.hunger = 20; }
   // (and his house's water in the jar — the chores of the house done before he set out, as the obra-longe.js does —: the
   // house's water (1,05, until 0,55) takes whoever of the house has nothing weightier, and the call to the stage is not given
@@ -180,7 +185,10 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, b
   // on it never ended — the case lived its 200 s and took the theatre's newest show, which in the tip a39483e, the case begun
   // later, was the next day's preparation, «on», T-310)
   let on = false, op = null; if (a) calmBeasts([a.x, a.y], dr);
-  liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad, () => { if (a) calmBeasts([a.x, a.y], dr); });
+  // (and his trade held by the god's hand, as the l8 holds its actor's: the board of Mênfis deals the actor made by the case off
+  // the theatre every few seconds of her walk — the case is the far actor's walk, T-392)
+  const keepTrade = () => { if (a && (a.role !== 'ator' || a.job !== b.id)) { a.role = 'ator'; a.job = b.id; } };
+  liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad, () => { keepTrade(); if (a) calmBeasts([a.x, a.y], dr); });
   ok('l7 o-ator-de-longe', !!a && !!sp && !!op && op.st === 'ok' && on && at < Tt.horas(b).prep && !bad.length, a && sp ? `${a.name}, o ator do dia, a ${far} casas da porta: o preparo abriu às ${r2(at)} (antes ${Tt.horas(b).prep}); ${on ? 'no palco na peça' : 'não chegou à peça'}; o espetáculo ${op ? op.st + ' (' + (op.end ? op.end.why : '') + ')' : 'não abriu'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'sem ator ou sem lugar longe');
 }
 // ---------------- l8 the hungry actor on the stage (L-426) ----------------

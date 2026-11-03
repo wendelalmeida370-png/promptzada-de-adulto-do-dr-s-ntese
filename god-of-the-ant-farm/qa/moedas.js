@@ -155,9 +155,15 @@ live(150, () => {
 {
   const paid3 = () => lines.some(e => (e[8] === 'taverna' || e[8] === 'rodada') && drinker && e[3] === 'h:' + drinker.home);
   if (drinker && tv0) {
+    // (and its keeper: the tavern of the generation-13 metropole's Mênfis has none — the trades' ceiling gives a town of 58 none
+    // (D-090, D-101), and its day never opens: «Ahmose: nada pago», T-393 —: one of the town takes the trade by the god's hand,
+    // and is held in it while the case lasts — the board would move him off at its next pass —, as the urb2.js does (T-382))
+    let keeper = [...S.villagers.values()].find(v => v.job === tv0.id && v.role === 'taverneiro');
+    if (!keeper) { keeper = pick(o => o.role !== 'guerreiro' && o !== drinker); if (keeper) { keeper.role = 'taverneiro'; keeper.job = tv0.id; Vg.endTask(keeper); } }
+    const keep = () => { if (keeper && (keeper.role !== 'taverneiro' || keeper.job !== tv0.id)) { keeper.role = 'taverneiro'; keeper.job = tv0.id; } };
     const h = G.Taverna && G.Taverna.horas ? G.Taverna.horas(tv0) : { abre: 0.55 }; if (S.time < h.abre) S.time = h.abre + 0.005;
     let sent = 0;
-    live(150, () => { if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5) { const t = E.tavernTask(drinker, Vg.H); if (t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
+    live(150, () => { keep(); if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5) { const t = E.tavernTask(drinker, Vg.H); if (t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
   }
 }
 {

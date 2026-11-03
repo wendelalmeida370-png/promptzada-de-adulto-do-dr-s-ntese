@@ -526,12 +526,15 @@ float m3scale(float p) {
   }
   // (stones laid round a footing: courses from the floor down to the ground, each stone its own size and tone — the
   // house's id, not chance; the core behind them reaches below the lowest ground)
-  function footing(K, x, z, sx, sz, dressed, ring) {
+  function footing(K, x, z, sx, sz, dressed, ring, body) {
     const P = K.P; const base = P.base || ['#8a8478', '#6f6a60', '#a09a8e']; K.footed = true; // (dressed: squared blocks in even courses, as the classical lands lay them)
+    // (body: the house an annex leans on — the shell's rectangle —: on the annex's side against it no face and no stones, which
+    // stood into the house below its floor, and into its cellar there: the hut#3289 of the metropole, L-492)
+    const against = (px, pz) => !!body && px > body[0] + 1e-3 && px < body[2] - 1e-3 && pz > body[1] + 1e-3 && pz < body[3] - 1e-3;
     // (ring: a building drawn from its shell stands on the faces of its footing and its top's ledge round the walls — never a
     // block under its floor: a cellar is there)
     if (ring) { const lo = K.lo - K.y0 - 0.2; const c0 = dim(base[1], 0.78), c1 = dim(base[1], 0.86); const R = [x - sx / 2, z - sz / 2, x + sx / 2, z + sz / 2], RR = [R[0] - 0.04, R[1] - 0.04, R[2] + 0.04, R[3] + 0.04];
-      K.as('stone', () => { for (const sd of ['N', 'E', 'S', 'W']) { const F = rside(RR, sd); K.quad(F.P(F.u0, lo, 0), F.P(F.u1, lo, 0), F.P(F.u1, 0, 0), F.P(F.u0, 0, 0), c0, F.out); }
+      K.as('stone', () => { for (const sd of ['N', 'E', 'S', 'W']) { const F = rside(RR, sd); const mid = F.P((F.u0 + F.u1) / 2, 0, 0.06); if (against(mid[0], mid[2])) continue; K.quad(F.P(F.u0, lo, 0), F.P(F.u1, lo, 0), F.P(F.u1, 0, 0), F.P(F.u0, 0, 0), c0, F.out); }
         for (const r of cutRect(RR, [R])) flatQ(K, r, 0, c1, 1); }); }
     else K.as('stone', () => K.box(x, K.lo - K.y0 - 0.2, z, sx + 0.08, K.y0 - K.lo + 0.2, sz + 0.08, dim(base[1], 0.78)));
     if (!K.fine) return;
@@ -548,6 +551,7 @@ float m3scale(float p) {
           const h1 = K.hv(300 + n), h2 = K.hv(500 + n), h3 = K.hv(700 + n); n++;
           const l = Math.min(len - t, dressed ? 0.6 : 0.34 + h1 * 0.34); if (l < 0.12) break; const m = Math.max(0, t) + (Math.min(len, t + l) - Math.max(0, t)) / 2;
           const pr = dressed ? 0.05 : 0.05 + h2 * 0.035; const px = A[0] + dx * m + o[0] * pr, pz = A[1] + dz * m + o[1] * pr;
+          if (against(A[0] + dx * m + o[0] * 0.06, A[1] + dz * m + o[1] * 0.06)) { t += l; continue; } // (inside the house it leans on)
           // (a stone shows where its top clears the ground at both its ends and its face — on a slope the ground came through
           // the top of the stones at the ground's line: Build3D.check, lying faces cut by the ground; the core shows there)
           const hl = (Math.min(len, t + l) - Math.max(0, t)) / 2, gHi = Math.max(K.gy(px - dx * hl, pz - dz * hl), K.gy(px + dx * hl, pz + dz * hl), K.gy(px + o[0] * 0.2, pz + o[1] * 0.2));
@@ -1632,12 +1636,41 @@ float m3scale(float p) {
       const a0 = e.arco ? e.arco[0] : 0, a1 = e.arco ? e.arco[1] : TAU; const nS = Math.max(4, Math.round(S * (a1 - a0) / TAU));
       const ang = k => a0 + (a1 - a0) * k / nS; const dir = a => G.Forma.dirLot(X.side, Math.cos(a), Math.sin(a));
       const at = (r, a, y) => { const d = dir(a); return [C[0] + d[0] * r, y, C[1] + d[1] * r]; };
-      const ring = (r0, r1, y, cc) => { for (let k = 0; k < nS; k++) K.quad(at(r0, ang(k), y), at(r1, ang(k), y), at(r1, ang(k + 1), y), at(r0, ang(k + 1), y), cc, UP); };
-      const riser = (r, ya, yb, cc, out) => { for (let k = 0; k < nS; k++) { const dm = dir((ang(k) + ang(k + 1)) / 2); const o = out ? [dm[0], 0, dm[1]] : [-dm[0], 0, -dm[1]];
+      // (the stairways up the rows — the form's escadas, the plan's aisles (In.tierH): within half their width of their line, by
+      // the arc at each radius, a row's tread there in n steps up from the row before it. Drawn on every machine: the body stands
+      // on them — with the rows drawn whole it stood 0.2 m inside the stone, L-493)
+      const E = e.escadas && e.escadas.a.length ? e.escadas : null, hw = E ? E.l / 2 : 0, nP = E ? E.a.length + 1 : 1;
+      const rise = n > 1 ? A[n - 2][1] - A[n - 1][1] : 0.4; // (the plan's: the two lowest rows apart; a lone row, 0.4)
+      // (at a radius, the angles that bound the pieces — the arc's ends, each stairway's edges —: piece i of the rows between two of
+      // them, or of the stairways (st))
+      const cutsAt = r => { const o = [a0]; if (E) for (const a of E.a) o.push(a - hw / r, a + hw / r); o.push(a1); return o; };
+      const span = (r, i, st) => { const c = cutsAt(r); return st ? [c[2 * i + 1], c[2 * i + 2]] : [c[2 * i], c[2 * i + 1]]; };
+      const segs = (p, q) => Math.max(1, Math.round(nS * Math.max(p[1] - p[0], q[1] - q[0]) / (a1 - a0)));
+      const flat = (r0, r1, y, i, st, cc) => { const p = span(r0, i, st), q = span(r1, i, st), m = segs(p, q);
+        for (let j = 0; j < m; j++) { const u = j / m, w = (j + 1) / m; K.quad(at(r0, p[0] + (p[1] - p[0]) * u, y), at(r1, q[0] + (q[1] - q[0]) * u, y), at(r1, q[0] + (q[1] - q[0]) * w, y), at(r0, p[0] + (p[1] - p[0]) * w, y), cc, UP); } };
+      const face = (r, ya, yb, i, st, cc, out) => { const p = span(r, i, st), m = segs(p, p);
+        for (let j = 0; j < m; j++) { const u = p[0] + (p[1] - p[0]) * j / m, w = p[0] + (p[1] - p[0]) * (j + 1) / m; const dm = dir((u + w) / 2); const o = out ? [dm[0], 0, dm[1]] : [-dm[0], 0, -dm[1]];
+          K.quad(at(r, u, ya), at(r, w, ya), at(r, w, yb), at(r, u, yb), cc, o); } };
+      // (the rows and the faces up to them: the pieces between the stairways; the back wall whole)
+      const ring = (r0, r1, y, cc) => { for (let i = 0; i < nP; i++) flat(r0, r1, y, i, false, cc); };
+      const riser = (r, ya, yb, cc, out) => { for (let i = 0; i < nP; i++) face(r, ya, yb, i, false, cc, out); };
+      const wall = (r, ya, yb, cc, out) => { for (let k = 0; k < nS; k++) { const dm = dir((ang(k) + ang(k + 1)) / 2); const o = out ? [dm[0], 0, dm[1]] : [-dm[0], 0, -dm[1]];
         K.quad(at(r, ang(k), ya), at(r, ang(k + 1), ya), at(r, ang(k + 1), yb), at(r, ang(k), yb), cc, o); } };
+      // (the steps of row k in the stairways: tread j of n at its height, the face up to it from the step before — from the row
+      // inside, yIn, for the first —, and the row's ends either side of the stairway down to it)
+      const rAt = (k, j) => { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo; return rIn + (A[k][0] - rIn) * j / E.n; };
+      const yAt = (k, j) => X.Y(A[k][1] - rise + (j + 1) * rise / E.n);
+      const steps = (k, yIn, cc, mc) => {
+        for (let i = 0; i < E.a.length; i++) for (let j = 0; j < E.n; j++) {
+          const r0 = rAt(k, j), r1 = rAt(k, j + 1), y = yAt(k, j); flat(r0, r1, y, i, true, cc);
+          const ya = j ? yAt(k, j - 1) : yIn; if (ya !== null && y - ya > 1e-6) face(r0, ya, y, i, true, mc, false);
+          if (j < E.n - 1) for (const [ed, sg] of [[2 * i + 1, 1], [2 * i + 2, -1]]) { const pa = cutsAt(r0)[ed], pb = cutsAt(r1)[ed]; const t = G.Forma.dirLot(X.side, -Math.sin((pa + pb) / 2), Math.cos((pa + pb) / 2));
+            K.quad(at(r0, pa, y), at(r1, pb, y), at(r1, pb, X.Y(A[k][1])), at(r0, pa, X.Y(A[k][1])), mc, [t[0] * sg, 0, t[1] * sg]); }
+        } };
       K.as(X.mat(e, 'slab'), () => {
         for (let k = e.fecho ? 0 : 1; k < n; k++) { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo; ring(rIn, A[k][0], X.Y(A[k][1]), dim(col, 0.96 + (k % 2) * 0.06)); }
         for (let k = 0; k < n - 1; k++) riser(A[k + 1][0], X.Y(A[k + 1][1]), X.Y(A[k][1]), e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.8));
+        if (E) for (let k = e.fecho ? 0 : 1; k < n; k++) steps(k, k < n - 1 ? X.Y(A[k + 1][1]) : null, dim(col, 0.96 + (k % 2) * 0.06), e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.8));
         // (a balcony's parapet at the edge of each row over the drop — D-084, the maeniana: 0.12 m thick, its two faces and top)
         if (e.parapeito) for (let k = e.fecho ? 0 : 1; k < n; k++) { const r = k < n - 1 ? A[k + 1][0] : e.fundo, y = X.Y(A[k][1]), pc = e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.85);
           // (open where a flight comes out on the balcony: the segments whose middle is within half its width — D-095)
@@ -1651,7 +1684,8 @@ float m3scale(float p) {
       // down to the ground, and its two ends, stepped as its rings are)
       if (!e.fecho) return; const fc = rgbOf(X.col(e.fecho)); const yF = X.foot(0);
       K.as(X.mat(e, stuff(K.b).base), () => {
-        riser(A[0][0], yF, X.Y(A[0][1]), fc, true); riser(e.fundo, yF, X.Y(A[n - 1][1]), dim(col, 0.8), false);
+        wall(A[0][0], yF, X.Y(A[0][1]), fc, true); riser(e.fundo, yF, X.Y(A[n - 1][1]), dim(col, 0.8), false);
+        if (E) for (let i = 0; i < E.a.length; i++) face(e.fundo, yF, yAt(n - 1, 0), i, true, dim(col, 0.8), false); // (in a stairway, up to its first step)
         if (e.arco) for (const [a, sg] of [[a0, -1], [a1, 1]]) { const t = G.Forma.dirLot(X.side, -Math.sin(a), Math.cos(a)); const o = [t[0] * sg, 0, t[1] * sg];
           for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo, y = X.Y(A[k][1]); K.quad(at(rIn, a, yF), at(A[k][0], a, yF), at(A[k][0], a, y), at(rIn, a, y), dim(fc, 0.94), o); } }
       });
@@ -3506,7 +3540,7 @@ float m3scale(float p) {
     K.body = { x, z, sx, sz, door: e ? { side, o: od, a: od[1] ? e.x - x : e.z - z, w: (e.w || 1) + 0.5 } : null, shell: true };
     const ctx = { S, byLv, l0, foot, eave, rk, flat, raised, k: 0, gw, form: !!FB };
     // the base: stones under the walls (an annex's too), or the posts of a raised floor — a form's, its own plinth
-    if (raised) stilts(K, ctx, R); else if (!FB) { footing(K, x, z, sx, sz, K.st !== 'egipcio' && K.st !== 'asteca', true); for (const a of sh.annex || []) footing(K, (a.r[0] + a.r[2]) / 2, (a.r[1] + a.r[3]) / 2, a.r[2] - a.r[0], a.r[3] - a.r[1], false, true); }
+    if (raised) stilts(K, ctx, R); else if (!FB) { footing(K, x, z, sx, sz, K.st !== 'egipcio' && K.st !== 'asteca', true); for (const a of sh.annex || []) footing(K, (a.r[0] + a.r[2]) / 2, (a.r[1] + a.r[3]) / 2, a.r[2] - a.r[0], a.r[3] - a.r[1], false, true, R); }
     // the sides — the shell's from its foot to the eaves (where an annex stands against one, from its lean-to up) — and the
     // annexes' own, and their lean-tos
     const leans = FB ? [] : (sh.annex || []).map(a => leanOf(ctx, a)).filter(Boolean); // (a form's porch is the form's)

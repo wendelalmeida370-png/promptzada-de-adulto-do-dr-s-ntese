@@ -123,14 +123,14 @@
   // the outer ones cut where they would leave the lot —, four aisles up through them all (the kerkides: half a row at a step,
   // the five wedges between them the seats), the places to act in the orchestra, facing the rows; the stage building and its
   // columns solid. One walks in from the front, round the stage's ends (the parodoi)
-  const KERK = [1, 2, 3, 4].map(k => Math.PI + k * Math.PI / 5); // (the aisles: the half round in five wedges)
   function halfBowl(P, F) {
     const g = openGround(P, F, 'teatro'); const y = g.y;
-    // (each ring of seats of the form: its rows from the inside out — the form lists them from the outside in —, its arc)
+    // (each ring of seats of the form: its rows from the inside out — the form lists them from the outside in —, its arc; its
+    // aisles the form's stairways, which the 3D draws as steps: one rule, L-493)
     for (const e of F.els.filter(q => q.k === 'cavea')) {
       const A = e.aneis.slice().reverse(); const n = A.length; const rise = n > 1 ? A[1][1] - A[0][1] : 0.4; const tread = (A[n - 1][0] - e.fundo) / n;
-      const arc = e.arco || [0, TAU]; const aisles = KERK.filter(a => a > arc[0] + 0.1 && a < arc[1] - 0.1);
-      P.tiers(0, null, { ring: [e.c[0], e.c[1], e.fundo, A[n - 1][0]], arc, dir: 'out', rows: n, rise, tread, first: r2(A[0][1] - y), aisles, aisleW: 1.0 });
+      const arc = e.arco || [0, TAU]; const E = e.escadas || { a: [], l: 1.0 };
+      P.tiers(0, null, { ring: [e.c[0], e.c[1], e.fundo, A[n - 1][0]], arc, dir: 'out', rows: n, rise, tread, first: r2(A[0][1] - y), aisles: E.a, aisleW: E.l, climb: E.n });
     }
     if (P.inside()) return;
     const id = P.room(0, 'teatro', g.sh, 1);

@@ -24,7 +24,7 @@ const world = process.argv[2] || 'metropole';
 // were saved, L-419, and the ready worlds of the generation 7 are older than the trades of the Patch 2, which the load of
 // before dealt at once; the twelve seconds stay for any world, a save of before too, T-298)
 M.pronto(world); M.viver(12);
-const snap = G.Save.serialize();
+let snap = G.Save.serialize();
 const fresh = () => { M.reseed(4242); G.Save.apply(JSON.parse(snap)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); };
 const S = () => G.S;
 const r2 = x => Math.round(x * 100) / 100;
@@ -52,10 +52,31 @@ function pick() {
   }
   return best;
 }
+// (a mine with ore and a gallery possible whose town keeps no miner — the ceiling of its trades, D-090, gives it none: in the
+// generation-13 metropole the two mines with ore, Hedeby's (163) and Mênfis' (80), had none, and Roma's one miner kept a spent
+// vein —: two grown ones of its town take up the trade by the god's hand, as one takes up a trade (lazer.js), and the trade is
+// held by the god's hand while the cases last — the town's board would deal them back at its next pass; the shift asks the
+// mine, not the trade (economy.js, runMine), T-387)
+const handMade = [];
+if (!pick()) {
+  let b0 = null, o0 = null;
+  for (const b of [...S().buildings.values()].sort((p, q) => p.id - q.id)) {
+    if (b.type !== 'mina' || !b.built) continue; const o = (S().ores || []).find(q => q.id === b.ore); if (!o || o.amt < 12) continue;
+    const cv = b.cave && C.get(b.cave); const can = (cv && !cv.gone && cv.mine === b.id) || (!U().id[b.y * G.N + b.x] && b.x >= 2 && b.y >= 2 && b.x < G.N - 2 && b.y < G.N - 2);
+    if (can && (!o0 || o.amt > o0.amt)) { b0 = b; o0 = o; }
+  }
+  if (b0) {
+    for (const v of [...S().villagers.values()].filter(x => x.set === b0.set && x.age >= 18 && x.age < 55 && !x.captive && !x.jail && !x.aboard && !x.ug && x.role !== 'guerreiro' && !(S().avatar && S().avatar.id === x.id)).sort((p, q) => p.id - q.id).slice(0, 2)) {
+      G.Vg.endTask(v); v.role = 'mineiro'; v.job = b0.id; handMade.push(v.id);
+    }
+    snap = G.Save.serialize();
+  }
+}
 const P0 = pick();
+if (handMade.length && P0) { const viver0 = M.viver; M.viver = s => { const r = viver0(s); for (const id of handMade) { const v = S().villagers.get(id); if (v && (v.role !== 'mineiro' || v.job !== P0.b.id)) { v.role = 'mineiro'; v.job = P0.b.id; } } return r; }; }
 if (!P0) { console.log(`FALHOU | mina mundo | ${world}: nenhuma mina com veio, galeria possível e mineiro`); process.exit(1); }
 const town = S().settlements.get(P0.b.set); const F0 = G.Fac.get(V.facOfSet(P0.b.set));
-console.log(`${world}: a mina #${P0.b.id} de ${town.name} (${F0.civ}${E.coinage(F0.id) ? ', de moeda' : ''}), veio de ${P0.o.kind} com ${r2(P0.o.amt)}, ${P0.ms.length} mineiro(s)`);
+console.log(`${world}: a mina #${P0.b.id} de ${town.name} (${F0.civ}${E.coinage(F0.id) ? ', de moeda' : ''}), veio de ${P0.o.kind} com ${r2(P0.o.amt)}, ${P0.ms.length} mineiro(s)${handMade.length ? ' (o ofício dado pela mão do deus)' : ''}`);
 // (each case from the same world: the mine, its deposit, its miners by id; coins in the treasury for the pay; by day)
 function setup() {
   fresh();

@@ -30,7 +30,8 @@ let S = G.S; const W = G.W, TL = G.Space.TILE, A = G.Act, P = G.Porto, D = G.Dep
 const RDT = 1 / 30; const IN = G.Avatar.input;
 // (the frame as the game's: the world's step, the body's frame, the people drawn around the body)
 const look = () => { const p = G.Avatar.pos(); if (p) P3.update(RDT, { X: p.X, Y: p.Y, Z: p.Z }); };
-const frame = () => { G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); look(); };
+let roomKept = null; // (the store's room kept for the whole test, once the town is known — below, T-385)
+const frame = () => { if (roomKept) roomKept(); G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); look(); };
 const still = n => { for (let k = 0; k < (n || 4); k++) { G.Avatar.frame(RDT); look(); } }; // (the world stopped: only the body and the drawing)
 // (what the test does to the world stands for the god's hand, in the world's step)
 const god = f => { G.inSim++; const r = f(); G.inSim--; return r; };
@@ -136,6 +137,11 @@ const pick = quays.find(q => cutNear(q.sp) && dockers(q.s, q.sp).length) || quay
 if (pick) { set = pick.s; dock = pick.d; }
 if (!dock) { ok('um cais com armazém do porto', false, `nenhum em ${world}`); process.exit(1); }
 fac = G.Fac.get(set.fac);
+// (room in the people's store for what the quay unloads, kept by the god's hand at every step of the test, as rebanho.js
+// keeps its own: a full store pauses the unloading — the world's 'cheio': no lead, and an E on a crate answered «A descarga
+// está parada (o armazém cheio).» — and the cases are the docker's work, not the store's room. In the generation-12
+// metropole Delfos' store was full by the second case 2 (T-380); in the generation 13 Tebas' was full from case 5, T-385)
+roomKept = () => god(() => { for (const k of new Set(['food'].concat((dock.crates || []).map(c => c.k)))) { const room = D.room('f:' + fac.id, k); if (room < 40) D.use('f:' + fac.id, k, 40 - room, { code: 'teste', part: true }); } });
 const ids = { set: set.id, dock: dock.id, fac: fac.id };
 const refresh = () => { S = G.S; set = S.settlements.get(ids.set); dock = S.buildings.get(ids.dock); fac = G.Fac.get(ids.fac); };
 // (a clean quay, by day: what was on it goes to the store, the unloading under way ended)
@@ -380,7 +386,7 @@ function liftAgain() {
   // world's 'cheio': no lead to anyone —; the overseer of the quay looks once a second, and the unloading goes on at its next
   // look. In the generation-12 metropole the store of Delfos was full of food — 1040 of 1040, the town's deliveries filling
   // what was taken out within the second —, and Nestor saw no lead, T-380)
-  const keepRoom = () => god(() => { const room = D.room('f:' + fac.id, 'food'); if (room < 40) D.use('f:' + fac.id, 'food', 40 - room, { code: 'teste', part: true }); });
+  const keepRoom = () => roomKept(); // (the test's own keeper, at every frame since T-385)
   if (o) { god(() => { G.Vg.endTask(o); o.x = start[0]; o.y = start[1]; o.path = null; P.landCatch(dock, 'food', 16, 'arenque', '#a8c0d0', 0); }); G.Possess.take(o); G.Avatar.attach(o, 0); for (let k = 0; k < 10 || (k < 150 && P.opAt(dock) && P.opAt(dock).st !== 'on'); k++) { keepRoom(); frame(); } L = I.lead(o); c = callOf(); }
   ok('2. quem não é do ofício não é chamado ao cais, mas vê a pista dele', !!o && !c && !!L && L.step === 'pegar', o ? `${o.name}, ${G.roleName(o)}: ${c ? '«' + c.txt + '»' : 'sem chamado'}; pista «${L ? L.txt : '-'}»` : 'ninguém');
 }

@@ -171,15 +171,20 @@ function apart(v, h) {
     down = !!took6 && !(lead.carry && lead.carry.op === op4b.id) && !!line && ['pousou', 'devolveu', 'depositar'].includes(line[8]);
     // (looked at every tenth of a second to the end: a load of two hands in one pair of arms, two looks running)
     const run = new Map();
-    for (let s = 0; s < 4000 && A.live(op4b); s++) {
+    // (to the end of the case's own cargo — the stone: on the quay, on the ground, in hands — or of the unloading: the world's catches
+    // come onto the same unloading of a quay — one unloading a quay —, and in the generation-13 metropole Roma's boats brought 124
+    // of food and 15 of cod while the pair carried the stone; two dockers had not taken it all in by the night, which stopped the
+    // unloading with the 8 of stone in, T-389)
+    const stoneOut = () => (dock.crates || []).some(c => c.op === op4b.id && c.k === 'stone') || (S.loose || []).some(o => o.op === op4b.id && o.k === 'stone') || [...S.villagers.values()].some(v => v.carry && v.carry.op === op4b.id && v.carry.k === 'stone');
+    for (let s = 0; s < 4000 && A.live(op4b) && stoneOut(); s++) {
       M.viver(0.1);
       const now = new Map(); for (const v of S.villagers.values()) if (v.carry && v.carry.op === op4b.id && D.hands(v.carry.k, v.carry.n, v) !== 1 && !A.pair(v)) { now.set(v.id, (run.get(v.id) || 0) + 1); if (now.get(v.id) === 2) alone++; }
       run.clear(); for (const [id, n] of now) run.set(id, n);
       if (s % 10 === 9 && watch()) break;
     }
-    done = !A.live(op4b);
+    done = !A.live(op4b) ? op4b.st === 'ok' : !stoneOut();
   }
-  ok('p4b a ajudante chamada no meio', !!lead && stays && down && !alone && done && op4b.st === 'ok' && Math.abs((op4b.done.stone || 0) - (op4b.taken.stone || 0)) < 1e-6 && !bad().length,
+  ok('p4b a ajudante chamada no meio', !!lead && stays && down && !alone && done && Math.abs((op4b.done.stone || 0) - (op4b.taken.stone || 0)) < 1e-6 && !bad().length,
     lead ? `${lead.name} e ${help.name} sob uma caixa de ${n0} ${E.name(k0) || k0}: chamada para um afazer do dia (pri 1,3), ${took1 ? 'ELA FOI' : 'ela ficou'} ${stays ? '(a dupla seguiu)' : '(a dupla NÃO seguiu)'}; chamada para o que não espera (pri 6), ${took6 ? 'foi' : 'NÃO foi'} — a caixa ${line ? `${line[8]} (${line[3]} → ${line[4]})` : 'NÃO saiu das mãos de ' + lead.name}${line ? (line[8] === 'pousou' ? ', no chão onde ele estava' : line[8] === 'devolveu' ? ', de volta ao monte do cais' : line[8] === 'depositar' ? ', para dentro do armazém (na porta)' : '') : ''}; ${alone ? alone + ' vez(es) ALGUÉM levou sozinho uma caixa de dois' : 'ninguém levou sozinho uma caixa de dois'}; no fim ${A.STATES[op4b.st]}, chegou ${op4b.done.stone || 0} de ${op4b.taken.stone || 0}` : 'nenhuma dupla sob uma caixa pesada');
 }
 // ---------------- p5: the warehouse fills while a crate is on its way: the porter waits at the door with it, nobody lifts

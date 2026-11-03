@@ -31,8 +31,13 @@ const path = require('path');
 const T = require(path.join(__dirname, 'tres-node.js'));
 const { G, M } = T.load();
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | disputa ${name} | ${info}`); if (!c) fails.push(name); };
-const world = process.argv[2] || 'metropole';
-M.pronto(world); M.viver(2);
+// (the world: the one asked, or — none asked — the first ready world of the metropole, the megalopolis and the world war one of
+// whose towns with a quay and a harbour store keeps its quay the three hands of the proof by its own ceiling of the trades
+// (D-090; T-378) — the generation-13 metropole has none: Roma, the most, keeps two; the megalopolis has five, T-388)
+const asked = process.argv[2];
+const hands3 = () => [...G.S.settlements.values()].some(s => { const B = [...G.S.buildings.values()]; if (!B.some(b => b.set === s.id && b.type === 'doca' && b.built) || !B.some(b => b.set === s.id && b.type === 'armazem' && b.built)) return false; const f = G.Fac.get(s.fac); if (!f) return false; const n = [...G.S.villagers.values()].filter(o => o.set === s.id && !o.captive && o.age >= 16 && o.age < 62).length; const d = G.Eco.demand(s, f, n); d.estivador = Math.max(d.estivador || 0, 3); return (G.Eco.share(d, s, f, n).estivador || 0) >= 3; });
+let world = null;
+for (const w of asked ? [asked] : ['metropole', 'mega', 'mundial']) { M.pronto(w); M.viver(2); world = w; if (asked || hands3()) break; }
 let S = G.S; const W = G.W, TL = G.Space.TILE, A = G.Act, P = G.Porto, D = G.Depot, I = G.Interact, P3 = G.People3D;
 const RDT = 1 / 30;
 // (the frame as the game's: the world's step, the body's frame, the people drawn around the body)

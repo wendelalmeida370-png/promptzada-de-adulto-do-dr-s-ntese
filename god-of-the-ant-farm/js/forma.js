@@ -65,7 +65,8 @@
   //              tier), arcoW (an arch's share of its bay), arcoA..arcoB (where in its tier an arch stands: shares of the
   //              tier's height; the ground tier's from the ground), cor [lit, shaded], escuro: the dark behind the arches
   //   cavea      the seats round an arena, terraced: c, aneis [[r, y], …] from the top row down (the god's six rings), fundo:
-  //              the radius of the lowest ring's inner edge (the arena's)
+  //              the radius of the lowest ring's inner edge (the arena's); escadas { a: [angles], l, n }: the stairways up
+  //              the rows, l wide (by the arc at each radius), n steps to a row — the plan's aisles and the 3D's steps
   //   arena      the floor of the arena: c, r, y, cor; muro: the wall round it, up to the lowest row
   //   mastros    the masts of the awning on the rim: c, r, n round, y0, h
   //   colunata   columns: pts [[u, v], …], r, y0..y1, cor [lit, shaded]
@@ -449,14 +450,19 @@
   // their ends standing on the ground; the stage building along the front (the skene of 1.8 × 0.3 tiles and 9 px; the
   // Greek's painted band at its top) with its six columns before it, 7 px
   const ROW = 0.7, RISE = 0.4;
+  const KERK = [1, 2, 3, 4].map(k => Math.PI + k * Math.PI / 5); // (the stairways' lines: the half round in five wedges)
   const theatre = grego => L => {
     const c = [L / 2, L / 2 + 1.0], ri = 2.4, side = L / 2 - 0.3; const rows = Math.floor((c[1] - 0.3 - ri) / ROW + 1e-6);
     const ring = (k0, k1) => { const a = []; for (let k = k1; k >= k0; k--) a.push([ri + (k + 1) * ROW, RISE * (k + 1)]); return a; };
     const arc = r => (r <= side ? [Math.PI, 2 * Math.PI] : [Math.PI + Math.acos(side / r), 2 * Math.PI - Math.acos(side / r)]);
     const els = [{ k: 'bloco', r: rect(L, -1.4, -1.4, 1.4, 1.4), y0: 0, y1: px(0.2), cor: ['#a8a08c', '#988f7c', '#b8b09c'], mat: 'slab' }];
     const whole = Math.min(rows, Math.floor((side - ri) / ROW + 1e-6));
-    els.push({ k: 'cavea', c, aneis: ring(0, whole - 1), fundo: ri, cor: '#d8d0bc', arco: [Math.PI, 2 * Math.PI], fecho: 'wl' });
-    for (let k = whole; k < rows; k++) els.push({ k: 'cavea', c, aneis: ring(k, k), fundo: ri + k * ROW, cor: '#d8d0bc', arco: arc(ri + (k + 1) * ROW), fecho: 'wl' });
+    // (the stairways up the rows: the half round in five wedges — their four lines —, 1 m wide, two steps to a row; on a row cut
+    // by the lot's sides, the ones within it. One rule for the plan's aisles and the 3D's steps: the 3D drew the rows whole,
+    // and the body climbing an aisle stood 0.2 m inside the stone, L-493)
+    const esc = ar => ({ a: KERK.filter(q => q > ar[0] + 0.1 && q < ar[1] - 0.1), l: 1.0, n: 2 });
+    els.push({ k: 'cavea', c, aneis: ring(0, whole - 1), fundo: ri, cor: '#d8d0bc', arco: [Math.PI, 2 * Math.PI], fecho: 'wl', escadas: esc([Math.PI, 2 * Math.PI]) });
+    for (let k = whole; k < rows; k++) { const ar = arc(ri + (k + 1) * ROW); els.push({ k: 'cavea', c, aneis: ring(k, k), fundo: ri + k * ROW, cor: '#d8d0bc', arco: ar, fecho: 'wl', escadas: esc(ar) }); }
     els.push({ k: 'arena', c, r: 2.0, y: px(0.3), cor: '#e8dcc0' });
     els.push({ k: 'bloco', r: rect(L, -0.9, 0.85, 0.9, 1.15), y0: 0, y1: px(9), cor: ['wl', 'wr', 'top'] });
     if (grego) els.push({ k: 'faixa', r: rect(L, -0.9, 0.85, 0.9, 1.15), y0: px(7.5), y1: px(9), cor: 'acc' });

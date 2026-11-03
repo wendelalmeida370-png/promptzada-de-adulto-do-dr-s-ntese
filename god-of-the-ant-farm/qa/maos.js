@@ -158,7 +158,10 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
     const n1 = c1.carry ? c1.carry.n : 0; G.Village.kill(c1, 'teste');
     let late = null; const t0 = S.clock;
     fine(5, () => { see(); if (c0.task && c0.task.type === 'justice' && c0.task.j === e.id && late === null) late = Math.round((S.clock - t0) * 10) / 10; return late !== null; });
-    const went = fine(30, () => { see(); return e.phase === 'read' || e.phase === 'kill' || e.phase === 'after'; });
+    // (the reading comes at most 16 s of gathering and 26 of the march after the gathering begins — justice.js: the march ends
+    // when the condemned are on the scaffold, or at 26 s —: the case waits for that bound. In Texcoco, of the generation-13
+    // metropole, the condemned walked from far and the reading came after the 30 s the case gave it, T-386)
+    const went = fine(45, () => { see(); return e.phase === 'read' || e.phase === 'kill' || e.phase === 'after'; });
     const heir = D.ledger().filter(q => q[0] > L1 && q[3] === 'v:' + c1.id && q[5] === 'tecido' && q[8] === 'herdado').reduce((a, q) => a + q[6], 0);
     const c2s = holds(c2) ? 'ainda com a compra nas mãos' : D.ledger().some(q => q[3] === 'v:' + c2.id && q[4] === 'h:' + homeOf[2] && q[5] === 'tecido') ? 'com a compra já em casa' : 'SEM a compra';
     const watchers = [...S.villagers.values()].filter(v => v.task && v.task.type === 'justice' && v.task.j === e.id).length;

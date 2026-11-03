@@ -30,7 +30,7 @@ const S = () => G.S;
 const r2 = x => Math.round(x * 100) / 100;
 const seen = []; D.onMove.push(e => { seen.push(e); });
 G.inSim++;
-const live = (sec, each, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (each) each(); if (until && until()) return true; } return false; };
+const live = (sec, each, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (CUR) seeCut(CUR); if (each) each(); if (until && until()) return true; } return false; };
 const base = () => new Set(QA.check().filter(q => q.sev <= 2).map(q => `${q.sys}|${q.msg}`));
 const newBad = B => QA.check().filter(q => q.sev <= 2 && !B.has(`${q.sys}|${q.msg}`)).slice(0, 3).map(q => `S${q.sev} ${q.sys} ${q.msg}`);
 const fit = v => v && !v.captive && !v.jail && !v.aboard && !v.held && v.age >= 16 && v.age < 60;
@@ -57,7 +57,7 @@ if (!PEN) { console.log(`FALHOU | rebanho mundo | ${world}: nenhum curral com pa
 { const b = S().buildings.get(PEN); const herd = E.penAnimals(b); console.log(`${world}: ${V.buildName(b)} #${b.id} de ${S().settlements.get(b.set).name}, ${herd.length} bichos (${[...new Set(herd.map(a => a.kind))].join(', ')}), ${pastures(b)} lugares de pasto em volta${BARE ? `; sem capim em volta: #${BARE}` : ''}`); }
 // each case: the pen, its flock (inside, at rest), its herder at the gate; the hour of the case
 function setup(time, hunger, pen) {
-  fresh(); S().time = time; S().weather.rain = 0; OLD.clear();
+  fresh(); S().time = time; S().weather.rain = 0; OLD.clear(); CUT.clear();
   const b = S().buildings.get(pen || PEN); const role = G.BDEF[b.type].role;
   const v = [...S().villagers.values()].filter(x => x.job === b.id && x.role === role && fit(x)).sort((p, q) => p.id - q.id)[0];
   const herd = E.penAnimals(b).filter(a => !a.dead).sort((p, q) => p.id - q.id);
@@ -68,7 +68,7 @@ function setup(time, hunger, pen) {
   // pasture was gone — the r1, the r4 and the r5 are the pasture, not the wolf; the herder driving one off is the world's,
   // T-268 —, T-302)
   for (const a of [...S().animals.values()]) if (!a.dead && G.Animals.predator(a.kind) && G.dist2(a.x, a.y, b.x, b.y) < 40 * 40) G.Animals.remove(a);
-  return { b, v, herd, ids: herd.map(a => a.id), base: base() };
+  CUR = { b, v, herd, ids: herd.map(a => a.id), base: base() }; return CUR;
 }
 function send(v, b) {
   G.Vg.endTask(v); if (v.ug && G.Caves) G.Caves.exitNow(v); v.sleeping = false; v.inside = 0; v.energy = 95; v.hunger = 10;
@@ -85,8 +85,14 @@ const avgH = L => r2(L.reduce((s, a) => s + a.hunger, 0) / Math.max(1, L.length)
 const OLD = new Set();
 const seeOld = P => { for (const id of P.ids) { const a = S().animals.get(id); if (a && a.dead && a.cause === 'old') OLD.add(id); } };
 const aged = P => { seeOld(P); return P.ids.filter(id => OLD.has(id)); };
-const home = P => { const L = flock(P); const old = aged(P).filter(id => !L.some(a => a.id === id)).length; return { n: L.length, old, all: L.length + old === P.ids.length, pen: L.filter(a => a.state === 'pen').length, inside: L.filter(a => inPen(a, P.b)).length }; };
-const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)` : '');
+// (and one the town's butcher led off to the slaughter in the case — the world's own errand, economy.js runSlaughter, which
+// takes the beast out of the world —: no fault of the herder's either. In the generation-13 metropole the butcher of Ribe took
+// a ewe of the pen at 0,405 while its herder lay dead, and the flock came home 7 of 7, T-390. Seen at every step of the case,
+// while the beast is led — after, it is no longer in the world)
+const CUT = new Set(); let CUR = null;
+const seeCut = P => { for (const id of P.ids) { const a = S().animals.get(id); const by = a && a.state === 'led' && a.ledBy && S().villagers.get(a.ledBy); if (by && by.role === 'acougueiro') CUT.add(id); } };
+const home = P => { const L = flock(P); const old = aged(P).filter(id => !L.some(a => a.id === id)).length; const cut = P.ids.filter(id => CUT.has(id) && !L.some(a => a.id === id) && !OLD.has(id)).length; return { n: L.length, old, cut, all: L.length + old + cut === P.ids.length, pen: L.filter(a => a.state === 'pen').length, inside: L.filter(a => inPen(a, P.b)).length }; };
+const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)` : '') + (H.cut ? ` (${H.cut} levad${H.cut === 1 ? 'o' : 'os'} pelo açougueiro)` : '');
 
 // r1 the pasture
 {
