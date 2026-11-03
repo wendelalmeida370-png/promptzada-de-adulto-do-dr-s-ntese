@@ -558,7 +558,11 @@ if (want('l14')) {
     const cand = [...houses.values()].filter(x => x.kids.length).map(x => Object.assign(x, { o: x.grown.filter(g => !x.kids.some(k => k.mother === g.id || k.father === g.id)).sort((a, b) => stays(b, x) - stays(a, x) || b.age - a.age || a.id - b.id)[0] })).filter(x => x.o).sort((a, b) => stays(b.o, b) - stays(a.o, a) || b.kids.length - a.kids.length || a.h.id - b.h.id)[0];
     if (!cand) return null;
     const st = stays(cand.o, cand); aged = [cand.o, cand.o.age, st >= 2 ? 'com o companheiro em casa' : st ? `numa casa com cama sobrando, ${cand.n} de ${G.BDEF[cand.h.type].housing}` : `só numa casa cheia, ${cand.n} de ${G.BDEF[cand.h.type].housing} — nenhuma melhor`];
-    cand.o.age = 63; cand.old = [cand.o]; return cand;
+    // (and an elder in full, as the town's board makes one of 62 at its next pass — village.js assignJobs: the role 'anciao' and
+    // its line in the life, G.Life.onRole —, the errand of before let go: in the generation-13 metropole the one made 63 was
+    // Tiye, a fisher, who went to her boat at the first step, before the board's pass, and spent 55 s of the case aboard, T-394)
+    const prev = cand.o.role; cand.o.age = 63; cand.o.role = 'anciao'; if (G.Life && G.Life.onRole) G.Life.onRole(cand.o, prev); G.Vg.endTask(cand.o);
+    aged.push(prev); cand.old = [cand.o]; return cand;
   };
   // (this world first — the small town is calm —, and only then the metropolis)
   let e = findHouse() || ageOne();
@@ -566,6 +570,10 @@ if (want('l14')) {
   if (!e) ok('l14 os velhos cuidam dos pequenos em casa', false, 'nenhuma casa com alguém de 62 anos ou mais e crianças de 3 a 6, nem com um adulto da casa que não seja o pai ou a mãe delas');
   else {
     let h = e.h; const dw = doorWatch(); let minded = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
+    // (the house's pantry with a meal for the little ones, by the ledger: a little one of an empty house goes out to the town's
+    // store to eat — the world's rule —, and the case is the minding at home, not the pantry. In the generation-13 metropole
+    // Khufu went out to eat in the middle of it and stayed home 77% of the minding, T-394)
+    const pantry0 = G.Depot.get('h:' + h.id, 'food'); if (pantry0 < 4) { const room = G.Depot.room('h:' + h.id, 'food'); if (room > 0) G.Depot.make('h:' + h.id, 'food', Math.min(4 - pantry0, room), { code: 'teste', part: true }); }
     // (the little ones come home and stay: when each first came home while minded, and — from then on — how much of the
     // minding it spent at home, awake; a little one far away takes a while to walk home)
     const came = new Map(), stayIn = new Map(), stayAll = new Map(), moved = new Set();
@@ -631,9 +639,9 @@ if (want('l14')) {
     const sum = mp => [...mp.values()].reduce((a, b) => a + b, 0);
     const stayed = sum(stayAll) ? sum(stayIn) / sum(stayAll) : 0; const first = came.size ? Math.min(...came.values()) : 0;
     const kidsOk = came.size >= Math.ceil(e.kids.length / 2) && stayed >= 0.8;
-    if (aged) { const o = S.villagers.get(aged[0].id); if (o) o.age = aged[1]; }
+    if (aged) { const o = S.villagers.get(aged[0].id); if (o) { o.age = aged[1]; o.role = aged[3]; } }
     ok('l14 os velhos cuidam dos pequenos em casa', minded >= 200 && kidsOk && !loops && two <= 20 && reloadOk && afterOk && !!died && !dw.wrong.length,
-      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${aged ? `${Math.floor(aged[1])} anos, posta em 63 pela mão da prova, ${aged[2]} — os mundos prontos não têm, depois das mudanças do dia, velho morando com crianças pequenas` : e.old.map(o => Math.floor(o.age)).join(', ') + ' anos'}) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), ${came.size} de ${e.kids.length} criança(s) vieram para casa${came.size ? ` (a primeira aos ${r2(first / 10)} s) e ficaram em casa ${Math.round(stayed * 100)}% do cuidado dali em diante` : ''}${moved.size ? ` (${moved.size} mudaram de casa com a família no meio: ${[...moved].map(id => (S.villagers.get(id) || { name: '#' + id }).name).join(', ')} — contadas até a mudança)` : ''}${reload}${after}${died ? '' : '; dos 55 aos 65 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 || !kidsOk ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}; as crianças: ${e.kids.map(c => `${c.name}: ${(kseq.get(c.id) || []).slice(0, 8).join(' → ')}`).join(' | ')}` : ''}`);
+      `${h.type}#${h.id} (a despensa com ${Math.round(pantry0 * 100) / 100} de comida no começo): ${e.old.map(o => o.name).join(', ')} (${aged ? `${Math.floor(aged[1])} anos, posta em 63 pela mão da prova, ${aged[2]} — os mundos prontos não têm, depois das mudanças do dia, velho morando com crianças pequenas` : e.old.map(o => Math.floor(o.age)).join(', ') + ' anos'}) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), ${came.size} de ${e.kids.length} criança(s) vieram para casa${came.size ? ` (a primeira aos ${r2(first / 10)} s) e ficaram em casa ${Math.round(stayed * 100)}% do cuidado dali em diante` : ''}${moved.size ? ` (${moved.size} mudaram de casa com a família no meio: ${[...moved].map(id => (S.villagers.get(id) || { name: '#' + id }).name).join(', ')} — contadas até a mudança)` : ''}${reload}${after}${died ? '' : '; dos 55 aos 65 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 || !kidsOk ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}; as crianças: ${e.kids.map(c => `${c.name}: ${(kseq.get(c.id) || []).slice(0, 8).join(' → ')}`).join(' | ')}` : ''}`);
   }
 }
 
@@ -812,7 +820,7 @@ if (want('l16', 'l16b')) {
     else {
       let h = pick.h; const st = pick.st, hid = h.id, owner = h.dono, E0 = pick.old;
       const ownerHome = owner && S.villagers.get(owner) ? S.villagers.get(owner).home : 0;
-      if (E0.age < 62) { aged = [E0.id, E0.age]; E0.age = 63; }
+      if (E0.age < 62) { aged = [E0.id, E0.age, E0.role]; E0.age = 63; E0.role = 'anciao'; if (G.Life && G.Life.onRole) G.Life.onRole(E0, aged[2]); G.Vg.endTask(E0); } // (an elder in full, as in the l14: T-394)
       E0.home = hid; for (const y of pick.young) y.home = hid;
       const E = () => S.villagers.get(E0.id);
       notes.push(`${h.type}#${hid} de ${st.name} (${cap(h)} camas): ${residents(h).length} moradores, com ${E0.name} (${Math.floor(aged ? aged[1] : E0.age)}${aged ? ', posta em 63 pela mão da prova' : ''}) e ${pick.young.map(y => `${y.name} (${Math.floor(y.age)})`).join(', ')}`);
@@ -846,8 +854,13 @@ if (want('l16', 'l16b')) {
       // the checker sees it: an old one put out of a house too full by the test's hand, with a young single still in it
       {
         const town1 = [...S.villagers.values()].filter(v => v.set === st.id && v.home && v.home !== hid && single(v)).sort((a, c) => a.id - c.id);
-        const O = town1.find(v => v.age >= 25 && v.age < 62), Yn = town1.find(v => v !== O && v.age >= 18 && v.age < 36);
-        const other = O && homesOf(st.id).find(b => b.id !== hid && b.id !== O.home && cap(b) > residents(b).length);
+        // (the young one first, then the one made old — of 25 to 61, else any other single grown one: the hand makes him 66 —: in the
+        // generation-13 metropole no single of 25 to 61 lived in another house of Roma after the case, T-394)
+        const Yn = town1.find(v => v.age >= 18 && v.age < 36), O = town1.find(v => v !== Yn && v.age >= 25 && v.age < 62) || town1.find(v => v !== Yn && v.age >= 18 && v.age < 62);
+        // (the house the old one goes to: one with a bed to spare, else any other of the town — the rule, D-098 in lar-inv.js, looks
+        // only at the house too full, at who left it before whom: in the generation-13 metropole the case's young had taken Roma's
+        // spare beds by then, and the proof found none, «sem gente», T-394)
+        const homes1 = O ? homesOf(st.id).filter(b => b.id !== hid && b.id !== O.home) : []; const other = homes1.find(b => cap(b) > residents(b).length) || homes1[0];
         if (O && Yn && other) {
           const back = [[O, O.home], [Yn, Yn.home]]; const a0 = O.age, hp0 = O.hp;
           O.age = 66; O.hp = 40; O.home = hid; Yn.home = hid;
@@ -855,9 +868,9 @@ if (want('l16', 'l16b')) {
           QA.check(); O.home = other.id; const seen = QA.check().filter(q => String(q.msg).includes('D-098'));
           say('verificador', residents(h).length >= cap(h) && seen.length > 0, seen.length ? `o verificador viu: «${seen[0].msg}»` : 'o verificador NÃO viu o velho posto para fora antes do moço');
           for (const [v, hm] of back) v.home = hm; O.age = a0; O.hp = hp0;
-        } else say('verificador', false, 'sem gente para a prova do verificador');
+        } else say('verificador', false, `sem gente para a prova do verificador (${[!O && 'nenhum solteiro de 25 a 61 noutra casa', !Yn && 'nenhum moço solteiro', !other && 'nenhuma outra casa'].filter(Boolean).join(', ')})`);
       }
-      if (aged) { const o = S.villagers.get(aged[0]); if (o) o.age = aged[1]; }
+      if (aged) { const o = S.villagers.get(aged[0]); if (o) { o.age = aged[1]; o.role = aged[2]; } }
       ok('l16 da casa cheia saem os moços primeiro (D-098)', fine, notes.join(' · '));
     }
   }
