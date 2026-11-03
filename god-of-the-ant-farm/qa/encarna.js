@@ -102,19 +102,26 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       },
       // the body walked along the world's own path to (x, y) — the camera turned toward each next step, W held; and round what
       // stops the feet on the way, as a player steers — a boulder, a pier, a stall —: a step aside and on again, farther and to
-      // the other side the next time, as the estiva's proof walks (T-205, T-231, T-242)
-      walkTo(x, y, max, run) {
+      // the other side the next time, as the estiva's proof walks (T-205, T-231, T-242). With stop — what the walk is for, a
+      // prompt —, the walk ends the moment it is there (T-366)
+      walkTo(x, y, max, run, stop) {
         const v = E.body(); const st = G.Avatar.state(); if (!v || !st) return { ok: false, why: 'sem corpo' };
         const p0 = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p0) return { ok: false, why: 'sem caminho' };
         const p = E.throughGates(v.x, v.y, p0);
         // (no step to take — the body already at the place —: said, never a crash that ends the whole run, T-340)
         if (!p.length) return { ok: G.dist(v.x, v.y, x, y) < 0.8, frames: 0, steps: 0, bad: 0, under: 0, camIn: 0, stuck: false, d: +(G.dist(v.x, v.y, x, y) * 4).toFixed(1), none: 1 };
         // (and the frames its length asks, at a slow walk, 0.05 m a frame, and some, when that is more than max: through the gate,
-        // the walk to the market of Mênfis is 31 tiles, 124 m, past the 1800 frames of the case — T-152 of the estiva, T-242)
+        // the walk to the market of Mênfis is 31 tiles, 124 m, past the 1800 frames of the case — T-152 of the estiva, T-242);
+        // slower when this body walks slower, at the pace the world gives it (Avatar's move: 0.7 of its walk under 8 of strength,
+        // 0.8 starving, 0.9 under a load of 4 or more), with some to spare for the turns and the slopes: the docker Cláudia of
+        // Roma, with no strength left and a crate in her arms, 1.1 m/s, was 25 m short of the door when the frames ran out at the
+        // end of a walk of 229 m, T-366
         let len = 0; { let a = [v.x, v.y]; for (const w of p) { len += Math.hypot(w[0] - a[0], w[1] - a[1]); a = w; } }
-        const lim = Math.max(max || 1500, Math.ceil(len * G.Space.TILE / 0.05) + 300);
+        const caps = st.caps || G.Possess.caps(v); const pace = caps.walk * (v.energy < 8 ? 0.7 : 1) * ((v.hunger || 0) >= 100 ? 0.8 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1);
+        const lim = Math.max(max || 1500, Math.ceil(len * G.Space.TILE / Math.min(0.05, pace * 0.033 * 0.85)) + 300);
         let i = 0, bad = 0, under = 0, still = 0, last = [v.x, v.y], k = 0, camIn = 0, aside = 0, side = 1, turns = 0;
         for (; k < lim; k++) {
+          if (stop && stop()) break;
           const w = p[Math.min(i, p.length - 1)]; const dx = w[0] - v.x, dy = w[1] - v.y; const d = Math.hypot(dx, dy);
           if (d < 0.3) { if (i >= p.length - 1) break; i++; continue; }
           G.Cam3D.yaw = Math.atan2(dy, dx) + (aside > 0 ? side * Math.PI / 2 : 0); if (aside > 0) aside--; G.Input3D.down.frente = true; G.Input3D.down.correr = !!run;
@@ -130,7 +137,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         }
         G.Input3D.down.frente = false; G.Input3D.down.correr = false; E.f(4);
         const end = p[p.length - 1];
-        return { ok: G.dist(v.x, v.y, end[0], end[1]) < 0.8, frames: k, steps: p.length, bad, under, camIn, stuck: still >= 3, d: +(G.dist(v.x, v.y, end[0], end[1]) * 4).toFixed(1) };
+        return { ok: G.dist(v.x, v.y, end[0], end[1]) < 0.8, frames: k, steps: p.length, bad, under, camIn, stuck: still >= 3, d: +(G.dist(v.x, v.y, end[0], end[1]) * 4).toFixed(1), len: +(len * G.Space.TILE).toFixed(1) };
       },
       // the box of a building against the world's footprint and ground (metres)
       fits(b) {
@@ -415,13 +422,22 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const B = Sv.serialize(); load(B); const b1 = G.S.villagers.get(id);
     out.B = { avatar: G.S.avatar && G.S.avatar.id, task: b1 && b1.task && b1.task.type, mode: G.Modes.state, at: b1 ? G.dist(pB[0], pB[1], b1.x, b1.y) : -1, hud: (document.querySelector('#inc-hud .ih-name') || {}).textContent };
     // D) after walking far
-    // (a straight run, the stick held, toward the most open way about the body — dry ground the world walks, no lot nor wall —
-    // when the way of before is not: in the generation-6 «cidade» the way 1,1 rad from Túlia met an obstacle at 7,5 m — T-243)
-    const openTo = a => { let d = 0; for (; d < 8; d += 0.25) { const x = b1.x + Math.cos(a) * d, y = b1.y + Math.sin(a) * d; if (!G.W.inb(x, y)) break; const i = G.W.idx(x, y); if (!G.W.walkableXY(x, y) || S.occ[i] || S.wall[i] || S.type[i] <= G.T.RIVER) break; } return d; };
-    let yawD = 1.1; { let best = openTo(1.1); for (let k = 0; k < 16 && best < 6; k++) { const a = k / 16 * Math.PI * 2, d = openTo(a); if (d > best) { best = d; yawD = a; } } }
-    const w = (() => { const x0 = b1.x, y0 = b1.y; G.Input3D.down.frente = true; G.Input3D.down.correr = true; G.Cam3D.yaw = yawD; __E.f(240); G.Input3D.down.frente = false; G.Input3D.down.correr = false; __E.f(8); return G.dist(x0, y0, b1.x, b1.y) * 4; })();
+    // (a run, the stick held, to a place the world walks to: of sixteen headings from 1,1 rad, six to eight tiles off, the first
+    // whose way by the world's path ends 5 tiles off or more — 20 m — and goes near to straight; along that path, round what
+    // stops the feet (walkTo). A straight run toward «the most open way about the body» — dry ground the world walks, no lot nor
+    // wall — measured each way from the body's own tile: Amenhotep #1670 of the «cidade» of the generation 12 stood on a garden
+    // by the river — a lot, for that rule —, every way was 0, and the run of 1,1 rad met the town's fire 9 m on and slid along it
+    // four seconds: 14,6 m, T-367. In the generation-6 «cidade» the way 1,1 rad from Túlia met an obstacle at 7,5 m — T-243)
+    let to = null, way = null;
+    for (const R of [6, 7, 8]) for (let k = 0; k < 16 && !to; k++) {
+      const a = 1.1 + k / 16 * Math.PI * 2, x = b1.x + Math.cos(a) * R, y = b1.y + Math.sin(a) * R; if (!G.W.inb(x, y) || !G.W.walkableXY(x, y)) continue;
+      const p = G.W.findPath(b1.x, b1.y, x, y, true, 30000); const e = p && p[p.length - 1]; if (!e) continue;
+      let len = 0, q = [b1.x, b1.y]; for (const s of p) { len += Math.hypot(s[0] - q[0], s[1] - q[1]); q = s; }
+      const d = G.dist(b1.x, b1.y, e[0], e[1]); if (d >= 5 && len < d * 1.4) { to = [x, y]; way = { a: +a.toFixed(2), R, end: +(d * 4).toFixed(1) }; }
+    }
+    const w = (() => { const x0 = b1.x, y0 = b1.y; if (to) way.walk = __E.walkTo(to[0], to[1], 0, true); __E.f(8); return G.dist(x0, y0, b1.x, b1.y) * 4; })();
     const pD = [b1.x, b1.y]; const D = Sv.serialize(); load(D); const d1 = G.S.villagers.get(id);
-    out.D = { walked: w, at: d1 ? G.dist(pD[0], pD[1], d1.x, d1.y) : -1, avatar: G.S.avatar && G.S.avatar.id, mode: G.Modes.state };
+    out.D = { walked: w, at: d1 ? G.dist(pD[0], pD[1], d1.x, d1.y) : -1, avatar: G.S.avatar && G.S.avatar.id, mode: G.Modes.state, way };
     // C) after leaving
     __E.leave(); const C = Sv.serialize(); load(C); const c1 = G.S.villagers.get(id);
     out.C = { avatar: !!G.S.avatar, mode: G.Modes.state, task: c1 && c1.task ? c1.task.type : null };
@@ -1043,13 +1059,22 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         __E.f(4); const A = P3.avatar; out.carry = { ran: !!(r && r.ok), msg: r && r.msg, frames, held, bad, after: !!(A && A.look && A.look.held), world: !!(b.carry && b.carry.n > 0) }; } }
     // 4. a docker unloading the quay (the unloading of act-porto.js, by day: the world's own errand for it, Porto.work): at every
     // frame the crates drawn on the quay are the world's, and a crate is drawn in hands only as many as the world has in hands
-    { const o = __E.adults(__E.town(), q => q.id !== v.id && free(q) && G.W.reaches(q, sp[0], sp[1]))[0]; out.docker = null;
+    { out.docker = null;
+      // (the god's hand: the day — and the unloading of the quay sees it at its overseer's next look, once a second: one waiting
+      // for the night gives no errand, T-249 —; then, of those the day brings out of their houses, the docker, and the errand the
+      // world gives a docker)
+      G.inSim++; S.time = 0.15; G.inSim--; __E.until(() => { const op = G.Porto.opAt(dock); return !op || op.st !== 'wait'; }, 90);
+      // (one the world leaves at the unloading the whole case, by its own rules: hands free and in the middle of nothing an errand
+      // of 1.1 does not take one from (Vg.busy), awake and not abed (Lar), fed and rested — past 50 of hunger a meal comes before
+      // the unloading, under 22 of strength the bed (villagers.js decide), and the case is some 11 s of the world: 5 more of
+      // hunger, 7 less of strength. The first adult of Mênfis out of doors at night, in the «cidade» of the generation 12, was
+      // Nebet #3024, up with 83 of hunger: she left the crate she was lifting for a meal at the store, T-365)
+      const fit = q => q.id !== v.id && free(q) && !G.Vg.busy(q, { pri: 1.1 }) && q.hunger < 40 && q.energy > 35 && !G.Lar.sleepy(q) && !G.Lar.bedrest(q) && G.W.reaches(q, sp[0], sp[1]);
+      let o = null; __E.until(() => !!(o = __E.adults(__E.town(), fit)[0]), 300);
+      if (!o && __E.adults(__E.town(), q => q.id !== v.id && free(q) && G.W.reaches(q, sp[0], sp[1])).length) out.docker = { given: false, why: 'ninguém de mãos livres, alimentado e descansado chega ao cais' };
       if (o) { const near = G.W.nearestLand(sp[0] + 0.6, sp[1], 3) || sp; o.x = near[0]; o.y = near[1]; o.path = null;
-        // (the god's hand: the day — and the unloading of the quay sees it at its overseer's next look, once a second: one waiting
-        // for the night gives no errand, T-249 —; then the errand the world gives a docker)
-        G.inSim++; S.time = 0.15; G.inSim--; __E.until(() => { const op = G.Porto.opAt(dock); return !op || op.st !== 'wait'; }, 90);
         G.inSim++; const given = G.Porto.work(o, dock, G.Vg.H); G.inSim--;
-        const r = { given: !!given, op: (G.Porto.opAt(dock) || { st: '-' }).st, frames: 0, extra: 0, ghost: 0, lifts: 0, n0: dock.crates.length };
+        const r = { who: `${o.name} #${o.id}`, given: !!given, op: (G.Porto.opAt(dock) || { st: '-' }).st, frames: 0, extra: 0, ghost: 0, lifts: 0, n0: dock.crates.length };
         for (let k = 0; k < 900 && dock.crates.length > r.n0 - 2; k++) { G.Main.frameFor(33); r.frames++;
           const world = new Set(dock.crates.map(c => c.id)); for (const e of P3.lying) if (e[5] === dock.id && !world.has(e[4])) r.ghost++;
           // (whoever the world has holding a thing the 3D draws as a crate — the crates of the quays, the gear's box)
@@ -1083,11 +1108,14 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const porters = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'estivador').length;
     const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).sort((a, b) => porters(b) - porters(a) || a.id - b.id);
     // (the quay and its stevedore found together: a town whose quay serves but whose stevedores all have their hands full is passed
-    // by — Mênfis's only one, carrying 4 of food, in the metropole of the v37's last worlds, T-250)
+    // by — Mênfis's only one, carrying 4 of food, in the metropole of the v37's last worlds, T-250 —; and of those, the quay whose
+    // warehouse is a stone's throw from it by the world's own path, from the crates to its door — the first town's, Roma's, has
+    // its warehouse outside the town's wall in the metropolis of the generation 12, 229 m round, T-366)
     const hand = (d, sp) => [...S.villagers.values()].filter(o => o.set === d.set && o.role === 'estivador' && !(o.carry && o.carry.n > 0) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp[0], sp[1])).sort((a, b) => a.id - b.id)[0];
-    let dock = null, found = 0;
-    for (const s of towns) { for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) { const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} })); if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) { found = found || d.id; if (hand(d, sp)) { dock = d; break; } } } if (dock) break; }
-    out.dock = dock ? dock.id : found || null; if (!dock) return out;
+    const way = (sp, st) => { const e = G.Vg.door(st); const p = W.findPath(sp[0], sp[1], e[0], e[1], true, 30000); if (!p) return Infinity; let L = 0, q = sp; for (const w of p) { L += Math.hypot(w[0] - q[0], w[1] - q[1]); q = w; } return L; };
+    let dock = null, found = 0, near = Infinity;
+    for (const s of towns) { for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) { const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} })); if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) { found = found || d.id; if (hand(d, sp)) { const L = way(sp, st); if (L < near) { near = L; dock = d; } } } } }
+    out.dock = dock ? dock.id : found || null; if (!dock) return out; out.way = Math.round(near * TL);
     const fid = G.Village.facOfSet(dock.set);
     god(() => { for (const op of A.all()) if (op.def === 'descarga' && op.at === dock.id && A.live(op)) A.end(op, 'cancel', 'teste'); for (const c of (dock.crates || []).slice()) D.move('q:' + dock.id, 'f:' + fid, c.k, c.n, { code: 'teste', part: true }); dock.crates = []; S.time = 0.15; });
     const sp = god(() => G.Fishers.crateSpot(dock));
@@ -1112,7 +1140,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     window.__e17 = { dock: dock.id, op: op.id, v: v.id, sp, fid }; out.fid = fid;
     return out;
   });
-  ok('e17 a metrópole tem um cais com armazém do porto e um estivador para viver', !!(e17a.dock && e17a.who && e17a.inn && e17a.op), JSON.stringify({ dock: e17a.dock, who: e17a.who, op: e17a.op }));
+  ok('e17 a metrópole tem um cais com armazém do porto e um estivador para viver', !!(e17a.dock && e17a.who && e17a.inn && e17a.op), JSON.stringify({ dock: e17a.dock, who: e17a.who, op: e17a.op, way: e17a.way }));
   if (e17a.op) {
     ok('e17 o barco descarrega: as caixas de verdade no cais, desenhadas uma a uma', e17a.crates.world >= 4 && e17a.crates.drawn === e17a.crates.world, JSON.stringify(e17a.crates));
     ok('e17 o estivador encarnado é chamado ao cais, na tela', e17a.call.includes(e17a.want), `«${e17a.call}»`);
@@ -1166,17 +1194,22 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       // (along the world's path to the door — where the mark is —, as a player walks up to it, the camera turned toward each next
       // step, until the prompt is the store's. Pushed straight at the door from where the walk stopped, the body went along the
       // wall of the harbour warehouse of Mênfis, in the metropole of the v37's last worlds, and round its corner out of the
-      // hands' reach — «Pôr a caixa no chão» —: T-255)
-      const st = G.Avatar.state(); const p0 = G.W.findPath(v.x, v.y, door[0], door[1], true, 30000); const pth = p0 ? __E.throughGates(v.x, v.y, p0) : [];
-      out.walk = { steps: pth.length, frames: 0 };
-      walk: for (const [PX, PZ] of pth.concat([door]).map(w => [w[0] * TL, w[1] * TL])) for (let k = 0; k < 300; k++) { if (/^Guardar /.test(prompt())) break walk; if (Math.hypot(PX - st.X, PZ - st.Z) < 0.35) break; G.Cam3D.yaw = Math.atan2(PZ - st.Z, PX - st.X); G.Input3D.down.frente = true; G.Main.frameFor(33); out.walk.frames++; }
+      // hands' reach — «Pôr a caixa no chão» —: T-255. The prompt of the store, the unloading's own «Guardar a caixa…», never
+      // another store's on the way; and the world's whole path, with the frames its length asks, round what stops the feet
+      // (walkTo): in Roma, in the metropolis of the generation 12, the harbour warehouse has its door outside the town's wall —
+      // the west gate shut on that side by a watchtower —, 229 m round from the quay; the walk, 300 frames a leg, was stopped
+      // beside the quay by the quay's own «Guardar comida na doca — Esta carga é da descarga…», 51 m from the door: T-366)
+      const st = G.Avatar.state(); const store = () => /^Guardar a caixa/.test(prompt());
+      out.walk = __E.walkTo(door[0], door[1], 0, false, store);
+      // (and from where the world's way ends — beside the place it goes to, a tile off — to the door itself, as before)
+      for (let k = 0; k < 300 && !store() && Math.hypot(door[0] * TL - st.X, door[1] * TL - st.Z) > 0.35; k++) { G.Cam3D.yaw = Math.atan2(door[1] * TL - st.Z, door[0] * TL - st.X); G.Input3D.down.frente = true; G.Main.frameFor(33); }
       G.Input3D.down.frente = false;
-      for (let k = 0; k < 30 && !/^Guardar /.test(prompt()); k++) { G.Cam3D.yaw = Math.atan2(door[1] * TL - st.Z, door[0] * TL - st.X); G.Main.frameFor(33); } // (at the door, facing it)
+      for (let k = 0; k < 30 && !store(); k++) { G.Cam3D.yaw = Math.atan2(door[1] * TL - st.Z, door[0] * TL - st.X); G.Main.frameFor(33); } // (at the door, facing it)
       __E.f(6); out.prompt = prompt(); out.walk.d = +(Math.hypot(door[0] * TL - st.X, door[1] * TL - st.Z)).toFixed(2);
-      if (!/^Guardar /.test(out.prompt)) { const b0 = G.Interact.best(); out.walk.at = [+v.x.toFixed(2), +v.y.toFixed(2)]; out.walk.door = door.map(q => +q.toFixed(2)); out.walk.best = b0 ? b0.label : null; }
+      if (!store()) { const b0 = G.Interact.best(); out.walk.at = [+v.x.toFixed(2), +v.y.toFixed(2)]; out.walk.door = door.map(q => +q.toFixed(2)); out.walk.best = b0 ? b0.label : null; }
       const c = v.carry; const n = c ? c.n : 0, k = c ? c.k : 'food'; const payee = v.home && D.exists('h:' + v.home) ? 'h:' + v.home : 'p:' + v.id;
       const led0 = D.ledger().length ? D.ledger()[D.ledger().length - 1][0] : 0; const st0 = v.st[k] || 0; const stock0 = D.get('f:' + X.fid, k); const coin0 = D.get(payee, 'moedas');
-      if (/^Guardar /.test(out.prompt)) { G.IncUI.use(); __E.until(() => !G.Avatar.busy(), 600); __E.f(6); }
+      if (store()) { G.IncUI.use(); __E.until(() => !G.Avatar.busy(), 600); __E.f(6); }
       const mine = D.ledger().filter(e => e[0] > led0 && e[7] === X.op && e[9] === v.id);
       const dep = mine.find(e => e[8] === 'depositar'), pay = mine.find(e => e[8] === 'paga');
       out.r = { n, carry: !!v.carry, dep: dep ? [dep[3], dep[4], dep[6]] : null, pay: pay ? [pay[4], pay[5], pay[6]] : null, due: Math.round(G.Porto.payOf(k, n) * 100) / 100, coin: G.Eco.coinage(X.fid), tally: [st0, v.st[k] || 0], stockUp: Math.round((D.get('f:' + X.fid, k) - stock0) * 100) / 100, coinUp: Math.round((D.get(payee, 'moedas') - coin0) * 100) / 100, payee };
