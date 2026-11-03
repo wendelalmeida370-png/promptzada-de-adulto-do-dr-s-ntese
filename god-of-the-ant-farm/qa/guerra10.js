@@ -62,13 +62,25 @@ const sc = process.argv[2] || 'small'; const seed = +(process.argv[3] || 7);
     if (sc === 'save') {
       // into the war: armies in the field
       for (let k = 0; k < 30; k++) { await run(0.1); const n = await page.evaluate(() => G.Wars.state().armies.filter(a => !a.done && a.band).length); if (n >= 1) break; }
+      // (one called to a muster gives up on the way and goes to bed: after the load he sleeps on, the others answer still, the
+      // muster's clock is as it was — the load called the whole roll again and started the clock over, L-445)
+      const drop = await page.evaluate(() => { const S = G.S; const a = G.Wars.state().armies.find(x => !x.done && x.phase === 'mobilizar'); if (!a) return null;
+        // (who answers: on the muster, or in a scene at the door on the way to it — as the muster itself counts them)
+        window.__ans = x => x.members.map(id => S.villagers.get(id)).filter(v => { if (!v) return false; if (v.task && v.task.type === 'muster' && v.task.army === x.id) return true; const pt = G.Scene && G.Scene.prevTask && G.Scene.prevTask(v); return !!pt && pt.type === 'muster' && pt.army === x.id; });
+        const ans = window.__ans(a); const v = ans.filter(o => o.task && o.task.type === 'muster').slice(-1)[0]; if (!v) return null;
+        G.Vg.endTask(v); G.Vg.setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: v.home });
+        return { army: a.id, v: v.id, called: a.called, n: ans.length - 1 }; });
       const before = await page.evaluate(() => ({ wars: G.Wars.state().wars.length, live: G.Wars.state().armies.filter(a => !a.done).map(a => a.name + ':' + a.phase + ':' + a.members.length), bands: G.War.bands.size }));
       await page.evaluate(() => G.Save.save(true));
       await page.evaluate(() => G.Main.continueGame()); await page.waitForTimeout(500);
-      const after = await page.evaluate(() => ({ wars: G.Wars.state().wars.length, live: G.Wars.state().armies.filter(a => !a.done).map(a => a.name + ':' + a.phase + ':' + a.members.length), bands: G.War.bands.size, atWar: G.Fac.atWar(window._A, window._B) }));
+      const after = await page.evaluate(d => { const S = G.S; const a = d && G.Wars.state().armies.find(x => x.id === d.army); const v = d && S.villagers.get(d.v);
+        return { wars: G.Wars.state().wars.length, live: G.Wars.state().armies.filter(a => !a.done).map(a => a.name + ':' + a.phase + ':' + a.members.length), bands: G.War.bands.size, atWar: G.Fac.atWar(window._A, window._B),
+          drop: d ? { task: v && v.task ? v.task.type : '-', n: a ? a.members.map(id => S.villagers.get(id)).filter(o => o && o.task && o.task.type === 'muster' && o.task.army === a.id).length : -1, called: a ? a.called : -1 } : null }; }, drop);
+      // (after the load the scenes are over: all who answered are on the muster itself)
       const r = await run(1.2);
       const later = await page.evaluate(() => ({ live: G.Wars.state().armies.filter(a => !a.done).map(a => a.name + ':' + a.phase + ':' + a.members.length), battles: G.Wars.state().battles.length }));
-      ok('8 save/load', after.wars === before.wars && after.atWar && (after.live.length >= 1) && later.live.length >= 0, `antes ${JSON.stringify(before)} · depois ${JSON.stringify(after)} · 1,2 dia depois ${JSON.stringify(later)} · ${r.ms.toFixed(1)} ms/passo`);
+      const dropOk = !drop || (after.drop && after.drop.task !== 'muster' && after.drop.n === drop.n && after.drop.called === drop.called);
+      ok('8 save/load', after.wars === before.wars && after.atWar && (after.live.length >= 1) && later.live.length >= 0 && dropOk, `antes ${JSON.stringify(before)} · depois ${JSON.stringify(after)} · 1,2 dia depois ${JSON.stringify(later)} · quem desistiu da convocação: ${drop ? `antes «sleep», ${drop.n} na reunião, relógio ${drop.called}; depois «${after.drop.task}», ${after.drop.n} na reunião, relógio ${after.drop.called}` : 'nenhuma convocação no save'} · ${r.ms.toFixed(1)} ms/passo`);
     } else {
       let perf = { ms: 0, worst: 0, n: 0 }; const snaps = [];
       for (let d = 0; d < o.days * 4; d++) {

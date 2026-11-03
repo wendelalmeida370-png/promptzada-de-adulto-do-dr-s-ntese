@@ -1103,7 +1103,11 @@
   // the ones left with no war, no target or not three to fight — walk on home, and end as they would have, at home (the
   // save keeps no bands: they were closed right there, and the save lost the road, the welcome and the armoury's
   // weapons — L-185)
-  function resume() {
+  // (who of a muster was answering the call when the world was saved: the tasks do not go in the save. One who gave up on the
+  // way — no road to the rally point — or was taken by something else stays on the roll and goes about his life; the load
+  // called them all again and set the muster's clock back to zero, and Ulf, asleep at home, got up for the war: L-445)
+  const answering = a => a.members.filter(id => { const v = P(id); if (!v) return false; if (v.task && v.task.type === 'muster' && v.task.army === a.id) return true; const pt = G.Scene && G.Scene.prevTask && G.Scene.prevTask(v); return !!pt && pt.type === 'muster' && pt.army === a.id; });
+  function resume(called) {
     const S = G.S;
     for (const a of armies()) {
       if (a.done) continue;
@@ -1113,7 +1117,13 @@
       if (a.sea && (a.phase === 'embarque' || a.phase === 'travessia')) continue;
       // (still at the muster: called again, and the muster itself decides — no target or too few, it sends them home; a
       // muster of a war already over breaks up here, as the peace breaks it up)
-      if (a.phase === 'mobilizar') { if (!w || w.end) { a.done = true; a.phase = 'dispersado'; continue; } a.called = S.clock; ms.forEach((v, k) => G.Vg.setTask(v, { type: 'muster', army: a.id, k, pri: 3.15, kind: 'muster', st: 0 })); continue; }
+      if (a.phase === 'mobilizar') {
+        if (!w || w.end) { a.done = true; a.phase = 'dispersado'; continue; }
+        // (those who were answering, each to the place in the ranks the call gave him, the muster's clock as it was; a save from
+        // before this knew no one: all of the roll are called again, and the clock starts over)
+        const who = called && called[a.id] ? ms.filter(v => called[a.id].includes(v.id)) : ms; if (!(called && called[a.id])) a.called = S.clock;
+        who.forEach(v => G.Vg.setTask(v, { type: 'muster', army: a.id, k: Math.max(0, a.members.indexOf(v.id)), pri: 3.15, kind: 'muster', st: 0 })); continue;
+      }
       if (!w || w.end || !tgt || ms.length < 3 || a.phase === 'retorno' || a.phase === 'retirada') { if (!walkHome(a, w, f, tgt, ms)) a.done = true; continue; }
       // the soldiers fall in again around their commander
       const lead = P(a.gen) || ms[0];
@@ -1137,9 +1147,9 @@
     return true;
   }
   (G.saveHooks = G.saveHooks || []).push({
-    save(out) { if (G.S.wz) out.wz = G.S.wz; },
+    save(out) { if (G.S.wz) { out.wz = G.S.wz; const m = {}; for (const a of G.S.wz.armies) if (!a.done && a.phase === 'mobilizar') m[a.id] = answering(a); out.wzCalled = m; } },
     load(o) {
-      if (o.wz) { G.S.wz = o.wz; resume(); }
+      if (o.wz) { G.S.wz = o.wz; resume(o.wzCalled || null); }
       // (a world saved before wars had names: the wars already burning get one now)
       const fs = G.Fac.all(); for (let i = 0; i < fs.length; i++) for (let j = i + 1; j < fs.length; j++) if (G.Fac.atWar(fs[i].id, fs[j].id) && !warOf(fs[i].id, fs[j].id)) { const r = G.Fac.rel(fs[i].id, fs[j].id); const A = r && r.by === fs[j].id ? fs[j] : fs[i]; Wz.ensure(A, A === fs[i] ? fs[j] : fs[i]); }
     },
