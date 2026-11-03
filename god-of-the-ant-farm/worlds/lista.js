@@ -20,8 +20,8 @@ G.Ready.list({
   "bytes": 963298
  },
  "metropole": {
-  "day": 69,
-  "pop": 953,
+  "day": 58,
+  "pop": 671,
   "peoples": 5,
   "towns": 19,
   "N": 160,
@@ -30,12 +30,12 @@ G.Ready.list({
   "city": {
    "name": "Mênfis",
    "tier": 4,
-   "pop": 50
+   "pop": 58
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 3964850
+  "bytes": 3196206
  },
  "mega": {
   "day": 65,
@@ -56,22 +56,22 @@ G.Ready.list({
   "bytes": 3192949
  },
  "mundial": {
-  "day": 78,
-  "pop": 621,
-  "peoples": 5,
+  "day": 84,
+  "pop": 1128,
+  "peoples": 6,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Tebas",
+   "name": "Mênfis",
    "tier": 4,
-   "pop": 110
+   "pop": 207
   },
   "wars": 2,
   "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 4223535
+  "bytes": 5318012
  },
  "anos100": {
   "day": 101,
