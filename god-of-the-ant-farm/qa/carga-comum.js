@@ -11,7 +11,9 @@
 // uma expedição guarda a carga no armazém antes do cais; m10 o verificador vê a carga parada nas mãos de uma criança de
 // dia; m11 quem desce à mina com carga nas mãos sobe com ela: o achado da caverna não escreve por cima (L-202); m12 quem
 // morre a bordo (uma flecha no convés) deixa a carga como o afogado: a compra vai para casa, a carga comum ao estoque, pelo
-// livro (L-460); e o
+// livro (L-460); m13 quem cuida dos pequenos em casa, de dia, com uma carga comum nas mãos, a leva ao armazém antes de
+// cuidar deles, e volta a cuidar (L-471); m14 o mesmo, salvo e carregado no meio do cuidar; m15 o verificador vê a carga
+// parada nas mãos de quem cuida; e o
 // verificador limpo, sem erro de módulo. Quem o caso precisa (a criança, o arbusto, a árvore, a colmeia, a praia
 // na maré baixa, o povo do mar) vem pela regra; sem um que sirva, o caso falha dizendo o que falta.
 const M = require('./nodemundo.js');
@@ -19,9 +21,10 @@ const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/ativida
 const fails = []; const mid = []; // (what the checker saw in the middle of a case: the case fails, even if the end looks clean)
 const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | carga comum ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 const others = new Map();
-// (one look of the checker: what weighs — the activities' rules and the numbers, S0 to S2 — and the two rules of L-186, S3)
-let l186 = [];
-const look = () => { const q = QA.check(); l186 = q.filter(x => /L-186/.test(x.msg)); return q.filter(x => x.sev <= 2).filter(x => { if (x.sys === 'act' || x.sys === 'nan') return true; others.set(x.msg, (others.get(x.msg) || 0) + 1); return false; }); };
+// (one look of the checker: what weighs — the activities' rules and the numbers, S0 to S2 — and the two rules of L-186 and
+// the one of L-471, S3)
+let l186 = [], l471 = [];
+const look = () => { const q = QA.check(); l186 = q.filter(x => /L-186/.test(x.msg)); l471 = q.filter(x => /L-471/.test(x.msg)); return q.filter(x => x.sev <= 2).filter(x => { if (x.sys === 'act' || x.sys === 'nan') return true; others.set(x.msg, (others.get(x.msg) || 0) + 1); return false; }); };
 const watch = () => { const bb = look(); for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return bb.length > 0; };
 const D = G.Depot, Fl = G.Flora;
 const r2 = x => Math.round(x * 100) / 100;
@@ -368,6 +371,69 @@ S.weather.storm = 0;
       `${outA.length ? outA.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NENHUM lançamento — a compra sumiu com ela'} (a casa ${r2(D.get(home, 'food') - food0)} de comida); ` +
       `${outB.length ? outB.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NENHUM lançamento — a lenha sumiu'} (o estoque ${r2(D.get(f, 'wood') - was)} de lenha)${bad.length ? '; o verificador: ' + bad.slice(0, 2).join(' · ') : ''}`);
   }
+}
+
+// ---------------- m13: the one minding the little ones at home by day, with a plain load in the hands, takes it to the store
+// first and goes back to them (L-471): the old of a house with little ones who minds them (G.Lar.minder), by the rule, sent to
+// mind them by the world's door (G.Lar.task) with 2 of wood in the hands — the old minder's day has no errand of work, and the
+// load stayed in the hands for days: Nefertari, the shepherd of Mênfis, with the trough's hay
+const minder = () => person(55, 85, o => !o.sleeping && !!(G.Lar && G.Lar.minder(o)));
+const mindsNow = v => !!(v && v.task && v.task.type === 'lar' && v.task.what === 'cuidar');
+{
+  S.time = 0.3;
+  const v = minder();
+  if (!v || !give(v, 'wood', 2)) ok('m13 quem cuida dos pequenos leva a carga antes', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, com armazém ao alcance');
+  else {
+    const sent = !!G.Lar.task(v, G.Vg.H, 'cuidar'); v.think = 0;
+    const n0 = lines.length, t0 = S.clock; const seen = []; let tw = null, saw = false;
+    const back = live(120, () => {
+      const ty = v.task ? v.task.type + (v.task.what ? '/' + v.task.what : '') : '-'; if (seen[seen.length - 1] !== ty) seen.push(ty);
+      if (l471.some(x => x.msg.includes('#' + v.id + ','))) saw = true;
+      if (tw === null && outOf(v.id, n0).some(q => q[5] === 'wood' && q[8] === 'entrega')) tw = S.clock;
+      return tw !== null && mindsNow(v);
+    });
+    const e = outOf(v.id, n0).find(q => q[5] === 'wood'); const di = seen.indexOf('deliver');
+    ok('m13 quem cuida dos pequenos leva a carga antes', sent && back && !!e && e[8] === 'entrega' && e[4] === store(v) && di >= 0 && di <= 2 && !saw && !look().length,
+      `${nm(v)}, que cuida dos pequenos da casa #${v.home}, ${sent ? 'mandado(a)' : 'NÃO mandado(a)'} a cuidar deles com 2 de lenha nas mãos: ${e ? `${e[8]} ${e[6]} para ${e[4]}, em ${r2(tw - t0)} s` : `a lenha NÃO foi ao armazém (nas mãos: ${hands(v)})`}; ${back ? 'e de volta a cuidar deles' : `e NÃO voltou a cuidar (${v.task ? v.task.type : 'sem afazer'})`}${saw ? '; o verificador viu a carga parada' : ''}; afazeres: ${seen.join(' → ')}`);
+  }
+}
+// ---------------- m14: the same, saved and loaded in the middle of the minding — the test's hand holds her thinking until
+// the save, which finds her minding them at home with the load —: loaded, the load goes to the store
+{
+  S.time = 0.3;
+  const v = minder();
+  if (!v || !give(v, 'wood', 2)) ok('m14 salvo e carregado no meio do cuidar', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre');
+  else {
+    G.Lar.task(v, G.Vg.H, 'cuidar'); v.think = 1e9;
+    live(60, () => mindsNow(v) && v.task.st === 2);
+    const st = v.task ? `${v.task.type}${v.task.what ? '/' + v.task.what : ''}.${v.task.st}` : 'sem afazer';
+    const id = v.id; v.think = 0;
+    const str = G.Save.serialize(); G.Save.apply(JSON.parse(str)); G.Main.mode = 'game'; S = G.S;
+    const v2 = S.villagers.get(id); const held = v2 ? hands(v2) : 'ninguém'; const n0 = lines.length;
+    const went = !!v2 && live(90, () => outOf(id, n0).some(q => q[5] === 'wood' && q[8] === 'entrega'));
+    ok('m14 salvo e carregado no meio do cuidar', st === 'lar/cuidar.2' && held === '2 de wood' && went && !look().length,
+      `${nm(v)} salvo(a) cuidando dos pequenos (${st}) com 2 de lenha nas mãos; carregado(a), com ${held}: ${went ? 'levou-a ao armazém' : `NÃO a levou (${v2 && v2.task ? v2.task.type : 'sem afazer'}, nas mãos: ${hands(v2)})`}`);
+  }
+}
+// ---------------- m15: the checker sees the load standing still in the hands of the one minding (the test's hand: minding
+// them at home and not stopping to think — as under the decide of before, whose minding never took a load anywhere); let go,
+// it goes to the store. A call of the world in the middle takes her from the minding: the case again with another, up to three
+{
+  let info = 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, com armazém ao alcance', fine = false; const calls = [];
+  for (let att = 0; att < 3 && !fine; att++) {
+    S.time = 0.3;
+    const v = minder(); if (!v || !give(v, 'wood', 2)) break;
+    G.Lar.task(v, G.Vg.H, 'cuidar'); v.think = 1e9;
+    let saw = '', called = '';
+    live(45, () => { if (!v.task || v.task.type !== 'lar') { called = v.task ? v.task.type : 'sem afazer'; return true; } look(); const q = l471.find(x => x.msg.includes('#' + v.id + ',')); if (q) saw = q.msg; return !!saw; });
+    v.think = 0;
+    if (called && !saw) { calls.push(`${v.name}: ${called}`); continue; }
+    const n0 = lines.length;
+    const went = live(60, () => outOf(v.id, n0).some(q => q[5] === 'wood' && q[8] === 'entrega'));
+    fine = !!saw && went;
+    info = `${nm(v)} cuidando dos pequenos com 2 de lenha, sem pensar: ${saw ? '«' + saw + '»' : 'o verificador NÃO viu'}; solto(a), ${went ? 'levou-a ao armazém' : `NÃO a levou (${v.task ? v.task.type : 'sem afazer'}, nas mãos: ${hands(v)})`}${calls.length ? ` (antes, o mundo chamou: ${calls.join(', ')})` : ''}`;
+  }
+  ok('m15 o verificador vê a carga parada nas mãos de quem cuida', fine && !look().length, info);
 }
 
 const e = M.erros();

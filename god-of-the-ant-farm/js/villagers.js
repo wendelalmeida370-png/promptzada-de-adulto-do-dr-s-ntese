@@ -592,6 +592,11 @@
       if (G.Urban && v.home && G.Urban.gardenDue(v)) opt(((elder ? 0.6 : 0.3) + G.R() * 0.4) * (eve ? 1.4 : S.time < 0.16 ? 1.25 : 0.8), 0.4, 'garden');
     }
     opt(0.04, 0, 'wander');
+    // (the one minding the little ones at home by day — G.Lar.minder — has no working day, as a child has none: a plain load in
+    // the hands goes to the store before the day at home, as a child's does (L-186) — eating, sleep and a storm first. Under the
+    // minding it stayed in the hands for days: Nefertari, the shepherd of Mênfis, 58, minded the little ones of her house with
+    // the trough's hay in her arms, ate from it, and was never one for the tavern, which seats no one with a load, L-471)
+    if (!night && best !== 'eat' && best !== 'sleep' && best !== 'shelter' && Vg.plainLoad(v) && (!cur || (cur.pri < 1 && cur.type !== 'deliver')) && !(v._noStore > S.clock) && G.Lar && G.Lar.minder(v)) { const t = deliverTask(v); if (t) { t.kind = 'deliver'; return; } }
     if (cur) {
       if (cur.kind === best) return;
       if (cur.pri >= bp) return;

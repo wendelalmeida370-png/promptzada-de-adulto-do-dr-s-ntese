@@ -598,8 +598,21 @@
     // ---- L-186: the hands are never filled over what they hold — a gathering (berries, fruit, honey, the flats' shellfish)
     // starts with the hands free or holding the same plain good —; and by day a child's load goes to its place before
     // play (the night's sleep cut the errand that took it there): a free child awake with a load, in no errand that carries
-    // it and with a store in reach, for more than 30 s of the day
+    // it and with a store in reach, for more than 30 s of the day; and so a plain load of the one minding the little ones at
+    // home by day, who has no working day to take it there either (L-471) — the minder as G.Lar.minder has it (the old of a
+    // house with little ones of three to six, well, and none other of the house minding them), read from the world and not
+    // from the house's count of the step, which only the step keeps
     const r2 = x => Math.round(x * 100) / 100; const day = s === G.S && G.isNight ? !G.isNight() : false; const kidNow = new Map();
+    const minding = v => {
+      const h = v.age >= 55 && !(v.sick > 0) && v.hp >= 50 && v.home > 0 ? s.buildings.get(v.home) : null; if (!h || !G.Village.livable(h)) return false;
+      let little = false;
+      for (const o of s.villagers.values()) {
+        if (o.home !== h.id || o.captive) continue;
+        if (o.age >= 3 && o.age < 7 && !o.aboard && !o.held && !o.ug && !o.air) little = true;
+        if (o !== v && o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.task.st === 2) return false;
+      }
+      return little;
+    };
     for (const v of s.villagers.values()) {
       const c = v.carry; const t = v.task; if (!c || !fin(c.n) || c.n <= EPS) continue;
       if (t && (t.type === 'gather' || t.type === 'mariscar' || t.type === 'pick' || t.type === 'honey')) {
@@ -607,10 +620,12 @@
         const want = t.type === 'honey' ? 'mel' : (K && K.good) || 'food';
         if (c.k !== want || c.op || c.to || c.cid) add('act', 3, `${v.name} #${v.id}: ${t.type} com ${r2(c.n)} de ${c.k} nas mãos — a colheita escreveria por cima do que elas levam (L-186)`);
       }
-      if (!day || !(v.age >= 2 && v.age < 16) || c.k === 'water' || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.sleeping || (s.avatar && s.avatar.id === v.id)) continue;
+      const kid = v.age >= 2 && v.age < 16;
+      if (!day || c.k === 'water' || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.sleeping || (s.avatar && s.avatar.id === v.id)) continue;
       if ((t && (t.pri >= 1 || t.type === 'deliver' || t.type === 'carga')) || v._noStore > s.clock) continue;
+      if (!kid && !(G.Vg.plainLoad(v) && minding(v))) continue;
       const p = kidMarkS === s && kidMark.get(v.id); const since = p && p.k === c.k ? p.since : s.clock; kidNow.set(v.id, { k: c.k, since });
-      if (s.clock - since > 30) add('act', 3, `${v.name} #${v.id}, ${Math.floor(v.age)} anos: ${r2(c.n)} de ${c.k} nas mãos há ${Math.round(s.clock - since)} s, de dia, ${t ? 'em ' + t.type : 'sem afazer'} — a carga não foi ao seu lugar (L-186)`);
+      if (s.clock - since > 30) add('act', 3, `${v.name} #${v.id}, ${Math.floor(v.age)} anos: ${r2(c.n)} de ${c.k} nas mãos há ${Math.round(s.clock - since)} s, de dia, ${t ? 'em ' + t.type : 'sem afazer'} — a carga não foi ao seu lugar (${kid ? 'L-186' : 'L-471: quem cuida dos pequenos em casa'})`);
     }
     kidMark = kidNow; kidMarkS = s;
     // ---- L-300: the water in the hands lives inside its errand (the house's jar, the bucket for a fire; a scene only lends

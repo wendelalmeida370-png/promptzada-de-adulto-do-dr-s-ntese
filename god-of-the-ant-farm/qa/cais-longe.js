@@ -11,7 +11,8 @@
 //  k4 o mesmo do k2 salvo e carregado no meio: carregado, sai da tripulação
 //  k5 um susto no cais no meio da reunião (um bicho na beira d'água: todos fogem): a tripulação volta ao cais, e a viagem sai
 //     com ela inteira (L-367: a grande viagem de Públio, no mar 8, saiu com um de vinte e seis)
-//  k6 os dois primeiros da fila do embarque longe do cais: quem está no cais embarca assim mesmo (L-367)
+//  k6 os dois primeiros da fila do embarque longe do cais: quem está no cais embarca assim mesmo (L-367) — quem está no cais
+//     numa cena de despedida é esperado pelo próprio embarque, e não conta (T-358)
 //  e o verificador limpo (S0–S3 novos), sem erro de módulo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -118,10 +119,18 @@ else {
     if (!e || e.st !== 'embarque' || held.length < 2 || !far) ok(K6, false, !e ? 'a viagem «média» não saiu' : e.st !== 'embarque' ? `a viagem não chegou ao embarque (${e.st})` : held.length < 2 ? 'menos de dois na fila' : 'nenhum chão a dez passos do cais');
     else {
       const others = e.crew.filter(id => !held.some(h => h.id === id)).map(id => S.villagers.get(id)).filter(Boolean);
-      const atQuay = others.filter(v => !v.aboard && G.dist(v.x, v.y, e.port[0], e.port[1]) <= 3.5).length, a0 = others.filter(v => v.aboard).length;
-      let k = 0; while (k++ < 100 && X.get(e.id) && e.st === 'embarque') { for (const h of held) { h.x = far[0]; h.y = far[1]; h.path = null; } G.debug.step(0.1); }
-      const a1 = others.filter(v => v.aboard).length;
-      ok(K6, a1 - a0 >= Math.min(4, atQuay), `${held.map(h => h.name).join(' e ')}, os primeiros da fila, a ${G.dist(far[0], far[1], e.port[0], e.port[1]).toFixed(0)} casas do cais; dos outros, ${atQuay} no cais: em 10 s, ${a1 - a0} embarcaram`);
+      // (the ones on the quay the boarding can take: one in a scene of their own — the farewell on the quay of «Além do
+      // Horizonte», hz-cais — is waited for by the boarding itself, the ship does not leave in the middle of an embrace. In the
+      // metropole of the generation 11 the leader Leif said goodbye on the quay for the first 33 s of the boarding, and of the
+      // two on the quay only Sven could step down in the 10 s, T-358; one a scene takes in the middle is the scene's too. With
+      // nobody free on the quay the case is not made)
+      const inScene = v => !!(G.Scene && G.Scene.actorScene(v));
+      const quay = others.filter(v => !v.aboard && G.dist(v.x, v.y, e.port[0], e.port[1]) <= 3.5);
+      const scened = new Set(quay.filter(inScene).map(v => v.id));
+      let k = 0; while (k++ < 100 && X.get(e.id) && e.st === 'embarque') { for (const h of held) { h.x = far[0]; h.y = far[1]; h.path = null; } G.debug.step(0.1); for (const v of quay) if (!v.aboard && inScene(v)) scened.add(v.id); }
+      const free = quay.filter(v => !scened.has(v.id)); const went = free.filter(v => v.aboard).length;
+      const sc = quay.filter(v => scened.has(v.id)).map(v => v.name);
+      ok(K6, free.length > 0 && went >= Math.min(4, free.length), `${held.map(h => h.name).join(' e ')}, os primeiros da fila, a ${G.dist(far[0], far[1], e.port[0], e.port[1]).toFixed(0)} casas do cais; dos outros, ${quay.length} no cais${sc.length ? ` (${sc.join(', ')} numa cena de despedida, que o embarque espera)` : ''}: ${free.length ? `em 10 s, ${went} dos ${free.length} livres embarcaram` : 'NINGUÉM livre no cais — o caso não se fez'}`);
       for (const h of held) h.path = null;
     }
   }
