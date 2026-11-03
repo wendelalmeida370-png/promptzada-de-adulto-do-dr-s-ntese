@@ -134,6 +134,11 @@ else {
     send(v, b, onFarm(b));
     live(60, Hd.step, () => held(v).food > 0 && v.task && v.task.type === 'farm');
     const n = held(v).food || 0; const mine = b.crops.findIndex(c => c.c === v.id); const L0 = seen.length;
+    // (room in the people's store for what is in his hands, made by the god at the moment he dies, as the r3 of the
+    // rebanho.js keeps it (T-327): a full store takes at its door only what fits — the inheritance's rest lost with its line,
+    // 'sem-lugar', as the world does —, and the case is the inheritance, not the room. Tenochtitlan's store of the generation
+    // 11 had room for 4 of food: of the 5 in Tonantzin's hands, 1 was lost at its door, T-353)
+    { const f = G.Fac.ofV(v); const room = D.room('f:' + f.id, 'food'); if (room < 12) D.use('f:' + f.id, 'food', 12 - room, { code: 'teste', part: true }); }
     V.kill(v, 'wolf'); Hd.step();
     const herd = r2(seen.slice(L0).filter(e => e[3] === 'v:' + v.id && e[5] === 'food' && e[8] === 'herdado').reduce((s, e) => s + e[6], 0));
     // another farmer takes the crop he held, and the rest

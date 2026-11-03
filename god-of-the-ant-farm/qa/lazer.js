@@ -66,6 +66,13 @@ function audience(b, n) {
 // way to the stage took it six seconds later, and the play went on: in the branch with the quay's dockers of L-428, both l3
 // and l8. A weightier errand a while, on the way or on the stage — the stage lets go of who left it, at its next look: T-303)
 const holdOthers = (b, keep) => { for (const o of S().villagers.values()) if (o.role === 'ator' && o.job === b.id && !keep.includes(o.id) && o.task && o.task.type === 'atuar') G.Vg.give(o, { type: 'idle', pri: 3, wait: 10 }); };
+// (the beasts that come at people kept away by the god's hand while a case of one person is on, round the places of the
+// case — the stage, the way of the one watched —: the beasts of prey and the ones that turn on whoever hunts them, a rhino,
+// an elephant, a boar. In the generation 11's Mênfis Kamose and Nefertari hunted rhinos and an elephant by the theatre and
+// the library, and the angry beasts sent the actor of the l8 running from the stage ('flee', 5) before his hunger took him
+// to eat. The case is the stage and the reading, not the hunt, as the rebanho.js keeps the beasts of prey from the pen
+// (T-302), T-356)
+const calmBeasts = (...at) => { for (const a of [...S().animals.values()]) { if (a.dead || a.dom || a.tamed) continue; const sp = G.Animals.DEF[a.kind]; if (!sp || !(G.Animals.predator(a.kind) || sp.defend || sp.bold > 0 || a.kind === 'boar' || G.Animals.threat(a))) continue; if (at.some(p => G.dist2(a.x, a.y, p[0], p[1]) < 40 * 40)) G.Animals.remove(a); } };
 const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.data.receita, op.data.pagos, op.data.vistos, Object.keys(op.data.plateia).sort(), Object.keys(op.data.atores).sort(), S().rng]);
 
 // ---------------- l1 a whole show ----------------
@@ -163,11 +170,17 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, b
   fresh(); const b = S().buildings.get(P.id); S().time = Tt.EARLY - 0.02; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
   const cast = actors(b); const a = cast.length ? solo(b, cast) : null; const sp = a ? farSpot(b, a) : null; const bad = [];
   if (a && sp) { G.Vg.endTask(a); a.x = sp[0]; a.y = sp[1]; a.path = null; a.inside = 0; a.sleeping = false; a.energy = 90; a.hunger = 20; }
+  // (and his house's water in the jar — the chores of the house done before he set out, as the obra-longe.js does —: the
+  // house's water (1,05, until 0,55) takes whoever of the house has nothing weightier, and the call to the stage is not given
+  // over an errand above 1 — in the generation 11's Mênfis Tauret, put down far from the door, went for it at the first step
+  // and spent the preparation carrying the jar home, «não chegou à peça», T-356)
+  if (a && sp) { const h = S().buildings.get(a.home); if (h) h.water = 1; }
   const dr = G.Vg.door(b); const far = a ? Math.round(G.dist(a.x, a.y, dr[0], dr[1])) : 0; const at = Tt.opensAt(b);
   // (the case's own show, kept when it opens, and its end waited for: Tt.dia gives only a show alive, and the wait for its end
   // on it never ended — the case lived its 200 s and took the theatre's newest show, which in the tip a39483e, the case begun
   // later, was the next day's preparation, «on», T-310)
-  let on = false, op = null; liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad);
+  let on = false, op = null; if (a) calmBeasts([a.x, a.y], dr);
+  liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad, () => { if (a) calmBeasts([a.x, a.y], dr); });
   ok('l7 o-ator-de-longe', !!a && !!sp && !!op && op.st === 'ok' && on && at < Tt.horas(b).prep && !bad.length, a && sp ? `${a.name}, o ator do dia, a ${far} casas da porta: o preparo abriu às ${r2(at)} (antes ${Tt.horas(b).prep}); ${on ? 'no palco na peça' : 'não chegou à peça'}; o espetáculo ${op ? op.st + ' (' + (op.end ? op.end.why : '') + ')' : 'não abriu'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'sem ator ou sem lugar longe');
 }
 // ---------------- l8 the hungry actor on the stage (L-426) ----------------
@@ -176,12 +189,13 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, b
 function hungryActor(hunger) {
   fresh(); const b = S().buildings.get(P.id); const cast = ready(b); const a = cast.length ? solo(b, cast) : null; const bad = [];
   if (a) { a.energy = 90; a.hunger = 20; }
-  const keep = a ? [a.id] : []; holdOthers(b, keep);
-  liveSec(60, () => { const o = Tt.dia(b); return !!o && o.data.fase === 'peca' && !!o.data.atores[a.id]; }, bad, () => holdOthers(b, keep));
+  const keep = a ? [a.id] : []; holdOthers(b, keep); const dr = G.Vg.door(b);
+  const hold = () => { holdOthers(b, keep); if (a) calmBeasts([a.x, a.y], dr); }; hold();
+  liveSec(60, () => { const o = Tt.dia(b); return !!o && o.data.fase === 'peca' && !!o.data.atores[a.id]; }, bad, hold);
   const op = Tt.dia(b); const started = !!op && op.data.fase === 'peca' && !!a && !!op.data.atores[a.id];
   if (started) a.hunger = hunger;
   // (who leaves the stage while the play is on — after the applause the stage is left anyway)
-  let left = null; if (started) liveSec(60, () => { if (!left && op.data.fase === 'peca' && !op.data.atores[a.id] && a.task) left = a.task.type; return !A.live(op); }, bad, () => holdOthers(b, keep));
+  let left = null; if (started) liveSec(60, () => { if (!left && op.data.fase === 'peca' && !op.data.atores[a.id] && a.task) left = a.task.type; return !A.live(op); }, bad, hold);
   return { a, op, started, left, bad };
 }
 {
@@ -198,11 +212,18 @@ function hungryActor(hunger) {
 // the reading by another door, and the load sat them all down again)
 const writers = () => [...S().buildings.values()].filter(b => { if (b.type !== 'biblioteca' || !b.built) return false; const f = G.Fac.get(V.facOfSet(b.set)); return !!(f && f.tech && f.tech.known && f.tech.known.escrita); });
 const free = v => !(v.captive || v.jail || v.aboard || v.sleeping || v.merchant || (v.carry && v.carry.n > 1e-6) || A.isBody(v) || !V.livable(S().buildings.get(v.home)));
+// (and her house hers through the evening: a family in need of a house — a tenant, a house too full, a couple in others'
+// full house (G.Casa.need) — moves when the day of its town comes, and the town's housing (village.js, assignHousing) moves a
+// grown one with no partner out of a crowded house, and one with a partner to the partner's: one of a family with where to
+// live, whom the housing leaves where she is. Menkaure of the generation 11's Mênfis rented her sobrado ('aluga'): the day of
+// Mênfis came at 0,74, on her way to bed, and her family took a house of its own; she slept in the sobrado, where her bed
+// had taken her — her house no more —, and the case waited for her in the new one until the morning, T-356)
+const settled = v => { const h = S().buildings.get(v.home); const cap = h && G.BDEF[h.type] ? G.BDEF[h.type].housing || 0 : 0; let n = 0; for (const o of S().villagers.values()) if (o.set === v.set && o.home === v.home && !o.captive) n++; const p = v.partner && S().villagers.get(v.partner); return n <= cap && !(p && p.set === v.set && p.home && p.home !== v.home) && !(G.Casa && G.Casa.need(v)); };
 {
   fresh(); let pick = null;
   for (const lib of writers()) {
     const dr = G.Vg.door(lib);
-    for (const v of [...S().villagers.values()].sort((a, c) => a.id - c.id)) if (v.set === lib.set && v.age >= 62 && free(v) && G.Lar.clock(v).bed < 0.712 && G.W.reaches(v, dr[0], dr[1])) { pick = { lib, v }; break; }
+    for (const v of [...S().villagers.values()].sort((a, c) => a.id - c.id)) if (v.set === lib.set && v.age >= 62 && free(v) && settled(v) && G.Lar.clock(v).bed < 0.712 && G.W.reaches(v, dr[0], dr[1])) { pick = { lib, v }; break; }
     if (pick) break;
   }
   if (!pick) ok('l9 a-leitora-vai-dormir', true, 'nenhum ancião de um povo com escrita que durma antes de a biblioteca fechar: sem o caso');
@@ -213,7 +234,8 @@ const free = v => !(v.captive || v.jail || v.aboard || v.sleeping || v.merchant 
     const t = Bi.visit(v, lib); let read = false; const calls = []; const bad = [];
     const home = () => !!v.task && v.task.type === 'sleep' && v.task.st >= 2 && v.sleeping && v.inside === v.home;
     // (a tenth of a second at a time: the reading may last a moment only — the family at the door took Citlali a second in)
-    for (let k = 0; k < 1600 && !home(); k++) { M.viver(0.1); if (k % 50 === 49) watch(bad); const tt = v.task; if (tt && tt.type === 'ler' && tt.st >= 1) read = true; else if (read && tt && !calls.includes(tt.type)) calls.push(tt.type); }
+    calmBeasts([v.x, v.y], dr);
+    for (let k = 0; k < 1600 && !home(); k++) { M.viver(0.1); if (k % 10 === 9) calmBeasts([v.x, v.y], dr); if (k % 50 === 49) watch(bad); const tt = v.task; if (tt && tt.type === 'ler' && tt.st >= 1) read = true; else if (read && tt && !calls.includes(tt.type)) calls.push(tt.type); }
     const asleep = home(); const kept = !!Bi.book(lib).quem[v.id];
     const r = asleep ? QA.roundTrip() : { diff: ['ela não chegou a dormir em casa'] };
     const w = S().villagers.get(v.id); const after = w && w.task ? `${w.task.type}/${w.task.st}` : 'sem tarefa';

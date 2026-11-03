@@ -107,7 +107,12 @@ function pairStep(ways, v, h, cid) {
   if (!w) { const w0 = { lead: v.id, help: h.id, n: 0, min: d, max: d, ahead: 0, stops: 0, way: 0, lx: v.x, ly: v.y, hx: h.x, hy: h.y }; ways.set(key, w0); return w0; }
   const ml = G.dist(v.x, v.y, w.lx, w.ly), mh = G.dist(h.x, h.y, w.hx, w.hy);
   w.n++; w.min = Math.min(w.min, d); w.max = Math.max(w.max, d); w.way += ml;
-  if (ml > 0.02) { if ((h.x - v.x) * (v.x - w.lx) + (h.y - v.y) * (v.y - w.ly) > 0.02 * ml) w.ahead++; if (mh < 0.25 * ml) w.stops++; }
+  // (standing while he walks: he went away from it along the crate — the share of his step on the line from it to him, what
+  // pulls it — and it moved less than a quarter of that. Round a right-angle corner the crate pivots the one behind: a step of
+  // his across the line pulls it by a second-order bit only — by the harbour warehouse of the generation 11's Mênfis, 0,031
+  // for a step of 0,131, the two 0,25 apart the whole time —, and the measure of his whole step counted that as a stop, T-357)
+  const ux = w.lx - w.hx, uy = w.ly - w.hy, u = Math.hypot(ux, uy) || 1; const pull = ((v.x - w.lx) * ux + (v.y - w.ly) * uy) / u;
+  if (ml > 0.02) { if ((h.x - v.x) * (v.x - w.lx) + (h.y - v.y) * (v.y - w.ly) > 0.02 * ml) w.ahead++; if (pull > 0.02 && mh < 0.25 * pull) w.stops++; }
   w.lx = v.x; w.ly = v.y; w.hx = h.x; w.hy = h.y; return w;
 }
 // (the checker's rule of the pair, shown the bad case: the helper pulled to 0,7 of a tile — where the old walk kept it —

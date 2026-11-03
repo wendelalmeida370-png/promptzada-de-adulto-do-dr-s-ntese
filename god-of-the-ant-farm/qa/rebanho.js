@@ -11,6 +11,8 @@
 //  r6 sem capim em volta do curral (a cidade o cercou de ruas): o pastor não leva o rebanho ao chão nu, e o feno vem do armazém
 //     (L-396: levava, e o rebanho voltava com mais fome do que foi) — num mundo sem curral assim, o capim em volta do curral
 //     do caso tirado pela mão do deus
+//  r7 um bicho do rebanho fechado no cercado de outro (entrou pela porteira atrás do pastor) sai dali e volta ao seu curral
+//     (L-468: só o bicho sem curral saía do cercado alheio por qualquer lado, e o caminho de volta não conhece porteiras)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
 // O corpo do deus não pastoreia (o interact.js não tem o verbo): o salto é das vidas longas da regressão.
 //   node qa/rebanho.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/rebanho.js)
@@ -185,6 +187,26 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   const grassAt = p => { let g = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) g += S().veg[G.W.idx(G.clamp(Math.floor(p[0]) + dx, 0, G.N - 1), G.clamp(Math.floor(p[1]) + dy, 0, G.N - 1))]; return r2(g); };
   const bad = newBad(P.base);
   ok('r6', !out && hay && !bad.length, `${V.buildName(P.b)} #${P.b.id} de ${S().settlements.get(P.b.set).name}, ${BARE ? 'sem capim em volta' : `o capim em volta tirado pela mão do deus (${pastures(P.b)} lugares de pasto)`}, o rebanho com fome (0,6): ${P.v.name} (${t0 ? t0.type : 'sem tarefa'}) ${out ? `LEVOU ${out} ao chão sem capim${at ? ` (${r2(at[0])},${r2(at[1])}, capim ${grassAt(at)})` : ''}` : 'não o levou ao pasto'}; o feno ${hay ? 'veio do armazém (\'feno\')' : 'NÃO veio em 120 s'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+}
+// r7 a beast of the flock shut in someone else's pen walks out and home (L-468: following the herder, a beast goes in at
+// the gate of a pen on his way — the gates let anyone in —, and only a beast with no pen could leave someone else's pen by
+// any side: in the generation 11's Texcoco a turkey of the case's flock went in at the gate of the pen by the road on the
+// way home after the load of the r4, and its way home — the people's, with no gates in it — pressed it against the fence
+// for good). Put down by the god's hand in the middle of the nearest other fenced ground it can walk to — a pen, a stable, a
+// captives' pen, a graveyard —, at rest, past the pasture's hours
+{
+  const P = setup(0.5, 0.1); const b = P.b; const FEN = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 };
+  const [gx, gy] = [b.x + b.w / 2, b.y + b.h + 0.4];
+  const other = [...S().buildings.values()].filter(o => FEN[o.type] && o.built && o.id !== b.id && G.W.canWalk(o.x + o.w / 2, o.y + o.h + 0.4, gx, gy)).sort((p, q) => G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y) || p.id - q.id)[0];
+  const a = P.herd.slice().sort((p, q) => p.age / G.Animals.DEF[p.kind].life - q.age / G.Animals.DEF[q.kind].life || p.id - q.id)[0]; // (the youngest: none dies of old age in the case)
+  if (!other || !a) ok('r7', true, `${other ? 'sem bicho no curral' : 'nenhum outro chão cercado a que o rebanho chegue a pé'}: sem o caso`);
+  else {
+    a.x = other.x + other.w / 2; a.y = other.y + other.h / 2; a.tx = a.x; a.ty = a.y; a.path = null; a.noGo = undefined; a.blk = 0; a.stk = 0;
+    const d0 = r2(G.dist(a.x, a.y, b.x + b.w / 2, b.y + b.h / 2)); let outAt = null, c0 = S().clock;
+    const back = live(90, () => { if (outAt === null && G.W.fenceMap()[G.W.idx(a.x, a.y)] !== other.id) outAt = r2(S().clock - c0); }, () => a.dead || (a.state === 'pen' && inPen(a, b)));
+    const bad = newBad(P.base);
+    ok('r7', back && !a.dead && !bad.length, `${a.kind} #${a.id} do ${V.buildName(b)} #${b.id} posto no meio de ${V.buildName(other)} #${other.id} (${other.type}), a ${d0} casas do seu: ${outAt === null ? 'NÃO SAIU de lá' : `saiu em ${outAt} s`}; ${back ? `no seu curral em ${r2(S().clock - c0)} s` : `não voltou ao seu curral em 90 s (em ${r2(a.x)},${r2(a.y)}, ${a.state})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  }
 }
 const er = M.erros();
 ok('erros', !Object.keys(er.mod).length && !er.console.length, `módulos: ${JSON.stringify(er.mod)}; console: ${er.console.slice(0, 2).join(' | ') || 'nada'}`);

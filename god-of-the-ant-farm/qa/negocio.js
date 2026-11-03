@@ -114,6 +114,12 @@ S.time = 0.1; godsPeace();
 const z1 = B.of(merchants()[0]); const m1 = S.villagers.get(z1.owner);
 // ---------------- n2: the wholesale is paid; no coin, no goods
 {
+  // (back from a voyage first, as the counter cases wait for the merchant back from what he did — the world's own voyage,
+  // waited for to its end, never cut —, the clock held at the case's hour. Jasão of the generation-11 metropole is a man of
+  // the sea — five voyages of his own before —, and when the case opened his canoe was being made ready: the crew's call to
+  // the quay (3,25), the ship and the homecoming took the three tries of the case before the store, T-355)
+  const t2 = S.time; const voyage = () => !!G.Expe.memberOf(m1.id) || !!(m1.task && (m1.task.pri || 0) >= 1.5);
+  if (voyage()) { const c0 = S.clock; const back = live(400, () => { if (S.time > t2) S.time = t2; return !voyage() || watch(); }); start += ` (${m1.name} ${back ? 'de volta de uma viagem em ' + Math.round(S.clock - c0) + ' s' : 'ainda numa viagem: ' + (m1.task ? m1.task.type : 'sem tarefa')})`; }
   // (fed and rested first, by the world's own meal and bed, as the counter cases start: a hungry merchant goes to the pantry
   // before the store — in the new metropolis Hipátia came to n2 with a hunger of 79, the meal took the case's errand, and
   // what she bought later was incense for her own stall, T-177)

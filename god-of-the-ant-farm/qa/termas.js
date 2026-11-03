@@ -114,14 +114,24 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
 // ---------------- e2 no wood at all ----------------
 {
   fresh(); const b = S().buildings.get(P.id); const f = ready(b); const bad = []; seen.length = 0;
-  // (no wood by the furnace, none in the store)
-  for (const ref of ['b:' + b.id, 'f:' + f.id]) { const n = D.get(ref, 'wood'); if (n > 1e-6) D.use(ref, 'wood', n, { code: 'teste', mine: true }); }
+  // (no wood by the furnace, none in the store, none on its way there: the wood in the hands of whoever takes it to the
+  // furnace — the stoker's own fetch, his from the step he set out, L-400 — is the baths' wood too; and none comes while the
+  // water is cold: the town's deliveries fill the store again in seconds, and a cold furnace sends the stoker for what is
+  // beyond the works' share. The god's hand keeps the town without wood for the baths through the cold part, every second, as
+  // the e3's keeps the store with some (T-281). In the generation 11's Mênfis the stoker Tutmés was on his way to the furnace
+  // with 3 of it when the case began, and by 0,31 the store had 22 again: the baths opened hot — 5 hot baths, 3 of wood
+  // burnt, wood the world had, T-354)
+  const dry = () => {
+    for (const ref of ['b:' + b.id, 'f:' + f.id]) { const n = D.get(ref, 'wood'); if (n > 1e-6) D.use(ref, 'wood', n, { code: 'teste', mine: true }); }
+    for (const v of S().villagers.values()) { const c = v.carry; if (c && c.k === 'wood' && c.n > 1e-6 && !c.op && (c.to === 'b:' + b.id || (v.job === b.id && v.role === 'foguista'))) D.use('v:' + v.id, 'wood', c.n, { code: 'teste', mine: true }); }
+  };
+  dry(); keeping = dry;
   liveSec(30, () => !!Te.dia(b), bad); const op = Te.dia(b);
   // (the bathers' errand held above the calls from outside below 3 — the line of the D-094 —: the case is the cold bath. In
   // the generation 7's Argos, sent at the opening by the leisure's own errand (0,4), the four were each taken on the way —
   // a prayer, a purchase, the fields, a cave — and nobody bathed until the baths closed, T-281)
   if (op) { bathers(b, 4, 2.9); liveSec(60, () => !A.live(op) || op.data.frios >= 1, bad); }
-  const cold = op ? { frios: op.data.frios, quentes: op.data.quentes, lenha: op.data.lenha } : null;
+  const cold = op ? { frios: op.data.frios, quentes: op.data.quentes, lenha: op.data.lenha } : null; keeping = null;
   // (and wood comes back to the store: the stoker brings it — held for him from the step he sets out, L-400 —, and the fire
   // is lit)
   // (kept there until he comes for it — the test's hand, as in the e3: the case is the stoker answering the wood that came

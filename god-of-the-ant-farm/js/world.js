@@ -112,8 +112,10 @@
     const i0 = W.idx(x0, y0), i1 = W.idx(x1, y1); const f0 = F[i0], f1 = F[i1];
     if (f0 === f1) return false;
     for (const f of [f0, f1]) {
-      // one that found itself shut in someone else's pen may always get out; going in is at the gate
-      if (!f || (a && a.pen === f) || (f === f0 && f0 !== f1 && !(a && a.pen))) continue;
+      // one that found itself shut in someone else's pen may always get out — a beast of another pen too: only the penless
+      // could, and a turkey of Texcoco that went in at the gate of the pen by the road, behind its herder, never came out (its
+      // way home is the people's, with no gates in it), L-468 —; going in is at the gate
+      if (!f || (a && a.pen === f) || f === f0) continue;
       const b = G.S.buildings.get(f); if (!b) continue;
       const gx = b.x + b.w / 2, gy = b.y + b.h; const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
       if (Math.abs(mx - gx) < 0.55 && Math.abs(my - gy) < 0.45) continue; // through the gate
