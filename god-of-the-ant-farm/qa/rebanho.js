@@ -134,6 +134,10 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   const GOODS = ['food', 'la', 'queijo'].filter(k => k === 'food' || k in G.Eco.GOODS);
   const keepRoom = () => { for (const k of GOODS) { const room = V.cap(f.id) - (f.stock[k] || 0); if (room < 12) D.use('f:' + f.id, k, 12 - room, { code: 'teste', part: true }); } };
   keepRoom();
+  // (and the herder's house with its water full, by the god's hand, as lazer.js and obra-longe.js bring theirs: the house's
+  // jar low sends one of the house to the well — the world's own errand —, and in the generation-12 metropole Meresankh took
+  // a fifth of the afternoon to fetch it, tended one cow of Mênfis and went home for the evening, T-375)
+  { const h = S().buildings.get(P.v.home); if (h) { h.water = 1; h.waterTry = undefined; } }
   const L0 = seen.length;
   send(P.v, P.b);
   // (one of the three dead of old age in the case gives nothing, and is no fault of the herder's — the oldest ewe of Birka dies

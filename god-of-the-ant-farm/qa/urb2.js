@@ -75,43 +75,79 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
 
   // 2 the tavern
   const tv = await page.evaluate(() => {
-    const S = G.S; const set = window.__set; const f = G.Fac.get(set.fac);
+    const S = G.S; const home = window.__set;
     // (the town's own tavern, if it has one: under the ceiling of the trades a town gives its taverns the keepers its shares
     // ask (D-090), and a second tavern put down by the test stood empty beside the first, its keeper at the old one, T-336)
-    const t = [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built && b.set === set.id).sort((a, b) => a.id - b.id)[0] || window.__put('taverna', set.cx, set.cy); if (!t) return { skip: 'sem lugar' };
+    const own = s => [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built && b.set === s.id).sort((a, b) => a.id - b.id)[0] || null;
+    let set = home, t = own(home) || window.__put('taverna', home.cx, home.cy);
+    // (and a town with no tavern and no room for one — its planner gives no site, and no free ground near its heart —: the
+    // tavern the world has, of the most peopled town with one, its own people the drinkers, its people taught the coin as the
+    // first town's was. Roma of the seed 7, of the coast, had a third of its circle under water and the rest built or wooded;
+    // a tavern put down on its first free ground, 30 tiles out, served nobody in three evenings, T-382)
+    if (!t) { const o = [...S.settlements.values()].map(s => ({ s, t: own(s) })).filter(o => o.t).sort((a, b) => G.Village.pop(b.s.id) - G.Village.pop(a.s.id) || a.s.id - b.s.id)[0]; if (o) { set = o.s; t = o.t; } }
+    if (!t) return { skip: 'sem lugar' };
+    window.__tset = set; const f = G.Fac.get(set.fac); G.Civ.learn && !G.Civ.has(f.id, 'moeda') && G.Civ.learn(f, 'moeda', 'teste');
     if (!t.inv) t.inv = {}; if ((t.inv.food || 0) < 10) G.Depot.make('b:' + t.id, 'food', 10 - (t.inv.food || 0), { code: 'teste' }); // (the meals of the house, by the ledger)
-    const drinkers = window.__adults().filter(v => v.home && v.role !== 'taverneiro' && v.role !== 'estivador' && v.role !== 'pescador' && !(v.task && v.task.type === 'fest')).slice(0, 4);
+    const drinkers = [...S.villagers.values()].filter(v => v.set === set.id && !v.captive && v.age >= 18 && v.age < 55 && !v.aboard).filter(v => v.home && v.role !== 'taverneiro' && v.role !== 'estivador' && v.role !== 'pescador' && !(v.task && v.task.type === 'fest')).slice(0, 4);
     for (const v of drinkers) { const h = G.S.buildings.get(v.home); if (h) h.coin = (h.coin || 0) + 10; }
-    return { t: t.id, drinkers: drinkers.map(v => v.id), drink: G.Tavern.DRINK[f.civ || 'classico'].k, civ: f.civ };
+    return { t: t.id, drinkers: drinkers.map(v => v.id), drink: G.Tavern.DRINK[f.civ || 'classico'].k, civ: f.civ, town: set === home ? '' : set.name };
   });
   if (tv.skip) ok('2 a taverna faz a bebida do seu povo e cobra cada rodada', false, tv.skip);
   else {
     // (the town gives the tavern its keeper; the keeper brews when the shelf is low)
-    const kp = await until(o => [...G.S.villagers.values()].find(v => v.job === o.t) ? 1 : 0, 200, tv);
+    const kp = await until(o => [...G.S.villagers.values()].find(v => v.job === o.t && v.role === 'taverneiro') ? 1 : 0, 200, tv);
+    // (with none — a town at the ceiling of its trades, D-090, gives its tavern no keeper — a grown one of the tavern's town
+    // takes up the trade by the god's hand, as one takes up a trade (lazer.js), and keeps it for the case: the town's board
+    // would deal him back at its next pass. The tavern of the P2 (D-077) opens its day only with its keeper at hand, T-382)
+    await page.evaluate(o => {
+      const S = G.S; const set = window.__tset || window.__set;
+      let k = [...S.villagers.values()].find(v => v.job === o.t && v.role === 'taverneiro');
+      if (!k) { k = [...S.villagers.values()].filter(v => v.set === set.id && !v.captive && !v.aboard && v.age >= 18 && v.age < 55 && v.role !== 'guerreiro' && !o.drinkers.includes(v.id)).sort((a, c) => a.id - c.id)[0]; if (k) { k.role = 'taverneiro'; k.job = o.t; G.Vg.endTask(k); } }
+      window.__kid = k ? k.id : 0; window.__step0 = G.debug.step;
+      G.debug.step = dt => { window.__step0(dt); const v = G.S.villagers.get(window.__kid); if (v && (v.role !== 'taverneiro' || v.job !== o.t)) { v.role = 'taverneiro'; v.job = o.t; } };
+    }, tv);
     // (a people that brews its drink waits for the first vat; one whose drink comes from the stores waits for the shelf)
     await until(o => { const b = G.S.buildings.get(o.t); return ['cerveja', 'pulque'].includes(o.drink) ? (b.brewed || 0) > 0 : (b.brewed || 0) > 0 || G.Tavern.onShelf(b); }, 400, tv);
-    // the evening (not a feast night: the feast takes everyone to the square): the drinkers, fed and rested, go to the tavern
-    // (a storm, a fire, a call can spoil an evening: up to three evenings)
+    // the evening (not a feast night: the feast takes everyone to the square): the shelf stocked by the ledger, as qa/taverna.js
+    // stocks it — the meals and the people's own drink —, the keeper at the counter just before the opening, the day opened by
+    // the world at its hour; then the drinkers, fed and rested, brought to the street of the tavern and sent by the world's own
+    // choice of a customer (G.Taverna.visitTask: an open tavern in reach, a seat, coin in the house). An errand given by hand
+    // without the day carried no deal of the P2's tavern and was dropped at once: the case passed only when one of the four
+    // went of his own will, T-382 (a storm, a fire, a call can spoil an evening: up to three evenings)
     let r2 = null, r3 = null;
-    for (let k = 0; k < 3 && !(r3 && r3.drinks.some(n => n >= 1)); k++) {
-      if (k) await until(() => G.S.time > 0.55 && G.S.time < 0.6 ? 1 : 0, 220);
-      await until(() => !G.Fest.active(window.__set.id), 300);
+    for (let k = 0; k < 3 && !(r3 && r3.paid > 0); k++) {
+      if (k) await until(() => G.S.time > 0.3 && G.S.time < 0.45 ? 1 : 0, 220);
+      await until(() => !G.Fest.active((window.__tset || window.__set).id), 300);
       r2 = await page.evaluate(o => {
-        const S = G.S; const b = S.buildings.get(o.t); const I = b.inv || (b.inv = {});
-        if (!G.Tavern.onShelf(b)) { I.cerveja = 6; } // (a people whose drink comes from the stores: the shelf filled by hand)
-        if ((I.food || 0) < 4) I.food = 10;
-        const coin0 = o.drinkers.map(id => { const v = S.villagers.get(id); const h = v && S.buildings.get(v.home); return h ? h.coin : 0; }).reduce((a, n) => a + n, 0);
-        S.time = 0.62;
-        for (const id of o.drinkers) { const v = S.villagers.get(id); if (!v || v.aboard) continue; G.Vg.endTask(v); v.sleeping = false; v.inside = 0; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); if (!(v.traits || []).includes('Sociável')) v.traits = (v.traits || []).concat(['Sociável']); G.Vg.setTask(v, { type: 'tavern', id: b.id, pri: 0.9 }); }
-        return { coin0, brewed: b.brewed || 0, shelf: G.Tavern.onShelf(b), L0: S.ledgerN };
+        const S = G.S, T = G.Taverna, D = G.Depot; const b = S.buildings.get(o.t); const ref = 'b:' + b.id;
+        if (D.free(ref, 'food') < 6) D.make(ref, 'food', 6 - D.free(ref, 'food'), { code: 'teste', part: true });
+        if (D.free(ref, o.drink) < 2) D.make(ref, o.drink, 2 - D.free(ref, o.drink), { code: 'teste', part: true });
+        const kv = S.villagers.get(window.__kid); const dr = G.Vg.door(b);
+        if (kv) { G.Vg.endTask(kv); kv.sleeping = false; kv.inside = 0; kv.x = dr[0]; kv.y = dr[1]; kv.path = null; kv.hunger = Math.min(kv.hunger, 10); kv.energy = Math.max(kv.energy, 85); }
+        S.time = T.horas(b).abre - 0.005; S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0;
+        return { brewed: b.brewed || 0, shelf: G.Tavern.onShelf(b), keeper: !!kv };
       }, tv);
+      const opened = await until(o => (G.Taverna.aberta(G.S.buildings.get(o.t)) ? 1 : 0), 30, tv);
+      const sent = await page.evaluate(o => {
+        const S = G.S, T = G.Taverna; const b = S.buildings.get(o.t); const dr = G.Vg.door(b); let n = 0;
+        const coin0 = o.drinkers.map(id => { const v = S.villagers.get(id); const h = v && S.buildings.get(v.home); return h ? h.coin : 0; }).reduce((a, x) => a + x, 0);
+        for (const id of o.drinkers) {
+          const v = S.villagers.get(id); if (!v || v.aboard || v.captive) continue;
+          G.Vg.endTask(v); v.sleeping = false; v.inside = 0; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85);
+          if (G.dist(v.x, v.y, dr[0], dr[1]) > 6) { v.x = dr[0] + 1.5; v.y = dr[1] + 1.5; v.path = null; }
+          const t = T.visitTask(v, { setTask: (p, q) => G.Vg.setTask(p, q) }); if (t || (v.task && v.task.type === 'tavern')) n++;
+        }
+        return { n, coin0, L0: S.ledgerN };
+      }, tv);
+      r2 = Object.assign(r2, { opened: !!opened, sent: sent.n, coin0: sent.coin0, L0: sent.L0 });
       await step(60);
       // (what the rounds cost, by the ledger: the coins from the drinkers' houses (or purses) to the keeper's, in the deals of
       // the tavern's day, act-taverna.js — the tavern of the P2 keeps no «takings» of its own: the count of before was always 0,
       // T-336)
-      r3 = await page.evaluate(o => { const S = G.S; const refs = new Set(o.drinkers.map(id => S.villagers.get(id)).filter(Boolean).map(v => G.Eco.coinRef(v))); const rows = G.Depot.ledger().filter(e => e[0] > o.L0 && e[8] === 'taverna' && e[5] === 'moedas' && refs.has(e[3])); const paid = rows.reduce((a, e) => a + e[6], 0), paidN = rows.length; const coin1 = o.drinkers.map(id => { const v = S.villagers.get(id); const h = v && S.buildings.get(v.home); return h ? h.coin : 0; }).reduce((a, n) => a + n, 0); return { paid, paidN, coin1, drinks: o.drinkers.map(id => (S.villagers.get(id) || {}).drinks || 0) }; }, Object.assign({}, tv, { L0: r2.L0 }));
+      r3 = await page.evaluate(o => { const S = G.S; const refs = new Set(o.drinkers.map(id => S.villagers.get(id)).filter(Boolean).map(v => G.Eco.coinRef(v))); const rows = G.Depot.ledger().filter(e => e[0] > o.L0 && e[8] === 'taverna' && e[5] === 'moedas' && refs.has(e[3])); const paid = rows.reduce((a, e) => a + e[6], 0), paidN = rows.length; const coin1 = o.drinkers.map(id => { const v = S.villagers.get(id); const h = v && S.buildings.get(v.home); return h ? h.coin : 0; }).reduce((a, n) => a + n, 0); return { paid, paidN, coin1 }; }, Object.assign({}, tv, { L0: r2.L0 }));
     }
-    ok('2 a taverna faz a bebida do seu povo e cobra cada rodada', (r2.brewed > 0 || ['vinho', 'mel'].includes(tv.drink)) && r3.drinks.some(n => n >= 1) && r3.paid > 0, `${tv.civ || 'clássico'}: bebe ${tv.drink}; ${kp ? 'a cidade deu um taverneiro' : 'sem taverneiro'}; feitas ${r2.brewed} medidas na casa; rodadas ${r3.drinks.join('/')}; pagas ${r3.paid.toFixed(1)} moedas pelo livro, em ${r3.paidN} contas da taverna (casas dos que beberam: ${r2.coin0.toFixed(1)} → ${r3.coin1.toFixed(1)}, com os salários do dia)`);
+    await page.evaluate(() => { if (window.__step0) { G.debug.step = window.__step0; window.__step0 = null; } });
+    ok('2 a taverna faz a bebida do seu povo e cobra cada rodada', (r2.brewed > 0 || ['vinho', 'mel'].includes(tv.drink)) && r2.opened && r3.paid > 0, `${tv.town ? `a taverna de ${tv.town} (a cidade não tem lugar para uma) — ` : ''}${tv.civ || 'clássico'}: bebe ${tv.drink}; ${kp ? 'a cidade deu um taverneiro' : r2.keeper ? 'o taverneiro pela mão do deus' : 'sem taverneiro'}; feitas ${r2.brewed} medidas na casa; ${r2.opened ? 'aberta na hora dela' : 'NÃO ABRIU'}; ${r2.sent} de ${tv.drinkers.length} fregueses foram; pagas ${r3.paid.toFixed(1)} moedas pelo livro, em ${r3.paidN} contas da taverna (casas dos que beberam: ${r2.coin0.toFixed(1)} → ${r3.coin1.toFixed(1)}, com os salários do dia)`);
   }
 
   // 3 the gardens: the town gives its airy-edge houses a yard; the families tend them, pick them, and the food goes to their pantry

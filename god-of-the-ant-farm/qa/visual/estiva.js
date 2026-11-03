@@ -268,12 +268,15 @@ if (lastBest) {
   G.Avatar.place(lastBest.x, lastBest.y); still(4); topUp(3);
   // (a porter may take the crate offered between the key and the contact — the world says so —: E again, as a player does,
   // turned each time to a crate nobody else holds — the quay's carriers claim theirs as they go for them: T-231)
-  let b = null, hand = null, r = null, tries = 0; const all = [];
-  for (; tries < 3 && !(v.carry && v.carry.n > 0); tries++) { const e5 = freeDrawn()[0] || drawnOf()[0]; if (e5) { faceTo(e5[0], e5[2]); still(2); } b = I.best(); if (!(b && b.id === 'atividade' && /^Pegar /.test(b.label))) break; cid = b.t.o.cid; hand = b.t.hand; r = doIt(b); all.push(...said); }
+  // (the crate drawn in the hands as the one lifted is: a crate of fish open, its fish showing; the cargo a ship brought shut
+  // — people3d.js —: its mark read on the quay before the lift. By case 5 of the generation-12 metropole the porters had
+  // taken the fish, and the crates left on the quay of Delfos were two ships' food: the one lifted was rightly drawn shut, T-379)
+  let b = null, hand = null, r = null, tries = 0, fishy = null; const all = [];
+  for (; tries < 3 && !(v.carry && v.carry.n > 0); tries++) { const e5 = freeDrawn()[0] || drawnOf()[0]; if (e5) { faceTo(e5[0], e5[2]); still(2); } b = I.best(); if (!(b && b.id === 'atividade' && /^Pegar /.test(b.label))) break; cid = b.t.o.cid; hand = b.t.hand; const cr = (dock.crates || []).find(q => q.id === cid); fishy = cr ? !!cr.fish : null; r = doIt(b); all.push(...said); }
   said.length = 0; said.push(...all);
   const H = P3.look(v).held;
-  ok('5. a caixa oferecida vem às mãos no contato do estivador, e sai do cais e do desenho', !!r && r.ok && !!v.carry && v.carry.op === op.id && !opCrates().some(c => c.id === cid) && !P3.lyingOf(dock.id).some(e => e[4] === cid) && !!H && H.form === 'caixaPeixe' && !!hand,
-    `${b ? '«' + b.label + '»' : 'nada'}${said.length ? ' → «' + said.join(' / ') + '»' : ''}${tries > 1 ? ` (${tries} vezes E)` : ''}; nas mãos: ${v.carry ? `${v.carry.n} de ${E.name(v.carry.k)} (descarga #${v.carry.op})` : 'nada'}; desenhada nas mãos: ${H ? H.form : 'nada'}; a caixa #${cid} ${opCrates().some(c => c.id === cid) ? 'ainda no cais' : 'saiu do cais'}`);
+  ok('5. a caixa oferecida vem às mãos no contato do estivador, e sai do cais e do desenho', !!r && r.ok && !!v.carry && v.carry.op === op.id && !opCrates().some(c => c.id === cid) && !P3.lyingOf(dock.id).some(e => e[4] === cid) && fishy !== null && !!H && H.form === (fishy ? 'caixaPeixe' : 'caixa') && !!v.carry.fish === fishy && !!hand,
+    `${b ? '«' + b.label + '»' : 'nada'}${said.length ? ' → «' + said.join(' / ') + '»' : ''}${tries > 1 ? ` (${tries} vezes E)` : ''}; nas mãos: ${v.carry ? `${v.carry.n} de ${E.name(v.carry.k)} (descarga #${v.carry.op})` : 'nada'}; desenhada nas mãos: ${H ? H.form : 'nada'} (${fishy === null ? 'a caixa não estava no cais' : fishy ? 'uma caixa de peixe' : 'a carga de um navio'}); a caixa #${cid} ${opCrates().some(c => c.id === cid) ? 'ainda no cais' : 'saiu do cais'}`);
 } else ok('5. pegar a caixa', false, 'nenhum lado com o aviso');
 
 // ------------------------------ 6. the lead to the store ------------------------------
@@ -372,7 +375,13 @@ function liftAgain() {
   const sp = god(() => G.Fishers.crateSpot(dock));
   const o = [...S.villagers.values()].filter(q => q.set === set.id && q.role !== 'estivador' && q.role !== 'pescador' && q.age >= 18 && !(q.carry && q.carry.n > 0) && G.Possess.can(q).ok && A.able(q) && W.reaches(q, sp[0], sp[1])).sort((a, b) => a.id - b.id)[0];
   let L = null, c = null;
-  if (o) { god(() => { G.Vg.endTask(o); o.x = start[0]; o.y = start[1]; o.path = null; P.landCatch(dock, 'food', 16, 'arenque', '#a8c0d0', 0); }); G.Possess.take(o); G.Avatar.attach(o, 0); for (let k = 0; k < 10; k++) frame(); L = I.lead(o); c = callOf(); }
+  // (and room for the catch in the people's store, kept by the god's hand while the case lasts, as rebanho.js keeps it: once
+  // the god has pulled the harbour's store down (case 8) the unloading goes to the town's, and a full store pauses it — the
+  // world's 'cheio': no lead to anyone —; the overseer of the quay looks once a second, and the unloading goes on at its next
+  // look. In the generation-12 metropole the store of Delfos was full of food — 1040 of 1040, the town's deliveries filling
+  // what was taken out within the second —, and Nestor saw no lead, T-380)
+  const keepRoom = () => god(() => { const room = D.room('f:' + fac.id, 'food'); if (room < 40) D.use('f:' + fac.id, 'food', 40 - room, { code: 'teste', part: true }); });
+  if (o) { god(() => { G.Vg.endTask(o); o.x = start[0]; o.y = start[1]; o.path = null; P.landCatch(dock, 'food', 16, 'arenque', '#a8c0d0', 0); }); G.Possess.take(o); G.Avatar.attach(o, 0); for (let k = 0; k < 10 || (k < 150 && P.opAt(dock) && P.opAt(dock).st !== 'on'); k++) { keepRoom(); frame(); } L = I.lead(o); c = callOf(); }
   ok('2. quem não é do ofício não é chamado ao cais, mas vê a pista dele', !!o && !c && !!L && L.step === 'pegar', o ? `${o.name}, ${G.roleName(o)}: ${c ? '«' + c.txt + '»' : 'sem chamado'}; pista «${L ? L.txt : '-'}»` : 'ninguém');
 }
 // (the verifier: what weighs, S0 to S2 — and no module error)

@@ -124,6 +124,11 @@
     return n >= T.SEATS;
   }
   T.full = full;
+  // (and where a guest sits is a seat — a bench, else a stool at a table —, never the keeper's fire: with no bench free the
+  // share-out's last rule gave the hearth and the stove first, a guest sat at the stove, a stool stayed free, and the door let
+  // one in more than the tavern's places, L-479. The interiors load after this file: the rule is given at each world)
+  const seatOf = (b, v) => (v.task && v.task.type === 'tavern' ? { use: v.task.use === 'comer' ? ['comer', 'sentar'] : ['sentar', 'comer'] } : null);
+  G.worldHooks.push(() => { if (G.Interiors && G.Interiors.placeRule) G.Interiors.placeRule('taverna', seatOf); });
 
   // ------------------------------ the day opens and closes ------------------------------
   // (once a day: at its opening hour, with its keeper at hand and something to serve; a day that could not open — the

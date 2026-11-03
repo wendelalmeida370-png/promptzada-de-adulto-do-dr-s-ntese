@@ -50,7 +50,12 @@ const busyOut = (n) => { let k = 0; for (; k < (n || 600) && G.Avatar.busy(); k+
 
 // ------------------------------ the town, the quay, the store, the docker, the porters ------------------------------
 const porters = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'estivador').length;
-const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).sort((a, b) => porters(b) - porters(a) || a.id - b.id);
+// (the town whose ceiling of the trades gives its quay the three hands of the proof — D-090: a ship's crates ask up to three
+// a store, and a town at its ceiling keeps the first hand only, L-428 —, as the town's board would share them with three
+// asked; then the most dockers, then the id. In the generation-12 metropole the first by the dockers was Mênfis, of 24 grown
+// ones, whose ceiling of nine kept its quay one hand: with a boat on the quay the town called nobody more, T-378)
+const quayHands = s => { const f = G.Fac.get(s.fac); if (!f) return 0; const A = [...S.villagers.values()].filter(o => o.set === s.id && !o.captive && o.age >= 16 && o.age < 62).length; const d = G.Eco.demand(s, f, A); d.estivador = Math.max(d.estivador || 0, 3); return G.Eco.share(d, s, f, A).estivador || 0; };
+const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).map(s => ({ s, three: quayHands(s) >= 3 })).sort((a, b) => b.three - a.three || porters(b.s) - porters(a.s) || a.s.id - b.s.id).map(o => o.s);
 let set = null, dock = null, fac = null;
 const dry = (x, y) => { const i = W.idx(x, y); const t = S.type[i]; return !((t === G.T.RIVER && !S.road[i]) || t <= G.T.SEA) && W.walkableXY(x, y); };
 for (const s of towns) {

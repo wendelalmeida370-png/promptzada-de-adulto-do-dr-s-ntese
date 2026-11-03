@@ -190,7 +190,11 @@ function hungryActor(hunger) {
   fresh(); const b = S().buildings.get(P.id); const cast = ready(b); const a = cast.length ? solo(b, cast) : null; const bad = [];
   if (a) { a.energy = 90; a.hunger = 20; }
   const keep = a ? [a.id] : []; holdOthers(b, keep); const dr = G.Vg.door(b);
-  const hold = () => { holdOthers(b, keep); if (a) calmBeasts([a.x, a.y], dr); }; hold();
+  // (and his trade kept by the god's hand for the case, as actors() gave it: a town whose ceiling of the trades leaves its
+  // theatre no actor — D-090: the generation-12 metropole's only theatre is Mênfis's, of 24 grown ones, whose nine hands go
+  // to the first nine kinds of workplaces — deals the one the case keeps to the fishing at its next pass, at 0,46, before the
+  // play: the case is the hungry actor on the stage, not the board, T-377)
+  const hold = () => { holdOthers(b, keep); if (a) { calmBeasts([a.x, a.y], dr); if (a.role !== 'ator' || a.job !== b.id) { a.role = 'ator'; a.job = b.id; } } }; hold();
   liveSec(60, () => { const o = Tt.dia(b); return !!o && o.data.fase === 'peca' && !!o.data.atores[a.id]; }, bad, hold);
   const op = Tt.dia(b); const started = !!op && op.data.fase === 'peca' && !!a && !!op.data.atores[a.id];
   if (started) a.hunger = hunger;

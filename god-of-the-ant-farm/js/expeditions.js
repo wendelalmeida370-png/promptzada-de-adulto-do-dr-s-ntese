@@ -1467,7 +1467,10 @@
     }
     for (const v of members.filter(v => !v.partner && v.age >= 17 && v.age < 40)) { if (crew.length >= n) break; if (!crew.includes(v)) crew.push(v); }
     if (crew.filter(v => v.age >= 16).length < 5) return null;
-    const lead = crew.filter(v => v.age >= 22).sort((a, b) => G.Politics.persona(b).amb + b.courage - G.Politics.persona(a).amb - a.courage)[0];
+    // (the leader, the boldest of the grown — of 22 and up, else of the young who go, as a voyage takes its new leader from
+    // whoever is left: five of sixteen and up and none of twenty-two, and the colony had no leader and broke the step, L-490)
+    const grown = crew.filter(v => v.age >= 22);
+    const lead = (grown.length ? grown : crew.filter(v => v.age >= 16)).sort((a, b) => G.Politics.persona(b).amb + b.courage - G.Politics.persona(a).amb - a.courage)[0];
     const cap = G.Fac.capitalOf(f.id); const colName = G.R() < 0.55 && cap ? 'Nova ' + cap.name : null;
     const e = { id: S.nextId++, fac: f.id, civ: f.civ, kind: 'colonia', scale: 'grande', st: 'prep', t: 0, day0: S.day, from: from.id, fromName: from.name, dock: dock.id, port: (di.quay || di.moor).slice(), moor: di.moor.slice(),
       obj: { k: 'colonia', why: best.motive, key: best.r.key, x: best.site.x, y: best.site.y, rumor: 0 }, crew: crew.map(v => v.id), roles: { sold: [], work: [], col: crew.map(v => v.id) }, ships: [], flag: 0, prov: 0, provT: 0, morale: 75, disc: [], log: [], lost: [], deadN: 0, track: [], ev: {}, legs: 0, news: [], status: 'ativa',

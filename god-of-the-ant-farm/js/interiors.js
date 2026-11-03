@@ -1515,9 +1515,14 @@
     // (a building no side of which opens onto a street the world walks — the town shut it in: a wall, a cliff, the buildings
     // round it — has no way in to fit anywhere: said as such, a defect of the world round it, not of the plan's door. o.sides:
     // the proofs ask the map of regions for it; the drawing never does — it would make the world's map anew from outside)
+    // (the step's word on it — or, for the proofs with no word since the world opened (a load carries none, and any change
+    // of the walk anywhere ends one), the turn's own rule asked now: a side open, and the way in fits before none of them —
+    // the town shut it in —, what the turn says. A warehouse of Uppsala in the generation-12 metropole, shut on three sides and
+    // its steps short of the ground on the fourth, was a defect on opening and the world's choice a turn later, T-376)
     if (o.world && b.built && b.blocks && G.Space && G.Space.entryFits) { const e = G.Space.entryFits(b, In.shellOf(b)); const said = In.entrySaid(b);
-      if (!e.ok && said !== false) F(o.sides && !SIDES.some(s => openTiles(b, s)) ? 'sem rua: nenhum lado do prédio dá para uma rua que o mundo anda (fechado pelo que está em volta)' : `a entrada não cabe diante da porta (${e.kind}, o pé a ${e.foot} m)`);
-      else if (!e.ok) E('a entrada não cabe em lado nenhum aberto à rua (dito pela virada do dia)'); }
+      const none = !e.ok && said === undefined && o.sides && SIDES.some(s => openTiles(b, s)) && !In.fitSide(b);
+      if (!e.ok && said !== false && !none) F(o.sides && !SIDES.some(s => openTiles(b, s)) ? 'sem rua: nenhum lado do prédio dá para uma rua que o mundo anda (fechado pelo que está em volta)' : `a entrada não cabe diante da porta (${e.kind}, o pé a ${e.foot} m)`);
+      else if (!e.ok) E(`a entrada não cabe em lado nenhum aberto à rua (${none ? 'pela regra da' : 'dito pela'} virada do dia)`); }
     if (o.world && b.built && b.blocks && G.Vg && G.Vg.planDoor === In.planDoor) { const pd = In.planDoor(b), d = G.Vg.door(b); if (pd && (Math.abs(pd[0] - d[0]) > 1e-6 || Math.abs(pd[1] - d[1]) > 1e-6)) F('quem sai não sai pela porta da planta'); }
     // (the flights: their ends where a body stands; their class by their slope — a ladder or a steep stair a choice, said)
     for (const s of p.stairs) {

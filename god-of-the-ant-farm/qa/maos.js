@@ -260,7 +260,10 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
 }
 // ---------------- m10: the crew hidden in the cave while the town is attacked: the quay waits for the fright to pass (L-459) ----------------
 // (a voyage made ready by the test's hand — the first people of the sea whose town of departure has a cave known within 45 tiles
-// —, one of its crew, not the leader, the first by id: the town's alarm up (an attack, as the war raises it), the errand at the
+// —, one of its crew of that town, not the leader, the first by id — the refuge is a town's: one of another town hides from
+// no alarm of his own, and the cave lets him go when his town is calm; Amenhotep, of the generation-12 metropole, a crewman
+// living away from Luxor, left the cave ten seconds in and was called to the quay with Luxor's alarm up, T-364 —: the
+// town's alarm up (an attack, as the war raises it), the errand at the
 // quay lost to the fright, and the cave's refuge for him (2,7). The voyage calls its crew back to the quay from any errand
 // below 3,25 «once the fright is over» (L-367), and did so with the alarm still up; now the call waits for the refuge to end,
 // and then he goes back to the quay)
@@ -273,7 +276,7 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
     if (c && dOf(c) < 45 && x.crew.length >= 2) { e = x; home = t; cv = c; break; }
     tried.push(`${x.name}: ${c ? `caverna a ${Math.round(dOf(c))} casas` : 'sem caverna conhecida'}`);
   }
-  const v = e && e.crew.map(id => S.villagers.get(id)).filter(q => q && q.id !== e.leader && !q.aboard).sort((a, b) => a.id - b.id)[0];
+  const v = e && e.crew.map(id => S.villagers.get(id)).filter(q => q && q.id !== e.leader && !q.aboard && q.set === home.id).sort((a, b) => a.id - b.id)[0];
   if (!e || !v) ok('m10 a tripulação escondida na caverna', false, `nenhuma viagem que saia de uma cidade com caverna perto: ${tried.join(' · ') || 'nenhum povo do mar'}`);
   else {
     home.alarmT = 40; Vg.endTask(v);
