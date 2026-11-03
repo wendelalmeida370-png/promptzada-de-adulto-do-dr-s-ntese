@@ -38,9 +38,9 @@ G.Ready.list({
   "bytes": 3196206
  },
  "mega": {
-  "day": 65,
-  "pop": 632,
-  "peoples": 4,
+  "day": 120,
+  "pop": 1904,
+  "peoples": 6,
   "towns": 19,
   "N": 160,
   "map": "continente",
@@ -48,12 +48,12 @@ G.Ready.list({
   "city": {
    "name": "Mênfis",
    "tier": 5,
-   "pop": 229
+   "pop": 322
   },
   "wars": 0,
   "ww": null,
   "world": "Thalael",
-  "bytes": 3192949
+  "bytes": 7234507
  },
  "mundial": {
   "day": 84,
