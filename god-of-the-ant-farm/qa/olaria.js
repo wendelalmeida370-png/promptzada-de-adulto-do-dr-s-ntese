@@ -5,7 +5,7 @@
 //     com a paz do deus sobre o caso (uma guerra no meio leva o oleiro à mobilização, T-295)
 //  o2 o oleiro morre no meio da fornada: ela espera, sem perder nem repetir nada; outro oleiro a toma de onde parou (um da
 //     cidade de mãos livres, que não é mercador de caravana, T-296)
-//  o3 o deus derruba a olaria no meio da queima: a fornada acaba ali, o que ela tinha é dito perdido, e a prateleira sai pelo
+//  o3 o deus derruba a olaria no meio da queima: a fornada acaba ali, no mesmo instante (L-444), o que ela tinha é dito perdido, e a prateleira sai pelo
 //     livro ('ruina')
 //  o4 o tijolo da obra (D-075): uma casa fundada numa cidade de olaria troca parte da pedra por tijolo, o total da obra é o
 //     mesmo; sem tijolo nenhum por um dia, o que falta volta a ser pedra; a obra largada devolve pelo que recebeu
@@ -104,9 +104,11 @@ console.log(`${world}: ${V.buildName(P.b)} #${P.b.id} de ${S().settlements.get(P
   if (!op) { ok('o3 a-olaria-cai', false, whyNot(b, 'ceramica')); console.log(`OLARIA: FALHOU (${fails.join(', ')})`); process.exit(1); }
   liveSec(400, () => !A.live(op) || (O.stage(op) && O.stage(op).kind === 'fogo'), bad);
   const inKiln = op.data.forno; D.make('b:' + b.id, 'ceramica', 3, { code: 'teste' }); const L0 = S().ledgerN || 0;
-  V.destroyBuilding(b, 'teste'); liveSec(2);
+  // (the very instant of the fall, before the world takes a step: the batch has ended there, and the checker sees no batch going
+  // on at a ruin — the overseer saw it a second later, L-444)
+  V.destroyBuilding(b, 'teste'); const now = { st: op.st, bad: [] }; watch(now.bad); liveSec(2);
   const ruina = S().ledger.filter(e => e[0] > L0 && e[8] === 'ruina' && e[3] === 'b:' + b.id).reduce((n, e) => n + e[6], 0);
-  ok('o3 a-olaria-cai', op.st === 'int' && op.data.perdido >= inKiln - 0.01 && ruina >= 3 - 0.01 && !bad.length, `fornada ${op.st} (${op.why || ''}): ${op.data.perdido} perdidos (${inKiln} no forno); a prateleira pelo livro: ruina ${ruina}`);
+  ok('o3 a-olaria-cai', now.st === 'int' && !now.bad.length && op.st === 'int' && op.data.perdido >= inKiln - 0.01 && ruina >= 3 - 0.01 && !bad.length, `no instante da queda: fornada ${now.st}${now.bad.length ? ', ' + now.bad.join(' | ') : ''}; depois ${op.st} (${op.why || ''}): ${op.data.perdido} perdidos (${inKiln} no forno); a prateleira pelo livro: ruina ${ruina}`);
 }
 // ---------------- o4 the brick of a work; o5 a people that makes no brick
 function freeSpot(set, w, h) {

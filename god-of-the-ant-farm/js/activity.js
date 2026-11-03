@@ -430,6 +430,12 @@
     const op = A.get(opId); if (!op || !op.rsv || !op.rsv.length) return;
     op.rsv = ref ? op.rsv.filter(r => !(r[0] === ref && (!k || r[1] === k))) : []; A._rv++;
   };
+  // a holder whose goods are written off — the shelf of a building that falls or is left to the wind, a work's site (a ruin
+  // keeps nothing: V.keptGone, V.siteGone) —: every claim on it goes with them. The operation itself ends at its own next look
+  // (a second later), by its own rule; between the two it held back what no longer was there (L-444)
+  D.unclaim = function (ref) {
+    for (const op of ops()) if (live(op) && op.rsv && op.rsv.some(r => r[0] === ref)) { op.rsv = op.rsv.filter(r => r[0] !== ref); A._rv++; A.log(op, 'solta', ref); }
+  };
   // who may take from / put into a holder: its owner and family, the hands of an operation that holds it, its people
   D.may = function (v, ref, mode, opId) {
     const h = hold(ref); if (!h || !v) return { ok: false, why: 'não existe' };
@@ -528,6 +534,14 @@
     A.log(op, st || 'ok', why || '');
     if (def && def.onEnd) try { def.onEnd(op, st, why); } catch (e) { oops('fim de ' + op.def, e); }
     byP = null;
+  };
+  // the building an operation works at leaves the world — it fell (fire, war, the god), was left to the wind, gave way to a
+  // works of the city —: its operations there look at once, each by its own rule (the batch is cut, the tavern's day closed,
+  // the baths', the play's), not at their next look a second later. Between the two a batch went on at a ruin, holding back
+  // what its shelf no longer had (L-444). One with nothing to say about it is left as it is.
+  A.atGone = function (b) {
+    const id = b && (b.id || b); if (!id) return;
+    for (const op of ops()) { if (!live(op) || op.at !== id) continue; const def = A.DEFS[op.def]; try { if (def && def.tick) def.tick(op, 0); } catch (e) { oops(op.def, e); } }
   };
   A.pause = function (op, why) { if (!op || !live(op) || op.st === 'wait' && op.wait === why) return; op.st = 'wait'; op.wait = why; A.log(op, 'parou', why); };
   A.resume = function (op) { if (!op || op.st !== 'wait') return; op.st = 'on'; A.log(op, 'voltou', op.wait); op.wait = ''; };

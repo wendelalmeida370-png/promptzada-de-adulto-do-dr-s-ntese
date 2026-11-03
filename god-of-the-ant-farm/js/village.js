@@ -196,6 +196,7 @@
   // what a work got is gone with it — it burnt, it fell, it was left to the wind; or it stands, and is what it was made of
   V.siteGone = function (b, code) {
     const D = G.Depot; const ref = 'o:' + b.id; if (!D || !D.exists(ref)) return;
+    D.unclaim(ref); // (and every claim on it: L-444)
     const got = V.delivered(b); for (const k of Object.keys(got).sort()) D.use(ref, k, got[k], { code, mine: true });
   };
   // what a building keeps — a house's pantry and chest, a shelf of work, a temple's treasure — is lost with it, in the ledger:
@@ -204,6 +205,7 @@
   V.keptGone = function (b, code) {
     const D = G.Depot; if (!D || !b) return;
     const home = !!(G.BDEF[b.type] && G.BDEF[b.type].housing); const ref = (home ? 'h:' : 'b:') + b.id; if (!D.exists(ref)) return;
+    D.unclaim(ref); // (the operations that held part of it back hold nothing now: L-444)
     const L = D.list(ref); for (const k of Object.keys(L).sort()) if (L[k] > 1e-6 && !(home && k === 'moedas')) D.use(ref, k, L[k], { code, mine: true });
   };
   // the town's works still waiting for this brick (what is not on its way already)
@@ -240,6 +242,7 @@
     const S = G.S; S.buildings.delete(b.id);
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }
     W.touchWalk();
+    G.Act && G.Act.atGone(b); // (its operations end with it, by their own rule: L-444)
   };
   V.totalCost = def => { let n = 0; for (const k in def.cost) n += def.cost[k] || 0; return n; };
   V.nameOf = (type, b) => G.Civ.bname(type, b ? b.style : null);
@@ -312,6 +315,7 @@
       // turn into ruins in place (non-blocking); what stands now is the ruin, finished or not what it was going to be (L-081)
       b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.progress = 1; b.upgradeFrom = null; b.ruinT = G.DAY_LEN * 3; b.hp = 1; W.touchWalk();
       G.Interiors && G.Interiors.ruin(b, cause); // (its plan becomes the ruin of itself)
+      G.Act && G.Act.atGone(b); // (and what was being done in it ends there: L-444)
     }
     G.FX && G.FX.collapse(cx, cy, b);
     G.Audio && G.Audio.at(cx, cy, 'collapse', true);
@@ -1181,6 +1185,7 @@
       if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
       if (b.type !== 'ruin') { b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * (2 + G.R() * 3); b.hp = 1; W.touchWalk(); G.Interiors && G.Interiors.abandon(b); }
       b.set = 0;
+      G.Act && G.Act.atGone(b); // (what was being done in it ends with the town: L-444)
     }
     const f = G.Fac.get(s.fac);
     V.log(`${s.name} foi abandonada. Só restam casas vazias.`, 'grave', s.cx, s.cy);
