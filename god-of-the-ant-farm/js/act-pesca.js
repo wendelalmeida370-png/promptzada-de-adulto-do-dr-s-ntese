@@ -150,15 +150,20 @@
     if (!G.S.villagers.has(v.id)) return { ok: false, why: '' };
     const F0 = G.Waters.FISH[fish.fish]; const nm0 = F0 ? F0.name : 'peixe';
     const room = D.room('v:' + v.id, fish.k, {}); const m = Math.min(fish.n, Math.floor(room + EPS));
-    // (what does not fit in the hands goes back to the water — and to its ground: another kind in the hands, or hands full)
-    if (m < fish.n) untake(x, y, fish.n - Math.max(0, m));
+    // (what does not fit in the hands goes back to the water — and to its ground: another kind in the hands, or hands full —,
+    // counted in fish: the hands hold loads and the ground holds fish, and a fish is a load or more (a pirarucu three and a
+    // half of food). It went back as loads: three pirarucus, eleven of food with room for ten, gave the ground a whole fish
+    // back for the one of food that did not fit — a quarter of a fish —, and the cast said it took the three, L-450)
+    const back = q => n * Math.max(0, q) / fish.n;
+    if (m < fish.n) untake(x, y, back(fish.n - m));
     const other = !!(v.carry && v.carry.n > EPS && v.carry.k !== fish.k);
     if (m < 1) return { ok: false, why: other ? 'Não há mão para outro peixe.' : 'Não cabe mais peixe nas mãos: leve ao armazém.', full: 1, other: other ? 1 : 0, name: nm0 };
     const r = D.make('v:' + v.id, fish.k, m, { code: 'pesca', by: v.id, rec: { fish: fish.fish } });
-    if (!r.ok) { untake(x, y, m); return { ok: false, why: 'Não cabe mais peixe nas mãos.', full: 1, name: nm0 }; }
+    if (!r.ok) { untake(x, y, back(m)); return { ok: false, why: 'Não cabe mais peixe nas mãos.', full: 1, name: nm0 }; }
     v.fishXp = Math.min(240, (v.fishXp || 0) + 1);
     const F = G.Waters.FISH[fish.fish]; const nm = F ? F.name : 'peixe';
-    return { ok: true, n: r.n, took: n, k: fish.k, fish: fish.fish, name: nm, how };
+    // (took: the fish that left the ground — the haul less what went back)
+    return { ok: true, n: r.n, took: r4(n - back(fish.n - m)), k: fish.k, fish: fish.fish, name: nm, how };
   };
 
   // ------------------------------ save ------------------------------

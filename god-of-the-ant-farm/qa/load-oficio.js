@@ -23,29 +23,37 @@ const hunters = s => adults(s).filter(v => v.role === 'cacador').length;
 const roles = () => { let t = ''; for (const v of S().villagers.values()) t += v.id + ':' + (v.role || '') + ';'; return t; };
 const settle = () => god(() => { for (let k = 0, prev = null; k < 30; k++) { G.Village.forceUpdate(); const r = roles(); if (r === prev) break; prev = r; } });
 const r2 = n => Math.round(n * 100) / 100;
-// (the wolf a hair inside the town's twenty tiles, east of its centre: 19.996 tiles, which the save's hundredth makes 20.00 —
-// out of the count, `dist < 20`)
-const wolfAt = s => [s.cx + 19.996, s.cy];
+// (the wolves a hair inside the town's twenty tiles, at the four quarters of its centre: 19.996 tiles, which the save's
+// hundredth makes 20.00 — out of the count, `dist < 20`)
+const wolfAt = (s, k) => [[s.cx + 19.996, s.cy], [s.cx - 19.996, s.cy], [s.cx, s.cy + 19.996], [s.cx, s.cy - 19.996]][k];
 settle();
-// a town where one more beast near it means one more hunter (the town's centre on the hundredth, so the save moves the wolf out)
-let town = null, base = 0, wolf = null;
+// a town where the beasts a hair near it mean one more hunter (the town's centre on the hundredth, so the save moves them out):
+// the first by id, with the fewest wolves that do it — one, two or three, put by the god's hand. One was the rule, and a
+// ready world has no town where one more beast asks a hunter: the generation-10 «cidade» has Mênfis with five beasts near it,
+// Tenochtitlan and Hedeby with three (a town counts three at most), and Roma with none but its hands too few — a second
+// hunter for one beast gives way to the wood and the forage, and for two beasts it does not (village.js, the trades). T-324
+let town = null, base = 0, wolves = [];
 for (const s of [...S().settlements.values()].filter(q => adults(q).length >= 7 && r2(q.cx) === q.cx && r2(q.cy) === q.cy).sort((a, b) => a.id - b.id)) {
-  const [x, y] = wolfAt(s); if (!G.W.inb(x, y)) continue;
-  const h0 = hunters(s); const w = god(() => G.Animals.spawn('wolf', x, y, { age: 6 })); settle();
-  if (hunters(s) > h0) { town = s; base = h0; wolf = w; break; }
-  god(() => S().animals.delete(w.id)); settle();
+  const h0 = hunters(s); const put = [];
+  for (let k = 0; k < 3; k++) {
+    const [x, y] = wolfAt(s, k); if (!G.W.inb(x, y)) break;
+    put.push(god(() => G.Animals.spawn('wolf', x, y, { age: 6 }))); settle();
+    if (hunters(s) > h0) { town = s; base = h0; wolves = put; break; }
+  }
+  if (town) break;
+  god(() => { for (const w of put) S().animals.delete(w.id); }); settle();
 }
-if (!town) { ok('o1 o lobo a um fio das vinte casas: a ida e volta não muda ofício', false, 'precondição: nenhuma cidade onde um lobo a mais pede um caçador a mais'); process.exit(1); }
-const d0 = G.dist(wolf.x, wolf.y, town.cx, town.cy);
+if (!town) { ok('o1 o lobo a um fio das vinte casas: a ida e volta não muda ofício', false, 'precondição: nenhuma cidade onde até três lobos a mais pedem um caçador a mais'); process.exit(1); }
+const d0 = Math.max(...wolves.map(w => G.dist(w.x, w.y, town.cx, town.cy)));
 // o1: the round trip — the settled town, saved and loaded: the same trades
-{ const h1 = hunters(town); const trip = QA.roundTrip(); const t = S().settlements.get(town.id); const wb = S().animals.get(wolf.id);
-  const d1 = wb ? G.dist(wb.x, wb.y, t.cx, t.cy) : -1;
+{ const h1 = hunters(town); const trip = QA.roundTrip(); const t = S().settlements.get(town.id);
+  const d1 = Math.min(...wolves.map(w => { const wb = S().animals.get(w.id); return wb ? G.dist(wb.x, wb.y, t.cx, t.cy) : -1; }));
   ok('o1 o lobo a um fio das vinte casas: a ida e volta não muda ofício', !trip.diff.length && d0 < 20 && d1 >= 20,
-    `${t.name}: o lobo #${wolf.id} a ${d0.toFixed(3)} casas do centro (no save, a ${d1.toFixed(3)}: fora da conta); ${h1} caçadores com ele (${base} sem); o save: ${trip.diff.length ? trip.diff.slice(0, 2).join(' | ') : 'igual'}`);
+    `${t.name}: ${wolves.length > 1 ? `os lobos ${wolves.map(w => '#' + w.id).join(', ')} a até` : `o lobo #${wolves[0].id} a`} ${d0.toFixed(3)} casas do centro (no save, a ${wolves.length > 1 ? 'no mínimo ' : ''}${d1.toFixed(3)}: fora da conta); ${h1} caçadores com ${wolves.length > 1 ? 'eles' : 'ele'} (${base} sem); o save: ${trip.diff.length ? trip.diff.slice(0, 2).join(' | ') : 'igual'}`);
 }
-// o2: who deals the trades out anew is the world's step — the wolf dead after the load, the town wants back what it wanted
-{ const t = S().settlements.get(town.id); const h1 = hunters(t); god(() => S().animals.delete(wolf.id)); live(6);
-  ok('o2 o passo do mundo redistribui os ofícios depois do load', hunters(t) === base, `${t.name}: ${h1} caçadores no load, ${hunters(t)} seis segundos depois, sem o lobo (sem ele a cidade quer ${base})`);
+// o2: who deals the trades out anew is the world's step — the wolves dead after the load, the town wants back what it wanted
+{ const t = S().settlements.get(town.id); const h1 = hunters(t); god(() => { for (const w of wolves) S().animals.delete(w.id); }); live(6);
+  ok('o2 o passo do mundo redistribui os ofícios depois do load', hunters(t) === base, `${t.name}: ${h1} caçadores no load, ${hunters(t)} seis segundos depois, sem ${wolves.length > 1 ? 'os lobos' : 'o lobo'} (sem ${wolves.length > 1 ? 'eles' : 'ele'} a cidade quer ${base})`);
 }
 // o3: a trade the game no longer has, in the save: mended at the load — and nobody else changes
 { settle(); const str = G.Save.serialize(); const o = JSON.parse(str); const t = S().settlements.get(town.id);

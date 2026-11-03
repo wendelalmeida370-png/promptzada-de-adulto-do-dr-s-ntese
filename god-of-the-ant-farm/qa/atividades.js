@@ -116,8 +116,12 @@ A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de 
 // ---------------- o4: who dies with a load drops it where they fell; another hand picks it up; the books still close
 {
   const S2 = G.S; const f2 = G.Fac.get(f.id); const free = p => !A.roleOf(p) && !(p.carry && p.carry.op);
+  // (the other hand is one the world could send for the crate: not of the dead one's family — the death calls the family to
+  // the funeral, village.js, and one at a call of the square is never sent for a crate, nor given one there: Vg.busy, D-094.
+  // The test's hand put the crate in Gunnar's arms on his way to the funeral of the one who fell, T-325)
+  const kin = (d, o) => o.id === d.partner || o.mother === d.id || o.father === d.id || d.mother === o.id || d.father === o.id || (d.mother && o.mother === d.mother);
   const vv = [...S2.villagers.values()].find(p => p.set === set.id && p.age > 18 && !p.captive && free(p));
-  const ww = [...S2.villagers.values()].find(p => p.set === vv.set && p.id !== vv.id && p.age > 18 && !p.captive && free(p));
+  const ww = [...S2.villagers.values()].find(p => p.set === vv.set && p.id !== vv.id && p.age > 18 && !p.captive && free(p) && !kin(vv, p));
   f2.stock.food = 40; G.Vg.endTask(vv); clearHands(vv); G.Vg.endTask(ww); clearHands(ww);
   const op = A.start('teste', { from: 'f:' + f2.id, to: 'h:' + (vv.home || ww.home), goods: { food: 3 }, set: vv.set, fac: f2.id });
   A.join(op, vv, 'carregador'); D.move('f:' + f2.id, 'v:' + vv.id, 'food', 3, { op: op.id, code: 'pegar', by: vv.id });

@@ -40,7 +40,9 @@ const storeIn = v => { const d = G.Village.nearestDropoff(v.x, v.y, v.set); retu
 // from the case, and the load with it)
 const GATHER = { justice: 1, assembly: 1, fest: 1, muster: 1, fire: 1 };
 const calm = id => { let n = 0; for (const o of S.villagers.values()) if (o.set === id && o.task && GATHER[o.task.type]) n++; return n < 3 && !(S.execs || []).some(e => e.set === id && e.phase === 'wait'); };
-const free = v => !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.air && !(S.avatar && S.avatar.id === v.id) && v.hp > 50 && v.home && storeIn(v) && calm(v.set);
+// (and none of a voyage's crew: a voyage being made ready calls its crew to the quay, 3,25, again and again until it sails —
+// the m9's own among them —, T-326)
+const free = v => !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.air && !(S.avatar && S.avatar.id === v.id) && v.hp > 50 && v.home && storeIn(v) && calm(v.set) && !(G.Expe && G.Expe.memberOf(v.id));
 function person(min, max, pred) {
   const v = [...S.villagers.values()].filter(o => o.age >= min && o.age < max && free(o) && !used.has(o.id) && !(o.carry && o.carry.n > 1e-6) && (!pred || pred(o))).sort((a, b) => a.id - b.id)[0];
   if (v) used.add(v.id); return v || null;
@@ -308,6 +310,10 @@ S.weather.storm = 0;
     const o = S.ores.find(q => q.id === b.ore); const door = G.Vg.door(b);
     const v = person(16, 60, q => q.set === b.set && G.W.reaches(q, door[0], door[1]));
     if (!v || !give(v, 'wood', 2)) continue;
+    // (kept ashore for the case by the god's hand, as one just back from a voyage — v.expCD: the voyages leave one be for three
+    // days —: the m9's voyage was still being made ready, and called Druso, of its crew, to the quay 0,6 s after he went down
+    // the shaft; he came up with the wood and never dug, T-326)
+    v.expCD = S.day;
     v.x = door[0]; v.y = door[1]; v.path = null;
     const amt0 = o.amt, n0 = lines.length;
     if (!G.Caves.mineShift(v, b, o)) { info = `${nm(v)}: a mina #${b.id} não deu um turno`; continue; }

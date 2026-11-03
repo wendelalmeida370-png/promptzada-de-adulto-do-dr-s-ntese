@@ -165,12 +165,20 @@ else {
     live(8); for (const i of tiles) Nat.extinguish(i, 9);
     // (the fire put out round the farm too: the test burns the field, not the town)
     for (let y = b.y - 2; y < b.y + b.h + 2; y++) for (let x = b.x - 2; x < b.x + b.w + 2; x++) if (W.inb(x, y)) Nat.extinguish(W.idx(x, y), 9);
-    const burnt = b.crops.filter(c => c.s === 0 && c.g === 0).length;
+    // (the canteiros the fire burnt — the world's ash on the tile, nature.js, the mark the farmers read — and those the town's
+    // people saved: they run with water to a fire in town, and a canteiro put out before it burns is a field like any other,
+    // harvested and planted again. The case asked the nine to burn: in the generation-9 and -10 metropole the field of Argos is
+    // a few steps from its people, and they put out two of the nine, which the farmers then harvested and planted — «replantados
+    // na cinza: 2», on no ash at all, T-327. What the case holds is the same, canteiro by canteiro: each burnt one back to bare,
+    // and nobody plants or harvests on the ash)
+    const ash = k => S().burnt[tiles[k]] > G.DAY_LEN * 0.5;
+    const ashK = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(ash);
+    const burnt = ashK.filter(k => b.crops[k].s === 0 && b.crops[k].g === 0).length;
     let onAsh = 0; for (const x of P.farmers.slice(0, 2)) send(x, b, onFarm(b));
     live(60, () => { for (const x of P.farmers) { const t = x.task; if (t && t.type === 'farm' && t.id === b.id && S().burnt[tiles[t.k]] > G.DAY_LEN * 0.5) onAsh++; } });
-    const planted = b.crops.filter(c => c.s >= 1).length; const bad = newBad(P.base);
-    ok('c4', burnt >= 9 && !onAsh && !planted && !bad.length,
-      `o fogo queimou ${burnt} de 9 canteiros (${sOf(b)}); passos de alguém trabalhando na cinza: ${onAsh}; replantados na cinza: ${planted}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    const planted = ashK.filter(k => b.crops[k].s >= 1).length; const bad = newBad(P.base);
+    ok('c4', ashK.length >= 1 && burnt === ashK.length && !onAsh && !planted && !bad.length,
+      `o fogo queimou ${ashK.length} de 9 canteiros${ashK.length < 9 ? ` (o povo apagou ${9 - ashK.length} antes de queimarem)` : ''}, ${burnt} de volta a nus (${sOf(b)}); passos de alguém trabalhando na cinza: ${onAsh}; replantados na cinza: ${planted}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   // c5 the god brings the farm down with the harvest in the hands
   {

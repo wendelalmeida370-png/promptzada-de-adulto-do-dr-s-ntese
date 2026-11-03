@@ -2,8 +2,8 @@
 // tarefas dele (economy.js: 'herd', 'fodder', 'tend'), os bichos do curral pelo passo deles (animals.js), o armazém e o livro.
 //  r1 o pasto: de manhã, com o rebanho com fome, o pastor o leva ao pasto, ele pasta e volta antes de escurecer — todos de
 //     novo dentro do curral, nenhum perdido, menos fome
-//  r2 o feno: de noite, com fome, o pastor traz feno do armazém ('feno', do armazém às mãos) e o rebanho come ('feno', das
-//     mãos ao uso): sai do armazém só o que o rebanho comeu
+//  r2 o feno: fora das horas do pasto (à tardinha, antes da hora de dormir do pastor), com fome, o pastor traz feno do
+//     armazém ('feno', do armazém às mãos) e o rebanho come ('feno', das mãos ao uso): sai do armazém só o que o rebanho comeu
 //  r3 a tosquia, a ordenha e os ovos: o que o bicho dá nasce nas mãos pelo livro ('tosquia', 'ordenha', 'ovos') e vai ao
 //     armazém ('entrega'); o bicho fica sem lã, sem leite, sem ovos até dar de novo
 //  r4 um save com o rebanho no pasto: carregado, o rebanho volta para o curral, nenhum fica solto para sempre
@@ -100,9 +100,13 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   ok('r1', !!t0 && t0.type === 'herd' && out && went + H.old >= P.ids.length && back && H.all && H.pen === H.n && H.inside === H.n && h1 < h0 && S().time < 0.75 && !bad.length,
     `${P.v.name} (${t0 ? t0.type : 'sem tarefa'}): ${went} de ${P.ids.length} foram ao pasto${fights.size ? ` (no meio: ${[...fights].join(', ')})` : ''}; ${back ? 'voltaram' : 'não voltaram'} (hora ${r2(S().time)}); no curral ${H.pen} de ${H.n}${oldSaid(H)} (dentro da cerca ${H.inside}); a fome ${h0} → ${h1}${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
-// r2 hay at night
+// r2 hay when the flock cannot graze: the evening, past the pasture's hours (economy.js pastorTask: hay from the store for a
+// hungry flock when there is no pasture now) and before the herder's own bed — the clock of each one, G.Lar.clock: a grown-up
+// goes to bed between 0,74 and 0,83, and the night falls at 0,73. The case was «de noite», at 0,86: since the clock (D-071)
+// the herder is in bed then, and the world's step put him to bed at his first thought, before the store — Moctezuma, of the
+// generation-9 and -10 metropole, whose bed is at 0,775: nothing out of the store, nothing eaten, T-327
 {
-  const P = setup(0.86, 0.6); const f = G.Fac.ofV(P.v); if (D.free('f:' + f.id, 'food') < 12) D.make('f:' + f.id, 'food', 12, { code: 'teste', part: true });
+  const P = setup(0.62, 0.6); const f = G.Fac.ofV(P.v); if (D.free('f:' + f.id, 'food') < 12) D.make('f:' + f.id, 'food', 12, { code: 'teste', part: true });
   const L0 = seen.length; const t0 = send(P.v, P.b); const h0 = avgH(P.herd);
   live(120, null, () => seen.slice(L0).some(e => e[8] === 'feno' && e[3] === 'v:' + P.v.id));
   live(2);
@@ -110,25 +114,38 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   const ate = r2(seen.slice(L0).filter(e => e[8] === 'feno' && e[3] === 'v:' + P.v.id && e[4] === '@uso').reduce((s, e) => s + e[6], 0));
   const hands = P.v.carry && P.v.carry.hay ? r2(P.v.carry.n) : 0; const h1 = avgH(flock(P)); const bad = newBad(P.base);
   ok('r2', !!t0 && t0.type === 'fodder' && took > 0 && Math.abs(took - ate) < 0.01 && !hands && h1 < h0 && !bad.length,
-    `${P.v.name} de noite (${t0 ? t0.type : 'sem tarefa'}): do armazém às mãos ${took} de feno, comido ${ate}, ainda nas mãos ${hands}; a fome ${h0} → ${h1}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    `${P.v.name} à tardinha (${t0 ? t0.type : 'sem tarefa'}; dorme às ${r2(G.Lar.clock(P.v).bed)}): do armazém às mãos ${took} de feno, comido ${ate}, ainda nas mãos ${hands}; a fome ${h0} → ${h1}${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
 // r3 shearing, milking, eggs
 {
-  // (the afternoon: past the hour of the pasture, a flock not hungry — the herder's work is the tending; three of them ready)
-  const P = setup(0.5, 0.1); const f = G.Fac.ofV(P.v); const ready = P.herd.filter(a => GIVES[a.kind] && a.grown >= 1).slice(0, 3);
+  // (the afternoon: past the hour of the pasture, a flock not hungry — the herder's work is the tending; three of them ready —,
+  // with the afternoon long enough for the three before the evening's free hours, 0,6, take the herder to the square and the
+  // tavern: at 0,5 Moctezuma tended two of Tenochtitlan's turkeys and went out for the evening, T-327)
+  const P = setup(0.43, 0.1); const f = G.Fac.ofV(P.v); const ready = P.herd.filter(a => GIVES[a.kind] && a.grown >= 1).slice(0, 3);
   // (only those three have anything to give: the rest of the flock was tended this morning)
   for (const a of P.herd) if (GIVES[a.kind]) a[GIVES[a.kind]] = 0;
   for (const a of ready) { a[GIVES[a.kind]] = 1.5; a.tended = 0; if (a.kind === 'ovelha') a.shorn = 0; }
+  // (room in the people's store for what the flock gives, kept by the god for the whole case — the town's other deliveries fill
+  // it meanwhile —: a full store takes nothing at its door — the delivery's 'sem-lugar', lost with its line —, and the case is
+  // the giving and the delivery, not the room. Tenochtitlan's store was full of food: of the 10 of eggs, 2 were lost at its
+  // door, T-327)
+  const GOODS = ['food', 'la', 'queijo'].filter(k => k === 'food' || k in G.Eco.GOODS);
+  const keepRoom = () => { for (const k of GOODS) { const room = V.cap(f.id) - (f.stock[k] || 0); if (room < 12) D.use('f:' + f.id, k, 12 - room, { code: 'teste', part: true }); } };
+  keepRoom();
   const L0 = seen.length;
   send(P.v, P.b);
   // (one of the three dead of old age in the case gives nothing, and is no fault of the herder's — the oldest ewe of Birka dies
   // in the first minute, T-268 —: the others give; the case waits for them, not for the dead one, T-302)
   const dueNow = () => ready.filter(a => !(a.dead && a.cause === 'old'));
-  live(300, null, () => dueNow().every(a => a[GIVES[a.kind]] < 1) && !(P.v.carry && P.v.carry.n > 1e-6));
+  // (each one seen giving — what it had down to nothing, the tending's mark, economy.js —, at the step it gave: a turkey lays
+  // again in a third of a day (animals.js), and the first ones laid again before the third was tended, and counted as not
+  // given — only the tending takes it down, T-327)
+  const gave = new Set(); const seeGive = () => { keepRoom(); for (const a of ready) if (!gave.has(a.id) && a[GIVES[a.kind]] < 1) gave.add(a.id); };
+  live(300, seeGive, () => dueNow().every(a => gave.has(a.id)) && !(P.v.carry && P.v.carry.n > 1e-6));
   const made = {}, sent = {}; const L = seen.slice(L0);
   for (const e of L) { if (e[3] === '@mundo' && e[4] === 'v:' + P.v.id && ['tosquia', 'ordenha', 'ovos'].includes(e[8])) made[e[5]] = r2((made[e[5]] || 0) + e[6]); if (e[3] === 'v:' + P.v.id && String(e[4]).startsWith('f:') && e[8] === 'entrega') sent[e[5]] = r2((sent[e[5]] || 0) + e[6]); }
   const due = dueNow();
-  const given = due.filter(a => a[GIVES[a.kind]] < 1).length; const bad = newBad(P.base);
+  const given = due.filter(a => gave.has(a.id)).length; const bad = newBad(P.base);
   const same = Object.keys(made).length > 0 && Object.keys(made).every(k => Math.abs((sent[k] || 0) - made[k]) < 0.01);
   ok('r3', due.length > 0 && given === due.length && same && !(P.v.carry && P.v.carry.n > 1e-6) && !bad.length,
     `${ready.length} bicho(s) prontos (${[...new Set(ready.map(a => a.kind))].join(', ')})${ready.length > due.length ? `, ${ready.length - due.length} morreu de velhice no caso` : ''}: deram ${given} de ${due.length}; nasceu nas mãos pelo livro ${JSON.stringify(made)}, ao armazém ${JSON.stringify(sent)}; ${f ? '' : 'sem povo; '}nas mãos no fim ${P.v.carry ? r2(P.v.carry.n) + ' de ' + P.v.carry.k : 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);

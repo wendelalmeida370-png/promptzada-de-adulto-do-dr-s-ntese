@@ -90,6 +90,11 @@ const shopAt = (o, P, k) => { G.Vg.endTask(o); o.hunger = 10; o.sleeping = false
 // f2 a purchase at the fair: the coins to the people's treasury
 {
   const P = setup(0.2); const k = 'food'; const I = P.b.inv || (P.b.inv = {}); if ((I[k] || 0) < 4) D.move('f:' + P.f.id, 'b:' + P.b.id, k, 6, { code: 'teste', part: true });
+  // (the town calm for the purchase: its feast of the day kept for another day by the god's hand — festivals.js, the plan of
+  // the day — and none under way: the feast calls the whole town, 3,2, over an errand to the fair. The Panathenaia of Argos
+  // fall at 0,2, the hour of the case, and took Alcmena at the first step, on her way to the stall, T-327)
+  { const s = S().settlements.get(P.b.set); s.festPlan = { day: S().day, key: null, done: true }; }
+  const feast = G.Fest && G.Fest.active(P.b.set);
   const o = buyer(P, k); const t = o && shopAt(o, P, k); const coin = E.coinage(P.f.id);
   live(150, null, () => o && lines(P, e => e[8] === 'compra' && e[4] === 'v:' + o.id).length > 0);
   live(120, null, () => o && !(o.carry && o.carry.n > 1e-6));
@@ -98,8 +103,8 @@ const shopAt = (o, P, k) => { G.Vg.endTask(o); o.hunger = 10; o.sleeping = false
   const toState = sum(pay.filter(e => e[4] === 'f:' + P.f.id)); const elsewhere = sum(pay.filter(e => e[4] !== 'f:' + P.f.id));
   const home = sum(lines(P, e => o && e[3] === 'v:' + o.id && e[4] === 'h:' + o.home && e[5] === k));
   const bad = newBad(P.base);
-  ok('f2', !!o && !!t && goods > 0 && (coin ? toState > 0 : !pay.length) && !elsewhere && Math.abs(home - goods) < 0.01 && !bad.length,
-    `${o ? o.name : 'ninguém'}: das bancas às mãos ${goods} de ${k}, à casa ${home}; pagou ${toState} ao tesouro${elsewhere ? ' e ' + elsewhere + ' a outro' : ''}${coin ? '' : ' (povo sem moeda)'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  ok('f2', !feast && !!o && !!t && goods > 0 && (coin ? toState > 0 : !pay.length) && !elsewhere && Math.abs(home - goods) < 0.01 && !bad.length,
+    `${feast ? 'uma festa já em curso na cidade; ' : ''}${o ? o.name : 'ninguém'}: das bancas às mãos ${goods} de ${k}, à casa ${home}; pagou ${toState} ao tesouro${elsewhere ? ' e ' + elsewhere + ' a outro' : ''}${coin ? '' : ' (povo sem moeda)'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
 // f3 noon: the fair closes — the feirante leaves the stall, and nobody buys at closed stalls
 {

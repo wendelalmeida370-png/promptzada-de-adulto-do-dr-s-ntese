@@ -1,5 +1,5 @@
 // pesca: a pescaria provocada de propósito (C1, a atividade 02) — no mundo pronto «metrópole».   node qa/pesca.js
-// p0 olhar a água não escreve nada (um mundo que ninguém pescou volta do save sem livro); p1 o peixe é contado (cada peixe pego sai do pesqueiro daquela água, pelo livro-razão: 'pesca'); p2 pescar demais
+// p0 olhar a água não escreve nada (um mundo que ninguém pescou volta do save sem livro); p1 o peixe é contado (cada peixe pego sai do pesqueiro daquela água, pelo livro-razão: 'pesca'); p1b o que não cabe nas mãos volta à água contado em peixes, e o lance diz o que saiu do pesqueiro (L-450); p2 pescar demais
 // esvazia a água, a pesca rende cada vez menos e some das opções (a do corpo diz por quê; os pescadores do povo vão a
 // outra água); p2b a água pequena pescada até um peixe fica «sem peixe»: nenhum lançamento traria nada (L-199); p3 o peixe volta, pela conta da vida (a mesma conta a qualquer hora em que se olhe); p4 o barco pesca do
 // mesmo pesqueiro e volta leve de uma água vazia; p5 save no meio: o pesqueiro volta igual (e o resto do mundo também);
@@ -78,6 +78,35 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
   const lines = book(e => e[0] > L0 && e[8] === 'pesca' && e[4] === 'v:' + v.id);
   ok('p1 o peixe é contado', got >= 1 && Math.abs((s0.n - s1.n) - took) < 1e-3 && lines.length === got && lines.every(e => e[3] === '@mundo') && !bad().length,
     `${v.name} lançou ${casts} vezes e pegou ${got} (${[...kinds].join(', ')}): o pesqueiro ${r2(s0.n)} → ${r2(s1.n)} (saíram ${took} peixes, a conta ${Math.abs((s0.n - s1.n) - took) < 1e-3 ? 'fecha' : 'NÃO fecha'}); no livro ${lines.length} lançamento(s) 'pesca' para as mãos${last ? ` (o último: ${last.n} de ${last.k === 'food' ? 'comida' : last.k})` : ''}`);
+}
+// ---------------- p1b: a haul bigger than the hands: what does not fit goes back to the water, counted in fish (the share of
+// the haul that did not fit), and the cast says what left the ground. It went back counted in loads — three pirarucus, eleven
+// of food with room for ten, gave the ground a whole fish back for the quarter of one —, and the cast said it took the three
+// (L-450). The hands one load short of full of the same catch — the fishing goes on with fish in the hands —, the water full
+// again by the god's hand before each cast; the haul and its loads read at the world's own doors (P.take, catchCarry)
+{
+  const v = person(town); atEdge(v, sp); v.fishXp = 40;
+  const take0 = P.take, cc0 = G.Waters.catchCarry; let hauled = 0, loads = 0;
+  P.take = function () { const m = take0.apply(this, arguments); hauled = m; return m; };
+  G.Waters.catchCarry = function () { const f = cc0.apply(this, arguments); loads = f.n; return f; };
+  // (only the hauls whose loads are not their fish count: a fish of one load — a tilápia, a truta — tells the two counts apart
+  // in nothing; a bagre, a pirarucu, a piranha do)
+  const wrong = []; let seen = 0, casts = 0, one = '';
+  for (let k = 0; k < 120 && seen < 3; k++) {
+    if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true });
+    const cap = Math.floor(D.room('v:' + v.id, 'food', {}) + 1e-6); D.make('v:' + v.id, 'food', cap - 1, { code: 'teste', rec: { fish: 'carpa' } });
+    if (S.pesca) delete S.pesca[sp.id];
+    const s0 = P.stock(sp.wx, sp.wy).n; hauled = 0; loads = 0;
+    const r = P.cast(v, sp.wx, sp.wy); casts++;
+    if (!r.ok || !(loads > 1) || loads === hauled) continue;
+    seen++; const s1 = P.stock(sp.wx, sp.wy).n; const kept = hauled * r.n / loads;
+    const said = `${r.name}: ${hauled} peixe(s), ${loads} de comida, coube ${r.n}; o pesqueiro ${r2(s0)} → ${r2(s1)}, o lance disse ${r2(r.took)}`;
+    if (Math.abs((s0 - s1) - r.took) < 1e-3 && Math.abs(r.took - kept) < 1e-3 && r.n === 1) { if (!one) one = said; } else wrong.push(said);
+  }
+  P.take = take0; G.Waters.catchCarry = cc0;
+  if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true });
+  ok('p1b o que não cabe nas mãos volta contado em peixes', seen >= 3 && !wrong.length && !bad().length,
+    `${v.name}, com as mãos a uma carga de cheias, lançou ${casts} vezes: ${seen} lance(s) maiores que as mãos, de peixes que não são uma carga cada${wrong.length ? `; a conta NÃO fecha em ${wrong.length}: ${wrong.slice(0, 2).join(' · ')}` : `, todos com o pesqueiro perdendo só o que coube (${one})`}`);
 }
 // ---------------- p2: fishing too hard empties the water: less and less, then no fishing there
 {
@@ -215,9 +244,13 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
   const line = book(e => e[0] > L0 && e[8] === 'pesca' && e[4] === 'v:' + v.id)[0];
   const s1 = P.stock(sp3.wx, sp3.wy).n;
   const held = !!(v.carry && v.carry.n >= 1 && v.carry.fish);
+  // (what the hands held, told as it was before the god let the body go — given back, the world takes it on from the hands, by
+  // the ledger, and the words read an empty hand: a TypeError, not a verdict —; and where it went then)
+  const inHands = held ? `${v.carry.n} de ${v.carry.k === 'food' ? 'comida' : v.carry.k} (${v.carry.fish})` : 'NADA'; const L7 = S.ledgerN;
   G.Possess.release('deus'); M.viver(0.2);
+  const then7 = book(e => e[0] > L7 && e[3] === 'v:' + v.id).map(e => `${e[8]} ${e[6]} → ${e[4]}`).join(', ');
   ok('p7 o corpo pesca pela mesma porta', tk.ok && !offs.length && r.ok && !!line && held && s1 < s0 - 0.5 && !bad().length,
-    `${v.name} pelo deus, com as mãos na água (${sp3.kind}): ${tries} tentativa(s): ${r.ok ? `pegou ${r.n} de ${r.name}` : r.why}; nas mãos ${held ? v.carry.n + ' de ' + (v.carry.k === 'food' ? 'comida' : v.carry.k) + ' (' + v.carry.fish + ')' : 'NADA'}; o pesqueiro ${r2(s0)} → ${r2(s1)}; no livro ${line ? 'pesca #' + line[0] : 'NADA'}; ofertas próprias de pesca entre as das atividades: ${offs.length}`);
+    `${v.name} pelo deus, com as mãos na água (${sp3.kind}): ${tries} tentativa(s): ${r.ok ? `pegou ${r.n} de ${r.name}` : r.why}; nas mãos ${inHands}${then7 ? ` (devolvido o corpo: ${then7})` : ''}; o pesqueiro ${r2(s0)} → ${r2(s1)}; no livro ${line ? 'pesca #' + line[0] : 'NADA'}; ofertas próprias de pesca entre as das atividades: ${offs.length}`);
   if (v.carry) D.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true });
 }
 // ---------------- p8: no water, ice, a water too deep for the people's way: no fishing

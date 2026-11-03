@@ -78,7 +78,9 @@ const clearHands = o => { if (o.carry && o.carry.n > 0) god(() => D.store('v:' +
 // world's porters, brought a few steps from the pile so that they go for a crate at once —; those with free hands first, and
 // the hands of the three emptied by the depot: a docker may come from his bed with a load still in his arms — T-086)
 const loaded = o => !!(o.carry && o.carry.n > 0);
-const able = o => o.set === set.id && o.role === 'estivador' && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1]);
+// (none of a voyage's crew: a voyage being made ready calls its crew to the quay, 3,25 — what cannot wait —, again and again
+// until it sails, T-326)
+const able = o => o.set === set.id && o.role === 'estivador' && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1]) && !(G.Expe && G.Expe.memberOf(o.id));
 // (the stevedores of a town are as many as the crates waiting on its quays ask, up to three a store — harbor.js, the town's job
 // board every 4 s of the world —: a clean quay asks one. Fewer than the proof needs: the god lands a catch on the quay — the
 // one the proof lands first anyway — and the town calls its hands by its own rule, in 30 s at most: T-224. But first the board
@@ -107,6 +109,12 @@ if (near.length < 3) { ok('lugares perto do cais', false, near.length); process.
 // three tries of case 3, before lifting her crate: T-234)
 const bring = (o, at) => god(() => { if (o.ug && G.Caves) G.Caves.exitNow(o); G.Vg.endTask(o); o.x = at[0]; o.y = at[1]; o.path = null; o.energy = Math.max(o.energy, 70); o.hunger = Math.min(o.hunger, 30); });
 bring(v, near[0]); bring(p1, near[1]); bring(p2, near[2]);
+// (and the two porters kept ashore for the cases by the god's hand, as ones just back from a voyage — v.expCD, the three days
+// the voyages leave them be (expeditions.js free) —: the cases are the crate between the body and the porter, not the sea. In
+// the generation-10 metropole «A Grande Expedição ao Norte» was made ready in Mênfis as case 2 began and took Ramsés and
+// Isetnofret, the town's two porters, to its quay: cases 2 and 3 waited three times for a lift that could not come, and in 7
+// the porters went for the crates and never lifted them, T-326)
+god(() => { for (const o of [p1, p2]) o.expCD = S.day; });
 if (!G.Possess.take(v).ok) { ok('encarnar o estivador', false, v.name); process.exit(1); }
 G.Avatar.attach(v, Math.atan2(sp0[1] - v.y, sp0[0] - v.x)); for (let k = 0; k < 6; k++) frame();
 console.log(`(${set.name}: o cais #${dock.id}; ${v.name} encarnado; ${p1.name} e ${p2.name}, carregadores do mundo${called})`);
@@ -332,8 +340,9 @@ ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCra
 }
 
 // ------------------------------ 7. a busy quay ------------------------------
-{ fresh(8); const crew = [...S.villagers.values()].filter(o => o.id !== v.id && o.set === set.id && o.role === 'estivador' && A.able(o) && W.reaches(o, sp0[0], sp0[1])).sort((a, b) => a.id - b.id).slice(0, 5);
+{ fresh(8); const crew = [...S.villagers.values()].filter(o => o.id !== v.id && o.set === set.id && o.role === 'estivador' && A.able(o) && W.reaches(o, sp0[0], sp0[1]) && !(G.Expe && G.Expe.memberOf(o.id))).sort((a, b) => a.id - b.id).slice(0, 5);
   for (const o of crew) rest(o);
+  god(() => { for (const o of crew) o.expCD = S.day; }); // (ashore for the case, as p1 and p2: T-326)
   crew.forEach((o, i) => bring(o, near[i % near.length]));
   const hands = new Map(); const atContact = [], miss = []; let presses = 0, lifts = 0, keyNo = 0; const g = A.ANIM.levantar;
   const watch = () => { for (const o of [v, ...crew]) if (o.carry && o.carry.op === op.id && o.carry.cid) { const s = hands.get(o.carry.cid) || new Set(); s.add(o.id); hands.set(o.carry.cid, s); } };

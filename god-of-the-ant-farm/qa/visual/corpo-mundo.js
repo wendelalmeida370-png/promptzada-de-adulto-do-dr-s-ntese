@@ -151,7 +151,12 @@ function fishPlace() {
         // (a cast's time: from the one before — or, for the world's fisher, from the moment it is at the water, st 2 — to it; the
         // body's first is from the key, half a gesture: not counted)
         if (!body && !(v.task && v.task.type === 'fish' && v.task.st === 2)) t0 = null; else if (!body && t0 === null) t0 = S.clock;
-        const c0 = casts; if (body) holdE('peixe'); frame();
+        // (and the body's, from a key the fishing was offered at: someone of the world who stops in front of the body puts his
+        // own «E» there — «falar com…» — and the hands are not asked to fish while he stands; in the generation-9 and -10
+        // «cidade» a passer-by stood 19 s before the body in the ford, and that wait counted as one cast of 21,6 s, T-328)
+        const busy = body && G.Avatar.busy(); const c0 = casts; const hb = body ? holdE('peixe') : null;
+        if (body && !busy && !(hb && hb.id === 'peixe' && hb.ok)) t0 = null;
+        frame();
         if (casts > c0) { if (t0 !== null) { T += S.clock - t0; n++; } t0 = S.clock; }
         const Lg = S.ledger || []; for (let q = Lg.length - 1; q >= 0 && Lg[q][0] > seen; q--) if (Lg[q][8] === 'pesca' && Lg[q][4] === 'v:' + id) { catches++; food += Lg[q][6]; }
         if (Lg.length) seen = Math.max(seen, Lg[Lg.length - 1][0]);

@@ -124,11 +124,22 @@ const z1 = B.of(merchants()[0]); const m1 = S.villagers.get(z1.owner);
   const payer = E.homeOf(m1) ? 'h:' + m1.home : 'p:' + m1.id; D.make(payer, 'moedas', 20, { code: 'teste' }); // (a family with coins)
   roomOn(z1, k, 3);
   const c0 = D.get(payer, 'moedas'), t0 = fac.stock.moedas || 0, s0 = D.get('f:' + fac.id, k), L0 = S.ledgerN;
-  G.Vg.setTask(m1, { type: 'atacado', biz: z1.id, k, n: 3, pri: 1, st: 0, id: mk.id, kind: 'work' });
   // (his own wholesale: the world's other merchants buy at their stores meanwhile — in the new metropolis the case took
   // Kamose's 8 of food in Mênfis and Caio's coins in another town for his, before his own came, T-177 —; the payment is the
   // line right after the goods)
-  const got = live(120, () => !!book('atacado', e => e[0] > L0 && e[5] === k && e[9] === m1.id).length || watch());
+  // (and an errand of the world above his — the water of his house, 1,05 — may take him from it on the way to the store: the
+  // case waits for that one to end and gives his again, up to three times, as the counter cases do. With the generation-10
+  // metropole the water of Ariadne's house called her at the first step, and what she bought later, by her own day, was
+  // jewels for her stall, T-328)
+  const line2 = () => !!book('atacado', e => e[0] > L0 && e[5] === k && e[9] === m1.id).length;
+  let got = false; const away2 = [];
+  for (let i = 0; i < 3 && !got; i++) {
+    const tk = G.Vg.setTask(m1, { type: 'atacado', biz: z1.id, k, n: 3, pri: 1, st: 0, id: mk.id, kind: 'work' });
+    live(120, () => line2() || m1.task !== tk || watch());
+    got = line2();
+    if (!got && m1.task !== tk) { const by = m1.task; away2.push(by ? by.type : 'nada'); if (by) live(120, () => m1.task !== by || watch()); }
+  }
+  if (away2.length) start += ` (${m1.name} chamado a ${away2.join(', ')} antes do armazém; de novo)`;
   const legs = book('atacado', e => e[0] > L0 && e[9] === m1.id);
   const goods = legs.find(e => e[5] === k), coin = goods ? legs.find(e => e[5] === 'moedas' && e[0] === goods[0] + 1) || legs.find(e => e[5] === 'moedas' && e[0] > goods[0]) : null;
   const paidOk = !!goods && !!coin && coin[0] === goods[0] + 1 && coin[3] === payer && coin[4] === 'f:' + fac.id && Math.abs(coin[6] - r2((E.PRICE[k] || 0.3) * goods[6] * 0.6)) < 0.011;
@@ -494,7 +505,13 @@ function stallNow() {
 // ---------------- n13: the god's body buys at someone else's stall, and haggles
 {
   S.time = 0.15; live(1);
-  const sw = stallNow(); start = prep(z, m) + sw; S.time = 0.15;
+  // (the stall open and attended after the start: the world's board may give its merchant another trade in the middle of it —
+  // while he eats or sleeps —, and his stall closes at once; the case takes the one open then and starts again, up to three
+  // times. With the generation-10 metropole the board made Ariadne a beekeeper while she slept, and the body found no counter
+  // to haggle at, T-328)
+  let sw = '', st13 = '';
+  for (let i = 0; i < 3; i++) { sw += stallNow(); st13 = prep(z, m); if (z.st === 'on' && B.manned(z)) break; }
+  start = st13 + sw; S.time = 0.15;
   const sp = B.spots(z);
   // (one whose house has room for the counter's first good: a full house does not buy — D-059)
   const kq = goodOf(z); const v = pickBuyer(set, sp, [m.id], true, kq);
