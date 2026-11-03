@@ -117,7 +117,9 @@
       owner: b => ({ fac: G.Village.facOfSet(b.set), home: b.id }),
     },
     b: { // a building's own shelf (a fair, a tavern, a workshop, a court)
-      obj: id => { const b = G.S.buildings.get(id); return b && !housing(b) ? b : null; },
+      // (a ruin is no shelf, as it is no house: a ruin keeps nothing, L-377 — a porter's clay marked for a pottery that the
+      // lava had just brought down was put into the ruin, and stayed there unwritten, L-462)
+      obj: id => { const b = G.S.buildings.get(id); return b && !housing(b) && b.type !== 'ruin' ? b : null; },
       get: (b, k) => (b.inv && b.inv[k]) || 0,
       room: (b, k) => (k === 'water' ? 0 : k === 'moedas' ? Infinity : furnRoom('b', b, k, AD.b.list(b), Infinity)),
       take: (b, k, n) => { b.inv[k] = r4((b.inv[k] || 0) - n); },

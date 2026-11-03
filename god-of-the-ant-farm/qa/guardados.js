@@ -11,6 +11,8 @@
 //  g6 o verificador vê uma ruína com coisas dentro (a mão do teste) — S2
 //  g7 a obra da cidade que derruba o bairro velho: as moedas da casa vão ao bolso do mais velho, e a despensa e a arca, da
 //     família e não do povo (D-059), vêm abaixo com a casa pelo livro («obra-da-cidade»)
+//  g8 a carga marcada para um prédio de trabalho que cai no caminho: vai ao estoque do povo pelo livro, e a ruína não guarda
+//     nada (L-462: a ruína era uma prateleira para o depósito)
 //  e nenhum erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
@@ -141,6 +143,27 @@ let ruinId = 0, keptRuina = 0;
     const coinOk = Math.abs(sum(coins, 'moedas') - had.moedas) < 0.01 && coins.every(e => e[4] === purse);
     ok('g7 o bairro velho', !!w && !S.buildings.has(h.id) && each && coinOk && !bad().length,
       `${V.buildName(h)} #${h.id} de ${big.name} derrubada para ${w ? V.buildName(w).toLowerCase() + ' #' + w.id : 'NADA'}: as moedas (${had.moedas}) ${coinOk ? 'ao bolso de ' + (fam[0] ? fam[0].name : 'o povo') : 'NÃO como devia: ' + JSON.stringify(coins.map(e => [e[4], e[6]]))}; a despensa e a arca ${JSON.stringify(Object.fromEntries(Object.keys(had).filter(k => k !== 'moedas').map(k => [k, had[k]])))} → pelo livro ${JSON.stringify(Object.fromEntries(Object.keys(had).filter(k => k !== 'moedas').map(k => [k, sum(goods, k)])))} («obra-da-cidade»)`);
+  }
+}
+// ---------------- g8 a load on its way to a building that falls (L-462) ----------------
+// (a porter with a load marked for a work building — the clay of a pottery's batch, goods for its shelf — when the building
+// falls: the load goes to the people's store, in the ledger, and the ruin keeps nothing. In the caos 13 of the closing's
+// regression, with the L-461: the lava brought the pottery #1610 down, and 18 s later a porter put the 2 of clay of its batch
+// into the ruin («entrega»), where they stayed unwritten — the ruin was a shelf to the depot, as a house's ruin is not)
+{
+  const b = [...S.buildings.values()].filter(x => x.set === big.id && work(x)).sort((p, q) => p.id - q.id)[0];
+  const v = b && [...S.villagers.values()].filter(o => o.set === big.id && o.age >= 18 && o.age < 55 && o.hp > 50 && !o.captive && !o.aboard && !o.jail && !o.ug && !o.held && !o.air && !o.inside && !(o.carry && o.carry.n > 1e-6) && !(o.task && (o.task.pri || 0) >= 1.5) && !(S.avatar && S.avatar.id === o.id) && !(G.Expe && G.Expe.memberOf(o.id)) && G.W.reaches(o, ...V.frontTile(b))).sort((p, q) => p.id - q.id)[0];
+  if (!b || !v) ok('g8 a carga a caminho de um prédio que caiu', false, `${big.name}: ${!b ? 'sem prédio de trabalho de pé' : 'ninguém livre que chegue a ele'}`);
+  else {
+    G.Vg.endTask(v); const put = D.make('v:' + v.id, 'tecido', 2, { code: 'teste', to: 'b:' + b.id }); G.Vg.setTask(v, { type: 'carga', to: 'b:' + b.id, pri: 1, st: 0 });
+    M.viver(0.5); const L0 = lines.length;
+    V.destroyBuilding(b, 'teste');
+    // (the world lives until the hands are empty, the ruin looked at every step)
+    let kept = '', k = 0; for (; k < 900 && v.carry && v.carry.n > 1e-6 && S.villagers.has(v.id); k++) { M.viver(0.1); const r = ruins().find(m => m.includes('#' + b.id + ' ')); if (r && !kept) kept = r; }
+    const went = out('v:' + v.id, L0); const to = went.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ');
+    const store = 'f:' + G.Fac.idOfV(v); const home = went.filter(e => e[4] === store);
+    ok('g8 a carga a caminho de um prédio que caiu', put.ok && !kept && !(v.carry && v.carry.n > 1e-6) && Math.abs(sum(home, 'tecido') - 2) < 0.01 && !went.some(e => e[4] === 'b:' + b.id) && !bad().length,
+      `${v.name} levando 2 de tecido para ${V.buildName(b).toLowerCase()} #${b.id}, que caiu no caminho: ${kept ? 'a ruína GUARDA: ' + kept : 'a ruína não guarda nada'}; em ${(k / 10).toFixed(1)} s a carga ${v.carry && v.carry.n > 1e-6 ? `AINDA nas mãos (${v.carry.n} de ${v.carry.k}, para ${v.carry.to})` : `saiu das mãos pelo livro: ${to || 'NENHUMA linha'}`}`);
   }
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
