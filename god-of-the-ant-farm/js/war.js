@@ -120,6 +120,8 @@
       if (v.captive || v.age < 16 || v.age >= 58 || v.hp < 55 || v.preg > 0 || v.held || v.air) continue;
       if (fid(v) !== f.id || v.id === f.leader && !opts.all) continue;
       if (v.task && (v.task.type === 'band' || v.task.type === 'combat' || busyDiplomat(v) || v.task.pri >= 4)) continue;
+      // (nor whoever has the hands busy, D-094: a purchase for home went raiding in the arms, L-461)
+      if (G.Vg.handsBusy(v)) continue;
       if (G.dist(v.x, v.y, from.cx, from.cy) > (G.Army ? 60 : 32)) continue; // a host is levied from the whole region
       const w = (v.role === 'guerreiro' ? 3 : (v.role === 'cacador' ? 1.5 : 0) + v.courage + (v.fury > 0 ? 3 : 0)) + (G.Stories ? G.Stories.warPull(v, enemy.id) : 0);
       cands.push([w, v]);

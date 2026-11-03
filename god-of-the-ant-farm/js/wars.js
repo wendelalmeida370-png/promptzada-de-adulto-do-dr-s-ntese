@@ -424,8 +424,11 @@
     const muster = o.at ? o.at.slice() : role === 'defesa' && !relief ? (W.nearestLand(front.cx, front.cy, 4) || [front.cx, front.cy]) : musterSpot(front, tgt);
     const land = W.landIds ? W.landIds() : null; const myLand = land ? land[W.idx(muster[0], muster[1])] : 0;
     const cands = [];
+    // (the levy is chosen with the hands free, D-094: the call cannot wait, but the choice is made before it, among many — a
+    // purchase for home went to the muster in the arms, the material of a work to the war, L-461; the hands are free in a
+    // moment, and the next levy finds them so)
     for (const v of S.villagers.values()) {
-      if (fid(v) !== f.id || keep.has(v.id) || !canServe(v)) continue;
+      if (fid(v) !== f.id || keep.has(v.id) || !canServe(v) || G.Vg.handsBusy(v)) continue;
       if (v.id === f.leader && role !== 'defesa' && !(G.Politics.leaderPe(f).agg > 0.7 && G.R() < 0.5)) continue;
       if (land && land[W.idx(v.x, v.y)] !== myLand) continue;
       const d = dist(v.x, v.y, muster[0], muster[1]); if (d > 70) continue;

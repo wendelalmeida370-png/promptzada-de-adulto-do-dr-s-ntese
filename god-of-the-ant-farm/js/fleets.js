@@ -116,8 +116,8 @@
     const d0 = S.buildings.get(o.dock || ships[0].dock);
     const fl = { id: S.nextId++, fac: f.id, civ: f.civ, war: war ? war.id : 0, mission, ships: ships.map(s => s.id), st: 'reunir', t: 0, d: S.day, form: mission === 'invasao' ? 'defensiva' : 'coluna', morale: 70, sunk: 0, taken: 0, lostMen: 0, x: ships[0].x, y: ships[0].y, hd: 0, tgt: o, log: [], battles: [], army: o.army || 0, dock: d0 ? d0.id : ships[0].dock };
     fl.name = nameFleet(f, mission, d0);
-    // the admiral: a veteran, a brave one, someone who knows the sea
-    const cands = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && !v.captive && v.age >= 24 && v.age < 62 && v.hp > 60 && !v.aboard && v.id !== f.leader && !(v.task && v.task.pri >= 3.15) && !G.War.busyDiplomat(v) && !(G.Expe && G.Expe.memberOf(v.id)));
+    // the admiral: a veteran, a brave one, someone who knows the sea (with the hands free, as the crews: L-461)
+    const cands = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && !v.captive && v.age >= 24 && v.age < 62 && v.hp > 60 && !v.aboard && v.id !== f.leader && !(v.task && v.task.pri >= 3.15) && !G.War.busyDiplomat(v) && !(G.Expe && G.Expe.memberOf(v.id)) && !G.Vg.handsBusy(v));
     const adm = cands.sort((a, b) => ((b.voyages || 0) * 0.6 + (b.vet || 0) * 0.3 + b.courage + (b.role === 'pescador' ? 0.4 : 0)) - ((a.voyages || 0) * 0.6 + (a.vet || 0) * 0.3 + a.courage + (a.role === 'pescador' ? 0.4 : 0)))[0];
     fl.cmd = adm ? adm.id : 0; fl.cmdName = adm ? adm.name : '';
     for (const s of ships) { s.fleet = fl.id; s.mor = 70; }
@@ -135,8 +135,11 @@
     // (an envoy on the road and a merchant with his caravan are not sent: the levy and the raid leave them be — wars.js
     // canServe, war.js busyDiplomat — and so does the fleet; the peace that Argos sent was taken onto a trireme an hour out of
     // the gate, and the war went on three years: L-439)
+    // (nor whoever has the hands busy — a load that has somewhere to go, the leg of an operation (D-094): the call to the ships
+    // cannot wait, but the choice is made before it, among many; a purchase for home went to sea on a warship, and the material
+    // of a work aboard, L-461 — as the voyages' crews, L-458)
     const levy = v => { const t = v.task; if (!t || t.type !== 'muster') return null; const a = Wz.army(t.army); return a && !a.done && a.phase === 'mobilizar' && a.fac === f.id && a.members.length > 8 ? a : null; };
-    const pool = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && !v.captive && v.age >= 16 && v.age < 56 && v.hp > 55 && !v.aboard && !(v.preg > 0) && v.id !== f.leader && (!(v.task && (v.task.pri >= 3.15 || v.task.type === 'cais')) || levy(v)) && !G.War.busyDiplomat(v) && !(G.Expe && G.Expe.memberOf(v.id)));
+    const pool = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && !v.captive && v.age >= 16 && v.age < 56 && v.hp > 55 && !v.aboard && !(v.preg > 0) && v.id !== f.leader && (!(v.task && (v.task.pri >= 3.15 || v.task.type === 'cais')) || levy(v)) && !G.War.busyDiplomat(v) && !(G.Expe && G.Expe.memberOf(v.id)) && !G.Vg.handsBusy(v));
     pool.sort((a, b) => ((b.role === 'guerreiro') * 3 + (b.role === 'pescador') * 2 + b.courage - (levy(b) ? 1.5 : 0)) - ((a.role === 'guerreiro') * 3 + (a.role === 'pescador') * 2 + a.courage - (levy(a) ? 1.5 : 0)));
     let k = 0;
     for (const s of ships) {

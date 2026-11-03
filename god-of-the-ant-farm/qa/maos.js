@@ -22,6 +22,9 @@
 //     até o susto passar, e depois ele volta ao cais (L-459)
 //  m11 a colônia e as crianças escondidas na caverna: uma criança no refúgio não é levada para a colônia, nem a família dela
 //     (que vai inteira ou não vai); as que não se escondiam vão (L-459)
+//  m12 as escolhas da guerra — a leva, a tripulação da frota (e o almirante), a do ataque pelo mar, o bando por terra — não
+//     levam quem tem as mãos ocupadas: com os guerreiros e caçadores do povo levando uma compra para casa e um construtor com
+//     o material a caminho da obra, ninguém escolhido tem as mãos ocupadas, e cada escolha acontece com os outros (L-461)
 //  e o verificador limpo nos casos, sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/oficio-inv.js'] });
@@ -317,6 +320,45 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
     ok('m11 as crianças escondidas e a colônia', !taken.length && still === hid.length && !parents.length && hid.length > 0 && !b11.length,
       `${e.name}, de ${c.s.name} (${e.crew.length} colonos, ${kids.length} criança(s) de fora do refúgio), com o alarme da cidade aceso e ${hid.length} criança(s) no refúgio da caverna: ${taken.length ? `LEVOU ${taken.length} escondida(s) (${taken.slice(0, 3).map(v => `${v.name}, ${v.age | 0} anos, agora ${tk(v)}`).join('; ')})` : 'nenhuma escondida levada'}; ${still} de ${hid.length} ainda no refúgio; ${parents.length ? `${parents.length} com o pai ou a mãe na colônia, SEM elas` : 'as famílias delas ficaram inteiras'}${b11.length ? '; o verificador: ' + b11[0] : ''}`);
   }
+}
+// ---------------- m12: the choices of war take the hands free (L-461) ----------------
+// (the call to the war cannot wait (3 or more), but the levy, the band, the crews of a raid by sea and of a fleet are chosen
+// before it, among many — as the voyages' crews, L-458. The premise, by rule: a people with a quay — the most peopled —, at
+// war with the first other one; every free grown warrior and hunter of it, the ones every choice of war takes first, with a
+// purchase on its way home in the arms; and a builder of the town of the quay with the material on its way to a work (a leg,
+// G.Act.leg). Then each choice, from the same world: none of the chosen has busy hands, and the choice still happens)
+{
+  const docksOf = q => G.Naval.docksOf(q.id).filter(d => G.Naval.dockInfo(d).moor).sort((a, b) => a.id - b.id);
+  const pickWar = () => { const fs = G.Fac.all().filter(q => q.alive && docksOf(q).length).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id) || a.id - b.id); const f = fs[0]; const e = f && G.Fac.all().filter(q => q.alive && q !== f).sort((a, b) => a.id - b.id)[0]; return f && e ? { f, e } : null; };
+  const atWar = (f, e) => { const rel = G.Fac.rel(f.id, e.id); if (rel && !rel.met) G.Politics.meet(f, e, { quiet: true }); const dp = S.divinePeace; S.divinePeace = 0; G.Politics.declareWar(f, e, 'ambicao'); S.divinePeace = dp; return G.Wars.warOf(f.id, e.id); };
+  const loose = o => o.age >= 18 && o.age < 55 && o.hp > 60 && !o.captive && !o.aboard && !o.jail && !o.ug && !o.held && !o.air && o.home && S.buildings.get(o.home) && !(o.carry && o.carry.n > 1e-6) && !(o.task && (o.task.pri || 0) >= 1.5) && !(S.avatar && S.avatar.id === o.id) && !(G.Expe && G.Expe.memberOf(o.id));
+  const busyAll = (f, at) => {
+    const n = []; for (const v of [...S.villagers.values()].filter(o => G.Fac.idOfV(o) === f.id && (o.role === 'guerreiro' || o.role === 'cacador') && loose(o)).sort((a, b) => a.id - b.id)) { purchase(v); n.push(v); }
+    const site = [...S.buildings.values()].filter(x => x.set === at.id && x.type !== 'ruin').sort((p, q) => p.id - q.id)[0];
+    const b = [...S.villagers.values()].filter(o => o.set === at.id && o.role !== 'guerreiro' && o.role !== 'cacador' && loose(o)).sort((p, q) => p.id - q.id)[0];
+    if (b && site) { Vg.endTask(b); D.make('v:' + b.id, 'wood', 2, { code: 'teste' }); Vg.setTask(b, { type: 'build', id: site.id, pri: 1, st: 2, mat: 'wood' }); }
+    return { n: n.length, leg: b && A.leg(b) ? b : null };
+  };
+  const hands = v => (v.carry ? `${v.carry.n} de ${v.carry.k}${v.carry.to ? ' para casa' : ' para a obra'}` : 'mãos vazias');
+  const CHOICES = [
+    ['a leva', (f, e, w, d, at) => { const a = G.Wars.mobilizeAt(w, f, G.Fac.capitalOf(e.id), at, [at.cx, at.cy], 60, {}); return a ? a.members.slice() : null; }],
+    ['a tripulação da frota', (f, e, w, d) => { D.make('f:' + f.id, 'wood', 60, { code: 'm12-frota', part: true }); const s = G.Naval.spawn('guerra', f, d); const fl = s && G.Fleets.form(f, w, 'patrulha', [s], { dock: d.id }); return fl ? s.crew.slice() : null; }],
+    ['o ataque pelo mar', (f, e) => { D.make('f:' + f.id, 'wood', 60, { code: 'm12-mar', part: true }); for (const o of G.Naval.shipsOf(f.id, 'transporte')) G.Naval._remove(o); const sh = G.Naval.launchRaid(f, e, { fury: true }); return sh ? sh.crew.slice() : null; }],
+    ['o bando por terra', (f, e) => { f.attackCD = 0; f.truce = 0; e.truce = 0; const b = G.War.launch(f, e, { fury: true }); const sh = b && b.naval && S.ships.find(s => s.id === b.ship); return b ? (sh ? sh.crew.slice() : b.members.slice()) : null; }],
+  ];
+  const lines = []; let okAll = true;
+  for (const [what, fn] of CHOICES) {
+    fresh(); const pw = pickWar(); const w = pw && atWar(pw.f, pw.e); const d = pw && docksOf(pw.f)[0]; const at = d && S.settlements.get(d.set);
+    if (!pw || !w || !at) { okAll = false; lines.push(`${what}: SEM o caso (nenhum povo com cais em guerra)`); continue; }
+    const p = busyAll(pw.f, at); const ids = fn(pw.f, pw.e, w, d, at);
+    const busy = (ids || []).map(id => S.villagers.get(id)).filter(v => v && Vg.handsBusy(v));
+    const legIn = !!(p.leg && ids && ids.includes(p.leg.id));
+    const good = !!ids && ids.length > 0 && !busy.length && !legIn && p.n > 0 && !!p.leg;
+    if (!good) okAll = false;
+    lines.push(`${what}: ${ids ? `${ids.length} escolhidos` : 'NÃO saiu'}, ${busy.length ? `${busy.length} COM AS MÃOS OCUPADAS (${busy.slice(0, 2).map(v => `${v.name}, ${hands(v)}, agora ${tk(v)}`).join('; ')})` : 'nenhum com as mãos ocupadas'}${legIn ? ` — o da obra ESCOLHIDO (${p.leg.name}, ${hands(p.leg)}, agora ${tk(p.leg)})` : ''}`);
+  }
+  const b12 = bad();
+  ok('m12 as escolhas da guerra com as mãos livres', okAll && !b12.length, `os guerreiros e caçadores do povo com uma compra para casa, e um construtor com o material a caminho da obra: ${lines.join(' · ')}${b12.length ? '; o verificador: ' + b12[0] : ''}`);
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `MAOS: FALHOU (${fails.join(', ')})` : 'MAOS: ok');

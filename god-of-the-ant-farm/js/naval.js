@@ -667,6 +667,8 @@
       if (v.captive || v.aboard || v.age < 16 || v.age >= 58 || v.hp < 55 || v.preg > 0 || v.held || v.air) continue;
       if (G.Fac.idOfV(v) !== fac.id || v.id === fac.leader) continue;
       if (v.task && (v.task.type === 'band' || v.task.type === 'combat' || v.task.type === 'embark' || v.task.pri >= 4)) continue;
+      // (nor whoever has the hands busy, D-094: a purchase for home went aboard a raid, L-461)
+      if (G.Vg.handsBusy(v)) continue;
       if (G.dist(v.x, v.y, from.cx, from.cy) > 30) continue;
       cands.push([warriors ? (v.role === 'guerreiro' ? 3 : v.role === 'cacador' ? 1.5 : 0) + v.courage + (v.fury > 0 ? 3 : 0) : G.R(), v]);
     }

@@ -256,7 +256,7 @@ const LEDGER_OK27 = [
 // Vg.handsBusy; (3) o enlist da festa pergunta ao free(); (4) o carrasco e o arauto da execução (5 e 4,5) são escolhidos com
 // as mãos livres (o pickExecutioner e o pickHerald perguntam ao handsBusy); (5) o homem da ordem secreta pergunta ao Vg.busy
 // antes de seguir alguém (L-456); (6) a tripulação de uma viagem não leva mãos ocupadas (L-458); (7) nem tira ninguém do
-// refúgio da caverna (L-459)
+// refúgio da caverna (L-459); (8) nem as escolhas da guerra — a leva, o bando, as tripulações do ataque e da frota (L-461)
 { const RX = /G\.Vg\.setTask\(.*?type:\s*'(justice|assembly|funeral|celebrate|petition)'.*?pri:\s*([0-9.]+)/;
   for (const f of files) { if (f === 'villagers.js') continue; src[f].forEach((line, k) => { const m = line.match(RX); if (!m || +m[2] >= 3) return; const near = src[f].slice(Math.max(0, k - 8), k + 1).join('\n'); if (!/Vg\.(busy|handsBusy)\(/.test(near)) fails.push(`mãos ocupadas: ${f}:${k + 1} chama alguém para ${m[1]} (${m[2]}) por setTask sem perguntar ao Vg.busy (D-094): ${line.trim().slice(0, 100)}`); }); }
   const fe = src['festivals.js'] || []; const fr = fe.findIndex(l => /^\s*function free\(v\)/.test(l));
@@ -286,6 +286,15 @@ const LEDGER_OK27 = [
   });
   if (!back7) fails.push('o susto: expeditions.js sem o laço da volta da tripulação ao cais (L-367) — a regra 38 (7) não acha onde ele pergunta ao hiding(v)');
   if (!kids7) fails.push('o susto: expeditions.js sem a escolha dos colonos do X.colony (const members = … free(v, f, { minAge: 2 …) — a regra 38 (7) não acha onde as crianças perguntam ao hiding(v)'); }
+// 38 (8). as escolhas da guerra não levam mãos ocupadas (L-461): a leva (wars.js, o laço dos candidatos do mobilize), o bando
+// por terra (war.js, Wr.launch), a tripulação do ataque pelo mar (naval.js, pickCrew), a da frota e o almirante (fleets.js,
+// o pool do manShips e os candidatos do form) perguntam ao Vg.handsBusy — o chamado não espera, mas a escolha é feita antes
+{ const at = (f, rx, n, what) => { const L = src[f] || []; const k = L.findIndex(l => rx.test(l)); if (k < 0) { fails.push(`mãos ocupadas: ${f} sem ${what} — a regra 38 (8) não acha a escolha (L-461)`); return; } if (!/Vg\.handsBusy\(/.test(L.slice(k, k + n).join('\n'))) fails.push(`mãos ocupadas: ${f}:${k + 1} ${what} escolhe sem perguntar ao Vg.handsBusy (D-094, L-461): ${L[k].trim().slice(0, 100)}`); };
+  at('wars.js', /keep\.has\(v\.id\) \|\| !canServe\(v\)/, 1, 'a leva (os candidatos do mobilize)');
+  at('war.js', /Wr\.launch = function/, 20, 'o bando por terra (Wr.launch)');
+  at('naval.js', /^\s*function pickCrew\(/, 8, 'a tripulação do ataque pelo mar (pickCrew)');
+  at('fleets.js', /^\s*const pool = \[\.\.\.S\.villagers\.values\(\)\]\.filter\(/, 1, 'a tripulação da frota (o pool do manShips)');
+  at('fleets.js', /^\s*const cands = \[\.\.\.S\.villagers\.values\(\)\]\.filter\(.*v\.age >= 24/, 1, 'o almirante da frota (os candidatos do form)'); }
 // 40. "quem a cidade manda embora" (L-440): a escolha dos fundadores de uma vila nova (village.js V.pickFounders), a dos
 // colonos de um navio (expeditions.js X.colony) e a de quem vai morar com o outro povo num casamento real (politics.js
 // royalMarriage) perguntam ao G.Vg.canSend — nunca o corpo do deus, o preso, o soldado, o emissário, quem está no meio de algo
