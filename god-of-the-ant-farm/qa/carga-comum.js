@@ -116,11 +116,15 @@ S.weather.storm = 0;
   if (!v || !b || !give(v, 'wood', 2)) ok('m4 a colheita não escreve por cima', false, v ? `${nm(v)}: sem arbusto ao alcance, ou não aguenta 2 de lenha` : 'nenhuma criança de 10 a 15 anos com um arbusto com frutas ao alcance');
   else {
     b.claim = v.id; G.Vg.setTask(v, { type: 'gather', id: b.id, pri: 1 });
-    const n0 = lines.length, b0 = b.berries; let saw = '';
-    const went = live(90, () => { if (!saw) { look(); const q = l186.find(x => x.msg.includes('#' + v.id + ':') && x.msg.includes('gather')); if (q) saw = q.msg; } return outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'entrega'); });
-    const food = outOf(v.id, n0).filter(e => e[5] === 'food');
-    ok('m4 a colheita não escreve por cima', went && b.berries === b0 && !food.length && !!saw && !look().length,
-      `${nm(v)} com 2 de lenha nas mãos, mandado(a) colher: o arbusto ${b.berries === b0 ? `ficou com as suas ${b0} frutas` : `PERDEU ${r2(b0 - b.berries)}`}; ${went ? 'a lenha foi ao armazém' : `a lenha NÃO foi (nas mãos: ${hands(v)})`}${food.length ? `; comida das mãos: ${sum(food)}` : ''}; o verificador: ${saw ? '«' + saw + '»' : 'NÃO viu a colheita com as mãos ocupadas'}`);
+    // (what the bush lost is the least it had along the case: a bush not full grows its berries by itself meanwhile — in the
+    // metropole of the generation 11 the one of the case had 4 of 5, a breath from the fifth, and grew it while the child walked
+    // there: «PERDEU -1», T-346. The picking is a fall, and a line of food into the hands)
+    const n0 = lines.length, b0 = b.berries; let saw = '', lo = b0;
+    const went = live(90, () => { if (b.berries < lo) lo = b.berries; if (!saw) { look(); const q = l186.find(x => x.msg.includes('#' + v.id + ':') && x.msg.includes('gather')); if (q) saw = q.msg; } return outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'entrega'); });
+    if (b.berries < lo) lo = b.berries;
+    const food = outOf(v.id, n0).filter(e => e[5] === 'food'); const grew = b.berries - b0;
+    ok('m4 a colheita não escreve por cima', went && lo >= b0 && !food.length && !!saw && !look().length,
+      `${nm(v)} com 2 de lenha nas mãos, mandado(a) colher: o arbusto ${lo >= b0 ? `não perdeu nenhuma das suas ${b0} frutas${grew > 0 ? ` (e cresceu ${grew} sozinho, até ${b.berries} de ${b.max})` : ''}` : `PERDEU ${r2(b0 - lo)}`}; ${went ? 'a lenha foi ao armazém' : `a lenha NÃO foi (nas mãos: ${hands(v)})`}${food.length ? `; comida das mãos: ${sum(food)}` : ''}; o verificador: ${saw ? '«' + saw + '»' : 'NÃO viu a colheita com as mãos ocupadas'}`);
   }
 }
 // ---------------- m5: the fruit and the honey, the same
@@ -347,20 +351,22 @@ S.weather.storm = 0;
   const a = person(18, 50, q => G.Depot.exists('h:' + q.home)), b = person(18, 50);
   if (!ship || !a || !b) ok('m12 quem morre a bordo deixa a carga pelo livro', false, !ship ? 'nenhum navio no mundo' : 'nenhum adulto livre');
   else {
-    G.Vg.endTask(a); D.make('v:' + a.id, 'food', 3, { code: 'teste', to: 'h:' + a.home });
-    const okB = give(b, 'wood', 2); const buy = a.carry && a.carry.to === 'h:' + a.home && a.carry.n === 3;
+    // (the loads by the test's hand, as much as the arms hold of them — a purchase of up to 3 of food for home, up to 2 of wood)
+    G.Vg.endTask(a); G.Vg.endTask(b);
+    const nA = D.make('v:' + a.id, 'food', 3, { code: 'teste', to: 'h:' + a.home, part: true }).n || 0, nB = D.make('v:' + b.id, 'wood', 2, { code: 'teste', part: true }).n || 0;
+    const buy = nA > 0 && a.carry && a.carry.to === 'h:' + a.home, okB = nB > 0 && b.carry && b.carry.k === 'wood';
     G.Naval.board(a, ship); G.Naval.board(b, ship);
-    const aboard = a.aboard === ship.id && b.aboard === ship.id && hands(a) === '3 de food (marcada)' && hands(b) === '2 de wood';
+    const hA = hands(a), hB = hands(b); const aboard = a.aboard === ship.id && b.aboard === ship.id && hA === `${r2(nA)} de food (marcada)` && hB === `${r2(nB)} de wood`;
     look(); // (the checker knows the marked load in the hands)
     const n0 = lines.length, f = store(b), was = D.get(f, 'wood'), home = 'h:' + a.home, food0 = D.get(home, 'food');
     G.Vg.damage(a, 500, 'arrow'); G.Vg.damage(b, 500, 'arrow');
     const outA = outOf(a.id, n0), outB = outOf(b.id, n0); const bad = look().map(q => q.msg);
     const fine = buy && okB && aboard && !S.villagers.has(a.id) && !S.villagers.has(b.id) &&
-      Math.abs(sum(outA.filter(e => e[8] === 'herdado' && e[4] === home)) - 3) < 1e-6 && Math.abs(sum(outB.filter(e => e[8] === 'herdado' && e[4] === f)) - 2) < 1e-6 && !bad.length;
+      Math.abs(sum(outA.filter(e => e[8] === 'herdado' && e[4] === home)) - nA) < 1e-6 && Math.abs(sum(outB.filter(e => e[8] === 'herdado' && e[4] === f)) - nB) < 1e-6 && !bad.length;
     ok('m12 quem morre a bordo deixa a carga pelo livro', fine,
-      `${ship.kind}#${ship.id}: ${nm(a)} a bordo com ${hands(a) === 'nada' ? '3 de food para casa' : hands(a)}${aboard ? '' : ' (NÃO embarcou como o caso pede)'}, e ${nm(b)} com 2 de lenha; uma flecha em cada um: ` +
+      `${ship.kind}#${ship.id}: ${nm(a)} a bordo com ${hA}, e ${nm(b)} com ${hB}${aboard ? '' : ' (NÃO a bordo com as cargas como o caso pede)'}; uma flecha em cada um: ` +
       `${outA.length ? outA.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NENHUM lançamento — a compra sumiu com ela'} (a casa ${r2(D.get(home, 'food') - food0)} de comida); ` +
-      `${outB.length ? outB.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NENHUM lançamento — a lenha sumiu com ele'} (o estoque ${r2(D.get(f, 'wood') - was)} de lenha)${bad.length ? '; o verificador: ' + bad.slice(0, 2).join(' · ') : ''}`);
+      `${outB.length ? outB.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NENHUM lançamento — a lenha sumiu'} (o estoque ${r2(D.get(f, 'wood') - was)} de lenha)${bad.length ? '; o verificador: ' + bad.slice(0, 2).join(' · ') : ''}`);
   }
 }
 
