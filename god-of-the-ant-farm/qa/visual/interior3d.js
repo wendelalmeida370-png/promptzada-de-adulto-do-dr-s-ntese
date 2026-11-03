@@ -320,8 +320,12 @@ for (const [b, plan, own] of jobs) {
       if (hi > lim) bad.out.push(`${tag}: algo a ${hi.toFixed(2)} m, acima do beiral e das peças (${lim.toFixed(2)} m)`);
       for (const it of plan.items) { if (it.form && FMb) continue; nOut++; let has = false; for (let k = 0; k < P.length && !has; k += 3) { const x = P[k] - X0, z = P[k + 2] - Z0; if (x > it.r[0] + 0.02 && x < it.r[2] - 0.02 && z > it.r[1] + 0.02 && z < it.r[3] - 0.02) has = true; } if (!has) bad.out.push(`${tag} ${it.kind}: não desenhada no lado de fora`); }
       nIn++; if (!B3.openShell(b.id)) bad.inside.push(`${tag}: casca aberta que o 3D abriria (desenharia o dentro por cima)`);
-      const toldo = sh.roof && sh.roof.kind === 'toldo'; let hits = 0; const cover = FMb ? formCover(FMb, fside) : [];
-      for (const fx of [0.2, 0.4, 0.6, 0.8]) for (const fz of [0.2, 0.4, 0.6, 0.8]) { const x = sh.r[0] + (sh.r[2] - sh.r[0]) * fx, z = sh.r[1] + (sh.r[3] - sh.r[1]) * fz;
+      // (its lanes, every half metre: a lattice of 4 × 4 fell all on the stalls of the feira#17584 of the mega of the generation
+      // 11 — its four rows of stalls under the four lines of the lattice —, and no lane was asked, T-352)
+      const toldo = sh.roof && sh.roof.kind === 'toldo'; let hits = 0; const cover = FMb ? formCover(FMb, fside) : []; const lane = [];
+      for (let u = sh.r[0] + 0.25; u < sh.r[2] - 0.1; u += 0.5) lane.push(u);
+      const laneZ = []; for (let u = sh.r[1] + 0.25; u < sh.r[3] - 0.1; u += 0.5) laneZ.push(u);
+      for (const x of lane) for (const z of laneZ) {
         if (plan.items.some(it => x > it.r[0] - 0.15 && x < it.r[2] + 0.15 && z > it.r[1] - 0.15 && z < it.r[3] + 0.15)) continue;
         if (cover.some(r => x > r[0] - 0.15 && x < r[2] + 0.15 && z > r[1] - 0.15 && z < r[3] + 0.15)) continue; nSky++; // (under the form)
         const hit = cast(TX, W3([x, 0.3, z]), [0, 1, 0], 30); const y = hit ? hit.t + 0.3 : null; if (hit) hits++;

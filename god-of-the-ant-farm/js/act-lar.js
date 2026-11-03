@@ -472,8 +472,9 @@
       // floor, as the people of the house eat in it (D-085); with the body's gesture of eating — one of eating on the floor is
       // the 3D's to make, P3/P4. L-398)
       const floor = !table && !!(G.Interiors && G.Interiors.ready && G.Interiors.ready(h)) && !pieceAt(h, ['comer', 'sentar', 'aquecer']);
-      const at = table && G.dist(x, y, table[0], table[1]) <= r + 0.5 ? table : floor ? [v.x, v.y] : null;
-      if (at) out.push({ id: 'lar.comer:' + h.id, act: 'comer', label: hot ? 'Cear em casa (a ceia de hoje)' : 'Comer em casa, da despensa', at, anim: 'comer', hands: 1, ok: has && v.hunger > 15, why: !has ? 'A despensa da casa está vazia.' : 'Você não está com fome.' });
+      // (here: that meal has no place of its own — what the body faces in reach is meant before it: L-467)
+      const atTable = !!table && G.dist(x, y, table[0], table[1]) <= r + 0.5; const at = atTable ? table : floor ? [v.x, v.y] : null;
+      if (at) out.push({ id: 'lar.comer:' + h.id, act: 'comer', label: hot ? 'Cear em casa (a ceia de hoje)' : 'Comer em casa, da despensa', at, here: atTable ? 0 : 1, anim: 'comer', hands: 1, ok: has && v.hunger > 15, why: !has ? 'A despensa da casa está vazia.' : 'Você não está com fome.' });
       const fire = pieceAt(h, ['cozinhar', 'assar', 'aquecer'], lv);
       if (fire && G.dist(x, y, fire[0], fire[1]) <= r + 0.5) out.push({ id: 'lar.cozinhar:' + h.id, act: 'cozinhar', label: 'Cozinhar a ceia da casa', at: fire, anim: 'cozinhar', hands: 2, ok: has && !hot, why: hot ? 'A ceia de hoje já está pronta.' : 'A despensa da casa está vazia.' });
       return out;

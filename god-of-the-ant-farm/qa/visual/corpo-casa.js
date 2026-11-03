@@ -116,23 +116,55 @@ function goTo(b, p, lv, to) {
 // One the city will not rebuild while the proof runs: it densifies from its heart out (City.upgradeHomes: the house nearest
 // the town's middle becomes a sobrado), so the farthest from it — the house#2924 of the new metropole, the nearest, was made a
 // sobrado in the middle of the proof, the body put out: T-155 —; of those, one with stairs up from its entrance's storey and
-// a seat or a table (part 7 sits on it)
+// a seat or a table the walk from the door reaches, away from where the house offers its own activities (part 7 sits on it)
+// (where the body's own house offers its activities — act-lar.js offers: the meal at the first place to eat of the storey, the
+// supper at its first fire —, metres of the lot: there E offers the activity before the place, the activity's word over the
+// place's at the same spot (interact.js). A place more than a metre from both is the place's: T-322, and T-348 — the sobrado#17374
+// of the metrópole of the generation 11 has only the table, where the meal is offered, and the brazier, its fire)
+const MEAL = ['comer', 'sentar', 'aquecer'], FIRE = ['cozinhar', 'assar', 'aquecer'];
+const offerAt = (b, lv, uses) => { for (const u of uses) for (const q of In.slots(b, u)) if (q.item.lv === lv) return [q.spot.x, q.spot.z]; return null; };
+const awayOf = (b, lv, x, z) => [offerAt(b, lv, MEAL), offerAt(b, lv, FIRE)].every(m => !m || Math.hypot(x - m[0], z - m[1]) > 1);
+// (and a place the plan's own walk for a body comes to from the door — its metres, In.walkIn, kept with the places —: the body
+// came in by the door. The place at the north of the low table of the house#14898 of the same metrópole is shut in a nook by the
+// stair, the table and the jars, a gap of 0,24 m — the plan has it usable, its reach a cell ±2 away; the walk has no way to it,
+// T-348)
+const walked = e => e.din < Infinity;
+// (a seat of a house E offers as a place to whoever is in it — walked from the door, and, for one of the house, away from where
+// the house offers its own activities)
+const seatFor = (b, own) => { const t = In.table(b); return !!t && t.spots.some(e => e.ok && walked(e) && (e.use === 'sentar' || e.use === 'comer') && !e.it.mark && !e.it.tier && (!own || awayOf(b, e.lv, e.x, e.z))); };
+// (a house whose plan has no table, seat nor hearth on any storey — most huts —: the meal of the body's own is offered where it
+// stands, on the floor, L-398; by the bed, the bed is what the body faces — part 4 there, L-467)
+const bare = b => !MEAL.some(u => In.slots(b, u).length);
 function houseAndBody() {
   const far = b => { const t = S.settlements.get(b.set); return t ? G.dist(b.x + 0.5, b.y + 0.5, t.cx, t.cy) : 0; };
   const homes = [...S.buildings.values()].filter(b => b.built && In.has(b) && (b.type === 'house' || b.type === 'sobrado') && In.planDoor(b)).sort((a, b) => far(b) - far(a) || a.id - b.id);
-  const seat = b => { const t = In.table(b); return !!t && t.spots.some(e => e.ok && (e.use === 'sentar' || e.use === 'comer')); };
   const order = [];
   for (const b of homes) {
     const p = Sp.planNow(b); if (!p || !p.entrance) continue;
     const v = [...S.villagers.values()].filter(o => o.home === b.id && o.age >= 18 && o.age < 55 && !o.sleeping && G.Possess.can(o).ok).sort((a, c) => a.id - c.id)[0]; if (!v) continue;
-    const up = p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === (p.entryLv || 0)), se = seat(b); order.push({ b, p, v, up, se }); if (up && se) break;
+    const up = p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === (p.entryLv || 0)), se = seatFor(b, true); order.push({ b, p, v, up, se, bare: bare(b) }); if (up && se) break;
   }
-  // (the one with stairs and a seat first, then stairs, then a seat, then the farther ones)
-  const rank = o => (o.up ? 2 : 0) + (o.se ? 1 : 0); order.sort((a, c) => rank(c) - rank(a));
+  // (the one with stairs and a seat first — part 7 in the body's own house —, then stairs and no table, seat nor hearth — part 4
+  // where the meal is offered at the feet —, then stairs, then a seat, then the farther ones; part 7 goes to a house of another
+  // family where the body's own has no seat E offers as a place: in the metrópole of the generation 11 none has, T-348)
+  const rank = o => (o.up ? 4 : 0) + (o.se ? 2 : 0) + (o.bare ? 1 : 0); order.sort((a, c) => rank(c) - rank(a));
   for (const { b, p, v } of order) {
     const d = In.planDoor(b); if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
     G.Vg.endTask(v); v.inside = 0; v.x = d[0]; v.y = d[1]; v.path = null; if (!G.Possess.take(v).ok) continue;
     G.Avatar.attach(v, 0); for (let k = 0; k < 4; k++) frame(); return { b, p, v };
+  }
+  return null;
+}
+// (for part 7 where the body's own house has no seat E offers as a place: the nearest house of another family with a plan, its
+// door on a street and not locked now, with a seat free on the storey of its entrance that the walk from its door reaches — a
+// guest: its house offers no meal nor fire to the body, and E offers the place)
+function guestHouse(home, v) {
+  const at = q => G.dist(q.x + q.w / 2, q.y + q.h / 2, home.x + home.w / 2, home.y + home.h / 2);
+  const homes = [...S.buildings.values()].filter(q => q.id !== home.id && q.id !== v.home && q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado' || q.type === 'hut' || q.type === 'insula') && In.planDoor(q)).sort((a, c) => at(a) - at(c) || a.id - c.id);
+  for (const q of homes) {
+    const p = Sp.planNow(q); if (!p || !p.entrance || In.doorState(q, p.entrance.door).state === 'trancada' || !seatFor(q, false)) continue;
+    const lv = p.entryLv || 0; if (!In.freeNear(q, lv, 0, 0, 60).some(e => (e.use === 'sentar' || e.use === 'comer') && !e.it.mark && !e.it.tier && In.walkIn(q, e) < Infinity)) continue;
+    return { b: q, p };
   }
   return null;
 }
@@ -218,17 +250,20 @@ else {
   // (the verb 'lugar': a step to where one gets onto it, the world marks it — S.avatar.use, the place the share-out gives the
   // body —, the body on it, turned as the place is; a gesture of the hands there keeps it seated; walking, up where it got on,
   // the place let go. And seated again, for the save below: loaded, seated on it again)
-  let seatedAt = null;
-  { // (a place free on any storey of the house — the one the body is on first —, a seat or the table first)
+  // (in the body's own house where it has a seat E offers as a place; else, after the rest, in a house of another family — the
+  // body a guest, its house offering no meal nor fire —, saved and loaded seated there: T-348)
+  const atPlace = (b, p, own) => {
+    let seatedAt = null;
+    // (a place free on any storey of the house — the one the body is on first —, a seat or the table first)
     const lv0 = G.Possess.level(); const pl0 = [];
-    for (const l of p.levels.slice().sort((a, c) => (a.lv === lv0 ? 0 : 1) - (c.lv === lv0 ? 0 : 1) || a.lv - c.lv)) pl0.push(...In.freeNear(b, l.lv, st().X - b.x * TL, st().Z - b.y * TL, 30).filter(q => G.Interact.PURE.has(q.use) && !q.it.mark && !q.it.tier));
-    // (not the place of the house's meal: in the body's own house the meal is offered at the first place to eat of the storey
-    // — act-lar.js —, and there E offers it before the place, the activity's word over the place's at the same spot
-    // (interact.js); the case is the place, so a seat or the table away from that spot first — else as before. In the
-    // metrópole of the generation 10 the first was the seat of Penélope's own table where the meal is offered, T-322)
-    const mealAt = lv => { for (const u of ['comer', 'sentar', 'aquecer']) for (const q of In.slots(b, u)) if (q.item.lv === lv) return [q.spot.x, q.spot.z]; return null; };
-    const away = q => { const m = mealAt(q.lv); return !m || Math.hypot(q.x - m[0], q.z - m[1]) > 1; };
-    const pl = pl0.find(q => q.use === 'sentar' && away(q)) || pl0.find(q => q.use === 'comer' && away(q)) || pl0.find(away) || pl0.find(q => q.use === 'sentar' || q.use === 'comer') || pl0[0];
+    for (const l of p.levels.slice().sort((a, c) => (a.lv === lv0 ? 0 : 1) - (c.lv === lv0 ? 0 : 1) || a.lv - c.lv)) pl0.push(...In.freeNear(b, l.lv, st().X - b.x * TL, st().Z - b.y * TL, 30).filter(q => G.Interact.PURE.has(q.use) && !q.it.mark && !q.it.tier && In.walkIn(b, q) < Infinity));
+    // (not the place of the house's meal nor of its fire: in the body's own house the meal is offered at the first place to eat
+    // of the storey and the supper at its first fire — act-lar.js —, and there E offers them before the place, the activity's
+    // word over the place's at the same spot (interact.js); the case is the place, so a seat or the table away from those spots
+    // first — else as before. In the metrópole of the generation 10 the first was the seat of Penélope's own table where the
+    // meal is offered, T-322; in the generation 11, the brazier of the sobrado#17374, where the supper is cooked, T-348)
+    const away = q => !own || awayOf(b, q.lv, q.x, q.z);
+    const pl = pl0.find(q => q.use === 'sentar' && away(q)) || pl0.find(q => q.use === 'comer' && away(q)) || (own ? pl0.find(away) : null) || pl0.find(q => q.use === 'sentar' || q.use === 'comer') || (own ? pl0[0] : null);
     if (pl) pl.at = In.standFor(b, pl, st().X - b.x * TL, st().Z - b.y * TL); // (where one gets onto it: the body's whole rim stands there)
     // (the feet walk up to where one gets onto it — the player's stick: to a point near it where the body's rim fits, the
     // verb takes the last step itself)
@@ -241,8 +276,9 @@ else {
       const r = G.Interact.run(best); for (let k = 0; k < 150 && !(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); k++) frame();
       return { r, best };
     };
-    if (!pl) ok('7. senta num lugar da planta', true, 'nenhum lugar livre de sentar na casa (nada a provar)');
-    else {
+    if (!pl) return { tried: false };
+    {
+      console.log(`(a parte 7 em ${b.type}#${b.id}, ${own ? 'a casa do corpo' : 'de outra família — o corpo de visita'}: ${pl.use} em ${pl.it.kind}, piso ${pl.lv})`);
       bad = []; const s1 = sitDown(); const u = G.Possess.useOf(); const sn = G.Avatar.seatNow(); const tp = s1.best ? s1.best.t.pl : pl;
       const onIt = Math.hypot(st().X - (b.x * TL + tp.x), st().Z - (b.y * TL + tp.z)) < 0.05; let dy = st().yaw - (Math.PI / 2 - tp.ry); while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
       const mine = In.places(b).by.get(v.id);
@@ -256,14 +292,17 @@ else {
       ok('7. anda e levanta: de pé onde subiu, o lugar solto', st().loco === 'ground' && !G.Possess.useOf() && !G.Avatar.seatNow() && upAt < 0.6 && !bad.length && v.inside === b.id, `${st().loco}; o mundo: ${G.Possess.useOf() ? 'ainda o lugar' : 'solto'}; a ${upAt.toFixed(2)} m de onde subiu${bad.length ? '; ' + bad[0] : ''}`);
       const s2 = sitDown(); seatedAt = G.Possess.useOf() ? { it: G.Possess.useOf().it, q: G.Possess.useOf().q } : null; if (!seatedAt) ok('7. senta de novo (para o salvar)', false, s2.why || 'não sentou');
     }
-  }
+    return { tried: true, seatedAt };
+  };
+  // (saved seated: seated again on the same place — Possess's load holds it, the controller sits on it —, and up)
+  const seatedAgain = seatedAt => { const u = G.Possess.useOf(); ok('6. salvo sentado, senta de novo no mesmo lugar', !!u && u.it === seatedAt.it && u.q === seatedAt.q && st().loco === 'seat', `o mundo: ${u ? u.use + ' ' + u.it : 'nada'}; ${st().loco}`);
+    IN.mz = 1; IN.camYaw = st().yaw + Math.PI; frame(); stop(); for (let k = 0; k < 30; k++) frame(); };
+  const in7 = seatFor(b, true) ? atPlace(b, p, true) : { tried: false }; const seatedAt = in7.seatedAt || null;
   // ------------------------------ 6. save and load indoors ------------------------------
   { const x0 = v.x, y0 = v.y, lv0 = G.Possess.level(); M.salvarCarregar(); S = G.S; v = G.Possess.body();
     if (v) { G.Avatar.attach(v, 0); for (let k = 0; k < 6; k++) frame(); }
     ok('6. salvar e carregar dentro de casa: dentro ainda, no mesmo piso e lugar', !!v && v.inside === b.id && G.Possess.level() === lv0 && Math.hypot(v.x - x0, v.y - y0) < 0.02, v ? `dentro ${v.inside === b.id}; piso ${G.Possess.level()} (era ${lv0}); a ${(Math.hypot(v.x - x0, v.y - y0) * TL).toFixed(2)} m` : 'sem corpo');
-    // (saved seated: seated again on the same place — Possess's load holds it, the controller sits on it)
-    if (seatedAt) { const u = G.Possess.useOf(); ok('6. salvo sentado, senta de novo no mesmo lugar', !!u && u.it === seatedAt.it && u.q === seatedAt.q && st().loco === 'seat', `o mundo: ${u ? u.use + ' ' + u.it : 'nada'}; ${st().loco}`);
-      IN.mz = 1; IN.camYaw = st().yaw + Math.PI; frame(); stop(); for (let k = 0; k < 30; k++) frame(); }
+    if (seatedAt) seatedAgain(seatedAt);
   }
   // ------------------------------ 5. out by the door ------------------------------
   { const b2 = S.buildings.get(b.id), p2 = Sp.planNow(b2); v = G.Possess.body();
@@ -287,6 +326,25 @@ else {
       const left = S.buildings.get(b3.id);
       ok('6. o deus tira a casa com o corpo dentro: o mundo o põe fora, em chão firme', was && v.inside === 0 && G.Possess.level() === undefined && !bad.length && (!left || left.type === 'ruin'), `estava dentro ${was}; dentro agora ${v.inside}; piso ${G.Possess.level()}; o prédio: ${left ? left.type : 'sumiu'}${bad.length ? '; ' + bad[0] : ''}`);
     } else ok('6. o deus tira a casa com o corpo dentro', false, 'sem casa ou sem corpo');
+  }
+  // ------------------------------ 7. at a place of a house of another family ------------------------------
+  // (where the body's own house had no seat E offers as a place: the body put by the god's hand on the doorstep of the nearest
+  // house that has one, the door opened by its hands, in, seated, the hands, up, seated again — and saved and loaded seated)
+  if (!in7.tried) {
+    v = G.Possess.body(); const gh = v && guestHouse(b, v);
+    if (!gh) ok('7. senta num lugar da planta', false, 'nenhuma casa de outra família com um lugar de sentar livre que o caminho da porta alcance, de porta não trancada');
+    else {
+      const { b: gb, p: gp } = gh; const d = In.planDoor(gb); if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
+      G.Vg.endTask(v); v.inside = 0; v.x = d[0]; v.y = d[1]; v.path = null; G.Possess.take(v); G.Avatar.attach(v, 0); for (let k = 0; k < 4; k++) frame();
+      if (In.doorState(gb, gp.entrance.door).state !== 'aberta') { G.Possess.apply(w => In.useDoor(gb, gp.entrance.door, 'abrir', w)); frame(); }
+      walkIn(gb, gp, 1.0); frame(); frame();
+      if (v.inside !== gb.id) ok('7. entra na casa de outra família pela porta', false, `dentro de ${v.inside} (quer ${gb.id})`);
+      else {
+        const r7 = atPlace(gb, gp, false);
+        if (!r7.tried) ok('7. senta num lugar da planta', false, `${gb.type}#${gb.id}: nenhum lugar de sentar livre agora`);
+        else if (r7.seatedAt) { M.salvarCarregar(); S = G.S; v = G.Possess.body(); if (v) { G.Avatar.attach(v, 0); for (let k = 0; k < 6; k++) frame(); } seatedAgain(r7.seatedAt); }
+      }
+    }
   }
   ok('verificador no fim (S0 a S2)', !vbad().length, vtxt(vbad()));
 }

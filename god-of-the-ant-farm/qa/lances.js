@@ -510,13 +510,25 @@ let pocketDoor = null;
     // 11c. the checker sees a turn that left a door before a pocket: the step's map swapped for one where all ground is one
     // (a turn that does not see pockets) — the door left there, and the word said with this ground —; then the real turn
     const s1 = b2.ip.s; const oi2 = W.idx(od2[0], od2[1]); const qx = oi2 % N, qy = (oi2 / N) | 0;
-    const wW = [at(qx - 1, qy), at(qx + 1, qy), at(qx, qy - 1), at(qx, qy + 1)].filter(i => i !== oi2 && S.occ[i] !== b2.id && W.walkable(i)); ground([], wW);
+    // (the pocket: the tile the door opens onto and, straight out from the door, as many tiles beyond it as its way in needs to
+    // keep its ground — the walls round them only —, the fewest where the way in fits: a turn blind to pockets keeps a door
+    // whose way in fits, and the case is that turn. In the anos100 of the generation 11 the west door of the house#34598 had
+    // thirteen treads down a slope, their foot on the tile beyond: walled round the one tile, the way in no longer fit — no
+    // ground before the foot —, and even the blind turn moved the door, to the pocket of the 11a, T-350)
+    const away = s1 === 'W' ? [-1, 0] : s1 === 'E' ? [1, 0] : s1 === 'N' ? [0, -1] : [0, 1];
+    let wW = [], pocketN = 0;
+    for (let k = 1; k <= 3 && !pocketN; k++) {
+      const pk = []; for (let j = 0; j < k; j++) pk.push(at(qx + away[0] * j, qy + away[1] * j)); if (pk.some(i => !W.walkable(i))) break;
+      const ring = []; for (const i of pk) { const ix = i % N, iy = (i / N) | 0; for (const j of [at(ix - 1, iy), at(ix + 1, iy), at(ix, iy - 1), at(ix, iy + 1)]) if (!pk.includes(j) && !ring.includes(j) && S.occ[j] !== b2.id && W.walkable(j)) ring.push(j); }
+      const back = ground([], ring); if (entry(b2).ok) { wW = ring; pocketN = k; } else unground(back);
+    }
     const real = W.reachIds; const one = new Int32Array(N * N).fill(-1); for (let i = 0; i < N * N; i++) if (W.walkable(i)) one[i] = 0;
     let bad1 = [];
     try { W.reachIds = peek => (peek ? real(true) : one); W.reachBuilds++; turn(); } finally { W.reachIds = real; W.reachBuilds++; }
-    bad1 = pocketBad(); const left = b2.ip.s === s1;
+    // (the checker's word on this door, the one left there — not another building's the blind turn moved)
+    bad1 = pocketBad(); const left = b2.ip.s === s1; const mine1 = bad1.filter(q => q.msg.startsWith(`${b2.type}#${b2.id}: a porta (lado ${s1})`));
     turn(); const bad2 = pocketBad(); const od3 = outOf(b2);
-    ok('o verificador vê a porta deixada num bolsão', left && bad1.length > 0 && b2.ip.s !== s1 && !bad2.length && size()(od3) >= 12, `com o mapa trocado, a virada deixou a porta em ${s1}: ${bad1.length} queixa(s) (${bad1.slice(0, 1).map(q => q.msg).join('')}); com o mapa de volta, a virada a leva a ${b2.ip.s}, e o verificador ${bad2.length ? 'AINDA QUEIXA' : 'cala'}`);
+    ok('o verificador vê a porta deixada num bolsão', !!pocketN && left && mine1.length > 0 && b2.ip.s !== s1 && !bad2.length && size()(od3) >= 12, `${pocketN ? `um bolsão de ${pocketN} casa(s) diante da porta (${s1}), a entrada cabendo` : `NENHUM BOLSÃO diante da porta (${s1}) onde a entrada caiba (${JSON.stringify(entry(b2))})`}; com o mapa trocado, a virada ${left ? 'deixou a porta em ' + s1 : 'MUDOU a porta de ' + s1 + ' para ' + b2.ip.s}: ${mine1.length ? 'o verificador a vê' : 'o verificador NÃO a vê'} (${(mine1.length ? mine1 : bad1).slice(0, 1).map(q => q.msg).join('') || 'nenhuma queixa'}); com o mapa de volta, a virada a leva a ${b2.ip.s}, diante de um chão de ${size()(od3)} casas, e o verificador ${bad2.length ? 'AINDA QUEIXA' : 'cala'}`);
     // 11d. the checker sees a door before a pocket two days on, whatever the step said: the ground changed again (the word
     // is for another ground), the days go by without a turn of the interiors (the street of the side before it given back,
     // so that one side is on the street)

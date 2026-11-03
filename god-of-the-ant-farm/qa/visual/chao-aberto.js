@@ -110,7 +110,7 @@ const placeAt = (X, Z) => { const ok0 = G.Avatar.place(X / TL, Z / TL); for (let
 // ------------------------------ 3. the rostra ------------------------------
 { const rost = open.filter(b => b.type === 'praca').map(b => ({ b, p: Sp.planNow(b) })).filter(o => o.p && o.p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === 0 && s.lv1 === 1));
   if (!rost.length) ok('3. os rostros da praça romana: o corpo fica diante do pé, na borda do lote, e sobe ao topo', true, 'nenhuma praça com rostros neste mundo (nada a provar)');
-  else { let up = 0, low = 0; const why = [], high = []; const tried = rost.slice(0, 4);
+  else { let up = 0, low = 0; const why = [], high = []; const tried = rost; // (every square of the world with rostra: the low edges are the few — one of four in the metrópole of the generation 11, T-350)
     for (const { b, p } of tried) {
       const s = p.stairs.find(q => q.kind !== 'degraus' && q.lv0 === 0 && q.lv1 === 1); const [dx, dz] = s.dir; const r = s.r;
       const mid = dx ? (r[1] + r[3]) / 2 : (r[0] + r[2]) / 2, e0 = dx ? (dx > 0 ? r[0] : r[2]) : (dz > 0 ? r[1] : r[3]);
@@ -118,12 +118,17 @@ const placeAt = (X, Z) => { const ok0 = G.Avatar.place(X / TL, Z / TL); for (let
       // (from the street before the foot — beyond the lot's edge —, to the place before the foot, then up along the climb)
       const lotEdge = dx ? (dx > 0 ? 0 : b.w * TL) : (dz > 0 ? 0 : b.h * TL); const before = Math.abs((dx ? e0 : e0) - lotEdge);
       const o = at(before + 0.9); if (!world(o[0], o[1])) { why.push(`praca#${b.id}: a rua diante do pé não se anda`); continue; }
-      // (how high the square's floor stands over the street just before the foot: a step, walked; higher, the hands take it)
-      const eg = at(before + 0.05); const rise = Sp.plinth(b).y0 + Sp.FLOOR_UP - Sp.footAt(eg[0] / TL, eg[1] / TL); const isLow = rise <= STEP - 0.05;
+      // (how high the square's floor stands over the ground the feet cross at the edge before the foot: a step, walked; higher,
+      // the hands take it. The lowest ground from a hand outside the lot to where the square's floor begins, every centimetre
+      // by the feet's rule — the strip of the lot's own ground round the shell too, not only the street: before the rostra of
+      // the praca#13670 of the metrópole of the generation 11 the street is a bridge, 0,17 m over the lot's own ground at its
+      // edge, and from that ground to the square's floor it is 0,72 m, a ledge, T-350)
+      let lowY = Infinity; for (let t = before + 0.05; t > 0; t -= 0.01) { const q = at(t); const ins = Sp.indoor(q[0], q[1], 0, 0); if (ins && ins.b === b) break; const y = feet(q[0], q[1]); lowY = Math.min(lowY, y === null ? -Infinity : y); }
+      const rise = Sp.plinth(b).y0 + Sp.FLOOR_UP - lowY; const isLow = rise <= STEP - 0.05;
       placeAt(o[0], o[1]); const d = walkTo(...at(0.4), 240, 0.08);
       const top = [X0 + s.b[0], Z0 + s.b[1]]; let k = 0; for (; k < 300 && (st().lv !== 1 || st().loco === 'stair'); k++) { IN.camYaw = Math.atan2(top[1] - st().Z, top[0] - st().X); IN.mz = 1; frame(); check(); }
       stop(); for (let q = 0; q < 10; q++) { frame(); check(); }
-      if (!isLow) { high.push(`praca#${b.id} (${rise.toFixed(2)} m${st().lv === 1 ? ', subiu' : ''})`); continue; }
+      if (!isLow) { high.push(`praca#${b.id} (${Number.isFinite(rise) ? rise.toFixed(2) + " m" : "sem chão na borda"}${st().lv === 1 ? ', subiu' : ''})`); continue; }
       low++; if (st().lv === 1) up++; else why.push(`praca#${b.id}: diante do pé a ${d.toFixed(2)} m do lugar, parado em ${(st().X - X0).toFixed(2)};${(st().Z - Z0).toFixed(2)} do lote (o lance ${r.join(',')}, para ${dx},${dz}), no piso ${st().lv}, em ${st().inB ? st().inB.type + '#' + st().inB.id : 'nenhum prédio'}${st().block ? ' (' + st().block + ')' : ''}`);
     }
     ok('3. os rostros da praça romana: o corpo fica diante do pé, na borda do lote, e sobe ao topo', low > 0 && up === low, `${up} de ${low} praças com a borda de um passo diante do pé${why.length ? ' — ' + why.join(' · ') : ''}; com a borda mais alta que um passo (sobe-se com as mãos, e nunca para dentro do lance): ${high.join(', ') || 'nenhuma'}`); } }

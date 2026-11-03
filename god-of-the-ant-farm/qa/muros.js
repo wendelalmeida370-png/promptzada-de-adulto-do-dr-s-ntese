@@ -7,6 +7,8 @@
 //   1. every wall planned today, in every town of the ready worlds that could raise one, has a gate on each of its sides — or,
 //      where the people of a side walk out only by its corner, the next side's gate a step away (within three tiles of every
 //      street and worn path of it) —, never two side by side, at most four
+//   1b. none of a wall planned on the lot of an open ground with a plan, the square or the fair (L-466: walls stood on the fairs —
+//      the edge of the feira#12801 of the metrópole of the generation 11 a strip of wall where its plan's floor ended)
 //   2. the gates are where the people walk: a side crossed by a street or a worn path has its gate on one of them
 //   3. the bad case of L-140, by rule in every world: the walls whose walked sides differ the most in traffic (the busiest
 //      side's busiest tile against the quietest walked side's) — where the old planner, keeping the four busiest gates of
@@ -31,6 +33,8 @@
 //   8. no blocking building in the way of a gate (L-348: two houses, one on each side of a gate of Tenochtitlan's wall, in the
 //      metropole of 28/10, left it a tile of nowhere): a gate put beside the town's best site for a house turns the site finder
 //      elsewhere, and the site it gives has no tile beside a gate
+//   8b. the site finder gives only sites whose work the town's streets reach (L-465: a pocket of one tile between Mênfis's wall
+//      and the sea was its best site for a house): in every town of the worlds, for the kinds a town builds most
 //   9. a building that comes in the only way of another behind a standing wall (L-382: a block of Hedeby, in the mega of the
 //      v37's last worlds, raised on the strip between the rock and the wall that led to the town's cemetery, shut the cemetery
 //      off; the wall's gates had been judged at its plan and at the load only): a well put by the world's own door where it
@@ -48,7 +52,7 @@ const WORLDS = (process.argv[2] || 'cidade,metropole,mega,mundial,anos100').spli
 const plan = s => { const S = G.S; const keep = S.walls; S.walls = keep.filter(w => w.set !== s.id); const id0 = S.nextId; const w = G.Siege.raiseWalls(s, null, false); S.walls = keep; S.nextId = id0; return w; };
 const sideOf = (w, i) => { const N = G.N, [x0, y0, x1, y1] = w.box, x = i % N, y = (i / N) | 0; const out = []; if (x === x0) out.push('O'); if (x === x1) out.push('L'); if (y === y0) out.push('N'); if (y === y1) out.push('S'); return out; };
 const dist = (i, j) => { const N = G.N; return Math.abs((i % N) - (j % N)) + Math.abs(((i / N) | 0) - ((j / N) | 0)); };
-let plans = 0, bad1 = [], bad2 = [], worst = ''; const uneven = []; const bad6 = []; let reach6 = 0;
+let plans = 0, bad1 = [], bad2 = [], worst = ''; const uneven = []; const bad6 = []; let reach6 = 0; const bad1b = []; let near1b = 0;
 const cross = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
 // (the buildings of a town reached today that the wall as planned — its tiles shut, its gates open — leaves out of reach; null
 // when the town has no region to judge from)
@@ -73,6 +77,15 @@ for (const k of WORLDS) {
     // (6a: none of it inside another town's walls; and how often the box reaches into one)
     { const inner = w.tiles.filter(i => G.Siege.walledIn(i, w)); if (inner.length) bad6.push(`${name}: ${inner.length} casa(s) dentro do muro de outra cidade`);
       if (S.walls.some(o => o.set !== s.id && cross(o.box, w.box))) reach6++; }
+    // (1b: none of it on the lot of an open ground with a plan — the square, the fair: the world walks across it, its plan has
+    // its floor there —, L-466; and how many plans have one on the line of their box, where the wall goes round)
+    { const open = i => { const o = S.occ[i]; const b = o && S.buildings.get(o); return !!b && !G.BDEF[b.type].blocks && !!G.Interiors.TYPES[b.type]; };
+      const onOpen = w.tiles.filter(open);
+      if (onOpen.length) bad1b.push(`${name}: ${onOpen.length} casa(s) no lote de ${[...new Set(onOpen.map(i => { const b = S.buildings.get(S.occ[i]); return b.type + '#' + b.id; }))].join(', ')}`);
+      const [bx0, by0, bx1, by1] = w.box; let line = false;
+      for (let x = bx0; x <= bx1 && !line; x++) line = open(by0 * G.N + x) || open(by1 * G.N + x);
+      for (let y = by0; y <= by1 && !line; y++) line = open(y * G.N + bx0) || open(y * G.N + bx1);
+      if (line) near1b++; }
     // (7a: every building of the town reached today stays reached with the wall — a town that has one planned as from nothing:
     // its own wall off the map for the plan, as the world plans only a town with none)
     { const own = G.Siege.wallOf(s.id); const keep = own ? own.tiles.filter(i => S.wall[i]).map(i => [i, S.wall[i]]) : []; for (const [i] of keep) S.wall[i] = 0; if (keep.length) G.W.touchWalk();
@@ -116,6 +129,30 @@ for (const k of WORLDS) {
   }
 }
 ok('1 cada lado o seu portão, nunca lado a lado, no máximo quatro', plans > 20 && !bad1.length, `${plans} muros planejados em ${WORLDS.length} mundos; ${bad1.length} com falta: ${bad1.slice(0, 4).join(' · ') || 'nenhum'}${worst ? ' · ex.: ' + worst : ''}`);
+ok('1b nenhum muro planejado no lote de uma praça ou feira (chão aberto de planta, L-466)', plans > 20 && !bad1b.length, `${plans} muros planejados, ${near1b} com uma praça ou feira na linha da caixa, por onde o muro passa: ${bad1b.length ? bad1b.length + ' sobre um lote — ' + bad1b.slice(0, 4).join(' · ') : 'nenhum sobre o lote'}`);
+// 1c. a wall of before L-466 standing on the lot of a fair, in a save: loaded, it comes down there — the lot the world's to walk
+// across again — and the rest of the wall stands (a wall of the ready worlds whose record, planned before the fix, still has
+// tiles on a fair's lot: the god puts them back on it, as a save of before holds them; a record of after the fix has none —
+// a tile of a fair or a square of its town put in it, as the planner of before did)
+{
+  let got = null;
+  for (const k of WORLDS) {
+    M.pronto(k); const S = G.S;
+    const open = i => { const o = S.occ[i]; const b = o && S.buildings.get(o); return !!b && !G.BDEF[b.type].blocks && !!G.Interiors.TYPES[b.type]; };
+    const up = S.walls.filter(q => q.tiles.some(i => S.wall[i] === 1));
+    let w = up.find(q => q.tiles.some(open)) || null, put = w ? w.tiles.filter(open) : [];
+    for (const q of w ? [] : up) { const ob = [...S.buildings.values()].filter(o => o.set === q.set && !G.BDEF[o.type].blocks && G.Interiors.TYPES[o.type]).sort((a, c) => (a.type === 'feira' ? 0 : 1) - (c.type === 'feira' ? 0 : 1) || a.id - c.id)[0];
+      if (ob) { const i = ob.y * G.N + ob.x; q.tiles.push(i); put = [i]; w = q; break; } }
+    if (!w) continue; const lots = [...new Set(put.map(i => { const b = S.buildings.get(S.occ[i]); return b.type + '#' + b.id; }))];
+    G.inSim++; try { for (const i of put) { S.wall[i] = 1; S.wallFac[i] = w.fac; } G.W.touchWalk(); } finally { G.inSim--; }
+    // (and the checker: it sees the wall on the lot before, and is quiet after)
+    const said = () => QA.check().filter(q => /\(chão aberto de planta\)/.test(q.msg)).length;
+    const rest = w.tiles.filter(i => S.wall[i] && !open(i)); const said0 = said(); M.salvarCarregar(); const S1 = G.S;
+    got = { k, w, put, lots, still: put.filter(i => S1.wall[i]).length, walk: put.filter(i => G.W.walkable(i)).length, rest: rest.length, kept: rest.filter(i => S1.wall[i]).length, said0, said1: said() };
+    break;
+  }
+  ok('1c o muro de antes no lote de uma feira, num save: carregado, sai do lote, e o resto do muro fica', !!got && !got.still && got.walk === got.put.length && got.kept === got.rest && got.said0 > 0 && !got.said1, got ? `${got.k}: o muro #${got.w.id} com ${got.put.length} casa(s) de pé no lote de ${got.lots.join(', ')} — o verificador ${got.said0 ? 'o vê' : 'NÃO o vê'}; carregado, ${got.still} de pé lá, ${got.walk} que o mundo anda; o resto do muro: ${got.kept} de ${got.rest} de pé; o verificador ${got.said1 ? 'AINDA QUEIXA' : 'cala'}` : 'nenhum muro dos mundos com o registro sobre o lote de uma praça ou feira (nada a provar)');
+}
 ok('2 o portão do lado fica onde se anda (a rua ou o caminho gasto que o cruza)', !bad2.length, bad2.slice(0, 4).join(' · ') || `${plans} muros, nenhum lado com o portão fora de onde se anda`);
 { const top = uneven.sort((a, b) => b.ratio - a.ratio).slice(0, 5); const miss = top.filter(q => !q.served);
   ok('3 o caso ruim do L-140, pela regra: nos muros cujos lados andados mais diferem no movimento, o lado mais quieto tem o seu portão', top.length >= 3 && !miss.length,
@@ -264,6 +301,21 @@ for (const k of ['metropole', 'mega', 'cidade', 'anos100', 'mundial']) {
       ok('8 nada que bloqueia no caminho de um portão: o buscador de lugar vai para outro lado', moved && !(s1 && beside(s1, def)), `${s.name}: o lugar de uma casa em (${s0[0]},${s0[1]}); um portão posto em (${g % N},${(g / N) | 0}), ao lado dele: ${s1 ? 'o lugar foi para (' + s1[0] + ',' + s1[1] + ')' + (beside(s1, def) ? ', AO LADO de um portão' : ', longe de portão') : 'nenhum lugar'}`);
     }
   }
+}
+// 8b. the site finder gives only sites whose work the town's streets reach (L-465: the best site of a house of Mênfis, in the
+// metrópole of the generation 11, was a tile of beach between its wall and the sea, a pocket of one tile — the case 8 had no
+// open ground beside it —; and in the anos500, a house of Argos in a pocket between a pottery and the sea): in every town of
+// the worlds, for the kinds a town builds most, the site has a tile round it the town reaches (V.siteReached, the builders'
+// own rule, V.townReachesWork)
+{
+  const KINDS = ['house', 'hut', 'sobrado', 'insula', 'storehouse', 'workshop', 'well', 'farm', 'temple', 'taverna'].filter(t => G.BDEF[t]);
+  let asked = 0, got = 0; const bad8 = [];
+  for (const k of WORLDS) {
+    M.pronto(k); const S = G.S, V = G.Village; G.inSim++;
+    try { for (const s of [...S.settlements.values()].filter(q => G.Fac.get(q.fac)).sort((a, b) => a.id - b.id)) for (const t of KINDS) { asked++; const p = V.findSite(s, t); if (!p) continue; got++; if (!V.siteReached(s, p[0], p[1], G.BDEF[t])) bad8.push(`${k}: ${s.name} ${t} em ${p[0]},${p[1]}${p.demolish ? ' (derrubando)' : ''}`); } }
+    finally { G.inSim--; }
+  }
+  ok('8b o buscador de lugar só dá lugar que as ruas da cidade alcançam', got > 0 && !bad8.length, `${asked} pedidos em ${WORLDS.length} mundos, ${got} lugares: ${bad8.length ? bad8.length + ' fora do alcance das ruas — ' + bad8.slice(0, 4).join(' · ') : 'todos ao alcance das ruas'}`);
 }
 // 9. a building in the only way of another, behind a standing wall
 {

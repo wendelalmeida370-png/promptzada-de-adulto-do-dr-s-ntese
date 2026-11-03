@@ -169,6 +169,12 @@
     while (st.length) { const a = st.pop(); const x = a % N; for (const c of [x > 0 ? a - 1 : -1, x < N - 1 ? a + 1 : -1, a - N, a + N]) { if (c < 0 || c >= N * N || seen.has(c) || !free(c)) continue; seen.add(c); st.push(c); } }
     return open.every(i => seen.has(i));
   };
+  // (a tile no wall takes — planned, raised at once or laid by the builders —: a blocking building's, or an open ground's with a
+  // plan, the square and the fair: the world walks across its lot and its plan has its floor there. Only the square was spared,
+  // and walls stood on the fairs — three tiles of the feira#12801 of the metrópole of the generation 11, the edge of its lot a
+  // strip of wall where the plan's floor ended, its stalls on tiles the world does not walk: L-466)
+  const keepsWall = o => !!o && (o.blocks || o.type === 'praca' || !!(G.Interiors && G.Interiors.TYPES && G.Interiors.TYPES[o.type]));
+  const takenAt = i => { const o = G.S.occ[i]; return !!o && keepsWall(G.S.buildings.get(o)); };
   function planWall(s, f, core) {
     const S = G.S;
     // (a town whose heart is inside another town's walls is walled already: what it would raise is a strip outside the other
@@ -191,7 +197,7 @@
     for (const [x, y] of per) {
       const i = y * N + x;
       if (S.type[i] < T.SAND || S.wall[i] === 3 || Sg.walledIn(i, { set: s.id, id: Infinity })) continue;
-      if (S.occ[i]) { const b = S.buildings.get(S.occ[i]); if (b && (b.blocks || b.type === 'praca')) continue; }
+      if (takenAt(i)) continue;
       tiles.push(i);
       if (S.road[i] || S.wear[i] > 22) gates.push(i);
     }
@@ -232,7 +238,7 @@
     const w = planWall(s, f); if (!w) return null;
     if (mat) w.mat = mat;
     S.walls.push(w);
-    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || (S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks) || Sg.walledIn(i, w)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
+    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || takenAt(i) || Sg.walledIn(i, w)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
     if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); }
     return w;
   };
@@ -269,7 +275,7 @@
       // stayed shut, L-340)
       const gate = w.gates.includes(i);
       // (and never inside another town's walls: a plan saved before L-342 still has those tiles)
-      if (i !== undefined && !Sg.walledIn(i, w) && (gate && S.wall[i] === 1 || !S.wall[i] && !(S.occ[i] && (S.buildings.get(S.occ[i]) || {}).blocks))) {
+      if (i !== undefined && !Sg.walledIn(i, w) && (gate && S.wall[i] === 1 || !S.wall[i] && !takenAt(i))) {
         f.stock[k] -= 2;
         S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; G.W.touchWalk();
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
@@ -691,11 +697,12 @@
     load(o) {
       const S = G.S; S.walls = o.walls || []; S.wallHp = o.wallHp || {}; S.missiles = []; for (const f of S.factions.values()) f.sac = null; Sg.reset();
       // (a save from before L-342: what was raised inside another town's walls comes down — the pocket opens; the tile map is
-      // back already, city.js loads before)
+      // back already, city.js loads before. And one from before L-466: what was raised on the lot of an open ground with a plan
+      // — the square, the fair — comes down, as no wall is raised there now: the world walks across it, its plan has its floor)
       let down = 0;
       for (const w of S.walls) for (const i of w.tiles) {
-        if (!S.wall[i] || S.wall[i] === 3 || !Sg.walledIn(i, w)) continue;
-        if (S.walls.some(q => q !== w && q.tiles.includes(i) && !Sg.walledIn(i, q))) continue; // (a tile of a wall that may stand there)
+        if (!S.wall[i] || S.wall[i] === 3) continue; const o = S.occ[i], ob = o && S.buildings.get(o); const onOpen = !!ob && !ob.blocks && takenAt(i);
+        if (!onOpen && (!Sg.walledIn(i, w) || S.walls.some(q => q !== w && q.tiles.includes(i) && !Sg.walledIn(i, q)))) continue; // (a tile of a wall that may stand there)
         S.wall[i] = 0; S.wallFac[i] = 0; delete S.wallHp[i]; down++;
       }
       // (and a building of the town its own wall shuts off gets its gate — cut at once where the wall already stands, L-344)

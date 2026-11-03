@@ -118,21 +118,38 @@ ok('presos nas celas, em algum mundo', seen.presos > 0, `${seen.presos || 0} pre
 // ---- a palace of each size founded by hand where the land is free — the colossal one no ready world has —: its record from
 // the day it is placed, its plan valid and what it is for, its shell the plan's, the same after a save, and its ruin
 {
-  M.pronto(list[0]); const S = G.S; const N = G.N; const made = [];
+  M.pronto(list[0]); const S = G.S; const N = G.N; const made = []; const raised = [];
   const free = (x0, y0, w) => { for (let y = y0 - 1; y <= y0 + w; y++) for (let x = x0 - 1; x <= x0 + w; x++) { if (!G.W.inb(x, y)) return false; const i = G.W.idx(x, y); if (!G.W.walkable(i) || S.occ[i] || S.road[i]) return false; } return true; };
+  const freeAt = w => { for (let y = 2; y < N - w - 2; y++) for (let x = 2; x < N - w - 2; x++) if (free(x, y, w)) return [x, y]; return null; };
+  // (a world with no free land that serves — the metrópole of the generation 11 has no free square of 5 × 5 left, and the
+  // colossal one was not founded, T-351 —: the god raises land from the sea by the game's own power, G.Powers.reshape, in the
+  // open water nearest the main town, and lays its middle flat, 7 × 7 tiles — a palace of 5 and the free ring round it —, as
+  // the lances.js does for a lot, T-117)
+  const raise = () => {
+    const T = G.T, V1 = N + 1; const set0 = G.Village.mainSettlement(); const cx = set0 ? set0.cx : N / 2, cy = set0 ? set0.cy : N / 2; let best = null, bd = 1e9;
+    for (let y = 10; y < N - 10; y++) for (let x = 10; x < N - 10; x++) { const d = Math.hypot(x - cx, y - cy); if (d >= bd) continue; let all = true;
+      for (let ty = y - 7; ty <= y + 7 && all; ty++) for (let tx = x - 7; tx <= x + 7; tx++) { const i = ty * N + tx; if (S.type[i] > T.SEA || S.occ[i]) { all = false; break; } }
+      if (all) { best = [x, y]; bd = d; } }
+    if (!best) return false;
+    G.Powers.reshape(best[0] + 0.5, best[1] + 0.5, 5.5, +1, { peak: 0.6, hill: 0 });
+    let hi = -1e9; for (let vy = best[1] - 3; vy <= best[1] + 4; vy++) for (let vx = best[0] - 3; vx <= best[0] + 4; vx++) hi = Math.max(hi, S.H[vy * V1 + vx]);
+    for (let vy = best[1] - 3; vy <= best[1] + 4; vy++) for (let vx = best[0] - 3; vx <= best[0] + 4; vx++) S.H[vy * V1 + vx] = hi;
+    G.Relief.fixArea(best[0] - 6, best[1] - 6, best[0] + 6, best[1] + 6); S.typeVer = (S.typeVer || 0) + 1; G.W.invalidateLand(); G.W.touchWalk(); raised.push(best.join(','));
+    return true;
+  };
   const set = [...S.settlements.values()].find(t => t.fac && G.Fac.get(t.fac)) || [...S.settlements.values()][0];
   G.inSim++;
   try {
     for (const t of ['palacio', 'grande_palacio', 'palacio_colossal']) {
-      const w = G.BDEF[t].w; let at = null;
-      for (let y = 2; y < N - w - 2 && !at; y++) for (let x = 2; x < N - w - 2; x++) if (free(x, y, w)) { at = [x, y]; break; }
+      const w = G.BDEF[t].w; let at = freeAt(w);
+      if (!at && raised.length < 3 && raise()) at = freeAt(w);
       if (at) made.push(G.Village.addBuilding(t, at[0], at[1], set.id, true));
     }
   } finally { G.inSim--; }
   In.uncache(); let bad = 0; const ex = [];
   for (const b of made) { const p = In.plan(b); const s = In.shellOf(b); const why = !b.ip ? 'sem registro' : !p.ok ? (p.errs || []).slice(0, 2).join('; ') : FOR[b.type](p, b) || (strip(s) !== strip(In.shellOfPlan(p)) ? 'a casca de longe difere' : null); if (why) { bad++; ex.push(`#${b.id} ${b.type}: ${why}`); } else ex.push(`#${b.id} ${b.type}/${b.ip.f}: ${p.rooms.length} cômodos, ${p.items.length} peças`); }
   const s0 = snap(); M.salvarCarregar(); const s1 = snap();
-  ok('palácios fundados à mão', made.length === 3 && !bad && !same(s0, s1), `${made.length} de 3 fundados: ${ex.join(' · ')}; depois de salvar e carregar, ${same(s0, s1)} plantas diferentes`);
+  ok('palácios fundados à mão', made.length === 3 && !bad && !same(s0, s1), `${made.length} de 3 fundados${raised.length ? ` (no chão que o deus ergueu do mar em ${raised.join(' e ')}: ${list[0]} não tinha terra livre que servisse)` : ''}: ${ex.join(' · ')}; depois de salvar e carregar, ${same(s0, s1)} plantas diferentes`);
   for (const b of made) seen[b.type] = (seen[b.type] || 0) + 1;
 }
 // ---- the old save: the records taken out; loading gives each building one again, the same each time

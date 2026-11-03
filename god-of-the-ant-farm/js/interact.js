@@ -45,7 +45,7 @@
   I.FACE = Math.PI / 4; // (radians: a door this far round from where the body looks, or less, is the door it faces — L-326)
   I.best = function () {
     const ctx = I.ctx(); if (!ctx || G.Avatar.swimming()) return null; // (the hands are swimming)
-    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1;
+    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1;
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
         // (t.reach: a target reached from farther than its kind — the door of a house from its doorstep)
@@ -56,9 +56,15 @@
         if (p.door && sc > ds) { ds = sc; door = c; }
         if (p.passing && sc > ps) { ps = sc; pass = c; }
         if (p.opens && sc > os) { os = sc; open = c; }
+        if (!t.here && !p.here && sc > fs && aim(ctx, t.X, t.Z).ang <= I.FACE) { fs = sc; faced = c; }
       }
     }
     if (!best) return null;
+    // (an offer of the world with no place of its own, where the body stands — the meal on the floor of a house with no table,
+    // seat nor hearth —: what the body faces in reach is meant before it. Its point was the body's own, its bearing the noise of
+    // two positions a hair apart: by the mat of the house#35280 of the metrópole of the generation 11 the body facing its bed
+    // heard «Comer em casa, da despensa», and never lay down by E — L-467)
+    if (best.t.here && faced) best = faced;
     // (at a door it is the door one means, not an animal going by — unless the body faces the animal more than the door, by more
     // than a few degrees, and the animal is the nearer: then the animal. In line with the door, the door)
     if (door && pass && (best === door || best === pass)) { const a = aim(ctx, pass.t.X, pass.t.Z), b = aim(ctx, door.t.X, door.t.Z); best = a.d < b.d && a.ang + I.AHEAD < b.ang ? pass : door; }
@@ -753,6 +759,9 @@
       if (nb) { t.X = nb[0]; t.Z = nb[2]; }
     } else if (o.act === 'depositar' && o.def === 'descarga') { const dest = G.Possess.storeOf(G.Act.get(o.op)); if (dest) { const d = G.Vg.door(dest); t.X = d[0] * L(); t.Z = d[1] * L(); } }
     else if (o.act === 'pousar') t.pref = -3;
+    // (an offer where the body stands, with no place of its own: a stride straight before it, wherever it looks — as the fish in
+    // the shallows —, and what the body faces in reach meant before it, I.best: L-467)
+    else if (o.here) { t.here = 1; t.X = ctx.X + Math.cos(ctx.yaw) * 0.7; t.Z = ctx.Z + Math.sin(ctx.yaw) * 0.7; }
     // (the work in reach, possible now, is what one means at the pile or at the door, more than a word with someone beside it —
     // unless face to face with them, a step away)
     if (o.ok !== false && (o.act === 'pegar' || o.act === 'pegarChao' || o.act === 'depositar')) t.pref = 1.6;

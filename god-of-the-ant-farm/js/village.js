@@ -480,6 +480,10 @@
   const RENEW = { farm: 1, hut: 2, house: 3 };
   const RENEW_BLOCK = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 2, house: 3, sobrado: 4 };
   const KEEP = { farm: 2, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
+  // (a site whose work the town's streets reach: a tile round the lot that one walks, from which the town reaches — the ring of
+  // V.townReachesWork, the lot not yet standing)
+  const siteReached = (set, x, y, def) => { for (let ty = y - 1; ty <= y + def.h; ty++) for (let tx = x - 1; tx <= x + def.w; tx++) { if (ty >= y && ty < y + def.h && tx >= x && tx < x + def.w) continue; if (W.inb(tx, ty) && W.walkable(W.idx(tx, ty)) && W.townReaches(set, tx + 0.5, ty + 0.5)) return true; } return false; };
+  V.siteReached = siteReached; // (for the proofs: muros.js 8b)
   function search(set, type, def, R, field, counts, renew, dear, reach) {
     const S = G.S; const block = renew && type === 'quarteirao'; const may = block ? RENEW_BLOCK : RENEW;
     const left = gone => { const n = {}; for (const id of gone) { const t = S.buildings.get(id).type; if (KEEP[t] && (counts[t] || 0) - (n[t] = (n[t] || 0) + 1) < KEEP[t]) return false; } return true; };
@@ -546,6 +550,11 @@
       let sc = place - trees * 0.7 - sl * 1.5 + G.R() * 0.8 - cost * 2;
       if (type === 'farm') sc += (fert / 9) * 7;
       if (S.type[y * N + x] === T.SAND) sc -= 1.5;
+      // (and only where the town's streets reach the work — the builders' own rule, V.townReachesWork: a tile beside the lot the
+      // town reaches —; asked of the best so far only, after the draw, so that the world's draws stay as they were. The best site
+      // of a house of Mênfis, in the metrópole of the generation 11, was a tile of beach between its wall and the sea, a pocket of
+      // one tile: its work given up after its tries, L-349, and the same site asked again — L-465)
+      if (sc > bestSc && !siteReached(set, x, y, def)) continue;
       if (sc > bestSc) { bestSc = sc; best = gone ? Object.assign([x, y], { demolish: gone }) : [x, y]; }
     }
     return best;

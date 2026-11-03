@@ -179,6 +179,9 @@
     // a building of a town shut off by the town's own standing wall, where a gate in it would open the way (L-344)
     if (G.Siege && G.Siege.openWays) { const ws = (s.walls || []).filter(w => w.done && s.settlements.has(w.set)); if (ws.length) { const w = ws[(wallTurn++) % ws.length], st = s.settlements.get(w.set); const o = G.Siege.openWays(st, w, true); if (o.length) add('city', 3, `o muro de ${st.name} (#${w.id}) fecha ${o.length} prédio(s) da cidade: um portão em (${o[0] % N},${(o[0] / N) | 0}) abriria o caminho`); } }
     if (G.Siege && G.Siege.walledIn) for (const w of s.walls || []) { const st = s.settlements.get(w.set); for (const i of w.tiles) if (s.wall[i] && s.wall[i] !== 3 && G.Siege.walledIn(i, w)) { add('city', 3, `o muro de ${st ? st.name : '#' + w.set} (#${w.id}) tem casa de pé em (${i % G.N},${(i / G.N) | 0}), dentro do muro de outra cidade`); break; } }
+    // no wall standing on the lot of an open ground with a plan — the square, the fair: the world walks across it, its plan has its
+    // floor there (L-466)
+    if (G.Interiors && G.Interiors.TYPES) for (const w of s.walls || []) { const st = s.settlements.get(w.set); for (const i of w.tiles) { const ob = s.wall[i] && s.wall[i] !== 3 && s.occ[i] ? s.buildings.get(s.occ[i]) : null; if (ob && !ob.blocks && G.Interiors.TYPES[ob.type]) { add('city', 3, `o muro de ${st ? st.name : '#' + w.set} (#${w.id}) tem casa de pé em (${i % G.N},${(i / G.N) | 0}), no lote de ${ob.type}#${ob.id} (chão aberto de planta)`); break; } } }
     { let ghost = 0, ex = 0; for (let i = 0; i < s.occ.length; i++) { const o = s.occ[i]; if (o && !s.buildings.has(o)) { ghost++; ex = o; } } if (ghost) add('city', 2, `${ghost} casa(s) do mapa ocupadas por prédio inexistente #${ex}`); }
     // ---- the memory of the dead: cemeteries hold twelve, a grave and its record agree, nobody is kept past three
     // generations unless they mattered or the living are their children and grandchildren (L-072)
