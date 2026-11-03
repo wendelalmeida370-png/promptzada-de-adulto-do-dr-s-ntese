@@ -17,7 +17,7 @@ G.Ready.list({
   "wars": 0,
   "ww": null,
   "world": "Ysdun",
-  "bytes": 963284
+  "bytes": 963298
  },
  "metropole": {
   "day": 65,
@@ -35,7 +35,7 @@ G.Ready.list({
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 3660004
+  "bytes": 3660018
  },
  "mega": {
   "day": 57,
@@ -53,7 +53,7 @@ G.Ready.list({
   "wars": 0,
   "ww": null,
   "world": "Ysessa",
-  "bytes": 2650961
+  "bytes": 2650975
  },
  "mundial": {
   "day": 70,
@@ -71,7 +71,7 @@ G.Ready.list({
   "wars": 2,
   "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 4230976
+  "bytes": 4230990
  },
  "anos100": {
   "day": 101,
