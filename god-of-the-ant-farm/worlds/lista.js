@@ -20,9 +20,9 @@ G.Ready.list({
   "bytes": 963298
  },
  "metropole": {
-  "day": 65,
-  "pop": 834,
-  "peoples": 6,
+  "day": 72,
+  "pop": 1107,
+  "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
@@ -30,48 +30,48 @@ G.Ready.list({
   "city": {
    "name": "Mênfis",
    "tier": 4,
-   "pop": 131
+   "pop": 136
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 3660018
+  "bytes": 4306732
  },
  "mega": {
-  "day": 57,
-  "pop": 614,
+  "day": 66,
+  "pop": 864,
   "peoples": 4,
-  "towns": 11,
+  "towns": 18,
   "N": 160,
   "map": "continente",
   "seed": 3305,
   "city": {
-   "name": "Hedeby",
+   "name": "Mênfis",
    "tier": 5,
-   "pop": 168
+   "pop": 209
   },
   "wars": 0,
   "ww": null,
   "world": "Ysessa",
-  "bytes": 2650975
+  "bytes": 3249013
  },
  "mundial": {
-  "day": 70,
-  "pop": 730,
-  "peoples": 4,
+  "day": 85,
+  "pop": 566,
+  "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Roma",
-   "tier": 3,
-   "pop": 82
+   "name": "Birka",
+   "tier": 4,
+   "pop": 67
   },
-  "wars": 2,
-  "ww": "a Grande Coalizão",
+  "wars": 1,
+  "ww": "a Guerra da Coroa",
   "world": "Coressa",
-  "bytes": 4230990
+  "bytes": 4197666
  },
  "anos100": {
   "day": 101,
