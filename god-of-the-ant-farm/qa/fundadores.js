@@ -36,7 +36,14 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
   await page.evaluate(() => {
     window.__F = {
       five(set, child) {
-        const S = G.S; const f = G.Fac.get(set.fac); const other = G.Fac.all().find(o => o.alive && o.id !== f.id);
+        const S = G.S; const f = G.Fac.get(set.fac);
+        // (the people the envoy goes to: one he can walk to, and is still on his way to thirty seconds later — by rule, the
+        // nearest capital linked on foot 60 tiles or more away, else the farthest linked one; else the first, as on the islands,
+        // where he is not judged. The first of the list had no road from Mênfis in the mega of the 11th generation, and the
+        // envoy gave up on his own and went hunting, T-347)
+        const cap = o => G.Fac.capitalOf(o.id); const far = o => G.dist(set.cx, set.cy, cap(o).cx, cap(o).cy);
+        const linked = G.Fac.all().filter(o => o.alive && o.id !== f.id && cap(o) && G.W.townsLinked(set, cap(o))).sort((p, q) => far(p) - far(q) || p.id - q.id);
+        const other = linked.find(o => far(o) >= 60) || linked[linked.length - 1] || G.Fac.all().find(o => o.alive && o.id !== f.id);
         const here = v => v.set === set.id && !v.captive && !v.aboard && !v.jail && !v.held && !v.air && !v.ug && v.hp > 60;
         const wives = [...S.villagers.values()].filter(v => here(v) && v.g === 'f' && v.partner && v.age >= 18 && v.age < 42 && S.villagers.get(v.partner) && S.villagers.get(v.partner).set === set.id).sort((a, b) => a.id - b.id);
         const singles = [...S.villagers.values()].filter(v => here(v) && !v.partner && v.age >= 17 && v.age < 32 && v.id !== f.leader).sort((a, b) => a.id - b.id);
@@ -79,8 +86,11 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       Object.assign(out, { picked: true, gone, sizes: [Math.min(...sizes), Math.max(...sizes)], badSend: [...new Set(badSend)].slice(0, 4), broken: [...new Set(broken)].slice(0, 4) });
     }
     G.Vg.endTask(c.merc); // (the caravan made by hand carries nothing: its errand ends before the world goes on)
-    for (let k = 0; k < 300; k++) G.debug.step(0.1);
-    out.after = __F.after(c); out.bad = __F.clean().slice(0, 4);
+    // (a danger of the world on the road — a beast that attacks the envoy, and he fights it — takes him off his errand as it
+    // would anyone; what the case guards is that the founding never takes him: on his way still, or taken by a danger and
+    // still of his town. In the mega of the 11th generation a beast met him at 22 s, on the road to Tenochtitlan, T-347)
+    let envDanger = 0; for (let k = 0; k < 300; k++) { G.debug.step(0.1); const t = c.env.task; if (t && t.pri >= 4 && /^(fight|flee|hunt|panic)$/.test(t.type)) envDanger = 1; }
+    out.after = __F.after(c); out.after.envDanger = envDanger; out.after.envHome = c.env.set === set.id; out.bad = __F.clean().slice(0, 4);
     return out;
   }, WORLD);
   if (r.err) ok('f1 a cidade do caso', false, r.err);
@@ -180,7 +190,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
   else ok('f6 o casamento real: o filho que iria morar com o outro povo é o corpo do deus — ele fica', r6.allied && r6.home && r6.avatar && !r6.wed && !r6.bad.length,
     `aliança ${r6.allied ? 'selada' : 'não selada'}; ${r6.body} (filha do governante de ${r6.weak}, o povo mais fraco): ${r6.home ? 'ficou na sua cidade' : 'foi morar com o outro povo'}${r6.wed ? ', casada com ' + r6.wed : ''}, ${r6.avatar ? 'ainda do deus' : 'perdida pelo deus'}; ${r6.bad.join(' | ') || 'verificador limpo'}`);
   // (on the islands the envoy to another people has no road on foot and gives up on his own: he is judged on the ready world)
-  const good = (a, road) => a.avatar && a.home && a.pris && (!road || a.env === 'envoy') && a.sold;
+  const good = (a, road) => a.avatar && a.home && a.pris && (!road || a.env === 'envoy' || (a.envDanger && a.envHome)) && a.sold;
   ok('f4 um tempo depois: o corpo é do deus, o preso na cela, o emissário a caminho, o soldado no bando; verificador limpo', !r.err && !r3.err && good(a1, true) && good(a3, false) && !(r.bad || []).length && !(r3.bad2 || []).length && !errs.length,
     `mundo pronto ${JSON.stringify(a1)}, ilhas ${JSON.stringify(a3)}; ${(r.bad || []).concat(r3.bad2 || []).join(' | ') || 'verificador limpo'}; ${errs.slice(0, 3).join(' · ') || 'sem erro de página'}`);
   console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'TUDO PASSOU');
