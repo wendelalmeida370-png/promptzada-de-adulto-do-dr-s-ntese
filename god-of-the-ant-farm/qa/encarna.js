@@ -107,6 +107,8 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         const v = E.body(); const st = G.Avatar.state(); if (!v || !st) return { ok: false, why: 'sem corpo' };
         const p0 = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p0) return { ok: false, why: 'sem caminho' };
         const p = E.throughGates(v.x, v.y, p0);
+        // (no step to take — the body already at the place —: said, never a crash that ends the whole run, T-340)
+        if (!p.length) return { ok: G.dist(v.x, v.y, x, y) < 0.8, frames: 0, steps: 0, bad: 0, under: 0, camIn: 0, stuck: false, d: +(G.dist(v.x, v.y, x, y) * 4).toFixed(1), none: 1 };
         // (and the frames its length asks, at a slow walk, 0.05 m a frame, and some, when that is more than max: through the gate,
         // the walk to the market of Mênfis is 31 tiles, 124 m, past the 1800 frames of the case — T-152 of the estiva, T-242)
         let len = 0; { let a = [v.x, v.y]; for (const w of p) { len += Math.hypot(w[0] - a[0], w[1] - a[1]); a = w; } }
@@ -155,7 +157,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       const market = [...S.buildings.values()].find(b => b.set === s.id && b.built && (b.type === 'mercado' || b.type === 'feira'));
       const dock = [...S.buildings.values()].find(b => b.set === s.id && b.built && b.type === 'doca');
       const m = market || [...S.buildings.values()].find(b => b.set === s.id && b.built && b.type === 'storehouse');
-      const v = __E.adults(s).sort((a, c) => G.dist2(a.x, a.y, m.x, m.y) - G.dist2(c.x, c.y, m.x, m.y))[0];
+      // (the body: the adult nearest the market who has a walk to make — four tiles or more from its door, the door within
+      // the feet's reach —: the nearest of all stood at the door in the metrópole of the 11th generation, and the walk «along
+      // the streets to the market» had no step, T-340)
+      const md = G.Vg.door(m); const byM = (a, c) => G.dist2(a.x, a.y, m.x, m.y) - G.dist2(c.x, c.y, m.x, m.y) || a.id - c.id;
+      const ad = __E.adults(s); const v = ad.filter(a => G.dist(a.x, a.y, md[0], md[1]) >= 4 && G.W.reaches(a, md[0], md[1])).sort(byM)[0] || ad.sort(byM)[0];
       window.__v = v; window.__m = m; window.__dock = dock;
       G.UI.select(v); G.Render.cam.follow = v.id; __E.f(10);
       const inn = __E.enter(v);
@@ -175,11 +181,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     ok('e1 o chão 3D é a altura do mundo', r.nv > 500 && r.err < 0.02, `${r.nv} vértices (${r.carved} no leito de um rio), erro máximo ${r.err.toFixed(4)} m`);
     await shot('e1-mercado');
     const w = await E(() => { const m = window.__m; const d = G.Vg.door(m); return { w: __E.walkTo(d[0], d[1], 1800), qa: __E.qa() }; });
-    ok('e1 anda pelas ruas até o mercado', w.w.ok && !w.w.bad && !w.w.under && !w.w.camIn, `${JSON.stringify(w.w)} · roads perto: ${r.roads}`);
+    ok('e1 anda pelas ruas até o mercado', w.w.ok && !w.w.none && !w.w.bad && !w.w.under && !w.w.camIn, `${JSON.stringify(w.w)} · roads perto: ${r.roads}`);
     await shot('e1-no-mercado');
     if (r.dock) {
       const d = await E(() => { const b = window.__dock; const p = G.Vg.door(b); const f = __E.fits(b); const sea = (() => { for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) if (G.W.inb(x, y) && G.S.type[y * G.N + x] <= G.T.SEA) return true; return false; })(); return { w: __E.walkTo(p[0], p[1], 2400, true), sea, f }; });
-      ok('e1 o porto fica na costa e se chega a ele a pé', d.sea && d.w.ok && !d.w.bad && !d.w.camIn, `cais junto do mar: ${d.sea} · ${JSON.stringify(d.w)}`);
+      ok('e1 o porto fica na costa e se chega a ele a pé', d.sea && d.w.ok && !d.w.none && !d.w.bad && !d.w.camIn, `cais junto do mar: ${d.sea} · ${JSON.stringify(d.w)}`);
       await shot('e1-porto');
       // across the town: from the port to the farthest door of the town the feet can reach (40 m or more: the world's path
       // is smoothed into straight legs, so the proof is the distance, not the number of corners)
