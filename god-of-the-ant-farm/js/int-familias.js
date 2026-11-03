@@ -303,9 +303,12 @@
     for (const c of cands) {
       const { r, du, dv, hole } = c; const cu = (r[0] + r[2]) / 2, cv = (r[1] + r[3]) / 2; const len = du ? r[2] - r[0] : r[3] - r[1];
       const foot = [cu - du * (len / 2 + 0.4), cv - dv * (len / 2 + 0.4)], tp = [cu + du * (len / 2 + 0.35), cv + dv * (len / 2 + 0.35)];
-      if (!roomHolding(P, lv0, r)) continue;
+      const hr = roomHolding(P, lv0, r); if (!hr) continue;
       if (P.keepClear(lv0).some(z => P.ovr(r, z)) || (hole && P.keepClear(lv1).some(z => P.ovr(hole, z)))) continue;
-      const fr = P.rooms.find(m => m.lv === lv0 && ptInR(foot, m.r, 0.2)); if (!fr) continue;
+      // (the foot in the room the flight stands in: the body walks into the flight from its foot, and the loft's ladder through
+      // a hatch at the back of a house cut front and back stood against the partition with its foot past it, in the front
+      // room — never reached, L-447)
+      if (!ptInR(foot, hr.r, 0.2)) continue;
       if (!P.footFree(lv0, r, du, dv)) continue; // (a body stands before its foot, off the flight: L-391)
       const tr = P.rooms.find(m => m.lv === lv1 && ptInR(tp, m.r, 0.15) && (!top || top(m))); if (!tr) continue;
       if (hole && !roomHolding(P, lv1, hole) && !P.rooms.some(m => m.lv === lv1 && P.ovr(hole, m.r))) continue;

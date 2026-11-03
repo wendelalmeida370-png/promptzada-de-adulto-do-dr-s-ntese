@@ -534,6 +534,10 @@ let pocketDoor = null;
     let migr = null;
     if (ob && ob.ip && fam.length) {
       ob.ip.v = 2; ob.ip.s = s2; ob.ip.o = 1; for (const q of fam) { q.x = od3[0]; q.y = od3[1]; q.home = id; q.inside = 0; }
+      // (and out of the save's list of who was at home — act-lar.js, D-073 —: the family is at the door of then, in the pocket,
+      // as the save of before has it; in the cidade of the generation 10 two of them were asleep in their house at the save,
+      // and the list put them back in it on loading, T-322)
+      if (Array.isArray(o.lar)) o.lar = o.lar.filter(e => !fam.some(q => q.id === e[0]));
       const shut0 = size()(od3); G.Save.apply(o); In.uncache(); const b3 = G.S.buildings.get(id); const od4 = b3 && outOf(b3); const fact = b3 && b3.ip.h[b3.ip.h.length - 1];
       const out = fam.map(q => G.S.villagers.get(q.id)).filter(Boolean); const vd = b3 && sim(() => G.Vg.door(b3)); const sz4 = size();
       const free = out.length === fam.length && out.every(v => near([v.x, v.y], vd) && sz4([v.x, v.y]) >= 12);

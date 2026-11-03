@@ -882,8 +882,10 @@
     return { els: [...base, ...steps, ...h.els, ...cristas, { k: 'bandeira', p: [at(L, 0.72), at(L, 0.8), px(4)], h: px(18), cor: 'acc2' }], door: h.door,
       body: { walls: h.walls, base: { r: rect(L, -0.95, -0.95, 0.95, 0.95), y1: px(4) }, steps } };
   });
+  // (the way in between the pylons on the door's line: 0.2 m off it, the door's steps — wider than the door, Space.doorFlight
+  // — ran 13 cm into the left tower's mass, the paco#16131 of the mega, L-448)
   def('paco', 'egipcio', L => {
-    const h = wingF(L, 'egipcio', -0.9, -0.9, 0.55, 0.2, 0, 13, 1, { door: -0.2, back: true }); const torres = [[-0.7, -0.35], [0.05, 0.4]];
+    const h = wingF(L, 'egipcio', -0.9, -0.9, 0.55, 0.2, 0, 13, 1, { door: -0.2, back: true }); const torres = [[-0.75, -0.4], [0, 0.35]];
     return { els: [...h.els, ...torres.flatMap(([a, b]) => pylonF(L, a, b, 0.35, 0.65, 15)), { k: 'palmeira', p: [at(L, 0.75), at(L, 0.75), 0], h: px(12), s: 1 }], door: h.door,
       body: { walls: h.walls, towers: torres.map(([a, b]) => rect(L, a, 0.35, b, 0.65)) } };
   });

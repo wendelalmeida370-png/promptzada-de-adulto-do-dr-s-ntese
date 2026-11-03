@@ -222,7 +222,13 @@ else {
   { // (a place free on any storey of the house — the one the body is on first —, a seat or the table first)
     const lv0 = G.Possess.level(); const pl0 = [];
     for (const l of p.levels.slice().sort((a, c) => (a.lv === lv0 ? 0 : 1) - (c.lv === lv0 ? 0 : 1) || a.lv - c.lv)) pl0.push(...In.freeNear(b, l.lv, st().X - b.x * TL, st().Z - b.y * TL, 30).filter(q => G.Interact.PURE.has(q.use) && !q.it.mark && !q.it.tier));
-    const pl = pl0.find(q => q.use === 'sentar' || q.use === 'comer') || pl0[0];
+    // (not the place of the house's meal: in the body's own house the meal is offered at the first place to eat of the storey
+    // — act-lar.js —, and there E offers it before the place, the activity's word over the place's at the same spot
+    // (interact.js); the case is the place, so a seat or the table away from that spot first — else as before. In the
+    // metrópole of the generation 10 the first was the seat of Penélope's own table where the meal is offered, T-322)
+    const mealAt = lv => { for (const u of ['comer', 'sentar', 'aquecer']) for (const q of In.slots(b, u)) if (q.item.lv === lv) return [q.spot.x, q.spot.z]; return null; };
+    const away = q => { const m = mealAt(q.lv); return !m || Math.hypot(q.x - m[0], q.z - m[1]) > 1; };
+    const pl = pl0.find(q => q.use === 'sentar' && away(q)) || pl0.find(q => q.use === 'comer' && away(q)) || pl0.find(away) || pl0.find(q => q.use === 'sentar' || q.use === 'comer') || pl0[0];
     if (pl) pl.at = In.standFor(b, pl, st().X - b.x * TL, st().Z - b.y * TL); // (where one gets onto it: the body's whole rim stands there)
     // (the feet walk up to where one gets onto it — the player's stick: to a point near it where the body's rim fits, the
     // verb takes the last step itself)

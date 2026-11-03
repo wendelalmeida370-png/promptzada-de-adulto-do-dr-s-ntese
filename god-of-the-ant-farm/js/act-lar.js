@@ -172,7 +172,10 @@
   // fire; whoever else is awake, talked to; or a rest by the fire)
   function idle(v, h, e) {
     if (index().baby.has(v.id)) return 'ninar';
-    if (!G.isNight() && !G.isEvening() && L.minder(v)) return 'cuidar'; // (by day, the old with little ones at home mind them)
+    // (by day, the old with little ones at home mind them — and the one at home who takes it up is the one minding from now:
+    // the count of the house is the second's, and a second old one of the house, looking round in the same second, took it
+    // up too — two minding at once, L-446)
+    if (!G.isNight() && !G.isEvening() && L.minder(v)) { if (v.inside === h.id) e.care = v.id; return 'cuidar'; }
     if (G.isNight() && v.age >= 16 && waited(v, e)) return 'esperar';
     if (e.awake.some(o => o.id !== v.id && o.age >= 6 && (!o.task || o.task.type === 'lar'))) return 'conversar';
     return 'descansar';

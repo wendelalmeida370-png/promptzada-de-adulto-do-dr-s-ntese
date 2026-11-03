@@ -17,8 +17,18 @@ const settled = s => s.st !== 'ativa' || !!s.data.waitHeir || G.S.villagers.has(
 const how = s => s.st !== 'ativa' ? `acabou (${s.end ? s.end.k : '?'})` : s.data.waitHeir ? 'à espera de herdeiro' : `segue com #${s.protag}`;
 const live = () => G.S.saga.stories.filter(s => s.st === 'ativa' && G.S.villagers.has(s.protag));
 // (the world opened and lived until a story is under way, up to two minutes: the world-war world of the v37's last worlds opens
-// with none — a pilgrimage begins about a minute in —, and the cases had nothing to kill, T-258)
-const open = world => { M.pronto(world); M.viver(3); for (let k = 0; k < 120 && !live().length; k++) M.viver(1); };
+// with none — a pilgrimage begins about a minute in —, and the cases had nothing to kill, T-258. And when none begins in them,
+// the test's hand promotes the seeds the director weighs highest, ripe and of different kinds, up to three — as the
+// developer's panel does (devmode.js, St._promote): the metrópole of the generation 10 opens on day 65 with 37 stories told
+// and its seeds weighed under the director's bar, the pilgrimages worn out by the fatigue of what was told, T-321)
+const promote = n => {
+  const St = G.Stories, S = G.S; const kinds = new Set();
+  const seeds = S.saga.seeds.filter(sd => S.villagers.has(sd.protag) && !(sd.ripe && S.clock < sd.ripe)).sort((a, b) => (b.w || 0) - (a.w || 0) || b.score - a.score || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  G.inSim++; try { for (const sd of seeds) { if (kinds.size >= n) break; if (kinds.has(sd.type) || !S.saga.seeds.includes(sd)) continue; if (St._promote(sd)) kinds.add(sd.type); } } finally { G.inSim--; }
+  return [...kinds];
+};
+let promoted = [];
+const open = world => { M.pronto(world); M.viver(3); for (let k = 0; k < 120 && !live().length; k++) M.viver(1); promoted = live().length ? [] : promote(3); if (promoted.length) M.viver(0.1); };
 for (const world of WORLDS) {
   open(world);
   // ---------------- p1 each active story, its protagonist killed by the god ----------------
@@ -32,7 +42,7 @@ for (const world of WORLDS) {
       if (!settled(st)) loose.push(`#${st0.id} ${st0.type}`); else kinds.push(`${st0.type} ${how(st)}`);
       M.viver(0.3);
     }
-    ok(`p1 ${world} a morte de cada protagonista`, n > 0 && !bad.length && !loose.length, `${n} histórias: ${kinds.slice(0, 6).join(' · ') || '-'}${bad.length ? ' — o verificador: ' + bad.slice(0, 2).join(' · ') : ''}${loose.length ? ' — ainda sem desfecho um passo depois: ' + loose.join(', ') : ''}`);
+    ok(`p1 ${world} a morte de cada protagonista`, n > 0 && !bad.length && !loose.length, `${n} histórias${promoted.length ? ` (sem nenhuma em dois minutos, promovidas pela mão da prova: ${promoted.join(', ')})` : ''}: ${kinds.slice(0, 6).join(' · ') || '-'}${bad.length ? ' — o verificador: ' + bad.slice(0, 2).join(' · ') : ''}${loose.length ? ' — ainda sem desfecho um passo depois: ' + loose.join(', ') : ''}`);
   }
   // ---------------- p2 the save in between: the death unheard goes into the save ----------------
   {
@@ -43,7 +53,7 @@ for (const world of WORLDS) {
       G.Village.kill(G.S.villagers.get(st0.protag), 'old', true);
       const o = JSON.parse(G.Save.serialize()); G.Save.apply(o);
       const a = s1(); M.viver(0.1); const st = story(st0.id); const b = s1();
-      ok(`p2 ${world} o save no meio-tempo`, !a.length && !b.length && !!st && settled(st), `#${st0.id} ${st0.type}: depois do load ${a.length ? a[0] : 'limpo'}; um passo depois ${st ? how(st) : 'sumiu'}${b.length ? ', ' + b[0] : ''}`);
+      ok(`p2 ${world} o save no meio-tempo`, !a.length && !b.length && !!st && settled(st), `#${st0.id} ${st0.type}${promoted.length ? ' (promovida pela mão da prova)' : ''}: depois do load ${a.length ? a[0] : 'limpo'}; um passo depois ${st ? how(st) : 'sumiu'}${b.length ? ', ' + b[0] : ''}`);
     }
   }
   // ---------------- p3 the death in a skip of time ----------------
@@ -60,7 +70,7 @@ for (const world of WORLDS) {
         for (const m of s1()) seen.push(m);
         G.Main.skipStep(1); st = story(st0.id); for (const m of s1()) if (!seen.includes(m)) seen.push(m);
       } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; }
-      ok(`p3 ${world} a morte no salto`, !seen.length && !!st && settled(st), `#${st0.id} ${st0.type}: um passo do salto depois, ${st ? how(st) : 'sumiu'}${seen.length ? ' — o verificador: ' + seen[0] : ''}`);
+      ok(`p3 ${world} a morte no salto`, !seen.length && !!st && settled(st), `#${st0.id} ${st0.type}${promoted.length ? ' (promovida pela mão da prova)' : ''}: um passo do salto depois, ${st ? how(st) : 'sumiu'}${seen.length ? ' — o verificador: ' + seen[0] : ''}`);
     }
   }
   // ---------------- p4 the seed of one who dies: gone as soon as the stories hear (L-351) ----------------

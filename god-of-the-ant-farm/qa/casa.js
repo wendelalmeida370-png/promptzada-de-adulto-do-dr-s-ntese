@@ -48,6 +48,9 @@ M.pronto('metropole'); S = G.S; M.viver(2); G.inSim++;
 S.time = 0.15; S.weather.storm = 0;
 // (the town of the cases: a town of coin with the most grown people without a partner — the couples of the cases come from them)
 const singles = s => [...S.villagers.values()].filter(v => v.set === s.id && v.age >= 18 && v.age < 50 && !v.partner && !v.captive).length;
+// (and the couples a town can give: those of a full house the town's day asks, and the pairs its single men and single women
+// make — h2's, when the cases' town has none, T-320)
+const couples = s => { const L = [...S.villagers.values()].filter(v => v.set === s.id && v.age >= 18 && v.age < 50 && !v.partner && !v.captive && !v.jail && !v.aboard && v.home); const m = L.filter(v => v.g === 'm').length; return Math.min(m, L.length - m) + K.queue(s).filter(e => e[1] === 'casal').length; };
 let set = [...S.settlements.values()].filter(s => E.coinage(s.fac)).sort((a, b) => singles(b) - singles(a) || a.id - b.id)[0];
 if (!set) { console.log('FALHOU | casa | nenhuma cidade com moeda na metrópole'); process.exit(1); }
 console.log(`(${set.name}: ${G.Village.pop(set.id)} habitantes; moeda: ${E.coinage(set.fac) ? 'sim' : 'não'}; uma casa nova custa uns ${K.price(set, 'house')} moedas)`);
@@ -129,17 +132,26 @@ function stockUp() {
 // (the skip, as M.saltar runs it, with the god's hand keeping the people's stone and wood while it runs — as the quarteirão's
 // year() does with its feed(): the case is the house a family paid for standing and the family moving in, not the town's
 // store; in the final metrópole twenty works of Hedeby's people waited for stone, and the house stood at 58% for years, T-202)
+// — and the gods' peace over the years it runs, the god's power (Politics.divinePeace), renewed before it lapses: in the
+// metrópole of the generation 10 lived by the L-446, a war on day 66 killed half of Tenochtitlan's builders and kept the rest at
+// the dead, the hiding and the trials until the fifth year ended with the house at 67%, T-320
 function skipFed(n) {
   const d0 = S.day; const low = () => Object.keys(G.BDEF.sobrado.cost).some(k => D.get('f:' + set.fac, k) < G.BDEF.sobrado.cost[k]);
   G.Skip.on = true; G.FX.off = true; W.pathGreed = 1.3;
-  try { while (G.S.day - d0 < n) { G.Main.skipStep(1); if (low()) stockUp(); } } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; }
+  try { while (G.S.day - d0 < n) { if (!(G.S.divinePeace > G.DAY_LEN * 0.25)) G.Politics.divinePeace(); G.Main.skipStep(1); if (low()) stockUp(); } } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; }
 }
 const warNote = (w, t0) => `${w ? `; a cidade esperou ${w} s por paz antes do caso` : ''}${G.War.threat(set.id) ? '; a cidade em guerra agora' : ''}${t0 !== undefined ? ` (o caso: ${Math.round(S.clock - t0)} s do mundo)` : ''}`;
 // ---------------- h2: the need goes into the diary, and the house saves (no luxury bought while it does)
-let hv = null, hHome = null;
+let hv = null, hHome = null, chain = '';
 {
   // (a couple the town's day asks: of a full house, only its youngest family is — D-098 —, by the head the day names)
-  for (let k = 0; k < 8 && !hv; k++) { const c = couple(); if (!c) break; const e = K.queue(set).find(q => q[0].id === c.id || q[0].id === c.partner); if (e) hv = e[0]; }
+  const find = tw => { for (let k = 0; k < 8 && !hv; k++) { const c = couple(tw); if (!c) break; const e = K.queue(tw).find(q => q[0].id === c.id || q[0].id === c.partner); if (e) hv = e[0]; } return hv; };
+  find(set);
+  // (none: h1's day may have taken the town's one couple — in the metrópole of the generation 10, Tenochtitlan's only couple
+  // the day asked took a commission in it, and the town has nine single women and not one single man —: the ready world
+  // again; and still none, the town of coin with the most couples to give, for h2 to h4, T-320)
+  if (!hv) { reload(); if (find(set)) chain = 'o mundo pronto de novo: o dia da cidade do h1 levou o casal dela'; }
+  if (!hv) for (const tw of [...S.settlements.values()].filter(s => s !== set && E.coinage(s.fac)).sort((a, b) => couples(b) - couples(a) || a.id - b.id)) if (find(tw)) { chain = `em ${tw.name}: ${set.name} não tem casal`; set = tw; break; }
   hHome = hv && S.buildings.get(hv.home);
   let info = 'nenhum casal numa casa cheia', fine2 = false;
   if (hv) {
@@ -154,7 +166,7 @@ let hv = null, hHome = null;
     fine2 = !!goal && !!hHome.poupa && hHome.poupa.by === hv.id && !list.includes('joias');
     info = `${hv.name} e ${S.villagers.get(hv.partner).name} na casa #${hHome.id} (${residents(hHome).length} pessoas, dono ${S.villagers.get(hHome.dono) ? S.villagers.get(hHome.dono).name : hHome.dono}): no diário «${goal ? goal.txt : 'NADA'}»; a casa ${hHome.poupa ? `junta até ${hHome.poupa.alvo}` : 'NÃO junta'}; o que vai comprar: ${list.join(', ') || 'nada'}${list.includes('joias') ? ' — JOIAS mesmo juntando' : ''}`;
   }
-  ok('h2 precisar e juntar', fine2 && !bad().length, info);
+  ok('h2 precisar e juntar', fine2 && !bad().length, (chain ? `(${chain}) ` : '') + info);
 }
 // ---------------- h11: the people's empty house, bought through the ledger; the family moves with its share
 {
@@ -236,6 +248,7 @@ if (hb) {
   }
   ok('h4 levantar e mudar', fine4 && !bad().length, info);
 }
+set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cases' town had no couple for them: back to it)
 // ---------------- h12: a rent — an empty house its owner left, rented; the rent of a day; what is owed; the owner gives up
 {
   // (the couple as h11's: in the cases' town, or in the next town of coin when that one has nobody left to make one of, T-129)
@@ -653,6 +666,12 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
   set = noCoin[0];
   let info = 'nenhuma cidade sem moeda', fine9 = false;
   let v = null; for (const tw of noCoin) { v = couple(tw); if (v) { set = tw; break; } }
+  // (or, when none of its towns has anyone to make a couple of — in the cidade of the generation 10 nobody of 18 to 50 is
+  // single —, the family the town's day asks first, of a house too full for its beds: the people raise it a house the same
+  // way, T-320)
+  const asked = tw => { const q = K.queue(tw).find(e => !A.isBody(e[0]) && !K.waiting(e[0])); return q ? q[0] : null; };
+  if (!v) for (const tw of noCoin) { v = asked(tw); if (v) { set = tw; break; } }
+  const why9 = v ? K.need(v) : '';
   if (set) {
     const f = G.Fac.get(set.fac); for (const k of ['wood', 'stone']) if ((f.stock[k] || 0) < 60) D.make('f:' + f.id, k, 60, { code: 'teste', part: true });
     if (v) {
@@ -668,8 +687,8 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
       const b = K.waiting(v) || (v.home !== h0 ? S.buildings.get(v.home) : null);
       const paid = book(e => e[0] > L0 && e[5] === 'moedas' && (e[8] === 'obra-casa' || e[8] === 'compra-casa' || e[8] === 'aluguel')).length;
       fine9 = !!r.ok && !!b && !paid && b.dono === v.id;
-      info = `${set.name} (sem moeda): ${v.name} ${b ? (b.built ? `recebeu do povo a casa vazia #${b.id}` : `pediu ao povo, e o povo pôs ${G.Village.buildName(b).toLowerCase()} em ${b.x},${b.y}`) : 'NÃO conseguiu casa: ' + (r.why || JSON.stringify(r))}; moedas pagas: ${paid}`;
-    } else info = `${noCoin.map(s => s.name).join(', ')}: nenhum casal numa casa cheia`;
+      info = `${set.name} (sem moeda): ${v.name} (${why9 === 'casal' ? 'o casal na casa cheia' : `a família que o dia da cidade pergunta: ${why9}`}) ${b ? (b.built ? `recebeu do povo a casa vazia #${b.id}` : `pediu ao povo, e o povo pôs ${G.Village.buildName(b).toLowerCase()} em ${b.x},${b.y}`) : 'NÃO conseguiu casa: ' + (r.why || JSON.stringify(r))}; moedas pagas: ${paid}`;
+    } else info = `${noCoin.map(s => s.name).join(', ')}: nenhum casal numa casa cheia, nem família que o dia da cidade pergunte`;
   }
   ok('h9 um povo sem moeda', fine9 && !bad().length, info);
 }

@@ -97,10 +97,17 @@ function open() {
 }
 // (the world's step, a tenth of a second at a time — G.debug.step itself: M.viver(0.1) can take two, the clock's float sum
 // short of the tenth —; after each, the case's own look — true stops —; the checker once a second)
-function live(sec, each) { const n = Math.round(sec * 10); for (let k = 0; k < n; k++) { S.weather.storm = 0; G.debug.step(0.1); if (each && each() === true) return true; if (k % 10 === 9) watch(); } return false; }
-// (until the world's hour is t — past midnight if it must)
+// (goal: the world's hour, counted in days — S.day + S.time —, to keep stepping to when the seconds are lived short of it)
+function live(sec, each, goal) {
+  const n = Math.round(sec * 10); const short = () => goal !== undefined && S.day + S.time < goal - 0.05 / G.DAY_LEN - 1e-9;
+  for (let k = 0; k < n || (short() && k < n * 3 + 100); k++) { S.weather.storm = 0; G.debug.step(0.1); if (each && each() === true) return true; if (k % 10 === 9) watch(); }
+  return false;
+}
+// (until the world's hour is t — past midnight if it must —: the seconds the hour takes at the sun's pace, and the steps more
+// that a scene took from it — the sun lingers while a scene plays, main.js —: the evening of l1 ended at 18h34 with a story's
+// scene in it, short of the bed time of most, and the save of l4 came before the feasts and the meetings of the night, T-319)
 const until = t => ((t - S.time) % 1 + 1) % 1 * G.DAY_LEN;
-function liveTo(t, each) { return live(until(t), each); }
+function liveTo(t, each) { const sec = until(t); return live(sec, each, S.day + S.time + sec / G.DAY_LEN); }
 // (the hour on an axis that starts at midday: the night is in one piece — 0.87 < 0.97 < 0.05)
 const fromNoon = t => ((t - 0.5) % 1 + 1) % 1;
 // the biggest town, and its people with a house
@@ -289,7 +296,13 @@ if (want('l2')) {
   if (!pair) ok('l2 a vigia e a casa que espera', false, `ninguém acordado em casa às ${fmtT(S.time)} com alguém da casa para sair de vigia`);
   else {
     const [a, b] = pair; const h = S.buildings.get(b.home); const dw = doorWatch();
-    G.Vg.setTask(a, { type: 'patrol', pri: 1.6, torch: true, n: 0 }); // (the test's hand: the four rounds of the watch)
+    // (the test's hand: the four rounds of the watch — given again while its first round finds no ground: the spot of a round
+    // is drawn round the town's centre, W.randomNear finds none where the circle is sea, and the errand ends at its first
+    // step — in Trondheim, the metrópole of the generation 10 —, as the world's own watch does before its hunter takes it up
+    // again at his next choice, T-319)
+    const watchOn = () => !!a.task && a.task.type === 'patrol' && a.task.st >= 1;
+    let tries = 0; for (; tries < 12 && !watchOn(); tries++) { G.Vg.setTask(a, { type: 'patrol', pri: 1.6, torch: true, n: 0 }); S.weather.storm = 0; G.debug.step(0.1); dw.step(); }
+    const started = watchOn();
     let waitS = 0, outS = 0, nadaS = 0, back = -1, waitEnd = -1, why = ''; const seq = [], seqB = []; const c2 = S.clock;
     live(180, () => {
       dw.step();
@@ -299,8 +312,8 @@ if (want('l2')) {
       if (back >= 0 && waitEnd < 0 && !(b.task && b.task.type === 'lar' && b.task.what === 'esperar')) waitEnd = S.clock;
       return back >= 0 && waitEnd >= 0 && S.clock - back > 2;
     });
-    const fine = waitS >= 3 && back >= 0 && waitEnd >= 0 && waitEnd - back <= 5 && nadaS < 1 && !dw.wrong.length;
-    ok('l2 a vigia e a casa que espera', fine, `${nm(a)} saiu de vigia por ${r2(outS)} s («${why}»${nadaS >= 1 ? `, ${r2(nadaS)} s SEM AFAZER` : ''}); ${nm(b)} esperou em casa ${r2(waitS)} s; ${back >= 0 ? `${a.name} voltou${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ' pela porta'}, e a espera acabou ${waitEnd >= 0 ? r2(waitEnd - back) + ' s depois' : 'NUNCA'}` : `${a.name} NÃO VOLTOU em 180 s`}${back < 0 || nadaS >= 1 || waitS < 3 || process.env.TRACE ? ` [fora: ${seq.map(x => x.join(' ')).join(' → ')}; em casa: ${seqB.map(x => x.join(' ')).join(' → ')}]` : ''}`);
+    const fine = started && waitS >= 3 && back >= 0 && waitEnd >= 0 && waitEnd - back <= 5 && nadaS < 1 && !dw.wrong.length;
+    ok('l2 a vigia e a casa que espera', fine, `${started ? (tries > 1 ? `(a vigia dada ${tries} vezes até a ronda achar chão) ` : '') : `A VIGIA NÃO COMEÇOU em ${tries} vezes; `}${nm(a)} saiu de vigia por ${r2(outS)} s («${why}»${nadaS >= 1 ? `, ${r2(nadaS)} s SEM AFAZER` : ''}); ${nm(b)} esperou em casa ${r2(waitS)} s; ${back >= 0 ? `${a.name} voltou${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ' pela porta'}, e a espera acabou ${waitEnd >= 0 ? r2(waitEnd - back) + ' s depois' : 'NUNCA'}` : `${a.name} NÃO VOLTOU em 180 s`}${back < 0 || nadaS >= 1 || waitS < 3 || process.env.TRACE ? ` [fora: ${seq.map(x => x.join(' ')).join(' → ')}; em casa: ${seqB.map(x => x.join(' ')).join(' → ')}]` : ''}`);
   }
 }
 
@@ -555,7 +568,7 @@ if (want('l14')) {
     let h = e.h; const dw = doorWatch(); let minded = 0, n = 0, txt = '', two = 0, reload = '', reloadOk = true; const exits = new Map();
     // (the little ones come home and stay: when each first came home while minded, and — from then on — how much of the
     // minding it spent at home, awake; a little one far away takes a while to walk home)
-    const came = new Map(), stayIn = new Map(), stayAll = new Map();
+    const came = new Map(), stayIn = new Map(), stayAll = new Map(), moved = new Set();
     let died = null, diedAt = 0, after = '', afterOk = true, saved = false;
     // (the save and the death come at the first moment the old one is minding from 40 s and from 55 s — one of the world takes
     // a meal or a rest now and then, and the little ones wait for her: L-235 —; nobody minding in the next ten seconds, the
@@ -579,10 +592,14 @@ if (want('l14')) {
       if (died && n === diedAt + 80 + Math.round((L.WAIT_CARE || 0) * 10)) {
         // (another of the house minding now — an old one of the case, or one of 55 or more of the house —: the little ones stay)
         const other = [...S.villagers.values()].find(o => o.id !== died.id && o.home === h.id && o.task && o.task.type === 'lar' && o.task.what === 'cuidar' && o.inside === h.id);
-        const heldL = e.kids.filter(o => S.villagers.has(o.id) && o.inside === h.id && o.task && o.task.type === 'lar' && o.task.what !== 'acamado' && o.actT > 16); const held = heldL.length;
+        // (a little one still within its wait for one of the house who minded it after the death and stepped out — the other old
+        // one, Snorri, took it up and went to eat — waits by the rule, L-235: held is the one past it, or never minded; with the
+        // plans of the L-447 the metrópole lived that, and the case called two waiting 14 s «presas», T-319)
+        const heldL = e.kids.filter(o => S.villagers.has(o.id) && o.inside === h.id && o.task && o.task.type === 'lar' && o.task.what !== 'acamado' && o.actT > 16 && !(o.task.minded && (o.task.gone || 0) < (L.WAIT_CARE || 0))); const held = heldL.length;
+        const waiting = e.kids.filter(o => S.villagers.has(o.id) && o.inside === h.id && o.task && o.task.type === 'lar' && o.task.minded && (o.task.gone || 0) > 0 && (o.task.gone || 0) < (L.WAIT_CARE || 0)).map(o => `${o.name} ${r2(o.task.gone)} s`);
         afterOk = !!other || !held;
         const why = heldL.map(o => `${o.name}: ${o.task.what}, ${Math.round(o.actT)} s, esperou ${r2(o.task.gone || 0)} s${o.task.minded ? '' : ' (sem a marca do cuidado)'}`).join('; ');
-        after = `; ${died.name} morreu aos ${r2(diedAt / 10)} s: ${other ? `${other.name} (${Math.floor(other.age)}) passou a cuidar` : held ? `${held} criança(s) AINDA PRESA(S) EM CASA ${8 + (L.WAIT_CARE || 0)} s depois (${why})` : 'as crianças voltaram ao dia delas'}`;
+        after = `; ${died.name} morreu aos ${r2(diedAt / 10)} s: ${other ? `${other.name} (${Math.floor(other.age)}) passou a cuidar` : held ? `${held} criança(s) AINDA PRESA(S) EM CASA ${8 + (L.WAIT_CARE || 0)} s depois (${why})` : waiting.length ? `as crianças esperam quem cuidou depois e saiu por pouco (${waiting.join(', ')} de ${L.WAIT_CARE} s)` : 'as crianças voltaram ao dia delas'}`;
       }
       if (died) return;
       if (n >= 400 && n <= 500 && !saved && (mindingNow() || n === 500)) {
@@ -601,7 +618,11 @@ if (want('l14')) {
       if (ms.length > 1) two++;
       if (m) {
         minded++; if (!txt) txt = L.taskText(m, m.task);
-        for (const c of e.kids) { const k = S.villagers.get(c.id); if (!k) continue; const inn = k.inside === h.id && !k.sleeping; if (inn && !came.has(c.id)) came.set(c.id, n); if (came.has(c.id)) { stayAll.set(c.id, (stayAll.get(c.id) || 0) + 1); if (inn) stayIn.set(c.id, (stayIn.get(c.id) || 0) + 1); } }
+        // (a little one whose family moved to another house in the middle — the mother gone to live with the father, as the
+        // village's housing does when his house has room (village.js), the little ones with her — is no longer one of this
+        // house's: its days at the new one are not a stay away from this one. In the metrópole of the generation 10 two of
+        // Gudrun's moved to Ivar's 40 s in, and the case counted their new house as 38% of the minding away, T-319)
+        for (const c of e.kids) { const k = S.villagers.get(c.id); if (!k) continue; if (k.home !== h.id) { moved.add(c.id); continue; } const inn = k.inside === h.id && !k.sleeping; if (inn && !came.has(c.id)) came.set(c.id, n); if (came.has(c.id)) { stayAll.set(c.id, (stayAll.get(c.id) || 0) + 1); if (inn) stayIn.set(c.id, (stayIn.get(c.id) || 0) + 1); } }
       }
       for (const id of dw.out) if (e.kids.some(o => o.id === id)) exits.set(id, (exits.get(id) || 0) + 1);
       dw.out.length = 0;
@@ -612,7 +633,7 @@ if (want('l14')) {
     const kidsOk = came.size >= Math.ceil(e.kids.length / 2) && stayed >= 0.8;
     if (aged) { const o = S.villagers.get(aged[0].id); if (o) o.age = aged[1]; }
     ok('l14 os velhos cuidam dos pequenos em casa', minded >= 200 && kidsOk && !loops && two <= 20 && reloadOk && afterOk && !!died && !dw.wrong.length,
-      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${aged ? `${Math.floor(aged[1])} anos, posta em 63 pela mão da prova, ${aged[2]} — os mundos prontos não têm, depois das mudanças do dia, velho morando com crianças pequenas` : e.old.map(o => Math.floor(o.age)).join(', ') + ' anos'}) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), ${came.size} de ${e.kids.length} criança(s) vieram para casa${came.size ? ` (a primeira aos ${r2(first / 10)} s) e ficaram em casa ${Math.round(stayed * 100)}% do cuidado dali em diante` : ''}${reload}${after}${died ? '' : '; dos 55 aos 65 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 || !kidsOk ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}; as crianças: ${e.kids.map(c => `${c.name}: ${(kseq.get(c.id) || []).slice(0, 8).join(' → ')}`).join(' | ')}` : ''}`);
+      `${h.type}#${h.id}: ${e.old.map(o => o.name).join(', ')} (${aged ? `${Math.floor(aged[1])} anos, posta em 63 pela mão da prova, ${aged[2]} — os mundos prontos não têm, depois das mudanças do dia, velho morando com crianças pequenas` : e.old.map(o => Math.floor(o.age)).join(', ') + ' anos'}) e ${e.kids.length} criança(s) de 3 a 6; de dia, cuidando em casa ${r2(minded / 10)} s de 55 («${txt}»), ${came.size} de ${e.kids.length} criança(s) vieram para casa${came.size ? ` (a primeira aos ${r2(first / 10)} s) e ficaram em casa ${Math.round(stayed * 100)}% do cuidado dali em diante` : ''}${moved.size ? ` (${moved.size} mudaram de casa com a família no meio: ${[...moved].map(id => (S.villagers.get(id) || { name: '#' + id }).name).join(', ')} — contadas até a mudança)` : ''}${reload}${after}${died ? '' : '; dos 55 aos 65 s, NINGUÉM CUIDANDO para morrer'}${two ? `; dois cuidando juntos ${r2(two / 10)} s` : ''}${loops ? `; ${loops} criança(s) ENTRANDO E SAINDO sem parar` : ''}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}${minded < 200 || !kidsOk ? ` — o que ${e.old[0].name} fez: ${seq.slice(0, 12).join(' → ')}; fora do cuidado: ${[...whyNot].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} ${c} s`).join(', ')}; as crianças: ${e.kids.map(c => `${c.name}: ${(kseq.get(c.id) || []).slice(0, 8).join(' → ')}`).join(' | ')}` : ''}`);
   }
 }
 
@@ -641,6 +662,10 @@ if (want('l15')) {
   if (!A) fail('(a) nenhuma casa à noite com a mãe, o bebê e outro da casa dentro');
   else {
     const m = S.villagers.get(A.mother), h = builtHome(m); m.fury = 6;
+    // (a quiet night in the house, by the test's hand: nobody of it hungry — the hunger wakes one to eat, by the world's rule,
+    // and at 0,86 (the liveTo that reaches the hour, T-319) the father, 93 of hunger, woke with the baby in his arms and ate what
+    // he carried at the door, the baby with him)
+    for (const o of S.villagers.values()) if (o.home === h.id && o.age >= 2) o.hunger = Math.min(o.hunger, 20);
     const r1 = track(A.id, 4, h.id);
     const before = S.villagers.get(A.id).carrier; M.salvarCarregar(); S = G.S; const after = S.villagers.get(A.id).carrier;
     if (before !== after) fail(`(a) o save mudou o colo (${who(before)} → ${who(after)})`);
@@ -1043,7 +1068,10 @@ if (want('l19')) {
   // after the load, where it lay, and still the player's, and the next steps of the night do not wake it; (c) the body asleep
   // in a room of a building that is not its house, on its plan's floor — the world's step lets it lie there —: asleep there
   // after the load; (d) by day it wakes by its own rule. Before, the body woke in the load anywhere but in its own bed)
-  open();
+  // (the deep of the night, by the test's hand, with no feast of the year in it: the ready world is saved at midnight, and the
+  // night ends at 0,02 — G.isNight —, a few seconds of the world after it opens: in the generation 10 the body, rested, woke by
+  // day by its own rule two seconds after the load, and in the building of (c) it did not lie down at all, T-319)
+  open(); S.time = 0.9; for (const st of S.settlements.values()) noFeast(st);
   const adult = o => o.age >= 18 && o.age < 60 && !o.captive && !o.aboard && !o.ug && !o.held && !o.jail && !isBody(o);
   const notes = []; let fine = true; const say = (tag, c, txt) => { notes.push(`${tag}: ${c ? '' : 'NÃO — '}${txt}`); if (!c) fine = false; };
   const grown = [...S.villagers.values()].filter(adult).sort((a, c) => a.id - c.id);
@@ -1063,9 +1091,15 @@ if (want('l19')) {
   const w1 = S.villagers.get(w.id), v1 = v && S.villagers.get(v.id);
   const wKept = !!w1 && w1.sleeping && !w1.inside && G.dist(w1.x, w1.y, wp[0], wp[1]) < 0.01;
   say('(a) quem do mundo dorme na rua', wKept, `${nm(w)}: antes do save ${w0}; depois ${w1 ? where(w1) + (G.dist(w1.x, w1.y, wp[0], wp[1]) < 0.01 ? ', no mesmo lugar' : ', NOUTRO LUGAR') : 'SUMIU'}`);
+  // (and then given back to the night — home to bed, as one near one's own door goes —: the test's hand laid her down a few
+  // tiles from it, and asleep there past 5 s the checker calls it a night outdoors by one's house, L-371 — the night of the
+  // case now lasts, T-319. The measure is the save in the middle of that sleep)
+  if (w1) G.Vg.endTask(w1);
   let vKept = !!v1 && bodyOk && isBody(v1) && v1.sleeping && !v1.inside && G.dist(v1.x, v1.y, vp[0], vp[1]) < 0.01;
-  live(2); const vNight = !!v1 && v1.sleeping;
-  say('(b) o corpo dormindo na rua', vKept && vNight, !took.ok ? `o corpo não pegou ${v ? nm(v) : 'ninguém'}` : `${nm(v)} («Dormir aqui»): antes do save ${v0}; depois ${v1 ? where(v1) + (isBody(v1) ? '' : ', NÃO É MAIS O CORPO') + (G.dist(v1.x, v1.y, vp[0], vp[1]) < 0.01 ? ', no mesmo lugar' : ', NOUTRO LUGAR') : 'SUMIU'}; 2 s de noite depois: ${vNight ? 'dormindo' : 'ACORDADO'}`);
+  // (as the load left it — the note said what two seconds later had, T-319)
+  const v1w = v1 ? where(v1) + (isBody(v1) ? '' : ', NÃO É MAIS O CORPO') + (G.dist(v1.x, v1.y, vp[0], vp[1]) < 0.01 ? ', no mesmo lugar' : ', NOUTRO LUGAR') : 'SUMIU';
+  live(2); const vNight = !!v1 && v1.sleeping && G.isNight();
+  say('(b) o corpo dormindo na rua', vKept && vNight, !took.ok ? `o corpo não pegou ${v ? nm(v) : 'ninguém'}` : `${nm(v)} («Dormir aqui»)${bodyOk ? '' : ' — NÃO DEITOU antes do save'}: antes do save ${v0}; depois ${v1w}; 2 s de noite depois: ${!G.isNight() ? 'JÁ DE DIA' : vNight ? 'dormindo' : 'ACORDADO'}`);
   // (c) awake again, in a room of a building with a plan that is not its house — the test's hand puts it on the plan's floor —,
   // and laid down there
   let cOk = false, cTxt = 'nenhum prédio com planta onde o corpo fique';

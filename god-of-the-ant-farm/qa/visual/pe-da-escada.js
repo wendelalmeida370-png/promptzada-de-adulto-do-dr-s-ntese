@@ -4,7 +4,8 @@
 // O corpo toma um lance só pelo pé (avatar.js: o lance é sólido no piso de onde sobe; o corpo o toma a até 0,7 m antes do
 // primeiro degrau, na largura dele, andando ao longo dele), com a borda inteira (0,32 m) num chão onde se anda. As provas:
 //   1. o pé: em cada lance de cada prédio com planta do mundo, o patamar do pé que a planta guarda (s.a) fica onde o corpo toma o
-//      lance, com a borda inteira do corpo no chão que o Space dá aos pés (Space.indoor) e fora de todo lance daquele piso
+//      lance, com a borda inteira do corpo no chão que o Space dá aos pés (Space.indoor) e fora de todo lance daquele piso; e
+//      dele, ao longo do lance, até o primeiro degrau, a borda no chão o caminho todo (L-447)
 //   2. o caminho: da porta da rua — ou do topo do lance que chega ao piso — até o pé de cada lance, um caminho pelas casas da
 //      planta onde o corpo cabe pela regra dele: a borda de 0,34 m (ou de 0,26, roçando o que está ao lado; ou, entre duas
 //      quinas, o passo do próprio corpo, que olha a borda do lado para onde vai: Avatar.blocked), nunca por cima de um lance do
@@ -82,8 +83,13 @@ for (const b of blds) {
   const open = p.shell.kind === 'aberta'; const e0 = p.entryLv || 0;
   for (const s of fl) {
     nFl++; const [ax, az] = s.a; const tag = `${b.type}#${b.id} (${b.ip.f}) lance ${s.id} ${s.lv0}→${s.lv1}`;
-    // 1. the foot the plan keeps: where the body takes the flight, its whole rim on the feet's floor, off the flights
+    // 1. the foot the plan keeps: where the body takes the flight, its whole rim on the feet's floor, off the flights — and from
+    // it, along the flight's line, up to its first step, the rim on that floor all the way: the body takes the flight by walking
+    // into it, and the loft's ladder of a house cut front and back had its foot past the partition, L-447
+    const toStep = () => { const r = s.r, du = s.dir[0], dv = s.dir[1], e0 = du ? (du > 0 ? r[0] : r[2]) : (dv > 0 ? r[1] : r[3]); const e = du ? (du > 0 ? e0 - ax : ax - e0) : (dv > 0 ? e0 - az : az - e0);
+      const K = R + 0.01; if (e <= K) return null; for (let k = Math.max(K, e - 0.02); ; k = Math.max(K, k - 0.02)) { const x = du ? e0 - du * k : ax, z = du ? az : e0 - dv * k; const w = rimWhy(b, p, s.lv0, x, z); if (w) return `a ${(k - R).toFixed(2)} m do primeiro degrau, ${w}`; if (k <= K) return null; } }; // (up to a centimetre from it: there the rim meets it)
     if (!atFoot(s, ax, az) || (!open && !rimOK(b, p, s.lv0, ax, az))) footBad.push(`${tag}: o pé ${ax},${az} ${atFoot(s, ax, az) ? 'sem a borda do corpo no chão (' + rimWhy(b, p, s.lv0, ax, az) + ')' : 'fora de onde o corpo toma o lance'}`);
+    else if (!open) { const w = toStep(); if (w) footBad.push(`${tag}: do pé ${ax},${az} o corpo não chega ao lance (${w})`); }
     // 2. the way to it — from the door on the entrance's storey, from the top of a flight coming up to the others (a storey below
     // the entrance is come down to by the flight itself: its foot is where the body lands; an open ground is the street's)
     if (open || s.lv0 < e0) continue; nWay++;
