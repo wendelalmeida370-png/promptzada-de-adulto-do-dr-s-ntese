@@ -292,8 +292,10 @@
         // (the order's man goes when nothing weightier holds him — a call from outside takes only an errand of less weight than
         // its own, never hands with a load on its way (Vg.busy, D-094) —: the order took a rioter of Mênfis out of the square,
         // and the levy that came for the town took him, L-456. The witness waits)
+        // (nor one on the way to a meal or at the top of hunger with the life going — the meeting's rule, L-397 —: the witnesses
+        // waiting their turn took the same man from one to the next with no meal between, and he starved following them, L-476)
         const t = { type: 'stalk', target: v.id, soc: q.id, pri: 2.6, st: 0, kind: 'stalk', w: w.id };
-        if (G.Vg.busy(hunter, t)) continue;
+        if (G.Vg.busy(hunter, t) || meal(hunter)) continue;
         w.hunter = hunter.id; G.Vg.endTask(hunter); G.Vg.setTask(hunter, t);
         continue;
       }
@@ -441,7 +443,7 @@
     if (i.hunter) {
       const h = person(i.hunter); const t = q && { type: 'stalk', target: inv.id, soc: q.id, pri: 2.6, st: 0, kind: 'stalk', inq: i.id };
       if (!h || h.captive || !t) i.hunter = 0;
-      else if (!G.Vg.busy(h, t)) { i.hunter = 0; G.Vg.endTask(h); G.Vg.setTask(h, t); }
+      else if (!G.Vg.busy(h, t) && !meal(h)) { i.hunter = 0; G.Vg.endTask(h); G.Vg.setTask(h, t); }
     }
     // found: a meeting in the act, with the investigator watching
     if (q && !i.found && !(i.hold && G.S.clock < i.hold)) for (const m of s.meets) {
@@ -563,6 +565,7 @@
       return true;
     }
     if (t.type === 'stalk') {
+      if (leavesToEat(v, H)) return true; // (the one who follows leaves to eat as the meeting's own: L-476)
       const o = person(t.target); const q = soc(t.soc);
       if (!o || !q || t.age > DAY() * 1.6) { if (!o && q && t.w) { const w = (q.wit || []).find(x => x.id === t.target); if (w) w.done = 1; } H.end(v); return true; }
       // only when nobody else is near, and best at night

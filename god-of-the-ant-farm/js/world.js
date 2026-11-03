@@ -168,6 +168,9 @@
   const ground = W.ground = i => { const S = G.S; const t = S.type[i]; if ((t < T.RIVER && !(S.dry && S.dry[i])) || S.cliff[i] || W.blocked(i)) return false; if (t === T.RIVER && S.deep[i] && !S.road[i] && !(S.ice && S.ice[i])) return false; return true; };
   W.wallOpen = w => !w || w === 2 || w === 3 || w === 4;
   const passable = i => ground(i) && W.wallOpen(G.S.wall[i]);
+  // (the map of reach as the step last built it while the ground is still the same — never rebuilt: what only looks asks this;
+  // null when the ground changed since, L-478)
+  W.reachNow = () => { const S = G.S; return reachIds && reachKey === S && reachWV === (S.walkVer || 0) && reachTV === (S.typeVer || 0) && reachIds.length === N * N ? reachIds : null; };
   W.reachIds = function (peek) {
     const S = G.S; const n = N * N;
     if (reachIds && reachKey === S && reachWV === (S.walkVer || 0) && reachTV === (S.typeVer || 0) && reachIds.length === n && (peek || (S.clock >= reachT && S.clock - reachT < 20))) return reachIds;

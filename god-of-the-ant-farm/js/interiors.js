@@ -1699,7 +1699,25 @@
   const doorSaid = new Map();
   G.worldHooks.push(() => doorSaid.clear());
   const CORNERS = b => [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]];
+  // (a building with no plan of its own — a dock, a well, a field —: its people's door is the first of the old corners on the
+  // biggest ground round it, never one a pocket took, as a plan's door off the street; with no corner on it, the first corner
+  // open, as ever (Vg.door). The dock of Delfos, in the metrópole of the 12th generation, stands at the foot of a cliff, and its
+  // first corner was a pocket of three tiles the cliff shuts in: whoever walked to its door found no way — L-478. Judged in the
+  // world's step; out of it, the step's last answer for the same ground, or the same rule on the map of reach as the step last
+  // built it — never a map built for a drawing)
+  const cornerKey = b => 'n:' + b.type + ':' + b.x + ',' + b.y + ',' + b.w + ',' + b.h + ':' + (G.S.walkVer || 0) + ':' + (G.S.typeVer || 0);
+  function openCorner(b) {
+    const key = cornerKey(b); const m = doorSaid.get(b.id); if (m && m.key === key) return m.d;
+    const L = G.inSim ? G.W.reachIds() : G.W.reachNow(); if (!L) return null;
+    const big = bigGround(b, L); const out = CORNERS(b).find(c => onStreet(b, c[0], c[1], L, big)) || null;
+    if (G.inSim) { doorSaid.set(b.id, { key, d: out }); if (doorSaid.size > In.SHELLS) doorSaid.delete(doorSaid.keys().next().value); }
+    return out;
+  }
+  // (the step's last answer for a building with no plan, while the ground is the same — for the checker; undefined when the step
+  // has not asked since)
+  In.cornerSaid = function (b) { const m = b && !b.ip && doorSaid.get(b.id); return m && m.key === cornerKey(b) ? m.d : undefined; };
   In.planDoor = function (b) {
+    if (!b.ip && !In.TYPES[b.type]) return openCorner(b);
     const d = doorOf(b); if (!d || !G.W.walkableXY(d[0], d[1])) return null;
     const S = G.S; const key = planKey(b, b.ip) + ':' + (S.walkVer || 0) + ':' + (S.typeVer || 0);
     if (!G.inSim) { const m = doorSaid.get(b.id); return m && m.key === key ? m.d : d; }

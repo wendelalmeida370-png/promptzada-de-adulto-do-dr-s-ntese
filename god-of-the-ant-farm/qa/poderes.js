@@ -755,9 +755,13 @@ const key = process.argv[2] || 'cidade';
       const free = o => o.age >= 16 && !o.inside && !o.aboard && !o.captive && !(o.task && o.task.pri >= 3);
       const nearA = (a, b) => G.dist2(a.x, a.y, w0.a.x, w0.a.y) - G.dist2(b.x, b.y, w0.a.x, w0.a.y);
       let v = [...S.villagers.values()].filter(o => o.set === A.id && free(o) && W.canWalk(o.x, o.y, w0.a.x, w0.a.y) && !W.canWalk(o.x, o.y, w0.b.x, w0.b.y)).sort(nearA)[0]; let setDown = false;
-      if (!v) { v = [...S.villagers.values()].filter(o => o.set === A.id && free(o)).sort(nearA)[0]; if (v) { G.Vg.endTask(v); v.x = w0.a.x; v.y = w0.a.y; v.path = null; setDown = true; } }
+      if (!v) { v = [...S.villagers.values()].filter(o => o.set === A.id && free(o)).sort(nearA)[0]; setDown = !!v; }
       const ok = G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0];
       H.run(4);
+      // (set down once the bed is open, and sent at once: the near end of the way in the metrópole of the 12th generation is a
+      // ledge under a cliff that only the bed reaches — set down there before the sea opened, the world took him off it to the
+      // land of his town (the rule of who is shut in, L-306), and from there the road goes round the bay, never across: T-363)
+      if (v && setDown) { G.Vg.endTask(v); v.x = w0.a.x; v.y = w0.a.y; v.path = null; }
       const dry = p.tiles.every(i => S.dry[i] && W.walkable(i)); const linked = W.canWalk(p.ax, p.ay, p.bx, p.by);
       const shipOn = S.ships.some(s => p.tiles.includes(W.idx(s.x, s.y)));
       let walker = null, across = false, onFloor = false; const set = new Set(p.tiles);

@@ -124,6 +124,33 @@ if (TURNS) {
     ok('o bolsão aberto de novo', near(back, pd) && near(G.Vg.door(b), pd), `a porta da planta de novo: ${f2(back)}`);
   }
 }
+// ---- the door of a building with no plan (a dock, a well, a field) onto a pocket: the tile of its first old corner shut in all
+// round (walls on its open sides) — whoever walked to it would find no way: the step gives the first old corner on the biggest
+// ground round the building, and what is drawn says the same; opened again, the first corner again (the dock of Delfos under
+// its cliff, the metrópole of the 12th generation: L-478) ----
+{
+  const N = G.N; const nb = i => [i - 1, i + 1, i - N, i + N].filter(j => j >= 0 && j < N * N); const tile = p => W.idx(p[0], p[1]);
+  const ringOf = h => { const out = []; for (const s of ['S', 'E', 'W', 'N']) { const n = s === 'S' || s === 'N' ? h.w : h.h; for (let k = 0; k < n; k++) out.push(outside(h, s, k)); } return out; };
+  const streetCorner = h => { const size = sizes(); const g = p => (W.walkableXY(p[0], p[1]) ? size(regOf(p)) : -1); const big = Math.max(0, ...ringOf(h).map(g)); return cornersOf(h).find(c => g(c) >= 0 && g(c) >= big) || null; };
+  const plain = [...G.S.buildings.values()].filter(h => h.built && h.blocks && !h.ip && !In.TYPES[h.type]);
+  let b = null, walled = [], tried = 0;
+  for (const h of plain) {
+    if (tried >= 40) break; const o0 = oldDoor(h); if (!o0) continue; const i = tile(o0); tried++;
+    const w = []; sim(() => { for (const j of nb(i)) if (W.walkable(j)) { G.S.wall[j] = 1; w.push(j); } W.touchWalk(); });
+    const od = streetCorner(h); const size = sizes();
+    if (od && tile(od) !== i && size(regOf(od)) > size(regOf(o0))) { b = h; walled = w; break; }
+    sim(() => { for (const j of w) G.S.wall[j] = 0; W.touchWalk(); });
+  }
+  if (!b) ok('a porta de um prédio sem planta para um bolsão', false, `nenhum prédio sem planta com um canto que dê para a rua fora do bolsão neste mundo (${tried} tentados, de ${plain.length})`);
+  else {
+    const o0 = oldDoor(b); const od = streetCorner(b);
+    const inStep = sim(() => G.Vg.door(b)); const drawn = G.Vg.door(b);
+    ok('a porta de um prédio sem planta para um bolsão', !!od && near(inStep, od) && near(drawn, od) && regOf(inStep) === regOf(od), `${b.type}#${b.id}: o primeiro canto ${f2(o0)} fechado em volta (${walled.length} muros); no passo, quem vai à porta vai a ${f2(inStep)} — o primeiro canto que dá para a rua ${f2(od)}; no desenho, ${f2(drawn)}`);
+    sim(() => { for (const j of walled) G.S.wall[j] = 0; W.touchWalk(); });
+    const back = sim(() => G.Vg.door(b));
+    ok('o bolsão do prédio sem planta aberto de novo', near(back, o0) && near(G.Vg.door(b), o0), `o primeiro canto de novo: ${f2(back)}`);
+  }
+}
 // ---- the house full: what does not fit stays where it was, nothing lost ----
 let full = null;
 {

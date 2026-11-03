@@ -132,6 +132,22 @@
         }
       }
     }
+    // ---- the door of a building with no plan (a dock, a well, a field), where the step said it: never ground smaller than the
+    // biggest round the building when one of its old corners opens onto that — the first corner shut in a pocket shuts out
+    // whoever walks to it (the dock of Delfos under its cliff, L-478); made anew here, on the map of reach
+    if (In.cornerSaid) {
+      const W = G.W; let L = null, size = null;
+      for (const b of s.buildings.values()) {
+        if (b.ip || In.TYPES[b.type] || !b.built || !b.blocks) continue;
+        const said = In.cornerSaid(b); if (said === undefined) continue;
+        if (!L) { L = W.reachIds(true); const m = new Map(); for (let i = 0; i < L.length; i++) if (L[i] >= 0) m.set(L[i], (m.get(L[i]) || 0) + 1); size = r => m.get(r) || 0; }
+        const g = p => (p && W.inb(p[0], p[1]) && W.walkableXY(p[0], p[1]) ? size(L[W.idx(p[0], p[1])]) : -1);
+        const ring = []; for (let k = 0; k < b.w; k++) ring.push([b.x + k + 0.5, b.y + b.h + 0.4], [b.x + k + 0.5, b.y - 0.4]); for (let k = 0; k < b.h; k++) ring.push([b.x + b.w + 0.4, b.y + k + 0.5], [b.x - 0.4, b.y + k + 0.5]);
+        const big = Math.max(0, ...ring.map(g)); const corners = [[b.x + b.w - 0.5, b.y + b.h + 0.4], [b.x + b.w + 0.4, b.y + b.h - 0.5], [b.x - 0.4, b.y + 0.5], [b.x + 0.5, b.y - 0.4]];
+        const d = G.Vg.door(b);
+        if (big > 0 && corners.some(c => g(c) >= big) && g(d) < big) add('int', 2, `${b.type}#${b.id}: a porta (sem planta) dá para um chão de ${Math.max(0, g(d))} casas, e um canto dá para o de ${big}`);
+      }
+    }
   });
   // (the records go into the save with their buildings: the canonical state carries them, so a round trip that loses one is seen)
   QA.canonMore.push(['interiores', () => {

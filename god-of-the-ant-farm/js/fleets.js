@@ -206,7 +206,9 @@
       if (losW(s.x, s.y, w[0], w[1])) { s.path = [w]; s.pi = 0; } else if (!s._rt || G.S.clock - s._rt > 2) { s._rt = G.S.clock; Nv._sailTo(s, w[0], w[1]); }
     });
   }
-  function losW(ax, ay, bx, by) { const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 0.4); for (let k = 1; k <= n; k++) { const f = k / n; const x = ax + (bx - ax) * f, y = ay + (by - ay) * f; if (!W.inb(x, y) || G.S.type[W.idx(x, y)] > T.SEA) return false; } return true; }
+  // (a straight line of water is the walk over the grid of naval.js, every tile the line crosses — points every 0.4 of a tile
+  // missed the corner of the land a ship of a fleet on its station only grazed, and it sailed onto the shore: L-477, as L-075)
+  function losW(ax, ay, bx, by) { return Nv.losWater(ax, ay, bx, by); }
   // by water to a point: straight there over open water, around the land when some is in the way, and nowhere when no sea
   // leads there
   function sailFor(s, w) { if (losW(s.x, s.y, w[0], w[1])) { s.path = [w]; s.pi = 0; return true; } if (Nv._sailTo(s, w[0], w[1])) return true; s.path = null; s.pi = 0; return false; }

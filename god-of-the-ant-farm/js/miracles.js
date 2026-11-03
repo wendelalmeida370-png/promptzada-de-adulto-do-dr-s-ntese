@@ -41,11 +41,14 @@
   P.setAt = setAt; P.facAt = facAt;
   const peopleOf = fid => { const out = []; for (const v of G.S.villagers.values()) if (!v.captive && G.Fac.idOfV(v) === fid) out.push(v); return out; };
   const water = i => G.S.type[i] <= T.SEA;
+  // (where a ship floats: the sea, and not the bed of a sea the god holds open — naval.js's own rule —: land raised beside the
+  // open bed of Mênfis pushed three ships onto its sand, L-475)
+  const floats = i => water(i) && !(G.S.dry && G.S.dry[i]);
   function nearestWater(x, y, R) {
     const cx = Math.floor(x), cy = Math.floor(y);
     for (let r = 0; r <= R; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-      const nx = cx + dx, ny = cy + dy; if (W.inb(nx, ny) && water(ny * N + nx)) return [nx + 0.5, ny + 0.5];
+      const nx = cx + dx, ny = cy + dy; if (W.inb(nx, ny) && floats(ny * N + nx)) return [nx + 0.5, ny + 0.5];
     }
     return null;
   }
@@ -235,7 +238,7 @@
     if (changed.size && dir > 0) {
       for (const s of [...S.ships]) {
         const i = W.idx(s.x, s.y);
-        if (!water(i)) { const p = nearestWater(s.x, s.y, 7); if (!p) { G.Naval.sink(s, null, 'god'); continue; } s.x = p[0]; s.y = p[1]; }
+        if (!floats(i)) { const p = nearestWater(s.x, s.y, 7); if (!p) { G.Naval.sink(s, null, 'god'); continue; } s.x = p[0]; s.y = p[1]; }
         // (the whole course ahead, leg by leg, and not only its turns: new land between two of them is in the way as much — a
         // fishing boat sailed on over the hill the god had just raised across its way home, L-454)
         if (s.path && s.pi < s.path.length && !G.Naval.courseClear(s)) { const last = s.path[s.path.length - 1]; const np = G.Naval.seaPath(s.x, s.y, last[0], last[1]); if (np) { s.path = np; s.pi = 0; } else { s.path = null; s.pi = 0; } }

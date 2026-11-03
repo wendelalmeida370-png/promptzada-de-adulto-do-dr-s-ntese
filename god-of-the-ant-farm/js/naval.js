@@ -107,6 +107,8 @@
     }
     return false;
   }
+  // (the one test of a straight line of water for every ship — the fleets ask it too: L-477)
+  Nv.losWater = losWater;
   // the course ahead of a ship is water all the way, leg by leg — the same walk over the grid its sea path was drawn with (the
   // ground that changes under a course asks this: L-454)
   Nv.courseClear = function (s) {

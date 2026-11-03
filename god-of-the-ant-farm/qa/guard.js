@@ -305,5 +305,15 @@ const LEDGER_OK27 = [
     if (!/G\.Vg\.canSend\(/.test(L.slice(i, i + 30).join('\n'))) fails.push(`quem vai embora: ${f}:${i + 1} a escolha ${what} não pergunta ao G.Vg.canSend (L-440)`);
   }
 }
+// 41. "a reta de água é uma só" (L-075, L-477): se um navio vai reto a um ponto, quem diz que a reta é toda água é a caminhada
+// pela grade do naval.js (G.Naval.losWater: cada casa que a reta cruza) — pontos a cada tanto de casa pulam a quina da terra que
+// a reta só raspa: a frota posta no bloqueio mandava um navio à vaga dele por cima de uma ponta de terra. Nenhum módulo testa a
+// água de uma reta por pontos, e uma reta de água de outro arquivo (losW…) só pergunta ao Nv.losWater
+for (const f of Object.keys(src)) {
+  (src[f] || []).forEach((l, k) => {
+    if (/Math\.hypot\([^)]*\)\s*\/\s*0\.\d+\)/.test(l) && /T\.SEA/.test(l) && /for \(let k = [01]; k <= n; k\+\+\)/.test(l)) fails.push(`a reta de água: ${f}:${k + 1} testa a água de uma reta por pontos — pergunte ao G.Naval.losWater (L-477)`);
+    if (f !== 'naval.js' && /function losW\w*\s*\(|const losW\w*\s*=/.test(l) && !/losWater\(/.test(l)) fails.push(`a reta de água: ${f}:${k + 1} uma reta de água que não pergunta ao Nv.losWater (L-477)`);
+  });
+}
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
