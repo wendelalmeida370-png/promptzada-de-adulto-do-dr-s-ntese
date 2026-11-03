@@ -75,56 +75,56 @@ G.Ready.list({
  },
  "anos100": {
   "day": 101,
-  "pop": 913,
-  "peoples": 2,
-  "towns": 14,
+  "pop": 984,
+  "peoples": 1,
+  "towns": 7,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
    "name": "Hedeby",
    "tier": 4,
-   "pop": 198
+   "pop": 205
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 3705720
+  "bytes": 3524595
  },
  "anos500": {
   "day": 501,
-  "pop": 1070,
-  "peoples": 2,
-  "towns": 14,
-  "N": 128,
-  "map": "continente",
-  "seed": 3404,
-  "city": {
-   "name": "Tenochtitlan",
-   "tier": 4,
-   "pop": 192
-  },
-  "wars": 0,
-  "ww": null,
-  "world": "Selara",
-  "bytes": 6036509
- },
- "anos1000": {
-  "day": 1001,
-  "pop": 1051,
-  "peoples": 2,
-  "towns": 13,
+  "pop": 1036,
+  "peoples": 1,
+  "towns": 7,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
    "name": "Argos",
    "tier": 4,
-   "pop": 203
+   "pop": 200
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 6435552
+  "bytes": 5329475
+ },
+ "anos1000": {
+  "day": 1001,
+  "pop": 1035,
+  "peoples": 1,
+  "towns": 8,
+  "N": 128,
+  "map": "continente",
+  "seed": 3404,
+  "city": {
+   "name": "Hedeby",
+   "tier": 5,
+   "pop": 372
+  },
+  "wars": 0,
+  "ww": null,
+  "world": "Selara",
+  "bytes": 5692851
  }
 });
