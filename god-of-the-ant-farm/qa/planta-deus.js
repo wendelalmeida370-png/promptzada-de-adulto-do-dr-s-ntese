@@ -33,6 +33,9 @@ for (const t of Object.keys(one)) {
   let k = 0; while (!G.PlanView.drawn(b) && k++ < 400) { draw(); await wait(1); }
   const p = G.PlanView.drawn(b) ? In.plan(b) : null; const ms = draw();
   const html = G.PlanView.panelHTML(b, s => s); const said = /Geometria:/.test(html); const shown = (html.match(/✗/g) || []).length;
+  // (a ruin's plan is what is left of one, and the panel gives it no report, on purpose — int-planta.js, checkHTML —: a ruin
+  // passes by having none. The metrópole of the 11th generation has a ruin with its plan kept, T-338)
+  if (b.type === 'ruin') { geo.push(`${t} #${b.id}: ${!p ? 'NÃO ABRIU' : said ? 'COM O RELATÓRIO NO PAINEL (uma ruína não tem)' : 'sem relatório no painel, como uma ruína'}`); if (!p || said) bad++; G.PlanView.act('plan', b); draw(); continue; }
   const list = p ? In.report(b, p, { world: true }) : []; const nF = list.filter(x => x.k === 'FALHA').length;
   geo.push(`${t} #${b.id}: ${!p ? 'NÃO ABRIU' : said ? `${nF} ${nF === 1 ? 'falha' : 'falhas'}${nF ? ' (' + list.filter(x => x.k === 'FALHA').map(x => x.what).slice(0, 2).join('; ') + ')' : ''}, ${list.length - nF} ${list.length - nF === 1 ? 'escolha' : 'escolhas'}, no painel ${shown} ✗; com o desenho, ${ms.toFixed(0)} ms` : 'SEM O RELATÓRIO NO PAINEL'}`);
   if (!p || !said || nF || shown !== Math.min(4, nF)) bad++;

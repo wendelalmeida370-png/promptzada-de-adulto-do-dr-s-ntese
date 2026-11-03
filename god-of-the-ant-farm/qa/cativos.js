@@ -82,7 +82,10 @@ const key = process.argv[2] || 'mundial';
   const r3 = await page.evaluate(() => {
     const C = __C, [, , T3] = C.T; const r = G.Fac.rel(C.A.id, C.B.id);
     if (r && r.st !== 'guerra') G.Politics.declareWar(C.B, C.A, 'ambicao');
-    const w = G.Wars.active().find(x => x.side[C.A.id] && x.side[C.B.id]); if (!w) return { err: 'a guerra não começou' };
+    // (the war the peace ends — the game's own Wars.warOf: the two on opposite sides —, not the first war both are in: the
+    // «guerra mundial» of the 11th generation has the two on one side of the Guerra da Coroa, and the town held in it was
+    // not the one the peace of the Guerra de Tebas gave back, T-339)
+    const w = G.Wars.warOf(C.A.id, C.B.id); if (!w) return { err: 'a guerra não começou' };
     const caps = C.hold(T3, C.A, C.B, w);
     G.Wars.onPeace(C.B, C.A, 'sem vencedores', null); if (r) { r.st = 'tregua'; r.truce = G.DAY_LEN * 3; }
     return { back: T3.fac === C.A.id, n: caps.length, free: C.freeOf(caps), own: C.own().filter(q => caps.some(v => q.msg.includes('#' + v.id))).length, line: C.line(8, new RegExp(T3.name)) };
