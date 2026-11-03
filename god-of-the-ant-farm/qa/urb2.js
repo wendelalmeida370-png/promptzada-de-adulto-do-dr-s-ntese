@@ -19,14 +19,21 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
   await page.addScriptTag({ path: __dirname + '/qa.js' });
   const t0 = Date.now(); const res = []; const ok = (n, c, d) => res.push(`${c ? 'PASSOU' : 'FALHOU'} | ${n} | ${d}`);
   await page.evaluate(seed => { G.Main.newGame({ type: 'continente', size: 112, tribes: 2, seed, temper: 'pacifico' }); G.UI.setSpeed(0); G.Main.mode = 'game'; if (G.Audio) G.Audio.mute = true; }, seed);
-  // years of a blessed life, until the biggest town has a few streets' worth of grown-ups (a tavern keeper and a watch are not for a hamlet)
+  // years of a blessed life, until the biggest town has a few streets' worth of grown-ups (a tavern keeper and a watch are not
+  // for a hamlet: thirty — with twenty, Hedeby's 6 fishermen, 4 builders, 4 farmers, 2 priests and 2 hunters left no hands for
+  // wood and forage, and the cut of the minimum rest (D-090) took every trade of the town, the tavern's keeper with them, even
+  // with the stores full, T-336)
   await page.evaluate(() => {
     const S = G.S; let bt = 0, chk = 0, A = 0; S.blessed = true;
     const grown = () => { const s = G.Village.mainSettlement(); let n = 0; if (s) for (const v of S.villagers.values()) if (v.set === s.id && v.age >= 18 && !v.captive) n++; return n; };
-    while (S.day < 12 || (S.day < 40 && A < 20)) { G.debug.step(0.1); if ((chk -= 0.1) <= 0) { chk = 5; A = grown(); } if ((bt -= 0.1) <= 0) { bt = 2; S.divinePeace = G.DAY_LEN; S.weather.fertility = G.DAY_LEN; } }
+    while (S.day < 12 || (S.day < 40 && A < 30)) { G.debug.step(0.1); if ((chk -= 0.1) <= 0) { chk = 5; A = grown(); } if ((bt -= 0.1) <= 0) { bt = 2; S.divinePeace = G.DAY_LEN; S.weather.fertility = G.DAY_LEN; } }
     window.__set = G.Village.mainSettlement(); const set = window.__set;
     const f = G.Fac.get(set.fac); G.Civ.learn && !G.Civ.has(f.id, 'moeda') && G.Civ.learn(f, 'moeda', 'teste');
     f.stock.food += 400; f.stock.wood += 200; f.stock.stone += 200;
+    // (and its stores of food, wood and stone full, so that it needs fewer hands for them: at thirty grown-ups, with the stores
+    // as they were, the cut of the minimum rest (D-090) still took every trade, the keeper with them; with them full, the town
+    // gives its tavern the keeper by its own sharing of the trades, T-336)
+    const cap = G.Village.cap(f.id) * 0.95; for (const k of ['food', 'wood', 'stone']) f.stock[k] = Math.max(f.stock[k] || 0, cap);
   });
   const step = (secs) => page.evaluate(n => { for (let k = 0; k < n; k++) G.debug.step(0.1); }, Math.round(secs * 10));
   const until = async (fn, maxSecs, arg) => { for (let k = 0; k < maxSecs / 5; k++) { const r = await page.evaluate(fn, arg); if (r) return r; await step(5); } return page.evaluate(fn, arg); };
@@ -69,8 +76,10 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
   // 2 the tavern
   const tv = await page.evaluate(() => {
     const S = G.S; const set = window.__set; const f = G.Fac.get(set.fac);
-    const t = window.__put('taverna', set.cx, set.cy); if (!t) return { skip: 'sem lugar' };
-    t.inv = { food: 10 };
+    // (the town's own tavern, if it has one: under the ceiling of the trades a town gives its taverns the keepers its shares
+    // ask (D-090), and a second tavern put down by the test stood empty beside the first, its keeper at the old one, T-336)
+    const t = [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built && b.set === set.id).sort((a, b) => a.id - b.id)[0] || window.__put('taverna', set.cx, set.cy); if (!t) return { skip: 'sem lugar' };
+    if (!t.inv) t.inv = {}; if ((t.inv.food || 0) < 10) G.Depot.make('b:' + t.id, 'food', 10 - (t.inv.food || 0), { code: 'teste' }); // (the meals of the house, by the ledger)
     const drinkers = window.__adults().filter(v => v.home && v.role !== 'taverneiro' && v.role !== 'estivador' && v.role !== 'pescador' && !(v.task && v.task.type === 'fest')).slice(0, 4);
     for (const v of drinkers) { const h = G.S.buildings.get(v.home); if (h) h.coin = (h.coin || 0) + 10; }
     return { t: t.id, drinkers: drinkers.map(v => v.id), drink: G.Tavern.DRINK[f.civ || 'classico'].k, civ: f.civ };
@@ -94,12 +103,15 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
         const coin0 = o.drinkers.map(id => { const v = S.villagers.get(id); const h = v && S.buildings.get(v.home); return h ? h.coin : 0; }).reduce((a, n) => a + n, 0);
         S.time = 0.62;
         for (const id of o.drinkers) { const v = S.villagers.get(id); if (!v || v.aboard) continue; G.Vg.endTask(v); v.sleeping = false; v.inside = 0; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); if (!(v.traits || []).includes('Sociável')) v.traits = (v.traits || []).concat(['Sociável']); G.Vg.setTask(v, { type: 'tavern', id: b.id, pri: 0.9 }); }
-        return { coin0, brewed: b.brewed || 0, shelf: G.Tavern.onShelf(b), take0: b.takings || 0 };
+        return { coin0, brewed: b.brewed || 0, shelf: G.Tavern.onShelf(b), L0: S.ledgerN };
       }, tv);
       await step(60);
-      r3 = await page.evaluate(o => { const S = G.S; const take1 = S.buildings.get(o.t).takings || 0; const coin1 = o.drinkers.map(id => { const v = S.villagers.get(id); const h = v && S.buildings.get(v.home); return h ? h.coin : 0; }).reduce((a, n) => a + n, 0); return { take1, coin1, drinks: o.drinkers.map(id => (S.villagers.get(id) || {}).drinks || 0) }; }, tv);
+      // (what the rounds cost, by the ledger: the coins from the drinkers' houses (or purses) to the keeper's, in the deals of
+      // the tavern's day, act-taverna.js — the tavern of the P2 keeps no «takings» of its own: the count of before was always 0,
+      // T-336)
+      r3 = await page.evaluate(o => { const S = G.S; const refs = new Set(o.drinkers.map(id => S.villagers.get(id)).filter(Boolean).map(v => G.Eco.coinRef(v))); const rows = G.Depot.ledger().filter(e => e[0] > o.L0 && e[8] === 'taverna' && e[5] === 'moedas' && refs.has(e[3])); const paid = rows.reduce((a, e) => a + e[6], 0), paidN = rows.length; const coin1 = o.drinkers.map(id => { const v = S.villagers.get(id); const h = v && S.buildings.get(v.home); return h ? h.coin : 0; }).reduce((a, n) => a + n, 0); return { paid, paidN, coin1, drinks: o.drinkers.map(id => (S.villagers.get(id) || {}).drinks || 0) }; }, Object.assign({}, tv, { L0: r2.L0 }));
     }
-    ok('2 a taverna faz a bebida do seu povo e cobra cada rodada', (r2.brewed > 0 || ['vinho', 'mel'].includes(tv.drink)) && r3.drinks.some(n => n >= 1) && r3.take1 > r2.take0, `${tv.civ || 'clássico'}: bebe ${tv.drink}; ${kp ? 'a cidade deu um taverneiro' : 'sem taverneiro'}; feitas ${r2.brewed} medidas na casa; rodadas ${r3.drinks.join('/')}; a taverna recebeu ${(r3.take1 - r2.take0).toFixed(1)} moedas (casas dos que beberam: ${r2.coin0.toFixed(1)} → ${r3.coin1.toFixed(1)}, com os salários do dia)`);
+    ok('2 a taverna faz a bebida do seu povo e cobra cada rodada', (r2.brewed > 0 || ['vinho', 'mel'].includes(tv.drink)) && r3.drinks.some(n => n >= 1) && r3.paid > 0, `${tv.civ || 'clássico'}: bebe ${tv.drink}; ${kp ? 'a cidade deu um taverneiro' : 'sem taverneiro'}; feitas ${r2.brewed} medidas na casa; rodadas ${r3.drinks.join('/')}; pagas ${r3.paid.toFixed(1)} moedas pelo livro, em ${r3.paidN} contas da taverna (casas dos que beberam: ${r2.coin0.toFixed(1)} → ${r3.coin1.toFixed(1)}, com os salários do dia)`);
   }
 
   // 3 the gardens: the town gives its airy-edge houses a yard; the families tend them, pick them, and the food goes to their pantry
