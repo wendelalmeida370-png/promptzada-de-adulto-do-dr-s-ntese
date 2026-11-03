@@ -124,6 +124,10 @@
   // every frame: follow the body, keep clear of the world, place the camera
   C3.update = function (rdt, body, cam) {
     clock += rdt; room = G.Avatar && G.Avatar.indoors ? G.Avatar.indoors() : null; if (room && byOuterDoor(room, body)) room = null;
+    // (an open shell — a square, a yard — has no walls between the eye and the body: its pieces stop the eye where they stand,
+    // the air past its edge does not. Kept as a room, the edge was a wall: a body against the high rim of a square in Mênfis,
+    // on the way to the port, had the eye pushed into its own head and still out of the shell, L-449)
+    if (room && room.p.shell && room.p.shell.kind === 'aberta') room = null;
     const head = body.head !== undefined ? body.head : (body.h || 1.75) * 0.86;
     // (the world moved the body — a building rose where it stood, a scene, a load: the eye goes with it at once;
     // easing after it would fly through the houses on the way, and a pivot inside a house leaves the eye there — L-106)
