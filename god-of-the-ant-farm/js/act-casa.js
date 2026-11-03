@@ -281,14 +281,18 @@
     A.note(v, 'memory', coinPeople(set) ? `Pagamos ${price} moedas pelos materiais da nossa casa.` : 'O povo vai levantar a nossa casa.', NOTE);
     return b;
   }
-  // a commission that never started (no hands, no ground): the coins come back to the household that paid, in the ledger
+  // a commission that never started (no hands, no ground): the coins come back to the household that paid, in the ledger; and
+  // what its builders had already brought to the site — the people's — goes back to the people's store before the work leaves
+  // the ground, as a work given up does (V.siteBack, L-246). It went with the work, unwritten: a house of Birka paid for on day
+  // 66, with the 4 of wood a builder of the family brought on day 69 and no stroke after it, was given back on day 70 — the
+  // mundial of the generation 12, L-474
   function refund(b, set) {
     const o = b.encomenda; const v = P(o.by) || o.fam.map(P).find(Boolean);
     const kept = D.get('h:' + b.id, 'moedas');
     if (kept > EPS) { const to = v ? homeRef(v) || 'p:' + v.id : 'f:' + set.fac; D.move('h:' + b.id, to, 'moedas', kept, { code: 'obra-devolvida', by: v ? v.id : 0, part: true }); }
     if (v) A.note(v, 'memory', 'A obra da nossa casa nunca começou: as moedas voltaram para nós.', NOTE);
     b.encomenda = null; b.dono = 0;
-    if (!b.progress) G.Village.removeBuilding(b);
+    if (!b.progress) { G.Village.siteBack(b, 'obra-largada'); G.Village.removeBuilding(b); }
   }
   // moving: the family's people to the new house, and what is theirs with them — all of it when the whole household goes,
   // its share of the pantry, the goods and the coins when it leaves others behind (the house's pot is everyone's in it):

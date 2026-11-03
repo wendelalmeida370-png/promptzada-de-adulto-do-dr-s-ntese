@@ -18,6 +18,9 @@
 //  b11 a doca terminada em pedra: sem madeira e com pedra no armazém de um povo que conhece o mar, o gerente das frotas troca
 //     a madeira que a doca pede por pedra — a conta da obra e o que ela pede juntos (G.Village.swapBill): o que entrou nela pelo
 //     livro é o que virou o prédio (L-416: a madeira entrava sem linha e a pedra sumia)
+//  b12 a encomenda devolvida com material na obra: a casa paga que ninguém começou, com a madeira de um construtor nela, sai do
+//     chão no dia das casas da cidade, e a madeira volta ao estoque pelo livro ('obra-largada'); um save no meio (L-474: ia junto
+//     com a obra, sem linha)
 //  e o verificador (as regras das obras: oficio-inv) limpo no meio de cada caso, sem erro de módulo nem aviso no console.
 //   node qa/obra.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/obra.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
@@ -227,6 +230,32 @@ const send = b => {
     const traded = !!(o && o.troca && o.troca.wood < 0);
     ok('b11 a-doca-de-pedra', done && !!o && o.built && traded && Math.abs(sum(built) - total(bill)) < 0.01 && Math.abs(inOf('wood') - (bill.wood || 0)) < 0.01 && Math.abs(inOf('stone') - (bill.stone || 0)) < 0.01 && Math.abs(flowOf(ref)) < 0.01,
       o ? `${s.name}, doca #${id} ${o.built ? 'de pé' : 'ainda obra a ' + Math.round((o.progress || 0) * 100) + '%'}: a troca ${traded ? JSON.stringify(o.troca) : 'NÃO houve'}, a conta ${JSON.stringify(bill)}; entrou na obra pelo livro ${inOf('wood')} de madeira e ${inOf('stone')} de pedra; virou o prédio ('obra-feita') ${sum(built)}; o que entrou e não saiu: ${flowOf(ref)}` : 'a doca sumiu');
+  }
+}
+// ---------------- b12 a commission given back with material on its site (L-474) ----------------
+// (a house paid for that nobody started — no stroke on it after the days a family waits, G.Casa.MAX_WAIT —: the town's day of
+// houses gives the family its coins back and takes the work off the ground, act-casa.js; what its builders had brought to it
+// is the people's, and goes back to their store, as a work given up does ('obra-largada'). It left the world with the work,
+// unwritten: in the mundial of the generation 12, the house #35209 of Birka, paid for on day 66, got 4 of wood from a builder
+// of the family on day 69 and no stroke after it, and on day 70 the wood went with the work. A save in the middle: the
+// commission and the material on the site load as they were, and the checker looks at the site again before the day)
+{
+  seen.length = 0; const K = G.Casa;
+  let b = null; for (const t of ['house', 'hut']) if (!b) b = V.startProject(set0, t);
+  const v = [...S.villagers.values()].filter(o => o.set === set0.id && o.age >= 18 && o.home && !o.captive).sort((p, q) => p.id - q.id)[0];
+  if (!b || !G.BDEF[b.type].housing || !v || !K) ok('b12 a-encomenda-devolvida', false, !b ? `${set0.name}: nenhum lugar para uma casa` : !v ? `${set0.name}: ninguém para encomendar` : `${b.type}#${b.id} não é casa`);
+  else {
+    const id = b.id, ref = 'o:' + id, type = b.type;
+    // (the test's hand: the commission as the family's order makes it — paid for by a people without coin, nothing —, made the
+    // days a family waits ago; and the 4 of wood a builder brought to it, with no stroke)
+    b.dono = v.id; b.encomenda = { fam: [v.id], d: S.day - K.MAX_WAIT - 1, paid: 0, by: v.id, why: 'casal', fac: set0.fac };
+    const k = (b.need.wood || 0) >= 4 ? 'wood' : firstNeed(b, 4); const r = k ? D.make(ref, k, 4, { code: 'teste' }) : { ok: false };
+    reload(); watch(); const o = S.buildings.get(id);
+    const kept = !!o && !!o.encomenda && Math.abs((V.delivered(o)[k] || 0) - 4) < 0.01 && !o.progress;
+    K.day(set0); live(2);
+    const ret = seen.filter(e => e[3] === ref && e[8] === 'obra-largada'); const gone = !S.buildings.has(id);
+    ok('b12 a-encomenda-devolvida', r.ok && kept && gone && Math.abs(sum(ret) - 4) < 0.01 && ret.every(e => e[4] === 'f:' + f0.id) && Math.abs(flowOf(ref)) < 0.01,
+      `${type}#${id} encomendada por ${v.name}, parada ${K.MAX_WAIT + 1} dias com 4 de ${k} nela${kept ? '' : ' (NÃO carregada assim)'}, salva e carregada: ${gone ? 'devolvida e tirada do chão' : 'AINDA no chão'}; o que ela recebeu voltou ao estoque pelo livro ${sum(ret)} ('obra-largada'), e o que entrou nela ${Math.abs(flowOf(ref)) < 0.01 ? 'saiu' : 'NÃO saiu: ' + flowOf(ref) + ' sem linha'}`);
   }
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
