@@ -797,12 +797,12 @@
     const swapFor = () => {
       let best = null, bd = Infinity;
       for (const r of ['coletor', 'lenhador']) for (const o of have[r]) {
-        if (o.aboard || o.ug || o.held) continue;
+        if (o.aboard || o.ug || o.held || (S.avatar && o.id === S.avatar.id)) continue;
         for (const b of works) { if (!V.reachesWork(o, b)) continue; const f = V.frontTile(b); const d = G.dist(o.x, o.y, f[0], f[1]); if (d < bd || (d === bd && best && o.id < best.o.id)) { bd = d; best = { o, r }; } }
       }
       return best;
     };
-    if (works.length && !keep) for (const v of have.construtor.slice()) if (!v.aboard && !v.ug && !v.held && !works.some(b => V.reachesWork(v, b))) {
+    if (works.length && !keep) for (const v of have.construtor.slice()) if (!v.aboard && !v.ug && !v.held && !(S.avatar && v.id === S.avatar.id) && !works.some(b => V.reachesWork(v, b))) {
       have.construtor.splice(have.construtor.indexOf(v), 1); v.job = 0;
       const p = swapFor();
       if (p) { have[p.r].splice(have[p.r].indexOf(p.o), 1); p.o.role = 'construtor'; p.o.job = 0; have.construtor.push(p.o); v.role = p.r; have[p.r].push(v); G.Life && G.Life.onRole(p.o, p.r); G.Life && G.Life.onRole(v, 'construtor'); }
@@ -848,6 +848,9 @@
     for (const v of list) {
       for (const r of roles) {
         let s = (v.task ? 0 : 2) + G.R();
+        // (the god's body keeps its trade while the god lives it — the player's to change, as its house is (D-098): a potter of the
+        // cidade, lived for a few seconds, came back a farmer, L-473. After the draw, as the next one)
+        if (G.S.avatar && v.id === G.S.avatar.id) continue;
         // (one who cannot take this trade here — a builder who reaches none of the town's works, L-389 —: after the draw, so
         // the world's chance runs the same whoever is left out)
         if (fits && !fits(v, r)) continue;

@@ -233,7 +233,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   });
   ok('e2 encarna uma pessoa real', e2.inn && e2.inTask === 'avatar', `${e2.id0.name} #${e2.id0.id}, ${Math.floor(e2.id0.age)} anos, ${e2.id0.kids.length} filhos, ${e2.id0.bio} memórias`);
   ok('e2 anda com ela', e2.moved > e2.want, `${e2.moved.toFixed(1)} m em 4,6 s — o passo do mundo para ela, ${e2.pace.toFixed(2)} m/s: pede ${e2.want.toFixed(1)} m (${e2.how})`);
-  ok('e2 a mesma pessoa depois (id, família, casa, povo)', e2.alive && e2.same2 && e2.same === 1 && JSON.stringify([e2.id0.name, e2.id0.mother, e2.id0.father, e2.id0.partner, e2.id0.kids, e2.id0.home, e2.id0.set, e2.id0.role]) === JSON.stringify([e2.after.name, e2.after.mother, e2.after.father, e2.after.partner, e2.after.kids, e2.after.home, e2.after.set, e2.after.role]) && e2.after.age > e2.id0.age, `mesmo objeto: ${e2.same2}; idade ${e2.id0.age.toFixed(3)} → ${e2.after && e2.after.age.toFixed(3)}; histórias ${e2.id0.stories || '-'} → ${e2.after && e2.after.stories || '-'}`);
+  ok('e2 a mesma pessoa depois (id, família, casa, povo)', e2.alive && e2.same2 && e2.same === 1 && JSON.stringify([e2.id0.name, e2.id0.mother, e2.id0.father, e2.id0.partner, e2.id0.kids, e2.id0.home, e2.id0.set, e2.id0.role]) === JSON.stringify([e2.after.name, e2.after.mother, e2.after.father, e2.after.partner, e2.after.kids, e2.after.home, e2.after.set, e2.after.role]) && e2.after.age > e2.id0.age, `mesmo objeto: ${e2.same2}; vivo ${e2.alive}; same ${e2.same}; idade ${e2.id0.age.toFixed(3)} → ${e2.after && e2.after.age.toFixed(3)}; histórias ${e2.id0.stories || '-'} → ${e2.after && e2.after.stories || '-'}${e2.after ? '; mudou: ' + (['name', 'mother', 'father', 'partner', 'kids', 'home', 'set', 'role'].filter(k => JSON.stringify(e2.id0[k]) !== JSON.stringify(e2.after[k])).map(k => `${k} ${JSON.stringify(e2.id0[k])} → ${JSON.stringify(e2.after[k])}`).join(', ') || 'nada') : ''}`);
   ok('e2 volta ao Modo Deus: exatamente onde foi deixada, selecionada; depois a IA de novo', e2.left && !e2.avatar && e2.ai && e2.sel && e2.leftAt < 0.05, `a ${e2.leftAt.toFixed(2)} m de onde o jogador a deixou quando o Modo Deus voltou; tarefa depois: ${e2.task}`);
   ok('e2 a biografia lembra', !!e2.bio && /guiad/.test(e2.bio.txt), e2.bio ? e2.bio.txt : '-');
   ok('e2 verificador', !e2.qa.length, e2.qa.slice(0, 3).join(' · ') || 'limpo');
@@ -817,8 +817,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     G.Avatar.place(p0[0], p0[1]); __E.f(4); const b = __E.body(); const a = G.Animals.spawn('ovelha', b.x + 0.4, b.y);
     out.pet = null; if (a) { a.dom = true; __E.f(2); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'carinho'); const ts = near(pr.find(ctx)); const d0 = A().carinho || 0;
       if (ts.length) { st.yaw = Math.atan2(ts[0].Z - st.Z, ts[0].X - st.X); __E.f(1); const r = G.Interact.run({ id: 'carinho', t: ts[0] }); __E.until(() => !G.Avatar.busy(), 200); out.pet = { ran: !!(r && r.ok), deed: (A().carinho || 0) - d0 }; } else out.pet = { found: 0 }; }
-    // gold on the ground (the god's rain, a dragon's hoard): picked up before the others get there — into the house, or the hands
-    G.Avatar.place(p0[0], p0[1]); __E.f(4);
+    // gold on the ground (the god's rain, a dragon's hoard): picked up before the others get there — into the house, or the hands.
+    // (on open ground, by rule: the nearest tile the feet reach with open ground all round it — the coins fall on ground only;
+    // where the body had stood, among houses, no coin fell within its reach in the cidade of the 11th generation, T-361)
+    const openAt = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 2; dx++) { const X = x + dx, Y = y + dy; if (!G.W.inb(X, Y)) return false; const i = G.W.idx(X, Y); if (G.S.type[i] < G.T.SAND || !G.W.walkable(i)) return false; } return true; };
+    let gp = null; for (let r = 0; r <= 14 && !gp; r++) for (let dy = -r; dy <= r && !gp; dy++) for (let dx = -r; dx <= r && !gp; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = Math.floor(p0[0]) + dx + 0.5, y = Math.floor(p0[1]) + dy + 0.5; if (openAt(x, y) && G.W.reaches(__E.body(), x, y)) gp = [x, y]; }
+    G.Avatar.place((gp || p0)[0], (gp || p0)[1]); __E.f(4);
     { const b = __E.body(); const h = G.Eco.homeOf(b); const c0 = h ? h.coin || 0 : b.purse || 0; const k0 = b.carry && b.carry.k === 'ouro' ? b.carry.n : 0;
       G.Powers.spillGold(b.x + 0.5, b.y, 12, G.Fac.idOfV(b), 'um teste'); const ctx = G.Interact.ctx(); const pr = G.Interact.list.find(q => q.id === 'ouro'); const ts = near(pr.find(ctx)); const d0 = A().ouro || 0;
       out.gold = { piles: ts.length };
