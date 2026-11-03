@@ -87,7 +87,7 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
       // of the sea — X.consider counts it apart too; on the line's 47aac4a the egípcios' colony of the year 21 tied them with
       // the Norse, 9 and 9 — T-189)
       worlds.push(await R(() => {
-        const out = []; for (const f of G.Fac.all()) { const c = G.CIVS[f.civ]; const ex = T.exps(f.id); out.push({ n: f.name, civ: f.civ, naval: c && c.traits.naval || 1, aff: +G.Expe.prof(f).aff.toFixed(2), exps: ex.filter(e => e.kind !== 'colonia').length, cols: ex.filter(e => e.kind === 'colonia').length, boats: G.S.ships.filter(s => s.fac === f.id && s.kind === 'pesca').length }); }
+        const out = []; for (const f of G.Fac.all()) { const c = G.CIVS[f.civ]; const ex = T.exps(f.id); out.push({ n: f.name, civ: f.civ, naval: c && c.traits.naval || 1, aff: +G.Expe.prof(f).aff.toFixed(2), exps: ex.filter(e => e.kind !== 'colonia').length, cols: ex.filter(e => e.kind === 'colonia').length, boats: G.S.ships.filter(s => s.fac === f.id && s.kind === 'pesca').length, docks: [...G.S.buildings.values()].filter(b => (b.type === 'doca' || (b.type === 'ruin' && b.origType === 'doca')) && G.Village.facOfSet(b.set) === f.id).length }); }
         return out.sort((a, b) => b.naval - a.naval);
       }));
     }
@@ -100,7 +100,12 @@ const CASE = process.argv[2] || 'rich'; const seed = +(process.argv[3] || 7);
     const line = all.map(x => `${x.civ} (tradição naval ${x.naval}, afinidade ${Math.min(...x.aff)}–${Math.max(...x.aff)}): ${x.exps.join('+')} = ${sum(x)} expedições${x.cols ? ` (e ${x.cols} de colônia)` : ''}, barcos de pesca ${x.boats.join('/')}`).join(' · ');
     const shaped = per.every(p => p.sea.length && p.land.length);
     ok('3 cultura aventureira explora mais', shaped && A >= B * 1.5 && A >= 4 * NW, `${NW} mundos de ilhas, 25 anos cada (${((Date.now() - t0) / 1000).toFixed(0)} s): ${line} · a melhor do mar em cada mundo ${per.map(p => p.a).join('+')} = ${A}, a que menos foi ${per.map(p => p.b).join('+')} = ${B}`);
-    ok('4 cultura não marítima explora menos', shaped && land.every(x => sum(x) < A) && per.every(p => p.land.every(x => x.boats >= 1)), `as de pouca tradição naval exploram menos que as do mar — mas, vivendo em ilhas, todas pescam e se lançam ao mar (${land.map(x => x.civ + ': ' + sum(x)).join(', ')}, contra ${A} da melhor do mar em cada mundo)`);
+    // (and they fish: fishing boats at the end of the 25 years, or the quay that had them — standing, being raised again, or burnt
+    // down: a quay that falls takes its boats with it (fishers.js). With the code of 724fe42 the quays of Mênfis and Roma burnt in
+    // the years 22 and 23 of the second world, the boats with them, and the new quays were still going up in the year 25 — the
+    // people had fished for twenty years, T-383)
+    const fished = x => x.boats >= 1 || x.docks >= 1;
+    ok('4 cultura não marítima explora menos', shaped && land.every(x => sum(x) < A) && per.every(p => p.land.every(fished)), `as de pouca tradição naval exploram menos que as do mar — mas, vivendo em ilhas, todas pescam e se lançam ao mar (${land.map(x => x.civ + ': ' + sum(x)).join(', ')}, contra ${A} da melhor do mar em cada mundo)`);
   }
 
   if (CASE === 'fisher') {

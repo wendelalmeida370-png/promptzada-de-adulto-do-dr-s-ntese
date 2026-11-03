@@ -457,11 +457,15 @@ const key = process.argv[2] || 'cidade';
       const S = G.S; __H.toDay();
       for (const v of S.villagers.values()) { const t = v.task; if (!t || t.type !== 'combat' || t.duel) continue; const o = S.villagers.get(t.id); if (o && G.Fac.atWar(G.Fac.idOfV(v), G.Fac.idOfV(o)) && G.Powers.canCast('duel', v.x, v.y)) return [v.x, v.y]; }
       const fit = sid => [...S.villagers.values()].filter(v => v.set === sid && v.age >= 18 && v.age < 50 && !v.captive && !v.aboard && !v.jail && !v.ug && !v.inside && v.hp > 60).sort((a, b) => a.id - b.id);
-      let best = null, bd = 1e18;
-      for (const a of S.settlements.values()) for (const b of S.settlements.values()) { if (a.fac === b.fac || !G.Fac.atWar(a.fac, b.fac) || !G.W.townsLinked(a, b) || fit(a.id).length < 4 || fit(b.id).length < 4) continue; const d = G.dist2(a.cx, a.cy, b.cx, b.cy); if (d < bd) { bd = d; best = [a, b]; } }
+      // (the two towns at war, linked by land, that can field the most a side — four, as before, where any pair can —, then the
+      // nearest: the duel needs one warrior a side (fates.js, champions). In the world war of the generation 13 the Grand
+      // Coalition was ending its war with two small peoples — Ribe with 3 grown ones fit to fight, Uppsala with 1 —, and with
+      // four a side asked there was no battle to stage, T-384)
+      let best = null, bd = 1e18, bn = 0;
+      for (const a of S.settlements.values()) for (const b of S.settlements.values()) { if (a.fac === b.fac || !G.Fac.atWar(a.fac, b.fac) || !G.W.townsLinked(a, b)) continue; const n = Math.min(4, fit(a.id).length, fit(b.id).length); if (n < 1) continue; const d = G.dist2(a.cx, a.cy, b.cx, b.cy); if (n > bn || (n === bn && d < bd)) { bn = n; bd = d; best = [a, b]; } }
       if (!best) return null;
       const [A, B] = best; const at = G.W.randomNear(B.cx + 4, B.cy + 4, 4) || [B.cx, B.cy];
-      const ma = fit(A.id).slice(0, 4), mb = fit(B.id).slice(0, 4);
+      const ma = fit(A.id).slice(0, bn), mb = fit(B.id).slice(0, bn);
       ma.forEach((v, k) => { G.Vg.endTask(v); v.x = at[0] - 0.6; v.y = at[1] + k * 0.4; v.role = 'guerreiro'; });
       mb.forEach((v, k) => { G.Vg.endTask(v); v.x = at[0] + 0.6; v.y = at[1] + k * 0.4; v.role = 'guerreiro'; });
       ma.forEach((v, k) => { G.Vg.H.setTask(v, { type: 'combat', id: mb[k].id, pri: 4.2, kind: 'combat' }); G.Vg.H.setTask(mb[k], { type: 'combat', id: v.id, pri: 4.2, def: true, kind: 'combat' }); });
