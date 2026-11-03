@@ -836,6 +836,8 @@
   const r3 = x => Math.round(x * 1000) / 1000;
   const pt = p => (Array.isArray(p) ? p.map(r3) : null);
   const pts = L => (Array.isArray(L) ? L.filter(p => Array.isArray(p) && p.length >= 2 && p.every(Number.isFinite)) : []);
+  // (the day a feast began goes with it: its end in the chronicle says «of the year N» when it ends on another day — a feast
+  // across a save ended «do ano undefined», L-464; a save of before has none, and the feast counts from the day it is opened)
   (G.saveHooks = G.saveHooks || []).push({
     save(out) {
       reset(); const S = G.S;
@@ -846,7 +848,7 @@
           id: fe.id, key: fe.key, set: fe.set, fac: fe.fac, t: r3(fe.t), len: r3(fe.len), stage: fe.stage, sname: fe.sname, sdur: r3(fe.sdur), stT: r3(fe.stT), arrived: fe.arrived || 0,
           parts: fe.parts.slice(), roles: fe.roles, who, trail: (fe.trail || []).map(pt), props: fe.props, lit: [...fe.lit], dark: !!fe.dark, note: fe.note, grand: !!fe.grand, truce: !!fe.truce, torches: !!fe.torches,
           A: pt(fe.A), B: pt(fe.B), C: pt(fe.C), T: fe.T ? fe.T.id : 0, course: pt(fe.course), victim: fe.victim || 0, ledBy: (a && a.ledBy) || 0, victimV: fe.victimV || 0, animalPen: fe.animalPen || 0,
-          plan: fe.plan, leaderAt: fe.leaderAt === undefined ? -1 : fe.leaderAt, riteDone: !!fe.riteDone, houses: fe.houses || null, hk: fe.hk || 0, winner: fe.winner || 0, food: r3(fe.food || 0), owe: r3(fe.owe || 0), racers: fe.racers || null,
+          plan: fe.plan, day0: fe.day0, leaderAt: fe.leaderAt === undefined ? -1 : fe.leaderAt, riteDone: !!fe.riteDone, houses: fe.houses || null, hk: fe.hk || 0, winner: fe.winner || 0, food: r3(fe.food || 0), owe: r3(fe.owe || 0), racers: fe.racers || null,
         };
       });
     },
@@ -860,7 +862,7 @@
           id: x.id, key: x.key, set: x.set, fac: x.fac, t: +x.t || 0, len: +x.len || 1, stage: x.stage | 0, sname: x.plan[x.stage | 0][0], sdur: +x.sdur || 1, stT: +x.stT || 0, st: 0, arrived: +x.arrived || 0, arrT: 0,
           parts: (x.parts || []).filter(id => S.villagers.has(id)), roles: {}, trail: pts(x.trail), props: x.props && typeof x.props === 'object' ? x.props : {}, lit: new Set(Array.isArray(x.lit) ? x.lit : []), dark: !!x.dark, fx: [], note: x.note && typeof x.note === 'object' ? x.note : {},
           grand: !!x.grand, truce: !!x.truce, torches: !!x.torches, A: P(x.A), B: P(x.B), C: P(x.C), T: x.T ? S.buildings.get(x.T) || null : null, course: Array.isArray(x.course) && x.course.length === 4 ? x.course : null,
-          victim: x.victim || 0, victimV: x.victimV || 0, animalPen: x.animalPen || 0, plan: x.plan, leaderAt: Number.isFinite(x.leaderAt) && x.leaderAt >= 0 ? x.leaderAt : undefined, riteDone: !!x.riteDone,
+          victim: x.victim || 0, victimV: x.victimV || 0, animalPen: x.animalPen || 0, plan: x.plan, day0: Number.isInteger(x.day0) ? x.day0 : S.day, leaderAt: Number.isFinite(x.leaderAt) && x.leaderAt >= 0 ? x.leaderAt : undefined, riteDone: !!x.riteDone,
           houses: Array.isArray(x.houses) ? x.houses : undefined, hk: x.hk | 0, winner: x.winner || 0, food: +x.food || 0, owe: +x.owe || 0, racers: x.racers && typeof x.racers === 'object' ? x.racers : {}, orderStage: -1,
         };
         for (const k in x.roles || {}) if (Array.isArray(x.roles[k])) fe.roles[k] = x.roles[k].filter(id => S.villagers.has(id));

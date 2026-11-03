@@ -1189,7 +1189,7 @@ if (want('l10')) {
   const woken = fe ? fe.parts.filter(id => kidsAsleep.has(id) && !Object.values(fe.roles).some(l => l.includes(id))) : [];
   if (!fe) ok('l10 a festa atravessa o save', false, `${set.name} (${f.civ}) não começou nenhuma festa: ${keys.join(', ')}`);
   else {
-    const id = fe.id, key = fe.key; live(10);
+    const id = fe.id, key = fe.key, day0 = fe.day0, n0 = S.logN || 0; live(10);
     const st = x => x ? [x.key, x.stage, x.parts.length, x.parts.filter(pid => { const v = S.villagers.get(pid); return v && v.task && v.task.type === 'fest' && v.task.fid === x.id; }).length].join('/') : 'sumiu';
     const before = st(G.Fest.list().find(x => x.id === id));
     M.salvarCarregar(); S = G.S;
@@ -1200,8 +1200,11 @@ if (want('l10')) {
     const feast = book(e => e[0] > L0 && e[3] === 'f:' + f.id && e[5] === 'food' && (e[8] === 'banquete' || e[8] === 'festa'));
     const eaten = r2(feast.reduce((s, e) => s + e[6], 0));
     const plan = (fe2 || fe).plan || []; const hasFeast = plan.some(s => s[0] === 'feast');
-    ok('l10 a festa atravessa o save', before === after && ended >= 0 && !stuck && (!hasFeast || feast.length >= 1) && !woken.length,
-      `${key} em ${set.name} às ${fmtT(0.8)}: ${kidsAsleep.size} crianças dormindo, ${woken.length ? `${woken.length} ARRANCADAS DA CAMA para a plateia` : 'nenhuma arrancada da cama para a plateia'}; antes do save ${before}, depois ${after} (festa/etapa/participantes/na festa); ${ended >= 0 ? 'terminou' : 'NÃO TERMINOU'}${stuck ? `, ${stuck} AINDA NA FESTA` : ''}; o banquete no livro: ${feast.length} linha(s), ${eaten} de comida${hasFeast ? '' : ' (esta festa não tem banquete)'}`);
+    // (its end in the chronicle: the year it began, never «undefined» — the day it began went with it through the save, L-464)
+    const endL = (S.history || []).find(h => h.n > n0 && h.ic === 'fest' && /^Terminou|^Terminaram/.test(h.txt) && h.txt.includes(' em ' + set.name + ':')); const yr = endL && endL.txt.match(/ do ano (\S+)/);
+    const endOk = !!endL && !/undefined/.test(endL.txt) && (!yr || +yr[1] === day0);
+    ok('l10 a festa atravessa o save', before === after && ended >= 0 && !stuck && (!hasFeast || feast.length >= 1) && !woken.length && endOk,
+      `${key} em ${set.name} às ${fmtT(0.8)}: ${kidsAsleep.size} crianças dormindo, ${woken.length ? `${woken.length} ARRANCADAS DA CAMA para a plateia` : 'nenhuma arrancada da cama para a plateia'}; antes do save ${before}, depois ${after} (festa/etapa/participantes/na festa); ${ended >= 0 ? 'terminou' : 'NÃO TERMINOU'}${stuck ? `, ${stuck} AINDA NA FESTA` : ''}; o banquete no livro: ${feast.length} linha(s), ${eaten} de comida${hasFeast ? '' : ' (esta festa não tem banquete)'}; o fim na crônica: ${endL ? `«${endL.txt.slice(0, 90)}»${endOk ? '' : ' — O ANO ERRADO'}` : 'NENHUMA LINHA'} (começou no ano ${day0})`);
   }
 }
 
