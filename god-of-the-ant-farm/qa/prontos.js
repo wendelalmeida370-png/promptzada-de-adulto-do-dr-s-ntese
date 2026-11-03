@@ -14,11 +14,13 @@ const OUT = process.env.OUT || path.join(ROOT, 'worlds');
 // has not begun by itself, the game's own start of a world war is called: the world chooses the reason and the sides,
 // only the moment is ours); { after: seconds } a little more, so the armies are on the move; { snap } keep it
 // (as sementes são as do navegador das provas: com outro motor de JavaScript o mesmo número faz outro mundo, e uma semente
-// que chegava à meta pode não chegar — T-123; no Chrome 153 a megalópole 3303 parou no nível 4 e a 3305 chegou)
+// que chegava à meta pode não chegar — T-123; no Chrome 153 a megalópole 3303 parou no nível 4 e a 3305 chegou; com os
+// consertos do fechamento do Patch 2 a 3305 parou no nível 4 — uma guerra longa, ano 167 —, a 3306 chegou só no ano 108 e a
+// 3309 no 65: T-362)
 const KINDS = {
   cidade: { seed: 3101, opts: { type: 'continente', size: 128, tribes: 4 }, legs: [{ goal: 'cidade', course: 'fartura' }, { snap: 'cidade' }] },
   metropole: { seed: 3202, opts: { type: 'continente', size: 160, tribes: 5 }, legs: [{ goal: 'metropole', course: 'fartura' }, { snap: 'metropole' }] },
-  mega: { seed: 3305, opts: { type: 'continente', size: 160, tribes: 4 }, legs: [{ goal: 'mega', course: 'fartura' }, { snap: 'mega' }] },
+  mega: { seed: 3309, opts: { type: 'continente', size: 160, tribes: 4 }, legs: [{ goal: 'mega', course: 'fartura' }, { snap: 'mega' }] },
   mundial: { seed: 3510, opts: { type: 'continente', size: 160, tribes: 6 }, legs: [{ goal: 'metropole', course: 'fartura' }, { ww: 80 }, { after: 60 }, { snap: 'mundial' }] },
   anos: { seed: 3404, opts: { type: 'continente', size: 128, tribes: 5 }, legs: [{ years: 100 }, { snap: 'anos100' }, { years: 400 }, { snap: 'anos500' }, { years: 500 }, { snap: 'anos1000' }] },
 };

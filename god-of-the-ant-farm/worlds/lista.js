@@ -20,8 +20,8 @@ G.Ready.list({
   "bytes": 963298
  },
  "metropole": {
-  "day": 72,
-  "pop": 1107,
+  "day": 69,
+  "pop": 953,
   "peoples": 5,
   "towns": 19,
   "N": 160,
@@ -30,48 +30,48 @@ G.Ready.list({
   "city": {
    "name": "Mênfis",
    "tier": 4,
-   "pop": 136
+   "pop": 50
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 4306732
+  "bytes": 3964850
  },
  "mega": {
-  "day": 66,
-  "pop": 864,
+  "day": 65,
+  "pop": 632,
   "peoples": 4,
-  "towns": 18,
+  "towns": 19,
   "N": 160,
   "map": "continente",
-  "seed": 3305,
+  "seed": 3309,
   "city": {
    "name": "Mênfis",
    "tier": 5,
-   "pop": 209
+   "pop": 229
   },
   "wars": 0,
   "ww": null,
-  "world": "Ysessa",
-  "bytes": 3249013
+  "world": "Thalael",
+  "bytes": 3192949
  },
  "mundial": {
-  "day": 85,
-  "pop": 566,
+  "day": 78,
+  "pop": 621,
   "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Birka",
+   "name": "Tebas",
    "tier": 4,
-   "pop": 67
+   "pop": 110
   },
-  "wars": 1,
-  "ww": "a Guerra da Coroa",
+  "wars": 2,
+  "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 4197666
+  "bytes": 4223535
  },
  "anos100": {
   "day": 101,
