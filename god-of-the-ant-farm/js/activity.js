@@ -872,6 +872,9 @@
   const board0 = G.Naval && G.Naval.board;
   if (board0) G.Naval.board = function (v) { if (v) letGo(v, 'embarcou'); return board0.apply(this, arguments); };
   // who dies with a load of an operation in the arms drops it where they fell (a thing on the ground, for another hand)
+  // (and the dead aboard leave theirs as the drowned do — the sinking puts them over the side first —: a load for a place to
+  // its place, a plain load to the store; an arrow on the deck took a purchase out of the world with no line, L-460. An
+  // operation's load never goes aboard: it is put down at the plank, letGo)
   const kill0 = G.Village.kill;
   G.Village.kill = function (v, cause, byGod) {
     const c = v && v.carry;
@@ -879,12 +882,12 @@
       const op = c.op && A.get(c.op);
       D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op && live(op) ? op.id : 0, code: 'caiu', by: v.id, fac: G.Fac.idOfV(v) });
       if (op) A.log(op, 'caiu', v.id, cause || '');
-    } else if (c && c.n > EPS && c.to && D.exists(c.to) && G.S.villagers.has(v.id) && !v.aboard) {
+    } else if (c && c.n > EPS && c.to && D.exists(c.to) && G.S.villagers.has(v.id)) {
       // (a load for a place — a purchase on its way home, goods for a stall — is its owner's: it goes there, with the cause —
       // a house takes all of its own, on the floor if need be, D-059 —; what a stall has no room for, to the people's store)
       D.move('v:' + v.id, c.to, c.k, c.n, { code: 'herdado', by: v.id, part: true, floor: c.to[0] === 'h' });
       const fid = G.Fac.idOfV(v); if (v.carry && v.carry.n > EPS && D.exists('f:' + fid)) D.move('v:' + v.id, 'f:' + fid, v.carry.k, v.carry.n, { code: 'herdado', by: v.id, part: true });
-    } else if (c && c.n > EPS && !c.op && !c.to && !c.cid && c.k !== 'moedas' && G.S.villagers.has(v.id) && !v.aboard) {
+    } else if (c && c.n > EPS && !c.op && !c.to && !c.cid && c.k !== 'moedas' && G.S.villagers.has(v.id)) {
       // (a plain load — the day's wood, a basket of berries — is the people's: into its store, with the cause, as the
       // delivery would have done, what does not fit lost in writing; water is poured out. It went with the dead, unwritten:
       // L-186)

@@ -107,6 +107,14 @@
     }
     return false;
   }
+  // the course ahead of a ship is water all the way, leg by leg — the same walk over the grid its sea path was drawn with (the
+  // ground that changes under a course asks this: L-454)
+  Nv.courseClear = function (s) {
+    if (!s.path) return true;
+    let ax = s.x, ay = s.y;
+    for (let k = s.pi; k < s.path.length; k++) { const p = s.path[k]; if (!losWater(ax, ay, p[0], p[1])) return false; ax = p[0]; ay = p[1]; }
+    return true;
+  };
   function smooth(pts) {
     if (pts.length <= 2) return pts.slice(1);
     const out = []; let a = 0;

@@ -430,6 +430,9 @@
       for (const id of crew) { const v = P(id); if (!v && sh.kind !== 'pesca') add('sea', 3, `${nm}: tripulante ${id} morto ainda na lista`); else if (v && v.aboard && v.aboard !== sh.id) add('sea', 2, `${nm}: tripulante ${v.name} está a bordo de outro navio ${v.aboard}`); }
       const i = G.W.idx(sh.x, sh.y); const moving = !{ idle: 1, build: 1, board: 1, dock: 1, prep: 1, unload: 1, embark: 1, wait: 1, land: 1 }[sh.st];
       if (moving && s.type[i] > G.T.SEA && s.type[i] !== G.T.RIVER) add('sea', 2, `${nm}: navegando (${sh.st}) em terra (${s.type[i]})`);
+      // (and one at rest as well: a hull the world left on the sand sails on it the next time it is used — the transport the
+      // landing sent across an island lay there at anchor, unseen, until a fleet took it 37 acts later: T-344)
+      else if (!moving && s.type[i] > G.T.SEA && s.type[i] !== G.T.RIVER) add('sea', 2, `${nm}: parado (${sh.st}) em terra (${s.type[i]})`);
       const aboard = [...s.villagers.values()].filter(v => v.aboard === sh.id).length;
       if (moving && !aboard && !sh.ghost && sh.st !== 'deriva' && sh.kind !== 'pesca' && sh.kind !== 'mercante') add('sea', 3, `${nm}: navegando (${sh.st}) sem ninguém a bordo`);
       if (sh.kind === 'pesca' && moving && !aboard && sh.st !== 'adrift') add('sea', 3, `${nm}: barco de pesca (${sh.st}) sem ninguém a bordo`);

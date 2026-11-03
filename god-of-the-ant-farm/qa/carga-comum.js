@@ -9,7 +9,9 @@
 // idem; m6 o mariscar, idem; m7 save/load no meio — a criança indo ao armazém, e dormindo com a carga —: a carga chega;
 // m8 a criança morre no meio: a carga vai ao estoque do povo pelo livro ('herdado'), não some com ela; m9 a tripulação de
 // uma expedição guarda a carga no armazém antes do cais; m10 o verificador vê a carga parada nas mãos de uma criança de
-// dia; m11 quem desce à mina com carga nas mãos sobe com ela: o achado da caverna não escreve por cima (L-202); e o
+// dia; m11 quem desce à mina com carga nas mãos sobe com ela: o achado da caverna não escreve por cima (L-202); m12 quem
+// morre a bordo (uma flecha no convés) deixa a carga como o afogado: a compra vai para casa, a carga comum ao estoque, pelo
+// livro (L-460); e o
 // verificador limpo, sem erro de módulo. Quem o caso precisa (a criança, o arbusto, a árvore, a colmeia, a praia
 // na maré baixa, o povo do mar) vem pela regra; sem um que sirva, o caso falha dizendo o que falta.
 const M = require('./nodemundo.js');
@@ -333,6 +335,33 @@ S.weather.storm = 0;
     break;
   }
   ok('m11 a caverna não escreve por cima das mãos', fine && !look().length, info);
+}
+// ---------------- m12: the dead aboard leave their load as the drowned do (L-460): an arrow on the deck — the test's hand puts
+// one aboard with a purchase on its way home, and one with a plain load —: the purchase goes home and the plain load to the
+// people's store, in the ledger ('herdado'). Both went out of the world with no line (the killing skipped whoever was aboard),
+// and the checker saw the marked one vanish (S1): the caos 13 of the closing's regression, with the L-453 fix — Citlali, of
+// a warship's crew, with 8 of food for home in the hands
+{
+  S.time = 0.3;
+  const ship = [...S.ships].filter(s => s.st !== 'build' && !s.sunk).sort((a, b) => a.id - b.id)[0];
+  const a = person(18, 50, q => G.Depot.exists('h:' + q.home)), b = person(18, 50);
+  if (!ship || !a || !b) ok('m12 quem morre a bordo deixa a carga pelo livro', false, !ship ? 'nenhum navio no mundo' : 'nenhum adulto livre');
+  else {
+    G.Vg.endTask(a); D.make('v:' + a.id, 'food', 3, { code: 'teste', to: 'h:' + a.home });
+    const okB = give(b, 'wood', 2); const buy = a.carry && a.carry.to === 'h:' + a.home && a.carry.n === 3;
+    G.Naval.board(a, ship); G.Naval.board(b, ship);
+    const aboard = a.aboard === ship.id && b.aboard === ship.id && hands(a) === '3 de food (marcada)' && hands(b) === '2 de wood';
+    look(); // (the checker knows the marked load in the hands)
+    const n0 = lines.length, f = store(b), was = D.get(f, 'wood'), home = 'h:' + a.home, food0 = D.get(home, 'food');
+    G.Vg.damage(a, 500, 'arrow'); G.Vg.damage(b, 500, 'arrow');
+    const outA = outOf(a.id, n0), outB = outOf(b.id, n0); const bad = look().map(q => q.msg);
+    const fine = buy && okB && aboard && !S.villagers.has(a.id) && !S.villagers.has(b.id) &&
+      Math.abs(sum(outA.filter(e => e[8] === 'herdado' && e[4] === home)) - 3) < 1e-6 && Math.abs(sum(outB.filter(e => e[8] === 'herdado' && e[4] === f)) - 2) < 1e-6 && !bad.length;
+    ok('m12 quem morre a bordo deixa a carga pelo livro', fine,
+      `${ship.kind}#${ship.id}: ${nm(a)} a bordo com ${hands(a) === 'nada' ? '3 de food para casa' : hands(a)}${aboard ? '' : ' (NÃO embarcou como o caso pede)'}, e ${nm(b)} com 2 de lenha; uma flecha em cada um: ` +
+      `${outA.length ? outA.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NENHUM lançamento — a compra sumiu com ela'} (a casa ${r2(D.get(home, 'food') - food0)} de comida); ` +
+      `${outB.length ? outB.map(e => `${e[8]} ${e[6]} para ${e[4]}`).join(', ') : 'NENHUM lançamento — a lenha sumiu com ele'} (o estoque ${r2(D.get(f, 'wood') - was)} de lenha)${bad.length ? '; o verificador: ' + bad.slice(0, 2).join(' · ') : ''}`);
+  }
 }
 
 const e = M.erros();

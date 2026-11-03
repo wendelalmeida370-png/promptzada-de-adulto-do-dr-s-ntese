@@ -109,8 +109,9 @@
     const set = new Set(p.tiles);
     for (const s of [...S.ships]) {
       if (set.has(W.idx(s.x, s.y))) { const q = nearestSea(s.x, s.y); if (!q) { G.Naval.sink(s, null, 'god'); continue; } s.x = q[0]; s.y = q[1]; }
-      // (a course across the bed is a course into a wall: plotted again)
-      if (s.path && s.path.slice(s.pi).some(q => set.has(W.idx(q[0], q[1])))) { const last = s.path[s.path.length - 1]; const np = G.Naval.seaPath(s.x, s.y, last[0], last[1]); s.path = np || null; s.pi = 0; }
+      // (a course across the bed is a course into a wall: plotted again — the whole course ahead, leg by leg, and not only its
+      // turns: a straight leg over the bed between two of them is as much in the way, L-454)
+      if (s.path && s.pi < s.path.length && !G.Naval.courseClear(s)) { const last = s.path[s.path.length - 1]; const np = G.Naval.seaPath(s.x, s.y, last[0], last[1]); s.path = np || null; s.pi = 0; }
     }
     S.fish = S.fish.filter(f => !set.has(W.idx(f.x, f.y)));
     for (const a of S.animals.values()) {

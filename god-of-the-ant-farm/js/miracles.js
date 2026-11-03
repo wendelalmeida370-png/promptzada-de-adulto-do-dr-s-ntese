@@ -236,7 +236,9 @@
       for (const s of [...S.ships]) {
         const i = W.idx(s.x, s.y);
         if (!water(i)) { const p = nearestWater(s.x, s.y, 7); if (!p) { G.Naval.sink(s, null, 'god'); continue; } s.x = p[0]; s.y = p[1]; }
-        if (s.path && s.path.slice(s.pi).some(q => changed.has(W.idx(q[0], q[1])))) { const last = s.path[s.path.length - 1]; const np = G.Naval.seaPath(s.x, s.y, last[0], last[1]); if (np) { s.path = np; s.pi = 0; } else { s.path = null; s.pi = 0; } }
+        // (the whole course ahead, leg by leg, and not only its turns: new land between two of them is in the way as much — a
+        // fishing boat sailed on over the hill the god had just raised across its way home, L-454)
+        if (s.path && s.pi < s.path.length && !G.Naval.courseClear(s)) { const last = s.path[s.path.length - 1]; const np = G.Naval.seaPath(s.x, s.y, last[0], last[1]); if (np) { s.path = np; s.pi = 0; } else { s.path = null; s.pi = 0; } }
       }
       S.fish = S.fish.filter(f => water(W.idx(f.x, f.y)));
     }

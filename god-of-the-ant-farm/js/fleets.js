@@ -43,6 +43,8 @@
   Fl.MISSION = MISSION;
   const FORM = { linha: 'linha', coluna: 'coluna', crescente: 'meia-lua', defensiva: 'anel em volta dos transportes', flancos: 'duas alas' };
   Fl.FORM = FORM;
+  // how far off the beach a ship can put its soldiers into the water to wade ashore: the formation lying off it
+  Fl.WADE = 6;
 
   // ------------------------------ where at sea ------------------------------
   // "o Estreito de Svartey", "as Águas de Argos", "o Mar Aberto"
@@ -202,6 +204,9 @@
     });
   }
   function losW(ax, ay, bx, by) { const n = Math.ceil(Math.hypot(bx - ax, by - ay) / 0.4); for (let k = 1; k <= n; k++) { const f = k / n; const x = ax + (bx - ax) * f, y = ay + (by - ay) * f; if (!W.inb(x, y) || G.S.type[W.idx(x, y)] > T.SEA) return false; } return true; }
+  // by water to a point: straight there over open water, around the land when some is in the way, and nowhere when no sea
+  // leads there
+  function sailFor(s, w) { if (losW(s.x, s.y, w[0], w[1])) { s.path = [w]; s.pi = 0; return true; } if (Nv._sailTo(s, w[0], w[1])) return true; s.path = null; s.pi = 0; return false; }
 
   // ====================================================================================
   //  A FLEET, twice a second
@@ -631,7 +636,11 @@
         // the soldiers eat from the transports' stores (the army's wagons came aboard)
         if (arrived || G.dist(fl.x, fl.y, fl.land.water[0], fl.land.water[1]) < 2.5) {
           fl.st = 'desembarque'; fl.t = 0; fl.dq = 0;
-          for (const s of trs) { const w2 = Nv._nearestWater(fl.land.water[0] + G.rr(-1.5, 1.5), fl.land.water[1] + G.rr(-1.5, 1.5), 2) || fl.land.water; s.path = [w2]; s.pi = 0; }
+          // (each transport makes for the shallows of the beach by water, and the shallows of the beach's own sea: the centre
+          // of the fleet arrives, not every hull — one still on its way round an island was sent straight across it, and was
+          // left on the sand, L-453)
+          const bc = Nv.compAt(fl.land.water[0], fl.land.water[1]);
+          for (const s of trs) { let w2 = Nv._nearestWater(fl.land.water[0] + G.rr(-1.5, 1.5), fl.land.water[1] + G.rr(-1.5, 1.5), 2) || fl.land.water; if (Nv.compAt(w2[0], w2[1]) !== bc) w2 = fl.land.water; s.shallows = w2; sailFor(s, w2); }
           if (w) Wz.event(w, `Desembarque! Os transportes de ${f.name} encostam na praia perto de ${tgt ? tgt.name : 'terra inimiga'}, e os soldados pulam na água rasa.`, fl.land.land[0], fl.land.land[1], 'naval');
           G.Stories && G.Stories.signal('amphibiousLanding', { fleet: fl.id, army: a ? a.id : 0, fac: f.id, war: w ? w.id : 0, set: fl.target, x: fl.land.land[0], y: fl.land.land[1] });
           if (tgt) tgt.alarmT = Math.max(tgt.alarmT || 0, 25);
@@ -646,6 +655,9 @@
         const mem = new Set(a ? a.members : []);
         for (const s of ships) {
           const ab = s.kind === 'transporte' ? Nv.aboardOf(s) : Nv.aboardOf(s).filter(v => mem.has(v.id) && v.id !== fl.cmd); left += ab.length;
+          // (off a ship at the beach only: one still coming in keeps its soldiers until it is there — they were put on the sand
+          // from wherever it was, eighty tiles away round an island, L-453)
+          if (G.dist(s.x, s.y, fl.land.water[0], fl.land.water[1]) > Fl.WADE) continue;
           if (s.kind !== 'transporte') for (const v of ab.slice(0, 2)) { const k = s.crew.indexOf(v.id); if (k >= 0) s.crew.splice(k, 1); }
           for (const v of ab.slice(0, 2)) { Nv.unboard(v); const p = W.randomNear(fl.land.land[0], fl.land.land[1], 2) || fl.land.land; v.x = p[0]; v.y = p[1]; G.FX && G.FX.splash(v.x, v.y, 0.3); G.Vg.setTask(v, { type: 'praia', fleet: fl.id, k: (fl.landedN = (fl.landedN || 0) + 1), pri: 3.3, st: 0 }); }
         }
@@ -818,6 +830,9 @@
         for (const s of fl.ships.map(ship).filter(Boolean)) { s.grapple = 0; s.target = 0; s.path = null; }
         if (fl.st === 'navegar' || fl.st === 'casa' || fl.st === 'retirada') { const tg = fl.st === 'navegar' ? target(fl) : (() => { const d = S.buildings.get(fl.dock); const di = d && Nv.dockInfo(d); return di && di.moor; })(); if (tg) course(fl, tg[0], tg[1]); }
         if (fl.st === 'travessia' && fl.land) course(fl, fl.land.water[0], fl.land.water[1]);
+        // (the transports still coming in to the beach go on there: the save has the shallows each one makes for, not its course
+        // — a transport left without one stayed where it was, with its soldiers aboard, L-453)
+        if (fl.st === 'desembarque' && fl.land) for (const s of fl.ships.map(ship).filter(q => q && q.kind === 'transporte')) sailFor(s, s.shallows || fl.land.water);
         // soldiers waiting on the beach to re-embark keep going there
         if (fl.st === 'reembarque' || fl.st === 'espera') for (const v of S.villagers.values()) if (!v.aboard && G.Fac.idOfV(v) === fl.fac && fl.land && G.dist(v.x, v.y, fl.land.land[0], fl.land.land[1]) < 30 && !v.task) G.Vg.setTask(v, { type: 'reembarque', fleet: fl.id, pri: 3.1, st: 0 });
         if (fl.st === 'embarque') { const a = Wz.army(fl.army); if (a) a.embT = S.clock; }
