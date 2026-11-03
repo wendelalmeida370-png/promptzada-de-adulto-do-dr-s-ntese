@@ -2,7 +2,8 @@
 // a blessed world grows until its first metropolis (or the years run out), then:
 //  1 the quarters are born from the town: each one's vocation is in its buildings
 //  2 every quarter has a name of its own in its town, and keeps it (ids, names and history survive a save)
-//  3 the land of the noble quarters is worth more than the land of the popular ones
+//  3 the land of the noble quarters is worth more than the land of their own town (its popular quarters, or its other ones);
+//    with no noble quarter anywhere, the old heart's more than the popular quarters' of its town
 //  4 the town grows from many cores, not only around its fire
 //  5 avenues join the hearth to the cores, and they are paved before the side streets
 //  6 a city spreads out: the edge of town sleeps fewer people per patch than its heart
@@ -85,10 +86,28 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
   const lost = before.filter(b => !after.some(a => JSON.stringify(a) === JSON.stringify(b)));
   const back = clock1 !== null && Math.abs(clock1 - clock0) < 1e-6;
   ok('2 nomes únicos e guardados no save', !dup.length && !lost.length && all.length > 0 && back, `${all.length} bairros; repetidos: ${dup.map(t => t.name).join(', ') || 'nenhum'}; mudaram no save: ${lost.map(b => b[1]).join(', ') || 'nenhum'}; ${clock1 === null ? 'o save NÃO carregou em 60 s' : back ? 'carregado o save de agora' : `carregado OUTRO save (relógio ${Math.round(clock1)}, salvo no ${Math.round(clock0)})`}`);
-  // 3 the noble quarters' land is dearer
-  const val = k => { const l = all.filter(d => d.k === k && d.st); return l.length ? l.reduce((n, d) => n + d.st.value, 0) / l.length : null; };
-  const vn = val('nobre'), vp = val('popular'), vc = val('centro');
-  ok('3 a terra vale mais no bairro nobre', vn === null || vp === null ? (vc !== null && vp !== null ? vc > vp : true) : vn > vp, `nobre ${vn === null ? '—' : Math.round(vn)}, centro ${vc === null ? '—' : Math.round(vc)}, popular ${vp === null ? '—' : Math.round(vp)}${vn === null ? ' (sem bairro nobre ainda)' : ''}`);
+  // 3 the noble quarters' land is dearer — than the land of its own town: the noble quarter against the popular ones of its town,
+  // or, with none, against the other quarters of its town but the old heart (the heart is dear by its own rule); a town with no
+  // noble quarter, or nothing to set it against, is information only. Over the towns: dearer in at least half of them, and
+  // dearer on the whole. (Across towns the land is not the same land: the two noble quarters of Mênfis and Argos against the
+  // one popular quarter of Uppsala, new on good land, read «nobre 48, popular 52»; and with no popular quarter anywhere the
+  // case passed by default, T-335)
+  const vOf = l => (l.length ? l.reduce((n, d) => n + d.st.value, 0) / l.length : null);
+  const pairs = towns.map(t => {
+    const ds = t.ds.filter(d => d.st); const nob = ds.filter(d => d.k === 'nobre'); if (!nob.length) return null;
+    const pop = ds.filter(d => d.k === 'popular'); const ref = pop.length ? pop : ds.filter(d => d.k !== 'nobre' && d.k !== 'centro');
+    return ref.length ? { town: t.name, nob: vOf(nob), ref: vOf(ref), vs: pop.length ? 'o popular' : 'os outros' } : null;
+  }).filter(Boolean);
+  // (with no noble quarter anywhere, the old heart against the popular quarters of its own town, as before — the heart is dear
+  // by its own rule)
+  const hearts = pairs.length ? [] : towns.map(t => {
+    const ds = t.ds.filter(d => d.st); const c = ds.filter(d => d.k === 'centro'), pop = ds.filter(d => d.k === 'popular');
+    return c.length && pop.length ? { town: t.name, nob: vOf(c), ref: vOf(pop), vs: 'o popular', k: 'centro' } : null;
+  }).filter(Boolean);
+  const P3 = pairs.length ? pairs : hearts;
+  const dearer = P3.filter(p => p.nob > p.ref).length, gap = P3.reduce((n, p) => n + p.nob - p.ref, 0);
+  const alone = all.filter(d => d.k === 'popular' && !P3.some(p => p.town === d.town)).map(d => `${d.town}: popular ${Math.round(d.st ? d.st.value : 0)}, sem par`);
+  ok('3 a terra vale mais no bairro nobre', !P3.length || (gap > 0 && dearer * 2 >= P3.length), `${P3.length ? P3.map(p => `${p.town}: ${p.k || 'nobre'} ${Math.round(p.nob)} contra ${p.vs} ${Math.round(p.ref)}`).join('; ') + ` — mais cara em ${dearer} de ${P3.length}, ${gap >= 0 ? '+' : ''}${(gap / P3.length).toFixed(1)} em média${hearts.length ? ' (sem bairro nobre: o centro)' : ''}` : 'nenhuma cidade com bairro nobre (ou centro) e outro bairro (só informação)'}${alone.length ? ' · ' + alone.join('; ') : ''}`);
   // 4 more than one core gathers homes
   const big = A.towns.slice().sort((a, b) => b.pop - a.pop)[0];
   ok('4 a cidade cresce de vários núcleos', !!big && big.coreHomes.length >= 1, big ? `${big.name}: núcleos ${big.cores.join(', ')}; com casas em volta (além do fogo): ${big.coreHomes.join(', ') || 'nenhum'}` : 'nenhuma cidade');
