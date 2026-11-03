@@ -214,8 +214,11 @@
   //  WHO GOES
   // ====================================================================================
   const BUSY = { band: 1, muster: 1, combat: 1, embark: 1, aboard: 1, jail: 1, condemned: 1, scene: 1, envoy: 1, trade: 1, escape: 1, flee: 1, swim: 1, expl: 1, naufrago: 1, cais: 1, army: 1, siege: 1, riot: 1 };
+  // (one hiding in a cave from an attack on the town — the cave's refuge, 2,7 —: the fright is not over while it lasts)
+  const hiding = v => !!(v && v.task && v.task.type === 'caverna' && v.task.kind === 'refuge');
   function free(v, f, o) {
     o = o || {};
+    if (hiding(v)) return false; // (nobody is picked for a voyage from the cave's refuge: L-459)
     if (!v || v.captive || v.aboard || v.held || v.air || v.ug || v.hp < 55 || v.preg > 0 || v.rebel) return false;
     if (v.age < (o.minAge || 17) || v.age > (o.maxAge || 56)) return false;
     if (G.Fac.idOfV(v) !== f.id || v.id === f.leader) return false;
@@ -464,7 +467,9 @@
       // (whoever lost the errand to a fright — a beast on the quay, a fire, a fight — goes back to it once the fright is over, as
       // the crew ashore goes back to the boats: Públio's great voyage, its crew scattered by a beast on the quay, sailed with one
       // of twenty-six; a save gave the errand back, the living world did not, L-367)
-      for (const v of crew) if (!v.aboard && !v.captive && !(v.task && ((v.task.type === 'cais' && v.task.exp === e.id) || v.task.pri > 3.25)) && !(G.Scene && G.Scene.actorScene(v))) G.Vg.setTask(v, { type: 'cais', exp: e.id, k: e.crew.indexOf(v.id), job: 'wait', pri: 3.25, st: 0 });
+      // (and the cave's refuge of one hiding from an attack is the fright too: the call waits for it to end — Cássio, of a voyage
+      // of Óstia, hidden in the cave with the town's alarm still up, was called to the quay a tenth of a second later, L-459)
+      for (const v of crew) if (!v.aboard && !v.captive && !hiding(v) && !(v.task && ((v.task.type === 'cais' && v.task.exp === e.id) || v.task.pri > 3.25)) && !(G.Scene && G.Scene.actorScene(v))) G.Vg.setTask(v, { type: 'cais', exp: e.id, k: e.crew.indexOf(v.id), job: 'wait', pri: 3.25, st: 0 });
     }
     if (flag && Nv.atSea(flag)) { if (!e.track.length || G.dist2(e.track[e.track.length - 1][0], e.track[e.track.length - 1][1], flag.x, flag.y) > 9) { e.track.push([+flag.x.toFixed(1), +flag.y.toFixed(1)]); if (e.track.length > 160) e.track.splice(1, 1); } e.lastX = flag.x; e.lastY = flag.y; }
     switch (e.st) {
@@ -1446,8 +1451,10 @@
   X.colony = function (f, best, n, docks) {
     const S = G.S; const dock = docks[0]; const di = Nv.dockInfo(dock); const from = S.settlements.get(dock.set); if (!from) return null;
     // (only who the town can send, the children too — G.Vg.canSend: a child who was the god's body, in the god's hand or down in
-    // a cave went aboard by the second rule —, and a family only whole: L-440)
-    const members = [...S.villagers.values()].filter(v => v.set === from.id && (free(v, f, { minAge: 2, maxAge: 50 }) || (v.age < 16 && v.age >= 2)) && G.Vg.canSend(v));
+    // a cave went aboard by the second rule —, and a family only whole: L-440; nor a child hiding in the cave's refuge from an
+    // attack on the town — the second rule asks it too: four children of Mênfis were called out of the cave to the quay with
+    // the alarm still up, and their families with them, L-459)
+    const members = [...S.villagers.values()].filter(v => v.set === from.id && (free(v, f, { minAge: 2, maxAge: 50 }) || (v.age < 16 && v.age >= 2 && !hiding(v))) && G.Vg.canSend(v));
     const crew = [];
     // families first: couples with their small children
     for (const m of G.shuffle(members.filter(v => v.g === 'f' && v.partner && v.age >= 17))) {

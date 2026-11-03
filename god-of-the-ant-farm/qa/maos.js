@@ -18,6 +18,10 @@
 //     compra para casa (a regra inteira das mãos ocupadas); o turno da mina (o ofício do mineiro) também (L-395); o refúgio
 //     de quem foge de um ataque não espera — a compra vai nas mãos e, ao sair, chega em casa pelo livro —; o ataque aos
 //     bandidos (3,1) leva; com a compra em casa, o oráculo leva
+//  m10 a tripulação escondida na caverna: com a cidade atacada, o refúgio de um tripulante segura o chamado da viagem ao cais
+//     até o susto passar, e depois ele volta ao cais (L-459)
+//  m11 a colônia e as crianças escondidas na caverna: uma criança no refúgio não é levada para a colônia, nem a família dela
+//     (que vai inteira ou não vai); as que não se escondiam vão (L-459)
 //  e o verificador limpo nos casos, sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/oficio-inv.js'] });
@@ -249,6 +253,69 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
     const h9 = homeLine();
     ok('m9 a caverna forçada', waited && raid && tr.startsWith('caverna') && fled && tf.startsWith('caverna') && withIt && home && up && tu.startsWith('caverna') && !b9.length,
       `${c.name} com uma compra nas mãos: ${said.map(([k, r, t, h]) => `${k} ${r ? 'LEVOU' : 'esperou'} (${t}${h ? '' : ', SEM a compra'})`).join('; ')}; o ataque aos bandidos (3,1) ${raid ? 'levou' : 'NÃO levou'} (${tr}); ${d.name}, com uma compra nas mãos: o refúgio ${fled ? 'levou' : 'NÃO levou'} (${tf}${withIt ? ', com a compra' : ', SEM a compra'}), e a compra ${home ? `chegou em casa ('compra-em-casa', livro ${h9 ? h9[0] : '?'})` : 'NÃO chegou em casa em 300 s'}; com a compra em casa, o oráculo ${up ? 'levou' : 'NÃO levou'} (${tu})${b9.length ? '; o verificador: ' + b9[0] : ''}`);
+  }
+}
+// ---------------- m10: the crew hidden in the cave while the town is attacked: the quay waits for the fright to pass (L-459) ----------------
+// (a voyage made ready by the test's hand — the first people of the sea whose town of departure has a cave known within 45 tiles
+// —, one of its crew, not the leader, the first by id: the town's alarm up (an attack, as the war raises it), the errand at the
+// quay lost to the fright, and the cave's refuge for him (2,7). The voyage calls its crew back to the quay from any errand
+// below 3,25 «once the fright is over» (L-367), and did so with the alarm still up; now the call waits for the refuge to end,
+// and then he goes back to the quay)
+{
+  fresh(); let e = null, home = null, cv = null; const tried = [];
+  for (const f of G.Fac.all().filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
+    const x = G.Expe.consider(f, { scale: 'media', many: true }); if (!x) { tried.push(`${f.name}: nenhuma viagem`); continue; }
+    const t = S.settlements.get(x.from); const dOf = c => Math.min(...c.mouths.map(m => G.dist(m.x, m.y, t.cx, t.cy)));
+    const c = G.Caves.all().filter(q => q.mouths.length && !q.mine && q.known && q.known[t.fac]).sort((a, b) => dOf(a) - dOf(b) || a.id - b.id)[0];
+    if (c && dOf(c) < 45 && x.crew.length >= 2) { e = x; home = t; cv = c; break; }
+    tried.push(`${x.name}: ${c ? `caverna a ${Math.round(dOf(c))} casas` : 'sem caverna conhecida'}`);
+  }
+  const v = e && e.crew.map(id => S.villagers.get(id)).filter(q => q && q.id !== e.leader && !q.aboard).sort((a, b) => a.id - b.id)[0];
+  if (!e || !v) ok('m10 a tripulação escondida na caverna', false, `nenhuma viagem que saia de uma cidade com caverna perto: ${tried.join(' · ') || 'nenhum povo do mar'}`);
+  else {
+    home.alarmT = 40; Vg.endTask(v);
+    const hall = cv.halls && cv.halls[0]; const cell = hall ? Math.floor(hall.y) * G.N + Math.floor(hall.x) : -1;
+    const hid = !!G.Caves.give(v, 'refuge', cv, cell, { pri: 2.7, stay: 1e9, force: 1, urge: 1 });
+    const hiding = () => !!(v.task && v.task.type === 'caverna' && v.task.kind === 'refuge');
+    let early = null, back = null; const t0 = S.clock;
+    fine(120, () => { const quay = v.task && v.task.type === 'cais' && v.task.exp === e.id; if (quay && home.alarmT > 0 && early === null) early = Math.round((S.clock - t0) * 10) / 10; if (quay && back === null) back = Math.round((S.clock - t0) * 10) / 10; return back !== null; });
+    const b10 = bad();
+    const said = !hid ? 'o refúgio NÃO o levou' : early !== null ? `CHAMADO AO CAIS ${early} s depois, com o alarme ainda aceso` : back !== null ? `o cais esperou o susto passar: de volta ao cais ${back} s depois, com o refúgio acabado` : `NÃO voltou ao cais em 120 s (${hiding() ? 'ainda no refúgio' : v.task ? v.task.type : 'sem tarefa'})`;
+    ok('m10 a tripulação escondida na caverna', hid && early === null && back !== null && !b10.length, `${v.name}, da tripulação de ${e.name} (${home.name}), escondido ${G.Caves.na ? G.Caves.na(cv) : 'na caverna'} com o alarme da cidade aceso: ${said}${b10.length ? '; o verificador: ' + b10[0] : ''}`);
+  }
+}
+// ---------------- m11: the colony and the children hiding in the cave: its second rule asks too (L-459) ----------------
+// (a colony made ready by the test's hand — X.colony straight, for the first region where it finds a site, as the plan sends
+// it —, from the town of a people of the sea with the most children: its alarm up, and the cave's refuge for its children of
+// 3 to 13 (2,7, as the world's refuge gives it to them all); the stores filled by the test's hand for the voyage. The colony
+// takes its children by a second rule, outside the free() of the crew, and called children of Mênfis out of the cave to the
+// quay with the alarm still up; now a hiding child is not taken — nor its family, which goes only whole (L-440))
+{
+  fresh(); const tried = [];
+  const docksOf = q => [...S.buildings.values()].filter(b => b.type === 'doca' && b.built && G.Village.facOfSet(b.set) === q.id).sort((a, b) => a.id - b.id);
+  const kidsOf = s => [...S.villagers.values()].filter(v => v.set === s.id && v.age >= 3 && v.age < 14 && !v.captive && !v.aboard && !v.ug && !v.held && !v.air).sort((a, b) => a.id - b.id);
+  const c = G.Fac.all().filter(q => q.alive && G.Civ.has(q.id, 'navegacao') && docksOf(q).length).map(q => ({ f: q, dock: docksOf(q)[0], s: S.settlements.get(docksOf(q)[0].set) })).filter(o => o.s).sort((a, b) => kidsOf(b.s).length - kidsOf(a.s).length || a.f.id - b.f.id)[0] || null;
+  let e = null, hid = [], best = null;
+  if (c) {
+    c.s.alarmT = 40;
+    const dOf = cv => Math.min(...cv.mouths.map(m => G.dist(m.x, m.y, c.s.cx, c.s.cy)));
+    const cv = G.Caves.all().filter(q => q.mouths.length && !q.mine).sort((a, b) => dOf(a) - dOf(b) || a.id - b.id)[0];
+    const hall = cv && cv.halls && cv.halls[0]; const cell = hall ? Math.floor(hall.y) * G.N + Math.floor(hall.x) : -1;
+    if (cv) for (const v of kidsOf(c.s)) { Vg.endTask(v); if (G.Caves.give(v, 'refuge', cv, cell, { pri: 2.7, stay: 1e9, force: 1, urge: 1 }) && v.task && v.task.type === 'caverna') hid.push(v); }
+    for (const r of G.Know.regions()) { const site = G.Expe.siteFor(r, c.f.id); if (site) { best = { r, site, motive: 'expansao' }; break; } }
+    if (!best) tried.push('nenhuma região com lugar para a colônia');
+    else { c.f.stock.food = Math.max(c.f.stock.food, 2000); c.f.stock.wood = Math.max(c.f.stock.wood, 200); e = G.Expe.colony(c.f, best, 26, [c.dock]); if (!e) tried.push('a colônia não saiu'); }
+  } else tried.push('nenhum povo do mar com doca');
+  if (!e) ok('m11 as crianças escondidas e a colônia', false, `sem o caso: ${tried.join(' · ')}`);
+  else {
+    const ids = new Set(e.crew); const taken = hid.filter(v => ids.has(v.id));
+    const still = hid.filter(v => v.task && v.task.type === 'caverna' && v.task.kind === 'refuge').length;
+    // (the family of a hiding child stays with it: no child left in the cave with a parent gone to the colony)
+    const parents = hid.filter(v => !ids.has(v.id) && (ids.has(v.mother) || ids.has(v.father)));
+    const kids = e.crew.map(id => S.villagers.get(id)).filter(v => v && v.age < 16 && !hid.includes(v));
+    const b11 = bad();
+    ok('m11 as crianças escondidas e a colônia', !taken.length && still === hid.length && !parents.length && hid.length > 0 && !b11.length,
+      `${e.name}, de ${c.s.name} (${e.crew.length} colonos, ${kids.length} criança(s) de fora do refúgio), com o alarme da cidade aceso e ${hid.length} criança(s) no refúgio da caverna: ${taken.length ? `LEVOU ${taken.length} escondida(s) (${taken.slice(0, 3).map(v => `${v.name}, ${v.age | 0} anos, agora ${tk(v)}`).join('; ')})` : 'nenhuma escondida levada'}; ${still} de ${hid.length} ainda no refúgio; ${parents.length ? `${parents.length} com o pai ou a mãe na colônia, SEM elas` : 'as famílias delas ficaram inteiras'}${b11.length ? '; o verificador: ' + b11[0] : ''}`);
   }
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
