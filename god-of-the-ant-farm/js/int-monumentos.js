@@ -666,6 +666,12 @@
     const g = openGround(P, F, 'pedras'); if (!g || P.inside()) return;
     const id = P.room(0, 'pedras', g.sh, 1); if (!solids(P, F, id)) return;
     const S = F.els.filter(e => e.k === 'pedra'); if (!S.length) { P.errs.push('o monumento sem as pedras'); return; }
+    // (the king's stone ship of a city — the step of 4 tiles —: the offering before the great stone, the prayers in two rows of
+    // six within the ship, behind it)
+    const R = F.amphi && F.amphi.runas;
+    if (R) { const [gu, gv, ge] = R.grande; P.marks(0, id, 'ofertar', [[r2(gu), r2(gv + ge + 0.5), Math.PI]]);
+      const pray = []; for (const v of [R.fila, R.fila + 0.8]) for (const du of [-2.0, -1.2, -0.4, 0.4, 1.2, 2.0]) pray.push([r2(gu + du), r2(v), Math.PI]);
+      P.marks(0, id, 'rezar', pray); return; }
     const tall = S.reduce((a, e) => (e.y1 > a.y1 ? e : a)), front = Math.max(...S.map(e => e.c[1] + e.e)), cu = P.L / 2;
     P.marks(0, id, 'ofertar', [[r2(tall.c[0]), r2(tall.c[1] + tall.e + 0.5), Math.PI]]);
     P.marks(0, id, 'rezar', [-1.6, -0.8, 0.8, 1.6].map(du => [r2(cu + du), r2(Math.min(g.sh[3] - 0.5, front + 1.0)), Math.PI]));
