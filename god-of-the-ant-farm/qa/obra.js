@@ -10,8 +10,9 @@
 //  b6 o construtor morre com a carga a caminho: a carga vai ao estoque ('herdado'), e a obra não espera mais por ela — o que
 //     ela espera a caminho é o que os construtores trazem (esperava para sempre)
 //  b7 a sobra: outra mão encheu a obra enquanto o construtor vinha — o que ela não pede mais volta ao estoque ('sobra-obra')
-//  b8 um save no meio da entrega, carregado: a obra fica pronta (as muralhas da cidade, que tiram a pedra do armazém antes de
-//     toda obra, seguradas no caso, T-293)
+//  b8 um save no meio da entrega, carregado: a carga a caminho continua nas mãos e sai delas pelo livro, e a obra fica pronta
+//     (as muralhas da cidade, que tiram a pedra do armazém antes de toda obra, seguradas no caso, T-293; o caso espera a obra
+//     com os construtores trabalhando nela, T-465)
 //  b9 a carroça de comércio sai com a carga pelo livro ('carroca', f: → c:): a carroça é lugar do depósito desde o primeiro
 //     mundo (registrada antes do depósito existir, nunca foi, e nenhuma carroça de comércio saía)
 //  b10 a cidade abandonada com uma obra: o que ela tinha fica ao vento, pelo livro ('abandono')
@@ -94,14 +95,38 @@ const send = b => {
   // after the load, and the wall took the 60 in 9 s and every stone after it: the well waited the 400 s for its 12. The case
   // is the save in the middle of a delivery, not who gets the stone first, T-293)
   const held = []; const hold = () => { (S.walls || []).forEach((q, i) => { if (!q.done && q.set === set0.id) { q.done = true; held.push(i); } }); };
-  hold(); stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0;
+  // (and the premise armed in any course, as the b11's: the god's peace held, the town's feast of each day kept for another
+  // day, the weather calm, and the wood and stone of the cases kept in the people's store (stock) while the case runs — the
+  // families' commissions have their turn before the city's works (L-313), and the town's older works take the rest —; after
+  // the load the case waits for the well while builders work on it — the time on its build task, up to the 400 s of before,
+  // ten days of the world at most —, not a window of the world. T-465: in the «cidade» of the generation 14 the 400 s after
+  // the load ended with the well at 67%: the builders went on with the sobrados two families had paid for, a storm sent them
+  // home at 0,59, then the evening at home, the night and the Jól; with the peace, the feast and the weather held, the store
+  // had no stone from the third day on, and the well stood at 44% for days, 10 of stone short)
+  let k8 = 0;
+  const calm8 = () => {
+    if (!(S.divinePeace > 0)) G.Politics.divinePeace();
+    S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0;
+    if (!set0.festPlan || set0.festPlan.day !== S.day || set0.festPlan.key || !set0.festPlan.done) set0.festPlan = { day: S.day, key: null, done: true };
+    if (++k8 % 20 === 0) stock();
+  };
+  calm8(); hold(); stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0;
   if (b) send(b);
-  const mid0 = !!b && live(240, () => { hold(); return !!carrying(id); });
+  const mid0 = !!b && live(240, () => { calm8(); hold(); return !!carrying(id); });
   const w = b && carrying(id); const was = w ? `${w.carry.n} de ${w.carry.k} nas mãos de ${w.name}` : 'ninguém carregando';
+  const wid = w ? w.id : 0, wk = w ? w.carry.k : null, wn = w ? w.carry.n : 0;
   if (b) reload();
-  const done = !!b && live(400, () => { hold(); return !site(id); });
+  // (the load the save caught on its way is in the hands after the load, and leaves them by the ledger: the tasks do not go
+  // in the save, and the save gives no work a load on its way (incoming), so the carrier's next work is the planner's — the
+  // well, or another work of the town that needs it —; with none that needs it, the store)
+  const c8 = S.villagers.get(wid); const kept = !!w && !!c8 && !!c8.carry && c8.carry.k === wk && Math.abs(c8.carry.n - wn) < 0.01;
+  const L8 = seen.length, t8 = S.clock; let work = 0;
+  const done = !!b && live(10 * G.DAY_LEN, () => { calm8(); hold(); if (onIt(id).length) work += 0.1; return !site(id) || work >= 400; }) && !site(id);
+  let left = 0; const out8 = []; for (const e of seen.slice(L8)) if (e[3] === 'v:' + wid && e[5] === wk && left < wn - 1e-6) { out8.push(e); left += e[6]; }
+  const to8 = out8.map(e => `${e[6]} ${/^o:/.test(e[4]) ? (e[4] === 'o:' + id ? 'no poço' : 'na obra #' + e[4].slice(2)) : /^f:/.test(e[4]) ? 'no armazém' : e[4]} ('${e[8]}')`).join(', ');
   const o = S.buildings.get(id); for (const i of held) if (S.walls[i]) S.walls[i].done = false;
-  ok('b8 save-no-meio-da-entrega', mid0 && done && !!o && o.built, b ? `${b.type}#${id}, salva com ${was}, carregada: ${o && o.built ? 'pronta' : o ? 'ainda a ' + Math.round(o.progress * 100) + '%' : 'sumiu'}` : 'nenhuma obra possível');
+  const byBook = out8.every(e => (e[8] === 'obra' && /^o:/.test(e[4])) || (TO_STORE[e[8]] && /^f:/.test(e[4])));
+  ok('b8 save-no-meio-da-entrega', mid0 && kept && Math.abs(left - wn) < 0.01 && byBook && done && !!o && o.built, b ? `${b.type}#${id}, salva com ${was}, carregada: ${kept ? 'a carga nas mãos depois do load' : 'a carga NÃO estava nas mãos depois do load'}, e ela saiu delas pelo livro: ${to8 || 'NADA'}; o poço ${o && o.built ? 'pronto' : o ? 'ainda a ' + Math.round(o.progress * 100) + '%' : 'sumiu'} (${Math.round(work)} s de construtor nele, em ${Math.round(S.clock - t8)} s do mundo depois do load)` : 'nenhuma obra possível');
 }
 // ---------------- b3 a reform given up (L-246) ----------------
 {
