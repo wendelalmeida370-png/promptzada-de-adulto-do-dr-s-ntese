@@ -332,19 +332,22 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
         }
         if (!crime) return { skip: `o roubo não aconteceu durante a festa (${key}; ${tries} tentativas; o ladrão: ${t.task ? t.task.type + '/' + t.task.st : 'sem tarefa'}; a festa ${on() ? 'continua' : 'acabou'})` };
         const viu = crime.seen.includes(g.id), caca = g.hunt === crime.id;
-        let s = 0, fim = null, preso = null, presoNaFesta = false, saiu = false;
+        // (who arrests may be another of the law who knew of it — a witness at the feast, or one a witness told —: the rule is the
+        // arrest after the feast; in a life with nine witnesses another guard of the feast got to the thief first, T-462)
+        const knew = new Set(crime.seen); let s = 0, fim = null, preso = null, presoNaFesta = false, saiu = false;
         for (let k = 0; k < 6000 && preso === null; k++) {
           G.debug.step(0.1); s = Math.round((s + 0.1) * 10) / 10; const a = on();
           if (a && !inFest(g)) saiu = true;
           if (!a && fim === null) fim = s;
+          for (const o of S.villagers.values()) if (o.hunt === crime.id) knew.add(o.id);
           if (t.jail) { preso = s; presoNaFesta = a; }
         }
-        const c = (S.crimes || []).find(q => q.id === crime.id) || crime;
+        const c = (S.crimes || []).find(q => q.id === crime.id) || crime; const who = S.villagers.get(c.by);
         const bad = QA.check().filter(x => x.sys === 'urb' && x.sev <= 3).map(x => x.sev + ' ' + x.msg);
-        return { key, how, tries, seen: crime.seen.length, viu, caca, saiu, fim, preso, presoNaFesta, by: c.by === g.id, bad };
+        return { key, how, tries, seen: crime.seen.length, viu, caca, saiu, fim, preso, presoNaFesta, by: c.by === g.id, knew: knew.has(c.by), who: who ? `${who.name} (${who.role}${crime.seen.includes(who.id) ? ', que viu' : ', a quem contaram'})` : '?', bad };
       }, f8);
-      ok('8 o roubo na noite da festa (D-126): o guarda que viu prende depois dela', !r8.skip && r8.viu && r8.caca && !r8.saiu && r8.fim !== null && r8.preso !== null && !r8.presoNaFesta && r8.preso >= r8.fim && r8.by && !r8.bad.length,
-        r8.skip || `${r8.key}: ${r8.how}; o roubo na ${r8.tries}ª tentativa, ${r8.seen} testemunha${r8.seen > 1 ? 's' : ''} — o guarda ${r8.viu ? 'viu' : 'NÃO VIU'}, ${r8.caca ? 'guardou o caso' : 'NÃO GUARDOU o caso'} e ${r8.saiu ? 'SAIU DA FESTA' : 'ficou na festa'}; a festa acabou ${r8.fim === null ? 'NUNCA' : r8.fim + ' s depois'}; ${r8.preso === null ? 'o ladrão NÃO FOI PRESO' : r8.presoNaFesta ? `preso NA FESTA (${r8.preso} s)` : `preso ${Math.round((r8.preso - r8.fim) * 10) / 10} s depois dela, ${r8.by ? 'pelo guarda que viu' : 'POR OUTRO'}`}${r8.bad.length ? '; o verificador: ' + r8.bad.slice(0, 2).join('; ') : ''}`);
+      ok('8 o roubo na noite da festa (D-126): o guarda que viu prende depois dela', !r8.skip && r8.viu && r8.caca && !r8.saiu && r8.fim !== null && r8.preso !== null && !r8.presoNaFesta && r8.preso >= r8.fim && r8.knew && !r8.bad.length,
+        r8.skip || `${r8.key}: ${r8.how}; o roubo na ${r8.tries}ª tentativa, ${r8.seen} testemunha${r8.seen > 1 ? 's' : ''} — o guarda ${r8.viu ? 'viu' : 'NÃO VIU'}, ${r8.caca ? 'guardou o caso' : 'NÃO GUARDOU o caso'} e ${r8.saiu ? 'SAIU DA FESTA' : 'ficou na festa'}; a festa acabou ${r8.fim === null ? 'NUNCA' : r8.fim + ' s depois'}; ${r8.preso === null ? 'o ladrão NÃO FOI PRESO' : r8.presoNaFesta ? `preso NA FESTA (${r8.preso} s)` : `preso ${Math.round((r8.preso - r8.fim) * 10) / 10} s depois dela, ${r8.by ? 'pelo guarda que viu' : r8.knew ? 'por outro da lei que sabia: ' + r8.who : 'POR QUEM NÃO SABIA: ' + r8.who}`}${r8.bad.length ? '; o verificador: ' + r8.bad.slice(0, 2).join('; ') : ''}`);
     }
   }
   const news = await page.evaluate(() => G.S.history.filter(h => /barraco|roub|prend|cadeia|horta|estivador|caixa|taverna|cela/i.test(h.txt)).slice(-8).map(h => h.d + ': ' + h.txt));
