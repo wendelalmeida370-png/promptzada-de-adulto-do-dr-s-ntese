@@ -95,10 +95,13 @@ const calm = (set, h) => !(S.execs || []).some(e => e.set === set.id && e.phase 
 // — through the house's own errand door, up to three times. In the old metropolis a storm took the one sent in c8, the execution of two of the house took
 // the rest of the day, and the next morning the house tried at 0,06, before any stall or the fair opened, and waited half
 // a day (before the L-345); in c9 the builder of the house went from obra to obra and the fisher's work outweighed the wish
-// (before the L-331): T-185)
+// (before the L-331): T-185. Nor the oracle of a cave: by the game's rule the cave calls her up every morning over an errand
+// (caves.js, 1,6), and the hand would take her out of it only for the cave to call her back — in c9 the hand sent Neferu,
+// the oracle, and eleven seconds later she was going up to the cave again, T-455)
+const oracleOf = q => G.Caves.all().some(cv => cv.oracle && cv.oracle.id === q.id);
 function hand(h, done) {
   const r = { sent: [], t: S.clock };
-  const free = q => !(q.task && (GATHER[q.task.type] || q.task.type === 'shelter' || (q.task.pri || 0) >= 2)) && !(q.carry && q.carry.n > 0);
+  const free = q => !(q.task && (GATHER[q.task.type] || q.task.type === 'shelter' || (q.task.pri || 0) >= 2)) && !(q.carry && q.carry.n > 0) && !oracleOf(q);
   r.step = () => {
     if (errandOf(h) || done()) { r.t = S.clock; return; }
     if (S.clock - r.t <= 60 || r.sent.length >= 3) return;
@@ -395,11 +398,27 @@ const fair = stockFair(set);
 // ================================ a people without coin ================================
 {
   M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); S.time = 0.15;
-  // (the biggest town without coin, with a fair or a market and a family house — two grown people — for the case)
-  const family = s => [...S.buildings.values()].filter(b => b.set === s.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && [...S.villagers.values()].filter(v => v.home === b.id && v.age >= 14).length >= 2).sort((a, b) => a.id - b.id);
+  // (the case's premise in any course of the dice, as the lazer.js keeps the afternoon of a show — T-455: the god's peace over
+  // the world (G.Politics.divinePeace: the wars in truce, the bands gone home) and the alarm of an attack over with it; the
+  // weather calm while the case lasts (a storm sends everyone home, 1,05, over the errand); the town's feast of the day kept
+  // for another day by the god's hand (festivals.js, the plan of the day, as the feira.js and the lar.js keep it: the feast
+  // calls the whole town, 3,2); and the house of the case one no cave's oracle lives in — by the game's rule the cave calls
+  // her up every morning, until noon, over an errand of her house (caves.js, 1,6), and the clock held at 0,30 keeps it
+  // morning. Since 4895ac9 the first house of Mênfis was Neferu's, the oracle: the Feast of Opet took her at 0,18 on her way
+  // to the fair, the cave called her back after the hand sent her, and a storm took home the next two sent — nothing bought)
+  G.Politics.divinePeace(); for (const s of S.settlements.values()) if (s.alarmT > 0) s.alarmT = 0;
+  const calm9 = () => { S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0; };
+  // (the biggest town without coin, with a fair or a market and a family house — two grown people, no oracle — for the case)
+  const family = s => [...S.buildings.values()].filter(b => b.set === s.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && [...S.villagers.values()].filter(v => v.home === b.id && v.age >= 14).length >= 2 && !members(b).some(oracleOf)).sort((a, b) => a.id - b.id);
   const tw = [...S.settlements.values()].filter(s => !E.coinage(s.fac) && [...S.buildings.values()].some(b => b.set === s.id && (b.type === 'feira' || b.type === 'mercado') && b.built) && family(s).length).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
-  let info = 'nenhuma cidade sem moeda com feira ou mercado e uma casa de família (dois adultos) no mundo «cidade»', fine9 = false;
+  let info = 'nenhuma cidade sem moeda com feira ou mercado e uma casa de família (dois adultos, nenhum deles o oráculo de uma caverna) no mundo «cidade»', fine9 = false;
   if (tw) {
+    tw.festPlan = { day: S.day, key: null, done: true }; calm9();
+    // (and the people of the case without coin while it lasts — the test's hand on the world's door of the arts, G.Civ.learn,
+    // as the negocio.js keeps its own (T-098): the arts spread between peoples that trade or live in peace, by chance, every
+    // thirty seconds (civs.js), and in a course of the T-455 the Casa de Amon learned the coin from the Aztecs, at peace with
+    // it, 27 s into the case — the house had no coin to pay with, and nobody of it went again)
+    const learn0 = G.Civ.learn; G.Civ.learn = function (f, t) { if (t === 'moeda' && f && f.id === tw.fac) return false; return learn0.apply(this, arguments); };
     stockFair(tw);
     const h = family(tw)[0];
     lacking(h); if ((h.pantry || 0) < 12) D.make('h:' + h.id, 'food', 12, { code: 'teste' });
@@ -408,7 +427,8 @@ const fair = stockFair(set);
     // the fair's hours — T-185)
     const home9 = () => book(e => e[0] > L0 && e[4] === 'h:' + h.id && e[8] === 'compra-em-casa').length > 0;
     const hd9 = hand(h, () => home9() || members(h).some(o => o.carry && o.carry.bought && o.carry.to === 'h:' + h.id));
-    const got = fine(240, atHour(0.3, () => { hd9.step(); return home9() || watch(); }));
+    const got = fine(240, atHour(0.3, () => { calm9(); hd9.step(); return home9() || watch(); }));
+    G.Civ.learn = learn0;
     const buy = book(e => e[0] > L0 && (e[8] === 'venda' || e[8] === 'feira') && e[5] !== 'food' && /^v:/.test(e[4]) && (S.villagers.get(+e[4].slice(2)) || {}).home === h.id)[0];
     const paid = buy && buy[8] === 'venda' ? D.ledger().find(e => e[0] === buy[0] + 1) : null;
     fine9 = got && !!buy && !bad().length;
