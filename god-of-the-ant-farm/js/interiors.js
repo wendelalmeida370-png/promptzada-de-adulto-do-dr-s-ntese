@@ -2363,6 +2363,14 @@
     secure(b);
   }
   In.retype = (b, from) => { if (b && b.ip && b.ip.t !== b.type) retype(b, from || b.ip.t, 'reforma'); };
+  // the lot grown in place — a town raising its monument a step up the type's ladder (village.js, D-106): the same building,
+  // its record kept with its facts; its lot (rec.n) the new one, the family checked again, a fact of it, the door judged again
+  // on the shell it has now, and the doors about it whose street the bigger lot may have taken
+  In.resized = function (b, from) {
+    if (!b || !b.ip || !TYPES[b.type] || b.ip.n === b.w) return; const rec = b.ip;
+    rec.n = b.w; const c = In.familiesFor(rec); if (!c.ok.includes(rec.f)) rec.f = chooseFamily(b, rec);
+    rec.r++; rec.fx = []; fact(b, 'ampliado', (from || '') + '>' + b.w); placeDoor(b); secure(b); besides(b);
+  };
   In.ruin = function (b, cause) { if (!b || !b.ip) return; b.ip.r++; fact(b, 'ruina', cause || ''); };
   In.abandon = function (b) { if (!b || !b.ip) return; b.ip.r++; fact(b, 'abandono'); };
   In.damage = function (b, cause) { if (!b || !b.ip) return; const h = b.ip.h; const last = h[h.length - 1]; if (last && last[1] === 'dano' && last[0] === G.S.day) return; fact(b, 'dano', cause || ''); };
