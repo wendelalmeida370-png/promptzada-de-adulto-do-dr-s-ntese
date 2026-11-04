@@ -418,7 +418,8 @@ run('e21', () => {
   M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4, temper: 'normal' }); S = G.S; V = G.Village; Es = G.Escala; D = G.Depot; M.saltar(3);
   const caps = [...new Set([...S.factions.values()].map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
   const set = caps.find(s => V.resWork(s)); if (!ok('e21a uma capital com obra grande', !!set, set ? `${set.name} (${G.Civ.idOfFac(set.fac)}): ${V.resWork(set).type} ${V.resWork(set).steps.map(s => s.n).join('/')}` : 'nenhuma')) return;
-  const t0 = set.tier; set.tier = 3; const h0 = marca(); const r = sim(() => V.reservaDia(set)); const R = V.reserva(set);
+  // (a capital no nível da guarda — o que ela guardou no salto, se guardou, a prova solta para vê-la guardar)
+  const t0 = set.tier; set.tier = Math.max(3, V.RES_TIER); if (set.urb) set.urb.res = null; const h0 = marca(); const r = sim(() => V.reservaDia(set)); const R = V.reserva(set);
   let livre = !!R; if (R) for (let y = R.y; y < R.y + R.n; y++) for (let x = R.x; x < R.x + R.n; x++) { const o = S.occ[y * G.N + x] && S.buildings.get(S.occ[y * G.N + x]); if (o && !(o.set === set.id && V.OPEN[o.type] && !G.BDEF[o.type].housing)) livre = false; }
   ok('e21b a cidade guarda o lote', !!R && R.n === Es.steps(R.type).find(s => s.id === R.esc).n && livre && linhas(h0, /guardou um campo/).length > 0, R ? `${R.type}/${R.esc}: ${R.n} × ${R.n} em ${R.x},${R.y}, a ${G.dist(R.x + R.n / 2, R.y + R.n / 2, set.cx, set.cy).toFixed(0)} casas; «${(linhas(h0, /guardou/)[0] || { txt: '-' }).txt}»` : 'nada guardado');
   if (!R) return;
@@ -434,15 +435,19 @@ run('e21', () => {
   ok('e21f o deus põe um poço nele', !solto && why === 'ocupada' && !!R3 && !sobre, `com o poço #${poco.id}: ${solto ? 'AINDA GUARDADO' : 'solto (' + why + ')'}; no dia seguinte: ${R3 ? `outro em ${R3.x},${R3.y}${sobre ? ' — SOBRE O POÇO' : ''}` : 'nenhum'}`);
   if (!R3) return;
   // (a cidade abaixo de cidade: guarda até RES_YEARS anos; depois, solta)
-  set2.tier = 2; const a = sim(() => V.reservaDia(set2)); set2.urb.res.lost = S.day - V.RES_YEARS; const b = sim(() => V.reservaDia(set2));
+  set2.tier = V.RES_TIER - 1; const a = sim(() => V.reservaDia(set2)); set2.urb.res.lost = S.day - V.RES_YEARS; const b = sim(() => V.reservaDia(set2));
   ok('e21g a cidade que perde o nível', !!a && !b && set2.urb.resGone.why === 'nivel', `no primeiro ano abaixo: ${a ? 'guardado' : 'SOLTO'}; depois de ${V.RES_YEARS} anos: ${b ? 'AINDA GUARDADO' : 'solto (' + set2.urb.resGone.why + ')'}`);
-  set2.tier = 3; set2.urb.resGone.day = S.day - 1; const R4 = sim(() => V.reservaDia(set2));
+  set2.tier = Math.max(3, V.RES_TIER); set2.urb.resGone.day = S.day - 1; const R4 = sim(() => V.reservaDia(set2));
   // (o meteoro no meio do lote: o chão muda, o lote não serve mais)
   const m = sim(() => { G.Powers.meteorImpact({ x: R4.x + R4.n / 2, y: R4.y + R4.n / 2, r: 3.4, t: 0, delay: 0 }); return V.reservaDia(set2); });
   ok('e21h o meteoro', !!R4 && !m && set2.urb.resGone.why === 'terra', `${R4 ? 'guardado de novo em ' + R4.x + ',' + R4.y : '-'}; depois do meteoro: ${m ? 'AINDA GUARDADO' : 'solto (' + set2.urb.resGone.why + ')'}`);
   // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto)
   set2.urb.resGone.day = S.day - 1; const R5 = sim(() => V.reservaDia(set2));
   if (!ok('e21i guardado outra vez', !!R5, R5 ? `${R5.x},${R5.y}` : 'sem lote')) return;
+  // (o fogo num campo do lote guardado passa: o lote fica — Argos o largava pelo trigo em chamas, numa vida do zero)
+  const fi = (R5.y + 1) * G.N + R5.x + 1; const f0 = S.fire[fi]; S.fire[fi] = 5; const R5f = sim(() => V.reservaDia(set2)); S.fire[fi] = f0;
+  ok('e21n o fogo no lote guardado passa', !!R5f && R5f.x === R5.x && R5f.y === R5.y, R5f ? `com fogo em ${R5.x + 1},${R5.y + 1}: o lote fica` : `com fogo: SOLTO (${set2.urb.resGone && set2.urb.resGone.why})`);
+  if (!R5f) return;
   let pedras = 0; for (let y = R5.y; y < R5.y + R5.n && pedras < 3; y++) for (let x = R5.x; x < R5.x + R5.n && pedras < 3; x++) if (!S.occ[y * G.N + x] && !S.treeAt[y * G.N + x] && !S.objAt[y * G.N + x] && G.Nature.addRock(x + 0.5, y + 0.5, 40)) pedras++;
   rico(set2); const L0 = S.ledgerN || 0; set2._noSite = {}; const w = sim(() => V.startProject(set2, R5.type));
   const dentro = w && w.x >= R5.x && w.y >= R5.y && w.x + w.w <= R5.x + R5.n && w.y + w.h <= R5.y + R5.n;

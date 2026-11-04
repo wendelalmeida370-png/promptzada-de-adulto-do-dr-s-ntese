@@ -799,14 +799,16 @@
   V.resOver = resOver;
   // (a lot of n serves a reserve of the town: every tile on the map, dry, with no wall, highway nor fire, no building on it but
   // the town's own fields; the ring with no blocking building and no cliff on land; the relief within the podium; no other
-  // town's lot over it; the minor streets on it joined again round it; the town's streets reaching it)
-  function resFits(set, type, x, y, n) {
+  // town's lot over it; the minor streets on it joined again round it; the town's streets reaching it. One kept (keep) is
+  // judged by what stays: a field on fire burns out, and the streets the town lays over it are joined again when the work
+  // comes, or the work waits — Argos let go of its lot of 40 m for the fire in its wheat, year 21 of a life from scratch)
+  function resFits(set, type, x, y, n, keep) {
     const S = G.S; if (x < 2 || y < 2 || x + n > N - 2 || y + n > N - 2) return false;
     let streets = false;
     for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) {
       const i = ty * N + tx; const inLot = tx >= x && tx < x + n && ty >= y && ty < y + n; const o = S.occ[i] ? S.buildings.get(S.occ[i]) : null;
       if (inLot) {
-        if (S.type[i] < T.SAND || S.wall[i] || S.road[i] >= 3 || S.fire[i] > 0) return false;
+        if (S.type[i] < T.SAND || S.wall[i] || S.road[i] >= 3 || (!keep && S.fire[i] > 0)) return false;
         if (o && !(FIELDS[o.type] && o.set === set.id)) return false;
         if (S.road[i] || (G.City && G.City.onStreet(set, i))) streets = true;
       } else {
@@ -815,7 +817,7 @@
       }
     }
     if (W.slope(x, y, n, n) > V.PODIUM || resOver(set, type, x, y, n, n, true)) return false;
-    if (streets && !relinks(set, x, y, n, null)) return false;
+    if (streets && !keep && !relinks(set, x, y, n, null)) return false;
     return siteReached(set, x, y, { w: n, h: n });
   }
   // (the nearest lot of n that serves, as far as the town's radius and RES_REACH. → [x, y], or null)
@@ -841,7 +843,7 @@
       const w = resWork(set);
       if (!fac || G.Fac.capitalOf(fac.id) !== set) return letGo(set, 'capital');
       if (!w || w.type !== r.type || !w.steps.some(st => st.id === r.esc && st.n === r.n)) return letGo(set, 'povo');
-      if (!resFits(set, r.type, r.x, r.y, r.n)) return letGo(set, 'terra');
+      if (!resFits(set, r.type, r.x, r.y, r.n, true)) return letGo(set, 'terra');
       return r;
     }
     if ((set.tier || 0) < V.RES_TIER || !fac || G.Fac.capitalOf(fac.id) !== set) return null;
