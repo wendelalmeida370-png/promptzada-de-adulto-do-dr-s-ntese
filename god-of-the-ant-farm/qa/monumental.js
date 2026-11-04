@@ -25,14 +25,16 @@
 //        13), ou sem o trono do camarote, e cala quando ela volta
 //     A7 os lugares (In.places, a tabela da planta), num processo à parte com prazo: feita a tempo, um lugar livre de assistir,
 //        de lutar, o trono e a corte
-//     A8 o parapeito do pódio do anfiteatro de hoje em volta de uma arena de 10 m (L-551): aberto sobre os degraus como o 3D
+//     A8 o parapeito do pódio do anfiteatro de hoje em volta de uma arena de 10 m (L-551): aberto sobre os degraus como o 3D,
+//        as paredes no polígono do 3D (T-457)
 //     A9 as passagens da esquerda e da direita cobertas da ponte do pódio à fachada (a abóbada: o vão azul que o E viu)
 //     A10 o camarote do imperador (D-125), dos dois lados do patamar do fundo: na forma, 2,5 m da primeira fileira, o chão no
 //        pódio duas fileiras fundo, a fileira de trás com o parapeito (a queda de 1,26 m), as fileiras de cima a partir da
 //        quarta, o parapeito da passagem no chão dele, o trono (o assento a 0,5 m e o espaldar) e o banco da corte; na planta,
 //        nos dois tamanhos e nos quatro lados, o lugar do trono e os quatro da corte (os usos 'trono' e 'corte') que o corpo
 //        toma, um assento um do outro, o caminho até eles alcançado da porta; nenhum assento das fileiras nem lugar em pé no
-//        camarote; a fileira de trás nunca andada; os assentos iguais nos quatro lados
+//        camarote; a fileira de trás nunca andada, o parapeito dela no polígono do 3D (T-457); os assentos iguais nos quatro
+//        lados
 //   C — as pirâmides (a maravilha egípcia e a asteca nos degraus de 10 e 13 casas: js/forma-espetaculo.js e as plantas em
 //       js/int-monumentos.js, D-108):
 //     C1 as formas: a Grande Pirâmide lisa (as faces de 50 a 54°, a base ≥ 36 m), a entrada aberta na face (≥ 2,2 m), o
@@ -64,7 +66,8 @@
 //        níveis, os pisos e os lances, o palco, os bastidores, os camarins, a sala, as entradas, o adro — alcançados —;
 //        quem atua (os postos do ofício e os lugares) e quem toca; os cabides; o tempo (≤ 400 ms)
 //     E3 a forma × a planta: o chão e as fileiras na altura da forma, nada andado nos muros das pontas nem no parapeito; as
-//        paredes da planta nas da forma, as portas nas aberturas; a L-494 (1) a orquestra e (3) nenhum chão na base de uma
+//        paredes da planta nas da forma — o parapeito da galeria no polígono do 3D (T-457) —, as portas nas aberturas; a L-494
+//        (1) a orquestra e (3) nenhum chão na base de uma
 //        coluna — também no teatro antigo —; a (2), do 3D e da planta, contada
 //     E4 os pés, num mundo em branco, a cada 2 cm: da rua pelo adro, pelas entradas e pelos bastidores à orquestra, subindo ao
 //        palco e aos bastidores, subindo a escada do meio pelas fileiras, pelo passeio e pela galeria
@@ -137,6 +140,16 @@ const SIZES = [10, 13], SIDES = ['S', 'E', 'N', 'W'];
 const inPoly = (pts, x, z) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, zi] = pts[i], [xj, zj] = pts[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
 const angGap = (a, b) => { const d = ((a - b) % TAU + TAU) % TAU; return Math.min(d, TAU - d); };
 const angIn = (th, a0, a1) => { const span = ((a1 - a0) % TAU + TAU) % TAU || TAU; return ((th - a0) % TAU + TAU) % TAU <= span + 1e-9; };
+// (T-457: a plan's walls along a ring — their middle line on the 3D's polygon of radius r about c, G.Forma.ringEdge — over the
+// arc from a0 to a1: the most a point of them stands off that polygon, and the widest stretch of the arc they leave open, in m)
+const ringWallsOff = (walls, c, r, a0, a1) => {
+  const ang = q => a0 - 0.5 + (((Math.atan2(q[1] - c[1], q[0] - c[0]) - a0 + 0.5) % TAU) + TAU) % TAU;
+  let dev = 0; for (const w of walls) for (let j = 0; j <= 20; j++) { const x = w.a[0] + (w.b[0] - w.a[0]) * j / 20, z = w.a[1] + (w.b[1] - w.a[1]) * j / 20;
+    dev = Math.max(dev, Math.abs(Math.hypot(x - c[0], z - c[1]) / Fo.ringEdge(1, Math.atan2(z - c[1], x - c[0])) - r)); }
+  const arcs = walls.map(w => [ang(w.a), ang(w.b)].sort((x, y) => x - y)).sort((x, y) => x[0] - y[0]);
+  let gap = arcs.length ? Math.max(arcs[0][0] - a0, a1 - arcs[arcs.length - 1][1], 0) : a1 - a0; for (let k = 1; k < arcs.length; k++) gap = Math.max(gap, arcs[k][0] - arcs[k - 1][1]);
+  return { dev, gap: gap * r, n: walls.length };
+};
 // (the seats of a plan's rows the walk from its door reaches: a cell beside each, reached, a step from its height)
 const reachedSeats = p => In.tierSeats(p).filter(q => { const n = p.grid.n, R = p.reach[q.lv], H = p.hgt && p.hgt[q.lv]; if (!R) return false; const cx = Math.floor(q.x / CS), cz = Math.floor(q.z / CS);
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const x = cx + dx, z = cz + dz; if (x < 0 || z < 0 || x >= n || z >= n) continue; const k = z * n + x; if (R[k] && (!H || Math.abs(H[k] - q.y) <= In.BODY.step + 1e-6)) return true; } return false; });
@@ -383,14 +396,17 @@ function testeA() {
         // (the opening: the gap between the podium's walls' ends either side of it, as angles about the middle, against the 3D's)
         const ang = q => Math.atan2(q[1] - cv, q[0] - cu); let lo = -9, hi = 9; const half = A.gap.w / 2 / fundo;
         for (const w of p.walls) { if (w.lv !== 2 || w.kind !== 'parede') continue; for (const q of [w.a, w.b]) { let a = ang(q); if (a < 0) a += 2 * Math.PI; const d = a - Math.PI; if (d <= 1e-9 && d > lo) lo = d; if (d >= -1e-9 && d < hi) hi = d; } }
-        out.open = [lo, hi]; out.want = half; const st = p.stairs.find(s => s.lv0 === 1 && s.lv1 === 2); out.top = st ? st.b : null; }
+        out.open = [lo, hi]; out.want = half; const st = p.stairs.find(s => s.lv0 === 1 && s.lv1 === 2); out.top = st ? st.b : null;
+        // (and the walls on the 3D's polygon — their middle line 6 cm out of the sand's edge by its measure, the cut's ends too: T-457)
+        let dev = 0; for (const w of p.walls) { if (w.lv !== 2 || w.kind !== 'parede') continue; for (let j = 0; j <= 20; j++) { const x = w.a[0] + (w.b[0] - w.a[0]) * j / 20, z = w.a[1] + (w.b[1] - w.a[1]) * j / 20; dev = Math.max(dev, Math.abs(Math.hypot(x - cu, z - cv) / Fo.ringEdge(1, Math.atan2(z - cv, x - cu)) - fundo - 0.06)); } } out.dev = dev; }
       console.log(JSON.stringify(out)); process.exit(0);`;
     const r = cp.spawnSync(process.execPath, ['-e', code], { cwd: __dirname, timeout: 60000, encoding: 'utf8' }); let o = null; try { o = JSON.parse((r.stdout || '').trim().split('\n').pop()); } catch (e) { o = null; }
     const out = [];
     if (!o) out.push(`o processo da prova falhou: ${(r.stderr || '').slice(0, 160)}`);
     else if (!o.ok) out.push(`a planta não se arma: ${o.errs.join('; ')}`);
-    else { if (o.fal.length) out.push(o.fal.slice(0, 2).join('; ')); if (Math.abs(-o.open[0] - o.want) > 0.002 || Math.abs(o.open[1] - o.want) > 0.002) out.push(`a abertura do parapeito de ${(o.open[0] * 180 / Math.PI).toFixed(2)}° a ${(o.open[1] * 180 / Math.PI).toFixed(2)}°, a do 3D ±${(o.want * 180 / Math.PI).toFixed(2)}°`); }
-    ok('A8 o parapeito do pódio do anfiteatro de hoje em volta de uma arena de 10 m (L-551): aberto sobre os degraus da areia como o 3D, o corpo no alto deles', !out.length, out.join(' · ') || `a abertura de ${(o.open[0] * 180 / Math.PI).toFixed(2)}° a +${(o.open[1] * 180 / Math.PI).toFixed(2)}° em volta do meio (a do 3D: ±${(o.want * 180 / Math.PI).toFixed(2)}°, 1,1 m no raio da arena); o alto dos degraus em (${o.top.map(q => q.toFixed(2)).join(', ')})`);
+    else { if (o.fal.length) out.push(o.fal.slice(0, 2).join('; ')); if (Math.abs(-o.open[0] - o.want) > 0.002 || Math.abs(o.open[1] - o.want) > 0.002) out.push(`a abertura do parapeito de ${(o.open[0] * 180 / Math.PI).toFixed(2)}° a ${(o.open[1] * 180 / Math.PI).toFixed(2)}°, a do 3D ±${(o.want * 180 / Math.PI).toFixed(2)}°`);
+      if (!(o.dev <= 0.01)) out.push(`o parapeito a ${(o.dev * 100).toFixed(1)} cm do polígono do 3D (T-457)`); }
+    ok('A8 o parapeito do pódio do anfiteatro de hoje em volta de uma arena de 10 m (L-551): aberto sobre os degraus da areia como o 3D, o corpo no alto deles', !out.length, out.join(' · ') || `a abertura de ${(o.open[0] * 180 / Math.PI).toFixed(2)}° a +${(o.open[1] * 180 / Math.PI).toFixed(2)}° em volta do meio (a do 3D: ±${(o.want * 180 / Math.PI).toFixed(2)}°, 1,1 m no raio da arena), o parapeito a ${(o.dev * 100).toFixed(1)} cm do polígono do 3D (T-457); o alto dos degraus em (${o.top.map(q => q.toFixed(2)).join(', ')})`);
   // ---------------------------------------------------------------- A9 the side passages' vault
   // (the passages of the left and the right go under the rows from the bridge at the podium out to the facade: at every point of
   // them, a piece of the form over the head — the bridge, the vault —; without the vault the sky showed between the rows' ends,
@@ -460,12 +476,16 @@ function testeA() {
         tally.push(p.cap.watch);
         if (s !== 'S') continue;
         // (the street on the front: the plan's frame the form's)
-        const inBox = (x, z, r0, rA) => B.some(X => { const d = Math.hypot(x - X.c[0], z - X.c[1]); return d >= r0(X) && d <= rA(X) && angIn(Math.atan2(z - X.c[1], x - X.c[0]), X.span[0], X.span[1]); });
+        // (the box's band by the 3D's polygon, as the plan lays it — the radius over the edge's at the angle, G.Forma.ringEdge —;
+        // and its back wall on that polygon, a hand inside the band, the whole arc: along the round it stood 4.3 cm off it, T-457)
+        const inBox = (x, z, r0, rA) => B.some(X => { const th = Math.atan2(z - X.c[1], x - X.c[0]), d = Math.hypot(x - X.c[0], z - X.c[1]) / Fo.ringEdge(1, th); return d >= r0(X) && d <= rA(X) && angIn(th, X.span[0], X.span[1]); });
+        const backs = B.map(X => ringWallsOff(p.walls.filter(w => w.lv === 2 && w.kind === 'parapeito' && [w.a, w.b].every(q => Math.abs(Math.hypot(q[0] - X.c[0], q[1] - X.c[1]) - (X.rB - 0.06)) < 0.15 && angIn(Math.atan2(q[1] - X.c[1], q[0] - X.c[0]), X.span[0] - 0.01, X.span[1] + 0.01))), X.c, X.rB - 0.06, X.span[0], X.span[1]));
+        if (backs.some(o => !o.n || o.dev > 0.01 || o.gap > 0.02)) out.push(`n ${n}: o parapeito de trás do camarote ${backs.map(o => `em ${o.n} paredes a ${(o.dev * 100).toFixed(1)} cm do polígono do 3D, o maior vão ${o.gap.toFixed(2)} m`).join(' e ')} (T-457)`);
         const seats = In.tierSeats(p).filter(q => inBox(q.x, q.z, () => r1, X => X.r3)); if (seats.length) out.push(`n ${n}: ${seats.length} assentos das fileiras no camarote ou na fileira de trás`);
         const stand = (p.marks || []).filter(M => M.use === 'assistir').flatMap(M => M.pts).filter(q => inBox(q.x, q.z, () => O.rb, X => X.r3)); if (stand.length) out.push(`n ${n}: ${stand.length} lugares de assistir em pé diante do camarote`);
         let strip = 0, walked = 0; for (let k = 0; k < N * N; k++) { const x = (k % N + 0.5) * CS, z = (Math.floor(k / N) + 0.5) * CS; if (!inBox(x, z, X => X.rB + 0.02, X => X.r3 - 0.02)) continue; strip++; if (R[k]) walked++; }
         if (!strip || walked) out.push(`n ${n}: a fileira de trás do camarote andada em ${walked} de ${strip} casinhas`);
-        said.push(`n ${n}: o camarote de ${lens.map(x => x.toFixed(2)).join(' e ')} m, o trono e a corte (4) que o corpo toma, alcançados da porta; ${p.cap.watch} assentos; a fileira de trás (${strip} casinhas) nunca andada`);
+        said.push(`n ${n}: o camarote de ${lens.map(x => x.toFixed(2)).join(' e ')} m, o trono e a corte (4) que o corpo toma, alcançados da porta; ${p.cap.watch} assentos; a fileira de trás (${strip} casinhas) nunca andada, o parapeito dela a ${(Math.max(...backs.map(o => o.dev)) * 100).toFixed(1)} cm do polígono do 3D (T-457)`);
       }
       if (new Set(tally).size > 1) out.push(`n ${n}: os assentos mudam com o lado (${tally.join(', ')})`);
     }
@@ -849,6 +869,11 @@ function testeE() {
         for (let s = 0.15; s < L2 - 0.15; s += 0.25) { if (hs.some(h => Math.abs(s - h.at) < h.w / 2 + 0.1)) continue; const x = w.a[0] + (w.b[0] - w.a[0]) * s / L2, z = w.a[1] + (w.b[1] - w.a[1]) * s / L2; if (!inBlock(F, x, z, yb, 0.02)) { off++; if (!offAt) offAt = `(${x.toFixed(2)}, ${z.toFixed(2)})`; } }
         for (const h of hs) { doors++; const x = w.a[0] + (w.b[0] - w.a[0]) * h.at / L2, z = w.a[1] + (w.b[1] - w.a[1]) * h.at / L2; if (inBlock(F, x, z, yb, -0.05)) shut++; } }
       if (off || shut || doors < 3 + (A.dc ? 3 : 0)) out.push(`${tag}: ${off} pontos das paredes da planta fora das da forma (o primeiro ${offAt}), ${shut} de ${doors} portas fechadas na forma`);
+      // (T-457: the parapet round the gallery — the plan's walls of it on the 3D's polygon, their middle line R − 0.1 by its
+      // measure at every point, the arc from a0 to a1 whole: as chords of their own from a0 the Greek's stood 4.3 cm off it)
+      const rim = p.walls.filter(w => w.lv === 0 && w.kind === 'parapeito' && [w.a, w.b].every(q => Math.abs(Math.hypot(q[0] - A.cu, q[1] - A.vD) - (A.R - 0.1)) < 0.3));
+      const ro = ringWallsOff(rim, [A.cu, A.vD], A.R - 0.1, A.a0, A.a1);
+      if (!ro.n || ro.dev > 0.01 || ro.gap > 0.02) out.push(`${tag}: o parapeito da galeria da planta a ${(ro.dev * 100).toFixed(1)} cm do polígono do 3D, ${ro.n} paredes, o maior vão ${ro.gap.toFixed(2)} m (T-457)`);
       // (L-494: the orchestra drawn a hair over the plan's floor — (1) —; no floor of the plan in a column's base — (3), the 3D's
       // base of 2.3 radii —; (2), the rows drawn as chords and walked as rounds: below)
       const orq = F.els.find(e => e.k === 'arena'); const d1 = orq.y - (p.levels[0].y); if (d1 < 0 || d1 > 0.015) out.push(`${tag}: a orquestra desenhada a ${d1.toFixed(3)} m do chão da planta (L-494, 1)`);
@@ -863,7 +888,7 @@ function testeE() {
           const th = Math.atan2(z - e.c[1], x - e.c[0]), d = Math.hypot(x - e.c[0], z - e.c[1]), dp = d / Fo.ringEdge(1, th); if (bnd.some(r => (d < r) !== (dp < r))) band++;
           if (Math.abs(In.floorYOf(p, 0, x, z) - caveaY(F, x, z)) > 1e-6) { poly++; if (!polyAt) polyAt = `(${x.toFixed(2)}, ${z.toFixed(2)})`; } } }
       if (poly) out.push(`${tag}: ${poly} casinhas das fileiras com o chão da planta fora do da forma (a primeira ${polyAt}; L-494, 2)`);
-      said.push(`${tag}: ${cells} casinhas andadas no chão, o chão a ${worst.toFixed(3)} m da forma, ${doors} portas nas aberturas da forma, a orquestra ${(d1 * 100).toFixed(1)} cm sobre o chão; L-494 (2): ${poly} casinhas fora da forma (${band} entre o redondo e o polígono)`);
+      said.push(`${tag}: ${cells} casinhas andadas no chão, o chão a ${worst.toFixed(3)} m da forma, ${doors} portas nas aberturas da forma, a orquestra ${(d1 * 100).toFixed(1)} cm sobre o chão; L-494 (2): ${poly} casinhas fora da forma (${band} entre o redondo e o polígono); o parapeito da galeria em ${ro.n} paredes a ${(ro.dev * 100).toFixed(1)} cm do polígono do 3D (T-457)`);
     }
     // (the classic theatre — the Greek's and the classical people's, the one of before (antigo) —: no floor in its columns' bases)
     for (const st of ['grego', 'classico']) { const n0 = G.BDEF.teatro.w; const { b, p } = planOf('teatro', st, n0, 'S', (nid += 37)); if (!p || !p.ok) { out.push(`o teatro antigo ${st}: não se arma`); continue; }
