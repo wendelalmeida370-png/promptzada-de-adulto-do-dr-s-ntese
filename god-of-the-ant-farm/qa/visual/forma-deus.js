@@ -43,7 +43,12 @@
 //     a linha; o ponteiro sobre o lote, nada mais sob ele: «Reservado para o Coliseu» (o artigo de cada nome); sem a reserva,
 //     nada; o save, o acaso e o relógio iguais depois dos quadros; o mesmo mundo com e sem quadros. Até a G.Village.reserva do C
 //     entrar no jogo, uma reserva de teste registrada só aqui (TESTE).
-//   node qa/visual/forma-deus.js [a,b,c,d,e,f,g,h,i,j,k]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
+// (l) A escada em degraus (L-565, T-445): toda escada de uma forma — pelo pintor; no tamanho clássico, o desenho à mão das
+//     pirâmides de degraus (o templo e o Templo Mayor dos astecas, a Acrópole, o zigurate) — com tantos espelhos quanto os
+//     degraus que o 3D põe (Fo.flight), da altura e da largura deles; os degraus de caixa do desenho à mão dos palácios, à parte.
+// (m) As cores da forma pelo nome inteiro (L-564): 'trim2' e 'acc2' são as cores da paleta, não 'trim' e 'acc'; o palácio
+//     asteca de 6 com as duas faixas dos tetos planos, a vermelha e a verde-azulada.
+//   node qa/visual/forma-deus.js [a,b,c,d,e,f,g,h,i,j,k,l,m]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
 //   MUNDO_K=mundo  o mundo pronto da (k) (metropole)
 //   VERB=1  cada tipo e povo                   JSON=arquivo  os números
 'use strict';
@@ -528,6 +533,59 @@ if (want('k')) {
       ok('k: com e sem quadros, o mesmo mundo', fa === fb && ka === kb && drawn === FR && said === FR, `${(STEPS * FR) / 10} s de ${world}: ${fa === fb && ka === kb ? 'o mesmo mundo' : 'MUNDOS DIFERENTES'} (${fa} / ${fb}); a reserva desenhada em ${drawn} de ${FR} quadros, o rótulo em ${said}`);
     }
   } finally { if (real) V.reserva = real; else delete V.reserva; R.pointer = null; R.hover = null; }
+}
+
+// ------------------------------ (l) the flight in steps ------------------------------
+// (T-445: the god painted the stair of a stepped pyramid as a ramp — a few faint lines on it —, and the 3D lays it in steps,
+// as the form's flight (Fo.flight: no riser over 0.26 m). Now the god paints the same steps, each riser a shade darker than
+// its treads. Every step of a form with a flight — by the painter; at the type's classic size, the hand drawing of the
+// stepped pyramids (the Aztecs' temple and Templo Mayor, the Acropolis, the ziggurat) —: as many risers as the form's
+// flight, of its height (a quad two of whose sides stand upright, as tall as a step and as wide as the flight); a flight hidden in the mass, or that
+// climbs toward the view, none. The hand drawings of a few box treads up a palace's platform, counted apart)
+if (want('l')) {
+  F.blank(); const out = [], bad = [], boxes = []; let nF = 0, nR = 0, q = 0;
+  const HAND = { 'maravilha/classico': 1, 'maravilha/grego': 1, 'maravilha/asteca': 1, 'temple/asteca': 1 }; // (the classic hand drawings of a whole flight)
+  const risers = (ops, dz, wx) => ops.filter(o => o.f && o.polys.length === 1 && o.polys[0].length === 4 && (([a, b, c, d]) => Math.abs(a[0] - d[0]) < 1e-6 && Math.abs(b[0] - c[0]) < 1e-6 && Math.abs(a[1] - d[1] - dz) < 0.01 && Math.abs(b[1] - c[1] - dz) < 0.01 && Math.abs(Math.abs(b[0] - a[0]) - wx) < 0.05)(o.polys[0])).length;
+  for (const ty of Fo.types()) for (const st of STY) {
+    if (!Fo.has(ty, st)) continue; const n0 = G.BDEF[ty] && G.BDEF[ty].w;
+    for (const n of Fo.sizes(ty, st)) {
+      const Fm = Fo.of(ty, st, n); if (!Fm || Fm.style !== st) continue; const fl = Fm.els.filter(e => e.k === 'escada'); if (!fl.length) continue;
+      if (n === n0 && !HAND[ty + '/' + st]) { boxes.push(`${ty}/${st}/${n}`); continue; }
+      const b = putBig(ty, st, 9100 + (q++), n);
+      try {
+        const god = F.god(b); if (god.none) { bad.push(`${ty}/${st}/${n}: nenhum desenho`); continue; }
+        // (the flights by the height of their steps — two of the same are counted together —: the form's steps where the risers
+        // face the view, none where the flight is hidden or climbs toward it)
+        const by = new Map(); for (const e of fl) { const k = Fo.flight(e).length, dz = (e.b[2] - e.a[2]) * 3.04 / k, wx = e.w * 4, key = dz.toFixed(4) + '/' + wx.toFixed(3), seen = !e.oculto && (e.a[0] - e.b[0]) + (e.a[1] - e.b[1]) > 1e-9;
+          const g = by.get(key) || { dz, wx, want: 0 }; g.want += seen ? k : 0; by.set(key, g); } // (the flight's width in the god's px: w m ÷ 4 m a tile × 16 px)
+        for (const g of by.values()) { const got = risers(god.ops, g.dz, g.wx); nF++; nR += got; if (got !== g.want) bad.push(`${ty}/${st}/${n}${n === n0 ? ' (à mão)' : ''}: ${got} espelhos de ${g.dz.toFixed(2)} × ${g.wx.toFixed(1)} px, a forma ${g.want}`); }
+        if (process.env.VERB) out.push(`${ty}/${st}/${n}: ${[...by.values()].map(g => `${g.want} de ${g.dz.toFixed(2)} × ${g.wx.toFixed(1)} px`).join(', ')}`);
+      } finally { F.drop(b); }
+    }
+  }
+  ok('l: a escada em degraus, como o 3D', nF > 0 && !bad.length, `${nF} escadas, ${nR} espelhos pintados, cada uma com os degraus da forma${bad.length ? ' — não: ' + bad.join('; ') : ''}${boxes.length ? `; os degraus de caixa do desenho à mão, à parte: ${boxes.join(', ')}` : ''}${out.length ? ' — ' + out.join('; ') : ''}`);
+}
+
+// ------------------------------ (m) a form's colours by their whole names ------------------------------
+// (L-564: the palette's 'trim2' and 'acc2' — the Aztecs' and the Egyptians' second painted band, every people's second accent
+// — were read as «a list and a place in it», 'trim' and 'acc' being no lists: the first's colour. In every people, a name the
+// palette has whole is its own colour, a list's name and a place its place; and the Aztec palace of 6 the god paints shows
+// its flat roofs' two bands, the red and the teal over it, along each wing — not one red band twice as tall)
+if (want('m')) {
+  F.blank(); const wrong = []; let nW = 0, nL = 0;
+  for (const st of STY) { const p = A.PAL[st];
+    for (const k of Object.keys(p)) { const v = p[k];
+      if (typeof v === 'string' && /\d$/.test(k)) { nW++; if (A.formCol(st, k).toLowerCase() !== v.toLowerCase()) wrong.push(`${st}/${k}: ${A.formCol(st, k)} (a paleta: ${v})`); }
+      if (Array.isArray(v) && typeof v[0] === 'string') v.forEach((c, i) => { nL++; if (A.formCol(st, k + i).toLowerCase() !== c.toLowerCase()) wrong.push(`${st}/${k}${i}: ${A.formCol(st, k + i)} (a lista: ${c})`); }); } }
+  const b = putBig('palacio', 'asteca', 9400, 6); let red = 0, teal = 0;
+  try {
+    const god = F.god(b), P = A.PAL.asteca, R0 = F.parseCol(P.trim), T0 = F.parseCol(P.trim2);
+    const same = (c, w) => [1, 0.8].some(k => Math.abs(c[0] - w[0] * k) < 2 && Math.abs(c[1] - w[1] * k) < 2 && Math.abs(c[2] - w[2] * k) < 2);
+    const long = o => { const xs = o.polys[0].map(q => q[0]), ys = o.polys[0].map(q => q[1]); return Math.max(...xs) - Math.min(...xs) > 20; }; // (a band along a wing, not a crest)
+    for (const o of god.ops) if (o.f && long(o)) { if (same(o.col, R0)) red++; else if (same(o.col, T0)) teal++; }
+  } finally { F.drop(b); }
+  const Fm = Fo.of('palacio', 'asteca', 6), nb = Fm.els.filter(e => e.k === 'faixa' && e.cor === 'trim2').length;
+  ok('m: as cores da forma pelo nome inteiro', !wrong.length && teal >= nb && nb > 0, `${nW} nomes inteiros com número (trim2, acc2) e ${nL} lugares de listas, nos seis povos${wrong.length ? ' — errados: ' + wrong.join(', ') : ': cada um a sua cor'}; o palácio asteca de 6: ${red} faces de faixa vermelhas e ${teal} verde-azuladas (a forma: ${nb} faixas 'trim2' sobre as vermelhas)`);
 }
 
 if (process.env.JSON) fs.writeFileSync(process.env.JSON, JSON.stringify(json));
