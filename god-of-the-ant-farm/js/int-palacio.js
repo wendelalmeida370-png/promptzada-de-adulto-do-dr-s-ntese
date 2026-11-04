@@ -242,26 +242,31 @@
   const FM = { form: 1 }; // (a piece the form draws: the plan only keeps the feet off it)
   // (which of the world's sides each of the plan's faces is, by the side the plan opens to: the bits of rec.pw — int-quadras.js)
   const PARTY = { S: { frente: 4, fundo: 1, direita: 2, esquerda: 8 }, N: { frente: 1, fundo: 4, direita: 8, esquerda: 2 }, E: { frente: 2, fundo: 8, direita: 1, esquerda: 4 }, W: { frente: 8, fundo: 2, direita: 4, esquerda: 1 } };
-  const riskOf = F => { const e = F && F.els.find(q => q.palacio); return e ? e.palacio : null; };
+  // (the risk of a form with one — the palace's, the temple's —, kept on its platform's element)
+  const riskOf = F => { const e = F && F.els.find(q => q.palacio || q.risco); return e ? e.palacio || e.risco : null; };
+  // (a wall of the risk and its openings: a window — none in a side against another building's wall at the founding: a party
+  // wall, rec.pw —, a door — the street's where the risk says so, kept in .gate —; the rooms either side of a door are found by
+  // where it falls, when the plan is finished)
+  function layerOf(P) {
+    const Ly = { gate: -1 }; const blind = side => !!(side && P.rec.pw & ((PARTY[P.rec.s] || PARTY.S)[side] || 0));
+    Ly.lay = w => {
+      const id = P.wall(w.lv, w.a, w.b, w.t, w.h, w.outer, w.kind);
+      for (const o of w.ops) {
+        const at = r2(P.atOf(id, o.p));
+        if (o.k === 'janela') { if (!(w.outer && blind(w.side))) P.window(id, at, o.w, o.h, o.sill); }
+        else { const d = P.door(id, at, o.w, o.h, -1, o.rua ? 'rua' : -1, o.rua ? 1 : 0, o.k === 'portal' ? 'porta' : o.k); if (o.rua) Ly.gate = d; }
+      }
+      return id;
+    };
+    return Ly;
+  }
   function palaceByForm(P, F) {
     const R = riskOf(F); if (!R) { P.errs.push('o palácio sem o risco da forma'); return; }
     P.shell = { kind: 'rect', r: R.B.slice(), t: R.t, mat: R.mat, base: R.Hp >= In.BODY.step ? 'macica' : 'pedra', baseH: R.Hp, floors: R.two ? 2 : 1, eave: R.eave, court: R.C.slice() };
     P.roof = { kind: R.roof.kind, along: null, h: R.roof.h, over: R.roof.over, court: R.C.slice() };
     for (const l of R.levels) P.level(l.lv, l.y, l.h, l.kind, l.area);
     P.entryLv = 0;
-    // (a wall of the risk and its openings: a window — none in a side against another building's wall at the founding: a party
-    // wall, rec.pw —, a door — the street's where the risk says so —; the rooms either side of a door are found by where it
-    // falls, when the plan is finished)
-    let gate = -1; const blind = side => !!(side && P.rec.pw & ((PARTY[P.rec.s] || PARTY.S)[side] || 0));
-    const lay = w => {
-      const id = P.wall(w.lv, w.a, w.b, w.t, w.h, w.outer, w.kind);
-      for (const o of w.ops) {
-        const at = r2(P.atOf(id, o.p));
-        if (o.k === 'janela') { if (!(w.outer && blind(w.side))) P.window(id, at, o.w, o.h, o.sill); }
-        else { const d = P.door(id, at, o.w, o.h, -1, o.rua ? 'rua' : -1, o.rua ? 1 : 0, o.k === 'portal' ? 'porta' : o.k); if (o.rua) gate = d; }
-      }
-      return id;
-    };
+    const Ly = layerOf(P); const lay = Ly.lay;
     for (const w of R.walls) if (w.casca) lay(w);
     // (the porch: an annex open at its sides, as high as its columns; the columns of the risk — the porch's between it and the
     // court of honour, the screen across the open court's front with the street's gate in its middle bay — each where the form
@@ -270,13 +275,13 @@
     for (const c of R.cols) {
       const s = c.pts.slice().sort((a, b) => a[0] - b[0]); const lo = r2(s[0][0] - c.rc), hi = r2(s[s.length - 1][0] + c.rc), at = s[0][1];
       const out = P.colonnade(0, [hi, at], [lo, at], { at: s.map(q => r2(hi - q[0])).reverse(), col: r2(2 * c.rc), h: c.h, dh: c.h, outer: c.front ? 1 : 0, door: c.front ? c.rua : undefined, rua: !!c.front });
-      if (c.front) gate = out.door;
+      if (c.front) Ly.gate = out.door;
     }
     if (R.yard) P.yard = { r: R.yard.slice(), h: R.yardH, lv: 0 }; // (the court of honour: the shell's yard, its edge as high as the risk has it)
     // (the flight from the street up to the podium: one, on the form's own treads)
     P.stair('degraus', -1, 0, R.stair.slice(), 0, -1, null, { larga: R.sw >= 1.2 ? 1 : 0, treads: R.treads.map(q => ({ r: q.r.slice(), y: q.y })) });
-    if (gate < 0) { P.errs.push('o palácio sem a porta da rua'); return; }
-    P.entrance = { door: gate, u: R.gate.u, v: R.gate.v, w: R.gate.w, lv: 0 };
+    if (Ly.gate < 0) { P.errs.push('o palácio sem a porta da rua'); return; }
+    P.entrance = { door: Ly.gate, u: R.gate.u, v: R.gate.v, w: R.gate.w, lv: 0 };
     if (P.inside()) return;
     // ======== the inside ========
     for (const w of R.walls) if (!w.casca) lay(w);
@@ -325,7 +330,77 @@
     for (const f of later) f();
   }
   In.formSized('palacio', palaceByForm); In.formSized('palacio_colossal', palaceByForm);
-  In.riskOf = riskOf; // (for the proofs: the risk a palace's plan is laid out from)
+  In.riskOf = riskOf; // (for the proofs: the risk a palace's or a temple's plan is laid out from)
+
+  // ------------------------------ the temple by its form: the bigger steps (D-106) ------------------------------
+  // The temple of four, six and eight tiles — js/forma-poder.js, riscoTemplo — laid out from the risk its form keeps (the
+  // platform's element: e.risco), as the palace is: its shell the cella's block (the Greek's, the Roman's), the hall's (the
+  // Egyptian's, the Norse's) on the platform; the porch, the peristyle, the gallery its annexes, their columns where the form
+  // stands them, their bays the ways through; the precinct on the platform its yard — the temenos, the terraces, the court
+  // behind the pylon, the garth in its palisade —, its walls, its gate where the flight comes up; inside, the walls and the
+  // portals, the rooms, the form's pieces (the columns of the hall, the towers, the trees and statues, the stones) and its fires,
+  // the place of who lights each beside it; then the furniture. In the form's family (forma.templo), where the form of that size
+  // is the people's (In.formSized, int-civicos.js)
+  function templeByForm(P, F) {
+    const R = riskOf(F); if (!R) { P.errs.push('o templo sem o risco da forma'); return; }
+    P.shell = { kind: 'rect', r: R.B.slice(), t: R.t, mat: R.mat, base: R.Hp >= In.BODY.step ? 'macica' : 'pedra', baseH: R.Hp, floors: 1, eave: R.eave };
+    P.roof = { kind: R.roof.kind, along: R.roof.along || null, h: R.roof.h, over: R.roof.over };
+    for (const l of R.levels) P.level(l.lv, l.y, l.h, l.kind, l.area);
+    P.entryLv = 0;
+    const Ly = layerOf(P);
+    for (const w of R.walls) if (w.casca) Ly.lay(w);
+    for (const a of R.annexes) P.annex.push({ r: a.r.slice(), h: a.h, fn: a.fn, lv: 0, roof: 'portico' });
+    for (const c of R.cols) { const out = P.colonnade(0, c.line[0], c.line[1], { at: c.at, col: r2(2 * c.rc), h: c.wh || c.h, dh: c.h, outer: c.outer ? 1 : 0, door: c.door, rua: !!c.rua }); if (c.rua) Ly.gate = out.door; }
+    if (R.yard) P.yard = { r: R.yard.slice(), h: R.yardH, lv: 0 };
+    P.stair('degraus', -1, 0, R.stair.slice(), 0, -1, null, { larga: R.sw >= 1.2 ? 1 : 0, treads: R.treads.map(q => ({ r: q.r.slice(), y: q.y })) });
+    if (Ly.gate < 0) { P.errs.push('o templo sem a porta da rua'); return; }
+    P.entrance = { door: Ly.gate, u: R.gate.u, v: R.gate.v, w: R.gate.w, lv: 0 };
+    if (P.inside()) return;
+    // ======== the inside ========
+    for (const w of R.walls) if (!w.casca) Ly.lay(w);
+    const ids = R.rooms.map(m => P.room(m.lv, m.fn, m.r, m.open));
+    for (const p of R.pieces) if (!P.at('solido', 0, ids[p.room], p.r.slice(), 0, 1, { h: p.h, form: 1 })) { P.errs.push(`${p.k} da forma onde a planta não o põe (${p.r.join(', ')})`); return; }
+    // (the fires of the risk: solid on the floor, the place of who lights each beside it toward the way in, facing it)
+    const e = P.entrance;
+    for (const f of R.fires) { const id = ids[f.room];
+      if (!P.at('solido', 0, id, f.pe.slice(), 0, 1, { h: f.h, form: 1 })) { P.errs.push('o braseiro da forma onde a planta não o põe'); return; }
+      const du = e.u - f.c[0], dv = e.v - f.c[1], dl = Math.hypot(du, dv) || 1, d = f.r + In.BODY.r + 0.1;
+      P.marks(0, id, 'acender', [[r2(f.c[0] + du / dl * d), r2(f.c[1] + dv / dl * d), Math.atan2(-du, -dv)]]); }
+    templeFormFurnish(P, R, ids);
+  }
+  // the temple's furniture by its form: the god's image against the back wall of the sanctuary in its middle, the altar a pace
+  // before it — the priest between them —, a lamp at either hand; the faithful in rows facing the altar, an aisle down the
+  // middle — the benches, the mats of the peoples that kneel —, in the rooms of prayer the risk names; and where no row goes,
+  // standing before the temple, a pace apart (the court, the porch, the peristyle, the gallery, the garth), clear of the way in
+  // and of what stands there; the chest of the offerings. The same in every attempt: the risk fixes the rooms, the rows are laid
+  // the same way
+  function templeFormFurnish(P, R, ids) {
+    const sid = ids[R.sanct]; const A = P.rooms[sid].r; const L = R.L;
+    const im = P.place('idolo', 0, sid, { sides: ['fundo'], center: true }); if (!im) { P.errs.push('sem lugar para a imagem do deus'); return; }
+    const cu = r2((im.r[0] + im.r[2]) / 2); let al = null;
+    for (let dv = 0.75; !al && im.r[3] + dv + 0.7 <= A[3] - 0.6 + 1e-6; dv = r2(dv + 0.1)) for (const du of [0, -0.3, 0.3]) {
+      const u = Math.max(A[0] + 0.7, Math.min(A[2] - 0.7, cu + du)); al = P.at('altar', 0, sid, [r2(u - 0.6), r2(im.r[3] + dv), r2(u + 0.6), r2(im.r[3] + dv + 0.7)], 0, 1); if (al) break; }
+    if (!al) { P.errs.push('sem lugar para o altar'); return; }
+    P.opt(() => { const ac = (al.r[0] + al.r[2]) / 2; for (const du of [-1.1, 1.1]) P.at('lampadario', 0, sid, [r2(ac + du - 0.23), r2(al.r[1] + 0.12), r2(ac + du + 0.22), r2(al.r[1] + 0.57)], 0, 1); });
+    const kind = R.kneel ? 'esteira-oracao' : 'banco-fieis'; const D = In.ITEMS[kind]; const aisle = 1.2, gv = R.kneel ? 0.4 : 0.55, gu = R.kneel ? 0.35 : 0.3;
+    let n = 0;
+    for (const k of R.pray) {
+      const id = ids[k], r = P.rooms[id].r; const v0 = id === sid ? r2(al.r[3] + 1.3) : r2(r[1] + 0.6), v1 = r2(r[3] - 1.0);
+      for (let v = v0; v + D.d <= v1 + 1e-6; v = r2(v + D.d + gv)) for (const s of [-1, 1]) for (let u = r2(L / 2 + s * aisle / 2); s > 0 ? u + D.w <= r[2] - 0.4 + 1e-6 : u - D.w >= r[0] + 0.4 - 1e-6; u = r2(u + s * (D.w + gu))) {
+        const rr = s > 0 ? [u, v, r2(u + D.w), r2(v + D.d)] : [r2(u - D.w), v, u, r2(v + D.d)]; if (P.at(kind, 0, id, rr, 0, -1)) n++; }
+    }
+    for (const k of R.stand) {
+      const id = ids[k], r = P.rooms[id].r; const keep = (k === R.courtRoom ? R.gate.w : R.doorD ? R.doorD.w : 2) / 2 + 0.6; const pts = [];
+      for (const v of r[3] - r[1] >= 2.4 ? [r2(r[1] + 0.8), r2(r[3] - 0.8)] : [r2((r[1] + r[3]) / 2)]) for (let u = r2(r[0] + 0.6); u <= r[2] - 0.6 + 1e-6; u = r2(u + 0.9)) {
+        if (Math.abs(u - L / 2) < keep) continue;
+        if (P.items.some(it => it.lv === 0 && In.ITEMS[it.kind].solid && u > it.r[0] - 0.75 && u < it.r[2] + 0.75 && v > it.r[1] - 0.75 && v < it.r[3] + 0.75)) continue;
+        pts.push([u, v, Math.PI]); }
+      if (pts.length) { P.marks(0, id, 'rezar', pts); n += pts.length; }
+    }
+    if (n < 2) P.errs.push(`só ${n} lugares para os fiéis`);
+    P.opt(() => { for (const id of [sid].concat(ids)) if (P.place('cofre', 0, id)) break; });
+  }
+  In.formSized('temple', templeByForm);
 
   // ------------------------------ the fair ------------------------------
   // no walls and no roof: the lot's own ground, open on every side (its shell 'aberta'); the stalls in rows along the lanes
