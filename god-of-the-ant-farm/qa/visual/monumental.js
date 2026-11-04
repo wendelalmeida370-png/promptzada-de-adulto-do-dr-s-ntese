@@ -787,13 +787,22 @@ async function browserPart() {
       const front = H.reach(nm.face, C, o), back = H.reach(nm.face, C, [-o[0], -o[1]]); window.__nm = { C, o };
       // (the body on open ground before the way in, the street's — a step aside where a tree or a house is)
       const T = G.Space.TILE; let at = null; for (const d of [14, 12, 16, 18, 10]) for (const du of [0, -3, 3, -6, 6]) { const q = [C[0] + o[0] * (front + d) - o[1] * du, C[1] + o[1] * (front + d) + o[0] * du]; if (!at && G.W.inb(q[0] / T, q[1] / T) && G.W.walkableXY(q[0] / T, q[1] / T) && !G.S.treeAt[G.W.idx(Math.floor(q[0] / T), Math.floor(q[1] / T))]) at = q; }
-      G.Space.planNow(b); V.warm(2); V.f(6);
+      // (the frames the incarnation's title takes to fade, a few seconds)
+      G.Space.planNow(b); V.warm(2); V.f(200, 33);
+      // (from outside: the eye 6 m up, 20 m before the facade, over the grass — on the way in's side, or round it by eighths, the
+      // first side whose line to the facade passes no tree —, looking at the facade)
+      const tree = (P, A) => { for (let k = 0; k <= 24; k++) { const x = Math.floor((P[0] + (A[0] - P[0]) * k / 24) / T), z = Math.floor((P[2] + (A[2] - P[2]) * k / 24) / T);
+        for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) if (G.W.inb(x + dx, z + dz) && G.S.treeAt[G.W.idx(x + dx, z + dz)]) return true; } return false; };
+      let P1 = null, A1 = null; const a0 = Math.atan2(o[1], o[0]);
+      for (const j of [0, 1, -1, 2, -2, 3, -3, 4]) { const a = a0 + j * Math.PI / 4, w = [Math.cos(a), Math.sin(a)], r = H.reach(nm.face, C, w);
+        const P = [C[0] + w[0] * (r + 20), nm.base + 6, C[1] + w[1] * (r + 20)], A = [C[0] + w[0] * r, nm.base + nm.H * 0.45, C[1] + w[1] * r]; if (!P1) { P1 = P; A1 = A; } if (!tree(P, A)) { P1 = P; A1 = A; break; } }
       return { ok: true, id: b.id, x: b.x, y: b.y, drop0: f.drop0, h0: f.h0, at: at || [C[0] + o[0] * (front + 14), C[1] + o[1] * (front + 14)], into: Math.atan2(-o[1], -o[0]),
+        P1, A1,
         P2: [C[0] + o[0] * 5, nm.base + nm.sandY + 1.7, C[1] + o[1] * 5], A2: [C[0] - o[0] * back, nm.base + nm.H * 0.5, C[1] - o[1] * back] };
     });
     const pics5 = [];
     if (!r13.ok) pics5.push(r13.why);
-    else { const s1 = await shot('16-coliseu13-fora', { at: r13.at, attach: true, body: r13.into, yaw: r13.into, pitch: -0.5, dist: 9 }); await shot('17-coliseu13-arena', { body: r13.into, yaw: r13.into, pitch: -0.12, dist: 5.5, eye: { P: r13.P2, A: r13.A2 } });
+    else { const s1 = await shot('16-coliseu13-fora', { at: r13.at, attach: true, body: r13.into, yaw: r13.into, pitch: -0.2, dist: 9, eye: { P: r13.P1, A: r13.A1 } }); await shot('17-coliseu13-arena', { body: r13.into, yaw: r13.into, pitch: -0.12, dist: 5.5, eye: { P: r13.P2, A: r13.A2 } });
       for (const tag of ['16-coliseu13-fora', '17-coliseu13-arena']) { const f = path.join(OUT, tag + '.jpg'); pics5.push(fs.existsSync(f) ? `${tag}.jpg ${(fs.statSync(f).size / 1024).toFixed(0)} KB` : `${tag}: não saiu`); }
       if (!s1.placed) pics5.push(`o corpo não foi posto diante dele (a ${s1.d} m)`); }
     ok('14. o Coliseu colossal de 13 casas (a «cidade», Roma): de fora, o corpo diante da entrada; da arena', r13.ok && pics5.every(q => /KB/.test(q)), `${r13.ok ? `#${r13.id} em ${r13.x},${r13.y} (o chão ${r13.drop0} m de desnível${r13.h0 !== null ? ', aplainado' : ''}); ` : ''}${pics5.join(' · ')}`);
