@@ -2544,19 +2544,59 @@
     if (q === undefined) q = R.quarter(); return s === FL[q] ? { m: 1, back: false } : s === FR[q] ? { m: -1, back: false } : { m: m0, back: true };
   }
   R.doorView = doorView; // (for the proofs: { m: the mirror, back: drawn without its door } for a view's quarter)
-  // (a building on fire, for its glow: its first tile, or the one in from it; a lot of more than two tiles, its other corners and
-  // its middle too — D-106: a fire on the far side of a 10-tile lot is a fire in the building)
-  const fireOn = b => { const S = G.S, at = (x, y) => S.fire[W.idx(x, y)] > 0.15; if (at(b.x, b.y) || (b.w > 1 && at(b.x + 1, b.y + 1))) return true;
-    return b.w > 2 && (at(b.x + b.w - 1, b.y) || at(b.x, b.y + b.h - 1) || at(b.x + b.w - 1, b.y + b.h - 1) || at(b.x + (b.w >> 1), b.y + (b.h >> 1))); };
+  // (a building on fire, for its glow: a fire on any tile of its lot — D-106: one on the far side of a 10-tile lot is a fire in
+  // the building; a lot of 13 is 169 looks a frame, nothing)
+  const fireOn = b => { const F = G.S.fire; for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) if (F[W.idx(tx, ty)] > 0.15) return true; return false; };
   R.fireOn = fireOn; // (for the proofs)
+  // ---- the podium of a step of another size than its type's classic one (D-106, D-120): the relief under its lot — up to three
+  // of the map's levels — is a terrace of its people's dressed stone, as the 3D's (Space.plinth): its two faces the view shows,
+  // each from the lot's highest ground down to the ground under it all along its edge, the god's light on the one at the left
+  // and his shade on the other; its courses every half a level — 0.75 m — and the joints of its blocks, 2 m long, each course
+  // half a block on from the one under it; its coping, a band of the stone's top colour; the ground's line at its foot ----
+  const PODC = 0.5, PODB = 0.5; // (a course, levels; a block, tiles)
+  function podium(b, base) {
+    const A = G.Arch, pal = (A && A.PAL && (A.PAL[b.style] || A.PAL.classico)) || null; const sc = pal ? pal.base : ['#a59c8b', '#847b6c', '#bdb4a3'];
+    const [cx, cy] = G.Village.center(b); const fx = depth(cx + 1, cy) - depth(cx, cy), fy = depth(cx, cy + 1) - depth(cx, cy);
+    const xE = fx > 0 ? b.x + b.w : b.x, yE = fy > 0 ? b.y + b.h : b.y, inX = fx > 0 ? -0.02 : 0.02, inY = fy > 0 ? -0.02 : 0.02;
+    const hv = (x, y) => W.hAt(x, y); const fc = proj(xE + inX, yE + inY, base);
+    // (an edge: n + 1 of its corners, x along it or y along it; its outline down to the ground at each corner)
+    const face = (along) => {
+      const n = along === 'x' ? b.w : b.h, pt = k => (along === 'x' ? [b.x + k, yE] : [xE, b.y + k]), ins = q => [q[0] + (along === 'x' ? 0 : inX), q[1] + (along === 'x' ? inY : 0)];
+      const top = [], bot = [], gr = []; let lo = base;
+      for (let k = 0; k <= n; k++) { const q = pt(k), h = Math.min(base, hv(q[0], q[1])); gr.push(h); lo = Math.min(lo, h); const qi = ins(q); top.push(proj(qi[0], qi[1], base)); bot.push(proj(qi[0], qi[1], h)); }
+      return { n, pt, ins, top, bot, gr, lo };
+    };
+    for (const along of ['x', 'y']) {
+      const f = face(along); if (base - f.lo < 0.02) continue;
+      const mid = f.top[f.n >> 1], lit = mid[0] < fc[0] - 1e-6; const col = lit ? sc[0] : sc[1];
+      ctx.save(); ctx.beginPath(); ctx.moveTo(f.top[0][0], f.top[0][1]); for (let k = 1; k <= f.n; k++) ctx.lineTo(f.top[k][0], f.top[k][1]); for (let k = f.n; k >= 0; k--) ctx.lineTo(f.bot[k][0], f.bot[k][1]); ctx.closePath();
+      ctx.fillStyle = col; ctx.fill(); ctx.clip();
+      // (the courses and the joints, clipped to the face: a course's line from end to end; a block's joint every PODB, half a
+      // block on in every other course)
+      ctx.strokeStyle = lit ? 'rgba(40,30,20,0.22)' : 'rgba(30,20,10,0.25)'; ctx.lineWidth = 0.5; ctx.beginPath();
+      const P0 = f.ins(f.pt(0)), P1 = f.ins(f.pt(f.n));
+      for (let j = 1, h = base - PODC; h > f.lo - 1e-6; j++, h -= PODC) {
+        const a = proj(P0[0], P0[1], h), c = proj(P1[0], P1[1], h); ctx.moveTo(a[0], a[1]); ctx.lineTo(c[0], c[1]);
+        const h0 = h + PODC; for (let s = (j % 2) * PODB / 2 + PODB; s < f.n - 1e-6; s += PODB) { const q = f.ins(f.pt(s)); const u = proj(q[0], q[1], h0), v = proj(q[0], q[1], h); ctx.moveTo(u[0], u[1]); ctx.lineTo(v[0], v[1]); }
+      }
+      ctx.stroke();
+      // (the coping: a band of the stone's top over the first course; the ground's line at the foot)
+      ctx.fillStyle = sc[2]; ctx.beginPath(); ctx.moveTo(f.top[0][0], f.top[0][1]); for (let k = 1; k <= f.n; k++) ctx.lineTo(f.top[k][0], f.top[k][1]);
+      for (let k = f.n; k >= 0; k--) { const q = f.ins(f.pt(k)); const s = proj(q[0], q[1], Math.max(f.gr[k], base - 0.22)); ctx.lineTo(s[0], s[1]); } ctx.closePath(); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(20,14,8,0.3)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(f.bot[0][0], f.bot[0][1]); for (let k = 1; k <= f.n; k++) ctx.lineTo(f.bot[k][0], f.bot[k][1]); ctx.stroke();
+    }
+  }
+  R.podium = (c, b) => { const k = ctx; ctx = c; try { podium(b, W.maxH(b.x, b.y, b.w, b.h)); } finally { ctx = k; } }; // (for the proofs: on a context of theirs)
   function drawBuilding(b, sx, sy, t, nightF) {
     const S = G.S; const Art = G.Art;
     const def = G.BDEF[b.type];
     const [cx, cy] = G.Village.center(b);
     const base = W.maxH(b.x, b.y, b.w, b.h);
     const minH = W.minH(b.x, b.y, b.w, b.h);
-    // plinth so buildings sit on slopes
-    if (b.built && b.type !== 'cemetery' && b.type !== 'ruin' && b.type !== 'campfire' && !def.field && base - minH > 0.15) {
+    // plinth so buildings sit on slopes (a step of another size: its podium of stone, D-120)
+    if (b.built && b.type !== 'cemetery' && b.type !== 'ruin' && b.type !== 'campfire' && !def.field && base - minH > 0.15 && G.Arch.sized && G.Arch.sized(b.type, b.w)) podium(b, base);
+    else if (b.built && b.type !== 'cemetery' && b.type !== 'ruin' && b.type !== 'campfire' && !def.field && base - minH > 0.15) {
       const hx = b.w / 2 - 0.02, hy = b.h / 2 - 0.02;
       const drop = (base - minH) * HS + 1; const m = R.mirror();
       ctx.fillStyle = '#8a7a64';

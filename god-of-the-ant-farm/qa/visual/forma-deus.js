@@ -28,7 +28,13 @@
 // (h) O que mais o deus vê de um lote grande (L-531): o ponteiro escolhe o degrau de 10 casas até o alto da forma (o fundo dele
 //     também) e a casa desenhada diante da face dele, não o degrau; o nome dele, quando fica pronto, sobre o alto; um fogo no
 //     canto do fundo ou no meio do lote acende o prédio; o mundo igual.
-//   node qa/visual/forma-deus.js [a,b,c,d,e,f,g,h]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
+// (i) O pódio de pedra (L-532, D-120): o degrau de 10 casas num chão que cai 3 níveis — nas quatro vistas, as faces que a vista
+//     vê, do chão mais alto do lote até o chão de cada canto da borda (nunca até o ponto mais baixo do lote fora da vista), a
+//     da esquerda na pedra clara do povo e a da direita na escura, uma fiada a cada meio nível; o mundo igual.
+// (j) O ninho de cegonha no telhado de um degrau (L-533): no alto do desenho sobre o meio do lote — no palácio de pátios, a ala
+//     de trás, não o pátio —; o da casa como era. A planta aberta no Modo Deus na profundidade do próprio prédio nas quatro
+//     vistas (L-534). Um fogo em qualquer casa de um lote grande acende o prédio. O mundo igual.
+//   node qa/visual/forma-deus.js [a,b,c,d,e,f,g,h,i,j]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
 //   VERB=1  cada tipo e povo                   JSON=arquivo  os números
 'use strict';
 const path = require('path'), fs = require('fs');
@@ -347,6 +353,68 @@ if (want('h')) {
     const s1 = JSON.stringify([b, h]) + JSON.stringify(S.rng || null);
     ok('h: o que mais o deus vê de um lote grande', g1 === b && g2 === h && okN && fc && fm && !f0 && fhh && s0 === s1, out.join('; ') + (s0 === s1 ? '; o mundo igual' : '; o mundo MUDOU'));
   } finally { cam.x = cam0.x; cam.y = cam0.y; cam.zoom = cam0.zoom; F.drop(h); F.drop(b); }
+}
+
+// ------------------------------ (i) the podium of stone ------------------------------
+// (L-532, D-120: the step of 10 tiles on ground falling 3 levels toward the back of its lot and 3 along one side: in each of the
+// four views, the faces the view shows — from the lot's highest ground down to the ground at each corner of its edge, never
+// to the lot's lowest point where it is out of sight —, the left one in its people's light stone and the right in its shade,
+// a course every half a level; nothing of the world written)
+if (want('i')) {
+  F.blank(); const R = G.Render, S = G.S, W = G.W; const V = Math.round(Math.sqrt(S.H.length)); const x0 = 20, y0 = 20, n = N10;
+  // (the ground: 4 at the front corner — x and y high —, falling a level every 3.3 tiles toward the back along x, flat along y)
+  for (let vy = y0; vy <= y0 + n; vy++) for (let vx = x0; vx <= x0 + n; vx++) S.H[vy * V + vx] = 1 + 3 * (vx - x0) / n;
+  const b = putBig('maravilha', 'romano', 6700, n, x0, y0); const PALb = A.PAL.romano.base.map(F.parseCol); const out = [];
+  try {
+    const s0 = JSON.stringify(b) + JSON.stringify(S.rng || null); let okAll = true;
+    const same = (c, p) => Math.abs(c[0] - p[0]) < 1 && Math.abs(c[1] - p[1]) < 1 && Math.abs(c[2] - p[2]) < 1;
+    for (let r = 0; r < 4; r++) R.asView(r, () => {
+      const rec = F.recorder(); R.podium(rec.c, b); const fills = rec.ops.filter(o => o.f), lines = rec.ops.filter(o => !o.f);
+      const faces = fills.filter(o => same(o.col, PALb[0]) || same(o.col, PALb[1])); const lit = faces.filter(o => same(o.col, PALb[0])).length, dark = faces.length - lit;
+      // (each face's drop at its two ends, levels: from the polygon's top and bottom points at its ends, px ÷ HS)
+      const drops = faces.map(o => { const P2 = o.polys[0]; const xs = P2.map(p => p[0]); const lo = Math.min(...xs), hi = Math.max(...xs);
+        const at = x => { const ys = P2.filter(p => Math.abs(p[0] - x) < 0.6).map(p => p[1]); return ys.length ? (Math.max(...ys) - Math.min(...ys)) / R.HS : 0; }; return [at(lo), at(hi)].map(v => +v.toFixed(2)); });
+      // (what the ground says: the faces this view shows, and their drop at each end — the corners of the lot's two near edges)
+      const [cx, cy] = G.Village.center(b); const fx = R.depth(cx + 1, cy) - R.depth(cx, cy), fy = R.depth(cx, cy + 1) - R.depth(cx, cy);
+      const xE = fx > 0 ? x0 + n : x0, yE = fy > 0 ? y0 + n : y0, top = W.maxH(x0, y0, n, n), g = (x, y) => top - S.H[y * V + x];
+      const want = [[g(x0, yE), g(x0 + n, yE)], [g(xE, y0), g(xE, y0 + n)]].filter(d => Math.max(...d) > 0.02).map(d => d.slice().sort((p, q) => p - q));
+      const got = drops.map(d => d.slice().sort((p, q) => p - q));
+      const okR = faces.length === want.length && want.every(w => got.some(q => Math.abs(q[0] - w[0]) < 0.15 && Math.abs(q[1] - w[1]) < 0.15)) && (faces.length < 2 || (lit === 1 && dark === 1)) && lines.length > 0;
+      okAll = okAll && okR; out.push(`vista ${r}: ${faces.length} face${faces.length === 1 ? '' : 's'} (${lit} clara, ${dark} escura), as pontas ${JSON.stringify(got)} níveis (o chão: ${JSON.stringify(want)})`);
+    });
+    const s1 = JSON.stringify(b) + JSON.stringify(S.rng || null);
+    ok('i: o pódio de pedra do degrau, até o chão de cada canto', okAll && s0 === s1, out.join('; ') + ` — o bloco marrom de antes descia ${(W.maxH(x0, y0, n, n) - W.minH(x0, y0, n, n)).toFixed(0)} níveis inteiros nas duas faces de cada vista; ${s0 === s1 ? 'o mundo igual' : 'o mundo MUDOU'}`);
+  } finally { F.drop(b); }
+}
+
+// ------------------------------ (j) a stork's nest, the open plan, a fire ------------------------------
+// (L-533: the nest on the roof of a step — the palace of courtyards of 6 tiles — at the top of the god's picture over the middle
+// of its lot, its back wing, not the courtyard; a house's where it was. L-534: the plan the god opens takes the building's own
+// depth in the four views. And a fire on any tile of a big lot lights it. Nothing of the world written)
+if (want('j')) {
+  F.blank(); const R = G.Render, S = G.S, W = G.W; const out = []; let okN = false, okP = false, okF = false;
+  const b = putBig('palacio', 'romano', 6800, 6, 20, 20), h = putBig('house', 'romano', 6801, 1, 30, 30);
+  try {
+    const s0 = JSON.stringify([b, h]) + JSON.stringify(S.rng || null);
+    // (the nests, put by hand on the two roofs; their entities as the hooks give them, painted where the render puts them)
+    S.nests = [{ id: 1, type: 'roof', host: b.id, kind: 'stork', st: 'eggs', x: 23, y: 23 }, { id: 2, type: 'roof', host: h.id, kind: 'stork', st: 'eggs', x: 30.5, y: 30.5 }];
+    const ents = []; for (const hk of G.renderHooks.ents) hk((d, e, x, y, hh) => { if (e && e.n && e.fn) ents.push({ d, e, x, y, h: hh }); }, [-1e9, -1e9, 1e9, 1e9], 2);
+    const nestAt = id => { const q = ents.find(o => o.e.n.id === id); if (!q) return null; const p = R.proj(q.x, q.y, q.h === undefined ? W.groundH(q.x, q.y) : q.h); const rec = F.recorder(); q.e.fn(rec.c, q.e, p[0], p[1], 0);
+      const o = rec.ops.find(op => op.f); if (!o) return null; const ys = o.polys[0].map(v => v[1]), xs = o.polys[0].map(v => v[0]); return { up: p[1] - (Math.min(...ys) + Math.max(...ys)) / 2, dx: (Math.min(...xs) + Math.max(...xs)) / 2 - p[0], h: q.h }; };
+    const nb = nestAt(1), nh = nestAt(2); const t0 = A.formTop0('palacio', 'romano', 6), base = W.maxH(b.x, b.y, b.w, b.h);
+    okN = !!nb && Math.abs(nb.up - (t0 + 1)) < 0.6 && Math.abs(nb.dx) < 0.6 && nb.h === base && !!nh && Math.abs(nh.up - 20) < 0.6 && Math.abs(nh.dx + 4) < 0.6;
+    out.push(`o ninho no palácio de 6: ${nb ? nb.up.toFixed(1) : '-'} px sobre a âncora, no meio (o alto do desenho ali, a ala de trás: ${t0.toFixed(1)}; o pátio, no chão), não na altura do telhado clássico; o da casa: ${nh ? nh.up.toFixed(1) : '-'} px, 4 px à esquerda, como era`);
+    S.nests = [];
+    // (the plan open on the palace: the hook's depth against the render's key, in the four views)
+    const PV = G.PlanView, In = G.Interiors; G.UI.selected = b; PV.id = b.id; PV.lv = null; In.want(b); for (let k = 0; k < 400 && !In.ready(b); k++) In.pump(50);
+    const keys = []; for (let r = 0; r < 4; r++) R.asView(r, () => { for (const hk of G.renderHooks.ents) hk((d, e, x, y) => { if (e && e.fn && /drawPlan/.test(e.fn.toString())) keys.push({ r, k: R.depth(x, y) + (d - x - y), bk: R.bkey(b) }); }, [-1e9, -1e9, 1e9, 1e9], 2); });
+    PV.id = 0; G.UI.selected = null;
+    okP = keys.length === 4 && keys.every(q => Math.abs(q.k - q.bk) < 1e-9); out.push(`a planta aberta: ${keys.length} vistas, ${keys.filter(q => Math.abs(q.k - q.bk) < 1e-9).length} na profundidade do prédio`);
+    // (a fire on a tile in from the edges and away from the middle: the step lights)
+    const i = W.idx(b.x + 1, b.y + 4); S.fire[i] = 0.5; okF = R.fireOn(b); S.fire[i] = 0; okF = okF && !R.fireOn(b); out.push(`o fogo numa casa qualquer do lote: ${okF ? 'aceso' : 'apagado'}`);
+    const s1 = JSON.stringify([b, h]) + JSON.stringify(S.rng || null);
+    ok('j: o ninho no degrau, a planta aberta, o fogo', okN && okP && okF && s0 === s1, out.join('; ') + (s0 === s1 ? '; o mundo igual' : '; o mundo MUDOU'));
+  } finally { S.nests = []; F.drop(h); F.drop(b); }
 }
 
 if (process.env.JSON) fs.writeFileSync(process.env.JSON, JSON.stringify(json));

@@ -1981,6 +1981,22 @@
     return Art.sprite(key, w, h, ax, ay, (c, m) => A.formPaint(c, m, F, st, { noDoor }), true);
   };
   A.formKey = (type, st, n, noDoor) => 'f-' + type + st + n + (noDoor ? '|c' : '');
+  // the top of the god's picture of a step straight over the anchor — the middle of its lot —, px: the highest point of its
+  // solid parts on that column of the screen (where a thing perches on the building: a stork's nest — over a palace of
+  // courtyards, its back wing, not the courtyard), the same in the four views (the picture turns only by its mirror, and this
+  // column is its axis); no mast, no flag, no line. Of the form alone: kept with it
+  const tops = new WeakMap();
+  A.formTop0 = function (type, style, n) {
+    const Fo = G.Forma; const st = PAL[style] ? style : 'classico'; const F = Fo && Fo.of(type, st, n); if (!F) return null;
+    let top = tops.get(F); if (top !== undefined) return top; top = 0;
+    for (const q of formParts(null, { glow: [], win: [], fires: [] }, F, st, {})) {
+      if (!q.PL || q.PL.length < 3) continue; // (a solid: a flat part lies on one, a line is none)
+      const o = hull2(q.V.map(v => [(v[0] - v[1]) * 16, (v[0] + v[1]) * 8 - v[2] * 16]));
+      for (let k = 0; k < o.length; k++) { const a = o[k], b = o[(k + 1) % o.length]; if ((a[0] > 0) === (b[0] > 0) && a[0] !== 0 && b[0] !== 0) continue;
+        const y = Math.abs(b[0] - a[0]) < 1e-9 ? Math.min(a[1], b[1]) : a[1] + (b[1] - a[1]) * (0 - a[0]) / (b[0] - a[0]); top = Math.max(top, -y); }
+    }
+    tops.set(F, top); return top;
+  };
   // (a size that is not its type's classic one: a step drawn from its form — none given, the classic)
   A.sized = (type, n) => n !== undefined && n !== null && !!G.BDEF[type] && n !== G.BDEF[type].w;
 

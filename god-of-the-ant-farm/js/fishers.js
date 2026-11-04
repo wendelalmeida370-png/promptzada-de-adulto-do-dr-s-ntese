@@ -391,7 +391,9 @@
     for (const b of G.S.buildings.values()) {
       if (b.type !== 'doca' || !b.built) continue;
       if (b.crates && b.crates.length) { const p = crateSpot(b); let e = crateE.get(b.id); if (!e || e.b !== b) crateE.set(b.id, e = { b, fn: drawCrates }); add(p[0] + p[1] + 0.05, e, p[0], p[1]); }
-      if (b._fishers) { const p = Fi.quaySpot(b, 14); let e = rackE.get(b.id); if (!e || e.b !== b) rackE.set(b.id, e = { b, fn: drawRack }); add(p[0] + p[1] - 0.2, e, p[0] - 0.4, p[1] - 0.3); }
+      // (the rack stands where it is drawn, as anyone standing: its anchor's depth and a hair — half a tile more put it in front
+      // of the dock's face it stands behind, T-419)
+      if (b._fishers) { const p = Fi.quaySpot(b, 14); let e = rackE.get(b.id); if (!e || e.b !== b) rackE.set(b.id, e = { b, fn: drawRack }); add(p[0] - 0.4 + p[1] - 0.3 + 0.05, e, p[0] - 0.4, p[1] - 0.3); }
     }
     if (crateE.size > 300) crateE.clear(); if (rackE.size > 300) rackE.clear();
   });
