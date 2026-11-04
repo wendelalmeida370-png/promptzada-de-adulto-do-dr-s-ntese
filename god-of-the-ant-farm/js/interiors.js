@@ -578,12 +578,29 @@
     // a piece placed where fits said: the spots it covers taken from the pieces around it — and taken back, the piece with
     // them, if with it there some piece of the storey, some room or the end of a stair is no longer reached on foot
     put(kind, lv, room, rr, fu, fv, f, extra) {
+      if (!this.headRoom(kind, lv, rr, extra)) return null;
       const it = this.item(kind, lv, room, rr, fu, fv, Object.assign({ drop: f.drop }, extra || {})); if (!it) return null;
       const prev = f.steal.map(([o]) => [o, o.drop ? o.drop.slice() : null]);
       for (const [o, q] of f.steal) { if (!o.drop) o.drop = []; if (!o.drop.includes(q)) o.drop.push(q); } this._ver++;
       if (this.L >= 12 ? this.walksIn(lv, room) : this.walks(lv)) return it;
       this.items.pop(); for (const [o, d] of prev) o.drop = d; this._ver++;
       return null;
+    },
+    // (a piece hung over the floor — a shelf on pegs, baskets from the beams — over a flight that comes up to its storey or goes
+    // up from it: never in the head of whoever climbs, the body's height over the highest step under it; the baskets of the
+    // Greek insula hung 5 cm to 1.4 m over the steps, L-584)
+    headRoom(kind, lv, rr, extra) {
+      const D = ITEMS[kind]; const y = extra && extra.y !== undefined ? extra.y : D && D.y; if (!(y > 0)) return true;
+      const L = this.levels.find(q => q.lv === lv); if (!L) return true; const bot = L.y + y;
+      for (const st of this.stairs) {
+        if (st.kind === 'degraus' || (st.lv0 !== lv && st.lv1 !== lv)) continue;
+        const I = [Math.max(rr[0], st.r[0]), Math.max(rr[1], st.r[1]), Math.min(rr[2], st.r[2]), Math.min(rr[3], st.r[3])]; if (I[2] - I[0] < 1e-6 || I[3] - I[1] < 1e-6) continue;
+        const a = this.levels.find(q => q.lv === st.lv0), b = this.levels.find(q => q.lv === st.lv1); if (!a || !b) continue;
+        const len = st.dir[0] ? st.r[2] - st.r[0] : st.r[3] - st.r[1];
+        const t = st.dir[0] ? (st.dir[0] > 0 ? I[2] - st.r[0] : st.r[2] - I[0]) : (st.dir[1] > 0 ? I[3] - st.r[1] : st.r[3] - I[1]);
+        if (bot - (a.y + (b.y - a.y) * G.clamp(t / (len || 1), 0, 1)) < BODY.h) return false; // (the highest step under it)
+      }
+      return true;
     },
     // is everything of a storey still reached on foot (the plan as it stands, in its own frame): every piece by one of its
     // places for each use, every room, the ends of its stairs — from the street door on the entrance storey, from the

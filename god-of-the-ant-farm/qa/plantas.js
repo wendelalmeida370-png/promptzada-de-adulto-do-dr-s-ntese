@@ -35,6 +35,16 @@ const low = (L, ms) => L.length >= 40 && ms <= L[L.length - 1].ms; let nCells = 
 // the nearest one that is not. The last resort of the hall's recipe left 0.6 m, and a bench by the walls stood 0.12 m before the
 // altar's corner: 1136 of 25856 temples on four dice, L-502)
 const ALTAR_ROOM = 0.85; let nAltar = 0, nAltarBad = 0; const altarEx = [];
+// (L-584: a piece hung over the floor never in the head of whoever climbs a flight under it — the body's height over the
+// highest step under the piece, on a flight that comes up to its storey or goes up from it)
+let nHung = 0, nHungBad = 0; const hungEx = [];
+const headOf = (p, it) => { const L = p.levels.find(q => q.lv === it.lv); if (!L) return Infinity; const bot = L.y + it.y; let m = Infinity;
+  for (const st of p.stairs) { if (st.kind === 'degraus' || (st.lv0 !== it.lv && st.lv1 !== it.lv)) continue; const r = it.r, q = st.r;
+    const I = [Math.max(r[0], q[0]), Math.max(r[1], q[1]), Math.min(r[2], q[2]), Math.min(r[3], q[3])]; if (I[2] - I[0] < 1e-6 || I[3] - I[1] < 1e-6) continue;
+    const a = p.levels.find(l => l.lv === st.lv0), b = p.levels.find(l => l.lv === st.lv1); if (!a || !b) continue; const len = st.dir[0] ? q[2] - q[0] : q[3] - q[1];
+    const t = st.dir[0] ? (st.dir[0] > 0 ? I[2] - q[0] : q[2] - I[0]) : (st.dir[1] > 0 ? I[3] - q[1] : q[3] - I[1]);
+    m = Math.min(m, bot - (a.y + (b.y - a.y) * Math.max(0, Math.min(1, t / (len || 1))))); }
+  return m; };
 const altarRoom = (p, it) => {
   const fx = Math.round(Math.sin(it.ry)), fz = Math.round(Math.cos(it.ry)); const r = it.r, CS = In.CS, n = p.grid.n, g = p.grid.lv[it.lv];
   const e = fz > 0 ? r[3] : fz < 0 ? r[1] : fx > 0 ? r[2] : r[0]; const mid = fz ? (r[0] + r[2]) / 2 : (r[1] + r[3]) / 2; let best = ALTAR_ROOM;
@@ -89,6 +99,7 @@ for (const type of Object.keys(In.TYPES)) {
             nCells++; const y = In.floorYOf(p, l.lv, x, z); if (Math.abs(y - l.y - In.hAt(p, l.lv, x, z)) > 1e-6) { nFloorBad++; if (floorEx.length < 4) floorEx.push(`${type}/${c}/${f} #${id} piso ${l.lv} (${x}, ${z}): ${y.toFixed(2)} com o piso a ${l.y}`); }
           }
         }
+        for (const it of p.items) { if (!(it.y > 0)) continue; const hr = headOf(p, it); if (hr === Infinity) continue; nHung++; if (hr < In.BODY.h - 0.01) { nHungBad++; if (hungEx.length < 4 || process.env.VERB) hungEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${it.kind} a ${hr.toFixed(2)} m sobre os degraus`); } }
         if (type === 'temple') for (const it of p.items) { if (it.kind !== 'altar') continue; nAltar++; const d = altarRoom(p, it); if (d < ALTAR_ROOM) { nAltarBad++; if (altarEx.length < 4 || process.env.VERB) altarEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${d.toFixed(3)} m`); } }
         seen.add(p.sig); fine.add(hash(JSON.stringify([p.shell, p.rooms.map(m => m.r), p.items.map(i => [i.kind, i.x, i.z, i.ry]), p.holes.map(h => [h.wall, h.at])])));
         // the same input, the same plan (a second build outside the cache)
@@ -124,6 +135,8 @@ ok('a casca de longe', nShellBad === 0, `${nShell} cascas pedidas sozinhas: ${nS
 ok('o chão fora das escadas', nFloorBad === 0, `${nCells} células de chão fora das escadas e dos degraus; em ${nFloorBad} a altura não é a do piso`);
 if (nAltar) ok('o lugar de ofertar diante do altar (L-502)', nAltarBad === 0, `${nAltar} altares de templo: ${nAltarBad} com menos de ${ALTAR_ROOM} m de chão livre diante dele`);
 for (const e of altarEx) console.log('   ✗ ' + e);
+ok('a peça pendurada fora da cabeça de quem sobe (L-584)', nHungBad === 0, `${nHung} peças penduradas sobre um lance: ${nHungBad} a menos de ${In.BODY.h} m sobre os degraus sob elas`);
+for (const e of hungEx) console.log('   ✗ ' + e);
 for (const e of floorEx) console.log('   ✗ ' + e);
 ok('poucas caídas', nFell <= nPlans * 0.1, `${nFell} de ${nPlans} plantas (${(100 * nFell / Math.max(1, nPlans)).toFixed(1)}%) caíram da família do registro para a próxima que o catálogo oferece ali`);
 for (const e of fellEx) console.log('   ↘ ' + e);
