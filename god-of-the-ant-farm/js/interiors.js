@@ -263,9 +263,50 @@
   }
 
   // ------------------------------ the plan under construction (canonical) ------------------------------
-  // (the family in the seed by its own name — a hash of its id —, never by its place in the list of families: one family added in a
-  // file loaded early moved every family after it, and with them the plans of nearly every building of the world, L-512)
-  const famSeed = id => { let h = 0x811C9DC5; const s = String(id || ''); for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 0x01000193); } return h | 0; };
+  // (the family in the seed: its place in the list of the families there were when the list was frozen (FAMSEED, Arquitetura
+  // Monumental) — every plan of today the same —, and a family registered after it by its own name, a hash of its id: one family
+  // added in a file loaded early moved every family after it in the list, and with them the plans of nearly every building of the
+  // world, L-512. A family not registered at all: 7, as before. Never change the list — a family that leaves the game keeps its
+  // place —; a new one needs no entry)
+  const FAMSEED = new Map([
+    "integrado.terreo", "integrado.esteios", "integrado.jirau", "integrado.terraco", "integrado.quarto", "integrado.funda",
+    "integrado.porao-jirau", "integrado.porao-quarto", "redonda.terreo", "redonda.funda", "redonda.esteios",
+    "setores.terreo", "setores.jirau", "setores.terraco", "setores.quarto", "setores.funda", "setores.esteios",
+    "setores.porao-jirau", "setores.porao-quarto", "anexo.terreo", "anexo.jirau", "anexo.terraco", "anexo.quarto",
+    "anexo.funda", "anexo.esteios", "anexo.porao-jirau", "anexo.porao-quarto", "integrado.andar", "integrado.andarq",
+    "integrado.andar-jirau", "integrado.andar-terraco", "integrado.andar-quarto", "integrado.porao-andar", "setores.andar",
+    "setores.andarq", "setores.andar-jirau", "setores.andar-terraco", "setores.andar-quarto", "setores.porao-andar",
+    "anexo.andar", "anexo.andarq", "anexo.andar-jirau", "anexo.andar-terraco", "anexo.andar-quarto", "anexo.porao-andar",
+    "produtiva.terreo", "produtiva.jirau", "produtiva.terraco", "produtiva.quarto", "produtiva.porao-jirau",
+    "produtiva.porao-quarto", "produtiva.andar", "produtiva.andarq", "produtiva.andar-jirau", "produtiva.andar-terraco",
+    "produtiva.andar-quarto", "produtiva.porao-andar", "integrado.andar3", "integrado.andar3q", "integrado.andar3-jirau",
+    "integrado.andar3-terraco", "integrado.andar3-quarto", "integrado.porao-andar3", "setores.andar3", "setores.andar3q",
+    "setores.andar3-jirau", "setores.andar3-terraco", "setores.andar3-quarto", "setores.porao-andar3", "anexo.andar3",
+    "anexo.andar3q", "anexo.andar3-jirau", "anexo.andar3-terraco", "anexo.andar3-quarto", "anexo.porao-andar3",
+    "produtiva.andar3", "produtiva.andar3q", "produtiva.andar3-jirau", "produtiva.andar3-terraco",
+    "produtiva.andar3-quarto", "produtiva.porao-andar3", "integrado.andar4", "integrado.andar4q", "integrado.andar4-jirau",
+    "integrado.andar4-terraco", "integrado.porao-andar4", "integrado.andar5", "integrado.andar5q",
+    "integrado.andar5-jirau", "setores.andar4", "setores.andar4q", "setores.andar4-jirau", "setores.andar4-terraco",
+    "setores.porao-andar4", "setores.andar5", "setores.andar5q", "setores.andar5-jirau", "produtiva.andar4",
+    "produtiva.andar4q", "produtiva.andar4-jirau", "produtiva.andar4-terraco", "produtiva.porao-andar4",
+    "produtiva.andar5", "produtiva.andar5q", "produtiva.andar5-jirau", "quadra-patio.andar3", "quadra-patio.andar4",
+    "quadra-patio.andar3-terraco", "quadra-patio.andar4-terraco", "quadra-u.andar3", "quadra-u.andar4",
+    "quadra-u.andar3-terraco", "quadra-u.andar4-terraco", "quadra-barras.andar3", "quadra-barras.andar4",
+    "quadra-barras.andar3-terraco", "quadra-barras.andar4-terraco", "quadra-l.andar3", "quadra-l.andar4",
+    "quadra-l.andar3-terraco", "quadra-l.andar4-terraco", "w-salao.terreo", "w-salao.galeria", "w-salao.porao",
+    "w-salao.esteios", "w-salao.andar", "w-frente.terreo", "w-frente.galeria", "w-frente.porao", "w-frente.esteios",
+    "w-frente.andar", "w-corredor.terreo", "w-corredor.galeria", "w-corredor.porao", "w-corredor.esteios",
+    "w-corredor.andar", "w-patio.terreo", "w-patio.porao", "w-patio.andar", "w-naves.terreo", "w-naves.galeria",
+    "w-naves.porao", "w-naves.esteios", "w-naves.andar", "w-anexo.terreo", "w-anexo.galeria", "w-anexo.porao",
+    "w-anexo.andar", "w-terreiro.terreo", "w-terreiro.andar", "w-celas.terreo", "w-celas.andar", "w-celas.porao",
+    "w-enfiada.terreo", "w-enfiada.andar", "forma.salao", "forma.templo", "praca-fonte.chao", "pal-peristilo.terreo",
+    "pal-peristilo.andar", "pal-peristilo.terraco", "pal-honra.terreo", "pal-honra.andar", "pal-honra.terraco",
+    "pal-ala.terreo", "pal-ala.andar", "pal-ala.terraco", "feira-ruas.chao", "feira-ruas.toldos", "feira-praca.chao",
+    "feira-praca.toldos", "feira-bordas.chao", "feira-bordas.toldos", "forma.teatro", "forma.maravilha", "forma.monumento",
+    "forma.palacio", "forma.banhos", "forma.paco", "forma.celeiro", "forma.mercado"
+  ].map((id, k) => [id, k + 7]));
+  const famSeed = id => { const k = FAMSEED.get(id); if (k !== undefined) return k; if (!FAMS[id]) return 7;
+    let h = 0x811C9DC5; const s = String(id); for (let q = 0; q < s.length; q++) { h ^= s.charCodeAt(q); h = Math.imul(h, 0x01000193); } return h | 0; };
   function seedOf(id, fam, attempt) { return (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(famSeed(fam), 0x85EBCA6B) ^ Math.imul(attempt + 3, 0xC2B2AE35)) | 0; }
   // (two sets of dice: the shell's — one for the building and its family, the same in every attempt: the shell, its roof, its
   // floors, its outside walls and what opens in them are what is seen from afar, and never change with how the inside went
