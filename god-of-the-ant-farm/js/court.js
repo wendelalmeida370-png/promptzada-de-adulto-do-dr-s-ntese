@@ -93,12 +93,14 @@
     for (let k = want.length - 1; k >= 0; k--) if (want[k] === 'palacio') want.splice(k, 1);
     const isCap = G.Fac.capitalOf(fac.id) === set; if (!isCap || fac.gov === 'tribo' || (set.tier || 0) < 2 || G.City.saving(set, fac)) return;
     for (const k in c.siteTypes) if (Co.RANK[k] || (G.BDEF[k] && G.BDEF[k].civic && k !== 'paco')) return;
-    const st = fac.stock; const cur = bestPalace(fac); const want0 = desired(fac, set);
+    const cur = bestPalace(fac); const want0 = desired(fac, set);
     const r = P.ruler(fac);
     if (cur && Co.RANK[cur.type] >= Co.RANK[want0]) return;
     // a new ruler gets settled first; a palace is only replaced by a far grander one
     if (cur && (!r || Co.vanity(r) < 0.62 || G.S.day - (fac.rulerSince || 0) < 2 || Co.RANK[want0] - Co.RANK[cur.type] < 1)) return;
-    if ((want0 !== 'paco' && (set.tier || 0) < 3) || st.stone < (want0 === 'paco' ? 30 : 60) || pop < (want0 === 'paco' ? 20 : 26)) return;
+    // (the stone: a palace of its type's own size asks for it in store, one of a bigger step for the people's stone income to pay
+    // for it — G.Village.stoneGate, D-120)
+    if ((want0 !== 'paco' && (set.tier || 0) < 3) || !G.Village.stoneGate(set, want0, want0 === 'paco' ? 30 : 60) || pop < (want0 === 'paco' ? 20 : 26)) return;
     want.push(want0); fac._palaceWish = { type: want0, by: r ? r.id : 0, day: G.S.day };
   };
   // the vainest palaces go up outside the town, on open ground — at the size of the step of the ladder tried (n, G.Escala:
