@@ -1572,6 +1572,8 @@ float m3scale(float p) {
     const P = k => { const t = k / n * TAU; return [c[0] + (Math.cos(t) * e1[0] + Math.sin(t) * e2[0]) * r, c[1] + (Math.cos(t) * e1[1] + Math.sin(t) * e2[1]) * r, c[2] + (Math.cos(t) * e1[2] + Math.sin(t) * e2[2]) * r]; };
     for (let k = 0; k < n; k++) K.tri(c, P(k), P(k + 1), col, out);
   }
+  // (how far out of its face a form paints a door: a hair, its dark leaf over the wall — the proofs read it)
+  const PAINT = B3.PAINT = 0.02;
   const FORMK = {
     bloco(K, e, X) {
       const r = X.rect(e.r), y0 = X.foot(e.y0), y1 = X.Y(e.y1); const c = e.cor || ['wl', 'wr', 'top']; const cut = e.topCut ? X.rect(e.topCut) : null;
@@ -1913,7 +1915,7 @@ float m3scale(float p) {
       if (e.na === 'piramide') { const p = X.F.els.find(q => q.k === 'piramide'); const vAt = y => p.c[1] + p.e * (1 - (y - p.y0) / (p.y1 - p.y0)); const nn = [X.front[0], (p.e / (p.y1 - p.y0)), X.front[1]];
         const l = Math.hypot(...nn); out = nn.map(q => q / l); const d = 0.03;
         A = X.pt(e.u - e.w / 2, vAt(e.y0) + d, e.y0); B = X.pt(e.u + e.w / 2, vAt(e.y0) + d, e.y0); Cc = X.pt(e.u + e.w / 2, vAt(e.y1) + d, e.y1); D = X.pt(e.u - e.w / 2, vAt(e.y1) + d, e.y1); }
-      else { const v = e.v + 0.02; A = X.pt(e.u - e.w / 2, v, e.y0); B = X.pt(e.u + e.w / 2, v, e.y0); Cc = X.pt(e.u + e.w / 2, v, e.y1); D = X.pt(e.u - e.w / 2, v, e.y1); out = [X.front[0], 0, X.front[1]]; }
+      else { const v = e.v + PAINT; A = X.pt(e.u - e.w / 2, v, e.y0); B = X.pt(e.u + e.w / 2, v, e.y0); Cc = X.pt(e.u + e.w / 2, v, e.y1); D = X.pt(e.u - e.w / 2, v, e.y1); out = [X.front[0], 0, X.front[1]]; }
       K.as(e.luz ? 'linen' : 'door', () => K.quad(A, B, Cc, D, X.col(e.cor), out)); // (a door of light: the hall's fire through a cloth)
     },
     disco(K, e, X) {
@@ -3193,6 +3195,18 @@ float m3scale(float p) {
       const i0 = Math.ceil((cx - w) / cs - 0.5), i1 = Math.floor((cx + w) / cs - 0.5); if (i1 >= i0) out.push([i0 * cs, k * cs, (i1 + 1) * cs, (k + 1) * cs]); }
     return out;
   }
+  // the floor of the closed part of a ground open to the sky (D-131): over each closed room of the storey, less the holes of the
+  // stairs that come up through it — under it the form's floor —, and a board through each door of it (its walls are the
+  // form's: the doorway's floor is the form's paving, a hair lower)
+  function closedFloor(K, plan, l, CP) {
+    const holes = plan.stairs.filter(s => s.lv1 === l.lv && s.hole).map(s => s.hole);
+    const [pat, col] = floorMat(K, l); const y = l.y + FLOOR_UP;
+    K.as(pat, () => { for (const m of CP.rooms) if (m.lv === l.lv) for (const r of cutRect(m.r, holes)) flatQ(K, r, y, col, 1); });
+    K.as('plankH', () => { for (const h of plan.holes) { const d = h.door >= 0 && plan.doors[h.door]; const w = plan.walls[h.wall];
+      if (!d || !w || w.lv !== l.lv || (h.sill || 0) > 0.001 || !(d.rooms || []).some(id => CP.ids.has(id))) continue;
+      const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L;
+      K.box(w.a[0] + tx * h.at, l.y, w.a[1] + tz * h.at, h.w, FLOOR_UP + 0.008, w.t + 0.02, IDARK, Math.atan2(-tz, tx)); } });
+  }
   // a storey's floor over its area less the holes of the ladders and stairs that come up through it; where another storey
   // is under it, its slab — the underside (the ceiling of the room below), the edges (a loft's front, a hatch's sides), the
   // joists under it
@@ -3593,6 +3607,23 @@ float m3scale(float p) {
     return !!sh.court && (!inRect(sh.r, mx, mz) || inRect(sh.court, mx, mz));
   }
   B3.formWall = formWall; // (for the proofs)
+  // the closed part of a ground open to the sky (D-131: the theater's skene) — the plan's rooms that are not open, under a roof of
+  // the form — or null (a fair has none; a passage through the cávea's stone is no building of its own): { rooms, ids, lvs (each
+  // storey's), at(lv, x, z) — the closed room there }. The 3D opens it as a closed building (B3.interior: its floors, pieces,
+  // leaves, its ceiling at its storey's top — the plan's, the foot of the form's roof over it —; its walls are the form's, drawn
+  // outside), the rest of the ground the outside's
+  const closedMemo = new WeakMap();
+  function closedPart(plan, b) {
+    if (!plan || !plan.shell || plan.shell.kind !== 'aberta') return null;
+    if (closedMemo.has(plan)) return closedMemo.get(plan);
+    const F = b && formOf(b), side = F && formSide(b, plan);
+    const roofs = F ? G.Forma.mass(F).filter(m => m.k === 'telhado').map(m => { const a = G.Forma.toLot(side, F.L, m.r[0], m.r[1]), q = G.Forma.toLot(side, F.L, m.r[2], m.r[3]); return [Math.min(a[0], q[0]), Math.min(a[1], q[1]), Math.max(a[0], q[0]), Math.max(a[1], q[1])]; }) : [];
+    const rooms = plan.rooms.filter(r => !r.open && roofs.some(q => inRect(q, (r.r[0] + r.r[2]) / 2, (r.r[1] + r.r[3]) / 2))); let c = null;
+    if (rooms.length) c = { rooms, ids: new Set(rooms.map(r => r.id)), lvs: new Set(rooms.map(r => r.lv)),
+      at: (lv, x, z) => rooms.find(r => r.lv === lv && x > r.r[0] && x < r.r[2] && z > r.r[1] && z < r.r[3]) || null };
+    closedMemo.set(plan, c); return c;
+  }
+  B3.closedPart = closedPart; // (for the proofs)
   B3.interior = function (plan, b, o) {
     o = o || {}; if (!plan || !plan.levels || !plan.levels.length || !plan.shell) return null;
     const levels = plan.levels.slice().sort((p, q) => p.y - q.y); const fine = o.fine !== undefined ? !!o.fine : undefined; const fill = o.fill || null;
@@ -3607,17 +3638,22 @@ float m3scale(float p) {
     const outSteps = new Set(outOfPlan(plan).steps);
     // (the storey under another: the one whose area its own lies over, highest first)
     const under = l => { let best = null; for (const q of levels) if (q.y < l.y - 0.01 && clipR(q.area, l.area) && (!best || q.y > best.y)) best = q; return best; };
+    // (a ground open to the sky: only its closed part — D-131 —, the rest the outside's; its walls the form's, drawn outside)
+    const CP = closedPart(plan, b); const mid = r => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
+    const inCP = (lv, r) => !CP || !!CP.at(lv, ...mid(r));
     for (const l of levels) {
+      if (CP && !CP.lvs.has(l.lv)) continue;
       const K = Ks[l.lv]; const g = out.lv[l.lv];
-      inFloor(K, plan, l, under(l));
-      for (const w of plan.walls) if (w.lv === l.lv && l.kind !== 'terraco' && !formWall(b, plan, w)) inWall(K, plan, w, l);
+      if (CP) closedFloor(K, plan, l, CP); else inFloor(K, plan, l, under(l));
+      if (!CP) for (const w of plan.walls) if (w.lv === l.lv && l.kind !== 'terraco' && !formWall(b, plan, w)) inWall(K, plan, w, l);
       if (round && l.lv === levels[0].lv) inRing(K, plan, l);
-      for (const s of plan.stairs) if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === l.lv && !outSteps.has(s)) inStair(K, plan, s);
-      for (const s of plan.stairs) if (s.lv1 === l.lv && grandWell(s)) wellRail(K, plan, s, l);
+      for (const s of plan.stairs) if ((s.kind === 'degraus' ? s.lv1 : s.lv0) === l.lv && !outSteps.has(s) && inCP(l.lv, s.r)) inStair(K, plan, s);
+      for (const s of plan.stairs) if (s.lv1 === l.lv && grandWell(s) && inCP(l.lv, s.r)) wellRail(K, plan, s, l);
       for (const it of plan.items) {
-        if (it.lv !== l.lv || (it.form && Fm)) continue; const from = g.p.length / 3; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot);
-        // (the ceiling a piece reaches up to from its foot — a hood, a flue: the storey's own, or the eaves)
-        const ceil = Math.min(l.y + l.h, sh.eave) - foot;
+        if (it.lv !== l.lv || (it.form && Fm) || !inCP(it.lv, it.r)) continue; const from = g.p.length / 3; const foot = l.y + (it.y || 0) + FLOOR_UP; const F = piece(K, it, foot);
+        // (the ceiling a piece reaches up to from its foot — a hood, a flue: the storey's own, or the eaves; in a closed part of a
+        // ground open to the sky, its storey's)
+        const ceil = (CP ? l.y + l.h : Math.min(l.y + l.h, sh.eave)) - foot;
         const f = FURN[it.kind]; if (f) f(F, it, { ceil, fill: fill ? fill[it.id] : undefined }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH');
         out.item[it.id] = [l.lv, from, g.p.length / 3];
         if (it.fire) out.light.push([K.x0 + it.x, K.y0 + l.y + (it.y || 0) + Math.min(it.h, 0.6), K.z0 + it.z, FIRE_K[it.kind] || 0.5]);
@@ -3627,15 +3663,20 @@ float m3scale(float p) {
       // the court's, where the plan stands them)
       if (RT && l.lv === RT.lv) { const X = formCtx(K, Fm, RT.side, true); for (const e of innerEls(RT.R)) FORMK[e.k](K, e, X); }
     }
-    { const g = R3.Geo(); const K = kit(g, b, undefined, undefined, fine); g.ao = null; inRoof(K, plan);
+    { const g = R3.Geo(); const K = kit(g, b, undefined, undefined, fine); g.ao = null;
+      // (the closed part of a ground open to the sky: over each of its rooms the ceiling at its storey's top — the plan's, the
+      // foot of the form's roof over it: D-131 —, turned down to the room)
+      if (CP) K.as('beam', () => { for (const m of CP.rooms) { const l = levels.find(q => q.lv === m.lv); if (l) flatQ(K, m.r, l.y + l.h, dim(IWOOD, 0.95), -1); } });
+      else inRoof(K, plan);
       // (an annex's lean-to, its ceiling at its own height — the room on a terrace is the outside's, whole; a palace's porch, a
       // temple's peristyle and gallery, the form's entablature and skirt roofs over its columns)
       if (!riskForm(b)) K.as('beam', () => { for (const a of sh.annex || []) { const l = levels.find(q => q.lv === (a.lv || 0)) || levels[0]; flatQ(K, a.r, l.y + a.h, dim(IWOOD, 0.9), -1); } });
       out.roof = g; }
-    // the leaves of the doors, shut where the plan has them, to turn as the world has them
+    // the leaves of the doors, shut where the plan has them, to turn as the world has them (of a ground open to the sky, its
+    // closed part's: a door one of whose rooms is closed)
     const TLm = TL();
     for (const d of plan.doors) {
-      if (d.kind === 'vao') continue; const w = plan.walls[d.wall]; const l = w && levels.find(q => q.lv === w.lv); if (!l) continue;
+      if (d.kind === 'vao' || (CP && !(d.rooms || []).some(id => CP.ids.has(id)))) continue; const w = plan.walls[d.wall]; const l = w && levels.find(q => q.lv === w.lv); if (!l) continue;
       const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const L = Math.hypot(ax, az) || 1; const nx = -az / L, nz = ax / L;
       // (it swings into its first room: the house's for a street door, the hall's for the door into an annex)
       let sg = w.outer ? sideIn(plan, w, l) : 1;
@@ -3647,7 +3688,7 @@ float m3scale(float p) {
     // the lids over the holes the stairs come up through, shut — hinged along the hole's edge at the stair's top (a grand
     // stair's well open: its rail round it, wellRail)
     for (const s of plan.stairs) {
-      const l = s.hole && !grandWell(s) && levels.find(q => q.lv === s.lv1); if (!l) continue; const r = s.hole, dx = s.dir[0], dz = s.dir[1];
+      const l = s.hole && !grandWell(s) && inCP(s.lv0, s.r) && levels.find(q => q.lv === s.lv1); if (!l) continue; const r = s.hole, dx = s.dir[0], dz = s.dir[1];
       const w = dx ? r[3] - r[1] : r[2] - r[0], d = dx ? r[2] - r[0] : r[3] - r[1];
       // (the hinge: the middle of the far edge along the climb; the lid lies back from it, against the climb)
       const hx = dx ? (dx > 0 ? r[2] : r[0]) : (r[0] + r[2]) / 2, hz = dz ? (dz > 0 ? r[3] : r[1]) : (r[1] + r[3]) / 2;
@@ -3746,6 +3787,20 @@ float m3scale(float p) {
     const face = (F.ax ? w.a[1] : w.a[0]) + (F.ax ? F.o[1] : F.o[0]) * w.t / 2; if (Math.abs(face - F.line) > 0.03) return false;
     const a = F.ax ? Math.min(w.a[0], w.b[0]) : Math.min(w.a[1], w.b[1]), b = F.ax ? Math.max(w.a[0], w.b[0]) : Math.max(w.a[1], w.b[1]);
     return b > F.u0 + 0.05 && a < F.u1 - 0.05;
+  }
+  // (a round hut's straight piece — the wall its door is in — and its side, out from the ring's middle)
+  function roundPiece(S) {
+    const sh = S.shell, seg = S.walls.find(w => w.kind === 'anel' || (w.outer && w.kind === 'parede')); if (!seg) return null;
+    const mx = (seg.a[0] + seg.b[0]) / 2, mz = (seg.a[1] + seg.b[1]) / 2; const ax = Math.abs(seg.b[1] - seg.a[1]) < 1e-3;
+    return { seg, mx, mz, F: wside(seg, ax ? Math.sign(mz - sh.cz) || 1 : Math.sign(mx - sh.cx) || 1) };
+  }
+  // (the faces whose openings the outside draws and dresses — sideFace —: the shell's sides, a lean-to's (a form's porch is the
+  // form's), a round hut's straight piece)
+  function dressedSides(b, S) {
+    const sh = S.shell, four = r => ['N', 'E', 'S', 'W'].map(sd => rside(r, sd));
+    if (sh.kind === 'round') { const RP = roundPiece(S); return RP ? [RP.F] : []; }
+    if (sh.kind !== 'rect') return [];
+    return four(sh.r).concat(bodyForm(b) || riskForm(b) ? [] : (sh.annex || []).flatMap(a => four(a.r)));
   }
   // (what a wall of the shell is made of outside: the people's own colour for the shell's stuff, another stuff's own colour —
   // the half-timber over the adobe —, the north's weathered planks)
@@ -4031,7 +4086,7 @@ float m3scale(float p) {
     const cuts = ops.map(q => [q.u0, q.y0, q.u1, q.y1]).concat(covers);
     const shade = main && !ctx.flat ? yb : undefined;
     for (const [b0, b1, st] of stuffBands(K, ctx, ws, ya, yb)) faceRects(K, F, cutRect([F.u0, b0, F.u1, b1], cuts), st, 0, b1 >= yb - 1e-3 ? shade : undefined);
-    for (const q of ops) opening(gw, K, ctx, F, q);
+    for (const q of ops) opening(gw, K, ctx, F, q, ops);
     dressSide(K, ctx, F, ws, ops, ya, yb, main, covers);
   }
   // (a flight of steps of Space's reckoning laid in stone — before a door, before the foot of an outside flight: Space.doorFlight)
@@ -4045,7 +4100,7 @@ float m3scale(float p) {
   const alongV = (F, s) => (F.ax ? [s, 0, 0] : [0, 0, s]);
   // an opening of a side: its reveals of the wall's stuff (in to the pane, through the wall for a door or an arch), the pane
   // and its lamp, a door's leaf shut, an arch's dark; their frames
-  function opening(gw, K, ctx, F, q) {
+  function opening(gw, K, ctx, F, q, ops) {
     const st = outStuff(K, ctx.S, q.w), t = q.t, kind = q.h.kind; const deep = kind === 'janela' ? t / 2 : t; const { u0, u1, y0, y1 } = q; const P = F.P;
     K.as(st.pat, () => {
       K.quad(P(u0, y0, 0), P(u0, y0, -deep), P(u0, y1, -deep), P(u0, y1, 0), dim(st.col, 0.9), alongV(F, 1));
@@ -4056,7 +4111,7 @@ float m3scale(float p) {
     if (kind === 'janela') {
       const c = P(q.uc, y0, -t / 2); gw.put(SH.box, R3.mat(K.x0 + c[0], K.y0 + c[1], K.z0 + c[2], F.ax ? 0 : Math.PI / 2, u1 - u0, y1 - y0, 0.02), '#2a3440');
       if (K.lit) { const l = P(q.uc, y0 + (y1 - y0) / 2, -t / 2 + 0.05); K.lit.push([K.x0 + l[0], K.y0 + l[1], K.z0 + l[2], F.o[0], F.o[1]]); }
-      winDress(K, F, q, ctx.k++); return;
+      winDress(K, F, q, ctx.k++, ops); return;
     }
     // (a door's or an arch's floor through the wall: its threshold, a hair under the inside's)
     if ((q.h.sill || 0) <= 0.001) K.as('plankH', () => K.quad(P(u0, y0 + 0.006, 0), P(u1, y0 + 0.006, 0), P(u1, y0 + 0.006, -t), P(u0, y0 + 0.006, -t), IDARK, UP));
@@ -4091,7 +4146,7 @@ float m3scale(float p) {
   // but on the walls of a form's body (D-093: the palace, the baths, the library), the god's windows: the frame, the sill and the
   // lintel, no shutters nor flowers (the god paints none on the town's buildings: the thermae's arches with their shutters open
   // ran into one dark band: nine windows of the god's, four in the 3D)
-  function winDress(K, F, q, k) {
+  function winDress(K, F, q, k, ops) {
     const P = K.P, st = K.st; const ww = q.u1 - q.u0, hh = q.y1 - q.y0, py = q.y0; const formed = !!(bodyForm(K.b) || riskForm(K.b));
     const framed = st !== 'nordico' && st !== 'egipcio'; const shut = (st === 'classico' || st === 'grego') && K.b.type !== 'insula' && !formed;
     const tc = st === 'asteca' ? (P.trim2 || P.trim) : (P.trim || '#6b4a30'); const fc = st === 'nordico' ? nordWood(K).dark : calm(tc, 0.75, 0.9);
@@ -4119,7 +4174,10 @@ float m3scale(float p) {
         K.gp.blade(X, Y, Z, 0.09, ang, X + F.o[0] * 0.12 + Math.cos(ang) * 0.05, Y + 0.24, Z + F.o[1] * 0.12 + Math.sin(ang) * 0.05, [62, 104, 46], j % 2 ? [84, 140, 62] : fl, 0.5); }
     }
     const sh = K.b.type === 'cadeia' || formed ? false : shut ? (st === 'grego' ? r < 0.78 : true) : (st === 'romano' && K.b.type !== 'insula' && r >= 0.45 && r < 0.75) || (st === 'nordico' && r < 0.6);
-    if (sh) K.as(st === 'nordico' ? 'plankV' : 'painted', () => { const open = K.hv(110 + k) < 0.7; const sc = st === 'nordico' ? nordWood(K).dark : sh2;
+    // (opened flat on the wall only where both leaves lie on it, clear of the face's other openings and their frames — beside a
+    // door one lay over its post and into its opening, L-571 —: shut over the window there)
+    const reach = ww + 0.13; const clear = q.uc - reach >= F.u0 && q.uc + reach <= F.u1 && !(ops || []).some(o => o !== q && o.u0 - 0.17 < q.uc + reach && o.u1 + 0.17 > q.uc - reach && o.y0 < q.y1 && o.y1 > q.y0);
+    if (sh) K.as(st === 'nordico' ? 'plankV' : 'painted', () => { const open = clear && K.hv(110 + k) < 0.7; const sc = st === 'nordico' ? nordWood(K).dark : sh2;
       for (const s2 of [-1, 1]) { if (open) fx(s2 * (ww / 2 + 0.1 + ww / 4 + 0.03), 0, ww * 0.5, hh, 0.04, sc, 0.03); else fx(s2 * ww * 0.25, 0, ww * 0.5, hh, 0.05, sc, 0.04); } });
   }
   // the frame of a door at its mouth, as each people makes it — the posts and the lintel (of stone in the stone lands), the
@@ -4304,6 +4362,7 @@ float m3scale(float p) {
       return out; };
     f = q => {
       if (q.ala) return true;
+      if (q.k === 'porta' && q.portao) return false; // (the gate it paints shut — the court's front's, the court of honour's —: its own, where the inside's leaf turns: B3.cuts, T-461)
       if (q.k === 'janelas' || q.k === 'porta') return outer(q) ? true : q.k === 'janelas' ? Object.assign({}, q, { tinta: '#2a3440' }) : false;
       if (q.piso) return Object.assign({}, q, { y1: q.y0 + 0.004 });
       if (q.k === 'faixa') return Object.assign({}, q, { lados: faces(q.r) });
@@ -4433,11 +4492,11 @@ float m3scale(float p) {
     const byLv = new Map(S.levels.map(l => [l.lv, l])); const l0 = S.levels.slice().sort((a, b) => a.y - b.y).find(l => l.kind !== 'porao') || S.levels[0];
     const ctx = { S, byLv, l0, foot: 0, eave, rk: 'thatch', flat: false, raised: false, k: 0, gw };
     K.footed = true; const base = P.base || ['#8a8478', '#6f6a60', '#a09a8e']; const st = outStuff(K, S, null);
-    const seg = S.walls.find(w => w.kind === 'anel' || (w.outer && w.kind === 'parede'));
+    const RP = roundPiece(S), seg = RP && RP.seg;
     const ang = p => Math.atan2(p[1] - cz, p[0] - cx); const on = (a, rr, y) => [cx + Math.cos(a) * rr, y, cz + Math.sin(a) * rr];
     let a0 = 0, sw = TAU, F = null;
-    if (seg) { const mx = (seg.a[0] + seg.b[0]) / 2, mz = (seg.a[1] + seg.b[1]) / 2; const ax = Math.abs(seg.b[1] - seg.a[1]) < 1e-3; const out = ax ? Math.sign(mz - cz) || 1 : Math.sign(mx - cx) || 1;
-      F = wside(seg, out); const A = F.P(F.u0, 0, 0), B = F.P(F.u1, 0, 0); const aA = ang([A[0], A[2]]), aB = ang([B[0], B[2]]); const md = v => ((v % TAU) + TAU) % TAU; const e = ang([mx, mz]);
+    if (seg) { const { mx, mz } = RP;
+      F = RP.F; const A = F.P(F.u0, 0, 0), B = F.P(F.u1, 0, 0); const aA = ang([A[0], A[2]]), aB = ang([B[0], B[2]]); const md = v => ((v % TAU) + TAU) % TAU; const e = ang([mx, mz]);
       // (round the long way: from one end of the piece to the other, not through the piece's own side)
       const d = md(aA - aB); sw = md(e - aB) < d ? d - TAU : d; a0 = aB;
       K.as(st.pat, () => { for (const [p, a] of [[B, aB], [A, aA]]) { const q = on(a, r, 0); K.quad([p[0], 0, p[2]], [q[0], 0, q[2]], [q[0], eave, q[2]], [p[0], eave, p[2]], st.col, [p[0] - cx, 0, p[2] - cz]); } }); }
@@ -4468,15 +4527,35 @@ float m3scale(float p) {
   B3.cuts = function (b, S) {
     S = S || B3.shellOf(b); if (!S) return [];
     const L = TL(), X0 = b.x * L, Z0 = b.y * L, Y0 = G.Space.plinth(b).y0; const out = [];
+    // (a ground open to the sky with a closed part: only that part's pieces give way — the outside's copy of each closed room's,
+    // from a hair over its floor to a hand over the tallest, a hair in from its walls —; its walls, its doorways and its roof are
+    // the form's, D-131)
+    const CP = S.shell.kind === 'aberta' && S.p ? closedPart(S.p, b) : null;
+    if (CP) { const Fm = formOf(b);
+      for (const m of CP.rooms) { const l = S.levels.find(q => q.lv === m.lv); const its = S.p.items.filter(it => it.lv === m.lv && !(it.form && Fm) && CP.at(m.lv, (it.r[0] + it.r[2]) / 2, (it.r[1] + it.r[3]) / 2) === m); if (!l || !its.length) continue;
+        const top = Math.max(...its.map(it => (it.y || 0) + it.h)) + 0.12;
+        out.push([X0 + m.r[0] + 0.005, Y0 + l.y + 0.008, Z0 + m.r[1] + 0.005, X0 + m.r[2] - 0.005, Y0 + l.y + top, Z0 + m.r[3] - 0.005]); }
+      return out; }
     const RF = riskForm(b); // (a palace, a temple by its risk: the form's walls — its court's front, the court of honour's, the precinct's, the columns — the outside does not draw)
-    const gate = !!RF && RF.els.some(e => e.k === 'porta' && e.portao); // (but a gate the form paints shut — the pylon's —: the inside's leaf turns there)
+    // (but a gate the form paints shut — a 'porta' with portao: the pylon's, a palisade's, a palace's court's —: the inside's leaf
+    // turns there; in the lot's metres, its middle and its width — a door of the plan is its own within its half width, a wall's
+    // thickness off its face: T-461)
+    const gside = RF ? formSide(b, S) : null; const gates = RF ? RF.els.filter(e => e.k === 'porta' && e.portao && e.v !== undefined).map(e => { const q = G.Forma.toLot(gside, RF.L, e.u, e.v); return [q[0], q[1], e.w]; }) : [];
+    const sides = dressedSides(b, S);
     for (const h of S.holes) {
       if (h.kind === 'janela') continue; const w = S.byId.get(h.wall); const l = w && S.levels.find(q => q.lv === w.lv); if (!w || !l) continue;
-      const fw = RF && formWall(b, S, w); if (fw && (!gate || h.kind === 'vao' || w.kind !== 'cerca')) continue;
       const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const Lw = Math.hypot(ax, az) || 1; const tx = ax / Lw, tz = az / Lw; const along = Math.abs(tx) > 0.5;
+      const cx = w.a[0] + tx * h.at, cz = w.a[1] + tz * h.at;
+      const fw = RF && formWall(b, S, w); if (fw && (h.kind === 'vao' || !gates.some(([gx, gz, gw]) => Math.hypot(cx - gx, cz - gz) < gw / 2 + w.t))) continue;
       // (the painted gate's from a hair over the paving: the form's floor and platform stay)
-      const cx = w.a[0] + tx * h.at, cz = w.a[1] + tz * h.at; const half = h.w / 2 + 0.012, th = w.t / 2 + 0.07; const y0 = l.y + (h.sill || 0) + (fw ? 0.01 : -0.02), y1 = l.y + (h.sill || 0) + h.h + 0.012;
-      out.push(along ? [X0 + cx - half, Y0 + y0, Z0 + cz - th, X0 + cx + half, Y0 + y1, Z0 + cz + th] : [X0 + cx - th, Y0 + y0, Z0 + cz - half, X0 + cx + th, Y0 + y1, Z0 + cz + half]);
+      const half = h.w / 2 + 0.012, th = w.t / 2 + 0.07; const y0 = l.y + (h.sill || 0) + (fw ? 0.01 : -0.02), y1 = l.y + (h.sill || 0) + h.h + 0.012;
+      // (a hand before each face — the battens of the shut leaf, on its room's side —; but out of a face the outside dresses,
+      // where the leaf is not, only past the face: the lintel standing out of it over the door keeps its underside — before the
+      // door, under it, the eye met the lintel's top through it, its back: interior3d 5, T-450)
+      let lo = th, hi = th; const F = !fw && sides.find(f => wallOn(w, f));
+      if (F) { const o = along ? F.o[1] : F.o[0]; const n = along ? tx : -tz; // (the wall's left normal across it, as roomSide's)
+        if (h.kind === 'vao' || roomSide(S, w, doorOf(S, h), F) * n * o < 0) { if (o > 0) hi = w.t / 2 + 0.002; else lo = w.t / 2 + 0.002; } }
+      out.push(along ? [X0 + cx - half, Y0 + y0, Z0 + cz - lo, X0 + cx + half, Y0 + y1, Z0 + cz + hi] : [X0 + cx - lo, Y0 + y0, Z0 + cz - half, X0 + cx + hi, Y0 + y1, Z0 + cz + half]);
     }
     const c = S.shell.court;
     // (a palace's court: only its sides' faces — the outside's, a hand thick, the god's windows painted on them —: what stands in
@@ -4533,7 +4612,7 @@ float m3scale(float p) {
     const want = []; const seen = new Set(); const inB = v0 && v0.inside ? S.buildings.get(v0.inside) : null;
     // (an open shell — a fair — has nothing to open: its outside shows its pieces, and its people where the plan puts them; a ruin
     // is drawn as a ruin, the old way, its plan's rubble not over it)
-    const opens = (b, p) => !!p && b.type !== 'ruin' && !(p.shell && p.shell.kind === 'aberta');
+    const opens = (b, p) => !!p && b.type !== 'ruin' && !(p.shell && p.shell.kind === 'aberta' && !closedPart(p, b)); // (but its closed part: the theater's skene, D-131)
     if (inB) { seen.add(inB.id); const p = inB.type === 'ruin' ? null : G.Space.plan(inB); if (opens(inB, p)) want.push([-1, inB, p]); }
     const tx = Math.floor(X / L), ty = Math.floor(Z / L), r = Math.ceil(OPEN_R / L) + 1;
     for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++) {
