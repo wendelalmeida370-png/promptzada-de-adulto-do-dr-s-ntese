@@ -448,8 +448,15 @@
   // them becomes the form's on loading where the form is laid out (In.migrate, by the type's formFam); t(rec, F): the walls'
   // thickness where the type's is its own (the temazcal's, inside its dome: P3); bare(P, F): the type's plan where its form has
   // no body — the Egyptian baths' sacred lake, open to the sky (P3) —, in the same family
-  const formCanOf = rec => (FORM_BARE[rec.t] && G.Forma && G.Forma.of(rec.t, rec.c, In.nOf(rec)) ? null : formCan(rec));
-  const formBuild = P => { const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); if (F && !G.Forma.body(F) && FORM_BARE[P.rec.t]) FORM_BARE[P.rec.t](P, F); else formHall(P); };
+  // (and the bigger steps of a type — G.Escala, D-106 —, where the form of the building's size is no hall but a building of
+  // its own — the palace of courts, int-palacio.js —: laid out by the builder its file gives, In.formSized(type, fn(P, F)), in
+  // the form's family all the same: the form of that size the people's, the step not the classic one)
+  const FORM_SIZED = {};
+  In.formSized = (type, fn) => { FORM_SIZED[type] = fn; };
+  const sizedOf = rec => { const fn = FORM_SIZED[rec.t], n = In.nOf(rec); return fn && n !== ((G.BDEF[rec.t] || {}).w || 1) && G.Forma && G.Forma.has(rec.t, rec.c, n) ? fn : null; };
+  const formCanOf = rec => (sizedOf(rec) || (FORM_BARE[rec.t] && G.Forma && G.Forma.of(rec.t, rec.c, In.nOf(rec))) ? null : formCan(rec));
+  const formBuild = P => { const fn = sizedOf(P.rec); if (fn) { fn(P, G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec))); return; }
+    const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); if (F && !G.Forma.body(F) && FORM_BARE[P.rec.t]) FORM_BARE[P.rec.t](P, F); else formHall(P); };
   In.formType = function (type, o) {
     FORM_FAM[type] = o.fam; FORM_FURNISH[type] = o.furnish; if (o.hall) HALL_FN[type] = o.hall; if (o.split) FORM_SPLIT[type] = o.split;
     if (o.t) FORM_T[type] = o.t; if (o.bare) FORM_BARE[type] = o.bare;

@@ -231,7 +231,9 @@
   In.familiesFor = function (rec) {
     const key = comboKey(rec); let c = CAT.get(key); if (c) return c;
     const T = TYPES[rec.t]; c = { ok: [], why: {}, arch: {}, gen: {} };
-    const tab = PROBED[probeKey(rec)] || PROBED[[rec.t, rec.c, 0, 0].join('|') + yk(rec)] || null;
+    // (its own key, else the plain one of the type and people — of the same size: a bigger step's never read from the classic
+    // lot's line, L-510)
+    const tab = PROBED[probeKey(rec)] || PROBED[[rec.t, rec.c, 0, 0].join('|') + yk(rec) + nKey(rec)] || null;
     if (T) for (const id of T.fams || []) {
       const F = FAMS[id]; if (!F) continue;
       const why = F.can ? F.can(rec, T, TRAD[rec.c] || TRAD.classico) : null;
@@ -1945,7 +1947,10 @@
     floor.sort((a, c) => (a.lv === e0 ? 0 : 1) - (c.lv === e0 ? 0 : 1) || a.lv - c.lv || a.room - c.room || a.d - c.d || a.x - c.x || a.z - c.z);
     // (lying on the floor: the floors the plan keeps for whoever its beds leave out first — floorBeds —, then the others)
     const lie = (p.floorBeds || []).map(f => Object.assign({}, f, { din: r2(walkTo(W, f.lv, (f.R[0] + f.R[2]) / 2, (f.R[1] + f.R[3]) / 2, 1.0)) }));
-    for (const f of lieRects(p, keep)) if (!lie.some(q => q.lv === f.lv && q.R.join() === f.R.join())) { const dw = walkTo(W, f.lv, (f.R[0] + f.R[2]) / 2, (f.R[1] + f.R[3]) / 2, 1.0); if (dw !== Infinity) lie.push(Object.assign(f, { din: r2(dw) })); }
+    // (the table keeps the first 240: a key per floor, and no more asked once they are in — searching the list for each of an
+    // open arena's 25 000 floors took minutes: L-495)
+    const had = new Set(lie.map(q => q.lv + ':' + q.R.join()));
+    for (const f of lieRects(p, keep)) { if (lie.length >= 240) break; const key = f.lv + ':' + f.R.join(); if (had.has(key)) continue; const dw = walkTo(W, f.lv, (f.R[0] + f.R[2]) / 2, (f.R[1] + f.R[3]) / 2, 1.0); if (dw !== Infinity) { had.add(key); lie.push(Object.assign(f, { din: r2(dw) })); } }
     // (a jail's cells: each one's room, its bed of straw and the place on it, its grating)
     const cells = p.rooms.filter(m => m.fn === 'cela').map(m => { const bed = p.items.find(i => i.room === m.id && i.places > 0); const door = p.doors.find(d => d.rooms.includes(m.id)); return { room: m.id, lv: m.lv, r: m.r, bed: bed ? bed.id : null, spot: bed ? bed.spots.find(q => q.use === 'deitar') || null : null, door: door ? door.id : null }; });
     const e = p.entrance;

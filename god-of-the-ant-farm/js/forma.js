@@ -1603,8 +1603,11 @@
   // D-095; stalls, bays: a market's, where the god draws them — arch.js mercado, T-254)
   // n: the building's lot in tiles (b.w) — absent, or the type's classic size, the classic form; another size, the form of
   // that step (Fo.def … sizes), or none
+  // (a size is a number of tiles: anything else — a building, as the third argument was before the sizes — is the caller's
+  // mistake, said aloud rather than answered with no form: T-416)
+  const nArg = n => { if (n !== undefined && n !== null && !(Number.isInteger(n) && n > 0)) throw new Error('G.Forma: o tamanho é um número de casas (b.w), não ' + (typeof n) + ' (D-106, T-416)'); };
   Fo.of = function (type, style, n) {
-    const F0 = FORMS[type]; if (!F0) return null;
+    nArg(n); const F0 = FORMS[type]; if (!F0) return null;
     if (n === undefined || n === null || n === n0Of(type)) {
       const fn = F0[style] || F0.classico; if (!fn) return null;
       const key = type + ':' + (F0[style] ? style : 'classico'); let F = memo.get(key); if (F) return F;
@@ -1620,7 +1623,7 @@
   };
   // (a type with a form in this people's style — of the size n, when given: the classic size, or a step's generator)
   Fo.has = (type, style, n) => {
-    if (!(FORMS[type] && (FORMS[type][style] || FORMS[type].classico))) return false;
+    nArg(n); if (!(FORMS[type] && (FORMS[type][style] || FORMS[type].classico))) return false;
     return n === undefined || n === null || n === n0Of(type) || !!sizedFn(type, style, n);
   };
   // (the sizes a people raises a type in: the classic and its steps')
@@ -1651,6 +1654,8 @@
       else if (e.k === 'tina' || e.k === 'bacia' || e.k === 'morro') out.push({ k: 'circ', c: e.c, r: e.r });
       else if (e.k === 'vaso') out.push({ k: 'circ', c: e.c, r: Math.max(...e.perfil.map(q => q[0])) });
       else if (e.k === 'banco') out.push({ k: 'rect', r: e.r });
+      // (the Colosseum's ring and its arena's floor, D-107: the rectangle round their outline)
+      else if (e.k === 'arcada' || e.k === 'areia') { let u0 = 1e9, v0 = 1e9, u1 = -1e9, v1 = -1e9; for (const q of e.pts) { u0 = Math.min(u0, q[0]); v0 = Math.min(v0, q[1]); u1 = Math.max(u1, q[0]); v1 = Math.max(v1, q[1]); } out.push({ k: 'rect', r: [u0, v0, u1, v1] }); }
     }
     return out;
   };
@@ -1673,6 +1678,13 @@
       else if (e.k === 'tora') out.push({ k: 'tronco', a: e.a, b: e.b, r0: e.r, r1: e.r, cor: e.cor });
       else if (e.k === 'vaso') for (let j = 0; j + 1 < e.perfil.length; j++) { const [r0, d0] = e.perfil[j], [r1, d1] = e.perfil[j + 1]; if (d1 - d0 < 1e-3) continue; /* (a flat ring — a shoulder — is no mass of its own) */ out.push({ k: 'tronco', a: [e.c[0], e.c[1], e.y0 + d0], b: [e.c[0], e.c[1], e.y0 + d1], r0: Math.max(0.02, r0), r1: Math.max(0.02, r1), cor: e.cor[0] }); }
       else if (e.k === 'pano') out.push({ k: 'pano', p: e.p, cor: e.cor });
+      // (the arcaded ring round an arena, D-107: each bay a sheet outside, one inside from where the seats stop leaning on it,
+      // and its top — the arches are the near picture's; from far off the facade is its wall)
+      else if (e.k === 'arcada') { const N = e.pts.length, yi = e.dentro ? e.dentro.y0 : e.y0;
+        for (let j = 0; j < N; j++) { const a = e.pts[j], b = e.pts[(j + 1) % N], c = e.pts1[(j + 1) % N], d = e.pts1[j];
+          out.push({ k: 'pano', p: [[a[0], a[1], e.y0], [b[0], b[1], e.y0], [b[0], b[1], e.y1], [a[0], a[1], e.y1]], cor: e.cor[0] },
+            { k: 'pano', p: [[d[0], d[1], yi], [c[0], c[1], yi], [c[0], c[1], e.y1], [d[0], d[1], e.y1]], cor: e.cor[1] },
+            { k: 'pano', p: [[a[0], a[1], e.y1], [b[0], b[1], e.y1], [c[0], c[1], e.y1], [d[0], d[1], e.y1]], cor: e.cor[0] }); } }
       else if (e.k === 'bandeira') { const t = e.p[2] + e.h; // (its pole and its pennant, as the 3D's: out across it 1.25 m, a metre down — the god's is a mass, the tallest of a palace)
         out.push({ k: 'tronco', a: e.p, b: [e.p[0], e.p[1], t], r0: 0.06, r1: 0.05, cor: '#5a3c22' }, { k: 'pano', p: [[e.p[0], e.p[1], t - 0.04], [e.p[0] + 1.25, e.p[1], t - 0.54], [e.p[0], e.p[1], t - 1.04], [e.p[0], e.p[1], t - 1.04]], cor: e.cor }); }
       else if (e.k === 'bola') out.push({ k: 'tronco', a: [e.c[0], e.c[1], e.c[2] - 0.7 * (e.ry || e.r)], b: [e.c[0], e.c[1], e.c[2] + 0.7 * (e.ry || e.r)], r0: e.r, r1: e.r, cor: e.cor });

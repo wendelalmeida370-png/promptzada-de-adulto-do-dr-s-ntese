@@ -136,7 +136,9 @@ F.god = function (b, o) {
   // its door with o.noDoor — L-264)
   // (with the god's view drawing its homes from their shells — Arch.homeOn, D-082 —, a home is that picture, as the view has it)
   const shell = o.shell !== undefined ? o.shell : A.fromShell && A.fromShell(b.type) && b.ip && G.Interiors ? G.Interiors.shellOf(b) : undefined;
-  try { Art.clear(); if (A.homeClear) A.homeClear(); spr = shell !== undefined ? (shell && A.home ? A.home(b, shell, o.q || 0) : null) : Art.building(b.type, b.v, b.style, b.wd, o.noDoor); } finally { global.document = doc0; void keep; }
+  // (o.pic: the picture another painter makes of it — the god's painter of its form, Arch.formSprite: qa/visual/forma-deus.js;
+  // the building's lot to the god's view — a step of another size than its type's is painted from its form, D-106)
+  try { Art.clear(); if (A.homeClear) A.homeClear(); spr = o.pic ? o.pic() : shell !== undefined ? (shell && A.home ? A.home(b, shell, o.q || 0) : null) : Art.building(b.type, b.v, b.style, b.wd, o.noDoor, b.w); } finally { global.document = doc0; void keep; }
   if (A.homeClear) A.homeClear();
   // (what the god paints for it in a layer of its own — its ground, its fences, what stands in it: T-150 —, under the picture
   // and among the people as the view sorts them: the open grounds, whose picture that layer is — a tavern's lamp at night, a
