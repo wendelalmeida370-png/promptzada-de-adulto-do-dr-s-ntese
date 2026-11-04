@@ -1658,9 +1658,15 @@ float m3scale(float p) {
         K.quad(at(r, ang(k), ya), at(r, ang(k + 1), ya), at(r, ang(k + 1), yb), at(r, ang(k), yb), cc, o); } };
       // (the steps of row k in the stairways: tread j of n at its height, the face up to it from the step before — from the row
       // inside, yIn, for the first —, and the row's ends either side of the stairway down to it)
-      const rAt = (k, j) => { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo; return rIn + (A[k][0] - rIn) * j / E.n; };
+      // (the steps within a row's depth — the next ring's —, the rest of a deeper ring flat in the stairway: the top ring of a wedge
+      // of the Colosseum is its top row and the walk behind it, and spread over all of it the steps stood the body 0.21 m over the
+      // last one, as the plan lays them — In.tierH)
+      const rIn = k => (k < n - 1 ? A[k + 1][0] : e.fundo);
+      const tread = k => Math.min(A[k][0] - rIn(k), k < n - 1 ? A[k + 1][0] - rIn(k + 1) : Infinity);
+      const rAt = (k, j) => rIn(k) + tread(k) * j / E.n;
       const yAt = (k, j) => X.Y(A[k][1] - rise + (j + 1) * rise / E.n);
       const steps = (k, yIn, cc, mc) => {
+        if (A[k][0] - rIn(k) - tread(k) > 1e-3) for (let i = 0; i < E.a.length; i++) flat(rIn(k) + tread(k), A[k][0], X.Y(A[k][1]), i, true, cc);
         for (let i = 0; i < E.a.length; i++) for (let j = 0; j < E.n; j++) {
           const r0 = rAt(k, j), r1 = rAt(k, j + 1), y = yAt(k, j); flat(r0, r1, y, i, true, cc);
           const ya = j ? yAt(k, j - 1) : yIn; if (ya !== null && y - ya > 1e-6) face(r0, ya, y, i, true, mc, false);
@@ -1669,16 +1675,22 @@ float m3scale(float p) {
         } };
       K.as(X.mat(e, 'slab'), () => {
         for (let k = e.fecho ? 0 : 1; k < n; k++) { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo; ring(rIn, A[k][0], X.Y(A[k][1]), dim(col, 0.96 + (k % 2) * 0.06)); }
-        for (let k = 0; k < n - 1; k++) riser(A[k + 1][0], X.Y(A[k + 1][1]), X.Y(A[k][1]), e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.8));
+        // (the face up to the top ring — the drum's walk, the rim — whole where no step reaches it: with no fecho the top ring has
+        // no steps, and between the stairways' lines its face left holes onto the sky, the width of a stairway)
+        for (let k = 0; k < n - 1; k++) (k === 0 && E && !e.fecho ? wall : riser)(A[k + 1][0], X.Y(A[k + 1][1]), X.Y(A[k][1]), e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.8));
         if (E) for (let k = e.fecho ? 0 : 1; k < n; k++) steps(k, k < n - 1 ? X.Y(A[k + 1][1]) : null, dim(col, 0.96 + (k % 2) * 0.06), e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.8));
         // (a balcony's parapet at the edge of each row over the drop — D-084, the maeniana: 0.12 m thick, its two faces and top)
         if (e.parapeito) for (let k = e.fecho ? 0 : 1; k < n; k++) { const r = k < n - 1 ? A[k + 1][0] : e.fundo, y = X.Y(A[k][1]), pc = e.muro ? rgbOf(X.col(e.muro)) : dim(col, 0.85);
-          // (open where a flight comes out on the balcony: the segments whose middle is within half its width — D-095)
-          const gaps = (e.vaos || []).filter(g => g.anel === k); const shut = j => !gaps.some(g => { const m = (ang(j) + ang(j + 1)) / 2; return Math.abs(((m - g.a) % TAU + TAU + Math.PI) % TAU - Math.PI) * r < g.w / 2; });
-          for (let j = 0; j < nS; j++) { if (!shut(j)) continue; const dm = dir((ang(j) + ang(j + 1)) / 2);
-            K.quad(at(r, ang(j), y), at(r, ang(j + 1), y), at(r, ang(j + 1), y + e.parapeito), at(r, ang(j), y + e.parapeito), pc, [-dm[0], 0, -dm[1]]);
-            K.quad(at(r + 0.12, ang(j), y), at(r + 0.12, ang(j + 1), y), at(r + 0.12, ang(j + 1), y + e.parapeito), at(r + 0.12, ang(j), y + e.parapeito), dim(pc, 1.05), [dm[0], 0, dm[1]]);
-            K.quad(at(r, ang(j), y + e.parapeito), at(r + 0.12, ang(j), y + e.parapeito), at(r + 0.12, ang(j + 1), y + e.parapeito), at(r, ang(j + 1), y + e.parapeito), dim(pc, 1.1), UP); } }
+          // (open where a flight comes out on the balcony: half its width each side of its line, by the arc at that radius — D-095;
+          // cut there, not by whole segments: round an arena of 10 m a segment is 1.3 m, and an opening of 1.1 m between the
+          // middles of two of them left the parapet shut over the steps)
+          const gaps = (e.vaos || []).filter(g => g.anel === k).map(g => [g.a - g.w / 2 / r, g.a + g.w / 2 / r]);
+          const open = (a0, a1) => { let out = [[a0, a1]]; for (const [g0, g1] of gaps) for (let s = -1; s <= 1; s++) { const p0 = g0 + s * TAU, p1 = g1 + s * TAU;
+            out = out.flatMap(([q0, q1]) => (p1 <= q0 || p0 >= q1 ? [[q0, q1]] : [[q0, Math.max(q0, p0)], [Math.min(q1, p1), q1]].filter(([u0, u1]) => u1 - u0 > 1e-4))); } return out; };
+          for (let j = 0; j < nS; j++) for (const [a0, a1] of gaps.length ? open(ang(j), ang(j + 1)) : [[ang(j), ang(j + 1)]]) { const dm = dir((a0 + a1) / 2);
+            K.quad(at(r, a0, y), at(r, a1, y), at(r, a1, y + e.parapeito), at(r, a0, y + e.parapeito), pc, [-dm[0], 0, -dm[1]]);
+            K.quad(at(r + 0.12, a0, y), at(r + 0.12, a1, y), at(r + 0.12, a1, y + e.parapeito), at(r + 0.12, a0, y + e.parapeito), dim(pc, 1.05), [dm[0], 0, dm[1]]);
+            K.quad(at(r, a0, y + e.parapeito), at(r + 0.12, a0, y + e.parapeito), at(r + 0.12, a1, y + e.parapeito), at(r, a1, y + e.parapeito), dim(pc, 1.1), UP); } }
       });
       // (a bowl that stands on the ground, no drum round it: its back wall from the ground to its rim, the lowest ring's face
       // down to the ground, and its two ends, stepped as its rings are)
@@ -1709,6 +1721,79 @@ float m3scale(float p) {
       // (the wall round the arena, from its floor up to the lowest ring of seats)
       if (e.muro) K.as('ashlar', () => { const yb = X.Y(e.muro); for (let k = 0; k < S; k++) { const a0 = k / S * TAU, a1 = (k + 1) / S * TAU, am = (a0 + a1) / 2; const p = (a, yy) => [C[0] + Math.cos(a) * e.r, yy, C[1] + Math.sin(a) * e.r];
         K.quad(p(a0, y), p(a1, y), p(a1, yb), p(a0, yb), '#b8a888', [-Math.cos(am), 0, -Math.sin(am)]); } });
+    },
+    // the arcaded ring round an arena (the Colosseum's facade on the split oval, D-107): each bay a flat prism from its outer face
+    // (pts[k] to pts[k+1]) to its inner one (pts1), its storeys from the ground up — each with its arch (the piers, the sill but on
+    // the ground storey, the wall over it, the corners round its round head, the soffit and the jambs through the wall, the dark of
+    // the gallery behind; on a bay of abertos the ground arch a way in through the whole ring, its soffit the passage's vault, no
+    // dark), or its window every few bays (the attic's), or its plain wall —; the cornice over each storey and a pilaster at each
+    // pier where the machine carries detail; the inner face from dentro.y0 up, the same arches, their dark at the gallery's middle;
+    // the walk on its top
+    arcada(K, e, X) {
+      const n = e.pts.length; const lit = rgbOf(X.col(e.cor[0])); const dark = X.col(e.escuro || '#2a1e18'); const M = 6;
+      const open = new Set(e.abertos || []); const yFoot = X.foot(e.y0); const din = e.dentro ? e.dentro.y0 : Infinity;
+      // (a face of a bay: the middle of its line, the way along it, the way out of it — away from the other face —, its length)
+      const frame = (p0, p1, q0, q1) => { const m = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2], mq = [(q0[0] + q1[0]) / 2, (q0[1] + q1[1]) / 2]; const bw = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1e-6;
+        const tg = [(p1[0] - p0[0]) / bw, (p1[1] - p0[1]) / bw]; let o = [-tg[1], tg[0]]; if ((m[0] - mq[0]) * o[0] + (m[1] - mq[1]) * o[1] < 0) o = [-o[0], -o[1]]; return { m, tg, o, bw }; };
+      // (one storey of one face, from yb to ytop: dd how deep its openings go — the dark behind at dd, but through a way in)
+      const storey = (f, st, yb, ytop, tone, dd, through, q) => {
+        const P = (s, y, d) => [f.m[0] + f.tg[0] * s - f.o[0] * d, y, f.m[1] + f.tg[1] * s - f.o[1] * d]; const out = [f.o[0], 0, f.o[1]], T3 = [f.tg[0], 0, f.tg[1]];
+        const face = (s0, y0, s1, y1) => { if (y1 - y0 > 1e-4 && s1 - s0 > 1e-4) K.quad(P(s0, y0, 0), P(s1, y0, 0), P(s1, y1, 0), P(s0, y1, 0), tone, out); };
+        const h = st.y1 - st.y0, bw = f.bw; const win = !st.arco && st.janela && q % (st.janela.cada || 1) === 0 ? st.janela : null;
+        if (st.arco) {
+          const aw = Math.min(bw - 0.3, bw * st.arco.w); const ya = X.Y(st.y0 + st.arco.a * h), yt = X.Y(st.y0 + st.arco.b * h); const yh = yt - aw / 2;
+          face(-bw / 2, yb, -aw / 2, ytop); face(aw / 2, yb, bw / 2, ytop); face(-aw / 2, yb, aw / 2, ya); face(-aw / 2, yt, aw / 2, ytop);
+          const arc = []; for (let j = 0; j <= M * 2; j++) { const fj = j / (M * 2) * Math.PI; arc.push([-Math.cos(fj) * aw / 2, yh + Math.sin(fj) * aw / 2]); }
+          for (let j = 0; j < M * 2; j++) { const c0 = arc[j], c1 = arc[j + 1]; const corner = j < M ? [-aw / 2, yt] : [aw / 2, yt];
+            K.tri(P(corner[0], corner[1], 0), P(c0[0], c0[1], 0), P(c1[0], c1[1], 0), tone, out);
+            const fm = (j + 0.5) / (M * 2) * Math.PI; const inw = [T3[0] * Math.cos(fm), -Math.sin(fm), T3[2] * Math.cos(fm)];
+            K.quad(P(c0[0], c0[1], 0), P(c1[0], c1[1], 0), P(c1[0], c1[1], dd), P(c0[0], c0[1], dd), dim(tone, 0.7), inw); }
+          for (const sg of [-1, 1]) K.quad(P(sg * aw / 2, ya, 0), P(sg * aw / 2, yh, 0), P(sg * aw / 2, yh, dd), P(sg * aw / 2, ya, dd), dim(tone, 0.78), [T3[0] * -sg, 0, T3[2] * -sg]);
+          K.quad(P(-aw / 2, ya, 0), P(aw / 2, ya, 0), P(aw / 2, ya, dd), P(-aw / 2, ya, dd), dim(tone, 0.88), UP);
+          if (!through) { K.quad(P(-aw / 2, ya, dd), P(aw / 2, ya, dd), P(aw / 2, yh, dd), P(-aw / 2, yh, dd), dark, out);
+            for (let j = 0; j < M * 2; j++) K.tri(P(0, yh, dd), P(arc[j][0], arc[j][1], dd), P(arc[j + 1][0], arc[j + 1][1], dd), dark, out); }
+        } else if (win) {
+          const ww = Math.min(bw - 0.4, win.w), wa = X.Y(st.y0 + win.a * h), wb = X.Y(st.y0 + win.b * h), wd = Math.min(0.4, dd);
+          face(-bw / 2, yb, -ww / 2, ytop); face(ww / 2, yb, bw / 2, ytop); face(-ww / 2, yb, ww / 2, wa); face(-ww / 2, wb, ww / 2, ytop);
+          for (const sg of [-1, 1]) K.quad(P(sg * ww / 2, wa, 0), P(sg * ww / 2, wb, 0), P(sg * ww / 2, wb, wd), P(sg * ww / 2, wa, wd), dim(tone, 0.78), [T3[0] * -sg, 0, T3[2] * -sg]);
+          K.quad(P(-ww / 2, wa, 0), P(ww / 2, wa, 0), P(ww / 2, wa, wd), P(-ww / 2, wa, wd), dim(tone, 0.88), UP);
+          K.quad(P(-ww / 2, wb, wd), P(ww / 2, wb, wd), P(ww / 2, wb, 0), P(-ww / 2, wb, 0), dim(tone, 0.6), DOWN);
+          K.quad(P(-ww / 2, wa, wd), P(ww / 2, wa, wd), P(ww / 2, wb, wd), P(-ww / 2, wb, wd), dark, out);
+        } else face(-bw / 2, yb, bw / 2, ytop);
+        if (!K.fine) return;
+        // (the cornice over the storey, standing out of the wall; the pilaster at the bay's first pier — the half-column of its order
+        // drawn as a pilaster: four faces —, up to the cornice)
+        const yc = ytop; K.quad(P(-bw / 2 - 0.01, yc - 0.24, -0.1), P(bw / 2 + 0.01, yc - 0.24, -0.1), P(bw / 2 + 0.01, yc, -0.1), P(-bw / 2 - 0.01, yc, -0.1), dim(tone, 1.04), out);
+        K.quad(P(-bw / 2, yc, -0.1), P(bw / 2, yc, -0.1), P(bw / 2, yc, 0), P(-bw / 2, yc, 0), dim(tone, 1.08), UP);
+        if (st.ordem) { const pw = Math.min(0.55, bw * 0.11) / 2, pd = st.ordem === 'pilastra' ? 0.07 : 0.15, y1 = yc - 0.24, s = -bw / 2 + pw + 0.02; const pc = dim(tone, 1.03);
+          K.quad(P(s - pw, yb, -pd), P(s + pw, yb, -pd), P(s + pw, y1, -pd), P(s - pw, y1, -pd), pc, out);
+          for (const sg of [-1, 1]) K.quad(P(s + sg * pw, yb, -pd), P(s + sg * pw, yb, 0), P(s + sg * pw, y1, 0), P(s + sg * pw, y1, -pd), dim(pc, 0.9), [T3[0] * sg, 0, T3[2] * sg]); }
+      };
+      K.as(X.mat(e, 'ashlar'), () => { for (let q = 0; q < n; q++) {
+        const r = (q + 1) % n; const p0 = X.XZ(e.pts[q][0], e.pts[q][1]), p1 = X.XZ(e.pts[r][0], e.pts[r][1]), q0 = X.XZ(e.pts1[q][0], e.pts1[q][1]), q1 = X.XZ(e.pts1[r][0], e.pts1[r][1]);
+        const fo = frame(p0, p1, q0, q1), fi = frame(q0, q1, p0, p1); const t = Math.abs((fo.m[0] - fi.m[0]) * fo.o[0] + (fo.m[1] - fi.m[1]) * fo.o[1]);
+        const tone = dim(lit, 0.95 + K.hv(600 + q) * 0.08); const way = open.has(q);
+        e.andares.forEach((st, k) => {
+          const yb = st.y0 <= 0.001 ? yFoot : X.Y(st.y0), ytop = X.Y(st.y1); const inner = st.y0 >= din - 1e-6;
+          storey(fo, st, yb, ytop, tone, way && k === 0 ? t : inner ? t / 2 : t * 0.85, way && k === 0, q);
+          if (inner) storey(fi, st, yb, ytop, dim(tone, 0.94), t / 2, false, q);
+        });
+        // (the walk on its top, from its outer face to its inner one)
+        const yT = X.Y(e.y1); K.quad([p0[0], yT, p0[1]], [p1[0], yT, p1[1]], [q1[0], yT, q1[1]], [q0[0], yT, q0[1]], dim(tone, 1.06), UP);
+      } });
+    },
+    // the floor of an arena whose outline is no circle (the split oval, D-107): its top over the outline, its underside d lower
+    // over the undercroft, the sides of its openings (the hatch over the undercroft's flight) — the outline and the openings laid
+    // as one shape (three's triangulation): the rays from the middle of a round arena do not go round an opening off its middle
+    areia(K, e, X) {
+      const y = X.Y(e.y), d = e.d || 0.2; const V2 = p => new THREE.Vector2(p[0], p[1]);
+      const cv = e.pts.map(p => V2(X.XZ(p[0], p[1]))); const hv = (e.buracos || []).map(b => { const r = X.rect(b); return [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]].map(V2); });
+      const tris = THREE.ShapeUtils.triangulateShape(cv, hv); const all = cv.concat(...hv); const col = X.col(e.cor), under = dim(rgbOf(col), 0.55);
+      K.as('soil', () => { for (const [a, b2, c] of tris) { const A = all[a], B = all[b2], C = all[c];
+        K.tri([A.x, y, A.y], [B.x, y, B.y], [C.x, y, C.y], col, UP); K.tri([A.x, y - d, A.y], [B.x, y - d, B.y], [C.x, y - d, C.y], under, DOWN); } });
+      K.as('wood', () => { for (const h of hv) { const mx = (h[0].x + h[2].x) / 2, mz = (h[0].y + h[2].y) / 2;
+        for (let k = 0; k < 4; k++) { const a = h[k], b2 = h[(k + 1) % 4]; const ex = (a.x + b2.x) / 2 - mx, ez = (a.y + b2.y) / 2 - mz; const l = Math.hypot(ex, ez) || 1;
+          K.quad([a.x, y - d, a.y], [b2.x, y - d, b2.y], [b2.x, y, b2.y], [a.x, y, a.y], [96, 72, 48], [-ex / l, 0, -ez / l]); } } });
     },
     mastros(K, e, X) {
       const C = X.XZ(e.c[0], e.c[1]); K.as('beam', () => { for (let k = 0; k < e.n; k++) { const a = (k + 0.5) / e.n * TAU; const x = C[0] + Math.cos(a) * e.r, z = C[1] + Math.sin(a) * e.r;
@@ -2019,7 +2104,11 @@ float m3scale(float p) {
       if (n[0] * out[0] + n[1] * out[1] + n[2] * out[2] < 0) g.tri(a, c, b2, cc); else g.tri(a, b2, c, cc); };
     const quad = (a, b2, c, d, cc, out) => { tri(a, b2, c, cc, out); tri(a, c, d, cc, out); };
     const mid = (a, b2) => { const c = [(a[0] + b2[0]) / 2, 0, (a[2] + b2[2]) / 2]; return c; };
+    // (a big form from afar — a lot of 24 m and more —: its masses only; its small pieces — the parapets, the treads, the posts, the
+    // masts — are under a pixel there, and the Colosseum has some 180 of them. The classic forms keep theirs: the god's figures)
+    const big = F.L >= 24; const small = m => (m.k === 'box' && (Math.min(m.r[2] - m.r[0], m.r[3] - m.r[1]) < 0.5 || (m.r[2] - m.r[0]) * (m.r[3] - m.r[1]) * (m.y1 - m.y0) < 3)) || (m.k === 'tronco' && Math.max(m.r0, m.r1) < 0.25);
     for (const m of G.Forma.mass(F)) {
+      if (big && small(m)) continue;
       const y0 = m.y0 <= 0.001 ? lo - hi - 0.2 : m.y0; g.pat = PAT[m.k === 'piramide' ? 'sandstone' : m.k === 'telhado' ? 'tile' : 'stone']; const cc = col(m.cor);
       if (m.k === 'box' || m.k === 'talude') { const a = m.r, t2 = m.r1 || m.r; const lo4 = [[a[0], a[3]], [a[2], a[3]], [a[2], a[1]], [a[0], a[1]]], hi4 = [[t2[0], t2[3]], [t2[2], t2[3]], [t2[2], t2[1]], [t2[0], t2[1]]];
         const C = W((a[0] + a[2]) / 2, (a[1] + a[3]) / 2, 0);
@@ -2735,13 +2824,24 @@ float m3scale(float p) {
   // them: 35 m × the preset's lod (Realm.Q().lod; all the near ones where the preset has none), a chunk at a time by its nearest edge. Once
   // fine it stays so until the body is 8 m further: walking along a chunk's edge does not draw it again and again. Only seen)
   const fineOf = new Map(); G.worldHooks.push(() => fineOf.clear());
+  // (what a chunk draws reaches past its edge: a building is drawn whole by the chunk of its corner, and a monument of 10 or 13
+  // tiles runs into the next ones — the chunk's tiles and its buildings' lots, in tiles, [x0, y0, x1, y1])
+  function reachOf(x0, y0, n) {
+    let x1 = x0 + n, y1 = y0 + n;
+    for (const b of G.S.buildings.values()) if (inChunk(b, x0, y0, n)) { if (b.x + b.w > x1) x1 = b.x + b.w; if (b.y + b.h > y1) y1 = b.y + b.h; }
+    return [x0, y0, x1, y1];
+  }
+  B3.reachOf = reachOf; // (for the proofs)
   function fineAt(x0, y0, n) {
     const q = R3 && R3.Q ? R3.Q() : null; if (!q || !q.detail) return false;
     const f = G.Possess && G.Possess.body && G.Possess.body(); if (!f || q.lod === undefined) return true; // (no body, or a preset without lod: every near picture fine, as before)
-    const L = TL(), X = f.x * L, Z = f.y * L, D = 35 * q.lod; const key = x0 + ',' + y0;
-    const d = Math.hypot(Math.max(x0 * L - X, 0, X - (x0 + n) * L), Math.max(y0 * L - Z, 0, Z - (y0 + n) * L));
+    // (by the nearest edge of all it draws: beside the far end of the Colosseum, whose corner is in the chunk before, the
+    // monument is fine — reckoned by the chunk's own tiles it was coarse there, 36 m from them at the medium quality)
+    const L = TL(), X = f.x * L, Z = f.y * L, D = 35 * q.lod; const key = x0 + ',' + y0; const r = reachOf(x0, y0, n);
+    const d = Math.hypot(Math.max(r[0] * L - X, 0, X - r[2] * L), Math.max(r[1] * L - Z, 0, Z - r[3] * L));
     const now = fineOf.get(key) ? d < D + 8 : d < D; fineOf.set(key, now); return now;
   }
+  B3.fineAt = fineAt; // (for the proofs)
   B3.sig = function (x0, y0, n) {
     let s = 0; const fine = fineAt(x0, y0, n);
     // (and the trees about the steps its doors run on into the street: the steps go round a tree come, and back where it went —
@@ -3525,6 +3625,42 @@ float m3scale(float p) {
   // the world's door only where the shell has no entrance: while the plan's way in is not open ground, the world's door falls
   // back to the old corner rule — a day, till the turn of the day moves it —, and the form would turn round from its plan)
   const formSide = (b, S) => (S && S.entrance && S.entrance.side) || doorSide(b);
+  // is a point of the world (metres) in the stone of a building drawn by its form — the eye's question (Cam3D: it does not go
+  // through what is drawn): its masses as the 3D builds them, each down to the lot's lowest ground where it stands on it — a
+  // block, a battered rock, a pyramid, the levels of a stepped one, the drum's ring, the rows of a cávea down to the ground (its
+  // stairways and arches left solid: the eye keeps out of a notch), the arena's floor but its hatch, a column. What the plan
+  // walks inside them — the passage under the rows — is the plan's to say. Pure: the form and the plinth read, nothing kept
+  const fromLot = (s, L, x, z) => (s === 'S' ? [x, z] : s === 'N' ? [L - x, L - z] : s === 'E' ? [L - z, x] : [z, L - x]);
+  // (a point in a closed outline [[u, v], …]: the crossings of a ray along +u)
+  const inPoly = (P, u, v) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > v) !== (b[1] > v) && u < (b[0] - a[0]) * (v - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+  function inStone(e, u, v, y) {
+    const lo = y0 => (y0 <= 0.001 ? -Infinity : y0); const inR = r => u >= r[0] && u <= r[2] && v >= r[1] && v <= r[3];
+    switch (e.k) {
+      case 'bloco': return y >= lo(e.y0) && y <= e.y1 && inR(e.r);
+      case 'talude': { if (y > e.y1 || y < lo(e.y0)) return false; const f = G.clamp((y - e.y0) / ((e.y1 - e.y0) || 1), 0, 1); return inR(e.r.map((q, k) => q + (e.r1[k] - q) * f)); }
+      case 'piramide': { if (y > e.y1 || y < lo(e.y0)) return false; const s = e.e * (1 - G.clamp((y - e.y0) / ((e.y1 - e.y0) || 1), 0, 1)); return Math.abs(u - e.c[0]) <= s && Math.abs(v - e.c[1]) <= s; }
+      case 'escalonada': { const N0 = e.niveis; if (y > N0[N0.length - 1][2]) return false; let s = N0[0][0]; for (const [ss, ya, yb] of N0) if (y >= ya && y <= yb) { s = ss; break; } return y >= lo(N0[0][1]) && Math.abs(u - e.c[0]) <= s && Math.abs(v - e.c[1]) <= s; }
+      case 'tambor': { if (y > e.y1 || y < lo(e.y0)) return false; const r = Math.hypot(u - e.c[0], v - e.c[1]); return r >= e.r - e.t && r <= e.r; }
+      case 'cavea': {
+        const r = Math.hypot(u - e.c[0], v - e.c[1]); const A = e.aneis, n = A.length; if (r < e.fundo || r > A[0][0]) return false;
+        if (e.arco) { const a = Math.atan2(v - e.c[1], u - e.c[0]); const t = ((a - e.arco[0]) % TAU + TAU) % TAU; if (t > e.arco[1] - e.arco[0]) return false; }
+        for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo; if (r >= rIn && r <= A[k][0]) return y <= A[k][1]; }
+        return false;
+      }
+      case 'arena': { if (y > e.y || Math.hypot(u - e.c[0], v - e.c[1]) > e.r) return false; return !(e.buraco && inR(e.buraco)); }
+      case 'arcada': return y <= e.y1 && y >= lo(e.y0) && inPoly(e.pts, u, v) && !inPoly(e.pts1, u, v);
+      case 'areia': return y <= e.y && inPoly(e.pts, u, v) && !(e.buracos || []).some(inR);
+      case 'coluna': return y >= lo(e.y0) && y <= e.y1 && Math.hypot(u - e.c[0], v - e.c[1]) <= e.r;
+      default: return false;
+    }
+  }
+  B3.stoneAt = function (b, X, Y, Z) {
+    const F = b && b.built && B3.byForm(b) && formOf(b); if (!F) return false;
+    const L = TL(); const pl = G.Space.plinth(b); const y = Y - (bodyForm(b) ? pl.y0 : pl.hi);
+    const q = fromLot(formSide(b, B3.shellOf(b)), F.L, X - b.x * L, Z - b.y * L);
+    for (const e of F.els) if (inStone(e, q[0], q[1], y)) return true;
+    return false;
+  };
   B3.formSide = formSide;
   function shellHouse(g, gw, K, S) {
     const sh = S.shell, P = K.P; if (sh.kind === 'round') return shellRound(g, gw, K, S); if (sh.kind === 'aberta') return shellOpen(g, gw, K, S);
