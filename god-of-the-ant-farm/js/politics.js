@@ -362,6 +362,12 @@
       if (h) P.crown(f, h, 'escolha');
     }
   }
+  // the thrones at once, where a people changes: a ruler no longer of the people she rules — her town gone to another people,
+  // the captives of a town become its people — gives her throne now, as the court would at its next look (ensureLeader, each
+  // second); never a free ruler of another people, not even for that second: the queen of Lavínio, a captive in Mileto, was
+  // Mileto's and still Lavínio's queen when its last soul died; the ruler of Lavínio in Roma when the Clã de Hrafn took it, the
+  // Clã's and still Lavínio's (L-542). A captive ruler stays the court's look, as before
+  P.reseat = function () { for (const f of G.Fac.all()) { const v = G.S.villagers.get(f.leader); if (v && !v.captive && G.Fac.idOfV(v) !== f.id) ensureLeader(f); } };
   const DEATH_TXT = {
     old: 'morreu de velhice', hunger: 'morreu de fome', sick: 'sucumbiu à doença', fire: 'morreu num incêndio', wolf: ['foi morto por lobos', 'foi morta por lobos'],
     boar: ['foi morto por um javali', 'foi morta por um javali'], lightning: ['foi fulminado por um raio', 'foi fulminada por um raio'],
@@ -629,6 +635,7 @@
       if (o.loyalty < 32 && G.dist(o.cx, o.cy, s.cx, s.cy) < G.dist(o.cx, o.cy, cap.cx, cap.cy)) { o.fac = nf.id; o.loyalty = 60; joined.push(o.name); }
     }
     if (lead) P.crown(nf, lead, 'secessao', true);
+    P.reseat(); // (a ruler of the old people living in the towns that broke away is of the new one now: L-542)
     const r = G.Fac.rel(old.id, nf.id); r.met = S.day; r.op = -40; r.grudge = 45;
     for (const o of G.Fac.all()) {
       if (o.id === old.id || o.id === nf.id) continue;
@@ -679,6 +686,9 @@
       for (const o of held) { o.captive = null; o.role = null; G.Vg.endTask(o); G.Vg.emote(o, 'happy', 3); }
       const s = S.settlements.get(held[0].set);
       log(`${last ? `Com a morte de ${last.name}, ${last.g === 'f' ? 'a última' : 'o último'} de ${f.name}, os` : 'Os'} cativos de ${s ? s.name : f.name} se viram livres: a cidade agora é deles.`, 'free', s ? s.cx : undefined, s ? s.cy : undefined);
+      // (a ruler of another people taken captive a moment before — the court passes a captive's throne within the second — is
+      // one of the town's people now: her people gets its new ruler at once, L-542)
+      P.reseat();
       return;
     }
     const sets = G.Fac.settlementsOf(f.id);

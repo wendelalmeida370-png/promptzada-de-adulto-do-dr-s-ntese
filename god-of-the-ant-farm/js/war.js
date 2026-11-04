@@ -340,6 +340,7 @@
     G.Fac.updateTerritory();
     if (!G.Fac.settlementsOf(old.id).length) G.Politics.extinct(old, f);
     else if (wasCapital) { old.capital = 0; const c = G.Fac.capitalOf(old.id); if (c) log(`${old.name} perdeu sua capital e se reagrupou em ${c.name}.`, 'war', c.cx, c.cy); }
+    G.Politics.reseat(); // (a ruler of the fallen town who was neither taken nor killed is of the conqueror's people now: L-542)
   };
 
   // ------------------------------ captives ------------------------------
@@ -392,6 +393,8 @@
       v.captive = null; v.role = null; G.Life && G.Life.bio(v, 'freed'); n++;
     }
     if (n) { const f = G.Fac.get(set.fac); if (f) f.st.freed = (f.st.freed || 0) + n; S.stats.freed = (S.stats.freed || 0) + n; }
+    // (and the thrones: a ruler who lived there is of the town's people now — her own people gets its new ruler at once, L-542)
+    G.Politics.reseat();
     return n;
   };
   // (the line for the chronicle: "3 dos seus, que eram cativos lá, ficaram livres")
