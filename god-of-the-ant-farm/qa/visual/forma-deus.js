@@ -3,10 +3,13 @@
 //     peças da forma e pelo desenho de antes, gravados enquanto pintam (visual/fidelidade-lib.js) e medidos na mesma grade —
 //     a silhueta (o quanto as duas se cobrem), o alto, a largura por faixa, a linha do chão. «Quase iguais»: os limites da
 //     fidelidade para duas figuras da mesma casca (LIM do fidelidade.js), e nenhuma peça que o pintor não saiba pintar.
-// (b) O degrau novo pela forma: um Coliseu de 10 casas (a forma do M1 quando houver; até lá, um gerador de teste registrado só
-//     nesta prova) — o deus o desenha pelo pintor, do tamanho dele (o «sprite» de 10 casas), com a massa do 3D do mesmo prédio
-//     e da forma (a fidelidade: silhueta, alto, largura, a planta vista de cima); um tamanho sem forma não cai no desenho de
-//     antes; o desenho do tamanho clássico é o de antes, igual; o «sprite» grande feito uma vez e guardado.
+// (b) O degrau novo pela forma: o Coliseu de 10 casas (a forma do M1; sem ela, um gerador de teste registrado só nesta prova)
+//     — o deus o desenha pelo pintor, do tamanho dele (o «sprite» de 10 casas), toda peça com pintor (a arcada, a areia) e a
+//     ordem sem volta quebrada, com a massa da forma e com a do 3D do mesmo prédio (a fidelidade: silhueta, alto, largura, a
+//     planta vista de cima: o deus e o 3D cada um na sua linha); um tamanho sem forma não cai no desenho de antes; o desenho do
+//     tamanho clássico é o de antes, igual; o «sprite» grande feito uma vez e guardado. E os palácios do M2 (o palácio de 6
+//     casas e o colossal de 10, nos povos grego, romano, egípcio e nórdico — T-407): pelo pintor, toda peça com pintor e a
+//     ordem sem volta quebrada nos pátios, contra a forma; o 3D deles contra a forma e contra o deus.
 // (c) A ordem do desenho dos prédios grandes: nas quatro vistas, quem está ao lado ou atrás de um prédio de 10 casas (de 3, de 2)
 //     é desenhado do lado certo dele — na frente das faces que o deus vê, atrás das outras —, pela chave do render.js (R.bkey:
 //     a profundidade do meio do lote, de R.bigW casas para cima); e quantos a regra de antes (o canto da frente, um palmo para
@@ -86,14 +89,17 @@ if (want('b')) {
   try {
     A.formMissing.clear(); const t1 = clock(); const god = F.god(b); const ms = clock() - t1; const st = A.formStats || {};
     const want10 = Art.spriteDims ? Art.spriteDims(N10, N10, 0)[0] : (N10 * 2) * 16 + 16;
-    ok('b: o degrau de 10 casas desenhado pelo pintor, do tamanho dele', !god.none && god.spr && Math.abs(god.spr.w - want10) < 0.5 && !A.formMissing.size,
+    ok('b: o degrau de 10 casas desenhado pelo pintor, do tamanho dele', !god.none && god.spr && Math.abs(god.spr.w - want10) < 0.5 && !A.formMissing.size && st.rings === 0,
       god.none ? 'o deus não desenhou nada' : `o «sprite» de ${god.spr.w.toFixed(0)} × ${god.spr.h.toFixed(0)} px (o lote de ${N10} casas: ${want10} px de largura; o desenho de antes, de ${L0} casas, ${Art.spriteDims(L0, L0, 0)[0]}) — ${st.parts} partes, ${st.pairs} pares que se cobrem na tela, ${st.edges} «atrás de», ${st.rings} voltas quebradas; pintado em ${ms} ms (Node, gravado)${TESTE ? '; a forma: o gerador de teste desta prova' : '; a forma: a do jogo'}${A.formMissing.size ? ' — peças sem pintor: ' + [...A.formMissing].join(', ') : ''}`);
     const near = F.near(b); const mk = F.gridFor(god, near); const Rg = F.paintGod(god, mk()), Rn = F.paint3D(near, mk());
     const c = F.compare(F.measure(Rg), F.measure(Rn), [b.w, b.h]); const topLim = Math.max(LIM.top, LIM.topK * c.topA);
     const okM = !c.empty && c.iou >= LIM.iou && Math.abs(c.dTop) <= topLim && c.dProf <= LIM.prof && c.dFoot <= LIM.foot;
     ok('b: o deus e o 3D do mesmo prédio grande, a mesma massa', okM, c.empty ? 'vazio: ' + c.empty : `silhueta ${c.iou.toFixed(3)} (≥ ${LIM.iou}), alto ${c.topA.toFixed(1)} → ${c.topB.toFixed(1)} m, largura ${c.dProf.toFixed(3)}, pé ${c.dFoot.toFixed(1)} px, aberturas ${c.openA} → ${c.openB}, a cor por dentro ${(F.inside(Rg, Rn) * 100).toFixed(0)} %`);
     const Fm = Fo.of('maravilha', 'romano', N10); const fc = F.formCheck(b, Fm, god, near, LIM);
-    ok('b: o deus e o 3D contra a forma de 10 casas', fc.ok, fc.ok ? `deus × forma: silhueta ${fc.god.iou.toFixed(3)}; 3D × forma: ${fc.d3.iou.toFixed(3)}; a planta vista de cima ${fc.plan.iou.toFixed(3)}; o alto do 3D ${fc.plan.top.toFixed(2)} m, o da forma ${fc.plan.formTop.toFixed(2)} m` : fc.why.join('; '));
+    // (each against the form on its own line: the god's picture is this proof's painter, the 3D is Build3D's)
+    const gWhy = fc.why.filter(w => w.startsWith('deus')), dWhy = fc.why.filter(w => !w.startsWith('deus'));
+    ok('b: o deus contra a forma de 10 casas', !gWhy.length, `deus × forma: silhueta ${fc.god.iou.toFixed(3)}, alto ${fc.god.topA.toFixed(1)} → ${fc.god.topB.toFixed(1)} m, largura ${fc.god.dProf.toFixed(3)}${gWhy.length ? ' — ' + gWhy.join('; ') : ''}`);
+    ok('b: o 3D contra a forma de 10 casas', !dWhy.length, dWhy.length ? dWhy.join('; ') : `3D × forma: ${fc.d3.iou.toFixed(3)}; a planta vista de cima ${fc.plan.iou.toFixed(3)}; o alto do 3D ${fc.plan.top.toFixed(2)} m, o da forma ${fc.plan.formTop.toFixed(2)} m`);
     json.b = { iou: c.iou, dTop: c.dTop, dProf: c.dProf, formGod: fc.god.iou, form3D: fc.d3.iou, plan: fc.plan.iou, parts: st.parts, ms };
     if (process.env.PNG) { fs.mkdirSync(process.env.PNG, { recursive: true }); F.png(path.join(process.env.PNG, 'degrau-maravilha-10.png'), [[Rg, Rn]], [[b.w, b.h]], 1); }
     // (a size its people has no form of: none — never the drawing of before at the wrong size; the classic size: the drawing of before)
@@ -102,6 +108,25 @@ if (want('b')) {
     const k1 = Art.building('maravilha', 0, 'romano', null, false, N10), k2 = Art.building('maravilha', 0, 'romano', null, false, N10);
     ok('b: o «sprite» grande feito uma vez e guardado', !!k1 && k1 === k2, k1 ? `${Math.ceil(k1.w * 3)} × ${Math.ceil(k1.h * 3)} px na tela a 3× (${(Math.ceil(k1.w * 3) * Math.ceil(k1.h * 3) * 4 / 1048576).toFixed(1)} MB, mais ⅓ das cópias menores)` : 'nenhum');
   } finally { F.drop(b); }
+  // (M2's palaces — the palace of courtyards of 6 tiles and the colossal of 10, D-106 — in the four peoples that raise them: each
+  // painted from its form — every piece known, the order unbroken round its courtyards —, against its form, and the 3D of it
+  // against its form and against the god's picture; T-407)
+  const pal = [], PN = { palacio: 'palácio', palacio_colossal: 'colossal' };
+  for (const [type, n] of [['palacio', 6], ['palacio_colossal', 10]]) for (const st2 of ['grego', 'romano', 'egipcio', 'nordico']) {
+    if (!Fo.has(type, st2, n)) { pal.push({ type, st: st2, n, none: true }); continue; }
+    const pb = putBig(type, st2, 4300 + pal.length, n);
+    try {
+      A.formMissing.clear(); const g = F.god(pb); const s2 = A.formStats || {}; const nr = F.near(pb); const fc2 = F.formCheck(pb, Fo.of(type, st2, n), g, nr, LIM);
+      const mk2 = F.gridFor(g, nr); const c2 = F.compare(F.measure(F.paintGod(g, mk2())), F.measure(F.paint3D(nr, mk2())), [pb.w, pb.h]);
+      pal.push({ type, st: st2, n, w: g.spr ? g.spr.w : 0, miss: [...A.formMissing], rings: s2.rings, parts: s2.parts, god: fc2.god.iou, d3f: fc2.d3.iou, d3: c2.iou, gWhy: fc2.why.filter(w => w.startsWith('deus')), dWhy: fc2.why.filter(w => !w.startsWith('deus')) });
+    } finally { F.drop(pb); }
+  }
+  json.palacios = pal;
+  const lab = p => `${PN[p.type]}/${p.st}`;
+  ok('b: os palácios do M2 pelo pintor (6 e 10 casas, quatro povos)', pal.every(p => !p.none && Math.abs(p.w - ((2 * p.n) * 16 + 16)) < 0.5 && !p.miss.length && p.rings === 0 && !p.gWhy.length),
+    pal.map(p => (p.none ? `${lab(p)}: sem forma de ${p.n} casas` : `${lab(p)}: ${p.parts} partes, ${p.rings} voltas quebradas${p.miss.length ? ', sem pintor: ' + p.miss.join(',') : ''}, deus × forma ${p.god.toFixed(3)}${p.gWhy.length ? ' (' + p.gWhy.join('; ') + ')' : ''}`)).join('; '));
+  ok('b: os palácios do M2 no 3D, contra a forma e contra o deus', pal.every(p => p.none || (!p.dWhy.length && p.d3 >= LIM.iou)),
+    pal.filter(p => !p.none).map(p => `${lab(p)}: 3D × forma ${p.d3f.toFixed(3)}, deus × 3D ${p.d3.toFixed(3)}${p.dWhy.length ? ' — ' + p.dWhy.join('; ') : ''}`).join('; '));
 }
 
 // ------------------------------ (c) the order of the drawing ------------------------------

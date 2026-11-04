@@ -1482,9 +1482,13 @@
     c.fillStyle = g; c.beginPath(); c.ellipse(a[0], a[1], rx, ry, 0, 0, Math.PI); c.lineTo(b[0] - rx, b[1]); c.ellipse(b[0], b[1], rx, ry, 0, Math.PI, 0, true); c.closePath(); c.fill();
     if (ct) { c.fillStyle = ct; c.beginPath(); c.ellipse(b[0], b[1], rx, ry, 0, 0, TAU); c.fill(); }
   }
-  // (the far half of a round — where a face toward its middle faces the eye — from ya to yb px, at r tiles; open where cut)
+  // (the far half of a round — where a face toward its middle faces the eye — from ya to yb px, at r tiles; open where cut. An
+  // arc given past a turn — from −π/2, say — is the same round: its piece in that half, a turn on)
   function farBand(c, cx, cy, r, ya, yb, col, a0, a1, cut) {
-    const f0 = Math.max(a0 === undefined ? 0 : a0, 0.75 * Math.PI), f1 = Math.min(a1 === undefined ? TAU : a1, 1.75 * Math.PI); if (f1 <= f0 || yb - ya < 1e-6) return;
+    const A0 = a0 === undefined ? 0 : a0, A1 = a1 === undefined ? TAU : a1; if (yb - ya < 1e-6) return;
+    for (const s of [0, TAU, -TAU]) { const f0 = Math.max(A0 + s, 0.75 * Math.PI), f1 = Math.min(A1 + s, 1.75 * Math.PI); if (f1 > f0) farArc(c, cx, cy, r, ya, yb, col, f0, f1, cut); }
+  }
+  function farArc(c, cx, cy, r, ya, yb, col, f0, f1, cut) {
     const m = Math.max(6, Math.round(48 * (f1 - f0) / TAU)); const shut = a => !(cut || []).some(g => Math.abs(((a - g[0]) % TAU + TAU + Math.PI) % TAU - Math.PI) < g[1]);
     let run = []; const flush = () => { if (run.length > 1) { const up = run.map(a => P(cx + Math.cos(a) * r, cy + Math.sin(a) * r, yb)), dn = run.slice().reverse().map(a => P(cx + Math.cos(a) * r, cy + Math.sin(a) * r, ya)); poly(c, up.concat(dn), col); } run = []; };
     for (let j = 0; j < m; j++) { const s0 = f0 + (f1 - f0) * j / m, s1 = f0 + (f1 - f0) * (j + 1) / m; if (shut((s0 + s1) / 2)) { if (!run.length) run.push(s0); run.push(s1); } else flush(); }
@@ -1493,9 +1497,10 @@
   // the rows of a cavea (its form's — D-084, the god's caveaPaint at any size): each tread the ring of the round at its height
   // from its inner edge to its outer one (the arena and what stands lower in the middle show through), the stairways up it a
   // strip a little darker, the wall down to the next row and the parapet at the tread's edge where they face the eye (open
-  // where a flight comes out on it: its vaos), the ends of a half bowl and the piece of its back wall that turns to the eye.
-  // The top ring is a drum's walk where the bowl stands in one (no fecho), as the 3D has it
-  function cavPaint(c, e, L, seats, wall, muro) {
+  // where a flight comes out on it: its vaos — on the lowest row too where the bowl stands on the ground, as the 3D's —), the
+  // ends of a half bowl (not where another bowl goes on from it: joined, [at a0, at a1]) and the piece of its back wall that
+  // turns to the eye. The top ring is a drum's walk where the bowl stands in one (no fecho), as the 3D has it
+  function cavPaint(c, e, L, seats, wall, muro, joined) {
     const T = v => (v - L / 2) / 4; const cx = T(e.c[0]), cy = T(e.c[1]); const A0 = e.aneis, n = A0.length;
     const a0 = e.arco ? e.arco[0] : 0, a1 = e.arco ? e.arco[1] : TAU;
     const pt = (r, a, y) => P(cx + Math.cos(a) * r / 4, cy + Math.sin(a) * r / 4, y * ZPX);
@@ -1506,12 +1511,12 @@
       if (k || e.fecho) poly(c, arc(rOut, y, a0, a1).concat(arc(Math.max(0, rIn), y, a1, a0)), k % 2 ? seats : tone(seats, 0.9));
       if (E && (k || e.fecho)) for (const a of E.a) { const h0 = E.l / 2 / Math.max(0.1, rIn), h1 = E.l / 2 / rOut; poly(c, [pt(rIn, a - h0, y), pt(rOut, a - h1, y), pt(rOut, a + h1, y), pt(rIn, a + h0, y)], tone(seats, 0.84)); }
       if (k < n - 1) farBand(c, cx, cy, rIn / 4, A0[k + 1][1] * ZPX, y * ZPX, muro || tone(seats, 0.82), a0, a1); // (its face down to the next: the 3D's riser)
-      if (e.parapeito && k > 0) farBand(c, cx, cy, rIn / 4, y * ZPX, (y + e.parapeito) * ZPX, tone(muro || seats, 0.9), a0, a1, (e.vaos || []).filter(g => g.anel === k).map(g => [g.a, g.w / 2 / rIn]));
+      if (e.parapeito && (k > 0 || e.fecho)) farBand(c, cx, cy, rIn / 4, y * ZPX, (y + e.parapeito) * ZPX, tone(muro || seats, 0.9), a0, a1, (e.vaos || []).filter(g => g.anel === k).map(g => [g.a, g.w / 2 / rIn]));
     }
     if (!e.fecho) return;
     farBand(c, cx, cy, e.fundo / 4, 0, A0[n - 1][1] * ZPX, tone(seats, 0.8), a0, a1); // (a bowl on the ground: its lowest row's face down to it)
-    for (const a of [a0, a1]) for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A0[k + 1][0] : e.fundo; poly(c, [pt(rIn, a, 0), pt(A0[k][0], a, 0), pt(A0[k][0], a, A0[k][1]), pt(rIn, a, A0[k][1])], tone(wall, 0.94)); }
-    const b0 = Math.max(a0, 1.75 * Math.PI), b1 = Math.min(a1, 2 * Math.PI); if (b1 > b0) poly(c, arc(A0[0][0], A0[0][1], b0, b1).concat(arc(A0[0][0], 0, b1, b0)), tone(wall, 0.8));
+    [a0, a1].forEach((a, s) => { if (joined && joined[s]) return; for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A0[k + 1][0] : e.fundo; poly(c, [pt(rIn, a, 0), pt(A0[k][0], a, 0), pt(A0[k][0], a, A0[k][1]), pt(rIn, a, A0[k][1])], tone(wall, 0.94)); } });
+    for (const s of [0, TAU, -TAU]) { const b0 = Math.max(a0 + s, 1.75 * Math.PI), b1 = Math.min(a1 + s, 2 * Math.PI); if (b1 > b0) poly(c, arc(A0[0][0], A0[0][1], b0, b1).concat(arc(A0[0][0], 0, b1, b0)), tone(wall, 0.8)); }
   }
   // (the kinds of piece the god paints from a form; another kind is left out, and named here for the proofs — with how the last
   // painting went: A.formStats. Only seen; anew with every world)
@@ -1523,6 +1528,11 @@
     const p = pal(st), L = F.L, h0 = L / 2, out = [], Fo = G.Forma;
     const T = u => (u - h0) / 4, Z = y => y * ZPX, col = s => fcol(p, s), E3 = (x, y, z) => [x, y, z / 16];
     const door = o.noDoor ? F.door : null;
+    // (the ends of the bowls where one goes on from another — the same edge, the line through both their middles: the quarters
+    // of the Colosseum's oval, each two arcs, D-107 —: inside the seats, no wall of theirs to paint)
+    const ends = []; for (const e of F.els) if (e.k === 'cavea' && e.arco && e.fecho) e.arco.forEach((a, s) => { const r0 = e.fundo, r1 = e.aneis[0][0]; ends.push({ e, s, p: [[e.c[0] + Math.cos(a) * r0, e.c[1] + Math.sin(a) * r0], [e.c[0] + Math.cos(a) * r1, e.c[1] + Math.sin(a) * r1]] }); });
+    const same = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.05;
+    const joined = new Map(); for (const x of ends) if (ends.some(y => y.e !== x.e && same(x.p[0], y.p[0]) && same(x.p[1], y.p[1]))) { const j = joined.get(x.e) || [false, false]; j[x.s] = true; joined.set(x.e, j); }
     F.els.forEach((e, i) => {
       const put = (q, paint, j) => { q.i = i; q.j = j || 0; q.paint = paint; out.push(q); return q; };
       switch (e.k) {
@@ -1618,9 +1628,14 @@
         }
         case 'cavea': {
           const cx = T(e.c[0]), cy = T(e.c[1]), A0 = e.aneis; const a0 = e.arco ? e.arco[0] : 0, a1 = e.arco ? e.arco[1] : TAU;
-          let zLo = e.fecho ? 0 : 1e9, zHi = 0; A0.forEach(([, y], k) => { zLo = Math.min(zLo, Z(y)); zHi = Math.max(zHi, Z(y + (k && e.parapeito ? e.parapeito : 0))); });
-          const q = put(prismP(roundG(cx, cy, A0[0][0] / 4, 24, a0, a1), zLo, zHi), () => cavPaint(c, e, L, col(e.cor), col(e.fecho || 'wl'), e.muro ? col(e.muro) : null));
-          q.bowl = { c: [cx, cy], r: e.fundo / 4 };
+          let zLo = e.fecho ? 0 : 1e9, zHi = 0; A0.forEach(([, y], k) => { zLo = Math.min(zLo, Z(y)); zHi = Math.max(zHi, Z(y + ((k || e.fecho) && e.parapeito ? e.parapeito : 0))); });
+          // (a piece of a round less than a half: its outline the outer arc and the inner one's two ends — not its middle, which
+          // may lie far off, across the arena: the Colosseum's quarters, D-107)
+          const g0 = a1 - a0 < Math.PI - 1e-6 ? roundG(cx, cy, A0[0][0] / 4, 24, a0, a1).slice(0, -1).concat([a0, a1].map(a => [cx + Math.cos(a) * e.fundo / 4, cy + Math.sin(a) * e.fundo / 4])) : roundG(cx, cy, A0[0][0] / 4, 24, a0, a1);
+          const q = put(prismP(g0, zLo, zHi), () => cavPaint(c, e, L, col(e.cor), col(e.fecho || 'wl'), e.muro ? col(e.muro) : null, joined.get(e)));
+          // (its bowl: what stands in it — in the round of its lowest row and, a piece of one, within its arc —; a piece whose rows
+          // rise toward the eye — its middle facing it — is before what stands in it, the others after)
+          const mid = (a0 + a1) / 2; q.bowl = e.arco ? { c: [cx, cy], r: e.fundo / 4, a0, a1, fwd: Math.cos(mid) + Math.sin(mid) > 1e-9 } : { c: [cx, cy], r: e.fundo / 4 };
           break;
         }
         case 'arena': {
@@ -1830,6 +1845,56 @@
         }
         case 'aro': { const u = T(e.c[0]), v = T(e.c[1]), z = Z(e.c[2]), r = e.r / 4, rz = e.r * ZPX;
           put(boxP(u - r, v - 0.03, u + r, v + 0.03, z - rz, z + rz), () => { c.strokeStyle = col(e.cor); c.lineWidth = Math.max(0.6, e.t * 9); c.beginPath(); for (let k = 0; k <= 16; k++) { const a = k / 16 * TAU; const s = P(u + Math.cos(a) * r, v, z + Math.sin(a) * rz); if (k) c.lineTo(s[0], s[1]); else c.moveTo(s[0], s[1]); } c.stroke(); }); break; }
+        // the arcaded ring round an arena (the Colosseum's facade, D-107): a part each bay, as the drum's — its outer face where it
+        // faces the eye, in the gradient from the god's left to his right (its storeys' arches dark, the ground one of a way in
+        // through to the inside; the attic's windows; the cornices between the storeys; the order at its piers), the inner face
+        // of the far bays from where the seats stop leaning on it, with its arches, and the walk on top —; its back half before
+        // what is inside its round, its front half after (the ring rule)
+        case 'arcada': {
+          const N = e.pts.length, O = e.pts.map(q => [T(q[0]), T(q[1])]), I = e.pts1.map(q => [T(q[0]), T(q[1])]);
+          const z0 = Z(e.y0), z1 = Z(e.y1), zi = Z(e.dentro ? e.dentro.y0 : e.y0); const cL = col(e.cor[0]), cR = col(e.cor[1] || e.cor[0]);
+          const esc = e.escuro ? col(e.escuro) : '#28201a', dark = G.rgb(rgbOf(esc), 0.55); const open = new Set(e.abertos || []), ss = e.andares || [];
+          for (let k = 0; k < N; k++) {
+            const a = O[k], b = O[(k + 1) % N], ai = I[k], bi = I[(k + 1) % N]; const bayM = Math.hypot(b[0] - a[0], b[1] - a[1]) * 4;
+            let nx = b[1] - a[1], ny = a[0] - b[0]; const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl; // (its outward normal: away from its inner face)
+            if (nx * (a[0] + b[0] - ai[0] - bi[0]) + ny * (a[1] + b[1] - ai[1] - bi[1]) < 0) { nx = -nx; ny = -ny; }
+            const fwd = nx + ny > 1e-9, back = nx + ny < -1e-9, tn = mixc(cL, cR, (1 + (nx - ny) / Math.SQRT2) / 2);
+            const on = (p0, p1) => (s, z) => P(p0[0] + (p1[0] - p0[0]) * s, p0[1] + (p1[1] - p0[1]) * s, z);
+            // (a face's storeys from zf up: the arches — the ground one of a way in the passage's dark —, the windows of every so
+            // many bays, the order at its two piers, the cornice over each storey but the last)
+            const storeys = (at, zf, tf, way) => ss.forEach((sd, j) => {
+              const zb = Z(sd.y0), zc = Z(sd.y1), th = zc - zb; if (zc <= zf + 1e-6) return;
+              if (sd.arco) { const w = sd.arco.w, za = Math.max(zf, zb + sd.arco.a * th), zt = zb + sd.arco.b * th, zh = Math.max(za, zt - w * bayM / 2 * ZPX);
+                const pts = [at(0.5 - w / 2, za), at(0.5 - w / 2, zh)]; for (let q = 1; q < 8; q++) { const f = q / 8 * Math.PI; pts.push(at(0.5 - Math.cos(f) * w / 2, zh + Math.sin(f) * (zt - zh))); }
+                pts.push(at(0.5 + w / 2, zh), at(0.5 + w / 2, za)); poly(c, pts, way && j === 0 ? esc : dark); }
+              if (sd.janela && k % (sd.janela.cada || 1) === 0) { const hw = Math.min(0.45, sd.janela.w / 2 / bayM); poly(c, [at(0.5 - hw, zb + sd.janela.a * th), at(0.5 + hw, zb + sd.janela.a * th), at(0.5 + hw, zb + sd.janela.b * th), at(0.5 - hw, zb + sd.janela.b * th)], dark); }
+              if (sd.ordem) for (const s of [0.05, 0.95]) ln(c, at(s, Math.max(zf, zb)), at(s, zc - 0.6), tone(tf, sd.ordem === 'pilastra' ? 1.05 : 1.1), sd.ordem === 'pilastra' ? 0.5 : 0.7);
+              if (j < ss.length - 1) { const cz = Math.min(th * 0.08, 0.22 * ZPX); poly(c, [at(0, zc - cz), at(1, zc - cz), at(1, zc), at(0, zc)], tone(tf, 1.07)); ln(c, at(0, zc - cz - 0.3), at(1, zc - cz - 0.3), 'rgba(0,0,0,0.15)', 0.5); }
+            });
+            const V = [a, b, bi, ai].map(q => [q[0], q[1], z0 / 16]).concat([a, b, bi, ai].map(q => [q[0], q[1], z1 / 16]));
+            const part = put(hullP(V, BOXF), () => {
+              if (fwd) { const at = on(a, b); poly(c, [at(0, z0), at(1, z0), at(1, z1), at(0, z1)], tn); storeys(at, z0, tn, open.has(k)); }
+              else if (back) { const at = on(ai, bi), tb = tone(tn, 0.78); poly(c, [at(0, zi), at(1, zi), at(1, z1), at(0, z1)], tb); storeys(at, zi, tb, false); }
+              poly(c, [P(a[0], a[1], z1), P(b[0], b[1], z1), P(bi[0], bi[1], z1), P(ai[0], ai[1], z1)], tone(tn, 1.06));
+              if (fwd) ln(c, P(a[0], a[1], z1), P(b[0], b[1], z1), 'rgba(255,255,255,0.35)', 0.7);
+            }, k);
+            part.ring = { id: i, poly: O, fwd };
+          }
+          break;
+        }
+        // the floor of an arena whose outline is no circle (D-107): its sand, the openings in it cut through — what is under them
+        // shows: the flight up from the undercroft — and their far edges its thickness
+        case 'areia': {
+          const O = e.pts.map(q => [T(q[0]), T(q[1])]), z = Z(e.y), zd = Z(e.y - (e.d || 0)), cc = col(e.cor); const holes = (e.buracos || []).map(h => h.map(T));
+          const q = put(prismP(O, zd, z), () => {
+            c.fillStyle = cc; c.beginPath(); O.forEach((p0, k) => { const s = P(p0[0], p0[1], z); if (k) c.lineTo(s[0], s[1]); else c.moveTo(s[0], s[1]); }); c.closePath();
+            for (const h of holes) { const r = [P(h[0], h[1], z), P(h[0], h[3], z), P(h[2], h[3], z), P(h[2], h[1], z)]; c.moveTo(r[0][0], r[0][1]); for (let k = 1; k < 4; k++) c.lineTo(r[k][0], r[k][1]); c.closePath(); }
+            c.fill('evenodd');
+            for (const h of holes) { poly(c, [P(h[0], h[1], zd), P(h[2], h[1], zd), P(h[2], h[1], z), P(h[0], h[1], z)], tone(cc, 0.72)); poly(c, [P(h[0], h[1], zd), P(h[0], h[3], zd), P(h[0], h[3], z), P(h[0], h[1], z)], tone(cc, 0.8)); }
+          });
+          q.floor = true;
+          break;
+        }
         default: A.formMissing.add(e.k);
       }
     });
@@ -1846,15 +1911,22 @@
       if (all && some) return f > 0 ? 1 : -1; }
     return 0;
   }
-  const inRound = (Q, rg) => !(Q.ring && Q.ring.id === rg.id) && Q.V.every(v => Math.hypot(v[0] - rg.c[0], v[1] - rg.c[1]) <= rg.r + 0.03);
-  const inBowl = (Q, bw) => !Q.bowl && Q.V.every(v => Math.hypot(v[0] - bw.c[0], v[1] - bw.c[1]) <= bw.r + 0.04);
+  // (inside a ring: within the round of a drum; within the outline of an arcade — convex, round it from +u toward +v)
+  const inPoly = (v, P2) => { for (let k = 0; k < P2.length; k++) { const a = P2[k], b = P2[(k + 1) % P2.length]; const l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > 1e-9 && ((b[0] - a[0]) * (v[1] - a[1]) - (b[1] - a[1]) * (v[0] - a[0])) / l < -0.03) return false; } return true; };
+  const inRound = (Q, rg) => !(Q.ring && Q.ring.id === rg.id) && Q.V.every(v => (rg.poly ? inPoly(v, rg.poly) : Math.hypot(v[0] - rg.c[0], v[1] - rg.c[1]) <= rg.r + 0.03));
+  // (in a bowl: within the round of its lowest row — a piece of one, within its arc too, where another piece of the same round
+  // may stand: its podium)
+  const inArc = (v, bw) => { const dx = v[0] - bw.c[0], dy = v[1] - bw.c[1]; if (Math.hypot(dx, dy) < 0.02) return true; const a = Math.atan2(dy, dx), m = (bw.a0 + bw.a1) / 2, h = (bw.a1 - bw.a0) / 2 + 0.02; return Math.abs(((a - m) % TAU + TAU + Math.PI) % TAU - Math.PI) <= h; };
+  const inBowl = (Q, bw) => (bw.a0 === undefined ? !Q.bowl : !Q.bowl || Q.bowl.a0 !== undefined) && Q.V.every(v => Math.hypot(v[0] - bw.c[0], v[1] - bw.c[1]) <= bw.r + 0.04 && (bw.a0 === undefined || inArc(v, bw)));
   // -1: A first; 1: B first; 0: no word
   function paintFirst(A, B) {
     if (A.d1 <= B.d0 + FEP) return -1; if (B.d1 <= A.d0 + FEP) return 1;
     for (let k = 0; k < 3; k++) { if (A.hi[k] <= B.lo[k] + FEP && A.lo[k] < B.lo[k] - FEP) return -1; if (B.hi[k] <= A.lo[k] + FEP && B.lo[k] < A.lo[k] - FEP) return 1; }
     let r = sepBy(A, B); if (r) return r; r = sepBy(B, A); if (r) return -r;
     if (A.ring && inRound(B, A.ring)) return A.ring.fwd ? 1 : -1; if (B.ring && inRound(A, B.ring)) return B.ring.fwd ? -1 : 1;
-    if (A.bowl && inBowl(B, A.bowl)) return -1; if (B.bowl && inBowl(A, B.bowl)) return 1;
+    if (A.bowl && inBowl(B, A.bowl)) return A.bowl.fwd ? 1 : -1; if (B.bowl && inBowl(A, B.bowl)) return B.bowl.fwd ? -1 : 1;
+    // (an arena's floor and a piece of the seats round it: the piece whose rows rise toward the eye after it, the others before)
+    if (A.bowl && A.bowl.a0 !== undefined && B.floor) return A.bowl.fwd ? 1 : -1; if (B.bowl && B.bowl.a0 !== undefined && A.floor) return B.bowl.fwd ? -1 : 1;
     return 0;
   }
   // (two outlines on the screen cover each other: no line between them)
@@ -1865,7 +1937,7 @@
     return true;
   }
   function formOrder(parts) {
-    const n = parts.length, st = { parts: n, pairs: 0, edges: 0, rings: 0 }; if (n < 2) return { order: parts.slice(), st };
+    const n = parts.length, st = { parts: n, pairs: 0, edges: 0, rings: 0, cut: [] }; if (n < 2) return { order: parts.slice(), st };
     for (const q of parts) {
       let sx0 = 1e9, sy0 = 1e9, sx1 = -1e9, sy1 = -1e9, d0 = 1e9, d1 = -1e9; const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9], sp = [];
       for (const v of q.V) { const sx = (v[0] - v[1]) * 16, sy = (v[0] + v[1]) * 8 - v[2] * 16, d = v[0] + v[1] + v[2]; sp.push([sx, sy]);
@@ -1887,7 +1959,7 @@
     for (let k = 0; k < n; k++) if (!deg[k]) push(k);
     const order = [], done = new Uint8Array(n); let next = 0;
     while (order.length < n) {
-      if (!heap.length) { while (done[next]) next++; push(next); st.rings++; }
+      if (!heap.length) { while (done[next]) next++; push(next); st.rings++; if (st.cut.length < 24) st.cut.push([parts[next].i, parts[next].j]); } // (where: its piece and part, for the proofs)
       const k = pop(); if (done[k]) continue; done[k] = 1; order.push(parts[k]);
       for (const j of adj[k]) if (--deg[j] === 0 && !done[j]) push(j);
     }
