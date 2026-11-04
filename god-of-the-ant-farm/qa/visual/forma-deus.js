@@ -7,11 +7,17 @@
 //     nesta prova) — o deus o desenha pelo pintor, do tamanho dele (o «sprite» de 10 casas), com a massa do 3D do mesmo prédio
 //     e da forma (a fidelidade: silhueta, alto, largura, a planta vista de cima); um tamanho sem forma não cai no desenho de
 //     antes; o desenho do tamanho clássico é o de antes, igual; o «sprite» grande feito uma vez e guardado.
-// (c) A ordem do desenho dos prédios grandes: nas quatro vistas, quem está ao lado ou atrás de um prédio de 10 casas (e de 3) é
-//     desenhado do lado certo dele — na frente das faces que o deus vê, atrás das outras —, pela chave do render.js (R.bkey:
-//     a profundidade do meio do lote); e quantos a regra de antes (o canto da frente, um palmo para trás) punha do lado errado.
+// (c) A ordem do desenho dos prédios grandes: nas quatro vistas, quem está ao lado ou atrás de um prédio de 10 casas (de 3, de 2)
+//     é desenhado do lado certo dele — na frente das faces que o deus vê, atrás das outras —, pela chave do render.js (R.bkey:
+//     a profundidade do meio do lote, de R.bigW casas para cima); e quantos a regra de antes (o canto da frente, um palmo para
+//     trás) punha do lado errado — em 1 casa, as duas contadas.
+// (d) A ordem no mundo vivo (L-527): nos mundos prontos «metropole» e «mega», em volta de cada prédio de 2 casas ou mais que o
+//     deus desenha como uma caixa, nas quatro vistas, as árvores, as pedras, os arbustos, as pessoas, os bichos, as carroças, os
+//     muros e os outros prédios (caixa contra caixa) do lado certo; o que os ganchos dos outros arquivos põem, contado pelo nome
+//     (a profundidade deles é deles); e quantos a chave de antes (a da 1ª rodada: o meio do lote só de 3 casas para cima, o
+//     curral, o estábulo e a feira pelo canto da frente) punha do lado errado.
 // (e) O desenho não muda o mundo: pintar o prédio grande e pedir a chave do desenho (R.bkey) não escreve no prédio nem tira do acaso do mundo.
-//   node qa/visual/forma-deus.js [a,b,c,e]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
+//   node qa/visual/forma-deus.js [a,b,c,d,e]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
 //   VERB=1  cada tipo e povo                   JSON=arquivo  os números
 'use strict';
 const path = require('path'), fs = require('fs');
@@ -107,9 +113,11 @@ if (want('c')) {
   for (const n of [N10, 3, 2, 1]) {
     const b = putBig(n === N10 ? 'maravilha' : n === 3 ? 'teatro' : n === 2 ? 'temple' : 'house', 'romano', 5000 + n, n);
     try {
-      const h = W.maxH(b.x, b.y, b.w, b.h); const [cx, cy] = G.Village.center(b); let bad = 0, old = 0, tot = 0, front = 0;
+      const h = W.maxH(b.x, b.y, b.w, b.h); const [cx, cy] = G.Village.center(b); let bad = 0, old = 0, neu = 0, tot = 0, front = 0;
       for (let r = 0; r < 4; r++) R.asView(r, () => {
-        const bk = R.bkey(b); const a = R.proj(cx, cy, h)[0]; const oldKey = R.depth(cx, cy) + (b.w + b.h) / 2 - 0.8;
+        // (the building's key as the render sorts it now; the rule of before — its front corner, a hand back —; the middle of its
+        // lot, a hand back: D-114's)
+        const bk = R.bkey(b); const a = R.proj(cx, cy, h)[0]; const oldKey = R.depth(cx, cy) + (b.w + b.h) / 2 - 0.8, newKey = R.depth(cx, cy) - 0.15;
         // (the faces the view shows: an outward normal toward greater depth)
         const fx = R.depth(cx + 1, cy) - R.depth(cx, cy), fy = R.depth(cx, cy + 1) - R.depth(cx, cy);
         const x0 = Math.min(...[[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]].map(([x, y]) => R.proj(x, y, h)[0])) - a, x1 = Math.max(...[[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]].map(([x, y]) => R.proj(x, y, h)[0])) - a;
@@ -119,16 +127,85 @@ if (want('c')) {
           const sx = R.proj(px, py, h)[0] - a; if (sx <= x0 + 1 || sx >= x1 - 1) continue; // (beside the lot on the screen only: where the two can cover each other)
           const beyond = (px > b.x + b.w && fx > 0) || (px < b.x && fx < 0) || (py > b.y + b.h && fy > 0) || (py < b.y && fy < 0);
           const key = R.depth(px, py) + 0.05; tot++; if (beyond) front++;
-          if (beyond ? key <= bk : key >= bk) bad++; if (beyond ? key <= oldKey : key >= oldKey) old++;
+          if (beyond ? key <= bk : key >= bk) bad++; if (beyond ? key <= oldKey : key >= oldKey) old++; if (beyond ? key <= newKey : key >= newKey) neu++;
         } }
       });
-      res.push({ n, tot, front, bad, old });
+      res.push({ n, tot, front, bad, old, neu });
     } finally { F.drop(b); }
   }
   json.c = res;
-  // (the big ones, by the middle of their lot: none on the wrong side; under 3 tiles the rule of before is kept — counted, not held)
-  const big = res.filter(r => r.n >= 3), small = res.filter(r => r.n < 3);
-  ok('c: a ordem do desenho ao lado e atrás do prédio grande', big.every(r => r.bad === 0), big.map(r => `${r.n} casas: ${r.tot} lugares em volta nas quatro vistas (${r.front} na frente das faces que o deus vê), ${r.bad} do lado errado (a regra de antes: ${r.old})`).join('; ') + ' — abaixo de 3 casas, a regra de antes, mantida: ' + small.map(r => `${r.n} casa${r.n > 1 ? 's' : ''}, ${r.bad} de ${r.tot}`).join('; '));
+  // (from R.bigW tiles up, by the middle of their lot: none on the wrong side; under it the rule of before is kept — counted, not
+  // held; and both rules counted at every size)
+  const big = res.filter(r => r.n >= R.bigW), small = res.filter(r => r.n < R.bigW);
+  ok('c: a ordem do desenho ao lado e atrás do prédio grande', big.every(r => r.bad === 0), big.map(r => `${r.n} casa${r.n > 1 ? 's' : ''}: ${r.tot} lugares em volta nas quatro vistas (${r.front} na frente das faces que o deus vê), ${r.bad} do lado errado (a regra de antes: ${r.old})`).join('; ') +
+    (small.length ? ' — abaixo de ' + R.bigW + ' casas, a regra de antes, mantida: ' + small.map(r => `${r.n} casa${r.n > 1 ? 's' : ''}, ${r.bad} de ${r.tot} (pelo meio do lote: ${r.neu})`).join('; ') : ''));
+}
+
+// ------------------------------ (d) the order in a lived world ------------------------------
+// (round each building the god draws as a box — built, or a site —, a tile and a half out: what the render sorts itself, where
+// its screen column falls on the lot — beyond a face the view shows, after the building; beyond a hidden one, before; another
+// building that draws a box (a pen, a stable or a fair on a slope: its plinth), box against box: apart along one axis of the
+// ground, the one beyond the other's shown face after it; apart along both with the two disagreeing, or with no column of the
+// screen in common, neither covers the other. The square and the fold keep their own rule, for whoever stands on them, and what
+// the hooks add has its own depth: both counted, by name, not held)
+if (want('d')) {
+  const R = G.Render, W = G.W;
+  const OPEN = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1 }, PEN = { curral: 1, estabulo: 1, feira: 1 }, OWN = { praca: 1, cercado: 1 };
+  // (the key of the first round: the middle of the lot from 3 tiles up, the pen, the stable and the fair by the front corner)
+  const keyOld = b => { const [cx, cy] = G.Village.center(b); return b.type === 'praca' ? R.depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : b.w >= 3 && !OPEN[b.type] && !PEN[b.type] && !(G.BDEF[b.type] || {}).field ? R.depth(cx, cy) - 0.15 : R.depth(cx, cy) + (b.w + b.h) / 2 - 0.8; };
+  const field = o => o.type === 'farm' || !!(G.BDEF[o.type] || {}).field;
+  // (what a building's entry draws in the sorted pass: a box — its picture, its site —; an open ground built, nothing of its own
+  // but the pen's plinth on a slope, the square's picture and the fold's stakes)
+  const box = o => !field(o) && (!o.built || (!OPEN[o.type] && !PEN[o.type]));
+  const drawn = o => !field(o) && (!o.built || OWN[o.type] || (PEN[o.type] ? W.maxH(o.x, o.y, o.w, o.h) - W.minH(o.x, o.y, o.w, o.h) > 0.15 : !OPEN[o.type]));
+  const colOf = (o, h, a) => { const xs = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]].map(([x, y]) => R.proj(x, y, h)[0] - a); return [Math.min(...xs), Math.max(...xs)]; };
+  const res = [];
+  for (const key of ['metropole', 'mega']) {
+    M.pronto(key); const S = G.S;
+    const things = [];
+    for (const t of S.trees.values()) things.push({ k: 'árvore', x: t.x, y: t.y, off: 0 });
+    for (const r of S.rocks.values()) things.push({ k: 'pedra', x: r.x, y: r.y, off: 0 });
+    for (const b of S.bushes.values()) things.push({ k: 'arbusto', x: b.x, y: b.y, off: 0 });
+    for (const v of S.villagers.values()) { if (v.inside || v.held || v.aboard || (v.age < 2 && v.carried)) continue; things.push({ k: 'pessoa', x: v.x, y: v.y, off: 0.05 + (v.dz || 0) }); }
+    for (const a of S.animals.values()) { const sd = G.Animals.DEF[a.kind]; if (a.held || !sd || (sd.cls === 'air' && a.z > 4)) continue; things.push({ k: 'bicho', x: a.x, y: a.y, off: 0.04 }); }
+    for (const c of S.carts) things.push({ k: 'carroça', x: c.x, y: c.y, off: 0.03 });
+    for (const w of S.walls) for (let k = 0; k < w.built; k++) { const i = w.tiles[k], wv = S.wall[i]; if (wv === 1 || wv === 2 || wv === 4) things.push({ k: 'muro', x: i % G.N + 0.5, y: ((i / G.N) | 0) + 0.5, off: 0 }); }
+    const hooked = []; for (const h of G.renderHooks.ents) h((d, e, x, y) => { hooked.push({ k: (e && e.fn && e.fn.name) || '?', x, y, off: d - x - y }); }, [-1e9, -1e9, 1e9, 1e9], 2);
+    const boxes = [...S.buildings.values()].filter(b => b.w === b.h && box(b));
+    const by = {}; const row = n => by[n] || (by[n] = { n, lots: 0, tot: 0, bad: 0, old: 0, kinds: {}, own: 0, ownBad: 0, ownOld: 0, hook: 0, hookBad: 0, hookOld: 0, hooks: {} });
+    const say = (...a) => { if (process.env.VERB) console.log('  d:', key, ...a); };
+    for (let r = 0; r < 4; r++) R.asView(r, () => {
+      for (const b of boxes) {
+        const T = row(b.w); if (r === 0) T.lots++;
+        const [cx, cy] = G.Village.center(b), h = W.maxH(b.x, b.y, b.w, b.h), a = R.proj(cx, cy, h)[0];
+        const fx = R.depth(cx + 1, cy) - R.depth(cx, cy), fy = R.depth(cx, cy + 1) - R.depth(cx, cy);
+        const [x0, x1] = colOf(b, h, a); const bk = R.bkey(b), bo = keyOld(b);
+        const near = t => !(t.x < b.x - 1.5 || t.x > b.x + b.w + 1.5 || t.y < b.y - 1.5 || t.y > b.y + b.h + 1.5);
+        const side = t => { if (t.x >= b.x && t.x <= b.x + b.w && t.y >= b.y && t.y <= b.y + b.h) return 0; const sx = R.proj(t.x, t.y, h)[0] - a; if (sx <= x0 + 1 || sx >= x1 - 1) return 0;
+          return (t.x > b.x + b.w && fx > 0) || (t.x < b.x && fx < 0) || (t.y > b.y + b.h && fy > 0) || (t.y < b.y && fy < 0) ? 1 : -1; };
+        const wrong = (s, k, key) => s > 0 ? k <= key : k >= key;
+        for (const t of things) { if (!near(t)) continue; const s = side(t); if (!s) continue; const k = R.depth(t.x, t.y) + t.off; T.tot++;
+          if (wrong(s, k, bk)) { T.bad++; T.kinds[t.k] = (T.kinds[t.k] || 0) + 1; say('vista', r, b.type, b.id, t.k, t.x.toFixed(2), t.y.toFixed(2), 'lado', s, k.toFixed(2), bk.toFixed(2)); } if (wrong(s, k, bo)) T.old++; }
+        for (const t of hooked) { if (!near(t)) continue; const s = side(t); if (!s) continue; const k = R.depth(t.x, t.y) + t.off; T.hook++;
+          if (wrong(s, k, bk)) { T.hookBad++; T.hooks[t.k] = (T.hooks[t.k] || 0) + 1; } if (wrong(s, k, bo)) T.hookOld++; }
+        for (const o of S.buildings.values()) {
+          if (o === b || !drawn(o) || o.x >= b.x + b.w + 1.5 || o.x + o.w <= b.x - 1.5 || o.y >= b.y + b.h + 1.5 || o.y + o.h <= b.y - 1.5) continue;
+          const sx = o.x >= b.x + b.w ? 1 : o.x + o.w <= b.x ? -1 : 0, sy = o.y >= b.y + b.h ? 1 : o.y + o.h <= b.y ? -1 : 0; if (!sx && !sy) continue;
+          const ax = sx ? Math.sign(sx * fx) : 0, ay = sy ? Math.sign(sy * fy) : 0; if (ax && ay && ax !== ay) continue;
+          const [o0, o1] = colOf(o, h, a); if (Math.min(x1, o1) - Math.max(x0, o0) <= 2) continue; // (no column in common)
+          const s = ax || ay, bad = wrong(s, R.bkey(o), bk), was = wrong(s, keyOld(o), bo);
+          if (OWN[o.type] && o.built) { T.own++; if (bad) T.ownBad++; if (was) T.ownOld++; continue; }
+          T.tot++; if (bad) { T.bad++; const kk = 'prédio ' + o.type; T.kinds[kk] = (T.kinds[kk] || 0) + 1; say('vista', r, b.type, b.id, 'contra', o.type, o.id, 'lado', s, R.bkey(o).toFixed(2), bk.toFixed(2)); } if (was) T.old++;
+        }
+      }
+    });
+    res.push({ key, rows: Object.values(by).sort((p, q) => p.n - q.n) });
+  }
+  json.d = res;
+  const big = res.flatMap(w => w.rows.filter(r => r.n >= R.bigW));
+  const fmt = r => `${r.n} casa${r.n > 1 ? 's' : ''}: ${r.lots} prédios, ${r.tot} coisas em volta, ${r.bad} do lado errado${r.bad ? ' ' + JSON.stringify(r.kinds) : ''} (a chave de antes: ${r.old})` +
+    (r.own ? `; contra a praça e o cercado, ${r.ownBad} de ${r.own} (antes: ${r.ownOld})` : '') + (r.hook ? `; dos ganchos, ${r.hookBad} de ${r.hook}${r.hookBad ? ' ' + JSON.stringify(r.hooks) : ''} (antes: ${r.hookOld})` : '');
+  ok('d: a ordem no mundo vivo, em volta dos prédios de 2 casas ou mais', big.length > 0 && big.every(r => r.bad === 0), res.map(w => `${w.key} — ` + w.rows.map(fmt).join('; ')).join(' | '));
 }
 
 // ------------------------------ (e) the drawing does not change the world ------------------------------

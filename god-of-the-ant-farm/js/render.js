@@ -924,10 +924,13 @@
   // ---- a big building among the people (D-106): sorted by the depth of the middle of its lot — of its two side corners, a
   // square lot's — whoever stands beside it or behind it is drawn on the right side of it. Beside a square lot, in any column of
   // the screen, the lot's front is never nearer the eye than its side corners nor its back farther: one standing out of the lot
-  // in front of a face it shows is deeper than them, one behind it less deep. The front corner, a hand back, put a person
-  // beside a building of 10 tiles behind its wall (the rule kept for those under 3 tiles; the open grounds — a square, a ruin, a
-  // graveyard, a pen, a campfire, the stable and the fair, the fields, whose pieces the hooks sort each by its own — keep theirs) ----
-  const BIGW = 3; const FLATB = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1, curral: 1, estabulo: 1, feira: 1 };
+  // in front of a face it shows is deeper than them, one behind it less deep; and of two square lots side by side, the one in
+  // front of the other's face has the deeper middle, whatever their sizes. The front corner, a hand back, put a person beside a
+  // building of 10 tiles behind its wall, and a tree, a beast or a bush beside one of 2 on the wrong side of it (the rule kept
+  // for those of 1 tile: there the two agree; the open grounds — a square, a ruin, a graveyard, a fold, a campfire, the fields,
+  // whose pieces the hooks sort each by its own — keep theirs; the pen, the stable and the fair draw here only their plinth on a
+  // slope, or their site: a box, like the buildings — L-527) ----
+  const BIGW = 2; R.bigW = BIGW; const FLATB = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1 };
   R.bkey = function (b) { const [cx, cy] = G.Village.center(b); return b.type === 'praca' ? depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : b.w >= BIGW && !FLATB[b.type] && !(G.BDEF[b.type] || {}).field ? depth(cx, cy) - 0.15 : depth(cx, cy) + (b.w + b.h) / 2 - 0.8; };
   function pushD(d, type, o, sx, sy) {
     let e = drawList[drawN]; if (!e) { e = {}; drawList[drawN] = e; }
