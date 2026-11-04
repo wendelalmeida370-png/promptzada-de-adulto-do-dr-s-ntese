@@ -2417,6 +2417,9 @@
     const rec = b.ip; const m0 = openTiles(b, rec.s); const shut = !(m0 & (rec.o || m0)) || !m0 || !frontOpen(b, In.shellOf(b));
     if (!shut && entryOk(b, rec)) { sayEntry(b, true); return; }
     let to = fitSide(b, rec); const ok = !!to; let moved = false;
+    // (where it fits on none: the first side whose door — the shell's for that side: a form's gate stands where the form has it,
+    // not on any of the side's open tiles — opens onto the biggest ground; else the first side open, as before: L-514)
+    if (!to && shut) for (const s of SIDES) { const m = openTiles(b, s); if (m && frontOpen(b, shellFor(b, s === rec.s && m === rec.o ? rec : Object.assign({}, rec, { s, o: m })))) { to = { s, o: m }; break; } }
     if (!to && shut) for (const s of SIDES) { const m = openTiles(b, s); if (m) { to = { s, o: m }; break; } }
     if (to && (to.s !== rec.s || to.o !== rec.o)) { rec.s = to.s; rec.o = to.o; rec.r++; fact(b, 'reforma', 'porta ' + to.s); moved = true; }
     // (said: fits, or fits on no side open; a door left on a street shut all round says nothing)

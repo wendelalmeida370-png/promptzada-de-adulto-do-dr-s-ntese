@@ -674,7 +674,7 @@
   // form (G.Forma.has asks a classic form): its bigger steps are a plan of the lot's size (TYPES.taverna.sizes, In.sizeOk) and
   // what the god and the 3D draw of it is its plan's shell, as the tavern of 8 m's. The risk below fixes the walls, rooms and
   // stair (a structure, no dice: the plan's dice only move what is not the tables'); laid out only on a lot of 12 m or more
-  // (int-civicos.js: In.formSized, the family the type's bigger steps are given)
+  // (the family estalagem.andar: int-civicos.js gives it to the type, as its bigger steps')
   const rr2 = x => Math.round(x * 100) / 100;
   function innRisk(rec, tr, L) {
     const k = L >= 16 ? 1 : 0; const m = 0.4, t = rr2(Math.max(0.25, tr.t || 0.25)), ti = 0.15, c = t / 2;
@@ -766,9 +766,10 @@
     for (const k of R.ups) { const id = ids[k]; const own = R.rooms[k].fn === 'aposento'; if (P.place(own ? tr.coupleRich || bed : bed, 1, id) || P.place('cama', 1, id)) { beds++; P.opt(() => P.place('arca', 1, id)); } }
     if (!beds) P.errs.push('sem cama nos quartos');
   }
-  // (no family of its own: a family registered here would move the dice of every plan of a family registered after it — the
-  // plan's seed is the family's place in the order of registration, L-512 —; the inn is laid out through the bigger steps' door,
-  // In.formSized, in the family the type's bigger steps are given — int-civicos.js)
+  // (a family of its own: its plans' dice by its own name — L-512, the seed of a family registered after the frozen list —, the
+  // dice of every other family's plans as they were)
+  In.addFamilies([{ id: 'estalagem.andar', H: 'estalagem', V: 'andar', S: 'estalagem.andar', name: 'A estalagem: o salão, a cozinha, a adega, os quartos em cima e o terreiro',
+    can: rec => (In.nOf(rec) < 3 ? 'a estalagem é dos degraus maiores da taverna (12 m ou mais)' : null), build: P => innBuild(P) }]);
   In.innBuild = innBuild;
 
   // ------------------------------ the rich house: the house's bigger step (domus 2; D-106) ------------------------------
@@ -777,7 +778,8 @@
   // the front the vestibule from the street's door between two more, each room opening on the court; the court open to the
   // sky in the middle, its fountain. The people's walls, roof, beds, fire and table (In.TRAD), its household furnished as every
   // house's (furnishHome: the couple's bed, the children's, the fire, the pantry, the chest, the table). The house has no form:
-  // a plan of the lot's size (TYPES.house.sizes), what the god and the 3D draw of it its shell's (Arch.home, D-082)
+  // a plan of the lot's size (TYPES.house.sizes), what the god and the 3D draw of it its shell's (Arch.home, D-082); the family
+  // domus.patio (int-civicos.js gives it to the type, as its bigger step's)
   function domusBuild(P) {
     const tr = P.tr, rec = P.rec, L = P.L; const def = G.BDEF[rec.t] || {}; const need = def.housing || 6;
     const m = 0.3, t = rr2(tr.t || 0.25), ti = 0.12, c = t / 2; const B = [m, m, rr2(L - m), rr2(L - m)]; const I = [rr2(m + t), rr2(m + t), rr2(L - m - t), rr2(L - m - t)];
@@ -826,5 +828,7 @@
     P.opt(() => P.place('fonte', 0, court, { sides: ['centro'], margin: 0.4 }));
     P.opt(() => P.place('banco', 0, front[1], { sides: ['esquerda', 'direita'] }));
   }
+  In.addFamilies([{ id: 'domus.patio', H: 'domus', V: 'patio', S: 'domus.patio', name: 'A casa rica: os cômodos em volta do pátio aberto',
+    can: rec => (In.nOf(rec) !== 2 ? 'a casa do pátio é a casa rica, de 8 m' : null), build: P => domusBuild(P) }]);
   In.domusBuild = domusBuild;
 })(window.G);
