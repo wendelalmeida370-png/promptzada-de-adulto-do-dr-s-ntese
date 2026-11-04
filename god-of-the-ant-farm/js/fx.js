@@ -49,9 +49,10 @@
     for (let i = FX.glows.length - 1; i >= 0; i--) { const g = FX.glows[i]; g.life -= rdt; if (g.life <= 0) FX.glows.splice(i, 1); }
     if (FX.flash > 0) FX.flash = Math.max(0, FX.flash - rdt * 2.2);
   };
-  FX.floater = function (x, y, text, color, life) {
+  // (lift: px more over the ground in the god's view — a text over a tall thing; the body's view keeps its own height)
+  FX.floater = function (x, y, text, color, life, lift) {
     if (FX.floaters.length > 40) FX.floaters.shift();
-    FX.floaters.push({ x, y, h: G.W.groundH(x, y), z: 16, text, c: color || '#fff', life: life || 1.6, max: life || 1.6 });
+    FX.floaters.push({ x, y, h: G.W.groundH(x, y), z: 16, lift: lift || 0, text, c: color || '#fff', life: life || 1.6, max: life || 1.6 });
   };
   FX.ring = function (x, y, r0, r1, life, color, width, glow) {
     FX.rings.push({ x, y, h: G.W.groundH(x, y), r0, r1, life, max: life, c: color, w: width || 2, glow: !!glow });
@@ -116,7 +117,9 @@
       FX.spawn({ x, y, z: R(8, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: R(20, 70), g: 60, drag: 1.5, life: R(0.8, 1.6), s0: 2.2, s1: 0.4, c: G.vpick(['#ffe08a', '#fff3c8', '#ffd05a']), k: 8, layer: 1 });
     }
     FX.ring(x, y, 0.2, size * 1.4, 0.9, 'rgba(255,230,150,0.9)', 2, true);
-    if (reads(1.1)) FX.floater(x, y, G.Village.buildName(b) + '!', '#fff1c4', 2.2);
+    // (its name: a step of another size than its type's classic one — D-106 — over the top of its form, not on its walls)
+    const lift = G.Arch && G.Arch.sized && G.Arch.sized(b.type, b.w) && G.Render && G.Render.siteH ? Math.max(0, G.Render.siteH(b) - 8) : 0;
+    if (reads(1.1)) FX.floater(x, y, G.Village.buildName(b) + '!', '#fff1c4', 2.2, lift);
     FX.dust(x, y, 8);
   };
   FX.blessing = function (x, y) {
