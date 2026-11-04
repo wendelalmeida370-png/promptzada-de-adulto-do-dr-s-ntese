@@ -6,7 +6,9 @@
 // que perdem, a linha na crônica; e3x o juiz do lote, regra a regra); o save no meio da obra grande (e4); o deus derruba no
 // meio (e5); a cidade que encolhe (e6); a ampliação no lugar (e7: o mesmo id, o nome, a história, a conta do que cresce, o save
 // no meio, pronta; e8 o palácio e o seu patrono; e9 a ampliação que ninguém alcança volta ao que era); a obra grande guarda a
-// pedra da cidade (e10, D-117); um save de antes igual (e11); a mesma semente, a mesma escolha (e12).
+// pedra da cidade (e10, D-117); um save de antes igual (e11); a mesma semente, a mesma escolha (e12); os palácios pela escada
+// (e13); a mão do deus prefere o chão que o pódio cobre (e14). Onde o povo já tem a forma grande de verdade (o Coliseu romano do
+// M1, os palácios do M2), a prova usa a dele.
 //   node qa/escala.js            (ONLY=e1,e3 só esses; VERB=1 conta mais)
 'use strict';
 process.chdir(__dirname);
@@ -284,6 +286,16 @@ run('e13', () => {
     ok('e13b o grande palácio pela escada', !ergueu || (ergueu.w === 8 && ergueu.esc === 'grande_palacio'), ergueu ? `ergue ${lado(ergueu)}` : 'nenhuma capital com lote para o de 8 (só o lote foi provado)');
     const c = checa(); ok('e13c verificador', c.ok, c.txt);
   } finally { V.PODIUM = pod; }
+});
+
+// ------------------------------ e14: a mão do deus prefere o chão que o pódio cobre ------------------------------
+// (no raio dela, um lote de até 3 m com o anel sem penhasco antes de um mais perto e mais íngreme; sem nenhum, o mais perto)
+run('e14', () => {
+  abre(); const set = cidade('Óstia'); const n = 4; const N = G.N; const ox = Math.floor(set.cx), oy = Math.floor(set.cy);
+  const livre = (x, y) => { for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) { if (tx < 2 || ty < 2 || tx >= N - 2 || ty >= N - 2) return false; const i = ty * N + tx; if (S.occ[i] || S.wall[i] || S.type[i] < G.T.SAND) return false; if (tx >= x && tx < x + n && ty >= y && ty < y + n && (S.road[i] >= 2 || S.fire[i] > 0)) return false; } return true; };
+  let perto = null; for (let r = 0; r <= 40 && !perto; r++) for (let dy = -r; dy <= r && !perto; dy++) for (let dx = -r; dx <= r; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = ox + dx - 2, y = oy + dy - 2; if (livre(x, y)) { perto = { x, y, r, sl: G.W.slope(x, y, n, n) }; break; } }
+  const b = sim(() => V.handFound(set, 'temple', 'templo', { R: 40 })); const sl = b ? G.W.slope(b.x, b.y, n, n) : 99;
+  ok('e14 a mão do deus prefere o pódio', !!b && sl <= V.PODIUM, `o lote livre mais perto de ${set.name}: ${perto ? `${perto.x},${perto.y} com ${(perto.sl * 1.5).toFixed(1)} m` : '-'}; a mão pôs ${lado(b)} com ${(sl * 1.5).toFixed(1)} m${perto && perto.sl > V.PODIUM ? ' (o mais perto era íngreme demais: foi a outro)' : ''}`);
 });
 
 // ------------------------------ e11: um save de antes igual ------------------------------
