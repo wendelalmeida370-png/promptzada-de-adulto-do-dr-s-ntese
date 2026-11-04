@@ -316,11 +316,14 @@
       return along ? (line < (C[1] + C[3]) / 2 ? ['frente', r2(line + w.t / 2)] : ['fundo', r2(line - w.t / 2)]) : (line < (C[0] + C[2]) / 2 ? ['direita', r2(line + w.t / 2)] : ['esquerda', r2(line - w.t / 2)]); };
     const yOf = lv => (lv ? r2(Hp + R.H0) : Hp);
     for (const w of R.walls) {
-      if (w.yard || !w.ops.length) continue; const f = face(w); if (!f) continue; const along = Math.abs(w.a[1] - w.b[1]) < 1e-6;
+      // (the court of honour's walls only for their gate; the street's gate the risk has a leaf in — in the pylon's wall, the
+      // palisade, the court of honour's —: painted shut, portao — the inside's leaf turns there when the inside is drawn, as at
+      // the temple's pylon; there was nothing in the gate drawn: L-577, T-461)
+      if (!w.ops.length || (w.yard && !w.ops.some(o => o.rua && o.k !== 'vao'))) continue; const f = face(w); if (!f) continue; const along = Math.abs(w.a[1] - w.b[1]) < 1e-6;
       for (const o of w.ops) {
         const c = along ? o.p[0] : o.p[1];
         if (o.k === 'janela') els.push({ k: 'janelas', na: f[0], em: f[1], de: r2(c - o.w / 2), ate: r2(c + o.w / 2), y0: r2(yOf(w.lv) + o.sill), y1: r2(yOf(w.lv) + o.sill + o.h), n: 0 });
-        else if (f[0] === 'frente' && o.k !== 'vao') els.push({ k: 'porta', na: 'frente', v: f[1], u: r2(c), w: o.w, y0: yOf(w.lv), y1: r2(yOf(w.lv) + o.h), cor: o.k === 'portal' ? (EG ? '#3e2e1c' : 'door') : 'door' });
+        else if (f[0] === 'frente' && o.k !== 'vao') els.push(Object.assign({ k: 'porta', na: 'frente', v: f[1], u: r2(c), w: o.w, y0: yOf(w.lv), y1: r2(yOf(w.lv) + o.h), cor: o.k === 'portal' ? (EG ? '#3e2e1c' : 'door') : 'door' }, o.rua ? { portao: true } : {}));
       }
     }
     // the columns: the porch's along the colossal's front, the screen across the palace's court — under their entablature
@@ -643,7 +646,9 @@
         } else els.push(bloco(rr, Hp, r2(Hp + w.h), EG ? WALL : PAR, { mat: EG ? 'parede' : 'slab' }));
       }
       if (gate && NO) for (const s of [-1, 1]) { const u = r2(gate.p[0] + s * (gate.w / 2 + 0.2)); els.push({ k: 'tora', a: [u, gate.p[1], Hp], b: [u, gate.p[1], r2(Hp + w.h + 1.2)], r: 0.2, cor: '#5a3a22' }); }
-      if (gate && EG) els.push({ k: 'porta', na: 'frente', v: r2(gate.p[1] + w.t / 2), u: gate.p[0], w: gate.w, y0: Hp, y1: r2(Hp + gate.h), cor: '#2a2016', portao: true });
+      // (the gate the risk has a leaf in — the pylon's, the palisade's between its tall posts —: the form paints it shut, and
+      // the inside's leaf turns there when the inside is drawn — portao; the Norse's was the gap open, no leaf: L-576)
+      if (gate && (EG || NO)) els.push({ k: 'porta', na: 'frente', v: r2(gate.p[1] + w.t / 2), u: gate.p[0], w: gate.w, y0: Hp, y1: r2(Hp + gate.h), cor: EG ? '#2a2016' : '#4a3220', portao: true });
     }
     // the columns of the risk: each line's, where the plan stands them
     const colsOf = c => { const [a, b] = c.line; const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return c.at.map(s => [r2(a[0] + (b[0] - a[0]) * s / len), r2(a[1] + (b[1] - a[1]) * s / len)]); };

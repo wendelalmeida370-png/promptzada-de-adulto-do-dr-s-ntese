@@ -30,6 +30,8 @@
 //   B14 o telhado da planta é o da forma: um por ala (a subida e o começo sobre o beiral de cada uma), nunca um em volta do pátio
 //   B15 as palmeiras dos pátios com a copa inteira sob o céu (L-574); a colunata da frente do pátio aberta só no vão do portão:
 //      a balaustrada da forma nos outros, a planta sem vão neles — uma regra só, a do risco (L-575)
+//   B16 o portão da rua de um prédio pelo risco: o de folha pintado fechado pela forma no vão (portao) — o palácio egípcio e o
+//      nórdico, o colossal, o recinto do templo nórdico —, o de vão aberto sem nada pintado (L-576, L-577, T-461)
 // E a D, os templos — o templo (4 casas), o grande templo (6) e o santuário monumental (8) dos mesmos seis povos (o do asteca, a
 // pirâmide de degraus e o santuário no alto, com o corpo da forma: o 3D a desenha), o risco de js/forma-poder.js (riscoTemplo) e a planta pela forma (int-palacio.js, templeByForm, a família forma.templo):
 //   D1 a forma de cada povo e tamanho, o degrau só a quem a tem; as formas dos povos diferentes em cada tamanho (a H)
@@ -470,6 +472,20 @@ function B15() {
   }
   ok('B15a as palmeiras dos pátios com a copa inteira sob o céu, e a colunata da frente do pátio aberta só no vão do portão — a balaustrada da forma nos outros, a planta sem vão neles (uma regra só, a do risco)', !out.length && palms > 0, some(out).join(' / ') || `${palms} palmeiras; ${bays} vãos de colunata: ${sum.join(', ')}`);
 }
+// ---------------------------------------------------------------- B16: the street's gate, the plan's and the form's (T-461)
+function B16() {
+  // (one rule for the street's gate of a building by its risk — the palaces', the temples' —: where the risk has a leaf in it
+  // ('portao': the pylon's wall, the palisade, a precinct's, the court of honour's), the form paints it shut in its gap, marked
+  // portao — the inside's leaf turns there —, and nowhere else; where it is a way with no leaf ('vao'), nothing painted)
+  const out = [], sum = [];
+  const check = (key, t, c, n) => { const F = Fo.of(t, c, n), R = In.riskOf(F); const g = R && R.gateD; const painted = F.els.filter(e => e.k === 'porta' && e.portao);
+    if (!g || g.k === 'vao') { if (painted.length) out.push(`${key}: o portão sem folha, e a forma pinta ${painted.length}`); return; }
+    const at = painted.filter(e => Math.abs(e.u - g.p[0]) < 1e-6 && Math.abs(e.w - g.w) < 1e-6);
+    if (painted.length !== 1 || at.length !== 1) out.push(`${key}: o portão com folha (${g.k}), a forma pinta ${painted.length} (no vão dele: ${at.length})`); else sum.push(key); };
+  for (const [t, n] of PAL) for (const c of POVOS) check(`${PL(t)}/${c}`, t, c, n);
+  for (const n of TPL) for (const c of POVOS) check(`T${n}/${c}`, 'temple', c, n);
+  ok('B16a o portão da rua de um prédio pelo risco: o de folha pintado fechado pela forma no vão dele (portao) — o egípcio e o nórdico, o palácio, o colossal e o recinto do templo —, o de vão aberto sem nada pintado', !out.length && sum.length > 0, some(out).join(' / ') || `${sum.length} portões de folha pintados no vão: ${sum.join(', ')}`);
+}
 // ================================================================ D: the temples (templo 4, grande templo 6, santuário monumental 8)
 const TPL = [4, 6, 8], TFAM = 'forma.templo';
 const blankS = () => ({ villagers: new Map(), buildings: new Map(), dead: new Map(), settlements: new Map(), clock: 100, day: 3, time: 0.4, avatar: null, nextId: 1000, history: [], fire: new Float32Array(G.N * G.N), occ: new Int32Array(G.N * G.N) });
@@ -834,7 +850,7 @@ function G3() {
     ok('G3b de pé num mundo novo: a casa rica de cada povo — a planta, o verificador; um ano; uma derrubada; salvar e carregar', res.length >= 4 && res.every(r => r.ok) && !bad.length && !bad1.length && !bad2.length && alive >= res.length - 1 && razed === 'a derrubada vira ruína com planta' && M.limpo(),
       `${res.length} de pé (${res.map(tell).join(', ')}); ${alive} de pé e com planta depois do ano; ${razed}; o verificador S0–S2: ${q0} antes, ${bad.length} com elas, ${bad1.length} depois de um ano, ${bad2.length} depois do save${bad.concat(bad1, bad2).length ? ' (' + bad.concat(bad1, bad2).slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
 }
-for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11], ['B12', B12], ['B13', B13], ['B14', B14], ['B15', B15],
+for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11], ['B12', B12], ['B13', B13], ['B14', B14], ['B15', B15], ['B16', B16],
   ['D1', D1], ['D2', D2], ['D3', D3], ['D4', D4], ['D5', D5], ['D6', D6], ['D7', D7], ['D8', D8], ['D9', D9],
   ['F1', F1], ['F2', F2], ['F3', F3], ['F4', F4], ['F5', F5], ['F6', F6], ['G1', G1], ['G2', G2], ['G3', G3]]) if (want(k)) f();
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
