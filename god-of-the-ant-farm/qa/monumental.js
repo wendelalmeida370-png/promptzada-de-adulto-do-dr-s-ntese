@@ -88,6 +88,8 @@ const G = M.load({ qa: true, extra: ['qa/monumental-inv.js'] });
 const In = G.Interiors, Fo = G.Forma, Sp = G.Space;
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | monumental ${name} | ${info}`); if (!c) fails.push(name); };
 const ms = () => Number(process.hrtime.bigint()) / 1e6; // (the clock of the process: Date.now stands still in nodemundo)
+// (the time the process itself spent on fn — what a plan costs the game, not what a busy machine adds to the clock) → [its result, ms]
+const cpuMs = fn => { const c0 = process.cpuUsage(); const r = fn(); const c = process.cpuUsage(c0); return [r, (c.user + c.system) / 1000]; };
 const TAU = Math.PI * 2, CS = In.CS;
 const blank = () => { G.S = { villagers: new Map(), buildings: new Map(), dead: new Map(), settlements: new Map(), clock: 100, day: 3, time: 0.4, avatar: null, nextId: 1000, history: [], fire: new Float32Array(G.N * G.N) }; };
 const rec = (t, c, f, s, n) => ({ v: In.REC_V || 4, f, r: 0, t, u: In.TYPES[t].use, s, o: 7, c, e: 3, k: 'ae', cl: 't', fl: 0, d: 1, w: 1, pw: 0, h: [], m: 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0, n });
@@ -161,7 +163,7 @@ function testeA() {
     const out = [], said = []; const times = [];
     for (const n of SIZES) for (const s of SIDES) {
       const b = { id: (nid += 37), type: 'maravilha', style: 'romano', x: 8, y: 8, w: n, h: n, built: true }; b.ip = rec('maravilha', 'romano', 'forma.maravilha', s, n);
-      const t0 = ms(); const p = In.makeFam(b, b.ip, 'forma.maravilha'); times.push(ms() - t0); plans[n + s] = { b, p };
+      const [p, dt] = cpuMs(() => In.makeFam(b, b.ip, 'forma.maravilha')); times.push(dt); plans[n + s] = { b, p };
       if (!p || !p.ok) { out.push(`n ${n}/${s}: não se arma (${p ? p.errs.slice(0, 2).join('; ') : '—'})`); continue; }
       G.S.buildings.set(b.id, b);
       const fal = In.report(b, p, { rec: b.ip }).filter(q => q.k === 'FALHA'); if (fal.length) out.push(`n ${n}/${s}: ${fal.slice(0, 2).map(q => q.what).join('; ')}`);
@@ -302,18 +304,46 @@ function testeA() {
     else { if (!o.ok || !o.free.assistir || !o.free.lutar) out.push(`a tabela ${o.ok ? 'feita' : 'não feita'}, um lugar livre de assistir ${o.free.assistir}, de lutar ${o.free.lutar}`); if (o.dt > 400) out.push(`a tabela dos lugares levou ${o.dt.toFixed(0)} ms (o alvo: 400)`); }
     ok('A7 os lugares do Coliseu (In.places, a tabela da planta): feita a tempo, um lugar livre de assistir e de lutar', !out.length, out.join(' · ') || `${o.spots} lugares na tabela em ${o.dt.toFixed(0)} ms`);
   }
+  // ---------------------------------------------------------------- A8 the podium's parapet of today's amphitheatre, round a great arena
+  // (L-551: the arena's plan of before — js/forma.js amphi — round an arena of 10 m, as E's test Colosseum has it: its parapet open
+  // over the steps from the sand exactly as the 3D leaves it — the gap's width at the ring's radius, cut at those angles —, and the
+  // body taking the steps' top. In a process of its own: the test form, a size no people has, never reaches the other tests)
+  {
+    const path = require('path'), cp = require('child_process');
+    const code = `const M = require(${JSON.stringify(path.join(__dirname, 'nodemundo.js'))}); const G = M.load({}); const In = G.Interiors, Fo = G.Forma;
+      G.S = { villagers: new Map(), buildings: new Map(), dead: new Map(), settlements: new Map(), clock: 100, day: 3, time: 0.4, avatar: null, nextId: 1000, history: [], fire: new Float32Array(G.N * G.N) };
+      const RUN48 = 1 / Math.tan(48 * Math.PI / 180), n = 12, L = n * 4, cu = L / 2, cv = L / 2, R = L / 2 - 1.2, N = 28, fundo = 10, ya = 3.0, yb = 3.45, tr1 = 1.2;
+      const bw = 2 * R * Math.sin(Math.PI / N), aw = bw * 0.6, ah = 7 * 0.725, hw = aw / 2, run = ya * RUN48, vt = cv - 0.88;
+      const A = { c: [cu, cv], R, t: 0.8, fundo, ya, yb, tr1, aw, ah, under: [cu - hw, vt, cu + hw, vt + run], hatch: [cu - hw, vt, cu + hw, vt + run * (1 - (ya - 0.2 - 1.9) / ya)], steps: [cu - fundo, cv - 0.4, cu - fundo + 0.5, cv + 0.4], gap: { a: Math.PI, w: 1.1 }, face: R * Math.cos(Math.PI / N) };
+      Fo.def('maravilha', 'romano', () => ({ els: [], amphi: A }), [n]);
+      const rec = ${JSON.stringify(rec('maravilha', 'romano', 'forma.maravilha', 'S', 12))}; const b = { id: 72001, type: 'maravilha', style: 'romano', x: 8, y: 8, w: n, h: n, built: true, ip: rec }; G.S.buildings.set(b.id, b);
+      const p = In.makeFam(b, rec, 'forma.maravilha'); const out = { ok: !!(p && p.ok), errs: p ? p.errs.slice(0, 2) : [] };
+      if (p && p.ok) { const fal = In.report(b, p, { rec }).filter(q => q.k === 'FALHA').map(q => q.what); out.fal = fal;
+        // (the opening: the gap between the podium's walls' ends either side of it, as angles about the middle, against the 3D's)
+        const ang = q => Math.atan2(q[1] - cv, q[0] - cu); let lo = -9, hi = 9; const half = A.gap.w / 2 / fundo;
+        for (const w of p.walls) { if (w.lv !== 2 || w.kind !== 'parede') continue; for (const q of [w.a, w.b]) { let a = ang(q); if (a < 0) a += 2 * Math.PI; const d = a - Math.PI; if (d <= 1e-9 && d > lo) lo = d; if (d >= -1e-9 && d < hi) hi = d; } }
+        out.open = [lo, hi]; out.want = half; const st = p.stairs.find(s => s.lv0 === 1 && s.lv1 === 2); out.top = st ? st.b : null; }
+      console.log(JSON.stringify(out)); process.exit(0);`;
+    const r = cp.spawnSync(process.execPath, ['-e', code], { cwd: __dirname, timeout: 60000, encoding: 'utf8' }); let o = null; try { o = JSON.parse((r.stdout || '').trim().split('\n').pop()); } catch (e) { o = null; }
+    const out = [];
+    if (!o) out.push(`o processo da prova falhou: ${(r.stderr || '').slice(0, 160)}`);
+    else if (!o.ok) out.push(`a planta não se arma: ${o.errs.join('; ')}`);
+    else { if (o.fal.length) out.push(o.fal.slice(0, 2).join('; ')); if (Math.abs(-o.open[0] - o.want) > 0.002 || Math.abs(o.open[1] - o.want) > 0.002) out.push(`a abertura do parapeito de ${(o.open[0] * 180 / Math.PI).toFixed(2)}° a ${(o.open[1] * 180 / Math.PI).toFixed(2)}°, a do 3D ±${(o.want * 180 / Math.PI).toFixed(2)}°`); }
+    ok('A8 o parapeito do pódio do anfiteatro de hoje em volta de uma arena de 10 m (L-551): aberto sobre os degraus da areia como o 3D, o corpo no alto deles', !out.length, out.join(' · ') || `a abertura de ${(o.open[0] * 180 / Math.PI).toFixed(2)}° a +${(o.open[1] * 180 / Math.PI).toFixed(2)}° em volta do meio (a do 3D: ±${(o.want * 180 / Math.PI).toFixed(2)}°, 1,1 m no raio da arena); o alto dos degraus em (${o.top.map(q => q.toFixed(2)).join(', ')})`);
+  }
 }
 // (who is given a place in a building of a people — In.places, freePlace, the body's «lugar» —: the table of its plan's places,
 // made once a record; in a process of its own with a deadline, so that a table that never ends fails the proof instead of
-// hanging it → { ok, dt, spots, free: { use: a place free } } | { err })
+// hanging it → { ok, dt — the process's own time making it: on a busy machine the clock's stretched the Colosseum's from 200 to
+// 787 ms —, wall, spots, free: { use: a place free } } | { err })
 const stepOf = (type, n) => (G.Escala.steps(type).find(s => s.n === n) || {}).id;
 function placesOf(style, n, uses, type) {
   const path = require('path'), cp = require('child_process'); type = type || 'maravilha';
   const code = `const M = require(${JSON.stringify(path.join(__dirname, 'nodemundo.js'))}); const G = M.load({}); const In = G.Interiors; const ms = () => Number(process.hrtime.bigint()) / 1e6;
     G.S = { villagers: new Map(), buildings: new Map(), dead: new Map(), settlements: new Map(), clock: 100, day: 3, time: 0.4, avatar: null, nextId: 1000, history: [], fire: new Float32Array(G.N * G.N) };
     const b = { id: 71021, type: ${JSON.stringify(type)}, style: ${JSON.stringify(style)}, x: 8, y: 8, w: ${n}, h: ${n}, esc: ${JSON.stringify(stepOf(type, n))}, built: true }; b.ip = ${JSON.stringify(rec(type, style, famOf(type), 'S', n))}; G.S.buildings.set(b.id, b);
-    const p = In.plan(b); const t0 = ms(); const t = In.table(b); const dt = ms() - t0; const free = {}; for (const u of ${JSON.stringify(uses)}) free[u] = !!In.freePlace(b, u);
-    console.log(JSON.stringify({ ok: !!(p && p.ok && t), dt, free, spots: t ? t.spots.length : 0 })); process.exit(0);`;
+    const p = In.plan(b); const t0 = ms(), c0 = process.cpuUsage(); const t = In.table(b); const c1 = process.cpuUsage(c0), wall = ms() - t0, dt = (c1.user + c1.system) / 1000; const free = {}; for (const u of ${JSON.stringify(uses)}) free[u] = !!In.freePlace(b, u);
+    console.log(JSON.stringify({ ok: !!(p && p.ok && t), dt, wall, free, spots: t ? t.spots.length : 0 })); process.exit(0);`;
   const t0 = ms(); const r = cp.spawnSync(process.execPath, ['-e', code], { cwd: __dirname, timeout: 30000, encoding: 'utf8' }); const wall = ms() - t0;
   let o = null; try { o = JSON.parse((r.stdout || '').trim().split('\n').pop()); } catch (e) { o = null; }
   if (!o) return { err: r.signal ? `o repartidor de lugares não terminou em ${(wall / 1000).toFixed(0)} s (interiors.js, makeTable)` : `o processo da prova falhou: ${(r.stderr || '').slice(0, 160)}` };
@@ -323,7 +353,7 @@ function placesOf(style, n, uses, type) {
 const famOf = type => (type === 'monument' ? 'forma.monumento' : 'forma.' + type);
 function planOf(type, style, n, s, id) {
   const b = { id, type, style, x: 8, y: 8, w: n, h: n, built: true }; b.ip = rec(type, style, famOf(type), s, n);
-  const t0 = ms(); const p = In.makeFam(b, b.ip, famOf(type)); return { b, p, dt: ms() - t0 };
+  const [p, dt] = cpuMs(() => In.makeFam(b, b.ip, famOf(type))); return { b, p, dt };
 }
 const wonderPlan = (style, n, s, id) => planOf('maravilha', style, n, s, id);
 // (the places of a use a plan's marks have that the body takes — on the storey lv, when given)
@@ -681,7 +711,7 @@ function testeE() {
       // (L-494: the orchestra drawn a hair over the plan's floor — (1) —; no floor of the plan in a column's base — (3), the 3D's
       // base of 2.3 radii —; (2), the rows drawn as chords and walked as rounds, is the 3D's and the plan's: counted here)
       const orq = F.els.find(e => e.k === 'arena'); const d1 = orq.y - (p.levels[0].y); if (d1 < 0 || d1 > 0.015) out.push(`${tag}: a orquestra desenhada a ${d1.toFixed(3)} m do chão da planta (L-494, 1)`);
-      let inBase = 0; for (const e of F.els) { if (e.k !== 'colunata') continue; const lc = Math.abs(e.y0 - yb) < 0.2 ? lb : -1; if (lc < 0) continue; const g = p.grid.lv[lc], h = e.r * 1.15;
+      let inBase = 0; for (const e of F.els) { if (e.k !== 'colunata') continue; const lc = Math.abs(e.y0 - yb) < 0.2 ? lb : -1; if (lc < 0) continue; const g = p.grid.lv[lc], h = e.r * Fo.COLUMN_BASE / 2;
         for (const [cx, cz] of e.pts) for (let z = Math.floor((cz - h) / CS); z <= Math.floor((cz + h) / CS); z++) for (let x = Math.floor((cx - h) / CS); x <= Math.floor((cx + h) / CS); x++) { const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS; if (Math.abs(mx - cx) < h && Math.abs(mz - cz) < h && g[z * N + x] === CELL.FLOOR) inBase++; } }
       if (inBase) out.push(`${tag}: ${inBase} casinhas de chão na base de uma coluna (L-494, 3)`);
       let poly = 0; for (const e of pieces) { const span = e.arco[1] - e.arco[0], nS = Math.max(4, Math.round(48 * span / TAU)); const bnd = e.aneis.map(q => q[0]).concat([e.fundo]);
@@ -692,7 +722,7 @@ function testeE() {
     // (the classic theatre — the Greek's and the classical people's, the one of before (antigo) —: no floor in its columns' bases)
     for (const st of ['grego', 'classico']) { const n0 = G.BDEF.teatro.w; const { b, p } = planOf('teatro', st, n0, 'S', (nid += 37)); if (!p || !p.ok) { out.push(`o teatro antigo ${st}: não se arma`); continue; }
       const F = Fo.of('teatro', st, n0), N = p.grid.n, g = p.grid.lv[0]; let inBase = 0;
-      for (const e of F.els) { if (e.k !== 'colunata') continue; const h = e.r * 1.15; for (const [cx, cz] of e.pts) for (let z = Math.floor((cz - h) / CS); z <= Math.floor((cz + h) / CS); z++) for (let x = Math.floor((cx - h) / CS); x <= Math.floor((cx + h) / CS); x++) { const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS; if (Math.abs(mx - cx) < h && Math.abs(mz - cz) < h && g[z * N + x] === CELL.FLOOR) inBase++; } }
+      for (const e of F.els) { if (e.k !== 'colunata') continue; const h = e.r * Fo.COLUMN_BASE / 2; for (const [cx, cz] of e.pts) for (let z = Math.floor((cz - h) / CS); z <= Math.floor((cz + h) / CS); z++) for (let x = Math.floor((cx - h) / CS); x <= Math.floor((cx + h) / CS); x++) { const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS; if (Math.abs(mx - cx) < h && Math.abs(mz - cz) < h && g[z * N + x] === CELL.FLOOR) inBase++; } }
       if (inBase) out.push(`o teatro antigo ${st}: ${inBase} casinhas de chão na base de uma coluna (L-494, 3)`); else said.push(`o teatro antigo ${st} (${b.w} casas): nenhuma casinha de chão na base de uma coluna`); }
     ok('E3 a forma × a planta dos teatros: o chão e as fileiras na altura da forma, nada andado nos muros, as paredes e as portas da planta nas da forma; a L-494 (1) e (3)', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
   }

@@ -40,14 +40,15 @@
     const u0 = Math.max(a[0], b[0]), u1 = Math.min(a[2], b[2]); if (a[1] < b[1]) out.push([u0, a[1], u1, b[1]]); if (b[3] < a[3]) out.push([u0, b[3], u1, a[3]]);
     return out;
   };
-  // (a column's foot is its base, as the 3D draws it under the shaft — a square 2.3 of its radius wide, build3d.js colunata —,
-  // not the shaft's round: on the cells between the two edges the plan had floor, and the body stood in the base of the six
-  // columns of the Greek theatre's stage — L-494)
-  const COL_BASE = 1.15;
+  // (a column's foot is its base — the vocabulary's square slab, 2.3 radii a side (js/forma.js COLUMN_BASE), as the 3D draws it
+  // under the shaft —, not the shaft's round: on the cells between the two edges the plan had floor, and the body stood in the
+  // base of the six columns of the Greek theatre's stage — L-494. A plan file asks the form only the plan's questions (the
+  // guard, the form's rule): its half side here, and the proof — qa/monumental.js E3 — holds it to the vocabulary's)
+  const COL_HALF = 1.15;
   const colOf = (F, s) => F.els.some(e => e.k === 'colunata' && Math.abs(e.r - s.r) < 1e-9 && e.pts.some(p => Math.abs(p[0] - s.c[0]) < 1e-9 && Math.abs(p[1] - s.c[1]) < 1e-9));
   function solids(P, F, room, o) {
     o = o || {}; const lv0 = P.rooms[(o.rooms || [room])[0]].lv; const feet = P.items.filter(it => it.form && it.lv === lv0 && !it.niche).map(it => it.r.slice()); const area = r => (r[2] - r[0]) * (r[3] - r[1]);
-    const foot = s => { if (s.k === 'rect') return s.r; const h = colOf(F, s) ? s.r * COL_BASE : s.r; return [s.c[0] - h, s.c[1] - h, s.c[0] + h, s.c[1] + h]; };
+    const foot = s => { if (s.k === 'rect') return s.r; const h = colOf(F, s) ? s.r * COL_HALF : s.r; return [s.c[0] - h, s.c[1] - h, s.c[0] + h, s.c[1] + h]; };
     const off = (p, q) => minus(p, [q[0] - 0.05, q[1] - 0.05, q[2] + 0.05, q[3] + 0.05]); const big = q => q[2] - q[0] >= 0.05 && q[3] - q[1] >= 0.05;
     for (const s of (o.list || G.Forma.solids(F, o.y)).slice().sort((a, b) => area(foot(b)) - area(foot(a)))) {
       const r0 = foot(s); if (o.skip && o.skip(r0)) continue;
@@ -221,12 +222,16 @@
     // (the flights: the undercroft's, its hole the hatch; the steps from the sand to the podium)
     P.stair('escada', 0, 1, A.under, 0, -1, A.hatch);
     P.stair('escada', 1, 2, A.steps, -1, 0, null);
-    // (the podium's parapet: a low wall round the sand's edge, its middle line 6 cm out, open beside the steps — 32 straight
-    // pieces, those whose middle is within the opening left out)
-    const pr = A.fundo + 0.06, N = 32;
-    for (let k = 0; k < N; k++) {
-      const a0 = k * TAU / N, a1 = (k + 1) * TAU / N, am = (a0 + a1) / 2; if (Math.abs(((am - A.gap.a) % TAU + TAU + Math.PI) % TAU - Math.PI) * pr < A.gap.w / 2 + 0.1) continue;
-      P.wall(2, [r2(cu + pr * Math.cos(a0)), r2(cv + pr * Math.sin(a0))], [r2(cu + pr * Math.cos(a1)), r2(cv + pr * Math.sin(a1))], 0.12, 0.9, 0, 'parede');
+    // (the podium's parapet: a low wall round the sand's edge, its middle line 6 cm out, open beside the steps exactly as the 3D
+    // leaves it open — its 48 chords round the ring, the opening the gap's width at the ring's own radius, cut at those angles:
+    // 32 pieces of which those whose middle fell in the opening were left out, round an arena of 10 m, left none out and the
+    // parapet shut over the steps, L-551)
+    const pr = A.fundo + 0.06, NS = 48, half = A.gap.w / 2 / A.fundo;
+    for (let k = 0; k < NS; k++) {
+      let parts = [[k * TAU / NS, (k + 1) * TAU / NS]];
+      for (let s = -1; s <= 1; s++) { const p0 = A.gap.a - half + s * TAU, p1 = A.gap.a + half + s * TAU;
+        parts = parts.flatMap(([q0, q1]) => (p1 <= q0 || p0 >= q1 ? [[q0, q1]] : [[q0, Math.max(q0, p0)], [Math.min(q1, p1), q1]].filter(([u0, u1]) => (u1 - u0) * pr > 0.01))); }
+      for (const [a0, a1] of parts) P.wall(2, [r2(cu + pr * Math.cos(a0)), r2(cv + pr * Math.sin(a0))], [r2(cu + pr * Math.cos(a1)), r2(cv + pr * Math.sin(a1))], 0.12, 0.9, 0, 'parede');
     }
     if (P.inside()) return;
     // (the rooms: the passage from the street to the top of the undercroft's flight — through the arch: its width —, under the

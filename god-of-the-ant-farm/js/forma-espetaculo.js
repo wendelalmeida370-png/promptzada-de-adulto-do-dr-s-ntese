@@ -170,6 +170,9 @@
     for (const su of [1, -1]) {
       const e0 = cu + su * Au, e1 = e0 + su * dp; const br = [Math.min(e0, e1), cv - h / 2, Math.max(e0, e1), cv + h / 2].map(k3);
       wall(br, yb - 0.3, yb, STONE, { mat: 'slab' });
+      // (the passage's vault, from the bridge out to the facade's inner face at the bridge's height: under the rows either side
+      // the passage is a tunnel — from it the sky showed between the rows' ends, a blue gap beside the bridge)
+      const ef = cu + su * (Au + D - t); wall([Math.min(e1, ef), cv - h / 2, Math.max(e1, ef), cv + h / 2], yb - 0.3, yb, STONE, { mat: 'slab' });
       if (su < 0) { const m = Math.ceil(ya / 0.225 - 1e-9), run = m * TR; const r = [e0 - run, cv - h / 2, e0, cv + h / 2].map(k3); els.push(...flight(r, ya, 1, 0).out); ways.esquerda = { r, m, run, bridge: br }; }
       else { wall([e0, cv - h / 2, e0 + wt, cv + h / 2], yc, yb - 0.3); ways.direita = { bridge: br }; }
     }
