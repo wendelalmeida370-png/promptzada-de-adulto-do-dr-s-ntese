@@ -578,13 +578,14 @@
   }
 
   // ------------------------------ room for a monument (D-115) ------------------------------
-  // a bigger step of a public work with no free lot of its size: the town opens room for it — it pulls down its own low houses
-  // and fields there (never a public building, a tall house, a workshop, nor its last two farms or the last field of a kind),
-  // up to the step's limit (V.openLimit), and moves what it pulls down: each field to a lot of its own, and the families to new
-  // homes with more beds than they lose — all of it found before anything comes down, or nothing comes down. The relief under
-  // the lot is the podium's (V.PODIUM: the form covers it); the ring round it, where one walks, free of what stays
+  // a bigger step of a public work with no free lot of its size: the town opens room for it — it pulls down its own low houses,
+  // its sobrados and its fields there (as a block of the heart does, V.blockSite: never a public building, an ínsula, a
+  // workshop, nor its last two farms or the last field of a kind), up to the step's limit (V.openLimit), and moves what it pulls
+  // down: each field to a lot of its own, and the families to new homes with more beds than they lose — all of it found before
+  // anything comes down, or nothing comes down. The relief under the lot is the podium's (V.PODIUM: the form covers it); the ring
+  // round it, where one walks, free of what stays
   V.PODIUM = 2; // (the ground's relief under a step of another size: two of the map's levels of 1.5 m — 3 m)
-  const OPEN = V.OPEN = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 2, house: 3 }; // (what may come down, and how much it hurts to)
+  const OPEN = V.OPEN = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 2, house: 3, sobrado: 4 }; // (what may come down, and how much it hurts to)
   V.openLimit = n => ({ bld: Math.max(2, n - 2), beds: 3 * n }); // (what one step may pull down: buildings, beds)
   const publicWork = type => !!G.BDEF[type] && (!!G.BDEF[type].civic || type === 'temple' || type === 'monument');
   V.opens = (type, step) => !!step && step.n !== G.Escala.n0(type) && !step.familia && publicWork(type);
@@ -690,7 +691,9 @@
   // the god's hand founds a step of a type's ladder (the proofs and the developer's panel, D-106): on the nearest lot of its
   // size to the point asked (the town's middle by default) — every tile of it and of the ring round it dry, free of buildings
   // and walls, no main street nor fire on the lot; the ground's steps under it are the form's base to cover (its plinth, its
-  // footing), trees and bushes go as for any work —, raised whole when asked (built). → the building, or null
+  // footing), trees and bushes go as for any work —, raised whole when asked (built). Within its radius it takes first a lot the
+  // podium covers (the relief under it up to V.PODIUM, the ring with no cliff: D-115), and only with none such one steeper — the
+  // nearest free lot of the metrópole's Rome was a slope of 13.5 m, its way in fitting before no street. → the building, or null
   V.handFound = function (set, type, stepId, o) {
     const S = G.S; const step = G.Escala.steps(type).find(s => s.id === stepId || s.n === stepId); if (!step || !set) return null;
     // (only a step its people knows how to raise: a form, or a plan, of its size — else there would be nothing to draw nor walk)
@@ -704,9 +707,14 @@
       }
       return true;
     };
-    for (let r = 0; r <= (o && o.R || 40); r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const flat = (x, y) => {
+      if (W.slope(x, y, n, n) > V.PODIUM) return false;
+      for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) if ((ty < y || ty >= y + n || tx < x || tx >= x + n) && S.cliff[ty * N + tx]) return false;
+      return true;
+    };
+    for (const pass of [flat, null]) for (let r = 0; r <= (o && o.R || 40); r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = ox + dx - Math.floor(n / 2), y = oy + dy - Math.floor(n / 2);
-      if (!free(x, y)) continue;
+      if (!free(x, y) || (pass && !pass(x, y))) continue;
       const b = V.startProject(set, type, [x, y], step); if (b && o && o.built && !b.built) V.completeBuilding(b);
       return b;
     }

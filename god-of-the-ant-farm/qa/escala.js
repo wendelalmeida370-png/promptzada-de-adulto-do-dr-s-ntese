@@ -47,18 +47,26 @@ function checa() {
 function run(id, fn) { if (ONLY && !ONLY.includes(id)) return; try { fn(); } catch (e) { ok(id, false, 'exceção: ' + (e && e.stack ? e.stack.split('\n').slice(0, 4).join(' / ') : e)); } }
 
 // ------------------------------ e0: só o degrau clássico ------------------------------
-// (antes de qualquer gerador: o planejador novo não oferece degrau nenhum além do clássico, não amplia nada e não tira do acaso
-// do mundo — o mundo é o de antes, como o líder provou para o contrato)
+// (antes dos geradores de teste, só com as formas grandes de verdade — o Coliseu do M1, os palácios do M2 —: onde o povo de uma
+// cidade não tem a forma maior de um tipo, a escada dele é só o clássico, nenhum degrau abre espaço, e numa cidade sem degrau
+// maior em tipo nenhum o planejador novo não amplia nada, não guarda a pedra e não tira do acaso do mundo)
 const PUB = ['maravilha', 'teatro', 'temple', 'palacio', 'grande_palacio', 'palacio_colossal', 'paco', 'monument', 'banhos', 'biblioteca', 'mercado', 'administracao'];
 run('e0', () => {
-  abre(); const rng0 = S.rng; let big = 0, grew = 0, great = 0, opens = 0;
+  abre(); let classic = 0, opens = 0, grew = 0, great = 0, quietas = 0, mexeu = 0; const novos = new Set();
   for (const set of S.settlements.values()) {
-    const fac = G.Fac.get(set.fac); if (!fac) continue; const c = V.counts(set.id);
-    for (const t of PUB) { const ch = Es.choose(set, t); if (ch.some(s => s.n !== Es.n0(t))) big++; if (ch.some(s => V.opens(t, s))) opens++; }
+    const fac = G.Fac.get(set.fac); if (!fac) continue; const c = V.counts(set.id); let maior = false;
+    for (const t of PUB) {
+      const ch = Es.choose(set, t);
+      if (ch.some(s => s.n !== Es.n0(t))) { maior = true; novos.add(`${t}/${G.Civ.idOfFac(set.fac) || 'classico'}`); continue; }
+      classic++; if (ch.some(s => V.opens(t, s))) opens++;
+    }
+    if (maior) continue;
+    quietas++; const rng0 = S.rng;
     if (sim(() => V.grow(set, fac, c))) grew++;
     if (V.greatWork(set, c)) great++;
+    if (S.rng !== rng0) mexeu++;
   }
-  ok('e0 só o clássico', !big && !grew && !great && !opens && S.rng === rng0, `${S.settlements.size} cidades: degraus além do clássico oferecidos ${big}, que abrem espaço ${opens}, ampliações ${grew}, obras grandes que guardam a pedra ${great}; o acaso do mundo ${S.rng === rng0 ? 'intocado' : 'MEXIDO'}`);
+  ok('e0 sem forma maior, só o clássico', !opens && !grew && !great && !mexeu && quietas > 0, `${classic} escadas só com o clássico, nenhuma abre espaço (${opens}); ${quietas} cidades sem degrau maior: ampliações ${grew}, obras que guardam a pedra ${great}, o acaso mexido ${mexeu}. Com forma maior, de verdade: ${[...novos].sort().join(', ') || 'nenhuma'}`);
 });
 
 // ------------------------------ os geradores de teste (só nesta prova) ------------------------------
@@ -132,9 +140,9 @@ run('e3x', () => {
   const L0 = juiz();
   const L1 = com([['house', set.id, 1, 1]], juiz), L2 = com([['house', set.id, 0, 0], ['hut', set.id, 2, 2]], juiz);
   const R1 = com([['house', set.id, 0, 0], ['house', set.id, 2, 0], ['hut', set.id, 1, 2]], juiz); // (três: o limite do degrau de 4 é dois)
-  const R2 = com([['well', set.id, 1, 1]], juiz), R3 = com([['sobrado', set.id, 1, 1]], juiz), R4 = com([['house', outra.id, 1, 1]], juiz);
-  ok('e3x as regras', !!L0 && !L0.gone.length && !!L1 && L1.gone.length === 1 && !!L2 && L2.gone.length === 2 && L2.beds === 10 && !R1 && !R2 && !R3 && !R4,
-    `livre: ${L0 ? 'cabe' : 'não'}; uma casa baixa da cidade: ${L1 ? 'cai (' + L1.gone.length + ')' : 'não'}; duas (${L2 ? L2.beds : '?'} camas): ${L2 ? 'caem' : 'não'}; três (o limite): ${R1 ? 'CAEM' : 'não'}; um poço: ${R2 ? 'CAI' : 'não'}; um sobrado: ${R3 ? 'CAI' : 'não'}; a casa de ${outra.name}: ${R4 ? 'CAI' : 'não'}`);
+  const R2 = com([['well', set.id, 1, 1]], juiz), L3 = com([['sobrado', set.id, 1, 1]], juiz), R4 = com([['house', outra.id, 1, 1]], juiz), R5 = com([['insula', set.id, 1, 1]], juiz);
+  ok('e3x as regras', !!L0 && !L0.gone.length && !!L1 && L1.gone.length === 1 && !!L2 && L2.gone.length === 2 && L2.beds === 10 && !R1 && !R2 && !!L3 && L3.beds === 9 && !R4 && !R5,
+    `livre: ${L0 ? 'cabe' : 'não'}; uma casa baixa da cidade: ${L1 ? 'cai (' + L1.gone.length + ')' : 'não'}; duas (${L2 ? L2.beds : '?'} camas): ${L2 ? 'caem' : 'não'}; três (o limite): ${R1 ? 'CAEM' : 'não'}; um poço: ${R2 ? 'CAI' : 'não'}; um sobrado (como no quarteirão): ${L3 ? 'cai (' + L3.beds + ' camas)' : 'NÃO'}; uma ínsula: ${R5 ? 'CAI' : 'não'}; a casa de ${outra.name}: ${R4 ? 'CAI' : 'não'}`);
   // (as duas últimas fazendas: uma fazenda da cidade no lote cai só se, sem ela, ficam duas)
   const F = [...S.buildings.values()].filter(o => o.set === set.id && o.type === 'farm').length;
   const rf = com([['farm', set.id, 0, 0]], juiz);
