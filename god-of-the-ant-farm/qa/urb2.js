@@ -59,18 +59,21 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const sh = S.ships.find(s => s.kind === 'mercante') || S.ships[0]; if (!sh) return { skip: 'nenhum navio no mundo' };
     // (the cloth that the porters' hands put into the people's store — the ledger's «depositar», counted as it happens)
     window.__clothIn = 0; G.Depot.onMove.push(e => { if (e[5] === 'tecido' && e[4] === 'f:' + f.id && e[8] === 'depositar' && /^v:/.test(e[3])) window.__clothIn += e[6]; });
+    // (what comes down on the quay: a quay with little room takes part of the hold — the rest stays aboard —, and the case is that
+    // what came down walks to the store: the measures of the case's own crates, T-438)
+    const cloth0 = (dock.crates || []).filter(c => c.k === 'tecido'); const n0 = cloth0.reduce((a, c) => a + (c.n || 0), 0);
     sh.goods = { k: 'tecido', n: 12 }; G.Harbor.land(dock, sh.goods, sh);
-    const cloth = (dock.crates || []).filter(c => c.k === 'tecido').length;
-    return { dock: dock.id, w: w.id, hand: hand.id, crates: cloth };
+    const cl = (dock.crates || []).filter(c => c.k === 'tecido'); const cloth = cl.length - cloth0.length; const landed = Math.round((cl.reduce((a, c) => a + (c.n || 0), 0) - n0) * 100) / 100;
+    return { dock: dock.id, w: w.id, hand: hand.id, crates: cloth, landed };
   });
   if (q.skip) ok('1 a carga do navio desce no cais e vai a pé ao armazém', true, `(sem prova: ${q.skip})`);
   else {
     // (the case's own cargo: its cloth crates off the quay, and the cloth in the store by the porters' hands; the quay of a
     // busy port has other crates on it all the time)
     await page.evaluate(() => { window.__cloth = o => { const d = G.S.buildings.get(o.dock); return { left: (d.crates || []).filter(c => c.k === 'tecido').length, inn: Math.round(window.__clothIn * 100) / 100 }; }; });
-    await until(o => { const r = window.__cloth(o); return r.left === 0 && r.inn >= 12 - 1e-6 ? 1 : null; }, 400, q);
+    await until(o => { const r = window.__cloth(o); return r.left === 0 && r.inn >= o.landed - 1e-6 ? 1 : null; }, 400, q);
     const fin = await page.evaluate(o => window.__cloth(o), q);
-    ok('1 a carga do navio desce no cais e vai a pé ao armazém', q.crates > 0 && fin.left === 0 && fin.inn >= 12 - 1e-6, `${q.crates} caixas de tecido no cais; depois: ${fin.left} no cais, ${fin.inn} medidas entraram no estoque pelas mãos dos estivadores`);
+    ok('1 a carga do navio desce no cais e vai a pé ao armazém', q.crates > 0 && q.landed > 0 && fin.left === 0 && fin.inn >= q.landed - 1e-6, `${q.crates} caixas de tecido no cais (${q.landed} medidas das 12 do porão); depois: ${fin.left} no cais, ${fin.inn} medidas entraram no estoque pelas mãos dos estivadores`);
   }
 
   // 2 the tavern
@@ -118,6 +121,9 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     for (let k = 0; k < 3 && !(r3 && r3.paid > 0); k++) {
       if (k) await until(() => G.S.time > 0.3 && G.S.time < 0.45 ? 1 : 0, 220);
       await until(() => !G.Fest.active((window.__tset || window.__set).id), 300);
+      // (and not a feast night: a town has its feast of the year at its hour — the jól of Hedeby at 0,81 —, and the feast takes
+      // everyone free, the tavern's keeper among them: the evening of the case is one with the year's feast held, T-438)
+      await page.evaluate(() => { const t = window.__tset || window.__set; t.festPlan = { day: G.S.day, key: null, done: true }; });
       r2 = await page.evaluate(o => {
         const S = G.S, T = G.Taverna, D = G.Depot; const b = S.buildings.get(o.t); const ref = 'b:' + b.id;
         if (D.free(ref, 'food') < 6) D.make(ref, 'food', 6 - D.free(ref, 'food'), { code: 'teste', part: true });
@@ -128,6 +134,10 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
         return { brewed: b.brewed || 0, shelf: G.Tavern.onShelf(b), keeper: !!kv };
       }, tv);
       const opened = await until(o => (G.Taverna.aberta(G.S.buildings.get(o.t)) ? 1 : 0), 30, tv);
+      // (the drinkers go when the working day is over — the evening, G.isEvening, when the world's own choice offers the tavern:
+      // sent at the opening, 0,575, the farmers of the seed 7 were taken back to their fields by their work, weightier than the
+      // tavern's errand, and the tavern served the others — T-438)
+      await until(() => (G.isEvening() ? 1 : 0), 30);
       const sent = await page.evaluate(o => {
         const S = G.S, T = G.Taverna; const b = S.buildings.get(o.t); const dr = G.Vg.door(b); let n = 0;
         const coin0 = o.drinkers.map(id => { const v = S.villagers.get(id); const h = v && S.buildings.get(v.home); return h ? h.coin : 0; }).reduce((a, x) => a + x, 0);
@@ -213,9 +223,10 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const jail = window.__put('cadeia', set.cx - 3, set.cy - 3) || (() => { const R = Math.max(8, set.radius || 8); for (const fr of [0.5, 0.8, 1.1]) for (let k = 0; k < 12; k++) { const a = k / 12 * 6.283; const p = window.__spot(set.cx + Math.cos(a) * R * fr, set.cy + Math.sin(a) * R * fr, 2, 2, 8); if (p) { const b = G.Village.addBuilding('cadeia', p[0], p[1], set.id, true); G.W.touchWalk(); return b; } } return null; })();
     if (!jail) return { skip: 'sem lugar para a cadeia' };
     const jailer = ad.find(v => v !== thief && v !== guard && v.role !== 'taverneiro'); if (jail && jailer) { jailer.role = 'carcereiro'; jailer.job = jail.id; G.Vg.endTask(jailer); }
-    // the night falls; the guard stands watch by the door, awake (back and forth, for the night)
-    S.time = 0.76;
-    const [dx, dy] = G.Vg.door(rich); guard.x = dx + 1.2; guard.y = dy + 0.8; guard.sleeping = false; guard.inside = 0; G.Vg.setTask(guard, { type: 'ronda', pts: Array.from({ length: 40 }, (_, k) => k % 2 ? [dx - 1.2, dy + 0.8] : [dx + 1.5, dy + 0.6]), k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' });
+    // the night falls; the guard stands watch by the door, awake and rested (back and forth, for the night: at energy 20 the bed
+    // came before the round, T-438)
+    S.time = 0.76; set.festPlan = { day: S.day, key: null, done: true }; // (not a feast night: the feast of the year takes the watch from its round — T-438)
+    const [dx, dy] = G.Vg.door(rich); guard.x = dx + 1.2; guard.y = dy + 0.8; guard.sleeping = false; guard.inside = 0; guard.energy = Math.max(guard.energy, 85); guard.hunger = Math.min(guard.hunger, 10); G.Vg.setTask(guard, { type: 'ronda', pts: Array.from({ length: 40 }, (_, k) => k % 2 ? [dx - 1.2, dy + 0.8] : [dx + 1.5, dy + 0.6]), k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' });
     thief.sleeping = false; thief.inside = 0; G.Vg.endTask(thief);
     G.Vg.setTask(thief, { type: 'furto', house: rich.id, pri: 2.05, st: 0, kind: 'furto' });
     // (the coins in and out of the thief's purse, as the ledger writes them: the house's own total moves with the day)
@@ -230,9 +241,9 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
       if (k) await page.evaluate(o => {
         const S = G.S; const t = S.villagers.get(o.thief), r = S.buildings.get(o.rich); if (!t || !r) return;
         let g = S.villagers.get(o.guard); const law = q => q && (q.role === 'vigia' || q.role === 'guerreiro'); if (!law(g) || (g.task && g.task.pri >= 3)) { g = window.__adults().find(v => law(v) && v !== t && !(v.task && v.task.pri >= 3)) || g; if (g && !law(g)) g.role = 'vigia'; if (g) o.guard = g.id; }
-        S.time = 0.76; r.coin = o.coin0; const [dx, dy] = G.Vg.door(r);
+        S.time = 0.76; window.__set.festPlan = { day: S.day, key: null, done: true }; r.coin = o.coin0; const [dx, dy] = G.Vg.door(r);
         G.Vg.endTask(t); t.sleeping = false; t.inside = 0; G.Vg.setTask(t, { type: 'furto', house: r.id, pri: 2.05, st: 0, kind: 'furto' });
-        if (g) { G.Vg.endTask(g); g.sleeping = false; g.inside = 0; g.x = dx + 1.2; g.y = dy + 0.8; G.Vg.setTask(g, { type: 'ronda', pts: Array.from({ length: 40 }, (_, i) => i % 2 ? [dx - 1.2, dy + 0.8] : [dx + 1.5, dy + 0.6]), k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' }); }
+        if (g) { G.Vg.endTask(g); g.sleeping = false; g.inside = 0; g.energy = Math.max(g.energy, 85); g.hunger = Math.min(g.hunger, 10); g.x = dx + 1.2; g.y = dy + 0.8; G.Vg.setTask(g, { type: 'ronda', pts: Array.from({ length: 40 }, (_, i) => i % 2 ? [dx - 1.2, dy + 0.8] : [dx + 1.5, dy + 0.6]), k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' }); }
       }, th);
       const before = await page.evaluate(o => (G.S.crimes || []).filter(q => q.thief === o.thief).length, th);
       stole = await until(o => { const l = (G.S.crimes || []).filter(q => q.thief === o.thief); const c = l.length > o.before ? l[l.length - 1] : null; return c ? { id: c.id, n: c.n, seen: c.seen.length, flag: !!c.flag } : null; }, 60, Object.assign({ before }, th));

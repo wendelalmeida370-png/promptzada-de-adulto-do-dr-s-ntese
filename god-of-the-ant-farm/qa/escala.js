@@ -47,26 +47,30 @@ function checa() {
 function run(id, fn) { if (ONLY && !ONLY.includes(id)) return; try { fn(); } catch (e) { ok(id, false, 'exceção: ' + (e && e.stack ? e.stack.split('\n').slice(0, 4).join(' / ') : e)); } }
 
 // ------------------------------ e0: só o degrau clássico ------------------------------
-// (antes dos geradores de teste, só com as formas grandes de verdade — o Coliseu do M1, os palácios do M2 —: onde o povo de uma
-// cidade não tem a forma maior de um tipo, a escada dele é só o clássico, nenhum degrau abre espaço, e numa cidade sem degrau
-// maior em tipo nenhum o planejador novo não amplia nada, não guarda a pedra e não tira do acaso do mundo)
+// (a referência do mundo de antes da escada: com cada povo sabendo só o degrau clássico de cada tipo — G.Escala.choose dando o
+// clássico, como antes das formas grandes —, nenhum degrau abre espaço, o planejador não amplia nada, não guarda a pedra, não
+// tira do acaso do mundo, e nenhuma cidade guarda lote. Com as formas do M1 e do M2, todo povo tem alguma forma grande e não
+// sobrou cidade «quieta» para ser a referência — T-399 —: a referência é a escada só clássica, pedida assim na prova; e os
+// tipos que ainda não têm degrau maior em povo nenhum — os banhos, a biblioteca, o mercado, o paço municipal — escolhem o
+// clássico de verdade em toda cidade)
 const PUB = ['maravilha', 'teatro', 'temple', 'palacio', 'grande_palacio', 'palacio_colossal', 'paco', 'monument', 'banhos', 'biblioteca', 'mercado', 'administracao'];
 run('e0', () => {
-  abre(); let classic = 0, opens = 0, grew = 0, great = 0, quietas = 0, mexeu = 0; const novos = new Set();
-  for (const set of S.settlements.values()) {
-    const fac = G.Fac.get(set.fac); if (!fac) continue; const c = V.counts(set.id); let maior = false;
-    for (const t of PUB) {
-      const ch = Es.choose(set, t);
-      if (ch.some(s => s.n !== Es.n0(t))) { maior = true; novos.add(`${t}/${G.Civ.idOfFac(set.fac) || 'classico'}`); continue; }
-      classic++; if (ch.some(s => V.opens(t, s))) opens++;
+  abre(); const choose0 = Es.choose; let classic = 0, opens = 0, grew = 0, great = 0, mexeu = 0, guardou = 0, cidades = 0;
+  Es.choose = (set, type) => [Es.classic(type)];
+  try {
+    for (const set of S.settlements.values()) {
+      const fac = G.Fac.get(set.fac); if (!fac) continue; cidades++; const c = V.counts(set.id);
+      for (const t of PUB) { classic++; if (Es.choose(set, t).some(s => V.opens(t, s))) opens++; }
+      const rng0 = S.rng;
+      if (sim(() => V.grow(set, fac, c))) grew++;
+      if (V.greatWork(set, c)) great++;
+      if (S.rng !== rng0) mexeu++;
     }
-    if (maior) continue;
-    quietas++; const rng0 = S.rng;
-    if (sim(() => V.grow(set, fac, c))) grew++;
-    if (V.greatWork(set, c)) great++;
-    if (S.rng !== rng0) mexeu++;
-  }
-  ok('e0 sem forma maior, só o clássico', !opens && !grew && !great && !mexeu && quietas > 0, `${classic} escadas só com o clássico, nenhuma abre espaço (${opens}); ${quietas} cidades sem degrau maior: ampliações ${grew}, obras que guardam a pedra ${great}, o acaso mexido ${mexeu}. Com forma maior, de verdade: ${[...novos].sort().join(', ') || 'nenhuma'}`);
+  } finally { Es.choose = choose0; }
+  ok('e0 só o clássico: nada muda', !opens && !grew && !great && !mexeu && cidades > 0, `${cidades} cidades, ${classic} escadas só com o clássico: nenhuma abre espaço (${opens}); ampliações ${grew}, obras que guardam a pedra ${great}, o acaso do mundo tocado ${mexeu}`);
+  const sem = ['banhos', 'biblioteca', 'mercado', 'administracao']; let maior = [];
+  for (const set of S.settlements.values()) for (const t of sem) if (Es.choose(set, t).some(st => st.n !== Es.n0(t))) maior.push(`${set.name}/${t}`);
+  ok('e0b os tipos sem degrau maior escolhem o clássico', !maior.length, maior.length ? `com degrau maior: ${maior.slice(0, 4).join(', ')}` : `${sem.join(', ')}: o clássico em toda cidade`);
 });
 
 // ------------------------------ os geradores de teste (só nesta prova) ------------------------------
@@ -404,6 +408,181 @@ run('e19', () => {
   ok('e19d os lutadores na areia, o público nas fileiras', naAreia > 0 && naAreia <= luta && nasFileiras > 0 && nasFileiras <= ver && mais <= ver, `no auge, ${mais} na plateia (${nasFileiras} em lugares de ver) e ${naAreia} lutando na areia; ${quem} chamados aos jogos`);
   ok('e19e no fim, ninguém lá dentro', !Tt.dia(b) && !dentro, `o espetáculo ${Tt.dia(b) ? 'AINDA ABERTO' : op.st + ' (' + (op.why || '') + ')'}; ${dentro} lá dentro`);
   const c = checa(); ok('e19f verificador', c.ok, c.txt);
+});
+
+// ------------------------------ e21: o campo guardado para a obra grande (D-121) ------------------------------
+// (num mundo novo, a terra ainda aberta: a capital que vira cidade guarda o lote do maior degrau da sua obra grande; as buscas o
+// deixam de fora; o save; o deus põe um poço nele (solta, e outro se guarda); a cidade que perde o nível; o meteoro; as pedras do
+// lote quebradas para a obra fundada nele; a cidade que some; o verificador)
+run('e21', () => {
+  M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4, temper: 'normal' }); S = G.S; V = G.Village; Es = G.Escala; D = G.Depot; M.saltar(3);
+  const caps = [...new Set([...S.factions.values()].map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
+  const set = caps.find(s => V.resWork(s)); if (!ok('e21a uma capital com obra grande', !!set, set ? `${set.name} (${G.Civ.idOfFac(set.fac)}): ${V.resWork(set).type} ${V.resWork(set).steps.map(s => s.n).join('/')}` : 'nenhuma')) return;
+  // (a capital no nível da guarda — o que ela guardou no salto, se guardou, a prova solta para vê-la guardar)
+  const t0 = set.tier; set.tier = Math.max(3, V.RES_TIER); if (set.urb) set.urb.res = null; const h0 = marca(); const r = sim(() => V.reservaDia(set)); const R = V.reserva(set);
+  let livre = !!R; if (R) for (let y = R.y; y < R.y + R.n; y++) for (let x = R.x; x < R.x + R.n; x++) { const o = S.occ[y * G.N + x] && S.buildings.get(S.occ[y * G.N + x]); if (o && !(o.set === set.id && V.OPEN[o.type] && !G.BDEF[o.type].housing)) livre = false; }
+  ok('e21b a cidade guarda o lote', !!R && R.n === Es.steps(R.type).find(s => s.id === R.esc).n && livre && linhas(h0, /guardou um campo/).length > 0, R ? `${R.type}/${R.esc}: ${R.n} × ${R.n} em ${R.x},${R.y}, a ${G.dist(R.x + R.n / 2, R.y + R.n / 2, set.cx, set.cy).toFixed(0)} casas; «${(linhas(h0, /guardou/)[0] || { txt: '-' }).txt}»` : 'nada guardado');
+  if (!R) return;
+  const casa = V.resOver(set, 'house', R.x + 1, R.y + 1, 1, 1, true), campo = V.resOver(set, 'farm', R.x, R.y, 3, 3, false), obra = V.resOver(set, R.type, R.x, R.y, R.n, R.n, true);
+  let busca = 0; for (let k = 0; k < 6; k++) { set._noSite = {}; const p = sim(() => V.findSite(set, 'house')); if (p && p[0] < R.x + R.n && p[0] + 1 > R.x && p[1] < R.y + R.n && p[1] + 1 > R.y) busca++; }
+  ok('e21c as buscas o deixam de fora', casa === set && !campo && !obra && !busca, `uma casa nele: ${casa ? 'barrada' : 'LIVRE'}; um campo da cidade: ${campo ? 'BARRADO' : 'pode'}; a obra dele: ${obra ? 'BARRADA' : 'pode'}; 6 buscas de casa: ${busca} nele`);
+  salva(); const set2 = cidade(set.name); const R2 = V.reserva(set2);
+  ok('e21d o save', JSON.stringify(R2) === JSON.stringify(R), `depois do save: ${JSON.stringify(R2)}`);
+  const c0 = checa(); ok('e21e verificador', c0.ok, c0.txt);
+  // (o deus põe um poço no lote: o lote se solta, e no dia seguinte a cidade guarda outro, sem o poço)
+  const poco = sim(() => V.addBuilding('well', R.x + 2, R.y + 2, set2.id, true)); const solto = V.reserva(set2), why = set2.urb.resGone && set2.urb.resGone.why;
+  set2.urb.resGone.day = S.day - 1; const R3 = sim(() => V.reservaDia(set2)); const sobre = R3 && poco.x >= R3.x && poco.x < R3.x + R3.n && poco.y >= R3.y && poco.y < R3.y + R3.n;
+  ok('e21f o deus põe um poço nele', !solto && why === 'ocupada' && !!R3 && !sobre, `com o poço #${poco.id}: ${solto ? 'AINDA GUARDADO' : 'solto (' + why + ')'}; no dia seguinte: ${R3 ? `outro em ${R3.x},${R3.y}${sobre ? ' — SOBRE O POÇO' : ''}` : 'nenhum'}`);
+  if (!R3) return;
+  // (a cidade abaixo de cidade: guarda até RES_YEARS anos; depois, solta)
+  set2.tier = V.RES_TIER - 1; const a = sim(() => V.reservaDia(set2)); set2.urb.res.lost = S.day - V.RES_YEARS; const b = sim(() => V.reservaDia(set2));
+  ok('e21g a cidade que perde o nível', !!a && !b && set2.urb.resGone.why === 'nivel', `no primeiro ano abaixo: ${a ? 'guardado' : 'SOLTO'}; depois de ${V.RES_YEARS} anos: ${b ? 'AINDA GUARDADO' : 'solto (' + set2.urb.resGone.why + ')'}`);
+  set2.tier = Math.max(3, V.RES_TIER); set2.urb.resGone.day = S.day - 1; const R4 = sim(() => V.reservaDia(set2));
+  // (o meteoro no meio do lote: o chão muda, o lote não serve mais)
+  const m = sim(() => { G.Powers.meteorImpact({ x: R4.x + R4.n / 2, y: R4.y + R4.n / 2, r: 3.4, t: 0, delay: 0 }); return V.reservaDia(set2); });
+  ok('e21h o meteoro', !!R4 && !m && set2.urb.resGone.why === 'terra', `${R4 ? 'guardado de novo em ' + R4.x + ',' + R4.y : '-'}; depois do meteoro: ${m ? 'AINDA GUARDADO' : 'solto (' + set2.urb.resGone.why + ')'}`);
+  // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto)
+  set2.urb.resGone.day = S.day - 1; const R5 = sim(() => V.reservaDia(set2));
+  if (!ok('e21i guardado outra vez', !!R5, R5 ? `${R5.x},${R5.y}` : 'sem lote')) return;
+  // (o fogo num campo do lote guardado passa: o lote fica — Argos o largava pelo trigo em chamas, numa vida do zero)
+  const fi = (R5.y + 1) * G.N + R5.x + 1; const f0 = S.fire[fi]; S.fire[fi] = 5; const R5f = sim(() => V.reservaDia(set2)); S.fire[fi] = f0;
+  ok('e21n o fogo no lote guardado passa', !!R5f && R5f.x === R5.x && R5f.y === R5.y, R5f ? `com fogo em ${R5.x + 1},${R5.y + 1}: o lote fica` : `com fogo: SOLTO (${set2.urb.resGone && set2.urb.resGone.why})`);
+  if (!R5f) return;
+  let pedras = 0; for (let y = R5.y; y < R5.y + R5.n && pedras < 3; y++) for (let x = R5.x; x < R5.x + R5.n && pedras < 3; x++) if (!S.occ[y * G.N + x] && !S.treeAt[y * G.N + x] && !S.objAt[y * G.N + x] && G.Nature.addRock(x + 0.5, y + 0.5, 40)) pedras++;
+  rico(set2); const L0 = S.ledgerN || 0; set2._noSite = {}; const w = sim(() => V.startProject(set2, R5.type));
+  const dentro = w && w.x >= R5.x && w.y >= R5.y && w.x + w.w <= R5.x + R5.n && w.y + w.h <= R5.y + R5.n;
+  const pedra5 = D.ledger().filter(e => e[0] > L0 && e[8] === 'pedreira').reduce((s, e) => s + e[6], 0);
+  ok('e21j a obra no lote guardado, com a pedra do lote', !!w && dentro && !V.reserva(set2) && set2.urb.resGone.why === 'fundada' && pedra5 >= 40, `${lado(w)}${dentro ? ' dentro do lote' : ' FORA DO LOTE'}; o lote ${V.reserva(set2) ? 'AINDA GUARDADO' : 'solto (' + set2.urb.resGone.why + ')'}; ${pedras} pedras postas no lote, ${pedra5} de pedra quebrada pelo livro`);
+  // (o verificador vê um prédio num lote guardado — a prova o põe à mão, sem o V.addBuilding)
+  const s3 = [...S.settlements.values()].sort((a, c) => a.id - c.id).find(o => o.id !== set2.id && [...S.buildings.values()].some(q => q.set === o.id && q.built && !V.OPEN[q.type])); // (do mundo de agora: o save fez outro)
+  if (s3) {
+    const any = [...S.buildings.values()].find(o => o.set === s3.id && o.built && !V.OPEN[o.type]);
+    const st = Es.steps(R5.type).find(q => q.id === R5.esc); (s3.urb || (s3.urb = { d: [], names: [] })).res = { type: R5.type, esc: R5.esc, n: st.n, x: any.x, y: any.y, d: S.day, chk: S.day, lost: 0 };
+    const viu = QA.check().filter(q => q.sys === 'escala' && /campo guardado/.test(q.msg)); s3.urb.res = null;
+    ok('e21k o verificador vê um prédio no lote', viu.length > 0, viu.length ? viu[0].msg.slice(0, 160) : 'NÃO VIU');
+  }
+  // (a cidade que some: o lote vai com ela)
+  const s6 = [...new Set([...S.factions.values()].map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => a.id - c.id).find(o => o.id !== set2.id && V.resWork(o));
+  if (s6) { s6.tier = 3; const R6 = sim(() => V.reservaDia(s6)); const id6 = s6.id; const outra = [...S.settlements.values()].find(o => o.id !== id6);
+    // (a cidade sem ninguém, deixada ao vento: a gente dela morre antes)
+    if (R6) { sim(() => { for (const v of [...S.villagers.values()]) if (v.set === id6) V.kill(v, 'old'); V.abandon(s6); }); ok('e21l a cidade que some', !S.settlements.has(id6) && !V.resOver(outra, 'house', R6.x, R6.y, R6.n, R6.n, true), `${s6.name} abandonada com o lote guardado em ${R6.x},${R6.y}: o lote foi com ela`); } else ok('e21l a cidade que some', false, `${s6.name} não guardou lote`); }
+  set.tier = t0;
+  const c = checa(); ok('e21m verificador', c.ok, c.txt);
+});
+
+// (o muro passa ao lado do campo guardado, como ao lado da praça: na metrópole pronta, uma cidade sem muro, o muro planejado; um
+// campo guardado posto à mão atravessando o lado norte dele; o muro de novo, erguido de uma vez — nenhuma casa do muro no lote,
+// que o abre como a praça. Roma largava o seu pelo muro posto em cima, numa vida do zero)
+run('e21o', () => {
+  abre(); const Sg = G.Siege;
+  const s = [...S.settlements.values()].filter(o => !Sg.wallOf(o.id) && G.Fac.get(o.fac)).sort((a, c) => V.pop(c.id) - V.pop(a.id)).find(o => { const w = sim(() => Sg.raiseWalls(o, 'pedra', false)); if (!w) return false; S.walls.splice(S.walls.indexOf(w), 1); o._box = w.box; return true; });
+  if (!ok('e21o uma cidade sem muro, com o muro planejado', !!s, s ? `${s.name}: o muro em ${s._box.join(',')}` : 'nenhuma')) return;
+  const [x0, y0, x1] = s._box; const u = s.urb || (s.urb = { d: [], names: [] }); const r0 = u.res;
+  u.res = { type: 'maravilha', esc: 'maravilha', n: 10, x: Math.round((x0 + x1) / 2) - 5, y: y0 - 5, d: S.day, chk: S.day, lost: 0 }; const R = u.res;
+  const no = i => { const x = i % G.N, y = (i / G.N) | 0; return x >= R.x && x < R.x + R.n && y >= R.y && y < R.y + R.n; };
+  const w = sim(() => Sg.raiseWalls(s, 'pedra', true)); const plano = w ? w.tiles.filter(no).length : -1;
+  let erguido = 0; for (let y = R.y; y < R.y + R.n; y++) for (let x = R.x; x < R.x + R.n; x++) if (S.wall[y * G.N + x]) erguido++;
+  // (sem o campo, o mesmo muro passaria por ele: o plano de antes tinha casas do lado norte dentro do lote)
+  let antes = 0; for (let x = R.x; x < R.x + R.n; x++) if (x >= s._box[0] && x <= s._box[2] && y0 >= R.y && y0 < R.y + R.n) antes++;
+  ok('e21o o muro passa ao lado do campo guardado', !!w && w.tiles.length > 0 && antes > 0 && plano === 0 && erguido === 0, w ? `o muro de ${w.tiles.length} casas: sem o campo, ${antes} casas do lado norte cairiam no lote; com ele, ${plano} no plano e ${erguido} erguidas nele` : 'sem muro');
+  // (desfeito: o muro e o campo de teste)
+  if (w) { for (const i of w.tiles) { S.wall[i] = 0; S.wallFac[i] = 0; delete S.wallHp[i]; } S.walls.splice(S.walls.indexOf(w), 1); G.W.touchWalk(); }
+  u.res = r0 || null; delete s._box;
+});
+
+// ------------------------------ e22: a audiência no palácio (D-124) ------------------------------
+// (o palácio de 6 de Roma de pé, com planta: quem governa no trono, a cidade entra pelos lugares da planta — 'audiencia' e os de
+// visitante, 'sentar', até o M2 pôr os de pé da sala do trono —, a ronda fica; o save no meio; quem governa morre no meio; o deus
+// derruba o palácio no meio; o voto e o pão iguais, na praça)
+const DIST = (v, b) => { const d = G.Vg.door(b); return Math.round(G.dist(v.x, v.y, d[0], d[1])); };
+function audiencia(chama) {
+  abre(); const set = cidade('Roma'); const f = G.Fac.get(set.fac); const Co = G.Court, P = G.Politics, In = G.Interiors;
+  const b = sim(() => V.handFound(set, 'palacio', 'palacio', { R: 60, built: true })); const r = P.ruler(f);
+  if (!b || !r) return { set, f, b, r };
+  for (const v of [r, ...[...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive).sort((a, c) => a.id - c.id).slice(0, 40)]) { sim(() => G.Vg.endTask(v)); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); }
+  const dr = G.Vg.door(b); r.x = dr[0] + 1; r.y = dr[1] + 1;
+  for (const v of [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive && o !== r).sort((a, c) => a.id - c.id).slice(0, 24)) { v.x = dr[0] + 2 + (v.id % 5); v.y = dr[1] + 2 + (v.id % 3); v.path = null; }
+  const vigia = [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 16 && !o.captive && o !== r).sort((a, c) => c.id - a.id)[0];
+  sim(() => G.Vg.setTask(vigia, { type: 'ronda', pts: [[dr[0] + 2, dr[1] + 2], [dr[0] + 3, dr[1] + 2]], k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' })); vigia.x = dr[0] + 2; vigia.y = dr[1] + 2;
+  S.time = 0.35; const okA = chama === null ? false : sim(() => (chama ? chama(f, set) : Co.audiencia(f, 'teste'))); const ronda = vigia.task && vigia.task.type; const longe = DIST(vigia, b);
+  return { set, f, b, r, vigia, ronda, longe, okA, In, Co, P };
+}
+run('e22', () => {
+  let A = audiencia(); const { b, r } = A;
+  if (!ok('e22a o palácio pronto e quem governa', !!b && !!r && !!b.ip && A.okA && !!A.f.aud, b ? `${lado(b)}, ${r ? r.name : 'sem governante'}; audiência ${A.okA ? 'chamada' : 'NÃO CHAMADA'}` : 'sem palácio')) return;
+  const lugares = A.Co.AUD_USES.reduce((n, u) => n + A.In.slots(b, u).length, 0) - 1; const chamados = A.f.aud.who.length;
+  M.viver(25);
+  const dentro = [...S.villagers.values()].filter(v => v.inside === b.id && v.task && v.task.kind === 'audiencia' && !v.task.throne); const usos = dentro.map(v => (A.In.placeOf(v) || {}).use || 'sem lugar');
+  const tr = A.In.placeOf(r); const th = A.In.slots(b, 'audiencia')[0];
+  ok('e22b quem governa no trono, a cidade nos lugares', !!tr && tr.item === th.item.id && tr.use === 'sentar' && dentro.length > 0 && chamados <= lugares && usos.every(u => A.Co.AUD_USES.includes(u)) && usos.includes('audiencia'),
+    `${r.name} ${tr ? `no ${tr.it && tr.it.kind || 'lugar'} (${tr.use})` : 'SEM LUGAR'}; ${chamados} chamados para ${lugares} lugares (${A.Co.AUD_USES.join(' e ')}); dentro: ${dentro.length} — ${[...new Set(usos)].map(u => u + ' ' + usos.filter(x => x === u).length).join(', ')}`);
+  ok('e22c a ronda fica', !A.f.aud.who.includes(A.vigia.id) && A.ronda === 'ronda', `${A.vigia.name}, a ${A.longe} casas da porta: ${A.f.aud.who.includes(A.vigia.id) ? 'CHAMADO' : 'não chamado'}, na ${A.ronda || '-'} ao chamado`);
+  const c1 = checa(); ok('e22d verificador', c1.ok, c1.txt);
+  // (o verificador vê: a audiência apagada à mão com a cidade nela; quem está nela dentro de outro prédio)
+  const aud1 = A.f.aud; A.f.aud = null; const q1 = QA.check().filter(q => q.sys === 'escala' && q.sev === 2 && /não tem audiência/.test(q.msg)).length; A.f.aud = aud1;
+  const fo = dentro[0]; const casa = [...S.buildings.values()].find(o => o.built && o.type === 'house' && o.set === A.set.id); fo.inside = casa.id;
+  const q2 = QA.check().filter(q => q.sys === 'escala' && q.sev === 2 && /dentro de outro/.test(q.msg)).length; fo.inside = b.id;
+  ok('e22m o verificador vê', q1 >= dentro.length && q2 === 1, `com a audiência apagada à mão: ${q1} avisos S2 (${dentro.length} dentro e os que vêm); ${fo.name} posto noutra casa: ${q2}`);
+  const aud0 = JSON.stringify(A.f.aud); const ids = dentro.map(v => v.id); salva(); const f2 = G.Fac.get(A.f.id);
+  const volta = ids.filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.kind === 'audiencia' && v.inside === b.id; }).length;
+  ok('e22e o save no meio', !!f2.aud && JSON.stringify(f2.aud) === aud0 && volta === ids.length, `a audiência ${f2.aud ? 'continua' : 'SUMIU'}; ${volta} de ${ids.length} de volta lá dentro`);
+  sim(() => V.kill(S.villagers.get(r.id), 'old')); M.viver(4); const r2 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length;
+  ok('e22f quem governa morre no meio', !f2.aud && !r2, `${f2.aud ? 'a audiência AINDA DURA' : 'a audiência acabou'}; ${r2} ainda nela`);
+  A = audiencia(); M.viver(15); const n3 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length;
+  sim(() => V.destroyBuilding(S.buildings.get(A.b.id), 'meteor')); M.viver(4); const n4 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length; const fora = [...S.villagers.values()].filter(v => v.inside === A.b.id).length;
+  ok('e22g o deus derruba o palácio no meio', A.okA && n3 > 0 && !A.f.aud && !n4 && !fora, `${n3} na audiência; depois do palácio caído: ${n4} nela, ${fora} lá dentro`);
+  const c2 = checa(); ok('e22i verificador', c2.ok, c2.txt);
+  // (o voto e o pão: com o palácio pronto de pé, na praça, diante do assento do poder — Po.seat —, como antes; nenhuma audiência)
+  A = audiencia(null); const seat = G.Polity.seat(A.f); const praca = [];
+  for (const why of ['voto', 'pao']) {
+    sim(() => G.Polity.crowd(A.set, why)); const L = [...S.villagers.values()].filter(v => v.task && v.task.type === 'assembly');
+    praca.push(`${why}: ${L.length} na praça${L.every(v => v.task.kind === 'assembly' && v.task.x === seat[0] && v.task.y === seat[1]) ? ', diante do assento' : ' (FORA DO ASSENTO)'}`);
+    if (!L.length || !L.every(v => v.task.kind === 'assembly' && v.task.x === seat[0] && v.task.y === seat[1])) praca.push('FALHA');
+    for (const v of L) sim(() => G.Vg.endTask(v));
+  }
+  ok('e22h o voto e o pão iguais', !praca.includes('FALHA') && !A.f.aud && !!A.b, `com ${lado(A.b)} de pé — ${praca.join('; ')}; audiência: ${A.f.aud ? 'CHAMADA' : 'nenhuma'}`);
+  // (as três chamadas: a resposta à petição — Po.crowd 'audiencia' —, a coroação, a chegada de um embaixador vivo)
+  A = audiencia((f, set) => G.Polity.crowd(set, 'audiencia')); const pet = A.f.aud && A.f.aud.why;
+  A = audiencia(null); const novo = [...S.villagers.values()].filter(v => v.set === A.set.id && v.age >= 20 && !v.captive && v !== A.r && v !== A.vigia && !v.task && G.dist(v.x, v.y, ...G.Vg.door(A.b)) < 12).sort((a, c) => a.id - c.id)[0];
+  sim(() => { A.P.endReign(A.f, 'teste'); A.P.crown(A.f, novo, 'teste', true); }); const cor = A.f.aud && A.f.aud.ruler === novo.id ? A.f.aud.why : '-';
+  A = audiencia(null); const de = G.Fac.all().find(o => o !== A.f && o.alive && G.Fac.rel(o.id, A.f.id)); const env = de && [...S.villagers.values()].find(v => G.Fac.ofV(v) === de && v.age >= 16 && !v.captive);
+  if (env) sim(() => A.P.deliver(de, A.f, 'contato', env)); const emb = A.f.aud && A.f.aud.why;
+  ok('e22j as três chamadas', pet === 'peticao' && cor === 'coroacao' && emb === 'embaixada', `a resposta à petição: ${pet || 'NADA'}; a coroação de ${novo ? novo.name : '-'}: ${cor}; o emissário ${env ? env.name : '-'} de ${de ? de.name : '-'}: ${emb || 'NADA'}`);
+  // (sem palácio pronto com planta, a resposta à petição não chama ninguém — como antes da D-124)
+  const sem = G.Fac.all().map(f => G.Fac.capitalOf(f.id)).filter(c => c && !G.Court.audPalace(G.Fac.get(c.fac)))[0];
+  const n0 = [...S.villagers.values()].filter(v => v.task && v.task.type === 'assembly').length; if (sem) sim(() => G.Polity.crowd(sem, 'audiencia'));
+  const n1 = [...S.villagers.values()].filter(v => v.task && v.task.type === 'assembly').length;
+  ok('e22k sem palácio, nenhuma reunião', !!sem && n1 === n0 && !G.Fac.get(sem.fac).aud, sem ? `${sem.name}: ${n1 - n0} chamados, audiência ${G.Fac.get(sem.fac).aud ? 'CHAMADA' : 'nenhuma'}` : 'toda capital tem palácio pronto');
+  const c3 = checa(); ok('e22l verificador', c3.ok, c3.txt);
+});
+
+// ------------------------------ e23: os serviços abertos com a comida garantida (D-102) ------------------------------
+// (o teto dos ofícios guarda uma pessoa para cada serviço aberto — o taverneiro de cada taverna, um ator de cada teatro ou arena,
+// um estivador do cais com caixas e armazém — quando a comida do povo está garantida, V.foodSafe; com ela em risco, como antes; o
+// corte do resto mínimo os deixa; na vida, a taverna e o teatro de Mênfis, vazios na metrópole pronta, ganham quem os abra; o save
+// devolve os ofícios como estavam; o verificador vê o serviço vazio)
+run('e23', () => {
+  abre(); const E = G.Eco; const set = cidade('Mênfis'); const f = G.Fac.get(set.fac);
+  const papel = r => [...S.villagers.values()].filter(v => v.set === set.id && v.role === r).length;
+  const sv = E.services(set); const ask = sim(() => E.demand(set, f, 25));
+  const pede = { taverneiro: ask.taverneiro || 0, ator: ask.ator || 0, oleiro: 2, ferreiro: 2, mercador: 1, feirante: 2 };
+  // (um teto de 1 — quatro mãos crescidas —: o primeiro da fila leva a única mão; com a comida garantida, os serviços abertos a mais)
+  const seguro = V.foodSafe(f.id); const deu = E.share(Object.assign({}, pede), set, f, 4);
+  const fs0 = V.foodSafe; V.foodSafe = () => false; const antes = E.share(Object.assign({}, pede), set, f, 4); V.foodSafe = fs0;
+  ok('e23a o teto guarda os serviços com a comida garantida', seguro && sv.taverneiro >= 1 && sv.ator >= 1 && deu.taverneiro === 1 && deu.ator === 1 && antes.taverneiro + antes.ator + antes.oleiro + antes.ferreiro + antes.mercador + antes.feirante === 1,
+    `abertos ${JSON.stringify(sv)}; pedem ${JSON.stringify(pede)}, teto 1 — com a comida garantida ${JSON.stringify(deu)}; em risco ${JSON.stringify(antes)}`);
+  const w1 = { taverneiro: 1, ator: 2, oleiro: 1 }; const n1 = E.cut(w1, 3, { taverneiro: 1, ator: 1 });
+  ok('e23b o corte do resto deixa os serviços guardados', n1 === 2 && w1.taverneiro === 1 && w1.ator === 1 && w1.oleiro === 0, `corta 3 de ${JSON.stringify({ taverneiro: 1, ator: 2, oleiro: 1 })} guardando um taverneiro e um ator: ${n1} cortados, ${JSON.stringify(w1)}`);
+  const t0 = papel('taverneiro'), a0 = papel('ator'); M.viver(400); const c1 = checa();
+  ok('e23c na vida, a taverna e o teatro abertos', papel('taverneiro') >= 1 && papel('ator') >= 1 && V.foodSafe(f.id) && c1.ok, `Mênfis: taverneiros ${t0} → ${papel('taverneiro')}, atores ${a0} → ${papel('ator')} em dois dias; ${c1.txt}`);
+  const roles = [...S.villagers.values()].filter(v => v.set === set.id).map(v => v.id + ':' + v.role).join(); salva(); const s2 = cidade('Mênfis');
+  const roles2 = [...S.villagers.values()].filter(v => v.set === s2.id).map(v => v.id + ':' + v.role).join();
+  ok('e23d o save devolve os ofícios', roles === roles2, roles === roles2 ? 'os mesmos ofícios, um por um, depois de carregar' : 'OS OFÍCIOS MUDARAM NO LOAD');
+  // (o verificador vê: a taverna sem ninguém do ofício por três dias, a comida garantida — tirados os taverneiros à mão, sem passo)
+  const kept = [...S.villagers.values()].filter(v => v.set === s2.id && v.role === 'taverneiro'); for (const v of kept) v.role = 'coletor';
+  const vazia = () => QA.check().filter(q => q.sys === 'escala' && /a taverna sem ninguém/.test(q.msg) && q.msg.startsWith('Mênfis')).length;
+  const q0 = vazia(); const d0 = S.day; S.day += 3; const q3 = vazia(); S.day = d0; for (const v of kept) v.role = 'taverneiro';
+  ok('e23e o verificador vê', !q0 && q3 === 1, `sem taverneiro: no primeiro dia ${q0}, três dias depois ${q3}`);
 });
 
 // ------------------------------ e20: cada capital que não ergue a obra grande diz por quê ------------------------------

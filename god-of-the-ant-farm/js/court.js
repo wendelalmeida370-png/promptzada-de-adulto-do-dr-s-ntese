@@ -116,6 +116,7 @@
       const x = Math.floor(set.cx) + dx - Math.floor(w / 2), y = Math.floor(set.cy) + dy - Math.floor(w / 2);
       if (x < 3 || y < 3 || x + w > N - 3 || y + w > N - 3) continue;
       const d = G.dist(x + w / 2, y + w / 2, set.cx, set.cy); if (d > R) continue;
+      if (G.Village.resOver && G.Village.resOver(set, type, x, y, w, w, true)) continue; // (a lot kept for another great work: D-121)
       let ok = true, trees = 0;
       for (let ty = y - 1; ty <= y + w && ok; ty++) for (let tx = x - 1; tx <= x + w; tx++) {
         const i = ty * N + tx; const inside = tx >= x && ty >= y && tx < x + w && ty < y + w;
@@ -339,6 +340,92 @@
     return h;
   };
   // (rulerSince and the palace wish live on the faction, saved with it)
+
+  // ------------------------------ the audience at the palace (D-124) ------------------------------
+  // a third meeting, beside the vote and the bread in the square: with the seat of power a ready palace of the capital, with its
+  // plan, the ruler sits on the throne and the town comes in — at the answer to a petition (polity.js, Po.crowd 'audiencia'), a
+  // coronation and an envoy's arrival. Who: the town's own, near, not captive, of 14 or more, with free hands (Vg.give, D-094),
+  // never the watch on its round (D-103); how many: the plan's free places of the audience — 'audiencia', then the visitors'
+  // 'sentar' (Co.AUD_USES) —, no other ceiling. Each one to the gate (the errand 'assembly', kind 'audiencia'), in by it, the
+  // place inside the allotter's by the palace's rule; the first in line before the throne. f.aud keeps it, in the save, until the
+  // answer (Co.AUD_DUR seconds of the world), the ruler's death, flight or arrest, or the palace's fall
+  Co.AUD_DUR = 30; Co.AUD_USES = ['audiencia', 'sentar'];
+  Co.audPalace = f => { const b = f && bestPalace(f); const cap = f && G.Fac.capitalOf(f.id); return b && b.built && b.type !== 'ruin' && b.ip && cap && b.set === cap.id ? b : null; };
+  const In_ = () => G.Interiors;
+  const throneOf = b => { const In = In_(); const s = In && In.slots ? In.slots(b, 'audiencia')[0] : null; return s ? s.item : null; };
+  const audRoom = b => { const In = In_(); let n = 0; if (In && In.slots) for (const u of Co.AUD_USES) n += In.slots(b, u).length; return n - 1; }; // (the throne's seat is the ruler's)
+  Co.audiencia = function (f, why) {
+    const S = G.S; if (!G.inSim || !f || f.aud) return false;
+    const b = Co.audPalace(f); const r = P.ruler(f); if (!b || !r || r.jail || r.captive || r.aboard) return false;
+    const cap = G.Fac.capitalOf(f.id); const dr = G.Vg.door(b);
+    if (!G.Vg.give(r, { type: 'assembly', kind: 'audiencia', b: b.id, fid: f.id, x: dr[0], y: dr[1], throne: 1, pri: 1.9, st: 0 })) return false;
+    const aud = f.aud = { b: b.id, ruler: r.id, why: why || '', t0: S.clock, until: S.clock + Co.AUD_DUR, who: [] };
+    let room = audRoom(b); for (const v of S.villagers.values()) if (v.inside === b.id && v !== r) room--;
+    for (const o of S.villagers.values()) {
+      if (room <= 0) break;
+      // (who works at the palace serves the audience at its post: never called to it)
+      if (o === r || o.set !== cap.id || o.age < 14 || o.captive || o.jail || o.job === b.id || G.dist(o.x, o.y, dr[0], dr[1]) > 22 || (o.task && o.task.type === 'ronda')) continue;
+      if (G.Vg.give(o, { type: 'assembly', kind: 'audiencia', b: b.id, fid: f.id, x: dr[0], y: dr[1], pri: 1.7, st: 0 })) { aud.who.push(o.id); room--; }
+    }
+    return true;
+  };
+  // (the end of an audience: everyone in it back to their day)
+  function audEnd(f) { const S = G.S; const a = f.aud; if (!a) return; f.aud = null; for (const v of S.villagers.values()) if (v.task && v.task.type === 'assembly' && v.task.kind === 'audiencia' && v.task.fid === f.id) G.Vg.endTask(v); }
+  Co.audEnd = f => (G.inSim ? audEnd(f) : null);
+  // (it ends with the answer — its time —, with the ruler dead, changed, fled aboard, taken or in the cell, and with its palace no
+  // more the seat of the capital: fallen, in works, the town lost; the fall itself ends it at once, Co.audGone)
+  function audTick() {
+    const S = G.S;
+    for (const f of G.Fac.all()) {
+      const a = f.aud; if (!a) continue; const b = S.buildings.get(a.b); const r = S.villagers.get(a.ruler);
+      if (!b || Co.audPalace(f) !== b || !r || P.ruler(f) !== r || r.jail || r.captive || r.aboard || S.clock >= a.until) audEnd(f);
+    }
+  }
+  Co.audGone = b => { for (const f of G.Fac.all()) if (f.aud && f.aud.b === b.id) audEnd(f); }; // (village.js, as it falls or goes)
+  // (the errand: to the gate, in by it, at the allotter's place — the ruler on the throne —, until the audience ends)
+  function runAud(v, t, dt, H) {
+    const S = G.S; const f = G.Fac.get(t.fid); const a = f && f.aud; const b = S.buildings.get(t.b);
+    if (!a || a.b !== t.b || !b || !b.built || b.type === 'ruin') { if (v.inside === t.b) v.inside = 0; return H.end(v); }
+    if (t.st === 0) {
+      if (!t.wk) { if (!G.Vg.gotoB(v, b, 0.2)) return H.end(v); t.wk = 1; }
+      if (H.move(v, dt)) { const dr = G.Vg.door(b); v.x = dr[0]; v.y = dr[1]; v.inside = b.id; t.st = 1; t.at = S.clock; v.actT = 0; }
+      else if (t.age > 60) return H.end(v);
+      return;
+    }
+    v.act = t.throne ? 'sit' : '';
+  }
+  const oldWarRun = G.War.run;
+  G.War.run = function (v, t, dt, H) { if (t.type === 'assembly' && t.kind === 'audiencia') { runAud(v, t, dt, H); return true; } return oldWarRun.apply(this, arguments); };
+  const oldWarText = G.War.taskText;
+  if (oldWarText) G.War.taskText = function (v, t) { if (t.type === 'assembly' && t.kind === 'audiencia') return t.throne ? 'No trono, recebendo a cidade' : t.st ? 'Na audiência do palácio' : 'Indo à audiência do palácio'; return oldWarText.apply(this, arguments); };
+  // (the palace's rule for the allotter: the ruler on the throne; who came to the audience at 'audiencia' — the first in line,
+  // before the throne — then at the visitors' seats. Registered with each world, as the tavern's: interiors.js loads after this)
+  const audPlace = (b, v) => {
+    const t = v.task; if (!t || t.kind !== 'audiencia' || t.b !== b.id) return null;
+    if (t.throne) { const th = throneOf(b); return { use: ['sentar'], item: th ? th.id : null, st: 'sit', pri: 4 }; }
+    return { use: Co.AUD_USES, item: null, st: 'idle', pri: 3 + Math.min(0.9, Math.max(0, G.S.clock - (t.at || G.S.clock)) / 1e4) }; // (the longer in, the nearer the throne)
+  };
+  G.worldHooks.push(() => { if (In_() && In_().placeRule) for (const u of ['palacio', 'paco']) In_().placeRule(u, audPlace); }); // (the chief's hall has its seat too)
+  // (who came: at the coronation and at an envoy's arrival — the answer to a petition asks Po.crowd, polity.js)
+  const oldCrown = P.crown;
+  P.crown = function (f) { const r = oldCrown.apply(this, arguments); if (G.inSim && f && !f.aud) Co.audiencia(f, 'coroacao'); return r; };
+  const oldDeliver = P.deliver;
+  // (an envoy who arrived and lives: the one put to death at the gate is heard by nobody)
+  P.deliver = function (from, to, msg, envoy) { const r = oldDeliver.apply(this, arguments); if (G.inSim && envoy && G.S.villagers.has(envoy.id) && to && to.alive !== false && !to.aud) Co.audiencia(to, 'embaixada'); return r; };
+  // (the save: f.aud goes with the faction; who was in it — on the way or inside — comes back by setTask, as the mutiny, L-190)
+  (G.saveHooks = G.saveHooks || []).push({
+    save(out) { const L = []; for (const v of G.S.villagers.values()) { const t = v.task; if (t && t.type === 'assembly' && t.kind === 'audiencia') L.push([v.id, t.fid, t.b, t.st, t.throne ? 1 : 0, v.inside === t.b ? 1 : 0, t.at || 0]); } out.audiencia = L; },
+    load(o) {
+      const S = G.S; const L = o && Array.isArray(o.audiencia) ? o.audiencia : [];
+      for (const [id, fid, bid, st, th, inn, at] of L) {
+        const v = S.villagers.get(id); const f = G.Fac.get(fid); const b = S.buildings.get(bid); if (!v || !f || !f.aud || f.aud.b !== bid || !b) continue;
+        const dr = G.Vg.door(b); G.Vg.setTask(v, { type: 'assembly', kind: 'audiencia', b: bid, fid, x: dr[0], y: dr[1], throne: th ? 1 : 0, pri: th ? 1.9 : 1.7, st, at });
+        if (v.task && v.task.kind === 'audiencia' && inn) v.inside = bid;
+      }
+    },
+  });
+  const oldUpd = Co.update;
+  Co.update = function (dt) { oldUpd(dt); if (G.S && G.inSim !== 0) audTick(); };
 })(window.G);
 
 // ------------------------------ the palaces, drawn ------------------------------
