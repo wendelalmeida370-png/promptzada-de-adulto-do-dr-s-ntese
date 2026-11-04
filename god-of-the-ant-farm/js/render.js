@@ -2551,13 +2551,15 @@
   // ---- the podium of a step of another size than its type's classic one (D-106, D-120): the relief under its lot — up to three
   // of the map's levels — is a terrace of its people's dressed stone, as the 3D's (Space.plinth): its two faces the view shows,
   // each from the lot's highest ground down to the ground under it all along its edge, the god's light on the one at the left
-  // and his shade on the other; its courses every half a level — 0.75 m — and the joints of its blocks, 2 m long, each course
-  // half a block on from the one under it; its coping, a band of the stone's top colour; the ground's line at its foot ----
-  const PODC = 0.5, PODB = 0.5; // (a course, levels; a block, tiles)
+  // and his shade on the other; its courses every half a level — 0.75 m — of the world's height, counted from its zero, so that
+  // two neighbours' and the ground's steps meet, and the joints of its blocks, 2 m long from the west or north end of its side,
+  // an odd course's 1 m on; its coping, a band of the stone's top colour; the ground's line at its foot (the 3D's the same: its
+  // edge 0.1 m in from the lot's, LOT_IN) ----
+  const PODC = 0.5, PODB = 0.5, PODIN = 0.025; // (a course, levels; a block, tiles; the edge in from the lot's, tiles)
   function podium(b, base) {
     const A = G.Arch, pal = (A && A.PAL && (A.PAL[b.style] || A.PAL.classico)) || null; const sc = pal ? pal.base : ['#a59c8b', '#847b6c', '#bdb4a3'];
     const [cx, cy] = G.Village.center(b); const fx = depth(cx + 1, cy) - depth(cx, cy), fy = depth(cx, cy + 1) - depth(cx, cy);
-    const xE = fx > 0 ? b.x + b.w : b.x, yE = fy > 0 ? b.y + b.h : b.y, inX = fx > 0 ? -0.02 : 0.02, inY = fy > 0 ? -0.02 : 0.02;
+    const xE = fx > 0 ? b.x + b.w : b.x, yE = fy > 0 ? b.y + b.h : b.y, inX = fx > 0 ? -PODIN : PODIN, inY = fy > 0 ? -PODIN : PODIN;
     const hv = (x, y) => W.hAt(x, y); const fc = proj(xE + inX, yE + inY, base);
     // (an edge: n + 1 of its corners, x along it or y along it; its outline down to the ground at each corner)
     const face = (along) => {
@@ -2571,13 +2573,14 @@
       const mid = f.top[f.n >> 1], lit = mid[0] < fc[0] - 1e-6; const col = lit ? sc[0] : sc[1];
       ctx.save(); ctx.beginPath(); ctx.moveTo(f.top[0][0], f.top[0][1]); for (let k = 1; k <= f.n; k++) ctx.lineTo(f.top[k][0], f.top[k][1]); for (let k = f.n; k >= 0; k--) ctx.lineTo(f.bot[k][0], f.bot[k][1]); ctx.closePath();
       ctx.fillStyle = col; ctx.fill(); ctx.clip();
-      // (the courses and the joints, clipped to the face: a course's line from end to end; a block's joint every PODB, half a
-      // block on in every other course)
+      // (the courses and the joints, clipped to the face: course k from k to k + 1 half levels of the world — its line at its foot,
+      // end to end —, its joints every PODB from the side's west or north end, an odd course's half a block on)
       ctx.strokeStyle = lit ? 'rgba(40,30,20,0.22)' : 'rgba(30,20,10,0.25)'; ctx.lineWidth = 0.5; ctx.beginPath();
       const P0 = f.ins(f.pt(0)), P1 = f.ins(f.pt(f.n));
-      for (let j = 1, h = base - PODC; h > f.lo - 1e-6; j++, h -= PODC) {
-        const a = proj(P0[0], P0[1], h), c = proj(P1[0], P1[1], h); ctx.moveTo(a[0], a[1]); ctx.lineTo(c[0], c[1]);
-        const h0 = h + PODC; for (let s = (j % 2) * PODB / 2 + PODB; s < f.n - 1e-6; s += PODB) { const q = f.ins(f.pt(s)); const u = proj(q[0], q[1], h0), v = proj(q[0], q[1], h); ctx.moveTo(u[0], u[1]); ctx.lineTo(v[0], v[1]); }
+      for (let k = Math.floor((base - 1e-6) / PODC); (k + 1) * PODC > f.lo + 1e-6; k--) {
+        const h = k * PODC, h0 = Math.min(base, h + PODC);
+        if (h > f.lo + 1e-6) { const a = proj(P0[0], P0[1], h), c = proj(P1[0], P1[1], h); ctx.moveTo(a[0], a[1]); ctx.lineTo(c[0], c[1]); }
+        for (let s = (((k % 2) + 2) % 2) * PODB / 2; s < f.n - 1e-6; s += PODB) { if (s < 1e-6) continue; const q = f.ins(f.pt(s)); const u = proj(q[0], q[1], h0), v = proj(q[0], q[1], h); ctx.moveTo(u[0], u[1]); ctx.lineTo(v[0], v[1]); }
       }
       ctx.stroke();
       // (the coping: a band of the stone's top over the first course; the ground's line at the foot)
