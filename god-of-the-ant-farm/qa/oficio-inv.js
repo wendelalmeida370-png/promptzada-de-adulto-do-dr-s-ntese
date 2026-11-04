@@ -124,7 +124,8 @@
       for (const op of (s.acts || []).filter(o => o.def === 'espetaculo' && LIVE[o.st])) {
         const nm = `espetáculo #${op.id}`; const d = op.data || {}; const b = s.buildings.get(op.at);
         if (shows.has(op.at)) add('oficio', 2, `teatro #${op.at}: dois espetáculos vivos (#${shows.get(op.at)} e #${op.id})`); shows.set(op.at, op.id);
-        if (!b || b.type !== 'teatro' || !b.built) { add('oficio', 2, `${nm}: o teatro ${op.at} ${!b ? 'não existe' : 'não está de pé'} e o espetáculo segue`); continue; }
+        // (where a show is given is the game's own rule — a theatre standing, or the Colosseum's arena, G.Teatro.isShow: L-569)
+        if (!b || !(G.Teatro.isShow ? G.Teatro.isShow(b) : b.type === 'teatro' && b.built)) { add('oficio', 2, `${nm}: o teatro ${op.at} ${!b ? 'não existe' : 'não está de pé'} e o espetáculo segue`); continue; }
         for (const k of ['entradas', 'receita', 'voltas', 'pagos']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
         if (!{ preparo: 1, portas: 1, peca: 1, fim: 1 }[d.fase]) add('oficio', 1, `${nm}: fase ${d.fase}`);
         for (const id in d.plateia || {}) { const v = s.villagers.get(+id); if (!v) { add('oficio', 2, `${nm}: #${id} na plateia não existe`); continue; } listed(`plateia:${op.id}:${id}`, fine(v, d.plateia[id], b, 'teatro', op.id), `${nm}: ${v.name} #${id} na plateia`); }

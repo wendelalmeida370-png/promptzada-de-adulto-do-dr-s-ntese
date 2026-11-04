@@ -181,14 +181,46 @@
     // (the seats: of each quarter, the podium's walk on each of its two arcs — its parapet over the sand — and the rows over it to
     // the facade, an aisle up the middle of each: each a part of the round about its own centre, its ends — the passages' walls,
     // and the line where the two arcs of a quarter meet — on the lines through it, from the ground)
+    // (the emperor's box — the pulvinar, D-125 —: either side of the back landing, on the minor axis, the first two rows taken
+    // out of the back's big arcs along BOX m of the first row: its floor the podium's walk carried two rows deep, at its height;
+    // the third row over it its back, with the parapet on its edge (a drop of three rows) — no seat on it: one seated there
+    // has the parapet's top over his eyes —; in the right one the throne against it, in the left one the court's bench. Its
+    // parts at the end of each arc by the passage, the rows' aisle clear of it)
+    const BOX = 2.5, boxes = [];
     const blocks = [];
     for (const [su, sv] of QUADS) for (const small of [true, false]) {
       const r0 = small ? rs : rb; const c = small ? [cu + su * (O.a + g / 2), cv + sv * h / 2] : [cu + su * g / 2, cv + sv * (h / 2 - O.b)];
       const arco = small ? arcOf(su, sv, 0, phi) : arcOf(su, sv, phi, HALF); const mid = k3((arco[0] + arco[1]) / 2);
+      const box = !small && sv < 0, dB = BOX / (r0 + dp); const span = box ? (su > 0 ? [arco[0], k3(arco[0] + dB)] : [k3(arco[1] - dB), arco[1]]) : null;
+      const rest = box ? (su > 0 ? [span[1], arco[1]] : [arco[0], span[0]]) : arco;
       els.push({ k: 'cavea', c: c.map(k3), aneis: [[k3(r0 + dp), yb]], fundo: k3(r0), cor: SEAT, parapeito: 0.9, muro: RISER, fecho: SEAT, arco });
       const aneis = [[k3(r0 + D - t), yTop]]; for (let j = rows - 1; j >= 1; j--) aneis.push([k3(r0 + dp + j * TREAD), k3(yb + j * RISE)]);
-      els.push({ k: 'cavea', c: c.map(k3), aneis, fundo: k3(r0 + dp), cor: SEAT, muro: RISER, fecho: SEAT, arco, escadas: { a: [mid], l: 1.0, n: 2 } });
-      blocks.push({ c: c.map(k3), r0: k3(r0 + dp), r1: k3(r0 + D - t), arco, aisles: [mid], small, su, sv });
+      // (by the box the rows in two pieces: the first three over the rest of the arc, and from the fourth over the whole arc —
+      // the box under them —: no end of the rows where they go on over it, which the god would paint as a wall across them)
+      const esc = { a: [mid], l: 1.0, n: 2 };
+      if (!box) els.push({ k: 'cavea', c: c.map(k3), aneis, fundo: k3(r0 + dp), cor: SEAT, muro: RISER, fecho: SEAT, arco, escadas: esc });
+      else els.push({ k: 'cavea', c: c.map(k3), aneis: aneis.slice(-3), fundo: k3(r0 + dp), cor: SEAT, muro: RISER, fecho: SEAT, arco: rest, escadas: esc },
+        { k: 'cavea', c: c.map(k3), aneis: aneis.slice(0, -3), fundo: k3(r0 + dp + 3 * TREAD), cor: SEAT, muro: RISER, fecho: SEAT, arco, escadas: esc });
+      // (the plan's rows: by the box the first three over the rest of the arc, and from the fourth on the whole arc — the rings the
+      // same as the form's pieces; cut in two blocks a row loses a seat at the cut)
+      if (!box) blocks.push({ c: c.map(k3), r0: k3(r0 + dp), r1: k3(r0 + D - t), arco, aisles: [mid], small, su, sv });
+      else blocks.push({ c: c.map(k3), r0: k3(r0 + dp), r1: k3(r0 + dp + 3 * TREAD), arco: rest, aisles: [mid], small, su, sv, n: 3 },
+        { c: c.map(k3), r0: k3(r0 + dp + 3 * TREAD), r1: k3(r0 + D - t), arco, aisles: [mid], small, su, sv, skip: 3 });
+      if (!box) continue;
+      // (the box: its floor; the third row, alone, its parapet on its edge — the parapet of a piece is on every row's edge)
+      const rB = k3(r0 + dp + 2 * TREAD), r3 = k3(rB + TREAD), y3 = k3(yb + 3 * RISE);
+      els.push({ k: 'cavea', c: c.map(k3), aneis: [[rB, yb]], fundo: k3(r0 + dp), cor: '#d8c8b0', muro: RISER, fecho: SEAT, arco: span });
+      els.push({ k: 'cavea', c: c.map(k3), aneis: [[r3, y3]], fundo: rB, cor: SEAT, parapeito: 0.9, muro: RISER, fecho: SEAT, arco: span });
+      // (what stands in it, square to the lot — the arc's tilt there under a tenth —: its middle, the riser's line along it)
+      const am = (span[0] + span[1]) / 2, at = r => [c[0] + r * Math.cos(am), c[1] + r * Math.sin(am)];
+      const seat = (r, w, d, y0, y1, cor, o) => { const [pu, pv] = at(r); return Object.assign({ k: 'bloco', r: [pu - w / 2, pv - d / 2, pu + w / 2, pv + d / 2].map(k3), y0: k3(y0), y1: k3(y1), cor }, o); };
+      const MARB = ['#e8e0d0', '#c8c0b0', '#f2ece0'], GILT = ['#e8c060', '#c8a040', '#f2d070'];
+      // (the throne: its seat 1.0 × 0.8 m, 0.5 m high — the hips of one seated —, its gilded back, the purple round on it; the
+      // court's bench of 2.4 m, four to sit on it — one row: the box is two rows deep, and a second bench would stand on the
+      // podium's walk —; each a hand clear of the back's foot)
+      if (su > 0) { const rT = rB - 0.17 - 0.4; els.push(seat(rT, 1.0, 0.8, yb, yb + 0.5, MARB), seat(rT + 0.325, 1.0, 0.15, yb + 0.5, yb + 1.6, GILT), { k: 'disco', na: 'frente', u: k3(at(rT)[0]), v: k3(at(rT)[1] - 0.25), y: k3(yb + 1.25), r: 0.22, cor: '#7a2a5a' });
+        boxes.push({ su, c: c.map(k3), span, rB, r3, y3, seat: 'trono', r: seat(rT, 1.0, 0.8, 0, 1).r }); }
+      else { const bench = seat(rB - 0.18 - 0.2, 2.4, 0.4, yb, yb + 0.45, MARB); els.push(bench); boxes.push({ su, c: c.map(k3), span, rB, r3, y3, seat: 'corte', r: bench.r }); }
     }
     // (the parapets: along the podium's edge where it crosses a passage — the landings', the bridges' —, on the bridges' outer
     // edges, and along each passage's two walls on the rows, step by step — over the drop into the passage —; 0.12 m thick, 0.9
@@ -199,9 +231,11 @@
     const steps = j => (j < rows ? [dp + j * TREAD, dp + (j + 1) * TREAD] : null);
     for (const [su, sv] of QUADS) for (let j = 0; j < rows; j++) {
       const [d0, d1] = steps(j); const d1x = j === rows - 1 ? D - t : d1; const y = yb + (j + 1) * RISE;
-      // (on the front or back passage: the wall at u = cu + su·g/2, the rows along v; on the left or right one: at v = cv + sv·h/2)
+      // (on the front or back passage: the wall at u = cu + su·g/2, the rows along v; on the left or right one: at v = cv + sv·h/2 —
+      // by the box, where the first two rows are its floor, one parapet at its height over the flight's drop)
       const ue = cu + su * g / 2, va = cv + sv * (Bv + d0), vb = cv + sv * (Bv + d1x);
-      par([su > 0 ? ue : ue - PT, Math.min(va, vb), su > 0 ? ue + PT : ue, Math.max(va, vb)], y);
+      if (sv < 0 && j < 2) { if (!j) { const vz = cv + sv * (Bv + dp + 2 * TREAD); par([su > 0 ? ue : ue - PT, Math.min(va, vz), su > 0 ? ue + PT : ue, Math.max(va, vz)], yb); } }
+      else par([su > 0 ? ue : ue - PT, Math.min(va, vb), su > 0 ? ue + PT : ue, Math.max(va, vb)], y);
       const ve = cv + sv * h / 2, ua = cu + su * (Au + d0), ub = cu + su * (Au + d1x);
       par([Math.min(ua, ub), sv > 0 ? ve : ve - PT, Math.max(ua, ub), sv > 0 ? ve + PT : ve], y);
     }
@@ -218,7 +252,7 @@
     // (and the plan's questions of it: the arena's edge d out, as sides — its primitives: 0 and 12 the right end's halves, 3 the
     // front's, 6 the left end's, 9 the back's straight bits —; whether a point is inside the oval d out)
     const oval = { L, n, cu, cv, g, h, D, t, Au, Bv, rs, rb, a: O.a, b: O.b, phi, ya, yb, dp, rows, rise: RISE, tread: TREAD, yTop, H, storeys: [yTop, s1, s2, H],
-      prims: O.prims, blocks, ways, hypo, hatch, cages, nb, pts, pts1, axes, aw, ah, way,
+      prims: O.prims, blocks, boxes, ways, hypo, hatch, cages, nb, pts, pts1, axes, aw, ah, way,
       sides: (d, step) => sides(O, d, step), inside: (u, v, d) => insideOval(O, u, v, d || 0) };
     return { els, door: { u: cu, w: aw, y0: 0, y1: ah }, amphi: { oval } };
   }
