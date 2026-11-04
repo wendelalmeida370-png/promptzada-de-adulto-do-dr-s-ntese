@@ -268,6 +268,12 @@
     G.Audio && G.Audio.at(cx, cy, 'built', true);
     const set = S.settlements.get(b.set);
     const nm = V.buildName(b);
+    // (an enlargement done, D-116: its town's own line — the type's story was told the day it first stood)
+    if (b.amp && !b.amp.fim) {
+      b.amp.fim = S.day; if (growing) growing.delete(b.id);
+      V.log(`${set ? set.name + ' terminou' : 'Terminou'} a ampliação ${G.gen(nm) === 'a' ? 'da' : 'do'} ${nm}: agora com ${b.w * 4} metros de lado.`, b.type, cx, cy);
+      V.updateEra(); return;
+    }
     const firsts = {
       hut: ['firstHut', 'A primeira cabana foi construída.', 'Primeiro abrigo', 'Eles não dormem mais ao relento.'],
       storehouse: ['firstStore', 'O primeiro armazém foi construído.', 'Armazém', 'Agora conseguem guardar muito mais.'],
@@ -443,15 +449,18 @@
 
   // ------------------------------ site placement ------------------------------
   // (reach, when given: only where it says — the fire of a town cut off from its stores, on its streets' side, L-368)
-  // (n: the lot's side of the step it is sought for — G.Escala, D-106 —; absent, the type's own)
+  // (n: the lot's side of the step it is sought for — G.Escala, D-106 —; absent, the type's own. A step of another size stands
+  // on its podium: the ground's relief under its lot up to V.PODIUM, D-115)
   V.findSite = function (set, type, reach, n) {
     const S = G.S; const def0 = G.BDEF[type];
-    const def = n && n !== def0.w ? Object.assign({}, def0, { w: n, h: n }) : def0; const nk = def === def0 ? type : type + ':' + n;
+    const def = n && n !== def0.w ? Object.assign({}, def0, { w: n, h: n, podium: true }) : def0; const nk = def === def0 ? type : type + ':' + n;
     if (type === 'doca' && G.City) return G.City.dockSite(set);
     if (G.Eco && def === def0) { const e = G.Eco.findSite(set, type); if (e !== undefined) return e; }
     // a search that found nothing today is not repeated until tomorrow (big cities ask many times a day)
     const noSite = set._noSite || (set._noSite = {});
     if (noSite[nk] === S.day) return null;
+    // (a palace of a step of the ladder: where the court puts it, at the step's size — court.js — and, none there, as any work)
+    if (def !== def0 && G.Court && G.Court.site) { const e = G.Court.site(set, type, n); if (e) return e; }
     const field = type === 'farm' || type === 'cercado' || type === 'curral' || type === 'estabulo';
     const pop = V.pop(set.id);
     const R = G.Urban ? G.Urban.radius(set, def, pop) : Math.min(17 + (set.tier || 0) * 3 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
@@ -462,7 +471,9 @@
     // a full city puts its great buildings out by its edge, beyond the walls if need be,
     // and when even there is no room, it builds them over its own old fields and houses
     if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, false);
-    if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, true);
+    // (the old quarter pulled down for a work of the type's own size; a step of another size opens its room by its own rules —
+    // every field moved, every family rehoused: V.openSite, D-115)
+    if (!best && def.civic && def === def0) best = search(set, type, def, R + 6, field, counts, true);
     if (!best) noSite[nk] = S.day;
     return best;
   };
@@ -536,7 +547,7 @@
       }
       if (!ok || bad(gone, beds)) continue;
       const sl = W.slope(x, y, def.w, def.h);
-      if (sl > (type === 'farm' ? 1.6 : 1.15)) continue;
+      if (sl > (type === 'farm' ? 1.6 : def.podium ? V.PODIUM : 1.15)) continue;
       let ideal = 3;
       if (def.housing) ideal = 2.6 + homes * (type === 'insula' || type === 'sobrado' ? 0.28 : 0.33);
       else if (G.City && G.City.IDEAL[type]) ideal = G.City.IDEAL[type];
@@ -565,19 +576,112 @@
     return best;
   }
 
+  // ------------------------------ room for a monument (D-115) ------------------------------
+  // a bigger step of a public work with no free lot of its size: the town opens room for it — it pulls down its own low houses
+  // and fields there (never a public building, a tall house, a workshop, nor its last two farms or the last field of a kind),
+  // up to the step's limit (V.openLimit), and moves what it pulls down: each field to a lot of its own, and the families to new
+  // homes with more beds than they lose — all of it found before anything comes down, or nothing comes down. The relief under
+  // the lot is the podium's (V.PODIUM: the form covers it); the ring round it, where one walks, free of what stays
+  V.PODIUM = 2; // (the ground's relief under a step of another size: two of the map's levels of 1.5 m — 3 m)
+  const OPEN = V.OPEN = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 2, house: 3 }; // (what may come down, and how much it hurts to)
+  V.openLimit = n => ({ bld: Math.max(2, n - 2), beds: 3 * n }); // (what one step may pull down: buildings, beds)
+  const publicWork = type => !!G.BDEF[type] && (!!G.BDEF[type].civic || type === 'temple' || type === 'monument');
+  V.opens = (type, step) => !!step && step.n !== G.Escala.n0(type) && !step.familia && publicWork(type);
+  // (a lot of n × n at x, y for a step that opens room: every tile dry — the town's own low houses and fields on it come down
+  // whole; own, the building being enlarged, is its own —, no wall, main street, gate, fire nor rock; the ring round it free of
+  // a blocking building that stays (a low house of the town there comes down too); within the step's limit, the farms kept;
+  // its relief within the podium, and the town's streets reaching it. → { gone, beds, cost, trees, sl }, or null)
+  function lotFor(set, def, x, y, own, counts, lim) {
+    const S = G.S; const n = def.w;
+    if (x < 2 || y < 2 || x + n > N - 2 || y + n > N - 2) return null;
+    const gone = []; let beds = 0, cost = 0, trees = 0;
+    const take = o => { if (gone.includes(o.id)) return true; if (!o.built || o.set !== set.id || !OPEN[o.type]) return false; gone.push(o.id); cost += OPEN[o.type]; beds += G.BDEF[o.type].housing || 0; return gone.length <= lim.bld && beds <= lim.beds; };
+    for (let ty = y; ty < y + n; ty++) for (let tx = x; tx < x + n; tx++) {
+      const i = ty * N + tx;
+      if (S.type[i] < T.SAND || S.wall[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.road[i] >= 2 || (S.road[i] && G.City && G.City.onStreet(set, i))) return null;
+      const oid = S.objAt[i]; if (oid && !S.bushes.has(oid)) return null; // (a rock stays where it is; a bush goes, as for any work)
+      if (def.blocks && V.byGate(tx, ty)) return null;
+      const o = S.occ[i] ? S.buildings.get(S.occ[i]) : null;
+      if (o && o !== own && !take(o)) return null;
+      if (S.treeAt[i]) trees++;
+    }
+    for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) {
+      if (ty >= y && ty < y + n && tx >= x && tx < x + n) continue;
+      if (!W.inb(tx, ty)) return null;
+      const o = S.occ[ty * N + tx] ? S.buildings.get(S.occ[ty * N + tx]) : null;
+      if (o && o !== own && o.blocks && !(G.BDEF[o.type].housing && take(o))) return null;
+    }
+    const left = {}; for (const id of gone) { const t = S.buildings.get(id).type; left[t] = (left[t] || 0) + 1; if (KEEP[t] && (counts[t] || 0) - left[t] < KEEP[t]) return null; }
+    const sl = W.slope(x, y, n, n); if (sl > V.PODIUM) return null;
+    if (!siteReached(set, x, y, def)) return null;
+    return { gone, beds, cost, trees, sl };
+  }
+  V.lotFor = (set, type, n, x, y, own) => { // (for the proofs: qa/escala.js — the rules one lot is judged by)
+    const counts = {}; for (const b of G.S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
+    return lotFor(set, Object.assign({}, G.BDEF[type], { w: n, h: n, podium: true }), x, y, own || null, counts, V.openLimit(n));
+  };
+  // (where what a step pulls down goes, found before anything comes down — none of it on the work's lot nor its ring, nor on
+  // another's: each field a lot of its kind, the families homes of the kind the town raises now with more beds than they
+  // lose. → [[type, [x, y]]…], or null: then nothing comes down)
+  function relocation(set, x0, y0, n, gone) {
+    const S = G.S; const held = [[x0 - 1, y0 - 1, x0 + n + 1, y0 + n + 1]];
+    const clear = (w, h) => (x, y) => !held.some(r => x - 1 < r[2] && x + w + 1 > r[0] && y - 1 < r[3] && y + h + 1 > r[1]);
+    const put = t => { const d = G.BDEF[t]; const p = V.findSite(set, t, clear(d.w, d.h)); if (!p || p.demolish) return null; held.push([p[0], p[1], p[0] + d.w, p[1] + d.h]); return p; };
+    const out = []; let need = 0;
+    for (const id of gone.slice().sort((a, b) => a - b)) {
+      const o = S.buildings.get(id); const d = G.BDEF[o.type];
+      if (d.housing) { need += d.housing; continue; }
+      const p = put(o.type); if (!p) return null; out.push([o.type, p]);
+    }
+    if (!need) return out;
+    const fac = G.Fac.get(set.fac); if (!fac) return null;
+    // (a block finds its own room — V.blockSite —: the families get the tallest single house the town raises)
+    let t = G.City ? G.City.homeType(set, fac, G.Fac.has(fac.id, 'workshop'), fac.stock) : 'house'; if (t === 'quarteirao') t = 'insula';
+    let beds = 0;
+    for (let k = 0; beds <= need && k < 12; k++) { const p = put(t); if (!p) return null; const tt = G.Urban ? G.Urban.homeFor(set, t, p) : t; beds += G.BDEF[tt].housing || 0; out.push([tt, p]); }
+    return beds > need ? out : null;
+  }
+  // the room a step opens (V.opens): the best lots of its size within the town's edge (its radius and six), those with the least
+  // to pull down first — each with its moves found, the first whose fields and families have somewhere to go. → [x, y] with
+  // .demolish (the ids), .moves (what goes up elsewhere) and .beds (the beds that come down), or null
+  V.openSite = function (set, type, step) {
+    const S = G.S; const n = step.n; const def = Object.assign({}, G.BDEF[type], { w: n, h: n, podium: true });
+    const noSite = set._noSite || (set._noSite = {}); const nk = type + ':' + n + ':abre'; if (noSite[nk] === S.day) return null;
+    const pop = V.pop(set.id); const R = (G.Urban ? G.Urban.radius(set, def, pop) : 20) + 6; const lim = V.openLimit(n);
+    const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
+    const ideal = (G.City && G.City.IDEAL[type]) || (type === 'temple' ? 5 : 3.2);
+    const cands = []; const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const x = cxi + dx - Math.floor((n - 1) / 2), y = cyi + dy - Math.floor((n - 1) / 2);
+      const fx = x + n / 2, fy = y + n / 2; const d = G.dist(fx, fy, set.cx, set.cy); if (d > R) continue;
+      const L = lotFor(set, def, x, y, null, counts, lim); if (!L || !L.gone.length) continue; // (a free lot is the plain search's)
+      const place = G.Urban && (set.tier || 0) >= 2 ? G.Urban.siteScore(set, type, def, x, y, fx, fy, d, ideal) : -Math.abs(d - ideal) * 1.2;
+      cands.push([place - L.trees * 0.7 - L.sl * 1.5 - L.cost * 2 - L.beds * 0.3, x, y, L]);
+    }
+    cands.sort((a, b) => b[0] - a[0] || a[2] - b[2] || a[1] - b[1]);
+    for (const [, x, y, L] of cands.slice(0, 6)) { const moves = relocation(set, x, y, n, L.gone); if (moves) return Object.assign([x, y], { demolish: L.gone, moves, beds: L.beds }); }
+    noSite[nk] = S.day; return null;
+  };
+
   // (at: a site chosen by the caller — for the step given with it, else the type's classic lot. Else the town tries the steps
   // of the type's ladder from the biggest it justifies and can pay for — G.Escala.choose —: the first one it finds land for
-  // is raised, D-106)
+  // is raised, D-106; a step of a public work with no free lot opens its room, by its rules — V.openSite, D-115)
   V.startProject = function (set, type, at, given) {
     let pos = at, step = at && given ? given : null;
-    if (!pos) for (const st of G.Escala.choose(set, type)) { pos = V.findSite(set, type, undefined, st.n); if (pos) { step = st; break; } }
+    if (!pos) for (const st of G.Escala.choose(set, type)) {
+      pos = V.findSite(set, type, undefined, st.n);
+      if (!pos && V.opens(type, st)) pos = V.openSite(set, type, st);
+      if (pos) { step = st; break; }
+    }
     if (!pos) { set.fails++; return null; }
     // (a city builds tall only where its land is dear; on cheap ground the same family builds a house with a yard)
     if (G.Urban && !pos.demolish) { const t = G.Urban.homeFor(set, type, pos); if (t !== type) { type = t; step = null; } }
-    if (pos.demolish) renew(set, type, pos.demolish);
+    if (pos.demolish) renew(set, type, pos.demolish, pos.moves);
     const b = V.addBuilding(type, pos[0], pos[1], set.id, false, step);
     if (type === 'cemetery') V.completeBuilding(b);
     G.Eco && G.Eco.onPlaced(b);
+    // (what the step pulled down goes up again elsewhere: the fields on their new lots, the families' new homes)
+    if (pos.moves) for (const [t, p] of pos.moves) V.startProject(set, t, p);
     return b;
   };
 
@@ -606,9 +710,130 @@
     }
     return null;
   };
-  // the old quarter comes down for the great work: its people look for new homes, as after a fire
-  function renew(set, type, ids) {
-    const S = G.S; let homes = 0, fields = 0, cx = set.cx, cy = set.cy;
+
+  // ------------------------------ the enlargement (D-116) ------------------------------
+  // a town grown since it raised one of its public works raises it a step up the type's ladder, in place: the same building —
+  // its id, its name, its history, whoever has it for work or for palace —, its lot grown round the old one over free ground
+  // or room opened by the rules of a step that opens it (lotFor, relocation), its bill what the bigger step costs more than the
+  // one it had (b.troca: the part that stands is off the bill — what the work holds is still what the ledger brings it), its
+  // work what is left of the bigger step's. While it grows it is a work (b.amp: the lot and step it had, the day it began).
+  // One at a time — no great work of the town going up —, where the town justifies the bigger step (G.Escala.choose) and has a
+  // quarter of the new part's stone in store (at most 120)
+  let growing = null; // (the enlargements under way, by id: found again from the world after a new world or a load)
+  G.worldHooks.push(() => { growing = null; });
+  const growingNow = () => { if (!growing) { growing = new Set(); for (const b of G.S.buildings.values()) if (b.amp && !b.amp.fim && !b.built && b.type !== 'ruin') growing.add(b.id); } return growing; };
+  // (the lot of n tiles round the old one: every candidate that holds it — the fewest to pull down, then the nearest to centred —,
+  // with the moves of what it pulls down found. → [x, y] (.demolish, .moves when it pulls down), or null)
+  V.growLot = function (set, b, step) {
+    const S = G.S; const n = step.n, n0 = b.w; const def = Object.assign({}, G.BDEF[b.type], { w: n, h: n, podium: true });
+    const counts = {}; for (const o of S.buildings.values()) if (o.set === set.id) counts[o.type] = (counts[o.type] || 0) + 1;
+    const lim = V.openLimit(n); const mx = b.x + b.w / 2, my = b.y + b.h / 2; const cands = [];
+    for (let y = b.y + n0 - n; y <= b.y; y++) for (let x = b.x + n0 - n; x <= b.x; x++) {
+      const L = lotFor(set, def, x, y, b, counts, lim); if (!L) continue;
+      cands.push([L.cost * 2 + L.beds * 0.3 + L.sl * 1.5 + L.trees * 0.7 + (Math.abs(x + n / 2 - mx) + Math.abs(y + n / 2 - my)) * 0.3, x, y, L]);
+    }
+    cands.sort((p, q) => p[0] - q[0] || p[2] - q[2] || p[1] - q[1]);
+    for (const [, x, y, L] of cands.slice(0, 4)) {
+      if (!L.gone.length) return [x, y];
+      const moves = relocation(set, x, y, n, L.gone); if (moves) return Object.assign([x, y], { demolish: L.gone, moves, beds: L.beds });
+    }
+    return null;
+  };
+  V.enlarge = function (b, step, pos) {
+    const S = G.S; const set = b && S.settlements.get(b.set);
+    if (!set || !b.built || b.type === 'ruin' || !step || step.n <= b.w || !pos) return null;
+    const s0 = G.Escala.of(b), n0 = b.w, n = step.n; const nm = V.buildName(b);
+    if (pos.demolish) renew(set, b.type, pos.demolish, pos.moves);
+    b.amp = { de: n0, esc: s0.id, x: b.x, y: b.y, d: S.day };
+    b.x = pos[0]; b.y = pos[1]; b.w = b.h = n; b.esc = step.id; // (its step and its lot: written here only, D-106)
+    for (let ty = b.y; ty < b.y + n; ty++) for (let tx = b.x; tx < b.x + n; tx++) {
+      const i = ty * N + tx; if (S.occ[i] === b.id) continue;
+      S.occ[i] = b.id;
+      const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) { G.Nature.removeTree(t); if (t.stage === 'grow' && t.size > 0.5) clearing(set.fac); G.FX && G.FX.poof(tx + 0.5, ty + 0.5, '#6d8f3c'); } }
+      const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); if (bu) G.Nature.removeBush(bu); }
+    }
+    W.touchWalk();
+    // (the bill of what grows: the bigger step's less the part that stands; the progress, that part's share of the work)
+    const B0 = G.Escala.bill(b.type, s0), B1 = G.Escala.bill(b.type, step);
+    b.built = false; b.need = { wood: 0, stone: 0 }; b.incoming = { wood: 0, stone: 0 }; b.brick = null; b.troca = {}; b.unreach = 0;
+    for (const k in B1.cost) { b.need[k] = Math.max(0, B1.cost[k] - (B0.cost[k] || 0)); b.incoming[k] = 0; }
+    for (const k in B0.cost) b.troca[k] = -Math.min(B0.cost[k], B1.cost[k] || 0);
+    const t0 = V.totalCost(B0), t1 = V.totalCost(B1);
+    b.progress = Math.min(t1 ? t0 / t1 : 0, B1.work ? B0.work / B1.work : 0);
+    // (whoever was inside goes out, and what was being done there ends by its own rule: it is a work now — its plan grows with it)
+    for (const v of S.villagers.values()) if (v.inside === b.id) { v.inside = 0; v.sleeping = false; G.Vg.endTask(v); }
+    G.Act && G.Act.atGone(b);
+    G.Siege && G.Siege.placed(b);
+    G.Interiors && G.Interiors.resized(b, n0);
+    V.brickSwap(b);
+    growingNow().add(b.id);
+    const [cx, cy] = V.center(b);
+    V.log(`${set.name} começou a ampliar ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: de ${n0 * 4} para ${n * 4} metros de lado.`, 'city', cx, cy);
+    if (pos.moves) for (const [t, p] of pos.moves) V.startProject(set, t, p);
+    return b;
+  };
+  // an enlargement the builders cannot reach (the ring of the work cut off since — a wall, the water) is given up before their
+  // rule lets the whole building go with it (an unreached work is let go, villagers.js): what came for the new part goes back
+  // to the store, in the ledger, and the building is again what it was, on the lot it had
+  V.ungrow = function (b) {
+    const S = G.S; const a = b && b.amp; if (!a || a.fim || b.built || b.type === 'ruin') return false;
+    V.siteBack(b, 'obra-largada');
+    for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }
+    const n = b.w; b.x = a.x; b.y = a.y; b.w = b.h = a.de; b.esc = a.esc;
+    for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) S.occ[ty * N + tx] = b.id;
+    W.touchWalk();
+    b.built = true; b.progress = 1; b.need = { wood: 0, stone: 0 }; b.incoming = { wood: 0, stone: 0 }; b.brick = null; b.troca = null; b.unreach = 0; b.amp = null;
+    if (growing) growing.delete(b.id);
+    for (const o of S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) G.Vg.endTask(o);
+    G.Siege && G.Siege.keepWays(b.set);
+    G.Interiors && G.Interiors.resized(b, n);
+    const set = S.settlements.get(b.set); const nm = V.buildName(b); const [cx, cy] = V.center(b);
+    V.log(`${set ? set.name + ' desistiu' : 'Desistiram'} de ampliar ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: ninguém chegava à obra.`, 'city', cx, cy);
+    return true;
+  };
+  // (each time the planner plans a town: an enlargement of it its builders have failed to reach four times is given up — they
+  // let a work go at six)
+  V.growStuck = function (set) {
+    const S = G.S; if (!growingNow().size) return;
+    for (const id of [...growing]) {
+      const b = S.buildings.get(id); if (!b || b.built || b.type === 'ruin' || !b.amp || b.amp.fim) { growing.delete(id); continue; }
+      if (b.set === set.id && (b.unreach || 0) >= 4) V.ungrow(b);
+    }
+  };
+  // (a great work of the town going up and waiting for stone: a public work of a step of another size than its type's, or one
+  // being enlarged — asked only when the town has a public work under way, c.siteTypes. → the building, or null)
+  V.greatWork = function (set, c) {
+    let any = false; for (const k in c.siteTypes) if (publicWork(k)) { any = true; break; } if (!any) return null;
+    for (const b of G.S.buildings.values()) {
+      if (b.set !== set.id || b.built || b.type === 'ruin' || !publicWork(b.type) || !(b.amp || b.w !== G.Escala.n0(b.type))) continue;
+      if ((b.need.stone || 0) > ((b.incoming && b.incoming.stone) || 0) + 1e-6) return b;
+    }
+    return null;
+  };
+  // (the planner's question, with nothing the town needs to live first: with no great work going up, the first public work of
+  // the town that a bigger step it justifies now fits round. Nothing while only each type's classic step is known: no step
+  // bigger than the one it has)
+  V.grow = function (set, fac, c) {
+    const S = G.S;
+    if ((set.tier || 0) < 2 || (G.City && G.City.saving(set, fac))) return null;
+    for (const k in c.siteTypes) if (G.BDEF[k] && G.BDEF[k].civic) return null; // (one great work at a time)
+    const grows = {}; let any = false;
+    for (const t in c) { if (!(c[t] > 0) || !publicWork(t)) continue; const st = G.Escala.choose(set, t)[0]; if (st && st.n > G.Escala.n0(t) && !st.familia) { grows[t] = st; any = true; } }
+    if (!any) return null;
+    const noSite = set._noSite || (set._noSite = {}); if (noSite.amplia === S.day) return null;
+    for (const b of S.buildings.values()) {
+      if (b.set !== set.id || !b.built || b.type === 'ruin' || !grows[b.type] || grows[b.type].n <= b.w) continue;
+      const st = grows[b.type]; const more = Math.max(0, (G.Escala.bill(b.type, st).cost.stone || 0) - (G.Escala.billOf(b).cost.stone || 0));
+      if ((fac.stock.stone || 0) < Math.min(120, more * 0.25)) continue;
+      const pos = V.growLot(set, b, st); if (!pos) continue;
+      return V.enlarge(b, st, pos);
+    }
+    noSite.amplia = S.day; return null;
+  };
+  // the old quarter comes down for the great work: its people look for new homes, as after a fire — or, for a step that opened
+  // its room (moves: what goes up elsewhere, D-115), in the new homes the town raises for them, and its fields go elsewhere
+  function renew(set, type, ids, moves) {
+    const S = G.S; let homes = 0, fields = 0, houses = 0, plots = 0, cx = set.cx, cy = set.cy;
     for (const id of ids) {
       const o = S.buildings.get(id); if (!o) continue;
       let head = null;
@@ -623,13 +848,20 @@
       // (D-059), and the ground keeps no owner nor anyone to pick it up for the family — it went unwritten, L-377)
       V.keptGone(o, 'obra-da-cidade');
       if (o.type === 'farm') fields++; else homes++;
+      if (G.BDEF[o.type] && G.BDEF[o.type].housing) houses++; else plots++;
       [cx, cy] = V.center(o);
       G.FX && G.FX.dust(cx, cy, 4);
       V.removeBuilding(o);
     }
     const nm = V.nameOf(type, { style: G.Civ.idOfFac(set.fac) });
-    const what = [homes ? (homes === 1 ? 'uma casa velha' : `${homes} casas velhas`) : '', fields ? (fields === 1 ? 'um campo' : `${fields} campos`) : ''].filter(Boolean).join(' e ');
-    V.log(`${set.name} derrubou ${what} para dar lugar ${G.gen(nm) === 'a' ? 'à' : 'ao'} ${nm}.`, 'city', cx, cy);
+    if (!moves) {
+      const what = [homes ? (homes === 1 ? 'uma casa velha' : `${homes} casas velhas`) : '', fields ? (fields === 1 ? 'um campo' : `${fields} campos`) : ''].filter(Boolean).join(' e ');
+      V.log(`${set.name} derrubou ${what} para dar lugar ${G.gen(nm) === 'a' ? 'à' : 'ao'} ${nm}.`, 'city', cx, cy); return;
+    }
+    const what = [houses ? (houses === 1 ? 'uma casa velha' : `${houses} casas velhas`) : '', plots ? (plots === 1 ? 'um campo' : `${plots} campos`) : ''].filter(Boolean).join(' e ');
+    const nh = moves.filter(m => G.BDEF[m[0]].housing).length, nf = moves.length - nh;
+    const to = [nh ? `as famílias vão morar em ${nh === 1 ? 'uma casa nova' : nh + ' casas novas'}` : '', nf ? (nf === 1 ? 'o campo vai para outro lugar' : 'os campos vão para outro lugar') : ''].filter(Boolean).join(', e ');
+    V.log(`${set.name} abriu espaço para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: derrubou ${what}, e ${to}.`, 'city', cx, cy);
   }
 
   // ------------------------------ planner ------------------------------
@@ -661,6 +893,7 @@
     const hi = housingInfo(set.id);
     const pop = hi.pop; if (pop === 0) return;
     const fac = G.Fac.get(set.fac); if (!fac) return;
+    V.growStuck(set); // (an enlargement its builders cannot reach is given up before their rule takes the building: D-116)
     const isMain = G.Fac.capitalOf(fac.id) === set;
     const facHas = type => G.Fac.has(fac.id, type);
     if (!c.campfire) { const b = V.startProject(set, 'campfire'); if (b) { set.campfire = b.id; } return; }
@@ -689,6 +922,9 @@
     G.Eco && G.Eco.plan(set, fac, c, want, pop);
     G.Harbor && G.Harbor.plan(set, fac, c, want, pop);
     if (c.storehouse && !c.siteTypes.storehouse && (st.wood > cap * 0.9 || st.food > cap * 0.9 || st.stone > cap * 0.9) && c.storehouse < 1 + Math.floor(pop / 30)) want.push('storehouse');
+    // (a public work the town has outgrown goes a step up its ladder, in place — before a new great work, after what it needs to
+    // live and to keep itself: D-116)
+    if (!want.some(t => ESSENTIAL[t] || DEFENCE[t]) && V.grow(set, fac, c)) return;
     // the town improves what it has: an old hut becomes a stone house, stone houses grow a second
     // floor and then become apartment blocks
     const improve = () => {
@@ -712,6 +948,10 @@
     if (G.City && G.City.saving(set, fac)) {
       for (let k = want.length - 1; k >= 0; k--) { const t = want[k], d = G.BDEF[t]; if (d && !ESSENTIAL[t] && !DEFENCE[t] && ((d.cost && d.cost.stone) || 0) >= 16) want.splice(k, 1); }
     }
+    // (a great work of a bigger step going up — the town's monument, raised for years — keeps the town's stone: while it waits for
+    // stone, no other extra that costs stone is begun, and what the town needs to live and to keep itself goes on. Its stone
+    // went to every smaller work begun beside it, and the Colosseum of Rome got none in eight years: D-117)
+    if (V.greatWork(set, c)) for (let k = want.length - 1; k >= 0; k--) { const t = want[k], d = G.BDEF[t]; if (d && !ESSENTIAL[t] && !DEFENCE[t] && ((d.cost && d.cost.stone) || 0) >= 8) want.splice(k, 1); }
     if ((set.tier || 0) === 2 && stoneHomes < 6 && c.hut > 0 && !want.some(t => ESSENTIAL[t])) { if (improve()) return; improved = true; }
     if (!want.length && !improved) { if (improve()) return; improved = true; }
     // proactive housing for growing families
