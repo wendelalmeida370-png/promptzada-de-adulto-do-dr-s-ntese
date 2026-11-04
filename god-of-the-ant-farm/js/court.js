@@ -352,8 +352,12 @@
   Co.AUD_DUR = 30; Co.AUD_USES = ['audiencia', 'sentar'];
   Co.audPalace = f => { const b = f && bestPalace(f); const cap = f && G.Fac.capitalOf(f.id); return b && b.built && b.type !== 'ruin' && b.ip && cap && b.set === cap.id ? b : null; };
   const In_ = () => G.Interiors;
-  const throneOf = b => { const In = In_(); const s = In && In.slots ? In.slots(b, 'audiencia')[0] : null; return s ? s.item : null; };
-  const audRoom = b => { const In = In_(); let n = 0; if (In && In.slots) for (const u of Co.AUD_USES) n += In.slots(b, u).length; return n - 1; }; // (the throne's seat is the ruler's)
+  // (the places of the audience as the plan's table has them — the pieces' and the marks', M2's standing places before the throne
+  // being marks, which In.slots does not see —; the throne's seat the ruler's)
+  const tableOf = b => { const In = In_(); return In && In.table ? In.table(b) : null; };
+  const throneOf = b => { const t = tableOf(b); return t ? t.items.find(it => it.kind === 'trono') || null : null; };
+  const audRoom = b => { const t = tableOf(b); if (!t) return 0; let n = 0; for (const u of Co.AUD_USES) n += (t.byUse.get(u) || []).length; return n - 1; };
+  Co.audRoom = audRoom; // (for the proofs)
   Co.audiencia = function (f, why) {
     const S = G.S; if (!G.inSim || !f || f.aud) return false;
     const b = Co.audPalace(f); const r = P.ruler(f); if (!b || !r || r.jail || r.captive || r.aboard) return false;

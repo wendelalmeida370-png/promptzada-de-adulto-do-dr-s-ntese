@@ -126,6 +126,23 @@
   const stageUse = b => (hasUse(b, 'atuar') || !hasUse(b, 'lutar') ? 'atuar' : 'lutar');
   const seatUse = b => (hasUse(b, 'assistir') || !hasUse(b, 'sentar') ? 'assistir' : 'sentar');
   Tt.stageUse = stageUse; Tt.seatUse = seatUse;
+  // (the emperor's box of the Colosseum — D-125, the pulvinar —: at the games, the ruler of the arena's people on its throne, and
+  // up to four of the court on its bench — the ruler's family first (the partner, the children, the parents, the brothers and
+  // sisters), then the people's nobles (the palace's own: the group 'nobreza' of polity.js) —; the rest of them on the rows when
+  // the box is full. Who has a place there is the allotter's, by the rule of the type (In.placeRule 'maravilha', as the tavern's
+  // and the palace's): the errand names no seat. → 'trono', 'corte' (kin: 2, a noble: 1), or null)
+  const boxOf = (v, b) => {
+    if (!arena(b) || !hasUse(b, 'trono') || !G.Politics) return null;
+    const f = G.Fac.get(G.Village.facOfSet(b.set)); const r = f && G.Politics.ruler(f); if (!r || G.Fac.idOfV(v) !== f.id) return null;
+    if (v === r) return 'trono';
+    const kin = v.id === r.partner || v.mother === r.id || v.father === r.id || r.mother === v.id || r.father === v.id || (!!r.mother && v.mother === r.mother) || (!!r.father && v.father === r.father);
+    return kin || (G.Polity && G.Polity.groupOf(v) === 'nobreza') ? 'corte' : null;
+  };
+  const kinOf = (v, b) => { const f = G.Fac.get(G.Village.facOfSet(b.set)); const r = f && G.Politics.ruler(f); return !!r && (v.id === r.partner || v.mother === r.id || v.father === r.id || r.mother === v.id || r.father === v.id || (!!r.mother && v.mother === r.mother) || (!!r.father && v.father === r.father)); };
+  Tt.boxOf = boxOf; // (for the proofs)
+  const rowUse = (v, b) => (boxOf(v, b) ? undefined : seatUse(b)); // (the box's people: no seat named, the rule gives it)
+  const boxPlace = (b, v) => { const t = v.task; if (!t || t.type !== 'teatro' || t.id !== b.id || !(t.st >= 1)) return null; const k = boxOf(v, b); return k ? { use: [k, seatUse(b)], st: 'sit', pri: k === 'trono' ? 6 : kinOf(v, b) ? 5.5 : 5 } : null; };
+  G.worldHooks.push(() => { const I = In(); if (I && I.placeRule) I.placeRule('maravilha', boxPlace); });
   function full(b, op) {
     const I = In(); if (planned(b)) return !I.freePlace(b, [seatUse(b), 'sentar']);
     return Object.keys(op.data.plateia).length >= Tt.CAP;
@@ -297,7 +314,7 @@
       const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r === 0) return;
       if (full(b, op)) { G.Vg.emote(v, 'sad', 1); say(v, 'teatro_cheio', {}); return H.end(v); }
       const p = payEntry(v, op, b); if (!p.ok) return H.end(v);
-      goIn(v, t, b, seatUse(b)); d.entradas++;
+      goIn(v, t, b, rowUse(v, b)); d.entradas++;
       d.plateia[v.id] = { t: Math.round(S.clock * 10) / 10, st: d.fase === 'peca' ? 2 : 1, paid: p.n };
       t.st = 1; v.actT = 0; return;
     }
@@ -613,7 +630,7 @@
         for (const [id, m] of Object.entries(d.plateia)) {
           const v = S.villagers.get(+id); if (!v || m.body || v.captive || v.jail) { delete d.plateia[id]; continue; }
           if (kp && !kp.has(op.id + ':' + id)) continue;
-          G.Vg.setTask(v, { type: 'teatro', id: op.at, op: op.id, pri: 0.45, st: m.st === 2 ? 2 : 1, use: b ? seatUse(b) : 'assistir', kind: 'leisure' });
+          G.Vg.setTask(v, { type: 'teatro', id: op.at, op: op.id, pri: 0.45, st: m.st === 2 ? 2 : 1, use: b ? rowUse(v, b) : 'assistir', kind: 'leisure' });
           if (v.task && v.task.type === 'teatro') v.inside = op.at; else delete d.plateia[id];
         }
         for (const [id, m] of Object.entries(d.atores)) {
