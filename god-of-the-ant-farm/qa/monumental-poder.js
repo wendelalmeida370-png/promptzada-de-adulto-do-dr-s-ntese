@@ -22,6 +22,12 @@
 //   B11 os casos ruins num mundo novo: a obra do colossal e a do grande palácio asteca salvas e carregadas no meio e acabadas; o deus que derruba o palácio (a
 //      ruína da planta); o verificador limpo em cada passo — e a sua regra nova (qa/poder-inv.js) pega um palácio grande com a
 //      planta de uma família da receita
+//   B12 o andar de cima em volta do poço vazio da escada grande (L-515, L-562): todo palácio arma em quatro registros de cada lado
+//      (os contextos do plantas.js, os sais da T-436), e o palacio#5773 da lar l9 nos quatro lados; o alto de cada escada
+//      alcançado, nenhum móvel a menos de 0,6 m do poço (o guarda-corpo)
+//   B13 os lugares da audiência (D-124): em pé no salão do trono, em filas viradas para ele, o corredor livre (≥ 40); no grande e
+//      no colossal também na sala da audiência (≥ 20); todos alcançados da porta
+//   B14 o telhado da planta é o da forma: um por ala (a subida e o começo sobre o beiral de cada uma), nunca um em volta do pátio
 // E a D, os templos — o templo (4 casas), o grande templo (6) e o santuário monumental (8) dos mesmos seis povos (o do asteca, a
 // pirâmide de degraus e o santuário no alto, com o corpo da forma: o 3D a desenha), o risco de js/forma-poder.js (riscoTemplo) e a planta pela forma (int-palacio.js, templeByForm, a família forma.templo):
 //   D1 a forma de cada povo e tamanho, o degrau só a quem a tem; as formas dos povos diferentes em cada tamanho (a H)
@@ -365,6 +371,78 @@ function B11() {
     else { const f0 = b.ip.f; b.ip.f = 'pal-honra.terreo'; const caught = mine().length; b.ip.f = f0; const quiet = mine().length;
       if (!caught || quiet) out.push(`a regra nova: ${caught} avisos com a família da receita, ${quiet} com a da forma`); else said.push('a regra nova pega a família da receita'); } }
   ok('B11a os casos ruins: a obra salva no meio, o palácio derrubado, o verificador limpo — e a regra nova do verificador pega a planta de outra família', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
+}
+// ---------------------------------------------------------------- B12: upstairs round the stair's void well (L-515, L-562)
+function B12() {
+  // (every palace in four records of each side — the plan's dice: the id, a context of the plantas.js's, one of the salts of the
+  // proofs, T-436 —: it lays out (no room upstairs reached only over the well); each grand stair's top reached on its storey;
+  // nothing within 0.6 m of its well — the railing: E's. And the palacio#5773 of the lar's l9 — the Aztec palace of 6 the town
+  // of Memphis founded in the ready world «cidade» —, on its four sides)
+  const out = [], S0 = G.S; G.S = blankS(); let id = 64001, n = 0, laid = 0, near = Infinity, nearAt = '', tops = 0;
+  const gap = (a, b) => Math.hypot(Math.max(0, a[0] - b[2], b[0] - a[2]), Math.max(0, a[1] - b[3], b[1] - a[3]));
+  const CTXS = [{ k: '', cl: 't', fl: 0, d: 1, w: 0, e: 1 }, { k: 'a', cl: 't', fl: 0, d: 3, w: 1, e: 3 }, { k: 'a', cl: 'q', fl: 0, d: 2, w: 0, e: 3 }, { k: '', cl: 'f', fl: 0, d: 0, w: 0, e: 1 }, { k: '', cl: 'u', fl: 1, d: 1, w: 0, e: 2 }, { k: 'ae', cl: 't', fl: 0, d: 2, w: 2, e: 5 }], SALTS = [0, 101, 777, 4242];
+  const make = (b, rec, salt) => { const S1 = In.SALT; In.SALT = salt; try { return In.make(b, rec); } finally { In.SALT = S1; } };
+  for (const s of LADOS) { const b = { id: 5773, type: 'palacio', style: 'asteca', x: 72, y: 17, w: 6, h: 6, esc: 'palacio', built: true };
+    const p = make(b, { v: 4, f: 'forma.palacio', r: 0, t: 'palacio', u: 'palacio', s, o: 63, c: 'asteca', e: 4, k: '', cl: 'f', fl: 0, d: 0, w: 0, pw: 0, n: 6, h: [[15, 'obra']], m: 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 }, 0);
+    if (!p.ok) out.push(`o palacio#5773 da lar l9, lado ${s}: ${(p.errs || []).slice(0, 2).join('; ')}`); }
+  for (const [t, nn] of PAL) for (const c of POVOS) for (const s of LADOS) for (let q = 0; q < 4; q++) {
+    const b = { id: (id += 7919), type: t, style: c, x: 8, y: 8, w: nn, h: nn, built: true };
+    b.ip = In.newRecord(b, Object.assign({ t, c, pw: 0, s, o: (1 << nn) - 1, n: nn }, CTXS[(q + LADOS.indexOf(s) + POVOS.indexOf(c)) % CTXS.length])); G.S.buildings.set(b.id, b); n++;
+    const p = make(b, b.ip, SALTS[q]); if (!p || !p.ok) { out.push(`${PL(t)}/${c}/${s} #${b.id} (sal ${SALTS[q]}): ${(p ? p.errs : ['sem planta']).slice(0, 2).join('; ')}`); G.S.buildings.delete(b.id); continue; } laid++;
+    for (const st of p.stairs) { if (!In.grandWell(st)) continue; tops++;
+      if (!(walkTo(p, st.lv1, st.b[0], st.b[1]) < Infinity)) out.push(`${PL(t)}/${c}/${s} #${b.id}: o alto da escada sem chão no piso ${st.lv1}`);
+      for (const it of p.items) { if (it.lv !== st.lv1 || !In.ITEMS[it.kind] || !In.ITEMS[it.kind].solid) continue; const d = gap(it.r, st.hole);
+        if (d < near) { near = d; nearAt = `${PL(t)}/${c}/${s}: ${it.kind}`; } if (d < 0.6 - 1e-6) out.push(`${PL(t)}/${c}/${s} #${b.id}: ${it.kind} a ${d.toFixed(2)} m do poço`); } }
+    G.S.buildings.delete(b.id);
+  }
+  G.S = S0;
+  ok('B12a o andar de cima em volta do poço vazio da escada grande: todo palácio arma em quatro registros de cada lado (os contextos do plantas.js, os sais da T-436), e o palacio#5773 da lar l9 nos quatro lados; o alto de cada escada alcançado, nenhum móvel a menos de 0,6 m do poço', !out.length && laid === n,
+    `${laid} de ${n} plantas e o palacio#5773; ${tops} escadas grandes; o móvel mais perto de um poço a ${near.toFixed(2)} m (${nearAt})${out.length ? ' — ' + some(out).join(' / ') : ''}`);
+}
+// ---------------------------------------------------------------- B13: the audience's places (D-124)
+function B13() {
+  // (in the throne hall, standing in rows before the throne, each facing it as one before it does — the throne's own place of
+  // audience —, the aisle from the throne down the hall free; in the great palace and the colossal, in the hall of audience too;
+  // each reached from the street's gate)
+  const out = [], sum = [];
+  for (const m of made.filter(q => q.p.ok)) {
+    const p = m.p; const why = []; const hall = p.rooms.find(q => q.fn === 'trono'), aud = p.rooms.find(q => q.fn === 'audiencia');
+    const th = p.items.find(i => i.kind === 'trono'); const sp = th && th.spots.find(q => q.use === 'audiencia');
+    if (!hall || !th || !sp) { out.push(`${tag(m)}: sem o salão, o trono ou o lugar diante dele`); continue; }
+    const pts = room => (p.marks || []).filter(M => M.use === 'audiencia' && room && M.room === room.id).flatMap(M => M.pts.filter(q => q.ok).map(q => ({ lv: M.lv, x: q.x, z: q.z, ry: q.ry })));
+    const go = L => L.filter(q => walkTo(p, q.lv, q.x, q.z) < Infinity);
+    const inHall = go(pts(hall)), inAud = go(pts(aud));
+    // (facing the throne as its own place does; off the aisle: a metre and more from the line through the throne along its facing)
+    const dx = Math.sin(sp.ry), dz = Math.cos(sp.ry), cx = (th.r[0] + th.r[2]) / 2, cz = (th.r[1] + th.r[3]) / 2;
+    const turned = inHall.filter(q => Math.abs(Math.atan2(Math.sin(q.ry - sp.ry), Math.cos(q.ry - sp.ry))) > 0.01).length;
+    const onAisle = inHall.filter(q => Math.abs((q.x - cx) * dz - (q.z - cz) * dx) < 1.1 - 1e-6).length;
+    if (inHall.length < 40) why.push(`${inHall.length} no salão do trono`); if (turned) why.push(`${turned} sem olhar para o trono`); if (onAisle) why.push(`${onAisle} no corredor do trono`);
+    if (m.t !== 'palacio' && inAud.length < 20) why.push(`${inAud.length} na sala da audiência`);
+    if (!sp.ok || !(walkTo(p, th.lv, sp.x, sp.z) < Infinity)) why.push('o lugar diante do trono');
+    if (why.length) out.push(`${tag(m)}: ${why.join(', ')}`);
+    if (m.s === 'S') sum.push(`${PL(m.t)}/${m.c} ${inHall.length}${m.t !== 'palacio' ? ' + ' + inAud.length : ''}`);
+  }
+  ok('B13a os lugares da audiência: em pé no salão do trono, em filas viradas para ele, o corredor livre (≥ 40); no grande e no colossal também na sala da audiência (≥ 20); todos alcançados da porta', !out.length, some(out).join(' / ') || `no salão do trono (+ na sala da audiência): ${sum.join(', ')}`);
+}
+// ---------------------------------------------------------------- B14: the plan's roof is the form's
+function B14() {
+  // (one roof over each wing, along it, as the form paints them — its rise and where it starts over the eaves —; the Egyptian's
+  // and the Aztec's flat; never one round the court)
+  const out = [], sum = [];
+  for (const m of made.filter(q => q.p.ok && q.s === 'S')) {
+    const R = riskOf(m.t, m.c, m.n), F = Fo.of(m.t, m.c, m.n); const rf = (m.so && m.so.shell && m.so.shell.roof) || {}; const why = [];
+    if (rf.kind !== R.roof.kind) why.push(`o tipo ${rf.kind} (a forma ${R.roof.kind})`);
+    if (!rf.alas || rf.alas.length !== R.alas.length) why.push(`${rf.alas ? rf.alas.length : 0} alas no telhado da planta (a forma ${R.alas.length})`);
+    for (const a of R.alas) {
+      const w = (rf.alas || []).find(q => q.lado === a.lado); const e = F.els.find(q => q.k === 'telhado' && q.r.every((x, k) => Math.abs(x - a.r[k]) < 0.01));
+      const fh = e ? e.y1 - e.y0 : 0, fb = e ? e.y0 - R.eave : 0;
+      if (!w) { why.push(`sem a ala ${a.lado}`); continue; }
+      if ((a.h > 0) !== !!e || Math.abs(w.h - fh) > 0.01 || (e && Math.abs(w.base - fb) > 0.01)) why.push(`a ala ${a.lado}: a planta ${w.h}/${w.base}, a forma ${e ? fh.toFixed(2) + '/' + fb.toFixed(2) : 'plana'}`);
+    }
+    if (why.length) out.push(`${tag(m)}: ${why.join(', ')}`);
+    sum.push(`${PL(m.t)}/${m.c} ${rf.kind} ${(rf.alas || []).map(q => q.h).join('/')}`);
+  }
+  ok('B14a o telhado da planta é o da forma: um por ala, a subida e o começo sobre o beiral de cada uma (o egípcio e o asteca planos), nunca um em volta do pátio', !out.length, some(out).join(' / ') || sum.join(', '));
 }
 // ================================================================ D: the temples (templo 4, grande templo 6, santuário monumental 8)
 const TPL = [4, 6, 8], TFAM = 'forma.templo';
@@ -730,7 +808,7 @@ function G3() {
     ok('G3b de pé num mundo novo: a casa rica de cada povo — a planta, o verificador; um ano; uma derrubada; salvar e carregar', res.length >= 4 && res.every(r => r.ok) && !bad.length && !bad1.length && !bad2.length && alive >= res.length - 1 && razed === 'a derrubada vira ruína com planta' && M.limpo(),
       `${res.length} de pé (${res.map(tell).join(', ')}); ${alive} de pé e com planta depois do ano; ${razed}; o verificador S0–S2: ${q0} antes, ${bad.length} com elas, ${bad1.length} depois de um ano, ${bad2.length} depois do save${bad.concat(bad1, bad2).length ? ' (' + bad.concat(bad1, bad2).slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
 }
-for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11],
+for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11], ['B12', B12], ['B13', B13], ['B14', B14],
   ['D1', D1], ['D2', D2], ['D3', D3], ['D4', D4], ['D5', D5], ['D6', D6], ['D7', D7], ['D8', D8], ['D9', D9],
   ['F1', F1], ['F2', F2], ['F3', F3], ['F4', F4], ['F5', F5], ['F6', F6], ['G1', G1], ['G2', G2], ['G3', G3]]) if (want(k)) f();
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');

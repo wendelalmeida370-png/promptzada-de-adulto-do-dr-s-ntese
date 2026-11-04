@@ -36,6 +36,9 @@
   // of honour); the classical people's the Greek's, as the god draws its palace (G.Escala offers a step only where its people's
   // form has that size).
   const DOOR_H = 2.6; // (an inner door's height: over the body's 1.75 m, under the lintel's beam)
+  // (the stair up to the chambers: 4.8 m up in 4.2 — 49°, a stair the feet walk, D-086 —, 1.4 m wide; a metre before its foot and
+  // a landing of a metre past its top: its well is void upstairs, L-562 —, the top steps onto floor, never through a wall: L-515)
+  const STAIR = { run: 4.2, w: 1.4, foot: 1.0, land: 1.0 };
   function risco(st, n) {
     const L = n * TILE, big = n >= 10, mid = !big && n >= 8; const NO = st === 'nordico', EG = st === 'egipcio', RO = st === 'romano', AZ = st === 'asteca';
     // ---- the podium and its flight: risers of 0.25 m, the flight before the podium's front, its foot at the lot's edge ----
@@ -78,8 +81,10 @@
     const wingRooms = {};
     for (const [side, W] of [['esquerda', LW], ['direita', RW]]) {
       const cuts = big || mid ? cutsOf(W[1], W[3], sideK) : [[W[1], r2(W[1] + 3.9)], [r2(W[1] + 3.9 + ti), W[3]]];
+      // (upstairs the last room — the stair's, up from the wing's front — reaches back past the stair's top by its landing)
+      const up = cuts.map(q => q.slice()); if (two && !big) { const k = up.length - 1; const a = Math.min(up[k][0], r2(W[3] - STAIR.foot - STAIR.run - STAIR.land)); up[k][0] = a; up[k - 1][1] = r2(a - ti); }
       wingRooms[side] = { 0: cuts.map(([a, b], q) => room(0, sideFn[side][q], [W[0], a, W[2], b], { wing: side, court: 1 })) };
-      if (two) wingRooms[side][1] = cuts.map(([a, b]) => room(1, 'aposento', [W[0], a, W[2], b], { wing: side }));
+      if (two) wingRooms[side][1] = up.map(([a, b]) => room(1, 'aposento', [W[0], a, W[2], b], { wing: side }));
     }
     // the front wing of the colossal: the vestibule behind the main door, the guard either side of it, the stair at the left end,
     // the treasury at the right; above, the chambers and the ruler's study over the vestibule
@@ -220,9 +225,9 @@
     // toward the court; the palace of six's in each side wing's front room, up toward the back: its side wings' chambers are
     // reached each by its own, the wing of state between them a storey high ----
     if (two) {
-      const run2 = 4.2, w2 = 1.4; // (4.8 m up in 4.2: 49°, a stair the feet walk — D-086)
+      const run2 = STAIR.run, w2 = STAIR.w;
       if (big) { const r = R.rooms[wingRooms.frente[0][0]].r; const v0 = r2(r[3] - 0.05 - w2), u0 = r2(r[0] + 0.75); R.stairs.push({ lv0: 0, lv1: 1, r: [u0, v0, r2(u0 + run2), r2(r[3] - 0.05)], du: 1, dv: 0 }); }
-      else for (const side of ['esquerda', 'direita']) { const ws = wingRooms[side][0]; const r = R.rooms[ws[ws.length - 1]].r; const u0 = side === 'esquerda' ? r2(r[0] + 0.05) : r2(r[2] - 0.05 - w2), v1 = r2(r[3] - 1.0); R.stairs.push({ lv0: 0, lv1: 1, r: [u0, r2(v1 - run2), r2(u0 + w2), v1], du: 0, dv: -1 }); }
+      else for (const side of ['esquerda', 'direita']) { const ws = wingRooms[side][0]; const r = R.rooms[ws[ws.length - 1]].r; const u0 = side === 'esquerda' ? r2(r[0] + 0.05) : r2(r[2] - 0.05 - w2), v1 = r2(r[3] - STAIR.foot); R.stairs.push({ lv0: 0, lv1: 1, r: [u0, r2(v1 - run2), r2(u0 + w2), v1], du: 0, dv: -1 }); }
       for (const s of R.stairs) s.hole = s.r.slice();
     }
     // ---- the pieces on the floors of the courts: the court's fountain (where one drinks) and what stands in the courts — the
@@ -241,7 +246,14 @@
       solid(yRoom, [r2(x - q), r2(y - q), r2(x + q), r2(y + q)], NO ? 1.0 : AZ ? 7.5 : 4.6, NO ? 'braseiro' : AZ ? 'palmeira' : 'estatua'); }
     if (big && EG) for (const s of [-1, 1]) { const x = r2(L / 2 + s * 4.5), y = r2(yard[1] + 2.6); solid(yRoom, [r2(x - 0.45), r2(y - 0.45), r2(x + 0.45), r2(y + 0.45)], 16, 'obelisco'); }
     // ---- the shell's numbers for the plan ----
-    R.roof = NO ? { kind: 'turfa', h: 3.6, over: 0.5 } : EG || AZ ? { kind: 'plano', h: 0, over: 0 } : { kind: RO ? 'quatro-aguas' : 'duas-aguas', h: 2.6, over: 0.45 };
+    // ---- the roofs: one over each wing, along it — the Greek's gables and the Roman's hips over the cornice of the columns'
+    // stone, the Norse's turf (the great hall's steeper), the Egyptian's and the Aztec's flat —: the god paints them, and the
+    // plan's roof is these, a roof a wing, never one round the court (E) ----
+    const wEnd = big ? C[3] : B[3]; const wingR = [['fundo', [B[0], B[1], B[2], C[1]]], ['esquerda', [B[0], C[1], C[0], wEnd]], ['direita', [C[2], C[1], B[2], wEnd]]]; if (big) wingR.push(['frente', [B[0], C[3], B[2], B[3]]]);
+    const cornice = NO || EG || AZ ? 0 : 0.7;
+    R.alas = wingR.map(([lado, r]) => { const across = lado === 'fundo' || lado === 'frente'; const d = across ? r[3] - r[1] : r[2] - r[0];
+      return { lado, r: r.map(r2), ao: across ? 'u' : 'v', y0: r2(eave + cornice), h: EG || AZ ? 0 : NO ? (lado === 'fundo' ? 6.4 : 3.6) : r2(Math.min(3.4, d * (RO ? 0.27 : 0.24))), ov: NO ? 0.5 : EG || AZ ? 0 : 0.3 }; });
+    R.roof = { kind: NO ? 'turfa' : EG || AZ ? 'plano' : RO ? 'quatro-aguas' : 'duas-aguas', h: Math.max(...R.alas.map(a => a.h)), over: R.alas[0].ov, cornice };
     R.mat = NO ? 'tabua' : EG ? 'adobe-caiado' : AZ ? 'adobe-estuque' : RO ? 'reboco' : 'adobe-caiado';
     return R;
   }
@@ -275,8 +287,7 @@
       const ent = 0.7; // (the cornice: the stone of the columns over the walls, 0.12 out)
       for (const [, r] of wings) els.push(bloco([r[0] - 0.12, r[1] - 0.12, r[2] + 0.12, r[3] + 0.12], eave, eave + ent, COL, { mat: 'slab' }));
       const y0 = r2(eave + ent);
-      for (const [side, r] of wings) { const across = side === 'fundo' || side === 'frente'; const d = across ? r[3] - r[1] : r[2] - r[0]; const rise = r2(Math.min(3.4, d * (RO ? 0.27 : 0.24)));
-        els.push({ k: 'telhado', r: r.map(r2), y0, y1: r2(y0 + rise), ao: across ? 'u' : 'v', ov: 0.3, cor: ROOF, quatro: RO ? true : undefined }); roofTop = Math.max(roofTop, y0 + rise); }
+      for (const a of R.alas) { els.push({ k: 'telhado', r: a.r.slice(), y0, y1: r2(y0 + a.h), ao: a.ao, ov: a.ov, cor: ROOF, quatro: RO ? true : undefined }); roofTop = Math.max(roofTop, y0 + a.h); }
     } else if (EG || AZ) { // (the Egyptian's and the Aztec's flat roofs under their two painted bands, as the god draws their palaces)
       for (const [, r] of wings) els.push({ k: 'faixa', r: r.map(r2), y0: r2(eave - 1.3), y1: r2(eave - 0.7), cor: 'trim' }, { k: 'faixa', r: r.map(r2), y0: r2(eave - 0.7), y1: r2(eave - 0.25), cor: 'trim2' },
         bloco([r[0] - 0.15, r[1] - 0.15, r[2] + 0.15, r[3] + 0.15], eave, r2(eave + 0.45), ['top', 'top', 'top'], { mat: 'slab' }));
@@ -284,8 +295,7 @@
       if (AZ) { const gold = big ? ['#f2c14e', '#d8a63a', '#f2c14e'] : ['acc', 'acc', 'acc']; const z0 = r2(eave + 0.45), v = r2(cut - 0.2);
         for (let k = -2; k <= 2; k++) { const u = r2(L / 2 + k * 2.6); els.push(bloco([r2(u - 0.2), r2(v - 0.08), r2(u + 0.2), r2(v + 0.08)], z0, r2(z0 + 1.2), gold, { mat: 'slab' }), { k: 'bola', c: [u, v, r2(z0 + 1.6)], r: 0.16, ry: 0.7, cor: '#2fae8f' }); } }
     } else {
-      for (const [side, r] of wings) { const across = side === 'fundo' || side === 'frente'; const rise = side === 'fundo' ? 6.4 : 3.6;
-        els.push({ k: 'telhado', r: r.map(r2), y0: eave, y1: r2(eave + rise), ao: across ? 'u' : 'v', ov: 0.5, cor: ROOF, mat: 'turf' }); roofTop = Math.max(roofTop, eave + rise); }
+      for (const a of R.alas) { els.push({ k: 'telhado', r: a.r.slice(), y0: eave, y1: r2(eave + a.h), ao: a.ao, ov: a.ov, cor: ROOF, mat: 'turf' }); roofTop = Math.max(roofTop, eave + a.h); }
       // (the great hall's dragons at its gables, its three shields on the court's face)
       const yr = r2(eave + 6.4); els.push({ k: 'dragao', p: [r2(B[0] - 0.5), r2((B[1] + cut) / 2), yr], dir: -1, cor: '#3a2616' }, { k: 'dragao', p: [r2(B[2] + 0.5), r2((B[1] + cut) / 2), yr], dir: 1, cor: '#3a2616' });
       for (const du of [-4, 0, 4]) els.push({ k: 'disco', na: 'frente', u: r2(L / 2 + du), v: r2(cut + 0.02), y: r2(Hp + 3.3), r: 0.55, cor: '#a23c2a' });
