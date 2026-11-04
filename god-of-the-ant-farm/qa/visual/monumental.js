@@ -1,5 +1,5 @@
 // monumental: o Coliseu, o palácio de pátios e os templos grandes no 3D, com o corpo e a câmera — a parte E da Arquitetura
-// Monumental (1ª a 3ª rodadas):
+// Monumental (1ª a 4ª rodadas):
 //   node qa/visual/monumental.js [PASTA_DAS_FOTOS]       (padrão: qa/monumental/fotos)
 //   PARTE=node (só a parte em Node: segundos) · PARTE=navegador (só as fotos e o quadro) · sem PARTE: as duas, uma depois da outra
 // O Coliseu fundado pela mão do deus em Roma da metrópole — G.Village.handFound(set, 'maravilha', 'maravilha', { built: true,
@@ -7,6 +7,10 @@
 // chão pode ter mais desnível do que o pódio da forma cobre (3 m, o combinado da equipe; o terreno das cidades é do C): então a mão
 // do deus aplaina o lote e uma praça de 4 casas em volta, com mais 4 de transição, só na prova, antes de fundar (dito na saída).
 // Parte 1 (Node: o 3D sem placa — qa/visual/tres-node.js —, o corpo e a câmera quadro a quadro, como o jogo):
+//   F1. num mundo só de grama (os prédios postos à mão, como a fidelidade os põe): as fileiras dos teatros de 6, 8 e 10 casas
+//      (romano, grego) e do Coliseu de 10 e 13, nos quatro lados — no meio de cada casinha andada das fileiras, o chão da
+//      planta é o alto do que o 3D desenha ali (L-494, 2: as fileiras desenhadas em cordas e andadas em círculos; um polígono
+//      só agora, G.Forma.ringEdge) —; L1 o lago do jardim sagrado (o antigo e os de 6, 8 e 10) de longe: a água, na altura dela
 //   1. a forma e o 3D: o lote e a forma do mesmo tamanho, a altura; os triângulos perto (o detalhe fino) e longe, por peça, cada um
 //      no seu teto; o tempo de fazer o pedaço; as ordens da fachada em meias-colunas (a toscana, a jônica, a coríntia: o fuste
 //      meio-redondo no primeiro pilar de cada baia; o ático em pilastras); a silhueta de longe do tamanho da forma (a caixa dela
@@ -47,6 +51,8 @@
 //   10. sem erro de página nem aviso no console
 //   11. o palácio de pátios: as fotos em terceira pessoa — de fora, no pátio, no salão do trono
 //   12. os templos de 8 casas do grego, do egípcio e do nórdico e os palácios de 6 desses povos, de fora; o salão hipostilo por dentro
+//   13. o camarote do imperador (D-125) no Coliseu de 10: de sobre a arena, diante dele, e de perto, da beira do pódio
+//   14. o Coliseu colossal de 13 casas na Roma da «cidade»: de fora, o corpo diante da entrada; da arena
 const path = require('path'); const fs = require('fs'); const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
 const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'qa', 'monumental', 'fotos'));
@@ -155,11 +161,67 @@ function HELP(G) {
   return H;
 }
 
+// the proofs on a world of nothing but grass, the buildings put by hand (as qa/visual/fidelidade-lib.js puts them), before the
+// ready world: F1 the rows of seats — at the middle of every reached cell of the rows of the theatres of 6, 8 and 10 tiles (the
+// Roman, the Greek) and of the Colosseums of 10 and 13, on the four sides, the plan's floor and the top of what the 3D draws there
+// (up to half a metre over it) the same: drawn as chords and walked as rounds, near a row's edge a cell was in one row in the plan
+// and in the next in the drawing (L-494, 2 — one polygon now, G.Forma.ringEdge) —; L1 the sacred garden's lake from afar: at its
+// middle the far figure's top its water, at its height, blue — it was the floor under it, brown ground
+function blankChecks(G, ok) {
+  const B3 = G.Build3D, In = G.Interiors, Sp = G.Space, TL = Sp.TILE, CS = In.CS;
+  const S = G.newState(7); S.N = G.N; S.H.fill(4); S.type.fill(G.T.GRASS); S.biome.fill(0); S.clock = 0; S.day = 30; S.time = 0.3; G.S = S; G.newWorld();
+  const stepOf = (t, n) => (G.Escala.steps(t).find(s => s.n === n) || {}).id;
+  const put = (type, st, n, s, id) => { const def = G.BDEF[type];
+    const b = { id, type, style: st, esc: n === def.w ? undefined : stepOf(type, n), x: 20, y: 20, w: n, h: n, built: true, progress: 1, hp: def.hp || 100, maxHp: def.hp || 100, v: 0, set: 0, blocks: !!def.blocks, ip: null };
+    S.buildings.set(id, b); for (let yy = b.y; yy < b.y + n; yy++) for (let xx = b.x; xx < b.x + n; xx++) S.occ[yy * G.N + xx] = id;
+    b.ip = In.newRecord(b, { t: type, c: st, e: 3, k: 'ae', cl: 't', fl: 0, d: 1, w: 1, pw: 0, s, o: (1 << Math.min(n, 30)) - 1, n }); return b; };
+  const drop = b => { S.buildings.delete(b.id); for (let i = 0; i < S.occ.length; i++) if (S.occ[i] === b.id) S.occ[i] = 0; };
+  // (the top of the lying triangles over a point, up to a height: the ones of a building's near picture — what lies about it put
+  // aside —, binned by their boxes over its lot)
+  const tops = b => { const P3 = G.Props3D; G.Props3D = null; let r; try { r = B3.nearGeo(b.x, b.y, 1); } finally { G.Props3D = P3; }
+    const P = r.solid.attributes.position.array; const bins = new Map(), bx = b.x * TL, bz = b.y * TL, BIN = 0.5;
+    for (let k = 0; k + 8 < P.length; k += 9) { const v = Array.from(P.subarray(k, k + 9)); const ux = v[3] - v[0], uy = v[4] - v[1], uz = v[5] - v[2], wx = v[6] - v[0], wy = v[7] - v[1], wz = v[8] - v[2];
+      const ny = uz * wx - ux * wz, nl = Math.hypot(uy * wz - uz * wy, ny, ux * wy - uy * wx); if (!nl || Math.abs(ny) / nl < 0.5) continue;
+      for (let i = Math.floor((Math.min(v[0], v[3], v[6]) - bx) / BIN); i <= Math.floor((Math.max(v[0], v[3], v[6]) - bx) / BIN); i++) for (let j = Math.floor((Math.min(v[2], v[5], v[8]) - bz) / BIN); j <= Math.floor((Math.max(v[2], v[5], v[8]) - bz) / BIN); j++) {
+        const q = i * 4096 + j; let a = bins.get(q); if (!a) bins.set(q, a = []); a.push(v); } }
+    for (const k in r) if (r[k]) r[k].dispose();
+    return (x, z, cap) => { let best = -Infinity; const X = bx + x, Z = bz + z; for (const v of bins.get(Math.floor(x / BIN) * 4096 + Math.floor(z / BIN)) || []) {
+      const d = (v[5] - v[8]) * (v[0] - v[6]) + (v[6] - v[3]) * (v[2] - v[8]); if (Math.abs(d) < 1e-12) continue;
+      const l1 = ((v[5] - v[8]) * (X - v[6]) + (v[6] - v[3]) * (Z - v[8])) / d, l2 = ((v[8] - v[2]) * (X - v[6]) + (v[0] - v[6]) * (Z - v[8])) / d, l3 = 1 - l1 - l2;
+      if (l1 < -1e-9 || l2 < -1e-9 || l3 < -1e-9) continue; const y = l1 * v[1] + l2 * v[4] + l3 * v[7]; if (y <= cap && y > best) best = y; } return best; }; };
+  let id = 91000; const out = [], said = [];
+  for (const [type, st, n] of [['teatro', 'romano', 6], ['teatro', 'romano', 8], ['teatro', 'romano', 10], ['teatro', 'grego', 6], ['teatro', 'grego', 8], ['teatro', 'grego', 10], ['maravilha', 'romano', 10], ['maravilha', 'romano', 13]]) {
+    let cells = 0, bad = 0, first = '';
+    for (const s of ['S', 'E', 'N', 'W']) { const b = put(type, st, n, s, id++); const p = Sp.planNow(b); if (!p || !p.ok) { out.push(`${type} ${st} ${n} ${s}: a planta não se fez`); drop(b); continue; }
+      const top = tops(b), base = Sp.plinth(b).y0;
+      for (const lv of [...new Set(p.tiers.map(T => T.lv))]) { const N = p.grid.n, R = p.reach[lv], Ts = p.tiers.filter(T => T.lv === lv);
+        for (let k = 0; k < N * N; k++) { if (!R[k]) continue; const x = (k % N + 0.5) * CS, z = (Math.floor(k / N) + 0.5) * CS; if (!Ts.some(T => In.tierH(T, x, z) !== null)) continue; cells++;
+          const py = base + In.floorYOf(p, lv, x, z), dy = top(x, z, py + 0.5) - py; if (Math.abs(dy) > 0.01) { bad++; if (!first) first = `${s} (${x.toFixed(2)}, ${z.toFixed(2)}): ${dy.toFixed(2)} m`; } } }
+      drop(b); }
+    said.push(`${type === 'teatro' ? 'o teatro' : 'o Coliseu'} ${st} de ${n}: ${cells} casinhas andadas, ${bad} fora`);
+    if (bad) out.push(`${type} ${st} ${n}: ${bad} casinhas das fileiras com o chão da planta fora do desenho (a primeira ${first})`);
+  }
+  ok('F1 as fileiras: no meio de cada casinha andada das fileiras — os teatros de 6, 8 e 10 casas (romano, grego), o Coliseu de 10 e de 13, nos quatro lados —, o chão da planta é o que o 3D desenha (L-494, 2: um polígono só, G.Forma.ringEdge)', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
+  const lk = [], lkSaid = [];
+  for (const n of [3, 6, 8, 10]) { const b = put('teatro', 'egipcio', n, 'S', id++); const F = B3.formOf(b); const lam = F && F.els.find(e => e.k === 'lamina'); if (!lam) { lk.push(`de ${n}: sem lago na forma`); drop(b); continue; }
+    const q = G.Forma.toLot(B3.formSide(b, B3.shellOf(b)), F.L, (lam.r[0] + lam.r[2]) / 2, (lam.r[1] + lam.r[3]) / 2), X = b.x * TL + q[0], Z = b.y * TL + q[1];
+    const g = B3.farGeo(b.x, b.y, 1); const P = g.attributes.position.array, Cc = g.attributes.color.array; let best = null;
+    for (let k = 0; k + 8 < P.length; k += 9) { const d = (P[k + 5] - P[k + 8]) * (P[k] - P[k + 6]) + (P[k + 6] - P[k + 3]) * (P[k + 2] - P[k + 8]); if (Math.abs(d) < 1e-12) continue;
+      const l1 = ((P[k + 5] - P[k + 8]) * (X - P[k + 6]) + (P[k + 6] - P[k + 3]) * (Z - P[k + 8])) / d, l2 = ((P[k + 8] - P[k + 2]) * (X - P[k + 6]) + (P[k] - P[k + 6]) * (Z - P[k + 8])) / d, l3 = 1 - l1 - l2;
+      if (l1 < -1e-9 || l2 < -1e-9 || l3 < -1e-9) continue; const y = l1 * P[k + 1] + l2 * P[k + 4] + l3 * P[k + 7]; if (!best || y > best.y) best = { y, c: [0, 1, 2].map(a => (Cc[k + a] + Cc[k + 3 + a] + Cc[k + 6 + a]) / 3) }; }
+    g.dispose(); const want = Sp.plinth(b).hi + lam.y; const blue = best && best.c[2] > best.c[0] + 0.05 && best.c[2] > best.c[1];
+    if (!best || Math.abs(best.y - want) > 0.02 || !blue) lk.push(`de ${n}: ${best ? `o alto a ${(best.y - want).toFixed(2)} m da água, a cor ${best.c.map(c => c.toFixed(2)).join(',')}` : 'nada'}`);
+    else lkSaid.push(`de ${n} casas: a água a ${lam.y.toFixed(2)} m, a cor ${best.c.map(c => c.toFixed(2)).join(',')}`);
+    drop(b); }
+  ok('L1 o lago do jardim sagrado de longe (o antigo e os de 6, 8 e 10 casas): no meio dele, o alto da figura de longe é a água, na altura dela, azul (era o fundo dele: chão marrom)', !lk.length, lk.join(' · ') || lkSaid.join(' · '));
+}
+
 // ================================ part 1: Node ================================
 function nodePart() {
   const T = require(path.join(__dirname, 'tres-node.js'));
   const { G, M, THREE } = T.load({ extra: ['qa/visual/coliseu-teste.js', 'qa/visual/corpo-qa.js'] });
   const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | monumental ${name} | ${info}`); if (!c) fails.push(name); };
+  blankChecks(G, ok); // (F1, L1: on a world of grass, before the ready one)
   M.pronto('metropole');
   const S = G.S, In = G.Interiors, Sp = G.Space, TL = Sp.TILE, B3 = G.Build3D, R3 = G.Realm;
   const bad0 = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg));
@@ -522,7 +584,7 @@ function nodePart() {
 async function browserPart() {
   const VIS = require(path.join(__dirname, 'vistas.js'));
   fs.mkdirSync(OUT, { recursive: true });
-  const { browser, page, errs } = await VIS.open(ROOT, { worlds: ['metropole'], w: 1000, h: 620 });
+  const { browser, page, errs } = await VIS.open(ROOT, { worlds: ['metropole', 'cidade'], w: 1000, h: 620 }); // (the «cidade»: the Colosseum of 13, part 14)
   const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | monumental ${name} | ${info}`); if (!c) fails.push(name); };
   try {
     await page.addScriptTag({ path: path.join(__dirname, 'coliseu-teste.js') });
@@ -701,6 +763,40 @@ async function browserPart() {
     if (hall.ok) await shot('10-templo-egipcio-salao', { body: hall.into, yaw: hall.into, pitch: -0.18, dist: 3.4 });
     { const f = path.join(OUT, '10-templo-egipcio-salao.jpg'); pics3.push(hall.ok && fs.existsSync(f) ? `10-templo-egipcio-salao.jpg ${(fs.statSync(f).size / 1024).toFixed(0)} KB (o corpo no salão: ${hall.inside}, a ${hall.d} m do ponto)` : `10-templo-egipcio-salao: ${hall.why || 'não saiu'}`); }
     ok('12. os templos de 8 casas (grego, egípcio, nórdico) e os palácios de 6 (grego, egípcio, nórdico) pela forma: de fora; o salão hipostilo por dentro', pics3.every(q => /KB/.test(q)) && hall.ok && hall.inside, pics3.join(' · '));
+    // 13. the emperor's box (D-125) of the Colosseum of 10 of part 7: from over the arena before it — the throne, the back row with
+    // its parapet, the rows from the fourth over it, the court's bench across the back landing —; and close, from the podium's edge
+    const bx = await page.evaluate(() => {
+      const H = window.__MON; const b = G.S.buildings.get(window.__b); const nm = H.numbers(b); const F = nm.F; const O = F.amphi && F.amphi.oval;
+      if (!O || !O.boxes || !O.boxes.length) return { ok: false, why: 'a forma sem o camarote' };
+      const T = G.Space.TILE; const W = (u, v) => { const q = G.Forma.toLot(nm.side, F.L, u, v); return [b.x * T + q[0], b.y * T + q[1]]; };
+      const X = O.boxes.find(q => q.seat === 'trono') || O.boxes[0]; const am = (X.span[0] + X.span[1]) / 2; const at = r => W(X.c[0] + r * Math.cos(am), X.c[1] + r * Math.sin(am));
+      const yb = nm.base + O.yb, m = at(X.rB - 0.5), far = at(X.rB - 10), near = at(X.rB - 2.6); const yaw = Math.atan2(m[1] - far[1], m[0] - far[0]);
+      return { ok: true, yaw, far: { P: [far[0], yb + 2.4, far[1]], A: [m[0], yb + 0.8, m[1]] }, near: { P: [near[0], yb + 1.75, near[1]], A: [m[0], yb + 0.5, m[1]] } };
+    });
+    const pics4 = [];
+    if (!bx.ok) pics4.push(bx.why);
+    else for (const [tag, eye, pitch] of [['14-camarote', bx.far, -0.2], ['15-camarote-perto', bx.near, -0.3]]) { await shot(tag, { yaw: bx.yaw + Math.PI, pitch, dist: 4.8, eye }); const f = path.join(OUT, tag + '.jpg'); pics4.push(fs.existsSync(f) ? `${tag}.jpg ${(fs.statSync(f).size / 1024).toFixed(0)} KB` : `${tag}: não saiu`); }
+    ok('13. o camarote do imperador (D-125) no Coliseu de 10: de sobre a arena, diante dele, e de perto, da beira do pódio', bx.ok && pics4.every(q => /KB/.test(q)), pics4.join(' · '));
+    // 14. the colossal Colosseum of 13 tiles in the Roma of the ready world «cidade» (the metropole has no lot of 13 tiles free near
+    // a Roman town: T-441), founded whole by the god's hand — the lot levelled first where it rises —: from outside, the body
+    // before its way in; from the arena
+    const r13 = await page.evaluate(() => {
+      const V = window.__VIS, H = window.__MON; const op = V.open('cidade', 'baixa'); if (!op.ok) return { ok: false, why: 'a cidade não abriu: ' + op.why }; G.S.time = 0.42;
+      const f = H.found('Roma', 60, 'colossal'); if (!f.b) return { ok: false, why: f.why }; const b = f.b; window.__b = b.id;
+      const nm = H.numbers(b); const e = nm.p.entrance; const dx = e.out[0] - e.x, dz = e.out[1] - e.z, l = Math.hypot(dx, dz) || 1; const o = [dx / l, dz / l]; const C = nm.C;
+      const front = H.reach(nm.face, C, o), back = H.reach(nm.face, C, [-o[0], -o[1]]); window.__nm = { C, o };
+      // (the body on open ground before the way in, the street's — a step aside where a tree or a house is)
+      const T = G.Space.TILE; let at = null; for (const d of [14, 12, 16, 18, 10]) for (const du of [0, -3, 3, -6, 6]) { const q = [C[0] + o[0] * (front + d) - o[1] * du, C[1] + o[1] * (front + d) + o[0] * du]; if (!at && G.W.inb(q[0] / T, q[1] / T) && G.W.walkableXY(q[0] / T, q[1] / T) && !G.S.treeAt[G.W.idx(Math.floor(q[0] / T), Math.floor(q[1] / T))]) at = q; }
+      G.Space.planNow(b); V.warm(2); V.f(6);
+      return { ok: true, id: b.id, x: b.x, y: b.y, drop0: f.drop0, h0: f.h0, at: at || [C[0] + o[0] * (front + 14), C[1] + o[1] * (front + 14)], into: Math.atan2(-o[1], -o[0]),
+        P2: [C[0] + o[0] * 5, nm.base + nm.sandY + 1.7, C[1] + o[1] * 5], A2: [C[0] - o[0] * back, nm.base + nm.H * 0.5, C[1] - o[1] * back] };
+    });
+    const pics5 = [];
+    if (!r13.ok) pics5.push(r13.why);
+    else { const s1 = await shot('16-coliseu13-fora', { at: r13.at, attach: true, body: r13.into, yaw: r13.into, pitch: -0.5, dist: 9 }); await shot('17-coliseu13-arena', { body: r13.into, yaw: r13.into, pitch: -0.12, dist: 5.5, eye: { P: r13.P2, A: r13.A2 } });
+      for (const tag of ['16-coliseu13-fora', '17-coliseu13-arena']) { const f = path.join(OUT, tag + '.jpg'); pics5.push(fs.existsSync(f) ? `${tag}.jpg ${(fs.statSync(f).size / 1024).toFixed(0)} KB` : `${tag}: não saiu`); }
+      if (!s1.placed) pics5.push(`o corpo não foi posto diante dele (a ${s1.d} m)`); }
+    ok('14. o Coliseu colossal de 13 casas (a «cidade», Roma): de fora, o corpo diante da entrada; da arena', r13.ok && pics5.every(q => /KB/.test(q)), `${r13.ok ? `#${r13.id} em ${r13.x},${r13.y} (o chão ${r13.drop0} m de desnível${r13.h0 !== null ? ', aplainado' : ''}); ` : ''}${pics5.join(' · ')}`);
   } finally {
     ok('10. sem erro de página nem aviso no console', !errs.length, errs.slice(0, 3).join(' || ') || 'nenhum');
     await browser.close();

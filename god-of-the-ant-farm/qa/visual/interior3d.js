@@ -1,6 +1,7 @@
 // interior3d: the inside of the buildings drawn from G.Interiors' plans — in Node, without a graphics card (qa/visual/
 // tres-node.js: the game's own 3D files, building the geometry the game builds — Build3D.interior):
-//   node qa/visual/interior3d.js [mundo]       (default: the ready world «metropole»: houses, sobrados, insulas, huts)
+//   node qa/visual/interior3d.js [mundo]       (default: the ready world «metropole»: houses, sobrados, insulas, huts — or a
+//                                              save, a file .json: a world with what the ready ones have not yet)
 // For every planned building of the world — and a round hut laid out in its own family, the round shell the world has none
 // of — rays are cast at the geometry the 3D builds, against what the plan says:
 //   1. every number a number; nothing out of the lot; what the inside costs to draw (triangles), by type
@@ -19,7 +20,8 @@
 //   8. pure: the same plan, the same picture; no draw on the world's chance nor on the eye's; the world untouched — the
 //      outside's too
 // The outside drawn from the same shell (Build3D.outside), and the two together as the game shows them when the inside is
-// drawn — the outside's own door openings and court put aside (Build3D.cuts):
+// drawn — the outside's own door openings and court put aside (Build3D.cuts); of a building drawn by its risk (a palace of
+// courts, a temple — Build3D.riskForm), its court (shell.court) and the Greek's porch (Build3D.pronaos) open, the form's (T-442):
 //   9. the outside closes the building: from the street, at every side, between the openings, its face where the shell's
 //      walls have their outer face (a hand of dressing before it at most; where a mass of the form stands before the side,
 //      the form's face before it: T-285), turned out — and from its yard (2), never from within a mass of the form (T-282);
@@ -37,7 +39,7 @@ const path = require('path');
 const T = require(path.join(__dirname, 'tres-node.js'));
 const { G, M, THREE } = T.load();
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | interior3d ${name} | ${info}`); if (!c) fails.push(name); };
-M.pronto(process.argv[2] || 'metropole');
+const ARG = process.argv[2] || 'metropole'; if (/\.json$/.test(ARG)) M.abrir(JSON.parse(require('fs').readFileSync(ARG, 'utf8'))); else M.pronto(ARG);
 const S = G.S, In = G.Interiors, B3 = G.Build3D, TL = G.Space.TILE, CELL = In.CELL;
 const FLOOR_UP = 0.012;
 
@@ -263,7 +265,8 @@ for (const [b, plan, own] of jobs) {
       const low = l.kind === 'jirau' || c === CELL.LOWROOF, from = low ? 0.06 : 0.3;
       if (covered && x > sh0.court[0] - 0.3 && x < sh0.court[2] + 0.3 && z > sh0.court[1] - 0.3 && z < sh0.court[3] + 0.3) continue; // (the plan's: counted apart)
       if (over && over.y > 0.5) continue; // (under a piece hung on the wall — a shelf, the pegs, the keys —: the piece, not the ceiling)
-      nCeil++; const top = cast(TA, W3([x, fy + from, z]), [0, 1, 0], 14, cutAt);
+      // (as high as a temple of 8 tiles goes: the Roman's ceiling 15.6 m over its nave, under its ridge — at 14 m it was the sky)
+      nCeil++; const top = cast(TA, W3([x, fy + from, z]), [0, 1, 0], 30, cutAt);
       const need = low ? 0.1 : 1.75;
       if (!top || !top.front || top.t + from < need) bad.ceil.push(`${tag} piso ${l.lv} (${l.kind}) em ${x.toFixed(2)},${z.toFixed(2)}: ${top ? 'teto a ' + (top.t + 0.3).toFixed(2) + ' m' + (top.front ? '' : ' (avesso)') : 'céu aberto'}`);
     }
@@ -303,6 +306,13 @@ for (const [b, plan, own] of jobs) {
     if (JSON.stringify(S.rng) !== rng1) bad.pure.push(`${tag}: o lado de fora mudou o acaso do mundo`);
     { const c = costX[b.type] = costX[b.type] || { n: 0, sum: 0 }; c.n++; c.sum += ex.solid.p.length / 9; }
     const sh = plan.shell, S2 = ex.S;
+    // (the open parts of a building drawn by its risk — T-442 —: its court, open to the street at its front and to the sky, where the
+    // form's pieces stand; a Greek temple's porch between the antae, under the entablature (Build3D.pronaos): what is seen there is
+    // the form, not a face of the shell, and what stands in them is the outside's)
+    const RFb = B3.riskForm(b), court = RFb && sh.court ? sh.court : null, porch = RFb ? B3.pronaos(b) : null;
+    // (the court with its columns — their bases and capitals, the entablature on them — a hand into the walls round it, never
+    // into the rooms behind them, 0.4 m off)
+    const inOpen = (x, y, z) => (court && x > court[0] - 0.25 && x < court[2] + 0.25 && z > court[1] - 0.25 && z < court[3] + 0.25) || (porch && x > porch.r[0] - 0.02 && x < porch.r[2] + 0.02 && z > porch.r[1] - 0.02 && z < porch.r[3] + 0.02 && y < porch.y1 + 0.03);
     const body = plan.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y); const l0 = body[0] || plan.levels[0];
     // (a shell on a form's body: under its floor the form's base, standing out of the walls as the god's plinth does — the
     // fidelity proof's —: its sides from the floor up)
@@ -354,8 +364,12 @@ for (const [b, plan, own] of jobs) {
         const sn = ax ? o[1] : o[0], a0 = line + Math.min(sn * 0.17, sn * 1.5), a1 = line + Math.max(sn * 0.17, sn * 1.5);
         const massFore = (u, y) => fcov.some(q => (ax ? q[0] < u && q[2] > u && q[1] < a1 && q[3] > a0 : q[1] < u && q[3] > u && q[0] < a1 && q[2] > a0) && q[4] < y && q[5] > y);
         const e = 1e-3; const inMass = p => fcov.some(q => p[0] > q[0] - e && p[0] < q[2] + e && p[2] > q[1] - e && p[2] < q[3] + e && p[1] > q[4] - e && p[1] < q[5] + e); // (on its face too: between the jamb and the lintel)
+        // (a risk's court or porch open on this side — its edge on the side's line —: along it, the form's — T-442)
+        const onSide = r => (sd === 'N' ? Math.abs(r[1] - R[1]) : sd === 'S' ? Math.abs(r[3] - R[3]) : sd === 'W' ? Math.abs(r[0] - R[0]) : Math.abs(r[2] - R[2])) < 0.05;
+        const fronts = [court && onSide(court) ? [court, Infinity] : null, porch && onSide(porch.r) ? [porch.r, porch.y1 + 0.3] : null].filter(Boolean).map(([r, top]) => [ax ? r[0] : r[1], ax ? r[2] : r[3], top]);
         for (let u = u0 + 0.2; u < u1 - 0.19; u += 0.6) for (let y = foot + 0.25; y < yTop; y += 0.7) {
-          if (gaps.some(gp => u > gp[0] && u < gp[2] && y > gp[1] && y < gp[3])) continue; nOut++;
+          if (gaps.some(gp => u > gp[0] && u < gp[2] && y > gp[1] && y < gp[3])) continue;
+          if (fronts.some(f => u > f[0] - 0.05 && u < f[1] + 0.05 && y < f[2])) continue; nOut++;
           const P0 = ax ? [u, y, line + o[1] * 1.5] : [line + o[0] * 1.5, y, u];
           if (sh.yard && P0[0] > sh.yard.r[0] && P0[0] < sh.yard.r[2] && P0[2] > sh.yard.r[1] && P0[2] < sh.yard.r[3]) { nOut--; continue; } // (a side the yard faces: seen from it, 2)
           if (inMass(P0)) { nOut--; continue; } // (nor from within a mass of the form — the pylon's towers round the court, the Egyptian temple's —: no street there)
@@ -372,7 +386,7 @@ for (const [b, plan, own] of jobs) {
         for (const l of plan.levels) { if (l.kind === 'terraco') continue; const A = l.area; if (!A || x <= A[0] + 0.02 || x >= A[2] - 0.02 || z <= A[1] + 0.02 || z >= A[3] - 0.02) continue;
         if (y > l.y + 0.03 && y < Math.min(l.y + l.h, under(x, z)) - 0.03) return l; } return null; };
       for (let k = 0; k + 8 < P.length; k += 9) { const pts = [[P[k], P[k + 1], P[k + 2]], [P[k + 3], P[k + 4], P[k + 5]], [P[k + 6], P[k + 7], P[k + 8]]]; pts.push([(pts[0][0] + pts[1][0] + pts[2][0]) / 3, (pts[0][1] + pts[1][1] + pts[2][1]) / 3, (pts[0][2] + pts[1][2] + pts[2][2]) / 3]);
-        for (const q of pts) { const l = inRoomVol(q[0] - X0, q[1] - Y0, q[2] - Z0); if (l && !cutAt(q)) { n0++; if (ex0.length < 2) ex0.push(`piso ${l.lv} em ${(q[0] - X0).toFixed(2)},${(q[1] - Y0).toFixed(2)},${(q[2] - Z0).toFixed(2)}`); break; } } }
+        for (const q of pts) { const l = inRoomVol(q[0] - X0, q[1] - Y0, q[2] - Z0); if (l && !cutAt(q) && !inOpen(q[0] - X0, q[1] - Y0, q[2] - Z0)) { n0++; if (ex0.length < 2) ex0.push(`piso ${l.lv} em ${(q[0] - X0).toFixed(2)},${(q[1] - Y0).toFixed(2)},${(q[2] - Z0).toFixed(2)}`); break; } } }
       nIn++; if (n0) bad.inside.push(`${tag}: ${n0} triângulos de fora dentro (${ex0.join('; ')})`); }
     // 11. a court and a terrace see the sky (the room on the terrace aside)
     { const rm = sh.roof && sh.roof.room;
