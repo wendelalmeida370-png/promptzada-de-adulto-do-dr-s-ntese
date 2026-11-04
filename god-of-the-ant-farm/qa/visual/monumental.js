@@ -1,4 +1,4 @@
-// monumental: o Coliseu no 3D, com o corpo e a câmera — a parte E da Arquitetura Monumental (1ª rodada):
+// monumental: o Coliseu e o palácio de pátios no 3D, com o corpo e a câmera — a parte E da Arquitetura Monumental (1ª e 2ª rodadas):
 //   node qa/visual/monumental.js [PASTA_DAS_FOTOS]       (padrão: qa/monumental/fotos)
 //   PARTE=node (só a parte em Node: segundos) · PARTE=navegador (só as fotos e o quadro) · sem PARTE: as duas, uma depois da outra
 // O Coliseu fundado pela mão do deus em Roma da metrópole — G.Village.handFound(set, 'maravilha', 'maravilha', { built: true,
@@ -16,15 +16,24 @@
 //      distância livre (inteira no meio) e a câmera nunca na pedra da forma (Build3D.stoneAt) nem no que é sólido (Cam3D.solid)
 //   5. o corpo, pela planta: entra pela entrada, sobe os lances ao piso de onde se assiste e fica nele 10 s (o mundo não o tira dali:
 //      L-550), empurra contra o parapeito e anda ao longo dele sem cair, senta para assistir (o verbo «lugar»), levanta e segue no piso
+//   P. o palácio de pátios do M2 (6 casas, romano), fundado pela mão do deus em Roma (T-407): P1 desenhado pela forma — perto, as
+//      peças da forma com as paredes da casca; longe, as massas da forma (não a caixa de 18 triângulos) —; P2 a frente do pátio
+//      aberta (da rua, pelo vão do portão, o olhar chega ao fundo do pátio); P3 as peças que a planta marca da forma desenhadas, e de
+//      pé com o interior aberto; P4 as escadas grandes com o poço aberto e o guarda-corpo, sem alçapão; P5 o corpo sobe a escada
+//      grande, não anda sobre o poço e desce pelo lance andando; P6 a câmera no pátio e no salão do trono
+//   T. o pódio de pedra (D-120) sob o palácio: o desnível do lote em pedra aparelhada, em fiadas, na pedra do povo; o lote clássico
+//      com o plinto de antes. E (1) o pedaço refeito com a geometria do monumento guardada (Build3D.formKeep): igual, mais depressa
 //   6. o verificador limpo, sem erro de módulo
 // Parte 2 (o navegador, o 3D desenhado por software — lento: poucas fotos, pequenas):
 //   7. as fotos em JPG: de fora (o corpo diante da fachada), da arena olhando as arquibancadas, do alto de um anel
-//   8. o quadro do Modo Encarnado (a medida do e8 do encarna: simulação + 3D, 90 quadros de 16 ms na qualidade média, mediana e
-//      p95) com o corpo diante do lugar do Coliseu — antes de fundá-lo e com ele à vista —, as chamadas e os triângulos; alvo: mediana
-//      ≤ 13 ms com o Coliseu — ou, com a máquina ocupada (os ms do 3D por software valem pouco: T-433), não acima da de antes
+//   8. o quadro do Modo Encarnado (a medida do e8 do encarna: simulação + 3D, quadros de 16 ms na qualidade média, mediana e p95) com o
+//      corpo diante do Coliseu, em turnos — o pedaço do canto dele com e sem ele, trocados a cada 15 quadros, seis vezes cada: a mesma
+//      carga da máquina para os dois (T-433) —; alvo: mediana ≤ 13 ms (ou não acima da sem ele × 1,15) e p95 não pior que a sem ele ×
+//      1,15. E, para ler, antes e depois de fundá-lo (um minuto entre as duas), as chamadas e os triângulos
 //   9. na qualidade leve (um pedaço em volta), o corpo no pedaço além do da ponta de lá do Coliseu: o pedaço do canto dele perto
 //      (sem a silhueta de longe no lugar do prédio inteiro)
 //   10. sem erro de página nem aviso no console
+//   11. o palácio de pátios: as fotos em terceira pessoa — de fora, no pátio, no salão do trono
 const path = require('path'); const fs = require('fs'); const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
 const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'qa', 'monumental', 'fotos'));
@@ -35,9 +44,12 @@ function HELP(G) {
   const H = {};
   // (where the god's hand founds the lot: handFound's own search — the lot and the ring round it dry, free of buildings and walls,
   // no main street nor fire on the lot —, from the town's middle out)
-  H.siteOf = function (set, n, R) {
-    const S = G.S, N = G.N; const ox = Math.floor(set.cx), oy = Math.floor(set.cy);
-    const free = (x, y) => { for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) { if (tx < 2 || ty < 2 || tx >= N - 2 || ty >= N - 2) return false; const i = ty * N + tx;
+  // (o.ring: the tiles round it free of buildings — the square before it the body and the eye stand on —; o.cross: a lot across
+  // two chunks of the map, the one of its corner drawing it whole)
+  H.siteOf = function (set, n, R, o) {
+    o = o || {}; const S = G.S, N = G.N; const ox = Math.floor(set.cx), oy = Math.floor(set.cy); const g = o.ring || 1;
+    const crosses = (x, y) => Math.floor(x / 16) !== Math.floor((x + n - 1) / 16) || Math.floor(y / 16) !== Math.floor((y + n - 1) / 16);
+    const free = (x, y) => { if (o.cross && !crosses(x, y)) return false; for (let ty = y - g; ty < y + n + g; ty++) for (let tx = x - g; tx < x + n + g; tx++) { if (tx < 2 || ty < 2 || tx >= N - 2 || ty >= N - 2) return false; const i = ty * N + tx;
       if (S.occ[i] || S.wall[i] || S.type[i] < G.T.SAND) return false; if (tx >= x && tx < x + n && ty >= y && ty < y + n && (S.road[i] >= 2 || S.fire[i] > 0)) return false; } return true; };
     for (let r = 0; r <= R; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = ox + dx - Math.floor(n / 2), y = oy + dy - Math.floor(n / 2); if (free(x, y)) return [x, y]; }
     return null;
@@ -62,9 +74,10 @@ function HELP(G) {
   // the ground levelled first where it rises more than the form's podium covers (3 m)
   H.found = function (name, R) {
     const S = G.S; const set = [...S.settlements.values()].find(s => s.name === name); if (!set) return { why: 'não há ' + name + ' neste mundo' };
-    const st = G.Escala.steps('maravilha').find(s => s.id === 'maravilha'); const n = st.n; const site = H.siteOf(set, n, R); if (!site) return { why: 'nenhum lote livre de ' + n + ' casas a ' + R + ' do meio de ' + name };
+    const st = G.Escala.steps('maravilha').find(s => s.id === 'maravilha'); const n = st.n; const site = H.siteOf(set, n, R, { cross: true }) || H.siteOf(set, n, R); if (!site) return { why: 'nenhum lote livre de ' + n + ' casas a ' + R + ' do meio de ' + name };
     const drop0 = H.drop(site[0], site[1], n); const h0 = drop0 > 3 ? H.aplainar(site[0], site[1], n) : null;
-    G.inSim++; let b; try { b = G.Village.handFound(set, 'maravilha', 'maravilha', { built: true, x: site[0] + Math.floor(n / 2), y: site[1] + Math.floor(n / 2), R: 0 }); } finally { G.inSim--; }
+    // (R: half a tile — the lot asked, levelled, and only it: handFound's radius of 0 is its 40)
+    G.inSim++; let b; try { b = G.Village.handFound(set, 'maravilha', 'maravilha', { built: true, x: site[0] + Math.floor(n / 2), y: site[1] + Math.floor(n / 2), R: 0.5 }); } finally { G.inSim--; }
     if (!b) return { why: 'o handFound não fundou no lote ' + site };
     return { b, set, site, n, drop0: +drop0.toFixed(1), drop1: +H.drop(site[0], site[1], n).toFixed(1), h0, teste: !!G.ColiseuTeste };
   };
@@ -84,6 +97,39 @@ function HELP(G) {
   };
   // (how far an outline reaches from a middle along a way — its farthest point that way —; the point of an outline a share round it)
   H.reach = (pts, C, o) => Math.max(...pts.map(q => (q[0] - C[0]) * o[0] + (q[1] - C[1]) * o[1]));
+  // the palace of courts (M2's, D-106) of the town named, founded whole by the god's hand — its type and its step —, and what the
+  // proofs read of it: its plan, its form and its risk, the form's frame in the world, the court's and the throne hall's rooms, the
+  // throne, the grand stairs (Build3D.grandWell), the way in
+  H.palace = function (name, type, stepId, R) {
+    const S = G.S; const set = [...S.settlements.values()].find(s => s.name === name); if (!set) return { why: 'não há ' + name + ' neste mundo' };
+    G.inSim++; let b; try { b = G.Village.handFound(set, type, stepId, { built: true, R: R || 60 }); } finally { G.inSim--; }
+    if (!b) return { why: `o handFound não fundou ${type} em ${name}` };
+    return Object.assign({ b, set }, H.palaceOf(b));
+  };
+  H.palaceOf = function (b) {
+    const T = G.Space.TILE, B3 = G.Build3D; const p = G.Space.planNow(b); const F = B3.formOf(b); const Rk = G.Interiors.riskOf(F);
+    const side = B3.formSide(b, B3.shellOf(b)); const W = (u, v) => { const q = G.Forma.toLot(side, F.L, u, v); return [b.x * T + q[0], b.y * T + q[1]]; };
+    const room = fn => p.rooms.find(m => m.fn === fn && m.lv === 0);
+    return { p, F, Rk, side, W, base: G.Space.plinth(b).y0, court: room('patio'), hall: room('trono'), throne: p.items.find(it => it.kind === 'trono'), grand: p.stairs.filter(s => B3.grandWell(s)), e: p.entrance };
+  };
+  // (the body walked to a point in a straight line, as the game walks it — the world's step and the body's, no frame drawn: the
+  // photos' way in; the flights it runs into taken whole)
+  H.walk = function (X, Z, max, near) {
+    const IN = G.Avatar.input, st = () => G.Avatar.state(), RDT = 1 / 30; const fr = () => { G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); }; let still = 0, last = [st().X, st().Z];
+    for (let k = 0; k < (max || 600); k++) { const dx = X - st().X, dz = Z - st().Z; if (Math.hypot(dx, dz) < (near || 0.2)) break;
+      IN.camYaw = Math.atan2(dz, dx); IN.mz = 1; IN.mx = 0; fr(); if (st().loco === 'stair') for (let j = 0; j < 600 && st().loco === 'stair'; j++) fr();
+      if (Math.hypot(st().X - last[0], st().Z - last[1]) < 0.004) { if (++still > 25) break; } else still = 0; last = [st().X, st().Z]; }
+    IN.mz = 0; IN.mx = 0; for (let q = 0; q < 6; q++) fr(); return Math.hypot(X - st().X, Z - st().Z);
+  };
+  // (a door of a plan between two rooms — its middle, in the lot's metres —, and the way through it from one room to the other: the
+  // points a hand before it on either side)
+  H.doorBetween = function (p, ra, rb) {
+    for (const d of p.doors) { if (!(d.rooms.includes(ra) && d.rooms.includes(rb))) continue; const h = p.holes.find(q => q.door === d.id); const w = p.walls[d.wall]; if (!h || !w) continue;
+      const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L; const m = [w.a[0] + tx * h.at, w.a[1] + tz * h.at];
+      const A = p.rooms.find(q => q.id === ra); const nx = -tz, nz = tx; const s = ((A.r[0] + A.r[2]) / 2 - m[0]) * nx + ((A.r[1] + A.r[3]) / 2 - m[1]) * nz >= 0 ? 1 : -1;
+      return { id: d.id, m, a: [m[0] + nx * s * 0.9, m[1] + nz * s * 0.9], b: [m[0] - nx * s * 0.9, m[1] - nz * s * 0.9] }; }
+    return null;
+  };
   return H;
 }
 
@@ -107,8 +153,14 @@ function nodePart() {
   for (const k of [...new Set(F.els.map(e => e.k))]) { G.Forma.of = (t, s, n) => (t === b.type && n === b.w ? Object.assign({}, F, { els: F.els.filter(e => e.k === k) }) : of0(t, s, n)); per.push(`${k} ${(B3.cost(b).solid / 1000).toFixed(1)}`); }
   G.Forma.of = of0;
   const cost = B3.cost(b); const C = 16; const cx0 = Math.floor(b.x / C) * C, cy0 = Math.floor(b.y / C) * C;
-  let ms = 1e9; for (let k = 0; k < 3; k++) { const t0 = performance.now(); B3.nearGeo(cx0, cy0, C); ms = Math.min(ms, Math.round(performance.now() - t0)); }
-  ok('1. os triângulos perto no teto (o detalhe fino)', cost.solid <= tetoPerto, `${cost.solid} triângulos (teto ${tetoPerto}) — por peça, mil: ${per.join(' · ')}; o pedaço ${cx0 / C},${cy0 / C} feito em ${ms} ms`);
+  // (the chunk drawn again: with the monument's geometry drawn anew — Build3D.formKeep off — and with it kept; the same triangles)
+  const chunkMs = () => { let t = 1e9; for (let k = 0; k < 3; k++) { const t0 = performance.now(); const r = B3.nearGeo(cx0, cy0, C); t = Math.min(t, performance.now() - t0); for (const q in r) if (r[q]) r[q].dispose(); } return +t.toFixed(1); };
+  const arr = () => { const r = B3.nearGeo(cx0, cy0, C); const a = { p: Array.from(r.solid.attributes.position.array), c: Array.from(r.solid.attributes.color.array), w: r.glass ? r.glass.attributes.position.count : 0 }; for (const q in r) if (r[q]) r[q].dispose(); return a; };
+  B3.formKeep = false; const msCold = chunkMs(); const A0 = arr(); B3.formKeep = true; B3.nearGeo(cx0, cy0, C); const made0 = B3.formKept().made; const msWarm = chunkMs(); const A1 = arr(); const redrawn = B3.formKept().made - made0;
+  const same = A0.p.length === A1.p.length && A0.w === A1.w && A0.p.every((x, i) => Math.abs(x - A1.p[i]) < 1e-3) && A0.c.every((x, i) => Math.abs(x - A1.c[i]) < 1e-4);
+  ok('1. os triângulos perto no teto (o detalhe fino)', cost.solid <= tetoPerto, `${cost.solid} triângulos (teto ${tetoPerto}) — por peça, mil: ${per.join(' · ')}`);
+  // (the ms are the machine's — shared, they say little —: the proof is that the Colosseum is not drawn again, and the same comes out)
+  ok('1. o pedaço refeito com a geometria do monumento guardada: igual, sem desenhar o Coliseu de novo', same && !redrawn, `o pedaço ${cx0 / C},${cy0 / C} feito de novo 4 vezes com ele guardado: ${redrawn} vezes desenhado (${B3.formKept().n} guardados); ${same ? 'os mesmos triângulos, as mesmas cores' : 'DIFERENTE'} (${A0.p.length / 9} triângulos); ${msCold} ms desenhando o Coliseu, ${msWarm} ms com ele guardado (o mínimo de 3)`);
   // (the far figure of the chunk with only this building in it: the far picture of its chunk less the one without it)
   const farOf = () => { const g = B3.farGeo(cx0, cy0, C); return g ? g.attributes.position.count / 3 : 0; };
   const far1 = farOf(); const keep = S.buildings.get(b.id); S.buildings.delete(b.id); const far0 = farOf(); S.buildings.set(b.id, keep);
@@ -210,6 +262,121 @@ function nodePart() {
     const fine = B3.fineAt(cx0, cy0, C); const D = 35 * (R3.Q().lod || 1);
     ok('2. junto da ponta de lá do Coliseu, o detalhe fino (pela beira do que o pedaço desenha)', fine && r[2] >= b.x + b.w && r[3] >= b.y + b.h, `o corpo a ${dOwn.toFixed(0)} m do pedaço do canto (o fino até ${D.toFixed(0)} m), junto do Coliseu; o pedaço desenha até ${r[2]},${r[3]}: fino ${fine}`);
     G.Possess.release('deus'); G.Avatar.detach(); }
+  // ================ P. the palace of courts (M2's of 6 tiles, the Roman's: its dome, its screen of columns — T-407) ================
+  const PZ = H.palace('Roma', 'palacio', 'palacio', 60);
+  if (!PZ.b) ok('P. o palácio fundado em Roma', false, PZ.why);
+  else {
+    const pb = PZ.b, pp = PZ.p, PF = PZ.F, RK = PZ.Rk; const px0 = pb.x * TL, pz0 = pb.y * TL, pbase = PZ.base; const pat = (x, z) => [px0 + x, pz0 + z];
+    console.log(`(o palácio #${pb.id} de ${pb.w} casas em ${pb.x},${pb.y}: a planta ${pp.ok ? 'pronta' : 'falhou'}, a família ${pb.ip && pb.ip.f}; o pódio de ${RK.Hp} m, o beiral a ${RK.eave} m, o alto da forma ${PF.top.toFixed(1)} m; ${PZ.grand.length} escadas grandes)`);
+    // P1. drawn by its form: near — the form's pieces with the shell's walls — and far — the form's masses, not the shell's box
+    const pc = B3.cost(pb); const pcx = Math.floor(pb.x / C) * C, pcy = Math.floor(pb.y / C) * C;
+    let pms = 1e9; for (let k = 0; k < 3; k++) { const t0 = performance.now(); B3.nearGeo(pcx, pcy, C); pms = Math.min(pms, Math.round(performance.now() - t0)); }
+    const all2 = S.buildings; S.buildings = new Map([[pb.id, pb]]); let pfg, pnear; try { pfg = B3.farGeo(pcx, pcy, C); pnear = B3.nearGeo(pcx, pcy, C); } finally { S.buildings = all2; }
+    pfg.computeBoundingBox(); const pfar = pfg.attributes.position.count / 3; const ptop = pfg.boundingBox.max.y - pbase;
+    ok('P1. o palácio desenhado pela forma: perto e longe', B3.byForm(pb) && !!B3.riskForm(pb) && pc.solid <= 60000 && pfar > 100 && pfar <= 2000 && Math.abs(ptop - PF.top) <= 0.5, `pela forma: ${B3.byForm(pb)}; perto ${pc.solid} triângulos (+${pc.glass} de vidro), o pedaço feito em ${pms} ms; longe ${pfar} triângulos (a caixa da casca: 18), o alto de longe ${ptop.toFixed(1)} m, o da forma ${PF.top.toFixed(1)} m`);
+    // T. the stone podium (D-120): the lot's drop under the palace's floor, in dressed stone ----------------
+    // (its faces on the lot's edges — 0.1 m in, the plinth's —: each side with a drop has its stones, of many tones — a block's own
+    // —, none over the floor's height; the drop of the side; a building of its type's classic lot keeps the plinth of before)
+    { const b = pb, f = PZ; const ng = { solid: pnear.solid };
+      const pl = Sp.plinth(b); const X0 = b.x * TL + 0.1, Z0 = b.y * TL + 0.1, X1 = (b.x + b.w) * TL - 0.1, Z1 = (b.y + b.h) * TL - 0.1;
+      const P = ng.solid.attributes.position.array, Cl = ng.solid.attributes.color ? ng.solid.attributes.color.array : null; const per = { N: 0, E: 0, S: 0, W: 0 }; const tones = new Set(); let over = 0;
+      for (let i = 0; i < P.length; i += 9) { const xs = [P[i], P[i + 3], P[i + 6]], ys = [P[i + 1], P[i + 4], P[i + 7]], zs = [P[i + 2], P[i + 5], P[i + 8]];
+        const on = (arr, v) => arr.every(q => Math.abs(q - v) < 0.06); const sd = on(zs, Z0) ? 'N' : on(zs, Z1) ? 'S' : on(xs, X0) ? 'W' : on(xs, X1) ? 'E' : null; if (!sd) continue;
+        per[sd]++; if (Math.max(...ys) > pl.y0 + 0.02) over++; if (Cl) tones.add([0, 1, 2].map(c => Math.round(Cl[i + c] * 60)).join(',')); }
+      const dropOf = sd => { let lo2 = Infinity; for (let k = 0; k <= 40; k++) { const f = k / 40; const x = sd === 'W' ? b.x : sd === 'E' ? b.x + b.w : b.x + b.w * f, y = sd === 'N' ? b.y : sd === 'S' ? b.y + b.h : b.y + b.h * f; lo2 = Math.min(lo2, Sp.drawnAt(Math.min(G.N - 0.001, x), Math.min(G.N - 0.001, y))); } return pl.y0 - lo2; };
+      const drops = {}; for (const sd of ['N', 'E', 'S', 'W']) drops[sd] = +dropOf(sd).toFixed(1);
+      const classic = [...S.buildings.values()].find(q => q.built && q.set === f.set.id && G.BDEF[q.type] && q.w === (G.BDEF[q.type].w || 1) && !Sp.baseless(q));
+      ok('T. o pódio de pedra (D-120): o desnível do lote em pedra aparelhada, em fiadas, na pedra do povo', B3.bigStep(b) && ['N', 'E', 'S', 'W'].every(sd => drops[sd] < 0.3 || per[sd] > 8) && tones.size >= 6 && !over && !!classic && !B3.bigStep(classic),
+        `o desnível por lado ${['N', 'E', 'S', 'W'].map(sd => `${sd} ${drops[sd]} m: ${per[sd]} triângulos`).join(', ')}; ${tones.size} tons de pedra; acima do piso: ${over}; um prédio do lote clássico (${classic ? classic.type : 'nenhum'}) com o plinto de antes: ${classic ? !B3.bigStep(classic) : '-'}`);
+      }
+    // P2. the court's open front: from the street through the gate's bay — at the eye's height and over the doors' tops —, the eye
+    // reaches the court's back, the wing of state's face, not a wall across the front
+    const mesh = new THREE.Mesh(pnear.solid, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); mesh.updateMatrixWorld();
+    const rcs = new THREE.Raycaster(); const o2 = PZ.W(RK.L / 2, RK.L), bk = PZ.W(RK.L / 2, RK.C[1]); const dl = Math.hypot(bk[0] - o2[0], bk[1] - o2[1]); const dn = [(bk[0] - o2[0]) / dl, (bk[1] - o2[1]) / dl];
+    const rays = [1.6, 5.0].map(hh => { rcs.set(new THREE.Vector3(o2[0] + dn[0] * 0.3, pbase + RK.Hp + hh, o2[1] + dn[1] * 0.3), new THREE.Vector3(dn[0], 0, dn[1])); rcs.far = 60; const hit = rcs.intersectObject(mesh)[0]; return { hh, d: hit ? +(hit.distance + 0.3).toFixed(1) : null }; });
+    const deep = RK.L - RK.C[1];
+    // (and with the inside drawn — the floors, the walls, the ceilings: the upper storey's slab, at its height, no beam across the
+    // court's front, L-555)
+    const insG = B3.interior(pp, pb); const im = new THREE.Group(); for (const k in insG.lv) if (!insG.lv[k].empty) im.add(new THREE.Mesh(insG.lv[k].build(), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }))); if (!insG.roof.empty) im.add(new THREE.Mesh(insG.roof.build(), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }))); im.updateMatrixWorld(true);
+    const l1 = pp.levels.find(l => l.lv === 1); const hIn = l1 ? l1.y - RK.Hp - 0.05 : 4.75;
+    rcs.set(new THREE.Vector3(o2[0] + dn[0] * 0.3, pbase + RK.Hp + hIn, o2[1] + dn[1] * 0.3), new THREE.Vector3(dn[0], 0, dn[1])); const hitIn = rcs.intersectObject(im, true)[0]; const dIn = hitIn ? +(hitIn.distance + 0.3).toFixed(1) : null;
+    ok('P2. a frente do pátio aberta: da rua, pelo vão do portão, o olhar chega ao fundo do pátio', !RK.big && rays.every(q => q.d !== null && q.d >= deep - 0.6) && (dIn === null || dIn >= deep - 0.6), `do meio da frente do lote ao fundo do pátio ${deep.toFixed(1)} m; o olhar a ${rays.map(q => `${q.hh} m: para a ${q.d} m`).join(', ')} (a frente que subia em altura cheia parava em ${(RK.L - RK.B[3]).toFixed(1)}); com o interior desenhado, na altura da laje de cima (${hIn.toFixed(1)} m): ${dIn === null ? 'nada no caminho' : 'para a ' + dIn + ' m'}`);
+    // P3. the pieces of the courts the plan marks the form's (form: 1 — the fountain, the cypresses, the statues…): drawn, each in its
+    // place, and none of them where the inside, once drawn, takes the outside away (B3.cuts)
+    const cuts = B3.cuts(pb); const inCut = q => cuts.some(c2 => q[0] > c2[0] && q[1] > c2[1] && q[2] > c2[2] && q[0] < c2[3] && q[1] < c2[4] && q[2] < c2[5]);
+    const PA = pnear.solid.attributes.position.array; const mids = []; for (let i = 0; i < PA.length; i += 9) mids.push([(PA[i] + PA[i + 3] + PA[i + 6]) / 3, (PA[i + 1] + PA[i + 4] + PA[i + 7]) / 3, (PA[i + 2] + PA[i + 5] + PA[i + 8]) / 3]);
+    const lvY = lv => (pp.levels.find(l => l.lv === lv) || { y: 0 }).y;
+    const pieces = pp.items.filter(it => it.form).map(it => { const X = px0 + it.x, Z = pz0 + it.z, r = Math.max(it.w, it.d) / 2 + 0.15, y0 = pbase + lvY(it.lv) - 0.05, y1 = y0 + (it.h || 1) + 1;
+      let n = 0, cut = 0; for (const q of mids) if (Math.abs(q[0] - X) <= r && Math.abs(q[2] - Z) <= r && q[1] >= y0 && q[1] <= y1) { n++; if (inCut(q)) cut++; } return { kind: it.kind, n, cut }; });
+    ok('P3. as peças dos pátios que a planta marca da forma: desenhadas, e de pé com o interior aberto', pieces.length > 0 && pieces.every(q => q.n > 0 && !q.cut), `${pieces.length} peças: ${pieces.map(q => `${q.kind} ${q.n}${q.cut ? ` (${q.cut} cortados)` : ''}`).join(', ')}; ${cuts.length} cortes (as faces do pátio e as portas)`);
+    // P4. the grand stairs: their wells open — no lid —, the rail round them on the storey they come up to
+    const ins = B3.interior(pp, pb); const gs = PZ.grand; const lids = ins.hatch.filter(h => gs.some(s2 => s2.id === h.id)).length;
+    const rails = gs.map(s2 => { const g = ins.lv[s2.lv1]; const A = g.p; const r = s2.hole; const yl = pbase + lvY(s2.lv1); let n = 0;
+      for (let i = 0; i < A.length; i += 9) { const x = (A[i] + A[i + 3] + A[i + 6]) / 3 - px0, y = (A[i + 1] + A[i + 4] + A[i + 7]) / 3, z = (A[i + 2] + A[i + 5] + A[i + 8]) / 3 - pz0;
+        if (y > yl + 0.05 && y < yl + 1.05 && x > r[0] - 0.2 && x < r[2] + 0.2 && z > r[1] - 0.2 && z < r[3] + 0.2 && !(x > r[0] + 0.15 && x < r[2] - 0.15 && z > r[1] + 0.15 && z < r[3] - 0.15)) n++; }
+      return n; });
+    ok('P4. as escadas grandes: o poço aberto, sem alçapão, com o guarda-corpo em volta', gs.length > 0 && !lids && rails.every(n => n > 0), `${gs.length} escadas de ${gs.map(s2 => s2.w).join(', ')} m: ${lids} tampas (o alçapão de antes: uma em cada); o guarda-corpo, ${rails.join(', ')} triângulos`);
+    // P5. the body: in by the gate, across the court and into the room of the stair, up it; on the upper storey, never over the open
+    // well (its rail), and from the landing down the flight as one walks
+    const v2 = [...S.villagers.values()].filter(q => q.set === PZ.set.id && q.age >= 18 && q.age < 55 && !q.inside && G.Possess.can(q).ok).sort((a2, b2) => a2.id - b2.id)[0];
+    const pe = PZ.e; const s2 = gs[0]; const py = () => +(st().Y - pbase).toFixed(2); let walk = null, walk0 = 'sem porta'; S.time = 0.42;
+    if (v2 && s2 && pe && pe.out) {
+      G.inSim++; G.Vg.endTask(v2); v2.x = (px0 + pe.out[0]) / TL; v2.y = (pz0 + pe.out[1]) / TL; v2.path = null; G.inSim--;
+      G.Possess.take(v2); G.Avatar.attach(v2, 0); G.Cam3D.attach(G.Avatar.pos(), 0); for (let k = 0; k < 6; k++) frame();
+      walkTo(...pat(pe.x, pe.z), 900); const inn = PZ.W(RK.L / 2, (RK.C[1] + RK.C[3]) / 2); walkTo(inn[0], inn[1], 900);
+      const sr = pp.rooms.find(m => m.lv === s2.lv0 && s2.a[0] > m.r[0] && s2.a[0] < m.r[2] && s2.a[1] > m.r[1] && s2.a[1] < m.r[3]); const dr = sr && H.doorBetween(pp, PZ.court.id, sr.id);
+      // (the room's door off the court opened by the hand, as the verb «Abrir a porta» does — Interiors.useDoor —, by day)
+      if (dr) { G.inSim++; const od = In.useDoor(pb, dr.id, 'abrir', v2); G.inSim--; walk0 = od.ok ? 'aberta' : od.why; walkTo(...pat(dr.a[0], dr.a[1]), 900); walkTo(...pat(dr.b[0], dr.b[1]), 600); }
+      walkTo(...pat(s2.a[0], s2.a[1]), 900); const atFoot = { lv: lvl(), y: py() };
+      // (up the flight to its top on the storey above — the strip of floor between the well's far end and the room's wall)
+      walkTo(...pat(s2.b[0], s2.b[1]), 1500); const up = { lv: lvl(), y: py() };
+      // (at its top, across the well's end both ways — along its edge, the rail beside it: the body stays on the storey, out of the
+      // well, never over it —, back to the top)
+      const hr = s2.hole, inWell = () => { const x = st().X - px0, z = st().Z - pz0; return x > hr[0] && x < hr[2] && z > hr[1] && z < hr[3]; }; let over = null;
+      if (up.lv === s2.lv1) { over = { lv: [], y: [], inWell: false };
+        for (const q of [[-s2.dir[1], s2.dir[0]], [s2.dir[1], -s2.dir[0]]]) { walkTo(...pat(s2.b[0] + q[0] * 3, s2.b[1] + q[1] * 3), 240); over.lv.push(lvl()); over.y.push(py()); over.inWell = over.inWell || inWell(); walkTo(...pat(s2.b[0], s2.b[1]), 240); } }
+      // (from its top, into the flight against the climb: down it, as one walks — Avatar's takeFlight, the grand well's)
+      const back = { lv: lvl(), y: py() }; walkTo(...pat(s2.a[0], s2.a[1]), 1500); const down = { lv: lvl(), y: py(), from: back.lv };
+      walk = { atFoot, up, over, down, y1: lvY(s2.lv1), y0: lvY(s2.lv0) };
+      G.Possess.release('deus'); G.Avatar.detach();
+    }
+    ok('P5. o corpo sobe a escada grande, não anda sobre o poço aberto e desce pelo lance andando', !!walk && walk.up.lv === s2.lv1 && Math.abs(walk.up.y - walk.y1) < 0.1 && !!walk.over && !walk.over.inWell && walk.over.lv.every(l => l === s2.lv1) && walk.over.y.every(q => Math.abs(q - walk.y1) < 0.1) && walk.down.from === s2.lv1 && walk.down.lv === s2.lv0 && Math.abs(walk.down.y - walk.y0) < 0.1,
+      walk ? `a porta do cômodo da escada ${walk0}; no pé da escada piso ${walk.atFoot.lv} a ${walk.atFoot.y} m; em cima piso ${walk.up.lv} a ${walk.up.y} m (o piso a ${walk.y1}); de lado no alto do poço, para os dois lados: ${walk.over ? `pisos ${walk.over.lv.join(', ')} a ${walk.over.y.join(', ')} m, ${walk.over.inWell ? 'DENTRO do poço' : 'nunca dentro dele'}` : 'não chegou'}; do alto do lance (piso ${walk.down.from}) para ele: piso ${walk.down.lv} a ${walk.down.y} m` : 'sem corpo, sem escada ou sem entrada');
+    // P6. the camera in the court — the sky over it — and in the throne hall: the distance asked, never in stone nor in what is solid
+    const yCourt = pbase + RK.Hp + 0.012; const cc = PZ.W(RK.L / 2, (RK.C[1] + RK.C[3]) / 2 + 1); const toHall = Math.atan2(bk[1] - cc[1], bk[0] - cc[0]);
+    const qC = camAt(cc[0], yCourt, cc[1], toHall, 0.15, 4.8);
+    const hm = PZ.W(RK.L / 2, (RK.B[1] + RK.C[1]) / 2 + 1.2), th = PZ.W(RK.L / 2, RK.B[1]); const toThrone = Math.atan2(th[1] - hm[1], th[0] - hm[0]); const qH = camAt(hm[0], yCourt, hm[1], toThrone, 0.15, 4.8);
+    const roomH = (RK.C[1] - ((RK.B[1] + RK.C[1]) / 2 + 1.2)) - 0.3; // (behind the body in the hall, to its court wall)
+    ok('P6. a câmera no pátio e no salão do trono: a distância pedida, nunca na pedra', qC.cur >= 4.3 && qH.cur >= Math.min(4.8, roomH) * 0.8 && !qC.stone && !qH.stone, `no pátio ${qC.cur.toFixed(1)} m de 4,8${qC.stone ? ' (NA PEDRA)' : ''}; no salão do trono ${qH.cur.toFixed(1)} m (até a parede do pátio ${roomH.toFixed(1)})${qH.stone ? ' (NA PEDRA)' : ''}`);
+    G.Cam3D.OPT.follow = true;
+  }
+  // ================ M. the body at its own table (D-104): «Sentar à mesa» always; seated, the meal — when there is what to eat ================
+  // (a grown-up of Roma whose house has a table, from the street in by its door — opened by the hand, as the verb does —, to it)
+  { const tableOf = h => { const p = h && h.built && h.type !== 'ruin' && Sp.planNow(h); return p && p.ok && p.entrance && p.entrance.out && p.items.some(it => /mesa/i.test((In.ITEMS[it.kind] || {}).name || '')) ? p : null; };
+    const cands = [...S.villagers.values()].filter(q => q.age >= 18 && q.age < 60 && q.home && !q.inside && !q.sleeping && q.set === (PZ.set || {}).id && G.Possess.can(q).ok && tableOf(S.buildings.get(q.home))).sort((a2, b2) => a2.id - b2.id).slice(0, 6);
+    let M0 = null, tried = 0;
+    for (const w of cands) {
+      const h = S.buildings.get(w.home), hp = tableOf(h); const hx = h.x * TL, hz = h.y * TL; const e = hp.entrance; tried++;
+      G.inSim++; G.Vg.endTask(w); w.x = (hx + e.out[0]) / TL; w.y = (hz + e.out[1]) / TL; w.path = null; S.time = 0.42; In.useDoor(h, e.door, 'abrir', w); G.inSim--;
+      G.Possess.take(w); G.Avatar.attach(w, 0); for (let k = 0; k < 6; k++) frame();
+      walkTo(hx + e.x, hz + e.z, 600); walkTo(hx + e.x - (e.out[0] - e.x) * 0.6, hz + e.z - (e.out[1] - e.z) * 0.6, 300);
+      const lv = lvl(); const here = () => [st().X - hx, st().Z - hz];
+      const pl = lv === undefined ? null : In.freeNear(h, lv, here()[0], here()[1], 30).filter(q => q.use === 'comer').sort((a2, b2) => Math.hypot(a2.x - here()[0], a2.z - here()[1]) - Math.hypot(b2.x - here()[0], b2.z - here()[1]))[0];
+      if (pl) { const sf = In.standFor(h, pl, here()[0], here()[1]); walkTo(hx + sf[0], hz + sf[1], 600, 0.3);
+        if (Math.hypot(st().X - hx - sf[0], st().Z - hz - sf[1]) < 0.6) {
+          const look = () => { const ya = Math.atan2(hz + pl.z - st().Z, hx + pl.x - st().X); IN.camYaw = ya; st().yaw = ya; frame(); return G.Interact.best(); };
+          // (not hungry, the pantry as it is: at the table it sits)
+          G.inSim++; w.hunger = 5; G.inSim--; const b0 = look(); let seated = false;
+          if (b0 && b0.id === 'lugar') { G.Interact.run(b0); for (let k = 0; k < 150 && !(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); k++) frame(); seated = !!(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); }
+          // (seated: the meal of the house — without hunger, said why; with hunger, offered)
+          const b1 = G.Interact.best(); G.inSim++; w.hunger = 60; G.inSim--; const b2 = G.Interact.best();
+          const tx = b => (b ? `${b.id} «${b.label}»${b.ok ? '' : ' (' + b.why + ')'}` : 'nada');
+          M0 = { who: w.name, house: h.type + '#' + h.id, b0: tx(b0), seated, b1: tx(b1), b2: tx(b2), ok: !!b0 && b0.id === 'lugar' && b0.ok && seated && !!b2 && b2.id === 'atividade' && /comer|cear/i.test(b2.label) };
+        }
+      }
+      G.Possess.release('deus'); G.Avatar.detach(); for (let k = 0; k < 90; k++) frame(); if (M0) break; // (the world takes the person back in its step, as in the game)
+    }
+    ok('M. o corpo à própria mesa (D-104): sem fome, senta; sentado, a refeição da casa', !!M0 && M0.ok, M0 ? `${M0.who} em casa (${M0.house}): de pé, sem fome — ${M0.b0}; sentado: ${M0.seated}; sentado, sem fome — ${M0.b1}; com fome — ${M0.b2}` : `nenhuma das ${tried} casas com mesa de Roma deixou o corpo chegar à mesa`); }
   // ---------------- 6. the verifier ----------------
   const vb = QA.check().filter(q => q.sev <= 2 && !bad0.has(q.sys + '|' + q.msg)); const er = M.erros();
   ok('6. o verificador limpo, sem erro de módulo', !vb.length && !Object.keys(er.mod).length && !er.console.length, `${vb.length ? vb.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo'}; módulos ${JSON.stringify(er.mod)}; console ${er.console.slice(0, 2).join(' | ') || 'limpo'}`);
@@ -230,7 +397,7 @@ async function browserPart() {
     const r0 = await page.evaluate(() => {
       const V = window.__VIS, H = window.__MON; V.open('metropole', 'baixa'); const S = G.S; G.S.time = 0.42;
       const set = [...S.settlements.values()].find(s => s.name === 'Roma'); const n = G.Escala.steps('maravilha').find(s => s.id === 'maravilha').n;
-      const site = H.siteOf(set, n, 60); const drop0 = H.drop(site[0], site[1], n); const h0 = drop0 > 3 ? H.aplainar(site[0], site[1], n) : null;
+      const site = H.siteOf(set, n, 60, { cross: true }) || H.siteOf(set, n, 60); const drop0 = H.drop(site[0], site[1], n); const h0 = drop0 > 3 ? H.aplainar(site[0], site[1], n) : null;
       window.__site = { set: set.id, site, n, drop0, h0 };
       // (the body: a grown-up of Roma, put on the square before the lot's south side — the way in faces the street, found below)
       const v = [...S.villagers.values()].filter(q => q.set === set.id && q.age >= 18 && q.age < 55 && !q.inside && G.Possess.can(q).ok).sort((a, b) => a.id - b.id)[0];
@@ -254,20 +421,45 @@ async function browserPart() {
     const before = await measure();
     const r1 = await page.evaluate(() => {
       const H = window.__MON; const s = window.__site; const set = G.S.settlements.get(s.set);
-      G.inSim++; let b; try { b = G.Village.handFound(set, 'maravilha', 'maravilha', { built: true, x: s.site[0] + Math.floor(s.n / 2), y: s.site[1] + Math.floor(s.n / 2), R: 0 }); } finally { G.inSim--; }
+      G.inSim++; let b; try { b = G.Village.handFound(set, 'maravilha', 'maravilha', { built: true, x: s.site[0] + Math.floor(s.n / 2), y: s.site[1] + Math.floor(s.n / 2), R: 0.5 }); } finally { G.inSim--; }
       if (!b) return { ok: false }; window.__b = b.id; const nm = H.numbers(b); const e = nm.p.entrance; const dx = e.out[0] - e.x, dz = e.out[1] - e.z, l = Math.hypot(dx, dz) || 1; const o = [dx / l, dz / l];
       const reach = q => H.reach(nm.face, nm.C, q); const dg = [(o[0] - o[1]) / Math.SQRT2, (o[1] + o[0]) / Math.SQRT2];
       window.__nm = { C: nm.C, H: nm.H, base: nm.base, sandY: nm.sandY, e, o, front: reach(o), back: reach([-o[0], -o[1]]), diag: reach(dg), dg };
       return { ok: true, id: b.id, x: b.x, y: b.y, teste: !!G.ColiseuTeste };
     });
     if (!r1.ok) { ok('7. o Coliseu fundado', false, 'o handFound não fundou'); return fails; }
+    // (its plan made — once, when the eye first asks for it: Space.plan, the pump's — and its chunk drawn with it: the frame
+    // measured with the Colosseum in view as it stays; the one time a chunk is drawn again for it is the part 1's measure)
+    await page.evaluate(() => { const V = window.__VIS; G.Space.planNow(G.S.buildings.get(window.__b)); V.warm(2); V.f(10, 33); });
     const after = await measure();
     console.log(`(o Coliseu ${r1.teste ? 'DE TESTE' : 'do M1'} #${r1.id} em ${r1.x},${r1.y}; o chão do lote tinha ${r0.drop0} m de desnível${r0.h0 !== null ? ', aplainado pela mão do deus' : ''}; o corpo: ${r0.who})`);
+    // (and in turns, under the same load — the machine is shared: a frame measured before the founding and one a minute after are
+    // worth little, T-433 —: the chunk of the Colosseum's corner drawn with it and without it, swapped every 15 frames, six times
+    // each; the frame as the e8 measures it. The one time the chunk is drawn again for it is part 1's)
+    const turns = await page.evaluate(() => {
+      const V = window.__VIS, R3 = G.Realm, B3 = G.Build3D, S = G.S; const b = S.buildings.get(window.__b); const T = G.Space.TILE, C = 16;
+      const st = G.Avatar.state(); const s = window.__site; const cx = (s.site[0] + s.n / 2) * T, cz = (s.site[1] + s.n / 2) * T; const yaw = Math.atan2(cz - st.Z, cx - st.X);
+      R3.setQuality('media'); V.warm(2); st.yaw = yaw; G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = 0.12; G.Cam3D.dist = 4.8; V.f(20, 33);
+      const x0 = Math.floor(b.x / C) * C, y0 = Math.floor(b.y / C) * C;
+      // (the chunk's buildings as the realm drew them: its solid mesh — the one with as many points as the chunk's buildings drawn
+      // again here, the same drawing)
+      const MS = R3.mats().solid; let M = null; const ref = B3.nearGeo(x0, y0, C); const nRef = ref.solid ? ref.solid.attributes.position.count : -1; for (const q in ref) if (ref[q]) ref[q].dispose();
+      R3.scene().traverse(o => { if (!M && o.isMesh && o.material === MS && o.geometry && o.geometry.attributes.position && o.geometry.attributes.position.count === nRef) M = o; });
+      if (!M) { R3.setQuality('baixa'); return { none: true }; }
+      const keep = S.buildings.get(b.id); S.buildings.delete(b.id); let wo; try { wo = B3.nearGeo(x0, y0, C); } finally { S.buildings.set(b.id, keep); }
+      const withG = M.geometry, noG = wo.solid || new THREE.BufferGeometry();
+      const run = (g, n, out) => { M.geometry = g; for (let k = 0; k < n; k++) { const t0 = performance.now(); G.Main.frameFor(16); out.push(performance.now() - t0); } };
+      const A = [], B = []; run(withG, 6, []); for (let k = 0; k < 6; k++) { run(withG, 15, A); run(noG, 15, B); }
+      M.geometry = withG; for (const q in wo) if (wo[q] && wo[q] !== noG) wo[q].dispose(); noG.dispose();
+      { const re = B3.nearGeo(x0, y0, C); for (const q in re) if (re[q]) re[q].dispose(); } // (the chunk's lamps and tops as they were)
+      R3.setQuality('baixa');
+      const q = (a, p) => { const s2 = a.slice().sort((x, y) => x - y); return +s2[Math.min(s2.length - 1, Math.floor(s2.length * p))].toFixed(1); };
+      return { withM: q(A, 0.5), withP: q(A, 0.95), noM: q(B, 0.5), noP: q(B, 0.95), tris: [Math.round(withG.attributes.position.count / 3), wo.solid ? Math.round(wo.solid.attributes.position.count / 3) : 0] };
+    });
     const load = require('os').loadavg()[0], cores = require('os').cpus().length;
-    // (the ms of a machine drawing 3D by software and shared with other proofs are worth little — T-433: the Colosseum is held to the
-    // frame before it in the same run, and to the e8's 13 ms when the machine is free; the calls and the triangles always compare)
-    ok('8. o quadro do Modo Encarnado com o Coliseu à vista (a medida do e8, qualidade média): mediana ≤ 13 ms, ou não acima da de antes', after.med <= 13 || after.med <= before.med * 1.15 + 1, `carga da máquina ${load.toFixed(1)} em ${cores} núcleos; antes ${before.med} ms (p95 ${before.p95}), ${before.calls} chamadas, ${(before.tris / 1000).toFixed(0)} mil triângulos → com o Coliseu ${after.med} ms (p95 ${after.p95}), ${after.calls} chamadas, ${(after.tris / 1000).toFixed(0)} mil triângulos`);
-    console.log(`DESEMPENHO | monumental | Roma da metrópole, o corpo diante do Coliseu: mediana ${before.med} → ${after.med} ms, p95 ${before.p95} → ${after.p95} ms, chamadas ${before.calls} → ${after.calls}, triângulos ${before.tris} → ${after.tris}`);
+    ok('8. o quadro do Modo Encarnado com o Coliseu à vista (a medida do e8, qualidade média, em turnos com e sem ele): mediana ≤ 13 ms (ou não acima da sem ele × 1,15) e p95 não pior que a sem ele × 1,15', !turns.none && (turns.withM <= 13 || turns.withM <= turns.noM * 1.15 + 0.5) && turns.withP <= turns.noP * 1.15 + 0.5,
+      turns.none ? 'o pedaço do Coliseu não achado na cena' : `carga da máquina ${load.toFixed(1)} em ${cores} núcleos; em turnos (6 × 15 quadros cada): sem o Coliseu ${turns.noM} ms (p95 ${turns.noP}) → com ele ${turns.withM} ms (p95 ${turns.withP}); o pedaço do canto ${turns.tris[1]} → ${turns.tris[0]} triângulos`);
+    console.log(`DESEMPENHO | monumental | Roma da metrópole, o corpo diante do Coliseu: em turnos, mediana ${turns.noM} → ${turns.withM} ms, p95 ${turns.noP} → ${turns.withP} ms; antes e depois de fundá-lo (um minuto entre as duas, carga ${load.toFixed(1)}): mediana ${before.med} → ${after.med} ms, p95 ${before.p95} → ${after.p95} ms, chamadas ${before.calls} → ${after.calls}, triângulos ${before.tris} → ${after.tris}`);
     // the photos: the eye's pose set after the game's own (the photos only: what the camera does is the part 1's proof)
     const shot = async (name, pose) => {
       await page.evaluate(p => {
@@ -308,6 +500,34 @@ async function browserPart() {
       return { own, body: bc, near: G.Realm.nearAt(own[0], own[1]), d: Math.max(Math.abs(bc[0] - own[0]), Math.abs(bc[1] - own[1])), edge: +edge.toFixed(0) };
     });
     ok('9. na qualidade leve, além da ponta de lá do Coliseu, o pedaço do canto dele perto', r9.skip || r9.near, r9.skip ? `${r9.why} (${r9.own})` : `o canto no pedaço ${r9.own}, o corpo no ${r9.body} (${r9.d} pedaços dali, a ${r9.edge} m do Coliseu): o do canto ${r9.near ? 'perto' : 'LONGE (a silhueta no lugar do prédio)'}`);
+    // 11. the palace of courts (M2's of 6 tiles, the Roman's): founded whole by the god's hand in Roma; the body before its flight,
+    // then in by its gate to the court, then through the throne hall's portal to before the throne — a photo at each, in the third
+    // person (the eye behind the body, as the game holds it)
+    const rp = await page.evaluate(() => {
+      const H = window.__MON; const PZ = H.palace('Roma', 'palacio', 'palacio', 60); if (!PZ.b) return { ok: false, why: PZ.why };
+      const R = PZ.Rk, W = PZ.W, b = PZ.b; const T = G.Space.TILE; const yawOf = (a, c) => Math.atan2(c[1] - a[1], c[0] - a[0]);
+      const front = W(R.L / 2, R.L + 4.5), into = yawOf(W(R.L / 2, R.L), W(R.L / 2, R.C[1]));
+      window.__pz = { id: b.id, front, into, gate: [b.x * T + PZ.e.x, b.y * T + PZ.e.z], court: W(R.L / 2 - 2.6, R.C[3] - 2.2), side: W(R.L / 2 - 2.6, R.C[1] + 1.4), door: W(R.L / 2, R.C[1] + 1.0), hall: W(R.L / 2 + 1.8, (R.B[1] + R.C[1]) / 2 + 1.2), throne: W(R.L / 2, R.B[1]), // (in the hall a little aside of the throne's axis: the throne beside the body, not behind it)
+       
+        hallDoor: (() => { const d = H.doorBetween(PZ.p, PZ.court.id, PZ.hall.id); return d ? d.id : -1; })() };
+      return { ok: true, id: b.id, x: b.x, y: b.y, st: G.Civ.idOfFac(PZ.set.fac) };
+    });
+    if (!rp.ok) ok('11. o palácio fundado em Roma', false, rp.why);
+    else {
+      const walkIn = async stage => page.evaluate(s => { const H = window.__MON, P = window.__pz; const b = G.S.buildings.get(P.id); const T = G.Space.TILE; const v = G.Possess.body();
+        if (s === 'fora') { G.inSim++; v.x = P.front[0] / T; v.y = P.front[1] / T; v.path = null; G.inSim--; G.Avatar.attach(v, P.into); return { d: 0 }; }
+        if (s === 'patio') { H.walk(P.gate[0], P.gate[1], 600); const d = H.walk(P.court[0], P.court[1], 600); return { d: +d.toFixed(2), lv: G.Possess.level() }; }
+        // (the portal opened by the hand, as the verb does: Interiors.useDoor)
+        G.S.time = 0.42; if (P.hallDoor >= 0) { G.inSim++; G.Interiors.useDoor(b, P.hallDoor, 'abrir', v); G.inSim--; }
+        H.walk(P.side[0], P.side[1], 600); H.walk(P.door[0], P.door[1], 600); const d = H.walk(P.hall[0], P.hall[1], 600); return { d: +d.toFixed(2), lv: G.Possess.level() };
+      }, stage);
+      const w1 = await walkIn('fora'); await shot('4-palacio-fora', { body: rp && (await page.evaluate(() => window.__pz.into)), yaw: await page.evaluate(() => window.__pz.into), pitch: -0.42, dist: 7.5 });
+      const w2 = await walkIn('patio'); const into = await page.evaluate(() => window.__pz.into); await shot('5-palacio-patio', { body: into, yaw: into, pitch: -0.3, dist: 5.2 });
+      const w3 = await walkIn('salao'); await shot('6-palacio-trono', { body: into, yaw: into, pitch: -0.12, dist: 3.6 });
+      const pics2 = ['4-palacio-fora', '5-palacio-patio', '6-palacio-trono'].map(n => { const f = path.join(OUT, n + '.jpg'); return fs.existsSync(f) ? `${n}.jpg ${(fs.statSync(f).size / 1024).toFixed(0)} KB` : `${n}: não saiu`; });
+      ok('11. o palácio de pátios (6 casas, romano): de fora, no pátio e no salão do trono, em terceira pessoa', pics2.every(q => /KB/.test(q)) && w2.d < 1.5 && w3.d < 1.5, `#${rp.id} em ${rp.x},${rp.y} (${rp.st}); o corpo no pátio a ${w2.d} m do ponto (piso ${w2.lv}), no salão a ${w3.d} m (piso ${w3.lv}); ${pics2.join(' · ')}`);
+      void w1;
+    }
   } finally {
     ok('10. sem erro de página nem aviso no console', !errs.length, errs.slice(0, 3).join(' || ') || 'nenhum');
     await browser.close();
