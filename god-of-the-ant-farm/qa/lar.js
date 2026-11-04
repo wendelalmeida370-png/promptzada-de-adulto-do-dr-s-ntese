@@ -22,7 +22,8 @@
 //      parar — e esperam por ele quando sai por pouco, para comer ou descansar (L-235); um save no meio do dia; quem cuida
 //      morre no meio (outro velho assume, ou os pequenos voltam ao dia deles); o save e a morte no primeiro instante em que
 //      ele está cuidando. Sem
-//      velho morando com pequenos numa cidade em paz, a mão da prova põe em 63 anos um adulto da casa que não é pai nem mãe deles
+//      velho morando com pequenos numa cidade em paz, a mão da prova põe em 63 anos um adulto da casa que não é pai nem mãe deles;
+//      o velho do caso de braços livres, posto à porta de casa, comido e descansado (o caso é o cuidado: T-404)
 //  l15 o bebê muda de colo onde está (D-074): em casa à noite, a mãe em fúria o passa ao pai ou a alguém da casa, ali; um
 //      save no meio; na rua, a quem está perto (sem pulo); sem ninguém perto, à mãe, ao pai ou a uma mulher da vila, onde
 //      estiverem (como antes); nunca ao corpo do jogador; a guerreira entre lutas só o dá a alguém da casa; e o corpo, pelas
@@ -30,7 +31,7 @@
 //  l16 da casa cheia saem os moços primeiro (D-098): a mão da prova enche uma casa de pequenos com uma velha que cuida
 //      deles e moços solteiros — sai o mais moço, a velha e o dono ficam; um save no meio e mais um moço: sai de novo o
 //      mais moço; a velha morre cuidando e os pequenos voltam ao dia deles; e o verificador vê o velho posto para fora
-//      antes do moço. l16b: de dois casais de fora numa casa cheia, o dia da cidade pergunta ao mais moço; o dono fica
+//      antes do moço (a gente dessa parte procurada na cidade inteira, numa ordem: T-404). l16b: de dois casais de fora numa casa cheia, o dia da cidade pergunta ao mais moço; o dono fica
 //  l13 a continuidade da casa (o pedido 8.4): o corpo longe, perto, dentro (come e cozinha), fora, o tempo, de volta, o save —
 //      a família igual ao ser olhada e ao ver o corpo entrar, a despensa só pelo livro, o corpo deitado em casa no save
 //  l17 a casa que a cidade amplia por cima da família continua sendo a casa dela (L-371): a noite em casa e dormindo dentro,
@@ -543,13 +544,18 @@ if (want('l14')) {
   // beds splits once a day, act-casa.js: the old one may move out, and the little ones are no longer hers —, in a town at
   // peace: a town under threat calls its grown ones to the fight, and the case would watch a battle)
   const calm = h => !(G.War && G.War.threat && G.War.threat(h.set));
-  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v)) e.old.push(v); if (v.age >= 3 && v.age < 6.5) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
+  // (the old of the case with free arms — no baby of another house in them —: on the dice of the T-436 the one made old, Tiye,
+  // held a neighbour's baby in the street, took it home to the minding, and died with it in her arms in her house — a baby in a
+  // house not its own with nobody holding it, for the moment the world takes to hand it on, and the checker looked in that
+  // moment, T-404)
+  const strange = v => { const bb = G.Vg.holdsBaby(v); return !!bb && bb.home !== v.home; };
+  const findHouse = () => { const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const e = houses.get(h.id) || { h, old: [], kids: [] }; if (v.age >= 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !strange(v)) e.old.push(v); if (v.age >= 3 && v.age < 6.5) e.kids.push(v); houses.set(h.id, e); } return [...houses.values()].filter(x => x.old.length && x.kids.length).sort((a, b) => b.kids.length - a.kids.length || a.h.id - b.h.id)[0]; };
   // (the ready worlds may have none after the day's moves — a full house splits, and the old one is often who leaves —: then
   // the test's hand makes one of the house old for the case, a grown one who is not the little ones' mother or father, nor a
   // warrior — the age back at the end —, and the mechanism is what is proven: the old one minds them, they come home and stay)
   let aged = null;
   const ageOne = () => {
-    const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const x = houses.get(h.id) || { h, old: [], kids: [], grown: [], n: 0 }; x.n++; if (v.age >= 3 && v.age < 6.5) x.kids.push(v); else if (v.age >= 25 && v.age < 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !v.secret && v.role !== 'guerreiro' && !v.jail && !v.aboard) x.grown.push(v); houses.set(h.id, x); }
+    const houses = new Map(); for (const v of S.villagers.values()) { const h = builtHome(v); if (!h || v.captive || !calm(h)) continue; const x = houses.get(h.id) || { h, old: [], kids: [], grown: [], n: 0 }; x.n++; if (v.age >= 3 && v.age < 6.5) x.kids.push(v); else if (v.age >= 25 && v.age < 62 && !(v.sick > 0) && v.hp >= 50 && !isBody(v) && !v.secret && v.role !== 'guerreiro' && !v.jail && !v.aboard && !strange(v)) x.grown.push(v); houses.set(h.id, x); }
     // (one who stays in the house through the case: a single grown one of a house too full is sent to one with room every
     // few seconds — village.js assignHousing —, and the case would watch someone else's house. A partner in the same house
     // keeps one there; so does a house with a bed to spare, even for a baby born in the case)
@@ -574,6 +580,12 @@ if (want('l14')) {
     // store to eat — the world's rule —, and the case is the minding at home, not the pantry. In the generation-13 metropole
     // Khufu went out to eat in the middle of it and stayed home 77% of the minding, T-394)
     const pantry0 = G.Depot.get('h:' + h.id, 'food'); if (pantry0 < 4) { const room = G.Depot.room('h:' + h.id, 'food'); if (room > 0) G.Depot.make('h:' + h.id, 'food', Math.min(4 - pantry0, room), { code: 'teste', part: true }); }
+    // (and the old of the case at the door of the house, fed and rested, as one who has had the morning's meal at home: the case
+    // is the minding, not her hunger nor her way home — a grown one of the world eats at 60, 0,48 a second awake: from 10 the
+    // 55 s of the minding take her to 36. After the merges of 5c1b60b and 438979e Imhotep, made 63 by the hand in the
+    // metropolis, went to the minding, turned to eat for 18 s and walked back for 16, and minded 19,4 s of the 55; fed, she
+    // walked 31 s from where the morning had found her, T-404)
+    const hd = G.Vg.door(h); for (const o of e.old) { G.Vg.endTask(o); o.x = hd[0]; o.y = hd[1]; o.path = null; o.inside = 0; o.sleeping = false; o.hunger = Math.min(o.hunger, 10); o.energy = Math.max(o.energy, 90); }
     // (the little ones come home and stay: when each first came home while minded, and — from then on — how much of the
     // minding it spent at home, awake; a little one far away takes a while to walk home)
     const came = new Map(), stayIn = new Map(), stayAll = new Map(), moved = new Set();
@@ -851,24 +863,33 @@ if (want('l16', 'l16b')) {
       live(25, () => { look(); });
       let heldAfter = 0; for (const id of kids) { const k = S.villagers.get(id); if (k && k.inside === hid && k.task && k.task.type === 'lar' && k.actT > 18) heldAfter++; }
       say('morte', !heldAfter, `${E0.name} ${minded ? 'cuidava dos pequenos em casa' : 'ainda não cuidava'} e morreu: ${heldAfter ? `${heldAfter} criança(s) PRESA(S) em casa` : 'os pequenos voltaram ao dia deles'}; ${left.length} saíram ao todo`);
-      // the checker sees it: an old one put out of a house too full by the test's hand, with a young single still in it
+      // the checker sees it: an old one put out of a house too full by the test's hand, with a young single still in it — the
+      // people the hand needs sought among the town's, in an order, the whole town at most: the young single (of 18 to 35: one
+      // of another house, else one of the case's young still in it), the one the hand makes 66 (a single of 25 to 61 of another
+      // house, else a single of 18 to 61, else any grown one of 25 to 61 — then of 18 — of another house fit to be moved, a
+      // partner too: he does not go to the partner's house, the rule's own «married into another house»), and, to fill the
+      // house past its beds, grown ones of the town older than the young one. In the metropolis of the generation 13 and on the
+      // dice of the T-436 Roma had, outside the house after the case, one single of 25 to 61 — 50, sick — and the miner of 20
+      // in the mine, «sem gente», T-394, T-404
       {
-        const town1 = [...S.villagers.values()].filter(v => v.set === st.id && v.home && v.home !== hid && single(v)).sort((a, c) => a.id - c.id);
-        // (the young one first, then the one made old — of 25 to 61, else any other single grown one: the hand makes him 66 —: in the
-        // generation-13 metropole no single of 25 to 61 lived in another house of Roma after the case, T-394)
-        const Yn = town1.find(v => v.age >= 18 && v.age < 36), O = town1.find(v => v !== Yn && v.age >= 25 && v.age < 62) || town1.find(v => v !== Yn && v.age >= 18 && v.age < 62);
-        // (the house the old one goes to: one with a bed to spare, else any other of the town — the rule, D-098 in lar-inv.js, looks
-        // only at the house too full, at who left it before whom: in the generation-13 metropole the case's young had taken Roma's
-        // spare beds by then, and the proof found none, «sem gente», T-394)
-        const homes1 = O ? homesOf(st.id).filter(b => b.id !== hid && b.id !== O.home) : []; const other = homes1.find(b => cap(b) > residents(b).length) || homes1[0];
+        const out1 = [...S.villagers.values()].filter(v => v.set === st.id && v.home && v.home !== hid && v.age >= 18 && v.age < 62 && fit(v)).sort((a, c) => a.id - c.id);
+        const town1 = out1.filter(single), still = residents(h).filter(v => v.age >= 18 && v.age < 36 && single(v) && v.id !== h.dono).sort((a, c) => a.age - c.age || a.id - c.id);
+        const Yn = town1.find(v => v.age < 36) || still[0];
+        const O = town1.find(v => v !== Yn && v.age >= 25) || town1.find(v => v !== Yn) || out1.find(v => v !== Yn && v.age >= 25) || out1.find(v => v !== Yn);
+        // (the house the old one goes to: one with a bed to spare, else any other of the town, not his own nor his partner's — the
+        // rule, D-098 in lar-inv.js, looks only at the house too full, at who left it before whom: in the generation-13 metropole
+        // the case's young had taken Roma's spare beds by then, and the proof found none, «sem gente», T-394)
+        const mate = O && O.partner ? S.villagers.get(O.partner) : null;
+        const homes1 = O ? homesOf(st.id).filter(b => b.id !== hid && b.id !== O.home && !(mate && b.id === mate.home)) : []; const other = homes1.find(b => cap(b) > residents(b).length) || homes1[0];
         if (O && Yn && other) {
-          const back = [[O, O.home], [Yn, Yn.home]]; const a0 = O.age, hp0 = O.hp;
+          const back = [[O, O.home], [Yn, Yn.home]]; const a0 = O.age, hp0 = O.hp; const who = `${O.name} (${Math.floor(a0)}, ${O.partner ? 'casado' : 'solteiro'}) posto em 66 e ${Yn.name} (${Math.floor(Yn.age)}) ${Yn.home === hid ? 'já na casa' : 'trazido'}`;
           O.age = 66; O.hp = 40; O.home = hid; Yn.home = hid;
-          for (const f of town1) { if (residents(h).length > cap(h)) break; if (f !== O && f !== Yn && f.age >= 18 && f.age > Yn.age) { back.push([f, f.home]); f.home = hid; } }
+          for (const f of out1) { if (residents(h).length > cap(h)) break; if (f !== O && f !== Yn && f.age > Yn.age) { back.push([f, f.home]); f.home = hid; } }
+          const full = residents(h).length;
           QA.check(); O.home = other.id; const seen = QA.check().filter(q => String(q.msg).includes('D-098'));
-          say('verificador', residents(h).length >= cap(h) && seen.length > 0, seen.length ? `o verificador viu: «${seen[0].msg}»` : 'o verificador NÃO viu o velho posto para fora antes do moço');
+          say('verificador', full > cap(h) && seen.length > 0, `${who}, ${full} na casa de ${cap(h)} camas: ${seen.length ? `o verificador viu: «${seen[0].msg}»` : 'o verificador NÃO viu o velho posto para fora antes do moço'}`);
           for (const [v, hm] of back) v.home = hm; O.age = a0; O.hp = hp0;
-        } else say('verificador', false, `sem gente para a prova do verificador (${[!O && 'nenhum solteiro de 25 a 61 noutra casa', !Yn && 'nenhum moço solteiro', !other && 'nenhuma outra casa'].filter(Boolean).join(', ')})`);
+        } else say('verificador', false, `sem gente para a prova do verificador em ${st.name} (${[!Yn && 'nenhum solteiro de 18 a 35, nem fora nem na casa', !O && `nenhum adulto apto de 18 a 61 noutra casa além dele (${out1.length} adultos aptos fora da casa)`, O && !other && 'nenhuma outra casa'].filter(Boolean).join(', ')})`);
       }
       if (aged) { const o = S.villagers.get(aged[0]); if (o) { o.age = aged[1]; o.role = aged[2]; } }
       ok('l16 da casa cheia saem os moços primeiro (D-098)', fine, notes.join(' · '));
