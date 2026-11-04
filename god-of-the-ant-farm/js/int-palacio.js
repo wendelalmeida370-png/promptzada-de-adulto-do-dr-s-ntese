@@ -264,7 +264,12 @@
   function palaceByForm(P, F) {
     const R = riskOf(F); if (!R) { P.errs.push('o palácio sem o risco da forma'); return; }
     P.shell = { kind: 'rect', r: R.B.slice(), t: R.t, mat: R.mat, base: R.Hp >= In.BODY.step ? 'macica' : 'pedra', baseH: R.Hp, floors: R.two ? 2 : 1, eave: R.eave, court: R.C.slice() };
-    P.roof = { kind: R.roof.kind, along: null, h: R.roof.h, over: R.roof.over, court: R.C.slice() };
+    // (the roof the form has: one over each wing, along it, from the eaves — over the cornice of the Greek's and the Roman's —,
+    // its rise each its own (alas: the wing by its side, from the way in — fundo, esquerda, direita, frente —, its rise, how far
+    // over the eaves it starts); the court open to the sky between them. Never one roof round the court: E. In the canonical
+    // frame, each wing's rectangle and the way its ridge runs: P.roofGeo)
+    P.roof = { kind: R.roof.kind, along: null, h: R.roof.h, over: R.roof.over, court: R.C.slice(), alas: R.alas.map(a => ({ lado: a.lado, h: a.h, base: r2(a.y0 - R.eave) })) };
+    P.roofGeo = { kind: R.roof.kind, along: null, eave: R.eave, rise: R.roof.h, R: R.B.slice(), alas: R.alas.map(a => ({ lado: a.lado, r: a.r.slice(), ao: a.ao, y0: a.y0, h: a.h, ov: a.ov })) };
     for (const l of R.levels) P.level(l.lv, l.y, l.h, l.kind, l.area);
     P.entryLv = 0;
     const Ly = layerOf(P); const lay = Ly.lay;
@@ -316,6 +321,12 @@
     // (the way of state kept clear: the courts' axis — from the gate to the fountain and on to the throne hall's portal, the court
     // of honour's from the gate to the porch —, no bench on it: L-513)
     for (const k of [R.courtRoom, R.yardRoom]) if (k >= 0) { const r = rect(k); P.zones.push({ lv: 0, r: [r2(L / 2 - 0.8), r[1], r2(L / 2 + 0.8), r[3]] }); }
+    // (and round each stair: upstairs the passage along its well's railing and the landing past its top — the void well is
+    // walked round, never over, and no chest stands against the railing (it stood 0.10 m from it: E) —; below, the floor
+    // before its foot: L-515)
+    for (const s of R.stairs) { const h = s.hole, k = 0.7, d = 1.0;
+      P.zones.push({ lv: s.lv1, r: [r2(h[0] - (s.du < 0 ? d : k)), r2(h[1] - (s.dv < 0 ? d : k)), r2(h[2] + (s.du > 0 ? d : k)), r2(h[3] + (s.dv > 0 ? d : k))] });
+      P.zones.push({ lv: s.lv0, r: s.dv < 0 ? [h[0], h[3], h[2], r2(h[3] + d)] : s.dv > 0 ? [h[0], r2(h[1] - d), h[2], h[1]] : s.du > 0 ? [r2(h[0] - d), h[1], h[0], h[3]] : [h[2], h[1], r2(h[2] + d), h[3]] }); }
     const fire = id => { const f = tr.fire === 'lar' ? 'lar' : tr.fire || 'fogao'; return (f === 'lar' && P.place('lar', 0, id, { sides: ['livre'], margin: 0.6 })) || P.place(f === 'lar' || f === 'forno' ? 'fogao' : f, 0, id) || P.place('fogao', 0, id) || P.place('braseiro', 0, id); };
     let beds = 0;
     for (const m of R.rooms) {
@@ -332,6 +343,16 @@
     }
     if (!beds) { P.errs.push('sem cama nos aposentos'); return; }
     for (const f of later) f();
+    // the audience (D-124): where those the ruler receives stand — in rows before the throne, facing it, a metre apart, the
+    // aisle from the portal to the throne free; in the great palace and the colossal, in the hall of audience too, facing the
+    // throne hall's door, its front and that door's side kept for the way through. Each clear of what stands there
+    const clear = (lv, u, v) => !P.items.some(it => it.lv === lv && In.ITEMS[it.kind].solid && u > it.r[0] - 0.75 && u < it.r[2] + 0.75 && v > it.r[1] - 0.75 && v < it.r[3] + 0.75);
+    { const k = R.throne, r = rect(k), cu = r2((r[0] + r[2]) / 2); const pts = [];
+      for (let v = r2(r[1] + 3.2); v <= r[3] - 1.2 + 1e-6; v = r2(v + 1.1)) for (let d = 1.2; cu + d <= r[2] - 1.2 + 1e-6; d = r2(d + 1.0)) for (const u of [r2(cu - d), r2(cu + d)]) if (clear(0, u, v)) pts.push([u, v, Math.PI]);
+      if (pts.length) P.marks(0, ids[k], 'audiencia', pts); }
+    if (R.big || R.mid) { const k = R.audience, r = rect(k); const left = r[2] <= L / 2; const pts = [];
+      for (let v = r2(r[1] + 1.2); v <= r[3] - 1.4 + 1e-6; v = r2(v + 1.0)) for (let u = r2(left ? r[0] + 1.2 : r[2] - 1.2); left ? u <= r[2] - 1.4 + 1e-6 : u >= r[0] + 1.4 - 1e-6; u = r2(u + (left ? 1.0 : -1.0))) if (clear(0, u, v)) pts.push([u, v, left ? Math.PI / 2 : -Math.PI / 2]);
+      if (pts.length) P.marks(0, ids[k], 'audiencia', pts); }
   }
   In.formSized('palacio', palaceByForm); In.formSized('grande_palacio', palaceByForm); In.formSized('palacio_colossal', palaceByForm);
   In.riskOf = riskOf; // (for the proofs: the risk a palace's or a temple's plan is laid out from)
