@@ -92,20 +92,22 @@
     P.opt(() => { const ac = (al.r[0] + al.r[2]) / 2; for (const du of [-1.1, 1.1]) P.at('lampadario', lv, ar, [ac + du - 0.23, al.r[1] + 0.12, ac + du + 0.22, al.r[1] + 0.57], 0, 1); });
     const kind = KNEEL[P.rec.c] ? 'esteira-oracao' : 'banco-fieis'; const D = In.ITEMS[kind];
     // (where the room is wide enough, two to a row with the aisle between; a narrow nave or aisle, one to a row in the middle,
-    // a way along either side)
-    let n = 0;
+    // a way along either side. The two the temple needs first; the others for comfort (P.opt): where one of them leaves the
+    // body no way to sit on it — set beside another, in a corner —, it goes, not the plan: the fourth bench of a hall behind a
+    // court, 0.32 m from the third, left the temple with no plan on other dice — L-500, T-436)
+    let n = 0; const put = f => (n >= 2 ? P.opt(f) : f());
     for (const id of [ar].concat(rooms.cells.filter(c => P.rooms[c].fn === 'nave-lateral'))) {
       const R = P.rooms[id].r; const aisle = P.rr(0.9, 1.1); const mid = id === ar ? (al.r[0] + al.r[2]) / 2 : (R[0] + R[2]) / 2;
       const two = Math.min(D.w, (Math.min(mid - R[0], R[2] - mid) - aisle / 2) - 0.35), one = Math.min(D.w, R[2] - R[0] - 1.3);
       const v1 = id === ar ? al.r[3] + 0.95 : R[1] + 0.6;
       for (let v = v1; v + D.d < R[3] - 0.5; v += D.d + (kind === 'banco-fieis' ? 0.55 : 0.4)) {
-        let got = 0; if (two >= 0.65) for (const u0 of [mid - aisle / 2 - two, mid + aisle / 2]) if (P.at(kind, lv, id, [u0, v, u0 + two, v + D.d], 0, -1)) got++;
-        if (!got && one >= 0.65) for (const u0 of [mid - one / 2, R[0] + 0.65, R[2] - 0.65 - one]) if (P.at(kind, lv, id, [u0, v, u0 + one, v + D.d], 0, -1)) { got++; break; }
+        let got = 0; if (two >= 0.65) for (const u0 of [mid - aisle / 2 - two, mid + aisle / 2]) if (put(() => P.at(kind, lv, id, [u0, v, u0 + two, v + D.d], 0, -1))) got++;
+        if (!got && one >= 0.65) for (const u0 of [mid - one / 2, R[0] + 0.65, R[2] - 0.65 - one]) if (put(() => P.at(kind, lv, id, [u0, v, u0 + one, v + D.d], 0, -1))) { got++; break; }
         n += got;
       }
     }
     // (where no row goes — a small court, a nave of arches —, the faithful where there is room: by the walls, in the wings)
-    if (n < 2) for (const id of [ar, cella].concat(rooms.cells).filter((x, q, a) => a.indexOf(x) === q)) { for (let g = 0; g < 4 && n < 4; g++) if (P.place(kind, lvOf(P, id), id, { sides: ['livre', 'fundo', 'esquerda', 'direita'], margin: 0.35 })) n++; if (n >= 2) break; }
+    if (n < 2) for (const id of [ar, cella].concat(rooms.cells).filter((x, q, a) => a.indexOf(x) === q)) { for (let g = 0; g < 4 && n < 4; g++) if (put(() => P.place(kind, lvOf(P, id), id, { sides: ['livre', 'fundo', 'esquerda', 'direita'], margin: 0.35 }))) n++; if (n >= 2) break; }
     if (n < 2) P.errs.push(`só ${n} lugares para os fiéis`);
     P.opt(() => { for (const id of [rooms.front, cella].concat(rooms.cells).filter(has)) if (P.place('cofre', lvOf(P, id), id)) break; });
     if (has(rooms.cellar)) P.opt(() => P.place('jarros', -1, rooms.cellar));
@@ -211,7 +213,7 @@
 
   // ------------------------------ the programmes ------------------------------
   // (the temple of a town: the priests' rooms over it, where the people does not dig a cellar too)
-  W.add('temple', { use: 'templo', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'porao', 'andar'], open: 1, lockNight: 1, jobs: 1, apse: 2.4, need: { altar: 1, idolo: 1 }, door: [1.2, 1.6], furnish: templeFurnish });
+  W.add('temple', { use: 'templo', H: ['salao', 'frente', 'naves', 'patio'], V: ['terreo', 'porao', 'andar'], open: 1, lockNight: 1, jobs: 1, apse: 2.4, court: 2.4, need: { altar: 1, idolo: 1 }, door: [1.2, 1.6], furnish: templeFurnish });
   W.add('quartel', { use: 'quartel', H: ['salao', 'frente', 'corredor', 'patio'], V: ['terreo', 'andar'], lockNight: 0, need: { catre: 4, armeiro: 1 }, door: [1.1, 1.5], furnish: barracksFurnish });
   // (the cells along an aisle, in a row behind the guard room, or round the yard; an aisle between cells has no stair nor
   // trapdoor: its walls are the cells' gratings — the storey above and the cellar are the guard room's —, and the guard's
