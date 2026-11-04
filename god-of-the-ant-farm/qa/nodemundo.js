@@ -66,6 +66,9 @@ M.load = function (o) {
   if (o.qa) M.run('qa/qa.js');
   // (an extra the page already runs before three.js runs once: js/space.js, which the world asks since L-195)
   for (const f of o.extra || []) if (!ran.has(f)) M.run(f);
+  // (SALT=n: the plans on other dice — In.SALT, for the proofs only, T-436 —, and so the catalogue's table, made on the game's,
+  // set aside: every family probed again on those dice)
+  if (process.env.SALT && G.Interiors) { G.Interiors.SALT = Number(process.env.SALT) | 0; for (const k of Object.keys(G.Interiors.PROBED || {})) delete G.Interiors.PROBED[k]; }
   G.Main.mode = 'game';
   return G;
 };

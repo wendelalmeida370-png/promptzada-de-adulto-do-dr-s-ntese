@@ -307,7 +307,10 @@
   ].map((id, k) => [id, k + 7]));
   const famSeed = id => { const k = FAMSEED.get(id); if (k !== undefined) return k; if (!FAMS[id]) return 7;
     let h = 0x811C9DC5; const s = String(id); for (let q = 0; q < s.length; q++) { h ^= s.charCodeAt(q); h = Math.imul(h, 0x01000193); } return h | 0; };
-  function seedOf(id, fam, attempt) { return (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(famSeed(fam), 0x85EBCA6B) ^ Math.imul(attempt + 3, 0xC2B2AE35)) | 0; }
+  // (In.SALT: a salt for the proofs only — the grammars proved on other dice, T-436 —, never set by the game: at 0 nothing
+  // changes, the same dice as ever)
+  In.SALT = 0;
+  function seedOf(id, fam, attempt) { return (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(famSeed(fam), 0x85EBCA6B) ^ Math.imul(attempt + 3, 0xC2B2AE35) ^ In.SALT) | 0; }
   // (two sets of dice: the shell's — one for the building and its family, the same in every attempt: the shell, its roof, its
   // floors, its outside walls and what opens in them are what is seen from afar, and never change with how the inside went
   // — and each attempt's own for the inside, from P.inside() on)

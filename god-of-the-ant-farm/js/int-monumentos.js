@@ -44,7 +44,7 @@
   // under the shaft —, not the shaft's round: on the cells between the two edges the plan had floor, and the body stood in the
   // base of the six columns of the Greek theatre's stage — L-494. A plan file asks the form only the plan's questions (the
   // guard, the form's rule): its half side here, and the proof — qa/monumental.js E3 — holds it to the vocabulary's)
-  const COL_HALF = 1.15;
+  const COL_HALF = G.Forma.COLUMN_BASE / 2;
   const colOf = (F, s) => F.els.some(e => e.k === 'colunata' && Math.abs(e.r - s.r) < 1e-9 && e.pts.some(p => Math.abs(p[0] - s.c[0]) < 1e-9 && Math.abs(p[1] - s.c[1]) < 1e-9));
   function solids(P, F, room, o) {
     o = o || {}; const lv0 = P.rooms[(o.rooms || [room])[0]].lv; const feet = P.items.filter(it => it.form && it.lv === lv0 && !it.niche).map(it => it.r.slice()); const area = r => (r[2] - r[0]) * (r[3] - r[1]);
