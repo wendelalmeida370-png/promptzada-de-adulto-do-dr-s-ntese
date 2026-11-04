@@ -172,6 +172,8 @@
     try { relayout(); } finally { rot = kr; spin = ks; }
     if (ks) ks.laidFor = r;
   }
+  // (for the proofs: fn asked as the view of the side r would answer it — proj, depth, R.strips —, the view itself untouched)
+  R.asView = function (r, fn) { const ks = spin, kr = rot; rot = mod4(r); spin = null; try { return fn(); } finally { rot = kr; spin = ks; } };
   // while turning: paint, a part at a time, the pictures of the side the turn is heading for
   function paintTarget(ms) {
     if (!spin || spin.laidFor !== spin.target) return;
@@ -919,9 +921,29 @@
   const drawList = []; let drawN = 0;
   const lights = []; // [sx, sy, r, color, a]
   const emisWin = []; const emisFire = []; const emisGlow = []; const emisTorch = []; const overlays = [];
-  function pushD(d, type, o, sx, sy) {
+  // ---- a big building among the people (D-106): its picture cut in columns of the screen, each in the painter's order by the
+  // front of its lot in that column — whoever stands beside it or behind it is drawn on the right side of it. One entry for the
+  // whole lot, by its front corner, put a person beside a building of 10 tiles behind its wall; the flat ones (a square, a ruin,
+  // a graveyard, a pen, a campfire) keep their one ----
+  const BIGW = 3, STRIP = 16; const FLATB = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1 };
+  // (the strips of a building's picture in this view: [{ c0, c1 — px from its anchor, the outer ones to the picture's end —, d —
+  // the depth it is sorted by: the lot's front in that column, its nearer edge's, less a hand: one standing at the wall by the
+  // edge of two strips, a sliver of him in the next one, stays whole —, k }])
+  R.strips = function (b, base) {
+    const [cx, cy] = G.Village.center(b); const h = base === undefined ? W.maxH(b.x, b.y, b.w, b.h) : base; const a = proj(cx, cy, h);
+    const C = [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]].map(([x, y]) => [proj(x, y, h)[0] - a[0], depth(x, y)]);
+    // (the front of the lot in a column of the screen: the deepest of its edges there)
+    const front = sx => { let d = -1e9; for (let k = 0; k < 4; k++) { const A = C[k], B = C[(k + 1) % 4]; const lo = Math.min(A[0], B[0]), hi = Math.max(A[0], B[0]); if (hi - lo < 1e-6 || sx < lo - 1e-6 || sx > hi + 1e-6) continue; const dd = A[1] + (B[1] - A[1]) * (sx - A[0]) / (B[0] - A[0]); if (dd > d) d = dd; } return d; };
+    let x0 = 1e9, x1 = -1e9; for (const q of C) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); }
+    const n = Math.max(2, Math.ceil((x1 - x0) / STRIP)), out = [];
+    for (let k = 0; k < n; k++) { const s0 = x0 + (x1 - x0) * k / n, s1 = x0 + (x1 - x0) * (k + 1) / n; out.push({ c0: k ? s0 : -1e4, c1: k < n - 1 ? s1 : 1e4, d: Math.min(front(s0), front(s1)) - 0.15, k }); }
+    return out;
+  };
+  R.bigW = BIGW; // (for the proofs: from how many tiles a building is drawn in strips)
+  // (c0, c1: a column of a big building's picture, px from its anchor — the strip it is in the painter's order by; k its index)
+  function pushD(d, type, o, sx, sy, c0, c1, k) {
     let e = drawList[drawN]; if (!e) { e = {}; drawList[drawN] = e; }
-    e.d = d; e.t = type; e.o = o; e.sx = sx; e.sy = sy; drawN++;
+    e.d = d; e.t = type; e.o = o; e.sx = sx; e.sy = sy; e.c0 = c0; e.c1 = c1; e.k = k; drawN++;
   }
   function light(sx, sy, r, c, a) { lights.push(sx, sy, r, c, a); }
   R.lightAt = light;
@@ -986,7 +1008,7 @@
         if (G.VR() < dt * 1.3) G.FX.spawn({ x: cx + G.vrr(-0.1, 0.1), y: cy + G.vrr(-0.1, 0.1), z: 10, vz: G.vrr(12, 22), vx: wx * 0.6, vy: wy * 0.6, life: G.vrr(2, 3.5), s0: 3, s1: 9, c: 'rgba(150,150,150,0.3)', k: 2 });
         if (G.VR() < dt * 2.2) G.FX.spawn({ x: cx, y: cy, z: 5, vz: G.vrr(20, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: G.vrr(0.6, 1.4), s0: 0.9, s1: 0.2, c: '#ffc060', k: 4, layer: 1 });
       } else if (SMOKE[b.type] && (KILN[b.type] || b.type === 'banhos' || G.VR() < 0.5 + night)) {
-        const dv = doorView(b); const spr = homeSprite(b, false) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back); // (the chimney of the picture drawn)
+        const dv = doorView(b); const spr = homeSprite(b, false) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back, b.w); // (the chimney of the picture drawn)
         const steam = b.type === 'banhos';
         if (spr && spr.fires.length && G.VR() < dt * (KILN[b.type] ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
           const h = W.groundH(cx, cy);
@@ -1185,7 +1207,11 @@
       const [cx, cy] = G.Village.center(b);
       const base = W.maxH(b.x, b.y, b.w, b.h);
       const p = proj(cx, cy, base);
-      if (p[0] < view[0] - 60 || p[0] > view[2] + 60 || p[1] < view[1] - 30 || p[1] > view[3] + 140) continue;
+      // (its picture reaches (w + h) × 8 px each side of its anchor, (w + h) × 4 under it and its height over it: a big lot's
+      // farther than a house's — D-106)
+      const mx = Math.max(60, (b.w + b.h) * 8 + 12), dn = Math.max(30, (b.w + b.h) * 4 + 12), up = b.w > 3 ? 140 + (b.w + b.h) * 4 + b.w * 12 : 140;
+      if (p[0] < view[0] - mx || p[0] > view[2] + mx || p[1] < view[1] - dn || p[1] > view[3] + up) continue;
+      if (b.w >= BIGW && !spin && !FLATB[b.type]) { for (const s of R.strips(b, base)) pushD(s.d, 4, b, p[0], p[1], s.c0, s.c1, s.k); continue; }
       pushD(b.type === 'praca' ? depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : depth(cx, cy) + (b.w + b.h) / 2 - 0.8, 4, b, p[0], p[1]);
     }
     // aqueduct arches, carts on the roads
@@ -2323,7 +2349,12 @@
         if (!o.burnt && o.berries > 0) Art.berries(ctx, sx, sy, o.berries, 1);
         break;
       }
-      case 4: if (G.PlanView && G.PlanView.drawn(o)) break; /* (C2: its plan, open, is drawn in its place) */ if (spin) drawSpinBuilding(o, sx, sy, t, nightF); else drawBuilding(o, sx, sy, t, nightF); break;
+      case 4: if (G.PlanView && G.PlanView.drawn(o)) break; /* (C2: its plan, open, is drawn in its place) */
+        if (e.c0 !== undefined) { // (a strip of a big building: its picture clipped to its columns — at whole pixels of the screen, so
+          // two strips meet without a seam —, its lights and fires with the first one)
+          const M = ctx.getTransform(), X = x => (Math.round(M.a * x + M.e) - M.e) / M.a; const a0 = X(sx + e.c0), a1 = X(sx + e.c1);
+          ctx.save(); ctx.beginPath(); ctx.rect(a0, sy - 1e4, a1 - a0, 2e4); ctx.clip(); try { drawBuilding(o, sx, sy, t, nightF, e.k > 0); } finally { ctx.restore(); } break; }
+        if (spin) drawSpinBuilding(o, sx, sy, t, nightF); else drawBuilding(o, sx, sy, t, nightF); break;
       case 5: {
         const v = o;
         const night = nightF > 0.5;
@@ -2397,7 +2428,7 @@
     let any = false;
     for (const e of list) {
       let hw = 14, top = 46;
-      if (e.t === 4) { hw = (e.o.w + e.o.h) * 16; top = 90; } else if (e.t === 1) { hw = 16; top = 56; } else if (e.t === 10) { hw = 26; top = 60; }
+      if (e.t === 4) { hw = (e.o.w + e.o.h) * 16; top = e.o.w > 3 ? 90 + (e.o.w + e.o.h) * 4 + e.o.w * 12 : 90; } else if (e.t === 1) { hw = 16; top = 56; } else if (e.t === 10) { hw = 26; top = 60; }
       const cx0 = Math.max(0, Math.floor((e.sx - hw - view[0]) / OG)), cx1 = Math.min(gw - 1, Math.floor((e.sx + hw - view[0]) / OG));
       const cy0 = Math.max(0, Math.floor((e.sy - top - oy) / OG)), cy1 = Math.min(gh - 1, Math.floor((e.sy + 4 - oy) / OG));
       for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) { const k = cy * gw + cx; if (e.d < ogrid[k]) { ogrid[k] = e.d; any = true; } }
@@ -2518,7 +2549,8 @@
     if (q === undefined) q = R.quarter(); return s === FL[q] ? { m: 1, back: false } : s === FR[q] ? { m: -1, back: false } : { m: m0, back: true };
   }
   R.doorView = doorView; // (for the proofs: { m: the mirror, back: drawn without its door } for a view's quarter)
-  function drawBuilding(b, sx, sy, t, nightF) {
+  // (quiet: only its picture — a strip of a big building after the first: its lights, fires and signs are the first's)
+  function drawBuilding(b, sx, sy, t, nightF, quiet) {
     const S = G.S; const Art = G.Art;
     const def = G.BDEF[b.type];
     const [cx, cy] = G.Village.center(b);
@@ -2538,29 +2570,32 @@
     if (b.type === 'cemetery') { drawCemetery(b, sx, sy, t); return; }
     if (b.type === 'ruin') { drawRuin(b, sx, sy, t); return; }
     if (b.type === 'cercado') { if (b.built) penStakes(b, penFront(b), 1); else { penStakes(b, penFront(b), b.progress); overlays.push(b, sx, sy - 14); } return; }
-    if (!b.built) { drawSite(b, sx, sy, t); if (burning) emisFire.push(sx, sy - 8, 1); return; }
+    if (!b.built) { drawSite(b, sx, sy, t, quiet); if (burning && !quiet) emisFire.push(sx, sy - 8, 1); return; }
     const dv = doorView(b);
-    const spr = homeSprite(b, true) || Art.building(b.type, b.v, b.style, b.wd, dv.back);
-    if (!spr) return;
+    // (its picture of its own size: a step of its type's ladder that is not the classic one is the god's from its form — D-106 —,
+    // its masses where its people have no form of that size)
+    const spr = homeSprite(b, true) || Art.building(b.type, b.v, b.style, b.wd, dv.back, b.w);
+    if (!spr) { if (G.Arch.sized && G.Arch.sized(b.type, b.w)) drawMass(b, sx, sy, t, nightF); return; }
     // storehouse piles
     if (b.type === 'storehouse' && !b.style) drawPiles(b, sx, sy);
     Art.drawMx(ctx, spr, sx, sy, 1, dv.m);
     const m = dv.m;
     if (b.hp < b.maxHp * 0.6) { ctx.fillStyle = 'rgba(30,20,15,0.25)'; ctx.beginPath(); ctx.ellipse(sx, sy - 8, 10 * b.w, 6 * b.h, 0, 0, TAU); ctx.fill(); }
+    if (b.type === 'quartel') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx - 22 * m, sy - 16, G.Fac.hex(f.id), t, 22); }
+    if (b.type === 'torre') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx + 1 * m, sy - 50, G.Fac.hex(f.id), t, 10); }
+    if (quiet) return;
     // night windows & fires
     const occupied = G.Village && (!def.housing ? true : hasResidents(b));
     if (nightF > 0.15 && occupied && spr.win.length && !(G.Fest && G.Fest.darkB(b))) {
       emisWin.push(spr, sx, sy, nightF * (0.85 + 0.15 * Math.sin(t * 3 + b.id)) * m);
       light(sx, sy - 8, 30 + b.w * 12, 'warm', 0.55 * nightF);
     }
-    if (b.type === 'temple' || b.type === 'maravilha' || b.type === 'palacio' || b.type === 'paco' || b.type === 'grande_palacio' || b.type === 'palacio_colossal') { for (const f of spr.fires) { emisFire.push(sx + f[0] * m, sy + f[1], 0.45); light(sx + f[0] * m, sy + f[1], 40, 'warm', 0.8); } for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'maravilha' ? 14 : 8, 'gold', 0.4 + nightF * 0.5 + (b.type === 'maravilha' ? 0.15 * Math.sin(t * 2) : 0)); if (b.type === 'maravilha') light(sx, sy - 50, 110, 'gold', 0.6 * nightF + 0.1); }
+    if (b.type === 'temple' || b.type === 'maravilha' || b.type === 'palacio' || b.type === 'paco' || b.type === 'grande_palacio' || b.type === 'palacio_colossal') { for (const f of spr.fires) { emisFire.push(sx + f[0] * m, sy + f[1], 0.45); light(sx + f[0] * m, sy + f[1], 40, 'warm', 0.8); } for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'maravilha' ? 14 : 8, 'gold', 0.4 + nightF * 0.5 + (b.type === 'maravilha' ? 0.15 * Math.sin(t * 2) : 0)); if (b.type === 'maravilha') { const k = Math.sqrt(b.w / def.w); light(sx, sy - 50 * k, 110 * k, 'gold', 0.6 * nightF + 0.1); } }
     else if (KILN[b.type]) { for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'ourives' ? 3 : 6, b.type === 'ourives' ? 'gold' : 'fire', 0.6 + 0.3 * Math.sin(t * 9 + b.id)); light(sx + 10 * m, sy - 4, 28, 'warm', 0.5 * nightF + 0.1); for (const f of spr.fires) if (b.type !== 'workshop' && b.type !== 'forja' && b.type !== 'olaria') emisFire.push(sx + f[0] * m, sy + f[1], 0.3); }
     else if (b.type === 'estatua' || b.type === 'mina') { for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'estatua' ? 12 : 3, 'gold', (b.type === 'estatua' ? 0.45 : 0.3) + nightF * 0.5 + 0.15 * Math.sin(t * 2 + g[1])); if (b.type === 'estatua') light(sx, sy - 30, 60, 'gold', 0.6 * nightF + 0.1); for (const f of spr.fires) { emisTorch.push(sx + f[0] * m, sy + f[1]); light(sx + f[0] * m, sy + f[1], 22, 'warm', 0.6 * nightF); } }
     else if (b.type === 'mercado_negro') { for (const f of spr.fires) { emisTorch.push(sx + f[0] * m, sy + f[1]); light(sx + f[0] * m, sy + f[1], 20, 'warm', 0.7 * nightF + 0.05); } }
     else if (FIRELIT[b.type]) for (const f of spr.fires) { emisFire.push(sx + f[0] * m, sy + f[1], 0.35); light(sx + f[0] * m, sy + f[1], 34, 'warm', 0.7); }
     if (b.type === 'monument' || b.type === 'praca' || b.type === 'biblioteca') { for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], 10, 'gold', 0.5 + nightF * 0.6 + 0.15 * Math.sin(t * 2)); if (b.type === 'monument') light(sx, sy - 60, 80, 'gold', 0.7 * nightF + 0.1); }
-    if (b.type === 'quartel') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx - 22 * m, sy - 16, G.Fac.hex(f.id), t, 22); }
-    if (b.type === 'torre') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx + 1 * m, sy - 50, G.Fac.hex(f.id), t, 10); }
     if (burning) emisFire.push(sx, sy - 14, 1.2);
   }
   const homesLit = new Set(); // homes with someone living in them (rebuilt each night frame)
@@ -2617,7 +2652,7 @@
     ctx.globalAlpha = 1;
     if (G.VR() < 0.02) G.FX.smokePuff(b.x + b.w / 2, b.y + b.h / 2);
   }
-  function drawSite(b, sx, sy, t) {
+  function drawSite(b, sx, sy, t, quiet) {
     const def = G.BDEF[b.type];
     const p = b.progress;
     const hx = b.w / 2 - 0.1, hy = b.h / 2 - 0.1;
@@ -2659,7 +2694,7 @@
         ctx.stroke();
         if (p > 0.85) {
           ctx.globalAlpha = (p - 0.85) / 0.15;
-          const dv = doorView(b); const spr = homeSprite(b, true) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back); if (spr) G.Art.drawMx(ctx, spr, sx, sy, 1, dv.m); // (the house it will be)
+          const dv = doorView(b); const spr = homeSprite(b, true) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back, b.w); if (spr) G.Art.drawMx(ctx, spr, sx, sy, 1, dv.m); // (the house it will be)
           ctx.globalAlpha = 1;
         }
       }
@@ -2671,7 +2706,7 @@
     const left = 1 - p;
     for (let k = 0; k < Math.min(6, Math.ceil(woodIn * left / 3)); k++) { const q = P(hx + 0.3, -hy + 0.2 + (k % 3) * 0.15, Math.floor(k / 3) * 1.5); ctx.fillStyle = '#8f6238'; ctx.fillRect(q[0] - 4, q[1] - 1.5, 7, 1.5); }
     for (let k = 0; k < Math.min(5, Math.ceil(stoneIn * left / 4)); k++) { const q = P(-hx + 0.2 + k * 0.18, hy + 0.3, 0); ctx.fillStyle = '#9a958c'; ctx.beginPath(); ctx.ellipse(q[0], q[1] - 1, 1.8, 1.2, 0, 0, TAU); ctx.fill(); }
-    overlays.push(b, sx, sy - wallH - 12);
+    if (!quiet) overlays.push(b, sx, sy - wallH - 12);
   }
 
   // ------------------------------ particles ------------------------------

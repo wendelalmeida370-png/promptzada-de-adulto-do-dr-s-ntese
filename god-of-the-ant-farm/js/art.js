@@ -409,10 +409,11 @@
 
   // ------------------------------ buildings ------------------------------
   const ROOFS = [['#b85a3c', '#94452d', '#7a3826'], ['#9a6a3a', '#7f5530', '#6a4526'], ['#6c6f86', '#56596e', '#46485a']];
-  // (noDoor: the picture without its door — its door is on a side the view does not see: L-264)
+  // (noDoor: the picture without its door — its door is on a side the view does not see: L-264; n: the building's lot — a
+  // step of another size than its type's is the god's from its form, or none: never the drawing of before, D-106)
   let noDoor = false;
-  Art.building = function (type, v, style, extra, nd) {
-    if (G.Arch) { const s = G.Arch.building(type, v, style || 'classico', extra, nd); if (s) return s; }
+  Art.building = function (type, v, style, extra, nd, n) {
+    if (G.Arch) { const s = G.Arch.building(type, v, style || 'classico', extra, nd, n); if (s || (G.Arch.sized && G.Arch.sized(type, n))) return s; }
     noDoor = !!nd;
     try { return before(type, v, nd ? '|c' : ''); } finally { noDoor = false; }
   };

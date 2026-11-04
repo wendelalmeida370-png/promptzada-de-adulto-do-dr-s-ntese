@@ -133,8 +133,9 @@ for (const type of Object.keys(G.BDEF)) {
       row.dentro = F.inside(Rg, Rn); { const k = type + '/' + style; dentro[k] = Math.max(dentro[k] || 0, row.dentro); }
       row.costas = Math.max(F.backOnly(near), F.backOnly(far)); if (row.costas > HOLE) holes.push(`${type}/${style}#${id}${row.fam ? ' (' + row.fam + ')' : ''}: ${(row.costas * 100).toFixed(1)}%`);
       for (const k of ['profA', 'profB']) delete row.near[k];
-      // (b) the form, where there is one
-      const Fm = FORMA && FORMA.of(type, style, b) && (!G.Build3D.byForm || G.Build3D.byForm(b)) ? FORMA.of(type, style, b) : null;
+      // (b) the form, where there is one — of the building's lot (G.Forma.of's third is its size since D-106: given the building,
+      // it answered none, and no type was held to its form — T-416)
+      const Fm = FORMA && FORMA.of(type, style, b.w) && (!G.Build3D.byForm || G.Build3D.byForm(b)) ? FORMA.of(type, style, b.w) : null;
       if (Fm) { formed.add(type + '/' + style); const fc = F.formCheck(b, Fm, god, near, LIM); row.forma = { ok: fc.ok, why: fc.why, plan: fc.plan.iou, top3D: fc.plan.top, topForma: fc.plan.formTop }; }
       rows.push(row);
       const key = type + '/' + style; const was = per.get(key); const rank = { '=': 0, '≈': 1, '≠': 2 };
