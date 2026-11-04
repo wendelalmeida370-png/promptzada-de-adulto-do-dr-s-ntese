@@ -1538,7 +1538,9 @@ float m3scale(float p) {
     const L = F.L, lift = onPlan ? 0 : K.y0 - K.hi, foot = K.lo - K.y0 - 0.2; // (foot: the lot's lowest ground, in the kit's frame)
     const XZ = (u, v) => G.Forma.toLot(side, L, u, v);
     const P = K.P;
-    const col = s => { if (Array.isArray(s)) return s; if (typeof s !== 'string') return '#8a8478'; if (s[0] === '#') return s;
+    // (a colour's name: the palette's own whole name first — 'trim2', 'acc2' are colours of their own, as arch.js's fcol reads them,
+    // L-564 —, then a list's place — 'roof1' — or its first)
+    const col = s => { if (Array.isArray(s)) return s; if (typeof s !== 'string') return '#8a8478'; if (s[0] === '#') return s; if (typeof P[s] === 'string') return P[s];
       const m = s.match(/^([a-z]+)(\d)?$/); if (!m) return '#8a8478'; const v = P[m[1]]; return m[2] !== undefined ? (Array.isArray(v) ? v[+m[2]] : v) || '#8a8478' : (Array.isArray(v) ? v[0] : v) || '#8a8478'; };
     return {
       F, side, L, K, col, lift,
@@ -2199,7 +2201,8 @@ float m3scale(float p) {
   // metres; g the far chunk's builder)
   function massInto(g, b, F, side) {
     const L = TL(), P = palOf(b); const pl = G.Space.plinth(b); const hi = bodyForm(b) || riskForm(b) ? pl.y0 : pl.hi, lo = pl.lo; const X0 = b.x * L, Z0 = b.y * L; // (a shell's form on the plinth's top: formCtx)
-    const col = s => { if (typeof s !== 'string') return P.wl || '#efe2c4'; if (s[0] === '#') return s; const m = s.match(/^([a-z]+)(\d)?$/); const v = m ? P[m[1]] : null; return (m && m[2] !== undefined && Array.isArray(v) ? v[+m[2]] : Array.isArray(v) ? v[0] : v) || '#8a8478'; };
+    // (a colour's name: the palette's own whole name first — 'trim2', 'acc2', L-564 —, then a list's place or its first)
+    const col = s => { if (typeof s !== 'string') return P.wl || '#efe2c4'; if (s[0] === '#') return s; if (typeof P[s] === 'string') return P[s]; const m = s.match(/^([a-z]+)(\d)?$/); const v = m ? P[m[1]] : null; return (m && m[2] !== undefined && Array.isArray(v) ? v[+m[2]] : Array.isArray(v) ? v[0] : v) || '#8a8478'; };
     const W = (u, v, y) => { const q = G.Forma.toLot(side, F.L, u, v); return [X0 + q[0], hi + y, Z0 + q[1]]; };
     // (a face turned out: its corners in the order that shows it from out — the far material shows one side)
     const tri = (a, b2, c, cc, out) => { const n = [(b2[1] - a[1]) * (c[2] - a[2]) - (b2[2] - a[2]) * (c[1] - a[1]), (b2[2] - a[2]) * (c[0] - a[0]) - (b2[0] - a[0]) * (c[2] - a[2]), (b2[0] - a[0]) * (c[1] - a[1]) - (b2[1] - a[1]) * (c[0] - a[0])];
@@ -3790,6 +3793,8 @@ float m3scale(float p) {
     const a = G.Forma.toLot(side, F.L, B[0] + t, R.vF + t / 2), c = G.Forma.toLot(side, F.L, B[2] - t, B[3]);
     return { r: [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[0], c[0]), Math.max(a[1], c[1])], y1: R.Hp + R.Hc }; };
   B3.riskForm = riskForm; // (for the proofs)
+  // (for the proofs: a Greek temple's porch — its rect in the lot's frame, its ceiling —: the form's there, in the plan's storey)
+  B3.pronaos = b => { const RF = riskForm(b); return RF && templeOf(RF) ? pronaosOf(RF, formSide(b, B3.shellOf(b))) : null; };
   // (the side a form with a plan is turned to: the plan's — its entrance's —, where its rooms, its pieces and its way in are;
   // the world's door only where the shell has no entrance: while the plan's way in is not open ground, the world's door falls
   // back to the old corner rule — a day, till the turn of the day moves it —, and the form would turn round from its plan)

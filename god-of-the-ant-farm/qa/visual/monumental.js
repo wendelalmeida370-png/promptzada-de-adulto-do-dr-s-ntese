@@ -25,7 +25,8 @@
 //      peças da forma com as paredes da casca; longe, as massas da forma (não a caixa de 18 triângulos) —; P2 a frente do pátio
 //      aberta (da rua, pelo vão do portão, o olhar chega ao fundo do pátio); P3 as peças que a planta marca da forma desenhadas, e de
 //      pé com o interior aberto; P4 as escadas grandes com o poço aberto e o guarda-corpo, sem alçapão; P5 o corpo sobe a escada
-//      grande, não anda sobre o poço e desce pelo lance andando; P6 a câmera no pátio e no salão do trono
+//      grande, não anda sobre o poço e desce pelo lance andando; P6 a câmera no pátio e no salão do trono; P7 as cores da forma
+//      pelo nome inteiro (L-564): a segunda faixa dos tetos planos do palácio asteca de 6 (Tenochtitlan) na cor dela
 //   T. o pódio de pedra (D-120) sob o palácio: o desnível do lote em pedra aparelhada, em fiadas, na pedra do povo; o lote clássico
 //      com o plinto de antes. E (1) o pedaço refeito com a geometria do monumento guardada (Build3D.formKeep): igual, mais depressa
 //   Tp. os templos de 8 casas do M2 pela forma (T-439, T-410), fundados pela mão do deus em Argos, Roma, Mênfis e Birka: Tp1 perto
@@ -129,8 +130,9 @@ function HELP(G) {
   H.palaceOf = function (b) {
     const T = G.Space.TILE, B3 = G.Build3D; const p = G.Space.planNow(b); const F = B3.formOf(b); const Rk = G.Interiors.riskOf(F);
     const side = B3.formSide(b, B3.shellOf(b)); const W = (u, v) => { const q = G.Forma.toLot(side, F.L, u, v); return [b.x * T + q[0], b.y * T + q[1]]; };
-    const room = fn => p.rooms.find(m => m.fn === fn && m.lv === 0);
-    return { p, F, Rk, side, W, base: G.Space.plinth(b).y0, court: room('patio'), hall: room('trono'), throne: p.items.find(it => it.kind === 'trono'), grand: p.stairs.filter(s => G.Interiors.grandWell(s)), e: p.entrance };
+    // (a plan that does not lay out — the Aztec palace's on a lot of Tenochtitlan —: none, said why; the form is there all the same)
+    const room = fn => p && p.rooms.find(m => m.fn === fn && m.lv === 0); const why = p ? null : 'a planta não se fez: ' + (((G.Interiors.plan(b) || {}).errs || []).slice(0, 2).join('; ') || '?');
+    return { p, why, F, Rk, side, W, base: G.Space.plinth(b).y0, court: room('patio'), hall: room('trono'), throne: p && p.items.find(it => it.kind === 'trono'), grand: p ? p.stairs.filter(s => G.Interiors.grandWell(s)) : [], e: p && p.entrance };
   };
   // (the body walked to a point in a straight line, as the game walks it — the world's step and the body's, no frame drawn: the
   // photos' way in; the flights it runs into taken whole)
@@ -390,6 +392,19 @@ function nodePart() {
     ok('P6. a câmera no pátio e no salão do trono: a distância pedida, nunca na pedra', qC.cur >= 4.3 && qH.cur >= Math.min(4.8, roomH) * 0.8 && !qC.stone && !qH.stone, `no pátio ${qC.cur.toFixed(1)} m de 4,8${qC.stone ? ' (NA PEDRA)' : ''}; no salão do trono ${qH.cur.toFixed(1)} m (até a parede do pátio ${roomH.toFixed(1)})${qH.stone ? ' (NA PEDRA)' : ''}`);
     G.Cam3D.OPT.follow = true;
   }
+  // P7. the colours of a form by their whole names (L-564): the Aztec palace of 6 — M2's, founded in Tenochtitlan —, the second band
+  // of its flat roofs ('trim2', the blue-green) in its own colour, not in the first's ('trim', the red)
+  { const AZ = H.palace('Tenochtitlan', 'palacio', 'palacio', 60);
+    if (!AZ.b) ok('P7. o palácio asteca fundado em Tenochtitlan', false, AZ.why);
+    else { const Pa = G.Arch.PAL.asteca; const bands = AZ.F.els.filter(e => e.k === 'faixa' && e.cor === 'trim2'); const lin = s => { const c = new THREE.Color(s).convertSRGBToLinear(); return [c.r, c.g, c.b]; };
+      const want = lin(Pa.trim2), not = lin(Pa.trim); const d2 = (a, c2) => (a[0] - c2[0]) ** 2 + (a[1] - c2[1]) ** 2 + (a[2] - c2[2]) ** 2;
+      const tally = (geo, base) => { const P = geo.attributes.position.array, Cc = geo.attributes.color.array; let mine = 0, first = 0;
+        for (const e of bands) { const ym = base + (e.y0 + e.y1) / 2; for (let i = 0; i < P.length; i += 9) { const ys = [P[i + 1], P[i + 4], P[i + 7]]; if (Math.min(...ys) < base + e.y0 - 0.01 || Math.max(...ys) > base + e.y1 + 0.01 || Math.min(...ys) > ym || Math.max(...ys) < ym) continue;
+          const c2 = [Cc[i], Cc[i + 1], Cc[i + 2]]; if (d2(c2, want) < d2(c2, not)) mine++; else first++; } } return { mine, first }; };
+      const az = AZ.b; const cx = Math.floor(az.x / C) * C, cy = Math.floor(az.y / C) * C; const all4 = S.buildings; S.buildings = new Map([[az.id, az]]); let ng; try { ng = B3.nearGeo(cx, cy, C); } finally { S.buildings = all4; }
+      const tn = tally(ng.solid, AZ.base);
+      ok('P7. as cores da forma pelo nome inteiro (L-564): a segunda faixa dos tetos planos do palácio asteca na cor dela', bands.length > 0 && tn.mine > 0 && tn.first === 0,
+        `#${az.id} em ${az.x},${az.y}: ${bands.length} faixas «trim2» (${Pa.trim2}, a primeira «trim» ${Pa.trim}): perto ${tn.mine} triângulos na cor dela, ${tn.first} na da primeira (pela forma: ${B3.byForm(az)}; ${AZ.p ? 'a planta pronta' : AZ.why})`); } }
   // ================ Tp. the temples of the bigger steps by their form (M2's risks — T-439, T-410, L-558): the Greek's, the Roman's,
   // the Egyptian's and the Norse's of 8 tiles, founded whole by the god's hand in a town of each people ================
   { const Tz = []; for (const [town, civ] of [['Argos', 'grego'], ['Roma', 'romano'], ['Mênfis', 'egipcio'], ['Birka', 'nordico']]) Tz.push(Object.assign({ town, civ }, H.temple(town, 'monumental', 60)));
@@ -407,7 +422,7 @@ function nodePart() {
       return { n, of: els.length }; };
     const rows = [];
     for (const t of Tz) {
-      if (!t.b) { ok(`Tp. o templo de 8 casas em ${t.town}`, false, t.why); continue; }
+      if (!t.b || !t.p) { ok(`Tp. o templo de 8 casas em ${t.town}`, false, t.why); continue; }
       const g2 = alone(t.b); g2.near.solid.computeBoundingBox(); g2.far.computeBoundingBox();
       rows.push(Object.assign(t, { g2, P2: g2.near.solid.attributes.position.array, AP: g2.near.solid.attributes.aP.array, topN: g2.near.solid.boundingBox.max.y - t.base, topF: g2.far.boundingBox.max.y - t.base,
         massTop: Math.max(...G.Forma.mass(t.F).map(m => Math.max(...[m.y1, m.a && m.a[2], m.b && m.b[2], ...(m.p || []).map(q => q[2])].filter(Number.isFinite)))), cost2: B3.cost(t.b), fw: t.p.walls.filter(w => B3.formWall(t.b, t.p, w)).length }));
@@ -581,16 +596,21 @@ async function browserPart() {
       turns.none ? 'o pedaço do Coliseu não achado na cena' : `carga da máquina ${load.toFixed(1)} em ${cores} núcleos; em turnos (6 × 15 quadros cada): sem o Coliseu ${turns.noM} ms (p95 ${turns.noP}) → com ele ${turns.withM} ms (p95 ${turns.withP}); o pedaço do canto ${turns.tris[1]} → ${turns.tris[0]} triângulos`);
     console.log(`DESEMPENHO | monumental | Roma da metrópole, o corpo diante do Coliseu: em turnos, mediana ${turns.noM} → ${turns.withM} ms, p95 ${turns.noP} → ${turns.withP} ms; antes e depois de fundá-lo (um minuto entre as duas, carga ${load.toFixed(1)}): mediana ${before.med} → ${after.med} ms, p95 ${before.p95} → ${after.p95} ms, chamadas ${before.calls} → ${after.calls}, triângulos ${before.tris} → ${after.tris}`);
     // the photos: the eye's pose set after the game's own (the photos only: what the camera does is the part 1's proof)
+    // (the body put at the pose's point first, when it has one — by Avatar.place, or taken there and attached again (attach: out of
+    // a building it stood in — out of it first: the world puts one inside a building where it is not back at its door —) —;
+    // whether it stands there after the frames)
     const shot = async (name, pose) => {
-      await page.evaluate(p => {
-        const V = window.__VIS; const st = G.Avatar.state(); const n = window.__nm; const T = G.Space.TILE;
-        if (p.at) { G.Avatar.place(p.at[0] / T, p.at[1] / T); V.f(3); }
+      const r = await page.evaluate(p => {
+        const V = window.__VIS; const st = G.Avatar.state(); const n = window.__nm; const T = G.Space.TILE; let placed = null;
+        if (p.at && p.attach) { const v = G.Possess.body(); G.inSim++; v.inside = 0; v.x = p.at[0] / T; v.y = p.at[1] / T; v.path = null; G.inSim--; G.Avatar.attach(v, p.body || 0); V.f(3); placed = true; }
+        else if (p.at) { placed = G.Avatar.place(p.at[0] / T, p.at[1] / T); V.f(3); }
         if (p.body) { st.yaw = p.body; }
         G.Realm.setQuality('media'); V.warm(2); G.Cam3D.OPT.follow = false; G.Cam3D.yaw = p.yaw; G.Cam3D.pitch = p.pitch; G.Cam3D.dist = p.dist; G.Cam3D.cur = p.dist;
-        window.__cam = p.eye || null; V.f(12); if (p.body) st.yaw = p.body; V.f(2); void n;
+        window.__cam = p.eye || null; V.f(12); if (p.body) st.yaw = p.body; V.f(2); void n; const s2 = G.Avatar.state(); const d = p.at && s2 ? Math.hypot(s2.X - p.at[0], s2.Z - p.at[1]) : 0; return { placed: placed !== false && d < 3, d: +d.toFixed(1) };
       }, pose);
       try { await page.screenshot({ path: path.join(OUT, name + '.jpg'), type: 'jpeg', quality: 72, timeout: 180000 }); } catch (e2) { console.log('(foto ' + name + ' não saiu: ' + e2.message.slice(0, 80) + ')'); }
       await page.evaluate(() => { window.__cam = null; G.Realm.setQuality('baixa'); });
+      return r;
     };
     await page.evaluate(() => { const up = G.Cam3D.update; G.Cam3D.update = function (rdt, body, cam) { up.call(this, rdt, body, cam); const o = window.__cam; if (o) { cam.position.set(o.P[0], o.P[1], o.P[2]); cam.lookAt(o.A[0], o.A[1], o.A[2]); } }; });
     const poses = await page.evaluate(() => {
@@ -650,26 +670,29 @@ async function browserPart() {
     }
     // 12. the temples of 8 tiles by their form (T-439, T-410) — the Greek's in Argos, the Egyptian's in Mênfis, the Norse's in Birka —
     // and the palaces of 6 of those peoples — in Argos, Mênfis and Hedeby —, founded whole by the god's hand: each from outside, the
-    // eye raised before its front's left corner, the body on the street before it; and the Egyptian's hypostyle hall from inside,
+    // eye over its front's left corner, the body on the street before it; and the Egyptian's hypostyle hall from inside,
     // the body walked in by the pylon's gate and the hall's portal (its columns: L-558)
     const more = await page.evaluate(() => {
       const H = window.__MON; const T = G.Space.TILE; const out = [];
       for (const [town, type, step, tag] of [['Argos', 'temple', 'monumental', '7-templo-grego'], ['Mênfis', 'temple', 'monumental', '8-templo-egipcio'], ['Birka', 'temple', 'monumental', '9-templo-nordico'],
         ['Argos', 'palacio', 'palacio', '11-palacio-grego'], ['Mênfis', 'palacio', 'palacio', '12-palacio-egipcio'], ['Hedeby', 'palacio', 'palacio', '13-palacio-nordico']]) {
         const z = type === 'temple' ? H.temple(town, step, 60) : H.palace(town, type, step, 60); if (!z.b) { out.push({ tag, why: z.why }); continue; }
-        const L = z.F.L, W = z.W, top = z.F.top, base = z.base; const P = W(-0.2 * L, 1.42 * L), A = W(0.5 * L, 0.45 * L), st = W(0.5 * L, L + 2.2);
-        out.push({ tag, id: z.b.id, x: z.b.x, y: z.b.y, st: G.Civ.idOfFac(z.set.fac), at: st, into: Math.atan2(A[1] - st[1], A[0] - st[0]), eye: { P: [P[0], base + Math.max(7, top * 0.62), P[1]], A: [A[0], base + top * 0.3, A[1]] } });
+        // (the eye a little out of the lot's front-left corner, over the top of the building and of the trees round it)
+        const L = z.F.L, W = z.W, top = z.F.top, base = z.base; const P = W(-0.06 * L, 1.14 * L), A = W(0.5 * L, 0.42 * L);
+        // (the body on open ground before its front — the street, a step aside where a tree or the water is)
+        let st = null; for (const d of [2.2, 3.5, 5, 7]) for (const du of [0, -2, 2, -4, 4]) { const q = W(0.5 * L + du, L + d); if (!st && G.W.inb(q[0] / T, q[1] / T) && G.W.walkableXY(q[0] / T, q[1] / T)) st = q; } st = st || W(0.5 * L, L + 2.2);
+        out.push({ tag, id: z.b.id, x: z.b.x, y: z.b.y, st: G.Civ.idOfFac(z.set.fac), at: st, into: Math.atan2(A[1] - st[1], A[0] - st[0]), eye: { P: [P[0], base + top + 4, P[1]], A: [A[0], base + top * 0.28, A[1]] } });
       }
       window.__more = out; return out;
     });
     const pics3 = [];
-    for (const m of more) { if (m.why) { pics3.push(`${m.tag}: ${m.why}`); continue; } await shot(m.tag, { at: m.at, body: m.into, yaw: m.into, pitch: -0.3, dist: 6, eye: m.eye }); const f = path.join(OUT, m.tag + '.jpg'); pics3.push(fs.existsSync(f) ? `${m.tag}.jpg ${(fs.statSync(f).size / 1024).toFixed(0)} KB (#${m.id} em ${m.x},${m.y}, ${m.st})` : `${m.tag}: não saiu`); }
+    for (const m of more) { if (m.why) { pics3.push(`${m.tag}: ${m.why}`); continue; } const sr = await shot(m.tag, { at: m.at, attach: true, body: m.into, yaw: m.into, pitch: -0.3, dist: 6, eye: m.eye }); const f = path.join(OUT, m.tag + '.jpg'); pics3.push(!sr || !sr.placed ? `${m.tag}: o corpo não foi posto diante dele (a ${sr && sr.d} m)` : fs.existsSync(f) ? `${m.tag}.jpg ${(fs.statSync(f).size / 1024).toFixed(0)} KB (#${m.id} em ${m.x},${m.y}, ${m.st})` : `${m.tag}: não saiu`); }
     // (into the Egyptian's hall: by the gate and across the court, the portal opened by the hand — Interiors.useDoor —, by day)
     const hall = await page.evaluate(() => {
       const H = window.__MON; const m = (window.__more || []).find(q => q.tag === '8-templo-egipcio'); if (!m || !m.id) return { ok: false, why: 'sem o templo egípcio' };
-      const b = G.S.buildings.get(m.id); const z = H.palaceOf(b); const T = G.Space.TILE; const v = G.Possess.body(); const p = z.p, R = z.Rk;
+      const b = G.S.buildings.get(m.id); const z = H.palaceOf(b); const T = G.Space.TILE; const v = G.Possess.body(); const p = z.p, R = z.Rk; if (!p) return { ok: false, why: z.why };
       const court = p.rooms.find(q => q.fn === 'patio'), hy = p.rooms.find(q => q.fn === 'hipostila'); const e = p.entrance; G.S.time = 0.42;
-      G.Avatar.place((b.x * T + e.out[0]) / T, (b.y * T + e.out[1]) / T); window.__VIS.warm(2); window.__VIS.f(3);
+      G.inSim++; v.inside = 0; v.x = (b.x * T + e.out[0]) / T; v.y = (b.y * T + e.out[1]) / T; v.path = null; G.inSim--; G.Avatar.attach(v, 0); window.__VIS.warm(2); window.__VIS.f(3);
       G.inSim++; G.Interiors.useDoor(b, e.door, 'abrir', v); G.inSim--; H.walk(b.x * T + e.x, b.y * T + e.z, 600);
       const d = court && hy && H.doorBetween(p, court.id, hy.id); if (d) { G.inSim++; G.Interiors.useDoor(b, d.id, 'abrir', v); G.inSim--; H.walk(b.x * T + d.a[0], b.y * T + d.a[1], 600); H.walk(b.x * T + d.b[0], b.y * T + d.b[1], 600); }
       const mid = z.W(R.L / 2 + 0.8, (hy.r[1] + hy.r[3]) / 2 + 1.2); const dd = H.walk(mid[0], mid[1], 600); const back = z.W(R.L / 2, hy.r[1]);
