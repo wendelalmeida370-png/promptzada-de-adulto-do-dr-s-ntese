@@ -41,8 +41,8 @@
 //     Node — a linha no chão pelos pontos da borda do lote certo, do tamanho dele (na cor do povo, sobre uma escura); as estacas
 //     dos cantos com a bandeirola e uma a cada duas casas, a corda de cada vão desenhada uma vez nas quatro vistas; de longe, só
 //     a linha; o ponteiro sobre o lote, nada mais sob ele: «Reservado para o Coliseu» (o artigo de cada nome); sem a reserva,
-//     nada; o save, o acaso e o relógio iguais depois dos quadros; o mesmo mundo com e sem quadros. Até a G.Village.reserva do C
-//     entrar no jogo, uma reserva de teste registrada só aqui (TESTE).
+//     nada; o save, o acaso e o relógio iguais depois dos quadros; o mesmo mundo com e sem quadros. O lote é o que a reserva do
+//     jogo guarda (G.Village.reserva, do C), pedido pela guarda de prova (qa/guarda-lib.js) logo depois de abrir o mundo.
 // (l) A escada em degraus (L-565, T-445): toda escada de uma forma — pelo pintor; no tamanho clássico, o desenho à mão das
 //     pirâmides de degraus (o templo e o Templo Mayor dos astecas, a Acrópole, o zigurate) — com tantos espelhos quanto os
 //     degraus que o 3D põe (Fo.flight), da altura e da largura deles; os degraus de caixa do desenho à mão dos palácios, à parte.
@@ -101,7 +101,7 @@ if (want('a')) {
 
 // ------------------------------ the step of 10 tiles ------------------------------
 // (M1's Colosseum when its form is in the game; until then the test generator of visual/forma-deus-lib.js, registered here only)
-const { coliseuTeste, reservaTeste } = require('./forma-deus-lib.js');
+const { coliseuTeste } = require('./forma-deus-lib.js'); const { guarda } = require('../guarda-lib.js');
 const N10 = require('./forma-deus-lib.js').N, TESTE = !Fo.has('maravilha', 'romano', N10); if (TESTE) Fo.def('maravilha', 'romano', coliseuTeste, [N10]);
 // (a building of n tiles a side on the flat world: its record made as the world makes it at the founding, its lot n)
 function putBig(type, st, id, n, x, y) {
@@ -457,18 +457,19 @@ if (want('j')) {
 // (D-121: the capital keeps the lot of the biggest step of its great work, and the god sees it — a light line of its people's
 // colour on the ground round the lot, a stake at each corner with a pennant of that colour and one every two tiles between,
 // the rope from stake to stake; from afar the line alone; the pointer over it, nothing else under it: «Reservado para o
-// Coliseu». Asked of the world: G.Village.reserva(set), C's — pure, { type, esc, x, y, n } or null. While it is not in the
-// game, a test reserve registered only here (TESTE: the lot of the wonder's biggest step near the capital's middle, no
-// building in it — fields and roads may be). The god's whole frame drawn in Node on a recorder: the line on the right lot, of
+// Coliseu». Asked of the world: G.Village.reserva(set), C's — pure, { type, esc, x, y, n } or null. The lot the game keeps,
+// had by the proof's guard (qa/guarda-lib.js: the capital at the guard's level, a ground laid flat where the land will not
+// do; T-443) just after the world is opened — it changes the world, so everything measured comes after it — in each run of
+// the world. The god's whole frame drawn in Node on a recorder: the line on the right lot, of
 // the right size; the stakes, their ropes, the label; from afar the line alone; gone with the reserve; nothing of the world
 // changed by drawing it (its chance, its clock, its save); the same world with and without frames)
 if (want('k')) {
   const world = process.env.MUNDO_K || 'metropole';
   // (the terrain's outlines are the browser's Path2D: in Node, nothing — the ground's pictures are not what is looked at here)
   if (!global.Path2D) global.Path2D = class { moveTo() { } lineTo() { } closePath() { } rect() { } arc() { } ellipse() { } quadraticCurveTo() { } bezierCurveTo() { } addPath() { } };
-  const V = G.Village, R = G.Render, W = G.W, cam = R.cam, real = V.reserva, RTESTE = !real; let gone = false, lot = null; const out = [];
-  // (the reserve the world gives: C's, as it is — or, while it is not in the game, this proof's —; none while «gone»)
-  V.reserva = s => (gone ? null : real ? real(s) : lot && s.id === lot.set ? lot.r : null);
+  const V = G.Village, R = G.Render, W = G.W, cam = R.cam, real = V.reserva; let gone = false; const out = [];
+  // (the reserve the world gives, C's, as it is; none while «gone» — the frames only: no step of the world runs then)
+  V.reserva = s => (gone ? null : real(s));
   // (the god's frame on a recorder: what it paints, and the texts it writes — their own coordinates)
   let rec = F.recorder(); const texts = [];
   const pc = new Proxy({}, { get(t, k) { if (k === 'fillText') return (s, x, y) => texts.push({ s: String(s), x, y }); const c = rec.c; if (k in c) { const v = c[k]; return typeof v === 'function' ? v.bind(c) : v; } return () => { }; }, set(t, k, v) { rec.c[k] = v; return true; } });
@@ -478,10 +479,9 @@ if (want('k')) {
   const same = (c, p) => Math.abs(c[0] - p[0]) < 1 && Math.abs(c[1] - p[1]) < 1 && Math.abs(c[2] - p[2]) < 1;
   try {
     let S = M.pronto(world); R.init({ getContext: () => pc, width: 0, height: 0, style: {} });
-    // (the test's lot — visual/forma-deus-lib.js, as D-121 keeps one —; or, with C's, the first town that keeps one)
-    let cap = null; if (RTESTE) { lot = reservaTeste(G); cap = lot && S.settlements.get(lot.set); } else cap = [...S.settlements.values()].find(s => real(s)) || null;
-    const r = cap && V.reserva(cap);
-    if (!r) ok('k: a reserva do lote no deus', false, RTESTE ? `nenhum lote livre para a reserva de teste em ${world}` : `nenhuma cidade com o lote reservado em ${world} (G.Village.reserva do C): os mundos prontos gerados de novo com ela?`);
+    // (the lot the game keeps, by the proof's guard — in the ready world of now no town keeps one —: a world it changes)
+    const g = guarda(G), cap = g && S.settlements.get(g.set), r = cap && V.reserva(cap);
+    if (!r) ok('k: a reserva do lote no deus', false, `a guarda de prova não fez cidade nenhuma guardar um lote em ${world}`);
     else {
       const n = r.n, col = F.parseCol(G.Fac.hex(cap.fac)), cx = r.x + n / 2, cy = r.y + n / 2;
       const look = z => { const c = R.proj(cx, cy, W.groundH(cx, cy)); cam.follow = 0; cam.target = null; cam.x = c[0]; cam.y = c[1]; cam.zoom = cam.tz = z; };
@@ -505,7 +505,7 @@ if (want('k')) {
           for (const o of rc.ops) { if (!o.f && same(o.col, [176, 146, 100])) ropes += o.segs.length / 10; if (o.f && same(o.col, col)) flags++; } }
         okV = okV && ropes === st.length && flags === 4; views.push(`${ropes} cordas, ${flags} bandeirolas`); });
       const okLab = lab.length === 1 && lab[0].s === R.reserveName(q) && (() => { const p = R.proj(cx, cy, W.groundH(cx, cy)), is = G.clamp(1.5 / cam.zoom, 0.7, 1.4); return Math.abs(lab[0].x - p[0]) < 0.01 && Math.abs(lab[0].y - (p[1] - 10 * is)) < 0.01; })();
-      out.push(`${cap.name}: o lote (${r.x}, ${r.y}) de ${n} × ${n} casas${RTESTE ? ' (a reserva de teste)' : ''} — ${L1.length} traços pelos ${4 * n} pontos da borda (${okL ? `a linha escura na borda clara, ${cord(L1).w.toFixed(1)} px na tela` : 'NÃO os dois'}); ${st.length} estacas (esperadas ${wantN}), ${onEdge ? 'todas na borda' : 'FORA DA BORDA'}; nas quatro vistas: ${views.join(' / ')}; o rótulo: «${lab.length ? lab[0].s : '-'}»${lab.length > 1 ? ` (${lab.length} vezes)` : ''}`);
+      out.push(`${cap.name}: o lote (${r.x}, ${r.y}) de ${n} × ${n} casas que a reserva do jogo guarda${g.provocado ? ' (o chão aplainado pela guarda)' : ''} — ${L1.length} traços pelos ${4 * n} pontos da borda (${okL ? `a linha escura na borda clara, ${cord(L1).w.toFixed(1)} px na tela` : 'NÃO os dois'}); ${st.length} estacas (esperadas ${wantN}), ${onEdge ? 'todas na borda' : 'FORA DA BORDA'}; nas quatro vistas: ${views.join(' / ')}; o rótulo: «${lab.length ? lab[0].s : '-'}»${lab.length > 1 ? ` (${lab.length} vezes)` : ''}`);
       // (2) the label only with nothing else under the pointer, and only on the lot
       R.hover = [...S.buildings.values()].find(b => b.set === cap.id) || null; frame(); const labH = labels().length; R.hover = null;
       R.pointer = [r.x - 2, r.y - 2]; frame(); const labO = labels().length; R.pointer = [cx, cy];
@@ -526,13 +526,15 @@ if (want('k')) {
       // (7) the same world with and without frames: 30 s of the world, and with the god's frame — the reserve, its label —
       // every two seconds
       gone = false; R.pointer = null; const STEPS = 20, FR = 15;
-      S = M.pronto(world); look(1.25); for (let k = 0; k < STEPS * FR; k++) G.debug.step(0.1); const fa = fp(), ka = clockOf(S); // (the same camera: the save keeps where the god looks)
-      S = M.pronto(world); look(1.25); R.pointer = [cx, cy]; let drawn = 0, said = 0;
+      // (each run the world opened and the guard asked again — the same world, the same lot —, then the same camera: the save
+      // keeps where the god looks)
+      S = M.pronto(world); guarda(G); look(1.25); for (let k = 0; k < STEPS * FR; k++) G.debug.step(0.1); const fa = fp(), ka = clockOf(S);
+      S = M.pronto(world); guarda(G); look(1.25); R.pointer = [cx, cy]; let drawn = 0, said = 0;
       for (let k = 0; k < FR; k++) { for (let j = 0; j < STEPS; j++) G.debug.step(0.1); frame(); drawn += R.reserves().length; said += labels().length; }
       const fb = fp(), kb = clockOf(S);
       ok('k: com e sem quadros, o mesmo mundo', fa === fb && ka === kb && drawn === FR && said === FR, `${(STEPS * FR) / 10} s de ${world}: ${fa === fb && ka === kb ? 'o mesmo mundo' : 'MUNDOS DIFERENTES'} (${fa} / ${fb}); a reserva desenhada em ${drawn} de ${FR} quadros, o rótulo em ${said}`);
     }
-  } finally { if (real) V.reserva = real; else delete V.reserva; R.pointer = null; R.hover = null; }
+  } finally { V.reserva = real; R.pointer = null; R.hover = null; }
 }
 
 // ------------------------------ (l) the flight in steps ------------------------------

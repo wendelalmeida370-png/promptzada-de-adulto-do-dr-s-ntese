@@ -769,7 +769,7 @@
   // (a family of its own: its plans' dice by its own name — L-512, the seed of a family registered after the frozen list —, the
   // dice of every other family's plans as they were)
   In.addFamilies([{ id: 'estalagem.andar', H: 'estalagem', V: 'andar', S: 'estalagem.andar', name: 'A estalagem: o salão, a cozinha, a adega, os quartos em cima e o terreiro',
-    can: rec => (In.nOf(rec) < 3 ? 'a estalagem é dos degraus maiores da taverna (12 m ou mais)' : null), build: P => innBuild(P) }]);
+    can: rec => (In.nOf(rec) < 3 ? 'a estalagem é dos degraus maiores da taverna (12 m ou mais)' : null), build: P => In.innBuild(P) }]); // (by In: the proofs put their own stair in, T-409)
   In.innBuild = innBuild;
 
   // ------------------------------ the rich house: the house's bigger step (domus 2; D-106) ------------------------------

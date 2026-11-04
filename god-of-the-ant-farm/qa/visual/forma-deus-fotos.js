@@ -13,14 +13,14 @@
 //   6. a obra pela metade (o mundo pronto de novo, o Coliseu fundado como obra): o andaime da altura da forma desse tamanho
 //      (R.siteH) e a foto dela
 //   7. a memória dos desenhos grandes (Art.BIG)
-//   8. o lote reservado para a obra grande (D-121; a reserva do C, ou até lá a de teste de visual/forma-deus-lib.js): de perto,
+//   8. o lote reservado para a obra grande (D-121; o que a reserva do jogo guarda, pedido pela guarda de prova): de perto,
 //      com o mouse sobre o lote e nada mais sob ele («Reservado para o Coliseu»), o canto da frente de perto, e de longe; o
 //      mundo igual (QA.canon)
 // Numa pasta do jogo de antes do pintor (sem G.Arch.formSprite), só tira as fotos de antes (o degrau desenhado à moda antiga).
 const path = require('path'), fs = require('fs'), os = require('os');
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')), OUT = path.resolve(process.argv[3] || path.join(os.tmpdir(), 'forma-deus'));
 fs.mkdirSync(OUT, { recursive: true });
-const { open } = require('./vistas.js'); const LIB = require('./forma-deus-lib.js');
+const { open } = require('./vistas.js'); const LIB = require('./forma-deus-lib.js'); const { guarda } = require('../guarda-lib.js');
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | forma-deus-fotos ${name} | ${info}`); if (!c) fails.push(name); };
 (async () => {
   const t0 = Date.now();
@@ -121,35 +121,35 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       const two = o7.made.map(q => q.mb * 4 / 3).sort((a, b) => b - a).slice(0, 2).reduce((s, x) => s + x, 0);
       ok('7: a memória dos desenhos grandes, com teto', o7.same && o7.peak <= o7.cap + two, `o cache depois das vistas: ${o7.m0.n} desenhos, ${o7.m0.mb.toFixed(1)} MB (os grandes: ${o7.m0.bigN}, ${o7.m0.bigMB.toFixed(1)} MB); o Coliseu solto e pintado de novo em ${o7.ms.toFixed(0)} ms, ${o7.same ? 'os mesmos pixels' : 'OUTROS pixels'} (${o7.px[0]} × ${o7.px[1]}); os ${o7.made.length} desenhos dos degraus (com e sem porta) somam ${tot.toFixed(1)} MB com as cópias, o mais lento ${slow.k} em ${slow.ms.toFixed(0)} ms — com o teto de ${o7.cap} MB: no máximo ${o7.peak.toFixed(1)} MB, ${o7.dropped} soltos; o cache no fim: ${o7.m1.n} desenhos, ${o7.m1.mb.toFixed(1)} MB`);
     }
-    // (8) the lot kept for a great work (D-121): the ready world again; C's reserve when it is in the game — until then, the
-    // test one (visual/forma-deus-lib.js), registered in the page for these photos only —; near, the mouse on a tile of it
-    // with nothing else under the pointer (main.js gives the tile, the render the label), and from afar; the world unchanged
-    const o8 = await page.evaluate(gen => {
+    // (8) the lot kept for a great work (D-121): the ready world again, and the lot the game's reserve keeps there — asked by
+    // the proof's guard (qa/guarda-lib.js, its source sent into the page: the capital at the guard's level, a ground laid flat
+    // where the land will not do; T-443) —; near, the mouse on a tile of it with nothing else under the pointer (main.js gives
+    // the tile, the render the label), its front corner close, and from afar; the world unchanged by the frames, after the guard
+    const o8 = await page.evaluate(src => {
       G.Save.apply(JSON.parse(G.Ready.data.metropole)); G.Main.mode = 'game'; G.UI.setSpeed(0); if (G.FX && G.FX.list) G.FX.list.length = 0;
-      const V = G.Village, S = G.S, R = G.Render; let teste = false;
-      if (!V.reserva) { const q = (0, eval)('(' + gen + ')')(G); if (!q) return { err: 'nenhum lote livre para a reserva de teste' }; teste = true; window.__resTeste = q; V.reserva = s => (s.id === q.set ? q.r : null); }
-      const set = [...S.settlements.values()].find(s => V.reserva(s)); if (!set) return { err: 'nenhuma cidade com o lote reservado' };
-      const r = V.reserva(set), cx = r.x + r.n / 2, cy = r.y + r.n / 2;
+      const V = G.Village, S = G.S, R = G.Render; const g = (0, eval)('(' + src + ')')(G); if (!g) return { err: 'a guarda de prova não fez cidade nenhuma guardar um lote na metrópole' };
+      const set = S.settlements.get(g.set), r = set && V.reserva(set); if (!r) return { err: 'a cidade da guarda sem o lote reservado' };
+      const cx = r.x + r.n / 2, cy = r.y + r.n / 2;
       R.centerOn(cx, cy, 1.25); window.__VIS.f(3);
       // (a tile of the lot, from its middle out, whose screen point picks nothing: no field nor building under the pointer)
       let at = null; for (let k = 0; k <= r.n / 2 && !at; k++) for (const [dx, dy] of [[0, 0], [k, 0], [-k, 0], [0, k], [0, -k], [k, k], [-k, -k], [k, -k], [-k, k]]) {
         const x = cx + dx, y = cy + dy; if (x < r.x + 0.5 || y < r.y + 0.5 || x > r.x + r.n - 0.5 || y > r.y + r.n - 0.5) continue;
         const p = R.proj(x, y, G.W.groundH(x, y)), s2 = R.worldPxToScreen(p[0], p[1]); if (!G.Main.pick(s2[0], s2[1], false)) { at = s2; break; } }
-      return { teste, set: set.name, r, at, canon0: window.QA && QA.canon ? JSON.stringify(QA.canon()) : null };
-    }, LIB.reservaTeste.toString()).catch(e => ({ err: e.message }));
+      return { set: set.name, sid: set.id, r, at, provocado: g.provocado, canon0: window.QA && QA.canon ? JSON.stringify(QA.canon()) : null };
+    }, guarda.toString()).catch(e => ({ err: e.message }));
     if (o8.err) ok('8: o lote reservado', false, o8.err);
     else {
       if (o8.at) await page.mouse.move(o8.at[0], o8.at[1]);
-      const near = await page.evaluate(() => { window.__VIS.f(4); const R = G.Render; const q = R.reserves()[0]; return { n: R.reserves().length, pt: R.pointer, hover: !!R.hover, name: q ? R.reserveName(q) : null }; });
+      const near = await page.evaluate(sid => { window.__VIS.f(4); const R = G.Render; const q = R.reserves().find(o => o.s.id === sid); return { n: R.reserves().length, mine: !!q, pt: R.pointer, hover: !!R.hover, name: q ? R.reserveName(q) : null }; }, o8.sid);
       await shot('deus-reserva');
       await page.mouse.move(4, 4);
       await page.evaluate(r => { G.Input.mouse.onCanvas = false; G.Render.centerOn(r.x + r.n - 1, r.y + r.n - 1, 3); window.__VIS.f(4); }, o8.r); // (its front corner, close — the mouse off the view —: the stake, the pennant, the rope)
       await shot('deus-reserva-canto');
       await page.evaluate(r => { G.Render.centerOn(r.x + r.n / 2, r.y + r.n / 2, 0.45); window.__VIS.f(4); }, o8.r);
       await shot('deus-reserva-longe');
-      const end = await page.evaluate(c0 => { const canon = window.QA && QA.canon ? JSON.stringify(QA.canon()) : null; if (window.__resTeste) { delete G.Village.reserva; delete window.__resTeste; } G.Main.frameFor(33); return { same: c0 === null || c0 === canon, gone: G.Render.reserves().length }; }, o8.canon0);
+      const end = await page.evaluate(c0 => { const canon = window.QA && QA.canon ? JSON.stringify(QA.canon()) : null; G.Main.frameFor(33); return { same: c0 === null || c0 === canon }; }, o8.canon0);
       const inLot = !!near.pt && near.pt[0] >= o8.r.x && near.pt[0] < o8.r.x + o8.r.n && near.pt[1] >= o8.r.y && near.pt[1] < o8.r.y + o8.r.n;
-      ok('8: o lote reservado, de perto e de longe', near.n >= 1 && inLot && !near.hover && end.same && (!o8.teste || end.gone === 0), `${o8.set}: o lote (${o8.r.x}, ${o8.r.y}) de ${o8.r.n} casas${o8.teste ? ' (a reserva de teste)' : ''}; o ponteiro ${inLot ? 'no lote' : 'FORA dele'}${near.hover ? ', sobre um prédio' : `, «${near.name}»`}; ${end.same ? 'o mundo igual (QA.canon)' : 'o mundo MUDOU'}${o8.teste ? `; a reserva de teste tirada: ${end.gone} no quadro` : ''}`);
+      ok('8: o lote reservado, de perto e de longe', near.mine && inLot && !near.hover && end.same, `${o8.set}: o lote (${o8.r.x}, ${o8.r.y}) de ${o8.r.n} casas que a reserva do jogo guarda${o8.provocado ? ' (o chão aplainado pela guarda)' : ''}; ${near.mine ? 'no quadro' : 'FORA do quadro'}; o ponteiro ${inLot ? 'no lote' : 'FORA dele'}${near.hover ? ', sobre um prédio' : `, «${near.name}»`}; ${end.same ? 'o mundo igual (QA.canon) depois dos quadros' : 'o mundo MUDOU'}`);
     }
     const mod6 = await page.evaluate(() => (G.modErr ? Object.keys(G.modErr) : [])); for (const k of mod6) if (!after.mod.includes(k)) after.mod.push(k);
     ok('5: nenhum erro', !errs.length && !after.mod.length, errs.length || after.mod.length ? errs.slice(0, 4).join(' | ') + ' ' + after.mod.join(',') : 'nenhum erro de página nem de módulo');
