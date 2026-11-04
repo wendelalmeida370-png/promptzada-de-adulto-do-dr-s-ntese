@@ -11,15 +11,23 @@ const M = require('./nodemundo.js');
 const G = M.load({}); const In = G.Interiors;
 const FILE = path.join(__dirname, '..', 'js', 'int-catalogo.js');
 const args = process.argv.slice(2);
+// (and a key of each bigger step of the type's ladder this people can raise — G.Escala.can: its form of that size, or a lot
+// the type's recipes are laid out in —, the game's own with the size, nKey: the game reads the table for them too, and never
+// probes the families of a Colosseum while the world runs — L-510, half a second the first time)
+const sizesOf = (t, c) => { const n0 = (G.BDEF[t] || {}).w || 1; return G.Escala ? [0, ...G.Escala.steps(t).map(st => st.n).filter((n, q, a) => n !== n0 && a.indexOf(n) === q && G.Escala.can(t, c, n))] : [0]; };
+const keyOf = (t, c, hot, wb, y, n) => [t, c, hot, wb].join('|') + (y ? '|' + y : '') + (n ? '|n' + n : '');
 const keysOf = (mode, types) => {
   const out = [];
   // (a home's keys twice: out of the centre, its yard about it — 'y' —, and in it — 'c': D-082)
-  for (const t of types) for (const c of Object.keys(In.TRAD)) for (const hot of mode === 'tudo' ? [0, 1] : [0]) for (const wb of mode === 'tudo' ? [0, 1, 2] : [0]) for (const y of In.GODSZ && In.GODSZ[t] ? ['y', 'c'] : ['']) out.push(y ? [t, c, hot, wb, y] : [t, c, hot, wb]);
+  for (const t of types) for (const c of Object.keys(In.TRAD)) for (const n of sizesOf(t, c)) for (const hot of mode === 'tudo' ? [0, 1] : [0]) for (const wb of mode === 'tudo' ? [0, 1, 2] : [0]) for (const y of In.GODSZ && In.GODSZ[t] ? ['y', 'c'] : ['']) out.push([t, c, hot, wb, y, n]);
   return out;
 };
+// (a key back to its parts: the size its last, when it has one)
+const partsOf = k => { const q = k.split('|'); const n = /^n\d+$/.test(q[q.length - 1]) ? +q.pop().slice(1) : 0; return [q[0], q[1], +q[2], +q[3], q[4] || '', n]; };
 // one key: every family of the type under it (the rules aside: they are read live, in the context of each building)
-function compute(t, c, hot, wb, y) {
+function compute(t, c, hot, wb, y, n) {
   const rec = { v: 1, f: '', r: 0, t, u: In.TYPES[t].use, s: 'S', o: 0, c, e: 3, k: 'ae', cl: hot ? 'q' : 't', fl: 0, d: y === 'c' ? 3 : 1, w: wb, pw: 0, h: [], m: 0, fx: [], dr: {} };
+  if (n) rec.n = n; // (a bigger step: the probes on lots of its size)
   const tab = {}; for (const f of In.TYPES[t].fams) tab[f] = In.probe(rec, f);
   return tab;
 }
@@ -52,7 +60,7 @@ ${body}
 `;
   fs.writeFileSync(FILE, src); console.log(`gravado ${path.relative(process.cwd(), FILE)}: ${keys.length} chaves, ${msgs.length} motivos, ${(src.length / 1024).toFixed(0)} KB`);
 }
-const run = (list) => { const out = {}; let n = 0; for (const [t, c, hot, wb, y] of list) { const k = [t, c, hot, wb].join('|') + (y ? '|' + y : ''); out[k] = compute(t, c, hot, wb, y); n++; const ok = Object.values(out[k]).filter(x => x === 1).length;
+const run = (list) => { const out = {}; let n = 0; for (const [t, c, hot, wb, y, sz] of list) { const k = keyOf(t, c, hot, wb, y, sz); out[k] = compute(t, c, hot, wb, y, sz); n++; const ok = Object.values(out[k]).filter(x => x === 1).length;
   // (and the line of the rule that nobody sleeps standing, D-082 (6): every family that is laid out holds the whole household —
   // in its beds, and the most of the probes on a floor kept for them)
   const H = (G.BDEF[t] || {}).housing; let line = '';
@@ -72,12 +80,12 @@ if (cmd === 'gera') {
   const table = read(); const keys = Object.keys(table).sort(); const n = Math.min(keys.length, +(args[1] || 4));
   let bad = 0;
   for (let q = 0; q < n; q++) {
-    const k = keys[Math.floor(q * keys.length / n)]; const [t, c, hot, wb, y] = k.split('|'); if (!In.TYPES[t]) { console.log(`FALHOU | catálogo | ${k}: tipo que a gramática não tem mais`); bad++; continue; }
-    const now = compute(t, c, +hot, +wb, y); const diff = Object.keys(Object.assign({}, now, table[k])).filter(f => String(now[f]) !== String(table[k][f]));
+    const k = keys[Math.floor(q * keys.length / n)]; const [t, c, hot, wb, y, sz] = partsOf(k); if (!In.TYPES[t]) { console.log(`FALHOU | catálogo | ${k}: tipo que a gramática não tem mais`); bad++; continue; }
+    const now = compute(t, c, hot, wb, y, sz); const diff = Object.keys(Object.assign({}, now, table[k])).filter(f => String(now[f]) !== String(table[k][f]));
     if (diff.length) { bad++; console.log(`FALHOU | catálogo | ${k}: ${diff.length} famílias mudaram (${diff.slice(0, 4).join(', ')}): gere de novo com node qa/catalogo.js`); }
     else console.log(`PASSOU | catálogo | ${k} em dia`);
   }
-  const missing = keysOf('base', allTypes).map(x => x.join('|')).filter(k => !table[k]);
+  const missing = keysOf('base', allTypes).map(x => keyOf(...x)).filter(k => !table[k]);
   if (missing.length) { bad++; console.log(`FALHOU | catálogo | faltam ${missing.length} chaves de base (${missing.slice(0, 4).join(', ')}): node qa/catalogo.js`); }
   console.log(bad ? `FALHOU: ${bad}` : 'PASSOU'); process.exit(bad ? 1 : 0);
 } else { console.log('comando? gera | parte | junta | confere'); process.exit(2); }

@@ -231,7 +231,9 @@
   In.familiesFor = function (rec) {
     const key = comboKey(rec); let c = CAT.get(key); if (c) return c;
     const T = TYPES[rec.t]; c = { ok: [], why: {}, arch: {}, gen: {} };
-    const tab = PROBED[probeKey(rec)] || PROBED[[rec.t, rec.c, 0, 0].join('|') + yk(rec)] || null;
+    // (its own key, else the plain one of the type and people — of the same size: a bigger step's never read from the classic
+    // lot's line, L-510)
+    const tab = PROBED[probeKey(rec)] || PROBED[[rec.t, rec.c, 0, 0].join('|') + yk(rec) + nKey(rec)] || null;
     if (T) for (const id of T.fams || []) {
       const F = FAMS[id]; if (!F) continue;
       const why = F.can ? F.can(rec, T, TRAD[rec.c] || TRAD.classico) : null;
