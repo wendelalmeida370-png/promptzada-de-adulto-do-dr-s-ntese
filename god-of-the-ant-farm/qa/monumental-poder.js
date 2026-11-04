@@ -53,7 +53,8 @@
 //   F2 a planta em todo povo, tamanho e lado (a família do registro novo e do catálogo); a taberna de 8 m com as suas; a mesma
 //      duas vezes; a casca; o tempo da planta; a tabela dos lugares da hospedaria
 //   F3 a hospedaria: o salão ≥ 10 × 8 m, ≥ 8 mesas, a cozinha com o fogo, o depósito das pipas, o balcão; ≥ 20 sentados
-//   F4 as regras do corpo: o portão e a porta do salão ≥ 2,2 m, a escada, os quartos de cima alcançados
+//   F4 as regras do corpo: o portão e a porta do salão ≥ 2,2 m, a escada, os quartos de cima alcançados; F4b as camas de
+//      cima — nenhuma peça sem tamanho, cada quarto com um lugar de deitar, o banco-cama do nórdico 0,7 m por lugar (L-585)
 //   F5 de pé no mundo (a hospedaria na metrópole, com os lugares da tabela do mundo; as duas num mundo novo, um ano, o save)
 //   F6 os casos ruins: a obra salva no meio, a taverna derrubada, a regra do verificador
 // E a G, as casas — a cabana e a casa de 4 m continuam; a casa rica (domus, 2 casas, o degrau de uma família) de int-familias.js
@@ -746,6 +747,22 @@ function F4() {
   }
   ok('F4a as regras do corpo: o portão e a porta do salão ≥ 2,2 m, a escada que os pés sobem, os quartos de cima alcançados', !out.length, some(out).join(' / ') || `nos ${taverns().filter(q => q.s === 'S').length} (a taverna e a hospedaria dos seis povos)`);
 }
+// (and the beds upstairs: no piece of no size; every room of the guests and the keeper's with a bed of a place at least where
+// the body lies — the Norse's sleeping bench 0.7 m a sleeper: laid by P.place it was 0 m long, no guest with where to lie, L-585)
+function F4b() {
+  const out = [], sum = {};
+  for (const m of taverns().filter(q => q.p.ok)) {
+    const p = m.p; const why = []; const zero = p.items.filter(i => !(i.w > 0.05 && i.d > 0.05)); if (zero.length) why.push(`${zero.length} peças sem tamanho (${[...new Set(zero.map(i => i.kind))].join(', ')})`);
+    for (const r of p.rooms.filter(q => q.lv === 1 && (q.fn === 'quarto' || q.fn === 'aposento'))) {
+      const beds = p.items.filter(i => i.room === r.id && i.spots.some(q => q.use === 'deitar')); const lie = beds.reduce((k, i) => k + i.spots.filter(q => q.use === 'deitar' && q.ok).length, 0);
+      const short = beds.filter(i => In.ITEMS[i.kind].per && (i.places < 1 || i.w < In.ITEMS[i.kind].per * i.places - 0.02));
+      if (!lie) why.push(`o ${r.fn} #${r.id} sem lugar de deitar`); if (short.length) why.push(`o ${r.fn} #${r.id} com ${short.map(i => `${i.kind} de ${i.w.toFixed(2)} m para ${i.places}`).join(', ')}`);
+      for (const i of beds) sum[i.kind] = (sum[i.kind] || 0) + 1;
+    }
+    if (why.length) out.push(`${vtag(m)}: ${why.join(', ')}`);
+  }
+  ok('F4b as camas de cima: nenhuma peça sem tamanho; cada quarto e o do taverneiro com uma cama de um lugar ao menos, onde o corpo deita — o banco-cama do nórdico, 0,7 m por lugar', !out.length, some(out).join(' / ') || Object.entries(sum).map(([k, n]) => `${n} ${k}`).join(', '));
+}
 // ---------------------------------------------------------------- F5: standing in the world
 function F5() {
   const qa = qaS; const tell = r => `${r.st}/V${r.b.w} ${r.d.toFixed(0)} casas ${r.rel.toFixed(1)} m${r.ok ? '' : ' — ' + r.why}`;
@@ -852,6 +869,6 @@ function G3() {
 }
 for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11], ['B12', B12], ['B13', B13], ['B14', B14], ['B15', B15], ['B16', B16],
   ['D1', D1], ['D2', D2], ['D3', D3], ['D4', D4], ['D5', D5], ['D6', D6], ['D7', D7], ['D8', D8], ['D9', D9],
-  ['F1', F1], ['F2', F2], ['F3', F3], ['F4', F4], ['F5', F5], ['F6', F6], ['G1', G1], ['G2', G2], ['G3', G3]]) if (want(k)) f();
+  ['F1', F1], ['F2', F2], ['F3', F3], ['F4', F4], ['F4b', F4b], ['F5', F5], ['F6', F6], ['G1', G1], ['G2', G2], ['G3', G3]]) if (want(k)) f();
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
 process.exit(fails.length ? 1 : 0);

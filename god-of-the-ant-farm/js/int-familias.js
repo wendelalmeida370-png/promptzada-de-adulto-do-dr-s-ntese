@@ -762,8 +762,11 @@
     P.opt(() => { for (let g = 0; g < 2; g++) P.place('banco', 0, hall, { sides: ['esquerda', 'fundo'] }); });
     P.opt(() => { P.place('cuba', 0, cellar); if (tr.keep && tr.keep.includes('jarros')) P.place('jarros', 0, cellar); P.place('mesa', 0, kitchen, { sides: ['livre'] }); });
     // upstairs: a bed in every room (the keeper's the couple's), its chest
+    // (a bed whose length goes by its sleepers — the Norse's sleeping bench, 0.7 m each — is laid by P.bench, along a wall, as
+    // long as the wall leaves: by P.place it took the catalogue's length, 0, and no guest had where to lie: L-585)
     let beds = 0; const bed = tr.rich && tr.rich[0] ? tr.rich[0] : 'cama';
-    for (const k of R.ups) { const id = ids[k]; const own = R.rooms[k].fn === 'aposento'; if (P.place(own ? tr.coupleRich || bed : bed, 1, id) || P.place('cama', 1, id)) { beds++; P.opt(() => P.place('arca', 1, id)); } }
+    const lay = (kind, id) => (In.ITEMS[kind] && In.ITEMS[kind].per ? ['fundo', 'esquerda', 'direita', 'frente'].some(s => P.bench(1, id, s, { min: 1 })) : !!P.place(kind, 1, id));
+    for (const k of R.ups) { const id = ids[k]; const own = R.rooms[k].fn === 'aposento'; if (lay(own ? tr.coupleRich || bed : bed, id) || P.place('cama', 1, id)) { beds++; P.opt(() => P.place('arca', 1, id)); } }
     if (!beds) P.errs.push('sem cama nos quartos');
   }
   // (a family of its own: its plans' dice by its own name — L-512, the seed of a family registered after the frozen list —, the
