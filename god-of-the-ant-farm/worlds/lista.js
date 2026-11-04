@@ -20,8 +20,8 @@ G.Ready.list({
   "bytes": 931146
  },
  "metropole": {
-  "day": 54,
-  "pop": 532,
+  "day": 53,
+  "pop": 526,
   "peoples": 6,
   "towns": 19,
   "N": 160,
@@ -30,12 +30,12 @@ G.Ready.list({
   "city": {
    "name": "Tenochtitlan",
    "tier": 4,
-   "pop": 76
+   "pop": 97
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 2814079
+  "bytes": 2791972
  },
  "mega": {
   "day": 99,
@@ -56,9 +56,9 @@ G.Ready.list({
   "bytes": 5852876
  },
  "mundial": {
-  "day": 89,
-  "pop": 536,
-  "peoples": 6,
+  "day": 80,
+  "pop": 554,
+  "peoples": 4,
   "towns": 20,
   "N": 160,
   "map": "continente",
@@ -66,17 +66,17 @@ G.Ready.list({
   "city": {
    "name": "Roma",
    "tier": 4,
-   "pop": 106
+   "pop": 132
   },
-  "wars": 2,
+  "wars": 1,
   "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 4459475
+  "bytes": 4279391
  },
  "anos100": {
   "day": 101,
-  "pop": 850,
-  "peoples": 3,
+  "pop": 739,
+  "peoples": 2,
   "towns": 14,
   "N": 128,
   "map": "continente",
@@ -84,12 +84,12 @@ G.Ready.list({
   "city": {
    "name": "Roma",
    "tier": 4,
-   "pop": 241
+   "pop": 218
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 3561928
+  "bytes": 3301971
  },
  "anos500": {
   "day": 501,
