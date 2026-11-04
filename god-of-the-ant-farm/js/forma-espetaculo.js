@@ -170,6 +170,9 @@
     for (const su of [1, -1]) {
       const e0 = cu + su * Au, e1 = e0 + su * dp; const br = [Math.min(e0, e1), cv - h / 2, Math.max(e0, e1), cv + h / 2].map(k3);
       wall(br, yb - 0.3, yb, STONE, { mat: 'slab' });
+      // (the passage's vault, from the bridge out to the facade's inner face at the bridge's height: under the rows either side
+      // the passage is a tunnel — from it the sky showed between the rows' ends, a blue gap beside the bridge)
+      const ef = cu + su * (Au + D - t); wall([Math.min(e1, ef), cv - h / 2, Math.max(e1, ef), cv + h / 2], yb - 0.3, yb, STONE, { mat: 'slab' });
       if (su < 0) { const m = Math.ceil(ya / 0.225 - 1e-9), run = m * TR; const r = [e0 - run, cv - h / 2, e0, cv + h / 2].map(k3); els.push(...flight(r, ya, 1, 0).out); ways.esquerda = { r, m, run, bridge: br }; }
       else { wall([e0, cv - h / 2, e0 + wt, cv + h / 2], yc, yb - 0.3); ways.direita = { bridge: br }; }
     }
@@ -362,6 +365,7 @@
       8: { ro: 5.0, lo: 7, up: 4, dz: 1.2, al: 7, au: 13, w: 18, pw: 2.5, ds: 2.0, tf: 0.4, dc: 1.4, dr: 3.0, hf: 5.0, hb: 5.0 },
       10: { ro: 6.5, lo: 9, up: 5, dz: 1.4, al: 7, au: 15, w: 22, pw: 3.0, ds: 2.4, tf: 0.4, dc: 1.6, dr: 3.8, hf: 6.0, hb: 6.0 } },
   };
+  TEATRO.classico = TEATRO.grego; // (the classical people's theatre the Greek's, as the god draws it, its skene with no band)
   const DOORS = { 6: [1.6, 2.6, 1.2, 2.3], 8: [1.8, 3.0, 1.3, 2.5], 10: [2.0, 3.2, 1.4, 2.6] }; // (the middle door's width and height, the side ones')
   function teatroGrande(L, n, st) {
     const T = TEATRO[st], S = T[n], roman = st === 'romano'; const cu = L / 2, vD = L / 2, yq = 0.06, R = L / 2 - 0.3;
@@ -425,13 +429,48 @@
     wallU(u0 + 0.4, u1 - 0.4, vC + S.dc, vR, yq, yq + S.hb, [[cu - wm, 1.0, 2.2], [cu, 1.0, 2.2], [cu + wm, 1.0, 2.2]]);
     for (const s of [-1, 1]) els.push(box([cu + s * wm / 2 - 0.1, vR, cu + s * wm / 2 + 0.1, vF - 0.3], yq, yq + S.hb));
     wallU(u0, u1, vF - 0.3, vF, yq, yq + S.hb, [[cu, 1.6, 2.4]]);
-    els.push({ k: 'faixa', r: [k3(u0), vS, k3(u1), vF], y0: k3(yq + S.hf - 0.6), y1: k3(yq + S.hf), cor: 'acc' });
+    if (st === 'grego') els.push({ k: 'faixa', r: [k3(u0), vS, k3(u1), vF], y0: k3(yq + S.hf - 0.6), y1: k3(yq + S.hf), cor: 'acc' }); // (the Greek's band: the classical people's skene has none, as the god draws it)
     els.push({ k: 'telhado', r: [k3(u0), vS, k3(u1), vF], y0: k3(yq + S.hf), y1: k3(yq + S.hf + 1.4), ao: 'u', ov: 0.3, cor: ['roof0', 'roof1', 'gable', 'roof2'] });
     const teatro = { L, n, st, cu, vD, yq, ys, ro: S.ro, ri: k3(ri), R, rG, rW: k3(rW), a0: k3(a0), a1: k3(a1), tr, rs, lo: S.lo, up: S.up, top: k3(top), rows, w, u0: k3(u0), u1: k3(u1), wm, vP, vS, vC, vR, vF, dc: S.dc, dr: S.dr, hb: S.hb, hf: S.hf, doors: doorsB.map(q => q.map(k3)), flights: [], front: null, cols, hp };
     return { els, amphi: { teatro } };
   }
   Fo.def('teatro', 'romano', (L, n) => teatroGrande(L, n, 'romano'), [6, 8, 10]);
   Fo.def('teatro', 'grego', (L, n) => teatroGrande(L, n, 'grego'), [6, 8, 10]);
+  Fo.def('teatro', 'classico', (L, n) => teatroGrande(L, n, 'classico'), [6, 8, 10]);
+  // the mead hall of a city (teatro, nordico: the steps of 6, 8 and 10 tiles): the god's longhouse grown — 20 × 9 m (27 × 11,
+  // 34 × 13) on its stone base, its walls of planks 3.2 m (3.6, 4.0) with the red band under the eaves and the windows high on
+  // its front and ends, the door in its middle up its three treads, the six painted shields along its front, the roof of turf
+  // 6 m over the eaves (7, 8.5), the dragon at its gable; inside, the two rows of posts. Its body is the hall's (hallGrande,
+  // Valhalla's): the plan furnishes it — the long hearths, the benches where one sits to hear the skald, the tables —
+  const HIDROMEL = { 6: { hu: 10, hv: 4.5, hh: 3.2, rf: 6.0, yb: 0.45 }, 8: { hu: 13.5, hv: 5.5, hh: 3.6, rf: 7.0, yb: 0.45 }, 10: { hu: 17, hv: 6.5, hh: 4.0, rf: 8.5, yb: 0.6 } };
+  Fo.def('teatro', 'nordico', (L, n) => hallGrande(L, n, HIDROMEL[n], 0), [6, 8, 10]);
+  // the sacred garden of a city (teatro, egipcio: the steps of 6, 8 and 10 tiles): the god's garden grown — its lawn, its walls
+  // round the back and the sides 2.4 m high, open to the street —; the sacred lake in its rim of stone, 10 × 6 m (14 × 8,
+  // 18 × 10), with the lotus on its water, its middle 1.5 m behind the lot's; the palms along the walls; the two sphinxes on
+  // their plinths at the front, either side of the way in. Before the lake, where the rite is performed, and the lawn before it
+  // where the crowd stands to watch (the plan's). → the elements, and the numbers the plan reads (amphi.jardim)
+  const JARDIM = { 6: { pw: 5.0, pd: 3.0, rows: 4, ph: 4.5 }, 8: { pw: 7.0, pd: 4.0, rows: 5, ph: 5.0 }, 10: { pw: 9.0, pd: 5.0, rows: 6, ph: 5.5 } };
+  function jardimGrande(L, n) {
+    const S = JARDIM[n], cu = L / 2, m = 0.3, wt = 0.4, wh = 2.4, yl = 0.08, rim = 0.35, rh = 0.45; const pv = L / 2 - 1.5;
+    const box = (r, y0, y1, cor, o) => Object.assign({ k: 'bloco', r: r.map(k3), y0: k3(y0), y1: k3(y1), cor: cor || ['wl', 'wr', 'top'] }, o);
+    const els = [box([m, m, L - m, L - m], 0, yl, ['#76983e', '#668a36', '#86a84e'], { mat: 'turf' })];
+    // (the walls: the back, the left, the right)
+    els.push(box([m, m, L - m, m + wt], 0, wh), box([m, m + wt, m + wt, L - m], 0, wh), box([L - m - wt, m + wt, L - m, L - m], 0, wh));
+    // (the lake: its rim of stone round the water, the floor under it, the water, the lotus)
+    const R = [cu - S.pw, pv - S.pd, cu + S.pw, pv + S.pd].map(k3), W = [R[0] + rim, R[1] + rim, R[2] - rim, R[3] - rim].map(k3);
+    for (const q of [[R[0], R[1], R[2], W[1]], [R[0], W[3], R[2], R[3]], [R[0], W[1], W[0], W[3]], [W[2], W[1], R[2], W[3]]]) els.push(box(q, 0, rh, ['base0', 'base1', 'base2']));
+    els.push(box(W, 0, 0.12, ['base1', 'base1', '#3a6a7a']), { k: 'lamina', r: W, y: 0.32, cor: '#4a9ac0' });
+    const lotus = []; for (let k = 0; k < Math.round(S.pw * 1.6); k++) lotus.push([k3(W[0] + 0.6 + (W[2] - W[0] - 1.2) * (k + 0.5) / Math.round(S.pw * 1.6)), k3(W[1] + 0.8 + (k % 3) * (W[3] - W[1] - 1.6) / 2)]);
+    els.push({ k: 'flores', pts: lotus, y: 0.32, r: 0, n: 1, b: 0.3, chato: true, cor: ['#5a9a3c', '#f0a0c0'] });
+    // (the palms along the walls, 1.6 m in from them, every 3.6 m or so)
+    const pin = m + wt + 1.6, np = Math.max(3, Math.round((L - 2 * pin) / 3.6));
+    for (let k = 0; k <= np; k++) { const t = k3(pin + (L - 2 * pin) * k / np); els.push({ k: 'palmeira', p: [t, k3(pin), yl], h: S.ph, s: 1.4 }); if (k && t < L - 4.0) els.push({ k: 'palmeira', p: [k3(pin), t, yl], h: S.ph, s: 1.4 }, { k: 'palmeira', p: [k3(L - pin), t, yl], h: S.ph, s: 1.4 }); }
+    // (the sphinxes on their plinths, 1 m outside the lake's sides, 2.6 m in from the front)
+    for (const s of [-1, 1]) { const u = cu + s * (S.pw + 1.0), v = L - 2.6; els.push(box([u - 0.7, v - 1.1, u + 0.7, v + 1.1], 0, 0.5, ['base0', 'base1', 'base2']), { k: 'estatua', p: [k3(u), k3(v), 0.5], h: 3.0, cor: 'wl', pose: 'esfinge' }); }
+    const jardim = { L, n, lago: R, agua: W, rows: S.rows, yl };
+    return { els, amphi: { jardim } };
+  }
+  Fo.def('teatro', 'egipcio', (L, n) => jardimGrande(L, n), [6, 8, 10]);
 
   // ------------------------------ the great ball court (teatro, asteca: the steps of 6, 8 and 10 tiles — D-109) ------------------------------
   // The tlachtli of a city, as the god draws the Aztec's theatre: the alley along the lot (16, 22 and 28 m long, 4 to 6 m wide)
@@ -531,4 +570,123 @@
     return { els };
   }
   for (const st of ['egipcio', 'romano', 'asteca', 'grego']) Fo.def('monument', st, (L, n) => monumentoGrande(L, n, st), [4]);
+
+  // ------------------------------ Valhalla (maravilha, nordico: the steps of 10 and 13 tiles) ------------------------------
+  // The god's great hall of the Norse grown to a capital's lot of 40 m (52 m): the hall of 34 × 13 m (46 × 17) along the street on
+  // its stone base, the treads of its front up to it from the street, its walls of planks 4.5 m (5 m) with the gilded shields
+  // hung along its front, the door of light in its middle, the roof of gilded shields — its ridge 9 m (11 m) over the eaves —,
+  // a dragon at each gable's end; inside, the two rows of posts under the roof. Its body is the hall's (D-093: the walls the
+  // plan raises its shell on, the base, the treads): the plan furnishes it — the king's high seat, the long hearths, the
+  // benches, the tables of the feast, the skald. → the elements (and the hall's body)
+  const HALL = { 10: { hu: 17, hv: 6.5, hh: 4.5, rf: 9, yb: 0.6 }, 13: { hu: 23, hv: 8.5, hh: 5.0, rf: 11, yb: 0.6 } };
+  // (the hall of the Norse grown — Valhalla's, gilded (gold), the mead hall's of a theatre, of turf, as the god draws each —:
+  // S its half length and half depth, its walls' height, its roof's rise, its base's)
+  function hallGrande(L, n, S, gold) {
+    const cu = L / 2, cv = L / 2, yb = S.yb, H = yb + S.hh; const u0 = cu - S.hu, u1 = cu + S.hu, v0 = cv - S.hv, v1 = cv + S.hv;
+    const base = { k: 'bloco', r: [u0 - 0.2, v0 - 0.2, u1 + 0.2, v1 + 0.2].map(k3), y0: 0, y1: yb, cor: ['base0', 'base1', 'base2'], mat: 'ashlar' };
+    const walls = { k: 'bloco', r: [u0, v0, u1, v1].map(k3), y0: yb, y1: k3(H), cor: ['wl', 'wr', 'top'], tabuas: Math.round(S.hu * 2 / 1.1), mat: 'parede' };
+    // (the treads up to the base: three, 0.3 m deep, 3 m wide before the door, the lowest on the street side)
+    const steps = []; for (let j = 0; j < 3; j++) steps.push({ k: 'bloco', r: [cu - 1.5, v1 + 0.2 + 0.3 * (2 - j), cu + 1.5, v1 + 0.2 + 0.3 * (3 - j)].map(k3), y0: 0, y1: k3(yb * (j + 1) / 3), cor: ['base0', 'base1', 'base2'], degrau: 1 });
+    // (the two rows of posts under the roof, a third of the way in from each long wall, every 4 m or so — an odd number of bays:
+    // none on the axis, before the door —: inside, before the roof in the list — the god paints in its order, and the roof hides
+    // them —, oculto)
+    const np = Math.round(S.hu * 2 / 4) | 1, posts = [], inner = []; for (const v of [v0 + S.hv * 2 / 3, v1 - S.hv * 2 / 3]) for (let k = 1; k < np; k++) { const u = u0 + S.hu * 2 * k / np; inner.push({ k: 'tora', a: [k3(u), k3(v), yb], b: [k3(u), k3(v), k3(H)], r: 0.22, cor: '#6a4a2c', oculto: 1 }); posts.push([k3(u), k3(v), 0.22]); }
+    const els = [base, ...steps, walls, ...inner], R = [u0, v0, u1, v1].map(k3);
+    if (gold) els.push({ k: 'porta', na: 'frente', v: k3(v1), u: cu, w: 2.0, y0: yb, y1: k3(yb + 3.0), cor: '#ffd27a', luz: true },
+      { k: 'telhado', r: R, y0: k3(H), y1: k3(H + S.rf), ao: 'u', ov: 0.5, cor: ['#e8b83a', '#c8962a', 'wl', '#8a6a1a'], escudos: { linhas: Math.round(S.rf / 1.6), n: Math.round(S.hu * 2 / 1.3), cor: ['#f2cc5a', '#d8a83a'] } },
+      { k: 'dragao', p: [k3(u1 + 0.5), cv, k3(H + S.rf)], dir: 1, cor: '#8a6a1a' }, { k: 'dragao', p: [k3(u0 - 0.5), cv, k3(H + S.rf)], dir: -1, cor: '#8a6a1a' });
+    else {
+      // (the mead hall's: its door, the red band under the eaves, the windows high on its front either side of the door and
+      // on its ends, the roof of turf, the dragon at its gable)
+      els.push({ k: 'porta', na: 'frente', v: k3(v1), u: cu, w: 2.0, y0: yb, y1: k3(yb + 2.6), cor: 'door' }, { k: 'faixa', r: R, y0: k3(H - 0.6), y1: k3(H), cor: 'trim' });
+      for (const [a, b] of [[u0 + 1.5, cu - 3.0], [cu + 3.0, u1 - 1.5]]) els.push({ k: 'janelas', na: 'frente', em: k3(v1), de: k3(a), ate: k3(b), y0: k3(H - 1.6), y1: k3(H - 0.9), n: Math.max(2, Math.round((b - a) / 3)) });
+      for (const [na, em] of [['direita', u1], ['esquerda', u0]]) els.push({ k: 'janelas', na, em: k3(em), de: k3(cv - 1.6), ate: k3(cv + 1.6), y0: k3(H - 1.6), y1: k3(H - 0.9), n: 2 });
+      els.push({ k: 'telhado', r: R, y0: k3(H), y1: k3(H + S.rf), ao: 'u', ov: 0.5, cor: ['roof0', 'roof1', 'gable', 'roof2'], mat: 'turf' }, { k: 'dragao', p: [k3(u1 + 0.5), cv, k3(H + S.rf)], dir: 1, cor: '#3a2616' });
+    }
+    // (the shields hung along the front, either side of the door: Valhalla's sixteen, the mead hall's six painted)
+    if (gold) for (let k = 1; k <= 8; k++) for (const s of [-1, 1]) { const u = cu + s * (2.2 + (S.hu - 3.2) * k / 8); els.push({ k: 'disco', na: 'frente', u: k3(u), v: k3(v1), y: k3(yb + 2.6), r: 0.45, cor: k % 2 ? '#d8a83a' : '#b33a2a' }); }
+    else for (let k = 0; k < 3; k++) for (const s of [-1, 1]) { const u = cu + s * (2.0 + (S.hu - 3.5) * (k + 0.5) / 3); els.push({ k: 'disco', na: 'frente', u: k3(u), v: k3(v1), y: k3(yb + 1.5), r: 0.42, cor: ['#a23c2a', '#d8b25a', '#3f6fb0'][k], olho: '#d8c89a' }); }
+    const salao = { L, n, cu, cv, yb, hh: S.hh, r: R, posts, hearth: k3(S.hu / 3.4) }; // (the long hearths' middles either side of the hall's)
+    return { body: { walls, base, steps }, els, door: { u: cu, w: 2.0, y0: yb, y1: k3(yb + (gold ? 3.0 : 2.6)) }, amphi: { salao } };
+  }
+  const valhallaGrande = (L, n) => hallGrande(L, n, HALL[n], 1);
+  Fo.def('maravilha', 'nordico', (L, n) => valhallaGrande(L, n), [10, 13]);
+
+  // ------------------------------ the Acropolis (maravilha, grego: the steps of 10 and 13 tiles) ------------------------------
+  // The god's Acropolis grown to a capital's lot of 40 m (52 m): the rock, battered from 31 m at its foot to 27 m at its top 6 m
+  // up (41 to 36 m, 8 m), the great stair up its front from the street to its top (the Propylaea: 8 m wide, its ramps, 48°);
+  // round its top the parapet over the drop, open at the stair. On it the temple — the Parthenon —: its two steps (0.25 m each)
+  // round the stylobate, 8 columns at its ends — the middle bay wider — and 13 along its sides (10 and 17), the entablature with its painted frieze, the
+  // pediment roof along the way in with the gilded round in its gable; inside the colonnade the cella, its great door to the
+  // front, and in it Athena in gold on her pedestal, facing the door. Before the temple the great altar and, at the front-left,
+  // Athena Promachos in gold with her spear and shield on her pedestal. → the elements, and the numbers the plan reads
+  // (amphi.acropole)
+  const ACRO = { 10: { e0: 15.5, e1: 13.5, zr: 6.0, tw: 6.5, t0: 8.5, t1: 28.5, cw: 4.0, c0: 11.0, c1: 25.5, cr: 0.42, ch: 7.5, nf: 8, ns: 13, ath: 7.0, pro: 9.0 },
+    13: { e0: 20.5, e1: 18.0, zr: 8.0, tw: 8.5, t0: 10.0, t1: 38.0, cw: 5.2, c0: 13.0, c1: 34.0, cr: 0.5, ch: 9.0, nf: 10, ns: 17, ath: 8.5, pro: 11.0 } };
+  function acropoleGrande(L, n) {
+    const S = ACRO[n], cu = L / 2, cv = L / 2, zr = S.zr, ys = zr + 0.5, yc = ys + S.ch, ye = yc + 1.2; const marble = ['col0', 'col1', 'col0'];
+    const box = (r, y0, y1, cor, o) => Object.assign({ k: 'bloco', r: r.map(k3), y0: k3(y0), y1: k3(y1), cor: cor || ['base0', 'base1', 'base2'] }, o);
+    const T = [cu - S.e1, cv - S.e1, cu + S.e1, cv + S.e1], sw = 8.0, st = [cu - S.tw, S.t0, cu + S.tw, S.t1].map(k3); // (the top; the stair's width; the stylobate)
+    const els = [{ k: 'talude', r: [cu - S.e0, cv - S.e0, cu + S.e0, cv + S.e0].map(k3), r1: T.map(k3), y0: 0, y1: zr, cor: ['#b8ae9c', '#948a78', '#d8d0bc'] },
+      { k: 'escada', a: [cu, k3(L - 1.0), 0], b: [cu, k3(cv + S.e1), zr], w: sw, cor: '#c8bea8', clara: 1.0, alfarda: 0.5 }];
+    // (the parapet round the top, 0.25 m thick and 0.9 m over it, open at the stair)
+    const pt = 0.25, par = r => els.push(box(r, zr, zr + 0.9, ['#c8bea8', '#a89e88', '#d8cec0']));
+    par([T[0], T[1], T[2], T[1] + pt]); par([T[0], T[1] + pt, T[0] + pt, T[3]]); par([T[2] - pt, T[1] + pt, T[2], T[3]]); par([T[0] + pt, T[3] - pt, cu - sw / 2, T[3]]); par([cu + sw / 2, T[3] - pt, T[2] - pt, T[3]]);
+    // (the temple: its two steps round the stylobate — the lower 0.35 m out —, its columns 0.6 m in from the stylobate's edge;
+    // at its ends the middle bay wider, 1.4 m clear between the columns' bases — the way in up the steps between them, as the
+    // Propylaea's middle bay, the procession's —, the others even)
+    els.push(box([st[0] - 0.35, st[1] - 0.35, st[2] + 0.35, st[3] + 0.35], zr, zr + 0.25, ['base0', 'base1', 'base2'], { degrau: 1 }), box(st, zr + 0.25, ys, ['base0', 'base1', 'base2'], { degrau: 1 }));
+    const cols = [], ci = [st[0] + 0.6, st[1] + 0.6, st[2] - 0.6, st[3] - 0.6];
+    const bay = 1.4 + S.cr * Fo.COLUMN_BASE, gap = (ci[2] - ci[0] - bay) / (S.nf - 2), mid = S.nf / 2 - 1;
+    for (let k = 0; k < S.nf; k++) { const u = ci[0] + gap * k + (k > mid ? bay - gap : 0); cols.push([k3(u), k3(ci[1])], [k3(u), k3(ci[3])]); }
+    for (let k = 1; k < S.ns - 1; k++) { const v = ci[1] + (ci[3] - ci[1]) * k / (S.ns - 1); cols.push([k3(ci[0]), k3(v)], [k3(ci[2]), k3(v)]); }
+    // (the cella: its walls, 0.6 m thick, up to the entablature; its door to the front, 2.4 × 5 m — the wall either side and
+    // the lintel over it —; inside, Athena on her pedestal against the back wall, facing the door)
+    const C = [cu - S.cw, S.c0, cu + S.cw, S.c1].map(k3), wt = 0.6, dw = 2.4, dh = 5.0;
+    els.push(box([C[0], C[1], C[2], C[1] + wt], ys, yc, ['wl', 'wr', 'top']), box([C[0], C[1] + wt, C[0] + wt, C[3]], ys, yc, ['wl', 'wr', 'top']), box([C[2] - wt, C[1] + wt, C[2], C[3]], ys, yc, ['wl', 'wr', 'top']));
+    els.push(box([C[0] + wt, C[3] - wt, cu - dw / 2, C[3]], ys, yc, ['wl', 'wr', 'top']), box([cu + dw / 2, C[3] - wt, C[2] - wt, C[3]], ys, yc, ['wl', 'wr', 'top']), box([cu - dw / 2, C[3] - wt, cu + dw / 2, C[3]], ys + dh, yc, ['wl', 'wr', 'top']));
+    const ped = [cu - 1.1, C[1] + wt + 0.6, cu + 1.1, C[1] + wt + 2.4].map(k3); els.push(box(ped, ys, ys + 0.8, marble, { mat: 'marble' }));
+    els.push({ k: 'estatua', p: [cu, k3((ped[1] + ped[3]) / 2), k3(ys + 0.8)], h: S.ath, w: 0.6, cor: '#e8c060', lanca: true });
+    // (the colonnade, the entablature with the frieze, the pediment roof along the way in, the gilded round in its gable)
+    els.push({ k: 'colunata', pts: cols, r: S.cr, y0: k3(ys), y1: k3(yc), cor: ['col0', 'col1'], mat: 'marble' });
+    els.push(box(st, yc, ye, marble, { mat: 'marble' }), { k: 'faixa', r: st, y0: k3(yc + 0.4), y1: k3(yc + 0.9), cor: 'acc' });
+    els.push({ k: 'telhado', r: st, y0: k3(ye), y1: k3(ye + S.tw * 0.28), ao: 'v', ov: 0.3, cor: ['roof0', 'roof1', 'gable', 'roof2'] });
+    els.push({ k: 'disco', na: 'frente', u: cu, v: k3(st[3] + 0.31), y: k3(ye + S.tw * 0.12), r: 0.9, cor: '#f2c14e' });
+    // (before the temple the great altar; at the front-left Athena Promachos on her pedestal)
+    const alt = [cu + 1.6, S.t1 + 1.8, cu + 4.6, S.t1 + 3.0].map(k3); els.push(box(alt, zr, zr + 1.0, ['#d8d0bc', '#b8b09c', '#e8e0cc']));
+    const pp = [cu - S.tw - 2.6, S.t1 + 1.2, cu - S.tw - 0.8, S.t1 + 3.0].map(k3); els.push(box(pp, zr, zr + 1.4, marble, { mat: 'marble' }));
+    els.push({ k: 'estatua', p: [k3((pp[0] + pp[2]) / 2), k3((pp[1] + pp[3]) / 2), k3(zr + 1.4)], h: S.pro, w: 0.7, cor: '#e0b84a', lanca: true });
+    const acropole = { L, n, cu, cv, zr, ys, yc, top: T.map(k3), pt, sw, stair: { foot: k3(L - 1.0), top: k3(cv + S.e1) }, stylo: st, krepis: 0.35, cella: C, wt, door: [cu, dw, dh], ped, alt, pp, cols };
+    return { els, door: { u: cu, w: sw, y0: 0, y1: zr, stair: true }, amphi: { acropole } };
+  }
+  Fo.def('maravilha', 'grego', (L, n) => acropoleGrande(L, n), [10, 13]);
+
+  // ------------------------------ the ziggurat (maravilha, classico: the steps of 10 and 13 tiles) ------------------------------
+  // The god's ziggurat grown to a capital's lot of 40 m (52 m), as Ur's: on its paved court, four levels — 32, 25, 17 and 11 m a
+  // side (42, 33, 24 and 15), 4.5, 4.0, 3.5 and 5.0 m high (5.5, 5.0, 4.5 and 6.0) —, the great stair up its front from the
+  // court to the third's top, the terrace round the fourth 12 m up (15; the stair 49°, as steep as the god's lets the feet up it,
+  // D-086), the parapet round the terrace
+  // open at the stair, the braziers on their stands before the fourth's front corners, and on the fourth's front the golden
+  // eye. The god paints in the list's order: the parapet behind the fourth and left of it before it, the rest after (the
+  // fourth stood in front of them, and the parapet over it). → the elements, and the numbers the plan reads (amphi.zigurate)
+  const ZIG = { 10: { e: [16, 12.5, 8.5, 5.5], h: [4.5, 4.0, 3.5, 5.0], sw: 5.0, eye: 1.4 }, 13: { e: [21, 16.5, 12, 7.5], h: [5.5, 5.0, 4.5, 6.0], sw: 6.0, eye: 1.8 } };
+  function zigurateGrande(L, n) {
+    const S = ZIG[n], cu = L / 2, cv = L / 2, yq = 0.06, vFoot = L - 1.0; const niveis = []; let y = 0;
+    for (let k = 0; k < 3; k++) { niveis.push([S.e[k], k3(y), k3(y + S.h[k])]); y += S.h[k]; }
+    const yt = k3(y), e3 = S.e[2], e4 = S.e[3], y4 = k3(yt + S.h[3]); const T = [cu - e3, cv - e3, cu + e3, cv + e3].map(k3), Q = [cu - e4, cv - e4, cu + e4, cv + e4].map(k3);
+    const els = [{ k: 'bloco', r: [0, 0, L, L], y0: 0, y1: yq, cor: ['#c9c1ae', '#aaa18c', '#ddd6c5'], mat: 'slab', piso: 1 },
+      { k: 'escalonada', c: [cu, cv], niveis, cor: ['wl', 'wr', 'top'], friso: 0.3, mat: 'plaster' }];
+    // (the parapet round the terrace — 0.9 m, 0.25 m thick, on its edge —, open where the stair comes up: behind and left first)
+    const pt = 0.25, par = r => els.push({ k: 'bloco', r: r.map(k3), y0: yt, y1: k3(yt + 0.9), cor: ['wl', 'wr', 'top'], mat: 'plaster' });
+    par([T[0], T[1], T[2], T[1] + pt]); par([T[0], T[1] + pt, T[0] + pt, T[3]]);
+    els.push({ k: 'bloco', r: Q, y0: yt, y1: y4, cor: ['wl', 'wr', 'top'], mat: 'plaster' }, { k: 'faixa', r: Q, y0: k3(y4 - 0.3), y1: y4, cor: 'trim' });
+    par([T[2] - pt, T[1] + pt, T[2], T[3]]); par([T[0] + pt, T[3] - pt, cu - S.sw / 2, T[3]]); par([cu + S.sw / 2, T[3] - pt, T[2] - pt, T[3]]);
+    // (the braziers on their stands, 1.2 m before the fourth's front, 1 m in from its corners)
+    for (const s of [-1, 1]) { const bu = cu + s * (e4 - 1.0), bv = cv + e4 + 1.2; els.push({ k: 'bloco', r: [bu - 0.3, bv - 0.3, bu + 0.3, bv + 0.3].map(k3), y0: yt, y1: k3(yt + 0.9), cor: ['#6a5a50', '#4a3e36', '#7a6a60'] }, { k: 'braseiro', p: [k3(bu), k3(bv), k3(yt + 0.9)], r: 0.45, uso: 'acender' }); }
+    els.push({ k: 'escada', a: [cu, k3(vFoot), yq], b: [cu, k3(cv + e3), yt], w: S.sw, cor: 'wl', clara: 1.05, alfarda: 0.5 });
+    els.push({ k: 'disco', na: 'frente', u: cu, v: Q[3], y: k3(yt + S.h[3] * 0.55), r: S.eye, cor: '#d9b34a', olho: '#6a4a1a' });
+    const zigurate = { L, n, cu, cv, yt, e0: S.e[0], top: T, pt, sw: S.sw, stair: { foot: k3(vFoot), top: T[3] }, quarto: Q };
+    return { els, door: { u: cu, w: S.sw, y0: 0, y1: yt, stair: true }, amphi: { zigurate } };
+  }
+  Fo.def('maravilha', 'classico', (L, n) => zigurateGrande(L, n), [10, 13]);
 })(window.G = window.G || {});

@@ -1,4 +1,5 @@
-// monumental-inv: as regras do verificador para os degraus grandes dos monumentos (D-106 a D-109; o M1) — carregado depois do
+// monumental-inv: as regras do verificador para os degraus grandes dos monumentos (D-106 a D-109; o M1; as maravilhas e os
+// teatros dos outros povos, a 3ª rodada) — carregado depois do
 // qa/qa.js (QA.more), como o escala-inv.js; o líder o junta (qa/junta-inv.js). Lê o prédio e pergunta ao G.Forma e às portas do
 // G.Interiors (fazer uma planta não muda o mundo).
 (function () {
@@ -12,6 +13,18 @@
   const SEATS = { 6: 250, 8: 350, 10: 600 };
   // (and the great ball court's stands on its walls — the Aztec's theatre: its rows seat 80, 112 and 204 —, D-109)
   const STANDS = { 6: 60, 8: 90, 10: 160 };
+  // (the wonders and the theatres of the other peoples: the floors the plan lays at the form's heights — [storey, metres] —, and
+  // the places of what is done there, each one the body takes — [storey, use, how many at least]: the benches of the Norse hall
+  // (Valhalla's and the mead hall's of a theatre) and the skald; the prayer in the Parthenon's cella and the offering on the
+  // rock's top; the priest, the prayer and the braziers on the ziggurat's terrace; the rite before the sacred lake and the crowd
+  // standing to watch it)
+  const GARDEN = { 6: 50, 8: 90, 10: 140 };
+  const OTHER = {
+    salao: A => ({ what: 'o salão', floors: [[0, A.yb]], need: [[0, 'sentar', 16], [0, 'atuar', 1]] }),
+    acropole: A => ({ what: 'a acrópole', floors: [[0, A.zr], [1, A.ys]], need: [[1, 'rezar', 4], [0, 'ofertar', 2]] }),
+    zigurate: A => ({ what: 'o zigurate', floors: [[1, A.yt]], need: [[1, 'oficiar', 1], [1, 'rezar', 4], [1, 'acender', 2]] }),
+    jardim: A => ({ what: 'o jardim sagrado', floors: [[0, A.yl]], need: [[0, 'assistir', GARDEN[A.n] || 0], [0, 'atuar', 1]] }),
+  };
   QA.more.push(function (add, s) {
     const In = G.Interiors, Fo = G.Forma; if (!In || !Fo) return;
     for (const b of s.buildings.values()) {
@@ -26,8 +39,21 @@
         continue;
       }
       if (!b.built || !b.ip || (b.type !== 'maravilha' && b.type !== 'teatro')) continue;
-      const F = Fo.of(b.type, b.style || 'classico', b.w); const A = F && F.amphi; if (!A || !(A.oval || A.piramide || A.mayor || A.teatro || A.campo)) continue;
-      const O = A.oval, p = In.plan(b);
+      const F = Fo.of(b.type, b.style || 'classico', b.w); const A = F && F.amphi; if (!A) continue;
+      const O = A.oval, p = In.plan(b), key = Object.keys(OTHER).find(k => A[k]);
+      if (key) {
+        // ---- the wonders and the theatres of the other peoples: the plan stands, its floors at the form's heights (else the body
+        // walks in the stone or in the air), and the places of what is done there, which the body takes
+        const K = OTHER[key](A[key]);
+        if (!p || !p.ok) { add('monumental', 1, `${b.type}#${b.id} (${b.style}, ${b.w} casas): a planta de ${K.what} não se arma (${p ? p.errs.slice(0, 2).join('; ') : 'sem planta'})`); continue; }
+        let off = false;
+        for (const [lv, y] of K.floors) { const l = p.levels.find(q => q.lv === lv); if (!l || Math.abs(l.y - y) > 0.01) { add('monumental', 1, `${b.type}#${b.id} (${b.style}): o piso ${lv} de ${K.what} a ${l ? l.y.toFixed(2) : '—'} m na planta e a ${y.toFixed(2)} m na forma — o corpo andaria noutro chão que o visto`); off = true; } }
+        if (off) continue;
+        const got = (lv, use) => (p.marks || []).filter(M => M.lv === lv && M.use === use).reduce((n, M) => n + M.pts.filter(q => q.ok).length, 0) + (p.items || []).filter(i => i.lv === lv).reduce((n, i) => n + i.spots.filter(q => q.use === use).length, 0);
+        for (const [lv, use, min] of K.need) { const n = got(lv, use); if (n < min) add('monumental', 2, `${b.type}#${b.id} (${b.style}, ${b.w} casas): ${n} lugares de ${use} n${lv ? 'o piso de cima' : 'o chão'} de ${K.what} que o corpo toma (${min} ao menos)`); }
+        continue;
+      }
+      if (!(O || A.piramide || A.mayor || A.teatro || A.campo)) continue;
       if (A.campo) {
         // ---- the great ball court (D-109): its plan stands, the stands on its walls at the form's height, their rows seating the
         // crowd its step is built for
