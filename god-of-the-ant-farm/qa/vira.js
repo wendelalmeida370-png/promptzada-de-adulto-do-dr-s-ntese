@@ -4,7 +4,11 @@
 // 2 morre a última alma de um povo (o menor que não tem cativos nas suas cidades, T-318): o povo acaba junto, não um minuto
 //   depois (L-090);
 // 3 morre a última alma livre de um povo que tinha cativos nas suas cidades: os cativos ficam livres, e a cidade é deles;
-// e o verificador fica limpo nos dois.
+// 4 entre esses cativos, a governante de outro povo, feita cativa um instante antes: livre e da cidade, o povo dela tem outro
+//   governante na hora, nunca um governante livre de outro povo (L-542);
+// 5 a capital tomada com o governante dentro, por um povo que faz cidadãos dos vencidos: ele é do vencedor agora, e o povo
+//   dele tem outro governante na hora (L-542);
+// e o verificador fica limpo em todos.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -62,7 +66,45 @@ const ROOT = path.resolve(__dirname, '..');
     return { ok: f.alive && G.Fac.pop(f.id) >= 2 && !held && !bad.length, info: `${f.name}: ${mine.length} almas livres morreram, ${strangers.length} cativos na capital; vivo ${f.alive}, povo agora ${G.Fac.pop(f.id)}, ainda cativos ${held}; ${bad.slice(0, 3).join(' | ') || 'verificador limpo'}` };
   });
   console.log(`${r3.ok ? 'PASSOU' : 'FALHOU'} | a última alma livre morre e os cativos herdam a cidade | ${r3.info}`);
-  r.ok = r.ok && r2.ok && r3.ok;
+  // 4 the ruler of another people among the captives who inherit the town: taken a moment before (the court passes a captive's
+  // throne within the second), she is one of the town's people now — her people gets its new ruler at once, never a free
+  // ruler of another people (L-542: the queen of Lavínio, a captive in Mileto, in the case 3 of the generation 14)
+  const r4 = await page.evaluate(() => {
+    const S = G.S; const F = G.Fac.all().filter(f => f.alive && G.Fac.capitalOf(f.id)).sort((a, b) => G.Fac.pop(a.id) - G.Fac.pop(b.id));
+    const f = F[0]; const cap = G.Fac.capitalOf(f.id);
+    const g = F.find(o => o !== f && o.leader && S.villagers.has(o.leader) && !S.villagers.get(o.leader).captive && G.Fac.pop(o.id) >= 4);
+    if (!f || !g) return { ok: false, info: 'sem dois povos para o caso' };
+    const queen = S.villagers.get(g.leader); const other = [...S.villagers.values()].find(v => !v.captive && G.Fac.idOfV(v) !== f.id && v !== queen && v.age >= 16 && !v.aboard && !v.ug && !v.jail);
+    for (const v of [queen, other].filter(Boolean)) { G.War.enslave(v, G.Fac.idOfV(v), v.set); v.set = cap.id; v.x = cap.cx; v.y = cap.cy; }
+    const mine = [...S.villagers.values()].filter(v => !v.captive && G.Fac.idOfV(v) === f.id);
+    for (const v of mine) G.Village.kill(v, 'sick');
+    const now = g.leader !== queen.id && !!S.villagers.get(g.leader) && G.Fac.idOfV(S.villagers.get(g.leader)) === g.id;
+    const bad0 = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
+    for (let k = 0; k < 24; k++) G.debug.step(0.05);
+    const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg); const nl = S.villagers.get(g.leader);
+    return { ok: !queen.captive && G.Fac.idOfV(queen) === f.id && now && !bad0.length && !bad.length, info: `${queen.name}, governante de ${g.name}, cativa em ${cap.name}: com a morte da última alma de ${f.name} ficou livre e é de ${G.Fac.ofV(queen) ? G.Fac.ofV(queen).name : '?'}; ${g.name} ${now ? 'teve outro governante na hora' : 'NÃO TEVE OUTRO GOVERNANTE NA HORA'} (${nl ? nl.name : 'ninguém'}); ${[...bad0, ...bad].slice(0, 3).join(' | ') || 'verificador limpo na hora e um segundo depois'}` };
+  });
+  console.log(`${r4.ok ? 'PASSOU' : 'FALHOU'} | a governante de outro povo, cativa, herda a cidade: o povo dela tem outro governante na hora | ${r4.info}`);
+  // 5 a capital taken with its ruler inside, by a people that makes citizens of the vanquished (no captives, no sword): the ruler
+  // is the conqueror's now, and her people gets its new ruler at once (L-542: the ruler of Lavínio in Roma, the Clã's and still
+  // Lavínio's for the second the court takes to look)
+  const r5 = await page.evaluate(() => {
+    const S = G.S; const F = G.Fac.all();
+    let X = null, Y = null;
+    for (const a of F) { const cap = G.Fac.capitalOf(a.id); const lv = S.villagers.get(a.leader); if (X || !cap || !lv || lv.captive || lv.set !== cap.id || G.Fac.settlementsOf(a.id).length < 2) continue; Y = F.find(c => c !== a && !G.Politics.tyr(c) && [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === c.id && !v.captive && v.age >= 18 && v.age < 50 && !v.aboard && !v.jail && !v.ug).length >= 2) || null; if (Y) X = a; }
+    if (!X) return { ok: false, info: 'nenhuma capital com o governante dentro e um povo para tomá-la' };
+    const set = G.Fac.capitalOf(X.id); const lv = S.villagers.get(X.leader);
+    const men = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === Y.id && v.age >= 18 && v.age < 50 && !v.captive && !v.aboard && !v.jail && !v.ug).slice(0, 4);
+    const b = G.War.makeBand(Y, X, set, men, 'conquista', {}); G.Politics.leaderPe(Y).cru = 0; // (the test's hand: a people that makes citizens)
+    G.War.conquer(set, b);
+    const nl = S.villagers.get(X.leader); const now = !!nl && nl !== lv && G.Fac.idOfV(nl) === X.id;
+    const bad0 = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
+    for (let k = 0; k < 24; k++) G.debug.step(0.05);
+    const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
+    return { ok: !lv.captive && S.villagers.has(lv.id) && G.Fac.idOfV(lv) === Y.id && now && !bad0.length && !bad.length, info: `${set.name}, capital de ${X.name} com ${lv.name} dentro, tomada por ${Y.name}: ${lv.name} é de ${G.Fac.ofV(lv) ? G.Fac.ofV(lv).name : '?'}; ${X.name} ${now ? 'teve outro governante na hora (' + nl.name + ')' : 'NÃO TEVE OUTRO GOVERNANTE NA HORA'}; ${[...bad0, ...bad].slice(0, 3).join(' | ') || 'verificador limpo na hora e um segundo depois'}` };
+  });
+  console.log(`${r5.ok ? 'PASSOU' : 'FALHOU'} | a capital tomada com o governante dentro: o povo dele tem outro governante na hora | ${r5.info}`);
+  r.ok = r.ok && r2.ok && r3.ok && r4.ok && r5.ok;
   console.log(`${errs.length ? 'FALHOU' : 'PASSOU'} | sem erros | ${errs.slice(0, 2).join(' | ') || 'nenhum'}`);
   await browser.close(); process.exit(r.ok && !errs.length ? 0 : 1);
 })();
