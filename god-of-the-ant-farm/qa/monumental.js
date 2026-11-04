@@ -59,7 +59,8 @@
 //       js/int-monumentos.js, D-109; e a L-494):
 //     E1 as formas: a cávea (a romana meio círculo, a grega mais que meio), as fileiras do corpo, os níveis (o passeio entre
 //        eles, o dobro de escadas acima), a galeria do alto (≥ 0,8 m) e o seu parapeito, o muro de 0,9 m na ponta de cada
-//        fileira, a orquestra rente ao chão (L-494), o palco romano a 1 m (≥ 12 m de largura no monumental, os lances do
+//        fileira (da largura da parede da planta: L-507), a orquestra rente ao chão (L-494), o palco romano a 1 m (≥ 12 m de
+//        largura no monumental, os lances do
 //        corpo) e a frons acima das fileiras, a skene grega e o proskenion, as três portas (≥ 2,2 m), as colunas, as
 //        entradas (≥ 2 m), os bastidores (o corredor, os camarins, a sala do meio)
 //     E2 as plantas: nos quatro lados e nos três tamanhos, sem falha; todo assento alcançado (≥ 300 no monumental), os
@@ -67,7 +68,8 @@
 //        quem atua (os postos do ofício e os lugares) e quem toca; os cabides; o tempo (≤ 400 ms)
 //     E3 a forma × a planta: o chão e as fileiras na altura da forma, nada andado nos muros das pontas nem no parapeito; as
 //        paredes da planta nas da forma — o parapeito da galeria no polígono do 3D (T-457); o prédio do palco até o teto da
-//        forma, nenhuma parede dele acima (D-131) —, as portas nas aberturas; a L-494
+//        forma, nenhuma parede dele acima (D-131) —, as portas nas aberturas; os lances do palco romano nos degraus da forma
+//        (L-506); a L-494
 //        (1) a orquestra e (3) nenhum chão na base de uma
 //        coluna — também no teatro antigo —; a (2), do 3D e da planta, contada
 //     E4 os pés, num mundo em branco, a cada 2 cm: da rua pelo adro, pelas entradas e pelos bastidores à orquestra, subindo ao
@@ -805,7 +807,15 @@ function testeE() {
       const walk = pieces.length > 1 ? A.rW - (A.ri + A.tr * A.lo) : 0, gal = A.rG - (pieces.length > 1 ? A.rW + A.tr * A.up : A.ri + A.tr * A.lo);
       if ((n >= 8 && (pieces.length < 2 || walk < 1.2 - 1e-6 || pieces[1].escadas.a.length <= pieces[0].escadas.a.length)) || gal < 0.8) out.push(`${tag}: ${pieces.length} níveis, o passeio de ${walk.toFixed(2)} m, a galeria de ${gal.toFixed(2)} m`);
       const par = F.els.find(e => e.k === 'cavea' && !e.escadas && Math.abs(e.aneis[0][0] - A.R) < 1e-6), ends = F.els.filter(e => e.k === 'cavea' && !e.escadas && e !== par);
-      if (!par || Math.abs(par.aneis[0][1] - A.top - 0.9) > 1e-3 || ends.length !== 2 * A.rows.length || A.rows.some(([, , y]) => ends.filter(e => Math.abs(e.aneis[0][1] - y - 0.9) < 1e-3).length < 2)) out.push(`${tag}: o parapeito da galeria ${par ? 'de ' + (par.aneis[0][1] - A.top).toFixed(2) + ' m' : 'ausente'}, ${ends.length} muros nas pontas de ${A.rows.length} fileiras`);
+      // (the walls at the rows' ends: at each end of each row, 0.9 m over it, its whole depth — and of the plan's wall's width, 0.2
+      // m: a wedge of the row's whole depth stood 1.28 cm off it, L-507 —: the most any of them stands off a strip of 0.2 m)
+      let endBad = '', endDev = 0;
+      for (const [r0, r1, y] of A.rows) for (const sd of [0, 1]) {
+        const mine = ends.filter(e => Math.abs(e.aneis[0][1] - y - 0.9) < 1e-3 && Math.abs(e.arco[1 - sd] - (sd ? A.a1 : A.a0)) < 2e-3 && e.fundo >= r0 - 1e-3 && e.aneis[0][0] <= r1 + 1e-3).sort((p, q) => p.fundo - q.fundo);
+        let at = r0; for (const e of mine) { if (Math.abs(e.fundo - at) > 2e-3) break; at = e.aneis[0][0]; const d = e.arco[1] - e.arco[0]; for (const r of [e.fundo, e.aneis[0][0]]) endDev = Math.max(endDev, Math.abs(r * Math.sin(d) - 0.2)); }
+        if (Math.abs(at - r1) > 2e-3 && !endBad) endBad = `a fileira de ${r0} a ${r1} m: o muro da ponta só até ${at} m`;
+      }
+      if (!par || Math.abs(par.aneis[0][1] - A.top - 0.9) > 1e-3 || endBad || endDev > 0.006) out.push(`${tag}: o parapeito da galeria ${par ? 'de ' + (par.aneis[0][1] - A.top).toFixed(2) + ' m' : 'ausente'}; ${endBad || 'os muros nas pontas inteiros'}, a ${(endDev * 100).toFixed(2)} cm da largura da parede da planta (L-507)`);
       // (the orchestra: a hair over the floor — the plan's, L-494 —, its round clear of the rows; the Greek's acting floor ≥ 12 m on the
       // monumental)
       const orq = F.els.find(e => e.k === 'arena'); if (!orq || orq.y < A.yq || orq.y - A.yq > 0.015 || orq.r > A.ri - 0.4 || (st === 'grego' && n >= 10 && 2 * orq.r < 12)) out.push(`${tag}: a orquestra ${orq ? `de ${(2 * orq.r).toFixed(1)} m a ${(orq.y - A.yq).toFixed(3)} m do chão` : 'ausente'}`);
@@ -881,6 +891,14 @@ function testeE() {
       // frons of 4.6 m on one of 3, over the building)
       const ls = p.levels.find(l => l.lv === lb); const over = p.walls.filter(w => w.lv === lb && (w.kind === 'parede' || w.kind === 'divisoria') && ls.y + w.h > A.teto + 1e-6);
       if (Math.abs(ls.y + ls.h - A.teto) > 1e-6 || over.length) out.push(`${tag}: o piso do prédio do palco até ${(ls.y + ls.h).toFixed(2)} m, o teto da forma a ${A.teto} m; ${over.length} paredes acima dele (D-131)`);
+      // (L-506: the Roman's flights up to the stage and to the hall — the plan's floor on them the form's steps, as drawn: a slope
+      // across their four risers of 23.5 cm left the feet up to 20 cm under the step drawn)
+      let stepOff = 0, stepAt = '', stepN = 0; const steps = F.els.filter(e => e.k === 'bloco' && e.degrau);
+      for (const s of p.stairs) { if (s.lv0 !== 0 || s.lv1 !== 1) continue;
+        for (let z = Math.floor(s.r[1] / CS); z <= Math.floor(s.r[3] / CS); z++) for (let x = Math.floor(s.r[0] / CS); x <= Math.floor(s.r[2] / CS); x++) { const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS;
+          const e = steps.find(q => mx > q.r[0] + 0.01 && mx < q.r[2] - 0.01 && mz > q.r[1] + 0.01 && mz < q.r[3] - 0.01); if (!e) continue; stepN++;
+          const d = Math.abs(In.floorYOf(p, 0, mx, mz) - e.y1); if (d > stepOff) { stepOff = d; stepAt = `(${mx.toFixed(2)}, ${mz.toFixed(2)})`; } } }
+      if (stepOff > 0.0051) out.push(`${tag}: nos lances do palco, o chão da planta a ${(stepOff * 100).toFixed(1)} cm do degrau da forma em ${stepAt} (L-506)`); // (the plan keeps a tread's top to the centimetre: 0.295 is 0.3 in it)
       // (L-494: the orchestra drawn a hair over the plan's floor — (1) —; no floor of the plan in a column's base — (3), the 3D's
       // base of 2.3 radii —; (2), the rows drawn as chords and walked as rounds: below)
       const orq = F.els.find(e => e.k === 'arena'); const d1 = orq.y - (p.levels[0].y); if (d1 < 0 || d1 > 0.015) out.push(`${tag}: a orquestra desenhada a ${d1.toFixed(3)} m do chão da planta (L-494, 1)`);
@@ -895,7 +913,7 @@ function testeE() {
           const th = Math.atan2(z - e.c[1], x - e.c[0]), d = Math.hypot(x - e.c[0], z - e.c[1]), dp = d / Fo.ringEdge(1, th); if (bnd.some(r => (d < r) !== (dp < r))) band++;
           if (Math.abs(In.floorYOf(p, 0, x, z) - caveaY(F, x, z)) > 1e-6) { poly++; if (!polyAt) polyAt = `(${x.toFixed(2)}, ${z.toFixed(2)})`; } } }
       if (poly) out.push(`${tag}: ${poly} casinhas das fileiras com o chão da planta fora do da forma (a primeira ${polyAt}; L-494, 2)`);
-      said.push(`${tag}: ${cells} casinhas andadas no chão, o chão a ${worst.toFixed(3)} m da forma, ${doors} portas nas aberturas da forma, a orquestra ${(d1 * 100).toFixed(1)} cm sobre o chão; L-494 (2): ${poly} casinhas fora da forma (${band} entre o redondo e o polígono); o parapeito da galeria em ${ro.n} paredes a ${(ro.dev * 100).toFixed(1)} cm do polígono do 3D (T-457); o prédio do palco até o teto da forma, ${A.teto} m (D-131)`);
+      said.push(`${tag}: ${cells} casinhas andadas no chão, o chão a ${worst.toFixed(3)} m da forma, ${doors} portas nas aberturas da forma, a orquestra ${(d1 * 100).toFixed(1)} cm sobre o chão; L-494 (2): ${poly} casinhas fora da forma (${band} entre o redondo e o polígono); o parapeito da galeria em ${ro.n} paredes a ${(ro.dev * 100).toFixed(1)} cm do polígono do 3D (T-457); o prédio do palco até o teto da forma, ${A.teto} m (D-131)${stepN ? `; nos lances do palco, ${stepN} casinhas no degrau da forma (L-506)` : ''}`);
     }
     // (the classic theatre — the Greek's and the classical people's, the one of before (antigo) —: no floor in its columns' bases)
     for (const st of ['grego', 'classico']) { const n0 = G.BDEF.teatro.w; const { b, p } = planOf('teatro', st, n0, 'S', (nid += 37)); if (!p || !p.ok) { out.push(`o teatro antigo ${st}: não se arma`); continue; }

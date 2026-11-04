@@ -800,8 +800,10 @@
       for (const u of [cu - wm, cu, cu + wm]) P.door(part, P.atOf(part, [u, vR - 0.15]), 1.0, 2.2, -1, -1, 0, 'vao'); }
     for (const s of [-1, 1]) P.wall(lb, [r2(cu + s * wm / 2), vR], [r2(cu + s * wm / 2), r2(vF - 0.3)], 0.2, hs, 0, 'divisoria');
     P.wall(lb, [u0, r2(vF - 0.15)], [r2(cu - 0.8), r2(vF - 0.15)], 0.3, hs, 0, 'parede'); P.wall(lb, [r2(cu + 0.8), r2(vF - 0.15)], [u1, r2(vF - 0.15)], 0.3, hs, 0, 'parede');
-    // (the Roman's flights: up from the orchestra to the stage at its front, up from the forecourt to the hall)
-    if (roman) { for (const r of A.flights) P.stair('escada', 0, 1, r, 0, 1, null); P.stair('escada', 0, 1, A.front, 0, -1, null); }
+    // (the Roman's flights: up from the orchestra to the stage at its front, up from the forecourt to the hall — on the form's
+    // treads, the feet on its steps as they are drawn: a slope across its four risers of 23.5 cm left the feet up to 20 cm under
+    // the step drawn, L-506)
+    if (roman) { A.flights.forEach((r, k) => P.stair('escada', 0, 1, r, 0, 1, null, { treads: A.treads[k] })); P.stair('escada', 0, 1, A.front, 0, -1, null, { treads: A.frontTreads }); }
     if (P.inside()) return;
     // (the rooms: the rows and the orchestra and the ways in, the yards, the forecourt; the stage, the corridor, the rooms, the
     // opening of the hall's door)
