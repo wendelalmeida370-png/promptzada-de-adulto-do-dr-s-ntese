@@ -470,6 +470,26 @@ run('e21', () => {
   const c = checa(); ok('e21m verificador', c.ok, c.txt);
 });
 
+// (o muro passa ao lado do campo guardado, como ao lado da praça: na metrópole pronta, uma cidade sem muro, o muro planejado; um
+// campo guardado posto à mão atravessando o lado norte dele; o muro de novo, erguido de uma vez — nenhuma casa do muro no lote,
+// que o abre como a praça. Roma largava o seu pelo muro posto em cima, numa vida do zero)
+run('e21o', () => {
+  abre(); const Sg = G.Siege;
+  const s = [...S.settlements.values()].filter(o => !Sg.wallOf(o.id) && G.Fac.get(o.fac)).sort((a, c) => V.pop(c.id) - V.pop(a.id)).find(o => { const w = sim(() => Sg.raiseWalls(o, 'pedra', false)); if (!w) return false; S.walls.splice(S.walls.indexOf(w), 1); o._box = w.box; return true; });
+  if (!ok('e21o uma cidade sem muro, com o muro planejado', !!s, s ? `${s.name}: o muro em ${s._box.join(',')}` : 'nenhuma')) return;
+  const [x0, y0, x1] = s._box; const u = s.urb || (s.urb = { d: [], names: [] }); const r0 = u.res;
+  u.res = { type: 'maravilha', esc: 'maravilha', n: 10, x: Math.round((x0 + x1) / 2) - 5, y: y0 - 5, d: S.day, chk: S.day, lost: 0 }; const R = u.res;
+  const no = i => { const x = i % G.N, y = (i / G.N) | 0; return x >= R.x && x < R.x + R.n && y >= R.y && y < R.y + R.n; };
+  const w = sim(() => Sg.raiseWalls(s, 'pedra', true)); const plano = w ? w.tiles.filter(no).length : -1;
+  let erguido = 0; for (let y = R.y; y < R.y + R.n; y++) for (let x = R.x; x < R.x + R.n; x++) if (S.wall[y * G.N + x]) erguido++;
+  // (sem o campo, o mesmo muro passaria por ele: o plano de antes tinha casas do lado norte dentro do lote)
+  let antes = 0; for (let x = R.x; x < R.x + R.n; x++) if (x >= s._box[0] && x <= s._box[2] && y0 >= R.y && y0 < R.y + R.n) antes++;
+  ok('e21o o muro passa ao lado do campo guardado', !!w && w.tiles.length > 0 && antes > 0 && plano === 0 && erguido === 0, w ? `o muro de ${w.tiles.length} casas: sem o campo, ${antes} casas do lado norte cairiam no lote; com ele, ${plano} no plano e ${erguido} erguidas nele` : 'sem muro');
+  // (desfeito: o muro e o campo de teste)
+  if (w) { for (const i of w.tiles) { S.wall[i] = 0; S.wallFac[i] = 0; delete S.wallHp[i]; } S.walls.splice(S.walls.indexOf(w), 1); G.W.touchWalk(); }
+  u.res = r0 || null; delete s._box;
+});
+
 // ------------------------------ e22: a audiência no palácio (D-124) ------------------------------
 // (o palácio de 6 de Roma de pé, com planta: quem governa no trono, a cidade entra pelos lugares da planta — 'audiencia' e os de
 // visitante, 'sentar', até o M2 pôr os de pé da sala do trono —, a ronda fica; o save no meio; quem governa morre no meio; o deus

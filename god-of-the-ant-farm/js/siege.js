@@ -175,6 +175,9 @@
   // strip of wall where the plan's floor ended, its stalls on tiles the world does not walk: L-466)
   const keepsWall = o => !!o && (o.blocks || o.type === 'praca' || !!(G.Interiors && G.Interiors.TYPES && G.Interiors.TYPES[o.type]));
   const takenAt = i => { const o = G.S.occ[i]; return !!o && keepsWall(G.S.buildings.get(o)); };
+  // (nor a lot a town keeps for its great work, D-121: the wall passes by it as by the square, and the work, when it stands, is
+  // the wall there as any building — Roma let go of its lot of 40 m for the wall laid across it, year 38 of a life from scratch)
+  const keptAt = i => !!(G.Village.resOver && G.Village.resOver(null, 'muro', i % N, (i / N) | 0, 1, 1, false));
   function planWall(s, f, core) {
     const S = G.S;
     // (a town whose heart is inside another town's walls is walled already: what it would raise is a strip outside the other
@@ -197,7 +200,7 @@
     for (const [x, y] of per) {
       const i = y * N + x;
       if (S.type[i] < T.SAND || S.wall[i] === 3 || Sg.walledIn(i, { set: s.id, id: Infinity })) continue;
-      if (takenAt(i)) continue;
+      if (takenAt(i) || keptAt(i)) continue;
       tiles.push(i);
       if (S.road[i] || S.wear[i] > 22) gates.push(i);
     }
@@ -238,7 +241,7 @@
     const w = planWall(s, f); if (!w) return null;
     if (mat) w.mat = mat;
     S.walls.push(w);
-    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || takenAt(i) || Sg.walledIn(i, w)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
+    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || takenAt(i) || keptAt(i) || Sg.walledIn(i, w)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
     if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); }
     return w;
   };
@@ -275,7 +278,8 @@
       // stayed shut, L-340)
       const gate = w.gates.includes(i);
       // (and never inside another town's walls: a plan saved before L-342 still has those tiles)
-      if (i !== undefined && !Sg.walledIn(i, w) && (gate && S.wall[i] === 1 || !S.wall[i] && !takenAt(i))) {
+      // (a tile kept since the plan — a lot guarded after it, D-121 — stays open, as at the plan)
+      if (i !== undefined && !Sg.walledIn(i, w) && (gate && S.wall[i] === 1 || !S.wall[i] && !takenAt(i) && !keptAt(i))) {
         f.stock[k] -= 2;
         S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; G.W.touchWalk();
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
