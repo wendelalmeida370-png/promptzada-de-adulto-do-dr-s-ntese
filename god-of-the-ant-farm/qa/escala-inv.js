@@ -32,5 +32,16 @@
       if (on) add('escala', 2, `${tag}: ${on.type}#${on.id} em cima dele — no campo guardado não se ergue nada`);
       if ((r.chk || 0) < s.day - 1) add('escala', 3, `${tag}: a cidade não olha para ele desde o ano ${r.chk}`);
     }
+    // ---- the audience at the palace (D-124): who is in one goes to the ready palace its people's audience is in, or is in it, at a
+    // place of the allotter
+    for (const v of s.villagers.values()) {
+      const t = v.task; if (!t || t.type !== 'assembly' || t.kind !== 'audiencia') continue;
+      const b = s.buildings.get(t.b); const f = G.Fac.get(t.fid);
+      if (!b || !b.built || b.type === 'ruin' || !b.ip || !G.Court || !G.Court.RANK[b.type]) add('escala', 2, `${v.name} #${v.id}: em audiência num palácio que não está pronto de pé (#${t.b})`);
+      else if (!f || !f.aud || f.aud.b !== b.id) add('escala', 2, `${v.name} #${v.id}: em audiência no palácio #${b.id}, e o povo não tem audiência nele`);
+      else if (v.inside && v.inside !== b.id) add('escala', 2, `${v.name} #${v.id}: em audiência no palácio #${b.id}, dentro de outro prédio (#${v.inside})`);
+      else if (v.id !== f.aud.ruler && v.set !== b.set) add('escala', 3, `${v.name} #${v.id}: em audiência no palácio #${b.id}, de outra cidade`);
+      else if (v.inside === b.id && In && In.places) { const P = In.places(b); if (!P.by.has(v.id) && !P.with.has(v.id)) add('escala', 3, `${v.name} #${v.id}: na audiência dentro do palácio #${b.id} sem um lugar do repartidor`); }
+    }
   });
 })();

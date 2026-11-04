@@ -465,6 +465,72 @@ run('e21', () => {
   const c = checa(); ok('e21m verificador', c.ok, c.txt);
 });
 
+// ------------------------------ e22: a audiência no palácio (D-124) ------------------------------
+// (o palácio de 6 de Roma de pé, com planta: quem governa no trono, a cidade entra pelos lugares da planta — 'audiencia' e os de
+// visitante, 'sentar', até o M2 pôr os de pé da sala do trono —, a ronda fica; o save no meio; quem governa morre no meio; o deus
+// derruba o palácio no meio; o voto e o pão iguais, na praça)
+const DIST = (v, b) => { const d = G.Vg.door(b); return Math.round(G.dist(v.x, v.y, d[0], d[1])); };
+function audiencia(chama) {
+  abre(); const set = cidade('Roma'); const f = G.Fac.get(set.fac); const Co = G.Court, P = G.Politics, In = G.Interiors;
+  const b = sim(() => V.handFound(set, 'palacio', 'palacio', { R: 60, built: true })); const r = P.ruler(f);
+  if (!b || !r) return { set, f, b, r };
+  for (const v of [r, ...[...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive).sort((a, c) => a.id - c.id).slice(0, 40)]) { sim(() => G.Vg.endTask(v)); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); }
+  const dr = G.Vg.door(b); r.x = dr[0] + 1; r.y = dr[1] + 1;
+  for (const v of [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive && o !== r).sort((a, c) => a.id - c.id).slice(0, 24)) { v.x = dr[0] + 2 + (v.id % 5); v.y = dr[1] + 2 + (v.id % 3); v.path = null; }
+  const vigia = [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 16 && !o.captive && o !== r).sort((a, c) => c.id - a.id)[0];
+  sim(() => G.Vg.setTask(vigia, { type: 'ronda', pts: [[dr[0] + 2, dr[1] + 2], [dr[0] + 3, dr[1] + 2]], k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' })); vigia.x = dr[0] + 2; vigia.y = dr[1] + 2;
+  S.time = 0.35; const okA = chama === null ? false : sim(() => (chama ? chama(f, set) : Co.audiencia(f, 'teste'))); const ronda = vigia.task && vigia.task.type; const longe = DIST(vigia, b);
+  return { set, f, b, r, vigia, ronda, longe, okA, In, Co, P };
+}
+run('e22', () => {
+  let A = audiencia(); const { b, r } = A;
+  if (!ok('e22a o palácio pronto e quem governa', !!b && !!r && !!b.ip && A.okA && !!A.f.aud, b ? `${lado(b)}, ${r ? r.name : 'sem governante'}; audiência ${A.okA ? 'chamada' : 'NÃO CHAMADA'}` : 'sem palácio')) return;
+  const lugares = A.Co.AUD_USES.reduce((n, u) => n + A.In.slots(b, u).length, 0) - 1; const chamados = A.f.aud.who.length;
+  M.viver(25);
+  const dentro = [...S.villagers.values()].filter(v => v.inside === b.id && v.task && v.task.kind === 'audiencia' && !v.task.throne); const usos = dentro.map(v => (A.In.placeOf(v) || {}).use || 'sem lugar');
+  const tr = A.In.placeOf(r); const th = A.In.slots(b, 'audiencia')[0];
+  ok('e22b quem governa no trono, a cidade nos lugares', !!tr && tr.item === th.item.id && tr.use === 'sentar' && dentro.length > 0 && chamados <= lugares && usos.every(u => A.Co.AUD_USES.includes(u)) && usos.includes('audiencia'),
+    `${r.name} ${tr ? `no ${tr.it && tr.it.kind || 'lugar'} (${tr.use})` : 'SEM LUGAR'}; ${chamados} chamados para ${lugares} lugares (${A.Co.AUD_USES.join(' e ')}); dentro: ${dentro.length} — ${[...new Set(usos)].map(u => u + ' ' + usos.filter(x => x === u).length).join(', ')}`);
+  ok('e22c a ronda fica', !A.f.aud.who.includes(A.vigia.id) && A.ronda === 'ronda', `${A.vigia.name}, a ${A.longe} casas da porta: ${A.f.aud.who.includes(A.vigia.id) ? 'CHAMADO' : 'não chamado'}, na ${A.ronda || '-'} ao chamado`);
+  const c1 = checa(); ok('e22d verificador', c1.ok, c1.txt);
+  // (o verificador vê: a audiência apagada à mão com a cidade nela; quem está nela dentro de outro prédio)
+  const aud1 = A.f.aud; A.f.aud = null; const q1 = QA.check().filter(q => q.sys === 'escala' && q.sev === 2 && /não tem audiência/.test(q.msg)).length; A.f.aud = aud1;
+  const fo = dentro[0]; const casa = [...S.buildings.values()].find(o => o.built && o.type === 'house' && o.set === A.set.id); fo.inside = casa.id;
+  const q2 = QA.check().filter(q => q.sys === 'escala' && q.sev === 2 && /dentro de outro/.test(q.msg)).length; fo.inside = b.id;
+  ok('e22m o verificador vê', q1 >= dentro.length && q2 === 1, `com a audiência apagada à mão: ${q1} avisos S2 (${dentro.length} dentro e os que vêm); ${fo.name} posto noutra casa: ${q2}`);
+  const aud0 = JSON.stringify(A.f.aud); const ids = dentro.map(v => v.id); salva(); const f2 = G.Fac.get(A.f.id);
+  const volta = ids.filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.kind === 'audiencia' && v.inside === b.id; }).length;
+  ok('e22e o save no meio', !!f2.aud && JSON.stringify(f2.aud) === aud0 && volta === ids.length, `a audiência ${f2.aud ? 'continua' : 'SUMIU'}; ${volta} de ${ids.length} de volta lá dentro`);
+  sim(() => V.kill(S.villagers.get(r.id), 'old')); M.viver(4); const r2 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length;
+  ok('e22f quem governa morre no meio', !f2.aud && !r2, `${f2.aud ? 'a audiência AINDA DURA' : 'a audiência acabou'}; ${r2} ainda nela`);
+  A = audiencia(); M.viver(15); const n3 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length;
+  sim(() => V.destroyBuilding(S.buildings.get(A.b.id), 'meteor')); M.viver(4); const n4 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length; const fora = [...S.villagers.values()].filter(v => v.inside === A.b.id).length;
+  ok('e22g o deus derruba o palácio no meio', A.okA && n3 > 0 && !A.f.aud && !n4 && !fora, `${n3} na audiência; depois do palácio caído: ${n4} nela, ${fora} lá dentro`);
+  const c2 = checa(); ok('e22i verificador', c2.ok, c2.txt);
+  // (o voto e o pão: com o palácio pronto de pé, na praça, diante do assento do poder — Po.seat —, como antes; nenhuma audiência)
+  A = audiencia(null); const seat = G.Polity.seat(A.f); const praca = [];
+  for (const why of ['voto', 'pao']) {
+    sim(() => G.Polity.crowd(A.set, why)); const L = [...S.villagers.values()].filter(v => v.task && v.task.type === 'assembly');
+    praca.push(`${why}: ${L.length} na praça${L.every(v => v.task.kind === 'assembly' && v.task.x === seat[0] && v.task.y === seat[1]) ? ', diante do assento' : ' (FORA DO ASSENTO)'}`);
+    if (!L.length || !L.every(v => v.task.kind === 'assembly' && v.task.x === seat[0] && v.task.y === seat[1])) praca.push('FALHA');
+    for (const v of L) sim(() => G.Vg.endTask(v));
+  }
+  ok('e22h o voto e o pão iguais', !praca.includes('FALHA') && !A.f.aud && !!A.b, `com ${lado(A.b)} de pé — ${praca.join('; ')}; audiência: ${A.f.aud ? 'CHAMADA' : 'nenhuma'}`);
+  // (as três chamadas: a resposta à petição — Po.crowd 'audiencia' —, a coroação, a chegada de um embaixador vivo)
+  A = audiencia((f, set) => G.Polity.crowd(set, 'audiencia')); const pet = A.f.aud && A.f.aud.why;
+  A = audiencia(null); const novo = [...S.villagers.values()].filter(v => v.set === A.set.id && v.age >= 20 && !v.captive && v !== A.r && v !== A.vigia && !v.task && G.dist(v.x, v.y, ...G.Vg.door(A.b)) < 12).sort((a, c) => a.id - c.id)[0];
+  sim(() => { A.P.endReign(A.f, 'teste'); A.P.crown(A.f, novo, 'teste', true); }); const cor = A.f.aud && A.f.aud.ruler === novo.id ? A.f.aud.why : '-';
+  A = audiencia(null); const de = G.Fac.all().find(o => o !== A.f && o.alive && G.Fac.rel(o.id, A.f.id)); const env = de && [...S.villagers.values()].find(v => G.Fac.ofV(v) === de && v.age >= 16 && !v.captive);
+  if (env) sim(() => A.P.deliver(de, A.f, 'contato', env)); const emb = A.f.aud && A.f.aud.why;
+  ok('e22j as três chamadas', pet === 'peticao' && cor === 'coroacao' && emb === 'embaixada', `a resposta à petição: ${pet || 'NADA'}; a coroação de ${novo ? novo.name : '-'}: ${cor}; o emissário ${env ? env.name : '-'} de ${de ? de.name : '-'}: ${emb || 'NADA'}`);
+  // (sem palácio pronto com planta, a resposta à petição não chama ninguém — como antes da D-124)
+  const sem = G.Fac.all().map(f => G.Fac.capitalOf(f.id)).filter(c => c && !G.Court.audPalace(G.Fac.get(c.fac)))[0];
+  const n0 = [...S.villagers.values()].filter(v => v.task && v.task.type === 'assembly').length; if (sem) sim(() => G.Polity.crowd(sem, 'audiencia'));
+  const n1 = [...S.villagers.values()].filter(v => v.task && v.task.type === 'assembly').length;
+  ok('e22k sem palácio, nenhuma reunião', !!sem && n1 === n0 && !G.Fac.get(sem.fac).aud, sem ? `${sem.name}: ${n1 - n0} chamados, audiência ${G.Fac.get(sem.fac).aud ? 'CHAMADA' : 'nenhuma'}` : 'toda capital tem palácio pronto');
+  const c3 = checa(); ok('e22l verificador', c3.ok, c3.txt);
+});
+
 // ------------------------------ e20: cada capital que não ergue a obra grande diz por quê ------------------------------
 run('e20', () => {
   for (const w of ['metropole', 'mundial', 'mega']) {

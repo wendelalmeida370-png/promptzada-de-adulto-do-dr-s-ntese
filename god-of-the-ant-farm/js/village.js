@@ -263,6 +263,7 @@
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }
     W.touchWalk();
     G.Act && G.Act.atGone(b); // (its operations end with it, by their own rule: L-444)
+    G.Court && G.Court.audGone && G.Court.audGone(b); // (and the audience in it: D-124)
   };
   V.totalCost = def => { let n = 0; for (const k in def.cost) n += def.cost[k] || 0; return n; };
   V.workOf = b => G.Escala.billOf(b).work; // (the work a building takes: its step's, D-106)
@@ -331,6 +332,7 @@
       if (v.home === b.id) v.home = 0;
       if (v.inside === b.id) { v.inside = 0; v.sleeping = false; G.Vg.endTask(v); }
     }
+    G.Court && G.Court.audGone && G.Court.audGone(b); // (the audience in a palace that falls ends with it, on the way in too: D-124)
     // (the coins kept in a house that falls are lost with it — in the ledger: the ruin is no house to hold them)
     if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
     V.keptGone(b, 'ruina'); // (and what it kept, the house's pantry and chest or the shelf, L-377)

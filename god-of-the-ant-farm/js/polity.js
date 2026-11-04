@@ -452,6 +452,7 @@
     if (a === 'regime') { const ok = (P.fam(f) === 'dyn' && (b === 'parlamento' || b === 'feudal')) || (P.free(f) && (b === 'democracia' || b === 'republica' || b === 'oligarquia')); if (!ok || !available(f, b)) p = 0; else p -= 0.15; }
     const who = styledV(f, r);
     G.Life && G.Life.bio(lead, 'note', `Levou ${GR[pt.k].pl} até ${r.name} para pedir ${Po.demandText(f, pt.dem)}`);
+    Po.crowd(G.Fac.capitalOf(f.id), 'audiencia'); // (the town hears the answer in the palace, where there is one: D-124)
     if (G.R() < p) {
       const conc = CONCEDE[pt.dem] || pt.dem;
       log(`${who} ouviu ${lead.name} e cedeu.`, 'crown', pt.x, pt.y);
@@ -565,7 +566,11 @@
   Po.riot = (f, set, why, o) => (G.Riots ? G.Riots.start(f, set, why, o) : null);
   // the people gather in the square: to vote, to get bread, to hear a sentence (the watch on its round stays there: D-103)
   Po.crowd = function (set, why) {
-    if (!set) return; const S = G.S; const f = G.Fac.get(set.fac); const at = (f && Po.seat(f)) || [set.cx, set.cy];
+    if (!set) return; const S = G.S; const f = G.Fac.get(set.fac);
+    // (the audience — D-124 —: with the seat of power a ready palace of the capital with its plan, the ruler on the throne and the
+    // town in it, as many as its places — court.js —; with none, no meeting, as before it)
+    if (why === 'audiencia') { if (f && G.Court && G.Court.audiencia) G.Court.audiencia(f, 'peticao'); return; }
+    const at = (f && Po.seat(f)) || [set.cx, set.cy];
     let n = 0;
     for (const o of S.villagers.values()) { if (n >= 24) break; if (o.set !== set.id || o.age < 8 || o.captive || G.dist(o.x, o.y, at[0], at[1]) > 22 || (o.task && o.task.type === 'ronda')) continue; if (G.Vg.give(o, { type: 'assembly', x: at[0], y: at[1], pri: 1.7, kind: 'assembly', why })) n++; }
   };
