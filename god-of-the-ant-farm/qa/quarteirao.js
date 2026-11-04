@@ -74,6 +74,7 @@ const key = process.argv[2] || 'mega';
     // for a block today lives a blessed year more — at most twelve — until there is)
     const p0 = await page.evaluate(() => {
       const S = G.S, V = G.Village, W = __Q; const set = S.settlements.get(W.set); const d0 = S.day;
+      const FIELD = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 }; // (what a block brings down that is no house)
       const feed = () => { const f = G.Fac.get(set.fac); if (f) { f.stock.stone = Math.max(f.stock.stone, 200); f.stock.wood = Math.max(f.stock.wood, 120); } };
       const year = () => { G.Skip.on = true; S.blessed = true; try { const d = S.day; while (S.day === d) { G.Main.skipStep(1); S.divinePeace = Math.max(S.divinePeace || 0, 100); S.weather.fertility = Math.max(S.weather.fertility || 0, 100); } } finally { G.Skip.on = false; S.blessed = false; } feed(); };
       feed();
@@ -85,10 +86,18 @@ const key = process.argv[2] || 'mega';
         if (lived) break;
         for (let ty = pos[1]; ty < pos[1] + 2 && !house; ty++) for (let tx = pos[0]; tx < pos[0] + 2 && !house; tx++) if (!S.occ[ty * G.N + tx]) house = V.addBuilding('house', tx, ty, set.id, true);
         // (no ground free under the block — a heart all built, in the mega of the v37 for twelve years —: a house it would bring
-        // down that nobody lives in takes the family; or, where it brings down only gardens and the like, the family's house
-        // stands where one of them was — the test's hand, T-195)
+        // down that nobody lives in takes the family; or, where it brings down only gardens and fields, the family's house
+        // stands on a tile of the block's lot one of them held, the field taken up by the test's hand — T-195. The first site
+        // of Mênfis since the junction 841a188 is a farm of 3 that covers the whole lot, and the next one waits on where the
+        // towns round it build: the test's own hand makes the premise, not the course of the world, T-427)
         if (!house) { const e = gone.map(id => S.buildings.get(id)).find(o => o && G.BDEF[o.type].housing); if (e) house = e; }
-        if (!house) { const o = gone.map(id => S.buildings.get(id)).find(q => q && q.w === 1 && q.h === 1 && !G.BDEF[q.type].civic); if (o) { const ox = o.x, oy = o.y; V.removeBuilding(o); gone = gone.filter(id => id !== o.id); house = V.addBuilding('house', ox, oy, set.id, true); } }
+        if (!house) {
+          const o = gone.map(id => S.buildings.get(id)).find(q => q && FIELD[q.type] && q.set === set.id);
+          if (o) {
+            const [ox, oy, ow, oh] = [o.x, o.y, o.w, o.h]; V.removeBuilding(o); gone = gone.filter(id => id !== o.id);
+            for (let ty = pos[1]; ty < pos[1] + 2 && !house; ty++) for (let tx = pos[0]; tx < pos[0] + 2 && !house; tx++) if (!S.occ[ty * G.N + tx] && tx >= ox && tx < ox + ow && ty >= oy && ty < oy + oh) house = V.addBuilding('house', tx, ty, set.id, true);
+          }
+        }
         if (!house) V.startProject(set, 'quarteirao', pos);
       }
       if (!house && !lived) return { none: `nenhum lugar de quarteirão com chão livre para a casa em ${S.day - d0} anos` };
