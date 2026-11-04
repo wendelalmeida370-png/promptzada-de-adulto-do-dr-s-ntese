@@ -1603,8 +1603,11 @@
   // D-095; stalls, bays: a market's, where the god draws them — arch.js mercado, T-254)
   // n: the building's lot in tiles (b.w) — absent, or the type's classic size, the classic form; another size, the form of
   // that step (Fo.def … sizes), or none
+  // (a size is a number of tiles: anything else — a building, as the third argument was before the sizes — is the caller's
+  // mistake, said aloud rather than answered with no form: T-416)
+  const nArg = n => { if (n !== undefined && n !== null && !(Number.isInteger(n) && n > 0)) throw new Error('G.Forma: o tamanho é um número de casas (b.w), não ' + (typeof n) + ' (D-106, T-416)'); };
   Fo.of = function (type, style, n) {
-    const F0 = FORMS[type]; if (!F0) return null;
+    nArg(n); const F0 = FORMS[type]; if (!F0) return null;
     if (n === undefined || n === null || n === n0Of(type)) {
       const fn = F0[style] || F0.classico; if (!fn) return null;
       const key = type + ':' + (F0[style] ? style : 'classico'); let F = memo.get(key); if (F) return F;
@@ -1620,7 +1623,7 @@
   };
   // (a type with a form in this people's style — of the size n, when given: the classic size, or a step's generator)
   Fo.has = (type, style, n) => {
-    if (!(FORMS[type] && (FORMS[type][style] || FORMS[type].classico))) return false;
+    nArg(n); if (!(FORMS[type] && (FORMS[type][style] || FORMS[type].classico))) return false;
     return n === undefined || n === null || n === n0Of(type) || !!sizedFn(type, style, n);
   };
   // (the sizes a people raises a type in: the classic and its steps')
