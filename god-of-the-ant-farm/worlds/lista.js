@@ -93,8 +93,8 @@ G.Ready.list({
  },
  "anos500": {
   "day": 501,
-  "pop": 1038,
-  "peoples": 3,
+  "pop": 1043,
+  "peoples": 2,
   "towns": 14,
   "N": 128,
   "map": "continente",
@@ -102,29 +102,29 @@ G.Ready.list({
   "city": {
    "name": "Roma",
    "tier": 4,
-   "pop": 155
+   "pop": 201
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 5918025
+  "bytes": 5696413
  },
  "anos1000": {
   "day": 1001,
-  "pop": 1035,
-  "peoples": 1,
-  "towns": 8,
+  "pop": 1037,
+  "peoples": 2,
+  "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Hedeby",
-   "tier": 5,
-   "pop": 372
+   "name": "Roma",
+   "tier": 4,
+   "pop": 195
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 5692851
+  "bytes": 6269421
  }
 });
