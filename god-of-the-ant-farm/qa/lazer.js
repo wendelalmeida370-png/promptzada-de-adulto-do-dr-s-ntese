@@ -11,8 +11,11 @@
 //  l6 a saída do fim da tarde: sem a mão da prova, gente da cidade escolhe o teatro por conta própria (G.Teatro.urge, a escolha
 //     da pessoa ao lado da taverna e de casa), paga, assiste e aplaude — num dos três primeiros dias (o que a chama da plateia
 //     depois é do mundo: uma história, T-404)
-//  (e l7 a l11, mais abaixo). Nos casos do teatro a tarde é calma: o tempo, a cidade em paz (a paz divina do jogo) e sem a festa
-//  do dia, pela mão da prova (T-404); o público chamado pela mão vem quando as portas abrem, os mais perto primeiro, e fica.
+//  (e l7 a l11, mais abaixo; l12 o ator chamado, a caminho do palco e no preparo, não é levado por um afazer de fora — a mina
+//  da caverna —, L-503; l13 a festa da cidade nas horas do espetáculo: o teatro não o abre naquele dia, e a festa que o deus
+//  começa com a peça em cena a encerra ali, todos livres para a festa, D-130). Nos casos do teatro a tarde é calma: o tempo, a
+//  cidade em paz (a paz divina do jogo) e sem a festa do dia, pela mão da prova (T-404); o público chamado pela mão vem quando as
+//  portas abrem, os mais perto primeiro, e fica.
 //  e nenhum erro de módulo nem aviso no console.
 //   node qa/lazer.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/lazer.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
@@ -219,15 +222,10 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, b
   // (and his trade held by the god's hand, as the l8 holds its actor's: the board of Mênfis deals the actor made by the case off
   // the theatre every few seconds of her walk — the case is the far actor's walk, T-392)
   const keepTrade = () => { if (a && (a.role !== 'ator' || a.job !== b.id)) { a.role = 'ator'; a.job = b.id; } };
-  // (and her walk to the stage kept by the god's hand, as her trade: the call to the stage behind the shut doors (1,05) is the
-  // lightest errand of the afternoon — she may go and eat, and is called again —, and with the calm afternoon of the T-404 the
-  // cave of Mênfis took her on her way, to its mine (1,25) and then to deliver the ore (1,1), and the show was called off «sem
-  // atores» at 0,63: on her way she is called back and the errand held above the day's calls below 3, the line of the D-094 —
-  // the case is the far actor's walk, T-404)
-  const keepWalk = () => { if (!a || !S().villagers.has(a.id)) return; const o = Tt.dia(b); if (!o || o.data.atores[a.id] || o.data.fase === 'peca' || o.data.fase === 'fim') return;
-    if (!(a.task && a.task.type === 'atuar' && a.task.id === b.id)) Tt.task(a, b, null, G.Vg.H);
-    if (a.task && a.task.type === 'atuar' && a.task.st === 0) a.task.pri = Math.max(a.task.pri || 0, 2.9); };
-  liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad, () => { keepTrade(); keepWalk(); if (a) calmBeasts([a.x, a.y], dr); });
+  // (her walk to the stage is the game's: the actor called is in the leg of the show, and an errand from outside waits — with
+  // the calm afternoon of the T-404 the cave of Mênfis took her on her way to its mine (1,25), and the show was called off «sem
+  // atores» at 0,63; the proof held her walk by its hand until the L-503 was mended)
+  liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad, () => { keepTrade(); if (a) calmBeasts([a.x, a.y], dr); });
   ok('l7 o-ator-de-longe', !!a && !!sp && !!op && op.st === 'ok' && on && at < Tt.horas(b).prep && !bad.length, a && sp ? `${a.name}, o ator do dia, a ${far} casas da porta: o preparo abriu às ${r2(at)} (antes ${Tt.horas(b).prep}); ${on ? 'no palco na peça' : 'não chegou à peça'}; o espetáculo ${op ? op.st + ' (' + (op.end ? op.end.why : '') + ')' : 'não abriu'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'sem ator ou sem lugar longe');
 }
 // ---------------- l8 the hungry actor on the stage (L-426) ----------------
@@ -351,6 +349,78 @@ const backTo = (w, ty) => !!w && !!w.task && w.task.type === ty;
     liveSec(2); const let_go = !Bi.book(S().buildings.get(lib.id)).quem[rd.id];
     ok('l11 leitor-chamado-antes-do-save', reading && held && same && out && let_go, `${rd.name} lendo ${n(lib)}: ${reading ? 'sim' : 'NÃO'}; à cama um momento antes do save (ainda no livro: ${held ? 'sim' : 'NÃO'}); depois do load ${out ? 'fora da biblioteca' : 'DE VOLTA À LEITURA'}; dois segundos depois o livro ${let_go ? 'o soltou' : 'AINDA O TEM'}; a casa e as operações na ida e volta: ${same ? 'iguais' : 'DIFERENTES'}`);
   }
+}
+// ---------------- l12 the actor called is not taken from the show by an errand from outside (L-503) ----------------
+// (the cave's mine — 1,25, by the cave's own door, G.Caves.give, as its plan gives it — offered to the actor of the day on her
+// way to the stage: she goes on; put by the god's hand at the door, on the stage behind the shut doors the hands' rule says her
+// busy (Vg.busy, Vg.handsBusy: D-094); and the play is played with her. Before the L-503 the mine took her on her way, and the
+// show was called off «sem atores»)
+{
+  fresh(); const b = S().buildings.get(P.id); const cast = ready(b); const bad = [];
+  liveSec(20, () => !!Tt.dia(b), bad); const op = Tt.dia(b);
+  const walking = v => !!v && !!op && S().villagers.has(v.id) && !!v.task && v.task.type === 'atuar' && v.task.op === op.id && v.task.st === 0 && !v.inside;
+  let a = null; if (op) liveSec(20, () => !!(a = cast.find(walking)), bad);
+  const cv = G.Caves.all().filter(c => c.mouths.length).sort((x, y) => x.id - y.id)[0];
+  let took = null, kept = false, busy = null, on = false, txt = op ? 'nenhum ator a caminho do palco' : 'o espetáculo não abriu';
+  if (a && cv) {
+    took = G.Caves.give(a, 'mine', cv, -1, { stay: 12, pri: 1.25 }); kept = walking(a);
+    txt = `${a.name} a caminho do palco: a mina da ${cv.name} ${took ? 'A LEVOU' : 'não a levou'}${kept ? ', segue para o palco' : ` (${a.task ? a.task.type : 'sem afazer'})`}`;
+    if (kept) { const dr = G.Vg.door(b); a.x = dr[0]; a.y = dr[1]; a.path = null; liveSec(10, () => !A.live(op) || !!op.data.atores[a.id], bad); }
+    if (kept && A.live(op) && op.data.atores[a.id] && op.data.fase === 'preparo') { busy = G.Vg.busy(a, { type: 'caverna', kind: 'mine', pri: 1.25 }) && !!G.Vg.handsBusy(a); txt += `; no palco de portas fechadas: ${busy ? 'ocupada para um afazer de fora' : 'LIVRE para um afazer de fora'}`; }
+    else if (kept) txt += `; no palco de portas fechadas: ${A.live(op) && op.data.atores[a.id] ? 'as portas já abertas' : 'não chegou'}`;
+    if (kept) { liveSec(150, () => { if (A.live(op) && op.data.atores[a.id] && op.data.fase === 'peca') on = true; return !A.live(op); }, bad, () => calmBeasts([a.x, a.y])); txt += `; ${on ? 'no palco na peça' : 'não chegou à peça'}, o espetáculo ${op.st}${op.end ? ' (' + op.end.why + ')' : ''}`; }
+  }
+  ok('l12 o-ator-chamado-nao-e-levado (L-503)', !!a && !!cv && took === false && kept && busy === true && on && op.st === 'ok' && !bad.length, `${txt}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}`);
+}
+// ---------------- l13 the town's feast and the show (D-130) ----------------
+// (a) the feast of its people that falls in the show's hours, the town's plan of the day by the god's hand: the theatre opens no
+// show that day, past the doors' hour — kept for another day —; one of the morning, held before the doors, leaves the show its
+// day. (b) a feast begun by the god's hand with the play under way: the show ends there — closed as cut, nobody in it with its
+// errand, its rows and its stage empty — and its actors and its audience are free for the feast, which takes whom it takes
+// (D-126); the checker clean
+{
+  const feasts = st => { const f = G.Fac.get(st.fac); return f ? G.Fest.of(f.civ).filter(k => !G.Fest.DEF[k].trigger) : []; };
+  const span = k => [G.Fest.DEF[k].at, G.Fest.DEF[k].at + G.Fest.DEF[k].dur * 1.15];
+  const bad = []; const notes = []; let good = true; const fail = m => { good = false; notes.push(m.toUpperCase()); };
+  // (a) in the show's hours
+  fresh(); let b = S().buildings.get(P.id); ready(b); let st = S().settlements.get(b.set); const h = Tt.horas(b);
+  const kIn = feasts(st).find(k => span(k)[0] < h.fecha && span(k)[1] > h.abre), kAm = feasts(st).find(k => span(k)[1] <= h.abre);
+  if (!kIn) notes.push(`(a) o povo de ${st.name} não tem festa nas horas do espetáculo`);
+  else {
+    st.festPlan = { day: S().day, key: kIn, done: false };
+    let opened = false; liveSec(Math.ceil((h.abre - S().time) * G.DAY_LEN) + 4, () => (opened = !!Tt.dia(b)), bad);
+    if (opened) fail(`(a) ${G.Fest.DEF[kIn].name} às ${G.Fest.DEF[kIn].at} no dia: o espetáculo abriu`);
+    else notes.push(`(a) ${G.Fest.DEF[kIn].name} às ${G.Fest.DEF[kIn].at} no dia: nenhum espetáculo até as portas (${r2(S().time)})`);
+  }
+  if (!kAm) notes.push(`(a) o povo de ${st.name} não tem festa de manhã`);
+  else {
+    fresh(); b = S().buildings.get(P.id); ready(b); st = S().settlements.get(b.set);
+    st.festPlan = { day: S().day, key: kAm, done: true }; st.festDone = Object.assign({}, st.festDone, { [kAm]: S().day });
+    const opened = liveSec(20, () => !!Tt.dia(b), bad);
+    if (!opened) fail(`(a) ${G.Fest.DEF[kAm].name} de manhã (até ${r2(span(kAm)[1])}): o espetáculo não abriu à tarde`);
+    else notes.push(`(a) ${G.Fest.DEF[kAm].name} de manhã: o espetáculo abriu à tarde`);
+  }
+  // (b) a feast begun with the play under way
+  fresh(); b = S().buildings.get(P.id); ready(b); st = S().settlements.get(b.set);
+  liveSec(20, () => !!Tt.dia(b), bad); const op = Tt.dia(b);
+  if (op) { atDoors(b, op, bad); liveSec(80, () => !A.live(op) || op.data.fase === 'peca', bad); }
+  if (!op || !A.live(op) || op.data.fase !== 'peca') fail(`(b) a peça não chegou a começar (${op ? op.st + ' ' + op.data.fase : 'sem espetáculo'})`);
+  else {
+    const people = Object.keys(op.data.plateia).concat(Object.keys(op.data.atores)).map(Number);
+    let fe = null, key = ''; for (const k of feasts(st)) { fe = G.Fest.start(st, k); if (fe) { key = k; break; } }
+    if (!fe) fail(`(b) nenhuma festa de ${st.name} começou pela mão do deus`);
+    else {
+      const hanging = [...S().villagers.values()].filter(v => v.task && (v.task.type === 'teatro' || v.task.type === 'atuar') && v.task.op === op.id).length;
+      const held = people.filter(id => { const v = S().villagers.get(id); return v && G.Vg.handsBusy(v); }).length;
+      const went = people.filter(id => fe.parts.includes(id)).length;
+      if (A.live(op) || op.st !== 'int' || !op.end || op.end.why !== 'a festa') fail(`(b) o espetáculo ${A.live(op) ? 'SEGUE (' + op.data.fase + ')' : op.st + ' (' + (op.end ? op.end.why : '') + ')'} com ${G.Fest.DEF[key].name} começada`);
+      if (hanging || Object.keys(op.data.plateia).length || Object.keys(op.data.atores).length) fail(`(b) ${hanging} ainda com o afazer do espetáculo, ${Object.keys(op.data.plateia).length} na plateia e ${Object.keys(op.data.atores).length} no palco`);
+      if (held) fail(`(b) ${held} dos ${people.length} da peça presos a ela (mãos ocupadas)`);
+      liveSec(5, null, bad);
+      notes.push(`(b) ${G.Fest.DEF[key].name} pela mão do deus com a peça em cena (${people.length} na peça): o espetáculo ${op.st} (${op.end ? op.end.why : ''}), ninguém com o afazer dele, ${went} dos ${people.length} na festa, que leva ${fe.parts.length}`);
+    }
+  }
+  ok('l13 a-festa-e-a-peca (D-130)', good && !bad.length, `${notes.join(' · ')}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}`);
 }
 function n(b) { return 'n' + (G.gen(V.buildName(b)) === 'a' ? 'a ' : 'o ') + V.buildName(b).toLowerCase(); }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));

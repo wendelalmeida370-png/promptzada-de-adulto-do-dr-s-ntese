@@ -66,7 +66,8 @@
 //        níveis, os pisos e os lances, o palco, os bastidores, os camarins, a sala, as entradas, o adro — alcançados —;
 //        quem atua (os postos do ofício e os lugares) e quem toca; os cabides; o tempo (≤ 400 ms)
 //     E3 a forma × a planta: o chão e as fileiras na altura da forma, nada andado nos muros das pontas nem no parapeito; as
-//        paredes da planta nas da forma — o parapeito da galeria no polígono do 3D (T-457) —, as portas nas aberturas; a L-494
+//        paredes da planta nas da forma — o parapeito da galeria no polígono do 3D (T-457); o prédio do palco até o teto da
+//        forma, nenhuma parede dele acima (D-131) —, as portas nas aberturas; a L-494
 //        (1) a orquestra e (3) nenhum chão na base de uma
 //        coluna — também no teatro antigo —; a (2), do 3D e da planta, contada
 //     E4 os pés, num mundo em branco, a cada 2 cm: da rua pelo adro, pelas entradas e pelos bastidores à orquestra, subindo ao
@@ -119,7 +120,8 @@
 //        entrada entre as esfinges (≥ 2,2 m)
 //     T2 as plantas: nos quatro lados e nos três tamanhos, sem falha, todo cômodo alcançado, quem assiste (nos bancos; em pé
 //        diante do lago) e quem atua (os postos do ofício), o tempo
-//     T3 a forma × a planta: o chão na altura da forma, nada andado no que ela tem de sólido
+//     T3 a forma × a planta: o chão na altura da forma, nada andado no que ela tem de sólido, nenhum chão sob a água do
+//        lago (L-505)
 //     T4 os pés, a cada 2 cm: pelos degraus e pela porta ao longo da nave; entre as esfinges até diante do lago e ao longo dele
 //     T5 o mundo: cada povo os ergue (e nunca o antigo); pela mão do deus em Birka e em Tebas, de pé, vivendo, salvos e
 //        carregados, o verificador, derrubados
@@ -874,6 +876,11 @@ function testeE() {
       const rim = p.walls.filter(w => w.lv === 0 && w.kind === 'parapeito' && [w.a, w.b].every(q => Math.abs(Math.hypot(q[0] - A.cu, q[1] - A.vD) - (A.R - 0.1)) < 0.3));
       const ro = ringWallsOff(rim, [A.cu, A.vD], A.R - 0.1, A.a0, A.a1);
       if (!ro.n || ro.dev > 0.01 || ro.gap > 0.02) out.push(`${tag}: o parapeito da galeria da planta a ${(ro.dev * 100).toFixed(1)} cm do polígono do 3D, ${ro.n} paredes, o maior vão ${ro.gap.toFixed(2)} m (T-457)`);
+      // (D-131: the stage building a closed part under its roof — its storey up to the form's ceiling of it, A.teto, the foot of
+      // the roof over its rooms, and no wall of it above: the Greek's walls of 4 m stood on a storey of 3, the Roman's scaenae
+      // frons of 4.6 m on one of 3, over the building)
+      const ls = p.levels.find(l => l.lv === lb); const over = p.walls.filter(w => w.lv === lb && (w.kind === 'parede' || w.kind === 'divisoria') && ls.y + w.h > A.teto + 1e-6);
+      if (Math.abs(ls.y + ls.h - A.teto) > 1e-6 || over.length) out.push(`${tag}: o piso do prédio do palco até ${(ls.y + ls.h).toFixed(2)} m, o teto da forma a ${A.teto} m; ${over.length} paredes acima dele (D-131)`);
       // (L-494: the orchestra drawn a hair over the plan's floor — (1) —; no floor of the plan in a column's base — (3), the 3D's
       // base of 2.3 radii —; (2), the rows drawn as chords and walked as rounds: below)
       const orq = F.els.find(e => e.k === 'arena'); const d1 = orq.y - (p.levels[0].y); if (d1 < 0 || d1 > 0.015) out.push(`${tag}: a orquestra desenhada a ${d1.toFixed(3)} m do chão da planta (L-494, 1)`);
@@ -888,7 +895,7 @@ function testeE() {
           const th = Math.atan2(z - e.c[1], x - e.c[0]), d = Math.hypot(x - e.c[0], z - e.c[1]), dp = d / Fo.ringEdge(1, th); if (bnd.some(r => (d < r) !== (dp < r))) band++;
           if (Math.abs(In.floorYOf(p, 0, x, z) - caveaY(F, x, z)) > 1e-6) { poly++; if (!polyAt) polyAt = `(${x.toFixed(2)}, ${z.toFixed(2)})`; } } }
       if (poly) out.push(`${tag}: ${poly} casinhas das fileiras com o chão da planta fora do da forma (a primeira ${polyAt}; L-494, 2)`);
-      said.push(`${tag}: ${cells} casinhas andadas no chão, o chão a ${worst.toFixed(3)} m da forma, ${doors} portas nas aberturas da forma, a orquestra ${(d1 * 100).toFixed(1)} cm sobre o chão; L-494 (2): ${poly} casinhas fora da forma (${band} entre o redondo e o polígono); o parapeito da galeria em ${ro.n} paredes a ${(ro.dev * 100).toFixed(1)} cm do polígono do 3D (T-457)`);
+      said.push(`${tag}: ${cells} casinhas andadas no chão, o chão a ${worst.toFixed(3)} m da forma, ${doors} portas nas aberturas da forma, a orquestra ${(d1 * 100).toFixed(1)} cm sobre o chão; L-494 (2): ${poly} casinhas fora da forma (${band} entre o redondo e o polígono); o parapeito da galeria em ${ro.n} paredes a ${(ro.dev * 100).toFixed(1)} cm do polígono do 3D (T-457); o prédio do palco até o teto da forma, ${A.teto} m (D-131)`);
     }
     // (the classic theatre — the Greek's and the classical people's, the one of before (antigo) —: no floor in its columns' bases)
     for (const st of ['grego', 'classico']) { const n0 = G.BDEF.teatro.w; const { b, p } = planOf('teatro', st, n0, 'S', (nid += 37)); if (!p || !p.ok) { out.push(`o teatro antigo ${st}: não se arma`); continue; }
@@ -1502,7 +1509,11 @@ function testeT() {
         for (let z = Math.max(0, Math.floor(r[1] / CS)); z <= Math.min(N - 1, Math.floor(r[3] / CS)); z++) for (let x = Math.max(0, Math.floor(r[0] / CS)); x <= Math.min(N - 1, Math.floor(r[2] / CS)); x++) { const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS;
           if (mx > r[0] + 0.03 && mx < r[2] - 0.03 && mz > r[1] + 0.03 && mz < r[3] - 0.03 && g[z * N + x] === CELL.FLOOR && p.reach[0][z * N + x]) { bad++; if (!first) first = `(${mx.toFixed(2)}, ${mz.toFixed(2)})`; } } }
       if (bad) out.push(`${tag}: ${bad} casinhas de chão alcançado no que a forma tem de sólido (a primeira ${first})`);
-      said.push(`${tag}: o chão a ${y} m, nada andado no sólido da forma`);
+      // (and no floor of the plan under the form's water — the lake's, walled by its rim and no solid of the form: 836 cells of
+      // floor 4 cm under its floor in the garden of 6, 2660 in the one of 10, L-505)
+      let wet = 0; for (const e of F.els) { if (e.k !== 'lamina') continue; for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) { const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS; if (mx > e.r[0] && mx < e.r[2] && mz > e.r[1] && mz < e.r[3] && (g[z * N + x] === CELL.FLOOR || g[z * N + x] === CELL.DOOR)) wet++; } }
+      if (wet) out.push(`${tag}: ${wet} casinhas de chão sob a água da forma (L-505)`);
+      said.push(`${tag}: o chão a ${y} m, nada andado no sólido da forma${F.els.some(e => e.k === 'lamina') ? ', nenhum chão sob a água' : ''}`);
     }
     ok('T3 a forma × a planta dos teatros que faltavam: o chão na altura da forma, nada andado no que ela tem de sólido (as paredes, o lago, as palmeiras, as esfinges)', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
   }

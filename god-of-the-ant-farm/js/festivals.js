@@ -161,13 +161,18 @@
     const setup = SETUP[key]; if (!setup) return null;
     const ok = setup(fe, { set, f, d, pop, crowd, adults, priest, ruler, take, S0, cap });
     if (!ok) { for (const id of fe.parts) { const v = S.villagers.get(id); if (v && v.task && v.task.type === 'fest') G.Vg.endTask(v); } return null; }
+    // (the feast begins: the town's shows under way end there — the theatre closes its show, nobody left in it, act-lazer.js —,
+    // and their people are free for the feast with the rest of the town: it takes all, the actors and the rows too, as it takes
+    // the patrol, D-126. A feast begun by the god's word in the play kept the rows it took and left the stage to the actors,
+    // D-130)
+    const freed = G.Teatro && G.Teatro.feast && G.Teatro.feast(set) ? people(set).filter(v => !crowd.includes(v)) : [];
     // the rest: those living closest to the festival, and those with no shift to keep
     const venue = fe.C || fe.A || [set.cx, set.cy];
     const ON_SHIFT = { agricultor: 1, construtor: 1, mineiro: 1, lenhador: 1, pastor: 1, cavalarico: 1, ferreiro: 1, tecelao: 1, oleiro: 1, mercador: 1, feirante: 1, guerreiro: 1, cobrador: 1 };
     // (a feast that begins after dark wakes the town for the rite and the people its roles need — the crowd is who is up: the
     // ones asleep come last, and the children asleep in their beds stay there)
     const score = v => { const h = S.buildings.get(v.home); const hx = h ? h.x : v.x, hy = h ? h.y : v.y; return G.dist(hx, hy, venue[0], venue[1]) + (ON_SHIFT[v.role] ? 7 : 0) - (v.age < 16 || v.age >= 60 ? 3 : 0) - v.devotion / 25 + (v.sleeping ? 12 : 0) + G.R() * 2; };
-    const rest = crowd.filter(v => !fe.parts.includes(v.id) && !(v.sleeping && v.age < 12)).map(v => [score(v), v]).sort((a, b) => a[0] - b[0]).map(e => e[1]);
+    const rest = crowd.concat(freed).filter(v => !fe.parts.includes(v.id) && !(v.sleeping && v.age < 12)).map(v => [score(v), v]).sort((a, b) => a[0] - b[0]).map(e => e[1]);
     for (const v of take(rest, cap - fe.parts.length)) enlist(fe, v, 'crowd');
     live.set(fe.id, fe);
     set.festDone = set.festDone || {}; set.festDone[key] = S.day;
@@ -746,19 +751,36 @@
   };
   // the festival of the year for a town: the great cycles when they fall due (the Games every four
   // years, the New Fire every fifty-two), otherwise the next feast in turn. Small towns every other year.
-  function yearPlan(set, f) {
+  // (planOf reads it — the key, null for none, and the turn the town takes for it —; yearPlan keeps it for the day)
+  function planOf(set, f) {
     const S = G.S;
-    if (set.festPlan && set.festPlan.day === S.day) return set.festPlan;
     const small = (set.tier || 0) < 2 && G.Village.pop(set.id) < 40;
     const cal = FE.of(f.civ).filter(k => !FE.DEF[k].trigger);
     const due = cal.filter(k => FE.DEF[k].every > 1 && ((S.day + (FE.DEF[k].off || 0)) % FE.DEF[k].every) === 0 && FE.DEF[k].every !== 2);
     const yearly = cal.filter(k => FE.DEF[k].every <= 1 || (FE.DEF[k].every === 2 && S.day % 2 === 0));
-    let key = null;
-    if (due.length) key = due[0];
-    else if (!(small && (S.day + set.id) % 2)) { set.festTurn = (set.festTurn || 0) + 1; key = yearly.length ? yearly[set.festTurn % yearly.length] : null; }
-    set.festPlan = { day: S.day, key, done: !key };
+    if (due.length) return { key: due[0] };
+    if (small && (S.day + set.id) % 2) return { key: null };
+    const turn = (set.festTurn || 0) + 1; return { key: yearly.length ? yearly[turn % yearly.length] : null, turn };
+  }
+  function yearPlan(set, f) {
+    const S = G.S;
+    if (set.festPlan && set.festPlan.day === S.day) return set.festPlan;
+    const p = planOf(set, f); if (p.turn !== undefined) set.festTurn = p.turn;
+    set.festPlan = { day: S.day, key: p.key, done: !p.key };
     return set.festPlan;
   }
+  // the hours of a town's feast today, as parts of the day — [its beginning, its end] —, or null: the one under way, the one
+  // its plan of the day still holds to begin, or the one held today (the plan the town keeps for the day, or the one it would
+  // make — nothing kept by asking). A show of the town does not open into it (act-lazer.js, D-130)
+  FE.window = function (set) {
+    reset(); const S = G.S; if (!set) return null;
+    for (const fe of live.values()) if (fe.set === set.id) return [S.time - fe.t / DAY(), S.time + Math.max(0, fe.len - fe.t) / DAY()];
+    const f = G.Fac.get(set.fac); if (!f || !f.civ || ((set.tier || 0) < 1 && G.Village.pop(set.id) < 14)) return null;
+    const plan = set.festPlan && set.festPlan.day === S.day ? set.festPlan : planOf(set, f);
+    const d = plan.key && FE.DEF[plan.key]; if (!d) return null;
+    if (plan.done && !(set.festDone && set.festDone[plan.key] === S.day)) return null; // (not held: the war at the gates)
+    return [d.at, d.at + d.dur * 1.15];
+  };
   // the new fire: while it is out, no fire burns in the city
   FE.dark = function (setId) { reset(); for (const fe of live.values()) if (fe.set === setId && fe.dark) return fe; return null; };
   FE.darkB = function (b) { const fe = FE.dark(b.set); return !!fe && !fe.lit.has(b.id); };

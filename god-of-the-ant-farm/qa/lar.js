@@ -27,7 +27,8 @@
 //  l15 o bebê muda de colo onde está (D-074): em casa à noite, a mãe em fúria o passa ao pai ou a alguém da casa, ali; um
 //      save no meio; na rua, a quem está perto (sem pulo); sem ninguém perto, à mãe, ao pai ou a uma mulher da vila, onde
 //      estiverem (como antes); nunca ao corpo do jogador; a guerreira entre lutas só o dá a alguém da casa; e o corpo, pelas
-//      ofertas da casa, pega o bebê no colo, fica com ele e o devolve à mãe
+//      ofertas da casa, pega o bebê no colo, fica com ele e o devolve à mãe; e quem tem no colo o bebê de outra casa morre em
+//      casa: no mesmo instante ele está noutro colo ou em casa, e o verificador nada vê (L-504)
 //  l16 da casa cheia saem os moços primeiro (D-098): a mão da prova enche uma casa de pequenos com uma velha que cuida
 //      deles e moços solteiros — sai o mais moço, a velha e o dono ficam; um save no meio e mais um moço: sai de novo o
 //      mais moço; a velha morre cuidando e os pequenos voltam ao dia deles; e o verificador vê o velho posto para fora
@@ -781,6 +782,35 @@ if (want('l15')) {
       if (r1.ok && (!r2.ok || b3.carrier !== m.id)) fail(`(f) dar o bebê à mãe: ${r2.why || 'o bebê ficou com ' + who(b3.carrier)}`);
       notes.push(`(f) ${w.name}, vivido pelo jogador, em casa: «${r1.msg || r1.why}» (1,5 s depois, ainda no colo dele: ${kept ? 'sim' : 'NÃO'}); «${r2.msg || r2.why}»`);
       G.Possess.release('deus');
+    }
+  }
+  // (g) one who holds a baby of another house dies at home with it in her arms: at that moment the baby is where its own rule
+  // puts it — other arms, the mother or the father, or home —, and the checker, looking at once, sees no baby with no arms in a
+  // house not its own. On the dice of the T-436 Tiye, made old by the l14, took a neighbour's baby home and died with it there,
+  // and the checker saw it before the baby's next step (S3), L-504. At night, a grown one of the town in her own house, the
+  // baby handed to her there by the world's door (G.Vg.handBaby)
+  open(); liveTo(0.86);
+  const findG = () => { const kids = [...S.villagers.values()].filter(x => x.age < 2 && !x.ug && !x.captive && x.home && !x.sleeping).sort((p, q) => p.id - q.id);
+    for (const gb of kids) { const w = [...S.villagers.values()].filter(o => o.set === gb.set && o.home && o.home !== gb.home && o.id !== gb.mother && o.id !== gb.father && fit(o) && o.inside && o.inside === o.home && !!builtHome(o) && !G.Vg.holdsBaby(o)).sort((p, q) => p.id - q.id)[0]; if (w) return [gb, w]; }
+    return null; };
+  const Gg = findG();
+  if (!Gg) notes.push('(g) nenhum bebê acordado à noite com alguém de outra casa dentro dela');
+  else {
+    const [gb, gw] = Gg; const hw = builtHome(gw);
+    gb.inside = hw.id; gb.x = gw.x; gb.y = gw.y; gb.path = null;
+    const given = G.Vg.handBaby(gb, gw); live(0.3);
+    const b1 = S.villagers.get(gb.id), w1 = S.villagers.get(gw.id);
+    if (!given || !b1 || !w1 || b1.carrier !== gw.id || w1.inside !== hw.id || b1.inside !== hw.id) notes.push(`(g) a mão da prova não deixou o bebê ${gb.name} no colo de ${gw.name} em casa (dado: ${given ? 'sim' : 'não'}, colo ${who(b1 && b1.carrier)}, dentro ${b1 && b1.inside})`);
+    else {
+      V.kill(w1, 'old');
+      const s3 = watch().filter(q => q.sys === 'lar' && String(q.msg).includes('sem quem o carrega'));
+      const b2 = S.villagers.get(gb.id); const c2 = b2 && S.villagers.get(b2.carrier);
+      const mHome = (S.villagers.get(b2.mother) || {}).home;
+      const where = !b2 ? 'morto' : c2 ? `no colo de ${c2.name}${c2.id === b2.mother ? ' (a mãe)' : c2.id === b2.father ? ' (o pai)' : ''}` : b2.inside && (b2.inside === b2.home || b2.inside === mHome) ? 'em casa' : `sem colo, dentro de ${b2.inside || 'nenhum prédio'}`;
+      if (s3.length) fail(`(g) ${gw.name} morreu com o bebê ${gb.name} no colo em ${hw.type}#${hw.id}: o verificador viu ${s3[0].msg}`);
+      if (b2 && !c2 && !(b2.inside && (b2.inside === b2.home || b2.inside === mHome))) fail(`(g) o bebê ${gb.name}, logo depois, ${where}`);
+      live(1);
+      notes.push(`(g) ${gw.name} morreu em ${hw.type}#${hw.id} com o bebê ${gb.name}, de outra casa, no colo: no mesmo instante, ${where}`);
     }
   }
   ok('l15 o bebê muda de colo onde está (D-074)', good, notes.join(' · '));

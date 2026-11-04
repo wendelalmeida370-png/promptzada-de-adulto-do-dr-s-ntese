@@ -158,15 +158,20 @@
     const o = F.els.find(e => e.k === 'arena'); if (!o) { P.errs.push('a forma do teatro sem orquestra'); return; }
     const [cu, cv] = o.c; stage(P, 0, id, 'atuar', [[cu, cv + 0.3, Math.PI], [cu - 1.0, cv + 0.6, Math.PI], [cu + 1.0, cv + 0.6, Math.PI]]);
   }
+  // (the pool of a garden — its rim of stone and the water within it — solid to the feet: one piece of the form over the whole
+  // of it, laid before the form's other solids. The water and the floor under it are no solid of the form — a sheet, a floor
+  // of 12 cm —, and the plan had floor inside the rim, 4 cm under the pool's floor and under its water: 810 cells of it in the
+  // sacred garden of 6, L-505 — the form's water is not walked)
+  const pool = (P, id, R, h) => { if (P.at('solido', 0, id, R.map(r2), 0, 1, Object.assign({ h }, FM))) return true; P.errs.push('o tanque do jardim onde a planta não o põe'); return false; };
   // the Egyptian's sacred garden: its lawn, the pool in its stone rim, the palms, the sphinx, the walls at the back and the left
   // — all solid, as the form has them —; who performs the rite at the pool's front (atuar), and round it those who watch it,
   // standing on the lawn, facing the water
   function garden(P, F) {
     if (F.amphi && F.amphi.jardim) { jardimGrande(P, F, F.amphi.jardim); return; } // (the sacred garden of a city)
     const g = openGround(P, F, 'jardim'); if (P.inside()) return;
-    const id = P.room(0, 'jardim', g.sh, 1); if (!solids(P, F, id)) return;
     const rim = F.els.filter(e => e.k === 'bloco' && e.y1 > 0.3 && e.y1 < 1.0); if (!rim.length) { P.errs.push('a forma do jardim sem o tanque'); return; }
     const R = rim.reduce((a, e) => [Math.min(a[0], e.r[0]), Math.min(a[1], e.r[1]), Math.max(a[2], e.r[2]), Math.max(a[3], e.r[3])], [Infinity, Infinity, -Infinity, -Infinity]);
+    const id = P.room(0, 'jardim', g.sh, 1); if (!pool(P, id, R, Math.max(...rim.map(e => e.y1))) || !solids(P, F, id)) return;
     const cu = (R[0] + R[2]) / 2, cv = (R[1] + R[3]) / 2;
     stage(P, 0, id, 'atuar', jobsOf(P) > 1 ? [[cu - 0.5, R[3] + 0.6, Math.PI], [cu + 0.5, R[3] + 0.6, Math.PI]] : [[cu, R[3] + 0.6, Math.PI]]); // (two side by side where two act)
     const watch = []; for (const du of [-2.4, -1.2, 1.2, 2.4]) watch.push([cu + du, R[3] + 1.6, Math.PI]);
@@ -179,8 +184,8 @@
   // them the crowd standing in rows, and along the lake's sides, facing it
   function jardimGrande(P, F, A) {
     const g = openGround(P, F, 'jardim'); if (!g || P.inside()) return;
-    const id = P.room(0, 'jardim', g.sh, 1); if (!solids(P, F, id)) return;
     const R = A.lago, cu = (R[0] + R[2]) / 2, cv = (R[1] + R[3]) / 2;
+    const id = P.room(0, 'jardim', g.sh, 1); if (!pool(P, id, R, 0.45) || !solids(P, F, id)) return; // (the lake and its rim: L-505)
     stage(P, 0, id, 'atuar', [[r2(cu - 0.6), r2(R[3] + 0.6), Math.PI], [r2(cu + 0.6), r2(R[3] + 0.6), Math.PI]]);
     const watch = [];
     for (let row = 0; row < A.rows; row++) { const v = r2(R[3] + 1.6 + row * 0.8); for (let u = R[0] + 0.4; u <= R[2] - 0.4 + 1e-6; u += 0.8) if (row || Math.abs(u - cu) > 1.2) watch.push([r2(u), v, Math.PI]); }
@@ -765,10 +770,15 @@
   // corridor into each room, the hall's opening on the street side. Who acts on the Roman's stage, in the Greek's orchestra (the
   // actors' posts, P2's trade, and the places); the musicians in the orchestra; the dressing rooms' hangers and benches
   function teatroPlan(P, F, A) {
-    const L = P.L, m = 0.1; const sh = [m, m, L - m, L - m]; const roman = A.st === 'romano'; const { cu, vD, yq, u0, u1, vS, vC, vR, vF, wm, hb } = A;
+    const L = P.L, m = 0.1; const sh = [m, m, L - m, L - m]; const roman = A.st === 'romano'; const { cu, vD, yq, u0, u1, vS, vC, vR, vF, wm } = A;
+    // (the stage building is a closed part under its roof — D-131 —: its storey from its floor — the Roman's podium, the Greek's
+    // ground — up to the form's ceiling of it, A.teto, the foot of the roof over its rooms, and no wall of it above that: the
+    // Roman's scaenae frons, 4.6 m on a storey of 3, rose over the building, and the 3D drew it so — the facade over the roof is
+    // the form's —; the 3D lays its ceiling there, the same number)
+    const hs = r2(A.teto - (roman ? A.ys : yq));
     P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: 'chao', baseH: yq, floors: 1, eave: 0 }; P.roof = null;
-    P.level(0, yq, 3.0, 'chao', sh); P.entryLv = 0;
-    const lb = roman ? 1 : 0; if (roman) P.level(1, A.ys, hb, 'chao', [u0, A.vP, u1, vF]);
+    P.level(0, yq, roman ? 3.0 : hs, 'chao', sh); P.entryLv = 0;
+    const lb = roman ? 1 : 0; if (roman) P.level(1, A.ys, hs, 'chao', [u0, A.vP, u1, vF]);
     wayIn(P, sh[0], sh[2], sh[3], [[u0, u1]]);
     // (the rows: each piece of the form with its stairways — the lower, the upper — a block)
     for (const e of F.els) { if (e.k !== 'cavea' || !e.escadas) continue; const Ar = e.aneis.slice().reverse();
@@ -783,13 +793,13 @@
     ringWalls(P, 0, [cu, vD], A.R - 0.1, A.a0, A.a1, 0.2, 0.9, 'parapeito');
     // (the stage building's walls on its storey: the one behind the stage with its three doors, its sides, the partition with a
     // door into each room, the rooms' walls, the front open where the hall's door is)
-    const back = P.wall(lb, [u0, r2((vS + vC) / 2)], [u1, r2((vS + vC) / 2)], r2(vC - vS), A.hf, 0, 'parede');
+    const back = P.wall(lb, [u0, r2((vS + vC) / 2)], [u1, r2((vS + vC) / 2)], r2(vC - vS), hs, 0, 'parede');
     for (const [u, dw, dh] of A.doors) P.door(back, P.atOf(back, [u, (vS + vC) / 2]), dw, dh, -1, -1, 0, 'vao');
-    for (const u of [r2(u0 + 0.2), r2(u1 - 0.2)]) P.wall(lb, [u, vC], [u, r2(vF - 0.3)], 0.4, hb, 0, 'parede');
-    if (A.dc) { const part = P.wall(lb, [r2(u0 + 0.4), r2(vR - 0.15)], [r2(u1 - 0.4), r2(vR - 0.15)], 0.3, hb, 0, 'divisoria');
+    for (const u of [r2(u0 + 0.2), r2(u1 - 0.2)]) P.wall(lb, [u, vC], [u, r2(vF - 0.3)], 0.4, hs, 0, 'parede');
+    if (A.dc) { const part = P.wall(lb, [r2(u0 + 0.4), r2(vR - 0.15)], [r2(u1 - 0.4), r2(vR - 0.15)], 0.3, hs, 0, 'divisoria');
       for (const u of [cu - wm, cu, cu + wm]) P.door(part, P.atOf(part, [u, vR - 0.15]), 1.0, 2.2, -1, -1, 0, 'vao'); }
-    for (const s of [-1, 1]) P.wall(lb, [r2(cu + s * wm / 2), vR], [r2(cu + s * wm / 2), r2(vF - 0.3)], 0.2, hb, 0, 'divisoria');
-    P.wall(lb, [u0, r2(vF - 0.15)], [r2(cu - 0.8), r2(vF - 0.15)], 0.3, hb, 0, 'parede'); P.wall(lb, [r2(cu + 0.8), r2(vF - 0.15)], [u1, r2(vF - 0.15)], 0.3, hb, 0, 'parede');
+    for (const s of [-1, 1]) P.wall(lb, [r2(cu + s * wm / 2), vR], [r2(cu + s * wm / 2), r2(vF - 0.3)], 0.2, hs, 0, 'divisoria');
+    P.wall(lb, [u0, r2(vF - 0.15)], [r2(cu - 0.8), r2(vF - 0.15)], 0.3, hs, 0, 'parede'); P.wall(lb, [r2(cu + 0.8), r2(vF - 0.15)], [u1, r2(vF - 0.15)], 0.3, hs, 0, 'parede');
     // (the Roman's flights: up from the orchestra to the stage at its front, up from the forecourt to the hall)
     if (roman) { for (const r of A.flights) P.stair('escada', 0, 1, r, 0, 1, null); P.stair('escada', 0, 1, A.front, 0, -1, null); }
     if (P.inside()) return;
