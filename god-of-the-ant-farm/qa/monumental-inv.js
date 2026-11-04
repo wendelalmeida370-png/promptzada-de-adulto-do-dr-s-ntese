@@ -1,4 +1,4 @@
-// monumental-inv: as regras do verificador para os degraus grandes dos monumentos (D-106, D-107, D-108; o M1) — carregado depois do
+// monumental-inv: as regras do verificador para os degraus grandes dos monumentos (D-106 a D-109; o M1) — carregado depois do
 // qa/qa.js (QA.more), como o escala-inv.js; o líder o junta (qa/junta-inv.js). Lê o prédio e pergunta ao G.Forma e às portas do
 // G.Interiors (fazer uma planta não muda o mundo).
 (function () {
@@ -7,12 +7,25 @@
   // (the places of the rite on the top storey of the Great Pyramid and of the Templo Mayor — the offering before the sarcophagus
   // and those who pray about it; the priest before each shrine's door and at each brazier —, each one the body takes, D-108)
   const RITE = { piramide: { ofertar: 1, rezar: 2 }, mayor: { oficiar: 2, acender: 2 } };
+  // (the least a theatre of each step seats, reached from its door — the monumental's 300 of PLANO.md §7, test E, with room to
+  // spare: its rows seat 800 and more —, D-109)
+  const SEATS = { 6: 250, 8: 350, 10: 600 };
   QA.more.push(function (add, s) {
     const In = G.Interiors, Fo = G.Forma; if (!In || !Fo) return;
     for (const b of s.buildings.values()) {
-      if (!b.built || b.type !== 'maravilha' || !b.ip) continue;
-      const F = Fo.of(b.type, b.style || 'classico', b.w); const A = F && F.amphi; if (!A || !(A.oval || A.piramide || A.mayor)) continue;
+      if (!b.built || !b.ip || (b.type !== 'maravilha' && b.type !== 'teatro')) continue;
+      const F = Fo.of(b.type, b.style || 'classico', b.w); const A = F && F.amphi; if (!A || !(A.oval || A.piramide || A.mayor || A.teatro)) continue;
       const O = A.oval, p = In.plan(b);
+      if (A.teatro) {
+        // ---- the theatre of a city (D-109): its plan stands, the Roman's stage at the form's height, and its rows seat the crowd
+        // its step is built for, each seat reached from its door
+        const T = A.teatro;
+        if (!p || !p.ok) { add('monumental', 1, `${b.type}#${b.id} (${b.style}, ${b.w} casas): a planta do teatro não se arma (${p ? p.errs.slice(0, 2).join('; ') : 'sem planta'})`); continue; }
+        const l1 = p.levels.find(l => l.lv === 1);
+        if (T.st === 'romano' && (!l1 || Math.abs(l1.y - T.ys) > 0.01)) add('monumental', 1, `${b.type}#${b.id} (${b.style}): o palco da planta a ${l1 ? l1.y.toFixed(2) : '—'} m e o da forma a ${T.ys.toFixed(2)} m — o corpo andaria noutro chão que o visto`);
+        if ((p.cap.watch || 0) < (SEATS[b.w] || 0)) add('monumental', 2, `${b.type}#${b.id} (${b.style}, ${b.w} casas): ${p.cap.watch || 0} lugares de assistir sentados que a porta alcança (o degrau tem ${SEATS[b.w]} ao menos)`);
+        continue;
+      }
       if (O) {
         // ---- the Colosseum (the split oval, D-107): its plan stands, on the form's floors — the sand at the form's height —, and
         // seats the crowd its step is built for, each seat reached from its door (a plan that does not stand leaves the body and

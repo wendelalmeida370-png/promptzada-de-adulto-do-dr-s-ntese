@@ -332,4 +332,104 @@
     return { els, door: { u: cu, w: sw, y0: 0, y1: H, stair: true }, amphi: { mayor } };
   }
   Fo.def('maravilha', 'asteca', (L, n) => mayorGrande(L, n), [10, 13]);
+
+  // ------------------------------ the theatres (teatro, romano and grego: the steps of 6, 8 and 10 tiles — D-109) ------------------------------
+  // The theatre of a city, on a lot of 24, 32 or 40 m: the orchestra's middle at the lot's, the rows round its back — the Roman's
+  // a half round, the Greek's 20° more each side, round its whole round orchestra — out to 0.3 m off the lot's back and sides:
+  // the lower rows, on the grande and the monumental the walk round them (the praecinctio, the diazoma) and the upper ones, at
+  // the top the gallery behind the last row and its parapet (the theatre's outer wall); the stairways up the rows (twice as many
+  // above the walk); at the rows' ends, outside them, the stepped walls 0.9 m over each row (the analemmata, over the ways in).
+  // Before the rows the ways in between their ends and the stage building — the aditus, the parodoi — from the yards along its
+  // sides and the forecourt on the street. The Roman's stage (the pulpitum) 1 m over the orchestra, twice its round wide (26 m
+  // on the monumental), its two flights up from the orchestra; behind it the scaenae frons — one or two tiers of columns, its
+  // three doors, the royal one in the middle —, the corridor behind it, the rooms behind that (a dressing room either side, the
+  // hall in the middle up its flight from the forecourt), their roof. The Greek's whole round orchestra, where they act; the
+  // skene behind it — the proskenion's columns and the logeion over them, its three doors, its corridor and rooms, its door on
+  // the forecourt, its roof and its band. The rows are the body's (0.72 × 0.42 m, the Greek's 0.70 × 0.40: D-084); the
+  // orchestra a hair over the floor (the plan's: L-494) → the elements, and the numbers the plan reads (amphi.teatro)
+  // (each step: the orchestra's round ro; the rows below the walk (lo), above it (up: 0, one level), the walk dz wide; the
+  // stairways up them (al, au); the stage building w wide — its stage ds deep (the Greek's proskenion), the wall behind it tf
+  // thick (the scaenae frons, the skene's), the corridor behind dc deep (0: the doors into the rooms), the rooms dr deep, its
+  // height hf over its floor (the frons's; the rooms' hb under their roof) —; the aditus ad deep, the parodos pw wide at the
+  // building's corner; the frons's tiers of columns)
+  const TEATRO = {
+    romano: { tr: 0.72, rs: 0.42, alfa: 0, gang: 0.6, ys: 1.0, cor: '#ddd2b8',
+      6: { ro: 4.0, lo: 8, up: 0, dz: 0, al: 3, au: 0, w: 16, ad: 2.2, ds: 4.0, tf: 0.8, dc: 0, dr: 2.4, hf: 4.6, hb: 3.0, ord: 1 },
+      8: { ro: 5.0, lo: 7, up: 3, dz: 1.2, al: 5, au: 9, w: 20, ad: 2.5, ds: 5.0, tf: 1.0, dc: 1.4, dr: 3.0, hf: 6.6, hb: 3.2, ord: 2 },
+      10: { ro: 6.5, lo: 8, up: 6, dz: 1.4, al: 5, au: 11, w: 26, ad: 3.0, ds: 6.0, tf: 1.2, dc: 1.6, dr: 3.8, hf: 8.6, hb: 3.4, ord: 2 } },
+    grego: { tr: 0.70, rs: 0.40, alfa: 20 * Math.PI / 180, gang: 0.5, ys: 0, cor: '#d8d0bc',
+      6: { ro: 4.0, lo: 8, up: 0, dz: 0, al: 5, au: 0, w: 13, pw: 2.0, ds: 1.6, tf: 0.4, dc: 1.2, dr: 2.0, hf: 4.0, hb: 4.0 },
+      8: { ro: 5.0, lo: 7, up: 4, dz: 1.2, al: 7, au: 13, w: 18, pw: 2.5, ds: 2.0, tf: 0.4, dc: 1.4, dr: 3.0, hf: 5.0, hb: 5.0 },
+      10: { ro: 6.5, lo: 9, up: 5, dz: 1.4, al: 7, au: 15, w: 22, pw: 3.0, ds: 2.4, tf: 0.4, dc: 1.6, dr: 3.8, hf: 6.0, hb: 6.0 } },
+  };
+  const DOORS = { 6: [1.6, 2.6, 1.2, 2.3], 8: [1.8, 3.0, 1.3, 2.5], 10: [2.0, 3.2, 1.4, 2.6] }; // (the middle door's width and height, the side ones')
+  function teatroGrande(L, n, st) {
+    const T = TEATRO[st], S = T[n], roman = st === 'romano'; const cu = L / 2, vD = L / 2, yq = 0.06, R = L / 2 - 0.3;
+    const { tr, rs, alfa } = T, ri = S.ro + T.gang, a0 = Math.PI - alfa, a1 = TAU + alfa, span = a1 - a0;
+    const box = (r, y0, y1, cor, o) => Object.assign({ k: 'bloco', r: r.map(k3), y0: k3(y0), y1: k3(y1), cor: cor || ['wl', 'wr', 'top'] }, o);
+    const els = [box([0, 0, L, L], 0, yq, ['#b0a68e', '#a0967e', '#c0b69e'], { mat: 'slab', piso: 1 })];
+    // (the rows: each piece's rings from the top one down — [its outer edge, its top] —, its top ring its last row and the walk
+    // behind it: the lower piece's the walk round, the upper's — or the lower's, with no upper — the gallery to the parapet)
+    const rL = ri + tr * S.lo, rW = rL + S.dz, top = yq + rs * (S.lo + S.up), rG = R - 0.2; const up = S.up > 0;
+    const aisles = m => { const o = []; for (let j = 1; j <= m; j++) o.push(k3(a0 + span * j / (m + 1))); return o; };
+    const rows = []; // (every ring as the plan and the end walls read it: [its inner edge, its outer, its top])
+    const cav = (r0, k0, m, rTop, na) => { const A = []; for (let k = m - 1; k >= 0; k--) { const ro = k === m - 1 ? rTop : r0 + (k + 1) * tr, y = yq + rs * (k0 + k + 1); A.push([k3(ro), k3(y)]); rows.push([k3(r0 + k * tr), k3(ro), k3(y)]); }
+      return { k: 'cavea', c: [cu, vD], aneis: A, fundo: k3(r0), cor: T.cor, arco: [k3(a0), k3(a1)], fecho: 'wl', escadas: { a: aisles(na), l: 1.0, n: 2 } }; };
+    els.push(cav(ri, 0, S.lo, up ? rW : rG, S.al)); if (up) els.push(cav(rW, S.lo, S.up, rG, S.au));
+    // (the parapet round the gallery — the outer wall, from the ground —; at each row's end, outside it, its stepped wall: a
+    // wedge 0.2 m wide at its middle, 0.9 m over the row)
+    els.push({ k: 'cavea', c: [cu, vD], aneis: [[k3(R), k3(top + 0.9)]], fundo: k3(rG), cor: T.cor, arco: [k3(a0), k3(a1)], fecho: 'wl' });
+    for (const [r0, r1, y] of rows) { const d = k3(0.2 / ((r0 + r1) / 2)); for (const ar of [[k3(a0 - d), k3(a0)], [k3(a1), k3(a1 + d)]]) els.push({ k: 'cavea', c: [cu, vD], aneis: [[r1, k3(y + 0.9)]], fundo: r0, cor: T.cor, arco: ar, fecho: 'wl' }); }
+    els.push({ k: 'arena', c: [cu, vD], r: S.ro, y: k3(yq + 0.01), cor: roman ? '#d6c9ac' : '#e8dcc0' });
+    // (the stage building: its back vP — the Roman's stage's front, the Greek's proskenion's columns: the parodos pw wide between
+    // its corner and the rows' end —, the wall behind the stage from vS, the corridor from vC, the rooms from vR, its front vF)
+    const w = S.w, u0 = cu - w / 2, u1 = cu + w / 2, ys = roman ? T.ys : yq;
+    const vP = k3(roman ? vD + S.ad : vD + (S.pw + Math.sin(alfa) * w / 2) / Math.cos(alfa) + 0.2);
+    const vS = k3(vP + S.ds), vC = k3(vS + S.tf), vR = k3(vC + (S.dc ? S.dc + 0.3 : 0)), vF = k3(vR + S.dr + 0.3), wm = k3(w / 3);
+    const [dW, dH, sW, sH] = DOORS[n]; const doorsB = [[cu, dW, dH], [cu - w / 4, sW, sH], [cu + w / 4, sW, sH]];
+    // (a wall along u from ua to ub at v0..v1, from y0 up to y1, open where its doors are — each [u, w, h] — under its lintels)
+    const wallU = (ua, ub, v0, v1, y0, y1, ds, cor) => { let at = ua; for (const [u, dw, dh] of ds.slice().sort((p, q) => p[0] - q[0])) { if (u - dw / 2 > at) els.push(box([at, v0, u - dw / 2, v1], y0, y1, cor)); els.push(box([u - dw / 2, v0, u + dw / 2, v1], y0 + dh, y1, cor)); at = u + dw / 2; } if (ub > at) els.push(box([at, v0, ub, v1], y0, y1, cor)); };
+    // (the columns along the wall behind the stage, at v from ua to ub: at its ends and either side of each door, half a metre off
+    // its jambs, and between them none more than 2.4 m apart)
+    const colsAlong = (ua, ub, v) => { const out = [], cuts = [ua]; for (const [du, dw] of doorsB.slice().sort((p, q) => p[0] - q[0])) cuts.push(du - dw / 2 - 0.5, du + dw / 2 + 0.5); cuts.push(ub);
+      for (let i = 0; i < cuts.length; i += 2) { const a = cuts[i], b = cuts[i + 1], k = Math.max(1, Math.ceil((b - a) / 2.4 - 1e-9)); for (let j = 0; j <= k; j++) out.push([k3(a + (b - a) * j / k), k3(v)]); }
+      return out; };
+    if (roman) {
+      // (the stage: its podium the whole building's — the floor of the stage and of the rooms —; its two flights up from the
+      // orchestra, the treads 0.3 m deep, each riser a quarter of the stage's height)
+      els.push(box([u0, vP, u1, vF], 0, ys, ['base0', 'base1', 'base2'], { mat: 'ashlar', piso: 1 }));
+      const m = Math.ceil((ys - yq) / 0.26 - 1e-9), fl = []; for (const ux of [cu - (S.ro - 1.2), cu + (S.ro - 1.2)]) { fl.push([k3(ux - 0.8), k3(vP - 0.3 * m), k3(ux + 0.8), vP]);
+        for (let j = 0; j < m; j++) els.push(box([ux - 0.8, vP - 0.3 * (m - j), ux + 0.8, vP - 0.3 * (m - j - 1)], 0, yq + (ys - yq) * (j + 1) / m, ['base0', 'base1', 'base2'], { degrau: 1 })); }
+      // (the scaenae frons: its wall to hf over the stage with its three doors; its tiers of columns before it on the stage, the
+      // ledge over each tier, the cornice at its top)
+      wallU(u0, u1, vS, vC, ys, ys + S.hf, doorsB, ['wl', 'wr', 'top']);
+      const h1 = S.ord > 1 ? (S.hf - 0.6) / 2 : S.hf - 0.6, cols = colsAlong(u0 + 0.6, u1 - 0.6, vS - 0.5);
+      for (let t = 0; t < S.ord; t++) { const yb = ys + t * (h1 + 0.3); els.push({ k: 'colunata', pts: cols, r: 0.22, y0: k3(yb), y1: k3(yb + h1), cor: ['col0', 'col1'], mat: 'marble' }); els.push(box([u0, vS - 0.9, u1, vS], yb + h1, yb + h1 + 0.3, ['trim', 'trim', 'trim'])); }
+      // (behind it: the corridor and the rooms under their roof — the side walls, the partition with a door to each room, the
+      // rooms' walls, the front with the hall's opening up its flight)
+      const yb = ys + S.hb; els.push(box([u0, vC, u0 + 0.4, vF - 0.3], ys, yb), box([u1 - 0.4, vC, u1, vF - 0.3], ys, yb));
+      if (S.dc) wallU(u0 + 0.4, u1 - 0.4, vC + S.dc, vR, ys, yb, [[cu - wm, 1.0, 2.2], [cu, 1.0, 2.2], [cu + wm, 1.0, 2.2]]);
+      for (const s of [-1, 1]) els.push(box([cu + s * wm / 2 - 0.1, vR, cu + s * wm / 2 + 0.1, vF - 0.3], ys, yb));
+      wallU(u0, u1, vF - 0.3, vF, ys, yb, [[cu, 1.6, 2.4]]);
+      for (let j = 0; j < m; j++) els.push(box([cu - 0.8, vF + 0.3 * (m - j - 1), cu + 0.8, vF + 0.3 * (m - j)], 0, yq + (ys - yq) * (j + 1) / m, ['base0', 'base1', 'base2'], { degrau: 1 }));
+      els.push({ k: 'telhado', r: [k3(u0), vC, k3(u1), vF], y0: k3(yb), y1: k3(yb + 1.4), ao: 'u', ov: 0.3, cor: ['roof0', 'roof1', 'gable', 'roof2'] });
+      const teatro = { L, n, st, cu, vD, yq, ys, ro: S.ro, ri: k3(ri), R, rG, rW: k3(rW), a0: k3(a0), a1: k3(a1), tr, rs, lo: S.lo, up: S.up, top: k3(top), rows, w, u0: k3(u0), u1: k3(u1), wm, vP, vS, vC, vR, vF, dc: S.dc, dr: S.dr, hb: S.hb, hf: S.hf, doors: doorsB.map(q => q.map(k3)), flights: fl, front: [k3(cu - 0.8), vF, k3(cu + 0.8), k3(vF + 0.3 * m)], cols };
+      return { els, amphi: { teatro } };
+    }
+    // (the Greek's skene: the proskenion's columns along its back and the logeion over them; its wall with the three doors — the
+    // thyromata —, the corridor behind, the rooms, the front with the hall's door; its roof, its band)
+    const hp = k3(Math.min(3.0, S.hf - 1.0)), cols = colsAlong(u0 + 0.5, u1 - 0.5, vP + 0.3);
+    els.push({ k: 'colunata', pts: cols, r: 0.2, y0: yq, y1: hp, cor: ['col0', 'col1'], mat: 'marble' }, box([u0, vP, u1, vS], hp, hp + 0.3, ['trim', 'trim', 'trim']));
+    wallU(u0, u1, vS, vC, yq, yq + S.hf, doorsB, ['wl', 'wr', 'top']);
+    els.push(box([u0, vC, u0 + 0.4, vF - 0.3], yq, yq + S.hb), box([u1 - 0.4, vC, u1, vF - 0.3], yq, yq + S.hb));
+    wallU(u0 + 0.4, u1 - 0.4, vC + S.dc, vR, yq, yq + S.hb, [[cu - wm, 1.0, 2.2], [cu, 1.0, 2.2], [cu + wm, 1.0, 2.2]]);
+    for (const s of [-1, 1]) els.push(box([cu + s * wm / 2 - 0.1, vR, cu + s * wm / 2 + 0.1, vF - 0.3], yq, yq + S.hb));
+    wallU(u0, u1, vF - 0.3, vF, yq, yq + S.hb, [[cu, 1.6, 2.4]]);
+    els.push({ k: 'faixa', r: [k3(u0), vS, k3(u1), vF], y0: k3(yq + S.hf - 0.6), y1: k3(yq + S.hf), cor: 'acc' });
+    els.push({ k: 'telhado', r: [k3(u0), vS, k3(u1), vF], y0: k3(yq + S.hf), y1: k3(yq + S.hf + 1.4), ao: 'u', ov: 0.3, cor: ['roof0', 'roof1', 'gable', 'roof2'] });
+    const teatro = { L, n, st, cu, vD, yq, ys, ro: S.ro, ri: k3(ri), R, rG, rW: k3(rW), a0: k3(a0), a1: k3(a1), tr, rs, lo: S.lo, up: S.up, top: k3(top), rows, w, u0: k3(u0), u1: k3(u1), wm, vP, vS, vC, vR, vF, dc: S.dc, dr: S.dr, hb: S.hb, hf: S.hf, doors: doorsB.map(q => q.map(k3)), flights: [], front: null, cols, hp };
+    return { els, amphi: { teatro } };
+  }
+  Fo.def('teatro', 'romano', (L, n) => teatroGrande(L, n, 'romano'), [6, 8, 10]);
+  Fo.def('teatro', 'grego', (L, n) => teatroGrande(L, n, 'grego'), [6, 8, 10]);
 })(window.G = window.G || {});
