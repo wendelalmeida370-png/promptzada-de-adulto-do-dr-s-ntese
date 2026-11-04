@@ -563,11 +563,11 @@
   const St = () => G.Stories;
   // the street rises (riots.js)
   Po.riot = (f, set, why, o) => (G.Riots ? G.Riots.start(f, set, why, o) : null);
-  // the people gather in the square: to vote, to get bread, to hear a sentence
+  // the people gather in the square: to vote, to get bread, to hear a sentence (the watch on its round stays there: D-103)
   Po.crowd = function (set, why) {
     if (!set) return; const S = G.S; const f = G.Fac.get(set.fac); const at = (f && Po.seat(f)) || [set.cx, set.cy];
     let n = 0;
-    for (const o of S.villagers.values()) { if (n >= 24) break; if (o.set !== set.id || o.age < 8 || o.captive || G.dist(o.x, o.y, at[0], at[1]) > 22) continue; if (G.Vg.give(o, { type: 'assembly', x: at[0], y: at[1], pri: 1.7, kind: 'assembly', why })) n++; }
+    for (const o of S.villagers.values()) { if (n >= 24) break; if (o.set !== set.id || o.age < 8 || o.captive || G.dist(o.x, o.y, at[0], at[1]) > 22 || (o.task && o.task.type === 'ronda')) continue; if (G.Vg.give(o, { type: 'assembly', x: at[0], y: at[1], pri: 1.7, kind: 'assembly', why })) n++; }
   };
 
   // ------------------------------ the petition, walked ------------------------------
