@@ -2515,13 +2515,23 @@
   R.siteOld = (b, make) => siteOld(b, make); // (for the proofs too: what the god draws of a house being extended)
   // (how high a type's walls rise as its site draws them, px)
   const siteH = (type, def) => (type === 'hut' ? 7 : type === 'temple' ? 22 : type === 'monument' ? 30 : type === 'farm' ? 0 : type === 'maravilha' ? 34 : type === 'quarteirao' ? 30 : type === 'insula' ? 24 : type === 'sobrado' ? 18 : def && def.w >= 3 ? 20 : 12);
+  // (and a building's: a step of another size than its type's classic one — D-106 — rises to the top of its form of that size;
+  // where its people have no form of it, to its type's walls grown as its light grows, by the root of its lot over the classic's)
+  const siteHOf = b => {
+    const def = G.BDEF[b.type]; if (!G.Arch || !G.Arch.sized || !G.Arch.sized(b.type, b.w)) return siteH(b.type, def);
+    const Fo = G.Forma, st = b.style || 'classico'; const F = Fo && Fo.has(b.type, st, b.w) ? Fo.of(b.type, st, b.w) : null;
+    return F && F.top > 0 ? F.top * Fo.ZPX : siteH(b.type, def) * Math.sqrt(b.w / def.w);
+  };
+  R.siteH = siteHOf; // (for the proofs: how high a building's site rises, px)
+  // (the scaffold's posts along each edge of a site: at the corners; a step of 4 tiles or more, one every two tiles or so)
+  const sitePosts = b => (G.Arch && G.Arch.sized && G.Arch.sized(b.type, b.w) ? Math.max(1, Math.round((b.w - 0.2) / 2)) : 1);
   // the scaffold's top over a house being extended, px: from over the old house's walls up to over the new one's — over the old
   // roof's top at least: the work goes up over the family — with the work (o: the old house's picture, siteOld's: its eaves and
   // its roof when it is drawn from its shell; else the walls a site of its type has, the top of its sprite of before)
   R.siteTop = (b, o) => {
     const H = o && o.spr && o.spr.H; const e0 = H ? H.eave : siteH(b.upgradeFrom, G.BDEF[b.upgradeFrom]);
     const t0 = H ? H.eave + (H.roof.rise || 0) : o && o.spr && o.spr.ay > e0 ? o.spr.ay : e0 + 6;
-    const h0 = e0 + 3, h1 = Math.max(t0 + 4.5, siteH(b.type, G.BDEF[b.type]) + 8); return h0 + Math.max(0, h1 - h0) * G.clamp(b.progress || 0, 0, 1);
+    const h0 = e0 + 3, h1 = Math.max(t0 + 4.5, siteHOf(b) + 8); return h0 + Math.max(0, h1 - h0) * G.clamp(b.progress || 0, 0, 1);
   };
   // ---- the god's door on the side its plan opens it (L-264): a picture of before has its door on its front-left face — it
   // is drawn as it is where the plan's door is on the side the view shows at the front-left, mirrored where that side is at
@@ -2640,7 +2650,7 @@
     const p = b.progress;
     const hx = b.w / 2 - 0.1, hy = b.h / 2 - 0.1;
     const P = (dx, dy, z) => { const o = R.soff(dx, dy, z); return [sx + o[0], sy + o[1]]; };
-    const wallH = siteH(b.type, def);
+    const wallH = siteHOf(b);
     if (b.type === 'farm' || def.field) return;
     if (b.upgradeFrom) {
       // (a house extended over its family — L-371 —: the old house whole the whole work long, as the 3D keeps it, and round it
@@ -2669,11 +2679,16 @@
           ctx.fillStyle = '#a07f50';
           ctx.beginPath(); const f1 = P(hx, hy, 0), f2 = P(hx, -hy, 0), f3 = P(hx, -hy, wf), f4 = P(hx, hy, wf); ctx.moveTo(f1[0], f1[1]); ctx.lineTo(f2[0], f2[1]); ctx.lineTo(f3[0], f3[1]); ctx.lineTo(f4[0], f4[1]); ctx.closePath(); ctx.fill();
         }
-        // posts & beams
+        // posts & beams (a step's of 4 tiles or more: a post every two tiles or so along its edges, and a ledger round it every
+        // 4 m up to the top beams — the scaffold of its size, D-106)
         ctx.strokeStyle = '#7a5230'; ctx.lineWidth = 1.2;
         ctx.beginPath();
-        for (const [dx, dy] of [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]]) { const a = P(dx, dy, 0), c2 = P(dx, dy, fh); ctx.moveTo(a[0], a[1]); ctx.lineTo(c2[0], c2[1]); }
-        if (p > 0.45) { const q = [P(-hx, -hy, fh), P(hx, -hy, fh), P(hx, hy, fh), P(-hx, hy, fh)]; ctx.moveTo(q[0][0], q[0][1]); for (let k = 1; k <= 4; k++) ctx.lineTo(q[k % 4][0], q[k % 4][1]); }
+        const cs = [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]], np = sitePosts(b);
+        for (let k = 0; k < 4; k++) for (let j = 0; j < np; j++) { const [x0, y0] = cs[k], [x1, y1] = cs[(k + 1) % 4], f = j / np; const a = P(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, 0), c2 = P(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, fh); ctx.moveTo(a[0], a[1]); ctx.lineTo(c2[0], c2[1]); }
+        if (p > 0.45) {
+          const zs = [fh]; if (np > 1) for (let z = 12.16; z < fh - 2; z += 12.16) zs.push(z);
+          for (const z of zs) { const q = cs.map(([dx, dy]) => P(dx, dy, z)); ctx.moveTo(q[0][0], q[0][1]); for (let k = 1; k <= 4; k++) ctx.lineTo(q[k % 4][0], q[k % 4][1]); }
+        }
         ctx.stroke();
         if (p > 0.85) {
           ctx.globalAlpha = (p - 0.85) / 0.15;
@@ -2691,6 +2706,8 @@
     for (let k = 0; k < Math.min(5, Math.ceil(stoneIn * left / 4)); k++) { const q = P(-hx + 0.2 + k * 0.18, hy + 0.3, 0); ctx.fillStyle = '#9a958c'; ctx.beginPath(); ctx.ellipse(q[0], q[1] - 1, 1.8, 1.2, 0, 0, TAU); ctx.fill(); }
     overlays.push(b, sx, sy - wallH - 12);
   }
+  // (for the proofs: a site as drawSite paints it, on a context of theirs at (sx, sy) — and where its name goes)
+  R.siteOn = function (c, b, sx, sy) { const k = ctx, n0 = overlays.length; ctx = c; try { drawSite(b, sx, sy, 0); return overlays.slice(n0 + 1, n0 + 3); } finally { ctx = k; overlays.length = n0; } };
 
   // ------------------------------ particles ------------------------------
   function drawParticles(layer, view) {

@@ -10,6 +10,8 @@
 //   3. a ordem do desenho: a chave do prédio na lista do quadro (R.bkey) e a de cada pessoa, cada uma do lado certo dele
 //   4. as fotos (JPG pequenos): de frente, de perto do lado (a pessoa diante da face), e girado um quarto
 //   5. nenhum erro de página nem de módulo; o desenho não muda o mundo (a impressão do mundo, QA.canon, igual)
+//   6. a obra pela metade (o mundo pronto de novo, o Coliseu fundado como obra): o andaime da altura da forma desse tamanho
+//      (R.siteH) e a foto dela
 // Numa pasta do jogo de antes do pintor (sem G.Arch.formSprite), só tira as fotos de antes (o degrau desenhado à moda antiga).
 const path = require('path'), fs = require('fs'), os = require('os');
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')), OUT = path.resolve(process.argv[3] || path.join(os.tmpdir(), 'forma-deus'));
@@ -75,6 +77,25 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     // (5) the world unchanged by the drawing; no error
     const after = await page.evaluate(c0 => ({ canon: window.QA && QA.canon ? JSON.stringify(QA.canon()) : null, diff: window.QA && QA.diff && c0 ? QA.diff(JSON.parse(c0), QA.canon()).slice(0, 3) : [], mod: G.modErr ? Object.keys(G.modErr) : [] }), m.canon0);
     if (r.pinta) ok('5: o desenho não muda o mundo', m.canon0 === null || m.canon0 === after.canon, m.canon0 === null ? 'sem QA.canon' : m.canon0 === after.canon ? 'a impressão do mundo igual depois dos quadros, do «sprite» e do giro' : 'mudou: ' + JSON.stringify(after.diff).slice(0, 300));
+    // (6) the site of the step, half built: the ready world again, the Colosseum founded by the god's hand as a work, at half
+    // of it — its scaffold as tall as its form of that size (R.siteH, the god's site: render.js drawSite), its name over it
+    const o6 = await page.evaluate(([gen, N]) => {
+      G.Save.apply(JSON.parse(G.Ready.data.metropole)); G.Main.mode = 'game'; G.UI.setSpeed(0);
+      const Fo = G.Forma, S = G.S; if (!Fo.has('maravilha', 'romano', N) && Fo.def) Fo.def('maravilha', 'romano', (0, eval)('(' + gen + ')'), [N]);
+      const set = [...S.settlements.values()].find(s => s.name === 'Roma') || [...S.settlements.values()].find(s => G.Civ.idOfFac(s.fac) === 'romano');
+      let b = null; G.inSim++; try { b = set && G.Village.handFound ? G.Village.handFound(set, 'maravilha', 'maravilha', { built: false }) : null; } finally { G.inSim--; }
+      if (!b) return { err: 'a mão do deus não fundou a obra' };
+      b.progress = 0.5; if (G.FX && G.FX.list) G.FX.list.length = 0;
+      G.Render.centerOn(b.x + b.w / 2, b.y + b.h / 2 + 1, 1.25); window.__VIS.f(3);
+      const F = Fo.of('maravilha', b.style || 'romano', b.w);
+      return { w: b.w, built: b.built, h: G.Render.siteH ? G.Render.siteH(b) : null, top: F ? F.top * Fo.ZPX : null };
+    }, [LIB.coliseuTeste.toString(), LIB.N]).catch(e => ({ err: e.message }));
+    if (o6.err) ok('6: a obra do Coliseu pela metade', false, o6.err);
+    else {
+      await shot(r.pinta && o6.h !== null ? 'deus-coliseu-obra' : 'antes-deus-coliseu-obra');
+      if (o6.h !== null) ok('6: a obra do Coliseu pela metade, da altura da forma', !o6.built && o6.top !== null && Math.abs(o6.h - o6.top) < 0.01, `a obra de ${o6.w} casas: o andaime a ${o6.h.toFixed(1)} px (a forma desse tamanho: ${o6.top === null ? 'nenhuma' : o6.top.toFixed(1) + ' px'})`);
+    }
+    const mod6 = await page.evaluate(() => (G.modErr ? Object.keys(G.modErr) : [])); for (const k of mod6) if (!after.mod.includes(k)) after.mod.push(k);
     ok('5: nenhum erro', !errs.length && !after.mod.length, errs.length || after.mod.length ? errs.slice(0, 4).join(' | ') + ' ' + after.mod.join(',') : 'nenhum erro de página nem de módulo');
   } catch (e) { ok('a prova', false, e.message); }
   finally { await browser.close(); }

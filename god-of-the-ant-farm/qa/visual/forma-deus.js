@@ -219,6 +219,43 @@ if (want('e')) {
   } finally { F.drop(b); }
 }
 
+// ------------------------------ (f) the site of a big building ------------------------------
+// (a site as the god's view paints it — render.js drawSite, recorded —: the step of 10 tiles rises to the top of its form of
+// that size, its name over it, with a post every two tiles or so along its edges and, once the beams are up, a ledger every
+// 4 m; a step without a form of its size, to its type's walls grown by the root of its lot over the classic one's; at its
+// classic size, every type's site as it was: its type's walls, the four corner posts, the beams on top)
+if (want('f')) {
+  F.blank(); const R = G.Render, S = G.S; const POST = '122,82,48';
+  const site = (type, st, id, n, p) => { const b = putBig(type, st, id, n); b.built = false; b.progress = p; b.need = { wood: 0, stone: 0 }; return b; };
+  // (what it paints, from its anchor: the posts — the upright strokes of their brown — and how tall; the rings of beams; where
+  // its name goes: over its walls)
+  const paint = b => { const rec = F.recorder(); const lab = R.siteOn(rec.c, b, 0, 0); const posts = [], rings = [];
+    for (const o of rec.ops) if (!o.f && o.col.slice(0, 3).join() === POST) for (const [a, c] of o.segs) (Math.abs(a[0] - c[0]) < 1e-6 ? posts : rings).push(Math.abs(a[1] - c[1]));
+    return { posts: posts.length, fh: posts.length ? Math.max(...posts) : 0, rings: rings.length / 4, wallH: -lab[1] - 12 }; };
+  const near = (a, b) => Math.abs(a - b) < 0.01;
+  // (1) the step of 10 tiles, by its form
+  const Fm = Fo.of('maravilha', 'romano', N10), want10 = Fm.top * Fo.ZPX, np = Math.max(1, Math.round((N10 - 0.2) / 2)); const big = [];
+  for (const p of [0.3, 0.5, 0.7]) { const b = site('maravilha', 'romano', 7100 + p * 10, N10, p); try { big.push(Object.assign({ p }, paint(b))); } finally { F.drop(b); } }
+  const fhOf = (p, h) => h * G.clamp((p - 0.15) / 0.3, 0, 1);
+  ok('f: a obra do degrau de 10 casas, da altura da forma desse tamanho', big.every(r => near(r.wallH, want10) && near(r.fh, fhOf(r.p, want10)) && r.posts === 4 * np && (r.p <= 0.45 || r.rings >= Math.floor(want10 / 12.16))),
+    `a forma: ${Fm.top.toFixed(2)} m, ${want10.toFixed(1)} px (a do tipo, de 3 casas: ${R.siteH({ type: 'maravilha', w: 3, h: 3, style: 'romano' }).toFixed(0)} px) — ` + big.map(r => `${Math.round(r.p * 100)} %: andaime de ${r.fh.toFixed(1)} px, ${r.posts} postes, ${r.rings} voltas de vigas, o nome a ${r.wallH.toFixed(1)} + 12 px`).join('; '));
+  // (2) a step without a form of its size: the type's walls grown by the root of its lot
+  const cand = [['maravilha', 'grego', N10], ['teatro', 'grego', 7], ['temple', 'nordico', 5], ['palacio', 'asteca', 6]].find(([t, s, n]) => !Fo.has(t, s, n));
+  if (cand) { const [t, s, n] = cand; const d = G.BDEF[t]; const h0 = R.siteH({ type: t, w: d.w, h: d.h, style: s }), wantN = h0 * Math.sqrt(n / d.w); const b = site(t, s, 7200, n, 0.6);
+    try { const r = paint(b); ok('f: sem forma do tamanho, a altura do tipo escalada', near(r.wallH, wantN) && near(r.fh, wantN), `${t}/${s} de ${n} casas (sem forma desse tamanho): ${r.wallH.toFixed(1)} px = ${h0} × √(${n}/${d.w}); ${r.posts} postes`); } finally { F.drop(b); } }
+  else ok('f: sem forma do tamanho, a altura do tipo escalada', false, 'nenhum tipo sem forma do tamanho entre os candidatos');
+  // (3) at its classic size, every type's site as it was
+  const odd = []; let n0 = 0;
+  for (const t of Object.keys(G.BDEF)) { const d = G.BDEF[t]; if (t === 'farm' || d.field || t === 'campfire' || t === 'cemetery' || t === 'ruin' || t === 'cercado') continue;
+    const b = site(t, 'classico', 7300 + n0, d.w, 0.6); n0++;
+    try { const r = paint(b); if (!(r.posts === 4 && r.rings === 1 && near(r.fh, r.wallH) && near(r.wallH, R.siteH(b)))) odd.push(`${t}: ${r.posts} postes, ${r.rings} voltas, ${r.fh.toFixed(1)} px`); } finally { F.drop(b); } }
+  ok('f: no tamanho clássico, a obra de antes', n0 > 0 && !odd.length, odd.length ? odd.slice(0, 6).join('; ') : `${n0} tipos: as paredes do tipo, os quatro postes dos cantos, as vigas em cima`);
+  // (4) painting a site does not change the world
+  const b = site('maravilha', 'romano', 7400, N10, 0.5);
+  try { const s0 = JSON.stringify(b) + JSON.stringify(S.rng || null); paint(b); R.siteH(b); const s1 = JSON.stringify(b) + JSON.stringify(S.rng || null);
+    ok('f: pintar a obra não muda o mundo', s0 === s1, s0 === s1 ? 'a obra e o acaso do mundo iguais' : 'mudou'); } finally { F.drop(b); }
+}
+
 if (process.env.JSON) fs.writeFileSync(process.env.JSON, JSON.stringify(json));
 const e = M.erros(); ok('sem erro do jogo', M.limpo(), M.limpo() ? 'nenhum erro de módulo nem aviso no console' : JSON.stringify(e.mod) + ' ' + e.console.slice(0, 3).join(' | '));
 console.log(`(${((clock() - t0) / 1000).toFixed(1)} s)`);
