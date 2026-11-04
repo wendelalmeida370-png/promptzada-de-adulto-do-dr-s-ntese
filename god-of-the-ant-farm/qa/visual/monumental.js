@@ -157,12 +157,16 @@ function nodePart() {
   // (a point of the arena's edge, k eighths round it, moved d toward the middle — out of it with d < 0)
   const edgeAt = (k, d) => { const q = nm.edge[Math.floor(k * nm.edge.length / 8) % nm.edge.length]; const l = Math.hypot(q[0] - c[0], q[1] - c[1]) || 1; return [q[0] + (c[0] - q[0]) / l * d, q[1] + (c[1] - q[1]) / l * d]; };
   const yA = base + nm.sandY + 0.012, yP = base + nm.yPod + 0.012; const inside = []; let worst = 99, stoneHit = 0;
+  // (how far the arena runs from a point along a way, on the sand: the eye has the distance asked or up to the arena's wall)
+  const inPoly = (P, x, z) => { let r = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a2 = P[i], b2 = P[j]; if ((a2[1] > z) !== (b2[1] > z) && x < (b2[0] - a2[0]) * (z - a2[1]) / (b2[1] - a2[1]) + a2[0]) r = !r; } return r; };
+  const room = (X, Z, yaw) => { let s = 0; while (s < 40 && inPoly(nm.edge, X - Math.cos(yaw) * (s + 0.1), Z - Math.sin(yaw) * (s + 0.1))) s += 0.1; return s; };
   for (const [yaw, dist] of [[0, 4.8], [Math.PI / 2, 4.8], [Math.PI, 4.8], [-Math.PI / 2, 4.8], [yawIn, 8], [yawIn + Math.PI, 11]]) {
-    const q = camAt(c[0] - o[0] * 1.5, yA, c[1] - o[1] * 1.5, yaw, 0.12, dist); worst = Math.min(worst, q.cur / dist); if (q.stone) stoneHit++; inside.push(`${dist}→${q.cur.toFixed(1)}`); }
+    const X = c[0] - o[0] * 1.5, Z = c[1] - o[1] * 1.5; const q = camAt(X, yA, Z, yaw, 0.12, dist); const want = Math.min(dist, room(X, Z, yaw) * 0.95 - 0.3);
+    worst = Math.min(worst, q.cur / Math.max(0.5, want)); if (q.stone) stoneHit++; inside.push(`${dist}→${q.cur.toFixed(1)}${want < dist ? ` (a arena acaba a ${(want + 0.3).toFixed(1)})` : ''}`); }
   // (at the arena's edge, facing its middle: the eye behind, over the podium and the rows — held by them, never in them)
   const edgeC = []; for (let k = 0; k < 8; k++) { const p0 = edgeAt(k + 0.3, 1.2); const q = camAt(p0[0], yA, p0[1], Math.atan2(c[1] - p0[1], c[0] - p0[0]), 0.15, 4.8); if (q.stone) stoneHit++; edgeC.push(q.cur.toFixed(1)); }
   const podC = []; for (let k = 0; k < 4; k++) { const p0 = edgeAt(2 * k + 0.6, -0.6); const q = camAt(p0[0], yP, p0[1], Math.atan2(c[1] - p0[1], c[0] - p0[0]), 0.2, 4.8); if (q.stone) stoneHit++; podC.push(q.cur.toFixed(1)); }
-  ok('4. dentro: na arena a câmera com a distância inteira; na beira dela e no pódio, segura pelas fileiras e nunca na pedra', worst >= 0.95 && !stoneHit, `no meio da arena (pedida→livre, m): ${inside.join(', ')}; na beira da arena, as fileiras atrás: ${edgeC.join(', ')} m; no pódio: ${podC.join(', ')} m; câmera na pedra: ${stoneHit}`);
+  ok('4. dentro: na arena a câmera com a distância pedida até o muro dela; na beira dela e no pódio, segura pelo muro e pelas fileiras, nunca na pedra', worst >= 0.95 && !stoneHit, `no meio da arena (pedida→livre, m): ${inside.join(', ')}; na beira da arena, o muro do pódio atrás: ${edgeC.join(', ')} m; no pódio: ${podC.join(', ')} m; câmera na pedra: ${stoneHit}`);
   G.Cam3D.OPT.follow = true; G.Cam3D.dist = 4.8; G.Cam3D.pitch = 0.26; G.Cam3D.attach(G.Avatar.pos(), st().yaw);
   // ---------------- 5. the body: in by the way in, up the flights to the storey one watches from, along its parapet, seated ----------------
   // (by the plan: the storey with places to watch from — the podium —, the flights up to it from the way in's storey, nearest the way in first)
