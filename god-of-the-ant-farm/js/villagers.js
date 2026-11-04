@@ -91,6 +91,8 @@
 
   // ------------------------------ helpers ------------------------------
   const cap = v => (v.age < 12 ? 1 : v.age < 16 ? 2 : v.age >= 62 ? 2 : 4);
+  // (the room left in the hands for more of the plain good they hold: a work's yield goes on top of it, never over another thing — L-583)
+  const room = v => Math.max(0, cap(v) - (v.carry && v.carry.n > 1e-6 ? v.carry.n : 0));
   Vg.cap = cap;
   Vg.workMul = v => workMul(v);
   const isAdult = v => v.age >= 16 && v.age < 62;
@@ -1098,9 +1100,12 @@
             if (tr.chop >= 3 * Math.max(0.5, tr.size)) G.Nature.fellTree(tr, v.face);
           } else if (tr.stage === 'fall') { v.act = ''; }
           else if (tr.stage === 'log') {
-            const n = Math.min(cap(v), tr.wood); tr.wood -= n;
+            // (the hands first: with another thing in them — a load taken up from the ground, an errand's — it goes to its place,
+            // and the log waits for a hand; what a work brings in never takes the place of what the hands held — L-583)
+            if (!Vg.handsFor(v, 'wood')) { tr.claim = 0; deliverTask(v); break; }
+            const n = Math.min(room(v), tr.wood); tr.wood -= n;
             if (tr.wood <= 0) { tr.stage = 'stump'; tr.t = 0; tr.claim = 0; }
-            v.carry = { k: 'wood', n }; emote(v, 'wood', 1.5);
+            Vg.fillHands(v, 'wood', n); emote(v, 'wood', 1.5);
             deliverTask(v);
           }
         }
@@ -1136,9 +1141,10 @@
           t.w += dt * workMul(v);
           if (v.actT > 0.6) { v.actT = 0; G.Audio && G.Audio.at(r.x, r.y, 'mine'); G.FX && G.FX.chips(r.x, r.y, '#a9a9a9'); }
           if (t.w > 3.8) {
-            const n = Math.min(cap(v), r.stone); r.stone -= n;
+            if (!Vg.handsFor(v, 'stone')) { deliverTask(v); break; } // (the hands first: L-583)
+            const n = Math.min(room(v), r.stone); r.stone -= n;
             if (r.stone <= 0) G.Nature.removeRock(r);
-            v.carry = { k: 'stone', n }; deliverTask(v);
+            Vg.fillHands(v, 'stone', n); deliverTask(v);
           }
         }
         break;
@@ -1151,7 +1157,7 @@
         else {
           v.act = 'butcher'; G.faceTo(v, t.fx - v.x, t.fy - v.y); t.w += dt * workMul(v);
           if (v.actT > 0.8) { v.actT = 0; G.FX && G.FX.blood && G.FX.blood(t.fx, t.fy, 0.3); }
-          if (t.w > 6) { const n = G.Sea.cutWhale(v); if (n) { v.carry = { k: 'food', n: Math.min(cap(v), n), meat: 'whale', extra: G.R() < 0.5 ? { oleo: 1 } : undefined }; emote(v, 'food', 1.2); deliverTask(v); } else end(v); }
+          if (t.w > 6) { if (!Vg.handsFor(v, 'food')) { deliverTask(v); break; } const n = G.Sea.cutWhale(v); if (n) { Vg.fillHands(v, 'food', Math.min(room(v), n), { meat: 'whale', extra: G.R() < 0.5 ? { oleo: 1 } : undefined }); emote(v, 'food', 1.2); deliverTask(v); } else end(v); }
         }
         break;
       }
@@ -1206,7 +1212,7 @@
         else {
           v.act = 'gather'; G.faceTo(v, t.wx, t.wy);
           t.w += dt * workMul(v);
-          if (t.w > 6) { v.carry = { k: 'wood', n: Math.min(cap(v), G.ri(2, 4)) }; emote(v, 'wood', 1.2); deliverTask(v); }
+          if (t.w > 6) { if (Vg.handsFor(v, 'wood') && Vg.fillHands(v, 'wood', Math.min(room(v), G.ri(2, 4)))) emote(v, 'wood', 1.2); deliverTask(v); } // (the hands first: L-583)
         }
         break;
       }
@@ -1217,7 +1223,7 @@
           v.act = 'mine';
           t.w += dt * workMul(v);
           if (v.actT > 0.6) { v.actT = 0; G.Audio && G.Audio.at(t.x, t.y, 'mine'); G.FX && G.FX.chips(t.x + 0.2, t.y + 0.2, '#b0aca4'); }
-          if (t.w > 5) { v.carry = { k: 'stone', n: Math.min(cap(v), 3) }; deliverTask(v); }
+          if (t.w > 5) { if (Vg.handsFor(v, 'stone')) Vg.fillHands(v, 'stone', Math.min(room(v), 3)); deliverTask(v); } // (the hands first: L-583)
         }
         break;
       }
@@ -1249,6 +1255,10 @@
           if (t.type === 'fight') { emote(v, 'happy', 2); if (G.Riches && G.Riches.spoils(v, a, t)) return; return end(v); }
           // collect the meat
           if (G.dist(v.x, v.y, a.x, a.y) > 0.8) { if (!t.carc) { if (!Vg.goto(v, a.x, a.y, false)) return end(v); t.carc = true; } move(v, dt); }
+          // (the meat and the hide only into free hands: what is in them — wood taken up from the ground, an errand's — goes to its
+          // place first, and the carcass waits; the meat was written over the load, and four of wood went with no line in the
+          // ledger, L-583)
+          else if (v.carry && v.carry.n > 1e-6) { a.claim = 0; deliverTask(v); }
           else if (G.Riches && G.Riches.carcass(v, a, t, dt, H)) { /* skinned at the kill, then home with meat and hide */ }
           else { const take = Math.min(8, Math.max(1, a.meat)); v.carry = { k: 'food', n: Math.max(1, Math.round(take * G.Civ.tV(v, 'hunt'))), meat: a.kind }; a.meat -= take; if (a.meat <= 0.5) G.Animals.remove(a); else a.claim = 0; emote(v, 'food', 1.5); deliverTask(v); }
           break;
@@ -1295,6 +1305,8 @@
         else {
           v.act = t.harvest ? 'harvest' : 'plant';
           if (v.actT > 1.5 / workMul(v)) {
+            // (the harvest goes on top of plain food, never over another thing or an errand's food: those go to their place first — L-583)
+            if (t.harvest && !Vg.handsFor(v, 'food')) { c.c = 0; return deliverTask(v); }
             c.c = 0;
             if (t.harvest) {
               // Egyptian river floods, Aztec maize... each people farms differently
