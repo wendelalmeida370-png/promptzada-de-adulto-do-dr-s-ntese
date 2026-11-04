@@ -1777,7 +1777,7 @@ float m3scale(float p) {
     // pier where the machine carries detail; the inner face from dentro.y0 up, the same arches, their dark at the gallery's middle;
     // the walk on its top
     arcada(K, e, X) {
-      const n = e.pts.length; const lit = rgbOf(X.col(e.cor[0])); const dark = X.col(e.escuro || '#2a1e18'); const M = 6;
+      const n = e.pts.length; const lit = rgbOf(X.col(e.cor[0])); const dark = X.col(e.escuro || '#2a1e18'); const M = K.fine ? 6 : 4; // (an arch's half-round in 12 pieces near, 8 beyond the fine detail)
       const open = new Set(e.abertos || []); const yFoot = X.foot(e.y0); const din = e.dentro ? e.dentro.y0 : Infinity;
       // (a face of a bay: the middle of its line, the way along it, the way out of it — away from the other face —, its length)
       const frame = (p0, p1, q0, q1) => { const m = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2], mq = [(q0[0] + q1[0]) / 2, (q0[1] + q1[1]) / 2]; const bw = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1e-6;
@@ -1924,10 +1924,11 @@ float m3scale(float p) {
       const p = X.pt(e.p[0], e.p[1], e.p[2]); K.as('iron', () => { K.cyl(p[0], p[1], p[2], 0.07, 0.55, '#4a3a2a'); K.sph(p[0], p[1] + 0.62, p[2], e.r, '#5a4030', e.r * 0.45); });
       K.as('soil', () => K.sph(p[0], p[1] + 0.72, p[2], e.r * 0.75, [226, 98, 40], e.r * 0.2)); // (the embers)
     },
-    // a round shaft standing alone: sixteen faces from its foot to its top, and its top; the frieze winding up it — a band
-    // standing out a finger, the shaft's stone a little darker — from espiral.y0, a turn every espiral.passo
+    // a round shaft standing alone: sixteen faces from its foot to its top — lados of them where the form says: a milestone's
+    // eight —, and its top; the frieze winding up it — a band standing out a finger, the shaft's stone a little darker — from
+    // espiral.y0, a turn every espiral.passo
     coluna(K, e, X) {
-      const C = X.XZ(e.c[0], e.c[1]), y0 = X.foot(e.y0), y1 = X.Y(e.y1), r = e.r, N = 16; const col = X.col(e.cor[0]);
+      const C = X.XZ(e.c[0], e.c[1]), y0 = X.foot(e.y0), y1 = X.Y(e.y1), r = e.r, N = e.lados >= 3 ? Math.round(e.lados) : 16; const col = X.col(e.cor[0]);
       const p = (a, rr, y) => [C[0] + Math.cos(a) * rr, y, C[1] + Math.sin(a) * rr];
       K.as(X.mat(e, 'marble'), () => { for (let k = 0; k < N; k++) { const a0 = k / N * TAU, a1 = (k + 1) / N * TAU, am = (a0 + a1) / 2;
         K.quad(p(a0, r, y0), p(a1, r, y0), p(a1, r, y1), p(a0, r, y1), col, [Math.cos(am), 0, Math.sin(am)]); K.tri([C[0], y1, C[1]], p(a0, r, y1), p(a1, r, y1), col, UP); } });
@@ -2156,14 +2157,14 @@ float m3scale(float p) {
     const keep = B3.formKeep && F.L >= 24 && K.g === g && (!skip || skip === riskSkips.get(F));
     if (keep) {
       const b = K.b; const set = G.S.settlements.get(b.set);
-      const key = [b.id, F.type, F.style, F.L, side, onPlan ? 1 : 0, skip ? 'r' : '-', K.fine ? 1 : 0, K.prog >= 1 ? 1 : 0, Math.floor(K.hurt * 20), b.v || 0, (set && set.fac) || 0, G.S.typeVer || 0, K.lo.toFixed(2), K.hi.toFixed(2), K.y0.toFixed(2)].join('|');
+      const key = [b.id, F.type, F.style, F.L, side, onPlan ? 1 : 0, skip ? 'r' : '-', K.fine ? 1 : 0, (R3.Q && R3.Q() ? R3.Q().lod + '/' + R3.Q().detail : ''), K.prog >= 1 ? 1 : 0, Math.floor(K.hurt * 20), b.v || 0, (set && set.fac) || 0, G.S.typeVer || 0, K.lo.toFixed(2), K.hi.toFixed(2), K.y0.toFixed(2)].join('|');
       let m = FKEEP.get(b.id);
       if (!m || m.key !== key || m.F !== F) {
-        const g1 = R3.Geo(), gw1 = R3.Geo(), gp1 = R3.Geo(), gq1 = R3.WGeo(); const K1 = kit(g1, b, gp1, gq1, K.fine); K1.lit = K.lit ? [] : null;
+        const g1 = R3.Geo(), gw1 = R3.Geo(), gp1 = R3.Geo(), gq1 = R3.WGeo(); const K1 = kit(g1, b, gp1, gq1, K.fine); K1.lit = []; // (its lit windows kept always: laid where the chunk asks for them)
         const top = formIn(g1, gw1, K1, F, side, skip, onPlan);
         // (a form that lays plants or water too — the gardens, the pools —: drawn straight into the chunk, every time)
         if (!gp1.empty || !gq1.empty) { FKEEP.delete(b.id); return formIn(g, gw, K, F, side, skip, onPlan); }
-        m = { key, F, g: packG(g1), gw: packG(gw1), lit: K1.lit || [], body: K1.body, top }; fkMade++;
+        m = { key, F, g: packG(g1), gw: packG(gw1), lit: K1.lit, body: K1.body, top }; fkMade++;
       }
       FKEEP.delete(b.id); FKEEP.set(b.id, m); if (FKEEP.size > FKEEP_MAX) FKEEP.delete(FKEEP.keys().next().value); // (the one drawn longest ago let go)
       unpackG(g, m.g); unpackG(gw, m.gw); if (K.lit) for (const q of m.lit) K.lit.push(q); K.body = m.body; K.footed = true;
@@ -3193,7 +3194,13 @@ float m3scale(float p) {
       for (const r of pieces) { const q = clipR(r, A); if (q) flatQ(K, q, yb + jh, wd, -1); }
       // (the edges: of the storey's own area where it stands free over the room, and round each hole)
       const R = l.area; const edge = (x0, z0, x1, z1, out) => K.quad([x0, yb, z0], [x1, yb, z1], [x1, y, z1], [x0, y, z0], wd, out);
-      edge(R[0], R[1], R[2], R[1], [0, 0, -1]); edge(R[2], R[1], R[2], R[3], [1, 0, 0]); edge(R[2], R[3], R[0], R[3], [0, 0, 1]); edge(R[0], R[3], R[0], R[1], [-1, 0, 0]);
+      // (an edge of the storey's area where it runs over the court open through it — the palace of six's open front, its court's
+      // back: no slab there, the court's —, left out: L-555)
+      const side = (x0, z0, x1, z1, out) => { const ax = Math.abs(z1 - z0) < 1e-6; const c = open, m = 0.05;
+        if (!c || !(ax ? z0 > c[1] - m && z0 < c[3] + m : x0 > c[0] - m && x0 < c[2] + m)) return edge(x0, z0, x1, z1, out);
+        const a = ax ? Math.min(x0, x1) : Math.min(z0, z1), b2 = ax ? Math.max(x0, x1) : Math.max(z0, z1), c0 = ax ? c[0] : c[1], c1 = ax ? c[2] : c[3];
+        for (const [s, e] of [[a, Math.min(b2, c0)], [Math.max(a, c1), b2]]) if (e - s > 0.02) edge(ax ? s : x0, ax ? z0 : s, ax ? e : x0, ax ? z0 : e, out); };
+      side(R[0], R[1], R[2], R[1], [0, 0, -1]); side(R[2], R[1], R[2], R[3], [1, 0, 0]); side(R[2], R[3], R[0], R[3], [0, 0, 1]); side(R[0], R[3], R[0], R[1], [-1, 0, 0]);
       for (const h of holes) { if (h === open) continue; edge(h[0], h[1], h[2], h[1], [0, 0, 1]); edge(h[2], h[1], h[2], h[3], [-1, 0, 0]); edge(h[2], h[3], h[0], h[3], [0, 0, -1]); edge(h[0], h[3], h[0], h[1], [1, 0, 0]); }
     });
     // (the joists, across the short way, every 60 cm: cut where a hole is)
