@@ -1132,7 +1132,7 @@
   (G.saveHooks = G.saveHooks || []).push({
     save(out, r) {
       const S = G.S;
-      out.ships = S.ships.map(s => Object.assign({}, s, { x: r(s.x, 2), y: r(s.y, 2), path: null, pi: 0 }));
+      out.ships = S.ships.map(s => Object.assign({}, s, { x: r(s.x, 2), y: r(s.y, 2), path: null, pi: 0, _ab: undefined, _abT: undefined, _sf: undefined })); // (the crew and the sail its picture keeps: the drawing's)
       out.fish = S.fish; out.seaRoutes = S.seaRoutes;
     },
     load(o) {
