@@ -884,6 +884,10 @@
       const op = c.op && A.get(c.op);
       D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op && live(op) ? op.id : 0, code: 'caiu', by: v.id, fac: G.Fac.idOfV(v) });
       if (op) A.log(op, 'caiu', v.id, cause || '');
+    } else if (c && c.n > EPS && c.to && !D.exists(c.to) && G.S.villagers.has(v.id)) {
+      // (a load for a place that is gone — the house the volcano took before the duel took its buyer —: down where the dead fell,
+      // in the ledger, as an operation's load; it went with the dead, unwritten, L-587)
+      D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'caiu', by: v.id, fac: G.Fac.idOfV(v) });
     } else if (c && c.n > EPS && c.to && D.exists(c.to) && G.S.villagers.has(v.id)) {
       // (a load for a place — a purchase on its way home, goods for a stall — is its owner's: it goes there, with the cause —
       // a house takes all of its own, on the floor if need be, D-059 —; what a stall has no room for, to the people's store)
