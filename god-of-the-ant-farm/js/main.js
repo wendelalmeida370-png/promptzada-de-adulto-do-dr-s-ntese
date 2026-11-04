@@ -560,10 +560,10 @@
         hoverT = 0.05;
         const m = I.mouse;
         if (m.onCanvas) {
-          if (I.power && I.power !== 'hand') { const [x, y] = G.Render.screenToTile(m.x, m.y); G.Render.preview = { power: I.power, x, y }; G.Render.hover = null; }
-          else { G.Render.preview = null; G.Render.hover = pick(m.x, m.y, I.power === 'hand'); }
+          if (I.power && I.power !== 'hand') { const [x, y] = G.Render.screenToTile(m.x, m.y); G.Render.preview = { power: I.power, x, y }; G.Render.hover = null; G.Render.pointer = null; }
+          else { G.Render.preview = null; G.Render.hover = pick(m.x, m.y, I.power === 'hand'); G.Render.pointer = G.Render.screenToTile(m.x, m.y); } // (the tile under the pointer: a reserve says what it is kept for, D-121)
           canvas.style.cursor = I.held ? 'grabbing' : I.power === 'hand' ? (G.Render.hover ? 'grab' : 'default') : I.power ? 'crosshair' : (G.Render.hover ? 'pointer' : 'default');
-        } else { G.Render.hover = null; G.Render.preview = null; }
+        } else { G.Render.hover = null; G.Render.preview = null; G.Render.pointer = null; }
       }
       if (G.Scene && M.mode === 'game' && !inc) G.Scene.beforeFrame();
       // (the god's picture is not drawn while the body's covers the screen)

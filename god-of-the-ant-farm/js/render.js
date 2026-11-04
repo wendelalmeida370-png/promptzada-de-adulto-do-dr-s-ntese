@@ -55,6 +55,7 @@
     return { back, front };
   };
   R.hover = null;
+  R.pointer = null; // (the tile under the god's pointer, main.js: a reserve says what it is kept for)
   R.preview = null; // {power, x, y}
   R.time = 0;
 
@@ -1184,6 +1185,7 @@
     }
     // ---------- ground layer ----------
     lights.length = 0; emisWin.length = 0; emisFire.length = 0; emisGlow.length = 0; emisTorch.length = 0; overlays.length = 0;
+    frameRes = reserves(); // (the lots kept for great works, asked once a frame: the line on the ground, the stakes, the label — D-121)
     if (!R.dbg.noGround) drawGround(t, view, nightF);
     PROF.mark('ground', t0); t0 = now();
     // ---------- sorted entities ----------
@@ -1204,11 +1206,11 @@
       if (p[0] < view[0] - mx || p[0] > view[2] + mx || p[1] < view[1] - dn || p[1] > view[3] + up) continue;
       pushD(R.bkey(b), 4, b, p[0], p[1]);
     }
-    // aqueduct arches, carts on the roads
+    // aqueduct arches, carts on the roads (an aqueduct's people read, never written on it: the save is the world's)
     for (const a of S.aqueducts) for (let k = 0; k < a.built; k++) {
       const [x, y, d] = a.tiles[k]; const i = y * N + x;
       if (S.occ[i]) { const ob = S.buildings.get(S.occ[i]); if (ob && ob.blocks) continue; }
-      const p = vis(x + 0.5, y + 0.5, W.groundH(x + 0.5, y + 0.5)); if (p) pushD(depth(x + 0.5, y + 0.5) + 0.05, 8, { d, x, y, st: a.style || (a.style = (G.Fac.get(a.fac) || {}).civ || 'classico') }, p[0], p[1]);
+      const p = vis(x + 0.5, y + 0.5, W.groundH(x + 0.5, y + 0.5)); if (p) pushD(depth(x + 0.5, y + 0.5) + 0.05, 8, { d, x, y, st: a.style || (G.Fac.get(a.fac) || {}).civ || 'classico' }, p[0], p[1]);
     }
     for (const c of S.carts) { const p = vis(c.x, c.y, W.groundH(c.x, c.y)); if (p) pushD(depth(c.x, c.y) + 0.03, 9, c, p[0], p[1]); }
     for (const s of S.ships) { const p = vis(s.x, s.y, W.groundH(s.x, s.y)); if (p) pushD(depth(s.x, s.y) + 0.3, 10, s, p[0], p[1]); }
@@ -1525,6 +1527,7 @@
       else if (b.type === 'quartel') { ctx.fillStyle = 'rgba(150,130,100,0.35)'; diamond(b.x - 0.2, b.y - 0.2, b.x + b.w + 0.2, b.y + b.h + 0.2); ctx.fill(); }
     }
     for (const h of HK.ground) h(ctx, proj, view, t, nightF, diamond, FXA);
+    for (const q of frameRes) reserveGround(q); // (the lots kept for great works: their line on the ground, D-121)
     // selection & hover rings
     const sel = G.UI && G.UI.selected;
     const ring = (o, col, w) => {
@@ -2544,6 +2547,64 @@
     if (q === undefined) q = R.quarter(); return s === FL[q] ? { m: 1, back: false } : s === FR[q] ? { m: -1, back: false } : { m: m0, back: true };
   }
   R.doorView = doorView; // (for the proofs: { m: the mirror, back: drawn without its door } for a view's quarter)
+  // ---- the lot a capital keeps for its great work, years before it founds it (D-121: as the Campus Martius), as the god sees it:
+  // on the ground round it a cord's line — dark, in a pale casing: it reads on snow and sand as on grass —; at its corners a
+  // stake with a pennant of its people's colour, a short stake every two tiles between, the rope from stake to stake — each
+  // stake among the people at its own depth, its rope to the stakes behind it —; the fields and paths in it as they are,
+  // nothing laid over them. From afar, where a stake is a speck: the line, its corners marked bold, a spot of the people's
+  // colour on each. The lines keep their width on the screen, near or far. And with the pointer over it, nothing else under
+  // it: «Reservado para o Coliseu». Asked of the world — G.Village.reserva(set), pure: { type, esc, x, y, n } or null, the
+  // lot's corner and side in tiles —, once a frame; nothing written ----
+  let frameRes = []; G.worldHooks.push(() => { frameRes = []; });
+  function reserves() {
+    const V = G.Village, S = G.S; if (!V || !V.reserva || !S) return []; const out = [];
+    for (const s of S.settlements.values()) { const r = V.reserva(s); if (r && r.n > 0 && W.inb(r.x, r.y) && W.inb(r.x + r.n - 1, r.y + r.n - 1)) out.push({ s, r, col: G.Fac.hex(s.fac) || '#d8b25a' }); }
+    return out;
+  }
+  R.reserves = () => frameRes; // (for the proofs: the reserves the last frame drew)
+  // (the perimeter's points, a tile apart, round the lot from its corner (x, y): [x, y, a corner?])
+  const perimeter = r => { const o = [], n = r.n; for (let k = 0; k < n; k++) o.push([r.x + k, r.y, !k]); for (let k = 0; k < n; k++) o.push([r.x + n, r.y + k, !k]); for (let k = 0; k < n; k++) o.push([r.x + n - k, r.y + n, !k]); for (let k = 0; k < n; k++) o.push([r.x, r.y + n - k, !k]); return o; };
+  const CORD = 'rgba(66,44,26,0.85)', CASE = 'rgba(250,242,220,0.6)';
+  function reserveGround(q) {
+    const z = R.cam.zoom, far = z < 0.56, k = 1 / Math.max(0.3, z); // (k: a screen pixel, in the world's)
+    const P2 = perimeter(q.r).map(([x, y]) => proj(x, y, W.hAt(x, y))), m = P2.length, n = q.r.n;
+    ctx.beginPath(); ctx.moveTo(P2[0][0], P2[0][1]); for (let i = 1; i < m; i++) ctx.lineTo(P2[i][0], P2[i][1]); ctx.closePath();
+    ctx.strokeStyle = CASE; ctx.lineWidth = (far ? 3.6 : 2.6) * k; ctx.stroke();
+    ctx.strokeStyle = CORD; ctx.lineWidth = (far ? 1.7 : 1.1) * k; ctx.stroke();
+    if (!far) return;
+    // (from afar: two tiles of a bold line each way from each corner, and the people's colour where the corner stake stands)
+    const arm = Math.min(2, n >> 1);
+    for (let c = 0; c < 4; c++) {
+      ctx.beginPath(); for (let j = -arm; j <= arm; j++) { const p = P2[(c * n + j + m) % m]; if (j === -arm) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]); }
+      ctx.strokeStyle = CASE; ctx.lineWidth = 5.2 * k; ctx.stroke(); ctx.strokeStyle = CORD; ctx.lineWidth = 2.8 * k; ctx.stroke();
+    }
+    for (let c = 0; c < 4; c++) { const p = P2[c * n]; ctx.beginPath(); ctx.arc(p[0], p[1], 2.2 * k, 0, Math.PI * 2); ctx.fillStyle = q.col; ctx.fill(); ctx.strokeStyle = CORD; ctx.lineWidth = 0.9 * k; ctx.stroke(); }
+  }
+  R.reserveGroundOn = (c, q) => { const k = ctx; ctx = c; try { reserveGround(q); } finally { ctx = k; } }; // (for the proofs)
+  // the stakes: every other point of the perimeter — the corners always —, each drawn with its rope to its neighbours behind it
+  HK.ents.push(function (add, view, zoom) {
+    if (zoom < 0.56) return;
+    for (const q of frameRes) {
+      const pts = perimeter(q.r).filter(([x, y, c], k) => c || k % 2 === 0), m = pts.length;
+      pts.forEach(([x, y, corner], k) => { const a = pts[(k + m - 1) % m], b = pts[(k + 1) % m]; add(x + y + 0.02, { fn: drawStake, q, x, y, corner, nb: [a, b] }, x, y); });
+    }
+  });
+  function drawStake(c, e, sx, sy) {
+    const hS = e.corner ? 8 : 5, top = sy - hS, d0 = depth(e.x, e.y);
+    // (the rope to each neighbour behind this stake — the one in front draws it —, sagging a little, at the stakes' height)
+    c.strokeStyle = 'rgba(176,146,100,0.95)'; c.lineWidth = 0.7; c.beginPath();
+    for (const nb of e.nb) { const dn = depth(nb[0], nb[1]); if (dn > d0 || (dn === d0 && (nb[0] + nb[1] * 1e-3) > (e.x + e.y * 1e-3))) continue;
+      const p = proj(nb[0], nb[1], W.groundH(nb[0], nb[1])), hN = nb[2] ? 8 : 5; const a = [sx, top + 1.5], b = [p[0], p[1] - hN + 1.5];
+      c.moveTo(a[0], a[1]); c.quadraticCurveTo((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + 1.2, b[0], b[1]); }
+    c.stroke();
+    const w = e.corner ? 1.3 : 1.1; c.fillStyle = '#5e4128'; c.fillRect(sx - w / 2, top, w, hS); c.fillStyle = '#8a6a44'; c.fillRect(sx - w / 2, top, w / 2, hS);
+    if (e.corner) { c.fillStyle = e.q.col; c.beginPath(); c.moveTo(sx + w / 2, top); c.lineTo(sx + 5, top + 1.5); c.lineTo(sx + w / 2, top + 3.1); c.closePath(); c.fill(); }
+  }
+  // (what the god reads over a reserve the pointer is on: the work it is kept for, in its people's name for it — «o Coliseu»,
+  // «a Grande Pirâmide», «a Acrópole»: the article by the name's head word, after «Grande» the next)
+  R.keptFor = (type, civ) => { const nm = G.Civ && G.Civ.bname ? G.Civ.bname(type, civ || null) : type; const w = String(nm).split(' '), head = w[0] === 'Grande' && w[1] ? w[1] : w[0];
+    return 'Reservado para ' + (/a$/.test(head) || /^(Acrópole|Pirâmide)$/.test(head) ? 'a ' : 'o ') + nm; };
+  R.reserveName = q => R.keptFor(q.r.type, G.Civ && G.Civ.idOfFac ? G.Civ.idOfFac(q.s.fac) : null);
   // (a building on fire, for its glow: a fire on any tile of its lot — D-106: one on the far side of a 10-tile lot is a fire in
   // the building; a lot of 13 is 169 looks a frame, nothing)
   const fireOn = b => { const F = G.S.fire; for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) if (F[W.idx(tx, ty)] > 0.15) return true; return false; };
@@ -3094,6 +3155,10 @@
     drawPlaceLabels(view);
     drawDistrictLabels(view);
     drawCityLabels(view);
+    // (a reserve the pointer is on, nothing else under it: the work it is kept for, over its middle)
+    const pt = R.pointer, rq = pt && !R.hover && !R.under && G.Main && G.Main.mode === 'game' && !(G.Cinema && G.Cinema.on) && !(G.Photo && G.Photo.on) ? frameRes.find(q => pt[0] >= q.r.x && pt[0] < q.r.x + q.r.n && pt[1] >= q.r.y && pt[1] < q.r.y + q.r.n) : null;
+    if (rq) { const cx = rq.r.x + rq.r.n / 2, cy = rq.r.y + rq.r.n / 2, p = proj(cx, cy, W.groundH(cx, cy)); const txt = R.reserveName(rq);
+      ctx.font = `600 ${Math.round(9 * is)}px Nunito, sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3 * is; ctx.strokeStyle = 'rgba(20,20,30,0.7)'; ctx.strokeText(txt, p[0], p[1] - 10 * is); ctx.fillStyle = '#fff4dc'; ctx.fillText(txt, p[0], p[1] - 10 * is); }
     for (let k = 0; k < overlays.length; k += 3) {
       const o = overlays[k], sx = overlays[k + 1], sy = overlays[k + 2];
       if (o.prayerIcon) { G.Art.draw(ctx, G.Art.icon('awe'), sx, sy + 6, is * 1.5); continue; }
