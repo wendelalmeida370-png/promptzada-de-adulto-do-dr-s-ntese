@@ -925,10 +925,10 @@
   // square lot's — whoever stands beside it or behind it is drawn on the right side of it. Beside a square lot, in any column of
   // the screen, the lot's front is never nearer the eye than its side corners nor its back farther: one standing out of the lot
   // in front of a face it shows is deeper than them, one behind it less deep. The front corner, a hand back, put a person
-  // beside a building of 10 tiles behind its wall (the rule kept for those under 3 tiles; the flat ones — a square, a ruin, a
-  // graveyard, a pen, a campfire — keep theirs) ----
-  const BIGW = 3; const FLATB = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1 };
-  R.bkey = function (b) { const [cx, cy] = G.Village.center(b); return b.type === 'praca' ? depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : b.w >= BIGW && !FLATB[b.type] ? depth(cx, cy) - 0.15 : depth(cx, cy) + (b.w + b.h) / 2 - 0.8; };
+  // beside a building of 10 tiles behind its wall (the rule kept for those under 3 tiles; the open grounds — a square, a ruin, a
+  // graveyard, a pen, a campfire, the stable and the fair, the fields, whose pieces the hooks sort each by its own — keep theirs) ----
+  const BIGW = 3; const FLATB = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1, curral: 1, estabulo: 1, feira: 1 };
+  R.bkey = function (b) { const [cx, cy] = G.Village.center(b); return b.type === 'praca' ? depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : b.w >= BIGW && !FLATB[b.type] && !(G.BDEF[b.type] || {}).field ? depth(cx, cy) - 0.15 : depth(cx, cy) + (b.w + b.h) / 2 - 0.8; };
   function pushD(d, type, o, sx, sy) {
     let e = drawList[drawN]; if (!e) { e = {}; drawList[drawN] = e; }
     e.d = d; e.t = type; e.o = o; e.sx = sx; e.sy = sy; drawN++;

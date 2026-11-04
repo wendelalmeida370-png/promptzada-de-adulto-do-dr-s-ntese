@@ -1512,8 +1512,10 @@
     for (const a of [a0, a1]) for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A0[k + 1][0] : e.fundo; poly(c, [pt(rIn, a, 0), pt(A0[k][0], a, 0), pt(A0[k][0], a, A0[k][1]), pt(rIn, a, A0[k][1])], tone(wall, 0.94)); }
     const b0 = Math.max(a0, 1.75 * Math.PI), b1 = Math.min(a1, 2 * Math.PI); if (b1 > b0) poly(c, arc(A0[0][0], A0[0][1], b0, b1).concat(arc(A0[0][0], 0, b1, b0)), tone(wall, 0.8));
   }
-  // (the kinds of piece the god paints from a form; another kind is left out, and named here for the proofs)
-  A.formMissing = new Set();
+  // (the kinds of piece the god paints from a form; another kind is left out, and named here for the proofs — with how the last
+  // painting went: A.formStats. Only seen; anew with every world)
+  A.formMissing = new Set(); A.formStats = null;
+  G.worldHooks.push(() => { A.formMissing.clear(); A.formStats = null; });
   // the parts of a form's pieces: [{ i (its piece), j (its part), V, PL, paint, ring?, bowl? }] (o.noDoor: without the door the
   // view does not see — L-264 —, as the drawings of before)
   function formParts(c, m, F, st, o) {
