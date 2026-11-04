@@ -78,17 +78,25 @@
     // (the last resort, once every attempt left the altar out — the round In.plan makes only then: L-192. Behind a court the
     // hall can be too shallow for the altar a pace before the image with the faithful's room before it, the sanctuary's
     // door keeping clear the floor before the image, and the court's doors keeping its own: the altar wherever it goes in
-    // the hall, then in the court, the nearest the image first, with only the room its offering needs before it)
+    // the hall, then in the court, the nearest the image first, with the room its offering needs before it — ROOM, the one
+    // who offers half a metre before its front and his body round him: with 0.6 m he stood against the wall —; and where the
+    // hall is too shallow for it before the image, beside the image, the priest's room behind it — 0.8 m from the back
+    // wall —, after every place before the image or in the court)
+    const ROOM = 0.85;
     if (!al && P.last) {
       const tries = [];
       for (const at of [cella].concat(has(rooms.court) ? [rooms.court] : [])) {
         const A = P.rooms[at].r; const v0 = at === cella ? im.r[3] : A[1];
-        for (let v = v0 + 0.5; v + 0.7 <= A[3] - 0.6 + 1e-6; v += 0.1) for (let u = A[0] + 0.6; u + 0.6 <= A[2] + 1e-6; u += 0.15) tries.push([at, u, v, (at === cella ? 0 : 100) + Math.abs(u - cu) + (v - v0)]);
+        for (let v = v0 + 0.5; v + 0.7 <= A[3] - ROOM + 1e-6; v += 0.1) for (let u = A[0] + 0.6; u + 0.6 <= A[2] + 1e-6; u += 0.15) tries.push([at, u, v, (at === cella ? 0 : 100) + Math.abs(u - cu) + (v - v0)]);
       }
+      { const A = P.rooms[cella].r; for (let v = A[1] + 0.8; v + 0.7 <= A[3] - ROOM + 1e-6; v += 0.1) for (let u = A[0] + 0.6; u + 0.6 <= A[2] + 1e-6; u += 0.15) if (Math.abs(u - cu) >= 1.35 - 1e-6) tries.push([cella, u, v, 200 + Math.abs(u - cu) + (v - A[1])]); }
       tries.sort((x, y) => x[3] - y[3]);
       for (const [at, u, v] of tries) { al = P.at('altar', lv, at, [u - 0.6, v, u + 0.6, v + 0.7], 0, 1); if (al) { ar = at; break; } }
     }
     if (!al) { P.lack = 1; P.errs.push('sem lugar para o altar'); return; }
+    // (the room of the offering kept before the altar: no bench of the faithful nor anything else on it — a bench by the walls
+    // went 0.12 m before the altar's corner, and the one who offers stood between them)
+    P.zones.push({ lv, r: [al.r[0], al.r[3], al.r[2], r2(al.r[3] + ROOM)] });
     P.opt(() => { const ac = (al.r[0] + al.r[2]) / 2; for (const du of [-1.1, 1.1]) P.at('lampadario', lv, ar, [ac + du - 0.23, al.r[1] + 0.12, ac + du + 0.22, al.r[1] + 0.57], 0, 1); });
     const kind = KNEEL[P.rec.c] ? 'esteira-oracao' : 'banco-fieis'; const D = In.ITEMS[kind];
     // (where the room is wide enough, two to a row with the aisle between; a narrow nave or aisle, one to a row in the middle,

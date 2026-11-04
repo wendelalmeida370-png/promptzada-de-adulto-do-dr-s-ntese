@@ -30,6 +30,18 @@ const TOP = { plan: [], att: [], planBy: new Map(), attBy: new Map() };
 const note = (L, w, n) => { if (L.length >= n && w.ms <= L[L.length - 1].ms) return; L.push(w); L.sort((x, y) => y.ms - x.ms); if (L.length > n) L.pop(); };
 const noteBy = (M, k, w, n) => { let L = M.get(k); if (!L) M.set(k, L = []); note(L, w, n); };
 const low = (L, ms) => L.length >= 40 && ms <= L[L.length - 1].ms; let nCells = 0, nFloorBad = 0; const floorEx = []; let nShell = 0, nShellBad = 0; const shellEx = [];
+// (the room of the offering before a temple's altar — the one who offers half a metre before its front, his body round him —:
+// the plan's cells whose middles are before its front, within ALTAR_ROOM of it and 0.3 m of its middle, open floor; the depth to
+// the nearest one that is not. The last resort of the hall's recipe left 0.6 m, and a bench by the walls stood 0.12 m before the
+// altar's corner: 1136 of 25856 temples on four dice, L-502)
+const ALTAR_ROOM = 0.85; let nAltar = 0, nAltarBad = 0; const altarEx = [];
+const altarRoom = (p, it) => {
+  const fx = Math.round(Math.sin(it.ry)), fz = Math.round(Math.cos(it.ry)); const r = it.r, CS = In.CS, n = p.grid.n, g = p.grid.lv[it.lv];
+  const e = fz > 0 ? r[3] : fz < 0 ? r[1] : fx > 0 ? r[2] : r[0]; const mid = fz ? (r[0] + r[2]) / 2 : (r[1] + r[3]) / 2; let best = ALTAR_ROOM;
+  for (let z = 0; z < n; z++) for (let x = 0; x < n; x++) { const cx = (x + 0.5) * CS, cz = (z + 0.5) * CS; const d = fz ? (cz - e) * fz : (cx - e) * fx, a = fz ? cx - mid : cz - mid;
+    if (d <= 0 || d >= ALTAR_ROOM || Math.abs(a) >= 0.3) continue; const c = g[z * n + x]; if (c !== In.CELL.FLOOR && c !== In.CELL.DOOR && d < best) best = d; }
+  return best;
+};
 for (const type of Object.keys(In.TYPES)) {
   if (ONLY && !ONLY.includes(type)) continue;
   const def = G.BDEF[type]; if (!def) { ok('tipo ' + type, false, 'tipo sem BDEF'); continue; }
@@ -77,6 +89,7 @@ for (const type of Object.keys(In.TYPES)) {
             nCells++; const y = In.floorYOf(p, l.lv, x, z); if (Math.abs(y - l.y - In.hAt(p, l.lv, x, z)) > 1e-6) { nFloorBad++; if (floorEx.length < 4) floorEx.push(`${type}/${c}/${f} #${id} piso ${l.lv} (${x}, ${z}): ${y.toFixed(2)} com o piso a ${l.y}`); }
           }
         }
+        if (type === 'temple') for (const it of p.items) { if (it.kind !== 'altar') continue; nAltar++; const d = altarRoom(p, it); if (d < ALTAR_ROOM) { nAltarBad++; if (altarEx.length < 4 || process.env.VERB) altarEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${d.toFixed(3)} m`); } }
         seen.add(p.sig); fine.add(hash(JSON.stringify([p.shell, p.rooms.map(m => m.r), p.items.map(i => [i.kind, i.x, i.z, i.ry]), p.holes.map(h => [h.wall, h.at])])));
         // the same input, the same plan (a second build outside the cache)
         if (q < 3) { const p2 = In.make(b, rec); if (JSON.stringify(p2.items) !== JSON.stringify(p.items) || p2.sig !== p.sig) ok(`determinismo ${type}/${c}/${f}`, false, `#${id}: duas plantas diferentes da mesma entrada`); }
@@ -109,6 +122,8 @@ for (const e of shortEx) console.log('   ~ ' + e);
 if (DA.top) console.log(`   a tentativa mais cara: ${DA.top.min.toFixed(1)} ms (${DA.top.tag}, a ${DA.top.n + 1}ª; na rodada, até ${DA.raw.toFixed(0)} ms)`);
 ok('a casca de longe', nShellBad === 0, `${nShell} cascas pedidas sozinhas: ${nShellBad} diferentes da planta inteira${shellEx.length ? ' (' + shellEx.join(', ') + ')' : ''}`);
 ok('o chão fora das escadas', nFloorBad === 0, `${nCells} células de chão fora das escadas e dos degraus; em ${nFloorBad} a altura não é a do piso`);
+if (nAltar) ok('o lugar de ofertar diante do altar (L-502)', nAltarBad === 0, `${nAltar} altares de templo: ${nAltarBad} com menos de ${ALTAR_ROOM} m de chão livre diante dele`);
+for (const e of altarEx) console.log('   ✗ ' + e);
 for (const e of floorEx) console.log('   ✗ ' + e);
 ok('poucas caídas', nFell <= nPlans * 0.1, `${nFell} de ${nPlans} plantas (${(100 * nFell / Math.max(1, nPlans)).toFixed(1)}%) caíram da família do registro para a próxima que o catálogo oferece ali`);
 for (const e of fellEx) console.log('   ↘ ' + e);

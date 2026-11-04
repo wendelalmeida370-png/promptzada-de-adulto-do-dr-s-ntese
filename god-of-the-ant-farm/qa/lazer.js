@@ -9,7 +9,10 @@
 //  l5 a leitura: quem vem ler à biblioteca soma à pesquisa do povo o que o livro da biblioteca diz (os leitores descansados,
 //     alimentados, de mãos livres, não mercadores, os mais perto da porta primeiro, T-297)
 //  l6 a saída do fim da tarde: sem a mão da prova, gente da cidade escolhe o teatro por conta própria (G.Teatro.urge, a escolha
-//     da pessoa ao lado da taverna e de casa), paga, assiste e aplaude
+//     da pessoa ao lado da taverna e de casa), paga, assiste e aplaude — num dos três primeiros dias (o que a chama da plateia
+//     depois é do mundo: uma história, T-404)
+//  (e l7 a l11, mais abaixo). Nos casos do teatro a tarde é calma: o tempo, a cidade em paz (a paz divina do jogo) e sem a festa
+//  do dia, pela mão da prova (T-404); o público chamado pela mão vem quando as portas abrem, os mais perto primeiro, e fica.
 //  e nenhum erro de módulo nem aviso no console.
 //   node qa/lazer.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/lazer.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
@@ -47,17 +50,34 @@ function actors(b) {
   }
   return Tt.actorsOf(b);
 }
+// (the afternoon of a show calm, as its weather: the town at peace — the god's peace over the world, the game's own power,
+// G.Politics.divinePeace: the wars in truce, the bands gone home, no war declared for two days and a half, and the alarm of an
+// attack over with them —, and its feast of the day kept for another day by the god's hand — festivals.js, the plan of the
+// day, as the feira.js and the lar.js keep it: a day of the world is a year, and the feast calls the whole town, 3,2, the rows
+// of a play too —. In the courses of other dice — the plans on the salts of the T-436 — Mênfis was attacked at 0,51 and the
+// far actor of the l7, a mother, ran to the cave of the town (caves.js, refuge) and then fought; and its Bela Festa do Vale,
+// at 0,62, in the play's time, took the audience of the l1 on its way in, T-404)
+const calm = b => { const w = S().weather; w.rain = 0; if (w.storm) w.storm = 0; G.Politics.divinePeace(); for (const s of S().settlements.values()) if (s.alarmT > 0) s.alarmT = 0; const st = S().settlements.get(b.set); if (st) st.festPlan = { day: S().day, key: null, done: true }; };
 // (the afternoon before the theatre opens its preparation — at the hour its farthest actor needs to walk to the stage, L-425:
 // the clock set just before it, once the actors are known)
-function ready(b) { S().time = Tt.EARLY - 0.02; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0; const cast = actors(b); S().time = Math.max(S().time, Tt.opensAt(b) - 0.01); return cast; }
+function ready(b) { S().time = Tt.EARLY - 0.02; calm(b); const cast = actors(b); S().time = Math.max(S().time, Tt.opensAt(b) - 0.01); return cast; }
+// (the audience called when the doors open: Tt.visit takes nobody while the actors make ready behind closed doors — called in
+// the preparation, the hand's audience of the l1 to the l4 never came, and the l1 hung on one who came by his own choice; on
+// the dice of the T-436 a story called him from the rows (a saga, 1,02) four seconds into the play, «0 viram a peça», T-404)
+function atDoors(b, op, bad) { liveSec(60, () => !A.live(op) || op.data.fase !== 'preparo', bad); const n = audience(b, 6).length; liveSec(4, null, bad); return n + audience(b, 4).length; }
 // (who chooses the theatre: grown townsfolk free of weightier errands, with the entry in the house — the choice of the evening
-// out, as the villagers' decide makes it: the errand of the show, of the kind 'teatro')
+// out, as the villagers' decide makes it: the errand of the show, of the kind 'teatro' —, the nearest its door first, set down
+// by the door by the god's hand once the show takes them (the doors open), the errand held above the day's calls below 3 — the
+// line of the D-094, as the readers of the l5 and the l9: the case is the show. Called at the doors of the generation-13
+// metropolis from where they were, the hand's audience came from all over Mênfis — the nearest free ones 23 to 30 tiles away
+// —: one in time, the others on their way still when the late door shut at 0,63; and a story took one from the rows, a saga of
+// 1,02, T-404)
 function audience(b, n) {
-  const out = [];
-  for (const v of [...S().villagers.values()].sort((a, c) => a.id - c.id)) {
+  const dr = G.Vg.door(b); const far = v => G.dist2(v.x, v.y, dr[0], dr[1]); const out = [];
+  for (const v of [...S().villagers.values()].sort((a, c) => far(a) - far(c) || a.id - c.id)) {
     if (out.length >= n) break;
-    if (v.set !== b.set || v.age < 16 || v.age > 60 || v.captive || v.jail || v.aboard || v.sleeping || v.inside || (v.task && (v.task.pri || 0) >= 1) || v.role === 'ator') continue;
-    const t = Tt.visit(v, b); if (t) { t.kind = 'teatro'; out.push(v); }
+    if (v.set !== b.set || v.age < 16 || v.age > 60 || v.captive || v.jail || v.aboard || v.ug || v.sleeping || v.inside || (v.task && (v.task.pri || 0) >= 1) || v.role === 'ator') continue;
+    const t = Tt.visit(v, b); if (t) { v.x = dr[0]; v.y = dr[1]; v.path = null; t.kind = 'teatro'; t.pri = 2.9; out.push(v); }
   }
   return out;
 }
@@ -81,8 +101,7 @@ const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.d
   const opened = liveSec(20, () => !!Tt.dia(b), bad); const op = Tt.dia(b);
   let strangers = 0, most = 0;
   if (op) {
-    audience(b, 6); liveSec(4);
-    audience(b, 4);
+    atDoors(b, op, bad);
     liveSec(160, () => !A.live(op), bad, () => { if (!A.live(op)) return; most = Math.max(most, Object.keys(op.data.plateia).length); for (const id of Object.keys(op.data.plateia)) { const v = S().villagers.get(+id); if (v && v.set !== b.set) strangers++; } });
   }
   const paid = op ? r2(seen.filter(e => e[7] === op.id && e[5] === 'moedas' && (e[8] === 'teatro' || e[8] === 'teatro-volta')).reduce((n, e) => n + (e[8] === 'teatro' ? e[6] : -e[6]), 0)) : 0;
@@ -96,7 +115,7 @@ const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.d
 {
   fresh(); const b = S().buildings.get(P.id); ready(b);
   liveSec(20, () => !!Tt.dia(b)); const op = Tt.dia(b);
-  if (op) { audience(b, 6); liveSec(80, () => !A.live(op) || op.data.fase === 'peca'); liveSec(8); }
+  if (op) { atDoors(b, op); liveSec(80, () => !A.live(op) || op.data.fase === 'peca'); liveSec(8); }
   const mid = op && A.live(op) && op.data.fase === 'peca' ? G.Save.serialize() : null; const opId = op ? op.id : 0;
   const run = () => { M.reseed(4242); G.Save.apply(JSON.parse(mid)); G.Main.mode = 'game'; liveSec(40); const o = A.get(opId); return o ? digest(o) : 'sem o espetáculo'; };
   const a = mid ? run() : '', c = mid ? run() : '';
@@ -106,7 +125,7 @@ const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.d
 {
   fresh(); const b = S().buildings.get(P.id); ready(b); const bad = [];
   liveSec(20, () => !!Tt.dia(b)); const op = Tt.dia(b);
-  if (op) { audience(b, 6); liveSec(80, () => !A.live(op) || op.data.fase === 'peca'); }
+  if (op) { atDoors(b, op); liveSec(80, () => !A.live(op) || op.data.fase === 'peca'); }
   const playing = !!op && A.live(op) && op.data.fase === 'peca'; const had = op ? Object.keys(op.data.plateia).length : 0;
   if (playing) { for (const id of Object.keys(op.data.atores)) { const v = S().villagers.get(+id); if (v) V.kill(v, 'teste', true); } holdOthers(b, []); }
   const stopped = playing && liveSec(40, () => !A.live(op), bad, () => holdOthers(b, []));
@@ -117,7 +136,7 @@ const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.d
 {
   fresh(); const b = S().buildings.get(P.id); ready(b);
   liveSec(20, () => !!Tt.dia(b)); const op = Tt.dia(b);
-  if (op) { audience(b, 6); liveSec(80, () => !A.live(op) || op.data.fase === 'peca'); }
+  if (op) { atDoors(b, op); liveSec(80, () => !A.live(op) || op.data.fase === 'peca'); }
   const playing = !!op && A.live(op); const had = op ? Object.keys(op.data.plateia).length : 0;
   if (playing) { V.destroyBuilding(b, 'teste'); liveSec(3); }
   const stuck = [...S().villagers.values()].filter(v => v.task && (v.task.type === 'teatro' || v.task.type === 'atuar') && v.task.id === b.id).length;
@@ -151,12 +170,23 @@ const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.d
   }
 }
 // ---------------- l6 the evening out, by the townsfolk's own choice ----------------
+// (the day sought, three at most — each the next afternoon of the world, its weather and its peace kept by the hand as ready()
+// keeps them —: the choice of the evening out is the townsfolk's, and what calls them from the rows after it is the world's.
+// On the dice of the T-436 the one fisherman who came was called from the rows by a story (a saga, 1,02) four seconds into
+// the play, «0 viram a peça»: the case is a day when one who came of his own choice sees the play to its end, T-404)
 {
-  fresh(); const b = S().buildings.get(P.id); const cast = ready(b); const bad = [];
-  liveSec(20, () => !!Tt.dia(b), bad); const op = Tt.dia(b); const came = new Set();
-  if (op) liveSec(160, () => !A.live(op), bad, () => { if (A.live(op)) for (const id of Object.keys(op.data.plateia)) came.add(+id); });
+  fresh(); const b = S().buildings.get(P.id); const cast = ready(b); const bad = []; const days = [];
+  let op = null, came = new Set();
+  for (let k = 0; k < 3; k++) {
+    if (k) { const d0 = S().day; liveSec(G.DAY_LEN, () => S().day > d0 && S().time >= Tt.EARLY - 0.02, bad); ready(b); }
+    liveSec(20, () => !!Tt.dia(b), bad); op = Tt.dia(b); came = new Set();
+    if (op) liveSec(160, () => !A.live(op), bad, () => { if (A.live(op)) for (const id of Object.keys(op.data.plateia)) came.add(+id); });
+    days.push(op ? `${came.size} vieram, ${op.data.vistos} viram (${op.st})` : 'não abriu');
+    if (op && came.size >= 1 && op.data.vistos >= 1 && op.st === 'ok') break;
+  }
   const kinds = {}; for (const id of came) { const v = S().villagers.get(id); const k = v ? v.role : 'morto'; kinds[k] = (kinds[k] || 0) + 1; }
-  ok('l6 a-saida-da-tarde', !!op && came.size >= 1 && op.data.vistos >= 1 && op.st === 'ok' && !bad.length, op ? `${cast.length} atores; ${came.size} vieram por conta própria (${JSON.stringify(kinds)}), ${op.data.entradas} entradas, ${op.data.vistos} viram a peça; caixa ${op.data.receita}; ${op.st} (${op.end ? op.end.why : ''}); ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'não abriu');
+  const when = days.length > 1 ? ` — no ${days.length}º dia (antes: ${days.slice(0, -1).join('; ')})` : '';
+  ok('l6 a-saida-da-tarde', !!op && came.size >= 1 && op.data.vistos >= 1 && op.st === 'ok' && !bad.length, op ? `${cast.length} atores; ${came.size} vieram por conta própria (${JSON.stringify(kinds)}), ${op.data.entradas} entradas, ${op.data.vistos} viram a peça; caixa ${op.data.receita}; ${op.st} (${op.end ? op.end.why : ''})${when}${days.length === 3 && !(came.size >= 1 && op.data.vistos >= 1) ? ' — em três dias, ninguém que veio por conta própria viu a peça até o fim' : ''}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : `não abriu (${days.join('; ')})`);
 }
 // ---------------- l7 the actor from the far end of the town (L-425) ----------------
 // (one actor only — the other's trade let go for the case —, put by the god's hand some 40 tiles from the theatre's door on
@@ -167,12 +197,13 @@ const solo = (b, cast) => { const a = cast[0]; for (const o of cast.slice(1)) { 
 // regions, the theatre's door is reached from it too)
 const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, bd = Infinity; for (let y = 0; y < G.N; y++) for (let x = 0; x < G.N; x++) { const d = Math.hypot(x + 0.5 - dr[0], y + 0.5 - dr[1]); if (d < 38 || d > 44 || Math.abs(d - 40) >= bd) continue; const i = W.idx(x, y); if (!W.walkable(i) || S().occ[i] || !W.reaches(v, x + 0.5, y + 0.5)) continue; best = [x + 0.5, y + 0.5]; bd = Math.abs(d - 40); } return best; };
 {
-  fresh(); const b = S().buildings.get(P.id); S().time = Tt.EARLY - 0.02; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
+  fresh(); const b = S().buildings.get(P.id); S().time = Tt.EARLY - 0.02; calm(b);
   const cast = actors(b);
   // (the clock set again once the actors are known, as ready() does: the theatre of the generation-13 metropole is Mênfis', whose
   // ceiling of the trades gives it no actor (D-090), and the twelve seconds actors() waits for the town's own ate the walk the
-  // preparation gives the far one — called at 0,45, Ankhesen came to the door at 0,635, after the cancelling at 0,63, T-392)
-  S().time = Tt.EARLY - 0.02; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
+  // preparation gives the far one — called at 0,45, Ankhesen came to the door at 0,635, after the cancelling at 0,63, T-392 —;
+  // the town at peace and without its feast through the walk, as the weather: calm(), T-404)
+  S().time = Tt.EARLY - 0.02; calm(b);
   const a = cast.length ? solo(b, cast) : null; const sp = a ? farSpot(b, a) : null; const bad = [];
   if (a && sp) { G.Vg.endTask(a); a.x = sp[0]; a.y = sp[1]; a.path = null; a.inside = 0; a.sleeping = false; a.energy = 90; a.hunger = 20; }
   // (and his house's water in the jar — the chores of the house done before he set out, as the obra-longe.js does —: the
@@ -188,7 +219,15 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, b
   // (and his trade held by the god's hand, as the l8 holds its actor's: the board of Mênfis deals the actor made by the case off
   // the theatre every few seconds of her walk — the case is the far actor's walk, T-392)
   const keepTrade = () => { if (a && (a.role !== 'ator' || a.job !== b.id)) { a.role = 'ator'; a.job = b.id; } };
-  liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad, () => { keepTrade(); if (a) calmBeasts([a.x, a.y], dr); });
+  // (and her walk to the stage kept by the god's hand, as her trade: the call to the stage behind the shut doors (1,05) is the
+  // lightest errand of the afternoon — she may go and eat, and is called again —, and with the calm afternoon of the T-404 the
+  // cave of Mênfis took her on her way, to its mine (1,25) and then to deliver the ore (1,1), and the show was called off «sem
+  // atores» at 0,63: on her way she is called back and the errand held above the day's calls below 3, the line of the D-094 —
+  // the case is the far actor's walk, T-404)
+  const keepWalk = () => { if (!a || !S().villagers.has(a.id)) return; const o = Tt.dia(b); if (!o || o.data.atores[a.id] || o.data.fase === 'peca' || o.data.fase === 'fim') return;
+    if (!(a.task && a.task.type === 'atuar' && a.task.id === b.id)) Tt.task(a, b, null, G.Vg.H);
+    if (a.task && a.task.type === 'atuar' && a.task.st === 0) a.task.pri = Math.max(a.task.pri || 0, 2.9); };
+  liveSec(200, () => { const o = Tt.dia(b); if (o && !op) op = o; if (o && a && o.data.atores[a.id] && o.data.fase === 'peca') on = true; return !!op && !A.live(op); }, bad, () => { keepTrade(); keepWalk(); if (a) calmBeasts([a.x, a.y], dr); });
   ok('l7 o-ator-de-longe', !!a && !!sp && !!op && op.st === 'ok' && on && at < Tt.horas(b).prep && !bad.length, a && sp ? `${a.name}, o ator do dia, a ${far} casas da porta: o preparo abriu às ${r2(at)} (antes ${Tt.horas(b).prep}); ${on ? 'no palco na peça' : 'não chegou à peça'}; o espetáculo ${op ? op.st + ' (' + (op.end ? op.end.why : '') + ')' : 'não abriu'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'sem ator ou sem lugar longe');
 }
 // ---------------- l8 the hungry actor on the stage (L-426) ----------------
