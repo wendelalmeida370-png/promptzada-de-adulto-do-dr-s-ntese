@@ -3377,7 +3377,9 @@ float m3scale(float p) {
   function piece(K, it, y0) {
     const c = Math.cos(it.ry || 0), s = Math.sin(it.ry || 0); const P = (a, n) => [it.x + a * c + n * s, it.z - a * s + n * c];
     const F = {
-      box(a, y, n, sa, sy, sn, col, pat, ry2) { const p = P(a, n); K.as(pat || 0, () => K.box(p[0], y0 + y, p[1], sa, sy, sn, col, (it.ry || 0) + (ry2 || 0))); },
+      // (a part of no size is not drawn turned inside out: a piece the plan gave no length — the Norse inn's bench-bed, L-578 —
+      // had its pelts −6 cm wide, their faces the wrong way)
+      box(a, y, n, sa, sy, sn, col, pat, ry2) { if (sa < 0 || sy < 0 || sn < 0) return; const p = P(a, n); K.as(pat || 0, () => K.box(p[0], y0 + y, p[1], sa, sy, sn, col, (it.ry || 0) + (ry2 || 0))); },
       cyl(a, y, n, r, h, col, pat) { const p = P(a, n); K.as(pat || 0, () => K.cyl(p[0], y0 + y, p[1], r, h, col)); },
       sph(a, y, n, r, col, sy, pat) { const p = P(a, n); K.as(pat || 0, () => K.sph(p[0], y0 + y, p[1], r, col, sy)); },
       log(a0, ya, n0, a1, yb, n1, r, col, pat) { const p = P(a0, n0), q = P(a1, n1); K.as(pat || 0, () => K.log([p[0], y0 + ya, p[1]], [q[0], y0 + yb, q[1]], r, col)); },

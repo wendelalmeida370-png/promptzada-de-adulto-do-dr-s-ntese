@@ -18,8 +18,8 @@
 //      or the roof's — high enough for a body of 1.75 m (on a loft, for one on hands and knees), never the sky. The closed part
 //      of a ground open to the sky (D-131, the theater's skene): its ceiling at the foot of the form's roof over each room, and
 //      no wall of its rooms over it
-//   6. the furniture: each piece within its own rectangle and on its floor, every kind of the catalogue drawn (the pieces
-//      a building's form draws — marked form, D-093: the square's — are the form's, outside)
+//   6. the furniture: each piece with a size, within its own rectangle and on its floor, every kind of the catalogue drawn
+//      (the pieces a building's form draws — marked form, D-093: the square's — are the form's, outside)
 //   7. the doors' leaves: shut, in their opening; opened, into their first room. The lids: opened, up off their hole
 //   8. pure: the same plan, the same picture; no draw on the world's chance nor on the eye's; the world untouched — the
 //      outside's too
@@ -312,8 +312,12 @@ for (const [b, plan, own] of jobs) {
   for (const it of plan.items) {
     if (it.form && FMb) continue; // (the form's own, drawn outside: the fidelity proof measures it)
     if (CPb && !CPb.at(it.lv, (it.r[0] + it.r[2]) / 2, (it.r[1] + it.r[3]) / 2)) continue; // (an open ground's, out of its closed part: the outside's — 9 to 11)
-    nItem++; if (!B3.FURN[it.kind]) bad.kind.add(it.kind); const R = out.item[it.id]; if (!R || R[2] <= R[1]) { bad.item.push(`${tag} ${it.kind}: nada desenhado`); continue; }
-    const g = out.lv[R[0]]; const l = lvOf(it.lv); const foot = l.y + (it.y || 0); const ceil = Math.min(l.y + l.h, plan.shell.eave) + 0.01;
+    nItem++; if (!B3.FURN[it.kind]) bad.kind.add(it.kind);
+    // (a piece with a size: the plan's — one of no length was drawn as a sliver turned inside out, and its sleepers had no
+    // place: the Norse inn's bench-bed, L-578)
+    if (it.r[2] - it.r[0] < 0.01 || it.r[3] - it.r[1] < 0.01) bad.item.push(`${tag} ${it.kind} ${it.id}: sem tamanho (${(it.r[2] - it.r[0]).toFixed(2)} × ${(it.r[3] - it.r[1]).toFixed(2)} m, a planta)`);
+    const R = out.item[it.id]; if (!R || R[2] <= R[1]) { bad.item.push(`${tag} ${it.kind}: nada desenhado`); continue; }
+    const g = out.lv[R[0]]; const l = lvOf(it.lv); const foot = l.y + (it.y || 0); const ceil = (CPb ? l.y + l.h : Math.min(l.y + l.h, plan.shell.eave)) + 0.01;
     const roof = it.kind === 'fogao' || it.kind === 'forja-fogo'; let worst = 0, wy = 0;
     for (let k = R[1]; k < R[2]; k++) { const x = g.p[k * 3] - X0, y = g.p[k * 3 + 1] - Y0, z = g.p[k * 3 + 2] - Z0;
       worst = Math.max(worst, it.r[0] - x, x - it.r[2], it.r[1] - z, z - it.r[3]); if (y < foot - 0.01 || y > (roof ? ceil : foot + it.h + 0.5)) wy++; }
