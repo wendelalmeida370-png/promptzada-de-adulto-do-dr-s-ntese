@@ -137,7 +137,7 @@ const KIT_DRAW = /\b(K\.(box|cyl|cone|sph|gable|hip|quad|tri|para|bar|log|sheet)
 // (o Node o carrega; a planta pergunta a ele). Fora do que só se vê (a lista LOOK), um módulo só faz à forma as perguntas da
 // planta (FORMA_ASK); o resto (mass, foot, faces, hip, figure, deck, dome, lived, ZPX) é do desenho
 const FORMA_WORLD = /\bG\.S\b|\bS\.(buildings|villagers)\b|\.ip\b/, FORMA_VIEW = /\bTHREE\b|\bG\.(Build3D|Realm|Render|Arch|Art|Space|Interiors)\b/;
-const FORMA_ASK = ['of', 'has', 'body', 'uses', 'solids', 'flight', 'toLot', 'dirLot', 'COLUMN_BASE']; // (COLUMN_BASE: the base of a column, the size the plan keeps solid — L-494 (3))
+const FORMA_ASK = ['of', 'has', 'body', 'uses', 'solids', 'flight', 'toLot', 'dirLot', 'COLUMN_BASE', 'ringEdge']; // (COLUMN_BASE: the base of a column, the size the plan keeps solid — L-494 (3); ringEdge: the drawn edge of a ring of seats, the plan's rows by it — L-494 (2))
 // (the forms of the other steps of a ladder, D-106: js/forma-*.js, each pure as js/forma.js, putting its generators in by Fo.def)
 const FORMA_FILE = f => /^forma(-[a-z0-9-]+)?\.js$/.test(f);
 // 37. "o grão é do mundo" (L-394): só o passo do mundo pede o grão de uma fazenda ao Estates.grainOf, que o guarda na fazenda

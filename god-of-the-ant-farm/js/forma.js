@@ -1636,6 +1636,17 @@
   // (a column's base: a square slab COLUMN_BASE radii a side, 0.12 m high, at its foot — the 3D draws it so, and the plan keeps
   // its floor off it: L-494)
   Fo.COLUMN_BASE = 2.3;
+  // the rings of a cávea as the 3D draws them and the plan walks them, one rule (L-494, 2): at every radius r the polygon of the
+  // round's SEG sides about the cávea's middle — its corners at the angles k·τ/SEG, the same in the lot's frame (a quarter turn is
+  // twelve of them) —, never the round itself; where a piece ends (the arc's end, a stairway's edge — half its width by the arc
+  // at r) its corner on that polygon. The 3D lays a point of a ring of radius r at the angle th where Fo.ringEdge says; the plan
+  // measures a point by its distance over the edge's there (In.tierPos): drawn as chords and walked as rounds, near a row's
+  // edge a point fell in one row in the plan and in the next in the drawing
+  const SEG = Fo.SEG = 48, SEGA = 2 * Math.PI / SEG; // (the sides round a ring of seats and an arena)
+  // (how far out the edge of the ring of radius r is drawn at the angle th: r at a corner, r·cos(π/SEG) at a side's middle)
+  Fo.ringEdge = (r, th) => { const m = (Math.floor(th / SEGA) + 0.5) * SEGA; return r * Math.cos(SEGA / 2) / Math.cos(th - m); };
+  // (the angles of the corners of an edge from the angle p round to q: its two ends and the polygon's own between them)
+  Fo.ringVerts = (p, q) => { const out = [p]; for (let k = Math.floor(p / SEGA) + 1; k * SEGA < q - 1e-9; k++) if (k * SEGA > p + 1e-9) out.push(k * SEGA); out.push(q); return out; };
   // the highest point of a form (m over the lot's highest ground): its far figure's height and the camera's
   function topOf(els) {
     let t = 0;

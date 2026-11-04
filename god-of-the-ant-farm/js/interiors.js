@@ -1105,10 +1105,15 @@
   const angGap = (a, b) => { const d = ((a - b) % TAU + TAU) % TAU; return Math.min(d, TAU - d); };
   // (a point in a block: how far into it up the rows (s), how deep it is (D), and across it — the angle and the radius of a
   // ring, the coordinate along the rows of a rectangle (c); null out of it)
+  // (a ring's by its edges as the 3D draws them — the polygon of each radius, G.Forma.ringEdge —, not by the round: by the round,
+  // near a row's edge a point fell in one row in the plan and in the next in the drawing, L-494 (2). The radius: the point's
+  // distance over the drawn edge's at its angle — the ring of that radius is drawn through it —, the aisles' edges by it too:
+  // the 3D's stairways are cut half their width by the arc at each radius, their corners on that radius's polygon)
   function tierPos(T, x, z) {
     if (T.kind === 'ring') {
-      const dx = x - T.cu, dz = z - T.cv; const d = Math.hypot(dx, dz); const s = T.dir === 'out' ? d - T.r0 : T.r1 - d; const D = T.r1 - T.r0;
-      if (s < 0 || s >= D) return null; const th = Math.atan2(dz, dx); if (T.arc && !angIn(th, T.arc[0], T.arc[1])) return null;
+      const dx = x - T.cu, dz = z - T.cv; const th = Math.atan2(dz, dx); const d = Math.hypot(dx, dz) / G.Forma.ringEdge(1, th);
+      const s = T.dir === 'out' ? d - T.r0 : T.r1 - d; const D = T.r1 - T.r0;
+      if (s < 0 || s >= D) return null; if (T.arc && !angIn(th, T.arc[0], T.arc[1])) return null;
       return { s, D, th, d };
     }
     const [u0, v0, u1, v1] = T.r; if (x < u0 || x >= u1 || z < v0 || z >= v1) return null; const ns = T.dir === 'n' || T.dir === 's';

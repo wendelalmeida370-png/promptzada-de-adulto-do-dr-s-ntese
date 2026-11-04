@@ -142,10 +142,11 @@ const reachedSeats = p => In.tierSeats(p).filter(q => { const n = p.grid.n, R = 
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const x = cx + dx, z = cz + dz; if (x < 0 || z < 0 || x >= n || z >= n) continue; const k = z * n + x; if (R[k] && (!H || Math.abs(H[k] - q.y) <= In.BODY.step + 1e-6)) return true; } return false; });
 // (the floor of the form's seats at a point of the podium's storey, metres over the lot's ground — the cavea pieces' own
 // rings: the podium's walk, each row, and in an aisle its steps, n to a row within a row's depth — the top ring is its top row
-// and the walk behind it, flat —; null off them)
+// and the walk behind it, flat —; null off them. Each ring's edge as the 3D draws it and the plan walks it: the polygon of its
+// radius — the point's distance over the drawn edge's at its angle, G.Forma.ringEdge (L-494, 2))
 function caveaY(F, u, z) {
   for (const e of F.els) {
-    if (e.k !== 'cavea') continue; const d = Math.hypot(u - e.c[0], z - e.c[1]), th = Math.atan2(z - e.c[1], u - e.c[0]);
+    if (e.k !== 'cavea') continue; const th = Math.atan2(z - e.c[1], u - e.c[0]), d = Math.hypot(u - e.c[0], z - e.c[1]) / Fo.ringEdge(1, th);
     if (d < e.fundo || d > e.aneis[0][0] || !angIn(th, e.arco[0], e.arco[1])) continue;
     const A = e.aneis, n = A.length; let k = n - 1; while (k > 0 && d > A[k][0]) k--; const rIn = k < n - 1 ? A[k + 1][0] : e.fundo;
     const E = e.escadas; if (!E || !E.a.some(a => angGap(th, a) * d <= E.l / 2)) return A[k][1];
@@ -757,8 +758,9 @@ function testeC() {
 
 // =========================================================================================== E — the theatres
 const TSIZES = [6, 8, 10], TSTYLES = ['romano', 'grego', 'classico'];
-// (a point in a piece of the form's rows — its radius within it, its angle in its arc)
-const inPiece = (e, x, z) => { const d = Math.hypot(x - e.c[0], z - e.c[1]); return d >= e.fundo - 1e-6 && d <= e.aneis[0][0] + 1e-6 && angIn(Math.atan2(z - e.c[1], x - e.c[0]), e.arco[0], e.arco[1]); };
+// (a point in a piece of the form's rows — its radius within it, by the polygon of the 3D and the plan (G.Forma.ringEdge), its
+// angle in its arc)
+const inPiece = (e, x, z) => { const th = Math.atan2(z - e.c[1], x - e.c[0]), d = Math.hypot(x - e.c[0], z - e.c[1]) / Fo.ringEdge(1, th); return d >= e.fundo - 1e-6 && d <= e.aneis[0][0] + 1e-6 && angIn(th, e.arco[0], e.arco[1]); };
 // (a point in a block of the form standing on a floor at y — from it up past a body's head —, its rect grown by e)
 const inBlock = (F, x, z, y, e) => F.els.some(q => q.k === 'bloco' && !q.piso && !q.degrau && q.y0 <= y + 0.05 && q.y1 >= y + 2.0 && x > q.r[0] - e && x < q.r[2] + e && z > q.r[1] - e && z < q.r[3] + e);
 function testeE() {
@@ -848,22 +850,27 @@ function testeE() {
         for (const h of hs) { doors++; const x = w.a[0] + (w.b[0] - w.a[0]) * h.at / L2, z = w.a[1] + (w.b[1] - w.a[1]) * h.at / L2; if (inBlock(F, x, z, yb, -0.05)) shut++; } }
       if (off || shut || doors < 3 + (A.dc ? 3 : 0)) out.push(`${tag}: ${off} pontos das paredes da planta fora das da forma (o primeiro ${offAt}), ${shut} de ${doors} portas fechadas na forma`);
       // (L-494: the orchestra drawn a hair over the plan's floor — (1) —; no floor of the plan in a column's base — (3), the 3D's
-      // base of 2.3 radii —; (2), the rows drawn as chords and walked as rounds, is the 3D's and the plan's: counted here)
+      // base of 2.3 radii —; (2), the rows drawn as chords and walked as rounds: below)
       const orq = F.els.find(e => e.k === 'arena'); const d1 = orq.y - (p.levels[0].y); if (d1 < 0 || d1 > 0.015) out.push(`${tag}: a orquestra desenhada a ${d1.toFixed(3)} m do chão da planta (L-494, 1)`);
       let inBase = 0; for (const e of F.els) { if (e.k !== 'colunata') continue; const lc = Math.abs(e.y0 - yb) < 0.2 ? lb : -1; if (lc < 0) continue; const g = p.grid.lv[lc], h = e.r * Fo.COLUMN_BASE / 2;
         for (const [cx, cz] of e.pts) for (let z = Math.floor((cz - h) / CS); z <= Math.floor((cz + h) / CS); z++) for (let x = Math.floor((cx - h) / CS); x <= Math.floor((cx + h) / CS); x++) { const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS; if (Math.abs(mx - cx) < h && Math.abs(mz - cz) < h && g[z * N + x] === CELL.FLOOR) inBase++; } }
       if (inBase) out.push(`${tag}: ${inBase} casinhas de chão na base de uma coluna (L-494, 3)`);
-      let poly = 0; for (const e of pieces) { const span = e.arco[1] - e.arco[0], nS = Math.max(4, Math.round(48 * span / TAU)); const bnd = e.aneis.map(q => q[0]).concat([e.fundo]);
-        for (let k = 0; k < N * N; k++) { if (!p.reach[0][k]) continue; const x = (k % N + 0.5) * CS, z = (Math.floor(k / N) + 0.5) * CS; if (!inPiece(e, x, z)) continue; const d = Math.hypot(x - e.c[0], z - e.c[1]), th = Math.atan2(z - e.c[1], x - e.c[0]);
-          const ph = ((th - e.arco[0]) % TAU + TAU) % TAU % (span / nS) - span / nS / 2, dp = d * Math.cos(ph) / Math.cos(span / nS / 2); if (bnd.some(r => (d < r) !== (dp < r))) poly++; } }
-      said.push(`${tag}: ${cells} casinhas andadas no chão, o chão a ${worst.toFixed(3)} m da forma, ${doors} portas nas aberturas da forma, a orquestra ${(d1 * 100).toFixed(1)} cm sobre o chão; L-494 (2): ${poly} casinhas`);
+      // (L-494 (2): the rows drawn as chords and walked as rounds — one polygon now for the 3D and the plan, G.Forma.ringEdge —:
+      // every reached cell of the rows, a step's edge too, on the form's floor by it; and, to read, how many lie between the round
+      // and the polygon of an edge — the ones the round put in another row than the drawing)
+      let poly = 0, band = 0, polyAt = ''; for (const e of pieces) { const bnd = e.aneis.map(q => q[0]).concat([e.fundo]);
+        for (let k = 0; k < N * N; k++) { if (!p.reach[0][k]) continue; const x = (k % N + 0.5) * CS, z = (Math.floor(k / N) + 0.5) * CS; if (!inPiece(e, x, z)) continue;
+          const th = Math.atan2(z - e.c[1], x - e.c[0]), d = Math.hypot(x - e.c[0], z - e.c[1]), dp = d / Fo.ringEdge(1, th); if (bnd.some(r => (d < r) !== (dp < r))) band++;
+          if (Math.abs(In.floorYOf(p, 0, x, z) - caveaY(F, x, z)) > 1e-6) { poly++; if (!polyAt) polyAt = `(${x.toFixed(2)}, ${z.toFixed(2)})`; } } }
+      if (poly) out.push(`${tag}: ${poly} casinhas das fileiras com o chão da planta fora do da forma (a primeira ${polyAt}; L-494, 2)`);
+      said.push(`${tag}: ${cells} casinhas andadas no chão, o chão a ${worst.toFixed(3)} m da forma, ${doors} portas nas aberturas da forma, a orquestra ${(d1 * 100).toFixed(1)} cm sobre o chão; L-494 (2): ${poly} casinhas fora da forma (${band} entre o redondo e o polígono)`);
     }
     // (the classic theatre — the Greek's and the classical people's, the one of before (antigo) —: no floor in its columns' bases)
     for (const st of ['grego', 'classico']) { const n0 = G.BDEF.teatro.w; const { b, p } = planOf('teatro', st, n0, 'S', (nid += 37)); if (!p || !p.ok) { out.push(`o teatro antigo ${st}: não se arma`); continue; }
       const F = Fo.of('teatro', st, n0), N = p.grid.n, g = p.grid.lv[0]; let inBase = 0;
       for (const e of F.els) { if (e.k !== 'colunata') continue; const h = e.r * Fo.COLUMN_BASE / 2; for (const [cx, cz] of e.pts) for (let z = Math.floor((cz - h) / CS); z <= Math.floor((cz + h) / CS); z++) for (let x = Math.floor((cx - h) / CS); x <= Math.floor((cx + h) / CS); x++) { const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS; if (Math.abs(mx - cx) < h && Math.abs(mz - cz) < h && g[z * N + x] === CELL.FLOOR) inBase++; } }
       if (inBase) out.push(`o teatro antigo ${st}: ${inBase} casinhas de chão na base de uma coluna (L-494, 3)`); else said.push(`o teatro antigo ${st} (${b.w} casas): nenhuma casinha de chão na base de uma coluna`); }
-    ok('E3 a forma × a planta dos teatros: o chão e as fileiras na altura da forma, nada andado nos muros, as paredes e as portas da planta nas da forma; a L-494 (1) e (3)', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
+    ok('E3 a forma × a planta dos teatros: o chão e as fileiras na altura da forma, nada andado nos muros, as paredes e as portas da planta nas da forma; a L-494 (1), (2) e (3)', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
   }
   // ---------------------------------------------------------------- E4 the feet, on a blank world
   {
