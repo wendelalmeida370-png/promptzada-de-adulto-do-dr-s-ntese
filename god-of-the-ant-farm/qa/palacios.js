@@ -1,7 +1,8 @@
 // palacios: o palácio, os banhos e o paço de cada povo pela sua forma (D-093; a decisão do líder de 29/10: a família pela forma
 // dos três no int-monumentos.js, com os móveis do P4), em Node, sem mundo gerado, sobre o código do jogo:
 //   1. cada um se arma em todo povo e lado pela família da forma (forma.palacio, forma.banhos, forma.paco), a que o tipo
-//      prefere; o grande palácio e o colossal ficam com as plantas deles (não têm o corpo da forma)
+//      prefere; o grande palácio e o colossal do lote clássico ficam com as plantas deles (não têm o corpo da forma; os degraus
+//      maiores, o palácio de pátios de forma-poder.js, são do qa/monumental-poder.js)
 //   2. a casca pelo corpo da forma: as paredes no pé dela, o piso na altura dela — sobre a base maciça, um passo ou mais acima do pé (L-390), ou no chão —, a porta,
 //      as janelas; o pórtico com cada coluna onde a forma a tem e a rua entrando pelo vão diante do lance; o portão do pilone
 //      do palácio egípcio (a passagem sob a verga até a face do portão, um vão sempre aberto); a passagem do temazcal sob o
@@ -64,7 +65,9 @@ const formOf = m => G.Forma.of(m.t, m.c), body = m => G.Forma.body(formOf(m));
 // ---------------------------------------------------------------- 1. by the form, everywhere
 {
   const bad = made.filter(m => !m.p.ok); const no = Object.keys(offer).filter(k => !offer[k].ok || offer[k].pref !== FAM(offer[k].t));
-  const keep = ['grande_palacio', 'palacio_colossal'].filter(t => In.TYPES[t] && (In.TYPES[t].fams || []).some(f => /^forma\./.test(f)));
+  // (the great palace and the colossal of their classic lots — of the type's table — with the recipe's families: the form's is
+  // offered them only at a bigger step, the palace of courts of forma-poder.js — qa/monumental-poder.js, B)
+  const keep = ['grande_palacio', 'palacio_colossal'].filter(t => In.TYPES[t] && POVOS.some(c => In.familiesFor(rec(t, c, '', 'S')).ok.some(f => /^forma\./.test(f))));
   ok('1a o palácio, os banhos e o paço se armam em todo povo e lado pela família da forma, a que o tipo prefere (o grande palácio e o colossal com as suas)', !bad.length && !no.length && !keep.length,
     `${made.length - bad.length} de ${made.length} plantas${no.length ? '; sem a forma: ' + no.map(k => `${k} (${offer[k].why || 'não preferida: ' + offer[k].pref})`).join(', ') : ''}${bad.length ? '; ' + bad.slice(0, 3).map(m => `${tag(m)} ${m.s}: ${m.p.errs.slice(0, 2).join(' | ')}`).join(' / ') : ''}${keep.length ? '; com a família da forma sem ter corpo: ' + keep.join(', ') : ''}`);
 }

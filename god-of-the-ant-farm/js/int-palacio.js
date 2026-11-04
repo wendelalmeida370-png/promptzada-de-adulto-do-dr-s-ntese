@@ -26,11 +26,17 @@
   const VP = { terreo: '', andar: 'com andar de aposentos', terraco: 'com terraço' };
   const PT = ['palacio', 'grande_palacio', 'palacio_colossal'];
   const pfams = [];
+  // (the recipe's palaces are the classic steps' — the lot of the type's table —; a bigger step is its form's: forma.palacio, below)
+  const classicLot = rec => In.nOf(rec) === ((G.BDEF[rec.t] || {}).w || 1);
   for (const h in HP) for (const v in VP) {
     const id = 'pal-' + h + '.' + v; pfams.push(id);
-    In.addFamilies([{ id, H: 'pal-' + h, V: v, name: HP[h] + (VP[v] ? ' ' + VP[v] : ''), can: (rec, T, tr) => (v === 'terraco' ? K.flatOK(rec, tr) : null), build: P => palace(P) }]);
+    In.addFamilies([{ id, H: 'pal-' + h, V: v, name: HP[h] + (VP[v] ? ' ' + VP[v] : ''), can: (rec, T, tr) => (!classicLot(rec) ? 'o palácio de um degrau maior é o da forma' : v === 'terraco' ? K.flatOK(rec, tr) : null), build: P => palace(P) }]);
   }
-  const ptypes = {}; for (const t of PT) ptypes[t] = { use: 'palacio', fams: pfams, lockNight: 1, need: { trono: 1 } };
+  // (the colossal's ten tiles laid out by the form's family too — the palace's is In.formType's, int-monumentos.js —, offered
+  // only where its form of that size is the people's: In.formSized below. First in its list: where the catalogue answers for
+  // the bigger step with the classic one's row — In.familiesFor's second key has no size: the leader's, M2's report —, a record
+  // of ten that finds no family offered is given the list's first, as every record is)
+  const ptypes = {}; for (const t of PT) ptypes[t] = { use: 'palacio', fams: t === 'palacio_colossal' ? ['forma.palacio'].concat(pfams) : pfams, lockNight: 1, need: { trono: 1 } };
   In.addTypes(ptypes);
 
   // (the shell — from the record and the family alone — is the outside: the court, the wings' outer walls storey by storey,
@@ -219,6 +225,108 @@
     for (const f of [[throne, kitchen, chambers, store, banquet, guard], [chambers, throne, kitchen, banquet, store, guard], [kitchen, throne, chambers, guard, banquet, store]][P.attempt % 3]) f();
     P.opt(() => P.place('fonte', 0, rooms.court, { sides: ['centro'], margin: 0.6 }));
   }
+
+  // ------------------------------ the palace by its form: the bigger steps (D-106) ------------------------------
+  // The palace of six tiles and the colossal of ten — the palace of courts of js/forma-poder.js — laid out from the risk its form
+  // keeps (the podium's element: e.palacio), the numbers the god paints. Its shell: the block of wings round the court
+  // (P.shell.court), on the podium — a solid base, the floor its top —, the people's roof round the court; its outer walls storey
+  // by storey (the wing of state's as high as the eaves) and their windows; the front of the open court (the screen of columns,
+  // the pylon's wall, the palisade) or the court of honour (P.yard: its balustrade or its wall, its gate) and the porch (an annex,
+  // its columns where the form stands them); the flight up from the street on the form's treads; the street's gate, the way in.
+  // Its inside: the court's walls and the partitions with their doors and windows, the rooms where the risk has them, the stairs
+  // up to the chambers, the court's fountain and what stands on the courts' floors (the form's pieces: the plan keeps the feet
+  // off them); then the furniture, the plan's own dice placing it — the throne against the throne hall's back wall in its middle,
+  // the audience before it, the court's benches along its sides, the guard either side; the benches of those who come to wait in
+  // the hall of audience and the vestibule; the council's table and the scribes'; the guard's rack and cots; the kitchen's fire,
+  // the banquet's tables, the treasury's chests; a bed in every chamber; the guards at the gate (vigiar). In the form's family
+  // (forma.palacio), where the form of that size is the people's (In.formSized, int-civicos.js)
+  const FM = { form: 1 }; // (a piece the form draws: the plan only keeps the feet off it)
+  // (which of the world's sides each of the plan's faces is, by the side the plan opens to: the bits of rec.pw — int-quadras.js)
+  const PARTY = { S: { frente: 4, fundo: 1, direita: 2, esquerda: 8 }, N: { frente: 1, fundo: 4, direita: 8, esquerda: 2 }, E: { frente: 2, fundo: 8, direita: 1, esquerda: 4 }, W: { frente: 8, fundo: 2, direita: 4, esquerda: 1 } };
+  const riskOf = F => { const e = F && F.els.find(q => q.palacio); return e ? e.palacio : null; };
+  function palaceByForm(P, F) {
+    const R = riskOf(F); if (!R) { P.errs.push('o palácio sem o risco da forma'); return; }
+    P.shell = { kind: 'rect', r: R.B.slice(), t: R.t, mat: R.mat, base: R.Hp >= In.BODY.step ? 'macica' : 'pedra', baseH: R.Hp, floors: R.two ? 2 : 1, eave: R.eave, court: R.C.slice() };
+    P.roof = { kind: R.roof.kind, along: null, h: R.roof.h, over: R.roof.over, court: R.C.slice() };
+    for (const l of R.levels) P.level(l.lv, l.y, l.h, l.kind, l.area);
+    P.entryLv = 0;
+    // (a wall of the risk and its openings: a window — none in a side against another building's wall at the founding: a party
+    // wall, rec.pw —, a door — the street's where the risk says so —; the rooms either side of a door are found by where it
+    // falls, when the plan is finished)
+    let gate = -1; const blind = side => !!(side && P.rec.pw & ((PARTY[P.rec.s] || PARTY.S)[side] || 0));
+    const lay = w => {
+      const id = P.wall(w.lv, w.a, w.b, w.t, w.h, w.outer, w.kind);
+      for (const o of w.ops) {
+        const at = r2(P.atOf(id, o.p));
+        if (o.k === 'janela') { if (!(w.outer && blind(w.side))) P.window(id, at, o.w, o.h, o.sill); }
+        else { const d = P.door(id, at, o.w, o.h, -1, o.rua ? 'rua' : -1, o.rua ? 1 : 0, o.k === 'portal' ? 'porta' : o.k); if (o.rua) gate = d; }
+      }
+      return id;
+    };
+    for (const w of R.walls) if (w.casca) lay(w);
+    // (the porch: an annex open at its sides, as high as its columns; the columns of the risk — the porch's between it and the
+    // court of honour, the screen across the open court's front with the street's gate in its middle bay — each where the form
+    // stands it)
+    if (R.porch) { const c = R.cols.find(q => q.porch); P.annex.push({ r: R.porch.slice(), h: c ? c.h : R.Hw, fn: 'portico', lv: 0, roof: 'portico' }); }
+    for (const c of R.cols) {
+      const s = c.pts.slice().sort((a, b) => a[0] - b[0]); const lo = r2(s[0][0] - c.rc), hi = r2(s[s.length - 1][0] + c.rc), at = s[0][1];
+      const out = P.colonnade(0, [hi, at], [lo, at], { at: s.map(q => r2(hi - q[0])).reverse(), col: r2(2 * c.rc), h: c.h, dh: c.h, outer: c.front ? 1 : 0, door: c.front ? c.rua : undefined, rua: !!c.front });
+      if (c.front) gate = out.door;
+    }
+    if (R.yard) P.yard = { r: R.yard.slice(), h: R.yardH, lv: 0 }; // (the court of honour: the shell's yard, its edge as high as the risk has it)
+    // (the flight from the street up to the podium: one, on the form's own treads)
+    P.stair('degraus', -1, 0, R.stair.slice(), 0, -1, null, { larga: R.sw >= 1.2 ? 1 : 0, treads: R.treads.map(q => ({ r: q.r.slice(), y: q.y })) });
+    if (gate < 0) { P.errs.push('o palácio sem a porta da rua'); return; }
+    P.entrance = { door: gate, u: R.gate.u, v: R.gate.v, w: R.gate.w, lv: 0 };
+    if (P.inside()) return;
+    // ======== the inside ========
+    for (const w of R.walls) if (!w.casca) lay(w);
+    const ids = R.rooms.map(m => P.room(m.lv, m.fn, m.r, m.open));
+    for (const s of R.stairs) P.stair('escada', s.lv0, s.lv1, s.r.slice(), s.du, s.dv, s.hole.slice());
+    const fo = R.fonte; const c = fo.c;
+    if (!P.at('fonte', 0, ids[R.courtRoom], [c[0] - fo.r, c[1] - fo.r, c[0] + fo.r, c[1] + fo.r].map(r2), 0, 1, FM)) { P.errs.push('a fonte do pátio onde a planta não a põe'); return; }
+    for (const p of R.pieces) if (!P.at('solido', 0, ids[p.room], p.r.slice(), 0, 1, { h: p.h, form: 1 })) { P.errs.push(`${p.k} da forma onde a planta não o põe (${p.r.join(', ')})`); return; }
+    palaceFormFurnish(P, R, ids);
+  }
+  // the furniture of the palace by its form: by what each room is for (the risk's), the places of the guard where they stand
+  function palaceFormFurnish(P, R, ids) {
+    const tr = P.tr; const lvOf = k => R.rooms[k].lv; const rect = k => R.rooms[k].r; const L = R.L;
+    // (a place to stand with no piece — the guard's —, its room kept clear of furniture first)
+    const guard = (k, pts) => { for (const q of pts) P.zones.push({ lv: lvOf(k), r: [q[0] - 0.4, q[1] - 0.4, q[0] + 0.4, q[1] + 0.4].map(r2) }); return () => P.marks(lvOf(k), ids[k], 'vigiar', pts.map(q => [r2(q[0]), r2(q[1]), q[2]]), { st: 'idle' }); };
+    const later = [];
+    // the throne: against the back wall in the middle, the audience's room before it kept clear, its two lamps, the guard either
+    // side of it, the benches of the court along the sides
+    { const k = R.throne, r = rect(k), id = ids[k]; const cu = r2((r[0] + r[2]) / 2);
+      const th = P.at('trono', 0, id, [r2(cu - 0.5), r2(r[1] + 0.05), r2(cu + 0.5), r2(r[1] + 0.85)], 0, 1); if (!th) { P.errs.push('sem lugar para o trono'); return; }
+      P.zones.push({ lv: 0, r: [r2(th.r[0] - 0.3), th.r[3], r2(th.r[2] + 0.3), r2(th.r[3] + 1.8)] });
+      later.push(guard(k, [[cu - 2.2, r[1] + 1.0, 0], [cu + 2.2, r[1] + 1.0, 0]]));
+      P.opt(() => { for (const du of [-1.2, 1.2]) P.at('lampadario', 0, id, [r2(cu + du - 0.225), r2(r[1] + 0.05), r2(cu + du + 0.225), r2(r[1] + 0.5)], 0, 1); });
+      if (R.NO) P.opt(() => P.at('lar', 0, id, [r2(cu - 0.6), r2((r[1] + r[3]) / 2 - 0.4), r2(cu + 0.6), r2((r[1] + r[3]) / 2 + 0.4)], 0, 1)); // (the great hall's hearth in its middle)
+      let n = 0; for (const s of ['esquerda', 'direita']) for (let g = 0; g < 3; g++) if (P.place('banco', 0, id, { sides: [s] })) n++;
+      if (n < 4) { P.errs.push(`só ${n} bancos no salão do trono`); return; } }
+    // (the guards at the street's gate, inside it: either side of its way — the Egyptian's in the passage between the towers)
+    { const open = R.big ? R.yardRoom : R.courtRoom; const r = rect(open); const gw = R.gate.w; const du = R.EG ? Math.max(0.6, gw / 2 - 0.7) : gw / 2 + 0.9;
+      later.push(guard(open, [[L / 2 - du, r[3] - 1.0, 0], [L / 2 + du, r[3] - 1.0, 0]])); }
+    if (R.vest >= 0) { const r = rect(R.vest); later.push(guard(R.vest, [[L / 2 - 1.9, r[3] - 0.9, Math.PI], [L / 2 + 1.9, r[3] - 0.9, Math.PI]])); }
+    const fire = id => { const f = tr.fire === 'lar' ? 'lar' : tr.fire || 'fogao'; return (f === 'lar' && P.place('lar', 0, id, { sides: ['livre'], margin: 0.6 })) || P.place(f === 'lar' || f === 'forno' ? 'fogao' : f, 0, id) || P.place('fogao', 0, id) || P.place('braseiro', 0, id); };
+    let beds = 0;
+    for (const m of R.rooms) {
+      const id = ids[m.id], lv = m.lv;
+      if (m.fn === 'audiencia' || m.fn === 'vestibulo') P.opt(() => { for (const s of ['esquerda', 'direita', 'fundo']) for (let g = 0; g < 2; g++) P.place('banco', lv, id, { sides: [s] }); if (m.fn === 'audiencia') P.place('lampadario', lv, id, { sides: ['livre'], margin: 0.8 }); });
+      else if (m.fn === 'conselho') { P.opt(() => { P.place('mesa-conferencia', lv, id, { sides: ['livre'], margin: 0.8 }); for (let g = 0; g < 2; g++) P.place('mesa-escriba', lv, id); P.place('cofre', lv, id); }); }
+      else if (m.fn === 'escritorio' || m.fn === 'estudo') P.opt(() => { for (let g = 0; g < (m.fn === 'estudo' ? 1 : 2); g++) P.place('mesa-escriba', lv, id); P.place('arca', lv, id); });
+      else if (m.fn === 'cozinha') { if (!fire(id)) { P.errs.push('sem lugar para o fogo da cozinha'); return; } P.opt(() => { P.place('mesa', lv, id, { sides: ['livre'] }); P.place('jarros', lv, id); }); }
+      else if (m.fn === 'banquete') P.opt(() => { for (let g = 0; g < 2; g++) if (P.place('mesa', lv, id, { sides: ['livre'], margin: 0.6 })) P.place('banco', lv, id); P.place('jarros', lv, id); });
+      else if (m.fn === 'guarda') P.opt(() => { P.place('armeiro', lv, id); P.place('banco', lv, id); P.place('catre', lv, id); });
+      else if (m.fn === 'tesouro') P.opt(() => { for (let g = 0; g < 2; g++) P.place('cofre', lv, id); P.place('arca', lv, id); });
+      else if (m.fn === 'aposento') { if (P.place('cama-casal', lv, id) || P.place('cama', lv, id)) { beds++; P.opt(() => P.place('arca', lv, id)); } }
+      else if (m.fn === 'patio') P.opt(() => { for (let g = 0; g < 2; g++) P.place('banco', lv, id, { sides: ['livre'], margin: 1.2 }); });
+    }
+    if (!beds) { P.errs.push('sem cama nos aposentos'); return; }
+    for (const f of later) f();
+  }
+  In.formSized('palacio', palaceByForm); In.formSized('palacio_colossal', palaceByForm);
+  In.riskOf = riskOf; // (for the proofs: the risk a palace's plan is laid out from)
 
   // ------------------------------ the fair ------------------------------
   // no walls and no roof: the lot's own ground, open on every side (its shell 'aberta'); the stalls in rows along the lanes

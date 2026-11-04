@@ -204,6 +204,7 @@
   // not walked: no floor of the plan there
   function amphitheatre(P, F) {
     const A = F.amphi; if (!A) { P.errs.push('a forma do anfiteatro sem os seus números'); return; }
+    if (A.oval) { coliseu(P, F, A.oval); return; } // (the Colosseum of a capital, the split oval: D-107)
     const L = P.L, m = 0.1; const sh = [m, m, L - m, L - m]; const [cu, cv] = A.c; const hw = A.aw / 2; const ro = A.fundo + A.tr1;
     P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: 'chao', floors: 1, eave: 0 }; P.roof = null;
     // (the storeys: the ground — the passage, the undercroft —, the sand, the podium)
@@ -240,6 +241,88 @@
       watch.push([cu + rw * Math.cos(a), cv + rw * Math.sin(a), Math.atan2(-Math.cos(a), -Math.sin(a))]);
     }
     P.marks(2, po, 'assistir', watch, { st: 'idle' });
+  }
+  // the Colosseum of a capital (the steps of 10 and 13 tiles, js/forma-espetaculo.js — D-107): its plan the form's split oval.
+  // Three storeys: the ground — the square round it, the four passages through it on its axes (their walls the ends of the
+  // rows either side), and under the sand the undercroft, its long corridor in from the right passage and the cross one, the
+  // cages behind their walls (seen, not gone into) —; the sand; the podium and the rows over it. The way in from the street at
+  // the lot's front, across the square to any of the four arches; from the front and the back passages the flight up to the
+  // podium's landing, from the left one the flight up to the gate of the sand, from the undercroft the flight up through the
+  // hatch. On the podium, standing at its parapet, the places to watch from; the rows of each wedge of the oval a block of
+  // P.tiers (an aisle up its middle, two steps a row), on the form's rings; on the sand, the places to fight. The walk only where
+  // the form has floor: each storey's rooms are rectangles of the lot, and what they hold that is no floor of the form — the
+  // facade, the solid under the rows, the sand's quarters on the podium's storey, the lot's corners on the rows' — is shut in
+  // by walls where the form has its faces (the facade's, the podium's, the ends of the rows), and never reached
+  function coliseu(P, F, O) {
+    const L = P.L, m = 0.1; const sh = [m, m, L - m, L - m];
+    const { cu, cv, g, h, Au, Bv, ya, yb, dp } = O; const hg = g / 2, hh = h / 2, W = O.ways; const wt = 0.2; const y0 = groundOf(F, L); // (the square's top)
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y0), baseH: y0, floors: 1, eave: 0 }; P.roof = null;
+    P.level(0, y0, ya - y0, 'chao', sh); P.entryLv = 0;
+    P.level(1, ya, yb - ya, 'arena', [cu - Au, cv - Bv, cu + Au, cv + Bv]);
+    P.level(2, yb, 2.6, 'sacada', [cu - Au - O.D, cv - Bv - O.D, cu + Au + O.D, cv + Bv + O.D]);
+    wayIn(P, sh[0], sh[2], sh[3], [O.way]);
+    // (a wall along a side a → b moved out by d — to the right of its way round, the outside of the oval —, t thick, h high)
+    const along = (lv, a, b, d, t, ht, kind) => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; const nx = (b[1] - a[1]) / l, nz = -(b[0] - a[0]) / l;
+      return P.wall(lv, [r2(a[0] + nx * d), r2(a[1] + nz * d)], [r2(b[0] + nx * d), r2(b[1] + nz * d)], t, ht, 0, kind || 'parede'); };
+    // the ground: the facade — its bays, as thick as it is, the arches on the axes the ways through it —; the walls of the
+    // passages and of the undercroft's corridors (on the lines of the rows' ends, outside the passages); the foundation of the
+    // podium round the sand, but where the left passage's flight comes up to the gate and the right passage goes in under it
+    const nb = O.nb, mid = O.pts.map((p, k) => [(p[0] + O.pts1[k][0]) / 2, (p[1] + O.pts1[k][1]) / 2]);
+    for (let k = 0; k < nb; k++) {
+      const w = P.wall(0, mid[k].map(r2), mid[(k + 1) % nb].map(r2), O.t, O.storeys[0], 0, 'parede');
+      if (O.axes.includes(k)) P.door(w, P.wlen(w) / 2, O.aw, O.ah, -1, -1, 0, 'arco');
+    }
+    const ax = k => O.pts1[k]; const vF = ax(O.axes[1])[1], vB = ax(O.axes[3])[1], uR = ax(O.axes[0])[0], uL = ax(O.axes[2])[0]; // (the facade's inner face on each axis)
+    for (const s of [-1, 1]) {
+      const u = cu + s * (hg + wt / 2), v = cv + s * (hh + wt / 2);
+      P.wall(0, [r2(u), r2(cv + hh)], [r2(u), r2(vF)], wt, yb, 0, 'parede'); P.wall(0, [r2(u), r2(cv - hh)], [r2(u), r2(vB)], wt, yb, 0, 'parede');
+      P.wall(0, [r2(cu + hg), r2(v)], [r2(uR), r2(v)], wt, yb, 0, 'parede'); P.wall(0, [r2(cu - hg), r2(v)], [r2(uL), r2(v)], wt, yb, 0, 'parede');
+    }
+    const edge = O.sides(0);
+    for (const e of edge) if (e.i !== 6 && e.i !== 0 && e.i !== 12) along(0, e.a, e.b, wt / 2, wt, ya);
+    // the sand: the podium's wall round it, the gate at its left end — under the bridge, as high as the sand leaves (2.2 m) — open
+    for (const e of edge) { const w = along(1, e.a, e.b, wt / 2, wt, yb - ya); if (e.i === 6) P.door(w, P.wlen(w) / 2, r2(P.wlen(w) - 0.2), r2(yb - 0.3 - ya), -1, -1, 0, 'vao'); }
+    // the podium's storey: its parapet round the sand — on the landings and the bridges too —; along the passages, on the rows,
+    // over the drop; on the bridges' outer edges; the facade's inner face behind the rows' top
+    for (const e of edge) along(2, e.a, e.b, 0.06, 0.12, 0.9, 'parapeito');
+    const hp = r2(O.yTop - yb + 0.9);
+    for (const s of [-1, 1]) {
+      const u = cu + s * (hg + 0.06), v = cv + s * (hh + 0.06);
+      P.wall(2, [r2(u), r2(cv + Bv + dp)], [r2(u), r2(vF)], 0.12, hp, 0, 'parapeito'); P.wall(2, [r2(u), r2(cv - Bv - dp)], [r2(u), r2(vB)], 0.12, hp, 0, 'parapeito');
+      P.wall(2, [r2(cu + Au + dp), r2(v)], [r2(uR), r2(v)], 0.12, hp, 0, 'parapeito'); P.wall(2, [r2(cu - Au - dp), r2(v)], [r2(uL), r2(v)], 0.12, hp, 0, 'parapeito');
+      const ub = cu + s * (Au + dp - 0.06); P.wall(2, [r2(ub), r2(cv - hh)], [r2(ub), r2(cv + hh)], 0.12, 0.9, 0, 'parapeito');
+    }
+    for (let k = 0; k < nb; k++) along(2, O.pts1[k], O.pts1[(k + 1) % nb], wt / 2, wt, 2.6);
+    // (the flights: up to the podium's landings, rising toward the sand; up to the gate; up from the undercroft through the hatch)
+    P.stair('escada', 0, 2, W.frente.r, 0, -1, null); P.stair('escada', 0, 2, W.fundo.r, 0, 1, null);
+    P.stair('escada', 0, 1, W.esquerda.r, 1, 0, null); P.stair('escada', 0, 1, O.hypo.r, 0, 1, O.hatch);
+    // (the rows: each wedge of the oval, the form's own rings about its own centre)
+    for (const B of O.blocks) P.tiers(2, null, { ring: [B.c[0], B.c[1], B.r0, B.r1], arc: B.arco, dir: 'out', rows: O.rows, rise: O.rise, tread: O.tread, first: O.rise, aisles: B.aisles, aisleW: 1.0, climb: 2 });
+    if (P.inside()) return;
+    // (the rooms, rectangles of the lot: on the ground the four quarters and the passages between them, the crossing under the
+    // middle of the sand; the sand; on the podium's storey the four quarters, the landings and the bridges)
+    const quad = (su, sv) => [su > 0 ? cu + hg : m, sv > 0 ? cv + hh : m, su > 0 ? L - m : cu - hg, sv > 0 ? L - m : cv - hh].map(r2);
+    for (const [su, sv] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) P.room(0, 'praca', quad(su, sv), 1);
+    for (const r of [[cu - hg, cv + hh, cu + hg, L - m], [cu - hg, m, cu + hg, cv - hh], [m, cv - hh, cu - hg, cv + hh], [cu + hg, cv - hh, L - m, cv + hh]]) P.room(0, 'passagem', r.map(r2), 1);
+    P.room(0, 'subsolo', [cu - hg, cv - hh, cu + hg, cv + hh].map(r2), 0);
+    const ar = P.room(1, 'arena', [cu - Au, cv - Bv, cu + Au, cv + Bv].map(r2), 1);
+    for (const [su, sv] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) P.room(2, 'cavea', quad(su, sv), 1);
+    for (const r of [W.frente.landing, W.fundo.landing, W.esquerda.bridge, W.direita.bridge]) P.room(2, 'podio', r, 1);
+    // (the posts round the square: solid at their feet — the form's, FM)
+    for (const e of F.els) { if (e.k !== 'coluna') continue; const id = P.rooms.findIndex(q => q.lv === 0 && In.inRoomPt(q, e.c[0], e.c[1]));
+      if (id < 0 || !P.at('solido', 0, id, [e.c[0] - e.r, e.c[1] - e.r, e.c[0] + e.r, e.c[1] + e.r].map(r2), 0, 1, Object.assign({ h: e.y1 }, FM))) { P.errs.push('um marco da praça onde a planta não o põe'); return; } }
+    // (who fights: on the sand, two and two facing each other, off the hatch)
+    const fight = []; for (const [du, dv] of [[-0.55, 0], [0.32, -0.27], [-0.32, -0.27], [0.55, 0]]) { const u = cu + du * Au, v = cv + dv * Bv; fight.push([r2(u - 0.55), r2(v), Math.PI / 2], [r2(u + 0.55), r2(v), -Math.PI / 2]); }
+    stage(P, 1, ar, 'lutar', fight, { st: 'fight' });
+    // (who watches standing: along the podium, 0.52 m in from its parapet, every 0.8 m, facing the sand — but on the landings and
+    // the bridges, where the flights come up and the passages are crossed)
+    const watch = []; const cIn = (u, v) => (v > cv + hh || v < cv - hh) && (u > cu + hg || u < cu - hg); let run = 0.4;
+    for (const e of O.sides(0.52, 0.05)) { const l = Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]); if (e.i % 3 === 0) { run = 0.4; continue; } // (each arc's from 0.4 m on)
+      const nx = -(e.b[1] - e.a[1]) / l, nz = (e.b[0] - e.a[0]) / l;
+      for (; run < l; run += 0.8) { const f = run / l; const u = e.a[0] + (e.b[0] - e.a[0]) * f, v = e.a[1] + (e.b[1] - e.a[1]) * f; if (cIn(u, v)) watch.push([r2(u), r2(v), Math.atan2(nx, nz)]); }
+      run -= l; }
+    for (const [su, sv] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) { const id = P.rooms.findIndex(q => q.lv === 2 && q.fn === 'cavea' && In.inRoomPt(q, cu + su * (hg + 1), cv + sv * (hh + 1)));
+      P.marks(2, id, 'assistir', watch.filter(q => Math.sign(q[0] - cu) === su && Math.sign(q[1] - cv) === sv), { st: 'idle' }); }
   }
   const THEATRE = { grego: halfBowl, classico: halfBowl, egipcio: garden, asteca: ballCourt, nordico: meadHall, romano: amphitheatre };
 

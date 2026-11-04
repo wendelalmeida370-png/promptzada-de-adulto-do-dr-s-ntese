@@ -172,6 +172,8 @@
     try { relayout(); } finally { rot = kr; spin = ks; }
     if (ks) ks.laidFor = r;
   }
+  // (for the proofs: fn asked as the view of the side r would answer it — proj, depth, R.bkey —, the view itself untouched)
+  R.asView = function (r, fn) { const ks = spin, kr = rot; rot = mod4(r); spin = null; try { return fn(); } finally { rot = kr; spin = ks; } };
   // while turning: paint, a part at a time, the pictures of the side the turn is heading for
   function paintTarget(ms) {
     if (!spin || spin.laidFor !== spin.target) return;
@@ -919,6 +921,14 @@
   const drawList = []; let drawN = 0;
   const lights = []; // [sx, sy, r, color, a]
   const emisWin = []; const emisFire = []; const emisGlow = []; const emisTorch = []; const overlays = [];
+  // ---- a big building among the people (D-106): sorted by the depth of the middle of its lot — of its two side corners, a
+  // square lot's — whoever stands beside it or behind it is drawn on the right side of it. Beside a square lot, in any column of
+  // the screen, the lot's front is never nearer the eye than its side corners nor its back farther: one standing out of the lot
+  // in front of a face it shows is deeper than them, one behind it less deep. The front corner, a hand back, put a person
+  // beside a building of 10 tiles behind its wall (the rule kept for those under 3 tiles; the open grounds — a square, a ruin, a
+  // graveyard, a pen, a campfire, the stable and the fair, the fields, whose pieces the hooks sort each by its own — keep theirs) ----
+  const BIGW = 3; const FLATB = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1, curral: 1, estabulo: 1, feira: 1 };
+  R.bkey = function (b) { const [cx, cy] = G.Village.center(b); return b.type === 'praca' ? depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : b.w >= BIGW && !FLATB[b.type] && !(G.BDEF[b.type] || {}).field ? depth(cx, cy) - 0.15 : depth(cx, cy) + (b.w + b.h) / 2 - 0.8; };
   function pushD(d, type, o, sx, sy) {
     let e = drawList[drawN]; if (!e) { e = {}; drawList[drawN] = e; }
     e.d = d; e.t = type; e.o = o; e.sx = sx; e.sy = sy; drawN++;
@@ -986,7 +996,7 @@
         if (G.VR() < dt * 1.3) G.FX.spawn({ x: cx + G.vrr(-0.1, 0.1), y: cy + G.vrr(-0.1, 0.1), z: 10, vz: G.vrr(12, 22), vx: wx * 0.6, vy: wy * 0.6, life: G.vrr(2, 3.5), s0: 3, s1: 9, c: 'rgba(150,150,150,0.3)', k: 2 });
         if (G.VR() < dt * 2.2) G.FX.spawn({ x: cx, y: cy, z: 5, vz: G.vrr(20, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: G.vrr(0.6, 1.4), s0: 0.9, s1: 0.2, c: '#ffc060', k: 4, layer: 1 });
       } else if (SMOKE[b.type] && (KILN[b.type] || b.type === 'banhos' || G.VR() < 0.5 + night)) {
-        const dv = doorView(b); const spr = homeSprite(b, false) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back); // (the chimney of the picture drawn)
+        const dv = doorView(b); const spr = homeSprite(b, false) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back, b.w); // (the chimney of the picture drawn)
         const steam = b.type === 'banhos';
         if (spr && spr.fires.length && G.VR() < dt * (KILN[b.type] ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
           const h = W.groundH(cx, cy);
@@ -1185,8 +1195,11 @@
       const [cx, cy] = G.Village.center(b);
       const base = W.maxH(b.x, b.y, b.w, b.h);
       const p = proj(cx, cy, base);
-      if (p[0] < view[0] - 60 || p[0] > view[2] + 60 || p[1] < view[1] - 30 || p[1] > view[3] + 140) continue;
-      pushD(b.type === 'praca' ? depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : depth(cx, cy) + (b.w + b.h) / 2 - 0.8, 4, b, p[0], p[1]);
+      // (its picture reaches (w + h) × 8 px each side of its anchor, (w + h) × 4 under it and its height over it: a big lot's
+      // farther than a house's — D-106)
+      const mx = Math.max(60, (b.w + b.h) * 8 + 12), dn = Math.max(30, (b.w + b.h) * 4 + 12), up = b.w > 3 ? 140 + (b.w + b.h) * 4 + b.w * 12 : 140;
+      if (p[0] < view[0] - mx || p[0] > view[2] + mx || p[1] < view[1] - dn || p[1] > view[3] + up) continue;
+      pushD(R.bkey(b), 4, b, p[0], p[1]);
     }
     // aqueduct arches, carts on the roads
     for (const a of S.aqueducts) for (let k = 0; k < a.built; k++) {
@@ -2397,7 +2410,7 @@
     let any = false;
     for (const e of list) {
       let hw = 14, top = 46;
-      if (e.t === 4) { hw = (e.o.w + e.o.h) * 16; top = 90; } else if (e.t === 1) { hw = 16; top = 56; } else if (e.t === 10) { hw = 26; top = 60; }
+      if (e.t === 4) { hw = (e.o.w + e.o.h) * 16; top = e.o.w > 3 ? 90 + (e.o.w + e.o.h) * 4 + e.o.w * 12 : 90; } else if (e.t === 1) { hw = 16; top = 56; } else if (e.t === 10) { hw = 26; top = 60; }
       const cx0 = Math.max(0, Math.floor((e.sx - hw - view[0]) / OG)), cx1 = Math.min(gw - 1, Math.floor((e.sx + hw - view[0]) / OG));
       const cy0 = Math.max(0, Math.floor((e.sy - top - oy) / OG)), cy1 = Math.min(gh - 1, Math.floor((e.sy + 4 - oy) / OG));
       for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) { const k = cy * gw + cx; if (e.d < ogrid[k]) { ogrid[k] = e.d; any = true; } }
@@ -2540,8 +2553,10 @@
     if (b.type === 'cercado') { if (b.built) penStakes(b, penFront(b), 1); else { penStakes(b, penFront(b), b.progress); overlays.push(b, sx, sy - 14); } return; }
     if (!b.built) { drawSite(b, sx, sy, t); if (burning) emisFire.push(sx, sy - 8, 1); return; }
     const dv = doorView(b);
-    const spr = homeSprite(b, true) || Art.building(b.type, b.v, b.style, b.wd, dv.back);
-    if (!spr) return;
+    // (its picture of its own size: a step of its type's ladder that is not the classic one is the god's from its form — D-106 —,
+    // its masses where its people have no form of that size)
+    const spr = homeSprite(b, true) || Art.building(b.type, b.v, b.style, b.wd, dv.back, b.w);
+    if (!spr) { if (G.Arch.sized && G.Arch.sized(b.type, b.w)) drawMass(b, sx, sy, t, nightF); return; }
     // storehouse piles
     if (b.type === 'storehouse' && !b.style) drawPiles(b, sx, sy);
     Art.drawMx(ctx, spr, sx, sy, 1, dv.m);
@@ -2553,7 +2568,7 @@
       emisWin.push(spr, sx, sy, nightF * (0.85 + 0.15 * Math.sin(t * 3 + b.id)) * m);
       light(sx, sy - 8, 30 + b.w * 12, 'warm', 0.55 * nightF);
     }
-    if (b.type === 'temple' || b.type === 'maravilha' || b.type === 'palacio' || b.type === 'paco' || b.type === 'grande_palacio' || b.type === 'palacio_colossal') { for (const f of spr.fires) { emisFire.push(sx + f[0] * m, sy + f[1], 0.45); light(sx + f[0] * m, sy + f[1], 40, 'warm', 0.8); } for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'maravilha' ? 14 : 8, 'gold', 0.4 + nightF * 0.5 + (b.type === 'maravilha' ? 0.15 * Math.sin(t * 2) : 0)); if (b.type === 'maravilha') light(sx, sy - 50, 110, 'gold', 0.6 * nightF + 0.1); }
+    if (b.type === 'temple' || b.type === 'maravilha' || b.type === 'palacio' || b.type === 'paco' || b.type === 'grande_palacio' || b.type === 'palacio_colossal') { for (const f of spr.fires) { emisFire.push(sx + f[0] * m, sy + f[1], 0.45); light(sx + f[0] * m, sy + f[1], 40, 'warm', 0.8); } for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'maravilha' ? 14 : 8, 'gold', 0.4 + nightF * 0.5 + (b.type === 'maravilha' ? 0.15 * Math.sin(t * 2) : 0)); if (b.type === 'maravilha') { const k = Math.sqrt(b.w / def.w); light(sx, sy - 50 * k, 110 * k, 'gold', 0.6 * nightF + 0.1); } }
     else if (KILN[b.type]) { for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'ourives' ? 3 : 6, b.type === 'ourives' ? 'gold' : 'fire', 0.6 + 0.3 * Math.sin(t * 9 + b.id)); light(sx + 10 * m, sy - 4, 28, 'warm', 0.5 * nightF + 0.1); for (const f of spr.fires) if (b.type !== 'workshop' && b.type !== 'forja' && b.type !== 'olaria') emisFire.push(sx + f[0] * m, sy + f[1], 0.3); }
     else if (b.type === 'estatua' || b.type === 'mina') { for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'estatua' ? 12 : 3, 'gold', (b.type === 'estatua' ? 0.45 : 0.3) + nightF * 0.5 + 0.15 * Math.sin(t * 2 + g[1])); if (b.type === 'estatua') light(sx, sy - 30, 60, 'gold', 0.6 * nightF + 0.1); for (const f of spr.fires) { emisTorch.push(sx + f[0] * m, sy + f[1]); light(sx + f[0] * m, sy + f[1], 22, 'warm', 0.6 * nightF); } }
     else if (b.type === 'mercado_negro') { for (const f of spr.fires) { emisTorch.push(sx + f[0] * m, sy + f[1]); light(sx + f[0] * m, sy + f[1], 20, 'warm', 0.7 * nightF + 0.05); } }
@@ -2659,7 +2674,7 @@
         ctx.stroke();
         if (p > 0.85) {
           ctx.globalAlpha = (p - 0.85) / 0.15;
-          const dv = doorView(b); const spr = homeSprite(b, true) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back); if (spr) G.Art.drawMx(ctx, spr, sx, sy, 1, dv.m); // (the house it will be)
+          const dv = doorView(b); const spr = homeSprite(b, true) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back, b.w); if (spr) G.Art.drawMx(ctx, spr, sx, sy, 1, dv.m); // (the house it will be)
           ctx.globalAlpha = 1;
         }
       }

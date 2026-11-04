@@ -1421,14 +1421,505 @@
   };
   A.home = function (b, s, q) { const k = A.homeKey(b, s, q); return k ? A.homePaint(b, k) : null; };
 
+  // ------------------------------ the god's painter of a form (D-106) ------------------------------
+  // A building of a step of its type's ladder that no drawing of before has — its lot is not its type's classic one (b.w !==
+  // BDEF[type].w) — is painted by the god from its own form (G.Forma.of(type, style, n)): every piece the form lists, in the
+  // god's projection (x, y the form's metres ÷ 4 from the middle of the lot, z its metres × 3.04 px: the numbers the forms
+  // were read from the drawings with — Forma.ZPX), in the people's palette and the god's shading (the front-left face the
+  // light one, the front-right the darker, the tops their own; a drum's bays from the one to the other as the god's bowl turns
+  // its gradient), at any size. Each piece is cut into parts — a drum into its bays, a stepped mass into its levels, a row of
+  // columns into its columns —, and the parts are painted back to front as the god's eye sees them: a part before another it
+  // is behind (a plane between the two — a face of one of them, or of their boxes —; a drum's bay and what is inside its
+  // round; a bowl of seats and what stands in it), else in the order the form lists them (the god's own, back to front).
+  // Only the view: the form is asked for, nothing is written, no chance — every building of a step and a people has one picture.
+  const rgbOf = s => { if (Array.isArray(s)) return s; if (typeof s !== 'string') return [138, 132, 120]; if (s[0] === '#') return G.hex2rgb(s.length === 4 ? '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3] : s); const m = s.match(/-?\d+(\.\d+)?/g); return m && m.length >= 3 ? [+m[0], +m[1], +m[2]] : [138, 132, 120]; };
+  const hexOf = r => '#' + r.slice(0, 3).map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  // (the god's shade of any colour — darker under 1, lighter over — and the mix of two, as hex: the kit shades hex)
+  const tone = (s, f) => { const r = rgbOf(s); return hexOf(f < 1 ? r.map(v => v * f) : r.map(v => v + (255 - v) * (f - 1))); };
+  const mixc = (a, b, t) => { const A0 = rgbOf(a), B0 = rgbOf(b); return hexOf([0, 1, 2].map(i => A0[i] + (B0[i] - A0[i]) * t)); };
+  // (a form's colour as the 3D reads it — Build3D's formCtx: a name of the people's palette, 'wl', 'roof1', 'col0' —, or the god's own)
+  const fcol = (p, s) => { if (Array.isArray(s)) return hexOf(s); if (typeof s !== 'string') return '#8a8478'; if (s[0] === '#') return s.length === 4 ? hexOf(rgbOf(s)) : s; if (s.startsWith('rgb')) return hexOf(rgbOf(s));
+    const m = s.match(/^([a-z]+)(\d)?$/); if (!m) return '#8a8478'; const v = p[m[1]]; return (m[2] !== undefined ? (Array.isArray(v) ? v[+m[2]] : v) : (Array.isArray(v) ? v[0] : v)) || '#8a8478'; };
+  // (gold: what the god lights at night — an eye, a capstone, a statue)
+  const golden = s => { const [r, g, b] = rgbOf(s); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); if (mx < 150 || mx - mn < 70 || mx !== r) return false; const h = 60 * (g - b) / (mx - mn); return h >= 28 && h <= 62; };
+  // (the god's eye: x, y the tiles from the lot's middle, z its px over 16 — it looks down along (1, 1, 1) in these units, so of
+  // two points one before the other the nearer has the greater x + y + z. A part's planes { n, d }: n·p ≤ d inside it)
+  function planeOf(pts, ctr) {
+    let nx = 0, ny = 0, nz = 0; for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; nx += (a[1] - b[1]) * (a[2] + b[2]); ny += (a[2] - b[2]) * (a[0] + b[0]); nz += (a[0] - b[0]) * (a[1] + b[1]); }
+    const l = Math.hypot(nx, ny, nz); if (l < 1e-12) return null; let n = [nx / l, ny / l, nz / l], d = n[0] * pts[0][0] + n[1] * pts[0][1] + n[2] * pts[0][2];
+    if (ctr && n[0] * ctr[0] + n[1] * ctr[1] + n[2] * ctr[2] > d + 1e-9) { n = [-n[0], -n[1], -n[2]]; d = -d; } return { n, d };
+  }
+  // (a convex part: its points and its faces, each a list of the points' indices)
+  function hullP(V, faces) { const c = [0, 0, 0]; for (const v of V) for (let k = 0; k < 3; k++) c[k] += v[k] / V.length; const PL = []; for (const f of faces) { const q = planeOf(f.map(k => V[k]), c); if (q) PL.push(q); } return { V, PL }; }
+  const BOXF = [[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [4, 5, 6, 7], [0, 3, 2, 1]];
+  // (a box: x, y tiles, z px)
+  const boxP = (x0, y0, x1, y1, z0, z1) => { const a = z0 / 16, b = z1 / 16; return { V: [[x0, y0, a], [x1, y0, a], [x1, y1, a], [x0, y1, a], [x0, y0, b], [x1, y0, b], [x1, y1, b], [x0, y1, b]],
+    PL: [{ n: [1, 0, 0], d: x1 }, { n: [-1, 0, 0], d: -x0 }, { n: [0, 1, 0], d: y1 }, { n: [0, -1, 0], d: -y0 }, { n: [0, 0, 1], d: b }, { n: [0, 0, -1], d: -a }] }; };
+  // (the outline round points of a plane, counter-clockwise: Andrew's chain)
+  function hull2(pts) {
+    const P2 = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]); if (P2.length < 3) return P2;
+    const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); const lo = [], hi = [];
+    for (const p of P2) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 1e-9) lo.pop(); lo.push(p); }
+    for (let k = P2.length - 1; k >= 0; k--) { const p = P2[k]; while (hi.length >= 2 && cr(hi[hi.length - 2], hi[hi.length - 1], p) <= 1e-9) hi.pop(); hi.push(p); }
+    lo.pop(); hi.pop(); return lo.concat(hi);
+  }
+  // (a prism over points of the ground — their outline —, from z0 to z1 px)
+  function prismP(g0, z0, z1) {
+    const g = hull2(g0); const n = g.length; const V = g.map(q => [q[0], q[1], z0 / 16]).concat(g.map(q => [q[0], q[1], z1 / 16])); const faces = [], up = [], dn = [];
+    for (let k = 0; k < n; k++) { faces.push([k, (k + 1) % n, n + (k + 1) % n, n + k]); up.push(n + k); dn.push(n - 1 - k); }
+    faces.push(up); if (z1 - z0 > 1e-6) faces.push(dn); return hullP(V, faces);
+  }
+  // (a flat part — a door on a face, a pane, a round of gold —: its plane, both ways; a pole: its two ends)
+  const flatP = V => { const q = planeOf(V, null); return { V, PL: q ? [q, { n: [-q.n[0], -q.n[1], -q.n[2]], d: -q.d }] : [] }; };
+  const lineP = (a, b) => ({ V: [a, b], PL: [] });
+  // (a round of the ground — the whole, or the part from a0 to a1 with its middle —: tiles)
+  const roundG = (cx, cy, r, m, a0, a1) => { const A0 = a0 === undefined ? 0 : a0, A1 = a1 === undefined ? TAU : a1; const whole = A1 - A0 >= TAU - 1e-6; const o = [];
+    for (let k = 0; k < m + (whole ? 0 : 1); k++) { const a = A0 + (A1 - A0) * k / m; o.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); } if (!whole) o.push([cx, cy]); return o; };
+  // (a round thing standing: its side from the god's left to its right in its two tones, its top)
+  function cylinder(c, x, y, r, z0, z1, cl, cr, ct) {
+    const a = P(x, y, z0), b = P(x, y, z1), rx = r * 22.63, ry = r * 11.31;
+    const g = c.createLinearGradient(a[0] - rx, 0, a[0] + rx, 0); g.addColorStop(0, cl); g.addColorStop(1, cr);
+    c.fillStyle = g; c.beginPath(); c.ellipse(a[0], a[1], rx, ry, 0, 0, Math.PI); c.lineTo(b[0] - rx, b[1]); c.ellipse(b[0], b[1], rx, ry, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    if (ct) { c.fillStyle = ct; c.beginPath(); c.ellipse(b[0], b[1], rx, ry, 0, 0, TAU); c.fill(); }
+  }
+  // (the far half of a round — where a face toward its middle faces the eye — from ya to yb px, at r tiles; open where cut)
+  function farBand(c, cx, cy, r, ya, yb, col, a0, a1, cut) {
+    const f0 = Math.max(a0 === undefined ? 0 : a0, 0.75 * Math.PI), f1 = Math.min(a1 === undefined ? TAU : a1, 1.75 * Math.PI); if (f1 <= f0 || yb - ya < 1e-6) return;
+    const m = Math.max(6, Math.round(48 * (f1 - f0) / TAU)); const shut = a => !(cut || []).some(g => Math.abs(((a - g[0]) % TAU + TAU + Math.PI) % TAU - Math.PI) < g[1]);
+    let run = []; const flush = () => { if (run.length > 1) { const up = run.map(a => P(cx + Math.cos(a) * r, cy + Math.sin(a) * r, yb)), dn = run.slice().reverse().map(a => P(cx + Math.cos(a) * r, cy + Math.sin(a) * r, ya)); poly(c, up.concat(dn), col); } run = []; };
+    for (let j = 0; j < m; j++) { const s0 = f0 + (f1 - f0) * j / m, s1 = f0 + (f1 - f0) * (j + 1) / m; if (shut((s0 + s1) / 2)) { if (!run.length) run.push(s0); run.push(s1); } else flush(); }
+    flush();
+  }
+  // the rows of a cavea (its form's — D-084, the god's caveaPaint at any size): each tread the ring of the round at its height
+  // from its inner edge to its outer one (the arena and what stands lower in the middle show through), the stairways up it a
+  // strip a little darker, the wall down to the next row and the parapet at the tread's edge where they face the eye (open
+  // where a flight comes out on it: its vaos), the ends of a half bowl and the piece of its back wall that turns to the eye.
+  // The top ring is a drum's walk where the bowl stands in one (no fecho), as the 3D has it
+  function cavPaint(c, e, L, seats, wall, muro) {
+    const T = v => (v - L / 2) / 4; const cx = T(e.c[0]), cy = T(e.c[1]); const A0 = e.aneis, n = A0.length;
+    const a0 = e.arco ? e.arco[0] : 0, a1 = e.arco ? e.arco[1] : TAU;
+    const pt = (r, a, y) => P(cx + Math.cos(a) * r / 4, cy + Math.sin(a) * r / 4, y * ZPX);
+    const arc = (r, y, f, t) => { const o = []; const m = Math.max(6, Math.round(96 * Math.abs(t - f) / TAU)); for (let j = 0; j <= m; j++) o.push(pt(r, f + (t - f) * j / m, y)); return o; };
+    const E = e.escadas && e.escadas.a && e.escadas.a.length ? e.escadas : null;
+    for (let k = 0; k < n; k++) {
+      const rOut = A0[k][0], rIn = k < n - 1 ? A0[k + 1][0] : e.fundo, y = A0[k][1];
+      if (k || e.fecho) poly(c, arc(rOut, y, a0, a1).concat(arc(Math.max(0, rIn), y, a1, a0)), k % 2 ? seats : tone(seats, 0.9));
+      if (E && (k || e.fecho)) for (const a of E.a) { const h0 = E.l / 2 / Math.max(0.1, rIn), h1 = E.l / 2 / rOut; poly(c, [pt(rIn, a - h0, y), pt(rOut, a - h1, y), pt(rOut, a + h1, y), pt(rIn, a + h0, y)], tone(seats, 0.84)); }
+      if (k < n - 1) farBand(c, cx, cy, rIn / 4, A0[k + 1][1] * ZPX, y * ZPX, muro || tone(seats, 0.82), a0, a1); // (its face down to the next: the 3D's riser)
+      if (e.parapeito && k > 0) farBand(c, cx, cy, rIn / 4, y * ZPX, (y + e.parapeito) * ZPX, tone(muro || seats, 0.9), a0, a1, (e.vaos || []).filter(g => g.anel === k).map(g => [g.a, g.w / 2 / rIn]));
+    }
+    if (!e.fecho) return;
+    farBand(c, cx, cy, e.fundo / 4, 0, A0[n - 1][1] * ZPX, tone(seats, 0.8), a0, a1); // (a bowl on the ground: its lowest row's face down to it)
+    for (const a of [a0, a1]) for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A0[k + 1][0] : e.fundo; poly(c, [pt(rIn, a, 0), pt(A0[k][0], a, 0), pt(A0[k][0], a, A0[k][1]), pt(rIn, a, A0[k][1])], tone(wall, 0.94)); }
+    const b0 = Math.max(a0, 1.75 * Math.PI), b1 = Math.min(a1, 2 * Math.PI); if (b1 > b0) poly(c, arc(A0[0][0], A0[0][1], b0, b1).concat(arc(A0[0][0], 0, b1, b0)), tone(wall, 0.8));
+  }
+  // (the kinds of piece the god paints from a form; another kind is left out, and named here for the proofs — with how the last
+  // painting went: A.formStats. Only seen; anew with every world)
+  A.formMissing = new Set(); A.formStats = null;
+  G.worldHooks.push(() => { A.formMissing.clear(); A.formStats = null; });
+  // the parts of a form's pieces: [{ i (its piece), j (its part), V, PL, paint, ring?, bowl? }] (o.noDoor: without the door the
+  // view does not see — L-264 —, as the drawings of before)
+  function formParts(c, m, F, st, o) {
+    const p = pal(st), L = F.L, h0 = L / 2, out = [], Fo = G.Forma;
+    const T = u => (u - h0) / 4, Z = y => y * ZPX, col = s => fcol(p, s), E3 = (x, y, z) => [x, y, z / 16];
+    const door = o.noDoor ? F.door : null;
+    F.els.forEach((e, i) => {
+      const put = (q, paint, j) => { q.i = i; q.j = j || 0; q.paint = paint; out.push(q); return q; };
+      switch (e.k) {
+        case 'bloco': {
+          const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z0 = Z(e.y0), z1 = Z(e.y1); const cc = e.cor || ['wl', 'wr', 'top'];
+          const cl = col(cc[0]), cr = col(cc[1] || cc[0]), ct = col(cc[2] || cc[0]);
+          put(boxP(x0, y0, x1, y1, z0, z1), () => {
+            box(c, x0, y0, x1, y1, z0, z1, cl, cr, ct);
+            if (e.tabuas) { const n = e.tabuas, nr = Math.max(2, Math.round(n * (y1 - y0) / Math.max(0.05, x1 - x0)));
+              for (let k = 1; k < n; k++) { const x = x0 + (x1 - x0) * k / n; ln(c, P(x, y1, z0), P(x, y1, z1), 'rgba(30,20,10,0.35)', 0.4); }
+              for (let k = 1; k < nr; k++) { const y = y0 + (y1 - y0) * k / nr; ln(c, P(x1, y, z0), P(x1, y, z1), 'rgba(30,20,10,0.35)', 0.4); } }
+            if (e.friso) { const z = z1 - Z(e.friso); ln(c, P(x0, y1, z), P(x1, y1, z), 'rgba(0,0,0,0.12)', 0.5); ln(c, P(x1, y1, z), P(x1, y0, z), 'rgba(0,0,0,0.12)', 0.5); }
+          });
+          break;
+        }
+        case 'faixa': { const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z0 = Z(e.y0), z1 = Z(e.y1), cc = col(e.cor); put(boxP(x0, y0, x1, y1, z0, z1), () => band(c, x0, y0, x1, y1, z0, z1, cc)); break; }
+        case 'talude': {
+          const a = e.r.map(T), b = e.r1.map(T), z0 = Z(e.y0), z1 = Z(e.y1); const cc = e.cor || ['wl', 'wr', 'top'];
+          const V = [[a[0], a[1], z0], [a[2], a[1], z0], [a[2], a[3], z0], [a[0], a[3], z0], [b[0], b[1], z1], [b[2], b[1], z1], [b[2], b[3], z1], [b[0], b[3], z1]];
+          put(hullP(V.map(q => E3(...q)), BOXF), () => {
+            poly(c, [P(a[0], a[3], z0), P(a[2], a[3], z0), P(b[2], b[3], z1), P(b[0], b[3], z1)], col(cc[0]));
+            poly(c, [P(a[2], a[3], z0), P(a[2], a[1], z0), P(b[2], b[1], z1), P(b[2], b[3], z1)], col(cc[1] || cc[0]));
+            top(c, b[0], b[1], b[2], b[3], z1, col(cc[2] || cc[0]));
+          });
+          break;
+        }
+        case 'piramide': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), s = e.e / 4, z0 = Z(e.y0), z1 = Z(e.y1);
+          const V = [[cx - s, cy - s, z0], [cx + s, cy - s, z0], [cx + s, cy + s, z0], [cx - s, cy + s, z0], [cx, cy, z1]].map(q => E3(...q));
+          put(hullP(V, [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4], [0, 3, 2, 1]]), () => {
+            poly(c, [P(cx - s, cy + s, z0), P(cx + s, cy + s, z0), P(cx, cy, z1)], col(e.cor[0]));
+            poly(c, [P(cx + s, cy + s, z0), P(cx + s, cy - s, z0), P(cx, cy, z1)], col(e.cor[1] || e.cor[0]));
+            const nf = e.fiadas || 0; for (let k = 1; k < nf; k++) { const f = k / nf, w = s * (1 - f), z = z0 + (z1 - z0) * f; ln(c, P(cx - w, cy + w, z), P(cx + w, cy + w, z), 'rgba(140,110,70,0.25)', 0.4); ln(c, P(cx + w, cy + w, z), P(cx + w, cy - w, z), 'rgba(90,70,40,0.25)', 0.4); }
+            if (e.ponta) { const f = e.ponta.f, w = s * f, z = z1 - (z1 - z0) * f;
+              poly(c, [P(cx - w, cy + w, z), P(cx + w, cy + w, z), P(cx, cy, z1)], col(e.ponta.cor[0])); poly(c, [P(cx + w, cy + w, z), P(cx + w, cy - w, z), P(cx, cy, z1)], col(e.ponta.cor[1] || e.ponta.cor[0])); m.glow.push(P(cx, cy, z1 - 3)); }
+          });
+          break;
+        }
+        case 'escalonada': {
+          const cx = T(e.c[0]), cy = T(e.c[1]); const cc = e.cor || ['wl', 'wr', 'top']; const cl = col(cc[0]), cr = col(cc[1] || cc[0]), ct = col(cc[2] || cc[0]);
+          e.niveis.forEach(([s, ya, yb], j) => { const q = s / 4, z0 = Z(ya), z1 = Z(yb);
+            put(boxP(cx - q, cy - q, cx + q, cy + q, z0, z1), () => { box(c, cx - q, cy - q, cx + q, cy + q, z0, z1, cl, cr, ct);
+              if (e.friso) { const z = z1 - Z(e.friso); ln(c, P(cx - q, cy + q, z), P(cx + q, cy + q, z), 'rgba(0,0,0,0.12)', 0.5); ln(c, P(cx + q, cy + q, z), P(cx + q, cy - q, z), 'rgba(0,0,0,0.12)', 0.5); } }, j); });
+          break;
+        }
+        // a flight from its foot a to its top b, w wide (its ramps, its painted line): the god's stair of the stepped pyramid
+        case 'escada': {
+          const au = T(e.a[0]), av = T(e.a[1]), az = Z(e.a[2]), bu = T(e.b[0]), bv = T(e.b[1]), bz = Z(e.b[2]);
+          const ru = bu - au, rv = bv - av, rl = Math.hypot(ru, rv) || 1; const wu = Math.hypot(ru, rv) > 1e-6 ? -rv / rl : 1, wv = Math.hypot(ru, rv) > 1e-6 ? ru / rl : 0;
+          const hw = e.w / 8, al = (e.alfarda || 0) / 4, W2 = hw + al; const S = (s, f) => [au + ru * f + wu * s, av + rv * f + wv * s];
+          const V = [[...S(-W2, 0), az], [...S(W2, 0), az], [...S(W2, 1), bz], [...S(-W2, 1), bz], [...S(-W2, 1), az], [...S(W2, 1), az]].map(q => E3(...q));
+          const q = bz - az > 1e-6 ? hullP(V, [[0, 1, 5, 4], [0, 1, 2, 3], [4, 5, 2, 3], [0, 4, 3], [1, 5, 2]]) : flatP(V.slice(0, 4));
+          const cl = tone(col(e.cor), e.clara || 1), cs = tone(col('wr'), 0.9);
+          const strip = (s0, s1, cc) => poly(c, [P(...S(s0, 0), az), P(...S(s1, 0), az), P(...S(s1, 1), bz), P(...S(s0, 1), bz)], cc);
+          put(q, () => {
+            strip(-hw, hw, cl);
+            const n = Math.max(2, Math.round((bz - az) / 2.5)); for (let k = 1; k < n; k++) { const f = k / n, z = az + (bz - az) * f; ln(c, P(...S(-hw, f), z), P(...S(hw, f), z), 'rgba(0,0,0,0.18)', 0.3); }
+            if (al) { strip(-hw - al, -hw, cs); strip(hw, hw + al, cs); }
+            if (e.divisor) { const d = e.divisor; strip(d.u / 4 - d.w / 8, d.u / 4 + d.w / 8, col(d.cor)); }
+          });
+          break;
+        }
+        // the drum of arcades: a part each bay (the god's bowl, its front half in the gradient from its left to its right — the
+        // dark arches of each tier and the line between the tiers —, the inside of the far bays, the walk on top and its light rim)
+        case 'tambor': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), R = e.r / 4, t = e.t / 4, N = e.arcos || 24, ap = R * Math.cos(Math.PI / N), bw = 2 * R * Math.sin(Math.PI / N), aw = bw * (e.arcoW || 0.6);
+          const z0 = Z(e.y0), z1 = Z(e.y1), nT = e.andares || 1, th = (z1 - z0) / nT; const cL = col(e.cor[0]), cR = col(e.cor[1] || e.cor[0]);
+          const dark = G.rgb(rgbOf(e.escuro ? col(e.escuro) : '#28201a'), 0.55); const rise = aw / 2 * 4 * ZPX; // (an arch's round head, px: as high as it is half wide)
+          const aA = e.arcoA === undefined ? 0.175 : e.arcoA, aB = e.arcoB === undefined ? 0.725 : e.arcoB;
+          for (let q = 0; q < N; q++) {
+            const a = q / N * TAU, ox = Math.cos(a), oy = Math.sin(a), gx = -oy, gy = ox;
+            const at = (s, d, z) => P(cx + ox * (ap - d) + gx * s, cy + oy * (ap - d) + gy * s, z); // (s along the bay, d in from its face: tiles)
+            const ex = (s, d, z) => [cx + ox * (ap - d) + gx * s, cy + oy * (ap - d) + gy * s, z / 16];
+            const V = [ex(-bw / 2, 0, z0), ex(bw / 2, 0, z0), ex(bw / 2, t, z0), ex(-bw / 2, t, z0), ex(-bw / 2, 0, z1), ex(bw / 2, 0, z1), ex(bw / 2, t, z1), ex(-bw / 2, t, z1)];
+            const fwd = ox + oy > 1e-9, back = ox + oy < -1e-9; const tn = mixc(cL, cR, (1 + (ox - oy) / Math.SQRT2) / 2);
+            const part = put(hullP(V, BOXF), () => {
+              if (fwd) {
+                poly(c, [at(-bw / 2, 0, z0), at(bw / 2, 0, z0), at(bw / 2, 0, z1), at(-bw / 2, 0, z1)], tn);
+                for (let k = 0; k < nT; k++) {
+                  const zb = z0 + k * th, za = k ? zb + aA * th : z0, zt = zb + aB * th, zh = Math.max(za, zt - rise);
+                  const pts = [at(-aw / 2, 0, za), at(-aw / 2, 0, zh)]; for (let j = 1; j < 8; j++) { const f = j / 8 * Math.PI; pts.push(at(-Math.cos(f) * aw / 2, 0, zh + Math.sin(f) * (zt - zh))); }
+                  pts.push(at(aw / 2, 0, zh), at(aw / 2, 0, za)); poly(c, pts, dark);
+                  // (the cornice over the tier: a band a little lighter, the god's line under it)
+                  if (k < nT - 1) { const zc = zb + th, cz = Math.min(th * 0.08, 0.22 * ZPX); poly(c, [at(-bw / 2, 0, zc - cz), at(bw / 2, 0, zc - cz), at(bw / 2, 0, zc), at(-bw / 2, 0, zc)], tone(tn, 1.07)); ln(c, at(-bw / 2, 0, zc - cz - 0.3), at(bw / 2, 0, zc - cz - 0.3), 'rgba(0,0,0,0.15)', 0.5); }
+                }
+              } else if (back) poly(c, [at(-bw / 2, t, z0), at(bw / 2, t, z0), at(bw / 2, t, z1), at(-bw / 2, t, z1)], tone(tn, 0.78));
+              poly(c, [at(-bw / 2, 0, z1), at(bw / 2, 0, z1), at(bw / 2, t, z1), at(-bw / 2, t, z1)], tone(tn, 1.06));
+              if (fwd) ln(c, at(-bw / 2, 0, z1), at(bw / 2, 0, z1), 'rgba(255,255,255,0.35)', 0.7);
+            }, q);
+            part.ring = { id: i, c: [cx, cy], r: R, fwd };
+          }
+          break;
+        }
+        case 'cavea': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), A0 = e.aneis; const a0 = e.arco ? e.arco[0] : 0, a1 = e.arco ? e.arco[1] : TAU;
+          let zLo = e.fecho ? 0 : 1e9, zHi = 0; A0.forEach(([, y], k) => { zLo = Math.min(zLo, Z(y)); zHi = Math.max(zHi, Z(y + (k && e.parapeito ? e.parapeito : 0))); });
+          const q = put(prismP(roundG(cx, cy, A0[0][0] / 4, 24, a0, a1), zLo, zHi), () => cavPaint(c, e, L, col(e.cor), col(e.fecho || 'wl'), e.muro ? col(e.muro) : null));
+          q.bowl = { c: [cx, cy], r: e.fundo / 4 };
+          break;
+        }
+        case 'arena': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), r = e.r / 4, z = Z(e.y), zt = e.muro ? Z(e.muro) : z;
+          put(prismP(roundG(cx, cy, r, 16), z, zt), () => {
+            const pts = []; for (let k = 0; k < 64; k++) { const a = k / 64 * TAU; pts.push(P(cx + Math.cos(a) * r, cy + Math.sin(a) * r, z)); } poly(c, pts, col(e.cor));
+            if (e.buraco) { const h = e.buraco.map(T); poly(c, [P(h[0], h[1], z), P(h[2], h[1], z), P(h[2], h[3], z), P(h[0], h[3], z)], '#4a3a2a'); }
+            if (zt > z) farBand(c, cx, cy, r, z, zt, tone('#b8a888', 0.9));
+          });
+          break;
+        }
+        case 'mastros': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y0 + e.h), cc = col(e.cor);
+          for (let k = 0; k < e.n; k++) { const a = (k + 0.5) / e.n * TAU, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; put(lineP(E3(x, y, z0), E3(x, y, z1)), () => ln(c, P(x, y, z0), P(x, y, z1), cc, 0.6), k); }
+          break;
+        }
+        // (a column each: the god's column — its shaft, its capital; the papyrus of Egypt wider, in its own colour)
+        case 'colunata': {
+          const r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1); const c0 = col(e.cor[0]), c1 = col(e.cor[1] || e.cor[0]); const pap = e.papiro;
+          const R = pap ? pap.r / 4 : r * 1.5, zc = pap ? Z(pap.h) : 0.9, ac = pap ? col(pap.cor) : c0;
+          e.pts.forEach((pt, j) => { const x = T(pt[0]), y = T(pt[1]);
+            put(boxP(x - R, y - R, x + R, y + R, z0, z1), () => { box(c, x - r, y - r, x + r, y + r, z0, z1, c0, c1, c0); box(c, x - R, y - R, x + R, y + R, z1 - zc, z1, ac, pap ? tone(ac, 0.85) : c1, c0); }, j); });
+          break;
+        }
+        case 'telhado': {
+          const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z0 = Z(e.y0), z1 = Z(e.y1), ov = (e.ov || 0) / 4; const cc = e.cor || ['roof0', 'roof1', 'gable', 'roof2'];
+          const cF = col(cc[0]), cB = col(cc[1] || cc[0]), cG = col(cc[2] || cc[0]), cE = col(cc[3] || cc[1] || cc[0]);
+          const X0 = x0 - ov, X1 = x1 + ov, Y0 = y0 - ov, Y1 = y1 + ov, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2; const alongU = e.quatro ? X1 - X0 >= Y1 - Y0 : e.ao === 'u';
+          const ridge = e.quatro ? (alongU ? [[X0 + (Y1 - Y0) / 2, ym], [X1 - (Y1 - Y0) / 2, ym]] : [[xm, Y0 + (X1 - X0) / 2], [xm, Y1 - (X1 - X0) / 2]]) : (alongU ? [[X0, ym], [X1, ym]] : [[xm, Y0], [xm, Y1]]);
+          const ze = Math.max(0, z0 - 1);
+          const V = [[X0, Y0, ze], [X1, Y0, ze], [X1, Y1, ze], [X0, Y1, ze], [ridge[0][0], ridge[0][1], z1], [ridge[1][0], ridge[1][1], z1]].map(q => E3(...q));
+          const faces = alongU ? [[0, 3, 2, 1], [0, 1, 5, 4], [3, 2, 5, 4], [0, 4, 3], [1, 2, 5]] : [[0, 3, 2, 1], [0, 4, 5, 3], [1, 2, 5, 4], [0, 1, 4], [3, 5, 2]];
+          put(hullP(V, faces), () => {
+            if (e.quatro) hip(c, x0, y0, x1, y1, z0, z1, ov, cF, cB, cE);
+            else if (e.ao === 'u') gableX(c, x0, y0, x1, y1, z0, z1, ov, cF, cB, cG, cE);
+            else gableY(c, x0, y0, x1, y1, z0, z1, ov, cF, cB, cG, cE);
+            if (e.escudos) { // (a roof of shields — Valhalla —: rows of them down the slope the god sees)
+              const sc = e.escudos; const n = sc.n, rows = sc.linhas; const len = (alongU ? X1 - X0 : Y1 - Y0) * 4, span = (alongU ? Y1 - ym : X1 - xm) * 4, rise = (z1 - z0) / ZPX;
+              const rx = Math.min(len / n, Math.hypot(span, rise) / rows) * 0.46 * 5.657;
+              for (let r2 = 0; r2 < rows; r2++) for (let k = 0; k < n; k++) { const f = (r2 + 0.5) / rows, s = (k + 0.5) / n, z = z0 - 1 + (z1 - z0 + 1) * f;
+                const q = alongU ? P(X0 + (X1 - X0) * s, Y1 + (ym - Y1) * f, z) : P(X1 + (xm - X1) * f, Y0 + (Y1 - Y0) * s, z);
+                c.fillStyle = col(sc.cor[(k + r2) % 2]); c.beginPath(); c.ellipse(q[0], q[1], rx, rx * 0.6, 0, 0, TAU); c.fill(); }
+            }
+            if (e.mat === 'turf') { if (alongU) { tufts(c, P(x0, ym, z1), P(x1, ym, z1), 8, '#88a852'); tufts(c, P(X0, Y1, z0 - 1), P(X1, Y1, z0 - 1), 10, '#5f7a34'); } else tufts(c, P(xm, y0, z1), P(xm, y1, z1), 8, '#88a852'); }
+          });
+          break;
+        }
+        // a door on the front — on its pyramid's face —: a dark leaf (lit at night, as the god's door; a sealed one never)
+        case 'porta': {
+          if (door && e.na !== 'piramide' && !e.lacrada && Math.abs(e.u - door.u) <= door.w / 2 + 0.3 && Math.abs((e.y0 || 0) - (door.y0 || 0)) < 0.35) break; // (its door on a side the view does not see: L-264)
+          let V;
+          if (e.na === 'piramide') { const pq = F.els.find(q => q.k === 'piramide'); if (!pq) break; const vAt = y => pq.c[1] + pq.e * (1 - (y - pq.y0) / (pq.y1 - pq.y0));
+            const a = T(e.u - e.w / 2), b = T(e.u + e.w / 2), v0 = T(vAt(e.y0)), v1 = T(vAt(e.y1)); V = [[a, v0, Z(e.y0)], [b, v0, Z(e.y0)], [b, v1, Z(e.y1)], [a, v1, Z(e.y1)]]; }
+          else { const v = T(e.v), a = T(e.u - e.w / 2), b = T(e.u + e.w / 2); V = [[a, v, Z(e.y0)], [b, v, Z(e.y0)], [b, v, Z(e.y1)], [a, v, Z(e.y1)]]; }
+          const pts = V.map(q => P(q[0], q[1], q[2])), cc = col(e.cor || 'door');
+          put(flatP(V.map(q => E3(...q))), () => { poly(c, pts, cc); if (!e.lacrada) m.win.push(pts); });
+          break;
+        }
+        // a round on the front (or on the right face at u): an eye, a shield
+        case 'disco': {
+          const right = e.na === 'direita'; const u = T(e.u), v = T(e.v), z = Z(e.y), r = e.r / 4, rz = e.r * ZPX; const cc = col(e.cor);
+          const at3 = (a, f) => (right ? [u, v - Math.cos(a) * r * f, z + Math.sin(a) * rz * f] : [u + Math.cos(a) * r * f, v, z + Math.sin(a) * rz * f]);
+          const ring = f => { const o2 = []; for (let k = 0; k < 24; k++) o2.push(P(...at3(k / 24 * TAU, f))); return o2; };
+          const V = []; for (let k = 0; k < 8; k++) V.push(E3(...at3(k / 8 * TAU, 1)));
+          put(flatP(V), () => { poly(c, ring(1), cc); if (e.olho) poly(c, ring(0.32), col(e.olho)); if (e.olho || golden(cc)) m.glow.push(P(...at3(0, 0))); });
+          break;
+        }
+        case 'placa': { const v = T(e.v), a = T(e.u - e.w / 2), b = T(e.u + e.w / 2), z0 = Z(e.y0), z1 = Z(e.y1); const V = [[a, v, z0], [b, v, z0], [b, v, z1], [a, v, z1]];
+          put(flatP(V.map(q => E3(...q))), () => poly(c, V.map(q => P(q[0], q[1], q[2])), col(e.cor))); break; }
+        // a row of windows on the front or the right (the back and the left the god does not see): its panes as the god's winsL and
+        // winsR, lit at night; an opening painted (tinta) never lit; the bars before them
+        case 'janelas': {
+          if (e.na !== 'frente' && e.na !== 'direita') break;
+          const em = T(e.em), z0 = Z(e.y0), z1 = Z(e.y1), de = T(e.de), ate = T(e.ate); const spans = [];
+          if (!e.n) spans.push([de, ate]); else { const w = (ate - de) / (e.n * 2 + 1); for (let k = 0; k < e.n; k++) spans.push([de + w * (1 + 2 * k), de + w * (2 + 2 * k)]); }
+          const front = e.na === 'frente'; const V = front ? [[de, em, z0], [ate, em, z0], [ate, em, z1], [de, em, z1]] : [[em, de, z0], [em, ate, z0], [em, ate, z1], [em, de, z1]];
+          const cc = e.tinta ? col(e.tinta) : p.win;
+          put(flatP(V.map(q => E3(...q))), () => { for (const [a, b] of spans) {
+            if (front) onL(c, em, a, b, z0, z1, cc, e.tinta ? null : m); else onR(c, em, a, b, z0, z1, cc, e.tinta ? null : m);
+            if (e.grade) for (let j = 1; j <= e.grade; j++) { const s = a + (b - a) * j / (e.grade + 1); if (front) ln(c, P(s, em, z0), P(s, em, z1), '#3a3a40', 0.4); else ln(c, P(em, s, z0), P(em, s, z1), '#3a3a40', 0.4); } } });
+          break;
+        }
+        // a statue: the god's robed figure (its spear and shield, its ravens); the enthroned king, the feathered serpent, the
+        // sphinx by the figure's parts (Forma.figure), back to front
+        case 'estatua': {
+          const x = T(e.p[0]), y = T(e.p[1]), z = Z(e.p[2]), hp = e.h * ZPX, cc = col(e.cor);
+          if (!e.pose) { const wp = Math.max(1.4, hp * 0.13), w = wp / 16;
+            put(boxP(x - w, y - w, x + w, y + w, z, z + hp * 1.1), () => { statue(c, x, y, z, cc, hp, !!e.lanca);
+              if (e.corvos) { const b = P(x, y, z); c.fillStyle = col(e.corvos); for (const s of [-1, 1]) { c.beginPath(); c.arc(b[0] + s * wp * 1.05, b[1] - hp * 0.7, Math.max(0.6, wp * 0.32), 0, TAU); c.fill(); } }
+              if (golden(cc)) m.glow.push(P(x, y, z + hp * 0.78)); });
+            break; }
+          const parts = Fo.figure(e); const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+          const grow = (u, v, yy, r) => { lo[0] = Math.min(lo[0], u - r); lo[1] = Math.min(lo[1], v - r); lo[2] = Math.min(lo[2], yy); hi[0] = Math.max(hi[0], u + r); hi[1] = Math.max(hi[1], v + r); hi[2] = Math.max(hi[2], yy); };
+          for (const q of parts) { if (q.k === 'caixa') { grow(q.c[0], q.c[1], q.c[2], Math.max(q.a, q.d) / 2); grow(q.c[0], q.c[1], q.c[2] + q.h, 0); } else if (q.k === 'haste') { grow(q.a[0], q.a[1], q.a[2], q.r); grow(q.b[0], q.b[1], q.b[2], q.r); } else if (q.k === 'espira') { grow(q.c[0], q.c[1], q.c[2], q.R0 + q.t0); grow(q.c[0], q.c[1], q.c[2] + q.h, q.R1 + q.t1); } else { grow(q.c[0], q.c[1], q.c[2] - (q.ry || q.r), q.r); grow(q.c[0], q.c[1], q.c[2] + (q.ry || q.r), q.r); } }
+          const dk = q => { const pt = q.c || q.a; return T(pt[0]) + T(pt[1]) + Z(pt[2]) / 16; };
+          const order = parts.map((q, k) => [dk(q), k]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(r => parts[r[1]]);
+          put(boxP(T(lo[0]), T(lo[1]), T(hi[0]), T(hi[1]), Z(lo[2]), Z(hi[2])), () => {
+            for (const q of order) { const qc = tone(col(q.cor), q.tom || 1);
+              if (q.k === 'caixa') box(c, T(q.c[0] - q.a / 2), T(q.c[1] - q.d / 2), T(q.c[0] + q.a / 2), T(q.c[1] + q.d / 2), Z(q.c[2]), Z(q.c[2] + q.h), qc, tone(qc, 0.78), tone(qc, 1.08));
+              else if (q.k === 'bola') { const s = P(T(q.c[0]), T(q.c[1]), Z(q.c[2])); c.fillStyle = qc; c.beginPath(); c.ellipse(s[0], s[1], q.r * 5.657, Math.sqrt(8 * q.r * q.r + 9.24 * (q.ry || q.r) * (q.ry || q.r)), 0, 0, TAU); c.fill(); }
+              else if (q.k === 'haste') ln(c, P(T(q.a[0]), T(q.a[1]), Z(q.a[2])), P(T(q.b[0]), T(q.b[1]), Z(q.b[2])), qc, Math.max(0.5, q.r * 9));
+              else if (q.k === 'escudo') { const s = P(T(q.c[0]), T(q.c[1]), Z(q.c[2])); c.fillStyle = qc; c.beginPath(); c.ellipse(s[0], s[1], q.r * 4.47, q.r * 3.04, 0, 0, TAU); c.fill(); }
+              else if (q.k === 'espira') { // (its coils as the god's: a round of the tube's girth a turn, from the lowest up, by its tones)
+                for (let j = 0; j < q.voltas; j++) { const f = (j + 0.5) / q.voltas, Rr = q.R0 + (q.R1 - q.R0) * f, tt = q.t0 + (q.t1 - q.t0) * f; const s = P(T(q.c[0]), T(q.c[1]), Z(q.c[2] + q.t0 + (q.h - q.t1 - q.t0) * f));
+                  const rx = (Rr + tt) * 5.657; c.fillStyle = tone(col(q.cor), q.toms[j % q.toms.length]); c.beginPath(); c.ellipse(s[0], s[1], rx, rx * 0.5 + tt * 1.5, 0, 0, TAU); c.fill(); } }
+            }
+            if (golden(cc)) m.glow.push(P(x, y, z + hp * 0.7));
+          });
+          break;
+        }
+        case 'dragao': { const q0 = [T(e.p[0]), T(e.p[1]), Z(e.p[2])]; const sd = e.ao === 'v' ? -e.dir : e.dir;
+          put(boxP(q0[0] - 0.12, q0[1] - 0.12, q0[0] + 0.12, q0[1] + 0.12, q0[2], q0[2] + 5), () => { const q = P(...q0); dragon(c, [q[0] + sd, q[1] + 1], sd, col(e.cor || '#3a2616')); }); break; }
+        case 'braseiro': { const x = T(e.p[0]), y = T(e.p[1]), z = Z(e.p[2]), rr = (e.r || 0.3) * 5.657;
+          put(boxP(x - 0.08, y - 0.08, x + 0.08, y + 0.08, z, z + 2.6), () => { const b = P(x, y, z), t = P(x, y, z + 1.7); ln(c, b, t, '#4a3a2a', 0.6);
+            c.fillStyle = '#5a4030'; c.beginPath(); c.ellipse(t[0], t[1], rr, rr * 0.45, 0, 0, TAU); c.fill(); c.fillStyle = '#e26228'; c.beginPath(); c.ellipse(t[0], t[1] - 0.3, rr * 0.7, rr * 0.3, 0, 0, TAU); c.fill(); m.fires.push(P(x, y, z + 2.2)); }); break; }
+        case 'coluna': {
+          const x = T(e.c[0]), y = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1); const cl = col(e.cor[0]), cr = col(e.cor[1] || e.cor[0]);
+          put(prismP(roundG(x, y, r, 12), z0, z1), () => { cylinder(c, x, y, r, z0, z1, cl, cr, tone(cl, 1.08));
+            const sp = e.espiral; if (sp) { const rx = r * 22.63, pas = Z(sp.passo); c.strokeStyle = tone(cl, 0.78); c.lineWidth = Math.max(0.5, sp.w * 4);
+              for (let zz = Z(sp.y0); zz < z1 - pas * 0.5; zz += pas / 2) { const q = P(x, y, zz); c.beginPath(); c.moveTo(q[0] - rx, q[1]); c.lineTo(q[0] + rx, q[1] - pas * 0.5); c.stroke(); } } });
+          break;
+        }
+        // a standing stone: its front, its right face, its top falling to the left and the back; the serpent down its front
+        case 'pedra': {
+          const x = T(e.c[0]), y = T(e.c[1]), s0 = e.e / 4, s1 = e.e1 / 4, z0 = Z(e.y0); const S = [[-1, 1], [1, 1], [1, -1], [-1, -1]];
+          const zt = q => Z(e.y1 - (1 - q[0]) / 2 * e.cai[0] - (1 - q[1]) / 2 * e.cai[1]);
+          const lo = S.map(q => [x + q[0] * s0, y + q[1] * s0, z0]), hi = S.map(q => [x + q[0] * s1, y + q[1] * s1, zt(q)]);
+          put(hullP(lo.concat(hi).map(q => E3(...q)), BOXF), () => {
+            poly(c, [P(...lo[0]), P(...lo[1]), P(...hi[1]), P(...hi[0])], col(e.cor[0])); poly(c, [P(...lo[1]), P(...lo[2]), P(...hi[2]), P(...hi[1])], col(e.cor[1] || e.cor[0]));
+            poly(c, hi.map(q => P(...q)), tone(col(e.cor[0]), 1.08));
+            if (e.cobra) { const B = [[-0.55, 0.2], [0.75, 0.38], [-0.75, 0.62], [0.3, 0.8]]; const bz = t => [0, 1].map(k => (1 - t) ** 3 * B[0][k] + 3 * (1 - t) ** 2 * t * B[1][k] + 3 * (1 - t) * t * t * B[2][k] + t ** 3 * B[3][k]);
+              const zf = f => z0 + f * (Z(e.y1) - z0), at2 = (s, f) => { const hf = s0 + (s1 - s0) * f; return P(x + s * hf, y + hf, zf(f)); };
+              c.strokeStyle = col(e.cobra); c.lineWidth = 0.9; c.beginPath(); for (let j = 0; j <= 14; j++) { const q = bz(j / 14), s = at2(q[0], q[1]); if (j) c.lineTo(s[0], s[1]); else c.moveTo(s[0], s[1]); } c.stroke(); }
+          });
+          break;
+        }
+        // a stone wheel on its edge, facing the front: its back round in the rim's colour, its face, the painted rings and rays
+        case 'roda': {
+          const u = T(e.c[0]), v = T(e.c[1]), z = Z(e.y), r = e.r / 4, rz = e.r * ZPX, t = e.t / 8;
+          const at = (a, f, dv) => P(u + Math.cos(a) * r * f, v + dv, z + Math.sin(a) * rz * f);
+          const ring = (f, dv) => { const o2 = []; for (let k = 0; k < 32; k++) o2.push(at(k / 32 * TAU, f, dv)); return o2; };
+          put(boxP(u - r, v - t, u + r, v + t, z - rz, z + rz), () => {
+            poly(c, ring(1, -t), col(e.cor[0])); poly(c, ring(1, t), col(e.cor[1] || e.cor[0]));
+            const lw = (e.larg || 0.09) * e.r * 4; for (const [f, cc] of e.aneis || []) { c.strokeStyle = col(cc); c.lineWidth = Math.max(0.4, lw); c.beginPath(); const q = ring(f, t); c.moveTo(q[0][0], q[0][1]); for (const s of q) c.lineTo(s[0], s[1]); c.closePath(); c.stroke(); }
+            const ry = e.raios; if (ry) for (let k = 0; k < ry.n; k++) { const a = k / ry.n * TAU; poly(c, [at(a, ry.r0, t), at(a + ry.a, ry.r1, t), at(a - ry.a, ry.r1, t)], col(ry.cor)); }
+          });
+          break;
+        }
+        case 'flores': {
+          const n = e.n || 6, bb = (e.b || 0.13) * 5.657; const pts = []; const lo = [1e9, 1e9], hi = [-1e9, -1e9];
+          e.pts.forEach((q, j) => { for (let k = 0; k < n; k++) { const x = T(q[0] + Math.cos(k + j) * e.r), y = T(q[1] + Math.sin((k + j) * 1.7) * e.r * 0.6); pts.push([x, y, Z(e.y + (e.chato ? 0.03 : 0.1)), col(e.cor[(k + j) % e.cor.length])]);
+            lo[0] = Math.min(lo[0], x); lo[1] = Math.min(lo[1], y); hi[0] = Math.max(hi[0], x); hi[1] = Math.max(hi[1], y); } });
+          if (!pts.length) break; const zf = Z(e.y);
+          put(boxP(lo[0] - 0.03, lo[1] - 0.03, hi[0] + 0.03, hi[1] + 0.03, zf, zf + 1.2), () => { for (const q of pts) { const s = P(q[0], q[1], q[2]); c.fillStyle = q[3]; c.beginPath(); c.ellipse(s[0], s[1], bb, e.chato ? bb * 0.5 : bb * 0.8, 0, 0, TAU); c.fill(); } });
+          break;
+        }
+        case 'lamina': { const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z = Z(e.y); const V = [[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]];
+          put(flatP(V.map(q => E3(...q))), () => { poly(c, V.map(q => P(...q)), col(e.cor)); ln(c, P(x0 + (x1 - x0) * 0.2, y0 + (y1 - y0) * 0.3, z), P(x0 + (x1 - x0) * 0.5, y0 + (y1 - y0) * 0.3, z), 'rgba(255,255,255,0.35)', 0.6); }); break; }
+        case 'palmeira': { const q0 = [T(e.p[0]), T(e.p[1]), Z(e.p[2])], s = e.h * ZPX / 12;
+          put(boxP(q0[0] - 0.2 * s, q0[1] - 0.2 * s, q0[0] + 0.2 * s, q0[1] + 0.2 * s, q0[2], q0[2] + 13 * s), () => { const b = P(...q0); palm(c, b[0], b[1], s); }); break; }
+        case 'bandeira': { const q0 = [T(e.p[0]), T(e.p[1]), Z(e.p[2])], hp = e.h * ZPX;
+          put(lineP(E3(...q0), E3(q0[0], q0[1], q0[2] + hp)), () => { const b = P(...q0); flag(c, b[0], b[1], col(e.cor), hp); }); break; }
+        case 'bola': { const x = T(e.c[0]), y = T(e.c[1]), z = Z(e.c[2]), r = e.r / 4, ry = (e.ry || e.r) * ZPX;
+          put(boxP(x - r, y - r, x + r, y + r, z - ry, z + ry), () => { const s = P(x, y, z), rx = e.r * 5.657, rr = Math.sqrt(8 * e.r * e.r + 9.24 * (e.ry || e.r) * (e.ry || e.r)); const cc = col(e.cor);
+            c.fillStyle = cc; c.beginPath(); c.ellipse(s[0], s[1], rx, rr, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(0,0,0,0.16)'; c.beginPath(); c.ellipse(s[0] + rx * 0.35, s[1], rx * 0.55, rr * 0.9, 0, 0, TAU); c.fill(); }); break; }
+        case 'tora': { const a = [T(e.a[0]), T(e.a[1]), Z(e.a[2])], b = [T(e.b[0]), T(e.b[1]), Z(e.b[2])];
+          put(lineP(E3(...a), E3(...b)), () => ln(c, P(...a), P(...b), col(e.cor), Math.max(0.5, e.r * 9))); break; }
+        case 'tina': {
+          const x = T(e.c[0]), y = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1); const cc = col(e.cor);
+          put(prismP(roundG(x, y, r, 12), z0, z1), () => { cylinder(c, x, y, r, z0, z1, cc, tone(cc, 0.8), col(e.borda || e.cor));
+            const t = P(x, y, z1); if (e.agua) { c.fillStyle = col(e.agua); c.beginPath(); c.ellipse(t[0], t[1], r * 22.63 * 0.83, r * 11.31 * 0.83, 0, 0, TAU); c.fill(); }
+            for (let k = 0; k < (e.aros || 0); k++) { const q = P(x, y, z0 + (z1 - z0) * (k + 1) / ((e.aros || 0) + 1)); c.strokeStyle = col(e.aro || '#3a3a40'); c.lineWidth = 0.5; c.beginPath(); c.ellipse(q[0], q[1], r * 22.63, r * 11.31, 0, 0, Math.PI); c.stroke(); } });
+          break;
+        }
+        case 'pano': { const V = e.p.map(q => [T(q[0]), T(q[1]), Z(q[2])]); const pl = planeOf(V.map(q => E3(...q)), null); const cc = col(e.cor);
+          put(flatP(V.map(q => E3(...q))), () => poly(c, V.map(q => P(...q)), pl && pl.n[0] + pl.n[1] + pl.n[2] < 0 ? tone(cc, 0.8) : cc)); break; }
+        case 'letreiro': { const q0 = [T(e.p[0]), T(e.p[1]), Z(e.p[2])];
+          put(boxP(q0[0], q0[1] - 0.05, q0[0] + 0.16, q0[1] + 0.05, q0[2] - 2.2, q0[2]), () => { const a = P(...q0), b = P(q0[0] + 0.15, q0[1], q0[2]); ln(c, a, b, '#4a3422', 0.8);
+            const mq = P(q0[0] + 0.09, q0[1], q0[2] - 0.3); poly(c, [[mq[0] - 1.6, mq[1]], [mq[0] + 1.6, mq[1] + 0.8], [mq[0] + 1.6, mq[1] + 2.4], [mq[0] - 1.6, mq[1] + 1.6]], col(e.cor));
+            if (e.moeda) { c.fillStyle = col(e.moeda); c.beginPath(); c.arc(mq[0], mq[1] + 1.2, 0.6, 0, TAU); c.fill(); } }); break; }
+        case 'bacia': {
+          const x = T(e.c[0]), y = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1), cc = col(e.cor);
+          put(prismP(roundG(x, y, r, 12), z0, z1), () => { cylinder(c, x, y, r, z0, z1, cc, tone(cc, 0.82), tone(cc, 1.05));
+            const ri = Math.max(0.01, (e.r - e.t) / 4), w = P(x, y, z1 - Z(e.nivel || 0.1)); c.fillStyle = col(e.agua || '#5aaed0'); c.beginPath(); c.ellipse(w[0], w[1], ri * 22.63, ri * 11.31, 0, 0, TAU); c.fill();
+            c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.ellipse(w[0] - ri * 6, w[1] - ri * 2, ri * 6, ri * 2, 0, 0, TAU); c.fill(); });
+          break;
+        }
+        case 'banco': {
+          const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z = Z(e.y), zp = Math.max(0, z - 0.25); const along = x1 - x0 >= y1 - y0, len = along ? x1 - x0 : y1 - y0, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
+          const wood = col(e.cor), stone = col(e.pes || 'base0');
+          put(boxP(x0, y0, x1, y1, 0, z), () => { for (const sg of [-1, 1]) { const o2 = sg * (len / 2 - 0.05); if (along) box(c, xm + o2 - 0.0175, y0 + 0.0075, xm + o2 + 0.0175, y1 - 0.0075, 0, zp, stone, tone(stone, 0.8), stone); else box(c, x0 + 0.0075, ym + o2 - 0.0175, x1 - 0.0075, ym + o2 + 0.0175, 0, zp, stone, tone(stone, 0.8), stone); }
+            box(c, x0, y0, x1, y1, zp, z, wood, tone(wood, 0.8), tone(wood, 1.1)); });
+          break;
+        }
+        case 'morro': { const x = T(e.c[0]), y = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1);
+          put(prismP(roundG(x, y, r, 12), z0, z1), () => { const b = P(x, y, z0); dome(c, b[0], b[1], r * 22.63, z1 - z0, col(e.cor[0]), col(e.cor[1] || e.cor[0]), null);
+            for (let k = 0; k < (e.veios || 0); k++) { const q = P(x + Math.cos(k * 2.4) * r * 0.5, y + Math.sin(k * 2.4) * r * 0.5, z0 + (z1 - z0) * (0.2 + 0.5 * G.hash(k + 5))); c.fillStyle = '#a8522e'; c.fillRect(q[0] - 0.5, q[1] - 0.5, 1, 1); } }); break; }
+        // a turned shape — a pot, a granary of clay, a cap of thatch —: its bands from its foot up, each the front of the round
+        // between two of its rings, lighter up it; its top where its last ring is wide
+        case 'vaso': {
+          const x = T(e.c[0]), y = T(e.c[1]), pf = e.perfil, zb = Z(e.y0); const hi = col(e.cor[0]), lo = e.cor[1] ? col(e.cor[1]) : tone(hi, 0.8); const rmax = Math.max(...pf.map(q => q[0])) / 4;
+          put(prismP(roundG(x, y, rmax, 12), zb, zb + Z(pf[pf.length - 1][1])), () => {
+            for (let j = 0; j + 1 < pf.length; j++) { const [r0, d0] = pf[j], [r1, d1] = pf[j + 1]; const a = P(x, y, zb + Z(d0)), b = P(x, y, zb + Z(d1)); const ra = r0 / 4 * 22.63, rb = r1 / 4 * 22.63;
+              c.fillStyle = mixc(lo, hi, (j + 0.5) / (pf.length - 1)); c.beginPath(); c.ellipse(a[0], a[1], Math.max(0.01, ra), Math.max(0.01, ra / 2), 0, 0, Math.PI); c.lineTo(b[0] - rb, b[1]); c.ellipse(b[0], b[1], Math.max(0.01, rb), Math.max(0.01, rb / 2), 0, Math.PI, 0, true); c.closePath(); c.fill(); }
+            const [rt, dt] = pf[pf.length - 1]; if (rt > 0.02) { const t = P(x, y, zb + Z(dt)); c.fillStyle = hi; c.beginPath(); c.ellipse(t[0], t[1], rt / 4 * 22.63, rt / 4 * 11.31, 0, 0, TAU); c.fill(); } });
+          break;
+        }
+        case 'aro': { const u = T(e.c[0]), v = T(e.c[1]), z = Z(e.c[2]), r = e.r / 4, rz = e.r * ZPX;
+          put(boxP(u - r, v - 0.03, u + r, v + 0.03, z - rz, z + rz), () => { c.strokeStyle = col(e.cor); c.lineWidth = Math.max(0.6, e.t * 9); c.beginPath(); for (let k = 0; k <= 16; k++) { const a = k / 16 * TAU; const s = P(u + Math.cos(a) * r, v, z + Math.sin(a) * rz); if (k) c.lineTo(s[0], s[1]); else c.moveTo(s[0], s[1]); } c.stroke(); }); break; }
+        default: A.formMissing.add(e.k);
+      }
+    });
+    return out;
+  }
+  // the parts in the order the god paints them — a part before another it is behind; else the form's order — and how the
+  // sorting went (for the proofs: the parts, the pairs that meet on the screen, the «behind»s found, the rings broken)
+  const FEP = 1e-4;
+  // (A's points out of a plane of B — all on its outer side, some off it —: 1, B first, where the plane faces the eye — A is
+  // in front —; -1, A first, where it faces away)
+  function sepBy(A, B) {
+    for (const pl of B.PL) { const f = pl.n[0] + pl.n[1] + pl.n[2]; if (f > -1e-6 && f < 1e-6) continue; let all = true, some = false;
+      for (const v of A.V) { const s = pl.n[0] * v[0] + pl.n[1] * v[1] + pl.n[2] * v[2] - pl.d; if (s < -FEP) { all = false; break; } if (s > FEP) some = true; }
+      if (all && some) return f > 0 ? 1 : -1; }
+    return 0;
+  }
+  const inRound = (Q, rg) => !(Q.ring && Q.ring.id === rg.id) && Q.V.every(v => Math.hypot(v[0] - rg.c[0], v[1] - rg.c[1]) <= rg.r + 0.03);
+  const inBowl = (Q, bw) => !Q.bowl && Q.V.every(v => Math.hypot(v[0] - bw.c[0], v[1] - bw.c[1]) <= bw.r + 0.04);
+  // -1: A first; 1: B first; 0: no word
+  function paintFirst(A, B) {
+    if (A.d1 <= B.d0 + FEP) return -1; if (B.d1 <= A.d0 + FEP) return 1;
+    for (let k = 0; k < 3; k++) { if (A.hi[k] <= B.lo[k] + FEP && A.lo[k] < B.lo[k] - FEP) return -1; if (B.hi[k] <= A.lo[k] + FEP && B.lo[k] < A.lo[k] - FEP) return 1; }
+    let r = sepBy(A, B); if (r) return r; r = sepBy(B, A); if (r) return -r;
+    if (A.ring && inRound(B, A.ring)) return A.ring.fwd ? 1 : -1; if (B.ring && inRound(A, B.ring)) return B.ring.fwd ? -1 : 1;
+    if (A.bowl && inBowl(B, A.bowl)) return -1; if (B.bowl && inBowl(A, B.bowl)) return 1;
+    return 0;
+  }
+  // (two outlines on the screen cover each other: no line between them)
+  function meet2(Pa, Qb) {
+    for (const R of [Pa, Qb]) for (let k = 0; k < R.length; k++) { const a = R[k], b = R[(k + 1) % R.length]; const nx = b[1] - a[1], ny = a[0] - b[0]; const l = Math.hypot(nx, ny); if (l < 1e-9) continue;
+      let p0 = 1e18, p1 = -1e18, q0 = 1e18, q1 = -1e18; for (const v of Pa) { const s = (v[0] * nx + v[1] * ny) / l; if (s < p0) p0 = s; if (s > p1) p1 = s; } for (const v of Qb) { const s = (v[0] * nx + v[1] * ny) / l; if (s < q0) q0 = s; if (s > q1) q1 = s; }
+      if (p1 <= q0 + 0.05 || q1 <= p0 + 0.05) return false; }
+    return true;
+  }
+  function formOrder(parts) {
+    const n = parts.length, st = { parts: n, pairs: 0, edges: 0, rings: 0 }; if (n < 2) return { order: parts.slice(), st };
+    for (const q of parts) {
+      let sx0 = 1e9, sy0 = 1e9, sx1 = -1e9, sy1 = -1e9, d0 = 1e9, d1 = -1e9; const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9], sp = [];
+      for (const v of q.V) { const sx = (v[0] - v[1]) * 16, sy = (v[0] + v[1]) * 8 - v[2] * 16, d = v[0] + v[1] + v[2]; sp.push([sx, sy]);
+        if (sx < sx0) sx0 = sx; if (sx > sx1) sx1 = sx; if (sy < sy0) sy0 = sy; if (sy > sy1) sy1 = sy; if (d < d0) d0 = d; if (d > d1) d1 = d;
+        for (let k = 0; k < 3; k++) { if (v[k] < lo[k]) lo[k] = v[k]; if (v[k] > hi[k]) hi[k] = v[k]; } }
+      q.sb = [sx0 - 0.6, sy0 - 0.6, sx1 + 0.6, sy1 + 0.6]; q.d0 = d0; q.d1 = d1; q.lo = lo; q.hi = hi; q.o2 = hull2(sp);
+    }
+    // (the pairs whose boxes on the screen meet: by cells of 16 px)
+    const CS = 16, cells = new Map(); parts.forEach((q, k) => { for (let gy = Math.floor(q.sb[1] / CS); gy <= Math.floor(q.sb[3] / CS); gy++) for (let gx = Math.floor(q.sb[0] / CS); gx <= Math.floor(q.sb[2] / CS); gx++) { const key = gx * 100003 + gy; let l = cells.get(key); if (!l) cells.set(key, l = []); l.push(k); } });
+    const seen = new Set(), adj = parts.map(() => []), deg = new Int32Array(n);
+    for (const l of cells.values()) for (let x = 0; x < l.length; x++) for (let y = x + 1; y < l.length; y++) {
+      const a = l[x], b = l[y]; const key = a * n + b; if (seen.has(key)) continue; seen.add(key);
+      const A = parts[a], B = parts[b]; if (A.sb[2] < B.sb[0] || B.sb[2] < A.sb[0] || A.sb[3] < B.sb[1] || B.sb[3] < A.sb[1] || !meet2(A.o2, B.o2)) continue;
+      st.pairs++; const r = paintFirst(A, B); if (r < 0) { adj[a].push(b); deg[b]++; st.edges++; } else if (r > 0) { adj[b].push(a); deg[a]++; st.edges++; }
+    }
+    // (Kahn's, the form's order first among the free; a ring of «behind»s broken at the form's first)
+    const heap = []; const push = k => { heap.push(k); let i = heap.length - 1; while (i > 0) { const pI = (i - 1) >> 1; if (heap[pI] <= heap[i]) break; [heap[pI], heap[i]] = [heap[i], heap[pI]]; i = pI; } };
+    const pop = () => { const top0 = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let s = i; if (l < heap.length && heap[l] < heap[s]) s = l; if (r < heap.length && heap[r] < heap[s]) s = r; if (s === i) break; [heap[s], heap[i]] = [heap[i], heap[s]]; i = s; } } return top0; };
+    for (let k = 0; k < n; k++) if (!deg[k]) push(k);
+    const order = [], done = new Uint8Array(n); let next = 0;
+    while (order.length < n) {
+      if (!heap.length) { while (done[next]) next++; push(next); st.rings++; }
+      const k = pop(); if (done[k]) continue; done[k] = 1; order.push(parts[k]);
+      for (const j of adj[k]) if (--deg[j] === 0 && !done[j]) push(j);
+    }
+    return { order, st };
+  }
+  // a form painted into a picture: its parts, back to front (o.noDoor: without its door); how it went — for the proofs
+  A.formPaint = function (c, m, F, st, o) {
+    const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
+    const r = formOrder(formParts(c, m, F, st, o || {})); for (const q of r.order) q.paint();
+    r.st.ms = (typeof performance !== 'undefined' ? performance.now() : 0) - t0; A.formStats = r.st; return r.st;
+  };
+  // the god's picture of a step from its form, n tiles a side (its door left out where the view does not see it — L-264 —, as
+  // the drawings of before): the sprite of the type, people and size, painted once and kept (Art's cache)
+  A.formSprite = function (type, style, n, noDoor) {
+    const Fo = G.Forma; const st = PAL[style] ? style : 'classico'; const F = Fo && Fo.of(type, st, n); if (!F) return null;
+    const key = 'f-' + type + st + F.n + (noDoor ? '|c' : '');
+    const [w, h, ax, ay] = dims(F.n, F.n, Math.ceil(F.top * ZPX) + 12);
+    return Art.sprite(key, w, h, ax, ay, (c, m) => A.formPaint(c, m, F, st, { noDoor }));
+  };
+  // (a size that is not its type's classic one: a step drawn from its form — none given, the classic)
+  A.sized = (type, n) => n !== undefined && n !== null && !!G.BDEF[type] && n !== G.BDEF[type].w;
+
   // ------------------------------ dispatch ------------------------------
   const MAXZ = { quarteirao: 84, hut: 30, house: 40, sobrado: 52, insula: 64, temple: 64, monument: 72, storehouse: 44, workshop: 46, quartel: 44, torre: 54, praca: 44, mercado: 38, celeiro: 44, biblioteca: 44, teatro: 56, banhos: 50, palacio: 72, doca: 36, aqueduto: 36, maravilha: 100 };
   const NEW = { quarteirao: 1, sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1, temple: 1 }; // (the temple: the Greek's — D-093)
   // later files add building types of their own with the same drawing kit
   A.EXT = {};
   A.kit = () => ({ longhouse, stepPyr, treads, P, poly, ln, walls, top, box, onL, onR, door, shade, roof, hall, column, colonnade, steps, flag, palm, jar, barrel, awning, stall, statue, dome, tree, basin, pave, band, parapet, plinth, winsL, winsR, gableX, gableY, hip, pal, TAU });
-  // (noDoor: the picture without its door — its door is on a side the view does not see: L-264)
-  A.building = function (type, v, style, extra, noDoor) {
+  // (noDoor: the picture without its door — its door is on a side the view does not see: L-264; n: the building's lot, b.w —
+  // a step of another size than its type's classic one is painted from its form, D-106 —, none: the classic)
+  A.building = function (type, v, style, extra, noDoor, n) {
+    if (A.sized(type, n)) return A.formSprite(type, style, n, noDoor);
     NODOOR = !!noDoor;
     try { return building(type, v, style, extra, noDoor ? '|c' : ''); } finally { NODOOR = false; }
   };
