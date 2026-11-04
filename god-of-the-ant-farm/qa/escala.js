@@ -531,6 +531,35 @@ run('e22', () => {
   const c3 = checa(); ok('e22l verificador', c3.ok, c3.txt);
 });
 
+// ------------------------------ e23: os serviços abertos com a comida garantida (D-102) ------------------------------
+// (o teto dos ofícios guarda uma pessoa para cada serviço aberto — o taverneiro de cada taverna, um ator de cada teatro ou arena,
+// um estivador do cais com caixas e armazém — quando a comida do povo está garantida, V.foodSafe; com ela em risco, como antes; o
+// corte do resto mínimo os deixa; na vida, a taverna e o teatro de Mênfis, vazios na metrópole pronta, ganham quem os abra; o save
+// devolve os ofícios como estavam; o verificador vê o serviço vazio)
+run('e23', () => {
+  abre(); const E = G.Eco; const set = cidade('Mênfis'); const f = G.Fac.get(set.fac);
+  const papel = r => [...S.villagers.values()].filter(v => v.set === set.id && v.role === r).length;
+  const sv = E.services(set); const ask = sim(() => E.demand(set, f, 25));
+  const pede = { taverneiro: ask.taverneiro || 0, ator: ask.ator || 0, oleiro: 2, ferreiro: 2, mercador: 1, feirante: 2 };
+  // (um teto de 1 — quatro mãos crescidas —: o primeiro da fila leva a única mão; com a comida garantida, os serviços abertos a mais)
+  const seguro = V.foodSafe(f.id); const deu = E.share(Object.assign({}, pede), set, f, 4);
+  const fs0 = V.foodSafe; V.foodSafe = () => false; const antes = E.share(Object.assign({}, pede), set, f, 4); V.foodSafe = fs0;
+  ok('e23a o teto guarda os serviços com a comida garantida', seguro && sv.taverneiro >= 1 && sv.ator >= 1 && deu.taverneiro === 1 && deu.ator === 1 && antes.taverneiro + antes.ator + antes.oleiro + antes.ferreiro + antes.mercador + antes.feirante === 1,
+    `abertos ${JSON.stringify(sv)}; pedem ${JSON.stringify(pede)}, teto 1 — com a comida garantida ${JSON.stringify(deu)}; em risco ${JSON.stringify(antes)}`);
+  const w1 = { taverneiro: 1, ator: 2, oleiro: 1 }; const n1 = E.cut(w1, 3, { taverneiro: 1, ator: 1 });
+  ok('e23b o corte do resto deixa os serviços guardados', n1 === 2 && w1.taverneiro === 1 && w1.ator === 1 && w1.oleiro === 0, `corta 3 de ${JSON.stringify({ taverneiro: 1, ator: 2, oleiro: 1 })} guardando um taverneiro e um ator: ${n1} cortados, ${JSON.stringify(w1)}`);
+  const t0 = papel('taverneiro'), a0 = papel('ator'); M.viver(400); const c1 = checa();
+  ok('e23c na vida, a taverna e o teatro abertos', papel('taverneiro') >= 1 && papel('ator') >= 1 && V.foodSafe(f.id) && c1.ok, `Mênfis: taverneiros ${t0} → ${papel('taverneiro')}, atores ${a0} → ${papel('ator')} em dois dias; ${c1.txt}`);
+  const roles = [...S.villagers.values()].filter(v => v.set === set.id).map(v => v.id + ':' + v.role).join(); salva(); const s2 = cidade('Mênfis');
+  const roles2 = [...S.villagers.values()].filter(v => v.set === s2.id).map(v => v.id + ':' + v.role).join();
+  ok('e23d o save devolve os ofícios', roles === roles2, roles === roles2 ? 'os mesmos ofícios, um por um, depois de carregar' : 'OS OFÍCIOS MUDARAM NO LOAD');
+  // (o verificador vê: a taverna sem ninguém do ofício por três dias, a comida garantida — tirados os taverneiros à mão, sem passo)
+  const kept = [...S.villagers.values()].filter(v => v.set === s2.id && v.role === 'taverneiro'); for (const v of kept) v.role = 'coletor';
+  const vazia = () => QA.check().filter(q => q.sys === 'escala' && /a taverna sem ninguém/.test(q.msg) && q.msg.startsWith('Mênfis')).length;
+  const q0 = vazia(); const d0 = S.day; S.day += 3; const q3 = vazia(); S.day = d0; for (const v of kept) v.role = 'taverneiro';
+  ok('e23e o verificador vê', !q0 && q3 === 1, `sem taverneiro: no primeiro dia ${q0}, três dias depois ${q3}`);
+});
+
 // ------------------------------ e20: cada capital que não ergue a obra grande diz por quê ------------------------------
 run('e20', () => {
   for (const w of ['metropole', 'mundial', 'mega']) {

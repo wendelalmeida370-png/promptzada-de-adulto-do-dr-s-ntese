@@ -1331,7 +1331,8 @@
       // a trade of one hand is not cut before one of four, and the tavern, the market and the fair go last; the tavern's
       // keeper was the third to go, whatever the rest)
       if (want.contrabandista > 0) { const cut = Math.min(want.contrabandista, MIN_REST - rest); want.contrabandista -= cut; ecoN -= cut; rest += cut; }
-      if (rest < MIN_REST && G.Eco && G.Eco.cut) { const cut = G.Eco.cut(want, MIN_REST - rest); ecoN -= cut; rest += cut; }
+      // (the hands a town with its food safe keeps for its open services stay, D-102)
+      if (rest < MIN_REST && G.Eco && G.Eco.cut) { const cut = G.Eco.cut(want, MIN_REST - rest, G.Eco.kept ? G.Eco.kept(set, fac, want) : null); ecoN -= cut; rest += cut; }
     }
     let rocks = 0; for (const r of S.rocks.values()) if (G.dist(r.x, r.y, set.cx, set.cy) < 26) { rocks++; if (rocks > 2) break; }
     if (!rocks && G.Vg.canQuarry(set)) rocks = 1;

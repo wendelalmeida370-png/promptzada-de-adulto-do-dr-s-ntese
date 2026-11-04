@@ -43,5 +43,24 @@
       else if (v.id !== f.aud.ruler && v.set !== b.set) add('escala', 3, `${v.name} #${v.id}: em audiência no palácio #${b.id}, de outra cidade`);
       else if (v.inside === b.id && In && In.places) { const P = In.places(b); if (!P.by.has(v.id) && !P.with.has(v.id)) add('escala', 3, `${v.name} #${v.id}: na audiência dentro do palácio #${b.id} sem um lugar do repartidor`); }
     }
+    // ---- the open services with the food safe (D-102): a tavern, a theatre or an arena, a quay with crates and its warehouse have
+    // someone of their trade in the town — after three days of the food safe and the service open (the trades are dealt out four
+    // seconds at a time, three changes at most: a keeper who dies is replaced within the day). A town of fewer than ten grown
+    // hands is not judged (it asks for more than it has); the first day seen kept here, by world, never in the world
+    const E = G.Eco; if (E && E.services && G.Village.foodSafe) {
+      if (SERV.S !== s) { SERV.S = s; SERV.m.clear(); }
+      const roles = new Map(), adults = new Map();
+      for (const v of s.villagers.values()) { if (v.captive) continue; let R = roles.get(v.set); if (!R) roles.set(v.set, R = new Set()); R.add(v.role); if (v.age >= 16 && v.age < 62) adults.set(v.set, (adults.get(v.set) || 0) + 1); }
+      for (const set of s.settlements.values()) {
+        const fac = G.Fac.get(set.fac); const o = fac && (adults.get(set.id) || 0) >= 10 && G.Village.foodSafe(fac.id) ? E.services(set) : null;
+        for (const r of E.SERVICE) {
+          const key = set.id + ':' + r;
+          if (!o || !o[r] || (roles.get(set.id) || new Set()).has(r)) { SERV.m.delete(key); continue; }
+          const d0 = SERV.m.get(key); if (d0 === undefined) { SERV.m.set(key, s.day); continue; }
+          if (s.day - d0 >= 3) add('escala', 3, `${set.name}: ${r === 'taverneiro' ? 'a taverna' : r === 'ator' ? 'o teatro' : 'o cais com carga'} sem ninguém do ofício há ${s.day - d0} dias, com a comida garantida (D-102)`);
+        }
+      }
+    }
   });
+  const SERV = { S: null, m: new Map() };
 })();

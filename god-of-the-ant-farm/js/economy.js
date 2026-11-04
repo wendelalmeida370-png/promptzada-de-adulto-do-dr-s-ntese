@@ -248,12 +248,35 @@
   const rank = k => { const i = FIRST.indexOf(k); return i < 0 ? FIRST.length : i; };
   const FOOD = { pescador: 1, fruticultor: 1 };
   E.FOOD_TRADES = FOOD;
+  // (the services a town has open — D-102 —: with its food safe (V.foodSafe), one hand for each beyond the ceiling — the keeper of
+  // each tavern, an actor of each theatre or arena, a docker while crates wait on its quays —: a big tavern or theatre with nobody
+  // to open it is an empty monument, and not even Mênfis, of 58, had its keeper (T-393). With the food at risk, as before)
+  E.SERVICE = ['taverneiro', 'ator', 'estivador'];
+  E.services = function (set) {
+    const k = { taverneiro: 0, ator: 0, estivador: 0 }; let crates = 0, ws = 0;
+    for (const b of G.S.buildings.values()) {
+      if (b.set !== set.id) continue; if (b.crates && b.crates.length) crates += b.crates.length;
+      if (!b.built) continue; const j = E.jobsOf(b); if (!j || !(j.n > 0)) continue;
+      if (j.role === 'taverneiro' || j.role === 'ator') k[j.role]++; else if (j.role === 'estivador') ws++;
+    }
+    if (crates && ws) k.estivador = 1; // (the quay's: a warehouse to carry the crates to, and crates waiting)
+    return k;
+  };
+  // (the hands kept so, by trade, of what the town asks — the cut of the minimum rest, village.js, leaves them too —; null with
+  // the food at risk)
+  E.kept = function (set, fac, ask) {
+    if (!(G.Village.foodSafe && G.Village.foodSafe(fac.id))) return null;
+    const o = E.services(set); let k = null;
+    for (const r of E.SERVICE) if (o[r] && ask[r] > 0) (k || (k = {}))[r] = Math.min(ask[r], o[r]);
+    return k;
+  };
   E.share = function (out, set, fac, A) {
     const pop = G.Village.pop(set.id); const hungry = (fac.stock.food || 0) < pop * 1.5;
     const capN = Math.floor(A * (hungry ? 0.18 : 0.38));
     const keys = Object.keys(out).filter(k => !FOOD[k] && out[k] > 0).sort();
     let tot = 0; for (const k of keys) tot += out[k];
     if (!tot || tot <= capN) return out;
+    const ask = {}; for (const k of keys) ask[k] = out[k];
     const got = {}; let given = 0;
     for (const k of keys.slice().sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : 1))) { if (given >= capN) break; got[k] = 1; given++; }
     // (then the quay's hands, whole, while the ceiling holds them: as many as the crates waiting on it ask — harbor.js, up to
@@ -271,6 +294,7 @@
     }
     for (const k of keys) out[k] = got[k] || 0;
     if (keys.includes('pastor') && !(out.pastor >= 1)) out.pastor = 1;
+    const kept = E.kept(set, fac, ask); if (kept) for (const k in kept) out[k] = Math.max(out[k], kept[k]);
     return out;
   };
   // the cut of the minimum rest (village.js assignJobs: some hands for wood and forage before the trades): n hands, one at a
@@ -280,10 +304,10 @@
   // mines are not cut here (the smugglers go before: village.js). Returns how many it cut
   const KEEP = { estivador: 1, carcereiro: 1, vigia: 1, foguista: 1, pastor: 1, mineiro: 1, contrabandista: 1 };
   E.CUT = FIRST.slice().reverse().filter(r => !KEEP[r]).concat(['fruticultor']);
-  E.cut = function (want, n) {
+  E.cut = function (want, n, keep) {
     let k = 0;
     while (k < n) {
-      let r = null; for (const q of E.CUT) if (want[q] > 0 && (!r || want[q] > want[r])) r = q;
+      let r = null; for (const q of E.CUT) if (want[q] > ((keep && keep[q]) || 0) && (!r || want[q] > want[r])) r = q;
       if (!r) break;
       want[r]--; k++;
     }
