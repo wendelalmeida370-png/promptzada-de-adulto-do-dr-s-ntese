@@ -255,7 +255,10 @@
     a.deve = r2(Math.max(0, due - n)); a.pago = S.day;
     if (a.deve > EPS && a.deve + EPS >= per * K.OWE_DAYS) {
       // (the owner gives up: the people buy the house, for what they can pay of half its worth; the debt goes with it)
-      const f = 'f:' + set.fac; const worth = r2(Math.min(K.price(set, b.type) * 0.5, D.get(f, 'moedas')));
+      // (paid in coin only to a people that knows it: the owner of another people — a town that rose and became its own, the
+      // Freed People of the world war — gives the house up for the debt, and no coin is born in a house that has no use for it, L-586)
+      const rb = to[0] === 'h' ? S.buildings.get(o.home) : null; const rf = rb ? G.Village.facOfSet(rb.set) : G.Fac.idOfV(o);
+      const f = 'f:' + set.fac; const worth = E.coinage(rf) ? r2(Math.min(K.price(set, b.type) * 0.5, D.get(f, 'moedas'))) : 0;
       if (worth > EPS) D.move(f, to, 'moedas', worth, { code: 'venda-casa', by: o.id });
       A.note(o, 'memory', `${head.name} não pagava o aluguel: vendi a casa ao povo${worth > EPS ? ` por ${worth} moedas` : ''}.`, NOTE);
       for (const m of L) if (m.age >= 16) A.note(m, 'memory', `Devíamos o aluguel a ${o.name}: a casa passou ao povo.`, NOTE);
