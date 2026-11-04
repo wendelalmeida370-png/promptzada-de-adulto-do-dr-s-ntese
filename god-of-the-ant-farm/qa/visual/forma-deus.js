@@ -362,8 +362,9 @@ if (want('h')) {
 // a course every half a level; nothing of the world written)
 if (want('i')) {
   F.blank(); const R = G.Render, S = G.S, W = G.W; const V = Math.round(Math.sqrt(S.H.length)); const x0 = 20, y0 = 20, n = N10;
-  // (the ground: 4 at the front corner — x and y high —, falling a level every 3.3 tiles toward the back along x, flat along y)
-  for (let vy = y0; vy <= y0 + n; vy++) for (let vx = x0; vx <= x0 + n; vx++) S.H[vy * V + vx] = 1 + 3 * (vx - x0) / n;
+  // (the ground: 4.3 at the front corner — x and y high —, falling a level every 3.3 tiles toward the back along x, flat along
+  // y: a podium from 4.3 down to 1.3, its courses at the world's half levels — 1.5 to 4 —, not counted from its top)
+  for (let vy = y0; vy <= y0 + n; vy++) for (let vx = x0; vx <= x0 + n; vx++) S.H[vy * V + vx] = 1.3 + 3 * (vx - x0) / n;
   const b = putBig('maravilha', 'romano', 6700, n, x0, y0); const PALb = A.PAL.romano.base.map(F.parseCol); const out = [];
   try {
     const s0 = JSON.stringify(b) + JSON.stringify(S.rng || null); let okAll = true;
@@ -377,10 +378,14 @@ if (want('i')) {
       // (what the ground says: the faces this view shows, and their drop at each end — the corners of the lot's two near edges)
       const [cx, cy] = G.Village.center(b); const fx = R.depth(cx + 1, cy) - R.depth(cx, cy), fy = R.depth(cx, cy + 1) - R.depth(cx, cy);
       const xE = fx > 0 ? x0 + n : x0, yE = fy > 0 ? y0 + n : y0, top = W.maxH(x0, y0, n, n), g = (x, y) => top - S.H[y * V + x];
-      const want = [[g(x0, yE), g(x0 + n, yE)], [g(xE, y0), g(xE, y0 + n)]].filter(d => Math.max(...d) > 0.02).map(d => d.slice().sort((p, q) => p - q));
+      const want = [[g(x0, yE), g(x0 + n, yE)], [g(xE, y0), g(xE, y0 + n)]].filter(d => Math.max(...d) > 0.02).map(d => d.map(v => +v.toFixed(2)).sort((p, q) => p - q));
       const got = drops.map(d => d.slice().sort((p, q) => p - q));
-      const okR = faces.length === want.length && want.every(w => got.some(q => Math.abs(q[0] - w[0]) < 0.15 && Math.abs(q[1] - w[1]) < 0.15)) && (faces.length < 2 || (lit === 1 && dark === 1)) && lines.length > 0;
-      okAll = okAll && okR; out.push(`vista ${r}: ${faces.length} face${faces.length === 1 ? '' : 's'} (${lit} clara, ${dark} escura), as pontas ${JSON.stringify(got)} níveis (o chão: ${JSON.stringify(want)})`);
+      // (the courses of each face: its long strokes — a joint is upright —, one at each of the world's half levels between the
+      // ground and the top: 4, 3.5 … 1.5 — six —, where counted from the top they would be five)
+      const courses = lines.filter(o => o.col[3] < 0.28 && o.segs.some(s => Math.abs(s[1][0] - s[0][0]) > 2)).map(o => o.segs.filter(s => Math.abs(s[1][0] - s[0][0]) > 2).length); // (the courses' strokes; the foot's line is darker)
+      const lo0 = W.minH(x0, y0, n, n), wantC = Math.floor((top - 1e-6) / 0.5) - Math.floor(lo0 / 0.5 + 1e-6);
+      const okR = faces.length === want.length && want.every(w => got.some(q => Math.abs(q[0] - w[0]) < 0.15 && Math.abs(q[1] - w[1]) < 0.15)) && (faces.length < 2 || (lit === 1 && dark === 1)) && courses.length === faces.length && courses.every(c => c === wantC);
+      okAll = okAll && okR; out.push(`vista ${r}: ${faces.length} face${faces.length === 1 ? '' : 's'} (${lit} clara, ${dark} escura), as pontas ${JSON.stringify(got)} níveis (o chão: ${JSON.stringify(want)}), fiadas ${JSON.stringify(courses)} (as do mundo: ${wantC})`);
     });
     const s1 = JSON.stringify(b) + JSON.stringify(S.rng || null);
     ok('i: o pódio de pedra do degrau, até o chão de cada canto', okAll && s0 === s1, out.join('; ') + ` — o bloco marrom de antes descia ${(W.maxH(x0, y0, n, n) - W.minH(x0, y0, n, n)).toFixed(0)} níveis inteiros nas duas faces de cada vista; ${s0 === s1 ? 'o mundo igual' : 'o mundo MUDOU'}`);
