@@ -538,6 +538,7 @@
         if (ty >= y && ty < y + def.h && tx >= x && tx < x + def.w) continue;
         if (!W.inb(tx, ty)) { ok = false; break; }
         const i = ty * N + tx; const o = S.occ[i];
+        if (def.podium && S.type[i] >= T.SAND && S.cliff[i]) { ok = false; break; } // (a podium's ring is where one walks: no cliff — D-115)
         if (o) {
           const ob = S.buildings.get(o); if (ob && gone && gone.includes(ob.id)) continue;
           if (ob && block && ob.blocks && ob.built && ob.set === set.id && G.BDEF[ob.type].housing && may[ob.type]) { if (!gone) gone = []; gone.push(ob.id); cost += may[ob.type]; beds += G.BDEF[ob.type].housing; continue; }
@@ -608,7 +609,8 @@
     for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) {
       if (ty >= y && ty < y + n && tx >= x && tx < x + n) continue;
       if (!W.inb(tx, ty)) return null;
-      const o = S.occ[ty * N + tx] ? S.buildings.get(S.occ[ty * N + tx]) : null;
+      const j = ty * N + tx; if (S.type[j] >= T.SAND && S.cliff[j]) return null; // (the ring is where one walks: no cliff)
+      const o = S.occ[j] ? S.buildings.get(S.occ[j]) : null;
       if (o && o !== own && o.blocks && !(G.BDEF[o.type].housing && take(o))) return null;
     }
     const left = {}; for (const id of gone) { const t = S.buildings.get(id).type; left[t] = (left[t] || 0) + 1; if (KEEP[t] && (counts[t] || 0) - left[t] < KEEP[t]) return null; }
@@ -810,6 +812,12 @@
     }
     return null;
   };
+  // (the turn a work has with the builders who choose where to bring materials and hands — the builders' choice, villagers.js,
+  // adds it to the walk to each work: a great work of the town comes before the smaller works about it as if it were V.GREAT_PRI
+  // (tiles²) nearer, else every work nearer the builders took its stone and the Colosseum of Rome got none in eight years —
+  // D-117. Nothing for any other work: with only the classic steps, no turn changes)
+  V.GREAT_PRI = 400;
+  V.workPri = b => (!b.built && b.type !== 'ruin' && publicWork(b.type) && (b.amp || b.w !== G.Escala.n0(b.type)) ? -V.GREAT_PRI : 0);
   // (the planner's question, with nothing the town needs to live first: with no great work going up, the first public work of
   // the town that a bigger step it justifies now fits round. Nothing while only each type's classic step is known: no step
   // bigger than the one it has)

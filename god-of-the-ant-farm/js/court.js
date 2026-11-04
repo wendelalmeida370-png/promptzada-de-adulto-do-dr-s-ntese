@@ -118,7 +118,7 @@
       for (let ty = y - 1; ty <= y + w && ok; ty++) for (let tx = x - 1; tx <= x + w; tx++) {
         const i = ty * N + tx; const inside = tx >= x && ty >= y && tx < x + w && ty < y + w;
         if (S.occ[i]) { const o = S.buildings.get(S.occ[i]); if (inside || (o && o.blocks)) { ok = false; break; } }
-        if (!inside) continue;
+        if (!inside) { if (w !== def.w && S.type[i] >= T.SAND && S.cliff[i]) { ok = false; break; } continue; } // (a podium's ring is where one walks)
         const tt = S.type[i]; if (tt < T.SAND || tt === T.RIVER || S.objAt[i] || S.wall[i] || S.road[i] >= 2 || S.fire[i] > 0) { ok = false; break; }
         if (S.treeAt[i]) trees++;
       }
