@@ -377,7 +377,7 @@ const backTo = (w, ty) => !!w && !!w.task && w.task.type === ty;
 // show that day, past the doors' hour — kept for another day —; one of the morning, held before the doors, leaves the show its
 // day. (b) a feast begun by the god's hand with the play under way: the show ends there — closed as cut, nobody in it with its
 // errand, its rows and its stage empty — and its actors and its audience are free for the feast, which takes whom it takes
-// (D-126); the checker clean
+// (D-126); (c) every people has a feast of the year out of the show's hours; the checker clean
 {
   const feasts = st => { const f = G.Fac.get(st.fac); return f ? G.Fest.of(f.civ).filter(k => !G.Fest.DEF[k].trigger) : []; };
   const span = k => [G.Fest.DEF[k].at, G.Fest.DEF[k].at + G.Fest.DEF[k].dur * 1.15];
@@ -420,6 +420,13 @@ const backTo = (w, ty) => !!w && !!w.task && w.task.type === ty;
       notes.push(`(b) ${G.Fest.DEF[key].name} pela mão do deus com a peça em cena (${people.length} na peça): o espetáculo ${op.st} (${op.end ? op.end.why : ''}), ninguém com o afazer dele, ${went} dos ${people.length} na festa, que leva ${fe.parts.length}`);
     }
   }
+  // (c) every people's theatre has its days: in the calendar of each people, a feast of the year out of the show's hours — at
+  // 0,52 the classical people's one feast of the year, the harvest's, fell in them every year, and its theatre in a big town
+  // never opened (D-130)
+  { const hh = Tt.horas(S().buildings.get(P.id)); const civs = [...new Set(Object.values(G.Fest.DEF).map(d => d.civ).filter(Boolean))].sort();
+    const shut = civs.filter(c => { const ks = G.Fest.of(c).filter(k => !G.Fest.DEF[k].trigger && G.Fest.DEF[k].every <= 1); return ks.length && ks.every(k => span(k)[0] < hh.fecha && span(k)[1] > hh.abre); });
+    if (shut.length) fail(`(c) o teatro de ${shut.join(', ')} nunca abre numa cidade grande: toda festa do ano cai nas horas da peça`);
+    else notes.push(`(c) os ${civs.length} povos têm festa do ano fora das horas da peça`); }
   ok('l13 a-festa-e-a-peca (D-130)', good && !bad.length, `${notes.join(' · ')}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}`);
 }
 function n(b) { return 'n' + (G.gen(V.buildName(b)) === 'a' ? 'a ' : 'o ') + V.buildName(b).toLowerCase(); }

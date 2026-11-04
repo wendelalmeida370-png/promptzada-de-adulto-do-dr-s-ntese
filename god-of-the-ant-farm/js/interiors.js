@@ -1728,6 +1728,8 @@
       // on their treads where they have them)
       if (s.kind === 'degraus') { if (s.lv1 !== lv || !onFlight(s, x, z)) continue; const ty = In.treadY(s, x, z); if (ty >= 0) return ty; const len = s.dir[0] ? s.r[2] - s.r[0] : s.r[3] - s.r[1]; const t = s.dir[0] ? (s.dir[0] > 0 ? x - s.r[0] : s.r[2] - x) : (s.dir[1] > 0 ? z - s.r[1] : s.r[3] - z); return y0 * G.clamp(t / (len || 1), 0, 1); }
       if (s.lv0 !== lv || !onFlight(s, x, z)) continue; const l1 = p.levels.find(q => q.lv === s.lv1); const y1 = l1 ? l1.y : y0;
+      // (a flight between two storeys with its treads said — a form's steps, the Roman stage's — on them, as the 'degraus': L-506)
+      if (s.treads) { const ty = In.treadY(s, x, z); if (ty >= 0) return ty; }
       const len = s.dir[0] ? s.r[2] - s.r[0] : s.r[3] - s.r[1]; const t = s.dir[0] ? (s.dir[0] > 0 ? x - s.r[0] : s.r[2] - x) : (s.dir[1] > 0 ? z - s.r[1] : s.r[3] - z);
       return y0 + (y1 - y0) * G.clamp(t / (len || 1), 0, 1);
     }

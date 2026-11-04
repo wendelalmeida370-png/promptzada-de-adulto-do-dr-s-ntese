@@ -414,10 +414,15 @@
     const cav = (r0, k0, m, rTop, na) => { const A = []; for (let k = m - 1; k >= 0; k--) { const ro = k === m - 1 ? rTop : r0 + (k + 1) * tr, y = yq + rs * (k0 + k + 1); A.push([k3(ro), k3(y)]); rows.push([k3(r0 + k * tr), k3(ro), k3(y)]); }
       return { k: 'cavea', c: [cu, vD], aneis: A, fundo: k3(r0), cor: T.cor, arco: [k3(a0), k3(a1)], fecho: 'wl', escadas: { a: aisles(na), l: 1.0, n: 2 } }; };
     els.push(cav(ri, 0, S.lo, up ? rW : rG, S.al)); if (up) els.push(cav(rW, S.lo, S.up, rG, S.au));
-    // (the parapet round the gallery — the outer wall, from the ground —; at each row's end, outside it, its stepped wall: a
-    // wedge 0.2 m wide at its middle, 0.9 m over the row)
+    // (the parapet round the gallery — the outer wall, from the ground —; at each row's end, outside it, its stepped wall 0.9 m
+    // over the row, of the plan's wall's width, 0.2 m: in pieces 0.25 m deep at most, each a wedge 0.2 m wide at its middle, its
+    // outer edge's angle to 1e-5 — one wedge the row's whole depth, its angle to 1e-3, stood 1.28 cm off the plan's wall at the
+    // row's ends, and more on the deep top rows, L-507)
     els.push({ k: 'cavea', c: [cu, vD], aneis: [[k3(R), k3(top + 0.9)]], fundo: k3(rG), cor: T.cor, arco: [k3(a0), k3(a1)], fecho: 'wl' });
-    for (const [r0, r1, y] of rows) { const d = k3(0.2 / ((r0 + r1) / 2)); for (const ar of [[k3(a0 - d), k3(a0)], [k3(a1), k3(a1 + d)]]) els.push({ k: 'cavea', c: [cu, vD], aneis: [[r1, k3(y + 0.9)]], fundo: r0, cor: T.cor, arco: ar, fecho: 'wl' }); }
+    const k5 = x => Math.round(x * 1e5) / 1e5, e0 = k3(a0), e1 = k3(a1);
+    for (const [r0, r1, y] of rows) { const nk = Math.max(1, Math.ceil((r1 - r0) / 0.25 - 1e-9));
+      for (let i = 0; i < nk; i++) { const ra = i ? k3(r0 + (r1 - r0) * i / nk) : r0, rb = i < nk - 1 ? k3(r0 + (r1 - r0) * (i + 1) / nk) : r1, d = 0.2 / ((ra + rb) / 2);
+        for (const ar of [[k5(e0 - d), e0], [e1, k5(e1 + d)]]) els.push({ k: 'cavea', c: [cu, vD], aneis: [[rb, k3(y + 0.9)]], fundo: ra, cor: T.cor, arco: ar, fecho: 'wl' }); } }
     els.push({ k: 'arena', c: [cu, vD], r: S.ro, y: k3(yq + 0.01), cor: roman ? '#d6c9ac' : '#e8dcc0' });
     // (the stage building: its back vP — the Roman's stage's front, the Greek's proskenion's columns: the parodos pw wide between
     // its corner and the rows' end —, the wall behind the stage from vS, the corridor from vC, the rooms from vR, its front vF)
@@ -434,10 +439,12 @@
       return out; };
     if (roman) {
       // (the stage: its podium the whole building's — the floor of the stage and of the rooms —; its two flights up from the
-      // orchestra, the treads 0.3 m deep, each riser a quarter of the stage's height)
+      // orchestra, the treads 0.3 m deep, each riser a quarter of the stage's height — each flight's treads in the numbers, the
+      // plan's flight on them: L-506)
       els.push(box([u0, vP, u1, vF], 0, ys, ['base0', 'base1', 'base2'], { mat: 'ashlar', piso: 1 }));
-      const m = Math.ceil((ys - yq) / 0.26 - 1e-9), fl = []; for (const ux of [cu - (S.ro - 1.2), cu + (S.ro - 1.2)]) { fl.push([k3(ux - 0.8), k3(vP - 0.3 * m), k3(ux + 0.8), vP]);
-        for (let j = 0; j < m; j++) els.push(box([ux - 0.8, vP - 0.3 * (m - j), ux + 0.8, vP - 0.3 * (m - j - 1)], 0, yq + (ys - yq) * (j + 1) / m, ['base0', 'base1', 'base2'], { degrau: 1 })); }
+      const step = (r, j) => { const e = box(r, 0, yq + (ys - yq) * (j + 1) / m, ['base0', 'base1', 'base2'], { degrau: 1 }); els.push(e); return { r: e.r, y: e.y1 }; };
+      const m = Math.ceil((ys - yq) / 0.26 - 1e-9), fl = [], flT = []; for (const ux of [cu - (S.ro - 1.2), cu + (S.ro - 1.2)]) { fl.push([k3(ux - 0.8), k3(vP - 0.3 * m), k3(ux + 0.8), vP]);
+        const tr = []; for (let j = 0; j < m; j++) tr.push(step([ux - 0.8, vP - 0.3 * (m - j), ux + 0.8, vP - 0.3 * (m - j - 1)], j)); flT.push(tr); }
       // (the scaenae frons: its wall to hf over the stage with its three doors; its tiers of columns before it on the stage, the
       // ledge over each tier, the cornice at its top)
       wallU(u0, u1, vS, vC, ys, ys + S.hf, doorsB, ['wl', 'wr', 'top']);
@@ -449,11 +456,11 @@
       if (S.dc) wallU(u0 + 0.4, u1 - 0.4, vC + S.dc, vR, ys, yb, [[cu - wm, 1.0, 2.2], [cu, 1.0, 2.2], [cu + wm, 1.0, 2.2]]);
       for (const s of [-1, 1]) els.push(box([cu + s * wm / 2 - 0.1, vR, cu + s * wm / 2 + 0.1, vF - 0.3], ys, yb));
       wallU(u0, u1, vF - 0.3, vF, ys, yb, [[cu, 1.6, 2.4]]);
-      for (let j = 0; j < m; j++) els.push(box([cu - 0.8, vF + 0.3 * (m - j - 1), cu + 0.8, vF + 0.3 * (m - j)], 0, yq + (ys - yq) * (j + 1) / m, ['base0', 'base1', 'base2'], { degrau: 1 }));
+      const frT = []; for (let j = 0; j < m; j++) frT.push(step([cu - 0.8, vF + 0.3 * (m - j - 1), cu + 0.8, vF + 0.3 * (m - j)], j));
       els.push({ k: 'telhado', r: [k3(u0), vC, k3(u1), vF], y0: k3(yb), y1: k3(yb + 1.4), ao: 'u', ov: 0.3, cor: ['roof0', 'roof1', 'gable', 'roof2'] });
       // (teto: the ceiling of the stage building — a closed part, D-131 —, the foot of the form's roof over its rooms: the plan's
       // storey of it up to there and no wall of it above, the 3D's ceiling there — one number, the form's)
-      const teatro = { L, n, st, cu, vD, yq, ys, ro: S.ro, ri: k3(ri), R, rG, rW: k3(rW), a0: k3(a0), a1: k3(a1), tr, rs, lo: S.lo, up: S.up, top: k3(top), rows, w, u0: k3(u0), u1: k3(u1), wm, vP, vS, vC, vR, vF, dc: S.dc, dr: S.dr, hb: S.hb, hf: S.hf, teto: k3(yb), doors: doorsB.map(q => q.map(k3)), flights: fl, front: [k3(cu - 0.8), vF, k3(cu + 0.8), k3(vF + 0.3 * m)], cols };
+      const teatro = { L, n, st, cu, vD, yq, ys, ro: S.ro, ri: k3(ri), R, rG, rW: k3(rW), a0: k3(a0), a1: k3(a1), tr, rs, lo: S.lo, up: S.up, top: k3(top), rows, w, u0: k3(u0), u1: k3(u1), wm, vP, vS, vC, vR, vF, dc: S.dc, dr: S.dr, hb: S.hb, hf: S.hf, teto: k3(yb), doors: doorsB.map(q => q.map(k3)), flights: fl, treads: flT, front: [k3(cu - 0.8), vF, k3(cu + 0.8), k3(vF + 0.3 * m)], frontTreads: frT, cols };
       return { els, amphi: { teatro } };
     }
     // (the Greek's skene: the proskenion's columns along its back and the logeion over them; its wall with the three doors — the

@@ -51,7 +51,9 @@
       desc: 'a noite mais curta: danças de roda em volta do mastro e fogueiras no crepúsculo' },
     thing: { art: 'o', civ: 'nordico', name: 'Thing', at: 0.26, dur: 0.1, every: 2,
       desc: 'os homens livres se reúnem; o recitador das leis fala e as disputas são julgadas' },
-    colheita: { art: 'a', civ: 'classico', name: 'Festa da Colheita', at: 0.52, dur: 0.12, every: 1,
+    // (the harvest's feast at midday, over before the theatre's doors: at 0,52 it fell every year in the play's hours, and the
+    // classical people's theatre of a big town never opened, D-130)
+    colheita: { art: 'a', civ: 'classico', name: 'Festa da Colheita', at: 0.34, dur: 0.12, every: 1,
       desc: 'dança de roda, pão novo e os primeiros frutos oferecidos ao deus' },
   };
   FE.of = civ => Object.keys(FE.DEF).filter(k => FE.DEF[k].civ === civ);
