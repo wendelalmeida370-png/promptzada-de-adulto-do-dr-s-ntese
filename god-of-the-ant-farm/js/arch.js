@@ -1505,10 +1505,11 @@
       const rOut = A0[k][0], rIn = k < n - 1 ? A0[k + 1][0] : e.fundo, y = A0[k][1];
       if (k || e.fecho) poly(c, arc(rOut, y, a0, a1).concat(arc(Math.max(0, rIn), y, a1, a0)), k % 2 ? seats : tone(seats, 0.9));
       if (E && (k || e.fecho)) for (const a of E.a) { const h0 = E.l / 2 / Math.max(0.1, rIn), h1 = E.l / 2 / rOut; poly(c, [pt(rIn, a - h0, y), pt(rOut, a - h1, y), pt(rOut, a + h1, y), pt(rIn, a + h0, y)], tone(seats, 0.84)); }
-      if (k < n - 1 && e.parapeito) farBand(c, cx, cy, rIn / 4, A0[k + 1][1] * ZPX, y * ZPX, muro || tone(seats, 0.82), a0, a1);
+      if (k < n - 1) farBand(c, cx, cy, rIn / 4, A0[k + 1][1] * ZPX, y * ZPX, muro || tone(seats, 0.82), a0, a1); // (its face down to the next: the 3D's riser)
       if (e.parapeito && k > 0) farBand(c, cx, cy, rIn / 4, y * ZPX, (y + e.parapeito) * ZPX, tone(muro || seats, 0.9), a0, a1, (e.vaos || []).filter(g => g.anel === k).map(g => [g.a, g.w / 2 / rIn]));
     }
     if (!e.fecho) return;
+    farBand(c, cx, cy, e.fundo / 4, 0, A0[n - 1][1] * ZPX, tone(seats, 0.8), a0, a1); // (a bowl on the ground: its lowest row's face down to it)
     for (const a of [a0, a1]) for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A0[k + 1][0] : e.fundo; poly(c, [pt(rIn, a, 0), pt(A0[k][0], a, 0), pt(A0[k][0], a, A0[k][1]), pt(rIn, a, A0[k][1])], tone(wall, 0.94)); }
     const b0 = Math.max(a0, 1.75 * Math.PI), b1 = Math.min(a1, 2 * Math.PI); if (b1 > b0) poly(c, arc(A0[0][0], A0[0][1], b0, b1).concat(arc(A0[0][0], 0, b1, b0)), tone(wall, 0.8));
   }
