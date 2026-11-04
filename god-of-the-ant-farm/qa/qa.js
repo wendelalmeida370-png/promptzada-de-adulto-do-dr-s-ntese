@@ -1536,7 +1536,10 @@
 // G.Interiors (fazer uma planta não muda o mundo).
 (function () {
   if (!window.QA || !QA.more) return;
-  const WATCH = 600; // (the Colosseum's least: the places to watch from seated, reached from its door — PLANO.md §7, test A)
+  // (the Colosseum's least, by its step: the places to watch from seated, reached from its door — its rows seat 742 and 1406
+  // with the emperor's box, D-125: the floor a twentieth under them —; and in the box, the throne's place and the court's four,
+  // which the body takes)
+  const WATCH = { 10: 700, 13: 1340 }, BOX = { trono: 1, corte: 4 };
   // (the places of the rite on the top storey of the Great Pyramid and of the Templo Mayor — the offering before the sarcophagus
   // and those who pray about it; the priest before each shrine's door and at each brazier —, each one the body takes, D-108)
   const RITE = { piramide: { ofertar: 1, rezar: 2 }, mayor: { oficiar: 2, acender: 2 } };
@@ -1614,7 +1617,10 @@
         if (!p || !p.ok) { add('monumental', 1, `${b.type}#${b.id} (${b.style}, ${b.w} casas): a planta do anfiteatro não se arma (${p ? p.errs.slice(0, 2).join('; ') : 'sem planta'})`); continue; }
         const l1 = p.levels.find(l => l.lv === 1);
         if (!l1 || Math.abs(l1.y - O.ya) > 0.01) add('monumental', 1, `${b.type}#${b.id}: a areia da planta a ${l1 ? l1.y.toFixed(2) : '—'} m e a da forma a ${O.ya.toFixed(2)} m — o corpo andaria noutro chão que o visto`);
-        if ((p.cap.watch || 0) < WATCH) add('monumental', 2, `${b.type}#${b.id} (${b.w} casas): ${p.cap.watch || 0} lugares de assistir sentados que a porta alcança (o Coliseu tem ${WATCH} ao menos)`);
+        const least = WATCH[b.w] || WATCH[10];
+        if ((p.cap.watch || 0) < least) add('monumental', 2, `${b.type}#${b.id} (${b.w} casas): ${p.cap.watch || 0} lugares de assistir sentados que a porta alcança (o Coliseu tem ${least} ao menos)`);
+        for (const use in BOX) { const got = (p.items || []).filter(i => i.lv === 2).reduce((n, i) => n + i.spots.filter(q => q.use === use && q.ok).length, 0);
+          if (got < BOX[use]) add('monumental', 2, `${b.type}#${b.id} (${b.w} casas): ${got} lugares ${use === 'trono' ? 'do trono' : 'da corte'} no camarote do imperador que o corpo toma (${BOX[use]} ao menos)`); }
         continue;
       }
       // ---- the Great Pyramid and the Templo Mayor (D-108): the plan stands, its top storey — the king's chamber up the gallery, the
