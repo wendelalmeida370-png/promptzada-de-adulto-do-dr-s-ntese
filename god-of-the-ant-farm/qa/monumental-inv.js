@@ -33,7 +33,9 @@
         // middle the place of the offering, which the body takes
         const F = Fo.of(b.type, b.style || 'classico', b.w); if (!F) continue; const p = In.plan(b);
         if (!p || !p.ok) { add('monumental', 1, `${b.type}#${b.id} (${b.style}, ${b.w} casas): a planta do grande monumento não se arma (${p ? p.errs.slice(0, 2).join('; ') : 'sem planta'})`); continue; }
-        const top = F.els.filter(e => e.k === 'bloco' && e.degrau === 1).reduce((y, e) => Math.max(y, e.y1), 0), l0 = p.levels.find(l => l.lv === 0);
+        // (the top: its highest step — the Norse's stone ship has none: its grass, the ground's floor under the lot's middle)
+        const st = F.els.filter(e => e.k === 'bloco' && e.degrau === 1), c = F.L / 2, lawn = F.els.find(e => e.k === 'bloco' && e.y0 <= 1e-6 && e.y1 < 0.15 && e.r[0] < c && e.r[2] > c && e.r[1] < c && e.r[3] > c);
+        const top = st.length ? st.reduce((y, e) => Math.max(y, e.y1), 0) : lawn ? lawn.y1 : 0, l0 = p.levels.find(l => l.lv === 0);
         if (!l0 || Math.abs(l0.y - top) > 0.01) add('monumental', 1, `${b.type}#${b.id} (${b.style}): o alto do monumento a ${l0 ? l0.y.toFixed(2) : '—'} m na planta e a ${top.toFixed(2)} m na forma`);
         if (!(p.marks || []).some(M => M.use === 'ofertar' && M.pts.some(q => q.ok))) add('monumental', 2, `${b.type}#${b.id} (${b.style}): nenhum lugar de ofertar que o corpo tome diante do grande monumento`);
         continue;

@@ -526,14 +526,15 @@
   // ------------------------------ the great monuments (monument: the step of 4 tiles — D-109) ------------------------------
   // The monument of a city on a lot of 16 m: up its three steps along the front — each in two, a body's step of 0.25 m (the
   // crepis, D-097) — to the top, 12.8 m across, round what stands in its middle: the Egyptian's obelisk, 22 m of shaft and its
-  // gilded pyramidion on its pedestal, the golden eye on its front, the two sphinxes on their plinths before it; the Roman's
+  // gilded pyramidion on its pedestal, the golden eye on its front, the two sphinxes on their plinths before it; the classical
+  // people's obelisk of 24 m, the god's — its eye, its flower beds, no sphinxes —; the Roman's
   // column of the triumph, 26 m with its frieze winding up it, on its pedestal with the plate of the deeds, the gilded emperor
   // on its capital; the Aztec's Sun Stone of 8.4 m standing in its cradle on its altar, a feathered serpent either side, the two
   // braziers before it; the Greek's god of 9 m in gold, spear and shield, on his pedestal of marble with its band. What the
   // plan reads is the classic's (int-monumentos.js, monumentPlan): the steps, the top, what stands in its middle — the offering
   // before it, the prayers behind —, the braziers where one lights them. → the elements
   const CREPIS = { h: 0.5, shrink: 0.6, n: 3 }; // (each step 0.5 m, split in two along the front; 0.6 m narrower each side than the one under it)
-  const BASEM = { egipcio: ['#d8c8a0', '#b8a884', '#e4d6b0'], romano: ['#e0d8c8', '#bdb4a2', '#ece6d8'], asteca: ['#b8a07a', '#a89068', '#c8b08a'], grego: ['#e8e2d4', '#c6beac', '#f2ede2'] };
+  const BASEM = { egipcio: ['#d8c8a0', '#b8a884', '#e4d6b0'], romano: ['#e0d8c8', '#bdb4a2', '#ece6d8'], asteca: ['#b8a07a', '#a89068', '#c8b08a'], grego: ['#e8e2d4', '#c6beac', '#f2ede2'], classico: ['#c9c1ae', '#aaa18c', '#ddd6c5'] };
   function monumentoGrande(L, n, st) {
     const cu = L / 2, e0 = L / 2 - 0.4, { h, shrink } = CREPIS, ty = CREPIS.n * h; const cor = BASEM[st];
     const box = (r, y0, y1, c, o) => Object.assign({ k: 'bloco', r: r.map(k3), y0: k3(y0), y1: k3(y1), cor: c || cor }, o);
@@ -562,6 +563,15 @@
       els.push({ k: 'roda', c: [cu, cu], y: k3(yA + cr + R), r: R, t: 0.9, cor: ['#9a9488', '#b8b2a4'], aneis: [[10 / 13, '#2fae8f'], [7.5 / 13, '#b33a2a'], [5 / 13, '#e8c24a'], [2.6 / 13, '#b33a2a']], larg: 1.2 / 13, raios: { n: 8, r0: 5.5 / 13, r1: 9.5 / 13, a: 0.15, cor: '#7a746a' } });
       for (const s of [-1, 1]) { const u = cu + s * 4.8; els.push(box([u - 0.6, cu - 0.6, u + 0.6, cu + 0.6], ty, ty + 0.5, ['#8a8478', '#6f6a60', '#a09a8e'])); els.push({ k: 'estatua', p: [k3(u), cu, k3(ty + 0.5)], h: 5.0, cor: '#2fae8f', pose: 'serpente', penas: '#2fae8f', olho: '#b33a2a' }); }
       for (const s of [-1, 1]) { const u = cu + s * 2.6, v = cu + 3.0; els.push(box([u - 0.3, v - 0.3, u + 0.3, v + 0.3], ty, ty + 0.9, ['#6a5a50', '#4a3e36', '#7a6a60']), { k: 'braseiro', p: [k3(u), k3(v), k3(ty + 0.9)], r: 0.45, uso: 'acender' }); }
+    } else if (st === 'classico') {
+      // (the classical people's obelisk, as the god draws it: its two pedestals, the shaft, the gilded pyramidion, the golden
+      // eye on its front, the flower beds at three corners of the top — no sphinxes: the Egyptian's)
+      const y1 = ty + 2.6, H = 24, a0 = 1.3, a1 = 0.8;
+      els.push({ k: 'flores', pts: [[cu - 4.8, cu + 4.8], [cu + 4.8, cu - 4.8], [cu + 4.8, cu + 4.8]].map(q => q.map(k3)), y: ty, r: 0.8, cor: ['#ff8fb0', '#ffd85a', '#ffffff', '#b98cff'] });
+      els.push(sq(2.2, ty, ty + 1.4, ['#b8ae98', '#978d78', '#cbc2ae']), sq(1.7, ty + 1.4, y1, ['#c4baa4', '#a39984', '#d6ceba']));
+      els.push({ k: 'talude', r: [cu - a0, cu - a0, cu + a0, cu + a0].map(k3), r1: [cu - a1, cu - a1, cu + a1, cu + a1].map(k3), y0: k3(y1), y1: k3(y1 + H), cor: ['#e6dfcc', '#bdb39c', '#e6dfcc'], mat: 'base' });
+      els.push({ k: 'piramide', c: [cu, cu], e: a1, y0: k3(y1 + H), y1: k3(y1 + H + 1.8), cor: gold, mat: 'slab' });
+      els.push({ k: 'disco', na: 'frente', u: cu, v: k3(cu + a0 - (a0 - a1) * 0.45), y: k3(y1 + 0.45 * H), r: 0.9, cor: '#d9b34a', olho: '#6a4a1a' });
     } else {
       const yP = ty + 5.0;
       els.push(sq(2.1, ty, ty + 1.0, ['col0', 'col1', 'col0'], { mat: 'marble' }), sq(1.7, ty + 1.0, yP, ['col0', 'col1', 'col0'], { mat: 'marble' }), { k: 'faixa', r: [cu - 1.7, cu - 1.7, cu + 1.7, cu + 1.7].map(k3), y0: k3(yP - 0.6), y1: k3(yP), cor: 'acc' });
@@ -569,7 +579,23 @@
     }
     return { els };
   }
-  for (const st of ['egipcio', 'romano', 'asteca', 'grego']) Fo.def('monument', st, (L, n) => monumentoGrande(L, n, st), [4]);
+  for (const st of ['egipcio', 'romano', 'asteca', 'grego', 'classico']) Fo.def('monument', st, (L, n) => monumentoGrande(L, n, st), [4]);
+  // the Norse's: the god's rune stones grown to the stone ship of a king — on its grass, the ship's outline of standing stones
+  // 14 m long and 6 m across, broadside to the street, its stem and stern the tallest (3.2 m), its middle open to the front
+  // (2.5 m between the stones: the way in); within it the great rune stone, 9 m, with the red serpent carved down it, and the
+  // two of 6 and 7 m behind it either side (the god's three). The god paints the far ones first. → the elements, and the
+  // numbers the plan reads (amphi.runas: the great stone, where the prayers stand)
+  function runasGrande(L, n) {
+    const cu = L / 2, cv = L / 2, half = 6.8, wide = 3.0; const stones = [];
+    const stone = (u, v, e, h, cobra) => stones.push({ k: 'pedra', c: [k3(u), k3(v)], e, e1: k3(e * 0.75), y0: 0, y1: h, cai: [k3(h * 0.065), k3(h * 0.033)], cor: ['#a09a90', '#7e7870'], cobra: cobra || null });
+    stone(cu - half - 0.4, cv, 0.4, 3.2); stone(cu + half + 0.4, cv, 0.4, 3.2);
+    for (const off of [-5.4, -3.6, -1.6, 1.6, 3.6, 5.4]) { const w = wide * Math.sqrt(1 - (off / half) ** 2), h = k3(2.0 + 0.7 * Math.abs(off) / 5.4); stone(cu + off, cv - w, 0.35, h); stone(cu + off, cv + w, 0.35, h); }
+    const great = [cu, cv - 0.9, 1.0]; stone(great[0], great[1], great[2], 9.0, '#b33a2a'); stone(cu - 2.4, cv - 1.6, 0.6, 6.0, '#b33a2a'); stone(cu + 2.4, cv - 1.3, 0.65, 7.0, '#b33a2a');
+    stones.sort((a, b) => a.c[0] + a.c[1] - (b.c[0] + b.c[1]));
+    const els = [{ k: 'bloco', r: [0.4, 0.4, L - 0.4, L - 0.4], y0: 0, y1: 0.075, cor: ['#6a8a3a', '#5e7e36', '#7a9a4a'], mat: 'turf' }, ...stones];
+    return { els, amphi: { runas: { L, n, cu, cv, grande: great.map(k3), fila: k3(cv + 1.3) } } };
+  }
+  Fo.def('monument', 'nordico', (L, n) => runasGrande(L, n), [4]);
 
   // ------------------------------ Valhalla (maravilha, nordico: the steps of 10 and 13 tiles) ------------------------------
   // The god's great hall of the Norse grown to a capital's lot of 40 m (52 m): the hall of 34 × 13 m (46 × 17) along the street on

@@ -76,8 +76,9 @@
 //     H5 o mundo: cada povo funda o seu degrau grande e nunca o antigo; o campo de bola pela mão do deus em Tenochtitlan, de
 //        pé, vivendo, salvo e carregado, o verificador (as arquibancadas noutra altura), derrubado
 //     H6 os lugares do campo de bola (a tabela da planta): um lugar livre de assistir e de jogar
-//   M — o grande monumento (o degrau de 4 casas, 16 m, em quatro povos: o obelisco egípcio, a coluna do triunfo romana, a
-//       Pedra do Sol asteca, o deus de ouro grego — D-109; a planta, a do monumento de antes):
+//   M — o grande monumento (o degrau de 4 casas, 16 m, em seis povos: o obelisco egípcio, a coluna do triunfo romana, a
+//       Pedra do Sol asteca, o deus de ouro grego — D-109 —, o obelisco clássico, o do deus, e o navio de pedras nórdico — a 4ª
+//       rodada; a planta, a do monumento de antes):
 //     M1 as formas: os degraus do corpo (cada um em dois), o alto de 12,8 m, a peça do meio (≥ um décimo do alto), a altura
 //        (≥ 10 m), as quatro silhuetas diferentes
 //     M2 as plantas: nos quatro lados e nos quatro povos, sem falha, o alto alcançado, quem oferta, quem reza (16), quem acende
@@ -1028,7 +1029,7 @@ function testeH() {
 }
 
 // =========================================================================================== M — the great monument
-const MPEOPLES = ['egipcio', 'romano', 'asteca', 'grego'];
+const MPEOPLES = ['egipcio', 'romano', 'asteca', 'grego', 'classico', 'nordico'];
 function testeM() {
   blank(); const n = 4;
   // ---------------------------------------------------------------- M1 the forms
@@ -1036,6 +1037,14 @@ function testeM() {
     const out = [], said = [], maps = {};
     for (const st of MPEOPLES) {
       const F = Fo.has('monument', st, n) && Fo.of('monument', st, n); if (!F) { out.push(`${st}: sem a forma`); continue; }
+      if (st === 'nordico') {
+        // (the Norse's stone ship on its grass: the great stone 8 m and more, the ship's stones round it, its middle open to the
+        // street — 2.2 m between the stones at least —, the way in)
+        const S = F.els.filter(e => e.k === 'pedra'), g = S.reduce((a, e) => (e.y1 > a.y1 ? e : a)), A = F.amphi && F.amphi.runas;
+        const front = S.filter(e => e.c[1] > F.L / 2 + 1.5).map(e => [e.c[0] - e.e, e.c[0] + e.e]).sort((a, b) => a[0] - b[0]); let gap = 0; for (let k = 1; k < front.length; k++) if (front[k - 1][1] < F.L / 2 && front[k][0] > F.L / 2) gap = front[k][0] - front[k - 1][1];
+        if (F.L !== 16 || !A || S.length < 12 || g.y1 < 8 || gap < 2.2 || !F.els.some(e => e.k === 'bloco' && e.mat === 'turf')) out.push(`${st}: lote ${F.L} m, ${S.length} pedras, a grande de ${g.y1} m, a entrada de ${gap.toFixed(2)} m`);
+        maps[st] = sideMap(F); said.push(`${st}: o navio de ${S.length - 3} pedras, a grande de ${g.y1} m, a entrada de ${gap.toFixed(1)} m`); continue;
+      }
       // (the steps: a body's each — the crepis, each step split along the front —; the top 12 m across; what stands in its middle,
       // a tenth of the top at least; the height of a great one)
       const st0 = F.els.filter(e => e.k === 'bloco' && e.degrau === 1).sort((a, b) => a.y1 - b.y1); let rr = 0, prev = 0; for (const e of st0) { rr = Math.max(rr, e.y1 - prev); prev = e.y1; }
@@ -1045,7 +1054,7 @@ function testeM() {
     }
     const ps = Object.keys(maps); let least = 9, pair = ''; for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) { const a = maps[ps[i]], b = maps[ps[j]]; const d = Math.max(...a.map((q, k) => Math.abs(q - b[k]))); if (d < least) { least = d; pair = `${ps[i]} e ${ps[j]}`; } }
     if (ps.length < 3 || least < 0.1) out.push(`${ps.length} povos, os mais parecidos ${pair} (${least.toFixed(2)} do lote)`);
-    ok('M1 as formas do grande monumento (16 m) em quatro povos — o obelisco, a coluna do triunfo, a Pedra do Sol, o deus de ouro: os degraus do corpo, o alto, a peça do meio, a altura, cada um a sua', !out.length, out.slice(0, 3).join(' · ') || `${said.join(' · ')}; os mais parecidos, ${pair}, a ${(least * 100).toFixed(0)}% do lote`);
+    ok('M1 as formas do grande monumento (16 m) em seis povos — o obelisco egípcio e o clássico, a coluna do triunfo, a Pedra do Sol, o deus de ouro, o navio de pedras: os degraus do corpo, o alto, a peça do meio, a altura, cada um a sua', !out.length, out.slice(0, 3).join(' · ') || `${said.join(' · ')}; os mais parecidos, ${pair}, a ${(least * 100).toFixed(0)}% do lote`);
   }
   // ---------------------------------------------------------------- M2 the plans
   {
@@ -1055,12 +1064,12 @@ function testeM() {
       if (!p || !p.ok) { out.push(`${tag}: não se arma (${p ? p.errs.slice(0, 2).join('; ') : '—'})`); continue; }
       G.S.buildings.set(b.id, b);
       const fal = In.report(b, p, { rec: b.ip }).filter(q => q.k === 'FALHA'); if (fal.length) out.push(`${tag}: ${fal.slice(0, 2).map(q => q.what).join('; ')}`);
-      const rs = p.rooms.filter(m => m.fn === 'plataforma'); if (!rs.length || !rs.every(m => roomReached(p, m))) out.push(`${tag}: o alto que a porta não alcança`);
+      const rs = p.rooms.filter(m => m.fn === (st === 'nordico' ? 'pedras' : 'plataforma')); if (!rs.length || !rs.every(m => roomReached(p, m))) out.push(`${tag}: o alto que a porta não alcança`);
       if (marksOk(p, 'ofertar') < 1 || marksOk(p, 'rezar') < 8 || (st === 'asteca' && marksOk(p, 'acender') < 2)) out.push(`${tag}: ${marksOk(p, 'ofertar')} de ofertar, ${marksOk(p, 'rezar')} de rezar, ${marksOk(p, 'acender')} de acender`);
       if (s === 'S') said.push(`${st}: ${marksOk(p, 'ofertar')} de ofertar, ${marksOk(p, 'rezar')} de rezar${st === 'asteca' ? `, ${marksOk(p, 'acender')} de acender` : ''}`);
     }
     const tmax = Math.max(...times); if (tmax > 400) out.push(`a planta levou ${tmax.toFixed(0)} ms (o alvo: 400)`);
-    ok('M2 as plantas do grande monumento: nos quatro lados e nos quatro povos, sem falha, o alto alcançado, quem oferta, quem reza, quem acende os braseiros, o tempo', !out.length, out.slice(0, 4).join(' · ') || `${said.join(' · ')}; a maior em ${tmax.toFixed(0)} ms`);
+    ok('M2 as plantas do grande monumento: nos quatro lados e nos seis povos, sem falha, o alto (o gramado do navio) alcançado, quem oferta, quem reza, quem acende os braseiros, o tempo', !out.length, out.slice(0, 4).join(' · ') || `${said.join(' · ')}; a maior em ${tmax.toFixed(0)} ms`);
   }
   // ---------------------------------------------------------------- M3 the feet, on a blank world: up the steps, round the middle
   {
@@ -1072,6 +1081,16 @@ function testeM() {
       S.buildings.set(b.id, b); for (let yy = b.y; yy < b.y + b.h; yy++) for (let xx = b.x; xx < b.x + b.w; xx++) S.occ[yy * G.N + xx] = b.id;
       b.ip = In.newRecord(b, { t: 'monument', c: st, e: 3, k: 'ae', cl: 't', fl: 0, d: 1, w: 1, pw: 0, s: 'S', o: (1 << n) - 1, n });
       const p = Sp.planNow(b); if (!p || !p.ok) { out.push(`${st}: sem planta`); continue; }
+      if (st === 'nordico') {
+        // (the stone ship: from the street over the grass, in by the ship's open middle, to the place of the offering before the
+        // great stone and along the prayers' first row)
+        const F = Fo.of('monument', st, n), A = F.amphi.runas, L = n * TL, of = (p.marks.find(q => q.use === 'ofertar') || { pts: [] }).pts[0];
+        const legs = [[0, [[A.cu, L + 0.8], [A.cu, A.fila + 1.4]].concat(of ? [[of.x, of.z], [of.x, A.fila], [A.cu - 2.0, A.fila]] : [])]];
+        const r = feetAlong(b, legs, (lv, u, z) => (u > 0.45 && u < L - 0.45 && z > 0.45 && z < L - 0.45 ? [0.075, 0] : null));
+        if (r.worst || r.step > In.BODY.step + 0.01) out.push(`${st}: os pés a ${r.worst.toFixed(2)} m da forma em ${r.at || '—'}, o maior degrau ${r.step.toFixed(2)} m`);
+        if (r.shut || !of) out.push(`${st}: ${r.shut} pontos do caminho onde o corpo não passa (o primeiro ${r.shutAt || '—'})${of ? '' : ', sem lugar de ofertar'}`);
+        said.push(`${st}: ${r.pts} pontos, o maior degrau ${r.step.toFixed(2)} m`); continue;
+      }
       const F = Fo.of('monument', st, n), L = n * TL, pl = Sp.plinth(b); const st0 = F.els.filter(e => e.k === 'bloco' && e.degrau === 1); const T = st0.reduce((a, e) => (e.y1 > a.y1 ? e : a)).r, top = Math.max(...st0.map(e => e.y1)), cu = L / 2;
       const of = (p.marks.find(M2 => M2.use === 'ofertar') || { pts: [] }).pts[0];
       // (the floor under a point: the highest step there — the street off them —; from the street up the front, round the middle
@@ -1089,7 +1108,7 @@ function testeM() {
       if (shut) out.push(`${st}: ${shut} pontos do caminho onde o corpo não passa (o primeiro ${shutAt})`);
       said.push(`${st}: ${pts} pontos, o maior degrau ${step.toFixed(2)} m`);
     }
-    ok('M3 os pés no grande monumento: da rua pelos degraus ao alto, em volta do que está no meio, até o lugar de ofertar', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
+    ok('M3 os pés no grande monumento: da rua pelos degraus ao alto, em volta do que está no meio, até o lugar de ofertar; no navio de pedras, pelo gramado e pelo meio aberto do navio', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
   }
   // ---------------------------------------------------------------- M4 the world: the god's hand in a town of each people
   {
@@ -1097,7 +1116,7 @@ function testeM() {
     const bad = what => { const q = globalThis.QA.check().filter(x => x.sev <= 2 || x.sys === 'monumental' || x.sys === 'escala'); if (q.length) out.push(`${what}: ${q.slice(0, 2).map(x => `${x.sys} S${x.sev} ${x.msg.slice(0, 90)}`).join(' · ')}`); };
     const townOf = st => [...S.settlements.values()].filter(s => G.Civ.idOfFac(s.fac) === st).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
     bad('antes'); const built = [];
-    for (const st of MPEOPLES) { const set = townOf(st); if (!set) { out.push(`sem cidade ${st}`); continue; }
+    for (const st of MPEOPLES) { const set = townOf(st); if (!set) { if (st === 'classico') said.push('o povo clássico sem cidade na metrópole (T-401)'); else out.push(`sem cidade ${st}`); continue; }
       G.inSim++; let b; try { b = G.Village.handFound(set, 'monument', 'grande', { built: true, R: 60 }); } finally { G.inSim--; }
       if (!b) { out.push(`a mão do deus não achou lote de 4 casas perto de ${set.name}`); continue; }
       const p = In.plan(b); if (!p || !p.ok || b.w !== 4 || b.esc !== 'grande' || b.style !== st) out.push(`${set.name}: ${b.style} ${b.w} casas esc=${b.esc}, a planta ${p && p.ok}`);
