@@ -475,7 +475,9 @@
     const esc = ar => ({ a: KERK.filter(q => q > ar[0] + 0.1 && q < ar[1] - 0.1), l: 1.0, n: 2 });
     els.push({ k: 'cavea', c, aneis: ring(0, whole - 1), fundo: ri, cor: '#d8d0bc', arco: [Math.PI, 2 * Math.PI], fecho: 'wl', escadas: esc([Math.PI, 2 * Math.PI]) });
     for (let k = whole; k < rows; k++) { const ar = arc(ri + (k + 1) * ROW); els.push({ k: 'cavea', c, aneis: ring(k, k), fundo: ri + k * ROW, cor: '#d8d0bc', arco: ar, fecho: 'wl', escadas: esc(ar) }); }
-    els.push({ k: 'arena', c, r: 2.0, y: px(0.3), cor: '#e8dcc0' });
+    // (the orchestra a centimetre over the paving, on the floor the plan walks — it stood 3 cm over it, and the feet sank in the
+    // round drawn: L-494)
+    els.push({ k: 'arena', c, r: 2.0, y: px(0.2) + 0.01, cor: '#e8dcc0' });
     els.push({ k: 'bloco', r: rect(L, -0.9, 0.85, 0.9, 1.15), y0: 0, y1: px(9), cor: ['wl', 'wr', 'top'] });
     if (grego) els.push({ k: 'faixa', r: rect(L, -0.9, 0.85, 0.9, 1.15), y0: px(7.5), y1: px(9), cor: 'acc' });
     const cols = []; for (let k = 0; k < 6; k++) cols.push([at(L, -0.85 + 1.7 * k / 5), at(L, 1.25)]);
@@ -1631,6 +1633,9 @@
     for (const st of [style, 'classico']) for (const e of (SIZED[type] || {})[st] || []) for (const n of e.sizes) if (!out.includes(n)) out.push(n);
     return out.sort((a, b) => a - b); };
   Fo.types = () => Object.keys(FORMS);
+  // (a column's base: a square slab COLUMN_BASE radii a side, 0.12 m high, at its foot — the 3D draws it so, and the plan keeps
+  // its floor off it: L-494)
+  Fo.COLUMN_BASE = 2.3;
   // the highest point of a form (m over the lot's highest ground): its far figure's height and the camera's
   function topOf(els) {
     let t = 0;
@@ -1666,6 +1671,7 @@
   Fo.mass = function (F) {
     const out = [];
     for (const e of F.els) {
+      if (e.oculto) continue; // (inside a mass — the pyramid's corridor, gallery and chamber, D-108 —: no part of its figure)
       if (e.k === 'bloco') out.push({ k: 'box', r: e.r, y0: e.y0, y1: e.y1, cor: e.cor[0] });
       else if (e.k === 'talude') out.push({ k: 'talude', r: e.r, r1: e.r1, y0: e.y0, y1: e.y1, cor: e.cor[0] });
       else if (e.k === 'piramide') out.push({ k: 'piramide', c: e.c, e: e.e, y0: e.y0, y1: e.y1, cor: e.cor[0] });
