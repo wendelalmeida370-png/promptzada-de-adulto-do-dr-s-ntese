@@ -168,6 +168,12 @@
   function open(b) {
     const S = S_(); if (!G.inSim || !b || !b.built || Tt.dia(b) || openedToday(b) || !inHours(b)) return null;
     if (!actorsOf(b).length) return null; // (no actors, no show today)
+    // (the town's feast in the show's hours — from its doors to its closing —: no show today, kept for another day — the feast
+    // calls the whole town, the rows and the actors too, D-126: the Bela Festa do Vale of Mênfis falls at 0,62, in the play, and
+    // took its audience on its way in —. A day of the world is a year, and a big town has its feast every year: one before the
+    // doors — the morning's, the games of 0,30 to 0,44 — or after the closing leaves the show its day, D-130)
+    const fw = G.Fest && G.Fest.window ? G.Fest.window(S.settlements.get(b.set)) : null; const h = Tt.horas(b);
+    if (fw && fw[0] < h.fecha && fw[1] > h.abre) return null;
     return A.start('espetaculo', { at: b.id, set: b.set, fac: facOf(b), to: 'b:' + b.id, why: 'dia', by: 0, x: b.x + b.w / 2, y: b.y + b.h / 2,
       data: { day: S.day, fase: 'preparo', t0: 0, tf: 0, entradas: 0, receita: 0, voltas: 0, pagos: 0, vistos: 0, atores: {}, plateia: {}, q: 0 } });
   }
@@ -206,6 +212,16 @@
     if (Object.keys(d.plateia).length) { const v = S.villagers.get(+Object.keys(d.plateia)[0]); say(v, 'teatro_sem_peca', {}); }
     close(op, 'int', why);
   }
+  // (the town's feast begins — on the god's word, or a feast of the calendar moved in its day —: its shows under way end there,
+  // nobody left in them, before the feast looks for its people — it takes all, the actors and the rows too, as it takes the
+  // patrol, D-126 —: before the play there is no play, and who paid gets it back; in the play, it stopped there, seen in part;
+  // at the applause, it is over. D-130 → how many ended)
+  Tt.feast = function (set) {
+    let n = 0; if (!set) return 0;
+    for (const b of showsOf(set.id)) { const op = Tt.dia(b); if (!op) continue; n++;
+      if (op.data.fase === 'fim') close(op, 'ok', 'acabou'); else if (op.data.fase === 'peca') close(op, 'int', 'a festa'); else cancel(op, b, 'a festa'); }
+    return n;
+  };
   // (the doors open: the actors called to the stage, when free of what weighs more — hunger, sleep, a storm, a feast, a
   // trial — and of an errand of their own)
   function callActors(b, op) {
@@ -216,6 +232,10 @@
       G.Vg.give(v, { type: 'atuar', id: b.id, op: op.id, pri: 1.05, st: 0 });
     }
   }
+  // (the actor called, on his way to the stage, is in the leg of the show — on the stage, the show's own leg says it —: an
+  // errand from outside asks the hands' rule first and waits, D-094. The cave's mine (1,25) took the actor of the day on her way
+  // across Mênfis (1,05), and the show was called off «sem atores» at 0,63, L-503)
+  A.hooks.leg.push(v => { const t = v.task; if (!t || t.type !== 'atuar' || t.st !== 0 || !t.op) return null; const op = A.get(t.op); return op && live(op) && op.def === 'espetaculo' && op.data.fase !== 'fim' ? 'palco' : null; });
   // the applause: who watched the play, glad of it (a little more devout, a sorrow lighter, the town a little more loyal); the
   // actors, paid
   function applause(op, b) {
@@ -456,9 +476,11 @@
     name: 'Espetáculo', conserve: false, many: false,
     purpose: 'O espetáculo do dia de um teatro: as portas abrem, os atores sobem ao palco, o público paga a entrada (num povo de moeda), senta, assiste e aplaude; os atores recebem do tesouro.',
     needs: 'um teatro com os seus atores',
-    // (the actor on the stage, the doors open or the play on, is in the leg of the show: a call from outside below 3 does not
-    // take him from it — the feast, a secret meeting, a funeral —, D-094, L-426)
-    leg(op, v) { const d = op.data; const m = d && d.atores && d.atores[v.id]; return m && !m.body && (d.fase === 'portas' || d.fase === 'peca') ? 'palco' : null; },
+    // (the actor on the stage — making ready behind the closed doors too, the doors open or the play on — is in the leg of the
+    // show: a call from outside below 3 does not take him from it — a secret meeting, a funeral, the cave —, D-094, L-426,
+    // L-503; and on his way to the stage, by the hook below. His own needs are his: behind the closed doors a meal of 1,2 may
+    // still take him, and he is called again)
+    leg(op, v) { const d = op.data; const m = d && d.atores && d.atores[v.id]; return m && !m.body && d.fase !== 'fim' ? 'palco' : null; },
     title(op) { const S = S_(); const b = S.buildings.get(op.at); const d = op.data; return `O espetáculo ${b ? de(b) : 'do teatro'}: ${d.fase === 'preparo' ? 'os atores se preparam' : d.fase === 'portas' ? 'as portas abertas' : d.fase === 'peca' ? 'a peça em cena' : 'os aplausos'}, ${Object.keys(d.plateia).length} na plateia`; },
     avail(c, v, set) {
       for (const b of showsOf(set.id)) { const op = Tt.dia(b); if (!op) continue; const ok = aberto(b, op); return { ok, why: ok ? '' : shut(op), txt: `Há espetáculo ${n_(b)} de ${set.name} hoje`, known: G.dist(v.x, v.y, b.x, b.y) < 30 }; }

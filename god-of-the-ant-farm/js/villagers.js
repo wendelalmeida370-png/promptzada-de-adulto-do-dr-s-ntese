@@ -1821,6 +1821,19 @@
   // (the baby in someone's arms — for whoever needs to know the hands are taken: an offer of two hands to the body; reads only)
   Vg.holdsBaby = v => { if (!v) return null; for (const b of G.S.villagers.values()) if (b.age < 2 && b.carrier === v.id) return b; return null; };
   Vg.handBaby = function (b, c) { if (!b || b.age >= 2 || !Vg.canHold(c) || c.set !== b.set || !nearBaby(b, c)) return false; b.carrier = c.id; b.seekT = 0; return true; };
+  // (the babies in the arms of one who leaves the world: at that moment, where the baby's own rule puts it — the arms just
+  // lost, new ones at once: the mother or the father within reach, one of its house or anyone grown within reach, else the
+  // mother or the father, a woman of the village, wherever they are, else home (babyUpdate). Between the death and its next
+  // step it lay with no arms in the house of the dead, not its own: Tiye died with a neighbour's baby at home, and the checker
+  // saw it there, L-504)
+  const kill0 = G.Village.kill;
+  G.Village.kill = function (v) {
+    const S = G.S; const held = [];
+    if (v && S.villagers.has(v.id)) for (const b of S.villagers.values()) if (b.age < 2 && b.carrier === v.id) held.push(b);
+    const r = kill0.apply(this, arguments);
+    if (held.length && !S.villagers.has(v.id)) for (const b of held) if (S.villagers.has(b.id) && b.carrier === v.id) { b.seekT = 0; babyUpdate(b, 0); }
+    return r;
+  };
   function babyUpdate(v, dt) {
     const S = G.S;
     v.task = null;

@@ -451,7 +451,9 @@
       wallU(u0, u1, vF - 0.3, vF, ys, yb, [[cu, 1.6, 2.4]]);
       for (let j = 0; j < m; j++) els.push(box([cu - 0.8, vF + 0.3 * (m - j - 1), cu + 0.8, vF + 0.3 * (m - j)], 0, yq + (ys - yq) * (j + 1) / m, ['base0', 'base1', 'base2'], { degrau: 1 }));
       els.push({ k: 'telhado', r: [k3(u0), vC, k3(u1), vF], y0: k3(yb), y1: k3(yb + 1.4), ao: 'u', ov: 0.3, cor: ['roof0', 'roof1', 'gable', 'roof2'] });
-      const teatro = { L, n, st, cu, vD, yq, ys, ro: S.ro, ri: k3(ri), R, rG, rW: k3(rW), a0: k3(a0), a1: k3(a1), tr, rs, lo: S.lo, up: S.up, top: k3(top), rows, w, u0: k3(u0), u1: k3(u1), wm, vP, vS, vC, vR, vF, dc: S.dc, dr: S.dr, hb: S.hb, hf: S.hf, doors: doorsB.map(q => q.map(k3)), flights: fl, front: [k3(cu - 0.8), vF, k3(cu + 0.8), k3(vF + 0.3 * m)], cols };
+      // (teto: the ceiling of the stage building — a closed part, D-131 —, the foot of the form's roof over its rooms: the plan's
+      // storey of it up to there and no wall of it above, the 3D's ceiling there — one number, the form's)
+      const teatro = { L, n, st, cu, vD, yq, ys, ro: S.ro, ri: k3(ri), R, rG, rW: k3(rW), a0: k3(a0), a1: k3(a1), tr, rs, lo: S.lo, up: S.up, top: k3(top), rows, w, u0: k3(u0), u1: k3(u1), wm, vP, vS, vC, vR, vF, dc: S.dc, dr: S.dr, hb: S.hb, hf: S.hf, teto: k3(yb), doors: doorsB.map(q => q.map(k3)), flights: fl, front: [k3(cu - 0.8), vF, k3(cu + 0.8), k3(vF + 0.3 * m)], cols };
       return { els, amphi: { teatro } };
     }
     // (the Greek's skene: the proskenion's columns along its back and the logeion over them; its wall with the three doors — the
@@ -465,7 +467,8 @@
     wallU(u0, u1, vF - 0.3, vF, yq, yq + S.hb, [[cu, 1.6, 2.4]]);
     if (st === 'grego') els.push({ k: 'faixa', r: [k3(u0), vS, k3(u1), vF], y0: k3(yq + S.hf - 0.6), y1: k3(yq + S.hf), cor: 'acc' }); // (the Greek's band: the classical people's skene has none, as the god draws it)
     els.push({ k: 'telhado', r: [k3(u0), vS, k3(u1), vF], y0: k3(yq + S.hf), y1: k3(yq + S.hf + 1.4), ao: 'u', ov: 0.3, cor: ['roof0', 'roof1', 'gable', 'roof2'] });
-    const teatro = { L, n, st, cu, vD, yq, ys, ro: S.ro, ri: k3(ri), R, rG, rW: k3(rW), a0: k3(a0), a1: k3(a1), tr, rs, lo: S.lo, up: S.up, top: k3(top), rows, w, u0: k3(u0), u1: k3(u1), wm, vP, vS, vC, vR, vF, dc: S.dc, dr: S.dr, hb: S.hb, hf: S.hf, doors: doorsB.map(q => q.map(k3)), flights: [], front: null, cols, hp };
+    // (teto: the skene's ceiling, the foot of its roof — D-131, as the Roman's)
+    const teatro = { L, n, st, cu, vD, yq, ys, ro: S.ro, ri: k3(ri), R, rG, rW: k3(rW), a0: k3(a0), a1: k3(a1), tr, rs, lo: S.lo, up: S.up, top: k3(top), rows, w, u0: k3(u0), u1: k3(u1), wm, vP, vS, vC, vR, vF, dc: S.dc, dr: S.dr, hb: S.hb, hf: S.hf, teto: k3(yq + S.hf), doors: doorsB.map(q => q.map(k3)), flights: [], front: null, cols, hp };
     return { els, amphi: { teatro } };
   }
   Fo.def('teatro', 'romano', (L, n) => teatroGrande(L, n, 'romano'), [6, 8, 10]);
