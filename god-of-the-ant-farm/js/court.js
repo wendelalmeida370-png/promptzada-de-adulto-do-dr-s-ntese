@@ -116,6 +116,7 @@
       const x = Math.floor(set.cx) + dx - Math.floor(w / 2), y = Math.floor(set.cy) + dy - Math.floor(w / 2);
       if (x < 3 || y < 3 || x + w > N - 3 || y + w > N - 3) continue;
       const d = G.dist(x + w / 2, y + w / 2, set.cx, set.cy); if (d > R) continue;
+      if (G.Village.resOver && G.Village.resOver(set, type, x, y, w, w, true)) continue; // (a lot kept for another great work: D-121)
       let ok = true, trees = 0;
       for (let ty = y - 1; ty <= y + w && ok; ty++) for (let tx = x - 1; tx <= x + w; tx++) {
         const i = ty * N + tx; const inside = tx >= x && ty >= y && tx < x + w && ty < y + w;

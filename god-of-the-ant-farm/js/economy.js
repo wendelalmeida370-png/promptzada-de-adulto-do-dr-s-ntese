@@ -192,6 +192,7 @@
     if (type === 'mina') {
       const o = (S.ores || []).find(q => q.id === set._mineFor) || E.oresNear(set, 22).find(q => !q.mine); if (!o) return null;
       const i = o.y * N + o.x; if (S.occ[i] || S.wall[i]) return null;
+      if (G.Village.resOver && G.Village.resOver(set, type, o.x, o.y, 1, 1, true)) return null; // (a lot kept for a great work: D-121)
       if (!W.findPath(set.cx, set.cy, o.x + 0.5, o.y + 0.5, true, 4000)) return null;
       return [o.x, o.y];
     }

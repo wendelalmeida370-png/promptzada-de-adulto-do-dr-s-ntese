@@ -20,5 +20,17 @@
       }
       if (b.ip && In && In.nOf && In.nOf(b.ip) !== b.w) add('escala', 1, `${b.type}#${b.id}: o registro da planta é de um lote de ${In.nOf(b.ip)} casas e o prédio tem ${b.w} — a planta seria de outro prédio`);
     }
+    // ---- the lot a capital keeps for a great work (D-121): a step of the work, on the map; no building on it but the town's own
+    // fields (a building put down on it lets it go at once — V.addBuilding); the town looks at it every day
+    const FIELD = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 }; const N = G.N;
+    for (const set of s.settlements.values()) {
+      const r = set.urb && set.urb.res; if (!r) continue;
+      const tag = `${set.name}: o campo guardado para ${r.type}/${r.esc}`; const st = Es.steps(r.type).find(q => q.id === r.esc);
+      if (!st || st.n !== r.n) add('escala', 2, `${tag} tem ${r.n} casas, e não é um degrau do tipo`);
+      if (!(r.x >= 0 && r.y >= 0 && r.x + r.n <= N && r.y + r.n <= N)) { add('escala', 2, `${tag} sai do mapa (${r.x}, ${r.y}, ${r.n})`); continue; }
+      let on = null; for (let y = r.y; y < r.y + r.n && !on; y++) for (let x = r.x; x < r.x + r.n; x++) { const o = s.occ[y * N + x] ? s.buildings.get(s.occ[y * N + x]) : null; if (o && !(o.set === set.id && FIELD[o.type])) { on = o; break; } }
+      if (on) add('escala', 2, `${tag}: ${on.type}#${on.id} em cima dele — no campo guardado não se ergue nada`);
+      if ((r.chk || 0) < s.day - 1) add('escala', 3, `${tag}: a cidade não olha para ele desde o ano ${r.chk}`);
+    }
   });
 })();
