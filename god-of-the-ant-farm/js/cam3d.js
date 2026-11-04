@@ -21,7 +21,9 @@
   const OPT = C3.OPT = { sens: 1, invertY: false, follow: true, fov: 58, dist: 4.8, smooth: 1 };
   try { const o = JSON.parse(localStorage.getItem('gotaf-cam3d') || 'null'); if (o && typeof o === 'object') for (const k in OPT) if (k in o && typeof o[k] === typeof OPT[k]) OPT[k] = o[k]; } catch (e) { }
   C3.saveOpt = () => { try { localStorage.setItem('gotaf-cam3d', JSON.stringify(OPT)); } catch (e) { } };
-  const PMIN = -1.05, PMAX = 1.2, DMIN = 1.4, DMAX = 11;
+  // (out to 16 m: before a monument's front of 20 m and more, and in an arena of 20, the eye stands back to see it — it was 11)
+  const PMIN = -1.05, PMAX = 1.2, DMIN = 1.4, DMAX = 16;
+  C3.DMAX = DMAX;
   let piv = null, lookT = -1e9, fovNow = 58, clock = 0;
   G.worldHooks.push(() => { piv = null; C3.lock = null; C3.inside = false; });
 
@@ -78,34 +80,53 @@
   }
   C3.solid = solid;
   // a point in a building with a plan made: null (no plan: the old box), else solid or not — in the walls, a piece of
-  // furniture, a shut door, a storey's slab, the roof, under a floor, over the ground inside a cellar; free in its rooms, its
-  // open doors, the hall's height where no storey is, the sky over its roof
+  // furniture, a shut door, a storey's slab, the roof, under a floor (the rows of seats on it too), over the ground inside a
+  // cellar, in the stone of its form where the plan has no room; free in its rooms, its open doors, the hall's height where no
+  // storey is, the sky over its roof — over an open ground, the sky
   function planSolid(b, X, Y, Z) {
     const Sp = G.Space; const p = Sp.planMade ? Sp.planMade(b) : null; if (!p || !p.ok || !p.grid) return null;
     const L = Sp.TILE, x = X - b.x * L, z = Z - b.y * L, y = Y - Sp.plinth(b).y0; const sh = p.shell;
+    // (the stone of a building drawn by its form where the plan has no room — the rows of a cávea, the drum, the substructure:
+    // the plan of a monument lays only what is walked in it (D-093), and the eye went through the rows of the Colosseum)
+    const stone = () => !!(G.Build3D && G.Build3D.stoneAt && G.Build3D.stoneAt(b, X, Y, Z));
     const inShell = sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : x > sh.r[0] && x < sh.r[2] && z > sh.r[1] && z < sh.r[3];
     const annex = !inShell && (sh.annex || []).find(a => x > a.r[0] && x < a.r[2] && z > a.r[1] && z < a.r[3]);
-    if (!inShell && !annex) return false; // (the yard, the street: open)
+    if (!inShell && !annex) return stone(); // (the yard, the street: open — but for the form's stone there)
     if (annex) return y > (annex.h || 2.2) - 0.05 && y < (annex.h || 2.2) + 0.6; // (an annex's room under its lean-to)
     const lv = p.levels.slice().sort((a, c) => a.y - c.y); let l = null; for (const q of lv) if (y >= q.y - 0.02) l = q;
     const C = G.Interiors.CELL;
     // (the hole a flight comes up through, in a storey's floor — its hatch, an open height —: where the head of one climbing it
     // passes, and the eye with it — L-180; a flight that goes up from a storey stands on its floor)
     const hole = q => { const hc = Sp.cellIn(p, q.lv, x, z); return hc === C.HATCH || hc === C.VOID; };
-    if (!l || (y < l.y + 0.06 && !(l !== lv[0] && hole(l)))) return true; // (in a floor, under the lowest)
+    const fy = l ? l.y + (G.Interiors.hAt ? G.Interiors.hAt(p, l.lv, x, z) : 0) : 0; // (on the rows of seats, their top)
+    if (!l || (y < fy + 0.06 && !(l !== lv[0] && hole(l)))) return true; // (in a floor, under the lowest)
     // (over a cellar's ground the earth: the eye stays under it)
     if (l.y < 0 && y < 0 && Y > W.hAt(X / L, Z / L) * G.Space.HM - 0.05) return true;
     const up = lv.find(q => q.y > l.y + 0.05);
+    const roofed = sh.kind !== 'aberta'; // (an open ground has no roof to keep under: the sky — it had a band of roof at its eave, 0)
     // (over the storey's rooms: a storey above — its slab, but for its hole —, or the roof)
-    if (y > l.y + l.h + 0.02) { if (up && y > up.y - (up.slab || 0.2) - 0.02) return !hole(up); if (!up) { const r = roofIn(p, x, z); return y > r - 0.3 && y < r + 0.7; } }
+    if (y > l.y + l.h + 0.02) { if (up && y > up.y - (up.slab || 0.2) - 0.02) return !hole(up); if (!up) { if (!roofed) return stone(); const r = roofIn(p, x, z); return y > r - 0.3 && y < r + 0.7; } }
     const c = Sp.cellIn(p, l.lv, x, z);
-    if (c === C.WALL) return true;
+    if (c === C.WALL) { const t = wallTop(p, l.lv, x, z); return !t || y < l.y + t + 0.1; } // (to its own top: a parapet of 0.9 m is no wall of the storey's height)
     if (c === C.SOLID) return y < l.y + 1.0;
     if (c === C.LOW) return y < l.y + 0.5;
     if (c === C.DOOR) { const e = Sp.planEntry && Sp.planEntry(b.id); const n = p.grid.n, cs = p.grid.cs; const a = e && e.doors && e.doors[l.lv]; const k = a ? a[Math.floor(z / cs) * n + Math.floor(x / cs)] : 0;
       return k > 0 && !(G.Interiors.doorState(b, k - 1) && G.Interiors.doorState(b, k - 1).state === 'aberta') && y < l.y + 2.1; }
-    if (!up) { const r = roofIn(p, x, z); if (y > r - 0.3) return y < r + 0.7; }
+    if (!up && roofed) { const r = roofIn(p, x, z); if (y > r - 0.3) return y < r + 0.7; }
+    if (c === C.OUT || c === C.VOID) return stone();
     return false;
+  }
+  // (the top of the walls of a storey on its cells, over its floor — 0 where none of its walls is: the plan's walls laid on its
+  // grid, once a plan; a cell a wall marks gets its height, the parapet's 0.9 m, the storey's wall its own)
+  const tops = new WeakMap();
+  function wallTop(p, lv, x, z) {
+    let m = tops.get(p); if (!m) tops.set(p, m = {});
+    let g = m[lv]; const n = p.grid.n, cs = p.grid.cs;
+    if (!g) { g = m[lv] = new Float32Array(n * n);
+      for (const w of p.walls) { if (w.lv !== lv || !(w.h > 0)) continue; const dx = w.b[0] - w.a[0], dz = w.b[1] - w.a[1]; const k1 = Math.max(1, Math.ceil(Math.hypot(dx, dz) / (cs / 2))); const r = (w.t || 0.2) / 2 + cs;
+        for (let k = 0; k <= k1; k++) { const px = w.a[0] + dx * k / k1, pz = w.a[1] + dz * k / k1;
+          for (let cz = Math.max(0, Math.floor((pz - r) / cs)); cz <= Math.min(n - 1, Math.floor((pz + r) / cs)); cz++) for (let cx = Math.max(0, Math.floor((px - r) / cs)); cx <= Math.min(n - 1, Math.floor((px + r) / cs)); cx++) { const i = cz * n + cx; if (w.h > g[i]) g[i] = w.h; } } } }
+    const cx = Math.floor(x / cs), cz = Math.floor(z / cs); return cx < 0 || cz < 0 || cx >= n || cz >= n ? 0 : g[cz * n + cx];
   }
   // (the roof's underside over a point of a plan — Interiors' roofY in the lot's frame, a hand under the outside's slopes)
   function roofIn(p, x, z) {
@@ -143,7 +164,11 @@
       if (Math.abs(da) < 2.3) C3.yaw += da * (1 - Math.exp(-0.9 * rdt * Math.min(1.5, body.speed / 2)));
       C3.pitch += (0.22 - C3.pitch) * (1 - Math.exp(-0.5 * rdt));
     }
-    const d = fwd(C3.yaw, C3.pitch);
+    // (looking up — at a front, a drum, a tower —: the eye goes down its orbit only to a hand over the feet, and from there it
+    // tilts up as asked (below); down the orbit it met the ground and came in to a metre behind the head, and the top of a front of
+    // 21 m stayed out of the picture 9 m before it)
+    const po = Math.max(C3.pitch, -Math.asin(Math.min(1, Math.max(0.2, piv.Y - (body.Y + 0.45)) / Math.max(0.5, C3.dist))));
+    const d = fwd(C3.yaw, po);
     const free = reach(piv, d, C3.dist);
     // (in at once when something is in the way; out again gently)
     C3.cur = free < C3.cur ? free : C3.cur + (free - C3.cur) * (1 - Math.exp(-2.6 * rdt));
@@ -168,8 +193,13 @@
     // (the far end of the view where the haze of the quality has already hidden everything: nothing past it is drawn)
     cam.fov = fovNow; cam.near = 0.12; cam.far = G.Realm && G.Realm.viewFar ? G.Realm.viewFar() : 1600; cam.updateProjectionMatrix();
     cam.position.set(P.X, P.Y, P.Z);
-    cam.lookAt(piv.X + rx * sh, piv.Y, piv.Z + rz * sh);
-    C3.last = { pos: [P.X, P.Y, P.Z], at: [piv.X + rx * sh, piv.Y, piv.Z + rz * sh], fov: fovNow };
+    // (the tilt up the orbit could not give: the look raised over the head, as far as asked, the head kept in the lower part of the
+    // picture — four fifths of the way down from its middle at most —, never past 77° up)
+    const aim = [piv.X + rx * sh, piv.Y, piv.Z + rz * sh];
+    { const hd = Math.hypot(aim[0] - P.X, aim[2] - P.Z), e0 = Math.atan2(aim[1] - P.Y, hd), want = -C3.pitch;
+      if (want > e0 + 0.02 && hd > 0.05) aim[1] = P.Y + hd * Math.tan(Math.min(want, e0 + 0.8 * fovNow * Math.PI / 360, 1.35)); }
+    cam.lookAt(aim[0], aim[1], aim[2]);
+    C3.last = { pos: [P.X, P.Y, P.Z], at: aim, fov: fovNow };
   };
   // the pose the camera has right now (for the flight back up to the god)
   C3.pose = () => C3.last || null;
