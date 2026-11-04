@@ -115,6 +115,41 @@ for (const e of fellEx) console.log('   ↘ ' + e);
 console.log(`${nCombo} combinações; ${nGen} famílias que a arquitetura permite e o gerador não armou`);
 console.log(`combinações abaixo de 5 só porque a arquitetura não permite mais: ${small.length}`);
 for (const s of small.slice(0, process.env.CAT ? 999 : 12)) console.log('   · ' + s);
+// (L-562: a grand stair's well — an 'escada' of 1.2 m or more with a hole, In.grandWell — is void on the storey it comes up
+// to, never a trapdoor one walks over: the 3D draws it open, with a rail round it. In the palace of 6 and the Colosseum of 10,
+// every cell whose middle is in the hole; and the plan still arms, every place reached)
+{
+  const CS = 0.25; let nW = 0; const bad = [];
+  for (const [t, c, n, s] of [['palacio', 'romano', 6, 'S'], ['palacio', 'grego', 6, 'E'], ['maravilha', 'romano', 10, 'S']]) {
+    const rec = { v: 4, f: '', r: 0, t, u: In.TYPES[t].use, s, o: 0, c, e: 5, k: 'ae', cl: 't', fl: 0, d: 2, w: 1, pw: 0, h: [], m: 0, fx: [], dr: {}, n };
+    rec.f = In.familiesFor(rec).ok[0]; const p = rec.f ? In.make({ id: 9001 + n, type: t, x: 10, y: 10, w: n, h: n }, rec) : null;
+    if (!p || !p.ok || !p.grid) { bad.push(`${t}/${c}/${n}: não arma`); continue; }
+    const N = Math.round(p.lot.w / CS);
+    for (const st of p.stairs.filter(In.grandWell)) {
+      nW++; const g = p.grid.lv[st.lv1]; let k = 0;
+      for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) { const u = (x + 0.5) * CS, v = (z + 0.5) * CS; if (u > st.hole[0] && u < st.hole[2] && v > st.hole[1] && v < st.hole[3] && g[z * N + x] !== In.CELL.VOID) k++; }
+      if (k) bad.push(`${t}/${c}/${n}/${s}: ${k} casinhas do poço que se pisam (piso ${st.lv1})`);
+    }
+  }
+  ok('o poço da escada grande vazio (L-562)', nW >= 4 && !bad.length, `${nW} poços de escada grande no palácio de 6 e no Coliseu de 10, todos vazios na grade do andar de cima; as plantas armam${bad.length ? ' — ' + bad.join('; ') : ''}`);
+}
+// (T-409: a flight whose foot has no floor to stand on — its first step 10 cm from the wall —: the plan says so first, not the
+// next piece that found no place for want of a way, nor the room above not reached. The tavern's flights moved against the wall
+// for the proof only)
+{
+  const orig = In.innBuild; const got = [];
+  In.innBuild = P => { const st = P.stair; P.stair = function (kind, lv0, lv1, r, du, dv, hole, o) {
+    if (kind === 'escada') { const I = this.inner(); const d = du > 0 ? I[0] + 0.1 - r[0] : du < 0 ? I[2] - 0.1 - r[2] : dv > 0 ? I[1] + 0.1 - r[1] : I[3] - 0.1 - r[3];
+      const sh = q => (du ? [q[0] + d, q[1], q[2] + d, q[3]] : [q[0], q[1] + d, q[2], q[3] + d]); r = sh(r); if (hole) hole = sh(hole); }
+    return st.call(this, kind, lv0, lv1, r, du, dv, hole, o); }; return orig(P); };
+  try {
+    for (const [c, n, s] of [['romano', 3, 'S'], ['grego', 4, 'E'], ['nordico', 3, 'W']]) {
+      const rec = { v: 4, f: 'forma.salao', r: 0, t: 'taverna', u: In.TYPES.taverna.use, s, o: 0, c, e: 5, k: 'ae', cl: 't', fl: 0, d: 2, w: 1, pw: 0, h: [], m: 0, fx: [], dr: {}, n };
+      const p = In.makeFam({ id: 777 + n, type: 'taverna', x: 10, y: 10, w: n, h: n }, rec, 'forma.salao'); got.push([`${c}/${n}/${s}`, p.ok, (p.errs || [])[0] || '']);
+    }
+  } finally { In.innBuild = orig; }
+  ok('o pé da escada sem chão (T-409)', got.length === 3 && got.every(([, a, e]) => !a && /^o pé da escada sem chão \(piso 0\)$/.test(e)), got.map(([k, a, e]) => `${k}: ${a ? 'ARMA' : e}`).join(' · '));
+}
 // (a ratchet: the count the grammar has reached — it may only go down; brought down, the ceiling comes down with it, and the
 // goal is zero. Raised by a change, the change is wrong — unless the leader agrees and the commit says why)
 const GERADOR_TETO = 6; // (17 → 11 com a B2c: a ínsula do centro com um andar a mais, D-082 (3); 11 → 9 com a cabana redonda do deus, T-161; 9 → 6 com o pé das escadas onde o corpo fica, L-391)

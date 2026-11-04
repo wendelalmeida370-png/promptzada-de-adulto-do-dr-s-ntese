@@ -22,6 +22,20 @@ const same = (a, b) => { let d = 0; for (const [id, s] of a) if (b.get(id) !== s
 
 M.pronto(key);
 checkAll(`${key} aberto`);
+// ---- the table of places by the pump's line (T-432): a big plan's table, made a little at a time after its plan (the drawing's
+// line, a few ms a frame), is the very table the step makes in one go — the Colosseum of 10, the palace of 6 and the Greek
+// theatre of 8 put on the opened world for the proof only
+{
+  const S = G.S; const sig = t => JSON.stringify({ s: t.spots.map(e => [e.k, e.use, e.on, e.lv, e.x, e.z, e.ok, e.din, e.it.id || e.it.kind, e.q]), f: t.floor, l: t.lie, c: t.cells, e: t.entry, r: t.rows.length });
+  const bs = [['maravilha', 'romano', 10, 'S'], ['palacio', 'romano', 6, 'E'], ['teatro', 'grego', 8, 'N']].map(([t, c, n, s], q) => {
+    const rec = { v: 4, f: '', r: 0, t, u: In.TYPES[t].use, s, o: 0, c, e: 5, k: 'ae', cl: 't', fl: 0, d: 2, w: 1, pw: 0, h: [], m: 0, fx: [], dr: {}, n }; rec.f = In.familiesFor(rec).ok[0];
+    const b = { id: 990001 + q, type: t, x: 3, y: 3, w: n, h: n, ip: rec, style: c, built: true, set: 0 }; S.buildings.set(b.id, b); return b; });
+  In.untable(); for (const b of bs) In.want(b); let k = 0; for (; k < 20000 && (In.waiting() || In.waitingTables()); k++) In.pump(2);
+  const byLine = bs.map(b => In.tableReady(b)); const a = bs.map(b => sig(In.table(b)));
+  In.untable(); const z = bs.map(b => sig(In.table(b))); const n = bs.map(b => In.table(b).spots.length);
+  for (const b of bs) S.buildings.delete(b.id); In.untable(); In.uncache();
+  ok('a tabela pela fila (T-432)', byLine.every(Boolean) && a.every((x, i) => x === z[i]), `${bs.length} prédios grandes (${n.join(', ')} lugares): ${byLine.filter(Boolean).length} tabelas feitas pela fila em ${k} rodadas de 2 ms; ${a.filter((x, i) => x === z[i]).length} iguais à feita de uma vez`);
+}
 // ---- save and load, twice: the same records, the same plans
 const s0 = snap(); M.salvarCarregar(); const s1 = snap(); M.salvarCarregar(); const s2 = snap();
 ok('salvar e carregar duas vezes', !same(s0, s1) && !same(s1, s2), `${s0.size} plantas: ${same(s0, s1)} diferentes depois de carregar, ${same(s1, s2)} depois de carregar de novo`);
