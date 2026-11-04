@@ -45,7 +45,14 @@
 //   F4 as regras do corpo: o portão e a porta do salão ≥ 2,2 m, a escada, os quartos de cima alcançados
 //   F5 de pé no mundo (a hospedaria na metrópole, com os lugares da tabela do mundo; as duas num mundo novo, um ano, o save)
 //   F6 os casos ruins: a obra salva no meio, a taverna derrubada, a regra do verificador
-//   node qa/monumental-poder.js [B1,B2,…,D1,…,F1,…]      VERB=1: cada caso que falha
+// E a G, as casas — a cabana e a casa de 4 m continuam; a casa rica (domus, 2 casas, o degrau de uma família) de int-familias.js
+// (In.domusBuild, a casa do pátio, mobiliada como toda casa: furnishHome), pela mesma porta e família da taverna:
+//   G1 a cabana e a casa com 4 × 4 m, as famílias de antes
+//   G2 a casa rica: o degrau de uma família, o lote de 8 × 8 m, a planta em todo povo, lado e riqueza; a família abrigada (≥ 6
+//      lugares de dormir), o fogo, o pátio aberto; a mesma duas vezes, a casca, o tempo, a tabela dos lugares
+//   G3 de pé no mundo (a metrópole e um mundo novo: a planta, o verificador, um ano, a derrubada, salvar e carregar; o degrau
+//      oferecido só à família; a regra do verificador)
+//   node qa/monumental-poder.js [B1,…,D1,…,F1,…,G1,…]      VERB=1: cada caso que falha
 'use strict';
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['qa/escala-inv.js', 'qa/poder-inv.js'] });
@@ -626,8 +633,74 @@ function F6() {
       if (!caught || quiet) out.push(`a regra: ${caught} avisos com a família da receita, ${quiet} com a estalagem`); else said.push('a regra do verificador pega a família da receita num degrau maior'); } }
   ok('F6a os casos ruins da taverna: a obra salva no meio, a taverna derrubada, o verificador limpo — e a sua regra pega a planta de outra família', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
 }
+// ================================================================ G: the houses (the hut and the house of 4 m, the rich house of 8)
+const GFAM = 'forma.salao';
+const hrec = (t, c, s, n, wb, d) => In.newRecord({ id: 0, type: t, style: c, x: 8, y: 8, w: n, h: n }, { t, c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: d || 1, w: wb, pw: 0, s, o: (1 << n) - 1, n });
+const gtag = m => `domus/${m.c}/${m.s}/w${m.wb}`;
+let gcache = null;
+const domuses = () => {
+  if (gcache) return gcache; G.S = blankS(); gcache = []; let id = 91001;
+  for (const c of TODOS) for (const s of LADOS) for (const wb of [0, 2]) {
+    const b = { id: (id += 23), type: 'house', style: c, x: 8, y: 8, w: 2, h: 2, built: true }; b.ip = Object.assign(hrec('house', c, s, 2, wb), { f: GFAM });
+    const t0 = clock(); const p = In.makeFam(b, b.ip, GFAM); const ms = clock() - t0; G.S.buildings.set(b.id, b); gcache.push({ c, s, wb, b, p, ms, so: In.shellOf(b) });
+  }
+  return gcache;
+};
+// ---------------------------------------------------------------- G1: the hut and the house keep their 4 m
+function G1() {
+  G.S = blankS(); const out = []; let id = 90001;
+  for (const t of ['hut', 'house']) {
+    if (G.BDEF[t].w !== 1 || G.BDEF[t].h !== 1) out.push(`${t}: ${G.BDEF[t].w}×${G.BDEF[t].h} casas`); if (Es.classic(t).n !== 1) out.push(`${t}: o degrau clássico de ${Es.classic(t).n}`);
+    for (const c of TODOS) { const b = { id: (id += 11), type: t, style: c, x: 8, y: 8, w: 1, h: 1, built: true }; b.ip = hrec(t, c, 'S', 1, 1, 2); const p = In.make(b, b.ip);
+      if (!p.ok) out.push(`${t}/${c}: a planta (${p.errs.slice(0, 1)})`); else if (p.lot.w !== 4) out.push(`${t}/${c}: o lote de ${p.lot.w} m`); if (b.ip.f === GFAM) out.push(`${t}/${c}: com a família do degrau maior`); }
+  }
+  ok('G1a a cabana e a casa continuam com 4 × 4 m — a tabela, o degrau clássico, a planta do registro novo pelas famílias de antes', !out.length, out.join(' / ') || 'nos seis povos, o lote de 4 m e as famílias da receita');
+}
+// ---------------------------------------------------------------- G2: the rich house
+function G2() {
+  const H = domuses(); const bad = H.filter(m => !m.p.ok); const out = []; const dom = Es.steps('house').find(s => s.id === 'domus');
+  for (const c of TODOS) { if (!Es.can('house', c, 2)) out.push(`${c}: o degrau não oferecido`); const r = hrec('house', c, 'S', 2, 2); if (r.f !== GFAM) out.push(`${c}: o registro com ${r.f}`); if (!In.familiesFor(r).ok.includes(GFAM)) out.push(`${c}: o catálogo sem a da casa rica`); }
+  const sh = H.find(m => m.p.ok); const shs = sh ? `${(sh.p.shell.r[2] - sh.p.shell.r[0]).toFixed(1)} × ${(sh.p.shell.r[3] - sh.p.shell.r[1]).toFixed(1)} m` : '-';
+  ok('G2a a casa rica (domus): o degrau de uma família (familia), 2 casas — o lote de 8 × 8 m —, a planta em todo povo, lado e riqueza pela família do degrau (a do registro novo e do catálogo)', !!(dom && dom.n === 2 && dom.familia) && !bad.length && !out.length,
+    `${H.length - bad.length} de ${H.length} plantas${bad.length ? '; ' + some(bad).map(m => `${gtag(m)}: ${m.p.errs.slice(0, 2).join('; ')}`).join(' / ') : ''}${out.length ? '; ' + out.join(' · ') : ''}; o lote ${dom ? dom.n * 4 : '-'} × ${dom ? dom.n * 4 : '-'} m, a casa ${shs}`);
+  const why = [], sum = new Map();
+  for (const m of H.filter(q => q.p.ok)) { const p = m.p; const w2 = [];
+    if (p.cap.places < (G.BDEF.house.housing || 6)) w2.push(`${p.cap.places} lugares de dormir`);
+    // (the fire where the household cooks: its place to cook, bake or warm — the three a supper is made at, act-lar.js)
+    if (!p.items.some(i => ['lar', 'fogao', 'forno', 'braseiro', 'fogareiro', 'fogo-chao'].includes(i.kind))) w2.push('sem o fogo'); else if (!(Math.min(reachOf(p, 'cozinhar'), reachOf(p, 'assar'), reachOf(p, 'aquecer')) < Infinity)) w2.push('o fogo que a porta não alcança');
+    if (!p.rooms.some(q => q.open && q.fn === 'patio') || !p.shell.court) w2.push('sem o pátio aberto');
+    if (!(reachOf(p, 'deitar') < Infinity)) w2.push('as camas que a porta não alcança');
+    if (w2.length) why.push(`${gtag(m)}: ${w2.join(', ')}`);
+    if (m.s === 'S' && m.wb === 2) sum.set(m.c, `${p.cap.places} (${p.items.filter(i => i.places > 0).map(i => i.kind).filter((k, q, a) => a.indexOf(k) === q).join('+')})`); }
+  ok('G2b a casa rica abriga a família (≥ 6 lugares de dormir), com o fogo e o pátio aberto, cada um alcançado da porta', !why.length, some(why).join(' / ') || `lugares de dormir, a rica de cada povo: ${[...sum].map(([c, v]) => `${c} ${v}`).join(', ')}`);
+  const diff = H.filter(m => m.p.ok).filter(m => { const q = In.makeFam(m.b, m.b.ip, GFAM); return JSON.stringify([q.rooms, q.items.map(i => [i.kind, i.x, i.z, i.ry]), q.doors, q.holes]) !== JSON.stringify([m.p.rooms, m.p.items.map(i => [i.kind, i.x, i.z, i.ry]), m.p.doors, m.p.holes]); });
+  const shd = H.filter(m => m.p.ok && (!m.so || strip(m.so) !== strip(In.shellOfPlan(m.p))));
+  ok('G2c a mesma planta duas vezes da mesma entrada; a casca de longe igual à da planta', !diff.length && !shd.length, `${diff.length} plantas diferentes, ${shd.length} cascas diferentes${diff.concat(shd).length ? ': ' + some(diff.concat(shd)).map(gtag).join(', ') : ''}`);
+  const ts = H.slice().sort((a, b) => b.ms - a.ms); const again = ts.slice(0, 3).map(m => { let best = Infinity; for (let r = 0; r < 3; r++) { In.uncache(); const a = clock(); In.makeFam(m.b, m.b.ip, GFAM); best = Math.min(best, clock() - a); } return [gtag(m), best]; }).sort((a, b) => b[1] - a[1]);
+  const tab = H.filter(m => m.s === 'S' && m.wb === 2 && m.p.ok).map(m => { const a = clock(); In.table(m.b); return clock() - a; }).sort((a, b) => b - a);
+  ok('G2d o tempo de fazer a planta (alvo: 400 ms) e a tabela dos lugares (alvo: 1 s) em Node', again[0][1] < 400 && tab[0] < 1000, `a planta mais cara ${again[0][1].toFixed(0)} ms (${again[0][0]}, sem cache); a tabela mais cara ${tab[0].toFixed(0)} ms`);
+}
+// ---------------------------------------------------------------- G3: standing in the world; the bad cases
+function G3() {
+  const qa = qaS, mine = () => globalThis.QA.check().filter(q => q.sys === 'poder'); const tell = r => `${r.st} ${r.d.toFixed(0)} casas${r.ok ? '' : ' — ' + r.why}`;
+  { M.pronto('metropole'); const q0 = qa().length; const res = [];
+    for (const c of TODOS) { const set = [...G.S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0]; if (!set) continue; const r = stand(set, 'house', 'domus', { R: 30 }); if (!r.none) res.push(r); }
+    const offered = (() => { const set = [...G.S.settlements.values()].find(s => G.Fac.get(s.fac)); if (!set) return '-'; const a = Es.choose(set, 'house').map(s => s.id), b = Es.choose(set, 'house', { familia: true }).map(s => s.id); return `a cidade: ${a.join(',')}; a família: ${b.join(',')}`; })();
+    const bad = qa(); M.salvarCarregar(); const after = res.filter(r => { const b = G.S.buildings.get(r.b.id); return b && b.w === 2 && b.esc === 'domus' && In.plan(b).ok && b.ip.f === GFAM; }).length; const bad2 = qa();
+    // (the checker's rule: a rich house laid out by a recipe of the lot of 4 m is caught, and quiet once it is the step's family again)
+    let rule = '-'; const one = res.length && G.S.buildings.get(res[0].b.id); if (one) { const f0 = one.ip.f; one.ip.f = 'integrado.terreo'; const caught = mine().length; one.ip.f = f0; rule = caught && !mine().length ? 'a regra pega a receita' : `a regra: ${caught} com a receita, ${mine().length} com a do degrau`; }
+    ok('G3a de pé num mundo pronto (a metrópole): a casa rica pela mão do deus em cada povo — a planta, o relatório, o verificador; salvar e carregar; o degrau só para a família; a regra do verificador', res.length >= 3 && res.every(r => r.ok) && !bad.length && after === res.length && !bad2.length && q0 === 0 && rule === 'a regra pega a receita' && /a família: domus/.test(offered) && !/a cidade: [^;]*domus/.test(offered) && M.limpo(),
+      `${res.length} de pé (${res.map(tell).join(', ')}); ${offered}; o verificador S0–S2: ${q0} antes, ${bad.length} com elas${bad.length ? ' (' + bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}, ${bad2.length} depois do save; ${after} de ${res.length} iguais depois de salvar e carregar; ${rule}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
+  { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 6, temper: 'normal' }); const q0 = qa().length; const res = [];
+    for (const c of TODOS) { const set = [...G.S.settlements.values()].find(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c); if (!set) continue; const r = stand(set, 'house', 'domus', { R: 30 }); if (!r.none) res.push(r); }
+    const bad = qa(); M.saltar(1); const bad1 = qa(); const alive = res.filter(r => { const b = G.S.buildings.get(r.b.id); return b && b.built && b.w === 2 && In.plan(b) && In.plan(b).ok; }).length;
+    const ruin = res.length && G.S.buildings.get(res[0].b.id); let razed = '-'; if (ruin) { G.inSim++; try { G.Village.destroyBuilding(ruin, 'deus'); } finally { G.inSim--; } const r = G.S.buildings.get(ruin.id); razed = r && r.type === 'ruin' && In.plan(r).ok ? 'a derrubada vira ruína com planta' : 'a ruína: ' + (r ? r.type : 'sumiu'); }
+    M.salvarCarregar(); const bad2 = qa();
+    ok('G3b de pé num mundo novo: a casa rica de cada povo — a planta, o verificador; um ano; uma derrubada; salvar e carregar', res.length >= 4 && res.every(r => r.ok) && !bad.length && !bad1.length && !bad2.length && alive >= res.length - 1 && razed === 'a derrubada vira ruína com planta' && M.limpo(),
+      `${res.length} de pé (${res.map(tell).join(', ')}); ${alive} de pé e com planta depois do ano; ${razed}; o verificador S0–S2: ${q0} antes, ${bad.length} com elas, ${bad1.length} depois de um ano, ${bad2.length} depois do save${bad.concat(bad1, bad2).length ? ' (' + bad.concat(bad1, bad2).slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
+}
 for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11],
   ['D1', D1], ['D2', D2], ['D3', D3], ['D4', D4], ['D5', D5], ['D6', D6], ['D7', D7], ['D8', D8], ['D9', D9],
-  ['F1', F1], ['F2', F2], ['F3', F3], ['F4', F4], ['F5', F5], ['F6', F6]]) if (want(k)) f();
+  ['F1', F1], ['F2', F2], ['F3', F3], ['F4', F4], ['F5', F5], ['F6', F6], ['G1', G1], ['G2', G2], ['G3', G3]]) if (want(k)) f();
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
 process.exit(fails.length ? 1 : 0);

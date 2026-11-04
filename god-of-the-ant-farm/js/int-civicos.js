@@ -479,6 +479,7 @@
     In.formSized(t, (P, F) => build(P, F));
     In.addTypes({ [t]: Object.assign({}, T, { fams: T.fams.concat([STEP]), sizes, stepFam: STEP, prefer: (rec, l) => (In.nOf(rec) !== n0 ? (l.includes(STEP) ? [STEP] : l) : pf ? pf(rec, l) : l) }) }); };
   sizedType('taverna', [3, 4], P => In.innBuild(P));
+  sizedType('house', [2], P => In.domusBuild(P));
 
   // ------------------------------ the square (P4, phase E) ------------------------------
   // the town's open ground — it blocks nothing: the world walks across it —, its shell 'aberta' (no walls, no roof, on the

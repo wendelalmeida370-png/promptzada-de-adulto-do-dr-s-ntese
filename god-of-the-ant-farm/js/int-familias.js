@@ -770,4 +770,61 @@
   // plan's seed is the family's place in the order of registration, L-512 —; the inn is laid out through the bigger steps' door,
   // In.formSized, in the family the type's bigger steps are given — int-civicos.js)
   In.innBuild = innBuild;
+
+  // ------------------------------ the rich house: the house's bigger step (domus 2; D-106) ------------------------------
+  // The house of a rich family, its own choice (the ladder's familia step: G.Escala, the city's to decide who raises it), on a
+  // lot of 8 m: the house round its court — across the back the hall of the fire and the table between two chambers, across
+  // the front the vestibule from the street's door between two more, each room opening on the court; the court open to the
+  // sky in the middle, its fountain. The people's walls, roof, beds, fire and table (In.TRAD), its household furnished as every
+  // house's (furnishHome: the couple's bed, the children's, the fire, the pantry, the chest, the table). The house has no form:
+  // a plan of the lot's size (TYPES.house.sizes), what the god and the 3D draw of it its shell's (Arch.home, D-082)
+  function domusBuild(P) {
+    const tr = P.tr, rec = P.rec, L = P.L; const def = G.BDEF[rec.t] || {}; const need = def.housing || 6;
+    const m = 0.3, t = rr2(tr.t || 0.25), ti = 0.12, c = t / 2; const B = [m, m, rr2(L - m), rr2(L - m)]; const I = [rr2(m + t), rr2(m + t), rr2(L - m - t), rr2(L - m - t)];
+    const h0 = rr2(Math.max(2.6, (tr.h0 || 2.4) + 0.2)); const dr = rr2(Math.min(2.5, (I[3] - I[1] - 2 * ti - 1.6) / 2)); // (the rows' depth: the court at least 1.6 m)
+    const Vb = rr2(I[1] + dr), Vf = rr2(I[3] - dr); const C = [I[0], rr2(Vb + ti), I[2], rr2(Vf - ti)];
+    P.shell = { kind: 'rect', r: B.slice(), t, mat: tr.mat, base: 'pedra', floors: 1, eave: h0, court: C.slice() };
+    const kind = PITCHED[tr.roof] || tr.roof === 'plano' ? tr.roof : 'duas-aguas'; const rise = kind === 'plano' ? 0 : rr2(Math.min(2.2, dr * 0.7));
+    P.roof = { kind, along: 'u', h: rise, over: kind === 'plano' ? 0 : 0.42, court: C.slice() };
+    P.level(0, 0, h0, 'piso', I.slice()); P.entryLv = 0;
+    // (the outer walls, the street's door in the front's middle, the windows the people opens to the street and the sides)
+    const Ly = In.riskLayer ? In.riskLayer(P) : null; if (!Ly) { P.errs.push('sem o assentar das paredes'); return; }
+    // (the front row's three rooms — a chamber, the vestibule, a chamber —; the back row's two: the hall of the fire, wide enough
+    // for an open hearth with a place to cook either side of it, and a chamber)
+    const third = (I[2] - I[0] - 2 * ti) / 3; const cut = [I[0], rr2(I[0] + third), rr2(I[0] + 2 * third + ti), I[2]];
+    const cols = [[cut[0], cut[1]], [rr2(cut[1] + ti), rr2(cut[2] - ti)], [cut[2], cut[3]]];
+    const wh = rr2((I[2] - I[0]) * 0.6); const backCols = [[I[0], rr2(I[0] + wh)], [rr2(I[0] + wh + ti), I[2]]];
+    const w = (a, b, tw, h, kind2, o) => Object.assign({ lv: 0, a: a.map(rr2), b: b.map(rr2), t: tw, h: rr2(h), kind: kind2, outer: 0, casca: 0, ops: [] }, o || {});
+    const op = (wl, p, ww, hh, k, o) => { wl.ops.push(Object.assign({ k, p: p.map(rr2), w: ww, h: hh }, o || {})); return wl; };
+    const win = (wl, p) => op(wl, p, 0.6, 0.8, 'janela', { sill: 1.3 });
+    const walls = [];
+    const fundo = w([B[0], rr2(B[1] + c)], [B[2], rr2(B[1] + c)], t, h0, 'parede', { outer: 1, casca: 1, side: 'fundo' }); for (const [a, b] of backCols) win(fundo, [rr2((a + b) / 2), rr2(B[1] + c)]);
+    const esq = w([rr2(B[0] + c), B[3]], [rr2(B[0] + c), B[1]], t, h0, 'parede', { outer: 1, casca: 1, side: 'esquerda' }); win(esq, [rr2(B[0] + c), rr2((I[1] + Vb) / 2)]); win(esq, [rr2(B[0] + c), rr2((Vf + I[3]) / 2)]);
+    const dir = w([rr2(B[2] - c), B[1]], [rr2(B[2] - c), B[3]], t, h0, 'parede', { outer: 1, casca: 1, side: 'direita' }); win(dir, [rr2(B[2] - c), rr2((I[1] + Vb) / 2)]); win(dir, [rr2(B[2] - c), rr2((Vf + I[3]) / 2)]);
+    const frente = w([B[2], rr2(B[3] - c)], [B[0], rr2(B[3] - c)], t, h0, 'parede', { outer: 1, casca: 1, side: 'frente' });
+    op(frente, [rr2(L / 2), rr2(B[3] - c)], 1.0, 2.2, 'porta', { rua: 1 }); for (const q of [0, 2]) win(frente, [rr2((cols[q][0] + cols[q][1]) / 2), rr2(B[3] - c)]);
+    walls.push(fundo, esq, dir, frente);
+    for (const wl of walls) Ly.lay(wl);
+    if (Ly.gate < 0) { P.errs.push('sem a porta da rua'); return; }
+    P.entrance = { door: Ly.gate, u: rr2(L / 2), v: B[3], w: 1.0, lv: 0 };
+    if (P.inside()) return;
+    // ======== the inside ========
+    // (the court's walls — the back row's front, the front row's back —, each room's door on the court and its window by it;
+    // the partitions between the rooms of a row)
+    const cb = w([I[2], rr2(Vb + ti / 2)], [I[0], rr2(Vb + ti / 2)], ti, h0, 'parede'), cf = w([I[0], rr2(Vf - ti / 2)], [I[2], rr2(Vf - ti / 2)], ti, h0, 'parede');
+    for (const [q, [a, b]] of backCols.entries()) { const u = rr2((a + b) / 2); op(cb, [u, rr2(Vb + ti / 2)], q ? 0.85 : 1.2, 2.1, 'porta'); win(cb, [rr2(q ? u + 0.8 : u - 1.2), rr2(Vb + ti / 2)]); }
+    for (const [q, [a, b]] of cols.entries()) { const u = rr2((a + b) / 2), big = q === 1; op(cf, [u, rr2(Vf - ti / 2)], big ? 1.2 : 0.85, 2.1, 'porta'); if (!big) win(cf, [rr2(u + (u < L / 2 ? 0.8 : -0.8)), rr2(Vf - ti / 2)]); }
+    Ly.lay(cb); Ly.lay(cf);
+    Ly.lay(w([rr2(backCols[0][1] + ti / 2), I[1]], [rr2(backCols[0][1] + ti / 2), Vb], ti, h0, 'divisoria'));
+    for (const x of [rr2(cut[1] + ti / 2), rr2(cut[2] - ti / 2)]) Ly.lay(w([x, Vf], [x, I[3]], ti, h0, 'divisoria'));
+    const room = (fn, r, open) => P.room(0, fn, r.map(rr2), open ? 1 : 0);
+    const back = backCols.map(([a, b], q) => room(q ? 'quarto' : 'lar', [a, I[1], b, Vb])), front = cols.map(([a, b], q) => room(q === 1 ? 'vestibulo' : 'quarto', [a, Vf, b, I[3]]));
+    const court = room('patio', C, true);
+    // the household's furniture as every house's: the couple's bed and the others' in the chambers, the fire, the table and
+    // the pantry in the hall, the chest; the court's fountain
+    furnishHome(P, { lar: back[0], quarto: back[1], up: [front[0], front[2]] }, need);
+    P.opt(() => P.place('fonte', 0, court, { sides: ['centro'], margin: 0.4 }));
+    P.opt(() => P.place('banco', 0, front[1], { sides: ['esquerda', 'direita'] }));
+  }
+  In.domusBuild = domusBuild;
 })(window.G);
