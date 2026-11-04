@@ -375,7 +375,7 @@ run('e18', () => {
 // tantos quantos vêm, e no fim ninguém lá dentro)
 run('e19', () => {
   abre(); const set = cidade('Roma'); const In = G.Interiors, Tt = G.Teatro, E = G.Eco;
-  const b = sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60, built: true }));
+  let b = sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60, built: true }));
   if (!ok('e19a o Coliseu de pé', !!b && b.w === 10 && b.built && G.Interiors.plan(b).ok, lado(b))) return;
   const T = In.table(b); const of = u => (T && T.byUse.get(u)) || []; const assentos = of('assistir').filter(e => e.it.kind === 'fileira').length, emPe = of('assistir').filter(e => e.it.kind === 'marca').length;
   const ver = of('assistir').length, luta = of('lutar').length, jb = E.jobsOf(b);
@@ -386,14 +386,18 @@ run('e19', () => {
   sim(() => E.place(set)); const cast = Tt.actorsOf(b);
   S.time = Tt.EARLY - 0.02; S.weather.rain = 0; S.weather.storm = 0; S.time = Math.max(S.time, Tt.opensAt(b) - 0.01);
   let op = null; for (let k = 0; k < 40 && !op; k++) { M.viver(1); op = Tt.dia(b); }
+  let salvo = null; // (o save no meio dos jogos: os lutadores de volta à areia, cada um no seu lugar de luta)
   if (!ok('e19c os jogos do dia', cast.length > 0 && !!op, `${cast.length} lutadores com o posto no Coliseu; o espetáculo ${op ? '#' + op.id + ' aberto' : 'NÃO abriu'}`)) return;
   let mais = 0, quem = 0, naAreia = 0, nasFileiras = 0;
   for (let k = 0; k < 160 && Tt.dia(b); k++) {
     M.viver(1);
     if (op.data.fase === 'portas' || op.data.fase === 'peca') for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (v.set !== set.id || v.age < 16 || v.role === 'ator' || v.sleeping || v.inside || (v.task && (v.task.type === 'teatro' || (v.task.pri || 0) >= 1))) continue; if (sim(() => Tt.visit(v, b))) quem++; }
     if (op.data.fase === 'peca') { let fi = 0, ar = 0; for (const v of S.villagers.values()) { if (v.inside !== b.id) continue; const p = In.placeOf(v); if (p && p.use === 'assistir') fi++; if (p && p.use === 'lutar') ar++; }
-      mais = Math.max(mais, Object.keys(op.data.plateia).length); nasFileiras = Math.max(nasFileiras, fi); naAreia = Math.max(naAreia, ar); }
+      mais = Math.max(mais, Object.keys(op.data.plateia).length); nasFileiras = Math.max(nasFileiras, fi); naAreia = Math.max(naAreia, ar);
+      if (ar && !salvo) { const id = b.id, oid = op.id; salva(); b = S.buildings.get(id); op = G.Act.get(oid); M.viver(1);
+        const lut = Object.keys(op.data.atores).map(k => S.villagers.get(+k)).filter(Boolean); salvo = { ar, usos: lut.map(v => (v.task && v.task.use) || '-'), naAreia: lut.filter(v => { const p = In.placeOf(v); return p && p.use === 'lutar'; }).length }; } }
   }
+  ok('e19g o save no meio dos jogos', !!salvo && salvo.naAreia > 0 && salvo.usos.every(u => u === 'lutar'), salvo ? `${salvo.ar} na areia antes do save; depois, os lutadores com a tarefa de ${[...new Set(salvo.usos)].join(', ')} e ${salvo.naAreia} num lugar de luta` : 'sem save (ninguém na areia)');
   M.viver(2); // (os bebês no colo saem com quem os carrega, no passo seguinte)
   const lista = [...S.villagers.values()].filter(v => v.inside === b.id); const dentro = lista.length;
   if (VERB || dentro) console.log('  lá dentro:', lista.map(v => { const c = v.carrier && S.villagers.get(v.carrier); return `${v.id} ${v.role} ${v.task ? v.task.type + '/' + v.task.st + '/' + (v.task.use || '') : '-'} colo ${v.carrier || 0}${c ? ' (' + c.role + ', dentro de ' + c.inside + ', ' + (c.task ? c.task.type : '-') + ')' : ''}`; }).join(' · '));
