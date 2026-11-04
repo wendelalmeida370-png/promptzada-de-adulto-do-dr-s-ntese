@@ -39,6 +39,13 @@
   // (the stair up to the chambers: 4.8 m up in 4.2 — 49°, a stair the feet walk, D-086 —, 1.4 m wide; a metre before its foot and
   // a landing of a metre past its top: its well is void upstairs, L-562 —, the top steps onto floor, never through a wall: L-515)
   const STAIR = { run: 4.2, w: 1.4, foot: 1.0, land: 1.0 };
+  // (the palm of an Egyptian court: its trunk, and its crown — the fronds' reach, s, the form's; drawn, the top leans 0.2 m
+  // and the fronds have their thickness: its trunk stands that far and 0.4 m more from every face of the court, the crown wholly
+  // under the sky, never in the hall behind the wall — it stood 0.9 m from it, the crown 0.5 m in the throne hall: L-574)
+  const PALM = { h: 7.5, s: 1.4, off: 0.4 };
+  // (the screen of columns across the open court's front stands on the podium's edge: in its bays a balustrade a metre high
+  // over the drop, but in the gate's — the plan's way in is that bay alone, the others a window over the balustrade: L-575)
+  const BAL = 1.0;
   function risco(st, n) {
     const L = n * TILE, big = n >= 10, mid = !big && n >= 8; const NO = st === 'nordico', EG = st === 'egipcio', RO = st === 'romano', AZ = st === 'asteca';
     // ---- the podium and its flight: risers of 0.25 m, the flight before the podium's front, its foot at the lot's edge ----
@@ -153,7 +160,7 @@
       if (!NO && !EG) {
         // the screen of columns across the court's front (the propylon): their middles 0.45 in, a bay of the flight's middle the gate
         const rc = 0.45; const n0 = Math.max(4, Math.round((C[2] - C[0]) / 2.5)); const pts = []; for (let q = 0; q <= n0; q++) pts.push([r2(C[0] + rc + (C[2] - C[0] - 2 * rc) * q / n0), r2(Vp - rc)]);
-        R.cols.push({ pts, rc, h: r2(Hw - 2.6), y0: Hp, front: 1, rua: Math.floor(n0 / 2) });
+        R.cols.push({ pts, rc, h: r2(Hw - 2.6), y0: Hp, front: 1, rua: Math.floor(n0 / 2), bal: BAL }); // (rua: the gate's bay, from the left)
         R.gate = { u: L / 2, v: Vp, w: r2((C[2] - C[0] - 2 * rc) / n0 - 2 * rc) };
       } else {
         // the pylon's wall (the Egyptian's) or the palisade (the Norse's) across the court's front, its gate in the middle
@@ -235,15 +242,16 @@
     const cu = r2((courtR[0] + courtR[2]) / 2), cv = r2((courtR[1] + courtR[3]) / 2);
     R.fonte = { c: [cu, cv], r: big ? 1.4 : 1.1, y1: r2(Hp + 0.6) };
     const solid = (room2, r, h, k, o) => R.pieces.push(Object.assign({ room: room2, r: r.map(r2), h: r2(h), k }, o || {}));
-    const cor = (dx, dy) => [r2(dx < 0 ? courtR[0] + 0.9 : courtR[2] - 0.9), r2(dy < 0 ? courtR[1] + 0.9 : courtR[3] - 0.9)]; // (in the corners, off the doors in the middle of the rooms)
-    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { if (!big && dy > 0 && !NO) continue; const [x, y] = cor(dx, dy); solid(cRoom, [x - 0.4, y - 0.4, x + 0.4, y + 0.4], EG ? 7.5 : NO ? 1.1 : AZ ? 1.0 : 4.8, EG ? 'palmeira' : NO ? 'pedra' : AZ ? 'braseiro' : 'cipreste'); }
+    // (in the corners, off the doors in the middle of the rooms; the palm with its crown under the sky: PALM)
+    const inset = EG ? r2(PALM.s + PALM.off) : 0.9; const cor = (dx, dy) => [r2(dx < 0 ? courtR[0] + inset : courtR[2] - inset), r2(dy < 0 ? courtR[1] + inset : courtR[3] - inset)];
+    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { if (!big && dy > 0 && !NO) continue; const [x, y] = cor(dx, dy); solid(cRoom, [x - 0.4, y - 0.4, x + 0.4, y + 0.4], EG ? PALM.h : NO ? 1.1 : AZ ? 1.0 : 4.8, EG ? 'palmeira' : NO ? 'pedra' : AZ ? 'braseiro' : 'cipreste'); }
     if (EG) { // (the pylon's towers either side of the gate, in the front corners of the court — the colossal's of honour)
       const Y = big ? yard : courtR; const fy = big ? r2(yard[3] - 0.3) : r2(Vp - 0.3); const d = big ? 3.0 : 2.4; const g0 = r2(L / 2 - gw / 2 - 0.05), g1 = r2(L / 2 + gw / 2 + 0.05);
       const tw = big ? 9.0 : Math.min(4.6, r2(g0 - Y[0] - 0.1)); R.towers = [[r2(g0 - tw), r2(fy - d), g0, fy], [g1, r2(fy - d), r2(g1 + tw), fy]];
       for (const r of R.towers) solid(big ? yRoom : cRoom, r, big ? 14 : 11, 'torre');
     }
     if (big && !EG) for (const s of [-1, 1]) { const x = r2(L / 2 + s * (sw / 2 + (NO ? 2.0 : 2.6))), y = r2(yard[3] - 2.0), q = AZ ? 0.4 : 0.7; // (the Aztec's palms, as the god stands them before its court palaces)
-      solid(yRoom, [r2(x - q), r2(y - q), r2(x + q), r2(y + q)], NO ? 1.0 : AZ ? 7.5 : 4.6, NO ? 'braseiro' : AZ ? 'palmeira' : 'estatua'); }
+      solid(yRoom, [r2(x - q), r2(y - q), r2(x + q), r2(y + q)], NO ? 1.0 : AZ ? PALM.h : 4.6, NO ? 'braseiro' : AZ ? 'palmeira' : 'estatua'); }
     if (big && EG) for (const s of [-1, 1]) { const x = r2(L / 2 + s * 4.5), y = r2(yard[1] + 2.6); solid(yRoom, [r2(x - 0.45), r2(y - 0.45), r2(x + 0.45), r2(y + 0.45)], 16, 'obelisco'); }
     // ---- the shell's numbers for the plan ----
     // ---- the roofs: one over each wing, along it — the Greek's gables and the Roman's hips over the cornice of the columns'
@@ -323,8 +331,8 @@
       const top = c.porch ? r2(eave + (EG ? 0.45 : 0.7)) : r2(c.y0 + c.h + 0.9);
       els.push(bloco([u0, v0, u1, v1], r2(c.y0 + c.h), top, EG ? ['top', 'top', 'top'] : COL, { mat: 'slab' }));
       // (the screen at the podium's edge: a balustrade of a metre between its columns over the drop, but in the gate's bay)
-      if (c.front) for (let k = 0; k + 1 < c.pts.length; k++) { const a = c.pts[k][0] + c.rc, b = c.pts[k + 1][0] - c.rc; if (a < L / 2 && b > L / 2) continue;
-        els.push(bloco([a, c.pts[k][1] - 0.15, b, c.pts[k][1] + 0.15], c.y0, r2(c.y0 + 1.0), PAR, { mat: 'slab' })); }
+      if (c.front) for (let k = 0; k + 1 < c.pts.length; k++) { const a = c.pts[k][0] + c.rc, b = c.pts[k + 1][0] - c.rc; if (k === c.rua) continue; // (the gate's bay, the plan's way in: BAL)
+        els.push(bloco([a, c.pts[k][1] - 0.15, b, c.pts[k][1] + 0.15], c.y0, r2(c.y0 + c.bal), PAR, { mat: 'slab' })); }
       if (!EG && !NO && !AZ) { // (the pediment over the middle: the gable across the way in, the gilded round in it)
         const pw = c.porch ? 15 : (u1 - u0) * 0.7, pu0 = r2(L / 2 - pw / 2), pu1 = r2(L / 2 + pw / 2); const ph = c.porch ? 3.4 : 2.0;
         els.push({ k: 'telhado', r: [pu0, r2(v0), pu1, r2(v1)], y0: top, y1: r2(top + ph), ao: 'v', ov: 0.2, cor: ROOF },
@@ -359,7 +367,7 @@
     for (const p of R.pieces) {
       const c = [r2((p.r[0] + p.r[2]) / 2), r2((p.r[1] + p.r[3]) / 2)];
       if (p.k === 'cipreste') els.push({ k: 'bola', c: [c[0], c[1], r2(Hp + p.h * 0.5)], r: 0.45, ry: r2(p.h * 0.55), cor: '#2f5a2a', mat: 'turf' });
-      else if (p.k === 'palmeira') els.push({ k: 'palmeira', p: [c[0], c[1], Hp], h: r2(p.h - 0.6), s: 1.4 });
+      else if (p.k === 'palmeira') els.push({ k: 'palmeira', p: [c[0], c[1], Hp], h: r2(p.h - 0.6), s: PALM.s });
       else if (p.k === 'pedra') els.push({ k: 'pedra', c, e: 0.4, e1: 0.3, y0: Hp, y1: r2(Hp + p.h), cai: [0.04, 0.04], cor: ['#8e877b', '#6f6a60'], cobra: '#a23c2a' });
       else if (p.k === 'estatua') els.push(bloco(p.r, Hp, r2(Hp + 1.0), BASE, { mat: 'base' }), { k: 'estatua', p: [c[0], c[1], r2(Hp + 1.0)], h: 3.6, w: 0.5, cor: '#e8e0d0' });
       else if (p.k === 'braseiro') els.push(bloco(p.r, Hp, r2(Hp + 0.7), BASE, { mat: 'base' }), { k: 'braseiro', p: [c[0], c[1], r2(Hp + 0.7)], r: 0.45 });

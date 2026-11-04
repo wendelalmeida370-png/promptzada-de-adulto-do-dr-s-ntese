@@ -28,6 +28,8 @@
 //   B13 os lugares da audiência (D-124): em pé no salão do trono, em filas viradas para ele, o corredor livre (≥ 40); no grande e
 //      no colossal também na sala da audiência (≥ 20); todos alcançados da porta
 //   B14 o telhado da planta é o da forma: um por ala (a subida e o começo sobre o beiral de cada uma), nunca um em volta do pátio
+//   B15 as palmeiras dos pátios com a copa inteira sob o céu (L-574); a colunata da frente do pátio aberta só no vão do portão:
+//      a balaustrada da forma nos outros, a planta sem vão neles — uma regra só, a do risco (L-575)
 // E a D, os templos — o templo (4 casas), o grande templo (6) e o santuário monumental (8) dos mesmos seis povos (o do asteca, a
 // pirâmide de degraus e o santuário no alto, com o corpo da forma: o 3D a desenha), o risco de js/forma-poder.js (riscoTemplo) e a planta pela forma (int-palacio.js, templeByForm, a família forma.templo):
 //   D1 a forma de cada povo e tamanho, o degrau só a quem a tem; as formas dos povos diferentes em cada tamanho (a H)
@@ -444,6 +446,30 @@ function B14() {
   }
   ok('B14a o telhado da planta é o da forma: um por ala, a subida e o começo sobre o beiral de cada uma (o egípcio e o asteca planos), nunca um em volta do pátio', !out.length, some(out).join(' / ') || sum.join(', '));
 }
+// ---------------------------------------------------------------- B15: the court's palms and the screen's bays (T-450)
+function B15() {
+  // (a palm of a court — the Egyptian's, the Aztec's court of honour —: its crown wholly under the sky, the trunk at least the
+  // fronds' reach of the form (s) and the lean of its top and the fronds' thickness (0.3 m) from every face of its court; and
+  // the screen of columns across the open court's front: the plan's way through its gate's bay alone, the form's balustrade
+  // in every other bay and in none of the gate's — one rule, the risk's)
+  const out = [], sum = []; let palms = 0, bays = 0;
+  for (const [t, n] of PAL) for (const c of POVOS) {
+    const R = riskOf(t, c, n), F = Fo.of(t, c, n); const courts = [R.rooms[R.courtRoom].r].concat(R.yardRoom >= 0 ? [R.rooms[R.yardRoom].r] : []);
+    for (const e of F.els) { if (e.k !== 'palmeira') continue; const [u, v] = e.p; const r = courts.find(q => u > q[0] && u < q[2] && v > q[1] && v < q[3]); palms++;
+      const d = r ? Math.min(u - r[0], v - r[1], r[2] - u, r[3] - v) : -1; if (d < e.s + 0.3 - 1e-6) out.push(`${PL(t)}/${c}: a palmeira em ${u},${v} a ${d.toFixed(2)} m da face do pátio (a copa ${e.s} m)`); }
+    const sc = R.cols.find(q => q.front); if (!sc) continue;
+    const bal = F.els.filter(e => e.k === 'bloco' && Math.abs(e.y1 - e.y0 - sc.bal) < 1e-6 && Math.abs((e.r[1] + e.r[3]) / 2 - sc.pts[0][1]) < 1e-6);
+    for (const m of made.filter(q => q.t === t && q.c === c && q.p.ok)) {
+      const p = m.p; const w = p.walls.find(q => q.kind === 'colunata' && q.outer && q.lv === 0); if (!w) { out.push(`${tag(m)}: sem a colunata da frente do pátio`); continue; }
+      const holes = p.holes.filter(h => h.wall === w.id && h.kind !== 'janela'); const door = p.doors.find(d => d.wall === w.id);
+      if (holes.length !== 1 || !door || p.entrance.door !== door.id) out.push(`${tag(m)}: ${holes.length} vãos na colunata da frente (a planta: só o do portão, a entrada)`);
+    }
+    for (let k = 0; k + 1 < sc.pts.length; k++) { bays++; const a = sc.pts[k][0] + sc.rc, b2 = sc.pts[k + 1][0] - sc.rc; const has = bal.some(e => e.r[0] <= a + 1e-6 && e.r[2] >= b2 - 1e-6);
+      if (has === (k === sc.rua)) out.push(`${PL(t)}/${c}: o vão ${k} da colunata ${has ? 'com' : 'sem'} balaustrada (o do portão: ${sc.rua})`); }
+    sum.push(`${PL(t)}/${c} ${sc.pts.length - 1} vãos, o portão no ${sc.rua}`);
+  }
+  ok('B15a as palmeiras dos pátios com a copa inteira sob o céu, e a colunata da frente do pátio aberta só no vão do portão — a balaustrada da forma nos outros, a planta sem vão neles (uma regra só, a do risco)', !out.length && palms > 0, some(out).join(' / ') || `${palms} palmeiras; ${bays} vãos de colunata: ${sum.join(', ')}`);
+}
 // ================================================================ D: the temples (templo 4, grande templo 6, santuário monumental 8)
 const TPL = [4, 6, 8], TFAM = 'forma.templo';
 const blankS = () => ({ villagers: new Map(), buildings: new Map(), dead: new Map(), settlements: new Map(), clock: 100, day: 3, time: 0.4, avatar: null, nextId: 1000, history: [], fire: new Float32Array(G.N * G.N), occ: new Int32Array(G.N * G.N) });
@@ -808,7 +834,7 @@ function G3() {
     ok('G3b de pé num mundo novo: a casa rica de cada povo — a planta, o verificador; um ano; uma derrubada; salvar e carregar', res.length >= 4 && res.every(r => r.ok) && !bad.length && !bad1.length && !bad2.length && alive >= res.length - 1 && razed === 'a derrubada vira ruína com planta' && M.limpo(),
       `${res.length} de pé (${res.map(tell).join(', ')}); ${alive} de pé e com planta depois do ano; ${razed}; o verificador S0–S2: ${q0} antes, ${bad.length} com elas, ${bad1.length} depois de um ano, ${bad2.length} depois do save${bad.concat(bad1, bad2).length ? ' (' + bad.concat(bad1, bad2).slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
 }
-for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11], ['B12', B12], ['B13', B13], ['B14', B14],
+for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11], ['B12', B12], ['B13', B13], ['B14', B14], ['B15', B15],
   ['D1', D1], ['D2', D2], ['D3', D3], ['D4', D4], ['D5', D5], ['D6', D6], ['D7', D7], ['D8', D8], ['D9', D9],
   ['F1', F1], ['F2', F2], ['F3', F3], ['F4', F4], ['F5', F5], ['F6', F6], ['G1', G1], ['G2', G2], ['G3', G3]]) if (want(k)) f();
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');

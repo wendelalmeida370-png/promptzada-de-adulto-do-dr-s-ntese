@@ -279,9 +279,14 @@
     // stands it)
     if (R.porch) { const c = R.cols.find(q => q.porch); P.annex.push({ r: R.porch.slice(), h: c ? c.h : R.Hw, fn: 'portico', lv: 0, roof: 'portico' }); }
     for (const c of R.cols) {
-      const s = c.pts.slice().sort((a, b) => a[0] - b[0]); const lo = r2(s[0][0] - c.rc), hi = r2(s[s.length - 1][0] + c.rc), at = s[0][1];
-      const out = P.colonnade(0, [hi, at], [lo, at], { at: s.map(q => r2(hi - q[0])).reverse(), col: r2(2 * c.rc), h: c.h, dh: c.h, outer: c.front ? 1 : 0, door: c.front ? c.rua : undefined, rua: !!c.front });
-      if (c.front) Ly.gate = out.door;
+      const s = c.pts.slice().sort((a, b) => a[0] - b[0]); const lo = r2(s[0][0] - c.rc), hi = r2(s[s.length - 1][0] + c.rc), at = s[0][1]; const pos = s.map(q => r2(hi - q[0])).reverse();
+      if (!c.front) { P.colonnade(0, [hi, at], [lo, at], { at: pos, col: r2(2 * c.rc), h: c.h, dh: c.h }); continue; }
+      // (the screen across the open court's front, on the podium's edge: the way in its gate's bay alone — the risk's c.rua,
+      // counted from the left: the wall runs from the right —; every other bay shut by the balustrade the form stands there,
+      // never a way through to the drop — they were arches, and the 3D found the balustrade in them, 0.30 m past the face:
+      // L-575. The court's open front the proofs know as the form's: T-449)
+      const wid = P.wall(0, [hi, at], [lo, at], r2(2 * c.rc), c.h, 1, 'colunata'); const k = pos.length - 2 - c.rua;
+      Ly.gate = P.door(wid, r2((pos[k] + pos[k + 1]) / 2), r2(pos[k + 1] - pos[k] - 2 * c.rc), c.h, -1, 'rua', 1, 'vao');
     }
     if (R.yard) P.yard = { r: R.yard.slice(), h: R.yardH, lv: 0 }; // (the court of honour: the shell's yard, its edge as high as the risk has it)
     // (the flight from the street up to the podium: one, on the form's own treads)
