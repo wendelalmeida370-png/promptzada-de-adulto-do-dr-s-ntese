@@ -33,10 +33,9 @@
     In.addFamilies([{ id, H: 'pal-' + h, V: v, name: HP[h] + (VP[v] ? ' ' + VP[v] : ''), can: (rec, T, tr) => (!classicLot(rec) ? 'o palácio de um degrau maior é o da forma' : v === 'terraco' ? K.flatOK(rec, tr) : null), build: P => palace(P) }]);
   }
   // (the colossal's ten tiles laid out by the form's family too — the palace's is In.formType's, int-monumentos.js —, offered
-  // only where its form of that size is the people's: In.formSized below. First in its list: where the catalogue answers for
-  // the bigger step with the classic one's row — In.familiesFor's second key has no size: the leader's, M2's report —, a record
-  // of ten that finds no family offered is given the list's first, as every record is)
-  const ptypes = {}; for (const t of PT) ptypes[t] = { use: 'palacio', fams: t === 'palacio_colossal' ? ['forma.palacio'].concat(pfams) : pfams, lockNight: 1, need: { trono: 1 } };
+  // only where its form of that size is the people's: In.formSized below; at the end of its list, the catalogue offering it by
+  // the record's own size — L-510 —, where the recipe's families leave the bigger step to it)
+  const ptypes = {}; for (const t of PT) ptypes[t] = { use: 'palacio', fams: t === 'palacio_colossal' ? pfams.concat(['forma.palacio']) : pfams, lockNight: 1, need: { trono: 1 } };
   In.addTypes(ptypes);
 
   // (the shell — from the record and the family alone — is the outside: the court, the wings' outer walls storey by storey,
