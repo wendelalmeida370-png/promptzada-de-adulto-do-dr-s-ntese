@@ -10,8 +10,9 @@
 // (e13); a mão do deus prefere o chão que o pódio cobre (e14). A terra e o pedido (D-120): a renda de pedra pelo livro e o degrau
 // maior só com a pedra de vinte anos (e15); a vez da obra grande só com a cidade alimentada e em casa (e16); de fora e de dentro,
 // e quem não acha terra diz por quê (e17); limpar o lote — a rua menor que o anel junta, a madeira para a obra (e18); os jogos do
-// Coliseu pelos lugares da planta (e19); o porquê de cada capital nos três mundos prontos (e20). Onde o povo já tem a forma
-// grande de verdade (o Coliseu romano do M1, os palácios do M2), a prova usa a dele.
+// Coliseu pelos lugares da planta (e19); o porquê de cada capital nos três mundos prontos (e20); a obra que espera um tijolo que
+// não vem volta à pedra, a que espera há mais tempo primeiro (e24, L-540). Onde o povo já tem a forma grande de verdade (o
+// Coliseu romano do M1, os palácios do M2), a prova usa a dele.
 //   node qa/escala.js            (ONLY=e1,e3 só esses; VERB=1 conta mais)
 'use strict';
 process.chdir(__dirname);
@@ -610,6 +611,67 @@ run('e23', () => {
   const vazia = () => QA.check().filter(q => q.sys === 'escala' && /a taverna sem ninguém/.test(q.msg) && q.msg.startsWith('Mênfis')).length;
   const q0 = vazia(); const d0 = S.day; S.day += 3; const q3 = vazia(); S.day = d0; for (const v of kept) v.role = 'taverneiro';
   ok('e23e o verificador vê', !q0 && q3 === 1, `sem taverneiro: no primeiro dia ${q0}, três dias depois ${q3}`);
+});
+
+// ------------------------------ e24: o tijolo que não vem (L-540) ------------------------------
+// (a obra que espera tijolo há um dia volta à pedra quando o tijolo a caminho — o livre no estoque do povo, o das prateleiras das
+// olarias da cidade e o que as fornadas delas ainda vão dar — não cobre o que as obras da cidade esperam: as que esperam há mais
+// tempo primeiro, até o resto caber; a de hoje espera. Antes, um tijolo no estoque ou uma fornada a caminho seguravam todas: o
+// teatro de Tenochtitlan ficou 18 anos a 85%, 40 adobes a fazer, com 118 de pedra no estoque. Com o tijolo coberto, ninguém volta)
+run('e24', () => {
+  abre(); const E = G.Eco, O = G.Oficio;
+  const set = [...S.settlements.values()].find(s => E.brickOf(s.fac) && [...S.buildings.values()].some(o => o.set === s.id && o.type === 'olaria' && o.built));
+  if (!set) return ok('e24 o tijolo que não vem', false, 'nenhuma cidade com olaria num povo de tijolo');
+  const k = E.brickOf(set.fac), ref = 'f:' + set.fac;
+  const lacks = b => Math.max(0, (b.need[k] || 0) - ((b.incoming && b.incoming[k]) || 0));
+  const works = () => [...S.buildings.values()].filter(o => o.set === set.id && !o.built && o.type !== 'ruin' && o.brick && o.brick.k === k && lacks(o) > 0);
+  const have = () => { let n = D.free(ref, k); for (const o of S.buildings.values()) if (o.set === set.id && o.type === 'olaria') { n += D.get('b:' + o.id, k); for (const op of O.batches(o)) { const R = O.rx(op); if (R && R.k === k) n += Math.max(0, op.data.n - op.data.feitos - op.data.quebrados); } } return n; };
+  const livre = (w, h, taken) => {
+    for (let r = 3; r < 26; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const x = Math.floor(set.cx) + dx, y = Math.floor(set.cy) + dy; let good = true;
+      for (let yy = y - 1; yy <= y + h && good; yy++) for (let xx = x - 1; xx <= x + w && good; xx++) { if (!G.W.inb(xx, yy)) { good = false; break; } const i = yy * G.N + xx; if (S.occ[i] || !G.W.walkable(i) || S.road[i] || taken.some(p => xx >= p[0] - 1 && xx <= p[0] + w && yy >= p[1] - 1 && yy <= p[1] + h)) good = false; }
+      if (good) return [x, y];
+    }
+    return null;
+  };
+  // (um tijolo só no estoque — antes, ele segurava todas —, e três casas novas: duas esperam há dias, a terceira é de hoje)
+  const f0 = D.free(ref, k); if (f0 > 0) D.use(ref, k, f0, { code: 'teste', mine: true }); D.make(ref, k, 1, { code: 'teste' });
+  const taken = [], hs = [];
+  for (let n = 0; n < 3; n++) { const p = livre(G.BDEF.house.w, G.BDEF.house.h, taken); if (!p) break; taken.push(p); hs.push(V.addBuilding('house', p[0], p[1], set.id, false)); }
+  if (hs.length < 3 || hs.some(b => !b.brick)) return ok('e24 o tijolo que não vem', false, `${set.name}: ${hs.length} casas novas, ${hs.filter(b => b.brick).length} com tijolo`);
+  hs[0].brick.day = S.day - 3; hs[1].brick.day = S.day - 2; hs[2].brick.day = S.day;
+  const want0 = V.brickWant(set, k), have0 = have();
+  const elig = works().filter(o => S.day - (o.brick.day || 0) >= 1).sort((a, b) => (a.brick.day || 0) - (b.brick.day || 0) || a.id - b.id);
+  const st0 = new Map(works().map(o => [o.id, { lack: lacks(o), stone: o.need.stone || 0, back: o.brick.back || 0 }]));
+  V.onNewDay();
+  const back = elig.filter(o => !(lacks(o) > 0)); const prefix = back.every(o => elig.indexOf(o) < back.length);
+  const conta = back.every(o => { const z = st0.get(o.id); return Math.abs((o.need.stone || 0) - z.stone - z.lack) < 1e-6 && Math.abs((o.brick.back || 0) - z.back - z.lack) < 1e-6; });
+  const want1 = V.brickWant(set, k), have1 = have();
+  ok('e24a sem o tijolo para todas, as que esperam há mais tempo voltam à pedra', want0 > have0 && back.length > 0 && prefix && conta && lacks(hs[2]) > 0 && (want1 <= have1 + 1e-6 || back.length === elig.length),
+    `${set.name} (${k}): as obras esperam ${want0}, vêm ${have0} (1 no estoque); das ${elig.length} que esperam há um dia ou mais, ${back.length} voltaram à pedra, as mais antigas primeiro (${back.map(o => o.type + '#' + o.id + ' do ano ' + o.brick.day).slice(0, 4).join(', ')}), a pedra no lugar do que faltava; a de hoje espera; agora esperam ${want1}, vêm ${have1}`);
+  D.make(ref, k, Math.ceil(V.brickWant(set, k)) + 5, { code: 'teste' }); hs[2].brick.day = S.day - 2; const l2 = lacks(hs[2]);
+  V.onNewDay(); const c = checa();
+  ok('e24b com o tijolo coberto, ninguém volta', l2 > 0 && lacks(hs[2]) === l2 && c.ok, `a casa de dois dias espera ${l2} de ${k}, com o estoque cobrindo todas: depois do dia, espera ${lacks(hs[2])}; ${c.txt}`);
+});
+
+// ------------------------------ e25: o palácio do governante no lugar do palácio, na fila das obras cívicas (L-541) ------------------------------
+// (o planejador da cidade pede o palácio antes do teatro, dos banhos e da maravilha; o da corte o troca pelo que o governante quer
+// — e o punha no fim da fila: com uma obra cívica grande de cada vez, o palácio esperava cada praça, mercado, biblioteca, teatro e
+// banho que a cidade crescendo pedia, e nenhuma capital dos mundos de teste ergueu um. Agora ele entra antes dos rivais da coroa)
+run('e25', () => {
+  abre(); const P = G.Politics;
+  const caps = [...S.factions.values()].map(f => G.Fac.capitalOf(f.id)).filter(s => s && (s.tier || 0) >= 3 && f0(s) && !G.Court.bestPalace(f0(s)));
+  function f0(s) { return G.Fac.get(s.fac); }
+  const out = []; let bad = 0, seen = 0;
+  for (const set of caps) {
+    const f = f0(set), r = P.ruler(f); if (!r || f.gov === 'tribo') continue;
+    P.persona(r).vai = 0.45; f.rulerSince = S.day - 5; rico(set, 100); pedra(set, 200); civicas(set);
+    const want = []; sim(() => G.City.plan(set, f, V.counts(set.id), want, V.pop(set.id)));
+    const p = want.indexOf('palacio'), q = want.findIndex(t => t === 'teatro' || t === 'banhos' || t === 'maravilha');
+    if (p < 0 || q < 0) { out.push(`${set.name}: ${want.join(', ') || 'nada'}`); continue; }
+    seen++; if (p > q) bad++; out.push(`${set.name}: ${want.join(', ')}`);
+  }
+  ok('e25 o palácio do governante vem antes do teatro, dos banhos e da maravilha', seen > 0 && !bad, `${seen} capitais com o palácio e um rival na fila — ${out.join(' · ')}`);
 });
 
 // ------------------------------ e20: cada capital que não ergue a obra grande diz por quê ------------------------------

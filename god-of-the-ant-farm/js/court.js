@@ -89,8 +89,12 @@
   const oldPlan = G.City.plan;
   G.City.plan = function (set, fac, c, want, pop) {
     oldPlan(set, fac, c, want, pop);
-    // the city planner's plain palace is replaced by what the ruler wants
+    // the city planner's plain palace is replaced by what the ruler wants — in the palace's place among the town's wishes, before
+    // the theatre, the baths and the wonder, as the planner has it (put at their end, with one great civic work at a time, it
+    // waited behind every square, market, library, theatre and bath a growing town wished, and no capital of the test worlds
+    // raised one: L-541)
     for (let k = want.length - 1; k >= 0; k--) if (want[k] === 'palacio') want.splice(k, 1);
+    const wish = t => { const k = want.findIndex(x => x === 'teatro' || x === 'banhos' || x === 'maravilha'); if (k < 0) want.push(t); else want.splice(k, 0, t); };
     const isCap = G.Fac.capitalOf(fac.id) === set; if (!isCap || fac.gov === 'tribo' || (set.tier || 0) < 2 || G.City.saving(set, fac)) return;
     for (const k in c.siteTypes) if (Co.RANK[k] || (G.BDEF[k] && G.BDEF[k].civic && k !== 'paco')) return;
     const cur = bestPalace(fac); const want0 = desired(fac, set);
@@ -101,7 +105,7 @@
     // (the stone: a palace of its type's own size asks for it in store, one of a bigger step for the people's stone income to pay
     // for it — G.Village.stoneGate, D-120)
     if ((want0 !== 'paco' && (set.tier || 0) < 3) || !G.Village.stoneGate(set, want0, want0 === 'paco' ? 30 : 60) || pop < (want0 === 'paco' ? 20 : 26)) return;
-    want.push(want0); fac._palaceWish = { type: want0, by: r ? r.id : 0, day: G.S.day };
+    wish(want0); fac._palaceWish = { type: want0, by: r ? r.id : 0, day: G.S.day };
   };
   // the vainest palaces go up outside the town, on open ground — at the size of the step of the ladder tried (n, G.Escala:
   // V.startProject tries them from the biggest the town justifies, and V.findSite asks here for each — D-106); a step of
