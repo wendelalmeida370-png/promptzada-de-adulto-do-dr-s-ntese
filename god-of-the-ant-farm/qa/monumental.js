@@ -22,6 +22,8 @@
 //     A6 o verificador (qa/monumental-inv.js): pega uma planta com menos lugares que o Coliseu tem, e cala quando ela volta
 //     A7 os lugares (In.places, a tabela da planta), num processo à parte com prazo: feita a tempo, um lugar livre de assistir
 //        e de lutar
+//     A8 o parapeito do pódio do anfiteatro de hoje em volta de uma arena de 10 m (L-551): aberto sobre os degraus como o 3D
+//     A9 as passagens da esquerda e da direita cobertas da ponte do pódio à fachada (a abóbada: o vão azul que o E viu)
 //   C — as pirâmides (a maravilha egípcia e a asteca nos degraus de 10 e 13 casas: js/forma-espetaculo.js e as plantas em
 //       js/int-monumentos.js, D-108):
 //     C1 as formas: a Grande Pirâmide lisa (as faces de 50 a 54°, a base ≥ 36 m), a entrada aberta na face (≥ 2,2 m), o
@@ -357,6 +359,29 @@ function testeA() {
     else if (!o.ok) out.push(`a planta não se arma: ${o.errs.join('; ')}`);
     else { if (o.fal.length) out.push(o.fal.slice(0, 2).join('; ')); if (Math.abs(-o.open[0] - o.want) > 0.002 || Math.abs(o.open[1] - o.want) > 0.002) out.push(`a abertura do parapeito de ${(o.open[0] * 180 / Math.PI).toFixed(2)}° a ${(o.open[1] * 180 / Math.PI).toFixed(2)}°, a do 3D ±${(o.want * 180 / Math.PI).toFixed(2)}°`); }
     ok('A8 o parapeito do pódio do anfiteatro de hoje em volta de uma arena de 10 m (L-551): aberto sobre os degraus da areia como o 3D, o corpo no alto deles', !out.length, out.join(' · ') || `a abertura de ${(o.open[0] * 180 / Math.PI).toFixed(2)}° a +${(o.open[1] * 180 / Math.PI).toFixed(2)}° em volta do meio (a do 3D: ±${(o.want * 180 / Math.PI).toFixed(2)}°, 1,1 m no raio da arena); o alto dos degraus em (${o.top.map(q => q.toFixed(2)).join(', ')})`);
+  // ---------------------------------------------------------------- A9 the side passages' vault
+  // (the passages of the left and the right go under the rows from the bridge at the podium out to the facade: at every point of
+  // them, a piece of the form over the head — the bridge, the vault —; without the vault the sky showed between the rows' ends,
+  // beside the bridge: the blue gap E saw. The proof counts the points left open with the vault taken out, too: it would see it)
+  {
+    const out = [], said = [];
+    for (const n of SIZES) {
+      const F = Fo.of('maravilha', 'romano', n), O = F.amphi.oval; const k3 = x => Math.round(x * 1000) / 1000;
+      const roofed = (els, u, v) => els.some(e => e.k === 'bloco' && !e.degrau && e.y0 >= 2.0 && u > e.r[0] - 1e-6 && u < e.r[2] + 1e-6 && v > e.r[1] - 1e-6 && v < e.r[3] + 1e-6);
+      let open = 0, openAt = '', pts = 0, without = 0;
+      for (const su of [1, -1]) {
+        const e0 = O.cu + su * O.Au, e1 = e0 + su * O.dp, ef = O.cu + su * (O.Au + O.D - O.t); const vr = [Math.min(e1, ef), O.cv - O.h / 2, Math.max(e1, ef), O.cv + O.h / 2].map(k3);
+        const rest = F.els.filter(e => !(e.k === 'bloco' && e.r.every((q, k) => Math.abs(q - vr[k]) < 1e-6)));
+        for (let u = Math.min(e0, ef) + 0.05; u < Math.max(e0, ef) - 0.05; u += 0.1) for (const v of [O.cv - O.h / 2 + 0.1, O.cv, O.cv + O.h / 2 - 0.1]) { pts++;
+          if (!roofed(F.els, u, v)) { open++; if (!openAt) openAt = `(${u.toFixed(2)}, ${v.toFixed(2)})`; }
+          if (!roofed(rest, u, v)) without++; }
+      }
+      if (open) out.push(`n ${n}: ${open} de ${pts} pontos das passagens sem nada por cima (o primeiro ${openAt})`);
+      if (!without) out.push(`n ${n}: sem a abóbada, nenhum ponto aberto — a prova não a veria`);
+      said.push(`n ${n}: ${pts} pontos das duas passagens, todos cobertos (sem a abóbada, ${without} abertos)`);
+    }
+    ok('A9 as passagens da esquerda e da direita do Coliseu: cobertas da ponte do pódio à fachada (a abóbada; sem ela, o vão azul do céu entre as pontas das fileiras)', !out.length, out.join(' · ') || said.join(' · '));
+  }
   }
 }
 // (who is given a place in a building of a people — In.places, freePlace, the body's «lugar» —: the table of its plan's places,
