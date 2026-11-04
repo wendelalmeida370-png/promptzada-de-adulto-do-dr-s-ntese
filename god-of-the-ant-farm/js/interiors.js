@@ -1463,7 +1463,11 @@
     // rooms inside the shell, not over each other on a storey
     for (const m of plan.rooms) { const host = [shR].concat((sh.annex || []).map(a => a.r), sh.yard ? [sh.yard.r] : []); if (!host.some(h => inside(m.r, h, 0.02))) E.push(`cômodo ${m.fn} fora da casca`); }
     for (let i = 0; i < plan.rooms.length; i++) for (let j = i + 1; j < plan.rooms.length; j++) { const a = plan.rooms[i], b = plan.rooms[j]; if (a.lv === b.lv && roomsCross(a, b)) E.push(`cômodos sobrepostos: ${a.fn} e ${b.fn}`); }
-    // furniture inside its room, never over another piece
+    // furniture with a size — a bench measured by its sleepers set down with none had 0 m and slept nobody, and only the 3D
+    // saw it, inside out (L-585) —, inside its room, never over another piece
+    // (a place — the stage's, the arena's, a row, a mark — is a point by its catalogue: only a piece the catalogue gives a size,
+    // or measures by its sleepers, without one)
+    for (const it of plan.items) { const D = ITEMS[it.kind]; if (D && ((D.per && !(it.w >= D.per - 1e-6)) || (D.w > 0 && !(it.w > 0.01)) || (D.d > 0 && !(it.d > 0.01)))) E.push(`${it.kind} sem tamanho (${it.w} × ${it.d} m)`); }
     for (const it of plan.items) { const m = plan.rooms[it.room]; if (!m || !inside(it.r, it.niche ? [m.r[0] - 0.5, m.r[1] - 0.5, m.r[2] + 0.5, m.r[3] + 0.5] : m.r, 0.02)) E.push(`${it.kind} fora do cômodo`); }
     for (let i = 0; i < plan.items.length; i++) for (let j = i + 1; j < plan.items.length; j++) { const a = plan.items[i], b = plan.items[j]; if (a.lv === b.lv && (!a.niche || b.niche) && (!b.niche || a.niche) && ov(a.r, b.r, 0.01)) E.push(`móveis sobrepostos: ${a.kind} e ${b.kind}`); }
     // doors wide enough, stairs between storeys that exist
