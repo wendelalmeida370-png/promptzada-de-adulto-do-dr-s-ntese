@@ -1526,6 +1526,47 @@
     }
   });
 })();
+  // ---- qa/monumental-inv.js ----
+// monumental-inv: as regras do verificador para os degraus grandes dos monumentos (D-106, D-107; o M1) — carregado depois do
+// qa/qa.js (QA.more), como o escala-inv.js; o líder o junta (qa/junta-inv.js). Lê o prédio e pergunta ao G.Forma e às portas do
+// G.Interiors (fazer uma planta não muda o mundo).
+(function () {
+  if (!window.QA || !QA.more) return;
+  const WATCH = 600; // (the Colosseum's least: the places to watch from seated, reached from its door — PLANO.md §7, test A)
+  QA.more.push(function (add, s) {
+    const In = G.Interiors, Fo = G.Forma; if (!In || !Fo) return;
+    for (const b of s.buildings.values()) {
+      if (!b.built || b.type !== 'maravilha' || !b.ip) continue;
+      const F = Fo.of(b.type, b.style || 'classico', b.w); const O = F && F.amphi && F.amphi.oval; if (!O) continue;
+      // ---- the Colosseum (the split oval, D-107): its plan stands, on the form's floors — the sand at the form's height —, and
+      // seats the crowd its step is built for, each seat reached from its door (a plan that does not stand leaves the body and
+      // the people nowhere to walk in the biggest building of the town)
+      const p = In.plan(b);
+      if (!p || !p.ok) { add('monumental', 1, `${b.type}#${b.id} (${b.style}, ${b.w} casas): a planta do anfiteatro não se arma (${p ? p.errs.slice(0, 2).join('; ') : 'sem planta'})`); continue; }
+      const l1 = p.levels.find(l => l.lv === 1);
+      if (!l1 || Math.abs(l1.y - O.ya) > 0.01) add('monumental', 1, `${b.type}#${b.id}: a areia da planta a ${l1 ? l1.y.toFixed(2) : '—'} m e a da forma a ${O.ya.toFixed(2)} m — o corpo andaria noutro chão que o visto`);
+      if ((p.cap.watch || 0) < WATCH) add('monumental', 2, `${b.type}#${b.id} (${b.w} casas): ${p.cap.watch || 0} lugares de assistir sentados que a porta alcança (o Coliseu tem ${WATCH} ao menos)`);
+    }
+  });
+})();
+  // ---- qa/poder-inv.js ----
+// poder-inv: as regras do verificador para os degraus maiores dos prédios de poder (D-106, a Arquitetura Monumental; o
+// especialista M2) — carregado depois do qa/qa.js (QA.more), como o escala-inv.js; o líder o junta (qa/junta-inv.js). Lê o
+// prédio e o seu registro e pergunta ao G.Forma e ao G.Interiors (nenhuma pergunta muda o mundo).
+(function () {
+  if (!window.QA || !QA.more) return;
+  QA.more.push(function (add, s) {
+    const In = G.Interiors, Fo = G.Forma; if (!In || !In.riskOf || !Fo) return;
+    for (const b of s.buildings.values()) {
+      if (b.type === 'ruin' || !b.ip || !G.BDEF[b.type] || b.w === G.BDEF[b.type].w) continue;
+      // ---- the palace of a bigger step is laid out by its form — the risk the god paints (forma-poder.js) —: its record in the
+      // form's family, never in a recipe's (another palace than the one drawn: the body would walk other walls; L-510, a record of
+      // ten given a recipe's family where the catalogue answered with the classic size's row)
+      const st = b.style || 'classico'; if (!Fo.has(b.type, st, b.w)) continue; const F = Fo.of(b.type, st, b.w); if (!In.riskOf(F)) continue;
+      if (b.ip.f !== 'forma.palacio') add('poder', 2, `${b.type}#${b.id} (${st}, ${b.w} casas): a planta da família ${b.ip.f}, não a da forma (forma.palacio) — o corpo andaria noutro palácio que o desenhado`);
+    }
+  });
+})();
   // ==== fim das invariantes dos sistemas novos ====
   // (the executions a load keeps: one in its aftermath, or with nobody left to execute, is over — the load of justice.js drops it,
   // as the tick would — and is no loss of the save: the mundial of the v37 lived into one and the round trip said «execs: 3 → 2», T-212)
