@@ -11,6 +11,14 @@
   const TAU = Math.PI * 2;
   const r2 = x => Math.round(x * 100) / 100;
   const FM = { form: 1 }; // (a piece the form draws: the plan only uses it — the 3D does not draw it again)
+  // (a ring as the 3D draws it — the polygon of its radius about its middle, its corners at the angles k·τ/48: G.Forma.ringEdge,
+  // L-494, L-566 —: the point of the ring of radius r about c at the angle a; and the plan's walls along an arc of it, one to each
+  // side of that polygon from a0 to a1 (G.Forma.ringVerts). Laid as chords of their own from a0, or along the round, they stood
+  // up to 4.3 cm off the 3D's — the theatre's gallery, the box's back —, T-457)
+  const ringPt = (c, r, a) => { const q = G.Forma.ringEdge(r, a); return [r2(c[0] + q * Math.cos(a)), r2(c[1] + q * Math.sin(a))]; };
+  const ringWalls = (P, lv, c, r, a0, a1, t, h, kind) => { const V = G.Forma.ringVerts(a0, a1); for (let k = 0; k + 1 < V.length; k++) P.wall(lv, ringPt(c, r, V[k]), ringPt(c, r, V[k + 1]), t, h, 0, kind); };
+  // (a point's radius about c by that polygon: its distance over the edge's at its angle — the plan's rows' own, In.tierPos)
+  const ringR = (c, u, v) => Math.hypot(u - c[0], v - c[1]) / G.Forma.ringEdge(1, Math.atan2(v - c[1], u - c[0]));
 
   // ------------------------------ what the form has ------------------------------
   // (the top of the form's ground under the plan's floor: its slab, its lawn — the widest low one under the middle of the lot,
@@ -245,13 +253,13 @@
     // (the podium's parapet: a low wall round the sand's edge, its middle line 6 cm out, open beside the steps exactly as the 3D
     // leaves it open — its 48 chords round the ring, the opening the gap's width at the ring's own radius, cut at those angles:
     // 32 pieces of which those whose middle fell in the opening were left out, round an arena of 10 m, left none out and the
-    // parapet shut over the steps, L-551)
+    // parapet shut over the steps, L-551 — the ends of the cut on the polygon too, where the 3D cuts it: T-457)
     const pr = A.fundo + 0.06, NS = 48, half = A.gap.w / 2 / A.fundo;
     for (let k = 0; k < NS; k++) {
       let parts = [[k * TAU / NS, (k + 1) * TAU / NS]];
       for (let s = -1; s <= 1; s++) { const p0 = A.gap.a - half + s * TAU, p1 = A.gap.a + half + s * TAU;
         parts = parts.flatMap(([q0, q1]) => (p1 <= q0 || p0 >= q1 ? [[q0, q1]] : [[q0, Math.max(q0, p0)], [Math.min(q1, p1), q1]].filter(([u0, u1]) => (u1 - u0) * pr > 0.01))); }
-      for (const [a0, a1] of parts) P.wall(2, [r2(cu + pr * Math.cos(a0)), r2(cv + pr * Math.sin(a0))], [r2(cu + pr * Math.cos(a1)), r2(cv + pr * Math.sin(a1))], 0.12, 0.9, 0, 'parede');
+      for (const [a0, a1] of parts) P.wall(2, ringPt([cu, cv], pr, a0), ringPt([cu, cv], pr, a1), 0.12, 0.9, 0, 'parede');
     }
     if (P.inside()) return;
     // (the rooms: the passage from the street to the top of the undercroft's flight — through the arch: its width —, under the
@@ -330,9 +338,9 @@
     // (the rows: each wedge of the oval, the form's own rings about its own centre)
     // (by the emperor's box: the first three rows over the rest of the arc — n —, and from the fourth the whole arc — skip)
     for (const B of O.blocks) P.tiers(2, null, { ring: [B.c[0], B.c[1], B.r0, B.r1], arc: B.arco, dir: 'out', rows: B.n || O.rows - (B.skip || 0), rise: O.rise, tread: O.tread, first: O.rise * (1 + (B.skip || 0)), aisles: B.aisles, aisleW: 1.0, climb: 2 });
-    // (the box's back: the third row's riser and its parapet, a wall along the arc at its edge — its chords, a hand inside it)
-    for (const X of O.boxes || []) { const r = X.rB - 0.06, n = Math.max(2, Math.ceil((X.span[1] - X.span[0]) * r / 0.4)); const at = a => [r2(X.c[0] + r * Math.cos(a)), r2(X.c[1] + r * Math.sin(a))];
-      for (let k = 0; k < n; k++) P.wall(2, at(X.span[0] + (X.span[1] - X.span[0]) * k / n), at(X.span[0] + (X.span[1] - X.span[0]) * (k + 1) / n), 0.12, r2(X.y3 - yb + 0.9), 0, 'parapeito'); }
+    // (the box's back: the third row's riser and its parapet, a wall along the arc at its edge — on the 3D's polygon, a hand
+    // inside it: along the round, in chords of 0.4 m, it stood up to 4.3 cm off it, T-457)
+    for (const X of O.boxes || []) ringWalls(P, 2, X.c, X.rB - 0.06, X.span[0], X.span[1], 0.12, r2(X.y3 - yb + 0.9), 'parapeito');
     if (P.inside()) return;
     // (the rooms, rectangles of the lot: on the ground the four quarters and the passages between them, the crossing under the
     // middle of the sand; the sand; on the podium's storey the four quarters, the landings and the bridges)
@@ -356,8 +364,10 @@
     const CS = In.CS;
     for (const X of O.boxes || []) { const id = P.rooms.findIndex(q => q.lv === 2 && q.fn === 'cavea' && In.inRoomPt(q, (X.r[0] + X.r[2]) / 2, (X.r[1] + X.r[3]) / 2));
       if (id < 0) { P.errs.push('o camarote fora das fileiras da planta'); return; }
-      const inRow = (u, v) => { const d = Math.hypot(u - X.c[0], v - X.c[1]), a = Math.atan2(v - X.c[1], u - X.c[0]); return d >= X.rB && d <= X.r3 && a >= X.span[0] && a <= X.span[1]; };
-      const cs = X.span.flatMap(a => [X.rB, X.r3].map(r => [X.c[0] + r * Math.cos(a), X.c[1] + r * Math.sin(a)])); // (its corners: by the minor axis its extremes)
+      // (its band by the 3D's polygon, as the rows round it — the plan's own measure, ringR —; its corners the polygon's between
+      // the ends of its arc, the extremes of the band among them)
+      const inRow = (u, v) => { const d = ringR(X.c, u, v), a = Math.atan2(v - X.c[1], u - X.c[0]); return d >= X.rB && d <= X.r3 && a >= X.span[0] && a <= X.span[1]; };
+      const cs = G.Forma.ringVerts(X.span[0], X.span[1]).flatMap(a => [X.rB, X.r3].map(r => { const q = G.Forma.ringEdge(r, a); return [X.c[0] + q * Math.cos(a), X.c[1] + q * Math.sin(a)]; }));
       const [u0, u1] = [Math.min(...cs.map(q => q[0])), Math.max(...cs.map(q => q[0]))], [v0, v1] = [Math.min(...cs.map(q => q[1])), Math.max(...cs.map(q => q[1]))];
       for (let x = Math.floor(u0 / CS); x <= Math.floor(u1 / CS); x++) { const u = (x + 0.5) * CS; let lo = Infinity, hi = -Infinity;
         for (let z = Math.floor(v0 / CS); z <= Math.floor(v1 / CS); z++) { const v = (z + 0.5) * CS; if (inRow(u, v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
@@ -763,13 +773,14 @@
     // (the rows: each piece of the form with its stairways — the lower, the upper — a block)
     for (const e of F.els) { if (e.k !== 'cavea' || !e.escadas) continue; const Ar = e.aneis.slice().reverse();
       P.tiers(0, null, { ring: [e.c[0], e.c[1], e.fundo, Ar[Ar.length - 1][0]], arc: e.arco, dir: 'out', rows: Ar.length, rise: A.rs, tread: A.tr, first: r2(Ar[0][1] - yq), aisles: e.escadas.a, aisleW: e.escadas.l, climb: e.escadas.n }); }
-    // (the stepped walls at the rows' ends — their middle line 0.1 m out of them —, the parapet round the gallery — its chords
-    // the 3D's —: walls of the storey)
+    // (the stepped walls at the rows' ends — their middle line 0.1 m out of them, from the round of the rows' inner edge to the
+    // gallery's: a hand into the parapet past the polygon, never short of it —, the parapet round the gallery — on the 3D's
+    // polygon, its middle line R − 0.1: drawn as 24 or 29 chords of their own from a0, the Greek's stood up to 4.3 cm off it,
+    // T-457 —: walls of the storey)
     const at = (r, a) => [r2(cu + r * Math.cos(a)), r2(vD + r * Math.sin(a))];
     for (const [a, s] of [[A.a0, -1], [A.a1, 1]]) { const o = [-Math.sin(a) * s * 0.1, Math.cos(a) * s * 0.1]; const p0 = at(A.ri, a), p1 = at(A.rG, a);
       P.wall(0, [r2(p0[0] + o[0]), r2(p0[1] + o[1])], [r2(p1[0] + o[0]), r2(p1[1] + o[1])], 0.2, 0.9, 0, 'parapeito'); }
-    const span = A.a1 - A.a0, nS = Math.max(4, Math.round(48 * span / TAU));
-    for (let k = 0; k < nS; k++) P.wall(0, at(A.R - 0.1, A.a0 + span * k / nS), at(A.R - 0.1, A.a0 + span * (k + 1) / nS), 0.2, 0.9, 0, 'parapeito');
+    ringWalls(P, 0, [cu, vD], A.R - 0.1, A.a0, A.a1, 0.2, 0.9, 'parapeito');
     // (the stage building's walls on its storey: the one behind the stage with its three doors, its sides, the partition with a
     // door into each room, the rooms' walls, the front open where the hall's door is)
     const back = P.wall(lb, [u0, r2((vS + vC) / 2)], [u1, r2((vS + vC) / 2)], r2(vC - vS), A.hf, 0, 'parede');
