@@ -103,7 +103,7 @@
       const foot = at(0), top = at(len), land = [s.b[0], s.b[1]]; const W3 = (q, y) => [B.x * L + q[0], B.y * L + q[1], y];
       let P = null, lv = s.lv0;
       if (b.lv === s.lv0 && atFoot(s) && along > 0.4) { P = [[b.X, b.Z, b.Y], W3(foot, y0), W3(top, y1), W3(land, y1)]; lv = s.lv1; }
-      else if (b.lv === s.lv1 && ((wx === 0 && wz === 0) || (along < -0.4 && G.Build3D && G.Build3D.grandWell && G.Build3D.grandWell(s))) && past(s, x, z, 1.4)) { P = [[b.X, b.Z, b.Y], W3(land, y1), W3(top, y1), W3(foot, y0), W3(s.a, y0)]; lv = s.lv0; }
+      else if (b.lv === s.lv1 && ((wx === 0 && wz === 0) || (along < -0.4 && G.Interiors && G.Interiors.grandWell && G.Interiors.grandWell(s))) && past(s, x, z, 1.4)) { P = [[b.X, b.Z, b.Y], W3(land, y1), W3(top, y1), W3(foot, y0), W3(s.a, y0)]; lv = s.lv0; }
       if (!P) continue;
       // (the times along it: steps on the level at a walk, the flight in its own time)
       const wk = Math.max(0.5, b.caps.walk * 0.6); P[0][3] = 0;
@@ -236,9 +236,9 @@
     // to, its hatch shut is floor — one goes down it by hand: Avatar.down)
     if (b && b.inB && b.inP) { const L = TL(); const x = X - b.inB.x * L, z = Z - b.inB.y * L;
       for (const q of b.inP.stairs) { if (q.kind === 'degraus' || q.lv0 !== b.lv) continue; const r = q.r; if (x > r[0] && x < r[2] && z > r[1] && z < r[3]) { b.stairHit = q; return 'stair'; } }
-      // (a grand stair's well, open — no lid over it, its rail round it: Build3D.grandWell —: never walked over; from its landing,
-      // down the flight as one walks — takeFlight)
-      const gw = G.Build3D && G.Build3D.grandWell;
+      // (a grand stair's well, open — no lid over it, its rail round it, void in the plan's grid: Interiors.grandWell, L-562 —:
+      // never walked over; from its landing, down the flight as one walks — takeFlight)
+      const gw = G.Interiors && G.Interiors.grandWell;
       if (gw) for (const q of b.inP.stairs) { if (q.lv1 !== b.lv || !gw(q)) continue; const r = q.hole; if (x > r[0] && x < r[2] && z > r[1] && z < r[3]) { b.stairHit = q; return 'stair'; } } }
     const ins = indoorAt(X, Z);
     // (and a flight of another building, at the point — an open ground's, with no wall round it: the rostra of a square —, as
