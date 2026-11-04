@@ -5,9 +5,9 @@
 // direita, uma diante da face da frente à esquerda, uma atrás. O mundo parado; quadros da visão do deus.
 //   1. o «sprite» do degrau: o pintor da forma, do tamanho do lote (largura (2 × 10) × 16 + 16 px), quanto custa fazê-lo (ms,
 //      no navegador) e quanta memória (o quadro a 3× e as cópias menores)
-//   2. o quadro: a mediana de 15 quadros com o Coliseu na tela (ms, por software: o piso, não a placa de vídeo)
-//   3. a ordem do desenho: as entradas do prédio na lista do quadro (as tiras do render.js) e a de cada pessoa, cada uma do
-//      lado certo dele
+//   2. o quadro: a mediana de 15 quadros com o Coliseu na tela (ms, por software: o piso, não a placa de vídeo), e a parte dele
+//      que desenha os prédios (o medidor do render.js, R.prof: e4)
+//   3. a ordem do desenho: a chave do prédio na lista do quadro (R.bkey) e a de cada pessoa, cada uma do lado certo dele
 //   4. as fotos (JPG pequenos): de frente, de perto do lado (a pessoa diante da face), e girado um quarto
 //   5. nenhum erro de página nem de módulo; o desenho não muda o mundo (a impressão do mundo, QA.canon, igual)
 // Numa pasta do jogo de antes do pintor (sem G.Arch.formSprite), só tira as fotos de antes (o degrau desenhado à moda antiga).
@@ -49,13 +49,12 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
         const k = 'f-maravilha' + (b.style || 'romano') + b.w; G.Art.clear(); const t1 = performance.now(); const spr = G.Arch.formSprite('maravilha', b.style || 'romano', b.w, false); out.ms = performance.now() - t1;
         out.spr = spr ? { w: spr.w, h: spr.h, cw: spr.c.width, ch: spr.c.height } : null; out.st = G.Arch.formStats; void k;
         window.__VIS.f(4);
-        // (2) the frame with it on the screen: the median of 15
+        // (2) the frame with it on the screen: the median of 15; and the buildings' own share of it — the render's profiler,
+        // R.prof: e4 —, over 20
         const ts = []; for (let j = 0; j < 15; j++) { const t2 = performance.now(); G.Main.frameFor(33); ts.push(performance.now() - t2); } ts.sort((a, c) => a - c); out.frame = ts[7];
-        // (3) the order of the drawing: the building's strips and each person's place — by the render's own numbers
-        const h = G.W.maxH(b.x, b.y, b.w, b.h); const strips = R.strips(b, h); const a = R.proj(b.x + b.w / 2, b.y + b.h / 2, h)[0];
-        out.order = people.map(pid => { const v = S.villagers.get(pid); const sx = R.proj(v.x, v.y, G.W.groundH(v.x, v.y))[0] - a; const key = R.depth(v.x, v.y) + 0.05; const st = strips.filter(z => z.c0 < sx + 3 && z.c1 > sx - 3);
-          return { id: pid, x: v.x, y: v.y, after: st.every(z => key > z.d), before: st.every(z => key < z.d) }; });
-        out.strips = strips.length;
+        R.prof.t = {}; R.prof.on = true; try { for (let j = 0; j < 20; j++) G.Main.frameFor(33); } finally { R.prof.on = false; } out.e4 = (R.prof.t.e4 || 0) / 20;
+        // (3) the order of the drawing: the building's key and each person's — by the render's own numbers
+        const bk = R.bkey(b); out.order = people.map(pid => { const v = S.villagers.get(pid); const key = R.depth(v.x, v.y) + 0.05; return { id: pid, after: key > bk, before: key < bk }; });
       }
       return out;
     }, [r.id, r.ps]).catch(e => ({ err: e.message }));
@@ -64,7 +63,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     if (r.pinta) {
       const W2 = (2 * r.w) * 16 + 16; const mb = m.spr ? m.spr.cw * m.spr.ch * 4 / 1048576 : 0;
       ok('1: o «sprite» do degrau, do tamanho do lote', !!m.spr && Math.abs(m.spr.w - W2) < 0.5, m.spr ? `${m.spr.w.toFixed(0)} × ${m.spr.h.toFixed(0)} px (o lote: ${W2}); feito em ${m.ms.toFixed(0)} ms no navegador — ${m.st && m.st.parts} partes, ${m.st && m.st.edges} «atrás de» —; ${mb.toFixed(1)} MB a 3× (mais ⅓ nas cópias menores: ${(mb * 4 / 3).toFixed(1)} MB)` : 'nenhum');
-      ok('2: o quadro com o Coliseu na tela', m.frame > 0, `mediana de 15 quadros: ${m.frame.toFixed(1)} ms (WebGL e canvas por software: o piso, não a placa de vídeo) — ${m.strips} tiras`);
+      ok('2: o quadro com o Coliseu na tela', m.frame > 0, `mediana de 15 quadros: ${m.frame.toFixed(1)} ms (canvas e WebGL por software: o piso, não a placa de vídeo); o desenho dos prédios na tela (R.prof e4): ${m.e4.toFixed(2)} ms por quadro`);
       const wrong = m.order.filter((o, k) => (k < 2 ? !o.after : !o.before));
       ok('3: a ordem do desenho em volta do Coliseu', !wrong.length, m.order.map((o, k) => `#${o.id} ${k < 2 ? 'diante de uma face: depois do prédio' : 'atrás: antes'} ${(k < 2 ? o.after : o.before) ? 'sim' : 'NÃO'}`).join('; '));
     }

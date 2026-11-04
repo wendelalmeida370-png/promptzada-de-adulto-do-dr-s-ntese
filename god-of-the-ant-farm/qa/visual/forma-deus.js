@@ -8,8 +8,8 @@
 //     e da forma (a fidelidade: silhueta, alto, largura, a planta vista de cima); um tamanho sem forma não cai no desenho de
 //     antes; o desenho do tamanho clássico é o de antes, igual; o «sprite» grande feito uma vez e guardado.
 // (c) A ordem do desenho dos prédios grandes: nas quatro vistas, quem está ao lado ou atrás de um prédio de 10 casas (e de 3) é
-//     desenhado do lado certo dele — na frente das faces que o deus vê, atrás das outras —, pelas tiras do render.js
-//     (R.strips); e quantos a regra de antes (uma entrada pelo canto da frente) punha do lado errado.
+//     desenhado do lado certo dele — na frente das faces que o deus vê, atrás das outras —, pela chave do render.js (R.bkey:
+//     a profundidade do meio do lote); e quantos a regra de antes (o canto da frente, um palmo para trás) punha do lado errado.
 // (e) O desenho não muda o mundo: pintar o prédio grande e pedir as tiras não escreve no prédio nem tira do acaso do mundo.
 //   node qa/visual/forma-deus.js [a,b,c,e]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
 //   VERB=1  cada tipo e povo                   JSON=arquivo  os números
@@ -95,16 +95,16 @@ if (want('b')) {
 
 // ------------------------------ (c) the order of the drawing ------------------------------
 // (round a lot, rings of places a little out of it — from a hand to a tile and a half —: in each of the four views, each place
-// whose screen column falls on the lot is in front of the building — beyond a face the view shows: the people's key over every
-// strip a person standing there covers, 3 px each side of his middle — or behind it: under every one)
+// whose screen column falls on the lot is in front of the building — beyond a face the view shows: the people's key over the
+// building's — or behind it: under it)
 if (want('c')) {
   F.blank(); const R = G.Render, W = G.W; const res = [];
-  for (const n of [N10, 3]) {
-    const b = putBig(n === N10 ? 'maravilha' : 'teatro', 'romano', 5000 + n, n);
+  for (const n of [N10, 3, 2, 1]) {
+    const b = putBig(n === N10 ? 'maravilha' : n === 3 ? 'teatro' : n === 2 ? 'temple' : 'house', 'romano', 5000 + n, n);
     try {
       const h = W.maxH(b.x, b.y, b.w, b.h); const [cx, cy] = G.Village.center(b); let bad = 0, old = 0, tot = 0, front = 0;
       for (let r = 0; r < 4; r++) R.asView(r, () => {
-        const S = R.strips(b, h); const a = R.proj(cx, cy, h)[0]; const oldKey = R.depth(cx, cy) + (b.w + b.h) / 2 - 0.8;
+        const bk = R.bkey(b); const a = R.proj(cx, cy, h)[0]; const oldKey = R.depth(cx, cy) + (b.w + b.h) / 2 - 0.8;
         // (the faces the view shows: an outward normal toward greater depth)
         const fx = R.depth(cx + 1, cy) - R.depth(cx, cy), fy = R.depth(cx, cy + 1) - R.depth(cx, cy);
         const x0 = Math.min(...[[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]].map(([x, y]) => R.proj(x, y, h)[0])) - a, x1 = Math.max(...[[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]].map(([x, y]) => R.proj(x, y, h)[0])) - a;
@@ -113,17 +113,17 @@ if (want('c')) {
           const [px, py] = side === 0 ? [X0 + q, Y0] : side === 1 ? [X1, Y0 + q] : side === 2 ? [X1 - q, Y1] : [X0, Y1 - q];
           const sx = R.proj(px, py, h)[0] - a; if (sx <= x0 + 1 || sx >= x1 - 1) continue; // (beside the lot on the screen only: where the two can cover each other)
           const beyond = (px > b.x + b.w && fx > 0) || (px < b.x && fx < 0) || (py > b.y + b.h && fy > 0) || (py < b.y && fy < 0);
-          const key = R.depth(px, py) + 0.05; const sts = S.filter(z => z.c0 < sx + 3 && z.c1 > sx - 3); tot++; if (beyond) front++;
-          if (!sts.length || sts.some(z => (beyond ? key <= z.d : key >= z.d))) bad++; if (beyond ? key <= oldKey : key >= oldKey) old++;
+          const key = R.depth(px, py) + 0.05; tot++; if (beyond) front++;
+          if (beyond ? key <= bk : key >= bk) bad++; if (beyond ? key <= oldKey : key >= oldKey) old++;
         } }
       });
       res.push({ n, tot, front, bad, old });
     } finally { F.drop(b); }
   }
   json.c = res;
-  const r10 = res.find(r => r.n === N10), r3 = res.find(r => r.n === 3);
-  ok('c: a ordem do desenho ao lado e atrás do prédio grande', res.every(r => r.bad === 0), res.map(r => `${r.n} casas: ${r.tot} lugares em volta nas quatro vistas (${r.front} na frente das faces que o deus vê), ${r.bad} do lado errado (a regra de antes: ${r.old})`).join('; '));
-  void r10; void r3;
+  // (the big ones, by the middle of their lot: none on the wrong side; under 3 tiles the rule of before is kept — counted, not held)
+  const big = res.filter(r => r.n >= 3), small = res.filter(r => r.n < 3);
+  ok('c: a ordem do desenho ao lado e atrás do prédio grande', big.every(r => r.bad === 0), big.map(r => `${r.n} casas: ${r.tot} lugares em volta nas quatro vistas (${r.front} na frente das faces que o deus vê), ${r.bad} do lado errado (a regra de antes: ${r.old})`).join('; ') + ' — abaixo de 3 casas, a regra de antes, mantida: ' + small.map(r => `${r.n} casa${r.n > 1 ? 's' : ''}, ${r.bad} de ${r.tot}`).join('; '));
 }
 
 // ------------------------------ (e) the drawing does not change the world ------------------------------
@@ -131,9 +131,9 @@ if (want('e')) {
   F.blank(); const b = putBig('maravilha', 'romano', 6060, N10); const S = G.S;
   try {
     const before = JSON.stringify(b) + JSON.stringify(S.rng || null) + S.buildings.size; G.Art.clear();
-    F.god(b); G.Render.asView(1, () => G.Render.strips(b)); G.Arch.formSprite('maravilha', 'romano', N10, true);
+    F.god(b); G.Render.asView(1, () => G.Render.bkey(b)); G.Arch.formSprite('maravilha', 'romano', N10, true);
     const after = JSON.stringify(b) + JSON.stringify(S.rng || null) + S.buildings.size;
-    ok('e: o desenho não muda o mundo', before === after, before === after ? 'o prédio, o acaso do mundo e a lista dos prédios iguais depois de pintar e de pedir as tiras' : 'mudou');
+    ok('e: o desenho não muda o mundo', before === after, before === after ? 'o prédio, o acaso do mundo e a lista dos prédios iguais depois de pintar e de pedir a chave do desenho' : 'mudou');
   } finally { F.drop(b); }
 }
 
