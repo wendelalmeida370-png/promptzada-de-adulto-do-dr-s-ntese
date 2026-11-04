@@ -21,10 +21,11 @@
   // A step: { id, nome, n (the lot's side, tiles), req: { tier, pop, era } (what its town needs to justify it), k (its bill over
   // the type's: the materials), kw (its work; k when absent), legado (the buildings already standing only: never founded again
   // where a bigger step of its people is to be had), familia (a family's own choice — the rich house —, never the town's) }.
-  // The numbers measured by the city (D-117): a town's monument takes years of its stone, and is done. With the turn a great work
-  // has with the builders, the metrópole's capitals put up the theatre of 6 in 13 years and, in 30, the palace of 6 to 95% and
-  // the wonder of 10 to 90% at the first bills: the materials (k) of the biggest steps a fifth below those now, their work (kw)
-  // as it was — the hands are not what holds a monument back, the stone is
+  // The numbers measured by the city (D-117): a town's monument takes years of its stone. With the turn a great work has with the
+  // builders, in one life of 30 years of the metrópole the theatre of 6 stood in 13 years and the palace of 6 and the wonder of
+  // 10 reached 95% and 90% at the first bills (in another, the wonder stopped at 27%: a town's fate weighs more than its bill):
+  // the materials (k) of the biggest steps now a fifth below those, their work (kw) as it was — the hands are not what holds a
+  // monument back, the stone is
   const LADDER = Es.LADDER = {};
   const classic = type => { const d = G.BDEF[type]; return d ? d.w : 1; };
   Es.n0 = classic;
