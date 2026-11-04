@@ -93,21 +93,21 @@ G.Ready.list({
  },
  "anos500": {
   "day": 501,
-  "pop": 1036,
-  "peoples": 1,
-  "towns": 7,
+  "pop": 1038,
+  "peoples": 3,
+  "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Argos",
+   "name": "Roma",
    "tier": 4,
-   "pop": 200
+   "pop": 155
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 5329475
+  "bytes": 5918025
  },
  "anos1000": {
   "day": 1001,
