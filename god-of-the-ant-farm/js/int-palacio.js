@@ -331,6 +331,7 @@
   }
   In.formSized('palacio', palaceByForm); In.formSized('palacio_colossal', palaceByForm);
   In.riskOf = riskOf; // (for the proofs: the risk a palace's or a temple's plan is laid out from)
+  In.riskLayer = layerOf; // (the walls of a risk laid in a plan — the inn's of int-familias.js too: one rule for the party walls)
 
   // ------------------------------ the temple by its form: the bigger steps (D-106) ------------------------------
   // The temple of four, six and eight tiles — js/forma-poder.js, riscoTemplo — laid out from the risk its form keeps (the

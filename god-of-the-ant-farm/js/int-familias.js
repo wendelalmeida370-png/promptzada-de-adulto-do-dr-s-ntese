@@ -664,4 +664,110 @@
     return top === 'jirau' ? pitched(rec, tr) : top === 'terraco' || top === 'quarto' ? !pitched(rec, tr) : true; };
   // (what the other recipes — the block round a court, the buildings of work — lay out with)
   In.HOME = { ladderAt, sideLadders, loft, porao, terrace, windows, roofOf, pitched, wet, flatOK, cellarOK, touches, roomHolding, ptInR, parseV, NUM, TOPN, rowOf, roofFits };
+
+  // ------------------------------ the inn: the tavern's bigger steps (taverna 3, hospedaria 4; D-106) ------------------------------
+  // The tavern of a grown town as the god draws the tavern of 8 m (the house at the back, the yard before it fenced low, its
+  // gate on the street — int-trabalho.js, YARD.taverna), on a lot of 12 or 16 m: the house of two storeys across the back —
+  // the hall where the guests eat and drink at the long tables, the keeper's counter by the kitchen's door, the kitchen with its
+  // stove, the cellar of the barrels and the vat behind it —; upstairs the rooms of the guests and the keeper's along the
+  // corridor the stair in the hall comes up to; the yard before the house, its tables and their benches. The tavern has no
+  // form (G.Forma.has asks a classic form): its bigger steps are a plan of the lot's size (TYPES.taverna.sizes, In.sizeOk) and
+  // what the god and the 3D draw of it is its plan's shell, as the tavern of 8 m's. The risk below fixes the walls, rooms and
+  // stair (a structure, no dice: the plan's dice only move what is not the tables'); laid out only on a lot of 12 m or more
+  // (int-civicos.js: In.formSized, the family the type's bigger steps are given)
+  const rr2 = x => Math.round(x * 100) / 100;
+  function innRisk(rec, tr, L) {
+    const k = L >= 16 ? 1 : 0; const m = 0.4, t = rr2(Math.max(0.25, tr.t || 0.25)), ti = 0.15, c = t / 2;
+    const yd = k ? 3.8 : 3.2, Vh = rr2(L - m - yd); const B = [m, m, rr2(L - m), Vh]; const I = [rr2(m + t), rr2(m + t), rr2(L - m - t), rr2(Vh - t)];
+    const h0 = rr2(Math.max(3.0, (tr.h0 || 2.4) + 0.5)), h1 = rr2(Math.max(2.4, tr.h1 || 2.4)), y1 = rr2(h0 + 0.2);
+    const ws = k ? 3.8 : 3.2, sd = k ? 3.8 : 3.0; const xk = rr2(I[2] - ws);
+    const R = { L, k, B, I, t, h0, h1, y1, walls: [], rooms: [], ups: [] };
+    const room = (lv, fn, r, o) => { R.rooms.push(Object.assign({ lv, fn, r: r.map(rr2), id: R.rooms.length }, o || {})); return R.rooms.length - 1; };
+    const wall = (lv, a, b, tw, h, kind, o) => { const w = Object.assign({ lv, a: a.map(rr2), b: b.map(rr2), t: tw, h: rr2(h), kind, outer: 0, casca: 0, ops: [] }, o || {}); R.walls.push(w); return w; };
+    const door = (w, p, ww, hh, kind, o) => { w.ops.push(Object.assign({ k: kind || 'porta', p: p.map(rr2), w: ww, h: hh }, o || {})); };
+    const win = (w, p, ww, hh, sill) => { w.ops.push({ k: 'janela', p: p.map(rr2), w: ww, h: hh, sill }); };
+    R.levels = [{ lv: 0, y: 0, h: h0, kind: 'piso', area: I.slice() }, { lv: 1, y: y1, h: h1, kind: 'andar', area: I.slice() }];
+    // ---- the house's walls, storey by storey; the hall's door from the yard, the windows ----
+    const hall = room(0, 'salao', [I[0], I[1], rr2(xk - ti), I[3]]); const cellar = room(0, 'adega', [xk, I[1], I[2], rr2(I[1] + sd)]); const kitchen = room(0, 'cozinha', [xk, rr2(I[1] + sd + ti), I[2], I[3]]);
+    const hr = R.rooms[hall].r, kr = R.rooms[kitchen].r; const hm = rr2((hr[0] + hr[2]) / 2);
+    for (const lv of [0, 1]) {
+      const h = lv ? h1 : h0;
+      const fundo = wall(lv, [B[0], rr2(B[1] + c)], [B[2], rr2(B[1] + c)], t, h, 'parede', { outer: 1, casca: 1, side: 'fundo' });
+      const esq = wall(lv, [rr2(B[0] + c), B[3]], [rr2(B[0] + c), B[1]], t, h, 'parede', { outer: 1, casca: 1, side: 'esquerda' });
+      const dir = wall(lv, [rr2(B[2] - c), B[1]], [rr2(B[2] - c), B[3]], t, h, 'parede', { outer: 1, casca: 1, side: 'direita' });
+      const fr = wall(lv, [B[2], rr2(B[3] - c)], [B[0], rr2(B[3] - c)], t, h, 'parede', { outer: 1, casca: 1, side: 'frente' });
+      const ws2 = lv ? { w: 0.8, h: 1.1, s: 0.9 } : { w: 1.0, h: 1.4, s: 1.0 };
+      if (!lv) { door(fr, [hm, rr2(B[3] - c)], k ? 1.4 : 1.2, 2.4, 'portal'); for (const du of [-2.6, 2.6]) win(fr, [rr2(hm + du), rr2(B[3] - c)], ws2.w, ws2.h, ws2.s); win(fr, [rr2((kr[0] + kr[2]) / 2), rr2(B[3] - c)], ws2.w, ws2.h, ws2.s); }
+      else for (let q = 0; q < (k ? 4 : 3); q++) win(fr, [rr2(I[0] + (I[2] - I[0]) * (q + 0.5) / (k ? 4 : 3)), rr2(B[3] - c)], ws2.w, ws2.h, ws2.s);
+      for (const q of lv ? [0.25, 0.75] : [0.3, 0.7]) win(esq, [rr2(B[0] + c), rr2(I[1] + (I[3] - I[1]) * q)], ws2.w, ws2.h, ws2.s);
+      win(dir, [rr2(B[2] - c), rr2((lv ? I[1] + (I[3] - I[1]) * 0.25 : (kr[1] + kr[3]) / 2))], ws2.w, ws2.h, ws2.s);
+      if (lv) win(fundo, [rr2((I[0] + I[2]) / 2), rr2(B[1] + c)], ws2.w, ws2.h, ws2.s);
+    }
+    // ---- the ground's partitions: the wing of the kitchen and the cellar, their doors (the hall to the kitchen, the kitchen to the cellar) ----
+    const pw = wall(0, [rr2(xk - ti / 2), I[1]], [rr2(xk - ti / 2), I[3]], ti, h0, 'divisoria'); door(pw, [rr2(xk - ti / 2), rr2((kr[1] + kr[3]) / 2)], 1.0, 2.2, 'porta');
+    const cw = wall(0, [xk, rr2(I[1] + sd + ti / 2)], [I[2], rr2(I[1] + sd + ti / 2)], ti, h0, 'divisoria'); door(cw, [rr2((xk + I[2]) / 2), rr2(I[1] + sd + ti / 2)], 0.9, 2.1, 'porta');
+    // ---- upstairs: the landing the stair comes up to and the rooms along the back (and, the inn's, along the front), the
+    // corridor between them; the stair up from the hall's back corner, along its back wall (3.6 m for its height, 1.1 wide) ----
+    const rd = k ? 4.2 : 3.6, cd = 1.5; const v0 = rr2(I[1] + rd + ti), v1 = rr2(v0 + cd); const front = k ? [rr2(v1 + ti), I[3]] : null;
+    const nr = k ? 4 : 3; const w0 = rr2(Math.max(5.4, (I[2] - I[0] - (nr - 1) * ti) / nr)), each = (I[2] - I[0] - w0 - (nr - 1) * ti) / (nr - 1);
+    const cols = [[I[0], rr2(I[0] + w0)]]; for (let q = 1; q < nr; q++) { const a = rr2(I[0] + w0 + ti + (q - 1) * (each + ti)); cols.push([a, rr2(q === nr - 1 ? I[2] : a + each)]); }
+    R.corr = room(1, 'corredor', [I[0], v0, I[2], k ? v1 : I[3]]);
+    const cwB = wall(1, [I[0], rr2(v0 - ti / 2)], [I[2], rr2(v0 - ti / 2)], ti, h1, 'divisoria'); const cwF = front ? wall(1, [I[2], rr2(v1 + ti / 2)], [I[0], rr2(v1 + ti / 2)], ti, h1, 'divisoria') : null;
+    for (const [q, [a, b]] of cols.entries()) {
+      const id = room(1, q === 0 ? 'patamar' : q === 1 ? 'aposento' : 'quarto', [a, I[1], b, rr2(v0 - ti)]); if (q) R.ups.push(id); door(cwB, [rr2((a + b) / 2), rr2(v0 - ti / 2)], 0.9, 2.1, 'porta');
+      if (front) { R.ups.push(room(1, 'quarto', [a, front[0], b, front[1]])); door(cwF, [rr2((a + b) / 2), rr2(v1 + ti / 2)], 0.9, 2.1, 'porta'); }
+      if (q < nr - 1) { const u = rr2(b + ti / 2); wall(1, [u, I[1]], [u, rr2(v0 - ti)], ti, h1, 'divisoria'); if (front) wall(1, [u, front[0]], [u, front[1]], ti, h1, 'divisoria'); }
+    }
+    R.stair = { r: [rr2(I[0] + 1.2), rr2(I[1] + 0.1), rr2(I[0] + 4.8), rr2(I[1] + 1.2)], du: 1, dv: 0 }; // (its foot 1.2 m from the wall, its top 0.6 m inside the landing: floor at both ends)
+    // ---- the yard before the house: its fence, the gate on the street in its middle, its floor; its tables ----
+    const Y = [m, Vh, rr2(L - m), rr2(L - m)]; R.yard = Y; R.yardH = 1.1; const ft = 0.2, c2 = ft / 2;
+    wall(0, [rr2(Y[0] + c2), Y[1]], [rr2(Y[0] + c2), Y[3]], ft, 1.1, 'cerca', { outer: 1, casca: 1, yard: 1 }); wall(0, [rr2(Y[2] - c2), Y[3]], [rr2(Y[2] - c2), Y[1]], ft, 1.1, 'cerca', { outer: 1, casca: 1, yard: 1 });
+    const gw = k ? 1.8 : 1.6; const fw = wall(0, [Y[2], rr2(Y[3] - c2)], [Y[0], rr2(Y[3] - c2)], ft, 1.1, 'cerca', { outer: 1, casca: 1, yard: 1 }); door(fw, [rr2(L / 2), rr2(Y[3] - c2)], gw, 2.2, 'portao', { rua: 1 });
+    R.gate = { u: rr2(L / 2), v: Y[3], w: gw }; R.yardRoom = room(0, 'terreiro', [rr2(Y[0] + ft), Vh, rr2(Y[2] - ft), rr2(Y[3] - ft)], { open: 1 });
+    R.yardTables = (k ? [-1, 1] : [-1]).map(s => { const u = s < 0 ? rr2(Y[0] + 0.9) : rr2(Y[2] - 0.9 - 2.2); return [u, rr2(Vh + 0.7), rr2(u + 2.2), rr2(Vh + 2.4)]; });
+    R.hall = hall; R.kitchen = kitchen; R.cellar = cellar;
+    R.roof = { kind: tr.roof === 'palha' ? 'duas-aguas' : tr.roof || 'duas-aguas', along: 'u', over: 0.42 }; R.roof.h = R.roof.kind === 'plano' ? 0 : rr2(Math.min(3.6, (B[3] - B[1]) * 0.36));
+    return R;
+  }
+  In.innRisk = innRisk; // (for the proofs)
+  function innBuild(P) {
+    const tr = P.tr, rec = P.rec; const R = innRisk(rec, tr, P.L); if (!In.riskLayer) { P.errs.push('sem o assentar das paredes'); return; }
+    P.shell = { kind: 'rect', r: R.B.slice(), t: R.t, mat: tr.mat, base: 'pedra', floors: 2, eave: rr2(R.y1 + R.h1) };
+    P.roof = { kind: R.roof.kind, along: R.roof.along, h: R.roof.h, over: R.roof.kind === 'plano' ? 0 : R.roof.over }; P.roofGeo = { kind: R.roof.kind, along: R.roof.along, eave: P.shell.eave, rise: R.roof.h, R: R.B.slice() };
+    for (const l of R.levels) P.level(l.lv, l.y, l.h, l.kind, l.area);
+    P.entryLv = 0;
+    const Ly = In.riskLayer(P); for (const w of R.walls) if (w.casca) Ly.lay(w);
+    if (Ly.gate < 0) { P.errs.push('sem portão no terreiro'); return; }
+    P.entrance = { door: Ly.gate, u: R.gate.u, v: R.gate.v, w: R.gate.w, lv: 0 };
+    P.yard = { r: R.yard.slice(), h: R.yardH, lv: 0 };
+    // (the yard and its tables laid with the shell — what the god and the 3D see from afar)
+    const yid = P.room(0, 'terreiro', R.rooms[R.yardRoom].r, 1);
+    for (const r of R.yardTables) if (!P.at('mesa-terreiro', 0, yid, r, 0, 1, { yard: 1 })) { P.errs.push('a mesa do terreiro não cabe'); return; }
+    P.stair('escada', 0, 1, R.stair.r.slice(), R.stair.du, R.stair.dv, R.stair.r.slice());
+    if (P.inside()) return;
+    // ======== the inside ========
+    for (const w of R.walls) if (!w.casca) Ly.lay(w);
+    const ids = R.rooms.map(m => (m.id === R.yardRoom ? yid : P.room(m.lv, m.fn, m.r, m.open)));
+    const hall = ids[R.hall], kitchen = ids[R.kitchen], cellar = ids[R.cellar];
+    // the counter by the kitchen's door; the kitchen's fire; the cellar's barrels — what the tavern's day needs (act-taverna.js)
+    if (!P.place('balcao', 0, hall, { sides: ['direita'], margin: 0.3 }) && !P.place('balcao', 0, hall, { sides: ['livre'], margin: 0.3 })) { P.errs.push('sem lugar para o balcão'); return; }
+    const f = tr.fire === 'fogao' || tr.fire === 'forno' ? 'fogao' : tr.fire || 'fogao';
+    if (!(P.place(f, 0, kitchen) || P.place('fogao', 0, kitchen) || P.place('braseiro', 0, kitchen))) { P.errs.push('sem lugar para o fogo da cozinha'); return; }
+    if (!P.place('pipas', 0, cellar)) { P.errs.push('sem lugar para as pipas'); return; }
+    // the long tables of the hall, each with its benches: as many as the floor holds, from the back wall forward, the way to
+    // the stair, the counter and the kitchen's door kept open (the plan's own fitting says where one more goes)
+    const r = P.rooms[hall].r; let n = 0;
+    for (let v = rr2(r[1] + 0.6); v + 1.7 <= r[3] - 1.2 + 1e-6; v = rr2(v + 0.2)) for (let u = rr2(r[0] + 0.6); u + 2.2 <= r[2] - 0.4 + 1e-6; u = rr2(u + 0.2)) if (P.at('mesa-terreiro', 0, hall, [u, v, rr2(u + 2.2), rr2(v + 1.7)], 0, 1)) n++;
+    if (n < (R.k ? 6 : 3)) { P.errs.push(`só ${n} mesas no salão`); return; }
+    P.opt(() => { for (let g = 0; g < 2; g++) P.place('banco', 0, hall, { sides: ['esquerda', 'fundo'] }); });
+    P.opt(() => { P.place('cuba', 0, cellar); if (tr.keep && tr.keep.includes('jarros')) P.place('jarros', 0, cellar); P.place('mesa', 0, kitchen, { sides: ['livre'] }); });
+    // upstairs: a bed in every room (the keeper's the couple's), its chest
+    let beds = 0; const bed = tr.rich && tr.rich[0] ? tr.rich[0] : 'cama';
+    for (const k of R.ups) { const id = ids[k]; const own = R.rooms[k].fn === 'aposento'; if (P.place(own ? tr.coupleRich || bed : bed, 1, id) || P.place('cama', 1, id)) { beds++; P.opt(() => P.place('arca', 1, id)); } }
+    if (!beds) P.errs.push('sem cama nos quartos');
+  }
+  // (no family of its own: a family registered here would move the dice of every plan of a family registered after it — the
+  // plan's seed is the family's place in the order of registration, L-512 —; the inn is laid out through the bigger steps' door,
+  // In.formSized, in the family the type's bigger steps are given — int-civicos.js)
+  In.innBuild = innBuild;
 })(window.G);
