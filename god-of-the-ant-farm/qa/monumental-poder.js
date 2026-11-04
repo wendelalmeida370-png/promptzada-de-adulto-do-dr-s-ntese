@@ -21,7 +21,38 @@
 //   B11 os casos ruins num mundo novo: a obra do colossal salva e carregada no meio e acabada; o deus que derruba o palácio (a
 //      ruína da planta); o verificador limpo em cada passo — e a sua regra nova (qa/poder-inv.js) pega um palácio grande com a
 //      planta de uma família da receita
-//   node qa/monumental-poder.js [B1,B2,…]      VERB=1: cada caso que falha
+// E a D, os templos — o templo (4 casas), o grande templo (6) e o santuário monumental (8) dos mesmos quatro povos, o risco de
+// js/forma-poder.js (riscoTemplo) e a planta pela forma (int-palacio.js, templeByForm, a família forma.templo):
+//   D1 a forma de cada povo e tamanho, o degrau só a quem a tem; as formas dos povos diferentes em cada tamanho (a H)
+//   D2 a planta em todo povo, tamanho e lado pela família da forma (a do registro novo e do catálogo); o santuário da aldeia com
+//      a sua; a mesma duas vezes; a casca; o tempo da planta; a tabela dos lugares do monumental (In.table) a tempo
+//   D3 o santuário monumental contra o da aldeia do mesmo povo: o lote e o chão coberto ≥ 9 vezes
+//   D4 a nave ≥ 10 × 16 m e ≥ 8 m de altura, o altar alcançado da porta
+//   D5 os lugares de rezar — os bancos, as esteiras dos povos que se ajoelham, de pé diante do templo —: ≥ 40 no monumental,
+//      cada um alcançado da porta; o lugar de oficiar
+//   D6 a escadaria, a entrada no alto dela, o parapeito onde o pódio cai mais de 1 m, a porta da rua e o portal ≥ 2,2 m
+//   D7 os pés da rua até dentro da nave, a cada 2 cm, num mundo em branco
+//   D8 de pé no mundo: o monumental pela mão do deus na metrópole e os três degraus de cada povo num mundo novo, um ano, salvar
+//      e carregar, o verificador limpo
+//   D9 os casos ruins: a obra salva no meio e acabada, o grande templo derrubado, a regra do verificador
+// E a F, a taverna — a taverna (3 casas) e a hospedaria (4) dos seis povos: a taverna não tem forma, os degraus maiores são a
+// planta do lote do tamanho (TYPES.taverna.sizes), a estalagem de int-familias.js (In.innBuild) pela porta In.formSized, na
+// família forma.salao (sem família nova: L-512):
+//   F1 a escada oferecida a todo povo pela planta do tamanho
+//   F2 a planta em todo povo, tamanho e lado (a família do registro novo e do catálogo); a taberna de 8 m com as suas; a mesma
+//      duas vezes; a casca; o tempo da planta; a tabela dos lugares da hospedaria
+//   F3 a hospedaria: o salão ≥ 10 × 8 m, ≥ 8 mesas, a cozinha com o fogo, o depósito das pipas, o balcão; ≥ 20 sentados
+//   F4 as regras do corpo: o portão e a porta do salão ≥ 2,2 m, a escada, os quartos de cima alcançados
+//   F5 de pé no mundo (a hospedaria na metrópole, com os lugares da tabela do mundo; as duas num mundo novo, um ano, o save)
+//   F6 os casos ruins: a obra salva no meio, a taverna derrubada, a regra do verificador
+// E a G, as casas — a cabana e a casa de 4 m continuam; a casa rica (domus, 2 casas, o degrau de uma família) de int-familias.js
+// (In.domusBuild, a casa do pátio, mobiliada como toda casa: furnishHome), pela mesma porta e família da taverna:
+//   G1 a cabana e a casa com 4 × 4 m, as famílias de antes
+//   G2 a casa rica: o degrau de uma família, o lote de 8 × 8 m, a planta em todo povo, lado e riqueza; a família abrigada (≥ 6
+//      lugares de dormir), o fogo, o pátio aberto; a mesma duas vezes, a casca, o tempo, a tabela dos lugares
+//   G3 de pé no mundo (a metrópole e um mundo novo: a planta, o verificador, um ano, a derrubada, salvar e carregar; o degrau
+//      oferecido só à família; a regra do verificador)
+//   node qa/monumental-poder.js [B1,…,D1,…,F1,…,G1,…]      VERB=1: cada caso que falha
 'use strict';
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['qa/escala-inv.js', 'qa/poder-inv.js'] });
@@ -202,43 +233,49 @@ function B8() {
   ok('B8a as regras do corpo: a porta da rua e a principal ≥ 2,2 m, as escadas que os pés sobem, os peitoris de cima ≥ 0,9 m', !out.length, some(out).join(' / ') || `nos ${made.filter(q => q.s === 'S').length} (a porta da rua, os lances, as janelas do piso de cima)`);
 }
 // ---------------------------------------------------------------- B9: the feet in, on a blank world
+// (a blank world: flat grass, nothing on it; a building of a step put on it by hand, its record as the world makes it)
+const blankWorld = () => { const S = G.newState(7); S.H.fill(4); S.type.fill(G.T.GRASS); if (S.biome) S.biome.fill(0); S.clock = 0; S.day = 30; S.time = 0.3; G.S = S; G.newWorld(); return S; };
+const putStep = (S, t, c, n, x, y, id) => { const def = G.BDEF[t]; const b = { id, type: t, style: c, x, y, w: n, h: n, esc: t, built: true, progress: 1, hp: 100, maxHp: 100, v: 0, set: 0, blocks: !!def.blocks, ip: null };
+  S.buildings.set(b.id, b); for (let yy = b.y; yy < b.y + n; yy++) for (let xx = b.x; xx < b.x + n; xx++) S.occ[yy * G.N + xx] = b.id;
+  b.ip = In.newRecord(b, { t, c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: 1, w: 1, pw: 0, s: 'S', o: (1 << n) - 1, n }); return b; };
+// (the feet from the street along the way in to v = end, every 2 cm, against what the form is there — the treads, the
+// platform's top, the street —: the worst difference, the points below it, the biggest step, where they stop)
+function feetIn(b, p, R, end) {
+  const TL = Sp.TILE, L = b.w * TL, u = p.entrance.x; const pl = Sp.plinth(b);
+  const inR = (r, a, z) => a >= r[0] && a <= r[2] && z >= r[1] && z <= r[3];
+  const top = z => { for (const q of R.treads) if (inR(q.r, u, z)) return q.y; return inR(R.podium, u, z) ? R.Hp : 0; };
+  const edges = R.treads.flatMap(q => [q.r[1], q.r[3]]).concat([R.podium[3]]);
+  let worst = 0, at = 0, step = 0, fell = 0, prev = null, nn = 0, stop = null;
+  for (let z = L + 1.0; z >= end; z -= 0.02) {
+    const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, 0, b.id); const foot = ins ? ins.y : Math.max(Sp.footAt(X / TL, Z / TL), Sp.stepTop(X, Z));
+    if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
+    if (ins && !ins.walk && ins.door < 0 && stop === null) stop = z;
+    if (edges.some(e => Math.abs(z - e) < 0.03)) continue;
+    // (in the street, or past the flight's foot on the lot's edge: the steps before it are Space's — L-163, L-390 —, not the form's)
+    if ((!ins && Sp.stepTop(X, Z) > -Infinity) || z > R.stair[3] + 0.01) continue; nn++;
+    const wantY = pl.hi + top(z) + (ins && z < R.podium[3] ? Sp.FLOOR_UP : 0); const d = foot - wantY; if (Math.abs(d) > Math.abs(worst)) { worst = d; at = z; }
+    if (d < -0.05) fell++;
+  }
+  const bad = Math.abs(worst) > 0.03 || fell || step > In.BODY.step + 0.01 || Math.abs(pl.y0 - pl.hi) > 1e-9 || stop !== null;
+  return { bad, worst, why: `os pés a ${worst.toFixed(2)} m da forma em v ${at.toFixed(2)}, ${fell} pontos abaixo dela, o maior degrau ${step.toFixed(2)} m, o quadro a ${(pl.y0 - pl.hi).toFixed(2)} m do chão${stop !== null ? `, parados em v ${stop.toFixed(2)}` : ''} (${nn} pontos)` };
+}
 function B9() {
-  const S = G.newState(7); S.H.fill(4); S.type.fill(G.T.GRASS); if (S.biome) S.biome.fill(0); S.clock = 0; S.day = 30; S.time = 0.3; G.S = S; G.newWorld();
-  const TL = Sp.TILE, out = [], sum = []; let k = 0;
+  const S = blankWorld(); const out = [], sum = []; let k = 0;
   for (const [t, n] of PAL) for (const c of POVOS) {
     const x = 6 + 14 * (k % 4), y = 6 + (n === 10 ? 0 : 16) + 0; k++;
-    const def = G.BDEF[t]; const b = { id: 98001 + k * 7, type: t, style: c, x, y, w: n, h: n, esc: t, built: true, progress: 1, hp: 100, maxHp: 100, v: 0, set: 0, blocks: !!def.blocks, ip: null };
-    S.buildings.set(b.id, b); for (let yy = b.y; yy < b.y + n; yy++) for (let xx = b.x; xx < b.x + n; xx++) S.occ[yy * G.N + xx] = b.id;
-    b.ip = In.newRecord(b, { t, c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: 1, w: 1, pw: 0, s: 'S', o: (1 << n) - 1, n });
+    const b = putStep(S, t, c, n, x, y, 98001 + k * 7);
     const key = `${t === 'palacio' ? 'P' : 'C'}/${c}`; if (b.ip.f !== FAM) { out.push(`${key}: o registro novo com ${b.ip.f}`); continue; }
     const p = Sp.planNow(b); if (!p || !p.ok) { out.push(`${key}: sem planta`); continue; }
-    const R = riskOf(t, c, n); const pl = Sp.plinth(b); const L = n * TL; const u = p.entrance.x;
-    // (what the form is there: the treads, the podium's top, the street)
-    const inR = (r, a, z) => a >= r[0] && a <= r[2] && z >= r[1] && z <= r[3];
-    const top = z => { for (const q of R.treads) if (inR(q.r, u, z)) return q.y; return inR(R.podium, u, z) ? R.Hp : 0; };
-    const edges = R.treads.flatMap(q => [q.r[1], q.r[3]]).concat([R.podium[3]]);
+    const R = riskOf(t, c, n);
     // (from the street to the court: the colossal to the inner side of its vestibule's portal, the palace to before its fountain)
-    const end = n === 10 ? R.C[3] - 0.8 : R.fonte.c[1] + R.fonte.r + 1.0;
-    let worst = 0, at = 0, step = 0, fell = 0, prev = null, nn = 0, stop = null;
-    for (let z = L + 1.0; z >= end; z -= 0.02) {
-      const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, 0, b.id); const foot = ins ? ins.y : Math.max(Sp.footAt(X / TL, Z / TL), Sp.stepTop(X, Z));
-      if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
-      if (ins && !ins.walk && ins.door < 0 && stop === null) stop = z;
-      if (edges.some(e => Math.abs(z - e) < 0.03)) continue;
-      // (in the street, or past the flight's foot on the lot's edge: the steps before it are Space's — L-163, L-390 —, not the form's)
-      if ((!ins && Sp.stepTop(X, Z) > -Infinity) || z > R.stair[3] + 0.01) continue; nn++;
-      const wantY = pl.hi + top(z) + (ins && z < R.podium[3] ? Sp.FLOOR_UP : 0); const d = foot - wantY; if (Math.abs(d) > Math.abs(worst)) { worst = d; at = z; }
-      if (d < -0.05) fell++;
-    }
-    sum.push(`${key} ${worst >= 0 ? '+' : ''}${worst.toFixed(3)}`);
-    if (Math.abs(worst) > 0.03 || fell || step > In.BODY.step + 0.01 || Math.abs(pl.y0 - pl.hi) > 1e-9 || stop !== null) out.push(`${key}: os pés a ${worst.toFixed(2)} m da forma em v ${at.toFixed(2)}, ${fell} pontos abaixo dela, o maior degrau ${step.toFixed(2)} m, o quadro a ${(pl.y0 - pl.hi).toFixed(2)} m do chão${stop !== null ? `, parados em v ${stop.toFixed(2)}` : ''} (${nn} pontos)`);
+    const f = feetIn(b, p, R, n === 10 ? R.C[3] - 0.8 : R.fonte.c[1] + R.fonte.r + 1.0);
+    sum.push(`${key} ${f.worst >= 0 ? '+' : ''}${f.worst.toFixed(3)}`); if (f.bad) out.push(`${key}: ${f.why}`);
   }
   ok('B9a os pés da rua para dentro, subindo os degraus da forma, sempre num chão onde ficam', !out.length, some(out).join(' / ') || `nos ${PAL.length * POVOS.length}, a cada 2 cm (a maior diferença: ${sum.join(', ')})`);
 }
 // ---------------------------------------------------------------- B10: standing in the world
-function B10() {
-  // (a palace of the god's hand: where, the plan, the way in, the report, the checker)
-  const stand = (set, t, step, o) => {
+// (a building of the god's hand — a palace, a temple —: where, the plan, the way in, the report, the checker; B10, D9)
+const stand = (set, t, step, o) => {
     const st = G.Civ.idOfFac(set.fac); let b; G.inSim++; try { b = G.Village.handFound(set, t, step, Object.assign({ built: true }, o)); } finally { G.inSim--; }
     if (!b) return { set, st, t, none: true };
     const p = In.plan(b); const e = Sp.entryFits(b, In.shellOf(b)); const rep = In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA').map(q => q.what);
@@ -248,9 +285,9 @@ function B10() {
     return { set, st, t, b, ok: !!(p && p.ok && !rep.length), fits: e.ok, why: [p && p.ok ? '' : 'planta: ' + (p ? p.errs.slice(0, 2).join('; ') : '-'), e.ok ? '' : `a entrada não cabe (${e.kind}, o pé a ${e.foot} m)`, rep.slice(0, 2).join('; ')].filter(Boolean).join(', '),
       d: G.dist(b.x + b.w / 2, b.y + b.h / 2, set.cx, set.cy), rel: (hi - lo) * Sp.HM, flat: o.flat };
   };
-  // (the nearest lot of n with its ring free, as the god's hand founds, within R of a town's middle, whose ground rises no more
-  // than the podium covers — two of the relief's steps, 3 m —: the point to found at, or null)
-  const flatLot = (set, n, R) => { const S = G.S, W = G.W, N = G.N, T = G.T; const ox = Math.floor(set.cx), oy = Math.floor(set.cy);
+// (the nearest lot of n with its ring free, as the god's hand founds, within R of a town's middle, whose ground rises no more
+// than the podium covers — two of the relief's steps, 3 m —: the point to found at, or null)
+const flatLot = (set, n, R) => { const S = G.S, W = G.W, N = G.N, T = G.T; const ox = Math.floor(set.cx), oy = Math.floor(set.cy);
     for (let r = 0; r <= R; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = ox + dx - Math.floor(n / 2), y = oy + dy - Math.floor(n / 2); let ok2 = true;
       for (let ty = y - 1; ty <= y + n && ok2; ty++) for (let tx = x - 1; tx <= x + n; tx++) { if (tx < 2 || ty < 2 || tx >= N - 2 || ty >= N - 2) { ok2 = false; break; } const i = ty * N + tx;
@@ -259,7 +296,9 @@ function B10() {
       if ((hi - lo) * Sp.HM <= 3 + 1e-6) return { x: x + Math.floor(n / 2), y: y + Math.floor(n / 2) };
     }
     return null; };
-  const qa = () => globalThis.QA.check().filter(q => q.sev <= 2);
+const qaS = () => globalThis.QA.check().filter(q => q.sev <= 2);
+function B10() {
+  const qa = qaS;
   const tell = r => `${r.set.name} (${r.st}) ${r.t === 'palacio' ? 'P' : 'C'}#${r.b.id} a ${r.d.toFixed(0)} casas, ${r.rel.toFixed(1)} m de desnível${r.ok && r.fits ? '' : ': ' + r.why}`;
   // the ready world: the colossal of the god's hand in the cities of the peoples that raise it (the first that has a lot of 10)
   { M.pronto('metropole'); const q0 = qa().length; const res = [];
@@ -307,6 +346,361 @@ function B11() {
       if (!caught || quiet) out.push(`a regra nova: ${caught} avisos com a família da receita, ${quiet} com a da forma`); else said.push('a regra nova pega a família da receita'); } }
   ok('B11a os casos ruins: a obra salva no meio, o palácio derrubado, o verificador limpo — e a regra nova do verificador pega a planta de outra família', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
 }
-for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11]]) if (want(k)) f();
+// ================================================================ D: the temples (templo 4, grande templo 6, santuário monumental 8)
+const TPL = [4, 6, 8], TFAM = 'forma.templo';
+const blankS = () => ({ villagers: new Map(), buildings: new Map(), dead: new Map(), settlements: new Map(), clock: 100, day: 3, time: 0.4, avatar: null, nextId: 1000, history: [], fire: new Float32Array(G.N * G.N), occ: new Int32Array(G.N * G.N) });
+const trec = (c, s, n) => In.newRecord({ id: 0, type: 'temple', style: c, x: 8, y: 8, w: n, h: n }, { t: 'temple', c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: 1, w: 1, pw: 0, s, o: (1 << n) - 1, n });
+const ttag = m => `T${m.n}/${m.c}/${m.s}`;
+// (the temple's plans of every people, size and side, on a world of nothing: made once, when a test of D asks)
+let tcache = null;
+const temples = () => {
+  if (tcache) return tcache; G.S = blankS(); tcache = []; let id = 93001;
+  for (const n of TPL) for (const c of POVOS) for (const s of LADOS) {
+    const b = { id: (id += 37), type: 'temple', style: c, x: 8, y: 8, w: n, h: n, built: true }; b.ip = rec('temple', c, s, n, TFAM);
+    const t0 = clock(); const p = In.makeFam(b, b.ip, TFAM); const ms = clock() - t0; G.S.buildings.set(b.id, b); tcache.push({ n, c, s, b, p, ms, so: In.shellOf(b) });
+  }
+  return tcache;
+};
+const tfloor = p => p.rooms.filter(m => !m.open).reduce((a, m) => a + area(m.r), 0);
+// ---------------------------------------------------------------- D1: the forms
+function D1() {
+  const out = [], sum = [];
+  for (const n of TPL) for (const c of POVOS) {
+    const F = Fo.of('temple', c, n); if (!F) { out.push(`T${n}/${c}: sem forma`); continue; }
+    const R = In.riskOf(F); const L = n * 4; const why = [];
+    if (Math.abs(F.L - L) > 1e-9) why.push(`a forma de ${F.L} m num lote de ${L}`); if (!R || R.fam !== TFAM) why.push('sem o risco do templo');
+    for (const f of Fo.foot(F)) { const r = f.k === 'circ' ? [f.c[0] - f.r, f.c[1] - f.r, f.c[0] + f.r, f.c[1] + f.r] : f.r; if (r[0] < -1e-6 || r[1] < -1e-6 || r[2] > L + 1e-6 || r[3] > L + 1e-6) { why.push(`um pé fora do lote (${r.map(x => x.toFixed(2)).join(', ')})`); break; } }
+    if (!Es.can('temple', c, n)) why.push('o degrau não oferecido');
+    if (why.length) out.push(`T${n}/${c}: ${why.join(', ')}`);
+    sum.push(`T${n}/${c} ${F.top.toFixed(1)} m`);
+  }
+  for (const n of TPL) for (const c of OUTROS) if (Es.can('temple', c, n)) out.push(`T${n}/${c}: o degrau oferecido sem a forma do povo`);
+  ok('D1a a forma do templo de cada povo e tamanho (4, 6, 8): o lote, o pé dentro dele, o risco; o degrau só a quem tem a forma', !out.length, some(out).join(' / ') || `as alturas: ${sum.join(', ')}; o asteca e o clássico sem os degraus maiores (a forma deles fica para depois)`);
+  // (H: in each size the forms of the peoples differ — their masses, their tops)
+  const sig = (c, n) => { const F = Fo.of('temple', c, n); const k = {}; for (const m of Fo.mass(F)) k[m.k] = (k[m.k] || 0) + 1; return JSON.stringify(k) + ':' + F.top.toFixed(1); };
+  const diff = TPL.map(n => new Set(POVOS.map(c => sig(c, n))).size);
+  ok('D1b as formas dos povos diferentes entre si em cada tamanho (a parte H dos templos)', diff.every(x => x >= 3), TPL.map((n, q) => `${n} casas: ${diff[q]} formas em ${POVOS.length} povos`).join(', '));
+}
+// ---------------------------------------------------------------- D2: the plans
+function D2() {
+  const T = temples(); const bad = T.filter(m => !m.p.ok); const offer = [];
+  for (const n of TPL) for (const c of POVOS) { const r = trec(c, 'S', n); if (r.f !== TFAM) offer.push(`T${n}/${c}: o registro com ${r.f}`); if (!In.familiesFor(r).ok.includes(TFAM)) offer.push(`T${n}/${c}: o catálogo sem a da forma`); }
+  ok('D2a a planta do templo em todo povo, tamanho e lado, pela família da forma — a que o mundo dá ao registro do degrau', !bad.length && !offer.length, `${T.length - bad.length} de ${T.length} plantas${bad.length ? '; ' + some(bad).map(m => `${ttag(m)}: ${m.p.errs.slice(0, 2).join('; ')}`).join(' / ') : ''}${offer.length ? '; ' + offer.join(' · ') : '; o registro novo e o catálogo com a da forma em todos'}`);
+  // (the village shrine keeps its plan by its form of before — qa/templo.js proves it whole —: the family its record is given)
+  const cl = POVOS.concat(OUTROS).filter(c => trec(c, 'S', 2).f !== TFAM);
+  ok('D2b o santuário da aldeia (2 casas) com a sua planta pela forma de antes', !cl.length, cl.length ? 'com outra família: ' + cl.join(', ') : 'nos seis povos, forma.templo pelo corpo da forma clássica');
+  const diff = T.filter(m => m.p.ok).filter(m => { const q = In.makeFam(m.b, m.b.ip, TFAM); return JSON.stringify([q.rooms, q.items.map(i => [i.kind, i.x, i.z, i.ry]), q.doors, q.holes]) !== JSON.stringify([m.p.rooms, m.p.items.map(i => [i.kind, i.x, i.z, i.ry]), m.p.doors, m.p.holes]); });
+  ok('D2c a mesma planta duas vezes da mesma entrada', !diff.length, `${diff.length} diferentes${diff.length ? ': ' + some(diff).map(ttag).join(', ') : ''}`);
+  const sh = T.filter(m => m.p.ok && (!m.so || strip(m.so) !== strip(In.shellOfPlan(m.p))));
+  ok('D2d a casca de longe igual à da planta', !sh.length, `${sh.length} cascas diferentes${sh.length ? ': ' + some(sh).map(ttag).join(', ') : ''}`);
+  // (the dearest made again, warm, three times with no cache: the least is its cost; the places' table of each monumental, the
+  // first time the world asks for it — In.table, the share-out's —: its milliseconds)
+  const ts = T.slice().sort((a, b) => b.ms - a.ms); const med = T.map(q => q.ms).sort((a, b) => a - b)[T.length >> 1];
+  const again = ts.slice(0, 3).map(m => { let best = Infinity; for (let r = 0; r < 3; r++) { In.uncache(); const a = clock(); In.makeFam(m.b, m.b.ip, TFAM); best = Math.min(best, clock() - a); } return [ttag(m), best]; }).sort((a, b) => b[1] - a[1]);
+  ok('D2e o tempo de fazer a planta (alvo: 400 ms em Node)', again[0][1] < 400, `a mais cara ${again[0][1].toFixed(0)} ms (${again[0][0]}, sem cache); a mediana ${med.toFixed(0)} ms na rodada`);
+  const tab = T.filter(m => m.n === 8 && m.s === 'S' && m.p.ok).map(m => { const a = clock(); const t = In.table(m.b); return [m.c, clock() - a, t ? t.spots.length : 0]; }).sort((a, b) => b[1] - a[1]);
+  ok('D2f a tabela dos lugares do santuário monumental a tempo (alvo: 1 s em Node)', tab.length === POVOS.length && tab[0][1] < 1000, tab.map(([c, ms, n]) => `${c} ${ms.toFixed(0)} ms (${n} lugares)`).join(', '));
+}
+// ---------------------------------------------------------------- D3: the monumental sanctuary against the village shrine
+function D3() {
+  const out = [], sum = []; let hid = 95501;
+  for (const c of POVOS) {
+    const sb = { id: (hid += 7), type: 'temple', style: c, x: 30, y: 30, w: 2, h: 2, built: true }; sb.ip = trec(c, 'S', 2); const sp = In.make(sb, sb.ip);
+    const m = temples().find(q => q.n === 8 && q.c === c && q.s === 'S'); if (!sp.ok || !m || !m.p.ok) { out.push(`${c}: sem as plantas`); continue; }
+    const lot = 32 * 32 / (8 * 8), fl = tfloor(m.p) / Math.max(1, tfloor(sp));
+    if (lot < 9 || fl < 9) out.push(`${c}: o lote ${lot.toFixed(0)}×, o chão ${fl.toFixed(0)}×`);
+    sum.push(`${c} ${lot.toFixed(0)}× · ${fl.toFixed(0)}× (${tfloor(m.p).toFixed(0)} m² contra ${tfloor(sp).toFixed(1)} m²)`);
+  }
+  ok('D3a o santuário monumental (8 casas) contra o santuário da aldeia (2): o lote e o chão coberto ≥ 9 vezes', !out.length, `lote · chão coberto: ${sum.join(', ')}${out.length ? '; ' + out.join(' / ') : ''}`);
+}
+// ---------------------------------------------------------------- D4: the nave
+function D4() {
+  const out = [], sum = [];
+  for (const m of temples().filter(q => q.p.ok && q.n === 8)) {
+    const p = m.p; const nave = p.rooms.find(q => q.fn === 'nave' || q.fn === 'hipostila'); const why = [];
+    if (!nave) { out.push(`${ttag(m)}: sem a nave`); continue; }
+    const a = nave.r[2] - nave.r[0], b = nave.r[3] - nave.r[1]; if (Math.max(a, b) < 16 - 1e-6 || Math.min(a, b) < 10 - 1e-6) why.push(`a nave de ${a.toFixed(1)} × ${b.toFixed(1)} m`);
+    const h = p.levels.find(l => l.lv === nave.lv).h; if (h < 8 - 1e-6) why.push(`${h.toFixed(1)} m de altura`);
+    // (no storey over it; the altar reached from the street's gate — its priest's place —, its metres)
+    if (p.rooms.some(q => q.lv > nave.lv)) why.push('um piso sobre a nave');
+    const din = reachOf(p, 'oficiar'); if (!(din < Infinity)) why.push('o altar que a porta não alcança');
+    if (why.length) out.push(`${ttag(m)}: ${why.join(', ')}`);
+    if (m.s === 'S') sum.push(`${m.c} ${a.toFixed(1)}×${b.toFixed(1)} m, ${h.toFixed(1)} m de altura (${nave.fn}), o altar a ${din.toFixed(0)} m da porta`);
+  }
+  ok('D4a a nave do santuário monumental ≥ 10 × 16 m e ≥ 8 m de altura, o altar alcançado da porta', !out.length, some(out).join(' / ') || sum.join(', '));
+}
+// ---------------------------------------------------------------- D5: the places of prayer
+function D5() {
+  const out = [], sum = [];
+  for (const m of temples().filter(q => q.p.ok)) {
+    const p = m.p; const pts = placesOf(p, 'rezar').concat(placesOf(p, 'sentar')); let got = 0;
+    for (const q of pts) { const d = q.on ? Math.min(Infinity, ...q.it.spots.filter(sp => !sp.on && sp.ok).map(sp => walkTo(p, q.lv, sp.x, sp.z))) : walkTo(p, q.lv, q.x, q.z); if (d < Infinity) got++; }
+    const need = m.n === 8 ? 40 : 2; if (got < need) out.push(`${ttag(m)}: ${got} lugares de rezar alcançados (de ${pts.length})`);
+    if (!(reachOf(p, 'oficiar') < Infinity)) out.push(`${ttag(m)}: o lugar de oficiar que a porta não alcança`);
+    if (m.s === 'S') sum.push(`T${m.n}/${m.c} ${got}`);
+  }
+  ok('D5a os lugares de rezar (bancos, esteiras, de pé diante do templo): ≥ 40 no santuário monumental, cada um alcançado da porta; o de oficiar', !out.length, some(out).join(' / ') || sum.join(', '));
+}
+// ---------------------------------------------------------------- D6: the flight, the parapets, the body's rules
+function D6() {
+  const out = [], sum = [];
+  for (const m of temples().filter(q => q.p.ok && q.s === 'S')) {
+    const p = m.p; const R = In.riskOf(Fo.of('temple', m.c, m.n)); const why = [];
+    const st = p.stairs.find(s => s.kind === 'degraus' && s.lv0 === -1); if (!st) { out.push(`${ttag(m)}: sem a escadaria`); continue; }
+    const tr = (st.treads || []).slice().sort((a, b) => a.y - b.y); const ys = [0].concat(tr.map(q => q.y), [R.Hp]);
+    let rise = 0; for (let k = 1; k < ys.length; k++) rise = Math.max(rise, ys[k] - ys[k - 1]);
+    const deep = tr.length ? Math.min(...tr.map(q => Math.min(q.r[2] - q.r[0], q.r[3] - q.r[1]))) : Infinity;
+    if (rise > In.BODY.step + 1e-6) why.push(`um espelho de ${rise.toFixed(2)} m`); if (deep < 0.28 - 1e-6) why.push(`um piso de ${deep.toFixed(2)} m`); if (st.w < 1.2 - 1e-6) why.push(`${st.w.toFixed(2)} m de largura`);
+    const e = p.entrance; const sr = st.r; const top = [Math.min(sr[0], sr[2]), Math.min(sr[1], sr[3]), Math.max(sr[0], sr[2]), Math.max(sr[1], sr[3])];
+    if (!(e.x > top[0] - 0.05 && e.x < top[2] + 0.05 && e.z > top[1] - 0.6 && e.z < top[3] + 0.6)) why.push('a entrada fora do alto da escadaria');
+    // (the platform's edges where it falls more than a metre: the precinct's walls round it, 0.9 m at the least)
+    const rails = p.walls.filter(w => w.kind === 'cerca'); if (R.Hp > 1 + 1e-6 && (rails.length < 3 || rails.some(w => w.h < 0.9 - 1e-6))) why.push(`as bordas do pódio sem parapeito (${rails.map(w => w.h).join(', ')})`);
+    // (the street's gate and the portal ≥ 2.2 m; the stairs the feet climb)
+    const rua = p.doors.find(d => d.rooms.includes('rua')); const hole = d => p.holes.find(h => h.door === d.id);
+    if (!rua || hole(rua).h < 2.2 - 1e-6) why.push(`a porta da rua de ${rua ? hole(rua).h.toFixed(2) : '-'} m`);
+    if (!R.doorD || R.doorD.y1 - R.doorD.y0 < 2.2 - 1e-6) why.push('o portal baixo');
+    for (const s of p.stairs) if (s.kind === 'escada' && !(s.cls === 'degraus' || s.cls === 'escada')) why.push(`uma escada de ${s.slope}° (${s.cls})`);
+    if (why.length) out.push(`${ttag(m)}: ${why.join(', ')}`);
+    sum.push(`T${m.n}/${m.c} ${tr.length + 1}×${rise.toFixed(2)} m em ${st.w.toFixed(1)} m`);
+  }
+  ok('D6a a escadaria da rua ao pódio (espelho ≤ 0,30, piso ≥ 0,28, ≥ 1,2 m), a entrada no alto; o parapeito onde o pódio cai mais de 1 m; a porta da rua e o portal ≥ 2,2 m', !out.length, some(out).join(' / ') || sum.join(', '));
+}
+// ---------------------------------------------------------------- D7: the feet in, on a blank world
+function D7() {
+  const S = blankWorld(); const out = [], sum = []; let k = 0;
+  for (const n of TPL) for (const [q, c] of POVOS.entries()) {
+    const x = 4 + (n + 4) * q, y = n === 8 ? 4 : n === 6 ? 16 : 26; k++;
+    const b = putStep(S, 'temple', c, n, x, y, 99001 + k * 7); const key = `T${n}/${c}`;
+    if (b.ip.f !== TFAM) { out.push(`${key}: o registro novo com ${b.ip.f}`); continue; }
+    const p = Sp.planNow(b); if (!p || !p.ok) { out.push(`${key}: sem planta`); continue; }
+    const R = In.riskOf(Fo.of('temple', c, n));
+    // (from the street through the gate, the court, the porch, to a pace inside the nave's portal)
+    const end = (R.vF !== undefined ? R.vF : R.B[3] - R.t / 2) - 1.0;
+    const f = feetIn(b, p, R, end); sum.push(`${key} ${f.worst >= 0 ? '+' : ''}${f.worst.toFixed(3)}`); if (f.bad) out.push(`${key}: ${f.why}`);
+  }
+  ok('D7a os pés da rua até dentro da nave, subindo os degraus da forma, sempre num chão onde ficam', !out.length, some(out).join(' / ') || `nos ${TPL.length * POVOS.length}, a cada 2 cm (a maior diferença: ${sum.join(', ')})`);
+}
+// ---------------------------------------------------------------- D8: standing in the world
+function D8() {
+  const qa = qaS; const tell = r => `${r.st}/T${r.b.w} ${r.d.toFixed(0)} casas ${r.rel.toFixed(1)} m${r.ok && (r.fits || !r.flat) ? '' : ' — ' + r.why}`;
+  // the ready world: the monumental sanctuary of the god's hand in the biggest city of each people that raises it
+  { M.pronto('metropole'); const q0 = qa().length; const res = [];
+    for (const c of POVOS) { const sets = [...G.S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
+      for (const set of sets) { const at = flatLot(set, 8, 50); const r = stand(set, 'temple', 'monumental', at ? { x: at.x, y: at.y, R: 1, flat: 1 } : { R: 60 }); if (!r.none) { res.push(r); break; } } }
+    const bad = qa(); M.salvarCarregar(); const after = res.filter(r => { const b = G.S.buildings.get(r.b.id); return b && b.w === 8 && b.esc === 'monumental' && In.plan(b).ok && b.ip.f === TFAM; }).length; const bad2 = qa();
+    ok('D8a de pé num mundo pronto (a metrópole): o santuário monumental pela mão do deus — a planta, o relatório, a entrada onde o chão cabe no pódio, o verificador; salvar e carregar', res.length >= 2 && res.every(r => r.ok && (!r.flat || r.fits)) && !bad.length && after === res.length && !bad2.length && q0 === 0 && M.limpo(),
+      `${res.length} de pé (${res.map(tell).join(', ')}); o verificador S0–S2: ${q0} antes, ${bad.length} com eles${bad.length ? ' (' + bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}, ${bad2.length} depois do save; ${after} de ${res.length} iguais depois de salvar e carregar${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
+  // a new world: the three steps of each people by its city, a year, a save
+  { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 6, temper: 'normal' }); const q0 = qa().length; const res = []; const ids = { 4: 'templo', 6: 'grande', 8: 'monumental' };
+    for (const c of POVOS) { const set = [...G.S.settlements.values()].find(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c); if (!set) continue;
+      for (const n of TPL) { const at = flatLot(set, n, 40); const r = stand(set, 'temple', ids[n], at ? { x: at.x, y: at.y, R: 1, flat: 1 } : { R: 40 }); if (!r.none) res.push(r); } }
+    const bad = qa(); M.saltar(1); const bad1 = qa(); const alive = res.filter(r => { const b = G.S.buildings.get(r.b.id); return b && b.built && In.plan(b) && In.plan(b).ok; }).length;
+    M.salvarCarregar(); const bad2 = qa(); const flat = res.filter(r => r.flat);
+    ok('D8b de pé num mundo novo: os três degraus de cada povo perto da sua cidade — a planta, o relatório, a entrada onde o chão cabe no pódio, o verificador; um ano; salvar e carregar', res.length === TPL.length * POVOS.length && res.every(r => r.ok) && flat.every(r => r.fits) && flat.length >= POVOS.length && !bad.length && !bad1.length && !bad2.length && alive === res.length && M.limpo(),
+      `${res.length} de ${TPL.length * POVOS.length} de pé, ${flat.length} em chão de até 3 m (${res.map(tell).join(', ')}); o verificador S0–S2: ${q0} antes, ${bad.length} com eles, ${bad1.length} depois de um ano, ${bad2.length} depois do save${bad.concat(bad1, bad2).length ? ' (' + bad.concat(bad1, bad2).slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}; ${alive} de pé e com planta depois do ano${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
+}
+// ---------------------------------------------------------------- D9: the bad cases
+function D9() {
+  const qa = qaS, mine = () => globalThis.QA.check().filter(q => q.sys === 'poder');
+  M.novo({ seed: 103, type: 'continente', size: 128, tribes: 6, temper: 'normal' }); const out = [], said = [];
+  const setOf = c => [...G.S.settlements.values()].find(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c);
+  const found = (set, step, built) => { let b; G.inSim++; try { b = G.Village.handFound(set, 'temple', step, { built, R: 40 }); } finally { G.inSim--; } return b; };
+  // (a) the work of the monumental sanctuary saved in the middle, loaded and finished
+  { const b = found(setOf('egipcio'), 'monumental', false); if (!b) out.push('a obra do santuário sem lote');
+    else { const id = b.id; M.salvarCarregar(); const b1 = G.S.buildings.get(id); const q1 = qa();
+      if (!b1 || b1 === b || b1.built || b1.w !== 8 || b1.esc !== 'monumental') out.push(`a obra depois do save: ${b1 ? `${b1.w} casas, ${b1.esc}, ${b1.built ? 'pronta' : 'em obra'}` : 'sumiu'}`);
+      else { G.inSim++; try { G.Village.completeBuilding(b1); } finally { G.inSim--; } const p = In.plan(b1);
+        if (!p || !p.ok || b1.ip.f !== TFAM) out.push(`a obra acabada: ${b1.ip ? b1.ip.f : 'sem registro'}, ${p && p.ok ? 'planta ok' : 'planta NÃO: ' + (p ? p.errs.slice(0, 2).join('; ') : '-')}`); }
+      if (q1.length) out.push(`o verificador no meio da obra: ${q1.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ')}`);
+      said.push('a obra salva no meio (o save devolve as 8 casas e o degrau) e acabada: a família da forma, a planta'); } }
+  // (b) the god razes the great temple: its ruin, its plan; saved and loaded
+  { const b = found(setOf('grego'), 'grande', true); if (!b) out.push('o grande templo sem lote');
+    else { const id = b.id; G.inSim++; try { G.Village.destroyBuilding(b, 'deus'); } finally { G.inSim--; } const r = G.S.buildings.get(id); const p = r && In.plan(r);
+      if (!r || r.type !== 'ruin' || !p || !p.ok) out.push(`a ruína: ${r ? r.type : 'sumiu'}, ${p && p.ok ? 'planta ok' : 'planta NÃO'}`);
+      M.salvarCarregar(); const r2_ = G.S.buildings.get(id); const p2 = r2_ && In.plan(r2_);
+      if (r && (!r2_ || r2_.type !== 'ruin' || r2_.w !== r.w || !p2 || !p2.ok)) out.push(`a ruína depois do save: ${r2_ ? `${r2_.type}, ${r2_.w} casas` : 'sumiu'}`);
+      said.push('o grande templo derrubado pelo deus: a ruína com a sua planta, salva e carregada'); } }
+  const bad = qa(); if (bad.length) out.push(`o verificador: ${bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ')}`);
+  // (c) the checker's rule catches a temple of a bigger step laid out by a recipe's family
+  { const b = found(setOf('romano'), 'templo', true); if (!b) out.push('o templo romano sem lote');
+    else { const f0 = b.ip.f; b.ip.f = 'w-salao.terreo'; const caught = mine().length; b.ip.f = f0; const quiet = mine().length;
+      if (!caught || quiet) out.push(`a regra: ${caught} avisos com a família da receita, ${quiet} com a da forma`); else said.push('a regra do verificador pega a família da receita'); } }
+  ok('D9a os casos ruins do templo: a obra salva no meio, o templo derrubado, o verificador limpo — e a sua regra pega a planta de outra família', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
+}
+// ================================================================ F: the tavern (taverna 3, hospedaria 4)
+const VPL = [3, 4], VFAM = 'forma.salao', TODOS = POVOS.concat(OUTROS);
+const vrec = (c, s, n) => In.newRecord({ id: 0, type: 'taverna', style: c, x: 8, y: 8, w: n, h: n }, { t: 'taverna', c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: 1, w: 1, pw: 0, s, o: (1 << n) - 1, n });
+const vtag = m => `V${m.n}/${m.c}/${m.s}`;
+let vcache = null;
+const taverns = () => {
+  if (vcache) return vcache; G.S = blankS(); vcache = []; let id = 92001;
+  for (const n of VPL) for (const c of TODOS) for (const s of LADOS) {
+    const b = { id: (id += 29), type: 'taverna', style: c, x: 8, y: 8, w: n, h: n, built: true }; b.ip = rec('taverna', c, s, n, VFAM);
+    const t0 = clock(); const p = In.makeFam(b, b.ip, VFAM); const ms = clock() - t0; G.S.buildings.set(b.id, b); vcache.push({ n, c, s, b, p, ms, so: In.shellOf(b) });
+  }
+  return vcache;
+};
+// (the seats of a plan where one sits at once — at a table, on a bench —, each reached from the door)
+const seatsOf = p => { let n = 0; for (const q of placesOf(p, 'comer').concat(placesOf(p, 'sentar'))) { const d = q.on ? Math.min(Infinity, ...q.it.spots.filter(sp => !sp.on && sp.ok).map(sp => walkTo(p, q.lv, sp.x, sp.z))) : walkTo(p, q.lv, q.x, q.z); if (d < Infinity) n++; } return n; };
+// ---------------------------------------------------------------- F1: the ladder
+function F1() {
+  const out = []; for (const n of VPL) for (const c of TODOS) if (!Es.can('taverna', c, n)) out.push(`V${n}/${c}: o degrau não oferecido`);
+  ok('F1a a escada da taverna — a taberna (2 casas), a taverna (3), a hospedaria (4) — oferecida a todo povo pela planta do tamanho (a taverna não tem forma)', !out.length && !Fo.has('taverna', 'grego'),
+    out.join(' / ') || `os degraus: ${Es.steps('taverna').map(s => `${s.id} ${s.n}`).join(', ')}; In.sizeOk de 3 e 4 nos seis povos (TYPES.taverna.sizes); nenhuma forma: o deus e o 3D a desenham pela casca da planta`);
+}
+// ---------------------------------------------------------------- F2: the plans
+function F2() {
+  const V = taverns(); const bad = V.filter(m => !m.p.ok); const offer = [];
+  for (const n of VPL) for (const c of TODOS) { const r = vrec(c, 'S', n); if (r.f !== VFAM) offer.push(`V${n}/${c}: o registro com ${r.f}`); if (!In.familiesFor(r).ok.includes(VFAM)) offer.push(`V${n}/${c}: o catálogo sem a estalagem`); }
+  ok('F2a a planta da taverna e da hospedaria em todo povo e lado pela estalagem — a família que o mundo dá ao registro do degrau', !bad.length && !offer.length, `${V.length - bad.length} de ${V.length} plantas${bad.length ? '; ' + some(bad).map(m => `${vtag(m)}: ${m.p.errs.slice(0, 2).join('; ')}`).join(' / ') : ''}${offer.length ? '; ' + offer.join(' · ') : '; o registro novo e o catálogo com a estalagem em todos'}`);
+  const cl = TODOS.map(c => [c, vrec(c, 'S', 2).f]).filter(([, f]) => f === VFAM || !/^w-/.test(f));
+  ok('F2b a taberna (2 casas) com as famílias da receita de antes', !cl.length, cl.length ? cl.map(([c, f]) => `${c}: ${f}`).join(', ') : `nos seis povos (${TODOS.map(c => vrec(c, 'S', 2).f).filter((f, q, a) => a.indexOf(f) === q).join(', ')})`);
+  const diff = V.filter(m => m.p.ok).filter(m => { const q = In.makeFam(m.b, m.b.ip, VFAM); return JSON.stringify([q.rooms, q.items.map(i => [i.kind, i.x, i.z, i.ry]), q.doors, q.holes]) !== JSON.stringify([m.p.rooms, m.p.items.map(i => [i.kind, i.x, i.z, i.ry]), m.p.doors, m.p.holes]); });
+  ok('F2c a mesma planta duas vezes da mesma entrada', !diff.length, `${diff.length} diferentes${diff.length ? ': ' + some(diff).map(vtag).join(', ') : ''}`);
+  const sh = V.filter(m => m.p.ok && (!m.so || strip(m.so) !== strip(In.shellOfPlan(m.p))));
+  ok('F2d a casca de longe igual à da planta', !sh.length, `${sh.length} cascas diferentes${sh.length ? ': ' + some(sh).map(vtag).join(', ') : ''}`);
+  const ts = V.slice().sort((a, b) => b.ms - a.ms); const med = V.map(q => q.ms).sort((a, b) => a - b)[V.length >> 1];
+  const again = ts.slice(0, 3).map(m => { let best = Infinity; for (let r = 0; r < 3; r++) { In.uncache(); const a = clock(); In.makeFam(m.b, m.b.ip, VFAM); best = Math.min(best, clock() - a); } return [vtag(m), best]; }).sort((a, b) => b[1] - a[1]);
+  ok('F2e o tempo de fazer a planta (alvo: 400 ms em Node)', again[0][1] < 400, `a mais cara ${again[0][1].toFixed(0)} ms (${again[0][0]}, sem cache); a mediana ${med.toFixed(0)} ms na rodada`);
+  const tab = V.filter(m => m.n === 4 && m.s === 'S' && m.p.ok).map(m => { const a = clock(); const t = In.table(m.b); return [m.c, clock() - a, t ? t.spots.length : 0]; }).sort((a, b) => b[1] - a[1]);
+  ok('F2f a tabela dos lugares da hospedaria a tempo (alvo: 1 s em Node)', tab.length === TODOS.length && tab[0][1] < 1000, tab.map(([c, ms, n]) => `${c} ${ms.toFixed(0)} ms (${n} lugares)`).join(', '));
+}
+// ---------------------------------------------------------------- F3: the inn
+function F3() {
+  const out = [], sum = [];
+  for (const m of taverns().filter(q => q.p.ok && q.n === 4)) {
+    const p = m.p; const why = []; const room = fn => p.rooms.find(q => q.fn === fn); const hall = room('salao');
+    if (!hall) { out.push(`${vtag(m)}: sem o salão`); continue; }
+    const a = hall.r[2] - hall.r[0], b = hall.r[3] - hall.r[1]; if (Math.max(a, b) < 10 - 1e-6 || Math.min(a, b) < 8 - 1e-6) why.push(`o salão de ${a.toFixed(1)} × ${b.toFixed(1)} m`);
+    const tables = p.items.filter(i => i.kind === 'mesa-terreiro' || i.kind === 'mesa').length; if (tables < 8) why.push(`${tables} mesas`);
+    const kit = room('cozinha'), cel = room('adega'); const inRoom = (k, r) => p.items.some(i => k.includes(i.kind) && r && i.room === r.id);
+    if (!kit || !inRoom(['fogao', 'lar', 'braseiro'], kit)) why.push('a cozinha sem o seu fogo'); if (!cel || !inRoom(['pipas'], cel)) why.push('o depósito sem as pipas');
+    if (!p.items.some(i => i.kind === 'balcao')) why.push('sem o balcão'); if (!(reachOf(p, 'vender') < Infinity && reachOf(p, 'comprar') < Infinity)) why.push('o balcão que a porta não alcança');
+    const seats = seatsOf(p); if (seats < 20) why.push(`${seats} fregueses sentados`);
+    if (why.length) out.push(`${vtag(m)}: ${why.join(', ')}`);
+    if (m.s === 'S') sum.push(`${m.c} ${a.toFixed(1)}×${b.toFixed(1)} m, ${tables} mesas, ${seats} sentados`);
+  }
+  ok('F3a a hospedaria: o salão ≥ 10 × 8 m, ≥ 8 mesas, a cozinha com o fogo, o depósito das pipas, o balcão; ≥ 20 fregueses sentados ao mesmo tempo', !out.length, some(out).join(' / ') || sum.join('; '));
+}
+// ---------------------------------------------------------------- F4: the body's rules
+function F4() {
+  const out = [];
+  for (const m of taverns().filter(q => q.p.ok && q.s === 'S')) {
+    const p = m.p; const why = []; const hole = d => p.holes.find(h => h.door === d.id);
+    const rua = p.doors.find(d => d.rooms.includes('rua')); if (!rua || hole(rua).h < 2.2 - 1e-6) why.push(`o portão da rua de ${rua ? hole(rua).h.toFixed(2) : '-'} m`);
+    const hall = p.rooms.find(q => q.fn === 'salao'); const hd = hall && p.doors.find(d => d.rooms.includes(hall.id) && d.rooms.some(x => x !== 'rua' && p.rooms[x] && p.rooms[x].fn === 'terreiro'));
+    if (!hd || hole(hd).h < 2.2 - 1e-6) why.push(`a porta do salão de ${hd ? hole(hd).h.toFixed(2) : '-'} m`);
+    for (const s of p.stairs) if (s.kind === 'escada' && !(s.cls === 'degraus' || s.cls === 'escada')) why.push(`uma escada de ${s.slope}° (${s.cls})`);
+    if (!(reachOf(p, 'deitar') < Infinity)) why.push('as camas de cima que a porta não alcança');
+    if (why.length) out.push(`${vtag(m)}: ${why.join(', ')}`);
+  }
+  ok('F4a as regras do corpo: o portão e a porta do salão ≥ 2,2 m, a escada que os pés sobem, os quartos de cima alcançados', !out.length, some(out).join(' / ') || `nos ${taverns().filter(q => q.s === 'S').length} (a taverna e a hospedaria dos seis povos)`);
+}
+// ---------------------------------------------------------------- F5: standing in the world
+function F5() {
+  const qa = qaS; const tell = r => `${r.st}/V${r.b.w} ${r.d.toFixed(0)} casas ${r.rel.toFixed(1)} m${r.ok ? '' : ' — ' + r.why}`;
+  const seated = b => (In.slots ? In.slots(b, 'comer').length + In.slots(b, 'sentar').length : 0);
+  { M.pronto('metropole'); const q0 = qa().length; const res = [];
+    for (const c of TODOS) { const sets = [...G.S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
+      for (const set of sets) { const r = stand(set, 'taverna', 'hospedaria', { R: 40 }); if (!r.none) { res.push(r); break; } } }
+    const low = res.filter(r => r.ok && seated(r.b) < 20).map(r => `${r.st} ${seated(r.b)}`); const bad = qa(); M.salvarCarregar(); const after = res.filter(r => { const b = G.S.buildings.get(r.b.id); return b && b.w === 4 && b.esc === 'hospedaria' && In.plan(b).ok && b.ip.f === VFAM; }).length; const bad2 = qa();
+    ok('F5a de pé num mundo pronto (a metrópole): a hospedaria pela mão do deus — a planta, o relatório, os lugares da tabela do mundo (≥ 20 sentados), o verificador; salvar e carregar', res.length >= 2 && res.every(r => r.ok) && !low.length && !bad.length && after === res.length && !bad2.length && q0 === 0 && M.limpo(),
+      `${res.length} de pé (${res.map(tell).join(', ')}); sentados na tabela do mundo: ${res.map(r => seated(r.b)).join(', ')}${low.length ? ' — poucos: ' + low.join(', ') : ''}; o verificador S0–S2: ${q0} antes, ${bad.length} com elas${bad.length ? ' (' + bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}, ${bad2.length} depois do save; ${after} de ${res.length} iguais depois de salvar e carregar${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
+  { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 6, temper: 'normal' }); const q0 = qa().length; const res = []; const ids = { 3: 'taverna', 4: 'hospedaria' };
+    for (const c of TODOS) { const set = [...G.S.settlements.values()].find(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c); if (!set) continue; for (const n of VPL) { const r = stand(set, 'taverna', ids[n], { R: 40 }); if (!r.none) res.push(r); } }
+    const bad = qa(); M.saltar(1); const bad1 = qa(); const alive = res.filter(r => { const b = G.S.buildings.get(r.b.id); return b && b.built && In.plan(b) && In.plan(b).ok; }).length; M.salvarCarregar(); const bad2 = qa();
+    ok('F5b de pé num mundo novo: a taverna e a hospedaria de cada povo perto da sua cidade — a planta, o relatório, o verificador; um ano; salvar e carregar', res.length >= 2 * POVOS.length && res.every(r => r.ok) && !bad.length && !bad1.length && !bad2.length && alive === res.length && M.limpo(),
+      `${res.length} de pé (${res.map(tell).join(', ')}); o verificador S0–S2: ${q0} antes, ${bad.length} com elas, ${bad1.length} depois de um ano, ${bad2.length} depois do save${bad.concat(bad1, bad2).length ? ' (' + bad.concat(bad1, bad2).slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}; ${alive} de pé e com planta depois do ano${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
+}
+// ---------------------------------------------------------------- F6: the bad cases
+function F6() {
+  const qa = qaS, mine = () => globalThis.QA.check().filter(q => q.sys === 'poder');
+  M.novo({ seed: 103, type: 'continente', size: 128, tribes: 6, temper: 'normal' }); const out = [], said = [];
+  const setOf = c => [...G.S.settlements.values()].find(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c);
+  const found = (set, step, built) => { let b; G.inSim++; try { b = G.Village.handFound(set, 'taverna', step, { built, R: 40 }); } finally { G.inSim--; } return b; };
+  { const b = found(setOf('romano'), 'hospedaria', false); if (!b) out.push('a obra da hospedaria sem lote');
+    else { const id = b.id; M.salvarCarregar(); const b1 = G.S.buildings.get(id); const q1 = qa();
+      if (!b1 || b1 === b || b1.built || b1.w !== 4 || b1.esc !== 'hospedaria') out.push(`a obra depois do save: ${b1 ? `${b1.w} casas, ${b1.esc}, ${b1.built ? 'pronta' : 'em obra'}` : 'sumiu'}`);
+      else { G.inSim++; try { G.Village.completeBuilding(b1); } finally { G.inSim--; } const p = In.plan(b1); if (!p || !p.ok || b1.ip.f !== VFAM) out.push(`a obra acabada: ${b1.ip ? b1.ip.f : 'sem registro'}, ${p && p.ok ? 'planta ok' : 'planta NÃO'}`); }
+      if (q1.length) out.push(`o verificador no meio da obra: ${q1.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ')}`);
+      said.push('a obra da hospedaria salva no meio e acabada: a estalagem, a planta'); } }
+  { const b = found(setOf('nordico'), 'taverna', true); if (!b) out.push('a taverna sem lote');
+    else { const id = b.id; G.inSim++; try { G.Village.destroyBuilding(b, 'deus'); } finally { G.inSim--; } const r = G.S.buildings.get(id); const p = r && In.plan(r);
+      if (!r || r.type !== 'ruin' || !p || !p.ok) out.push(`a ruína: ${r ? r.type : 'sumiu'}, ${p && p.ok ? 'planta ok' : 'planta NÃO'}`); M.salvarCarregar(); said.push('a taverna derrubada pelo deus: a ruína, salva e carregada'); } }
+  const bad = qa(); if (bad.length) out.push(`o verificador: ${bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ')}`);
+  { const b = found(setOf('grego'), 'hospedaria', true); if (!b) out.push('a hospedaria grega sem lote');
+    else { const f0 = b.ip.f; b.ip.f = 'w-terreiro.andar'; const caught = mine().length; b.ip.f = f0; const quiet = mine().length;
+      if (!caught || quiet) out.push(`a regra: ${caught} avisos com a família da receita, ${quiet} com a estalagem`); else said.push('a regra do verificador pega a família da receita num degrau maior'); } }
+  ok('F6a os casos ruins da taverna: a obra salva no meio, a taverna derrubada, o verificador limpo — e a sua regra pega a planta de outra família', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
+}
+// ================================================================ G: the houses (the hut and the house of 4 m, the rich house of 8)
+const GFAM = 'forma.salao';
+const hrec = (t, c, s, n, wb, d) => In.newRecord({ id: 0, type: t, style: c, x: 8, y: 8, w: n, h: n }, { t, c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: d || 1, w: wb, pw: 0, s, o: (1 << n) - 1, n });
+const gtag = m => `domus/${m.c}/${m.s}/w${m.wb}`;
+let gcache = null;
+const domuses = () => {
+  if (gcache) return gcache; G.S = blankS(); gcache = []; let id = 91001;
+  for (const c of TODOS) for (const s of LADOS) for (const wb of [0, 2]) {
+    const b = { id: (id += 23), type: 'house', style: c, x: 8, y: 8, w: 2, h: 2, built: true }; b.ip = Object.assign(hrec('house', c, s, 2, wb), { f: GFAM });
+    const t0 = clock(); const p = In.makeFam(b, b.ip, GFAM); const ms = clock() - t0; G.S.buildings.set(b.id, b); gcache.push({ c, s, wb, b, p, ms, so: In.shellOf(b) });
+  }
+  return gcache;
+};
+// ---------------------------------------------------------------- G1: the hut and the house keep their 4 m
+function G1() {
+  G.S = blankS(); const out = []; let id = 90001;
+  for (const t of ['hut', 'house']) {
+    if (G.BDEF[t].w !== 1 || G.BDEF[t].h !== 1) out.push(`${t}: ${G.BDEF[t].w}×${G.BDEF[t].h} casas`); if (Es.classic(t).n !== 1) out.push(`${t}: o degrau clássico de ${Es.classic(t).n}`);
+    for (const c of TODOS) { const b = { id: (id += 11), type: t, style: c, x: 8, y: 8, w: 1, h: 1, built: true }; b.ip = hrec(t, c, 'S', 1, 1, 2); const p = In.make(b, b.ip);
+      if (!p.ok) out.push(`${t}/${c}: a planta (${p.errs.slice(0, 1)})`); else if (p.lot.w !== 4) out.push(`${t}/${c}: o lote de ${p.lot.w} m`); if (b.ip.f === GFAM) out.push(`${t}/${c}: com a família do degrau maior`); }
+  }
+  ok('G1a a cabana e a casa continuam com 4 × 4 m — a tabela, o degrau clássico, a planta do registro novo pelas famílias de antes', !out.length, out.join(' / ') || 'nos seis povos, o lote de 4 m e as famílias da receita');
+}
+// ---------------------------------------------------------------- G2: the rich house
+function G2() {
+  const H = domuses(); const bad = H.filter(m => !m.p.ok); const out = []; const dom = Es.steps('house').find(s => s.id === 'domus');
+  for (const c of TODOS) { if (!Es.can('house', c, 2)) out.push(`${c}: o degrau não oferecido`); const r = hrec('house', c, 'S', 2, 2); if (r.f !== GFAM) out.push(`${c}: o registro com ${r.f}`); if (!In.familiesFor(r).ok.includes(GFAM)) out.push(`${c}: o catálogo sem a da casa rica`); }
+  const sh = H.find(m => m.p.ok); const shs = sh ? `${(sh.p.shell.r[2] - sh.p.shell.r[0]).toFixed(1)} × ${(sh.p.shell.r[3] - sh.p.shell.r[1]).toFixed(1)} m` : '-';
+  ok('G2a a casa rica (domus): o degrau de uma família (familia), 2 casas — o lote de 8 × 8 m —, a planta em todo povo, lado e riqueza pela família do degrau (a do registro novo e do catálogo)', !!(dom && dom.n === 2 && dom.familia) && !bad.length && !out.length,
+    `${H.length - bad.length} de ${H.length} plantas${bad.length ? '; ' + some(bad).map(m => `${gtag(m)}: ${m.p.errs.slice(0, 2).join('; ')}`).join(' / ') : ''}${out.length ? '; ' + out.join(' · ') : ''}; o lote ${dom ? dom.n * 4 : '-'} × ${dom ? dom.n * 4 : '-'} m, a casa ${shs}`);
+  const why = [], sum = new Map();
+  for (const m of H.filter(q => q.p.ok)) { const p = m.p; const w2 = [];
+    if (p.cap.places < (G.BDEF.house.housing || 6)) w2.push(`${p.cap.places} lugares de dormir`);
+    // (the fire where the household cooks: its place to cook, bake or warm — the three a supper is made at, act-lar.js)
+    if (!p.items.some(i => ['lar', 'fogao', 'forno', 'braseiro', 'fogareiro', 'fogo-chao'].includes(i.kind))) w2.push('sem o fogo'); else if (!(Math.min(reachOf(p, 'cozinhar'), reachOf(p, 'assar'), reachOf(p, 'aquecer')) < Infinity)) w2.push('o fogo que a porta não alcança');
+    if (!p.rooms.some(q => q.open && q.fn === 'patio') || !p.shell.court) w2.push('sem o pátio aberto');
+    if (!(reachOf(p, 'deitar') < Infinity)) w2.push('as camas que a porta não alcança');
+    if (w2.length) why.push(`${gtag(m)}: ${w2.join(', ')}`);
+    if (m.s === 'S' && m.wb === 2) sum.set(m.c, `${p.cap.places} (${p.items.filter(i => i.places > 0).map(i => i.kind).filter((k, q, a) => a.indexOf(k) === q).join('+')})`); }
+  ok('G2b a casa rica abriga a família (≥ 6 lugares de dormir), com o fogo e o pátio aberto, cada um alcançado da porta', !why.length, some(why).join(' / ') || `lugares de dormir, a rica de cada povo: ${[...sum].map(([c, v]) => `${c} ${v}`).join(', ')}`);
+  const diff = H.filter(m => m.p.ok).filter(m => { const q = In.makeFam(m.b, m.b.ip, GFAM); return JSON.stringify([q.rooms, q.items.map(i => [i.kind, i.x, i.z, i.ry]), q.doors, q.holes]) !== JSON.stringify([m.p.rooms, m.p.items.map(i => [i.kind, i.x, i.z, i.ry]), m.p.doors, m.p.holes]); });
+  const shd = H.filter(m => m.p.ok && (!m.so || strip(m.so) !== strip(In.shellOfPlan(m.p))));
+  ok('G2c a mesma planta duas vezes da mesma entrada; a casca de longe igual à da planta', !diff.length && !shd.length, `${diff.length} plantas diferentes, ${shd.length} cascas diferentes${diff.concat(shd).length ? ': ' + some(diff.concat(shd)).map(gtag).join(', ') : ''}`);
+  const ts = H.slice().sort((a, b) => b.ms - a.ms); const again = ts.slice(0, 3).map(m => { let best = Infinity; for (let r = 0; r < 3; r++) { In.uncache(); const a = clock(); In.makeFam(m.b, m.b.ip, GFAM); best = Math.min(best, clock() - a); } return [gtag(m), best]; }).sort((a, b) => b[1] - a[1]);
+  const tab = H.filter(m => m.s === 'S' && m.wb === 2 && m.p.ok).map(m => { const a = clock(); In.table(m.b); return clock() - a; }).sort((a, b) => b - a);
+  ok('G2d o tempo de fazer a planta (alvo: 400 ms) e a tabela dos lugares (alvo: 1 s) em Node', again[0][1] < 400 && tab[0] < 1000, `a planta mais cara ${again[0][1].toFixed(0)} ms (${again[0][0]}, sem cache); a tabela mais cara ${tab[0].toFixed(0)} ms`);
+}
+// ---------------------------------------------------------------- G3: standing in the world; the bad cases
+function G3() {
+  const qa = qaS, mine = () => globalThis.QA.check().filter(q => q.sys === 'poder'); const tell = r => `${r.st} ${r.d.toFixed(0)} casas${r.ok ? '' : ' — ' + r.why}`;
+  { M.pronto('metropole'); const q0 = qa().length; const res = [];
+    for (const c of TODOS) { const set = [...G.S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0]; if (!set) continue; const r = stand(set, 'house', 'domus', { R: 30 }); if (!r.none) res.push(r); }
+    const offered = (() => { const set = [...G.S.settlements.values()].find(s => G.Fac.get(s.fac)); if (!set) return '-'; const a = Es.choose(set, 'house').map(s => s.id), b = Es.choose(set, 'house', { familia: true }).map(s => s.id); return `a cidade: ${a.join(',')}; a família: ${b.join(',')}`; })();
+    const bad = qa(); M.salvarCarregar(); const after = res.filter(r => { const b = G.S.buildings.get(r.b.id); return b && b.w === 2 && b.esc === 'domus' && In.plan(b).ok && b.ip.f === GFAM; }).length; const bad2 = qa();
+    // (the checker's rule: a rich house laid out by a recipe of the lot of 4 m is caught, and quiet once it is the step's family again)
+    let rule = '-'; const one = res.length && G.S.buildings.get(res[0].b.id); if (one) { const f0 = one.ip.f; one.ip.f = 'integrado.terreo'; const caught = mine().length; one.ip.f = f0; rule = caught && !mine().length ? 'a regra pega a receita' : `a regra: ${caught} com a receita, ${mine().length} com a do degrau`; }
+    ok('G3a de pé num mundo pronto (a metrópole): a casa rica pela mão do deus em cada povo — a planta, o relatório, o verificador; salvar e carregar; o degrau só para a família; a regra do verificador', res.length >= 3 && res.every(r => r.ok) && !bad.length && after === res.length && !bad2.length && q0 === 0 && rule === 'a regra pega a receita' && /a família: domus/.test(offered) && !/a cidade: [^;]*domus/.test(offered) && M.limpo(),
+      `${res.length} de pé (${res.map(tell).join(', ')}); ${offered}; o verificador S0–S2: ${q0} antes, ${bad.length} com elas${bad.length ? ' (' + bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}, ${bad2.length} depois do save; ${after} de ${res.length} iguais depois de salvar e carregar; ${rule}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
+  { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 6, temper: 'normal' }); const q0 = qa().length; const res = [];
+    for (const c of TODOS) { const set = [...G.S.settlements.values()].find(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c); if (!set) continue; const r = stand(set, 'house', 'domus', { R: 30 }); if (!r.none) res.push(r); }
+    const bad = qa(); M.saltar(1); const bad1 = qa(); const alive = res.filter(r => { const b = G.S.buildings.get(r.b.id); return b && b.built && b.w === 2 && In.plan(b) && In.plan(b).ok; }).length;
+    const ruin = res.length && G.S.buildings.get(res[0].b.id); let razed = '-'; if (ruin) { G.inSim++; try { G.Village.destroyBuilding(ruin, 'deus'); } finally { G.inSim--; } const r = G.S.buildings.get(ruin.id); razed = r && r.type === 'ruin' && In.plan(r).ok ? 'a derrubada vira ruína com planta' : 'a ruína: ' + (r ? r.type : 'sumiu'); }
+    M.salvarCarregar(); const bad2 = qa();
+    ok('G3b de pé num mundo novo: a casa rica de cada povo — a planta, o verificador; um ano; uma derrubada; salvar e carregar', res.length >= 4 && res.every(r => r.ok) && !bad.length && !bad1.length && !bad2.length && alive >= res.length - 1 && razed === 'a derrubada vira ruína com planta' && M.limpo(),
+      `${res.length} de pé (${res.map(tell).join(', ')}); ${alive} de pé e com planta depois do ano; ${razed}; o verificador S0–S2: ${q0} antes, ${bad.length} com elas, ${bad1.length} depois de um ano, ${bad2.length} depois do save${bad.concat(bad1, bad2).length ? ' (' + bad.concat(bad1, bad2).slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
+}
+for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11],
+  ['D1', D1], ['D2', D2], ['D3', D3], ['D4', D4], ['D5', D5], ['D6', D6], ['D7', D7], ['D8', D8], ['D9', D9],
+  ['F1', F1], ['F2', F2], ['F3', F3], ['F4', F4], ['F5', F5], ['F6', F6], ['G1', G1], ['G2', G2], ['G3', G3]]) if (want(k)) f();
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
 process.exit(fails.length ? 1 : 0);
