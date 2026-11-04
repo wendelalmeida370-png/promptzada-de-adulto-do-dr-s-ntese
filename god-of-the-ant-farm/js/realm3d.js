@@ -1566,6 +1566,22 @@ vec3 gxGrade( vec3 c ) {
   }
   // (the water's material, for the water other drawings hold — a paddy, a fountain's bowl: WGeo quads or discs drawn with it)
   R3.waterMat = () => MAT.water;
+  // (the chunks a building runs into past the chunk of its corner, which draws it whole: chunk → the chunks whose buildings reach
+  // into it — a lot of 4 tiles or more: a smaller one runs a few metres past its chunk, the far figure of the chunk's edge. Made
+  // again when a building comes or goes — the walk's version moves then, W.touchWalk — or the world is another)
+  let spill = new Map(), spillKey = ''; G.worldHooks.push(() => { spill = new Map(); spillKey = ''; });
+  function spillOf() {
+    const S = G.S; const key = (S.walkVer || 0) + ':' + S.buildings.size; if (key === spillKey) return spill;
+    spill = new Map(); spillKey = key;
+    for (const b of S.buildings.values()) {
+      if (Math.max(b.w, b.h) < 4) continue;
+      const ox = Math.floor(b.x / C), oy = Math.floor(b.y / C), ex = Math.floor((b.x + b.w - 1) / C), ey = Math.floor((b.y + b.h - 1) / C);
+      if (ex === ox && ey === oy) continue; const own = ckey(ox, oy);
+      for (let cy = oy; cy <= ey; cy++) for (let cx = ox; cx <= ex; cx++) { if (cx === ox && cy === oy) continue; const k = ckey(cx, cy); let s = spill.get(k); if (!s) spill.set(k, s = new Set()); s.add(own); }
+    }
+    return spill;
+  }
+  R3.spillOf = () => spillOf(); // (for the proofs)
   // streaming: the near pictures within reach of the focus, nearest first, a few milliseconds a frame
   function stream(fx, fz, budget) {
     const q = R3.Q(); const TL = G.Space.TILE; const R = q.near;
@@ -1576,11 +1592,18 @@ vec3 gxGrade( vec3 c ) {
       if (dx * dx + dy * dy > (R + 0.5) * (R + 0.5)) continue;
       want.push([dx * dx + dy * dy, cx, cy]);
     }
+    // (a chunk near whose ground a building of another chunk stands — a monument of 10 or 13 tiles from the chunk of its corner —:
+    // that chunk near too, as soon as this one, or the monument stood there as its far figure while its own stones were near the
+    // body — and came up whole as the body walked on: on the light quality, the Colosseum beside the body)
+    const sp = spillOf();
+    if (sp.size) { const inW = new Set(want.map(w => ckey(w[1], w[2]))); for (let k = 0, n = want.length; k < n; k++) { const o = sp.get(ckey(want[k][1], want[k][2])); if (!o) continue;
+      for (const ok of o) if (!inW.has(ok)) { inW.add(ok); want.push([want[k][0], ok % 4096, Math.floor(ok / 4096)]); } } }
     want.sort((a, b) => a[0] - b[0]);
     // (kept a little further than they are made: a body walking back and forth on a chunk's edge does not make and throw
     // away the same picture again and again)
     const keep = new Set(); const RK = (R + 1.5) * (R + 1.5);
     for (let dy = -R - 2; dy <= R + 2; dy++) for (let dx = -R - 2; dx <= R + 2; dx++) if (dx * dx + dy * dy <= RK) keep.add(ckey(ccx + dx, ccy + dy));
+    if (sp.size) for (const k of [...keep]) { const o = sp.get(k); if (o) for (const ok of o) keep.add(ok); }
     const t0 = performance.now(); let n = 0;
     for (const [d2, cx, cy] of want) {
       const ch = chunks.get(ckey(cx, cy)); if (!ch) continue;
@@ -1852,6 +1875,7 @@ vec3 gxGrade( vec3 c ) {
   // (for the tests: a chunk's signature, read only)
   R3.sigOf = (cx, cy) => sigOf(cx, cy);
   R3.chunkCount = () => ({ all: chunks.size, near: [...chunks.values()].filter(c => c.near).length });
+  R3.nearAt = (cx, cy) => { const ch = chunks.get(ckey(cx, cy)); return !!(ch && ch.near); }; // (for the proofs: has the chunk its near picture)
   // (for the tests: the near picture of the chunk at a point — its terrain is the first mesh)
   R3.nearOf = (X, Z) => { const ch = chunks.get(ckey(Math.floor(X / G.Space.TILE / C), Math.floor(Z / G.Space.TILE / C))); if (!ch || !ch.near) return null; const out = []; ch.near.traverse(o => { if (o.isMesh) out.push(o); }); return out; };
 })(window.G);
