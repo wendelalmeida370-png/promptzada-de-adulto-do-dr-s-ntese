@@ -21,7 +21,10 @@
   // A step: { id, nome, n (the lot's side, tiles), req: { tier, pop, era } (what its town needs to justify it), k (its bill over
   // the type's: the materials), kw (its work; k when absent), legado (the buildings already standing only: never founded again
   // where a bigger step of its people is to be had), familia (a family's own choice — the rich house —, never the town's) }.
-  // The first numbers; the city's specialist sets them by the economy measured (PLANO.md §2)
+  // The numbers measured by the city (D-117): a town's monument takes years of its stone, and is done. With the turn a great work
+  // has with the builders, the metrópole's capitals put up the theatre of 6 in 13 years and, in 30, the palace of 6 to 95% and
+  // the wonder of 10 to 90% at the first bills: the materials (k) of the biggest steps a fifth below those now, their work (kw)
+  // as it was — the hands are not what holds a monument back, the stone is
   const LADDER = Es.LADDER = {};
   const classic = type => { const d = G.BDEF[type]; return d ? d.w : 1; };
   Es.n0 = classic;
@@ -30,16 +33,16 @@
   const deferred = [];
   // (the ladders are set once the types are known: every module adds its types to G.BDEF on loading)
   Es.define = (type, steps) => deferred.push([type, steps]);
-  Es.define('maravilha', [C('antiga', 'Maravilha antiga', { legado: true }), { id: 'maravilha', nome: 'Maravilha', n: 10, k: 4 }, { id: 'colossal', nome: 'Maravilha colossal', n: 13, k: 6.5, req: { tier: 5, pop: 250 } }]);
-  Es.define('teatro', [C('antigo', 'Teatro antigo', { legado: true }), { id: 'teatro', nome: 'Teatro', n: 6, k: 2.5 }, { id: 'grande', nome: 'Grande teatro', n: 8, k: 4, req: { pop: 120 } }, { id: 'monumental', nome: 'Teatro monumental', n: 10, k: 5.5, req: { tier: 4, pop: 220 } }]);
-  Es.define('palacio', [C('antigo', 'Palácio antigo', { legado: true }), { id: 'palacio', nome: 'Palácio', n: 6, k: 2.5 }]);
-  Es.define('grande_palacio', [C('antigo', 'Grande palácio antigo', { legado: true }), { id: 'grande_palacio', nome: 'Grande palácio', n: 8, k: 2.2 }]);
-  Es.define('palacio_colossal', [C('antigo', 'Palácio colossal antigo', { legado: true }), { id: 'palacio_colossal', nome: 'Palácio colossal', n: 10, k: 2.2 }]);
+  Es.define('maravilha', [C('antiga', 'Maravilha antiga', { legado: true }), { id: 'maravilha', nome: 'Maravilha', n: 10, k: 3.2, kw: 4 }, { id: 'colossal', nome: 'Maravilha colossal', n: 13, k: 5, kw: 6.5, req: { tier: 5, pop: 250 } }]);
+  Es.define('teatro', [C('antigo', 'Teatro antigo', { legado: true }), { id: 'teatro', nome: 'Teatro', n: 6, k: 2.5 }, { id: 'grande', nome: 'Grande teatro', n: 8, k: 3.4, kw: 4, req: { pop: 120 } }, { id: 'monumental', nome: 'Teatro monumental', n: 10, k: 4.6, kw: 5.5, req: { tier: 4, pop: 220 } }]);
+  Es.define('palacio', [C('antigo', 'Palácio antigo', { legado: true }), { id: 'palacio', nome: 'Palácio', n: 6, k: 2.1, kw: 2.5 }]);
+  Es.define('grande_palacio', [C('antigo', 'Grande palácio antigo', { legado: true }), { id: 'grande_palacio', nome: 'Grande palácio', n: 8, k: 1.8, kw: 2.2 }]);
+  Es.define('palacio_colossal', [C('antigo', 'Palácio colossal antigo', { legado: true }), { id: 'palacio_colossal', nome: 'Palácio colossal', n: 10, k: 1.8, kw: 2.2 }]);
   Es.define('paco', [C('paco', 'Casa do chefe'), { id: 'paco_grande', nome: 'Paço', n: 3, k: 1.8, req: { tier: 2, pop: 60 } }]);
-  Es.define('temple', [C('santuario', 'Santuário'), { id: 'templo', nome: 'Templo', n: 4, k: 2.2, req: { tier: 2, pop: 40 } }, { id: 'grande', nome: 'Grande templo', n: 6, k: 3.6, req: { tier: 3, pop: 90 } }, { id: 'monumental', nome: 'Santuário monumental', n: 8, k: 5.5, req: { tier: 4, pop: 180 } }]);
+  Es.define('temple', [C('santuario', 'Santuário'), { id: 'templo', nome: 'Templo', n: 4, k: 2.2, req: { tier: 2, pop: 40 } }, { id: 'grande', nome: 'Grande templo', n: 6, k: 2.8, kw: 3.6, req: { tier: 3, pop: 90 } }, { id: 'monumental', nome: 'Santuário monumental', n: 8, k: 4.2, kw: 5.5, req: { tier: 4, pop: 180 } }]);
   Es.define('monument', [C('monumento', 'Monumento'), { id: 'grande', nome: 'Grande monumento', n: 4, k: 2.5, req: { pop: 120 } }]);
   Es.define('taverna', [C('taberna', 'Taberna'), { id: 'taverna', nome: 'Taverna', n: 3, k: 1.8, req: { pop: 60 } }, { id: 'hospedaria', nome: 'Hospedaria', n: 4, k: 2.6, req: { pop: 120 } }]);
-  Es.define('banhos', [C('banhos', 'Banhos'), { id: 'termas', nome: 'Termas', n: 5, k: 3, req: { pop: 120 } }, { id: 'grandes', nome: 'Grandes termas', n: 7, k: 4.5, req: { tier: 4, pop: 220 } }]);
+  Es.define('banhos', [C('banhos', 'Banhos'), { id: 'termas', nome: 'Termas', n: 5, k: 2.6, kw: 3, req: { pop: 120 } }, { id: 'grandes', nome: 'Grandes termas', n: 7, k: 3.6, kw: 4.5, req: { tier: 4, pop: 220 } }]);
   Es.define('biblioteca', [C('biblioteca', 'Biblioteca'), { id: 'grande', nome: 'Grande biblioteca', n: 4, k: 2.4, req: { pop: 150 } }]);
   Es.define('mercado', [C('mercado', 'Mercado'), { id: 'coberto', nome: 'Mercado coberto', n: 4, k: 2.4, req: { pop: 150 } }]);
   Es.define('administracao', [C('administracao', 'Administração'), { id: 'paco_municipal', nome: 'Paço municipal', n: 4, k: 2.2, req: { pop: 150 } }]);
