@@ -1,5 +1,5 @@
 // forma-deus-lib: o que as provas do deus pela forma (visual/forma-deus.js e forma-deus-fotos.js) dividem — o gerador de
-// teste do degrau grande, até a forma do especialista chegar. Puro: nada de node dentro dele (a fonte vai também ao navegador).
+// teste do degrau grande, até a forma do especialista chegar; o lote reservado de teste, até a reserva do C chegar (D-121). Puro: nada de node dentro dele (a fonte vai também ao navegador).
 'use strict';
 // a Colosseum of 40 m — the Romans' wonder of the step «maravilha», n = 10 — for the proofs until M1's form comes: the plaza
 // round it, the drum of four tiers of 32 arches with its four ways in, fourteen rows of seats with their stairways, parapets
@@ -18,4 +18,20 @@ function coliseuTeste(L) {
   for (const [u, v] of [[1.2, 1.2], [L - 1.2, 1.2], [1.2, L - 1.2], [L - 1.2, L - 1.2]]) els.push({ k: 'estatua', p: [u, v, 0.12], h: 4, w: 0.4, cor: '#e0b84a', lanca: true });
   return { els, door: { u: L / 2, w: 2.2, y0: 0, y1: 4 } };
 }
-module.exports = { coliseuTeste, N: 10 };
+// a lot kept for a great work (D-121), for the proofs until C's G.Village.reserva comes: the wonder's biggest step that finds
+// land — down to the smallest bigger than its classic —, the n × n of land with no building in it (fields and roads may be)
+// nearest a capital's middle, up to its radius and 20 tiles more; the first capital, the most people first, that has one.
+// { set, r: { type, esc, x, y, n } } or null — read from the world, nothing written
+function reservaTeste(G) {
+  const S = G.S, W = G.W, N = G.N, E = G.Escala; const people = new Map(); for (const v of S.villagers.values()) people.set(v.set, (people.get(v.set) || 0) + 1);
+  const caps = [...S.factions.values()].map(f => S.settlements.get(f.capital)).filter(s => s && S.factions.get(s.fac)).sort((a, b) => (people.get(b.id) || 0) - (people.get(a.id) || 0) || a.id - b.id);
+  const bad = new Uint8Array(N * N), sq = new Uint16Array(N * N);
+  for (const b of S.buildings.values()) { const d = G.BDEF[b.type] || {}; if (b.type === 'farm' || d.field) continue; for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) if (W.inb(x, y)) bad[W.idx(x, y)] = 1; }
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const i = y * N + x; sq[i] = bad[i] || !W.isLand(i) ? 0 : x && y ? 1 + Math.min(sq[i - 1], sq[i - N], sq[i - N - 1]) : 1; } // (the side of the free square ending at each tile)
+  const steps = E.steps('maravilha').filter(s => s.n > E.classic('maravilha').n).sort((a, b) => b.n - a.n);
+  for (const c of caps) for (const st of steps) { const n = st.n; let at = null, dm = (c.radius || 0) + 20;
+    for (let y = n - 1; y < N; y++) for (let x = n - 1; x < N; x++) if (sq[y * N + x] >= n) { const d = Math.hypot(x - n + 1 + n / 2 - c.cx, y - n + 1 + n / 2 - c.cy); if (d < dm) { dm = d; at = [x - n + 1, y - n + 1]; } }
+    if (at) return { set: c.id, r: { type: 'maravilha', esc: st.id, x: at[0], y: at[1], n } }; }
+  return null;
+}
+module.exports = { coliseuTeste, reservaTeste, N: 10 };

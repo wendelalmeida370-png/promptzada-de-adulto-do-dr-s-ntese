@@ -64,7 +64,7 @@
     const S = G.S;
     const vill = [...S.villagers.values()].map(v => {
       const o = Object.assign({}, v);
-      delete o.path; delete o.task; delete o.emo; delete o.babyOn; delete o.torch; delete o._fc;
+      delete o.path; delete o.task; delete o.emo; delete o.babyOn; delete o.torch; delete o._fc; delete o._civ; delete o._ruler; // (the god's frame's own marks on each one: its colours, its people, its crown — never the world's)
       o.coup = 0; o.rebel = 0; o.revolt = 0;
       o.pi = 0; o.moving = false; o.held = false;
       if (o.air) { o.air = false; o.z = 0; o.vz = 0; o.vx = 0; o.vy = 0; }
@@ -82,7 +82,7 @@
       trees: [...S.trees.values()].map(t => [t.id, r(t.x, 2), r(t.y, 2), t.kind, r(t.size, 2), r(t.maxSize, 2), t.stage === 'fall' ? 'log' : t.stage, t.wood, t.v, r(t.t, 0), t.fallDir, t.burntLog ? 1 : 0, r(t.chop, 1)]),
       rocks: [...S.rocks.values()].map(o => [o.id, r(o.x, 2), r(o.y, 2), o.stone, o.max, o.v, o.meteor ? 1 : 0]),
       bushes: [...S.bushes.values()].map(o => [o.id, r(o.x, 2), r(o.y, 2), o.berries, r(o.grow, 2), o.v, r(o.burnt, 0)]),
-      buildings: [...S.buildings.values()].map(b => { const o = Object.assign({}, b); delete o.res; if (o.crops) o.crops = o.crops.map(c => ({ s: c.s, g: r(c.g, 3), c: 0 })); o.incoming = { wood: 0, stone: 0 }; return o; }),
+      buildings: [...S.buildings.values()].map(b => { const o = Object.assign({}, b); delete o.res; delete o._sg; /* (what a stall's picture shows: the drawing's) */ if (o.crops) o.crops = o.crops.map(c => ({ s: c.s, g: r(c.g, 3), c: 0 })); o.incoming = { wood: 0, stone: 0 }; return o; }),
       villagers: vill,
       dead: [...S.dead.values()],
       animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false, morph: a.morph || null, seen: a.seen || 0, perch: a.perch || 0, dom: a.dom || 0, pen: a.pen || 0, wool: r(a.wool || 0, 2), milk: r(a.milk || 0, 2), eggs: r(a.eggs || 0, 2), shorn: r(a.shorn || 0, 0), tended: a.tended || 0 })),
