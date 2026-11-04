@@ -28,6 +28,9 @@
   //   areia   the floor of an arena whose outline is no circle: pts — its edge, round it, closed —, c (its middle), y (its
   //           top), d (its thickness: its underside, over the undercroft, d lower), cor, buracos: [[u0, v0, u1, v1], …] —
   //           the openings in it (the hatch over the undercroft's flight)
+  //   (piramide entrada { u, w, y0, y1 }: an opening through its front face — a way in, its corridor behind it —, not painted
+  //   on it as the sealed door is (D-108); oculto on any piece: inside a mass — the pyramid's corridor, its gallery, its
+  //   chamber —, seen only from within: the god does not paint it, the 3D draws it for whoever goes in)
   // ------------------------------ the split oval (the Colosseum's plan: D-107) ------------------------------
   // An amphitheatre is an oval of four centres, as the Colosseum is drawn: two small arcs about the ends of its long axis
   // (along u, across the lot) and two big ones along its sides, each pair tangent where they meet — on the line through both
@@ -238,4 +241,95 @@
     return side >= 0 ? Math.hypot(x - O.a, y) <= O.rs + d : Math.hypot(x, y + O.b) <= O.rb + d;
   }
   Fo.def('maravilha', 'romano', (L, n) => coliseu(L, n), [10, 13]);
+
+  // ------------------------------ the Great Pyramid (maravilha, egipcio: the steps of 10 and 13 tiles — D-108) ------------------------------
+  // Khufu's on a lot of 40 m (52 m): smooth, its faces at 51.84° — its height 4/π of its half base, the Great Pyramid's —, 36 m
+  // at its foot (38 m), 1.2 m off the lot's back, on its slab of a hand (0.15 m: the ground's own — where the lot falls away
+  // to the street, the steps before the way in come down to it, Space); its gilded capstone. Its way in on the front face, at
+  // its foot: the corridor 1.6 m wide and 2.4 m high into it — its mouth a portal of stone where it leaves the sloping face
+  // (the face open there: the piramide's entrada) —; at its end the great gallery up to the king's chamber — the flight of
+  // 44°, its walls 2 m apart, its vault stepped up over it (corbelled) —, the landing at its top, the chamber of granite (6 ×
+  // 4 m, 4.4 m high) through its door, the sarcophagus at its back. On the colossal's lot, before the face, the pyramid's
+  // temple: its court with the pillars along its sides, the altar, the gate to the street. What is inside the mass is seen
+  // only from within: its pieces come before the pyramid, marked so (oculto). → the elements, and the numbers the plan reads
+  // (amphi.piramide)
+  const LIME = ['#efe3c2', '#c9b48a'], GRANITE = ['#8a5a4a', '#6a4436', '#9a6a58'], LSTONE = ['#d8c8a0', '#b8a884', '#e4d6b0'];
+  const SEKED = Math.atan(4 / Math.PI); // (51.84°)
+  function piramide(L, n) {
+    const cu = L / 2, big = n >= 13; const e = big ? 19 : 18, H = k3(e * Math.tan(SEKED)), cv = e + 1.2, y0 = 0.15; const face = cv + e;
+    const box = (r, a, b, cor, o) => Object.assign({ k: 'bloco', r: r.map(k3), y0: k3(a), y1: k3(b), cor: cor || LSTONE, mat: 'ashlar' }, o);
+    const inner = [], els = [box([0, 0, L, L], 0, y0, ['base0', 'base1', 'base2'], { mat: 'slab', piso: 1 })];
+    // (the corridor: from the face's foot 5 m in; its walls 0.4 m, its ceiling 0.4 m)
+    const cw = 0.8, ct = 0.4, ch = 2.4, vC = face - 5.0;
+    inner.push(box([cu - cw - ct, vC, cu - cw, face], y0, y0 + ch), box([cu + cw, vC, cu + cw + ct, face], y0, y0 + ch), box([cu - cw - ct, vC, cu + cw + ct, face], y0 + ch, y0 + ch + 0.4));
+    // (the great gallery: its flight up toward the back, a tread of 0.25 m and no riser over 0.25, from the ground; its walls
+    // 0.5 m, as high as its vault; the vault in four courses, each over a quarter of the flight, 3 m over its steps there)
+    const yK = k3(y0 + 5.4), m = Math.ceil((yK - y0) / 0.25 - 1e-9), run = m * 0.25, vG = vC - run, gw = 1.0;
+    for (let j = 0; j < m; j++) inner.push(box([cu - gw, vC - (j + 1) * 0.25, cu + gw, vC - j * 0.25], 0, y0 + (yK - y0) * (j + 1) / m, LSTONE, { mat: 'slab', degrau: 1 }));
+    for (let q = 0; q < 4; q++) { const a = vC - run * (q + 1) / 4, b = vC - run * q / 4, top = y0 + (yK - y0) * (q + 1) / 4 + 3.0;
+      inner.push(box([cu - gw - 0.5, a, cu - gw, b], 0, top), box([cu + gw, a, cu + gw + 0.5, b], 0, top), box([cu - gw - 0.5, a, cu + gw + 0.5, b], top, top + 0.5)); }
+    inner.push(box([cu - gw - 0.5, vC, cu + gw + 0.5, vC + 0.4], y0 + ch, y0 + (yK - y0) / 4 + 3.5)); // (the gallery's end wall over the corridor's mouth)
+    // (the landing at the gallery's top, the chamber behind its wall — the door of 1.2 × 2.3 m in it —, the sarcophagus)
+    const vL = vG - 1.2, kw = 3.0, kd = 4.0, kh = 4.4, vK = vL - 0.4 - kd; // (the landing's back; the chamber's half width, depth, height; its back)
+    inner.push(box([cu - gw, vL, cu + gw, vG], 0, yK, LSTONE, { mat: 'slab' }), box([cu - gw - 0.5, vL, cu - gw, vG], yK, yK + 3.6), box([cu + gw, vL, cu + gw + 0.5, vG], yK, yK + 3.6), box([cu - gw - 0.5, vL, cu + gw + 0.5, vG], yK + 3.6, yK + 4.1));
+    inner.push(box([cu - kw - 0.4, vK - 0.4, cu + kw + 0.4, vL], 0, yK, GRANITE, { mat: 'slab' }));
+    inner.push(box([cu - kw - 0.4, vL - 0.4, cu - 0.6, vL], yK, yK + kh, GRANITE), box([cu + 0.6, vL - 0.4, cu + kw + 0.4, vL], yK, yK + kh, GRANITE), box([cu - 0.6, vL - 0.4, cu + 0.6, vL], yK + 2.3, yK + kh, GRANITE));
+    inner.push(box([cu - kw - 0.4, vK - 0.4, cu + kw + 0.4, vK], yK, yK + kh, GRANITE), box([cu - kw - 0.4, vK, cu - kw, vL - 0.4], yK, yK + kh, GRANITE), box([cu + kw, vK, cu + kw + 0.4, vL - 0.4], yK, yK + kh, GRANITE));
+    inner.push(box([cu - kw - 0.4, vK - 0.4, cu + kw + 0.4, vL], yK + kh, yK + kh + 0.6, GRANITE));
+    const sarco = [cu - 1.1, vK + 0.5, cu + 1.1, vK + 1.5].map(k3); inner.push(box(sarco, yK, yK + 1.05, ['#5a3a30', '#4a2e26', '#6a4a3e']));
+    for (const q of inner) q.oculto = 1;
+    els.push(...inner);
+    els.push({ k: 'piramide', c: [cu, cv], e, y0, y1: k3(y0 + H), cor: LIME, fiadas: 60, ponta: { f: 0.05, cor: ['#ffe27a', '#d9a93a'] }, entrada: { u: cu, w: 2 * cw, y0, y1: y0 + ch } });
+    // (the temple before the face, on the colossal's lot: its court's walls — the gate in the front one —, the pillars along its
+    // sides, the altar before the way in)
+    let temple = null;
+    if (L - face >= 10) { const t0 = face + 1.5, t1 = L - 3.2, tw = 7.5, wt = 0.6, gate = 1.6; temple = { r: [cu - tw, t0, cu + tw, t1].map(k3), gate: [k3(cu - gate), k3(cu + gate)] };
+      els.push(box([cu - tw - wt, t0, cu - tw, t1 + wt], y0, y0 + 3.5, LSTONE), box([cu + tw, t0, cu + tw + wt, t1 + wt], y0, y0 + 3.5, LSTONE),
+        box([cu - tw - wt, t1, cu - gate, t1 + wt], y0, y0 + 3.5, LSTONE), box([cu + gate, t1, cu + tw + wt, t1 + wt], y0, y0 + 3.5, LSTONE), box([cu - gate, t1, cu + gate, t1 + wt], y0 + 3.0, y0 + 3.5, LSTONE));
+      const pil = []; for (let j = 0; j < 5; j++) { const v = t0 + 1.2 + j * (t1 - t0 - 2.4) / 4; pil.push([k3(cu - tw + 1.2), k3(v)], [k3(cu + tw - 1.2), k3(v)]); }
+      els.push({ k: 'colunata', pts: pil, r: 0.35, y0, y1: y0 + 3.5, cor: ['#c8a878', '#a88858'] });
+      temple.altar = [cu - 0.9, t0 + 1.4, cu + 0.9, t0 + 2.2].map(k3); els.push(box(temple.altar, y0, y0 + 0.95, ['#b8a070', '#98804e', '#c8b080']));
+      temple.pil = pil; }
+    const piramide = { L, n, cu, cv, e, H: k3(H), y0, face: k3(face), cw, ch, vC: k3(vC), gallery: { r: [cu - gw, vG, cu + gw, vC].map(k3), m, run }, yK, landing: [cu - gw, vL, cu + gw, vG].map(k3),
+      chamber: [cu - kw, vK, cu + kw, vL - 0.4].map(k3), doorK: [k3(cu - 0.6), k3(cu + 0.6), k3(vL - 0.4), k3(vL), 2.3], sarco, temple };
+    return { els, door: { u: cu, w: 2 * cw, y0, y1: y0 + ch }, amphi: { piramide } };
+  }
+  Fo.def('maravilha', 'egipcio', (L, n) => piramide(L, n), [10, 13]);
+
+  // ------------------------------ the Templo Mayor (maravilha, asteca: the steps of 10 and 13 tiles — D-108) ------------------------------
+  // The twin temple of Tenochtitlan on a lot of 40 m (52 m): its ceremonial square of beaten earth round it; the pyramid of
+  // five terraces — from 30 m at its foot to 15 m at its top (38 to 19), 18 m high (22) — and up its front the double stair
+  // to the top, out over the square: two lanes and the ridge of stucco between them, the ramps at its sides (each step 0.26 m
+  // at most, the god's steep flight: 59°, climbed facing it — D-086); on the top, toward its back, the two shrines side by
+  // side — Tlaloc's blue on the left, Huitzilopochtli's red on the right —, each with its band, its door to the front (2.4 m),
+  // its crest, and the brazier before its outer corner; the platform before them where the priests stand. → the elements,
+  // and the numbers the plan reads (amphi.mayor)
+  function mayorGrande(L, n) {
+    const cu = L / 2, cv = L / 2, big = n >= 13; const e0 = big ? 19 : 15, e1 = big ? 9.5 : 7.5, lv = 5, H = big ? 22 : 18, h = H / lv;
+    const niveis = []; for (let k = 0; k < lv; k++) niveis.push([k3(e0 - (e0 - e1) * k / (lv - 1)), k3(k * h), k3((k + 1) * h)]);
+    // (the square's top; the stair's foot on it, 1.5 m off the lot's front; its width: two lanes of 2.7 m and the ridge)
+    const yq = 0.06, vFoot = L - 1.5, sw = 6.0;
+    const els = [{ k: 'bloco', r: [0, 0, L, L], y0: 0, y1: yq, cor: ['#b8a07a', '#a89068', '#c8b08a'], mat: 'slab', piso: 1 },
+      { k: 'escalonada', c: [cu, cv], niveis, cor: ['wl', 'wr', 'top'], friso: 0.3, mat: 'stucco' },
+      { k: 'escada', a: [cu, k3(vFoot), yq], b: [cu, k3(cv + e1), H], w: sw, cor: 'wl', clara: 1.08, alfarda: 0.5, divisor: { u: 0, w: 0.6, cor: 'trim' } }];
+    // (the shrines: 6.2 × 6.0 m each, 0.6 m apart, their backs 1 m off the top's back edge; 7 m of walls, the band at their top,
+    // the door 2.4 m high, the crest 2.6 m over the roof; the brazier on its stand before each outer corner)
+    const sw2 = 3.1, sd = 6.0, sh = 7.0, gap = 0.3, vb = cv - e1 + 1.0, vf = vb + sd; const shrines = [];
+    for (const [s, col] of [[-1, '#3f7fd8'], [1, '#c8382a']]) {
+      const u0 = s < 0 ? cu - gap - 2 * sw2 : cu + gap, u1 = u0 + 2 * sw2, uc = (u0 + u1) / 2;
+      els.push({ k: 'bloco', r: [u0, vb, u1, vf].map(k3), y0: H, y1: H + sh, cor: ['wl', 'wr', 'top'] });
+      els.push({ k: 'faixa', r: [u0, vb, u1, vf].map(k3), y0: H + sh - 1.4, y1: H + sh, cor: col });
+      els.push({ k: 'porta', na: 'frente', v: k3(vf), u: k3(uc), w: 1.6, y0: H, y1: H + 2.4, cor: '#2a1c14' });
+      els.push({ k: 'bloco', r: [uc - 2.3, vb + 2.4, uc + 2.3, vb + 2.8].map(k3), y0: H + sh, y1: H + sh + 2.6, cor: [col, col, col], crista: true });
+      const bu = s < 0 ? u0 + 0.6 : u1 - 0.6; els.push({ k: 'bloco', r: [bu - 0.3, vf + 0.8, bu + 0.3, vf + 1.4].map(k3), y0: H, y1: H + 0.9, cor: ['#6a5a50', '#4a3e36', '#7a6a60'] }, { k: 'braseiro', p: [k3(bu), k3(vf + 1.1), H + 0.9], r: 0.45, uso: 'acender' });
+      shrines.push({ r: [u0, vb, u1, vf].map(k3), door: k3(uc) });
+    }
+    // (the parapet round the top, over the drop of a terrace — 0.9 m, 0.2 m thick, on its edge —, open where the stair comes up)
+    const T = [cu - e1, cv - e1, cu + e1, cv + e1], pt = 0.2, par = r => els.push({ k: 'bloco', r: r.map(k3), y0: H, y1: H + 0.9, cor: ['wl', 'wr', 'top'], mat: 'stucco' });
+    par([T[0], T[1], T[2], T[1] + pt]); par([T[0], T[1] + pt, T[0] + pt, T[3]]); par([T[2] - pt, T[1] + pt, T[2], T[3]]);
+    par([T[0] + pt, T[3] - pt, cu - sw / 2, T[3]]); par([cu + sw / 2, T[3] - pt, T[2] - pt, T[3]]);
+    const mayor = { L, n, cu, cv, H, e0, e1, niveis, top: T.map(k3), pt, stair: { u: cu, w: sw, foot: k3(vFoot), top: k3(cv + e1) }, shrines };
+    return { els, door: { u: cu, w: sw, y0: 0, y1: H, stair: true }, amphi: { mayor } };
+  }
+  Fo.def('maravilha', 'asteca', (L, n) => mayorGrande(L, n), [10, 13]);
 })(window.G = window.G || {});

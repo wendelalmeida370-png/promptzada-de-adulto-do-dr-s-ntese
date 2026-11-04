@@ -385,6 +385,7 @@
   // lights them; at the platform's front, beside where the flight comes up, two places to stand and look out over the city
   // (topo) — the feast of Toxcatl on high
   function mayor(P, F) {
+    if (F.amphi && F.amphi.mayor) { mayorGrande(P, F, F.amphi.mayor); return; } // (the Templo Mayor of a capital: D-108)
     const lv = F.els.find(e => e.k === 'escalonada'), st = F.els.find(e => e.k === 'escada'); if (!lv || !st) { P.errs.push('a forma do templo sem os níveis ou a escada'); return; }
     const [s, , y] = lv.niveis[lv.niveis.length - 1]; const top = [lv.c[0] - s, lv.c[1] - s, lv.c[0] + s, lv.c[1] + s];
     const g = platform(P, F, top, y, st, 'plataforma'); if (!g) return; const id = g.rooms[0];
@@ -409,6 +410,7 @@
   // the walk before its front face, where one makes the offering under the sealed door (ofertar), and beside it those who pray
   // (rezar), facing it
   function pyramidFoot(P, F) {
+    if (F.amphi && F.amphi.piramide) { piramideGrande(P, F, F.amphi.piramide); return; } // (the Great Pyramid of a capital: D-108)
     const L = P.L; const sh = [0, 0, L, L]; const pyr = F.els.find(e => e.k === 'piramide'); if (!pyr) { P.errs.push('a forma sem a pirâmide'); return; } // (its slab the whole lot: from the street a step up on to it)
     const y = pyr.y0; P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y), baseH: r2(y), floors: 1, eave: 0 }; P.roof = null;
     P.level(0, y, 3.0, 'chao', sh); P.entryLv = 0;
@@ -444,6 +446,70 @@
     P.marks(0, id, 'rezar', pray);
     if (fig) P.marks(0, id, 'ofertar', [[r2(fig.p[0]), r2(fig.p[1] + 0.75), Math.PI]]);
     const back = g.rooms.find(q => P.rooms[q].r[3] <= bb[1] + 0.01); if (back !== undefined) { const r = P.rooms[back].r; P.marks(0, back, 'topo', [[r2(cu), r2((r[1] + r[3]) / 2), 0]]); }
+  }
+  // the Great Pyramid of a capital (the steps of 10 and 13 tiles, js/forma-espetaculo.js — D-108): two storeys — the ground, the
+  // slab round the pyramid (the square before its face, the ways along its sides and its back; on the colossal's lot the court of
+  // its temple, its walls, pillars and altar solid) and the corridor in from the way in at the face's foot —, and the king's
+  // chamber: up the great gallery from the corridor's end to its landing, through the door in the chamber's wall. Every room a
+  // rectangle of the form's floor, the mass round them no room (the void: never walked). Before the sarcophagus where one makes
+  // the offering, and about it those who pray; before the way in, the offering and the prayers of the square
+  function piramideGrande(P, F, A) {
+    const L = P.L, m = 0.1; const sh = [m, m, L - m, L - m]; const { cu, cv, e, y0, face, cw, yK } = A;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y0), baseH: y0, floors: 1, eave: 0 }; P.roof = null;
+    P.level(0, y0, A.ch, 'chao', sh); P.entryLv = 0;
+    P.level(1, yK, 4.4, 'chao', [A.chamber[0], A.chamber[1], A.chamber[2], A.landing[3]]);
+    wayIn(P, sh[0], sh[2], sh[3], [[r2(cu - 3.0), r2(cu + 3.0)]]);
+    // (the chamber's front wall between the landing and it, its door; the gallery's flight)
+    const wv = r2(A.doorK[3] - 0.2); const w = P.wall(1, [r2(A.chamber[0] - 0.4), wv], [r2(A.chamber[2] + 0.4), wv], 0.4, 4.4, 0, 'parede');
+    P.door(w, P.atOf(w, [cu, wv]), r2(A.doorK[1] - A.doorK[0]), A.doorK[4], -1, -1, 0, 'vao');
+    P.stair('escada', 0, 1, A.gallery.r, 0, -1, null);
+    if (P.inside()) return;
+    // (the rooms: the square before the face, the ways round the pyramid, the corridor, the gallery; the landing, the chamber)
+    const sq = P.room(0, 'esplanada', [sh[0], r2(face), sh[2], sh[3]], 1);
+    for (const r of [[sh[0], sh[1], sh[2], r2(cv - e)], [sh[0], r2(cv - e), r2(cu - e), r2(face)], [r2(cu + e), r2(cv - e), sh[2], r2(face)]]) if (r[2] - r[0] >= 0.8 && r[3] - r[1] >= 0.8) P.room(0, 'esplanada', r, 1);
+    P.room(0, 'corredor', [r2(cu - cw), A.vC, r2(cu + cw), r2(face)], 0); // (the gallery is its flight: no floor of its own)
+    P.room(1, 'patamar', A.landing, 0); const ch = P.room(1, 'camara', A.chamber, 0);
+    // (what stands on the square — the temple's walls, its pillars, its altar — solid; the sarcophagus)
+    if (!solids(P, F, sq, { y: y0 })) return;
+    if (!P.at('solido', 1, ch, A.sarco, 0, 1, Object.assign({ h: 1.05 }, FM))) { P.errs.push('o sarcófago onde a planta não o põe'); return; }
+    const sv = A.sarco[3] + 0.55; P.marks(1, ch, 'ofertar', [[r2(cu), r2(sv), Math.PI]]);
+    P.marks(1, ch, 'rezar', [-2.2, -1.2, 1.2, 2.2].map(du => [r2(cu + du), r2(Math.min(A.chamber[3] - 0.45, sv + 1.0)), Math.PI]));
+    const T = A.temple, fv = T ? r2(T.altar[3] + 0.55) : r2(Math.min(sh[3] - 0.5, face + 1.2)), au = T ? (T.altar[0] + T.altar[2]) / 2 : cu;
+    P.marks(0, sq, 'ofertar', [[r2(au), fv, Math.PI]]);
+    P.marks(0, sq, 'rezar', [-2.4, -1.4, 1.4, 2.4].map(du => [r2(au + du), r2(Math.min(sh[3] - 0.5, fv + 0.9)), Math.PI]));
+  }
+  // the Templo Mayor of a capital (the steps of 10 and 13 tiles, js/forma-espetaculo.js — D-108): two storeys — the ceremonial
+  // square round the pyramid (its four sides, rectangles of the slab) and the top —, the double stair between them (the god's
+  // steep one, climbed facing it: D-086). On the top, round the two shrines (solid: seen, not gone into), behind its parapet: before
+  // each shrine's door where the priest stands (oficiar), at the braziers where one lights them, at the top's front corners where
+  // one looks out (topo); in the square before the stair, those who watch the feast standing (assistir)
+  function mayorGrande(P, F, A) {
+    const L = P.L, m = 0.1; const sh = [m, m, L - m, L - m]; const { cu, cv, e0, e1, H } = A; const y0 = groundOf(F, L), T = A.top, pt = A.pt, sw = A.stair.w;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y0), baseH: y0, floors: 1, eave: 0 }; P.roof = null;
+    P.level(0, y0, 3.0, 'chao', sh); P.entryLv = 0;
+    P.level(1, H, 3.0, 'chao', T);
+    wayIn(P, sh[0], sh[2], sh[3], [[r2(cu - sw / 2 - 2), r2(cu + sw / 2 + 2)]]);
+    // (the top's parapet, open where the stair comes up; the stair from the square's front to the top's front edge)
+    const pw = (a, b) => P.wall(1, a.map(r2), b.map(r2), pt, 0.9, 0, 'parapeito'), h2 = pt / 2;
+    pw([T[0], T[1] + h2], [T[2], T[1] + h2]); pw([T[0] + h2, T[1]], [T[0] + h2, T[3]]); pw([T[2] - h2, T[1]], [T[2] - h2, T[3]]);
+    pw([T[0], T[3] - h2], [cu - sw / 2, T[3] - h2]); pw([cu + sw / 2, T[3] - h2], [T[2], T[3] - h2]);
+    P.stair('escada', 0, 1, [r2(cu - sw / 2), A.stair.top, r2(cu + sw / 2), A.stair.foot], 0, -1, null);
+    if (P.inside()) return;
+    // (the square's four sides; the top round the shrines — the platform before them, its sides, behind them)
+    const fr = P.room(0, 'praca', [sh[0], r2(cv + e0), sh[2], sh[3]], 1);
+    for (const r of [[sh[0], sh[1], sh[2], r2(cv - e0)], [sh[0], r2(cv - e0), r2(cu - e0), r2(cv + e0)], [r2(cu + e0), r2(cv - e0), sh[2], r2(cv + e0)]]) P.room(0, 'praca', r, 1);
+    // (the shrines and the slot between them no room: the void, never walked)
+    const bb = A.shrines.map(q => q.r).reduce((a, q) => [Math.min(a[0], q[0]), Math.min(a[1], q[1]), Math.max(a[2], q[2]), Math.max(a[3], q[3])]);
+    const plat = P.room(1, 'plataforma', [T[0], r2(bb[3]), T[2], T[3]], 1);
+    for (const r of [[T[0], T[1], r2(bb[0]), r2(bb[3])], [r2(bb[2]), T[1], T[2], r2(bb[3])], [r2(bb[0]), T[1], r2(bb[2]), r2(bb[1])]]) if (r[2] - r[0] >= 0.8 && r[3] - r[1] >= 0.8) P.room(1, 'plataforma', r, 1);
+    // (the braziers' stands solid, and where one lights each, before it; the priests before the doors; the look-outs; the crowd)
+    const lit = []; for (const u of G.Forma.uses(F)) { if (u.uso !== 'acender' || !u.pe) continue; if (!P.at('solido', 1, plat, u.pe.map(r2), 0, 1, Object.assign({ h: u.y1 }, FM))) { P.errs.push('o braseiro da forma onde a planta não o põe'); return; }
+      lit.push([r2(u.c[0]), r2(u.pe[3] + In.BODY.r + 0.12), Math.PI]); }
+    P.marks(1, plat, 'acender', lit);
+    P.marks(1, plat, 'oficiar', A.shrines.map(q => [q.door, r2(q.r[3] + 0.45), Math.PI]));
+    P.marks(1, plat, 'topo', [[r2(T[0] + 1.0), r2(T[3] - 0.6), 0], [r2(T[2] - 1.0), r2(T[3] - 0.6), 0]]);
+    const watch = []; for (let k = -4; k <= 4; k++) { if (Math.abs(k) < 2) continue; watch.push([r2(cu + k * 1.6), r2(Math.min(sh[3] - 0.6, A.stair.foot + 0.9)), Math.PI]); }
+    P.marks(0, fr, 'assistir', watch, { st: 'idle' });
   }
   const WONDER = { romano: amphitheatre, asteca: mayor, classico: ziggurat, egipcio: pyramidFoot, nordico: valhalla, grego: acropolis };
 
