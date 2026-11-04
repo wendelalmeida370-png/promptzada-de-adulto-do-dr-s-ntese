@@ -95,12 +95,13 @@ try { const s = fs.readFileSync(path.join(__dirname, 'regress.sh'), 'utf8'); con
   for (const r of s.matchAll(/\bF ([\w.-]+) ([\w./-]+\.js)\b/g)) add(r[2], `fund_${r[1]}.txt`);
   for (const r of s.matchAll(/\bnode ([^>&|;()]*?) > "\$OUT\/([^"]+)"/g)) for (const t of r[1].split(/\s+/)) if (/\.js$/.test(t)) add(t, r[2]); } catch (e) { /* (no regress.sh: the names alone) */ }
 // (a proof's outcome in the regression's folder: its own files — the regress.sh's names, or x.txt and x_….txt for qa/x.js —,
-// passed with no failure and, in the fundação's, the process out clean)
+// passed with no failure and, in the fundação's, the process out clean; a proof that answers in JSON — the memória dos
+// mortos, by ev.js — passed as the regress.sh reads it: «"fails": []», and no list of fails with something in it, T-395)
 const passed = f => {
   if (!RES || RES === true) return null; const base = path.basename(f, '.js'), mine = REG.get(path.normalize(f)) || []; let files = [];
   try { files = fs.readdirSync(RES).filter(n => n === base + '.txt' || n.startsWith(base + '_') || mine.includes(n)); } catch (e) { return null; }
   if (!files.length) return null; const all = files.map(n => fs.readFileSync(path.join(RES, n), 'utf8')).join('\n');
-  return /^PASSOU/m.test(all) && !/^FALHOU/m.test(all) && !/^saída [1-9]/m.test(all);
+  return (/^PASSOU/m.test(all) || /"fails": \[\]/.test(all)) && !/^FALHOU/m.test(all) && !/^saída [1-9]/m.test(all) && !/"fails": \[\s*[^\]\s]/.test(all);
 };
 
 // ------------------------------ the sheets ------------------------------
