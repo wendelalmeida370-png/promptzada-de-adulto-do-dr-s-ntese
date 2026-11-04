@@ -1533,7 +1533,11 @@
     const ends = []; for (const e of F.els) if (e.k === 'cavea' && e.arco && e.fecho) e.arco.forEach((a, s) => { const r0 = e.fundo, r1 = e.aneis[0][0]; ends.push({ e, s, p: [[e.c[0] + Math.cos(a) * r0, e.c[1] + Math.sin(a) * r0], [e.c[0] + Math.cos(a) * r1, e.c[1] + Math.sin(a) * r1]] }); });
     const same = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.05;
     const joined = new Map(); for (const x of ends) if (ends.some(y => y.e !== x.e && same(x.p[0], y.p[0]) && same(x.p[1], y.p[1]))) { const j = joined.get(x.e) || [false, false]; j[x.s] = true; joined.set(x.e, j); }
+    out.hidden = 0;
     F.els.forEach((e, i) => {
+      // (a piece inside a mass — the pyramid's corridor, gallery and chamber, D-108: oculto —, seen only by whoever goes in: the
+      // 3D's; the god does not paint it, as Forma.mass has no part of it)
+      if (e.oculto) { out.hidden++; return; }
       const put = (q, paint, j) => { q.i = i; q.j = j || 0; q.paint = paint; out.push(q); return q; };
       switch (e.k) {
         case 'bloco': {
@@ -1968,7 +1972,7 @@
   // a form painted into a picture: its parts, back to front (o.noDoor: without its door); how it went — for the proofs
   A.formPaint = function (c, m, F, st, o) {
     const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
-    const r = formOrder(formParts(c, m, F, st, o || {})); for (const q of r.order) q.paint();
+    const parts = formParts(c, m, F, st, o || {}); const r = formOrder(parts); r.st.hidden = parts.hidden; for (const q of r.order) q.paint();
     r.st.ms = (typeof performance !== 'undefined' ? performance.now() : 0) - t0; A.formStats = r.st; return r.st;
   };
   // the god's picture of a step from its form, n tiles a side (its door left out where the view does not see it — L-264 —, as
