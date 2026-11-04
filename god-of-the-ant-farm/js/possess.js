@@ -242,21 +242,25 @@
   // goes in the world's next step: L-162). Walls that rose round the body are no room it came into: the world takes it out as
   // anyone (L-175). The plan made now if it is not yet (Space.planNow), never the frame's queue: the world's step is the same
   // with or without anyone looking
-  function planAt(v) {
+  // (on an open ground of storeys come into by its way in — the arena and the podium of the amphitheatre over its substructure —,
+  // the storey the body stands on, kept with it (Avatar: Possess.setLevel); asked on the ground's own storey, the body on the arena
+  // stood in the stone under it, and the push of the stuck took it out of the building in a second — L-550)
+  function planAt(v, a) {
     const S = G.S; if (!W.inb(v.x, v.y)) return null; const B = S.buildings.get(S.occ[W.idx(v.x, v.y)]);
     if (!B || !G.Space.planNow || !G.Space.planNow(B)) return null;
-    const ins = G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE); return ins && ins.b === B && ins.walk ? ins : null;
+    const lv = a && a.via === B.id && Number.isFinite(a.lv) ? a.lv : undefined;
+    const ins = G.Space.indoor(v.x * G.Space.TILE, v.y * G.Space.TILE, lv, B.id); return ins && ins.b === B && ins.walk ? ins : null;
   }
   function onPlan(v, a) {
     if (!v) return false; if (v.inside) return indoorOK(v, a);
-    const ins = planAt(v); return !!ins && (!ins.shell || !!(a && a.via === ins.b.id));
+    const ins = planAt(v, a); return !!ins && (!ins.shell || !!(a && a.via === ins.b.id));
   }
   // the building the body is by, at the end of each step of the world: indoors, the one the world has it in; at its doorstep,
   // on its steps, in the opening of its outer door; or still in a room of the one it came in by. The only way into a room is
   // its door (L-175)
   function viaOf(v, a) {
     if (v.inside) return v.inside;
-    const ins = planAt(v); if (!ins) return 0; const id = ins.b.id;
+    const ins = planAt(v, a); if (!ins) return 0; const id = ins.b.id;
     if (!ins.shell) return id; // (the doorstep, the steps)
     const d = ins.door >= 0 && ins.p.doors[ins.door]; if (d && d.outer) return id; // (in its outer door's opening)
     return a && a.via === id ? id : 0; // (a room walked into from its door; walls that rose round it: none)
@@ -275,10 +279,10 @@
   Po.unuse = function (v) {
     const a = G.S.avatar; if (!a) return; const u = a.use; a.use = null;
     const w = v || G.S.villagers.get(a.id); const B = u && G.S.buildings.get(u.b);
-    if (w && B && w.inside === B.id && openShell(B)) { w.inside = 0; a.lv = null; }
+    if (w && B && w.inside === B.id && openShell(B)) w.inside = 0; // (on an open ground, still on the storey it stood up on: L-550)
   };
   const openShell = B => { const p = G.Space.planNow ? G.Space.planNow(B) : null; return !!(p && p.shell && p.shell.kind === 'aberta'); };
-  const openOn = (v, B) => { if (!openShell(B)) return false; const ins = planAt(v); return !!(ins && ins.b === B && ins.shell); };
+  const openOn = (v, B) => { if (!openShell(B)) return false; const ins = planAt(v, G.S.avatar); return !!(ins && ins.b === B && ins.shell); };
   Po.openShell = openShell; // (for the controller: an open ground is entered by a place of it, never by walking on it)
   Po.useOf = () => { const a = G.S.avatar; return a && a.use ? a.use : null; };
   const useHolds = (v, a) => { const u = a.use; const B = u && G.S.buildings.get(u.b); return !!(B && v.inside === u.b && G.Interiors.keyOf && G.Interiors.keyOf(B) === u.key); };
@@ -345,7 +349,7 @@
     if (!v.inside && a.lv !== null && a.lv !== undefined && !onPlan(v, a)) a.lv = null; // (out, and off any plan: no storey)
     if (a.use && !useHolds(v, a)) Po.unuse(v); // (out of the building, or its plan made over: the place let go)
     // (on an open ground with no place of it — a game loaded there whose place is gone —: out on the town's ground)
-    if (v.inside && !a.use && !v.sleeping) { const B = S.buildings.get(v.inside); if (B && openShell(B)) { v.inside = 0; a.lv = null; } }
+    if (v.inside && !a.use && !v.sleeping) { const B = S.buildings.get(v.inside); if (B && openShell(B)) v.inside = 0; } // (its storey kept: L-550)
     for (let k = a.asks.length - 1; k >= 0; k--) if (S.clock - a.asks[k].t > 90) a.asks.splice(k, 1);
     // (what the hands asked since the last step: done now, in the world's own step, in the order asked — each sees the world
     // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
