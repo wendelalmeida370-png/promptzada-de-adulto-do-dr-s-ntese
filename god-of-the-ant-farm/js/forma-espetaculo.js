@@ -432,4 +432,55 @@
   }
   Fo.def('teatro', 'romano', (L, n) => teatroGrande(L, n, 'romano'), [6, 8, 10]);
   Fo.def('teatro', 'grego', (L, n) => teatroGrande(L, n, 'grego'), [6, 8, 10]);
+
+  // ------------------------------ the great ball court (teatro, asteca: the steps of 6, 8 and 10 tiles — D-109) ------------------------------
+  // The tlachtli of a city, as the god draws the Aztec's theatre: the alley along the lot (16, 22 and 28 m long, 4 to 6 m wide)
+  // between its two walls — their faces to it sloping down to it (the benches the ball runs along), their ends and backs
+  // straight, 2.6 to 4.2 m high, the band at their top —, the stone ring on each slope over the alley's middle; at the alley's
+  // ends the fields of the I, wider than it. On each wall's top the stand: the walk along the slope's edge behind its parapet,
+  // the rows rising away from the alley (the body's, 0.72 × 0.42 m) with their stairways, the walk behind the last one and the
+  // parapet at the back; at the stand's ends the walks the flights come up to — one up each wall's left end from the field —,
+  // the rows' ends stepped walls 0.9 m over them. → the elements, and the numbers the plan reads (amphi.campo)
+  // (each step: the alley La × Wa, the slope's foot ta deep, the rows on each wall, its height Hw, the fields Le × We)
+  const CAMPO = { 6: { La: 16, Wa: 4, ta: 1.4, rows: 2, Hw: 2.6, Le: 3.0, We: 10, ring: 0.45 }, 8: { La: 22, Wa: 5, ta: 1.8, rows: 2, Hw: 3.4, Le: 3.5, We: 13, ring: 0.5 }, 10: { La: 28, Wa: 6, ta: 2.0, rows: 3, Hw: 4.2, Le: 4.5, We: 16, ring: 0.6 } };
+  function campoGrande(L, n) {
+    const S = CAMPO[n], cu = L / 2, cv = L / 2, yq = 0.06, TR = 0.72, RS = 0.42, pt = 0.2, ew = 1.5, Hw = S.Hw; // (a row's depth and rise; the parapets' thickness; the walks at a stand's ends)
+    const top = 1.0 + S.rows * TR + 0.8 + 2 * pt; // (a wall's top: its parapet, the walk along the slope, the rows, the walk behind them, the parapet at the back)
+    const ua = cu - S.La / 2, ub = cu + S.La / 2, earth = ['#c8b48e', '#b8a47e', '#d4c09a'];
+    const box = (r, y0, y1, cor, o) => Object.assign({ k: 'bloco', r: r.map(k3), y0: k3(y0), y1: k3(y1), cor: cor || ['wl', 'wr', 'top'] }, o);
+    const els = [box([0, 0, L, L], 0, yq, ['#b8a07a', '#a89068', '#c8b08a'], { mat: 'slab', piso: 1 }), box([ua, cv - S.Wa / 2, ub, cv + S.Wa / 2], yq, yq + 0.01, earth, { piso: 1 })];
+    for (const [a, b] of [[ua - S.Le, ua], [ub, ub + S.Le]]) els.push(box([a, cv - S.We / 2, b, cv + S.We / 2], yq, yq + 0.01, earth, { piso: 1 }));
+    const m = Math.ceil((Hw - yq) / 0.26 - 1e-9), run = 0.25 * m, na = Math.max(1, Math.round((S.La - 2 * ew) / 7)); const stands = [];
+    const aisles = []; for (let j = 1; j <= na; j++) aisles.push(k3(ua + ew + (S.La - 2 * ew) * j / (na + 1)));
+    for (const s of [-1, 1]) { // (the back wall, the front one)
+      const at = d => cv + s * (S.Wa / 2 + S.ta + d); // (v at d out of the slope's top edge)
+      const span = (d0, d1) => (s < 0 ? [at(d1), at(d0)] : [at(d0), at(d1)]); // ([v0, v1] from d0 to d1 out)
+      const vI = cv + s * S.Wa / 2, vT = at(0), vO = at(top); // (the slope's foot at the alley, its top edge, the wall's back)
+      els.push({ k: 'talude', r: (s < 0 ? [ua, vO, ub, vI] : [ua, vI, ub, vO]).map(k3), r1: (s < 0 ? [ua, vO, ub, vT] : [ua, vT, ub, vO]).map(k3), y0: 0, y1: k3(Hw), cor: ['wl', 'wr', 'top'], mat: 'stucco' });
+      els.push({ k: 'faixa', r: (s < 0 ? [ua, vO, ub, vT] : [ua, vT, ub, vO]).map(k3), y0: k3(Hw - 0.5), y1: k3(Hw), cor: 'trim' });
+      // (the ring on the slope over the alley's middle, facing it)
+      els.push({ k: 'aro', c: [k3(cu), k3(vI + s * 0.6 * S.ta), k3(0.6 * Hw)], r: S.ring, t: 0.1, dir: -s, cor: '#6a645a' });
+      // (the stand: the parapet along the slope; the rows — between the stairways a block each, in each stairway two steps a
+      // row —; the walk behind them; the parapet at the back; the rows' ends stepped walls)
+      const [p0, p1] = span(0, pt); els.push(box([ua, p0, ub, p1], Hw, Hw + 0.9, ['wl', 'wr', 'top']));
+      const d0 = pt + 1.0, cuts = [ua + ew].concat(...aisles.map(u => [u - 0.5, u + 0.5]), [ub - ew]);
+      for (let k = 0; k < S.rows; k++) { const [r0, r1] = span(d0 + k * TR, d0 + (k + 1) * TR), y = Hw + RS * (k + 1);
+        for (let i = 0; i < cuts.length; i += 2) els.push(box([cuts[i], r0, cuts[i + 1], r1], Hw, y, ['wl', 'wr', 'top'], { piso: 1 }));
+        for (const u of aisles) { const [h0, h1] = span(d0 + k * TR, d0 + (k + 0.5) * TR), [g0, g1] = span(d0 + (k + 0.5) * TR, d0 + (k + 1) * TR);
+          els.push(box([u - 0.5, h0, u + 0.5, h1], Hw, y - RS / 2, ['wl', 'wr', 'top'], { degrau: 1 }), box([u - 0.5, g0, u + 0.5, g1], Hw, y, ['wl', 'wr', 'top'], { degrau: 1 })); }
+        for (const [a, b] of [[ua + ew - pt, ua + ew], [ub - ew, ub - ew + pt]]) els.push(box([a, r0, b, r1], Hw, y + 0.9)); }
+      const yb = Hw + RS * S.rows, [w0, w1] = span(d0 + S.rows * TR, top - pt), [q0, q1] = span(top - pt, top);
+      els.push(box([ua + ew, w0, ub - ew, w1], Hw, yb, ['wl', 'wr', 'top'], { piso: 1 }));
+      for (const [a, b] of [[ua + ew - pt, ua + ew], [ub - ew, ub - ew + pt]]) els.push(box([a, w0, b, w1], Hw, yb + 0.9));
+      els.push(box([ua + ew, q0, ub - ew, q1], Hw, yb + 0.9), box([ua, q0, ua + ew, q1], Hw, Hw + 0.9), box([ub - ew, q0, ub, q1], Hw, Hw + 0.9));
+      // (the walls at the stand's ends — the left one open where the flight comes up —, the flight's treads from the field)
+      const vm = (vT + vO) / 2, [e0, e1] = span(pt, top - pt);
+      els.push(box([ua, e0, ua + pt, vm - 0.7], Hw, Hw + 0.9), box([ua, vm + 0.7, ua + pt, e1], Hw, Hw + 0.9), box([ub - pt, e0, ub, e1], Hw, Hw + 0.9));
+      for (let j = 0; j < m; j++) els.push(box([ua - run + 0.25 * j, vm - 0.7, ua - run + 0.25 * (j + 1), vm + 0.7], 0, yq + (Hw - yq) * (j + 1) / m, ['base0', 'base1', 'base2'], { degrau: 1 }));
+      stands.push({ s, vI: k3(vI), vT: k3(vT), vO: k3(vO), rows: span(d0, top - pt).map(k3), room: span(pt, top - pt).map(k3), vm: k3(vm), flight: [k3(ua - run), k3(vm - 0.7), k3(ua), k3(vm + 0.7)] });
+    }
+    const campo = { L, n, cu, cv, yq, Hw, ua, ub, Wa: S.Wa, ta: S.ta, top: k3(top), Le: S.Le, We: S.We, rows: S.rows, tr: TR, rs: RS, pt, ew, aisles, stands };
+    return { els, amphi: { campo } };
+  }
+  Fo.def('teatro', 'asteca', (L, n) => campoGrande(L, n), [6, 8, 10]);
 })(window.G = window.G || {});

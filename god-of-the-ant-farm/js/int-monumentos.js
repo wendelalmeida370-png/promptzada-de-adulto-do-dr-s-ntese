@@ -557,8 +557,39 @@
   function theatre(P) {
     const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); if (!F) { P.errs.push('o teatro sem forma'); return; }
     if (F.amphi && F.amphi.teatro) { teatroPlan(P, F, F.amphi.teatro); return; } // (the theatre of a city: D-109)
+    if (F.amphi && F.amphi.campo) { campoPlan(P, F, F.amphi.campo); return; } // (the great ball court of a city: D-109)
     const f = THEATRE[F.style] || THEATRE[P.rec.c]; if (!f) { P.errs.push(`o teatro de ${P.rec.c} ainda sem planta`); return; }
     f(P, F);
+  }
+  // the great ball court of a city (the Aztec's theatre, the steps of 6, 8 and 10 tiles, js/forma-espetaculo.js — D-109): the
+  // ground — the alley, the fields at its ends, round the walls (solid) — and the stands on the walls' tops a storey up: the walk
+  // along the slope's edge, the rows of the form (a block of P.tiers each, rising away from the alley, the walk behind them their
+  // last row's), the walks at the ends; the parapets walls of their storey where the form has them; the flight up each wall's left
+  // end from the field. Who plays in the alley (the actors' posts and places: the players), who watches standing in the fields
+  // at its ends, facing up it
+  function campoPlan(P, F, A) {
+    const L = P.L, m = 0.1; const sh = [m, m, L - m, L - m]; const { cu, cv, yq, Hw, ua, ub, pt, ew } = A;
+    P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: 'chao', baseH: yq, floors: 1, eave: 0 }; P.roof = null;
+    P.level(0, yq, 3.0, 'chao', sh); P.entryLv = 0;
+    const ext = A.stands.reduce((a, q) => [Math.min(a[0], q.vO, q.vI), Math.max(a[1], q.vO, q.vI)], [L, 0]); P.level(1, Hw, 3.0, 'chao', [ua, ext[0], ub, ext[1]]);
+    wayIn(P, sh[0], sh[2], sh[3], [[r2(cu - 4), r2(cu + 4)]]);
+    // (each stand: its rows a block, rising away from the alley; the parapets along the slope, at the back, at the ends — open at
+    // the flight —, the stepped walls at the rows' ends; the flight)
+    for (const q of A.stands) { const s = q.s, [v0, v1] = q.room, rv = q.rows, inner = s < 0 ? v1 : v0, outer = s < 0 ? v0 : v1;
+      P.tiers(1, null, { r: [ua + ew, rv[0], ub - ew, rv[1]], dir: s < 0 ? 'n' : 's', rows: A.rows, rise: A.rs, tread: A.tr, first: A.rs, aisles: A.aisles, aisleW: 1.0, climb: 2 });
+      const pw = (a, b) => P.wall(1, a.map(r2), b.map(r2), pt, 0.9, 0, 'parapeito');
+      pw([ua, inner - s * pt / 2], [ub, inner - s * pt / 2]); pw([ua, outer + s * pt / 2], [ub, outer + s * pt / 2]);
+      pw([ua + pt / 2, Math.min(v0, v1)], [ua + pt / 2, q.vm - 0.7]); pw([ua + pt / 2, q.vm + 0.7], [ua + pt / 2, Math.max(v0, v1)]); pw([ub - pt / 2, Math.min(v0, v1)], [ub - pt / 2, Math.max(v0, v1)]);
+      pw([ua + ew - pt / 2, rv[0]], [ua + ew - pt / 2, rv[1]]); pw([ub - ew + pt / 2, rv[0]], [ub - ew + pt / 2, rv[1]]);
+      P.stair('escada', 0, 1, q.flight, 1, 0, null); }
+    if (P.inside()) return;
+    const id = P.room(0, 'campo', sh, 1); for (const q of A.stands) P.room(1, 'arquibancada', [ua, Math.min(...q.room), ub, Math.max(...q.room)], 1);
+    if (!solids(P, F, id)) return;
+    // (who plays: in the alley, two and two either side of its middle, facing across it; who watches standing: in the fields at
+    // its ends, facing up it)
+    stage(P, 0, id, 'atuar', [[cu - 1.6, cv, Math.PI / 2], [cu + 1.6, cv, -Math.PI / 2], [cu - 3.2, cv, Math.PI / 2], [cu + 3.2, cv, -Math.PI / 2]]);
+    const watch = []; for (const [u, f] of [[r2(ua - 0.8), Math.PI / 2], [r2(ub + 0.8), -Math.PI / 2]]) for (const dv of [-1.5, -0.5, 0.5, 1.5]) watch.push([u, r2(cv + dv), f]);
+    P.marks(0, id, 'assistir', watch, { st: 'idle' });
   }
   // the theatre of a city (the steps of 6, 8 and 10 tiles, js/forma-espetaculo.js — D-109): the open ground — the forecourt on
   // the street, the yards along the stage building, the ways in between the rows' ends and it, the orchestra, the rows of the

@@ -61,7 +61,19 @@
 //        salvos e carregados, derrubados: o verificador limpo
 //     E6 o verificador: pega o palco noutra altura e a plateia menor que o degrau, e cala quando voltam
 //     E7 os lugares (a tabela da planta), num processo à parte com prazo: um lugar livre de assistir, de atuar e de tocar
-//   node qa/monumental.js [A C E …]   (só as letras pedidas; sem nada, todas)
+//   H — os povos (cada tipo grande do M1 em três povos, cada um com a forma do seu desenho: D-109):
+//     H1 a maravilha (o Coliseu, a Grande Pirâmide, o Templo Mayor) e o teatro (o romano, o grego, o campo de bola asteca),
+//        cada um a sua forma: as silhuetas de longe (Fo.mass) se afastam em ≥ 10% do lote a alguma altura, de frente ou de lado
+//     H2 a forma do campo de bola: a pista entre os muros com a rampa e os aros, as fileiras do corpo em cima deles, os
+//        parapeitos de 0,9 m, os degraus dos lances
+//     H3 as plantas do campo de bola: nos quatro lados e nos três tamanhos, sem falha, todo assento alcançado, o chão das
+//        arquibancadas na altura da forma, os jogadores e quem assiste em pé, o tempo
+//     H4 os pés pelo campo de bola, a cada 2 cm: da rua ao campo e à pista, subindo o lance do muro, pelo passeio e por uma
+//        escada até o alto das fileiras
+//     H5 o mundo: cada povo funda o seu degrau grande e nunca o antigo; o campo de bola pela mão do deus em Tenochtitlan, de
+//        pé, vivendo, salvo e carregado, o verificador (as arquibancadas noutra altura), derrubado
+//     H6 os lugares do campo de bola (a tabela da planta): um lugar livre de assistir e de jogar
+//   node qa/monumental.js [A C E H …]   (só as letras pedidas; sem nada, todas)
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['qa/monumental-inv.js'] });
 const In = G.Interiors, Fo = G.Forma, Sp = G.Space;
@@ -779,7 +791,149 @@ function testeE() {
   }
 }
 
-const TESTS = { A: testeA, C: testeC, E: testeE };
+// =========================================================================================== H — the peoples
+// (a form seen from the side, far off: at each twentieth of its height the span of its masses — Fo.mass — across the lot and
+// along it, shares of the lot: its silhouette from the front and from the side)
+function sideMap(F) {
+  const ms0 = Fo.mass(F); let H = 0; for (const m of ms0) H = Math.max(H, m.y1 || 0, ...(m.p ? m.p.map(q => q[2]) : []));
+  const at = (m, y) => { // (the rect a mass covers at the height y, or null)
+    if ((m.k === 'box' || m.k === 'telhado') && y >= m.y0 && y <= m.y1) return m.r;
+    if (m.k === 'talude' && y >= m.y0 && y <= m.y1) { const f = (y - m.y0) / ((m.y1 - m.y0) || 1); return m.r.map((q, k) => q + (m.r1[k] - q) * f); }
+    if (m.k === 'piramide' && y >= m.y0 && y <= m.y1) { const h = m.e * (1 - (y - m.y0) / (m.y1 - m.y0)); return [m.c[0] - h, m.c[1] - h, m.c[0] + h, m.c[1] + h]; }
+    if (m.k === 'anel' && y >= (m.y0 || 0) && y <= m.y1) { const a0 = m.a0 === undefined ? 0 : m.a0, sp = m.a0 === undefined ? TAU : ((m.a1 - m.a0) % TAU + TAU) % TAU || TAU; let r = null;
+      for (let k = 0; k <= 32; k++) { const a = a0 + sp * k / 32, u = m.c[0] + m.r * Math.cos(a), v = m.c[1] + m.r * Math.sin(a); r = r ? [Math.min(r[0], u), Math.min(r[1], v), Math.max(r[2], u), Math.max(r[3], v)] : [u, v, u, v]; } return r; }
+    if (m.k === 'pano') { const ys = m.p.map(q => q[2]); if (y < Math.min(...ys) || y > Math.max(...ys)) return null; const us = m.p.map(q => q[0]), vs = m.p.map(q => q[1]); return [Math.min(...us), Math.min(...vs), Math.max(...us), Math.max(...vs)]; }
+    return null; };
+  const out = [];
+  for (let k = 1; k <= 19; k++) { const y = H * k / 20; let r = null; for (const m of ms0) { const e = at(m, y); if (e) r = r ? [Math.min(r[0], e[0]), Math.min(r[1], e[1]), Math.max(r[2], e[2]), Math.max(r[3], e[3])] : e.slice(); }
+    out.push(r ? (r[2] - r[0]) / F.L : 0, r ? (r[3] - r[1]) / F.L : 0); }
+  return out;
+}
+function testeH() {
+  blank();
+  const TYPES = { maravilha: { peoples: ['romano', 'egipcio', 'asteca'], n: [10, 13] }, teatro: { peoples: ['romano', 'grego', 'asteca'], n: [6, 8, 10] } };
+  // ---------------------------------------------------------------- H1 three peoples each, each its own form
+  {
+    const out = [], said = [];
+    for (const t in TYPES) for (const n of TYPES[t].n) {
+      const maps = {}; for (const st of TYPES[t].peoples) { if (!Fo.has(t, st, n)) { out.push(`${t} ${st} n ${n}: sem forma`); continue; } maps[st] = sideMap(Fo.of(t, st, n)); }
+      const ps = Object.keys(maps); let least = 9, pair = '';
+      for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) { const a = maps[ps[i]], b = maps[ps[j]]; const d = Math.max(...a.map((q, k) => Math.abs(q - b[k]))); if (d < least) { least = d; pair = `${ps[i]} e ${ps[j]}`; } }
+      // (two of them are another form where their silhouettes part by a tenth of the lot at some height, from the front or the side)
+      if (ps.length < 3 || least < 0.1) out.push(`${t} n ${n}: ${ps.length} povos, os mais parecidos ${pair} (${least.toFixed(2)} do lote)`);
+      said.push(`${t} n ${n}: ${ps.join(', ')} — os mais parecidos, ${pair}, a ${(least * 100).toFixed(0)}% do lote um do outro`);
+    }
+    ok('H1 cada tipo grande em três povos, cada um com a sua forma: a maravilha (o Coliseu, a Grande Pirâmide, o Templo Mayor), o teatro (o romano, o grego, o campo de bola)', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
+  }
+  // ---------------------------------------------------------------- H2 the great ball court: its form
+  {
+    const out = [], said = [];
+    for (const n of TSIZES) {
+      const F = Fo.of('teatro', 'asteca', n), A = F && F.amphi && F.amphi.campo; if (!A) { out.push(`n ${n}: sem a forma`); continue; }
+      const walls = F.els.filter(e => e.k === 'talude'), rings = F.els.filter(e => e.k === 'aro');
+      // (the two walls, their faces to the alley sloping, the rings on them facing it; the rows the body's; the parapets; the flights)
+      const slope = walls.every(e => (e.r1[1] - e.r[1]) + (e.r[3] - e.r1[3]) > 0.5 && e.r1[0] === e.r[0] && e.r1[2] === e.r[2]);
+      if (walls.length !== 2 || !slope || rings.length !== 2 || A.ub - A.ua < 0.65 * F.L || A.Wa < 4) out.push(`n ${n}: ${walls.length} muros${slope ? '' : ' sem a rampa'}, ${rings.length} aros, a pista de ${A.ub - A.ua} × ${A.Wa} m`);
+      const rows = F.els.filter(e => e.k === 'bloco' && e.piso && e.y0 === A.Hw), steps = F.els.filter(e => e.degrau); let rr = 0;
+      for (const q of steps.filter(e => e.y0 === 0)) { const prev = steps.filter(o => o.y0 === 0 && Math.abs(o.r[1] - q.r[1]) < 1e-6 && o.y1 < q.y1).reduce((a, o) => Math.max(a, o.y1), A.yq); rr = Math.max(rr, q.y1 - prev); }
+      const par = F.els.filter(e => e.k === 'bloco' && !e.piso && !e.degrau && e.y0 >= A.Hw - 1e-6 && Math.abs(e.y1 - e.y0 - 0.9) < 1e-6).length;
+      if (!rows.length || rr > In.BODY.step + 1e-6 || par < 8 || A.tr < 0.7 || A.tr > 0.8 || A.rs < 0.4 || A.rs > 0.45) out.push(`n ${n}: ${rows.length} fileiras, degraus de ${rr.toFixed(2)} m, ${par} parapeitos`);
+      said.push(`n ${n}: a pista de ${A.ub - A.ua} × ${A.Wa} m entre os muros de ${A.Hw} m, os campos de ${A.Le} × ${A.We} m, ${A.rows} fileiras de ${A.rs} × ${A.tr} m em cada muro, os lances de degraus de ${rr.toFixed(2)} m, ${par} parapeitos de 0,9 m`);
+    }
+    ok('H2 a forma do campo de bola (o teatro asteca): a pista, os muros com a rampa e os aros, as fileiras do corpo em cima deles, os parapeitos, os lances', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
+  }
+  // ---------------------------------------------------------------- H3 the great ball court: its plans
+  let nid = 64001; const plans = {};
+  {
+    const out = [], said = [], times = [];
+    for (const n of TSIZES) for (const s of SIDES) {
+      const { b, p, dt } = planOf('teatro', 'asteca', n, s, (nid += 37)); times.push(dt); plans[n + s] = { b, p }; const tag = `n ${n}/${s}`;
+      if (!p || !p.ok) { out.push(`${tag}: não se arma (${p ? p.errs.slice(0, 2).join('; ') : '—'})`); continue; }
+      G.S.buildings.set(b.id, b);
+      const fal = In.report(b, p, { rec: b.ip }).filter(q => q.k === 'FALHA'); if (fal.length) out.push(`${tag}: ${fal.slice(0, 2).map(q => q.what).join('; ')}`);
+      const seats = In.tierSeats(p), got = reachedSeats(p); if (!seats.length || got.length < seats.length) out.push(`${tag}: ${seats.length} assentos, ${got.length} alcançados`);
+      const fl = p.stairs.filter(q => q.kind !== 'degraus'); if (p.levels.map(l => l.lv).join(',') !== '0,1' || fl.length !== 2) out.push(`${tag}: os pisos ${p.levels.map(l => l.lv).join(',')}, ${fl.length} lances`);
+      for (const fn of ['campo', 'arquibancada']) { const rs = p.rooms.filter(m => m.fn === fn); if (!rs.length || !rs.every(m => roomReached(p, m))) out.push(`${tag}: o cômodo ${fn} ${rs.length ? 'que a porta não alcança' : 'ausente'}`); }
+      const posts = p.items.filter(it => it.kind === 'cena').length; if (posts + marksOk(p, 'atuar') < 4 || marksOk(p, 'assistir') < 6) out.push(`${tag}: ${posts} postos e ${marksOk(p, 'atuar')} lugares de jogar, ${marksOk(p, 'assistir')} de assistir em pé`);
+      // (on the street's side as the form is drawn: the stands' floor — the walks, the rows, their stairways — at the form's height,
+      // off a step's edge)
+      if (s === 'S') { const F = Fo.of('teatro', 'asteca', n), A = F.amphi.campo, N = p.grid.n; let worst = 0, wat = '';
+        const rowY = (u, v) => { let y = null; for (const e of F.els) if (e.k === 'bloco' && (e.piso || e.degrau) && e.y0 === A.Hw && u >= e.r[0] && u <= e.r[2] && v >= e.r[1] && v <= e.r[3]) y = Math.max(y ?? 0, e.y1); return y ?? A.Hw; };
+        for (let k = 0; k < N * N; k++) { if (!p.reach[1][k]) continue; const x = (k % N + 0.5) * CS, z = (Math.floor(k / N) + 0.5) * CS; const fy = rowY(x, z);
+          if ([[0.13, 0], [-0.13, 0], [0, 0.13], [0, -0.13]].some(([dx, dz]) => rowY(x + dx, z + dz) !== fy)) continue; const d = In.floorYOf(p, 1, x, z) - fy; if (Math.abs(d) > Math.abs(worst)) { worst = d; wat = `(${x.toFixed(2)}, ${z.toFixed(2)})`; } }
+        if (Math.abs(worst) > 0.01) out.push(`${tag}: o chão das arquibancadas a ${worst.toFixed(2)} m da forma em ${wat}`);
+        said.push(`n ${n}: ${got.length} assentos nos muros (o chão a ${worst.toFixed(3)} m da forma), ${marksOk(p, 'assistir')} em pé nos campos, ${posts + marksOk(p, 'atuar')} jogadores; os lances de ${fl.map(q => `${q.slope}°`).join(', ')}`); }
+    }
+    const tmax = Math.max(...times); if (tmax > 400) out.push(`a planta levou ${tmax.toFixed(0)} ms (o alvo: 400)`);
+    ok('H3 as plantas do campo de bola: nos quatro lados e nos três tamanhos, sem falha, todo assento alcançado, os jogadores e quem assiste, o tempo', !out.length, out.slice(0, 4).join(' · ') || `${said.join(' · ')}; a maior em ${tmax.toFixed(0)} ms`);
+  }
+  // ---------------------------------------------------------------- H4 the feet in the ball court, on a blank world
+  {
+    const S = G.newState(7); S.H.fill(4); S.type.fill(G.T.GRASS); if (S.biome) S.biome.fill(0); S.clock = 0; S.day = 30; S.time = 0.3; G.S = S; G.newWorld();
+    const TL = Sp.TILE; const out = [], said = [];
+    for (const n of TSIZES) {
+      const def = G.BDEF.teatro; const b = { id: 94001 + n, type: 'teatro', style: 'asteca', esc: stepOf('teatro', n), x: 12, y: 12, w: n, h: n, built: true, progress: 1, hp: def.hp || 100, maxHp: def.hp || 100, v: 0, set: 0, blocks: true, ip: null };
+      for (const o of [...S.buildings.values()]) { for (let yy = o.y; yy < o.y + o.h; yy++) for (let xx = o.x; xx < o.x + o.w; xx++) S.occ[yy * G.N + xx] = 0; S.buildings.delete(o.id); }
+      S.buildings.set(b.id, b); for (let yy = b.y; yy < b.y + b.h; yy++) for (let xx = b.x; xx < b.x + b.w; xx++) S.occ[yy * G.N + xx] = b.id;
+      b.ip = In.newRecord(b, { t: 'teatro', c: 'asteca', e: 3, k: 'ae', cl: 't', fl: 0, d: 1, w: 1, pw: 0, s: 'S', o: (1 << n) - 1, n });
+      const p = Sp.planNow(b); if (!p || !p.ok) { out.push(`n ${n}: sem planta`); continue; }
+      const F = Fo.of('teatro', 'asteca', n), A = F.amphi.campo, L = n * TL, pl = Sp.plinth(b); const q = A.stands.find(z => z.s > 0), f = q.flight, inner = q.room[0], a = A.aisles[0];
+      const rowY = (u, v) => { let y = A.Hw; for (const e of F.els) if (e.k === 'bloco' && (e.piso || e.degrau) && e.y0 === A.Hw && u >= e.r[0] && u <= e.r[2] && v >= e.r[1] && v <= e.r[3]) y = Math.max(y, e.y1); return y; };
+      const treads = F.els.filter(e => e.degrau && e.y0 === 0 && Math.abs(e.r[1] - f[1]) < 1e-6);
+      // (from the street to the field and the alley; up the front wall's flight; along the walk by the slope; up a stairway to the walk behind the rows)
+      const legs = [[0, [[A.cu, L + 0.8], [A.cu, q.vO + 1.0], [f[0] - 0.8, q.vO + 1.0], [f[0] - 0.8, A.cv], [A.cu - 2, A.cv], [f[0] - 0.8, A.cv], [f[0] - 0.8, q.vm]]], [0, [[f[0] + 0.05, q.vm], [f[2] - 0.05, q.vm]], 1],
+        [1, [[A.ua + 0.5, q.vm], [A.ua + 0.5, inner + 0.6], [a, inner + 0.6], [a, q.room[1] - 0.4], [a + 1.5, q.room[1] - 0.4]]]];
+      let worst = 0, at = '', step = 0, shut = 0, shutAt = '', pts = 0;
+      for (const [lv, path, onFlight] of legs) { let prev = null;
+        for (let k = 0; k < path.length - 1; k++) { const [u0, z0] = path[k], [u1, z1] = path[k + 1]; const len = Math.hypot(u1 - u0, z1 - z0), m = Math.max(1, Math.round(len / 0.02));
+          for (let j = 0; j <= m; j++) { const u = u0 + (u1 - u0) * j / m, z = z0 + (z1 - z0) * j / m; const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, lv, b.id);
+            const foot = ins ? ins.y : Math.max(Sp.footAt(X / TL, Z / TL), Sp.stepTop(X, Z)); pts++;
+            if (ins && !ins.walk) { shut++; if (!shutAt) shutAt = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; }
+            if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
+            if (!ins || !ins.shell) continue;
+            let want;
+            if (onFlight) { want = null; for (const e of treads) if (u >= e.r[0] && u <= e.r[2]) want = Math.max(want ?? 0, e.y1); if (want === null) continue; const d = foot - (pl.hi + want + Sp.FLOOR_UP); if ((d > 0.03 || d < -0.3) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) no lance`; } continue; }
+            want = lv === 0 ? A.yq : rowY(u, z); if (lv === 1 && [[0.18, 0], [-0.18, 0], [0, 0.18], [0, -0.18]].some(([dx, dz]) => rowY(u + dx, z + dz) !== want)) continue;
+            const d = foot - (pl.hi + want + Sp.FLOOR_UP); if (Math.abs(d) > 0.03 && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; } } } }
+      if (worst || step > In.BODY.step + 0.01) out.push(`n ${n}: os pés a ${worst.toFixed(2)} m da forma em ${at || '—'}, o maior degrau ${step.toFixed(2)} m`);
+      if (shut) out.push(`n ${n}: ${shut} pontos do caminho onde o corpo não passa (o primeiro ${shutAt})`);
+      said.push(`n ${n}: ${pts} pontos, o maior degrau ${step.toFixed(2)} m`);
+    }
+    ok('H4 os pés pelo campo de bola: da rua ao campo e à pista, subindo o lance do muro, pelo passeio e por uma escada até o alto das fileiras', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
+  }
+  // ---------------------------------------------------------------- H5 the world: each people raises its own, never the old one
+  {
+    const out = [], said = []; M.pronto('metropole'); const S = G.S;
+    const bad = what => { const q = globalThis.QA.check().filter(x => x.sev <= 2 || x.sys === 'monumental' || x.sys === 'escala'); if (q.length) out.push(`${what}: ${q.slice(0, 2).map(x => `${x.sys} S${x.sev} ${x.msg.slice(0, 90)}`).join(' · ')}`); };
+    const townOf = st => [...S.settlements.values()].filter(s => G.Civ.idOfFac(s.fac) === st).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+    for (const t in TYPES) for (const st of TYPES[t].peoples) { const set = townOf(st); if (!set) { out.push(`sem cidade ${st}`); continue; } const ids = G.Escala.choose(set, t).map(s => s.id);
+      if (ids.some(id => (G.Escala.steps(t).find(s => s.id === id) || {}).legado)) out.push(`${set.name} (${st}): os degraus de ${t} ${ids.join(', ')}`); else said.push(`${t} em ${set.name}: ${ids.join(', ')}`); }
+    // (the ball court by the god's hand in the Aztecs' biggest town: standing, living, saved and loaded, thrown down)
+    const set = townOf('asteca'); G.inSim++; let b; try { b = set && G.Village.handFound(set, 'teatro', 'monumental', { built: true, R: 60 }); } finally { G.inSim--; }
+    if (!b) out.push('a mão do deus não achou lote para o campo de bola'); else {
+      const p = In.plan(b); if (!p || !p.ok || b.style !== 'asteca' || b.w !== 10) out.push(`o campo de bola: ${b.style} ${b.w} casas, a planta ${p && p.ok}`);
+      const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`no mundo: ${fal.map(q => q.what).join('; ')}`);
+      bad('de pé'); M.viver(5); bad('vivendo'); const sig = p && p.sig; M.salvarCarregar(); const b2 = G.S.buildings.get(b.id), p2 = b2 && In.plan(b2); if (!p2 || p2.sig !== sig) out.push('depois do save, outra planta'); bad('carregado');
+      // (the checker: the stands a metre off the form's, and quiet again)
+      const plan0 = In.plan; let hit = []; In.plan = x => { const q = plan0(x); return x === b2 && q ? Object.assign({}, q, { levels: q.levels.map(l => (l.lv === 1 ? Object.assign({}, l, { y: l.y + 1 }) : l)) }) : q; };
+      try { hit = globalThis.QA.check().filter(q => q.sys === 'monumental'); } finally { In.plan = plan0; }
+      if (!hit.some(q => q.sev === 1 && q.msg.includes('arquibancadas'))) out.push('com as arquibancadas noutra altura o verificador calou'); bad('de volta');
+      G.inSim++; try { G.Village.damageBuilding(G.S.buildings.get(b.id), 1e6, 'quake'); } finally { G.inSim--; } bad('derrubado'); M.viver(1); bad('a ruína vivendo');
+      said.push(`o campo de bola em ${set.name}: #${b.id}, ${p && p.cap.watch} assentos; vivo, salvo e carregado; o verificador pega as arquibancadas noutra altura e cala de volta; derrubado: limpo`); }
+    if (!M.limpo()) { const e = M.erros(); out.push(`erros: ${JSON.stringify(e.mod)} ${e.console.slice(0, 2).join(' | ')}`); }
+    ok('H5 o mundo: cada povo funda o seu degrau grande, nunca o antigo; o campo de bola pela mão do deus em Tenochtitlan, de pé, vivendo, salvo e carregado, o verificador, derrubado', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
+  }
+  // ---------------------------------------------------------------- H6 the places' table of the ball court
+  {
+    const out = [], said = [];
+    for (const n of TSIZES) { const uses = ['assistir', 'atuar'], o = placesOf('asteca', n, uses, 'teatro'); if (o.err) { out.push(`n ${n}: ${o.err}`); continue; }
+      const none = uses.filter(u => !o.free[u]); if (!o.ok || none.length || o.dt > 400) out.push(`n ${n}: a tabela ${o.ok ? 'feita' : 'não feita'} em ${o.dt.toFixed(0)} ms${none.length ? `, sem lugar livre de ${none.join(', ')}` : ''}`);
+      said.push(`n ${n}: ${o.spots} lugares em ${o.dt.toFixed(0)} ms`); }
+    ok('H6 os lugares do campo de bola (In.places, a tabela da planta): feita a tempo, um lugar livre de assistir e de jogar', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
+  }
+}
+
+const TESTS = { A: testeA, C: testeC, E: testeE, H: testeH };
 const want = process.argv.slice(2).map(s => s.toUpperCase());
 for (const k of Object.keys(TESTS)) if (!want.length || want.includes(k)) TESTS[k]();
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'monumental: tudo PASSOU');
