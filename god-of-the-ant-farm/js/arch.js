@@ -192,6 +192,15 @@
     const n = Math.round(e * 6);
     for (let k = 1; k < n; k++) { const f = -e + 2 * e * k / n; ln(c, P(f, -e, 0.4), P(f, e, 0.4), lines || 'rgba(90,80,65,0.3)', 0.35); ln(c, P(-e, f, 0.4), P(e, f, 0.4), lines || 'rgba(90,80,65,0.3)', 0.35); }
   }
+  // a flight up a front from its foot (x0..x1 at y0, z0) to its top (y1, z1), in steps as the 3D lays them (Forma's flight: no
+  // riser over 0.26 m — the god's painter's own, 'escada'): its ramp in the stair's light cl, then each riser a shade darker
+  // (cR) and each tread in the light
+  function flightSteps(c, x0, x1, y0, z0, y1, z1, cl, cR) {
+    poly(c, [P(x0, y0, z0), P(x1, y0, z0), P(x1, y1, z1), P(x0, y1, z1)], cl);
+    const m = Math.max(2, Math.ceil((z1 - z0) / 3.04 / 0.26 - 1e-9));
+    for (let k = 0; k < m; k++) { const ya = y0 + (y1 - y0) * k / m, yb = y0 + (y1 - y0) * (k + 1) / m, za = z0 + (z1 - z0) * k / m, zb = z0 + (z1 - z0) * (k + 1) / m;
+      poly(c, [P(x0, ya, za), P(x1, ya, za), P(x1, ya, zb), P(x0, ya, zb)], cR); poly(c, [P(x0, ya, zb), P(x1, ya, zb), P(x1, yb, zb), P(x0, yb, zb)], cl); }
+  }
   // stepped pyramid: stairs on the front (+y) face
   function stepPyr(c, p, e0, e1, n, lh, cl, cr, ct, stair) {
     for (let k = 0; k < n; k++) {
@@ -201,9 +210,7 @@
       ln(c, P(e, e, (k + 1) * lh - 0.8), P(e, -e, (k + 1) * lh - 0.8), 'rgba(0,0,0,0.12)', 0.5);
     }
     const H = n * lh, w = stair || 0.22;
-    poly(c, [P(-w, e0 + 0.02, 0), P(w, e0 + 0.02, 0), P(w, e1, H), P(-w, e1, H)], shade(cl, 1.08));
-    c.strokeStyle = 'rgba(0,0,0,0.18)'; c.lineWidth = 0.3;
-    for (let k = 1; k < n * 3; k++) { const f = k / (n * 3); const y = e0 + (e1 - e0) * f, z = H * f; ln(c, P(-w, y, z), P(w, y, z), 'rgba(0,0,0,0.18)', 0.3); }
+    flightSteps(c, -w, w, e0 + 0.02, 0, e1, H, shade(cl, 1.08), shade(cl, 1.08 * 0.86)); // (its steps as the 3D lays them)
     poly(c, [P(-w - 0.06, e0 + 0.02, 0), P(-w, e0 + 0.02, 0), P(-w, e1, H), P(-w - 0.06, e1, H)], shade(cr, 0.9));
     poly(c, [P(w, e0 + 0.02, 0), P(w + 0.06, e0 + 0.02, 0), P(w + 0.06, e1, H), P(w, e1, H)], shade(cr, 0.9));
     return H;
@@ -977,8 +984,7 @@
       top(c, -e + 0.1, -e + 0.1, e - 0.1, e - 0.1, 12, '#d8d0bc');
       c.strokeStyle = 'rgba(80,70,55,0.35)'; c.lineWidth = 0.5; for (let k = 0; k < 6; k++) { const x = -e + 0.2 + k * 0.5; ln(c, P(x, e, 1), P(x + 0.1, e - 0.05, 10), 'rgba(80,70,55,0.35)', 0.5); }
       // (the flight up its front, steep, of the rock's own stone: Forma's — its plan's way up)
-      poly(c, [P(-0.2, e + 0.02, 0), P(0.2, e + 0.02, 0), P(0.2, e - 0.1, 12), P(-0.2, e - 0.1, 12)], '#c8bea8');
-      for (let k = 1; k < 12; k++) { const f = k / 12; const y = e + 0.02 - 0.12 * f; ln(c, P(-0.2, y, 12 * f), P(0.2, y, 12 * f), 'rgba(80,70,55,0.3)', 0.3); }
+      flightSteps(c, -0.2, 0.2, e + 0.02, 0, e - 0.1, 12, '#c8bea8', shade('#c8bea8', 0.86));
       const z0 = 12;
       box(c, -1.1, -0.9, 1.1, 0.9, z0, z0 + 1.2, p.base[0], p.base[1], p.base[2]); box(c, -1.05, -0.85, 1.05, 0.85, z0 + 1.2, z0 + 2.4, p.base[0], p.base[1], p.base[2]);
       colonnade(c, p, -1.0, -0.8, 1.0, 0.8, z0 + 2.4, z0 + 22, 8, 0.045, 'B');
@@ -1007,7 +1013,7 @@
     // classic: a great ziggurat with a golden eye
     let z = 0; const lv = [[1.45, 10], [1.1, 10], [0.78, 10], [0.46, 12]];
     for (const [e, h] of lv) { box(c, -e, -e, e, e, z, z + h, p.wl, p.wr, p.top); ln(c, P(-e, e, z + h - 1), P(e, e, z + h - 1), 'rgba(0,0,0,0.12)', 0.6); z += h; }
-    poly(c, [P(-0.2, 1.47, 0), P(0.2, 1.47, 0), P(0.2, 0.78, z - 12), P(-0.2, 0.78, z - 12)], shade(p.wl, 1.05)); // (up to the third's top: Forma's)
+    flightSteps(c, -0.2, 0.2, 1.47, 0, 0.78, z - 12, shade(p.wl, 1.05), shade(p.wl, 1.05 * 0.86)); // (up to the third's top, in its steps: Forma's)
     const e = P(0, 0.46, z - 6); c.fillStyle = '#d9b34a'; c.beginPath(); c.ellipse(e[0], e[1], 3.6, 2, 0, 0, TAU); c.fill(); c.fillStyle = '#6a4a1a'; c.beginPath(); c.arc(e[0], e[1], 1.1, 0, TAU); c.fill();
     m.glow.push(e); m.glow.push(P(0, 0, z + 2));
     return z + 8;
@@ -1437,8 +1443,11 @@
   // (the god's shade of any colour — darker under 1, lighter over — and the mix of two, as hex: the kit shades hex)
   const tone = (s, f) => { const r = rgbOf(s); return hexOf(f < 1 ? r.map(v => v * f) : r.map(v => v + (255 - v) * (f - 1))); };
   const mixc = (a, b, t) => { const A0 = rgbOf(a), B0 = rgbOf(b); return hexOf([0, 1, 2].map(i => A0[i] + (B0[i] - A0[i]) * t)); };
-  // (a form's colour as the 3D reads it — Build3D's formCtx: a name of the people's palette, 'wl', 'roof1', 'col0' —, or the god's own)
+  // (a form's colour as the 3D reads it — Build3D's formCtx: a name of the people's palette, 'wl', 'roof1', 'col0' —, or the god's own.
+  // A name the palette has whole is that colour — 'trim2', 'acc2': the second band, not the first band's —; else a list's
+  // name and a place in it, L-564)
   const fcol = (p, s) => { if (Array.isArray(s)) return hexOf(s); if (typeof s !== 'string') return '#8a8478'; if (s[0] === '#') return s.length === 4 ? hexOf(rgbOf(s)) : s; if (s.startsWith('rgb')) return hexOf(rgbOf(s));
+    if (typeof p[s] === 'string') return p[s];
     const m = s.match(/^([a-z]+)(\d)?$/); if (!m) return '#8a8478'; const v = p[m[1]]; return (m[2] !== undefined ? (Array.isArray(v) ? v[+m[2]] : v) : (Array.isArray(v) ? v[0] : v)) || '#8a8478'; };
   // (gold: what the god lights at night — an eye, a capstone, a statue)
   const golden = s => { const [r, g, b] = rgbOf(s); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); if (mx < 150 || mx - mn < 70 || mx !== r) return false; const h = 60 * (g - b) / (mx - mn); return h >= 28 && h <= 62; };
@@ -1582,7 +1591,9 @@
               if (e.friso) { const z = z1 - Z(e.friso); ln(c, P(cx - q, cy + q, z), P(cx + q, cy + q, z), 'rgba(0,0,0,0.12)', 0.5); ln(c, P(cx + q, cy + q, z), P(cx + q, cy - q, z), 'rgba(0,0,0,0.12)', 0.5); } }, j); });
           break;
         }
-        // a flight from its foot a to its top b, w wide (its ramps, its painted line): the god's stair of the stepped pyramid
+        // a flight from its foot a to its top b, w wide (its ramps, its painted line): the god's stair of the stepped pyramid — its
+        // steps as the 3D lays them (Fo.flight: no riser over 0.26 m), each tread in the stair's light and each riser a shade
+        // darker where it faces the view; a flight that climbs toward the view shows its treads only
         case 'escada': {
           const au = T(e.a[0]), av = T(e.a[1]), az = Z(e.a[2]), bu = T(e.b[0]), bv = T(e.b[1]), bz = Z(e.b[2]);
           const ru = bu - au, rv = bv - av, rl = Math.hypot(ru, rv) || 1; const wu = Math.hypot(ru, rv) > 1e-6 ? -rv / rl : 1, wv = Math.hypot(ru, rv) > 1e-6 ? ru / rl : 0;
@@ -1593,7 +1604,10 @@
           const strip = (s0, s1, cc) => poly(c, [P(...S(s0, 0), az), P(...S(s1, 0), az), P(...S(s1, 1), bz), P(...S(s0, 1), bz)], cc);
           put(q, () => {
             strip(-hw, hw, cl);
-            const n = Math.max(2, Math.round((bz - az) / 2.5)); for (let k = 1; k < n; k++) { const f = k / n, z = az + (bz - az) * f; ln(c, P(...S(-hw, f), z), P(...S(hw, f), z), 'rgba(0,0,0,0.18)', 0.3); }
+            const n = Math.max(2, Math.ceil((e.b[2] - e.a[2]) / 0.26 - 1e-9)), cR = tone(cl, 0.86), seen = (au - bu) + (av - bv) > 1e-9;
+            for (let k = 0; k < n; k++) { const f0 = k / n, f1 = (k + 1) / n, z0 = az + (bz - az) * f0, z1 = az + (bz - az) * f1;
+              if (seen) poly(c, [P(...S(-hw, f0), z0), P(...S(hw, f0), z0), P(...S(hw, f0), z1), P(...S(-hw, f0), z1)], cR);
+              poly(c, [P(...S(-hw, f0), z1), P(...S(hw, f0), z1), P(...S(hw, f1), z1), P(...S(-hw, f1), z1)], cl); }
             if (al) { strip(-hw - al, -hw, cs); strip(hw, hw + al, cs); }
             if (e.divisor) { const d = e.divisor; strip(d.u / 4 - d.w / 8, d.u / 4 + d.w / 8, col(d.cor)); }
           });
@@ -1985,6 +1999,7 @@
     return Art.sprite(key, w, h, ax, ay, (c, m) => A.formPaint(c, m, F, st, { noDoor }), true);
   };
   A.formKey = (type, st, n, noDoor) => 'f-' + type + st + n + (noDoor ? '|c' : '');
+  A.formCol = (st, s) => fcol(PAL[st] || PAL.classico, s); // (for the proofs: a form's colour as the god's painter reads it, L-564)
   // the top of the god's picture of a step straight over the anchor — the middle of its lot —, px: the highest point of its
   // solid parts on that column of the screen (where a thing perches on the building: a stork's nest — over a palace of
   // courtyards, its back wing, not the courtyard), the same in the four views (the picture turns only by its mirror, and this

@@ -134,21 +134,21 @@ for (const s of small.slice(0, process.env.CAT ? 999 : 12)) console.log('   · '
   ok('o poço da escada grande vazio (L-562)', nW >= 4 && !bad.length, `${nW} poços de escada grande no palácio de 6 e no Coliseu de 10, todos vazios na grade do andar de cima; as plantas armam${bad.length ? ' — ' + bad.join('; ') : ''}`);
 }
 // (T-409: a flight whose foot has no floor to stand on — its first step 10 cm from the wall —: the plan says so first, not the
-// next piece that found no place for want of a way, nor the room above not reached. The tavern's flights moved against the wall
-// for the proof only)
+// next piece that found no place for want of a way, nor the room above not reached. The inn's flights (the tavern's bigger
+// steps, the family estalagem.andar) moved against the wall for the proof only, by its family's own builder)
 {
-  const orig = In.innBuild; const got = [];
-  In.innBuild = P => { const st = P.stair; P.stair = function (kind, lv0, lv1, r, du, dv, hole, o) {
+  const F = In.FAMS['estalagem.andar']; const orig = F && F.build; const got = [];
+  if (F) F.build = P => { const st = P.stair; P.stair = function (kind, lv0, lv1, r, du, dv, hole, o) {
     if (kind === 'escada') { const I = this.inner(); const d = du > 0 ? I[0] + 0.1 - r[0] : du < 0 ? I[2] - 0.1 - r[2] : dv > 0 ? I[1] + 0.1 - r[1] : I[3] - 0.1 - r[3];
       const sh = q => (du ? [q[0] + d, q[1], q[2] + d, q[3]] : [q[0], q[1] + d, q[2], q[3] + d]); r = sh(r); if (hole) hole = sh(hole); }
     return st.call(this, kind, lv0, lv1, r, du, dv, hole, o); }; return orig(P); };
   try {
-    for (const [c, n, s] of [['romano', 3, 'S'], ['grego', 4, 'E'], ['nordico', 3, 'W']]) {
-      const rec = { v: 4, f: 'forma.salao', r: 0, t: 'taverna', u: In.TYPES.taverna.use, s, o: 0, c, e: 5, k: 'ae', cl: 't', fl: 0, d: 2, w: 1, pw: 0, h: [], m: 0, fx: [], dr: {}, n };
-      const p = In.makeFam({ id: 777 + n, type: 'taverna', x: 10, y: 10, w: n, h: n }, rec, 'forma.salao'); got.push([`${c}/${n}/${s}`, p.ok, (p.errs || [])[0] || '']);
+    if (F) for (const [c, n, s] of [['romano', 3, 'S'], ['grego', 4, 'E'], ['nordico', 3, 'W']]) {
+      const rec = { v: 4, f: 'estalagem.andar', r: 0, t: 'taverna', u: In.TYPES.taverna.use, s, o: 0, c, e: 5, k: 'ae', cl: 't', fl: 0, d: 2, w: 1, pw: 0, h: [], m: 0, fx: [], dr: {}, n };
+      const p = In.makeFam({ id: 777 + n, type: 'taverna', x: 10, y: 10, w: n, h: n }, rec, 'estalagem.andar'); got.push([`${c}/${n}/${s}`, p.ok, (p.errs || [])[0] || '']);
     }
-  } finally { In.innBuild = orig; }
-  ok('o pé da escada sem chão (T-409)', got.length === 3 && got.every(([, a, e]) => !a && /^o pé da escada sem chão \(piso 0\)$/.test(e)), got.map(([k, a, e]) => `${k}: ${a ? 'ARMA' : e}`).join(' · '));
+  } finally { if (F) F.build = orig; }
+  ok('o pé da escada sem chão (T-409)', got.length === 3 && got.every(([, a, e]) => !a && /^o pé da escada sem chão \(piso 0\)$/.test(e)), got.length ? got.map(([k, a, e]) => `${k}: ${a ? 'ARMA' : e}`).join(' · ') : 'sem a família estalagem.andar');
 }
 // (a ratchet: the count the grammar has reached — it may only go down; brought down, the ceiling comes down with it, and the
 // goal is zero. Raised by a change, the change is wrong — unless the leader agrees and the commit says why)

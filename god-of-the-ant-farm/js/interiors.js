@@ -307,7 +307,10 @@
   ].map((id, k) => [id, k + 7]));
   const famSeed = id => { const k = FAMSEED.get(id); if (k !== undefined) return k; if (!FAMS[id]) return 7;
     let h = 0x811C9DC5; const s = String(id); for (let q = 0; q < s.length; q++) { h ^= s.charCodeAt(q); h = Math.imul(h, 0x01000193); } return h | 0; };
-  function seedOf(id, fam, attempt) { return (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(famSeed(fam), 0x85EBCA6B) ^ Math.imul(attempt + 3, 0xC2B2AE35)) | 0; }
+  // (In.SALT: a salt for the proofs only — the grammars proved on other dice, T-436 —, never set by the game: at 0 nothing
+  // changes, the same dice as ever)
+  In.SALT = 0;
+  function seedOf(id, fam, attempt) { return (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(famSeed(fam), 0x85EBCA6B) ^ Math.imul(attempt + 3, 0xC2B2AE35) ^ In.SALT) | 0; }
   // (two sets of dice: the shell's — one for the building and its family, the same in every attempt: the shell, its roof, its
   // floors, its outside walls and what opens in them are what is seen from afar, and never change with how the inside went
   // — and each attempt's own for the inside, from P.inside() on)
@@ -2414,6 +2417,9 @@
     const rec = b.ip; const m0 = openTiles(b, rec.s); const shut = !(m0 & (rec.o || m0)) || !m0 || !frontOpen(b, In.shellOf(b));
     if (!shut && entryOk(b, rec)) { sayEntry(b, true); return; }
     let to = fitSide(b, rec); const ok = !!to; let moved = false;
+    // (where it fits on none: the first side whose door — the shell's for that side: a form's gate stands where the form has it,
+    // not on any of the side's open tiles — opens onto the biggest ground; else the first side open, as before: L-514)
+    if (!to && shut) for (const s of SIDES) { const m = openTiles(b, s); if (m && frontOpen(b, shellFor(b, s === rec.s && m === rec.o ? rec : Object.assign({}, rec, { s, o: m })))) { to = { s, o: m }; break; } }
     if (!to && shut) for (const s of SIDES) { const m = openTiles(b, s); if (m) { to = { s, o: m }; break; } }
     if (to && (to.s !== rec.s || to.o !== rec.o)) { rec.s = to.s; rec.o = to.o; rec.r++; fact(b, 'reforma', 'porta ' + to.s); moved = true; }
     // (said: fits, or fits on no side open; a door left on a street shut all round says nothing)
