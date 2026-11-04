@@ -266,10 +266,14 @@
       const [cx, cy] = G.Village.center(b); const base = W.maxH(b.x, b.y, b.w, b.h);
       const [wx, wy] = R.proj(cx, cy, base);
       const [sx, sy] = R.worldPxToScreen(wx, wy);
-      const hw = (b.w + b.h) * 8 * cam.zoom, top = (BH[b.type] || 20) * cam.zoom, bot = (b.w + b.h) * 4 * cam.zoom;
-      if (px > sx - hw && px < sx + hw && py > sy - top - bot * 0.6 && py < sy + bot) {
-        // favour the diamond footprint for flat things
-        const dep = G.Render.depth(cx, cy) + (b.w + b.h) / 2;
+      // (as tall as it is drawn: a step of another size than its type's classic one — D-106 — to the top of its form, all over
+      // its lot — its back as high as its front —; the others to their roof over their middle)
+      const big = G.Arch && G.Arch.sized && G.Arch.sized(b.type, b.w) && R.siteH; const tall = big ? R.siteH(b) : (BH[b.type] || 20);
+      const hw = (b.w + b.h) * 8 * cam.zoom, top = tall * cam.zoom, bot = (b.w + b.h) * 4 * cam.zoom;
+      if (px > sx - hw && px < sx + hw && py > sy - top - bot * (big ? 1 : 0.6) && py < sy + bot) {
+        // (of two under the pointer, the one drawn over the other: the render's order — the front corner of a big lot is far
+        // ahead of a house beside it that is drawn over it, D-114)
+        const dep = R.bkey ? R.bkey(b) : G.Render.depth(cx, cy) + (b.w + b.h) / 2;
         if (dep > bdep) { bdep = dep; bb = b; }
       }
     }

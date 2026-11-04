@@ -25,7 +25,10 @@
 //     clássico, a obra de antes; pintar a obra não muda o mundo.
 // (g) A memória dos desenhos grandes (Art.BIG): os desenhos sem acaso dos degraus guardados até um teto, o desenhado há mais
 //     tempo solto primeiro, nunca um desenhado neste quadro ou no anterior; solto, pintado de novo igual; os desenhos à mão nunca.
-//   node qa/visual/forma-deus.js [a,b,c,d,e,f,g]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
+// (h) O que mais o deus vê de um lote grande (L-531): o ponteiro escolhe o degrau de 10 casas até o alto da forma (o fundo dele
+//     também) e a casa desenhada diante da face dele, não o degrau; o nome dele, quando fica pronto, sobre o alto; um fogo no
+//     canto do fundo ou no meio do lote acende o prédio; o mundo igual.
+//   node qa/visual/forma-deus.js [a,b,c,d,e,f,g,h]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
 //   VERB=1  cada tipo e povo                   JSON=arquivo  os números
 'use strict';
 const path = require('path'), fs = require('fs');
@@ -315,6 +318,35 @@ if (want('g')) {
     const hand = Art.building('palacio_colossal', 0, 'classico', null, false); const okH = !!hand && !hand.big;
     ok('g: a memória dos desenhos grandes, com teto', okA && okD && okC && okE && same && okH, log.join('; ') + `; o Coliseu pintado de novo: ${same ? 'a mesma pintura' : 'OUTRA'}; o desenho à mão do palácio colossal (${hand ? hand.c.width + ' × ' + hand.c.height : '-'} px): ${okH ? 'fora do teto' : 'contado!'}; ${Art.BIG.dropped - d0} soltos`);
   } finally { global.document = doc0; Art.BIG.mb = mb0; Art.frame = f0; Art.clear(); }
+}
+
+// ------------------------------ (h) what else the god sees of a big lot ------------------------------
+// (the 2D that read its type's size, not its lot's — L-531: the pointer picks the step of 10 tiles to the top of its form, and
+// the house drawn over its face, not the step whose front corner is far ahead; its name, when it is raised, over its top, not on
+// its walls; a fire on the far corner of its lot is a fire in it. Nothing of the world written)
+if (want('h')) {
+  F.blank(); const R = G.Render, S = G.S, W = G.W, cam = R.cam; const b = putBig('maravilha', 'romano', 6600, N10); const h = putBig('house', 'romano', 6601, 1, b.x + b.w, b.y + 4);
+  const cam0 = { x: cam.x, y: cam.y, zoom: cam.zoom }; const out = [];
+  try {
+    const s0 = JSON.stringify([b, h]) + JSON.stringify(S.rng || null);
+    const [cx, cy] = G.Village.center(b); const base = W.maxH(b.x, b.y, b.w, b.h); const a = R.proj(cx, cy, base); cam.x = a[0]; cam.y = a[1]; cam.zoom = 1.25;
+    const scr = (x, y, z) => { const p = R.proj(x, y, base); return R.worldPxToScreen(p[0], p[1] - (z || 0)); };
+    // (1) the pointer: on the top of its back, under its form's top and over its type's 20 px; on the house before its face
+    const top = R.siteH(b); const pTop = scr(cx - b.w / 2 + 0.6, cy - b.h / 2 + 0.6, top - 6), pHouse = scr(h.x + 0.5, h.y + 0.5, 8);
+    const g1 = G.Main.pick(pTop[0], pTop[1]), g2 = G.Main.pick(pHouse[0], pHouse[1]);
+    out.push(`o alto do fundo (${(top - 6).toFixed(0)} px): ${g1 === b ? 'o Coliseu' : g1 ? g1.type : 'nada'}`, `a casa diante da face: ${g2 === h ? 'a casa' : g2 === b ? 'o Coliseu' : g2 ? g2.type : 'nada'}`);
+    // (2) its name when it is raised: over its top (lifted by its form's height); a classic one's where it was
+    G.FX.floaters.length = 0; G.FX.complete(cx, cy, b); const f1 = G.FX.floaters[G.FX.floaters.length - 1];
+    const c3 = putBig('maravilha', 'romano', 6602, 3, 60, 60); G.FX.complete(61.5, 61.5, c3); const f3 = G.FX.floaters[G.FX.floaters.length - 1]; F.drop(c3); G.FX.floaters.length = 0;
+    const okN = !!f1 && f1.z + f1.lift >= top && !!f3 && f3.lift === 0 && f3.z === 16; out.push(`o nome dele: ${f1 ? (f1.z + f1.lift).toFixed(0) : '-'} px sobre o chão (o alto: ${top.toFixed(0)}); o de 3 casas: ${f3 ? f3.z + f3.lift : '-'} px, como era`);
+    // (3) a fire on the far corner of its lot, and in its middle; a house's first tile, as before
+    const fi = (x, y) => W.idx(x, y); S.fire[fi(b.x + b.w - 1, b.y + b.h - 1)] = 0.5; const fc = R.fireOn(b); S.fire[fi(b.x + b.w - 1, b.y + b.h - 1)] = 0;
+    S.fire[fi(b.x + 5, b.y + 5)] = 0.5; const fm = R.fireOn(b); S.fire[fi(b.x + 5, b.y + 5)] = 0; const f0 = R.fireOn(b);
+    S.fire[fi(h.x, h.y)] = 0.5; const fhh = R.fireOn(h); S.fire[fi(h.x, h.y)] = 0;
+    out.push(`fogo no canto do fundo: ${fc ? 'aceso' : 'apagado'}, no meio: ${fm ? 'aceso' : 'apagado'}, sem fogo: ${f0 ? 'aceso' : 'apagado'}; a casa: ${fhh ? 'acesa' : 'apagada'}`);
+    const s1 = JSON.stringify([b, h]) + JSON.stringify(S.rng || null);
+    ok('h: o que mais o deus vê de um lote grande', g1 === b && g2 === h && okN && fc && fm && !f0 && fhh && s0 === s1, out.join('; ') + (s0 === s1 ? '; o mundo igual' : '; o mundo MUDOU'));
+  } finally { cam.x = cam0.x; cam.y = cam0.y; cam.zoom = cam0.zoom; F.drop(h); F.drop(b); }
 }
 
 if (process.env.JSON) fs.writeFileSync(process.env.JSON, JSON.stringify(json));

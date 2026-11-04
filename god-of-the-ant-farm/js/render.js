@@ -2544,6 +2544,11 @@
     if (q === undefined) q = R.quarter(); return s === FL[q] ? { m: 1, back: false } : s === FR[q] ? { m: -1, back: false } : { m: m0, back: true };
   }
   R.doorView = doorView; // (for the proofs: { m: the mirror, back: drawn without its door } for a view's quarter)
+  // (a building on fire, for its glow: its first tile, or the one in from it; a lot of more than two tiles, its other corners and
+  // its middle too — D-106: a fire on the far side of a 10-tile lot is a fire in the building)
+  const fireOn = b => { const S = G.S, at = (x, y) => S.fire[W.idx(x, y)] > 0.15; if (at(b.x, b.y) || (b.w > 1 && at(b.x + 1, b.y + 1))) return true;
+    return b.w > 2 && (at(b.x + b.w - 1, b.y) || at(b.x, b.y + b.h - 1) || at(b.x + b.w - 1, b.y + b.h - 1) || at(b.x + (b.w >> 1), b.y + (b.h >> 1))); };
+  R.fireOn = fireOn; // (for the proofs)
   function drawBuilding(b, sx, sy, t, nightF) {
     const S = G.S; const Art = G.Art;
     const def = G.BDEF[b.type];
@@ -2559,7 +2564,7 @@
       ctx.moveTo(a[0], a[1]); ctx.lineTo(bb[0], bb[1]); ctx.lineTo(c2[0], c2[1]); ctx.lineTo(c2[0], c2[1] + drop); ctx.lineTo(bb[0], bb[1] + drop); ctx.lineTo(a[0], a[1] + drop); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.moveTo(bb[0], bb[1]); ctx.lineTo(c2[0], c2[1]); ctx.lineTo(c2[0], c2[1] + drop); ctx.lineTo(bb[0], bb[1] + drop); ctx.closePath(); ctx.fill();
     }
-    const burning = S.fire[W.idx(b.x, b.y)] > 0.15 || (b.w > 1 && S.fire[W.idx(b.x + 1, b.y + 1)] > 0.15);
+    const burning = fireOn(b);
     if (b.type === 'campfire') { drawCampfire(b, sx, sy, t, nightF); return; }
     if (b.type === 'cemetery') { drawCemetery(b, sx, sy, t); return; }
     if (b.type === 'ruin') { drawRuin(b, sx, sy, t); return; }
@@ -3080,8 +3085,8 @@
       const p = proj(f.x, f.y, f.h);
       ctx.globalAlpha = Math.min(1, f.life / f.max * 2);
       ctx.font = `800 ${Math.round(9 * is)}px Nunito, sans-serif`;
-      ctx.lineWidth = 3 * is; ctx.strokeStyle = 'rgba(20,15,10,0.6)'; ctx.strokeText(f.text, p[0], p[1] - f.z);
-      ctx.fillStyle = f.c; ctx.fillText(f.text, p[0], p[1] - f.z);
+      ctx.lineWidth = 3 * is; ctx.strokeStyle = 'rgba(20,15,10,0.6)'; ctx.strokeText(f.text, p[0], p[1] - f.z - (f.lift || 0));
+      ctx.fillStyle = f.c; ctx.fillText(f.text, p[0], p[1] - f.z - (f.lift || 0)); // (lift: over a tall thing, in the god's view only)
     }
     ctx.globalAlpha = 1;
     // power preview
