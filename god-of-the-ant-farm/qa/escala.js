@@ -388,6 +388,14 @@ run('e19', () => {
   const sobra = v => v.set === set.id && v.age >= 18 && v.age <= 55 && !v.captive && !v.jail && !v.aboard && v.role !== 'guerreiro';
   let n = 0; for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (n >= luta) break; if (!sobra(v) || v.role === 'ator') continue; v.role = 'ator'; v.job = 0; sim(() => G.Vg.endTask(v)); n++; }
   sim(() => E.place(set)); const cast = Tt.actorsOf(b);
+  // (o camarote — D-125 —: quem governa e até cinco da corte de Roma — a família de quem governa, depois os nobres do povo (o
+  // grupo 'nobreza' do polity.js) —, descansados e com as moedas da entrada: até quatro no banco, o quinto nas fileiras)
+  const rei = G.Politics.ruler(G.Fac.get(set.fac));
+  const corte = [...S.villagers.values()].filter(v => v !== rei && v.set === set.id && v.age >= 16 && !v.captive && !v.jail && !v.aboard && v.role !== 'ator' && Tt.boxOf(v, b) === 'corte').sort((a, c) => a.id - c.id).slice(0, 5);
+  if (VERB) console.log('  a corte:', corte.map(v => `${v.name} #${v.id} ${v.grp || '-'}`).join(', '), '; quem governa:', rei.name, rei.set === set.id ? 'em Roma' : 'fora');
+  // (trazidos à porta do Coliseu — quem governa mora noutra cidade —, para chegarem nos jogos de hoje)
+  const porta = G.Vg.door(b); for (const v of [rei, ...corte]) { sim(() => G.Vg.endTask(v)); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); v.x = porta[0] + 1 + (v.id % 3); v.y = porta[1] + 1; v.path = null; D.make(E.coinRef(v), 'moedas', 5, { code: 'teste' }); }
+  let caixa = null, caixaSalvo = null; const lugar = v => { const p = In.placeOf(v); return p ? { use: p.use, kind: p.it ? p.it.kind : '-', st: p.st, pose: p.pose, quadril: Math.round((p.y + In.SIT_H) * 100) / 100 } : null; };
   S.time = Tt.EARLY - 0.02; S.weather.rain = 0; S.weather.storm = 0; S.time = Math.max(S.time, Tt.opensAt(b) - 0.01);
   let op = null; for (let k = 0; k < 40 && !op; k++) { M.viver(1); op = Tt.dia(b); }
   let salvo = null; // (o save no meio dos jogos: os lutadores de volta à areia, cada um no seu lugar de luta)
@@ -395,13 +403,25 @@ run('e19', () => {
   let mais = 0, quem = 0, naAreia = 0, nasFileiras = 0;
   for (let k = 0; k < 160 && Tt.dia(b); k++) {
     M.viver(1);
+    if (op.data.fase === 'portas' && !caixa) { caixa = { mandados: 0 }; for (const v of [rei, ...corte]) { const t = sim(() => Tt.visit(v, b)); if (t) caixa.mandados++; else if (VERB) console.log('  não foi aos jogos:', v.name, v.id, 'tarefa', v.task && v.task.type, 'moedas', E.purse(v), 'chega', G.W.reaches(v, ...G.Vg.door(b)), 'dentro', v.inside, 'dorme', v.sleeping); } }
+    if (VERB && caixa && k % 15 === 0) console.log(`  k${k} ${op.data.fase}:`, [rei, ...corte].map(v => `${v.name}#${v.id} ${v.task ? v.task.type + '/' + v.task.st : '-'} ${v.inside === b.id ? 'dentro ' + ((In.placeOf(v) || {}).use || '?') : 'fora'}`).join(' | '));
+    // (no camarote, quem governa e os da corte que vieram — um chamado do mundo pode levar algum antes —, depois de um passo dentro)
+    if (op.data.fase === 'peca' && caixa && !caixa.rei && rei.inside === b.id && corte.some(v => v.inside === b.id)) { const vieram = corte.filter(v => v.inside === b.id); caixa = Object.assign(caixa, { rei: lugar(rei), corte: vieram.map(lugar), ids: vieram.map(v => v.id) }); }
     if (op.data.fase === 'portas' || op.data.fase === 'peca') for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (v.set !== set.id || v.age < 16 || v.role === 'ator' || v.sleeping || v.inside || (v.task && (v.task.type === 'teatro' || (v.task.pri || 0) >= 1))) continue; if (sim(() => Tt.visit(v, b))) quem++; }
     if (op.data.fase === 'peca') { let fi = 0, ar = 0; for (const v of S.villagers.values()) { if (v.inside !== b.id) continue; const p = In.placeOf(v); if (p && p.use === 'assistir') fi++; if (p && p.use === 'lutar') ar++; }
       mais = Math.max(mais, Object.keys(op.data.plateia).length); nasFileiras = Math.max(nasFileiras, fi); naAreia = Math.max(naAreia, ar);
-      if (ar && !salvo) { const id = b.id, oid = op.id; salva(); b = S.buildings.get(id); op = G.Act.get(oid); M.viver(1);
+      if (ar && !salvo) { const id = b.id, oid = op.id; const antes = caixa && caixa.rei; salva(); b = S.buildings.get(id); op = G.Act.get(oid); M.viver(1);
+        if (antes) caixaSalvo = { rei: lugar(S.villagers.get(rei.id)), corte: caixa.ids.map(id => lugar(S.villagers.get(id))) };
         const lut = Object.keys(op.data.atores).map(k => S.villagers.get(+k)).filter(Boolean); salvo = { ar, usos: lut.map(v => (v.task && v.task.use) || '-'), naAreia: lut.filter(v => { const p = In.placeOf(v); return p && p.use === 'lutar'; }).length }; } }
   }
   ok('e19g o save no meio dos jogos', !!salvo && salvo.naAreia > 0 && salvo.usos.every(u => u === 'lutar'), salvo ? `${salvo.ar} na areia antes do save; depois, os lutadores com a tarefa de ${[...new Set(salvo.usos)].join(', ')} e ${salvo.naAreia} num lugar de luta` : 'sem save (ninguém na areia)');
+  // (o camarote: quem governa sentado no trono, o quadril no assento de 0,5 m; até quatro da corte no banco, sentados, quem
+  // passa disso nas fileiras; e o save no meio dos jogos devolve cada um ao seu lugar)
+  const usos = L => L.map(q => (q ? q.use : '-'));
+  const okR = q => !!q && q.use === 'trono' && q.kind === 'trono-camarote' && q.st === 'sit' && q.pose === 'sentado' && Math.abs(q.quadril - 0.5) < 1e-6;
+  const okC = L => { const nc = Math.min(4, L.length); return L.length > 0 && usos(L).filter(u => u === 'corte').length === nc && L.filter(q => q && q.use === 'corte').every(q => q.kind === 'banco-corte' && q.st === 'sit') && usos(L).filter(u => u === Tt.seatUse(b)).length === L.length - nc; }; // (até quatro no banco; quem passa disso, nas fileiras)
+  ok('e19h o camarote: quem governa no trono, a corte no banco', !!caixa && okR(caixa.rei) && okC(caixa.corte), caixa && caixa.rei ? `${rei.name} no ${caixa.rei.kind} (${caixa.rei.use}, ${caixa.rei.pose}, o quadril a ${caixa.rei.quadril} m); a corte (${caixa.corte.length} dos ${corte.length} chamados vieram): ${usos(caixa.corte).join(', ')}` : `${caixa ? caixa.mandados : 0} de ${1 + corte.length} mandados aos jogos; o camarote não encheu`);
+  ok('e19i o save no meio dos jogos devolve o camarote', !!caixaSalvo && okR(caixaSalvo.rei) && okC(caixaSalvo.corte), caixaSalvo ? `depois do save: ${caixaSalvo.rei ? caixaSalvo.rei.use : '-'}; a corte: ${usos(caixaSalvo.corte).join(', ')}` : 'sem save');
   M.viver(2); // (os bebês no colo saem com quem os carrega, no passo seguinte)
   const lista = [...S.villagers.values()].filter(v => v.inside === b.id); const dentro = lista.length;
   if (VERB || dentro) console.log('  lá dentro:', lista.map(v => { const c = v.carrier && S.villagers.get(v.carrier); return `${v.id} ${v.role} ${v.task ? v.task.type + '/' + v.task.st + '/' + (v.task.use || '') : '-'} colo ${v.carrier || 0}${c ? ' (' + c.role + ', dentro de ' + c.inside + ', ' + (c.task ? c.task.type : '-') + ')' : ''}`; }).join(' · '));
@@ -411,15 +431,17 @@ run('e19', () => {
 });
 
 // ------------------------------ e21: o campo guardado para a obra grande (D-121) ------------------------------
-// (num mundo novo, a terra ainda aberta: a capital que vira cidade guarda o lote do maior degrau da sua obra grande; as buscas o
-// deixam de fora; o save; o deus põe um poço nele (solta, e outro se guarda); a cidade que perde o nível; o meteoro; as pedras do
-// lote quebradas para a obra fundada nele; a cidade que some; o verificador)
+// (num mundo novo, a capital no nível da guarda e um chão aplainado pela prova perto dela — qa/guarda-lib.js, a mesma que as
+// provas do V usam —, a guarda é a do jogo, V.reservaDia: a prova não depende de onde a terra sobra no rumo do mundo, T-448. As
+// buscas o deixam de fora; o save; o deus põe um poço nele (solta; tirado o poço, a cidade guarda de novo); a cidade que perde
+// o nível; o fogo passa; as pedras do lote quebradas para a obra fundada nele; noutra capital, o deus afoga o meio do lote; a
+// cidade que some; o verificador)
+const GL = require('./guarda-lib.js');
 run('e21', () => {
   M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4, temper: 'normal' }); S = G.S; V = G.Village; Es = G.Escala; D = G.Depot; M.saltar(3);
-  const caps = [...new Set([...S.factions.values()].map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
-  const set = caps.find(s => V.resWork(s)); if (!ok('e21a uma capital com obra grande', !!set, set ? `${set.name} (${G.Civ.idOfFac(set.fac)}): ${V.resWork(set).type} ${V.resWork(set).steps.map(s => s.n).join('/')}` : 'nenhuma')) return;
-  // (a capital no nível da guarda — o que ela guardou no salto, se guardou, a prova solta para vê-la guardar)
-  const t0 = set.tier; set.tier = Math.max(3, V.RES_TIER); if (set.urb) set.urb.res = null; const h0 = marca(); const r = sim(() => V.reservaDia(set)); const R = V.reserva(set);
+  const h0 = marca(); const g = GL.guarda(G, { provoca: true }); const set = g && S.settlements.get(g.set);
+  if (!ok('e21a uma capital no nível da guarda, num chão aplainado', !!set, set ? `${set.name} (${G.Civ.idOfFac(set.fac)}, nível ${g.tier} → ${set.tier}): ${V.resWork(set).type} ${V.resWork(set).steps.map(s => s.n).join('/')}` : 'nenhuma capital guardou')) return;
+  const R = V.reserva(set);
   let livre = !!R; if (R) for (let y = R.y; y < R.y + R.n; y++) for (let x = R.x; x < R.x + R.n; x++) { const o = S.occ[y * G.N + x] && S.buildings.get(S.occ[y * G.N + x]); if (o && !(o.set === set.id && V.OPEN[o.type] && !G.BDEF[o.type].housing)) livre = false; }
   ok('e21b a cidade guarda o lote', !!R && R.n === Es.steps(R.type).find(s => s.id === R.esc).n && livre && linhas(h0, /guardou um campo/).length > 0, R ? `${R.type}/${R.esc}: ${R.n} × ${R.n} em ${R.x},${R.y}, a ${G.dist(R.x + R.n / 2, R.y + R.n / 2, set.cx, set.cy).toFixed(0)} casas; «${(linhas(h0, /guardou/)[0] || { txt: '-' }).txt}»` : 'nada guardado');
   if (!R) return;
@@ -429,25 +451,21 @@ run('e21', () => {
   salva(); const set2 = cidade(set.name); const R2 = V.reserva(set2);
   ok('e21d o save', JSON.stringify(R2) === JSON.stringify(R), `depois do save: ${JSON.stringify(R2)}`);
   const c0 = checa(); ok('e21e verificador', c0.ok, c0.txt);
-  // (o deus põe um poço no lote: o lote se solta, e no dia seguinte a cidade guarda outro, sem o poço)
+  // (o deus põe um poço no lote: o lote se solta; o deus o tira, e no dia seguinte a cidade guarda de novo, sem prédio no lote)
   const poco = sim(() => V.addBuilding('well', R.x + 2, R.y + 2, set2.id, true)); const solto = V.reserva(set2), why = set2.urb.resGone && set2.urb.resGone.why;
-  set2.urb.resGone.day = S.day - 1; const R3 = sim(() => V.reservaDia(set2)); const sobre = R3 && poco.x >= R3.x && poco.x < R3.x + R3.n && poco.y >= R3.y && poco.y < R3.y + R3.n;
-  ok('e21f o deus põe um poço nele', !solto && why === 'ocupada' && !!R3 && !sobre, `com o poço #${poco.id}: ${solto ? 'AINDA GUARDADO' : 'solto (' + why + ')'}; no dia seguinte: ${R3 ? `outro em ${R3.x},${R3.y}${sobre ? ' — SOBRE O POÇO' : ''}` : 'nenhum'}`);
+  sim(() => V.removeBuilding(poco)); set2.urb.resGone.day = S.day - 1; const R3 = sim(() => V.reservaDia(set2));
+  ok('e21f o deus põe um poço nele', !solto && why === 'ocupada' && !!R3, `com o poço #${poco.id}: ${solto ? 'AINDA GUARDADO' : 'solto (' + why + ')'}; tirado o poço, no dia seguinte: ${R3 ? `guardado em ${R3.x},${R3.y}` : 'NENHUM'}`);
   if (!R3) return;
   // (a cidade abaixo de cidade: guarda até RES_YEARS anos; depois, solta)
   set2.tier = V.RES_TIER - 1; const a = sim(() => V.reservaDia(set2)); set2.urb.res.lost = S.day - V.RES_YEARS; const b = sim(() => V.reservaDia(set2));
   ok('e21g a cidade que perde o nível', !!a && !b && set2.urb.resGone.why === 'nivel', `no primeiro ano abaixo: ${a ? 'guardado' : 'SOLTO'}; depois de ${V.RES_YEARS} anos: ${b ? 'AINDA GUARDADO' : 'solto (' + set2.urb.resGone.why + ')'}`);
-  set2.tier = Math.max(3, V.RES_TIER); set2.urb.resGone.day = S.day - 1; const R4 = sim(() => V.reservaDia(set2));
-  // (o meteoro no meio do lote: o chão muda, o lote não serve mais)
-  const m = sim(() => { G.Powers.meteorImpact({ x: R4.x + R4.n / 2, y: R4.y + R4.n / 2, r: 3.4, t: 0, delay: 0 }); return V.reservaDia(set2); });
-  ok('e21h o meteoro', !!R4 && !m && set2.urb.resGone.why === 'terra', `${R4 ? 'guardado de novo em ' + R4.x + ',' + R4.y : '-'}; depois do meteoro: ${m ? 'AINDA GUARDADO' : 'solto (' + set2.urb.resGone.why + ')'}`);
-  // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto)
-  set2.urb.resGone.day = S.day - 1; const R5 = sim(() => V.reservaDia(set2));
+  set2.tier = Math.max(3, V.RES_TIER); set2.urb.resGone.day = S.day - 1; const R5 = sim(() => V.reservaDia(set2));
   if (!ok('e21i guardado outra vez', !!R5, R5 ? `${R5.x},${R5.y}` : 'sem lote')) return;
   // (o fogo num campo do lote guardado passa: o lote fica — Argos o largava pelo trigo em chamas, numa vida do zero)
   const fi = (R5.y + 1) * G.N + R5.x + 1; const f0 = S.fire[fi]; S.fire[fi] = 5; const R5f = sim(() => V.reservaDia(set2)); S.fire[fi] = f0;
   ok('e21n o fogo no lote guardado passa', !!R5f && R5f.x === R5.x && R5f.y === R5.y, R5f ? `com fogo em ${R5.x + 1},${R5.y + 1}: o lote fica` : `com fogo: SOLTO (${set2.urb.resGone && set2.urb.resGone.why})`);
   if (!R5f) return;
+  // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto)
   let pedras = 0; for (let y = R5.y; y < R5.y + R5.n && pedras < 3; y++) for (let x = R5.x; x < R5.x + R5.n && pedras < 3; x++) if (!S.occ[y * G.N + x] && !S.treeAt[y * G.N + x] && !S.objAt[y * G.N + x] && G.Nature.addRock(x + 0.5, y + 0.5, 40)) pedras++;
   rico(set2); const L0 = S.ledgerN || 0; set2._noSite = {}; const w = sim(() => V.startProject(set2, R5.type));
   const dentro = w && w.x >= R5.x && w.y >= R5.y && w.x + w.w <= R5.x + R5.n && w.y + w.h <= R5.y + R5.n;
@@ -461,12 +479,17 @@ run('e21', () => {
     const viu = QA.check().filter(q => q.sys === 'escala' && /campo guardado/.test(q.msg)); s3.urb.res = null;
     ok('e21k o verificador vê um prédio no lote', viu.length > 0, viu.length ? viu[0].msg.slice(0, 160) : 'NÃO VIU');
   }
-  // (a cidade que some: o lote vai com ela)
-  const s6 = [...new Set([...S.factions.values()].map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => a.id - c.id).find(o => o.id !== set2.id && V.resWork(o));
-  if (s6) { s6.tier = 3; const R6 = sim(() => V.reservaDia(s6)); const id6 = s6.id; const outra = [...S.settlements.values()].find(o => o.id !== id6);
+  // (noutra capital, pela mesma guarda de prova: o chão muda — o deus afoga o meio do lote, G.Powers.reshape para baixo —, e o lote
+  // não serve mais. Um meteoro num chão aplainado deixa a cratera dentro do pódio: o lote, que ainda serve, ficaria)
+  const g4 = GL.guarda(G, { provoca: true, fora: [set2.id] }); const s4 = g4 && S.settlements.get(g4.set); const R4 = s4 && V.reserva(s4);
+  const m = R4 && sim(() => { G.Powers.reshape(R4.x + R4.n / 2, R4.y + R4.n / 2, 3, -1); return V.reservaDia(s4); });
+  ok('e21h o chão muda (o deus afoga o meio do lote)', !!R4 && !m && s4.urb.resGone.why === 'terra', R4 ? `${s4.name}: guardado em ${R4.x},${R4.y}; depois da água: ${m ? 'AINDA GUARDADO' : 'solto (' + s4.urb.resGone.why + ')'}` : 'nenhuma outra capital guardou');
+  // (a cidade que some: o lote vai com ela — a terceira capital, pela mesma guarda)
+  const g6 = GL.guarda(G, { provoca: true, fora: [set2.id].concat(s4 ? [s4.id] : []) }); const s6 = g6 && S.settlements.get(g6.set);
+  if (!s6) ok('e21l a cidade que some', false, 'nenhuma outra capital guardou');
+  else { const R6 = V.reserva(s6); const id6 = s6.id; const outra = [...S.settlements.values()].find(o => o.id !== id6);
     // (a cidade sem ninguém, deixada ao vento: a gente dela morre antes)
-    if (R6) { sim(() => { for (const v of [...S.villagers.values()]) if (v.set === id6) V.kill(v, 'old'); V.abandon(s6); }); ok('e21l a cidade que some', !S.settlements.has(id6) && !V.resOver(outra, 'house', R6.x, R6.y, R6.n, R6.n, true), `${s6.name} abandonada com o lote guardado em ${R6.x},${R6.y}: o lote foi com ela`); } else ok('e21l a cidade que some', false, `${s6.name} não guardou lote`); }
-  set.tier = t0;
+    sim(() => { for (const v of [...S.villagers.values()]) if (v.set === id6) V.kill(v, 'old'); V.abandon(s6); }); ok('e21l a cidade que some', !S.settlements.has(id6) && !V.resOver(outra, 'house', R6.x, R6.y, R6.n, R6.n, true), `${s6.name} abandonada com o lote guardado em ${R6.x},${R6.y}: o lote foi com ela`); }
   const c = checa(); ok('e21m verificador', c.ok, c.txt);
 });
 
@@ -510,12 +533,16 @@ function audiencia(chama) {
 run('e22', () => {
   let A = audiencia(); const { b, r } = A;
   if (!ok('e22a o palácio pronto e quem governa', !!b && !!r && !!b.ip && A.okA && !!A.f.aud, b ? `${lado(b)}, ${r ? r.name : 'sem governante'}; audiência ${A.okA ? 'chamada' : 'NÃO CHAMADA'}` : 'sem palácio')) return;
-  const lugares = A.Co.AUD_USES.reduce((n, u) => n + A.In.slots(b, u).length, 0) - 1; const chamados = A.f.aud.who.length;
+  const T22 = A.In.table(b); const porUso = A.Co.AUD_USES.map(u => `${(T22.byUse.get(u) || []).length} ${u}`).join(' + ');
+  const lugares = A.Co.audRoom(b); const chamados = A.f.aud.who.length;
   M.viver(25);
   const dentro = [...S.villagers.values()].filter(v => v.inside === b.id && v.task && v.task.kind === 'audiencia' && !v.task.throne); const usos = dentro.map(v => (A.In.placeOf(v) || {}).use || 'sem lugar');
-  const tr = A.In.placeOf(r); const th = A.In.slots(b, 'audiencia')[0];
-  ok('e22b quem governa no trono, a cidade nos lugares', !!tr && tr.item === th.item.id && tr.use === 'sentar' && dentro.length > 0 && chamados <= lugares && usos.every(u => A.Co.AUD_USES.includes(u)) && usos.includes('audiencia'),
-    `${r.name} ${tr ? `no ${tr.it && tr.it.kind || 'lugar'} (${tr.use})` : 'SEM LUGAR'}; ${chamados} chamados para ${lugares} lugares (${A.Co.AUD_USES.join(' e ')}); dentro: ${dentro.length} — ${[...new Set(usos)].map(u => u + ' ' + usos.filter(x => x === u).length).join(', ')}`);
+  const tr = A.In.placeOf(r); const th = T22.items.find(it => it.kind === 'trono');
+  // (os lugares de pé do M2 diante do trono — marcas da planta, 50 no palácio de 6 — fazem a audiência crescer além dos 11 assentos
+  // de visitante: chamados mais do que eles, e de pé nas marcas)
+  const aud = (T22.byUse.get('audiencia') || []).length, sentar = (T22.byUse.get('sentar') || []).length;
+  ok('e22b quem governa no trono, a cidade nos lugares', !!tr && !!th && tr.item === th.id && tr.use === 'sentar' && dentro.length > 0 && chamados <= lugares && usos.every(u => A.Co.AUD_USES.includes(u)) && aud >= 50 && chamados > sentar - 1 && usos.filter(u => u === 'audiencia').length > 1,
+    `${r.name} ${tr ? `no ${tr.it && tr.it.kind || 'lugar'} (${tr.use})` : 'SEM LUGAR'}; ${chamados} chamados para ${lugares} lugares (${porUso}, menos o assento do trono); dentro: ${dentro.length} — ${[...new Set(usos)].map(u => u + ' ' + usos.filter(x => x === u).length).join(', ')}`);
   ok('e22c a ronda fica', !A.f.aud.who.includes(A.vigia.id) && A.ronda === 'ronda', `${A.vigia.name}, a ${A.longe} casas da porta: ${A.f.aud.who.includes(A.vigia.id) ? 'CHAMADO' : 'não chamado'}, na ${A.ronda || '-'} ao chamado`);
   const c1 = checa(); ok('e22d verificador', c1.ok, c1.txt);
   // (o verificador vê: a audiência apagada à mão com a cidade nela; quem está nela dentro de outro prédio)
