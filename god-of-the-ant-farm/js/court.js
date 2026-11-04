@@ -101,32 +101,40 @@
     if ((want0 !== 'paco' && (set.tier || 0) < 3) || st.stone < (want0 === 'paco' ? 30 : 60) || pop < (want0 === 'paco' ? 20 : 26)) return;
     want.push(want0); fac._palaceWish = { type: want0, by: r ? r.id : 0, day: G.S.day };
   };
-  // the vainest palaces go up outside the town, on open ground
-  const oldSite = E.findSite;
-  E.findSite = function (set, type) {
-    if (type !== 'palacio_colossal' && type !== 'grande_palacio') return oldSite(set, type);
-    const S = G.S; const def = G.BDEF[type]; const R = Math.round((set.radius || 8) + (type === 'palacio_colossal' ? 12 : 8));
+  // the vainest palaces go up outside the town, on open ground — at the size of the step of the ladder tried (n, G.Escala:
+  // V.startProject tries them from the biggest the town justifies, and V.findSite asks here for each — D-106); a step of
+  // another size than the type's own stands on its podium (the ground's relief under it up to V.PODIUM, D-115). → the lot,
+  // null (none), or undefined (not a palace the court puts outside)
+  Co.site = function (set, type, n) {
+    if (type !== 'palacio_colossal' && type !== 'grande_palacio') return undefined;
+    const S = G.S; const def = G.BDEF[type]; const w = n || def.w; const R = Math.round((set.radius || 8) + (type === 'palacio_colossal' ? 12 : 8));
+    const maxSl = w === def.w ? 1.3 : G.Village.PODIUM;
     let best = null, bs = -1e9;
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
-      const x = Math.floor(set.cx) + dx - Math.floor(def.w / 2), y = Math.floor(set.cy) + dy - Math.floor(def.h / 2);
-      if (x < 3 || y < 3 || x + def.w > N - 3 || y + def.h > N - 3) continue;
-      const d = G.dist(x + def.w / 2, y + def.h / 2, set.cx, set.cy); if (d > R) continue;
+      const x = Math.floor(set.cx) + dx - Math.floor(w / 2), y = Math.floor(set.cy) + dy - Math.floor(w / 2);
+      if (x < 3 || y < 3 || x + w > N - 3 || y + w > N - 3) continue;
+      const d = G.dist(x + w / 2, y + w / 2, set.cx, set.cy); if (d > R) continue;
       let ok = true, trees = 0;
-      for (let ty = y - 1; ty <= y + def.h && ok; ty++) for (let tx = x - 1; tx <= x + def.w; tx++) {
-        const i = ty * N + tx; const inside = tx >= x && ty >= y && tx < x + def.w && ty < y + def.h;
+      for (let ty = y - 1; ty <= y + w && ok; ty++) for (let tx = x - 1; tx <= x + w; tx++) {
+        const i = ty * N + tx; const inside = tx >= x && ty >= y && tx < x + w && ty < y + w;
         if (S.occ[i]) { const o = S.buildings.get(S.occ[i]); if (inside || (o && o.blocks)) { ok = false; break; } }
-        if (!inside) continue;
+        if (!inside) { if (w !== def.w && S.type[i] >= T.SAND && S.cliff[i]) { ok = false; break; } continue; } // (a podium's ring is where one walks)
         const tt = S.type[i]; if (tt < T.SAND || tt === T.RIVER || S.objAt[i] || S.wall[i] || S.road[i] >= 2 || S.fire[i] > 0) { ok = false; break; }
         if (S.treeAt[i]) trees++;
       }
       if (!ok) continue;
-      const sl = W.slope(x, y, def.w, def.h); if (sl > 1.3) continue;
+      const sl = W.slope(x, y, w, w); if (sl > maxSl) continue;
       const ideal = (set.radius || 8) + (type === 'palacio_colossal' ? 5 : 2);
       const sc = -Math.abs(d - ideal) * 1.1 - trees * 0.4 - sl * 2 + G.R() * 0.6;
+      // (a step of the ladder only where the town's streets reach the work, the builders' rule — asked of the best so far, after
+      // the draw: L-465)
+      if (sc > bs && w !== def.w && !G.Village.siteReached(set, x, y, { w, h: w })) continue;
       if (sc > bs) { bs = sc; best = [x, y]; }
     }
-    return best || oldSite(set, type);
+    return best;
   };
+  const oldSite = E.findSite;
+  E.findSite = function (set, type) { const p = Co.site(set, type); return p === undefined ? oldSite(set, type) : p || oldSite(set, type); };
   const oldPlaced = E.onPlaced;
   E.onPlaced = function (b) {
     oldPlaced(b);
