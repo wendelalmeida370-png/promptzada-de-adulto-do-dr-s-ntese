@@ -66,7 +66,9 @@
       if (heardS !== s) { heardS = s; heard = new Map(); }
       for (const b of withIp) {
         const said = In.entrySaid(b); if (said === undefined) continue; const k = In.entryKey(b); if (said && heard.get(b.id) === k) continue; heard.set(b.id, k);
-        const e = G.Space.entryFits(b, In.shellOf(b)); const front = !In.frontOpen || In.frontOpen(b); const ok = e.ok && front;
+        // (a plan with no shell — a form broken — has no way in to judge: said, never a fall of the whole check, T-423)
+        const sh = In.shellOf(b); if (!sh) { add('int', 2, `${b.type}#${b.id}: a planta não tem casca — a entrada que a virada do dia julgou não tem porta (T-423)`); continue; }
+        const e = G.Space.entryFits(b, sh); const front = !In.frontOpen || In.frontOpen(b); const ok = e.ok && front;
         const why = front ? `${e.kind}, o pé a ${e.foot} m` : 'a porta dá para uma casa da rua que não se anda';
         if (ok !== said) { add('int', 2, `${b.type}#${b.id}: a entrada ${ok ? 'cabe' : `não cabe (${why})`} diante da porta, e a virada do dia disse que ${said ? 'cabia' : 'não cabia'} com o mesmo chão`); continue; }
         if (!ok) { const to = In.fitSide(b); if (to) add('int', 2, `${b.type}#${b.id}: a porta ficou onde a entrada não cabe (${why}), e no lado ${to.s} ela cabe`); }

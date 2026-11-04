@@ -889,6 +889,9 @@
   // delivered, by the work's own bill (the brick that took the place of stone counted as brick: D-075), in the ledger; a
   // reform given up too: the house stands as it was, and what came for the new one goes back (it was lost: L-246)
   function abandonSite(b) {
+    // (an enlargement let go is undone — the building of before stands again, D-116 —, never the whole building taken off the
+    // map: the builders may give up before the planner does, L-560)
+    if (b.amp && !b.amp.fim && G.Village.ungrow) { G.Village.ungrow(b); return; }
     if (b.upgradeFrom) {
       const od = G.BDEF[b.upgradeFrom]; if (!od || od.w !== b.w || od.h !== b.h) return;
       G.Village.siteBack(b, 'obra-largada');
