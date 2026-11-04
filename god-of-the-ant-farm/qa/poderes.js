@@ -756,16 +756,21 @@ const key = process.argv[2] || 'cidade';
       // other before the sea opened — the nearest to it; where no one of the town lives on that land (the way from an islet to
       // the shore: L-307), the nearest of the town set down at the near end. Whoever already walks to the far end by land
       // would go round, never across
-      const free = o => o.age >= 16 && !o.inside && !o.aboard && !o.captive && !(o.task && o.task.pri >= 3);
+      // (and with nobody of the town out of doors — a world saved in the night, all of them in bed —, the nearest of the town
+      // is taken out of the house by the test's hand, as the other proofs do it — the task ended, out of the house, awake,
+      // rested and fed —, and set down at the near end like the one of an islet: the metrópole of the generation 14 is saved
+      // on day 53 at 0,004, the seven grown people of Lavínio in their houses, six asleep, and nobody walked, T-466)
+      const free = o => o.age >= 16 && !o.aboard && !o.captive && !o.ug && !(o.task && o.task.pri >= 3);
       const nearA = (a, b) => G.dist2(a.x, a.y, w0.a.x, w0.a.y) - G.dist2(b.x, b.y, w0.a.x, w0.a.y);
-      let v = [...S.villagers.values()].filter(o => o.set === A.id && free(o) && W.canWalk(o.x, o.y, w0.a.x, w0.a.y) && !W.canWalk(o.x, o.y, w0.b.x, w0.b.y)).sort(nearA)[0]; let setDown = false;
-      if (!v) { v = [...S.villagers.values()].filter(o => o.set === A.id && free(o)).sort(nearA)[0]; setDown = !!v; }
+      let v = [...S.villagers.values()].filter(o => o.set === A.id && free(o) && !o.inside && !o.sleeping && W.canWalk(o.x, o.y, w0.a.x, w0.a.y) && !W.canWalk(o.x, o.y, w0.b.x, w0.b.y)).sort(nearA)[0]; let setDown = false;
+      if (!v) { v = [...S.villagers.values()].filter(o => o.set === A.id && free(o)).sort((a, b) => (!!a.inside || !!a.sleeping) - (!!b.inside || !!b.sleeping) || nearA(a, b))[0]; setDown = !!v; }
+      const roused = !!v && (!!v.inside || !!v.sleeping);
       const ok = G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0];
       H.run(4);
       // (set down once the bed is open, and sent at once: the near end of the way in the metrópole of the 12th generation is a
       // ledge under a cliff that only the bed reaches — set down there before the sea opened, the world took him off it to the
       // land of his town (the rule of who is shut in, L-306), and from there the road goes round the bay, never across: T-363)
-      if (v && setDown) { G.Vg.endTask(v); v.x = w0.a.x; v.y = w0.a.y; v.path = null; }
+      if (v && setDown) { G.Vg.endTask(v); v.inside = 0; v.sleeping = false; v.energy = Math.max(v.energy, 95); v.hunger = Math.min(v.hunger, 10); v.x = w0.a.x; v.y = w0.a.y; v.path = null; }
       const dry = p.tiles.every(i => S.dry[i] && W.walkable(i)); const linked = W.canWalk(p.ax, p.ay, p.bx, p.by);
       const shipOn = S.ships.some(s => p.tiles.includes(W.idx(s.x, s.y)));
       let walker = null, across = false, onFloor = false; const set = new Set(p.tiles);
@@ -773,12 +778,12 @@ const key = process.argv[2] || 'cidade';
       let down = 0, onBed = 0; const bad = [];
       // (across: at the far end, having walked the sea's floor)
       H.until(() => { down = Math.max(down, H.tasks('fundo').length); onBed = Math.max(onBed, [...S.villagers.values()].filter(o => set.has(W.idx(o.x, o.y))).length); if (v && S.villagers.has(v.id)) { if (set.has(W.idx(v.x, v.y))) onFloor = true; if (onFloor && G.dist(v.x, v.y, p.bx, p.by) < 2) across = true; } const e = H.qaSea(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); return across && p.fished >= p.fish; }, 100);
-      return { c, linked0, ok, tiles: p.tiles.length, dry, linked, shipOn, walker, setDown, across, down, onBed, fished: p.fished, fish: p.fish, log: S.history.some(e => /O mar se abriu/.test(e.txt)), bad, qa: H.qaSea() };
+      return { c, linked0, ok, tiles: p.tiles.length, dry, linked, shipOn, walker, setDown, roused, across, down, onBed, fished: p.fished, fish: p.fish, log: S.history.some(e => /O mar se abriu/.test(e.txt)), bad, qa: H.qaSea() };
     });
     if (r.none) ok('p1 abrir o mar', false, 'nenhum estreito entre duas cidades nos mundos prontos');
     else {
       ok('p1 o mar se abre entre duas terras: o fundo vira caminho', r.ok && r.dry && !r.linked0 && r.linked && !r.shipOn && r.log, `${r.c.A} ↔ ${r.c.B}${r.c.real ? '' : ' (de uma ilhota à costa: as duas cidades já se alcançam por terra)'}: ${r.tiles} casas de fundo seco, pisáveis ${r.dry}; de uma margem se chega à outra a pé: antes ${r.linked0}, agora ${r.linked}; navio no fundo ${r.shipOn}`);
-      ok('p1 o povo desce para catar peixes e atravessa a pé', r.down >= 2 && r.fished >= 1 && r.across, `até ${r.down} descendo, ${r.onBed} no fundo ao mesmo tempo; ${r.fished} de ${r.fish} cestos de peixe; ${r.walker}${r.setDown ? ' (posta na ponta de lá: ninguém da cidade mora naquela terra)' : ''} atravessou pelo fundo ${r.across}`);
+      ok('p1 o povo desce para catar peixes e atravessa a pé', r.down >= 2 && r.fished >= 1 && r.across, `até ${r.down} descendo, ${r.onBed} no fundo ao mesmo tempo; ${r.fished} de ${r.fish} cestos de peixe; ${r.walker}${r.setDown ? (r.roused ? ' (tirada de casa pela mão da prova — o mundo salvo de noite, ninguém da cidade fora de casa — e levada à ponta de cá)' : ' (levada à ponta de cá: ninguém da cidade mora naquela terra)') : ''} atravessou pelo fundo ${r.across}`);
       ok('p1 verificador', !r.bad.length && !r.qa.length, [...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'limpo');
     }
   }
