@@ -36,8 +36,7 @@
 //      e carregar, o verificador limpo
 //   D9 os casos ruins: a obra salva no meio e acabada, o grande templo derrubado, a regra do verificador
 // E a F, a taverna — a taverna (3 casas) e a hospedaria (4) dos seis povos: a taverna não tem forma, os degraus maiores são a
-// planta do lote do tamanho (TYPES.taverna.sizes), a estalagem de int-familias.js (In.innBuild) pela porta In.formSized, na
-// família forma.salao (sem família nova: L-512):
+// planta do lote do tamanho (TYPES.taverna.sizes), a estalagem de int-familias.js, na sua família (estalagem.andar):
 //   F1 a escada oferecida a todo povo pela planta do tamanho
 //   F2 a planta em todo povo, tamanho e lado (a família do registro novo e do catálogo); a taberna de 8 m com as suas; a mesma
 //      duas vezes; a casca; o tempo da planta; a tabela dos lugares da hospedaria
@@ -46,7 +45,7 @@
 //   F5 de pé no mundo (a hospedaria na metrópole, com os lugares da tabela do mundo; as duas num mundo novo, um ano, o save)
 //   F6 os casos ruins: a obra salva no meio, a taverna derrubada, a regra do verificador
 // E a G, as casas — a cabana e a casa de 4 m continuam; a casa rica (domus, 2 casas, o degrau de uma família) de int-familias.js
-// (In.domusBuild, a casa do pátio, mobiliada como toda casa: furnishHome), pela mesma porta e família da taverna:
+// (a casa do pátio, mobiliada como toda casa: furnishHome), na sua família (domus.patio):
 //   G1 a cabana e a casa com 4 × 4 m, as famílias de antes
 //   G2 a casa rica: o degrau de uma família, o lote de 8 × 8 m, a planta em todo povo, lado e riqueza; a família abrigada (≥ 6
 //      lugares de dormir), o fogo, o pátio aberto; a mesma duas vezes, a casca, o tempo, a tabela dos lugares
@@ -528,7 +527,7 @@ function D9() {
   ok('D9a os casos ruins do templo: a obra salva no meio, o templo derrubado, o verificador limpo — e a sua regra pega a planta de outra família', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
 }
 // ================================================================ F: the tavern (taverna 3, hospedaria 4)
-const VPL = [3, 4], VFAM = 'forma.salao', TODOS = POVOS.concat(OUTROS);
+const VPL = [3, 4], VFAM = 'estalagem.andar', TODOS = POVOS.concat(OUTROS);
 const vrec = (c, s, n) => In.newRecord({ id: 0, type: 'taverna', style: c, x: 8, y: 8, w: n, h: n }, { t: 'taverna', c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: 1, w: 1, pw: 0, s, o: (1 << n) - 1, n });
 const vtag = m => `V${m.n}/${m.c}/${m.s}`;
 let vcache = null;
@@ -634,7 +633,7 @@ function F6() {
   ok('F6a os casos ruins da taverna: a obra salva no meio, a taverna derrubada, o verificador limpo — e a sua regra pega a planta de outra família', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
 }
 // ================================================================ G: the houses (the hut and the house of 4 m, the rich house of 8)
-const GFAM = 'forma.salao';
+const GFAM = 'domus.patio';
 const hrec = (t, c, s, n, wb, d) => In.newRecord({ id: 0, type: t, style: c, x: 8, y: 8, w: n, h: n }, { t, c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: d || 1, w: wb, pw: 0, s, o: (1 << n) - 1, n });
 const gtag = m => `domus/${m.c}/${m.s}/w${m.wb}`;
 let gcache = null;
