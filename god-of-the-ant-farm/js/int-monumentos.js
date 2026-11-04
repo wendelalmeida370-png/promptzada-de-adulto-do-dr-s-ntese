@@ -533,9 +533,13 @@
     const treads = []; for (let k = 0; k < st.length - 1; k++) treads.push({ r: [T[0], r2(st[k + 1].r[3]), T[2], r2(st[k].r[3])], y: st[k].y1 });
     if (!floorUp(P, T, y, [r2(T[0] + 0.05), r2(T[2] - 0.05)], [T[0], T[3], T[2], r2(st[0].r[3])], treads)) return;
     const g = roundMiddle(P, F, T, y, 'plataforma'); if (!g) return;
+    if (!lights(P, F, g.rooms)) return; // (the braziers of a great monument — the Aztec's —, where one lights them: D-109)
     const bb = g.bb, cu = (bb[0] + bb[2]) / 2, id = g.rooms[0], r = P.rooms[id].r; const v = r2(Math.min(r[3] - 0.4, bb[3] + 1.1));
     P.marks(0, id, 'ofertar', [[r2(cu), r2(bb[3] + 0.45), Math.PI]]);
-    P.marks(0, id, 'rezar', [-1.6, -0.8, 0.8, 1.6].filter(du => cu + du > r[0] + 0.4 && cu + du < r[2] - 0.4).map(du => [r2(cu + du), v, Math.PI]));
+    // (on a great one's top — 10 m across and more, D-109 — a row of eight, and a second behind it)
+    const great = T[2] - T[0] >= 10, dus = great ? [-3.2, -2.4, -1.6, -0.8, 0.8, 1.6, 2.4, 3.2] : [-1.6, -0.8, 0.8, 1.6];
+    const pray = []; for (const vv of great && r[3] - v >= 1.3 ? [v, r2(v + 0.9)] : [v]) for (const du of dus) if (cu + du > r[0] + 0.4 && cu + du < r[2] - 0.4) pray.push([r2(cu + du), vv, Math.PI]);
+    P.marks(0, id, 'rezar', pray);
   }
   function runestones(P, F) {
     const g = openGround(P, F, 'pedras'); if (!g || P.inside()) return;

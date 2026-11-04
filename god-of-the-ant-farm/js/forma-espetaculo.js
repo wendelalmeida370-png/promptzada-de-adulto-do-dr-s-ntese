@@ -483,4 +483,52 @@
     return { els, amphi: { campo } };
   }
   Fo.def('teatro', 'asteca', (L, n) => campoGrande(L, n), [6, 8, 10]);
+
+  // ------------------------------ the great monuments (monument: the step of 4 tiles — D-109) ------------------------------
+  // The monument of a city on a lot of 16 m: up its three steps along the front — each in two, a body's step of 0.25 m (the
+  // crepis, D-097) — to the top, 12.8 m across, round what stands in its middle: the Egyptian's obelisk, 22 m of shaft and its
+  // gilded pyramidion on its pedestal, the golden eye on its front, the two sphinxes on their plinths before it; the Roman's
+  // column of the triumph, 26 m with its frieze winding up it, on its pedestal with the plate of the deeds, the gilded emperor
+  // on its capital; the Aztec's Sun Stone of 8.4 m standing in its cradle on its altar, a feathered serpent either side, the two
+  // braziers before it; the Greek's god of 9 m in gold, spear and shield, on his pedestal of marble with its band. What the
+  // plan reads is the classic's (int-monumentos.js, monumentPlan): the steps, the top, what stands in its middle — the offering
+  // before it, the prayers behind —, the braziers where one lights them. → the elements
+  const CREPIS = { h: 0.5, shrink: 0.6, n: 3 }; // (each step 0.5 m, split in two along the front; 0.6 m narrower each side than the one under it)
+  const BASEM = { egipcio: ['#d8c8a0', '#b8a884', '#e4d6b0'], romano: ['#e0d8c8', '#bdb4a2', '#ece6d8'], asteca: ['#b8a07a', '#a89068', '#c8b08a'], grego: ['#e8e2d4', '#c6beac', '#f2ede2'] };
+  function monumentoGrande(L, n, st) {
+    const cu = L / 2, e0 = L / 2 - 0.4, { h, shrink } = CREPIS, ty = CREPIS.n * h; const cor = BASEM[st];
+    const box = (r, y0, y1, c, o) => Object.assign({ k: 'bloco', r: r.map(k3), y0: k3(y0), y1: k3(y1), cor: c || cor }, o);
+    const sq = (hw, y0, y1, c, o) => box([cu - hw, cu - hw, cu + hw, cu + hw], y0, y1, c, o);
+    const els = [];
+    for (let k = 0; k < CREPIS.n; k++) { const q = e0 - k * shrink; els.push(box([cu - q, cu - q, cu + q, cu + q], k * h, k * h + h / 2, cor, { degrau: 1 }), box([cu - q, cu - q, cu + q, cu + q - shrink / 2], k * h + h / 2, (k + 1) * h, cor, { degrau: 1 })); }
+    const gold = ['#f7d66a', '#d9a93a'];
+    if (st === 'egipcio') {
+      const y1 = ty + 2.4, H = 22, a0 = 1.5, a1 = 0.95;
+      els.push(sq(2.1, ty, ty + 1.2), sq(1.8, ty + 1.2, y1, ['#c8b890', '#a89870', '#d8c8a0']));
+      els.push({ k: 'talude', r: [cu - a0, cu - a0, cu + a0, cu + a0].map(k3), r1: [cu - a1, cu - a1, cu + a1, cu + a1].map(k3), y0: k3(y1), y1: k3(y1 + H), cor: ['#e6dfcc', '#bdb39c', '#e6dfcc'], mat: 'base' });
+      els.push({ k: 'piramide', c: [cu, cu], e: a1, y0: k3(y1 + H), y1: k3(y1 + H + 2.0), cor: gold, mat: 'slab' });
+      els.push({ k: 'disco', na: 'frente', u: cu, v: k3(cu + a0 - (a0 - a1) * 0.55), y: k3(y1 + 0.55 * H), r: 0.8, cor: '#d9b34a', olho: '#6a4a1a' });
+      for (const s of [-1, 1]) { const u = cu + s * 3.8, v = cu + 3.4; els.push(box([u - 0.55, v - 1.1, u + 0.55, v + 1.1], ty, ty + 0.6, ['#c8b890', '#a89870', '#d8c8a0'])); els.push({ k: 'estatua', p: [k3(u), k3(v), k3(ty + 0.6)], h: 2.4, cor: '#d8c8a0', pose: 'esfinge' }); }
+    } else if (st === 'romano') {
+      const yP = ty + 5.0, yC = yP + 0.6, H = 26;
+      els.push(sq(2.5, ty, yP, ['col0', 'col1', 'col0'], { mat: 'marble' }), { k: 'faixa', r: [cu - 2.5, cu - 2.5, cu + 2.5, cu + 2.5].map(k3), y0: k3(yP - 0.6), y1: k3(yP), cor: 'acc' });
+      els.push({ k: 'placa', v: k3(cu + 2.5), u: cu, w: 3.2, y0: k3(ty + 1.6), y1: k3(ty + 3.6), cor: '#d8d0b8' });
+      els.push(sq(2.0, yP, yC, ['col0', 'col1', 'col0'], { mat: 'marble' }));
+      els.push({ k: 'coluna', c: [cu, cu], r: 1.6, y0: k3(yC), y1: k3(yC + H), cor: ['col0', 'col1'], mat: 'marble', espiral: { y0: k3(yC + 1.0), passo: 3.6, w: 0.6 } });
+      els.push(sq(2.0, yC + H, yC + H + 1.0, ['col0', 'col1', 'col0'], { mat: 'marble' }));
+      els.push({ k: 'estatua', p: [cu, cu, k3(yC + H + 1.0)], h: 4.5, w: 0.5, cor: '#e0b84a', lanca: true });
+    } else if (st === 'asteca') {
+      const yA = ty + 0.6, R = 4.2, cr = 0.5;
+      els.push(box([cu - 3.5, cu - 1.5, cu + 3.5, cu + 1.5], ty, yA, ['#8a8478', '#6f6a60', '#a09a8e']), box([cu - 2.4, cu - 0.4, cu + 2.4, cu + 0.4], yA, yA + cr, ['#8a8478', '#6f6a60', '#a09a8e']));
+      els.push({ k: 'roda', c: [cu, cu], y: k3(yA + cr + R), r: R, t: 0.9, cor: ['#9a9488', '#b8b2a4'], aneis: [[10 / 13, '#2fae8f'], [7.5 / 13, '#b33a2a'], [5 / 13, '#e8c24a'], [2.6 / 13, '#b33a2a']], larg: 1.2 / 13, raios: { n: 8, r0: 5.5 / 13, r1: 9.5 / 13, a: 0.15, cor: '#7a746a' } });
+      for (const s of [-1, 1]) { const u = cu + s * 4.8; els.push(box([u - 0.6, cu - 0.6, u + 0.6, cu + 0.6], ty, ty + 0.5, ['#8a8478', '#6f6a60', '#a09a8e'])); els.push({ k: 'estatua', p: [k3(u), cu, k3(ty + 0.5)], h: 5.0, cor: '#2fae8f', pose: 'serpente', penas: '#2fae8f', olho: '#b33a2a' }); }
+      for (const s of [-1, 1]) { const u = cu + s * 2.6, v = cu + 3.0; els.push(box([u - 0.3, v - 0.3, u + 0.3, v + 0.3], ty, ty + 0.9, ['#6a5a50', '#4a3e36', '#7a6a60']), { k: 'braseiro', p: [k3(u), k3(v), k3(ty + 0.9)], r: 0.45, uso: 'acender' }); }
+    } else {
+      const yP = ty + 5.0;
+      els.push(sq(2.1, ty, ty + 1.0, ['col0', 'col1', 'col0'], { mat: 'marble' }), sq(1.7, ty + 1.0, yP, ['col0', 'col1', 'col0'], { mat: 'marble' }), { k: 'faixa', r: [cu - 1.7, cu - 1.7, cu + 1.7, cu + 1.7].map(k3), y0: k3(yP - 0.6), y1: k3(yP), cor: 'acc' });
+      els.push({ k: 'estatua', p: [cu, cu, k3(yP)], h: 9.0, w: 0.75, cor: '#c9a24a', lanca: true });
+    }
+    return { els };
+  }
+  for (const st of ['egipcio', 'romano', 'asteca', 'grego']) Fo.def('monument', st, (L, n) => monumentoGrande(L, n, st), [4]);
 })(window.G = window.G || {});
