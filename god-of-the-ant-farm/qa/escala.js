@@ -7,8 +7,11 @@
 // meio (e5); a cidade que encolhe (e6); a ampliação no lugar (e7: o mesmo id, o nome, a história, a conta do que cresce, o save
 // no meio, pronta; e8 o palácio e o seu patrono; e9 a ampliação que ninguém alcança volta ao que era); a obra grande guarda a
 // pedra da cidade (e10, D-117); um save de antes igual (e11); a mesma semente, a mesma escolha (e12); os palácios pela escada
-// (e13); a mão do deus prefere o chão que o pódio cobre (e14). Onde o povo já tem a forma grande de verdade (o Coliseu romano do
-// M1, os palácios do M2), a prova usa a dele.
+// (e13); a mão do deus prefere o chão que o pódio cobre (e14). A terra e o pedido (D-120): a renda de pedra pelo livro e o degrau
+// maior só com a pedra de vinte anos (e15); a vez da obra grande só com a cidade alimentada e em casa (e16); de fora e de dentro,
+// e quem não acha terra diz por quê (e17); limpar o lote — a rua menor que o anel junta, a madeira para a obra (e18); os jogos do
+// Coliseu pelos lugares da planta (e19); o porquê de cada capital nos três mundos prontos (e20). Onde o povo já tem a forma
+// grande de verdade (o Coliseu romano do M1, os palácios do M2), a prova usa a dele.
 //   node qa/escala.js            (ONLY=e1,e3 só esses; VERB=1 conta mais)
 'use strict';
 process.chdir(__dirname);
@@ -27,24 +30,19 @@ const soma = o => Object.values(o || {}).reduce((a, x) => a + (x || 0), 0);
 const lado = b => (b ? `${b.type}#${b.id} ${b.w}×${b.h} em ${b.x},${b.y} (${b.esc || '-'})` : 'nada');
 const ocupa = b => { for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) if (S.occ[y * G.N + x] !== b.id) return false; return true; };
 const pedra = (set, n) => D.make('f:' + set.fac, 'stone', n, { code: 'teste' });
+// (a renda de pedra do povo, como o livro a conta — f.pedra, D-120 —: a prova a põe alta onde só a terra e a escolha estão em jogo)
+const rico = (set, n) => { G.Fac.get(set.fac).pedra = [S.day, 0, n === undefined ? 100 : n]; };
 // (o save e a carga fazem um G.S novo: a prova passa a olhar o de agora; a crônica tem teto — as linhas novas, pelo número delas)
 const salva = () => { const k = M.salvarCarregar(); S = G.S; return k; };
 const marca = () => G.S.logN || 0;
 const linhas = (n0, rx) => G.S.history.filter(e => e.n > n0 && rx.test(e.txt));
 const civicas = set => sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && !o.built && o.type !== 'ruin' && G.BDEF[o.type].civic) V.completeBuilding(o); });
-// (o verificador S0–S2 e os erros do jogo; a conta da obra de um degrau com tijolo o qa.js compara com o custo do tipo, não com o
-// do degrau — o falso alarme do L-535, pedido ao líder —: esse aviso só não conta quando a conta é a do degrau, conferida aqui)
-const L535 = /a conta da obra \(([\d.]+)\) não é a do tipo/;
+// (o verificador S0–S2 e os erros do jogo — a conta da obra de um degrau o qa.js confere pelo degrau, L-535)
 function checa() {
-  const out = []; let falso = 0;
-  for (const q of QA.check()) {
-    if (q.sev > 2) continue;
-    const m = q.sys === 'oficio' && L535.exec(q.msg); const id = m && +((/#(\d+)/.exec(q.msg) || [])[1]); const b = id && S.buildings.get(id);
-    if (b && Math.abs(soma(V.bill(b)) - soma(Es.billOf(b).cost) - soma(b.troca)) < 1e-6) { falso++; continue; }
-    out.push(`S${q.sev} ${q.sys}: ${q.msg.slice(0, 150)}`);
-  }
+  const out = [];
+  for (const q of QA.check()) if (q.sev <= 2) out.push(`S${q.sev} ${q.sys}: ${q.msg.slice(0, 150)}`);
   const e = M.erros(); const errs = Object.keys(e.mod).length + e.console.length;
-  return { ok: !out.length && !errs, txt: (out.length ? out.slice(0, 3).join(' · ') : errs ? 'erros: ' + JSON.stringify(e).slice(0, 240) : 'verificador limpo') + (falso ? ` (e ${falso} falso${falso > 1 ? 's' : ''} alarme${falso > 1 ? 's' : ''} do L-535, a conta conferida pelo degrau)` : '') };
+  return { ok: !out.length && !errs, txt: out.length ? out.slice(0, 3).join(' · ') : errs ? 'erros: ' + JSON.stringify(e).slice(0, 240) : 'verificador limpo' };
 }
 function run(id, fn) { if (ONLY && !ONLY.includes(id)) return; try { fn(); } catch (e) { ok(id, false, 'exceção: ' + (e && e.stack ? e.stack.split('\n').slice(0, 4).join(' / ') : e)); } }
 
@@ -82,7 +80,7 @@ run('e1', () => {
   const vila = [...S.settlements.values()].filter(s => V.pop(s.id) >= 3 && V.pop(s.id) < 30 && (s.tier || 0) <= 1).sort((a, b) => V.pop(a.id) - V.pop(b.id) || a.id - b.id)[0];
   const cC = Es.choose(cap, 'temple'), cV = Es.choose(vila, 'temple'); const fmt = ch => ch.map(s => s.id + '/' + s.n).join(' > ');
   ok('e1a a escolha', cC[0].id === 'templo' && cV[0].id === 'santuario' && cV.length === 1, `${vila.name} (${V.pop(vila.id)} pessoas, nível ${vila.tier || 0}) escolhe ${fmt(cV)}; ${cap.name} (${V.pop(cap.id)} pessoas, nível ${cap.tier}) escolhe ${fmt(cC)}`);
-  const b = sim(() => V.startProject(cap, 'temple')); const st = degrau('temple', 4); const bill = Es.bill('temple', st);
+  rico(cap); const b = sim(() => V.startProject(cap, 'temple')); const st = degrau('temple', 4); const bill = Es.bill('temple', st);
   ok('e1b a capital ergue o grande', !!b && b.w === 4 && b.h === 4 && b.esc === 'templo' && !!b.ip && b.ip.n === 4 && V.workOf(b) === bill.work && Math.abs(soma(V.bill(b)) - soma(bill.cost)) < 1e-6 && ocupa(b),
     `${lado(b)} a ${b ? G.dist(b.x + 2, b.y + 2, cap.cx, cap.cy).toFixed(0) : '?'} casas do centro: a conta ${b ? JSON.stringify(V.bill(b)) : '?'} (o degrau: ${JSON.stringify(bill.cost)}, o tipo: ${JSON.stringify(G.BDEF.temple.cost)}), o trabalho ${b ? V.workOf(b) : '?'} (o tipo: ${G.BDEF.temple.work}), o registro da planta de ${b && b.ip ? b.ip.n : '?'} casas`);
   const bv = sim(() => V.startProject(vila, 'temple'));
@@ -92,14 +90,14 @@ run('e1', () => {
 
 // ------------------------------ e2: sem terra, o degrau de baixo ------------------------------
 run('e2', () => {
-  abre(); let set = null, why = '';
-  for (const nome of ['Roma', 'Argos', 'Tebas', 'Tenochtitlan']) {
-    const s = cidade(nome); if (!s || Es.choose(s, 'temple')[0].n !== 4) continue;
-    const livre = sim(() => V.findSite(s, 'temple', undefined, 4)), aberto = livre ? null : sim(() => V.openSite(s, 'temple', degrau('temple', 4)));
-    if (!livre && !aberto) { set = s; break; } why += `${nome}: tem lote; `;
-  }
-  if (!ok('e2a uma capital sem terra', !!set, set ? `${set.name} justifica o templo de 4 casas e não tem lote livre nem espaço que as regras abram` : why || 'nenhuma capital justifica o templo de 4')) return;
-  const b = sim(() => V.startProject(set, 'temple'));
+  abre();
+  // (com a pedra para o degrau grande, a busca dele sem nada hoje — o lote livre e o espaço aberto, como a cidade os guarda de um dia
+  // para o outro, set._noSite —: o degrau de baixo; com a D-120 toda capital da metrópole que justifica o templo de 4 acha lote)
+  const cabe2 = s => { s._noSite = {}; const p = sim(() => V.findSite(s, 'temple', undefined, 2)); s._noSite = {}; return !!p; };
+  const set = [...S.settlements.values()].filter(s => Es.choose(s, 'temple')[0].n === 4).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id).find(cabe2);
+  if (!ok('e2a uma cidade que justifica o templo de 4', !!set, set ? `${set.name} (${V.pop(set.id)} pessoas), com lote para o santuário` : 'nenhuma')) return;
+  set._noSite = { 'temple:4': S.day, 'temple:4:abre': S.day };
+  rico(set); const b = sim(() => V.startProject(set, 'temple'));
   ok('e2b o degrau de baixo', !!b && b.w === 2 && b.esc === 'santuario', `${set.name} ergue ${lado(b)}`);
   // (a maravilha não tem degrau de baixo: o antigo só fica nos que já estão de pé)
   const mv = Es.choose(set, 'maravilha'); const bm = sim(() => V.startProject(set, 'maravilha'));
@@ -117,7 +115,7 @@ run('e3', () => {
   const pub = () => [...S.buildings.values()].filter(o => o.set === set.id && o.type !== 'ruin' && (G.BDEF[o.type].civic || o.type === 'temple' || o.type === 'monument')).length;
   const farms = () => [...S.buildings.values()].filter(o => o.set === set.id && o.type === 'farm').length;
   const pub0 = pub(), farms0 = farms(), id0 = S.nextId, h0 = marca();
-  set._noSite = {}; const b = sim(() => V.startProject(set, 'temple'));
+  set._noSite = {}; rico(set); const b = sim(() => V.startProject(set, 'temple'));
   const foi = [...antes.keys()].filter(id => !S.buildings.has(id)); const tipos = foi.map(id => antes.get(id));
   const novos = [...S.buildings.values()].filter(o => o.id >= id0 && o !== b && o.set === set.id);
   const camasFoi = foi.reduce((s, id) => s + (G.BDEF[antes.get(id)].housing || 0), 0), camasNovas = novos.reduce((s, o) => s + (G.BDEF[o.type].housing || 0), 0);
@@ -202,8 +200,8 @@ run('e7', () => {
     `#${r.id} «${V.buildName(r)}» de ${r.amp ? r.amp.de : '?'} para ${r.w} casas, o lote de antes dentro do novo (${x0},${y0} em ${r.x},${r.y}); o mapa avisado (${walk0} → ${S.walkVer})`);
   const h1 = r.ip.h.map(f => f.join(':')); const fato = r.ip.h[r.ip.h.length - 1];
   ok('e7d a mesma história, e o fato novo', h0.every((f, k) => h1[k] === f) && fato[1] === 'ampliado' && r.ip.n === 4, `a história de antes (${h0.length} fatos) inteira, e «${fato.join(' ')}»; o registro da planta de ${r.ip.n} casas`);
-  const dv = V.delivered(r); const conta = soma(V.bill(r)), deve = soma(B1.cost) - soma(B0.cost);
-  ok('e7e a conta do que cresce', !soma(dv) && Math.abs(conta - deve) < 1e-6 && r.progress > 0 && r.progress < 1, `a conta ${JSON.stringify(V.bill(r))} = o degrau de 4 menos o de 2 (${deve}); nada na obra ainda; o andamento começa na parte que está de pé (${(r.progress * 100).toFixed(0)}%)`);
+  const dv = V.delivered(r); const conta = soma(V.bill(r)), deve = soma(B1.cost) - soma(B0.cost); const lenha = D.ledger().filter(e => e[8] === 'clareira' && e[4] === 'o:' + r.id).length;
+  ok('e7e a conta do que cresce', soma(dv) === (dv.wood || 0) && (dv.wood || 0) === lenha && Math.abs(conta - deve) < 1e-6 && r.progress > 0 && r.progress < 1, `a conta ${JSON.stringify(V.bill(r))} = o degrau de 4 menos o de 2 (${deve}); na obra só a madeira do chão novo (${dv.wood || 0}, ${lenha} toras no livro); o andamento começa na parte que está de pé (${(r.progress * 100).toFixed(0)}%)`);
   ok('e7f a crônica', linhas(hi, /começou a ampliar/).length > 0, (linhas(hi, /ampli/)[0] || { txt: 'nenhuma linha' }).txt);
   const c = checa(); ok('e7g verificador', c.ok, c.txt);
   const foto = x => JSON.stringify([x.x, x.y, x.w, x.esc, x.built, x.amp, x.need, x.troca, x.brick, +x.progress.toFixed(6), x.ip.n]);
@@ -279,7 +277,7 @@ run('e13', () => {
         const d = G.dist(p[0] + n / 2, p[1] + n / 2, set.cx, set.cy); const Rc = Math.round((set.radius || 8) + (t === 'palacio_colossal' ? 12 : 8));
         const bem = livre && G.W.slope(p[0], p[1], n, n) <= V.PODIUM && V.siteReached(set, p[0], p[1], { w: n, h: n });
         if (bem) bom++; else ruim++; out.push(`${set.name} ${t}/${n} a ${d.toFixed(0)} casas (a corte vai a ${Rc})${bem ? '' : ' RUIM'}`);
-        if (bem && !ergueu && t === 'grande_palacio') ergueu = sim(() => V.startProject(set, t));
+        if (bem && !ergueu && t === 'grande_palacio') { rico(set); ergueu = sim(() => V.startProject(set, t)); }
       }
     }
     ok('e13a a corte acha o lote do degrau', bom > 0 && !ruim, out.join(' · '));
@@ -298,6 +296,125 @@ run('e14', () => {
   ok('e14 a mão do deus prefere o pódio', !!b && sl <= V.PODIUM, `o lote livre mais perto de ${set.name}: ${perto ? `${perto.x},${perto.y} com ${(perto.sl * 1.5).toFixed(1)} m` : '-'}; a mão pôs ${lado(b)} com ${(sl * 1.5).toFixed(1)} m${perto && perto.sl > V.PODIUM ? ' (o mais perto era íngreme demais: foi a outro)' : ''}`);
 });
 
+// ------------------------------ e15: a renda de pedra e o pedido (D-120) ------------------------------
+// (o livro conta a pedra que as mãos do povo trazem ao estoque — a entrega —, não a que a prova põe; um degrau maior de uma obra
+// pública só com a pedra de vinte anos — a do estoque e a renda —, o clássico pela pedra guardada, como antes)
+run('e15', () => {
+  abre(); const set = cidade('Roma'); const f = G.Fac.get(set.fac); const fid = f.id; const P6 = degrau('palacio', 6);
+  const i0 = V.stoneIncome(fid); sim(() => { D.make('f:' + fid, 'stone', 12, { code: 'entrega' }); D.make('f:' + fid, 'stone', 5, { code: 'teste' }); }); const i1 = V.stoneIncome(fid);
+  ok('e15a a renda pelo livro', i1 === i0 + 12, `antes ${i0}, depois de 12 entregues e 5 postas pela prova: ${i1}`);
+  sim(() => D.use('f:' + fid, 'stone', f.stock.stone || 0, { code: 'teste' })); const B = Es.bill('palacio', P6).cost.stone;
+  const com = n => { f.pedra = [S.day, 0, n]; return V.affords(set, 'palacio', P6); };
+  const pouca = Math.floor(B * 0.7 / V.YEARS) - 1, bastante = Math.ceil(B / V.YEARS);
+  const a0 = com(0), a1 = com(pouca), a2 = com(bastante); const g0 = (f.pedra = [S.day, 0, 0], V.stoneGate(set, 'palacio', 60)), g1 = (f.pedra = [S.day, 0, bastante], V.stoneGate(set, 'palacio', 60));
+  ok('e15b o palácio de 6 pela renda', !a0 && !a1 && a2 && !g0 && g1, `a pedra do degrau ${B} (menos o tijolo, se houver); o estoque vazio: com renda 0 ${a0 ? 'PAGA' : 'não paga'}, ${pouca}/ano ${a1 ? 'PAGA' : 'não paga'}, ${bastante}/ano ${a2 ? 'paga' : 'NÃO PAGA'}; o portão da corte: ${g0 ? 'ABRE' : 'fecha'} e ${g1 ? 'abre' : 'FECHA'}`);
+  f.pedra = [S.day, 0, 0]; set._noSite = {}; const n0 = S.nextId; const b0 = sim(() => V.startProject(set, 'palacio')); const nada = !b0 && S.nextId === n0;
+  f.pedra = [S.day, 0, bastante]; set._noSite = {}; const b1 = sim(() => V.startProject(set, 'palacio'));
+  ok('e15c sem a pedra, o degrau maior fica para depois', nada && !!b1 && b1.w === 6 && b1.esc === 'palacio', `sem renda: ${nada ? 'nada começa' : 'COMEÇOU ' + lado(b0)}; com ${bastante}/ano: ${lado(b1)}`);
+  const sant = Es.steps('temple')[0]; const t0 = V.affords(set, 'temple', sant, 30); pedra(set, 30); const t1 = V.affords(set, 'temple', sant, 30);
+  ok('e15d o clássico pela pedra guardada', !t0 && t1, `o santuário pedindo 30 de pedra: com o estoque vazio ${t0 ? 'PAGA' : 'não'}, com 30 ${t1 ? 'paga' : 'NÃO'}`);
+  const c = checa(); ok('e15e verificador', c.ok, c.txt);
+});
+
+// ------------------------------ e16: a vez da obra grande só com a cidade alimentada e em casa (D-120) ------------------------------
+run('e16', () => {
+  abre(); const set = cidade('Roma'); const fid = set.fac; const f = G.Fac.get(fid);
+  const b = sim(() => V.handFound(set, 'palacio', 'palacio', { R: 60 })); if (!ok('e16a a obra grande', !!b && b.w === 6 && !b.built, lado(b))) return;
+  const fed = V.foodSafe(fid), hi = V.housingInfo(set.id); const v1 = V.vez(set), p1 = V.workPri(b);
+  const food = f.stock.food || 0; sim(() => D.use('f:' + fid, 'food', food, { code: 'teste' })); const v2 = V.vez(set), p2 = V.workPri(b);
+  sim(() => D.make('f:' + fid, 'food', food, { code: 'teste' }));
+  const adulto = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 16 && v.home && !v.captive).sort((a, c) => a.id - c.id)[0]; const casa = adulto.home;
+  adulto.home = 0; const v3 = V.vez(set), p3 = V.workPri(b); adulto.home = casa; const v4 = V.vez(set);
+  const santo = sim(() => V.handFound(set, 'temple', 'santuario', { R: 60 })); const p5 = santo ? V.workPri(santo) : 0;
+  ok('e16b a vez', fed && !hi.homeless && v1 === 1 && p1 === -V.GREAT_PRI && v2 === 0 && p2 === 0 && v3 === 0 && p3 === 0 && v4 === 1 && !p5,
+    `${set.name} alimentada (${Math.round(food)} de comida para ${G.Fac.pop(fid)}) e em casa: a vez ${v1} (${p1}); sem comida: ${v2} (${p2}); um adulto sem casa: ${v3} (${p3}); de volta: ${v4}; um santuário em obra: ${p5}`);
+  salva(); const s2 = cidade('Roma'); ok('e16c a vez vai no save', (s2.vez || 0) === v4, `depois do save: ${s2.vez}`);
+});
+
+// ------------------------------ e17: de fora e de dentro (D-120) ------------------------------
+// (o Coliseu romano procura até o raio e vinte; o palácio, até o raio e seis e depois doze; quem não acha diz por quê, com números)
+run('e17', () => {
+  abre(); const roma = cidade('Roma'), argos = cidade('Argos');
+  const r1 = V.reachOf(roma, 'maravilha').join(), r2 = V.reachOf(roma, 'palacio').join(), r3 = V.reachOf(argos, 'maravilha').join();
+  ok('e17a de fora e de dentro', r1 === '20' && r2 === '6,12' && r3 === '6,12', `o Coliseu de Roma até o raio e ${r1}; o palácio de Roma ${r2}; a maravilha de Argos ${r3}`);
+  roma._noSite = {}; const p = sim(() => V.findSite(roma, 'palacio', undefined, 6)); const R = G.Urban.radius(roma, { w: 6 }, V.pop(roma.id));
+  const d = p ? G.dist(p[0] + 3, p[1] + 3, roma.cx, roma.cy) : 0;
+  ok('e17b o palácio de 6 de Roma, dentro do alcance', !!p && !p.demolish && d <= R + 12, p ? `em ${p.join(',')}, a ${d.toFixed(0)} casas (o raio ${R})` : 'sem lote');
+  const w = V.landWhy(roma, 'maravilha', 10); roma._noSite = {}; const q = sim(() => V.findSite(roma, 'maravilha', undefined, 10));
+  const R10 = Math.round(G.Urban.radius(roma, { w: 10 }, V.pop(roma.id))) + 20;
+  ok('e17c o Coliseu sem terra diz por quê', w.R === R10 && (w.free || !q) && /\d/.test(w.txt), `«${w.txt}»`);
+});
+
+// ------------------------------ e18: limpar o lote — as ruas menores que o anel junta, a madeira para a obra (D-120) ------------------------------
+run('e18', () => {
+  abre(); const set = cidade('Óstia'); set._noSite = {}; const P = sim(() => V.findSite(set, 'temple', undefined, 4)); const N = G.N;
+  if (!ok('e18a um lote de 4', !!P, P ? P.join(',') : 'nenhum')) return;
+  const [x, y] = P; const row = y + 1; const salvo = [];
+  const pinta = (tx, ty, r) => { const i = ty * N + tx; salvo.push([i, S.road[i]]); S.road[i] = r; };
+  for (let tx = x - 1; tx <= x + 4; tx++) pinta(tx, row, 1); // (uma rua de terra de lado a lado, do anel ao anel)
+  const L1 = V.lotFor(set, 'temple', 4, x, y);
+  const volta = []; for (let tx = x - 1; tx <= x + 4; tx++) volta.push([tx, y - 1], [tx, y + 4]); // (as fileiras de cima e de baixo do anel, inteiras)
+  const tampa = volta.map(([tx, ty]) => sim(() => V.addBuilding('house', tx, ty, set.id, true)));
+  const L2 = V.lotFor(set, 'temple', 4, x, y); const sem = V.relinks(set, x, y, 4, null);
+  sim(() => { for (const o of tampa) V.removeBuilding(o); });
+  pinta(x + 2, row, 3); const L3 = V.lotFor(set, 'temple', 4, x, y);
+  for (const [i, r] of salvo.reverse()) S.road[i] = r;
+  ok('e18b a rua menor que o anel junta', !!L1 && !L2 && !sem && !L3, `uma rua de terra cortando o lote: ${L1 ? 'cabe (o anel junta as pontas)' : 'NÃO CABE'}; com as voltas do anel fechadas por casas: ${L2 ? 'CABE' : 'não'}; com um trecho de estrada: ${L3 ? 'CABE' : 'não'}`);
+  // (a madeira das árvores do lote vai para a obra do degrau maior)
+  let plant = 0; for (let ty = y; ty < y + 4; ty++) for (let tx = x; tx < x + 4; tx++) if (!S.treeAt[ty * N + tx] && G.Nature.addTree(tx + 0.5, ty + 0.5, 'oak', 0.9)) plant++;
+  let grown = 0; for (let ty = y; ty < y + 4; ty++) for (let tx = x; tx < x + 4; tx++) { const t = S.trees.get(S.treeAt[ty * N + tx]); if (t && t.stage === 'grow' && t.size > 0.5) grown++; }
+  const l0 = (S.ledgerN || 0); const b = sim(() => V.handFound(set, 'temple', 'templo', { x, y, R: 0 }));
+  const lenha = D.ledger().filter(e => e[0] > l0 && e[8] === 'clareira'); const naObra = b ? lenha.filter(e => e[4] === 'o:' + b.id).length : 0;
+  ok('e18c a madeira do lote vai para a obra', !!b && b.x === x && b.y === y && grown > 0 && naObra === Math.min(grown, Es.bill('temple', degrau('temple', 4)).cost.wood), `${grown} árvores crescidas no lote (${plant} plantadas pela prova): ${naObra} toras na obra ${b ? '#' + b.id : '-'}, ${lenha.length - naObra} no estoque`);
+  const c = checa(); ok('e18d verificador', c.ok, c.txt);
+});
+
+// ------------------------------ e19: os jogos do Coliseu, pelos lugares da planta (D-120) ------------------------------
+// (o Coliseu de Roma de pé: os lugares do público — as fileiras e o pódio, 'assistir' — e da areia — 'lutar' — que a planta do
+// degrau tem; os lutadores, um posto para cada lugar de luta; um dia de jogos: os lutadores na areia, o público nas fileiras,
+// tantos quantos vêm, e no fim ninguém lá dentro)
+run('e19', () => {
+  abre(); const set = cidade('Roma'); const In = G.Interiors, Tt = G.Teatro, E = G.Eco;
+  const b = sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60, built: true }));
+  if (!ok('e19a o Coliseu de pé', !!b && b.w === 10 && b.built && G.Interiors.plan(b).ok, lado(b))) return;
+  const T = In.table(b); const of = u => (T && T.byUse.get(u)) || []; const assentos = of('assistir').filter(e => e.it.kind === 'fileira').length, emPe = of('assistir').filter(e => e.it.kind === 'marca').length;
+  const ver = of('assistir').length, luta = of('lutar').length, jb = E.jobsOf(b);
+  ok('e19b os lugares da planta', assentos >= 700 && emPe >= 50 && luta === 8 && !!jb && jb.n === luta && jb.role === 'ator', `${assentos} assentos nas fileiras e ${emPe} em pé no pódio (${ver} para ver), ${luta} na areia; os postos: ${jb ? jb.n + ' de ' + jb.role : 'nenhum'}`);
+  // (os lutadores: oito adultos de Roma no ofício, a cada um o seu posto pelo repartidor do povo — E.place)
+  const sobra = v => v.set === set.id && v.age >= 18 && v.age <= 55 && !v.captive && !v.jail && !v.aboard && v.role !== 'guerreiro';
+  let n = 0; for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (n >= luta) break; if (!sobra(v) || v.role === 'ator') continue; v.role = 'ator'; v.job = 0; sim(() => G.Vg.endTask(v)); n++; }
+  sim(() => E.place(set)); const cast = Tt.actorsOf(b);
+  S.time = Tt.EARLY - 0.02; S.weather.rain = 0; S.weather.storm = 0; S.time = Math.max(S.time, Tt.opensAt(b) - 0.01);
+  let op = null; for (let k = 0; k < 40 && !op; k++) { M.viver(1); op = Tt.dia(b); }
+  if (!ok('e19c os jogos do dia', cast.length > 0 && !!op, `${cast.length} lutadores com o posto no Coliseu; o espetáculo ${op ? '#' + op.id + ' aberto' : 'NÃO abriu'}`)) return;
+  let mais = 0, quem = 0, naAreia = 0, nasFileiras = 0;
+  for (let k = 0; k < 160 && Tt.dia(b); k++) {
+    M.viver(1);
+    if (op.data.fase === 'portas' || op.data.fase === 'peca') for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (v.set !== set.id || v.age < 16 || v.role === 'ator' || v.sleeping || v.inside || (v.task && (v.task.type === 'teatro' || (v.task.pri || 0) >= 1))) continue; if (sim(() => Tt.visit(v, b))) quem++; }
+    if (op.data.fase === 'peca') { let fi = 0, ar = 0; for (const v of S.villagers.values()) { if (v.inside !== b.id) continue; const p = In.placeOf(v); if (p && p.use === 'assistir') fi++; if (p && p.use === 'lutar') ar++; }
+      mais = Math.max(mais, Object.keys(op.data.plateia).length); nasFileiras = Math.max(nasFileiras, fi); naAreia = Math.max(naAreia, ar); }
+  }
+  M.viver(2); // (os bebês no colo saem com quem os carrega, no passo seguinte)
+  const lista = [...S.villagers.values()].filter(v => v.inside === b.id); const dentro = lista.length;
+  if (VERB || dentro) console.log('  lá dentro:', lista.map(v => { const c = v.carrier && S.villagers.get(v.carrier); return `${v.id} ${v.role} ${v.task ? v.task.type + '/' + v.task.st + '/' + (v.task.use || '') : '-'} colo ${v.carrier || 0}${c ? ' (' + c.role + ', dentro de ' + c.inside + ', ' + (c.task ? c.task.type : '-') + ')' : ''}`; }).join(' · '));
+  ok('e19d os lutadores na areia, o público nas fileiras', naAreia > 0 && naAreia <= luta && nasFileiras > 0 && nasFileiras <= ver && mais <= ver, `no auge, ${mais} na plateia (${nasFileiras} em lugares de ver) e ${naAreia} lutando na areia; ${quem} chamados aos jogos`);
+  ok('e19e no fim, ninguém lá dentro', !Tt.dia(b) && !dentro, `o espetáculo ${Tt.dia(b) ? 'AINDA ABERTO' : op.st + ' (' + (op.why || '') + ')'}; ${dentro} lá dentro`);
+  const c = checa(); ok('e19f verificador', c.ok, c.txt);
+});
+
+// ------------------------------ e20: cada capital que não ergue a obra grande diz por quê ------------------------------
+run('e20', () => {
+  for (const w of ['metropole', 'mundial', 'mega']) {
+    abre(w); const caps = [...new Set([...S.factions.values()].map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, b) => V.pop(b.id) - V.pop(a.id)).slice(0, 4);
+    const out = []; let mudo = 0;
+    for (const set of caps) for (const t of ['maravilha', 'palacio', 'palacio_colossal']) {
+      const st = Es.choose(set, t)[0]; if (!st || st.n === Es.n0(t)) continue; const r = V.landWhy(set, t, st.n); if (!/\d/.test(r.txt)) mudo++;
+      out.push(`${set.name} ${t}/${st.n}: ${r.free ? r.free + ' lotes' : 'sem terra — ' + Object.keys(r.why).filter(k => r.why[k]).sort((a, b) => r.why[b] - r.why[a]).slice(0, 2).map(k => k + ' ' + Math.round(100 * r.why[k] / r.lots) + '%').join(', ')}`);
+    }
+    ok(`e20 ${w}: o porquê de cada capital`, !mudo && out.length > 0, out.join(' · '));
+  }
+});
+
 // ------------------------------ e11: um save de antes igual ------------------------------
 run('e11', () => {
   abre(); let sem = 0, fora = 0; const lotes = new Map();
@@ -310,7 +427,7 @@ run('e11', () => {
 
 // ------------------------------ e12: a mesma semente, a mesma escolha ------------------------------
 run('e12', () => {
-  const vez = () => { abre(); const set = cidade('Mênfis'); const b = sim(() => V.startProject(set, 'temple')); M.saltar(1); return `${lado(b)} · ` + require('crypto').createHash('sha1').update(G.Save.serialize()).digest('hex').slice(0, 16); };
+  const vez = () => { abre(); const set = cidade('Mênfis'); rico(set); const b = sim(() => V.startProject(set, 'temple')); M.saltar(1); return `${lado(b)} · ` + require('crypto').createHash('sha1').update(G.Save.serialize()).digest('hex').slice(0, 16); };
   const a = vez(), b = vez();
   ok('e12 a mesma semente, a mesma escolha', a === b, `${a}${a === b ? ' — igual nas duas vezes' : ' ≠ ' + b}`);
 });

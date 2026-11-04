@@ -288,10 +288,13 @@
     }
     return k;
   };
+  // (the posts of a workplace: its type's — G.BDEF jobs and role —, or a building's own, as a module says it: the Colosseum of a
+  // capital, a wonder with the sand of its games, the fighters of its arena — act-lazer.js). → { n, role }, or null
+  E.jobsOf = b => { const d = G.BDEF[b.type]; return d && d.jobs ? { n: d.jobs, role: d.role } : null; };
   // every worker of a workplace role gets a concrete workplace (and keeps it)
   E.place = function (set) {
     const S = G.S; const slots = new Map();
-    for (const b of S.buildings.values()) { if (b.set !== set.id || !b.built) continue; const d = G.BDEF[b.type]; if (d.jobs) slots.set(b.id, { b, left: d.jobs }); }
+    for (const b of S.buildings.values()) { if (b.set !== set.id || !b.built) continue; const j = E.jobsOf(b); if (j && j.n > 0) slots.set(b.id, { b, left: j.n, role: j.role }); }
     const workers = [];
     for (const v of S.villagers.values()) {
       if (v.set !== set.id || v.captive) continue;
@@ -304,12 +307,12 @@
     // keep the valid ones
     for (const v of workers) {
       const s = v.job && slots.get(v.job);
-      if (s && G.BDEF[s.b.type].role === v.role && s.left > 0) { s.left--; v._ok = true; } else { v.job = 0; v._ok = false; }
+      if (s && s.role === v.role && s.left > 0) { s.left--; v._ok = true; } else { v.job = 0; v._ok = false; }
     }
     for (const v of workers) {
       if (v._ok) continue;
       let best = null, bd = 1e9;
-      for (const s of slots.values()) { if (s.left <= 0 || G.BDEF[s.b.type].role !== v.role) continue; const d = G.dist2(v.x, v.y, s.b.x, s.b.y); if (d < bd) { bd = d; best = s; } }
+      for (const s of slots.values()) { if (s.left <= 0 || s.role !== v.role) continue; const d = G.dist2(v.x, v.y, s.b.x, s.b.y); if (d < bd) { bd = d; best = s; } }
       if (best) { v.job = best.b.id; best.left--; }
     }
     // idle miners take up the free places in the mines
@@ -1198,10 +1201,10 @@
   E.buildingHTML = function (b, plink, esc) {
     const S = G.S; let h = '';
     const I = b.inv || {};
-    const def = G.BDEF[b.type];
-    if (def.jobs) {
+    const def = G.BDEF[b.type]; const jb = E.jobsOf(b);
+    if (jb && jb.n > 0) {
       const ws = [...S.villagers.values()].filter(v => v.job === b.id);
-      h += `<div class="family"><div>Trabalham aqui (${ws.length}/${def.jobs}):</div><div>${ws.map(v => plink(v.id)).join(', ') || '<span class="muted">ninguém trabalha aqui agora</span>'}</div></div>`;
+      h += `<div class="family"><div>Trabalham aqui (${ws.length}/${jb.n}):</div><div>${ws.map(v => plink(v.id)).join(', ') || '<span class="muted">ninguém trabalha aqui agora</span>'}</div></div>`;
     }
     if (b.type === 'curral' || b.type === 'estabulo') {
       const herd = E.penAnimals(b); const kind = b.kind || (b.type === 'estabulo' ? 'cavalo' : null);

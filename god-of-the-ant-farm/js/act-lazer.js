@@ -54,7 +54,18 @@
   // building with no plan, the count of today)
   const In = () => G.Interiors;
   const planned = b => { const I = In(); return !!(I && I.freePlace && I.table && I.table(b)); };
-  const hasUse = (b, use) => { const I = In(); return !!(I && I.slots && planned(b) && I.slots(b, use).length); };
+  // (the places of a use the plan has, usable — its pieces', its rows' and its marks': the interiors' table, In.table)
+  const placesOf = (b, use) => { const I = In(); const t = I && I.freePlace && I.table ? I.table(b) : null; const L = t && t.byUse && t.byUse.get(use); return L ? L.length : 0; };
+  // (a use of a theatre's pieces; of an arena's places, its rows' and its marks' too — the Colosseum's sand has no piece)
+  const hasUse = (b, use) => { const I = In(); return arena(b) ? placesOf(b, use) > 0 : !!(I && I.slots && planned(b) && I.slots(b, use).length); };
+  // (the buildings of the shows: the theatres, and the Colosseum of a capital — a wonder whose form is the amphitheatre's
+  // (G.Forma: amphi), the games on its sand, its fighters the actors of its arena, its rows and its podium the public's: as
+  // many as its plan has places, In.places — D-120)
+  // (a step of its own: the classic wonder of the Romans is drawn as an arena too, and stays as it was)
+  const arena = b => { if (!b || b.type !== 'maravilha' || !b.built || !G.Forma || b.w === G.Escala.n0(b.type)) return false; const F = G.Forma.of(b.type, b.style || 'classico', b.w); return !!(F && F.amphi); };
+  const isShow = b => !!b && b.built && (b.type === 'teatro' || arena(b));
+  const showsOf = setId => { const a = E.byType(setId, 'maravilha').filter(arena); const t = E.byType(setId, 'teatro'); return a.length ? t.concat(a) : t; };
+  const fighters = b => placesOf(b, 'lutar');
 
   // ============================== the theatre ==============================
   const Tt = G.Teatro = {};
@@ -69,8 +80,9 @@
   A.addAnim('atuar', { act: 'talk', dur: 6, contact: 5.4, hands: 2 });
   A.addAnim('lutarJogo', { act: 'fight', dur: 4, contact: 3.6, hands: 2 });
   // ---- the actor: a trade of the town (two for each theatre standing, in a town of twelve grown hands or more; under the
-  // ceiling of the trades, D-090)
+  // ceiling of the trades, D-090) — and the fighters of an arena, a post for each place to fight on its sand (D-120)
   G.BDEF.teatro.jobs = 2; G.BDEF.teatro.role = 'ator';
+  const oldJobsOf = E.jobsOf; E.jobsOf = b => (arena(b) ? { n: fighters(b), role: 'ator' } : oldJobsOf(b));
   G.ROLE.ator = ['Ator', 'Atriz'];
   if (!E.JOB_ROLES.includes('ator')) E.JOB_ROLES.push('ator');
   E.JOB_OF.ator = ['teatro'];
@@ -79,7 +91,14 @@
   // (the doors at the end of the working day, the play as the evening begins — the hour one is free —, over before the night,
   // when the town goes to bed: G.isEvening, G.isNight; before the doors, the actors come to make ready — from the far end of a
   // city a walk takes longer than the doors give them)
-  Tt.horas = b => ({ prep: 0.5, abre: 0.56, peca: 0.6, fecha: 0.73 });
+  // (the games of a Colosseum stand out by the town's edge — D-120: its doors open in time for the town to walk there from its
+  // middle, at the time the actors walk, and so its preparation; never before the end of the working afternoon)
+  Tt.horas = b => {
+    if (!arena(b)) return { prep: 0.5, abre: 0.56, peca: 0.6, fecha: 0.73 };
+    const set = S_().settlements.get(b.set); const dr = G.Vg.door(b); const far = set ? G.dist(set.cx, set.cy, dr[0], dr[1]) : 0;
+    const abre = Math.max(Tt.EARLY, Math.min(0.56, 0.6 - (far * Tt.WALK + 8) / G.DAY_LEN));
+    return { prep: Math.min(0.5, abre), abre, peca: 0.6, fecha: 0.73 };
+  };
   Tt.WAITS = 0.03; // (the play begins at its hour with an actor on the stage; this long after it with none, there is no play)
   // (the preparation opens in time for the farthest actor of the theatre to walk to the stage — 1,3 s a tile on the straight
   // line, the streets go round, and 8 s to spare —, never before 0,40, the end of the working afternoon, nor after its hour:
@@ -199,7 +218,7 @@
   }
   function tick(op) {
     const S = S_(); const b = S.buildings.get(op.at); const d = op.data;
-    if (!b || b.type !== 'teatro' || !b.built) return close(op, 'int', 'o teatro caiu');
+    if (!isShow(b)) return close(op, 'int', 'o teatro caiu');
     if (facOf(b) !== op.fac) return close(op, 'int', 'o teatro mudou de dono');
     // who left by another door is no longer in the audience, or on the stage
     for (const id of Object.keys(d.plateia)) { const v = S.villagers.get(+id); if (!v || !seated(v, op, b)) delete d.plateia[id]; }
@@ -236,7 +255,7 @@
   }
   A.hooks.tick.push(function () {
     const S = S_();
-    for (const set of S.settlements.values()) for (const b of E.byType(set.id, 'teatro')) if (!Tt.dia(b) && inHours(b)) open(b);
+    for (const set of S.settlements.values()) for (const b of showsOf(set.id)) if (!Tt.dia(b) && inHours(b)) open(b);
   });
   // ---- the spectator (the errand 'teatro': st 0 on the way, 1 seated waiting, 2 watching)
   // the theatre for this person now: its show open, in reach, a seat free, and — in a people of coin — a house that can pay
@@ -244,7 +263,7 @@
   Tt.visit = function (v, b, H) {
     H = H || G.Vg.H;
     if (!v || !b || v.captive || v.jail || v.age < 6 || (v.carry && v.carry.n > EPS) || A.isBody(v)) return null;
-    if (b.type !== 'teatro' || !b.built || facOf(b) !== G.Fac.idOfV(v)) return null;
+    if (!isShow(b) || facOf(b) !== G.Fac.idOfV(v)) return null;
     const op = Tt.dia(b); if (!aberto(b, op) || full(b, op) || op.data.plateia[v.id] || op.data.atores[v.id]) return null;
     if (coin(b) && E.purse(v) + EPS < Tt.FEE) return null;
     const dr = G.Vg.door(b); if (!G.W.reaches(v, dr[0], dr[1])) return null;
@@ -254,7 +273,7 @@
   // wants to go now (the doors of a show of the town open, a seat free, the entry in the house), or 0; one already in the rows
   // or on the way stays for the play (the work, the tavern, a chat do not take one from it; hunger and sleep do)
   function tonight(v) {
-    for (const b of E.byType(v.set, 'teatro')) {
+    for (const b of showsOf(v.set)) {
       const op = Tt.dia(b); if (!aberto(b, op) || full(b, op) || facOf(b) !== G.Fac.idOfV(v)) continue;
       if (coin(b) && E.purse(v) + EPS < Tt.FEE) continue;
       const dr = G.Vg.door(b); if (G.W.reaches(v, dr[0], dr[1])) return b;
@@ -424,20 +443,20 @@
     leg(op, v) { const d = op.data; const m = d && d.atores && d.atores[v.id]; return m && !m.body && (d.fase === 'portas' || d.fase === 'peca') ? 'palco' : null; },
     title(op) { const S = S_(); const b = S.buildings.get(op.at); const d = op.data; return `O espetáculo ${b ? de(b) : 'do teatro'}: ${d.fase === 'preparo' ? 'os atores se preparam' : d.fase === 'portas' ? 'as portas abertas' : d.fase === 'peca' ? 'a peça em cena' : 'os aplausos'}, ${Object.keys(d.plateia).length} na plateia`; },
     avail(c, v, set) {
-      for (const b of E.byType(set.id, 'teatro')) { const op = Tt.dia(b); if (!op) continue; const ok = aberto(b, op); return { ok, why: ok ? '' : shut(op), txt: `Há espetáculo ${n_(b)} de ${set.name} hoje`, known: G.dist(v.x, v.y, b.x, b.y) < 30 }; }
+      for (const b of showsOf(set.id)) { const op = Tt.dia(b); if (!op) continue; const ok = aberto(b, op); return { ok, why: ok ? '' : shut(op), txt: `Há espetáculo ${n_(b)} de ${set.name} hoje`, known: G.dist(v.x, v.y, b.x, b.y) < 30 }; }
       return null;
     },
     tick,
     text(v, t, op) {
       const S = S_(); const b = S.buildings.get(t.id);
-      if (t.type === 'teatro') { if (t.st === 0) return 'Indo ao teatro'; return op.data.fase === 'peca' ? `Assistindo à peça ${n_(b)}` : op.data.fase === 'fim' ? 'Aplaudindo' : 'Esperando a peça começar'; }
+      if (t.type === 'teatro') { const jg = arena(b); if (t.st === 0) return jg ? 'Indo aos jogos' : 'Indo ao teatro'; return op.data.fase === 'peca' ? (jg ? `Assistindo aos jogos ${n_(b)}` : `Assistindo à peça ${n_(b)}`) : op.data.fase === 'fim' ? 'Aplaudindo' : jg ? 'Esperando os jogos começarem' : 'Esperando a peça começar'; }
       if (t.type === 'atuar') { if (t.st === 0) return 'Indo para o palco'; return op.data.fase === 'peca' ? (b && stageUse(b) === 'lutar' ? 'Lutando na arena, de mentira, para o público' : 'Atuando no palco') : 'No palco, esperando a hora'; }
       return null;
     },
     offers(v, x, y, r) {
       const S = S_(); const out = [];
       for (const b of S.buildings.values()) {
-        if (b.type !== 'teatro' || !b.built) continue;
+        if (!isShow(b)) continue;
         const at = G.Vg.door(b); if (v.inside !== b.id && G.dist(x, y, at[0], at[1]) > r + 2) continue;
         if (facOf(b) !== G.Fac.idOfV(v)) continue;
         const op = Tt.dia(b); if (!op) continue; const d = op.data;
@@ -526,7 +545,7 @@
   const oldJob = E.jobTask;
   E.jobTask = function (v, H) {
     const S = S_();
-    if (v.role === 'ator') { const b = v.job && S.buildings.get(v.job); const f = G.Fac.ofV(v); if (!b || !b.built || b.type !== 'teatro' || !f) return null; return Tt.task(v, b, f, H); }
+    if (v.role === 'ator') { const b = v.job && S.buildings.get(v.job); const f = G.Fac.ofV(v); if (!isShow(b) || !f) return null; return Tt.task(v, b, f, H); }
     if (v.role === 'copista') { const b = v.job && S.buildings.get(v.job); const f = G.Fac.ofV(v); if (!b || !b.built || b.type !== 'biblioteca' || !f) return null; return Bi.task(v, b, f, H); }
     return oldJob(v, H);
   };
@@ -534,7 +553,7 @@
   const oldDemand = E.demand;
   E.demand = function (set, fac, Ad) {
     const out = oldDemand(set, fac, Ad);
-    if (Ad >= 12) { const n = E.byType(set.id, 'teatro').length; if (n) out.ator = (out.ator || 0) + 2 * n; }
+    if (Ad >= 12) { let n = 2 * E.byType(set.id, 'teatro').length; for (const b of E.byType(set.id, 'maravilha')) if (arena(b)) n += fighters(b); if (n) out.ator = (out.ator || 0) + n; }
     if (Ad >= 10 && fac.tech && fac.tech.known && fac.tech.known.escrita) { const n = E.byType(set.id, 'biblioteca').length; if (n) out.copista = (out.copista || 0) + n; }
     return out;
   };
@@ -549,7 +568,7 @@
   E.buildingHTML = function (b, plink, esc) {
     let h = oldHTML(b, plink, esc);
     const hh = x => `${Math.floor(x * 24)}h`;
-    if (b.type === 'teatro' && b.built) {
+    if (isShow(b)) {
       const hr = Tt.horas(b); const op = Tt.dia(b); const n = actorsOf(b).length;
       if (op && live(op)) { const d = op.data; h += `<div class="doing">${d.fase === 'preparo' ? `Os atores se preparam: as portas abrem às ${hh(hr.abre)}` : d.fase === 'portas' ? `Portas abertas: a peça começa às ${hh(hr.peca)}` : d.fase === 'peca' ? 'A peça em cena' : 'Os aplausos'} · ${Object.keys(d.plateia).length} na plateia · ${Object.keys(d.atores).length} no palco${coin(b) ? ` · ${esc(money(b, d.receita))} de entradas` : ''}</div>`; }
       else h += `<div class="doing">${n ? `Espetáculo às ${hh(hr.peca)}` : 'Sem atores: sem espetáculo'}.</div>`;
@@ -588,17 +607,18 @@
       const kp = list('plateia'), ka = list('atores'), kl = list('ler');
       for (const op of A.all()) {
         if (op.def !== 'espetaculo' || !live(op)) continue;
+        const b = S.buildings.get(op.at); // (its places: the rows or the benches, the stage or the sand)
         const d = op.data; d.plateia = d.plateia && typeof d.plateia === 'object' ? d.plateia : {}; d.atores = d.atores && typeof d.atores === 'object' ? d.atores : {};
         for (const [id, m] of Object.entries(d.plateia)) {
           const v = S.villagers.get(+id); if (!v || m.body || v.captive || v.jail) { delete d.plateia[id]; continue; }
           if (kp && !kp.has(op.id + ':' + id)) continue;
-          G.Vg.setTask(v, { type: 'teatro', id: op.at, op: op.id, pri: 0.45, st: m.st === 2 ? 2 : 1, use: 'assistir', kind: 'leisure' });
+          G.Vg.setTask(v, { type: 'teatro', id: op.at, op: op.id, pri: 0.45, st: m.st === 2 ? 2 : 1, use: b ? seatUse(b) : 'assistir', kind: 'leisure' });
           if (v.task && v.task.type === 'teatro') v.inside = op.at; else delete d.plateia[id];
         }
         for (const [id, m] of Object.entries(d.atores)) {
           const v = S.villagers.get(+id); if (!v || m.body || v.captive || v.jail) { delete d.atores[id]; continue; }
           if (ka && !ka.has(op.id + ':' + id)) continue;
-          G.Vg.setTask(v, { type: 'atuar', id: op.at, op: op.id, pri: 1.05, st: 1, use: 'atuar', kind: 'work' });
+          G.Vg.setTask(v, { type: 'atuar', id: op.at, op: op.id, pri: 1.05, st: 1, use: b ? stageUse(b) : 'atuar', kind: 'work' });
           if (v.task && v.task.type === 'atuar') v.inside = op.at; else delete d.atores[id];
         }
       }
