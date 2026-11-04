@@ -2,8 +2,8 @@
 // os mundos prontos que vêm com o jogo: o que cada um é, sem o seu peso (escrito por qa/prontos.js — não editar à mão)
 G.Ready.list({
  "cidade": {
-  "day": 13,
-  "pop": 141,
+  "day": 12,
+  "pop": 124,
   "peoples": 4,
   "towns": 4,
   "N": 128,
@@ -12,30 +12,30 @@ G.Ready.list({
   "city": {
    "name": "Tenochtitlan",
    "tier": 3,
-   "pop": 34
+   "pop": 31
   },
   "wars": 0,
   "ww": null,
   "world": "Ysdun",
-  "bytes": 963298
+  "bytes": 931146
  },
  "metropole": {
-  "day": 58,
-  "pop": 671,
-  "peoples": 5,
+  "day": 54,
+  "pop": 532,
+  "peoples": 6,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
-   "name": "Mênfis",
+   "name": "Tenochtitlan",
    "tier": 4,
-   "pop": 58
+   "pop": 76
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 3196206
+  "bytes": 2814079
  },
  "mega": {
   "day": 120,
@@ -56,40 +56,40 @@ G.Ready.list({
   "bytes": 7234507
  },
  "mundial": {
-  "day": 84,
-  "pop": 1128,
-  "peoples": 6,
+  "day": 106,
+  "pop": 895,
+  "peoples": 4,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Mênfis",
+   "name": "Roma",
    "tier": 4,
-   "pop": 207
+   "pop": 171
   },
-  "wars": 2,
+  "wars": 1,
   "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 5318012
+  "bytes": 5485266
  },
  "anos100": {
   "day": 101,
-  "pop": 984,
-  "peoples": 1,
-  "towns": 7,
+  "pop": 850,
+  "peoples": 3,
+  "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Hedeby",
+   "name": "Roma",
    "tier": 4,
-   "pop": 205
+   "pop": 241
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 3524595
+  "bytes": 3561928
  },
  "anos500": {
   "day": 501,
