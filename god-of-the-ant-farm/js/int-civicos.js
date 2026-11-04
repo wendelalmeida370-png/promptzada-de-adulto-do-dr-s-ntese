@@ -451,9 +451,13 @@
   // (and the bigger steps of a type — G.Escala, D-106 —, where the form of the building's size is no hall but a building of
   // its own — the palace of courts, int-palacio.js —: laid out by the builder its file gives, In.formSized(type, fn(P, F)), in
   // the form's family all the same: the form of that size the people's, the step not the classic one)
+  // — and a type with no form at all (the tavern, the house): its bigger steps are a plan of the lot's size (TYPES[t].sizes,
+  // In.sizeOk), laid out by its file's builder the same way, in the family its bigger steps are given (no family of their own:
+  // L-512, a family registered in the middle of the order moves the dice of every plan after it)
   const FORM_SIZED = {};
   In.formSized = (type, fn) => { FORM_SIZED[type] = fn; };
-  const sizedOf = rec => { const fn = FORM_SIZED[rec.t], n = In.nOf(rec); return fn && n !== ((G.BDEF[rec.t] || {}).w || 1) && G.Forma && G.Forma.has(rec.t, rec.c, n) ? fn : null; };
+  const sizedOf = rec => { const fn = FORM_SIZED[rec.t], n = In.nOf(rec); if (!fn || n === ((G.BDEF[rec.t] || {}).w || 1) || !G.Forma) return null;
+    return G.Forma.has(rec.t, rec.c, n) || (!G.Forma.has(rec.t, rec.c) && In.sizeOk(rec.t, rec.c, n)) ? fn : null; };
   const formCanOf = rec => (sizedOf(rec) || (FORM_BARE[rec.t] && G.Forma && G.Forma.of(rec.t, rec.c, In.nOf(rec))) ? null : formCan(rec));
   const formBuild = P => { const fn = sizedOf(P.rec); if (fn) { fn(P, G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec))); return; }
     const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); if (F && !G.Forma.body(F) && FORM_BARE[P.rec.t]) FORM_BARE[P.rec.t](P, F); else formHall(P); };
@@ -466,6 +470,16 @@
   };
   In.formType('biblioteca', { fam: 'forma.salao', furnish: libraryFurnish });
   In.formType('temple', { fam: 'forma.templo', furnish: formTempleFurnish, hall: 'nave', keep: true });
+  // (the bigger steps of a type with no form — the tavern of 12 m and the inn of 16, the rich house of 8; D-106 —: a plan of the
+  // lot's size (sizes), laid out by the builder of int-familias.js (In.innBuild, In.domusBuild) through In.formSized, in the
+  // family of the halls by the form (forma.salao), at the end of the type's list — its place in the order of registration
+  // kept, the catalogue's row of the size its own —; that family the one a bigger step is given (stepFam), the recipes of the
+  // classic lot as they were, by the type's own preference)
+  const sizedType = (t, sizes, build) => { const T = In.TYPES[t], STEP = 'forma.salao'; if (!T || !In.FAMS[STEP]) return; const pf = T.prefer; const n0 = (G.BDEF[t] || {}).w || 1;
+    In.formSized(t, (P, F) => build(P, F));
+    In.addTypes({ [t]: Object.assign({}, T, { fams: T.fams.concat([STEP]), sizes, stepFam: STEP, prefer: (rec, l) => (In.nOf(rec) !== n0 ? (l.includes(STEP) ? [STEP] : l) : pf ? pf(rec, l) : l) }) }); };
+  sizedType('taverna', [3, 4], P => In.innBuild(P));
+  sizedType('house', [2], P => In.domusBuild(P));
 
   // ------------------------------ the square (P4, phase E) ------------------------------
   // the town's open ground — it blocks nothing: the world walks across it —, its shell 'aberta' (no walls, no roof, on the

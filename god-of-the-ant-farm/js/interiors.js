@@ -38,12 +38,10 @@
   // a storey carried by the walls below, a terrace over the roof's beams, a platform on stilts; a floor on the ground: none)
   const SLABS = In.SLABS = { jirau: 0.15, galeria: 0.2, andar: 0.2, terraco: 0.25, elevado: 0.2 };
   const ITEMS = In.ITEMS = {}, FAMS = In.FAMS = {}, TYPES = In.TYPES = {}, TRAD = In.TRAD = {};
-  const FAMLIST = [];
   In.addItems = o => { for (const k in o) ITEMS[k] = Object.assign({ kind: k }, o[k]); };
-  In.addFamilies = list => { for (const f of list) { if (!FAMS[f.id]) FAMLIST.push(f.id); FAMS[f.id] = f; } };
+  In.addFamilies = list => { for (const f of list) FAMS[f.id] = f; };
   In.addTypes = o => { for (const k in o) TYPES[k] = Object.assign({ type: k }, o[k]); };
   In.addTraditions = o => { for (const k in o) TRAD[k] = o[k]; };
-  const famIndex = id => { const k = FAMLIST.indexOf(id); return k < 0 ? 0 : k; };
 
   // ------------------------------ the canonical frame ------------------------------
   // A plan is laid out with its entrance at the front (v = L, the side the building opens to), u across it (the right hand
@@ -265,7 +263,10 @@
   }
 
   // ------------------------------ the plan under construction (canonical) ------------------------------
-  function seedOf(id, fam, attempt) { return (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(famIndex(fam) + 7, 0x85EBCA6B) ^ Math.imul(attempt + 3, 0xC2B2AE35)) | 0; }
+  // (the family in the seed by its own name — a hash of its id —, never by its place in the list of families: one family added in a
+  // file loaded early moved every family after it, and with them the plans of nearly every building of the world, L-512)
+  const famSeed = id => { let h = 0x811C9DC5; const s = String(id || ''); for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 0x01000193); } return h | 0; };
+  function seedOf(id, fam, attempt) { return (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(famSeed(fam), 0x85EBCA6B) ^ Math.imul(attempt + 3, 0xC2B2AE35)) | 0; }
   // (two sets of dice: the shell's — one for the building and its family, the same in every attempt: the shell, its roof, its
   // floors, its outside walls and what opens in them are what is seen from afar, and never change with how the inside went
   // — and each attempt's own for the inside, from P.inside() on)
