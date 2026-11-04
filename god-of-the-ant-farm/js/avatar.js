@@ -134,7 +134,9 @@
     if (b.inAsk && b.inAsk.res) b.inAsk = null;
     // (the world has it indoors only by the door: a room of the building it came in by — Possess.cameBy; going out is free, L-175)
     if (!b.inAsk && want !== (v.inside || 0)) { const id = want; b.inAsk = G.Possess.apply(w => { if (id && (!G.S.buildings.has(id) || !G.Possess.cameBy(id))) return { ok: false, why: '' }; w.inside = id; return { ok: true }; }); }
-    G.Possess.setLevel(ins && ins.shell && v.inside === ins.b.id ? ins.lv : null); // (once the world has it indoors)
+    // (once the world has it indoors — and on an open ground of storeys come into by its way in, the storey it stands on: the arena
+    // and the podium of the amphitheatre over its substructure, which the world's step asks the plan on, L-550)
+    G.Possess.setLevel(ins && ins.shell && (v.inside === ins.b.id || (open && G.Possess.cameBy(ins.b.id))) ? ins.lv : null);
   }
   Av.indoors = () => (b && b.inB && b.inShell ? { b: b.inB, p: b.inP, lv: b.lv, crawl: !!b.crawl } : null); // (for the camera and the 3D)
   // (the flight the body is going up or down now — the stair's id, its building's, how far along: the 3D lifts its lid)
@@ -337,6 +339,9 @@
         c.t = Math.min(c.T, c.t + h); let k = 0; while (k < c.P.length - 2 && c.t > c.P[k + 1][3]) k++;
         const A = c.P[k], B = c.P[k + 1]; const u = B[3] > A[3] ? G.clamp((c.t - A[3]) / (B[3] - A[3]), 0, 1) : 1;
         b.X = G.lerp(A[0], B[0], u); b.Z = G.lerp(A[1], B[1], u); b.Y = G.lerp(A[2], B[2], u); b.vx = b.vz = b.vy = 0; b.ground = true;
+        // (past the flight's top — up: on to its landing; down: on to its steps — the body is on the storey it goes to: on the way
+        // from the top of the subsolo's flight to its landing over the arena, the world asked the storey below, stone, L-550)
+        if (k >= 2) b.lv = c.lv;
         if (c.t >= c.T) { b.lv = c.lv; b.loco = 'ground'; b.flight = null; b.fallFrom = b.Y; }
       },
     },
