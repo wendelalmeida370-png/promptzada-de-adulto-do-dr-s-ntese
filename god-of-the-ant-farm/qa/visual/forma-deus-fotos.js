@@ -95,6 +95,28 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       await shot(r.pinta && o6.h !== null ? 'deus-coliseu-obra' : 'antes-deus-coliseu-obra');
       if (o6.h !== null) ok('6: a obra do Coliseu pela metade, da altura da forma', !o6.built && o6.top !== null && Math.abs(o6.h - o6.top) < 0.01, `a obra de ${o6.w} casas: o andaime a ${o6.h.toFixed(1)} px (a forma desse tamanho: ${o6.top === null ? 'nenhuma' : o6.top.toFixed(1) + ' px'})`);
     }
+    // (7) the memory of the big pictures (Art.BIG): the cache after the views above — all of it, and the big ones the cap
+    // counts —; the Colosseum's picture let go and painted again: how long, and the same pixels; then every step's picture
+    // made in turn, a frame each, with and without its door (as a world showing them one after the other): each one's memory and
+    // time, and what the cap let go
+    const o7 = await page.evaluate(N => {
+      const Art = G.Art, A = G.Arch, Fo = G.Forma; if (!Art.mem || !Art.BIG || !A.formKey) return { none: true };
+      const m0 = Art.mem();
+      const hash = c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 2166136261; for (let i = 0; i < d.length; i++) { h ^= d[i]; h = Math.imul(h, 16777619); } return h >>> 0; };
+      const s0 = A.formSprite('maravilha', 'romano', N, false); const h0 = hash(s0.c);
+      Art.forget(A.formKey('maravilha', 'romano', N, false)); const t = performance.now(); const s1 = A.formSprite('maravilha', 'romano', N, false); const ms = performance.now() - t; const h1 = hash(s1.c);
+      const steps = []; for (const ty of Fo.types()) for (const st of ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico']) { if (!Fo.has(ty, st)) continue; const n0 = G.BDEF[ty] && G.BDEF[ty].w; for (const n of Fo.sizes(ty, st)) if (n !== n0) steps.push([ty, st, n]); }
+      const made = [], d0 = Art.BIG.dropped; let peak = 0;
+      for (const [ty, st, n] of steps) for (const nd of [false, true]) { Art.frame++; const t1 = performance.now(); const s = A.formSprite(ty, st, n, nd); made.push({ k: `${ty}/${st}/${n}${nd ? '/c' : ''}`, mb: s ? s.c.width * s.c.height * 4 / 1048576 : 0, ms: performance.now() - t1 }); peak = Math.max(peak, Art.BIG.bytes / 1048576); }
+      return { m0, m1: Art.mem(), ms, same: h0 === h1 && s0 !== s1, px: [s1.c.width, s1.c.height], made, peak, dropped: Art.BIG.dropped - d0, cap: Art.BIG.mb };
+    }, LIB.N).catch(e => ({ err: e.message }));
+    if (o7.err) ok('7: a memória dos desenhos grandes', false, o7.err);
+    else if (!o7.none) {
+      const tot = o7.made.reduce((s, q) => s + q.mb * 4 / 3, 0), slow = o7.made.reduce((a, q) => (q.ms > a.ms ? q : a), { ms: 0 });
+      // (over the cap by two at most: the one just made and the one drawn the frame before are never let go)
+      const two = o7.made.map(q => q.mb * 4 / 3).sort((a, b) => b - a).slice(0, 2).reduce((s, x) => s + x, 0);
+      ok('7: a memória dos desenhos grandes, com teto', o7.same && o7.peak <= o7.cap + two, `o cache depois das vistas: ${o7.m0.n} desenhos, ${o7.m0.mb.toFixed(1)} MB (os grandes: ${o7.m0.bigN}, ${o7.m0.bigMB.toFixed(1)} MB); o Coliseu solto e pintado de novo em ${o7.ms.toFixed(0)} ms, ${o7.same ? 'os mesmos pixels' : 'OUTROS pixels'} (${o7.px[0]} × ${o7.px[1]}); os ${o7.made.length} desenhos dos degraus (com e sem porta) somam ${tot.toFixed(1)} MB com as cópias, o mais lento ${slow.k} em ${slow.ms.toFixed(0)} ms — com o teto de ${o7.cap} MB: no máximo ${o7.peak.toFixed(1)} MB, ${o7.dropped} soltos; o cache no fim: ${o7.m1.n} desenhos, ${o7.m1.mb.toFixed(1)} MB`);
+    }
     const mod6 = await page.evaluate(() => (G.modErr ? Object.keys(G.modErr) : [])); for (const k of mod6) if (!after.mod.includes(k)) after.mod.push(k);
     ok('5: nenhum erro', !errs.length && !after.mod.length, errs.length || after.mod.length ? errs.slice(0, 4).join(' | ') + ' ' + after.mod.join(',') : 'nenhum erro de página nem de módulo');
   } catch (e) { ok('a prova', false, e.message); }

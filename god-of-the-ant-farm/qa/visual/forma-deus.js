@@ -20,7 +20,12 @@
 //     (a profundidade deles é deles); e quantos a chave de antes (a da 1ª rodada: o meio do lote só de 3 casas para cima, o
 //     curral, o estábulo e a feira pelo canto da frente) punha do lado errado.
 // (e) O desenho não muda o mundo: pintar o prédio grande e pedir a chave do desenho (R.bkey) não escreve no prédio nem tira do acaso do mundo.
-//   node qa/visual/forma-deus.js [a,b,c,d,e]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
+// (f) A obra de um prédio grande (L-528): o andaime do degrau de 10 casas sobe ao alto da forma desse tamanho, com um poste a cada
+//     duas casas e uma volta de vigas a cada 4 m; sem forma do tamanho, às paredes do tipo crescidas pela raiz do lote; no tamanho
+//     clássico, a obra de antes; pintar a obra não muda o mundo.
+// (g) A memória dos desenhos grandes (Art.BIG): os desenhos sem acaso dos degraus guardados até um teto, o desenhado há mais
+//     tempo solto primeiro, nunca um desenhado neste quadro ou no anterior; solto, pintado de novo igual; os desenhos à mão nunca.
+//   node qa/visual/forma-deus.js [a,b,c,d,e,f,g]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
 //   VERB=1  cada tipo e povo                   JSON=arquivo  os números
 'use strict';
 const path = require('path'), fs = require('fs');
@@ -279,6 +284,37 @@ if (want('f')) {
   const b = site('maravilha', 'romano', 7400, N10, 0.5);
   try { const s0 = JSON.stringify(b) + JSON.stringify(S.rng || null); paint(b); R.siteH(b); const s1 = JSON.stringify(b) + JSON.stringify(S.rng || null);
     ok('f: pintar a obra não muda o mundo', s0 === s1, s0 === s1 ? 'a obra e o acaso do mundo iguais' : 'mudou'); } finally { F.drop(b); }
+}
+
+// ------------------------------ (g) the memory of the big pictures ------------------------------
+// (Art.BIG: the big pictures of no chance — the steps' from their forms — kept up to a cap, the one drawn longest ago let go
+// first, none drawn this frame or the last; let go, painted again the same — what the painter paints, recorded, equal; the
+// hand drawings never let go. Canvases of their own, with their sizes, as the browser's: the game's in Node have none)
+if (want('g')) {
+  const Art = G.Art, doc0 = global.document; const painted = new Map(); let last = null;
+  global.document = new Proxy(doc0, { get(t, k) { if (k === 'createElement') return tag => { if (tag !== 'canvas') return doc0.createElement(tag); const R = F.recorder(); const cv = { width: 0, height: 0, getContext: () => R.c }; last = R; return cv; }; return t[k]; } });
+  const mb0 = Art.BIG.mb, f0 = Art.frame, d0 = Art.BIG.dropped; const log = [];
+  try {
+    Art.clear(); Art.BIG.mb = 10; Art.frame = 0;
+    // (a step's picture made — a frame each —, what its painter painted kept; whether one is in the cache, not touching it)
+    const make = (ty, st, n) => { Art.frame++; const s = A.formSprite(ty, st, n, false); painted.set(A.formKey(ty, st, n, false), JSON.stringify(last.ops)); return s; };
+    const MB = () => (Art.BIG.bytes / 1048576).toFixed(1), K = (ty, st, n) => A.formKey(ty, st, n, false), on = k => Art.has(k);
+    const a = K('maravilha', 'romano', N10), b = K('palacio_colossal', 'romano', 10), c = K('palacio', 'romano', 6), d = K('palacio', 'grego', 6), e = K('maravilha', 'romano', 13);
+    // (the Colosseum, the colossal palace, the palace, over a cap of 10 MB: the Colosseum, drawn longest ago, goes)
+    const sA = make('maravilha', 'romano', N10); const pA = painted.get(a); make('palacio_colossal', 'romano', 10); make('palacio', 'romano', 6);
+    const okA = !on(a) && on(b) && on(c); log.push(`o Coliseu, o colossal e o palácio: ${MB()} MB, o Coliseu ${on(a) ? 'guardado' : 'solto'}`);
+    // (the colossal drawn again, the Greek palace made: under the cap, nothing goes)
+    Art.frame++; A.formSprite('palacio_colossal', 'romano', 10, false); make('palacio', 'grego', 6);
+    const okD = on(b) && on(c) && on(d); log.push(`o colossal desenhado de novo, o grego feito: ${MB()} MB, nenhum solto`);
+    // (the Colosseum wanted again: painted again, the same; the Roman palace, now drawn longest ago, goes — not the colossal)
+    const sA2 = make('maravilha', 'romano', N10); const same = painted.get(a) === pA && sA2 !== sA;
+    const okC = !on(c) && on(a) && on(b) && on(d); log.push(`o Coliseu de novo: ${MB()} MB, o palácio romano ${on(c) ? 'guardado' : 'solto'}`);
+    // (the Colosseum of 13: the colossal and the Greek palace go; the one of 10, drawn the frame before, never — over the cap a while)
+    make('maravilha', 'romano', 13); const okE = on(e) && on(a) && !on(b) && !on(d); log.push(`o de 13: ${MB()} MB — acima do teto só com os dois desenhados agora`);
+    // (a hand drawing, however big: never counted)
+    const hand = Art.building('palacio_colossal', 0, 'classico', null, false); const okH = !!hand && !hand.big;
+    ok('g: a memória dos desenhos grandes, com teto', okA && okD && okC && okE && same && okH, log.join('; ') + `; o Coliseu pintado de novo: ${same ? 'a mesma pintura' : 'OUTRA'}; o desenho à mão do palácio colossal (${hand ? hand.c.width + ' × ' + hand.c.height : '-'} px): ${okH ? 'fora do teto' : 'contado!'}; ${Art.BIG.dropped - d0} soltos`);
+  } finally { global.document = doc0; Art.BIG.mb = mb0; Art.frame = f0; Art.clear(); }
 }
 
 if (process.env.JSON) fs.writeFileSync(process.env.JSON, JSON.stringify(json));

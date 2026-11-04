@@ -1972,13 +1972,15 @@
     r.st.ms = (typeof performance !== 'undefined' ? performance.now() : 0) - t0; A.formStats = r.st; return r.st;
   };
   // the god's picture of a step from its form, n tiles a side (its door left out where the view does not see it — L-264 —, as
-  // the drawings of before): the sprite of the type, people and size, painted once and kept (Art's cache)
+  // the drawings of before): the sprite of the type, people and size, painted once and kept (Art's cache — the painter has no
+  // chance: a big one may be let go and painted again, the same, Art.BIG)
   A.formSprite = function (type, style, n, noDoor) {
     const Fo = G.Forma; const st = PAL[style] ? style : 'classico'; const F = Fo && Fo.of(type, st, n); if (!F) return null;
-    const key = 'f-' + type + st + F.n + (noDoor ? '|c' : '');
+    const key = A.formKey(type, st, F.n, noDoor);
     const [w, h, ax, ay] = dims(F.n, F.n, Math.ceil(F.top * ZPX) + 12);
-    return Art.sprite(key, w, h, ax, ay, (c, m) => A.formPaint(c, m, F, st, { noDoor }));
+    return Art.sprite(key, w, h, ax, ay, (c, m) => A.formPaint(c, m, F, st, { noDoor }), true);
   };
+  A.formKey = (type, st, n, noDoor) => 'f-' + type + st + n + (noDoor ? '|c' : '');
   // (a size that is not its type's classic one: a step drawn from its form — none given, the classic)
   A.sized = (type, n) => n !== undefined && n !== null && !!G.BDEF[type] && n !== G.BDEF[type].w;
 

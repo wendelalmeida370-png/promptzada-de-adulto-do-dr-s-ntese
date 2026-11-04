@@ -1239,7 +1239,7 @@
     // other modules give depths for the first view (x + y + offset): keep their offset, turn the rest
     if (HK.ents.length) { const add = (d, e, x, y, h) => { const p = proj(x, y, h === undefined ? W.groundH(x, y) : h); if (p[0] > view[0] - 70 && p[0] < view[2] + 70 && p[1] > view[1] - 20 && p[1] < view[3] + 120) pushD(rot ? depth(x, y) + (d - x - y) : d, 13, e, p[0], p[1]); }; for (const h of HK.ents) h(add, view, R.cam.zoom); }
     const list = drawList.slice(0, drawN).sort((a, b) => a.d - b.d);
-    G.Art.px = R.cam.zoom * dpr;
+    G.Art.px = R.cam.zoom * dpr; G.Art.frame++;
     if (nightF > 0.15) { homesLit.clear(); for (const v of S.villagers.values()) if (v.home) homesLit.add(v.home); }
     // shadows first
     ctx.fillStyle = 'rgba(20,30,20,0.2)';
