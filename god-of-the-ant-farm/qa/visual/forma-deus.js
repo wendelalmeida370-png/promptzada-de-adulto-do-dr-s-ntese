@@ -10,7 +10,7 @@
 // (c) A ordem do desenho dos prédios grandes: nas quatro vistas, quem está ao lado ou atrás de um prédio de 10 casas (e de 3) é
 //     desenhado do lado certo dele — na frente das faces que o deus vê, atrás das outras —, pela chave do render.js (R.bkey:
 //     a profundidade do meio do lote); e quantos a regra de antes (o canto da frente, um palmo para trás) punha do lado errado.
-// (e) O desenho não muda o mundo: pintar o prédio grande e pedir as tiras não escreve no prédio nem tira do acaso do mundo.
+// (e) O desenho não muda o mundo: pintar o prédio grande e pedir a chave do desenho (R.bkey) não escreve no prédio nem tira do acaso do mundo.
 //   node qa/visual/forma-deus.js [a,b,c,e]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
 //   VERB=1  cada tipo e povo                   JSON=arquivo  os números
 'use strict';
