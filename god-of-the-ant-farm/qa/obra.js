@@ -17,7 +17,8 @@
 //  b10 a cidade abandonada com uma obra: o que ela tinha fica ao vento, pelo livro ('abandono')
 //  b11 a doca terminada em pedra: sem madeira e com pedra no armazém de um povo que conhece o mar, o gerente das frotas troca
 //     a madeira que a doca pede por pedra — a conta da obra e o que ela pede juntos (G.Village.swapBill): o que entrou nela pelo
-//     livro é o que virou o prédio (L-416: a madeira entrava sem linha e a pedra sumia)
+//     livro é o que virou o prédio (L-416: a madeira entrava sem linha e a pedra sumia); o caso espera a doca com os construtores
+//     trabalhando nela, não uma janela do mundo (T-463)
 //  b12 a encomenda devolvida com material na obra: a casa paga que ninguém começou, com a madeira de um construtor nela, sai do
 //     chão no dia das casas da cidade, e a madeira volta ao estoque pelo livro ('obra-largada'); um save no meio (L-474: ia junto
 //     com a obra, sem linha)
@@ -224,12 +225,26 @@ const send = b => {
     if (f.tech && f.tech.known) f.tech.known.navegacao = 1;
     const keep = () => { const w = D.get(F, 'wood'); if (w > 0) D.use(F, 'wood', w, { code: 'teste', mine: true }); const st = D.get(F, 'stone'); const n = Math.min(D.room(F, 'stone'), 40 - st); if (n >= 1) D.make(F, 'stone', Math.floor(n), { code: 'teste' }); };
     keep(); if (S.time < 0.25 || S.time > 0.6) { S.time = 0.27; }
-    let k2 = 0; const done = live(900, () => { if (++k2 % 20 === 0) keep(); return !site(id); });
+    // (the case waits for the quay while builders work on it — the time counted is theirs on its work, the build task the
+    // planner gives, not a window of the world: by the game's rule the builders work in their hours — the night, the evening
+    // at home, a conclave, the town's feast take them — and the planner shares them among the town's works. And the premise
+    // armed in any course, as the compras c9 and the lazer keep theirs: the god's peace held, so that no band takes them for
+    // good; the town's feast of each day kept for another day (festivals.js, the plan of the day: it takes them with the load
+    // in their hands); the weather calm. T-463: after the L-540 and the L-541 the 900 s of the world ended with the quay of
+    // Hedeby at 88% (48 of 53 stones): the builders had been 319 s on it — the town's other works first, the Jól, the nights
+    // —, and in the last day a band took them, the stones of one of them in her hands. Ten days of the world at most)
+    const calm11 = () => {
+      if (!(S.divinePeace > 0)) G.Politics.divinePeace();
+      S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0;
+      if (!s.festPlan || s.festPlan.day !== S.day || s.festPlan.key || !s.festPlan.done) s.festPlan = { day: S.day, key: null, done: true };
+    };
+    calm11(); const c11 = S.clock; let k2 = 0, work = 0;
+    const done = live(10 * G.DAY_LEN, () => { calm11(); if (++k2 % 20 === 0) keep(); if (onIt(id).length) work += 0.1; return !site(id) || work >= 900; }) && !site(id);
     const o = S.buildings.get(id); const into = seen.filter(e => e[4] === ref); const built = seen.filter(e => e[3] === ref && e[8] === 'obra-feita');
     const inOf = k => sum(into.filter(e => e[5] === k)); const bill = o ? V.bill(o) : {};
     const traded = !!(o && o.troca && o.troca.wood < 0);
     ok('b11 a-doca-de-pedra', done && !!o && o.built && traded && Math.abs(sum(built) - total(bill)) < 0.01 && Math.abs(inOf('wood') - (bill.wood || 0)) < 0.01 && Math.abs(inOf('stone') - (bill.stone || 0)) < 0.01 && Math.abs(flowOf(ref)) < 0.01,
-      o ? `${s.name}, doca #${id} ${o.built ? 'de pé' : 'ainda obra a ' + Math.round((o.progress || 0) * 100) + '%'}: a troca ${traded ? JSON.stringify(o.troca) : 'NÃO houve'}, a conta ${JSON.stringify(bill)}; entrou na obra pelo livro ${inOf('wood')} de madeira e ${inOf('stone')} de pedra; virou o prédio ('obra-feita') ${sum(built)}; o que entrou e não saiu: ${flowOf(ref)}` : 'a doca sumiu');
+      o ? `${s.name}, doca #${id} ${o.built ? 'de pé' : 'ainda obra a ' + Math.round((o.progress || 0) * 100) + '%'} (${Math.round(work)} s de construtor nela, em ${Math.round(S.clock - c11)} s do mundo): a troca ${traded ? JSON.stringify(o.troca) : 'NÃO houve'}, a conta ${JSON.stringify(bill)}; entrou na obra pelo livro ${inOf('wood')} de madeira e ${inOf('stone')} de pedra; virou o prédio ('obra-feita') ${sum(built)}; o que entrou e não saiu: ${flowOf(ref)}` : 'a doca sumiu');
   }
 }
 // ---------------- b12 a commission given back with material on its site (L-474) ----------------
