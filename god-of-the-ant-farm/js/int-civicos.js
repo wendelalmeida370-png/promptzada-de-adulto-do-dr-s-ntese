@@ -268,7 +268,7 @@
     return { door: C.door, u, doors: C.doors };
   }
   function formHall(P) {
-    const rec = P.rec, tr = P.tr; const F = G.Forma && G.Forma.of(rec.t, rec.c); const B = F && G.Forma.body(F); if (!B) { P.errs.push('a forma do prédio sem corpo'); return; }
+    const rec = P.rec, tr = P.tr; const F = G.Forma && G.Forma.of(rec.t, rec.c, In.nOf(rec)); const B = F && G.Forma.body(F); if (!B) { P.errs.push('a forma do prédio sem corpo'); return; }
     const t = (FORM_T[rec.t] && FORM_T[rec.t](rec, F)) || Math.min(tr.t || 0.3, 0.35), c = t / 2; const sh = B.r.slice(); const y0 = B.y0, h0 = B.y1 - B.y0;
     // (on the form's solid base — its steps the form's own —, or on the ground: the steps before its door the street's. Solid
     // from a body's step over the lot's foot, In.BODY.step, as the P3's bodyShell and openBase have it — L-390: a floor a few
@@ -436,7 +436,7 @@
   // (the families: the form's — the library's the only one of its type, every people has its form, its own or the classic one;
   // the temple's wherever it is laid out for the people (D-093: the six have their temple's form), the type's halls where it is
   // not, and where both are offered, the form's: the one the god and the 3D draw)
-  const formCan = rec => (G.Forma && G.Forma.of(rec.t, rec.c) && G.Forma.body(G.Forma.of(rec.t, rec.c)) ? null : 'o prédio sem a forma de um corpo');
+  const formCan = rec => (G.Forma && G.Forma.of(rec.t, rec.c, In.nOf(rec)) && G.Forma.body(G.Forma.of(rec.t, rec.c, In.nOf(rec))) ? null : 'o prédio sem a forma de um corpo');
   // a type laid out by its form's body — one builder for all of them, this one (formHall: the shell, the porch, the peristyle,
   // the court and the pylon, the platform, the form's steps, its solids and its braziers): In.formType(type, { fam, furnish,
   // hall, split, keep }) — fam: the family's id (registered once, offered where the form has a body for the people);
@@ -448,8 +448,8 @@
   // them becomes the form's on loading where the form is laid out (In.migrate, by the type's formFam); t(rec, F): the walls'
   // thickness where the type's is its own (the temazcal's, inside its dome: P3); bare(P, F): the type's plan where its form has
   // no body — the Egyptian baths' sacred lake, open to the sky (P3) —, in the same family
-  const formCanOf = rec => (FORM_BARE[rec.t] && G.Forma && G.Forma.of(rec.t, rec.c) ? null : formCan(rec));
-  const formBuild = P => { const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c); if (F && !G.Forma.body(F) && FORM_BARE[P.rec.t]) FORM_BARE[P.rec.t](P, F); else formHall(P); };
+  const formCanOf = rec => (FORM_BARE[rec.t] && G.Forma && G.Forma.of(rec.t, rec.c, In.nOf(rec)) ? null : formCan(rec));
+  const formBuild = P => { const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); if (F && !G.Forma.body(F) && FORM_BARE[P.rec.t]) FORM_BARE[P.rec.t](P, F); else formHall(P); };
   In.formType = function (type, o) {
     FORM_FAM[type] = o.fam; FORM_FURNISH[type] = o.furnish; if (o.hall) HALL_FN[type] = o.hall; if (o.split) FORM_SPLIT[type] = o.split;
     if (o.t) FORM_T[type] = o.t; if (o.bare) FORM_BARE[type] = o.bare;

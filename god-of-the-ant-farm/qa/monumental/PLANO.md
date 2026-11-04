@@ -2,7 +2,7 @@
 
 > Em uma frase: cada prédio passa a ter um **tamanho escolhido pela cidade que o constrói** — um degrau de uma escada de
 > tamanhos por tipo, conforme a gente, a riqueza, a técnica e a terra que ela tem —, e a forma, a planta, o 3D e o desenho do
-> deus saem **desse mesmo tamanho**. O santuário da aldeia continua pequeno; o Coliseu da capital passa a ter 48 m e uma arena
+> deus saem **desse mesmo tamanho**. O santuário da aldeia continua pequeno; o Coliseu da capital passa a ter 40 m e uma arena
 > de verdade. O diagnóstico está em `DIAGNOSTICO.md`; o pedido, em `PEDIDO.md`.
 
 ## 0. A ordem dos patches e as três decisões
@@ -56,16 +56,19 @@ As três perguntas do fechamento do Patch 2, que o dono deixou para o líder dec
 
 | Tipo | Degraus (lado do lote) | Quem justifica o maior |
 |---|---|---|
-| Maravilha (o Coliseu, a Grande Pirâmide, o Templo Mayor, o salão nórdico…) | **maravilha 12 casas (48 m)** · colossal 16 (64 m); os de 3 casas, só os que já existem | a capital de um povo grande |
-| Teatro (e o anfiteatro romano) | teatro 6 (24 m) · grande teatro 9 (36 m) · monumental 12 (48 m) | a cidade grande com escrita |
-| Palácio · Grande Palácio · Palácio Colossal | 6 (24 m) · 9 (36 m) · 12 (48 m) | a sede do governo, pelo tamanho do reino |
+| Maravilha (o Coliseu, a Grande Pirâmide, o Templo Mayor, o salão nórdico…) | **maravilha 10 casas (40 m)** · colossal 13 (52 m); os de 3 casas, só os que já existem | a capital de um povo grande |
+| Teatro (e o anfiteatro romano) | teatro 6 (24 m) · grande teatro 8 (32 m) · monumental 10 (40 m) | a cidade grande com escrita |
+| Palácio · Grande Palácio · Palácio Colossal | 6 (24 m) · 8 (32 m) · 10 (40 m) | a sede do governo, pelo tamanho do reino |
 | Casa do Chefe | 2 (8 m) · 3 (12 m) | a vila que já governa outras |
-| Templo | santuário 2 (8 m) · templo 4 (16 m) · grande templo 6 (24 m) · santuário monumental 9 (36 m) | a cidade sagrada, a capital |
+| Templo | santuário 2 (8 m) · templo 4 (16 m) · grande templo 6 (24 m) · santuário monumental 8 (32 m) | a cidade sagrada, a capital |
 | Taverna | taberna 2 (8 m) · taverna 3 (12 m) · hospedaria 4 (16 m, dois pisos e pátio) | o porto, o mercado, a capital |
 | Casa | a casa de 1 (4 m) continua; a **casa rica** (domus) 2 (8 m, com átrio) para a família rica | a riqueza da família |
 | Banhos, biblioteca, mercado, administração, quartel, monumento | o de hoje (2) · o grande (4 a 8) | conforme o tipo — se o tempo couber (pedido 7.7), senão dito no relatório |
 
-O custo e o tempo da obra crescem com o volume: um monumento é um feito de anos da cidade, não um enfeite.
+O custo e o tempo da obra crescem com o volume: um monumento é um feito de anos da cidade, não um enfeite. Os tamanhos
+foram medidos contra a terra que os mundos têm (`DIAGNOSTICO.md`, «A terra para os monumentos»): o maior quadrado livre do
+mapa tem 11 a 13 casas, e perto das capitais maduras, 4 — a cidade abre espaço para o monumento (C), e o relevo vira pódio.
+Os números vivem no `js/escala.js` e são do especialista da cidade.
 
 ## 3. As etapas (o pedido 15) e o que cada uma entrega
 
@@ -96,7 +99,7 @@ seus arquivos, trabalhando em paralelo na sua cópia do projeto (worktree), e o 
 | **M1 — espetáculo e maravilhas** | o Coliseu e os anfiteatros, os teatros, as pirâmides egípcia e asteca, as maravilhas dos outros povos, os monumentos; forma **e** planta; o teatro grego (L-494) | `js/forma-espetaculo.js` (novo), `js/int-monumentos.js`, `qa/monumentos.js`, as provas A, C, E |
 | **M2 — poder, fé e convívio** | os palácios e a casa do chefe, os templos (do santuário ao santuário monumental), a taverna e a hospedaria, a casa rica; forma **e** planta | `js/forma-poder.js` (novo), `js/int-palacio.js`, `js/int-civicos.js`, `js/int-familias.js`, as provas B, D, F, G |
 | **V — a visão do deus** | o pintor das peças da forma na projeção do deus; a ordem de desenho dos prédios grandes; a fidelidade | `js/arch.js`, `js/render.js`, `qa/visual/fidelidade.js` |
-| **C — a cidade e a simulação** | a escolha do degrau, o terreno, o custo, a ampliação, a lotação nas atividades, D-102, D-103, os portões (L-491) | `js/village.js` (além do contrato), `js/urban.js`, `js/economy.js`, `js/court.js`, `js/siege.js`, as atividades que chamam gente, `qa/escala.js` |
+| **C — a cidade e a simulação** | a escolha do degrau, o terreno (abrir espaço: mudar campos, realojar famílias; o relevo sob o pódio), o custo, a ampliação, a lotação nas atividades, D-102, D-103, os portões (L-491) | `js/village.js` (além do contrato), `js/urban.js`, `js/economy.js`, `js/court.js`, `js/siege.js`, as atividades que chamam gente, `qa/escala.js` |
 | **E — o 3D, o corpo e a câmera** | o 3D dos prédios grandes, a câmera nos espaços grandes, o corpo nas escadarias, D-104, o desempenho, as fotos | `js/build3d.js`, `js/realm3d.js`, `js/cam3d.js`, `js/avatar.js`, `js/interact.js`, `qa/visual/monumental.js` |
 
 **Por que cinco e não menos:** a forma e a planta de um tipo andam juntas (um só dono por família de prédios, para não haver
@@ -132,9 +135,9 @@ do código e a vida curta, e roda a regressão completa uma vez, no fim, com os 
 
 | Teste | A prova | O que mede |
 |---|---|---|
-| **A — Coliseu** | `qa/monumental.js` A e `qa/visual/monumental.js` | lote ≥ 48 m; altura ≥ 20 m; ≥ 3 andares de arcadas; arena ≥ 20 × 12 m; ≥ 600 assentos; de cada entrada se chega a cada assento e à arena; a planta, a forma e o desenho do deus do mesmo tamanho; as fotos de fora e de dentro |
-| **B — Palácio** | `monumental.js` B | a área do palácio imperial ≥ 30 vezes a da casa; salão do trono ≥ 16 × 10 m e ≥ 10 m de pé-direito; ≥ 2 pátios; escadaria; lugares para guardas, funcionários e visitantes |
-| **C — Pirâmides** | `monumental.js` C | a egípcia lisa com 50–54° e ≥ 40 m de base; a asteca em ≥ 4 terraços, com a escadaria e os dois santuários; as massas das duas diferentes |
+| **A — Coliseu** | `qa/monumental.js` A e `qa/visual/monumental.js` | lote ≥ 40 m; altura ≥ 18 m; ≥ 3 andares de arcadas; arena ≥ 20 × 12 m; ≥ 600 assentos; de cada entrada se chega a cada assento e à arena; a planta, a forma e o desenho do deus do mesmo tamanho; as fotos de fora e de dentro |
+| **B — Palácio** | `monumental.js` B | a área do palácio imperial ≥ 30 vezes a da casa; salão do trono ≥ 14 × 9 m e ≥ 9 m de pé-direito; ≥ 2 pátios; escadaria; lugares para guardas, funcionários e visitantes |
+| **C — Pirâmides** | `monumental.js` C | a egípcia lisa com 50–54° e ≥ 36 m de base; a asteca em ≥ 4 terraços, com a escadaria e os dois santuários; as massas das duas diferentes |
 | **D — Templo** | `monumental.js` D | o santuário monumental com ≥ 9 vezes a área do santuário da aldeia; a nave ≥ 10 × 16 m e ≥ 8 m de altura; ≥ 40 lugares de rezar |
 | **E — Teatro** | `monumental.js` E | palco ≥ 12 m; ≥ 300 assentos em vários níveis; bastidores; corredores |
 | **F — Taverna** | `monumental.js` F | a hospedaria com salão ≥ 10 × 8 m, ≥ 8 mesas, cozinha, depósito, balcão; ≥ 20 fregueses sentados ao mesmo tempo |
@@ -155,7 +158,7 @@ E, como em toda feature (o protocolo):
 
 - O quadro do Modo Encarnado na metrópole (a medida do e8): hoje 10,9 ms na mediana — **no máximo 13 ms** com um monumento à
   vista.
-- Uma planta de 48 m feita em Node: medida e com teto (alvo: 400 ms na primeira vez; depois, do cache).
+- Uma planta de 40 m feita em Node: medida e com teto (alvo: 400 ms na primeira vez; depois, do cache).
 - O 3D: as peças repetidas (arcos, assentos, colunas) em instâncias; de longe, a silhueta das massas (`Fo.mass`), no mesmo
   tamanho.
 - O desenho do deus: o «sprite» do prédio grande feito uma vez e guardado, como os de hoje.

@@ -922,7 +922,7 @@
   // the progress the materials allow: all of it with every material in — a hair left by the sum of the loads (three of 3.3
   // for 10 leave 4e-16) is nothing missing, or the ratio would stop the last stroke at 0.9999999999999999
   function allowedProgress(b) {
-    const def = G.BDEF[b.type]; const tot = G.Village.totalCost(def);
+    const tot = G.Village.totalCost(G.Escala.billOf(b)); // (its step's bill, D-106)
     if (!tot) return 1;
     let left = 0; for (const k in b.need) left += b.need[k];
     return left < 1e-9 ? 1 : 1 - left / tot;
@@ -1605,7 +1605,7 @@
       G.faceTo(v, cx - v.x, cy - v.y);
       if (b.progress < allowed) {
         v.act = 'build';
-        b.progress = Math.min(allowed, b.progress + dt * workMul(v) * G.Civ.tV(v, 'build') / Math.max(1, def.work));
+        b.progress = Math.min(allowed, b.progress + dt * workMul(v) * G.Civ.tV(v, 'build') / Math.max(1, G.Village.workOf(b)));
         if (v.actT > 0.5) { v.actT = 0; G.Audio && G.Audio.at(cx, cy, 'hammer'); G.FX && G.FX.dust(cx + G.rr(-0.5, 0.5), cy + G.rr(-0.5, 0.5)); }
         if (b.progress >= 1) { G.Village.completeBuilding(b); v.st.built++; emote(v, 'happy', 2.5); return end(v); }
       } else { t.st = 0; v.act = ''; }

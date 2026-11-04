@@ -130,6 +130,18 @@
   // (each a function of the lot's side L, metres: the god draws the wonder on a 3 × 3 lot)
   const FORMS = {};
   const def = (type, style, fn) => { (FORMS[type] = FORMS[type] || {})[style] = fn; };
+  // the forms of the other steps of a type's ladder (G.Escala, D-106): a generator of a people's building at the sizes it
+  // raises — fn(L, n), L the lot's side in metres, n in tiles —, put in by its own file (js/forma-*.js, pure as this one). The
+  // forms above are each type's classic step, the size of its table (G.BDEF), and stay as they are
+  const SIZED = {};
+  Fo.def = function (type, style, fn, sizes) {
+    if (!sizes) { def(type, style, fn); return; }
+    const by = (SIZED[type] = SIZED[type] || {}); (by[style] = by[style] || []).push({ sizes: sizes.slice(), fn });
+  };
+  const n0Of = type => (G.BDEF && G.BDEF[type] ? G.BDEF[type].w : 3);
+  // (the generator of a size: the people's own, else the classical one's — as a classic form falls back on it)
+  const sizedFn = (type, style, n) => { const by = SIZED[type]; if (!by) return null;
+    for (const st of [style, 'classico']) for (const e of by[st] || []) if (e.sizes.includes(n)) return { st, fn: e.fn }; return null; };
 
   // ------------------------------ the god's kit, as forms ------------------------------
   // (arch.js and cityart.js draw a building with a few helpers — a plinth, the walls, a row of windows, a band, the people's
@@ -1589,14 +1601,32 @@
   // the form of a type in a people's style — { type, style, L, els, door, body, amphi, stalls, bays, top } — or null (its shell,
   // or its old drawing, is its form); the same object for every building of it (amphi: an amphitheatre's numbers, the plan's —
   // D-095; stalls, bays: a market's, where the god draws them — arch.js mercado, T-254)
-  Fo.of = function (type, style) {
-    const F0 = FORMS[type]; if (!F0) return null; const fn = F0[style] || F0.classico; if (!fn) return null;
-    const key = type + ':' + (F0[style] ? style : 'classico'); let F = memo.get(key); if (F) return F;
-    const d = G.BDEF && G.BDEF[type]; const L = (d ? d.w : 3) * TILE; const o = fn(L);
-    F = Object.freeze({ type, style: F0[style] ? style : 'classico', L, els: o.els, door: o.door || null, body: o.body || null, amphi: o.amphi || null, stalls: o.stalls || null, bays: o.bays || null, top: topOf(o.els) });
+  // n: the building's lot in tiles (b.w) — absent, or the type's classic size, the classic form; another size, the form of
+  // that step (Fo.def … sizes), or none
+  Fo.of = function (type, style, n) {
+    const F0 = FORMS[type]; if (!F0) return null;
+    if (n === undefined || n === null || n === n0Of(type)) {
+      const fn = F0[style] || F0.classico; if (!fn) return null;
+      const key = type + ':' + (F0[style] ? style : 'classico'); let F = memo.get(key); if (F) return F;
+      const L = n0Of(type) * TILE; const o = fn(L);
+      F = Object.freeze({ type, style: F0[style] ? style : 'classico', n: n0Of(type), L, els: o.els, door: o.door || null, body: o.body || null, amphi: o.amphi || null, stalls: o.stalls || null, bays: o.bays || null, top: topOf(o.els) });
+      memo.set(key, F); return F;
+    }
+    const g = sizedFn(type, style, n); if (!g) return null;
+    const key = type + ':' + g.st + ':' + n; let F = memo.get(key); if (F) return F;
+    const L = n * TILE; const o = g.fn(L, n);
+    F = Object.freeze({ type, style: g.st, n, L, els: o.els, door: o.door || null, body: o.body || null, amphi: o.amphi || null, stalls: o.stalls || null, bays: o.bays || null, top: topOf(o.els) });
     memo.set(key, F); return F;
   };
-  Fo.has = (type, style) => !!(FORMS[type] && (FORMS[type][style] || FORMS[type].classico));
+  // (a type with a form in this people's style — of the size n, when given: the classic size, or a step's generator)
+  Fo.has = (type, style, n) => {
+    if (!(FORMS[type] && (FORMS[type][style] || FORMS[type].classico))) return false;
+    return n === undefined || n === null || n === n0Of(type) || !!sizedFn(type, style, n);
+  };
+  // (the sizes a people raises a type in: the classic and its steps')
+  Fo.sizes = (type, style) => { if (!Fo.has(type, style)) return []; const out = [n0Of(type)];
+    for (const st of [style, 'classico']) for (const e of (SIZED[type] || {})[st] || []) for (const n of e.sizes) if (!out.includes(n)) out.push(n);
+    return out.sort((a, b) => a - b); };
   Fo.types = () => Object.keys(FORMS);
   // the highest point of a form (m over the lot's highest ground): its far figure's height and the camera's
   function topOf(els) {

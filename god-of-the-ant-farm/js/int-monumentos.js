@@ -391,16 +391,16 @@
     P.marks(0, id, 'rezar', [-1.6, -0.8, 0.8, 1.6].map(du => [r2(cu + du), r2(Math.min(g.sh[3] - 0.5, front + 1.0)), Math.PI]));
   }
   function monumentOf(P) {
-    const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c); if (!F) { P.errs.push('o monumento sem forma'); return; }
+    const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); if (!F) { P.errs.push('o monumento sem forma'); return; }
     monumentPlan(P, F);
   }
   function wonder(P) {
-    const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c); if (!F) { P.errs.push('a maravilha sem forma'); return; }
+    const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); if (!F) { P.errs.push('a maravilha sem forma'); return; }
     const f = WONDER[F.style] || WONDER[P.rec.c]; if (!f) { P.errs.push(`a maravilha de ${P.rec.c} ainda sem planta`); return; }
     f(P, F);
   }
   function theatre(P) {
-    const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c); if (!F) { P.errs.push('o teatro sem forma'); return; }
+    const F = G.Forma && G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); if (!F) { P.errs.push('o teatro sem forma'); return; }
     const f = THEATRE[F.style] || THEATRE[P.rec.c]; if (!f) { P.errs.push(`o teatro de ${P.rec.c} ainda sem planta`); return; }
     f(P, F);
   }
@@ -410,7 +410,7 @@
   // pylon's gate before the walls with no court (the Egyptian palace's), the way the form covers to its walls (the temazcal's),
   // the form's steps) —; here, of each type, how its hall is split into rooms and what stands in them
   // (the storey's height: the form's body, from its floor to its eaves)
-  const storeyH = P => { const B = G.Forma.body(G.Forma.of(P.rec.t, P.rec.c)); return B.y1 - B.y0; };
+  const storeyH = P => { const B = G.Forma.body(G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec))); return B.y1 - B.y0; };
   const fnRoom = (P, rooms, fn) => rooms.all.find(id => P.rooms[id] && P.rooms[id].fn === fn);
   // (a door of 0.9 m in a partition, at p, between the rooms either side of it)
   const inDoor = (P, w, p, ra, rb, h) => P.door(w, P.atOf(w, p), 0.9, Math.min(h - 0.2, 2.1), ra, rb, 0, 'porta');
@@ -521,11 +521,11 @@
     P.marks(0, id, 'despir', [[r2(u0), lv, Math.PI], [r2(u1), lv, Math.PI]]);
   }
 
-  In.addFamilies([{ id: 'forma.teatro', H: 'forma', V: 'teatro', S: 'forma.teatro', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => theatre(P) }]);
+  In.addFamilies([{ id: 'forma.teatro', H: 'forma', V: 'teatro', S: 'forma.teatro', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c, In.nOf(rec)) ? null : 'o prédio sem forma'), build: P => theatre(P) }]);
   In.addTypes({ teatro: { use: 'teatro', fams: ['forma.teatro'], open: 1 } });
-  In.addFamilies([{ id: 'forma.maravilha', H: 'forma', V: 'maravilha', S: 'forma.maravilha', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => wonder(P) }]);
+  In.addFamilies([{ id: 'forma.maravilha', H: 'forma', V: 'maravilha', S: 'forma.maravilha', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c, In.nOf(rec)) ? null : 'o prédio sem forma'), build: P => wonder(P) }]);
   In.addTypes({ maravilha: { use: 'maravilha', fams: ['forma.maravilha'], open: 1 } });
-  In.addFamilies([{ id: 'forma.monumento', H: 'forma', V: 'monumento', S: 'forma.monumento', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => monumentOf(P) }]);
+  In.addFamilies([{ id: 'forma.monumento', H: 'forma', V: 'monumento', S: 'forma.monumento', name: 'Pela forma', can: rec => (G.Forma && G.Forma.of(rec.t, rec.c, In.nOf(rec)) ? null : 'o prédio sem forma'), build: P => monumentOf(P) }]);
   In.addTypes({ monument: { use: 'monumento', fams: ['forma.monumento'], open: 1 } });
   // ------------------------------ the granary (celeiro) of the Egyptians and of the Aztecs (the leader's of 29/10, phase E) ------------------------------
   // open, its ground the form's — the Egyptian's base under its four domes, up the flight at its front; the Aztec's floor of
@@ -534,7 +534,7 @@
   // four of 28, the Aztec's three of 37 for the 110), a body's room before each mouth; the way in the ground's front, where the
   // form's flight comes up to it, else along it all
   function granaryForm(P) {
-    const F = G.Forma.of(P.rec.t, P.rec.c); const U = G.Forma.uses(F).filter(u => u.uso === 'tulha'); if (!U.length) { P.errs.push('o celeiro sem tulhas'); return; }
+    const F = G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); const U = G.Forma.uses(F).filter(u => u.uso === 'tulha'); if (!U.length) { P.errs.push('o celeiro sem tulhas'); return; }
     // (its ground: the widest piece of the form's floor under the middle of the lot — the base, the floor —, at its top)
     const L = P.L, c = L / 2, area = r => (r[2] - r[0]) * (r[3] - r[1]); let fl = null;
     for (const e of F.els) if (e.k === 'bloco' && !e.degrau && !e.uso && e.y0 < 0.01 && e.r[0] < c && e.r[2] > c && e.r[1] < c && e.r[3] > c && (!fl || area(e.r) > area(fl.r))) fl = e;
@@ -569,7 +569,7 @@
   // macellum, the stoa's walls and columns, the jars, the barrels, the palm); the way in the front's widest stretch where
   // nothing stands
   function marketForm(P) {
-    const F = G.Forma.of(P.rec.t, P.rec.c); const U = G.Forma.uses(F).filter(u => u.uso === 'banca' || u.uso === 'baia'); if (!U.length) { P.errs.push('o mercado sem bancas'); return; }
+    const F = G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); const U = G.Forma.uses(F).filter(u => u.uso === 'banca' || u.uso === 'baia'); if (!U.length) { P.errs.push('o mercado sem bancas'); return; }
     const L = P.L, c = L / 2, area = r => (r[2] - r[0]) * (r[3] - r[1]); let fl = null;
     for (const e of F.els) if (e.k === 'bloco' && e.piso && e.y0 < 0.01 && e.r[0] < c && e.r[2] > c && e.r[1] < c && e.r[3] > c && (!fl || area(e.r) > area(fl.r))) fl = e;
     if (!fl) { P.errs.push('o mercado sem chão'); return; }
@@ -604,7 +604,7 @@
   In.formType('paco', { fam: 'forma.paco', hall: 'trono', furnish: pacoFurnish, keep: true });
   for (const [t, fam, build, only] of [['celeiro', 'forma.celeiro', granaryForm, BINS], ['mercado', 'forma.mercado', marketForm]]) {
     const T0 = In.TYPES[t]; if (!T0) continue;
-    In.addFamilies([{ id: fam, H: 'forma', V: t, S: fam, name: 'Pela forma', can: rec => (only && !only[rec.c] ? 'o deste povo é um salão' : G.Forma && G.Forma.has(rec.t, rec.c) ? null : 'o prédio sem forma'), build: P => build(P) }]);
+    In.addFamilies([{ id: fam, H: 'forma', V: t, S: fam, name: 'Pela forma', can: rec => (only && !only[rec.c] ? 'o deste povo é um salão' : G.Forma && G.Forma.has(rec.t, rec.c, In.nOf(rec)) ? null : 'o prédio sem forma'), build: P => build(P) }]);
     In.addTypes({ [t]: Object.assign({}, T0, { fams: [fam].concat((T0.fams || []).filter(f => f !== fam)), formFam: fam, prefer: (rec, ok) => (ok.includes(fam) ? [fam] : ok) }) });
   }
 })(window.G);

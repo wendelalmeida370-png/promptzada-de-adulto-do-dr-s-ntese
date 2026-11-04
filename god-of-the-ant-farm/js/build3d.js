@@ -420,7 +420,7 @@ float m3scale(float p) {
   // (a type with a form, G.Forma, stands as high as its form: maravilha, monument, estatua — the others by this table)
   const HEIGHT = { hut: 4.4, house: 5.2, sobrado: 8.4, insula: 14, quarteirao: 15, barraco: 3, storehouse: 6.5, armazem: 7, celeiro: 7, workshop: 5.5, forja: 6, olaria: 5, tecelagem: 5.5, ourives: 5.5, perolaria: 5, sericultura: 5, acougue: 5, temple: 10, monument: 13, estatua: 7, palacio: 14, paco: 12, administracao: 9, coletoria: 7, biblioteca: 9, teatro: 7, banhos: 7, cadeia: 6, quartel: 6, torre: 12, taverna: 7.5, mercado: 3.2, feira: 3, mercado_negro: 3, doca: 1.2, mina: 4, apiario: 1.6, curral: 1.4, estabulo: 5, cercado: 1.5, farm: 1, horta: 0.8, plantacao: 1.2, vinhedo: 1.8, pomar: 4, well: 2.6, campfire: 0.6, cemetery: 1.2, praca: 3, aqueduto: 7, ruin: 2.5 };
   // (the form of a building — its type's in its people's style —, or null: the shell, or the kit's own shapes, are its form)
-  const formOf = b => (G.Forma && G.Forma.has(b.type, styleOf(b)) ? G.Forma.of(b.type, styleOf(b)) : null);
+  const formOf = b => (G.Forma && G.Forma.has(b.type, styleOf(b), b.w) ? G.Forma.of(b.type, styleOf(b), b.w) : null);
   const heightOf = b => { const F = formOf(b); return F ? F.top : HEIGHT[b.type] || 5; };
   B3.height = heightOf;
   B3.formOf = formOf; // (for the proofs)
@@ -2071,7 +2071,7 @@ float m3scale(float p) {
     celeiro(g, gw, K) {
       if (!G.Forma.has('celeiro', styleOf(K.b))) { house(g, gw, K, { h: 4, inset: 0.4, wall: '#9a4a32', pat: 'plankV', yard: 1.1 }); return; }
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 7); return; }
-      formInto(g, gw, K, G.Forma.of('celeiro', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('celeiro', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     workshop(g, gw, K) { smithy(g, gw, K, { h: 3.2, chimney: true, kind: 'wood' }); },
     forja(g, gw, K) { smithy(g, gw, K, { h: 3.3, wall: K.P.base ? K.P.base[2] : '#a09a8e', pat: 'stone', kind: 'forge' }); },
@@ -2085,16 +2085,16 @@ float m3scale(float p) {
     tecelagem(g, gw, K) { house(g, gw, K, { h: 3.2 }); if (K.prog >= 1) for (const [cc, k] of [['#c8483a', 0], ['#3f6fb0', 1], ['#e8b83a', 2]]) K.box(K.w * (0.25 + k * 0.25), 2.2, K.d - 0.3, 0.9, 1.4, 0.05, cc); },
     ourives(g, gw, K) { house(g, gw, K, { h: 3.2, wall: K.P.wr }); },
     // the divers' hut, the silk house and the salting yard, from their forms
-    perolaria(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1.4, K.d - 1.4, 2.5); return; } formInto(g, gw, K, G.Forma.of('perolaria', styleOf(K.b)), doorSide(K.b)); },
-    sericultura(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; } formInto(g, gw, K, G.Forma.of('sericultura', styleOf(K.b)), doorSide(K.b)); },
-    salga(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; } formInto(g, gw, K, G.Forma.of('salga', styleOf(K.b)), doorSide(K.b)); },
+    perolaria(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1.4, K.d - 1.4, 2.5); return; } formInto(g, gw, K, G.Forma.of('perolaria', styleOf(K.b), K.b.w), doorSide(K.b)); },
+    sericultura(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; } formInto(g, gw, K, G.Forma.of('sericultura', styleOf(K.b), K.b.w), doorSide(K.b)); },
+    salga(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; } formInto(g, gw, K, G.Forma.of('salga', styleOf(K.b), K.b.w), doorSide(K.b)); },
     acougue(g, gw, K) { house(g, gw, K, { h: 3 }); if (K.prog >= 1) K.box(K.w * 0.75, 1.6, K.d - 0.3, 1.2, 0.08, 0.08, '#6a4a30'); },
     // the inn: its yard before the door (barrels, a table and its benches: Props3D), its sign hung from an iron arm by the door
     taverna(g, gw, K) { house(g, gw, K, { floors: 2, h: 2.9, chimney: true, plinth: true, yard: 1.2 }); if (K.prog >= 1) innSign(K); },
     temple(g, gw, K) {
       const st = styleOf(K.b); const P = K.P;
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 5); return; }
-      if (G.Forma && G.Forma.has('temple', st)) { formInto(g, gw, K, G.Forma.of('temple', st), doorSide(K.b)); return; } // (D-093: the form)
+      if (G.Forma && G.Forma.has('temple', st, K.b.w)) { formInto(g, gw, K, G.Forma.of('temple', st, K.b.w), doorSide(K.b)); return; } // (D-093: the form)
       if (st === 'asteca' || st === 'maia' || st === 'inca') { K.as('tezontle', () => { for (let k = 0; k < 4; k++) { const s = (K.w - 0.5) * (1 - k * 0.2); K.box(K.w / 2, k * 1.6, K.d / 2, s, 1.6, s, P.base ? P.base[k % 2] : '#b9ad93'); } }); K.as('stucco', () => K.box(K.w / 2, 6.4, K.d / 2, K.w * 0.3, 2, K.d * 0.3, P.wl)); K.as('stucco', () => K.box(K.w / 2, 0.8, K.d - 0.6, 1.2, 0.2, 2.6, P.trim || '#b33a2a')); return; }
       if (st === 'egipcio') { K.as('sandstone', () => K.box(K.w / 2, 0, K.d / 2, K.w - 0.6, 6, K.d - 0.6, P.wl)); K.box(K.w / 2, 6, K.d / 2, K.w - 0.4, 0.5, K.d - 0.4, P.trim || '#2f8f8a'); K.as('plankV', () => K.box(K.w / 2, 0, K.d - 0.25, 1.6, 3.4, 0.2, P.door || '#3e2e1c')); K.as('sandstone', () => { for (const s of [-1, 1]) K.box(K.w / 2 + s * 2.6, 0, K.d + 0.4, 0.6, 7.5, 0.6, P.wr); }); return; }
       if (st === 'nordico') { house(g, gw, K, { h: 3.4, roof: 'turf', inset: 0.3 }); return; }
@@ -2110,76 +2110,76 @@ float m3scale(float p) {
     // triumphal column, the Sun Stone, the rune stones; the god in gold on his column — the god's own, in metres
     monument(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, 3, 3, 6); return; }
-      formInto(g, gw, K, G.Forma.of('monument', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('monument', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     estatua(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, 2.2, 2.2, 3); return; }
-      formInto(g, gw, K, G.Forma.of('estatua', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('estatua', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     // the theatre of each people, from its form: the arena, the half bowl with its stage, the sacred garden, the ball court,
     // the mead hall (L-263)
     teatro(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 6); return; }
-      formInto(g, gw, K, G.Forma.of('teatro', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('teatro', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     // the wonder of each people, from its form (G.Forma): the Colosseum, the Great Pyramid, the Templo Mayor, the Acropolis,
     // Valhalla, the ziggurat — the god's own, in metres (L-260, L-261)
     maravilha(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 10); return; }
-      formInto(g, gw, K, G.Forma.of('maravilha', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('maravilha', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     // the palace and the baths of each people, from their forms: the god's own (D-093)
     palacio(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 8); return; }
-      formInto(g, gw, K, G.Forma.of('palacio', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('palacio', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     banhos(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 4); return; }
-      formInto(g, gw, K, G.Forma.of('banhos', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('banhos', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     // (the chief's house and the palaces of the court, from their forms: the god's own — court.js)
     paco(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 8); return; }
-      formInto(g, gw, K, G.Forma.of('paco', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('paco', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     grande_palacio(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 10); return; }
-      formInto(g, gw, K, G.Forma.of('grande_palacio', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('grande_palacio', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     palacio_colossal(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 12); return; }
-      formInto(g, gw, K, G.Forma.of('palacio_colossal', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('palacio_colossal', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     // the seat of the scribes, the tax office and the library of each people, from their forms: the god's own (Phase E)
     administracao(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 6); return; }
-      formInto(g, gw, K, G.Forma.of('administracao', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('administracao', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     coletoria(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 0.8, K.d - 0.8, 5); return; }
-      formInto(g, gw, K, G.Forma.of('coletoria', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('coletoria', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     biblioteca(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 6); return; }
-      formInto(g, gw, K, G.Forma.of('biblioteca', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('biblioteca', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     cadeia(g, gw, K) { const P = K.P; house(g, gw, K, { h: 3.6, wall: P.base ? P.base[1] : '#6f6a60', pat: 'stone', roof: 'flat' }); },
     quartel(g, gw, K) { house(g, gw, K, { h: 3.4, plinth: true }); if (K.prog >= 1) { K.box(K.w - 0.4, 0, 0.4, 0.12, 7, 0.12, '#5a4a3a'); K.box(K.w - 0.4 + 0.6, 6.2, 0.4, 1.2, 0.7, 0.05, G.Fac.hex(G.Village.facOfSet(K.b.set))); } },
     // the watchtower of each people, from its form: of stone with its merlons; of timber on its legs (the classical and the Norse)
     torre(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 0.8, K.d - 0.8, 10); return; }
-      formInto(g, gw, K, G.Forma.of('torre', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('torre', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     // the market of each people from its form: the stalls, the bays, the macellum, the stoa, the sheds (phase E)
     mercado(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 3); return; }
-      formInto(g, gw, K, G.Forma.of('mercado', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('mercado', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     feira(g, gw, K) { stalls(K, 3); },
     // the smugglers' shack, from its form: boards and a lean-to, the curtain, the crates, the lantern
     mercado_negro(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 1, K.d - 1, 2.5); return; }
-      formInto(g, gw, K, G.Forma.of('mercado_negro', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('mercado_negro', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     doca(g, gw, K) {
       // the quay: planks out over the water on the side of the sea, on posts
@@ -2207,7 +2207,7 @@ float m3scale(float p) {
     },
     // the mine, from its form: the hill over the galleries filling the lot, the mouth at its foot, the rails and the cart in the
     // front corner (D-092) — the hill was there before the mine, going up as built
-    mina(g, gw, K) { formInto(g, gw, K, G.Forma.of('mina', styleOf(K.b)), doorSide(K.b)); },
+    mina(g, gw, K) { formInto(g, gw, K, G.Forma.of('mina', styleOf(K.b), K.b.w), doorSide(K.b)); },
     // the salt pans, as the god paints them on their ground: nine pans, a tile each, their low rims of clay, the brine in them
     // white as the sun leaves its salt (the world's b.salt: read, never written — only seen), the heap raked in the middle of
     // a pan where enough is left; on the ground, no plinth under them
@@ -2225,8 +2225,8 @@ float m3scale(float p) {
     // (the estates as the god draws them: their plants as the world grows them, the skeps among the flowers — estate, T-150)
     apiario(g, gw, K) { estate(K); },
     // the pens, from their forms: the fence round, the stable along the back, the shelter in its corner (as the god draws them)
-    curral(g, gw, K) { formInto(g, gw, K, G.Forma.of('curral', styleOf(K.b)), doorSide(K.b)); },
-    estabulo(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, 1.9, K.w - 0.6, 3.4, 3.6); return; } formInto(g, gw, K, G.Forma.of('estabulo', styleOf(K.b)), doorSide(K.b)); },
+    curral(g, gw, K) { formInto(g, gw, K, G.Forma.of('curral', styleOf(K.b), K.b.w), doorSide(K.b)); },
+    estabulo(g, gw, K) { if (K.prog < 1) { scaffold(K, K.w / 2, 1.9, K.w - 0.6, 3.4, 3.6); return; } formInto(g, gw, K, G.Forma.of('estabulo', styleOf(K.b), K.b.w), doorSide(K.b)); },
     cercado(g, gw, K) { fenceAround(K, 1.6, '#6a5a44', true); },
     farm(g, gw, K) { fields(K, '#d4ac44', '#6a9a3a'); },
     horta(g, gw, K) { fields(K, '#7aaa4a', '#4a8a2a', true); },
@@ -2235,7 +2235,7 @@ float m3scale(float p) {
     pomar(g, gw, K) { estate(K); },
     // the well, from its form: the god's well-house at the scale of people (D-092); the rune stone at a northern town's first well
     // is among what lies about it (Props3D)
-    well(g, gw, K) { formInto(g, gw, K, G.Forma.of('well', styleOf(K.b)), doorSide(K.b)); },
+    well(g, gw, K) { formInto(g, gw, K, G.Forma.of('well', styleOf(K.b), K.b.w), doorSide(K.b)); },
     // the campfire: a ring of broken stones half sunk in the ground — each its size, its tilt and its grey by the fire's id,
     // sooted on the side the fire is — round a bed of ash and embers, and the logs leaning in on one another, their bark on,
     // their upper ends burnt to charcoal (where they meet, 0.6 m over the ground, FX3D's flames rise)
@@ -2266,12 +2266,12 @@ float m3scale(float p) {
       for (let k = 0; k < n; k++) { const px = 1 + (k % 4) * (K.w - 2) / 3.2, pz = 1.2 + Math.floor(k / 4) * (K.d - 2.4) / 2.5; K.box(px, 0, pz, 0.6, 0.8, 0.18, '#9a968e'); K.box(px, 0, pz + 0.7, 0.6, 0.06, 1.2, '#6a5a44'); }
     },
     // the square of each people, from its form (D-093: the pieces the plan uses where the form puts them); going up, its pavement
-    praca(g, gw, K) { formInto(g, gw, K, G.Forma.of('praca', styleOf(K.b)), doorSide(K.b), K.prog < 1 ? e => !e.piso : null); },
+    praca(g, gw, K) { formInto(g, gw, K, G.Forma.of('praca', styleOf(K.b), K.b.w), doorSide(K.b), K.prog < 1 ? e => !e.piso : null); },
     // the cistern an aqueduct fills, of each people from its form: the walls with their arches, the water in it, the hip over
     // it (the classical lands); the Egyptian's tank and its shaduf; the Norse's tub on its legs
     aqueduto(g, gw, K) {
       if (K.prog < 1) { scaffold(K, K.w / 2, K.d / 2, K.w - 0.8, K.d - 0.8, 4); return; }
-      formInto(g, gw, K, G.Forma.of('aqueduto', styleOf(K.b)), doorSide(K.b));
+      formInto(g, gw, K, G.Forma.of('aqueduto', styleOf(K.b), K.b.w), doorSide(K.b));
     },
     ruin(g, gw, K) { const P = K.P; for (let k = 0; k < 5; k++) { const h = 0.6 + G.hash(K.b.id * 7 + k) * 2.4; const px = 0.6 + G.hash(K.b.id + k * 3) * (K.w - 1.2), pz = 0.6 + G.hash(K.b.id * 3 + k) * (K.d - 1.2); K.box(px, 0, pz, 1.2, h, 0.5, dim(P.wl || '#efe2c4', 0.7), G.hash(k) * 3); } },
   };
@@ -3520,7 +3520,7 @@ float m3scale(float p) {
   // (a shell the plan raised on a form's body — Interiors' family forma.*, D-093: the library —: its walls are the shell's, with
   // the plan's openings, which are the form's; the rest is the form's — its base and its treads, its porch and its columns, its
   // entablature, its roof —, and not the shell's footing, annexes, roof nor flights: what is seen is the form)
-  const bodyForm = b => { const F = b.ip && /^forma\./.test(b.ip.f || '') && G.Forma && G.Forma.of(b.type, styleOf(b)); return F && F.body ? F : null; };
+  const bodyForm = b => { const F = b.ip && /^forma\./.test(b.ip.f || '') && G.Forma && G.Forma.of(b.type, styleOf(b), b.w); return F && F.body ? F : null; };
   // (the side a form with a plan is turned to: the plan's — its entrance's —, where its rooms, its pieces and its way in are;
   // the world's door only where the shell has no entrance: while the plan's way in is not open ground, the world's door falls
   // back to the old corner rule — a day, till the turn of the day moves it —, and the form would turn round from its plan)
@@ -3630,7 +3630,7 @@ float m3scale(float p) {
   const AWN = [[196, 84, 62], [222, 192, 118], [88, 120, 162], [234, 226, 204], [160, 104, 64]];
   function shellOpen(g, gw, K, S) {
     const sh = S.shell, R = sh.r, x = (R[0] + R[2]) / 2, z = (R[1] + R[3]) / 2, sx = R[2] - R[0], sz = R[3] - R[1];
-    const Fm = G.Forma && G.Forma.of(K.b.type, styleOf(K.b)); const top = Fm ? formInto(g, gw, K, Fm, formSide(K.b, S)) : 0;
+    const Fm = G.Forma && G.Forma.of(K.b.type, styleOf(K.b), K.b.w); const top = Fm ? formInto(g, gw, K, Fm, formSide(K.b, S)) : 0;
     K.body = { x, z, sx, sz, door: null, shell: true, open: true };
     if (sh.roof && sh.roof.kind === 'toldo' && sh.eave > 0.5) {
       const az = sh.roof.along === 'z'; const len = (az ? sz : sx) - 0.2, wide = az ? sx : sz; const sw = 2.1, gap = 0.55;

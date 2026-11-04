@@ -83,13 +83,16 @@
     const D = G.Depot; if (!D || !G.Fac.get(fid)) return;
     const r = D.make('f:' + fid, 'wood', 1, { code: 'clareira', part: true }); if (r.ok && G.S.stats) G.S.stats.woodProduced += r.n;
   }
-  V.addBuilding = function (type, x, y, setId, built) {
-    const S = G.S; const def = G.BDEF[type];
+  // step: the step of the type's ladder it is raised at (G.Escala, D-106) — its lot (n × n tiles) and its bill; absent, the
+  // classic step, the size of the type's table
+  V.addBuilding = function (type, x, y, setId, built, step) {
+    const S = G.S; const def = G.BDEF[type]; const st = step || G.Escala.classic(type); const bill = G.Escala.bill(type, st);
     const b = {
-      id: S.nextId++, type, x, y, w: def.w, h: def.h, built: !!built, progress: built ? 1 : 0,
-      need: Object.assign({ wood: 0, stone: 0 }, built ? {} : def.cost), incoming: Object.fromEntries(Object.keys(Object.assign({ wood: 0, stone: 0 }, def.cost)).map(k => [k, 0])),
+      id: S.nextId++, type, x, y, w: st.n, h: st.n, built: !!built, progress: built ? 1 : 0,
+      need: Object.assign({ wood: 0, stone: 0 }, built ? {} : bill.cost), incoming: Object.fromEntries(Object.keys(Object.assign({ wood: 0, stone: 0 }, bill.cost)).map(k => [k, 0])),
       hp: def.hp, maxHp: def.hp, set: setId, blocks: def.blocks, v: Math.floor(G.R() * 3), born: S.day, burnHp: 0,
       style: G.Civ.idOfFac(V.facOfSet(setId)) || null, // architecture of the people who built it
+      esc: st.id, // (its step of the ladder: the lot's size, the bill — written here only, D-106)
       ip: null, // (the record of its plan: what its builders knew and where they built, and the facts of its life — interiors.js)
     };
     if (type === 'farm') b.crops = Array.from({ length: 9 }, () => ({ s: 0, g: 0, c: 0 }));
@@ -134,8 +137,7 @@
   // the bill of a work begun again in place (a hut rebuilt as a house, a house raised a floor): what its type costs, the brick
   // decided anew
   V.refound = function (b) {
-    const def = G.BDEF[b.type];
-    b.need = Object.assign({ wood: 0, stone: 0 }, def.cost); b.incoming = { wood: 0, stone: 0 }; b.brick = null; b.troca = null;
+    b.need = Object.assign({ wood: 0, stone: 0 }, G.Escala.billOf(b).cost); b.incoming = { wood: 0, stone: 0 }; b.brick = null; b.troca = null;
     V.brickSwap(b);
   };
   // a material a work still needs traded for another on the way — the quay finished in stone where the people has no timber
@@ -151,7 +153,7 @@
   };
   // what a work's bill is: its type's cost, with the brick that took the place of stone and the materials traded on the way
   V.bill = function (b) {
-    const def = G.BDEF[b.type] || { cost: {} }; const out = Object.assign({}, def.cost);
+    const out = Object.assign({}, G.Escala.billOf(b).cost);
     if (b.brick && b.brick.n > 0) { out.stone = Math.max(0, (out.stone || 0) - b.brick.n); out[b.brick.k] = (out[b.brick.k] || 0) + b.brick.n; }
     if (b.troca) for (const k in b.troca) { const d = b.troca[k]; if (typeof d === 'number' && isFinite(d)) out[k] = Math.max(0, (out[k] || 0) + d); }
     return out;
@@ -245,6 +247,7 @@
     G.Act && G.Act.atGone(b); // (its operations end with it, by their own rule: L-444)
   };
   V.totalCost = def => { let n = 0; for (const k in def.cost) n += def.cost[k] || 0; return n; };
+  V.workOf = b => G.Escala.billOf(b).work; // (the work a building takes: its step's, D-106)
   V.nameOf = (type, b) => G.Civ.bname(type, b ? b.style : null);
   V.buildName = b => (b.upgradeFrom && !b.built ? V.nameOf(b.type, b) + ' (obra)' : V.nameOf(b.type === 'ruin' ? (b.origType || 'ruin') : b.type, b));
   // a house that serves to live in: standing, or being raised further over its family by the city (b.upgradeFrom: the old
@@ -440,13 +443,15 @@
 
   // ------------------------------ site placement ------------------------------
   // (reach, when given: only where it says — the fire of a town cut off from its stores, on its streets' side, L-368)
-  V.findSite = function (set, type, reach) {
-    const S = G.S; const def = G.BDEF[type];
+  // (n: the lot's side of the step it is sought for — G.Escala, D-106 —; absent, the type's own)
+  V.findSite = function (set, type, reach, n) {
+    const S = G.S; const def0 = G.BDEF[type];
+    const def = n && n !== def0.w ? Object.assign({}, def0, { w: n, h: n }) : def0; const nk = def === def0 ? type : type + ':' + n;
     if (type === 'doca' && G.City) return G.City.dockSite(set);
-    if (G.Eco) { const e = G.Eco.findSite(set, type); if (e !== undefined) return e; }
+    if (G.Eco && def === def0) { const e = G.Eco.findSite(set, type); if (e !== undefined) return e; }
     // a search that found nothing today is not repeated until tomorrow (big cities ask many times a day)
     const noSite = set._noSite || (set._noSite = {});
-    if (noSite[type] === S.day) return null;
+    if (noSite[nk] === S.day) return null;
     const field = type === 'farm' || type === 'cercado' || type === 'curral' || type === 'estabulo';
     const pop = V.pop(set.id);
     const R = G.Urban ? G.Urban.radius(set, def, pop) : Math.min(17 + (set.tier || 0) * 3 + (def.w >= 3 ? 2 : 0), Math.round(6 + Math.sqrt(pop + 1) * 1.5 + (def.w >= 3 ? 2 : 0)));
@@ -458,7 +463,7 @@
     // and when even there is no room, it builds them over its own old fields and houses
     if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, false);
     if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, true);
-    if (!best) noSite[type] = S.day;
+    if (!best) noSite[nk] = S.day;
     return best;
   };
   // a block of a metropolis goes where the land is dear enough for it — and that heart is full: so it pulls down
@@ -560,18 +565,47 @@
     return best;
   }
 
-  V.startProject = function (set, type, at) {
-    const pos = at || V.findSite(set, type);
+  // (at: a site chosen by the caller — for the step given with it, else the type's classic lot. Else the town tries the steps
+  // of the type's ladder from the biggest it justifies and can pay for — G.Escala.choose —: the first one it finds land for
+  // is raised, D-106)
+  V.startProject = function (set, type, at, given) {
+    let pos = at, step = at && given ? given : null;
+    if (!pos) for (const st of G.Escala.choose(set, type)) { pos = V.findSite(set, type, undefined, st.n); if (pos) { step = st; break; } }
     if (!pos) { set.fails++; return null; }
     // (a city builds tall only where its land is dear; on cheap ground the same family builds a house with a yard)
-    if (G.Urban && !pos.demolish) type = G.Urban.homeFor(set, type, pos);
+    if (G.Urban && !pos.demolish) { const t = G.Urban.homeFor(set, type, pos); if (t !== type) { type = t; step = null; } }
     if (pos.demolish) renew(set, type, pos.demolish);
-    const b = V.addBuilding(type, pos[0], pos[1], set.id, false);
+    const b = V.addBuilding(type, pos[0], pos[1], set.id, false, step);
     if (type === 'cemetery') V.completeBuilding(b);
     G.Eco && G.Eco.onPlaced(b);
     return b;
   };
 
+  // the god's hand founds a step of a type's ladder (the proofs and the developer's panel, D-106): on the nearest lot of its
+  // size to the point asked (the town's middle by default) — every tile of it and of the ring round it dry, free of buildings
+  // and walls, no main street nor fire on the lot; the ground's steps under it are the form's base to cover (its plinth, its
+  // footing), trees and bushes go as for any work —, raised whole when asked (built). → the building, or null
+  V.handFound = function (set, type, stepId, o) {
+    const S = G.S; const step = G.Escala.steps(type).find(s => s.id === stepId || s.n === stepId); if (!step || !set) return null;
+    // (only a step its people knows how to raise: a form, or a plan, of its size — else there would be nothing to draw nor walk)
+    if (!G.Escala.can(type, G.Civ.idOfFac(set.fac) || 'classico', step.n)) return null;
+    const n = step.n; const ox = Math.floor(o && o.x !== undefined ? o.x : set.cx), oy = Math.floor(o && o.y !== undefined ? o.y : set.cy);
+    const free = (x, y) => {
+      for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) {
+        if (tx < 2 || ty < 2 || tx >= N - 2 || ty >= N - 2) return false; const i = ty * N + tx;
+        if (S.occ[i] || S.wall[i] || S.type[i] < T.SAND) return false;
+        if (tx >= x && tx < x + n && ty >= y && ty < y + n && (S.road[i] >= 2 || S.fire[i] > 0)) return false;
+      }
+      return true;
+    };
+    for (let r = 0; r <= (o && o.R || 40); r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = ox + dx - Math.floor(n / 2), y = oy + dy - Math.floor(n / 2);
+      if (!free(x, y)) continue;
+      const b = V.startProject(set, type, [x, y], step); if (b && o && o.built && !b.built) V.completeBuilding(b);
+      return b;
+    }
+    return null;
+  };
   // the old quarter comes down for the great work: its people look for new homes, as after a fire
   function renew(set, type, ids) {
     const S = G.S; let homes = 0, fields = 0, cx = set.cx, cy = set.cy;

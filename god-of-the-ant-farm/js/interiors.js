@@ -157,13 +157,13 @@
     let side = 'S', o = 0;
     for (const s of SIDES) { const m = openTiles(b, s); if (m) { side = s; o = m; break; } }
     const k = (f && G.Civ.has(f.id, 'alvenaria') ? 'a' : '') + (f && G.Civ.has(f.id, 'engenharia') ? 'e' : '');
-    return { t: b.type, c: b.style || 'classico', e: f ? f.era || 0 : 0, k, cl: CLIMA[bio] || 't', fl, d, w, pw: blindSides(b), s: side, o };
+    return { t: b.type, c: b.style || 'classico', e: f ? f.era || 0 : 0, k, cl: CLIMA[bio] || 't', fl, d, w, pw: blindSides(b), s: side, o, n: b.w };
   };
   function newRecord(b, ctx, migrated) {
     const T = TYPES[ctx.t];
     // (hh: who heads the house; nm: how many lived there at the last turn of the day; vz: the day the last of them left;
     // ab: the day the house was given up — the house left behind)
-    const rec = { v: REC_V, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, h: [], m: migrated ? 1 : 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
+    const rec = { v: REC_V, f: '', r: 0, t: ctx.t, u: T ? T.use : '', s: ctx.s, o: ctx.o, c: ctx.c, e: ctx.e, k: ctx.k, cl: ctx.cl, fl: ctx.fl, d: ctx.d, w: ctx.w, pw: ctx.pw, n: ctx.n, h: [], m: migrated ? 1 : 0, fx: [], dr: {}, hh: 0, nm: 0, vz: 0, ab: 0 };
     rec.f = chooseFamily(b, rec);
     return rec;
   }
@@ -175,11 +175,16 @@
   // must also be laid out validly on the probe buildings: that is the work of the proofs, done once for each type, people,
   // hot land or not and wealth (all a home's plan reads of its context), and shipped in js/int-catalogo.js (made by
   // qa/catalogo.js, never by hand). A combination the table does not have is probed here, the slow way.
-  const comboKey = rec => [rec.t, rec.c, rec.k, rec.cl, rec.fl, rec.d, rec.w, rec.e >= 2 ? 2 : rec.e].join('|');
+  const comboKey = rec => [rec.t, rec.c, rec.k, rec.cl, rec.fl, rec.d, rec.w, rec.e >= 2 ? 2 : rec.e].join('|') + nKey(rec);
   // (and, for a home, whether it stands out of the centre, its yard about it — In.yardKey, int-familias.js: D-082)
   const yk = rec => (In.yardKey ? In.yardKey(rec) : '');
-  const probeKey = rec => [rec.t, rec.c, rec.cl === 'q' ? 1 : 0, rec.w >= 2 ? 2 : rec.w >= 1 ? 1 : 0].join('|') + yk(rec);
+  // (the lot's side of a record, in tiles: its step's — G.Escala, D-106 —; a record of before the ladders, its type's own)
+  const nOf = In.nOf = rec => rec.n || (G.BDEF[rec.t] || {}).w || 1;
+  const nKey = rec => (rec.n && rec.n !== ((G.BDEF[rec.t] || {}).w || 1) ? '|n' + rec.n : ''); // (the classic size: the keys of before)
+  const probeKey = rec => [rec.t, rec.c, rec.cl === 'q' ? 1 : 0, rec.w >= 2 ? 2 : rec.w >= 1 ? 1 : 0].join('|') + yk(rec) + nKey(rec);
   In.probeKey = probeKey;
+  // (a type its plans lay out at the lot's side n — a step of its ladder: the sizes its type says it has; the classic, always)
+  In.sizeOk = (type, style, n) => { const T = TYPES[type]; return !!T && (n === ((G.BDEF[type] || {}).w || 1) || !!(T.sizes && T.sizes.includes(n))); };
   const CAT = new Map();
   G.worldHooks.push(() => { CAT.clear(); cache.clear(); }); // (a new world: nothing remembered from the one before)
   const PROBES = In.PROBES = [101, 2203, 30307, 404011];
@@ -209,7 +214,7 @@
   In.probe = function (rec, id) {
     const housing = (G.BDEF[rec.t] || {}).housing || 0; let short = 0;
     for (let k = 0; k < PROBES.length; k++) {
-      const pid = PROBES[k]; const pb = { id: pid, type: rec.t, x: 8, y: 8, w: (G.BDEF[rec.t] || {}).w || 1, h: (G.BDEF[rec.t] || {}).h || 1 };
+      const pid = PROBES[k]; const pb = { id: pid, type: rec.t, x: 8, y: 8, w: nOf(rec), h: nOf(rec) };
       // (as the plan is made: the attempts, and as many again)
       const r1 = Object.assign({}, rec, { f: id, s: PSIDES[k % 4] }); let p = make(pb, r1, id, true);
       if (!p.ok && !p.shellFailed && p.maxArea !== undefined) { const q = make(pb, r1, id, true, false, In.TRIES); q.maxArea = Math.max(q.maxArea || 0, p.maxArea); p = q; }

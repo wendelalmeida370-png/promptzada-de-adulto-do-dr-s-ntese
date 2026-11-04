@@ -108,3 +108,23 @@ cobrem só 330 casas — 12% da área. Óstia (270): 56 × 58 casas, 211 coberta
 - **Os saves**: os prédios guardam a sua pegada (`b.w`, `b.h`) — os de antes continuam do tamanho que tinham, nada se refaz ao
   carregar.
 - **A fidelidade**: a prova que segura o desenho do deus e a forma iguais precisa cobrir os tamanhos novos.
+
+## A terra para os monumentos (medida no começo da Etapa 2)
+
+Um monumento grande precisa de um lote livre do seu tamanho. Medido nos mundos prontos (`sondas/mon/quadrado.js`: o maior
+quadrado seco, sem prédio e sem muro):
+
+| Mundo | O maior quadrado livre do mapa inteiro | Perto das maiores cidades (até 30 casas do centro) |
+|---|---|---|
+| Metrópole (cidades de ~58 pessoas) | 13 casas (10 sem degrau do relevo) | Roma 13, Argos 12, Óstia 12, Tebas 11, Mênfis 9 |
+| Megalópole (cidades de 100 a 322) | 11 casas (7 sem degrau do relevo) | **Mênfis (322) 4, Óstia (270) 4, Hedeby 4, Alba Longa 4**, Argos 10, Tebas 9 |
+
+Três coisas tomam a terra: **os campos e as casas** das cidades maduras (em volta de Mênfis e de Óstia não sobra um quadrado
+de 5 casas), **a água** (as cidades nascem na costa e nos rios) e **os degraus do relevo** (`S.cliff`: o chão sobe em degraus
+de 1,5 m a cada poucas casas). Por isso:
+- **a cidade vai precisar abrir espaço** para o seu monumento — mudar campos de lugar e realojar famílias de casas baixas, com
+  regras (nunca as últimas fazendas, nunca um prédio público, mais camas construídas do que derrubadas), como ela já faz para
+  a ínsula do centro (`G.Village.blockSite`);
+- **o relevo vira pódio**: o lote de um monumento pode ter degraus do chão por baixo; a forma assenta numa plataforma (o pódio,
+  o terraço) que cobre o desnível, e a escadaria leva a ela — como os templos e as pirâmides de verdade;
+- **a escada de tamanhos cabe no mundo**: a maravilha com 10 casas (40 m) e a colossal com 13 (52 m), não 12 e 16.

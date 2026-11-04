@@ -2665,9 +2665,9 @@
       }
     }
     // delivered materials piles
-    const tot = G.Village.totalCost(def);
+    const bill = G.Escala.billOf(b); const tot = G.Village.totalCost(bill); // (its step's bill, D-106)
     const delivered = tot - b.need.wood - b.need.stone;
-    const woodIn = (def.cost.wood || 0) - b.need.wood, stoneIn = (def.cost.stone || 0) - b.need.stone;
+    const woodIn = (bill.cost.wood || 0) - b.need.wood, stoneIn = (bill.cost.stone || 0) - b.need.stone;
     const left = 1 - p;
     for (let k = 0; k < Math.min(6, Math.ceil(woodIn * left / 3)); k++) { const q = P(hx + 0.3, -hy + 0.2 + (k % 3) * 0.15, Math.floor(k / 3) * 1.5); ctx.fillStyle = '#8f6238'; ctx.fillRect(q[0] - 4, q[1] - 1.5, 7, 1.5); }
     for (let k = 0; k < Math.min(5, Math.ceil(stoneIn * left / 4)); k++) { const q = P(-hx + 0.2 + k * 0.18, hy + 0.3, 0); ctx.fillStyle = '#9a958c'; ctx.beginPath(); ctx.ellipse(q[0], q[1] - 1, 1.8, 1.2, 0, 0, TAU); ctx.fill(); }
