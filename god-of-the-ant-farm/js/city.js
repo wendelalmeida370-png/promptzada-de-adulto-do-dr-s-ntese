@@ -205,11 +205,11 @@
       if (need('palacio') && isCap && fac.gov !== 'tribo' && st.stone >= 50) opts.push('palacio');
       // a city without a palace, theatre or wonder dreams of one before it wants baths: it is what makes a metropolis
       const crown = c.palacio || c.teatro || c.maravilha;
-      const theatre = need('teatro') && (has(fac, 'filosofia') || has(fac, 'escrita')) && pop >= 36 && st.stone >= 50;
+      const theatre = need('teatro') && (has(fac, 'filosofia') || has(fac, 'escrita')) && pop >= 36 && G.Village.stoneGate(set, 'teatro', 50); // (a bigger step by the people's stone income, the classic one by the stone in store: D-120)
       if (theatre && !crown) opts.push('teatro');
       if (need('banhos') && has(fac, 'alvenaria') && pop >= 32) opts.push('banhos');
       if (theatre && crown) opts.push('teatro');
-      if (need('maravilha') && isCap && !fac._wonder && !siteAnywhere(fac, 'maravilha') && has(fac, 'alvenaria') && (fac.civ === 'egipcio' || has(fac, 'engenharia')) && G.Fac.pop(fac.id) >= 55 && st.stone >= 80) opts.push('maravilha');
+      if (need('maravilha') && isCap && !fac._wonder && !siteAnywhere(fac, 'maravilha') && has(fac, 'alvenaria') && (fac.civ === 'egipcio' || has(fac, 'engenharia')) && G.Fac.pop(fac.id) >= 55 && G.Village.stoneGate(set, 'maravilha', 80)) opts.push('maravilha'); // (as the theatre's: D-120)
     }
     // in order of wish: if the first finds no room, the next one gets its turn (still one great project at a time)
     for (const k of opts) want.push(k);

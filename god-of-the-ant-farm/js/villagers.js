@@ -916,7 +916,7 @@
       const [cx, cy] = G.Village.center(b);
       // (a family's house paid for — its materials paid at the town's prices, act-casa.js — has its turn before the city's
       // own works: the stone of the store went to a palace, and the house stood at 92% for years, L-313)
-      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0) + (b.encomenda ? -200 : 0);
+      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0) + (b.encomenda ? -200 : 0) + (G.Village.workPri ? G.Village.workPri(b) : 0); // (a great work's turn, with the town fed and housed: D-120)
       if (d < bd) { bd = d; best = b; }
     }
     if (!best) return null;

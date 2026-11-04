@@ -548,7 +548,7 @@
     f.exec = { v: victim.id, x, y, t: 0, reason: reason || '', set: cap.id };
     G.Vg.endTask(victim);
     G.Vg.setTask(victim, { type: 'condemned', pri: 6, x: x + 1.2, y: y + 0.7, kind: 'condemned' });
-    for (const o of S.villagers.values()) if (o !== victim && o.set === cap.id && o.age >= 6 && G.dist(o.x, o.y, x, y) < 22) G.Vg.give(o, { type: 'assembly', x, y, pri: 1.9, kind: 'assembly' });
+    for (const o of S.villagers.values()) if (o !== victim && o.set === cap.id && o.age >= 6 && G.dist(o.x, o.y, x, y) < 22 && !(o.task && o.task.type === 'ronda')) G.Vg.give(o, { type: 'assembly', x, y, pri: 1.9, kind: 'assembly' }); // (the watch stays on its round: D-103)
     G.UI && G.UI.notice(`${P.styled(f, P.ruler(f))} condenou ${victim.name} à morte ${reason}.`, 'massacre');
     return true;
   };

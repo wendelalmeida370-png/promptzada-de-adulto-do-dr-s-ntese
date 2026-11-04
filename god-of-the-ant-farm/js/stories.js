@@ -37,13 +37,14 @@
   // (a well-spread integer mix: small story ids must not all land on the same words)
   const mix = St.mix = k => { let h = Math.imul((k | 0) ^ 0x9e3779b9, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   const hashPick = (arr, k) => arr[Math.floor(mix(k) * arr.length)];
-  const recent = {}; // the variants of each storylet said lately, so two stories in a row don't use the same words
   const facName = id => { const f = G.Fac.get(id); return f ? f.name : 'um povo esquecido'; };
   const setName = id => { const s = G.S.settlements.get(id); return s ? s.name : null; };
   const VIOLENT = { war: 1, arrow: 1, massacre: 1, execution: 1, riot: 1, coup: 1, sacrifice: 1 };
 
   // ============================== state ==============================
-  function fresh() { return { v: 1, facts: [], nf: 1, seeds: [], stories: [], ns: 1, mem: [], know: {}, wars: {}, lastPromo: -1e9 }; }
+  // (recent: the variants of each storylet said lately, so two stories in a row don't use the same words — the world's own, saved
+  // with the saga: kept in the module, a second world of the same session heard the first's and told its stories in other words, L-561)
+  function fresh() { return { v: 1, facts: [], nf: 1, seeds: [], stories: [], ns: 1, mem: [], know: {}, wars: {}, lastPromo: -1e9, recent: {} }; }
   function st() { const S = G.S; if (!S.saga) S.saga = fresh(); return S.saga; }
   St.state = st;
   // people -> the stories they are in (rebuilt when the world changes)
@@ -372,7 +373,7 @@
     const pool = b.civ && civ && b.civ[civ] ? b.civ[civ].concat(b.civ[civ], b.text) : b.text;
     const ok = []; pool.forEach((fn, i) => { let t = null; try { t = fn(ctx); } catch { t = null; } if (t) ok.push([i, t]); });
     if (!ok.length) return null;
-    const r = recent[key] || (recent[key] = []); const fresh = ok.filter(o => !r.includes(o[0]));
+    const said = st().recent || (st().recent = {}); const r = said[key] || (said[key] = []); const fresh = ok.filter(o => !r.includes(o[0]));
     const o = hashPick(fresh.length ? fresh : ok, story.id * 31 + story.chapters.length * 7 + key.length);
     r.push(o[0]); if (r.length > Math.max(1, Math.floor(b.text.length / 2))) r.shift();
     return o[1];
@@ -717,7 +718,7 @@
   // ============================== save ==============================
   G.saveHooks = G.saveHooks || [];
   G.saveHooks.push({
-    save(out) { if (G.S.saga) { const s = G.S.saga; out.saga = { v: s.v, facts: s.facts, nf: s.nf, seeds: s.seeds, stories: s.stories, ns: s.ns, mem: s.mem, know: s.know, wars: s.wars, lastPromo: Math.round(s.lastPromo), follow: s.follow || 0 }; } },
+    save(out) { if (G.S.saga) { const s = G.S.saga; out.saga = { v: s.v, facts: s.facts, nf: s.nf, seeds: s.seeds, stories: s.stories, ns: s.ns, mem: s.mem, know: s.know, wars: s.wars, lastPromo: Math.round(s.lastPromo), follow: s.follow || 0, recent: s.recent || {} }; } },
     load(o) { G.S.saga = o.saga ? Object.assign(fresh(), o.saga) : null; idxFor = null; factFor = null; pending.length = 0; St.hotList = []; },
   });
 

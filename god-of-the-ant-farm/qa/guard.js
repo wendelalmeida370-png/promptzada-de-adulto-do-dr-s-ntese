@@ -332,5 +332,8 @@ for (const f of files) if (f !== 'village.js') src[f].forEach((l, k) => { const 
 // (L-525); a casa velha de uma ampliação (o tipo de antes, `o.type`) fica de fora
 for (const f of files) if (f !== 'art.js' && f !== 'arch.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   for (const m of c.matchAll(/\b(?:Art|Arch)\.building\(([^)]*)\)/g)) if (m[1].split(',').length < 6 && !/\bo\.type\b/.test(m[1])) fails.push(`deus: ${f}:${k + 1} o desenho de um prédio sem o lote dele (b.w — D-106): ${l.trim().slice(0, 110)}`); });
+// 45. "todo arquivo se lê": cada arquivo do jogo é JavaScript que o navegador aceita — um erro de sintaxe (um comentário que
+// engoliu o fim de uma linha, uma chave a mais) derruba o arquivo inteiro na hora de carregar, e só a vida curta o veria
+for (const f of files) { try { new (require('vm').Script)(src[f].join('\n'), { filename: f }); } catch (e) { fails.push(`sintaxe: ${f}: ${String(e.message).slice(0, 110)}`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

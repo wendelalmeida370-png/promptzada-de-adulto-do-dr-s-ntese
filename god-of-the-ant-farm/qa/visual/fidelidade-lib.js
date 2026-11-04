@@ -69,7 +69,8 @@ const toSrgb = v => (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) -
 const PAINTED = new WeakMap();
 function recorder() {
   const ops = []; let path = [], cur = null, start = null; let M = [1, 0, 0, 1, 0, 0]; const stack = [];
-  const st = { fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1 };
+  const st = { fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1, clips: null };
+  const clipped = o => { if (st.clips && st.clips.length) o.clip = st.clips; return o; };
   const tp = (x, y) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]];
   const scaleOf = () => Math.sqrt(Math.abs(M[0] * M[3] - M[1] * M[2])) || 1;
   const pt = (x, y) => { const p = tp(x, y); if (!cur) { cur = [p]; path.push(cur); start = p; } else cur.push(p); };
@@ -103,20 +104,24 @@ function recorder() {
     arcTo(x1, y1, x2, y2) { pt(x1, y1); last = [x1, y1]; void x2; void y2; },
     quadraticCurveTo(cx, cy, x, y) { const [x0, y0] = last; for (let k = 1; k <= 10; k++) { const t = k / 10, u = 1 - t; pt(u * u * x0 + 2 * u * t * cx + t * t * x, u * u * y0 + 2 * u * t * cy + t * t * y); } last = [x, y]; },
     bezierCurveTo(c1x, c1y, c2x, c2y, x, y) { const [x0, y0] = last; for (let k = 1; k <= 14; k++) { const t = k / 14, u = 1 - t; pt(u * u * u * x0 + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * x, u * u * u * y0 + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * y); } last = [x, y]; },
-    fill() { const col = parseCol(st.fillStyle); if (!col) return; const polys = path.filter(p => p.length >= 3).map(p => p.slice()); if (polys.length) ops.push({ f: 1, polys, col: [col[0], col[1], col[2], col[3] * st.globalAlpha] }); },
+    fill() { const col = parseCol(st.fillStyle); if (!col) return; const polys = path.filter(p => p.length >= 3).map(p => p.slice()); if (polys.length) ops.push(clipped({ f: 1, polys, col: [col[0], col[1], col[2], col[3] * st.globalAlpha] })); },
     stroke() { const col = parseCol(st.strokeStyle); if (!col) return; const w = st.lineWidth * scaleOf(); const segs = [];
       for (const p of path) { for (let k = 0; k + 1 < p.length; k++) segs.push([p[k], p[k + 1]]); if (p.closed && p.length > 2) segs.push([p[p.length - 1], p[0]]); }
-      if (segs.length) ops.push({ f: 0, segs, w, col: [col[0], col[1], col[2], col[3] * st.globalAlpha] }); },
-    fillRect(x, y, w, h) { const col = parseCol(st.fillStyle); if (!col) return; ops.push({ f: 1, polys: [[tp(x, y), tp(x + w, y), tp(x + w, y + h), tp(x, y + h)]], col: [col[0], col[1], col[2], col[3] * st.globalAlpha] }); },
-    strokeRect(x, y, w, h) { const col = parseCol(st.strokeStyle); if (!col) return; const P = [tp(x, y), tp(x + w, y), tp(x + w, y + h), tp(x, y + h)]; ops.push({ f: 0, segs: [[P[0], P[1]], [P[1], P[2]], [P[2], P[3]], [P[3], P[0]]], w: st.lineWidth * scaleOf(), col: [col[0], col[1], col[2], col[3] * st.globalAlpha] }); },
-    clearRect() { }, fillText() { }, strokeText() { }, setLineDash() { }, clip() { },
+      if (segs.length) ops.push(clipped({ f: 0, segs, w, col: [col[0], col[1], col[2], col[3] * st.globalAlpha] })); },
+    fillRect(x, y, w, h) { const col = parseCol(st.fillStyle); if (!col) return; ops.push(clipped({ f: 1, polys: [[tp(x, y), tp(x + w, y), tp(x + w, y + h), tp(x, y + h)]], col: [col[0], col[1], col[2], col[3] * st.globalAlpha] })); },
+    strokeRect(x, y, w, h) { const col = parseCol(st.strokeStyle); if (!col) return; const P = [tp(x, y), tp(x + w, y), tp(x + w, y + h), tp(x, y + h)]; ops.push(clipped({ f: 0, segs: [[P[0], P[1]], [P[1], P[2]], [P[2], P[3]], [P[3], P[0]]], w: st.lineWidth * scaleOf(), col: [col[0], col[1], col[2], col[3] * st.globalAlpha] })); },
+    clearRect() { }, fillText() { }, strokeText() { }, setLineDash() { },
+    // (a clip: the path's outline, each drawing after it — till the state it was set in is restored — only inside it; the
+    // court of a house of courtyards seen through its roof's cut, T-420)
+    clip() { const polys = path.filter(p => p.length >= 3).map(p => p.slice()); if (polys.length) st.clips = (st.clips || []).concat([polys]); },
     // (a picture drawn into this one — a sprite the god's layer puts down, Art.draw —: its own painting, recorded when it was
     // made, laid in where it is drawn)
     drawImage(img, dx, dy, dw, dh) {
       const R2 = PAINTED.get(img); if (!R2 || !img.width || !img.height) return; const sx = (dw === undefined ? img.width : dw) / img.width, sy = (dh === undefined ? img.height : dh) / img.height;
       const map = p => tp(dx + p[0] * sx, dy + p[1] * sy); const k = Math.sqrt(Math.abs(sx * sy)) * scaleOf();
       const ga = st.globalAlpha; const cl = c => [c[0], c[1], c[2], c[3] * ga]; // (the picture laid in through this one's own alpha)
-      for (const o of R2.ops) ops.push(o.f ? { f: 1, col: cl(o.col), polys: o.polys.map(P => P.map(map)) } : { f: 0, col: cl(o.col), w: o.w * k, segs: o.segs.map(s => [map(s[0]), map(s[1])]) });
+      const cm = o => (o.clip ? o.clip.map(cs => cs.map(P => P.map(map))) : []); // (the picture's own clips, laid in with it, and this one's)
+      for (const o of R2.ops) { const q = o.f ? { f: 1, col: cl(o.col), polys: o.polys.map(P => P.map(map)) } : { f: 0, col: cl(o.col), w: o.w * k, segs: o.segs.map(s => [map(s[0]), map(s[1])]) }; const cs = (st.clips || []).concat(cm(o)); if (cs.length) q.clip = cs; ops.push(q); }
     },
     measureText: () => ({ width: 0 }),
     createLinearGradient() { const g = { stops: [], addColorStop(o, cc) { g.stops.push(cc); } }; return g; },
@@ -148,7 +153,7 @@ F.god = function (b, o) {
   if (!spr || !rec) return own.length ? { ops: own, spr: null, layer: own.length } : { ops: [], none: true };
   // (the recorder's frame is the canvas's: scale(3) then translate(ax, ay) — back to the god's pixels from the anchor)
   const un = p => [p[0] / 3 - spr.ax, p[1] / 3 - spr.ay];
-  const ops = rec.ops.map(o => o.f ? { f: 1, col: o.col, polys: o.polys.map(P => P.map(un)) } : { f: 0, col: o.col, w: o.w / 3, segs: o.segs.map(s => [un(s[0]), un(s[1])]) });
+  const ops = rec.ops.map(o => { const q = o.f ? { f: 1, col: o.col, polys: o.polys.map(P => P.map(un)) } : { f: 0, col: o.col, w: o.w / 3, segs: o.segs.map(s => [un(s[0]), un(s[1])]) }; if (o.clip) q.clip = o.clip.map(cs => cs.map(P => P.map(un))); return q; });
   // (the square's pavement: the god paints it on the ground layer, under the picture — render.js, the lot less 0.02 tiles in
   // its people's colour —, so the view has it with the picture)
   if (b.type === 'praca' && A.plazaColor) { const P = (dx, dy) => [(dx - dy) * 16, (dx + dy) * 8]; const hw = b.w / 2 - 0.02, hh = b.h / 2 - 0.02; const c = parseCol(A.plazaColor(b.style));
@@ -302,8 +307,11 @@ function grid(x0, y0, x1, y1) {
   const W = Math.ceil((x1 - x0) * RES), H = Math.ceil((y1 - y0) * RES);
   return { x0, y0, W, H, r: new Float32Array(W * H), g: new Float32Array(W * H), b: new Float32Array(W * H), a: new Float32Array(W * H), z: null };
 }
-// (a polygon set filled by the nonzero rule at the cells' middles, its colour put over what is there)
-function fillPolys(R, polys, col) {
+// (a point in a set of polygons, by the nonzero rule; in every clip set of a list)
+function inSet(x, y, polys) { let w = 0; for (const P of polys) for (let k = 0; k < P.length; k++) { const A = P[k], B = P[(k + 1) % P.length]; if (A[1] <= y) { if (B[1] > y && (B[0] - A[0]) * (y - A[1]) - (x - A[0]) * (B[1] - A[1]) > 0) w++; } else if (B[1] <= y && (B[0] - A[0]) * (y - A[1]) - (x - A[0]) * (B[1] - A[1]) < 0) w--; } return w !== 0; }
+const inClip = (x, y, clip) => clip.every(cs => inSet(x, y, cs));
+// (a polygon set filled by the nonzero rule at the cells' middles, its colour put over what is there — only inside its clip)
+function fillPolys(R, polys, col, clip) {
   const a = Math.max(0, Math.min(1, col[3])); if (a <= 0) return;
   let ylo = 1e9, yhi = -1e9; for (const P of polys) for (const p of P) { if (p[1] < ylo) ylo = p[1]; if (p[1] > yhi) yhi = p[1]; }
   const j0 = Math.max(0, Math.floor((ylo - R.y0) * RES)), j1 = Math.min(R.H - 1, Math.ceil((yhi - R.y0) * RES));
@@ -315,17 +323,17 @@ function fillPolys(R, polys, col) {
     let w = 0;
     for (let k = 0; k + 1 < xs.length; k++) { w += xs[k][1]; if (!w) continue;
       const i0 = Math.max(0, Math.ceil((xs[k][0] - R.x0) * RES - 0.5)), i1 = Math.min(R.W - 1, Math.floor((xs[k + 1][0] - R.x0) * RES - 0.5));
-      for (let i = i0; i <= i1; i++) { const q = j * R.W + i; R.r[q] = col[0] * a + R.r[q] * (1 - a); R.g[q] = col[1] * a + R.g[q] * (1 - a); R.b[q] = col[2] * a + R.b[q] * (1 - a); R.a[q] = a + R.a[q] * (1 - a); } }
+      for (let i = i0; i <= i1; i++) { if (clip && !inClip(R.x0 + (i + 0.5) / RES, y, clip)) continue; const q = j * R.W + i; R.r[q] = col[0] * a + R.r[q] * (1 - a); R.g[q] = col[1] * a + R.g[q] * (1 - a); R.b[q] = col[2] * a + R.b[q] * (1 - a); R.a[q] = a + R.a[q] * (1 - a); } }
   }
 }
 // (a stroke: each segment a band of its width — the shape's lines that count: a mast, a pole, a spear; the hair-thin lines
 // of tiles and planks, and the faint ones, are the picture's texture, not its shape)
-function strokeSegs(R, segs, w, col) {
+function strokeSegs(R, segs, w, col, clip) {
   if (w < 0.55 || col[3] < 0.5) return;
   const polys = []; for (const [A, B] of segs) { const dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy) || 1; const nx = -dy / l * w / 2, ny = dx / l * w / 2; polys.push([[A[0] + nx, A[1] + ny], [B[0] + nx, B[1] + ny], [B[0] - nx, B[1] - ny], [A[0] - nx, A[1] - ny]]); }
-  for (const P of polys) fillPolys(R, [P], col);
+  for (const P of polys) fillPolys(R, [P], col, clip);
 }
-F.paintGod = function (god, R) { for (const o of god.ops) { if (o.f) fillPolys(R, o.polys, o.col); else strokeSegs(R, o.segs, o.w, o.col); } return R; };
+F.paintGod = function (god, R) { for (const o of god.ops) { if (o.f) fillPolys(R, o.polys, o.col, o.clip); else strokeSegs(R, o.segs, o.w, o.col, o.clip); } return R; };
 // (the 3D's triangles with the depth of each cell: the nearest wins; lit as the god's picture shades its faces — the front-
 // left face lighter, the front-right darker, the tops lightest. As much as the god's six palettes: their right faces 0.75 to
 // 0.87 of the left, 0.82 on the mean, their tops 1.10 to 1.17 — the ambient of 0.7 gives 0.82 and 1.11; the 0.55 it had

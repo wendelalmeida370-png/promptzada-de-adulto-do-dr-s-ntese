@@ -139,14 +139,20 @@ if (want('b')) {
     try {
       A.formMissing.clear(); const g = F.god(pb); const s2 = A.formStats || {}; const nr = F.near(pb); const fc2 = F.formCheck(pb, Fo.of(type, st2, n), g, nr, LIM);
       const mk2 = F.gridFor(g, nr); const c2 = F.compare(F.measure(F.paintGod(g, mk2())), F.measure(F.paint3D(nr, mk2())), [pb.w, pb.h]);
-      pal.push({ type, st: st2, n, w: g.spr ? g.spr.w : 0, miss: [...A.formMissing], rings: s2.rings, parts: s2.parts, god: fc2.god.iou, d3f: fc2.d3.iou, d3: c2.iou, gWhy: fc2.why.filter(w => w.startsWith('deus')), dWhy: fc2.why.filter(w => !w.startsWith('deus')) });
+      // (the pieces inside a mass — oculto, D-108: the pyramid's corridor, gallery and chamber —: none painted — the painting
+      // with them the same as without them, every op)
+      const Fm2 = Fo.of(type, st2, n), oc = Fm2.els.filter(e => e.oculto).length; let ocSame = true;
+      if (oc) { const r1 = F.recorder(), r2 = F.recorder(), mm = () => ({ glow: [], win: [], fires: [] }); A.formPaint(r1.c, mm(), Fm2, st2, {}); A.formPaint(r2.c, mm(), Object.assign({}, Fm2, { els: Fm2.els.filter(e => !e.oculto) }), st2, {}); ocSame = JSON.stringify(r1.ops) === JSON.stringify(r2.ops); }
+      pal.push({ type, st: st2, n, w: g.spr ? g.spr.w : 0, miss: [...A.formMissing], rings: s2.rings, parts: s2.parts, oc, ocHidden: s2.hidden || 0, ocSame, god: fc2.god.iou, d3f: fc2.d3.iou, d3: c2.iou, gWhy: fc2.why.filter(w => w.startsWith('deus')), dWhy: fc2.why.filter(w => !w.startsWith('deus')) });
     } finally { F.drop(pb); }
   }
   json.degraus = pal;
   const lab = p => `${p.type}/${p.st}/${p.n}`, live = pal.filter(p => !p.none);
-  const gBad = pal.filter(p => p.none || Math.abs(p.w - ((2 * p.n) * 16 + 16)) >= 0.5 || p.miss.length || p.rings !== 0 || p.gWhy.length), gLo = live.reduce((a, p) => (!a || p.god < a.god ? p : a), null);
+  const gBad = pal.filter(p => p.none || Math.abs(p.w - ((2 * p.n) * 16 + 16)) >= 0.5 || p.miss.length || p.rings !== 0 || p.gWhy.length || (p.oc && !(p.ocHidden === p.oc && p.ocSame))), gLo = live.reduce((a, p) => (!a || p.god < a.god ? p : a), null);
+  const ocs = live.filter(p => p.oc);
   ok('b: os degraus pelo pintor (todos os que têm forma, e os palácios nos quatro povos)', !gBad.length,
     `${live.length} degraus, ${live.reduce((s, p) => s + p.parts, 0)} partes, ${live.reduce((s, p) => s + p.rings, 0)} voltas quebradas, ${live.filter(p => p.miss.length).length} com peça sem pintor; deus × forma de ${gLo ? gLo.god.toFixed(3) : '-'} (${gLo ? lab(gLo) : '-'}) a ${live.length ? Math.max(...live.map(p => p.god)).toFixed(3) : '-'}` +
+    `; as peças ocultas (D-108): ${ocs.length ? ocs.map(p => `${lab(p)} ${p.oc}, ${p.ocHidden === p.oc && p.ocSame ? 'nenhuma pintada' : `${p.ocHidden} postas de lado, a pintura ${p.ocSame ? 'igual' : 'OUTRA'}`}`).join('; ') : 'nenhum degrau tem'}` +
     (gBad.length ? ' — ' + gBad.map(p => (p.none ? `${lab(p)}: sem forma` : `${lab(p)}: ${p.rings} voltas${p.miss.length ? ', sem pintor ' + p.miss.join(',') : ''}${p.gWhy.length ? ', ' + p.gWhy.join('; ') : ''}`)).join('; ') : ''));
   const dBad = live.filter(p => p.dWhy.length || p.d3 < LIM.iou);
   ok('b: os degraus no 3D, contra a forma e contra o deus', !dBad.length, `${live.length - dBad.length} de ${live.length} passam` + (dBad.length ? ' — ' + dBad.map(p => `${lab(p)}: 3D × forma ${p.d3f.toFixed(3)}, deus × 3D ${p.d3.toFixed(3)}${p.dWhy.length ? ', ' + p.dWhy.join('; ') : ''}`).join('; ') : ''));

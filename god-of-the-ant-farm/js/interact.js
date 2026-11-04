@@ -45,7 +45,7 @@
   I.FACE = Math.PI / 4; // (radians: a door this far round from where the body looks, or less, is the door it faces — L-326)
   I.best = function () {
     const ctx = I.ctx(); if (!ctx || G.Avatar.swimming()) return null; // (the hands are swimming)
-    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1;
+    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1, seat = null, ss = -1;
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
         // (t.reach: a target reached from farther than its kind — the door of a house from its doorstep)
@@ -53,6 +53,7 @@
         const sc = s + p.prio * 0.6 + (t.pref || 0); // (pref: a target meant more, or less, than the others in the same reach)
         const c = { p, t };
         if (sc > bs) { bs = sc; best = c; }
+        if (p.id === 'lugar' && sc + (t.pl.use === 'comer' ? 10 : 0) > ss) { ss = sc + (t.pl.use === 'comer' ? 10 : 0); seat = c; } // (a place at a table first)
         if (p.door && sc > ds) { ds = sc; door = c; }
         if (p.passing && sc > ps) { ps = sc; pass = c; }
         if (p.opens && sc > os) { os = sc; open = c; }
@@ -60,6 +61,10 @@
       }
     }
     if (!best) return null;
+    // (at the table of its own house the body sits first — «Sentar à mesa», always —, and eats there once seated, when there is
+    // what to eat: the meal of the house the world offers at the table gives way to the place at it while the body stands, hungry
+    // or not — D-104: the body of the god lives the house, not only the hunger)
+    if (seat && best.p.id === 'atividade' && best.t.o && /^lar\.comer:/.test(best.t.o.id || '')) best = seat;
     // (an offer of the world with no place of its own, where the body stands — the meal on the floor of a house with no table,
     // seat nor hearth —: what the body faces in reach is meant before it. Its point was the body's own, its bearing the noise of
     // two positions a hair apart: by the mat of the house#35280 of the metrópole of the generation 11 the body facing its bed
