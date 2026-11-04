@@ -1,5 +1,5 @@
 // casa: um teto para chamar de meu, provocado de propósito (C1, a atividade 01) — no mundo pronto «metrópole» (a cidade de
-// moeda com mais adultos sem par — hoje, Tenochtitlan) e no «cidade» (um povo sem moeda). Sem uma cidade que sirva, falha
+// moeda com mais adultos sem par — hoje, Hedeby) e no «cidade» (um povo sem moeda). Sem uma cidade que sirva, falha
 // dizendo o que falta.   node qa/casa.js
 // h1 toda casa tem dono (o mais velho que mora nela; a vazia é do povo); h2 quem precisa de casa (o casal na casa cheia
 // dos pais — o que o dia da cidade pergunta: de uma casa cheia, só a família mais moça, D-098) põe no diário e junta — e a casa que junta não compra luxo; h11 a casa vazia do povo, comprada pelo livro
@@ -111,9 +111,20 @@ function clearWay(v) {
   for (const b of [...S.buildings.values()]) if (b.set === set.id && b.encomenda && !b.built && !b.encomenda.fam.includes(v.id)) G.Village.completeBuilding(b);
 }
 // (a couple for a commission, the way cleared: a couple whose need went with it — the families of the other commissions
-// moved out, and the house it shared is no longer full — gives its place to the next)
+// moved out, and the house it shared is no longer full — gives its place to the next. In the cases' town, or, when it has
+// none to give, in the next town of coin with the most couples to give, as h2's (T-320): the case lives in that town — `set`
+// is it until the case gives it back. In the metrópole of the generation 14 Hedeby, the town of coin with the most single
+// people, has none: of its seven single men three own their houses, three live in houses the city is raising, and the last
+// one's household pays rent — his couple would be a tenant («aluga»), not one in others' full house —, and its day asks no
+// couple; h7, h8, h15 and h10 had «nenhum outro casal», T-456)
+const caseTown = () => (set.id !== set0 ? `(em ${set.name}: ${S.settlements.get(set0).name} não tem casal para o caso) ` : '');
 function readyCouple() {
-  for (let k = 0; k < 6; k++) { const v = couple(); if (!v) return null; clearWay(v); if (K.need(v)) return v; }
+  const towns = [set].concat([...S.settlements.values()].filter(s => s !== set && E.coinage(s.fac)).sort((a, b) => couples(b) - couples(a) || a.id - b.id));
+  for (const tw of towns) {
+    const was = set; set = tw;
+    for (let k = 0; k < 6; k++) { const v = couple(tw); if (!v) break; clearWay(v); if (K.need(v)) return v; }
+    set = was;
+  }
   return null;
 }
 // (what a commission needs to stand, before the case: the town at peace — the case lives until no fight is at it and no
@@ -323,7 +334,7 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
 // ---------------- h7: the one who ordered the house dies in the middle of the work: the family moves just the same
 {
   reload();
-  const v = readyCouple(); let info = 'nenhum outro casal', fine7 = false;
+  const v = readyCouple(); let info = 'nenhum casal para o caso em nenhuma cidade de moeda', fine7 = false;
   if (v) {
     const w = readyTown(); const h = S.buildings.get(v.home); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
     K.order(v);
@@ -343,12 +354,13 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       info = `${v.name} encomendou a casa #${b.id} e morreu no meio da obra: ${b.built ? 'a obra terminou' : S.buildings.has(b.id) ? `a obra NÃO terminou (${Math.round((b.progress || 0) * 100)}%)` : 'a obra SUMIU'}; ${whose}${warNote(w, t0)}`;
     } else info = `${v.name}: nenhuma obra encomendada`;
   }
-  ok('h7 morre no meio da obra', fine7 && !bad().length, info);
+  ok('h7 morre no meio da obra', fine7 && !bad().length, caseTown() + info);
+  set = S.settlements.get(set0) || set;
 }
 // ---------------- h8: a commission that never starts gives back what was paid
 {
   reload();
-  const v = readyCouple(); let info = 'nenhum outro casal', fine8 = false;
+  const v = readyCouple(); let info = 'nenhum casal para o caso em nenhuma cidade de moeda', fine8 = false;
   if (v) {
     const h = S.buildings.get(v.home); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
     K.order(v);
@@ -362,12 +374,13 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       info = `a obra #${id} de ${v.name} parada: ${S.buildings.has(id) ? 'CONTINUA no chão' : 'tirada do chão'}; voltaram à família ${back ? back[6] : 'NADA'} das ${paid} moedas guardadas na obra`;
     } else info = `${v.name}: nenhuma obra encomendada`;
   }
-  ok('h8 a obra que não começa devolve', fine8 && !bad().length, info);
+  ok('h8 a obra que não começa devolve', fine8 && !bad().length, caseTown() + info);
+  set = S.settlements.get(set0) || set;
 }
 // ---------------- h15: a work that is lost (fire takes it half built): the people give back what was not raised of it
 {
   reload();
-  const v = readyCouple(); let info = 'nenhum outro casal', fine15 = false;
+  const v = readyCouple(); let info = 'nenhum casal para o caso em nenhuma cidade de moeda', fine15 = false;
   if (v) {
     const h = S.buildings.get(v.home); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
     K.order(v);
@@ -382,7 +395,8 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       info = `a obra #${b.id} de ${v.name} pegou fogo a 40%: voltaram ${back ? back[6] : 'NADA'} das ${paid} guardadas na obra (o que não se levantou: ${r2(paid * 0.6)}), e ${raised ? raised[6] : 'NADA'} ao povo pelo que já estava de pé; no diário: ${memo ? '«A obra da nossa casa se perdeu…»' : 'NADA'}`;
     } else info = `${v.name}: nenhuma obra encomendada`;
   }
-  ok('h15 a obra que se perde devolve', fine15 && !bad().length, info);
+  ok('h15 a obra que se perde devolve', fine15 && !bad().length, caseTown() + info);
+  set = S.settlements.get(set0) || set;
 }
 // ---------------- h13: the shack (social.js): the family leaves it for a house with room taking what is its own, or makes it a hut paying the people's wood — in the ledger
 // (each of the two ways on purpose — h13 a family of three where a house has room for it, h13b a family one bigger than any
@@ -602,7 +616,7 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
 // ---------------- h10: the skip: the work ends and the family moves in
 {
   reload();
-  const v = readyCouple(); let info = 'nenhum outro casal', fine10 = false;
+  const v = readyCouple(); let info = 'nenhum casal para o caso em nenhuma cidade de moeda', fine10 = false;
   if (v) {
     const w = readyTown(); const h = S.buildings.get(v.home); setCoins('h:' + h.id, (K.price(set, 'sobrado') + 4) * 3);
     K.order(v);
@@ -630,7 +644,8 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
     }
     else info = `${v.name}: nenhuma obra encomendada`;
   }
-  ok('h10 o salto', fine10 && !bad().length && M.limpo(), info);
+  ok('h10 o salto', fine10 && !bad().length && M.limpo(), caseTown() + info);
+  set = S.settlements.get(set0) || set;
 }
 // ---------------- h16: what is left of a house — the ruin of one that fell, or of one in a town left to the wind — keeps the
 // owner it had, and is no one's to inherit: with the owner gone, it is nobody's (L-304)
