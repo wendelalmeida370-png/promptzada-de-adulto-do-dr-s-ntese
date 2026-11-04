@@ -41,13 +41,15 @@
   };
   // ------------------------------ the programmes ------------------------------
   // H, V: the organisations and the storeys the work takes; store: the people's store it keeps (BDEF.storage); jobs: its
-  // work stations (BDEF.jobs); door: the width of its way in (carts at a storehouse); furnish: what goes in
+  // work stations (BDEF.jobs); door: the width of its way in (carts at a storehouse); aisle: in a store of three naves, the
+  // depth its side aisles keep — its pieces and the place before them (naveOf, L-499); court: the least width of its court
+  // (a temple's, for its altar: L-501); furnish: what goes in
   const ALLH = ['salao', 'frente', 'corredor', 'patio', 'naves', 'anexo'];
   const PROG = {
-    storehouse: { use: 'armazem', H: ['salao', 'frente', 'corredor', 'patio', 'naves'], V: ['terreo', 'galeria', 'porao', 'esteios', 'andar'], storeAll: 1, lockNight: 1, door: [1.6, 2.0], furnish: P => keepFurnish(P, ['baia', 'prateleira', 'pipas', 'baia']) },
+    storehouse: { use: 'armazem', H: ['salao', 'frente', 'corredor', 'patio', 'naves'], V: ['terreo', 'galeria', 'porao', 'esteios', 'andar'], storeAll: 1, aisle: 2.25, lockNight: 1, door: [1.6, 2.0], furnish: P => keepFurnish(P, ['baia', 'prateleira', 'pipas', 'baia']) },
     // (the harbour's storehouse: its stevedores set the crates down on the loading floors by the door, their head counts them)
     armazem: { use: 'armazem', H: ['salao', 'frente', 'corredor', 'patio', 'naves'], V: ['terreo', 'galeria', 'porao', 'esteios', 'andar'], storeAll: 1, lockNight: 1, door: [1.6, 2.0], furnish: P => keepFurnish(P, ['baia', 'pipas', 'prateleira', 'baia'], 2) },
-    celeiro: { use: 'celeiro', H: ['salao', 'frente', 'corredor', 'naves'], V: ['terreo', 'galeria', 'esteios', 'andar'], storeAll: 1, lockNight: 1, door: [1.4, 1.8], furnish: P => keepFurnish(P, ['tulha', 'tulha', 'baia']) },
+    celeiro: { use: 'celeiro', H: ['salao', 'frente', 'corredor', 'naves'], V: ['terreo', 'galeria', 'esteios', 'andar'], storeAll: 1, aisle: 2.15, lockNight: 1, door: [1.4, 1.8], furnish: P => keepFurnish(P, ['tulha', 'tulha', 'baia']) },
     mercado: { use: 'mercado', H: ['salao', 'frente', 'corredor', 'patio', 'naves'], V: ['terreo', 'galeria', 'porao', 'andar'], storeAll: 1, open: 1, lockNight: 1, door: [1.4, 1.8], furnish: marketFurnish },
     workshop: { use: 'oficina', H: ['salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'porao', 'andar'], open: 1, lockNight: 1, jobs: 2, door: [1.0, 1.3], furnish: P => tradeFurnish(P, [['bancada', 2]], ['prateleira', 'secador'], ['cepo']) },
     forja: { use: 'forja', H: ['salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'andar'], open: 1, lockNight: 1, door: [1.0, 1.3], hot: 'forja-fogo', furnish: P => tradeFurnish(P, [['forja-fogo', 1], ['bancada', 1]], ['prateleira'], ['bigorna', 'tina']) },
@@ -118,10 +120,12 @@
     // (the aisle's middle; its width, at least 1.8 m, the inside's — in a store, down the middle: the bays on either side the
     // same, each cell as wide as a bay and the way in to it; off the middle, one side's cells hold no bay)
     if (H === 'corredor') { const off = P.rr(-0.3, 0.3); lay.cu = entryU = cu + (PR.storeAll ? 0 : off); er = [entryU - 0.9, I[1], entryU + 0.9, I[3]]; }
-    else if (H === 'naves') er = [cu - 1.3 + 0.175, I[1], cu + 1.3 - 0.175, I[3]];
+    else if (H === 'naves') { const nv = naveOf(PR, I); er = [cu - nv[0] / 2 + 0.175, I[1], cu + nv[0] / 2 - 0.175, I[3]]; }
     else if (H === 'patio') {
-      // (a jail's hall at the back is the guard's, shallower: the yard's wings hold its cells)
-      const bd = PR.cells ? P.rr(1.9, 2.3) : P.rr(2.4, 3.0), sw = P.rr(1.9, 2.3);
+      // (a jail's hall at the back is the guard's, shallower: the yard's wings hold its cells; a temple's court as wide as its
+      // altar wants — PR.court: the altar of 1.2 m and a way past it either side —: in a court of 1.8 m between wings of 2.3 the
+      // altar went nowhere, the hall behind too shallow for it, and the temple had no plan on other dice — L-501, T-436)
+      const bd = PR.cells ? P.rr(1.9, 2.3) : P.rr(2.4, 3.0), sw = P.rr(1.9, PR.court ? Math.max(1.9, Math.min(2.3, (I[2] - I[0] - 2 * ti - PR.court) / 2)) : 2.3);
       const C = [I[0] + sw + ti, I[1] + bd + ti, I[2] - sw - ti, I[3]]; if (C[2] - C[0] < 1.8) { P.errs.push('o pátio não cabe'); return; }
       lay.C = C; lay.bd = bd; er = C; entryU = (C[0] + C[2]) / 2;
       P.shell.court = C.slice(); P.roof.court = C.slice();
@@ -206,7 +210,7 @@
       }
     } else if (H === 'naves') {
       // (a nave down the middle, an aisle to either side, rows of pillars between: arches open every few steps)
-      const nw = P.rr(2.6, 3.2); const n0 = cu - nw / 2, n1 = cu + nw / 2; const pt = 0.35;
+      const nv = naveOf(PR, I), nw = P.rr(nv[0], nv[1]); const n0 = cu - nw / 2, n1 = cu + nw / 2; const pt = 0.35;
       rooms.main = room('nave', [n0 + pt / 2, I[1], n1 - pt / 2, I[3]]);
       const la = room('nave-lateral', [I[0], I[1], n0 - pt / 2, I[3]]), ra = room('nave-lateral', [n1 + pt / 2, I[1], I[2], I[3]]); rooms.cells.push(la, ra);
       for (const [x, aisle] of [[n0, la], [n1, ra]]) {
@@ -327,6 +331,11 @@
   const lvOf = (P, id) => P.rooms[id].lv;
   // (from the fifth attempt on, the rooms are tried in another order: the attempts on one shell must differ)
   const mix = (P, a) => (P.attempt >= 4 ? P.shuffle(a) : a);
+  // (the nave's width, from the narrowest to the widest: 2.6 to 3.2 m — in a store, the aisles either side as deep as its pieces
+  // and the place one stands before them, the body in it (PR.aisle: the granary's bins want 2.15 m, the storehouse's bays 2.25):
+  // on a lot of 8 m a nave of 3 m left aisles of 1.85, the bins went nowhere, and the granary on stilts held 88 to 92 sacks of
+  // its 110, the storehouse 136 of its 150 — L-499, found on other dice, T-436)
+  const naveOf = (PR, I) => { const hi = PR.aisle ? Math.min(3.2, I[2] - I[0] - 0.35 - 2 * PR.aisle) : 3.2; return [Math.min(2.6, hi), Math.max(Math.min(2.6, hi), hi)]; };
   const storeCap = P => P.items.reduce((n, it) => n + (In.ITEMS[it.kind].store && In.ITEMS[it.kind].store.dep === 'povo' ? (it.cap || In.ITEMS[it.kind].store.cap) : 0), 0);
   // the people's store: bays, shelves, bins and barrels round the walls until they hold what the building keeps; the clerk
   // who counts what comes in, by the door

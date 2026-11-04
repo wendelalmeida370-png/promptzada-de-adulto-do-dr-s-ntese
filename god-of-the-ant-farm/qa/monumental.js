@@ -5,8 +5,9 @@
 //       js/int-monumentos.js, D-107):
 //     A1 a forma: o lote (40 e 52 m), a fachada (≥ 18 m, três andares de arcos e o ático, as baias de 4 a 6 m, os arcos na
 //        proporção de gente, as quatro entradas nos eixos), a arena oval (≥ 20 × 12 m), as fileiras do corpo (0,40–0,45 ×
-//        0,70–0,80 m), os parapeitos (0,9 m), os degraus (≤ 0,30 m), o subsolo (os corredores, as jaulas, o alçapão), os
-//        mastros; a mesma forma para todo prédio do degrau
+//        0,70–0,80 m; as de cima do camarote sobre a fileira de trás dele), os parapeitos (0,9 m; ao longo da passagem do
+//        fundo, um só no chão do camarote), os degraus (≤ 0,30 m), o subsolo (os corredores, as jaulas, o alçapão), os mastros;
+//        a mesma forma para todo prédio do degrau
 //     A2 a planta: arma-se nos quatro lados, nos dois tamanhos, sem falha no relatório geométrico; três pisos e os lances entre
 //        eles; ≥ 600 lugares de assistir sentados, cada um alcançado da porta; quem assiste em pé no pódio, quem luta na areia;
 //        o tempo de fazê-la (o alvo: 400 ms)
@@ -15,15 +16,23 @@
 //        forma, a areia); a parede da planta em cada baia da fachada, aberta nos eixos; a arena e o pódio andados inteiros
 //     A4 os pés pelo caminho, num mundo em branco, a cada 2 cm (Space.indoor): da rua pela praça e pelo arco da frente até o pé
 //        do lance; pela praça até o arco da esquerda e o pé do lance da porta da areia; pelo da direita até o subsolo e o pé
-//        do lance do alçapão; na areia; no pódio e subindo um corredor até o alto das fileiras — o chão da forma, o maior
-//        degrau, o corpo passando em todo ponto
+//        do lance do alçapão; na areia; no pódio e subindo um corredor até o alto das fileiras; pela praça até o arco do fundo,
+//        subindo o lance do fundo nos degraus dele e do patamar pelo pódio até diante do trono e do banco da corte do camarote
+//        — o chão da forma, o maior degrau, o corpo passando em todo ponto
 //     A5 o mundo: o Coliseu pela mão do deus em Roma (a metrópole pronta), de pé — o lote, a forma e a planta do mesmo tamanho,
 //        o verificador limpo —; vivendo; salvo e carregado (a mesma planta); derrubado pelo deus (a ruína limpa)
-//     A6 o verificador (qa/monumental-inv.js): pega uma planta com menos lugares que o Coliseu tem, e cala quando ela volta
-//     A7 os lugares (In.places, a tabela da planta), num processo à parte com prazo: feita a tempo, um lugar livre de assistir
-//        e de lutar
+//     A6 o verificador (qa/monumental-inv.js): pega uma planta com menos lugares que o Coliseu tem (700 no de 10, 1340 no de
+//        13), ou sem o trono do camarote, e cala quando ela volta
+//     A7 os lugares (In.places, a tabela da planta), num processo à parte com prazo: feita a tempo, um lugar livre de assistir,
+//        de lutar, o trono e a corte
 //     A8 o parapeito do pódio do anfiteatro de hoje em volta de uma arena de 10 m (L-551): aberto sobre os degraus como o 3D
 //     A9 as passagens da esquerda e da direita cobertas da ponte do pódio à fachada (a abóbada: o vão azul que o E viu)
+//     A10 o camarote do imperador (D-125), dos dois lados do patamar do fundo: na forma, 2,5 m da primeira fileira, o chão no
+//        pódio duas fileiras fundo, a fileira de trás com o parapeito (a queda de 1,26 m), as fileiras de cima a partir da
+//        quarta, o parapeito da passagem no chão dele, o trono (o assento a 0,5 m e o espaldar) e o banco da corte; na planta,
+//        nos dois tamanhos e nos quatro lados, o lugar do trono e os quatro da corte (os usos 'trono' e 'corte') que o corpo
+//        toma, um assento um do outro, o caminho até eles alcançado da porta; nenhum assento das fileiras nem lugar em pé no
+//        camarote; a fileira de trás nunca andada; os assentos iguais nos quatro lados
 //   C — as pirâmides (a maravilha egípcia e a asteca nos degraus de 10 e 13 casas: js/forma-espetaculo.js e as plantas em
 //       js/int-monumentos.js, D-108):
 //     C1 as formas: a Grande Pirâmide lisa (as faces de 50 a 54°, a base ≥ 36 m), a entrada aberta na face (≥ 2,2 m), o
@@ -76,8 +85,9 @@
 //     H5 o mundo: cada povo funda o seu degrau grande e nunca o antigo; o campo de bola pela mão do deus em Tenochtitlan, de
 //        pé, vivendo, salvo e carregado, o verificador (as arquibancadas noutra altura), derrubado
 //     H6 os lugares do campo de bola (a tabela da planta): um lugar livre de assistir e de jogar
-//   M — o grande monumento (o degrau de 4 casas, 16 m, em quatro povos: o obelisco egípcio, a coluna do triunfo romana, a
-//       Pedra do Sol asteca, o deus de ouro grego — D-109; a planta, a do monumento de antes):
+//   M — o grande monumento (o degrau de 4 casas, 16 m, em seis povos: o obelisco egípcio, a coluna do triunfo romana, a
+//       Pedra do Sol asteca, o deus de ouro grego — D-109 —, o obelisco clássico, o do deus, e o navio de pedras nórdico — a 4ª
+//       rodada; a planta, a do monumento de antes):
 //     M1 as formas: os degraus do corpo (cada um em dois), o alto de 12,8 m, a peça do meio (≥ um décimo do alto), a altura
 //        (≥ 10 m), as quatro silhuetas diferentes
 //     M2 as plantas: nos quatro lados e nos quatro povos, sem falha, o alto alcançado, quem oferta, quem reza (16), quem acende
@@ -168,16 +178,19 @@ function testeA() {
       // (the arena: an oval of 20 × 12 m at least, the form's sand on its outline)
       const ext = areia ? [Math.max(...areia.pts.map(p => p[0])) - Math.min(...areia.pts.map(p => p[0])), Math.max(...areia.pts.map(p => p[1])) - Math.min(...areia.pts.map(p => p[1]))] : [0, 0];
       if (ext[0] < 20 || ext[1] < 12 || Math.abs(ext[0] - ext[1]) < 2) out.push(`n ${n}: a arena de ${ext[0].toFixed(2)} × ${ext[1].toFixed(2)} m`);
-      // (the rows: the body's seat — each ring one rise over the next, one tread deep but the top one's —, the podium's parapet)
-      const rowsP = F.els.filter(e => e.k === 'cavea' && e.escadas), pod = F.els.filter(e => e.k === 'cavea' && !e.escadas); let rmin = 9, rmax = 0, tmin = 9, tmax = 0;
-      for (const e of rowsP) { const A = e.aneis; for (let k = 0; k < A.length; k++) { const rIn = k < A.length - 1 ? A[k + 1] : [e.fundo, e.fundo === O.blocks[0].r0 ? O.yb : O.yb]; const rise = A[k][1] - (k < A.length - 1 ? A[k + 1][1] : O.yb);
+      // (the rows: the body's seat — each ring one rise over the next, one tread deep but the top one's; the lowest over the podium,
+      // or over the third row behind the emperor's box (D-125) —, the podium's parapet: the walk on each arc's edge)
+      const rowsP = F.els.filter(e => e.k === 'cavea' && e.aneis.length > 1), pod = F.els.filter(e => e.k === 'cavea' && (Math.abs(e.fundo - O.rs) < 1e-3 || Math.abs(e.fundo - O.rb) < 1e-3)); let rmin = 9, rmax = 0, tmin = 9, tmax = 0;
+      for (const e of rowsP) { const A = e.aneis; const X = O.boxes.find(q => Math.abs(e.fundo - q.r3) < 1e-3), base = X ? X.y3 : O.yb;
+        for (let k = 0; k < A.length; k++) { const rIn = k < A.length - 1 ? A[k + 1] : [e.fundo, base]; const rise = A[k][1] - rIn[1];
         rmin = Math.min(rmin, rise); rmax = Math.max(rmax, rise); if (k > 0) { const tr = A[k][0] - rIn[0]; tmin = Math.min(tmin, tr); tmax = Math.max(tmax, tr); } } }
       if (rmin < 0.4 - 1e-6 || rmax > 0.45 + 1e-6 || tmin < 0.7 - 1e-6 || tmax > 0.8 + 1e-6) out.push(`n ${n}: fileiras de ${rmin.toFixed(2)}–${rmax.toFixed(2)} × ${tmin.toFixed(2)}–${tmax.toFixed(2)} m`);
       if (pod.length < 8 || pod.some(e => !(e.parapeito >= 0.9))) out.push(`n ${n}: o pódio sem o parapeito de 0,9 m`);
       if (O.yb - O.ya < 2.2) out.push(`n ${n}: o pódio a ${(O.yb - O.ya).toFixed(2)} m sobre a areia`);
       // (the steps: each flight's riser, the aisles' half rows; the parapets along the passages, 0.9 m over the rows)
       const risers = [O.yb / O.ways.frente.m, O.yb / O.ways.fundo.m, O.ya / O.ways.esquerda.m, O.ya / O.hypo.m, O.rise / 2]; if (Math.max(...risers) > In.BODY.step) out.push(`n ${n}: degraus de ${Math.max(...risers).toFixed(2)} m`);
-      const par = F.els.filter(e => e.k === 'bloco' && e.y0 >= O.yb - 1e-6 && Math.abs(e.y1 - e.y0 - 0.9) < 1e-6); if (par.length < 8 * O.rows) out.push(`n ${n}: ${par.length} parapeitos ao longo das passagens (${8 * O.rows} ao menos)`);
+      // (by the emperor's box the first two rows along the back passage are its floor: one parapet at its height, not two)
+      const par = F.els.filter(e => e.k === 'bloco' && e.y0 >= O.yb - 1e-6 && Math.abs(e.y1 - e.y0 - 0.9) < 1e-6); if (par.length < 8 * O.rows - 2) out.push(`n ${n}: ${par.length} parapeitos ao longo das passagens (${8 * O.rows - 2} ao menos)`);
       // (the undercroft: its corridors' walls under the sand, the cages with their bars, the hatch; the masts)
       const under = F.els.filter(e => e.k === 'bloco' && e.y0 === 0 && Math.abs(e.y1 - (O.ya - 0.2)) < 1e-6).length, bars = F.els.filter(e => e.k === 'janelas' && e.grade).length;
       if (under < 8 || O.cages.length < 4 || bars < O.cages.length || !areia || !(areia.buracos || []).length) out.push(`n ${n}: o subsolo com ${under} paredes, ${O.cages.length} jaulas, ${bars} grades, ${areia && areia.buracos ? areia.buracos.length : 0} alçapões`);
@@ -270,26 +283,39 @@ function testeA() {
       const big = [cu + g / 2, cv + h / 2 - O.b]; const am = (O.phi + Math.PI / 2) / 2; const onBig = (r, a) => [big[0] + r * Math.cos(a), big[1] + r * Math.sin(a)];
       const podium = []; for (let a = Math.PI / 2 - 0.02; a >= am; a -= 0.02) podium.push(onBig(rb + 0.62, a)); podium.push(onBig(rb + 0.62, am));
       const top = []; for (let a = am; a <= am + 0.12; a += 0.02) top.push(onBig(rb + O.D - O.t - 0.36, a));
+      // (and to the emperor's box, D-125: round the square to the back arch, up the back flight — on its treads —, from the
+      // landing along the podium into each side of it: to where one stands before the throne, before the court's bench)
+      const vL = cv - Bv - dp / 2, thr = O.boxes.find(X => X.seat === 'trono').r, ben = O.boxes.find(X => X.seat === 'corte').r; const bm = (ben[0] + ben[2]) / 2;
       const legs = [
         [0, [[cu, L + 0.8], [cu, W.frente.r[3] + 0.45]]],
         [0, [[cu - 3, L - 2.0], [0.85, L - 2.0], [0.85, cv], [W.esquerda.r[0] - 0.45, cv]]],
         [0, [[cu + 3, L - 2.0], [L - 0.85, L - 2.0], [L - 0.85, cv], [cu, cv], [cu, O.hypo.r[1] - 0.45]]],
         [1, [[cu - Au + 0.5, cv], [cu, cv], [cu + 3, cv + 2.5], [cu + 3, O.hypo.r[3] + 1.0]]],
         [2, [[cu, cv + Bv + 0.85]].concat(podium, [onBig(rb + O.D - O.t - 0.36, am)], top)],
+        [0, [[cu + 3, L - 2.0], [L - 0.85, L - 2.0], [L - 0.85, 0.85], [cu, 0.85], [cu, W.fundo.r[1] - 0.45]]],
+        [0, [[cu, W.fundo.r[1] - 0.05], [cu, W.fundo.r[3] - 0.05]], 1],
+        [2, [[cu, W.fundo.r[3] + 0.35], [cu, vL], [cu + g / 2 + 1.0, vL], [(thr[0] + thr[2]) / 2, vL], [(thr[0] + thr[2]) / 2, thr[3] + 0.45]]],
+        [2, [[cu, vL], [cu - g / 2 - 1.0, vL], [bm + 0.6, vL], [bm + 0.6, ben[3] + 0.35], [bm - 0.6, ben[3] + 0.35]]],
       ];
-      for (const [lv, path] of legs) { let prev = null;
+      const treads = F.els.filter(e => e.k === 'bloco' && e.degrau && e.r[0] >= W.fundo.r[0] - 1e-6 && e.r[2] <= W.fundo.r[2] + 1e-6 && e.r[1] >= W.fundo.r[1] - 1e-6 && e.r[3] <= W.fundo.r[3] + 1e-6);
+      const tread = (u, z) => { let y = null; for (const q of treads) if (u >= q.r[0] && u <= q.r[2] && z >= q.r[1] && z <= q.r[3] && (y === null || q.y1 > y)) y = q.y1; return y; };
+      let flight = 0;
+      for (const [lv, path, onFlight] of legs) { let prev = null;
         for (let k = 0; k < path.length - 1; k++) { const [u0, z0] = path[k], [u1, z1] = path[k + 1]; const len = Math.hypot(u1 - u0, z1 - z0), m = Math.max(1, Math.round(len / 0.02));
           for (let j = 0; j <= m; j++) { const u = u0 + (u1 - u0) * j / m, z = z0 + (z1 - z0) * j / m; const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, lv, b.id);
             const foot = ins ? ins.y : Math.max(Sp.footAt(X / TL, Z / TL), Sp.stepTop(X, Z)); pts++;
             if (ins && !ins.walk) { shut++; if (!shutAt) shutAt = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; }
             if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
+            // (on the flight: the feet on its slope, within a step under its treads' edges, never over them)
+            if (onFlight) { const ty = tread(u, z); if (ty === null) continue; flight++; const d = foot - (pl.hi + ty + Sp.FLOOR_UP); if ((d > 0.03 || d < -0.3) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) no lance do fundo`; } continue; }
             if (!ins || !ins.shell || edge(lv, u, z)) continue; // (the street before the way in; a step's edge of the rows)
             const d = foot - (pl.hi + want(lv, u, z) + Sp.FLOOR_UP); if (Math.abs(d) > 0.03 && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; } } } }
       if (worst || step > In.BODY.step + 0.01) out.push(`n ${n}: os pés a ${worst.toFixed(2)} m da forma em ${at || '—'}, o maior degrau ${step.toFixed(2)} m`);
       if (shut) out.push(`n ${n}: ${shut} pontos do caminho onde o corpo não passa (o primeiro ${shutAt})`);
-      said.push(`n ${n}: ${pts} pontos, o maior degrau ${step.toFixed(2)} m`);
+      if (!flight) out.push(`n ${n}: o caminho não subiu o lance do fundo`);
+      said.push(`n ${n}: ${pts} pontos (${flight} no lance do fundo), o maior degrau ${step.toFixed(2)} m`);
     }
-    ok('A4 os pés pelo Coliseu: da rua pelos arcos às passagens e ao subsolo, na areia, no pódio e subindo um corredor das fileiras', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
+    ok('A4 os pés pelo Coliseu: da rua pelos arcos às passagens e ao subsolo, na areia, no pódio, subindo um corredor das fileiras e pelo lance do fundo até o trono e a corte do camarote', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
   }
   // ---------------------------------------------------------------- A5 the world: the god's hand in Rome
   {
@@ -324,14 +350,19 @@ function testeA() {
     let hit; try { hit = mine(); } finally { In.plan = plan0; }
     if (!hit.some(q => q.sev === 2)) out.push('com 120 lugares o verificador calou');
     if (mine().length) out.push('de volta, o verificador não calou');
-    ok('A6 o verificador do Coliseu: pega uma planta com menos lugares que o degrau, e cala quando ela volta', !out.length, out.join(' · ') || `limpo; com 120 lugares: «${hit[0].msg.slice(0, 90)}»; limpo de novo`);
+    // (and a plan with no throne in the emperor's box, D-125)
+    In.plan = x => { const p = plan0(x); return x === b && p ? Object.assign({}, p, { items: p.items.filter(i => i.kind !== 'trono-camarote') }) : p; };
+    let hit2; try { hit2 = mine(); } finally { In.plan = plan0; }
+    if (!hit2.some(q => q.sev === 2 && /trono/.test(q.msg))) out.push('sem o trono do camarote o verificador calou');
+    if (mine().length) out.push('de volta, o verificador não calou');
+    ok('A6 o verificador do Coliseu: pega uma planta com menos lugares que o degrau, ou sem o trono do camarote, e cala quando ela volta', !out.length, out.join(' · ') || `limpo; com 120 lugares: «${hit[0].msg.slice(0, 90)}»; sem o trono: «${hit2.find(q => /trono/.test(q.msg)).msg.slice(0, 90)}»; limpo de novo`);
   }
   // ---------------------------------------------------------------- A7 the places' table
   {
-    const o = placesOf('romano', 10, ['assistir', 'lutar']); const out = [];
+    const o = placesOf('romano', 10, ['assistir', 'lutar', 'trono', 'corte']); const out = [];
     if (o.err) out.push(o.err);
-    else { if (!o.ok || !o.free.assistir || !o.free.lutar) out.push(`a tabela ${o.ok ? 'feita' : 'não feita'}, um lugar livre de assistir ${o.free.assistir}, de lutar ${o.free.lutar}`); if (o.dt > 400) out.push(`a tabela dos lugares levou ${o.dt.toFixed(0)} ms (o alvo: 400)`); }
-    ok('A7 os lugares do Coliseu (In.places, a tabela da planta): feita a tempo, um lugar livre de assistir e de lutar', !out.length, out.join(' · ') || `${o.spots} lugares na tabela em ${o.dt.toFixed(0)} ms`);
+    else { if (!o.ok || !o.free.assistir || !o.free.lutar || !o.free.trono || !o.free.corte) out.push(`a tabela ${o.ok ? 'feita' : 'não feita'}, um lugar livre de assistir ${o.free.assistir}, de lutar ${o.free.lutar}, o trono ${o.free.trono}, a corte ${o.free.corte}`); if (o.dt > 400) out.push(`a tabela dos lugares levou ${o.dt.toFixed(0)} ms (o alvo: 400)`); }
+    ok('A7 os lugares do Coliseu (In.places, a tabela da planta): feita a tempo, um lugar livre de assistir e de lutar, o trono e a corte do camarote', !out.length, out.join(' · ') || `${o.spots} lugares na tabela em ${o.dt.toFixed(0)} ms`);
   }
   // ---------------------------------------------------------------- A8 the podium's parapet of today's amphitheatre, round a great arena
   // (L-551: the arena's plan of before — js/forma.js amphi — round an arena of 10 m, as E's test Colosseum has it: its parapet open
@@ -382,6 +413,62 @@ function testeA() {
     }
     ok('A9 as passagens da esquerda e da direita do Coliseu: cobertas da ponte do pódio à fachada (a abóbada; sem ela, o vão azul do céu entre as pontas das fileiras)', !out.length, out.join(' · ') || said.join(' · '));
   }
+  }
+  // ---------------------------------------------------------------- A10 the emperor's box (D-125)
+  // (either side of the back landing, on the minor axis: the first two rows out of the back's big arcs along 2.5 m of the first
+  // row — its floor the podium's, at its height —; the third its back, the parapet on its edge over a drop of more than a metre,
+  // no seat on it — one seated there has the parapet over his eyes —; the rows from the fourth over it; the parapet along the
+  // passage at its floor; the throne in the right one — its seat at the hips of one seated, its back over his head —, the
+  // court's bench in the left. On the plan, in the two sizes and the four sides: the throne's place and the court's four — the
+  // uses 'trono' and 'corte', the names the games will ask for —, each the body takes, a seat apart, the way onto it reached
+  // from the door; no seat of the rows nor place standing in the box, its back row never walked)
+  {
+    const out = [], said = [];
+    for (const n of SIZES) {
+      const F = Fo.of('maravilha', 'romano', n), O = F.amphi.oval, B = O.boxes || [];
+      if (B.length !== 2 || !B.some(X => X.seat === 'trono' && X.su > 0) || !B.some(X => X.seat === 'corte' && X.su < 0)) { out.push(`n ${n}: ${B.length} camarotes`); continue; }
+      const r1 = O.rb + O.dp; let lens = [];
+      for (const X of B) {
+        const tag = `n ${n} (${X.seat})`, len = (X.span[1] - X.span[0]) * r1; lens.push(len);
+        if (Math.abs(len - 2.5) > 0.05) out.push(`${tag}: ${len.toFixed(2)} m da primeira fileira`);
+        const on = e => e.k === 'cavea' && e.arco && Math.abs(e.arco[0] - X.span[0]) < 1e-6 && Math.abs(e.arco[1] - X.span[1]) < 1e-6;
+        // (the rows of its quarter: over it only from the fourth — the piece of them from the fourth over the whole arc, the god
+        // painting no end of them across it —, the first three over the rest of the arc)
+        const am = (X.span[0] + X.span[1]) / 2, mine = F.els.filter(e => e.k === 'cavea' && e.escadas && Math.abs(e.c[0] - X.c[0]) < 1e-6 && Math.abs(e.c[1] - X.c[1]) < 1e-6);
+        const ps = F.els.filter(on), floor = ps.find(e => e.aneis.length === 1 && !e.parapeito), back = ps.find(e => e.aneis.length === 1 && e.parapeito), up = mine.find(e => Math.abs(e.fundo - X.r3) < 1e-3 && angIn(am, e.arco[0], e.arco[1]));
+        if (!floor || Math.abs(floor.aneis[0][1] - O.yb) > 1e-6 || Math.abs(floor.fundo - r1) > 1e-3 || Math.abs(floor.aneis[0][0] - r1 - 2 * O.tread) > 1e-3) out.push(`${tag}: o chão ${floor ? `a ${floor.aneis[0][1]} m, de ${floor.fundo} a ${floor.aneis[0][0]}` : 'ausente'}`);
+        const drop = back ? back.aneis[0][1] - O.yb : 0; if (!back || !(back.parapeito >= 0.9) || drop <= 1 || Math.abs(back.fundo - X.rB) > 1e-3) out.push(`${tag}: a fileira de trás ${back ? `${drop.toFixed(2)} m sobre o chão, parapeito ${back.parapeito}` : 'ausente'}`);
+        if (!up || Math.abs(up.fundo - X.r3) > 1e-3 || Math.abs(up.aneis[up.aneis.length - 1][1] - (O.yb + 4 * O.rise)) > 1e-3) out.push(`${tag}: as fileiras de cima ${up ? `a partir de ${up.aneis[up.aneis.length - 1][1]} m` : 'ausentes'}`);
+        if (mine.length !== 2 || mine.some(e => angIn(am, e.arco[0], e.arco[1]) && e.fundo < X.r3 - 1e-3)) out.push(`${tag}: as fileiras do quarto por cima do camarote (${mine.length} peças)`);
+        const ue = O.cu + X.su * O.g / 2, vf = O.cv - O.Bv - O.dp, vb = vf - 2 * O.tread;
+        if (!F.els.some(e => e.k === 'bloco' && Math.abs(e.y0 - O.yb) < 1e-6 && Math.abs(e.y1 - e.y0 - 0.9) < 1e-6 && Math.abs((X.su > 0 ? e.r[0] : e.r[2]) - ue) < 1e-3 && e.r[1] <= vb + 1e-3 && e.r[3] >= vf - 1e-3)) out.push(`${tag}: sem o parapeito ao longo da passagem`);
+        const at = (y0, y1) => F.els.find(e => e.k === 'bloco' && Math.abs(e.y0 - y0) < 1e-6 && Math.abs(e.y1 - y1) < 1e-6 && e.r[0] < X.r[2] && e.r[2] > X.r[0] && e.r[1] < X.r[3] + 0.5 && e.r[3] > X.r[1] - 0.5);
+        if (X.seat === 'trono' && (!at(O.yb, O.yb + 0.5) || !at(O.yb + 0.5, O.yb + 1.6))) out.push(`${tag}: o trono sem o assento a 0,5 m ou o espaldar`);
+        if (X.seat === 'corte' && (!at(O.yb, O.yb + 0.45) || X.r[2] - X.r[0] < 2.2)) out.push(`${tag}: o banco da corte`);
+      }
+      // (the plans: the places, the body, the door — and, the street on the front, the box's ground)
+      const tally = [];
+      for (const s of SIDES) {
+        const { b, p } = plans[n + s] || {}; if (!p || !p.ok) { out.push(`n ${n}/${s}: sem planta`); continue; }
+        const its = k => p.items.filter(i => i.kind === k && i.lv === 2); const T = its('trono-camarote'), C = its('banco-corte');
+        const sp = (L, use) => L.flatMap(i => i.spots.filter(q => q.use === use)); const tr = sp(T, 'trono'), co = sp(C, 'corte');
+        if (T.length !== 1 || C.length !== 1 || tr.length !== 1 || co.length !== 4 || ![...tr, ...co].every(q => q.ok && q.on)) out.push(`n ${n}/${s}: ${tr.length} tronos e ${co.length} lugares da corte (${[...tr, ...co].filter(q => q.ok).length} que o corpo toma)`);
+        const gap = Math.min(...co.map((q, k) => Math.min(...co.filter((_, j) => j !== k).map(o => Math.hypot(o.x - q.x, o.z - q.z))))); if (gap < 0.5 - 1e-6) out.push(`n ${n}/${s}: a corte a ${gap.toFixed(2)} m um do outro`);
+        const N = p.grid.n, R = p.reach[2]; const reached = (x, z) => { const cx = Math.floor(x / CS), cz = Math.floor(z / CS); for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const k = (cz + dz) * N + cx + dx; if (R[k]) return true; } return false; };
+        for (const i of [...T, ...C]) if (!i.spots.some(q => q.use === 'acesso' && q.ok && reached(q.x, q.z))) out.push(`n ${n}/${s}: ${i.name.toLowerCase()} que a porta não alcança`);
+        tally.push(p.cap.watch);
+        if (s !== 'S') continue;
+        // (the street on the front: the plan's frame the form's)
+        const inBox = (x, z, r0, rA) => B.some(X => { const d = Math.hypot(x - X.c[0], z - X.c[1]); return d >= r0(X) && d <= rA(X) && angIn(Math.atan2(z - X.c[1], x - X.c[0]), X.span[0], X.span[1]); });
+        const seats = In.tierSeats(p).filter(q => inBox(q.x, q.z, () => r1, X => X.r3)); if (seats.length) out.push(`n ${n}: ${seats.length} assentos das fileiras no camarote ou na fileira de trás`);
+        const stand = (p.marks || []).filter(M => M.use === 'assistir').flatMap(M => M.pts).filter(q => inBox(q.x, q.z, () => O.rb, X => X.r3)); if (stand.length) out.push(`n ${n}: ${stand.length} lugares de assistir em pé diante do camarote`);
+        let strip = 0, walked = 0; for (let k = 0; k < N * N; k++) { const x = (k % N + 0.5) * CS, z = (Math.floor(k / N) + 0.5) * CS; if (!inBox(x, z, X => X.rB + 0.02, X => X.r3 - 0.02)) continue; strip++; if (R[k]) walked++; }
+        if (!strip || walked) out.push(`n ${n}: a fileira de trás do camarote andada em ${walked} de ${strip} casinhas`);
+        said.push(`n ${n}: o camarote de ${lens.map(x => x.toFixed(2)).join(' e ')} m, o trono e a corte (4) que o corpo toma, alcançados da porta; ${p.cap.watch} assentos; a fileira de trás (${strip} casinhas) nunca andada`);
+      }
+      if (new Set(tally).size > 1) out.push(`n ${n}: os assentos mudam com o lado (${tally.join(', ')})`);
+    }
+    ok('A10 o camarote do imperador (D-125): a forma — o chão no pódio, a fileira de trás com o parapeito, o trono e o banco —, o trono e a corte que o corpo toma alcançados da porta, nenhum assento nem lugar em pé no camarote', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
   }
 }
 // (who is given a place in a building of a people — In.places, freePlace, the body's «lugar» —: the table of its plan's places,
@@ -1028,7 +1115,7 @@ function testeH() {
 }
 
 // =========================================================================================== M — the great monument
-const MPEOPLES = ['egipcio', 'romano', 'asteca', 'grego'];
+const MPEOPLES = ['egipcio', 'romano', 'asteca', 'grego', 'classico', 'nordico'];
 function testeM() {
   blank(); const n = 4;
   // ---------------------------------------------------------------- M1 the forms
@@ -1036,6 +1123,14 @@ function testeM() {
     const out = [], said = [], maps = {};
     for (const st of MPEOPLES) {
       const F = Fo.has('monument', st, n) && Fo.of('monument', st, n); if (!F) { out.push(`${st}: sem a forma`); continue; }
+      if (st === 'nordico') {
+        // (the Norse's stone ship on its grass: the great stone 8 m and more, the ship's stones round it, its middle open to the
+        // street — 2.2 m between the stones at least —, the way in)
+        const S = F.els.filter(e => e.k === 'pedra'), g = S.reduce((a, e) => (e.y1 > a.y1 ? e : a)), A = F.amphi && F.amphi.runas;
+        const front = S.filter(e => e.c[1] > F.L / 2 + 1.5).map(e => [e.c[0] - e.e, e.c[0] + e.e]).sort((a, b) => a[0] - b[0]); let gap = 0; for (let k = 1; k < front.length; k++) if (front[k - 1][1] < F.L / 2 && front[k][0] > F.L / 2) gap = front[k][0] - front[k - 1][1];
+        if (F.L !== 16 || !A || S.length < 12 || g.y1 < 8 || gap < 2.2 || !F.els.some(e => e.k === 'bloco' && e.mat === 'turf')) out.push(`${st}: lote ${F.L} m, ${S.length} pedras, a grande de ${g.y1} m, a entrada de ${gap.toFixed(2)} m`);
+        maps[st] = sideMap(F); said.push(`${st}: o navio de ${S.length - 3} pedras, a grande de ${g.y1} m, a entrada de ${gap.toFixed(1)} m`); continue;
+      }
       // (the steps: a body's each — the crepis, each step split along the front —; the top 12 m across; what stands in its middle,
       // a tenth of the top at least; the height of a great one)
       const st0 = F.els.filter(e => e.k === 'bloco' && e.degrau === 1).sort((a, b) => a.y1 - b.y1); let rr = 0, prev = 0; for (const e of st0) { rr = Math.max(rr, e.y1 - prev); prev = e.y1; }
@@ -1045,7 +1140,7 @@ function testeM() {
     }
     const ps = Object.keys(maps); let least = 9, pair = ''; for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) { const a = maps[ps[i]], b = maps[ps[j]]; const d = Math.max(...a.map((q, k) => Math.abs(q - b[k]))); if (d < least) { least = d; pair = `${ps[i]} e ${ps[j]}`; } }
     if (ps.length < 3 || least < 0.1) out.push(`${ps.length} povos, os mais parecidos ${pair} (${least.toFixed(2)} do lote)`);
-    ok('M1 as formas do grande monumento (16 m) em quatro povos — o obelisco, a coluna do triunfo, a Pedra do Sol, o deus de ouro: os degraus do corpo, o alto, a peça do meio, a altura, cada um a sua', !out.length, out.slice(0, 3).join(' · ') || `${said.join(' · ')}; os mais parecidos, ${pair}, a ${(least * 100).toFixed(0)}% do lote`);
+    ok('M1 as formas do grande monumento (16 m) em seis povos — o obelisco egípcio e o clássico, a coluna do triunfo, a Pedra do Sol, o deus de ouro, o navio de pedras: os degraus do corpo, o alto, a peça do meio, a altura, cada um a sua', !out.length, out.slice(0, 3).join(' · ') || `${said.join(' · ')}; os mais parecidos, ${pair}, a ${(least * 100).toFixed(0)}% do lote`);
   }
   // ---------------------------------------------------------------- M2 the plans
   {
@@ -1055,12 +1150,12 @@ function testeM() {
       if (!p || !p.ok) { out.push(`${tag}: não se arma (${p ? p.errs.slice(0, 2).join('; ') : '—'})`); continue; }
       G.S.buildings.set(b.id, b);
       const fal = In.report(b, p, { rec: b.ip }).filter(q => q.k === 'FALHA'); if (fal.length) out.push(`${tag}: ${fal.slice(0, 2).map(q => q.what).join('; ')}`);
-      const rs = p.rooms.filter(m => m.fn === 'plataforma'); if (!rs.length || !rs.every(m => roomReached(p, m))) out.push(`${tag}: o alto que a porta não alcança`);
+      const rs = p.rooms.filter(m => m.fn === (st === 'nordico' ? 'pedras' : 'plataforma')); if (!rs.length || !rs.every(m => roomReached(p, m))) out.push(`${tag}: o alto que a porta não alcança`);
       if (marksOk(p, 'ofertar') < 1 || marksOk(p, 'rezar') < 8 || (st === 'asteca' && marksOk(p, 'acender') < 2)) out.push(`${tag}: ${marksOk(p, 'ofertar')} de ofertar, ${marksOk(p, 'rezar')} de rezar, ${marksOk(p, 'acender')} de acender`);
       if (s === 'S') said.push(`${st}: ${marksOk(p, 'ofertar')} de ofertar, ${marksOk(p, 'rezar')} de rezar${st === 'asteca' ? `, ${marksOk(p, 'acender')} de acender` : ''}`);
     }
     const tmax = Math.max(...times); if (tmax > 400) out.push(`a planta levou ${tmax.toFixed(0)} ms (o alvo: 400)`);
-    ok('M2 as plantas do grande monumento: nos quatro lados e nos quatro povos, sem falha, o alto alcançado, quem oferta, quem reza, quem acende os braseiros, o tempo', !out.length, out.slice(0, 4).join(' · ') || `${said.join(' · ')}; a maior em ${tmax.toFixed(0)} ms`);
+    ok('M2 as plantas do grande monumento: nos quatro lados e nos seis povos, sem falha, o alto (o gramado do navio) alcançado, quem oferta, quem reza, quem acende os braseiros, o tempo', !out.length, out.slice(0, 4).join(' · ') || `${said.join(' · ')}; a maior em ${tmax.toFixed(0)} ms`);
   }
   // ---------------------------------------------------------------- M3 the feet, on a blank world: up the steps, round the middle
   {
@@ -1072,6 +1167,16 @@ function testeM() {
       S.buildings.set(b.id, b); for (let yy = b.y; yy < b.y + b.h; yy++) for (let xx = b.x; xx < b.x + b.w; xx++) S.occ[yy * G.N + xx] = b.id;
       b.ip = In.newRecord(b, { t: 'monument', c: st, e: 3, k: 'ae', cl: 't', fl: 0, d: 1, w: 1, pw: 0, s: 'S', o: (1 << n) - 1, n });
       const p = Sp.planNow(b); if (!p || !p.ok) { out.push(`${st}: sem planta`); continue; }
+      if (st === 'nordico') {
+        // (the stone ship: from the street over the grass, in by the ship's open middle, to the place of the offering before the
+        // great stone and along the prayers' first row)
+        const F = Fo.of('monument', st, n), A = F.amphi.runas, L = n * TL, of = (p.marks.find(q => q.use === 'ofertar') || { pts: [] }).pts[0];
+        const legs = [[0, [[A.cu, L + 0.8], [A.cu, A.fila + 1.4]].concat(of ? [[of.x, of.z], [of.x, A.fila], [A.cu - 2.0, A.fila]] : [])]];
+        const r = feetAlong(b, legs, (lv, u, z) => (u > 0.45 && u < L - 0.45 && z > 0.45 && z < L - 0.45 ? [0.075, 0] : null));
+        if (r.worst || r.step > In.BODY.step + 0.01) out.push(`${st}: os pés a ${r.worst.toFixed(2)} m da forma em ${r.at || '—'}, o maior degrau ${r.step.toFixed(2)} m`);
+        if (r.shut || !of) out.push(`${st}: ${r.shut} pontos do caminho onde o corpo não passa (o primeiro ${r.shutAt || '—'})${of ? '' : ', sem lugar de ofertar'}`);
+        said.push(`${st}: ${r.pts} pontos, o maior degrau ${r.step.toFixed(2)} m`); continue;
+      }
       const F = Fo.of('monument', st, n), L = n * TL, pl = Sp.plinth(b); const st0 = F.els.filter(e => e.k === 'bloco' && e.degrau === 1); const T = st0.reduce((a, e) => (e.y1 > a.y1 ? e : a)).r, top = Math.max(...st0.map(e => e.y1)), cu = L / 2;
       const of = (p.marks.find(M2 => M2.use === 'ofertar') || { pts: [] }).pts[0];
       // (the floor under a point: the highest step there — the street off them —; from the street up the front, round the middle
@@ -1089,7 +1194,7 @@ function testeM() {
       if (shut) out.push(`${st}: ${shut} pontos do caminho onde o corpo não passa (o primeiro ${shutAt})`);
       said.push(`${st}: ${pts} pontos, o maior degrau ${step.toFixed(2)} m`);
     }
-    ok('M3 os pés no grande monumento: da rua pelos degraus ao alto, em volta do que está no meio, até o lugar de ofertar', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
+    ok('M3 os pés no grande monumento: da rua pelos degraus ao alto, em volta do que está no meio, até o lugar de ofertar; no navio de pedras, pelo gramado e pelo meio aberto do navio', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
   }
   // ---------------------------------------------------------------- M4 the world: the god's hand in a town of each people
   {
@@ -1097,7 +1202,7 @@ function testeM() {
     const bad = what => { const q = globalThis.QA.check().filter(x => x.sev <= 2 || x.sys === 'monumental' || x.sys === 'escala'); if (q.length) out.push(`${what}: ${q.slice(0, 2).map(x => `${x.sys} S${x.sev} ${x.msg.slice(0, 90)}`).join(' · ')}`); };
     const townOf = st => [...S.settlements.values()].filter(s => G.Civ.idOfFac(s.fac) === st).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
     bad('antes'); const built = [];
-    for (const st of MPEOPLES) { const set = townOf(st); if (!set) { out.push(`sem cidade ${st}`); continue; }
+    for (const st of MPEOPLES) { const set = townOf(st); if (!set) { if (st === 'classico') said.push('o povo clássico sem cidade na metrópole (T-401)'); else out.push(`sem cidade ${st}`); continue; }
       G.inSim++; let b; try { b = G.Village.handFound(set, 'monument', 'grande', { built: true, R: 60 }); } finally { G.inSim--; }
       if (!b) { out.push(`a mão do deus não achou lote de 4 casas perto de ${set.name}`); continue; }
       const p = In.plan(b); if (!p || !p.ok || b.w !== 4 || b.esc !== 'grande' || b.style !== st) out.push(`${set.name}: ${b.style} ${b.w} casas esc=${b.esc}, a planta ${p && p.ok}`);

@@ -69,6 +69,7 @@
 
   // ============================== the theatre ==============================
   const Tt = G.Teatro = {};
+  Tt.isShow = isShow; // (where a show is given: a theatre standing, or the Colosseum — the verifier asks the same, L-569)
   Tt.FEE = 0.1;    // (the entry, in the people's money: a small coin)
   Tt.WAGE = 0.3;   // (what the treasury pays each actor for a show)
   Tt.PLAY = 16;    // (the seconds of the play, of the world: two hours of its day — it ends before the night)

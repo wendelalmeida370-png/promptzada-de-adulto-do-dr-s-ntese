@@ -1334,7 +1334,8 @@
       for (const op of (s.acts || []).filter(o => o.def === 'espetaculo' && LIVE[o.st])) {
         const nm = `espetáculo #${op.id}`; const d = op.data || {}; const b = s.buildings.get(op.at);
         if (shows.has(op.at)) add('oficio', 2, `teatro #${op.at}: dois espetáculos vivos (#${shows.get(op.at)} e #${op.id})`); shows.set(op.at, op.id);
-        if (!b || b.type !== 'teatro' || !b.built) { add('oficio', 2, `${nm}: o teatro ${op.at} ${!b ? 'não existe' : 'não está de pé'} e o espetáculo segue`); continue; }
+        // (where a show is given is the game's own rule — a theatre standing, or the Colosseum's arena, G.Teatro.isShow: L-569)
+        if (!b || !(G.Teatro.isShow ? G.Teatro.isShow(b) : b.type === 'teatro' && b.built)) { add('oficio', 2, `${nm}: o teatro ${op.at} ${!b ? 'não existe' : 'não está de pé'} e o espetáculo segue`); continue; }
         for (const k of ['entradas', 'receita', 'voltas', 'pagos']) if (!fin(d[k]) || d[k] < -EPS) add('oficio', 1, `${nm}: ${k} = ${d[k]}`);
         if (!{ preparo: 1, portas: 1, peca: 1, fim: 1 }[d.fase]) add('oficio', 1, `${nm}: fase ${d.fase}`);
         for (const id in d.plateia || {}) { const v = s.villagers.get(+id); if (!v) { add('oficio', 2, `${nm}: #${id} na plateia não existe`); continue; } listed(`plateia:${op.id}:${id}`, fine(v, d.plateia[id], b, 'teatro', op.id), `${nm}: ${v.name} #${id} na plateia`); }
@@ -1578,7 +1579,10 @@
 // G.Interiors (fazer uma planta não muda o mundo).
 (function () {
   if (!window.QA || !QA.more) return;
-  const WATCH = 600; // (the Colosseum's least: the places to watch from seated, reached from its door — PLANO.md §7, test A)
+  // (the Colosseum's least, by its step: the places to watch from seated, reached from its door — its rows seat 742 and 1406
+  // with the emperor's box, D-125: the floor a twentieth under them —; and in the box, the throne's place and the court's four,
+  // which the body takes)
+  const WATCH = { 10: 700, 13: 1340 }, BOX = { trono: 1, corte: 4 };
   // (the places of the rite on the top storey of the Great Pyramid and of the Templo Mayor — the offering before the sarcophagus
   // and those who pray about it; the priest before each shrine's door and at each brazier —, each one the body takes, D-108)
   const RITE = { piramide: { ofertar: 1, rezar: 2 }, mayor: { oficiar: 2, acender: 2 } };
@@ -1607,7 +1611,9 @@
         // middle the place of the offering, which the body takes
         const F = Fo.of(b.type, b.style || 'classico', b.w); if (!F) continue; const p = In.plan(b);
         if (!p || !p.ok) { add('monumental', 1, `${b.type}#${b.id} (${b.style}, ${b.w} casas): a planta do grande monumento não se arma (${p ? p.errs.slice(0, 2).join('; ') : 'sem planta'})`); continue; }
-        const top = F.els.filter(e => e.k === 'bloco' && e.degrau === 1).reduce((y, e) => Math.max(y, e.y1), 0), l0 = p.levels.find(l => l.lv === 0);
+        // (the top: its highest step — the Norse's stone ship has none: its grass, the ground's floor under the lot's middle)
+        const st = F.els.filter(e => e.k === 'bloco' && e.degrau === 1), c = F.L / 2, lawn = F.els.find(e => e.k === 'bloco' && e.y0 <= 1e-6 && e.y1 < 0.15 && e.r[0] < c && e.r[2] > c && e.r[1] < c && e.r[3] > c);
+        const top = st.length ? st.reduce((y, e) => Math.max(y, e.y1), 0) : lawn ? lawn.y1 : 0, l0 = p.levels.find(l => l.lv === 0);
         if (!l0 || Math.abs(l0.y - top) > 0.01) add('monumental', 1, `${b.type}#${b.id} (${b.style}): o alto do monumento a ${l0 ? l0.y.toFixed(2) : '—'} m na planta e a ${top.toFixed(2)} m na forma`);
         if (!(p.marks || []).some(M => M.use === 'ofertar' && M.pts.some(q => q.ok))) add('monumental', 2, `${b.type}#${b.id} (${b.style}): nenhum lugar de ofertar que o corpo tome diante do grande monumento`);
         continue;
@@ -1654,7 +1660,10 @@
         if (!p || !p.ok) { add('monumental', 1, `${b.type}#${b.id} (${b.style}, ${b.w} casas): a planta do anfiteatro não se arma (${p ? p.errs.slice(0, 2).join('; ') : 'sem planta'})`); continue; }
         const l1 = p.levels.find(l => l.lv === 1);
         if (!l1 || Math.abs(l1.y - O.ya) > 0.01) add('monumental', 1, `${b.type}#${b.id}: a areia da planta a ${l1 ? l1.y.toFixed(2) : '—'} m e a da forma a ${O.ya.toFixed(2)} m — o corpo andaria noutro chão que o visto`);
-        if ((p.cap.watch || 0) < WATCH) add('monumental', 2, `${b.type}#${b.id} (${b.w} casas): ${p.cap.watch || 0} lugares de assistir sentados que a porta alcança (o Coliseu tem ${WATCH} ao menos)`);
+        const least = WATCH[b.w] || WATCH[10];
+        if ((p.cap.watch || 0) < least) add('monumental', 2, `${b.type}#${b.id} (${b.w} casas): ${p.cap.watch || 0} lugares de assistir sentados que a porta alcança (o Coliseu tem ${least} ao menos)`);
+        for (const use in BOX) { const got = (p.items || []).filter(i => i.lv === 2).reduce((n, i) => n + i.spots.filter(q => q.use === use && q.ok).length, 0);
+          if (got < BOX[use]) add('monumental', 2, `${b.type}#${b.id} (${b.w} casas): ${got} lugares ${use === 'trono' ? 'do trono' : 'da corte'} no camarote do imperador que o corpo toma (${BOX[use]} ao menos)`); }
         continue;
       }
       // ---- the Great Pyramid and the Templo Mayor (D-108): the plan stands, its top storey — the king's chamber up the gallery, the

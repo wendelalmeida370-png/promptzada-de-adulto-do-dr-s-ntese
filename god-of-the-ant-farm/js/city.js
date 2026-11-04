@@ -515,7 +515,8 @@
       if (!r.ok || (r.a !== set.id && r.b !== set.id)) continue;
       const other = S.settlements.get(r.a === set.id ? r.b : r.a); if (!other) continue;
       for (const i of r.tiles) {
-        if (S.road[i] >= 3 || S.occ[i] || S.wall[i] === 1 || S.type[i] < T.RIVER) continue;
+        // (never across a town's kept lot: the great work takes no highway, D-120/D-121 — the road through it stays a path, T-429)
+        if (S.road[i] >= 3 || S.occ[i] || S.wall[i] === 1 || S.type[i] < T.RIVER || (G.Village.resOver && G.Village.resOver(null, 'estrada', i % N, (i / N) | 0, 1, 1, false))) continue;
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
         const dm = G.dist(x, y, set.cx, set.cy), dO = G.dist(x, y, other.cx, other.cy);
         if (dm > dO + 0.5) continue;

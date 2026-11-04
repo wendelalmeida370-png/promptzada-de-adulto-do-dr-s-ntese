@@ -113,6 +113,10 @@
   In.addItems({
     cena: { name: 'Lugar de cena', w: 0, d: 0, h: 0, job: 1, spots: () => [{ use: 'atuar', a: 0, n: 0 }] },
     luta: { name: 'Lugar de luta', w: 0, d: 0, h: 0, job: 1, spots: () => [{ use: 'lutar', a: 0, n: 0 }] },
+    // (the emperor's box of the Colosseum — D-125 —: the throne, one to sit on it, 'trono'; the court's bench, four, 'corte' —
+    // who sits there at the games is the games' to say (C); the pieces the form's, FM)
+    'trono-camarote': { name: 'Trono do camarote', w: 1.0, d: 0.8, h: 1.6, seat: 0.5, solid: 1, spots: it => [{ use: 'trono', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.45 }] },
+    'banco-corte': { name: 'Banco da corte', w: 2.4, d: 0.4, h: 0.45, low: 1, spots: it => [-0.9, -0.3, 0.3, 0.9].map(a => ({ use: 'corte', a, n: 0, on: 1 })).concat([{ use: 'acesso', a: -0.6, n: it.d / 2 + 0.35 }, { use: 'acesso', a: 0.6, n: it.d / 2 + 0.35 }]) },
   });
   const jobsOf = P => { const T = In.TYPES[P.rec.t]; return (T && T.jobs !== undefined ? T.jobs : (G.BDEF[P.rec.t] || {}).jobs) || 0; };
   // (the places of a stage — [u, v, ry] as P.marks has them —: the posts first, then the marks; one stands at a post facing away
@@ -324,7 +328,11 @@
     P.stair('escada', 0, 2, W.frente.r, 0, -1, null); P.stair('escada', 0, 2, W.fundo.r, 0, 1, null);
     P.stair('escada', 0, 1, W.esquerda.r, 1, 0, null); P.stair('escada', 0, 1, O.hypo.r, 0, 1, O.hatch);
     // (the rows: each wedge of the oval, the form's own rings about its own centre)
-    for (const B of O.blocks) P.tiers(2, null, { ring: [B.c[0], B.c[1], B.r0, B.r1], arc: B.arco, dir: 'out', rows: O.rows, rise: O.rise, tread: O.tread, first: O.rise, aisles: B.aisles, aisleW: 1.0, climb: 2 });
+    // (by the emperor's box: the first three rows over the rest of the arc — n —, and from the fourth the whole arc — skip)
+    for (const B of O.blocks) P.tiers(2, null, { ring: [B.c[0], B.c[1], B.r0, B.r1], arc: B.arco, dir: 'out', rows: B.n || O.rows - (B.skip || 0), rise: O.rise, tread: O.tread, first: O.rise * (1 + (B.skip || 0)), aisles: B.aisles, aisleW: 1.0, climb: 2 });
+    // (the box's back: the third row's riser and its parapet, a wall along the arc at its edge — its chords, a hand inside it)
+    for (const X of O.boxes || []) { const r = X.rB - 0.06, n = Math.max(2, Math.ceil((X.span[1] - X.span[0]) * r / 0.4)); const at = a => [r2(X.c[0] + r * Math.cos(a)), r2(X.c[1] + r * Math.sin(a))];
+      for (let k = 0; k < n; k++) P.wall(2, at(X.span[0] + (X.span[1] - X.span[0]) * k / n), at(X.span[0] + (X.span[1] - X.span[0]) * (k + 1) / n), 0.12, r2(X.y3 - yb + 0.9), 0, 'parapeito'); }
     if (P.inside()) return;
     // (the rooms, rectangles of the lot: on the ground the four quarters and the passages between them, the crossing under the
     // middle of the sand; the sand; on the podium's storey the four quarters, the landings and the bridges)
@@ -341,9 +349,25 @@
     // (who fights: on the sand, two and two facing each other, off the hatch)
     const fight = []; for (const [du, dv] of [[-0.55, 0], [0.32, -0.27], [-0.32, -0.27], [0.55, 0]]) { const u = cu + du * Au, v = cv + dv * Bv; fight.push([r2(u - 0.55), r2(v), Math.PI / 2], [r2(u + 0.55), r2(v), -Math.PI / 2]); }
     stage(P, 1, ar, 'lutar', fight, { st: 'fight' });
+    // (the emperor's box: the third row behind it — no row of the plan's: no seat there — solid, the form's: a piece of it
+    // on each column of the storey's cells whose middles are in its band and its arc, round those middles — a piece takes the
+    // cells whose middle it covers, and two stand 2 cm apart —; the throne in the right one, the court's bench in the left, the
+    // form's pieces — their places 'trono' and 'corte', facing the sand)
+    const CS = In.CS;
+    for (const X of O.boxes || []) { const id = P.rooms.findIndex(q => q.lv === 2 && q.fn === 'cavea' && In.inRoomPt(q, (X.r[0] + X.r[2]) / 2, (X.r[1] + X.r[3]) / 2));
+      if (id < 0) { P.errs.push('o camarote fora das fileiras da planta'); return; }
+      const inRow = (u, v) => { const d = Math.hypot(u - X.c[0], v - X.c[1]), a = Math.atan2(v - X.c[1], u - X.c[0]); return d >= X.rB && d <= X.r3 && a >= X.span[0] && a <= X.span[1]; };
+      const cs = X.span.flatMap(a => [X.rB, X.r3].map(r => [X.c[0] + r * Math.cos(a), X.c[1] + r * Math.sin(a)])); // (its corners: by the minor axis its extremes)
+      const [u0, u1] = [Math.min(...cs.map(q => q[0])), Math.max(...cs.map(q => q[0]))], [v0, v1] = [Math.min(...cs.map(q => q[1])), Math.max(...cs.map(q => q[1]))];
+      for (let x = Math.floor(u0 / CS); x <= Math.floor(u1 / CS); x++) { const u = (x + 0.5) * CS; let lo = Infinity, hi = -Infinity;
+        for (let z = Math.floor(v0 / CS); z <= Math.floor(v1 / CS); z++) { const v = (z + 0.5) * CS; if (inRow(u, v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+        if (lo > hi) continue;
+        if (!P.at('solido', 2, id, [u - 0.11, lo - 0.01, u + 0.11, hi + 0.01].map(r2), 0, 1, Object.assign({ h: r2(X.y3 - yb) }, FM))) { P.errs.push('a fileira de trás do camarote onde a planta não a põe'); return; } }
+      if (!P.at(X.seat === 'trono' ? 'trono-camarote' : 'banco-corte', 2, id, X.r.map(r2), 0, 1, FM)) { P.errs.push(`${X.seat === 'trono' ? 'o trono' : 'o banco da corte'} do camarote onde a planta não o põe`); return; } }
     // (who watches standing: along the podium, 0.52 m in from its parapet, every 0.8 m, facing the sand — but on the landings and
-    // the bridges, where the flights come up and the passages are crossed)
-    const watch = []; const cIn = (u, v) => (v > cv + hh || v < cv - hh) && (u > cu + hg || u < cu - hg); let run = 0.4;
+    // the bridges, where the flights come up and the passages are crossed, and before the emperor's box)
+    const inBox = (u, v) => (O.boxes || []).some(X => { const a = Math.atan2(v - X.c[1], u - X.c[0]); return [a, a + TAU, a - TAU].some(q => q > X.span[0] - 0.02 && q < X.span[1] + 0.02); });
+    const watch = []; const cIn = (u, v) => (v > cv + hh || v < cv - hh) && (u > cu + hg || u < cu - hg) && !inBox(u, v); let run = 0.4;
     for (const e of O.sides(0.52, 0.05)) { const l = Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]); if (e.i % 3 === 0) { run = 0.4; continue; } // (each arc's from 0.4 m on)
       const nx = -(e.b[1] - e.a[1]) / l, nz = (e.b[0] - e.a[0]) / l;
       for (; run < l; run += 0.8) { const f = run / l; const u = e.a[0] + (e.b[0] - e.a[0]) * f, v = e.a[1] + (e.b[1] - e.a[1]) * f; if (cIn(u, v)) watch.push([r2(u), r2(v), Math.atan2(nx, nz)]); }
@@ -666,6 +690,12 @@
     const g = openGround(P, F, 'pedras'); if (!g || P.inside()) return;
     const id = P.room(0, 'pedras', g.sh, 1); if (!solids(P, F, id)) return;
     const S = F.els.filter(e => e.k === 'pedra'); if (!S.length) { P.errs.push('o monumento sem as pedras'); return; }
+    // (the king's stone ship of a city — the step of 4 tiles —: the offering before the great stone, the prayers in two rows of
+    // six within the ship, behind it)
+    const R = F.amphi && F.amphi.runas;
+    if (R) { const [gu, gv, ge] = R.grande; P.marks(0, id, 'ofertar', [[r2(gu), r2(gv + ge + 0.5), Math.PI]]);
+      const pray = []; for (const v of [R.fila, R.fila + 0.8]) for (const du of [-2.0, -1.2, -0.4, 0.4, 1.2, 2.0]) pray.push([r2(gu + du), r2(v), Math.PI]);
+      P.marks(0, id, 'rezar', pray); return; }
     const tall = S.reduce((a, e) => (e.y1 > a.y1 ? e : a)), front = Math.max(...S.map(e => e.c[1] + e.e)), cu = P.L / 2;
     P.marks(0, id, 'ofertar', [[r2(tall.c[0]), r2(tall.c[1] + tall.e + 0.5), Math.PI]]);
     P.marks(0, id, 'rezar', [-1.6, -0.8, 0.8, 1.6].map(du => [r2(cu + du), r2(Math.min(g.sh[3] - 0.5, front + 1.0)), Math.PI]));
