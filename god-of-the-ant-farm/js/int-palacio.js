@@ -32,10 +32,10 @@
     const id = 'pal-' + h + '.' + v; pfams.push(id);
     In.addFamilies([{ id, H: 'pal-' + h, V: v, name: HP[h] + (VP[v] ? ' ' + VP[v] : ''), can: (rec, T, tr) => (!classicLot(rec) ? 'o palácio de um degrau maior é o da forma' : v === 'terraco' ? K.flatOK(rec, tr) : null), build: P => palace(P) }]);
   }
-  // (the colossal's ten tiles laid out by the form's family too — the palace's is In.formType's, int-monumentos.js —, offered
-  // only where its form of that size is the people's: In.formSized below; at the end of its list, the catalogue offering it by
-  // the record's own size — L-510 —, where the recipe's families leave the bigger step to it)
-  const ptypes = {}; for (const t of PT) ptypes[t] = { use: 'palacio', fams: t === 'palacio_colossal' ? pfams.concat(['forma.palacio']) : pfams, lockNight: 1, need: { trono: 1 } };
+  // (the great palace's eight tiles and the colossal's ten laid out by the form's family too — the palace's is In.formType's,
+  // int-monumentos.js —, offered only where its form of that size is the people's: In.formSized below; at the end of its list,
+  // the catalogue offering it by the record's own size — L-510 —, where the recipe's families leave the bigger step to it)
+  const ptypes = {}; for (const t of PT) ptypes[t] = { use: 'palacio', fams: t !== 'palacio' ? pfams.concat(['forma.palacio']) : pfams, lockNight: 1, need: { trono: 1 } };
   In.addTypes(ptypes);
 
   // (the shell — from the record and the family alone — is the outside: the court, the wings' outer walls storey by storey,
@@ -226,8 +226,9 @@
   }
 
   // ------------------------------ the palace by its form: the bigger steps (D-106) ------------------------------
-  // The palace of six tiles and the colossal of ten — the palace of courts of js/forma-poder.js — laid out from the risk its form
-  // keeps (the podium's element: e.palacio), the numbers the god paints. Its shell: the block of wings round the court
+  // The palace of six tiles, the great palace of eight and the colossal of ten — the palace of courts of js/forma-poder.js —, of
+  // the six peoples, laid out from the risk its form keeps (the podium's element: e.palacio), the numbers the god paints. Its
+  // shell: the block of wings round the court
   // (P.shell.court), on the podium — a solid base, the floor its top —, the people's roof round the court; its outer walls storey
   // by storey (the wing of state's as high as the eaves) and their windows; the front of the open court (the screen of columns,
   // the pylon's wall, the palisade) or the court of honour (P.yard: its balustrade or its wall, its gate) and the porch (an annex,
@@ -312,6 +313,9 @@
     { const open = R.big ? R.yardRoom : R.courtRoom; const r = rect(open); const gw = R.gate.w; const du = R.EG ? Math.max(0.6, gw / 2 - 0.7) : gw / 2 + 0.9;
       later.push(guard(open, [[L / 2 - du, r[3] - 1.0, 0], [L / 2 + du, r[3] - 1.0, 0]])); }
     if (R.vest >= 0) { const r = rect(R.vest); later.push(guard(R.vest, [[L / 2 - 1.9, r[3] - 0.9, Math.PI], [L / 2 + 1.9, r[3] - 0.9, Math.PI]])); }
+    // (the way of state kept clear: the courts' axis — from the gate to the fountain and on to the throne hall's portal, the court
+    // of honour's from the gate to the porch —, no bench on it: L-513)
+    for (const k of [R.courtRoom, R.yardRoom]) if (k >= 0) { const r = rect(k); P.zones.push({ lv: 0, r: [r2(L / 2 - 0.8), r[1], r2(L / 2 + 0.8), r[3]] }); }
     const fire = id => { const f = tr.fire === 'lar' ? 'lar' : tr.fire || 'fogao'; return (f === 'lar' && P.place('lar', 0, id, { sides: ['livre'], margin: 0.6 })) || P.place(f === 'lar' || f === 'forno' ? 'fogao' : f, 0, id) || P.place('fogao', 0, id) || P.place('braseiro', 0, id); };
     let beds = 0;
     for (const m of R.rooms) {
@@ -329,16 +333,17 @@
     if (!beds) { P.errs.push('sem cama nos aposentos'); return; }
     for (const f of later) f();
   }
-  In.formSized('palacio', palaceByForm); In.formSized('palacio_colossal', palaceByForm);
+  In.formSized('palacio', palaceByForm); In.formSized('grande_palacio', palaceByForm); In.formSized('palacio_colossal', palaceByForm);
   In.riskOf = riskOf; // (for the proofs: the risk a palace's or a temple's plan is laid out from)
   In.riskLayer = layerOf; // (the walls of a risk laid in a plan — the inn's of int-familias.js too: one rule for the party walls)
 
   // ------------------------------ the temple by its form: the bigger steps (D-106) ------------------------------
   // The temple of four, six and eight tiles — js/forma-poder.js, riscoTemplo — laid out from the risk its form keeps (the
   // platform's element: e.risco), as the palace is: its shell the cella's block (the Greek's, the Roman's), the hall's (the
-  // Egyptian's, the Norse's) on the platform; the porch, the peristyle, the gallery its annexes, their columns where the form
-  // stands them, their bays the ways through; the precinct on the platform its yard — the temenos, the terraces, the court
-  // behind the pylon, the garth in its palisade —, its walls, its gate where the flight comes up; inside, the walls and the
+  // Egyptian's, the Norse's), the shrine's (the Aztec's, on its pyramid's top) on the platform; the porch, the peristyle, the
+  // gallery its annexes, their columns where the form stands them, their bays the ways through; the precinct on the platform
+  // its yard — the temenos, the terraces, the court behind the pylon, the garth in its palisade, the forecourt on the pyramid's
+  // top —, its walls, its gate where the flight comes up; inside, the walls and the
   // portals, the rooms, the form's pieces (the columns of the hall, the towers, the trees and statues, the stones) and its fires,
   // the place of who lights each beside it; then the furniture. In the form's family (forma.templo), where the form of that size
   // is the people's (In.formSized, int-civicos.js)
