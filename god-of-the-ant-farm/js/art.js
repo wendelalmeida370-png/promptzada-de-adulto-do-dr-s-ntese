@@ -7,9 +7,20 @@
   const SPR = 3;
   const cache = new Map();
   const TAU = Math.PI * 2;
+  // (the big pictures of no chance — a step's from its form, D-106: the Colosseum of 10 tiles is 3 MB at 3×, 4 with its smaller
+  // copies; its painter has no chance, so painted again it is the same picture — are kept up to BIG.mb all told: over it, the one
+  // drawn longest ago is let go, and painted again when it is wanted; one drawn in this frame or the last never: over the cap a
+  // while rather than painting the screen's own again and again. The others stay, as they always have — a hand drawing may pick
+  // its flowers' colours. Only the view: nothing of the world)
+  const BIG = Art.BIG = { px: 262144, mb: 32, bytes: 0, dropped: 0 }; const bigs = new Map();
+  Art.frame = 0; // (the renderer counts its frames here)
+  function trim() {
+    for (const [k, s] of bigs) { if (BIG.bytes <= BIG.mb * 1048576) break; if (s.f >= Art.frame - 1) continue; bigs.delete(k); cache.delete(k); BIG.bytes -= s.big; BIG.dropped++; }
+  }
 
-  Art.sprite = function (key, w, h, ax, ay, fn) {
-    let s = cache.get(key); if (s) return s;
+  // (pure: its painting has no chance — it may be let go and painted again, the same)
+  Art.sprite = function (key, w, h, ax, ay, fn, pure) {
+    let s = cache.get(key); if (s) { if (s.big) { s.f = Art.frame; bigs.delete(key); bigs.set(key, s); } return s; }
     const c = document.createElement('canvas');
     c.width = Math.max(1, Math.ceil(w * SPR)); c.height = Math.max(1, Math.ceil(h * SPR));
     const x = c.getContext('2d');
@@ -18,8 +29,16 @@
     const meta = { win: [], fires: [], glow: [] };
     fn(x, meta);
     s = { c, w, h, ax, ay, win: meta.win, fires: meta.fires, glow: meta.glow };
-    cache.set(key, s); return s;
+    cache.set(key, s);
+    // (a big one: its bytes at 3× and its two smaller copies, ⅓ more; kept last drawn last)
+    if (pure && c.width * c.height >= BIG.px) { s.big = c.width * c.height * 16 / 3; s.f = Art.frame; bigs.set(key, s); BIG.bytes += s.big; trim(); }
+    return s;
   };
+  // (for the proofs: a picture let go — painted again when it is wanted —; the cache's pictures and their memory, MB: each at 3×
+  // and the smaller copies it has made; the big ones as the cap counts them)
+  Art.forget = key => { const s = cache.get(key); if (!s) return false; cache.delete(key); if (s.big) { bigs.delete(key); BIG.bytes -= s.big; } return true; };
+  Art.has = key => cache.has(key);
+  Art.mem = () => { let n = 0, b = 0; for (const s of cache.values()) { n++; b += ((s.c.width * s.c.height || 0) + (s.m2 ? s.m2.width * s.m2.height : 0) + (s.m4 ? s.m4.width * s.m4.height : 0)) * 4; } return { n, mb: b / 1048576, bigN: bigs.size, bigMB: BIG.bytes / 1048576, dropped: BIG.dropped }; };
   // mipmaps: sprites are painted at 3x; zoomed out, a half or quarter copy is drawn instead
   Art.px = 1; // screen pixels per world unit, set by the renderer every frame
   function mip(s, lv) {
@@ -37,7 +56,7 @@
     const img = k >= 1.3 || s.c.width < 12 ? s.c : k >= 0.62 ? (s.m2 || mip(s, 2)) : (s.m4 || mip(s, 4));
     ctx.drawImage(img, x - s.ax * sc, y - s.ay * sc, s.w * sc, s.h * sc);
   };
-  Art.clear = () => cache.clear();
+  Art.clear = () => { cache.clear(); bigs.clear(); BIG.bytes = 0; };
   // sprites are drawn for the first view: the two side views see them mirrored
   Art.drawM = function (ctx, s, x, y, sc) {
     if (!(G.Render && G.Render.mirror() < 0)) return Art.draw(ctx, s, x, y, sc);

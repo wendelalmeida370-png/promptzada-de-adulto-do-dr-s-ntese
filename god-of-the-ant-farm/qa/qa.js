@@ -829,7 +829,9 @@
       if (heardS !== s) { heardS = s; heard = new Map(); }
       for (const b of withIp) {
         const said = In.entrySaid(b); if (said === undefined) continue; const k = In.entryKey(b); if (said && heard.get(b.id) === k) continue; heard.set(b.id, k);
-        const e = G.Space.entryFits(b, In.shellOf(b)); const front = !In.frontOpen || In.frontOpen(b); const ok = e.ok && front;
+        // (a plan with no shell — a form broken — has no way in to judge: said, never a fall of the whole check, T-423)
+        const sh = In.shellOf(b); if (!sh) { add('int', 2, `${b.type}#${b.id}: a planta não tem casca — a entrada que a virada do dia julgou não tem porta (T-423)`); continue; }
+        const e = G.Space.entryFits(b, sh); const front = !In.frontOpen || In.frontOpen(b); const ok = e.ok && front;
         const why = front ? `${e.kind}, o pé a ${e.foot} m` : 'a porta dá para uma casa da rua que não se anda';
         if (ok !== said) { add('int', 2, `${b.type}#${b.id}: a entrada ${ok ? 'cabe' : `não cabe (${why})`} diante da porta, e a virada do dia disse que ${said ? 'cabia' : 'não cabia'} com o mesmo chão`); continue; }
         if (!ok) { const to = In.fitSide(b); if (to) add('int', 2, `${b.type}#${b.id}: a porta ficou onde a entrada não cabe (${why}), e no lado ${to.s} ela cabe`); }
@@ -1365,8 +1367,9 @@
       if (!fin(b.brick.n) || b.brick.n < -EPS) { add('oficio', 1, `${b.type}#${b.id}: tijolo da obra ${b.brick.n}`); continue; }
       if (!b.need || (b.need[k] || 0) > b.brick.n + EPS) add('oficio', 2, `${b.type}#${b.id}: a obra pede ${b.need ? b.need[k] : '?'} de ${k}, trocou ${b.brick.n}`);
       if (b.need && (b.need.stone || 0) < -EPS) add('oficio', 1, `${b.type}#${b.id}: a obra pede pedra negativa (${b.need.stone})`);
-      // (the brick takes the place of stone one for one; a material traded on the way, L-416, changes the bill by its trade)
-      if (def && G.Village.bill) { let a = 0, z = 0; const bill = G.Village.bill(b); for (const q in bill) a += bill[q] || 0; for (const q in def.cost) z += def.cost[q] || 0; for (const q in b.troca || {}) z += b.troca[q] || 0; if (Math.abs(a - z) > EPS) add('oficio', 2, `${b.type}#${b.id}: a conta da obra (${a}) não é a do tipo (${z})`); }
+      // (the brick takes the place of stone one for one; a material traded on the way, L-416, changes the bill by its trade; the
+      // bill of the building's step — G.Escala.billOf, D-106 —, not its type's: a bigger step's is bigger, L-535)
+      if (def && G.Village.bill) { let a = 0, z = 0; const bill = G.Village.bill(b); const cost = G.Escala ? G.Escala.billOf(b).cost : def.cost; for (const q in bill) a += bill[q] || 0; for (const q in cost) z += cost[q] || 0; for (const q in b.troca || {}) z += b.troca[q] || 0; if (Math.abs(a - z) > EPS) add('oficio', 2, `${b.type}#${b.id}: a conta da obra (${a}) não é a do degrau (${z})`); }
     }
     // the works, a holder of the depot ('o', L-246): what a work still needs is within its bill (nothing it got vanished
     // from it, nothing was born in it); what it waits for on the way is what its builders carry for it; what it got is what

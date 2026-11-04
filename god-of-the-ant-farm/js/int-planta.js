@@ -153,7 +153,9 @@
     const I = In(); if (!I.ready(b)) { I.want(b); I.pump(3); return; }
     const p = I.plan(b); if (!p || !p.rooms) return;
     const lv = PV.lv === null || !p.levels.some(l => l.lv === PV.lv) ? p.entryLv : PV.lv;
-    const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-    add(cx + cy + (b.w + b.h) / 2 - 0.8, { fn: ctx => drawPlan(ctx, b, p, lv) }, cx, cy);
+    // (the building's own depth in the drawing, the render's key — the middle of a lot of 2 tiles or more, D-114 —, given as the
+    // hooks give theirs: x + y of the anchor and the offset from it)
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, R = G.Render;
+    add(cx + cy + (R.bkey ? R.bkey(b) - R.depth(cx, cy) : (b.w + b.h) / 2 - 0.8), { fn: ctx => drawPlan(ctx, b, p, lv) }, cx, cy);
   });
 })(window.G);

@@ -125,6 +125,7 @@ function recorder() {
   };
   return { c, ops };
 }
+F.recorder = recorder; // (for a proof that has the god paint something else on it — a site: qa/visual/forma-deus.js)
 // the god's picture of a building, as the god's view would paint it (Art.building: the sprite of its type, variant and
 // people), in the god's pixels from the anchor — the middle of the lot on its highest ground; ops: what was painted, in
 // order. Art's cache is put aside for the call: the picture is painted anew, and the game's cache stays as it was

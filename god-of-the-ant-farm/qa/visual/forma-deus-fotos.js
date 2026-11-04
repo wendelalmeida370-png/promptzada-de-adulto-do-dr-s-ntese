@@ -10,6 +10,8 @@
 //   3. a ordem do desenho: a chave do prédio na lista do quadro (R.bkey) e a de cada pessoa, cada uma do lado certo dele
 //   4. as fotos (JPG pequenos): de frente, de perto do lado (a pessoa diante da face), e girado um quarto
 //   5. nenhum erro de página nem de módulo; o desenho não muda o mundo (a impressão do mundo, QA.canon, igual)
+//   6. a obra pela metade (o mundo pronto de novo, o Coliseu fundado como obra): o andaime da altura da forma desse tamanho
+//      (R.siteH) e a foto dela
 // Numa pasta do jogo de antes do pintor (sem G.Arch.formSprite), só tira as fotos de antes (o degrau desenhado à moda antiga).
 const path = require('path'), fs = require('fs'), os = require('os');
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')), OUT = path.resolve(process.argv[3] || path.join(os.tmpdir(), 'forma-deus'));
@@ -75,6 +77,47 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     // (5) the world unchanged by the drawing; no error
     const after = await page.evaluate(c0 => ({ canon: window.QA && QA.canon ? JSON.stringify(QA.canon()) : null, diff: window.QA && QA.diff && c0 ? QA.diff(JSON.parse(c0), QA.canon()).slice(0, 3) : [], mod: G.modErr ? Object.keys(G.modErr) : [] }), m.canon0);
     if (r.pinta) ok('5: o desenho não muda o mundo', m.canon0 === null || m.canon0 === after.canon, m.canon0 === null ? 'sem QA.canon' : m.canon0 === after.canon ? 'a impressão do mundo igual depois dos quadros, do «sprite» e do giro' : 'mudou: ' + JSON.stringify(after.diff).slice(0, 300));
+    // (6) the site of the step, half built: the ready world again, the Colosseum founded by the god's hand as a work, at half
+    // of it — its scaffold as tall as its form of that size (R.siteH, the god's site: render.js drawSite), its name over it
+    const o6 = await page.evaluate(([gen, N]) => {
+      G.Save.apply(JSON.parse(G.Ready.data.metropole)); G.Main.mode = 'game'; G.UI.setSpeed(0);
+      const Fo = G.Forma, S = G.S; if (!Fo.has('maravilha', 'romano', N) && Fo.def) Fo.def('maravilha', 'romano', (0, eval)('(' + gen + ')'), [N]);
+      const set = [...S.settlements.values()].find(s => s.name === 'Roma') || [...S.settlements.values()].find(s => G.Civ.idOfFac(s.fac) === 'romano');
+      let b = null; G.inSim++; try { b = set && G.Village.handFound ? G.Village.handFound(set, 'maravilha', 'maravilha', { built: false }) : null; } finally { G.inSim--; }
+      if (!b) return { err: 'a mão do deus não fundou a obra' };
+      b.progress = 0.5; if (G.FX && G.FX.list) G.FX.list.length = 0;
+      G.Render.centerOn(b.x + b.w / 2, b.y + b.h / 2 + 1, 1.25); window.__VIS.f(3);
+      const F = Fo.of('maravilha', b.style || 'romano', b.w);
+      return { w: b.w, built: b.built, h: G.Render.siteH ? G.Render.siteH(b) : null, top: F ? F.top * Fo.ZPX : null };
+    }, [LIB.coliseuTeste.toString(), LIB.N]).catch(e => ({ err: e.message }));
+    if (o6.err) ok('6: a obra do Coliseu pela metade', false, o6.err);
+    else {
+      await shot(r.pinta && o6.h !== null ? 'deus-coliseu-obra' : 'antes-deus-coliseu-obra');
+      if (o6.h !== null) ok('6: a obra do Coliseu pela metade, da altura da forma', !o6.built && o6.top !== null && Math.abs(o6.h - o6.top) < 0.01, `a obra de ${o6.w} casas: o andaime a ${o6.h.toFixed(1)} px (a forma desse tamanho: ${o6.top === null ? 'nenhuma' : o6.top.toFixed(1) + ' px'})`);
+    }
+    // (7) the memory of the big pictures (Art.BIG): the cache after the views above — all of it, and the big ones the cap
+    // counts —; the Colosseum's picture let go and painted again: how long, and the same pixels; then every step's picture
+    // made in turn, a frame each, with and without its door (as a world showing them one after the other): each one's memory and
+    // time, and what the cap let go
+    const o7 = await page.evaluate(N => {
+      const Art = G.Art, A = G.Arch, Fo = G.Forma; if (!Art.mem || !Art.BIG || !A.formKey) return { none: true };
+      const m0 = Art.mem();
+      const hash = c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 2166136261; for (let i = 0; i < d.length; i++) { h ^= d[i]; h = Math.imul(h, 16777619); } return h >>> 0; };
+      const s0 = A.formSprite('maravilha', 'romano', N, false); const h0 = hash(s0.c);
+      Art.forget(A.formKey('maravilha', 'romano', N, false)); const t = performance.now(); const s1 = A.formSprite('maravilha', 'romano', N, false); const ms = performance.now() - t; const h1 = hash(s1.c);
+      const steps = []; for (const ty of Fo.types()) for (const st of ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico']) { if (!Fo.has(ty, st)) continue; const n0 = G.BDEF[ty] && G.BDEF[ty].w; for (const n of Fo.sizes(ty, st)) if (n !== n0) steps.push([ty, st, n]); }
+      const made = [], d0 = Art.BIG.dropped; let peak = 0;
+      for (const [ty, st, n] of steps) for (const nd of [false, true]) { Art.frame++; const t1 = performance.now(); const s = A.formSprite(ty, st, n, nd); made.push({ k: `${ty}/${st}/${n}${nd ? '/c' : ''}`, mb: s ? s.c.width * s.c.height * 4 / 1048576 : 0, ms: performance.now() - t1 }); peak = Math.max(peak, Art.BIG.bytes / 1048576); }
+      return { m0, m1: Art.mem(), ms, same: h0 === h1 && s0 !== s1, px: [s1.c.width, s1.c.height], made, peak, dropped: Art.BIG.dropped - d0, cap: Art.BIG.mb };
+    }, LIB.N).catch(e => ({ err: e.message }));
+    if (o7.err) ok('7: a memória dos desenhos grandes', false, o7.err);
+    else if (!o7.none) {
+      const tot = o7.made.reduce((s, q) => s + q.mb * 4 / 3, 0), slow = o7.made.reduce((a, q) => (q.ms > a.ms ? q : a), { ms: 0 });
+      // (over the cap by two at most: the one just made and the one drawn the frame before are never let go)
+      const two = o7.made.map(q => q.mb * 4 / 3).sort((a, b) => b - a).slice(0, 2).reduce((s, x) => s + x, 0);
+      ok('7: a memória dos desenhos grandes, com teto', o7.same && o7.peak <= o7.cap + two, `o cache depois das vistas: ${o7.m0.n} desenhos, ${o7.m0.mb.toFixed(1)} MB (os grandes: ${o7.m0.bigN}, ${o7.m0.bigMB.toFixed(1)} MB); o Coliseu solto e pintado de novo em ${o7.ms.toFixed(0)} ms, ${o7.same ? 'os mesmos pixels' : 'OUTROS pixels'} (${o7.px[0]} × ${o7.px[1]}); os ${o7.made.length} desenhos dos degraus (com e sem porta) somam ${tot.toFixed(1)} MB com as cópias, o mais lento ${slow.k} em ${slow.ms.toFixed(0)} ms — com o teto de ${o7.cap} MB: no máximo ${o7.peak.toFixed(1)} MB, ${o7.dropped} soltos; o cache no fim: ${o7.m1.n} desenhos, ${o7.m1.mb.toFixed(1)} MB`);
+    }
+    const mod6 = await page.evaluate(() => (G.modErr ? Object.keys(G.modErr) : [])); for (const k of mod6) if (!after.mod.includes(k)) after.mod.push(k);
     ok('5: nenhum erro', !errs.length && !after.mod.length, errs.length || after.mod.length ? errs.slice(0, 4).join(' | ') + ' ' + after.mod.join(',') : 'nenhum erro de página nem de módulo');
   } catch (e) { ok('a prova', false, e.message); }
   finally { await browser.close(); }

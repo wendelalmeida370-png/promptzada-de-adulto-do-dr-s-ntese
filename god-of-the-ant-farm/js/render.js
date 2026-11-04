@@ -924,10 +924,13 @@
   // ---- a big building among the people (D-106): sorted by the depth of the middle of its lot — of its two side corners, a
   // square lot's — whoever stands beside it or behind it is drawn on the right side of it. Beside a square lot, in any column of
   // the screen, the lot's front is never nearer the eye than its side corners nor its back farther: one standing out of the lot
-  // in front of a face it shows is deeper than them, one behind it less deep. The front corner, a hand back, put a person
-  // beside a building of 10 tiles behind its wall (the rule kept for those under 3 tiles; the open grounds — a square, a ruin, a
-  // graveyard, a pen, a campfire, the stable and the fair, the fields, whose pieces the hooks sort each by its own — keep theirs) ----
-  const BIGW = 3; const FLATB = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1, curral: 1, estabulo: 1, feira: 1 };
+  // in front of a face it shows is deeper than them, one behind it less deep; and of two square lots side by side, the one in
+  // front of the other's face has the deeper middle, whatever their sizes. The front corner, a hand back, put a person beside a
+  // building of 10 tiles behind its wall, and a tree, a beast or a bush beside one of 2 on the wrong side of it (the rule kept
+  // for those of 1 tile: there the two agree; the open grounds — a square, a ruin, a graveyard, a fold, a campfire, the fields,
+  // whose pieces the hooks sort each by its own — keep theirs; the pen, the stable and the fair draw here only their plinth on a
+  // slope, or their site: a box, like the buildings — L-527) ----
+  const BIGW = 2; R.bigW = BIGW; const FLATB = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1 };
   R.bkey = function (b) { const [cx, cy] = G.Village.center(b); return b.type === 'praca' ? depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : b.w >= BIGW && !FLATB[b.type] && !(G.BDEF[b.type] || {}).field ? depth(cx, cy) - 0.15 : depth(cx, cy) + (b.w + b.h) / 2 - 0.8; };
   function pushD(d, type, o, sx, sy) {
     let e = drawList[drawN]; if (!e) { e = {}; drawList[drawN] = e; }
@@ -1236,7 +1239,7 @@
     // other modules give depths for the first view (x + y + offset): keep their offset, turn the rest
     if (HK.ents.length) { const add = (d, e, x, y, h) => { const p = proj(x, y, h === undefined ? W.groundH(x, y) : h); if (p[0] > view[0] - 70 && p[0] < view[2] + 70 && p[1] > view[1] - 20 && p[1] < view[3] + 120) pushD(rot ? depth(x, y) + (d - x - y) : d, 13, e, p[0], p[1]); }; for (const h of HK.ents) h(add, view, R.cam.zoom); }
     const list = drawList.slice(0, drawN).sort((a, b) => a.d - b.d);
-    G.Art.px = R.cam.zoom * dpr;
+    G.Art.px = R.cam.zoom * dpr; G.Art.frame++;
     if (nightF > 0.15) { homesLit.clear(); for (const v of S.villagers.values()) if (v.home) homesLit.add(v.home); }
     // shadows first
     ctx.fillStyle = 'rgba(20,30,20,0.2)';
@@ -2512,13 +2515,23 @@
   R.siteOld = (b, make) => siteOld(b, make); // (for the proofs too: what the god draws of a house being extended)
   // (how high a type's walls rise as its site draws them, px)
   const siteH = (type, def) => (type === 'hut' ? 7 : type === 'temple' ? 22 : type === 'monument' ? 30 : type === 'farm' ? 0 : type === 'maravilha' ? 34 : type === 'quarteirao' ? 30 : type === 'insula' ? 24 : type === 'sobrado' ? 18 : def && def.w >= 3 ? 20 : 12);
+  // (and a building's: a step of another size than its type's classic one — D-106 — rises to the top of its form of that size;
+  // where its people have no form of it, to its type's walls grown as its light grows, by the root of its lot over the classic's)
+  const siteHOf = b => {
+    const def = G.BDEF[b.type]; if (!G.Arch || !G.Arch.sized || !G.Arch.sized(b.type, b.w)) return siteH(b.type, def);
+    const Fo = G.Forma, st = b.style || 'classico'; const F = Fo && Fo.has(b.type, st, b.w) ? Fo.of(b.type, st, b.w) : null;
+    return F && F.top > 0 ? F.top * Fo.ZPX : siteH(b.type, def) * Math.sqrt(b.w / def.w);
+  };
+  R.siteH = siteHOf; // (for the proofs: how high a building's site rises, px)
+  // (the scaffold's posts along each edge of a site: at the corners; a step of 4 tiles or more, one every two tiles or so)
+  const sitePosts = b => (G.Arch && G.Arch.sized && G.Arch.sized(b.type, b.w) ? Math.max(1, Math.round((b.w - 0.2) / 2)) : 1);
   // the scaffold's top over a house being extended, px: from over the old house's walls up to over the new one's — over the old
   // roof's top at least: the work goes up over the family — with the work (o: the old house's picture, siteOld's: its eaves and
   // its roof when it is drawn from its shell; else the walls a site of its type has, the top of its sprite of before)
   R.siteTop = (b, o) => {
     const H = o && o.spr && o.spr.H; const e0 = H ? H.eave : siteH(b.upgradeFrom, G.BDEF[b.upgradeFrom]);
     const t0 = H ? H.eave + (H.roof.rise || 0) : o && o.spr && o.spr.ay > e0 ? o.spr.ay : e0 + 6;
-    const h0 = e0 + 3, h1 = Math.max(t0 + 4.5, siteH(b.type, G.BDEF[b.type]) + 8); return h0 + Math.max(0, h1 - h0) * G.clamp(b.progress || 0, 0, 1);
+    const h0 = e0 + 3, h1 = Math.max(t0 + 4.5, siteHOf(b) + 8); return h0 + Math.max(0, h1 - h0) * G.clamp(b.progress || 0, 0, 1);
   };
   // ---- the god's door on the side its plan opens it (L-264): a picture of before has its door on its front-left face — it
   // is drawn as it is where the plan's door is on the side the view shows at the front-left, mirrored where that side is at
@@ -2531,14 +2544,59 @@
     if (q === undefined) q = R.quarter(); return s === FL[q] ? { m: 1, back: false } : s === FR[q] ? { m: -1, back: false } : { m: m0, back: true };
   }
   R.doorView = doorView; // (for the proofs: { m: the mirror, back: drawn without its door } for a view's quarter)
+  // (a building on fire, for its glow: a fire on any tile of its lot — D-106: one on the far side of a 10-tile lot is a fire in
+  // the building; a lot of 13 is 169 looks a frame, nothing)
+  const fireOn = b => { const F = G.S.fire; for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) if (F[W.idx(tx, ty)] > 0.15) return true; return false; };
+  R.fireOn = fireOn; // (for the proofs)
+  // ---- the podium of a step of another size than its type's classic one (D-106, D-120): the relief under its lot — up to three
+  // of the map's levels — is a terrace of its people's dressed stone, as the 3D's (Space.plinth): its two faces the view shows,
+  // each from the lot's highest ground down to the ground under it all along its edge, the god's light on the one at the left
+  // and his shade on the other; its courses every half a level — 0.75 m — and the joints of its blocks, 2 m long, each course
+  // half a block on from the one under it; its coping, a band of the stone's top colour; the ground's line at its foot ----
+  const PODC = 0.5, PODB = 0.5; // (a course, levels; a block, tiles)
+  function podium(b, base) {
+    const A = G.Arch, pal = (A && A.PAL && (A.PAL[b.style] || A.PAL.classico)) || null; const sc = pal ? pal.base : ['#a59c8b', '#847b6c', '#bdb4a3'];
+    const [cx, cy] = G.Village.center(b); const fx = depth(cx + 1, cy) - depth(cx, cy), fy = depth(cx, cy + 1) - depth(cx, cy);
+    const xE = fx > 0 ? b.x + b.w : b.x, yE = fy > 0 ? b.y + b.h : b.y, inX = fx > 0 ? -0.02 : 0.02, inY = fy > 0 ? -0.02 : 0.02;
+    const hv = (x, y) => W.hAt(x, y); const fc = proj(xE + inX, yE + inY, base);
+    // (an edge: n + 1 of its corners, x along it or y along it; its outline down to the ground at each corner)
+    const face = (along) => {
+      const n = along === 'x' ? b.w : b.h, pt = k => (along === 'x' ? [b.x + k, yE] : [xE, b.y + k]), ins = q => [q[0] + (along === 'x' ? 0 : inX), q[1] + (along === 'x' ? inY : 0)];
+      const top = [], bot = [], gr = []; let lo = base;
+      for (let k = 0; k <= n; k++) { const q = pt(k), h = Math.min(base, hv(q[0], q[1])); gr.push(h); lo = Math.min(lo, h); const qi = ins(q); top.push(proj(qi[0], qi[1], base)); bot.push(proj(qi[0], qi[1], h)); }
+      return { n, pt, ins, top, bot, gr, lo };
+    };
+    for (const along of ['x', 'y']) {
+      const f = face(along); if (base - f.lo < 0.02) continue;
+      const mid = f.top[f.n >> 1], lit = mid[0] < fc[0] - 1e-6; const col = lit ? sc[0] : sc[1];
+      ctx.save(); ctx.beginPath(); ctx.moveTo(f.top[0][0], f.top[0][1]); for (let k = 1; k <= f.n; k++) ctx.lineTo(f.top[k][0], f.top[k][1]); for (let k = f.n; k >= 0; k--) ctx.lineTo(f.bot[k][0], f.bot[k][1]); ctx.closePath();
+      ctx.fillStyle = col; ctx.fill(); ctx.clip();
+      // (the courses and the joints, clipped to the face: a course's line from end to end; a block's joint every PODB, half a
+      // block on in every other course)
+      ctx.strokeStyle = lit ? 'rgba(40,30,20,0.22)' : 'rgba(30,20,10,0.25)'; ctx.lineWidth = 0.5; ctx.beginPath();
+      const P0 = f.ins(f.pt(0)), P1 = f.ins(f.pt(f.n));
+      for (let j = 1, h = base - PODC; h > f.lo - 1e-6; j++, h -= PODC) {
+        const a = proj(P0[0], P0[1], h), c = proj(P1[0], P1[1], h); ctx.moveTo(a[0], a[1]); ctx.lineTo(c[0], c[1]);
+        const h0 = h + PODC; for (let s = (j % 2) * PODB / 2 + PODB; s < f.n - 1e-6; s += PODB) { const q = f.ins(f.pt(s)); const u = proj(q[0], q[1], h0), v = proj(q[0], q[1], h); ctx.moveTo(u[0], u[1]); ctx.lineTo(v[0], v[1]); }
+      }
+      ctx.stroke();
+      // (the coping: a band of the stone's top over the first course; the ground's line at the foot)
+      ctx.fillStyle = sc[2]; ctx.beginPath(); ctx.moveTo(f.top[0][0], f.top[0][1]); for (let k = 1; k <= f.n; k++) ctx.lineTo(f.top[k][0], f.top[k][1]);
+      for (let k = f.n; k >= 0; k--) { const q = f.ins(f.pt(k)); const s = proj(q[0], q[1], Math.max(f.gr[k], base - 0.22)); ctx.lineTo(s[0], s[1]); } ctx.closePath(); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(20,14,8,0.3)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(f.bot[0][0], f.bot[0][1]); for (let k = 1; k <= f.n; k++) ctx.lineTo(f.bot[k][0], f.bot[k][1]); ctx.stroke();
+    }
+  }
+  R.podium = (c, b) => { const k = ctx; ctx = c; try { podium(b, W.maxH(b.x, b.y, b.w, b.h)); } finally { ctx = k; } }; // (for the proofs: on a context of theirs)
   function drawBuilding(b, sx, sy, t, nightF) {
     const S = G.S; const Art = G.Art;
     const def = G.BDEF[b.type];
     const [cx, cy] = G.Village.center(b);
     const base = W.maxH(b.x, b.y, b.w, b.h);
     const minH = W.minH(b.x, b.y, b.w, b.h);
-    // plinth so buildings sit on slopes
-    if (b.built && b.type !== 'cemetery' && b.type !== 'ruin' && b.type !== 'campfire' && !def.field && base - minH > 0.15) {
+    // plinth so buildings sit on slopes (a step of another size: its podium of stone, D-120)
+    if (b.built && b.type !== 'cemetery' && b.type !== 'ruin' && b.type !== 'campfire' && !def.field && base - minH > 0.15 && G.Arch.sized && G.Arch.sized(b.type, b.w)) podium(b, base);
+    else if (b.built && b.type !== 'cemetery' && b.type !== 'ruin' && b.type !== 'campfire' && !def.field && base - minH > 0.15) {
       const hx = b.w / 2 - 0.02, hy = b.h / 2 - 0.02;
       const drop = (base - minH) * HS + 1; const m = R.mirror();
       ctx.fillStyle = '#8a7a64';
@@ -2546,7 +2604,7 @@
       ctx.moveTo(a[0], a[1]); ctx.lineTo(bb[0], bb[1]); ctx.lineTo(c2[0], c2[1]); ctx.lineTo(c2[0], c2[1] + drop); ctx.lineTo(bb[0], bb[1] + drop); ctx.lineTo(a[0], a[1] + drop); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.moveTo(bb[0], bb[1]); ctx.lineTo(c2[0], c2[1]); ctx.lineTo(c2[0], c2[1] + drop); ctx.lineTo(bb[0], bb[1] + drop); ctx.closePath(); ctx.fill();
     }
-    const burning = S.fire[W.idx(b.x, b.y)] > 0.15 || (b.w > 1 && S.fire[W.idx(b.x + 1, b.y + 1)] > 0.15);
+    const burning = fireOn(b);
     if (b.type === 'campfire') { drawCampfire(b, sx, sy, t, nightF); return; }
     if (b.type === 'cemetery') { drawCemetery(b, sx, sy, t); return; }
     if (b.type === 'ruin') { drawRuin(b, sx, sy, t); return; }
@@ -2637,7 +2695,7 @@
     const p = b.progress;
     const hx = b.w / 2 - 0.1, hy = b.h / 2 - 0.1;
     const P = (dx, dy, z) => { const o = R.soff(dx, dy, z); return [sx + o[0], sy + o[1]]; };
-    const wallH = siteH(b.type, def);
+    const wallH = siteHOf(b);
     if (b.type === 'farm' || def.field) return;
     if (b.upgradeFrom) {
       // (a house extended over its family — L-371 —: the old house whole the whole work long, as the 3D keeps it, and round it
@@ -2666,11 +2724,16 @@
           ctx.fillStyle = '#a07f50';
           ctx.beginPath(); const f1 = P(hx, hy, 0), f2 = P(hx, -hy, 0), f3 = P(hx, -hy, wf), f4 = P(hx, hy, wf); ctx.moveTo(f1[0], f1[1]); ctx.lineTo(f2[0], f2[1]); ctx.lineTo(f3[0], f3[1]); ctx.lineTo(f4[0], f4[1]); ctx.closePath(); ctx.fill();
         }
-        // posts & beams
+        // posts & beams (a step's of 4 tiles or more: a post every two tiles or so along its edges, and a ledger round it every
+        // 4 m up to the top beams — the scaffold of its size, D-106)
         ctx.strokeStyle = '#7a5230'; ctx.lineWidth = 1.2;
         ctx.beginPath();
-        for (const [dx, dy] of [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]]) { const a = P(dx, dy, 0), c2 = P(dx, dy, fh); ctx.moveTo(a[0], a[1]); ctx.lineTo(c2[0], c2[1]); }
-        if (p > 0.45) { const q = [P(-hx, -hy, fh), P(hx, -hy, fh), P(hx, hy, fh), P(-hx, hy, fh)]; ctx.moveTo(q[0][0], q[0][1]); for (let k = 1; k <= 4; k++) ctx.lineTo(q[k % 4][0], q[k % 4][1]); }
+        const cs = [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]], np = sitePosts(b);
+        for (let k = 0; k < 4; k++) for (let j = 0; j < np; j++) { const [x0, y0] = cs[k], [x1, y1] = cs[(k + 1) % 4], f = j / np; const a = P(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, 0), c2 = P(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, fh); ctx.moveTo(a[0], a[1]); ctx.lineTo(c2[0], c2[1]); }
+        if (p > 0.45) {
+          const zs = [fh]; if (np > 1) for (let z = 12.16; z < fh - 2; z += 12.16) zs.push(z);
+          for (const z of zs) { const q = cs.map(([dx, dy]) => P(dx, dy, z)); ctx.moveTo(q[0][0], q[0][1]); for (let k = 1; k <= 4; k++) ctx.lineTo(q[k % 4][0], q[k % 4][1]); }
+        }
         ctx.stroke();
         if (p > 0.85) {
           ctx.globalAlpha = (p - 0.85) / 0.15;
@@ -2688,6 +2751,8 @@
     for (let k = 0; k < Math.min(5, Math.ceil(stoneIn * left / 4)); k++) { const q = P(-hx + 0.2 + k * 0.18, hy + 0.3, 0); ctx.fillStyle = '#9a958c'; ctx.beginPath(); ctx.ellipse(q[0], q[1] - 1, 1.8, 1.2, 0, 0, TAU); ctx.fill(); }
     overlays.push(b, sx, sy - wallH - 12);
   }
+  // (for the proofs: a site as drawSite paints it, on a context of theirs at (sx, sy) — and where its name goes)
+  R.siteOn = function (c, b, sx, sy) { const k = ctx, n0 = overlays.length; ctx = c; try { drawSite(b, sx, sy, 0); return overlays.slice(n0 + 1, n0 + 3); } finally { ctx = k; overlays.length = n0; } };
 
   // ------------------------------ particles ------------------------------
   function drawParticles(layer, view) {
@@ -3060,8 +3125,8 @@
       const p = proj(f.x, f.y, f.h);
       ctx.globalAlpha = Math.min(1, f.life / f.max * 2);
       ctx.font = `800 ${Math.round(9 * is)}px Nunito, sans-serif`;
-      ctx.lineWidth = 3 * is; ctx.strokeStyle = 'rgba(20,15,10,0.6)'; ctx.strokeText(f.text, p[0], p[1] - f.z);
-      ctx.fillStyle = f.c; ctx.fillText(f.text, p[0], p[1] - f.z);
+      ctx.lineWidth = 3 * is; ctx.strokeStyle = 'rgba(20,15,10,0.6)'; ctx.strokeText(f.text, p[0], p[1] - f.z - (f.lift || 0));
+      ctx.fillStyle = f.c; ctx.fillText(f.text, p[0], p[1] - f.z - (f.lift || 0)); // (lift: over a tall thing, in the god's view only)
     }
     ctx.globalAlpha = 1;
     // power preview

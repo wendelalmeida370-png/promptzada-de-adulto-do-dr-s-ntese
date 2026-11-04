@@ -184,21 +184,28 @@
     for (const n of S.nests || []) {
       let e = ent.get(n); if (!e) ent.set(n, e = { n, fn: drawNest });
       if (n.type === 'tree') { const t = S.trees.get(n.host); if (t) add(t.x + t.y + 0.07, e, t.x, t.y); }
-      else if (n.type === 'roof') { const b = S.buildings.get(n.host); if (b) add(b.x + b.y + b.w + b.h - 0.9, e, b.x + b.w / 2, b.y + b.h / 2); }
+      // (on a step of another size: anchored where the god draws the building — the middle of its lot on its highest ground)
+      else if (n.type === 'roof') { const b = S.buildings.get(n.host); if (b) add(b.x + b.y + b.w + b.h - 0.9, e, b.x + b.w / 2, b.y + b.h / 2, stepTop(b) !== null ? G.W.maxH(b.x, b.y, b.w, b.h) : undefined); }
       else add(n.x + n.y + 0.05, e, n.x, n.y);
     }
     for (const d of S.dams || []) { let e = ent.get(d); if (!e) ent.set(d, e = { d, fn: drawDam }); add(d.x + d.y + 0.2, e, d.x, d.y); }
   });
+  // (a roof of a step of another size than its type's classic one — D-106 —: the top of the god's picture over the middle of its
+  // lot, px over its anchor — the form's, Arch.formTop0: over a palace of courtyards its back wing, not the courtyard —; where
+  // its people have no form of that size, the height its masses are drawn to. Null: a classic one — its roof of the table)
+  const stepTop = b => { const Ar = G.Arch; if (!b || !Ar || !Ar.sized || !Ar.sized(b.type, b.w)) return null; const t = Ar.formTop0 ? Ar.formTop0(b.type, b.style, b.w) : null; return t !== null ? t : G.Render && G.Render.siteH ? G.Render.siteH(b) : null; };
   function nestZ(n) {
     const S = G.S;
     if (n.type === 'tree') { const t = S.trees.get(n.host); return t ? A.canopyZ(t) + 2 : 14; }
-    if (n.type === 'roof') { const b = S.buildings.get(n.host); return b ? (ROOFS[b.type] || 26) + 1 : 26; }
+    if (n.type === 'roof') { const b = S.buildings.get(n.host); const st = stepTop(b); return st !== null ? st + 1 : b ? (ROOFS[b.type] || 26) + 1 : 26; }
     if (n.type === 'cliff') return 1.5;
     return 0.4;
   }
   function drawNest(c, e, sx, sy, t) {
     const n = e.n; const sp = SP[n.kind]; if (!sp) return;
-    const y = sy - nestZ(n); const x = sx + (n.type === 'tree' ? 1.5 : n.type === 'roof' ? -4 : 0);
+    // (on a step's roof, straight over the anchor: the column whose top the god's picture keeps in the four views)
+    const onStep = n.type === 'roof' && stepTop(G.S.buildings.get(n.host)) !== null;
+    const y = sy - nestZ(n); const x = sx + (n.type === 'tree' ? 1.5 : n.type === 'roof' && !onStep ? -4 : 0);
     const big = n.kind === 'stork' || n.kind === 'eagle' ? 1.5 : n.kind === 'penguin' || n.kind === 'goose' ? 1.1 : 0.9;
     // the bowl of sticks (a scrape of pebbles on the ground)
     if (n.type === 'ground') { c.fillStyle = n.kind === 'penguin' ? '#8a8478' : '#b8a070'; c.beginPath(); c.ellipse(x, y, 3 * big, 1.4 * big, 0, 0, TAU); c.fill(); }
