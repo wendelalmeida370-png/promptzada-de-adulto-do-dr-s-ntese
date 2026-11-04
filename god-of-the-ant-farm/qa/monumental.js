@@ -181,7 +181,7 @@ function testeA() {
       // (the rows: the body's seat — each ring one rise over the next, one tread deep but the top one's; the lowest over the podium,
       // or over the third row behind the emperor's box (D-125) —, the podium's parapet: the walk on each arc's edge)
       const rowsP = F.els.filter(e => e.k === 'cavea' && e.aneis.length > 1), pod = F.els.filter(e => e.k === 'cavea' && (Math.abs(e.fundo - O.rs) < 1e-3 || Math.abs(e.fundo - O.rb) < 1e-3)); let rmin = 9, rmax = 0, tmin = 9, tmax = 0;
-      for (const e of rowsP) { const A = e.aneis; const X = O.boxes.find(q => Math.abs(e.fundo - q.r3) < 1e-6), base = X ? X.y3 : O.yb;
+      for (const e of rowsP) { const A = e.aneis; const X = O.boxes.find(q => Math.abs(e.fundo - q.r3) < 1e-3), base = X ? X.y3 : O.yb;
         for (let k = 0; k < A.length; k++) { const rIn = k < A.length - 1 ? A[k + 1] : [e.fundo, base]; const rise = A[k][1] - rIn[1];
         rmin = Math.min(rmin, rise); rmax = Math.max(rmax, rise); if (k > 0) { const tr = A[k][0] - rIn[0]; tmin = Math.min(tmin, tr); tmax = Math.max(tmax, tr); } } }
       if (rmin < 0.4 - 1e-6 || rmax > 0.45 + 1e-6 || tmin < 0.7 - 1e-6 || tmax > 0.8 + 1e-6) out.push(`n ${n}: fileiras de ${rmin.toFixed(2)}–${rmax.toFixed(2)} × ${tmin.toFixed(2)}–${tmax.toFixed(2)} m`);
@@ -432,12 +432,14 @@ function testeA() {
         const tag = `n ${n} (${X.seat})`, len = (X.span[1] - X.span[0]) * r1; lens.push(len);
         if (Math.abs(len - 2.5) > 0.05) out.push(`${tag}: ${len.toFixed(2)} m da primeira fileira`);
         const on = e => e.k === 'cavea' && e.arco && Math.abs(e.arco[0] - X.span[0]) < 1e-6 && Math.abs(e.arco[1] - X.span[1]) < 1e-6;
-        const ps = F.els.filter(on), floor = ps.find(e => e.aneis.length === 1 && !e.parapeito), back = ps.find(e => e.aneis.length === 1 && e.parapeito), up = ps.find(e => e.aneis.length > 1);
+        // (the rows of its quarter: over it only from the fourth — the piece of them from the fourth over the whole arc, the god
+        // painting no end of them across it —, the first three over the rest of the arc)
+        const am = (X.span[0] + X.span[1]) / 2, mine = F.els.filter(e => e.k === 'cavea' && e.escadas && Math.abs(e.c[0] - X.c[0]) < 1e-6 && Math.abs(e.c[1] - X.c[1]) < 1e-6);
+        const ps = F.els.filter(on), floor = ps.find(e => e.aneis.length === 1 && !e.parapeito), back = ps.find(e => e.aneis.length === 1 && e.parapeito), up = mine.find(e => Math.abs(e.fundo - X.r3) < 1e-3 && angIn(am, e.arco[0], e.arco[1]));
         if (!floor || Math.abs(floor.aneis[0][1] - O.yb) > 1e-6 || Math.abs(floor.fundo - r1) > 1e-3 || Math.abs(floor.aneis[0][0] - r1 - 2 * O.tread) > 1e-3) out.push(`${tag}: o chão ${floor ? `a ${floor.aneis[0][1]} m, de ${floor.fundo} a ${floor.aneis[0][0]}` : 'ausente'}`);
         const drop = back ? back.aneis[0][1] - O.yb : 0; if (!back || !(back.parapeito >= 0.9) || drop <= 1 || Math.abs(back.fundo - X.rB) > 1e-3) out.push(`${tag}: a fileira de trás ${back ? `${drop.toFixed(2)} m sobre o chão, parapeito ${back.parapeito}` : 'ausente'}`);
         if (!up || Math.abs(up.fundo - X.r3) > 1e-3 || Math.abs(up.aneis[up.aneis.length - 1][1] - (O.yb + 4 * O.rise)) > 1e-3) out.push(`${tag}: as fileiras de cima ${up ? `a partir de ${up.aneis[up.aneis.length - 1][1]} m` : 'ausentes'}`);
-        const rows = F.els.find(e => e.k === 'cavea' && e.escadas && Math.abs(e.c[0] - X.c[0]) < 1e-6 && Math.abs(e.c[1] - X.c[1]) < 1e-6);
-        if (!rows || angIn((X.span[0] + X.span[1]) / 2, rows.arco[0], rows.arco[1])) out.push(`${tag}: as fileiras do quarto por cima do camarote`);
+        if (mine.length !== 2 || mine.some(e => angIn(am, e.arco[0], e.arco[1]) && e.fundo < X.r3 - 1e-3)) out.push(`${tag}: as fileiras do quarto por cima do camarote (${mine.length} peças)`);
         const ue = O.cu + X.su * O.g / 2, vf = O.cv - O.Bv - O.dp, vb = vf - 2 * O.tread;
         if (!F.els.some(e => e.k === 'bloco' && Math.abs(e.y0 - O.yb) < 1e-6 && Math.abs(e.y1 - e.y0 - 0.9) < 1e-6 && Math.abs((X.su > 0 ? e.r[0] : e.r[2]) - ue) < 1e-3 && e.r[1] <= vb + 1e-3 && e.r[3] >= vf - 1e-3)) out.push(`${tag}: sem o parapeito ao longo da passagem`);
         const at = (y0, y1) => F.els.find(e => e.k === 'bloco' && Math.abs(e.y0 - y0) < 1e-6 && Math.abs(e.y1 - y1) < 1e-6 && e.r[0] < X.r[2] && e.r[2] > X.r[0] && e.r[1] < X.r[3] + 0.5 && e.r[3] > X.r[1] - 0.5);

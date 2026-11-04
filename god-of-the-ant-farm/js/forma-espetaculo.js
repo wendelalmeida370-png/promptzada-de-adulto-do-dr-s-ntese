@@ -195,20 +195,22 @@
       const rest = box ? (su > 0 ? [span[1], arco[1]] : [arco[0], span[0]]) : arco;
       els.push({ k: 'cavea', c: c.map(k3), aneis: [[k3(r0 + dp), yb]], fundo: k3(r0), cor: SEAT, parapeito: 0.9, muro: RISER, fecho: SEAT, arco });
       const aneis = [[k3(r0 + D - t), yTop]]; for (let j = rows - 1; j >= 1; j--) aneis.push([k3(r0 + dp + j * TREAD), k3(yb + j * RISE)]);
-      els.push({ k: 'cavea', c: c.map(k3), aneis, fundo: k3(r0 + dp), cor: SEAT, muro: RISER, fecho: SEAT, arco: rest, escadas: { a: [mid], l: 1.0, n: 2 } });
+      // (by the box the rows in two pieces: the first three over the rest of the arc, and from the fourth over the whole arc —
+      // the box under them —: no end of the rows where they go on over it, which the god would paint as a wall across them)
+      const esc = { a: [mid], l: 1.0, n: 2 };
+      if (!box) els.push({ k: 'cavea', c: c.map(k3), aneis, fundo: k3(r0 + dp), cor: SEAT, muro: RISER, fecho: SEAT, arco, escadas: esc });
+      else els.push({ k: 'cavea', c: c.map(k3), aneis: aneis.slice(-3), fundo: k3(r0 + dp), cor: SEAT, muro: RISER, fecho: SEAT, arco: rest, escadas: esc },
+        { k: 'cavea', c: c.map(k3), aneis: aneis.slice(0, -3), fundo: k3(r0 + dp + 3 * TREAD), cor: SEAT, muro: RISER, fecho: SEAT, arco, escadas: esc });
       // (the plan's rows: by the box the first three over the rest of the arc, and from the fourth on the whole arc — the rings the
       // same as the form's pieces; cut in two blocks a row loses a seat at the cut)
       if (!box) blocks.push({ c: c.map(k3), r0: k3(r0 + dp), r1: k3(r0 + D - t), arco, aisles: [mid], small, su, sv });
       else blocks.push({ c: c.map(k3), r0: k3(r0 + dp), r1: k3(r0 + dp + 3 * TREAD), arco: rest, aisles: [mid], small, su, sv, n: 3 },
         { c: c.map(k3), r0: k3(r0 + dp + 3 * TREAD), r1: k3(r0 + D - t), arco, aisles: [mid], small, su, sv, skip: 3 });
       if (!box) continue;
-      // (the box: its floor; the third row, alone, its parapet on its edge — the parapet of a piece is on every row's edge —;
-      // the rows over it from the fourth)
+      // (the box: its floor; the third row, alone, its parapet on its edge — the parapet of a piece is on every row's edge)
       const rB = k3(r0 + dp + 2 * TREAD), r3 = k3(rB + TREAD), y3 = k3(yb + 3 * RISE);
       els.push({ k: 'cavea', c: c.map(k3), aneis: [[rB, yb]], fundo: k3(r0 + dp), cor: '#d8c8b0', muro: RISER, fecho: SEAT, arco: span });
       els.push({ k: 'cavea', c: c.map(k3), aneis: [[r3, y3]], fundo: rB, cor: SEAT, parapeito: 0.9, muro: RISER, fecho: SEAT, arco: span });
-      const ab = [[k3(r0 + D - t), yTop]]; for (let j = rows - 1; j >= 4; j--) ab.push([k3(r0 + dp + j * TREAD), k3(yb + j * RISE)]);
-      els.push({ k: 'cavea', c: c.map(k3), aneis: ab, fundo: r3, cor: SEAT, muro: RISER, fecho: SEAT, arco: span });
       // (what stands in it, square to the lot — the arc's tilt there under a tenth —: its middle, the riser's line along it)
       const am = (span[0] + span[1]) / 2, at = r => [c[0] + r * Math.cos(am), c[1] + r * Math.sin(am)];
       const seat = (r, w, d, y0, y1, cor, o) => { const [pu, pv] = at(r); return Object.assign({ k: 'bloco', r: [pu - w / 2, pv - d / 2, pu + w / 2, pv + d / 2].map(k3), y0: k3(y0), y1: k3(y1), cor }, o); };
