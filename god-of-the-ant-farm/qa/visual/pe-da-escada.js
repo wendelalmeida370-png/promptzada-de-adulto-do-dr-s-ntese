@@ -74,6 +74,10 @@ const inward = (p, k) => { const e = p.entrance; const d = p.doors[e.door]; cons
 const rimWhy = (b, p, lv, x, z) => { for (const [dx, dz] of RIM) { const X = x + dx * R, Z = z + dz * R; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, lv, b.id);
   if (!q) return `${X.toFixed(2)},${Z.toFixed(2)} fora da planta`; if (!(q.walk || q.door >= 0)) return `${X.toFixed(2)},${Z.toFixed(2)} na casa ${q.code}`; const f = ups(p, lv).find(s => inRect(s.r, X, Z, 0)); if (f) return `${X.toFixed(2)},${Z.toFixed(2)} no lance ${f.id}`; } return null; };
 const rimOK = (b, p, lv, x, z) => !rimWhy(b, p, lv, x, z);
+// (the body's own step there — Avatar's blocked: the centre and the points of the rim on the side it moves toward (mx, mz), on
+// what the feet walk and off every flight of the storey; null when it steps, else what the first point that does not is on)
+const stepWhy = (b, p, lv, x, z, mx, mz) => { for (const [dx, dz] of RIM) { if ((dx || dz) && dx * mx + dz * mz <= 0.05) continue; const X = x + dx * R, Z = z + dz * R; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, lv, b.id);
+  if (!q) return `${X.toFixed(2)},${Z.toFixed(2)} fora da planta`; if (!(q.walk || q.door >= 0)) return `${X.toFixed(2)},${Z.toFixed(2)} na casa ${q.code}`; const f = ups(p, lv).find(s => inRect(s.r, X, Z, 0)); if (f) return `${X.toFixed(2)},${Z.toFixed(2)} no lance ${f.id}`; } return null; };
 
 // ------------------------------ 1 and 2: every flight of the world's plans ------------------------------
 const blds = [...S.buildings.values()].filter(b => b.built && b.type !== 'ruin' && In.has(b)).sort((a, c) => a.id - c.id);
@@ -84,10 +88,12 @@ for (const b of blds) {
   for (const s of fl) {
     nFl++; const [ax, az] = s.a; const tag = `${b.type}#${b.id} (${b.ip.f}) lance ${s.id} ${s.lv0}→${s.lv1}`;
     // 1. the foot the plan keeps: where the body takes the flight, its whole rim on the feet's floor, off the flights — and from
-    // it, along the flight's line, up to its first step, the rim on that floor all the way: the body takes the flight by walking
-    // into it, and the loft's ladder of a house cut front and back had its foot past the partition, L-447
+    // it, along the flight's line, up to its first step, by the body's own step all the way (stepWhy, Avatar's blocked): the body
+    // takes the flight by walking into it, and the loft's ladder of a house cut front and back had its foot past the partition,
+    // L-447. The step, not the whole rim: walking in, the body slides along what stands beside it — a hut's loft ladder beside
+    // the annex's wall had the side of the rim in the wall's cell, 7 cm off its face, and the body went up it, T-471
     const toStep = () => { const r = s.r, du = s.dir[0], dv = s.dir[1], e0 = du ? (du > 0 ? r[0] : r[2]) : (dv > 0 ? r[1] : r[3]); const e = du ? (du > 0 ? e0 - ax : ax - e0) : (dv > 0 ? e0 - az : az - e0);
-      const K = R + 0.01; if (e <= K) return null; for (let k = Math.max(K, e - 0.02); ; k = Math.max(K, k - 0.02)) { const x = du ? e0 - du * k : ax, z = du ? az : e0 - dv * k; const w = rimWhy(b, p, s.lv0, x, z); if (w) return `a ${(k - R).toFixed(2)} m do primeiro degrau, ${w}`; if (k <= K) return null; } }; // (up to a centimetre from it: there the rim meets it)
+      const K = R + 0.01; if (e <= K) return null; for (let k = Math.max(K, e - 0.02); ; k = Math.max(K, k - 0.02)) { const x = du ? e0 - du * k : ax, z = du ? az : e0 - dv * k; const w = stepWhy(b, p, s.lv0, x, z, du, dv); if (w) return `a ${(k - R).toFixed(2)} m do primeiro degrau, ${w}`; if (k <= K) return null; } }; // (up to a centimetre from it: there the rim meets it)
     if (!atFoot(s, ax, az) || (!open && !rimOK(b, p, s.lv0, ax, az))) footBad.push(`${tag}: o pé ${ax},${az} ${atFoot(s, ax, az) ? 'sem a borda do corpo no chão (' + rimWhy(b, p, s.lv0, ax, az) + ')' : 'fora de onde o corpo toma o lance'}`);
     else if (!open) { const w = toStep(); if (w) footBad.push(`${tag}: do pé ${ax},${az} o corpo não chega ao lance (${w})`); }
     // 2. the way to it — from the door on the entrance's storey, from the top of a flight coming up to the others (a storey below
