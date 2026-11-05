@@ -256,8 +256,15 @@ const fair = stockFair(set);
   }
   G.Falas.say = say0;
   const bought14 = book(e => e[0] > L0 && tried14.some(id => e[4] === 'v:' + id) && (e[8] === 'compra' || e[8] === 'feira')).length;
-  ok('c14 a casa cheia não compra', L14 === 0 && u.every(x => x === 0) && !went && !!v14 && !bought14 && (!fair || said.includes('casa_cheia')) && Math.abs(D.get(H, 'moedas') - c0) < 1e-6 && !bad().length,
-    `a casa #${h.id} com a arca cheia (${r2(held())} de ${r2(capNow())}): ${L14} falta(s), vontade ${u.join(', ')}; ${went ? `ALGUÉM saiu (${goer ? goer.name + ', ' + goer.task.type + (goer.home !== h.id ? ', de outra casa' : '') : '?'})` : 'ninguém saiu em 60 s'}; ${v14 ? `${v14.name}, mandado à feira por tecido, ${bought14 ? 'COMPROU' : 'não comprou'} (falas: ${said.join(', ') || 'nenhuma'}${t14 && v14.task === t14 ? '' : `; agora ${v14.task ? v14.task.type : 'sem tarefa'}`}; moedas da casa ${r2(c0)} → ${r2(D.get(H, 'moedas'))})` : 'ninguém da casa para mandar'}${away14.length ? ` (antes: ${away14.join('; ')})` : ''}`);
+  // (the house's coins: none out of it in the case — nothing paid —, and the balance as the book says it: what came in meanwhile
+  // is the world's — in the Argos of the generation 14 the elder's wage of Clio, of the house, 0,42 from the treasury in the
+  // case's hour —, T-483)
+  const lines14 = book(e => e[0] > L0 && e[5] === 'moedas' && (e[3] === H || e[4] === H));
+  const out14 = r2(lines14.filter(e => e[3] === H).reduce((a, e) => a + e[6], 0)), in14 = r2(lines14.filter(e => e[4] === H).reduce((a, e) => a + e[6], 0));
+  const coins14 = out14 === 0 && Math.abs(D.get(H, 'moedas') - c0 - in14) < 1e-6;
+  const inSaid = in14 ? ` (+${in14} que entraram pelo livro: ${[...new Set(lines14.filter(e => e[4] === H).map(e => e[8]))].join(', ')})` : '';
+  ok('c14 a casa cheia não compra', L14 === 0 && u.every(x => x === 0) && !went && !!v14 && !bought14 && (!fair || said.includes('casa_cheia')) && coins14 && !bad().length,
+    `a casa #${h.id} com a arca cheia (${r2(held())} de ${r2(capNow())}): ${L14} falta(s), vontade ${u.join(', ')}; ${went ? `ALGUÉM saiu (${goer ? goer.name + ', ' + goer.task.type + (goer.home !== h.id ? ', de outra casa' : '') : '?'})` : 'ninguém saiu em 60 s'}; ${v14 ? `${v14.name}, mandado à feira por tecido, ${bought14 ? 'COMPROU' : 'não comprou'} (falas: ${said.join(', ') || 'nenhuma'}${t14 && v14.task === t14 ? '' : `; agora ${v14.task ? v14.task.type : 'sem tarefa'}`}; moedas da casa ${r2(c0)} → ${r2(D.get(H, 'moedas'))}${inSaid}${out14 ? `, ${out14} SAÍRAM DELA` : ''}${coins14 || out14 ? '' : ', FORA DO LIVRO'})` : 'ninguém da casa para mandar'}${away14.length ? ` (antes: ${away14.join('; ')})` : ''}`);
   // c15: room for one thing — the house sends for what it lacks, and buys only what fits (the fair's tables stocked again —
   // the town bought from them while the case waited —, and the clock held in the market's hours: a gathering at the square,
   // an execution, may take the house's people first, as it took them in the doors' world)
@@ -360,11 +367,16 @@ const fair = stockFair(set);
 }
 // ---------------- c7: a save in the middle of the errand: the errand lost does not hold the house; it buys again, one at a time
 {
-  S.time = 0.15; stockFair(set);
+  S.time = 0.15;
   // (a house that can send one of its own right after an errand, as the c1's since T-179: then the house's wait has not grown
   // yet — L-331 —, and the wish of one with a trade, 0,41, is under the day's work, 0,55. In the P2's branch joined with
-  // 4b713db the house of the case had a potter and a fair-keeper, and nobody went in the 120 s after the load, T-290)
-  const h = houseLacking(set, 2, 30, canSend, 'que possa mandar alguém logo depois de um recado (um adulto sem ofício e não trabalhador)'); const hid = h.id;
+  // 4b713db the house of the case had a potter and a fair-keeper, and nobody went in the 120 s after the load, T-290. In the
+  // cases' town, or — the cases before it took its last such house — in the next town of coin with a fair, the oldest first,
+  // as the casa's couples (T-456): the errand and the save are the same in any town of coin; in the metrópole of the
+  // generation 14 the nine cases before took the last house of Argos with a grown one free to send, T-483)
+  const t7 = [set].concat([...S.settlements.values()].filter(s => s !== set && E.coinage(s.fac) && hasB(s, 'feira')).sort((a, b) => (a.founded || 0) - (b.founded || 0) || a.id - b.id)).find(s => homesOf(s, 2, canSend).length) || set;
+  stockFair(t7);
+  const h = houseLacking(t7, 2, 30, canSend, 'que possa mandar alguém logo depois de um recado (um adulto sem ofício e não trabalhador)'); const hid = h.id;
   // (the errand out at the save is the case's premise: the house sends by its own rule, or the hand of c15 does, with the
   // clock held in the fair's hours — in the old metropolis on the tip of L-349 the house of c7 sent nobody in 90 s, before
   // the L-331, T-185 —; after the load, the house sends again by its own rule: that is the case)
@@ -375,7 +387,7 @@ const fair = stockFair(set);
   h2.shopT = undefined; // (the test's hand: the house may send again at once)
   let most = 0; const L0 = S.ledgerN;
   const again = fine(120, () => { let c = 0; for (const o of S.villagers.values()) if (o.task && o.task.casa === hid) c++; most = Math.max(most, c); return c > 0 || watch(); });
-  ok('c7 save no meio do recado', sent && again && most === 1 && !bad().length, `${sent ? 'o recado saiu' : 'o recado NÃO saiu'} antes do save${hd7.said()}; depois do load ${again ? 'a casa mandou de novo' : 'a casa NÃO mandou de novo'} (no máximo ${most} ao mesmo tempo)`);
+  ok('c7 save no meio do recado', sent && again && most === 1 && !bad().length, `${t7.id !== set.id ? `(em ${t7.name}: ${set.name} não tem mais uma casa que possa mandar alguém) ` : ''}${sent ? 'o recado saiu' : 'o recado NÃO saiu'} antes do save${hd7.said()}; depois do load ${again ? 'a casa mandou de novo' : 'a casa NÃO mandou de novo'} (no máximo ${most} ao mesmo tempo)`);
   void L0;
 }
 // ---------------- c10: the skip — the houses buy in the skip too

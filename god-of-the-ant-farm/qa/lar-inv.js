@@ -72,11 +72,15 @@
     // ---- nobody asleep outdoors near the house that serves them to live in — standing, or being raised further over them
     // (lives, the checker's own reading) —, in their own town, with the way to its door open by the map, for more than 5 s of the world:
     // under the works the family slept outdoors with no water and no home, L-371. (The way home that ended off its door twice
-    // — the night where one is, L-231 —, a captive, the jailed, the sea, a cave, the god's body are other causes)
+    // — the night where one is, L-231 —, a captive, the jailed, the sea, a cave, the god's body are other causes; and so is a
+    // house given by the town to one already asleep where they lay — the sleep chosen for another bed or for none, t.stay —:
+    // they sleep there until they wake. In the metrópole of the generation 14 Arne, with no house, asleep by the fire, was
+    // given a new one 5,6 tiles off, and slept on. The family of the L-371 lay down for the house they did not reach, T-485)
     if (out0S !== s) { out0S = s; out0 = new Map(); }
     const outNow = new Map(); const Wd = G.W;
     for (const v of s.villagers.values()) {
       const t = v.task; if (!v.sleeping || v.inside || !t || t.type !== 'sleep' || (t.re || 0) > 2 || v.age < 2) continue;
+      if (t.stay !== undefined && t.stay !== v.home) continue;
       if (!v.home || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.id === body || v.guestOf) continue;
       const h = s.buildings.get(v.home); if (!lives(h) || h.set !== v.set) continue;
       const [fx, fy] = G.Village.frontTile(h); if (G.dist(v.x, v.y, fx, fy) > 12 || !(Wd && Wd.reaches(v, fx, fy))) continue;

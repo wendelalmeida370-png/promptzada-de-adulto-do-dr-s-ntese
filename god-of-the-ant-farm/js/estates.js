@@ -248,7 +248,9 @@
     for (const type in EST) for (const b of E.byType(set.id, type)) {
       initEstate(b);
       const role = G.BDEF[type].role;
-      if (FIELDS[type]) { let ripe = 0, young = 0; for (const p of b.pl) { if (p.g < 0) continue; if (p.f >= 1) ripe++; else if (p.g < 1) young++; } add(role, ripe >= 3 ? G.BDEF[type].jobs : ripe || young ? 1 : 0); }
+      // (and a vat to press or a shelf to haul: the press and the haul are the estate's work too — with the plants bare after
+      // the picking it asked no hand, the board gave its hands to other trades, and the must waited in the vat, L-593)
+      if (FIELDS[type]) { const c = CR[b.crop]; let ripe = 0, young = 0; for (const p of b.pl) { if (p.g < 0) continue; if (p.f >= 1) ripe++; else if (p.g < 1) young++; } const press = !!(c && c.press && ((b.must || 0) >= 2 || ((b.inv && b.inv[c.out]) || 0) > 0)); add(role, ripe >= 3 ? G.BDEF[type].jobs : ripe || young || press ? 1 : 0); }
       else if (type === 'apiario') add(role, b.hv.some(h => h >= 1) ? 1 : 0);
       else if (type === 'salina') add(role, b.salt.filter(s => s >= 1).length >= 3 ? 2 : b.salt.some(s => s >= 1) ? 1 : 0);
       else if (type === 'sericultura') add(role, fac.silk ? 2 : 0);
