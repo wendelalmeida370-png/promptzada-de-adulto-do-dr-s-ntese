@@ -428,8 +428,9 @@ if (want('i')) {
 
 // ------------------------------ (j) a stork's nest, the open plan, a fire ------------------------------
 // (L-533: the nest on the roof of a step — the palace of courtyards of 6 tiles — at the top of the god's picture over the middle
-// of its lot, its back wing, not the courtyard; a house's where it was. L-534: the plan the god opens takes the building's own
-// depth in the four views. And a fire on any tile of a big lot lights it. Nothing of the world written)
+// of its lot, its back wing, not the courtyard; a house's where it was. L-598: each nest after its building in the sorted pass,
+// in the four views — on its roof, not under it: a house's roof hid the whole nest. L-534: the plan the god opens takes the
+// building's own depth in the four views. And a fire on any tile of a big lot lights it. Nothing of the world written)
 if (want('j')) {
   F.blank(); const R = G.Render, S = G.S, W = G.W; const out = []; let okN = false, okP = false, okF = false;
   const b = putBig('palacio', 'romano', 6800, 6, 20, 20), h = putBig('house', 'romano', 6801, 1, 30, 30);
@@ -443,6 +444,10 @@ if (want('j')) {
     const nb = nestAt(1), nh = nestAt(2); const t0 = A.formTop0('palacio', 'romano', 6), base = W.maxH(b.x, b.y, b.w, b.h);
     okN = !!nb && Math.abs(nb.up - (t0 + 1)) < 0.6 && Math.abs(nb.dx) < 0.6 && nb.h === base && !!nh && Math.abs(nh.up - 20) < 0.6 && Math.abs(nh.dx + 4) < 0.6;
     out.push(`o ninho no palácio de 6: ${nb ? nb.up.toFixed(1) : '-'} px sobre a âncora, no meio (o alto do desenho ali, a ala de trás: ${t0.toFixed(1)}; o pátio, no chão), não na altura do telhado clássico; o da casa: ${nh ? nh.up.toFixed(1) : '-'} px, 4 px à esquerda, como era`);
+    // (L-598: in each view, the nest's key in the sorted pass after its building's — painted on its roof, not under it)
+    const late = []; for (let r = 0; r < 4; r++) R.asView(r, () => { for (const hk of G.renderHooks.ents) hk((d, e, x, y) => { if (e && e.n && e.n.type === 'roof') { const host = S.buildings.get(e.n.host); late.push({ r, id: e.n.id, k: R.depth(x, y) + (d - x - y), bk: R.bkey(host) }); } }, [-1e9, -1e9, 1e9, 1e9], 2); });
+    const okO = late.length === 8 && late.every(q => q.k > q.bk); okN = okN && okO;
+    out.push(`nas quatro vistas, ${late.filter(q => q.k > q.bk).length} de ${late.length} ninhos depois do prédio no desenho${okO ? '' : ' — antes: ' + late.filter(q => q.k <= q.bk).map(q => `vista ${q.r} #${q.id} ${q.k.toFixed(2)} ≤ ${q.bk.toFixed(2)}`).join(', ')}`);
     S.nests = [];
     // (the plan open on the palace: the hook's depth against the render's key, in the four views)
     const PV = G.PlanView, In = G.Interiors; G.UI.selected = b; PV.id = b.id; PV.lv = null; In.want(b); for (let k = 0; k < 400 && !In.ready(b); k++) In.pump(50);

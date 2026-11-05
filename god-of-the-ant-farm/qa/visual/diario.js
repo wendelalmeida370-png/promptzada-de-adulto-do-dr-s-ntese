@@ -2,7 +2,9 @@
 //   bash qa/navegador.sh node qa/visual/diario.js [PASTA_DO_JOGO] [SAIDA]
 // The page of a life's diary (js/diario-ui.js), read from the world's own record of it (G.Act.diary: only what the person
 // knows), over the body's eyes and in the god's view. Two families of a town of coin that need a house: one with the coins for
-// it, lived first (where the builders have room for it); one the town's day put to saving for it, lived after. The proofs:
+// it, lived first (where the builders have room for it — and, where the world has none that can pay, one short of coin only,
+// what it lacks put in its house by the proof through the ledger: T-488); one the town's day put to saving for it, lived after.
+// The proofs:
 //   1. the panel over the body's eyes: its key (J) opens and closes it, the HUD's button and the self card's open it; each line
 //      of it says where it came from and the day; only the kinds of the diary the world has lines of (SAIDA/diario-antes.png)
 //   2. the body accepts a purchase — a house for the family, by the house's own offer at the people's store, the act of the
@@ -52,18 +54,24 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       const works = id => { let n = 0; for (const b of S.buildings.values()) if (b.set === id && b.encomenda && !b.built) n++; return n; };
       const saves = o => { const h = S.buildings.get(o.home); return !!(h && h.poupa && fam(o).includes(h.poupa.by)); };
       const short = o => /Falta dinheiro/.test(K.can(o).why || '');
-      const A = L.find(o => K.can(o).ok && works(o.set) + 2 <= K.MAX_WORKS);
+      // (A by the rule, never by name: a family that can pay, in a town whose builders have room for two houses more; where the
+      // world has none, a family there short of coin only — one not saving first: those are B's —, the coins it lacks put in its
+      // house by the proof's hand, through the ledger with the proof's own cause, as the world's goods are born (T-488))
+      const room = o => works(o.set) + 2 <= K.MAX_WORKS; let A = L.find(o => K.can(o).ok && room(o)), given = 0;
+      if (!A) for (const c of [...L.filter(o => room(o) && short(o) && !saves(o)), ...L.filter(o => room(o) && short(o) && saves(o))]) {
+        const n = Math.ceil(K.can(c).price - K.savings(c)) + 1; const r = god(() => G.Depot.make('h:' + c.home, 'moedas', n, { code: 'prova' }));
+        if (r.ok && K.can(c).ok) { A = c; given = n; break; } }
       const B = L.find(o => A && o.home !== A.home && !fam(A).includes(o.id) && o.set === A.set && saves(o) && short(o)) || L.find(o => A && o.home !== A.home && !fam(A).includes(o.id) && saves(o) && short(o));
       if (!A || !B) return { err: `famílias que precisam de casa numa cidade de moeda: ${L.length}; com com que pagar, numa cidade com construtores para mais duas: ${A ? A.name : 'nenhuma'} (com com que pagar: ${L.filter(o => K.can(o).ok).length}); juntando pelo dia da cidade: ${B ? B.name : 'nenhuma'} (juntando: ${L.filter(saves).length})` };
       // (the family short of coin decides now what the day of its town decided — to save: by the god's hand)
       const rb = god(() => K.order(B)); const hb = S.buildings.get(B.home);
       // (what the checker said of the activities before the cases: only what comes after counts)
-      window.__D = { A: A.id, B: B.id, setA: A.set, setB: B.set, hb: hb.id, bad0: QA.check().filter(x => x.sys === 'act').map(x => x.msg) };
-      return { A: `${A.name} #${A.id} (${K.need(A)}, ${Math.floor(K.savings(A))} moedas)`, B: `${B.name} #${B.id} (${K.need(B)}, ${Math.floor(K.savings(B))} moedas)`, town: (S.settlements.get(A.set) || {}).name, townB: (S.settlements.get(B.set) || {}).name,
+      window.__D = { A: A.id, B: B.id, setA: A.set, setB: B.set, hb: hb.id, given, bad0: QA.check().filter(x => x.sys === 'act').map(x => x.msg) };
+      return { given, A: `${A.name} #${A.id} (${K.need(A)}, ${Math.floor(K.savings(A))} moedas)`, B: `${B.name} #${B.id} (${K.need(B)}, ${Math.floor(K.savings(B))} moedas)`, town: (S.settlements.get(A.set) || {}).name, townB: (S.settlements.get(B.set) || {}).name,
         saving: !!(hb.poupa && fam(B).includes(hb.poupa.by)), rb: rb.why || (rb.ok ? 'ok' : '') };
     }, process.env.Q || 'media');
     if (s.err) { ok('o cenário', false, s.err); throw new Error(s.err); }
-    console.log(`(${s.town}: com com que pagar ${s.A}; ${s.townB}: juntando ${s.B} — ${s.saving ? 'a casa junta' : 'a casa NÃO junta: ' + s.rb})`);
+    console.log(`(${s.town}: com com que pagar ${s.A}${s.given ? ` — as ${s.given} moedas que faltavam postas pela prova, pelo livro` : ''}; ${s.townB}: juntando ${s.B} — ${s.saving ? 'a casa junta' : 'a casa NÃO junta: ' + s.rb})`);
     // (the lines of the panel as drawn — DOM —, and as the page made them: the text, the origin and the day of each)
     const panel = () => page.evaluate(() => {
       const c = document.querySelector('#inc-card'); const on = !!c && !c.classList.contains('hidden') && c.classList.contains('diario');
@@ -97,6 +105,9 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       const at = (() => { for (let r = 0; r <= 1.5; r += 0.25) for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) { const x = fx + dx * r, y = fy + dy * r; if (G.W.walkableXY(x, y)) return [x, y]; } return null; })();
       if (!at || !G.Avatar.place(at[0], at[1])) return { err: `nenhum chão diante do armazém ${st.type}#${st.id} (${fx},${fy})` };
       window.__VIS.warm(1); window.__VIS.f(4);
+      // (A armed by the proof — T-488 —: what its household has spent of those coins since, put back the same way before it
+      // buys — the family that can pay is the scenario, not what the house spent on the way)
+      if (D0.given) { const c = K.can(v); if (!c.ok && /Falta dinheiro/.test(c.why || '')) { const n = Math.ceil(c.price - K.savings(v)) + 1; D0.given += n; G.inSim++; try { G.Depot.make('h:' + v.home, 'moedas', n, { code: 'prova' }); } finally { G.inSim--; } } }
       const o = G.Act.offers(v, v.x, v.y, 2.6 / TL + 2).find(q => q.def === 'casa' && q.act === 'encomendar');
       if (!o) return { err: 'nenhuma oferta da casa diante do armazém: ' + G.Act.offers(v, v.x, v.y, 2.6 / TL + 2).map(q => q.def + '.' + q.act).join(', ') };
       if (o.ok === false) return { err: 'a oferta da casa recusada: ' + o.why };
