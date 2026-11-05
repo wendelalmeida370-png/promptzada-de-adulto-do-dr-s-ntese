@@ -8,6 +8,8 @@
 //  t4 ninguém servido do nada: o que se serviu numa noite cabe no que a prateleira tinha e no que o taverneiro comprou
 //  t5 o deus derruba a taverna no meio da noite: o dia acaba ali, a prateleira sai pelo livro ('ruina'), os fregueses saem
 //  t6 sem demanda: as casas da cidade sem moeda não vêm — a taverna aberta e vazia não é defeito (o verificador limpo)
+//  t7 a noite cai com gente à mesa: ninguém levado pelo trabalhinho da noite (L-591) — saem no sono, no fechar, na fome
+//  t8 o taverneiro longe, a caminho do balcão: quem espera se serve no balcão e paga como ao taverneiro (L-592)
 //  e nenhum erro de módulo nem aviso no console.
 //   node qa/taverna.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/taverna.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
@@ -129,6 +131,68 @@ const digest = op => JSON.stringify([op.st, op.data.servidos, op.data.receita, o
     if (op) liveSec(120, () => !A.live(op), bad, broke);
     ok('t6 sem-demanda', !!op && op.data.servidos === 0 && !bad.length, op ? `as casas sem moeda: ${op.data.servidos} servidos, ${op.data.recusas} recusas (${op.st}); ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'não abriu');
   }
+}
+// (the guests of the cases t7 and t8: the town's grown people, awake, fed and rested, with their hands free and — in a people of
+// coin — the price of a round, nearest the tavern first; sent by the world's own door, T.visitTask, which calls the keeper)
+// (not the night watch nor the smuggler, whose work of the night still calls)
+const guests = (b, n) => [...S().villagers.values()].filter(v => v.set === b.set && v.age >= 16 && v.age < 62 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.sleeping && !A.isBody(v) && v.role !== 'taverneiro' && v.role !== 'guerreiro' && v.role !== 'contrabandista' && !(G.Vg.nightWatch && G.Vg.nightWatch.get(v.set) === v.id) && v.hunger < 40 && v.energy > 50 && !(v.carry && v.carry.n > 1e-6) && (!v.task || v.task.pri < 1.5) && (!T.withCoin(b) || E.purse(v) >= 1))
+  .sort((a, c) => G.dist2(a.x, a.y, b.x, b.y) - G.dist2(c.x, c.y, b.x, b.y) || a.id - c.id).slice(0, n);
+const send = (b, who) => who.filter(v => { G.Vg.endTask(v); return !!T.visitTask(v, G.Vg.H); });
+// ---------------- t7 night falls on the guests at the tables ----------------
+// (the evening's guests, the night falling while they sit: none taken by the night's little work of one awake with nothing to
+// do — of priority 1, it took everyone at the tables at the fall of night, long before the closing and their bed, L-591 —; they
+// leave at their bed, the closing, hunger)
+{
+  fresh(); const b = S().buildings.get(P.id); ready(b); const bad = [];
+  liveSec(30, () => !!T.dia(b), bad); const op = T.dia(b);
+  let went = [], night = new Set(), taken = [], prev = new Set();
+  if (op) {
+    S().time = 0.69; // (the test's hand: the evening, a little before the night — G.isNight from 0.73)
+    went = send(b, guests(b, 4)); const ids = went.map(v => v.id);
+    liveSec(40, () => !A.live(op) || S().time > 0.86, bad, () => {
+      if (!A.live(op)) return;
+      // (at the tables at the fall of night: seen there from a second before it; and who, on the errand a second ago — on the
+      // way or at a table —, has left it at night for the work of the night — not the watch's nor the smuggler's: they are not
+      // of the guests)
+      if (S().time >= 0.725) for (const id of ids) if (op.data.mesa[id]) night.add(id);
+      const now = new Set(ids.filter(id => { const v = S().villagers.get(id); return v && v.task && v.task.type === 'tavern' && v.task.op === op.id; }));
+      if (G.isNight()) for (const id of prev) { const v = S().villagers.get(id); if (v && !now.has(id) && v.task && v.task.kind === 'work' && v.task.type !== 'patrol' && taken.length < 4) taken.push(`${v.name} → ${v.task.type} às ${r2(S().time)}`); }
+      prev = now;
+    });
+  }
+  ok('t7 a-noite-cai', !!op && went.length >= 2 && night.size >= 2 && !taken.length && !bad.length,
+    op ? `${went.length} da cidade mandados à taverna às 0.69; ${night.size} à mesa quando a noite caiu (0.73)${taken.length ? `; LEVADOS PELO TRABALHO DA NOITE: ${taken.join(', ')}` : ', nenhum levado pelo trabalho da noite'}; ${op.data.servidos} servidos${bad.length ? '; ' + bad.slice(0, 2).join(' | ') : ''}` : 'não abriu');
+}
+// ---------------- t8 the keeper far, on his way to the counter ----------------
+// (the keeper called to the counter from the far end of the town — the test's hand puts him at the building of his town
+// farthest from the tavern that he reaches, his errand to the counter given —: a guest who waits a while with nobody at the
+// counter serves himself there and pays as to the keeper; called from the market across the town, the keeper walked half a
+// minute, the guests waited for him all of it, and none served himself, L-592)
+{
+  fresh(); const b = S().buildings.get(P.id); ready(b); const bad = [];
+  liveSec(30, () => !!T.dia(b), bad); const op = T.dia(b); const k = T.keeperOf(b);
+  let far = 0, went = [], self = 0, waited = [], walk = 0; const c0 = S().clock;
+  if (op && k) {
+    S().time = 0.63;
+    const [tx, ty] = V.frontTile(b); let at = null;
+    for (const o of [...S().buildings.values()].filter(q => q.set === b.set && q.built && q.id !== b.id).sort((p, q) => G.dist2(q.x, q.y, tx, ty) - G.dist2(p.x, p.y, tx, ty) || p.id - q.id)) {
+      const [fx, fy] = V.frontTile(o); const x0 = k.x, y0 = k.y; k.x = fx + 0.5; k.y = fy + 0.5;
+      if (G.W.walkableXY(k.x, k.y) && G.W.reaches(k, tx, ty)) { at = [fx, fy]; break; } k.x = x0; k.y = y0; }
+    if (at) { G.Vg.endTask(k); k.inside = 0; k.path = null; far = r2(G.dist(k.x, k.y, tx, ty)); G.Vg.setTask(k, { type: 'atender', id: b.id, op: op.id, pri: 1.05, st: 0 }); }
+    went = send(b, guests(b, 3)); const ids = new Set(went.map(v => v.id));
+    liveSec(45, () => !A.live(op) || !(k.task && k.task.type === 'atender' && k.task.st === 0), bad, () => {
+      if (!A.live(op) || !(k.task && k.task.type === 'atender' && k.task.st === 0)) return;
+      // (the keeper still on his way: a round taken by a guest's own hand, and none left waiting past the while)
+      self = seen.filter(e => e[7] === op.id && e[8] === 'taverna' && ids.has(e[9]) && e[5] !== 'moedas').length;
+      for (const id of ids) { const v = S().villagers.get(id); const m = op.data.mesa[id]; const wt = v && m && m.st === 2 && v.task && v.task.type === 'tavern' ? v.task.wt || 0 : 0;
+        if (wt > 16 && waited.length < 3 && !waited.includes(v.name)) waited.push(v.name); }
+      walk = r2(S().clock - c0);
+    });
+  }
+  // (the case where it happened: a round by a guest's own hand while the keeper walked — the while is 12 s at the table —, and
+  // none left waiting past it)
+  ok('t8 o-taverneiro-longe', !!op && !!k && far >= 10 && went.length >= 1 && self >= 1 && !waited.length && !bad.length,
+    op && k ? `${k.name} chamado ao balcão de ${far} casas dali (${walk} s a caminho); ${went.length} da cidade à mesa; enquanto ele vinha, ${self} rodada(s) servida(s) pela mão do próprio freguês${waited.length ? `; ESPERARAM SEM SE SERVIR: ${waited.join(', ')}` : ''}${bad.length ? '; ' + bad.slice(0, 2).join(' | ') : ''}` : 'não abriu ou sem taverneiro');
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `TAVERNA: FALHOU (${fails.join(', ')})` : 'TAVERNA: ok');

@@ -47,6 +47,8 @@
 //      e carregar, o verificador limpo
 //   D9 os casos ruins: a obra salva no meio e acabada (o egípcio e a pirâmide asteca), o grande templo derrubado, a regra do
 //      verificador
+//   D10 os fiéis dentro do templo de 4 de cada povo num mundo novo, nos lugares da tabela da planta (bancos, esteiras, de pé
+//      diante da cela) — o templo só de pé também —, nunca mais que os lugares; um save no meio; todos terminam (L-590)
 // E a F, a taverna — a taverna (3 casas) e a hospedaria (4) dos seis povos: a taverna não tem forma, os degraus maiores são a
 // planta do lote do tamanho (TYPES.taverna.sizes), a estalagem de int-familias.js, na sua família (estalagem.andar):
 //   F1 a escada oferecida a todo povo pela planta do tamanho
@@ -72,7 +74,11 @@ const In = G.Interiors, Fo = G.Forma, Sp = G.Space, Es = G.Escala;
 const ONLY = process.argv[2] ? process.argv[2].split(',') : null;
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | monumental ${name} | ${info}`); if (!c) fails.push(name); };
 const some = L => (process.env.VERB ? L : L.slice(0, 3));
-const clock = () => Number(process.hrtime.bigint() / 1000n) / 1000;
+// (the proofs' time is this process's own CPU, not the wall's: the regression runs them with the four cores taken, and there the
+// wall of the same palace's table went from 0.3 s to 1.4 s, the dearest a different palace each run, while its CPU stayed 0.15
+// to 0.24 s — T-475. The process's CPU, the main thread's and its helpers', is never less than the wall's on a free machine:
+// the targets as strict as they were)
+const clock = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };
 const POVOS = ['grego', 'romano', 'egipcio', 'nordico', 'asteca', 'classico'], LADOS = ['S', 'E', 'N', 'W'];
 // (the peoples with a drawing of their own: the classical people's is the Greek's, as the god draws it — js/forma.js)
 const PROPRIOS = POVOS.filter(c => c !== 'classico');
@@ -149,10 +155,10 @@ function B2() {
   const ts = times.slice().sort((a, b) => b.ms - a.ms); const med = times.map(q => q.ms).sort((a, b) => a - b)[times.length >> 1];
   // (the dearest made again, warm, three times: the least is its cost — the first ones paid the engine's warming)
   const again = ts.slice(0, 3).map(q => { const m = made.find(x => tag(x) === q.k); let best = Infinity; for (let r = 0; r < 3; r++) { In.uncache(); const a = clock(); In.makeFam(m.b, m.b.ip, FAM); best = Math.min(best, clock() - a); } return [q.k, best]; }).sort((a, b) => b[1] - a[1]);
-  ok('B2e o tempo de fazer a planta (alvo: 400 ms em Node)', again[0][1] < 400, `a mais cara ${again[0][1].toFixed(0)} ms (${again[0][0]}, sem cache); a mediana ${med.toFixed(0)} ms na rodada`);
+  ok('B2e o tempo de fazer a planta (alvo: 400 ms em Node)', again[0][1] < 400, `a mais cara ${again[0][1].toFixed(0)} ms de CPU (${again[0][0]}, sem cache); a mediana ${med.toFixed(0)} ms na rodada`);
   // (the places' table of each palace — In.table, the share-out's —, the first time the world asks for it: its milliseconds)
   const tab = made.filter(m => m.s === 'S' && m.p.ok).map(m => { const a = clock(); const t = In.table(m.b); return [`${PL(m.t)}/${m.c}`, clock() - a, t ? t.spots.length : 0]; }).sort((a, b) => b[1] - a[1]);
-  ok('B2f a tabela dos lugares de cada palácio a tempo (alvo: 1 s em Node)', tab.length === PAL.length * POVOS.length && tab.every(q => q[2] > 0) && tab[0][1] < 1000, `a mais cara ${tab[0][0]} ${tab[0][1].toFixed(0)} ms (${tab[0][2]} lugares); ${tab.slice(1).map(([k, ms, n]) => `${k} ${ms.toFixed(0)} ms (${n})`).join(', ')}`);
+  ok('B2f a tabela dos lugares de cada palácio a tempo (alvo: 1 s em Node)', tab.length === PAL.length * POVOS.length && tab.every(q => q[2] > 0) && tab[0][1] < 1000, `a mais cara ${tab[0][0]} ${tab[0][1].toFixed(0)} ms de CPU (${tab[0][2]} lugares); ${tab.slice(1).map(([k, ms, n]) => `${k} ${ms.toFixed(0)} ms (${n})`).join(', ')}`);
 }
 // ---------------------------------------------------------------- B3: the palace against the house
 function B3() {
@@ -540,9 +546,9 @@ function D2() {
   // first time the world asks for it — In.table, the share-out's —: its milliseconds)
   const ts = T.slice().sort((a, b) => b.ms - a.ms); const med = T.map(q => q.ms).sort((a, b) => a - b)[T.length >> 1];
   const again = ts.slice(0, 3).map(m => { let best = Infinity; for (let r = 0; r < 3; r++) { In.uncache(); const a = clock(); In.makeFam(m.b, m.b.ip, TFAM); best = Math.min(best, clock() - a); } return [ttag(m), best]; }).sort((a, b) => b[1] - a[1]);
-  ok('D2e o tempo de fazer a planta (alvo: 400 ms em Node)', again[0][1] < 400, `a mais cara ${again[0][1].toFixed(0)} ms (${again[0][0]}, sem cache); a mediana ${med.toFixed(0)} ms na rodada`);
+  ok('D2e o tempo de fazer a planta (alvo: 400 ms em Node)', again[0][1] < 400, `a mais cara ${again[0][1].toFixed(0)} ms de CPU (${again[0][0]}, sem cache); a mediana ${med.toFixed(0)} ms na rodada`);
   const tab = T.filter(m => m.n === 8 && m.s === 'S' && m.p.ok).map(m => { const a = clock(); const t = In.table(m.b); return [m.c, clock() - a, t ? t.spots.length : 0]; }).sort((a, b) => b[1] - a[1]);
-  ok('D2f a tabela dos lugares do santuário monumental a tempo (alvo: 1 s em Node)', tab.length === POVOS.length && tab[0][1] < 1000, tab.map(([c, ms, n]) => `${c} ${ms.toFixed(0)} ms (${n} lugares)`).join(', '));
+  ok('D2f a tabela dos lugares do santuário monumental a tempo (alvo: 1 s em Node)', tab.length === POVOS.length && tab[0][1] < 1000, tab.map(([c, ms, n]) => `${c} ${ms.toFixed(0)} ms de CPU (${n} lugares)`).join(', '));
 }
 // ---------------------------------------------------------------- D3: the monumental sanctuary against the village shrine
 function D3() {
@@ -678,6 +684,70 @@ function D9() {
       if (!caught || quiet) out.push(`a regra: ${caught} avisos com a família da receita, ${quiet} com a da forma`); else said.push('a regra do verificador pega a família da receita'); } }
   ok('D9a os casos ruins do templo: a obra salva no meio, o templo derrubado, o verificador limpo — e a sua regra pega a planta de outra família', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
 }
+// ---------------------------------------------------------------- D10: the faithful inside, at the plan's places
+// (in a new world, the temple of four of each people with a town by the god's hand: the faithful called to prayer go in by the
+// door while the plan's table has a place of prayer free — a bench, a mat, a place where they stand before the cella:
+// G.Lar.prayIn —, never more inside than its places, each one at a place of prayer of the plan; a save in the middle; all
+// finish. The temples with no piece for the faithful, all of them standing — the Greek's of four —: by In.slots, the pieces
+// alone, the world sent no one in, L-590)
+function D10() {
+  // (a year first, the towns with their houses; then on to the late morning, its people up and fed — at most a day of the world)
+  M.novo({ seed: 103, type: 'continente', size: 128, tribes: 6, temper: 'normal' }); M.saltar(1);
+  for (let k = 0; k < G.DAY_LEN * 10 && !(G.S.time > 0.4 && G.S.time < 0.45); k++) G.debug.step(0.1);
+  const USES = ['rezar', 'sentar'], out = [], T = []; let saved = false, inside = 0, kept = -1, q0 = 0;
+  const placesIn = b => { const t = In.table(b); return t ? USES.reduce((k, u) => k + (t.byUse.get(u) || []).length, 0) : 0; };
+  const nearest = v => { let best = null, bd = 1e9; for (const b of G.S.buildings.values()) if (b.built && (b.type === 'temple' || b.type === 'monument') && b.set === v.set) { const d = G.dist2(v.x, v.y, b.x, b.y); if (d < bd) { bd = d; best = b; } } return best; };
+  const housed = v => { const h = v.home && G.S.buildings.get(v.home); return !!(h && h.built && h.type !== 'ruin'); };
+  // (the faithful the day will not call away on their way in and at their prayer — as lar.js l11: fed, rested, not of the army)
+  const free = v => housed(v) && !v.captive && v.age >= 16 && v.age < 70 && !v.sleeping && !(G.S.avatar && G.S.avatar.id === v.id) && v.role !== 'sacerdote' && v.role !== 'guerreiro' && v.hunger < 45 && v.energy > 35 && !v.aboard && !v.jail && !v.ug && (!v.task || v.task.pri < 2);
+  const praying = q => q.who.filter(v => v.inside === q.b.id && v.task && v.task.type === 'pray' && v.task.st === 2);
+  G.inSim++; // (the test's hand counts as the world's)
+  try {
+    q0 = qaS().length;
+    for (const c of presentes(POVOS)) {
+      const set = [...G.S.settlements.values()].find(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c);
+      const b = G.Village.handFound(set, 'temple', 'templo', { built: true, R: 40 }); if (!b) { out.push(`${c}: o templo de 4 sem lote`); continue; }
+      const n = placesIn(b), pieces = USES.reduce((k, u) => k + In.slots(b, u).length, 0); const [fx, fy] = G.Village.frontTile(b); const who = [], used = [];
+      // (the test's hand: the faithful a few steps from its door, where this temple is the nearest of their town's — the prayer goes
+      // to the nearest temple or monument —, as lar.js l11)
+      for (const v of [...G.S.villagers.values()].filter(q => q.set === set.id && free(q)).sort((a, z) => G.dist2(a.x, a.y, fx, fy) - G.dist2(z.x, z.y, fx, fy) || a.id - z.id)) {
+        if (who.length >= Math.min(n + 2, 8)) break;
+        const x0 = v.x, y0 = v.y, in0 = v.inside; let at = null;
+        for (let r = 1.5; r <= 4.5 && !at; r += 0.5) for (let k = 0; k < 16 && !at; k++) { const a = k / 16 * Math.PI * 2, x = fx + Math.cos(a) * r, y = fy + Math.sin(a) * r;
+          if (!G.W.inb(x, y) || !G.W.walkableXY(x, y) || used.some(u => G.dist(u[0], u[1], x, y) < 0.8)) continue;
+          v.x = x; v.y = y; v.inside = 0; if (G.W.reaches(v, fx, fy) && nearest(v) === b) at = [x, y]; }
+        if (at) { used.push(at); v.path = null; v.moving = false; who.push(v); } else { v.x = x0; v.y = y0; v.inside = in0; }
+      }
+      T.push({ c, b, n, pieces, who, most: 0, over: 0, at: new Set(), stand: new Set(), off: [] });
+    }
+    for (const q of T) for (const v of q.who) G.Vg.setTask(v, { type: 'pray', pri: 1.05 }); // (called to prayer — over the day's work)
+    for (let k = 0; k < 1200; k++) {
+      G.S.weather.storm = 0; G.debug.step(0.1); let busy = false;
+      for (const q of T) {
+        q.who = q.who.map(v => G.S.villagers.get(v.id)).filter(Boolean); const inn = praying(q);
+        q.most = Math.max(q.most, inn.length); if (inn.length > q.n) q.over++;
+        for (const v of inn) { const pl = In.placeOf(v); if (pl && USES.includes(pl.use)) { q.at.add(v.id); if (pl.it && pl.it.mark) q.stand.add(v.id); } else if (q.off.length < 2) q.off.push(`${v.name} em ${pl ? pl.use || pl.pose : 'nenhum lugar'}`); }
+        if (q.who.some(v => v.task && v.task.type === 'pray')) busy = true;
+      }
+      // (a save while some pray inside: on with it there — the same people inside, at prayer)
+      if (!saved) { const ins = [].concat(...T.map(q => praying(q).map(v => [v.id, q.b.id]))); if (ins.length >= 2) { saved = true; inside = ins.length; M.salvarCarregar(); kept = ins.filter(([id, bid]) => { const o = G.S.villagers.get(id); return o && o.inside === bid && o.task && o.task.type === 'pray' && o.task.st === 2; }).length; for (const q of T) q.b = G.S.buildings.get(q.b.id); } }
+      if (saved && !busy) break;
+    }
+  } finally { G.inSim--; }
+  const bad = qaS();
+  for (const q of T) { const key = `T4/${q.c} #${q.b.id}`;
+    if (!q.n) out.push(`${key}: nenhum lugar de rezar na tabela`);
+    else if (q.who.length >= 2 && q.at.size < 2) out.push(`${key}: ${q.at.size} rezaram dentro (de ${q.who.length} chamados; ${q.n} lugares, ${q.pieces} de peça)`);
+    if (q.over) out.push(`${key}: mais dentro que os ${q.n} lugares em ${q.over} passos`); if (q.off.length) out.push(`${key}: rezando fora de um lugar da planta (${q.off.join(', ')})`);
+    const left = q.who.filter(v => (v.task && v.task.type === 'pray') || v.inside === q.b.id).length; if (left) out.push(`${key}: ${left} ainda rezando ou dentro no fim`); }
+  // (the temples whose faithful all stand — no bench, no mat —, by the rule: their standing places used)
+  const solo = T.filter(q => q.n && !q.pieces && q.who.length >= 2), stood = T.reduce((k, q) => k + q.stand.size, 0);
+  for (const q of solo) if (!q.stand.size) out.push(`T4/${q.c}: o templo só de pé, ninguém rezou de pé dentro`);
+  if (!saved) out.push('nenhum save no meio (nunca dois rezando dentro)'); else if (kept !== inside) out.push(`o save no meio com ${inside} dentro: só ${kept} seguiram`);
+  if (bad.length > q0) out.push(`o verificador S0–S2: ${bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ')}`);
+  ok('D10a os fiéis dentro do templo de 4 de cada povo, nos lugares da tabela da planta — bancos, esteiras, de pé diante da cela —: nunca mais que os lugares, cada um num lugar de rezar; o templo só de pé também; um save no meio; todos terminam', T.length >= 5 && solo.length >= 1 && !out.length && M.limpo(),
+    `${out.length ? some(out).join(' / ') + ' — ' : ''}rezaram dentro: ${T.map(q => `${q.c} ${q.at.size} de ${q.who.length} (${q.n} lugares, ${q.pieces} de peça; até ${q.most} juntos${q.stand.size ? `, ${q.stand.size} de pé` : ''})`).join(', ')}; ${solo.length} só de pé (${solo.map(q => q.c).join(', ')}), ${stood} rezaram de pé; ${saved ? `o save no meio com ${inside} dentro, ${kept} seguiram` : 'sem save'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
+}
 // ================================================================ F: the tavern (taverna 3, hospedaria 4)
 const VPL = [3, 4], VFAM = 'estalagem.andar', TODOS = POVOS;
 const vrec = (c, s, n) => In.newRecord({ id: 0, type: 'taverna', style: c, x: 8, y: 8, w: n, h: n }, { t: 'taverna', c, e: 3, k: 'ae', cl: c === 'egipcio' ? 'q' : 't', fl: 0, d: 1, w: 1, pw: 0, s, o: (1 << n) - 1, n });
@@ -712,9 +782,9 @@ function F2() {
   ok('F2d a casca de longe igual à da planta', !sh.length, `${sh.length} cascas diferentes${sh.length ? ': ' + some(sh).map(vtag).join(', ') : ''}`);
   const ts = V.slice().sort((a, b) => b.ms - a.ms); const med = V.map(q => q.ms).sort((a, b) => a - b)[V.length >> 1];
   const again = ts.slice(0, 3).map(m => { let best = Infinity; for (let r = 0; r < 3; r++) { In.uncache(); const a = clock(); In.makeFam(m.b, m.b.ip, VFAM); best = Math.min(best, clock() - a); } return [vtag(m), best]; }).sort((a, b) => b[1] - a[1]);
-  ok('F2e o tempo de fazer a planta (alvo: 400 ms em Node)', again[0][1] < 400, `a mais cara ${again[0][1].toFixed(0)} ms (${again[0][0]}, sem cache); a mediana ${med.toFixed(0)} ms na rodada`);
+  ok('F2e o tempo de fazer a planta (alvo: 400 ms em Node)', again[0][1] < 400, `a mais cara ${again[0][1].toFixed(0)} ms de CPU (${again[0][0]}, sem cache); a mediana ${med.toFixed(0)} ms na rodada`);
   const tab = V.filter(m => m.n === 4 && m.s === 'S' && m.p.ok).map(m => { const a = clock(); const t = In.table(m.b); return [m.c, clock() - a, t ? t.spots.length : 0]; }).sort((a, b) => b[1] - a[1]);
-  ok('F2f a tabela dos lugares da hospedaria a tempo (alvo: 1 s em Node)', tab.length === TODOS.length && tab[0][1] < 1000, tab.map(([c, ms, n]) => `${c} ${ms.toFixed(0)} ms (${n} lugares)`).join(', '));
+  ok('F2f a tabela dos lugares da hospedaria a tempo (alvo: 1 s em Node)', tab.length === TODOS.length && tab[0][1] < 1000, tab.map(([c, ms, n]) => `${c} ${ms.toFixed(0)} ms de CPU (${n} lugares)`).join(', '));
 }
 // ---------------------------------------------------------------- F3: the inn
 function F3() {
@@ -846,7 +916,7 @@ function G2() {
   ok('G2c a mesma planta duas vezes da mesma entrada; a casca de longe igual à da planta', !diff.length && !shd.length, `${diff.length} plantas diferentes, ${shd.length} cascas diferentes${diff.concat(shd).length ? ': ' + some(diff.concat(shd)).map(gtag).join(', ') : ''}`);
   const ts = H.slice().sort((a, b) => b.ms - a.ms); const again = ts.slice(0, 3).map(m => { let best = Infinity; for (let r = 0; r < 3; r++) { In.uncache(); const a = clock(); In.makeFam(m.b, m.b.ip, GFAM); best = Math.min(best, clock() - a); } return [gtag(m), best]; }).sort((a, b) => b[1] - a[1]);
   const tab = H.filter(m => m.s === 'S' && m.wb === 2 && m.p.ok).map(m => { const a = clock(); In.table(m.b); return clock() - a; }).sort((a, b) => b - a);
-  ok('G2d o tempo de fazer a planta (alvo: 400 ms) e a tabela dos lugares (alvo: 1 s) em Node', again[0][1] < 400 && tab[0] < 1000, `a planta mais cara ${again[0][1].toFixed(0)} ms (${again[0][0]}, sem cache); a tabela mais cara ${tab[0].toFixed(0)} ms`);
+  ok('G2d o tempo de fazer a planta (alvo: 400 ms) e a tabela dos lugares (alvo: 1 s) em Node', again[0][1] < 400 && tab[0] < 1000, `a planta mais cara ${again[0][1].toFixed(0)} ms de CPU (${again[0][0]}, sem cache); a tabela mais cara ${tab[0].toFixed(0)} ms de CPU`);
 }
 // ---------------------------------------------------------------- G3: standing in the world; the bad cases
 function G3() {
@@ -868,7 +938,7 @@ function G3() {
       `${res.length} de pé (${res.map(tell).join(', ')}); ${alive} de pé e com planta depois do ano; ${razed}; o verificador S0–S2: ${q0} antes, ${bad.length} com elas, ${bad1.length} depois de um ano, ${bad2.length} depois do save${bad.concat(bad1, bad2).length ? ' (' + bad.concat(bad1, bad2).slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
 }
 for (const [k, f] of [['B1', B1], ['B2', B2], ['B3', B3], ['B4', B4], ['B5', B5], ['B6', B6], ['B7', B7], ['B8', B8], ['B9', B9], ['B10', B10], ['B11', B11], ['B12', B12], ['B13', B13], ['B14', B14], ['B15', B15], ['B16', B16],
-  ['D1', D1], ['D2', D2], ['D3', D3], ['D4', D4], ['D5', D5], ['D6', D6], ['D7', D7], ['D8', D8], ['D9', D9],
+  ['D1', D1], ['D2', D2], ['D3', D3], ['D4', D4], ['D5', D5], ['D6', D6], ['D7', D7], ['D8', D8], ['D9', D9], ['D10', D10],
   ['F1', F1], ['F2', F2], ['F3', F3], ['F4', F4], ['F4b', F4b], ['F5', F5], ['F6', F6], ['G1', G1], ['G2', G2], ['G3', G3]]) if (want(k)) f();
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
 process.exit(fails.length ? 1 : 0);

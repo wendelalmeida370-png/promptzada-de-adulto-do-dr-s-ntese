@@ -1193,7 +1193,9 @@ if (want('l11', 'l11b')) {
   // (the temple with the most faithful for whom it is the nearest — the prayer goes to the nearest temple or monument of
   // one's own town, villagers.js —, in this world or, with too few, in the metropolis)
   const nearest = v => { let best = null, bd = 1e9; for (const b of S.buildings.values()) if (b.built && (b.type === 'temple' || b.type === 'monument') && b.set === v.set) { const d = G.dist2(v.x, v.y, b.x, b.y); if (d < bd) { bd = d; best = b; } } return best; };
-  const placesOf = b => { const p = G.Interiors.plan(b); return p && p.ok ? p.items.reduce((n, it) => n + it.spots.filter(sp => sp.use === 'rezar' || sp.use === 'sentar').length, 0) : 0; };
+  // (the places of prayer as the world counts them — G.Lar.prayIn: the plan's table, the pieces' and the marks' where the
+  // faithful stand, the usable ones, L-590)
+  const placesOf = b => { const p = G.Interiors.plan(b); const t = p && p.ok ? G.Interiors.table(b) : null; return t ? ['rezar', 'sentar'].reduce((n, u) => n + (t.byUse.get(u) || []).length, 0) : 0; };
   // (the faithful the day will not call away on their way in and at their prayer: a meal comes at a hunger of 60, the bed at a
   // strength of 15, and either takes one from the prayer, as it should; and not of the army, which calls its own to drill and
   // to its assemblies, T-276)
