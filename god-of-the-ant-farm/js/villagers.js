@@ -1367,7 +1367,7 @@
             t.st = 3;
             // (the one spoken to stops a moment to talk — from the day's work too, for a courtship —, never from the leg of an
             // operation under way nor from a load that has somewhere to go (Vg.handsBusy, D-094): a courtship took Ivar, a
-            // builder of Hedeby, on his walk to the store for the stone of a work, and its load never came, L-509)
+            // builder of Hedeby, on his walk to the store for the stone of a work, and its load never came, L-508)
             if ((!o.task || o.task.pri <= (t.type === 'court' ? 1 : 0.9)) && !Vg.handsBusy(o)) setTask(o, { type: 'talk', id: v.id, pri: 0.9, wait: 4, kind: 'talk', court: t.type === 'court' });
           }
           v.act = 'talk'; G.faceTo(v, o.x - v.x, o.y - v.y);

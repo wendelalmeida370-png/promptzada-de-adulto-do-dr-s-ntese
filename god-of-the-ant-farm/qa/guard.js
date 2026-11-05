@@ -262,7 +262,7 @@ const LEDGER_OK27 = [
 // as mãos livres (o pickExecutioner e o pickHerald perguntam ao handsBusy); (5) o homem da ordem secreta pergunta ao Vg.busy
 // antes de seguir alguém (L-456); (6) a tripulação de uma viagem não leva mãos ocupadas (L-458); (7) nem tira ninguém do
 // refúgio da caverna (L-459); (8) nem as escolhas da guerra — a leva, o bando, as tripulações do ataque e da frota (L-461);
-// (9) nem o mercador de uma caravana, e a conversa não para quem está na perna de uma operação (L-508, L-509)
+// (9) nem o mercador de uma caravana, e a conversa não para quem está na perna de uma operação (L-508)
 { const RX = /G\.Vg\.setTask\(.*?type:\s*'(justice|assembly|funeral|celebrate|petition)'.*?pri:\s*([0-9.]+)/;
   for (const f of files) { if (f === 'villagers.js') continue; src[f].forEach((line, k) => { const m = line.match(RX); if (!m || +m[2] >= 3) return; const near = src[f].slice(Math.max(0, k - 8), k + 1).join('\n'); if (!/Vg\.(busy|handsBusy)\(/.test(near)) fails.push(`mãos ocupadas: ${f}:${k + 1} chama alguém para ${m[1]} (${m[2]}) por setTask sem perguntar ao Vg.busy (D-094): ${line.trim().slice(0, 100)}`); }); }
   const fe = src['festivals.js'] || []; const fr = fe.findIndex(l => /^\s*function free\(v\)/.test(l));
@@ -303,7 +303,7 @@ const LEDGER_OK27 = [
   at('fleets.js', /^\s*const cands = \[\.\.\.S\.villagers\.values\(\)\]\.filter\(.*v\.age >= 24/, 1, 'o almirante da frota (os candidatos do form)');
   // 38 (9). o mercador de uma caravana (trade.js, o launch; politics.js, o considerTrade) é escolhido com as mãos livres, e a
   // conversa só para quem ouve (o namoro, a visita: villagers.js) fora da perna de uma operação — a caravana levou o ator do
-  // palco, e um namoro o construtor do caminho do armazém (L-508, L-509)
+  // palco, e um namoro o construtor do caminho do armazém (L-508)
   at('trade.js', /^\s*let m = null;/, 4, 'o mercador da caravana (o launch)');
   at('politics.js', /^\s*let tr = null;/, 2, 'o mercador da troca entre povos (o considerTrade)');
   at('villagers.js', /setTask\(o, \{ type: 'talk', id: v\.id/, 1, 'a conversa que para quem ouve (o namoro, a visita)'); }
