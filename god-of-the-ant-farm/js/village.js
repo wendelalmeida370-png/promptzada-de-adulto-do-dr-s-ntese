@@ -581,6 +581,13 @@
         if (def.podium) {
           if (t < T.SAND || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 3) { ok = false; break; }
           if (S.road[i] || (G.City && G.City.onStreet(set, i))) streets = true;
+        } else if (block) {
+          // (and so does a block of the heart, keeping its bushes and rocks out: the dear heart of a metropolis is half paved
+          // streets — the paving is what makes it dear —, every building in it keeps a ring that becomes a lane, and a lot with no
+          // street in it was nowhere. Mênfis of the mega stood at two blocks from the year 64 to the 149, with the people and
+          // the stone for seven: L-602)
+          if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 3) { ok = false; break; }
+          if (S.road[i] || (G.City && G.City.onStreet(set, i))) streets = true;
         } else if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 2 || (S.road[i] && G.City && G.City.onStreet(set, i))) { ok = false; break; }
         if (field && (t === T.SAND || t === T.ROCKY)) { ok = false; break; }
         // (never in the way of a gate: a blocking building on a tile beside one shuts it — two houses, one on each side of a gate of
@@ -651,7 +658,7 @@
   V.reachOf = (set, type) => (V.fora(set, type) ? [20] : [6, 12]);
   // (a lot of a bigger step may take the town's minor streets — dirt and stone, never the highway — when the ring round it joins
   // again every street it cuts: the street tiles of the ring beside a street of the lot, the ends of the cut, all reach each other
-  // along the ring, on tiles one walks or that come down with the lot — D-120)
+  // along the ring, on tiles one walks or that come down with the lot — D-120; and a block of the heart's, L-602)
   function relinks(set, x, y, n, gone) {
     const S = G.S; const street = i => S.road[i] > 0 || !!(G.City && G.City.onStreet(set, i));
     const inLot = (tx, ty) => tx >= x && tx < x + n && ty >= y && ty < y + n; const ring = new Map();

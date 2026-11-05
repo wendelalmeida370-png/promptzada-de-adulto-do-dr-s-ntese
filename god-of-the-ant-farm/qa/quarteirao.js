@@ -9,7 +9,9 @@
 // 3 o verificador todo ano (o anel de passagem em volta de cada quarteirão fica livre);
 // 4 um save no meio de uma obra: a obra volta igual;
 // 5 um desalojado morre no meio, e o raio do deus cai na obra: o verificador não acha nada;
-// 6 os anos passam: quarteirões prontos e morados.
+// 6 os anos passam: quarteirões prontos e morados;
+// 7 o centro calçado: um quarteirão toma as ruas menores do lote — nunca a estrada — só quando o anel em volta religa cada rua
+//   que ele corta (L-602: as células caras de Mênfis eram meio rua calçada, e o lote não podia ter um palmo de rua).
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -50,7 +52,7 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
     const set = big.find(s => { s._noSite = {}; const p = V.blockSite(s); s._noSite = {}; return !!p; }) || big[0];
     if (!set) return null;
     const f = G.Fac.get(set.fac); if (!G.Civ.has(f.id, 'engenharia')) G.Civ.learn(f, 'engenharia', 'teste');
-    const W = window.__Q = { set: set.id, log: [], bad: [], homeless: 0, people: [], blocks: 0 };
+    const W = window.__Q = { set: set.id, log: [], bad: [], homeless: 0, people: [], blocks: 0, street: 0, sbad: [] };
     const LOW = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 1, house: 1, sobrado: 1 };
     const KEEP = { farm: 2, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
     const money = () => { let n = 0; for (const b of G.S.buildings.values()) if (b.set === set.id) n += b.coin || 0; for (const v of G.S.villagers.values()) if (v.set === set.id) n += v.purse || 0; return Math.round(n * 100) / 100; };
@@ -69,7 +71,12 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
       W.blocks++;
       const val = G.Urban.valueAt(set, b.x + 1, b.y + 1);
       const beds = gone.reduce((n, o) => n + (G.BDEF[o.type].housing || 0), 0);
-      W.log.push(`ano ${S.day}: terra ${val}, derrubou ${gone.map(o => o.type).join(', ') || 'nada'}`);
+      // (the streets under the lot: the minor ones it may take, the highway never — and the ring joins again what it cuts, L-602)
+      let streets = 0, high = 0;
+      for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * G.N + tx; if (S.road[i] >= 3) high++; else if (S.road[i] || (G.City && G.City.onStreet(set, i))) streets++; }
+      if (high) W.sbad.push(`quarteirão em ${b.x},${b.y} sobre ${high} casas da estrada`);
+      if (streets) { W.street++; if (!V.relinks(set, b.x, b.y, b.w, gone.map(o => o.id))) W.sbad.push(`quarteirão em ${b.x},${b.y}: o anel não religa as ${streets} casas de rua que ele corta`); }
+      W.log.push(`ano ${S.day}: terra ${val}, derrubou ${gone.map(o => o.type).join(', ') || 'nada'}${streets ? `, ${streets} casas de rua` : ''}`);
       if (val < G.Urban.DEAR.quarteirao) W.bad.push(`quarteirão em terra ${val}`);
       for (const o of gone) if (civic.has(o.id) || !LOW[o.type] || o.set !== set.id) W.bad.push(`derrubou ${o.type}#${o.id}`);
       if (beds > 24) W.bad.push(`tirou ${beds} camas`);
@@ -157,7 +164,7 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
             viol.push(...bad());
           }
         } finally { G.Skip.on = false; S.blessed = false; }
-        return { day: S.day, viol, mods: Object.keys(G.modErr || {}).length, log: W.log, wbad: W.bad, homeless: W.homeless, blocks: W.blocks };
+        return { day: S.day, viol, mods: Object.keys(G.modErr || {}).length, log: W.log, wbad: W.bad, homeless: W.homeless, blocks: W.blocks, street: W.street, sbad: W.sbad };
       });
       console.log(`  ${town}: família de ${p0.fam} no lugar ${p0.at}; ${a.blocks} quarteirões até o ano ${a.day}: ${a.log.join(' | ')}`);
       const rule = a.wbad.filter(x => !/moedas|ainda mora/.test(x)), home = a.wbad.filter(x => /moedas|ainda mora/.test(x));
@@ -165,6 +172,7 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
       ok('2 os desalojados sem casa, as moedas guardadas', a.homeless > 0 && !home.length, `${a.homeless} desalojados${home.slice(0, 3).map(x => '; ' + x).join('')}`);
       ok('3 o verificador todo ano (o anel dos quarteirões livre)', !a.viol.length && !a.mods, `até o ano ${a.day}${a.viol.length ? '; ' + a.viol.slice(0, 3).join(' | ') : ': nada'}${a.mods ? '; erro de módulo' : ''}`);
       ok('5 um desalojado morre, um raio cai na obra', s.fire === true && s.died && !a.viol.length && !a.mods, `raio ${s.fire}, morte ${s.died}`);
+      ok('7 o centro calçado: o quarteirão toma ruas menores, nunca a estrada, e o anel as religa (L-602)', a.street >= 1 && !a.sbad.length, `${a.street} de ${a.blocks} quarteirões sobre rua${a.sbad.length ? '; ' + a.sbad.slice(0, 3).join(' | ') : ''}`);
     }
     // ---- 6: blocks built and lived in
     const e = await page.evaluate(() => {
