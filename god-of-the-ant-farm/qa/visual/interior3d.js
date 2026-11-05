@@ -198,9 +198,14 @@ for (const [b, plan, own] of jobs) {
     // (a storey above, its slab and joists over the point: a loft low over a window's head)
     for (const q of plan.levels) if (q.y > lvOf(lv).y + 0.5 && Y > q.y - 0.32 && Y < q.y + 0.05 && x > q.area[0] && x < q.area[2] && z > q.area[1] && z < q.area[3]) return true;
     // (another wall of the storey between: the room on a terrace, back to back with its parapet)
-    for (const w2 of plan.walls) { if (w2.lv !== lv || w2.id === skip || k === 0 || k === 8) continue; const L2 = Math.hypot(w2.b[0] - w2.a[0], w2.b[1] - w2.a[1]) || 1; const ux = (w2.b[0] - w2.a[0]) / L2, uz = (w2.b[1] - w2.a[1]) / L2;
+    // (a wall of no length — 2 cm or less — is no obstacle: its direction is none, and it covered every point of its storey; the
+    // plan's fault, accused below — T-491)
+    for (const w2 of plan.walls) { if (w2.lv !== lv || w2.id === skip || k === 0 || k === 8) continue; const L2 = Math.hypot(w2.b[0] - w2.a[0], w2.b[1] - w2.a[1]); if (L2 <= 0.02) continue; const ux = (w2.b[0] - w2.a[0]) / L2, uz = (w2.b[1] - w2.a[1]) / L2;
       const s2 = (x - w2.a[0]) * ux + (z - w2.a[1]) * uz, o2 = (x - w2.a[0]) * -uz + (z - w2.a[1]) * ux; if (s2 > -0.02 && s2 < L2 + 0.02 && Math.abs(o2) < w2.t / 2 + 0.01 && Y < lvOf(lv).y + w2.h) return true; } }
     return false; };
+  // (a wall of no length in the plan — 2 cm or less —: the plan's fault; it silenced the rays of a whole storey of the
+  // Colosseum, its camarote's parapet 12 cm off unseen, T-491)
+  for (const w of plan.walls) if (Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) <= 0.02) bad.wall.push(`${tag}: parede ${w.id} sem comprimento (piso ${w.lv})`);
   // (the plan's own: a window whose head goes past the floor of a storey above it — a loft low over a window)
   for (const h of plan.holes) { if (h.kind !== 'janela') continue; const w = plan.walls[h.wall]; const l = w && lvOf(w.lv); if (!l) continue;
     const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const px = w.a[0] + (w.b[0] - w.a[0]) * h.at / L, pz = w.a[1] + (w.b[1] - w.a[1]) * h.at / L;
