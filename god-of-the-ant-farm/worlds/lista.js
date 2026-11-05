@@ -20,9 +20,9 @@ G.Ready.list({
   "bytes": 1047489
  },
  "metropole": {
-  "day": 64,
-  "pop": 903,
-  "peoples": 6,
+  "day": 67,
+  "pop": 961,
+  "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
@@ -30,12 +30,12 @@ G.Ready.list({
   "city": {
    "name": "Argos",
    "tier": 4,
-   "pop": 109
+   "pop": 123
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 3795852
+  "bytes": 3911335
  },
  "mega": {
   "day": 64,
@@ -56,40 +56,40 @@ G.Ready.list({
   "bytes": 3309486
  },
  "mundial": {
-  "day": 111,
-  "pop": 964,
-  "peoples": 4,
-  "towns": 19,
+  "day": 78,
+  "pop": 661,
+  "peoples": 5,
+  "towns": 23,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Tebas",
-   "tier": 3,
-   "pop": 290
+   "name": "Tenochtitlan",
+   "tier": 4,
+   "pop": 117
   },
-  "wars": 1,
+  "wars": 2,
   "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 5525628
+  "bytes": 4328801
  },
  "anos100": {
   "day": 101,
-  "pop": 316,
-  "peoples": 3,
-  "towns": 10,
+  "pop": 217,
+  "peoples": 5,
+  "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
    "name": "Argos",
-   "tier": 4,
-   "pop": 101
+   "tier": 3,
+   "pop": 53
   },
-  "wars": 1,
-  "ww": null,
+  "wars": 0,
+  "ww": "a Guerra do Ouro",
   "world": "Selara",
-  "bytes": 2403242
+  "bytes": 2469983
  },
  "anos500": {
   "day": 501,
