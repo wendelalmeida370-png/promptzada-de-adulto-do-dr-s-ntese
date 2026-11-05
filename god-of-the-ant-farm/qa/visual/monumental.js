@@ -1,7 +1,9 @@
 // monumental: o Coliseu, o palácio de pátios e os templos grandes no 3D, com o corpo e a câmera — a parte E da Arquitetura
 // Monumental (1ª a 4ª rodadas):
 //   node qa/visual/monumental.js [PASTA_DAS_FOTOS]       (padrão: qa/monumental/fotos)
-//   PARTE=node (só a parte em Node: segundos) · PARTE=navegador (só as fotos e o quadro) · sem PARTE: as duas, uma depois da outra
+//   PARTE=node (só a parte em Node: segundos) · PARTE=navegador (só a do navegador: as fotos, o custo do quadro em CPU) · sem
+//   PARTE: as duas, uma depois da outra · PARTE=quadro (só a prova 8t, o quadro do Modo Encarnado com o Coliseu à vista em tempo de
+//   relógio, que só vale com a máquina livre — na regressão, na fase do desempenho, sozinha no fim; nas outras partes não roda: T-472)
 // O Coliseu fundado pela mão do deus em Roma da metrópole — G.Village.handFound(set, 'maravilha', 'maravilha', { built: true,
 // R: 60 }) —, com a forma do M1 se o povo já a sabe, senão a de teste (qa/visual/coliseu-teste.js). Onde o handFound põe o lote, o
 // chão pode ter mais desnível do que o pódio da forma cobre (3 m, o combinado da equipe; o terreno das cidades é do C): então a mão
@@ -10,7 +12,9 @@
 //   F1. num mundo só de grama (os prédios postos à mão, como a fidelidade os põe): as fileiras dos teatros de 6, 8 e 10 casas
 //      (romano, grego) e do Coliseu de 10 e 13, nos quatro lados — no meio de cada casinha andada das fileiras, o chão da
 //      planta é o alto do que o 3D desenha ali (L-494, 2: as fileiras desenhadas em cordas e andadas em círculos; um polígono
-//      só agora, G.Forma.ringEdge) —; L1 o lago do jardim sagrado (o antigo e os de 6, 8 e 10) de longe: a água, na altura dela
+//      só agora, G.Forma.ringEdge) —; L1 o lago do jardim sagrado (o antigo e os de 6, 8 e 10) de longe: a água, na altura dela;
+//      E1 a entrada da Grande Pirâmide (D-108, L-579), de 10 e 13 casas nos quatro lados: de cada casa do corredor que a planta
+//      anda, para cima, o primeiro teto do 3D é o do corredor, virado para baixo — não a face da pirâmide
 //   1. a forma e o 3D: o lote e a forma do mesmo tamanho, a altura; os triângulos perto (o detalhe fino) e longe, por peça, cada um
 //      no seu teto; o tempo de fazer o pedaço; as ordens da fachada em meias-colunas (a toscana, a jônica, a coríntia: o fuste
 //      meio-redondo no primeiro pilar de cada baia; o ático em pilastras); a silhueta de longe do tamanho da forma (a caixa dela
@@ -42,9 +46,12 @@
 //   6. o verificador limpo, sem erro de módulo
 // Parte 2 (o navegador, o 3D desenhado por software — lento: poucas fotos, pequenas):
 //   7. as fotos em JPG: de fora (o corpo diante da fachada), da arena olhando as arquibancadas, do alto de um anel
-//   8. o quadro do Modo Encarnado (a medida do e8 do encarna: simulação + 3D, quadros de 16 ms na qualidade média, mediana e p95) com o
-//      corpo diante do Coliseu, em turnos — o pedaço do canto dele com e sem ele, trocados a cada 15 quadros, seis vezes cada: a mesma
-//      carga da máquina para os dois (T-433) —; alvo: mediana ≤ 13 ms (ou não acima da sem ele × 1,15) e p95 não pior que a sem ele ×
+//   8. o custo do quadro do Modo Encarnado com o corpo diante do Coliseu, em turnos — o pedaço do canto dele com e sem ele, trocados a
+//      cada 15 quadros, seis vezes cada: a mesma carga da máquina para os dois (T-433) —, em CPU do navegador: o processo da página e
+//      o do GL por software, onde se faz o desenho de um quadro, fora do relógio da página (T-472), cada turno desenhado até o fim;
+//      alvo: a mediana dos turnos não acima da sem ele × 1,15, e o pior turno não pior que o pior sem ele × 1,15
+//   8t. (PARTE=quadro, sozinha na máquina) o mesmo em tempo de relógio, a medida do e8 do encarna (simulação + 3D, quadros de 16 ms
+//      na qualidade média, mediana e p95); alvo: mediana ≤ 13 ms (ou não acima da sem ele × 1,15) e p95 não pior que a sem ele ×
 //      1,15. E, para ler, antes e depois de fundá-lo (um minuto entre as duas), as chamadas e os triângulos
 //   9. na qualidade leve (um pedaço em volta), o corpo no pedaço além do da ponta de lá do Coliseu: o pedaço do canto dele perto
 //      (sem a silhueta de longe no lugar do prédio inteiro)
@@ -214,6 +221,25 @@ function blankChecks(G, ok) {
     else lkSaid.push(`de ${n} casas: a água a ${lam.y.toFixed(2)} m, a cor ${best.c.map(c => c.toFixed(2)).join(',')}`);
     drop(b); }
   ok('L1 o lago do jardim sagrado de longe (o antigo e os de 6, 8 e 10 casas): no meio dele, o alto da figura de longe é a água, na altura dela, azul (era o fundo dele: chão marrom)', !lk.length, lk.join(' · ') || lkSaid.join(' · '));
+  // E1 the Great Pyramid's way in (D-108): from every cell of its corridor the plan walks, straight up, the first face of its near
+  // picture — what lies about it put aside — is the corridor's ceiling, facing down, a body's height up at least; the face of
+  // the pyramid was drawn whole across the corridor's mouth, from 0,4 to 2,3 m over its floor (L-579)
+  const py = [], pySaid = [];
+  for (const n of [10, 13]) for (const s of ['S', 'E', 'N', 'W']) { const b = put('maravilha', 'egipcio', n, s, id++); const p = Sp.planNow(b); const cor = p && p.ok && p.rooms.find(r => r.fn === 'corredor');
+    if (!cor) { py.push(`de ${n} ${s}: sem corredor na planta`); drop(b); continue; }
+    const P3 = G.Props3D; G.Props3D = null; let g; try { g = B3.nearGeo(b.x, b.y, 1); } finally { G.Props3D = P3; }
+    const P = g.solid.attributes.position.array, base = Sp.plinth(b).y0, CSn = p.grid.cs; let cells = 0, bad = 0, first = '', low = Infinity;
+    for (let x = cor.r[0] + CSn / 2; x < cor.r[2]; x += CSn) for (let z = cor.r[1] + CSn / 2; z < cor.r[3]; z += CSn) { if (!In.walk(b, cor.lv, x, z)) continue; cells++;
+      const y0 = base + In.floorYOf(p, cor.lv, x, z), X = b.x * TL + x, Z = b.y * TL + z; let hit = null;
+      for (let k = 0; k + 8 < P.length; k += 9) { const d = (P[k + 5] - P[k + 8]) * (P[k] - P[k + 6]) + (P[k + 6] - P[k + 3]) * (P[k + 2] - P[k + 8]); if (Math.abs(d) < 1e-12) continue;
+        const l1 = ((P[k + 5] - P[k + 8]) * (X - P[k + 6]) + (P[k + 6] - P[k + 3]) * (Z - P[k + 8])) / d, l2 = ((P[k + 8] - P[k + 2]) * (X - P[k + 6]) + (P[k] - P[k + 6]) * (Z - P[k + 8])) / d, l3 = 1 - l1 - l2;
+        if (l1 < -1e-9 || l2 < -1e-9 || l3 < -1e-9) continue; const y = l1 * P[k + 1] + l2 * P[k + 4] + l3 * P[k + 7]; if (y < y0 + 0.3 || (hit && y >= hit.y)) continue;
+        const ny = (P[k + 5] - P[k + 2]) * (P[k + 6] - P[k]) - (P[k + 3] - P[k]) * (P[k + 8] - P[k + 2]); hit = { y, down: ny < 0 }; }
+      const up = hit ? hit.y - y0 : Infinity; low = Math.min(low, up);
+      if (!hit || !hit.down || up < In.BODY.h) { bad++; if (!first) first = `${x.toFixed(2)},${z.toFixed(2)}: ${hit ? `${up.toFixed(2)} m${hit.down ? '' : ' (avesso)'}` : 'nada'}`; } }
+    for (const k in g) if (g[k]) g[k].dispose(); drop(b);
+    if (!cells || bad) py.push(`de ${n} ${s}: ${bad} de ${cells} casas do corredor${first ? ', a primeira ' + first : ''}`); else pySaid.push(`de ${n} ${s}: ${cells} casas, o teto a ${low.toFixed(2)} m ou mais`); }
+  ok('E1 a entrada da Grande Pirâmide (D-108, L-579), de 10 e 13 casas nos quatro lados: de cada casa do corredor, para cima, o primeiro teto do 3D é o do corredor, virado para baixo, a uma altura de corpo ao menos', !py.length, py.slice(0, 4).join(' · ') || pySaid.join(' · '));
 }
 
 // ================================ part 1: Node ================================
@@ -542,9 +568,15 @@ function nodePart() {
       return { civ: t.civ, cella: [t.base + R.Hp + 1.6, t.base + R.eave - 0.3].some(yy => B3.stoneAt(t.b, mid[0], yy, mid[1])), pod: B3.stoneAt(t.b, pod[0], t.base + R.Hp - 0.3, pod[1]) }; });
     ok('Tp6. a câmera nos templos: na cela nunca na pedra; sob o piso do recinto, na pedra da plataforma', camT.length === 4 && camT.every(q => !q.cella && q.pod), camT.map(q => `${q.civ}: na cela ${q.cella ? 'NA PEDRA' : 'livre'}, sob o recinto ${q.pod ? 'na pedra' : 'FORA dela'}`).join(' · ')); }
   // ================ M. the body at its own table (D-104): «Sentar à mesa» always; seated, the meal — when there is what to eat ================
-  // (a grown-up of Roma whose house has a table, from the street in by its door — opened by the hand, as the verb does —, to it)
+  // (a grown-up whose own house has a table, from the street in by its door — opened by the hand, as the verb does —, to it: of
+  // the houses with a table in any town of the world, the first grown-up of each. Few houses have one — a house lays its beds
+  // first, and its table only on the floor left (int-familias.js) —: in the generation-14 metropole two of 129, neither in Roma,
+  // where the proofs of the generations before found one (T-472). By day, by the god's hand, at the door of it: asleep or
+  // indoors at the hour of the proof, the errand's end wakes one and lets one out at the door, Vg.endTask)
   { const tableOf = h => { const p = h && h.built && h.type !== 'ruin' && Sp.planNow(h); return p && p.ok && p.entrance && p.entrance.out && p.items.some(it => /mesa/i.test((In.ITEMS[it.kind] || {}).name || '')) ? p : null; };
-    const cands = [...S.villagers.values()].filter(q => q.age >= 18 && q.age < 60 && q.home && !q.inside && !q.sleeping && q.set === (PZ.set || {}).id && G.Possess.can(q).ok && tableOf(S.buildings.get(q.home))).sort((a2, b2) => a2.id - b2.id).slice(0, 6);
+    const homeIds = new Set([...S.villagers.values()].map(q => q.home).filter(Boolean));
+    const homes = [...homeIds].map(id => S.buildings.get(id)).filter(h => tableOf(h)).sort((a2, b2) => a2.id - b2.id); const cands = [];
+    for (const h of homes) { const w = [...S.villagers.values()].filter(q => q.home === h.id && q.age >= 18 && q.age < 60 && G.Possess.can(q).ok).sort((a2, b2) => a2.id - b2.id)[0]; if (w && cands.length < 6) cands.push(w); }
     let M0 = null, tried = 0;
     for (const w of cands) {
       const h = S.buildings.get(w.home), hp = tableOf(h); const hx = h.x * TL, hz = h.y * TL; const e = hp.entrance; tried++;
@@ -567,7 +599,7 @@ function nodePart() {
       }
       G.Possess.release('deus'); G.Avatar.detach(); for (let k = 0; k < 90; k++) frame(); if (M0) break; // (the world takes the person back in its step, as in the game)
     }
-    ok('M. o corpo à própria mesa (D-104): sem fome, senta; sentado, a refeição da casa', !!M0 && M0.ok, M0 ? `${M0.who} em casa (${M0.house}): de pé, sem fome — ${M0.b0}; sentado: ${M0.seated}; sentado, sem fome — ${M0.b1}; com fome — ${M0.b2}` : `nenhuma das ${tried} casas com mesa de Roma deixou o corpo chegar à mesa`); }
+    ok('M. o corpo à própria mesa (D-104): sem fome, senta; sentado, a refeição da casa', !!M0 && M0.ok, M0 ? `${M0.who} em casa (${M0.house}): de pé, sem fome — ${M0.b0}; sentado: ${M0.seated}; sentado, sem fome — ${M0.b1}; com fome — ${M0.b2}` : `nenhuma das ${tried} casas com mesa (de ${homes.length} no mundo) deixou o corpo chegar à mesa`); }
   // ---------------- 6. the verifier ----------------
   const vb = QA.check().filter(q => q.sev <= 2 && !bad0.has(q.sys + '|' + q.msg)); const er = M.erros();
   ok('6. o verificador limpo, sem erro de módulo', !vb.length && !Object.keys(er.mod).length && !er.console.length, `${vb.length ? vb.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo'}; módulos ${JSON.stringify(er.mod)}; console ${er.console.slice(0, 2).join(' | ') || 'limpo'}`);
@@ -581,6 +613,16 @@ function nodePart() {
 }
 
 // ================================ part 2: the browser ================================
+// (the CPU the browser's processes have spent, in ms — every process under this one: the page's, the software GL's —, from /proc,
+// Linux's, in its clock's ticks of 10 ms; null where there is no /proc)
+function browserCPU() {
+  if (!fs.existsSync('/proc/self/stat')) return null;
+  const all = []; for (const d of fs.readdirSync('/proc')) { if (!/^\d+$/.test(d)) continue; let st; try { st = fs.readFileSync(`/proc/${d}/stat`, 'utf8'); } catch (e) { continue; }
+    const r = st.slice(st.lastIndexOf(')') + 2).split(' '); all.push({ pid: +d, ppid: +r[1], t: (+r[11]) + (+r[12]) }); }
+  const kids = new Map(); for (const p of all) { if (!kids.has(p.ppid)) kids.set(p.ppid, []); kids.get(p.ppid).push(p); }
+  let t = 0; const q = [process.pid]; while (q.length) for (const c of kids.get(q.pop()) || []) { t += c.t; q.push(c.pid); }
+  return t * 10;
+}
 async function browserPart() {
   const VIS = require(path.join(__dirname, 'vistas.js'));
   fs.mkdirSync(OUT, { recursive: true });
@@ -615,7 +657,10 @@ async function browserPart() {
       const c = V.count(); G.Realm.setQuality('baixa');
       return { med: +times[45].toFixed(1), p95: +times[85].toFixed(1), calls: c.calls, tris: c.tris };
     });
-    const before = await measure();
+    // (the frame's clock is measured only in PARTE=quadro — worth something only with the machine free: alone, in the regression's
+    // phase of performance; with five queues on four cores its p95 was the machine's, T-472. The other parts measure its CPU: 8)
+    const quadro = PARTE === 'quadro';
+    const before = quadro ? await measure() : null;
     const r1 = await page.evaluate(() => {
       const H = window.__MON; const s = window.__site; const set = G.S.settlements.get(s.set);
       G.inSim++; let b; try { b = G.Village.handFound(set, 'maravilha', 'maravilha', { built: true, x: s.site[0] + Math.floor(s.n / 2), y: s.site[1] + Math.floor(s.n / 2), R: 0.5 }); } finally { G.inSim--; }
@@ -628,35 +673,53 @@ async function browserPart() {
     // (its plan made — once, when the eye first asks for it: Space.plan, the pump's — and its chunk drawn with it: the frame
     // measured with the Colosseum in view as it stays; the one time a chunk is drawn again for it is the part 1's measure)
     await page.evaluate(() => { const V = window.__VIS; G.Space.planNow(G.S.buildings.get(window.__b)); V.warm(2); V.f(10, 33); });
-    const after = await measure();
     console.log(`(o Coliseu ${r1.teste ? 'DE TESTE' : 'do M1'} #${r1.id} em ${r1.x},${r1.y}; o chão do lote tinha ${r0.drop0} m de desnível${r0.h0 !== null ? ', aplainado pela mão do deus' : ''}; o corpo: ${r0.who})`);
-    // (and in turns, under the same load — the machine is shared: a frame measured before the founding and one a minute after are
-    // worth little, T-433 —: the chunk of the Colosseum's corner drawn with it and without it, swapped every 15 frames, six times
-    // each; the frame as the e8 measures it. The one time the chunk is drawn again for it is part 1's)
-    const turns = await page.evaluate(() => {
+    // (the chunk of the Colosseum's corner in turns, with it and without it, swapped every 15 frames, six times each — the same
+    // load of the machine for the two, T-433 —: its solid mesh as the realm drew it — the one with as many points as the chunk's
+    // buildings drawn again here, the same drawing — and the same chunk drawn without the Colosseum; __run draws n frames, the
+    // frame as the e8 measures it, the page's clock of each, and — sync — reads a pixel back: the turn drawn to its end, the
+    // software GL's too. The one time the chunk is drawn again for it is part 1's)
+    const prep = await page.evaluate(() => {
       const V = window.__VIS, R3 = G.Realm, B3 = G.Build3D, S = G.S; const b = S.buildings.get(window.__b); const T = G.Space.TILE, C = 16;
       const st = G.Avatar.state(); const s = window.__site; const cx = (s.site[0] + s.n / 2) * T, cz = (s.site[1] + s.n / 2) * T; const yaw = Math.atan2(cz - st.Z, cx - st.X);
       R3.setQuality('media'); V.warm(2); st.yaw = yaw; G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = 0.12; G.Cam3D.dist = 4.8; V.f(20, 33);
       const x0 = Math.floor(b.x / C) * C, y0 = Math.floor(b.y / C) * C;
-      // (the chunk's buildings as the realm drew them: its solid mesh — the one with as many points as the chunk's buildings drawn
-      // again here, the same drawing)
       const MS = R3.mats().solid; let M = null; const ref = B3.nearGeo(x0, y0, C); const nRef = ref.solid ? ref.solid.attributes.position.count : -1; for (const q in ref) if (ref[q]) ref[q].dispose();
       R3.scene().traverse(o => { if (!M && o.isMesh && o.material === MS && o.geometry && o.geometry.attributes.position && o.geometry.attributes.position.count === nRef) M = o; });
       if (!M) { R3.setQuality('baixa'); return { none: true }; }
       const keep = S.buildings.get(b.id); S.buildings.delete(b.id); let wo; try { wo = B3.nearGeo(x0, y0, C); } finally { S.buildings.set(b.id, keep); }
-      const withG = M.geometry, noG = wo.solid || new THREE.BufferGeometry();
-      const run = (g, n, out) => { M.geometry = g; for (let k = 0; k < n; k++) { const t0 = performance.now(); G.Main.frameFor(16); out.push(performance.now() - t0); } };
-      const A = [], B = []; run(withG, 6, []); for (let k = 0; k < 6; k++) { run(withG, 15, A); run(noG, 15, B); }
-      M.geometry = withG; for (const q in wo) if (wo[q] && wo[q] !== noG) wo[q].dispose(); noG.dispose();
-      { const re = B3.nearGeo(x0, y0, C); for (const q in re) if (re[q]) re[q].dispose(); } // (the chunk's lamps and tops as they were)
-      R3.setQuality('baixa');
-      const q = (a, p) => { const s2 = a.slice().sort((x, y) => x - y); return +s2[Math.min(s2.length - 1, Math.floor(s2.length * p))].toFixed(1); };
-      return { withM: q(A, 0.5), withP: q(A, 0.95), noM: q(B, 0.5), noP: q(B, 0.95), tris: [Math.round(withG.attributes.position.count / 3), wo.solid ? Math.round(wo.solid.attributes.position.count / 3) : 0] };
+      const withG = M.geometry, noG = wo.solid || new THREE.BufferGeometry(); const gl = R3.renderer().getContext(), px = new Uint8Array(4);
+      window.__run = (which, n, sync) => { M.geometry = which ? withG : noG; const out = []; for (let k = 0; k < n; k++) { const t0 = performance.now(); G.Main.frameFor(16); out.push(performance.now() - t0); }
+        if (sync) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return out; };
+      window.__undo = () => { M.geometry = withG; for (const q in wo) if (wo[q] && wo[q] !== noG) wo[q].dispose(); noG.dispose();
+        { const re = B3.nearGeo(x0, y0, C); for (const q in re) if (re[q]) re[q].dispose(); } // (the chunk's lamps and tops as they were)
+        R3.setQuality('baixa'); };
+      return { none: false, tris: [Math.round(withG.attributes.position.count / 3), wo.solid ? Math.round(wo.solid.attributes.position.count / 3) : 0] };
     });
-    const load = require('os').loadavg()[0], cores = require('os').cpus().length;
-    ok('8. o quadro do Modo Encarnado com o Coliseu à vista (a medida do e8, qualidade média, em turnos com e sem ele): mediana ≤ 13 ms (ou não acima da sem ele × 1,15) e p95 não pior que a sem ele × 1,15', !turns.none && (turns.withM <= 13 || turns.withM <= turns.noM * 1.15 + 0.5) && turns.withP <= turns.noP * 1.15 + 0.5,
-      turns.none ? 'o pedaço do Coliseu não achado na cena' : `carga da máquina ${load.toFixed(1)} em ${cores} núcleos; em turnos (6 × 15 quadros cada): sem o Coliseu ${turns.noM} ms (p95 ${turns.noP}) → com ele ${turns.withM} ms (p95 ${turns.withP}); o pedaço do canto ${turns.tris[1]} → ${turns.tris[0]} triângulos`);
-    console.log(`DESEMPENHO | monumental | Roma da metrópole, o corpo diante do Coliseu: em turnos, mediana ${turns.noM} → ${turns.withM} ms, p95 ${turns.noP} → ${turns.withP} ms; antes e depois de fundá-lo (um minuto entre as duas, carga ${load.toFixed(1)}): mediana ${before.med} → ${after.med} ms, p95 ${before.p95} → ${after.p95} ms, chamadas ${before.calls} → ${after.calls}, triângulos ${before.tris} → ${after.tris}`);
+    const qn = (a, p) => { if (!a.length) return NaN; const s2 = a.slice().sort((x, y) => x - y); return +s2[Math.min(s2.length - 1, Math.floor(s2.length * p))].toFixed(1); };
+    const load = () => require('os').loadavg()[0].toFixed(1), cores = require('os').cpus().length;
+    if (quadro) {
+      // 8t. the clock (alone on the machine: the regression's phase of performance): the frame as the e8 measures it, in turns
+      const after = await measure(); const A = [], B = [];
+      if (!prep.none) { await page.evaluate(() => window.__run(1, 6)); for (let k = 0; k < 6; k++) { A.push(...await page.evaluate(() => window.__run(1, 15))); B.push(...await page.evaluate(() => window.__run(0, 15))); } await page.evaluate(() => window.__undo()); }
+      const turns = { withM: qn(A, 0.5), withP: qn(A, 0.95), noM: qn(B, 0.5), noP: qn(B, 0.95) };
+      ok('8t. o quadro do Modo Encarnado com o Coliseu à vista em tempo de relógio, sozinha na máquina (a medida do e8, qualidade média, em turnos com e sem ele): mediana ≤ 13 ms (ou não acima da sem ele × 1,15) e p95 não pior que a sem ele × 1,15', !prep.none && (turns.withM <= 13 || turns.withM <= turns.noM * 1.15 + 0.5) && turns.withP <= turns.noP * 1.15 + 0.5,
+        prep.none ? 'o pedaço do Coliseu não achado na cena' : `carga da máquina ${load()} em ${cores} núcleos; em turnos (6 × 15 quadros cada): sem o Coliseu ${turns.noM} ms (p95 ${turns.noP}) → com ele ${turns.withM} ms (p95 ${turns.withP}); o pedaço do canto ${prep.tris[1]} → ${prep.tris[0]} triângulos`);
+      console.log(`DESEMPENHO | monumental | Roma da metrópole, o corpo diante do Coliseu: em turnos, mediana ${turns.noM} → ${turns.withM} ms, p95 ${turns.noP} → ${turns.withP} ms; antes e depois de fundá-lo (um minuto entre as duas, carga ${load()}): mediana ${before.med} → ${after.med} ms, p95 ${before.p95} → ${after.p95} ms, chamadas ${before.calls} → ${after.calls}, triângulos ${before.tris} → ${after.tris}`);
+      return fails; } // (the quadro only: the photos are the other parts')
+    // 8. what the frame costs with the Colosseum in view, in the CPU of the browser — the page's process and the GPU process, the
+    // software GL's, where the raster of a frame is done, after the page's frame: out of the page's clock, which times only the
+    // page's thread and the waits when the GL is behind, as the machine has it (T-472: the p95 of the clock was five queues on
+    // four cores) —, every turn drawn to its end (a pixel read back) before the CPU is read; by the frame, the limit of the
+    // clock's: the middle of the turns and the worst not above the ones without it × 1,15
+    const cpuA = [], cpuB = []; let cpuNo = false;
+    if (!prep.none) { await page.evaluate(() => window.__run(1, 6, true));
+      for (let k = 0; k < 6 && !cpuNo; k++) { const c0 = browserCPU(); await page.evaluate(() => window.__run(1, 15, true)); const c1 = browserCPU(); await page.evaluate(() => window.__run(0, 15, true)); const c2 = browserCPU();
+        if (c0 === null) cpuNo = true; else { cpuA.push((c1 - c0) / 15); cpuB.push((c2 - c1) / 15); } }
+      await page.evaluate(() => window.__undo()); }
+    const cpu = { withM: qn(cpuA, 0.5), withP: qn(cpuA, 0.95), noM: qn(cpuB, 0.5), noP: qn(cpuB, 0.95) };
+    ok('8. o custo do quadro com o Coliseu à vista, em CPU do navegador (o processo da página e o do GL por software), em turnos com e sem ele: a mediana dos turnos não acima da sem ele × 1,15, e o pior turno não pior que o pior sem ele × 1,15', !prep.none && !cpuNo && cpu.withM <= cpu.noM * 1.15 + 0.5 && cpu.withP <= cpu.noP * 1.15 + 0.5,
+      prep.none ? 'o pedaço do Coliseu não achado na cena' : cpuNo ? 'sem /proc: o CPU dos processos não se lê nesta máquina' : `carga da máquina ${load()} em ${cores} núcleos; em turnos (6 × 15 quadros cada), o CPU de um quadro: sem o Coliseu ${cpu.noM} ms (o pior turno ${cpu.noP}) → com ele ${cpu.withM} ms (o pior ${cpu.withP}); o pedaço do canto ${prep.tris[1]} → ${prep.tris[0]} triângulos (o tempo de relógio: PARTE=quadro, sozinha na máquina)`);
     // the photos: the eye's pose set after the game's own (the photos only: what the camera does is the part 1's proof)
     // (the body put at the pose's point first, when it has one — by Avatar.place, or taken there and attached again (attach: out of
     // a building it stood in — out of it first: the world puts one inside a building where it is not back at its door —) —;
@@ -807,7 +870,7 @@ async function browserPart() {
       if (!s1.placed) pics5.push(`o corpo não foi posto diante dele (a ${s1.d} m)`); }
     ok('14. o Coliseu colossal de 13 casas (a «cidade», Roma): de fora, o corpo diante da entrada; da arena', r13.ok && pics5.every(q => /KB/.test(q)), `${r13.ok ? `#${r13.id} em ${r13.x},${r13.y} (o chão ${r13.drop0} m de desnível${r13.h0 !== null ? ', aplainado' : ''}); ` : ''}${pics5.join(' · ')}`);
   } finally {
-    ok('10. sem erro de página nem aviso no console', !errs.length, errs.slice(0, 3).join(' || ') || 'nenhum');
+    ok(`10. sem erro de página nem aviso no console${PARTE === 'quadro' ? ' (o quadro)' : ''}`, !errs.length, errs.slice(0, 3).join(' || ') || 'nenhum');
     await browser.close();
   }
   return fails;
@@ -816,7 +879,7 @@ async function browserPart() {
 (async () => {
   let fails = [];
   if (PARTE === 'node') { fails = nodePart(); console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'TUDO PASSOU'); process.exit(fails.length ? 1 : 0); }
-  if (PARTE !== 'navegador') { // (the Node part in a process of its own: nodemundo stands the timers still, which the browser needs)
+  if (PARTE !== 'navegador' && PARTE !== 'quadro') { // (the Node part in a process of its own: nodemundo stands the timers still, which the browser needs)
     try { process.stdout.write(execFileSync(process.execPath, [__filename, OUT], { env: Object.assign({}, process.env, { PARTE: 'node' }), encoding: 'utf8', maxBuffer: 1 << 26 })); }
     catch (e) { process.stdout.write(e.stdout || ''); process.stderr.write(e.stderr || ''); fails.push('parte em Node'); } }
   if (PARTE !== 'node') fails = fails.concat(await browserPart());

@@ -1596,10 +1596,27 @@ float m3scale(float p) {
     piramide(K, e, X) {
       const C = X.XZ(e.c[0], e.c[1]), y0 = X.foot(e.y0), ya = X.Y(e.y0), y1 = X.Y(e.y1); const s = e.e; const f = e.ponta ? e.ponta.f : 0; const yc = y1 - (y1 - ya) * f, sc = s * f;
       const corner = (q, h, sz) => [C[0] + q[0] * sz, h, C[1] + q[1] * sz]; const Q = [[-1, 1], [1, 1], [1, -1], [-1, -1]], outs = [[0, 0.5, 1], [1, 0.5, 0], [0, 0.5, -1], [-1, 0.5, 0]];
+      // (its way in, D-108 — the entrada: the face toward the front open over the corridor, its width from its floor to its top,
+      // and that face in four pieces round it: under it, where the ground falls away, its two sides, over it. The face was one
+      // quad across the mouth of the corridor the plan walks — the body walked into the stone, the eye from the corridor met
+      // the back of the face a hand over its head: L-579)
+      const en = e.entrada, kf = en ? outs.findIndex(o => Math.abs(o[0] - X.front[0]) < 1e-6 && Math.abs(o[2] - X.front[1]) < 1e-6) : -1;
       K.as(X.mat(e, 'sandstone'), () => { for (let k = 0; k < 4; k++) { const q = (k + 1) % 4;
         // (from the ground under its foot to its capstone, the courses' stone; the foot a little out where the ground falls away)
-        const s0 = s + (ya - y0) * 0.02;
-        K.quad(corner(Q[k], y0, s0), corner(Q[q], y0, s0), corner(Q[q], yc, sc), corner(Q[k], yc, sc), X.col(e.cor[0]), outs[k]); } });
+        const s0 = s + (ya - y0) * 0.02; const c = X.col(e.cor[0]), o = outs[k];
+        const whole = () => K.quad(corner(Q[k], y0, s0), corner(Q[q], y0, s0), corner(Q[q], yc, sc), corner(Q[k], yc, sc), c, o);
+        if (k !== kf) { whole(); continue; }
+        // (the face in its own terms: t along its foot from the middle — the corner Q[k] at -sz —, sz its half width at a height)
+        const d = [(Q[q][0] - Q[k][0]) / 2, (Q[q][1] - Q[k][1]) / 2], nn = [o[0], o[2]];
+        const sz = h => s0 + (sc - s0) * (h - y0) / ((yc - y0) || 1);
+        const P = (t, h) => [C[0] + d[0] * t + nn[0] * sz(h), h, C[1] + d[1] * t + nn[1] * sz(h)];
+        const m = X.XZ(en.u, e.c[1]); const t0 = (m[0] - C[0]) * d[0] + (m[1] - C[1]) * d[1]; const ta = t0 - en.w / 2, tb = t0 + en.w / 2;
+        const ha = Math.max(y0, X.Y(en.y0)), hb = Math.min(yc, X.Y(en.y1));
+        if (!(hb > ha + 1e-3) || ta < -sz(hb) || tb > sz(hb)) { whole(); continue; }
+        if (ha > y0 + 1e-3) K.quad(P(-sz(y0), y0), P(sz(y0), y0), P(sz(ha), ha), P(-sz(ha), ha), c, o);
+        K.quad(P(-sz(ha), ha), P(ta, ha), P(ta, hb), P(-sz(hb), hb), c, o);
+        K.quad(P(tb, ha), P(sz(ha), ha), P(sz(hb), hb), P(tb, hb), c, o);
+        K.quad(P(-sz(hb), hb), P(sz(hb), hb), P(sz(yc), yc), P(-sz(yc), yc), c, o); } });
       if (f > 0) K.as('slab', () => { for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; K.tri(corner(Q[k], yc, sc), corner(Q[q], yc, sc), [C[0], y1, C[1]], X.col(e.ponta.cor[0]), outs[k]); } });
     },
     escalonada(K, e, X) {

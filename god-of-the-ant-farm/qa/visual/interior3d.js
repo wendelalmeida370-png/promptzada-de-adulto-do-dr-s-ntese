@@ -170,8 +170,11 @@ for (const [b, plan, own] of jobs) {
   const [X0, Y0, Z0] = out.at; const W3 = p => [X0 + p[0], Y0 + p[1], Z0 + p[2]];
   const geos = Object.values(out.lv).concat([out.roof]);
   // 1. numbers, the lot, the cost
-  // (from the lowest floor — or the ground, where the steps of a building raised on posts come down to it — to the roof)
-  { let nb = 0, far = 0; const lot = plan.lot.w; const ylo = Math.min(0, ...plan.levels.map(l => l.y)) - 0.4, yhi = plan.shell.eave + ((plan.shell.roof && plan.shell.roof.h) || 0) + 0.6 + Math.max(0, ...plan.levels.map(l => l.y + l.h - plan.shell.eave));
+  // (from the lowest floor — or the ground, where the steps of a building raised on posts come down to it — to the roof; a shell
+  // open to the sky has no eaves nor roof — its height is its form's, as the outside's is (openChecks) —: the Colosseum's top
+  // storey of seats stands at 4,9 m with the parapet over its last row to 8,74 m, the form's own block there, under a form of
+  // 25,6 m, and the bound of its storeys (8,1 m) called it out of the building, T-474)
+  { let nb = 0, far = 0; const lot = plan.lot.w; const ylo = Math.min(0, ...plan.levels.map(l => l.y)) - 0.4, yhi = Math.max(plan.shell.eave + ((plan.shell.roof && plan.shell.roof.h) || 0) + 0.6 + Math.max(0, ...plan.levels.map(l => l.y + l.h - plan.shell.eave)), plan.shell.kind === 'aberta' && FMb ? FMb.top + 0.5 : 0);
     for (const g of geos.concat(out.leaf.map(f => f.g), out.hatch.map(f => f.g))) { for (const a of [g.p, g.n]) for (let k = 0; k < a.length; k++) if (!Number.isFinite(a[k])) nb++; }
     for (const g of geos) for (let k = 0; k < g.p.length; k += 3) { const x = g.p[k] - X0, y = g.p[k + 1] - Y0, z = g.p[k + 2] - Z0; if (x < -0.05 || z < -0.05 || x > lot + 0.05 || z > lot + 0.05 || y < ylo || y > yhi) far++; }
     if (nb) bad.num.push(`${tag}: ${nb}`); if (far) bad.lot.push(`${tag}: ${far} pontos`);
