@@ -26,7 +26,9 @@
 //   7. no building of the town shut off by its own wall (L-344: Hedeby's forge in the mega of 28/10, on a strip between the water
 //      and the west wall line, four gates and none there — its smith in failed searches all day):
 //      7a every plan of the ready worlds, its tiles shut and its gates open, leaves every building of its town that is reached
-//         today reached (counted, the plans that needed a gate of their own for it: w.ways, beyond the four)
+//         today reached (counted, the plans that needed a gate of their own for it: w.ways, beyond the four) — also one whose
+//         only way runs along the line, the gate in two tiles (L-604: Tebas's storehouse on a ledge south of its wall planned in
+//         the metrópole of the generation 15, a tower inside the line where a gate of one tile would lead)
 //      7b Hedeby's forge, while the mega has it: opened from the save, a gate in the wall and the forge reached
 //      7c a standing wall with every gate shut into wall, in a save (an old wall that shut the town's buildings outside off):
 //         loaded, gates open in it, and every building reached before is reached again
@@ -43,6 +45,12 @@
 //   9b. the walls' shortcut (Siege.apart: a building that touches nothing, the open ground round it one piece without it, shuts
 //      nothing — the walls are not judged again for it): at every tile tried for 9, where the shortcut says so, the whole count
 //      (openWays, the tile taken) agrees
+//   10. no gate where the way across the wall line is shut by a blocking building on each side (L-603: Óstia's gate at
+//      (106,123) in the mundial remade after the generation 15, between the old tavern and the baths; Hedeby's at (35,67) in
+//      the mega of the generation 15, between the weaving shop and a sobrado — both there before the wall was planned):
+//      10a every plan of the ready worlds, by the checker's own rule (qa.js) read on the plan's tiles
+//      10b the bad case on purpose: a house on each side of a street tile of the line where a plan has its gate — planned
+//          again, the same line, the gate on another tile of that side; raised at once, the checker sees no gate of it shut
 //   5. the checker clean, no module error
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -67,7 +75,17 @@ const shutOff = (s, w) => {
   const ring = b => { const o = []; for (let x = b.x; x < b.x + b.w; x++) o.push([x, b.y - 1], [x, b.y + b.h]); for (let y = b.y; y < b.y + b.h; y++) o.push([b.x - 1, y], [b.x + b.w, y]); return o.filter(([x, y]) => x >= 0 && y >= 0 && x < N && y < N).map(([x, y]) => y * N + x); };
   return [...S.buildings.values()].filter(b => b.set === s.id && b.built && b.type !== 'ruin').filter(b => { const r = ring(b); return r.some(i => L[i] === R) && !r.some(i => pass(i) && seen[i]); });
 };
-const bad7 = []; let ways7 = 0;
+// (a gate whose way across the line is shut by a blocking building on each side — the checker's rule, qa.js, with the plan's
+// tiles and the walls that stand for the line: L-603)
+const shutGate = (w, i) => {
+  const S = G.S, N = G.N; const on = new Set(w.tiles); const wl = j => on.has(j) || S.wall[j] === 1 || S.wall[j] === 2 || S.wall[j] === 4;
+  const blk = j => { const o = S.occ[j]; const b = o && S.buildings.get(o); return !!(b && b.blocks); };
+  const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) return false;
+  const ew = wl(i - 1) && wl(i + 1), ns = wl(i - N) && wl(i + N); const a = ew ? [i - N, i + N] : ns ? [i - 1, i + 1] : null;
+  return !!a && blk(a[0]) && blk(a[1]);
+};
+const sim = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
+const bad7 = []; let ways7 = 0; const bad10 = [];
 for (const k of WORLDS) {
   M.pronto(k); const S = G.S;
   for (const s of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
@@ -91,6 +109,8 @@ for (const k of WORLDS) {
     { const own = G.Siege.wallOf(s.id); const keep = own ? own.tiles.filter(i => S.wall[i]).map(i => [i, S.wall[i]]) : []; for (const [i] of keep) S.wall[i] = 0; if (keep.length) G.W.touchWalk();
       try { const w0 = keep.length ? plan(s) : w; const cut = w0 && shutOff(s, w0); if (cut && cut.length) bad7.push(`${name}: ${cut.length} prédio(s) fechados (${cut.slice(0, 2).map(b => b.type + '#' + b.id).join(', ')})`); if (w0 && (w0.ways || []).length) ways7++; }
       finally { for (const [i, v] of keep) S.wall[i] = v; if (keep.length) G.W.touchWalk(); } }
+    // (10a: no gate of the plan between two blocking buildings across its line, L-603)
+    { const shut = w.gates.filter(g => shutGate(w, g)); if (shut.length) bad10.push(`${name}: ${shut.map(g => `(${g % G.N},${(g / G.N) | 0})`).join(' ')}`); }
     // 1. each side its gate (or one at its corner), none side by side, at most four
     // (a side that is only its corner — the rest of the line water, or out of the plan —, the corner a tile of the next side: no
     // side of its own to gate; in the anos100 of the v37 the north of Karnak's box was all water but the corner by the west gate,
@@ -158,14 +178,20 @@ ok('2 o portão do lado fica onde se anda (a rua ou o caminho gasto que o cruza)
   ok('3 o caso ruim do L-140, pela regra: nos muros cujos lados andados mais diferem no movimento, o lado mais quieto tem o seu portão', top.length >= 3 && !miss.length,
     top.length < 3 ? `só ${top.length} muro(s) com dois lados andados: o caso precisa de outro mundo` : top.map(q => `${q.name}: lado ${q.side} ${q.served ? 'servido' : 'SEM portão'} (${q.ratio.toFixed(1)}×; portões ${q.gates})`).join(' · ')); }
 ok('7a nenhum plano fecha um prédio da sua cidade', !bad7.length, `${plans} muros planejados; ${ways7} com portão a mais para um prédio que o muro fecharia; ${bad7.length ? bad7.slice(0, 4).join(' · ') : 'nenhum prédio fechado'}`);
+ok('10a nenhum portão planejado entre dois prédios, um de cada lado da linha (L-603)', plans > 20 && !bad10.length, `${plans} muros planejados; ${bad10.length ? bad10.length + ' com portão fechado pelos dois lados — ' + bad10.slice(0, 4).join(' · ') : 'nenhum portão fechado'}`);
 ok('6a nenhum plano corre dentro do muro de outra cidade', !bad6.length, `${plans} muros planejados; ${reach6} com o retângulo entrando no de outro muro; ${bad6.length ? bad6.slice(0, 4).join(' · ') : 'nenhuma casa dentro'}`);
 // 4. a wall begun, saved and loaded halfway; then finished
 {
   M.pronto('anos100'); const S = G.S;
-  const s = [...S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac)).sort((a, b) => a.id - b.id).find(q => plan(q));
-  if (!s) ok('4 um muro começado, salvo e carregado no meio', false, 'nenhuma cidade sem muro que possa erguer um');
+  // (the town: the first without a wall that can plan one, its people at peace — a town taken in the middle gives its wall up:
+  // Birka, in the anos100 remade after the generation 15, fell to Argos a minute in —, with the stone or the wood for half of it
+  // in store, put by the depot where it lacks — the builders lay a tile only with 3 in store, 2 a tile: Birka's people had none,
+  // and nothing was built, T-494)
+  const s = [...S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac) && !G.Fac.enemiesOf(q.fac).length).sort((a, b) => a.id - b.id).find(q => plan(q));
+  if (!s) ok('4 um muro começado, salvo e carregado no meio', false, 'nenhuma cidade sem muro, em paz, que possa erguer um');
   else {
     const w0 = G.Siege.raiseWalls(s, null, false); const tiles = w0.tiles.join(','), gates = w0.gates.join(',');
+    { const f = G.Fac.get(s.fac), k = w0.mat === 'pedra' ? 'stone' : 'wood'; const falta = Math.ceil(w0.tiles.length + 3 - (f.stock[k] || 0)); if (falta > 0) G.Depot.make('f:' + f.id, k, falta, { code: 'teste' }); }
     let n = 0; while (!G.Siege.wallOf(s.id).done && G.Siege.wallOf(s.id).built < w0.tiles.length / 2 && n++ < 4000) G.debug.step(0.5);
     const built = G.Siege.wallOf(s.id).built; M.salvarCarregar(); const w1 = G.Siege.wallOf(s.id);
     const same = !!w1 && w1.tiles.join(',') === tiles && w1.gates.join(',') === gates && w1.built === built;
@@ -356,6 +382,39 @@ for (const k of ['metropole', 'mega', 'cidade', 'anos100', 'mundial']) {
       `${found.k}: o muro de ${s.name} (#${w.id}); um poço (#${b.id}) em (${found.x},${found.y}) fecharia o caminho (o portão em ${shut0.map(g => `(${g % N},${(g / N) | 0})`).join(' ')}); posto: ${left.length ? `ainda fecha (${left.map(g => `(${g % N},${(g / N) | 0})`).join(' ')})` : 'nada fechado'}; portões a mais ${added.map(g => `(${g % N},${(g / N) | 0})${S.wall[g]}`).join(' ') || 'nenhum'}; o verificador: ${s3.join(' · ') || 'limpo'}; carregado, ${kept} de ${added.length} de pé no mapa`);
     void W;
   }
+}
+// 10b. the bad case on purpose (L-603): a house on each side of a street tile of the line where the plan of a town with no
+//      wall has its gate — on a straight run of the line, the two tiles across it free and dry; the houses another town's, so
+//      the box of the plan, its own buildings', stays —: planned again, the same line, and that side's gate on another tile;
+//      raised at once, the checker sees no gate of it shut by buildings
+{
+  const nm = '10b dois prédios, um de cada lado de uma casa de rua onde o plano tem o portão: o portão vai para outra casa';
+  let got = null;
+  for (const k of ['metropole', 'cidade', 'mega']) {
+    M.pronto(k); const S = G.S, N = G.N, V = G.Village;
+    for (const s of [...S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac)).sort((a, b) => a.id - b.id)) {
+      const other = [...S.settlements.values()].find(q => q.id !== s.id); const w0 = other && plan(s); if (!w0) continue; const on = new Set(w0.tiles);
+      const free = j => j >= 0 && j < N * N && !S.occ[j] && !S.wall[j] && !on.has(j) && S.type[j] >= G.T.SAND;
+      const across = i => { const ew = on.has(i - 1) && on.has(i + 1), ns = on.has(i - N) && on.has(i + N); return ew === ns ? null : ew ? [i - N, i + N] : [i - 1, i + 1]; };
+      const g = w0.gates.find(i => { if ((w0.ways || []).includes(i) || !S.road[i] || sideOf(w0, i).length !== 1) return false; const a = across(i); return !!a && free(a[0]) && free(a[1]); });
+      if (g === undefined) continue;
+      const sd = sideOf(w0, g)[0]; const hs = sim(() => across(g).map(j => V.addBuilding('house', j % N, (j / N) | 0, other.id, true)));
+      const w1 = plan(s); const same = !!w1 && w1.tiles.join() === w0.tiles.join();
+      const side = w1 ? w1.gates.filter(q => sideOf(w1, q).includes(sd)) : []; const shut1 = w1 ? w1.gates.filter(q => shutGate(w1, q)) : [];
+      // (raised at once: what the checker says of its gates — the wall then taken off the map as it was)
+      let mine = null;
+      if (w1) { const keep = w1.tiles.map(i => [i, S.wall[i], S.wallFac[i], S.wallHp[i]]); const w = sim(() => G.Siege.raiseWalls(s, 'pedra', true));
+        try { mine = QA.check().filter(q => /fechado por prédios dos dois lados/.test(q.msg) && w.gates.some(i => q.msg.includes(`(${i % N},${(i / N) | 0})`))).map(q => q.msg); }
+        finally { for (const [i, a, b, c] of keep) { S.wall[i] = a; S.wallFac[i] = b; if (c === undefined) delete S.wallHp[i]; else S.wallHp[i] = c; } S.walls.splice(S.walls.indexOf(w), 1); G.W.touchWalk(); } }
+      sim(() => { for (const h of hs) V.removeBuilding(h); });
+      got = { k, s, g, sd, hs, w1, same, side, shut1, mine }; break;
+    }
+    if (got) break;
+  }
+  if (!got) ok(nm, false, 'em nenhum mundo pronto um plano com o portão numa casa de rua de um trecho reto da linha, com chão livre dos dois lados');
+  else { const N = G.N, at = i => `(${i % N},${(i / N) | 0})`;
+    ok(nm, got.same && !got.w1.gates.includes(got.g) && got.side.length > 0 && !got.shut1.length && !!got.mine && !got.mine.length,
+      `${got.k}: ${got.s.name} — o portão do plano em ${at(got.g)} (lado ${got.sd}); com ${got.hs.map(h => h.type + '#' + h.id).join(' e ')} dos dois lados: ${got.same ? 'a mesma linha' : 'A LINHA MUDOU'}, o portão do lado ${got.sd} em ${got.side.map(at).join(' ') || 'NENHUM'}${got.w1.gates.includes(got.g) ? ', e AINDA em ' + at(got.g) : ''}; fechados pelos dois lados ${got.shut1.length}; erguido, o verificador: ${got.mine ? (got.mine.length ? got.mine[0] : 'nada') : '-'}`); }
 }
 // 5. the checker, the module errors
 { const bad = QA.check().filter(q => q.sev <= 2); const e = M.erros(); ok('5 verificador e erros de módulo', !bad.length && !Object.keys(e.mod).length, bad.length ? bad.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : `limpo; erros de módulo: ${JSON.stringify(e.mod)}`); }
