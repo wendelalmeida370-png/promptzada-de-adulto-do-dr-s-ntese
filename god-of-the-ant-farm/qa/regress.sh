@@ -106,7 +106,8 @@ echo "== fundação: $(cat "$OUT"/fund_*.txt 2>/dev/null | grep -c '^PASSOU') pa
 skip encarnado || { (timeout 10800 node encarna.js "$OUT/encarna-fotos" > "$OUT/encarnado.txt" 2>&1); (timeout 3600 node visual/baloes.js .. "$OUT/baloes-fotos" > "$OUT/baloes.txt" 2>&1); (timeout 3600 node visual/diario.js .. "$OUT/diario-fotos" > "$OUT/diario.txt" 2>&1); (timeout 1800 node visual/forma-deus-fotos.js .. "$OUT/forma-deus-fotos" > "$OUT/forma-deus-fotos.txt" 2>&1); }
 echo "== encarnado: $(grep -c '^PASSOU' "$OUT/encarnado.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/encarnado.txt" 2>/dev/null) falharam; balões: $(grep -c '^PASSOU' "$OUT/baloes.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/baloes.txt" 2>/dev/null) falharam; diário: $(grep -c '^PASSOU' "$OUT/diario.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/diario.txt" 2>/dev/null) falharam; o deus do degrau grande: $(grep -c '^PASSOU' "$OUT/forma-deus-fotos.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/forma-deus-fotos.txt" 2>/dev/null) falharam; $(grep -h '^DESEMPENHO' "$OUT/encarnado.txt" 2>/dev/null | cut -c1-200)"
 # 8. desempenho: sozinho na máquina, para os tempos valerem alguma coisa
-skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/mar_perf.txt" | cut -c1-160)"
+# (e o quadro do Modo Encarnado com o Coliseu à vista em tempo de relógio, a 8t do visual/monumental.js — D-134, D-137)
+skip perf || { m17 perf 7; PARTE=quadro timeout 3600 node visual/monumental.js "$OUT/monumental-fotos" > "$OUT/perf_monumental.txt" 2>&1; echo "saída $?" >> "$OUT/perf_monumental.txt"; }; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/mar_perf.txt" "$OUT/perf_monumental.txt" 2>/dev/null | cut -c1-160)"
 # resumo: uma linha por prova
 {
   for f in "$OUT"/mar_*.txt; do grep -h "PASSOU\|FALHOU" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | mar \2/'; done
@@ -124,6 +125,7 @@ skip perf || m17 perf 7; echo "== desempenho: $(grep -h 'PASSOU\|FALHOU' "$OUT/m
   [ -f "$OUT/diario.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/diario.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'
   [ -f "$OUT/forma-deus-fotos.txt" ] && grep -h "^PASSOU\|^FALHOU" "$OUT/forma-deus-fotos.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'
   for f in "$OUT"/fund_*.txt; do [ -f "$f" ] && { grep -h "^PASSOU |\|^FALHOU |" "$f" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'; grep -q '^saída 0' "$f" && echo "PASSOU | fundação $(basename "$f" .txt | cut -c6-) saiu limpo" || echo "FALHOU | fundação $(basename "$f" .txt | cut -c6-) saiu limpo"; }; done
+  [ -f "$OUT/perf_monumental.txt" ] && { grep -h "^PASSOU |\|^FALHOU |" "$OUT/perf_monumental.txt" | sed -E 's/^(PASSOU|FALHOU) \| ([^|]*)\|.*/\1 | \2/'; grep -q '^saída 0' "$OUT/perf_monumental.txt" && echo "PASSOU | desempenho monumental saiu limpo" || echo "FALHOU | desempenho monumental saiu limpo"; }
   for f in caos caos_13; do [ -f "$OUT/$f.txt" ] && { grep -q '"viol": \[\]' "$OUT/$f.txt" && grep -q '"errs": \[\]' "$OUT/$f.txt" && echo "PASSOU | $f sem violações S0–S2" || echo "FALHOU | $f sem violações S0–S2"; }; done
   for f in "$OUT"/guerra_*.txt; do grep -h " PASS \| FAIL " "$f" | grep -v RESULT | sed -E 's/^([^—]*) (PASS|FAIL) .*/\2 | guerra \1/; s/^PASS/PASSOU/; s/^FAIL/FALHOU/'; done
   grep -h "^PASSOU\|^FALHOU" "$OUT/guard.txt" "$OUT/determinismo.txt" | sed -E 's/^(PASSOU|FALHOU).*/\1/' | head -2 | paste -d' ' - <(echo vigia; echo determinismo) | sed 's/ / | /'
