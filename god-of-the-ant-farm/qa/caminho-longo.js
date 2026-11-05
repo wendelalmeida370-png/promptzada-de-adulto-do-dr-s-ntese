@@ -44,11 +44,13 @@ let pick = null;
   // heart of a town far from hers, by the same rule: the long way the map says open is the case, the walls were Liv's)
   if (!pick) scan([...S.settlements.values()].filter(s => !walled.includes(s)).sort((a, b) => a.id - b.id), false);
 }
-const who = pick && [...S.villagers.values()].filter(v => v.set === pick.a.id && v.age >= 18 && v.age < 50 && !v.captive && !v.aboard && !v.ug && !v.jail && !v.inside && !(S.avatar && S.avatar.id === v.id)).sort((p, q) => p.id - q.id)[0];
+// (a grown one of the town, free — the ones out of doors first, else one at home, whom the test's hand takes out awake: the
+// metrópole of the generation 14 was saved at midnight, everyone in bed, and the case found nobody, T-480)
+const who = pick && [...S.villagers.values()].filter(v => v.set === pick.a.id && v.age >= 18 && v.age < 50 && !v.captive && !v.aboard && !v.ug && !v.jail && !(S.avatar && S.avatar.id === v.id)).sort((p, q) => (p.inside ? 1 : 0) - (q.inside ? 1 : 0) || p.id - q.id)[0];
 if (!pick || !who) ok('l1 o caminho de casa de dentro de uma cidade murada longe: o mapa diz aberto, a busca exata não acha, o Vg.goto acha', false, !pick ? 'nenhum par de cidade (murada ou não) e cidade longe com o caminho longo demais para a busca exata' : 'a cidade não tem adulto livre');
 else {
   const { a, b, spot, t, d, walls } = pick;
-  Vg.endTask(who); who.x = spot[0]; who.y = spot[1]; who.path = null; who._pfN = 0; who._pfI = -1; who.carry = who.carry && who.carry.n > 0 ? who.carry : null;
+  Vg.endTask(who); who.inside = 0; who.sleeping = false; who.x = spot[0]; who.y = spot[1]; who.path = null; who._pfN = 0; who._pfI = -1; who.carry = who.carry && who.carry.n > 0 ? who.carry : null;
   const found = Vg.goto(who, t[0], t[1], true); const len = found && who.path ? who.path.length : 0; who.path = null;
   ok('l1 o caminho de casa de dentro de uma cidade murada longe: o mapa diz aberto, a busca exata não acha, o Vg.goto acha', found,
     `${who.name} de ${a.name}, no meio de ${b.name} (${walls ? 'dentro dos muros' : 'no coração dela, sem muro'}), a ${d.toFixed(0)} casas da frente do armazém de casa: a busca exata (3500) não acha; o Vg.goto ${found ? 'acha (' + len + ' pontos)' : 'NÃO acha'}`);

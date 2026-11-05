@@ -51,7 +51,11 @@ function judge(name, A, B, hr, L0, store0, how) {
   const reached = () => D.ledger().some(e => e[0] > L0 && e[3] === 'v:' + A.id && e[4] === hr && e[5] === 'ceramica');
   const intoStore = r2((f.stock.ceramica || 0) - store0);
   const loot = D.ledger().filter(e => e[0] > L0 && e[8] === 'saque' && e[3] === 'v:' + B.id && e[4] === 'f:' + f.id);
-  const lootOk = !B.carry && loot.length === 1 && Math.abs(loot[0][6] - 3) < 1e-6;
+  // (the loot into the store by its one line, all of it; what the hands hold after that came into them by a line of its own, later
+  // — a builder takes a work's stone from the store the next moment: in the metrópole of the generation 14, Khafre, back from the
+  // raid, put his 3 of food in the store and took 1 of stone for a work in the same second, T-479)
+  const later = () => loot.length === 1 && D.ledger().some(e => e[0] > loot[0][0] && e[4] === 'v:' + B.id);
+  const lootOk = loot.length === 1 && Math.abs(loot[0][6] - 3) < 1e-6 && (!B.carry || later());
   // (and the purchase goes on home: the next errand takes it there)
   const there = kept ? live(120, reached) : reached();
   if (!there) {
