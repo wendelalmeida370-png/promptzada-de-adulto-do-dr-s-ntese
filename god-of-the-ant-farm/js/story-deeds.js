@@ -58,7 +58,7 @@
       yield c.say('p', pick([`Eu nunca vou esquecer esse rosto.`, `${T ? T.name : 'Ele'}. ${T ? T.name : 'Ele'}. ${T ? T.name : 'Ele'}.`]), { style: 'think' });
     } else {
       c.pose('p', ''); yield 0.8;
-      const civ = p._civ || p.civ;
+      const civ = G.Fac.civOfV(p); // (the gods of the people they live among, from the world — never the frame's mark, L-589)
       c.pose('p', p.role === 'guerreiro' || p.role === 'cacador' ? 'brandish' : 'swear');
       c.slow(0.6, 1.6);
       const words = OATH[civ] ? OATH[civ](T ? T.name : 'quem fez isso', V ? V.name : '') : `${T ? T.name : 'Quem fez isso'}. Eu vou te encontrar.`;

@@ -653,7 +653,8 @@
   }
   // the dead on display: on the rope, on the cross, on the stake
   J.drawPosed = function (ctx, c, sx, sy, t) {
-    const L = c.look; const S = G.S;
+    // (the painter's copy of the look, never the world's: the pose and the burnt skin are the frame's, L-588)
+    const L = G.Carnage.paintLook(c); const S = G.S;
     const st = G.Carnage.stage(c);
     ctx.save(); ctx.translate(sx, sy);
     L.headless = false; L._ruler = false;
@@ -661,19 +662,19 @@
       const sw = Math.sin(t * 0.9 + c.id) * 0.05;
       ctx.translate(0, -1); ctx.rotate(sw);
       ctx.strokeStyle = rope; ctx.lineWidth = 0.55; ctx.beginPath(); ctx.moveTo(0, -9.6); ctx.lineTo(0, -(H + BEAM - 2.2) + 1); ctx.stroke();
-      const a = L.act; L.act = 'hangd'; L.actT = 0; L.moving = false;
-      G.Art.villager(ctx, L, 0, 0, t, false); L.act = a;
+      L.act = 'hangd'; L.actT = 0; L.moving = false;
+      G.Art.villager(ctx, L, 0, 0, t, false);
       ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(-0.7, -9.6, 1.4, 0.9);
     } else if (c.pose === 'cross') {
       ctx.translate(0, -7);
-      const a = L.act; L.act = 'cross'; L.actT = 0; L.moving = false;
-      G.Art.villager(ctx, L, 0, 0, t, false); L.act = a;
+      L.act = 'cross'; L.actT = 0; L.moving = false;
+      G.Art.villager(ctx, L, 0, 0, t, false);
       ctx.fillStyle = 'rgba(120,10,16,0.75)'; ctx.fillRect(3.6, -9.6, 0.6, 1.4); ctx.fillRect(-4.2, -9.6, 0.6, 1.4); ctx.fillRect(-0.3, -1.2, 0.8, 1.4);
     } else if (c.pose === 'burnt') {
       ctx.translate(0, -4);
       L.skin = '#2e221e'; L._cloth = '#1a1614'; L.hair = '#1a1614';
-      const a = L.act; L.act = 'bound'; L.actT = 0; L.moving = false;
-      G.Art.villager(ctx, L, 0, 0, t, false); L.act = a;
+      L.act = 'bound'; L.actT = 0; L.moving = false;
+      G.Art.villager(ctx, L, 0, 0, t, false);
       if (G.VR() < 0.05) G.FX && G.FX.spawn({ x: c.x, y: c.y, z: 14, vz: 8, vx: G.vrr(-0.1, 0.1), vy: 0, g: -2, life: 2, s0: 1.4, s1: 3.6, c: 'rgba(70,64,60,0.35)', k: 4 });
     }
     // crows on the hanged and the crucified

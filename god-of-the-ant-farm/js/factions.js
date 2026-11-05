@@ -24,6 +24,10 @@
   F.ofSet = setId => { const s = G.S.settlements.get(setId); return s ? G.S.factions.get(s.fac) : null; };
   F.ofV = v => F.ofSet(v.set);
   F.idOfV = v => { const s = G.S.settlements.get(v.set); return s ? s.fac : 0; };
+  // (the people a person lives among — the people of their town's faction; a captive keeps their own —: the world's rule, read by
+  // the oath and the vow. The god's frame dresses them by the same rule in its own mark, v._civ, which the world never reads:
+  // the oath read the mark, and one who lived among another people swore by other gods with and without a frame, L-589)
+  F.civOfV = v => (v.captive ? v.civ : ((F.ofV(v) || {}).civ || v.civ || null));
   F.stockOfSet = setId => { const f = F.ofSet(setId); return f ? f.stock : F._nullStock; };
   F.stockV = v => F.stockOfSet(v.set);
   // what the builders may take: wood set aside for a boat stays in the store
