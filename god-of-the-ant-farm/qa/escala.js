@@ -25,7 +25,13 @@ const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | escala
 const sim = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 let S, V, Es, D;
 const abre = w => { M.pronto(w || 'metropole'); S = G.S; V = G.Village; Es = G.Escala; D = G.Depot; return S; };
-const cidade = nome => [...S.settlements.values()].find(s => s.name === nome);
+// (as cidades pelo que são, nunca pelo nome — cada mundo refeito muda os tamanhos, os nomes e quem é a capital, T-477, T-493,
+// T-496: as capitais dos povos vivos, a mais povoada primeiro; a do povo de um estilo — a romana, a do Coliseu do M1 —; a maior
+// cidade; e um lote de um degrau pela busca do jogo, com o dia de ontem esquecido)
+const capitais = () => [...new Set(G.Fac.all().filter(f => f.alive).map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
+const doPovo = civ => capitais().find(s => G.Civ.idOfFac(s.fac) === civ) || null;
+const maior = () => [...S.settlements.values()].filter(s => G.Fac.get(s.fac)).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)[0] || null;
+const loteDe = (s, type, n) => { s._noSite = {}; const p = sim(() => V.findSite(s, type, undefined, n)); s._noSite = {}; return p; };
 const degrau = (t, n) => Es.steps(t).find(s => s.n === n);
 const soma = o => Object.values(o || {}).reduce((a, x) => a + (x || 0), 0);
 const lado = b => (b ? `${b.type}#${b.id} ${b.w}×${b.h} em ${b.x},${b.y} (${b.esc || '-'})` : 'nada');
@@ -169,8 +175,8 @@ run('e3x', () => {
 
 // ------------------------------ e4 e e5: o save no meio da obra grande, e o deus que derruba ------------------------------
 run('e4', () => {
-  abre(); const set = cidade('Roma'); const b = sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60 }));
-  if (!ok('e4a a obra grande', !!b && b.w === 10 && !b.built, `${set.name}: ${lado(b)}, a conta ${b ? JSON.stringify(V.bill(b)) : '?'}, o trabalho ${b ? V.workOf(b) : '?'}`)) return;
+  abre(); const set = doPovo('romano'); const b = set && sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60 })); // (a capital romana: o Coliseu do M1)
+  if (!ok('e4a a obra grande', !!b && b.w === 10 && !b.built, `${set ? set.name : 'nenhuma capital do povo romano'}: ${lado(b)}, a conta ${b ? JSON.stringify(V.bill(b)) : '?'}, o trabalho ${b ? V.workOf(b) : '?'}`)) return;
   pedra(set, 200); M.saltar(2);
   const o = S.buildings.get(b.id); const foto = x => JSON.stringify([x.x, x.y, x.w, x.h, x.esc, x.built, +x.progress.toFixed(6), x.need, x.brick, x.troca, x.ip && x.ip.n, x.ip && x.ip.h.length]);
   const f0 = foto(o); const p0 = o.progress; salva(); const o2 = S.buildings.get(b.id);
@@ -189,8 +195,8 @@ run('e4', () => {
 
 // ------------------------------ e6: a cidade que encolhe ------------------------------
 run('e6', () => {
-  abre(); const set = cidade('Mênfis'); const b = sim(() => V.handFound(set, 'temple', 'templo', { built: true, R: 60 }));
-  if (!ok('e6a o templo grande de pé', !!b && b.w === 4 && b.built, `${set.name} (${V.pop(set.id)}): ${lado(b)}`)) return;
+  abre(); const set = maior(); const b = set && sim(() => V.handFound(set, 'temple', 'templo', { built: true, R: 60 }));
+  if (!ok('e6a o templo grande de pé', !!b && b.w === 4 && b.built, `${set ? set.name + ' (' + V.pop(set.id) + ')' : 'nenhuma cidade'}: ${lado(b)}`)) return;
   const quem = [...S.villagers.values()].filter(v => v.set === set.id && !v.captive && !v._ruler).sort((a, c) => c.age - a.age || a.id - c.id);
   sim(() => { for (const v of quem) { if ([...S.villagers.values()].filter(o => o.set === set.id).length < 30) break; V.kill(v, 'old'); } });
   const ch = Es.choose(set, 'temple'); const fac = G.Fac.get(set.fac);
@@ -333,7 +339,9 @@ run('e14', () => {
 // (o livro conta a pedra que as mãos do povo trazem ao estoque — a entrega —, não a que a prova põe; um degrau maior de uma obra
 // pública só com a pedra de vinte anos — a do estoque e a renda —, o clássico pela pedra guardada, como antes)
 run('e15', () => {
-  abre(); const set = cidade('Roma'); const f = G.Fac.get(set.fac); const fid = f.id; const P6 = degrau('palacio', 6);
+  // (a capital: a mais povoada com lote para o palácio de 6, pela busca do jogo)
+  abre(); const set = capitais().find(s => !!loteDe(s, 'palacio', 6)); if (!ok('e15 uma capital com lote para o palácio de 6', !!set, set ? set.name : 'nenhuma')) return;
+  const f = G.Fac.get(set.fac); const fid = f.id; const P6 = degrau('palacio', 6);
   // (the people's count of the day begun clean, in the ledger's own form — f.pedra —: the income is the bigger of today's and
   // yesterday's, and in the metrópole of the generation 14 Roma's people had brought 144 yesterday, more than the 12 of the case:
   // the income did not move, T-477)
@@ -355,28 +363,35 @@ run('e15', () => {
 
 // ------------------------------ e16: a vez da obra grande só com a cidade alimentada e em casa (D-120) ------------------------------
 run('e16', () => {
-  abre(); const set = cidade('Roma'); const fid = set.fac; const f = G.Fac.get(fid);
-  const b = sim(() => V.handFound(set, 'palacio', 'palacio', { R: 60 })); if (!ok('e16a a obra grande', !!b && b.w === 6 && !b.built, lado(b))) return;
+  // (a capital alimentada e em casa — ninguém crescido sem casa —, a mais povoada onde a mão do deus acha lote para o palácio de 6)
+  abre(); let set = null, b = null;
+  for (const s of capitais()) { if (!V.foodSafe(s.fac) || V.housingInfo(s.id).homeless) continue; b = sim(() => V.handFound(s, 'palacio', 'palacio', { R: 60 })); if (b) { set = s; break; } }
+  if (!ok('e16a a obra grande', !!b && b.w === 6 && !b.built, b ? `${set.name}: ${lado(b)}` : 'nenhuma capital alimentada e em casa com lote para o palácio de 6')) return;
+  const fid = set.fac; const f = G.Fac.get(fid);
   const fed = V.foodSafe(fid), hi = V.housingInfo(set.id); const v1 = V.vez(set), p1 = V.workPri(b);
+  // (a comida de volta pelo depósito até o lugar que o povo tem: o depósito não põe o que não cabe, e na metrópole refeita depois
+  // da geração 15 Roma guardava 1238 com lugar para 1080 — tudo o que voltava era recusado, e a cidade ficava sem comida, T-496)
   const food = f.stock.food || 0; sim(() => D.use('f:' + fid, 'food', food, { code: 'teste' })); const v2 = V.vez(set), p2 = V.workPri(b);
-  sim(() => D.make('f:' + fid, 'food', food, { code: 'teste' }));
+  sim(() => D.make('f:' + fid, 'food', food, { code: 'teste', part: true }));
   const adulto = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 16 && v.home && !v.captive).sort((a, c) => a.id - c.id)[0]; const casa = adulto.home;
   adulto.home = 0; const v3 = V.vez(set), p3 = V.workPri(b); adulto.home = casa; const v4 = V.vez(set);
   const santo = sim(() => V.handFound(set, 'temple', 'santuario', { R: 60 })); const p5 = santo ? V.workPri(santo) : 0;
   ok('e16b a vez', fed && !hi.homeless && v1 === 1 && p1 === -V.GREAT_PRI && v2 === 0 && p2 === 0 && v3 === 0 && p3 === 0 && v4 === 1 && !p5,
     `${set.name} alimentada (${Math.round(food)} de comida para ${G.Fac.pop(fid)}) e em casa: a vez ${v1} (${p1}); sem comida: ${v2} (${p2}); um adulto sem casa: ${v3} (${p3}); de volta: ${v4}; um santuário em obra: ${p5}`);
-  salva(); const s2 = cidade('Roma'); ok('e16c a vez vai no save', (s2.vez || 0) === v4, `depois do save: ${s2.vez}`);
+  salva(); const s2 = S.settlements.get(set.id); ok('e16c a vez vai no save', !!s2 && (s2.vez || 0) === v4, `depois do save: ${s2 ? s2.vez : 'SEM A CIDADE'}`);
 });
 
 // ------------------------------ e17: de fora e de dentro (D-120) ------------------------------
 // (o Coliseu romano procura até o raio e vinte; o palácio, até o raio e seis e depois doze; quem não acha diz por quê, com números)
 run('e17', () => {
-  abre(); const roma = cidade('Roma'), argos = cidade('Argos');
+  // (a capital romana, cuja maravilha fica fora da cidade, e a mais povoada das capitais cuja maravilha fica dentro)
+  abre(); const roma = doPovo('romano'), argos = capitais().find(s => !V.fora(s, 'maravilha'));
+  if (!ok('e17 a capital romana e uma de maravilha dentro', !!roma && !!argos, `${roma ? roma.name : 'nenhuma capital romana'}; ${argos ? argos.name : 'nenhuma capital de maravilha dentro'}`)) return;
   const r1 = V.reachOf(roma, 'maravilha').join(), r2 = V.reachOf(roma, 'palacio').join(), r3 = V.reachOf(argos, 'maravilha').join();
-  ok('e17a de fora e de dentro', r1 === '20' && r2 === '6,12' && r3 === '6,12', `o Coliseu de Roma até o raio e ${r1}; o palácio de Roma ${r2}; a maravilha de Argos ${r3}`);
+  ok('e17a de fora e de dentro', r1 === '20' && r2 === '6,12' && r3 === '6,12', `o Coliseu de ${roma.name} até o raio e ${r1}; o palácio de ${roma.name} ${r2}; a maravilha de ${argos.name} ${r3}`);
   roma._noSite = {}; const p = sim(() => V.findSite(roma, 'palacio', undefined, 6)); const R = G.Urban.radius(roma, { w: 6 }, V.pop(roma.id));
   const d = p ? G.dist(p[0] + 3, p[1] + 3, roma.cx, roma.cy) : 0;
-  ok('e17b o palácio de 6 de Roma, dentro do alcance', !!p && !p.demolish && d <= R + 12, p ? `em ${p.join(',')}, a ${d.toFixed(0)} casas (o raio ${R})` : 'sem lote');
+  ok('e17b o palácio de 6 de Roma, dentro do alcance', !!p && !p.demolish && d <= R + 12, p ? `${roma.name}: em ${p.join(',')}, a ${d.toFixed(0)} casas (o raio ${R})` : `${roma.name}: sem lote`);
   const w = V.landWhy(roma, 'maravilha', 10); roma._noSite = {}; const q = sim(() => V.findSite(roma, 'maravilha', undefined, 10));
   const R10 = Math.round(G.Urban.radius(roma, { w: 10 }, V.pop(roma.id))) + 20;
   ok('e17c o Coliseu sem terra diz por quê', w.R === R10 && (w.free || !q) && /\d/.test(w.txt), `«${w.txt}»`);
@@ -384,8 +399,14 @@ run('e17', () => {
 
 // ------------------------------ e18: limpar o lote — as ruas menores que o anel junta, a madeira para a obra (D-120) ------------------------------
 run('e18', () => {
-  abre(); const set = cidade('Óstia'); set._noSite = {}; const P = sim(() => V.findSite(set, 'temple', undefined, 4)); const N = G.N;
-  if (!ok('e18a um lote de 4', !!P, P ? P.join(',') : 'nenhum')) return;
+  // (a cidade e o lote pelo que são: a menor que justifica o templo de 4 — templo4() —, depois as capitais; a primeira com lote de 4
+  // pela busca do jogo cujo anel inteiro se anda — por onde o anel junta as pontas da rua que a prova pinta —, e sem nenhum assim, a
+  // primeira com lote)
+  abre(); const N = G.N; const anel = ([x, y]) => { for (let ty = y - 1; ty <= y + 4; ty++) for (let tx = x - 1; tx <= x + 4; tx++) if ((ty < y || ty >= y + 4 || tx < x || tx >= x + 4) && !G.W.walkable(ty * N + tx)) return false; return true; };
+  const cands = [...new Set([templo4(), ...capitais()].filter(Boolean))]; let set = null, P = null;
+  for (const s of cands) { const p = loteDe(s, 'temple', 4); if (p && anel(p)) { set = s; P = p; break; } }
+  if (!set) for (const s of cands) { const p = loteDe(s, 'temple', 4); if (p) { set = s; P = p; break; } }
+  if (!ok('e18a um lote de 4', !!P, P ? `${set.name}: ${P.join(',')}` : 'nenhum')) return;
   const [x, y] = P; const row = y + 1; const salvo = [];
   const pinta = (tx, ty, r) => { const i = ty * N + tx; salvo.push([i, S.road[i]]); S.road[i] = r; };
   for (let tx = x - 1; tx <= x + 4; tx++) pinta(tx, row, 1); // (uma rua de terra de lado a lado, do anel ao anel)
@@ -414,9 +435,9 @@ run('e18', () => {
 // degrau tem; os lutadores, um posto para cada lugar de luta; um dia de jogos: os lutadores na areia, o público nas fileiras,
 // tantos quantos vêm, e no fim ninguém lá dentro)
 run('e19', () => {
-  abre(); const set = cidade('Roma'); const In = G.Interiors, Tt = G.Teatro, E = G.Eco;
-  let b = sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60, built: true }));
-  if (!ok('e19a o Coliseu de pé', !!b && b.w === 10 && b.built && G.Interiors.plan(b).ok, lado(b))) return;
+  abre(); const set = doPovo('romano'); const In = G.Interiors, Tt = G.Teatro, E = G.Eco; // (a capital romana: o Coliseu do M1)
+  let b = set && sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60, built: true }));
+  if (!ok('e19a o Coliseu de pé', !!b && b.w === 10 && b.built && G.Interiors.plan(b).ok, set ? `${set.name}: ${lado(b)}` : 'nenhuma capital do povo romano')) return;
   const T = In.table(b); const of = u => (T && T.byUse.get(u)) || []; const assentos = of('assistir').filter(e => e.it.kind === 'fileira').length, emPe = of('assistir').filter(e => e.it.kind === 'marca').length;
   const ver = of('assistir').length, luta = of('lutar').length, jb = E.jobsOf(b);
   ok('e19b os lugares da planta', assentos >= 700 && emPe >= 50 && luta === 8 && !!jb && jb.n === luta && jb.role === 'ator', `${assentos} assentos nas fileiras e ${emPe} em pé no pódio (${ver} para ver), ${luta} na areia; os postos: ${jb ? jb.n + ' de ' + jb.role : 'nenhum'}`);
@@ -442,6 +463,11 @@ run('e19', () => {
   // (trazidos à porta do Coliseu — quem governa mora noutra cidade —, para chegarem nos jogos de hoje)
   const porta = G.Vg.door(b); for (const v of [rei, ...corte]) { sim(() => G.Vg.endTask(v)); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); v.x = porta[0] + 1 + (v.id % 3); v.y = porta[1] + 1; v.path = null; D.make(E.coinRef(v), 'moedas', 5, { code: 'teste' }); }
   let caixa = null, caixaSalvo = null; const lugar = v => { const p = In.placeOf(v); return p ? { use: p.use, kind: p.it ? p.it.kind : '-', st: p.st, pose: p.pose, quadril: Math.round((p.y + In.SIT_H) * 100) / 100 } : null; };
+  // (toda a corte lá dentro, da lista da prova ou não — quem mais da corte vem aos jogos disputa o banco pela mesma regra: na
+  // metrópole refeita depois da geração 15, quatro da família de Antônia, dois de fora da lista, tinham o banco, e três nobres
+  // da lista ficaram nas fileiras, como a regra manda, T-496 —: cada um com o seu lugar e se é da família de quem governa)
+  const parente = v => { const r = G.Politics.ruler(G.Fac.get(set.fac)); return !!r && (v.id === r.partner || v.mother === r.id || v.father === r.id || r.mother === v.id || r.father === v.id || (!!r.mother && v.mother === r.mother) || (!!r.father && v.father === r.father)); };
+  const daCorte = () => [...S.villagers.values()].filter(v => v.inside === b.id && v.task && v.task.type === 'teatro' && Tt.boxOf(v, b) === 'corte').sort((a, c) => a.id - c.id).map(v => ({ id: v.id, kin: parente(v), q: lugar(v) }));
   S.time = Tt.EARLY - 0.02; S.weather.rain = 0; S.weather.storm = 0; S.time = Math.max(S.time, Tt.opensAt(b) - 0.01);
   // (um dia de jogos com o céu limpo: os eventos do acaso do mundo desligados pelo botão do jogo — G.DV.events, o do modo
   // desenvolvedor —, passo a passo. Na metrópole da geração 15 a tempestade do mundo veio às 0,555, e com ela todos os de
@@ -456,22 +482,25 @@ run('e19', () => {
     if (op.data.fase === 'portas' && !caixa) { caixa = { mandados: 0 }; for (const v of [rei, ...corte]) { const t = sim(() => Tt.visit(v, b)); if (t) caixa.mandados++; else if (VERB) console.log('  não foi aos jogos:', v.name, v.id, 'tarefa', v.task && v.task.type, 'moedas', E.purse(v), 'chega', G.W.reaches(v, ...G.Vg.door(b)), 'dentro', v.inside, 'dorme', v.sleeping); } }
     if (VERB && caixa && k % 15 === 0) console.log(`  k${k} ${op.data.fase}:`, [rei, ...corte].map(v => `${v.name}#${v.id} ${v.task ? v.task.type + '/' + v.task.st : '-'} ${v.inside === b.id ? 'dentro ' + ((In.placeOf(v) || {}).use || '?') : 'fora'}`).join(' | '));
     // (no camarote, quem governa e os da corte que vieram — um chamado do mundo pode levar algum antes —, depois de um passo dentro)
-    if (op.data.fase === 'peca' && caixa && !caixa.rei && rei.inside === b.id && corte.some(v => v.inside === b.id)) { const vieram = corte.filter(v => v.inside === b.id); caixa = Object.assign(caixa, { rei: lugar(rei), corte: vieram.map(lugar), ids: vieram.map(v => v.id) }); }
+    if (op.data.fase === 'peca' && caixa && !caixa.rei && rei.inside === b.id && corte.some(v => v.inside === b.id)) { const vieram = corte.filter(v => v.inside === b.id); caixa = Object.assign(caixa, { rei: lugar(rei), corte: vieram.map(lugar), ids: vieram.map(v => v.id), todos: daCorte() }); }
     if (op.data.fase === 'portas' || op.data.fase === 'peca') for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (v.set !== set.id || v.age < 16 || v.role === 'ator' || v.sleeping || v.inside || (v.task && (v.task.type === 'teatro' || (v.task.pri || 0) >= 1))) continue; if (sim(() => Tt.visit(v, b))) quem++; }
     if (op.data.fase === 'peca') { let fi = 0, ar = 0; for (const v of S.villagers.values()) { if (v.inside !== b.id) continue; const p = In.placeOf(v); if (p && p.use === 'assistir') fi++; if (p && p.use === 'lutar') ar++; }
       mais = Math.max(mais, Object.keys(op.data.plateia).length); nasFileiras = Math.max(nasFileiras, fi); naAreia = Math.max(naAreia, ar);
       if (ar && !salvo) { const id = b.id, oid = op.id; const antes = caixa && caixa.rei; salva(); b = S.buildings.get(id); op = G.Act.get(oid); passo();
-        if (antes) caixaSalvo = { rei: lugar(S.villagers.get(rei.id)), corte: caixa.ids.map(id => lugar(S.villagers.get(id))) };
+        if (antes) caixaSalvo = { rei: lugar(S.villagers.get(rei.id)), corte: caixa.ids.map(id => lugar(S.villagers.get(id))), todos: daCorte() };
         const lut = Object.keys(op.data.atores).map(k => S.villagers.get(+k)).filter(Boolean); salvo = { ar, usos: lut.map(v => (v.task && v.task.use) || '-'), naAreia: lut.filter(v => { const p = In.placeOf(v); return p && p.use === 'lutar'; }).length }; } }
   }
   ok('e19g o save no meio dos jogos', !!salvo && salvo.naAreia > 0 && salvo.usos.every(u => u === 'lutar'), salvo ? `${salvo.ar} na areia antes do save; depois, os lutadores com a tarefa de ${[...new Set(salvo.usos)].join(', ')} e ${salvo.naAreia} num lugar de luta` : 'sem save (ninguém na areia)');
-  // (o camarote: quem governa sentado no trono, o quadril no assento de 0,5 m; até quatro da corte no banco, sentados, quem
-  // passa disso nas fileiras; e o save no meio dos jogos devolve cada um ao seu lugar)
-  const usos = L => L.map(q => (q ? q.use : '-'));
+  // (o camarote: quem governa sentado no trono, o quadril no assento de 0,5 m; o banco da planta cheio da corte que veio,
+  // sentada — a família de quem governa antes dos nobres —, quem passa dele nas fileiras; e o save no meio dos jogos devolve cada
+  // um ao seu lugar)
+  const usos = L => L.map(q => (q ? q.use : '-')); const nb = (T.byUse.get('corte') || []).length;
   const okR = q => !!q && q.use === 'trono' && q.kind === 'trono-camarote' && q.st === 'sit' && q.pose === 'sentado' && Math.abs(q.quadril - 0.5) < 1e-6;
-  const okC = L => { const nc = Math.min(4, L.length); return L.length > 0 && usos(L).filter(u => u === 'corte').length === nc && L.filter(q => q && q.use === 'corte').every(q => q.kind === 'banco-corte' && q.st === 'sit') && usos(L).filter(u => u === Tt.seatUse(b)).length === L.length - nc; }; // (até quatro no banco; quem passa disso, nas fileiras)
-  ok('e19h o camarote: quem governa no trono, a corte no banco', !!caixa && okR(caixa.rei) && okC(caixa.corte), caixa && caixa.rei ? `${rei.name} no ${caixa.rei.kind} (${caixa.rei.use}, ${caixa.rei.pose}, o quadril a ${caixa.rei.quadril} m); a corte (${caixa.corte.length} dos ${corte.length} chamados vieram): ${usos(caixa.corte).join(', ')}` : `${caixa ? caixa.mandados : 0} de ${1 + corte.length} mandados aos jogos; o camarote não encheu`);
-  ok('e19i o save no meio dos jogos devolve o camarote', !!caixaSalvo && okR(caixaSalvo.rei) && okC(caixaSalvo.corte), caixaSalvo ? `depois do save: ${caixaSalvo.rei ? caixaSalvo.rei.use : '-'}; a corte: ${usos(caixaSalvo.corte).join(', ')}` : 'sem save');
+  const banco = L => L.filter(e => e.q && e.q.use === 'corte'), fora = L => L.filter(e => !(e.q && e.q.use === 'corte'));
+  const okC = L => !!L && L.length > 0 && nb > 0 && banco(L).length === Math.min(nb, L.length) && banco(L).every(e => e.q.kind === 'banco-corte' && e.q.st === 'sit') && fora(L).every(e => e.q && e.q.use === Tt.seatUse(b)) && !(banco(L).some(e => !e.kin) && fora(L).some(e => e.kin));
+  const diz = L => `a corte lá dentro ${L.length} (${L.filter(e => e.kin).length} da família): no banco de ${nb}, ${banco(L).length} (${banco(L).filter(e => e.kin).length} da família); nas fileiras ${fora(L).filter(e => e.q && e.q.use === Tt.seatUse(b)).length} de ${fora(L).length}`;
+  ok('e19h o camarote: quem governa no trono, a corte no banco', !!caixa && okR(caixa.rei) && okC(caixa.todos), caixa && caixa.rei ? `${rei.name} no ${caixa.rei.kind} (${caixa.rei.use}, ${caixa.rei.pose}, o quadril a ${caixa.rei.quadril} m); ${diz(caixa.todos)}; da lista da prova, ${caixa.corte.length} dos ${corte.length} vieram: ${usos(caixa.corte).join(', ')}` : `${caixa ? caixa.mandados : 0} de ${1 + corte.length} mandados aos jogos; o camarote não encheu`);
+  ok('e19i o save no meio dos jogos devolve o camarote', !!caixaSalvo && okR(caixaSalvo.rei) && okC(caixaSalvo.todos), caixaSalvo ? `depois do save: ${caixaSalvo.rei ? caixaSalvo.rei.use : '-'}; ${diz(caixaSalvo.todos)}` : 'sem save');
   M.viver(2); // (os bebês no colo saem com quem os carrega, no passo seguinte)
   const lista = [...S.villagers.values()].filter(v => v.inside === b.id); const dentro = lista.length;
   if (VERB || dentro) console.log('  lá dentro:', lista.map(v => { const c = v.carrier && S.villagers.get(v.carrier); return `${v.id} ${v.role} ${v.task ? v.task.type + '/' + v.task.st + '/' + (v.task.use || '') : '-'} colo ${v.carrier || 0}${c ? ' (' + c.role + ', dentro de ' + c.inside + ', ' + (c.task ? c.task.type : '-') + ')' : ''}`; }).join(' · '));
@@ -498,7 +527,7 @@ run('e21', () => {
   const casa = V.resOver(set, 'house', R.x + 1, R.y + 1, 1, 1, true), campo = V.resOver(set, 'farm', R.x, R.y, 3, 3, false), obra = V.resOver(set, R.type, R.x, R.y, R.n, R.n, true);
   let busca = 0; for (let k = 0; k < 6; k++) { set._noSite = {}; const p = sim(() => V.findSite(set, 'house')); if (p && p[0] < R.x + R.n && p[0] + 1 > R.x && p[1] < R.y + R.n && p[1] + 1 > R.y) busca++; }
   ok('e21c as buscas o deixam de fora', casa === set && !campo && !obra && !busca, `uma casa nele: ${casa ? 'barrada' : 'LIVRE'}; um campo da cidade: ${campo ? 'BARRADO' : 'pode'}; a obra dele: ${obra ? 'BARRADA' : 'pode'}; 6 buscas de casa: ${busca} nele`);
-  salva(); const set2 = cidade(set.name); const R2 = V.reserva(set2);
+  salva(); const set2 = S.settlements.get(set.id); const R2 = V.reserva(set2);
   ok('e21d o save', JSON.stringify(R2) === JSON.stringify(R), `depois do save: ${JSON.stringify(R2)}`);
   const c0 = checa(); ok('e21e verificador', c0.ok, c0.txt);
   // (o deus põe um poço no lote: o lote se solta; o deus o tira, e no dia seguinte a cidade guarda de novo, sem prédio no lote)
@@ -574,12 +603,19 @@ const DIST = (v, b) => { const d = G.Vg.door(b); return Math.round(G.dist(v.x, v
 // (the capital and its palace by the rule of the audience — Co.audPalace: the people's best palace, in its capital, standing with
 // its plan —: the first people with a ruler whose capital has its palace of 6 standing, else one with no palace at all, where the
 // god's hand raises it. In the metrópole of the generation 14 Roma had its own palace of 6, and the one the proof raised beside it
-// was never the audience's: everyone went to the old one, and nobody came into the new, T-477)
+// was never the audience's: everyone went to the old one, and nobody came into the new, T-477. Among those, first a capital with
+// people for the audience to pass the visitors' seats — more than the 24 the proof brings to the door: Texcoco, of 17, called
+// 10 —, then the ruler the years are least like to take in the middle — the death of old age begins at 55 and grows with the
+// years past it (villagers.js): in the metrópole remade after the generation 15 both palaces of 6 standing were of rulers of 68,
+// and Egil died of old age fourteen seconds into the audience —, then the palace standing, T-496)
 function audiencia(chama) {
   abre(); const Co = G.Court, P = G.Politics, In = G.Interiors;
   const caps = G.Fac.all().filter(o => o.alive && P.ruler(o) && G.Fac.capitalOf(o.id)).sort((a, c) => a.id - c.id);
   const seis = o => { const p = Co.audPalace(o); return p && p.w === 6 ? p : null; };
-  const f = caps.find(seis) || caps.find(o => !Co.bestPalace(o)); if (!f) return { set: null, f: null, b: null, r: null };
+  const gente = o => { const c = G.Fac.capitalOf(o.id), r0 = P.ruler(o); let n = 0; for (const v of S.villagers.values()) if (v.set === c.id && v.age >= 14 && !v.captive && !v.jail && v !== r0) n++; return n; };
+  const nota = o => [gente(o) > 24 ? 0 : 1, Math.max(0, P.ruler(o).age - 55), seis(o) ? 0 : 1];
+  const f = caps.filter(o => seis(o) || !Co.bestPalace(o)).map(o => [nota(o), o]).sort((a, c) => a[0][0] - c[0][0] || a[0][1] - c[0][1] || a[0][2] - c[0][2] || a[1].id - c[1].id).map(q => q[1])[0];
+  if (!f) return { set: null, f: null, b: null, r: null };
   const set = G.Fac.capitalOf(f.id);
   const b = seis(f) || sim(() => V.handFound(set, 'palacio', 'palacio', { R: 60, built: true })); const r = P.ruler(f);
   if (!b || !r || Co.audPalace(f) !== b) return { set, f, b, r };
@@ -588,7 +624,17 @@ function audiencia(chama) {
   for (const v of [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive && o !== r).sort((a, c) => a.id - c.id).slice(0, 24)) { v.x = dr[0] + 2 + (v.id % 5); v.y = dr[1] + 2 + (v.id % 3); v.path = null; }
   const vigia = [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 16 && !o.captive && o !== r).sort((a, c) => c.id - a.id)[0];
   sim(() => G.Vg.setTask(vigia, { type: 'ronda', pts: [[dr[0] + 2, dr[1] + 2], [dr[0] + 3, dr[1] + 2]], k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' })); vigia.x = dr[0] + 2; vigia.y = dr[1] + 2;
-  S.time = 0.35; const okA = chama === null ? false : sim(() => (chama ? chama(f, set) : Co.audiencia(f, 'teste'))); const ronda = vigia.task && vigia.task.type; const longe = DIST(vigia, b);
+  // (a hora da audiência fora das festas da capital e da cidade de quem governa — a festa chama a sua cidade inteira, onde cada
+  // um estiver, e quem governa também (D-126): na metrópole refeita depois da geração 15 Egil mora em Uppsala, governa do palácio
+  // de Hedeby, e a festa de Uppsala, às 0,46, o tirou do trono vinte segundos depois da audiência, T-496 —: a hora da manhã que
+  // deixa à audiência o seu tempo antes da festa ou depois dela)
+  const fws = [set, S.settlements.get(r.set)].filter((s, k, L) => !!s && L.indexOf(s) === k).map(s => (G.Fest && G.Fest.window ? G.Fest.window(s) : null)).filter(Boolean);
+  const dura = (Co.AUD_DUR + 5) / G.DAY_LEN;
+  const hora = [0.35, 0.3, 0.4, 0.25, 0.45, 0.5, 0.55].find(t => fws.every(fw => t + dura <= fw[0] || t >= fw[1]));
+  // (e quem governa governa a audiência inteira: o mandato começado hoje — f.term, o do polity.js, como nos jogos do e19 —, nenhuma
+  // eleição do mundo no meio dela: na metrópole refeita, Febe venceu Jasão em Argos dez segundos depois da audiência, T-496)
+  f.term = S.day;
+  S.time = hora === undefined ? 0.35 : hora; const okA = chama === null ? false : sim(() => (chama ? chama(f, set) : Co.audiencia(f, 'teste'))); const ronda = vigia.task && vigia.task.type; const longe = DIST(vigia, b);
   return { set, f, b, r, vigia, ronda, longe, okA, In, Co, P };
 }
 run('e22', () => {
@@ -776,7 +822,7 @@ run('e11', () => {
 
 // ------------------------------ e12: a mesma semente, a mesma escolha ------------------------------
 run('e12', () => {
-  const vez = () => { abre(); const set = cidade('Mênfis'); rico(set); const b = sim(() => V.startProject(set, 'temple')); M.saltar(1); return `${lado(b)} · ` + require('crypto').createHash('sha1').update(G.Save.serialize()).digest('hex').slice(0, 16); };
+  const vez = () => { abre(); const set = maior(); rico(set); const b = sim(() => V.startProject(set, 'temple')); M.saltar(1); return `${lado(b)} · ` + require('crypto').createHash('sha1').update(G.Save.serialize()).digest('hex').slice(0, 16); };
   const a = vez(), b = vez();
   ok('e12 a mesma semente, a mesma escolha', a === b, `${a}${a === b ? ' — igual nas duas vezes' : ' ≠ ' + b}`);
 });
