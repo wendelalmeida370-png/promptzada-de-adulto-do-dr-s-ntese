@@ -1,0 +1,2265 @@
+'use strict';
+// ============================================================
+//  Architecture: each culture builds in its own style —
+//  Greek marble and terracotta, Roman ochre and red tile,
+//  Egyptian sandstone and flat roofs, Aztec plaster and stepped
+//  pyramids, Norse timber and turf. Plus the new civic
+//  buildings, the wonders, carts and aqueduct arches.
+// ============================================================
+(function (G) {
+  const Art = G.Art; const TAU = Math.PI * 2;
+  const A = G.Arch = {};
+  const P = (dx, dy, z) => [(dx - dy) * 16, (dx + dy) * 8 - (z || 0)];
+  function poly(c, pts, fill, stroke, lw) {
+    c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.closePath();
+    if (fill) { c.fillStyle = fill; c.fill(); }
+    if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw || 0.4; c.stroke(); }
+  }
+  function ln(c, a, b, col, w) { c.strokeStyle = col; c.lineWidth = w || 0.5; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+  function walls(c, x0, y0, x1, y1, z0, z1, cl, cr, ins) {
+    const i = ins || 0;
+    poly(c, [P(x0, y1, z0), P(x1, y1, z0), P(x1 - i, y1 - i, z1), P(x0 + i, y1 - i, z1)], cl);
+    poly(c, [P(x1, y1, z0), P(x1, y0, z0), P(x1 - i, y0 + i, z1), P(x1 - i, y1 - i, z1)], cr);
+  }
+  function top(c, x0, y0, x1, y1, z, col) { poly(c, [P(x0, y0, z), P(x1, y0, z), P(x1, y1, z), P(x0, y1, z)], col); }
+  function box(c, x0, y0, x1, y1, z0, z1, cl, cr, ct) { walls(c, x0, y0, x1, y1, z0, z1, cl, cr); top(c, x0, y0, x1, y1, z1, ct || cl); }
+  function onL(c, y1, a, b, z0, z1, fill, m) { const pts = [P(a, y1, z0), P(b, y1, z0), P(b, y1, z1), P(a, y1, z1)]; poly(c, pts, fill); if (m) m.win.push(pts); }
+  function onR(c, x1, a, b, z0, z1, fill, m) { const pts = [P(x1, a, z0), P(x1, b, z0), P(x1, b, z1), P(x1, a, z1)]; poly(c, pts, fill); if (m) m.win.push(pts); }
+  // (the door of a picture, on its front-left face — the god's door face —; the picture of a building whose door is on a side
+  // the view does not see has none: L-264)
+  let NODOOR = false;
+  function door(c, y1, a, b, z0, z1, fill, m) { if (!NODOOR) onL(c, y1, a, b, z0, z1, fill, m); }
+  const dims = (fw, fh, maxZ) => Art.spriteDims(fw, fh, maxZ);
+  function shade(hex, f) {
+    const r = G.hex2rgb(hex);
+    return G.rgb(f < 1 ? r.map(v => v * f) : r.map(v => v + (255 - v) * (f - 1)));
+  }
+  const gableX = (...a) => Art.gableX(...a);
+  function gableY(c, x0, y0, x1, y1, z1, zr, ov, cF, cB, cG, cE) {
+    const xm = (x0 + x1) / 2;
+    poly(c, [P(x0, y1, z1), P(x1, y1, z1), P(xm, y1, zr)], cG);
+    poly(c, [P(xm, y0 - ov, zr), P(xm, y1 + ov, zr), P(x0 - ov, y1 + ov, z1 - 1), P(x0 - ov, y0 - ov, z1 - 1)], cB, cE, 0.5);
+    poly(c, [P(x1 + ov, y0 - ov, z1 - 1), P(x1 + ov, y1 + ov, z1 - 1), P(xm, y1 + ov, zr), P(xm, y0 - ov, zr)], cF, cE, 0.5);
+    c.strokeStyle = 'rgba(0,0,0,0.12)'; c.lineWidth = 0.4;
+    const n = Math.round((y1 - y0) * 10);
+    for (let k = 1; k < n; k++) { const yy = y0 - ov + (y1 - y0 + 2 * ov) * k / n; const a = P(x1 + ov, yy, z1 - 1), b = P(xm, yy, zr); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+    ln(c, P(xm, y0 - ov, zr), P(xm, y1 + ov, zr), 'rgba(255,255,255,0.25)', 0.7);
+  }
+  function hip(c, x0, y0, x1, y1, z1, zr, ov, cF, cR, cB) {
+    const X0 = x0 - ov, X1 = x1 + ov, Y0 = y0 - ov, Y1 = y1 + ov;
+    const lx = X1 - X0, ly = Y1 - Y0;
+    if (lx >= ly) {
+      const d = ly / 2, ym = (Y0 + Y1) / 2; const a = [X0 + d, ym], b = [X1 - d, ym];
+      poly(c, [P(X0, Y0, z1), P(X1, Y0, z1), P(b[0], b[1], zr), P(a[0], a[1], zr)], cB);
+      poly(c, [P(X0, Y0, z1), P(X0, Y1, z1), P(a[0], a[1], zr)], cB);
+      poly(c, [P(X0, Y1, z1), P(X1, Y1, z1), P(b[0], b[1], zr), P(a[0], a[1], zr)], cF);
+      poly(c, [P(X1, Y0, z1), P(X1, Y1, z1), P(b[0], b[1], zr)], cR);
+      ln(c, P(a[0], a[1], zr), P(b[0], b[1], zr), 'rgba(255,255,255,0.25)', 0.6);
+    } else {
+      const d = lx / 2, xm = (X0 + X1) / 2; const a = [xm, Y0 + d], b = [xm, Y1 - d];
+      poly(c, [P(X0, Y0, z1), P(X1, Y0, z1), P(a[0], a[1], zr)], cB);
+      poly(c, [P(X0, Y0, z1), P(X0, Y1, z1), P(b[0], b[1], zr), P(a[0], a[1], zr)], cB);
+      poly(c, [P(X0, Y1, z1), P(X1, Y1, z1), P(b[0], b[1], zr)], cF);
+      poly(c, [P(X1, Y0, z1), P(X1, Y1, z1), P(b[0], b[1], zr), P(a[0], a[1], zr)], cR);
+      ln(c, P(a[0], a[1], zr), P(b[0], b[1], zr), 'rgba(255,255,255,0.25)', 0.6);
+    }
+    // tile courses
+    c.strokeStyle = 'rgba(0,0,0,0.1)'; c.lineWidth = 0.35;
+    for (let k = 1; k < 4; k++) { const f = k / 4; const z = z1 + (zr - z1) * f; const i = (Math.min(lx, ly) / 2) * f; const a = P(X0 + i, Y1 - i, z), b = P(X1 - i, Y1 - i, z), e = P(X1 - i, Y0 + i, z); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(e[0], e[1]); c.stroke(); }
+  }
+
+  // ------------------------------ palettes ------------------------------
+  const PAL = A.PAL = {
+    classico: { wl: '#efe2c4', wr: '#d2c19e', base: ['#8a8478', '#6f6a60', '#a09a8e'], roof: ['#b85a3c', '#94452d', '#7a3826'], gable: '#dccba6', trim: '#6b4a30', win: '#2f3a48', door: '#5a3b25', acc: '#f2c14e', acc2: '#3f6fb0', col: ['#fbf6ea', '#d6ccb4'], kind: 'gable', pitch: 0.9, frame: true, top: '#cfc6b0', par: ['#d8cfb8', '#b6ac94'] },
+    grego: { wl: '#f4efe4', wr: '#d8d0bd', base: ['#d4ccb6', '#b3a98f', '#e7e0cd'], roof: ['#c8683f', '#a8532f', '#8a4028'], gable: '#efe8d6', trim: '#3f6fb0', win: '#27323e', door: '#3f6fb0', acc: '#3f6fb0', acc2: '#b8452f', col: ['#fbf8ef', '#d9d1bf'], kind: 'gable', pitch: 0.5, top: '#e6dfcc', par: ['#f0eadb', '#d4ccb8'] },
+    romano: { wl: '#edd4a4', wr: '#caa978', base: ['#a59c8b', '#847b6c', '#bdb4a3'], roof: ['#b5523a', '#94412d', '#7a3424'], gable: '#e4c995', trim: '#8e2f2f', win: '#2a2e38', door: '#6a2a20', acc: '#d8a63a', acc2: '#8e2f2f', col: ['#f4ecdb', '#d3c7ad'], kind: 'hip', pitch: 0.55, top: '#dcc394', par: ['#e8cf9f', '#c6a676'] },
+    egipcio: { wl: '#e8d2a2', wr: '#c5aa7a', base: ['#cdb98f', '#ab9870', '#e0cfa7'], roof: ['#d8c294', '#bca676', '#a08a5a'], gable: '#e0c898', top: '#dcc697', par: ['#e4cd9c', '#c2a676'], trim: '#2f8f8a', trim2: '#b8452f', win: '#2d261c', door: '#3e2e1c', acc: '#e8b83a', acc2: '#2f8f8a', col: ['#efe1bb', '#cdb88e'], kind: 'flat', batter: 0.04 },
+    asteca: { wl: '#f1e9d6', wr: '#d2c5a8', base: ['#b9ad93', '#978b73', '#cdc1a8'], roof: ['#caa85c', '#a3843f', '#8a6c2e'], gable: '#e6dcc4', top: '#e3d8bf', par: ['#ece2cb', '#cdbf9f'], trim: '#b33a2a', trim2: '#2fae8f', win: '#2a231c', door: '#3a2a1c', acc: '#2fae8f', acc2: '#b33a2a', col: ['#efe6d2', '#cfc2a6'], thatch: ['#caa85c', '#a3843f'], kind: 'flat' },
+    nordico: { wl: '#7e5e40', wr: '#5f4630', base: ['#7c766a', '#5f5a50', '#8e877b'], roof: ['#71903f', '#5a7631', '#445a22'], shingle: ['#5a4430', '#46342a', '#382a20'], gable: '#6a4a30', trim: '#a23c2a', win: '#2a1e14', door: '#3a2616', acc: '#d8b25a', acc2: '#a23c2a', col: ['#8a6848', '#6a4c32'], kind: 'turf', pitch: 1.3, top: '#6a5038', par: ['#7e5e40', '#5f4630'] },
+  };
+  const pal = st => PAL[st] || PAL.classico;
+
+  // ------------------------------ kit ------------------------------
+  function plinth(c, p, x0, y0, x1, y1, h) { box(c, x0 - 0.05, y0 - 0.05, x1 + 0.05, y1 + 0.05, 0, h, p.base[0], p.base[1], p.base[2]); }
+  function winsL(c, m, p, y1, x0, x1, z, h, n, col) { const w = (x1 - x0) / (n * 2 + 1); for (let k = 0; k < n; k++) { const a = x0 + w * (1 + k * 2); onL(c, y1, a, a + w, z, z + h, col || p.win, m); } }
+  function winsR(c, m, p, x1, y0, y1, z, h, n, col) { const w = (y1 - y0) / (n * 2 + 1); for (let k = 0; k < n; k++) { const a = y0 + w * (1 + k * 2); onR(c, x1, a, a + w, z, z + h, col || p.win, m); } }
+  function band(c, x0, y0, x1, y1, z0, z1, col) { poly(c, [P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)], col); poly(c, [P(x1, y1, z0), P(x1, y0, z0), P(x1, y0, z1), P(x1, y1, z1)], shade(col, 0.8)); }
+  function parapet(c, p, x0, y0, x1, y1, z, h) {
+    const w = 0.05, a = p.par[0], b = p.par[1];
+    box(c, x0, y0, x1, y0 + w, z, z + h, a, b, a); box(c, x0, y0, x0 + w, y1, z, z + h, a, b, a);
+    box(c, x0, y1 - w, x1, y1, z, z + h, a, b, a); box(c, x1 - w, y0, x1, y1, z, z + h, a, b, a);
+  }
+  function dragon(c, pt, dir, col) {
+    c.strokeStyle = col || '#3a2616'; c.lineWidth = 0.9; c.beginPath();
+    c.moveTo(pt[0], pt[1]); c.quadraticCurveTo(pt[0] + dir * 1.2, pt[1] - 4, pt[0] + dir * 3.2, pt[1] - 4.4); c.stroke();
+    c.fillStyle = col || '#3a2616'; c.beginPath(); c.arc(pt[0] + dir * 3.3, pt[1] - 4.3, 0.9, 0, TAU); c.fill();
+  }
+  function tufts(c, a, b, n, col) {
+    c.strokeStyle = col; c.lineWidth = 0.5;
+    for (let k = 0; k <= n; k++) { const f = k / n; const x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f; c.beginPath(); c.moveTo(x, y); c.lineTo(x - 0.4, y - 1.4); c.moveTo(x + 0.6, y); c.lineTo(x + 0.9, y - 1.2); c.stroke(); }
+  }
+  function roof(c, m, p, x0, y0, x1, y1, z, o) {
+    o = o || {};
+    const kind = o.kind || p.kind;
+    const ov = o.ov !== undefined ? o.ov : 0.08;
+    if (kind === 'flat') { top(c, x0, y0, x1, y1, z, p.top); if (o.par !== 0) parapet(c, p, x0, y0, x1, y1, z, o.par || 1.4); return z + (o.par || 1.4); }
+    const r = o.colors || (kind === 'turf' ? p.roof : p.roof);
+    const span = Math.min(x1 - x0, y1 - y0);
+    const rh = o.rh || span * 18 * (p.pitch || 0.8);
+    const alongY = o.alongY || (x1 - x0 < y1 - y0 - 0.01);
+    if (kind === 'hip') { hip(c, x0, y0, x1, y1, z, z + rh, ov, r[0], r[1], r[2]); return z + rh; }
+    if (kind === 'thatch') { if (alongY) gableY(c, x0, y0, x1, y1, z, z + rh, ov + 0.04, p.thatch[0], p.thatch[1], p.wl, '#7a5a2e'); else gableX(c, x0, y0, x1, y1, z, z + rh, ov + 0.04, p.thatch[0], p.thatch[1], p.wl, '#7a5a2e'); return z + rh; }
+    if (alongY) gableY(c, x0, y0, x1, y1, z, z + rh, ov, r[0], r[1], p.gable, r[2]);
+    else gableX(c, x0, y0, x1, y1, z, z + rh, ov, r[0], r[1], p.gable, r[2]);
+    if (kind === 'turf') {
+      if (!alongY) { const ym = (y0 + y1) / 2; tufts(c, P(x0, ym, z + rh), P(x1, ym, z + rh), 8, '#88a852'); tufts(c, P(x0 - ov, y1 + ov, z - 1), P(x1 + ov, y1 + ov, z - 1), 10, '#5f7a34'); const ap = P(x1 + ov, ym, z + rh); dragon(c, [ap[0] + 1, ap[1] + 1], 1); }
+      else { const xm = (x0 + x1) / 2; tufts(c, P(xm, y0, z + rh), P(xm, y1, z + rh), 8, '#88a852'); const ap = P(xm, y1 + ov, z + rh); dragon(c, [ap[0] - 1, ap[1] + 1], -1); }
+    }
+    return z + rh;
+  }
+  function column(c, p, x, y, z0, z1, r, flared) {
+    box(c, x - r, y - r, x + r, y + r, z0, z1, p.col[0], p.col[1], p.col[0]);
+    const R = flared ? r * 2.1 : r * 1.5;
+    box(c, x - R, y - R, x + R, y + R, z1 - (flared ? 1.6 : 0.9), z1, flared ? p.acc2 || p.col[0] : p.col[0], flared ? shade(p.acc2 || p.col[1], 0.85) : p.col[1], p.col[0]);
+  }
+  // (nr: how many along the rows — the back and the front —, n along the sides; a Greek temple's front of six, its sides of five)
+  function colonnade(c, p, x0, y0, x1, y1, z0, z1, n, r, sides, flared, nr) {
+    const pts = []; const m = nr || n;
+    if (sides.includes('B')) { for (let k = 0; k < m; k++) pts.push([x0 + (x1 - x0) * k / (m - 1), y0]); for (let k = 1; k < n; k++) pts.push([x0, y0 + (y1 - y0) * k / (n - 1)]); }
+    if (sides.includes('L')) for (let k = 0; k < m; k++) pts.push([x0 + (x1 - x0) * k / (m - 1), y1]);
+    if (sides.includes('R')) for (let k = 0; k < n - (sides.includes('L') ? 1 : 0); k++) pts.push([x1, y0 + (y1 - y0) * k / (n - 1)]);
+    pts.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
+    for (const [x, y] of pts) column(c, p, x, y, z0, z1, r, flared);
+  }
+  // (the caveas of a type's form, each with its lot's side: the rows the god draws — D-084)
+  const cavOf = (type, st) => { const F = G.Forma && G.Forma.of(type, st); const ar = F && F.els.find(q => q.k === 'arena'); return F ? F.els.filter(q => q.k === 'cavea').map(q => Object.assign({ L: F.L, buraco: ar && ar.buraco }, q)) : []; };
+  function steps(c, p, e, n, h, shrink) { for (let k = 0; k < n; k++) { const q = e - k * shrink; box(c, -q, -q, q, q, k * h, (k + 1) * h, p.base[0], p.base[1], p.base[2]); } return n * h; }
+  function flag(c, x, y, col, h) { ln(c, [x, y], [x, y - h], '#5a3c22', 0.7); c.fillStyle = col; c.beginPath(); c.moveTo(x, y - h); c.lineTo(x + 5, y - h + 1.5); c.lineTo(x, y - h + 3); c.closePath(); c.fill(); }
+  function palm(c, x, y, s) {
+    s = s || 1; c.strokeStyle = '#8a6a44'; c.lineWidth = 1.1 * s; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x - 1 * s, y - 7 * s, x + 1.5 * s, y - 12 * s); c.stroke();
+    const tx = x + 1.5 * s, ty = y - 12 * s; c.strokeStyle = '#4f9d45'; c.lineWidth = 1.4 * s;
+    for (const [dx, dy] of [[-5, 2], [5, 2.5], [-3.5, -1.5], [3.5, -1.8], [0, -3], [-5.5, 0.5], [5.5, 0.2]]) { c.beginPath(); c.moveTo(tx, ty); c.quadraticCurveTo(tx + dx * 0.5 * s, ty + dy * s - 2 * s, tx + dx * s, ty + dy * s + 1.5 * s); c.stroke(); }
+  }
+  function jar(c, x, y, s, col) { c.fillStyle = col || '#b8683a'; c.beginPath(); c.ellipse(x, y - 2 * s, 1.6 * s, 2.1 * s, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(0,0,0,0.2)'; c.beginPath(); c.ellipse(x + 0.6 * s, y - 2 * s, 0.9 * s, 1.9 * s, 0, 0, TAU); c.fill(); c.fillStyle = shade(col || '#b8683a', 0.7); c.fillRect(x - 0.7 * s, y - 4.4 * s, 1.4 * s, 0.7 * s); }
+  function barrel(c, x, y, s) { c.fillStyle = '#7a5230'; c.fillRect(x - 1.4 * s, y - 3.2 * s, 2.8 * s, 3.2 * s); c.fillStyle = '#5a3a20'; c.fillRect(x - 1.4 * s, y - 2.4 * s, 2.8 * s, 0.4 * s); c.fillRect(x - 1.4 * s, y - 1 * s, 2.8 * s, 0.4 * s); c.fillStyle = '#9a7040'; c.beginPath(); c.ellipse(x, y - 3.2 * s, 1.4 * s, 0.6 * s, 0, 0, TAU); c.fill(); }
+  function awning(c, x0, x1, y, z0, z1, d, cols) {
+    // striped cloth sloping out from a wall face at y (front-left)
+    const n = 5;
+    for (let k = 0; k < n; k++) { const a = x0 + (x1 - x0) * k / n, b = x0 + (x1 - x0) * (k + 1) / n; poly(c, [P(a, y, z1), P(b, y, z1), P(b, y + d, z0), P(a, y + d, z0)], cols[k % cols.length]); }
+  }
+  function stall(c, p, x, y, col1, col2) {
+    const s = 0.2;
+    for (const [dx, dy] of [[-s, -s], [s, -s], [s, s], [-s, s]]) ln(c, P(x + dx, y + dy, 0), P(x + dx, y + dy, 7), '#6a4a2c', 0.6);
+    box(c, x - s, y - s, x + s, y + s, 2.5, 3.4, '#8a6a44', '#6a4e30', '#9a7a52');
+    const t = P(x, y, 10);
+    for (let k = 0; k < 4; k++) { poly(c, [t, P(x - s - 0.04 + (k < 2 ? 0 : 0), y + s + 0.04, 7), P(x + s + 0.04, y + s + 0.04, 7)], k % 2 ? col1 : col2); }
+    poly(c, [t, P(x + s + 0.04, y + s + 0.04, 7), P(x + s + 0.04, y - s - 0.04, 7)], shade(col1, 0.8));
+    c.fillStyle = G.vpick(['#e05a3a', '#f0b040', '#6ab04a']); for (let k = 0; k < 3; k++) { const q = P(x - 0.1 + k * 0.1, y + 0.05, 3.6); c.beginPath(); c.arc(q[0], q[1], 0.7, 0, TAU); c.fill(); }
+  }
+  function statue(c, x, y, z, col, h, spear) {
+    const b = P(x, y, z); h = h || 10; const w = Math.max(1.4, h * 0.13);
+    c.fillStyle = col; c.beginPath(); c.moveTo(b[0] - w, b[1]); c.lineTo(b[0] + w, b[1]); c.lineTo(b[0] + w * 0.8, b[1] - h * 0.62); c.lineTo(b[0] - w * 0.8, b[1] - h * 0.62); c.fill();
+    c.fillRect(b[0] - w * 1.1, b[1] - h * 0.62, w * 2.2, h * 0.08);
+    c.beginPath(); c.arc(b[0], b[1] - h * 0.78, w * 0.7, 0, TAU); c.fill();
+    c.fillStyle = shade(col, 0.72); c.fillRect(b[0] + w * 0.15, b[1] - h * 0.62, w * 0.65, h * 0.62);
+    if (spear) { ln(c, [b[0] + w * 1.3, b[1] - h * 0.05], [b[0] + w * 1.3, b[1] - h * 1.1], shade(col, 0.6), Math.max(0.6, w * 0.3)); c.fillStyle = shade(col, 0.85); c.beginPath(); c.ellipse(b[0] - w * 1.1, b[1] - h * 0.42, w * 0.9, w * 1.2, 0, 0, TAU); c.fill(); c.strokeStyle = shade(col, 0.6); c.lineWidth = 0.4; c.stroke(); }
+  }
+  function dome(c, x, y, rx, h, colA, colB, tipCol) {
+    c.save(); c.translate(x, y);
+    const g = c.createLinearGradient(-rx, 0, rx, 0); g.addColorStop(0, colA); g.addColorStop(1, colB);
+    c.fillStyle = g; c.beginPath(); c.moveTo(-rx, 0); c.bezierCurveTo(-rx, -h * 0.62, -rx * 0.45, -h, 0, -h); c.bezierCurveTo(rx * 0.45, -h, rx, -h * 0.62, rx, 0); c.ellipse(0, 0, rx, rx * 0.5, 0, 0, Math.PI); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.12)'; c.lineWidth = 0.4;
+    for (const f of [-0.5, 0, 0.5]) { c.beginPath(); c.moveTo(f * rx, rx * 0.5 * Math.sqrt(1 - f * f)); c.quadraticCurveTo(f * rx * 0.9, -h * 0.6, 0, -h); c.stroke(); }
+    if (tipCol) { c.fillStyle = tipCol; c.beginPath(); c.arc(0, -h - 1, 1.3, 0, TAU); c.fill(); }
+    c.restore();
+    return [x, y - h - 1];
+  }
+  function tree(c, x, y, s) {
+    c.fillStyle = '#6e4a2b'; c.fillRect(x - 0.6 * s, y - 4 * s, 1.2 * s, 4 * s);
+    c.fillStyle = '#3f7d34'; c.beginPath(); c.arc(x + 0.5 * s, y - 6 * s, 3.4 * s, 0, TAU); c.fill();
+    c.fillStyle = '#56a043'; c.beginPath(); c.arc(x - 0.3 * s, y - 7 * s, 2.6 * s, 0, TAU); c.fill();
+  }
+  function basin(c, x, y, r, z, water) {
+    const p = P(x, y, z); c.fillStyle = '#b8b0a0'; c.beginPath(); c.ellipse(p[0], p[1], r * 22.6, r * 11.3, 0, 0, TAU); c.fill();
+    c.fillStyle = water || '#5aaed0'; c.beginPath(); c.ellipse(p[0], p[1], r * 19, r * 9.2, 0, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.35)'; c.beginPath(); c.ellipse(p[0] - r * 6, p[1] - r * 2, r * 6, r * 2, 0, 0, TAU); c.fill();
+  }
+  function pave(c, e, col, lines) {
+    top(c, -e, -e, e, e, 0.4, col);
+    c.strokeStyle = lines || 'rgba(90,80,65,0.3)'; c.lineWidth = 0.35;
+    const n = Math.round(e * 6);
+    for (let k = 1; k < n; k++) { const f = -e + 2 * e * k / n; ln(c, P(f, -e, 0.4), P(f, e, 0.4), lines || 'rgba(90,80,65,0.3)', 0.35); ln(c, P(-e, f, 0.4), P(e, f, 0.4), lines || 'rgba(90,80,65,0.3)', 0.35); }
+  }
+  // a flight up a front from its foot (x0..x1 at y0, z0) to its top (y1, z1), in steps as the 3D lays them (Forma's flight: no
+  // riser over 0.26 m — the god's painter's own, 'escada'): its ramp in the stair's light cl, then each riser a shade darker
+  // (cR) and each tread in the light
+  function flightSteps(c, x0, x1, y0, z0, y1, z1, cl, cR) {
+    poly(c, [P(x0, y0, z0), P(x1, y0, z0), P(x1, y1, z1), P(x0, y1, z1)], cl);
+    const m = Math.max(2, Math.ceil((z1 - z0) / 3.04 / 0.26 - 1e-9));
+    for (let k = 0; k < m; k++) { const ya = y0 + (y1 - y0) * k / m, yb = y0 + (y1 - y0) * (k + 1) / m, za = z0 + (z1 - z0) * k / m, zb = z0 + (z1 - z0) * (k + 1) / m;
+      poly(c, [P(x0, ya, za), P(x1, ya, za), P(x1, ya, zb), P(x0, ya, zb)], cR); poly(c, [P(x0, ya, zb), P(x1, ya, zb), P(x1, yb, zb), P(x0, yb, zb)], cl); }
+  }
+  // stepped pyramid: stairs on the front (+y) face
+  function stepPyr(c, p, e0, e1, n, lh, cl, cr, ct, stair) {
+    for (let k = 0; k < n; k++) {
+      const e = e0 - (e0 - e1) * k / Math.max(1, n - 1);
+      box(c, -e, -e, e, e, k * lh, (k + 1) * lh, cl, cr, ct);
+      ln(c, P(-e, e, (k + 1) * lh - 0.8), P(e, e, (k + 1) * lh - 0.8), 'rgba(0,0,0,0.12)', 0.5);
+      ln(c, P(e, e, (k + 1) * lh - 0.8), P(e, -e, (k + 1) * lh - 0.8), 'rgba(0,0,0,0.12)', 0.5);
+    }
+    const H = n * lh, w = stair || 0.22;
+    flightSteps(c, -w, w, e0 + 0.02, 0, e1, H, shade(cl, 1.08), shade(cl, 1.08 * 0.86)); // (its steps as the 3D lays them)
+    poly(c, [P(-w - 0.06, e0 + 0.02, 0), P(-w, e0 + 0.02, 0), P(-w, e1, H), P(-w - 0.06, e1, H)], shade(cr, 0.9));
+    poly(c, [P(w, e0 + 0.02, 0), P(w + 0.06, e0 + 0.02, 0), P(w + 0.06, e1, H), P(w, e1, H)], shade(cr, 0.9));
+    return H;
+  }
+  // the rows of a cavea as its form lays them (Forma's cavea, D-084 — the rows a body sits on, the plan's): each tread a
+  // slice of the round at its height from the middle (the next, lower and nearer the middle, paints over its inner part), the
+  // wall down to the next row and the parapet at the tread's edge where they face the eye (the far side), the ends of a half
+  // bowl and the piece of its back wall that turns to the eye — in the sprite's frame (the lot's middle; L its side, m)
+  function caveaPaint(c, e, L, seats, wall) {
+    const T = v => (v - L / 2) / 4, Z = y => y * 3.04; const cx = T(e.c[0]), cy = T(e.c[1]); const A = e.aneis, n = A.length;
+    const a0 = e.arco ? e.arco[0] : 0, a1 = e.arco ? e.arco[1] : TAU;
+    const pt = (r, a, y) => P(cx + Math.cos(a) * r / 4, cy + Math.sin(a) * r / 4, Z(y));
+    const arc = (r, y, f, t) => { const o = []; const m = Math.max(6, Math.round(64 * Math.abs(t - f) / TAU)); for (let j = 0; j <= m; j++) o.push(pt(r, f + (t - f) * j / m, y)); return o; };
+    const f0 = Math.max(a0, 0.75 * Math.PI), f1 = Math.min(a1, 1.75 * Math.PI); // (the far side: where a wall facing the middle faces the eye)
+    const band = (r, ya, yb, col) => { if (f1 > f0) poly(c, arc(r, yb, f0, f1).concat(arc(r, ya, f1, f0)), col); };
+    for (let k = 0; k < n; k++) {
+      const rOut = A[k][0], rIn = k < n - 1 ? A[k + 1][0] : e.fundo, y = A[k][1];
+      poly(c, (a1 - a0 < TAU - 1e-6 ? [pt(0, 0, y)] : []).concat(arc(rOut, y, a0, a1)), k % 2 ? seats : shade(seats, 0.9));
+      if (k < n - 1 && e.parapeito) band(rIn, A[k + 1][1], y, e.muro || shade(seats, 0.82)); // (the balteus down to the next row)
+      if (e.parapeito && k > 0) band(rIn, y, y + e.parapeito, shade(e.muro || seats, 0.9)); // (the parapet at its edge)
+    }
+    if (!e.fecho) return;
+    // (a bowl standing on the ground: its ends, stepped as its rows are, and the piece of its back wall facing the eye)
+    for (const a of [a0, a1]) for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A[k + 1][0] : e.fundo; poly(c, [pt(rIn, a, 0), pt(A[k][0], a, 0), pt(A[k][0], a, A[k][1]), pt(rIn, a, A[k][1])], shade(wall, 0.94)); }
+    const b0 = Math.max(a0, 1.75 * Math.PI), b1 = Math.min(a1, 2 * Math.PI); if (b1 > b0) poly(c, arc(A[0][0], A[0][1], b0, b1).concat(arc(A[0][0], 0, b1, b0)), shade(wall, 0.8));
+  }
+  // an oval bowl (amphitheatre / theatre seen from above); cav: its cavea's form, whose rows it draws (D-084)
+  function bowl(c, r, H, wallL, wallR, seats, floor, arches, half, cav) {
+    const rx = r * 22.6, ry = r * 11.3;
+    const top0 = -H;
+    // inner seating rings
+    if (cav) caveaPaint(c, cav, cav.L, seats, wallL);
+    else for (let k = 0; k < 6; k++) {
+      const f = 1 - k * 0.1; const z = H - k * (H * 0.12);
+      c.fillStyle = k % 2 ? seats : shade(seats, 0.9);
+      c.beginPath(); if (half) c.ellipse(0, -z, rx * f, ry * f, 0, Math.PI, TAU); else c.ellipse(0, -z, rx * f, ry * f, 0, 0, TAU);
+      if (half) c.lineTo(rx * f, -z); c.fill();
+    }
+    // (the arena as wide as its form's, and the hatch in its floor over the undercroft's flight — D-095)
+    const fa = cav && cav.fundo ? cav.fundo / (r * 4) : 0.4;
+    c.fillStyle = floor; c.beginPath(); c.ellipse(0, -H * 0.3, rx * fa, ry * fa, 0, 0, TAU); c.fill();
+    if (cav && cav.buraco) { const T = v => (v - cav.L / 2) / 4, q = cav.buraco; poly(c, [P(T(q[0]), T(q[1]), H * 0.3), P(T(q[2]), T(q[1]), H * 0.3), P(T(q[2]), T(q[3]), H * 0.3), P(T(q[0]), T(q[3]), H * 0.3)], '#4a3a2a'); }
+    if (half) return;
+    // front half of the outer wall
+    const g = c.createLinearGradient(-rx, 0, rx, 0); g.addColorStop(0, wallL); g.addColorStop(1, wallR);
+    c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, Math.PI); c.lineTo(-rx, top0); c.ellipse(0, top0, rx, ry, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    if (arches) {
+      const tiers = arches;
+      for (let t = 0; t < tiers; t++) {
+        const zc = H * (t + 0.45) / tiers, ah = H / tiers * 0.55;
+        for (let k = 1; k < 16; k++) {
+          const a = k / 16 * Math.PI; const x = Math.cos(a) * rx, y = Math.sin(a) * ry - zc;
+          const w = Math.sin(a) * 2.4;
+          c.fillStyle = 'rgba(40,30,25,0.55)'; c.beginPath(); c.moveTo(x - w / 2, y + ah / 2); c.lineTo(x - w / 2, y - ah / 4); c.quadraticCurveTo(x, y - ah / 2 - 0.8, x + w / 2, y - ah / 4); c.lineTo(x + w / 2, y + ah / 2); c.fill();
+        }
+        c.strokeStyle = 'rgba(0,0,0,0.15)'; c.lineWidth = 0.5; c.beginPath(); c.ellipse(0, -H * (t + 1) / tiers + 0.5, rx, ry, 0, 0, Math.PI); c.stroke();
+      }
+    }
+    c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 0.7; c.beginPath(); c.ellipse(0, top0, rx, ry, 0, 0, TAU); c.stroke();
+  }
+
+  // ------------------------------ homes ------------------------------
+  function longhouse(c, m, p, lx, ly, H, rh, big, dw) {
+    const x0 = -lx, x1 = lx, y0 = -ly, y1 = ly;
+    box(c, x0 - 0.04, y0 - 0.04, x1 + 0.04, y1 + 0.04, 0, 1.2, p.base[0], p.base[1], p.base[2]);
+    walls(c, x0, y0, x1, y1, 1.2, H, p.wl, p.wr);
+    c.strokeStyle = 'rgba(30,20,10,0.35)'; c.lineWidth = 0.4;
+    for (let k = 1; k < 10; k++) { const x = x0 + (x1 - x0) * k / 10; ln(c, P(x, y1, 1.2), P(x, y1, H), 'rgba(30,20,10,0.35)', 0.4); }
+    for (let k = 1; k < 4; k++) { const y = y0 + (y1 - y0) * k / 4; ln(c, P(x1, y, 1.2), P(x1, y, H), 'rgba(30,20,10,0.35)', 0.4); }
+    door(c, y1, -(dw || 0.08), dw || 0.08, 1.2, Math.min(H, 7.5), p.door);
+    band(c, x0, y0, x1, y1, H - 0.8, H, p.trim);
+    onL(c, y1, x0 + 0.12, x0 + 0.2, H - 4, H - 2, p.win, m); onL(c, y1, x1 - 0.2, x1 - 0.12, H - 4, H - 2, p.win, m);
+    onR(c, x1, -0.05, 0.05, H - 4, H - 2, p.win, m);
+    const zr = roof(c, m, p, x0, y0, x1, y1, H, { rh, ov: 0.1 });
+    m.fires.push(P(0, 0, zr));
+    if (big) { for (const x of [x0 + 0.2, 0.2 * lx, x1 - 0.25]) { const q = P(x, y1 + 0.02, H * 0.55); c.fillStyle = G.vpick(['#a23c2a', '#d8b25a', '#3f6fb0']); c.beginPath(); c.ellipse(q[0], q[1], 2, 1.5, 0, 0, TAU); c.fill(); c.fillStyle = '#d8c89a'; c.beginPath(); c.arc(q[0], q[1], 0.5, 0, TAU); c.fill(); } }
+  }
+  function roundHut(c, m, wa, wb, straw, band2) {
+    let g = c.createLinearGradient(-10, 0, 10, 0); g.addColorStop(0, wa); g.addColorStop(1, wb);
+    c.fillStyle = g; c.beginPath(); c.ellipse(0, 1, 9.5, 4.8, 0, 0, Math.PI); c.lineTo(-9.5, -5); c.lineTo(9.5, -5); c.closePath(); c.fill(); c.fillRect(-9.5, -5, 19, 6);
+    if (band2) { c.fillStyle = band2; c.beginPath(); c.ellipse(0, -2.8, 9.5, 4.8, 0, 0, Math.PI); c.lineTo(-9.5, -4.2); c.ellipse(0, -4.2, 9.5, 4.8, 0, Math.PI, 0, true); c.fill(); }
+    if (!NODOOR) { c.fillStyle = '#3a2616'; c.beginPath(); c.moveTo(-6, 4.5); c.lineTo(-6, -1.5); c.quadraticCurveTo(-4, -4.4, -2, -1.5); c.lineTo(-2, 5.3); c.closePath(); c.fill();
+      m.win.push([[-5.6, 4.4], [-5.6, -1.3], [-4, -3.4], [-2.4, -1.3], [-2.4, 5.1]]); }
+    g = c.createLinearGradient(-12, 0, 12, 0); g.addColorStop(0, straw[0]); g.addColorStop(1, straw[1]);
+    c.fillStyle = g; c.beginPath(); c.moveTo(-12.5, -4); c.lineTo(0, -24); c.lineTo(12.5, -4); c.ellipse(0, -4, 12.5, 5.5, 0, 0, Math.PI); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(110,80,35,0.45)'; c.lineWidth = 0.45;
+    for (let k = -11; k <= 11; k += 2) { c.beginPath(); c.moveTo(0, -23.5); c.lineTo(k, -4 + Math.sqrt(Math.max(0, 1 - (k / 12.5) ** 2)) * 5.5); c.stroke(); }
+    c.fillStyle = '#7a5a2e'; c.beginPath(); c.arc(0, -24, 1.4, 0, TAU); c.fill();
+  }
+  function hut(c, m, p, st, v) {
+    if (st === 'asteca') return roundHut(c, m, p.wl, p.wr, p.thatch, p.trim);
+    if (st === 'nordico') { longhouse(c, m, p, 0.36, 0.26, 4.5, 9); return; }
+    const e = 0.3, x0 = -e, x1 = e, y0 = -e + 0.04, y1 = e - 0.04;
+    plinth(c, p, x0, y0, x1, y1, 1.2);
+    walls(c, x0, y0, x1, y1, 1.2, 8, p.wl, p.wr, p.batter);
+    door(c, y1, -0.1, 0.06, 1.2, 6.5, p.door);
+    onR(c, x1 - (p.batter || 0) * 0.5, -0.06, 0.08, 4, 6, p.win, m);
+    if (st === 'egipcio') {
+      roof(c, m, p, x0 + 0.02, y0 + 0.02, x1 - 0.02, y1 - 0.02, 8, { par: 1 });
+      // palm-frond sunshade on the roof
+      for (const [dx, dy] of [[-0.15, -0.15], [0.15, -0.15], [0.15, 0.1], [-0.15, 0.1]]) ln(c, P(dx, dy, 8), P(dx, dy, 13), '#7a5a3a', 0.6);
+      poly(c, [P(-0.2, -0.2, 13), P(0.2, -0.2, 13), P(0.2, 0.15, 12.5), P(-0.2, 0.15, 12.5)], '#9a8a4a', '#6a5a2a');
+    } else roof(c, m, p, x0, y0, x1, y1, 8, { alongY: v % 2 === 1, rh: st === 'grego' ? 5 : 6 });
+  }
+  function townhouse(c, m, p, st, v, floors) {
+    const e = 0.37, x0 = -e, x1 = e, y0 = -e, y1 = e;
+    const fh = floors >= 3 ? 8 : 9, z0 = 2, H = z0 + floors * fh;
+    if (st === 'asteca') { // stepped levels, each set back
+      let e2 = e, z = 0;
+      plinth(c, p, -e, -e, e, e, 1.2); z = 1.2;
+      for (let f = 0; f < floors; f++) {
+        const zz = z + fh;
+        walls(c, -e2, -e2, e2, e2, z, zz, p.wl, p.wr);
+        band(c, -e2, -e2, e2, e2, zz - 1.6, zz, p.trim);
+        if (f === 0 && !NODOOR) { onL(c, e2, -0.1, 0.08, z, z + 6.5, p.door); poly(c, [P(-0.13, e2, z), P(-0.1, e2, z), P(-0.1, e2, z + 7), P(-0.13, e2, z + 7)], p.trim2); }
+        winsL(c, m, p, e2, -e2, e2, z + 3.5, 2.2, f === 0 ? 1 : 2);
+        winsR(c, m, p, e2, -e2, e2, z + 3.5, 2.2, 2);
+        top(c, -e2, -e2, e2, e2, zz, p.top);
+        // terrace plants
+        if (f < floors - 1) for (let k = 0; k < 3; k++) { const q = P(-e2 + 0.1 + k * 0.25, e2 - 0.04, zz); c.fillStyle = k % 2 ? '#5a9a3c' : '#e05a7a'; c.beginPath(); c.arc(q[0], q[1] - 0.8, 1.1, 0, TAU); c.fill(); }
+        z = zz; e2 -= 0.07;
+      }
+      parapet(c, p, -e2 - 0.07, -e2 - 0.07, e2 + 0.07, e2 + 0.07, z, 1.2);
+      return;
+    }
+    if (st === 'nordico') { longhouse(c, m, p, 0.42 + floors * 0.02, 0.32, 5.5 + floors * 1.8, 9 + floors * 2.5, floors >= 3); return; }
+    plinth(c, p, x0, y0, x1, y1, z0);
+    walls(c, x0, y0, x1, y1, z0, H, p.wl, p.wr, p.batter);
+    if (p.frame) { // timber frame
+      c.strokeStyle = '#6b4a30'; c.lineWidth = 0.8;
+      for (let f = 1; f <= floors; f++) { const z = z0 + f * fh; ln(c, P(x0, y1, z), P(x1, y1, z), '#6b4a30', 0.8); ln(c, P(x1, y1, z), P(x1, y0, z), '#6b4a30', 0.8); }
+      ln(c, P(x0, y1, z0), P(x0, y1, H), '#6b4a30', 0.8); ln(c, P(x1, y1, z0), P(x1, y1, H), '#6b4a30', 0.8); ln(c, P(x1, y0, z0), P(x1, y0, H), '#6b4a30', 0.8);
+    } else for (let f = 1; f < floors; f++) band(c, x0, y0, x1, y1, z0 + f * fh - 0.7, z0 + f * fh, st === 'grego' ? p.col[1] : shade(p.wl, 0.85));
+    if (st === 'romano' && floors >= 3) {
+      // tabernae: shops with awnings on the ground floor
+      for (let k = 0; k < 2; k++) { const a = x0 + 0.08 + k * 0.36; onL(c, y1, a, a + 0.26, z0, z0 + 6, '#3a2a20'); }
+      awning(c, x0 + 0.04, x1 - 0.04, y1, z0 + 5, z0 + 7.5, 0.14, ['#c8483a', '#efe2c4']);
+      onR(c, x1, -0.25, 0.05, z0, z0 + 6, '#3a2a20');
+    } else {
+      if (!NODOOR) { onL(c, y1, -0.14, 0.06, z0, z0 + 7, p.door); if (st === 'romano') { column(c, p, -0.2, y1 + 0.05, z0, z0 + 7.5, 0.025); column(c, p, 0.12, y1 + 0.05, z0, z0 + 7.5, 0.025); } }
+      if (st === 'grego') { onL(c, y1, 0.16, 0.19, z0 + 3.5, z0 + 6.5, p.trim); }
+      winsL(c, m, p, y1, 0.08, x1, z0 + 3.5, 3, 1);
+      winsR(c, m, p, x1, y0, y1, z0 + 3.5, 3, 2);
+    }
+    for (let f = 1; f < floors; f++) {
+      const z = z0 + f * fh + 2.5;
+      winsL(c, m, p, y1, x0, x1, z, 3.2, 2); winsR(c, m, p, x1 - (p.batter || 0), y0, y1, z, 3.2, 2);
+      if (st === 'grego') { for (const a of [-0.25, 0.1]) { onL(c, y1, a - 0.04, a, z, z + 3.2, p.trim); } }
+      if ((st === 'romano' || st === 'grego' || st === 'classico') && f === floors - 1 && floors >= 2) {
+        // wooden balcony
+        box(c, x0 + 0.05, y1, x1 - 0.05, y1 + 0.12, z - 1.2, z - 0.6, '#7a5230', '#5a3a20', '#8a6038');
+        for (let k = 0; k <= 5; k++) { const x = x0 + 0.05 + (x1 - x0 - 0.1) * k / 5; ln(c, P(x, y1 + 0.12, z - 0.6), P(x, y1 + 0.12, z + 1.6), '#6a4526', 0.45); }
+        ln(c, P(x0 + 0.05, y1 + 0.12, z + 1.6), P(x1 - 0.05, y1 + 0.12, z + 1.6), '#6a4526', 0.6);
+      }
+    }
+    if (st === 'egipcio') {
+      band(c, x0, y0, x1, y1, H - 2, H - 1, p.trim);
+      roof(c, m, p, x0 + 0.04, y0 + 0.04, x1 - 0.04, y1 - 0.04, H, { par: 1.3 });
+      // rooftop awning and wind-catcher
+      for (const [dx, dy] of [[-0.25, 0.05], [0.05, 0.05], [0.05, 0.28], [-0.25, 0.28]]) ln(c, P(dx, dy, H), P(dx, dy, H + 5), '#7a5a3a', 0.6);
+      poly(c, [P(-0.27, 0.03, H + 5), P(0.07, 0.03, H + 5), P(0.07, 0.3, H + 4.4), P(-0.27, 0.3, H + 4.4)], '#e8e0c8', '#b8a888');
+      box(c, 0.12, -0.3, 0.3, -0.12, H, H + 6, p.wl, p.wr, p.top); poly(c, [P(0.12, -0.12, H + 6), P(0.3, -0.12, H + 6), P(0.3, -0.12, H + 4), P(0.12, -0.12, H + 4)], '#3a2a1c');
+      return;
+    }
+    const kind = st === 'grego' && floors >= 3 ? 'gable' : p.kind;
+    const zr = roof(c, m, p, x0, y0, x1, y1, H, { kind, alongY: v % 2 === 1, rh: st === 'classico' ? 11 : undefined });
+    if (st === 'classico' || st === 'romano') { box(c, 0.1, -0.22, 0.24, -0.08, H + 2, Math.min(zr, H + 12) + 2, '#8e8578', '#6f675c', '#5a534a'); m.fires.push(P(0.17, -0.15, Math.min(zr, H + 12) + 3)); }
+    else m.fires.push(P(0, 0, zr));
+  }
+
+  // ------------------------------ city blocks ------------------------------
+  // four tall houses around a paved courtyard, each drawn with the townhouse kit, shifted to its corner
+  function offMeta(m, ox, oy) {
+    const d = P(ox, oy, 0); const sh = q => [q[0] + d[0], q[1] + d[1]];
+    return { win: { push: poly => m.win.push(poly.map(sh)) }, fires: { push: q => m.fires.push(sh(q)) }, glow: { push: q => m.glow.push(sh(q)) } };
+  }
+  function quarteirao(c, m, p, st, v) {
+    // courtyard paving and a tree or fountain in the middle
+    poly(c, [P(-0.95, -0.95, 0.4), P(0.95, -0.95, 0.4), P(0.95, 0.95, 0.4), P(-0.95, 0.95, 0.4)], A.plazaColor(st), shade(A.plazaColor(st), 0.8));
+    const base = st === 'romano' ? 4 : st === 'nordico' ? 2 : st === 'egipcio' ? 3 : st === 'asteca' ? 3 : st === 'grego' ? 3 : 3;
+    const quads = [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]];
+    for (let k = 0; k < 4; k++) {
+      const [ox, oy] = quads[k];
+      const floors = Math.max(2, base + ((v + k) % 3) - (k === 3 ? 1 : 0));
+      if (k === 3) { // the front corner stays open: a courtyard with a fountain or a tree
+        const q = P(0.55, 0.55, 0.4);
+        if (st === 'nordico' || st === 'asteca' || st === 'egipcio') { c.fillStyle = '#4e8a3a'; c.beginPath(); c.arc(q[0], q[1] - 7, 5, 0, TAU); c.fill(); c.fillStyle = '#6aa84a'; c.beginPath(); c.arc(q[0] - 1.5, q[1] - 8.5, 2.6, 0, TAU); c.fill(); ln(c, q, [q[0], q[1] - 3], '#6a4a2a', 1.2); }
+        else { box(c, 0.4, 0.4, 0.7, 0.7, 0.4, 1.8, p.col ? p.col[0] : '#d8d0c0', p.col ? p.col[1] : '#b8b0a0', '#6ab4d8'); ln(c, P(0.55, 0.55, 1.8), P(0.55, 0.55, 4.5), '#dfe8ee', 0.8); }
+        continue;
+      }
+      c.save(); const d = P(ox, oy, 0); c.translate(d[0], d[1]);
+      townhouse(c, offMeta(m, ox, oy), p, st, (v + k) % 3, floors);
+      c.restore();
+    }
+  }
+
+  // ------------------------------ generic halls ------------------------------
+  function hall(c, m, p, st, o) {
+    const { x0, y0, x1, y1, H } = o;
+    plinth(c, p, x0, y0, x1, y1, o.plinth || 2);
+    const z0 = o.plinth || 2;
+    if (st === 'nordico') { longhouse(c, m, p, (x1 - x0) / 2, (y1 - y0) / 2, H * 0.6, H * 0.75, o.big, o.doorW); return H * 1.35; }
+    walls(c, x0, y0, x1, y1, z0, H, p.wl, p.wr, p.batter);
+    if (o.door !== false) door(c, y1, (x0 + x1) / 2 - 0.12, (x0 + x1) / 2 + 0.12, z0, z0 + Math.min(10, (H - z0) * 0.7), p.door);
+    winsL(c, m, p, y1, x0, x1, z0 + (H - z0) * 0.5, 3, Math.max(1, Math.round((x1 - x0) * 2)));
+    winsR(c, m, p, x1 - (p.batter || 0), y0, y1, z0 + (H - z0) * 0.5, 3, Math.max(1, Math.round((y1 - y0) * 2)));
+    if (st === 'egipcio' || st === 'asteca') {
+      band(c, x0, y0, x1, y1, H - 2.2, H - 0.8, p.trim);
+      if (p.trim2) band(c, x0, y0, x1, y1, H - 3.4, H - 2.4, p.trim2);
+      return roof(c, m, p, x0, y0, x1, y1, H, { par: 1.4 });
+    }
+    return roof(c, m, p, x0, y0, x1, y1, H, { alongY: o.alongY, rh: o.rh });
+  }
+
+  // ------------------------------ religion ------------------------------
+  function temple(c, m, p, st) {
+    if (st === 'grego' || st === 'romano' || st === 'classico') { // (the classical people's: the Greek's — D-093)
+      const g = st !== 'romano';
+      const H0 = g ? steps(c, p, 0.95, 3, 1.4, 0.07) : 0;
+      if (!g) box(c, -0.85, -0.85, 0.85, 0.85, 0, 7, p.base[0], p.base[1], p.base[2]); // podium
+      // (the flight up the front on the axis, cut into the base — the body's, no riser over 0.30 m: Forma's temple —, from the
+      // highest tread down, each a box from the ground)
+      { const s = g ? 0.0875 : 0.125, n = g ? 5 : 8, d = g ? 0.08 : 0.08125, v0 = g ? 0.95 : 1.0, zt = g ? H0 : 7;
+        for (let j = n - 2; j >= 0; j--) box(c, -s, v0 - d * (j + 1), s, v0 - d * j, 0, zt * (j + 1) / n, p.base[0], p.base[1], shade(p.base[2], 1.05)); }
+      const z0 = g ? H0 : 7, H = z0 + 17;
+      const cx0 = g ? -0.5 : -0.55, cx1 = g ? 0.45 : 0.55, cy0 = g ? -0.5 : -0.7, cy1 = g ? 0.45 : 0.2;
+      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.0435, 'B', false, 6); // (0.80 m between two of the front's: Forma's temple)
+      walls(c, cx0, cy0, cx1, cy1, z0, H, p.wl, p.wr);
+      door(c, cy1, -0.15, 0.15, z0, z0 + 10, '#3a2e24', m);
+      if (g) colonnade(c, p, -0.72, -0.72, 0.72, 0.72, z0, H, 5, 0.0435, 'LR', false, 6);
+      else colonnade(c, p, -0.62, 0.3, 0.62, 0.72, z0, H, 4, 0.05, 'L');
+      const ey0 = g ? -0.78 : -0.72, ey1 = g ? 0.78 : 0.76;
+      box(c, -0.78, ey0, 0.78, ey1, H, H + 2.5, p.col[0], p.col[1], p.col[0]);
+      band(c, -0.78, ey0, 0.78, ey1, H + 1, H + 2, g ? p.acc : p.acc2);
+      gableY(c, -0.78, ey0, 0.78, ey1, H + 2.5, H + 12, 0.05, p.roof[0], p.roof[1], p.gable, p.roof[2]);
+      const e = P(0, ey1, H + 6); c.fillStyle = p.acc === '#3f6fb0' ? '#f2c14e' : p.acc; c.beginPath(); c.arc(e[0], e[1], 1.6, 0, TAU); c.fill(); m.glow.push(e);
+      for (const [bx, by] of [[-0.9, 0.9], [0.9, 0.9]]) { box(c, bx - 0.05, by - 0.05, bx + 0.05, by + 0.05, 0, 4, '#8a7a5a', '#6a5a40', '#9a8a6a'); m.fires.push(P(bx, by, 5)); }
+      return;
+    }
+    if (st === 'egipcio') {
+      box(c, -0.7, -0.9, 0.85, 0.3, 0, 15, p.wl, p.wr, p.top);
+      band(c, -0.7, -0.9, 0.85, 0.3, 12, 13.5, p.trim);
+      colonnade(c, p, -0.84375, 0.3, 0.84375, 0.55, 0, 13, 6, 0.05, 'L', true); // (six, symmetric round the gate's axis: Forma's temple)
+      for (const [a, b] of [[-0.92, -0.18], [0.18, 0.92]]) {
+        walls(c, a, 0.55, b, 0.92, 0, 30, p.wl, p.wr, 0.1);
+        top(c, a + 0.1, 0.65, b - 0.1, 0.82, 30, p.top);
+        band(c, a + 0.1, 0.55, b - 0.1, 0.82, 28, 30, p.trim);
+        c.strokeStyle = 'rgba(120,80,40,0.35)'; c.lineWidth = 0.5;
+        for (let k = 0; k < 3; k++) { const x = a + 0.15 + k * 0.18; ln(c, P(x, 0.92, 8), P(x, 0.92, 20), 'rgba(120,80,40,0.35)', 0.5); }
+        const fp = P((a + b) / 2, 0.93, 0); flag(c, fp[0], fp[1], p.trim2, 36);
+      }
+      box(c, -0.18, 0.62, 0.18, 0.86, 0, 20, p.wl, p.wr, p.top);
+      door(c, 0.86, -0.1, 0.1, 0, 13, '#2a2016', m);
+      band(c, -0.18, 0.62, 0.18, 0.86, 18, 20, p.trim);
+      m.glow.push(P(0, 0.86, 16));
+      m.fires.push(P(-0.6, 1.05, 3)); m.fires.push(P(0.6, 1.05, 3));
+      return;
+    }
+    if (st === 'asteca') {
+      const H = stepPyr(c, p, 0.95, 0.55, 4, 6.5, p.wl, p.wr, p.top, 0.2); // (its top 4.4 m square, the shrine's back on its back edge: Forma's temple)
+      box(c, -0.42, -0.55, 0.42, 0.32, H, H + 9, p.wl, p.wr, p.top);
+      band(c, -0.42, -0.55, 0.42, 0.32, H + 6.5, H + 9, p.trim);
+      door(c, 0.32, -0.12, 0.12, H, H + 6, '#2a1c14', m);
+      // roof comb
+      box(c, -0.3, -0.08, 0.3, 0.02, H + 9, H + 17, p.trim, shade(p.trim, 0.8), p.trim);
+      for (let k = 0; k < 4; k++) { const q = P(-0.22 + k * 0.15, 0.02, H + 13); c.fillStyle = p.trim2; c.fillRect(q[0] - 0.8, q[1] - 1.5, 1.6, 3); }
+      for (const [bx, by] of [[-0.47, 0.42], [0.47, 0.42]]) { box(c, bx - 0.05, by - 0.05, bx + 0.05, by + 0.05, H, H + 2.5, '#6a5a50', '#4a3e36', '#7a6a60'); m.fires.push(P(bx, by, H + 3)); }
+      m.glow.push(P(0, 0.32, H + 3));
+      return;
+    }
+    if (st === 'nordico') { // stave church
+      const S = p.shingle;
+      box(c, -0.75, -0.75, 0.75, 0.75, 0, 1.5, p.base[0], p.base[1], p.base[2]);
+      walls(c, -0.55, -0.55, 0.55, 0.55, 1.5, 12, p.wl, p.wr);
+      poly(c, [P(-0.75, 0.75, 7), P(0.75, 0.75, 7), P(0.55, 0.55, 11), P(-0.55, 0.55, 11)], S[0]);
+      poly(c, [P(0.75, 0.75, 7), P(0.75, -0.75, 7), P(0.55, -0.55, 11), P(0.55, 0.55, 11)], S[1]);
+      door(c, 0.75, -0.1, 0.1, 1.5, 7, p.door);
+      gableX(c, -0.55, -0.55, 0.55, 0.55, 12, 22, 0.08, S[0], S[1], p.wl, S[2]);
+      walls(c, -0.32, -0.32, 0.32, 0.32, 18, 27, p.wl, p.wr);
+      onL(c, 0.32, -0.08, 0.04, 21, 24, '#ffd27a', m); onR(c, 0.32, -0.04, 0.08, 21, 24, '#ffd27a', m);
+      gableY(c, -0.32, -0.32, 0.32, 0.32, 27, 35, 0.06, S[0], S[1], p.wl, S[2]);
+      box(c, -0.12, -0.12, 0.12, 0.12, 32, 38, p.wl, p.wr, S[2]);
+      poly(c, [P(-0.14, 0.14, 38), P(0.14, 0.14, 38), P(0, 0, 50)], S[0]); poly(c, [P(0.14, 0.14, 38), P(0.14, -0.14, 38), P(0, 0, 50)], S[1]);
+      const a1 = P(0.63, 0, 22), a2 = P(0, 0.38, 35); dragon(c, a1, 1); dragon(c, a2, -1);
+      m.fires.push(P(-0.9, 0.9, 3)); m.glow.push(P(0, 0, 50));
+      return;
+    }
+    return null;
+  }
+  // (the steps of a monument's base one goes up — D-097 —: each split in two along its front, its upper half set back half a
+  // shrink there, so each a body's step, 0.21 to 0.25 m —, its sides and its back the step's: as its form — G.Forma)
+  function stepsUp(c, p, e, n, h, shrink) {
+    for (let k = 0; k < n; k++) { const q = e - k * shrink; box(c, -q, -q, q, q, k * h, k * h + h / 2, p.base[0], p.base[1], p.base[2]); box(c, -q, -q, q, q - shrink / 2, k * h + h / 2, (k + 1) * h, p.base[0], p.base[1], p.base[2]); }
+    return n * h;
+  }
+  function monument(c, m, p, st) {
+    if (st === 'grego') {
+      stepsUp(c, p, 0.9, 2, 1.3, 0.1);
+      box(c, -0.3, -0.3, 0.3, 0.3, 2.6, 12, p.col[0], p.col[1], p.col[0]);
+      band(c, -0.3, -0.3, 0.3, 0.3, 10.5, 12, p.acc);
+      statue(c, 0, 0, 12, '#c9a24a', 30, true);
+      m.glow.push(P(0, 0, 34));
+      return;
+    }
+    if (st === 'romano') {
+      stepsUp(c, p, 0.85, 2, 1.4, 0.12);
+      box(c, -0.28, -0.28, 0.28, 0.28, 2.8, 9, p.col[0], p.col[1], p.col[0]);
+      box(c, -0.14, -0.14, 0.14, 0.14, 9, 56, p.col[0], p.col[1], p.col[0]);
+      c.strokeStyle = 'rgba(120,100,70,0.45)'; c.lineWidth = 0.6;
+      for (let k = 0; k < 11; k++) { const z = 11 + k * 4.2; ln(c, P(-0.14, 0.14, z), P(0.14, 0.14, z + 2.2), 'rgba(120,100,70,0.45)', 0.6); ln(c, P(0.14, 0.14, z + 2.2), P(0.14, -0.14, z + 4.2), 'rgba(100,85,60,0.4)', 0.6); }
+      box(c, -0.2, -0.2, 0.2, 0.2, 56, 58, p.col[0], p.col[1], p.col[0]);
+      statue(c, 0, 0, 58, '#e0b84a', 10, true);
+      m.glow.push(P(0, 0, 66));
+      return;
+    }
+    if (st === 'asteca') {
+      stepsUp(c, p, 0.9, 3, 1.5, 0.12);
+      const q = P(0, 0.1, 4.5 + 13);
+      c.fillStyle = '#9a9488'; c.beginPath(); c.arc(q[0], q[1], 13, 0, TAU); c.fill();
+      c.fillStyle = '#b8b2a4'; c.beginPath(); c.arc(q[0] - 0.8, q[1] - 0.6, 12.2, 0, TAU); c.fill();
+      for (const [r, col] of [[10, '#2fae8f'], [7.5, '#b33a2a'], [5, '#e8c24a'], [2.6, '#b33a2a']]) { c.strokeStyle = col; c.lineWidth = 1.2; c.beginPath(); c.arc(q[0] - 0.8, q[1] - 0.6, r, 0, TAU); c.stroke(); }
+      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; c.fillStyle = '#7a746a'; c.beginPath(); c.moveTo(q[0] - 0.8 + Math.cos(a) * 5.5, q[1] - 0.6 + Math.sin(a) * 5.5); c.lineTo(q[0] - 0.8 + Math.cos(a + 0.15) * 9.5, q[1] - 0.6 + Math.sin(a + 0.15) * 9.5); c.lineTo(q[0] - 0.8 + Math.cos(a - 0.15) * 9.5, q[1] - 0.6 + Math.sin(a - 0.15) * 9.5); c.fill(); }
+      m.glow.push([q[0] - 0.8, q[1] - 0.6]);
+      return;
+    }
+    if (st === 'nordico') {
+      top(c, -0.9, -0.9, 0.9, 0.9, 0.3, '#7a9a4a');
+      for (const [x, y, h, w] of [[-0.4, -0.35, 26, 0.13], [0.35, -0.2, 34, 0.16], [0, 0.35, 22, 0.12]]) {
+        poly(c, [P(x - w, y + w, 0), P(x + w, y + w, 0), P(x + w * 0.7, y + w * 0.7, h), P(x - w * 0.8, y + w * 0.8, h - 2)], '#a09a90');
+        poly(c, [P(x + w, y + w, 0), P(x + w, y - w, 0), P(x + w * 0.7, y - w * 0.7, h - 1), P(x + w * 0.7, y + w * 0.7, h)], '#7e7870');
+        const a = P(x, y + w, h * 0.2), b = P(x, y + w, h * 0.8);
+        c.strokeStyle = '#b33a2a'; c.lineWidth = 0.8; c.beginPath(); c.moveTo(a[0] - 2, a[1]); c.bezierCurveTo(a[0] + 4, a[1] - 5, b[0] - 4, b[1] + 5, b[0] + 1, b[1]); c.stroke();
+      }
+      m.glow.push(P(0.35, -0.2, 30));
+      return;
+    }
+    return null;
+  }
+
+  // ------------------------------ economy & civic ------------------------------
+  function storehouse(c, m, p, st) {
+    if (st === 'egipcio') return celeiro(c, m, p, st);
+    const z = hall(c, m, p, st, { x0: -0.78, y0: -0.6, x1: 0.78, y1: 0.6, H: 13, big: false });
+    if (st === 'asteca') { for (let k = 0; k < 3; k++) jar(c, P(0.9, -0.4 + k * 0.3, 0)[0], P(0.9, -0.4 + k * 0.3, 0)[1], 1.2, '#b8683a'); }
+    else if (st === 'nordico') { for (let k = 0; k < 3; k++) { const q = P(0.95, -0.5 + k * 0.3, 0); barrel(c, q[0], q[1], 1.1); } }
+    else { for (let k = 0; k < 3; k++) { const q = P(-0.4 + k * 0.3, 0.8, 0); jar(c, q[0], q[1], 1.1, st === 'grego' ? '#c87a4a' : '#b8683a'); } }
+    return z;
+  }
+  function celeiro(c, m, p, st) {
+    if (st === 'egipcio') {
+      // (the domes 6 px round — before them and between them the base has room for a body, the plan's way to their mouths —, the
+      // flight up the base's front from the street, to a hand off the lot's edge: as its form, L-414)
+      box(c, -0.85, -0.85, 0.85, 0.85, 0, 2.5, p.base[0], p.base[1], p.base[2]);
+      for (const [x, y] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) {
+        const b = P(x, y, 2.5); const g = c.createLinearGradient(b[0] - 6, 0, b[0] + 6, 0); g.addColorStop(0, p.wl); g.addColorStop(1, p.wr);
+        c.fillStyle = g; c.beginPath(); c.moveTo(b[0] - 6, b[1]); c.bezierCurveTo(b[0] - 6, b[1] - 14, b[0] - 2.6, b[1] - 20, b[0], b[1] - 21); c.bezierCurveTo(b[0] + 2.6, b[1] - 20, b[0] + 6, b[1] - 14, b[0] + 6, b[1]); c.fill();
+        c.fillStyle = '#3a2a1c'; c.beginPath(); c.arc(b[0] - 1.5, b[1] - 15, 1.2, 0, TAU); c.fill();
+      }
+      treads(c, p, -0.15, 0.15, 0.975, 2.5, 3, 0.0625);
+      return 24;
+    }
+    if (st === 'asteca') {
+      top(c, -0.975, -0.975, 0.975, 0.975, 0.5, p.top); // (to a hand off the lot's edge: room before the front pot's mouth, as its form)
+      for (const [x, y] of [[-0.35, -0.4], [0.4, -0.3], [0, 0.4]]) {
+        const b = P(x, y, 0); c.fillStyle = '#b87a4a'; c.beginPath(); c.moveTo(b[0] - 4, b[1]); c.bezierCurveTo(b[0] - 8, b[1] - 8, b[0] - 5, b[1] - 16, b[0] - 3, b[1] - 16); c.lineTo(b[0] + 3, b[1] - 16); c.bezierCurveTo(b[0] + 5, b[1] - 16, b[0] + 8, b[1] - 8, b[0] + 4, b[1]); c.fill();
+        c.fillStyle = 'rgba(0,0,0,0.18)'; c.beginPath(); c.moveTo(b[0] + 1, b[1]); c.bezierCurveTo(b[0] + 6, b[1] - 8, b[0] + 4, b[1] - 15, b[0] + 3, b[1] - 16); c.lineTo(b[0] + 1, b[1] - 16); c.fill();
+        c.fillStyle = p.thatch[0]; c.beginPath(); c.moveTo(b[0] - 6, b[1] - 15); c.lineTo(b[0], b[1] - 23); c.lineTo(b[0] + 6, b[1] - 15); c.ellipse(b[0], b[1] - 15, 6, 2.2, 0, 0, Math.PI); c.fill();
+      }
+      return 26;
+    }
+    if (st === 'nordico') { // raised storehouse on posts
+      for (const [x, y] of [[-0.5, -0.4], [0.5, -0.4], [0.5, 0.4], [-0.5, 0.4]]) box(c, x - 0.05, y - 0.05, x + 0.05, y + 0.05, 0, 6, '#5a4030', '#4a3222', '#6a4a36');
+      box(c, -0.6, -0.48, 0.6, 0.48, 6, 7, '#6a4a30', '#4e3620', '#7a5a3a');
+      walls(c, -0.55, -0.42, 0.55, 0.42, 7, 15, p.wl, p.wr);
+      door(c, 0.42, -0.1, 0.1, 7, 13, p.door);
+      poly(c, [P(-0.1, 0.9, 0), P(0.1, 0.9, 0), P(0.1, 0.44, 7), P(-0.1, 0.44, 7)], '#7a5a3a');
+      roof(c, m, p, -0.55, -0.42, 0.55, 0.42, 15, { rh: 10 });
+      return 28;
+    }
+    const z = hall(c, m, p, st, { x0: -0.85, y0: -0.55, x1: 0.85, y1: 0.55, H: 12 });
+    for (let k = 0; k < 4; k++) { const q = P(-0.5 + k * 0.3, 0.75, 0); c.fillStyle = '#d8c090'; c.beginPath(); c.ellipse(q[0], q[1] - 2, 2, 2.4, 0, 0, TAU); c.fill(); c.fillStyle = '#b89a60'; c.fillRect(q[0] - 0.6, q[1] - 4.8, 1.2, 0.8); }
+    return z;
+  }
+  function workshop(c, m, p, st) {
+    const z = hall(c, m, p, st, { x0: -0.8, y0: -0.8, x1: 0.25, y1: 0.75, H: 13 });
+    box(c, -0.6, -0.62, -0.38, -0.4, 8, 32, st === 'nordico' ? '#6a6258' : '#8a8378', st === 'nordico' ? '#524a42' : '#6c655b', '#57504a');
+    m.fires.push(P(-0.49, -0.51, 33));
+    for (const [px, py] of [[0.8, -0.6], [0.8, 0.7]]) box(c, px - 0.04, py - 0.04, px + 0.02, py + 0.02, 0, 10, '#6e4a2c', '#553820', '#6e4a2c');
+    poly(c, [P(0.25, -0.75, 12), P(0.88, -0.75, 10), P(0.88, 0.8, 10), P(0.25, 0.8, 12)], st === 'nordico' ? '#5a7631' : shade(p.roof ? p.roof[1] : '#7d6a55', 1), '#4a3a2a', 0.4);
+    box(c, 0.45, 0.05, 0.62, 0.3, 0, 3.5, '#3c3c40', '#2a2a2e', '#55555c');
+    box(c, 0.4, 0.1, 0.68, 0.25, 3.5, 5, '#4a4a52', '#34343a', '#707078');
+    m.glow.push(P(0.54, 0.18, 6));
+    return z;
+  }
+  function quartel(c, m, p, st) {
+    box(c, -0.92, -0.92, 0.92, 0.92, 0, 1.5, p.base[0], p.base[1], p.base[2]);
+    hall(c, m, p, st, { x0: -0.82, y0: -0.82, x1: 0.3, y1: 0.72, H: 13, plinth: 3 });
+    box(c, 0.52, -0.72, 0.62, 0.62, 5, 6.2, '#6e4a2c', '#553820', '#7a5634');
+    for (const py of [-0.6, -0.36, -0.12, 0.12, 0.36, 0.56]) {
+      const a = P(0.6, py, 1.5), b = P(0.6, py, 17); ln(c, a, b, '#6e4a2c', 0.8);
+      c.fillStyle = '#c4c8d0'; c.beginPath(); c.moveTo(b[0] - 0.9, b[1]); c.lineTo(b[0], b[1] - 2.8); c.lineTo(b[0] + 0.9, b[1]); c.fill();
+    }
+    // shields of the culture hang on the rack
+    for (const py of [-0.45, 0.0, 0.45]) {
+      const q = P(0.66, py, 8);
+      c.fillStyle = st === 'romano' ? '#a8322a' : st === 'grego' ? '#c9a24a' : st === 'asteca' ? '#2fae8f' : st === 'egipcio' ? '#e8d8b8' : '#9a6a3a';
+      if (st === 'romano') c.fillRect(q[0] - 1.6, q[1] - 2.6, 3.2, 5.2); else { c.beginPath(); c.ellipse(q[0], q[1], 2, 2.4, 0, 0, TAU); c.fill(); }
+      c.fillStyle = '#e8c24a'; c.beginPath(); c.arc(q[0], q[1], 0.6, 0, TAU); c.fill();
+    }
+    m.fires.push(P(-0.2, 0.9, 3));
+    return 30;
+  }
+  function torre(c, m, p, st) {
+    if (st === 'nordico') return null;
+    const e = 0.34;
+    box(c, -0.42, -0.42, 0.42, 0.42, 0, 3, p.base[0], p.base[1], p.base[2]);
+    walls(c, -e, -e, e, e, 3, 34, p.wl, p.wr, 0.03);
+    c.strokeStyle = 'rgba(0,0,0,0.12)'; c.lineWidth = 0.35;
+    for (let z = 7; z < 34; z += 3.5) { ln(c, P(-e, e, z), P(e, e, z), 'rgba(0,0,0,0.1)', 0.35); ln(c, P(e, e, z), P(e, -e, z), 'rgba(0,0,0,0.1)', 0.35); }
+    onL(c, e - 0.02, -0.06, 0.06, 20, 25, p.win, m); onR(c, e - 0.02, -0.06, 0.06, 26, 30, p.win, m);
+    top(c, -e - 0.04, -e - 0.04, e + 0.04, e + 0.04, 34, p.top || p.base[2]);
+    // (the merlons all round, as the form has them: the back and the far side first, behind the front ones)
+    for (let k = 0; k < 4; k++) { const a = -e + k * (2 * e / 3.5); box(c, a, -e - 0.04, a + 0.1, -e + 0.02, 34, 38, p.wl, p.wr, p.wl); box(c, -e - 0.04, a, -e + 0.02, a + 0.1, 34, 38, p.wl, p.wr, p.wl); }
+    for (let k = 0; k < 4; k++) { const a = -e + k * (2 * e / 3.5); box(c, a, e - 0.02, a + 0.1, e + 0.04, 34, 38, p.wl, p.wr, p.wl); box(c, e - 0.02, a, e + 0.04, a + 0.1, 34, 38, p.wl, p.wr, p.wl); }
+    if (p.trim) band(c, -e, -e, e, e, 30.5, 32, p.trim);
+    m.fires.push(P(0.1, 0.1, 36));
+    return 40;
+  }
+  // (the pieces the plan uses — D-093, G.Forma's square —: a bench, its plank 0.37–0.45 m on its two feet of stone; the speaker's
+  // stone of 0.45 m; a basin with its rim standing from z0 to z1 px — its side, its top, its water)
+  const ZM = 3.04; // (a metre of height in px)
+  function bench(c, p, x0, y0, x1, y1) {
+    const along = x1 - x0 >= y1 - y0, m = (along ? x1 - x0 : y1 - y0) / 2 - 0.05, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    for (const s2 of [-1, 1]) { if (along) box(c, cx + s2 * m - 0.0175, y0 + 0.0075, cx + s2 * m + 0.0175, y1 - 0.0075, 0, 0.37 * ZM, p.base[0], p.base[1], p.base[2]); else box(c, x0 + 0.0075, cy + s2 * m - 0.0175, x1 - 0.0075, cy + s2 * m + 0.0175, 0, 0.37 * ZM, p.base[0], p.base[1], p.base[2]); }
+    box(c, x0, y0, x1, y1, 0.37 * ZM, 0.45 * ZM, '#8a6a44', '#6e5436', '#9a7a52');
+  }
+  const speakerStone = (c, p, x0, y0, x1, y1) => box(c, x0, y0, x1, y1, 0, 0.45 * ZM, p.base[0], p.base[1], p.base[2]);
+  function basinRim(c, x, y, r, z0, z1, side, water) {
+    const a = P(x, y, z0), b = P(x, y, z1), rx = r * 22.63, ry = r * 11.31;
+    c.fillStyle = side; c.beginPath(); c.ellipse(a[0], a[1], rx, ry, 0, 0, Math.PI); c.lineTo(b[0] - rx, b[1]); c.ellipse(b[0], b[1], rx, ry, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    basin(c, x, y, r, z1, water);
+  }
+  function praca(c, m, p, st) {
+    // (the pavement itself is drawn on the ground layer, so people can walk over it; on it each people's square, its pieces
+    // where its form has them — G.Forma, D-093 —, back to front)
+    if (st === 'nordico') {
+      for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; const x = Math.cos(a) * 0.72, y = Math.sin(a) * 0.72; box(c, x - 0.06, y - 0.05, x + 0.06, y + 0.05, 0, 8 + (k % 3) * 2, '#a09a90', '#7e7870', '#b8b2a8'); }
+      box(c, -0.18, -0.12, 0.18, 0.14, 0, 3.5, '#9a948a', '#787268', '#b0aa9e');
+      statue(c, 0, 0, 3.5, '#6a4a30', 7, false);
+      speakerStone(c, p, -0.125, 0.165, 0.125, 0.365); // (the law speaker's, before the law stone)
+      return 14;
+    }
+    if (st === 'grego') { // stoa along the back: its back wall, the benches under its roof, the columns, the roof
+      box(c, -0.9, -0.9, 0.9, -0.82, 0.4, 12, p.wl, p.wr, p.top);
+      bench(c, p, -0.7, -0.81, -0.25, -0.7); bench(c, p, 0.25, -0.81, 0.7, -0.7);
+      colonnade(c, p, -0.9, -0.62, 0.9, -0.5, 0.4, 12, 7, 0.035, 'L');
+      gableX(c, -0.92, -0.92, 0.92, -0.48, 12, 16, 0.04, p.roof[0], p.roof[1], p.gable, p.roof[2]);
+      basinRim(c, -0.45, 0.35, 0.18, 0, 0.8, p.base[1]); statue(c, 0.15, 0.2, 0.4, '#f0ebe0', 12, true);
+      speakerStone(c, p, 0.6, -0.25, 0.85, 0);
+      return 20;
+    }
+    if (st === 'romano') {
+      box(c, -0.4, -0.9, 0.5, -0.55, 0.4, 5, p.base[0], p.base[1], p.base[2]); // rostra
+      for (let k = 1; k <= 5; k++) box(c, 0.5 + (k - 1) * 0.075, -0.85, 0.5 + k * 0.075, -0.6, 0, 5 * (6 - k) / 6, p.base[0], p.base[1], p.base[2]); // (their stair, at their right end)
+      for (const x of [-0.3, -0.05, 0.2, 0.45]) column(c, p, x, -0.5, 0.4, 5.5, 0.02);
+      statue(c, -0.4, 0.3, 0.4, '#b8a888', 10, true);
+      bench(c, p, -0.3, 0.05, 0.15, 0.16); bench(c, p, 0.225, 0.05, 0.675, 0.16);
+      box(c, 0.45, 0.45, 0.6, 0.6, 0.4, 3, p.col[0], p.col[1], p.col[0]);
+      box(c, 0.5, 0.5, 0.55, 0.55, 3, 26, p.col[0], p.col[1], p.col[0]);
+      statue(c, 0.525, 0.525, 26, '#e0b84a', 6, false);
+      m.glow.push(P(0.525, 0.525, 30));
+      return 34;
+    }
+    if (st === 'egipcio') {
+      const palmAt = (x, y) => { const q = P(x, y, 0.4); palm(c, q[0], q[1], 1.1); };
+      palmAt(-0.7, -0.7); bench(c, p, -0.225, -0.73, 0.225, -0.62); speakerStone(c, p, -0.85, -0.125, -0.6, 0.125); palmAt(0.7, -0.7); palmAt(-0.7, 0.7);
+      box(c, -0.12, -0.12, 0.12, 0.12, 0.4, 3, p.base[0], p.base[1], p.base[2]);
+      poly(c, [P(-0.08, 0.08, 3), P(0.08, 0.08, 3), P(0.05, 0.05, 30), P(-0.05, 0.05, 30)], '#e6dfcc');
+      poly(c, [P(0.08, 0.08, 3), P(0.08, -0.08, 3), P(0.05, -0.05, 30), P(0.05, 0.05, 30)], '#bdb39c');
+      const t = P(0, 0, 34); poly(c, [P(-0.05, 0.05, 30), P(0.05, 0.05, 30), t], '#f7d66a'); poly(c, [P(0.05, 0.05, 30), P(0.05, -0.05, 30), t], '#d9a93a');
+      m.glow.push(t);
+      bench(c, p, -0.225, 0.62, 0.225, 0.73); palmAt(0.7, 0.7);
+      return 36;
+    }
+    if (st === 'asteca') {
+      speakerStone(c, p, -0.85, -0.125, -0.6, 0.125);
+      box(c, -0.2, -0.2, 0.2, 0.2, 0.4, 3.5, p.wl, p.wr, p.top); band(c, -0.2, -0.2, 0.2, 0.2, 2.4, 3.5, p.trim);
+      m.fires.push(P(0, 0, 4.5));
+      const cols = [['#b33a2a', '#f1e9d6'], ['#2fae8f', '#f1e9d6'], ['#e8b83a', '#b33a2a']];
+      for (const [x, y, k] of [[-0.55, -0.55, 0], [0.55, -0.5, 1], [-0.55, 0.5, 2], [0.5, 0.55, 0]]) stall(c, p, x, y, cols[k][0], cols[k][1]);
+      return 14;
+    }
+    // classic: the fountain — its basin of 0.35 tiles with its rim to 0.72 m (the plan's: D-093), the column to 1.5 m and its
+    // bowl spilling into it —, the benches either side of it, the speaker's stone, the trees
+    for (const [x, y] of [[-0.75, -0.75], [0.7, -0.75]]) { const q = P(x, y, 0.4); tree(c, q[0], q[1], 1.1); }
+    speakerStone(c, p, -0.85, -0.125, -0.6, 0.125); bench(c, p, -0.225, -0.73, 0.225, -0.62);
+    basinRim(c, 0, 0, 0.35, 0, 0.72 * ZM, '#a8a090', '#5aaed0');
+    box(c, -0.0425, -0.0425, 0.0425, 0.0425, 1.8, 1.5 * ZM, '#c8c0b0', '#a8a090', '#d8d0c0');
+    basinRim(c, 0, 0, 0.125, 1.5 * ZM, 1.75 * ZM, '#b8b0a0', '#5aaed0');
+    c.fillStyle = 'rgba(200,235,255,0.85)'; const f = P(0, 0, 1.75 * ZM + 0.6); c.beginPath(); c.arc(f[0], f[1], 1.4, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(200,235,255,0.7)'; c.lineWidth = 0.6; for (const dx of [-3, 3]) { c.beginPath(); c.moveTo(f[0], f[1]); c.quadraticCurveTo(f[0] + dx, f[1] - 1.5, f[0] + dx * 1.4, f[1] + 3.2); c.stroke(); }
+    bench(c, p, -0.225, 0.62, 0.225, 0.73);
+    { const q = P(-0.75, 0.7, 0.4); tree(c, q[0], q[1], 1.1); }
+    return 10;
+  }
+  // (a stall of the market facing f [fu, fv]: its posts, its counter on the side it faces — under the cloth behind it the one who
+  // sells —, the cloth, the fruit on the counter: as its form, G.Forma)
+  function marketStall(c, p, x, y, f, col1, col2) {
+    const s = 0.2; const e = s + 0.0125, r = f[1] > 0 ? [x - e, y, x + e, y + e] : f[1] < 0 ? [x - e, y - e, x + e, y] : f[0] > 0 ? [x, y - e, x + e, y + e] : [x - e, y - e, x, y + e];
+    for (const [dx, dy] of [[-s, -s], [s, -s], [s, s], [-s, s]]) ln(c, P(x + dx, y + dy, 0), P(x + dx, y + dy, 7), '#6a4a2c', 0.6);
+    box(c, r[0], r[1], r[2], r[3], 2.5, 3.4, '#8a6a44', '#6a4e30', '#9a7a52');
+    const t = P(x, y, 10);
+    for (let k = 0; k < 4; k++) { poly(c, [t, P(x - s - 0.04, y + s + 0.04, 7), P(x + s + 0.04, y + s + 0.04, 7)], k % 2 ? col1 : col2); }
+    poly(c, [t, P(x + s + 0.04, y + s + 0.04, 7), P(x + s + 0.04, y - s - 0.04, 7)], shade(col1, 0.8));
+    const cx = (r[0] + r[2]) / 2, cy = (r[1] + r[3]) / 2; c.fillStyle = G.vpick(['#e05a3a', '#f0b040', '#6ab04a']); for (let k = 0; k < 3; k++) { const q = P(cx + (f[1] ? (k - 1) * 0.1 : 0), cy + (f[0] ? (k - 1) * 0.1 : 0), 3.6); c.beginPath(); c.arc(q[0], q[1], 0.7, 0, TAU); c.fill(); }
+  }
+  function mercado(c, m, p, st) {
+    const e = 0.92;
+    pave(c, e, st === 'nordico' ? '#a08a66' : st === 'egipcio' ? '#e2cfa2' : '#d9d0bc');
+    // (its stalls and its bays where its form has them — the plan's: G.Forma —; none there is a market drawn bare, an error: T-254)
+    const F = G.Forma.of('mercado', st); const stalls = F.stalls, bays = F.bays;
+    const AW = {
+      classico: [['#c8483a', '#f4efe3'], ['#3f7fd8', '#f4efe3'], ['#e8b83a', '#8a3a2a']],
+      grego: [['#3f6fb0', '#f4efe3'], ['#c8683f', '#f4efe3'], ['#3f6fb0', '#e8b83a']],
+      romano: [['#a8322a', '#efe2c4'], ['#d8a63a', '#efe2c4'], ['#6a2a5a', '#efe2c4']],
+      egipcio: [['#f1ead6', '#2f8f8a'], ['#f1ead6', '#b8452f'], ['#e8b83a', '#f1ead6']],
+      asteca: [['#b33a2a', '#2fae8f'], ['#e8b83a', '#b33a2a'], ['#2fae8f', '#f1e9d6']],
+      nordico: [['#8a3a2a', '#d8c8a0'], ['#4a6a3a', '#d8c8a0'], ['#7a5a3a', '#c8a060']],
+    }[st] || [['#c8483a', '#f4efe3']];
+    if (st === 'romano') { // macellum tholos
+      box(c, -0.3, -0.3, 0.3, 0.3, 0.4, 2, p.base[0], p.base[1], p.base[2]);
+      colonnade(c, p, -0.25, -0.25, 0.25, 0.25, 2, 12, 3, 0.03, 'BLR');
+      const d = P(0, 0, 12); dome(c, d[0], d[1], 11, 7, p.roof[0], p.roof[2], '#d8a63a');
+    } else if (st === 'grego') {
+      box(c, -0.9, -0.9, 0.9, -0.6, 0.4, 10, p.wl, p.wr, p.top);
+      colonnade(c, p, -0.9, -0.6, 0.9, -0.5, 0.4, 10, 6, 0.03, 'L');
+      gableX(c, -0.92, -0.92, 0.92, -0.48, 10, 13.5, 0.04, p.roof[0], p.roof[1], p.gable, p.roof[2]);
+    } else if (st === 'nordico') { for (const [x, y] of [[-0.6, -0.6], [0.6, -0.55]]) { box(c, x - 0.22, y - 0.18, x + 0.22, y + 0.18, 0.4, 7, p.wl, p.wr, p.wl); gableX(c, x - 0.22, y - 0.18, x + 0.22, y + 0.18, 7, 12, 0.05, p.roof[0], p.roof[1], p.gable, p.roof[2]); } }
+    // (the bays of the people's store at the back — their planks, the sacks over them —, but the Greek's rooms of its stoa and the
+    // Norse's sheds, drawn above)
+    if (st !== 'grego' && st !== 'nordico') for (const [x0, y0, x1, y1] of bays) { box(c, x0, y0, x1, y1, 0.4, 1.4 * ZM, '#8a6a44', '#6a4e30', '#9a7a52'); c.fillStyle = '#d8c090'; for (const t of [0.25, 0.5, 0.75]) { const q = P(x0 + (x1 - x0) * t, (y0 + y1) / 2, 1.4 * ZM); c.beginPath(); c.ellipse(q[0], q[1] - 0.4, 1.6, 0.9, 0, 0, TAU); c.fill(); } }
+    // (the stalls from the back to the front: each over the one behind it)
+    stalls.map((q, k) => [q, k]).sort((a, b) => (a[0][0] + a[0][1]) - (b[0][0] + b[0][1])).forEach(([[x, y, f], k]) => marketStall(c, p, x, y, f, AW[k % AW.length][0], AW[k % AW.length][1]));
+    if (st === 'egipcio' || st === 'asteca') for (let k = 0; k < 4; k++) { const q = P(-0.8 + k * 0.12, 0.85, 0.4); jar(c, q[0], q[1], 1, k % 2 ? '#b8683a' : '#c88a4a'); }
+    if (st === 'nordico') for (let k = 0; k < 3; k++) { const q = P(-0.82 + k * 0.16, 0.85, 0.4); barrel(c, q[0], q[1], 1); } // (at the front left: its form's)
+    if (st === 'egipcio') { const q = P(0.76, -0.25, 0.4); palm(c, q[0], q[1], 1); } // (beside the bays: its form's)
+    return 26;
+  }
+  // (the treads of a plinth's front: from its top at z px down in n − 1 treads of d tiles (0.075), the front at y, x0..x1 — G.Forma's)
+  function treads(c, p, x0, x1, y, z, n, d = 0.075) { for (let k = 1; k < n; k++) box(c, x0, y - d * (n - k), x1, y - d * (n - k - 1), 0, z * (n - k) / n, p.base[0], p.base[1], p.base[2]); }
+  function biblioteca(c, m, p, st) {
+    if (st === 'egipcio' || st === 'asteca') {
+      const z = hall(c, m, p, st, { x0: -0.8, y0: -0.8, x1: 0.8, y1: 0.35, H: 16 });
+      plinth(c, p, -0.8, 0.35, 0.8, 0.66, 2); // (the portico's floor: its columns stand on it — its form, Phase E)
+      treads(c, p, -0.85, 0.85, 0.86, 2, 3); // (down to the street: three risers of 0.22 m — its form, D-093)
+      colonnade(c, p, -0.7, 0.35, 0.7, 0.62, 2, 14, 5, 0.045, 'L', st === 'egipcio');
+      top(c, -0.8, 0.35, 0.8, 0.66, 14, p.top); band(c, -0.8, 0.35, 0.8, 0.66, 12.5, 14, p.trim);
+      return z + 4;
+    }
+    if (st === 'nordico') { hall(c, m, p, st, { x0: -0.8, y0: -0.5, x1: 0.8, y1: 0.5, H: 16, doorW: 0.1 }); treads(c, p, -0.2, 0.2, 0.7, 2, 3); for (const x of [-0.6, 0.6]) { box(c, x - 0.04, 0.72, x + 0.04, 0.8, 0, 12, '#6a4a30', '#4e3620', '#7a5a3a'); dragon(c, P(x, 0.76, 12), x > 0 ? 1 : -1); } return 32; }
+    box(c, -0.9, -0.9, 0.9, 0.75, 0, 2.5, p.base[0], p.base[1], p.base[2]); treads(c, p, -0.9, 0.9, 0.9, 2.5, 3); // (its plinth, its front two treads down to the street — its form, D-093)
+    walls(c, -0.7, -0.8, 0.75, 0.3, 2.5, 17, p.wl, p.wr);
+    winsR(c, m, p, 0.75, -0.8, 0.3, 9, 5, 2);
+    colonnade(c, p, -0.7, 0.3, 0.75, 0.68, 2.5, 17, 5, 0.04, 'L');
+    door(c, 0.3, -0.12, 0.12, 2.5, 11, '#3a2e24', m);
+    box(c, -0.75, -0.85, 0.8, 0.72, 17, 19, p.col[0], p.col[1], p.col[0]);
+    const zr = st === 'romano' ? roof(c, m, p, -0.75, -0.85, 0.8, 0.72, 19, { kind: 'hip' }) : (gableY(c, -0.75, -0.85, 0.8, 0.72, 19, 28, 0.04, p.roof[0], p.roof[1], p.gable, p.roof[2]), 28);
+    // (the library's plaque on its pediment: a hip has none — its form, Phase E)
+    if (st !== 'romano') { const s = P(0, 0.72, 22); c.fillStyle = '#e8d8a8'; c.fillRect(s[0] - 2.5, s[1] - 1.5, 5, 3); c.strokeStyle = '#8a6a3a'; c.lineWidth = 0.4; c.strokeRect(s[0] - 2.5, s[1] - 1.5, 5, 3); }
+    return zr;
+  }
+  function teatro(c, m, p, st) {
+    const e = 1.4;
+    if (st === 'egipcio') { // sacred garden with a pool
+      top(c, -e, -e, e, e, 0.3, '#86a84e');
+      box(c, -e, -e, e, -e + 0.08, 0, 5, p.wl, p.wr, p.top); box(c, -e, -e, -e + 0.08, e, 0, 5, p.wl, p.wr, p.top);
+      box(c, -0.7, -0.5, 0.7, 0.5, 0, 1.6, p.base[0], p.base[1], p.base[2]); top(c, -0.62, -0.42, 0.62, 0.42, 1.2, '#4a9ac0');
+      for (let k = 0; k < 6; k++) { const q = P(-0.5 + k * 0.2, -0.2 + (k % 2) * 0.35, 1.3); c.fillStyle = k % 2 ? '#f0a0c0' : '#5a9a3c'; c.beginPath(); c.ellipse(q[0], q[1], 1.6, 0.8, 0, 0, TAU); c.fill(); }
+      for (const [x, y] of [[-1.1, -0.9], [-0.9, 1.1], [1.1, -1.1], [1.1, 0.9], [0, -1.15], [-1.15, 0.1]]) { const q = P(x, y, 0.3); palm(c, q[0], q[1], 1.2); }
+      const sp = P(0.95, 0.95, 0.3); c.fillStyle = p.wl; c.fillRect(sp[0] - 4, sp[1] - 5, 8, 5); c.beginPath(); c.arc(sp[0] - 3, sp[1] - 7, 2.2, 0, TAU); c.fill();
+      return 20;
+    }
+    if (st === 'asteca') { // ball court
+      top(c, -e, -e, e, e, 0.3, p.top);
+      for (const [y0, y1] of [[-1.2, -0.45], [0.45, 1.2]]) { walls(c, -1.2, y0, 1.2, y1, 0, 7, p.wl, p.wr); top(c, -1.2, y0, 1.2, y1, 7, p.top); band(c, -1.2, y0, 1.2, y1, 5.5, 7, p.trim); }
+      poly(c, [P(-1.2, -0.45, 7), P(1.2, -0.45, 7), P(1.2, -0.25, 0.3), P(-1.2, -0.25, 0.3)], shade(p.wl, 0.95));
+      top(c, -1.2, -0.25, 1.2, 0.25, 0.3, '#b8a888'); // (the alley as high as the court's ground: Forma's, the plan's floor)
+      const r = P(0, -0.3, 4.5); c.strokeStyle = '#6a645a'; c.lineWidth = 1.2; c.beginPath(); c.ellipse(r[0], r[1], 1.8, 2.2, 0, 0, TAU); c.stroke();
+      band(c, -1.2, -0.25, 1.2, 0.25, 0.3, 0.45, p.trim2);
+      return 16;
+    }
+    if (st === 'nordico') { longhouse(c, m, p, 1.25, 0.6, 9, 22, true, 0.1); treads(c, p, -0.15, 0.15, 0.715, 1.2, 2); return 36; } // (its door of 0.8 m, the tread before it: Forma's)
+    if (st === 'romano') { bowl(c, 1.35, 26, '#e0c79a', '#b09268', '#c8b8a0', '#e8d8a8', 2, false, cavOf('teatro', 'romano')[0]); return 34; }
+    // Greek (and classic) theatre: the rows of a real one round the back of the orchestra, the outer ones cut by the lot (its
+    // form: D-084), the orchestra, the stage building and its columns along the front
+    top(c, -e, -e, e, e, 0.2, '#b8b09c');
+    for (const cv of cavOf('teatro', st).slice().reverse()) caveaPaint(c, cv, cv.L, '#d8d0bc', p.wl);
+    { const F = G.Forma.of('teatro', st); const o = F.els.find(q => q.k === 'arena'); const q = P((o.c[0] - F.L / 2) / 4, (o.c[1] - F.L / 2) / 4, 0.3); const rr = o.r / 4 * 22.6; c.fillStyle = '#e8dcc0'; c.beginPath(); c.ellipse(q[0], q[1], rr, rr / 2, 0, 0, TAU); c.fill(); }
+    box(c, -0.9, 0.85, 0.9, 1.15, 0, 9, p.wl, p.wr, p.top);
+    colonnade(c, p, -0.85, 1.15, 0.85, 1.25, 0, 7, 6, 0.03, 'L');
+    if (st === 'grego') { band(c, -0.9, 0.85, 0.9, 1.15, 7.5, 9, p.acc); }
+    return 26;
+  }
+  function banhos(c, m, p, st) {
+    if (st === 'egipcio') { // sacred lake — open at its front from -0.45 to 0.45, the landing there, the furnace on its left (the plan's way in and its keeper's: as its form, G.Forma)
+      box(c, -0.9, -0.9, 0.9, 0.75, 0, 1.4, p.base[0], p.base[1], p.base[2]);
+      for (const [a, b] of [[-0.9, -0.45], [0.45, 0.9]]) box(c, a, 0.75, b, 0.9, 0, 1.4, p.base[0], p.base[1], p.base[2]);
+      box(c, -0.45, 0.75, 0.45, 0.975, 0, 0.5, p.base[0], p.base[1], p.base[2]);
+      top(c, -0.75, -0.75, 0.75, 0.75, 1, '#3f8fb8');
+      for (let k = 0; k < 4; k++) ln(c, P(-0.45 + k * 0.04, 0.75 - k * 0.04, 1.4 - k * 0.1), P(0.45 - k * 0.04, 0.75 - k * 0.04, 1.4 - k * 0.1), 'rgba(0,0,0,0.15)', 0.4);
+      box(c, -0.45, 0.76, -0.25, 0.975, 0.5, 3.54, '#6a5a48', '#4e4236', '#7a6a58'); { const q = P(-0.25, 0.8675, 0.5 + 1.37); c.fillStyle = '#ff9a3a'; c.beginPath(); c.ellipse(q[0], q[1], 1.6, 1.4, 0, 0, TAU); c.fill(); m.glow.push(q); }
+      c.fillStyle = 'rgba(255,255,255,0.3)'; const w = P(-0.2, -0.1, 1); c.beginPath(); c.ellipse(w[0], w[1], 8, 2, 0, 0, TAU); c.fill();
+      for (const [x, y] of [[0.76, -0.76], [-0.76, 0.76]]) { const q = P(x, y, 1.4); palm(c, q[0], q[1], 1); } // (on the rim's inner corners, as its form: the fronds within the lot — G.Forma)
+      return 18;
+    }
+    if (st === 'asteca' || st === 'nordico') {
+      if (st === 'nordico') { box(c, -0.5, -0.4, 0.5, 0.4, 0, 1, p.base[0], p.base[1], p.base[2]); walls(c, -0.45, -0.35, 0.45, 0.35, 1, 8, p.wl, p.wr);
+        for (let z = 2; z < 8; z += 1.4) { ln(c, P(-0.45, 0.35, z), P(0.45, 0.35, z), 'rgba(30,20,10,0.4)', 0.5); ln(c, P(0.45, 0.35, z), P(0.45, -0.35, z), 'rgba(30,20,10,0.4)', 0.5); }
+        // (its door of 0.8 m and 1.8, the tread before it: as its form)
+        treads(c, p, -0.15, 0.15, 0.475, 1, 2); door(c, 0.35, -0.1, 0.1, 1, 6.5, p.door); const zr = roof(c, m, p, -0.45, -0.35, 0.45, 0.35, 8, { rh: 9 }); m.fires.push(P(0.1, 0, zr)); m.fires.push(P(-0.1, 0, zr)); return zr + 4; }
+      top(c, -0.8, -0.8, 0.8, 0.8, 0.4, p.top);
+      const b = P(0, 0, 0.4); const g = c.createLinearGradient(b[0] - 14, 0, b[0] + 14, 0); g.addColorStop(0, '#c8b8a0'); g.addColorStop(1, '#8a7a68');
+      c.fillStyle = g; c.beginPath(); c.ellipse(b[0], b[1], 14, 7, 0, 0, Math.PI); c.lineTo(-14, b[1]); c.ellipse(b[0], b[1], 14, 16, 0, Math.PI, TAU); c.fill();
+      // (its way in on the front, 0.22 tiles and 1.8 m — a body's, as its form: the god's of 1 m was a crawl —, the ring round
+      // the dome's foot open before it)
+      if (!NODOOR) { const d0 = P(-0.11, 0.6, 0.4), d1 = P(0.11, 0.6, 0.4), h = 1.8 * 3.04; c.fillStyle = '#2a1c14'; c.beginPath(); c.moveTo(d0[0], d0[1]); c.lineTo(d1[0], d1[1]); c.lineTo(d1[0], d1[1] - h + 1.4); c.quadraticCurveTo((d0[0] + d1[0]) / 2, (d0[1] + d1[1]) / 2 - h - 1, d0[0], d0[1] - h + 1.4); c.closePath(); c.fill(); }
+      for (const [a, b] of [[-0.6, -0.13], [0.13, 0.6]]) poly(c, [P(a, 0.6, 0.4), P(b, 0.6, 0.4), P(b, 0.6, 1.5), P(a, 0.6, 1.5)], p.trim);
+      poly(c, [P(0.6, 0.6, 0.4), P(0.6, -0.6, 0.4), P(0.6, -0.6, 1.5), P(0.6, 0.6, 1.5)], shade(p.trim, 0.8));
+      m.fires.push(P(0, 0, 18)); m.fires.push(P(0.2, -0.1, 16));
+      return 22;
+    }
+    // thermae: low vaulted halls around a great dome
+    plinth(c, p, -0.9, -0.9, 0.9, 0.9, 2);
+    for (let j = 1; j >= 0; j--) box(c, -0.15, 0.95 - 0.05 * (j + 1), 0.15, 0.95 - 0.05 * j, 0, 2 * (j + 1) / 3, p.base[0], p.base[1], shade(p.base[2], 1.05)); // (the flight cut into the plinth before the door: as its form)
+    walls(c, -0.85, -0.85, 0.85, 0.85, 2, 11, p.wl, p.wr);
+    for (const a of [-0.6, -0.15, 0.3]) { if (a !== -0.15) { const pts = [P(a, 0.85, 3), P(a + 0.22, 0.85, 3), P(a + 0.22, 0.85, 7.5), P(a + 0.11, 0.85, 9), P(a, 0.85, 7.5)]; poly(c, pts, p.win); m.win.push(pts); } const q = [P(0.85, a, 3), P(0.85, a + 0.22, 3), P(0.85, a + 0.22, 7.5), P(0.85, a + 0.11, 9), P(0.85, a, 7.5)]; poly(c, q, p.win); m.win.push(q); }
+    if (!NODOOR) poly(c, [P(-0.11, 0.85, 2), P(0.11, 0.85, 2), P(0.11, 0.85, 7.5), P(0, 0.85, 9), P(-0.11, 0.85, 7.5)], p.door); // (the door in the middle arch of the front: the plan's way in, as its form)
+    top(c, -0.85, -0.85, 0.85, 0.85, 11, p.top || p.base[2]);
+    band(c, -0.85, -0.85, 0.85, 0.85, 10, 11, p.trim);
+    box(c, -0.45, -0.45, 0.45, 0.45, 11, 15, p.wl, p.wr, p.top || p.base[2]);
+    const d = P(0, 0, 15); const tip = dome(c, d[0], d[1], 13, 13, st === 'romano' ? '#d8c8a8' : '#ece4d4', st === 'romano' ? '#a8987a' : '#bcb4a4', '#d8a63a');
+    m.fires.push([d[0] - 4, d[1] - 4]); m.fires.push([d[0] + 5, d[1] - 3]);
+    return 34;
+  }
+  function palacio(c, m, p, st) {
+    if (st === 'asteca') {
+      // (the platform, the flight cut into its front from the street at 1.48 — its treads the feet take — and the rest of it
+      // either side, as its form)
+      box(c, -1.4, -1.4, 1.4, 0.9725, 0, 6, p.base[0], p.base[1], p.base[2]); box(c, -1.4, 0.9725, -0.35, 1.4, 0, 6, p.base[0], p.base[1], p.base[2]);
+      for (let j = 6; j >= 0; j--) box(c, -0.35, 1.48 - 0.0725 * (j + 1), 0.35, 1.48 - 0.0725 * j, 0, 6 * (j + 1) / 8, p.base[0], p.base[1], shade(p.base[2], 1.05));
+      box(c, 0.35, 0.9725, 1.4, 1.4, 0, 6, p.base[0], p.base[1], p.base[2]);
+      walls(c, -1.2, -1.2, 1.2, 0.6, 6, 18, p.wl, p.wr);
+      door(c, 0.6, -0.15, 0.15, 6, 14, p.door); // (the plan's way in behind the columns, as its form)
+      colonnade(c, p, -1.1, 0.6, 1.1, 0.85, 6, 16, 7, 0.05, 'L');
+      top(c, -1.25, 0.55, 1.25, 0.9, 16, p.top);
+      band(c, -1.2, -1.2, 1.2, 0.9, 16, 18, p.trim); band(c, -1.2, -1.2, 1.2, 0.9, 18, 19, p.trim2);
+      top(c, -1.2, -1.2, 1.2, 0.9, 19, p.top);
+      for (const x of [-0.9, 0, 0.9]) { const q = P(x, 0.9, 19); c.fillStyle = '#2fae8f'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.ellipse(q[0] + k * 1.3, q[1] - 5, 0.8, 4, k * 0.25, 0, TAU); c.fill(); } }
+      m.fires.push(P(-1.2, 1.3, 7)); m.fires.push(P(1.2, 1.3, 7));
+      return 34;
+    }
+    if (st === 'egipcio') {
+      box(c, -1.3, -1.3, 1.3, 0.5, 0, 18, p.wl, p.wr, p.top); band(c, -1.3, -1.3, 1.3, 0.5, 15, 16.5, p.trim); band(c, -1.3, -1.3, 1.3, 0.5, 16.5, 18, p.trim2);
+      winsR(c, m, p, 1.3, -1.3, 0.5, 9, 4, 3);
+      door(c, 0.5, -0.15, 0.15, 0, 12, '#2a2016'); // (the hall's door behind the columns: the plan's way in, as its form)
+      colonnade(c, p, -1.2, 0.5, 1.2, 0.95, 0, 15, 7, 0.06, 'L', true);
+      top(c, -1.3, 0.45, 1.3, 1.0, 15, p.top);
+      for (const [a, b] of [[-1.3, -0.35], [0.35, 1.3]]) { walls(c, a, 1.0, b, 1.35, 0, 26, p.wl, p.wr, 0.08); top(c, a + 0.08, 1.08, b - 0.08, 1.27, 26, p.top); band(c, a + 0.08, 1.0, b - 0.08, 1.27, 24, 26, p.trim); const fp = P((a + b) / 2, 1.36, 0); flag(c, fp[0], fp[1], '#e8b83a', 32); }
+      door(c, 1.2, -0.2, 0.2, 0, 14, '#2a2016', m);
+      return 38;
+    }
+    if (st === 'nordico') { longhouse(c, m, p, 1.35, 0.75, 10, 26, true, 0.12); treads(c, p, -0.15, 0.15, 0.865, 1.2, 2); const a = P(-0.9, 0.95, 0); flag(c, a[0], a[1], '#a23c2a', 30); return 40; } // (its door of 0.96 m — a body's —, the tread before it: as its form)
+    if (st === 'romano') {
+      box(c, -1.45, -1.45, 1.45, 1.3, 0, 2.5, p.base[0], p.base[1], p.base[2]); treads(c, p, -1.45, 1.45, 1.45, 2.5, 3); // (the plinth's front its treads down to the street: as its form)
+      walls(c, -1.3, -1.3, 1.3, 0.7, 2.5, 20, p.wl, p.wr);
+      winsR(c, m, p, 1.3, -1.3, 0.7, 7, 4, 4); winsR(c, m, p, 1.3, -1.3, 0.7, 14, 4, 4);
+      door(c, 0.7, -0.15, 0.15, 2.5, 12.5, p.door);
+      colonnade(c, p, -1.2, 0.7, 1.2, 1.15, 2.5, 18, 7, 0.05, 'L');
+      box(c, -1.3, 0.65, 1.3, 1.2, 18, 20, p.col[0], p.col[1], p.col[0]);
+      hip(c, -1.3, -1.3, 1.3, 1.2, 20, 32, 0.06, p.roof[0], p.roof[1], p.roof[2]);
+      const d = P(0, -0.2, 29); const tip = dome(c, d[0], d[1], 12, 12, '#d8c8a8', '#a8987a', '#e0b84a'); m.glow.push(tip);
+      return 52;
+    }
+    // Greek & classic palace: a great hall with a pedimented front
+    box(c, -1.45, -1.45, 1.45, 1.3, 0, 2.5, p.base[0], p.base[1], p.base[2]); treads(c, p, -1.45, 1.45, 1.45, 2.5, 3); // (the plinth's front its treads down to the street: as its form)
+    walls(c, -1.25, -1.3, 1.25, 0.7, 2.5, 20, p.wl, p.wr);
+    winsR(c, m, p, 1.25, -1.3, 0.7, 8, 5, 4);
+    door(c, 0.7, -0.15, 0.15, 2.5, 12.5, p.door); // (the plan's way in behind the columns, as its form)
+    colonnade(c, p, -1.1, 0.7, 1.1, 1.2, 2.5, 20, 6, 0.055, 'L');
+    box(c, -1.3, -1.35, 1.3, 1.25, 20, 22.5, p.col[0], p.col[1], p.col[0]);
+    band(c, -1.3, -1.35, 1.3, 1.25, 21, 22, p.acc);
+    gableY(c, -1.3, -1.35, 1.3, 1.25, 22.5, 34, 0.05, p.roof[0], p.roof[1], p.gable, p.roof[2]);
+    const e = P(0, 1.25, 27); c.fillStyle = '#f2c14e'; c.beginPath(); c.arc(e[0], e[1], 2, 0, TAU); c.fill(); m.glow.push(e);
+    return 40;
+  }
+  function doca(c, m, p, st, wd) {
+    const [dx, dy] = wd || [1, 0];
+    // pier planks reaching out over the water
+    const px = dx * 1.5, py = dy * 1.5;
+    const w = 0.18;
+    const a0 = dx ? [dx * 0.9, -w] : [-w, dy * 0.9], a1 = dx ? [dx * 0.9 + px, w] : [w, dy * 0.9 + py];
+    const X0 = Math.min(a0[0], a1[0]), X1 = Math.max(a0[0], a1[0]), Y0 = Math.min(a0[1], a1[1]), Y1 = Math.max(a0[1], a1[1]);
+    for (let k = 0; k <= 4; k++) { const f = k / 4; const x = dx ? X0 + (X1 - X0) * f : 0, y = dy ? Y0 + (Y1 - Y0) * f : 0; box(c, x - 0.03, y - 0.03, x + 0.03, y + 0.03, -3, 1.6, '#5a3a20', '#4a2e18', '#6a4a2a'); }
+    box(c, X0, Y0, X1, Y1, 1.6, 2.4, '#9a7448', '#7a5a36', '#b08a5a');
+    c.strokeStyle = 'rgba(60,40,20,0.35)'; c.lineWidth = 0.35;
+    for (let k = 1; k < 10; k++) { const f = k / 10; if (dx) ln(c, P(X0 + (X1 - X0) * f, Y0, 2.4), P(X0 + (X1 - X0) * f, Y1, 2.4), 'rgba(60,40,20,0.35)', 0.35); else ln(c, P(X0, Y0 + (Y1 - Y0) * f, 2.4), P(X1, Y0 + (Y1 - Y0) * f, 2.4), 'rgba(60,40,20,0.35)', 0.35); }
+    // quay & warehouse
+    top(c, -0.95, -0.95, 0.95, 0.95, 1.6, '#a88a5e');
+    const z = hall(c, m, p, st, { x0: -0.8, y0: -0.8, x1: 0.1, y1: 0.2, H: 11, plinth: 1.6 });
+    // crane
+    const cp = [0.5, 0.5]; ln(c, P(cp[0], cp[1], 1.6), P(cp[0], cp[1], 20), '#6a4526', 1.1);
+    const tip = P(cp[0] + dx * 0.9, cp[1] + dy * 0.9, 22); ln(c, P(cp[0], cp[1], 20), tip, '#6a4526', 0.9);
+    ln(c, tip, [tip[0], tip[1] + 9], 'rgba(40,30,20,0.8)', 0.4); c.fillStyle = '#7a5230'; c.fillRect(tip[0] - 1.5, tip[1] + 9, 3, 2.5);
+    for (let k = 0; k < 3; k++) { const q = P(0.3 + k * 0.18, -0.6, 1.6); barrel(c, q[0], q[1], 1); }
+    return Math.max(z, 26);
+  }
+  function aqueduto(c, m, p, st) {
+    if (st === 'egipcio') {
+      box(c, -0.45, -0.45, 0.45, 0.45, 0, 4, p.base[0], p.base[1], p.base[2]); top(c, -0.36, -0.36, 0.36, 0.36, 3.4, '#3f8fb8');
+      ln(c, P(0.3, 0.3, 4), P(0.3, 0.3, 14), '#7a5a3a', 1); ln(c, P(-0.2, 0.1, 18), P(0.55, 0.475, 10.5), '#7a5a3a', 0.9); // (the beam's end over the lot's edge, never past it: Build3D.check)
+      return 22;
+    }
+    if (st === 'nordico') {
+      for (const [x, y] of [[-0.3, -0.3], [0.3, -0.3], [0.3, 0.3], [-0.3, 0.3]]) box(c, x - 0.04, y - 0.04, x + 0.04, y + 0.04, 0, 12, '#5a4030', '#4a3222', '#6a4a36');
+      const b = P(0, 0, 12); c.fillStyle = '#7a5230'; c.fillRect(b[0] - 9, b[1] - 9, 18, 9); c.fillStyle = '#5a3a20'; for (let k = 0; k < 3; k++) c.fillRect(b[0] - 9, b[1] - 8 + k * 3, 18, 0.6);
+      c.fillStyle = '#9a7040'; c.beginPath(); c.ellipse(b[0], b[1] - 9, 9, 3.5, 0, 0, TAU); c.fill(); c.fillStyle = '#4a9ac0'; c.beginPath(); c.ellipse(b[0], b[1] - 9, 7.5, 2.8, 0, 0, TAU); c.fill();
+      return 26;
+    }
+    const e = 0.38;
+    plinth(c, p, -e, -e, e, e, 2);
+    walls(c, -e, -e, e, e, 2, 18, p.wl, p.wr, p.batter);
+    for (const [a] of [[-0.18], [0.1]]) { onL(c, e, a, a + 0.1, 2, 9, 'rgba(40,30,25,0.6)'); onR(c, e, a, a + 0.1, 2, 9, 'rgba(40,30,25,0.6)'); }
+    if (p.trim) band(c, -e, -e, e, e, 15, 16.5, p.trim);
+    top(c, -e, -e, e, e, 18, p.top || p.base[2]); top(c, -e + 0.07, -e + 0.07, e - 0.07, e - 0.07, 18.2, '#4a9ac0');
+    if (st === 'romano' || st === 'grego' || st === 'classico') roof(c, m, p, -e - 0.02, -e - 0.02, e + 0.02, e + 0.02, 18, { kind: 'hip', rh: 6 });
+    return 28;
+  }
+  // ------------------------------ wonders ------------------------------
+  function maravilha(c, m, p, st) {
+    if (st === 'egipcio') { // the Great Pyramid
+      const e = 1.3, H = 74, d = -0.1, z0 = 0.8; // (set back d on its slab, the walk before it: Forma's pyramid, its plan)
+      box(c, -1.5, -1.5, 1.5, 1.5, 0, z0, p.base[0], p.base[1], p.base[2]);
+      poly(c, [P(-e, e + d, z0), P(e, e + d, z0), P(0, d, H)], '#efe3c2');
+      poly(c, [P(e, e + d, z0), P(e, -e + d, z0), P(0, d, H)], '#c9b48a');
+      for (let k = 1; k < 18; k++) { const f = k / 18; const q = e * (1 - f), z = z0 + (H - z0) * f; ln(c, P(-q, q + d, z), P(q, q + d, z), 'rgba(140,110,70,0.25)', 0.4); ln(c, P(q, q + d, z), P(q, -q + d, z), 'rgba(90,70,40,0.25)', 0.4); }
+      const k = 0.1; poly(c, [P(-e * k, e * k + d, H * (1 - k)), P(e * k, e * k + d, H * (1 - k)), P(0, d, H)], '#ffe27a'); poly(c, [P(e * k, e * k + d, H * (1 - k)), P(e * k, -e * k + d, H * (1 - k)), P(0, d, H)], '#d9a93a');
+      m.glow.push(P(0, d, H - 3));
+      onL(c, e * 0.62 + d, -0.08, 0.08, 20, 26, '#3a2a1c');
+      return H + 4;
+    }
+    if (st === 'asteca') { // Templo Mayor, twin shrines
+      const H = stepPyr(c, p, 1.45, 0.7, 5, 7.5, p.wl, p.wr, p.top, 0.16);
+      for (const [x, col] of [[-0.35, '#3f7fd8'], [0.35, '#c8382a']]) {
+        box(c, x - 0.28, -0.4, x + 0.28, 0.35, H, H + 10, p.wl, p.wr, p.top);
+        band(c, x - 0.28, -0.4, x + 0.28, 0.35, H + 7, H + 10, col);
+        onL(c, 0.35, x - 0.1, x + 0.1, H, H + 6, '#2a1c14', m);
+        box(c, x - 0.24, -0.1, x + 0.24, 0.0, H + 10, H + 19, col, shade(col, 0.8), col);
+        m.fires.push(P(x * 12 / 7, 0.55, H + 1.5)); // (its brazier before the shrine's outer corner: Forma's)
+      }
+      poly(c, [P(0.02, 1.47, 0), P(0.08, 1.47, 0), P(0.08, 0.72, H), P(0.02, 0.72, H)], p.trim);
+      m.glow.push(P(0, 0.4, H + 4));
+      return H + 24;
+    }
+    if (st === 'romano') { bowl(c, 1.45, 42, '#e8d2a6', '#b89a70', '#c8b8a0', '#e8d8a8', 3, false, cavOf('maravilha', 'romano')[0]);
+      for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI; const q = [Math.cos(a) * 1.45 * 22.6, Math.sin(a) * 1.45 * 11.3 - 42]; ln(c, q, [q[0], q[1] - 6], '#7a5a3a', 0.6); }
+      return 52; }
+    if (st === 'grego') { // Acropolis: rock plateau crowned by a great temple
+      const e = 1.45;
+      poly(c, [P(-e, e, 0), P(e, e, 0), P(e - 0.1, e - 0.1, 12), P(-e + 0.1, e - 0.1, 12)], '#b8ae9c');
+      poly(c, [P(e, e, 0), P(e, -e, 0), P(e - 0.1, -e + 0.1, 12), P(e - 0.1, e - 0.1, 12)], '#948a78');
+      top(c, -e + 0.1, -e + 0.1, e - 0.1, e - 0.1, 12, '#d8d0bc');
+      c.strokeStyle = 'rgba(80,70,55,0.35)'; c.lineWidth = 0.5; for (let k = 0; k < 6; k++) { const x = -e + 0.2 + k * 0.5; ln(c, P(x, e, 1), P(x + 0.1, e - 0.05, 10), 'rgba(80,70,55,0.35)', 0.5); }
+      // (the flight up its front, steep, of the rock's own stone: Forma's — its plan's way up)
+      flightSteps(c, -0.2, 0.2, e + 0.02, 0, e - 0.1, 12, '#c8bea8', shade('#c8bea8', 0.86));
+      const z0 = 12;
+      box(c, -1.1, -0.9, 1.1, 0.9, z0, z0 + 1.2, p.base[0], p.base[1], p.base[2]); box(c, -1.05, -0.85, 1.05, 0.85, z0 + 1.2, z0 + 2.4, p.base[0], p.base[1], p.base[2]);
+      colonnade(c, p, -1.0, -0.8, 1.0, 0.8, z0 + 2.4, z0 + 22, 8, 0.045, 'B');
+      walls(c, -0.75, -0.55, 0.75, 0.5, z0 + 2.4, z0 + 22, p.wl, p.wr);
+      colonnade(c, p, -1.0, -0.8, 1.0, 0.8, z0 + 2.4, z0 + 22, 8, 0.045, 'LR');
+      box(c, -1.05, -0.85, 1.05, 0.85, z0 + 22, z0 + 25, p.col[0], p.col[1], p.col[0]);
+      band(c, -1.05, -0.85, 1.05, 0.85, z0 + 23, z0 + 24.2, p.acc);
+      gableY(c, -1.05, -0.85, 1.05, 0.85, z0 + 25, z0 + 34, 0.05, p.roof[0], p.roof[1], p.gable, p.roof[2]);
+      const s = P(0, 0.9, z0 + 29); c.fillStyle = '#f2c14e'; c.beginPath(); c.arc(s[0], s[1], 2.2, 0, TAU); c.fill(); m.glow.push(s);
+      statue(c, -0.9, 1.1, 12, '#e0b84a', 16, true); m.glow.push(P(-0.9, 1.1, 26));
+      return z0 + 40;
+    }
+    if (st === 'nordico') { // Valhalla: a golden-shielded great hall
+      const x0 = -1.4, x1 = 1.4, y0 = -0.8, y1 = 0.8, H = 12;
+      box(c, x0 - 0.05, y0 - 0.05, x1 + 0.05, y1 + 0.05, 0, 2, p.base[0], p.base[1], p.base[2]); treads(c, p, -0.25, 0.25, y1 + 0.2, 2, 3); // (its treads to the street: Forma's)
+      walls(c, x0, y0, x1, y1, 2, H, p.wl, p.wr);
+      for (let k = 1; k < 16; k++) ln(c, P(x0 + (x1 - x0) * k / 16, y1, 2), P(x0 + (x1 - x0) * k / 16, y1, H), 'rgba(30,20,10,0.35)', 0.4);
+      door(c, y1, -0.15, 0.15, 2, 10, '#ffd27a', m); // (the hall's door, its plan's: on a side the view does not see, none — L-264)
+      gableX(c, x0, y0, x1, y1, H, H + 30, 0.12, '#e8b83a', '#c8962a', p.wl, '#8a6a1a');
+      for (let r = 0; r < 5; r++) for (let k = 0; k < 14; k++) { const f = (r + 0.5) / 5; const y = y1 + 0.12 - (y1 + 0.12) * f; const z = H - 1 + 30 * f; const q = P(x0 + 0.1 + k * 0.2, y, z); c.fillStyle = (k + r) % 2 ? '#f2cc5a' : '#d8a83a'; c.beginPath(); c.ellipse(q[0], q[1], 2.3, 1.4, 0, 0, TAU); c.fill(); }
+      const ap = P(x1 + 0.12, 0, H + 30); dragon(c, [ap[0] + 1, ap[1] + 1], 1, '#8a6a1a');
+      const ap2 = P(x0 - 0.12, 0, H + 30); dragon(c, [ap2[0] - 1, ap2[1] + 1], -1, '#8a6a1a');
+      m.glow.push(P(0, 0, H + 30)); m.fires.push(P(-0.8, 0, H + 26)); m.fires.push(P(0.8, 0, H + 26));
+      return H + 38;
+    }
+    // classic: a great ziggurat with a golden eye
+    let z = 0; const lv = [[1.45, 10], [1.1, 10], [0.78, 10], [0.46, 12]];
+    for (const [e, h] of lv) { box(c, -e, -e, e, e, z, z + h, p.wl, p.wr, p.top); ln(c, P(-e, e, z + h - 1), P(e, e, z + h - 1), 'rgba(0,0,0,0.12)', 0.6); z += h; }
+    flightSteps(c, -0.2, 0.2, 1.47, 0, 0.78, z - 12, shade(p.wl, 1.05), shade(p.wl, 1.05 * 0.86)); // (up to the third's top, in its steps: Forma's)
+    const e = P(0, 0.46, z - 6); c.fillStyle = '#d9b34a'; c.beginPath(); c.ellipse(e[0], e[1], 3.6, 2, 0, 0, TAU); c.fill(); c.fillStyle = '#6a4a1a'; c.beginPath(); c.arc(e[0], e[1], 1.1, 0, TAU); c.fill();
+    m.glow.push(e); m.glow.push(P(0, 0, z + 2));
+    return z + 8;
+  }
+
+  // ------------------------------ a home drawn from its shell (D-082) ------------------------------
+  // The god's picture of a home drawn from the shell its plan raises — Interiors.shellOf, made from the record alone, the same
+  // the 3D draws near and far: where it stands in its lot and how big; its storeys and how high; its roof (the kind, the
+  // ridge, the rise, the eaves); the round hut; the annex under its lean-to; the door where the plan opens it, on the side of
+  // the street; the windows the plan cuts in the walls one sees — in the people's own dressing of the drawings of before (the
+  // timber frame, the bands, the balcony, the columns and the awning, the wind-catcher, the terrace plants, the turf and its
+  // dragons). A sprite is drawn for the view's first side and mirrored on the side views: the shell is turned into the
+  // sprite's own frame for the quarter it is seen from. Only the view: the plan is never asked for, nothing is written.
+  const ZPX = 3.04; // (one metre of height in the god's pixels: the descent's, D-081)
+  const QS = [[1, 1], [1, -1], [-1, -1], [-1, 1]]; // (a world offset (wx, wy) in the sprite's frame, by the view's quarter)
+  const BODY = { piso: 1, semienterrado: 1, elevado: 1, andar: 1 }; // (the storeys that are the house's body)
+  const STRAW = ['#e2bf6c', '#b08a44'];
+  const CLASSIC_ROOFS = [['#b85a3c', '#94452d', '#7a3826'], ['#9a6a3a', '#7f5530', '#6a4526'], ['#6c6f86', '#56596e', '#46485a']]; // (the house of before's, art.js)
+  // (the colours of the stuffs of a wall, as the 3D has them — Build3D's INMAT —, for a storey of another stuff than its shell's)
+  const STUFF = { tabua: '#927250', taipa: '#b2926e', adobe: '#c0a47c', 'adobe-caiado': '#ece6d8', 'adobe-estuque': '#ded0b4', reboco: '#ded5c4', 'pau-a-pique': '#aa906e', pedra: '#9e988e', enxaimel: '#e8e0cf' };
+  const q2 = v => Math.round(v * 32) / 32, qz = v => Math.round(v * 2) / 2; // (a sprite's numbers to a pixel: what tells two apart)
+  // the shell in the sprite's frame (tiles from the lot's middle; heights in px over its highest ground): the house's numbers
+  A.homeGeo = function (b, s, q) {
+    const sh = s && s.shell; if (!sh || (sh.kind !== 'rect' && sh.kind !== 'round')) return null;
+    const L = b.w * 4, hL = L / 2, [qx, qy] = QS[q & 3];
+    const X = x => q2(qx * (x - hL) / 4), Y = z => q2(qy * (z - hL) / 4), Z = y => qz((0.4 + y) * ZPX);
+    const R = r => { const a = X(r[0]), c = X(r[2]), d = Y(r[1]), e = Y(r[3]); return [Math.min(a, c), Math.min(d, e), Math.max(a, c), Math.max(d, e)]; };
+    const lv = (s.levels || []).filter(l => BODY[l.kind]).sort((a, c) => a.y - c.y); if (!lv.length) return null;
+    const H = { round: sh.kind === 'round', base: sh.base, floor: Z(lv[0].y), eave: Z(sh.eave), floors: lv.map(l => Z(l.y)), wins: [], door: null, annex: [] };
+    if (H.round) { H.c = [X(sh.cx), Y(sh.cz)]; H.r = q2(sh.r / 4); } else H.rect = R(sh.r);
+    const rf = sh.roof || {}; H.roof = { kind: rf.kind || 'plano', alongY: rf.along === 'z', rise: qz((rf.h || 0) * ZPX), ov: q2((rf.over || 0) / 4) };
+    if (rf.room) H.roof.room = { rect: R(rf.room.r), h: qz((rf.room.h || 2) * ZPX) };
+    H.par = s.levels.some(l => l.kind === 'terraco') ? qz(1.15 * ZPX) : 0; // (a roof one lives on: its parapet, 0.9 m over the terrace)
+    if (rf.court) H.court = R(rf.court); // (a hall round a court: the court open to the sky, the roof cut over it)
+    // (which face of the sprite a world side is, for this quarter: L the front-left one, R the front-right; the back ones unseen)
+    const faceOf = side => (side === 'S' ? (qy > 0 ? 'L' : null) : side === 'N' ? (qy < 0 ? 'L' : null) : side === 'E' ? (qx > 0 ? 'R' : null) : (qx < 0 ? 'R' : null));
+    // (a home's pieces on its flat roof, where the 3D puts them — Forma.deck, L-267: the awning, the wind-catcher, the pots)
+    if (!H.round && HOMES[b.type] && H.roof.kind === 'plano' && s.entrance && G.Forma) {
+      const dk = G.Forma.deck(sh.r, s.entrance.side, L, PAL[b.style] ? b.style : 'classico', G.Forma.lived(s));
+      const fx = dk.front[0] * qx, fy = dk.front[1] * qy, acX = Math.abs(dk.across[0]) > 0.5;
+      H.deck = dk.items.map(it => {
+        const o = { k: it.k, x: X(it.x), y: Y(it.z), cor: it.cor };
+        if (it.k === 'toldo') { const hx = (acX ? it.w : it.d) / 8, hy = (acX ? it.d : it.w) / 8; o.c = [[-hx, -hy], [hx, -hy], [hx, hy], [-hx, hy]].map(([dx, dy]) => [q2(o.x + dx), q2(o.y + dy), qz((dx * fx + dy * fy > 0 ? it.h1 : it.h) * ZPX)]); }
+        else if (it.k === 'torre') { o.hw = q2(it.w / 8); o.h = qz(it.h * ZPX); o.boca = qz(it.boca * ZPX); o.face = faceOf(s.entrance.side); }
+        return o;
+      });
+    }
+    // the openings of the shell's walls on the faces one sees: the windows, the door, the arches
+    if (!H.round) {
+      const r = sh.r, cx = (r[0] + r[2]) / 2, cz = (r[1] + r[3]) / 2; const yOf = new Map(s.levels.map(l => [l.lv, l]));
+      const byId = new Map((s.walls || []).map(w => [w.id, w]));
+      for (const h of s.holes || []) {
+        const w = byId.get(h.wall); const l = w && yOf.get(w.lv); if (!l || !BODY[l.kind]) continue;
+        const dx = w.b[0] - w.a[0], dz = w.b[1] - w.a[1], len = Math.hypot(dx, dz) || 1; const px = w.a[0] + dx * h.at / len, pz = w.a[1] + dz * h.at / len;
+        const horiz = Math.abs(dz) < 1e-6; const edge = horiz ? Math.min(Math.abs(pz - r[1]), Math.abs(pz - r[3])) : Math.min(Math.abs(px - r[0]), Math.abs(px - r[2]));
+        if (edge > (w.t || 0.3) + 0.05) continue; // (a wall of the main body's outside only)
+        const F = faceOf(horiz ? (pz > cz ? 'S' : 'N') : (px > cx ? 'E' : 'W')); if (!F) continue;
+        const mid = F === 'L' ? X(px) : Y(pz), hw = h.w / 8;
+        const o = { face: F, a: q2(mid - hw), b: q2(mid + hw), z0: Z(l.y + (h.sill || 0)), z1: Z(l.y + (h.sill || 0) + h.h), kind: h.door >= 0 ? 'porta' : h.kind };
+        if (s.entrance && h.door === s.entrance.door) H.door = o; else H.wins.push(o);
+      }
+    } else if (s.entrance) { const e = s.entrance; H.door = { face: faceOf(e.side), at: [X(e.x), Y(e.z)], w: q2(e.w / 4), z1: Z(lv[0].y + 1.9) }; }
+    for (const a of sh.annex || []) H.annex.push({ rect: R(a.r), h: Z(a.h) });
+    // (a storey whose outside walls are of another stuff than the shell's: the half-timber over the ground floor's adobe)
+    H.bands = []; for (const l of lv) { const w = (s.walls || []).find(q => q.lv === l.lv && q.mat && q.mat !== sh.mat && q.kind === 'parede'); if (w) H.bands.push({ z0: Z(l.y), z1: Math.min(H.eave, Z(l.y + l.h)), mat: w.mat }); }
+    if (YARDS[b.type] && sh.yard) H.yard = yardGeo(b, s, sh, lv, { X, Y, Z, R, faceOf, qx, qy });
+    return H;
+  };
+  // the yard before the roofed part (B2d: the pottery's, the tavern's) in the sprite's frame, as the 3D lays it — Build3D's
+  // shellYard: the yard's rect and its floor, the plan's storey on the plinth's top; the fence — the plan's walls of kind
+  // 'cerca' — in runs broken at the gates, each on the yard's far sides or on its near ones; the gates, their posts, lintel and
+  // leaf; the pieces the plan lays with the shell (the kiln, the racks, the bricks, the moulding floor, the wheel, the clay pit;
+  // the table and its benches, the barrels, the jar): their rects, heights, the way their fronts face, their fire; and the
+  // tavern's sign, where the 3D hangs it — Build3D's innSign
+  function yardGeo(b, s, sh, lv, F) {
+    const { X, Y, Z, R, faceOf, qx, qy } = F; const ylv = sh.yard.lv || 0; const l = (s.levels || []).find(q => q.lv === ylv) || lv[0];
+    const Yd = { rect: R(sh.yard.r), z: Z(l.y), runs: [], gates: [], items: [], sign: null };
+    const [a0, b0] = Yd.rect; const far = (p0, p1) => (Math.abs(p0[0] - p1[0]) < 1e-6 && Math.abs(p0[0] - a0) < 0.06) || (Math.abs(p0[1] - p1[1]) < 1e-6 && Math.abs(p0[1] - b0) < 0.06);
+    for (const w of s.walls || []) {
+      if (w.kind !== 'cerca' || w.lv !== ylv) continue;
+      const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < 0.05) continue;
+      const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L; const at = d => [X(w.a[0] + tx * d), Y(w.a[1] + tz * d)];
+      const t = q2(w.t / 4), z1 = Z(l.y + w.h);
+      const run = (d0, d1) => { if (d1 - d0 < 0.05) return; const p0 = at(d0), p1 = at(d1); Yd.runs.push({ a: p0, b: p1, t, z1, far: far(p0, p1) }); };
+      const gates = (s.holes || []).filter(h => h.wall === w.id && h.kind !== 'janela').sort((p, q) => p.at - q.at); let d0 = 0;
+      for (const h of gates) {
+        run(d0, h.at - h.w / 2 - 0.15); d0 = h.at + h.w / 2 + 0.15;
+        const hy = Math.max(w.h + 0.2, (h.sill || 0) + h.h + 0.02); const p0 = at(h.at - h.w / 2 - 0.11), p1 = at(h.at + h.w / 2 + 0.11);
+        Yd.gates.push({ a: p0, b: p1, z1: Z(l.y + hy), top: Z(l.y + hy + 0.15), leaf: Z(l.y + Math.min(h.h, hy - 0.02)), far: far(p0, p1) });
+      }
+      run(d0, L);
+    }
+    for (const it of s.yard || []) Yd.items.push({ kind: it.kind, rect: R(it.r), h: qz(it.h * ZPX), face: [q2(qx * Math.sin(it.rot || 0)), q2(qy * Math.cos(it.rot || 0))], fire: it.fire ? 1 : 0 });
+    // (the tavern's sign by the way into its yard, on the house's front: the iron arm 0.82 m out at 2.45 m, the board under it
+    // 0.14–0.76 m out, on the side the building's own hash says, as Build3D's innSign hangs it)
+    const e = s.entrance;
+    if (b.type === 'taverna' && e && sh.kind === 'rect') {
+      const r = sh.r, o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[e.side] || [0, 1]; const ax = o[1] !== 0; const face = faceOf(e.side);
+      const wall = ax ? (r[1] + r[3]) / 2 + o[1] * (r[3] - r[1]) / 2 : (r[0] + r[2]) / 2 + o[0] * (r[2] - r[0]) / 2;
+      const sd = G.hash(b.id * 7919 + 23 * 104729 + 13) < 0.5 ? -1 : 1; const a = (ax ? e.x : e.z) + sd * (((e.w || 1) + 0.5) / 2 + 0.35);
+      const pt = n => (ax ? [X(a), Y(wall + o[1] * n)] : [X(wall + o[0] * n), Y(a)]);
+      if (face) Yd.sign = { w: pt(0), arm: pt(0.82), a: pt(0.14), b: pt(0.76), z: Z(2.45), zb: Z(1.79) };
+    }
+    return Yd;
+  }
+  // the picture of a home from its numbers (homeGeo), in its people's dressing
+  function homeDraw(c, m, p, st, v, H, type) {
+    if (H.round) return roundDraw(c, m, p, st, H);
+    if (H.yard) yardDraw(c, m, p, st, H, true);
+    const rf = H.roof, kind = rf.kind; const [x0, y0, x1, y1] = H.rect; const zF = H.floor, zE = H.eave; const bat = st === 'egipcio' ? 0.04 : 0;
+    const mid = r => (r[0] + r[2]) / 2 + (r[1] + r[3]) / 2; const behind = a => mid(a.rect) < mid(H.rect);
+    for (const a of H.annex) if (behind(a)) annexDraw(c, p, st, a, H);
+    // (what it stands on: the plinth of stone; the posts of a floor over wet ground; a sunken floor shows its walls only)
+    if (H.base === 'esteios') { for (const [x, y] of [[x0 + 0.04, y1 - 0.04], [x1 - 0.04, y1 - 0.04], [x1 - 0.04, y0 + 0.04]]) box(c, x - 0.03, y - 0.03, x + 0.03, y + 0.03, 0, zF, '#6a4a30', '#523822', '#7a5a3a'); }
+    else if (H.base !== 'semienterrado' && zF > 0.3) plinth(c, p, x0, y0, x1, y1, zF);
+    const z0 = H.base === 'semienterrado' ? 0 : Math.max(0, zF); const fl = H.floors;
+    walls(c, x0, y0, x1, y1, z0, zE, p.wl, p.wr, bat);
+    // ---- the storeys of another stuff (the 3D's colours of the stuffs: Build3D's INMAT), the half-timber's frame ----
+    for (const bd of H.bands || []) {
+      const col = STUFF[bd.mat] || '#ded5c4', b0 = bd.z0, b1 = bd.z1;
+      poly(c, [P(x0, y1, b0), P(x1, y1, b0), P(x1 - bat, y1 - bat, b1), P(x0 + bat, y1 - bat, b1)], col); poly(c, [P(x1, y1, b0), P(x1, y0, b0), P(x1 - bat, y0 + bat, b1), P(x1 - bat, y1 - bat, b1)], shade(col, 0.85));
+      if (bd.mat === 'enxaimel') { const tc = p.trim || '#5a3c24'; const nx = Math.max(2, Math.round((x1 - x0) * 8)), ny = Math.max(2, Math.round((y1 - y0) * 8));
+        for (let k = 0; k <= nx; k++) { const x = x0 + (x1 - x0) * k / nx; ln(c, P(x, y1, b0), P(x, y1, b1), tc, 0.6); if (k < nx && k % 2 === 0) ln(c, P(x, y1, b0), P(x + (x1 - x0) / nx, y1, b1), tc, 0.5); }
+        for (let k = 0; k <= ny; k++) { const y = y0 + (y1 - y0) * k / ny; ln(c, P(x1, y, b0), P(x1, y, b1), tc, 0.6); }
+        ln(c, P(x0, y1, b0), P(x1, y1, b0), tc, 0.8); ln(c, P(x1, y1, b0), P(x1, y0, b0), tc, 0.8); }
+    }
+    // ---- the people's dressing of the walls ----
+    if (st === 'nordico') {
+      const nx = Math.max(3, Math.round((x1 - x0) * 12)), ny = Math.max(2, Math.round((y1 - y0) * 6));
+      for (let k = 1; k < nx; k++) { const x = x0 + (x1 - x0) * k / nx; ln(c, P(x, y1, z0), P(x, y1, zE), 'rgba(30,20,10,0.35)', 0.4); }
+      for (let k = 1; k < ny; k++) { const y = y0 + (y1 - y0) * k / ny; ln(c, P(x1, y, z0), P(x1, y, zE), 'rgba(30,20,10,0.35)', 0.4); }
+      band(c, x0, y0, x1, y1, zE - 0.8, zE, p.trim);
+    } else if (st === 'classico') { // the timber frame: the corner posts, a beam at each storey and under the eaves
+      for (let f = 1; f <= fl.length; f++) { const z = f < fl.length ? fl[f] : zE; ln(c, P(x0, y1, z), P(x1, y1, z), p.trim, 0.8); ln(c, P(x1, y1, z), P(x1, y0, z), p.trim, 0.8); }
+      ln(c, P(x0, y1, z0), P(x0, y1, zE), p.trim, 0.8); ln(c, P(x1, y1, z0), P(x1, y1, zE), p.trim, 0.8); ln(c, P(x1, y0, z0), P(x1, y0, zE), p.trim, 0.8);
+    } else if (st === 'asteca') { for (let f = 1; f <= fl.length; f++) { const z = f < fl.length ? fl[f] : zE; band(c, x0, y0, x1, y1, z - 1.6, z, p.trim); } }
+    else if (st === 'egipcio') band(c, x0, y0, x1, y1, zE - 2, zE - 1, p.trim);
+    else for (let f = 1; f < fl.length; f++) band(c, x0, y0, x1, y1, fl[f] - 0.7, fl[f], st === 'grego' ? p.col[1] : shade(p.wl, 0.85));
+    // ---- the openings the plan cut in the walls one sees ----
+    const onF = (o, col, mm) => { if (o.face === 'L') onL(c, y1, o.a, o.b, o.z0, o.z1, col, mm); else onR(c, x1 - bat * (o.z0 - z0) / Math.max(1, zE - z0), o.a, o.b, o.z0, o.z1, col, mm); };
+    // (the iron of a jail: the bars of its windows, three up and one across; the straps across its door)
+    const iron = (o, fs, up) => { const xR = x1 - bat * (o.z0 - z0) / Math.max(1, zE - z0) + 0.01; for (const f of fs) { if (up) { const t = o.a + (o.b - o.a) * f; if (o.face === 'L') ln(c, P(t, y1 + 0.01, o.z0), P(t, y1 + 0.01, o.z1), '#2e2c2a', 0.45); else ln(c, P(xR, t, o.z0), P(xR, t, o.z1), '#2e2c2a', 0.45); }
+      else { const z = o.z0 + (o.z1 - o.z0) * f; if (o.face === 'L') ln(c, P(o.a, y1 + 0.01, z), P(o.b, y1 + 0.01, z), '#2e2c2a', 0.5); else ln(c, P(xR, o.a, z), P(xR, o.b, z), '#2e2c2a', 0.5); } } };
+    for (const o of H.wins) {
+      onF(o, o.kind === 'janela' ? p.win : '#2a2018', o.kind === 'janela' ? m : null);
+      if (type === 'cadeia' && o.kind === 'janela') { iron(o, [0.25, 0.5, 0.75], true); iron(o, [0.5], false); }
+      if (st === 'grego' && o.kind === 'janela' && o.z0 > fl[0] + 6) { const w = (o.b - o.a) * 0.3; onF({ face: o.face, a: o.a - w, b: o.a - w * 0.35, z0: o.z0, z1: o.z1 }, p.trim); } // (the shutter)
+    }
+    const d = H.door;
+    if (d && d.face) {
+      onF(d, p.door); if (type === 'cadeia') iron(d, [0.3, 0.7], false);
+      if (st === 'asteca') onF({ face: d.face, a: d.a - 0.03, b: d.a, z0: d.z0, z1: d.z1 + 0.5 }, p.trim2);
+      if (st === 'romano' && type !== 'insula') { const cl = (x, y) => column(c, p, x, y, d.z0, d.z1 + 0.5, 0.025); if (d.face === 'L') { cl(d.a - 0.06, y1 + 0.05); cl(d.b + 0.06, y1 + 0.05); } else { cl(x1 + 0.05, d.a - 0.06); cl(x1 + 0.05, d.b + 0.06); } }
+      // (the shops of a Roman block: an awning over the ground storey of the door's face)
+      if (st === 'romano' && type === 'insula' && d.face === 'L') { const z = fl.length > 1 ? fl[1] - 1 : zE - 1; awning(c, x0 + 0.04, x1 - 0.04, y1, z - 2.5, z, 0.14, ['#c8483a', '#efe2c4']); }
+      // (the wooden balcony of the top storey, on the door's face)
+      if ((st === 'romano' || st === 'grego' || st === 'classico') && fl.length >= 2 && d.face === 'L' && type !== 'cadeia') {
+        const z = fl[fl.length - 1] + 1.3; box(c, x0 + 0.05, y1, x1 - 0.05, y1 + 0.12, z - 1.2, z - 0.6, '#7a5230', '#5a3a20', '#8a6038');
+        for (let k = 0; k <= 5; k++) { const x = x0 + 0.05 + (x1 - x0 - 0.1) * k / 5; ln(c, P(x, y1 + 0.12, z - 0.6), P(x, y1 + 0.12, z + 1.6), '#6a4526', 0.45); }
+        ln(c, P(x0 + 0.05, y1 + 0.12, z + 1.6), P(x1 - 0.05, y1 + 0.12, z + 1.6), '#6a4526', 0.6);
+      }
+    }
+    // ---- the roof of the plan's kind, ridge and rise ----
+    let zRoof = () => zE; // (the roof's height over a point of it: where a court cuts it)
+    if (kind === 'plano') {
+      const par = H.par || (st === 'egipcio' ? 1.3 : 1.2); roof(c, m, p, x0 + bat, y0 + bat, x1 - bat, y1 - bat, zE, { kind: 'flat', par });
+      if (rf.room) { const [a0, b0, a1, b1] = rf.room.rect; const zr = zE + 0.8; box(c, a0, b0, a1, b1, zr, zr + rf.room.h, p.wl, p.wr, '#b8a070'); top(c, a0 - 0.03, b0 - 0.03, a1 + 0.03, b1 + 0.03, zr + rf.room.h + 0.4, '#9a8a4a'); }
+      if (st === 'asteca') {
+        // (the merlons along the parapet's top, about a metre apart, every other one capped in red — the 3D's roofOf: its
+        // block of 0.44 × 0.24 m and 0.16 m, its cap of 0.26 × 0.2 m and 0.14 m; the far sides first)
+        const zp = zE + par; const mer = (xa, ya, xb, yb) => { const ax = Math.abs(yb - ya) < 1e-6; const n = Math.max(2, Math.round(Math.hypot(xb - xa, yb - ya) * 4 / 0.9));
+          for (let k = 0; k < n; k++) { const f = (k + 0.5) / n, x = xa + (xb - xa) * f, y = ya + (yb - ya) * f; const [hx, hy] = ax ? [0.055, 0.03] : [0.03, 0.055], [cx, cy] = ax ? [0.033, 0.025] : [0.025, 0.033];
+            box(c, x - hx, y - hy, x + hx, y + hy, zp, zp + 0.5, p.wl, p.wr, p.top); box(c, x - cx, y - cy, x + cx, y + cy, zp + 0.5, zp + 0.92, k % 2 ? p.trim : p.wl, k % 2 ? shade(p.trim, 0.8) : p.wr, k % 2 ? p.trim : p.top); } };
+        if (!H.par) { mer(x0 + bat, y0 + bat, x1 - bat, y0 + bat); mer(x0 + bat, y0 + bat, x0 + bat, y1 - bat); mer(x0 + bat, y1 - bat, x1 - bat, y1 - bat); mer(x1 - bat, y0 + bat, x1 - bat, y1 - bat); } // (a terrace has the shell's own parapet: none)
+      }
+      deckDraw(c, p, H, zE);
+      m.fires.push(P((x0 + x1) / 2, (y0 + y1) / 2, zE + 2));
+    } else {
+      const k2 = kind === 'quatro-aguas' ? 'hip' : kind === 'turfa' ? 'turf' : kind === 'palha' ? 'thatch' : 'gable';
+      const pp = k2 === 'thatch' && !p.thatch ? Object.assign({}, p, { thatch: STRAW }) : p;
+      // (the roof's mass as the 3D lays it — Build3D's gableRoof and hip —: the stuff's thickness over the ridge, straw 0.4 m,
+      // turf 0.26, tiles 0.16; the eaves running on down the slope past the walls, half a metre out)
+      const half = (rf.alongY ? x1 - x0 : y1 - y0) * 2, rise = rf.rise / ZPX; const ang = Math.atan2(rise, Math.max(0.5, half));
+      const T = k2 === 'thatch' ? 0.4 : k2 === 'turf' ? 0.26 : 0.16, ov3 = k2 === 'thatch' ? 0.5 : k2 === 'turf' ? 0.46 : 0.42;
+      const drop = ov3 * Math.tan(ang) * ZPX, zTop = zE + rf.rise + (k2 === 'hip' ? 0.15 : T / Math.cos(ang)) * ZPX;
+      const zb = k2 === 'hip' ? zE - drop + 0.15 * ZPX : zE - drop + 1; // (the gables draw their eaves a pixel under their base; the hip at it)
+      const zr = roof(c, m, pp, x0, y0, x1, y1, zb, { kind: k2, alongY: rf.alongY, rh: Math.max(2, zTop - zb), ov: ov3 / 4, colors: type === 'house' && st === 'classico' ? CLASSIC_ROOFS[v % 3] : undefined });
+      { const ov = ov3 / 4 + (k2 === 'thatch' ? 0.04 : 0), X0 = x0 - ov, X1 = x1 + ov, Y0 = y0 - ov, Y1 = y1 + ov; const ze = k2 === 'hip' ? zb : zb - 1;
+        zRoof = k2 === 'hip' ? (x, y) => { const d = Math.min(X1 - X0, Y1 - Y0) / 2; return ze + (zr - ze) * Math.min(1, Math.max(0, Math.min(x - X0, X1 - x, y - Y0, Y1 - y)) / d); }
+          : rf.alongY ? (x, y) => ze + (zr - ze) * Math.max(0, 1 - Math.abs(x - (x0 + x1) / 2) / ((X1 - X0) / 2)) : (x, y) => ze + (zr - ze) * Math.max(0, 1 - Math.abs(y - (y0 + y1) / 2) / ((Y1 - Y0) / 2)); }
+      // (the north's barge boards crossed past the ridge at both gables, their ends carved: the 3D's bargeEnd)
+      if (k2 === 'turf') { const o = ov3 / 4; const ends = rf.alongY ? [[(x0 + x1) / 2, y0 - o], [(x0 + x1) / 2, y1 + o]] : [[x0 - o, (y0 + y1) / 2], [x1 + o, (y0 + y1) / 2]];
+        for (const [ex, ey] of ends) { const a = P(ex, ey, zr); ln(c, [a[0] - 2, a[1] + 1.5], [a[0] + 0.9, a[1] - 1.3], '#5a3c24', 0.9); ln(c, [a[0] + 2, a[1] + 1.5], [a[0] - 0.9, a[1] - 1.3], '#5a3c24', 0.9); } }
+      if ((st === 'classico' || st === 'romano') && k2 !== 'thatch') { const cx = x0 + (x1 - x0) * 0.68, cy = y0 + (y1 - y0) * 0.3; box(c, cx - 0.07, cy - 0.07, cx + 0.07, cy + 0.07, zE + 2, Math.min(zr, zE + 12) + 2, '#8e8578', '#6f675c', '#5a534a'); m.fires.push(P(cx, cy, Math.min(zr, zE + 12) + 3)); }
+      else m.fires.push(P((x0 + x1) / 2, (y0 + y1) / 2, zr));
+    }
+    if (H.court) courtDraw(c, p, H, zRoof);
+    for (const a of H.annex) if (!behind(a)) annexDraw(c, p, st, a, H);
+    if (H.yard) yardDraw(c, m, p, st, H, false);
+  }
+  // ---- a yard before the roofed part (yardGeo), back to front about it: before the house its floor of beaten earth and the
+  // stone edge it stands on, the fence's far runs and gates, the pieces behind the house; after it the pieces before it, the
+  // sign, the fence's near runs and gates ----
+  const yMid = r => (r[0] + r[2]) / 2 + (r[1] + r[3]) / 2;
+  function yardDraw(c, m, p, st, H, back) {
+    const Y = H.yard, hm = yMid(H.rect); const [x0, y0, x1, y1] = Y.rect;
+    if (back) {
+      if (Y.z > 0.3) walls(c, x0, y0, x1, y1, 0, Y.z, shade(p.base[1], 0.78), shade(p.base[1], 0.7));
+      top(c, x0, y0, x1, y1, Y.z, '#a48a68');
+      for (const r of Y.runs) if (r.far) runDraw(c, p, st, r, Y.z);
+      for (const g of Y.gates) if (g.far) gateDraw(c, p, st, g, Y.z);
+    }
+    for (const it of Y.items.filter(q => (yMid(q.rect) < hm) === back).sort((a, b2) => yMid(a.rect) - yMid(b2.rect))) pieceDraw(c, m, p, st, it, Y.z);
+    if (!back) {
+      if (Y.sign) signDraw(c, p, Y.sign);
+      for (const r of Y.runs) if (!r.far) runDraw(c, p, st, r, Y.z);
+      for (const g of Y.gates) if (!g.far) gateDraw(c, p, st, g, Y.z);
+    }
+  }
+  // (the stuff of the fence and of the gate's posts, as the 3D has it — Build3D's shellYard: whitewash, mud and stucco the
+  // people's walls', stone elsewhere; the cap of the low wall)
+  const fenceCol = (p, st) => (st === 'egipcio' || st === 'grego' || st === 'asteca' ? p.wl : p.base[1]);
+  // a run of the fence: a low wall of the people's stuff under its cap (0.07 m, a little wider); in the north, wattle on stakes
+  function runDraw(c, p, st, r, z) {
+    const hz = Math.abs(r.a[1] - r.b[1]) < 1e-6, t = r.t / 2;
+    const q = hz ? [Math.min(r.a[0], r.b[0]), r.a[1] - t, Math.max(r.a[0], r.b[0]), r.a[1] + t] : [r.a[0] - t, Math.min(r.a[1], r.b[1]), r.a[0] + t, Math.max(r.a[1], r.b[1])];
+    if (st === 'nordico') {
+      box(c, q[0], q[1], q[2], q[3], z, r.z1 - 0.3, '#8e7654', '#766850', '#9a8460');
+      const n = Math.max(1, Math.round((hz ? q[2] - q[0] : q[3] - q[1]) * 4 / 0.9));
+      for (let k = 0; k <= n; k++) { const f = k / n; const x = hz ? q[0] + (q[2] - q[0]) * f : q[2], y = hz ? q[3] : q[1] + (q[3] - q[1]) * f; ln(c, P(x, y, z - 0.3), P(x, y, r.z1), '#5a4430', 0.55); }
+      return;
+    }
+    const wc = fenceCol(p, st), cap = st === 'asteca' ? p.trim : shade(p.base[2], 0.95);
+    box(c, q[0], q[1], q[2], q[3], z, r.z1 - 0.21, wc, shade(wc, 0.86), wc);
+    box(c, q[0] - 0.01, q[1] - 0.01, q[2] + 0.01, q[3] + 0.01, r.z1 - 0.21, r.z1, cap, shade(cap, 0.85), cap);
+  }
+  // a gate: its two posts, its leaf shut between them, the lintel over them — the far post first
+  function gateDraw(c, p, st, g, z) {
+    const hz = Math.abs(g.a[1] - g.b[1]) < 1e-6, s = 0.0275, l = 0.012; const nord = st === 'nordico';
+    const wood = nord ? '#4a3626' : (p.trim || '#6b4a30'), pc = nord ? '#4a3626' : shade(fenceCol(p, st), 0.94);
+    const [n0, n1] = [g.a, g.b].sort((u, w) => u[0] + u[1] - (w[0] + w[1]));
+    const post = q => box(c, q[0] - s, q[1] - s, q[0] + s, q[1] + s, Math.max(0, z - 0.15), g.top, pc, shade(pc, 0.82), pc);
+    post(n0);
+    const lf = hz ? [Math.min(g.a[0], g.b[0]) + s, g.a[1] - l, Math.max(g.a[0], g.b[0]) - s, g.a[1] + l] : [g.a[0] - l, Math.min(g.a[1], g.b[1]) + s, g.a[0] + l, Math.max(g.a[1], g.b[1]) - s];
+    box(c, lf[0], lf[1], lf[2], lf[3], z, g.leaf, p.door, shade(p.door, 0.8), p.door);
+    const ll = hz ? [Math.min(g.a[0], g.b[0]) - 0.035, g.a[1] - 0.025, Math.max(g.a[0], g.b[0]) + 0.035, g.a[1] + 0.025] : [g.a[0] - 0.025, Math.min(g.a[1], g.b[1]) - 0.035, g.a[0] + 0.025, Math.max(g.a[1], g.b[1]) + 0.035];
+    box(c, ll[0], ll[1], ll[2], ll[3], g.z1, g.z1 + 0.55, wood, shade(wood, 0.8), wood);
+    post(n1);
+  }
+  // (an upright cylinder from the middle of its foot o, the screen's px: its side, then its top)
+  function cylUp(c, o, rx, h, side, topc) {
+    const ry = rx / 2; c.fillStyle = side; c.beginPath(); c.ellipse(o[0], o[1], rx, ry, 0, 0, Math.PI); c.lineTo(o[0] - rx, o[1] - h); c.ellipse(o[0], o[1] - h, rx, ry, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    c.fillStyle = topc; c.beginPath(); c.ellipse(o[0], o[1] - h, rx, ry, 0, 0, TAU); c.fill();
+  }
+  // a piece of the yard in the god's dressing, standing on the yard's floor at z, as big as the 3D builds it (Build3D's FURN)
+  function pieceDraw(c, m, p, st, it, z) {
+    const [x0, y0, x1, y1] = it.rect, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, h = it.h, o = P(cx, cy, z); const long = x1 - x0 >= y1 - y0;
+    switch (it.kind) {
+      case 'forno-olaria': { // the kiln: its ring of stone a third of its height, the dome of clay over it, its mouth, its smoke
+        const rx = Math.min(x1 - x0, y1 - y0) / 2 * 22.63 * 0.96, hb = h * 0.32;
+        cylUp(c, o, rx, hb, '#9a948a', '#8a8478'); dome(c, o[0], o[1] - hb, rx * 0.97, h - hb, '#c07850', '#8a5034');
+        const f = it.face;
+        if (f[1] > 0.7 || f[0] > 0.7) {
+          const q = P(cx + f[0] * (x1 - x0) * 0.44, cy + f[1] * (y1 - y0) * 0.44, z); const r = Math.max(1.6, rx * 0.2);
+          c.fillStyle = '#2a1a12'; c.beginPath(); c.arc(q[0], q[1] - hb * 0.4, r, Math.PI, TAU); c.fill();
+          if (it.fire) { c.fillStyle = '#ff9a3a'; c.beginPath(); c.arc(q[0], q[1] - hb * 0.4, r * 0.6, Math.PI, TAU); c.fill(); m.glow.push([q[0], q[1] - hb * 0.4 - 1]); }
+        }
+        m.fires.push([o[0], o[1] - h - 1]);
+        break;
+      }
+      case 'secador': { // the drying rack: its posts and shelves, the pots on them
+        box(c, x0, y0, x1, y1, z, z + h, '#7a5a3a', '#5a4028', '#8a6a44');
+        const n = Math.max(2, Math.round((long ? x1 - x0 : y1 - y0) * 8));
+        for (let k = 0; k < n; k++) { const f = (k + 0.5) / n; const q = long ? P(x0 + (x1 - x0) * f, cy, z + h) : P(cx, y0 + (y1 - y0) * f, z + h); jar(c, q[0], q[1], 0.55, k % 2 ? '#c8683a' : '#b85a30'); }
+        break;
+      }
+      case 'pilha-tijolos': box(c, x0, y0, x1, y1, z, z + h, '#b8683a', '#9a5030', '#c87a4a'); break;
+      case 'eira': top(c, x0, y0, x1, y1, z + 0.15, '#ccb488'); break;
+      case 'tanque-barro': box(c, x0, y0, x1, y1, z, z + h, '#a8805a', '#8a6a48', '#6a4028'); break;
+      case 'roda-oleiro': { // the potter's wheel: the kick wheel at its foot, the shaft, the head with the clay on it
+        cylUp(c, o, (x1 - x0) / 2 * 22.63 * 0.8, Math.max(0.3, h * 0.12), '#7a5a3a', '#8a6a44');
+        const t = P(cx, cy, z + h * 0.9); ln(c, P(cx, cy, z + h * 0.12), t, '#5a4028', 0.7);
+        c.fillStyle = '#8a6a44'; c.beginPath(); c.ellipse(t[0], t[1], 1.8, 0.9, 0, 0, TAU); c.fill(); c.fillStyle = '#b8704a'; c.beginPath(); c.ellipse(t[0], t[1] - 0.8, 0.8, 1, 0, 0, TAU); c.fill();
+        break;
+      }
+      case 'mesa-terreiro': { // the table on its trestles, a bench along each long side — the far bench first
+        const bw = 0.075, zs = z + qz(0.45 * ZPX);
+        const tb = long ? [x0 + 0.02, cy - 0.1, x1 - 0.02, cy + 0.1] : [cx - 0.1, y0 + 0.02, cx + 0.1, y1 - 0.02];
+        const b1 = long ? [x0, y0, x1, y0 + bw] : [x0, y0, x0 + bw, y1], b2 = long ? [x0, y1 - bw, x1, y1] : [x1 - bw, y0, x1, y1];
+        box(c, b1[0], b1[1], b1[2], b1[3], z, zs, '#8a6a44', '#6a4e30', '#9a7a52');
+        box(c, tb[0], tb[1], tb[2], tb[3], z, z + h, '#8a6a44', '#6a4e30', '#a8865a');
+        box(c, b2[0], b2[1], b2[2], b2[3], z, zs, '#8a6a44', '#6a4e30', '#9a7a52');
+        break;
+      }
+      case 'pipas': { // the barrels on their rack
+        box(c, x0, y0, x1, y1, z, z + qz(0.12 * ZPX), '#4a3a2a', '#3a2c20', '#5a4632');
+        for (let k = 0; k < 2; k++) { const f = (k + 0.5) / 2; const q = long ? P(x0 + (x1 - x0) * f, cy, z) : P(cx, y0 + (y1 - y0) * f, z); barrel(c, q[0], q[1], h / 3.6); }
+        break;
+      }
+      case 'talha': jar(c, o[0], o[1], h / 4.2, '#c87a4a'); break;
+      default: box(c, x0, y0, x1, y1, z, z + h, '#8a6a44', '#6a4e30', '#9a7a52');
+    }
+  }
+  // the tavern's sign: the iron arm out from the house's front, the board hung under it (as the 3D: across the wall), a cup on it
+  function signDraw(c, p, sg) {
+    ln(c, P(sg.w[0], sg.w[1], sg.z), P(sg.arm[0], sg.arm[1], sg.z), '#2e2b28', 0.7);
+    for (const q of [sg.a, sg.b]) ln(c, P(q[0], q[1], sg.z), P(q[0], q[1], sg.zb + 0.7), '#3a3632', 0.3);
+    poly(c, [P(sg.a[0], sg.a[1], sg.zb - 0.7), P(sg.b[0], sg.b[1], sg.zb - 0.7), P(sg.b[0], sg.b[1], sg.zb + 0.7), P(sg.a[0], sg.a[1], sg.zb + 0.7)], p.trim || '#6b4a30', 'rgba(0,0,0,0.3)', 0.3);
+    const m0 = P((sg.a[0] + sg.b[0]) / 2, (sg.a[1] + sg.b[1]) / 2, sg.zb); c.fillStyle = p.acc || '#d8b25a'; c.fillRect(m0[0] - 0.6, m0[1] - 0.5, 1.2, 1.1);
+  }
+  // a home's pieces on its flat roof (Forma.deck, where the 3D builds them: L-267) — the awning of cloth on its four poles,
+  // the wind-catcher with its mouth (on the face one sees, if its front is one), the pots of flowers — back to front
+  function deckDraw(c, p, H, z0) {
+    for (const o of (H.deck || []).slice().sort((a, b2) => a.x + a.y - (b2.x + b2.y))) {
+      if (o.k === 'toldo') {
+        for (const [x, y, z] of o.c) { const ix = x + (x < o.x ? 0.02 : -0.02), iy = y + (y < o.y ? 0.02 : -0.02); ln(c, P(ix, iy, z0), P(ix, iy, z0 + z), '#7a5a3a', 0.6); }
+        poly(c, o.c.map(([x, y, z]) => P(x, y, z0 + z)), '#e8e0c8', '#b8a888');
+      } else if (o.k === 'torre') {
+        const w = o.hw, zt = z0 + o.h, zb = zt - o.boca; box(c, o.x - w, o.y - w, o.x + w, o.y + w, z0, zt, p.wl, p.wr, p.top);
+        if (o.face === 'L') poly(c, [P(o.x - w, o.y + w, zt), P(o.x + w, o.y + w, zt), P(o.x + w, o.y + w, zb), P(o.x - w, o.y + w, zb)], '#3a2a1c');
+        else if (o.face === 'R') poly(c, [P(o.x + w, o.y + w, zt), P(o.x + w, o.y - w, zt), P(o.x + w, o.y - w, zb), P(o.x + w, o.y + w, zb)], '#3a2a1c');
+      } else { const q = P(o.x, o.y, z0); c.fillStyle = o.cor; c.beginPath(); c.arc(q[0], q[1] - 0.8, 1.1, 0, TAU); c.fill(); }
+    }
+  }
+  // a court open to the sky: the roof cut over it, and through the cut the court's paving and its two far walls, from the
+  // court's floor up under the roof (as the 3D opens it: the sky over the court, the roof all round it)
+  function courtDraw(c, p, H, zRoof) {
+    const [a0, b0, a1, b1] = H.court; const zF = Math.max(0, H.floor); const ring = []; const n = 6;
+    const edge = (xa, ya, xb, yb) => { for (let k = 0; k < n; k++) { const x = xa + (xb - xa) * k / n, y = ya + (yb - ya) * k / n; ring.push(P(x, y, zRoof(x, y))); } };
+    edge(a0, b0, a1, b0); edge(a1, b0, a1, b1); edge(a1, b1, a0, b1); edge(a0, b1, a0, b0);
+    const zt = Math.max(zRoof(a0, b0), zRoof(a1, b0), zRoof(a0, b1), zRoof((a0 + a1) / 2, (b0 + b1) / 2)) + 2;
+    c.save(); c.beginPath(); c.moveTo(ring[0][0], ring[0][1]); for (const q of ring) c.lineTo(q[0], q[1]); c.closePath(); c.clip();
+    top(c, a0, b0, a1, b1, zF, '#c8bca4');
+    poly(c, [P(a0, b0, zF), P(a1, b0, zF), P(a1, b0, zt), P(a0, b0, zt)], shade(p.wl, 0.88));
+    poly(c, [P(a0, b0, zF), P(a0, b1, zF), P(a0, b1, zt), P(a0, b0, zt)], shade(p.wr, 0.88));
+    c.restore();
+    c.strokeStyle = 'rgba(0,0,0,0.22)'; c.lineWidth = 0.5; c.beginPath(); c.moveTo(ring[0][0], ring[0][1]); for (const q of ring) c.lineTo(q[0], q[1]); c.closePath(); c.stroke();
+  }
+  // an annex against a side: its low walls and its lean-to falling away from the house
+  function annexDraw(c, p, st, a, H) {
+    const [x0, y0, x1, y1] = a.rect; const [X0, Y0, X1, Y1] = H.rect; const zF = Math.max(0, H.floor), zt = a.h;
+    if (H.base !== 'semienterrado' && zF > 0.3) plinth(c, p, x0, y0, x1, y1, zF);
+    walls(c, x0, y0, x1, y1, zF, zt, shade(p.wl, 0.95), shade(p.wr, 0.95));
+    // (the lean-to as the 3D lays it — Build3D's leanOf: high against the house by half the annex's depth (under the house's
+    // eaves), low at its outer wall and on past it 0.3 m, as far out at its ends; its cheeks closing the slope over the end walls)
+    const fx = x0 >= X1 - 0.01 ? 1 : x1 <= X0 + 0.01 ? -1 : 0, fy = fx ? 0 : y0 >= Y1 - 0.01 ? 1 : -1;
+    const depth = (fx ? x1 - x0 : y1 - y0) * 4; const hi = Math.min(zt + depth * 0.5 * ZPX, H.eave - 0.15 * ZPX), o = 0.075; const lo = zt - (hi - zt) * (0.3 / Math.max(0.3, depth));
+    const zAt = (x, y) => (fx > 0 ? (x <= x0 ? hi : lo) : fx < 0 ? (x >= x1 ? hi : lo) : fy > 0 ? (y <= y0 ? hi : lo) : (y >= y1 ? hi : lo));
+    const A0 = [fx < 0 ? x0 - o : x0 - (fx ? 0 : o), fy < 0 ? y0 - o : y0 - (fy ? 0 : o)], A1 = [fx > 0 ? x1 + o : x1 + (fx ? 0 : o), fy > 0 ? y1 + o : y1 + (fy ? 0 : o)];
+    // (the cheeks on the ends one sees: the wall's stuff from the wall's top up under the slope)
+    if (fx) { poly(c, [P(x0, y1, zt), P(x1, y1, zt), P(fx > 0 ? x0 : x1, y1, hi)], shade(p.wl, 0.95)); } else { poly(c, [P(x1, y0, zt), P(x1, y1, zt), P(x1, fy > 0 ? y0 : y1, hi)], shade(p.wr, 0.95)); }
+    const r = p.roof || ['#8a6a44', '#6a5034', '#5a4028']; const col = st === 'nordico' ? r[1] : (st === 'egipcio' || st === 'asteca') ? (p.thatch || STRAW)[0] : r[0];
+    poly(c, [P(A0[0], A0[1], zAt(A0[0], A0[1])), P(A1[0], A0[1], zAt(A1[0], A0[1])), P(A1[0], A1[1], zAt(A1[0], A1[1])), P(A0[0], A1[1], zAt(A0[0], A1[1]))], col, 'rgba(0,0,0,0.25)', 0.4);
+  }
+  // a round hut from its shell: the ring of wall to its eaves, the cone of thatch over it, the door where the plan leaves the gap
+  function roundDraw(c, m, p, st, H) {
+    const [cx, cy] = H.c; const o = P(cx, cy, 0); const rx = H.r * 22.63, ry = rx / 2; const zF = Math.max(0, H.floor), zE = H.eave;
+    const wa = st === 'asteca' ? p.wl : '#c9a36e', wb = st === 'asteca' ? p.wr : '#86673f';
+    let g = c.createLinearGradient(o[0] - rx, 0, o[0] + rx, 0); g.addColorStop(0, wa); g.addColorStop(1, wb);
+    c.fillStyle = g; c.beginPath(); c.ellipse(o[0], o[1] - zF, rx, ry, 0, 0, Math.PI); c.lineTo(o[0] - rx, o[1] - zE); c.lineTo(o[0] + rx, o[1] - zE); c.closePath(); c.fill();
+    if (st === 'asteca') { c.fillStyle = p.trim; c.beginPath(); c.ellipse(o[0], o[1] - zE + 2.2, rx, ry, 0, 0, Math.PI); c.lineTo(o[0] - rx, o[1] - zE + 0.8); c.ellipse(o[0], o[1] - zE + 0.8, rx, ry, 0, Math.PI, 0, true); c.fill(); }
+    const d = H.door; // (the door: where the gap is, if it is on the side one sees)
+    if (d && (d.at[0] - cx) + (d.at[1] - cy) > -1e-3) {
+      const dp = P(d.at[0], d.at[1], 0); const w = Math.max(3, d.w * 22.63 * 0.9); const zt = Math.min(zE - 0.5, d.z1);
+      c.fillStyle = '#3a2616'; c.beginPath(); c.moveTo(dp[0] - w / 2, dp[1] - zF); c.lineTo(dp[0] - w / 2, dp[1] - zt + w * 0.3); c.quadraticCurveTo(dp[0], dp[1] - zt - w * 0.4, dp[0] + w / 2, dp[1] - zt + w * 0.3); c.lineTo(dp[0] + w / 2, dp[1] - zF); c.closePath(); c.fill();
+      m.win.push([[dp[0] - w / 2, dp[1] - zF], [dp[0] - w / 2, dp[1] - zt], [dp[0] + w / 2, dp[1] - zt], [dp[0] + w / 2, dp[1] - zF]]);
+    }
+    const straw = p.thatch || STRAW; const R2 = (H.r + H.roof.ov) * 22.63, ry2 = R2 / 2, zA = zE + Math.max(4, H.roof.rise);
+    g = c.createLinearGradient(o[0] - R2, 0, o[0] + R2, 0); g.addColorStop(0, straw[0]); g.addColorStop(1, straw[1]);
+    c.fillStyle = g; c.beginPath(); c.moveTo(o[0] - R2, o[1] - zE + 1); c.lineTo(o[0], o[1] - zA); c.lineTo(o[0] + R2, o[1] - zE + 1); c.ellipse(o[0], o[1] - zE + 1, R2, ry2, 0, 0, Math.PI); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(110,80,35,0.45)'; c.lineWidth = 0.45;
+    for (let k = -0.9; k <= 0.9; k += 0.16) { c.beginPath(); c.moveTo(o[0], o[1] - zA + 0.5); c.lineTo(o[0] + k * R2, o[1] - zE + 1 + Math.sqrt(Math.max(0, 1 - k * k)) * ry2); c.stroke(); }
+    c.fillStyle = '#7a5a2e'; c.beginPath(); c.arc(o[0], o[1] - zA, 1.4, 0, TAU); c.fill();
+    m.fires.push([o[0], o[1] - zA]);
+  }
+  // the sprite of a home drawn from its shell, for the view's quarter q — or null (not a home, no shell: the drawing of
+  // before). Kept by what it draws — two homes with the same numbers share one picture —, the last few hundred
+  const HOMES = A.HOMES = { hut: 1, house: 1, sobrado: 1, insula: 1 };
+  // (the buildings of a yard before their roofed part — the pottery's, the tavern's, P4's B2d —: drawn from their shells with
+  // the homes, the yard and what stands in it as the shell has them)
+  const YARDS = A.YARDS = { olaria: 1, taverna: 1 };
+  // (the types the god draws from their shells always: they had no drawing of their own — the jail, L-265)
+  const SHELLS = A.SHELLS = { cadeia: 1 };
+  // (the god's view draws its homes from their shells: their plans follow the god's typology since P4's B2c — the yard, the
+  // storeys, the people's roof, the round hut —; D-082, switched on in phase C: the hut and the house of the six peoples, the
+  // sobrado and the ínsula with the 3D's mass — fidelidade.js)
+  A.homeOn = true;
+  // (whether the god draws a building of this type from its shell now)
+  A.fromShell = type => (HOMES[type] || YARDS[type] ? A.homeOn : !!SHELLS[type]);
+  // (each home's windows and door are its plan's own, so nearly every home has a picture of its own: a city of 150 homes
+  // asks ~25 MB a side of the view — kept up to A.HOMEMB, the least lately drawn let go and painted again when seen)
+  const homePics = new Map(); let homeBytes = 0; A.HOMEMB = 48;
+  A.homeClear = () => { homePics.clear(); homeBytes = 0; };
+  // (what a home's picture is known by, for the view's quarter q: the numbers it is drawn from — or null)
+  A.homeKey = function (b, s, q) {
+    if (!b || !(HOMES[b.type] || YARDS[b.type] || SHELLS[b.type]) || !s) return null; const H = A.homeGeo(b, s, q); if (!H) return null;
+    const st = PAL[b.style] ? b.style : 'classico'; const v = b.v || 0;
+    return { key: b.type + st + (b.type === 'house' && st === 'classico' ? v % 3 : '') + JSON.stringify(H), H, st, v };
+  };
+  A.homePic = key => { const spr = homePics.get(key); if (spr) { homePics.delete(key); homePics.set(key, spr); } return spr || null; };
+  A.homePaint = function (b, k) {
+    let spr = A.homePic(k.key); if (spr) return spr; const H = k.H;
+    const top = Math.max(MAXZ[b.type] || 64, H.eave + (H.roof.rise || 0) + (H.roof.room ? H.roof.room.h + 4 : 0) + 16);
+    const [w, h, ax, ay] = dims(b.w, b.h, top); const cv = document.createElement('canvas'); const K = 3; // (painted at 3×, as Art's sprites)
+    cv.width = Math.max(1, Math.ceil(w * K)); cv.height = Math.max(1, Math.ceil(h * K)); const c = cv.getContext('2d'); c.scale(K, K); c.translate(ax, ay); c.lineJoin = 'round'; c.lineCap = 'round';
+    const meta = { win: [], fires: [], glow: [] }; homeDraw(c, meta, pal(k.st), k.st, k.v, H, b.type);
+    spr = { c: cv, w, h, ax, ay, win: meta.win, fires: meta.fires, glow: meta.glow, H, bytes: cv.width * cv.height * 4 * 4 / 3 };
+    homePics.set(k.key, spr); homeBytes += spr.bytes;
+    while (homeBytes > A.HOMEMB * 1048576 && homePics.size > 1) { const [k0, s0] = homePics.entries().next().value; homePics.delete(k0); homeBytes -= s0.bytes; }
+    return spr;
+  };
+  A.home = function (b, s, q) { const k = A.homeKey(b, s, q); return k ? A.homePaint(b, k) : null; };
+
+  // ------------------------------ the god's painter of a form (D-106) ------------------------------
+  // A building of a step of its type's ladder that no drawing of before has — its lot is not its type's classic one (b.w !==
+  // BDEF[type].w) — is painted by the god from its own form (G.Forma.of(type, style, n)): every piece the form lists, in the
+  // god's projection (x, y the form's metres ÷ 4 from the middle of the lot, z its metres × 3.04 px: the numbers the forms
+  // were read from the drawings with — Forma.ZPX), in the people's palette and the god's shading (the front-left face the
+  // light one, the front-right the darker, the tops their own; a drum's bays from the one to the other as the god's bowl turns
+  // its gradient), at any size. Each piece is cut into parts — a drum into its bays, a stepped mass into its levels, a row of
+  // columns into its columns —, and the parts are painted back to front as the god's eye sees them: a part before another it
+  // is behind (a plane between the two — a face of one of them, or of their boxes —; a drum's bay and what is inside its
+  // round; a bowl of seats and what stands in it), else in the order the form lists them (the god's own, back to front).
+  // Only the view: the form is asked for, nothing is written, no chance — every building of a step and a people has one picture.
+  const rgbOf = s => { if (Array.isArray(s)) return s; if (typeof s !== 'string') return [138, 132, 120]; if (s[0] === '#') return G.hex2rgb(s.length === 4 ? '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3] : s); const m = s.match(/-?\d+(\.\d+)?/g); return m && m.length >= 3 ? [+m[0], +m[1], +m[2]] : [138, 132, 120]; };
+  const hexOf = r => '#' + r.slice(0, 3).map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  // (the god's shade of any colour — darker under 1, lighter over — and the mix of two, as hex: the kit shades hex)
+  const tone = (s, f) => { const r = rgbOf(s); return hexOf(f < 1 ? r.map(v => v * f) : r.map(v => v + (255 - v) * (f - 1))); };
+  const mixc = (a, b, t) => { const A0 = rgbOf(a), B0 = rgbOf(b); return hexOf([0, 1, 2].map(i => A0[i] + (B0[i] - A0[i]) * t)); };
+  // (a form's colour as the 3D reads it — Build3D's formCtx: a name of the people's palette, 'wl', 'roof1', 'col0' —, or the god's own.
+  // A name the palette has whole is that colour — 'trim2', 'acc2': the second band, not the first band's —; else a list's
+  // name and a place in it, L-564)
+  const fcol = (p, s) => { if (Array.isArray(s)) return hexOf(s); if (typeof s !== 'string') return '#8a8478'; if (s[0] === '#') return s.length === 4 ? hexOf(rgbOf(s)) : s; if (s.startsWith('rgb')) return hexOf(rgbOf(s));
+    if (typeof p[s] === 'string') return p[s];
+    const m = s.match(/^([a-z]+)(\d)?$/); if (!m) return '#8a8478'; const v = p[m[1]]; return (m[2] !== undefined ? (Array.isArray(v) ? v[+m[2]] : v) : (Array.isArray(v) ? v[0] : v)) || '#8a8478'; };
+  // (gold: what the god lights at night — an eye, a capstone, a statue)
+  const golden = s => { const [r, g, b] = rgbOf(s); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); if (mx < 150 || mx - mn < 70 || mx !== r) return false; const h = 60 * (g - b) / (mx - mn); return h >= 28 && h <= 62; };
+  // (the god's eye: x, y the tiles from the lot's middle, z its px over 16 — it looks down along (1, 1, 1) in these units, so of
+  // two points one before the other the nearer has the greater x + y + z. A part's planes { n, d }: n·p ≤ d inside it)
+  function planeOf(pts, ctr) {
+    let nx = 0, ny = 0, nz = 0; for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; nx += (a[1] - b[1]) * (a[2] + b[2]); ny += (a[2] - b[2]) * (a[0] + b[0]); nz += (a[0] - b[0]) * (a[1] + b[1]); }
+    const l = Math.hypot(nx, ny, nz); if (l < 1e-12) return null; let n = [nx / l, ny / l, nz / l], d = n[0] * pts[0][0] + n[1] * pts[0][1] + n[2] * pts[0][2];
+    if (ctr && n[0] * ctr[0] + n[1] * ctr[1] + n[2] * ctr[2] > d + 1e-9) { n = [-n[0], -n[1], -n[2]]; d = -d; } return { n, d };
+  }
+  // (a convex part: its points and its faces, each a list of the points' indices)
+  function hullP(V, faces) { const c = [0, 0, 0]; for (const v of V) for (let k = 0; k < 3; k++) c[k] += v[k] / V.length; const PL = []; for (const f of faces) { const q = planeOf(f.map(k => V[k]), c); if (q) PL.push(q); } return { V, PL }; }
+  const BOXF = [[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [4, 5, 6, 7], [0, 3, 2, 1]];
+  // (a box: x, y tiles, z px)
+  const boxP = (x0, y0, x1, y1, z0, z1) => { const a = z0 / 16, b = z1 / 16; return { V: [[x0, y0, a], [x1, y0, a], [x1, y1, a], [x0, y1, a], [x0, y0, b], [x1, y0, b], [x1, y1, b], [x0, y1, b]],
+    PL: [{ n: [1, 0, 0], d: x1 }, { n: [-1, 0, 0], d: -x0 }, { n: [0, 1, 0], d: y1 }, { n: [0, -1, 0], d: -y0 }, { n: [0, 0, 1], d: b }, { n: [0, 0, -1], d: -a }] }; };
+  // (the outline round points of a plane, counter-clockwise: Andrew's chain)
+  function hull2(pts) {
+    const P2 = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]); if (P2.length < 3) return P2;
+    const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); const lo = [], hi = [];
+    for (const p of P2) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 1e-9) lo.pop(); lo.push(p); }
+    for (let k = P2.length - 1; k >= 0; k--) { const p = P2[k]; while (hi.length >= 2 && cr(hi[hi.length - 2], hi[hi.length - 1], p) <= 1e-9) hi.pop(); hi.push(p); }
+    lo.pop(); hi.pop(); return lo.concat(hi);
+  }
+  // (a prism over points of the ground — their outline —, from z0 to z1 px)
+  function prismP(g0, z0, z1) {
+    const g = hull2(g0); const n = g.length; const V = g.map(q => [q[0], q[1], z0 / 16]).concat(g.map(q => [q[0], q[1], z1 / 16])); const faces = [], up = [], dn = [];
+    for (let k = 0; k < n; k++) { faces.push([k, (k + 1) % n, n + (k + 1) % n, n + k]); up.push(n + k); dn.push(n - 1 - k); }
+    faces.push(up); if (z1 - z0 > 1e-6) faces.push(dn); return hullP(V, faces);
+  }
+  // (a flat part — a door on a face, a pane, a round of gold —: its plane, both ways; a pole: its two ends)
+  const flatP = V => { const q = planeOf(V, null); return { V, PL: q ? [q, { n: [-q.n[0], -q.n[1], -q.n[2]], d: -q.d }] : [] }; };
+  const lineP = (a, b) => ({ V: [a, b], PL: [] });
+  // (a round of the ground — the whole, or the part from a0 to a1 with its middle —: tiles)
+  const roundG = (cx, cy, r, m, a0, a1) => { const A0 = a0 === undefined ? 0 : a0, A1 = a1 === undefined ? TAU : a1; const whole = A1 - A0 >= TAU - 1e-6; const o = [];
+    for (let k = 0; k < m + (whole ? 0 : 1); k++) { const a = A0 + (A1 - A0) * k / m; o.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); } if (!whole) o.push([cx, cy]); return o; };
+  // (a round thing standing: its side from the god's left to its right in its two tones, its top)
+  function cylinder(c, x, y, r, z0, z1, cl, cr, ct) {
+    const a = P(x, y, z0), b = P(x, y, z1), rx = r * 22.63, ry = r * 11.31;
+    const g = c.createLinearGradient(a[0] - rx, 0, a[0] + rx, 0); g.addColorStop(0, cl); g.addColorStop(1, cr);
+    c.fillStyle = g; c.beginPath(); c.ellipse(a[0], a[1], rx, ry, 0, 0, Math.PI); c.lineTo(b[0] - rx, b[1]); c.ellipse(b[0], b[1], rx, ry, 0, Math.PI, 0, true); c.closePath(); c.fill();
+    if (ct) { c.fillStyle = ct; c.beginPath(); c.ellipse(b[0], b[1], rx, ry, 0, 0, TAU); c.fill(); }
+  }
+  // (the far half of a round — where a face toward its middle faces the eye — from ya to yb px, at r tiles; open where cut. An
+  // arc given past a turn — from −π/2, say — is the same round: its piece in that half, a turn on)
+  function farBand(c, cx, cy, r, ya, yb, col, a0, a1, cut) {
+    const A0 = a0 === undefined ? 0 : a0, A1 = a1 === undefined ? TAU : a1; if (yb - ya < 1e-6) return;
+    for (const s of [0, TAU, -TAU]) { const f0 = Math.max(A0 + s, 0.75 * Math.PI), f1 = Math.min(A1 + s, 1.75 * Math.PI); if (f1 > f0) farArc(c, cx, cy, r, ya, yb, col, f0, f1, cut); }
+  }
+  function farArc(c, cx, cy, r, ya, yb, col, f0, f1, cut) {
+    const m = Math.max(6, Math.round(48 * (f1 - f0) / TAU)); const shut = a => !(cut || []).some(g => Math.abs(((a - g[0]) % TAU + TAU + Math.PI) % TAU - Math.PI) < g[1]);
+    let run = []; const flush = () => { if (run.length > 1) { const up = run.map(a => P(cx + Math.cos(a) * r, cy + Math.sin(a) * r, yb)), dn = run.slice().reverse().map(a => P(cx + Math.cos(a) * r, cy + Math.sin(a) * r, ya)); poly(c, up.concat(dn), col); } run = []; };
+    for (let j = 0; j < m; j++) { const s0 = f0 + (f1 - f0) * j / m, s1 = f0 + (f1 - f0) * (j + 1) / m; if (shut((s0 + s1) / 2)) { if (!run.length) run.push(s0); run.push(s1); } else flush(); }
+    flush();
+  }
+  // the rows of a cavea (its form's — D-084, the god's caveaPaint at any size): each tread the ring of the round at its height
+  // from its inner edge to its outer one (the arena and what stands lower in the middle show through), the stairways up it a
+  // strip a little darker, the wall down to the next row and the parapet at the tread's edge where they face the eye (open
+  // where a flight comes out on it: its vaos — on the lowest row too where the bowl stands on the ground, as the 3D's —), the
+  // ends of a half bowl (not where another bowl goes on from it: joined, [at a0, at a1]) and the piece of its back wall that
+  // turns to the eye. The top ring is a drum's walk where the bowl stands in one (no fecho), as the 3D has it
+  function cavPaint(c, e, L, seats, wall, muro, joined) {
+    const T = v => (v - L / 2) / 4; const cx = T(e.c[0]), cy = T(e.c[1]); const A0 = e.aneis, n = A0.length;
+    const a0 = e.arco ? e.arco[0] : 0, a1 = e.arco ? e.arco[1] : TAU;
+    const pt = (r, a, y) => P(cx + Math.cos(a) * r / 4, cy + Math.sin(a) * r / 4, y * ZPX);
+    const arc = (r, y, f, t) => { const o = []; const m = Math.max(6, Math.round(96 * Math.abs(t - f) / TAU)); for (let j = 0; j <= m; j++) o.push(pt(r, f + (t - f) * j / m, y)); return o; };
+    const E = e.escadas && e.escadas.a && e.escadas.a.length ? e.escadas : null;
+    for (let k = 0; k < n; k++) {
+      const rOut = A0[k][0], rIn = k < n - 1 ? A0[k + 1][0] : e.fundo, y = A0[k][1];
+      if (k || e.fecho) poly(c, arc(rOut, y, a0, a1).concat(arc(Math.max(0, rIn), y, a1, a0)), k % 2 ? seats : tone(seats, 0.9));
+      if (E && (k || e.fecho)) for (const a of E.a) { const h0 = E.l / 2 / Math.max(0.1, rIn), h1 = E.l / 2 / rOut; poly(c, [pt(rIn, a - h0, y), pt(rOut, a - h1, y), pt(rOut, a + h1, y), pt(rIn, a + h0, y)], tone(seats, 0.84)); }
+      if (k < n - 1) farBand(c, cx, cy, rIn / 4, A0[k + 1][1] * ZPX, y * ZPX, muro || tone(seats, 0.82), a0, a1); // (its face down to the next: the 3D's riser)
+      if (e.parapeito && (k > 0 || e.fecho)) farBand(c, cx, cy, rIn / 4, y * ZPX, (y + e.parapeito) * ZPX, tone(muro || seats, 0.9), a0, a1, (e.vaos || []).filter(g => g.anel === k).map(g => [g.a, g.w / 2 / rIn]));
+    }
+    if (!e.fecho) return;
+    farBand(c, cx, cy, e.fundo / 4, 0, A0[n - 1][1] * ZPX, tone(seats, 0.8), a0, a1); // (a bowl on the ground: its lowest row's face down to it)
+    [a0, a1].forEach((a, s) => { if (joined && joined[s]) return; for (let k = 0; k < n; k++) { const rIn = k < n - 1 ? A0[k + 1][0] : e.fundo; poly(c, [pt(rIn, a, 0), pt(A0[k][0], a, 0), pt(A0[k][0], a, A0[k][1]), pt(rIn, a, A0[k][1])], tone(wall, 0.94)); } });
+    for (const s of [0, TAU, -TAU]) { const b0 = Math.max(a0 + s, 1.75 * Math.PI), b1 = Math.min(a1 + s, 2 * Math.PI); if (b1 > b0) poly(c, arc(A0[0][0], A0[0][1], b0, b1).concat(arc(A0[0][0], 0, b1, b0)), tone(wall, 0.8)); }
+  }
+  // (the kinds of piece the god paints from a form; another kind is left out, and named here for the proofs — with how the last
+  // painting went: A.formStats. Only seen; anew with every world)
+  A.formMissing = new Set(); A.formStats = null;
+  G.worldHooks.push(() => { A.formMissing.clear(); A.formStats = null; });
+  // the parts of a form's pieces: [{ i (its piece), j (its part), V, PL, paint, ring?, bowl? }] (o.noDoor: without the door the
+  // view does not see — L-264 —, as the drawings of before)
+  function formParts(c, m, F, st, o) {
+    const p = pal(st), L = F.L, h0 = L / 2, out = [], Fo = G.Forma;
+    const T = u => (u - h0) / 4, Z = y => y * ZPX, col = s => fcol(p, s), E3 = (x, y, z) => [x, y, z / 16];
+    const door = o.noDoor ? F.door : null;
+    // (the ends of the bowls where one goes on from another — the same edge, the line through both their middles: the quarters
+    // of the Colosseum's oval, each two arcs, D-107 —: inside the seats, no wall of theirs to paint)
+    const ends = []; for (const e of F.els) if (e.k === 'cavea' && e.arco && e.fecho) e.arco.forEach((a, s) => { const r0 = e.fundo, r1 = e.aneis[0][0]; ends.push({ e, s, p: [[e.c[0] + Math.cos(a) * r0, e.c[1] + Math.sin(a) * r0], [e.c[0] + Math.cos(a) * r1, e.c[1] + Math.sin(a) * r1]] }); });
+    const same = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.05;
+    const joined = new Map(); for (const x of ends) if (ends.some(y => y.e !== x.e && same(x.p[0], y.p[0]) && same(x.p[1], y.p[1]))) { const j = joined.get(x.e) || [false, false]; j[x.s] = true; joined.set(x.e, j); }
+    out.hidden = 0;
+    F.els.forEach((e, i) => {
+      // (a piece inside a mass — the pyramid's corridor, gallery and chamber, D-108: oculto —, seen only by whoever goes in: the
+      // 3D's; the god does not paint it, as Forma.mass has no part of it)
+      if (e.oculto) { out.hidden++; return; }
+      const put = (q, paint, j) => { q.i = i; q.j = j || 0; q.paint = paint; out.push(q); return q; };
+      switch (e.k) {
+        case 'bloco': {
+          const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z0 = Z(e.y0), z1 = Z(e.y1); const cc = e.cor || ['wl', 'wr', 'top'];
+          const cl = col(cc[0]), cr = col(cc[1] || cc[0]), ct = col(cc[2] || cc[0]);
+          put(boxP(x0, y0, x1, y1, z0, z1), () => {
+            box(c, x0, y0, x1, y1, z0, z1, cl, cr, ct);
+            if (e.tabuas) { const n = e.tabuas, nr = Math.max(2, Math.round(n * (y1 - y0) / Math.max(0.05, x1 - x0)));
+              for (let k = 1; k < n; k++) { const x = x0 + (x1 - x0) * k / n; ln(c, P(x, y1, z0), P(x, y1, z1), 'rgba(30,20,10,0.35)', 0.4); }
+              for (let k = 1; k < nr; k++) { const y = y0 + (y1 - y0) * k / nr; ln(c, P(x1, y, z0), P(x1, y, z1), 'rgba(30,20,10,0.35)', 0.4); } }
+            if (e.friso) { const z = z1 - Z(e.friso); ln(c, P(x0, y1, z), P(x1, y1, z), 'rgba(0,0,0,0.12)', 0.5); ln(c, P(x1, y1, z), P(x1, y0, z), 'rgba(0,0,0,0.12)', 0.5); }
+          });
+          break;
+        }
+        case 'faixa': { const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z0 = Z(e.y0), z1 = Z(e.y1), cc = col(e.cor); put(boxP(x0, y0, x1, y1, z0, z1), () => band(c, x0, y0, x1, y1, z0, z1, cc)); break; }
+        case 'talude': {
+          const a = e.r.map(T), b = e.r1.map(T), z0 = Z(e.y0), z1 = Z(e.y1); const cc = e.cor || ['wl', 'wr', 'top'];
+          const V = [[a[0], a[1], z0], [a[2], a[1], z0], [a[2], a[3], z0], [a[0], a[3], z0], [b[0], b[1], z1], [b[2], b[1], z1], [b[2], b[3], z1], [b[0], b[3], z1]];
+          put(hullP(V.map(q => E3(...q)), BOXF), () => {
+            poly(c, [P(a[0], a[3], z0), P(a[2], a[3], z0), P(b[2], b[3], z1), P(b[0], b[3], z1)], col(cc[0]));
+            poly(c, [P(a[2], a[3], z0), P(a[2], a[1], z0), P(b[2], b[1], z1), P(b[2], b[3], z1)], col(cc[1] || cc[0]));
+            top(c, b[0], b[1], b[2], b[3], z1, col(cc[2] || cc[0]));
+          });
+          break;
+        }
+        case 'piramide': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), s = e.e / 4, z0 = Z(e.y0), z1 = Z(e.y1);
+          const V = [[cx - s, cy - s, z0], [cx + s, cy - s, z0], [cx + s, cy + s, z0], [cx - s, cy + s, z0], [cx, cy, z1]].map(q => E3(...q));
+          put(hullP(V, [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4], [0, 3, 2, 1]]), () => {
+            poly(c, [P(cx - s, cy + s, z0), P(cx + s, cy + s, z0), P(cx, cy, z1)], col(e.cor[0]));
+            poly(c, [P(cx + s, cy + s, z0), P(cx + s, cy - s, z0), P(cx, cy, z1)], col(e.cor[1] || e.cor[0]));
+            const nf = e.fiadas || 0; for (let k = 1; k < nf; k++) { const f = k / nf, w = s * (1 - f), z = z0 + (z1 - z0) * f; ln(c, P(cx - w, cy + w, z), P(cx + w, cy + w, z), 'rgba(140,110,70,0.25)', 0.4); ln(c, P(cx + w, cy + w, z), P(cx + w, cy - w, z), 'rgba(90,70,40,0.25)', 0.4); }
+            if (e.ponta) { const f = e.ponta.f, w = s * f, z = z1 - (z1 - z0) * f;
+              poly(c, [P(cx - w, cy + w, z), P(cx + w, cy + w, z), P(cx, cy, z1)], col(e.ponta.cor[0])); poly(c, [P(cx + w, cy + w, z), P(cx + w, cy - w, z), P(cx, cy, z1)], col(e.ponta.cor[1] || e.ponta.cor[0])); m.glow.push(P(cx, cy, z1 - 3)); }
+          });
+          break;
+        }
+        case 'escalonada': {
+          const cx = T(e.c[0]), cy = T(e.c[1]); const cc = e.cor || ['wl', 'wr', 'top']; const cl = col(cc[0]), cr = col(cc[1] || cc[0]), ct = col(cc[2] || cc[0]);
+          e.niveis.forEach(([s, ya, yb], j) => { const q = s / 4, z0 = Z(ya), z1 = Z(yb);
+            put(boxP(cx - q, cy - q, cx + q, cy + q, z0, z1), () => { box(c, cx - q, cy - q, cx + q, cy + q, z0, z1, cl, cr, ct);
+              if (e.friso) { const z = z1 - Z(e.friso); ln(c, P(cx - q, cy + q, z), P(cx + q, cy + q, z), 'rgba(0,0,0,0.12)', 0.5); ln(c, P(cx + q, cy + q, z), P(cx + q, cy - q, z), 'rgba(0,0,0,0.12)', 0.5); } }, j); });
+          break;
+        }
+        // a flight from its foot a to its top b, w wide (its ramps, its painted line): the god's stair of the stepped pyramid — its
+        // steps as the 3D lays them (Fo.flight: no riser over 0.26 m), each tread in the stair's light and each riser a shade
+        // darker where it faces the view; a flight that climbs toward the view shows its treads only
+        case 'escada': {
+          const au = T(e.a[0]), av = T(e.a[1]), az = Z(e.a[2]), bu = T(e.b[0]), bv = T(e.b[1]), bz = Z(e.b[2]);
+          const ru = bu - au, rv = bv - av, rl = Math.hypot(ru, rv) || 1; const wu = Math.hypot(ru, rv) > 1e-6 ? -rv / rl : 1, wv = Math.hypot(ru, rv) > 1e-6 ? ru / rl : 0;
+          const hw = e.w / 8, al = (e.alfarda || 0) / 4, W2 = hw + al; const S = (s, f) => [au + ru * f + wu * s, av + rv * f + wv * s];
+          const V = [[...S(-W2, 0), az], [...S(W2, 0), az], [...S(W2, 1), bz], [...S(-W2, 1), bz], [...S(-W2, 1), az], [...S(W2, 1), az]].map(q => E3(...q));
+          const q = bz - az > 1e-6 ? hullP(V, [[0, 1, 5, 4], [0, 1, 2, 3], [4, 5, 2, 3], [0, 4, 3], [1, 5, 2]]) : flatP(V.slice(0, 4));
+          const cl = tone(col(e.cor), e.clara || 1), cs = tone(col('wr'), 0.9);
+          const strip = (s0, s1, cc) => poly(c, [P(...S(s0, 0), az), P(...S(s1, 0), az), P(...S(s1, 1), bz), P(...S(s0, 1), bz)], cc);
+          put(q, () => {
+            strip(-hw, hw, cl);
+            const n = Math.max(2, Math.ceil((e.b[2] - e.a[2]) / 0.26 - 1e-9)), cR = tone(cl, 0.86), seen = (au - bu) + (av - bv) > 1e-9;
+            for (let k = 0; k < n; k++) { const f0 = k / n, f1 = (k + 1) / n, z0 = az + (bz - az) * f0, z1 = az + (bz - az) * f1;
+              if (seen) poly(c, [P(...S(-hw, f0), z0), P(...S(hw, f0), z0), P(...S(hw, f0), z1), P(...S(-hw, f0), z1)], cR);
+              poly(c, [P(...S(-hw, f0), z1), P(...S(hw, f0), z1), P(...S(hw, f1), z1), P(...S(-hw, f1), z1)], cl); }
+            if (al) { strip(-hw - al, -hw, cs); strip(hw, hw + al, cs); }
+            if (e.divisor) { const d = e.divisor; strip(d.u / 4 - d.w / 8, d.u / 4 + d.w / 8, col(d.cor)); }
+          });
+          break;
+        }
+        // the drum of arcades: a part each bay (the god's bowl, its front half in the gradient from its left to its right — the
+        // dark arches of each tier and the line between the tiers —, the inside of the far bays, the walk on top and its light rim)
+        case 'tambor': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), R = e.r / 4, t = e.t / 4, N = e.arcos || 24, ap = R * Math.cos(Math.PI / N), bw = 2 * R * Math.sin(Math.PI / N), aw = bw * (e.arcoW || 0.6);
+          const z0 = Z(e.y0), z1 = Z(e.y1), nT = e.andares || 1, th = (z1 - z0) / nT; const cL = col(e.cor[0]), cR = col(e.cor[1] || e.cor[0]);
+          const dark = G.rgb(rgbOf(e.escuro ? col(e.escuro) : '#28201a'), 0.55); const rise = aw / 2 * 4 * ZPX; // (an arch's round head, px: as high as it is half wide)
+          const aA = e.arcoA === undefined ? 0.175 : e.arcoA, aB = e.arcoB === undefined ? 0.725 : e.arcoB;
+          for (let q = 0; q < N; q++) {
+            const a = q / N * TAU, ox = Math.cos(a), oy = Math.sin(a), gx = -oy, gy = ox;
+            const at = (s, d, z) => P(cx + ox * (ap - d) + gx * s, cy + oy * (ap - d) + gy * s, z); // (s along the bay, d in from its face: tiles)
+            const ex = (s, d, z) => [cx + ox * (ap - d) + gx * s, cy + oy * (ap - d) + gy * s, z / 16];
+            const V = [ex(-bw / 2, 0, z0), ex(bw / 2, 0, z0), ex(bw / 2, t, z0), ex(-bw / 2, t, z0), ex(-bw / 2, 0, z1), ex(bw / 2, 0, z1), ex(bw / 2, t, z1), ex(-bw / 2, t, z1)];
+            const fwd = ox + oy > 1e-9, back = ox + oy < -1e-9; const tn = mixc(cL, cR, (1 + (ox - oy) / Math.SQRT2) / 2);
+            const part = put(hullP(V, BOXF), () => {
+              if (fwd) {
+                poly(c, [at(-bw / 2, 0, z0), at(bw / 2, 0, z0), at(bw / 2, 0, z1), at(-bw / 2, 0, z1)], tn);
+                for (let k = 0; k < nT; k++) {
+                  const zb = z0 + k * th, za = k ? zb + aA * th : z0, zt = zb + aB * th, zh = Math.max(za, zt - rise);
+                  const pts = [at(-aw / 2, 0, za), at(-aw / 2, 0, zh)]; for (let j = 1; j < 8; j++) { const f = j / 8 * Math.PI; pts.push(at(-Math.cos(f) * aw / 2, 0, zh + Math.sin(f) * (zt - zh))); }
+                  pts.push(at(aw / 2, 0, zh), at(aw / 2, 0, za)); poly(c, pts, dark);
+                  // (the cornice over the tier: a band a little lighter, the god's line under it)
+                  if (k < nT - 1) { const zc = zb + th, cz = Math.min(th * 0.08, 0.22 * ZPX); poly(c, [at(-bw / 2, 0, zc - cz), at(bw / 2, 0, zc - cz), at(bw / 2, 0, zc), at(-bw / 2, 0, zc)], tone(tn, 1.07)); ln(c, at(-bw / 2, 0, zc - cz - 0.3), at(bw / 2, 0, zc - cz - 0.3), 'rgba(0,0,0,0.15)', 0.5); }
+                }
+              } else if (back) poly(c, [at(-bw / 2, t, z0), at(bw / 2, t, z0), at(bw / 2, t, z1), at(-bw / 2, t, z1)], tone(tn, 0.78));
+              poly(c, [at(-bw / 2, 0, z1), at(bw / 2, 0, z1), at(bw / 2, t, z1), at(-bw / 2, t, z1)], tone(tn, 1.06));
+              if (fwd) ln(c, at(-bw / 2, 0, z1), at(bw / 2, 0, z1), 'rgba(255,255,255,0.35)', 0.7);
+            }, q);
+            part.ring = { id: i, c: [cx, cy], r: R, fwd };
+          }
+          break;
+        }
+        case 'cavea': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), A0 = e.aneis; const a0 = e.arco ? e.arco[0] : 0, a1 = e.arco ? e.arco[1] : TAU;
+          let zLo = e.fecho ? 0 : 1e9, zHi = 0; A0.forEach(([, y], k) => { zLo = Math.min(zLo, Z(y)); zHi = Math.max(zHi, Z(y + ((k || e.fecho) && e.parapeito ? e.parapeito : 0))); });
+          // (a piece of a round less than a half: its outline the outer arc and the inner one's two ends — not its middle, which
+          // may lie far off, across the arena: the Colosseum's quarters, D-107)
+          const g0 = a1 - a0 < Math.PI - 1e-6 ? roundG(cx, cy, A0[0][0] / 4, 24, a0, a1).slice(0, -1).concat([a0, a1].map(a => [cx + Math.cos(a) * e.fundo / 4, cy + Math.sin(a) * e.fundo / 4])) : roundG(cx, cy, A0[0][0] / 4, 24, a0, a1);
+          const q = put(prismP(g0, zLo, zHi), () => cavPaint(c, e, L, col(e.cor), col(e.fecho || 'wl'), e.muro ? col(e.muro) : null, joined.get(e)));
+          // (its bowl: what stands in it — in the round of its lowest row and, a piece of one, within its arc —; a piece whose rows
+          // rise toward the eye — its middle facing it — is before what stands in it, the others after)
+          const mid = (a0 + a1) / 2; q.bowl = e.arco ? { c: [cx, cy], r: e.fundo / 4, a0, a1, fwd: Math.cos(mid) + Math.sin(mid) > 1e-9 } : { c: [cx, cy], r: e.fundo / 4 };
+          break;
+        }
+        case 'arena': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), r = e.r / 4, z = Z(e.y), zt = e.muro ? Z(e.muro) : z;
+          put(prismP(roundG(cx, cy, r, 16), z, zt), () => {
+            const pts = []; for (let k = 0; k < 64; k++) { const a = k / 64 * TAU; pts.push(P(cx + Math.cos(a) * r, cy + Math.sin(a) * r, z)); } poly(c, pts, col(e.cor));
+            if (e.buraco) { const h = e.buraco.map(T); poly(c, [P(h[0], h[1], z), P(h[2], h[1], z), P(h[2], h[3], z), P(h[0], h[3], z)], '#4a3a2a'); }
+            if (zt > z) farBand(c, cx, cy, r, z, zt, tone('#b8a888', 0.9));
+          });
+          break;
+        }
+        case 'mastros': {
+          const cx = T(e.c[0]), cy = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y0 + e.h), cc = col(e.cor);
+          for (let k = 0; k < e.n; k++) { const a = (k + 0.5) / e.n * TAU, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; put(lineP(E3(x, y, z0), E3(x, y, z1)), () => ln(c, P(x, y, z0), P(x, y, z1), cc, 0.6), k); }
+          break;
+        }
+        // (a column each: the god's column — its shaft, its capital; the papyrus of Egypt wider, in its own colour)
+        case 'colunata': {
+          const r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1); const c0 = col(e.cor[0]), c1 = col(e.cor[1] || e.cor[0]); const pap = e.papiro;
+          const R = pap ? pap.r / 4 : r * 1.5, zc = pap ? Z(pap.h) : 0.9, ac = pap ? col(pap.cor) : c0;
+          e.pts.forEach((pt, j) => { const x = T(pt[0]), y = T(pt[1]);
+            put(boxP(x - R, y - R, x + R, y + R, z0, z1), () => { box(c, x - r, y - r, x + r, y + r, z0, z1, c0, c1, c0); box(c, x - R, y - R, x + R, y + R, z1 - zc, z1, ac, pap ? tone(ac, 0.85) : c1, c0); }, j); });
+          break;
+        }
+        case 'telhado': {
+          const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z0 = Z(e.y0), z1 = Z(e.y1), ov = (e.ov || 0) / 4; const cc = e.cor || ['roof0', 'roof1', 'gable', 'roof2'];
+          const cF = col(cc[0]), cB = col(cc[1] || cc[0]), cG = col(cc[2] || cc[0]), cE = col(cc[3] || cc[1] || cc[0]);
+          const X0 = x0 - ov, X1 = x1 + ov, Y0 = y0 - ov, Y1 = y1 + ov, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2; const alongU = e.quatro ? X1 - X0 >= Y1 - Y0 : e.ao === 'u';
+          const ridge = e.quatro ? (alongU ? [[X0 + (Y1 - Y0) / 2, ym], [X1 - (Y1 - Y0) / 2, ym]] : [[xm, Y0 + (X1 - X0) / 2], [xm, Y1 - (X1 - X0) / 2]]) : (alongU ? [[X0, ym], [X1, ym]] : [[xm, Y0], [xm, Y1]]);
+          const ze = Math.max(0, z0 - 1);
+          const V = [[X0, Y0, ze], [X1, Y0, ze], [X1, Y1, ze], [X0, Y1, ze], [ridge[0][0], ridge[0][1], z1], [ridge[1][0], ridge[1][1], z1]].map(q => E3(...q));
+          const faces = alongU ? [[0, 3, 2, 1], [0, 1, 5, 4], [3, 2, 5, 4], [0, 4, 3], [1, 2, 5]] : [[0, 3, 2, 1], [0, 4, 5, 3], [1, 2, 5, 4], [0, 1, 4], [3, 5, 2]];
+          put(hullP(V, faces), () => {
+            if (e.quatro) hip(c, x0, y0, x1, y1, z0, z1, ov, cF, cB, cE);
+            else if (e.ao === 'u') gableX(c, x0, y0, x1, y1, z0, z1, ov, cF, cB, cG, cE);
+            else gableY(c, x0, y0, x1, y1, z0, z1, ov, cF, cB, cG, cE);
+            if (e.escudos) { // (a roof of shields — Valhalla —: rows of them down the slope the god sees)
+              const sc = e.escudos; const n = sc.n, rows = sc.linhas; const len = (alongU ? X1 - X0 : Y1 - Y0) * 4, span = (alongU ? Y1 - ym : X1 - xm) * 4, rise = (z1 - z0) / ZPX;
+              const rx = Math.min(len / n, Math.hypot(span, rise) / rows) * 0.46 * 5.657;
+              for (let r2 = 0; r2 < rows; r2++) for (let k = 0; k < n; k++) { const f = (r2 + 0.5) / rows, s = (k + 0.5) / n, z = z0 - 1 + (z1 - z0 + 1) * f;
+                const q = alongU ? P(X0 + (X1 - X0) * s, Y1 + (ym - Y1) * f, z) : P(X1 + (xm - X1) * f, Y0 + (Y1 - Y0) * s, z);
+                c.fillStyle = col(sc.cor[(k + r2) % 2]); c.beginPath(); c.ellipse(q[0], q[1], rx, rx * 0.6, 0, 0, TAU); c.fill(); }
+            }
+            if (e.mat === 'turf') { if (alongU) { tufts(c, P(x0, ym, z1), P(x1, ym, z1), 8, '#88a852'); tufts(c, P(X0, Y1, z0 - 1), P(X1, Y1, z0 - 1), 10, '#5f7a34'); } else tufts(c, P(xm, y0, z1), P(xm, y1, z1), 8, '#88a852'); }
+          });
+          break;
+        }
+        // a door on the front — on its pyramid's face —: a dark leaf (lit at night, as the god's door; a sealed one never)
+        case 'porta': {
+          if (door && e.na !== 'piramide' && !e.lacrada && Math.abs(e.u - door.u) <= door.w / 2 + 0.3 && Math.abs((e.y0 || 0) - (door.y0 || 0)) < 0.35) break; // (its door on a side the view does not see: L-264)
+          let V;
+          if (e.na === 'piramide') { const pq = F.els.find(q => q.k === 'piramide'); if (!pq) break; const vAt = y => pq.c[1] + pq.e * (1 - (y - pq.y0) / (pq.y1 - pq.y0));
+            const a = T(e.u - e.w / 2), b = T(e.u + e.w / 2), v0 = T(vAt(e.y0)), v1 = T(vAt(e.y1)); V = [[a, v0, Z(e.y0)], [b, v0, Z(e.y0)], [b, v1, Z(e.y1)], [a, v1, Z(e.y1)]]; }
+          else { const v = T(e.v), a = T(e.u - e.w / 2), b = T(e.u + e.w / 2); V = [[a, v, Z(e.y0)], [b, v, Z(e.y0)], [b, v, Z(e.y1)], [a, v, Z(e.y1)]]; }
+          const pts = V.map(q => P(q[0], q[1], q[2])), cc = col(e.cor || 'door');
+          put(flatP(V.map(q => E3(...q))), () => { poly(c, pts, cc); if (!e.lacrada) m.win.push(pts); });
+          break;
+        }
+        // a round on the front (or on the right face at u): an eye, a shield
+        case 'disco': {
+          const right = e.na === 'direita'; const u = T(e.u), v = T(e.v), z = Z(e.y), r = e.r / 4, rz = e.r * ZPX; const cc = col(e.cor);
+          const at3 = (a, f) => (right ? [u, v - Math.cos(a) * r * f, z + Math.sin(a) * rz * f] : [u + Math.cos(a) * r * f, v, z + Math.sin(a) * rz * f]);
+          const ring = f => { const o2 = []; for (let k = 0; k < 24; k++) o2.push(P(...at3(k / 24 * TAU, f))); return o2; };
+          const V = []; for (let k = 0; k < 8; k++) V.push(E3(...at3(k / 8 * TAU, 1)));
+          put(flatP(V), () => { poly(c, ring(1), cc); if (e.olho) poly(c, ring(0.32), col(e.olho)); if (e.olho || golden(cc)) m.glow.push(P(...at3(0, 0))); });
+          break;
+        }
+        case 'placa': { const v = T(e.v), a = T(e.u - e.w / 2), b = T(e.u + e.w / 2), z0 = Z(e.y0), z1 = Z(e.y1); const V = [[a, v, z0], [b, v, z0], [b, v, z1], [a, v, z1]];
+          put(flatP(V.map(q => E3(...q))), () => poly(c, V.map(q => P(q[0], q[1], q[2])), col(e.cor))); break; }
+        // a row of windows on the front or the right (the back and the left the god does not see): its panes as the god's winsL and
+        // winsR, lit at night; an opening painted (tinta) never lit; the bars before them
+        case 'janelas': {
+          if (e.na !== 'frente' && e.na !== 'direita') break;
+          const em = T(e.em), z0 = Z(e.y0), z1 = Z(e.y1), de = T(e.de), ate = T(e.ate); const spans = [];
+          if (!e.n) spans.push([de, ate]); else { const w = (ate - de) / (e.n * 2 + 1); for (let k = 0; k < e.n; k++) spans.push([de + w * (1 + 2 * k), de + w * (2 + 2 * k)]); }
+          const front = e.na === 'frente'; const V = front ? [[de, em, z0], [ate, em, z0], [ate, em, z1], [de, em, z1]] : [[em, de, z0], [em, ate, z0], [em, ate, z1], [em, de, z1]];
+          const cc = e.tinta ? col(e.tinta) : p.win;
+          put(flatP(V.map(q => E3(...q))), () => { for (const [a, b] of spans) {
+            if (front) onL(c, em, a, b, z0, z1, cc, e.tinta ? null : m); else onR(c, em, a, b, z0, z1, cc, e.tinta ? null : m);
+            if (e.grade) for (let j = 1; j <= e.grade; j++) { const s = a + (b - a) * j / (e.grade + 1); if (front) ln(c, P(s, em, z0), P(s, em, z1), '#3a3a40', 0.4); else ln(c, P(em, s, z0), P(em, s, z1), '#3a3a40', 0.4); } } });
+          break;
+        }
+        // a statue: the god's robed figure (its spear and shield, its ravens); the enthroned king, the feathered serpent, the
+        // sphinx by the figure's parts (Forma.figure), back to front
+        case 'estatua': {
+          const x = T(e.p[0]), y = T(e.p[1]), z = Z(e.p[2]), hp = e.h * ZPX, cc = col(e.cor);
+          if (!e.pose) { const wp = Math.max(1.4, hp * 0.13), w = wp / 16;
+            put(boxP(x - w, y - w, x + w, y + w, z, z + hp * 1.1), () => { statue(c, x, y, z, cc, hp, !!e.lanca);
+              if (e.corvos) { const b = P(x, y, z); c.fillStyle = col(e.corvos); for (const s of [-1, 1]) { c.beginPath(); c.arc(b[0] + s * wp * 1.05, b[1] - hp * 0.7, Math.max(0.6, wp * 0.32), 0, TAU); c.fill(); } }
+              if (golden(cc)) m.glow.push(P(x, y, z + hp * 0.78)); });
+            break; }
+          const parts = Fo.figure(e); const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+          const grow = (u, v, yy, r) => { lo[0] = Math.min(lo[0], u - r); lo[1] = Math.min(lo[1], v - r); lo[2] = Math.min(lo[2], yy); hi[0] = Math.max(hi[0], u + r); hi[1] = Math.max(hi[1], v + r); hi[2] = Math.max(hi[2], yy); };
+          for (const q of parts) { if (q.k === 'caixa') { grow(q.c[0], q.c[1], q.c[2], Math.max(q.a, q.d) / 2); grow(q.c[0], q.c[1], q.c[2] + q.h, 0); } else if (q.k === 'haste') { grow(q.a[0], q.a[1], q.a[2], q.r); grow(q.b[0], q.b[1], q.b[2], q.r); } else if (q.k === 'espira') { grow(q.c[0], q.c[1], q.c[2], q.R0 + q.t0); grow(q.c[0], q.c[1], q.c[2] + q.h, q.R1 + q.t1); } else { grow(q.c[0], q.c[1], q.c[2] - (q.ry || q.r), q.r); grow(q.c[0], q.c[1], q.c[2] + (q.ry || q.r), q.r); } }
+          const dk = q => { const pt = q.c || q.a; return T(pt[0]) + T(pt[1]) + Z(pt[2]) / 16; };
+          const order = parts.map((q, k) => [dk(q), k]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(r => parts[r[1]]);
+          put(boxP(T(lo[0]), T(lo[1]), T(hi[0]), T(hi[1]), Z(lo[2]), Z(hi[2])), () => {
+            for (const q of order) { const qc = tone(col(q.cor), q.tom || 1);
+              if (q.k === 'caixa') box(c, T(q.c[0] - q.a / 2), T(q.c[1] - q.d / 2), T(q.c[0] + q.a / 2), T(q.c[1] + q.d / 2), Z(q.c[2]), Z(q.c[2] + q.h), qc, tone(qc, 0.78), tone(qc, 1.08));
+              else if (q.k === 'bola') { const s = P(T(q.c[0]), T(q.c[1]), Z(q.c[2])); c.fillStyle = qc; c.beginPath(); c.ellipse(s[0], s[1], q.r * 5.657, Math.sqrt(8 * q.r * q.r + 9.24 * (q.ry || q.r) * (q.ry || q.r)), 0, 0, TAU); c.fill(); }
+              else if (q.k === 'haste') ln(c, P(T(q.a[0]), T(q.a[1]), Z(q.a[2])), P(T(q.b[0]), T(q.b[1]), Z(q.b[2])), qc, Math.max(0.5, q.r * 9));
+              else if (q.k === 'escudo') { const s = P(T(q.c[0]), T(q.c[1]), Z(q.c[2])); c.fillStyle = qc; c.beginPath(); c.ellipse(s[0], s[1], q.r * 4.47, q.r * 3.04, 0, 0, TAU); c.fill(); }
+              else if (q.k === 'espira') { // (its coils as the god's: a round of the tube's girth a turn, from the lowest up, by its tones)
+                for (let j = 0; j < q.voltas; j++) { const f = (j + 0.5) / q.voltas, Rr = q.R0 + (q.R1 - q.R0) * f, tt = q.t0 + (q.t1 - q.t0) * f; const s = P(T(q.c[0]), T(q.c[1]), Z(q.c[2] + q.t0 + (q.h - q.t1 - q.t0) * f));
+                  const rx = (Rr + tt) * 5.657; c.fillStyle = tone(col(q.cor), q.toms[j % q.toms.length]); c.beginPath(); c.ellipse(s[0], s[1], rx, rx * 0.5 + tt * 1.5, 0, 0, TAU); c.fill(); } }
+            }
+            if (golden(cc)) m.glow.push(P(x, y, z + hp * 0.7));
+          });
+          break;
+        }
+        case 'dragao': { const q0 = [T(e.p[0]), T(e.p[1]), Z(e.p[2])]; const sd = e.ao === 'v' ? -e.dir : e.dir;
+          put(boxP(q0[0] - 0.12, q0[1] - 0.12, q0[0] + 0.12, q0[1] + 0.12, q0[2], q0[2] + 5), () => { const q = P(...q0); dragon(c, [q[0] + sd, q[1] + 1], sd, col(e.cor || '#3a2616')); }); break; }
+        case 'braseiro': { const x = T(e.p[0]), y = T(e.p[1]), z = Z(e.p[2]), rr = (e.r || 0.3) * 5.657;
+          put(boxP(x - 0.08, y - 0.08, x + 0.08, y + 0.08, z, z + 2.6), () => { const b = P(x, y, z), t = P(x, y, z + 1.7); ln(c, b, t, '#4a3a2a', 0.6);
+            c.fillStyle = '#5a4030'; c.beginPath(); c.ellipse(t[0], t[1], rr, rr * 0.45, 0, 0, TAU); c.fill(); c.fillStyle = '#e26228'; c.beginPath(); c.ellipse(t[0], t[1] - 0.3, rr * 0.7, rr * 0.3, 0, 0, TAU); c.fill(); m.fires.push(P(x, y, z + 2.2)); }); break; }
+        case 'coluna': {
+          const x = T(e.c[0]), y = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1); const cl = col(e.cor[0]), cr = col(e.cor[1] || e.cor[0]);
+          put(prismP(roundG(x, y, r, 12), z0, z1), () => { cylinder(c, x, y, r, z0, z1, cl, cr, tone(cl, 1.08));
+            const sp = e.espiral; if (sp) { const rx = r * 22.63, pas = Z(sp.passo); c.strokeStyle = tone(cl, 0.78); c.lineWidth = Math.max(0.5, sp.w * 4);
+              for (let zz = Z(sp.y0); zz < z1 - pas * 0.5; zz += pas / 2) { const q = P(x, y, zz); c.beginPath(); c.moveTo(q[0] - rx, q[1]); c.lineTo(q[0] + rx, q[1] - pas * 0.5); c.stroke(); } } });
+          break;
+        }
+        // a standing stone: its front, its right face, its top falling to the left and the back; the serpent down its front
+        case 'pedra': {
+          const x = T(e.c[0]), y = T(e.c[1]), s0 = e.e / 4, s1 = e.e1 / 4, z0 = Z(e.y0); const S = [[-1, 1], [1, 1], [1, -1], [-1, -1]];
+          const zt = q => Z(e.y1 - (1 - q[0]) / 2 * e.cai[0] - (1 - q[1]) / 2 * e.cai[1]);
+          const lo = S.map(q => [x + q[0] * s0, y + q[1] * s0, z0]), hi = S.map(q => [x + q[0] * s1, y + q[1] * s1, zt(q)]);
+          put(hullP(lo.concat(hi).map(q => E3(...q)), BOXF), () => {
+            poly(c, [P(...lo[0]), P(...lo[1]), P(...hi[1]), P(...hi[0])], col(e.cor[0])); poly(c, [P(...lo[1]), P(...lo[2]), P(...hi[2]), P(...hi[1])], col(e.cor[1] || e.cor[0]));
+            poly(c, hi.map(q => P(...q)), tone(col(e.cor[0]), 1.08));
+            if (e.cobra) { const B = [[-0.55, 0.2], [0.75, 0.38], [-0.75, 0.62], [0.3, 0.8]]; const bz = t => [0, 1].map(k => (1 - t) ** 3 * B[0][k] + 3 * (1 - t) ** 2 * t * B[1][k] + 3 * (1 - t) * t * t * B[2][k] + t ** 3 * B[3][k]);
+              const zf = f => z0 + f * (Z(e.y1) - z0), at2 = (s, f) => { const hf = s0 + (s1 - s0) * f; return P(x + s * hf, y + hf, zf(f)); };
+              c.strokeStyle = col(e.cobra); c.lineWidth = 0.9; c.beginPath(); for (let j = 0; j <= 14; j++) { const q = bz(j / 14), s = at2(q[0], q[1]); if (j) c.lineTo(s[0], s[1]); else c.moveTo(s[0], s[1]); } c.stroke(); }
+          });
+          break;
+        }
+        // a stone wheel on its edge, facing the front: its back round in the rim's colour, its face, the painted rings and rays
+        case 'roda': {
+          const u = T(e.c[0]), v = T(e.c[1]), z = Z(e.y), r = e.r / 4, rz = e.r * ZPX, t = e.t / 8;
+          const at = (a, f, dv) => P(u + Math.cos(a) * r * f, v + dv, z + Math.sin(a) * rz * f);
+          const ring = (f, dv) => { const o2 = []; for (let k = 0; k < 32; k++) o2.push(at(k / 32 * TAU, f, dv)); return o2; };
+          put(boxP(u - r, v - t, u + r, v + t, z - rz, z + rz), () => {
+            poly(c, ring(1, -t), col(e.cor[0])); poly(c, ring(1, t), col(e.cor[1] || e.cor[0]));
+            const lw = (e.larg || 0.09) * e.r * 4; for (const [f, cc] of e.aneis || []) { c.strokeStyle = col(cc); c.lineWidth = Math.max(0.4, lw); c.beginPath(); const q = ring(f, t); c.moveTo(q[0][0], q[0][1]); for (const s of q) c.lineTo(s[0], s[1]); c.closePath(); c.stroke(); }
+            const ry = e.raios; if (ry) for (let k = 0; k < ry.n; k++) { const a = k / ry.n * TAU; poly(c, [at(a, ry.r0, t), at(a + ry.a, ry.r1, t), at(a - ry.a, ry.r1, t)], col(ry.cor)); }
+          });
+          break;
+        }
+        case 'flores': {
+          const n = e.n || 6, bb = (e.b || 0.13) * 5.657; const pts = []; const lo = [1e9, 1e9], hi = [-1e9, -1e9];
+          e.pts.forEach((q, j) => { for (let k = 0; k < n; k++) { const x = T(q[0] + Math.cos(k + j) * e.r), y = T(q[1] + Math.sin((k + j) * 1.7) * e.r * 0.6); pts.push([x, y, Z(e.y + (e.chato ? 0.03 : 0.1)), col(e.cor[(k + j) % e.cor.length])]);
+            lo[0] = Math.min(lo[0], x); lo[1] = Math.min(lo[1], y); hi[0] = Math.max(hi[0], x); hi[1] = Math.max(hi[1], y); } });
+          if (!pts.length) break; const zf = Z(e.y);
+          put(boxP(lo[0] - 0.03, lo[1] - 0.03, hi[0] + 0.03, hi[1] + 0.03, zf, zf + 1.2), () => { for (const q of pts) { const s = P(q[0], q[1], q[2]); c.fillStyle = q[3]; c.beginPath(); c.ellipse(s[0], s[1], bb, e.chato ? bb * 0.5 : bb * 0.8, 0, 0, TAU); c.fill(); } });
+          break;
+        }
+        case 'lamina': { const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z = Z(e.y); const V = [[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]];
+          put(flatP(V.map(q => E3(...q))), () => { poly(c, V.map(q => P(...q)), col(e.cor)); ln(c, P(x0 + (x1 - x0) * 0.2, y0 + (y1 - y0) * 0.3, z), P(x0 + (x1 - x0) * 0.5, y0 + (y1 - y0) * 0.3, z), 'rgba(255,255,255,0.35)', 0.6); }); break; }
+        case 'palmeira': { const q0 = [T(e.p[0]), T(e.p[1]), Z(e.p[2])], s = e.h * ZPX / 12;
+          put(boxP(q0[0] - 0.2 * s, q0[1] - 0.2 * s, q0[0] + 0.2 * s, q0[1] + 0.2 * s, q0[2], q0[2] + 13 * s), () => { const b = P(...q0); palm(c, b[0], b[1], s); }); break; }
+        case 'bandeira': { const q0 = [T(e.p[0]), T(e.p[1]), Z(e.p[2])], hp = e.h * ZPX;
+          put(lineP(E3(...q0), E3(q0[0], q0[1], q0[2] + hp)), () => { const b = P(...q0); flag(c, b[0], b[1], col(e.cor), hp); }); break; }
+        case 'bola': { const x = T(e.c[0]), y = T(e.c[1]), z = Z(e.c[2]), r = e.r / 4, ry = (e.ry || e.r) * ZPX;
+          put(boxP(x - r, y - r, x + r, y + r, z - ry, z + ry), () => { const s = P(x, y, z), rx = e.r * 5.657, rr = Math.sqrt(8 * e.r * e.r + 9.24 * (e.ry || e.r) * (e.ry || e.r)); const cc = col(e.cor);
+            c.fillStyle = cc; c.beginPath(); c.ellipse(s[0], s[1], rx, rr, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(0,0,0,0.16)'; c.beginPath(); c.ellipse(s[0] + rx * 0.35, s[1], rx * 0.55, rr * 0.9, 0, 0, TAU); c.fill(); }); break; }
+        case 'tora': { const a = [T(e.a[0]), T(e.a[1]), Z(e.a[2])], b = [T(e.b[0]), T(e.b[1]), Z(e.b[2])];
+          put(lineP(E3(...a), E3(...b)), () => ln(c, P(...a), P(...b), col(e.cor), Math.max(0.5, e.r * 9))); break; }
+        case 'tina': {
+          const x = T(e.c[0]), y = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1); const cc = col(e.cor);
+          put(prismP(roundG(x, y, r, 12), z0, z1), () => { cylinder(c, x, y, r, z0, z1, cc, tone(cc, 0.8), col(e.borda || e.cor));
+            const t = P(x, y, z1); if (e.agua) { c.fillStyle = col(e.agua); c.beginPath(); c.ellipse(t[0], t[1], r * 22.63 * 0.83, r * 11.31 * 0.83, 0, 0, TAU); c.fill(); }
+            for (let k = 0; k < (e.aros || 0); k++) { const q = P(x, y, z0 + (z1 - z0) * (k + 1) / ((e.aros || 0) + 1)); c.strokeStyle = col(e.aro || '#3a3a40'); c.lineWidth = 0.5; c.beginPath(); c.ellipse(q[0], q[1], r * 22.63, r * 11.31, 0, 0, Math.PI); c.stroke(); } });
+          break;
+        }
+        case 'pano': { const V = e.p.map(q => [T(q[0]), T(q[1]), Z(q[2])]); const pl = planeOf(V.map(q => E3(...q)), null); const cc = col(e.cor);
+          put(flatP(V.map(q => E3(...q))), () => poly(c, V.map(q => P(...q)), pl && pl.n[0] + pl.n[1] + pl.n[2] < 0 ? tone(cc, 0.8) : cc)); break; }
+        case 'letreiro': { const q0 = [T(e.p[0]), T(e.p[1]), Z(e.p[2])];
+          put(boxP(q0[0], q0[1] - 0.05, q0[0] + 0.16, q0[1] + 0.05, q0[2] - 2.2, q0[2]), () => { const a = P(...q0), b = P(q0[0] + 0.15, q0[1], q0[2]); ln(c, a, b, '#4a3422', 0.8);
+            const mq = P(q0[0] + 0.09, q0[1], q0[2] - 0.3); poly(c, [[mq[0] - 1.6, mq[1]], [mq[0] + 1.6, mq[1] + 0.8], [mq[0] + 1.6, mq[1] + 2.4], [mq[0] - 1.6, mq[1] + 1.6]], col(e.cor));
+            if (e.moeda) { c.fillStyle = col(e.moeda); c.beginPath(); c.arc(mq[0], mq[1] + 1.2, 0.6, 0, TAU); c.fill(); } }); break; }
+        case 'bacia': {
+          const x = T(e.c[0]), y = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1), cc = col(e.cor);
+          put(prismP(roundG(x, y, r, 12), z0, z1), () => { cylinder(c, x, y, r, z0, z1, cc, tone(cc, 0.82), tone(cc, 1.05));
+            const ri = Math.max(0.01, (e.r - e.t) / 4), w = P(x, y, z1 - Z(e.nivel || 0.1)); c.fillStyle = col(e.agua || '#5aaed0'); c.beginPath(); c.ellipse(w[0], w[1], ri * 22.63, ri * 11.31, 0, 0, TAU); c.fill();
+            c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.ellipse(w[0] - ri * 6, w[1] - ri * 2, ri * 6, ri * 2, 0, 0, TAU); c.fill(); });
+          break;
+        }
+        case 'banco': {
+          const x0 = T(e.r[0]), y0 = T(e.r[1]), x1 = T(e.r[2]), y1 = T(e.r[3]), z = Z(e.y), zp = Math.max(0, z - 0.25); const along = x1 - x0 >= y1 - y0, len = along ? x1 - x0 : y1 - y0, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
+          const wood = col(e.cor), stone = col(e.pes || 'base0');
+          put(boxP(x0, y0, x1, y1, 0, z), () => { for (const sg of [-1, 1]) { const o2 = sg * (len / 2 - 0.05); if (along) box(c, xm + o2 - 0.0175, y0 + 0.0075, xm + o2 + 0.0175, y1 - 0.0075, 0, zp, stone, tone(stone, 0.8), stone); else box(c, x0 + 0.0075, ym + o2 - 0.0175, x1 - 0.0075, ym + o2 + 0.0175, 0, zp, stone, tone(stone, 0.8), stone); }
+            box(c, x0, y0, x1, y1, zp, z, wood, tone(wood, 0.8), tone(wood, 1.1)); });
+          break;
+        }
+        case 'morro': { const x = T(e.c[0]), y = T(e.c[1]), r = e.r / 4, z0 = Z(e.y0), z1 = Z(e.y1);
+          put(prismP(roundG(x, y, r, 12), z0, z1), () => { const b = P(x, y, z0); dome(c, b[0], b[1], r * 22.63, z1 - z0, col(e.cor[0]), col(e.cor[1] || e.cor[0]), null);
+            for (let k = 0; k < (e.veios || 0); k++) { const q = P(x + Math.cos(k * 2.4) * r * 0.5, y + Math.sin(k * 2.4) * r * 0.5, z0 + (z1 - z0) * (0.2 + 0.5 * G.hash(k + 5))); c.fillStyle = '#a8522e'; c.fillRect(q[0] - 0.5, q[1] - 0.5, 1, 1); } }); break; }
+        // a turned shape — a pot, a granary of clay, a cap of thatch —: its bands from its foot up, each the front of the round
+        // between two of its rings, lighter up it; its top where its last ring is wide
+        case 'vaso': {
+          const x = T(e.c[0]), y = T(e.c[1]), pf = e.perfil, zb = Z(e.y0); const hi = col(e.cor[0]), lo = e.cor[1] ? col(e.cor[1]) : tone(hi, 0.8); const rmax = Math.max(...pf.map(q => q[0])) / 4;
+          put(prismP(roundG(x, y, rmax, 12), zb, zb + Z(pf[pf.length - 1][1])), () => {
+            for (let j = 0; j + 1 < pf.length; j++) { const [r0, d0] = pf[j], [r1, d1] = pf[j + 1]; const a = P(x, y, zb + Z(d0)), b = P(x, y, zb + Z(d1)); const ra = r0 / 4 * 22.63, rb = r1 / 4 * 22.63;
+              c.fillStyle = mixc(lo, hi, (j + 0.5) / (pf.length - 1)); c.beginPath(); c.ellipse(a[0], a[1], Math.max(0.01, ra), Math.max(0.01, ra / 2), 0, 0, Math.PI); c.lineTo(b[0] - rb, b[1]); c.ellipse(b[0], b[1], Math.max(0.01, rb), Math.max(0.01, rb / 2), 0, Math.PI, 0, true); c.closePath(); c.fill(); }
+            const [rt, dt] = pf[pf.length - 1]; if (rt > 0.02) { const t = P(x, y, zb + Z(dt)); c.fillStyle = hi; c.beginPath(); c.ellipse(t[0], t[1], rt / 4 * 22.63, rt / 4 * 11.31, 0, 0, TAU); c.fill(); } });
+          break;
+        }
+        case 'aro': { const u = T(e.c[0]), v = T(e.c[1]), z = Z(e.c[2]), r = e.r / 4, rz = e.r * ZPX;
+          put(boxP(u - r, v - 0.03, u + r, v + 0.03, z - rz, z + rz), () => { c.strokeStyle = col(e.cor); c.lineWidth = Math.max(0.6, e.t * 9); c.beginPath(); for (let k = 0; k <= 16; k++) { const a = k / 16 * TAU; const s = P(u + Math.cos(a) * r, v, z + Math.sin(a) * rz); if (k) c.lineTo(s[0], s[1]); else c.moveTo(s[0], s[1]); } c.stroke(); }); break; }
+        // the arcaded ring round an arena (the Colosseum's facade, D-107): a part each bay, as the drum's — its outer face where it
+        // faces the eye, in the gradient from the god's left to his right (its storeys' arches dark, the ground one of a way in
+        // through to the inside; the attic's windows; the cornices between the storeys; the order at its piers), the inner face
+        // of the far bays from where the seats stop leaning on it, with its arches, and the walk on top —; its back half before
+        // what is inside its round, its front half after (the ring rule)
+        case 'arcada': {
+          const N = e.pts.length, O = e.pts.map(q => [T(q[0]), T(q[1])]), I = e.pts1.map(q => [T(q[0]), T(q[1])]);
+          const z0 = Z(e.y0), z1 = Z(e.y1), zi = Z(e.dentro ? e.dentro.y0 : e.y0); const cL = col(e.cor[0]), cR = col(e.cor[1] || e.cor[0]);
+          const esc = e.escuro ? col(e.escuro) : '#28201a', dark = G.rgb(rgbOf(esc), 0.55); const open = new Set(e.abertos || []), ss = e.andares || [];
+          for (let k = 0; k < N; k++) {
+            const a = O[k], b = O[(k + 1) % N], ai = I[k], bi = I[(k + 1) % N]; const bayM = Math.hypot(b[0] - a[0], b[1] - a[1]) * 4;
+            let nx = b[1] - a[1], ny = a[0] - b[0]; const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl; // (its outward normal: away from its inner face)
+            if (nx * (a[0] + b[0] - ai[0] - bi[0]) + ny * (a[1] + b[1] - ai[1] - bi[1]) < 0) { nx = -nx; ny = -ny; }
+            const fwd = nx + ny > 1e-9, back = nx + ny < -1e-9, tn = mixc(cL, cR, (1 + (nx - ny) / Math.SQRT2) / 2);
+            const on = (p0, p1) => (s, z) => P(p0[0] + (p1[0] - p0[0]) * s, p0[1] + (p1[1] - p0[1]) * s, z);
+            // (a face's storeys from zf up: the arches — the ground one of a way in the passage's dark —, the windows of every so
+            // many bays, the order at its two piers, the cornice over each storey but the last)
+            const storeys = (at, zf, tf, way) => ss.forEach((sd, j) => {
+              const zb = Z(sd.y0), zc = Z(sd.y1), th = zc - zb; if (zc <= zf + 1e-6) return;
+              if (sd.arco) { const w = sd.arco.w, za = Math.max(zf, zb + sd.arco.a * th), zt = zb + sd.arco.b * th, zh = Math.max(za, zt - w * bayM / 2 * ZPX);
+                const pts = [at(0.5 - w / 2, za), at(0.5 - w / 2, zh)]; for (let q = 1; q < 8; q++) { const f = q / 8 * Math.PI; pts.push(at(0.5 - Math.cos(f) * w / 2, zh + Math.sin(f) * (zt - zh))); }
+                pts.push(at(0.5 + w / 2, zh), at(0.5 + w / 2, za)); poly(c, pts, way && j === 0 ? esc : dark); }
+              if (sd.janela && k % (sd.janela.cada || 1) === 0) { const hw = Math.min(0.45, sd.janela.w / 2 / bayM); poly(c, [at(0.5 - hw, zb + sd.janela.a * th), at(0.5 + hw, zb + sd.janela.a * th), at(0.5 + hw, zb + sd.janela.b * th), at(0.5 - hw, zb + sd.janela.b * th)], dark); }
+              if (sd.ordem) for (const s of [0.05, 0.95]) ln(c, at(s, Math.max(zf, zb)), at(s, zc - 0.6), tone(tf, sd.ordem === 'pilastra' ? 1.05 : 1.1), sd.ordem === 'pilastra' ? 0.5 : 0.7);
+              if (j < ss.length - 1) { const cz = Math.min(th * 0.08, 0.22 * ZPX); poly(c, [at(0, zc - cz), at(1, zc - cz), at(1, zc), at(0, zc)], tone(tf, 1.07)); ln(c, at(0, zc - cz - 0.3), at(1, zc - cz - 0.3), 'rgba(0,0,0,0.15)', 0.5); }
+            });
+            const V = [a, b, bi, ai].map(q => [q[0], q[1], z0 / 16]).concat([a, b, bi, ai].map(q => [q[0], q[1], z1 / 16]));
+            const part = put(hullP(V, BOXF), () => {
+              if (fwd) { const at = on(a, b); poly(c, [at(0, z0), at(1, z0), at(1, z1), at(0, z1)], tn); storeys(at, z0, tn, open.has(k)); }
+              else if (back) { const at = on(ai, bi), tb = tone(tn, 0.78); poly(c, [at(0, zi), at(1, zi), at(1, z1), at(0, z1)], tb); storeys(at, zi, tb, false); }
+              poly(c, [P(a[0], a[1], z1), P(b[0], b[1], z1), P(bi[0], bi[1], z1), P(ai[0], ai[1], z1)], tone(tn, 1.06));
+              if (fwd) ln(c, P(a[0], a[1], z1), P(b[0], b[1], z1), 'rgba(255,255,255,0.35)', 0.7);
+            }, k);
+            part.ring = { id: i, poly: O, fwd };
+          }
+          break;
+        }
+        // the floor of an arena whose outline is no circle (D-107): its sand, the openings in it cut through — what is under them
+        // shows: the flight up from the undercroft — and their far edges its thickness
+        case 'areia': {
+          const O = e.pts.map(q => [T(q[0]), T(q[1])]), z = Z(e.y), zd = Z(e.y - (e.d || 0)), cc = col(e.cor); const holes = (e.buracos || []).map(h => h.map(T));
+          const q = put(prismP(O, zd, z), () => {
+            c.fillStyle = cc; c.beginPath(); O.forEach((p0, k) => { const s = P(p0[0], p0[1], z); if (k) c.lineTo(s[0], s[1]); else c.moveTo(s[0], s[1]); }); c.closePath();
+            for (const h of holes) { const r = [P(h[0], h[1], z), P(h[0], h[3], z), P(h[2], h[3], z), P(h[2], h[1], z)]; c.moveTo(r[0][0], r[0][1]); for (let k = 1; k < 4; k++) c.lineTo(r[k][0], r[k][1]); c.closePath(); }
+            c.fill('evenodd');
+            for (const h of holes) { poly(c, [P(h[0], h[1], zd), P(h[2], h[1], zd), P(h[2], h[1], z), P(h[0], h[1], z)], tone(cc, 0.72)); poly(c, [P(h[0], h[1], zd), P(h[0], h[3], zd), P(h[0], h[3], z), P(h[0], h[1], z)], tone(cc, 0.8)); }
+          });
+          q.floor = true;
+          break;
+        }
+        default: A.formMissing.add(e.k);
+      }
+    });
+    return out;
+  }
+  // the parts in the order the god paints them — a part before another it is behind; else the form's order — and how the
+  // sorting went (for the proofs: the parts, the pairs that meet on the screen, the «behind»s found, the rings broken)
+  const FEP = 1e-4;
+  // (A's points out of a plane of B — all on its outer side, some off it —: 1, B first, where the plane faces the eye — A is
+  // in front —; -1, A first, where it faces away)
+  function sepBy(A, B) {
+    for (const pl of B.PL) { const f = pl.n[0] + pl.n[1] + pl.n[2]; if (f > -1e-6 && f < 1e-6) continue; let all = true, some = false;
+      for (const v of A.V) { const s = pl.n[0] * v[0] + pl.n[1] * v[1] + pl.n[2] * v[2] - pl.d; if (s < -FEP) { all = false; break; } if (s > FEP) some = true; }
+      if (all && some) return f > 0 ? 1 : -1; }
+    return 0;
+  }
+  // (inside a ring: within the round of a drum; within the outline of an arcade — convex, round it from +u toward +v)
+  const inPoly = (v, P2) => { for (let k = 0; k < P2.length; k++) { const a = P2[k], b = P2[(k + 1) % P2.length]; const l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (l > 1e-9 && ((b[0] - a[0]) * (v[1] - a[1]) - (b[1] - a[1]) * (v[0] - a[0])) / l < -0.03) return false; } return true; };
+  const inRound = (Q, rg) => !(Q.ring && Q.ring.id === rg.id) && Q.V.every(v => (rg.poly ? inPoly(v, rg.poly) : Math.hypot(v[0] - rg.c[0], v[1] - rg.c[1]) <= rg.r + 0.03));
+  // (in a bowl: within the round of its lowest row — a piece of one, within its arc too, where another piece of the same round
+  // may stand: its podium)
+  const inArc = (v, bw) => { const dx = v[0] - bw.c[0], dy = v[1] - bw.c[1]; if (Math.hypot(dx, dy) < 0.02) return true; const a = Math.atan2(dy, dx), m = (bw.a0 + bw.a1) / 2, h = (bw.a1 - bw.a0) / 2 + 0.02; return Math.abs(((a - m) % TAU + TAU + Math.PI) % TAU - Math.PI) <= h; };
+  const inBowl = (Q, bw) => (bw.a0 === undefined ? !Q.bowl : !Q.bowl || Q.bowl.a0 !== undefined) && Q.V.every(v => Math.hypot(v[0] - bw.c[0], v[1] - bw.c[1]) <= bw.r + 0.04 && (bw.a0 === undefined || inArc(v, bw)));
+  // -1: A first; 1: B first; 0: no word
+  function paintFirst(A, B) {
+    if (A.d1 <= B.d0 + FEP) return -1; if (B.d1 <= A.d0 + FEP) return 1;
+    for (let k = 0; k < 3; k++) { if (A.hi[k] <= B.lo[k] + FEP && A.lo[k] < B.lo[k] - FEP) return -1; if (B.hi[k] <= A.lo[k] + FEP && B.lo[k] < A.lo[k] - FEP) return 1; }
+    let r = sepBy(A, B); if (r) return r; r = sepBy(B, A); if (r) return -r;
+    if (A.ring && inRound(B, A.ring)) return A.ring.fwd ? 1 : -1; if (B.ring && inRound(A, B.ring)) return B.ring.fwd ? -1 : 1;
+    if (A.bowl && inBowl(B, A.bowl)) return A.bowl.fwd ? 1 : -1; if (B.bowl && inBowl(A, B.bowl)) return B.bowl.fwd ? -1 : 1;
+    // (an arena's floor and a piece of the seats round it: the piece whose rows rise toward the eye after it, the others before)
+    if (A.bowl && A.bowl.a0 !== undefined && B.floor) return A.bowl.fwd ? 1 : -1; if (B.bowl && B.bowl.a0 !== undefined && A.floor) return B.bowl.fwd ? -1 : 1;
+    return 0;
+  }
+  // (two outlines on the screen cover each other: no line between them)
+  function meet2(Pa, Qb) {
+    for (const R of [Pa, Qb]) for (let k = 0; k < R.length; k++) { const a = R[k], b = R[(k + 1) % R.length]; const nx = b[1] - a[1], ny = a[0] - b[0]; const l = Math.hypot(nx, ny); if (l < 1e-9) continue;
+      let p0 = 1e18, p1 = -1e18, q0 = 1e18, q1 = -1e18; for (const v of Pa) { const s = (v[0] * nx + v[1] * ny) / l; if (s < p0) p0 = s; if (s > p1) p1 = s; } for (const v of Qb) { const s = (v[0] * nx + v[1] * ny) / l; if (s < q0) q0 = s; if (s > q1) q1 = s; }
+      if (p1 <= q0 + 0.05 || q1 <= p0 + 0.05) return false; }
+    return true;
+  }
+  function formOrder(parts) {
+    const n = parts.length, st = { parts: n, pairs: 0, edges: 0, rings: 0, cut: [] }; if (n < 2) return { order: parts.slice(), st };
+    for (const q of parts) {
+      let sx0 = 1e9, sy0 = 1e9, sx1 = -1e9, sy1 = -1e9, d0 = 1e9, d1 = -1e9; const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9], sp = [];
+      for (const v of q.V) { const sx = (v[0] - v[1]) * 16, sy = (v[0] + v[1]) * 8 - v[2] * 16, d = v[0] + v[1] + v[2]; sp.push([sx, sy]);
+        if (sx < sx0) sx0 = sx; if (sx > sx1) sx1 = sx; if (sy < sy0) sy0 = sy; if (sy > sy1) sy1 = sy; if (d < d0) d0 = d; if (d > d1) d1 = d;
+        for (let k = 0; k < 3; k++) { if (v[k] < lo[k]) lo[k] = v[k]; if (v[k] > hi[k]) hi[k] = v[k]; } }
+      q.sb = [sx0 - 0.6, sy0 - 0.6, sx1 + 0.6, sy1 + 0.6]; q.d0 = d0; q.d1 = d1; q.lo = lo; q.hi = hi; q.o2 = hull2(sp);
+    }
+    // (the pairs whose boxes on the screen meet: by cells of 16 px)
+    const CS = 16, cells = new Map(); parts.forEach((q, k) => { for (let gy = Math.floor(q.sb[1] / CS); gy <= Math.floor(q.sb[3] / CS); gy++) for (let gx = Math.floor(q.sb[0] / CS); gx <= Math.floor(q.sb[2] / CS); gx++) { const key = gx * 100003 + gy; let l = cells.get(key); if (!l) cells.set(key, l = []); l.push(k); } });
+    const seen = new Set(), adj = parts.map(() => []), deg = new Int32Array(n);
+    for (const l of cells.values()) for (let x = 0; x < l.length; x++) for (let y = x + 1; y < l.length; y++) {
+      const a = l[x], b = l[y]; const key = a * n + b; if (seen.has(key)) continue; seen.add(key);
+      const A = parts[a], B = parts[b]; if (A.sb[2] < B.sb[0] || B.sb[2] < A.sb[0] || A.sb[3] < B.sb[1] || B.sb[3] < A.sb[1] || !meet2(A.o2, B.o2)) continue;
+      st.pairs++; const r = paintFirst(A, B); if (r < 0) { adj[a].push(b); deg[b]++; st.edges++; } else if (r > 0) { adj[b].push(a); deg[a]++; st.edges++; }
+    }
+    // (Kahn's, the form's order first among the free; a ring of «behind»s broken at the form's first)
+    const heap = []; const push = k => { heap.push(k); let i = heap.length - 1; while (i > 0) { const pI = (i - 1) >> 1; if (heap[pI] <= heap[i]) break; [heap[pI], heap[i]] = [heap[i], heap[pI]]; i = pI; } };
+    const pop = () => { const top0 = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let s = i; if (l < heap.length && heap[l] < heap[s]) s = l; if (r < heap.length && heap[r] < heap[s]) s = r; if (s === i) break; [heap[s], heap[i]] = [heap[i], heap[s]]; i = s; } } return top0; };
+    for (let k = 0; k < n; k++) if (!deg[k]) push(k);
+    const order = [], done = new Uint8Array(n); let next = 0;
+    while (order.length < n) {
+      if (!heap.length) { while (done[next]) next++; push(next); st.rings++; if (st.cut.length < 24) st.cut.push([parts[next].i, parts[next].j]); } // (where: its piece and part, for the proofs)
+      const k = pop(); if (done[k]) continue; done[k] = 1; order.push(parts[k]);
+      for (const j of adj[k]) if (--deg[j] === 0 && !done[j]) push(j);
+    }
+    return { order, st };
+  }
+  // a form painted into a picture: its parts, back to front (o.noDoor: without its door); how it went — for the proofs
+  A.formPaint = function (c, m, F, st, o) {
+    const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
+    const parts = formParts(c, m, F, st, o || {}); const r = formOrder(parts); r.st.hidden = parts.hidden; for (const q of r.order) q.paint();
+    r.st.ms = (typeof performance !== 'undefined' ? performance.now() : 0) - t0; A.formStats = r.st; return r.st;
+  };
+  // the god's picture of a step from its form, n tiles a side (its door left out where the view does not see it — L-264 —, as
+  // the drawings of before): the sprite of the type, people and size, painted once and kept (Art's cache — the painter has no
+  // chance: a big one may be let go and painted again, the same, Art.BIG)
+  A.formSprite = function (type, style, n, noDoor) {
+    const Fo = G.Forma; const st = PAL[style] ? style : 'classico'; const F = Fo && Fo.of(type, st, n); if (!F) return null;
+    const key = A.formKey(type, st, F.n, noDoor);
+    const [w, h, ax, ay] = dims(F.n, F.n, Math.ceil(F.top * ZPX) + 12);
+    return Art.sprite(key, w, h, ax, ay, (c, m) => A.formPaint(c, m, F, st, { noDoor }), true);
+  };
+  A.formKey = (type, st, n, noDoor) => 'f-' + type + st + n + (noDoor ? '|c' : '');
+  A.formCol = (st, s) => fcol(PAL[st] || PAL.classico, s); // (for the proofs: a form's colour as the god's painter reads it, L-564)
+  // the top of the god's picture of a step straight over the anchor — the middle of its lot —, px: the highest point of its
+  // solid parts on that column of the screen (where a thing perches on the building: a stork's nest — over a palace of
+  // courtyards, its back wing, not the courtyard), the same in the four views (the picture turns only by its mirror, and this
+  // column is its axis); no mast, no flag, no line. Of the form alone: kept with it
+  const tops = new WeakMap();
+  A.formTop0 = function (type, style, n) {
+    const Fo = G.Forma; const st = PAL[style] ? style : 'classico'; const F = Fo && Fo.of(type, st, n); if (!F) return null;
+    let top = tops.get(F); if (top !== undefined) return top; top = 0;
+    for (const q of formParts(null, { glow: [], win: [], fires: [] }, F, st, {})) {
+      if (!q.PL || q.PL.length < 3) continue; // (a solid: a flat part lies on one, a line is none)
+      const o = hull2(q.V.map(v => [(v[0] - v[1]) * 16, (v[0] + v[1]) * 8 - v[2] * 16]));
+      for (let k = 0; k < o.length; k++) { const a = o[k], b = o[(k + 1) % o.length]; if ((a[0] > 0) === (b[0] > 0) && a[0] !== 0 && b[0] !== 0) continue;
+        const y = Math.abs(b[0] - a[0]) < 1e-9 ? Math.min(a[1], b[1]) : a[1] + (b[1] - a[1]) * (0 - a[0]) / (b[0] - a[0]); top = Math.max(top, -y); }
+    }
+    tops.set(F, top); return top;
+  };
+  // (a size that is not its type's classic one: a step drawn from its form — none given, the classic)
+  A.sized = (type, n) => n !== undefined && n !== null && !!G.BDEF[type] && n !== G.BDEF[type].w;
+
+  // ------------------------------ dispatch ------------------------------
+  const MAXZ = { quarteirao: 84, hut: 30, house: 40, sobrado: 52, insula: 64, temple: 64, monument: 72, storehouse: 44, workshop: 46, quartel: 44, torre: 54, praca: 44, mercado: 38, celeiro: 44, biblioteca: 44, teatro: 56, banhos: 50, palacio: 72, doca: 36, aqueduto: 36, maravilha: 100 };
+  const NEW = { quarteirao: 1, sobrado: 1, insula: 1, praca: 1, mercado: 1, celeiro: 1, biblioteca: 1, teatro: 1, banhos: 1, palacio: 1, doca: 1, aqueduto: 1, maravilha: 1, temple: 1 }; // (the temple: the Greek's — D-093)
+  // later files add building types of their own with the same drawing kit
+  A.EXT = {};
+  A.kit = () => ({ longhouse, stepPyr, treads, P, poly, ln, walls, top, box, onL, onR, door, shade, roof, hall, column, colonnade, steps, flag, palm, jar, barrel, awning, stall, statue, dome, tree, basin, pave, band, parapet, plinth, winsL, winsR, gableX, gableY, hip, pal, TAU });
+  // (noDoor: the picture without its door — its door is on a side the view does not see: L-264; n: the building's lot, b.w —
+  // a step of another size than its type's classic one is painted from its form, D-106 —, none: the classic)
+  A.building = function (type, v, style, extra, noDoor, n) {
+    if (A.sized(type, n)) return A.formSprite(type, style, n, noDoor);
+    NODOOR = !!noDoor;
+    try { return building(type, v, style, extra, noDoor ? '|c' : ''); } finally { NODOOR = false; }
+  };
+  function building(type, v, style, extra, kd) {
+    const X = A.EXT[type];
+    if (X) {
+      const st = PAL[style] ? style : 'classico'; const def = G.BDEF[type]; if (!def) return null;
+      const key = 'x-' + type + (v || 0) + st + (extra ? extra.join(',') : '') + kd;
+      const [w, h, ax, ay] = dims(def.w, def.h, X.maxz);
+      return Art.sprite(key, w, h, ax, ay, (c, m) => X.draw(c, m, pal(st), st, v || 0, extra));
+    }
+    const st = PAL[style] ? style : 'classico';
+    if (st === 'classico' && !NEW[type]) return null; // the original drawings
+    if (type === 'monument' && st === 'egipcio') return null; // the obelisk is already Egyptian
+    if (type === 'torre' && st === 'nordico') return null; // a timber watchtower is already Norse
+    const def = G.BDEF[type]; if (!def || !MAXZ[type]) return null;
+    const key = 'a-' + type + (v || 0) + st + (extra ? extra.join(',') : '') + kd;
+    const grow = type === 'doca' ? 1.6 : 0;
+    const [w, h, ax, ay] = dims(def.w + grow * 2, def.h + grow * 2, MAXZ[type]);
+    const p = pal(st);
+    return Art.sprite(key, w, h, ax, ay, (c, m) => {
+      switch (type) {
+        case 'hut': hut(c, m, p, st, v || 0); break;
+        case 'house': townhouse(c, m, p, st, v || 0, 1); break;
+        case 'sobrado': townhouse(c, m, p, st, v || 0, 2); break;
+        case 'insula': townhouse(c, m, p, st, v || 0, st === 'romano' ? 4 : 3); break;
+        case 'quarteirao': quarteirao(c, m, p, st, v || 0); break;
+        case 'temple': temple(c, m, p, st); break;
+        case 'monument': monument(c, m, p, st); break;
+        case 'storehouse': storehouse(c, m, p, st); break;
+        case 'workshop': workshop(c, m, p, st); break;
+        case 'quartel': quartel(c, m, p, st); break;
+        case 'torre': torre(c, m, p, st); break;
+        case 'praca': praca(c, m, p, st); break;
+        case 'mercado': mercado(c, m, p, st); break;
+        case 'celeiro': celeiro(c, m, p, st); break;
+        case 'biblioteca': biblioteca(c, m, p, st); break;
+        case 'teatro': teatro(c, m, p, st); break;
+        case 'banhos': banhos(c, m, p, st); break;
+        case 'palacio': palacio(c, m, p, st); break;
+        case 'doca': doca(c, m, p, st, extra); break;
+        case 'aqueduto': aqueduto(c, m, p, st); break;
+        case 'maravilha': maravilha(c, m, p, st); break;
+      }
+    });
+  }
+
+  A.plazaColor = st => st === 'nordico' ? '#86a84e' : st === 'egipcio' ? '#e2cfa2' : st === 'asteca' ? '#e0d6c0' : st === 'romano' ? '#d8cbb0' : '#ddd6c6';
+
+  // ------------------------------ aqueduct arches ------------------------------
+  A.arch = function (dir, style) {
+    const p = pal(style); const H = 20;
+    return Art.sprite('aqa-' + dir + style, 44, 48, 22, 38, (c) => {
+      const stone = style === 'nordico' ? ['#7a5a3c', '#5e452e', '#8a6a48'] : style === 'egipcio' ? [p.wl, p.wr, p.top] : style === 'asteca' ? [p.wl, p.wr, p.top] : ['#d8c8a8', '#b09c7c', '#e4d6ba'];
+      if (dir === 'c') { box(c, -0.12, -0.12, 0.12, 0.12, 0, H, stone[0], stone[1], stone[2]); top(c, -0.1, -0.1, 0.1, 0.1, H + 0.1, '#4a9ac0'); return; }
+      const X = dir === 'x';
+      const q = (a, z) => X ? P(a, 0.1, z) : P(0.1, a, z);
+      const face = X ? stone[0] : stone[1];
+      // two half piers
+      if (X) { box(c, -0.5, -0.1, -0.38, 0.1, 0, H - 4, stone[0], stone[1], stone[2]); box(c, 0.38, -0.1, 0.5, 0.1, 0, H - 4, stone[0], stone[1], stone[2]); }
+      else { box(c, -0.1, -0.5, 0.1, -0.38, 0, H - 4, stone[0], stone[1], stone[2]); box(c, -0.1, 0.38, 0.1, 0.5, 0, H - 4, stone[0], stone[1], stone[2]); }
+      // the arch with its spandrels
+      const pts = [q(-0.38, 9)];
+      for (let k = 0; k <= 12; k++) { const t = k / 12 * Math.PI; pts.push(q(-0.38 * Math.cos(t), 9 + 6 * Math.sin(t))); }
+      pts.push(q(0.5, 9)); pts.push(q(0.5, H - 3)); pts.push(q(-0.5, H - 3)); pts.push(q(-0.5, 9));
+      poly(c, pts, face);
+      // channel on top
+      if (X) box(c, -0.5, -0.12, 0.5, 0.12, H - 3, H, stone[0], stone[1], stone[2]); else box(c, -0.12, -0.5, 0.12, 0.5, H - 3, H, stone[0], stone[1], stone[2]);
+      if (X) top(c, -0.5, -0.06, 0.5, 0.06, H + 0.1, '#4a9ac0'); else top(c, -0.06, -0.5, 0.06, 0.5, H + 0.1, '#4a9ac0');
+      c.strokeStyle = 'rgba(0,0,0,0.12)'; c.lineWidth = 0.4; ln(c, q(-0.5, H - 3), q(0.5, H - 3), 'rgba(0,0,0,0.12)', 0.4);
+    });
+  };
+
+  // ------------------------------ people of each culture ------------------------------
+  function l2(c, x0, y0, x1, y1) { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); }
+  // weapons and shields carried by warriors (drawn in the villager's local space)
+  A.arms = function (c, v) {
+    const civ = v._civ, fc = v._fc || '#8a3a2a';
+    if (v.elite === 'carro') { // war chariot: box, wheel and horse
+      c.fillStyle = '#8a5a34'; c.fillRect(-3.4, -5.4, 5.2, 3.2); c.fillStyle = '#e8c24a'; c.fillRect(-3.4, -5.4, 5.2, 0.7);
+      c.fillStyle = '#4a3020'; c.beginPath(); c.arc(-1, -1.8, 2.1, 0, TAU); c.fill(); c.fillStyle = '#c8a060'; c.beginPath(); c.arc(-1, -1.8, 0.6, 0, TAU); c.fill();
+      c.fillStyle = '#6a4a30'; c.beginPath(); c.ellipse(6.5, -5.2, 3.2, 1.9, 0, 0, TAU); c.fill(); c.fillRect(8.4, -8, 1.8, 3); c.beginPath(); c.ellipse(10.2, -8.2, 1.5, 1, 0.3, 0, TAU); c.fill();
+      c.strokeStyle = '#4a3020'; c.lineWidth = 0.7; for (const x of [4.4, 5.6, 7.6, 8.6]) l2(c, x, -3.8, x + 0.3, -0.2);
+      l2(c, 1.8, -4, 4, -5);
+    }
+    if (v.arm === 'arco') {
+      c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.7; c.beginPath(); c.arc(2.6, -8, 4.6, -1.25, 1.25); c.stroke();
+      c.strokeStyle = 'rgba(240,235,220,0.8)'; c.lineWidth = 0.3; l2(c, 2.6 + Math.cos(-1.25) * 4.6, -8 + Math.sin(-1.25) * 4.6, 2.6 + Math.cos(1.25) * 4.6, -8 + Math.sin(1.25) * 4.6);
+      c.fillStyle = '#7a5230'; c.fillRect(-2.9, -10.5, 1.2, 4.5); c.fillStyle = '#e8e0c8'; c.fillRect(-2.8, -11.5, 0.3, 1.2); c.fillRect(-2.3, -11.7, 0.3, 1.2);
+      return;
+    }
+    switch (civ) {
+      case 'grego':
+        c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.65; l2(c, 1.7, -17, 1.7, -0.5);
+        c.fillStyle = '#c4c8d0'; c.beginPath(); c.moveTo(1.05, -17); c.lineTo(1.7, -19.2); c.lineTo(2.35, -17); c.fill();
+        c.fillStyle = '#c9a24a'; c.beginPath(); c.arc(-1.9, -6.6, 2.9, 0, TAU); c.fill();
+        c.fillStyle = fc; c.beginPath(); c.arc(-1.9, -6.6, 1.6, 0, TAU); c.fill();
+        c.strokeStyle = '#8a6a2a'; c.lineWidth = 0.4; c.beginPath(); c.arc(-1.9, -6.6, 2.9, 0, TAU); c.stroke();
+        return;
+      case 'romano':
+        c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.6; l2(c, 1.8, -15, 1.8, -1);
+        c.fillStyle = '#9aa0a8'; c.beginPath(); c.moveTo(1.3, -15); c.lineTo(1.8, -17.4); c.lineTo(2.3, -15); c.fill();
+        c.fillStyle = '#a8322a'; c.fillRect(-4, -10.2, 3.6, 7.6);
+        c.strokeStyle = '#e0b84a'; c.lineWidth = 0.45; c.strokeRect(-4, -10.2, 3.6, 7.6);
+        c.fillStyle = '#e0b84a'; c.beginPath(); c.arc(-2.2, -6.4, 0.7, 0, TAU); c.fill();
+        return;
+      case 'nordico':
+        c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.7; l2(c, 1.8, -12, 2.2, -4.5);
+        c.fillStyle = '#9aa0a8'; c.beginPath(); c.moveTo(1.6, -12.4); c.quadraticCurveTo(4.2, -12.6, 4, -9.6); c.lineTo(2, -10.4); c.fill();
+        if (v.elite === 'berserker') return;
+        c.fillStyle = '#8a6038'; c.beginPath(); c.arc(-1.9, -6.6, 2.8, 0, TAU); c.fill();
+        c.fillStyle = fc; c.beginPath(); c.moveTo(-1.9, -6.6); c.arc(-1.9, -6.6, 2.8, -Math.PI / 2, Math.PI / 2); c.fill();
+        c.fillStyle = '#9aa0a8'; c.beginPath(); c.arc(-1.9, -6.6, 0.8, 0, TAU); c.fill();
+        return;
+      case 'egipcio':
+        c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.65; l2(c, 1.7, -15, 1.7, -0.5);
+        c.fillStyle = '#d8b84a'; c.beginPath(); c.moveTo(1.05, -15); c.lineTo(1.7, -17.2); c.lineTo(2.35, -15); c.fill();
+        c.fillStyle = '#efe6d2'; c.beginPath(); c.moveTo(-3.8, -3); c.lineTo(-3.8, -9); c.quadraticCurveTo(-2.2, -11.6, -0.6, -9); c.lineTo(-0.6, -3); c.fill();
+        c.fillStyle = '#6a4a30'; c.beginPath(); c.arc(-2.6, -7, 0.7, 0, TAU); c.arc(-1.6, -5, 0.6, 0, TAU); c.fill();
+        c.fillStyle = fc; c.fillRect(-3.8, -4, 3.2, 0.8);
+        return;
+      case 'asteca':
+        c.save(); c.translate(1.8, -8); c.rotate(-0.25);
+        c.fillStyle = '#6e4a2c'; c.fillRect(-0.5, -6, 1, 8); c.fillStyle = '#2a2a30';
+        for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(-0.5, -5.5 + k * 1.4); c.lineTo(-1.4, -4.8 + k * 1.4); c.lineTo(-0.5, -4.4 + k * 1.4); c.fill(); c.beginPath(); c.moveTo(0.5, -5.5 + k * 1.4); c.lineTo(1.4, -4.8 + k * 1.4); c.lineTo(0.5, -4.4 + k * 1.4); c.fill(); }
+        c.restore();
+        c.fillStyle = '#2fae8f'; c.beginPath(); c.arc(-1.9, -6.6, 2.6, 0, TAU); c.fill();
+        c.fillStyle = '#e8c24a'; c.beginPath(); c.arc(-1.9, -6.6, 1.2, 0, TAU); c.fill();
+        c.fillStyle = fc; for (let k = -1; k <= 1; k++) { c.beginPath(); c.ellipse(-1.9 + k * 1.1, -3.4, 0.45, 1.3, 0, 0, TAU); c.fill(); }
+        return;
+    }
+    // classic spear and oval shield
+    c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.65; l2(c, 1.7, -14, 1.7, -0.5);
+    c.fillStyle = '#c4c8d0'; c.beginPath(); c.moveTo(1.05, -14); c.lineTo(1.7, -16.3); c.lineTo(2.35, -14); c.fill();
+    c.fillStyle = fc; c.beginPath(); c.ellipse(-1.9, -6.4, 1.7, 2.3, 0, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(40,30,20,0.8)'; c.lineWidth = 0.4; c.stroke();
+    c.fillStyle = '#d8d0b8'; c.beginPath(); c.arc(-1.9, -6.4, 0.55, 0, TAU); c.fill();
+  };
+  // helmets of warriors
+  A.helmet = function (c, v, hy) {
+    const civ = v._civ, fc = v._fc || '#c83a2a';
+    switch (civ) {
+      case 'grego':
+        c.fillStyle = '#c9a24a'; c.beginPath(); c.arc(0, hy - 0.4, 2.4, Math.PI, TAU); c.fill(); c.fillRect(-2.4, hy - 0.5, 1.3, 2.6); c.fillRect(1.2, hy - 0.5, 1.2, 2);
+        c.fillStyle = fc; c.beginPath(); c.moveTo(-2.6, hy - 2.4); c.quadraticCurveTo(0, hy - 6.2, 2.6, hy - 2.4); c.lineTo(2, hy - 2.2); c.quadraticCurveTo(0, hy - 4.8, -2, hy - 2.2); c.fill();
+        return true;
+      case 'romano':
+        c.fillStyle = '#9aa0a8'; c.beginPath(); c.arc(0, hy - 0.6, 2.35, Math.PI, TAU); c.fill(); c.fillRect(-2.35, hy - 0.7, 0.9, 2.3); c.fillRect(-2.6, hy - 0.8, 5.2, 0.6);
+        c.fillStyle = '#c83a2a'; c.fillRect(-2.2, hy - 4.2, 4.4, 1.3);
+        return true;
+      case 'nordico':
+        if (v.elite === 'berserker') { c.fillStyle = '#7a7068'; c.beginPath(); c.arc(0, hy - 0.8, 2.6, Math.PI * 0.9, Math.PI * 2.1); c.fill(); c.beginPath(); c.moveTo(-2.4, hy - 2); c.lineTo(-1.6, hy - 4); c.lineTo(-0.8, hy - 2.6); c.fill(); c.beginPath(); c.moveTo(2.4, hy - 2); c.lineTo(1.6, hy - 4); c.lineTo(0.8, hy - 2.6); c.fill(); return true; }
+        c.fillStyle = '#8a8e96'; c.beginPath(); c.moveTo(-2.3, hy - 0.4); c.quadraticCurveTo(-2.2, hy - 3.2, 0, hy - 4.4); c.quadraticCurveTo(2.2, hy - 3.2, 2.3, hy - 0.4); c.fill();
+        c.fillRect(1.1, hy - 0.6, 0.5, 2);
+        return true;
+      case 'egipcio':
+        c.fillStyle = '#efe6d2'; c.beginPath(); c.arc(-0.2, hy - 0.4, 2.35, Math.PI * 0.85, Math.PI * 2.05); c.fill(); c.fillRect(-2.5, hy - 0.5, 1.4, 3.4);
+        c.fillStyle = fc; c.fillRect(-2.3, hy - 1.6, 4.4, 0.5);
+        return true;
+      case 'asteca':
+        if (v.elite === 'aguia') { c.fillStyle = '#6a4a30'; c.beginPath(); c.arc(0, hy - 0.6, 2.6, Math.PI * 0.9, Math.PI * 2.1); c.fill(); c.fillStyle = '#e8c24a'; c.beginPath(); c.moveTo(1.8, hy - 1.6); c.lineTo(4.2, hy - 0.4); c.lineTo(1.8, hy - 0.2); c.fill(); c.fillStyle = '#f4efe3'; c.fillRect(-2, hy - 3.4, 3.2, 1); return true; }
+        c.fillStyle = '#e8b83a'; c.beginPath(); c.arc(0, hy - 0.6, 2.6, Math.PI * 0.9, Math.PI * 2.1); c.fill();
+        c.fillStyle = '#2a1a10'; for (const [x, y] of [[-1.2, -2.2], [0.6, -2.6], [1.6, -1.4], [-0.4, -1.2]]) { c.beginPath(); c.arc(x, hy + y, 0.4, 0, TAU); c.fill(); }
+        c.fillStyle = '#f4efe3'; c.beginPath(); c.moveTo(1.2, hy - 0.4); c.lineTo(1.6, hy + 0.4); c.lineTo(2, hy - 0.4); c.fill();
+        c.fillStyle = '#2fae8f'; c.beginPath(); c.ellipse(-1.8, hy - 3.6, 0.5, 1.8, -0.4, 0, TAU); c.fill();
+        return true;
+    }
+    return false;
+  };
+  // what a ruler wears on the head
+  A.crown = function (c, v, hy) {
+    const civ = v._civ;
+    switch (civ) {
+      case 'egipcio': // nemes and uraeus
+        c.fillStyle = '#e8c24a'; c.beginPath(); c.moveTo(-2.6, hy + 2.8); c.lineTo(-2.4, hy - 1.8); c.quadraticCurveTo(0, hy - 3.6, 2.4, hy - 1.8); c.lineTo(2.2, hy - 0.6); c.lineTo(-1, hy - 0.6); c.lineTo(-1.2, hy + 2.8); c.fill();
+        c.fillStyle = '#2a4a9a'; for (let k = 0; k < 3; k++) c.fillRect(-2.5, hy - 1 + k * 1.2, 1.3, 0.5);
+        c.fillRect(-2, hy - 2.2, 4, 0.5);
+        c.fillStyle = '#e8c24a'; c.beginPath(); c.arc(1.9, hy - 2.4, 0.6, 0, TAU); c.fill();
+        return true;
+      case 'asteca': // quetzal plumes
+        c.fillStyle = '#e8c24a'; c.fillRect(-2.4, hy - 2, 4.8, 0.9);
+        for (let k = -3; k <= 3; k++) { c.fillStyle = k % 2 ? '#1f8a5a' : '#2fae8f'; c.beginPath(); c.ellipse(k * 0.8, hy - 5.4 - (3 - Math.abs(k)) * 0.5, 0.55, 3.4, k * 0.22, 0, TAU); c.fill(); }
+        c.fillStyle = '#c8382a'; c.beginPath(); c.arc(0, hy - 1.6, 0.6, 0, TAU); c.fill();
+        return true;
+      case 'grego': case 'romano': { // laurel wreath
+        const gold = civ === 'romano' && v._imperial;
+        c.fillStyle = gold ? '#e8c24a' : '#5a9a3c';
+        for (let k = 0; k < 7; k++) { const a = Math.PI * (1.05 + k * 0.13); c.beginPath(); c.ellipse(Math.cos(a) * 2.2, hy - 0.5 + Math.sin(a) * 2.2, 0.5, 1, a + Math.PI / 2, 0, TAU); c.fill(); }
+        return true;
+      }
+      case 'nordico':
+        c.fillStyle = '#e8c24a'; c.fillRect(-2.3, hy - 2, 4.6, 0.9); for (const x of [-1.6, 0, 1.6]) { c.beginPath(); c.moveTo(x - 0.5, hy - 2); c.lineTo(x, hy - 3.4); c.lineTo(x + 0.5, hy - 2); c.fill(); }
+        return true;
+    }
+    return false;
+  };
+
+  // ------------------------------ carts ------------------------------
+  A.cart = function (civ, loaded, goods) {
+    return Art.sprite('cart-' + (civ || 'x') + (loaded ? goods : ''), 40, 28, 20, 22, (c) => {
+      if (civ === 'asteca') { // tlamemes: porters carrying loads on tumplines
+        for (const [x, y] of [[-7, 0], [3, 1]]) {
+          c.strokeStyle = '#3b2b20'; c.lineWidth = 1; ln(c, [x - 0.8, y - 3.8], [x - 1.5, y], '#3b2b20', 1); ln(c, [x + 0.8, y - 3.8], [x + 1.5, y], '#3b2b20', 1);
+          c.fillStyle = '#efe6d2'; c.fillRect(x - 2, y - 8.8, 4, 5.2);
+          c.fillStyle = '#a8744c'; c.beginPath(); c.arc(x + 0.3, y - 10.6, 2, 0, TAU); c.fill();
+          c.fillStyle = '#b8864a'; c.fillRect(x - 5.5, y - 13, 4.5, 7); c.fillStyle = '#8a6030'; c.fillRect(x - 5.5, y - 11, 4.5, 0.7);
+          c.fillStyle = goods === 'stone' ? '#9a958c' : goods === 'wood' ? '#8f6238' : '#e8c24a'; c.fillRect(x - 5, y - 14.5, 3.5, 1.8);
+        }
+        return;
+      }
+      const ox = civ === 'egipcio' ? 'donkey' : civ === 'nordico' ? 'horse' : 'ox';
+      // draught animal
+      const bx = 8;
+      c.fillStyle = ox === 'ox' ? '#8a6a4a' : ox === 'horse' ? '#6a4a30' : '#9a8a7a';
+      c.beginPath(); c.ellipse(bx, -6, 5, 3, 0, 0, TAU); c.fill();
+      c.fillRect(bx + 3, -9.5, 2.6, 4); c.beginPath(); c.ellipse(bx + 6, -9.5, 2.4, 1.6, 0.3, 0, TAU); c.fill();
+      if (ox === 'ox') { c.strokeStyle = '#e8e0c8'; c.lineWidth = 0.7; c.beginPath(); c.moveTo(bx + 5, -11); c.quadraticCurveTo(bx + 6.5, -13, bx + 8, -12); c.stroke(); }
+      if (ox === 'donkey') { c.fillStyle = '#9a8a7a'; c.fillRect(bx + 4.4, -13.5, 0.8, 3); c.fillRect(bx + 5.6, -13.5, 0.8, 3); }
+      c.strokeStyle = '#3a2a1a'; c.lineWidth = 1; for (const lx of [bx - 3.5, bx - 1.5, bx + 2, bx + 3.5]) ln(c, [lx, -4], [lx, 0], '#3a2a1a', 1);
+      // shaft & body
+      ln(c, [bx - 4, -5.5], [-2, -5], '#6a4526', 0.8);
+      const body = civ === 'romano' ? '#9a5a3a' : civ === 'grego' ? '#8a6a44' : '#7a5230';
+      c.fillStyle = body; c.fillRect(-13, -9, 12, 5);
+      c.fillStyle = 'rgba(0,0,0,0.2)'; c.fillRect(-13, -5.5, 12, 1.5);
+      if (loaded) {
+        if (goods === 'wood') { c.fillStyle = '#8f6238'; for (let k = 0; k < 3; k++) c.fillRect(-12.5, -11 - k * 1.5, 11, 1.4); c.fillStyle = '#d6b27a'; c.fillRect(-1.8, -13.5, 0.8, 4); }
+        else if (goods === 'stone') { c.fillStyle = '#9a958c'; for (let k = 0; k < 4; k++) { c.beginPath(); c.ellipse(-11 + k * 2.8, -10.5 - (k % 2), 1.8, 1.4, 0, 0, TAU); c.fill(); } }
+        else { c.fillStyle = '#d8c090'; for (let k = 0; k < 3; k++) { c.beginPath(); c.ellipse(-10.5 + k * 3.6, -10.5, 1.9, 1.9, 0, 0, TAU); c.fill(); } c.fillStyle = '#e04a3a'; c.beginPath(); c.arc(-7, -12.5, 1, 0, TAU); c.fill(); }
+      }
+      if (civ === 'nordico' || civ === 'egipcio') c.fillStyle = '#5a3a20'; else c.fillStyle = '#4a3020';
+      for (const wx of [-10.5, -3.5]) { c.beginPath(); c.arc(wx, -2.6, 2.7, 0, TAU); c.fill(); c.fillStyle = '#9a7a52'; c.beginPath(); c.arc(wx, -2.6, 0.8, 0, TAU); c.fill(); c.fillStyle = '#4a3020'; }
+    });
+  };
+})(window.G);
