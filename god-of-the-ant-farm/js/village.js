@@ -544,8 +544,12 @@
   const RENEW_BLOCK = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 2, house: 3, sobrado: 4 };
   const KEEP = { farm: 2, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
   // (a site whose work the town's streets reach: a tile round the lot that one walks, from which the town reaches — the ring of
-  // V.townReachesWork, the lot not yet standing)
-  const siteReached = (set, x, y, def) => { for (let ty = y - 1; ty <= y + def.h; ty++) for (let tx = x - 1; tx <= x + def.w; tx++) { if (ty >= y && ty < y + def.h && tx >= x && tx < x + def.w) continue; if (W.inb(tx, ty) && W.walkable(W.idx(tx, ty)) && W.townReaches(set, tx + 0.5, ty + 0.5)) return true; } return false; };
+  // V.townReachesWork, the lot not yet standing —, on a side of the lot and on the town's own ground: the map of reach steps only
+  // north, south, east and west, so a corner of the ring touches no tile of the lot, and whoever comes out of a door stands on
+  // the side tile itself, not beside it, as W.townReaches asks of a goal. A house of Mênfis, in the mega of the generation 14,
+  // had the town only at a corner and diagonal to its one open side, a pocket of one tile between cliffs: its door went there,
+  // and the family never walked out again — the envoy of the fundadores among them, L-543)
+  const siteReached = (set, x, y, def) => { for (let ty = y - 1; ty <= y + def.h; ty++) for (let tx = x - 1; tx <= x + def.w; tx++) { if ((tx >= x && tx < x + def.w) === (ty >= y && ty < y + def.h)) continue; if (W.inb(tx, ty) && W.walkable(W.idx(tx, ty)) && W.reachesTownXY(tx + 0.5, ty + 0.5, set)) return true; } return false; };
   V.siteReached = siteReached; // (for the proofs: muros.js 8b)
   function search(set, type, def, R, field, counts, renew, dear, reach) {
     const S = G.S; const block = renew && type === 'quarteirao'; const may = block ? RENEW_BLOCK : RENEW;

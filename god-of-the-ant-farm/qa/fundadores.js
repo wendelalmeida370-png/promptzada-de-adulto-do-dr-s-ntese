@@ -44,7 +44,10 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
         const cap = o => G.Fac.capitalOf(o.id); const far = o => G.dist(set.cx, set.cy, cap(o).cx, cap(o).cy);
         const linked = G.Fac.all().filter(o => o.alive && o.id !== f.id && cap(o) && G.W.townsLinked(set, cap(o))).sort((p, q) => far(p) - far(q) || p.id - q.id);
         const other = linked.find(o => far(o) >= 60) || linked[linked.length - 1] || G.Fac.all().find(o => o.alive && o.id !== f.id);
-        const here = v => v.set === set.id && !v.captive && !v.aboard && !v.jail && !v.held && !v.air && !v.ug && v.hp > 60;
+        // (of the town and on its streets, by the map of regions: in the mega of the generation 14 the envoy and the prisoner were
+        // of a family whose door gave onto a pocket of one tile — the house founded where the town reached only a corner, L-543 —,
+        // and the envoy gave up her errand at once, failing her path, T-468)
+        const here = v => v.set === set.id && !v.captive && !v.aboard && !v.jail && !v.held && !v.air && !v.ug && v.hp > 60 && G.W.reachesTown(v, set);
         const wives = [...S.villagers.values()].filter(v => here(v) && v.g === 'f' && v.partner && v.age >= 18 && v.age < 42 && S.villagers.get(v.partner) && S.villagers.get(v.partner).set === set.id).sort((a, b) => a.id - b.id);
         const singles = [...S.villagers.values()].filter(v => here(v) && !v.partner && v.age >= 17 && v.age < 32 && v.id !== f.leader).sort((a, b) => a.id - b.id);
         const kids = child ? [...S.villagers.values()].filter(v => here(v) && v.age >= 7 && v.age < 16 && S.villagers.get(v.mother) && S.villagers.get(v.father) && S.villagers.get(v.mother).set === set.id && S.villagers.get(v.father).set === set.id).sort((a, b) => a.id - b.id) : [];
