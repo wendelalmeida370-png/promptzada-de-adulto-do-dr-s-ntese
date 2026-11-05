@@ -920,6 +920,8 @@
 
   // ------------------------------ main frame ------------------------------
   const drawList = []; let drawN = 0;
+  // (the falling trees whose dust the frame has raised: the drawing's own, not a mark on the tree — L-597)
+  let dusted = new WeakSet(); G.worldHooks.push(() => { dusted = new WeakSet(); });
   const lights = []; // [sx, sy, r, color, a]
   const emisWin = []; const emisFire = []; const emisGlow = []; const emisTorch = []; const overlays = [];
   // ---- a big building among the people (D-106): sorted by the depth of the middle of its lot — of its two side corners, a
@@ -930,9 +932,14 @@
   // building of 10 tiles behind its wall, and a tree, a beast or a bush beside one of 2 on the wrong side of it (the rule kept
   // for those of 1 tile: there the two agree; the open grounds — a square, a ruin, a graveyard, a fold, a campfire, the fields,
   // whose pieces the hooks sort each by its own — keep theirs; the pen, the stable and the fair draw here only their plinth on a
-  // slope, or their site: a box, like the buildings — L-527) ----
+  // slope, or their site: a box, like the buildings — L-527; and so is a square under work: what stands of it is its site's
+  // scaffold, not its pavement — L-596). The middle itself, no margin under it: in the columns the lot covers, one behind a
+  // face it hides is less deep than the side corners and one before a face it shows deeper, and the people's and the beasts'
+  // own few hundredths over their feet keep to their side; a margin of 0.15 under it drew a beast pressed against the back of a
+  // pottery, 1.6 px in from its side corner, over its wall — L-596 ----
   const BIGW = 2; R.bigW = BIGW; const FLATB = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1 };
-  R.bkey = function (b) { const [cx, cy] = G.Village.center(b); return b.type === 'praca' ? depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : b.w >= BIGW && !FLATB[b.type] && !(G.BDEF[b.type] || {}).field ? depth(cx, cy) - 0.15 : depth(cx, cy) + (b.w + b.h) / 2 - 0.8; };
+  R.bkey = function (b) { const [cx, cy] = G.Village.center(b), site = b.type === 'praca' && !b.built;
+    return b.type === 'praca' && !site ? depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : b.w >= BIGW && (site || !FLATB[b.type]) && !(G.BDEF[b.type] || {}).field ? depth(cx, cy) : depth(cx, cy) + (b.w + b.h) / 2 - 0.8; };
   function pushD(d, type, o, sx, sy) {
     let e = drawList[drawN]; if (!e) { e = {}; drawList[drawN] = e; }
     e.d = d; e.t = type; e.o = o; e.sx = sx; e.sy = sy; drawN++;
@@ -1964,7 +1971,7 @@
       }
       case 27: G.CaveArt.treasure(ctx, e.sx, e.sy, t, e.o.x * 7 + e.o.y); light(e.sx, e.sy - 3, 14, 'gold', 0.35); break;
       case 28: G.CaveArt.beast(ctx, e.o, e.sx, e.sy + (e.o.kind === 'peixe' ? 1.5 : 0), t); break;
-      case 29: { const a = e.o; const p0 = a.pose, m0 = a.moving; a.pose = 'sleep'; a.moving = false; G.Art.animal(ctx, a, e.sx, e.sy, t); a.pose = p0; a.moving = m0; break; } // (drawn asleep; the beast itself is left as it was)
+      case 29: G.Art.animal(ctx, Object.assign({}, e.o, { pose: 'sleep', moving: false }), e.sx, e.sy, t); break; // (drawn asleep from a copy: the beast of the world not touched — set and put back, a «pose» it never had stayed on it, L-597)
       case 30: { const cv = e.o; const ph = G.Caves.batPhase(cv); const n = !ph ? cv.bats : ph.night ? cv.bats * 0.08 : ph.out ? cv.bats * (1 - ph.k) : cv.bats * ph.k; G.CaveArt.roost(ctx, e.sx, e.sy, n, t, cv.id * 13); break; }
       case 31: {
         const m = e.o; const dayA = G.clamp(1 - R.nightness() * 0.85, 0.12, 1); const kind = G.Caves.mouthKind(m, G.Caves.at(m.y * N + m.x));
@@ -1974,7 +1981,7 @@
         light(e.sx, e.sy - 12, 86, dayA > 0.4 ? 'gold' : 'cool', 0.25 + 0.75 * dayA);
         break;
       }
-      case 32: { const a = e.o; const p0 = a.pose, m0 = a.moving; a.pose = a.kind === 'cervo' || a.kind === 'veado' ? 'rest' : 'sleep'; a.moving = false; G.Art.animal(ctx, a, e.sx, e.sy, t); a.pose = p0; a.moving = m0; break; }
+      case 32: { const a = e.o; G.Art.animal(ctx, Object.assign({}, a, { pose: a.kind === 'cervo' || a.kind === 'veado' ? 'rest' : 'sleep', moving: false }), e.sx, e.sy, t); break; } // (from a copy too)
     }
   }
   function frameUnder(t, dt) {
@@ -2321,7 +2328,7 @@
           if (o.burntLog) Art.draw(ctx, Art.burntTree(), 0, 0, o.size);
           else { Art.draw(ctx, Art.trunk(o.kind === 'palm' ? 'oak' : o.kind, o.v), 0, 0, o.size); Art.draw(ctx, Art.canopy(o.kind === 'palm' ? 'oak' : o.kind, o.v), 0, 0, o.size); }
           ctx.restore();
-          if (o.fallT > 0.85 && !o.dusted) { o.dusted = true; G.FX.dust(o.x + o.fallDir * 0.6, o.y - o.fallDir * 0.6, 5); G.FX.poof(o.x + o.fallDir * 0.8, o.y - o.fallDir * 0.8, '#5f9a3e'); }
+          if (o.fallT > 0.85 && !dusted.has(o)) { dusted.add(o); G.FX.dust(o.x + o.fallDir * 0.6, o.y - o.fallDir * 0.6, 5); G.FX.poof(o.x + o.fallDir * 0.8, o.y - o.fallDir * 0.8, '#5f9a3e'); }
         } else if (o.stage === 'log') {
           ctx.save(); ctx.translate(sx, sy); if (R.sdir(o.fallDir, -o.fallDir) < 0) ctx.scale(-1, 1);
           Art.draw(ctx, Art.stump(), 0, 0, 0.9); Art.draw(ctx, Art.log(o.burntLog), 9, 1, Math.max(0.6, o.size) * Math.min(1, 0.5 + o.wood / 8)); ctx.restore();

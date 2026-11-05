@@ -221,13 +221,16 @@ if (want('c')) {
 if (want('d')) {
   const R = G.Render, W = G.W;
   const OPEN = { praca: 1, ruin: 1, cemetery: 1, cercado: 1, campfire: 1 }, PEN = { curral: 1, estabulo: 1, feira: 1 }, OWN = { praca: 1, cercado: 1 };
+  // (what draws itself even under work — no site box: the campfire, the graveyard, the ruin, the fold's stakes as they rise —,
+  // as render.js drawBuilding has it; a square under work is its site, a box — L-596, T-486)
+  const SITELESS = { campfire: 1, cemetery: 1, ruin: 1, cercado: 1 }; const own = o => OWN[o.type] && (o.built || o.type === 'cercado');
   // (the key of the first round: the middle of the lot from 3 tiles up, the pen, the stable and the fair by the front corner)
   const keyOld = b => { const [cx, cy] = G.Village.center(b); return b.type === 'praca' ? R.depth(cx, cy) - (b.w + b.h) / 2 + 0.4 : b.w >= 3 && !OPEN[b.type] && !PEN[b.type] && !(G.BDEF[b.type] || {}).field ? R.depth(cx, cy) - 0.15 : R.depth(cx, cy) + (b.w + b.h) / 2 - 0.8; };
   const field = o => o.type === 'farm' || !!(G.BDEF[o.type] || {}).field;
   // (what a building's entry draws in the sorted pass: a box — its picture, its site —; an open ground built, nothing of its own
   // but the pen's plinth on a slope, the square's picture and the fold's stakes)
-  const box = o => !field(o) && (!o.built || (!OPEN[o.type] && !PEN[o.type]));
-  const drawn = o => !field(o) && (!o.built || OWN[o.type] || (PEN[o.type] ? W.maxH(o.x, o.y, o.w, o.h) - W.minH(o.x, o.y, o.w, o.h) > 0.15 : !OPEN[o.type]));
+  const box = o => !field(o) && (!o.built ? !SITELESS[o.type] : !OPEN[o.type] && !PEN[o.type]);
+  const drawn = o => !field(o) && (own(o) || (!o.built ? !SITELESS[o.type] : PEN[o.type] ? W.maxH(o.x, o.y, o.w, o.h) - W.minH(o.x, o.y, o.w, o.h) > 0.15 : !OPEN[o.type]));
   const colOf = (o, h, a) => { const xs = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]].map(([x, y]) => R.proj(x, y, h)[0] - a); return [Math.min(...xs), Math.max(...xs)]; };
   const res = [];
   for (const key of ['metropole', 'mega']) {
@@ -264,7 +267,7 @@ if (want('d')) {
           const ax = sx ? Math.sign(sx * fx) : 0, ay = sy ? Math.sign(sy * fy) : 0; if (ax && ay && ax !== ay) continue;
           const [o0, o1] = colOf(o, h, a); if (Math.min(x1, o1) - Math.max(x0, o0) <= 2) continue; // (no column in common)
           const s = ax || ay, bad = wrong(s, R.bkey(o), bk), was = wrong(s, keyOld(o), bo);
-          if (OWN[o.type] && o.built) { T.own++; if (bad) T.ownBad++; if (was) T.ownOld++; continue; }
+          if (own(o)) { T.own++; if (bad) T.ownBad++; if (was) T.ownOld++; continue; }
           T.tot++; if (bad) { T.bad++; const kk = 'prédio ' + o.type; T.kinds[kk] = (T.kinds[kk] || 0) + 1; say('vista', r, b.type, b.id, 'contra', o.type, o.id, 'lado', s, R.bkey(o).toFixed(2), bk.toFixed(2)); } if (was) T.old++;
         }
       }
