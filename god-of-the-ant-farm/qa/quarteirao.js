@@ -1,6 +1,7 @@
-// quarteirao: node qa/quarteirao.js [mundo] — o quarteirão da metrópole (L-077), provocado de propósito no mundo pronto
-// «megalópole» (worlds/mega.js; ou outro mundo pronto): a maior cidade de nível 4 ou 5 vive anos abençoados com pedra de
-// sobra, e cada quarteirão que o planejador põe é fiscalizado na hora:
+// quarteirao: node qa/quarteirao.js [mundo] — o quarteirão da metrópole (L-077), provocado de propósito num mundo pronto: o
+// primeiro da lista — a «megalópole» (worlds/mega.js), a «metrópole», os anos100, a guerra mundial, os anos500 e os 1000 —
+// onde uma cidade de nível 4 ou 5 tem hoje lugar para um quarteirão no centro (ou o mundo pedido): essa cidade vive anos
+// abençoados com pedra de sobra, e cada quarteirão que o planejador põe é fiscalizado na hora:
 // 1 vai para terra cara o bastante (a de uma ínsula) e continua quarteirão; derruba só casas baixas, sobrados, hortas e
 //   campos da própria cidade — nunca um prédio público, nunca as duas últimas fazendas nem o último campo de um tipo —
 //   e traz mais camas do que tira;
@@ -12,7 +13,7 @@
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const key = process.argv[2] || 'mega';
+const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos100', 'mundial', 'anos500', 'anos1000'];
 (async () => {
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192'] });
   const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
@@ -22,7 +23,22 @@ const key = process.argv[2] || 'mega';
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto(process.env.GAME || 'file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
   await page.addScriptTag({ path: __dirname + '/qa.js' });
-  await page.addScriptTag({ path: path.join(ROOT, 'worlds', key + '.js') });
+  // (the world: the first of the list where a town of level 4 or 5 has room in its heart for a block today, by the game's own
+  // rule — V.blockSite —; where none has, the first, and its biggest town lives blessed years until it has. In the mega of
+  // the generation 14 none of its three had: their hearts all streets, insulae and public works, the only lots left holding
+  // a town's last apiary or last orchard, which a block never takes, with no room in the town for another one; and twelve
+  // blessed years opened none, T-467)
+  let key = null;
+  for (const k of KEYS) {
+    await page.addScriptTag({ path: path.join(ROOT, 'worlds', k + '.js') });
+    const room = await page.evaluate(k => {
+      G.Save.apply(JSON.parse(G.Ready.data[k])); const S = G.S, V = G.Village;
+      return [...S.settlements.values()].some(s => { if ((s.tier || 0) < 4) return false; s._noSite = {}; const p = V.blockSite(s); s._noSite = {}; return !!p; });
+    }, k);
+    if (room) { key = k; break; }
+  }
+  if (!key) key = KEYS[0];
+  console.log(`  o mundo: ${key}`);
   const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | ${name} | ${info}`); if (!cond) fails.push(name); };
   // the town, and the watch on every block the planner places
   const town = await page.evaluate(key => {
@@ -102,7 +118,10 @@ const key = process.argv[2] || 'mega';
       }
       if (!house && !lived) return { none: `nenhum lugar de quarteirão com chão livre para a casa em ${S.day - d0} anos` };
       if (house) {
-        const head = [...S.villagers.values()].find(v => v.set === set.id && v.age >= 25 && !v.captive && !v.jail && !v.aboard && v.partner && S.villagers.get(v.partner));
+        // (a couple of the town, both of it: in Tenochtitlan of the metrópole the first one found had its partner in another
+        // town, and the family was one)
+        const cand = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 25 && !v.captive && !v.jail && !v.aboard && v.partner && S.villagers.get(v.partner));
+        const head = cand.find(v => { const p = S.villagers.get(v.partner); return p.set === set.id && !p.captive && !p.jail && !p.aboard; }) || cand[0];
         for (const v of [head, S.villagers.get(head.partner), ...(head.kids || []).map(id => S.villagers.get(id))]) if (v && v.set === set.id && (v === head || v.age < 16 || v.id === head.partner)) { v.home = house.id; fam++; }
         house.coin = 30;
       }
