@@ -294,7 +294,7 @@
   Sn.vocL = (a, b) => { const w = Sn.voc(a, b); return b && w !== b.name ? w.charAt(0).toLowerCase() + w.slice(1) : w; };
   Sn.voc = (a, b) => { if (!a || !b) return b ? b.name : ''; const r = G.Stories ? G.Stories.relOf(a, b) : null; return (r && VOC[r]) || b.name; };
   const OATH = { nordico: ['Pelos deuses!', 'Por Odin!', 'Por Thor!'], romano: ['Pelos deuses!', 'Por Júpiter!'], egipcio: ['Por Rá!', 'Pelos deuses!'], asteca: ['Pelo Sol!', 'Pelos deuses!'], grego: ['Por Zeus!', 'Pelos deuses!'] };
-  Sn.oath = v => { const l = (v && OATH[v._civ || v.civ]) || ['Pelos deuses!', 'Céus!']; return l[Math.floor(G.R() * l.length)]; };
+  Sn.oath = v => { const l = (v && OATH[G.Fac.civOfV(v)]) || ['Pelos deuses!', 'Céus!']; return l[Math.floor(G.R() * l.length)]; };
 
   // ============================== the scene errand ==============================
   Sn.run = function (v, t, dt, H) {

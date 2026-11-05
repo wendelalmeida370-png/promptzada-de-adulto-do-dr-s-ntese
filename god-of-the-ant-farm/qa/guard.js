@@ -335,5 +335,12 @@ for (const f of files) if (f !== 'art.js' && f !== 'arch.js') src[f].forEach((l,
 // 45. "todo arquivo se lê": cada arquivo do jogo é JavaScript que o navegador aceita — um erro de sintaxe (um comentário que
 // engoliu o fim de uma linha, uma chave a mais) derruba o arquivo inteiro na hora de carregar, e só a vida curta o veria
 for (const f of files) { try { new (require('vm').Script)(src[f].join('\n'), { filename: f }); } catch (e) { fails.push(`sintaxe: ${f}: ${String(e.message).slice(0, 110)}`); } }
+// 46. "as marcas do quadro numa pessoa são do desenho" (L-589): o povo com que o deus a veste (v._civ), a cor do povo (v._fc),
+// a coroa (v._ruler) e o bebê no colo desenhado (v.babyOn) o quadro escreve a cada vez, e o save os tira; fora do que só se vê
+// (a lista LOOK da regra 3) e dos desenhos que moram num módulo do mundo (MARK_OK), ninguém os lê — o mundo pergunta ao mundo
+// (G.Fac.civOfV, G.Fac.idOfV): a jura lia o v._civ, e quem vivia entre outro povo jurava por outros deuses com e sem quadros
+const MARK_OK = [['army.js', "const civ = v._civ || 'classico'; const fc = v._fc || '#8a3a2a';"]];
+for (const f of files) if (!LOOK.includes(f)) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.(_civ|_fc|_ruler|babyOn)\b(?!\s*=(?!=))/.test(c) && f !== 'save.js' && !ok(MARK_OK, f, l)) fails.push(`marca do quadro: ${f}:${k + 1} um módulo do mundo lê uma marca que só o quadro escreve (v._civ, _fc, _ruler, babyOn — L-589): ${l.trim().slice(0, 110)}`); });
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
