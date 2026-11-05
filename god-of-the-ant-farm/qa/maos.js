@@ -335,7 +335,11 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
 // G.Act.leg). Then each choice, from the same world: none of the chosen has busy hands, and the choice still happens)
 {
   const docksOf = q => G.Naval.docksOf(q.id).filter(d => G.Naval.dockInfo(d).moor).sort((a, b) => a.id - b.id);
-  const pickWar = () => { const fs = G.Fac.all().filter(q => q.alive && docksOf(q).length).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id) || a.id - b.id); const f = fs[0]; const e = f && G.Fac.all().filter(q => q.alive && q !== f).sort((a, b) => a.id - b.id)[0]; return f && e ? { f, e } : null; };
+  // (the raid by sea against a people it can land at: by the raid's own rule — a landing on one of its towns from the sea of
+  // one of the docks (naval.js, launchRaid) —, the first other people with one; in the metrópole of the generation 14 the
+  // first other people, Argos, has no shore the Norse ships reach, and the raid never sailed, T-481)
+  const lands = (f, e) => docksOf(f).some(d => { const di = G.Naval.dockInfo(d); const c = G.Naval.compAt(di.moor[0], di.moor[1]); return G.Fac.settlementsOf(e.id).some(s => G.Naval.landing(s, c)); });
+  const pickWar = bySea => { const fs = G.Fac.all().filter(q => q.alive && docksOf(q).length).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id) || a.id - b.id); const f = fs[0]; const e = f && G.Fac.all().filter(q => q.alive && q !== f && (!bySea || lands(f, q))).sort((a, b) => a.id - b.id)[0]; return f && e ? { f, e } : null; };
   const atWar = (f, e) => { const rel = G.Fac.rel(f.id, e.id); if (rel && !rel.met) G.Politics.meet(f, e, { quiet: true }); const dp = S.divinePeace; S.divinePeace = 0; G.Politics.declareWar(f, e, 'ambicao'); S.divinePeace = dp; return G.Wars.warOf(f.id, e.id); };
   const loose = o => o.age >= 18 && o.age < 55 && o.hp > 60 && !o.captive && !o.aboard && !o.jail && !o.ug && !o.held && !o.air && o.home && S.buildings.get(o.home) && !(o.carry && o.carry.n > 1e-6) && !(o.task && (o.task.pri || 0) >= 1.5) && !(S.avatar && S.avatar.id === o.id) && !(G.Expe && G.Expe.memberOf(o.id));
   const busyAll = (f, at) => {
@@ -354,8 +358,8 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
   ];
   const lines = []; let okAll = true;
   for (const [what, fn] of CHOICES) {
-    fresh(); const pw = pickWar(); const w = pw && atWar(pw.f, pw.e); const d = pw && docksOf(pw.f)[0]; const at = d && S.settlements.get(d.set);
-    if (!pw || !w || !at) { okAll = false; lines.push(`${what}: SEM o caso (nenhum povo com cais em guerra)`); continue; }
+    fresh(); const pw = pickWar(what === 'o ataque pelo mar'); const w = pw && atWar(pw.f, pw.e); const d = pw && docksOf(pw.f)[0]; const at = d && S.settlements.get(d.set);
+    if (!pw || !w || !at) { okAll = false; lines.push(`${what}: SEM o caso (nenhum povo com cais em guerra${what === 'o ataque pelo mar' ? ' com um povo onde desembarcar' : ''})`); continue; }
     const p = busyAll(pw.f, at); const ids = fn(pw.f, pw.e, w, d, at);
     const busy = (ids || []).map(id => S.villagers.get(id)).filter(v => v && Vg.handsBusy(v));
     const legIn = !!(p.leg && ids && ids.includes(p.leg.id));

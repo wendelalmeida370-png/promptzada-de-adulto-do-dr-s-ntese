@@ -201,6 +201,9 @@
     const S = S_(); const d = op.data;
     for (const id of Object.keys(d.plateia)) { const v = S.villagers.get(+id); if (v && v.task && v.task.type === 'teatro' && v.task.op === op.id) G.Vg.endTask(v); }
     for (const id of Object.keys(d.atores)) { const v = S.villagers.get(+id); if (v && v.task && v.task.type === 'atuar' && v.task.op === op.id) G.Vg.endTask(v); }
+    // (and who has its errand out of its rows and its stage — on the way to them —: the errand ends with the show; a feast begun
+    // by the god's word with the play on left three with the errand of a show that was no more, D-130, L-595)
+    for (const v of S.villagers.values()) if (v.task && (v.task.type === 'teatro' || v.task.type === 'atuar') && v.task.op === op.id) G.Vg.endTask(v);
     d.plateia = {}; d.atores = {};
     A.end(op, st, why);
   }
@@ -296,24 +299,37 @@
     for (const set of S.settlements.values()) for (const b of showsOf(set.id)) if (!Tt.dia(b) && inHours(b)) open(b);
   });
   // ---- the spectator (the errand 'teatro': st 0 on the way, 1 seated waiting, 2 watching)
+  // (the walk to the door, in the world's seconds — 1,3 s a tile on the straight line, the streets go round, as the actors' —,
+  // and the seconds left to come in: to the late door, Tt.LATE after the play begins)
+  const walkTo = (v, b) => { const dr = G.Vg.door(b); return G.dist(v.x, v.y, dr[0], dr[1]) * Tt.WALK; };
+  const leftIn = (b, op) => (op.data.fase === 'peca' ? op.data.t0 + Tt.LATE - S_().clock : (Tt.horas(b).peca - S_().time) * G.DAY_LEN + Tt.LATE);
+  // (setting out before the doors open: the show of the day made ready behind its closed doors, and a walk longer than the time
+  // to the doors — the theatre stands at the edge of a town (D-120: up to the radius + 12), and from the town's middle the
+  // doors' hour is too late to set out: in the metropolis of the generation 14, Hedeby's theatre 28 tiles from it, L-509)
+  const early = (b, op, v) => !!op && op.st === 'on' && op.data.fase === 'preparo' && inHours(b) && walkTo(v, b) > (Tt.horas(b).abre - S_().time) * G.DAY_LEN;
   // the theatre for this person now: its show open, in reach, a seat free, and — in a people of coin — a house that can pay
-  // the entry; none of it, no errand (nobody is made up to fill a row)
-  Tt.visit = function (v, b, H) {
+  // the entry; none of it, no errand (nobody is made up to fill a row). far: the evening out of one who sets out before the
+  // doors open (Tt.go), to wait by them
+  Tt.visit = function (v, b, H, far) {
     H = H || G.Vg.H;
     if (!v || !b || v.captive || v.jail || v.age < 6 || (v.carry && v.carry.n > EPS) || A.isBody(v)) return null;
     if (!isShow(b) || facOf(b) !== G.Fac.idOfV(v)) return null;
-    const op = Tt.dia(b); if (!aberto(b, op) || full(b, op) || op.data.plateia[v.id] || op.data.atores[v.id]) return null;
+    const op = Tt.dia(b); if (!(aberto(b, op) || (far && early(b, op, v))) || full(b, op) || op.data.plateia[v.id] || op.data.atores[v.id]) return null;
     if (coin(b) && E.purse(v) + EPS < Tt.FEE) return null;
     const dr = G.Vg.door(b); if (!G.W.reaches(v, dr[0], dr[1])) return null;
     return H.setTask(v, { type: 'teatro', id: b.id, op: op.id, pri: 0.45, st: 0 });
   };
   // the evening out at the theatre — a choice of the villagers' decide, beside the tavern and home: how much this grown one
-  // wants to go now (the doors of a show of the town open, a seat free, the entry in the house), or 0; one already in the rows
-  // or on the way stays for the play (the work, the tavern, a chat do not take one from it; hunger and sleep do)
+  // wants to go now (the doors of a show of the town open — or, for one from far off, about to open —, a seat free, the entry
+  // in the house, and the door near enough to come in by the late door), or 0; one already in the rows or on the way stays for
+  // the play (the work, the tavern, a chat do not take one from it; hunger and sleep do)
   function tonight(v) {
     for (const b of showsOf(v.set)) {
-      const op = Tt.dia(b); if (!aberto(b, op) || full(b, op) || facOf(b) !== G.Fac.idOfV(v)) continue;
+      const op = Tt.dia(b); if (!op || !(aberto(b, op) || early(b, op, v)) || full(b, op) || facOf(b) !== G.Fac.idOfV(v)) continue;
       if (coin(b) && E.purse(v) + EPS < Tt.FEE) continue;
+      // (one who cannot be at the door by the late door does not set out: from 17 to 38 tiles off when the doors had opened,
+      // nine of Hedeby a day walked to its theatre and turned back at the late door, and its rows stayed empty, L-509)
+      if (walkTo(v, b) > leftIn(b, op)) continue;
       const dr = G.Vg.door(b); if (G.W.reaches(v, dr[0], dr[1])) return b;
     }
     return null;
@@ -323,15 +339,19 @@
     if (v.age < 16 || v.captive || v.jail || v.aboard || (v.carry && v.carry.n > EPS) || A.isBody(v) || !tonight(v)) return 0;
     return (v.traits.includes('Curioso') || v.traits.includes('Sociável') ? 0.55 : 0.4) + G.R() * 0.5;
   };
-  Tt.go = function (v, H) { const b = tonight(v); return b ? Tt.visit(v, b, H) : null; };
+  Tt.go = function (v, H) { const b = tonight(v); return b ? Tt.visit(v, b, H, true) : null; };
   function leave(v, op, H) { if (op && op.data && op.data.plateia && op.data.plateia[v.id]) delete op.data.plateia[v.id]; return H.end(v); }
   function runPlateia(v, t, dt, H) {
     const S = S_(); const b = S.buildings.get(t.id); const op = t.op ? A.get(t.op) : null;
     if (!b || !b.built || !op || !live(op)) return leave(v, op, H);
     const d = op.data;
     if (t.st === 0) {
-      if (!aberto(b, op)) return H.end(v);
+      // (set out before the doors opened — from the far end of the town —: on the way, and then by the door until it opens)
+      const wait = d.fase === 'preparo';
+      if (!aberto(b, op) && !wait) return H.end(v);
+      if (wait && t.at) { v.act = 'wait'; v.moving = false; return; }
       const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r === 0) return;
+      if (wait) { t.at = 1; v.act = 'wait'; v.moving = false; return; }
       if (full(b, op)) { G.Vg.emote(v, 'sad', 1); say(v, 'teatro_cheio', {}); return H.end(v); }
       const p = payEntry(v, op, b); if (!p.ok) return H.end(v);
       goIn(v, t, b, rowUse(v, b)); d.entradas++;
@@ -489,7 +509,7 @@
     tick,
     text(v, t, op) {
       const S = S_(); const b = S.buildings.get(t.id);
-      if (t.type === 'teatro') { const jg = arena(b); if (t.st === 0) return jg ? 'Indo aos jogos' : 'Indo ao teatro'; return op.data.fase === 'peca' ? (jg ? `Assistindo aos jogos ${n_(b)}` : `Assistindo à peça ${n_(b)}`) : op.data.fase === 'fim' ? 'Aplaudindo' : jg ? 'Esperando os jogos começarem' : 'Esperando a peça começar'; }
+      if (t.type === 'teatro') { const jg = arena(b); if (t.st === 0) return t.at ? (jg ? 'Esperando as portas dos jogos abrirem' : 'Esperando as portas do teatro abrirem') : jg ? 'Indo aos jogos' : 'Indo ao teatro'; return op.data.fase === 'peca' ? (jg ? `Assistindo aos jogos ${n_(b)}` : `Assistindo à peça ${n_(b)}`) : op.data.fase === 'fim' ? 'Aplaudindo' : jg ? 'Esperando os jogos começarem' : 'Esperando a peça começar'; }
       if (t.type === 'atuar') { if (t.st === 0) return 'Indo para o palco'; return op.data.fase === 'peca' ? (b && stageUse(b) === 'lutar' ? 'Lutando na arena, de mentira, para o público' : 'Atuando no palco') : 'No palco, esperando a hora'; }
       return null;
     },

@@ -196,7 +196,7 @@
   // invented: every module still lives every second of the years, only with a coarser hand where coarseness changes
   // nothing. The slow step goes in the middle: what it decides — a peace, a town given up — is acted on by the quick
   // half that follows, so the world between two steps is as settled as on the screen.)
-  const FINE = { Nature: 1, Villagers: 1, Carnage: 1, Scene: 1, Powers: 1, Riots: 1, Justice: 1, Possess: 1 };
+  const FINE = { Nature: 1, Villagers: 1, Carnage: 1, Scene: 1, Powers: 1, Riots: 1, Justice: 1, Possess: 1, Babies: 1 };
   const fine = h => { tick(h); for (const m of MODS) if (FINE[m[0]]) G.tryRun(m[0], m[1], h); G.tryRun('Factions', dt2 => G.Fac.updatePart(dt2, 'fine'), h); };
   M.skipStep = function (dt) {
     G.inSim++;
@@ -219,6 +219,8 @@
     ['Caves', dt => G.Caves && G.Caves.update(dt)], ['Pets', dt => G.Pets && G.Pets.update(dt)], ['Powers', dt => G.Powers.update(dt)],
     ['Lore', dt => G.Lore && G.Lore.update(dt)], ['Events', dt => G.Events.update(dt)],
     ['Possess', dt => G.Possess && G.Possess.update(dt)],
+    // (last: the babies where their arms are now — a module after the villagers' turn may have moved the arms, L-594)
+    ['Babies', () => G.Vg.babiesFollow && G.Vg.babiesFollow()],
   ];
   // at high speed the steps get a little longer and the frame has a time budget:
   // if the world is too big for the machine, the game runs as fast as it can instead of freezing

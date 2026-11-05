@@ -212,8 +212,14 @@ function estSetup(id, prep) {
   fresh(); morning(); const b = S().buildings.get(id); const role = G.BDEF[b.type].role;
   const ws = [...S().villagers.values()].filter(v => v.job === b.id && v.role === role && fit(v)).sort(byId);
   b.claim = {}; if (prep) prep(b);
-  return { b, ws, base: base() };
+  return { b, ws, role, base: base() };
 }
+// (the case's hands kept in the estate's trade while the case runs — the town's board deals the trades out every 4 s by the
+// town's need (village.js, assignJobs), and the need of a trade falls as the town's other estates of it are picked: in the
+// metrópole of the generation 14 the board made Metztli, of the banana grove, a merchant 44 s into the c6, and Itzel a miner,
+// and Papan, the olive grove's only hand, a hunter 4 s into the c7; the case is what the hands pick and press reaching the
+// store, not whom the board keeps, T-484)
+const keepHands = P => () => { for (const x of P.ws) { const v = S().villagers.get(x.id); if (v && !v.captive && (v.role !== P.role || v.job !== P.b.id)) { v.role = P.role; v.job = P.b.id; } } };
 const fieldAt = b => [b.x + 1, b.y + 1];
 // c6 the orchard and the plantation: what they bear to the store
 {
@@ -226,9 +232,16 @@ const fieldAt = b => [b.x + 1, b.y + 1];
     // (a tree a trip, as the hives: early in the morning, and the time of three trips and a night — with the meals of the
     // house, the P1's, the day of the generation 7's Tenochtitlan gave the banana grove one trip of three in 180 s, T-269)
     S().time = 0.08;
-    send(P.ws[0], b, fieldAt(b));
-    live(400, Hd.step, () => b.pl.slice(0, 3).every(p => p.f < 1) && P.ws.every(x => !(held(x)[k] > 0)));
-    const picked = b.pl.slice(0, 3).filter(p => p.f < 1).length; const lost = Hd.lost(); const bad = newBad(P.base);
+    // (each of the three ripe trees picked by a hand of the case — its fruit taken while the hand was at that tree —, as it
+    // happens: a banana bears again within the day, rate 1,2, and the three picked over two days were never bare at the same
+    // time — in the metrópole of the generation 14, the hands of the banana grove picked them at 0,27, 0,38 and the next day
+    // at 0,17, between the house's water, a purchase, wood and the cave, T-484)
+    const pickedK = new Set(); let atK = new Set(), lastF = b.pl.map(p => p.f);
+    const pick = () => { b.pl.forEach((p, i) => { if (i < 3 && atK.has(i) && p.f < lastF[i] - 0.4) pickedK.add(i); }); lastF = b.pl.map(p => p.f);
+      atK = new Set(P.ws.map(x => S().villagers.get(x.id)).filter(v => v && v.task && v.task.type === 'estate' && v.task.id === b.id && v.task.k < 3).map(v => v.task.k)); };
+    send(P.ws[0], b, fieldAt(b)); const kh = keepHands(P);
+    live(400, () => { kh(); Hd.step(); pick(); }, () => pickedK.size === 3 && P.ws.every(x => !(held(x)[k] > 0)));
+    const picked = pickedK.size; const lost = Hd.lost(); const bad = newBad(P.base);
     const okk = picked === 3 && Hd.born(k) > 0 && Hd.reached(k) && !lost.length && !bad.length; good = good && okk;
     out.push(`${V.buildName(b)} #${b.id}: colhidos ${picked} de 3 pés maduros; ${Hd.say(k)}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
@@ -243,8 +256,8 @@ const shelfLines = (b, k, L0) => seen.slice(L0).filter(e => e[5] === k && (e[3] 
 if (!PRESS) ok('c7', false, `${world}: nenhum vinhedo nem olival com as mãos do ofício`);
 else {
   const P = estSetup(PRESS, vatPrep); const b = P.b; const k = Es.CROPS[b.crop].out; const Hd = watchHands(P.ws.map(x => x.id)); const L0 = seen.length;
-  send(P.ws[0], b, fieldAt(b));
-  live(200, Hd.step, () => (b.must || 0) < 2 && !((b.inv && b.inv[k]) > 0) && P.ws.every(x => !(held(x)[k] > 0)));
+  send(P.ws[0], b, fieldAt(b)); const kh = keepHands(P);
+  live(200, () => { kh(); Hd.step(); }, () => (b.must || 0) < 2 && !((b.inv && b.inv[k]) > 0) && P.ws.every(x => !(held(x)[k] > 0)));
   const L = shelfLines(b, k, L0); const made = r2(L.filter(e => e[3] === '@mundo' && e[8] === 'prensa').reduce((s, e) => s + e[6], 0));
   const taken = r2(L.filter(e => e[3] === 'b:' + b.id).reduce((s, e) => s + e[6], 0)); const shelf = r2((b.inv && b.inv[k]) || 0);
   const fl = Hd.flow(k); const got = fl.toF; const lost = Hd.lost(); const bad = newBad(P.base);
@@ -261,25 +274,25 @@ else {
     const P = estSetup(PRESS, vatPrep); const b = P.b;
     const other = [...S().villagers.values()].sort(byId).find(o => o.set === b.set && fit(o) && o.job !== b.id && !P.ws.includes(o));
     b.claim = { vat: other.id }; const L0 = seen.length;
-    send(P.ws[0], b, fieldAt(b)); live(90, null, () => pressedBy(L0, b).length > 0);
+    send(P.ws[0], b, fieldAt(b)); live(90, keepHands(P), () => pressedBy(L0, b).length > 0);
     const by = pressedBy(L0, b); good = good && by.length > 0;
     parts.push(`segura por ${other.name} #${other.id} (${other.role}, longe dela): ${by.length ? 'prensada por #' + by[0] : 'ninguém prensou'}`);
   }
   // (2) the presser called away in the middle of the press: the other hand presses (he, kept away at the fire, does not)
   {
     const P = estSetup(PRESS, vatPrep); const b = P.b; const a = P.ws[0]; const next = P.ws[1] || null;
-    send(a, b, fieldAt(b)); live(60, null, () => a.task && a.task.type === 'estate' && a.task.do === 'press' && a.task.st === 1);
+    const kh = keepHands(P); send(a, b, fieldAt(b)); live(60, kh, () => a.task && a.task.type === 'estate' && a.task.do === 'press' && a.task.st === 1);
     const was = !!(a.task && a.task.do === 'press'); const L0 = seen.length;
     const away = () => { if (!(a.task && a.task.type === 'rest')) { G.Vg.endTask(a); G.Vg.setTask(a, { type: 'rest', pri: 2.5 }); } };
     away(); if (next) send(next, b, fieldAt(b));
-    live(90, away, () => pressedBy(L0, b).length > 0);
+    live(90, () => { kh(); away(); }, () => pressedBy(L0, b).length > 0);
     const by = pressedBy(L0, b); good = good && was && (!next || by.includes(next.id));
     parts.push(`${a.name} chamado no meio da prensa (${was ? 'estava nela' : 'não chegou a ela'}): ${next ? (by.includes(next.id) ? 'a outra mão prensou' : by.length ? 'prensada por #' + by[0] : 'a outra mão não prensou') : 'sem outra mão nela'}`);
   }
   // (3) a save with the vat held: after the load nobody is at it, and the other hand presses it
   {
     const P = estSetup(PRESS, vatPrep); const b = P.b; const a = P.ws[0];
-    send(a, b, fieldAt(b)); live(60, null, () => b.claim && b.claim.vat);
+    const kh = keepHands(P); send(a, b, fieldAt(b)); live(60, kh, () => b.claim && b.claim.vat);
     const heldBy = b.claim && b.claim.vat; M.salvarCarregar(); G.inSim = Math.max(G.inSim, 1);
     const b2 = S().buildings.get(PRESS); const a2 = S().villagers.get(a.id); const nx = P.ws[1] ? S().villagers.get(P.ws[1].id) : a2;
     const away = () => { if (a2 && nx !== a2 && !(a2.task && a2.task.type === 'rest')) { G.Vg.endTask(a2); G.Vg.setTask(a2, { type: 'rest', pri: 2.5 }); } };
@@ -291,7 +304,7 @@ else {
     let hand = nx, back = 0; const keep = () => { away(); if (!hand || pressedBy(L0, b2).length || (hand.task && hand.task.type === 'estate')) return;
       const h2 = hand.job === b2.id && fit(hand) ? hand : P.ws.map(w => S().villagers.get(w.id)).find(w => w && w !== a2 && w.job === b2.id && fit(w));
       if (h2) { hand = h2; back++; send(hand, b2, fieldAt(b2)); } };
-    live(90, keep, () => pressedBy(L0, b2).length > 0);
+    live(90, () => { kh(); keep(); }, () => pressedBy(L0, b2).length > 0);
     const by = pressedBy(L0, b2); const bad = newBad(P.base);
     good = good && !!heldBy && !!hand && by.includes(hand.id) && !bad.length;
     parts.push(`save com a tina segura (${heldBy ? '#' + heldBy : 'por ninguém'}): ${by.length ? 'prensada depois do load por #' + by[0] + (hand && by.includes(hand.id) ? (hand === a2 ? ' (a mesma mão: não há outra)' : ' (a outra mão)') : '') : 'ninguém prensou depois do load'}${back ? ` (a mão do caso mandada de volta à tina ${back} vez(es)${hand !== nx ? ', a seguinte do ofício: #' + hand.id : ''})` : ''}${bad.length ? '; ' + bad.join(' · ') : ''}`);

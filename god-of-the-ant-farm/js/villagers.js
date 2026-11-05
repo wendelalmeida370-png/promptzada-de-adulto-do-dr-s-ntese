@@ -1362,7 +1362,10 @@
         } else {
           if (t.st === 2) {
             t.st = 3;
-            if (!o.task || o.task.pri <= (t.type === 'court' ? 1 : 0.9)) setTask(o, { type: 'talk', id: v.id, pri: 0.9, wait: 4, kind: 'talk', court: t.type === 'court' });
+            // (the one spoken to stops a moment to talk — from the day's work too, for a courtship —, never from the leg of an
+            // operation under way nor from a load that has somewhere to go (Vg.handsBusy, D-094): a courtship took Ivar, a
+            // builder of Hedeby, on his walk to the store for the stone of a work, and its load never came, L-509)
+            if ((!o.task || o.task.pri <= (t.type === 'court' ? 1 : 0.9)) && !Vg.handsBusy(o)) setTask(o, { type: 'talk', id: v.id, pri: 0.9, wait: 4, kind: 'talk', court: t.type === 'court' });
           }
           v.act = 'talk'; G.faceTo(v, o.x - v.x, o.y - v.y);
           if (v.actT > 0.9 && (!v.emo || v.emo.t < 0.2)) emote(v, t.type === 'court' ? 'heart' : t.type === 'visit' ? 'heart' : 'chat', 1.2);
@@ -1885,6 +1888,19 @@
       if (G.Village.livable(h)) { const [hx, hy] = G.Village.center(h); v.x = hx; v.y = hy; v.inside = h.id; } // (L-371)
     }
   }
+  // (the babies follow their arms at the end of the world's step: arms a later module moved — a secret society's conclave calls
+  // its members out of bed and out of the house after the villagers' turn, secrets.js — left the baby a step alone in a house
+  // not its own, and the checker saw it there: Pompeia, called from her bed at 0,81 with Júlia in her arms, in the «cidade» of
+  // the generation 14, L-594. Arms that can no longer hold it: the baby's own rule at once, babyUpdate)
+  Vg.babiesFollow = function () {
+    const S = G.S;
+    for (const v of S.villagers.values()) {
+      if (v.age >= 2 || !v.carrier) continue;
+      const c = S.villagers.get(v.carrier);
+      if (!c || dropNow(c, v)) { babyUpdate(v, 0); continue; }
+      if (v.inside !== c.inside || !!v.sleeping !== !!c.sleeping) { v.x = c.x + c.face * -0.08; v.y = c.y + 0.02; v.inside = c.inside; v.sleeping = c.sleeping; G.faceAs(v, c); v.carried = !c.inside && !c.sleeping; }
+    }
+  };
 
   // ------------------------------ per-frame update ------------------------------
   let tAlarm = 0, tPush = 0;

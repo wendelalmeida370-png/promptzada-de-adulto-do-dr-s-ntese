@@ -55,7 +55,9 @@ const fill = (b, stone) => {
   b.incoming = { wood: 0, stone: 0 };
 };
 function give(v, b) {
-  G.Vg.endTask(v); v.sleeping = false; v.inside = 0; v.hunger = 0; v.path = null;
+  // (rested, as the case says — the morning of the case is the end of the night: in the metrópole of the generation 14 Bjorn,
+  // woken by the hand at 0,08 with the night's energy, went back to bed 0,7 s into the task, T-482)
+  G.Vg.endTask(v); v.sleeping = false; v.inside = 0; v.hunger = 0; v.energy = Math.max(v.energy, 95); v.path = null;
   // (and the jar at home full: in the same metropole the houses of Tenochtitlan were low on water, and Citlalin left the work
   // for the well in the first seconds, T-261)
   { const hb = S.buildings.get(v.home); if (hb) hb.water = 1; }

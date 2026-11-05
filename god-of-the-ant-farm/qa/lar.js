@@ -287,8 +287,12 @@ if (want('l2')) {
     for (const b of [...S.villagers.values()].filter(o => builtHome(o) && !o.captive).sort((x, y) => x.id - y.id)) {
       // (at the fire or talking — not over the pot or at the table: the cook's while is its own)
       if (b.age < 16 || b.sleeping || b.inside !== b.home || !b.task || b.task.type !== 'lar' || !(b.task.what === 'descansar' || b.task.what === 'conversar') || L.clock(b).bed < S.time + 0.04) continue;
-      // (not of a secret society: its people go to its meetings by night — secrets.js, the conclave)
-      const a = [...S.villagers.values()].filter(o => o.home === b.home && o.id !== b.id && o.age >= 16 && o.age < 60 && !o.sleeping && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.secret && !isBody(o) && (o.id === b.partner || o.mother === b.id || o.father === b.id)).sort((x, y) => x.id - y.id)[0];
+      // (not of a secret society: its people go to its meetings by night — secrets.js, the conclave. And no baby in the arms of
+      // either: by the house's rule one with a baby in the arms rocks it before waiting (act-lar.js, idle), and the baby of one
+      // who goes out on the watch is left with one at home (D-074) — in the «cidade» of the generation 14 Citlali went out with
+      // hers, Citlalin rocked it, and waited 0 s, T-485)
+      if (G.Vg.holdsBaby(b)) continue;
+      const a = [...S.villagers.values()].filter(o => o.home === b.home && o.id !== b.id && o.age >= 16 && o.age < 60 && !o.sleeping && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.secret && !isBody(o) && !G.Vg.holdsBaby(o) && (o.id === b.partner || o.mother === b.id || o.father === b.id)).sort((x, y) => x.id - y.id)[0];
       if (a) return [a, b];
     }
     return null;
@@ -378,6 +382,10 @@ if (want('l7')) {
     const oe = offer('lar.comer:' + h.id); const re = oe ? doIt(oe) : { ok: false, why: 'sem a oferta de comer' };
     const ate = book(e => e[0] > L0 && e[3] === ref && e[5] === 'food' && (e[8] === 'refeicao' || e[8] === 'ceia') && e[9] === v.id);
     goTo(fire); live(0.3);
+    // (the pantry with food for the cooking too: the family sups from it at the case's hour — in the «cidade» of the generation
+    // 14 Signy and Ragnhild ate two of the three the moment they came, Tove's meal took the last, and at the fire «A despensa da
+    // casa está vazia», T-485)
+    { const n = D.get(ref, 'food'); if (n < 2) D.make(ref, 'food', 2 - n, { code: 'teste', part: true, floor: true }); }
     const oc = offer('lar.cozinhar:' + h.id); const rc = oc ? doIt(oc) : { ok: false, why: 'sem a oferta de cozinhar' };
     const cooked = h.ceia === S.day; const deeds = S.avatar ? Object.assign({}, S.avatar.deeds) : {};
     st('no fogo'); v.energy = Math.min(v.energy, 60);
@@ -511,7 +519,9 @@ if (want('l13')) {
     const ra = doIt('lar.comer:' + h.id); if (fire) inside(fire); live(0.2); const rc = doIt('lar.cozinhar:' + h.id);
     // (what changed in the family in the step the body came in, and was not their own errand going on — one coming home to
     // bed or to the evening by the door, one falling asleep in bed)
-    const own = (e, f) => { const [id, i0, s0] = e.split('/').map(Number), [, i1, s1] = f.split('/').map(Number); const o = S.villagers.get(id); const t = o && o.task; if (!t) return false; if (!i0 && i1 === h.id && (t.type === 'sleep' || t.type === 'lar' || t.type === 'shelter')) return s0 === s1 || t.type === 'sleep'; if (i0 === i1 && !s0 && s1 && t.type === 'sleep') return true; return false; };
+    // (and a baby in arms is where its arms are — the body's arms too, which the world never empties, D-074: in the «cidade» of
+    // the generation 14 the body was Brynhild with her baby in her arms, and the baby came in with her, T-485)
+    const own = (e, f) => { const [id, i0, s0] = e.split('/').map(Number), [, i1, s1] = f.split('/').map(Number); const o = S.villagers.get(id); if (o && o.age < 2 && o.carrier) { const c = S.villagers.get(o.carrier); return !!c && (c.inside || 0) === i1 && !!c.sleeping === !!s1; } const t = o && o.task; if (!t) return false; if (!i0 && i1 === h.id && (t.type === 'sleep' || t.type === 'lar' || t.type === 'shelter')) return s0 === s1 || t.type === 'sleep'; if (i0 === i1 && !s0 && s1 && t.type === 'sleep') return true; return false; };
     const diff = (x, y) => { const A = x.split(' '), B = y.split(' '); return A.map((e, k) => e !== B[k] && !own(e, B[k]) ? `${e}→${B[k]} (${(S.villagers.get(+e.split('/')[0]) || {}).task ? S.villagers.get(+e.split('/')[0]).task.type : '-'})` : null).filter(Boolean).join(', '); };
     const dIn = diff(f3, f4);
     say('dentro', !!table && !!fire && !dIn && !!ra.ok && !!rc.ok && panOK(), `${!dIn ? 'a família igual ao entrar (fora o que é da vida dela)' : 'a família MUDOU ao entrar: ' + dIn}; comeu ${ra.ok ? 'sim' : 'NÃO (' + ra.why + ')'}; cozinhou ${rc.ok ? 'sim' : 'NÃO (' + rc.why + ')'}; a despensa pelo livro ${panOK() ? 'sim' : 'NÃO'}`);
@@ -1008,12 +1018,19 @@ if (want('l17')) {
   if (got) {
     set = got.st; const h = got.h;
     S.time = 0.6; const from = raise(h); const fam0 = res(h).map(v => v.id); const n0 = fam0.length;
-    const outs = new Set(); let lar = 0, family = 0, inside = 0;
-    // (the evening and the night: who of the house is at home, asleep inside, or asleep outdoors)
+    const outs = new Set(); let lar = 0, family = 0, inside = 0; const sent = new Set();
+    // (the evening and the night: who of the house is at home, asleep inside, or asleep outdoors. The evening at home of the case
+    // by the test's hand: each grown one of the house, the first time in the evening it is up with nothing to do, is sent home
+    // for the evening by the house's own door — G.Lar.task, 'tarde', the evening's going home, as the world's choice «home»
+    // gives it (villagers.js) —, and the house decides: the errand counts after a step of the world, which ends it when the house
+    // in works is not its home. A young family's evening is its own: in the metrópole of the generation 14 Coatlicue and Ocelotl
+    // went from the work to the garden — or, the garden tended, to the tavern — and from there to bed, and the house in works had
+    // no evening at home to be seen, T-485)
     liveTo(0.95, () => {
       for (const id of fam0) { const v = S.villagers.get(id); if (!v || v.home !== h.id) continue; const t = v.task;
         if (t && t.type === 'lar' && t.home === h.id) lar++; if (t && t.type === 'family') family++;
-        if (v.sleeping && v.inside === h.id) inside++; if (v.sleeping && !v.inside && t && t.type === 'sleep') outs.add(v.id); }
+        if (v.sleeping && v.inside === h.id) inside++; if (v.sleeping && !v.inside && t && t.type === 'sleep') outs.add(v.id);
+        if (!sent.has(id) && G.isEvening() && v.age >= 16 && !v.sleeping && !v.task) { sent.add(id); G.Lar.task(v, G.Vg.H, 'tarde'); } }
     });
     const asleepIn = fam0.filter(id => { const v = S.villagers.get(id); return v && v.sleeping && v.inside === h.id; });
     // (the plan they live in through the works is the old house's: the interiors' record keeps the old type until it stands)
@@ -1296,15 +1313,22 @@ if (want('l10c')) {
   // —: it eats first, and is not among the meeting's people; the others are. (b) The meeting gathered, another of them at the
   // top of hunger with the life going — the test's hand —: it leaves to eat, and the meeting goes on without it)
   open(); for (const st of S.settlements.values()) noFeast(st);
-  const Sc = G.Secrets; const socs = ((S.secrets && S.secrets.socs) || []).filter(q => !q.gone).sort((a, c) => a.id - c.id);
+  const Sc = G.Secrets; let socs = [];
   const can = (v, l) => G.dist(v.x, v.y, l.x, l.y) < 34 && !v.captive && !v.aboard && !v.held && !v.ug && !v.jail && !isBody(v) && !(v.task && v.task.pri >= 2);
   const store = v => { const d = V.nearestDropoff(v.x, v.y, v.set); if (!d) return Infinity; const ft = V.frontTile(d); return W.reaches(v, ft[0], ft[1]) ? G.dist(v.x, v.y, ft[0], ft[1]) : Infinity; };
   let q = null, l = null, go = [];
-  for (const s of socs) for (const lo of s.lodges) {
-    if (Sc.meetOfLodge(lo.id)) continue;
-    const g = Sc.membersOf(s).filter(v => can(v, lo)).sort((a, c) => a.id - c.id);
-    if (g.length >= 4 && g.some(v => v.age >= 18 && v.age < 60 && store(v) < Infinity) && g.length > go.length) { q = s; l = lo; go = g; }
-  }
+  const find10c = () => {
+    socs = ((S.secrets && S.secrets.socs) || []).filter(x => !x.gone).sort((a, c) => a.id - c.id);
+    for (const s of socs) for (const lo of s.lodges) {
+      if (Sc.meetOfLodge(lo.id)) continue;
+      const g = Sc.membersOf(s).filter(v => can(v, lo)).sort((a, c) => a.id - c.id);
+      if (g.length >= 4 && g.some(v => v.age >= 18 && v.age < 60 && store(v) < Infinity) && g.length > go.length) { q = s; l = lo; go = g; }
+    }
+    return !!l;
+  };
+  // (in this world or, when it has none, in the metropolis, as the l2 and the l13: in the «cidade» of the generation 14 no lodge
+  // of its three societies had four of its people within reach, T-485)
+  if (!find10c() && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); for (const st of S.settlements.values()) noFeast(st); find10c(); }
   const name = 'l10c a reunião da sociedade secreta não leva quem vai comer (L-397)';
   if (!l) ok(name, false, `nenhuma casa de sociedade secreta com quatro dos seus ao alcance (${socs.length} sociedade(s))`);
   else {
