@@ -93,21 +93,21 @@ G.Ready.list({
  },
  "anos500": {
   "day": 501,
-  "pop": 1071,
-  "peoples": 2,
-  "towns": 12,
+  "pop": 1002,
+  "peoples": 3,
+  "towns": 15,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Tlatelolco",
+   "name": "Corinto",
    "tier": 4,
-   "pop": 218
+   "pop": 198
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 5881010
+  "bytes": 6361256
  },
  "anos1000": {
   "day": 1001,
