@@ -11,6 +11,8 @@
 //    chão da cidade — lido pela prova casa a casa no mapa de regiões, não pelo V.siteReached
 // q3 dois anos de salto na metrópole: todo lugar que o mundo pede ao buscador tem, na hora, um lado do lote no chão da cidade;
 //    o verificador limpo e nenhum erro de módulo
+// q4 a corte pergunta o alcance do lote do grande palácio e do colossal também no degrau do próprio tipo (L-544): o lote que
+//    ela dá, dito fora do alcance das ruas, nunca é dado de novo — a mesma busca, com os mesmos sorteios do mundo
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js'] });
 const fails = [];
@@ -87,6 +89,23 @@ const before = (set, x, y, w, h) => { const W = G.W; return sides(x, y, w, h).co
   const chk = QA.check().filter(q => q.sev <= 2).map(q => q.msg); errs = Object.keys(G.modErr || {}).length;
   ok('q3 dois anos de salto: todo lugar dado tem um lado no chão da cidade', n > 0 && !bad.length && !chk.length && !errs && M.limpo(),
     `metrópole, do dia ${d0} ao ${Math.floor(S.day)}: ${n} lugares dados, ${bad.length ? bad.length + ' sem lado no chão da cidade — ' + bad.slice(0, 3).join(' · ') : 'todos com um lado no chão da cidade'}; ${chk.length ? 'o verificador: ' + chk.slice(0, 2).join(' | ') : 'verificador limpo'}${errs ? '; erro de módulo: ' + Object.keys(G.modErr).join(', ') : ''}`);
+}
+
+// ---- q4: the court asks the reach of the lot of its vain palaces at the type's own step too (L-544): the lot it gives, said
+// out of the streets' reach, is never given again — the same search, on the same draws of the world
+{
+  M.pronto('metropole'); const S = G.S, V = G.Village, Co = G.Court; G.inSim++;
+  let sites = 0, asked = 0, moved = 0; const bad = []; const real = V.siteReached;
+  try {
+    for (const s of [...S.settlements.values()].filter(q => G.Fac.get(q.fac)).sort((a, b) => a.id - b.id)) for (const t of ['grande_palacio', 'palacio_colossal']) {
+      const r0 = S.rng; const p = Co.site(s, t); S.rng = r0; if (!p) continue; sites++; const w = G.BDEF[t].w;
+      let seen = false; V.siteReached = (set, x, y, def) => { if (set === s && x === p[0] && y === p[1] && def.w === w) { seen = true; return false; } return real(set, x, y, def); };
+      let q = null; try { q = Co.site(s, t); } finally { V.siteReached = real; S.rng = r0; }
+      if (seen) asked++; if (!q || q[0] !== p[0] || q[1] !== p[1]) moved++; else bad.push(`${s.name} ${t} em ${p[0]},${p[1]}`);
+    }
+  } finally { V.siteReached = real; G.inSim--; }
+  ok('q4 a corte pergunta o alcance do lote do palácio no degrau do próprio tipo também', sites > 0 && asked === sites && moved === sites,
+    `metrópole: ${sites} lotes do grande palácio e do colossal no degrau de cada um; ${asked} perguntados ao alcance das ruas; dito fora do alcance, ${moved} foram para outro lugar${bad.length ? ' — DADOS DE NOVO: ' + bad.slice(0, 3).join(' · ') : ''}`);
 }
 console.log(fails.length ? `LOTE-BOLSAO: ${fails.length} falha(s)` : 'LOTE-BOLSAO: ok');
 process.exit(fails.length ? 1 : 0);

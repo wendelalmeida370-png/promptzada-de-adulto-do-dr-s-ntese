@@ -133,9 +133,10 @@
       const sl = W.slope(x, y, w, w); if (sl > maxSl) continue;
       const ideal = (set.radius || 8) + (type === 'palacio_colossal' ? 5 : 2);
       const sc = -Math.abs(d - ideal) * 1.1 - trees * 0.4 - sl * 2 + G.R() * 0.6;
-      // (a step of the ladder only where the town's streets reach the work, the builders' rule — asked of the best so far, after
-      // the draw: L-465)
-      if (sc > bs && w !== def.w && !G.Village.siteReached(set, x, y, { w, h: w })) continue;
+      // (only where the town's streets reach the work, the builders' rule — asked of the best so far, after the draw: L-465 —, at
+      // every step, the type's own size too: the vain palace of the classic step went wherever its open ground was, and a lot the
+      // town does not reach is a work given up after its tries and asked again — L-349, L-465 —, L-544)
+      if (sc > bs && !G.Village.siteReached(set, x, y, { w, h: w })) continue;
       if (sc > bs) { bs = sc; best = [x, y]; }
     }
     return best;

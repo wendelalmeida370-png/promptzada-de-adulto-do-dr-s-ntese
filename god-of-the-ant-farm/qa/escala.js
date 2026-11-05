@@ -55,12 +55,16 @@ function run(id, fn) { if (ONLY && !ONLY.includes(id)) return; try { fn(); } cat
 // tipos que ainda não têm degrau maior em povo nenhum — os banhos, a biblioteca, o mercado, o paço municipal — escolhem o
 // clássico de verdade em toda cidade)
 const PUB = ['maravilha', 'teatro', 'temple', 'palacio', 'grande_palacio', 'palacio_colossal', 'paco', 'monument', 'banhos', 'biblioteca', 'mercado', 'administracao'];
+// (a town with a great work of the world's own already going up when the ready world was saved — a step the ladder chose before
+// the proof — is not of the classic reference: that work keeps its stone whatever the proof asks now. In the metrópole of the
+// generation 14, Argos's great palace of 8 and Tenochtitlan's theatre of 6, T-477)
 run('e0', () => {
   abre(); const choose0 = Es.choose; let classic = 0, opens = 0, grew = 0, great = 0, mexeu = 0, guardou = 0, cidades = 0;
+  const doMundo = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && V.greatWork(s, V.counts(s.id))).map(s => s.name);
   Es.choose = (set, type) => [Es.classic(type)];
   try {
     for (const set of S.settlements.values()) {
-      const fac = G.Fac.get(set.fac); if (!fac) continue; cidades++; const c = V.counts(set.id);
+      const fac = G.Fac.get(set.fac); if (!fac || doMundo.includes(set.name)) continue; cidades++; const c = V.counts(set.id);
       for (const t of PUB) { classic++; if (Es.choose(set, t).some(s => V.opens(t, s))) opens++; }
       const rng0 = S.rng;
       if (sim(() => V.grow(set, fac, c))) grew++;
@@ -68,7 +72,7 @@ run('e0', () => {
       if (S.rng !== rng0) mexeu++;
     }
   } finally { Es.choose = choose0; }
-  ok('e0 só o clássico: nada muda', !opens && !grew && !great && !mexeu && cidades > 0, `${cidades} cidades, ${classic} escadas só com o clássico: nenhuma abre espaço (${opens}); ampliações ${grew}, obras que guardam a pedra ${great}, o acaso do mundo tocado ${mexeu}`);
+  ok('e0 só o clássico: nada muda', !opens && !grew && !great && !mexeu && cidades > 0, `${cidades} cidades, ${classic} escadas só com o clássico: nenhuma abre espaço (${opens}); ampliações ${grew}, obras que guardam a pedra ${great}, o acaso do mundo tocado ${mexeu}${doMundo.length ? `; fora da referência, com a obra grande do mundo já em obra: ${doMundo.join(', ')}` : ''}`);
   const sem = ['banhos', 'biblioteca', 'mercado', 'administracao']; let maior = [];
   for (const set of S.settlements.values()) for (const t of sem) if (Es.choose(set, t).some(st => st.n !== Es.n0(t))) maior.push(`${set.name}/${t}`);
   ok('e0b os tipos sem degrau maior escolhem o clássico', !maior.length, maior.length ? `com degrau maior: ${maior.slice(0, 4).join(', ')}` : `${sem.join(', ')}: o clássico em toda cidade`);
@@ -110,8 +114,11 @@ run('e2', () => {
 });
 
 // ------------------------------ e3: abrir espaço, com as regras ------------------------------
+// (a cidade: a menor que justifica o templo de 4 — o primeiro degrau que ela escolhe —, por quem é e não pelo nome: na metrópole da
+// geração 14, Óstia, a de antes, tinha 16 pessoas e escolhia o santuário de 2, e o templo nunca abria espaço, T-477)
+const templo4 = () => [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && Es.choose(s, 'temple')[0].n === 4).sort((a, c) => V.pop(a.id) - V.pop(c.id) || a.id - c.id)[0] || null;
 run('e3', () => {
-  abre(); const set = cidade('Óstia'); const lim = V.openLimit(4);
+  abre(); const set = templo4(); if (!set) { ok('e3a sem lote livre', false, 'nenhuma cidade que justifica o templo de 4'); return; } const lim = V.openLimit(4);
   // (a velha quadra: casas baixas da cidade, de pé, em cada lote livre de 4 casas que o planejador acharia — até não sobrar nenhum)
   let P, k = 0; const quadra = [];
   for (; k < 16; k++) { set._noSite = {}; P = sim(() => V.findSite(set, 'temple', undefined, 4)); if (!P) break; for (const [dx, dy] of k === 0 ? [[0, 0], [2, 2]] : [[1, 1]]) quadra.push(sim(() => V.addBuilding('house', P[0] + dx, P[1] + dy, set.id, true)).id); }
@@ -137,7 +144,7 @@ run('e3', () => {
 });
 // ------------------------------ e3x: o juiz do lote, regra a regra ------------------------------
 run('e3x', () => {
-  abre(); const set = cidade('Óstia'); set._noSite = {}; const P = sim(() => V.findSite(set, 'temple', undefined, 4));
+  abre(); const set = templo4(); if (!set) { ok('e3x0 um lote livre', false, 'nenhuma cidade que justifica o templo de 4'); return; } set._noSite = {}; const P = sim(() => V.findSite(set, 'temple', undefined, 4));
   if (!ok('e3x0 um lote livre', !!P, P ? `${set.name}: o lote de 4 em ${P.join(',')}` : 'nenhum')) return;
   const juiz = () => V.lotFor(set, 'temple', 4, P[0], P[1]);
   const com = (lista, f) => { const os = lista.map(([t, sid, dx, dy]) => sim(() => V.addBuilding(t, P[0] + dx, P[1] + dy, sid, true))); const r = f(); sim(() => { for (const o of os) V.removeBuilding(o); }); return r; };
@@ -253,17 +260,22 @@ run('e9', () => {
 // (Roma com as obras dela todas de pé — o planejador com lugar para começar outras —, um ano com a maravilha em obra e um ano sem
 // ela: os extras de pedra que a cidade começa em cada um; o que ela precisa para viver e para se guardar, nos dois)
 const NEED = ['storehouse', 'farm', 'well', 'workshop', 'praca', 'mercado', 'temple', 'celeiro', 'doca', 'quartel', 'torre', 'muralha', 'portao', 'wall', 'gate'];
-function extras(comObra) {
-  abre(); const set = cidade('Roma'); sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && !o.built && o.type !== 'ruin') V.completeBuilding(o); });
+// (the town: the biggest where the wonder the god's hand founds still waits for stone — the rocks broken on its lot go into the
+// work, D-121: in the metrópole of the generation 14 Roma's Colosseum got all its stone from the rocks of its lot, waited only for
+// bricks, and was no great work waiting for stone, T-477 —; the year of the comparison only there)
+function extras(comObra, sid) {
+  abre(); const set = S.settlements.get(sid); sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && !o.built && o.type !== 'ruin') V.completeBuilding(o); });
   const b = comObra ? sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60 })) : null; const great = V.greatWork(set, V.counts(set.id));
+  if (comObra && !(b && great && great.id === b.id)) return { set, b, great, out: null };
   const id0 = S.nextId; M.saltar(1); const out = [];
   for (const o of S.buildings.values()) if (o.id >= id0 && o.set === set.id) { const d = G.BDEF[o.type === 'ruin' ? o.origType : o.type]; if (d && !d.housing && (d.cost.stone || 0) >= 8 && !NEED.includes(o.type)) out.push(o.type); }
-  return { b, great, out };
+  return { set, b, great, out };
 }
 run('e10', () => {
-  const A = extras(true);
-  if (!ok('e10a a maravilha em obra guarda a pedra', !!A.b && !!A.great && A.great.id === A.b.id, `${lado(A.b)} espera pedra (${A.b ? A.b.need.stone : '?'}): ${A.great ? 'é a obra grande da cidade' : 'NÃO é vista'}`)) return;
-  const B = extras(false);
+  abre(); const ids = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && Es.can('maravilha', G.Civ.idOfFac(s.fac) || 'classico', 10)).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id).map(s => s.id);
+  let A = null; const tried = []; for (const sid of ids) { A = extras(true, sid); tried.push(`${A.set.name} ${A.b ? 'pedra ' + (A.b.need.stone || 0) : '-'}`); if (A.out) break; }
+  if (!ok('e10a a maravilha em obra guarda a pedra', !!A && !!A.out, A && A.out ? `${A.set.name}: ${lado(A.b)} espera pedra (${A.b.need.stone}): é a obra grande da cidade` : `nenhuma cidade onde a maravilha espera pedra (${tried.join(' · ')})`)) return;
+  const B = extras(false, A.set.id);
   ok('e10b nenhum extra de pedra começa enquanto ela espera', !A.out.length, `um ano com a obra grande: ${A.out.length} extras de pedra (${A.out.join(', ') || '-'}); sem ela: ${B.out.length} (${B.out.join(', ') || '-'})${B.out.length ? '' : ' — neste ano a prova não distingue'}`);
 });
 
@@ -306,6 +318,10 @@ run('e14', () => {
 // pública só com a pedra de vinte anos — a do estoque e a renda —, o clássico pela pedra guardada, como antes)
 run('e15', () => {
   abre(); const set = cidade('Roma'); const f = G.Fac.get(set.fac); const fid = f.id; const P6 = degrau('palacio', 6);
+  // (the people's count of the day begun clean, in the ledger's own form — f.pedra —: the income is the bigger of today's and
+  // yesterday's, and in the metrópole of the generation 14 Roma's people had brought 144 yesterday, more than the 12 of the case:
+  // the income did not move, T-477)
+  f.pedra = [S.day, 0, 0];
   const i0 = V.stoneIncome(fid); sim(() => { D.make('f:' + fid, 'stone', 12, { code: 'entrega' }); D.make('f:' + fid, 'stone', 5, { code: 'teste' }); }); const i1 = V.stoneIncome(fid);
   ok('e15a a renda pelo livro', i1 === i0 + 12, `antes ${i0}, depois de 12 entregues e 5 postas pela prova: ${i1}`);
   sim(() => D.use('f:' + fid, 'stone', f.stock.stone || 0, { code: 'teste' })); const B = Es.bill('palacio', P6).cost.stone;
@@ -385,6 +401,16 @@ run('e19', () => {
   const T = In.table(b); const of = u => (T && T.byUse.get(u)) || []; const assentos = of('assistir').filter(e => e.it.kind === 'fileira').length, emPe = of('assistir').filter(e => e.it.kind === 'marca').length;
   const ver = of('assistir').length, luta = of('lutar').length, jb = E.jobsOf(b);
   ok('e19b os lugares da planta', assentos >= 700 && emPe >= 50 && luta === 8 && !!jb && jb.n === luta && jb.role === 'ator', `${assentos} assentos nas fileiras e ${emPe} em pé no pódio (${ver} para ver), ${luta} na areia; os postos: ${jb ? jb.n + ' de ' + jb.role : 'nenhum'}`);
+  // (a day of games: the town's feast of the day out of the show's hours — D-130: the ludi of a Roman town, from 0,30 to 0,438,
+  // fall on the doors of the Colosseum, open at 0,40 for the walk from the far end of the town, and that day the games are the
+  // feast's own; the metrópole of the generation 14 was saved on such a day, T-477 —: the world goes on a year, at most three,
+  // to a day that leaves the show its hours)
+  const choca = () => { const fw = G.Fest && G.Fest.window ? G.Fest.window(set) : null; const h = Tt.horas(b); return !!fw && fw[0] < h.fecha && fw[1] > h.abre; };
+  for (let k = 0; k < 3 && choca(); k++) { const id = b.id; M.saltar(1); b = S.buildings.get(id); }
+  // (and who rules rules through the games: the term of the ruler begun today (f.term, the polity's), no election of the world's
+  // own in the middle of them — on the day after the ludi the republic of Lavínio elected Sexto at 0,426, with the doors open, and
+  // Flávia, called to the throne, was of the court, T-477)
+  G.Fac.get(set.fac).term = S.day;
   // (os lutadores: oito adultos de Roma no ofício, a cada um o seu posto pelo repartidor do povo — E.place)
   const sobra = v => v.set === set.id && v.age >= 18 && v.age <= 55 && !v.captive && !v.jail && !v.aboard && v.role !== 'guerreiro';
   let n = 0; for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (n >= luta) break; if (!sobra(v) || v.role === 'ator') continue; v.role = 'ator'; v.job = 0; sim(() => G.Vg.endTask(v)); n++; }
@@ -519,10 +545,18 @@ run('e21o', () => {
 // visitante, 'sentar', até o M2 pôr os de pé da sala do trono —, a ronda fica; o save no meio; quem governa morre no meio; o deus
 // derruba o palácio no meio; o voto e o pão iguais, na praça)
 const DIST = (v, b) => { const d = G.Vg.door(b); return Math.round(G.dist(v.x, v.y, d[0], d[1])); };
+// (the capital and its palace by the rule of the audience — Co.audPalace: the people's best palace, in its capital, standing with
+// its plan —: the first people with a ruler whose capital has its palace of 6 standing, else one with no palace at all, where the
+// god's hand raises it. In the metrópole of the generation 14 Roma had its own palace of 6, and the one the proof raised beside it
+// was never the audience's: everyone went to the old one, and nobody came into the new, T-477)
 function audiencia(chama) {
-  abre(); const set = cidade('Roma'); const f = G.Fac.get(set.fac); const Co = G.Court, P = G.Politics, In = G.Interiors;
-  const b = sim(() => V.handFound(set, 'palacio', 'palacio', { R: 60, built: true })); const r = P.ruler(f);
-  if (!b || !r) return { set, f, b, r };
+  abre(); const Co = G.Court, P = G.Politics, In = G.Interiors;
+  const caps = G.Fac.all().filter(o => o.alive && P.ruler(o) && G.Fac.capitalOf(o.id)).sort((a, c) => a.id - c.id);
+  const seis = o => { const p = Co.audPalace(o); return p && p.w === 6 ? p : null; };
+  const f = caps.find(seis) || caps.find(o => !Co.bestPalace(o)); if (!f) return { set: null, f: null, b: null, r: null };
+  const set = G.Fac.capitalOf(f.id);
+  const b = seis(f) || sim(() => V.handFound(set, 'palacio', 'palacio', { R: 60, built: true })); const r = P.ruler(f);
+  if (!b || !r || Co.audPalace(f) !== b) return { set, f, b, r };
   for (const v of [r, ...[...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive).sort((a, c) => a.id - c.id).slice(0, 40)]) { sim(() => G.Vg.endTask(v)); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); }
   const dr = G.Vg.door(b); r.x = dr[0] + 1; r.y = dr[1] + 1;
   for (const v of [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive && o !== r).sort((a, c) => a.id - c.id).slice(0, 24)) { v.x = dr[0] + 2 + (v.id % 5); v.y = dr[1] + 2 + (v.id % 3); v.path = null; }
@@ -548,9 +582,9 @@ run('e22', () => {
   const c1 = checa(); ok('e22d verificador', c1.ok, c1.txt);
   // (o verificador vê: a audiência apagada à mão com a cidade nela; quem está nela dentro de outro prédio)
   const aud1 = A.f.aud; A.f.aud = null; const q1 = QA.check().filter(q => q.sys === 'escala' && q.sev === 2 && /não tem audiência/.test(q.msg)).length; A.f.aud = aud1;
-  const fo = dentro[0]; const casa = [...S.buildings.values()].find(o => o.built && o.type === 'house' && o.set === A.set.id); fo.inside = casa.id;
-  const q2 = QA.check().filter(q => q.sys === 'escala' && q.sev === 2 && /dentro de outro/.test(q.msg)).length; fo.inside = b.id;
-  ok('e22m o verificador vê', q1 >= dentro.length && q2 === 1, `com a audiência apagada à mão: ${q1} avisos S2 (${dentro.length} dentro e os que vêm); ${fo.name} posto noutra casa: ${q2}`);
+  const fo = dentro[0]; const casa = [...S.buildings.values()].find(o => o.built && o.type === 'house' && o.set === A.set.id); let q2 = -1;
+  if (fo && casa) { fo.inside = casa.id; q2 = QA.check().filter(q => q.sys === 'escala' && q.sev === 2 && /dentro de outro/.test(q.msg)).length; fo.inside = b.id; }
+  ok('e22m o verificador vê', q1 >= dentro.length && q2 === 1, `com a audiência apagada à mão: ${q1} avisos S2 (${dentro.length} dentro e os que vêm); ${fo && casa ? `${fo.name} posto noutra casa: ${q2}` : fo ? 'nenhuma casa da cidade para pôr alguém' : 'ninguém lá dentro para pôr noutra casa'}`);
   const aud0 = JSON.stringify(A.f.aud); const ids = dentro.map(v => v.id); salva(); const f2 = G.Fac.get(A.f.id);
   const volta = ids.filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.kind === 'audiencia' && v.inside === b.id; }).length;
   ok('e22e o save no meio', !!f2.aud && JSON.stringify(f2.aud) === aud0 && volta === ids.length, `a audiência ${f2.aud ? 'continua' : 'SUMIU'}; ${volta} de ${ids.length} de volta lá dentro`);
@@ -587,10 +621,22 @@ run('e22', () => {
 // ------------------------------ e23: os serviços abertos com a comida garantida (D-102) ------------------------------
 // (o teto dos ofícios guarda uma pessoa para cada serviço aberto — o taverneiro de cada taverna, um ator de cada teatro ou arena,
 // um estivador do cais com caixas e armazém — quando a comida do povo está garantida, V.foodSafe; com ela em risco, como antes; o
-// corte do resto mínimo os deixa; na vida, a taverna e o teatro de Mênfis, vazios na metrópole pronta, ganham quem os abra; o save
+// corte do resto mínimo os deixa; na vida, a taverna e o teatro da cidade ficam com quem os abra; o save
 // devolve os ofícios como estavam; o verificador vê o serviço vazio)
+// (the town: the biggest with a tavern and a theatre open and its food safe — by what it has, not by its name: in the metrópole
+// of the generation 14 Mênfis, the one of before, had no theatre, T-477 —; where none has both, the biggest whose food is safe,
+// with the one it lacks raised by the god's hand)
+const servicos = () => {
+  const E = G.Eco; const fed = s => G.Fac.get(s.fac) && V.foodSafe(s.fac);
+  const L = [...S.settlements.values()].filter(fed).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
+  const both = L.find(s => { const sv = E.services(s); return sv.taverneiro >= 1 && sv.ator >= 1; }); if (both) return both;
+  const set = L[0]; if (!set) return null; const sv = E.services(set);
+  if (!(sv.taverneiro >= 1)) sim(() => V.handFound(set, 'taverna', Es.classic('taverna').id, { R: 40, built: true }));
+  if (!(sv.ator >= 1)) sim(() => V.handFound(set, 'teatro', 'teatro', { R: 40, built: true }));
+  return set;
+};
 run('e23', () => {
-  abre(); const E = G.Eco; const set = cidade('Mênfis'); const f = G.Fac.get(set.fac);
+  abre(); const E = G.Eco; const set = servicos(); if (!set) { ok('e23a o teto guarda os serviços com a comida garantida', false, 'nenhuma cidade com a comida garantida'); return; } const f = G.Fac.get(set.fac);
   const papel = r => [...S.villagers.values()].filter(v => v.set === set.id && v.role === r).length;
   const sv = E.services(set); const ask = sim(() => E.demand(set, f, 25));
   const pede = { taverneiro: ask.taverneiro || 0, ator: ask.ator || 0, oleiro: 2, ferreiro: 2, mercador: 1, feirante: 2 };
@@ -602,13 +648,13 @@ run('e23', () => {
   const w1 = { taverneiro: 1, ator: 2, oleiro: 1 }; const n1 = E.cut(w1, 3, { taverneiro: 1, ator: 1 });
   ok('e23b o corte do resto deixa os serviços guardados', n1 === 2 && w1.taverneiro === 1 && w1.ator === 1 && w1.oleiro === 0, `corta 3 de ${JSON.stringify({ taverneiro: 1, ator: 2, oleiro: 1 })} guardando um taverneiro e um ator: ${n1} cortados, ${JSON.stringify(w1)}`);
   const t0 = papel('taverneiro'), a0 = papel('ator'); M.viver(400); const c1 = checa();
-  ok('e23c na vida, a taverna e o teatro abertos', papel('taverneiro') >= 1 && papel('ator') >= 1 && V.foodSafe(f.id) && c1.ok, `Mênfis: taverneiros ${t0} → ${papel('taverneiro')}, atores ${a0} → ${papel('ator')} em dois dias; ${c1.txt}`);
-  const roles = [...S.villagers.values()].filter(v => v.set === set.id).map(v => v.id + ':' + v.role).join(); salva(); const s2 = cidade('Mênfis');
+  ok('e23c na vida, a taverna e o teatro abertos', papel('taverneiro') >= 1 && papel('ator') >= 1 && V.foodSafe(f.id) && c1.ok, `${set.name}: taverneiros ${t0} → ${papel('taverneiro')}, atores ${a0} → ${papel('ator')} em dois dias; ${c1.txt}`);
+  const roles = [...S.villagers.values()].filter(v => v.set === set.id).map(v => v.id + ':' + v.role).join(); salva(); const s2 = S.settlements.get(set.id);
   const roles2 = [...S.villagers.values()].filter(v => v.set === s2.id).map(v => v.id + ':' + v.role).join();
   ok('e23d o save devolve os ofícios', roles === roles2, roles === roles2 ? 'os mesmos ofícios, um por um, depois de carregar' : 'OS OFÍCIOS MUDARAM NO LOAD');
   // (o verificador vê: a taverna sem ninguém do ofício por três dias, a comida garantida — tirados os taverneiros à mão, sem passo)
   const kept = [...S.villagers.values()].filter(v => v.set === s2.id && v.role === 'taverneiro'); for (const v of kept) v.role = 'coletor';
-  const vazia = () => QA.check().filter(q => q.sys === 'escala' && /a taverna sem ninguém/.test(q.msg) && q.msg.startsWith('Mênfis')).length;
+  const vazia = () => QA.check().filter(q => q.sys === 'escala' && /a taverna sem ninguém/.test(q.msg) && q.msg.startsWith(s2.name)).length;
   const q0 = vazia(); const d0 = S.day; S.day += 3; const q3 = vazia(); S.day = d0; for (const v of kept) v.role = 'taverneiro';
   ok('e23e o verificador vê', !q0 && q3 === 1, `sem taverneiro: no primeiro dia ${q0}, três dias depois ${q3}`);
 });

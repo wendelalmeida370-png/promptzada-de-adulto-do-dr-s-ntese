@@ -402,7 +402,11 @@ const calmOne = (skip, also) => {
 {
   // (in the morning: the case is the new fire, not the night its builders sleep through)
   S.time = 0.3;
-  const set = set0; const stores = V.dropoffs(set.id).slice(); const fire0 = new Set(stores.map(b => b.id));
+  // (the town by the rule of the start, asked now — the most people, with two builders and a store —: the cases before take
+  // people of the town of the start (the h4 founds a free people with ten of its grown), and in the cidade of the generation 14
+  // Hedeby was left with two grown, a farmer and a fisher, and no builder: the trades never named one, and the fire never rose, T-478)
+  const set = [...S.settlements.values()].filter(s => builders(s) >= 2 && V.dropoffs(s.id).length).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0] || set0;
+  const stores = V.dropoffs(set.id).slice(); const fire0 = new Set(stores.map(b => b.id));
   const reached = () => [...S.buildings.values()].filter(b => b.set === set.id && G.BDEF[b.type] && (b.built ? G.BDEF[b.type].dropoff : b.type === 'campfire') && W.townReaches(set, ...V.frontTile(b)));
   const was = new Map();
   for (const b of stores) for (let y = b.y - 2; y < b.y + b.h + 2; y++) for (let x = b.x - 2; x < b.x + b.w + 2; x++) {
