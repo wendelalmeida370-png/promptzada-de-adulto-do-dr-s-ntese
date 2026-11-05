@@ -1,6 +1,7 @@
 // estiva: the docker's work, found and done by the body — in Node, without a browser (the world of qa/nodemundo.js with the 3D's
 // own files after it, qa/visual/tres-node.js: the crates are where the 3D draws them):
-//   node qa/visual/estiva.js [mundo]       (default: the ready world «metropole»)
+//   node qa/visual/estiva.js [mundo]       (none asked: the first of the ready worlds «metropole», «mega» and «mundial» with a
+//                                          quay the proofs can be made on — T-473)
 // The proofs (the owner could not find the docker's work in the Modo Encarnado: nothing said where the crates were, nor where
 // to take them, and the hands only reached a point beside the pile):
 //   1. a boat lands its catch on a quay by day: an unloading of the world, its crates on the quay, drawn where they lie
@@ -24,8 +25,9 @@ const path = require('path');
 const T = require(path.join(__dirname, 'tres-node.js'));
 const { G, M } = T.load();
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | estiva ${name} | ${info}`); if (!c) fails.push(name); };
-const world = process.argv[2] || 'metropole';
-M.pronto(world); M.viver(2);
+// (the world: the one asked, or — none asked — the first ready world of the metropole, the megalopolis and the world war one with
+// a quay the proofs can be made on: below, T-473)
+const asked = process.argv[2]; let world = asked || 'metropole';
 let S = G.S; const W = G.W, TL = G.Space.TILE, A = G.Act, P = G.Porto, D = G.Depot, E = G.Eco, I = G.Interact, P3 = G.People3D;
 const RDT = 1 / 30; const IN = G.Avatar.input;
 // (the frame as the game's: the world's step, the body's frame, the people drawn around the body)
@@ -35,7 +37,7 @@ const frame = () => { if (roomKept) roomKept(); G.debug.step(RDT * G.Space.TIME)
 const still = n => { for (let k = 0; k < (n || 4); k++) { G.Avatar.frame(RDT); look(); } }; // (the world stopped: only the body and the drawing)
 // (what the test does to the world stands for the god's hand, in the world's step)
 const god = f => { G.inSim++; const r = f(); G.inSim--; return r; };
-const bad0 = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg));
+let bad0 = null; // (what the verifier says of the world before the proofs: once the world is chosen, below)
 const vbad = () => QA.check().filter(q => q.sev <= 2 && !bad0.has(q.sys + '|' + q.msg));
 const vtxt = l => (l.length ? l.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo');
 const r2 = x => Math.round(x * 100) / 100;
@@ -119,23 +121,55 @@ const doIt = best => { said.length = 0; const r = I.run(best); for (let k = 0; k
 
 // ------------------------------ the town, the quay, the store, the docker ------------------------------
 const porters = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'estivador').length;
-const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).sort((a, b) => porters(b) - porters(a) || a.id - b.id);
 let set = null, dock = null, fac = null;
 const dry = (x, y) => { const i = W.idx(x, y); const t = S.type[i]; return !((t === G.T.RIVER && !S.road[i]) || t <= G.T.SEA) && W.walkableXY(x, y); };
 // (a place a stone's throw from the pile that the feet do not reach from there — across the water, a pocket —: part 3's)
 const cutNear = sp => { for (let r = 2; r <= 6; r += 0.5) for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2; const x = sp[0] + Math.cos(a) * r, y = sp[1] + Math.sin(a) * r; if (dry(x, y) && !W.canWalk(x, y, sp[0], sp[1], true)) return [x, y]; } return null; };
+// (none such by a pile: the islet the god can make there — a dry tile of plain ground two to five and a half tiles off (the lead
+// reaches 25 m), with water all round it: of its ring, what the map of regions does not cross already stays — the sea by the
+// quay, a cliff, a wall —, and the rest, plain ground with nothing and nobody on it, turns to sea (part 3 makes it, and undoes it
+// after; T-087). A ring all of plain ground three or four tiles off, as it was, is rare by a quay in a big town — the coast is
+// water, roads and houses —: T-204. And three tiles at least from the pile's own, counted by the tiles: its ring then clear of the
+// tiles round the pile, where the feet stand by it (W.canWalk's adj) — the first at two tiles, floored, was beside the pile's
+// tile in Tebas of the world war: the islet one of the tiles one reaches the pile from, and its ring the pile's tile, T-473)
+const plain = i => S.type[i] > G.T.RIVER && !S.occ[i] && !S.road[i] && !S.treeAt[i] && !S.wall[i] && !S.cliff[i] && !(S.dry && S.dry[i]) && W.walkable(i);
+const shut = i => !(W.ground(i) && W.wallOpen(S.wall[i])); // (what the map of regions does not cross: W.reachIds)
+const near9 = (o, x, y) => Math.floor(o.x) >= x - 1 && Math.floor(o.x) <= x + 1 && Math.floor(o.y) >= y - 1 && Math.floor(o.y) <= y + 1;
+const someone = (x, y) => [...S.villagers.values()].some(o => !o.inside && near9(o, x, y)) || [...S.animals.values()].some(o => near9(o, x, y));
+const isletNear = sp => { const px = Math.floor(sp[0]), py = Math.floor(sp[1]);
+  for (let r = 2; r <= 5.5; r += 0.5) for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2; const x = Math.floor(sp[0] + Math.cos(a) * r), y = Math.floor(sp[1] + Math.sin(a) * r);
+    if (Math.max(Math.abs(x - px), Math.abs(y - py)) < 3 || x < 2 || y < 2 || x >= G.N - 2 || y >= G.N - 2 || !plain(W.idx(x, y)) || someone(x, y)) continue; const ring = []; let good = true;
+    for (let dy = -1; dy <= 1 && good; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const i = W.idx(x + dx, y + dy); if (plain(i)) ring.push(i); else if (!shut(i)) { good = false; break; } }
+    if (good) return { cut: [x + 0.5, y + 0.5], ring }; }
+  return null;
+};
+// (the sides of a pile one can stand on: of the eight round its spot, at the prompt's reach from the crates drawn about it (3,2
+// m), the dry ground the feet reach from the pile — part 4 asks for three)
+const sidesOf = sp => { let n = 0; for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; const x = sp[0] + Math.cos(a) * 3.2 / TL, y = sp[1] + Math.sin(a) * 3.2 / TL; if (dry(x, y) && W.canWalk(sp[0], sp[1], x, y, true)) n++; } return n; };
 // (the stevedores of a town who could be lived there: hands free, where the feet reach the crates)
 const dockers = (s, sp) => [...S.villagers.values()].filter(o => o.set === s.id && o.role === 'estivador' && !(o.carry && o.carry.n > 0) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp[0], sp[1])).sort((a, b) => a.id - b.id);
-// (the quays with a port store their porters reach, the towns with most hands first; of them the first with such a place by its
-// pile and a docker to live — else the first: part 3 then makes the place, T-087)
-const quays = [];
-for (const s of towns) for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) {
-  const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} }));
-  if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) quays.push({ s, d, sp });
+// (the quays with a port store their porters reach, the towns with most hands first; of them the first whose pile the proofs can
+// be made on — a docker to live, three sides of it to stand on (part 4), a place by it the feet do not reach or the god's islet
+// there (part 3) —, the place there of itself first; in the first ready world that has one. A world has its quays where it has:
+// in the generation-14 metropole the one quay with a port store, Mênfis', had its pile on the corner of the quay between the
+// sea and a wall — two sides to stand on, and no plain ground for an islet —, and the proofs of the generations before stood on
+// the metropole's quay of the hour: T-473. Else the first quay: the proofs then say what it lacks)
+let quays = [], pick = null;
+for (const w of asked ? [asked] : ['metropole', 'mega', 'mundial']) {
+  M.pronto(w); M.viver(2); world = w; S = G.S; quays = [];
+  const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).sort((a, b) => porters(b) - porters(a) || a.id - b.id);
+  for (const s of towns) for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) {
+    const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} }));
+    if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) quays.push({ s, d, sp, near: !!cutNear(sp), islet: !!isletNear(sp), sides: sidesOf(sp), hands: dockers(s, sp).length });
+  }
+  const can = q => q.hands > 0 && q.sides >= 3;
+  pick = quays.find(q => can(q) && q.near) || quays.find(q => can(q) && q.islet) || null;
+  if (pick || asked) break;
 }
-const pick = quays.find(q => cutNear(q.sp) && dockers(q.s, q.sp).length) || quays[0];
+if (!pick) pick = quays[0];
 if (pick) { set = pick.s; dock = pick.d; }
 if (!dock) { ok('um cais com armazém do porto', false, `nenhum em ${world}`); process.exit(1); }
+bad0 = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg));
 fac = G.Fac.get(set.fac);
 // (room in the people's store for what the quay unloads, kept by the god's hand at every step of the test, as rebanho.js
 // keeps its own: a full store pauses the unloading — the world's 'cheio': no lead, and an E on a crate answered «A descarga
@@ -214,21 +248,11 @@ const snap = () => JSON.stringify([dock.crates, op, S.loose, v.carry, S.avatar.a
   // (a place a stone's throw from the pile that the feet do not reach from there — across the water, a pocket —, with the body put
   // there by the world: the world's step finds the crates out of reach)
   let cut = cutNear(sp0), made = null;
-  // (none by this pile, nor by any quay of the world: the god makes one — an islet, a dry tile of plain ground two to five and a
-  // half tiles off (the lead reaches 25 m), with water all round it: of its ring, what the map of regions does not cross already
-  // stays — the sea by the quay, a cliff, a wall —, and the rest, plain ground with nothing and nobody on it, turns to sea —, and
-  // undoes it after; the map told both times, S.typeVer and W.invalidateLand: T-087. A ring all of plain ground three or four
-  // tiles off, as it was, is rare by a quay in a big town — the coast is water, roads and houses —: T-204)
+  // (none by this pile: the god makes one — the islet (isletNear, above) —, and undoes it after; the map told both times,
+  // S.typeVer and W.invalidateLand: T-087, T-204)
   if (!cut) {
-    const plain = i => S.type[i] > G.T.RIVER && !S.occ[i] && !S.road[i] && !S.treeAt[i] && !S.wall[i] && !S.cliff[i] && !(S.dry && S.dry[i]) && W.walkable(i);
-    const shut = i => !(W.ground(i) && W.wallOpen(S.wall[i])); // (what the map of regions does not cross: W.reachIds)
-    const near9 = (o, x, y) => Math.floor(o.x) >= x - 1 && Math.floor(o.x) <= x + 1 && Math.floor(o.y) >= y - 1 && Math.floor(o.y) <= y + 1;
-    const someone = (x, y) => [...S.villagers.values()].some(o => !o.inside && near9(o, x, y)) || [...S.animals.values()].some(o => near9(o, x, y));
-    find: for (let r = 2; r <= 5.5; r += 0.5) for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2; const x = Math.floor(sp0[0] + Math.cos(a) * r), y = Math.floor(sp0[1] + Math.sin(a) * r);
-      if (x < 2 || y < 2 || x >= G.N - 2 || y >= G.N - 2 || !plain(W.idx(x, y)) || someone(x, y)) continue; const ring = []; let good = true;
-      for (let dy = -1; dy <= 1 && good; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const i = W.idx(x + dx, y + dy); if (plain(i)) ring.push(i); else if (!shut(i)) { good = false; break; } }
-      if (good) { made = { ring, was: ring.map(i => S.type[i]) }; cut = [x + 0.5, y + 0.5]; break find; } }
-    if (made) god(() => { for (const i of made.ring) S.type[i] = G.T.SEA; S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); });
+    const il = isletNear(sp0);
+    if (il) { made = { ring: il.ring, was: il.ring.map(i => S.type[i]) }; cut = il.cut; god(() => { for (const i of made.ring) S.type[i] = G.T.SEA; S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); }); }
   }
   const isle = !!made && !W.canWalk(cut[0], cut[1], sp0[0], sp0[1], true);
   let Lc = null, cc = null; const home = [v.x, v.y];

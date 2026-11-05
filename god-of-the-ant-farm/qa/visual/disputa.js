@@ -198,7 +198,11 @@ const offeredFree = cid => { const o = offerOf(cid); return !!o && o.ok !== fals
 const first = () => opCrates()[0] || null;
 const offerOf = cid => A.offers(v, v.x, v.y, 2.6 / TL + 2).find(q => q.act === 'pegar' && q.cid === cid) || null;
 const hold = c => (c ? `#${c.id} de ${c.by ? (c.by === v.id ? 'corpo' : (S.villagers.get(c.by) || { name: c.by }).name) : 'ninguém'}` : 'fora do cais');
-const rest = o => god(() => { if (o.task && o.task.type !== 'avatar') G.Vg.endTask(o); clearHands(o); });
+// (the hands emptied first, as the world stores a delivery, and the errand ended after: an errand ended with a crate of the
+// unloading in the hands sets it down where the porter stands when the quay has no room for it — the world's own rule,
+// Porto.drop —, and by the pile that crate on the ground took the prompt from the crates of the quay: «Pegar a caixa de comida
+// do chão» from every side, cases 7 and 8 of the generation-14 world, at 9fecc74 — the quay full, its ten crates: T-473)
+const rest = o => god(() => { clearHands(o); if (o.task && o.task.type !== 'avatar') G.Vg.endTask(o); });
 
 fresh(6);
 ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCrates().length >= 6 && drawnOf().length === opCrates().length, op ? `descarga #${op.id}: ${opCrates().length} caixas no cais, ${drawnOf().length} desenhadas` : 'nenhuma');
