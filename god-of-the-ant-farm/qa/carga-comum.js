@@ -153,8 +153,11 @@ S.weather.storm = 0;
     const went = live(120, () => { if (calledAway(v, 'pick')) cut = v.task.type; return !!cut || outOf(v.id, n0).some(e => e[5] === 'stone' && e[8] === 'entrega'); });
     if (cut) { away.push(`${nm(v)} chamad${v.g === 'f' ? 'a' : 'o'} para ${cut}`); continue; }
     const fr = outOf(v.id, n0).filter(e => e[5] === (K.good || 'food'));
-    fine = went && tr.fruit === f0 && !fr.length;
-    info = `${nm(v)} com 2 de pedra nas mãos, mandado(a) a ${K.name}: a árvore ${tr.fruit === f0 ? 'ficou com as suas frutas' : `PERDEU ${r2(f0 - tr.fruit)}`}; ${went ? 'a pedra foi ao armazém' : `a pedra NÃO foi (nas mãos: ${hands(v)})`}`;
+    // (kept its fruit: none picked — a tree not yet full grows a little in the case's two minutes, and the growth is not a
+    // pick; the generation 14's apple tree gained 0,05, T-470)
+    const lost = tr.fruit < f0 - 1e-9;
+    fine = went && !lost && !fr.length;
+    info = `${nm(v)} com 2 de pedra nas mãos, mandado(a) a ${K.name}: a árvore ${lost ? `PERDEU ${r2(f0 - tr.fruit)}` : 'ficou com as suas frutas' + (tr.fruit > f0 + 1e-9 ? ` (e cresceu ${r2(tr.fruit - f0)})` : '')}${fr.length ? `; ${fr.length} linha(s) de fruta no livro de quem foi` : ''}; ${went ? 'a pedra foi ao armazém' : `a pedra NÃO foi (nas mãos: ${hands(v)})`}`;
     break;
   }
   // (a hive with honey anywhere, and a grown-up who walks to it, brought beside it)

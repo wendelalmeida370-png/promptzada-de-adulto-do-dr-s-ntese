@@ -46,7 +46,7 @@
     const k = ['armL', 'armR', 'leg'].find(q => !L.lost[q] && G.R() < 0.7) || 'gut';
     if (k !== 'gut') {
       L.lost[k] = true;
-      bits.push({ kind: k === 'leg' ? 'leg' : 'arm', x: c.x, y: c.y, z: 3, vx: ux * G.rr(0.5, 1.4), vy: uy * G.rr(0.5, 1.4), vz: G.rr(18, 40), rot: G.rr(0, TAU), vr: G.rr(-10, 10), skin: L.skin0 || L.skin, cloth: G.Art.clothOf(L), t: 0, owner: c.vid, corpse: c.id, chewed: 1 });
+      bits.push({ kind: k === 'leg' ? 'leg' : 'arm', x: c.x, y: c.y, z: 3, vx: ux * G.rr(0.5, 1.4), vy: uy * G.rr(0.5, 1.4), vz: G.rr(18, 40), rot: G.rr(0, TAU), vr: G.rr(-10, 10), skin: L.skin, cloth: G.Art.clothOf(L), t: 0, owner: c.vid, corpse: c.id, chewed: 1 });
     }
     c.eaten = Math.min(1, (c.eaten || 0) + G.rr(0.1, 0.17));
     c.feeder = by ? by.id : 0; c.feedT = G.S.clock;
@@ -348,6 +348,11 @@
     L(0.3, -8, 1.4, -4.6); if (!(c.look.lost && (c.look.lost.armL || c.look.lost.armR))) L(-0.3, -8, -1.4, -4.8);
     if (!c.headless) { ctx.beginPath(); ctx.arc(0, -10.5, 1.9, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a3028'; ctx.fillRect(0.3, -11, 0.7, 0.7); ctx.fillRect(1.2, -11, 0.6, 0.7); ctx.fillRect(0.6, -9.6, 1, 0.35); }
   }
+  // (the painter's own copy of a body's look, refreshed from the world's every frame: the rot, the cloth, the head and the
+  // pose are painted on it, never on the corpse the world keeps and saves — the frame wrote them into the saved look, and a
+  // world looked at was another than the world unseen; the dead raised took the rotten skin of a body drawn, L-588)
+  const PAINT = new WeakMap();
+  C.paintLook = c => { let L = PAINT.get(c); if (!L) PAINT.set(c, L = {}); Object.assign(L, c.look); L._cloth = null; L.headless = !!c.headless; return L; };
   function drawCorpse(ctx, o, sx, sy, t, nightF) {
     const c = o.c; const S = G.S;
     // shown on the gallows, the cross, the stake: justice draws them
@@ -365,12 +370,10 @@
     if (fall >= 0.99) ctx.scale(1, 0.9);
     if (st === 'bones') drawBones(ctx, c, t);
     else {
-      const L = c.look;
+      const L = C.paintLook(c), sk = c.look.skin;
       const rot = st === 'fresh' ? 0 : st === 'rot' ? (days - ROT) / (DRY - ROT) : 1;
-      L.skin0 = L.skin0 || L.skin; L.hair0 = L.hair0 || L.hair;
-      L.skin = st === 'fresh' ? L.skin0 : st === 'rot' ? mix(L.skin0, '#8a9a72', rot * 0.8) : mix('#8a9a72', '#7a6650', (days - DRY) / (BONES - DRY));
+      L.skin = st === 'fresh' ? sk : st === 'rot' ? mix(sk, '#8a9a72', rot * 0.8) : mix('#8a9a72', '#7a6650', (days - DRY) / (BONES - DRY));
       L._cloth = st === 'fresh' ? null : mix(G.Art.clothOf(L), '#5a544c', st === 'rot' ? rot * 0.35 : 0.55);
-      L.headless = c.headless;
       if (c.cause === 'lightning') { L.skin = '#3a3430'; L._cloth = '#2a2624'; }
       G.Art.villager(ctx, L, 0, 0, t, false);
       // what the beast left: the belly torn open, the ribs, the guts on the ground
@@ -469,7 +472,7 @@
   (G.saveHooks = G.saveHooks || []).push({
     save(out) {
       out.carnage = {
-        corpses: corpses.map(c => { const o = Object.assign({}, c); delete o._e; o.look = Object.assign({}, c.look); delete o.look.skin0; delete o.look.hair0; delete o.look._cloth; if (o.look.skin0 === undefined && c.look.skin0) o.look.skin = c.look.skin0; o.claim = 0; o.drag = 0; return o; }),
+        corpses: corpses.map(c => { const o = Object.assign({}, c); delete o._e; o.look = Object.assign({}, c.look); o.claim = 0; o.drag = 0; return o; }),
         pyres: pyres.map(p => ({ id: p.id, set: p.set, x: p.x, y: p.y, heap: p.heap, bodies: p.bodies, burn: 0, ash: 0 })), next: nextId,
       };
     },
