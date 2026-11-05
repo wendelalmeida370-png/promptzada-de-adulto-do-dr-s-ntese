@@ -388,8 +388,11 @@
     if (v.hurt > 0) v.hurt -= dt;
     // babies are fed from the common stock
     if (v.age < 2 && v.hunger > 60) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 0.5; v.hunger -= 50; } }
-    // on campaign, on a mission or under siege there is no time for a meal: they eat provisions
-    if (v.hunger > 80 && v.task && (FIELD[v.task.type] || v.task.type === 'escorted') && (!v.captive || v.task.type === 'escorted') && v.age >= 2) { const pv = G.Wars ? G.Wars.provision(v) : null; if (pv === true) v.hunger = Math.max(0, v.hunger - 50); else if (pv === null) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 1; v.hunger = Math.max(0, v.hunger - 50); } } }
+    // on campaign, on a mission or under siege there is no time for a meal: they eat provisions — and so do the children, the old
+    // and the mothers hidden in the cave while their town is attacked, as those who flee a war to another town ('refugio'): the
+    // refuge goes over eating, and in the cave hunger calls no one out; Kamose of Tebas, taken to it on his way to eat, died two
+    // tiles from a store — L-605
+    if (v.hunger > 80 && v.task && (FIELD[v.task.type] || v.task.type === 'escorted' || (v.task.type === 'caverna' && v.task.kind === 'refuge')) && (!v.captive || v.task.type === 'escorted') && v.age >= 2) { const pv = G.Wars ? G.Wars.provision(v) : null; if (pv === true) v.hunger = Math.max(0, v.hunger - 50); else if (pv === null) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 1; v.hunger = Math.max(0, v.hunger - 50); } } }
     if (v.hunger >= 100) { v.hp -= 0.45 * dd; v.lastCause = 'hunger'; v.lastGod = false; if (G.R() < dt * 0.3) emote(v, 'food'); }
     if (v.immune > 0) v.immune -= dt;
     if (v.sick > 0) {

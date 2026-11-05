@@ -186,7 +186,10 @@
       for (const v of s.villagers.values()) {
         if (!dying(v) || v.captive || v.jail || v.aboard || v.ug || v.held || v.air) continue;
         const t = v.task; if (t && (t.type === 'eat' || t.type === 'forage' || t.type === 'flee' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'fire' || t.type === 'fight' || t.type === 'combat')) continue;
-        if (!t && !(v.think > 0.5)) continue; // (between two errands: the choice comes at the next step)
+        // (between two errands, and right after a load — which leaves no task and spreads the choice over [0, 1), save.js —: the
+        // choice comes at the next step. One that found nothing leaves 1.4 to 3.0, villagers.js; 0.5 took a freshly loaded child for
+        // one that found nothing, and the escala's e5b saw Kamose of Tebas starving with the store in reach — T-495)
+        if (!t && !(v.think > 1)) continue;
         const set = s.settlements.get(v.set); if (!set || G.War.threat(v.set) || (G.Vg.alarms && (G.Vg.alarms.get(v.set) || []).length)) continue;
         const where = [];
         const st = G.Fac.stockV(v); const d = st && st.food >= 1 ? G.Village.nearestDropoff(v.x, v.y, v.set) : null;

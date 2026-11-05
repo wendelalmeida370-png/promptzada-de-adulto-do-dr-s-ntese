@@ -33,6 +33,10 @@
 // h16 o refúgio da caverna é da cidade atacada: o alarme manda à caverna só quem está nela ou nos campos dela, nunca quem
 //    está longe; e o refúgio a caminho acaba com o perigo, como o de dentro, e quem tem fome come (L-601; achado pela regra S2
 //    na geração 15 dos mundos prontos: a mãe de Hedeby que andou meio dia até a caverna e morreu de fome no caminho)
+// h17 quem se esconde na caverna come das provisões, como quem foge da guerra: um velho ou uma criança da cidade com fome,
+//    mandado à caverna com o alarme tocando o tempo todo (um ataque longo), come do estoque do povo no refúgio e nunca chega à
+//    fome máxima (L-605; apontado pelo C na geração 15: Kamose, de Tebas em guerra, levado ao refúgio a caminho de comer, morreu
+//    a duas casas de um armazém)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -505,6 +509,38 @@ const calmOne = (skip, also) => {
     }
   }
   ok('h16 o refúgio da caverna é da cidade atacada, e acaba com o perigo — também a caminho (L-601)', good, info);
+}
+// ---------------- h17 the hidden eat their provisions (L-605) ----------------
+// (pointed out by C in the round of the generation 15: in a town at war the refuge — priority 2,7, over eating — took a starving
+// old man on his way to eat, and in the cave hunger calls no one out — the hidden stay while the danger lasts —, for up to 0,6 of a
+// day: Kamose of Tebas died two tiles from a store. Whoever flees a war to another town eats provisions on the way ('refugio', as
+// on campaign or on a mission: no time for a meal); so does whoever hides in the cave now. The case: a hungry old one or child of
+// the town sent to the cave, the alarm ringing all along — a long attack — for most of a day)
+{
+  const kids = s => [...S.villagers.values()].filter(q => q.set === s.id && ((q.age >= 3 && q.age < 14) || q.age >= 60) && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air && !(S.avatar && S.avatar.id === q.id)).sort((a, b) => a.id - b.id);
+  const mouthOf = s => { let best = null, bd = 24 * 24; for (const cv of G.Caves.all()) { if (!cv.mouths.length || cv.mine) continue; for (const m of cv.mouths) { const d = G.dist2(s.cx, s.cy, m.x, m.y); if (d < bd && W.townReaches(s, m.x, m.y)) { bd = d; best = { cv, m }; } } } return best; };
+  const towns = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5 && kids(s).length >= 1).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
+  let set = null, cm = null; for (const s of towns) { const q = mouthOf(s); if (q) { set = s; cm = q; break; } }
+  if (!set && towns.length) { set = towns[0]; for (let k = 0; k < 16 && !cm; k++) { const a = k * Math.PI / 8, r = Math.min(20, (set.radius || 8) + 4); G.Caves.openAt(Math.round(set.cx + Math.cos(a) * r), Math.round(set.cy + Math.sin(a) * r)); cm = mouthOf(set); } }
+  let info = 'nenhuma cidade com uma criança ou um velho e uma caverna perto', good = false;
+  if (set && cm) {
+    cm.cv.known[set.fac] = true;
+    const R = set.radius || 8; const [a] = kids(set);
+    let near = null; for (let y = Math.floor(set.cy - R); y <= set.cy + R && !near; y++) for (let x = Math.floor(set.cx - R); x <= set.cx + R && !near; x++) { if (!W.inb(x, y) || !W.walkableXY(x, y) || S.occ[y * G.N + x] || G.dist(x + 0.5, y + 0.5, set.cx, set.cy) > R || !W.townReaches(set, x, y)) continue; near = [x + 0.5, y + 0.5]; }
+    if (!near) info = `${set.name}: nenhum chão da cidade`;
+    else {
+      Vg.endTask(a); a.inside = 0; a.sleeping = false; a.x = near[0]; a.y = near[1]; a.path = null; a.hunger = 75;
+      if (G.isNight() || S.time > 0.6) S.time = 0.3;
+      const hiding = v => !!(v.task && v.task.type === 'caverna' && v.task.kind === 'refuge');
+      let inCave = false, top = a.hunger, ate = false, prev = a.hunger, hid = false;
+      set.alarmT = 40;
+      live(150, () => { set.alarmT = Math.max(set.alarmT, 20); if (hiding(a)) hid = true; if (a.ug) inCave = true; if (hiding(a) && a.hunger < prev - 20) ate = true; prev = a.hunger; top = Math.max(top, a.hunger); return false; });
+      set.alarmT = 0;
+      good = hid && inCave && ate && top < 100;
+      info = `${set.name}, ${C_(cm.cv)}: ${a.name} (${Math.round(a.age)} anos, fome 75), com o alarme tocando 150 s: ${hid ? 'mandado ao refúgio' : 'NÃO mandado ao refúgio'}, ${inCave ? 'entrou na caverna' : 'NÃO entrou'}, ${ate ? 'comeu das provisões escondido' : 'NÃO comeu escondido'}; a fome chegou a ${Math.round(top)}${top >= 100 ? ' (a fome máxima: perde vida)' : ''}`;
+    }
+  }
+  ok('h17 quem se esconde na caverna come das provisões, como quem foge da guerra (L-605)', good, info);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }
