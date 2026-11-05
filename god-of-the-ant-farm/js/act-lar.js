@@ -413,15 +413,18 @@
   if (G.Interiors && G.Interiors.bedRule) G.Interiors.bedRule((b, people) => L.beds(b, people));
 
   // ------------------------------ the faithful inside the temple (L-224) ------------------------------
-  // (a place free to pray in the temple's plan — the mats and the benches for the faithful, the altar for the priest —, counted
-  // against those already praying inside and those on their way in: the faithful go in by the door and kneel before the image;
-  // full, or a temple with no place of prayer, they keep to the rows before its door. The plan is pure: made now if it is not,
-  // it is the same plan. A yes keeps the place for this one in the step's count — two sent in the same second are two)
+  // (a place free to pray in the temple's plan — the mats and the benches for the faithful, the places where they stand before
+  // the cella, the altar for the priest —, counted against those already praying inside and those on their way in: the faithful
+  // go in by the door and kneel before the image; full, or a temple with no place of prayer, they keep to the rows before its
+  // door. The places as the plan's table has them — the pieces', the rows' and the marks', the usable ones, as the share-out
+  // gives them —: by In.slots, the pieces alone, the Greek temple of four, its faithful all standing, had none, and no one
+  // went in — L-590, as the audience's L-539. The plan is pure: made now if it is not, it is the same plan, and its table too.
+  // A yes keeps the place for this one in the step's count — two sent in the same second are two)
   L.prayIn = function (v, b, priest) {
-    const In = G.Interiors; if (!In || !In.plan || !b || !b.built || b.type !== 'temple') return false;
+    const In = G.Interiors; if (!In || !In.plan || !In.table || !b || !b.built || b.type !== 'temple') return false;
     const p = In.plan(b); if (!p || !p.ok) return false;
     const uses = priest ? ['oficiar'] : ['rezar', 'sentar'];
-    let n = 0; for (const u of uses) n += In.slots(b, u).length;
+    const tab = In.table(b); let n = 0; if (tab) for (const u of uses) n += (tab.byUse.get(u) || []).length;
     if (!n) return false;
     const o = index(); let e = o.house.get(b.id); if (!e) o.house.set(b.id, e = HOUSE());
     const t = v.task; const mine = t && t.type === 'pray' && t.inT === b.id && !!t.priest === !!priest ? 1 : 0;

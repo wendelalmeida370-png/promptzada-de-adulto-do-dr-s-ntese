@@ -16,8 +16,13 @@ const strip = o => { const x = Object.assign({}, o); delete x.key; return JSON.s
 const print = p => JSON.stringify([p.fam, p.sig, p.shell, p.levels, p.items.map(i => [i.kind, i.x, i.z, i.ry, i.lv])]);
 const civ = () => [...G.S.buildings.values()].filter(b => NEW.includes(b.type) || (b.type === 'ruin' && NEW.includes(b.origType) && b.ip));
 // what each is for, in pieces the world counts
+// (the temple's faithful where the world counts them — G.Lar.prayIn: the places of the plan's table, the benches', the mats' and
+// the marks' where they stand before the cella, the usable ones; two at least, as the plan's own rule. By the pieces alone the
+// Greek temple of four, its faithful all standing, had none: L-590)
+const FAITH = ['rezar', 'sentar'];
+const faithful = b => { const t = b && In.table(b); return t ? FAITH.reduce((n, u) => n + (t.byUse.get(u) || []).length, 0) : 0; };
 const FOR = {
-  temple: p => (p.items.some(i => i.kind === 'idolo') && p.items.some(i => i.kind === 'altar' && i.spots.some(s => s.use === 'oficiar')) && p.items.some(i => i.kind === 'banco-fieis' || i.kind === 'esteira-oracao') ? null : 'sem a imagem, o altar ou o lugar dos fiéis'),
+  temple: (p, b) => (p.items.some(i => i.kind === 'idolo') && p.items.some(i => i.kind === 'altar' && i.spots.some(s => s.use === 'oficiar')) && faithful(b) >= 2 ? null : 'sem a imagem, o altar ou o lugar dos fiéis'),
   quartel: p => (p.items.filter(i => i.kind === 'catre').length >= 4 && p.items.some(i => i.kind === 'armeiro') && p.items.some(i => i.kind === 'manequim') ? null : 'sem catres, armas ou o poste de treino'),
   cadeia: p => { const cs = p.rooms.filter(m => m.fn === 'cela'); if (cs.length < G.BDEF.cadeia.cells) return `${cs.length} celas`; if (!cs.every(c => p.items.some(i => i.room === c.id && i.kind === 'palha') && p.doors.some(d => d.rooms.includes(c.id) && d.kind === 'grade'))) return 'uma cela sem palha ou sem grade'; return p.items.some(i => i.kind === 'mesa-escriba') ? null : 'sem a mesa do carcereiro'; },
   banhos: p => (p.items.some(i => i.kind === 'piscina' || i.kind === 'tina-banho') && p.items.some(i => i.kind === 'fornalha-banho') ? null : 'sem a água ou sem a fornalha'),

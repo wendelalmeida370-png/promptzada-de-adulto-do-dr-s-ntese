@@ -96,7 +96,11 @@ const shopAt = (o, P, k) => { G.Vg.endTask(o); o.hunger = 10; o.sleeping = false
   { const s = S().settlements.get(P.b.set); s.festPlan = { day: S().day, key: null, done: true }; }
   const feast = G.Fest && G.Fest.active(P.b.set);
   const o = buyer(P, k); const t = o && shopAt(o, P, k); const coin = E.coinage(P.f.id);
-  live(150, null, () => o && lines(P, e => e[8] === 'compra' && e[4] === 'v:' + o.id).length > 0);
+  // (the tables kept with food for the case's buyer while he goes: the town's other shoppers of the hour buy there too, up to
+  // six each — in the metropole of the generation 14 two of them took the six there before he reached the stall, and he went
+  // home with nothing: T-489)
+  const stocked = () => { if (D.free('b:' + P.b.id, k) < 6 && D.free('f:' + P.f.id, k) >= 6) D.move('f:' + P.f.id, 'b:' + P.b.id, k, 6, { code: 'teste', part: true }); };
+  live(150, stocked, () => o && lines(P, e => e[8] === 'compra' && e[4] === 'v:' + o.id).length > 0);
   live(120, null, () => o && !(o.carry && o.carry.n > 1e-6));
   const goods = sum(lines(P, e => o && e[8] === 'compra' && e[3] === 'b:' + P.b.id && e[4] === 'v:' + o.id));
   const pay = lines(P, e => o && e[8] === 'compra' && e[5] === 'moedas' && e[3] === 'h:' + o.home);
