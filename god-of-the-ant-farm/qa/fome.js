@@ -30,6 +30,9 @@
 //    come (L-368; achado pela regra S2 no caos da semente 13: a criança de Tenochtitlan que morreu de fome em casa)
 // h15 comer o que se leva nas mãos passa pelo livro ('refeicao'), e a fome cai pelo que foi comido — meia ração, meia
 //    refeição —; a compra a caminho de casa não é comida (L-385; achado pela qa/campo.js do P2)
+// h16 o refúgio da caverna é da cidade atacada: o alarme manda à caverna só quem está nela ou nos campos dela, nunca quem
+//    está longe; e o refúgio a caminho acaba com o perigo, como o de dentro, e quem tem fome come (L-601; achado pela regra S2
+//    na geração 15 dos mundos prontos: a mãe de Hedeby que andou meio dia até a caverna e morreu de fome no caminho)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -37,7 +40,7 @@ const fails = []; const mid = []; // (what the checker saw in the middle of a ca
 const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | fome ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 const bad = () => QA.check().filter(q => q.sev <= 2 && (q.sys === 'act' || q.sys === 'nan' || q.sys === 'fome'));
 const watch = () => { const bb = bad(); if (bb.length) { for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return true; } return false; };
-const D = G.Depot, V = G.Village, Vg = G.Vg, W = G.W;
+const D = G.Depot, V = G.Village, Vg = G.Vg, W = G.W; const C_ = cv => (G.Caves.na ? G.Caves.na(cv) : 'na caverna');
 const r2 = x => Math.round(x * 100) / 100;
 let S;
 const live = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (k % 50 === 49) watch(); if (until && until()) { watch(); return true; } } watch(); return false; };
@@ -458,6 +461,50 @@ const calmOne = (skip, also) => {
   const say = (m, what) => `${what}: ${m.lines ? `comeu ${m.ate} pelo livro ('refeicao')` : 'NENHUMA LINHA no livro'}, a fome caiu ${m.fed}, ficaram ${m.left} nas mãos`;
   ok('h15 comer o que se leva nas mãos passa pelo livro, e a fome cai pelo que foi comido (L-385)', fine15,
     v ? `${v.name}, com fome 90: ${say(a, '3 de comida')} · ${say(b, 'meia ração')} · ${say(c, '2 de uma compra a caminho de casa')}${c.ate ? ' — A COMPRA FOI COMIDA' : ''}` : 'ninguém numa cidade calma');
+}
+// ---------------- h16 the cave's refuge is the attacked town's, and it ends with the danger (L-601) ----------------
+// (found by the S2 rule of the checker in the generation 15 of the ready worlds, the world war: Tove, a mother of Hedeby a
+// hundred tiles away, was sent to the town's cave when it was attacked — the refuge is given to its children, its old and its
+// mothers with a baby, priority 2,7, over eating —, walked to it half a day, the alarm long over, and starved on the way with
+// the store full. Now: (a) the alarm of a town sends to its cave only those at it — in it or in its fields —; one of it far off
+// is not in the attack; (b) the refuge on its way ends with the danger over — ten calm seconds —, as the one in the cave does,
+// and the hungry eat. The cave as the world's refuge picks it — a mouth within 24 tiles the town's streets reach, of a cave its
+// people know —; the people of the case by the rule (two of 3 to 13 years, or past 60), out in the open, put by the test's
+// hand: the near one on the side of the town away from the mouth, the far one well beyond its fields)
+{
+  const kids = s => [...S.villagers.values()].filter(q => q.set === s.id && ((q.age >= 3 && q.age < 14) || q.age >= 60) && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air && !(S.avatar && S.avatar.id === q.id)).sort((a, b) => a.id - b.id);
+  const mouthOf = s => { let best = null, bd = 24 * 24; for (const cv of G.Caves.all()) { if (!cv.mouths.length || cv.mine) continue; for (const m of cv.mouths) { const d = G.dist2(s.cx, s.cy, m.x, m.y); if (d < bd && W.townReaches(s, m.x, m.y)) { bd = d; best = { cv, m }; } } } return best; };
+  const towns = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5 && kids(s).length >= 2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
+  let set = null, cm = null; for (const s of towns) { const q = mouthOf(s); if (q) { set = s; cm = q; break; } }
+  // (no town of the world with a cave near: the god opens one by the biggest, as his hand does — G.Caves.openAt)
+  if (!set && towns.length) { set = towns[0]; for (let k = 0; k < 16 && !cm; k++) { const a = k * Math.PI / 8, r = Math.min(20, (set.radius || 8) + 4); G.Caves.openAt(Math.round(set.cx + Math.cos(a) * r), Math.round(set.cy + Math.sin(a) * r)); cm = mouthOf(set); } }
+  let info = 'nenhuma cidade com duas crianças ou velhos e uma caverna perto', good = false;
+  if (set && cm) {
+    cm.cv.known[set.fac] = true; // (its people know the cave — the world's refuge asks it — by the test's hand)
+    const R = set.radius || 8; const [a, b] = kids(set); const mx = cm.m.x + 0.5, my = cm.m.y + 0.5;
+    // (the near one: a walkable tile of the town, within its radius, the farthest from the mouth; the far one: beyond its fields)
+    let near = null, nd = -1, far = null, fd = 1e9;
+    for (let y = Math.floor(set.cy - R - 50); y <= set.cy + R + 50; y++) for (let x = Math.floor(set.cx - R - 50); x <= set.cx + R + 50; x++) {
+      if (!W.inb(x, y) || !W.walkableXY(x, y) || S.occ[y * G.N + x]) continue; const dc = G.dist(x + 0.5, y + 0.5, set.cx, set.cy);
+      if (dc <= R && W.townReaches(set, x, y)) { const dm = G.dist(x + 0.5, y + 0.5, mx, my); if (dm > nd) { nd = dm; near = [x + 0.5, y + 0.5]; } }
+      if (dc >= R + 30 && dc < fd) { fd = dc; far = [x + 0.5, y + 0.5]; }
+    }
+    if (!near || !far) info = `${set.name}: ${!near ? 'nenhum chão da cidade' : 'nenhum chão além dos campos dela'}`;
+    else {
+      const put = (v, p, hunger) => { Vg.endTask(v); v.inside = 0; v.sleeping = false; v.x = p[0]; v.y = p[1]; v.path = null; v.hunger = hunger; };
+      if (G.isNight() || S.time > 0.6) S.time = 0.3;
+      put(a, near, 95); put(b, far, 60);
+      const hiding = v => !!(v.task && v.task.type === 'caverna' && v.task.kind === 'refuge');
+      set.alarmT = 40; const fled = live(5, () => hiding(a)); const farFled = hiding(b); const st0 = a.task && a.task.st;
+      // (the danger over while she is on the way: the refuge ends in ten calm seconds, before the cave — and she eats)
+      set.alarmT = 0; let wentIn = false, ended = null; const t0 = S.clock;
+      live(30, () => { if (a.ug) wentIn = true; if (!hiding(a) && ended === null) ended = Math.round((S.clock - t0) * 10) / 10; return ended !== null; });
+      const ate = live(60, () => a.hunger < 50);
+      good = fled && !farFled && ended !== null && !wentIn && ate;
+      info = `${set.name}, ${C_(cm.cv)}: com o alarme, ${a.name} (${Math.round(a.age)} anos, a ${Math.round(G.dist(near[0], near[1], set.cx, set.cy))} casas do meio da cidade) ${fled ? `fugiu para a caverna (st ${st0})` : 'NÃO fugiu'}; ${b.name} (${Math.round(b.age)} anos, a ${Math.round(fd)} casas, além dos campos) ${farFled ? 'MANDADO À CAVERNA DE LONGE' : 'não foi mandado'}; o perigo passou com ${a.name} a caminho: ${ended !== null ? `o refúgio acabou ${ended} s depois${wentIn ? ', MAS ELA ENTROU NA CAVERNA' : ', antes da caverna'}` : 'o refúgio NÃO acabou'}; com a fome 95, ${ate ? 'comeu' : 'NÃO comeu'}`;
+    }
+  }
+  ok('h16 o refúgio da caverna é da cidade atacada, e acaba com o perigo — também a caminho (L-601)', good, info);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }

@@ -492,10 +492,15 @@
     }
     return G.Vg.give(v, t);
   };
+  // (the town of one in the refuge calm: ten seconds with no alarm — then the hiding is over)
+  function calmed(v, t, dt) { const s = G.S.settlements.get(v.set); if (!s || !(s.alarmT > 0)) { t.calm = (t.calm || 0) + dt; return t.calm > 10; } t.calm = 0; return false; }
   C.run = function (v, t, dt, H) {
     if (t.type !== 'caverna') return false;
     const cv = C.get(t.cave);
     if (!cv || cv.gone) { if (v.ug) exit(v); H.end(v); return true; }
+    // (the refuge on its way to the cave ends as the one in it does, with the danger over: sent while the alarm rang and still on
+    // the road when it stopped, a mother walked on to the cave for half a day, under a priority over eating, and starved — L-601)
+    if (t.kind === 'refuge' && t.st < 2 && calmed(v, t, dt)) { H.end(v); return true; }
     switch (t.st) {
       case 0: if (!H.goto(v, t.mouth.x + 0.5, t.mouth.y + 0.5, true)) { if (G.dist(v.x, v.y, t.mouth.x + 0.5, t.mouth.y + 0.5) > 1.6) { H.end(v); return true; } } t.st = 1; break;
       case 1: if (H.move(v, dt)) { if (t.kind === 'dare') { t.st = 10; t.t = 0; v.act = 'act'; v.actT = 0; G.faceTo(v, t.mouth.x + 0.5 - v.x, t.mouth.y + 0.5 - v.y); break; } enter(v, cv, t); goUG(v, t, cv, t.goal); t.st = 2; } break;
@@ -597,8 +602,7 @@
     } else if (t.kind === 'guano') {
       if (t.t > 5 && !t.carry && cv.guano >= 1) { const n = Math.min(4, Math.floor(cv.guano)); cv.guano -= n; t.carry = { k: 'guano', n }; t.done = true; }
     } else if (t.kind === 'refuge') {
-      const s = G.S.settlements.get(v.set);
-      if (!s || !(s.alarmT > 0)) { t.calm = (t.calm || 0) + dt; if (t.calm > 10) t.done = true; } else t.calm = 0;
+      if (calmed(v, t, dt)) t.done = true;
       t.stay = 1e9; if (t.t > DAY() * 0.6) t.done = true;
     } else if (t.kind === 'oracle') {
       t.stay = 1e9; if (G.S.time > 0.7 || !cv.oracle || cv.oracle.id !== v.id) t.done = true;
@@ -1212,6 +1216,10 @@
       for (const v of S.villagers.values()) {
         if (v.set !== set.id || v.captive || v.ug || v.inside || v.held || v.air || v.aboard) continue;
         if (!(v.age >= 3 && v.age < 14) && v.age < 60 && !mothers.has(v.id)) continue;
+        // (who is at the town the danger is at — in it or in its fields —: one of it far off is not in the attack. Tove, a mother of
+        // Hedeby a hundred tiles away, was sent to the town's cave, and walked half a day to it under a priority over eating, and
+        // starved on the way with the store full — L-601)
+        if (G.dist(v.x, v.y, set.cx, set.cy) > (set.radius || 8) + 8) continue;
         if (v.task && v.task.type === 'caverna') continue;
         const h = deepHall(cv); const c = spotIn(cv, h); if (c < 0) continue;
         if (C.give(v, 'refuge', cv, c, { pri: 2.7, stay: 1e9, force: !v.task || v.task.pri < 2.7 ? 1 : 0, urge: 1 })) n++;
