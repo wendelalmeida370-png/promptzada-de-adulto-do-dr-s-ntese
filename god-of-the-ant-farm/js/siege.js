@@ -86,6 +86,17 @@
     for (let y = y1 - 1; y > y0; y--) out.push([x0, y]);
     return out;
   }
+  // (a gate whose way across the wall line is shut by a blocking building on each side leads nowhere — Óstia's, between the old
+  // tavern and the baths, in the mundial remade after the generation 15; Hedeby's, between the weaving shop and a sobrado, in the
+  // mega of the generation 15 —: never a gate there, L-603. The line: the tiles of a plan and the walls that stand (line), the way
+  // across it as the checker reads it, qa.js)
+  const shutAcross = Sg.shutAcross = function (i, line) {
+    const S = G.S; const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) return false;
+    const blk = j => { const o = S.occ[j]; const b = o && S.buildings.get(o); return !!(b && b.blocks); };
+    const ew = line(i - 1) && line(i + 1), ns = line(i - N) && line(i + N); const a = ew ? [i - N, i + N] : ns ? [i - 1, i + 1] : null;
+    return !!a && blk(a[0]) && blk(a[1]);
+  };
+  const lineOf = tiles => { const S = G.S; const on = new Set(tiles); return j => on.has(j) || S.wall[j] === 1 || S.wall[j] === 2 || S.wall[j] === 4; };
   // (the ground inside another town's walls is walled already — an older wall, standing or still going up —: a wall of the
   // town next door run inside it shuts a pocket between the two with no gate of either — Corinto's east wall inside Argos's,
   // in the metropole of 28/10: three houses of Argos in a strip of 4 by 10, their people with no way home, L-342)
@@ -104,7 +115,7 @@
   // its tiles shut, its gates open, whether raised yet or not. dry: only the tiles it would open)
   Sg.openWays = function (s, w, dry) {
     const S = G.S, n = N * N; const R = W.townRegion(s); if (R < 0) return [];
-    const L = W.reachIds(true); const plan = new Set(w.tiles); const gates = new Set(w.gates); const out = [];
+    const L = W.reachIds(true); const plan = new Set(w.tiles); const gates = new Set(w.gates); const out = []; const line = lineOf(w.tiles);
     const pass = i => W.ground(i) && (plan.has(i) ? gates.has(i) : W.wallOpen(S.wall[i]));
     let seed = -1; for (let r = 0; r <= 10 && seed < 0; r++) for (let dy = -r; dy <= r && seed < 0; dy++) for (let dx = -r; dx <= r && seed < 0; dx++) { const x = Math.floor(s.cx) + dx, y = Math.floor(s.cy) + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue; const i = y * N + x; if (L[i] === R && pass(i)) seed = i; }
     if (seed < 0) return [];
@@ -122,10 +133,19 @@
       const [b, around] = left[j]; left.splice(j, 1); for (const i of around) if (!mark[i] && pass(i)) flood(i, 2);
       // (the tile of the wall between the town and that pocket — or the wall's own tile beside the building, where the wall
       // line runs along it — nearest the building)
-      const bx = b.x + b.w / 2, by = b.y + b.h / 2; let best = -1, bd = 1e18;
-      for (const i of w.tiles) { if (gates.has(i) || !W.ground(i) || !near(i, 1) || !(near(i, 2) || around.includes(i))) continue; const dd = G.dist2((i % N) + 0.5, ((i / N) | 0) + 0.5, bx, by); if (dd < bd) { bd = dd; best = i; } }
+      const bx = b.x + b.w / 2, by = b.y + b.h / 2; let best = -1, bd = 1e18, pair = -1;
+      const can = i => !gates.has(i) && W.ground(i) && !shutAcross(i, line); // (never a gate shut by buildings across the line: L-603)
+      const dd = i => G.dist2((i % N) + 0.5, ((i / N) | 0) + 0.5, bx, by);
+      for (const i of w.tiles) { if (!can(i) || !near(i, 1) || !(near(i, 2) || around.includes(i))) continue; if (dd(i) < bd) { bd = dd(i); best = i; } }
+      // (where the pocket's only way runs along the line — the tile beside it walled in on the town's side —, two tiles: that one
+      // and the next of the line that the town reaches. Tebas's storehouse on a ledge south of the wall planned in the metrópole of
+      // the generation 15: its way along the line, a tower inside it, and no gate of one tile opened it, L-604)
+      if (best < 0) for (const i of w.tiles) {
+        if (!can(i) || !(near(i, 2) || around.includes(i))) continue; const x = i % N;
+        for (const j of [x > 0 ? i - 1 : -1, x < N - 1 ? i + 1 : -1, i - N, i + N]) { if (j < 0 || j >= n || !plan.has(j) || !can(j) || !near(j, 1)) continue; if (dd(i) < bd) { bd = dd(i); best = i; pair = j; } }
+      }
       if (best < 0) { later.push([b, around]); continue; } // (shut off by something else — water, another wall —: not this wall's to open, unless a gate opened for another reaches it)
-      gates.add(best); out.push(best); dirty = true; left.push(...later.splice(0));
+      gates.add(best); out.push(best); if (pair >= 0) { gates.add(pair); out.push(pair); } dirty = true; left.push(...later.splice(0));
     }
     if (!dry && out.length) { for (const i of out) w.gates.push(i); w.ways = (w.ways || []).concat(out); }
     return out;
@@ -195,20 +215,22 @@
     x0 -= 2; y0 -= 2; x1 += 2; y1 += 2;
     if (x0 < 2 || y0 < 2 || x1 > N - 3 || y1 > N - 3) { x0 = Math.max(2, x0); y0 = Math.max(2, y0); x1 = Math.min(N - 3, x1); y1 = Math.min(N - 3, y1); }
     if (x1 - x0 > 30 || y1 - y0 > 30 || x1 - x0 < 5 || y1 - y0 < 5) return null;
-    const tiles = [], gates = [];
+    const tiles = [];
     const per = perimeter(x0, y0, x1, y1);
     for (const [x, y] of per) {
       const i = y * N + x;
       if (S.type[i] < T.SAND || S.wall[i] === 3 || Sg.walledIn(i, { set: s.id, id: Infinity })) continue;
       if (takenAt(i) || keptAt(i)) continue;
       tiles.push(i);
-      if (S.road[i] || S.wear[i] > 22) gates.push(i);
     }
     if (tiles.length < 12) return null;
+    // (a gate only where the way across the line is open — not between two buildings, one on each side of it: L-603)
+    const line = lineOf(tiles); const opens = i => !shutAcross(i, line);
+    const gates = tiles.filter(i => (S.road[i] || S.wear[i] > 22) && opens(i));
     // at least one gate on each side, where the people already walk
     const sides = [[x0, null], [x1, null], [null, y0], [null, y1]];
     for (const [sx, sy] of sides) {
-      const on = tiles.filter(i => (sx !== null ? i % N === sx : ((i / N) | 0) === sy));
+      const on = tiles.filter(i => (sx !== null ? i % N === sx : ((i / N) | 0) === sy) && opens(i));
       if (!on.length || on.some(i => gates.includes(i))) continue;
       let best = on[0], bs = -1; for (const i of on) if (S.wear[i] > bs) { bs = S.wear[i]; best = i; }
       if (bs < 3) best = on[Math.floor(on.length / 2)];
@@ -226,7 +248,7 @@
       const cand = gates.filter(q => onSide(sd, q)), free = cand.filter(q => !g2.some(j => near(q, j)));
       if (free.length) { g2.push(free[0]); continue; }
       if (cand.length) continue; // (where its people walk out, a gate of the next side is a step away)
-      const alt = tiles.filter(q => onSide(sd, q) && !g2.some(j => near(q, j))).sort((a, b) => rank(b) - rank(a))[0];
+      const alt = tiles.filter(q => onSide(sd, q) && !g2.some(j => near(q, j)) && opens(q)).sort((a, b) => rank(b) - rank(a))[0];
       if (alt !== undefined) g2.push(alt);
     }
     for (const i of gates) if (g2.length < 4 && !g2.includes(i) && !g2.some(j => near(i, j))) g2.push(i);
