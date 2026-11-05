@@ -20,22 +20,22 @@ G.Ready.list({
   "bytes": 1047489
  },
  "metropole": {
-  "day": 53,
-  "pop": 526,
+  "day": 64,
+  "pop": 903,
   "peoples": 6,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
-   "name": "Tenochtitlan",
+   "name": "Argos",
    "tier": 4,
-   "pop": 97
+   "pop": 109
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 2791972
+  "bytes": 3795852
  },
  "mega": {
   "day": 99,
@@ -56,40 +56,40 @@ G.Ready.list({
   "bytes": 5852876
  },
  "mundial": {
-  "day": 80,
-  "pop": 554,
+  "day": 71,
+  "pop": 599,
   "peoples": 4,
-  "towns": 20,
+  "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Roma",
+   "name": "Tenochtitlan",
    "tier": 4,
-   "pop": 132
+   "pop": 59
   },
-  "wars": 1,
+  "wars": 2,
   "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 4279391
+  "bytes": 4096145
  },
  "anos100": {
   "day": 101,
-  "pop": 739,
+  "pop": 409,
   "peoples": 2,
-  "towns": 14,
+  "towns": 12,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Roma",
-   "tier": 4,
-   "pop": 218
+   "name": "Argos",
+   "tier": 3,
+   "pop": 136
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 3301971
+  "bytes": 2498123
  },
  "anos500": {
   "day": 501,
