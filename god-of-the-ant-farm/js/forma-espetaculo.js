@@ -48,7 +48,9 @@
     const a = Aa - rs, e = Ba - rs, b = (a * a - e * e) / (2 * e), rb = Ba + b, phi = Math.atan2(b, a); // (the small arcs' centres a out along u, the big ones' b back along v: tangent at phi)
     const prims = [];
     const line = (p0, p1, n) => prims.push({ k: 'reta', p0, p1, n });
-    const arc = (c, r0, su, sv, t0, t1) => prims.push({ k: 'arco', c, r0, su, sv, t0, t1 });
+    // (each arc with the canonical angles it spans about its centre — the cávea's arco over it, the polygon the 3D draws its
+    // edges on: the plan's walls round the sand follow it, L-599)
+    const arc = (c, r0, su, sv, t0, t1) => prims.push({ k: 'arco', c, r0, su, sv, t0, t1, arco: arcOf(su, sv, Math.min(t0, t1), Math.max(t0, t1)) });
     const Au = Aa + g / 2, Bv = Ba + h / 2; // (the arena's half axes, split)
     line([cu + Au, cv], [cu + Au, cv + h / 2], [1, 0]);
     arc([cu + a + g / 2, cv + h / 2], rs, 1, 1, 0, phi); arc([cu + g / 2, cv + h / 2 - b], rb, 1, 1, phi, HALF);
@@ -141,7 +143,9 @@
     const cages = cagesOf(O); const ch = 1.6;
     for (const c of cages) {
       const vin = c.sv > 0 ? cv + h / 2 + wt : cv - h / 2 - wt, vout = vin + c.sv * ch; const lo = Math.min(vin, vout), hi = Math.max(vin, vout);
-      wall([c.u0 - wt, lo, c.u0, hi], 0, yc); wall([c.u1, lo, c.u1 + wt, hi], 0, yc); wall([c.u0 - wt, c.sv > 0 ? hi : lo - wt, c.u1 + wt, c.sv > 0 ? hi + wt : lo], 0, yc);
+      // (its two sides and its back, each kept for the plan too — its walls the same, L-600)
+      c.walls = [[c.u0 - wt, lo, c.u0, hi], [c.u1, lo, c.u1 + wt, hi], [c.u0 - wt, c.sv > 0 ? hi : lo - wt, c.u1 + wt, c.sv > 0 ? hi + wt : lo]].map(q => q.map(k3));
+      for (const q of c.walls) wall(q, 0, yc);
       els.push({ k: 'janelas', na: c.sv > 0 ? 'fundo' : 'frente', em: k3(c.sv > 0 ? cv + h / 2 : cv - h / 2), de: k3(c.u0 + 0.4), ate: k3(c.u1 - 0.4), y0: 0.9, y1: 1.9, n: 0, grade: 6 });
     }
     // (a flight's treads, each a block from the ground to its top — no riser over 0.225: m of them —, the way up dir: along v
@@ -194,7 +198,11 @@
       const box = !small && sv < 0, dB = BOX / (r0 + dp); const span = box ? (su > 0 ? [arco[0], k3(arco[0] + dB)] : [k3(arco[1] - dB), arco[1]]) : null;
       const rest = box ? (su > 0 ? [span[1], arco[1]] : [arco[0], span[0]]) : arco;
       els.push({ k: 'cavea', c: c.map(k3), aneis: [[k3(r0 + dp), yb]], fundo: k3(r0), cor: SEAT, parapeito: 0.9, muro: RISER, fecho: SEAT, arco });
-      const aneis = [[k3(r0 + D - t), yTop]]; for (let j = rows - 1; j >= 1; j--) aneis.push([k3(r0 + dp + j * TREAD), k3(yb + j * RISE)]);
+      // (the top ring — the top row and the walk behind it — out to the polygon round the facade's inner face, the sides' middles
+      // on it and the corners in its stone: on the polygon through it, between the corners the back of the rows stood before the
+      // facade's flat bays, up to 0.9 cm in the colossal, L-600)
+      const rT = k3((r0 + D - t) / Math.cos(Math.PI / Fo.SEG));
+      const aneis = [[rT, yTop]]; for (let j = rows - 1; j >= 1; j--) aneis.push([k3(r0 + dp + j * TREAD), k3(yb + j * RISE)]);
       // (by the box the rows in two pieces: the first three over the rest of the arc, and from the fourth over the whole arc —
       // the box under them —: no end of the rows where they go on over it, which the god would paint as a wall across them)
       const esc = { a: [mid], l: 1.0, n: 2 };
@@ -203,9 +211,9 @@
         { k: 'cavea', c: c.map(k3), aneis: aneis.slice(0, -3), fundo: k3(r0 + dp + 3 * TREAD), cor: SEAT, muro: RISER, fecho: SEAT, arco, escadas: esc });
       // (the plan's rows: by the box the first three over the rest of the arc, and from the fourth on the whole arc — the rings the
       // same as the form's pieces; cut in two blocks a row loses a seat at the cut)
-      if (!box) blocks.push({ c: c.map(k3), r0: k3(r0 + dp), r1: k3(r0 + D - t), arco, aisles: [mid], small, su, sv });
+      if (!box) blocks.push({ c: c.map(k3), r0: k3(r0 + dp), r1: rT, arco, aisles: [mid], small, su, sv });
       else blocks.push({ c: c.map(k3), r0: k3(r0 + dp), r1: k3(r0 + dp + 3 * TREAD), arco: rest, aisles: [mid], small, su, sv, n: 3 },
-        { c: c.map(k3), r0: k3(r0 + dp + 3 * TREAD), r1: k3(r0 + D - t), arco, aisles: [mid], small, su, sv, skip: 3 });
+        { c: c.map(k3), r0: k3(r0 + dp + 3 * TREAD), r1: rT, arco, aisles: [mid], small, su, sv, skip: 3 });
       if (!box) continue;
       // (the box: its floor; the third row, alone, its parapet on its edge — the parapet of a piece is on every row's edge)
       const rB = k3(r0 + dp + 2 * TREAD), r3 = k3(rB + TREAD), y3 = k3(yb + 3 * RISE);

@@ -481,10 +481,14 @@ function testeA() {
         if (s !== 'S') continue;
         // (the street on the front: the plan's frame the form's)
         // (the box's band by the 3D's polygon, as the plan lays it — the radius over the edge's at the angle, G.Forma.ringEdge —;
-        // and its back wall on that polygon, a hand inside the band, the whole arc: along the round it stood 4.3 cm off it, T-457)
+        // and its back wall on that polygon, a hand inside the band, the whole arc: along the round it stood 4.3 cm off it, T-457.
+        // A hand inside the band, where the 3D lays the parapet of a piece — on its row, 0.12 m from the edge in (build3d's
+        // cavea) —, 0.12 m thick, to the parapet's top: the plan's stood on the box's floor before it, and the proof looked for it
+        // there, L-600)
+        const l2 = p.levels.find(l => l.lv === 2), pw = (X, w) => Math.abs(w.t - 0.12) < 1e-6 && Math.abs(l2.y + w.h - X.y3 - 0.9) < 0.011;
         const inBox = (x, z, r0, rA) => B.some(X => { const th = Math.atan2(z - X.c[1], x - X.c[0]), d = Math.hypot(x - X.c[0], z - X.c[1]) / Fo.ringEdge(1, th); return d >= r0(X) && d <= rA(X) && angIn(th, X.span[0], X.span[1]); });
-        const backs = B.map(X => ringWallsOff(p.walls.filter(w => w.lv === 2 && w.kind === 'parapeito' && [w.a, w.b].every(q => Math.abs(Math.hypot(q[0] - X.c[0], q[1] - X.c[1]) - (X.rB - 0.06)) < 0.15 && angIn(Math.atan2(q[1] - X.c[1], q[0] - X.c[0]), X.span[0] - 0.01, X.span[1] + 0.01))), X.c, X.rB - 0.06, X.span[0], X.span[1]));
-        if (backs.some(o => !o.n || o.dev > 0.01 || o.gap > 0.02)) out.push(`n ${n}: o parapeito de trás do camarote ${backs.map(o => `em ${o.n} paredes a ${(o.dev * 100).toFixed(1)} cm do polígono do 3D, o maior vão ${o.gap.toFixed(2)} m`).join(' e ')} (T-457)`);
+        const backs = B.map(X => ringWallsOff(p.walls.filter(w => w.lv === 2 && w.kind === 'parapeito' && pw(X, w) && [w.a, w.b].every(q => Math.abs(Math.hypot(q[0] - X.c[0], q[1] - X.c[1]) - (X.rB + 0.06)) < 0.15 && angIn(Math.atan2(q[1] - X.c[1], q[0] - X.c[0]), X.span[0] - 0.01, X.span[1] + 0.01))), X.c, X.rB + 0.06, X.span[0], X.span[1]));
+        if (backs.some(o => !o.n || o.dev > 0.01 || o.gap > 0.02)) out.push(`n ${n}: o parapeito de trás do camarote ${backs.map(o => `em ${o.n} paredes a ${(o.dev * 100).toFixed(1)} cm do polígono do 3D, o maior vão ${o.gap.toFixed(2)} m`).join(' e ')} (T-457, L-600)`);
         const seats = In.tierSeats(p).filter(q => inBox(q.x, q.z, () => r1, X => X.r3)); if (seats.length) out.push(`n ${n}: ${seats.length} assentos das fileiras no camarote ou na fileira de trás`);
         const stand = (p.marks || []).filter(M => M.use === 'assistir').flatMap(M => M.pts).filter(q => inBox(q.x, q.z, () => O.rb, X => X.r3)); if (stand.length) out.push(`n ${n}: ${stand.length} lugares de assistir em pé diante do camarote`);
         let strip = 0, walked = 0; for (let k = 0; k < N * N; k++) { const x = (k % N + 0.5) * CS, z = (Math.floor(k / N) + 0.5) * CS; if (!inBox(x, z, X => X.rB + 0.02, X => X.r3 - 0.02)) continue; strip++; if (R[k]) walked++; }
@@ -494,6 +498,61 @@ function testeA() {
       if (new Set(tally).size > 1) out.push(`n ${n}: os assentos mudam com o lado (${tally.join(', ')})`);
     }
     ok('A10 o camarote do imperador (D-125): a forma — o chão no pódio, a fileira de trás com o parapeito, o trono e o banco —, o trono e a corte que o corpo toma alcançados da porta, nenhum assento nem lugar em pé no camarote', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
+  }
+  // ---------------------------------------------------------------- A11 the plan's storeys against the form (L-599, L-600)
+  // (on the plans of A2 — the two sizes, the four sides —, in the form's own frame (G.Forma.toCan): (1) the walls round the sand —
+  // the ground's, the sand's, the podium's parapet — on the 3D's polygon of each arc, the podium's front: laid as chords of their
+  // own they stood up to 1.4 cm off it, L-599; (2) under the sand no wall taller than its storey: the passages' walls stood up
+  // through the sand to the podium; (3) a flight under the storey it comes up to, its hole wherever a head would meet that
+  // storey's floor: the 3D laid the podium's floor over the front and back flights, 27 cm over their top steps; (4) the grid's
+  // floor within its storey's area: the lot's corners on the rows' storey were floor in the air; (5) none of it on the rows'
+  // storey in the facade's stone, where the heads of its ground arches are; (6) the cages walled as the form stands them: the
+  // quarter's floor went on through their stone; (7) the top ring of the rows out to the polygon round the facade's inner face:
+  // between its corners the back of the rows stood before the facade's flat bays, in the colossal — L-600. The 3D's own reading,
+  // ray by ray, is the interior3d's, in the worlds that have a Colosseum standing: T-490)
+  {
+    const out = [], said = []; const FL = In.CELL.FLOOR;
+    for (const n of SIZES) {
+      const F = Fo.of('maravilha', 'romano', n), O = F.amphi.oval, L = F.L, cS = Math.cos(Math.PI / Fo.SEG); let dev = 0, nRing = 0;
+      // (the facade's stone: between its inner and its outer faces — its bays flat, from corner to corner (pts1, pts) —, a hand
+      // off both)
+      const segD = (x, z, a, c) => { const dx = c[0] - a[0], dz = c[1] - a[1], l2 = dx * dx + dz * dz || 1; const f = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2)); return Math.hypot(x - a[0] - dx * f, z - a[1] - dz * f); };
+      const offAll = (P2, x, z) => P2.every((a, k) => segD(x, z, a, P2[(k + 1) % P2.length]) > 0.05);
+      const inStone = (x, z) => inPoly(O.pts, x, z) && !inPoly(O.pts1, x, z) && offAll(O.pts, x, z) && offAll(O.pts1, x, z);
+      for (const e of F.els) { if (e.k !== 'cavea' || Math.abs(e.aneis[0][1] - O.yTop) > 1e-6) continue; const q = O.prims.find(o => o.k === 'arco' && Math.hypot(o.c[0] - e.c[0], o.c[1] - e.c[1]) < 2e-3);
+        if (q && e.aneis[0][0] * cS < q.r0 + O.D - O.t - 1e-3) out.push(`n ${n}: o alto das fileiras no raio ${e.aneis[0][0]}, por dentro da face de dentro da fachada entre os cantos`); }
+      for (const s of SIDES) {
+        const { p } = plans[n + s] || {}; if (!p || !p.ok) { out.push(`n ${n}/${s}: sem planta`); continue; }
+        const tag = `n ${n}/${s}`, can = c => Fo.toCan(s, L, c[0], c[1]), lvOf = lv => p.levels.find(l => l.lv === lv), N = p.grid.n;
+        const cells = (lv, fn) => { const g = p.grid.lv[lv]; let k2 = 0; for (let k = 0; k < N * N; k++) { if (g[k] !== FL) continue; const x = (k % N + 0.5) * CS, z = (Math.floor(k / N) + 0.5) * CS; if (fn(x, z, can([x, z]))) k2++; } return k2; };
+        // (1)
+        for (const q of O.prims) { if (q.k !== 'arco') continue;
+          for (const [lv, half] of [[0, 0.1], [1, 0.1], [2, 0.06]]) {
+            const ws = p.walls.filter(w => w.lv === lv && Math.abs(w.t - 2 * half) < 1e-6).map(w => ({ a: can(w.a), b: can(w.b) })).filter(w => [w.a, w.b].every(c => { const th = Math.atan2(c[1] - q.c[1], c[0] - q.c[0]);
+              return Math.abs(Math.hypot(c[0] - q.c[0], c[1] - q.c[1]) / Fo.ringEdge(1, th) - q.r0 - half) < 0.08 && angIn(th, q.arco[0] - 0.01, q.arco[1] + 0.01); }));
+            const o = ringWallsOff(ws, q.c, q.r0 + half, q.arco[0], q.arco[1]); nRing += o.n; dev = Math.max(dev, o.dev);
+            if (!o.n || o.gap > 0.03) out.push(`${tag}: piso ${lv}, o arco de ${q.r0.toFixed(2)} m em ${o.n} paredes, o maior vão ${o.gap.toFixed(2)} m`); } }
+        // (2)
+        const l0 = lvOf(0), l1 = lvOf(1), l2 = lvOf(2);
+        const tall = p.walls.filter(w => w.lv === 0 && l0.y + w.h > l1.y + 0.005 && [0.1, 0.5, 0.9].some(f => { const c = can([w.a[0] + (w.b[0] - w.a[0]) * f, w.a[1] + (w.b[1] - w.a[1]) * f]); return O.inside(c[0], c[1], 0); }));
+        if (tall.length) out.push(`${tag}: ${tall.length} paredes do térreo debaixo da areia mais altas que ele (a ${Math.max(...tall.map(w => l0.y + w.h)).toFixed(2)} m)`);
+        // (3)
+        for (const st of p.stairs) { if (st.kind !== 'escada') continue; const a = lvOf(st.lv0), b2 = lvOf(st.lv1), A = b2.area, r = st.r, [du, dv] = st.dir; let open = 0;
+          for (let k = 0; k < 40; k++) { const f = (k + 0.5) / 40, y = a.y + (b2.y - a.y) * f;
+            const x = du ? (du > 0 ? r[0] + (r[2] - r[0]) * f : r[2] - (r[2] - r[0]) * f) : (r[0] + r[2]) / 2, z = dv ? (dv > 0 ? r[1] + (r[3] - r[1]) * f : r[3] - (r[3] - r[1]) * f) : (r[1] + r[3]) / 2;
+            if (x > A[0] && x < A[2] && z > A[1] && z < A[3] && b2.y - y < 2.05 && !(st.hole && x >= st.hole[0] - 1e-6 && x <= st.hole[2] + 1e-6 && z >= st.hole[1] - 1e-6 && z <= st.hole[3] + 1e-6)) open++; }
+          if (open) out.push(`${tag}: o lance ${st.id} (${st.lv0}→${st.lv1}) debaixo do piso de cima sem buraco em ${open} de 40 pontos`); }
+        // (4) (5) (6)
+        for (const l of p.levels) { const A = l.area, k4 = cells(l.lv, (x, z) => x < A[0] - 0.01 || x > A[2] + 0.01 || z < A[1] - 0.01 || z > A[3] + 0.01); if (k4) out.push(`${tag}: ${k4} casinhas de chão do piso ${l.lv} fora da área dele`); }
+        const k5 = cells(2, (x, z, c) => inStone(c[0], c[1])); if (k5) out.push(`${tag}: ${k5} casinhas de chão do piso das fileiras na pedra da fachada`);
+        // (no wall of no length: the proofs' rays past the walls of its storey all meet it — the box's back had one, T-491)
+        const nil = p.walls.filter(w => Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) < 0.02); if (nil.length) out.push(`${tag}: ${nil.length} paredes sem comprimento (a ${nil[0].id}, piso ${nil[0].lv})`);
+        const k6 = cells(0, (x, z, c) => O.cages.some(cg => cg.walls.some(q => c[0] > q[0] + 0.01 && c[0] < q[2] - 0.01 && c[1] > q[1] + 0.01 && c[1] < q[3] - 0.01))); if (k6) out.push(`${tag}: ${k6} casinhas de chão na pedra das jaulas`);
+        if (s === 'S') said.push(`n ${n}: ${nRing} paredes em volta da areia, a ${(dev * 100).toFixed(1)} cm do polígono do 3D no máximo; os lances do pódio com o poço aberto; o chão de cada piso na área dele, nenhum na pedra da fachada (${l2.y} m) nem na das ${O.cages.length} jaulas`);
+      }
+      if (dev > 0.008) out.push(`n ${n}: as paredes em volta da areia a ${(dev * 100).toFixed(1)} cm do polígono do 3D (L-599)`);
+    }
+    ok('A11 os pisos da planta do Coliseu contra a forma: as paredes da areia no polígono do 3D, nenhuma parede do subsolo pela areia acima, os lances do pódio abertos, o chão na área do seu piso e fora da pedra da fachada e das jaulas, as fileiras até a fachada', !out.length, out.slice(0, 4).join(' · ') || said.join(' · '));
   }
 }
 // (who is given a place in a building of a people — In.places, freePlace, the body's «lugar» —: the table of its plan's places,

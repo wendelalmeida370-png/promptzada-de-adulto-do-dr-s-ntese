@@ -16,7 +16,10 @@
   // side of that polygon from a0 to a1 (G.Forma.ringVerts). Laid as chords of their own from a0, or along the round, they stood
   // up to 4.3 cm off the 3D's — the theatre's gallery, the box's back —, T-457)
   const ringPt = (c, r, a) => { const q = G.Forma.ringEdge(r, a); return [r2(c[0] + q * Math.cos(a)), r2(c[1] + q * Math.sin(a))]; };
-  const ringWalls = (P, lv, c, r, a0, a1, t, h, kind) => { const V = G.Forma.ringVerts(a0, a1); for (let k = 0; k + 1 < V.length; k++) P.wall(lv, ringPt(c, r, V[k]), ringPt(c, r, V[k + 1]), t, h, 0, kind); };
+  // (a side of a few millimetres — an arc's end a hair past a corner: its angles in thousandths — none: rounded to the centimetre
+  // it was a wall of no length, and the proofs' rays past the walls of its storey all met it, T-491)
+  const ringWalls = (P, lv, c, r, a0, a1, t, h, kind) => { const V = G.Forma.ringVerts(a0, a1);
+    for (let k = 0; k + 1 < V.length; k++) { const a = ringPt(c, r, V[k]), b = ringPt(c, r, V[k + 1]); if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.02) P.wall(lv, a, b, t, h, 0, kind); } };
   // (a point's radius about c by that polygon: its distance over the edge's at its angle — the plan's rows' own, In.tierPos)
   const ringR = (c, u, v) => Math.hypot(u - c[0], v - c[1]) / G.Forma.ringEdge(1, Math.atan2(v - c[1], u - c[0]));
 
@@ -303,7 +306,8 @@
     P.shell = { kind: 'aberta', r: sh, t: 0, mat: 'chao', base: openBase(y0), baseH: y0, floors: 1, eave: 0 }; P.roof = null;
     P.level(0, y0, ya - y0, 'chao', sh); P.entryLv = 0;
     P.level(1, ya, yb - ya, 'arena', [cu - Au, cv - Bv, cu + Au, cv + Bv]);
-    P.level(2, yb, 2.6, 'sacada', [cu - Au - O.D, cv - Bv - O.D, cu + Au + O.D, cv + Bv + O.D]);
+    const A2 = [cu - Au - O.D, cv - Bv - O.D, cu + Au + O.D, cv + Bv + O.D]; // (the podium's storey: out to the facade)
+    P.level(2, yb, 2.6, 'sacada', A2);
     wayIn(P, sh[0], sh[2], sh[3], [O.way]);
     // (a wall along a side a → b moved out by d — to the right of its way round, the outside of the oval —, t thick, h high)
     const along = (lv, a, b, d, t, ht, kind) => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; const nx = (b[1] - a[1]) / l, nz = -(b[0] - a[0]) / l;
@@ -317,13 +321,35 @@
       if (O.axes.includes(k)) P.door(w, P.wlen(w) / 2, O.aw, O.ah, -1, -1, 0, 'arco');
     }
     const ax = k => O.pts1[k]; const vF = ax(O.axes[1])[1], vB = ax(O.axes[3])[1], uR = ax(O.axes[0])[0], uL = ax(O.axes[2])[0]; // (the facade's inner face on each axis)
+    // (each wall of a passage from under the sand out to the facade: under the sand as high as the undercroft — to the sand's
+    // underside, the form's corridors' (its sand d thick) —, out of it up to the podium — the rows' ends —, cut in the middle of
+    // the wall round the sand. At the podium's height all their length they stood up through the sand, and the wall round the
+    // arena met their back 23 cm off, L-600)
+    const sand = F.els.find(e => e.k === 'areia'); const yc = r2(ya - (sand ? sand.d : 0) - y0), yp = r2(yb - y0);
+    const passage = (a, b) => { let lo = 0, hi = 1;
+      for (let k = 0; k < 30; k++) { const f = (lo + hi) / 2; if (O.inside(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, wt / 2)) lo = f; else hi = f; }
+      const c = [r2(a[0] + (b[0] - a[0]) * lo), r2(a[1] + (b[1] - a[1]) * lo)];
+      if (Math.hypot(c[0] - a[0], c[1] - a[1]) > 0.05) P.wall(0, a, c, wt, yc, 0, 'parede'); if (Math.hypot(b[0] - c[0], b[1] - c[1]) > 0.05) P.wall(0, c, b, wt, yp, 0, 'parede'); };
     for (const s of [-1, 1]) {
-      const u = cu + s * (hg + wt / 2), v = cv + s * (hh + wt / 2);
-      P.wall(0, [r2(u), r2(cv + hh)], [r2(u), r2(vF)], wt, yb, 0, 'parede'); P.wall(0, [r2(u), r2(cv - hh)], [r2(u), r2(vB)], wt, yb, 0, 'parede');
-      P.wall(0, [r2(cu + hg), r2(v)], [r2(uR), r2(v)], wt, yb, 0, 'parede'); P.wall(0, [r2(cu - hg), r2(v)], [r2(uL), r2(v)], wt, yb, 0, 'parede');
+      const u = r2(cu + s * (hg + wt / 2)), v = r2(cv + s * (hh + wt / 2));
+      passage([u, r2(cv + hh)], [u, r2(vF)]); passage([u, r2(cv - hh)], [u, r2(vB)]);
+      passage([r2(cu + hg), v], [r2(uR), v]); passage([r2(cu - hg), v], [r2(uL), v]);
     }
-    const edge = O.sides(0);
-    for (const e of edge) if (e.i !== 6 && e.i !== 0 && e.i !== 12) along(0, e.a, e.b, wt / 2, wt, ya);
+    // (the cages either side of the cross corridor, as the form stands them — their sides and their backs, up to the sand's
+    // underside —: seen through their bars, not gone into. With none in the plan, the quarter's floor went on through their
+    // stone, a hand off the long corridor's walls, L-600)
+    for (const c of O.cages) for (const q of c.walls) { const vert = q[3] - q[1] > q[2] - q[0], mu = (q[0] + q[2]) / 2, mv = (q[1] + q[3]) / 2;
+      P.wall(0, (vert ? [mu, q[1]] : [q[0], mv]).map(r2), (vert ? [mu, q[3]] : [q[2], mv]).map(r2), r2(vert ? q[2] - q[0] : q[3] - q[1]), yc, 0, 'parede'); }
+    // (the sand's edge as the 3D draws it — the podium's front, its cávea's fundo —: each straight bit whole, each arc the polygon
+    // of its radius about its own centre, its corners at the angles k·τ/48 (G.Forma.ringVerts, ringEdge). Laid as chords of their
+    // own, 0.14 rad of the arc each, the walls round the sand stood up to 1.4 cm off the 3D's face, into the arena, L-599)
+    // (the corners as they are, rounded once, where each wall is moved out to — along —; a side of a few millimetres — an arc's
+    // end a hair past the polygon's corner: its angles in thousandths — none)
+    const onRing = (c, r, a) => { const q = G.Forma.ringEdge(r, a); return [c[0] + q * Math.cos(a), c[1] + q * Math.sin(a)]; };
+    const edge = O.prims.flatMap((q, i) => (q.k === 'reta' ? [{ a: q.p0, b: q.p1, i }]
+      : (V => V.slice(1).map((t, k) => ({ a: onRing(q.c, q.r0, V[k]), b: onRing(q.c, q.r0, t), i })))(G.Forma.ringVerts(q.arco[0], q.arco[1]))))
+      .filter(e => Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1]) > 0.02);
+    for (const e of edge) if (e.i !== 6 && e.i !== 0 && e.i !== 12) along(0, e.a, e.b, wt / 2, wt, r2(ya - y0));
     // the sand: the podium's wall round it, the gate at its left end — under the bridge, as high as the sand leaves (2.2 m) — open
     for (const e of edge) { const w = along(1, e.a, e.b, wt / 2, wt, yb - ya); if (e.i === 6) P.door(w, P.wlen(w) / 2, r2(P.wlen(w) - 0.2), r2(yb - 0.3 - ya), -1, -1, 0, 'vao'); }
     // the podium's storey: its parapet round the sand — on the landings and the bridges too —; along the passages, on the rows,
@@ -336,16 +362,21 @@
       P.wall(2, [r2(cu + Au + dp), r2(v)], [r2(uR), r2(v)], 0.12, hp, 0, 'parapeito'); P.wall(2, [r2(cu - Au - dp), r2(v)], [r2(uL), r2(v)], 0.12, hp, 0, 'parapeito');
       const ub = cu + s * (Au + dp - 0.06); P.wall(2, [r2(ub), r2(cv - hh)], [r2(ub), r2(cv + hh)], 0.12, 0.9, 0, 'parapeito');
     }
-    for (let k = 0; k < nb; k++) along(2, O.pts1[k], O.pts1[(k + 1) % nb], wt / 2, wt, 2.6);
-    // (the flights: up to the podium's landings, rising toward the sand; up to the gate; up from the undercroft through the hatch)
-    P.stair('escada', 0, 2, W.frente.r, 0, -1, null); P.stair('escada', 0, 2, W.fundo.r, 0, 1, null);
+    // (the facade on the rows' storey: its bays as thick as it is, as on the ground — its footprint no floor of the plan: the arches
+    // of its ground storey go up past the podium, and on the storey's floor in its thickness the 3D had their heads, L-600)
+    for (let k = 0; k < nb; k++) P.wall(2, mid[k].map(r2), mid[(k + 1) % nb].map(r2), O.t, 2.6, 0, 'parede');
+    // (the flights: up to the podium's landings, rising toward the sand — open to the sky over them: their footprint the well in
+    // the podium's storey, open (In.grandWell); with none the 3D laid that storey's floor over them, 27 cm over the top steps,
+    // L-600 —; up to the gate, under the bridge and the vault; up from the undercroft through the hatch)
+    P.stair('escada', 0, 2, W.frente.r, 0, -1, W.frente.r); P.stair('escada', 0, 2, W.fundo.r, 0, 1, W.fundo.r);
     P.stair('escada', 0, 1, W.esquerda.r, 1, 0, null); P.stair('escada', 0, 1, O.hypo.r, 0, 1, O.hatch);
     // (the rows: each wedge of the oval, the form's own rings about its own centre)
     // (by the emperor's box: the first three rows over the rest of the arc — n —, and from the fourth the whole arc — skip)
     for (const B of O.blocks) P.tiers(2, null, { ring: [B.c[0], B.c[1], B.r0, B.r1], arc: B.arco, dir: 'out', rows: B.n || O.rows - (B.skip || 0), rise: O.rise, tread: O.tread, first: O.rise * (1 + (B.skip || 0)), aisles: B.aisles, aisleW: 1.0, climb: 2 });
     // (the box's back: the third row's riser and its parapet, a wall along the arc at its edge — on the 3D's polygon, a hand
-    // inside it: along the round, in chords of 0.4 m, it stood up to 4.3 cm off it, T-457)
-    for (const X of O.boxes || []) ringWalls(P, 2, X.c, X.rB - 0.06, X.span[0], X.span[1], 0.12, r2(X.y3 - yb + 0.9), 'parapeito');
+    // inside it: along the round, in chords of 0.4 m, it stood up to 4.3 cm off it, T-457 —, the parapet's stone where the 3D
+    // lays it, on the row from its edge (rB to rB + 0.12): on the box's floor before it, 12 cm short of the riser, L-600)
+    for (const X of O.boxes || []) ringWalls(P, 2, X.c, X.rB + 0.06, X.span[0], X.span[1], 0.12, r2(X.y3 - yb + 0.9), 'parapeito');
     if (P.inside()) return;
     // (the rooms, rectangles of the lot: on the ground the four quarters and the passages between them, the crossing under the
     // middle of the sand; the sand; on the podium's storey the four quarters, the landings and the bridges)
@@ -354,7 +385,10 @@
     for (const r of [[cu - hg, cv + hh, cu + hg, L - m], [cu - hg, m, cu + hg, cv - hh], [m, cv - hh, cu - hg, cv + hh], [cu + hg, cv - hh, L - m, cv + hh]]) P.room(0, 'passagem', r.map(r2), 1);
     P.room(0, 'subsolo', [cu - hg, cv - hh, cu + hg, cv + hh].map(r2), 0);
     const ar = P.room(1, 'arena', [cu - Au, cv - Bv, cu + Au, cv + Bv].map(r2), 1);
-    for (const [su, sv] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) P.room(2, 'cavea', quad(su, sv), 1);
+    // (the podium's storey's quarters within the facade, to the middle of its stone — beyond, its wall: out to the lot's edge,
+    // their corners were floor of the plan in the air at 4.9 m, where the 3D lays no floor, L-600)
+    const hf = O.t / 2; const C2 = [A2[0] + hf, A2[1] + hf, A2[2] - hf, A2[3] - hf];
+    for (const [su, sv] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) { const q = quad(su, sv); P.room(2, 'cavea', [Math.max(q[0], C2[0]), Math.max(q[1], C2[1]), Math.min(q[2], C2[2]), Math.min(q[3], C2[3])].map(r2), 1); }
     for (const r of [W.frente.landing, W.fundo.landing, W.esquerda.bridge, W.direita.bridge]) P.room(2, 'podio', r, 1);
     // (the posts round the square: solid at their feet — the form's, FM)
     for (const e of F.els) { if (e.k !== 'coluna') continue; const id = P.rooms.findIndex(q => q.lv === 0 && In.inRoomPt(q, e.c[0], e.c[1]));
