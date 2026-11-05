@@ -68,7 +68,7 @@ fi
 # (e o tempo: a memória dos mortos — esquecer, o ossuário, a vala — e os mundos prontos abertos pelo menu)
 skip cidade || { (timeout 2400 node urb1.js 41 128 90 > "$OUT/cidade_bairros.txt" 2>&1) & (timeout 2000 node urb2.js 7 > "$OUT/cidade_vida.txt" 2>&1) &
   (timeout 900 node ev.js 5 continente 128 4 4 memoria.js > "$OUT/memoria.txt" 2>&1) & (timeout 2400 node mundos.js > "$OUT/mundos.txt" 2>&1) & wait
-  (timeout 1500 node quarteirao.js > "$OUT/cidade_quarteirao.txt" 2>&1) & (timeout 1500 node fundadores.js > "$OUT/cidade_fundadores.txt" 2>&1) & wait; }
+  (timeout 1500 node quarteirao.js > "$OUT/cidade_quarteirao.txt" 2>&1) & (timeout 1500 node fundadores.js > "$OUT/cidade_fundadores.txt" 2>&1) & (timeout 900 node lote-bolsao.js > "$OUT/cidade_lote-bolsao.txt" 2>&1) & wait; }
 echo "== cidade: $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^PASSOU') passaram, $(cat "$OUT"/cidade_*.txt 2>/dev/null | grep -c '^FALHOU') falharam; memória e mundos prontos: $(grep -h '^MUNDOS' "$OUT/mundos.txt" 2>/dev/null)"
 # 7. os poderes do deus: os novos (v30) provocados de propósito com os casos ruins, e o deus caótico lançando todos ao acaso
 # (e as famílias que o modo desenvolvedor faz: cada filho ao menos 11 anos depois dos pais, L-219)
