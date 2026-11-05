@@ -801,7 +801,12 @@ function stallNow() {
       zz = B.of(mer) || B.open(mer, mkt); if (!zz) break;
       if (!K) K = E.MARKET_GOODS.filter(q => q !== 'food' && !(zz.inv[q] >= 1)).sort()[0] || 'tecido';
       if ((f.stock[K] || 0) < 6) D.make('f:' + f.id, K, 6, { code: 'teste' });
-      roomOn(zz, K, 3); L0 = S.ledgerN;
+      roomOn(zz, K, 3);
+      // (the wholesale on account needs room under the store's limit — G.Biz.credit: a stall that owes up to it is given no more
+      // until it pays, the world's rule. A stall of the ready world near the limit — Sitamun's, of the generation 14, owed 11.31
+      // of the 12 — is closed first by its own rule, paying back what it owes (n17), and the merchant opens another: T-476)
+      if (B.credit(zz) + 1e-6 < r2((E.PRICE[K] || 0.3) * 3 * B.WHOLE)) { B.close(zz, 'teste'); zz = B.open(mer, mkt); if (!zz) break; roomOn(zz, K, 3); }
+      L0 = S.ledgerN;
       G.Vg.setTask(mer, { type: 'atacado', biz: zz.id, k: K, n: 3, pri: 1.2, st: 0, id: mkt.id });
       live(150, () => (zz.inv[K] || 0) >= 1 || watch());
       // (on account: the stall owes for it, and the ledger has the merchant's line — a stall tried again may owe from before)

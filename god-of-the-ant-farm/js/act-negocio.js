@@ -40,6 +40,9 @@
   // the hours of a market: from the morning to dusk
   B.hours = () => { const t = G.S.time; return t > 0.06 && t < 0.62; };
   const coin = z => E.coinage(z.fac);
+  // (for the proofs: what the store still gives a stall on account — a people without coin; with coin, no limit but the purse
+  // —, and the wholesale's share of the town's price)
+  B.credit = z => (coin(z) ? Infinity : Math.max(0, r2(OWE_MAX - oweTotal(z)))); B.WHOLE = WHOLE;
   // the people's way of paying, as its people say it
   B.money = function (fid) { const f = G.Fac.get(fid); const civ = f ? f.civ : 'classico'; const M = (G.Falas && G.Falas.MONEY[civ]) || ['moeda', 'moedas']; return { nome: M[0], plural: M[1], troca: !E.coinage(fid) }; };
   const fresh = d => ({ d, rev: 0, cost: 0, sold: {}, ref: {}, cust: 0, refus: 0, hag: 0, n: 0, open: 0 });

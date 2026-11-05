@@ -184,8 +184,11 @@
     for (const n of S.nests || []) {
       let e = ent.get(n); if (!e) ent.set(n, e = { n, fn: drawNest });
       if (n.type === 'tree') { const t = S.trees.get(n.host); if (t) add(t.x + t.y + 0.07, e, t.x, t.y); }
-      // (on a step of another size: anchored where the god draws the building — the middle of its lot on its highest ground)
-      else if (n.type === 'roof') { const b = S.buildings.get(n.host); if (b) add(b.x + b.y + b.w + b.h - 0.9, e, b.x + b.w / 2, b.y + b.h / 2, stepTop(b) !== null ? G.W.maxH(b.x, b.y, b.w, b.h) : undefined); }
+      // (on a step of another size: anchored where the god draws the building — the middle of its lot on its highest ground;
+      // sorted just after the building, by the render's own key for it: on its roof, not under it. The front corner less 0.9
+      // put it a tenth before a house of 1 tile — the roof painted over the whole nest —, L-598)
+      else if (n.type === 'roof') { const b = S.buildings.get(n.host); if (b) { const cx = b.x + b.w / 2, cy = b.y + b.h / 2, R = G.Render;
+        add(R && R.bkey ? cx + cy + (R.bkey(b) - R.depth(cx, cy)) + 0.01 : b.x + b.y + b.w + b.h - 0.79, e, cx, cy, stepTop(b) !== null ? G.W.maxH(b.x, b.y, b.w, b.h) : undefined); } }
       else add(n.x + n.y + 0.05, e, n.x, n.y);
     }
     for (const d of S.dams || []) { let e = ent.get(d); if (!e) ent.set(d, e = { d, fn: drawDam }); add(d.x + d.y + 0.2, e, d.x, d.y); }

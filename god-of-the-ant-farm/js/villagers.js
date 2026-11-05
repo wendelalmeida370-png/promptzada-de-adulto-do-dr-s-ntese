@@ -570,7 +570,10 @@
     if (v.mourn > 0) wU *= 0.7;
     if (v.fear > 60) wU *= 0.8;
     if (eve) wU *= 0.7;
-    opt(wU, watch || prowl ? 1.6 : 1, watch ? 'watch' : 'work');
+    // (the night's little work of one awake with nothing to do never over an evening at the tavern table: of priority 1, it
+    // took everyone at the tables at the fall of night, long before the closing and their bed — the tavern keeps its own
+    // until it shuts. The watch's torch and the smuggler's errand still call: L-591)
+    if (!(night && atTav) || watch || prowl) opt(wU, watch || prowl ? 1.6 : 1, watch ? 'watch' : 'work');
     if (S.weather.storm > 0 && !night && S.weather.rain > 0.3) { const h = S.buildings.get(v.home); if (G.Village.livable(h)) opt(0.8 + G.R() * 0.3, 1.05, 'shelter'); }
     if (!night) {
       opt((v.traits.includes('Sociável') ? 0.3 : 0.15) * (eve ? 2.3 : 1) * (elder ? 1.8 : 1) * G.R() * 1.6, 0, 'social');

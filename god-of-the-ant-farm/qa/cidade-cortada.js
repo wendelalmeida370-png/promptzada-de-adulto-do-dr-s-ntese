@@ -13,7 +13,7 @@
 //  c5 os armazéns cortados pela água — o h14 do fome.js sem a mão do deus (T-256) —: a cidade acende uma fogueira do lado das
 //     ruas, com um construtor de lá — quem tem uma carga simples nas mãos a pousa no chão, sem armazém ao alcance, e as mãos
 //     ficam livres para a obra (L-406) —; e, com a fogueira de pé, a carga pousada é apanhada por quem a alcança (L-408)
-//  c6 o mesmo, com a carga nas mãos de propósito: todo construtor das ruas com 3 de lenha nas mãos — antes da L-406 iam entregar
+//  c6 o mesmo, com a carga nas mãos de propósito: todo construtor das ruas com 3 de uma carga que nenhuma obra da cidade leva (lenha, se nenhuma a pede) nas mãos — antes da L-406 iam entregar
 //     num armazém do outro lado da água, e a fogueira nunca saía —: a pousam no chão, levantam a fogueira, e a carga pousada é
 //     apanhada por quem a alcança e levada à fogueira (L-408)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
@@ -174,9 +174,34 @@ for (const saved of [false, true]) {
 // (the h14 of the fome.js without the god's hand: the builders the water leaves on the far side stay there — T-256 brought them
 // to the streets; here the town names one of its own streets, L-389)
 {
+  // (the town and its builder whose house the water cuts too, by the rule of the town's ground — not the first of the list
+  // whatever the water does: the town of the most people, and its free builder with a house nearest the stores, for which the
+  // water round the stores and round that house leaves every store off the ground where most of the town's homes open
+  // (W.townRegion); else the next builder, the next town. In the cidade of the generation 14 Hedeby's stores stand among its
+  // houses, and the islands of the stores and of Tove's house, the nearest, joined into one that held most of the town's doors:
+  // the town's ground went with them, nothing was cut, and the case stopped with Tove and Brynhild set at home with no errand —
+  // the S2 «dentro sem motivo» was the proof's own hand, never lived — T-478)
+  const homeOf = q => { const h = S.buildings.get(q.home); return h && G.BDEF[h.type] && G.BDEF[h.type].housing ? h : null; };
+  const nearStores = (s, b) => Math.min(...V.dropoffs(s.id).map(o => G.dist(b.x + b.w / 2, b.y + b.h / 2, o.x + o.w / 2, o.y + o.h / 2)));
+  fresh(); const order = [...S.settlements.values()].filter(s => builders(s).some(free) && V.dropoffs(s.id).length).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id).map(s => s.id);
+  const cands = []; for (const sid of order) { const s = S.settlements.get(sid); for (const q of builders(s).filter(q => free(q) && homeOf(q)).sort((a, b) => nearStores(s, homeOf(a)) - nearStores(s, homeOf(b)) || a.id - b.id)) cands.push([sid, q.id]); }
+  const tried = []; let C = null;
+  for (const [sid, qid] of cands.slice(0, 8)) {
+    fresh(); const s = S.settlements.get(sid); const q = P(qid);
+    const stores = V.dropoffs(s.id).slice(); const h = homeOf(q);
+    const isles = stores.concat([h]).map(b => { const d = Vg.door(b); return [Math.min(b.x, Math.floor(d[0])) - 1, Math.min(b.y, Math.floor(d[1])) - 1, Math.max(b.x + b.w - 1, Math.floor(d[0])) + 1, Math.max(b.y + b.h - 1, Math.floor(d[1])) + 1]; });
+    const inIsle = (x, y) => isles.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
+    const ring = new Set(); for (const [x0, y0, x1, y1] of isles) for (let y = y0 - 2; y <= y1 + 2; y++) for (let x = x0 - 2; x <= x1 + 2; x++) { if (!W.inb(x, y) || inIsle(x, y)) continue; const i = W.idx(x, y); if (S.type[i] > G.T.SEA && (!S.occ[i] || W.walkable(i))) ring.add(i); }
+    const was = new Map(); for (const i of ring) { was.set(i, S.type[i]); S.type[i] = G.T.DEEP; } S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); W.touchWalk();
+    const left = [...S.buildings.values()].filter(b => b.set === s.id && G.BDEF[b.type] && (b.built ? G.BDEF[b.type].dropoff : b.type === 'campfire') && W.townReaches(s, ...V.frontTile(b))).length;
+    const d = Vg.door(h); const houseCut = !W.townReaches(s, d[0], d[1]);
+    tried.push(`${s.name}/${q.name}: ${left ? left + ' armazém(ns) ainda nas ruas' : houseCut ? 'cortados' : 'a casa não cortou'}`);
+    for (const [i, t] of was) S.type[i] = t; S.typeVer++; W.invalidateLand(); W.touchWalk();
+    if (!left && houseCut) { C = { sid, qid }; break; }
+  }
   fresh(); const B = base();
-  const set = pickTown(); let pass = false, info = '';
-  if (!set) info = 'nenhuma cidade';
+  const set = C ? S.settlements.get(C.sid) : null; let pass = false, info = '';
+  if (!set) info = `a água em volta dos armazéns não os cortou das ruas em nenhuma tentativa (${tried.join(' · ') || 'nenhuma cidade com construtor livre de casa e armazém'})`;
   else {
     const stores = V.dropoffs(set.id).slice(); const fire0 = new Set(stores.map(b => b.id));
     const reached = () => [...S.buildings.values()].filter(b => b.set === set.id && G.BDEF[b.type] && (b.built ? G.BDEF[b.type].dropoff : b.type === 'campfire') && W.townReaches(set, ...V.frontTile(b)));
@@ -190,8 +215,7 @@ for (const saved of [false, true]) {
     // (The house of every builder cut too took the doors of half the town, and with them its streets: the town's ground is
     // where most of its homes are, W.townRegion)
     const home = q => { const h = S.buildings.get(q.home); return h && G.BDEF[h.type] && G.BDEF[h.type].housing ? h : null; };
-    const near = b => Math.min(...stores.map(o => G.dist(b.x + b.w / 2, b.y + b.h / 2, o.x + o.w / 2, o.y + o.h / 2)));
-    const q0 = builders(set).filter(q => free(q) && home(q)).sort((a, b) => near(home(a)) - near(home(b)) || a.id - b.id)[0] || null;
+    const q0 = P(C.qid) || null; // (the builder the tries above found: his house cut too)
     const isles = stores.concat(q0 ? [home(q0)] : []).map(b => { const d = Vg.door(b); const x0 = Math.min(b.x, Math.floor(d[0])) - 1, y0 = Math.min(b.y, Math.floor(d[1])) - 1, x1 = Math.max(b.x + b.w - 1, Math.floor(d[0])) + 1, y1 = Math.max(b.y + b.h - 1, Math.floor(d[1])) + 1; return [x0, y0, x1, y1]; });
     const inIsle = (x, y) => isles.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
     const ring = new Set();
@@ -263,7 +287,12 @@ for (const saved of [false, true]) {
     S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); W.touchWalk();
     const cut = !reached().length;
     const crew = builders(set).filter(q => free(q) && W.reachesTown(q, set));
-    for (const q of crew) { Vg.endTask(q); if (q.carry && q.carry.n > 1e-6) D.use('v:' + q.id, q.carry.k, q.carry.n, { code: 'teste', mine: true, part: true }); D.make('v:' + q.id, 'wood', 3, { code: 'teste' }); }
+    // (a plain load no work of the town takes — wood while none needs it —: a work that needs what the hands hold takes it in, the
+    // builder's rule (runBuild), and the set-down of the L-406 is the load that has nowhere to go. In the cidade of the generation
+    // 14 Hedeby's works on the streets needed wood, the 3 of wood went into them, nobody set anything down, T-478)
+    const needs = new Set(); for (const b of S.buildings.values()) if (b.set === set.id && !b.built && b.type !== 'ruin') for (const k in b.need) if (b.need[k] > 0) needs.add(k);
+    const stock = G.Fac.get(set.fac).stock; const kind = ['wood', 'stone', 'la', 'tecido', 'ceramica', 'minerio', 'ouro'].find(k => !needs.has(k) && k in stock) || 'wood';
+    for (const q of crew) { Vg.endTask(q); if (q.carry && q.carry.n > 1e-6) D.use('v:' + q.id, q.carry.k, q.carry.n, { code: 'teste', mine: true, part: true }); D.make('v:' + q.id, kind, 3, { code: 'teste' }); }
     const down = []; const book = e => { if (e[8] === 'pousou' && !e[7] && String(e[4]).startsWith('g:') && crew.some(q => e[3] === 'v:' + q.id)) down.push(+String(e[4]).slice(2)); };
     const gone = () => down.length > 0 && down.every(id => !(S.loose || []).some(o => o.id === id));
     D.onMove.push(book);
@@ -273,7 +302,7 @@ for (const saved of [false, true]) {
     D.onMove.splice(D.onMove.indexOf(book), 1);
     const stuckNow = crew.filter(q => q.carry && q.carry.n > 1e-6 && q.task && q.task.type === 'deliver').length;
     pass = cut && crew.length > 0 && !!lit && lit.built && gone();
-    info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : !crew.length ? `${set.name}: nenhum construtor do lado das ruas` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água; ${crew.length} construtor(es) das ruas com 3 de lenha nas mãos (${names(crew)}): ${down.length} pousaram a carga no chão; ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa em ' + tLit + ' s' : 'AINDA em obra em 600 s'}` : 'NENHUMA fogueira nova do lado das ruas em 600 s'}${stuckNow ? `; ${stuckNow} ainda com a lenha nas mãos, a caminho de entregar` : ''}; a carga pousada ${!down.length ? '-' : gone() ? `apanhada toda${tUp >= 0 ? ', ' + tUp + ' s depois da fogueira' : ''}` : 'NÃO apanhada (ainda no chão)'}`;
+    info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : !crew.length ? `${set.name}: nenhum construtor do lado das ruas` : `${set.name}, ${stores.length} armazém(ns) cortado(s) pela água; ${crew.length} construtor(es) das ruas com 3 de ${kind === 'wood' ? 'lenha' : kind} nas mãos (${names(crew)}): ${down.length} pousaram a carga no chão; ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa em ' + tLit + ' s' : 'AINDA em obra em 600 s'}` : 'NENHUMA fogueira nova do lado das ruas em 600 s'}${stuckNow ? `; ${stuckNow} ainda com carga nas mãos, a caminho de entregar` : ''}; a carga pousada ${!down.length ? '-' : gone() ? `apanhada toda${tUp >= 0 ? ', ' + tUp + ' s depois da fogueira' : ''}` : 'NÃO apanhada (ainda no chão)'}`;
     const bad = newBad(B, new Set(['fome'])); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
     if (said.length) { pass = false; info += obrasSaid(); }
     for (const [i, t] of was) S.type[i] = t; S.typeVer++; W.invalidateLand(); W.touchWalk();

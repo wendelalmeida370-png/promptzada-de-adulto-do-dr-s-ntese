@@ -96,7 +96,9 @@
   // (the keeper called to the counter, when free of the tavern's own errands and of what weighs more — hunger, sleep, a
   // storm, a feast —: the day's other work, a walk, nothing)
   const OWN = { atender: 1, abastecer: 1, oficio: 1, carga: 1 };
-  const serving = (b, op) => { const k = keeperOf(b); return !!k && atHand(k) && ((A.isBody(k) && G.dist(k.x, k.y, b.x + b.w / 2, b.y + b.h / 2) < Math.max(b.w, b.h) + 2.5) || (!!k.task && k.task.type === 'atender' && k.task.op === op.id)); };
+  // (at the counter: the keeper's errand there, arrived — st 1 —, not his way to it: called from the market across the town, he
+  // walked half a minute, the guests waited for him all of it, and none served himself, L-592)
+  const serving = (b, op) => { const k = keeperOf(b); return !!k && atHand(k) && ((A.isBody(k) && G.dist(k.x, k.y, b.x + b.w / 2, b.y + b.h / 2) < Math.max(b.w, b.h) + 2.5) || (!!k.task && k.task.type === 'atender' && k.task.op === op.id && k.task.st >= 1)); };
   T.serving = b => { const op = T.dia(b); return !!op && serving(b, op); };
   function callKeeper(b, op) {
     const k = keeperOf(b); if (!k || !G.inSim || A.isBody(k) || !atHand(k)) return;

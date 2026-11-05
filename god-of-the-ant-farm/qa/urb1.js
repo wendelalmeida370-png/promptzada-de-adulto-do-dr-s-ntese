@@ -13,7 +13,8 @@
 //  9 the taverns poured: drink brewed in the house or brought from the stores, and served
 // 10 the ships' cargo came ashore in crates and went into the stores through the warehouses
 // 11 the thefts were answered: the thief caught (the cell, or the coin given back), not only left open
-// 12 the well-off live on dearer land than the plain families (they buy the good houses)
+// 12 the families of standing — the mark of the elite, the nobility — live on dearer land than the others (D-133: they buy the
+//    good houses, and the purchase spends the very coins a house counted as rich by)
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const [seed, size, maxYears] = [+(process.argv[2] || 41), +(process.argv[3] || 128), +(process.argv[4] || 90)];
 const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, '..', 'index.html');
@@ -128,7 +129,9 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const cr = S.crimes || []; const st = {}; for (const c of cr) st[c.st] = (st[c.st] || 0) + 1;
     let imp = 0; for (const f of G.Fac.all()) imp += (f.eco && f.eco.imp) || 0;
     const docks = B.filter(b => b.type === 'doca' && b.built);
-    // where the rich and the plain families sleep: the land value of their houses' patch, in every city
+    // where the families of standing and the others sleep: the land value of their houses' patch, in every city — the standing by
+    // the mark of the elite and the nobility, which go with the family when it trades its roof, not by the coins of the house: the
+    // purchase of the dear house is paid with them, and of the 8 houses where a buyer lived, 4 counted as plain (T-469, D-133)
     let rv = 0, rn = 0, pv = 0, pn = 0, moves = 0;
     for (const v of S.villagers.values()) for (const m of v.moves || []) if (/comprou uma casa/.test(m[1])) moves++;
     for (const st of S.settlements.values()) {
@@ -137,7 +140,7 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
       for (const b of B) {
         if (b.set !== st.id || !b.built || !G.BDEF[b.type].housing || b.type === 'barraco' || !who.has(b.id)) continue;
         const [cx, cy] = G.Village.center(b); const o = sn.cells.get(G.Urban.cellOf(cx, cy)); if (!o) continue;
-        const rich = b.elite || (b.coin || 0) >= 30 || who.get(b.id).some(v => v.grp === 'nobreza'); const plain = !rich && (b.coin || 0) < 10;
+        const rich = !!b.elite || who.get(b.id).some(v => v.grp === 'nobreza'); const plain = !rich;
         if (rich) { rv += o.value; rn++; } else if (plain) { pv += o.value; pn++; }
       }
     }
@@ -148,7 +151,7 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
   ok('10 a carga dos navios entrou pelo armazém', L.ware === 0 || L.imp > 0, `${L.docks} docas, ${L.ware} armazéns; ${Math.round(L.imp)} medidas importadas entraram no estoque; ${L.crates} caixas esperando nos cais agora`);
   const solved = L.crimes - (L.st.aberto || 0);
   ok('11 os roubos tiveram resposta', L.crimes < 3 || solved > 0, `${L.crimes} roubos guardados: ${Object.entries(L.st).map(([k, n]) => n + ' ' + k).join(', ') || 'nenhum'}`);
-  ok('12 os ricos moram em terra mais cara', L.rich === null || L.plain === null || L.rich > L.plain, `casas ricas: ${L.rn} (terra ${L.rich === null ? '—' : Math.round(L.rich)}); simples: ${L.pn} (terra ${L.plain === null ? '—' : Math.round(L.plain)}); ${L.moves} famílias compraram uma casa em terra mais cara`);
+  ok('12 os ricos moram em terra mais cara', L.rich === null || L.plain === null || L.rich > L.plain, `casas de posição (elite ou nobreza): ${L.rn} (terra ${L.rich === null ? '—' : Math.round(L.rich * 10) / 10}); as outras: ${L.pn} (terra ${L.plain === null ? '—' : Math.round(L.plain * 10) / 10}); ${L.moves} famílias compraram uma casa em terra mais cara`);
   const news = await page.evaluate(() => G.S.history.filter(h => h.ic === 'city').slice(-8).map(h => h.d + ': ' + h.txt));
   console.log('  crônica: ' + news.join(' | ').slice(0, 900));
   for (const l of res) console.log(l);
