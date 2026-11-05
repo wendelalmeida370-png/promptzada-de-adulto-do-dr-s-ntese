@@ -111,20 +111,20 @@ G.Ready.list({
  },
  "anos1000": {
   "day": 1001,
-  "pop": 976,
+  "pop": 963,
   "peoples": 2,
-  "towns": 12,
+  "towns": 13,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Tenochtitlan",
+   "name": "Ítaca",
    "tier": 3,
-   "pop": 162
+   "pop": 156
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 5898766
+  "bytes": 7455737
  }
 });
