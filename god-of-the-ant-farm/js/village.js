@@ -551,7 +551,13 @@
   // and the family never walked out again — the envoy of the fundadores among them, L-543)
   const siteReached = (set, x, y, def) => { for (let ty = y - 1; ty <= y + def.h; ty++) for (let tx = x - 1; tx <= x + def.w; tx++) { if ((tx >= x && tx < x + def.w) === (ty >= y && ty < y + def.h)) continue; if (W.inb(tx, ty) && W.walkable(W.idx(tx, ty)) && W.reachesTownXY(tx + 0.5, ty + 0.5, set)) return true; } return false; };
   V.siteReached = siteReached; // (for the proofs: muros.js 8b)
-  function search(set, type, def, R, field, counts, renew, dear, reach) {
+  // (for the proofs: qa/quarteirao.js 7b — the rules one lot of a block of the heart is judged by, with renewal: the lot, or null.
+  // It draws from the world's draw as the search does: a proof holds it still)
+  V.blockLot = (set, x, y) => {
+    const def = G.BDEF.quarteirao; const counts = {}; for (const b of G.S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
+    return search(set, 'quarteirao', def, G.Urban.radius(set, def, V.pop(set.id)), false, counts, true, G.Urban.DEAR.quarteirao, undefined, [x, y]);
+  };
+  function search(set, type, def, R, field, counts, renew, dear, reach, only) {
     const S = G.S; const block = renew && type === 'quarteirao'; const may = block ? RENEW_BLOCK : RENEW;
     const left = gone => { const n = {}; for (const id of gone) { const t = S.buildings.get(id).type; if (KEEP[t] && (counts[t] || 0) - (n[t] = (n[t] || 0) + 1) < KEEP[t]) return false; } return true; };
     const bad = (gone, beds) => renew && ((!gone && !block) || (gone && (gone.length > 4 || !left(gone))) || beds > (block ? 24 : 12));
@@ -560,6 +566,7 @@
     const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
       const x = cxi + dx - Math.floor((def.w - 1) / 2), y = cyi + dy - Math.floor((def.h - 1) / 2);
+      if (only && (x !== only[0] || y !== only[1])) continue; // (one lot only: V.blockLot)
       if (x < 2 || y < 2 || x + def.w > N - 2 || y + def.h > N - 2) continue;
       const fx = x + def.w / 2, fy = y + def.h / 2;
       const d = G.dist(fx, fy, set.cx, set.cy);

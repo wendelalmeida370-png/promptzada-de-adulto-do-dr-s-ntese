@@ -10,8 +10,11 @@
 // 4 um save no meio de uma obra: a obra volta igual;
 // 5 um desalojado morre no meio, e o raio do deus cai na obra: o verificador não acha nada;
 // 6 os anos passam: quarteirões prontos e morados;
-// 7 o centro calçado: um quarteirão toma as ruas menores do lote — nunca a estrada — só quando o anel em volta religa cada rua
-//   que ele corta (L-602: as células caras de Mênfis eram meio rua calçada, e o lote não podia ter um palmo de rua).
+// 7 o centro calçado (L-602: as células caras de Mênfis eram meio rua calçada, e o lote não podia ter um palmo de rua):
+//   7a cada quarteirão que o planejador põe sobre rua nunca toma a estrada, e o anel em volta religa as ruas que ele corta;
+//   7b de propósito: o melhor lote de hoje, julgado sozinho pela regra do jogo (V.blockLot) com o sorteio parado, vale com uma
+//      rua calçada deitada através dele, de anel a anel (antes, nenhum lote de quarteirão tomava rua de pedra); a mesma rua feita
+//      estrada, não; e com uma ponta da rua murada no anel (a rua cortada sem volta), não.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -92,6 +95,47 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
   }, key);
   if (!town) { ok('0 uma metrópole no mundo pronto', false, 'nenhuma cidade de nível 4'); }
   else {
+    // ---- 7b, first — on the world as chosen, the town with room for a block today; all it lays down is taken up again —: the
+    // paved heart, on purpose (L-602): the town's best lot for a block today, judged alone by the game's own rule
+    // (V.blockLot, the search on one lot), with the world's draw held still: as it is; with a paved street laid across it from a
+    // tile of the ring to the other (a street of stone, which no lot of a block could take before); the same street a highway; and
+    // the street's end on the ring walled — the street cut with no way round
+    const g = await page.evaluate(() => {
+      const S = G.S, V = G.Village, W = G.W, N = G.N, Q = __Q; const set = S.settlements.get(Q.set);
+      const R0 = G.R, rng0 = S.rng; G.R = () => 0.5;
+      const at = p => (p ? p[0] + ',' + p[1] : 'recusado');
+      const road0 = new Map(); const paint = (tiles, r) => { for (const i of tiles) { if (!road0.has(i)) road0.set(i, S.road[i]); S.road[i] = r; } };
+      let wallAt = -1, wall0 = 0; const out = {};
+      try {
+        set._noSite = {}; const A = V.blockSite(set); set._noSite = {}; if (!A) return { none: 'nenhum lote de quarteirão hoje' };
+        const judge = () => at(V.blockLot(set, A[0], A[1])); out.a = A[0] + ',' + A[1]; out.alone = judge();
+        const gone = A.demolish || [];
+        // (a street across the lot, from a tile of the ring to the other: a row or a column whose two ends are free tiles one walks,
+        // and that the ring joins again)
+        const ways = [];
+        for (const y of [A[1], A[1] + 1]) ways.push([y * N + A[0] - 1, y * N + A[0], y * N + A[0] + 1, y * N + A[0] + 2]);
+        for (const x of [A[0], A[0] + 1]) ways.push([(A[1] - 1) * N + x, A[1] * N + x, (A[1] + 1) * N + x, (A[1] + 2) * N + x]);
+        let way = null;
+        for (const t of ways) {
+          const [e1, , , e2] = t; if (S.occ[e1] || S.occ[e2] || !W.walkable(e1) || !W.walkable(e2) || S.road[e1] >= 3 || S.road[e2] >= 3) continue;
+          paint(t, 2); const ok = V.relinks(set, A[0], A[1], 2, gone); for (const i of t) S.road[i] = road0.get(i); road0.clear();
+          if (ok) { way = t; break; }
+        }
+        if (!way) return { none: `o lote ${out.a} não tem rua possível de anel a anel` };
+        out.way = way.map(i => (i % N) + ',' + ((i / N) | 0)).join(' ');
+        paint(way, 2); out.paved = judge();
+        paint(way, 3); out.high = judge();
+        paint(way, 2); wallAt = way[0]; wall0 = S.wall[wallAt]; S.wall[wallAt] = 1; W.touchWalk(); out.walled = judge();
+      } finally {
+        if (wallAt >= 0) { S.wall[wallAt] = wall0; W.touchWalk(); }
+        for (const [i, r] of road0) S.road[i] = r;
+        G.R = R0; S.rng = rng0; set._noSite = {};
+      }
+      return out;
+    });
+    if (g.none) ok('7b de propósito: a rua calçada sim, a estrada e a rua sem volta não (L-602)', false, g.none);
+    else ok('7b de propósito: a rua calçada sim, a estrada e a rua sem volta não (L-602)', g.alone === g.a && g.paved === g.a && g.high === 'recusado' && g.walled === 'recusado',
+      `o melhor lote ${g.a} (sozinho: ${g.alone}); com uma rua calçada de anel a anel (${g.way}): ${g.paved}; feita estrada: ${g.high}; com a ponta murada: ${g.walled}`);
     // ---- the bad case on purpose: a family, with its savings, lives where the next block will stand
     // (a place wholly under a field has no ground for the house: that block goes up as it is; and a heart with no room
     // for a block today lives a blessed year more — at most twelve — until there is)
@@ -172,7 +216,7 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
       ok('2 os desalojados sem casa, as moedas guardadas', a.homeless > 0 && !home.length, `${a.homeless} desalojados${home.slice(0, 3).map(x => '; ' + x).join('')}`);
       ok('3 o verificador todo ano (o anel dos quarteirões livre)', !a.viol.length && !a.mods, `até o ano ${a.day}${a.viol.length ? '; ' + a.viol.slice(0, 3).join(' | ') : ': nada'}${a.mods ? '; erro de módulo' : ''}`);
       ok('5 um desalojado morre, um raio cai na obra', s.fire === true && s.died && !a.viol.length && !a.mods, `raio ${s.fire}, morte ${s.died}`);
-      ok('7 o centro calçado: o quarteirão toma ruas menores, nunca a estrada, e o anel as religa (L-602)', a.street >= 1 && !a.sbad.length, `${a.street} de ${a.blocks} quarteirões sobre rua${a.sbad.length ? '; ' + a.sbad.slice(0, 3).join(' | ') : ''}`);
+      ok('7a cada quarteirão posto sobre rua: nunca a estrada, e o anel religa (L-602)', !a.sbad.length, `${a.street} de ${a.blocks} quarteirões sobre rua${a.sbad.length ? '; ' + a.sbad.slice(0, 3).join(' | ') : ''}`);
     }
     // ---- 6: blocks built and lived in
     const e = await page.evaluate(() => {
