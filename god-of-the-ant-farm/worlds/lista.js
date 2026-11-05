@@ -111,20 +111,20 @@ G.Ready.list({
  },
  "anos1000": {
   "day": 1001,
-  "pop": 1037,
+  "pop": 976,
   "peoples": 2,
-  "towns": 14,
+  "towns": 12,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Roma",
-   "tier": 4,
-   "pop": 195
+   "name": "Tenochtitlan",
+   "tier": 3,
+   "pop": 162
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 6269421
+  "bytes": 5898766
  }
 });
