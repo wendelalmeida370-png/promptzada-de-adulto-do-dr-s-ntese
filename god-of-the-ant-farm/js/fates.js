@@ -201,9 +201,11 @@
       if (!l.done && a && b && ((a.partner && a.partner !== b.id) || (b.partner && b.partner !== a.id))) l.done = 2;
       // (a danger or a duty more urgent than love took them both from the way — a fight, a flight, a fire —: the arrow
       // waits, and each one runs again once free, until its time is spent; it was spent at once, with no word, and the
-      // god's faith with it — L-302. The body the player lives is asked only once, by the arrow itself)
-      if (!l.done && a && b && l.t <= LOVE_T && !running(a) && !running(b)) {
-        for (const [p, q] of [[a, b], [b, a]]) if (freeOf(p) && !(p.task && p.task.pri >= 2.4) && !(S.avatar && S.avatar.id === p.id)) G.Vg.H.setTask(p, { type: 'amor', id: q.id, love: l.id, pri: 2.4, st: 0, kind: 'amor' });
+      // god's faith with it — L-302. Each one, not only when both have stopped: a sleep took her from the embrace, he
+      // slept in his turn, she ran to his door and waited, and he woke to his patrol — never called back while she
+      // followed him, and the arrow ran out, L-633. The body the player lives is asked only once, by the arrow itself)
+      if (!l.done && a && b && l.t <= LOVE_T) {
+        for (const [p, q] of [[a, b], [b, a]]) if (!running(p) && freeOf(p) && !(p.task && p.task.pri >= 2.4) && !(S.avatar && S.avatar.id === p.id)) G.Vg.H.setTask(p, { type: 'amor', id: q.id, love: l.id, pri: 2.4, st: 0, kind: 'amor' });
         continue;
       }
       // (done, or timed out: the arrow is spent)

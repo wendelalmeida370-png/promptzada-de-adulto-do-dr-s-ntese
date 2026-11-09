@@ -57,7 +57,10 @@
       const a = k / 32 * Math.PI, dx = Math.cos(a), dy = Math.sin(a);
       const A = shore(dx, dy), B = A && shore(-dx, -dy); if (!A || !B) continue;
       const len = A.s + B.s; if (len > MAXLEN || len < 3) continue;
-      const two = L[A.i] >= 0 && L[B.i] >= 0 && L[A.i] !== L[B.i];
+      // (two lands: not walked from one end to the other — a pocket of one tile that the land touches at a corner is the same
+      // land, as the feet reach it: in the world war of the generation 16 a way of 47 tiles across a bay, from the land of
+      // Tebas to a one-tile pocket of the same shore, counted as two lands, L-634)
+      const two = L[A.i] >= 0 && L[B.i] >= 0 && L[A.i] !== L[B.i] && !W.canWalk(A.x, A.y, B.x, B.y);
       const sc = (two ? 1000 : 0) - len;
       if (sc > bs) { bs = sc; best = { a: A, b: B, len, two, dx, dy }; }
     }
