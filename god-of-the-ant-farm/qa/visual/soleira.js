@@ -30,6 +30,13 @@
 //   6. a house built where the body stands: never inside, never in its rooms — it came in by no door —; the world takes it out
 //      as anyone (L-175); and saved and loaded in a door's opening, walking in, the world not yet having it indoors: there
 //      still, and indoors by the door it came in by
+//   7. a boulder put by the god's hand on the street under a door's steps that run on into it: no tread over it, nor the way to
+//      their foot, where the world says the way in fits — walked up without the hands —; the steps of before once it is gone; and
+//      the turn of the day takes the door where the way in fits (L-618). The door of a younger building put on the side whose
+//      steps, by their own reckoning, would cross an elder's that run on into the street: the younger gives way — none of its
+//      steps where the elder's are, nor in the way to their foot —, its way in does not fit there, the elder's is walked up, and
+//      the turn takes the younger's door where it fits (L-619); and in all the world, no flight of a younger building across an
+//      elder's
 //   and no module error
 const path = require('path');
 const T = require(path.join(__dirname, 'tres-node.js'));
@@ -119,6 +126,19 @@ const pushedAt = [];
 const watch = () => { const P = [v.x, v.y, v.inside]; if (last) { const j = Math.hypot(P[0] - last[0], P[1] - last[1]) * TL; if (j > 0.25) { pushes++; worst = Math.max(worst, j);
   if (pushedAt.length < 3) { const q = Sp.indoor(last[0] * TL, last[1] * TL); const B = S.buildings.get(S.occ[W.idx(last[0], last[1])]); pushedAt.push(`${j.toFixed(2)} m de ${last[0].toFixed(2)},${last[1].toFixed(2)} (dentro ${last[2] || 0}; ladrilho ${B ? B.type + '#' + B.id : '-'}; planta ${q ? `${q.b.type}#${q.b.id} walk ${q.walk} casca ${q.shell}` : '-'}; o mundo anda ${W.walkableXY(last[0], last[1])}) a ${P[0].toFixed(2)},${P[1].toFixed(2)} (dentro ${P[2] || 0})`); } } } last = P; };
 const st = () => G.Avatar.state();
+// (a flight of the plan inside the shell — its middle within its walls —, or out of them)
+const inShell = (sh, q) => { const cx = (q.r[0] + q.r[2]) / 2, cz = (q.r[1] + q.r[3]) / 2; return sh.kind === 'round' ? Math.hypot(cx - sh.cx, cz - sh.cz) < sh.r : cx > sh.r[0] && cx < sh.r[2] && cz > sh.r[1] && cz < sh.r[3]; };
+// (the body walked with the world stopped — only the body moves —: each frame the stick toward a point, until there or stopped
+// fifteen frames; the highest it got, and whether it climbed with the hands)
+const still = () => G.Avatar.frame(RDT);
+const walkStill = (X, Z, max) => { let stuck = 0, hiY = -1e9, hands = false; let lastP = [st().X, st().Z];
+  for (let k = 0; k < max; k++) { const s = st(); const dx = X - s.X, dz = Z - s.Z; if (Math.hypot(dx, dz) < 0.15) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; IN.run = false; s.yaw = yaw; still();
+    hiY = Math.max(hiY, st().Y); if (st().loco === 'climb') hands = true;
+    if (Math.hypot(st().X - lastP[0], st().Z - lastP[1]) < 0.002) { if (++stuck > 15) break; } else stuck = 0; lastP = [st().X, st().Z]; }
+  IN.mz = 0; return { hiY, hands }; };
+// (the body on a point of the world — metres —, facing a way: put there by the god's hand, lived again, a few frames)
+const putAt = (X, Z, yaw) => { if (S.avatar) G.Possess.release('deus'); god(() => { G.Vg.endTask(v); v.inside = 0; v.x = X / TL; v.y = Z / TL; v.path = null; });
+  if (!G.Possess.take(v).ok) return false; G.Avatar.attach(v, yaw); for (let k = 0; k < 4; k++) still(); return true; };
 function walk(X, Z, max, stopIn) {
   let k = 0; for (; k < (max || 240); k++) { const s = st(); const dx = X - s.X, dz = Z - s.Z; if (Math.hypot(dx, dz) < 0.15 || (stopIn && (stopIn === true ? v.inside : stopIn()))) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; s.yaw = yaw; frame(); watch();
     const c = st().loco === 'climb'; if (inWay && c && !wasClimb) climbs++; wasClimb = c; }
@@ -234,16 +254,6 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
   // body finds)
   const UP = G.Avatar.TUNE.stepUp; let nf = 0, hi = 0, nw = 0, up1 = 0, noFoot = 0, maxRise = 0; const far = [], stops = [], besides = [], shallows = [];
   let nNo = 0, upNo = 0, footNo = 0; const left = [];
-  const inShell = (sh, q) => { const cx = (q.r[0] + q.r[2]) / 2, cz = (q.r[1] + q.r[3]) / 2; return sh.kind === 'round' ? Math.hypot(cx - sh.cx, cz - sh.cz) < sh.r : cx > sh.r[0] && cx < sh.r[2] && cz > sh.r[1] && cz < sh.r[3]; };
-  const still = () => G.Avatar.frame(RDT);
-  const walkStill = (X, Z, max) => { let stuck = 0, hiY = -1e9, hands = false; let lastP = [st().X, st().Z];
-    for (let k = 0; k < max; k++) { const s = st(); const dx = X - s.X, dz = Z - s.Z; if (Math.hypot(dx, dz) < 0.15) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; IN.run = false; s.yaw = yaw; still();
-      hiY = Math.max(hiY, st().Y); if (st().loco === 'climb') hands = true;
-      if (Math.hypot(st().X - lastP[0], st().Z - lastP[1]) < 0.002) { if (++stuck > 15) break; } else stuck = 0; lastP = [st().X, st().Z]; }
-    IN.mz = 0; return { hiY, hands }; };
-  // (the body on a point of the world — metres —, facing a way: put there by the god's hand, lived again, a few frames)
-  const putAt = (X, Z, yaw) => { if (S.avatar) G.Possess.release('deus'); god(() => { G.Vg.endTask(v); v.inside = 0; v.x = X / TL; v.y = Z / TL; v.path = null; });
-    if (!G.Possess.take(v).ok) return false; G.Avatar.attach(v, yaw); for (let k = 0; k < 4; k++) still(); return true; };
   for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q)).sort((a, c) => a.id - c.id)) {
     const p = Sp.planNow(b); if (!p || !p.ok) continue; const y0 = Sp.plinth(b).y0; const lot = { w: b.w * TL, d: b.h * TL }; const fls = [];
     for (const h of p.holes) { const dd = h.door >= 0 ? p.doors[h.door] : null; if (!dd || !dd.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue; const l = p.levels.find(q => q.lv === w.lv); fls.push([Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, raisedOf(p)), true, h]); }
@@ -449,6 +459,103 @@ if (part(6)) {
     if (w) { v = w; afl = !!(w.task && w.task.afloat); mv = Math.hypot(w.x - x0, w.y - y0) * TL; G.Avatar.attach(w, 0); for (let k = 0; k < 10; k++) frame(); inn = w.inside; bad2.push(...vbad()); } }
   ok('6. salvo e carregado no vão da porta, entrando, antes de o mundo o ter dentro: lá ainda, sem a marca de quem nada; o mundo o tem dentro pela porta por onde veio', got && via === (B && B.id) && !!w && !afl && mv >= 0 && mv < 0.05 && B && inn === B.id && !bad2.length,
     `${B ? `${B.type}#${B.id}` : 'nenhuma casa'}: ${got ? `entrando (vindo pela porta de ${via || '-'})` : 'não achou a janela'}; depois de carregar: ${w ? `${afl ? 'com' : 'sem'} a marca de quem nada, movido ${mv.toFixed(2)} m, dentro de ${inn || '-'} 10 quadros depois` : 'sem corpo'}; ${vtxt(bad2)}`);
+}
+
+// ------------------------------ 7. a boulder under a door's steps; two doors' steps across a street ------------------------------
+// (L-618: a boulder's stones are ground the body stands on, never the world's — D-025 —: the steps that run on into the street
+// keep off them as they keep off a trunk (L-197), or the way in does not fit there and the turn of the day takes the door where
+// it fits. L-619: the steps of a younger building never where an elder's are, nor in the way to their foot, nor with theirs in
+// the way to its own: the younger gives way. Both reckoned here by the proof's own measure of a flight — its treads, and the
+// way to its foot: the stride before its lowest tread, as wide as the body, where the 4b's walk starts —, never by the world's)
+if (part(7)) {
+  const R0 = G.Avatar.TUNE.radius; const Wd = (b, q) => [b.x * TL + q[0], b.y * TL + q[1]];
+  const rect = (b, fl, a0, a1, n0, n1) => { const p = Wd(b, fl.P(a0, n0)), q = Wd(b, fl.P(a1, n1)); return [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1])]; };
+  const footprint = (b, fl) => { const lo = fl.treads.reduce((q, t) => (t.y < q.y ? t : q)); const n = lo.n + lo.wn / 2;
+    return { steps: fl.treads.map(t => rect(b, fl, t.a - t.wa / 2, t.a + t.wa / 2, t.n - t.wn / 2, t.n + t.wn / 2)), way: [rect(b, fl, lo.a - R0, lo.a + R0, n, n + 0.5 + R0)] }; };
+  const meets = (A, B) => A.some(p => B.some(q => Math.min(p[2], q[2]) - Math.max(p[0], q[0]) > 0.01 && Math.min(p[3], q[3]) - Math.max(p[1], q[1]) > 0.01));
+  const cross = (y, e) => meets(y.steps, e.steps.concat(e.way)) || meets(y.way, e.steps);
+  // (a building's flights as the world reckons them — through its plan, Space.doorFlight, as the 3D lays them and the feet go up
+  // them —: before its outer doors, and before the foot of each outside flight; with the opening a door's are before)
+  const flightsOfB = b => { const p = Sp.planNow(b); if (!p || !p.ok) return []; const lot = { w: b.w * TL, d: b.h * TL }; const out = [];
+    for (const h of p.holes) { const dd = h.door >= 0 ? p.doors[h.door] : null; if (!dd || !dd.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue; const l = p.levels.find(q => q.lv === w.lv); const fl = Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, raisedOf(p)); if (fl && fl.treads.length) out.push({ fl, hole: h }); }
+    for (const q of p.stairs) if (q.kind === 'degraus' && !inShell(p.shell, q)) { const fo = Sp.feet(q); const fl = Sp.doorFlight(b, p.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc); if (fl && fl.treads.length) out.push({ fl, hole: null }); }
+    return out; };
+  const fitsFl = fl => !!(fl.walks && fl.ground && fl.stand);
+  const street = fl => fl.treads.some(t => t.n > fl.room + 0.3); // (run on into the street: Space.entryFits's 'rua')
+  // (up a flight as the 4b walks it, the door open — by the hand of one who has its key, then as the world had it —: from the
+  // stride before its foot over its line to the door, with the world stopped; at the door, on its top, without the hands)
+  const walkUp = (b, fl, hole) => { const T = fl.treads.slice().sort((a, c) => a.y - c.y), lo = T[0], side = T.filter(t => t.kind === 'side');
+    const pts = [Wd(b, fl.P(lo.a, lo.n + lo.wn / 2 + 0.5))]; if (side.length) { for (const t of side) pts.push(Wd(b, fl.P(t.a, t.n))); pts.push(Wd(b, fl.P(0, 0.3)), Wd(b, fl.P(0, 0))); } else pts.push(Wd(b, fl.P(lo.a, 0.3)), Wd(b, fl.P(0, 0.3)), Wd(b, fl.P(0, 0)));
+    const dr0 = hole && b.ip.dr ? b.ip.dr[hole.door] : undefined; if (hole) setDoor({ b, e: { door: hole.door } }, true);
+    let r = null; if (putAt(pts[0][0], pts[0][1], Math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0]))) { const y0 = Sp.plinth(b).y0; let hiY = st().Y, hands = false;
+      for (const c of pts.slice(1)) { const q = walkStill(c[0], c[1], Math.min(1200, Math.ceil(200 + 60 * Math.hypot(c[0] - st().X, c[1] - st().Z)))); hiY = Math.max(hiY, q.hiY); hands = hands || q.hands; }
+      const D = Wd(b, fl.P(0, 0)), dD = Math.hypot(st().X - D[0], st().Z - D[1]); r = { up: hiY - y0 >= fl.top - 0.05 && !hands && dD < 0.45, hands, hi: hiY - y0, dD }; }
+    if (hole) god(() => { if (dr0 === undefined) delete b.ip.dr[hole.door]; else b.ip.dr[hole.door] = dr0; });
+    return r; };
+  const turn = () => god(() => In.onNewDay());
+  const name = b => `${b.type}#${b.id}`;
+  // ---- 7a. the boulder: a stone put by the god's hand on the street under a door's steps that run on into it, where the way in fits
+  { let A = null; const stoneOn = (b, fl) => { const out = []; for (const t of fl.treads) for (const [da, dn] of [[0, 0], [-t.wa / 2 + 0.05, -t.wn / 2 + 0.05], [t.wa / 2 - 0.05, t.wn / 2 - 0.05], [-t.wa / 2 + 0.05, t.wn / 2 - 0.05], [t.wa / 2 - 0.05, -t.wn / 2 + 0.05]]) out.push(Wd(b, fl.P(t.a + da, t.n + dn)));
+      const lo = fl.treads.reduce((q, t) => (t.y < q.y ? t : q)); for (const [da, dn] of [[0, 0.5], [-R0, 0.5], [R0, 0.5], [0, 0.5 + R0]]) out.push(Wd(b, fl.P(lo.a + da, lo.n + lo.wn / 2 + dn)));
+      return out.filter(([X, Z]) => Sp.stoneTop(X, Z) > Sp.footAt(X / TL, Z / TL) + 0.03).length; };
+    look: for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q) && q.type !== 'ruin').sort((a, c) => a.id - c.id)) for (const { fl, hole } of flightsOfB(b)) {
+      if (!hole || !street(fl) || !fitsFl(fl)) continue;
+      // (the stone on the tile under the middle of its treads in the street — free: no tree, no stone, nobody's lot, dry land)
+      const mid = fl.treads.filter(t => t.n > fl.room).sort((a, c) => a.n - c.n); const t = mid[Math.floor(mid.length / 2)]; if (!t) continue; const c = Wd(b, fl.P(t.a, t.n)); const x = Math.floor(c[0] / TL), y = Math.floor(c[1] / TL);
+      if (!W.inb(x, y)) continue; const i = W.idx(x, y); if (S.treeAt[i] || S.objAt[i] || S.occ[i] || S.road[i] || S.type[i] <= G.T.RIVER || !W.walkable(i)) continue;
+      A = { b, hole, fl0: fl, x, y, n0: fl.treads.length, t0: JSON.stringify(fl.treads.map(q => [q.n.toFixed(2), q.y.toFixed(2)])) }; break look; }
+    if (!A) ok('7a. uma pedra grande na rua debaixo dos degraus de uma porta: nenhum degrau sobre ela onde o mundo diz que a entrada cabe — subidos sem as mãos —; sem ela, os degraus de antes; a virada leva a porta para onde cabe', false, 'nenhum lance que entra na rua, onde a entrada cabe, com uma casa livre debaixo dele');
+    else { const { b, hole } = A; const rk = god(() => G.Nature.addRock(A.x + 0.5, A.y + 0.5, 40));
+      const now = () => flightsOfB(b).find(q => q.hole && q.hole.door === hole.door) || null;
+      const f1 = now(); const on1 = f1 ? stoneOn(b, f1.fl) : 0; const fit1 = !!f1 && fitsFl(f1.fl); const w1 = f1 && fit1 ? walkUp(b, f1.fl, f1.hole) : null;
+      // (the stone taken away: the steps of before)
+      god(() => G.Nature.removeRock(rk)); const f2 = now(); const back = !!f2 && JSON.stringify(f2.fl.treads.map(q => [q.n.toFixed(2), q.y.toFixed(2)])) === A.t0;
+      // (the stone again, and the turn of the day: the door where the way in fits — or, fitting on no side, where it was —, and no
+      // tread of any of its flights over the stone where the world says the way in fits)
+      const rk2 = god(() => G.Nature.addRock(A.x + 0.5, A.y + 0.5, 40)); const s0 = b.ip.s; turn();
+      const after = flightsOfB(b); const bad3 = after.filter(q => fitsFl(q.fl) && stoneOn(b, q.fl)); const e3 = Sp.entryFits(b, In.shellOf(b)); const to = In.fitSide(b);
+      const turnOk = !bad3.length && (e3.ok || !to);
+      ok('7a. uma pedra grande na rua debaixo dos degraus de uma porta: nenhum degrau sobre ela onde o mundo diz que a entrada cabe — subidos sem as mãos —; sem ela, os degraus de antes; a virada leva a porta para onde cabe',
+        !!rk && !!f1 && (fit1 ? on1 === 0 && !!w1 && w1.up : true) && back && turnOk,
+        `${name(b)}, porta ${hole.door} (lado ${s0}), ${A.n0} degraus na rua; a pedra na casa ${A.x},${A.y}: ${!rk ? 'não nasceu' : !f1 ? 'o lance sumiu' : fit1 ? `o lance de ${f1.fl.treads.length} degraus cabe, ${on1} pontos dos degraus e do caminho ao pé sobre a pedra; subido ${w1 ? (w1.up ? 'até a porta' : `até ${w1.hi.toFixed(2)} m${w1.hands ? ', com as mãos' : ''}, a ${w1.dD.toFixed(2)} m da porta`) : 'não'}` : `a entrada não cabe mais desse lado (${f1.fl.treads.length} degraus, os pés ${f1.fl.walks ? 'sobem' : 'não sobem'}, ${f1.fl.ground ? 'chão' : 'sem chão'} diante do pé, ${f1.fl.stand ? 'o corpo pisa' : 'o corpo não pisa'})`}; sem a pedra, ${back ? 'os degraus de antes' : 'outros degraus'}; com ela de novo e a virada: a porta no lado ${b.ip.s}, ${e3.ok ? 'a entrada cabe' : to ? `não cabe, e cabe no ${to.s}` : 'não cabe em lado nenhum'}${bad3.length ? `, ${bad3.length} lances sobre a pedra onde cabe` : ''}`);
+      if (rk2) god(() => G.Nature.removeRock(rk2)); } }
+  // ---- 7b. two doors' steps across a street: the door of a younger building put by the god's hand on the side whose steps,
+  // by their own reckoning, would cross an elder's that run on into the street where the way in fits
+  { const all = [...S.buildings.values()].filter(q => q.built && In.has(q) && q.type !== 'ruin').sort((a, c) => a.id - c.id);
+    const SIDE = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] }; const outT = (b, s, k) => s === 'S' ? [b.x + k + 0.5, b.y + b.h + 0.4] : s === 'N' ? [b.x + b.w - 1 - k + 0.5, b.y - 0.4] : s === 'E' ? [b.x + b.w + 0.4, b.y + b.h - 1 - k + 0.5] : [b.x - 0.4, b.y + k + 0.5];
+    const maskOf = (b, s) => { let m = 0; const n = s === 'S' || s === 'N' ? b.w : b.h; for (let k = 0; k < n; k++) { const p = outT(b, s, k); if (W.inb(p[0], p[1]) && W.walkableXY(p[0], p[1])) m |= 1 << k; } return m; };
+    // (a door's own steps for a record's side, as the world would reckon them alone — fresh, and never asking its elders —)
+    const ownFor = b => { const sh = In.shellOf(b); if (!sh || !sh.entrance) return []; const lot = { w: b.w * TL, d: b.h * TL }; const h = sh.holes.find(q => q.door === sh.entrance.door && q.kind !== 'janela'); const w = h && sh.walls[h.wall]; if (!w) return [];
+      const l = sh.levels.find(q => q.lv === w.lv); const fl = Sp.doorFlight(b, sh.shell, lot, w, h, l ? l.y : 0, raisedOf(sh), undefined, undefined, true, true); return fl && fl.treads.length ? [fl] : []; };
+    let C = null, tries = 0;
+    look: for (const E of all) for (const { fl: fe, hole: he } of flightsOfB(E)) { if (!he || !street(fe) || !fitsFl(fe)) continue; const pe = footprint(E, fe); const bx = pe.steps.concat(pe.way).reduce((q, r) => [Math.min(q[0], r[0]), Math.min(q[1], r[1]), Math.max(q[2], r[2]), Math.max(q[3], r[3])], [1e9, 1e9, -1e9, -1e9]);
+      const cx = (bx[0] + bx[2]) / 2, cz = (bx[1] + bx[3]) / 2;
+      for (const Y of all) { if (Y.id <= E.id || !Y.ip || Y.x * TL > bx[2] + 6 || (Y.x + Y.w) * TL < bx[0] - 6 || Y.y * TL > bx[3] + 6 || (Y.y + Y.h) * TL < bx[1] - 6) continue;
+        for (const s of ['N', 'E', 'S', 'W']) { if (s === Y.ip.s) continue; const o = SIDE[s]; if ((cx - (Y.x + Y.w / 2) * TL) * o[0] + (cz - (Y.y + Y.h / 2) * TL) * o[1] <= 0) continue; const m = maskOf(Y, s); if (!m) continue;
+          if (++tries > 600) break look;
+          const r0 = { s: Y.ip.s, o: Y.ip.o, r: Y.ip.r }; god(() => { Y.ip.s = s; Y.ip.o = m; Y.ip.r++; });
+          const hit = ownFor(Y).some(fy => cross(footprint(Y, fy), pe));
+          if (hit) { C = { E, fe, he, Y, s, r0 }; break look; }
+          god(() => { Y.ip.s = r0.s; Y.ip.o = r0.o; Y.ip.r = r0.r; }); } } }
+    if (!C) ok('7b. dois prédios frente a frente, os degraus da porta do mais novo cruzando os do mais velho: o mais novo cede — nenhum degrau dele onde estão os do mais velho, nem no caminho ao pé deles —, a entrada dele não cabe ali, o mais velho é subido; a virada leva a porta do mais novo para onde cabe', false, `nenhum par de prédios em que a porta do mais novo, num lado aberto, cruzaria com os seus degraus os de um mais velho que entram na rua (${tries} lados tentados)`);
+    else { const { E, fe, he, Y, s } = C; const pe = footprint(E, fe);
+      // (the younger's steps as the world reckons them now, through its plan: none across the elder's; its word on the way in)
+      const fy = flightsOfB(Y); const across = fy.filter(q => cross(footprint(Y, q.fl), pe)); const ey = Sp.entryFits(Y, In.shellOf(Y));
+      const we = walkUp(E, fe, he);
+      // (and the turn of the day: the younger's door where its way in fits — or, fitting on no side, where it was, still giving way —,
+      // and none of its steps across the elder's)
+      turn(); const fy2 = flightsOfB(Y); const across2 = fy2.filter(q => cross(footprint(Y, q.fl), pe)); const ey2 = Sp.entryFits(Y, In.shellOf(Y)); const to = In.fitSide(Y);
+      ok('7b. dois prédios frente a frente, os degraus da porta do mais novo cruzando os do mais velho: o mais novo cede — nenhum degrau dele onde estão os do mais velho, nem no caminho ao pé deles —, a entrada dele não cabe ali, o mais velho é subido; a virada leva a porta do mais novo para onde cabe',
+        !across.length && !ey.ok && !!we && we.up && !across2.length && (ey2.ok || !to),
+        `${name(Y)} (mais novo), a porta posta no lado ${s}, diante dos ${fe.treads.length} degraus de ${name(E)} na rua: ${across.length ? `${across.length} lances cruzando os do mais velho` : 'nenhum lance cruzando os do mais velho'}; a entrada dele ${ey.ok ? 'cabe' : `não cabe (${ey.kind}${ey.crossed ? `, cede a #${ey.crossed}` : ''})`}; ${name(E)} subido ${we ? (we.up ? 'até a porta' : `até ${we.hi.toFixed(2)} m${we.hands ? ', com as mãos' : ''}, a ${we.dD.toFixed(2)} m da porta`) : 'não'}; depois da virada: a porta de ${name(Y)} no lado ${Y.ip.s}, ${ey2.ok ? 'a entrada cabe' : to ? `não cabe, e cabe no ${to.s}` : 'não cabe em lado nenhum'}, ${across2.length ? `${across2.length} lances cruzando` : 'nenhum lance cruzando'}`); } }
+  // ---- 7c. and in all the world as it stands: no flight of a younger building across an elder's
+  { const all = [...S.buildings.values()].filter(q => q.built && In.has(q) && q.type !== 'ruin').sort((a, c) => a.id - c.id); const fp = new Map(); let pairs = 0; const bad = [];
+    for (const b of all) fp.set(b.id, flightsOfB(b).map(q => footprint(b, q.fl)));
+    for (const Y of all) for (const E of all) { if (E.id >= Y.id || E.x > Y.x + Y.w + 3 || E.x + E.w < Y.x - 3 || E.y > Y.y + Y.h + 3 || E.y + E.h < Y.y - 3) continue;
+      for (const y of fp.get(Y.id)) for (const e of fp.get(E.id)) { pairs++; if (cross(y, e) && bad.length < 4) bad.push(`${name(Y)} sobre ${name(E)}`); else if (cross(y, e)) bad.push(''); } }
+    ok('7c. em todo o mundo: nenhum lance de um prédio mais novo onde estão os degraus de um mais velho, nem no caminho ao pé deles, nem com os deles no caminho ao pé dos seus', pairs > 50 && !bad.length,
+      `${all.length} prédios, ${pairs} pares de lances a até três casas: ${bad.length ? `${bad.length} cruzando — ${bad.filter(Boolean).join(' · ')}` : 'nenhum cruzando'}`); }
+  if (S.avatar) G.Possess.release('deus');
 }
 
 // (no module error)
