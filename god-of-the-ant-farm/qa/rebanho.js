@@ -15,6 +15,9 @@
 //     (L-468: só o bicho sem curral saía do cercado alheio por qualquer lado, e o caminho de volta não conhece porteiras)
 //  r8 o abate cortado no meio: o açougueiro levando um bicho do curral na corda, uma ida de fora o leva (a assembleia): o
 //     bicho é solto e volta ao curral — nunca segue quem o levava num afazer que não é mais o dele (L-608)
+//  r9 a posição no save: uma vaca a um fio da borda da sua casa, ao lado de um penhasco, salva e carregada — fica na casa dela
+//     e volta ao curral; e um save de antes, que a pôs no penhasco: carregado, ela vai para a casa livre mais perto de onde
+//     chega ao curral, e volta (L-607: o save arredondava a 95,00 a vaca de 94,996, e ela ficava no penhasco para sempre)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
 // O corpo do deus não pastoreia (o interact.js não tem o verbo): o salto é das vidas longas da regressão.
 //   node qa/rebanho.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/rebanho.js)
@@ -264,6 +267,42 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
     const bad = newBad(P.base);
     ok('r8', led && st1 && took && ledT <= 0.5 && back && !a.dead && a.state !== 'led' && !a.ledBy && !bad.length,
       `${bu.name} (açougueiro) levando ${a.kind} #${a.id} do ${V.buildName(b)} #${b.id}: ${led ? 'na corda' : 'NÃO a pegou em 40 s'}${led ? (st1 ? ', a caminho do açougue' : ` (a tarefa ${bu.task ? bu.task.type + '.' + bu.task.st : 'nenhuma'})`) : ''}; a chamada à praça ${took ? 'o levou' : 'NÃO o levou'}; depois: ${ledT > 0.5 ? `o bicho SEGUIU NA CORDA de ${bu.name} por ${ledT} s, ${far} m` : 'solto logo'}; ${a.dead ? 'o bicho morreu' : a.state === 'led' ? `ainda na corda (${bu.task ? bu.task.type : 'sem tarefa'})` : back ? `no seu curral em ${r2(S().clock - c0)} s` : `não voltou ao curral em 90 s (em ${r2(a.x)},${r2(a.y)}, ${a.state})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  }
+}
+// r9 the positions in the save (L-607): the save keeps a hundredth of a tile, and rounded a cow of 94,996 to 95,00 — across the
+// edge of its tile, onto a cliff by it: loaded where no beast stands, every way of it home failed and it stayed there for good
+// (the r4 of the metrópole of the generation 15). A cow of the pen put a hair from the edge of a tile it stands on, by a cliff
+// across that edge — the tile nearest the pen's gate with a cliff east or south of it, from where the gate is reached, off any
+// fence —: saved and loaded, it is still in its tile and goes home; and a save of before (its version, 4, and the position as
+// its rounding wrote it, on the cliff): loaded, the cow is on the nearest ground it stands on from where it reaches its pen, and
+// goes home
+{
+  const P = setup(0.5, 0.1); const b = P.b; const W = G.W; const [gx, gy] = [b.x + b.w / 2, b.y + b.h + 0.4];
+  const a = P.herd.slice().sort((p, q) => p.age / G.Animals.DEF[p.kind].life - q.age / G.Animals.DEF[q.kind].life || p.id - q.id)[0];
+  let sp = null;
+  if (a) for (let y = b.y - 15; y <= b.y + b.h + 15; y++) for (let x = b.x - 15; x <= b.x + b.w + 15; x++) {
+    if (!W.inb(x, y) || !W.inb(x + 1, y + 1) || W.fenceMap()[W.idx(x, y)] || !G.Animals.walkOK(a, x + 0.5, y + 0.5) || !W.canWalk(x + 0.5, y + 0.5, gx, gy)) continue;
+    for (const [dx, dy] of [[1, 0], [0, 1]]) { if (!S().cliff[W.idx(x + dx, y + dy)] || G.Animals.walkOK(a, x + dx + 0.5, y + dy + 0.5)) continue;
+      const d = G.dist2(x + 0.5, y + 0.5, gx, gy); if (!sp || d < sp.d) sp = { x, y, dx, dy, d }; }
+  }
+  if (!a || !sp) ok('r9', false, a ? `nenhuma casa com penhasco ao lado a 15 casas do ${V.buildName(b)} #${b.id}` : 'sem bicho no curral');
+  else {
+    const put = () => { const c = S().animals.get(a.id); c.state = 'pen'; c.herder = 0; c.ledBy = 0; c.hold = 0; c.x = sp.dx ? sp.x + 0.996 : sp.x + 0.5; c.y = sp.dy ? sp.y + 0.996 : sp.y + 0.5; c.tx = c.x; c.ty = c.y; c.path = null; c.noGo = undefined; c.blk = 0; c.stk = 0; return c; };
+    const goneHome = () => live(60, null, () => { const c = S().animals.get(a.id); return !c || c.dead || (c.state === 'pen' && inPen(c, S().buildings.get(PEN))); });
+    const where = c => c ? `(${c.x.toFixed(3)},${c.y.toFixed(3)})${G.Animals.walkOK(c, c.x, c.y) ? '' : ', ONDE NÃO PODE FICAR'}${c.noGo ? ', DESISTIU DO CAMINHO' : ''}` : 'sumiu';
+    // (saved and loaded now)
+    const c0 = put(); const at0 = `(${c0.x.toFixed(3)},${c0.y.toFixed(3)})`;
+    M.salvarCarregar(); G.inSim = Math.max(G.inSim, 1);
+    const c1 = S().animals.get(a.id); const in1 = !!c1 && Math.floor(c1.x) === sp.x && Math.floor(c1.y) === sp.y && G.Animals.walkOK(c1, c1.x, c1.y); const at1 = where(c1);
+    const home1 = goneHome();
+    // (a save of before: the version 4, the position as its rounding put it — on the cliff)
+    const c2 = put(); const o = JSON.parse(G.Save.serialize()); o.v = 4; const ao = o.animals.find(q => q.id === a.id); ao.x = Math.round(c2.x * 100) / 100; ao.y = Math.round(c2.y * 100) / 100;
+    M.reseed(4242); G.Save.apply(o); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); G.inSim = Math.max(G.inSim, 1);
+    const c3 = S().animals.get(a.id); const ok3 = !!c3 && G.Animals.walkOK(c3, c3.x, c3.y) && W.canWalk(c3.x, c3.y, gx, gy); const at3 = where(c3);
+    const home3 = goneHome();
+    const bad = newBad(P.base);
+    ok('r9', in1 && home1 && ok3 && home3 && !bad.length,
+      `${a.kind} #${a.id} em ${at0}, na casa (${sp.x},${sp.y}) com o penhasco em (${sp.x + sp.dx},${sp.y + sp.dy}): salva e carregada, em ${at1}${in1 ? ', na casa dela' : ', FORA DA CASA DELA'}; ${home1 ? 'voltou ao curral' : 'NÃO voltou ao curral em 60 s'}; um save de antes (versão 4, ${ao.x.toFixed(2)},${ao.y.toFixed(2)}): carregada em ${at3}${ok3 ? ', de onde chega ao curral' : ''}; ${home3 ? 'voltou ao curral' : 'NÃO voltou ao curral em 60 s'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 const er = M.erros();

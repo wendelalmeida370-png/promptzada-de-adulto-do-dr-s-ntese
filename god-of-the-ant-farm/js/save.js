@@ -39,6 +39,9 @@
 
   // ages kept to a thousandth, never rounded across a birthday (a baby of 1.9996 must not wake up from a load a child)
   Sv.ageR = a => { const x = Math.round(a * 1000) / 1000; return Math.floor(x) > Math.floor(a) ? Math.floor(a) + 0.999 : x; };
+  // and positions to a hundredth, never rounded across the edge of a tile: a cow of 94,996 by a cliff at 95 woke up from a load
+  // on the cliff, where no beast stands, and stayed there for good (L-607). From the world's version 5 on (world.js)
+  Sv.posR = p => { const x = Math.round(p * 100) / 100; return Math.floor(x) > Math.floor(p) ? Math.floor(p) + 0.99 : x; };
   // A big world goes to the browser compressed: the browser keeps about five million characters for the whole site, and a
   // world of fifteen hundred souls is more than that as plain text (gzip makes it about a tenth). The compression is the
   // browser's own and finishes a moment later (Sv.pending); a small world is still written at once, as plain text. A short
@@ -69,7 +72,7 @@
       o.pi = 0; o.moving = false; o.held = false;
       if (o.air) { o.air = false; o.z = 0; o.vz = 0; o.vx = 0; o.vy = 0; }
       if (o.inside) { const b = S.buildings.get(o.inside); if (b) { const d = G.Vg.door(b); o.x = d[0]; o.y = d[1]; } o.inside = 0; o.sleeping = false; }
-      o.x = r(o.x, 2); o.y = r(o.y, 2); o.hunger = r(o.hunger, 1); o.energy = r(o.energy, 1); o.hp = r(o.hp, 1); o.age = Sv.ageR(o.age);
+      o.x = Sv.posR(o.x); o.y = Sv.posR(o.y); o.hunger = r(o.hunger, 1); o.energy = r(o.energy, 1); o.hp = r(o.hp, 1); o.age = Sv.ageR(o.age);
       o.devotion = r(o.devotion, 1); o.fear = r(o.fear, 1);
       return o;
     });
@@ -85,7 +88,7 @@
       buildings: [...S.buildings.values()].map(b => { const o = Object.assign({}, b); delete o.res; delete o._sg; /* (what a stall's picture shows: the drawing's) */ if (o.crops) o.crops = o.crops.map(c => ({ s: c.s, g: r(c.g, 3), c: 0 })); o.incoming = { wood: 0, stone: 0 }; return o; }),
       villagers: vill,
       dead: [...S.dead.values()],
-      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: r(a.x, 2), y: r(a.y, 2), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false, morph: a.morph || null, seen: a.seen || 0, perch: a.perch || 0, dom: a.dom || 0, pen: a.pen || 0, wool: r(a.wool || 0, 2), milk: r(a.milk || 0, 2), eggs: r(a.eggs || 0, 2), shorn: r(a.shorn || 0, 0), tended: a.tended || 0 })),
+      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: Sv.posR(a.x), y: Sv.posR(a.y), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false, morph: a.morph || null, seen: a.seen || 0, perch: a.perch || 0, dom: a.dom || 0, pen: a.pen || 0, wool: r(a.wool || 0, 2), milk: r(a.milk || 0, 2), eggs: r(a.eggs || 0, 2), shorn: r(a.shorn || 0, 0), tended: a.tended || 0 })),
       settlements: [...S.settlements.values()],
       N: S.N || N, mapType: S.mapType, temper: S.temper || 'normal', genOpts: S.genOpts || null, divinePeace: S.divinePeace || 0,
       factions: [...S.factions.values()].map(f => { const o = Object.assign({}, f); o.rel = {}; for (const k in f.rel) if (+k > f.id) o.rel[k] = Object.assign({}, f.rel[k], { envoy: 0 }); o.targets = null; o.coup = null; o.rev = null; o.revolt = null; o.exec = null; return o; }), usedNames: S.usedNames || [], starts: S.starts,
@@ -206,6 +209,9 @@
     if (o.cam) { G.Render.cam.x = o.cam.x; G.Render.cam.y = o.cam.y; G.Render.cam.zoom = G.Render.cam.tz = o.cam.zoom; }
     for (const f of S.factions.values()) { if (f.civ === undefined) f.civ = null; G.Civ.initTech(f); }
     for (const h of G.saveHooks || []) h.load(o);
+    // (a save of before the world's version 5 rounded positions across the edge of a tile: a beast it set down where no beast
+    // stands is moved to the nearest ground it stands on from where it reaches its home — only what no longer fits, L-419, L-607)
+    if (!(o.v >= 5) && G.Animals.aside) for (const a of S.animals.values()) G.Animals.aside(a, 3);
     // (the trades as they were saved — a load decides nothing: a wolf a hair inside a town's twenty tiles, saved a hair outside
     // (the save keeps a hundredth of a tile), turned a huntress into a stallholder at the load; the world deals the trades out
     // anew in its own step — L-419)

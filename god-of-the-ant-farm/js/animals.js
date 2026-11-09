@@ -362,7 +362,9 @@
   // (its pen, its range: the map of regions), within r tiles — never into a pocket, nor beyond what now stands between it and
   // home —; with no such ground near, on the nearest it can stand on at all
   A.aside = function (a, r) {
-    const sp = SP[a.kind]; if (!sp || sp.cls === 'air' || sp.cls === 'water' || a.held || a.air || walkOK(a, a.x, a.y)) return false;
+    const sp = SP[a.kind]; if (!sp || sp.cls === 'air' || sp.cls === 'water' || a.held || a.air) return false;
+    distances(); // (the shore's distances the amphibians' ground is read by: maybe not built yet, at a load)
+    if (walkOK(a, a.x, a.y)) return false;
     const can = (x, y) => walkOK(a, x, y);
     const home = (x, y) => can(x, y) && (!Number.isFinite(a.hx) || !Number.isFinite(a.hy) || W.canWalk(x, y, a.hx, a.hy));
     const p = W.nearestLand(a.x, a.y, r || 3, home) || W.nearestLand(a.x, a.y, r || 3, can);

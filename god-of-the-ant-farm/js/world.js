@@ -16,7 +16,7 @@
 
   G.newState = function (seed) {
     return {
-      v: 4, seed, N, mapType: 'ilha', rng: G.rngSeed(seed, 0),
+      v: 5, seed, N, mapType: 'ilha', rng: G.rngSeed(seed, 0), // (v 5: the positions saved inside their tiles, save.js — L-607)
       day: 1, time: 0.1, clock: 0,
       H: new Float32Array(V * V),
       type: new Uint8Array(N * N),
