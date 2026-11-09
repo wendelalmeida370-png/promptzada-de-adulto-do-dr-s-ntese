@@ -20,27 +20,27 @@ G.Ready.list({
   "bytes": 1118155
  },
  "metropole": {
-  "day": 41,
-  "pop": 404,
-  "peoples": 6,
-  "towns": 10,
+  "day": 49,
+  "pop": 540,
+  "peoples": 5,
+  "towns": 16,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
    "name": "Mênfis",
    "tier": 4,
-   "pop": 102
+   "pop": 103
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 2248050
+  "bytes": 2655330
  },
  "mega": {
   "day": 65,
-  "pop": 860,
-  "peoples": 5,
+  "pop": 773,
+  "peoples": 4,
   "towns": 19,
   "N": 160,
   "map": "continente",
@@ -48,48 +48,48 @@ G.Ready.list({
   "city": {
    "name": "Mênfis",
    "tier": 5,
-   "pop": 214
+   "pop": 163
   },
   "wars": 0,
   "ww": null,
   "world": "Thalael",
-  "bytes": 3549684
+  "bytes": 3369640
  },
  "mundial": {
-  "day": 120,
-  "pop": 811,
-  "peoples": 6,
-  "towns": 21,
+  "day": 69,
+  "pop": 447,
+  "peoples": 5,
+  "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Roma",
-   "tier": 3,
-   "pop": 193
+   "name": "Tebas",
+   "tier": 4,
+   "pop": 70
   },
   "wars": 1,
   "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 5776787
+  "bytes": 3605241
  },
  "anos100": {
   "day": 101,
-  "pop": 815,
+  "pop": 564,
   "peoples": 2,
-  "towns": 14,
+  "towns": 11,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Argos",
+   "name": "Hedeby",
    "tier": 4,
-   "pop": 137
+   "pop": 111
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 3536912
+  "bytes": 2998101
  },
  "anos500": {
   "day": 501,
