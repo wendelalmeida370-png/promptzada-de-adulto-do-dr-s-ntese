@@ -174,7 +174,10 @@ const z1 = B.of(merchants()[0]); const m1 = S.villagers.get(z1.owner);
 // muster), rested and fed — a tired one goes to bed before the stall, a hungry one to the pantry: if none is, the test's hand
 function pickBuyer(town, sp, not, last, k) {
   let L = [...S.villagers.values()].filter(v => v.set === town.id && !not.includes(v.id) && v.age >= 18 && !v.captive && !v.jail && !v.aboard && v.home && E.homeOf(v) && v.role !== 'mercador' && G.W.reaches(v, sp.buyer[0], sp.buyer[1])).sort((a, b) => (last ? b.id - a.id : a.id - b.id));
-  if (k) { const roomy = L.filter(o => D.room('h:' + o.home, k) + 1e-6 >= 1); if (roomy.length) L = roomy; }
+  // (room for the most one deal sells — 3 of a good, 6 of food, act-negocio.js —, and else for one: the house lives while the
+  // case runs, and in the metropole of the generation 15 Febe's house had 1,29 of room for cacao when she was sent; her hens
+  // laid an egg into the pantry, whose overflow takes the shelf, and at the counter she said «lá em casa não cabe», T-524)
+  if (k) { const deal = k === 'food' ? 6 : 3; const room = o => D.room('h:' + o.home, k) + 1e-6; const roomy = L.filter(o => room(o) >= deal); const some = L.filter(o => room(o) >= 1); if (roomy.length) L = roomy; else if (some.length) L = some; }
   // (and with free hands: a load in them has somewhere to go first, and a purchase does not fit)
   const calm = o => !(o.task && o.task.pri >= 1.5) && !(o.carry && o.carry.n > 0);
   const v = L.find(o => calm(o) && o.energy > 45 && o.hunger < 55 && !o.sleeping) || L.find(calm) || L[0] || null;
@@ -772,6 +775,15 @@ function stallNow() {
   // the new «cidade» Argos learned it in the middle of n15, its stall selling for drachmas, T-098)
   const noCoin = new Set([...S.factions.values()].filter(f => !E.coinage(f.id)).map(f => f.id)); const learn0 = G.Civ.learn;
   G.Civ.learn = function (f, t) { if (t === 'moeda' && f && noCoin.has(f.id)) return false; return learn0.apply(this, arguments); };
+  // (a world with no people without coin — the «cidade» of the generation 15: its four peoples had all learned it by day 16,
+  // and n15, n17 and n17b found «nenhuma cidade sem moeda com mercado» —: a new world by the game's own door, G.Main.newGame,
+  // as the «cidade» began (its seed and its map), whose peoples are born without the coin — the arts a people starts with,
+  // civs.js —, held so from its first minute, which gives them their first huts; the market, the god's hand below, T-525)
+  if (!noCoin.size) {
+    M.novo({ seed: 3101, type: 'continente', size: 128, tribes: 4 }); S = G.S;
+    for (const f of S.factions.values()) if (!E.coinage(f.id)) noCoin.add(f.id);
+    M.viver(60); G.inSim = Math.max(G.inSim, 1); godsPeace();
+  }
   // (the no-coin towns with a market, the biggest first: a town whose planner keeps no merchant for the case — a town short
   // of hands gives its trades away first, the merchant to the quay — passes it to the next one, told in the case; when none
   // keeps one, the god's hand puts a market where the town's own planner would, in the next town without coin, the biggest

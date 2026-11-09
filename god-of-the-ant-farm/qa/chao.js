@@ -34,8 +34,11 @@ const base = () => new Set(QA.check().filter(q => q.sev <= 2).map(q => `${q.sys}
 const newBad = B => QA.check().filter(q => q.sev <= 2 && !B.has(`${q.sys}|${q.msg}`)).slice(0, 3).map(q => `S${q.sev} ${q.sys} ${q.msg}`);
 const gOf = id => (S.loose || []).find(o => o.id === id) || null;
 const picked = (L0, gid) => lines(L0, e => e[8] === 'apanhou' && e[3] === 'g:' + gid);
-// (what the pickers took to the store: their 'entrega' of the kind, from their hands to the people's store)
-const delivered = (L0, gid, k, fid) => { const who = new Set(picked(L0, gid).map(e => e[4])); return lines(L0, e => e[8] === 'entrega' && who.has(e[3]) && e[4] === 'f:' + fid && e[5] === k); };
+// (what the pickers took to the store: their 'entrega' of the kind, from their hands to the people's store, after they picked
+// it up — what one of them delivered before, of his own work, is not the load's: in the «cidade» of the generation 15 Torvald
+// set his own wood down while the free people had no fire, delivered 4 of it to the fire once it stood, then picked up Tove's
+// 3, and the case counted the 4 as hers and ended before the 3 arrived, T-521)
+const delivered = (L0, gid, k, fid) => { const up = picked(L0, gid); return lines(L0, e => e[8] === 'entrega' && e[4] === 'f:' + fid && e[5] === k && up.some(p => p[4] === e[3] && e[0] > p[0])); };
 const onWay = gid => [...S.villagers.values()].filter(v => v.task && v.task.type === 'apanhar' && v.task.g === gid);
 // (what the L-408 rule says, every 5 s: each case keeps what it said)
 let said = [];
