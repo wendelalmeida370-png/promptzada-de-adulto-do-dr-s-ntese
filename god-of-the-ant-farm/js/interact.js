@@ -45,7 +45,7 @@
   I.FACE = Math.PI / 4; // (radians: a door this far round from where the body looks, or less, is the door it faces — L-326)
   I.best = function () {
     const ctx = I.ctx(); if (!ctx || G.Avatar.swimming()) return null; // (the hands are swimming)
-    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1, seat = null, ss = -1;
+    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1, seat = null, ss = -1, meal = null, ms = -1;
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
         // (t.reach: a target reached from farther than its kind — the door of a house from its doorstep)
@@ -54,6 +54,7 @@
         const c = { p, t };
         if (sc > bs) { bs = sc; best = c; }
         if (p.id === 'lugar' && sc + (t.pl.use === 'comer' ? 10 : 0) > ss) { ss = sc + (t.pl.use === 'comer' ? 10 : 0); seat = c; } // (a place at a table first)
+        if (p.id === 'atividade' && t.o && /^lar\.comer:/.test(t.o.id || '') && sc > ms) { ms = sc; meal = c; } // (the meal of the house)
         if (p.door && sc > ds) { ds = sc; door = c; }
         if (p.passing && sc > ps) { ps = sc; pass = c; }
         if (p.opens && sc > os) { os = sc; open = c; }
@@ -65,6 +66,11 @@
     // what to eat: the meal of the house the world offers at the table gives way to the place at it while the body stands, hungry
     // or not — D-104: the body of the god lives the house, not only the hunger)
     if (seat && best.p.id === 'atividade' && best.t.o && /^lar\.comer:/.test(best.t.o.id || '')) best = seat;
+    // (and seated at it, the meal of the house — when there is what to eat and the hunger for it — before the house's cooking: the
+    // meal's point is the house's first place at the table — as often as not the body's own seat, no way round from it —, and the
+    // brazier beside it, 0.65 m round to the side, won it: seated and hungry at the table of the house#13413 of the generation-15
+    // metropole, «Cozinhar a ceia da casa» — L-625, D-104)
+    else if (meal && best !== meal && meal.t.o.ok !== false && best.p.id === 'atividade' && best.t.o && /^lar\.cozinhar:/.test(best.t.o.id || '') && G.Avatar.seated() && (G.Possess.useOf() || {}).use === 'comer') best = meal;
     // (an offer of the world with no place of its own, where the body stands — the meal on the floor of a house with no table,
     // seat nor hearth —: what the body faces in reach is meant before it. Its point was the body's own, its bearing the noise of
     // two positions a hair apart: by the mat of the house#35280 of the metrópole of the generation 11 the body facing its bed
