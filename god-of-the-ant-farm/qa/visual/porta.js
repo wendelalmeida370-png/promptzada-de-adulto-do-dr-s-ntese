@@ -16,6 +16,9 @@
 //   5b. on every doorstep in the water (a canal, a ford: the water offers a fish a stride before the body, wherever it looks),
 //      and a little behind it, facing the door: the door's own verb, not the fish (L-326); turned from it past Interact.FACE,
 //      the fish again
+//   5c. and there, a pet a stride before the body, the door to its side within Interact.FACE: the animal, nearer and more in front
+//      than the door — the fish a stride ahead as well does not make the door win over it
+//   (1 to 4 on a doorstep on dry ground: one in the water is the 5b's and the 5c's)
 //   and the verifier clean, no module error
 const path = require('path');
 const M = require(path.join(__dirname, '..', 'nodemundo.js'));
@@ -40,9 +43,13 @@ const deg = r => Math.round(r * 57.2958);
 // (City.upgradeHomes), and the house#2924 of the new metropole, the nearest, was made a sobrado in the middle of the proof — T-156)
 const adults = f => [...S.villagers.values()].filter(o => o.age >= 18 && o.age < 55 && !o.inside && G.Possess.can(o).ok && (!f || f(o)));
 const outer = q => { const t = S.settlements.get(q.set); return t ? G.dist(q.x + 0.5, q.y + 0.5, t.cx, t.cy) : 0; }; // (how far from its town's middle)
+// (its doorstep on dry ground: one in the water — a canal, a ford — is the 5b's, where the water offers a fish a stride before
+// the body and, turned past Interact.FACE from the door, the fish is what one means; the house#15649 of the generation-16
+// metropole, the farthest from its town's middle, an Aztec house on a canal, gave «Pescar com as mãos» with the door to the side)
+const wet = (X, Z) => { const i = W.idx(X / TL, Z / TL); const t = S.type[i]; return (t === G.T.RIVER || t <= G.T.SEA) && !S.road[i] && !(S.ice && S.ice[i]); };
 let H = null;
 for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado') && In.planDoor(q)).sort((a, c) => outer(c) - outer(a) || a.id - c.id)) {
-  const p = Sp.planNow(b); if (!p || !p.entrance || !p.entrance.out) continue;
+  const p = Sp.planNow(b); if (!p || !p.entrance || !p.entrance.out || wet(b.x * TL + p.entrance.out[0], b.y * TL + p.entrance.out[1])) continue;
   const v = adults(o => o.home === b.id && !o.sleeping).sort((a, c) => a.id - c.id)[0]; if (v) { H = { b, p, v }; break; }
 }
 if (!H) { ok('uma casa com planta e morador', false, '-'); process.exit(1); }
@@ -228,11 +235,11 @@ function throughGates(x0, y0, pts) {
 // fish a stride straight ahead, and the door is what one means, its own verb; turned a quarter from it, past Interact.FACE,
 // the water's. The sobrado#13586 of the new metropole, two metres from its door: «Pescar com as mãos» over «Bater à porta» —
 // L-326)
-{ let n = 0, away = 0; const bad = [], seen = [];
+{ let n = 0, away = 0, petN = 0; const bad = [], seen = [], petBad = [], petSeen = [];
   for (const q of [...S.buildings.values()].filter(q => q.built && In.has(q) && In.planDoor(q)).sort((a, c) => a.id - c.id)) {
     const pq = Sp.planNow(q); if (!pq || !pq.entrance || !pq.entrance.out) continue;
-    const sx = q.x * TL + pq.entrance.out[0], sz = q.y * TL + pq.entrance.out[1]; const i = W.idx(sx / TL, sz / TL); const t = S.type[i];
-    if (!(t === G.T.RIVER || t <= G.T.SEA) || S.road[i] || (S.ice && S.ice[i])) continue;
+    const sx = q.x * TL + pq.entrance.out[0], sz = q.y * TL + pq.entrance.out[1];
+    if (!wet(sx, sz)) continue;
     clear([sx, sz]); if (!at(sx, sz, 0)) continue;
     const pp = I.list.find(x => x.id === 'portaPlanta'); const dt = (pp.find(I.ctx()) || []).find(x => x.b === q && x.d.id === pq.entrance.door); if (!dt) continue;
     const L0 = Math.hypot(sx - dt.X, sz - dt.Z) || 1, ox = (sx - dt.X) / L0, oz = (sz - dt.Z) / L0;
@@ -242,11 +249,27 @@ function throughGates(x0, y0, pts) {
       if (!I.list.find(x => x.id === 'peixe').find(I.ctx()).length) continue; n++;
       const r = I.best(); const tag = `${q.type}#${q.id} a ${Math.hypot(dt.X - st.X, dt.Z - st.Z).toFixed(2)} m: «${r ? r.label : 'nada'}»`; if (seen.length < 3) seen.push(tag); if (!(r && r.p.door && r.t.b === q)) bad.push(tag);
       st.yaw = yaw + Math.PI / 2; IN.camYaw = st.yaw; still(2); const r2 = I.best(); if (r2 && r2.id === 'peixe') away++;
+      // (5c: and a pet a stride before the body, the door to its side within Interact.FACE: nearer than the door and more in
+      // front, it is the animal — the fish a stride ahead as well does not make the door win over it; on the canal of the
+      // house#15649 of the generation-16 metropole, the pig at 0° and 0.70 m, the door at 40°: «Fechar a porta»)
+      // (only where the three of the case are all there is to choose from — the plan's door, the water's, the animal —, nothing else
+      // in reach as Interact reckons it (within its reach, not behind the back): a building that is no house keeps a door of its own
+      // before its plan's — a look, a meal, a prayer, Interact's 'porta', at the world's door of it —, and on the doorstep of the
+      // ourives#8980 of the generation-17 metropole that one stood straight ahead, the animal in line with it: «Examinar
+      // ourivesaria», the door by the rule — in line with the door, the door)
+      const mine = x => ['portaPlanta', 'peixe', 'agua', 'carinho', 'bicho'].includes(x.id);
+      const inReach = (x, t, c) => { const d = Math.hypot(t.X - c.X, t.Z - c.Z), a = Math.abs(Math.atan2(Math.sin(Math.atan2(t.Z - c.Z, t.X - c.X) - c.yaw), Math.cos(Math.atan2(t.Z - c.Z, t.X - c.X) - c.yaw))); return d <= (t.reach || x.reach) && !(d > 1.1 && a > 1.6); };
+      if (pet && petN < 12) { const y2 = yaw + 0.6; st.yaw = y2; IN.camYaw = y2; still(2); god(() => { pet.x = (st.X + Math.cos(y2) * 0.7) / TL; pet.y = (st.Z + Math.sin(y2) * 0.7) / TL; });
+        const c0 = I.ctx(); if (I.list.some(x => !mine(x) && x.find(c0).some(t => inReach(x, t, c0)))) continue;
+        const r3 = I.best(); petN++; const tag = `${q.type}#${q.id}, a porta a ${deg(Math.abs(Math.atan2(Math.sin(Math.atan2(dt.Z - st.Z, dt.X - st.X) - y2), Math.cos(Math.atan2(dt.Z - st.Z, dt.X - st.X) - y2))))}° e ${Math.hypot(dt.X - st.X, dt.Z - st.Z).toFixed(2)} m: «${r3 ? r3.label : 'nada'}»`;
+        if (petSeen.length < 2) petSeen.push(tag); if (!(r3 && isPet(r3) && r3.t.a === pet)) petBad.push(tag); }
     }
   }
-  back();
+  back(); if (pet) god(() => { pet.x = pet0[0]; pet.y = pet0[1]; });
   ok('5b. na soleira na água (um canal, um vau) e um pouco atrás dela, de frente para a porta: a porta, não o peixe que a água oferece à frente; virado um quarto dela, o peixe', n >= 3 && !bad.length && away >= 1,
     `${n} lugares na água com o peixe à frente: ${n - bad.length} a porta (${seen.join(' · ')})${bad.length ? `; ${bad.length} ERRADOS: ${bad.slice(0, 4).join(' · ')}` : ''}; virados um quarto da porta, o peixe em ${away}`);
+  ok('5c. na soleira na água, um bicho um passo à frente e a porta de lado (dentro de Interact.FACE): o bicho, mais perto e mais de frente que ela — o peixe à frente não a faz ganhar dele', !!pet && petN >= 1 && !petBad.length,
+    pet ? `${petName}, em ${petN} lugares: ${petN - petBad.length} o bicho (${petSeen.join(' · ')})${petBad.length ? `; ${petBad.length} ERRADOS: ${petBad.slice(0, 4).join(' · ')}` : ''}` : 'nenhum bicho de estimação no mundo');
 }
 
 // (the verifier: what weighs, S0 to S2 — and no module error)

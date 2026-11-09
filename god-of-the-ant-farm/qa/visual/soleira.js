@@ -537,7 +537,36 @@ if (part(7)) {
           const hit = ownFor(Y).some(fy => cross(footprint(Y, fy), pe));
           if (hit) { C = { E, fe, he, Y, s, r0 }; break look; }
           god(() => { Y.ip.s = r0.s; Y.ip.o = r0.o; Y.ip.r = r0.r; }); } } }
-    if (!C) ok('7b. dois prédios frente a frente, os degraus da porta do mais novo cruzando os do mais velho: o mais novo cede — nenhum degrau dele onde estão os do mais velho, nem no caminho ao pé deles —, a entrada dele não cabe ali, o mais velho é subido; a virada leva a porta do mais novo para onde cabe', false, `nenhum par de prédios em que a porta do mais novo, num lado aberto, cruzaria com os seus degraus os de um mais velho que entram na rua (${tries} lados tentados)`);
+    // (none in the world as it stands — two buildings so across a street are a town's chance: none in the metropoles of the
+    // generations 16 and 17, 68 and 78 sides tried —: the case made by the god's hand, as the 6's houses are made. A house founded on
+    // free ground across from an elder's steps that run on into the street, near them — never on them nor on the way to their foot:
+    // the elder's steps, by the world's word on them (reckoned anew), the same after it —, and its door put on a side facing them)
+    let made = null, lots = 0;
+    if (!C) {
+      const n = G.Escala.classic('house').n; const R = 2; // (metres: the new lot's edge at most this far from the elder's steps)
+      const freeT = (x, y) => { if (!W.inb(x, y)) return false; const i = W.idx(x, y); return !S.occ[i] && W.walkable(i) && !S.treeAt[i] && !S.objAt[i] && !S.wall[i] && S.type[i] > G.T.RIVER && !(S.road[i] >= 2); };
+      const sig = fl => JSON.stringify(fl.treads.map(q => [q.a.toFixed(2), q.n.toFixed(2), q.y.toFixed(2), q.wa.toFixed(2)]));
+      // (the elder's flight before that door as the world's word reckons it — anew, never the memo's)
+      const freshOf = (E, he) => { const p = Sp.planNow(E); const w = p && p.walls[he.wall]; if (!w) return null; const l = p.levels.find(q => q.lv === w.lv); const h = p.holes.find(q => q.door === he.door && q.kind !== 'janela'); return h ? Sp.doorFlight(E, p.shell, { w: E.w * TL, d: E.h * TL }, w, h, l ? l.y : 0, raisedOf(p), undefined, undefined, true) : null; };
+      look2: for (const E of all) for (const { fl: fe, hole: he } of flightsOfB(E)) { if (!he || !street(fe) || !fitsFl(fe)) continue;
+        const pe = footprint(E, fe); const bx = pe.steps.concat(pe.way).reduce((q, r) => [Math.min(q[0], r[0]), Math.min(q[1], r[1]), Math.max(q[2], r[2]), Math.max(q[3], r[3])], [1e9, 1e9, -1e9, -1e9]);
+        const f0 = freshOf(E, he); if (!f0) continue; const t0 = sig(f0); const set = E.set; const cx = (bx[0] + bx[2]) / 2, cz = (bx[1] + bx[3]) / 2;
+        // (the lots near the steps, not over them, nearest first)
+        const cand = []; for (let y = Math.floor((bx[1] - R) / TL) - n; y <= Math.floor((bx[3] + R) / TL); y++) for (let x = Math.floor((bx[0] - R) / TL) - n; x <= Math.floor((bx[2] + R) / TL); x++) {
+          const L = [x * TL, y * TL, (x + n) * TL, (y + n) * TL]; const gx = Math.max(bx[0] - L[2], L[0] - bx[2], 0), gz = Math.max(bx[1] - L[3], L[1] - bx[3], 0);
+          if ((!gx && !gz) || Math.hypot(gx, gz) > R) continue; let fr = true; for (let ty = y; ty < y + n && fr; ty++) for (let tx = x; tx < x + n; tx++) if (!freeT(tx, ty)) { fr = false; break; } if (fr) cand.push([Math.hypot(gx, gz), x, y]); }
+        cand.sort((a, c) => a[0] - c[0] || a[2] - c[2] || a[1] - c[1]);
+        for (const [, x, y] of cand) { if (++lots > 40) break look2;
+          const Y = god(() => G.Village.addBuilding('house', x, y, set, true)); if (!Y) continue; Sp.planNow(Y);
+          const f1 = freshOf(E, he); let found = null;
+          if (Y.ip && f1 && sig(f1) === t0 && fitsFl(f1)) for (const s of ['N', 'E', 'S', 'W']) { if (s === Y.ip.s) continue; const o = SIDE[s]; if ((cx - (Y.x + Y.w / 2) * TL) * o[0] + (cz - (Y.y + Y.h / 2) * TL) * o[1] <= 0) continue; const m = maskOf(Y, s); if (!m) continue;
+            const r0 = { s: Y.ip.s, o: Y.ip.o, r: Y.ip.r }; god(() => { Y.ip.s = s; Y.ip.o = m; Y.ip.r++; });
+            if (ownFor(Y).some(fy => cross(footprint(Y, fy), pe))) { found = { s, r0 }; break; }
+            god(() => { Y.ip.s = r0.s; Y.ip.o = r0.o; Y.ip.r = r0.r; }); }
+          if (found) { C = { E, fe, he, Y, s: found.s, r0: found.r0 }; made = Y; break look2; }
+          god(() => G.Village.removeBuilding(Y)); } }
+    }
+    if (!C) ok('7b. dois prédios frente a frente, os degraus da porta do mais novo cruzando os do mais velho: o mais novo cede — nenhum degrau dele onde estão os do mais velho, nem no caminho ao pé deles —, a entrada dele não cabe ali, o mais velho é subido; a virada leva a porta do mais novo para onde cabe', false, `nenhum par de prédios em que a porta do mais novo, num lado aberto, cruzaria com os seus degraus os de um mais velho que entram na rua (${tries} lados tentados); nem das ${lots} casas fundadas pela mão do deus diante desses degraus`);
     else { const { E, fe, he, Y, s } = C; const pe = footprint(E, fe);
       // (the younger's steps as the world reckons them now, through its plan: none across the elder's; its word on the way in)
       const fy = flightsOfB(Y); const across = fy.filter(q => cross(footprint(Y, q.fl), pe)); const ey = Sp.entryFits(Y, In.shellOf(Y));
@@ -547,7 +576,7 @@ if (part(7)) {
       turn(); const fy2 = flightsOfB(Y); const across2 = fy2.filter(q => cross(footprint(Y, q.fl), pe)); const ey2 = Sp.entryFits(Y, In.shellOf(Y)); const to = In.fitSide(Y);
       ok('7b. dois prédios frente a frente, os degraus da porta do mais novo cruzando os do mais velho: o mais novo cede — nenhum degrau dele onde estão os do mais velho, nem no caminho ao pé deles —, a entrada dele não cabe ali, o mais velho é subido; a virada leva a porta do mais novo para onde cabe',
         !across.length && !ey.ok && !!we && we.up && !across2.length && (ey2.ok || !to),
-        `${name(Y)} (mais novo), a porta posta no lado ${s}, diante dos ${fe.treads.length} degraus de ${name(E)} na rua: ${across.length ? `${across.length} lances cruzando os do mais velho` : 'nenhum lance cruzando os do mais velho'}; a entrada dele ${ey.ok ? 'cabe' : `não cabe (${ey.kind}${ey.crossed ? `, cede a #${ey.crossed}` : ''})`}; ${name(E)} subido ${we ? (we.up ? 'até a porta' : `até ${we.hi.toFixed(2)} m${we.hands ? ', com as mãos' : ''}, a ${we.dD.toFixed(2)} m da porta`) : 'não'}; depois da virada: a porta de ${name(Y)} no lado ${Y.ip.s}, ${ey2.ok ? 'a entrada cabe' : to ? `não cabe, e cabe no ${to.s}` : 'não cabe em lado nenhum'}, ${across2.length ? `${across2.length} lances cruzando` : 'nenhum lance cruzando'}`); } }
+        `${name(Y)} (mais novo${made ? `, fundado pela mão do deus em ${Y.x},${Y.y}, ${lots}ª casa tentada` : ''}), a porta posta no lado ${s}, diante dos ${fe.treads.length} degraus de ${name(E)} na rua: ${across.length ? `${across.length} lances cruzando os do mais velho` : 'nenhum lance cruzando os do mais velho'}; a entrada dele ${ey.ok ? 'cabe' : `não cabe (${ey.kind}${ey.crossed ? `, cede a #${ey.crossed}` : ''})`}; ${name(E)} subido ${we ? (we.up ? 'até a porta' : `até ${we.hi.toFixed(2)} m${we.hands ? ', com as mãos' : ''}, a ${we.dD.toFixed(2)} m da porta`) : 'não'}; depois da virada: a porta de ${name(Y)} no lado ${Y.ip.s}, ${ey2.ok ? 'a entrada cabe' : to ? `não cabe, e cabe no ${to.s}` : 'não cabe em lado nenhum'}, ${across2.length ? `${across2.length} lances cruzando` : 'nenhum lance cruzando'}`); } }
   // ---- 7c. and in all the world as it stands: no flight of a younger building across an elder's
   { const all = [...S.buildings.values()].filter(q => q.built && In.has(q) && q.type !== 'ruin').sort((a, c) => a.id - c.id); const fp = new Map(); let pairs = 0; const bad = [];
     for (const b of all) fp.set(b.id, flightsOfB(b).map(q => footprint(b, q.fl)));

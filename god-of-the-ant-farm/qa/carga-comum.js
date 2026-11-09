@@ -189,18 +189,22 @@ S.weather.storm = 0;
   // T-238)
   const frac = x => x - Math.floor(x);
   const ebb = () => { const t0 = frac((0.36 - frac(S.day * 0.13)) / 2) % 0.5; S.time = t0 < 0.08 ? t0 + 0.5 : t0; };
-  const spotFor = o => G.Sea && G.Sea.lowTide() && G.Sea.shellSpot(o.x, o.y, 18);
+  // (a beach the person walks to, by the map of regions — the game's own errand walks there, and the test's hand only saves the
+  // walk: a strip of shore cut from the town is no beach of hers, and from it no store is in reach either — the world sets the
+  // plain load down where she stands, L-169. In the metropole of the generation 16 the shore 18 tiles from Meresankh was such a
+  // strip, and the wood went to the ground, 'pousou')
+  const spotFor = o => { const q = G.Sea && G.Sea.lowTide() && G.Sea.shellSpot(o.x, o.y, 18); return q && G.W.reaches(o, q.x, q.y) ? q : null; };
   let info = '', fine = false; const away = []; let sp0 = null;
   // (one the world calls away from the flats before the catch — the cave's errand, of 1,3, took one for fifty seconds and
   // the tide came back — gives the case to another, at the next ebb, on the same flats, up to three: the case is the hands,
   // not the call)
   for (let a = 0; a < 3 && !fine && !info; a++) {
     ebb();
-    // (the first by id with flats in reach — or, after a call, anyone on the same flats — who can hold the two of wood)
+    // (the first by id with flats in reach on foot — or, after a call, anyone who walks to the same flats — who can hold the two of wood)
     let v = null, sp = null;
     for (let g = 0; g < 6 && !v; g++) {
       let o = person(16, 60, spotFor), q = o && spotFor(o);
-      if (!o && sp0 && G.Sea.lowTide()) { o = person(16, 60); q = o && sp0; }
+      if (!o && sp0 && G.Sea.lowTide()) { o = person(16, 60, p => G.W.reaches(p, sp0.x, sp0.y)); q = o && sp0; }
       if (!o) break;
       if (q && give(o, 'wood', 2)) { v = o; sp = q; }
     }

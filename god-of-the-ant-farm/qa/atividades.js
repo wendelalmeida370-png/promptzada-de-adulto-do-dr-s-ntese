@@ -146,7 +146,11 @@ A.def('teste', { name: 'Teste', conserve: true, title: () => 'Uma operação de 
 // ---------------- o6: the god's body keeps its role and its load (keepLoad); given back, it is still in the operation
 {
   const S2 = G.S; const f2 = G.Fac.get(f.id); f2.stock.food = 40;
-  const vv = [...S2.villagers.values()].find(p => p.set === set.id && p.age > 18 && p.age < 50 && !p.captive && G.Possess.can(p).ok && !A.roleOf(p) && !(p.carry && p.carry.op));
+  // (one with no beast that means harm about — by the world's own word on it, Animals.nearThreat and threat, twice as far as
+  // the world looks, for the seconds of the case —: given back, a wolf at hand is the world's flight, which puts the load down
+  // and leaves the operation, as anyone's; in the world of the seed 7 after the reg16, the one taken fled a wolf 0.1 s after)
+  const calm = p => { let n = 0; G.Animals.nearThreat(p.x, p.y, 12, a => { if (G.Animals.threat(a)) n++; }); return !n; };
+  const vv = [...S2.villagers.values()].find(p => p.set === set.id && p.age > 18 && p.age < 50 && !p.captive && G.Possess.can(p).ok && !A.roleOf(p) && !(p.carry && p.carry.op) && calm(p));
   const op = A.start('teste', { from: 'f:' + f2.id, to: 'h:' + vv.home, goods: { food: 2 }, fac: f2.id });
   G.Vg.endTask(vv); clearHands(vv); A.join(op, vv, 'carregador');
   D.move('f:' + f2.id, 'v:' + vv.id, 'food', 2, { op: op.id, code: 'pegar', by: vv.id });

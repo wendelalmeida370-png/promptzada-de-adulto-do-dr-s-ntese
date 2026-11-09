@@ -83,11 +83,15 @@ ok('p2 o manifesto', !!op && op.goods.sal === 14 && op.from === 's:' + sh.id && 
 // ---------------- p3: the team unloads it to the end
 {
   const seen = new Set();
+  // (the house of each one paid, at the moment of the pay — the ledger's own listener: a family moves on in the case's minutes —
+  // in the metropole of the generation 17 a stevedore of Mênfis had her pay in her house #9533 and moved with her family to the new
+  // #19315 2 s after it: the house at the end of the case was not the one paid, «ALGUM PARA QUEM NÃO CARREGOU»)
+  const homeAt = new Map(); D.onMove.push(e => { if (e[7] === op.id && e[8] === 'paga') homeAt.set(e[0], (S.villagers.get(e[9]) || {}).home); });
   const done = live(400, () => { for (const v of S.villagers.values()) if (v.carry && v.carry.op === op.id) seen.add(v.id); if (watch()) return true; return !A.live(op); });
   const deps = book(op, 'depositar'), pays = book(op, 'paga');
   const paid = Object.values(op.data.paid || {}).reduce((a, b) => a + b, 0);
-  // (each pay: from the people's treasury to the house — or the purse — of one who carried a crate of it)
-  const payOk = pays.every(e => e[3] === 'f:' + fac.id && e[5] === 'moedas' && seen.has(e[9]) && (e[4] === 'h:' + (S.villagers.get(e[9]) || {}).home || e[4] === 'p:' + e[9]));
+  // (each pay: from the people's treasury to the house — or the purse — of one who carried a crate of it, the house that was theirs then)
+  const payOk = pays.every(e => e[3] === 'f:' + fac.id && e[5] === 'moedas' && seen.has(e[9]) && (e[4] === 'h:' + homeAt.get(e[0]) || e[4] === 'p:' + e[9]));
   const inBook = r2(pays.reduce((a, e) => a + e[6], 0));
   // (what the store got, by the ledger: the unloading's deposits into the people's store — its stock is the people's own, and
   // the old economy's workshops fetch from it with no line, the salting house its salt: a count by the stock saw 14 come in

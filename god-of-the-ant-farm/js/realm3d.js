@@ -1612,6 +1612,15 @@ vec3 gxGrade( vec3 c ) {
       else if (G.S.clock - ch.sigT > (d2 <= 2 ? 0.25 : 1.5)) { ch.sigT = G.S.clock; const s = sigOf(cx, cy); if (!sameSig(s, ch.sig)) { buildNear(ch, s); n++; } }
       if (performance.now() - t0 > budget && n) break;
     }
+    // (and the near pictures kept beyond reach follow the world too, as slowly as the farther ones within it: kept as they were, a
+    // house founded in one stood unbuilt in its picture, and a bank's water over its lot, while the body stayed away — the
+    // house#21365 of the generation-17 metropole, founded at 84,84 two chunks from the body at the quay of Mênfis: «água desenhada
+    // sobre a terra fora do lugar», e17)
+    if (!(performance.now() - t0 > budget && n)) for (const k of keep) {
+      const ch = chunks.get(k); if (!ch || !ch.near || G.S.clock - ch.sigT <= 1.5) continue;
+      ch.sigT = G.S.clock; const s = sigOf(ch.cx, ch.cy); if (!sameSig(s, ch.sig)) { buildNear(ch, s); n++; }
+      if (performance.now() - t0 > budget && n) break;
+    }
     // (behind the body, beyond reach: thrown away, its geometry given back)
     for (const ch of chunks.values()) if (ch.near && !keep.has(ckey(ch.cx, ch.cy))) dropNear(ch);
     // (the far pictures follow the world too, slowly: one checked each frame)

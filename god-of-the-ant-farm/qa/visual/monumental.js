@@ -176,6 +176,27 @@ function HELP(G) {
       if (Math.hypot(st().X - last[0], st().Z - last[1]) < 0.004) { if (++still > 25) break; } else still = 0; last = [st().X, st().Z]; }
     IN.mz = 0; IN.mx = 0; for (let q = 0; q < 6; q++) fr(); return Math.hypot(X - st().X, Z - st().Z);
   };
+  // (the way in at a plan's entrance as a player takes it — world metres —: up the steps on their own line, as the soleira's 4b goes
+  // up a flight (T-288): of a floor over the street with an outside flight up to it (Interiors' 'degraus': a temple's podium), the
+  // steps before its foot (Space.feet), then that flight on the same line, then the door's middle; else the door's own steps. A
+  // straight flight into the street stands to one side of the middle where the street has something before it: the Egyptian temple
+  // of 8 of the generation-16 metropole had its seventeen treads 0.7 m to the side, a metre wide, its podium's face 4.7 m high
+  // beside them — the straight line at the door's middle went by the steps, into that face)
+  H.wayIn = function (b, p) {
+    const T = G.Space.TILE, Sp = G.Space; const Wd = q => [b.x * T + q[0], b.y * T + q[1]]; const lot = { w: b.w * T, d: b.h * T }; const e = p.entrance; const pts = [];
+    const h = p.holes.find(q => q.door === e.door && q.kind !== 'janela'); const w = h && p.walls[h.wall];
+    // (up a flight of Space's steps: from a stride past its foot; a side flight over each of its treads to its landing; a straight
+    // one up its own line to its top tread — and the line it is on, along its side)
+    const up = fl => { const L = fl.treads.slice().sort((q, c) => q.y - c.y), lo = L[0]; const side = fl.treads.filter(t => t.kind === 'side').sort((q, c) => c.k - q.k);
+      pts.push(Wd(fl.P(lo.a, lo.n + lo.wn / 2 + 0.5))); if (side.length) { for (const t of side) pts.push(Wd(fl.P(t.a, t.n))); pts.push(Wd(fl.P(0, 0.3))); return 0; } pts.push(Wd(fl.P(lo.a, 0.3))); return lo.a; };
+    const st = w && p.stairs.find(q => q.kind === 'degraus' && q.lv1 === w.lv);
+    if (st) { const r = st.r, dx = st.dir[0], dz = st.dir[1]; const f = dx ? [dx > 0 ? r[0] : r[2], (r[1] + r[3]) / 2] : [(r[0] + r[2]) / 2, dz > 0 ? r[1] : r[3]], t = dx ? [dx > 0 ? r[2] : r[0], f[1]] : [f[0], dz > 0 ? r[3] : r[1]];
+      const fo = Sp.feet(st); const ff = Sp.doorFlight(b, p.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc); let a = 0;
+      if (ff && ff.treads.length) a = up(ff); else pts.push(Wd([f[0] - dx * 0.6, f[1] - dz * 0.6]));
+      const o = dx ? [0, a] : [a, 0]; pts.push(Wd([f[0] + dx * 0.1 + o[0], f[1] + dz * 0.1 + o[1]]), Wd([t[0] - dx * 0.2 + o[0], t[1] - dz * 0.2 + o[1]])); }
+    else if (w) { const l = p.levels.find(q => q.lv === w.lv); const fl = Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, false); if (fl && fl.treads.length) up(fl); }
+    pts.push(Wd([e.x, e.z])); return pts;
+  };
   // (a door of a plan between two rooms — its middle, in the lot's metres —, and the way through it from one room to the other: the
   // points a hand before it on either side)
   H.doorBetween = function (p, ra, rb) {
@@ -848,13 +869,14 @@ async function browserPart() {
     });
     const pics3 = [];
     for (const m of more) { if (m.why) { pics3.push(`${m.tag}: ${m.why}`); continue; } const sr = await shot(m.tag, { at: m.at, attach: true, body: m.into, yaw: m.into, pitch: -0.3, dist: 6, eye: m.eye }); const f = path.join(OUT, m.tag + '.jpg'); pics3.push(!sr || !sr.placed ? `${m.tag}: o corpo não foi posto diante dele (a ${sr && sr.d} m)` : fs.existsSync(f) ? `${m.tag}.jpg ${(fs.statSync(f).size / 1024).toFixed(0)} KB (#${m.id} em ${m.x},${m.y}, ${m.st})` : `${m.tag}: não saiu`); }
-    // (into the Egyptian's hall: by the gate and across the court, the portal opened by the hand — Interiors.useDoor —, by day)
+    // (into the Egyptian's hall: up the steps before the podium on their line and by the gate (H.wayIn), across the court, the portal
+    // opened by the hand — Interiors.useDoor —, by day)
     const hall = await page.evaluate(() => {
       const H = window.__MON; const m = (window.__more || []).find(q => q.tag === '8-templo-egipcio'); if (!m || !m.id) return { ok: false, why: 'sem o templo egípcio' };
       const b = G.S.buildings.get(m.id); const z = H.palaceOf(b); const T = G.Space.TILE; const v = G.Possess.body(); const p = z.p, R = z.Rk; if (!p) return { ok: false, why: z.why };
       const court = p.rooms.find(q => q.fn === 'patio'), hy = p.rooms.find(q => q.fn === 'hipostila'); const e = p.entrance; G.S.time = 0.42;
       G.inSim++; v.inside = 0; v.x = (b.x * T + e.out[0]) / T; v.y = (b.y * T + e.out[1]) / T; v.path = null; G.inSim--; G.Avatar.attach(v, 0); window.__VIS.warm(2); window.__VIS.f(3);
-      G.inSim++; G.Interiors.useDoor(b, e.door, 'abrir', v); G.inSim--; H.walk(b.x * T + e.x, b.y * T + e.z, 600);
+      G.inSim++; G.Interiors.useDoor(b, e.door, 'abrir', v); G.inSim--; for (const q of H.wayIn(b, p)) H.walk(q[0], q[1], 600); // (up the steps on their own line: H.wayIn)
       const d = court && hy && H.doorBetween(p, court.id, hy.id); if (d) { G.inSim++; G.Interiors.useDoor(b, d.id, 'abrir', v); G.inSim--; H.walk(b.x * T + d.a[0], b.y * T + d.a[1], 600); H.walk(b.x * T + d.b[0], b.y * T + d.b[1], 600); }
       const mid = z.W(R.L / 2 + 0.8, (hy.r[1] + hy.r[3]) / 2 + 1.2); const dd = H.walk(mid[0], mid[1], 600); const back = z.W(R.L / 2, hy.r[1]);
       return { ok: true, d: +dd.toFixed(2), inside: v.inside === b.id, into: Math.atan2(back[1] - mid[1], back[0] - mid[0]) };

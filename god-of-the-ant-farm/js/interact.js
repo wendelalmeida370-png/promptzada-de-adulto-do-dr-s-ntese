@@ -45,7 +45,7 @@
   I.FACE = Math.PI / 4; // (radians: a door this far round from where the body looks, or less, is the door it faces — L-326)
   I.best = function () {
     const ctx = I.ctx(); if (!ctx || G.Avatar.swimming()) return null; // (the hands are swimming)
-    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1, seat = null, ss = -1, meal = null, ms = -1;
+    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1, seat = null, ss = -1, meal = null, ms = -1, other = null, xs = -1;
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
         // (t.reach: a target reached from farther than its kind — the door of a house from its doorstep)
@@ -59,6 +59,7 @@
         if (p.passing && sc > ps) { ps = sc; pass = c; }
         if (p.opens && sc > os) { os = sc; open = c; }
         if (!t.here && !p.here && sc > fs && aim(ctx, t.X, t.Z).ang <= I.FACE) { fs = sc; faced = c; }
+        if (!t.here && !p.here && !p.door && sc > xs && aim(ctx, t.X, t.Z).ang <= I.FACE) { xs = sc; other = c; } // (and the faced that is not a door's)
       }
     }
     if (!best) return null;
@@ -87,7 +88,14 @@
     // the house's own things — its bed, its stairs — as they were)
     else if (open && !best.p.door && !best.p.urgent && !(best.t.pref > 0) && !G.Avatar.indoors()) {
       const a = aim(ctx, best.t.X, best.t.Z), b = aim(ctx, open.t.X, open.t.Z);
-      if (b.ang <= I.FACE && !(!best.p.here && a.d < b.d && a.ang + I.AHEAD < b.ang)) best = open;
+      if (b.ang <= I.FACE && !(!best.p.here && a.d < b.d && a.ang + I.AHEAD < b.ang)) {
+        // (the water's, with no place of its own, gives way to the door — but by the same rule what the body faces does not: an
+        // animal a stride before the body, nearer and more in front than the door, is the animal. On the doorstep in a canal of the
+        // house#15649 of the generation-16 metropole, the pig at 0° and 0.70 m, the door at 40° and 1.89 m, the fish a stride ahead
+        // won the score and the door won the fish: «Fechar a porta» — against the rule of the porta 3)
+        const f = (best.p.here || best.t.here) && other ? aim(ctx, other.t.X, other.t.Z) : null;
+        best = f && f.d < b.d && f.ang + I.AHEAD < b.ang ? other : open;
+      }
     }
     const c = best.p.can(ctx, best.t);
     return { id: best.p.id, t: best.t, label: best.p.label(ctx, best.t), ok: c.ok, why: c.why || '', p: best.p };
@@ -528,28 +536,14 @@
   function workLoad(c) { if (!c || !(c.n > 0) || !c.op || !G.Act) return null; const op = G.Act.get(c.op); const def = op && G.Act.live(op) ? G.Act.DEFS[op.def] : null; return def && def.acts && def.acts.depositar ? op : null; }
   I.workLoad = workLoad;
   const whyWork = op => { const dest = op.def === 'descarga' ? G.Possess.storeOf(op) : null; const nm = G.Act.DEFS[op.def].name || 'Trabalho'; return `Esta carga é d${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm.toLowerCase()}: ${dest ? 'leve-a ' + G.Possess.toB(dest) : 'leve-a aonde ela pede'}.`; };
-  // a load brought to a store: the world's own count of a delivery (villagers.js 'deliver') for the body as for anyone — a year of
-  // plenty doubles the stone and the wood, what came along with the load goes in too. Done in the world's step
+  // a load brought to a store: the world's one door of a delivery for the body as for anyone (villagers.js Vg.deliver) — a load
+  // that belongs somewhere only there, what does not fit left in the arms; a plain one into the people's store through the depot,
+  // in the ledger, a year of plenty doubling the stone and the wood, what came along with the load in too. Done in the world's
+  // step. (It counted a plain load in the store by its own hand — Village.addStock, the hands emptied by hand —: no line in the
+  // ledger, and in the corpo-mundo the body's delivery was told from a neighbour's, in the same seconds, only by the stock)
   function deliver(w, b) {
-    const S = G.S; const c = w.carry; if (!c || !(c.n > 0)) return { ok: false, why: 'Suas mãos estão vazias.' };
-    if (!S.buildings.has(b.id) || !b.built) return { ok: false, why: 'Não existe mais.' };
-    const fid = G.Fac.idOfV(w); if (G.Village.facOfSet(b.set) !== fid) return { ok: false, why: 'Isto é de outro povo: o estoque daqui não é do seu.' };
-    // (a load that belongs somewhere goes only there, by the depot, as the world's people take theirs (activity.js runCarga): never
-    // into the people's store by mistake; what does not fit stays in the arms)
-    const bound = boundOf(c);
-    if (bound) {
-      if (bound !== 'f:' + fid) return { ok: false, why: whyBound(bound) };
-      const r = G.Depot.move('v:' + w.id, bound, c.k, c.n, { op: c.op || 0, code: 'entrega', by: w.id, part: true });
-      if (!r.ok) return { ok: false, why: 'Não cabe mais nada no estoque do seu povo.' };
-      G.FX && G.FX.deposit(w.x, w.y, c.k, r.n); G.Possess.deed('entrega'); return { ok: true, k: c.k, n: r.n };
-    }
-    const k = c.k, n = c.n * (S.blessed && (k === 'stone' || k === 'wood') ? 2 : 1);
-    const add = G.Village.addStock(k, n, G.Fac.idOfV(w)); w.st[k] = (w.st[k] || 0) + c.n;
-    if (add > 0) G.FX && G.FX.deposit(w.x, w.y, k, add);
-    if (c.extra) G.Riches && G.Riches.unload(w, c.extra);
-    G.Riches && G.Riches.delivered && G.Riches.delivered(w, c, add);
-    w.carry = null; G.Possess.deed('entrega');
-    return { ok: true, k, n: c.n };
+    const r = G.Vg.deliver(w, b); if (r.ok) G.Possess.deed('entrega');
+    return r;
   }
   // a building's card: what it is, whose it is, who lives or works there, what it holds — the world's own numbers
   function buildingCard(b, me) {
