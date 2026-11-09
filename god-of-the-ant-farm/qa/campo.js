@@ -107,6 +107,12 @@ const sOf = b => b.crops.map(c => c.s).join('');
 const ripe = () => ({ s: 3, g: 1, c: 0 });
 // (the farmer stands on the farm: its crops are the nearest — the world's farmTask chooses by distance)
 const onFarm = b => [b.x + 1, b.y + 1];
+// (the harvest in the hands — the field's food, marked grain —, at the farm work or on its way to the store: a crop that fills
+// the hands sends its farmer to the store with it at once — 6 or more, villagers.js —, and the Arrozal of Mênfis, by the Nile,
+// gives 9 a crop: there the harvest is in the hands only on the way. In the metropole of the generation 16 Nefertari had the 9
+// of her first crop in her arms at 3 s, walking them to the store, and the wait for food in the hands at the farm work ran its
+// 60 s — the board made her a miner meanwhile —: «morreu com 0 de comida nas mãos», «a roça caiu com 0»)
+const harvestIn = v => !!(v.carry && v.carry.k === 'food' && v.carry.grain && v.carry.n > 1e-6) && !!v.task && (v.task.type === 'farm' || v.task.type === 'deliver');
 if (!FARM) console.log(`FALHOU | campo mundo | ${world}: nenhuma roça com dois agricultores na cidade`);
 else {
   const b0 = S().buildings.get(FARM); console.log(`${world}: a roça #${FARM} de ${S().settlements.get(b0.set).name} (${Es.grainOf(b0).name})`);
@@ -132,8 +138,8 @@ else {
   {
     const P = farmSetup(ripe); const b = P.b; const v = P.farmers[0]; const Hd = watchHands(P.farmers.map(x => x.id));
     send(v, b, onFarm(b));
-    live(60, Hd.step, () => held(v).food > 0 && v.task && v.task.type === 'farm');
-    const n = held(v).food || 0; const mine = b.crops.findIndex(c => c.c === v.id); const L0 = seen.length;
+    live(60, Hd.step, () => harvestIn(v));
+    const n = held(v).food || 0; const mine = b.crops.findIndex(c => c.c === v.id); const L0 = seen.length; const way = v.task && v.task.type === 'deliver';
     // (room in the people's store for what is in his hands, made by the god at the moment he dies, as the r3 of the
     // rebanho.js keeps it (T-327): a full store takes at its door only what fits — the inheritance's rest lost with its line,
     // 'sem-lugar', as the world does —, and the case is the inheritance, not the room. Tenochtitlan's store of the generation
@@ -146,7 +152,7 @@ else {
     live(180, Hd.step, () => b.crops.every(c => c.s !== 3));
     const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c2', n > 0 && Math.abs(herd - n) < 0.01 && (mine < 0 || b.crops[mine].s !== 3) && b.crops.every(c => c.s !== 3) && !lost.length && Hd.reached('food') && !bad.length,
-      `${v.name} morreu com ${n} de comida nas mãos: ao armazém pelo livro ('herdado') ${herd}; o canteiro ${mine} que ele segurava ${mine < 0 ? '(nenhum)' : b.crops[mine].s !== 3 ? 'foi colhido por outro' : 'ficou maduro, preso'}; a roça ${sOf(b)}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `${v.name} morreu com ${n} de comida nas mãos${n > 0 ? (way ? ' (a colheita a caminho do armazém)' : ' (na roça)') : ''}: ao armazém pelo livro ('herdado') ${herd}; o canteiro ${mine} que ele segurava ${mine < 0 ? '(nenhum)' : b.crops[mine].s !== 3 ? 'foi colhido por outro' : 'ficou maduro, preso'}; a roça ${sOf(b)}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   // c3 a save in the middle of the season
   {
@@ -188,29 +194,38 @@ else {
   // c5 the god brings the farm down with the harvest in the hands
   {
     const P = farmSetup(ripe); const b = P.b; const v = P.farmers[0]; const Hd = watchHands([v.id]);
-    send(v, b, onFarm(b)); live(60, Hd.step, () => held(v).food > 0 && v.task && v.task.type === 'farm');
-    const n = held(v).food || 0; V.destroyBuilding(b, 'meteor'); Hd.step();
+    send(v, b, onFarm(b)); live(60, Hd.step, () => harvestIn(v));
+    const n = held(v).food || 0; const way = v.task && v.task.type === 'deliver'; V.destroyBuilding(b, 'meteor'); Hd.step();
     live(120, Hd.step, () => !(held(v).food > 0));
     const got = Hd.flow('food').toF; const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c5', n > 0 && !S().buildings.has(FARM) && !(held(v).food > 0) && got >= n - 0.01 && Hd.reached('food') && !lost.length && !bad.length,
-      `a roça caiu com ${n} de comida nas mãos de ${v.name}: a roça ${S().buildings.has(FARM) ? 'ainda lá' : 'sumiu'}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `a roça caiu com ${n} de comida nas mãos de ${v.name}${n > 0 ? (way ? ' (a colheita a caminho do armazém)' : ' (na roça)') : ''}: a roça ${S().buildings.has(FARM) ? 'ainda lá' : 'sumiu'}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 
 // ------------------------------ the estates ------------------------------
 // (an estate of these types with its hands — the role of the type, the job there —, the one with the most)
+// (and, with none such, the first of them with no hands at all: its trade given by the god's hand in the case — the metropole
+// of the generation 16 is a younger world, and its orchards and plantations stand with nobody of the trade at them; the
+// keeper of the case's hands below holds them in it, as T-484)
 function estPick(test) {
-  let best = null;
+  let best = null, bare = null;
   for (const b of [...S().buildings.values()].sort(byId)) {
     if (!b.built || !Es.is(b.type) || !test(b)) continue;
     const role = G.BDEF[b.type].role; const ws = [...S().villagers.values()].filter(v => v.job === b.id && v.role === role && fit(v));
     if (ws.length && (!best || ws.length > best.n)) best = { id: b.id, n: ws.length };
+    if (!ws.length && !bare) bare = b.id;
   }
-  return best && best.id;
+  return best ? best.id : bare;
 }
 function estSetup(id, prep) {
   fresh(); morning(); const b = S().buildings.get(id); const role = G.BDEF[b.type].role;
-  const ws = [...S().villagers.values()].filter(v => v.job === b.id && v.role === role && fit(v)).sort(byId);
+  let ws = [...S().villagers.values()].filter(v => v.job === b.id && v.role === role && fit(v)).sort(byId);
+  if (!ws.length) {
+    const f = G.Fac.get(V.facOfSet(b.set));
+    ws = [...S().villagers.values()].filter(v => v.set === b.set && fit(v) && v.role !== 'guerreiro' && !(f && f.leader === v.id) && D.strength(v) > 0 && !(S().avatar && S().avatar.id === v.id)).sort((p, q) => (!!p.job - !!q.job) || p.id - q.id).slice(0, 2);
+    for (const v of ws) { G.Vg.endTask(v); v.role = role; v.job = b.id; } handEst = ws.length;
+  } else handEst = 0;
   b.claim = {}; if (prep) prep(b);
   return { b, ws, role, base: base() };
 }
@@ -219,6 +234,7 @@ function estSetup(id, prep) {
 // metrópole of the generation 14 the board made Metztli, of the banana grove, a merchant 44 s into the c6, and Itzel a miner,
 // and Papan, the olive grove's only hand, a hunter 4 s into the c7; the case is what the hands pick and press reaching the
 // store, not whom the board keeps, T-484)
+let handEst = 0; // (how many hands the god's hand gave the case's estate: told in the case)
 const keepHands = P => () => { for (const x of P.ws) { const v = S().villagers.get(x.id); if (v && !v.captive && (v.role !== P.role || v.job !== P.b.id)) { v.role = P.role; v.job = P.b.id; } } };
 const fieldAt = b => [b.x + 1, b.y + 1];
 // c6 the orchard and the plantation: what they bear to the store
@@ -243,7 +259,7 @@ const fieldAt = b => [b.x + 1, b.y + 1];
     live(400, () => { kh(); Hd.step(); pick(); }, () => pickedK.size === 3 && P.ws.every(x => !(held(x)[k] > 0)));
     const picked = pickedK.size; const lost = Hd.lost(); const bad = newBad(P.base);
     const okk = picked === 3 && Hd.born(k) > 0 && Hd.reached(k) && !lost.length && !bad.length; good = good && okk;
-    out.push(`${V.buildName(b)} #${b.id}: colhidos ${picked} de 3 pés maduros; ${Hd.say(k)}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    out.push(`${V.buildName(b)} #${b.id}${handEst ? " (o ofício pela mão do deus a " + handEst + ")" : ""}: colhidos ${picked} de 3 pés maduros; ${Hd.say(k)}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   if (ids.length) ok('c6', good, out.join(' · '));
 }

@@ -74,7 +74,10 @@ function restockNow(P) {
 function buyer(P, k) {
   return [...S().villagers.values()].filter(o => o.set === P.b.set && fit(o) && o.home && !P.crew.includes(o) && D.get('h:' + o.home, 'moedas') >= 5 && D.room('h:' + o.home, k) >= 1).sort((a, c) => G.dist2(a.x, a.y, P.b.x, P.b.y) - G.dist2(c.x, c.y, P.b.x, P.b.y) || a.id - c.id)[0];
 }
-const shopAt = (o, P, k) => { G.Vg.endTask(o); o.hunger = 10; o.sleeping = false; return G.Vg.H.setTask(o, { type: 'shop', id: P.b.id, k, pri: 1.05 }); };
+// (with free hands: what is in them put away first, as send() does — a purchase the two hands have no room for is not made, the
+// world's rule (economy.js, runShop). In the Argos of the generation 16 the buyer, Jasão, had 3 of wood in his arms, and his
+// errand ended at the stall without a word, «das bancas às mãos 0»)
+const shopAt = (o, P, k) => { G.Vg.endTask(o); o.hunger = 10; o.sleeping = false; if (o.carry && o.carry.n > 1e-6 && o.carry.k !== 'water') G.Vg.toStore(o, G.Fac.idOfV(o), 'teste'); return G.Vg.H.setTask(o, { type: 'shop', id: P.b.id, k, pri: 1.05 }); };
 
 // f1 the morning of the fair
 {
@@ -103,9 +106,13 @@ const shopAt = (o, P, k) => { G.Vg.endTask(o); o.hunger = 10; o.sleeping = false
   live(150, stocked, () => o && lines(P, e => e[8] === 'compra' && e[4] === 'v:' + o.id).length > 0);
   live(120, null, () => o && !(o.carry && o.carry.n > 1e-6));
   const goods = sum(lines(P, e => o && e[8] === 'compra' && e[3] === 'b:' + P.b.id && e[4] === 'v:' + o.id));
-  const pay = lines(P, e => o && e[8] === 'compra' && e[5] === 'moedas' && e[3] === 'h:' + o.home);
+  // (the coins of his own purchase — by him, from a house —, and the purchase got home — to the house it was bought for, his
+  // then —: counted by his house, the payment of another of it was taken for his. In the Argos of the generation 16 Jasão
+  // moved to another house in the middle of the case, and a pot one of that house bought, 1,1 to the treasury, was told as his
+  // payment, «pagou 1.1 ao tesouro», with nothing bought)
+  const pay = lines(P, e => o && e[8] === 'compra' && e[5] === 'moedas' && e[9] === o.id && e[3][0] === 'h');
   const toState = sum(pay.filter(e => e[4] === 'f:' + P.f.id)); const elsewhere = sum(pay.filter(e => e[4] !== 'f:' + P.f.id));
-  const home = sum(lines(P, e => o && e[3] === 'v:' + o.id && e[4] === 'h:' + o.home && e[5] === k));
+  const home = sum(lines(P, e => o && e[8] === 'compra-em-casa' && e[3] === 'v:' + o.id && e[4][0] === 'h' && e[5] === k));
   const bad = newBad(P.base);
   ok('f2', !feast && !!o && !!t && goods > 0 && (coin ? toState > 0 : !pay.length) && !elsewhere && Math.abs(home - goods) < 0.01 && !bad.length,
     `${feast ? 'uma festa já em curso na cidade; ' : ''}${o ? o.name : 'ninguém'}: das bancas às mãos ${goods} de ${k}, à casa ${home}; pagou ${toState} ao tesouro${elsewhere ? ' e ' + elsewhere + ' a outro' : ''}${coin ? '' : ' (povo sem moeda)'}${bad.length ? '; ' + bad.join(' · ') : ''}`);

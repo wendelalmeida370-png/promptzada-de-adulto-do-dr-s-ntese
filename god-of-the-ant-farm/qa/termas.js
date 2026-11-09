@@ -19,13 +19,29 @@ const world = process.argv[2] || 'metropole';
 // were saved, L-419, and the ready worlds of the generation 7 are older than the trades of the Patch 2, which the load of
 // before dealt at once; the twelve seconds stay for any world, a save of before too, T-298)
 M.pronto(world); M.viver(12);
+// (a world with no baths and their stoker — the metropole of the generation 16 is a younger world, its first metropolis of
+// the year 41: «nenhum banho com foguista» —: the baths the world has, in the most peopled town of coin first, or, with none,
+// the god's hand puts them where the town's own planner would; and one of the town takes the stoker's trade by the god's hand,
+// held in it while the cases last — the town's board would deal him back at its next pass —, as the mina.js's miners (T-387))
+let handT = null, byGodT = false;
+if (![...G.S.buildings.values()].some(b => b.type === 'banhos' && b.built && Te.keeperOf(b))) {
+  const order = (a, c) => (E.coinage(c.fac) - E.coinage(a.fac)) || V.pop(c.id) - V.pop(a.id) || a.id - c.id;
+  let b = [...G.S.buildings.values()].filter(q => q.type === 'banhos' && q.built).sort((p, q) => order(G.S.settlements.get(p.set), G.S.settlements.get(q.set)) || p.id - q.id)[0] || null;
+  if (!b) for (const s of [...G.S.settlements.values()].sort(order)) { const pos = V.findSite(s, 'banhos'); if (!pos || pos.demolish) continue; b = V.addBuilding('banhos', pos[0], pos[1], s.id, true); byGodT = true; break; }
+  if (b) {
+    const f = G.Fac.get(V.facOfSet(b.set));
+    const v = [...G.S.villagers.values()].filter(o => o.set === b.set && o.age >= 18 && o.age < 55 && !o.captive && !o.jail && !o.aboard && !o.ug && o.role !== 'guerreiro' && !(f && f.leader === o.id) && D.strength(o) > 0).sort((a, c) => (!!a.job - !!c.job) || a.id - c.id)[0];
+    if (v) { G.Vg.endTask(v); v.role = 'foguista'; v.job = b.id; handT = { id: v.id, b: b.id }; }
+  }
+}
+const holdT = () => { if (!handT) return; const v = G.S.villagers.get(handT.id); if (v && !v.captive && (v.role !== 'foguista' || v.job !== handT.b)) { v.role = 'foguista'; v.job = handT.b; } };
 const snap = G.Save.serialize();
 const fresh = () => { M.reseed(4242); G.Save.apply(JSON.parse(snap)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); };
 const S = () => G.S;
 const r2 = x => Math.round(x * 100) / 100;
 const rule = QA.oficio; // (the trades' rule by its name: oficio-inv.js has more than one)
 const watch = bad => rule((sys, sev, msg) => { if (sys === 'oficio' && sev <= 2 && bad.length < 6 && !bad.includes(`S${sev} ${msg}`)) bad.push(`S${sev} ${msg}`); }, S());
-const liveSec = (sec, until, bad, each) => { for (let k = 0; k < sec; k++) { if (keeping) keeping(); M.viver(1); if (each) each(); if (bad && k % 5 === 4) watch(bad); if (until && until()) return true; } return false; };
+const liveSec = (sec, until, bad, each) => { for (let k = 0; k < sec; k++) { if (keeping) keeping(); holdT(); M.viver(1); if (each) each(); if (bad && k % 5 === 4) watch(bad); if (until && until()) return true; } return false; };
 const seen = []; D.onMove.push(e => { seen.push(e); });
 G.inSim++;
 // the baths of the tests: with their stoker, in the most peopled town of coin (else of any)
@@ -41,7 +57,7 @@ function pick() {
 const P = pick();
 if (!P) { console.log(`FALHOU | termas mundo | ${world}: nenhum banho com foguista`); process.exit(1); }
 const town = () => S().settlements.get(P.set);
-console.log(`${world}: ${V.buildName(P)} #${P.id} de ${town().name} (${(G.Fac.get(V.facOfSet(P.set)) || {}).civ}, ${V.pop(P.set)} habitantes, ${Te.withCoin(P) ? 'de moeda' : 'sem moeda'}); abrem ${Te.horas(P).abre}, fecham ${Te.horas(P).fecha}`);
+console.log(`${world}: ${V.buildName(P)} #${P.id} de ${town().name} (${(G.Fac.get(V.facOfSet(P.set)) || {}).civ}, ${V.pop(P.set)} habitantes, ${Te.withCoin(P) ? 'de moeda' : 'sem moeda'}); abrem ${Te.horas(P).abre}, fecham ${Te.horas(P).fecha}${handT ? (byGodT ? "; os banhos e o foguista pela mão do deus" : "; o foguista pela mão do deus") : ""}`);
 // wood in the store beyond what it keeps for its works, the morning before the opening
 function ready(b) {
   const f = G.Fac.get(V.facOfSet(b.set)); if (D.free('f:' + f.id, 'wood') < 40) D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true });
@@ -140,8 +156,11 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
   // fields' work and a delivery —, and without the hand the furnace stayed cold for the 90 s, T-281)
   if (op && A.live(op)) { D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true }); keeping = keep(f); }
   // (the stoker ends what he does — an idle look at the cold furnace lasts up to 16 s —, walks to the store and back, and feeds
-  // it: 90 s, inside the day)
-  const lit = op && liveSec(90, () => !A.live(op) || op.data.lenha >= 1, bad); keeping = null;
+  // it: 90 s, inside the day — the clock held at the hour the wood came back, the test's hand, as the counters' cases hold it:
+  // in the metropole of the generation 16 the cold part ended at 0,40, the capital's trade had taken Sitamun, the stoker, who
+  // was on the road back with its coins, and she fetched the wood, ate, and came to the furnace at 0,63, when the evening sends
+  // the day's workers home: «a fornalha apagada»)
+  const tw = S().time; const lit = op && liveSec(90, () => { if (S().time > tw) S().time = tw; return !A.live(op) || op.data.lenha >= 1; }, bad); keeping = null;
   ok('e2 sem-lenha', !!op && !!cold && cold.frios >= 1 && cold.quentes === 0 && cold.lenha === 0 && lit && op.data.lenha >= 1 && !bad.length, op ? `sem lenha: ${cold.frios} banhos frios, ${cold.quentes} quentes, ${cold.lenha} de lenha queimada; com lenha no armazém de novo: ${op.data.lenha >= 1 ? `a fornalha acesa (${op.data.lenha} de lenha)` : 'a fornalha apagada'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'não abriram');
 }
 // ---------------- e3 the stoker dies with the fire lit ----------------

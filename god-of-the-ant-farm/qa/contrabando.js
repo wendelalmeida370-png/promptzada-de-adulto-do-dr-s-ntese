@@ -62,6 +62,12 @@ const seen = []; D.onMove.push(e => { seen.push(e); });
 // T-391 — until the law takes it: a seizure from his hands, k3)
 let HOLD = null;
 const hold = () => { if (!HOLD) return; for (const id of HOLD.ids.slice()) { if (seen.slice(HOLD.L0).some(e => e[8] === 'apreendido' && e[3] === 'v:' + id)) { HOLD.ids.splice(HOLD.ids.indexOf(id), 1); continue; } const v = S().villagers.get(id); if (v && fit(v) && (v.role !== 'contrabandista' || v.job !== HOLD.mk)) { v.role = 'contrabandista'; v.job = HOLD.mk; } } };
+// (and at the board's own pass, inside the world's step — G.Eco.place closes it —: held only between the steps, the trade was
+// the board's within the step, and a decide of that same step saw no smuggler. In the metropole of the generation 16
+// Tenochtitlan, short of hands, cuts both its smugglers at every pass, and a pass in the middle of k1's theft gave Axayácatl
+// the bed of one who is no smuggler: the hold gave the trade back after the step, and his load went to the shelf by its mark
+// — 'entrega' —, not by the theft's own way: «das mãos à prateleira 0»)
+const place0 = E.place; E.place = function (s) { if (HOLD && s && s.id === (S().buildings.get(HOLD.mk) || {}).set) hold(); return place0.apply(this, arguments); };
 const live = (sec, each, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); hold(); if (each) each(); if (until && until()) return true; } return false; };
 const base = () => new Set(QA.check().filter(q => q.sev <= 2).map(q => `${q.sys}|${q.msg}`));
 const newBad = B => QA.check().filter(q => q.sev <= 2 && !B.has(`${q.sys}|${q.msg}`)).slice(0, 3).map(q => `S${q.sev} ${q.sys} ${q.msg}`);

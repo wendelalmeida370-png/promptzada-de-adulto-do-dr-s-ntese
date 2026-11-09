@@ -51,18 +51,27 @@ function listen() { if (falas0) return; falas0 = G.Falas.say; G.Falas.say = func
 const saidBy = (id, t0) => said.filter(e => e[0] === id && e[3] >= t0);
 // a town that wants a merchant for its market: the god's will said to the people's own planner (the demand of jobs), which
 // names one by its own rules and keeps him — a merchant made by hand would be sent back to the fields at the next round
-let demand0 = null;
+let demand0 = null, kept0 = null;
 // — and keeps the ones it has while the test runs (a merchant the planner sends to the quay closes his stall: the world's
-// rule, not the test's subject)
+// rule, not the test's subject) — the trade kept also from the cut of a town short of hands (E.kept: what the cut and the
+// ceiling leave, D-090, D-102) —; and when the planner names none — a town short of hands names no merchant at all: Hedeby, of
+// the generation-16 metropole and «cidade», with fifteen hands fewer than its trades and its works ask —, one of the town takes
+// the trade by the god's hand, as moedas.js's keeper (T-393), and the kept trade holds him in it
 function wantMerchant(tw, mkt) {
-  if (!demand0) demand0 = E.demand;
+  if (!demand0) demand0 = E.demand; if (!kept0) kept0 = E.kept;
   const mine = () => [...S.villagers.values()].filter(v => v.set === tw.id && v.role === 'mercador' && v.job === mkt.id);
   const keep = Math.max(1, mine().length);
   E.demand = function (set, fac, Aa) { const o = demand0.call(this, set, fac, Aa); if (set.id === tw.id) o.mercador = Math.max(o.mercador || 0, keep); return o; };
+  E.kept = function (set, fac, ask) { const o = kept0.call(this, set, fac, ask); if (set.id !== tw.id) return o; return Object.assign({}, o || {}, { mercador: Math.max((o && o.mercador) || 0, keep) }); };
   for (let k = 0; k < 8; k++) { const m = mine().sort((a, b) => a.id - b.id)[0]; if (m) return m; G.Village.forceUpdate(); }
-  return null;
+  const fac = G.Fac.get(tw.fac);
+  const hand = [...S.villagers.values()].filter(v => v.set === tw.id && v.age >= 18 && v.age < 62 && !v.captive && !v.jail && !v.aboard && !v.ug && v.home && E.homeOf(v) && v.role !== 'guerreiro' && !(fac && fac.leader === v.id) && !(S.avatar && S.avatar.id === v.id)).sort((a, b) => (!!a.job - !!b.job) || a.id - b.id)[0];
+  if (!hand) return null;
+  G.Vg.endTask(hand); hand.role = 'mercador'; hand.job = mkt.id; byHand.add(tw.id);
+  return hand;
 }
-const wantNone = () => { if (demand0) E.demand = demand0; };
+const byHand = new Set(); // (the towns whose merchant the god's hand named: told in the cases)
+const wantNone = () => { if (demand0) E.demand = demand0; if (kept0) E.kept = kept0; };
 // (the test's hand: room on a stall whose sales furniture is full — its biggest other goods back to the people's store,
 // in the ledger — so that a wholesale forced by the test has where to go; the world's own merchant buys only what fits)
 function roomOn(z, k, n) {
@@ -754,7 +763,7 @@ function stallNow() {
     if (!links.every(l => l[1])) console.log(`   (n14: a descarga ${opd.st}${opd.wait ? ' (' + opd.wait + ')' : ''}, ${JSON.stringify((opd.log || []).slice(-6))}; ${mer.name} ${mer.task ? mer.task.type + '.' + mer.task.st : '-'}, banca ${JSON.stringify(zz.inv)} ${B.manned(zz) ? 'atendida' : 'sem ninguém'}; ${buyer.name} ${buyer.task ? buyer.task.type + '.' + buyer.task.st + (buyer.task.talk !== undefined ? ' fala ' + buyer.task.talk : '') : '-'}${buyer.carry ? ' ' + JSON.stringify(buyer.carry) : ''}; o povo do cais ${opTo}, o da banca f:${zz.fac})`);
     const order = links.every((l, i) => l[1] && (i === 0 || l[1][0] > links[i - 1][1][0]));
     fine14 = links.every(l => l[1]) && order && D.get('h:' + hb.id, K) >= 1 && !bad().length;
-    info = `${port.name}: ${links.map(([c, e]) => `${c} ${e ? e[3] + '→' + e[4] : 'FALTA'}`).join(' · ')}; ${order ? 'na ordem' : 'FORA DE ORDEM'}; ${E.name(K)} na casa de ${buyer.name}: ${D.get('h:' + hb.id, K)}`;
+    info = `${port.name}${byHand.has(port.id) ? ' (o mercador pela mão do deus)' : ''}: ${links.map(([c, e]) => `${c} ${e ? e[3] + '→' + e[4] : 'FALTA'}`).join(' · ')}; ${order ? 'na ordem' : 'FORA DE ORDEM'}; ${E.name(K)} na casa de ${buyer.name}: ${D.get('h:' + hb.id, K)}`;
     }
     }
     D.onMove.splice(D.onMove.indexOf(onK), 1); }
@@ -799,10 +808,14 @@ function stallNow() {
     if (!mer) { info = `${tw.name}${byGod ? ' (o mercado posto pelo deus)' : ''}: o povo não nomeou mercador para o mercado`; } else {
     // (the world may close the stall in the middle — a caravan takes its merchant, the planner names him to another
     // trade —: then the merchant the town has now, a stall, the wholesale on account and a buyer again, up to three times)
-    let zz = null, K = null, L0 = 0, onAccount = false, t0 = 0, n0 = 0, buyer = null, again = ''; const L00 = S.ledgerN;
+    let zz = null, K = null, L0 = 0, onAccount = false, t0 = 0, n0 = 0, buyer = null, again = '', rest = ''; const L00 = S.ledgerN;
     for (let att = 0; att < 3 && !buyer; att++) {
       if (att) { const m2 = wantMerchant(tw, mkt); again += ` (${zz.st === 'on' ? `a banca #${zz.id} não vendeu` : `a banca #${zz.id} fechou no meio: ${zz.why || zz.st}`}; outra vez com ${m2 ? m2.name : 'ninguém'})`; if (!m2) break; mer = m2; }
-      S.time = 0.1;
+      // (the merchant free, rested and fed before the wholesale of the case, the town calm — the world's own errands, the
+      // clock held, as for the counter's cases (prep): the planner's merchant may come to it worn, and in the «cidade» of the
+      // generation 16 Otávio, named in Roma for the case, went to bed at the first step and woke to the stall's own
+      // wholesale — cerâmica, couro, comida —, never the case's good: «levou azeite fiado (NÃO)»)
+      S.time = 0.1; rest = [calmTown(tw), waitFree(mer), body(mer)].filter(Boolean).join(', ');
       zz = B.of(mer) || B.open(mer, mkt); if (!zz) break;
       if (!K) K = E.MARKET_GOODS.filter(q => q !== 'food' && !(zz.inv[q] >= 1)).sort()[0] || 'tecido';
       if ((f.stock[K] || 0) < 6) D.make('f:' + f.id, K, 6, { code: 'teste' });
@@ -823,7 +836,7 @@ function stallNow() {
       if (buyer && !(zz.day.n > n0)) buyer = null;
     }
     if (!buyer) info = `${tw.name}: ninguém da cidade comprou na banca (${zz ? `a banca #${zz.id} ${zz.st}${zz.why ? ' — ' + zz.why : ''}, ${B.manned(zz) ? 'atendida' : 'sem ninguém'}` : 'nenhuma banca'}; ${mer.name}: ${mer.role}, ${mer.task ? mer.task.type + '.' + mer.task.st : 'sem tarefa'})${again}`; else {
-    went = true; start += again;
+    went = true; start += again + (rest ? ` (antes do atacado: ${rest})` : '');
     const hb = E.homeOf(buyer);
     const sale = book('venda', e => e[0] > L0 && e[3] === 'z:' + zz.id)[0]; const pay = sale && D.ledger().find(e => e[0] === sale[0] + 1);
     if (!sale) console.log(`   (n15: ${mer.name} ${mer.task ? mer.task.type + '.' + mer.task.st : '-'}, banca ${JSON.stringify(zz.inv)} ${B.manned(zz) ? 'atendida' : 'sem ninguém'}; ${buyer.name} ${buyer.task ? buyer.task.type + '.' + buyer.task.st + (buyer.task.talk !== undefined ? ' fala ' + buyer.task.talk : '') : '-'}; preço ${B.price(zz, K)}, daria ${B.wtp(buyer, hb, zz, K)})`);
@@ -841,7 +854,7 @@ function stallNow() {
     live(150, () => !!book('troca', e => e[0] > L0 && e[9] === mer.id).length && !mer.carry || watch());
     const owe1 = Object.values(zz.owe).reduce((a, b) => a + b, 0);
     ok15 = onAccount && !!sale && inKind && owe1 < owe0 - 1e-6 && !bad().length;
-    info = `${tw.name} (${f.civ}, sem moeda${byGod ? ', o mercado posto pelo deus' : ''}): ${mer.name} levou ${E.name(K)} fiado (${onAccount ? 'devendo ' + r2(zz.owe[K] || owe0) : 'NÃO'}); ${buyer.name} ${sale ? `comprou ${sale[6]} e pagou ${pay ? pay[6] + ' de ' + E.name(pay[5]) : '?'}` : 'NÃO comprou'} (${talk.slice(0, 3).join(' / ')}); a troca (${got} de comida, paga ${kindRef[0] === 'h' ? 'à casa do mercador' : 'à banca'}) levada de lá ao armazém: a dívida ${r2(owe0)} → ${r2(owe1)}`;
+    info = `${tw.name} (${f.civ}, sem moeda${byGod ? ', o mercado posto pelo deus' : ''}${byHand.has(tw.id) ? ', o mercador pela mão do deus' : ''}): ${mer.name} levou ${E.name(K)} fiado (${onAccount ? 'devendo ' + r2(zz.owe[K] || owe0) : 'NÃO'}); ${buyer.name} ${sale ? `comprou ${sale[6]} e pagou ${pay ? pay[6] + ' de ' + E.name(pay[5]) : '?'}` : 'NÃO comprou'} (${talk.slice(0, 3).join(' / ')}); a troca (${got} de comida, paga ${kindRef[0] === 'h' ? 'à casa do mercador' : 'à banca'}) levada de lá ao armazém: a dívida ${r2(owe0)} → ${r2(owe1)}`;
     // ---- n17: the stall closes owing — it pays first (its stock back to the store at what it cost, then the exchange
     // still at the house), and only the rest goes home: what was taken on account is never a gift. (The debt made and the
     // stall closed in the same moment, by the god's body in the merchant's place: the planner may send a merchant to the
