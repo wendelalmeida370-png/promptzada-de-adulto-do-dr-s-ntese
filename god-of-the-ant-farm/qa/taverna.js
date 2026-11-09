@@ -31,12 +31,17 @@ const liveSec = (sec, until, bad, each) => { for (let k = 0; k < sec; k++) { M.v
 // (what the ledger writes, as it is written, from the start of each case)
 const seen = []; D.onMove.push(e => { seen.push(e); });
 G.inSim++;
-// the tavern of the tests: one with its keeper, in the most peopled town of coin (else of any)
+// the tavern of the tests: one with its keeper, in a town of coin (else of any), the one the most of its town's grown people
+// have for the nearest — who goes out for a cup goes to the nearest tavern of the town within 30 tiles (G.Taverna.visitTask);
+// the town's most peopled first. In Mênfis of the generation 15 the keeper's tavern stood at the town's edge, the nearest of 2
+// of its 73 grown people — the others had the one of the middle —, and nobody came to it the whole night: T-511
+const near = new Map();
+for (const v of S().villagers.values()) { if (v.age < 16) continue; let nb = null, bd = 900; for (const b of E.byType(v.set, 'taverna')) { if (!b.built) continue; const d = G.dist2(v.x, v.y, b.x, b.y); if (d < bd) { bd = d; nb = b; } } if (nb) near.set(nb.id, (near.get(nb.id) || 0) + 1); }
 function pick() {
   let best = null;
   for (const b of S().buildings.values()) {
     if (b.type !== 'taverna' || !b.built || !T.keeperOf(b)) continue;
-    const sc = (T.withCoin(b) ? 1e6 : 0) + V.pop(b.set);
+    const sc = (T.withCoin(b) ? 1e9 : 0) + (near.get(b.id) || 0) * 1e4 + V.pop(b.set);
     if (!best || sc > best.sc) best = { b, sc };
   }
   return best && best.b;
@@ -44,7 +49,7 @@ function pick() {
 const P = pick();
 if (!P) { console.log(`FALHOU | taverna mundo | ${world}: nenhuma taverna com taverneiro`); process.exit(1); }
 const town = () => S().settlements.get(P.set);
-console.log(`${world}: ${V.buildName(P)} #${P.id} de ${town().name} (${(G.Fac.get(V.facOfSet(P.set)) || {}).civ}, ${V.pop(P.set)} habitantes, ${T.withCoin(P) ? 'de moeda' : 'sem moeda'}); abre ${T.horas(P).abre}, fecha ${T.horas(P).fecha}`);
+console.log(`${world}: ${V.buildName(P)} #${P.id} de ${town().name} (${(G.Fac.get(V.facOfSet(P.set)) || {}).civ}, ${V.pop(P.set)} habitantes, ${T.withCoin(P) ? 'de moeda' : 'sem moeda'}; a mais perto de ${near.get(P.id) || 0} adultos da cidade); abre ${T.horas(P).abre}, fecha ${T.horas(P).fecha}`);
 // the shelf with meals and the people's drink, the afternoon before the opening
 function ready(b) {
   const ref = 'b:' + b.id; const f = G.Fac.get(V.facOfSet(b.set)); const L = G.Tavern && G.Tavern.DRINK; const dk = ((L && (L[f.civ || 'classico'] || L.classico)) || { k: 'cerveja' }).k;
