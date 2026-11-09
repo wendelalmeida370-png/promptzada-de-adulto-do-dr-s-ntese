@@ -823,6 +823,24 @@ if (want('l15')) {
       notes.push(`(g) ${gw.name} morreu em ${hw.type}#${hw.id} com o bebê ${gb.name}, de outra casa, no colo: no mesmo instante, ${where}`);
     }
   }
+  // (h) the baby in arms by the edge of a tile (L-xx4): drawn a hair behind its arms, it was a hair across the edge — on the next
+  // tile, the water by the beach — while its arms stood on the sand, and what judges people by the tile they stand on judged it
+  // there (the twins of Gunnar «na água» after the sea's close, in the poderes of the round 16). A baby in its mother's arms out
+  // of doors at midday, the mother still (looking at a spot of her own) and held by the god's hand a hair inside the edge of her
+  // tile behind her back: at every step, the baby on her tile
+  open(); liveTo(0.45);
+  const Hh = [...S.villagers.values()].filter(b => b.age < 2 && !b.ug && !b.captive && b.carrier && b.carrier === b.mother && !b.inside && !b.sleeping).sort((p, q) => p.id - q.id).find(b => { const m = S.villagers.get(b.mother); return fit(m) && !m.inside && !m.sleeping && W.walkableXY(m.x, m.y); });
+  if (!Hh) notes.push('(h) nenhum bebê no colo da mãe na rua ao meio-dia');
+  else {
+    const m = S.villagers.get(Hh.mother); const tx = Math.floor(m.x), ty = Math.floor(m.y);
+    const pin = () => { m.x = m.face > 0 ? tx + 0.03 : tx + 0.97; m.y = ty + 0.5; m.path = null; };
+    G.Vg.endTask(m); pin(); G.Vg.H.setTask(m, { type: 'olhar', x: m.x, y: m.y, fx: m.x + 3, fy: m.y, pri: 3, until: S.clock + 20, what: 'teste', kind: 'olhar' });
+    let off = 0, n = 0, k = 0; const at = [];
+    live(2, () => { const b = S.villagers.get(Hh.id), c = b && S.villagers.get(b.carrier); if (k++ > 0 && b && c && c.id === m.id && !c.inside) { n++; if (Math.floor(b.x) !== Math.floor(c.x) || Math.floor(b.y) !== Math.floor(c.y)) { off++; if (at.length < 2) at.push(`${r3(b.x)},${r3(b.y)} e ela em ${r3(c.x)},${r3(c.y)}`); } } pin(); });
+    if (!n) notes.push(`(h) ${Hh.name} saiu do colo de ${m.name} no caso`);
+    else if (off) fail(`(h) o bebê ${Hh.name} no colo de ${m.name}, ela a um fio da borda da casa (${tx},${ty}) do mapa: em ${off} de ${n} passos noutra casa (${at.join('; ')})`);
+    else notes.push(`(h) ${Hh.name} no colo de ${m.name}, ela a um fio da borda da casa (${tx},${ty}) do mapa: em ${n} passos, sempre na casa dela`);
+  }
   ok('l15 o bebê muda de colo onde está (D-074)', good, notes.join(' · '));
 }
 

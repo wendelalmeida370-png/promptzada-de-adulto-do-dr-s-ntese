@@ -1859,6 +1859,10 @@
     if (held.length && !S.villagers.has(v.id)) for (const b of held) if (S.villagers.has(b.id) && b.carrier === v.id) { b.seekT = 0; babyUpdate(b, 0); }
     return r;
   };
+  // (in arms: a hair behind them, on the arms' own tile — a hair across its edge was the next tile, the water by the beach, and
+  // what judges people by the tile they stand on judged the baby there and not its arms: Gunnar's twins «na água» after the
+  // sea's close, and the close takes whoever stands on its bed, L-xx4)
+  const inArms = (v, c) => { const x = c.x + c.face * -0.08, y = c.y + 0.02; v.x = Math.floor(x) === Math.floor(c.x) ? x : c.x; v.y = Math.floor(y) === Math.floor(c.y) ? y : c.y; };
   function babyUpdate(v, dt) {
     const S = G.S;
     v.task = null;
@@ -1889,7 +1893,7 @@
       v.carrier = c ? c.id : 0;
     }
     if (c) {
-      v.x = c.x + c.face * -0.08; v.y = c.y + 0.02; v.inside = c.inside; v.sleeping = c.sleeping; G.faceAs(v, c);
+      inArms(v, c); v.inside = c.inside; v.sleeping = c.sleeping; G.faceAs(v, c);
       v.carried = !c.inside && !c.sleeping;
     } else {
       // no one free to hold it: the baby sleeps at home
@@ -1908,7 +1912,7 @@
       if (v.age >= 2 || !v.carrier) continue;
       const c = S.villagers.get(v.carrier);
       if (!c || dropNow(c, v)) { babyUpdate(v, 0); continue; }
-      if (v.inside !== c.inside || !!v.sleeping !== !!c.sleeping) { v.x = c.x + c.face * -0.08; v.y = c.y + 0.02; v.inside = c.inside; v.sleeping = c.sleeping; G.faceAs(v, c); v.carried = !c.inside && !c.sleeping; }
+      if (v.inside !== c.inside || !!v.sleeping !== !!c.sleeping) { inArms(v, c); v.inside = c.inside; v.sleeping = c.sleeping; G.faceAs(v, c); v.carried = !c.inside && !c.sleeping; }
     }
   };
 
