@@ -1143,7 +1143,15 @@
       if (!v || !v.task || v.task.type !== 'herd') { a.state = 'pen'; a.herder = 0; }
       else {
         const d = G.dist(a.x, a.y, v.x, v.y);
-        if (d > 14) { a.x = v.x + G.rr(-1, 1); a.y = v.y + G.rr(-1, 1); }
+        // (left far behind: brought to the herder — within a tile of him, on ground it stands on, from where it reaches him, off any
+        // fence not its own; or the nearest such ground. Set anywhere within a tile of him, a sheep of Ivar's was set inside the
+        // butcher's shop, and cows of Gunnar's inside a sauna and a wall, L-609)
+        if (d > 14) {
+          const x = v.x + G.rr(-1, 1), y = v.y + G.rr(-1, 1); const F = W.fenceMap();
+          const fits = (px, py) => walkOK(a, px, py) && W.canWalk(px, py, v.x, v.y) && !(F && F[W.idx(px, py)] && F[W.idx(px, py)] !== a.pen);
+          const p = fits(x, y) ? [x, y] : W.nearestLand(v.x, v.y, 2, fits);
+          if (p) { a.x = p[0]; a.y = p[1]; a.path = null; }
+        }
         if (v.task.st === 3) { // spread out around the shepherd and graze
           a.t -= dt;
           if (a.t <= 0) { const ang = G.hash(a.id) * 6.28 + G.R() * 2; const r = G.rr(0.7, 2.8); const tx = v.x + Math.cos(ang) * r, ty = v.y + Math.sin(ang) * r; if (walkOK(a, tx, ty)) { a.tx = tx; a.ty = ty; } a.t = G.rr(2.5, 6); }

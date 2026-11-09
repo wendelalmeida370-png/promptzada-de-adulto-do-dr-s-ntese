@@ -18,6 +18,8 @@
 //  r9 a posição no save: uma vaca a um fio da borda da sua casa, ao lado de um penhasco, salva e carregada — fica na casa dela
 //     e volta ao curral; e um save de antes, que a pôs no penhasco: carregado, ela vai para a casa livre mais perto de onde
 //     chega ao curral, e volta (L-607: o save arredondava a 95,00 a vaca de 94,996, e ela ficava no penhasco para sempre)
+//  r11 o rebanho deixado para trás é posto perto do pastor só num chão onde fica e de onde chega a ele (L-609: era posto em
+//     qualquer lugar a uma casa dele, e na metrópole uma ovelha de Ivar foi posta dentro do açougue)
 //  r10 a volta sozinha com um chão cercado no caminho: uma vaca do curral posta do outro lado de um cercado alheio (um curral,
 //     um cemitério) que o caminho das pessoas atravessa — ela dá a volta e chega ao seu curral (o caminho dela não atravessa
 //     cerca alheia senão pela porteira; o das pessoas não conhece cercas, e as vacas de Birka ficaram presas na cerca do
@@ -333,6 +335,34 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
     const bad = newBad(P.base);
     ok('r10', back && !a.dead && !bad.length, `${a.kind} #${a.id} do ${V.buildName(b)} #${b.id} posta em (${sp[0]},${sp[1]}), do outro lado de ${V.buildName(fg)} #${fg.id} (${fg.type}, de ${(S().settlements.get(fg.set) || {}).name}), que o caminho das pessoas atravessa: ${back ? `no seu curral em ${r2(S().clock - c0)} s${inside ? ' (passando por dentro, pela porteira)' : ' (dando a volta)'}` : `NÃO chegou ao curral em 120 s (em ${r2(a.x)},${r2(a.y)}, ${a.state}${a.noGo ? ', desistiu do caminho' : ''})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
+}
+// r11 the flock left behind, set down by the herder (L-609): a beast of the flock more than 14 tiles from its herder is brought
+// to him (animals.js) — set anywhere within a tile of him, and in the metrópole of the round 14 a sheep of Ivar's was set
+// inside the butcher's shop. The herder out with the flock, put down by the god's hand, again and again, on the street tiles
+// round the pen with the most ground a cow does not stand on about them (houses, walls, rocks), each more than 16 tiles from
+// the one before: each time the flock is brought across the gap, and every beast is set where it stands, from where it
+// reaches him
+{
+  const P = setup(0.15, 0.5); send(P.v, P.b); const b = P.b; const W = G.W; const F = W.fenceMap();
+  const went = live(90, null, () => P.v.task && P.v.task.type === 'herd' && flock(P).some(a => a.state === 'herd' && a.herder === P.v.id));
+  const cow = flock(P)[0] || { kind: 'vaca' };
+  const tight = (x, y) => { let n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && !G.Animals.walkOK(cow, x + dx + 0.5, y + dy + 0.5)) n++; return n; };
+  const cand = [];
+  for (let y = b.y - 30; y <= b.y + 30; y++) for (let x = b.x - 30; x <= b.x + 30; x++) {
+    if (!W.inb(x, y) || F[W.idx(x, y)] || !W.walkable(W.idx(x, y)) || S().type[W.idx(x, y)] === G.T.RIVER || !G.Animals.walkOK(cow, x + 0.5, y + 0.5)) continue;
+    const n = tight(x, y); if (n >= 4 && W.canWalk(x + 0.5, y + 0.5, b.x + b.w / 2, b.y + b.h + 0.4)) cand.push([x, y, n]);
+  }
+  cand.sort((p, q) => q[2] - p[2] || p[1] - q[1] || p[0] - q[0]);
+  const seq = []; let at = [P.v.x, P.v.y]; for (let k = 0; k < 40 && seq.length < 14; k++) { const c = cand.find(q => !seq.includes(q) && G.dist(q[0] + 0.5, q[1] + 0.5, at[0], at[1]) > 16 && flock(P).every(a => G.dist(a.x, a.y, q[0] + 0.5, q[1] + 0.5) > 15)); if (!c) break; seq.push(c); at = [c[0] + 0.5, c[1] + 0.5]; }
+  let n = 0; const bad = [];
+  for (const c of seq) {
+    if (!(P.v.task && P.v.task.type === 'herd')) break;
+    P.v.x = c[0] + 0.5; P.v.y = c[1] + 0.5; P.v.path = null; // (the god's hand)
+    M.viver(0.1);
+    for (const a of flock(P)) if (a.state === 'herd' && a.herder === P.v.id && G.dist(a.x, a.y, P.v.x, P.v.y) < 2.5) { n++; if (!G.Animals.walkOK(a, a.x, a.y) || !W.canWalk(a.x, a.y, P.v.x, P.v.y)) { const i = W.idx(a.x, a.y); const o = S().occ[i] && S().buildings.get(S().occ[i]); bad.push(`${a.kind} #${a.id} em (${r2(a.x)},${r2(a.y)}) ${o ? 'dentro de ' + V.buildName(o) : S().cliff[i] ? 'num penhasco' : S().wall[i] ? 'num muro' : 'onde não fica'}`); } }
+  }
+  const bd = newBad(P.base);
+  ok('r11', went && n >= 10 && !bad.length && !bd.length, `${P.v.name} com o rebanho (${went ? 'no pastoreio' : 'NÃO saiu com o rebanho'}), posto pela mão do deus em ${seq.length} ruas apertadas (de ${cand.length}): ${n} vez(es) um bicho trazido para perto dele; ${bad.length ? bad.length + ' posto(s) onde não fica — ' + bad.slice(0, 4).join(' · ') : 'todos num chão onde ficam, de onde chegam a ele'}${bd.length ? '; ' + bd.join(' · ') : ''}`);
 }
 const er = M.erros();
 ok('erros', !Object.keys(er.mod).length && !er.console.length, `módulos: ${JSON.stringify(er.mod)}; console: ${er.console.slice(0, 2).join(' | ') || 'nada'}`);
