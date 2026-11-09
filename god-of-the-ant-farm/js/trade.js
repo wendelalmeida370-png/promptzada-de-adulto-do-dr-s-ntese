@@ -59,10 +59,11 @@
     // the merchant: someone of the market if there is one, otherwise a willing adult — with the hands free: never one in the
     // leg of an operation under way (Vg.handsBusy, D-094), as the choices of the war are made (L-461), and as the trader of the
     // trade between peoples (politics.js): a caravan took Sven, the actor of Hedeby, from the stage of the day's show, and
-    // the show was called off «sem atores», L-508
+    // the show was called off «sem atores», L-508 —; and awake: the caravans go by day, and at dawn the town is still in bed — the
+    // merchant was taken from it before her hour, as no errand from outside takes a sleeper (Vg.give)
     let m = null;
     for (const v of S.villagers.values()) {
-      if (v.set !== cap.id || v.captive || v.age < 18 || v.age > 58 || v.id === a.leader || v.role === 'guerreiro' || v.carry || (v.task && v.task.pri >= 2) || G.Vg.handsBusy(v)) continue;
+      if (v.set !== cap.id || v.captive || v.sleeping || v.age < 18 || v.age > 58 || v.id === a.leader || v.role === 'guerreiro' || v.carry || (v.task && v.task.pri >= 2) || G.Vg.handsBusy(v)) continue;
       if (v.role === 'mercador' || v.merchant) { m = v; break; }
       if (!m && (v.role === 'coletor' || v.role === 'lenhador' || v.role === 'feirante')) m = v;
     }

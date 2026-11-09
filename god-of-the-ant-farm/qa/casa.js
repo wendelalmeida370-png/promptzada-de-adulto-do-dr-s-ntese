@@ -409,7 +409,7 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
   set = S.settlements.get(set0) || set;
 }
 // ---------------- h13: the shack (social.js): the family leaves it for a house with room taking what is its own, or makes it a hut paying the people's wood — in the ledger
-// (each of the two ways on purpose — h13 a family of three where a house has room for it, h13b a family one bigger than any
+// (each of the two ways on purpose — h13 a family of three or more where a house has room for it, h13b a family one bigger than any
 // room in its town —, and the coins counted by the ledger: the family may buy something on the case's day with the shack's
 // coins, and in the metropolis of the v37 Túlia's family went with 12,4 of the 14, the rest paid at a stall, T-192)
 {
@@ -437,11 +437,29 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
     }
     return out.length >= n ? out : [];
   };
+  // (the family of the way out as the world makes a shack's: grown ones past 32, each with the partner — one of a couple goes
+  // where the other lives, village.js assignHousing — and the children under 16 who live with either, with the mother or else
+  // the father (the same); three at the least, and no more than the town's room. In the metropolis of the generation 16 every
+  // one past 32 of Birka had little ones: the three of the case went to the shack, six children went after them, and a family of
+  // nine found no house with room — the shack became a hut)
+  const parentOf = k => { const m = S.villagers.get(k.mother), f = S.villagers.get(k.father); return m && m.set === k.set && m.home ? m : f && f.set === k.set && f.home ? f : null; };
+  const family = (town, room) => {
+    const out = [];
+    for (const v of [...S.villagers.values()].filter(o => o.set === town.id && fit(o)).sort((a, b) => a.id - b.id)) {
+      if (out.includes(v)) continue;
+      const p = v.partner ? S.villagers.get(v.partner) : null; if (p && p.set === town.id && !fit(p)) continue;
+      const ad = p && p.set === town.id ? [v, p] : [v];
+      const kids = [...S.villagers.values()].filter(k => k.set === town.id && k.age < 16 && !k.captive && ad.includes(parentOf(k)));
+      if (kids.some(k => k.aboard || taken.has(k.id) || (S.avatar && S.avatar.id === k.id)) || out.length + ad.length + kids.length > room) continue;
+      out.push(...ad, ...kids); if (out.length >= 3) break;
+    }
+    return out.length >= 3 ? out : [];
+  };
   const shack = (name, want, size) => {
     let town = null, pos = null, ppl = [];
     for (const tw of [...S.settlements.values()].filter(s => E.coinage(s.fac) && G.Village.pop(s.id) > 20).sort((a, b) => free(a) - free(b) || a.id - b.id)) {
       const n = size(tw); if (!n) continue;
-      const p = G.Village.findSite(tw, 'hut'); const q = some(tw, n, want === 'hut'); if (p && !p.demolish && q.length >= n) { town = tw; pos = p; ppl = q; break; }
+      const p = G.Village.findSite(tw, 'hut'); const q = want === 'hut' ? some(tw, n, true) : family(tw, free(tw)); if (p && !p.demolish && q.length >= n) { town = tw; pos = p; ppl = q; break; }
     }
     let info = 'nenhuma cidade de moeda com lugar para um barraco e a família do caso (de 32 anos ou mais)', fine = false;
     if (town) {
@@ -472,7 +490,7 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       const owner = S.villagers.get(sh.dono), stays = !!owner && owner.home === sh.id;
       if (want === 'hut') fine = hut && !!coin8 && Math.abs(coin8[6] - 8) < 1e-6 && !!woodUse && Math.abs(coins('h:' + sh.id) - (C0 - 8 - spent)) < 1e-6 && !!sh.dono && ppl.some(v => v.id === sh.dono) && rec === 'hut' && stays;
       else fine = left && !!went && Math.abs(went[6] - (C0 - spent)) < 1e-6 && coins('h:' + sh.id) < 1e-6;
-      info = `${town.name} (no máximo ${room0} cama(s) livre(s) numa casa): ${ppl.map(v => v.name).join(', ')} num barraco com ${C0} moedas${Math.abs(spent) > 1e-6 ? ` (${r2(spent)} gastas no dia pela família, menos o que entrou${moved > 1e-6 ? `; ${r2(moved)} delas levadas por quem se mudou para outra casa, a parte dele` : ''})` : ''} → ${hut ? `o barraco virou cabana: ${coin8 ? coin8[6] : 'NADA'} moedas ao tesouro (livro ${coin8 ? coin8[0] : '—'}), ${woodUse ? woodUse[6] : 'NADA'} de madeira do armazém (${r2(wood0)} → ${r2(D.get('f:' + f.id, 'wood'))}), ficaram ${r2(coins('h:' + sh.id))} moedas, dono ${sh.dono ? (S.villagers.get(sh.dono) || {}).name : 'NENHUM'}${owner ? `, que ${stays ? 'ficou nela' : 'SE MUDOU no mesmo dia (T-235)'}` : ''}; o registro da planta diz ${rec} no mesmo dia` : left ? `saíram para uma casa com lugar (#${ppl[0].home}${homes0.includes(ppl[0].home) ? ', de onde saiu um deles' : ''}) levando ${went ? went[6] : 'NADA'} moedas (livro ${went ? went[0] : '—'}), ficaram ${r2(coins('h:' + sh.id))} no barraco` : `NADA aconteceu (${ppl.map(v => `${v.name} ${v.home === sh.id ? 'no barraco' : v.home ? 'na casa #' + v.home : 'sem casa'}${v.set !== town.id ? ', partiu da cidade' : ''}`).join('; ')})`}`;
+      info = `${town.name} (no máximo ${room0} cama(s) livre(s) numa casa): ${ppl.map(v => (v.age < 16 ? `${v.name} (${Math.floor(v.age)} anos)` : v.name)).join(', ')} num barraco com ${C0} moedas${Math.abs(spent) > 1e-6 ? ` (${r2(spent)} gastas no dia pela família, menos o que entrou${moved > 1e-6 ? `; ${r2(moved)} delas levadas por quem se mudou para outra casa, a parte dele` : ''})` : ''} → ${hut ? `o barraco virou cabana: ${coin8 ? coin8[6] : 'NADA'} moedas ao tesouro (livro ${coin8 ? coin8[0] : '—'}), ${woodUse ? woodUse[6] : 'NADA'} de madeira do armazém (${r2(wood0)} → ${r2(D.get('f:' + f.id, 'wood'))}), ficaram ${r2(coins('h:' + sh.id))} moedas, dono ${sh.dono ? (S.villagers.get(sh.dono) || {}).name : 'NENHUM'}${owner ? `, que ${stays ? 'ficou nela' : 'SE MUDOU no mesmo dia (T-235)'}` : ''}; o registro da planta diz ${rec} no mesmo dia` : left ? `saíram para uma casa com lugar (#${ppl[0].home}${homes0.includes(ppl[0].home) ? ', de onde saiu um deles' : ''}) levando ${went ? went[6] : 'NADA'} moedas (livro ${went ? went[0] : '—'}), ficaram ${r2(coins('h:' + sh.id))} no barraco` : `NADA aconteceu (${ppl.map(v => `${v.name} ${v.home === sh.id ? 'no barraco' : v.home ? 'na casa #' + v.home : 'sem casa'}${v.set !== town.id ? ', partiu da cidade' : ''}`).join('; ')})`}`;
     }
     ok(name, fine && !bad().length, info);
   };
@@ -504,8 +522,10 @@ function dearPair() {
     const mid = vals[vals.length >> 1], high = vals[Math.floor(vals.length * 0.75)];
     const noble = h => (occ.get(h.b.id) || []).some(v => v.grp === 'nobreza');
     const own = h => (occ.get(h.b.id) || []).some(v => v.id === h.b.dono && !v.captive) && !(occ.get(h.b.id) || []).some(v => S.avatar && S.avatar.id === v.id);
-    const cheap = homes.find(h => h.val < mid && !h.b.elite && own(h));
-    const dear = cheap && homes.slice().reverse().find(h => h.val >= high && h.cap >= cheap.n && cheap.cap >= h.n && !h.b.elite && !noble(h) && h.val - cheap.val > 9 && own(h));
+    // (every cheap house against every dear one, the widest gap first, as moveUp itself weighs them: in the Argos of the
+    // generation 16 the cheapest house, of six, fitted in no dear one, and the pair the dear land would trade was further up)
+    let cheap = null, dear = null;
+    for (const c of homes) if (c.val < mid && !c.b.elite && own(c)) for (const h of homes) if (h.val >= high && h.cap >= c.n && c.cap >= h.n && !h.b.elite && !noble(h) && h.val - c.val > 9 && own(h) && (!dear || h.val - c.val > dear.val - cheap.val)) { cheap = c; dear = h; }
     if (dear) return { city, cheap, dear, tried };
     tried.push(`${city.name}: nenhuma casa de terra cara que sirva (o meio da terra a ${Math.round(mid)}, o quarto de cima a partir de ${Math.round(high)})`);
   }

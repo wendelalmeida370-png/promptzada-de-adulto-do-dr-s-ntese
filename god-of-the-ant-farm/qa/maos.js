@@ -283,7 +283,11 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
 {
   fresh(); let e = null, home = null, cv = null; const tried = [];
   for (const f of G.Fac.all().filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
-    const x = G.Expe.consider(f, { scale: 'media', many: true }); if (!x) { tried.push(`${f.name}: nenhuma viagem`); continue; }
+    // (the sea weighed again, a dozen times at the most: a people that knows no land past its own waters — no tale, no beach seen,
+    // nothing unknown — sets out for the horizon only now and then, at the draw of the world's own chance, X.consider candidates;
+    // with the world of the caravan that takes nobody from bed, Hedeby's first weighing found none)
+    let x = null; for (let k = 0; k < 12 && !x; k++) x = G.Expe.consider(f, { scale: 'media', many: true });
+    if (!x) { tried.push(`${f.name}: nenhuma viagem`); continue; }
     const t = S.settlements.get(x.from); const dOf = c => Math.min(...c.mouths.map(m => G.dist(m.x, m.y, t.cx, t.cy)));
     const c = G.Caves.all().filter(q => q.mouths.length && !q.mine && q.known && q.known[t.fac]).sort((a, b) => dOf(a) - dOf(b) || a.id - b.id)[0];
     if (c && dOf(c) < 45 && x.crew.length >= 2) { e = x; home = t; cv = c; break; }

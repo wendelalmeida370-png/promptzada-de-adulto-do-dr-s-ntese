@@ -1000,9 +1000,10 @@
     if (!want || b.stock[want] < 25) return;
     if (G.R() > 0.4) return;
     const cap = G.Fac.capitalOf(a.id), dest = G.Fac.capitalOf(b.id); if (!cap || !dest) return;
-    // (the trader with the hands free, as the caravan's merchant: never one in the leg of an operation under way — D-094, L-508)
+    // (the trader with the hands free, as the caravan's merchant: never one in the leg of an operation under way — D-094, L-508 —,
+    // nor one asleep, as no errand from outside takes a sleeper)
     let tr = null;
-    for (const v of S.villagers.values()) if (v.set === cap.id && !v.captive && v.age >= 18 && v.age < 55 && v.id !== a.leader && v.role !== 'guerreiro' && (!v.task || v.task.pri < 2) && !v.carry && !G.Vg.handsBusy(v)) { tr = v; if (!v.partner) break; }
+    for (const v of S.villagers.values()) if (v.set === cap.id && !v.captive && !v.sleeping && v.age >= 18 && v.age < 55 && v.id !== a.leader && v.role !== 'guerreiro' && (!v.task || v.task.pri < 2) && !v.carry && !G.Vg.handsBusy(v)) { tr = v; if (!v.partner) break; }
     if (!tr) return;
     r.tradeDay = S.day + 1 + G.R();
     const n = Math.min(14, Math.floor(a.stock[give] * 0.2));

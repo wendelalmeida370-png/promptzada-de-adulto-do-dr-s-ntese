@@ -724,7 +724,7 @@ function D10() {
           v.x = x; v.y = y; v.inside = 0; if (G.W.reaches(v, fx, fy) && nearest(v) === b) at = [x, y]; }
         if (at) { used.push(at); v.path = null; v.moving = false; who.push(v); } else { v.x = x0; v.y = y0; v.inside = in0; }
       }
-      T.push({ c, b, n, pieces, who, most: 0, over: 0, at: new Set(), stand: new Set(), off: [] });
+      T.push({ c, b, n, pieces, who, n0: who.length, most: 0, over: 0, at: new Set(), stand: new Set(), urg: new Map(), off: [] });
     }
     for (const q of T) for (const v of q.who) G.Vg.setTask(v, { type: 'pray', pri: 1.05 }); // (called to prayer — over the day's work)
     for (let k = 0; k < 1200; k++) {
@@ -732,27 +732,34 @@ function D10() {
       for (const q of T) {
         q.who = q.who.map(v => G.S.villagers.get(v.id)).filter(Boolean); const inn = praying(q);
         q.most = Math.max(q.most, inn.length); if (inn.length > q.n) q.over++;
-        for (const v of inn) { const pl = In.placeOf(v); if (pl && USES.includes(pl.use)) { q.at.add(v.id); if (pl.it && pl.it.mark) q.stand.add(v.id); } else if (q.off.length < 2) q.off.push(`${v.name} em ${pl ? pl.use || pl.pose : 'nenhum lugar'}`); }
+        // (one of them made the temple's priest in the case — its trade, given by the town — leads the prayer at the altar: his
+        // place, as the checker's rule has it; the faithful counted are the others)
+        for (const v of inn) { const pl = In.placeOf(v); if (pl && v.task.priest && pl.use === 'oficiar') continue; if (pl && USES.includes(pl.use)) { q.at.add(v.id); if (pl.it && pl.it.mark) q.stand.add(v.id); } else if (q.off.length < 2) q.off.push(`${v.name} em ${pl ? pl.use || pl.pose : 'nenhum lugar'}`); }
+        // (one taken by what cannot wait — a wolf, a fire: 3 or more, D-094 — is the world's, not the temple's)
+        for (const v of q.who) if (v.task && (v.task.pri || 0) >= 3 && !q.urg.has(v.id)) q.urg.set(v.id, v.task.type);
         if (q.who.some(v => v.task && v.task.type === 'pray')) busy = true;
       }
-      // (a save while some pray inside: on with it there — the same people inside, at prayer)
-      if (!saved) { const ins = [].concat(...T.map(q => praying(q).map(v => [v.id, q.b.id]))); if (ins.length >= 2) { saved = true; inside = ins.length; M.salvarCarregar(); kept = ins.filter(([id, bid]) => { const o = G.S.villagers.get(id); return o && o.inside === bid && o.task && o.task.type === 'pray' && o.task.st === 2; }).length; for (const q of T) q.b = G.S.buildings.get(q.b.id); } }
+      // (a save while some pray inside, once no one called is still on the way in: on with it there — the same people inside, at
+      // prayer. The errands on the way are not in the save — the people's tasks never are, the prayer inside is given back —,
+      // and the save taken at the first two inside, anywhere, cut the way in of the others, in the generation 16)
+      const goingIn = T.some(q => q.who.some(v => v.task && v.task.type === 'pray' && v.task.inT && v.task.st < 2));
+      if (!saved && !goingIn) { const ins = [].concat(...T.map(q => praying(q).map(v => [v.id, q.b.id]))); if (ins.length >= 2) { saved = true; inside = ins.length; M.salvarCarregar(); kept = ins.filter(([id, bid]) => { const o = G.S.villagers.get(id); return o && o.inside === bid && o.task && o.task.type === 'pray' && o.task.st === 2; }).length; for (const q of T) q.b = G.S.buildings.get(q.b.id); } }
       if (saved && !busy) break;
     }
   } finally { G.inSim--; }
   const bad = qaS();
   for (const q of T) { const key = `T4/${q.c} #${q.b.id}`;
     if (!q.n) out.push(`${key}: nenhum lugar de rezar na tabela`);
-    else if (q.who.length >= 2 && q.at.size < 2) out.push(`${key}: ${q.at.size} rezaram dentro (de ${q.who.length} chamados; ${q.n} lugares, ${q.pieces} de peça)`);
+    else if (q.who.length - q.urg.size >= 2 && q.at.size < 2) out.push(`${key}: ${q.at.size} rezaram dentro (de ${q.who.length} chamados${q.urg.size ? `, ${q.urg.size} levados por uma urgência` : ''}; ${q.n} lugares, ${q.pieces} de peça)`);
     if (q.over) out.push(`${key}: mais dentro que os ${q.n} lugares em ${q.over} passos`); if (q.off.length) out.push(`${key}: rezando fora de um lugar da planta (${q.off.join(', ')})`);
     const left = q.who.filter(v => (v.task && v.task.type === 'pray') || v.inside === q.b.id).length; if (left) out.push(`${key}: ${left} ainda rezando ou dentro no fim`); }
   // (the temples whose faithful all stand — no bench, no mat —, by the rule: their standing places used)
-  const solo = T.filter(q => q.n && !q.pieces && q.who.length >= 2), stood = T.reduce((k, q) => k + q.stand.size, 0);
+  const solo = T.filter(q => q.n && !q.pieces && q.who.length - q.urg.size >= 2), stood = T.reduce((k, q) => k + q.stand.size, 0);
   for (const q of solo) if (!q.stand.size) out.push(`T4/${q.c}: o templo só de pé, ninguém rezou de pé dentro`);
   if (!saved) out.push('nenhum save no meio (nunca dois rezando dentro)'); else if (kept !== inside) out.push(`o save no meio com ${inside} dentro: só ${kept} seguiram`);
   if (bad.length > q0) out.push(`o verificador S0–S2: ${bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ')}`);
   ok('D10a os fiéis dentro do templo de 4 de cada povo, nos lugares da tabela da planta — bancos, esteiras, de pé diante da cela —: nunca mais que os lugares, cada um num lugar de rezar; o templo só de pé também; um save no meio; todos terminam', T.length >= 5 && solo.length >= 1 && !out.length && M.limpo(),
-    `${out.length ? some(out).join(' / ') + ' — ' : ''}rezaram dentro: ${T.map(q => `${q.c} ${q.at.size} de ${q.who.length} (${q.n} lugares, ${q.pieces} de peça; até ${q.most} juntos${q.stand.size ? `, ${q.stand.size} de pé` : ''})`).join(', ')}; ${solo.length} só de pé (${solo.map(q => q.c).join(', ')}), ${stood} rezaram de pé; ${saved ? `o save no meio com ${inside} dentro, ${kept} seguiram` : 'sem save'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
+    `${out.length ? some(out).join(' / ') + ' — ' : ''}rezaram dentro: ${T.map(q => `${q.c} ${q.at.size} de ${q.n0} (${q.n} lugares, ${q.pieces} de peça; até ${q.most} juntos${q.stand.size ? `, ${q.stand.size} de pé` : ''}${q.urg.size ? `; ${q.urg.size} levado(s) por uma urgência: ${[...q.urg.values()].join(', ')}` : ''})`).join(', ')}; ${solo.length} só de pé (${solo.map(q => q.c).join(', ')}), ${stood} rezaram de pé; ${saved ? `o save no meio com ${inside} dentro, ${kept} seguiram` : 'sem save'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 // ================================================================ F: the tavern (taverna 3, hospedaria 4)
 const VPL = [3, 4], VFAM = 'estalagem.andar', TODOS = POVOS;

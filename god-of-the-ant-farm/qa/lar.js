@@ -246,11 +246,65 @@ if (want('l4')) {
   const woke = new Map(); const wasA = new Map(asleep.map(v => [v.id, true]));
   liveTo(0.16, () => { for (const v of asleep) if (wasA.get(v.id) && !v.sleeping && !woke.has(v.id) && S.villagers.has(v.id)) woke.set(v.id, { t: S.time, wake: L.clock(v).wake, hunger: v.hunger, task: v.task ? v.task.type : '' }); });
   const ws = [...woke.values()];
-  const soon = ws.filter(w => fromNoon(w.t) < fromNoon(w.wake) - 0.005 && w.hunger < 80 && w.task !== 'flee' && w.task !== 'fire');
+  // (but the night watch, up by its duty — the torch of the town, villagers.js —: the hunter of the watch of the generation 16 was
+  // in bed at the save, and up at 21h07 for his round; and the fight, as the fire and the flight: a revolution's rebels rise at
+  // once, at any hour — polity.js uprising —: with l5 alone before it, Lucrécia, Cláudia and Tito rose at 22h05)
+  const soon = ws.filter(w => fromNoon(w.t) < fromNoon(w.wake) - 0.005 && w.hunger < 80 && w.task !== 'flee' && w.task !== 'fire' && w.task !== 'patrol' && w.task !== 'combat');
   const span = ws.length ? Math.max(...ws.map(w => fromNoon(w.t))) - Math.min(...ws.map(w => fromNoon(w.t))) : 0;
   ok('l4 o save no meio da noite', !lar.length && !moved.length && ws.length >= 3 && soon.length <= Math.max(1, ws.length * 0.05) && span >= 0.02,
     `${atHome} em casa no save (${rt.bytes} caracteres)${lar.length ? ' — DIFERENÇA: ' + lar.slice(0, 2).join(' · ') : ', a mesma casa depois'}${moved.length ? ` — MUDARAM: ${moved.slice(0, 3).join(' · ')}` : ''}${rt.diff.length > lar.length ? ` (outras partes do save: ${rt.diff.length - lar.length})` : ''}; de manhã ${ws.length} de ${asleep.length} acordaram, entre ${ws.length ? fmtT(ws.slice().sort((x, y) => fromNoon(x.t) - fromNoon(y.t))[0].t) : '—'} e ${ws.length ? fmtT(ws.slice().sort((x, y) => fromNoon(y.t) - fromNoon(x.t))[0].t) : '—'}; antes da própria hora: ${soon.length}${soon.length ? ' (' + soon.slice(0, 2).map(w => `${fmtT(w.t)} < ${fmtT(w.wake)}`).join(', ') + ')' : ''}`);
   nightReady = false;
+}
+
+// ======================= l4b: the caravan takes nobody from bed =======================
+// (at dawn — the caravans go by day, trade.js, and the town still sleeps —: with every grown one of a capital who could lead its
+// people's caravan of luxuries asleep, the caravan wakes none of them; and one of them up, it takes that one. In the l4 of the
+// generation 16 the world's step took a sleeper from her bed at 0h53, before her hour of 1h09, to lead a caravan)
+if (want('l4b')) {
+  open(); S.time = 0.03; const TR = G.Trade;
+  const cand = (f, cap) => [...S.villagers.values()].filter(v => v.set === cap.id && !v.captive && v.age >= 18 && v.age <= 58 && v.id !== f.leader && v.role !== 'guerreiro' && !v.carry && !(v.task && v.task.pri >= 2) && !G.Vg.handsBusy(v) && !isBody(v)).sort((a, c) => a.id - c.id);
+  // (the people's store with goods of the trade its partners lack, and the caravans' day open again: the test's hand)
+  const ready4b = f => { for (const k of ['joias', 'tecido', 'ceramica']) D.make('f:' + f.id, k, 10, { code: 'teste' }); for (const o of G.Fac.all()) { const r = G.Fac.rel(f.id, o.id); if (r) r.luxDay = 0; } };
+  let info = 'nenhum povo com capital, gente e um parceiro do comércio de luxo', fine = false;
+  for (const f of G.Fac.all().filter(q => q.alive !== false && G.Fac.capitalOf(q.id) && G.Fac.pop(q.id) >= 12).sort((a, c) => a.id - c.id)) {
+    const cap = G.Fac.capitalOf(f.id); const L4 = cand(f, cap); if (L4.length < 2) continue;
+    // (all in bed, where they are — as the sleep of who lies down —, the caravan sent)
+    for (const v of L4) { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'sleep', pri: 1.5, st: 2, home: v.home || 0, kind: 'sleep' }); v.sleeping = true; v.path = null; v.moving = false; }
+    ready4b(f); TR.launch(f);
+    const woken = L4.filter(v => !v.sleeping || (v.task && v.task.type === 'trade'));
+    // (one of them up — the test's hand: one the caravan takes, of the market or of the trades that roam —, the caravan sent
+    // again: the deal there, and the one awake leads it)
+    const up = L4.find(v => v.role === 'mercador' || v.merchant) || L4.find(v => v.role === 'coletor' || v.role === 'lenhador' || v.role === 'feirante'); if (!up) continue;
+    G.Vg.endTask(up); up.sleeping = false; ready4b(f); TR.launch(f);
+    const led = !!(up.task && up.task.type === 'trade');
+    if (!led && !woken.length) { info = `${cap.name}: nenhum negócio de luxo para o caso`; continue; }
+    fine = !woken.length && led;
+    info = `${cap.name} (${f.name}), ao amanhecer (${fmtT(S.time)}): ${L4.length} que podiam levar a caravana, todos na cama — ${woken.length ? `ACORDADOS para ela: ${woken.slice(0, 3).map(v => `${nm(v)} (${v.task ? v.task.type : '-'})`).join(', ')}` : 'nenhum acordado'}; com ${nm(up)} de pé, ${led ? 'ela levou a caravana' : 'a caravana NÃO saiu com ele'}`;
+    break;
+  }
+  // (and the trade between peoples, politics.js, by the same rule: its trader is never taken from bed. A pair of peoples at peace,
+  // the stores made by the test's hand to call for the trade — a surplus here, a lack there —, every grown one of the capital
+  // who could carry it asleep, and the politics of the world weighed — ten seconds of it at a time, until a trade goes or a
+  // dozen times —; then one of them up, the same)
+  open(); S.time = 0.03;
+  const P3 = ['food', 'wood', 'stone']; let fineT = false, infoT = 'nenhum par de povos em paz, com capitais, para o comércio';
+  const candT = (f, cap) => [...S.villagers.values()].filter(v => v.set === cap.id && !v.captive && v.age >= 18 && v.age < 55 && v.id !== f.leader && v.role !== 'guerreiro' && (!v.task || v.task.pri < 2) && !v.carry && !G.Vg.handsBusy(v) && !isBody(v)).sort((a, c) => a.id - c.id);
+  const sentT = L => L.filter(v => v.task && v.task.type === 'trade' && !v.task.lux);
+  const weigh = L => { for (let k = 0; k < 12 && !sentT(L).length; k++) G.Politics.update(10); return sentT(L); };
+  for (const a of G.Fac.all().filter(q => q.alive !== false && G.Fac.capitalOf(q.id) && G.Fac.pop(q.id) >= 12).sort((x, y) => x.id - y.id)) {
+    const b = G.Fac.all().filter(q => q.id !== a.id && q.alive !== false && G.Fac.capitalOf(q.id)).sort((x, y) => x.id - y.id).find(q => { const r = G.Fac.rel(a.id, q.id); return r && r.met && (r.st === 'paz' || r.st === 'alianca' || r.st === 'vassalo') && r.op >= -15 && !r.envoy && P3.some(k => (q.stock[k] || 0) < 40); });
+    const cap = G.Fac.capitalOf(a.id); const LT = cand(a, cap).length ? candT(a, cap) : []; if (!b || LT.length < 2) continue;
+    const r = G.Fac.rel(a.id, b.id); const give = P3.find(k => (b.stock[k] || 0) < 40); const wantK = P3.filter(k => k !== give).sort((x, y) => (b.stock[y] || 0) - (b.stock[x] || 0))[0];
+    const stores = () => { const need = Math.max(50, G.Village.cap(a.id) * 0.55) + 30 - (a.stock[give] || 0); if (need > 0) D.make('f:' + a.id, give, need, { code: 'teste' }); if ((b.stock[wantK] || 0) < 25) D.make('f:' + b.id, wantK, 30, { code: 'teste' }); r.tradeDay = 0; };
+    for (const v of LT) { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'sleep', pri: 1.5, st: 2, home: v.home || 0, kind: 'sleep' }); v.sleeping = true; v.path = null; v.moving = false; }
+    stores(); const wokenT = weigh(LT).concat(LT.filter(v => !v.sleeping)).filter((v, i, l) => l.indexOf(v) === i);
+    const upT = LT[0]; G.Vg.endTask(upT); upT.sleeping = false; stores(); const sentUp = weigh(LT);
+    const ledT = sentUp.length === 1 && sentUp[0] === upT;
+    fineT = !wokenT.length && ledT;
+    infoT = `${cap.name} (${a.name}, ${give} para ${b.name}): ${LT.length} que podiam levar o comércio, todos na cama — ${wokenT.length ? `ACORDADOS para ele: ${wokenT.slice(0, 3).map(v => `${nm(v)} (${v.task ? v.task.type : '-'})`).join(', ')}` : 'nenhum acordado'}; com ${nm(upT)} de pé, ${ledT ? 'ele levou o comércio' : sentUp.length ? `o comércio saiu com ${sentUp.map(nm).join(', ')}` : 'o comércio NÃO saiu'}`;
+    break;
+  }
+  ok('l4b a caravana e o comércio entre os povos não tiram ninguém da cama', fine && fineT, info + ' · o comércio entre os povos: ' + infoT);
 }
 
 // ======================= l6: the god's fire on a house at night; a house pulled down with people in it =======================
@@ -608,7 +662,12 @@ if (want('l14')) {
     // (what the old of the house did, second by second, and why one was not minding — for the note when the case fails)
     const seq = []; const whyNot = new Map(); const kseq = new Map();
     const notMinding = o => { if (o.home !== h.id) return 'mudou de casa'; if (o.age < 55) return 'idade'; if (o.sick > 0) return 'doente'; if (o.hp < 50) return `ferida (${Math.round(o.hp)})`; if (!builtHome(o)) return 'sem casa'; const t = o.task; return t ? `${t.type}${t.what ? ':' + t.what : ''}` : 'sem tarefa'; };
+    // (a day with no feast in the house's town, as the other cases of the town's days — l1, l4 —, kept so through the case, which
+    // may cross into the next day: the feast calls the whole town, the old one of the minding too — in the generation 16 Henut
+    // spent 44 s of the 55 at the opet, and nobody was minding for the save)
+    const hs = S.settlements.get(h.set);
     live(95, () => {
+      noFeast(hs);
       dw.step(); n++;
       if (n % 10 === 0 && !died) {
         const o = S.villagers.get(e.old[0].id); const w = o ? (o.task && o.task.type === 'lar' && o.task.what === 'cuidar' ? (o.task.st === 2 ? 'cuidar' : 'indo cuidar') : notMinding(o)) : 'morta'; if (seq[seq.length - 1] !== w) seq.push(w); if (o && w !== 'cuidar') whyNot.set(w, (whyNot.get(w) || 0) + 1);
@@ -689,7 +748,11 @@ if (want('l15')) {
   // (a) at night in the house: the mother in a fury — the father or one of the house takes the baby, there; a save in the
   // middle keeps it in the same arms; the fury over, the mother or the father has it
   liveTo(0.86);
-  const A = babies().find(b => { const m = S.villagers.get(b.mother); const h = m && builtHome(m); return !!h && m.inside === h.id && b.inside === h.id && [...S.villagers.values()].some(o => o.id !== m.id && o.home === h.id && o.inside === h.id && fit(o)); });
+  const homeA = b => { const m = S.villagers.get(b.mother); const h = m && builtHome(m); return !!h && m.inside === h.id && b.inside === h.id && [...S.villagers.values()].some(o => o.id !== m.id && o.home === h.id && o.inside === h.id && fit(o)); };
+  // (none in its mother's arms in such a house: one whose mother is home with it and another of the house, put in her arms by the
+  // world's own door — G.Vg.handBaby, the test's hand: in the generation 16 Senusret, of a year, slept at home in the arms of one of
+  // another house, his mother asleep by him)
+  const A = babies().find(homeA) || [...S.villagers.values()].filter(b => b.age < 2 && !b.ug && !b.captive && b.mother).sort((a, c) => a.id - c.id).find(b => homeA(b) && G.Vg.handBaby(b, S.villagers.get(b.mother)));
   if (!A) fail('(a) nenhuma casa à noite com a mãe, o bebê e outro da casa dentro');
   else {
     const m = S.villagers.get(A.mother), h = builtHome(m); m.fury = 6;
@@ -1032,16 +1095,19 @@ if (want('l17')) {
         if (v.sleeping && v.inside === h.id) inside++; if (v.sleeping && !v.inside && t && t.type === 'sleep') outs.add(v.id);
         if (!sent.has(id) && G.isEvening() && v.age >= 16 && !v.sleeping && !v.task) { sent.add(id); G.Lar.task(v, G.Vg.H, 'tarde'); } }
     });
-    const asleepIn = fam0.filter(id => { const v = S.villagers.get(id); return v && v.sleeping && v.inside === h.id; });
+    const asleepIn = fam0.filter(id => { const v = S.villagers.get(id); return v && v.sleeping && v.inside === h.id && v.age >= 2; }); // (the babies aside: below)
     // (the plan they live in through the works is the old house's: the interiors' record keeps the old type until it stands)
     const regMid = h.ip ? h.ip.t : null;
     // (a save in the middle of the night: each one of the house at home as before it — inside, asleep or not, the same task, as
     // the save hook of the home gives them back (D-073). The whole world's round trip is the regression's: here only the house
     // of the case)
     const was = id => { const v = S.villagers.get(id); return v ? `${v.inside === h.id ? 'dentro' : 'fora'}/${v.sleeping ? 'dormindo' : 'acordado'}/${v.task ? v.task.type : 'nada'}` : 'morto'; };
-    const before = new Map(fam0.filter(id => { const v = S.villagers.get(id); return v && v.inside === h.id; }).map(id => [id, was(id)]));
+    // (not a baby: it follows whoever carries it — villagers.js babyUpdate, at the world's next step; the home's hook keeps none, as
+    // l4 leaves them out: the house of the generation 16 had Senusret, of one year, asleep in his mother's arms, out at the door
+    // in the load and back in them at the next step)
+    const before = new Map(fam0.filter(id => { const v = S.villagers.get(id); return v && v.inside === h.id && v.age >= 2; }).map(id => [id, was(id)]));
     M.salvarCarregar(); S = G.S; const hh = S.buildings.get(h.id);
-    const afterIn = fam0.filter(id => { const v = S.villagers.get(id); return v && v.sleeping && v.inside === h.id; });
+    const afterIn = fam0.filter(id => { const v = S.villagers.get(id); return v && v.sleeping && v.inside === h.id && v.age >= 2; });
     const lost = [...before.keys()].filter(id => was(id) !== before.get(id)).map(id => `${(S.villagers.get(id) || {}).name || '#' + id}: ${before.get(id)} → ${was(id)}`);
     // (dawn: the jar emptied, filled again by one of the house)
     liveTo(0.08); hh.water = 0.1; hh.waterTry = undefined;
@@ -1158,7 +1224,9 @@ if (want('l19')) {
   const grown = [...S.villagers.values()].filter(adult).sort((a, c) => a.id - c.id);
   const where = o => `${o.inside ? 'dentro de #' + o.inside : 'na rua'}, ${o.sleeping ? 'dormindo' : 'ACORDADO'}`;
   // (a) one of the world, in the street: as the sleep of who has no house, where it stands — out at the door first if it was in
-  const w = grown.find(o => !o.inside && !o.sleeping) || grown[0];
+  // (one the night lets sleep: not starving — the hunger wakes the starving, villagers.js hungerWakes —: the first one awake in the
+  // street of the generation 16, Sitamun, was at 97 of hunger, and woke to eat before the save)
+  const w = grown.find(o => !o.inside && !o.sleeping && o.hunger < 70) || grown.find(o => o.hunger < 70) || grown[0];
   G.Vg.endTask(w); G.Vg.setTask(w, { type: 'sleep', pri: 1.5, st: 2, home: 0, kind: 'sleep' }); w.sleeping = true; w.path = null; w.moving = false;
   live(0.5);
   // (b) the body, by the door of its house, in the street
@@ -1293,12 +1361,15 @@ if (want('l10')) {
 
 // ======================= l10b: a feast does not take who is on the way to a meal (L-234) =======================
 if (want('l10b')) {
-  // (the feast's hour, as l10; two grown ones of the town awake, at the top of hunger with the life going, on their way to
-  // the store — the test's hand —, when the feast begins: they eat first, and are not in its crowd)
-  open(); set = town(); const f = G.Fac.get(set.fac); S.time = 0.62; liveTo(0.8);
+  // (the evening, the town's grown ones still up — before their bed, G.Lar.clock; the town of the generation 16 was all in bed
+  // at 0,8, the feast's hour of l10, and the case had nobody to send —; two of them awake, out of doors first, else at home, at
+  // the top of hunger with the life going, on their way to the store — the test's hand —, when the feast begins: they eat
+  // first, and are not in its crowd)
+  open(); set = town(); const f = G.Fac.get(set.fac); S.time = 0.62; liveTo(0.7);
   const keys = G.Fest.of(f.civ).filter(k => !G.Fest.DEF[k].trigger);
   D.make('f:' + f.id, 'food', 40, { code: 'teste', part: true });
-  const hungry = people(set).filter(v => v.age >= 18 && v.age < 60 && !v.sleeping && !v.inside && !isBody(v) && !(v.task && v.task.pri >= 3)).slice(0, 2);
+  const upNow = people(set).filter(v => v.age >= 18 && v.age < 60 && !v.sleeping && !isBody(v) && !(v.task && v.task.pri >= 3));
+  const hungry = upNow.filter(v => !v.inside).concat(upNow.filter(v => v.inside)).slice(0, 2);
   for (const v of hungry) { v.hunger = 100; v.hp = 30; v._noStore = 0; v._hungerT = 0; G.Vg.endTask(v); G.Vg.setTask(v, { type: 'eat', pri: 2.5 }); }
   let fe = null; for (const k of keys) { fe = G.Fest.start(set, k, {}); if (fe) break; }
   const taken = fe ? hungry.filter(v => fe.parts.includes(v.id)) : [];
