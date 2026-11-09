@@ -357,16 +357,63 @@
     return true;
   }
   A.lineOK = lineOK;
-  // a way around: the same paths people walk (cliffs, walls and houses in the way), a few searches a frame
+  // a beast standing where it cannot stand any more — a wall raised on its tile (L-606), the load of an older save that set it a
+  // hair across the edge of its tile (L-607) —: set down on the nearest ground it can stand on from where it reaches its home
+  // (its pen, its range: the map of regions), within r tiles — never into a pocket, nor beyond what now stands between it and
+  // home —; with no such ground near, on the nearest it can stand on at all
+  A.aside = function (a, r) {
+    const sp = SP[a.kind]; if (!sp || sp.cls === 'air' || sp.cls === 'water' || a.held || a.air) return false;
+    distances(); // (the shore's distances the amphibians' ground is read by: maybe not built yet, at a load)
+    if (walkOK(a, a.x, a.y)) return false;
+    const can = (x, y) => walkOK(a, x, y);
+    const home = (x, y) => can(x, y) && (!Number.isFinite(a.hx) || !Number.isFinite(a.hy) || W.canWalk(x, y, a.hx, a.hy));
+    const p = W.nearestLand(a.x, a.y, r || 3, home) || W.nearestLand(a.x, a.y, r || 3, can);
+    if (!p) return false;
+    a.x = p[0]; a.y = p[1]; a.tx = a.x; a.ty = a.y; a.path = null; a.moving = false; a.blk = 0; a.stk = 0; a.noGo = undefined;
+    return true;
+  };
+  // a way around, a few searches a frame: the beast's own — the ground it stands on (walkOK: cliffs, walls and houses in the way),
+  // and never across a fence it may not cross, into a fenced ground not its own but by the gate (W.fenceBlocks). The people's
+  // way knows no fences: a cow walking home alone was pressed against the fence of a graveyard on that way for good (the cows of
+  // Birka by Óstia's cemetery, after a load with the flock at pasture, the r4 of the round 14)
   let pathBudget = 0;
-  G.worldHooks.push(() => { pathBudget = 0; });
+  let pg = null, pcame = null, pseen = null, pshut = null, pgen = 0; const pq = new G.Heap();
+  G.worldHooks.push(() => { pathBudget = 0; pg = null; pgen = 0; });
+  const DX8 = [1, -1, 0, 0, 1, 1, -1, -1], DY8 = [0, 0, 1, -1, 1, -1, 1, -1];
+  function beastPath(a, tx, ty, maxNodes) {
+    const n = N * N; if (!pg || pg.length !== n) { pg = new Float32Array(n); pcame = new Int32Array(n); pseen = new Uint32Array(n); pshut = new Uint32Array(n); pgen = 0; }
+    pgen++; pq.clear();
+    const s = W.idx(a.x, a.y), t = W.idx(tx, ty); const tX = t % N, tY = (t / N) | 0; const onGoal = walkOK(a, tX + 0.5, tY + 0.5);
+    const can = (x, y) => walkOK(a, x + 0.5, y + 0.5);
+    pg[s] = 0; pseen[s] = pgen; pcame[s] = -1; pq.push(s, 0);
+    let found = -1, nodes = 0;
+    while (pq.size) {
+      const c = pq.pop(); if (pshut[c] === pgen) continue; pshut[c] = pgen;
+      const cx = c % N, cy = (c / N) | 0;
+      if (onGoal ? c === t : c !== s && Math.max(Math.abs(cx - tX), Math.abs(cy - tY)) <= 1) { found = c; break; }
+      if (++nodes > maxNodes) break;
+      for (let k = 0; k < 8; k++) {
+        const nx = cx + DX8[k], ny = cy + DY8[k]; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+        const j = ny * N + nx; if (pshut[j] === pgen || !can(nx, ny)) continue;
+        if (k >= 4 && (!can(nx, cy) || !can(cx, ny))) continue; // (no corner of a house or a rock cut across)
+        if (W.fenceBlocks(a, cx + 0.5, cy + 0.5, nx + 0.5, ny + 0.5)) continue;
+        const g = pg[c] + (k >= 4 ? 1.4142 : 1);
+        if (pseen[j] !== pgen || g < pg[j]) { pseen[j] = pgen; pg[j] = g; pcame[j] = c; const hx = Math.abs(nx - tX), hy = Math.abs(ny - tY); pq.push(j, g + Math.max(hx, hy) + 0.4142 * Math.min(hx, hy)); }
+      }
+    }
+    if (found < 0) return null;
+    const tiles = []; for (let c = found; c !== -1; c = pcame[c]) tiles.push(c); tiles.reverse();
+    const pts = tiles.map(i => [(i % N) + 0.5, ((i / N) | 0) + 0.5]); pts[0] = [a.x, a.y]; if (onGoal) pts[pts.length - 1] = [tx, ty];
+    return pts;
+  }
   const canRoute = a => { const sp = SP[a.kind]; return sp.cls === 'land' || (sp.cls === 'amph' && G.S.type[W.idx(a.x, a.y)] > T.RIVER && G.S.type[W.idx(a.tx, a.ty)] > T.RIVER); };
   function route(a) {
     const S = G.S;
     if (!canRoute(a)) return false; // (water, and the edge of the water: no way round to look for)
     if (pathBudget <= 0 || S.clock - (a.pfT || -99) < 1.6) return null; // not this frame
     pathBudget--; a.pfT = S.clock;
-    const p = W.findPath(a.x, a.y, a.tx, a.ty, true, 700);
+    if (!W.canWalk(a.x, a.y, a.tx, a.ty, true)) return false; // (another island, a pocket: no flooding the map for nothing)
+    const p = beastPath(a, a.tx, a.ty, 700);
     return p && p.length ? p : false;
   }
   // nowhere to go from here: stop pushing against the rock, and think of something else
@@ -1062,6 +1109,16 @@
   }
 
   // ---------------- livestock ----------------
+  // whose errand leads a beast on a rope — a module that leads one names its errand here —: the butcher's slaughter of that
+  // beast (economy.js), the feast that offers it (festivals.js), the band that drove off a raided herd (army.js), the caravan
+  // with its pack horse (trade.js)
+  const LEADS = A.LEADS = {
+    slaughter: (t, a) => t.a === a.id,
+    fest: (t, a) => !!G.Fest && G.Fest.list().some(fe => fe.id === t.fid && fe.victim === a.id),
+    band: (t, a) => !!a.stolen,
+    trade: (t, a) => !!a.pack,
+  };
+  const leads = (t, a) => { const f = LEADS[t.type]; return !!f && f(t, a); };
   function domAI(a, dt) {
     const S = G.S; const sp = SP[a.kind];
     if (a.hold > 0) { a.hold -= dt; a.moving = false; return; }
@@ -1073,7 +1130,9 @@
     if (a.flee > 0) { a.flee -= dt; if (moveTo(a, dt, sp.run)) a.flee = 0; return; }
     if (a.state === 'led') {
       const v = S.villagers.get(a.ledBy);
-      if (!v || !v.task) { a.state = 'pen'; a.ledBy = 0; return; }
+      // (led only while the leader's errand is about it: any other, and it is let go back to its pen — it stayed led while its
+      // leader had any task at all, and with the slaughter cut three cows of Birka followed the butcher about for 400 s, L-608)
+      if (!v || !v.task || !leads(v.task, a)) { a.state = 'pen'; a.ledBy = 0; return; }
       const d = G.dist(a.x, a.y, v.x, v.y);
       if (d > 12) { a.x = v.x; a.y = v.y; }
       if (d > 0.75) { a.tx = v.x - v.face * 0.45; a.ty = v.y + 0.15; moveTo(a, dt, Math.max(sp.sp, 1.2) * (d > 2.5 ? 1.7 : 1.05)); } else a.moving = false;
@@ -1084,7 +1143,15 @@
       if (!v || !v.task || v.task.type !== 'herd') { a.state = 'pen'; a.herder = 0; }
       else {
         const d = G.dist(a.x, a.y, v.x, v.y);
-        if (d > 14) { a.x = v.x + G.rr(-1, 1); a.y = v.y + G.rr(-1, 1); }
+        // (left far behind: brought to the herder — within a tile of him, on ground it stands on, from where it reaches him, off any
+        // fence not its own; or the nearest such ground. Set anywhere within a tile of him, a sheep of Ivar's was set inside the
+        // butcher's shop, and cows of Gunnar's inside a sauna and a wall, L-609)
+        if (d > 14) {
+          const x = v.x + G.rr(-1, 1), y = v.y + G.rr(-1, 1); const F = W.fenceMap();
+          const fits = (px, py) => walkOK(a, px, py) && W.canWalk(px, py, v.x, v.y) && !(F && F[W.idx(px, py)] && F[W.idx(px, py)] !== a.pen);
+          const p = fits(x, y) ? [x, y] : W.nearestLand(v.x, v.y, 2, fits);
+          if (p) { a.x = p[0]; a.y = p[1]; a.path = null; }
+        }
         if (v.task.st === 3) { // spread out around the shepherd and graze
           a.t -= dt;
           if (a.t <= 0) { const ang = G.hash(a.id) * 6.28 + G.R() * 2; const r = G.rr(0.7, 2.8); const tx = v.x + Math.cos(ang) * r, ty = v.y + Math.sin(ang) * r; if (walkOK(a, tx, ty)) { a.tx = tx; a.ty = ty; } a.t = G.rr(2.5, 6); }

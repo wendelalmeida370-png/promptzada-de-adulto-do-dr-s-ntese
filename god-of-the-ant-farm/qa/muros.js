@@ -51,6 +51,15 @@
 //      10a every plan of the ready worlds, by the checker's own rule (qa.js) read on the plan's tiles
 //      10b the bad case on purpose: a house on each side of a street tile of the line where a plan has its gate — planned
 //          again, the same line, the gate on another tile of that side; raised at once, the checker sees no gate of it shut
+//   11. no wall over a fenced ground — a pen, a stable, a captives' pen, a graveyard: its fence is the wall there —, and no beast
+//      left inside a new wall (L-606: the planner laid walls across them — Mênfis's over a pen of Birka in the metrópole of the
+//      generation 15, and in every ready world after —, and a beast on a tile where the wall rose stayed inside it for good):
+//      11a every plan of the ready worlds keeps off the fenced grounds
+//      11b the bad case on purpose: a pen on the line of a town's wall and a cow of it held on another tile of the line — raised
+//          by the builders (the plan made before the pen) and at once (with the pen there): no wall stands on the pen, and the
+//          cow is set down beside the wall, where it can stand and from where it reaches its pen
+//      11c a wall of before standing on a fenced ground, in a save: the checker sees it; loaded, it comes down there, and the
+//          rest of the wall stands
 //   5. the checker clean, no module error
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -86,6 +95,8 @@ const shutGate = (w, i) => {
 };
 const sim = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 const bad7 = []; let ways7 = 0; const bad10 = [];
+// (the fenced grounds, as the world fences them — world.js: an animal crosses their fence only at the gate)
+const FEN = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 }; const bad11 = [];
 for (const k of WORLDS) {
   M.pronto(k); const S = G.S;
   for (const s of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
@@ -111,6 +122,9 @@ for (const k of WORLDS) {
       finally { for (const [i, v] of keep) S.wall[i] = v; if (keep.length) G.W.touchWalk(); } }
     // (10a: no gate of the plan between two blocking buildings across its line, L-603)
     { const shut = w.gates.filter(g => shutGate(w, g)); if (shut.length) bad10.push(`${name}: ${shut.map(g => `(${g % G.N},${(g / G.N) | 0})`).join(' ')}`); }
+    // (11a: none of it on a fenced ground — its fence is the wall there, as the square's lot is ground the wall goes round —, L-606)
+    { const fen = i => { const o = S.occ[i]; const b = o && S.buildings.get(o); return !!b && !!FEN[b.type]; }; const onF = w.tiles.filter(fen);
+      if (onF.length) bad11.push(`${name}: ${onF.length} casa(s) no chão cercado de ${[...new Set(onF.map(i => { const b = S.buildings.get(S.occ[i]); return b.type + '#' + b.id; }))].join(', ')}`); }
     // 1. each side its gate (or one at its corner), none side by side, at most four
     // (a side that is only its corner — the rest of the line water, or out of the plan —, the corner a tile of the next side: no
     // side of its own to gate; in the anos100 of the v37 the north of Karnak's box was all water but the corner by the west gate,
@@ -179,6 +193,7 @@ ok('2 o portão do lado fica onde se anda (a rua ou o caminho gasto que o cruza)
     top.length < 3 ? `só ${top.length} muro(s) com dois lados andados: o caso precisa de outro mundo` : top.map(q => `${q.name}: lado ${q.side} ${q.served ? 'servido' : 'SEM portão'} (${q.ratio.toFixed(1)}×; portões ${q.gates})`).join(' · ')); }
 ok('7a nenhum plano fecha um prédio da sua cidade', !bad7.length, `${plans} muros planejados; ${ways7} com portão a mais para um prédio que o muro fecharia; ${bad7.length ? bad7.slice(0, 4).join(' · ') : 'nenhum prédio fechado'}`);
 ok('10a nenhum portão planejado entre dois prédios, um de cada lado da linha (L-603)', plans > 20 && !bad10.length, `${plans} muros planejados; ${bad10.length ? bad10.length + ' com portão fechado pelos dois lados — ' + bad10.slice(0, 4).join(' · ') : 'nenhum portão fechado'}`);
+ok('11a nenhum muro planejado num chão cercado — curral, estábulo, cercado, cemitério (L-606)', plans > 20 && !bad11.length, `${plans} muros planejados; ${bad11.length ? bad11.length + ' sobre um chão cercado — ' + bad11.slice(0, 4).join(' · ') : 'nenhum sobre um chão cercado'}`);
 ok('6a nenhum plano corre dentro do muro de outra cidade', !bad6.length, `${plans} muros planejados; ${reach6} com o retângulo entrando no de outro muro; ${bad6.length ? bad6.slice(0, 4).join(' · ') : 'nenhuma casa dentro'}`);
 // 4. a wall begun, saved and loaded halfway; then finished
 {
@@ -415,6 +430,87 @@ for (const k of ['metropole', 'mega', 'cidade', 'anos100', 'mundial']) {
   else { const N = G.N, at = i => `(${i % N},${(i / N) | 0})`;
     ok(nm, got.same && !got.w1.gates.includes(got.g) && got.side.length > 0 && !got.shut1.length && !!got.mine && !got.mine.length,
       `${got.k}: ${got.s.name} — o portão do plano em ${at(got.g)} (lado ${got.sd}); com ${got.hs.map(h => h.type + '#' + h.id).join(' e ')} dos dois lados: ${got.same ? 'a mesma linha' : 'A LINHA MUDOU'}, o portão do lado ${got.sd} em ${got.side.map(at).join(' ') || 'NENHUM'}${got.w1.gates.includes(got.g) ? ', e AINDA em ' + at(got.g) : ''}; fechados pelos dois lados ${got.shut1.length}; erguido, o verificador: ${got.mine ? (got.mine.length ? got.mine[0] : 'nada') : '-'}`); }
+}
+// 11b. the bad case on purpose (L-606): a pen on the line of a town's wall — another town's, so the box of the plan, its own
+//      buildings', stays; put down by the god's hand where a straight run of the line crosses free dry ground, the line through
+//      its middle, two tiles from any gate — and a cow of it held still on another tile of the line, open ground the cow can
+//      stand on with ground it can stand on across the line on both sides: raised by the builders (the plan made before the
+//      pen, as a town builds while its wall waits) and at once (the plan made with the pen there), no wall stands on the pen,
+//      and the cow is not left inside the wall — set down beside it, where it can stand and from where it reaches its pen
+for (const instant of [false, true]) {
+  const nm = `11b um curral na linha do muro e uma vaca numa casa dele: nenhum muro no curral, e a vaca posta ao lado (${instant ? 'o muro erguido de uma vez' : 'pelos construtores'})`;
+  let got = null;
+  for (const k of ['cidade', 'metropole', 'mega']) {
+    M.pronto(k); const S = G.S, N = G.N, V = G.Village, W = G.W;
+    const COW = { kind: 'vaca' };
+    for (const s of [...S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac) && !G.Fac.enemiesOf(q.fac).length).sort((a, b) => a.id - b.id)) {
+      const other = [...S.settlements.values()].filter(q => q.id !== s.id && G.Fac.get(q.fac)).sort((p, q) => G.dist2(p.cx, p.cy, s.cx, s.cy) - G.dist2(q.cx, q.cy, s.cx, s.cy) || p.id - q.id)[0];
+      const w0 = other && plan(s); if (!w0) continue; const on = new Set(w0.tiles);
+      const far = (i, d) => w0.gates.every(g => dist(g, i) > d);
+      const free = j => j >= 0 && j < N * N && !S.occ[j] && !S.wall[j] && !S.road[j] && S.type[j] >= G.T.SAND && W.walkable(j) && !S.treeAt[j] && !S.objAt[j];
+      // (the pen: its three tiles across a straight run of the line, its middle on it, all nine free)
+      let spot = null;
+      for (const i of w0.tiles) {
+        const sd = sideOf(w0, i); if (sd.length !== 1) continue; const hz = sd[0] === 'N' || sd[0] === 'S';
+        const run = hz ? [i - 1, i, i + 1] : [i - N, i, i + N]; if (!run.every(j => on.has(j) && sideOf(w0, j).length === 1 && far(j, 2))) continue;
+        const x0 = (i % N) - 1, y0 = ((i / N) | 0) - 1; const lot = []; for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) lot.push((y0 + dy) * N + x0 + dx);
+        if (lot.every(free)) { spot = { x0, y0, lot, run, i }; break; }
+      }
+      if (!spot) continue;
+      // (the cow's tile: of the line, open ground a cow stands on, with ground it stands on across the line on both sides, three
+      // tiles and more from the pen and a tile from any gate — the first in the plan's order, raised early)
+      const across = i => { const sd = sideOf(w0, i); const hz = sd[0] === 'N' || sd[0] === 'S'; return hz ? [i - N, i + N] : [i - 1, i + 1]; };
+      const okC = j => G.Animals.walkOK(COW, (j % N) + 0.5, ((j / N) | 0) + 0.5);
+      const ct = w0.tiles.find(c => sideOf(w0, c).length === 1 && far(c, 1) && dist(c, spot.i) > 3 && !S.occ[c] && !S.wall[c] && okC(c) && across(c).every(j => !on.has(j) && okC(j)));
+      if (ct === undefined) continue;
+      // (the plan first, the pen after — the builders' case —, or the pen first and the wall at once)
+      const res = sim(() => {
+        let w = instant ? null : G.Siege.raiseWalls(s, null, false);
+        const pen = V.addBuilding('curral', spot.x0, spot.y0, other.id, true);
+        const cow = G.Animals.spawn('vaca', (ct % N) + 0.5, ((ct / N) | 0) + 0.5, { dom: other.fac, pen: pen.id, state: 'pen', grown: 1, age: 3, hunger: 0.1, hx: pen.x + 1.5, hy: pen.y + 1.5, hold: 1e9 });
+        if (instant) w = G.Siege.raiseWalls(s, null, true);
+        return { w, pen, cow };
+      });
+      const w = res.w; if (!w) continue;
+      if (!instant) {
+        G.Depot.make('f:' + w.fac, w.mat === 'pedra' ? 'stone' : 'wood', 600, { code: 'teste', part: true }); // (the material the builders take)
+        const at = Math.max(...spot.run.concat([ct]).map(j => w.tiles.indexOf(j)));
+        let n = 0; while (w.built <= at && !w.done && n++ < 8000) G.debug.step(0.5);
+      }
+      const cow = res.cow; const ci = W.idx(cow.x, cow.y);
+      got = { k, s, other, w, pen: res.pen, spot, ct, cow, raised: S.wall[ct] === 1, onPen: spot.lot.filter(j => S.wall[j] === 1 || S.wall[j] === 2 || S.wall[j] === 4).length, planOn: w.tiles.filter(j => spot.lot.includes(j)).length,
+        inWall: S.wall[ci] === 1 || S.wall[ci] === 4, stands: !cow.dead && G.Animals.walkOK(cow, cow.x, cow.y), reaches: W.canWalk(cow.x, cow.y, cow.hx, cow.hy) };
+      break;
+    }
+    if (got) break;
+  }
+  if (!got) { ok(nm, false, 'em nenhum mundo pronto uma cidade sem muro com um trecho reto da linha sobre chão livre para um curral'); continue; }
+  const N = G.N, at = i => `(${i % N},${(i / N) | 0})`;
+  ok(nm, got.raised && !got.onPen && (!instant || !got.planOn) && !got.inWall && got.stands && got.reaches,
+    `${got.k}: o muro de ${got.s.name} (#${got.w.id}); ${G.Village.buildName(got.pen)} #${got.pen.id} de ${got.other.name} em (${got.spot.x0},${got.spot.y0}), a linha pelo meio${instant ? `; o plano com o curral lá: ${got.planOn ? got.planOn + ' casa(s) dele NO CURRAL' : 'nenhuma casa no curral'}` : ''}; de pé no curral: ${got.onPen ? got.onPen + ' casa(s) de MURO' : 'nenhum muro'}; a vaca #${got.cow.id} na casa ${at(got.ct)} da linha — ${got.raised ? 'o muro subiu ali' : 'o muro NÃO subiu ali'}: agora em (${got.cow.x.toFixed(2)},${got.cow.y.toFixed(2)})${got.inWall ? ', DENTRO DO MURO' : ''}, ${got.stands ? 'num chão onde fica' : 'ONDE NÃO PODE FICAR'}, ${got.reaches ? 'chega ao seu curral' : 'NÃO CHEGA ao seu curral'}`);
+}
+// 11c. a wall of before L-606 standing on a fenced ground, in a save: the checker sees it; loaded, it comes down there — the fence
+//      the wall there again — and the rest of the wall stands (a wall of the ready worlds standing on a pen, a stable, a captives'
+//      pen or a graveyard, as the planner of before raised it; with none, a tile of a fenced ground of its town put in its record
+//      and raised, as a save of before holds it)
+{
+  let got = null;
+  for (const k of WORLDS) {
+    M.pronto(k); const S = G.S;
+    const fen = i => { const o = S.occ[i]; const b = o && S.buildings.get(o); return !!b && !!FEN[b.type] && !b.blocks; };
+    const up = S.walls.filter(q => q.tiles.some(i => S.wall[i] === 1));
+    let w = up.find(q => q.tiles.some(i => S.wall[i] && S.wall[i] !== 3 && fen(i))) || null, put = w ? w.tiles.filter(i => S.wall[i] && S.wall[i] !== 3 && fen(i)) : [];
+    for (const q of w ? [] : up) { const ob = [...S.buildings.values()].filter(o => o.set === q.set && FEN[o.type] && o.built).sort((a, c) => a.id - c.id)[0];
+      if (ob) { const i = ob.y * G.N + ob.x; q.tiles.push(i); put = [i]; w = q; break; } }
+    if (!w) continue; const lots = [...new Set(put.map(i => { const b = S.buildings.get(S.occ[i]); return b.type + '#' + b.id; }))];
+    sim(() => { for (const i of put) { S.wall[i] = 1; S.wallFac[i] = w.fac; } G.W.touchWalk(); });
+    const said = () => QA.check().filter(q => /chão cercado/.test(q.msg)).length;
+    const rest = w.tiles.filter(i => S.wall[i] && !put.includes(i)); const said0 = said(); M.salvarCarregar(); const S1 = G.S;
+    got = { k, w, put, lots, still: put.filter(i => S1.wall[i]).length, walk: put.filter(i => G.W.walkable(i)).length, rest: rest.length, kept: rest.filter(i => S1.wall[i]).length, said0, said1: said() };
+    break;
+  }
+  ok('11c o muro de antes num chão cercado, num save: o verificador o vê; carregado, sai de lá, e o resto do muro fica', !!got && !got.still && got.walk === got.put.length && got.kept === got.rest && got.said0 > 0 && !got.said1,
+    got ? `${got.k}: o muro #${got.w.id} com ${got.put.length} casa(s) de pé no chão cercado de ${got.lots.join(', ')} — o verificador ${got.said0 ? 'o vê' : 'NÃO o vê'}; carregado, ${got.still} de pé lá, ${got.walk} que o mundo anda; o resto do muro: ${got.kept} de ${got.rest} de pé; o verificador ${got.said1 ? 'AINDA QUEIXA' : 'cala'}` : 'nenhum muro de pé nos mundos (nada a provar)');
 }
 // 5. the checker, the module errors
 { const bad = QA.check().filter(q => q.sev <= 2); const e = M.erros(); ok('5 verificador e erros de módulo', !bad.length && !Object.keys(e.mod).length, bad.length ? bad.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : `limpo; erros de módulo: ${JSON.stringify(e.mod)}`); }

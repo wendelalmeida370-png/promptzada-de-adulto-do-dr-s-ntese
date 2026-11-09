@@ -192,8 +192,19 @@
   // (a tile no wall takes — planned, raised at once or laid by the builders —: a blocking building's, or an open ground's with a
   // plan, the square and the fair: the world walks across its lot and its plan has its floor there. Only the square was spared,
   // and walls stood on the fairs — three tiles of the feira#12801 of the metrópole of the generation 11, the edge of its lot a
-  // strip of wall where the plan's floor ended, its stalls on tiles the world does not walk: L-466)
-  const keepsWall = o => !!o && (o.blocks || o.type === 'praca' || !!(G.Interiors && G.Interiors.TYPES && G.Interiors.TYPES[o.type]));
+  // strip of wall where the plan's floor ended, its stalls on tiles the world does not walk: L-466. Nor a fenced ground — a pen,
+  // a stable, a captives' pen, a graveyard (world.js): its fence is the wall there; laid across it, the wall shut its beasts in
+  // and out — Mênfis's over a pen of Birka in the metrópole of the generation 15, and half the plans of the ready worlds over
+  // one, L-606)
+  const keepsWall = o => !!o && (o.blocks || o.type === 'praca' || !!W.FENCED[o.type] || !!(G.Interiors && G.Interiors.TYPES && G.Interiors.TYPES[o.type]));
+  // nobody stays buried inside a new wall: who stands on its tiles steps to the nearest ground beside it — a person, and a beast by
+  // its own rule of where it can stand, towards its home (Animals.aside). A beast where the wall rose stayed inside it for good,
+  // and a wall raised at once moved nobody at all (L-606)
+  function unbury(tiles) {
+    const S = G.S;
+    for (const v of S.villagers.values()) if (tiles.has(W.idx(v.x, v.y)) && !v.aboard) { const p = W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; v.path = null; } }
+    if (G.Animals && G.Animals.aside) for (const a of S.animals.values()) if (tiles.has(W.idx(a.x, a.y))) G.Animals.aside(a, 3);
+  }
   const takenAt = i => { const o = G.S.occ[i]; return !!o && keepsWall(G.S.buildings.get(o)); };
   // (nor a lot a town keeps for its great work, D-121: the wall passes by it as by the square, and the work, when it stands, is
   // the wall there as any building — Roma let go of its lot of 40 m for the wall laid across it, year 38 of a life from scratch)
@@ -263,8 +274,9 @@
     const w = planWall(s, f); if (!w) return null;
     if (mat) w.mat = mat;
     S.walls.push(w);
-    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || takenAt(i) || keptAt(i) || Sg.walledIn(i, w)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; }
-    if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); }
+    const up = new Set();
+    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || takenAt(i) || keptAt(i) || Sg.walledIn(i, w)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; up.add(i); }
+    if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); if (up.size) unbury(up); }
     return w;
   };
   function considerWalls() {
@@ -306,8 +318,7 @@
         S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; G.W.touchWalk();
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
         G.FX && G.FX.dust(x, y, 2);
-        // nobody stays buried inside the new wall
-        for (const v of S.villagers.values()) if (W.idx(v.x, v.y) === i && !v.aboard) { const p = W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; v.path = null; } }
+        unbury(new Set([i]));
       }
       if (w.built >= w.tiles.length) {
         w.done = true;
@@ -724,7 +735,8 @@
       const S = G.S; S.walls = o.walls || []; S.wallHp = o.wallHp || {}; S.missiles = []; for (const f of S.factions.values()) f.sac = null; Sg.reset();
       // (a save from before L-342: what was raised inside another town's walls comes down — the pocket opens; the tile map is
       // back already, city.js loads before. And one from before L-466: what was raised on the lot of an open ground with a plan
-      // — the square, the fair — comes down, as no wall is raised there now: the world walks across it, its plan has its floor)
+      // — the square, the fair — comes down, as no wall is raised there now: the world walks across it, its plan has its floor.
+      // And one from before L-606: what was raised on a fenced ground — its fence the wall there again)
       let down = 0;
       for (const w of S.walls) for (const i of w.tiles) {
         if (!S.wall[i] || S.wall[i] === 3) continue; const o = S.occ[i], ob = o && S.buildings.get(o); const onOpen = !!ob && !ob.blocks && takenAt(i);
