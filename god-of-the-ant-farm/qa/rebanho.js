@@ -87,8 +87,10 @@ function setup(time, hunger, pen) {
   // (the beasts of prey round the pen sent away by the god's hand for the case: in the branch joined with 8e432b8 a wolf
   // came on the flock at pasture at 0,20, the herder fought it and hunted it, the flock went home hungry, and the morning's
   // pasture was gone — the r1, the r4 and the r5 are the pasture, not the wolf; the herder driving one off is the world's,
-  // T-268 —, T-302)
-  for (const a of [...S().animals.values()]) if (!a.dead && G.Animals.predator(a.kind) && G.dist2(a.x, a.y, b.x, b.y) < 40 * 40) G.Animals.remove(a);
+  // T-268 —, T-302; and the big beasts that defend themselves and charge whoever comes near — a rhino, a buffalo, an elephant:
+  // in the metrópole of the generation 16, with the fixes of the round 16, a rhino came on Kiya at the pasture at 0,51, she fought
+  // it and fled, the evening came and she went home with the herding never ended, T-xx7)
+  for (const a of [...S().animals.values()]) { const d = G.Animals.DEF[a.kind]; if (!a.dead && (G.Animals.predator(a.kind) || (d && d.defend && !d.dom)) && G.dist2(a.x, a.y, b.x, b.y) < 40 * 40) G.Animals.remove(a); }
   CUR = { b, v, herd, ids: herd.map(a => a.id), base: base() }; return CUR;
 }
 function send(v, b) {
