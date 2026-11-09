@@ -37,7 +37,11 @@ const fine = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1)
 // (what the checker says: the busy hands' own rule — QA.maos —, and every S2 of the activities and the numbers)
 const ours = () => { const out = []; QA.maos((sys, sev, msg) => out.push(`S${sev} ${msg}`), S); return out; };
 const bad = () => QA.check().filter(q => q.sev <= 2 && (q.sys === 'act' || q.sys === 'nan')).map(q => q.msg);
+// (the world lives to its own morning before the cases: the hour of the case set on a world saved at night leaves its people
+// asleep in their houses — the metrópole of the generation 15 is saved at 0,003, and m4 found nobody awake and out of doors by
+// the scaffold in any town, T-503)
 M.pronto('metropole'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim || 0, 1);
+for (let k = 0; k < 400 && !(S.time > 0.3 && S.time < 0.36); k++) M.viver(1);
 // the town of the cases: the most peopled one of coin, at peace — one with a stall open, if there is one
 const pop = s => G.Village.pop(s.id);
 const towns = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && E.coinage(s.fac) && !G.War.threat(s.id)).sort((a, b) => pop(b) - pop(a) || a.id - b.id);
@@ -111,6 +115,12 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
   if (!z || !m || !sp || !b1 || !b2) ok('m3 a venda no balcão', false, `${set.name}: ${z ? '' : 'nenhuma banca aberta, nem mercado com mercador; '}${b1 && b2 ? '' : 'ninguém livre'}`);
   else {
     if (m.carry && m.carry.n > 1e-6 && !m.carry.to && !m.carry.op) D.use('v:' + m.id, m.carry.k, m.carry.n, { code: 'teste', mine: true });
+    // (the day at the stall with the hands free: a load on its way — in the morning, the wholesale goods the merchant carries to
+    // his stall — holds the hands by the rule (busyHands), and it only goes where it is bound: put there, as at the arrival
+    // (the 'entrega' of the world's errands). With the world lived to its morning (m4, T-503), Nefertiti, in Mênfis, came with
+    // 6 of food on its way to her stall, and the assembly rightly left her: T-503)
+    if (m.carry && m.carry.n > 1e-6 && m.carry.to && !m.carry.op) D.move('v:' + m.id, m.carry.to, m.carry.k, m.carry.n, { code: 'entrega', by: m.id, part: true });
+    const held = m.carry && m.carry.n > 1e-6 ? ` (ainda com ${m.carry.n} de ${m.carry.k} para ${m.carry.to || m.carry.op || '-'})` : '';
     Vg.endTask(m); Vg.setTask(m, { type: 'banca', biz: z.id, pri: 1, st: 1, dur: 40, id: z.b });
     const lm0 = A.leg(m); const asm0 = Vg.give(m, ASM()); const k0 = tk(m); if (!k0.startsWith('banca')) Vg.setTask(m, { type: 'banca', biz: z.id, pri: 1, st: 1, dur: 40, id: z.b });
     // (one in line, by the line's own door — G.Life.inLine, as the buyer's errand stands in it)
@@ -125,7 +135,7 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
     const lmE = A.leg(m); const asmE = Vg.give(m, ASM()); const kE = tk(m);
     for (const v of [m, b1, b2]) Vg.endTask(v);
     ok('m3 a venda no balcão', !lm0 && asm0 && line >= 1 && lm === 'venda' && !asmM && kM === 'banca.1' && l2 === 'venda' && !asm2 && k2 === 'compra.2' && !l1 && asm1 && k1.startsWith('assembly') && !line2 && !lmE && asmE && kE.startsWith('assembly') && !ours().length,
-      `na banca de ${m.name}${opened ? ' (aberta pela mão do teste)' : ''}, em ${set.name}: sem fila, a assembleia ${asm0 ? 'o levou' : 'NÃO o levou'} (${k0}); com ${line} na fila (${lm || 'SEM perna'}), ${asmM ? 'LEVOU' : 'esperou'} (${kM}); ${b2.name} conversando no balcão (${l2 || 'SEM perna'}): ${asm2 ? 'LEVOU' : 'esperou'} (${k2}); ${b1.name}, só na fila (${l1 || 'sem perna'}): ${asm1 ? 'levou' : 'NÃO levou'} (${k1}); a fila vazia (${line2}), o mercador: ${asmE ? 'levou' : 'NÃO levou'} (${kE})`);
+      `na banca de ${m.name}${opened ? ' (aberta pela mão do teste)' : ''}${held}, em ${set.name}: sem fila, a assembleia ${asm0 ? 'o levou' : 'NÃO o levou'} (${k0}); com ${line} na fila (${lm || 'SEM perna'}), ${asmM ? 'LEVOU' : 'esperou'} (${kM}); ${b2.name} conversando no balcão (${l2 || 'SEM perna'}): ${asm2 ? 'LEVOU' : 'esperou'} (${k2}); ${b1.name}, só na fila (${l1 || 'sem perna'}): ${asm1 ? 'levou' : 'NÃO levou'} (${k1}); a fila vazia (${line2}), o mercador: ${asmE ? 'levou' : 'NÃO levou'} (${kE})`);
   }
 }
 // ---------------- m4: the execution waits for the hands; it calls the others, and the one whose purchase got home ----------------

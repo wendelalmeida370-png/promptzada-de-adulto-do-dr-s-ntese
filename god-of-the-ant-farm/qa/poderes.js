@@ -599,7 +599,10 @@ const key = process.argv[2] || 'cidade';
   }
   {
     const r = await page.evaluate(() => {
-      const H = __H; H.fresh(); const S = G.S; H.toDay();
+      // (the winter cast in the morning past 0,3: it lasts a day of the world (winter.js), and its thaw falls in the next
+      // morning, with the town awake and out — cast at the first light, its end fell at 0,97 and later, in the night, everyone
+      // asleep or indoors, in the cidade of the generation 15, T-499)
+      const H = __H; H.fresh(); const S = G.S; H.toDay(); while (!(S.time > 0.3 && S.time < 0.45)) H.run(2);
       const L = H.lake(); if (!L) return null;
       G.Powers.cast('winter', L.x, L.y); const w = S.winters[0];
       // the god raises land under one edge of the ice
@@ -607,13 +610,20 @@ const key = process.argv[2] || 'cidade';
       G.Powers.raise(ex, ey); H.run(1);
       const after = w.tiles.length;
       // someone walks to the middle of the ice and stays there, watching, until the thaw
-      const v = [...S.villagers.values()].filter(o => o.set === L.set.id && o.age >= 16 && !o.inside && !o.aboard && !o.captive && !o.jail).sort((a, b) => G.dist2(a.x, a.y, L.x, L.y) - G.dist2(b.x, b.y, L.x, L.y))[0];
       const mid = w.tiles.slice().sort((a, b) => G.dist2(a % G.N, (a / G.N) | 0, L.x, L.y) - G.dist2(b % G.N, (b / G.N) | 0, L.x, L.y))[0];
       const mx = mid % G.N + 0.5, my = ((mid / G.N) | 0) + 0.5;
       let onIce = false; const bad = [];
-      // (the day goes by; near the end of it, out onto the ice)
+      // (the day goes by; near the end of it, out onto the ice — the nearest of the town free then, awake and with nothing above
+      // the errand: the one picked in the morning was aboard a boat at the end of the day in the cidade of the generation 15, and
+      // the boat kept him, T-499)
       H.until(() => { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(q => q.msg)); return w.t > G.DAY_LEN - 30; }, G.DAY_LEN);
-      G.Vg.H.setTask(v, { type: 'olhar', x: mx, y: my, fx: mx + 1, fy: my, pri: 3, until: S.clock + 100, what: 'gelo', kind: 'olhar' });
+      const livre = o => o.set === L.set.id && o.age >= 16 && !o.inside && !o.aboard && !o.captive && !o.jail && !o.sleeping && !(o.task && (o.task.pri || 0) >= 3) && G.W.reaches(o, mx, my);
+      let v = null;
+      for (const o of [...S.villagers.values()].filter(livre).sort((a, b) => G.dist2(a.x, a.y, mx, my) - G.dist2(b.x, b.y, mx, my) || a.id - b.id)) {
+        G.Vg.H.setTask(o, { type: 'olhar', x: mx, y: my, fx: mx + 1, fy: my, pri: 3, until: S.clock + 100, what: 'gelo', kind: 'olhar' });
+        if (o.task && o.task.type === 'olhar') { v = o; break; }
+      }
+      if (!v) return { none: true };
       H.until(() => { if (S.ice && S.ice[G.W.idx(v.x, v.y)] && w.t > G.DAY_LEN - 2) onIce = true; return !(S.winters || []).length; }, 60);
       H.run(2);
       const alive = S.villagers.get(v.id); const i = alive ? G.W.idx(alive.x, alive.y) : -1;
@@ -621,7 +631,8 @@ const key = process.argv[2] || 'cidade';
       const iceLeft = S.ice ? S.ice.reduce((a, b) => a + b, 0) : 0;
       return { before: w.tiles.length, after, onIce, fell: w.fell, who: v.name, alive: !!alive, dry: alive ? G.W.walkable(i) : null, bio: alive ? (alive.bio || []).some(e => /água gelada/.test(e[2] || '')) : null, wet, iceLeft, bad, qa: H.qa() };
     });
-    if (r) ok('i3 terra erguida sob o gelo; no degelo, quem está no gelo cai na água', r.onIce && r.fell >= 1 && (!r.alive || (r.dry && r.bio)) && !r.wet && !r.iceLeft && !r.bad.length && !r.qa.length, `gelo depois da terra erguida: ${r.after} casas; ${r.who} no gelo ${r.onIce}; caíram ${r.fell}; ${r.who} ${r.alive ? `vivo, em terra seca ${r.dry}, biografia ${r.bio}` : 'morreu na água'}; gente em água funda ${r.wet}; gelo restante ${r.iceLeft}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
+    if (r && r.none) ok('i3 terra erguida sob o gelo; no degelo, quem está no gelo cai na água', false, 'ninguém da cidade livre para ir ao meio do gelo no fim do inverno');
+    else if (r) ok('i3 terra erguida sob o gelo; no degelo, quem está no gelo cai na água', r.onIce && r.fell >= 1 && (!r.alive || (r.dry && r.bio)) && !r.wet && !r.iceLeft && !r.bad.length && !r.qa.length, `gelo depois da terra erguida: ${r.after} casas; ${r.who} no gelo ${r.onIce}; caíram ${r.fell}; ${r.who} ${r.alive ? `vivo, em terra seca ${r.dry}, biografia ${r.bio}` : 'morreu na água'}; gente em água funda ${r.wet}; gelo restante ${r.iceLeft}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
   }
 
   // ------------------------------ Dragão ------------------------------
@@ -674,10 +685,13 @@ const key = process.argv[2] || 'cidade';
       const H = __H; H.fresh(); const S = G.S; const { d } = H.dragon();
       d.hoard = 60; // (what it took from the towns before)
       H.until(() => d.st === 'dorme', 400); H.toDay();
-      // (asleep in daylight: the brave of the burned town climb to the lair; one of them falls in the fight)
+      // (asleep in daylight: the brave of the burned town climb to the lair; one of them falls in the fight. The climb takes the
+      // world's own time — the call comes a while into the sleep, the walk to a lair 44 tiles from the town, the wait below it for
+      // the party, and a hunt of the dragon in between sends them home to be called again: in the cidade of the generation 15 the
+      // first blade came at 190 s —: the wait goes through two of its sleeps, T-500)
       let fighting = 0, fell = null; const bad = []; const climbed = new Set();
       let woke = false;
-      H.until(() => { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); const t = H.tasks('dragao'); for (const v of t) climbed.add(v.id); fighting = t.filter(v => v.task.st === 2).length; if (d.st === 'luta') woke = true; if (!fell && fighting >= 1 && d.st === 'luta') { const v = t.find(o => o.task.st === 2); fell = v.name; G.Village.kill(v, 'teste', true); } return !!fell; }, 160);
+      H.until(() => { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); const t = H.tasks('dragao'); for (const v of t) climbed.add(v.id); fighting = t.filter(v => v.task.st === 2).length; if (d.st === 'luta') woke = true; if (!fell && fighting >= 1 && d.st === 'luta') { const v = t.find(o => o.task.st === 2); fell = v.name; G.Village.kill(v, 'teste', true); } return !!fell; }, 480);
       d.fled = 1; d.hp = Math.min(d.hp, 40); // (the blows have told: the next ones kill — and it does not get away)
       // (the spill is caught in the step it happens, before anyone picks a coin)
       let rn = null, spill = 0;

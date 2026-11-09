@@ -120,9 +120,15 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   live(2);
   const took = r2(seen.slice(L0).filter(e => e[8] === 'feno' && e[3] === 'f:' + f.id && e[4] === 'v:' + P.v.id).reduce((s, e) => s + e[6], 0));
   const ate = r2(seen.slice(L0).filter(e => e[8] === 'feno' && e[3] === 'v:' + P.v.id && e[4] === '@uso').reduce((s, e) => s + e[6], 0));
+  // (what of the hay went back to the store from his hands — a fodder cut on the way puts the load back at its place, L-186:
+  // in the metrópole of the generation 15 Gunnar took 8, put them back ('entrega'), took 8 again and fed them, T-501 —: the
+  // store gives out only what the flock ate, the hay that came back off the count)
+  const i0 = seen.slice(L0).findIndex(e => e[8] === 'feno' && e[3] === 'f:' + f.id && e[4] === 'v:' + P.v.id);
+  const sum = (L, p) => L.filter(p).reduce((s, e) => s + e[6], 0); const after = i0 < 0 ? [] : seen.slice(L0 + i0);
+  const back = r2(sum(after, e => e[3] === 'v:' + P.v.id && e[4] === 'f:' + f.id && e[5] === 'food') - sum(after, e => e[3] === '@mundo' && e[4] === 'v:' + P.v.id && e[5] === 'food')); // (food born in his hands meanwhile — a milking — and delivered is not hay)
   const hands = P.v.carry && P.v.carry.hay ? r2(P.v.carry.n) : 0; const h1 = avgH(flock(P)); const bad = newBad(P.base);
-  ok('r2', !!t0 && t0.type === 'fodder' && took > 0 && Math.abs(took - ate) < 0.01 && !hands && h1 < h0 && !bad.length,
-    `${P.v.name} à tardinha (${t0 ? t0.type : 'sem tarefa'}; dorme às ${r2(G.Lar.clock(P.v).bed)}): do armazém às mãos ${took} de feno, comido ${ate}, ainda nas mãos ${hands}; a fome ${h0} → ${h1}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  ok('r2', !!t0 && t0.type === 'fodder' && took > 0 && ate > 0 && Math.abs(took - back - ate) < 0.01 && !hands && h1 < h0 && !bad.length,
+    `${P.v.name} à tardinha (${t0 ? t0.type : 'sem tarefa'}; dorme às ${r2(G.Lar.clock(P.v).bed)}): do armazém às mãos ${took} de feno${back ? `, de volta ao armazém ${back}` : ''}, comido ${ate}, ainda nas mãos ${hands}; a fome ${h0} → ${h1}${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
 // r3 shearing, milking, eggs
 {
@@ -148,7 +154,9 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   send(P.v, P.b);
   // (one of the three dead of old age in the case gives nothing, and is no fault of the herder's — the oldest ewe of Birka dies
   // in the first minute, T-268 —: the others give; the case waits for them, not for the dead one, T-302)
-  const dueNow = () => ready.filter(a => !(a.dead && a.cause === 'old'));
+  // (nor one the town's butcher leads off to the slaughter in the case — the world's own errand, as in the r1, the r4 and the
+  // r5, T-390: in the metrópole of the generation 15 he took the third ready cow of Birka's pen at 0,63, before its milking, T-501)
+  const dueNow = () => ready.filter(a => !(a.dead && a.cause === 'old') && !CUT.has(a.id));
   // (each one seen giving — what it had down to nothing, the tending's mark, economy.js —, at the step it gave: a turkey lays
   // again in a third of a day (animals.js), and the first ones laid again before the third was tended, and counted as not
   // given — only the tending takes it down, T-327)
@@ -160,7 +168,7 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   const given = due.filter(a => gave.has(a.id)).length; const bad = newBad(P.base);
   const same = Object.keys(made).length > 0 && Object.keys(made).every(k => Math.abs((sent[k] || 0) - made[k]) < 0.01);
   ok('r3', due.length > 0 && given === due.length && same && !(P.v.carry && P.v.carry.n > 1e-6) && !bad.length,
-    `${ready.length} bicho(s) prontos (${[...new Set(ready.map(a => a.kind))].join(', ')})${ready.length > due.length ? `, ${ready.length - due.length} morreu de velhice no caso` : ''}: deram ${given} de ${due.length}; nasceu nas mãos pelo livro ${JSON.stringify(made)}, ao armazém ${JSON.stringify(sent)}; ${f ? '' : 'sem povo; '}nas mãos no fim ${P.v.carry ? r2(P.v.carry.n) + ' de ' + P.v.carry.k : 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    `${ready.length} bicho(s) prontos (${[...new Set(ready.map(a => a.kind))].join(', ')})${ready.some(a => a.dead && a.cause === 'old') ? `, ${ready.filter(a => a.dead && a.cause === 'old').length} morreu de velhice no caso` : ''}${ready.some(a => CUT.has(a.id)) ? `, ${ready.filter(a => CUT.has(a.id)).length} levad${ready.filter(a => CUT.has(a.id)).length === 1 ? 'o' : 'os'} pelo açougueiro` : ''}: deram ${given} de ${due.length}; nasceu nas mãos pelo livro ${JSON.stringify(made)}, ao armazém ${JSON.stringify(sent)}; ${f ? '' : 'sem povo; '}nas mãos no fim ${P.v.carry ? r2(P.v.carry.n) + ' de ' + P.v.carry.k : 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
 // r4 a save with the flock out at pasture
 {
@@ -202,8 +210,8 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
 // the gate of a pen on his way — the gates let anyone in —, and only a beast with no pen could leave someone else's pen by
 // any side: in the generation 11's Texcoco a turkey of the case's flock went in at the gate of the pen by the road on the
 // way home after the load of the r4, and its way home — the people's, with no gates in it — pressed it against the fence
-// for good). Put down by the god's hand in the middle of the nearest other fenced ground it can walk to — a pen, a stable, a
-// captives' pen, a graveyard —, at rest, past the pasture's hours
+// for good). Put down by the god's hand inside the nearest other fenced ground it can walk to — a pen, a stable, a captives'
+// pen, a graveyard —, on a tile of it the beast can stand on and walk home from, at rest, past the pasture's hours
 {
   const P = setup(0.5, 0.1); const b = P.b; const FEN = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 };
   const [gx, gy] = [b.x + b.w / 2, b.y + b.h + 0.4];
@@ -211,11 +219,18 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   const a = P.herd.slice().sort((p, q) => p.age / G.Animals.DEF[p.kind].life - q.age / G.Animals.DEF[q.kind].life || p.id - q.id)[0]; // (the youngest: none dies of old age in the case)
   if (!other || !a) ok('r7', true, `${other ? 'sem bicho no curral' : 'nenhum outro chão cercado a que o rebanho chegue a pé'}: sem o caso`);
   else {
-    a.x = other.x + other.w / 2; a.y = other.y + other.h / 2; a.tx = a.x; a.ty = a.y; a.path = null; a.noGo = undefined; a.blk = 0; a.stk = 0;
+    // (on a tile of that ground the beast can stand on and walk home from, the nearest its own gate: the middle of Curral
+    // #12229, in the metrópole of the generation 15, is a wall that crosses the pen — the cow put on it could not take a step —,
+    // and the pen's north row is on the other side of that wall, T-501)
+    const mid = [other.x + other.w / 2, other.y + other.h / 2]; const spots = [];
+    for (let y = other.y; y < other.y + other.h; y++) for (let x = other.x; x < other.x + other.w; x++) if (G.Animals.walkOK(a, x + 0.5, y + 0.5) && G.W.canWalk(x + 0.5, y + 0.5, gx, gy)) spots.push([x + 0.5, y + 0.5]);
+    spots.sort((p, q) => G.dist2(p[0], p[1], gx, gy) - G.dist2(q[0], q[1], gx, gy) || p[1] - q[1] || p[0] - q[0]);
+    const sp = spots[0] || mid;
+    a.x = sp[0]; a.y = sp[1]; a.tx = a.x; a.ty = a.y; a.path = null; a.noGo = undefined; a.blk = 0; a.stk = 0;
     const d0 = r2(G.dist(a.x, a.y, b.x + b.w / 2, b.y + b.h / 2)); let outAt = null, c0 = S().clock;
     const back = live(90, () => { if (outAt === null && G.W.fenceMap()[G.W.idx(a.x, a.y)] !== other.id) outAt = r2(S().clock - c0); }, () => a.dead || (a.state === 'pen' && inPen(a, b)));
     const bad = newBad(P.base);
-    ok('r7', back && !a.dead && !bad.length, `${a.kind} #${a.id} do ${V.buildName(b)} #${b.id} posto no meio de ${V.buildName(other)} #${other.id} (${other.type}), a ${d0} casas do seu: ${outAt === null ? 'NÃO SAIU de lá' : `saiu em ${outAt} s`}; ${back ? `no seu curral em ${r2(S().clock - c0)} s` : `não voltou ao seu curral em 90 s (em ${r2(a.x)},${r2(a.y)}, ${a.state})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    ok('r7', back && !a.dead && !bad.length, `${a.kind} #${a.id} do ${V.buildName(b)} #${b.id} posto em (${r2(sp[0])},${r2(sp[1])}), dentro de ${V.buildName(other)} #${other.id} (${other.type}), a ${d0} casas do seu: ${outAt === null ? 'NÃO SAIU de lá' : `saiu em ${outAt} s`}; ${back ? `no seu curral em ${r2(S().clock - c0)} s` : `não voltou ao seu curral em 90 s (em ${r2(a.x)},${r2(a.y)}, ${a.state})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 const er = M.erros();
