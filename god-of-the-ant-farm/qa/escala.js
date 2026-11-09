@@ -731,6 +731,12 @@ run('e23', () => {
   ok('e23b o corte do resto deixa os serviços guardados', n1 === 2 && w1.taverneiro === 1 && w1.ator === 1 && w1.oleiro === 0, `corta 3 de ${JSON.stringify({ taverneiro: 1, ator: 2, oleiro: 1 })} guardando um taverneiro e um ator: ${n1} cortados, ${JSON.stringify(w1)}`);
   const t0 = papel('taverneiro'), a0 = papel('ator'); M.viver(400); const c1 = checa();
   ok('e23c na vida, a taverna e o teatro abertos', papel('taverneiro') >= 1 && papel('ator') >= 1 && V.foodSafe(f.id) && c1.ok, `${set.name}: taverneiros ${t0} → ${papel('taverneiro')}, atores ${a0} → ${papel('ator')} em dois dias; ${c1.txt}`);
+  // (saved where no turn of age waits for the dealing: the load gives the role of an age turned in the four seconds before the
+  // save — 2, 16, 62 —, the captive's and a trade to a grown one with none at once, and the world at its next dealing; the
+  // dealing's clock starts over at every load, so the load cannot know when that would be — T-534. A baby born then was the
+  // same, and is born a baby now, L-630)
+  const pend = () => [...S.villagers.values()].some(v => v.set === set.id && (v.captive ? v.role !== 'cativo' : v.age < 2 ? v.role !== 'bebe' : v.age < 16 ? v.role !== 'crianca' : v.age >= 62 ? v.role !== 'anciao' : !v.role || v.role === 'bebe' || v.role === 'crianca' || v.role === 'anciao'));
+  for (let k = 0; k < 120 && pend(); k++) M.viver(0.1);
   const roles = [...S.villagers.values()].filter(v => v.set === set.id).map(v => v.id + ':' + v.role).join(); salva(); const s2 = S.settlements.get(set.id);
   const roles2 = [...S.villagers.values()].filter(v => v.set === s2.id).map(v => v.id + ':' + v.role).join();
   ok('e23d o save devolve os ofícios', roles === roles2, roles === roles2 ? 'os mesmos ofícios, um por um, depois de carregar' : 'OS OFÍCIOS MUDARAM NO LOAD');
