@@ -2,22 +2,22 @@
 // os mundos prontos que vêm com o jogo: o que cada um é, sem o seu peso (escrito por qa/prontos.js — não editar à mão)
 G.Ready.list({
  "cidade": {
-  "day": 16,
-  "pop": 140,
+  "day": 20,
+  "pop": 152,
   "peoples": 4,
   "towns": 4,
   "N": 128,
   "map": "continente",
   "seed": 3101,
   "city": {
-   "name": "Tenochtitlan",
+   "name": "Mênfis",
    "tier": 3,
-   "pop": 35
+   "pop": 38
   },
   "wars": 0,
   "ww": null,
   "world": "Ysdun",
-  "bytes": 1050280
+  "bytes": 1118155
  },
  "metropole": {
   "day": 41,
