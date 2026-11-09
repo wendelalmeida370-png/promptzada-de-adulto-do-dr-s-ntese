@@ -528,14 +528,19 @@
     return H.setTask(v, { type: 'taxes', id: b.id, route, k: 0, bag: 0, pri: 1.05 });
   }
   // what a smuggler takes from his town's store, and the theft that waits for him tonight: room on the market's shelf, a store
-  // of his town to go to and something there worth it — or null (asked by his task and by his night, E.prowls)
+  // of his town to go to and something there worth it that his two hands lift now — or null (asked by his task and by his
+  // night, E.prowls). One who lifts none of it — both arms lost, or the arms full of another load — has no theft: he was sent
+  // to the store all night, a new try every two seconds, kept up by E.prowls, and took nothing (L-620)
   const LOOT = ['tecido', 'ceramica', 'joias', 'food', 'couro', 'ferramentas'];
   const shelfStock = I => { let n = 0; for (const k in I) if (k !== 'moedas') n += I[k]; return n; };
   function nightTheft(v, b, f) {
     if (shelfStock(b.inv || {}) >= 12) return null;
     const d = G.Village.nearestDropoff(b.x, b.y, v.set); if (!d) return null;
-    const pick = LOOT.filter(k => (f.stock[k] || 0) >= 3); return pick.length ? { d, pick } : null;
+    const ref = 'b:' + b.id;
+    const pick = LOOT.filter(k => (f.stock[k] || 0) >= 3 && G.Depot.room('v:' + v.id, k, { to: ref }) + 1e-6 >= 1); return pick.length ? { d, pick } : null;
   }
+  // (a body whose hands lift a load of the loot — one of a good, alone —: who can be a smuggler at all)
+  const lifts = v => { const s = G.Depot.strength(v); return LOOT.some(k => G.Depot.weight(k, 1) <= s + 1e-6); };
   function smugglerTask(v, b, f, H) {
     const stock = shelfStock(inv(b));
     if (G.isNight() || (G.isEvening() && G.R() < 0.4)) {
@@ -1098,14 +1103,24 @@
     const short = f.stock.tecido + f.stock.ceramica < pop * 0.1 && (f.stock.tecido + f.stock.ceramica) > 0;
     const push = (rate - 0.15) * 3 + (set.loyalty < 40 ? 0.6 : 0) + (short ? 0.3 : 0) + (G.Fac.enemiesOf(f.id).length ? 0.2 : 0);
     if (push <= 0 || G.R() > push * 0.25) return;
-    // two disloyal souls set up shop in a back alley
-    const crooks = [...S.villagers.values()].filter(v => v.set === set.id && !v.captive && v.age >= 18 && v.age < 55 && v.role !== 'guerreiro' && !G.Fac.all().some(q => q.leader === v.id)).sort((a, b) => (a.devotion + (a.traits.includes('Cético') ? -10 : 0)) - (b.devotion + (b.traits.includes('Cético') ? -10 : 0)));
-    if (crooks.length < 2) return;
-    const pos = G.Village.findSite(set, 'mercado_negro'); if (!pos) return;
-    const b = G.Village.addBuilding('mercado_negro', pos[0], pos[1], set.id, true);
-    for (const v of crooks.slice(0, 2)) { v.role = 'contrabandista'; v.job = b.id; }
-    log(`Num beco de ${set.name}, surgiu um mercado clandestino. Mercadoria sem imposto — e sem pergunta.`, 'chain', b.x, b.y);
+    E.openBlackMarket(set);
   }
+  // the two disloyal souls a town's black market would take: the least devout grown ones — of those whose hands lift a load:
+  // an armless one was taken, and his nights at the store took nothing (L-620). A question: it writes nothing, draws no chance
+  E.crooksFor = function (set) {
+    const S = G.S;
+    return [...S.villagers.values()].filter(v => v.set === set.id && !v.captive && v.age >= 18 && v.age < 55 && v.role !== 'guerreiro' && lifts(v) && !G.Fac.all().some(q => q.leader === v.id)).sort((a, b) => (a.devotion + (a.traits.includes('Cético') ? -10 : 0)) - (b.devotion + (b.traits.includes('Cético') ? -10 : 0))).slice(0, 2);
+  };
+  // they set up shop in a back alley (the world's chance above, or whoever asks for one: the proofs open it by this door)
+  E.openBlackMarket = function (set) {
+    const crooks = E.crooksFor(set);
+    if (crooks.length < 2) return null;
+    const pos = G.Village.findSite(set, 'mercado_negro'); if (!pos) return null;
+    const b = G.Village.addBuilding('mercado_negro', pos[0], pos[1], set.id, true);
+    for (const v of crooks) { v.role = 'contrabandista'; v.job = b.id; }
+    log(`Num beco de ${set.name}, surgiu um mercado clandestino. Mercadoria sem imposto — e sem pergunta.`, 'chain', b.x, b.y);
+    return b;
+  };
 
   // ------------------------------ slow ticks: pens, houses, statues ------------------------------
   function penTick(dt) {

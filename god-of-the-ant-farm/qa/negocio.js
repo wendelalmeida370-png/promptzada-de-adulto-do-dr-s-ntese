@@ -769,21 +769,14 @@ function stallNow() {
 
 // ================================ a people without coin: the exchange ================================
 {
-  M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); godsPeace(); // (and here, T-227)
   // (the peoples without coin stay without it while the cases run — the test's hand on the world's door of the arts,
   // G.Civ.learn, as wantMerchant's on the planner's demand: a young world's peoples learn the coin within minutes, and in
-  // the new «cidade» Argos learned it in the middle of n15, its stall selling for drachmas, T-098)
-  const noCoin = new Set([...S.factions.values()].filter(f => !E.coinage(f.id)).map(f => f.id)); const learn0 = G.Civ.learn;
-  G.Civ.learn = function (f, t) { if (t === 'moeda' && f && noCoin.has(f.id)) return false; return learn0.apply(this, arguments); };
-  // (a world with no people without coin — the «cidade» of the generation 15: its four peoples had all learned it by day 16,
-  // and n15, n17 and n17b found «nenhuma cidade sem moeda com mercado» —: a new world by the game's own door, G.Main.newGame,
-  // as the «cidade» began (its seed and its map), whose peoples are born without the coin — the arts a people starts with,
-  // civs.js —, held so from its first minute, which gives them their first huts; the market, the god's hand below, T-525)
-  if (!noCoin.size) {
-    M.novo({ seed: 3101, type: 'continente', size: 128, tribes: 4 }); S = G.S;
-    for (const f of S.factions.values()) if (!E.coinage(f.id)) noCoin.add(f.id);
-    M.viver(60); G.inSim = Math.max(G.inSim, 1); godsPeace();
-  }
+  // the new «cidade» Argos learned it in the middle of n15, its stall selling for drachmas, T-098 —; and with no people
+  // without coin in the ready world — the «cidade» of the generation 15: its four peoples had all learned it by day 16, and
+  // n15, n17 and n17b found «nenhuma cidade sem moeda com mercado» —, a new world by the game's own door, whose peoples are
+  // born without it: M.semMoeda, D-143; the market, the god's hand below, T-525)
+  const W0 = M.semMoeda('cidade'); S = G.S; G.inSim = Math.max(G.inSim, 1); godsPeace(); // (and here, T-227)
+  const learn0 = W0.aprende;
   // (the no-coin towns with a market, the biggest first: a town whose planner keeps no merchant for the case — a town short
   // of hands gives its trades away first, the merchant to the quay — passes it to the next one, told in the case; when none
   // keeps one, the god's hand puts a market where the town's own planner would, in the next town without coin, the biggest
@@ -923,7 +916,7 @@ function stallNow() {
     wantNone();
     ok('n17b a banca do tempo da troca, quando o povo aprende a moeda', fine, info);
   }
-  G.Civ.learn = learn0;
+  W0.solta();
 }
 
 const e = M.erros();

@@ -679,7 +679,10 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
 }
 // ---------------- h9: a people without coin: the people raise it with what they have
 {
-  M.pronto('cidade'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); taken.clear();
+  // (a world with a people without coin: the «cidade», or, with none there — its four peoples knew the coin by day 16 in the
+  // generation 15: «nenhuma cidade sem moeda» —, a new world by the game's own door, its peoples born without it and held so
+  // while the case runs: M.semMoeda, D-143, T-527)
+  const W9 = M.semMoeda('cidade'); S = G.S; G.inSim = Math.max(G.inSim, 1); taken.clear();
   // (the biggest town of a people without coin — or, when it has nobody left to make a couple of, the next one: in the cidade
   // grown by L-322 the single men of Argos all own the house they live in, T-134)
   const noCoin = [...S.settlements.values()].filter(s => !E.coinage(s.fac)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id) || a.id - b.id);
@@ -707,9 +710,10 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
       const b = K.waiting(v) || (v.home !== h0 ? S.buildings.get(v.home) : null);
       const paid = book(e => e[0] > L0 && e[5] === 'moedas' && (e[8] === 'obra-casa' || e[8] === 'compra-casa' || e[8] === 'aluguel')).length;
       fine9 = !!r.ok && !!b && !paid && b.dono === v.id;
-      info = `${set.name} (sem moeda): ${v.name} (${why9 === 'casal' ? 'o casal na casa cheia' : `a família que o dia da cidade pergunta: ${why9}`}) ${b ? (b.built ? `recebeu do povo a casa vazia #${b.id}` : `pediu ao povo, e o povo pôs ${G.Village.buildName(b).toLowerCase()} em ${b.x},${b.y}`) : 'NÃO conseguiu casa: ' + (r.why || JSON.stringify(r))}; moedas pagas: ${paid}`;
-    } else info = `${noCoin.map(s => s.name).join(', ')}: nenhum casal numa casa cheia, nem família que o dia da cidade pergunte`;
+      info = `${set.name} (sem moeda${W9.novo ? ", num mundo novo" : ""}): ${v.name} (${why9 === 'casal' ? 'o casal na casa cheia' : `a família que o dia da cidade pergunta: ${why9}`}) ${b ? (b.built ? `recebeu do povo a casa vazia #${b.id}` : `pediu ao povo, e o povo pôs ${G.Village.buildName(b).toLowerCase()} em ${b.x},${b.y}`) : 'NÃO conseguiu casa: ' + (r.why || JSON.stringify(r))}; moedas pagas: ${paid}`;
+    } else info = `${noCoin.map(s => s.name).join(', ')}${W9.novo ? ' (num mundo novo)' : ''}: nenhum casal numa casa cheia, nem família que o dia da cidade pergunte`;
   }
+  W9.solta();
   ok('h9 um povo sem moeda', fine9 && !bad().length, info);
 }
 // ---------------- h18: the town's day leaves the house of the body's family to the body, whoever of its grown ones heads it in

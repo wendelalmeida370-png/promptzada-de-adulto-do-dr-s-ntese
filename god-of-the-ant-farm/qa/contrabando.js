@@ -11,9 +11,12 @@
 //  k4 um save com a mercadoria roubada nas mãos: carregado, ela segue para a prateleira do mercado (a carga marcada vai aonde é
 //     marcada), nunca para o armazém comum
 //  k5 o contrabandista morre com a mercadoria roubada nas mãos: ela vai à prateleira do mercado ('herdado')
+//  k6 quem não levanta carga (L-620): o menos devoto da cidade perde os dois braços, e o mundo toma os dois seguintes para o
+//     mercado; feito contrabandista assim mesmo, a noite dele não tem roubo — nenhuma ida ao armazém, nada levado, ninguém
+//     acordado por isso (E.prowls)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console. (A segunda batida, que fecha o mercado com a
 //  prateleira de volta ao armazém, é do qa/guardados.js, L-377.)
-// Num mundo sem mercado clandestino, a prova o abre como o mundo abre (economy.js, considerBlackMarket): um beco da cidade, dois
+// Num mundo sem mercado clandestino, a prova o abre pela porta do mundo (economy.js, G.Eco.openBlackMarket): um beco da cidade, dois
 // contrabandistas — na cidade mais populosa em que o caminho do armazém ao mercado passa pela rua, onde a ronda o vê (T-523).
 // O roubo é de noite: a cama da noite o cortava no primeiro olhar (L-386: a pergunta, G.Eco.prowls, no
 // economy.js; a exceção ao sono no decide, do P1). E de noite o posto do soldado dorme: quem flagra é a ronda (L-405).
@@ -39,17 +42,13 @@ const STREET = 8; // (from the store's door to the market, in a straight line: s
 const street = (sid, x, y) => { const st = V.nearestDropoff(x, y, sid); if (!st) return false; const [fx, fy] = V.frontTile(st); return G.dist(fx, fy, x + 0.5, y + 0.5) >= STREET; };
 function market() {
   for (const b of [...S().buildings.values()].sort((p, q) => p.id - q.id)) if (b.type === 'mercado_negro' && b.built && street(b.set, b.x, b.y) && [...S().villagers.values()].filter(v => v.job === b.id && v.role === 'contrabandista' && fit(v)).length >= 2) return { id: b.id, opened: false };
-  let set = null, pos = null;
-  for (const s of [...S().settlements.values()].filter(o => (o.tier || 0) >= 2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) { const p = V.findSite(s, 'mercado_negro'); if (p && street(s.id, p[0], p[1])) { set = s; pos = p; break; } }
-  if (!set) return null;
-  const b = V.addBuilding('mercado_negro', pos[0], pos[1], set.id, true);
-  // (its two smugglers as the world takes them, the least devout first (considerBlackMarket) — of the ones whose hands lift a
-  // load: in the Argos of the generation 15 the first grown one by id, Teodora, had lost both arms, and her nights at the store
-  // took nothing, a new try every two seconds (L-620))
-  const lifts = v => G.Depot.strength(v) >= G.Depot.weight('ferramentas', 1);
-  const crooks = [...S().villagers.values()].filter(v => v.set === set.id && fit(v) && lifts(v) && v.role !== 'guerreiro' && !G.Fac.all().some(q => q.leader === v.id)).sort((a, c) => (a.devotion + (a.traits.includes('Cético') ? -10 : 0)) - (c.devotion + (c.traits.includes('Cético') ? -10 : 0)) || a.id - c.id).slice(0, 2);
-  for (const v of crooks) { v.role = 'contrabandista'; v.job = b.id; }
-  return { id: b.id, opened: true };
+  // (opened by the world's own door, G.Eco.openBlackMarket — the alley where the town's planner puts it, its two smugglers as
+  // the world takes them: the least devout, of those whose hands lift a load, L-620)
+  for (const s of [...S().settlements.values()].filter(o => (o.tier || 0) >= 2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) {
+    const p = V.findSite(s, 'mercado_negro'); if (!p || !street(s.id, p[0], p[1])) continue;
+    const b = E.openBlackMarket(s); if (b) return { id: b.id, opened: true };
+  }
+  return null;
 }
 const MK = market();
 if (!MK) { console.log(`FALHOU | contrabando mundo | ${world}: nenhuma cidade onde abrir um mercado clandestino a uma rua (${STREET} casas) do armazém`); process.exit(1); }
@@ -193,6 +192,31 @@ function stealNow(P, v) {
   const bad = newBad(P.base);
   ok('k5', got && Math.abs(shelf - n) < 0.01 && !else_ && !bad.length,
     `${v.name} morreu com ${n} roubado nas mãos: à prateleira do mercado ('herdado') ${shelf}, a outro lugar ${else_}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+}
+// k6 one whose hands lift nothing (L-620): the least devout of a town loses both arms — the test's hand, as a war leaves one —,
+// and the world takes the next two for its black market; made a smuggler all the same (as the world made one before the
+// L-620), his night has no theft: no errand to the store, nothing taken, nobody kept up for it (E.prowls). Before, the night
+// sent him to the store a new time every two seconds, the market's trade went to him, and he took nothing
+{
+  fresh(); const b = S().buildings.get(MK.id); const T = S().settlements.get(b.set); const B0 = base(); const L0 = seen.length;
+  const first = E.crooksFor(T); const A = first[0] || null;
+  if (!A) ok('k6', false, `${T.name}: ninguém que o mundo tomaria para o mercado`); else {
+    A.lost = Object.assign({}, A.lost || {}, { armL: true, armR: true }); // (both arms, as a war leaves one: carnage.js)
+    const then = E.crooksFor(T); const skipped = !then.includes(A) && then.length === 2 && then.every(o => G.Depot.strength(o) > 0);
+    // (his night at the market all the same, held in the trade while the case lasts — the board orders nobody into crime)
+    A.role = 'contrabandista'; A.job = b.id; S().time = 0.75; S().weather.rain = 0;
+    const st = V.nearestDropoff(b.x, b.y, b.set); const t0 = send(A, st ? V.frontTile(st) : null);
+    let sent = t0 && t0.type === 'steal' ? 1 : 0, last = A.task, up = 0;
+    live(60, () => {
+      if (A.role !== 'contrabandista' || A.job !== b.id) { A.role = 'contrabandista'; A.job = b.id; }
+      if (A.task !== last) { last = A.task; if (A.task && A.task.type === 'steal') sent++; }
+      if (E.prowls(A)) up++;
+    });
+    const took = lines({ L0 }, e => e[8] === 'contrabando' && (e[3] === 'v:' + A.id || e[4] === 'v:' + A.id)).length;
+    const bad = newBad(B0);
+    ok('k6', skipped && !sent && !up && !took && !bad.length,
+      `${A.name} #${A.id}, o menos devoto de ${T.name}, sem os dois braços (força ${G.Depot.strength(A)}): o mundo toma ${then.map(o => o.name).join(' e ') || 'ninguém'}${then.includes(A) ? ' — E ELE' : ', não ele'}; feito contrabandista assim mesmo, numa noite de 60 s: ${sent} ida(s) ao armazém para roubar, ${r2(up / 10)} s acordado pelo roubo (E.prowls), ${took} linha(s) de contrabando${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  }
 }
 const er = M.erros();
 ok('erros', !Object.keys(er.mod).length && !er.console.length, `módulos: ${JSON.stringify(er.mod)}; console: ${er.console.slice(0, 2).join(' | ') || 'nada'}`);
