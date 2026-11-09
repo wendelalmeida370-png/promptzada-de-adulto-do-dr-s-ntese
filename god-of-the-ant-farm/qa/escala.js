@@ -451,9 +451,14 @@ run('e19', () => {
   // own in the middle of them — on the day after the ludi the republic of Lavínio elected Sexto at 0,426, with the doors open, and
   // Flávia, called to the throne, was of the court, T-477)
   G.Fac.get(set.fac).term = S.day;
-  // (os lutadores: oito adultos de Roma no ofício, a cada um o seu posto pelo repartidor do povo — E.place)
-  const sobra = v => v.set === set.id && v.age >= 18 && v.age <= 55 && !v.captive && !v.jail && !v.aboard && v.role !== 'guerreiro';
-  let n = 0; for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (n >= luta) break; if (!sobra(v) || v.role === 'ator') continue; v.role = 'ator'; v.job = 0; sim(() => G.Vg.endTask(v)); n++; }
+  // (os lutadores: oito adultos de Roma no ofício, a cada um o seu posto pelo repartidor do povo — E.place —; livres para o dia
+  // pela regra do chamado do palco (callActors: nada que pese mais que o dia de trabalho, as mãos sem carga), nunca quem governa
+  // nem a corte do camarote, que vão aos seus lugares, e alimentados e descansados para os jogos, como a corte: na metrópole da
+  // 14ª rodada, entre os oito primeiros estavam quem governa, uma mercadora numa caravana e três que a fome e o sono levaram do
+  // palco — a peça das 0,60 sem ninguém nele, e o espetáculo acabou «sem atores», T-533)
+  const rei0 = G.Politics.ruler(G.Fac.get(set.fac));
+  const sobra = v => v.set === set.id && v.age >= 18 && v.age <= 55 && !v.captive && !v.jail && !v.aboard && v.role !== 'guerreiro' && v !== rei0 && Tt.boxOf(v, b) !== 'corte' && !(v.carry && v.carry.n > 1e-6) && !(v.task && (v.task.pri || 0) > 1);
+  let n = 0; for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (n >= luta) break; if (!sobra(v) || v.role === 'ator') continue; v.role = 'ator'; v.job = 0; sim(() => G.Vg.endTask(v)); v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); n++; }
   sim(() => E.place(set)); const cast = Tt.actorsOf(b);
   // (o camarote — D-125 —: quem governa e até cinco da corte de Roma — a família de quem governa, depois os nobres do povo (o
   // grupo 'nobreza' do polity.js) —, descansados e com as moedas da entrada: até quatro no banco, o quinto nas fileiras)
