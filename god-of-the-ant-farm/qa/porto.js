@@ -482,9 +482,11 @@ quayGone('p15 a cidade do cais abandonada', o => {
   // (the new people's next unloading — opened by the next landing, theirs — takes the crates left free on the quay as its own)
   if (S.buildings.has(dock.id) && dock.type === 'doca') {
     const sh = ship(); sh.goods = { k: 'sal', n: 4 }; G.Harbor.land(dock, sh.goods, sh); live(2);
-    const o2 = P.opAt(dock); const took = o2 ? ((o2.taken || {}).sal || 0) : 0;
-    ok('p16b a próxima descarga do novo povo', !!o2 && o2 !== o && o2.fac === G.Village.facOfSet(dock.set) && o2.fac !== o.fac && free > 0 && took >= free + 4 - 0.01 && !bad().length,
-      o2 ? `a descarga #${o2.id} do povo #${o2.fac} (a de antes era do #${o.fac}) tomou como suas as ${free} de sal deixadas livres no cais e as 4 do navio novo: ${JSON.stringify(o2.taken)}` : 'nenhuma descarga nova');
+    // (what it took, of every good: the crates left free on the quay are of every good the unloading cut had — in the metrópole
+    // of the generation 15, 14 of salt and 4 of food —, and the new ship's 4 of salt on top, T-502)
+    const o2 = P.opAt(dock); const took = o2 ? Object.values(o2.taken || {}).reduce((s, n) => s + n, 0) : 0;
+    ok('p16b a próxima descarga do novo povo', !!o2 && o2 !== o && o2.fac === G.Village.facOfSet(dock.set) && o2.fac !== o.fac && free > 0 && took >= free + 4 - 0.01 && ((o2.taken || {}).sal || 0) >= 4 - 0.01 && !bad().length,
+      o2 ? `a descarga #${o2.id} do povo #${o2.fac} (a de antes era do #${o.fac}) tomou como suas as ${free} caixas deixadas livres no cais e as 4 de sal do navio novo: ${JSON.stringify(o2.taken)}` : 'nenhuma descarga nova');
   } else ok('p16b a próxima descarga do novo povo', false, 'o cais não está mais lá');
 }
 const e = M.erros();

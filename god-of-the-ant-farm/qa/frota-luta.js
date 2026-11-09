@@ -33,11 +33,27 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     const l1 = saved.map(x => Object.assign(x, { now: get(x.id) ? get(x.id).st : '-' }));
     const trip = QA.roundTrip(); const fdiff = trip.diff.filter(d => /^fleets/.test(d));
     // l3: a fleet alive and not fighting, put to a fight as engage puts one (fleets.js)
-    const S = G.S; const live = S.fleets.filter(f => G.Fleets.live(f) && f.st !== 'combate' && f.ships.length).sort((a, b) => a.id - b.id);
-    const fl = live[0]; if (!fl) return { l1, fdiff, err: 'nenhuma frota viva fora de luta' };
+    const S = G.S; let live = S.fleets.filter(f => G.Fleets.live(f) && f.st !== 'combate' && f.ships.length).sort((a, b) => a.id - b.id);
+    // (sem nenhuma viva fora de luta — nos mundos prontos da geração 15 toda frota já tinha acabado: as 23 do mundial, do ano 78,
+    // T-498 —: uma patrulha formada como o conselho da frota a forma (G.Fleets.form, fleets.js): o primeiro povo em guerra com um
+    // cais de atracar e navio de guerra livre, metade dos livres)
+    let formed = 0;
+    if (!live.length) {
+      const Nv = G.Naval; G.inSim++;
+      try {
+        for (const f of G.Fac.all().filter(o => o.alive).sort((a, b) => a.id - b.id)) {
+          const ens = G.Fac.enemiesOf(f.id); if (!ens.length) continue;
+          const docks = Nv.docksOf(f.id).filter(d => Nv.dockInfo(d).moor); if (!docks.length) continue;
+          const idle = Nv.shipsOf(f.id, 'guerra').filter(s => !s.fleet && !s.exp && s.st !== 'build' && s.hp > s.maxHp * 0.5 && !Nv.atSea(s)); if (!idle.length) continue;
+          const nf = G.Fleets.form(f, G.Wars.warOf(f.id, ens[0].id), 'patrulha', idle.slice(0, Math.max(1, Math.ceil(idle.length * 0.5))), { dock: docks[0].id });
+          if (nf) { formed = nf.id; live = [nf]; break; }
+        }
+      } finally { G.inSim--; }
+    }
+    const fl = live[0]; if (!fl) return { l1, fdiff, err: 'nenhuma frota viva fora de luta, e nenhum povo em guerra com cais e navio de guerra livre para formar uma' };
     const foe = S.fleets.find(f => G.Fleets.live(f) && f.fac !== fl.fac && G.Fac.atWar(f.fac, fl.fac));
     fl.prevSt = fl.st; fl.st = 'combate'; fl.t = 0; fl.foe = foe ? foe.id : 0; fl.hitT = S.clock; fl.battle = 0;
-    const l3 = { id: fl.id, prev: fl.prevSt };
+    const l3 = { id: fl.id, prev: fl.prevSt, formed };
     G.Save.apply(JSON.parse(G.Save.serialize())); l3.after = get(fl.id) ? get(fl.id).st : '-';
     // l4: a minute of the world
     let left = false, at = 0; const c0 = G.S.clock;
@@ -51,7 +67,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
   else ok('l1 a frota que o save guarda lutando sem batalha de registro continua lutando depois de carregar', loose.every(x => x.now === 'combate') && closed.every(x => x.now !== 'combate') && kept.every(x => x.now === 'combate'),
     r.l1.map(x => `frota ${x.id}: ${x.battle ? `batalha ${x.battle} ${x.open ? 'aberta' : 'fechada'}` : 'sem batalha'}, depois de carregar «${x.now}»`).join('; '));
   ok('l2 a ida e volta do mundo sem diferença nas frotas', !r.fdiff.length, r.fdiff.join(' · ') || 'nenhuma');
-  ok('l3 uma frota posta a lutar (sem batalha) passa pelo save ainda lutando', r.l3.after === 'combate', `frota ${r.l3.id} (antes «${r.l3.prev}»): depois do save «${r.l3.after}»`);
+  ok('l3 uma frota posta a lutar (sem batalha) passa pelo save ainda lutando', r.l3.after === 'combate', `frota ${r.l3.id}${r.l3.formed ? ' (formada pela prova, como o conselho da frota)' : ''} (antes «${r.l3.prev}»): depois do save «${r.l3.after}»`);
   ok('l4 a luta acaba como no mundo vivo; verificador limpo', r.l4.left && r.l4.at <= 50 && !r.bad.length && !errs.length,
     `${r.l4.left ? `deixou a luta aos ${r.l4.at} s` : 'ainda lutando depois de 60 s'} (agora «${r.l4.st}»); ${r.bad.join(' | ') || 'verificador limpo'}; ${errs.slice(0, 3).join(' · ') || 'sem erro de página'}`);
   // (no summary line: the sea's files are counted line by line, as the mar17.js cases — the exit code tells it all)

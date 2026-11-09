@@ -382,10 +382,19 @@ function liftAgain() {
   // the quay emptied by others: the lead goes
   if (v && v.carry) god(() => { D.drop('v:' + v.id, v.carry.k, v.carry.n, v.x, v.y, { op: v.carry.op, code: 'pousou', by: v.id, fac: fac.id }); });
   const opNow = op2 ? A.get(op2.id) : A.get(op.id); // (the unloading of the crate in the hands: T-205)
-  god(() => { if (opNow && A.live(opNow)) { for (const c of (dock.crates || []).slice()) if (c.op === opNow.id) D.move('q:' + dock.id, 'f:' + fac.id, c.k, c.n, { op: opNow.id, code: 'teste', part: true }); for (const o of (S.loose || []).slice()) if (o.op === opNow.id) D.move('g:' + o.id, 'f:' + fac.id, o.k, o.n, { op: opNow.id, code: 'teste', part: true }); } });
+  // (the others: what of the unloading lies on the quay or on the ground goes into the store by their hands — the god's, here)
+  const empty = () => god(() => { let n = 0; if (opNow && A.live(opNow)) { for (const c of (dock.crates || []).slice()) if (c.op === opNow.id) { const r = D.move('q:' + dock.id, 'f:' + fac.id, c.k, c.n, { op: opNow.id, code: 'teste', part: true }); if (r.ok) n += r.n; } for (const o of (S.loose || []).slice()) if (o.op === opNow.id) { const r = D.move('g:' + o.id, 'f:' + fac.id, o.k, o.n, { op: opNow.id, code: 'teste', part: true }); if (r.ok) n += r.n; } } return n; });
+  const outOf = () => opNow && A.live(opNow) ? (dock.crates || []).filter(c => c.op === opNow.id).length + (S.loose || []).filter(o => o.op === opNow.id).length : 0;
+  empty();
   for (let k = 0; k < 60; k++) frame();
-  const L3 = v ? I.lead(v) : null;
-  ok('8. o cais esvaziado por outros: a pista some', !L3 || L3.op !== (opNow ? opNow.id : op.id), L3 ? `ainda: «${L3.txt}»` : `nenhuma pista${opNow && opNow.id !== op.id ? ` (a descarga #${opNow.id}, a seguinte à #${op.id})` : ''}`);
+  // (a quay goes on receiving: a landing in the wait — a ship's cargo, a merchant's return, a boat's catch — adds to the
+  // unloading under way (Porto.land, Porto.landCatch), and the lead to its crates is right; what landed is the others' too,
+  // taken the same way, and the lead is read at once, the world stopped (only the body and its drawing go on). In the
+  // metrópole of generation 15, a merchant ship's return put 8 of food on the quay of Roma in those 60 frames, in the same
+  // unloading — the overseer had not yet seen it empty —, and the lead went to its two crates: T-504)
+  const late = Math.round(empty() * 100) / 100; still(2);
+  const L3 = v ? I.lead(v) : null; const left = outOf();
+  ok('8. o cais esvaziado por outros: a pista some', !left && (!L3 || L3.op !== (opNow ? opNow.id : op.id)), (left ? `o cais não ficou vazio: ${left} caixa(s) da descarga sem lugar no armazém; ` : '') + (L3 ? `ainda: «${L3.txt}»` : `nenhuma pista${opNow && opNow.id !== op.id ? ` (a descarga #${opNow.id}, a seguinte à #${op.id})` : ''}`) + (late ? ` (e ${late} desembarcado na espera, na mesma descarga, levado também)` : ''));
 }
 { // someone of another people, a stone's throw from the quay: the unloading is not their people's work — no lead, no call
   if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
