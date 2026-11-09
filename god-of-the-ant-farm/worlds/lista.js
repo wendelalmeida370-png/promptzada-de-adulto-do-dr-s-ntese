@@ -93,21 +93,21 @@ G.Ready.list({
  },
  "anos500": {
   "day": 501,
-  "pop": 1071,
+  "pop": 1018,
   "peoples": 2,
   "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Hedeby",
+   "name": "Tenochtitlan",
    "tier": 4,
-   "pop": 201
+   "pop": 217
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 5955795
+  "bytes": 6140232
  },
  "anos1000": {
   "day": 1001,
