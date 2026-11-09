@@ -551,10 +551,22 @@ run('e21', () => {
   if (!R5f) return;
   // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto)
   let pedras = 0; for (let y = R5.y; y < R5.y + R5.n && pedras < 3; y++) for (let x = R5.x; x < R5.x + R5.n && pedras < 3; x++) if (!S.occ[y * G.N + x] && !S.treeAt[y * G.N + x] && !S.objAt[y * G.N + x] && G.Nature.addRock(x + 0.5, y + 0.5, 40)) pedras++;
+  // (um campo da cidade começado no lote guardado — o campo da própria cidade não solta o lote —, com madeira já entregue à obra
+  // dele: a obra grande fundada no lote o derruba, e o que a obra do campo tinha volta ao estoque do povo, no livro, como uma
+  // obra largada. Sumia com ela: a farm#12117 da mega da geração 16, com 4 de madeira, L-632)
+  const fd = G.BDEF.farm; let fp = null;
+  for (let y = R5.y; y + fd.h <= R5.y + R5.n && !fp; y++) for (let x = R5.x; x + fd.w <= R5.x + R5.n && !fp; x++) {
+    let livre5 = true; for (let ty = y; ty < y + fd.h && livre5; ty++) for (let tx = x; tx < x + fd.w; tx++) if (S.occ[ty * G.N + tx]) { livre5 = false; break; }
+    if (livre5) fp = [x, y];
+  }
+  const roca = fp && sim(() => V.addBuilding('farm', fp[0], fp[1], set2.id, false));
+  if (roca) sim(() => D.make('o:' + roca.id, 'wood', 4, { code: 'prova' }));
   rico(set2); const L0 = S.ledgerN || 0; set2._noSite = {}; const w = sim(() => V.startProject(set2, R5.type));
   const dentro = w && w.x >= R5.x && w.y >= R5.y && w.x + w.w <= R5.x + R5.n && w.y + w.h <= R5.y + R5.n;
   const pedra5 = D.ledger().filter(e => e[0] > L0 && e[8] === 'pedreira').reduce((s, e) => s + e[6], 0);
   ok('e21j a obra no lote guardado, com a pedra do lote', !!w && dentro && !V.reserva(set2) && set2.urb.resGone.why === 'fundada' && pedra5 >= 40, `${lado(w)}${dentro ? ' dentro do lote' : ' FORA DO LOTE'}; o lote ${V.reserva(set2) ? 'AINDA GUARDADO' : 'solto (' + set2.urb.resGone.why + ')'}; ${pedras} pedras postas no lote, ${pedra5} de pedra quebrada pelo livro`);
+  const volta = roca ? D.ledger().filter(e => e[0] > L0 && e[3] === 'o:' + roca.id && e[8] === 'obra-da-cidade').reduce((n, e) => n + e[6], 0) : 0; const cR = checa();
+  ok('e21p o campo começado no lote, derrubado pela obra grande, devolve o que a obra dele tinha', !!roca && !S.buildings.has(roca.id) && Math.abs(volta - 4) < 1e-6 && cR.ok, roca ? `farm#${roca.id} (obra, 4 de madeira entregue) ${S.buildings.has(roca.id) ? 'AINDA DE PÉ' : 'derrubado'}; de volta ao estoque do povo pelo livro: ${volta}; ${cR.txt}` : 'nenhum lugar para o campo no lote');
   // (o verificador vê um prédio num lote guardado — a prova o põe à mão, sem o V.addBuilding)
   const s3 = [...S.settlements.values()].sort((a, c) => a.id - c.id).find(o => o.id !== set2.id && [...S.buildings.values()].some(q => q.set === o.id && q.built && !V.OPEN[q.type])); // (do mundo de agora: o save fez outro)
   if (s3) {

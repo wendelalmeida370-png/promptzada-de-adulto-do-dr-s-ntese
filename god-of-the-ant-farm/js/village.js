@@ -1203,6 +1203,10 @@
       // (and what the house kept — the pantry, the chest — comes down with it, in the ledger: the family's, not the people's
       // (D-059), and the ground keeps no owner nor anyone to pick it up for the family — it went unwritten, L-377)
       V.keptGone(o, 'obra-da-cidade');
+      // (and a work pulled down — a field of the town begun on its kept lot, D-121, which the great work founded there takes —:
+      // what it had got goes back to its people's store, as a work given up. It vanished with the site: 4 of wood of the
+      // farm#12117 of the mega of the generation 16, L-632)
+      if (!o.built) V.siteBack(o, 'obra-da-cidade');
       if (o.type === 'farm') fields++; else homes++;
       if (G.BDEF[o.type] && G.BDEF[o.type].housing) houses++; else plots++;
       [cx, cy] = V.center(o);
