@@ -131,25 +131,31 @@ run('e2', () => {
 const templo4 = () => [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && Es.choose(s, 'temple')[0].n === 4).sort((a, c) => V.pop(a.id) - V.pop(c.id) || a.id - c.id)[0] || null;
 run('e3', () => {
   abre(); const set = templo4(); if (!set) { ok('e3a sem lote livre', false, 'nenhuma cidade que justifica o templo de 4'); return; } const lim = V.openLimit(4);
-  // (a velha quadra: casas baixas da cidade, de pé, em cada lote livre de 4 casas que o planejador acharia — até não sobrar nenhum)
+  // (a velha quadra: casas baixas da cidade, de pé, em cada lote livre de 4 casas que o planejador acharia — até não sobrar nenhum:
+  // na metrópole da geração 16, mais nova, Argos, de 51 pessoas, tinha 40 lotes livres de 4, e a quadra de antes parava em 16, T-xx3)
   let P, k = 0; const quadra = [];
-  for (; k < 16; k++) { set._noSite = {}; P = sim(() => V.findSite(set, 'temple', undefined, 4)); if (!P) break; for (const [dx, dy] of k === 0 ? [[0, 0], [2, 2]] : [[1, 1]]) quadra.push(sim(() => V.addBuilding('house', P[0] + dx, P[1] + dy, set.id, true)).id); }
+  for (; k < 100; k++) { set._noSite = {}; P = sim(() => V.findSite(set, 'temple', undefined, 4)); if (!P) break; for (const [dx, dy] of k === 0 ? [[0, 0], [2, 2]] : [[1, 1]]) quadra.push(sim(() => V.addBuilding('house', P[0] + dx, P[1] + dy, set.id, true)).id); }
   if (!ok('e3a sem lote livre', !P, `${k} lotes livres de 4 casas tomados por ${quadra.length} casas baixas da cidade; nenhum sobrou`)) return;
   const antes = new Map(); for (const o of S.buildings.values()) if (o.set === set.id) antes.set(o.id, o.type);
   const pub = () => [...S.buildings.values()].filter(o => o.set === set.id && o.type !== 'ruin' && (G.BDEF[o.type].civic || o.type === 'temple' || o.type === 'monument')).length;
   const farms = () => [...S.buildings.values()].filter(o => o.set === set.id && o.type === 'farm').length;
   const pub0 = pub(), farms0 = farms(), id0 = S.nextId, h0 = marca();
+  // (o quintal de uma casa — a horta da família, urban.js — cai com a casa, L-079: é da casa, não um prédio nem um campo que o
+  // degrau derruba; na metrópole da geração 16 o templo de Argos derrubou um campo e uma choupana, e a horta da choupana foi com
+  // ela, T-xx3)
+  const casaDe = new Map(); for (const o of S.buildings.values()) if (o.set === set.id && o.type === 'horta' && o.home) casaDe.set(o.id, o.home);
   set._noSite = {}; rico(set); const b = sim(() => V.startProject(set, 'temple'));
-  const foi = [...antes.keys()].filter(id => !S.buildings.has(id)); const tipos = foi.map(id => antes.get(id));
+  const foi0 = [...antes.keys()].filter(id => !S.buildings.has(id)); const quintais = foi0.filter(id => casaDe.has(id) && foi0.includes(casaDe.get(id)));
+  const foi = foi0.filter(id => !quintais.includes(id)); const tipos = foi.map(id => antes.get(id));
   const novos = [...S.buildings.values()].filter(o => o.id >= id0 && o !== b && o.set === set.id);
   const camasFoi = foi.reduce((s, id) => s + (G.BDEF[antes.get(id)].housing || 0), 0), camasNovas = novos.reduce((s, o) => s + (G.BDEF[o.type].housing || 0), 0);
   const camposFoi = tipos.filter(t => !G.BDEF[t].housing).length, camposNovos = novos.filter(o => !G.BDEF[o.type].housing).length;
-  const linha = linhas(h0, /abriu espaço/)[0];
-  ok('e3b abre espaço', !!b && b.w === 4 && b.esc === 'templo' && foi.length > 0 && ocupa(b), `${set.name} ergue ${lado(b)} derrubando ${foi.length}: ${tipos.join(', ')}`);
+  const linha = linhas(h0, /abriu espaço/)[0]; const qt = quintais.length ? ` (e ${quintais.length} quintal com a sua casa)` : '';
+  ok('e3b abre espaço', !!b && b.w === 4 && b.esc === 'templo' && foi.length > 0 && ocupa(b), `${set.name} ergue ${lado(b)} derrubando ${foi.length}: ${tipos.join(', ')}${qt}`);
   ok('e3c só casas baixas e campos da cidade', tipos.every(t => V.OPEN[t]) && pub() === pub0 + 1 && farms() >= Math.min(2, farms0), `os públicos ${pub0} → ${pub()} (só o templo novo), as fazendas ${farms0} → ${farms()}`);
-  ok('e3d o limite do degrau', foi.length <= lim.bld && camasFoi <= lim.beds, `${foi.length} prédios e ${camasFoi} camas (o limite do degrau de 4: ${lim.bld} e ${lim.beds})`);
+  ok('e3d o limite do degrau', foi.length <= lim.bld && camasFoi <= lim.beds, `${foi.length} prédios e ${camasFoi} camas${qt} (o limite do degrau de 4: ${lim.bld} e ${lim.beds})`);
   const perto = novos.filter(o => o.x + o.w > b.x - 1 && o.x < b.x + b.w + 1 && o.y + o.h > b.y - 1 && o.y < b.y + b.h + 1);
-  ok('e3e mais camas do que derrubou; os campos mudam de lugar', camasNovas > camasFoi && camposNovos === camposFoi && !perto.length, `as famílias: ${camasFoi} camas derrubadas, ${camasNovas} em ${novos.filter(o => G.BDEF[o.type].housing).length} casas novas (${novos.filter(o => G.BDEF[o.type].housing).map(o => o.type).join(', ')}); campos ${camposFoi} → ${camposNovos} em lote novo; nenhum no lote nem no anel do templo`);
+  ok('e3e mais camas do que derrubou; os campos mudam de lugar', camasNovas > camasFoi && camposNovos === camposFoi && !perto.length, `as famílias: ${camasFoi} camas derrubadas, ${camasNovas} em ${novos.filter(o => G.BDEF[o.type].housing).length} casas novas (${novos.filter(o => G.BDEF[o.type].housing).map(o => o.type).join(', ')}); campos ${camposFoi} → ${camposNovos} em lote novo${qt}; nenhum no lote nem no anel do templo`);
   const semCasa = [...S.villagers.values()].filter(v => v.home && !S.buildings.has(v.home));
   ok('e3f a crônica e as famílias', !!linha && !semCasa.length, `«${linha ? linha.txt : 'nenhuma linha'}»; ninguém com casa derrubada por casa (${semCasa.length})`);
   const c = checa(); ok('e3g verificador', c.ok, c.txt);
@@ -477,7 +483,13 @@ run('e19', () => {
   // (um dia de jogos com o céu limpo: os eventos do acaso do mundo desligados pelo botão do jogo — G.DV.events, o do modo
   // desenvolvedor —, passo a passo. Na metrópole da geração 15 a tempestade do mundo veio às 0,555, e com ela todos os de
   // prioridade abaixo de 1,05 vão se abrigar em casa: o camarote saiu antes da peça, T-493)
-  const passo = () => { const e0 = G.DV.events; G.DV.events = 0; try { M.viver(1); } finally { if (e0 === undefined) delete G.DV.events; else G.DV.events = e0; } };
+  // (e os lutadores no ofício durante os jogos, pela mão do deus, como o lazer.js segura o seu ator: o repartidor, a cada 4 s, os
+  // pode levar ao ofício que a cidade pede mais (D-090, o corte dos ofícios) — na metrópole da 16ª rodada, com os rebanhos do
+  // L-xx1 pedindo pastores, as três lutadoras de Roma deixaram o ofício cinco segundos depois do posto, antes das portas, e o
+  // espetáculo nunca abriu, T-xx8)
+  const castIds = cast.map(v => v.id);
+  const segura = () => { for (const id of castIds) { const v = S.villagers.get(id); if (v && (v.role !== 'ator' || v.job !== b.id)) { v.role = 'ator'; v.job = b.id; } } };
+  const passo = () => { segura(); const e0 = G.DV.events; G.DV.events = 0; try { M.viver(1); } finally { if (e0 === undefined) delete G.DV.events; else G.DV.events = e0; } segura(); };
   let op = null; for (let k = 0; k < 40 && !op; k++) { passo(); op = Tt.dia(b); }
   let salvo = null; // (o save no meio dos jogos: os lutadores de volta à areia, cada um no seu lugar de luta)
   if (!ok('e19c os jogos do dia', cast.length > 0 && !!op, `${cast.length} lutadores com o posto no Coliseu; o espetáculo ${op ? '#' + op.id + ' aberto' : 'NÃO abriu'}`)) return;
@@ -549,8 +561,12 @@ run('e21', () => {
   const fi = (R5.y + 1) * G.N + R5.x + 1; const f0 = S.fire[fi]; S.fire[fi] = 5; const R5f = sim(() => V.reservaDia(set2)); S.fire[fi] = f0;
   ok('e21n o fogo no lote guardado passa', !!R5f && R5f.x === R5.x && R5f.y === R5.y, R5f ? `com fogo em ${R5.x + 1},${R5.y + 1}: o lote fica` : `com fogo: SOLTO (${set2.urb.resGone && set2.urb.resGone.why})`);
   if (!R5f) return;
-  // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto)
-  let pedras = 0; for (let y = R5.y; y < R5.y + R5.n && pedras < 3; y++) for (let x = R5.x; x < R5.x + R5.n && pedras < 3; x++) if (!S.occ[y * G.N + x] && !S.treeAt[y * G.N + x] && !S.objAt[y * G.N + x] && G.Nature.addRock(x + 0.5, y + 0.5, 40)) pedras++;
+  // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto — as pedras no meio do lote, onde fica o degrau
+  // fundado, centrado no lote (V.resSite): postas a partir do canto, a obra de 10 no lote de 13 de Mênfis, num mundo do zero com
+  // os consertos da 16ª rodada, deixou de fora a primeira fileira, onde as três estavam, e nenhuma foi quebrada, T-xx9)
+  const mid5 = [R5.x + R5.n / 2, R5.y + R5.n / 2]; const cel5 = []; for (let y = R5.y; y < R5.y + R5.n; y++) for (let x = R5.x; x < R5.x + R5.n; x++) cel5.push([x, y]);
+  cel5.sort((p, q) => G.dist2(p[0] + 0.5, p[1] + 0.5, mid5[0], mid5[1]) - G.dist2(q[0] + 0.5, q[1] + 0.5, mid5[0], mid5[1]) || p[1] - q[1] || p[0] - q[0]);
+  let pedras = 0; for (const [x, y] of cel5) { if (pedras >= 3) break; if (!S.occ[y * G.N + x] && !S.treeAt[y * G.N + x] && !S.objAt[y * G.N + x] && G.Nature.addRock(x + 0.5, y + 0.5, 40)) pedras++; }
   // (um campo da cidade começado no lote guardado — o campo da própria cidade não solta o lote —, com madeira já entregue à obra
   // dele: a obra grande fundada no lote o derruba, e o que a obra do campo tinha volta ao estoque do povo, no livro, como uma
   // obra largada. Sumia com ela: a farm#12117 da mega da geração 16, com 4 de madeira, L-632)

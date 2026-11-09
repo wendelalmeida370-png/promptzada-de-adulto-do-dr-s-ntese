@@ -156,9 +156,15 @@ for (const k of WORLDS) {
     if (!worst && w.gates.length) worst = `${name}: ${w.tiles.length} casas de muro, ${w.gates.length} portões (${w.gates.map(g => sideOf(w, g).join('')).join(' ')})`;
   }
   if (k === 'anos100') {
-    // 3b. Jelling planned again, while the world has it: a gate on the west side
+    // 3b. Jelling planned again, while the world has it as it was found — its west side a line of its own over a street or a worn
+    // path (the street to Mênfis's quay): a gate on the west side. (In the anos100 of the generation 16 Jelling is a hamlet of
+    // six whose west line runs inside Birka's walls — left out, L-342 —: no west side to gate, T-xx4)
     const je = [...S.settlements.values()].find(s => s.name === 'Jelling'); const w = je && plan(je);
-    if (w) { const west = w.gates.filter(g => sideOf(w, g).includes('O')); ok('3b Jelling planejada de novo: um portão no lado oeste', west.length > 0, `caixa ${JSON.stringify(w.box)}; portões ${w.gates.map(g => `(${g % G.N},${(g / G.N) | 0})${sideOf(w, g).join('')}`).join(' ')}`); }
+    const westT = w ? w.tiles.filter(i => { const sd = sideOf(w, i); return sd.length === 1 && sd[0] === 'O'; }) : [];
+    const westW = westT.filter(i => S.road[i] || S.wear[i] > 22);
+    if (w && westW.length) { const west = w.gates.filter(g => sideOf(w, g).includes('O')); ok('3b Jelling planejada de novo: um portão no lado oeste', west.length > 0, `caixa ${JSON.stringify(w.box)}; o lado oeste com ${westW.length} casa(s) de rua ou caminho; portões ${w.gates.map(g => `(${g % G.N},${(g / G.N) | 0})${sideOf(w, g).join('')}`).join(' ')}`); }
+    else if (w) { const [x0, y0, , y1] = w.box; let inner = 0, wet = 0; for (let y = y0; y <= y1; y++) { const i = y * G.N + x0; if (G.Siege.walledIn(i, w)) inner++; else if (S.type[i] < G.T.SAND) wet++; }
+      console.log(`(3b: o muro de Jelling planejado neste mundo não tem lado oeste andado — ${westT.length} casa(s) de muro no oeste${inner ? `, ${inner} da linha dentro do muro de outra cidade` : ''}${wet ? `, ${wet} na água` : ''} —; o caso ruim vai pela regra, no 1 e no 3)`); }
     else console.log('(3b: o mundo pronto anos100 não tem mais Jelling, onde o L-140 foi achado; o caso ruim vai pela regra, no 3)');
   }
 }

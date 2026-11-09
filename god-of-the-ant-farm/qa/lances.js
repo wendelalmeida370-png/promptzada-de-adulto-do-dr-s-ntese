@@ -498,8 +498,11 @@ let pocketDoor = null;
     const sz2 = size(); const pocket = sz2(od); const bad0 = pocketBad(); const inStep = sim(() => In.planDoor(b)); const exitV = sim(() => G.Vg.door(b));
     ok('a rua da porta fechada num bolsão', pocket >= 1 && pocket <= 2 && !!inStep && !near(inStep, od) && near(exitV, inStep) && sz2(inStep) >= 12 && !bad0.length, `house#${b.id}: ${wE.length} muros em volta da casa diante da porta (${s0}) — um bolsão de ${pocket} casa(s); no passo, até a virada, quem sai sai em ${f2(exitV)}, ${inStep && near(inStep, od) ? 'A PORTA DO BOLSÃO' : 'um canto de antes num chão de ' + sz2(inStep) + ' casas'}; o verificador antes da virada ${bad0.length ? 'QUEIXOU: ' + bad0[0].msg : 'calado (a palavra da virada era para o chão de antes)'}`);
     const id = b.id; M.salvarCarregar(); In.uncache(); let b2 = G.S.buildings.get(id);
-    const free16 = v => !v.jail && !v.aboard && !v.captive && v.age >= 16 && !(G.S.avatar && G.S.avatar.id === v.id) && !v.inside;
-    const v = [...G.S.villagers.values()].find(q => free16(q) && q.set === b2.set);
+    // (one of the house's town out of doors; with all of them indoors — the anos100 of the generation 16 opens at midnight, and
+    // the six of Jelling are asleep at home —, one of them, taken out first by the game's door: Vg.endTask, out by the door and
+    // awake, T-xx6)
+    const free16 = v => !v.jail && !v.aboard && !v.captive && v.age >= 16 && !(G.S.avatar && G.S.avatar.id === v.id);
+    const v = [...G.S.villagers.values()].find(q => free16(q) && q.set === b2.set && !q.inside) || [...G.S.villagers.values()].find(q => free16(q) && q.set === b2.set);
     ok('o bolsão: salvar e carregar no meio', !!b2 && sameRec(recOf(b2), r0) && wE.every(i => G.S.wall[i] === 1) && size()(od) === pocket, `o registro ${b2 ? b2.ip.s + '/' + b2.ip.o : '-'} e os muros como estavam, o bolsão ainda de ${size()(od)}`);
     if (v) sim(() => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'idle', wait: 5, pri: 0.3 }); v.inside = id; });
     turn(); const ref = b2.ip.h[b2.ip.h.length - 1]; const pd2 = sim(() => In.planDoor(b2)); const od2 = outOf(b2); const sz3 = size();

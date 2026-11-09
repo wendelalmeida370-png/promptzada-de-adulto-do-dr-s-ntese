@@ -175,13 +175,18 @@
     // broke the shop and the well — L-085)
     for (const v0 of o.villagers) { const v = G.Vg.shape(v0); v.path = null; v.task = null; v.emo = null; v._q = null; v.think = lr(); v.scan = lr() * 0.3; S.villagers.set(v.id, v); }
     for (const d of o.dead) S.dead.set(d.id, d);
+    const took = new Set();
     for (const a of o.animals) {
       if (!('morph' in a)) a.morph = null; // (older worlds: no rare coats appear on loading)
       const nid = S.nextId; // (spawn takes a fresh id before the saved one replaces it: give it back)
       const x = G.Animals.spawn(a.kind, a.x, a.y, a); S.animals.delete(x.id); x.id = a.id; S.animals.set(a.id, x); S.nextId = nid;
-      // a herd animal goes back to its pen (whoever was leading it out lost the errand with the save)
-      if (x.dom) { x.herder = 0; x.ledBy = 0; x.hold = 0; if (x.pen) { x.state = 'pen'; } }
+      // a herd animal goes back to its pen (whoever was leading it out lost the errand with the save); a town's beast has none —
+      // a save of before put the cats and hens of a town in its new pen: let go, only what no longer fits (L-419, L-xx1)
+      if (x.dom) { x.herder = 0; x.ledBy = 0; x.hold = 0; if (x.pen && G.Animals.DEF[x.kind] && G.Animals.DEF[x.kind].town) { took.add(x.pen); x.pen = 0; } if (x.pen) { x.state = 'pen'; } }
     }
+    // (and the pen they took before its first flock came — economy.js penTick gives none to a pen with beasts in it —, with no
+    // beast of the herds in it, waits for its first flock again: the world's step gives it)
+    if (took.size) { const held = new Set(); for (const a of S.animals.values()) if (a.pen && !a.dead) held.add(a.pen); for (const id of took) { const b = S.buildings.get(id); if (b && !held.has(id)) b.stocked = false; } }
     for (const s of o.settlements) S.settlements.set(s.id, s);
     for (const v of S.villagers.values()) repairV(v, S);
     if (o.factions && o.factions.length) {
