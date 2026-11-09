@@ -144,7 +144,9 @@
       const d = SP()[k]; const L = by[k]; const kids = Math.min(A.level(k) === 1 ? 8 : 2, Math.floor(L.length / 2 + (L.length % 2 && G.R() < 0.5 ? 1 : 0)));
       for (let j = 0; j < kids; j++) {
         const m = L[j % L.length];
-        A.spawn(k, m.x + G.rr(-0.6, 0.6), m.y + G.rr(-0.6, 0.6), { leader: m.leader || m.id, age: 0, grown: 0.35, hunger: 0.1, z: d.cls === 'air' ? m.z : 0, hx: m.hx, hy: m.hy });
+        // (beside its mother, on ground it stands on — a hand round her reached into a house beside her: L-629)
+        const jx = m.x + G.rr(-0.6, 0.6), jy = m.y + G.rr(-0.6, 0.6); const at = d.cls === 'air' || A.walkOK(m, jx, jy) ? [jx, jy] : [m.x, m.y];
+        A.spawn(k, at[0], at[1], { leader: m.leader || m.id, age: 0, grown: 0.35, hunger: 0.1, z: d.cls === 'air' ? m.z : 0, hx: m.hx, hy: m.hy });
         born++; const eco = S.eco || (S.eco = { deaths: {}, born: {} }); eco.born[k] = (eco.born[k] || 0) + 1;
       }
       for (const a of L) a.hunger = 0;
