@@ -262,9 +262,20 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
 {
   const P = setup(0.5, 0.1); const b = P.b; const fac = V.facOfSet(b.set);
   const shop = v => S().buildings.get(v.job);
-  const bu = [...S().villagers.values()].filter(v => v.role === 'acougueiro' && fit(v) && shop(v) && shop(v).built && V.facOfSet(shop(v).set) === fac).sort((p, q) => p.id - q.id)[0];
+  let bu = [...S().villagers.values()].filter(v => v.role === 'acougueiro' && fit(v) && shop(v) && shop(v).built && V.facOfSet(shop(v).set) === fac).sort((p, q) => p.id - q.id)[0];
+  // (a people with no butcher: the trade given by the god's hand at a built butcher's shop of the pen's people — its own town's
+  // first —, as the dealer of trades gives it to a town whose pens hold four beasts or more (economy.js E.demand), to a grown-up
+  // of that town free of the weightier calls: he leads only the beasts of his own people's pens (economy.js butcherTask). In the
+  // metrópole of the generation 16, with the herds the town's beasts had kept from their pens (L-xx1), no people had one, T-xx1)
+  let made = null;
+  if (!bu) {
+    const sh = [...S().buildings.values()].filter(o => o.type === 'acougue' && o.built && V.facOfSet(o.set) === fac).sort((p, q) => (p.set !== b.set) - (q.set !== b.set) || G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y) || p.id - q.id)[0];
+    const rei = G.Politics && G.Politics.ruler ? G.Politics.ruler(G.Fac.get(fac)) : null;
+    bu = sh && [...S().villagers.values()].filter(v => fit(v) && v.set === sh.set && v !== P.v && v !== rei && v.role !== 'guerreiro' && !G.Vg.handsBusy(v) && !(v.task && (v.task.pri || 0) > 1)).sort((p, q) => p.id - q.id)[0];
+    if (bu) { made = bu.role || 'sem ofício'; G.Vg.endTask(bu); bu.role = 'acougueiro'; bu.job = sh.id; }
+  }
   const a = P.herd.filter(x => x.grown >= 1).sort((p, q) => p.age / G.Animals.DEF[p.kind].life - q.age / G.Animals.DEF[q.kind].life || p.id - q.id)[0]; // (the youngest grown one: none dies of old age in the case)
-  if (!bu || !a) ok('r8', false, `${bu ? '' : 'nenhum açougueiro do povo do curral; '}${a ? '' : 'nenhum bicho crescido no curral'}`);
+  if (!bu || !a) ok('r8', false, `${bu ? '' : 'nenhum açougueiro do povo do curral nem açougue de pé dele; '}${a ? '' : 'nenhum bicho crescido no curral'}`);
   else {
     // (the butcher at the pen's gate, awake, out of doors, hands empty, and his errand the slaughter of that beast — as the
     // butcher's own choice gives it, economy.js butcherTask)
@@ -282,7 +293,7 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
     const back = took && live(90, () => { if (a.state === 'led') { ledT = r2(S().clock - c0); far = Math.max(far, r2(G.dist(a.x, a.y, x0, y0))); } }, () => a.dead || (a.state === 'pen' && !a.ledBy && inPen(a, b)));
     const bad = newBad(P.base);
     ok('r8', led && st1 && took && ledT <= 0.5 && back && !a.dead && a.state !== 'led' && !a.ledBy && !bad.length,
-      `${bu.name} (açougueiro) levando ${a.kind} #${a.id} do ${V.buildName(b)} #${b.id}: ${led ? 'na corda' : 'NÃO a pegou em 40 s'}${led ? (st1 ? ', a caminho do açougue' : ` (a tarefa ${bu.task ? bu.task.type + '.' + bu.task.st : 'nenhuma'})`) : ''}; a chamada à praça ${took ? 'o levou' : 'NÃO o levou'}; depois: ${ledT > 0.5 ? `o bicho SEGUIU NA CORDA de ${bu.name} por ${ledT} s, ${far} m` : 'solto logo'}; ${a.dead ? 'o bicho morreu' : a.state === 'led' ? `ainda na corda (${bu.task ? bu.task.type : 'sem tarefa'})` : back ? `no seu curral em ${r2(S().clock - c0)} s` : `não voltou ao curral em 90 s (em ${r2(a.x)},${r2(a.y)}, ${a.state})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `${bu.name} (açougueiro${made ? `, o ofício dado pela mão do deus no ${V.buildName(shop(bu))} #${bu.job} — era ${made}` : ''}) levando ${a.kind} #${a.id} do ${V.buildName(b)} #${b.id}: ${led ? 'na corda' : 'NÃO a pegou em 40 s'}${led ? (st1 ? ', a caminho do açougue' : ` (a tarefa ${bu.task ? bu.task.type + '.' + bu.task.st : 'nenhuma'})`) : ''}; a chamada à praça ${took ? 'o levou' : 'NÃO o levou'}; depois: ${ledT > 0.5 ? `o bicho SEGUIU NA CORDA de ${bu.name} por ${ledT} s, ${far} m` : 'solto logo'}; ${a.dead ? 'o bicho morreu' : a.state === 'led' ? `ainda na corda (${bu.task ? bu.task.type : 'sem tarefa'})` : back ? `no seu curral em ${r2(S().clock - c0)} s` : `não voltou ao curral em 90 s (em ${r2(a.x)},${r2(a.y)}, ${a.state})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 // r9 the positions in the save (L-607): the save keeps a hundredth of a tile, and rounded a cow of 94,996 to 95,00 — across the
@@ -324,20 +335,29 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
 // r10 home alone with a fenced ground on the way: a cow of the pen put on the far side of someone else's fenced ground — a pen,
 // a stable, a captives' pen, a graveyard, within 25 tiles —, on a tile it stands on, off any fence, from where the people's way
 // to its pen runs across that ground (not by its gate): no herder, at rest, past the pasture's hours — it goes round and
-// reaches its pen. The people's way knows no fences, and the beast walking it alone was pressed against the fence for good
+// reaches its pen. The people's way knows no fences, and the beast walking it alone was pressed against the fence for good.
+// (The pen: the one of the other cases where such a fenced ground is there, else the first other pen of the world with beasts
+// and one — the case is a beast of a pen going round someone else's fence, not this pen: in the metrópole of the generation 16 no
+// fenced ground within 25 tiles of Mênfis's pen lies across its people's way, T-xx2)
 {
-  const P = setup(0.5, 0.1); const b = P.b; const W = G.W; const F = W.fenceMap(); const FEN = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 };
-  const [cx, cy] = [b.x + b.w / 2, b.y + b.h / 2];
-  const a = P.herd.slice().sort((p, q) => p.age / G.Animals.DEF[p.kind].life - q.age / G.Animals.DEF[q.kind].life || p.id - q.id)[0];
-  // (the people's way from a point to the pen's middle crosses the fenced ground fg — sampled every quarter of a tile)
-  const across = (x, y, fg) => { const p = W.findPath(x, y, cx, cy, true, 3500); if (!p) return false; for (let k = 1; k < p.length; k++) { const [x0, y0] = p[k - 1], [x1, y1] = p[k]; const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.25); for (let q = 0; q <= n; q++) if (F[W.idx(x0 + (x1 - x0) * q / n, y0 + (y1 - y0) * q / n)] === fg.id) return true; } return false; };
-  let got = null;
-  if (a) for (const fg of [...S().buildings.values()].filter(o => FEN[o.type] && o.built && o.id !== b.id && G.dist(o.x, o.y, b.x, b.y) < 25).sort((p, q) => G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y) || p.id - q.id)) {
-    const ring = []; for (let y = fg.y - 1; y <= fg.y + fg.h; y++) for (let x = fg.x - 1; x <= fg.x + fg.w; x++) if (x < fg.x || x >= fg.x + fg.w || y < fg.y || y >= fg.y + fg.h) ring.push([x, y]);
-    const sp = ring.find(([x, y]) => W.inb(x, y) && !F[W.idx(x, y)] && G.Animals.walkOK(a, x + 0.5, y + 0.5) && W.canWalk(x + 0.5, y + 0.5, cx, cy) && across(x + 0.5, y + 0.5, fg));
-    if (sp) { got = { fg, sp }; break; }
-  }
-  if (!a || !got) ok('r10', false, a ? `nenhum chão cercado a 25 casas do ${V.buildName(b)} #${b.id} que o caminho das pessoas até ele atravesse` : 'sem bicho no curral');
+  const W = G.W; const FEN = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 };
+  const look = P => {
+    const b = P.b; const F = W.fenceMap(); const [cx, cy] = [b.x + b.w / 2, b.y + b.h / 2];
+    const a = P.herd.slice().sort((p, q) => p.age / G.Animals.DEF[p.kind].life - q.age / G.Animals.DEF[q.kind].life || p.id - q.id)[0];
+    // (the people's way from a point to the pen's middle crosses the fenced ground fg — sampled every quarter of a tile)
+    const across = (x, y, fg) => { const p = W.findPath(x, y, cx, cy, true, 3500); if (!p) return false; for (let k = 1; k < p.length; k++) { const [x0, y0] = p[k - 1], [x1, y1] = p[k]; const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.25); for (let q = 0; q <= n; q++) if (F[W.idx(x0 + (x1 - x0) * q / n, y0 + (y1 - y0) * q / n)] === fg.id) return true; } return false; };
+    if (a) for (const fg of [...S().buildings.values()].filter(o => FEN[o.type] && o.built && o.id !== b.id && G.dist(o.x, o.y, b.x, b.y) < 25).sort((p, q) => G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y) || p.id - q.id)) {
+      const ring = []; for (let y = fg.y - 1; y <= fg.y + fg.h; y++) for (let x = fg.x - 1; x <= fg.x + fg.w; x++) if (x < fg.x || x >= fg.x + fg.w || y < fg.y || y >= fg.y + fg.h) ring.push([x, y]);
+      const sp = ring.find(([x, y]) => W.inb(x, y) && !F[W.idx(x, y)] && G.Animals.walkOK(a, x + 0.5, y + 0.5) && W.canWalk(x + 0.5, y + 0.5, cx, cy) && across(x + 0.5, y + 0.5, fg));
+      if (sp) return { a, fg, sp };
+    }
+    return { a, fg: null, sp: null };
+  };
+  fresh(); const pens = [PEN].concat([...S().buildings.values()].filter(o => (o.type === 'curral' || o.type === 'estabulo') && o.built && o.id !== PEN && E.penAnimals(o).some(q => !q.dead)).sort((p, q) => p.id - q.id).map(o => o.id));
+  let P = null, L = null; const tried = [];
+  for (const id of pens) { P = setup(0.5, 0.1, id); L = look(P); tried.push(`${V.buildName(P.b)} #${P.b.id}`); if (L.fg) break; }
+  const b = P.b; const F = W.fenceMap(); const a = L.a; const got = L.fg ? { fg: L.fg, sp: L.sp } : null;
+  if (!a || !got) ok('r10', false, a ? `nenhum chão cercado a 25 casas de um curral com bichos (${tried.join(', ')}) que o caminho das pessoas até ele atravesse` : 'sem bicho no curral');
   else {
     const { fg, sp } = got; a.x = sp[0] + 0.5; a.y = sp[1] + 0.5; a.tx = a.x; a.ty = a.y; a.path = null; a.noGo = undefined; a.blk = 0; a.stk = 0; a.state = 'pen'; a.herder = 0; a.ledBy = 0; a.hold = 0;
     const c0 = S().clock; let inside = false;
