@@ -146,7 +146,7 @@
       // (the roster starts over, and whoever is still aboard steps ashore first, on the ship's quay — Nv.clearCrew: a list written
       // over them left them aboard and off it, and v.aboard is the only truth. A fleet that ends in its tick leaves its crews
       // aboard their idle ships (shipRun), and a warship sails with whoever is aboard (naval.js): Nefertari, the lone sailor of a
-      // patrol that ended, aboard her idle warship when the council took it for the next fleet, L-xx3)
+      // patrol that ended, aboard her idle warship when the council took it for the next fleet, L-639)
       Nv.clearCrew(s);
       if (s.kind === 'transporte' && fl.mission === 'invasao') continue;
       const crew = []; if (adm && s === ships[0]) { crew.push(adm); taken.add(adm.id); }

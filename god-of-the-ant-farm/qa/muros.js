@@ -158,7 +158,7 @@ for (const k of WORLDS) {
   if (k === 'anos100') {
     // 3b. Jelling planned again, while the world has it as it was found — its west side a line of its own over a street or a worn
     // path (the street to Mênfis's quay): a gate on the west side. (In the anos100 of the generation 16 Jelling is a hamlet of
-    // six whose west line runs inside Birka's walls — left out, L-342 —: no west side to gate, T-xx4)
+    // six whose west line runs inside Birka's walls — left out, L-342 —: no west side to gate, T-565)
     const je = [...S.settlements.values()].find(s => s.name === 'Jelling'); const w = je && plan(je);
     const westT = w ? w.tiles.filter(i => { const sd = sideOf(w, i); return sd.length === 1 && sd[0] === 'O'; }) : [];
     const westW = westT.filter(i => S.road[i] || S.wear[i] > 22);

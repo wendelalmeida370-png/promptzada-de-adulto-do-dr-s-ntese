@@ -105,7 +105,7 @@ for (const saved of [false, true]) {
     const still = () => roleOf(gone).filter(v => site(bid) && !reachV(v, site(bid)));
     // (read at that count, before the world's next step — that step sets down on the shore whoever is hungry with no way to a store
     // (villagers.js, the 'eat': in the generation 16's Mênfis both builders, hungry, at the first tenth of a second, after the count
-    // had made them a woodcutter and a forager — and the case read nobody on the islet, T-xx5) —; with someone still a builder on
+    // had made them a woodcutter and a forager — and the case read nobody on the islet, T-566) —; with someone still a builder on
     // the islet at it — the code of before swaps nobody —, the next counts too, up to 9 s, as long as the islet holds them)
     let held = still(); const t0 = S.clock;
     if (!held.length || held.some(v => v.role === 'construtor')) { live(9, () => roleOf(gone).every(v => v.role !== 'construtor') || still().length < gone.length); held = still(); }

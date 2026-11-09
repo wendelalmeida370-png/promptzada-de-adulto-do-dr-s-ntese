@@ -1861,7 +1861,7 @@
   };
   // (in arms: a hair behind them, on the arms' own tile — a hair across its edge was the next tile, the water by the beach, and
   // what judges people by the tile they stand on judged the baby there and not its arms: Gunnar's twins «na água» after the
-  // sea's close, and the close takes whoever stands on its bed, L-xx4)
+  // sea's close, and the close takes whoever stands on its bed, L-640)
   const inArms = (v, c) => { const x = c.x + c.face * -0.08, y = c.y + 0.02; v.x = Math.floor(x) === Math.floor(c.x) ? x : c.x; v.y = Math.floor(y) === Math.floor(c.y) ? y : c.y; };
   function babyUpdate(v, dt) {
     const S = G.S;

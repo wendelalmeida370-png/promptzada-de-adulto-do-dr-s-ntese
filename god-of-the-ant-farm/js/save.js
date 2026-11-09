@@ -181,7 +181,7 @@
       const nid = S.nextId; // (spawn takes a fresh id before the saved one replaces it: give it back)
       const x = G.Animals.spawn(a.kind, a.x, a.y, a); S.animals.delete(x.id); x.id = a.id; S.animals.set(a.id, x); S.nextId = nid;
       // a herd animal goes back to its pen (whoever was leading it out lost the errand with the save); a town's beast has none —
-      // a save of before put the cats and hens of a town in its new pen: let go, only what no longer fits (L-419, L-xx1)
+      // a save of before put the cats and hens of a town in its new pen: let go, only what no longer fits (L-419, L-637)
       if (x.dom) { x.herder = 0; x.ledBy = 0; x.hold = 0; if (x.pen && G.Animals.DEF[x.kind] && G.Animals.DEF[x.kind].town) { took.add(x.pen); x.pen = 0; } if (x.pen) { x.state = 'pen'; } }
     }
     // (and the pen they took before its first flock came — economy.js penTick gives none to a pen with beasts in it —, with no

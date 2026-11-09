@@ -886,7 +886,7 @@ if (want('l15')) {
       notes.push(`(g) ${gw.name} morreu em ${hw.type}#${hw.id} com o bebê ${gb.name}, de outra casa, no colo: no mesmo instante, ${where}`);
     }
   }
-  // (h) the baby in arms by the edge of a tile (L-xx4): drawn a hair behind its arms, it was a hair across the edge — on the next
+  // (h) the baby in arms by the edge of a tile (L-640): drawn a hair behind its arms, it was a hair across the edge — on the next
   // tile, the water by the beach — while its arms stood on the sand, and what judges people by the tile they stand on judged it
   // there (the twins of Gunnar «na água» after the sea's close, in the poderes of the round 16). A baby in its mother's arms out
   // of doors at midday, the mother still (looking at a spot of her own) and held by the god's hand a hair inside the edge of her

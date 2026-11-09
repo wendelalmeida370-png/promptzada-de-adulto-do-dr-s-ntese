@@ -30,10 +30,10 @@
 //     cemitério de Óstia depois de um load com o rebanho no pasto — o r4 da 14ª rodada)
 //  r13 os bichos da cidade e o curral novo: um curral fundado numa cidade com cães, gatos, galinhas e pombos — nenhum deles entra
 //     nele, e ele recebe o seu primeiro rebanho; e um save de antes com eles num curral novo: carregado, soltos, e o curral recebe
-//     o rebanho que não veio (L-xx1: a regra do bicho perdido levava todo bicho com dono ao curral ainda sem espécie, e o curral
+//     o rebanho que não veio (L-637: a regra do bicho perdido levava todo bicho com dono ao curral ainda sem espécie, e o curral
 //     com bichos dentro nunca recebia o seu rebanho — os dezoito gatos, galinhas e pombos de Mênfis, com pastor e sem vaca)
 //  r14 o cavalo de carga da caravana nasce onde fica: o mercador à porta de um prédio, e dentro de uma casa — o cavalo num chão onde
-//     fica, de onde chega a ele (L-xx2: nascia a um passo do lado dele, e à porta de uma mina o passo era dentro da mina)
+//     fica, de onde chega a ele (L-638: nascia a um passo do lado dele, e à porta de uma mina o passo era dentro da mina)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
 // O corpo do deus não pastoreia (o interact.js não tem o verbo): o salto é das vidas longas da regressão.
 //   node qa/rebanho.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/rebanho.js)
@@ -89,7 +89,7 @@ function setup(time, hunger, pen) {
   // pasture was gone — the r1, the r4 and the r5 are the pasture, not the wolf; the herder driving one off is the world's,
   // T-268 —, T-302; and the big beasts that defend themselves and charge whoever comes near — a rhino, a buffalo, an elephant:
   // in the metrópole of the generation 16, with the fixes of the round 16, a rhino came on Kiya at the pasture at 0,51, she fought
-  // it and fled, the evening came and she went home with the herding never ended, T-xx7)
+  // it and fled, the evening came and she went home with the herding never ended, T-568)
   for (const a of [...S().animals.values()]) { const d = G.Animals.DEF[a.kind]; if (!a.dead && (G.Animals.predator(a.kind) || (d && d.defend && !d.dom)) && G.dist2(a.x, a.y, b.x, b.y) < 40 * 40) G.Animals.remove(a); }
   CUR = { b, v, herd, ids: herd.map(a => a.id), base: base() }; return CUR;
 }
@@ -268,7 +268,7 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   // (a people with no butcher: the trade given by the god's hand at a built butcher's shop of the pen's people — its own town's
   // first —, as the dealer of trades gives it to a town whose pens hold four beasts or more (economy.js E.demand), to a grown-up
   // of that town free of the weightier calls: he leads only the beasts of his own people's pens (economy.js butcherTask). In the
-  // metrópole of the generation 16, with the herds the town's beasts had kept from their pens (L-xx1), no people had one, T-xx1)
+  // metrópole of the generation 16, with the herds the town's beasts had kept from their pens (L-637), no people had one, T-562)
   let made = null;
   if (!bu) {
     const sh = [...S().buildings.values()].filter(o => o.type === 'acougue' && o.built && V.facOfSet(o.set) === fac).sort((p, q) => (p.set !== b.set) - (q.set !== b.set) || G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y) || p.id - q.id)[0];
@@ -340,7 +340,7 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
 // reaches its pen. The people's way knows no fences, and the beast walking it alone was pressed against the fence for good.
 // (The pen: the one of the other cases where such a fenced ground is there, else the first other pen of the world with beasts
 // and one — the case is a beast of a pen going round someone else's fence, not this pen: in the metrópole of the generation 16 no
-// fenced ground within 25 tiles of Mênfis's pen lies across its people's way, T-xx2)
+// fenced ground within 25 tiles of Mênfis's pen lies across its people's way, T-563)
 {
   const W = G.W; const FEN = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 };
   const look = P => {
@@ -437,7 +437,7 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
       `${ca.kind} #${ca.id} no lote (${l1[0]},${l1[1]}) da ${bh ? V.buildName(bh) + ' #' + bh.id : 'casa NÃO fundada'}: agora em ${wa.at}${wa.inLot ? ', DENTRO DO LOTE' : wa.ok ? ', onde fica, de onde chega ao curral' : ', ONDE NÃO FICA ou de onde não chega'}; ${cb.kind} #${cb.id} no meio do lote (${l2[0]},${l2[1]}) do ${bt ? V.buildName(bt) + ' #' + bt.id + ' ' + bt.w + '×' + bt.h : 'teatro NÃO fundado'}: agora em ${wb.at}${wb.inLot ? ', DENTRO DO LOTE' : wb.ok ? ', onde fica, de onde chega ao curral' : ', ONDE NÃO FICA ou de onde não chega'}; a metrópole vivida 300 s: ${put.length ? 'POSTOS DENTRO pelo prédio que subiu — ' + put.join(' · ') : 'nenhum posto dentro pelo prédio que sobe'}, ${born.length ? 'NASCIDOS DENTRO — ' + born.join(' · ') : 'nenhum nascido dentro'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
-// r13 a town's beasts and a new pen (L-xx1): the rule of the lost beast (animals.js) took in every beast with an owner, and a pen
+// r13 a town's beasts and a new pen (L-637): the rule of the lost beast (animals.js) took in every beast with an owner, and a pen
 // raised in a town stands without its kind until the pens' step gives it, with its first flock (economy.js penTick, every two
 // seconds) — the dogs, cats, hens and pigeons of the town walked into the new pen at once, and the pen, with beasts in it, never got
 // its flock (Mênfis's pen in the metrópole of the generation 16: eighteen cats, hens and pigeons, a herder for them, no cow). The
@@ -488,7 +488,7 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
       `${set.name}: ${best[1]} bichos da cidade sem curral; ${b1 ? `${V.buildName(b1)} #${b1.id} novo em (${l1}), ${kind0 ? 'JÁ COM A ESPÉCIE ' + kind0 : 'sem espécie'}` : 'o curral NÃO fundado'}: 4 s depois, ${n1} bicho(s) da cidade num curral${n1 ? ' — ENTRARAM' : ''}, o rebanho do curral ${kinds(f1)}${b1 ? ' (' + (b1.kind || '-') + ')' : ''}; o verificador ${sees ? 'vê' : 'NÃO VÊ'} o bicho da cidade posto num curral pela mão do deus${cat ? ` (${cat.kind} #${cat.id})` : ''}; um save de antes com ${put} no ${b2 ? V.buildName(b2) + ' #' + b2.id : 'curral NÃO fundado'}${bo ? ' (' + bo.kind + ', sem rebanho)' : ''}: carregado, ${n2} num curral, o curral ${wait2 ? 'à espera do primeiro rebanho' : 'DADO POR SERVIDO'}; 4 s depois o rebanho ${kinds(f2)}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
-// r14 the caravan's pack horse born where it stands (L-xx2: in the metrópole lived of the r12, a pack horse of a caravan was
+// r14 the caravan's pack horse born where it stands (L-638: in the metrópole lived of the r12, a pack horse of a caravan was
 // born inside a mine — trade.js put it a step to its merchant's side, and by the mine's door that step was inside it). A people
 // with a deal to make (not the Aztecs, whose trader carries the load himself) sends a caravan by the world's own door
 // (G.Trade.launch) with every one who could be its merchant standing a hair east of a building of its capital that blocks — the

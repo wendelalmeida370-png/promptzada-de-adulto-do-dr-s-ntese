@@ -1537,7 +1537,7 @@
       else if (a.kind === 'vaca' || a.kind === 'cabra') a.milk = Math.min(1.5, a.milk + dayF * 2.2 * fed);
       else if (a.kind === 'peru') a.eggs = Math.min(1.5, a.eggs + dayF * 2.6 * fed);
       // a lost animal of the herds without a pen joins the nearest pen of its people — a town's beast (a dog, a cat, a hen, a
-      // pigeon) lives with the people, never in a pen: the cats of Mênfis took its new pen, before its kind was given (L-xx1)
+      // pigeon) lives with the people, never in a pen: the cats of Mênfis took its new pen, before its kind was given (L-637)
       if (sp.dom && (!a.pen || !G.S.buildings.has(a.pen))) { const p = [...G.S.buildings.values()].find(b => (b.type === (a.kind === 'cavalo' ? 'estabulo' : 'curral')) && b.built && G.Village.facOfSet(b.set) === a.dom && (!b.kind || b.kind === a.kind)); a.pen = p ? p.id : 0; if (p) { a.state = 'pen'; a.hx = p.x + 1.5; a.hy = p.y + 1.5; } }
     }
     if (a.hunger >= 1) { a.hunger = 1; a.hp -= dt * sp.hp / (DAY() * 1.1); if (a.hp <= 0) { A.kill(a, null, 'hunger'); return false; } }

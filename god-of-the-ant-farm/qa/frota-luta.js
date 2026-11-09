@@ -10,7 +10,7 @@
 //  l4 depois, no mundo, a luta acaba como no mundo vivo (sem inimigos por perto, ou 45 s depois do primeiro golpe), e o
 //     verificador fica limpo (S0–S2), sem erro de página nem aviso no console.
 //  l5 um navio de guerra livre com alguém a bordo (como a frota que acaba no seu passo deixa a tripulação) levado pelo
-//     conselho a uma frota nova: todo mundo a bordo no rol, e quem estava a bordo no rol ou em terra (L-xx3: o rol novo era
+//     conselho a uma frota nova: todo mundo a bordo no rol, e quem estava a bordo no rol ou em terra (L-639: o rol novo era
 //     escrito por cima de quem estava a bordo — «a bordo mas fora da tripulação»).
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
@@ -73,7 +73,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
   ok('l3 uma frota posta a lutar (sem batalha) passa pelo save ainda lutando', r.l3.after === 'combate', `frota ${r.l3.id}${r.l3.formed ? ' (formada pela prova, como o conselho da frota)' : ''} (antes «${r.l3.prev}»): depois do save «${r.l3.after}»`);
   ok('l4 a luta acaba como no mundo vivo; verificador limpo', r.l4.left && r.l4.at <= 50 && !r.bad.length && !errs.length,
     `${r.l4.left ? `deixou a luta aos ${r.l4.at} s` : 'ainda lutando depois de 60 s'} (agora «${r.l4.st}»); ${r.bad.join(' | ') || 'verificador limpo'}; ${errs.slice(0, 3).join(' · ') || 'sem erro de página'}`);
-  // l5 a warship with someone aboard taken by the next fleet (L-xx3): the roster of a ship of a new fleet was written over the
+  // l5 a warship with someone aboard taken by the next fleet (L-639): the roster of a ship of a new fleet was written over the
   // people aboard it (fleets.js manShips) — aboard and off the roster, «a bordo mas fora da tripulação»: Nefertari, the lone sailor
   // of a patrol that ended in its tick, aboard her idle warship when the council took it for the next fleet (the poderes p1 of the
   // round 16, in this world). A free warship of a people at war with a dock; one of its people put aboard by the game's door

@@ -500,7 +500,7 @@ let pocketDoor = null;
     const id = b.id; M.salvarCarregar(); In.uncache(); let b2 = G.S.buildings.get(id);
     // (one of the house's town out of doors; with all of them indoors — the anos100 of the generation 16 opens at midnight, and
     // the six of Jelling are asleep at home —, one of them, taken out first by the game's door: Vg.endTask, out by the door and
-    // awake, T-xx6)
+    // awake, T-567)
     const free16 = v => !v.jail && !v.aboard && !v.captive && v.age >= 16 && !(G.S.avatar && G.S.avatar.id === v.id);
     const v = [...G.S.villagers.values()].find(q => free16(q) && q.set === b2.set && !q.inside) || [...G.S.villagers.values()].find(q => free16(q) && q.set === b2.set);
     ok('o bolsão: salvar e carregar no meio', !!b2 && sameRec(recOf(b2), r0) && wE.every(i => G.S.wall[i] === 1) && size()(od) === pocket, `o registro ${b2 ? b2.ip.s + '/' + b2.ip.o : '-'} e os muros como estavam, o bolsão ainda de ${size()(od)}`);

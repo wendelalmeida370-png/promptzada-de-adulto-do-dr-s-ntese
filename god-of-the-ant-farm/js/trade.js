@@ -75,7 +75,7 @@
     if (!G.Depot.move('f:' + a.id, 'v:' + m.id, d.k, d.n, { code: 'caravana', by: m.id, pack: true, tag: beast ? { from: beast } : undefined }).ok) return;
     const t = G.Vg.setTask(m, { type: 'trade', to: d.b.id, from: a.id, give: d.k, n: d.n, want: 'moedas', lux: 1, pri: 1.8, kind: 'trade' });
     // a pack horse with saddlebags (the Aztec trader carries the load himself), born beside him on ground a horse stands on — by
-    // the door of a mine, the step to his side was inside the mine; and him indoors, the nearest such ground (L-629, L-xx2)
+    // the door of a mine, the step to his side was inside the mine; and him indoors, the nearest such ground (L-629, L-638)
     if (a.civ !== 'asteca' && G.Animals.DEF.cavalo) {
       const drop = G.Village.nearestDropoff(m.x, m.y, m.set);
       const jx = m.x - 0.4, jy = m.y + 0.2, at = G.Animals.walkOK({ kind: 'cavalo' }, jx, jy) ? [jx, jy] : [m.x, m.y];

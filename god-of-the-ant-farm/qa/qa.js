@@ -486,7 +486,7 @@
     { let lastN = -1, lastD = -1; for (const h of s.history) { if (h.n !== undefined) { if (h.n <= lastN) add('chron', 2, `crônica: número fora de ordem (${h.n} ≤ ${lastN})`); lastN = h.n; } if (h.d < lastD) add('chron', 2, `crônica: data fora de ordem (${h.d} < ${lastD}): ${h.txt.slice(0, 60)}`); lastD = h.d; } }
     // ---- animals
     let an = 0; for (const a of s.animals.values()) { if (!fin(a.x) || !fin(a.y)) add('fauna', 1, `animal ${a.kind}#${a.id}: posição inválida`); if (!a.dead) an++; if (a.hp !== undefined && !fin(a.hp)) add('fauna', 1, `animal ${a.kind}#${a.id}: hp ${a.hp}`); }
-    // a town's beast (a dog, a cat, a hen, a pigeon) lives with the people, never in a pen (L-xx1)
+    // a town's beast (a dog, a cat, a hen, a pigeon) lives with the people, never in a pen (L-637)
     { const l = []; for (const a of s.animals.values()) { const sp = G.Animals.DEF[a.kind]; if (a.pen && !a.dead && sp && sp.town) l.push(`${a.kind}#${a.id}`); } if (l.length) add('fauna', 3, `${l.length} bicho(s) da cidade num curral: ${l.slice(0, 4).join(', ')}`); }
     // ---- counts shown vs real
     { let real = 0; for (const v of s.villagers.values()) if (!v.captive) real++; let sum = 0; for (const f of G.Fac.all()) sum += G.Fac.pop(f.id); if (Math.abs(sum - real) > 0) add('pop', 2, `soma das populações dos povos (${sum}) ≠ pessoas livres (${real})`); }
