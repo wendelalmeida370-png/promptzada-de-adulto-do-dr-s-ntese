@@ -240,6 +240,12 @@ function hungryActor(hunger) {
   // to the first nine kinds of workplaces — deals the one the case keeps to the fishing at its next pass, at 0,46, before the
   // play: the case is the hungry actor on the stage, not the board, T-377)
   const hold = () => { holdOthers(b, keep); if (a) { calmBeasts([a.x, a.y], dr); if (a.role !== 'ator' || a.job !== b.id) { a.role = 'ator'; a.job = b.id; } } }; hold();
+  // (the show opened at its hour and its actor called to the stage at once, by the theatre's own doors — Tt.open, and the call
+  // callActors gives —: the actor called is in the leg of the show, and an errand from outside asks the hands first and waits
+  // (D-094, L-503). Left to the next steps, in the reg16 the trade between the peoples (politics.js, considerTrade: any grown
+  // one of the capital with the hands free) took the one actor of the case in the second the preparation opened, before the
+  // show called him, and the show was called off «sem atores» — the case is the hungry actor on the stage, not the trade)
+  if (a) { S().time = Math.max(S().time, Tt.opensAt(b)); const o = Tt.open(b) || Tt.dia(b); if (o && !(a.task && a.task.type === 'atuar')) G.Vg.give(a, { type: 'atuar', id: b.id, op: o.id, pri: 1.05, st: 0 }); }
   liveSec(60, () => { const o = Tt.dia(b); return !!o && o.data.fase === 'peca' && !!o.data.atores[a.id]; }, bad, hold);
   const op = Tt.dia(b); const started = !!op && op.data.fase === 'peca' && !!a && !!op.data.atores[a.id];
   if (started) a.hunger = hunger;

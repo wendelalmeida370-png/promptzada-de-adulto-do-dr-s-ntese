@@ -471,8 +471,18 @@ run('e19', () => {
   const rei = G.Politics.ruler(G.Fac.get(set.fac));
   const corte = [...S.villagers.values()].filter(v => v !== rei && v.set === set.id && v.age >= 16 && !v.captive && !v.jail && !v.aboard && v.role !== 'ator' && Tt.boxOf(v, b) === 'corte').sort((a, c) => a.id - c.id).slice(0, 5);
   if (VERB) console.log('  a corte:', corte.map(v => `${v.name} #${v.id} ${v.grp || '-'}`).join(', '), '; quem governa:', rei.name, rei.set === set.id ? 'em Roma' : 'fora');
-  // (trazidos à porta do Coliseu — quem governa mora noutra cidade —, para chegarem nos jogos de hoje)
-  const porta = G.Vg.door(b); for (const v of [rei, ...corte]) { sim(() => G.Vg.endTask(v)); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); v.x = porta[0] + 1 + (v.id % 3); v.y = porta[1] + 1; v.path = null; D.make(E.coinRef(v), 'moedas', 5, { code: 'teste' }); }
+  // (trazidos à porta do Coliseu — quem governa mora noutra cidade —, para chegarem nos jogos de hoje, de mãos livres: o que
+  // traziam vai aonde ia antes, pela regra da carga que não segue (A.holdCarry, Village.kill) — a de um trabalho no chão onde
+  // estavam, para outra mão; a de um lugar ao seu lugar (a casa leva tudo o que é seu, D-059); a sem destino ao armazém do povo;
+  // a água derramada —, no livro, com o motivo da prova. Com carga nos braços, Cornélia, que governa Roma de outra cidade, não
+  // foi mandada aos jogos (o Tt.visit pede as mãos livres, D-094), e o camarote nunca teve o seu trono, na reg16 e na ponta)
+  const maosLivres = v => { const c = v.carry; if (!c || !(c.n > 1e-6)) return; const fid = G.Fac.idOfV(v), op = c.op ? G.Act.get(c.op) : null;
+    if (op && G.Act.live(op)) D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op.id, code: 'pousou', by: v.id, fac: fid });
+    else if (c.k === 'water') D.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true });
+    else if (c.to && D.exists(c.to)) D.move('v:' + v.id, c.to, c.k, c.n, { code: 'teste', by: v.id, part: true, floor: c.to[0] === 'h' });
+    if (v.carry && v.carry.n > 1e-6 && D.exists('f:' + fid)) D.move('v:' + v.id, 'f:' + fid, v.carry.k, v.carry.n, { code: 'teste', by: v.id, part: true });
+    if (v.carry && v.carry.n > 1e-6) D.drop('v:' + v.id, v.carry.k, v.carry.n, v.x, v.y, { code: 'pousou', by: v.id, fac: fid }); };
+  const porta = G.Vg.door(b); for (const v of [rei, ...corte]) { sim(() => { G.Vg.endTask(v); maosLivres(v); }); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); v.x = porta[0] + 1 + (v.id % 3); v.y = porta[1] + 1; v.path = null; D.make(E.coinRef(v), 'moedas', 5, { code: 'teste' }); }
   let caixa = null, caixaSalvo = null; const lugar = v => { const p = In.placeOf(v); return p ? { use: p.use, kind: p.it ? p.it.kind : '-', st: p.st, pose: p.pose, quadril: Math.round((p.y + In.SIT_H) * 100) / 100 } : null; };
   // (toda a corte lá dentro, da lista da prova ou não — quem mais da corte vem aos jogos disputa o banco pela mesma regra: na
   // metrópole refeita depois da geração 15, quatro da família de Antônia, dois de fora da lista, tinham o banco, e três nobres
