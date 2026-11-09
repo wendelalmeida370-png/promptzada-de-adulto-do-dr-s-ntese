@@ -7,7 +7,9 @@
 // o1 um lobo a um fio dentro das vinte casas de uma cidade, os ofícios assentados com ele: a ida e volta pelo save não muda
 //    ofício nenhum (QA.roundTrip igual); o2 o lobo morto depois do load: o passo do mundo devolve a cidade ao que ela queria
 //    sem ele (quem redistribui é o passo); o3 um ofício que não existe mais, no save, é consertado no load, e só ele muda;
-//    e o verificador limpo, nenhum erro.
+//    o4 o recém-nascido nasce bebê: o parto dá 'bebe' na hora, e o save e o load devolvem o bebê como estava; o5 a criança
+//    criada aos cinco anos já é 'crianca' (L-630: nascia sem papel, o mundo dava o de bebê na repartição seguinte e o load
+//    na hora — o papel do bebê mudava no save); e o verificador limpo, nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const world = process.argv[2] || 'cidade';
@@ -26,6 +28,25 @@ const r2 = n => Math.round(n * 100) / 100;
 // (the wolves a hair inside the town's twenty tiles, at the four quarters of its centre: 19.996 tiles, which the save's
 // hundredth makes 20.00 — out of the count, `dist < 20`)
 const wolfAt = (s, k) => [[s.cx + 19.996, s.cy], [s.cx - 19.996, s.cy], [s.cx, s.cy + 19.996], [s.cx, s.cy - 19.996]][k];
+// o4, o5: the role its age gives a child under 16, from its first instant (L-630) — a newborn was born with none, the world gave
+// it «bebe» at the next dealing, four seconds on, and the load at once: a baby born a moment before a save came back from it with
+// another role (the e23d of the escala, round 14). A birth by the world's own door (Village.birth), the role at once and after a
+// save and a load; and a child of five made by the game's door (Vg.create). Then the world as it was, for the wolves' cases
+{
+  const mum = [...S().villagers.values()].filter(v => v.g === 'f' && v.age >= 18 && v.age < 40 && !v.captive && !v.aboard && !v.jail && S().villagers.has(v.partner) && S().settlements.has(v.set)).sort((a, b) => a.id - b.id)[0];
+  if (!mum) { ok('o4 o recém-nascido nasce bebê, e o save não muda o papel dele', false, 'ninguém para dar à luz'); ok('o5 a criança criada aos cinco anos já é criança', false, 'sem cidade'); }
+  else {
+    const n0 = mum.kids.length; god(() => G.Village.birth(mum)); const ids = mum.kids.slice(n0);
+    const role = id => { const v = S().villagers.get(id); return v ? v.role : '(sumiu)'; };
+    const at0 = ids.map(role); const t = S().settlements.get(mum.set);
+    const kid = god(() => G.Vg.create({ set: t.id, x: t.cx, y: t.cy, age: 5, g: 'm' })); const kid0 = kid.role;
+    M.salvarCarregar(); const at1 = ids.map(role); const kid1 = role(kid.id);
+    ok('o4 o recém-nascido nasce bebê, e o save não muda o papel dele', ids.length > 0 && at0.every(r => r === 'bebe') && at1.every(r => r === 'bebe'),
+      `${mum.name} deu à luz ${ids.length > 1 ? 'gêmeos' : 'um bebê'} (${ids.map(id => '#' + id).join(', ')}): o papel na hora ${at0.map(r => r || 'nenhum').join(', ')}; depois do save e do load ${at1.map(r => r || 'nenhum').join(', ')}`);
+    ok('o5 a criança criada aos cinco anos já é criança', kid0 === 'crianca' && kid1 === 'crianca', `${kid.name} #${kid.id}, criado aos 5 anos: ${kid0 || 'nenhum papel'}; depois do save e do load ${kid1 || 'nenhum papel'}`);
+  }
+  M.pronto(world); M.viver(2);
+}
 settle();
 // a town where the beasts a hair near it mean one more hunter (the town's centre on the hundredth, so the save moves them out):
 // the first by id, with the fewest wolves that do it — one, two or three, put by the god's hand. One was the rule, and a

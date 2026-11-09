@@ -67,10 +67,14 @@
     const traits = o.traits || rollTraits([m, f]);
     const home = S.settlements.get(o.set); const civId = o.civ || (home ? G.Civ.idOfFac(home.fac) : null); const civ = G.CIVS[civId];
     let courage = G.clamp(0.45 + (G.R() - 0.5) * 0.5 + (traits.includes('Corajoso') ? 0.35 : 0) - (traits.includes('Medroso') ? 0.35 : 0) + (civ && civ.traits.courage || 0), 0, 1);
+    // (a child comes with the role its age gives — 'bebe' under 2, 'crianca' under 16, the dealing's own rule (assignJobs) —, not
+    // with none until the next dealing, four seconds on: the load gave it at once, and a newborn's role changed across a save,
+    // L-630. A grown one waits for the dealing, where the elder's comes with its story, G.Life.onRole)
+    const role0 = o.age < 2 ? 'bebe' : o.age < 16 ? 'crianca' : null;
     const v = Vg.shape({
       id: o.id || S.nextId++, name: o.name || uniqueName(g, civId), g, age: o.age, born: S.day - o.age, civ: civId || null,
       hp: 100, hunger: G.rr(5, 35), energy: G.rr(65, 100),
-      role: null, x: o.x, y: o.y, z: 0, vx: 0, vy: 0, vz: 0, air: false, held: false,
+      role: role0, x: o.x, y: o.y, z: 0, vx: 0, vy: 0, vz: 0, air: false, held: false,
       path: null, pi: 0, task: null, act: '', actT: 0, carry: null,
       home: 0, set: o.set, partner: 0, mother: o.mother || 0, father: o.father || 0, kids: [], widow: 0,
       courage, traits, devotion: traits.includes('Devoto') ? G.rr(10, 20) : G.rr(1, 7), fear: 0,
