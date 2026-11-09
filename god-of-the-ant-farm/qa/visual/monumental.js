@@ -37,7 +37,8 @@
 //      pelo nome inteiro (L-564): a segunda faixa dos tetos planos do palácio asteca de 6 (Tenochtitlan) na cor dela
 //   T. o pódio de pedra (D-120) sob o palácio: o desnível do lote em pedra aparelhada, em fiadas, na pedra do povo; o lote clássico
 //      com o plinto de antes. E (1) o pedaço refeito com a geometria do monumento guardada (Build3D.formKeep): igual, mais depressa
-//   Tp. os templos de 8 casas do M2 pela forma (T-439, T-410), fundados pela mão do deus em Argos, Roma, Mênfis e Birka: Tp1 perto
+//   Tp. os templos de 8 casas do M2 pela forma (T-439, T-410), fundados pela mão do deus numa cidade do grego, do romano, do egípcio
+//      e do nórdico, pela regra do jogo — nunca a cidade pelo nome (qa/mao-regra.js, T-505, T-515) —: Tp1 perto
 //      e longe, do alto da forma; Tp2 o pórtico grego entre as antas (o olhar da rua chega ao fundo dele, de fora e com o interior; o
 //      fundo cede ao interior; o teto é o entablamento); Tp3 o corpo sobe o lance, entra no pórtico e, pelo portal, na nave; Tp4 o
 //      egípcio — as torres do pilone, as bandeiras, o portão pintado que cede à folha do interior, as colunas do salão hipostilo com o
@@ -64,6 +65,8 @@
 //   14. o Coliseu colossal de 13 casas na Roma da «cidade»: de fora, o corpo diante da entrada; da arena
 const path = require('path'); const fs = require('fs'); const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..');
+// (the god's hand for a people by the game's rule, never a town by its name — qa/mao-regra.js, T-505, T-515: in the page too)
+const handFor = require(path.join(__dirname, '..', 'mao-regra.js'));
 const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'qa', 'monumental', 'fotos'));
 const PARTE = process.env.PARTE || '';
 
@@ -101,6 +104,9 @@ function HELP(G) {
   // the Colosseum of the town named — the wonder's step asked: the 'maravilha' of 10 tiles, the 'colossal' of 13 —, founded whole
   // by the god's hand where handFound puts it (R tiles round its middle at most) — the ground levelled first where it rises more
   // than the form's podium covers (3 m)
+  // (what the proofs found by these hands stands: the hand that opens a place for another — the temples', T-515 — never throws one
+  // of them down)
+  const founded = new Set(); H.keep = id => founded.add(id); // (and one founded by the proof's own hand: the Colosseum of the page)
   H.found = function (name, R, stepId) {
     const S = G.S; const set = [...S.settlements.values()].find(s => s.name === name); if (!set) return { why: 'não há ' + name + ' neste mundo' }; stepId = stepId || 'maravilha';
     const st = G.Escala.steps('maravilha').find(s => s.id === stepId); const n = st.n; const site = H.siteOf(set, n, R, { cross: true }) || H.siteOf(set, n, R); if (!site) return { why: 'nenhum lote livre de ' + n + ' casas a ' + R + ' do meio de ' + name };
@@ -108,7 +114,7 @@ function HELP(G) {
     // (R: half a tile — the lot asked, levelled, and only it: handFound's radius of 0 is its 40)
     G.inSim++; let b; try { b = G.Village.handFound(set, 'maravilha', stepId, { built: true, x: site[0] + Math.floor(n / 2), y: site[1] + Math.floor(n / 2), R: 0.5 }); } finally { G.inSim--; }
     if (!b) return { why: 'o handFound não fundou no lote ' + site };
-    return { b, set, site, n, drop0: +drop0.toFixed(1), drop1: +H.drop(site[0], site[1], n).toFixed(1), h0, teste: !!G.ColiseuTeste };
+    founded.add(b.id); return { b, set, site, n, drop0: +drop0.toFixed(1), drop1: +H.drop(site[0], site[1], n).toFixed(1), h0, teste: !!G.ColiseuTeste };
   };
   // (the form's numbers the proofs read, in the world's metres — a drum or the arcade of the split oval (M1), a round arena or the
   // sand —: the middle (the arena's), the facade's outline and height, the arena's edge and its sand's height, the podium's height)
@@ -133,14 +139,26 @@ function HELP(G) {
     const S = G.S; const set = [...S.settlements.values()].find(s => s.name === name); if (!set) return { why: 'não há ' + name + ' neste mundo' };
     G.inSim++; let b; try { b = G.Village.handFound(set, type, stepId, { built: true, R: R || 60 }); } finally { G.inSim--; }
     if (!b) return { why: `o handFound não fundou ${type} em ${name}` };
-    return Object.assign({ b, set }, H.palaceOf(b));
+    founded.add(b.id); return Object.assign({ b, set }, H.palaceOf(b));
   };
-  // (a temple of a bigger step — the risk's, M2's: its plan and its risk read as the palace's)
-  H.temple = function (name, stepId, R) {
-    const S = G.S; const set = [...S.settlements.values()].find(s => s.name === name); if (!set) return { why: 'não há ' + name + ' neste mundo' };
-    G.inSim++; let b; try { b = G.Village.handFound(set, 'temple', stepId, { built: true, R: R || 60 }); } finally { G.inSim--; }
-    if (!b) return { why: `o handFound não fundou o templo ${stepId} em ${name}` };
-    return Object.assign({ b, set }, H.palaceOf(b));
+  // (the same, in a town of a people by the game's rule, never a town by its name — handFor, as the temples: T-515; the palaces of
+  // the photos of 12 by Mênfis and Hedeby found no lot once the temples of those peoples stood there)
+  H.palaceFor = function (civ, type, stepId, R) {
+    const hf = handFor(G, civ, type, stepId, R || 60, founded); const town = hf.set ? hf.set.name : '-';
+    if (!hf.set) return { town, why: `nenhuma cidade do povo ${civ} neste mundo` };
+    if (!hf.b) return { town, why: `a mão do deus não fundou ${type} em cidade nenhuma do povo ${civ} (a primeira: ${town})` };
+    founded.add(hf.b.id); return Object.assign({ b: hf.b, set: hf.set, town, gone: hf.gone }, H.palaceOf(hf.b));
+  };
+  // (a temple of a bigger step — the risk's, M2's: its plan and its risk read as the palace's —, founded by the god's hand in a
+  // town of a people by the game's rule, never a town by its name (handFor, qa/mao-regra.js: the towns in the order the people's
+  // wonder looks for them, the first where the hand finds the lot; with none, the place opened by the game's doors): in the
+  // metrópole of the generation 15 the hand found no lot of 8 by Roma, Mênfis nor Birka — T-515 —; never throwing down what the
+  // proofs founded before it: the Egyptian's place opened by Mênfis was the Greek's temple of a moment before)
+  H.temple = function (civ, stepId, R) {
+    const hf = handFor(G, civ, 'temple', stepId, R || 60, founded); const town = hf.set ? hf.set.name : '-';
+    if (!hf.set) return { town, why: `nenhuma cidade do povo ${civ} neste mundo` };
+    if (!hf.b) return { town, why: `a mão do deus não fundou o templo ${stepId} em cidade nenhuma do povo ${civ} (a primeira: ${town})` };
+    founded.add(hf.b.id); return Object.assign({ b: hf.b, set: hf.set, town, gone: hf.gone }, H.palaceOf(hf.b));
   };
   H.palaceOf = function (b) {
     const T = G.Space.TILE, B3 = G.Build3D; const p = G.Space.planNow(b); const F = B3.formOf(b); const Rk = G.Interiors.riskOf(F);
@@ -496,8 +514,9 @@ function nodePart() {
       ok('P7. as cores da forma pelo nome inteiro (L-564): a segunda faixa dos tetos planos do palácio asteca na cor dela', bands.length > 0 && tn.mine > 0 && tn.first === 0,
         `#${az.id} em ${az.x},${az.y}: ${bands.length} faixas «trim2» (${Pa.trim2}, a primeira «trim» ${Pa.trim}): perto ${tn.mine} triângulos na cor dela, ${tn.first} na da primeira (pela forma: ${B3.byForm(az)}; ${AZ.p ? 'a planta pronta' : AZ.why})`); } }
   // ================ Tp. the temples of the bigger steps by their form (M2's risks — T-439, T-410, L-558): the Greek's, the Roman's,
-  // the Egyptian's and the Norse's of 8 tiles, founded whole by the god's hand in a town of each people ================
-  { const Tz = []; for (const [town, civ] of [['Argos', 'grego'], ['Roma', 'romano'], ['Mênfis', 'egipcio'], ['Birka', 'nordico']]) Tz.push(Object.assign({ town, civ }, H.temple(town, 'monumental', 60)));
+  // the Egyptian's and the Norse's of 8 tiles, founded whole by the god's hand in a town of each people — by the game's rule, never
+  // a town by its name: T-515 ================
+  { const Tz = []; for (const civ of ['grego', 'romano', 'egipcio', 'nordico']) Tz.push(Object.assign({ civ }, H.temple(civ, 'monumental', 60)));
     const mesh1 = g => { const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); m.updateMatrixWorld(); return m; };
     const insOf = (p2, b2) => { const ig = B3.interior(p2, b2); const gr = new THREE.Group(); for (const k in ig.lv) if (!ig.lv[k].empty) gr.add(new THREE.Mesh(ig.lv[k].build(), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })));
       if (!ig.roof.empty) gr.add(new THREE.Mesh(ig.roof.build(), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }))); gr.updateMatrixWorld(true); return { ig, gr }; };
@@ -512,7 +531,7 @@ function nodePart() {
       return { n, of: els.length }; };
     const rows = [];
     for (const t of Tz) {
-      if (!t.b || !t.p) { ok(`Tp. o templo de 8 casas em ${t.town}`, false, t.why); continue; }
+      if (!t.b || !t.p) { ok(`Tp. o templo de 8 casas do povo ${t.civ}`, false, t.why || `em ${t.town}: ${t.p ? '' : 'a planta não se fez'}`); continue; }
       const g2 = alone(t.b); g2.near.solid.computeBoundingBox(); g2.far.computeBoundingBox();
       rows.push(Object.assign(t, { g2, P2: g2.near.solid.attributes.position.array, AP: g2.near.solid.attributes.aP.array, topN: g2.near.solid.boundingBox.max.y - t.base, topF: g2.far.boundingBox.max.y - t.base,
         massTop: Math.max(...G.Forma.mass(t.F).map(m => Math.max(...[m.y1, m.a && m.a[2], m.b && m.b[2], ...(m.p || []).map(q => q[2])].filter(Number.isFinite)))), cost2: B3.cost(t.b), fw: t.p.walls.filter(w => B3.formWall(t.b, t.p, w)).length }));
@@ -632,6 +651,7 @@ async function browserPart() {
   const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | monumental ${name} | ${info}`); if (!c) fails.push(name); };
   try {
     await page.addScriptTag({ path: path.join(__dirname, 'coliseu-teste.js') });
+    await page.evaluate(`window.handFor = ${handFor.toString()}`); // (the god's hand by the game's rule, for HELP's temples: T-515)
     await page.evaluate(`window.__MON = (${HELP.toString()})(window.G)`);
     // the world, and the body in Roma where the god's hand will found the Colosseum: the lot found and levelled first, the body on
     // its square before the way in, facing it — the frame measured there before, with the Colosseum after
@@ -666,7 +686,7 @@ async function browserPart() {
     const r1 = await page.evaluate(() => {
       const H = window.__MON; const s = window.__site; const set = G.S.settlements.get(s.set);
       G.inSim++; let b; try { b = G.Village.handFound(set, 'maravilha', 'maravilha', { built: true, x: s.site[0] + Math.floor(s.n / 2), y: s.site[1] + Math.floor(s.n / 2), R: 0.5 }); } finally { G.inSim--; }
-      if (!b) return { ok: false }; window.__b = b.id; const nm = H.numbers(b); const e = nm.p.entrance; const dx = e.out[0] - e.x, dz = e.out[1] - e.z, l = Math.hypot(dx, dz) || 1; const o = [dx / l, dz / l];
+      if (!b) return { ok: false }; window.__b = b.id; H.keep(b.id); const nm = H.numbers(b); const e = nm.p.entrance; const dx = e.out[0] - e.x, dz = e.out[1] - e.z, l = Math.hypot(dx, dz) || 1; const o = [dx / l, dz / l];
       const reach = q => H.reach(nm.face, nm.C, q); const dg = [(o[0] - o[1]) / Math.SQRT2, (o[1] + o[0]) / Math.SQRT2];
       window.__nm = { C: nm.C, H: nm.H, base: nm.base, sandY: nm.sandY, e, o, front: reach(o), back: reach([-o[0], -o[1]]), diag: reach(dg), dg };
       return { ok: true, id: b.id, x: b.x, y: b.y, teste: !!G.ColiseuTeste };
@@ -809,15 +829,15 @@ async function browserPart() {
       ok('11. o palácio de pátios (6 casas, romano): de fora, no pátio e no salão do trono, em terceira pessoa', pics2.every(q => /KB/.test(q)) && w2.d < 1.5 && w3.d < 1.5, `#${rp.id} em ${rp.x},${rp.y} (${rp.st}); o corpo no pátio a ${w2.d} m do ponto (piso ${w2.lv}), no salão a ${w3.d} m (piso ${w3.lv}); ${pics2.join(' · ')}`);
       void w1;
     }
-    // 12. the temples of 8 tiles by their form (T-439, T-410) — the Greek's in Argos, the Egyptian's in Mênfis, the Norse's in Birka —
-    // and the palaces of 6 of those peoples — in Argos, Mênfis and Hedeby —, founded whole by the god's hand: each from outside, the
-    // eye over its front's left corner, the body on the street before it; and the Egyptian's hypostyle hall from inside,
-    // the body walked in by the pylon's gate and the hall's portal (its columns: L-558)
+    // 12. the temples of 8 tiles by their form (T-439, T-410) and the palaces of 6 — the Greek's, the Egyptian's and the Norse's,
+    // each in a town of its people by the game's rule (T-515) —, founded whole by the god's hand: each from outside, the eye over its
+    // front's left corner, the body on the street before it; and the Egyptian's hypostyle hall from inside, the body walked in by
+    // the pylon's gate and the hall's portal (its columns: L-558)
     const more = await page.evaluate(() => {
       const H = window.__MON; const T = G.Space.TILE; const out = [];
-      for (const [town, type, step, tag] of [['Argos', 'temple', 'monumental', '7-templo-grego'], ['Mênfis', 'temple', 'monumental', '8-templo-egipcio'], ['Birka', 'temple', 'monumental', '9-templo-nordico'],
-        ['Argos', 'palacio', 'palacio', '11-palacio-grego'], ['Mênfis', 'palacio', 'palacio', '12-palacio-egipcio'], ['Hedeby', 'palacio', 'palacio', '13-palacio-nordico']]) {
-        const z = type === 'temple' ? H.temple(town, step, 60) : H.palace(town, type, step, 60); if (!z.b) { out.push({ tag, why: z.why }); continue; }
+      for (const [civ, type, step, tag] of [['grego', 'temple', 'monumental', '7-templo-grego'], ['egipcio', 'temple', 'monumental', '8-templo-egipcio'], ['nordico', 'temple', 'monumental', '9-templo-nordico'],
+        ['grego', 'palacio', 'palacio', '11-palacio-grego'], ['egipcio', 'palacio', 'palacio', '12-palacio-egipcio'], ['nordico', 'palacio', 'palacio', '13-palacio-nordico']]) {
+        const z = type === 'temple' ? H.temple(civ, step, 60) : H.palaceFor(civ, type, step, 60); if (!z.b) { out.push({ tag, why: z.why }); continue; }
         // (the eye a little out of the lot's front-left corner, over the top of the building and of the trees round it)
         const L = z.F.L, W = z.W, top = z.F.top, base = z.base; const P = W(-0.06 * L, 1.14 * L), A = W(0.5 * L, 0.42 * L);
         // (the body on open ground before its front — the street, a step aside where a tree or the water is)
