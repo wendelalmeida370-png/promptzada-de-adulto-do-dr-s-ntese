@@ -33,6 +33,10 @@ function walkTo(X, Z, max, near) {
   for (; k < (max || 600); k++) {
     const dx = X - st.X, dz = Z - st.Z; if (Math.hypot(dx, dz) < (near || 0.15)) break;
     IN.camYaw = Math.atan2(dz, dx); IN.mz = 1; IN.mx = 0; frame(); check();
+    // (a flight taken goes by itself to its end — a ladder hand over hand, slow and nearly straight up: its 4 mm a frame along
+    // the ground were taken for the body stuck, and the walk ended half way up the ladder of the house#23766 of the
+    // generation-15 metropole, the feet at 0,61 m, T-514)
+    if (st.loco === 'stair') { still = 0; last = [st.X, st.Z]; continue; }
     if (Math.hypot(st.X - last[0], st.Z - last[1]) < 0.004) { if (++still > 25) break; } else still = 0; last = [st.X, st.Z];
   }
   stop(); for (let q = 0; q < 6; q++) { frame(); check(); }
