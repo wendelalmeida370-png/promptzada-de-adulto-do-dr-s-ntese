@@ -18,6 +18,10 @@
 //  r9 a posição no save: uma vaca a um fio da borda da sua casa, ao lado de um penhasco, salva e carregada — fica na casa dela
 //     e volta ao curral; e um save de antes, que a pôs no penhasco: carregado, ela vai para a casa livre mais perto de onde
 //     chega ao curral, e volta (L-607: o save arredondava a 95,00 a vaca de 94,996, e ela ficava no penhasco para sempre)
+//  r10 a volta sozinha com um chão cercado no caminho: uma vaca do curral posta do outro lado de um cercado alheio (um curral,
+//     um cemitério) que o caminho das pessoas atravessa — ela dá a volta e chega ao seu curral (o caminho dela não atravessa
+//     cerca alheia senão pela porteira; o das pessoas não conhece cercas, e as vacas de Birka ficaram presas na cerca do
+//     cemitério de Óstia depois de um load com o rebanho no pasto — o r4 da 14ª rodada)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
 // O corpo do deus não pastoreia (o interact.js não tem o verbo): o salto é das vidas longas da regressão.
 //   node qa/rebanho.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/rebanho.js)
@@ -303,6 +307,31 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
     const bad = newBad(P.base);
     ok('r9', in1 && home1 && ok3 && home3 && !bad.length,
       `${a.kind} #${a.id} em ${at0}, na casa (${sp.x},${sp.y}) com o penhasco em (${sp.x + sp.dx},${sp.y + sp.dy}): salva e carregada, em ${at1}${in1 ? ', na casa dela' : ', FORA DA CASA DELA'}; ${home1 ? 'voltou ao curral' : 'NÃO voltou ao curral em 60 s'}; um save de antes (versão 4, ${ao.x.toFixed(2)},${ao.y.toFixed(2)}): carregada em ${at3}${ok3 ? ', de onde chega ao curral' : ''}; ${home3 ? 'voltou ao curral' : 'NÃO voltou ao curral em 60 s'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  }
+}
+// r10 home alone with a fenced ground on the way: a cow of the pen put on the far side of someone else's fenced ground — a pen,
+// a stable, a captives' pen, a graveyard, within 25 tiles —, on a tile it stands on, off any fence, from where the people's way
+// to its pen runs across that ground (not by its gate): no herder, at rest, past the pasture's hours — it goes round and
+// reaches its pen. The people's way knows no fences, and the beast walking it alone was pressed against the fence for good
+{
+  const P = setup(0.5, 0.1); const b = P.b; const W = G.W; const F = W.fenceMap(); const FEN = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 };
+  const [cx, cy] = [b.x + b.w / 2, b.y + b.h / 2];
+  const a = P.herd.slice().sort((p, q) => p.age / G.Animals.DEF[p.kind].life - q.age / G.Animals.DEF[q.kind].life || p.id - q.id)[0];
+  // (the people's way from a point to the pen's middle crosses the fenced ground fg — sampled every quarter of a tile)
+  const across = (x, y, fg) => { const p = W.findPath(x, y, cx, cy, true, 3500); if (!p) return false; for (let k = 1; k < p.length; k++) { const [x0, y0] = p[k - 1], [x1, y1] = p[k]; const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.25); for (let q = 0; q <= n; q++) if (F[W.idx(x0 + (x1 - x0) * q / n, y0 + (y1 - y0) * q / n)] === fg.id) return true; } return false; };
+  let got = null;
+  if (a) for (const fg of [...S().buildings.values()].filter(o => FEN[o.type] && o.built && o.id !== b.id && G.dist(o.x, o.y, b.x, b.y) < 25).sort((p, q) => G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y) || p.id - q.id)) {
+    const ring = []; for (let y = fg.y - 1; y <= fg.y + fg.h; y++) for (let x = fg.x - 1; x <= fg.x + fg.w; x++) if (x < fg.x || x >= fg.x + fg.w || y < fg.y || y >= fg.y + fg.h) ring.push([x, y]);
+    const sp = ring.find(([x, y]) => W.inb(x, y) && !F[W.idx(x, y)] && G.Animals.walkOK(a, x + 0.5, y + 0.5) && W.canWalk(x + 0.5, y + 0.5, cx, cy) && across(x + 0.5, y + 0.5, fg));
+    if (sp) { got = { fg, sp }; break; }
+  }
+  if (!a || !got) ok('r10', false, a ? `nenhum chão cercado a 25 casas do ${V.buildName(b)} #${b.id} que o caminho das pessoas até ele atravesse` : 'sem bicho no curral');
+  else {
+    const { fg, sp } = got; a.x = sp[0] + 0.5; a.y = sp[1] + 0.5; a.tx = a.x; a.ty = a.y; a.path = null; a.noGo = undefined; a.blk = 0; a.stk = 0; a.state = 'pen'; a.herder = 0; a.ledBy = 0; a.hold = 0;
+    const c0 = S().clock; let inside = false;
+    const back = live(120, () => { if (F[W.idx(a.x, a.y)] === fg.id) inside = true; }, () => a.dead || (a.state === 'pen' && inPen(a, b)));
+    const bad = newBad(P.base);
+    ok('r10', back && !a.dead && !bad.length, `${a.kind} #${a.id} do ${V.buildName(b)} #${b.id} posta em (${sp[0]},${sp[1]}), do outro lado de ${V.buildName(fg)} #${fg.id} (${fg.type}, de ${(S().settlements.get(fg.set) || {}).name}), que o caminho das pessoas atravessa: ${back ? `no seu curral em ${r2(S().clock - c0)} s${inside ? ' (passando por dentro, pela porteira)' : ' (dando a volta)'}` : `NÃO chegou ao curral em 120 s (em ${r2(a.x)},${r2(a.y)}, ${a.state}${a.noGo ? ', desistiu do caminho' : ''})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 const er = M.erros();

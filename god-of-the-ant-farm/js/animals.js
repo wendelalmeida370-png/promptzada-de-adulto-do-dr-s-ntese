@@ -372,16 +372,48 @@
     a.x = p[0]; a.y = p[1]; a.tx = a.x; a.ty = a.y; a.path = null; a.moving = false; a.blk = 0; a.stk = 0; a.noGo = undefined;
     return true;
   };
-  // a way around: the same paths people walk (cliffs, walls and houses in the way), a few searches a frame
+  // a way around, a few searches a frame: the beast's own — the ground it stands on (walkOK: cliffs, walls and houses in the way),
+  // and never across a fence it may not cross, into a fenced ground not its own but by the gate (W.fenceBlocks). The people's
+  // way knows no fences: a cow walking home alone was pressed against the fence of a graveyard on that way for good (the cows of
+  // Birka by Óstia's cemetery, after a load with the flock at pasture, the r4 of the round 14)
   let pathBudget = 0;
-  G.worldHooks.push(() => { pathBudget = 0; });
+  let pg = null, pcame = null, pseen = null, pshut = null, pgen = 0; const pq = new G.Heap();
+  G.worldHooks.push(() => { pathBudget = 0; pg = null; pgen = 0; });
+  const DX8 = [1, -1, 0, 0, 1, 1, -1, -1], DY8 = [0, 0, 1, -1, 1, -1, 1, -1];
+  function beastPath(a, tx, ty, maxNodes) {
+    const n = N * N; if (!pg || pg.length !== n) { pg = new Float32Array(n); pcame = new Int32Array(n); pseen = new Uint32Array(n); pshut = new Uint32Array(n); pgen = 0; }
+    pgen++; pq.clear();
+    const s = W.idx(a.x, a.y), t = W.idx(tx, ty); const tX = t % N, tY = (t / N) | 0; const onGoal = walkOK(a, tX + 0.5, tY + 0.5);
+    const can = (x, y) => walkOK(a, x + 0.5, y + 0.5);
+    pg[s] = 0; pseen[s] = pgen; pcame[s] = -1; pq.push(s, 0);
+    let found = -1, nodes = 0;
+    while (pq.size) {
+      const c = pq.pop(); if (pshut[c] === pgen) continue; pshut[c] = pgen;
+      const cx = c % N, cy = (c / N) | 0;
+      if (onGoal ? c === t : c !== s && Math.max(Math.abs(cx - tX), Math.abs(cy - tY)) <= 1) { found = c; break; }
+      if (++nodes > maxNodes) break;
+      for (let k = 0; k < 8; k++) {
+        const nx = cx + DX8[k], ny = cy + DY8[k]; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+        const j = ny * N + nx; if (pshut[j] === pgen || !can(nx, ny)) continue;
+        if (k >= 4 && (!can(nx, cy) || !can(cx, ny))) continue; // (no corner of a house or a rock cut across)
+        if (W.fenceBlocks(a, cx + 0.5, cy + 0.5, nx + 0.5, ny + 0.5)) continue;
+        const g = pg[c] + (k >= 4 ? 1.4142 : 1);
+        if (pseen[j] !== pgen || g < pg[j]) { pseen[j] = pgen; pg[j] = g; pcame[j] = c; const hx = Math.abs(nx - tX), hy = Math.abs(ny - tY); pq.push(j, g + Math.max(hx, hy) + 0.4142 * Math.min(hx, hy)); }
+      }
+    }
+    if (found < 0) return null;
+    const tiles = []; for (let c = found; c !== -1; c = pcame[c]) tiles.push(c); tiles.reverse();
+    const pts = tiles.map(i => [(i % N) + 0.5, ((i / N) | 0) + 0.5]); pts[0] = [a.x, a.y]; if (onGoal) pts[pts.length - 1] = [tx, ty];
+    return pts;
+  }
   const canRoute = a => { const sp = SP[a.kind]; return sp.cls === 'land' || (sp.cls === 'amph' && G.S.type[W.idx(a.x, a.y)] > T.RIVER && G.S.type[W.idx(a.tx, a.ty)] > T.RIVER); };
   function route(a) {
     const S = G.S;
     if (!canRoute(a)) return false; // (water, and the edge of the water: no way round to look for)
     if (pathBudget <= 0 || S.clock - (a.pfT || -99) < 1.6) return null; // not this frame
     pathBudget--; a.pfT = S.clock;
-    const p = W.findPath(a.x, a.y, a.tx, a.ty, true, 700);
+    if (!W.canWalk(a.x, a.y, a.tx, a.ty, true)) return false; // (another island, a pocket: no flooding the map for nothing)
+    const p = beastPath(a, a.tx, a.ty, 700);
     return p && p.length ? p : false;
   }
   // nowhere to go from here: stop pushing against the rock, and think of something else
