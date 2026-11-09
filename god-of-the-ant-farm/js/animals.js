@@ -1062,6 +1062,16 @@
   }
 
   // ---------------- livestock ----------------
+  // whose errand leads a beast on a rope — a module that leads one names its errand here —: the butcher's slaughter of that
+  // beast (economy.js), the feast that offers it (festivals.js), the band that drove off a raided herd (army.js), the caravan
+  // with its pack horse (trade.js)
+  const LEADS = A.LEADS = {
+    slaughter: (t, a) => t.a === a.id,
+    fest: (t, a) => !!G.Fest && G.Fest.list().some(fe => fe.id === t.fid && fe.victim === a.id),
+    band: (t, a) => !!a.stolen,
+    trade: (t, a) => !!a.pack,
+  };
+  const leads = (t, a) => { const f = LEADS[t.type]; return !!f && f(t, a); };
   function domAI(a, dt) {
     const S = G.S; const sp = SP[a.kind];
     if (a.hold > 0) { a.hold -= dt; a.moving = false; return; }
@@ -1073,7 +1083,9 @@
     if (a.flee > 0) { a.flee -= dt; if (moveTo(a, dt, sp.run)) a.flee = 0; return; }
     if (a.state === 'led') {
       const v = S.villagers.get(a.ledBy);
-      if (!v || !v.task) { a.state = 'pen'; a.ledBy = 0; return; }
+      // (led only while the leader's errand is about it: any other, and it is let go back to its pen — it stayed led while its
+      // leader had any task at all, and with the slaughter cut three cows of Birka followed the butcher about for 400 s, L-608)
+      if (!v || !v.task || !leads(v.task, a)) { a.state = 'pen'; a.ledBy = 0; return; }
       const d = G.dist(a.x, a.y, v.x, v.y);
       if (d > 12) { a.x = v.x; a.y = v.y; }
       if (d > 0.75) { a.tx = v.x - v.face * 0.45; a.ty = v.y + 0.15; moveTo(a, dt, Math.max(sp.sp, 1.2) * (d > 2.5 ? 1.7 : 1.05)); } else a.moving = false;

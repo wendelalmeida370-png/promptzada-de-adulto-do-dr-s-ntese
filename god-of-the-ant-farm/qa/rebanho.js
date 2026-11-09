@@ -13,6 +13,8 @@
 //     do caso tirado pela mão do deus
 //  r7 um bicho do rebanho fechado no cercado de outro (entrou pela porteira atrás do pastor) sai dali e volta ao seu curral
 //     (L-468: só o bicho sem curral saía do cercado alheio por qualquer lado, e o caminho de volta não conhece porteiras)
+//  r8 o abate cortado no meio: o açougueiro levando um bicho do curral na corda, uma ida de fora o leva (a assembleia): o
+//     bicho é solto e volta ao curral — nunca segue quem o levava num afazer que não é mais o dele (L-608)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
 // O corpo do deus não pastoreia (o interact.js não tem o verbo): o salto é das vidas longas da regressão.
 //   node qa/rebanho.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/rebanho.js)
@@ -231,6 +233,37 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
     const back = live(90, () => { if (outAt === null && G.W.fenceMap()[G.W.idx(a.x, a.y)] !== other.id) outAt = r2(S().clock - c0); }, () => a.dead || (a.state === 'pen' && inPen(a, b)));
     const bad = newBad(P.base);
     ok('r7', back && !a.dead && !bad.length, `${a.kind} #${a.id} do ${V.buildName(b)} #${b.id} posto em (${r2(sp[0])},${r2(sp[1])}), dentro de ${V.buildName(other)} #${other.id} (${other.type}), a ${d0} casas do seu: ${outAt === null ? 'NÃO SAIU de lá' : `saiu em ${outAt} s`}; ${back ? `no seu curral em ${r2(S().clock - c0)} s` : `não voltou ao seu curral em 90 s (em ${r2(a.x)},${r2(a.y)}, ${a.state})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+  }
+}
+// r8 the slaughter cut in the middle (L-608): the butcher of the pen's people leads a beast of it on a rope to his shop
+// ('slaughter', economy.js runSlaughter), and on the way an errand from outside takes him — a call to the square to watch
+// something, a minute long, 1,7 over the slaughter's 1 —: the beast is let go at once, back to its pen, never led about by one
+// whose errand is no longer about it (a beast stayed led while its leader had any task at all: with the slaughter cut, three
+// cows of Birka followed the butcher about for 400 s and more, in the metrópole of the generation 15 — the r3 of the round 13)
+{
+  const P = setup(0.5, 0.1); const b = P.b; const fac = V.facOfSet(b.set);
+  const shop = v => S().buildings.get(v.job);
+  const bu = [...S().villagers.values()].filter(v => v.role === 'acougueiro' && fit(v) && shop(v) && shop(v).built && V.facOfSet(shop(v).set) === fac).sort((p, q) => p.id - q.id)[0];
+  const a = P.herd.filter(x => x.grown >= 1).sort((p, q) => p.age / G.Animals.DEF[p.kind].life - q.age / G.Animals.DEF[q.kind].life || p.id - q.id)[0]; // (the youngest grown one: none dies of old age in the case)
+  if (!bu || !a) ok('r8', false, `${bu ? '' : 'nenhum açougueiro do povo do curral; '}${a ? '' : 'nenhum bicho crescido no curral'}`);
+  else {
+    // (the butcher at the pen's gate, awake, out of doors, hands empty, and his errand the slaughter of that beast — as the
+    // butcher's own choice gives it, economy.js butcherTask)
+    G.Vg.endTask(bu); if (bu.ug && G.Caves) G.Caves.exitNow(bu); bu.sleeping = false; bu.inside = 0; bu.energy = 95; bu.hunger = 10;
+    if (bu.carry && bu.carry.n > 1e-6 && bu.carry.k !== 'water') G.Vg.toStore(bu, G.Fac.idOfV(bu), 'teste');
+    bu.x = b.x + b.w / 2; bu.y = b.y + b.h + 0.4; bu.path = null; bu.think = 0;
+    G.Vg.H.setTask(bu, { type: 'slaughter', id: bu.job, pen: b.id, a: a.id, pri: 1 });
+    const led = live(40, null, () => a.state === 'led' && a.ledBy === bu.id);
+    const st1 = !!(bu.task && bu.task.type === 'slaughter' && bu.task.st === 1); // (on the way to the shop, the beast on the rope)
+    const set = S().settlements.get(bu.set);
+    const took = led && st1 && G.Vg.give(bu, { type: 'olhar', x: set.cx, y: set.cy, fx: set.cx + 1, fy: set.cy, pri: 1.7, until: S().clock + 60, what: 'praça', kind: 'olhar' });
+    // (then the world: the butcher goes to the square for a minute; the beast, let go, goes home — how long it stayed on the rope
+    // after the cut, and how far it followed him)
+    let ledT = 0, far = 0; const c0 = S().clock, x0 = a.x, y0 = a.y;
+    const back = took && live(90, () => { if (a.state === 'led') { ledT = r2(S().clock - c0); far = Math.max(far, r2(G.dist(a.x, a.y, x0, y0))); } }, () => a.dead || (a.state === 'pen' && !a.ledBy && inPen(a, b)));
+    const bad = newBad(P.base);
+    ok('r8', led && st1 && took && ledT <= 0.5 && back && !a.dead && a.state !== 'led' && !a.ledBy && !bad.length,
+      `${bu.name} (açougueiro) levando ${a.kind} #${a.id} do ${V.buildName(b)} #${b.id}: ${led ? 'na corda' : 'NÃO a pegou em 40 s'}${led ? (st1 ? ', a caminho do açougue' : ` (a tarefa ${bu.task ? bu.task.type + '.' + bu.task.st : 'nenhuma'})`) : ''}; a chamada à praça ${took ? 'o levou' : 'NÃO o levou'}; depois: ${ledT > 0.5 ? `o bicho SEGUIU NA CORDA de ${bu.name} por ${ledT} s, ${far} m` : 'solto logo'}; ${a.dead ? 'o bicho morreu' : a.state === 'led' ? `ainda na corda (${bu.task ? bu.task.type : 'sem tarefa'})` : back ? `no seu curral em ${r2(S().clock - c0)} s` : `não voltou ao curral em 90 s (em ${r2(a.x)},${r2(a.y)}, ${a.state})`}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 const er = M.erros();
