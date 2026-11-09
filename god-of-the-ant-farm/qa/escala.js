@@ -666,10 +666,13 @@ run('e22', () => {
   const aud0 = JSON.stringify(A.f.aud); const ids = dentro.map(v => v.id); salva(); const f2 = G.Fac.get(A.f.id);
   const volta = ids.filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.kind === 'audiencia' && v.inside === b.id; }).length;
   ok('e22e o save no meio', !!f2.aud && JSON.stringify(f2.aud) === aud0 && volta === ids.length, `a audiência ${f2.aud ? 'continua' : 'SUMIU'}; ${volta} de ${ids.length} de volta lá dentro`);
-  sim(() => V.kill(S.villagers.get(r.id), 'old')); M.viver(4); const r2 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length;
+  // (who is still in it: in the audience of the case's people — the audience of another people going on meanwhile is theirs: in
+  // the metrópole of the round 15, Ivar, crowned in the Clã de Hrafn, sat his own throne at his coronation while Argos's ended, T-535)
+  const naDe = fid => [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia' && v.task.fid === fid).length;
+  sim(() => V.kill(S.villagers.get(r.id), 'old')); M.viver(4); const r2 = naDe(f2.id);
   ok('e22f quem governa morre no meio', !f2.aud && !r2, `${f2.aud ? 'a audiência AINDA DURA' : 'a audiência acabou'}; ${r2} ainda nela`);
-  A = audiencia(); M.viver(15); const n3 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length;
-  sim(() => V.destroyBuilding(S.buildings.get(A.b.id), 'meteor')); M.viver(4); const n4 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length; const fora = [...S.villagers.values()].filter(v => v.inside === A.b.id).length;
+  A = audiencia(); M.viver(15); const n3 = naDe(A.f.id);
+  sim(() => V.destroyBuilding(S.buildings.get(A.b.id), 'meteor')); M.viver(4); const n4 = naDe(A.f.id); const fora = [...S.villagers.values()].filter(v => v.inside === A.b.id).length;
   ok('e22g o deus derruba o palácio no meio', A.okA && n3 > 0 && !A.f.aud && !n4 && !fora, `${n3} na audiência; depois do palácio caído: ${n4} nela, ${fora} lá dentro`);
   const c2 = checa(); ok('e22i verificador', c2.ok, c2.txt);
   // (o voto e o pão: com o palácio pronto de pé, na praça, diante do assento do poder — Po.seat —, como antes; nenhuma audiência)
