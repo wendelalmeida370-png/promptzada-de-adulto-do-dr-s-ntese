@@ -88,7 +88,8 @@ const PORT_SET = /\b(Depot|D)\.stores\s*=(?!=)|\bVg\.planDoor\s*=(?!=)/;
 const PORT_OK = { 'interiors.js': () => true, 'activity.js': line => /\bD\.stores\s*=\s*null\s*;/.test(line), 'villagers.js': line => /\bVg\.planDoor\s*=\s*null\s*;/.test(line) };
 // 23. "o mundo pergunta ao espaço só se a entrada cabe" (L-195): fora do que só se vê (a lista LOOK da regra 3) e das portas
 // do corpo (os pés e as mãos do corpo leem o espaço dele), o mundo só pergunta ao G.Space pelo entryFits — a conta pura dos
-// degraus diante da porta, feita de novo — e pelo treesAround, as árvores de que ela depende, lidas do mundo (L-206); outra
+// degraus diante da porta, feita de novo — e pelo treesAround, as árvores, as pedras grandes e os registros dos prédios mais
+// velhos de que ela depende, lidos do mundo (L-206, L-618, L-619); outra
 // pergunta faria o passo do mundo depender do que o 3D guarda (os memos do space.js), e o mundo seria outro com ou sem alguém
 // olhando
 const SPACE_BODY = ['possess.js', 'avatar.js', 'interact.js'];
