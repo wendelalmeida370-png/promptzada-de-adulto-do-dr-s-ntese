@@ -357,6 +357,19 @@
     return true;
   }
   A.lineOK = lineOK;
+  // a beast standing where it cannot stand any more — a wall raised on its tile (L-606), the load of an older save that set it a
+  // hair across the edge of its tile (L-607) —: set down on the nearest ground it can stand on from where it reaches its home
+  // (its pen, its range: the map of regions), within r tiles — never into a pocket, nor beyond what now stands between it and
+  // home —; with no such ground near, on the nearest it can stand on at all
+  A.aside = function (a, r) {
+    const sp = SP[a.kind]; if (!sp || sp.cls === 'air' || sp.cls === 'water' || a.held || a.air || walkOK(a, a.x, a.y)) return false;
+    const can = (x, y) => walkOK(a, x, y);
+    const home = (x, y) => can(x, y) && (!Number.isFinite(a.hx) || !Number.isFinite(a.hy) || W.canWalk(x, y, a.hx, a.hy));
+    const p = W.nearestLand(a.x, a.y, r || 3, home) || W.nearestLand(a.x, a.y, r || 3, can);
+    if (!p) return false;
+    a.x = p[0]; a.y = p[1]; a.tx = a.x; a.ty = a.y; a.path = null; a.moving = false; a.blk = 0; a.stk = 0; a.noGo = undefined;
+    return true;
+  };
   // a way around: the same paths people walk (cliffs, walls and houses in the way), a few searches a frame
   let pathBudget = 0;
   G.worldHooks.push(() => { pathBudget = 0; });

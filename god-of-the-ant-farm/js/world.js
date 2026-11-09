@@ -94,7 +94,7 @@
   // walls block, open gates (2) and aqueduct arches (3) let people through, shut gates (4) don't
   // the fences of pens, stables, captives' pens and graveyards: an animal crosses them only at the gate
   // (the middle of the pen's lower side); the flock of a pen may always go in and out of its own
-  const FENCED = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 };
+  const FENCED = W.FENCED = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 }; // (read by the walls too: no wall over a fence, L-606)
   let fenceMap = null, fenceT = -1e9, fenceN = 0;
   G.worldHooks.push(() => { fenceMap = null; fenceT = -1e9; fenceN = 0; }); // (a new world, or a save loaded: it starts over)
   W.fenceMap = function () {

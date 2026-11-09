@@ -182,6 +182,8 @@
     // no wall standing on the lot of an open ground with a plan — the square, the fair: the world walks across it, its plan has its
     // floor there (L-466)
     if (G.Interiors && G.Interiors.TYPES) for (const w of s.walls || []) { const st = s.settlements.get(w.set); for (const i of w.tiles) { const ob = s.wall[i] && s.wall[i] !== 3 && s.occ[i] ? s.buildings.get(s.occ[i]) : null; if (ob && !ob.blocks && G.Interiors.TYPES[ob.type]) { add('city', 3, `o muro de ${st ? st.name : '#' + w.set} (#${w.id}) tem casa de pé em (${i % G.N},${(i / G.N) | 0}), no lote de ${ob.type}#${ob.id} (chão aberto de planta)`); break; } } }
+    // nor on a fenced ground — a pen, a stable, a captives' pen, a graveyard: its fence is the wall there (L-606)
+    if (G.W.FENCED) for (const w of s.walls || []) { const st = s.settlements.get(w.set); for (const i of w.tiles) { const ob = s.wall[i] && s.wall[i] !== 3 && s.occ[i] ? s.buildings.get(s.occ[i]) : null; if (ob && !ob.blocks && G.W.FENCED[ob.type]) { add('city', 3, `o muro de ${st ? st.name : '#' + w.set} (#${w.id}) tem casa de pé em (${i % G.N},${(i / G.N) | 0}), no chão cercado de ${ob.type}#${ob.id}`); break; } } }
     { let ghost = 0, ex = 0; for (let i = 0; i < s.occ.length; i++) { const o = s.occ[i]; if (o && !s.buildings.has(o)) { ghost++; ex = o; } } if (ghost) add('city', 2, `${ghost} casa(s) do mapa ocupadas por prédio inexistente #${ex}`); }
     // ---- the memory of the dead: cemeteries hold twelve, a grave and its record agree, nobody is kept past three
     // generations unless they mattered or the living are their children and grandchildren (L-072)
