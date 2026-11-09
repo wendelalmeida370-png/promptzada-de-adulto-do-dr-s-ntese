@@ -454,7 +454,8 @@
   Wz.mobilizeAt = (w, f, tgt, front, at, n, o) => mobilize(w, f, 'campanha', tgt, Object.assign({}, o || {}, { front, at, n }));
   // a soldier on the way to the rally point, and waiting there
   function runMuster(v, t, dt, H) {
-    const a = Wz.army(t.army); if (!a || a.phase !== 'mobilizar') return H.end(v);
+    // (an army that is over calls no one: the call a scene gives back after the end is let go — L-641)
+    const a = Wz.army(t.army); if (!a || a.done || a.phase !== 'mobilizar') return H.end(v);
     if (!t.spot) {
       const k = t.k || 0; const ang = k * 2.39996; const r = 0.8 + Math.sqrt(k) * 0.55;
       const p = [a.muster[0] + Math.cos(ang) * r, a.muster[1] + Math.sin(ang) * r * 0.8];
@@ -523,9 +524,10 @@
   function supplyDays(a) { const n = a.band && G.War.bands.get(a.band) ? G.War.bands.get(a.band).members.length : a.members.length; return n ? a.food / (n * FOOD) : 0; }
   Wz.supplyDays = supplyDays;
   // a soldier on campaign eats from the wagons; near home, from the granary; in enemy land, what can be foraged
-  // (null: not on campaign, eat as anyone in the field does; true: fed; false: the wagons are empty)
+  // (null: not on campaign, eat as anyone in the field does; true: fed; false: the wagons are empty — an army that is over
+  // feeds no one: the one a scene holds with the call of an army closed at the muster eats as anyone, L-641)
   Wz.provision = function (v) {
-    const a = Wz.armyOf(v); if (!a || a.phase === 'mobilizar' || a.role === 'defesa' && a.food < 1) return null;
+    const a = Wz.armyOf(v); if (!a || a.done || a.phase === 'mobilizar' || a.role === 'defesa' && a.food < 1) return null;
     if (a.food >= 1) { a.food -= 1; return true; }
     const f = F(a.fac); const home = G.S.settlements.get(v.set);
     if (f && home && home.fac === f.id && dist(v.x, v.y, home.cx, home.cy) < (home.radius || 8) + 6 && f.stock.food >= 1) { f.stock.food -= 1; return true; }
@@ -535,6 +537,10 @@
   // ====================================================================================
   //  THE CAMPAIGN, every half second
   // ====================================================================================
+  // an army ends with a phase that says so: dispersed, or home if it walked home. (One closed at the muster when its war
+  // ended outside the treaty — a people fell — kept «mobilizar»: Tove, held by a scene that kept her call, was given it
+  // back after the end and drilled at the rally point for twenty-five years, for an army no one looked at any more — L-641)
+  function closeArmy(a) { a.done = true; if (a.phase !== 'retorno' && a.phase !== 'dispersado') a.phase = 'dispersado'; }
   function armyTick(a, dt) {
     const S = G.S; const w = Wz.get(a.war); const f = F(a.fac);
     if (!f || !f.alive) { a.done = true; a.phase = 'dispersado'; return; }
@@ -551,7 +557,7 @@
     // at sea, the fleet carries the army (there are no wagons, no desertions: there is nowhere to run)
     if (a.phase === 'embarque' || a.phase === 'travessia') { const fl = G.Fleets && G.Fleets.get(a.sea); if (!fl || !G.Fleets.live(fl)) { a.done = true; a.phase = 'dispersado'; } return; }
     const b = a.band ? G.War.bands.get(a.band) : null;
-    if (!b) { if (!a.done) { a.done = true; if (a.phase !== 'retorno' && a.phase !== 'dispersado') a.phase = 'dispersado'; homecoming(a); } return; }
+    if (!b) { if (!a.done) { closeArmy(a); homecoming(a); } return; }
     a.members = b.members.slice();
     if (b.army) { a.gen = b.army.gen; const ms = b.army.cos.filter(c => !c.rout); a.morale = ms.length ? Math.round(ms.reduce((s, c) => s + c.morale, 0) / ms.length) : 0; }
     a.phase = b.st === 'retorno' ? (b.retreat ? 'retirada' : 'retorno') : b.army ? ({ reunir: 'reunir', marcha: 'marcha', acampar: 'acampado', batalha: 'batalha', cerco: 'cerco', cercar: 'cerco', assalto: 'assalto', invadir: 'assalto', guerrilha: 'guerrilha', posicao: 'posicao' }[b.army.phase] || b.army.phase) : b.st;
@@ -1090,7 +1096,7 @@
     if (tRef >= 3) { refugees(tRef / DAY()); tRef = 0; }
     for (const w of Wz.active()) {
       // a war whose sides no longer fight each other (a people fell, a peace made outside the treaty path) closes quietly
-      if (!w.a.some(x => w.b.some(y => G.Fac.atWar(x, y)))) { if (!w.end) { w.end = S.day; w.t1 = S.clock; w.dead = Object.values(w.side).reduce((s, q) => s + q.dead, 0); const gone = w.a.concat(w.b).map(F).filter(f => f && !f.alive); event(w, `${cap1(w.name)} acabou${gone.length ? ': ' + gone.map(f => f.name).join(', ') + (gone.length > 1 ? ' deixaram' : ' deixou') + ' de existir' : ''}. Mortos: ${w.dead}.`, undefined, undefined, 'peace'); G.Stories && G.Stories.signal('warEnded', { war: w.id, winner: 0, dead: w.dead }); for (const a of armies()) if (!a.done && a.war === w.id) { const b = G.War.bands.get(a.band); if (b && a.role === 'defesa') G.War.disband(b, true); else if (b) { b.st = 'retorno'; b.t = 0; } else if (a.phase === 'mobilizar') { for (const id of a.members) { const v = P(id); if (v && v.task && v.task.type === 'muster') G.Vg.endTask(v); } a.done = true; } } } continue; }
+      if (!w.a.some(x => w.b.some(y => G.Fac.atWar(x, y)))) { if (!w.end) { w.end = S.day; w.t1 = S.clock; w.dead = Object.values(w.side).reduce((s, q) => s + q.dead, 0); const gone = w.a.concat(w.b).map(F).filter(f => f && !f.alive); event(w, `${cap1(w.name)} acabou${gone.length ? ': ' + gone.map(f => f.name).join(', ') + (gone.length > 1 ? ' deixaram' : ' deixou') + ' de existir' : ''}. Mortos: ${w.dead}.`, undefined, undefined, 'peace'); G.Stories && G.Stories.signal('warEnded', { war: w.id, winner: 0, dead: w.dead }); for (const a of armies()) if (!a.done && a.war === w.id) { const b = G.War.bands.get(a.band); if (b && a.role === 'defesa') G.War.disband(b, true); else if (b) { b.st = 'retorno'; b.t = 0; } else if (a.phase === 'mobilizar') { for (const id of a.members) { const v = P(id); if (v && v.task && v.task.type === 'muster') G.Vg.endTask(v); } closeArmy(a); } } } continue; }
       w.planT = (w.planT || 0) - d;
       if (w.planT <= 0) { w.planT = 2; plan(w, 2); }
       exhaustion(w);
@@ -1116,7 +1122,7 @@
       if (a.done) continue;
       const w = Wz.get(a.war); const f = F(a.fac); const tgt = S.settlements.get(a.target);
       const ms = a.members.map(P).filter(v => v && !v.captive && fid(v) === a.fac);
-      if (!f || !f.alive || !ms.length || a.phase === 'dispersado') { a.done = true; continue; }
+      if (!f || !f.alive || !ms.length || a.phase === 'dispersado') { closeArmy(a); continue; }
       if (a.sea && (a.phase === 'embarque' || a.phase === 'travessia')) continue;
       // (still at the muster: called again, and the muster itself decides — no target or too few, it sends them home; a
       // muster of a war already over breaks up here, as the peace breaks it up)
@@ -1127,7 +1133,7 @@
         const who = called && called[a.id] ? ms.filter(v => called[a.id].includes(v.id)) : ms; if (!(called && called[a.id])) a.called = S.clock;
         who.forEach(v => G.Vg.setTask(v, { type: 'muster', army: a.id, k: Math.max(0, a.members.indexOf(v.id)), pri: 3.15, kind: 'muster', st: 0 })); continue;
       }
-      if (!w || w.end || !tgt || ms.length < 3 || a.phase === 'retorno' || a.phase === 'retirada') { if (!walkHome(a, w, f, tgt, ms)) a.done = true; continue; }
+      if (!w || w.end || !tgt || ms.length < 3 || a.phase === 'retorno' || a.phase === 'retirada') { if (!walkHome(a, w, f, tgt, ms)) closeArmy(a); continue; }
       // the soldiers fall in again around their commander
       const lead = P(a.gen) || ms[0];
       a.muster = [lead.x, lead.y];
