@@ -73,11 +73,13 @@
     const beast = d.k === 'peles' ? G.pick(['wolf', 'bear', 'fox']) : undefined;
     if (!G.Depot.move('f:' + a.id, 'v:' + m.id, d.k, d.n, { code: 'caravana', by: m.id, pack: true, tag: beast ? { from: beast } : undefined }).ok) return;
     const t = G.Vg.setTask(m, { type: 'trade', to: d.b.id, from: a.id, give: d.k, n: d.n, want: 'moedas', lux: 1, pri: 1.8, kind: 'trade' });
-    // a pack horse with saddlebags (the Aztec trader carries the load himself)
+    // a pack horse with saddlebags (the Aztec trader carries the load himself), born beside him on ground a horse stands on — by
+    // the door of a mine, the step to his side was inside the mine; and him indoors, the nearest such ground (L-629, L-xx2)
     if (a.civ !== 'asteca' && G.Animals.DEF.cavalo) {
       const drop = G.Village.nearestDropoff(m.x, m.y, m.set);
-      const h = G.Animals.spawn('cavalo', m.x - 0.4, m.y + 0.2, { dom: a.id, grown: 1, age: 4, hunger: 0.1, state: 'led', pen: drop ? drop.id : 0 });
-      if (h) { h.ledBy = m.id; h.pack = d.k; if (t) t.pack = h.id; }
+      const jx = m.x - 0.4, jy = m.y + 0.2, at = G.Animals.walkOK({ kind: 'cavalo' }, jx, jy) ? [jx, jy] : [m.x, m.y];
+      const h = G.Animals.spawn('cavalo', at[0], at[1], { dom: a.id, grown: 1, age: 4, hunger: 0.1, state: 'led', pen: drop ? drop.id : 0 });
+      if (h) { G.Animals.aside(h, 3); h.ledBy = m.id; h.pack = d.k; if (t) t.pack = h.id; }
     }
     if (!a._caravan) { a._caravan = S.day; log(`${m.name} partiu de ${cap.name} com ${d.n} de ${E.name(d.k)} para vender em ${d.b.name}. É a primeira caravana de ${a.name}.`, 'trade', m.x, m.y); }
   }

@@ -32,6 +32,8 @@
 //     nele, e ele recebe o seu primeiro rebanho; e um save de antes com eles num curral novo: carregado, soltos, e o curral recebe
 //     o rebanho que não veio (L-xx1: a regra do bicho perdido levava todo bicho com dono ao curral ainda sem espécie, e o curral
 //     com bichos dentro nunca recebia o seu rebanho — os dezoito gatos, galinhas e pombos de Mênfis, com pastor e sem vaca)
+//  r14 o cavalo de carga da caravana nasce onde fica: o mercador à porta de um prédio, e dentro de uma casa — o cavalo num chão onde
+//     fica, de onde chega a ele (L-xx2: nascia a um passo do lado dele, e à porta de uma mina o passo era dentro da mina)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
 // O corpo do deus não pastoreia (o interact.js não tem o verbo): o salto é das vidas longas da regressão.
 //   node qa/rebanho.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/rebanho.js)
@@ -463,6 +465,44 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
     ok('r13', okA && sees && okB && !bad.length,
       `${set.name}: ${best[1]} bichos da cidade sem curral; ${b1 ? `${V.buildName(b1)} #${b1.id} novo em (${l1}), ${kind0 ? 'JÁ COM A ESPÉCIE ' + kind0 : 'sem espécie'}` : 'o curral NÃO fundado'}: 4 s depois, ${n1} bicho(s) da cidade num curral${n1 ? ' — ENTRARAM' : ''}, o rebanho do curral ${kinds(f1)}${b1 ? ' (' + (b1.kind || '-') + ')' : ''}; o verificador ${sees ? 'vê' : 'NÃO VÊ'} o bicho da cidade posto num curral pela mão do deus${cat ? ` (${cat.kind} #${cat.id})` : ''}; um save de antes com ${put} no ${b2 ? V.buildName(b2) + ' #' + b2.id : 'curral NÃO fundado'}${bo ? ' (' + bo.kind + ', sem rebanho)' : ''}: carregado, ${n2} num curral, o curral ${wait2 ? 'à espera do primeiro rebanho' : 'DADO POR SERVIDO'}; 4 s depois o rebanho ${kinds(f2)}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
+}
+// r14 the caravan's pack horse born where it stands (L-xx2: in the metrópole lived of the r12, a pack horse of a caravan was
+// born inside a mine — trade.js put it a step to its merchant's side, and by the mine's door that step was inside it). A people
+// with a deal to make (not the Aztecs, whose trader carries the load himself) sends a caravan by the world's own door
+// (G.Trade.launch) with every one who could be its merchant standing a hair east of a building of its capital that blocks — the
+// step to his side inside it —: the horse is born on ground it stands on, from where it reaches him; and with all of them
+// indoors, in a house: born on ground it stands on, from where it reaches the house's door
+{
+  const W = G.W; const H0 = { kind: 'cavalo' };
+  const inB = (x, y) => { const i = W.idx(x, y); const o = S().occ[i] && S().buildings.get(S().occ[i]); return o && o.blocks ? o : null; };
+  // (who could be the merchant: trade.js launch's own test of a grown-up of the capital with free hands)
+  const cand = (cap, f) => [...S().villagers.values()].filter(v => v.set === cap.id && !v.captive && v.age >= 18 && v.age <= 58 && v.id !== f.leader && v.role !== 'guerreiro' && !v.carry && !(v.task && v.task.pri >= 2) && !G.Vg.handsBusy(v));
+  const part = place => {
+    for (const fid of G.Fac.all().filter(f => f.civ !== 'asteca').map(f => f.id).sort((p, q) => p - q)) {
+      fresh(); OLD.clear(); CUT.clear(); CUR = null; S().time = 0.4; const B = base();
+      const f = G.Fac.get(fid), cap = G.Fac.capitalOf(fid); if (!f || !cap) continue;
+      const L = cand(cap, f); if (!L.length) continue;
+      const was = L.map(v => [v, v.x, v.y, v.inside]);
+      const at = place(cap, L); if (!at) continue;
+      const id0 = S().nextId; G.Trade.launch(f);
+      const h = [...S().animals.values()].find(q => q.id >= id0 && q.kind === 'cavalo' && !q.dead); if (!h) continue;
+      const m = S().villagers.get(h.ledBy); const o = inB(h.x, h.y);
+      // (the others, not sent, back where they were)
+      for (const [v, x, y, ins] of was) if (v !== m) { v.x = x; v.y = y; v.inside = ins; }
+      const to = at.door || (m ? [m.x, m.y] : null);
+      return { f, cap, at, h, m, o, stand: G.Animals.walkOK(h, h.x, h.y) && !o, reach: !!to && W.canWalk(h.x, h.y, to[0], to[1]), bad: newBad(B) };
+    }
+    return null;
+  };
+  const near = (cap, ok) => [...S().buildings.values()].filter(b => b.set === cap.id && b.built && b.blocks && ok(b)).sort((p, q) => G.dist2(p.x, p.y, cap.cx, cap.cy) - G.dist2(q.x, q.y, cap.cx, cap.cy) || p.id - q.id)[0];
+  // (by a door: a building whose tile east of its first row is ground a horse stands on, reached from the town's middle)
+  const P1 = part((cap, L) => { const b = near(cap, o => { const x = o.x + o.w, y = o.y; return W.inb(x, y) && !W.fenceMap()[W.idx(x, y)] && G.Animals.walkOK(H0, x + 0.5, y + 0.5) && W.canWalk(x + 0.5, y + 0.5, cap.cx, cap.cy); }); if (!b) return null;
+    for (const v of L) { v.inside = 0; v.x = b.x + b.w + 0.1; v.y = b.y + 0.4; v.path = null; } return { b }; });
+  // (indoors: a house of the capital, all of them in it, where the world puts one at home — its middle)
+  const P2 = part((cap, L) => { const b = near(cap, o => !!G.BDEF[o.type].housing && G.Village.livable(o)); if (!b) return null;
+    const [hx, hy] = G.Village.center(b); for (const v of L) { v.inside = b.id; v.x = hx; v.y = hy; v.path = null; } return { b, door: G.Vg.door(b) }; });
+  const say = (P, what) => P ? `${P.f.name}: ${P.m ? P.m.name : '?'} ${what} ${V.buildName(P.at.b)} #${P.at.b.id}; o cavalo #${P.h.id} nasceu em (${r2(P.h.x)},${r2(P.h.y)})${P.o ? ', DENTRO DE ' + V.buildName(P.o) + ' #' + P.o.id : P.stand ? ', onde fica' : ', ONDE NÃO FICA'}${P.reach ? (P.at.door ? ', de onde chega à porta' : ', de onde chega a ele') : ', de onde NÃO CHEGA'}${P.bad.length ? '; ' + P.bad.join(' · ') : ''}` : `nenhum povo mandou caravana (${what} um prédio)`;
+  ok('r14', !!P1 && P1.stand && P1.reach && !P1.bad.length && !!P2 && P2.stand && P2.reach && !P2.bad.length, `${say(P1, 'à porta de')}; ${say(P2, 'dentro de')}`);
 }
 const er = M.erros();
 ok('erros', !Object.keys(er.mod).length && !er.console.length, `módulos: ${JSON.stringify(er.mod)}; console: ${er.console.slice(0, 2).join(' | ') || 'nada'}`);
