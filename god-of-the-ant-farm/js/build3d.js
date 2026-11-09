@@ -971,9 +971,12 @@ float m3scale(float p) {
             K.g.put(G.Mesh3D.part('empena', style === 2 ? 'cavalo' : 'voluta'), m, K.c(style === 2 ? (paint || bc) : bc)); const eye = style === 2 && G.Mesh3D.part('empena', 'olho'); if (eye) K.g.put(eye, m, K.c('#1e1610')); }
           else { const d = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]]; const l = Math.hypot(d[0], d[1], d[2]); bargeEnd(K, b2, [d[0] / l, d[1] / l, d[2] / l], vec(0, 0, -sd), sc(rU, bt), bw * 0.8, style, bc, paint, cls >= 2 ? (P.acc || '#d8b25a') : '#1e1610'); } }
       } });
-      // (the purlins' ends under the gables, round logs past the boards)
-      if (nord) K.as('beam', () => { for (const e of [-1, 1]) { for (const sd of [-1, 1]) for (const f of [0.42, 0.8]) K.peg(S(e * (L / 2 - 0.1), sw * f, -0.16, sd), S(e * (eu + 0.07), sw * f, -0.16, sd), 0.075, dim(bc, 0.95));
-        K.peg(at(e * (L / 2 - 0.1), y + h - 0.17, 0), at(e * (eu + 0.08), y + h - 0.17, 0), 0.085, dim(bc, 0.95)); } });
+      // (the purlins' ends under the gables, round logs past the boards, their feet in the gable wall — a hand in from its face, a
+      // finger short of its inside where the wall is thinner than that: the 6 cm of a shack's let them 4 cm into its room, the
+      // barraco#27206 of the generation-15 megalopolis, L-617)
+      const inW = K.wallT ? Math.min(0.1, Math.max(0.01, K.wallT - 0.01)) : 0.1;
+      if (nord) K.as('beam', () => { for (const e of [-1, 1]) { for (const sd of [-1, 1]) for (const f of [0.42, 0.8]) K.peg(S(e * (L / 2 - inW), sw * f, -0.16, sd), S(e * (eu + 0.07), sw * f, -0.16, sd), 0.075, dim(bc, 0.95));
+        K.peg(at(e * (L / 2 - inW), y + h - 0.17, 0), at(e * (eu + 0.08), y + h - 0.17, 0), 0.085, dim(bc, 0.95)); } });
     }
     // a turf roof's log along the eaves, on its hooks, that holds the turf from sliding; the grass growing over it all
     if (turf) {
@@ -3969,7 +3972,7 @@ float m3scale(float p) {
     else if (!sh.roof) top = wallTops(K, S, R, eave); // (no roof at all — a shell open above, as a ruin's: the tops of its walls)
     else if (flat) top = flatTop(g, gw, K, ctx, x, z, sx, sz);
     else if (sh.court) top = courtRoof(K, ctx, rk);
-    else top = roofOf(K, x, z, sx, sz, eave, rk, null, sh.roof.along === 'z', sh.roof.h, true, new Set(leans.map(ln => ln.on)));
+    else { K.wallT = sh.t; top = roofOf(K, x, z, sx, sz, eave, rk, null, sh.roof.along === 'z', sh.roof.h, true, new Set(leans.map(ln => ln.on))); } // (the walls' thickness: the purlins' feet in them)
     if (!FO && K.st === 'nordico' && rk === 'turf' && K.roof && !sh.court) nordGables(gw, K, K.cls);
     // (an outside flight, and the steps before its foot down to the ground — Space.feet; L-163 —: a form's flight its treads)
     for (const s of S.steps || []) { if (!FO) inStair(K, S, s); const f = G.Space.feet(s); const fl = G.Space.doorFlight(K.b, sh, { w: K.w, d: K.d }, f.w, f.h, 0, false, f.F, f.uc); if (fl) layFlight(K, fl, (K.P.base || [])[2] || '#a09a8e'); }
@@ -4594,6 +4597,11 @@ float m3scale(float p) {
     if (RF && templeOf(RF)) { const R = riskOf(RF), B = R.B, t = R.t, top = R.Hp + R.Hw, side = formSide(b, S); const cl = R.GR && R.vF !== undefined ? [B[0], B[1], B[2], R.vF + t / 2] : B;
       const p = G.Forma.toLot(side, RF.L, cl[0] + t, cl[1] + t), q = G.Forma.toLot(side, RF.L, cl[2] - t, cl[3] - t);
       out.push([X0 + Math.min(p[0], q[0]), Y0 + top - 0.03, Z0 + Math.min(p[1], q[1]), X0 + Math.max(p[0], q[0]), Y0 + top + 0.03, Z0 + Math.max(p[1], q[1])]); }
+    // (a terrace's slab over the hole of a stair that comes up to it: the outside draws the slab whole — the building seen from
+    // without is shut —, and with the inside drawn it closed the hole over the inside's own floor, where the lid lifts as the
+    // body goes through: the stair of the quarteirão#26981 of the generation-15 megalopolis came up under it, L-616)
+    const tl = S.p && S.p.ok && S.p.stairs && S.levels.find(l => l.kind === 'terraco');
+    if (tl) for (const s of S.p.stairs) if (s.lv1 === tl.lv && s.hole) out.push([X0 + s.hole[0], Y0 + tl.y - 0.05, Z0 + s.hole[1], X0 + s.hole[2], Y0 + tl.y + 0.008, Z0 + s.hole[3]]);
     // (the pieces of a yard, the outside's while the inside is not drawn: the inside's own, with what they keep, once it is)
     if (S.shell.yard) { const l = S.levels.find(q => q.lv === (S.shell.yard.lv || 0)); const y = l ? l.y : 0;
       for (const it of S.yard || []) out.push([X0 + it.r[0] - 0.012, Y0 + y - 0.02, Z0 + it.r[1] - 0.012, X0 + it.r[2] + 0.012, Y0 + y + it.h + 0.12, Z0 + it.r[3] + 0.012]); }

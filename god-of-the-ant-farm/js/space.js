@@ -200,23 +200,99 @@
   // (the street on some tiles, as a number: its grown trees — a tree born there, grown a tenth, fallen, felled changes it, L-197 —
   // and its ground, whose lot it is and whether the world walks it — a building, a wall, a ruin come or gone changes it: the
   // steps into the street are reckoned from that ground, open(), and were kept by the memo over a street built over, L-213)
-  const treesOn = tiles => { const S = G.S; let s = 0; for (const i of tiles) { const id = S.treeAt[i]; const t = id && S.trees.get(id); if (Sp.trunk(t)) s = (s * 31 + id * 7 + tenth(t)) | 0; s = (s * 17 + (S.occ[i] || 0) * 3 + (W.walkable(i) ? 1 : 2)) | 0; } return s; };
-  let flights = new Map(), under = new Map(); G.worldHooks.push(() => { flights = new Map(); under = new Map(); });
+  // (and a boulder's stones on them: the steps keep off them, L-618)
+  const treesOn = tiles => { const S = G.S; let s = 0; for (const i of tiles) { const id = S.treeAt[i]; const t = id && S.trees.get(id); if (Sp.trunk(t)) s = (s * 31 + id * 7 + tenth(t)) | 0;
+    const o = S.objAt[i]; if (o) { const r = S.rocks.get(o); if (r) s = (s * 13 + o * 5 + Sp.stoneSize(r)) | 0; }
+    s = (s * 17 + (S.occ[i] || 0) * 3 + (W.walkable(i) ? 1 : 2)) | 0; } return s; };
+  // (a building's record as a number — what its shell and its doors are made of: In.keyOf's parts — and whether it is done; and
+  // the records of some buildings — the elders whose steps a younger one's keep off, L-619 —, one gone as such)
+  let strMemo = new Map(); const strH = s => { let h = strMemo.get(s); if (h === undefined) { h = 0; for (let k = 0; k < s.length; k++) h = (h * 31 + s.charCodeAt(k)) | 0; if (strMemo.size > 2000) strMemo.clear(); strMemo.set(s, h); } return h; };
+  const recSig = B => { const r = B.ip; return (B.id * 7 + (r.r | 0) * 131 + strH(String(r.s)) * 17 + strH(String(r.f)) + strH(B.type) * 3 + (r.fx ? r.fx.length : 0) * 29 + (B.built ? 1009 : 0)) | 0; };
+  const recsOn = ids => { let s = 0; for (const id of ids) { const B = G.S.buildings.get(id); s = (s * 31 + (B && B.ip ? recSig(B) : -id)) | 0; } return s; };
+  let flights = new Map(), under = new Map(), underR = new Map(); G.worldHooks.push(() => { flights = new Map(); under = new Map(); underR = new Map(); strMemo = new Map(); });
   // the grown trees about the steps a building's doors run on into the street, as a number (0 where none do): what the 3D draws
-  // its steps again for — Build3D.sig —, the steps reckoned round a tree come and gone (L-197). The tiles are those of the
-  // flights reckoned so far, kept here; only read
-  Sp.treeSig = b => { const t = under.get(b.id); return t ? treesOn(t) : 0; };
+  // its steps again for — Build3D.sig —, the steps reckoned round a tree come and gone (L-197); the stones of a boulder too
+  // (L-618), and the records of the elder buildings whose steps they keep off (L-619). The tiles and the elders are those of
+  // the flights reckoned so far, kept here; only read
+  Sp.treeSig = b => { const t = under.get(b.id), r = underR.get(b.id); return t || r ? ((t ? treesOn(t) : 0) * 31 + (r ? recsOn(r) : 0)) | 0 : 0; };
   // the grown trees about a building, as a number — on its lot and two tiles round it: as far as the steps of its doors run on
   // into the street (room + 5.3 m out of a door's line, a trunk's reach beside them) —, by the same rule and the same tenth:
   // what the world keys its word on the way in by (Interiors' entrySaid, L-206). Read from the world alone, never from what
-  // the 3D kept (Space.treeSig): a tree born there, grown a tenth, fallen or felled changes it
+  // the 3D kept (Space.treeSig): a tree born there, grown a tenth, fallen or felled changes it. And a boulder's stones there,
+  // which the steps keep off (L-618); and the steps of the elder buildings round it, which its own keep off (L-619): their
+  // records — a door moved, a family changed, a building done —, and the trees and stones their steps go round, as far as they
+  // run (two tiles from their lots, four from this one)
   Sp.treesAround = function (b) {
     const S = G.S; let s = 0;
-    for (let y = Math.max(0, b.y - 2); y <= Math.min(N - 1, b.y + b.h + 1); y++) for (let x = Math.max(0, b.x - 2); x <= Math.min(N - 1, b.x + b.w + 1); x++) {
-      const id = S.treeAt[y * N + x]; const t = id && S.trees.get(id); if (Sp.trunk(t)) s = (s * 31 + id * 7 + tenth(t)) | 0;
+    for (let y = Math.max(0, b.y - 4); y <= Math.min(N - 1, b.y + b.h + 3); y++) for (let x = Math.max(0, b.x - 4); x <= Math.min(N - 1, b.x + b.w + 3); x++) {
+      const i = y * N + x; const id = S.treeAt[i]; const t = id && S.trees.get(id); if (Sp.trunk(t)) s = (s * 31 + id * 7 + tenth(t)) | 0;
+      const o = S.objAt[i]; const r = o && S.rocks.get(o); if (r) s = (s * 13 + o * 5 + Sp.stoneSize(r)) | 0;
     }
+    for (const c of eldersBy(b, [b.x * TILE - REACH, b.y * TILE - REACH, (b.x + b.w) * TILE + REACH, (b.y + b.h) * TILE + REACH], true)) s = (s * 29 + recSig(c)) | 0;
     return s;
   };
+  // ---- the steps of two buildings, and a boulder's stones (L-618, L-619) ----
+  // (a boulder's stones are ground the body stands on — D-025 —, never the world's: a point, metres, where one stands over the
+  // ground — the feet there on the stone, its face over the street)
+  const stoneOver = (X, Z) => { const s = Sp.stoneTop(X, Z); return s > -Infinity && s > Sp.footAt(X / TILE, Z / TILE) + 0.03; };
+  // (how far a door's steps reach from its building's lot, with the stride before their foot and the body's rim: run on into
+  // the street room + 4.6 m at most — the lot's edge and 0.15 —, a stride and a rim past their last tread)
+  const REACH = 0.15 + 4.6 + 0.02 + 0.5 + BODY_R + 0.1;
+  // (a flight's footprint, world metres, as rectangles [x0, z0, x1, z1]: its treads, and the way to its foot — the stride before
+  // its lowest tread, where the body comes to it and stands, as wide as the body: Space.doorFlight's ground, the foot of the
+  // 4b's walk)
+  const rectOf = (b, fl, a0, a1, n0, n1) => { const p = fl.P(a0, n0), q = fl.P(a1, n1), X = b.x * TILE, Z = b.y * TILE; return [X + Math.min(p[0], q[0]), Z + Math.min(p[1], q[1]), X + Math.max(p[0], q[0]), Z + Math.max(p[1], q[1])]; };
+  const treadRects = (b, fl, list) => list.map(t => rectOf(b, fl, t.a - t.wa / 2, t.a + t.wa / 2, t.n - t.wn / 2, t.n + t.wn / 2));
+  const wayRects = (b, fl, list) => { if (!list.length) return []; const lo = list.reduce((q, t) => (t.y < q.y ? t : q)); const n = lo.n + lo.wn / 2; return [rectOf(b, fl, lo.a - BODY_R, lo.a + BODY_R, n, n + 0.5 + BODY_R)]; };
+  const meets = (A, B) => A.some(p => B.some(q => Math.min(p[2], q[2]) - Math.max(p[0], q[0]) > 0.01 && Math.min(p[3], q[3]) - Math.max(p[1], q[1]) > 0.01));
+  const boxOf = rs => rs.reduce((q, r) => [Math.min(q[0], r[0]), Math.min(q[1], r[1]), Math.max(q[2], r[2]), Math.max(q[3], r[3])], [Infinity, Infinity, -Infinity, -Infinity]);
+  // (the buildings older than b — a lower id: founded before it — whose lots lie within a reach of a box of metres: done, with a
+  // record and a shell of the plans', not a ruin — or, all: those at work too, for the key of the word; by id)
+  function eldersBy(b, R, all) {
+    const S = G.S, In = G.Interiors; const out = []; if (!In || !In.has) return out;
+    const x0 = Math.max(0, Math.floor((R[0] - REACH) / TILE)), x1 = Math.min(N - 1, Math.floor((R[2] + REACH) / TILE)), y0 = Math.max(0, Math.floor((R[1] - REACH) / TILE)), y1 = Math.min(N - 1, Math.floor((R[3] + REACH) / TILE));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const id = S.occ[y * N + x]; if (!id || id >= b.id || out.some(c => c.id === id)) continue;
+      const c = S.buildings.get(id); if (c && c.ip && In.has(c) && c.type !== 'ruin' && (all || c.built)) out.push(c); }
+    return out.sort((p, q) => p.id - q.id);
+  }
+  // (the doors of a shell whose steps come down to the street — its outer doors —, and the feet of its outside flights: each a
+  // wall, an opening, its storey's floor and, for a foot, the side; as Space.entryFits and the feet's flightsOf take them)
+  function doorsOf(sh) {
+    const out = []; const raised = raisedOf(sh);
+    for (const h of sh.holes || []) { if (!(h.door >= 0) || h.kind === 'janela') continue; const w = sh.walls[h.wall]; if (!w) continue; const l = (sh.levels || []).find(q => q.lv === w.lv); out.push({ w, h, ly: l ? l.y : 0, raised }); }
+    for (const st of (sh.stairs || sh.steps || [])) { if (st.kind !== 'degraus' || inShell(sh.shell, st)) continue; const fo = Sp.feet(st); out.push({ w: fo.w, h: fo.h, ly: 0, raised: false, F: fo.F, uc: fo.uc }); }
+    return out;
+  }
+  // (each door's apron — before it, as wide as its steps can be and as far as they run, along its whole side too: a flight down
+  // along the wall, and the way to its foot —, world metres: kept by the shell, the record's — Interiors keeps the one object
+  // while the record is the same —, as the lot is where it is)
+  let aprons = new WeakMap(); G.worldHooks.push(() => { aprons = new WeakMap(); });
+  function apronsOf(c, sh) {
+    const m = aprons.get(sh); if (m && m.x === c.x && m.y === c.y) return m.list;
+    const lot = { w: c.w * TILE, d: c.h * TILE }; const list = [];
+    for (const d of doorsOf(sh)) {
+      const F = d.F || sideOf(sh.shell, lot.w, d.w); const Lw = Math.hypot(d.w.b[0] - d.w.a[0], d.w.b[1] - d.w.a[1]) || 1;
+      const uc = d.F ? d.uc : F.ax ? d.w.a[0] + (d.w.b[0] - d.w.a[0]) / Lw * d.h.at : d.w.a[1] + (d.w.b[1] - d.w.a[1]) / Lw * d.h.at;
+      const P = (a, n) => (F.ax ? [uc + a, F.line + F.o[1] * n] : [F.line + F.o[0] * n, uc + a]); const half = (d.h.w + 0.5) / 2 + 0.7 + BODY_R + 0.05;
+      const room = (F.o[1] > 0 ? lot.d - F.line : F.o[1] < 0 ? F.line : F.o[0] > 0 ? lot.w - F.line : F.line) + 0.15;
+      list.push({ d, r: rectOf(c, { P }, Math.min(-half, F.u0 - uc - 1), Math.max(half, F.u1 - uc + 1), -0.05, room + 4.6 + 0.5 + BODY_R + 0.1) });
+    }
+    aprons.set(sh, { x: c.x, y: c.y, list }); return list;
+  }
+  // (the steps of an elder, as its own doors' reckoning lays them — base: never asking its own elders, so a word waits on no chain
+  // of them —; their treads, the way to their foot, and the treads of its lot alone, where a younger door's of its own gave way:
+  // what an elder's steps may be. Only the doors whose steps could come within reach of the box. fresh: reckoned anew, as the
+  // world's word is — never what the memo of the steps keeps)
+  function elderSteps(c, R, fresh) {
+    const sh = G.Interiors.shellOf(c); if (!sh) return [];
+    const lot = { w: c.w * TILE, d: c.h * TILE }; const out = [];
+    for (const { d, r } of apronsOf(c, sh)) {
+      if (!meets([r], [R])) continue; // (none of the box in its apron: no steps of it there)
+      const fl = Sp.doorFlight(c, sh.shell, lot, d.w, d.h, d.ly, d.raised, d.F, d.F ? d.uc : undefined, fresh, true); if (!fl || !fl.treads.length) continue;
+      out.push({ c, fl, steps: treadRects(c, fl, fl.treads).concat(fl.lot && fl.lot !== fl.treads ? treadRects(c, fl, fl.lot) : []), way: wayRects(c, fl, fl.treads) });
+    }
+    return out;
+  }
   // the steps before an outer door down to the ground, for a door on the ground storey of a building whose floor stands over
   // the street (its plinth) — and before the foot of an outside flight (Interiors' 'degraus', from the plinth's top: Space.feet)
   // —: the ones the 3D lays (Build3D's dressing of a door) and the ones the feet go up (Space.indoor on the doorstep,
@@ -228,7 +304,8 @@
   // 3D's frame: Build3D's F).
   //   sh: the shell (rect, annexes, kind); lot: { w, d } metres; w: the door's wall; h: its opening; ly: its storey's floor;
   //   raised: a floor on posts (the outside flight up to it has the steps); F0, uc0: a side given (a flight's foot)
-  // → { F, uc, P, top, w (the steps' width), treads: [{ k, a, n, wa, wn, y, gy, kind }], cut, room } — or null: no steps there
+  // → { F, uc, P, top, w (the steps' width), treads: [{ k, a, n, wa, wn, y, gy, kind }], cut, room, foot, rise, walks, ground,
+  // stand, lot, tiles, crossed } — or null: no steps there
   // (a tile out of its own lot that a door's way in never takes — its treads, the ground before them, the body on them —, though
   // the world walks it, as the body's own rule has it (Avatar's solidAt): the tile of a gate, whose piers are the feet's walls
   // since L-308 — where they stand is the 3D's to say, never asked here: the whole tile —, L-323, the house#8974 and the
@@ -236,14 +313,16 @@
   // the body in only by its door — the steps of one never on another's lot, L-213 —, L-324, the house#24793, whose fourteen
   // steps came down into the feira#10950)
   const barred = i => { const S = G.S; if (S.wall[i] === 2 || S.wall[i] === 4) return true; const B = S.occ[i] && S.buildings.get(S.occ[i]); return !!(B && !Sp.baseless(B) && G.Interiors && G.Interiors.has(B)); };
-  Sp.doorFlight = function (b, sh, lot, w, h, ly, raised, F0, uc0, fresh) {
+  // (base: the door's own steps, never asking the elders round it — what a younger building's steps keep off, L-619)
+  Sp.doorFlight = function (b, sh, lot, w, h, ly, raised, F0, uc0, fresh, base) {
     const y = ly + (h.sill || 0); if (raised || y >= 0.3 || !w || !h) return null;
     // (kept by the wall's place too — its ends —, and the side given for a flight's foot: a door moved to another side of its
-    // shell with the same wall id and the same place along it is another flight)
-    const y0 = Sp.plinth(b).y0; const key = b.id + ':' + w.id + ':' + h.at + ':' + h.w; const k0 = y0.toFixed(3) + ':' + (G.S.typeVer || 0) + ':' + ly + ':' + (h.sill || 0) + ':' + sh.r + ':' + w.t + ':' + w.a + ':' + w.b + (F0 ? ':' + F0.sd + F0.line + ':' + uc0 : '');
+    // shell with the same wall id and the same place along it is another flight; and by the record the shell is made of — its
+    // annexes and its yard choose the side —, as the elders' steps are read by it: L-619)
+    const y0 = Sp.plinth(b).y0; const key = b.id + ':' + w.id + ':' + h.at + ':' + h.w + (base ? ':b' : ''); const k0 = fresh ? '' : y0.toFixed(3) + ':' + (G.S.typeVer || 0) + ':' + ly + ':' + (h.sill || 0) + ':' + sh.r + ':' + w.t + ':' + w.a + ':' + w.b + (F0 ? ':' + F0.sd + F0.line + ':' + uc0 : '') + ':' + (G.Interiors && G.Interiors.keyOf ? G.Interiors.keyOf(b) : '');
     // (fresh: reckoned anew, and not kept — Space.entryFits; one that runs on into the street, kept while the trees about it
     // are as they were — L-197)
-    const m = !fresh && flights.get(key); if (m && m.k === k0 && (!m.tiles || treesOn(m.tiles) === m.ts)) return m.f;
+    const m = !fresh && flights.get(key); if (m && m.k === k0 && (!m.tiles || treesOn(m.tiles) === m.ts) && (!m.recs || recsOn(m.recs) === m.rs)) return m.f;
     let F = F0, uc = uc0;
     if (!F) { F = sideOf(sh, lot.w, w); const Lw = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; uc = F.ax ? w.a[0] + (w.b[0] - w.a[0]) / Lw * h.at : w.a[1] + (w.b[1] - w.a[1]) / Lw * h.at; }
     const P = (a, n) => (F.ax ? [uc + a, F.line + F.o[1] * n] : [F.line + F.o[0] * n, uc + a]);
@@ -252,7 +331,7 @@
     const reach = (a, ta, n, sd, yt) => { let d = 0; for (let j = 1; j <= 4; j++) { const q = n + sd * j / 4; if (Math.max(gAt(a, q), gAt(a - ta / 2, q), gAt(a + ta / 2, q)) > yt - 0.025) break; d = sd * j / 4; } return d; };
     const room = (F.o[1] > 0 ? lot.d - F.line : F.o[1] < 0 ? F.line : F.o[0] > 0 ? lot.w - F.line : F.line) + 0.15;
     const top = y + 0.02, wd = h.w + 0.5, n0 = 0.1, free = [uc - F.u0, F.u1 - uc];
-    let treads = []; let cut = null; let sideK = null; let tiles = null;
+    let treads = []; let cut = null; let sideK = null; let tiles = null; let lot1 = null; // (lot1: the steps of the lot alone, where these run on into the street)
     // (no rise over 0.30 anywhere: over treads of 0.29 the body's rim meets two at once, past its step, and stops it halfway up —
     // L-183 —: a drop that eight treads of a span would rise more over takes as many as bring it to 0.30)
     const drop = top - gAt(0, n0 + 0.3), need = Math.max(Math.min(8, Math.ceil(drop / 0.26)), Math.ceil(drop / 0.30)), nOut = Math.floor(room / 0.22);
@@ -330,13 +409,22 @@
       // (the world walks under a tree, and the body is walked round its trunk: the steps never stand in the trunk of a grown
       // tree — a tread its radius from its middle at least, the tree reckoned at its next tenth up —, and the body on them, a
       // rim inside their edge, is never pushed off them — L-197, the ourives#22497 and its acacia. The tiles a flight of these
-      // runs over, and about them as far as a trunk reaches: the trunks on them in the flight's frame)
-      const c0 = P(-(wd / 2 + 1.4), n0), c1 = P(wd / 2 + 1.4, room + 5.3); const trunks = []; tiles = [];
+      // runs over, and about them as far as a trunk reaches: the trunks on them in the flight's frame — and as far as a boulder's
+      // stone reaches, round the stride before their foot: L-618)
+      const c0 = P(-(wd / 2 + 2.0), n0), c1 = P(wd / 2 + 2.0, room + 6.8); const trunks = []; tiles = [];
       for (let ty = Math.max(0, Math.floor(b.y + Math.min(c0[1], c1[1]) / TILE)); ty <= Math.min(N - 1, Math.floor(b.y + Math.max(c0[1], c1[1]) / TILE)); ty++)
         for (let tx = Math.max(0, Math.floor(b.x + Math.min(c0[0], c1[0]) / TILE)); tx <= Math.min(N - 1, Math.floor(b.x + Math.max(c0[0], c1[0]) / TILE)); tx++) {
           const i = ty * N + tx; tiles.push(i); const id = G.S.treeAt[i]; const t = id && G.S.trees.get(id); const r = Sp.trunk(t) && Sp.trunk(t, tenth(t) / 10); if (!r) continue;
           const X = t.x * TILE - b.x * TILE, Z = t.y * TILE - b.y * TILE; trunks.push([(F.ax ? X : Z) - uc, ((F.ax ? Z : X) - F.line) * (F.ax ? F.o[1] : F.o[0]), r]); }
-      const clear = (s0, w2, e) => trunks.every(([ta, tn, r]) => Math.hypot(Math.max(s0 - w2 / 2 - ta, 0, ta - s0 - w2 / 2), Math.max(n0 - 0.01 - tn, 0, tn - e - 0.03)) >= r);
+      // (and a boulder's stones — the world walks its tile, the body goes up on the stone, D-025 —: never a tread over one, nor the
+      // stride before their foot, where the body comes to them from the street — the sobrado#27548 of the generation-15
+      // metropole ran ten treads into the street over a boulder, the five lowest inside the stone, its face 1.3 m over the street
+      // before their foot, climbed with the hands —; each stone as wide as it is, round — Space.stones —, on the tiles about the
+      // flight: L-618. Kept with the steps: a stone come or gone, or quarried a tenth, reckons them anew)
+      const stones = []; for (const i of tiles) { const o = G.S.objAt[i]; const r = o && G.S.rocks.get(o); if (!r) continue;
+        for (const st of Sp.stones(r)) { const X = st.X - b.x * TILE, Z = st.Z - b.y * TILE; stones.push([(F.ax ? X : Z) - uc, ((F.ax ? Z : X) - F.line) * (F.ax ? F.o[1] : F.o[0]), 0.5 * Math.max(st.sx, st.sz) + 0.02]); } }
+      const clear = (s0, w2, e) => trunks.every(([ta, tn, r]) => Math.hypot(Math.max(s0 - w2 / 2 - ta, 0, ta - s0 - w2 / 2), Math.max(n0 - 0.01 - tn, 0, tn - e - 0.03)) >= r)
+        && stones.every(([ta, tn, r]) => Math.hypot(Math.max(s0 - w2 / 2 - ta, 0, ta - s0 - w2 / 2), Math.max(n0 - 0.01 - tn, 0, tn - (e + 0.5 + BODY_R))) >= r);
       // (straight out from the door's middle, as wide as its steps; where the street has something beside the way, narrower, or to
       // one side of the middle — always before the door: a good stride of its width over it —; of those the street has room for,
       // one whose foot is a step over the ground before it, its treads' ends least in the slope — a street sloping across
@@ -359,14 +447,33 @@
         if (!walked && (n14 !== nS || r14 > 0.30) && room2(n14, e14)) lay(n14, e14, r14);
         if (best && ok1(best) && best.buried <= 0) break search; }
       // (kept where its feet walk, or where it brings them nearer the street than the steps of the lot alone)
-      treads = best && (ok1(best) || best.fs < f0) ? best.treads : keep;
+      treads = best && (ok1(best) || best.fs < f0) ? best.treads : keep; lot1 = keep;
     }
     // (the side flight, where the way down the street does no better: its feet walk and these do not, or its foot is the lower)
-    if (sideK && !walks(footStep(), riseUp(), treads.length) && ((!sideK.narrow && walks(sideK.fs, sideK.ru, sideK.treads.length)) || sideK.fs <= footStep())) { treads = sideK.treads; cut = sideK.cut; }
+    if (sideK && !walks(footStep(), riseUp(), treads.length) && ((!sideK.narrow && walks(sideK.fs, sideK.ru, sideK.treads.length)) || sideK.fs <= footStep())) { treads = sideK.treads; cut = sideK.cut; lot1 = null; }
+    // (the elders' steps round it, and the way to their foot: where these cross them, or come down in the way to them, or have
+    // theirs in the way to these, the younger gives way — the steps of the lot alone, too high a step from the street: its way
+    // in does not fit on this side, and the turn of the day takes its door where it fits. The storehouse#13361 and the
+    // house#22472 of the generation-15 metropole, facing across a street, each ran its steps on into it, their lowest treads
+    // in one place, the house's beside the storehouse's foot 0.62 m over the street: the body stopped there — L-619)
+    let crossed = 0, recs = null;
+    if (!base && treads.length && G.Interiors && G.Interiors.shellOf) {
+      const mine = treadRects(b, { P }, treads), way = wayRects(b, { P }, treads); const box = boxOf(mine.concat(way));
+      // (steps run on into the street are kept by what the elders' are made of — their ground, and their records: a door moved, a
+      // building done —, as the 3D and the feet read them; the lot's own never give way: only the word)
+      const keepBy = !fresh && !!lot1 && treads !== lot1; const have = keepBy ? new Set(tiles) : null;
+      look: for (const c of eldersBy(b, box)) for (const e of elderSteps(c, box, fresh)) {
+        if (keepBy && e.fl.tiles) for (const i of e.fl.tiles) if (!have.has(i)) { have.add(i); tiles.push(i); }
+        if (meets(mine, e.steps.concat(e.way)) || meets(way, e.steps)) { crossed = c.id; break look; } }
+      if (keepBy) recs = eldersBy(b, box, true).map(c => c.id);
+      if (crossed && lot1) treads = lot1;
+    }
     // (and what the feet find at its foot: the step up from the street with the rise above it — whether it walks —, and whether
     // there is ground the world walks a stride before its lowest tread — not a barred tile —: what Space.entryFits answers)
     const lo = treads.length ? treads.reduce((q, t) => (t.y < q.y ? t : q)) : null; const gp = lo ? P(lo.a, lo.n + lo.wn / 2 + 0.5) : null;
-    const ground = !gp || (() => { const x = b.x + gp[0] / TILE, z = b.y + gp[1] / TILE; if (!W.inb(x, z)) return false; const i = W.idx(x, z); return G.S.occ[i] === b.id || (W.walkableXY(x, z) && !barred(i)); })();
+    // (nor a boulder's stone there, under the body or its rim: L-618)
+    const ground = !gp || (() => { const x = b.x + gp[0] / TILE, z = b.y + gp[1] / TILE; if (!W.inb(x, z)) return false; const i = W.idx(x, z);
+      if (!(G.S.occ[i] === b.id || (W.walkableXY(x, z) && !barred(i)))) return false; const X = x * TILE, Z = z * TILE; return ![[0, 0], [BODY_R, 0], [-BODY_R, 0], [0, BODY_R], [0, -BODY_R]].some(([dx, dz]) => stoneOver(X + dx, Z + dz)); })();
     // (and whether the body goes up them and in, along the way it takes — as a player does: up a side flight over the middle of
     // each tread, over the landing from its end to the door's middle; else up the flight's line —: where its middle goes, and
     // under its rim to either side across its way — the points of the rim a step meets, aslant ahead: r·√½ out —, ground the
@@ -376,7 +483,7 @@
     // is none — L-207, the taverna#9656 —, nor one over a cliff beyond the lot's edge — L-208, the quartel#4882. What lies
     // beyond the door's middle, on the landing's far side, the body never goes over)
     const off = (a, n) => { const p = P(a, n); const X = b.x * TILE + p[0], Z = b.y * TILE + p[1]; if (!W.inb(X / TILE, Z / TILE)) return true;
-      const i = W.idx(X / TILE, Z / TILE); if (G.S.occ[i] === b.id) return false; if (barred(i)) return true; const s = Sp.surface(X, Z); return !s.walk && s.kind !== 'deep'; };
+      const i = W.idx(X / TILE, Z / TILE); if (G.S.occ[i] === b.id) return false; if (barred(i) || stoneOver(X, Z)) return true; const s = Sp.surface(X, Z); return !s.walk && s.kind !== 'deep'; }; // (a boulder's stone over the tread: the feet on the stone, L-618)
     const RIM = BODY_R * Math.SQRT1_2;
     const stand = (() => {
       const side = treads.filter(t => t.kind === 'side'), L = treads.find(t => t.kind === 'landing');
@@ -389,9 +496,12 @@
       return treads.every(t => { const r = Math.min(RIM, t.wa / 2); return !off(t.a, t.n) && !off(t.a - r, t.n) && !off(t.a + r, t.n); });
     })();
     const fs = treads.length ? footStep() : 0, ru = riseUp();
-    const f = { F, uc, P, top, w: wd, treads, cut, room, foot: fs, rise: ru, walks: !treads.length || walks(fs, ru, treads.length), ground, stand };
-    if (!fresh) { if (flights.size > 2000) flights.clear(); flights.set(key, { k: k0, f, tiles, ts: tiles ? treesOn(tiles) : 0 });
-      if (tiles) { const u = under.get(b.id) || []; for (const i of tiles) if (!u.includes(i)) u.push(i); under.set(b.id, u); } }
+    // (lot: the steps of the lot alone, where these ran on into the street — what an elder's may be, L-619 —; tiles: what they
+    // are kept by; crossed: the elder whose steps these gave way to, or came down in the way of)
+    const f = { F, uc, P, top, w: wd, treads, cut, room, foot: fs, rise: ru, walks: !treads.length || walks(fs, ru, treads.length), ground, stand: stand && !crossed, lot: lot1, tiles, crossed };
+    if (!fresh) { if (flights.size > 2000) flights.clear(); flights.set(key, { k: k0, f, tiles, ts: tiles ? treesOn(tiles) : 0, recs, rs: recs ? recsOn(recs) : 0 });
+      if (tiles) { const u = under.get(b.id) || []; for (const i of tiles) if (!u.includes(i)) u.push(i); under.set(b.id, u); }
+      if (recs && recs.length) { const u = underR.get(b.id) || []; for (const i of recs) if (!u.includes(i)) u.push(i); underR.set(b.id, u); } }
     return f;
   };
   // the foot of an outside flight (Interiors' 'degraus': up a house on stilts, down into a sunken floor), as a door's side for
@@ -416,7 +526,7 @@
   Sp.entryFits = function (b, c) {
     const lot = { w: b.w * TILE, d: b.h * TILE }; let worst = null;
     const look = (fl, de) => { if (!fl || !fl.treads.length) return; const kind = fl.treads.some(t => t.kind === 'side') ? 'lado' : fl.treads.length === 1 ? 'um' : fl.treads.some(t => t.n > fl.room + 0.3) ? 'rua' : 'lote';
-      const r = { ok: fl.walks && fl.ground && fl.stand, foot: +fl.foot.toFixed(2), rise: +fl.rise.toFixed(2), n: fl.treads.length, kind, ground: fl.ground, stand: fl.stand, de }; if (!worst || (worst.ok && !r.ok)) worst = r; };
+      const r = { ok: fl.walks && fl.ground && fl.stand, foot: +fl.foot.toFixed(2), rise: +fl.rise.toFixed(2), n: fl.treads.length, kind, ground: fl.ground, stand: fl.stand, de, crossed: fl.crossed || 0 }; if (!worst || (worst.ok && !r.ok)) worst = r; };
     const e = c.entrance; const h = e && c.holes.find(q => q.door === e.door && q.kind !== 'janela'); const w = h && c.walls[h.wall];
     if (w) { const l = c.levels.find(q => q.lv === w.lv); look(Sp.doorFlight(b, c.shell, lot, w, h, l ? l.y : 0, raisedOf(c), undefined, undefined, true), 'porta'); }
     // (a floor on posts — the door's own steps are the plan's flight up to it —, and every flight up from the ground outside the
