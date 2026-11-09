@@ -483,7 +483,13 @@ run('e19', () => {
   // (um dia de jogos com o céu limpo: os eventos do acaso do mundo desligados pelo botão do jogo — G.DV.events, o do modo
   // desenvolvedor —, passo a passo. Na metrópole da geração 15 a tempestade do mundo veio às 0,555, e com ela todos os de
   // prioridade abaixo de 1,05 vão se abrigar em casa: o camarote saiu antes da peça, T-493)
-  const passo = () => { const e0 = G.DV.events; G.DV.events = 0; try { M.viver(1); } finally { if (e0 === undefined) delete G.DV.events; else G.DV.events = e0; } };
+  // (e os lutadores no ofício durante os jogos, pela mão do deus, como o lazer.js segura o seu ator: o repartidor, a cada 4 s, os
+  // pode levar ao ofício que a cidade pede mais (D-090, o corte dos ofícios) — na metrópole da 16ª rodada, com os rebanhos do
+  // L-xx1 pedindo pastores, as três lutadoras de Roma deixaram o ofício cinco segundos depois do posto, antes das portas, e o
+  // espetáculo nunca abriu, T-xx8)
+  const castIds = cast.map(v => v.id);
+  const segura = () => { for (const id of castIds) { const v = S.villagers.get(id); if (v && (v.role !== 'ator' || v.job !== b.id)) { v.role = 'ator'; v.job = b.id; } } };
+  const passo = () => { segura(); const e0 = G.DV.events; G.DV.events = 0; try { M.viver(1); } finally { if (e0 === undefined) delete G.DV.events; else G.DV.events = e0; } segura(); };
   let op = null; for (let k = 0; k < 40 && !op; k++) { passo(); op = Tt.dia(b); }
   let salvo = null; // (o save no meio dos jogos: os lutadores de volta à areia, cada um no seu lugar de luta)
   if (!ok('e19c os jogos do dia', cast.length > 0 && !!op, `${cast.length} lutadores com o posto no Coliseu; o espetáculo ${op ? '#' + op.id + ' aberto' : 'NÃO abriu'}`)) return;
@@ -555,8 +561,12 @@ run('e21', () => {
   const fi = (R5.y + 1) * G.N + R5.x + 1; const f0 = S.fire[fi]; S.fire[fi] = 5; const R5f = sim(() => V.reservaDia(set2)); S.fire[fi] = f0;
   ok('e21n o fogo no lote guardado passa', !!R5f && R5f.x === R5.x && R5f.y === R5.y, R5f ? `com fogo em ${R5.x + 1},${R5.y + 1}: o lote fica` : `com fogo: SOLTO (${set2.urb.resGone && set2.urb.resGone.why})`);
   if (!R5f) return;
-  // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto)
-  let pedras = 0; for (let y = R5.y; y < R5.y + R5.n && pedras < 3; y++) for (let x = R5.x; x < R5.x + R5.n && pedras < 3; x++) if (!S.occ[y * G.N + x] && !S.treeAt[y * G.N + x] && !S.objAt[y * G.N + x] && G.Nature.addRock(x + 0.5, y + 0.5, 40)) pedras++;
+  // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto — as pedras no meio do lote, onde fica o degrau
+  // fundado, centrado no lote (V.resSite): postas a partir do canto, a obra de 10 no lote de 13 de Mênfis, num mundo do zero com
+  // os consertos da 16ª rodada, deixou de fora a primeira fileira, onde as três estavam, e nenhuma foi quebrada, T-xx9)
+  const mid5 = [R5.x + R5.n / 2, R5.y + R5.n / 2]; const cel5 = []; for (let y = R5.y; y < R5.y + R5.n; y++) for (let x = R5.x; x < R5.x + R5.n; x++) cel5.push([x, y]);
+  cel5.sort((p, q) => G.dist2(p[0] + 0.5, p[1] + 0.5, mid5[0], mid5[1]) - G.dist2(q[0] + 0.5, q[1] + 0.5, mid5[0], mid5[1]) || p[1] - q[1] || p[0] - q[0]);
+  let pedras = 0; for (const [x, y] of cel5) { if (pedras >= 3) break; if (!S.occ[y * G.N + x] && !S.treeAt[y * G.N + x] && !S.objAt[y * G.N + x] && G.Nature.addRock(x + 0.5, y + 0.5, 40)) pedras++; }
   // (um campo da cidade começado no lote guardado — o campo da própria cidade não solta o lote —, com madeira já entregue à obra
   // dele: a obra grande fundada no lote o derruba, e o que a obra do campo tinha volta ao estoque do povo, no livro, como uma
   // obra largada. Sumia com ela: a farm#12117 da mega da geração 16, com 4 de madeira, L-632)
