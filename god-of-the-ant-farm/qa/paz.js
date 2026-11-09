@@ -7,8 +7,10 @@
 // dia e meio), B, cansado, aceita a paz que A oferece, pela porta do jogo (G.Politics.answerPeace). p1 a guerra acaba com
 // um tratado (nome e termos); p2 os dois povos deixam de estar em guerra (trégua ou vassalagem) e o registro da guerra
 // fecha, com os mortos contados; p3 os soldados voltam: logo depois da paz nenhum bando da guerra marcha mais contra o
-// outro, e em dois dias os exércitos terminam e os bandos se desfazem; p4 os presos de um e de outro foram trocados; o
-// verificador limpo do começo ao fim, sem erro de módulo.
+// outro, e em dois dias os exércitos terminam e os bandos se desfazem; p4 os presos de um e de outro foram trocados; p5 a
+// paz que vem de fora do tratado com um convocado numa cena (L-641): ele larga o chamado quando a cena o devolve, e o
+// exército encerrado na reunião fecha disperso; p6 o load encerra disperso o exército em reunião que não tem mais ninguém
+// de pé (L-641); o verificador limpo do começo ao fim, sem erro de módulo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const seed = +(process.argv[2] || 11);
@@ -47,6 +49,46 @@ const marching = bandsOf().filter(b => b.st !== 'retorno');
 live(G.DAY_LEN * 2, () => host.done && guard.done && !bandsOf().length);
 ok('p3 os soldados voltam', !marching.length && host.done && guard.done && !bandsOf().length, `${bands0} bando(s) na guerra; logo depois da paz ${marching.length} ainda marchando; em dois dias: exército ${host.done ? 'encerrado' : host.phase}, guarda ${guard.done ? 'encerrada' : guard.phase}, ${bandsOf().length} bando(s) de pé`);
 ok('p4 os presos trocados', !capsOf().length, `${caps0} preso(s) de um e de outro antes da paz; ${capsOf().length} depois`);
+// p5 (L-641) a guerra que acaba fora do tratado, com um convocado numa cena: A declara de novo e convoca; um dos
+// convocados, a caminho do ponto de reunião, é levado por uma cena que guarda o chamado e o devolve no fim (como a
+// despedida à porta, a cv-chamado do story-war.js); o deus faz a Paz Divina (a porta do poder, G.Powers.peace), e o fim
+// calado da guerra — o mesmo de um povo que deixa de existir — encerra o exército ainda na reunião. Quando a cena devolve
+// o chamado, ele o larga, e o exército fecha disperso (antes fechava em «mobilizar», e quem a cena devolvia ia treinar no
+// ponto de reunião para sempre, por um exército encerrado)
+const Sn = G.Scene;
+Sn.define('qa-despedida', { imp: 1, *gen(c) { if (!c.take('p', { vital: true, keep: true, force: true })) return 'ocupada'; yield 12; return 'ok'; } });
+const levy = () => { if (!G.Fac.atWar(A.id, B.id)) G.Politics.declareWar(A, B, 'ambicao'); const w1 = Wz.warOf(A.id, B.id); const t1 = G.Fac.capitalOf(B.id); return w1 && t1 ? Wz.mobilize(w1, G.Fac.get(A.id), 'campanha', t1, {}) : null; };
+{
+  const h5 = A.alive && B.alive ? levy() : null; const w5 = h5 && Wz.get(h5.war);
+  const v5 = h5 && h5.members.map(id => S.villagers.get(id)).find(v => v && v.task && v.task.type === 'muster' && v.task.army === h5.id);
+  const sc = v5 && Sn.play('qa-despedida', { cast: { p: v5.id } });
+  const kept = () => { const pt = Sn.prevTask(v5); return !!pt && pt.type === 'muster' && pt.army === h5.id; };
+  if (!sc || !kept()) ok('p5 a paz com um convocado numa cena', false, `precondição: ${!h5 ? A.name + ' não convocou' : !v5 ? 'nenhum convocado a caminho' : 'a cena não guardou o chamado'}`);
+  else {
+    G.Powers.peace(v5.x, v5.y);
+    let k = 0; while (!h5.done && k++ < 30) M.viver(0.1);
+    const inScene = kept() && sc.st === 'run'; const phase0 = h5.phase;
+    k = 0; while (sc.st === 'run' && k++ < 400) M.viver(0.1);
+    // (the scene gives the call back in its own turn, after the people's: the call is looked at in the next step)
+    M.viver(0.1); M.viver(0.1);
+    live(30);
+    const t5 = v5.task; const still = S.villagers.has(v5.id) && !!t5 && t5.type === 'muster';
+    ok('p5 a paz com um convocado numa cena', inScene && !!w5 && !!w5.end && h5.done && h5.phase === 'dispersado' && !still, `${v5.name} na cena quando ${h5.name} encerrou: ${inScene ? 'sim' : 'não'} (guerra ${w5 && w5.end ? 'acabada no ano ' + w5.end : 'de pé'}; exército ${h5.done ? 'encerrado' : 'aberto'} em «${phase0}»); a cena acabou (${sc.result}); 30 s depois ${v5.name} ${still ? `ainda no chamado (${v5.act || '-'})` : `largou o chamado (${t5 ? t5.type : 'sem tarefa'})`}; o exército em «${h5.phase}»`);
+  }
+}
+// p6 (L-641) o exército que o load encontra sem ninguém: uma convocação nova, e o deus fulmina os convocados antes que a
+// reunião desista deles; o mundo é salvo e carregado ali mesmo — o load (o resume do wars.js) encerra o exército sem
+// ninguém de pé com a fase de quem acabou, «dispersado», não «mobilizar»
+{
+  const h6 = A.alive && B.alive ? levy() : null; let n6 = 0;
+  if (!h6) ok('p6 o load de um exército sem ninguém', false, `precondição: ${A.name} não convocou`);
+  else {
+    for (const id of h6.members) { const v = S.villagers.get(id); if (v) { G.Village.kill(v, 'god', true); n6++; } }
+    M.salvarCarregar(); S = G.S;
+    const a6 = Wz.army(h6.id); live(5);
+    ok('p6 o load de um exército sem ninguém', !!a6 && a6.done && a6.phase === 'dispersado', `${n6} convocado(s) fulminado(s) a caminho da reunião; depois do load: ${a6 ? `${a6.name} ${a6.done ? 'encerrado' : 'aberto'} em «${a6.phase}»` : 'o exército sumiu'}`);
+  }
+}
 const e = M.erros(); const mods = Object.keys(e.mod);
 ok('erros', !mods.length && !e.console.length, `módulos: ${mods.join(', ') || 'nenhum'}; console: ${e.console.slice(0, 2).join(' · ') || 'nada'}`);
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'PASSOU: todos');
