@@ -10,32 +10,32 @@ G.Ready.list({
   "map": "continente",
   "seed": 3101,
   "city": {
-   "name": "Mênfis",
+   "name": "Tenochtitlan",
    "tier": 3,
-   "pop": 36
+   "pop": 35
   },
   "wars": 0,
   "ww": null,
   "world": "Ysdun",
-  "bytes": 1047489
+  "bytes": 1050280
  },
  "metropole": {
-  "day": 67,
-  "pop": 961,
-  "peoples": 5,
-  "towns": 19,
+  "day": 41,
+  "pop": 404,
+  "peoples": 6,
+  "towns": 10,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
-   "name": "Argos",
+   "name": "Mênfis",
    "tier": 4,
-   "pop": 123
+   "pop": 102
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 3911335
+  "bytes": 2248050
  },
  "mega": {
   "day": 64,
