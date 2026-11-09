@@ -57,6 +57,10 @@ const people = () => [...S.villagers.values()].filter(v => v.set === set.id && v
 const used = new Set(); const pick = pred => { const v = people().filter(o => !used.has(o.id) && (!pred || pred(o))).sort((a, b) => a.id - b.id)[0]; if (v) used.add(v.id); return v; };
 const linesOf = (code, test) => lines.filter(e => e[8] === code && (!test || test(e)));
 S.time = 0.2; // (a morning: the markets and the doors open)
+// (and the town up from its beds: the clock set to the morning wakes nobody, the world's own morning does — the metropole of
+// the generation 15 was saved past midnight, at 0,003, with the town asleep, and the thief of m2, one awake out of doors as the
+// world's thief is, was nobody: «sem ladrão», T-519)
+live(30, () => people().filter(o => o.sleeping).length * 4 <= people().length);
 
 // m1 the tax round: the houses with coins near the tax office, by the economy's own errand
 let tax = null, taxRoute = [];
@@ -162,8 +166,13 @@ live(150, () => {
     if (!keeper) { keeper = pick(o => o.role !== 'guerreiro' && o !== drinker); if (keeper) { keeper.role = 'taverneiro'; keeper.job = tv0.id; Vg.endTask(keeper); } }
     const keep = () => { if (keeper && (keeper.role !== 'taverneiro' || keeper.job !== tv0.id)) { keeper.role = 'taverneiro'; keeper.job = tv0.id; } };
     const h = G.Taverna && G.Taverna.horas ? G.Taverna.horas(tv0) : { abre: 0.55 }; if (S.time < h.abre) S.time = h.abre + 0.005;
+    // (sent when the tavern's errand can take him — ashore, awake, at nothing above it —, and a send counted when it took: the
+    // world's boat may have him at the evening's hour — in the metropole of the generation 15 Ptahhotep, a fisherman, was
+    // aboard, the five sends went in five steps, each cut at once by the boat's own errand, and he came ashore and went home:
+    // «nada pago», T-520)
+    const free3 = () => !drinker.aboard && !drinker.sleeping && !(drinker.task && (drinker.task.pri || 0) > 4);
     let sent = 0;
-    live(150, () => { keep(); if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5) { const t = E.tavernTask(drinker, Vg.H); if (t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
+    live(150, () => { keep(); if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5 && free3()) { const t = E.tavernTask(drinker, Vg.H); if (t && drinker.task === t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
   }
 }
 {

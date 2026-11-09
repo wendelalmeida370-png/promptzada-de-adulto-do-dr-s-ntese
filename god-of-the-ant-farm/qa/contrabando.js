@@ -14,7 +14,8 @@
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console. (A segunda batida, que fecha o mercado com a
 //  prateleira de volta ao armazém, é do qa/guardados.js, L-377.)
 // Num mundo sem mercado clandestino, a prova o abre como o mundo abre (economy.js, considerBlackMarket): um beco da cidade, dois
-// contrabandistas. O roubo é de noite: a cama da noite o cortava no primeiro olhar (L-386: a pergunta, G.Eco.prowls, no
+// contrabandistas — na cidade mais populosa em que o caminho do armazém ao mercado passa pela rua, onde a ronda o vê (T-523).
+// O roubo é de noite: a cama da noite o cortava no primeiro olhar (L-386: a pergunta, G.Eco.prowls, no
 // economy.js; a exceção ao sono no decide, do P1). E de noite o posto do soldado dorme: quem flagra é a ronda (L-405).
 //   node qa/contrabando.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/contrabando.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true });
@@ -29,18 +30,29 @@ const S = () => G.S;
 const r2 = x => Math.round(x * 100) / 100;
 G.inSim++;
 const fit = v => v && !v.captive && !v.jail && !v.aboard && !v.held && v.age >= 18 && v.age < 55;
-// (the black market of the world, or one opened as the world opens it, in the most peopled town that is a city)
+// (the black market of the world, or one opened as the world opens it, in the most peopled town that is a city — one whose way
+// from the store it steals from, the nearest to it (the world's night theft), crosses the street: the round sees the smuggler
+// only with the load in his hands, from the store's door to the market's, a twentieth a step by the game's rule, and in the
+// metropole of the generation 15 the market Mênfis would open stood two tiles from its store — the load was one step a theft
+// in the street, and the three thefts at the watchman's side of k3 went by uncaught, T-523)
+const STREET = 8; // (from the store's door to the market, in a straight line: some four seconds of a smuggler's walk)
+const street = (sid, x, y) => { const st = V.nearestDropoff(x, y, sid); if (!st) return false; const [fx, fy] = V.frontTile(st); return G.dist(fx, fy, x + 0.5, y + 0.5) >= STREET; };
 function market() {
-  for (const b of [...S().buildings.values()].sort((p, q) => p.id - q.id)) if (b.type === 'mercado_negro' && b.built && [...S().villagers.values()].filter(v => v.job === b.id && v.role === 'contrabandista' && fit(v)).length >= 2) return { id: b.id, opened: false };
-  const set = [...S().settlements.values()].filter(s => (s.tier || 0) >= 2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0]; if (!set) return null;
-  const pos = V.findSite(set, 'mercado_negro'); if (!pos) return null;
+  for (const b of [...S().buildings.values()].sort((p, q) => p.id - q.id)) if (b.type === 'mercado_negro' && b.built && street(b.set, b.x, b.y) && [...S().villagers.values()].filter(v => v.job === b.id && v.role === 'contrabandista' && fit(v)).length >= 2) return { id: b.id, opened: false };
+  let set = null, pos = null;
+  for (const s of [...S().settlements.values()].filter(o => (o.tier || 0) >= 2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) { const p = V.findSite(s, 'mercado_negro'); if (p && street(s.id, p[0], p[1])) { set = s; pos = p; break; } }
+  if (!set) return null;
   const b = V.addBuilding('mercado_negro', pos[0], pos[1], set.id, true);
-  const crooks = [...S().villagers.values()].filter(v => v.set === set.id && fit(v) && v.role !== 'guerreiro' && !G.Fac.all().some(q => q.leader === v.id)).sort((a, c) => a.id - c.id).slice(0, 2);
+  // (its two smugglers as the world takes them, the least devout first (considerBlackMarket) — of the ones whose hands lift a
+  // load: in the Argos of the generation 15 the first grown one by id, Teodora, had lost both arms, and her nights at the store
+  // took nothing, a new try every two seconds (L-620))
+  const lifts = v => G.Depot.strength(v) >= G.Depot.weight('ferramentas', 1);
+  const crooks = [...S().villagers.values()].filter(v => v.set === set.id && fit(v) && lifts(v) && v.role !== 'guerreiro' && !G.Fac.all().some(q => q.leader === v.id)).sort((a, c) => (a.devotion + (a.traits.includes('Cético') ? -10 : 0)) - (c.devotion + (c.traits.includes('Cético') ? -10 : 0)) || a.id - c.id).slice(0, 2);
   for (const v of crooks) { v.role = 'contrabandista'; v.job = b.id; }
   return { id: b.id, opened: true };
 }
 const MK = market();
-if (!MK) { console.log(`FALHOU | contrabando mundo | ${world}: nenhuma cidade onde abrir um mercado clandestino`); process.exit(1); }
+if (!MK) { console.log(`FALHOU | contrabando mundo | ${world}: nenhuma cidade onde abrir um mercado clandestino a uma rua (${STREET} casas) do armazém`); process.exit(1); }
 M.viver(1);
 const snap = G.Save.serialize();
 const fresh = () => { M.reseed(4242); G.Save.apply(JSON.parse(snap)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); };
@@ -98,7 +110,9 @@ function stealNow(P, v) {
   D.move('f:' + P.f.id, 'b:' + P.b.id, k, 4, { code: 'teste', part: true });
   // (the payee as the shop finds it: the first of the world's people with this job, and that one's house)
   const seller = [...S().villagers.values()].find(o => o.job === P.b.id); const sh = seller && seller.home && S().buildings.get(seller.home);
-  const buyer = [...S().villagers.values()].filter(o => o.set === P.b.set && fit(o) && o.home && !P.crew.some(c => c.home === o.home) && !P.crew.includes(o) && D.get('h:' + o.home, 'moedas') >= 5 && D.room('h:' + o.home, k) >= 1).sort((a, c) => G.dist2(a.x, a.y, P.b.x, P.b.y) - G.dist2(c.x, c.y, P.b.x, P.b.y))[0];
+  // (and with free hands: what the arms hold has somewhere to go first, and the purchase does not fit them — in the Argos of
+  // the generation 15 Dion came to the counter with 4 of wood for a work in his arms, and went back to the work without it, T-523)
+  const buyer = [...S().villagers.values()].filter(o => o.set === P.b.set && fit(o) && o.home && !(o.carry && o.carry.n > 1e-6) && !P.crew.some(c => c.home === o.home) && !P.crew.includes(o) && D.get('h:' + o.home, 'moedas') >= 5 && D.room('h:' + o.home, k) >= 1).sort((a, c) => G.dist2(a.x, a.y, P.b.x, P.b.y) - G.dist2(c.x, c.y, P.b.x, P.b.y))[0];
   const coin = E.coinage(P.f.id);
   // (the errand to the black market as the shop gives it, held above the calls from outside below 3 — the line of the D-094 —:
   // the test is the deal at the counter, not whether someone stops him on the way — at 0,35 a word in the street takes it, and
