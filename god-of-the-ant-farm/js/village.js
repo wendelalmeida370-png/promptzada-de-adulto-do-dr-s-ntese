@@ -114,11 +114,25 @@
     // (the walls keep the towns' ways: a gate where one now shuts a building of its town off — before the plan is frozen, on the
     // ground as it will be, L-382)
     G.Siege && G.Siege.placed(b);
+    unburyBeasts(b);
     G.Interiors && G.Interiors.found(b); // (the plan's record, frozen the day it is placed)
     if (!built) V.brickSwap(b); // (where its people builds with brick, part of the stone is brick: D-075)
     for (const n of rocks) quarry(V.facOfSet(setId), b, n);
     return b;
   };
+  // (a beast where a lot that blocks now stands — a house, a granary, a theatre raised over it, or the new part of a building
+  // grown — steps out to the nearest ground it stands on, from where it reaches its home (Animals.aside), within reach of the
+  // lot's edge: one in the middle of a lot of 40 m is five tiles from it. It stayed inside for good — twelve beasts in a
+  // theatre of the metrópole, a buffalo in a granary, a cat in a market, L-629. tiles: only those, when the lot grew)
+  function unburyBeasts(b, tiles) {
+    if (!b.blocks || !G.Animals || !G.Animals.aside) return;
+    const S = G.S; const r = Math.ceil(Math.max(b.w, b.h) / 2) + 2;
+    for (const a of S.animals.values()) {
+      const tx = Math.floor(a.x), ty = Math.floor(a.y);
+      if (tx < b.x || tx >= b.x + b.w || ty < b.y || ty >= b.y + b.h || (tiles && !tiles.has(ty * N + tx))) continue;
+      G.Animals.aside(a, r);
+    }
+  }
   // (the stone of a rock broken on a work's lot: into the work while it needs stone, the rest to its people's store — born of the
   // world, in the ledger)
   function quarry(fid, work, n) {
@@ -1028,10 +1042,10 @@
     if (pos.demolish) renew(set, b.type, pos.demolish, pos.moves);
     b.amp = { de: n0, esc: s0.id, x: b.x, y: b.y, d: S.day };
     b.x = pos[0]; b.y = pos[1]; b.w = b.h = n; b.esc = step.id; // (its step and its lot: written here only, D-106)
-    let logs = 0;
+    let logs = 0; const grown = new Set();
     for (let ty = b.y; ty < b.y + n; ty++) for (let tx = b.x; tx < b.x + n; tx++) {
       const i = ty * N + tx; if (S.occ[i] === b.id) continue;
-      S.occ[i] = b.id;
+      S.occ[i] = b.id; grown.add(i);
       const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) { G.Nature.removeTree(t); if (t.stage === 'grow' && t.size > 0.5) logs++; G.FX && G.FX.poof(tx + 0.5, ty + 0.5, '#6d8f3c'); } }
       const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); if (bu) G.Nature.removeBush(bu); }
     }
@@ -1047,6 +1061,7 @@
     for (const v of S.villagers.values()) if (v.inside === b.id) { v.inside = 0; v.sleeping = false; G.Vg.endTask(v); }
     G.Act && G.Act.atGone(b);
     G.Siege && G.Siege.placed(b);
+    unburyBeasts(b, grown); // (the beasts on its new part: L-629)
     G.Interiors && G.Interiors.resized(b, n0);
     V.brickSwap(b);
     for (let k = 0; k < logs; k++) clearing(set.fac, b); // (the timber of the new part's ground, into the work: D-120)

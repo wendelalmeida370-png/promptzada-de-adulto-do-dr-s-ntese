@@ -187,7 +187,10 @@
       if (count('galinha') < want.galinha && yards.length) {
         const h = G.pick(yards); const d = doorOf(h);
         const rooster = !have.galinha.some(a => a.rooster);
-        G.Animals.spawn('galinha', d[0] + G.rr(-0.5, 0.5), d[1] + G.rr(-0.5, 0.5), { dom: set.fac, set: set.id, home: h.id, coat: (G.R() * 3) | 0, rooster, age: G.rr(0.3, 3), hx: d[0], hy: d[1] });
+        // (by the door, on ground it stands on: half a tile round the door reached into the house, and the hen came out inside
+        // it for good, L-629)
+        const jx = d[0] + G.rr(-0.5, 0.5), jy = d[1] + G.rr(-0.5, 0.5); const at = W.walkableXY(jx, jy) ? [jx, jy] : d;
+        G.Animals.spawn('galinha', at[0], at[1], { dom: set.fac, set: set.id, home: h.id, coat: (G.R() * 3) | 0, rooster, age: G.rr(0.3, 3), hx: d[0], hy: d[1] });
       }
       if (count('pombo') < want.pombo) {
         const sq = [...S.buildings.values()].filter(b => b.set === set.id && b.built && (b.type === 'praca' || b.type === 'mercado' || b.type === 'temple' || b.type === 'feira'));

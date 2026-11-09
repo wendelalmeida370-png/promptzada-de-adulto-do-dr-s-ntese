@@ -666,10 +666,13 @@ run('e22', () => {
   const aud0 = JSON.stringify(A.f.aud); const ids = dentro.map(v => v.id); salva(); const f2 = G.Fac.get(A.f.id);
   const volta = ids.filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.kind === 'audiencia' && v.inside === b.id; }).length;
   ok('e22e o save no meio', !!f2.aud && JSON.stringify(f2.aud) === aud0 && volta === ids.length, `a audiência ${f2.aud ? 'continua' : 'SUMIU'}; ${volta} de ${ids.length} de volta lá dentro`);
-  sim(() => V.kill(S.villagers.get(r.id), 'old')); M.viver(4); const r2 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length;
+  // (who is still in it: in the audience of the case's people — the audience of another people going on meanwhile is theirs: in
+  // the metrópole of the round 15, Ivar, crowned in the Clã de Hrafn, sat his own throne at his coronation while Argos's ended, T-535)
+  const naDe = fid => [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia' && v.task.fid === fid).length;
+  sim(() => V.kill(S.villagers.get(r.id), 'old')); M.viver(4); const r2 = naDe(f2.id);
   ok('e22f quem governa morre no meio', !f2.aud && !r2, `${f2.aud ? 'a audiência AINDA DURA' : 'a audiência acabou'}; ${r2} ainda nela`);
-  A = audiencia(); M.viver(15); const n3 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length;
-  sim(() => V.destroyBuilding(S.buildings.get(A.b.id), 'meteor')); M.viver(4); const n4 = [...S.villagers.values()].filter(v => v.task && v.task.kind === 'audiencia').length; const fora = [...S.villagers.values()].filter(v => v.inside === A.b.id).length;
+  A = audiencia(); M.viver(15); const n3 = naDe(A.f.id);
+  sim(() => V.destroyBuilding(S.buildings.get(A.b.id), 'meteor')); M.viver(4); const n4 = naDe(A.f.id); const fora = [...S.villagers.values()].filter(v => v.inside === A.b.id).length;
   ok('e22g o deus derruba o palácio no meio', A.okA && n3 > 0 && !A.f.aud && !n4 && !fora, `${n3} na audiência; depois do palácio caído: ${n4} nela, ${fora} lá dentro`);
   const c2 = checa(); ok('e22i verificador', c2.ok, c2.txt);
   // (o voto e o pão: com o palácio pronto de pé, na praça, diante do assento do poder — Po.seat —, como antes; nenhuma audiência)
@@ -731,6 +734,12 @@ run('e23', () => {
   ok('e23b o corte do resto deixa os serviços guardados', n1 === 2 && w1.taverneiro === 1 && w1.ator === 1 && w1.oleiro === 0, `corta 3 de ${JSON.stringify({ taverneiro: 1, ator: 2, oleiro: 1 })} guardando um taverneiro e um ator: ${n1} cortados, ${JSON.stringify(w1)}`);
   const t0 = papel('taverneiro'), a0 = papel('ator'); M.viver(400); const c1 = checa();
   ok('e23c na vida, a taverna e o teatro abertos', papel('taverneiro') >= 1 && papel('ator') >= 1 && V.foodSafe(f.id) && c1.ok, `${set.name}: taverneiros ${t0} → ${papel('taverneiro')}, atores ${a0} → ${papel('ator')} em dois dias; ${c1.txt}`);
+  // (saved where no turn of age waits for the dealing: the load gives the role of an age turned in the four seconds before the
+  // save — 2, 16, 62 —, the captive's and a trade to a grown one with none at once, and the world at its next dealing; the
+  // dealing's clock starts over at every load, so the load cannot know when that would be — T-534. A baby born then was the
+  // same, and is born a baby now, L-630)
+  const pend = () => [...S.villagers.values()].some(v => v.set === set.id && (v.captive ? v.role !== 'cativo' : v.age < 2 ? v.role !== 'bebe' : v.age < 16 ? v.role !== 'crianca' : v.age >= 62 ? v.role !== 'anciao' : !v.role || v.role === 'bebe' || v.role === 'crianca' || v.role === 'anciao'));
+  for (let k = 0; k < 120 && pend(); k++) M.viver(0.1);
   const roles = [...S.villagers.values()].filter(v => v.set === set.id).map(v => v.id + ':' + v.role).join(); salva(); const s2 = S.settlements.get(set.id);
   const roles2 = [...S.villagers.values()].filter(v => v.set === s2.id).map(v => v.id + ':' + v.role).join();
   ok('e23d o save devolve os ofícios', roles === roles2, roles === roles2 ? 'os mesmos ofícios, um por um, depois de carregar' : 'OS OFÍCIOS MUDARAM NO LOAD');
