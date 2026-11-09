@@ -7,7 +7,8 @@
 //    conferido pelo teste, à parte da regra: andável, seco, na região do lugar do balcão, a mais de 0,8 de toda porta de
 //    outro prédio, fora de onde está um vendedor (o seu e os das outras bancas do mercado), a um passo do anterior. Ao lado,
 //    a regra antiga (reta, sem voltar atrás) no mesmo chão
-// f2 três dias de mercado na metrópole com as portas ligadas: quem acha a fila cheia e vai embora é raro (contado contra
+// f2 três dias de mercado na metrópole com as portas ligadas (e mais, até seis, enquanto os balcões viram menos de 20
+//    chegadas): quem acha a fila cheia e vai embora é raro (contado contra
 //    quem chegou ao balcão, e à parte o que foi numa fila com menos lugares que os seus), e as filas do mundo — bancas,
 //    poços, lojas — seguem a regra o tempo todo (o verificador)
 // e o verificador limpo, sem erro de módulo.
@@ -94,7 +95,11 @@ for (const world of ['metropole', 'mundial']) {
     return r;
   };
   const L0 = S.ledgerN; let fila = new Map(); const t0 = S.clock;
-  for (let k = 0; k < 6000; k++) {
+  // (three market days, and more while the counters have seen fewer than twenty arrivals, up to six: the rate asks its sample,
+  // and a younger world gives it in more days — the metropole of the generation 16, its first metropolis of the year 41, has a
+  // merchant at most in each market, one stall each, and the three days brought fifteen to a counter, 3, 9 and 3 —; the
+  // checker of the lines over all of them)
+  for (let k = 0; k < 12000 && (k < 6000 || at < 20); k++) {
     G.debug.step(0.1);
     for (const v of S.villagers.values()) { const t = v.task; if (t && t.type === 'compra' && t.st >= 1 && !seen.has(v.id + ':' + t.biz + ':' + (t.k || ''))) { seen.add(v.id + ':' + t.biz + ':' + (t.k || '')); at++; } }
     if (k % 50 === 49) for (const q of QA.check()) if (q.sys === 'fila') fila.set(q.msg, (fila.get(q.msg) || 0) + 1);

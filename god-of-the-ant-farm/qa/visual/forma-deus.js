@@ -505,7 +505,10 @@ if (want('k')) {
       gone = false; R.pointer = [cx, cy]; R.hover = null; const L1 = lines(frame()), q = R.reserves().find(o => o.s === cap), lab = labels();
       const okQ = !!q && q.r.x === r.x && q.r.y === r.y && q.r.n === n;
       const CORD = [66, 44, 26], cord = L => L.find(o => same(o.col, CORD)); const okL = L1.length === 2 && !!cord(L1) && L1.some(o => same(o.col, [250, 242, 220]));
-      const st = stakes(), wantN = edge.filter((p, k) => k % n === 0 || k % 2 === 0).length;
+      // (the stakes of this lot — the frame draws every capital's: in the metropole of the generation 16 two keep a lot by the
+      // world's own rule, Mênfis for the Grande Pirâmide and Tenochtitlan for the Templo Mayor, and the case counted the twenty
+      // of Tenochtitlan's with Mênfis's: «40 estacas, FORA DA BORDA»)
+      const st = stakes().filter(s => s.o.q && s.o.q.s === cap), wantN = edge.filter((p, k) => k % n === 0 || k % 2 === 0).length;
       const onEdge = st.every(s => ((s.x === r.x || s.x === r.x + n) && s.y >= r.y && s.y <= r.y + n) || ((s.y === r.y || s.y === r.y + n) && s.x >= r.x && s.x <= r.x + n));
       const views = []; let okV = true;
       for (let v = 0; v < 4; v++) R.asView(v, () => { let ropes = 0, flags = 0;
@@ -538,7 +541,8 @@ if (want('k')) {
       // keeps where the god looks)
       S = M.pronto(world); guarda(G); look(1.25); for (let k = 0; k < STEPS * FR; k++) G.debug.step(0.1); const fa = fp(), ka = clockOf(S);
       S = M.pronto(world); guarda(G); look(1.25); R.pointer = [cx, cy]; let drawn = 0, said = 0;
-      for (let k = 0; k < FR; k++) { for (let j = 0; j < STEPS; j++) G.debug.step(0.1); frame(); drawn += R.reserves().length; said += labels().length; }
+      // (this lot's frames: the other capital's reserve is drawn in them too — «a reserva desenhada em 30 de 15 quadros»)
+      for (let k = 0; k < FR; k++) { for (let j = 0; j < STEPS; j++) G.debug.step(0.1); frame(); drawn += R.reserves().filter(o => o.s.id === g.set).length; said += labels().length; }
       const fb = fp(), kb = clockOf(S);
       ok('k: com e sem quadros, o mesmo mundo', fa === fb && ka === kb && drawn === FR && said === FR, `${(STEPS * FR) / 10} s de ${world}: ${fa === fb && ka === kb ? 'o mesmo mundo' : 'MUNDOS DIFERENTES'} (${fa} / ${fb}); a reserva desenhada em ${drawn} de ${FR} quadros, o rótulo em ${said}`);
     }

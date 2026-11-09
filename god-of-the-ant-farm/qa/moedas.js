@@ -45,10 +45,14 @@ function snap() {
 
 // ---------------- the town: a people with coin, its tax office, its tavern, houses with coins ----------------
 const coinTowns = [...S.settlements.values()].filter(s => E.coinage(s.fac) && of(s).some(b => b.type === 'coletoria') && of(s).some(b => b.type === 'taverna')).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
-const set = coinTowns[0];
-if (!set) { console.log(`FALHOU | moedas | nenhuma cidade com moeda, coletoria e taverna em ${world}`); process.exit(1); }
+let set = coinTowns[0], byGod = false;
+// (none with a tax office — the metropole of the generation 16 is a younger world, its first metropolis of the year 41, and no
+// town has raised one —: the god's hand puts one where the town's own planner would, in the biggest town of coin with a
+// tavern, as the market of negocio's exchange (T-184); the tax round of m1 is given by hand, as before)
+if (!set) for (const s of [...S.settlements.values()].filter(o => E.coinage(o.fac) && of(o).some(b => b.type === 'taverna')).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) { const pos = V.findSite(s, 'coletoria'); if (!pos || pos.demolish) continue; V.addBuilding('coletoria', pos[0], pos[1], s.id, true); set = s; byGod = true; break; }
+if (!set) { console.log(`FALHOU | moedas | nenhuma cidade com moeda, coletoria e taverna em ${world}, nem lugar para a mão do deus pôr uma coletoria`); process.exit(1); }
 const fac = G.Fac.get(set.fac); const F = 'f:' + fac.id;
-console.log(`(${world}: ${set.name}, de ${fac.name}: ${V.pop(set.id)} habitantes; ${of(set).filter(housing).length} casas)`);
+console.log(`(${world}: ${set.name}, de ${fac.name}: ${V.pop(set.id)} habitantes; ${of(set).filter(housing).length} casas${byGod ? "; a coletoria posta pelo deus" : ""})`);
 const before = snap();
 for (const f of S.factions.values()) watchCoin(f.stock, 'moedas', 'tesouro');
 for (const b of S.buildings.values()) if (housing(b)) watchCoin(b, 'coin', 'casa');
@@ -91,7 +95,7 @@ let drinker = null, tv0 = null;
   drinker = pick(o => (E.homeOf(o).coin || 0) >= 3 && tv && G.dist(o.x, o.y, tv.x, tv.y) < 25);
 }
 // m4 the family's errand of shopping: one of a house that lacks something and has coins
-let shopper = null, shopWhy = '', shopZ = null, shopK = null, shopTries = 0; const skip4 = [];
+let shopper = null, shopWhy = '', shopZ = null, shopK = null, shopTries = 0, holdM = null, reopened = 0; const skip4 = [];
 // (the test's hand on a stall: at least n of k on its counter — room made by sending its biggest other goods back to the
 // people's store, in the ledger, as negocio's roomOn —: the case is the coin of the deal, not the stock)
 function stocked(z, k, n) {
@@ -132,6 +136,7 @@ function stocked(z, k, n) {
       used.add(shopper.id); const hh = E.homeOf(shopper); if ((hh.coin || 0) < 5) D.make('h:' + hh.id, 'moedas', 10, { code: 'teste' });
       shopper.hunger = Math.min(shopper.hunger, 30); shopper.energy = Math.max(shopper.energy, 70); Vg.endTask(shopper);
       Vg.setTask(shopper, { type: 'compra', biz: z.id, k, pri: 4, st: 0 }); shopWhy = `${E.name(k)} na banca #${z.id}`; shopZ = z; shopK = k;
+      holdM = { mer, mb };
     }
   }
 }
@@ -145,7 +150,19 @@ let worker = null, wage = 0;
 // sends her off whenever another buyer is at it: in the final worlds Tlalli bought at her third time again, T-196)
 const TRIES = 5;
 const shopDone = () => lines.some(e => shopper && e[3] === 'h:' + shopper.home && e[5] === 'moedas' && (e[8] === 'compra' || e[8] === 'venda' || e[8] === 'compra-em-casa'));
+// (and the merchant of m4 held in his trade while the case lasts, his stall opened again if the world closed it — the board
+// deals the trades out every few seconds, and in the metropole of the generation 16, a younger world, it made Tenoch, of
+// Tenochtitlan, a farmer 3 s into the case: the stall closed, «o dono mudou de ofício», and Tonantzin had nowhere to buy)
+function keepStall() {
+  if (!holdM || shopDone() || !S.villagers.has(holdM.mer.id)) return;
+  const { mer, mb } = holdM; if (mer.role !== 'mercador' || mer.job !== mb.id) { mer.role = 'mercador'; mer.job = mb.id; }
+  if (shopZ && shopZ.st === 'on') return;
+  const zz = G.Biz.of(mer) || G.Biz.open(mer, mb); if (!zz) return;
+  shopZ = zz; zz.margin = zz.margin || {}; zz.margin[shopK] = -0.1; stocked(zz, shopK, 4); reopened++;
+  Vg.endTask(mer); Vg.setTask(mer, { type: 'banca', biz: zz.id, pri: 2, st: 0, dur: 200, id: zz.b });
+}
 live(150, () => {
+  keepStall();
   if (shopper && shopZ && !shopDone() && (shopZ.inv[shopK] || 0) < 1) stocked(shopZ, shopK, 2);
   if (shopper && shopZ && !shopDone() && !(shopper.task && shopper.task.type === 'compra') && shopTries < TRIES && G.Biz.manned(shopZ) && !G.Life.queueFull('biz:' + shopZ.id)) { shopTries++; Vg.setTask(shopper, { type: 'compra', biz: shopZ.id, k: shopK, pri: 4, st: 0 }); }
   const done1 = !tax || !(tax.task && tax.task.type === 'taxes');
@@ -171,8 +188,13 @@ live(150, () => {
     // aboard, the five sends went in five steps, each cut at once by the boat's own errand, and he came ashore and went home:
     // «nada pago», T-520)
     const free3 = () => !drinker.aboard && !drinker.sleeping && !(drinker.task && (drinker.task.pri || 0) > 4);
+    // (and brought to the tavern's door before each send, hands free and out of the caves — the deal is the subject, not the
+    // walk, as negocio's buyers: in the metropole of the generation 16 Horemheb was at a work across the street with wood in
+    // his arms when the tavern opened, the errand given from where he stood ended at its first step, five times in five steps,
+    // and he went down a cave for the rest of the evening)
+    const toDoor = () => { Vg.endTask(drinker); if (drinker.ug && G.Caves) G.Caves.exitNow(drinker); drinker.inside = 0; if (drinker.carry && drinker.carry.n > 1e-6 && drinker.carry.k !== 'water') Vg.toStore(drinker, G.Fac.idOfV(drinker), 'teste'); const [fx, fy] = V.frontTile(tv0); drinker.x = fx + 0.5; drinker.y = fy + 0.5; drinker.path = null; };
     let sent = 0;
-    live(150, () => { keep(); if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5 && free3()) { const t = E.tavernTask(drinker, Vg.H); if (t && drinker.task === t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
+    live(150, () => { keep(); if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5 && free3()) { toDoor(); const t = E.tavernTask(drinker, Vg.H); if (t && drinker.task === t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
   }
 }
 {
@@ -189,7 +211,7 @@ live(150, () => {
 }
 {
   const cp = lines.filter(e => shopper && e[3] === 'h:' + shopper.home && e[5] === 'moedas' && (e[8] === 'compra' || e[8] === 'venda' || e[8] === 'compra-em-casa'));
-  ok('m4 a compra da família: a moeda da casa a quem vende, pelo livro', !!shopper && cp.length > 0, shopper ? `${shopper.name} (${shopWhy}${shopTries ? ', mandada de novo ' + shopTries + ' vez(es): a fila cheia, ou nada na banca' : ''}): ${cp.map(e => e[8] + ' ' + r2(e[6]) + ' → ' + e[4]).slice(0, 3).join(', ') || 'nada comprado (agora ' + (shopper.task ? shopper.task.type : 'sem tarefa') + ')'}${skip4.length ? ` (antes, a banca sem ninguém: ${skip4.join('; ')})` : ''}` : `ninguém com compras a fazer que ache onde comprar${skip4.length ? ` (bancas sem ninguém: ${skip4.join('; ')})` : ''}`);
+  ok('m4 a compra da família: a moeda da casa a quem vende, pelo livro', !!shopper && cp.length > 0, shopper ? `${shopper.name} (${shopWhy}${shopTries ? ', mandada de novo ' + shopTries + ' vez(es): a fila cheia, ou nada na banca' : ''}${reopened ? ', a banca aberta de novo ' + reopened + ' vez(es): o mercador segurado no ofício' : ''}): ${cp.map(e => e[8] + ' ' + r2(e[6]) + ' → ' + e[4]).slice(0, 3).join(', ') || 'nada comprado (agora ' + (shopper.task ? shopper.task.type : 'sem tarefa') + ')'}${skip4.length ? ` (antes, a banca sem ninguém: ${skip4.join('; ')})` : ''}` : `ninguém com compras a fazer que ache onde comprar${skip4.length ? ` (bancas sem ninguém: ${skip4.join('; ')})` : ''}`);
 }
 {
   const sl = linesOf('salario', e => worker && e[4] === 'h:' + worker.home);

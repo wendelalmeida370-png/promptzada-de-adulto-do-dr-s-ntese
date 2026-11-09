@@ -89,6 +89,9 @@ function houseLacking(set, min, coins, pred, what) {
 // the fair — the same execution took the three sent in c14, after the merge of 496dfd3, T-095)
 const GATHER = { justice: 1, assembly: 1, fest: 1, muster: 1, fire: 1 };
 const calm = (set, h) => !(S.execs || []).some(e => e.set === set.id && e.phase !== 'done' && (e.phase !== 'wait' || e.start - 22 - S.clock < 150)) && !adults(h).some(o => o.task && GATHER[o.task.type]);
+// (the beasts of prey and the ones that turn on whoever hunts them — a rhino, an elephant, a boar — within forty tiles of the
+// places given, taken away by the god's hand: the lazer.js's rule, T-356)
+const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a.dead || a.dom || a.tamed) continue; const sp = G.Animals.DEF[a.kind]; if (!sp || !(G.Animals.predator(a.kind) || sp.defend || sp.bold > 0 || a.kind === 'boar' || G.Animals.threat(a))) continue; if (at.some(p => G.dist2(a.x, a.y, p[0], p[1]) < 40 * 40)) G.Animals.remove(a); } };
 // (where the case is what is bought, not who goes — the hand of c15: a minute with nobody of the house out for it, nor a
 // purchase on its way home, and the test's hand sends one of the house — grown (16 or more, as the world sends), rested and
 // fed, hands free, not called to the square, not under the world's hand (a sentence, a storm, anything that does not wait)
@@ -221,7 +224,11 @@ const fair = stockFair(set);
 {
   S.time = 0.15; stockFair(set);
   const h = houseIn(set, 2); lacking(h, 30); const H = 'h:' + h.id;
-  if (D.get(H, 'food') < 2) D.make(H, 'food', 2, { code: 'teste' }); // (something in the chest: a chest of nothing is no plan)
+  // (something in the chest: a chest of nothing is no plan — the depot leaves out a piece of no room, and a house without its
+  // pieces has the room of before the furniture, D-053. Something the family does not use up: the 2 of food of before were
+  // eaten from the pantry in the Argos of the generation 16, the chest followed the house down to «0 de 0», and with no plan
+  // the one sent to the fair bought cloth there, 1,6 coins out of the house)
+  if (D.get(H, 'ferramentas') < 1) D.make(H, 'ferramentas', 1, { code: 'teste' });
   const held = () => Object.entries(D.list(H)).filter(([k]) => k !== 'moedas').reduce((a, [, n]) => a + n, 0);
   const was = D.stores; let mode = 'cheia', cap = 0;
   const capNow = () => (mode === 'cheia' ? held() : mode === 'um' ? held() + 1 : cap);
@@ -346,7 +353,14 @@ const fair = stockFair(set);
   // metropolis, after the merge of 496dfd3, Tauret's stall had nobody at it, and the water took her afterwards, rightly)
   const L0 = S.ledgerN, c0 = S.clock; let took = 0, home = 0, by = null, prev = true, inWorks = 0; const again17 = [];
   const give0 = G.Vg.setTask; G.Vg.setTask = function (o, t) { if (o === v && t && t.type === 'water' && o.task && o.task.casa && !took) took = S.clock - c0 || 0.01; return give0.apply(this, arguments); };
+  // (the beasts that come at people kept away by the god's hand round the house, the place of the purchase and the one sent,
+  // while the case is on — the beasts of prey and the ones that turn on whoever hunts them —, as the lazer.js keeps them from
+  // the stage (T-356): in the Argos of the generation 16 a rhino was hunted by the fair, and the fight took Zoé from her
+  // errand there, three times, and then the hunt and the field — the purchase never came)
+  const shop17 = t17 && S.buildings.get(t17.id);
+  const calm17 = () => calmBeasts([v.x, v.y], [h.x + 0.5, h.y + 0.5], ...(shop17 ? [[shop17.x + 0.5, shop17.y + 0.5]] : []));
   fine(300, atHour(0.3, () => {
+    calm17();
     if (!h.built) { inWorks = S.clock - c0 || 0.01; return true; }
     if (!home && book(e => e[0] > L0 && e[4] === H17 && e[8] === 'compra-em-casa').length) home = S.clock - c0;
     const on = !!(v.task && v.task.casa);
@@ -389,8 +403,22 @@ const fair = stockFair(set);
   S = G.S; set = S.settlements.get(set.id); const h2 = S.buildings.get(hid);
   h2.shopT = undefined; // (the test's hand: the house may send again at once)
   let most = 0; const L0 = S.ledgerN;
-  const again = fine(120, () => { let c = 0; for (const o of S.villagers.values()) if (o.task && o.task.casa === hid) c++; most = Math.max(most, c); return c > 0 || watch(); });
-  ok('c7 save no meio do recado', sent && again && most === 1 && !bad().length, `${t7.id !== set.id ? `(em ${t7.name}: ${set.name} não tem mais uma casa que possa mandar alguém) ` : ''}${sent ? 'o recado saiu' : 'o recado NÃO saiu'} antes do save${hd7.said()}; depois do load ${again ? 'a casa mandou de novo' : 'a casa NÃO mandou de novo'} (no máximo ${most} ao mesmo tempo)`);
+  // (the errands the house gives after the load at its own door — C.task, from the decide —, and one the world takes from the
+  // one sent in the very step it was given: then the house waits half a day by its rule (GAP), and the test's hand lets it send
+  // again at once, up to three times, told in the case, as again() does for an errand lost on the way (T-095); the clock held
+  // in the fair's hours, as before the save (T-185). In the metropole of the generation 16 the house of the case, in Mênfis,
+  // sent Tiye, a warrior, after the load, and the raid of her people on the bandits of a cave (3,1) took her in that same step:
+  // «depois do load a casa NÃO mandou de novo»)
+  const gave7 = [], lost7 = []; const task7 = C.task;
+  C.task = function (o) { const t = task7.apply(this, arguments); if (t && o && o.home === hid) gave7.push(o); return t; };
+  const again = fine(120, atHour(0.3, () => {
+    let c = 0; for (const o of S.villagers.values()) if (o.task && o.task.casa === hid) c++; most = Math.max(most, c);
+    if (c > 0) return true;
+    const o = gave7.shift(); if (o && lost7.length < 3) { lost7.push(`${o.name} chamad${o.g === 'f' ? 'a' : 'o'} para ${o.task ? o.task.type : 'nada'}`); h2.shopT = undefined; h2.shopOut = 0; }
+    return watch();
+  }));
+  C.task = task7;
+  ok('c7 save no meio do recado', sent && again && most === 1 && !bad().length, `${t7.id !== set.id ? `(em ${t7.name}: ${set.name} não tem mais uma casa que possa mandar alguém) ` : ''}${sent ? 'o recado saiu' : 'o recado NÃO saiu'} antes do save${hd7.said()}; depois do load ${again ? 'a casa mandou de novo' : 'a casa NÃO mandou de novo'} (no máximo ${most} ao mesmo tempo)${lost7.length ? ` (antes, o mundo tirou o recado de quem foi: ${lost7.join('; ')} — a casa mandou de novo)` : ''}`);
   void L0;
 }
 // ---------------- c10: the skip — the houses buy in the skip too
@@ -426,15 +454,20 @@ const fair = stockFair(set);
   // to the fair, the cave called her back after the hand sent her, and a storm took home the next two sent — nothing bought)
   G.Politics.divinePeace(); for (const s of S.settlements.values()) if (s.alarmT > 0) s.alarmT = 0;
   const calm9 = () => { S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0; };
-  // (the biggest town without coin, with a fair or a market and a family house — two grown people, no oracle — for the case)
+  // (the biggest town without coin, with a place that sells and a family house — two grown people, no oracle — for the case)
   const family = s => [...S.buildings.values()].filter(b => b.set === s.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && [...S.villagers.values()].filter(v => v.home === b.id && v.age >= 14).length >= 2 && !members(b).some(oracleOf)).sort((a, b) => a.id - b.id);
-  const sells = s => [...S.buildings.values()].some(b => b.set === s.id && (b.type === 'feira' || b.type === 'mercado') && b.built);
+  // (a place that sells: a fair — its tables give to a people without coin, with its keeper at them or not (economy.js,
+  // runShop) — or a market with a merchant of its own: a market nobody opens a stall at sells nothing — Roma, of the world
+  // without coin of the generation 16, had one with no merchant, its house felt no wish to buy and the hand sent nobody,
+  // «NÃO comprou» —, and the god's fair below goes where no town has a place that sells)
+  const sells = s => [...S.buildings.values()].some(b => b.set === s.id && b.built && (b.type === 'feira' || (b.type === 'mercado' && [...S.villagers.values()].some(v => v.job === b.id && v.role === 'mercador'))));
   const byPop9 = (a, b) => G.Village.pop(b.id) - G.Village.pop(a.id) || a.id - b.id;
   let tw = [...S.settlements.values()].filter(s => !E.coinage(s.fac) && sells(s) && family(s).length).sort(byPop9)[0], byGod = false;
-  // (none with a fair or a market — a new world's first huts have neither —: the god's hand puts a fair where the town's own
-  // planner would, in the biggest town without coin with a family house, as negocio's market for the exchange (T-184))
+  // (none with a place that sells — a new world's first huts have neither, and a market may stand with no merchant —: the
+  // god's hand puts a fair where the town's own planner would, in the biggest town without coin with a family house, as
+  // negocio's market for the exchange (T-184))
   if (!tw) for (const s of [...S.settlements.values()].filter(o => !E.coinage(o.fac) && family(o).length).sort(byPop9)) { const pos = G.Village.findSite(s, 'feira'); if (!pos || pos.demolish) continue; G.Village.addBuilding('feira', pos[0], pos[1], s.id, true); tw = s; byGod = true; break; }
-  let info = `nenhuma cidade sem moeda com feira ou mercado e uma casa de família (dois adultos, nenhum deles o oráculo de uma caverna)${W9.novo ? ' no mundo novo' : ' no mundo «cidade»'}`, fine9 = false;
+  let info = `nenhuma cidade sem moeda com feira ou mercado com mercador e uma casa de família (dois adultos, nenhum deles o oráculo de uma caverna)${W9.novo ? ' no mundo novo' : ' no mundo «cidade»'}`, fine9 = false;
   if (tw) {
     tw.festPlan = { day: S.day, key: null, done: true }; calm9();
     // (and the people of the case without coin while it lasts — held by M.semMoeda, on the world's door of the arts (T-098):

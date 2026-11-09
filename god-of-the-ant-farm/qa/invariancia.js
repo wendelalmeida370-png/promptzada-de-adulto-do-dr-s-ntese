@@ -1,7 +1,7 @@
 // invariancia: a mesma causa, o mesmo efeito, em qualquer resolução (C1, o adendo da invariância causal) — em Node.
 //   node qa/invariancia.js [mundo]
-// (as descargas de E e B no porto com mais estivadores — cais e armazém do porto —, como o qa/porto.js o escolhe; hoje, na
-// metrópole, Óstia. Sem ele, ou sem navio mercante, o caso falha dizendo o que falta)
+// (as descargas de E e B no porto com cais e armazém do porto, o de mais estivadores primeiro, como o qa/porto.js o escolhe;
+// na metrópole da geração 16, Hedeby, ainda sem estivador. Sem ele, ou sem navio mercante, o caso falha dizendo o que falta)
 // A  o salto × o passo: a mesma cidade com bancas e cais vivendo dias pelo salto e pelo passo — os livros fecham nos dois
 //    (o que saiu = o que chegou + o perdido com causa + o que está sob guarda), nenhum estoque negativo, nenhuma venda sem
 //    pagamento; as diferenças (quantas vendas, quantas caixas) medidas e ditas: vêm do tamanho do passo e das decisões;
@@ -42,8 +42,12 @@ const since = t0 => ({ sales: run.sales - t0.sales, rev: r2(run.rev - t0.rev), c
 // own; a world without them fails the case, saying what it lacks)
 const porters = s => [...S.villagers.values()].filter(v => v.set === s.id && v.role === 'estivador').length;
 const hasB = (s, t) => [...S.buildings.values()].some(b => b.set === s.id && b.type === t && b.built);
-const portOf = () => [...S.settlements.values()].filter(s => hasB(s, 'doca') && hasB(s, 'armazem') && porters(s) >= 1).sort((a, b) => porters(b) - porters(a) || (a.founded || 0) - (b.founded || 0) || a.id - b.id)[0] || null;
-const portLacks = (set, sh) => !set ? `nenhuma cidade com cais, armazém do porto e estivadores em ${world}` : !sh ? `nenhum navio mercante em ${world} para descarregar em ${set.name}` : '';
+// (the stevedores are the unloading's first hands, not its only ones: it calls whoever of the town is free, as the porto.js's
+// p3 sees — the metropole of the generation 16, a younger world, has one port with a harbour warehouse, Hedeby, and no
+// stevedore yet, and the porto.js unloads its quay all the same; E and B asked for one, «nenhuma cidade com cais, armazém do
+// porto e estivadores»)
+const portOf = () => [...S.settlements.values()].filter(s => hasB(s, 'doca') && hasB(s, 'armazem')).sort((a, b) => porters(b) - porters(a) || (a.founded || 0) - (b.founded || 0) || a.id - b.id)[0] || null;
+const portLacks = (set, sh) => !set ? `nenhuma cidade com cais e armazém do porto em ${world}` : !sh ? `nenhum navio mercante em ${world} para descarregar em ${set.name}` : '';
 
 // ---------------- F: the same world with and without frames (what only reads, between the steps)
 {
