@@ -93,38 +93,38 @@ G.Ready.list({
  },
  "anos500": {
   "day": 501,
-  "pop": 1002,
-  "peoples": 3,
-  "towns": 15,
+  "pop": 1071,
+  "peoples": 2,
+  "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Corinto",
+   "name": "Hedeby",
    "tier": 4,
-   "pop": 198
+   "pop": 201
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 6361256
+  "bytes": 5955795
  },
  "anos1000": {
   "day": 1001,
-  "pop": 963,
+  "pop": 1002,
   "peoples": 2,
-  "towns": 13,
+  "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Ítaca",
+   "name": "Birka",
    "tier": 3,
-   "pop": 156
+   "pop": 126
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 7455737
+  "bytes": 6602667
  }
 });
