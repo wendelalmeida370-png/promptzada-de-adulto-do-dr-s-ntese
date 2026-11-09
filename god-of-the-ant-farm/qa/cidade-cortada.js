@@ -103,8 +103,13 @@ for (const saved of [false, true]) {
     // and the trades of every town), while the islet holds them all, T-331)
     V.forceUpdate();
     const still = () => roleOf(gone).filter(v => site(bid) && !reachV(v, site(bid)));
-    const t0 = S.clock; live(9, () => roleOf(gone).every(v => v.role !== 'construtor') || still().length < gone.length);
-    const held = still(); const left = held.filter(v => v.role !== 'construtor'); const tSwap = Math.round(S.clock - t0); const heldRoles = held.map(v => v.role || 'sem ofício');
+    // (read at that count, before the world's next step — that step sets down on the shore whoever is hungry with no way to a store
+    // (villagers.js, the 'eat': in the generation 16's Mênfis both builders, hungry, at the first tenth of a second, after the count
+    // had made them a woodcutter and a forager — and the case read nobody on the islet, T-xx5) —; with someone still a builder on
+    // the islet at it — the code of before swaps nobody —, the next counts too, up to 9 s, as long as the islet holds them)
+    let held = still(); const t0 = S.clock;
+    if (!held.length || held.some(v => v.role === 'construtor')) { live(9, () => roleOf(gone).every(v => v.role !== 'construtor') || still().length < gone.length); held = still(); }
+    const left = held.filter(v => v.role !== 'construtor'); const tSwap = Math.round(S.clock - t0); const heldRoles = held.map(v => v.role || 'sem ofício');
     // (and a builder of the streets who reaches the work: named at that count, or at the next)
     const streets = () => builders(set).filter(v => !gone.includes(v.id) && site(bid) && reachV(v, site(bid)));
     live(9, () => streets().length > 0);
