@@ -75,21 +75,21 @@ G.Ready.list({
  },
  "anos100": {
   "day": 101,
-  "pop": 564,
+  "pop": 520,
   "peoples": 2,
-  "towns": 11,
+  "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
    "name": "Hedeby",
    "tier": 4,
-   "pop": 111
+   "pop": 100
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 2998101
+  "bytes": 3047584
  },
  "anos500": {
   "day": 501,
