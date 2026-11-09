@@ -162,7 +162,15 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     pris.jail = jail.id; pris.jailUntil = S.day + 5; G.Vg.setTask(pris, { type: 'wander', pri: 1 });
     set.founded = S.day - 10;
     const n0 = S.settlements.size, d0 = S.day; let k = 0;
-    while (S.settlements.size === n0 && S.day - d0 < 8 && k++ < 200000) G.debug.step(0.1);
+    // (a espera vai até oito dias — o checkExpansion tira a sorte a cada dia, e na geração 15 a vila saiu no quinto —, e o preso
+    // fica preso nela: a pena renovada antes de acabar, dentro do teto da lei, seis dias — o verificador, qa.js —; a de cinco
+    // acabou antes da vila, T-497. E o corpo come quando o jogador manda — o mundo não o alimenta nem o acorda de fome, L-171,
+    // L-177 —: aqui a prova é o jogador, e a fome dele baixada pela mão da prova na espera — a refeição do jogador é à mesa de
+    // casa, com o corpo levado até ela —; sem isso, na geração 15, Yaretzi morreu de fome no quinto dia, T-497)
+    while (S.settlements.size === n0 && S.day - d0 < 8 && k++ < 200000) {
+      G.debug.step(0.1); if (body.hunger > 70) body.hunger = 20;
+      if (pris.jail && pris.jailUntil < S.day + 1) pris.jailUntil = S.day + 5;
+    }
     const ns = [...S.settlements.values()].find(s => s.id !== set.id && s.fac === f.id);
     const went = ns ? [...S.villagers.values()].filter(v => v.set === ns.id).length : 0;
     return { town: set.name, pop: [...S.villagers.values()].filter(v => v.set === set.id).length, body: body.name, founded: !!ns, village: ns ? ns.name : '', went, days: +(S.day - d0).toFixed(2),
