@@ -73,7 +73,10 @@ if (!pick()) {
   }
 }
 const P0 = pick();
-if (handMade.length && P0) { const viver0 = M.viver; M.viver = s => { const r = viver0(s); for (const id of handMade) { const v = S().villagers.get(id); if (v && (v.role !== 'mineiro' || v.job !== P0.b.id)) { v.role = 'mineiro'; v.job = P0.b.id; } } return r; }; }
+// (and the world's own miners of the case held the same way: the board deals its surplus out at each pass, one under the hill
+// too — in the metropole of the generation 15 it made Tales a builder on his way to the face of m4, before the save, and his
+// next shift, after the load, never came: T-522)
+if (P0) { const viver0 = M.viver; M.viver = s => { const r = viver0(s); for (const id of P0.ms) { const v = S().villagers.get(id); if (v && (v.role !== 'mineiro' || v.job !== P0.b.id)) { v.role = 'mineiro'; v.job = P0.b.id; } } return r; }; }
 if (!P0) { console.log(`FALHOU | mina mundo | ${world}: nenhuma mina com veio, galeria possível e mineiro`); process.exit(1); }
 const town = S().settlements.get(P0.b.set); const F0 = G.Fac.get(V.facOfSet(P0.b.set));
 console.log(`${world}: a mina #${P0.b.id} de ${town.name} (${F0.civ}${E.coinage(F0.id) ? ', de moeda' : ''}), veio de ${P0.o.kind} com ${r2(P0.o.amt)}, ${P0.ms.length} mineiro(s)${handMade.length ? ' (o ofício dado pela mão do deus)' : ''}`);
