@@ -17,7 +17,8 @@
 //   B8 as regras do corpo: a porta da rua e a principal ≥ 2,2 m; as escadas que os pés sobem (D-086); os peitoris de cima ≥ 0,9 m
 //   B9 os pés da rua para dentro, a cada 2 cm, num mundo em branco: subindo os degraus da forma até o pódio, nunca um degrau que
 //      o corpo não sobe, nunca uma queda
-//   B10 de pé no mundo: o colossal pela mão do deus num mundo pronto (G.Village.handFound, R 60) e os três de cada povo com
+//   B10 de pé no mundo: o colossal pela mão do deus num mundo pronto — a metrópole, ou o primeiro com lote para dois povos
+//      (T-510) — (G.Village.handFound, R 60) e os três de cada povo com
 //      cidade num mundo novo, perto delas — a planta, a entrada (Space.entryFits), o relatório, o verificador limpo, salvar e carregar
 //   B11 os casos ruins num mundo novo: a obra do colossal e a do grande palácio asteca salvas e carregadas no meio e acabadas; o deus que derruba o palácio (a
 //      ruína da planta); o verificador limpo em cada passo — e a sua regra nova (qa/poder-inv.js) pega um palácio grande com a
@@ -330,13 +331,18 @@ const qaS = () => globalThis.QA.check().filter(q => q.sev <= 2);
 function B10() {
   const qa = qaS;
   const tell = r => `${r.set.name} (${r.st}) ${PL(r.t)}#${r.b.id} a ${r.d.toFixed(0)} casas, ${r.rel.toFixed(1)} m de desnível${r.ok && r.fits ? '' : ': ' + r.why}`;
-  // the ready world: the colossal of the god's hand in the cities of the peoples that raise it (the first that has a lot of 10)
-  { M.pronto('metropole'); const q0 = qa().length; const res = [];
-    for (const c of POVOS) { const sets = [...G.S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
-      for (const set of sets) { const r = stand(set, 'palacio_colossal', 'palacio_colossal', { R: 60 }); if (!r.none) { res.push(r); break; } } }
-    const bad = qa(); const s0 = res.filter(r => r.ok).length; const sv = M.salvarCarregar(); const after = res.map(r => G.S.buildings.get(r.b.id)).filter(b => b && b.w === 10 && b.esc === 'palacio_colossal' && In.plan(b).ok).length; const bad2 = qa();
-    ok('B10a de pé num mundo pronto (a metrópole): o colossal pela mão do deus — a planta, a entrada, o relatório, o verificador; salvar e carregar', res.length >= 2 && s0 === res.length && !bad.length && after === res.length && !bad2.length && q0 === 0 && M.limpo(),
-      `${res.length} de pé (${res.map(tell).join(' · ')}); o verificador S0–S2: ${q0} antes, ${bad.length} com eles${bad.length ? ' (' + bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}, ${bad2.length} depois do save; ${after} de ${res.length} iguais depois de salvar e carregar${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
+  // the ready world: the colossal of the god's hand in the cities of the peoples that raise it (the first that has a lot of 10) —
+  // in the first ready world where two peoples have one, the metropolis first: its generation 15 had one free lot of 10 with its
+  // ring on the whole map (the city's own door, V.openSite, opened none either), and Argos took it; the others then had none (T-510)
+  { const ready = ['metropole'].concat([...require('fs').readFileSync(require('path').join(__dirname, '..', 'worlds', 'lista.js'), 'utf8').matchAll(/^ "([a-z0-9]+)": \{/gm)].map(m => m[1]).filter(w => w !== 'metropole'));
+    let q0 = 0, res = [], where = ''; const fewer = [];
+    for (const w of ready) { M.pronto(w); q0 = qa().length; res = []; where = w;
+      for (const c of POVOS) { const sets = [...G.S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === c).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
+        for (const set of sets) { const r = stand(set, 'palacio_colossal', 'palacio_colossal', { R: 60 }); if (!r.none) { res.push(r); break; } } }
+      if (res.length >= 2) break; fewer.push(`${w}: ${res.length ? res.map(r => r.set.name).join(', ') : 'nenhum'}`); }
+    const bad = qa(); const s0 = res.filter(r => r.ok).length; M.salvarCarregar(); const after = res.map(r => G.S.buildings.get(r.b.id)).filter(b => b && b.w === 10 && b.esc === 'palacio_colossal' && In.plan(b).ok).length; const bad2 = qa();
+    ok('B10a de pé num mundo pronto (a metrópole, ou o primeiro com lote para dois povos): o colossal pela mão do deus — a planta, a entrada, o relatório, o verificador; salvar e carregar', res.length >= 2 && s0 === res.length && !bad.length && after === res.length && !bad2.length && q0 === 0 && M.limpo(),
+      `${where}${fewer.length ? ` (antes, com lote para menos de dois povos: ${fewer.join('; ')})` : ''}: ${res.length} de pé (${res.map(tell).join(' · ')}); o verificador S0–S2: ${q0} antes, ${bad.length} com eles${bad.length ? ' (' + bad.slice(0, 2).map(q => q.msg.slice(0, 100)).join('; ') + ')' : ''}, ${bad2.length} depois do save; ${after} de ${res.length} iguais depois de salvar e carregar${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`); }
   // a new world: the palace and the colossal of each people by its city — on the nearest lot whose ground the podium covers (3
   // m), where there is one within 40 tiles; else the nearest the god's hand finds
   { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 6, temper: 'normal' }); const q0 = qa().length; const res = [];
