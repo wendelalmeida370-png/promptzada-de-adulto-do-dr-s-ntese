@@ -7,6 +7,7 @@
 //   M.novo({ seed: 7, type: 'ilha', size: 64, tribes: 2 })   um mundo novo, pelo G.Main.newGame
 //   M.pronto('cidade')                                       um mundo pronto de worlds/, pelo menu (G.Main.openSave)
 //   M.abrir(save)                                            um save (o objeto), pelo menu como um mundo pronto
+//   M.semMoeda('cidade')                                     um mundo com povos sem a moeda, segurados assim (D-143)
 //   M.viver(seg)    o passo normal: seg/0,1 passos de 0,1 s, contados (como o QA.run; T-131)
 //   M.saltar(anos)  o salto no tempo (G.Skip.on + G.Main.skipStep(1), como o timeskip.js)
 //   M.salvarCarregar()  serializa e carrega de volta (devolve o tamanho do save)
@@ -83,6 +84,19 @@ M.pronto = function (key) {
   return M.abrir(JSON.parse(data[key]));
 };
 M.abrir = function (o) { G.Main.openSave(o, ''); quiet(); return G.S; };
+// a world with peoples that have not learned the coin (D-143): the ready world `key` if it has one; else a new world by the
+// game's own door (G.Main.newGame, the seed and the map of the «cidade»), whose peoples are born without it (the arts a people
+// starts with, civs.js), lived a minute — their first huts —; either way the coin held from its first instant for the peoples
+// without it, while the proof runs (the test's hand on the door of the arts, G.Civ.learn: the arts spread between peoples by
+// chance, T-098). Gives { novo, povos (their ids), aprende (the door itself, to teach it on purpose), solta () (lets go) }
+M.semMoeda = function (key) {
+  M.pronto(key || 'cidade');
+  const povos = new Set([...G.S.factions.values()].filter(f => !G.Eco.coinage(f.id)).map(f => f.id)); const aprende = G.Civ.learn;
+  G.Civ.learn = function (f, t) { if (t === 'moeda' && f && povos.has(f.id)) return false; return aprende.apply(this, arguments); };
+  const novo = !povos.size;
+  if (novo) { M.novo({ seed: 3101, type: 'continente', size: 128, tribes: 4 }); for (const f of G.S.factions.values()) if (!G.Eco.coinage(f.id)) povos.add(f.id); M.viver(60); } else M.viver(2);
+  return { novo, povos, aprende, solta: () => { G.Civ.learn = aprende; } };
+};
 // (seg/0.1 steps of a tenth of a second, counted — never the clock compared: its float sum falls a hair short of each tenth,
 // and «while the clock has moved less than seg» took one step more, M.viver(0.1) two of them: T-131)
 M.viver = function (seg) { const n = seg > 0 ? Math.max(1, Math.round(seg / 0.1)) : 0; for (let k = 0; k < n; k++) G.debug.step(0.1); };
