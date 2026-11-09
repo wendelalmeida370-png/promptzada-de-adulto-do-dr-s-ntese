@@ -38,8 +38,8 @@ G.Ready.list({
   "bytes": 2248050
  },
  "mega": {
-  "day": 64,
-  "pop": 730,
+  "day": 65,
+  "pop": 860,
   "peoples": 5,
   "towns": 19,
   "N": 160,
@@ -48,48 +48,48 @@ G.Ready.list({
   "city": {
    "name": "Mênfis",
    "tier": 5,
-   "pop": 206
+   "pop": 214
   },
   "wars": 0,
   "ww": null,
   "world": "Thalael",
-  "bytes": 3309486
+  "bytes": 3549684
  },
  "mundial": {
-  "day": 78,
-  "pop": 661,
-  "peoples": 5,
-  "towns": 23,
+  "day": 120,
+  "pop": 811,
+  "peoples": 6,
+  "towns": 21,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Tenochtitlan",
-   "tier": 4,
-   "pop": 117
+   "name": "Roma",
+   "tier": 3,
+   "pop": 193
   },
-  "wars": 2,
+  "wars": 1,
   "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 4328801
+  "bytes": 5776787
  },
  "anos100": {
   "day": 101,
-  "pop": 217,
-  "peoples": 5,
+  "pop": 815,
+  "peoples": 2,
   "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
    "name": "Argos",
-   "tier": 3,
-   "pop": 53
+   "tier": 4,
+   "pop": 137
   },
   "wars": 0,
-  "ww": "a Guerra do Ouro",
+  "ww": null,
   "world": "Selara",
-  "bytes": 2469983
+  "bytes": 3536912
  },
  "anos500": {
   "day": 501,
