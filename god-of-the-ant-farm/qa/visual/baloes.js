@@ -35,7 +35,11 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       const S = G.S, D = G.Depot; const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
       const free = o => o.age >= 18 && o.age < 55 && !o.inside && !o.sleeping && !o.aboard && !o.captive && !o.jail;
       const market = id => { const b = S.buildings.get(id); return !!b && b.type === 'mercado' && b.built; };
-      const merchant = () => [...S.villagers.values()].filter(o => o.role === 'mercador' && market(o.job) && G.Eco.homeOf(o) && free(o)).sort((a, c) => a.id - c.id)[0];
+      // (and one the world has not taken for something above his counter: the crew of a voyage is called to the quay over it —
+      // the merchant Tales of the Argos of the generation-18 metropole was of the crew of a great expedition being made ready, and
+      // 0.17 s after the god's hand put him at his stall the voyage called him to the quay: «Não há ninguém na banca.», T-xxB)
+      const away = o => !!(G.Expe && G.Expe.memberOf(o.id)) || !!(G.War && G.War.busyDiplomat && G.War.busyDiplomat(o));
+      const merchant = () => [...S.villagers.values()].filter(o => o.role === 'mercador' && market(o.job) && G.Eco.homeOf(o) && free(o) && !away(o)).sort((a, c) => a.id - c.id)[0];
       // (the market's hours as the world lives them: from the hour of the save, the world's own step runs on — the town wakes and
       // goes out — to the middle of the morning, and on through the market's hours until a merchant with a job at a market is
       // out and free. A ready world saved at night had them all asleep at home, and an hour set by hand woke no one: T-342)
