@@ -1,4 +1,4 @@
-// fera-rara: a pele da fera rara depois do abate (L-xxx) — provocada de propósito.   [ONLY=f1,f3] node qa/fera-rara.js [mundo,mundo...]
+// fera-rara: a pele da fera rara depois do abate (L-655) — provocada de propósito.   [ONLY=f1,f3] node qa/fera-rara.js [mundo,mundo...]
 // A história «Fera Rara» guardava a fera no elenco depois de o protagonista abatê-la e esperava a pele até a virada do ano:
 // quando outra mão esfolava o corpo (e levava a carne toda) ou o corpo sumia, a história seguia contando com um bicho que não
 // existia mais — o verificador acusava S3 («elenco beast=… não existe em lugar nenhum», a vida curta 103 no ano 5) — e só se

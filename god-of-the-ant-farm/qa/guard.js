@@ -350,5 +350,12 @@ for (const f of files) { try { new (require('vm').Script)(src[f].join('\n'), { f
 const MARK_OK = [['army.js', "const civ = v._civ || 'classico'; const fc = v._fc || '#8a3a2a';"]];
 for (const f of files) if (!LOOK.includes(f)) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (/\.(_civ|_fc|_ruler|babyOn)\b(?!\s*=(?!=))/.test(c) && f !== 'save.js' && !ok(MARK_OK, f, l)) fails.push(`marca do quadro: ${f}:${k + 1} um módulo do mundo lê uma marca que só o quadro escreve (v._civ, _fc, _ruler, babyOn — L-589): ${l.trim().slice(0, 110)}`); });
+// 47. "a retirada tem uma porta só" (L-647, L-648): a marca de um bando que recua (b.retreat) só a porta G.War.retreat escreve
+// (war.js) — ela põe o bando de volta para casa e avisa o exército na hora, para o save guardar a retirada —; o load, que refaz o
+// bando de um exército em campo a partir da fase dele (wars.js, resume), é a única outra escrita. As cinco regras que mandam
+// recuar (as perdas do bando, a debandada da hoste, o campeão que cai, o cerco levantado, a fome) chamam a porta
+const RETREAT_OK = [['wars.js', "b.retreat = a.phase === 'retirada';"]];
+for (const f of files) if (f !== 'war.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.retreat\s*=(?!=)/.test(c) && !ok(RETREAT_OK, f, l)) fails.push(`retirada: ${f}:${k + 1} escreve a marca de retirada de um bando fora da porta G.War.retreat (L-647): ${l.trim().slice(0, 110)}`); });
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

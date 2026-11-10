@@ -141,7 +141,7 @@
   const rareOf = s => G.S.animals.get(s.cast.beast);
   // (the beast is in the cast while it lives; once the protagonist has slain it, the body leaves the cast and the story keeps its
   // id in data.carc: the body is the world's — the skinner's, the scavengers', the rot's — and the story waits for the pelt, not
-  // for the body, which went from the world while the story still counted on it, up to a day, L-xxx)
+  // for the body, which went from the world while the story still counted on it, up to a day, L-655)
   const beastId = s => s.cast.beast || s.data.carc;
   function rc(s) {
     const d = s.data; const a = d.art; const B = `${a} ${d.bname}`;
@@ -189,7 +189,7 @@
     tick(s) {
       const p = P(s.protag); if (!p || p.dead) return;
       // the pelt: the protagonist's skinning comes as a fact, another hand's too (both heard before the turn); the body gone
-      // otherwise — eaten, rotten, sunk, its last meat taken — the pelt is lost now, not at the turn of the year (L-xxx)
+      // otherwise — eaten, rotten, sunk, its last meat taken — the pelt is lost now, not at the turn of the year (L-655)
       if (s.data.killed) { if (G.S.day - s.data.killed >= 1 || !G.S.animals.has(beastId(s))) finishPelt(s, p, false); return; }
       const a = rareOf(s);
       if (!a || a.dead) { if (!a) { if (!s.data.gone) s.data.gone = G.S.day; else if (G.S.day - s.data.gone >= 2) St.finish(s, 'esquecida', 'sereno', St.say(s, 'fr-sumiu', rc(s))); } return; }
@@ -211,7 +211,7 @@
         return true;
       }
       // (this beast's pelt, by its id: in the protagonist's hands it is the story's, in another's it is lost — said when heard, not
-      // at the turn of the year with the body long gone, L-xxx)
+      // at the turn of the year with the body long gone, L-655)
       if (f.k === 'pele-rara' && s.data.killed && f.beast === beastId(s)) { finishPelt(s, alive(s.protag) ? P(s.protag) : null, f.a === s.protag); return true; }
       if (f.k === 'morte' && f.a === s.protag) {
         if (f.beast && f.beast === beastId(s)) {
