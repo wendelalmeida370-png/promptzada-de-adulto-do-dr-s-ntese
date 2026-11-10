@@ -1,5 +1,6 @@
 // escala: o cenário da escala dos prédios na cidade (D-106, a Arquitetura Monumental; o especialista da cidade — D-115 a D-117),
-// em Node, na metrópole pronta. Com só o degrau clássico de cada tipo, nada muda (e0). Com os degraus grandes ligados por
+// em Node, na metrópole pronta (o lote de 6 do palácio — e8, e15, e17b —, nos mundos prontos que o têm, a metrópole primeiro: T-627).
+// Com só o degrau clássico de cada tipo, nada muda (e0). Com os degraus grandes ligados por
 // geradores de teste registrados só aqui (a forma clássica do povo num lote maior: as formas grandes de verdade são do M1 e do
 // M2), a aldeia escolhe o pequeno e a capital o grande (e1); sem terra, o degrau de baixo (e2); abrir espaço com as regras (e3:
 // só casas baixas e campos da própria cidade, o limite do degrau, os campos mudam de lugar e as famílias ganham mais camas do
@@ -32,6 +33,12 @@ const capitais = () => [...new Set(G.Fac.all().filter(f => f.alive).map(f => G.F
 const doPovo = civ => capitais().find(s => G.Civ.idOfFac(s.fac) === civ) || null;
 const maior = () => [...S.settlements.values()].filter(s => G.Fac.get(s.fac)).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)[0] || null;
 const loteDe = (s, type, n) => { s._noSite = {}; const p = sim(() => V.findSite(s, type, undefined, n)); s._noSite = {}; return p; };
+// (a case's premise in the ready worlds as the game forms it: the metrópole first, and the next worlds when it has none — the
+// metrópole of the generation 18, older and bigger, has no lot of 6 for a palace near any town by the game's own search: water,
+// another town's buildings, relief — e20 —; the «cidade» of the year 20 has one by each of its capitals, T-627. → what fn found,
+// with .mundo, the world left open; or null)
+const MUNDOS = ['metropole', 'mundial', 'mega', 'cidade'];
+const acha = fn => { for (const w of MUNDOS) { abre(w); const r = fn(); if (r) return Object.assign(r, { mundo: w }); } return null; };
 const degrau = (t, n) => Es.steps(t).find(s => s.n === n);
 const soma = o => Object.values(o || {}).reduce((a, x) => a + (x || 0), 0);
 const lado = b => (b ? `${b.type}#${b.id} ${b.w}×${b.h} em ${b.x},${b.y} (${b.esc || '-'})` : 'nada');
@@ -143,14 +150,23 @@ const enche = (set, quadra) => {
 const campo = (o, ids) => !G.BDEF[o.type].housing && !(o.type === 'horta' && o.home && ids.includes(o.home)); // (não o quintal que cai com a sua casa)
 const casa = o => !!G.BDEF[o.type].housing;
 const arma = (set, quer, quadra) => {
-  const st = degrau('temple', 4); const caiu = [];
+  const st = degrau('temple', 4); const caiu = []; let plantou = '';
   for (let r = 0; r < 40; r++) {
     set._noSite = {}; const o = sim(() => V.openSite(set, 'temple', st)); set._noSite = {};
     if (!o || o.demolish.some(id => quer(S.buildings.get(id), o.demolish))) break;
+    // (a field wanted, and none in the way of a lot the step would open — the metrópole of the generation 18: only the old block's
+    // houses, and with them down no lot left to open —: the god's hand plants a field of the town where the houses of the lot the
+    // step opens stood, on its corner — of a kind the town has a lot to move to, the step's rule: a field comes down only with a
+    // lot of its kind to go to, and Tenochtitlan has none for a farm, T-626)
+    if (quer === campo && !plantou) {
+      const x = o[0], y = o[1]; const tipo = ['farm', 'pomar', 'plantacao', 'vinhedo', 'apiario'].find(t => { set._noSite = {}; const p = sim(() => V.findSite(set, t)); set._noSite = {}; return !!p && !p.demolish; });
+      if (tipo) sim(() => { for (const id of o.demolish) { const b = S.buildings.get(id); caiu.push(b.type); V.destroyBuilding(b, 'meteor'); } const f = V.addBuilding(tipo, x, y, set.id, true); if (f) { plantou = ` e plantou ${V.buildName(f)} #${f.id} (${tipo}) no lote ${x},${y}`; G.W.touchWalk(); } });
+      if (plantou) continue;
+    }
     sim(() => { for (const id of o.demolish) { const x = S.buildings.get(id); caiu.push(x.type); V.destroyBuilding(x, 'meteor'); } });
     enche(set, quadra);
   }
-  return caiu.length ? ` (antes, a mão do deus derrubou ${caiu.join(', ')})` : '';
+  return caiu.length || plantou ? ` (antes, a mão do deus derrubou ${caiu.join(', ') || 'nada'}${plantou})` : '';
 };
 // (o espaço aberto: o templo que a cidade ergue; o que caiu — o quintal de uma casa, a horta da família (urban.js), cai com a casa,
 // L-079: é da casa, não um prédio nem um campo que o degrau derruba; na metrópole da geração 16 o templo de Argos derrubou um campo
@@ -282,16 +298,20 @@ run('e7', () => {
 });
 // ------------------------------ e8: o palácio que cresce, e o seu patrono ------------------------------
 run('e8', () => {
-  abre(); let set = null, b0 = null; const P6 = degrau('palacio', 6);
+  let set = null, b0 = null; const P6 = degrau('palacio', 6);
   // (um palácio clássico de pé num lugar com 6 casas livres em volta: o pódio de 3 m não basta perto destas capitais (D-115), e
-  // aqui ele vai a 6 m só para pôr o palácio — o juiz é o mesmo)
+  // aqui ele vai a 6 m só para pôr o palácio — o juiz é o mesmo. Nos mundos prontos, a metrópole primeiro: T-627)
   const pod = V.PODIUM; V.PODIUM = 4;
   try {
-    for (const s of [...S.settlements.values()].filter(o => (o.tier || 0) >= 2).sort((a, c) => V.pop(c.id) - V.pop(a.id))) {
-      s._noSite = {}; const P = sim(() => V.findSite(s, 'palacio', undefined, 6)); if (!P) continue;
-      b0 = sim(() => V.handFound(s, 'palacio', 'antigo', { x: P[0] + 3, y: P[1] + 3, R: 0, built: true })); if (b0) { set = s; break; }
-    }
-    if (!ok('e8a o palácio de antes', !!b0 && b0.w === 3, b0 ? `${set.name}: ${lado(b0)}, de ${b0.patron || 'ninguém'}` : 'nenhuma cidade com lugar')) return;
+    const got = acha(() => {
+      for (const s of [...S.settlements.values()].filter(o => (o.tier || 0) >= 2).sort((a, c) => V.pop(c.id) - V.pop(a.id))) {
+        s._noSite = {}; const P = sim(() => V.findSite(s, 'palacio', undefined, 6)); if (!P) continue;
+        const b = sim(() => V.handFound(s, 'palacio', 'antigo', { x: P[0] + 3, y: P[1] + 3, R: 0, built: true })); if (b) return { set: s, b0: b };
+      }
+      return null;
+    });
+    if (got) { set = got.set; b0 = got.b0; }
+    if (!ok('e8a o palácio de antes', !!b0 && b0.w === 3, b0 ? `${got.mundo}: ${set.name}: ${lado(b0)}, de ${b0.patron || 'ninguém'}` : `nenhuma cidade com lugar (${MUNDOS.join(', ')})`)) return;
     const pat = b0.patronId && S.villagers.get(b0.patronId); const nm0 = V.buildName(b0); const id = b0.id;
     const pos = V.growLot(set, b0, P6); const r = pos && sim(() => V.enlarge(b0, P6, pos));
     ok('e8b o palácio cresce, o patrono mora nele', !!r && r.id === id && r.w === 6 && V.buildName(r) === nm0 && r.patron === b0.patron && (!pat || pat.palace === id),
@@ -383,7 +403,9 @@ run('e14', () => {
 // pública só com a pedra de vinte anos — a do estoque e a renda —, o clássico pela pedra guardada, como antes)
 run('e15', () => {
   // (a capital: a mais povoada com lote para o palácio de 6, pela busca do jogo)
-  abre(); const set = capitais().find(s => !!loteDe(s, 'palacio', 6)); if (!ok('e15 uma capital com lote para o palácio de 6', !!set, set ? set.name : 'nenhuma')) return;
+  // (nos mundos prontos, a metrópole primeiro: T-627)
+  const got = acha(() => { const c = capitais().find(s => !!loteDe(s, 'palacio', 6)); return c ? { set: c } : null; }); const set = got && got.set;
+  if (!ok('e15 uma capital com lote para o palácio de 6', !!set, set ? `${got.mundo}: ${set.name}` : `nenhuma (${MUNDOS.join(', ')})`)) return;
   const f = G.Fac.get(set.fac); const fid = f.id; const P6 = degrau('palacio', 6);
   // (the people's count of the day begun clean, in the ledger's own form — f.pedra —: the income is the bigger of today's and
   // yesterday's, and in the metrópole of the generation 14 Roma's people had brought 144 yesterday, more than the 12 of the case:
@@ -432,12 +454,16 @@ run('e17', () => {
   if (!ok('e17 a capital romana e uma de maravilha dentro', !!roma && !!argos, `${roma ? roma.name : 'nenhuma capital romana'}; ${argos ? argos.name : 'nenhuma capital de maravilha dentro'}`)) return;
   const r1 = V.reachOf(roma, 'maravilha').join(), r2 = V.reachOf(roma, 'palacio').join(), r3 = V.reachOf(argos, 'maravilha').join();
   ok('e17a de fora e de dentro', r1 === '20' && r2 === '6,12' && r3 === '6,12', `o Coliseu de ${roma.name} até o raio e ${r1}; o palácio de ${roma.name} ${r2}; a maravilha de ${argos.name} ${r3}`);
-  roma._noSite = {}; const p = sim(() => V.findSite(roma, 'palacio', undefined, 6)); const R = G.Urban.radius(roma, { w: 6 }, V.pop(roma.id));
-  const d = p ? G.dist(p[0] + 3, p[1] + 3, roma.cx, roma.cy) : 0;
-  ok('e17b o palácio de 6 de Roma, dentro do alcance', !!p && !p.demolish && d <= R + 12, p ? `${roma.name}: em ${p.join(',')}, a ${d.toFixed(0)} casas (o raio ${R})` : `${roma.name}: sem lote`);
   const w = V.landWhy(roma, 'maravilha', 10); roma._noSite = {}; const q = sim(() => V.findSite(roma, 'maravilha', undefined, 10));
   const R10 = Math.round(G.Urban.radius(roma, { w: 10 }, V.pop(roma.id))) + 20;
   ok('e17c o Coliseu sem terra diz por quê', w.R === R10 && (w.free || !q) && /\d/.test(w.txt), `«${w.txt}»`);
+  // (the Roman capital's palace of 6 by the game's search, within its reach — in the ready worlds, the metrópole first, where the
+  // Roman capital has a lot of 6: in the generation 18 only the «cidade» has one, the metrópole's Roma «sem terra», e20, T-627.
+  // After e17c, which reads the metrópole's Roma)
+  const got = acha(() => { const r = doPovo('romano'); if (!r) return null; r._noSite = {}; const P = sim(() => V.findSite(r, 'palacio', undefined, 6)); return P ? { r, p: P } : null; });
+  const r6 = got && got.r, p = got && got.p; const R = r6 ? G.Urban.radius(r6, { w: 6 }, V.pop(r6.id)) : 0;
+  const d = p ? G.dist(p[0] + 3, p[1] + 3, r6.cx, r6.cy) : 0;
+  ok('e17b o palácio de 6 de Roma, dentro do alcance', !!p && !p.demolish && d <= R + 12, p ? `${got.mundo}: ${r6.name}: em ${p.join(',')}, a ${d.toFixed(0)} casas (o raio ${R})` : `${roma.name}: sem lote (${MUNDOS.join(', ')})`);
 });
 
 // ------------------------------ e18: limpar o lote — as ruas menores que o anel junta, a madeira para a obra (D-120) ------------------------------
@@ -783,6 +809,10 @@ run('e22', () => {
 // of the generation 14 Mênfis, the one of before, had no theatre, T-477 —; where none has both, the biggest whose food is safe,
 // with the one it lacks raised by the god's hand — and where the hand finds no lot for it, the next: in the metrópole of the
 // generation 15 no town has both, and Mênfis, the biggest, has no lot for a theatre within the hand's radius, T-493)
+// (the food kept safe by the god's hand — the people's store up to a tenth over the line V.foodSafe draws, as far as it holds —:
+// in the life of the case the guarded services are the premise, and the town at the line lost it on the way — Roma in the
+// metrópole of the generation 18, 675 of food for 180, the services opened and the food not safe at the end, T-628)
+const farto = fid => { const f = G.Fac.get(fid); if (!f) return; const pop = G.Fac.pop(fid), cap = V.cap(fid); const want = Math.min(cap, Math.max(pop * 2.5 * V.FOOD_DAYS * 1.1, cap * 0.92)); const n = want - (f.stock.food || 0); if (n > 0) sim(() => D.make('f:' + fid, 'food', n, { code: 'teste', part: true })); };
 const servicos = () => {
   const E = G.Eco; const fed = s => G.Fac.get(s.fac) && V.foodSafe(s.fac); const tem = s => { const sv = E.services(s); return sv.taverneiro >= 1 && sv.ator >= 1; };
   const L = [...S.settlements.values()].filter(fed).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
@@ -810,7 +840,7 @@ run('e23', () => {
     `abertos ${JSON.stringify(sv)}; pedem ${JSON.stringify(pede)}, teto 1 — com a comida garantida ${JSON.stringify(deu)}; em risco ${JSON.stringify(antes)}`);
   const w1 = { taverneiro: 1, ator: 2, oleiro: 1 }; const n1 = E.cut(w1, 3, { taverneiro: 1, ator: 1 });
   ok('e23b o corte do resto deixa os serviços guardados', n1 === 2 && w1.taverneiro === 1 && w1.ator === 1 && w1.oleiro === 0, `corta 3 de ${JSON.stringify({ taverneiro: 1, ator: 2, oleiro: 1 })} guardando um taverneiro e um ator: ${n1} cortados, ${JSON.stringify(w1)}`);
-  const t0 = papel('taverneiro'), a0 = papel('ator'); M.viver(400); const c1 = checa();
+  const t0 = papel('taverneiro'), a0 = papel('ator'); for (let k = 0; k < 80; k++) { farto(f.id); M.viver(5); } const c1 = checa();
   ok('e23c na vida, a taverna e o teatro abertos', papel('taverneiro') >= 1 && papel('ator') >= 1 && V.foodSafe(f.id) && c1.ok, `${set.name}: taverneiros ${t0} → ${papel('taverneiro')}, atores ${a0} → ${papel('ator')} em dois dias; ${c1.txt}`);
   // (saved where no turn of age waits for the dealing: the load gives the role of an age turned in the four seconds before the
   // save — 2, 16, 62 —, the captive's and a trade to a grown one with none at once, and the world at its next dealing; the
@@ -824,7 +854,7 @@ run('e23', () => {
   // (o verificador vê: a taverna sem ninguém do ofício por três dias, a comida garantida — tirados os taverneiros à mão, sem passo)
   const kept = [...S.villagers.values()].filter(v => v.set === s2.id && v.role === 'taverneiro'); for (const v of kept) v.role = 'coletor';
   const vazia = () => QA.check().filter(q => q.sys === 'escala' && /a taverna sem ninguém/.test(q.msg) && q.msg.startsWith(s2.name)).length;
-  const q0 = vazia(); const d0 = S.day; S.day += 3; const q3 = vazia(); S.day = d0; for (const v of kept) v.role = 'taverneiro';
+  farto(s2.fac); const q0 = vazia(); const d0 = S.day; S.day += 3; const q3 = vazia(); S.day = d0; for (const v of kept) v.role = 'taverneiro';
   ok('e23e o verificador vê', !q0 && q3 === 1, `sem taverneiro: no primeiro dia ${q0}, três dias depois ${q3}`);
 });
 
