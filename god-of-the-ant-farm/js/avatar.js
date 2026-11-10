@@ -155,7 +155,16 @@
   const reached = (q) => { const R = q.p.reach && q.p.reach[q.lv]; if (!R) return true; const n = q.p.grid.n, cs = q.p.grid.cs; return !!R[Math.floor(q.z / cs) * n + Math.floor(q.x / cs)]; };
   // (nor in the footprint of a flight on the storey it goes up from: the body takes a flight whole, from its foot — solidAt —,
   // and put down in one it could never step out: L-391)
-  const onFlight = q => q.p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === q.lv && q.x > s.r[0] && q.x < s.r[2] && q.z > s.r[1] && q.z < s.r[3]);
+  const onFlight = q => q.p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === q.lv && inBox(flightCells(s.r), q.x, q.z));
+  // (a flight's footprint on the storey it goes up from as the plan's grid has it — the cells whose middle it covers, Interiors'
+  // own rule for its flight's cells —: the body is barred by a flight where the walk of the plan is, and the people of the world,
+  // the one rule of the body in a plan (In.BODY, Possess.onPlan). Barred by the flight's drawn outline instead, the body met the
+  // ladder of the house#18346 of the generation-17 metropole a little past its cells, in the way the walk has between it and a
+  // chest — 0,61 m there for a body of 0,64 —, and put up from the bed on the far side it never came back to the stairs down;
+  // the plan's side — every cell the outline touches — would have moved the furniture of many houses, and the world: L-xx1)
+  function flightCells(r) { const cs = G.Interiors.CS; return [Math.ceil(r[0] / cs - 0.5) * cs, Math.ceil(r[1] / cs - 0.5) * cs, (Math.floor(r[2] / cs - 0.5) + 1) * cs, (Math.floor(r[3] / cs - 0.5) + 1) * cs]; }
+  const inBox = (r, x, z) => x > r[0] && x < r[2] && z > r[1] && z < r[3];
+  Av.flightBox = flightCells; // (for the proofs: what of a flight's outline bars the body — visual/pe-da-escada 1b)
   const fits = (X, Z) => { const c = indoorAt(X, Z); if (!c || !c.walk || !c.shell || !reached(c) || onFlight(c)) return false; return RIM.every(([dx, dz]) => { const q = indoorAt(X + dx * TUNE.radius, Z + dz * TUNE.radius); return q && q.walk && q.shell && !onFlight(q); }); };
   function floorNear(X0, Z0) {
     for (let r = 0.3; r <= 1.8; r += 0.15) for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; const X = X0 + Math.cos(a) * r, Z = Z0 + Math.sin(a) * r; if (fits(X, Z)) return [X, Z]; }
@@ -235,7 +244,7 @@
     // (a flight's footprint on the storey it goes up from is taken whole, from its foot: takeFlight; on the storey it comes up
     // to, its hatch shut is floor — one goes down it by hand: Avatar.down)
     if (b && b.inB && b.inP) { const L = TL(); const x = X - b.inB.x * L, z = Z - b.inB.y * L;
-      for (const q of b.inP.stairs) { if (q.kind === 'degraus' || q.lv0 !== b.lv) continue; const r = q.r; if (x > r[0] && x < r[2] && z > r[1] && z < r[3]) { b.stairHit = q; return 'stair'; } }
+      for (const q of b.inP.stairs) { if (q.kind === 'degraus' || q.lv0 !== b.lv) continue; if (inBox(flightCells(q.r), x, z)) { b.stairHit = q; return 'stair'; } }
       // (a grand stair's well, open — no lid over it, its rail round it, void in the plan's grid: Interiors.grandWell, L-562 —:
       // never walked over; from its landing, down the flight as one walks — takeFlight)
       const gw = G.Interiors && G.Interiors.grandWell;
@@ -243,7 +252,7 @@
     const ins = indoorAt(X, Z);
     // (and a flight of another building, at the point — an open ground's, with no wall round it: the rostra of a square —, as
     // solid: taken only from within its building, at its foot; never where the feet land climbing up to it — L-411)
-    if (ins && ins.b !== (b && b.inB)) for (const q of ins.p.stairs) { if (q.kind === 'degraus' || q.lv0 !== ins.lv) continue; const r = q.r; if (ins.x > r[0] && ins.x < r[2] && ins.z > r[1] && ins.z < r[3]) return 'stair'; }
+    if (ins && ins.b !== (b && b.inB)) for (const q of ins.p.stairs) { if (q.kind === 'degraus' || q.lv0 !== ins.lv) continue; if (inBox(flightCells(q.r), ins.x, ins.z)) return 'stair'; }
     if (ins) { if (!ins.walk) return ins.shell ? 'wall' : 'building'; return ins.y > feet + TUNE.stepUp ? 'ledge' : null; }
     const s = G.Space.surface(X, Z);
     // (water the world does not walk — the sea, a lake, a deep river — is no wall to a body that swims: in it goes)

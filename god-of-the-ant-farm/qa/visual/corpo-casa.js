@@ -91,6 +91,7 @@ function pathIn(b, p, lv, from, to) {
   return res;
 }
 let followAt = ''; // (where the last follow stopped short: the body's point, the one it did not reach, what blocked it)
+let waited7 = 0; // (the seconds the body waited at the place of part 7 for the house's people to let it go)
 const follow = (b, pts) => { followAt = ''; for (const pt of pts) { const r = walkTo(b.x * TL + pt[0], b.y * TL + pt[1], 200, 0.12);
   // (before a door of the rooms: open, or opened by the hands — the world doing it in its step)
   const ds = pt.door !== undefined && In.doorState(b, pt.door); if (ds && ds.state !== 'aberta') { G.Possess.apply(w => In.useDoor(b, pt.door, 'abrir', w)); frame(); }
@@ -275,8 +276,13 @@ else {
     const near = q => { if (fitsAt(q.lv, q.at[0], q.at[1])) return q.at; for (let rr = 0.1; rr <= 0.6; rr += 0.05) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; const x = q.at[0] + Math.cos(a) * rr, z = q.at[1] + Math.sin(a) * rr; if (fitsAt(q.lv, x, z)) return [x, z]; } return q.at; };
     const sitDown = () => {
       if (!goTo(b, p, pl.lv, near(pl))) return { why: goWhy };
-      let best = null; for (let k = 0; k < 30 && !(best && best.id === 'lugar' && best.t.pl.item === pl.item); k++) { const ya = Math.atan2(b.y * TL + pl.z - st().Z, b.x * TL + pl.x - st().X); IN.camYaw = ya; st().yaw = ya; best = G.Interact.best(); frame(); }
-      if (!(best && best.id === 'lugar')) return { why: `o E oferece ${best ? `«${best.label}»` : 'nada'}` };
+      // (turned to it, until E offers it — a minute of the world at most: the house's own people take its places as they live, and
+      // one taken is not offered (Interiors.freeNear: never a place someone holds) until it is let go, as a player waits for it
+      // (T-304). In the house#18346 of the generation-17 metropole two of the children sat down to talk at home, at the table
+      // and by the brazier, while the body came down the stairs; the place at the table was let go 12 s after — T-xx1)
+      let best = null, k = 0; for (; k < 1800 && !(best && best.id === 'lugar' && best.t.pl.item === pl.item); k++) { const ya = Math.atan2(b.y * TL + pl.z - st().Z, b.x * TL + pl.x - st().X); IN.camYaw = ya; st().yaw = ya; best = G.Interact.best(); frame(); }
+      if (k > 30) waited7 = +(k / 30).toFixed(1);
+      if (!(best && best.id === 'lugar')) return { why: `o E oferece ${best ? `«${best.label}»` : 'nada'}${k >= 1800 ? ' (o lugar tomado, um minuto esperando)' : ''}` };
       const r = G.Interact.run(best); for (let k = 0; k < 150 && !(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); k++) frame();
       return { r, best };
     };
@@ -286,7 +292,7 @@ else {
       bad = []; const s1 = sitDown(); const u = G.Possess.useOf(); const sn = G.Avatar.seatNow(); const tp = s1.best ? s1.best.t.pl : pl;
       const onIt = Math.hypot(st().X - (b.x * TL + tp.x), st().Z - (b.y * TL + tp.z)) < 0.05; let dy = st().yaw - (Math.PI / 2 - tp.ry); while (dy > Math.PI) dy -= 2 * Math.PI; while (dy < -Math.PI) dy += 2 * Math.PI;
       const mine = In.places(b).by.get(v.id);
-      ok('7. senta: o mundo marca o lugar, o corpo nele, virado como o lugar', !!u && u.it === tp.item && u.q === tp.q && !!sn && st().loco === 'seat' && onIt && Math.abs(dy) < 0.05 && !!mine && mine.item === tp.item, `${s1.best ? s1.best.label : s1.why} (${tp.use} em ${tp.it.kind}); o mundo: ${u ? u.use + ' ' + u.it : 'nada'}; ${st().loco}, no ponto ${onIt}, virado a ${dy.toFixed(2)} rad; o repartidor: ${mine ? mine.use : 'nada'}`);
+      ok('7. senta: o mundo marca o lugar, o corpo nele, virado como o lugar', !!u && u.it === tp.item && u.q === tp.q && !!sn && st().loco === 'seat' && onIt && Math.abs(dy) < 0.05 && !!mine && mine.item === tp.item, `${s1.best ? s1.best.label : s1.why} (${tp.use} em ${tp.it.kind}${waited7 ? `, depois de ${waited7} s esperando a casa soltar o lugar` : ''}); o mundo: ${u ? u.use + ' ' + u.it : 'nada'}; ${st().loco}, no ponto ${onIt}, virado a ${dy.toFixed(2)} rad; o repartidor: ${mine ? mine.use : 'nada'}`);
       // (the hands at the place: a gesture with no walk keeps the body seated, in the seated state of a seated gesture)
       G.Avatar.act({ anim: 'eat', dur: 0.8, lock: true }); for (let k = 0; k < 8; k++) frame(); const kept = st().loco === 'seat', anim = st().anim; for (let k = 0; k < 30; k++) frame();
       ok('7. as mãos no lugar: o corpo segue nele', kept && anim === 'eat' && st().loco === 'seat' && !!G.Possess.useOf(), `durante: ${kept ? 'sentado' : 'de pé'} (${anim}); depois: ${st().loco}`);

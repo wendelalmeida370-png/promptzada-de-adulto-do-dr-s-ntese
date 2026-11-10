@@ -6,6 +6,8 @@
 //   1. o pé: em cada lance de cada prédio com planta do mundo, o patamar do pé que a planta guarda (s.a) fica onde o corpo toma o
 //      lance, com a borda inteira do corpo no chão que o Space dá aos pés (Space.indoor) e fora de todo lance daquele piso; e
 //      dele, ao longo do lance, até o primeiro degrau, a borda no chão o caminho todo (L-447)
+//   1b. o corpo e as pessoas do mundo pelas mesmas células: em cada lance, o que barra o corpo (Avatar.flightBox) são as casas do
+//      lance na planta (C.STAIR do piso de onde ele sobe), e o desenho do lance passa delas meia casa no máximo (0,125 m)
 //   2. o caminho: da porta da rua — ou do topo do lance que chega ao piso — até o pé de cada lance, um caminho pelas casas da
 //      planta onde o corpo cabe pela regra dele: a borda de 0,34 m (ou de 0,26, roçando o que está ao lado; ou, entre duas
 //      quinas, o passo do próprio corpo, que olha a borda do lado para onde vai: Avatar.blocked), nunca por cima de um lance do
@@ -82,11 +84,30 @@ const stepWhy = (b, p, lv, x, z, mx, mz) => { for (const [dx, dz] of RIM) { if (
 // ------------------------------ 1 and 2: every flight of the world's plans ------------------------------
 const blds = [...S.buildings.values()].filter(b => b.built && b.type !== 'ruin' && In.has(b)).sort((a, c) => a.id - c.id);
 let nFl = 0, footBad = [], wayBad = [], nWay = 0;
+// (1b: the body and the people of the world by the same cells — the flight bars the body by the plan's cells of it, C.STAIR on the
+// storey it goes up from (Avatar.flightBox) —, and the drawing may pass them by half a cell at most: the body never comes into a
+// flight's drawn outline by more than 0,125 m. Barred by the outline itself, the body met the ladder of the house#18346 of the
+// generation-17 metropole past its cells, where the walk of the plan and the people go — L-xx1, D-xx1)
+const CS = In.CS, cellBad = [], deep = {}; let worstIn = null;
 for (const b of blds) {
   const p = Sp.planNow(b); if (!p || !p.ok) continue; const fl = p.stairs.filter(s => s.kind !== 'degraus'); if (!fl.length) continue;
   const open = p.shell.kind === 'aberta'; const e0 = p.entryLv || 0;
   for (const s of fl) {
     nFl++; const [ax, az] = s.a; const tag = `${b.type}#${b.id} (${b.ip.f}) lance ${s.id} ${s.lv0}→${s.lv1}`;
+    { const B = G.Avatar.flightBox(s.r), r = s.r, g = p.grid.lv[s.lv0], n = p.grid.n; let miss = 0;
+      // (what bars the body is the plan's cells of the flight, to the edge: the cells of the storey whose middle is in the outline,
+      // the flight's in the grid — their box, and the body's, one)
+      let c0 = null; if (g) for (let z = 0; z < n; z++) for (let x = 0; x < n; x++) { const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS; if (mx > r[0] && mx < r[2] && mz > r[1] && mz < r[3] && g[z * n + x] === In.CELL.STAIR) c0 = c0 ? [Math.min(c0[0], x), Math.min(c0[1], z), Math.max(c0[2], x), Math.max(c0[3], z)] : [x, z, x, z]; }
+      const C0 = c0 ? [c0[0] * CS, c0[1] * CS, (c0[2] + 1) * CS, (c0[3] + 1) * CS] : null; if (!C0 || [0, 1, 2, 3].some(k => Math.abs(B[k] - C0[k]) > 1e-6)) miss++;
+      for (let z = Math.round(B[1] / CS); z < Math.round(B[3] / CS); z++) for (let x = Math.round(B[0] / CS); x < Math.round(B[2] / CS); x++) if (!g || g[z * n + x] !== In.CELL.STAIR) miss++;
+      // (and the other way: no cell the outline touches that the plan has as the flight's and that does not bar the body — none of
+      // another flight of the storey)
+      const others = fl.filter(q => q !== s && q.lv0 === s.lv0).map(q => G.Avatar.flightBox(q.r)); const inB = (Q, x, z) => x > Q[0] && x < Q[2] && z > Q[1] && z < Q[3];
+      if (g) for (let z = Math.max(0, Math.floor(r[1] / CS)); z <= Math.min(n - 1, Math.floor(r[3] / CS)); z++) for (let x = Math.max(0, Math.floor(r[0] / CS)); x <= Math.min(n - 1, Math.floor(r[2] / CS)); x++) {
+        const mx = (x + 0.5) * CS, mz = (z + 0.5) * CS; if (g[z * n + x] === In.CELL.STAIR && !inB(B, mx, mz) && !others.some(Q => inB(Q, mx, mz))) miss++; }
+      const over = Math.max(B[0] - r[0], r[2] - B[2], B[1] - r[1], r[3] - B[3], 0); deep[s.kind] = Math.max(deep[s.kind] || 0, over);
+      if (!worstIn || over > worstIn.over) worstIn = { over, tag };
+      if (miss || over > CS / 2 + 1e-9) cellBad.push(`${tag}: ${miss ? `${miss} casa(s) do corpo fora das da planta` : ''}${miss && over > CS / 2 + 1e-9 ? '; ' : ''}${over > CS / 2 + 1e-9 ? `o desenho ${(over * 100).toFixed(1)} cm além delas` : ''}`); }
     // 1. the foot the plan keeps: where the body takes the flight, its whole rim on the feet's floor, off the flights — and from
     // it, along the flight's line, up to its first step, by the body's own step all the way (stepWhy, Avatar's blocked): the body
     // takes the flight by walking into it, and the loft's ladder of a house cut front and back had its foot past the partition,
@@ -104,6 +125,8 @@ for (const b of blds) {
   }
 }
 ok('1. o pé de cada lance onde o corpo o toma, com a borda inteira no chão dos pés e fora dos lances', !footBad.length, `${nFl} lances em ${WORLD}${footBad.length ? `: ${footBad.length} sem pé — ${footBad.slice(0, 4).join(' · ')}` : ': todos'}`);
+ok('1b. o corpo e as pessoas do mundo pelas mesmas células: cada lance barra o corpo pelas casas dele na planta, e o desenho passa delas meia casa no máximo (0,125 m)', !cellBad.length && nFl > 0,
+  `${nFl} lances; o desenho além das casas, o mais: ${Object.entries(deep).map(([k, v]) => `${k} ${(v * 100).toFixed(1)} cm`).join(', ') || '-'}${worstIn ? ` (${worstIn.tag})` : ''}${cellBad.length ? `; ${cellBad.length} FORA — ${cellBad.slice(0, 3).join(' · ')}` : ''}`);
 ok('2. um caminho do corpo, pela regra dele, da porta (ou do topo do lance de baixo) até o pé de cada lance', !wayBad.length, `${nWay} lances${wayBad.length ? `: ${wayBad.length} sem caminho — ${wayBad.slice(0, 4).join(' · ')}` : ': todos'}`);
 
 // ------------------------------ 3. the body for real ------------------------------
