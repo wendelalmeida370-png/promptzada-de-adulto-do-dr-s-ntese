@@ -99,9 +99,9 @@ module.exports = {
       sistemas: ['G.Court', 'G.Interiors'],
       atividades: [
         { id: 'morar', o: 'o governante e a família moram ali', essencial: true, resultado: 'a casa do governante', condicao: 'um governante', feito: 'parcial', provas: ['qa/civicos.js'] },
-        { id: 'audiencia', o: 'o governante recebe em audiência no trono', usos: ['audiencia'], feito: false, provas: [] },
+        { id: 'audiencia', o: 'o governante recebe em audiência no trono', usos: ['audiencia'], tarefa: 'assembly', dono: 'C', resultado: 'quem governa no trono e a cidade nos lugares da planta, até a audiência acabar', condicao: 'o melhor palácio do povo (o paço também) pronto na capital, com planta (G.Court.audPalace); na resposta à petição, na coroação e na chegada de um emissário (D-124)', feito: true, provas: ['qa/escala.js'] },
       ],
-      notas: 'as plantas dos palácios têm o trono e a audiência, mas o mundo ainda não leva ninguém a eles: fica para a próxima onda',
+      notas: 'a audiência (D-124, da Arquitetura Monumental): quem governa senta no trono e a cidade entra pelos lugares da planta — o voto e o pão continuam na praça; o «morar» é parcial: o palácio pronto fica marcado como o de quem o mandou erguer (v.palace), mas nenhuma família o tem como casa: o governante e os seus continuam morando na casa deles',
     },
     cultura: {
       atividades: [
