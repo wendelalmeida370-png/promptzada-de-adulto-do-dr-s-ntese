@@ -129,41 +129,73 @@ run('e2', () => {
 // (a cidade: a menor que justifica o templo de 4 — o primeiro degrau que ela escolhe —, por quem é e não pelo nome: na metrópole da
 // geração 14, Óstia, a de antes, tinha 16 pessoas e escolhia o santuário de 2, e o templo nunca abria espaço, T-477)
 const templo4 = () => [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && Es.choose(s, 'temple')[0].n === 4).sort((a, c) => V.pop(a.id) - V.pop(c.id) || a.id - c.id)[0] || null;
-run('e3', () => {
-  abre(); const set = templo4(); if (!set) { ok('e3a sem lote livre', false, 'nenhuma cidade que justifica o templo de 4'); return; } const lim = V.openLimit(4);
-  // (a velha quadra: casas baixas da cidade, de pé, em cada lote livre de 4 casas que o planejador acharia — até não sobrar nenhum:
-  // na metrópole da geração 16, mais nova, Argos, de 51 pessoas, tinha 40 lotes livres de 4, e a quadra de antes parava em 16, T-564)
-  let P, k = 0; const quadra = [];
-  for (; k < 100; k++) { set._noSite = {}; P = sim(() => V.findSite(set, 'temple', undefined, 4)); if (!P) break; for (const [dx, dy] of k === 0 ? [[0, 0], [2, 2]] : [[1, 1]]) quadra.push(sim(() => V.addBuilding('house', P[0] + dx, P[1] + dy, set.id, true)).id); }
-  if (!ok('e3a sem lote livre', !P, `${k} lotes livres de 4 casas tomados por ${quadra.length} casas baixas da cidade; nenhum sobrou`)) return;
+// (a velha quadra: casas baixas da cidade, de pé, em cada lote livre de 4 casas que o planejador acharia — até não sobrar nenhum:
+// na metrópole da geração 16, mais nova, Argos, de 51 pessoas, tinha 40 lotes livres de 4, e a quadra de antes parava em 16, T-564)
+const enche = (set, quadra) => {
+  let P = null, k = 0;
+  for (; k < 100; k++) { set._noSite = {}; P = sim(() => V.findSite(set, 'temple', undefined, 4)); if (!P) break; for (const [dx, dy] of k === 0 && !quadra.length ? [[0, 0], [2, 2]] : [[1, 1]]) quadra.push(sim(() => V.addBuilding('house', P[0] + dx, P[1] + dy, set.id, true)).id); }
+  set._noSite = {}; return { P, k };
+};
+// (o que o espaço derruba é da regra — V.openSite: o lote com menos a derrubar, um campo antes de uma casa —, e a prova o arma pela
+// mão do deus: enquanto o espaço do templo de 4 não tomar o que o caso pede — um campo, uma casa com as suas camas —, ela derruba o
+// que ele tomaria, e a velha quadra enche o lote que uma fazenda derrubada deixa livre. Na metrópole da geração 17, Tenochtitlan
+// abria o espaço numa plantação, nenhuma casa caía, e a regra das famílias ficava sem prova)
+const campo = (o, ids) => !G.BDEF[o.type].housing && !(o.type === 'horta' && o.home && ids.includes(o.home)); // (não o quintal que cai com a sua casa)
+const casa = o => !!G.BDEF[o.type].housing;
+const arma = (set, quer, quadra) => {
+  const st = degrau('temple', 4); const caiu = [];
+  for (let r = 0; r < 40; r++) {
+    set._noSite = {}; const o = sim(() => V.openSite(set, 'temple', st)); set._noSite = {};
+    if (!o || o.demolish.some(id => quer(S.buildings.get(id), o.demolish))) break;
+    sim(() => { for (const id of o.demolish) { const x = S.buildings.get(id); caiu.push(x.type); V.destroyBuilding(x, 'meteor'); } });
+    enche(set, quadra);
+  }
+  return caiu.length ? ` (antes, a mão do deus derrubou ${caiu.join(', ')})` : '';
+};
+// (o espaço aberto: o templo que a cidade ergue; o que caiu — o quintal de uma casa, a horta da família (urban.js), cai com a casa,
+// L-079: é da casa, não um prédio nem um campo que o degrau derruba; na metrópole da geração 16 o templo de Argos derrubou um campo
+// e uma choupana, e a horta da choupana foi com ela, T-564 —; o que sobe noutro lugar, e as camas de um e de outro)
+function abreEspaco(set) {
   const antes = new Map(); for (const o of S.buildings.values()) if (o.set === set.id) antes.set(o.id, o.type);
-  const pub = () => [...S.buildings.values()].filter(o => o.set === set.id && o.type !== 'ruin' && (G.BDEF[o.type].civic || o.type === 'temple' || o.type === 'monument')).length;
-  const farms = () => [...S.buildings.values()].filter(o => o.set === set.id && o.type === 'farm').length;
-  const pub0 = pub(), farms0 = farms(), id0 = S.nextId, h0 = marca();
-  // (o quintal de uma casa — a horta da família, urban.js — cai com a casa, L-079: é da casa, não um prédio nem um campo que o
-  // degrau derruba; na metrópole da geração 16 o templo de Argos derrubou um campo e uma choupana, e a horta da choupana foi com
-  // ela, T-564)
   const casaDe = new Map(); for (const o of S.buildings.values()) if (o.set === set.id && o.type === 'horta' && o.home) casaDe.set(o.id, o.home);
+  const id0 = S.nextId, h0 = marca();
   set._noSite = {}; rico(set); const b = sim(() => V.startProject(set, 'temple'));
   const foi0 = [...antes.keys()].filter(id => !S.buildings.has(id)); const quintais = foi0.filter(id => casaDe.has(id) && foi0.includes(casaDe.get(id)));
   const foi = foi0.filter(id => !quintais.includes(id)); const tipos = foi.map(id => antes.get(id));
-  const novos = [...S.buildings.values()].filter(o => o.id >= id0 && o !== b && o.set === set.id);
-  const camasFoi = foi.reduce((s, id) => s + (G.BDEF[antes.get(id)].housing || 0), 0), camasNovas = novos.reduce((s, o) => s + (G.BDEF[o.type].housing || 0), 0);
-  const camposFoi = tipos.filter(t => !G.BDEF[t].housing).length, camposNovos = novos.filter(o => !G.BDEF[o.type].housing).length;
-  const linha = linhas(h0, /abriu espaço/)[0]; const qt = quintais.length ? ` (e ${quintais.length} quintal com a sua casa)` : '';
-  ok('e3b abre espaço', !!b && b.w === 4 && b.esc === 'templo' && foi.length > 0 && ocupa(b), `${set.name} ergue ${lado(b)} derrubando ${foi.length}: ${tipos.join(', ')}${qt}`);
+  const novos = [...S.buildings.values()].filter(o => o.id >= id0 && o !== b && o.set === set.id); const casas = novos.filter(o => G.BDEF[o.type].housing);
+  return {
+    b, foi, tipos, casas, linha: linhas(h0, /abriu espaço/)[0], qt: quintais.length ? ` (e ${quintais.length} quintal com a sua casa)` : '',
+    camasFoi: foi.reduce((s, id) => s + (G.BDEF[antes.get(id)].housing || 0), 0), camasNovas: casas.reduce((s, o) => s + G.BDEF[o.type].housing, 0),
+    camposFoi: tipos.filter(t => !G.BDEF[t].housing).length, camposNovos: novos.length - casas.length,
+    perto: b ? novos.filter(o => o.x + o.w > b.x - 1 && o.x < b.x + b.w + 1 && o.y + o.h > b.y - 1 && o.y < b.y + b.h + 1) : [],
+    semCasa: [...S.villagers.values()].filter(v => v.home && !S.buildings.has(v.home)),
+  };
+}
+run('e3', () => {
+  abre(); const set = templo4(); if (!set) { ok('e3a sem lote livre', false, 'nenhuma cidade que justifica o templo de 4'); return; } const lim = V.openLimit(4);
+  const quadra = []; const { P, k } = enche(set, quadra);
+  if (!ok('e3a sem lote livre', !P, `${k} lotes livres de 4 casas tomados por ${quadra.length} casas baixas da cidade; nenhum sobrou`)) return;
+  const mao = arma(set, campo, quadra);
+  const pub = () => [...S.buildings.values()].filter(o => o.set === set.id && o.type !== 'ruin' && (G.BDEF[o.type].civic || o.type === 'temple' || o.type === 'monument')).length;
+  const farms = () => [...S.buildings.values()].filter(o => o.set === set.id && o.type === 'farm').length;
+  const pub0 = pub(), farms0 = farms();
+  const { b, foi, tipos, casas, linha, qt, camasFoi, camasNovas, camposFoi, camposNovos, perto, semCasa } = abreEspaco(set);
+  ok('e3b abre espaço', !!b && b.w === 4 && b.esc === 'templo' && foi.length > 0 && ocupa(b), `${set.name} ergue ${lado(b)} derrubando ${foi.length}: ${tipos.join(', ')}${qt}${mao}`);
   ok('e3c só casas baixas e campos da cidade', tipos.every(t => V.OPEN[t]) && pub() === pub0 + 1 && farms() >= Math.min(2, farms0), `os públicos ${pub0} → ${pub()} (só o templo novo), as fazendas ${farms0} → ${farms()}`);
   ok('e3d o limite do degrau', foi.length <= lim.bld && camasFoi <= lim.beds, `${foi.length} prédios e ${camasFoi} camas${qt} (o limite do degrau de 4: ${lim.bld} e ${lim.beds})`);
-  const perto = novos.filter(o => o.x + o.w > b.x - 1 && o.x < b.x + b.w + 1 && o.y + o.h > b.y - 1 && o.y < b.y + b.h + 1);
   // (a mudança pela regra do que caiu — relocation, village.js —: cada campo num lote novo do seu tipo, nenhum no lote nem no anel
-  // do templo; as famílias de casa derrubada, mais camas do que perderam; e, sem casa no lote aberto, nenhuma casa nova: a regra
-  // só ergue casa para as camas perdidas. Na metrópole da geração 17, Tenochtitlan abriu o espaço numa plantação — um campo é mais
-  // barato de derrubar que uma casa, e a cidade tem campos de sobra —, e a prova cobrava mais camas de nenhuma casa)
+  // do templo; as famílias de casa derrubada, mais camas do que perderam; sem casa no lote aberto, nenhuma casa nova: a regra só
+  // ergue casa para as camas perdidas. O espaço armado num campo; a casa que cai é o e3h)
   const familias = camasFoi > 0 ? camasNovas > camasFoi : camasNovas === 0;
-  ok('e3e mais camas do que derrubou; os campos mudam de lugar', familias && camposNovos === camposFoi && !perto.length, `as famílias: ${camasFoi} camas derrubadas, ${camasNovas} em ${novos.filter(o => G.BDEF[o.type].housing).length} casas novas (${novos.filter(o => G.BDEF[o.type].housing).map(o => o.type).join(', ')})${camasFoi ? '' : ' — nenhuma casa no lote aberto, nenhuma casa nova'}; campos ${camposFoi} → ${camposNovos} em lote novo${qt}; nenhum no lote nem no anel do templo`);
-  const semCasa = [...S.villagers.values()].filter(v => v.home && !S.buildings.has(v.home));
+  ok('e3e mais camas do que derrubou; os campos mudam de lugar', familias && camposFoi > 0 && camposNovos === camposFoi && !perto.length, `as famílias: ${camasFoi} camas derrubadas, ${camasNovas} em ${casas.length} casas novas (${casas.map(o => o.type).join(', ')})${camasFoi ? '' : ' — nenhuma casa no lote aberto, nenhuma casa nova'}; campos ${camposFoi} → ${camposNovos} em lote novo${qt}; nenhum no lote nem no anel do templo`);
   ok('e3f a crônica e as famílias', !!linha && !semCasa.length, `«${linha ? linha.txt : 'nenhuma linha'}»; ninguém com casa derrubada por casa (${semCasa.length})`);
   const c = checa(); ok('e3g verificador', c.ok, c.txt);
+  // (e3h: a casa que cai — o mesmo mundo aberto de novo, a mesma cidade e a mesma quadra, e o espaço armado numa casa)
+  abre(); const set2 = templo4(); const quadra2 = []; const q2 = enche(set2, quadra2); const mao2 = arma(set2, casa, quadra2);
+  const A = abreEspaco(set2);
+  ok('e3h a casa que cai: as famílias ganham mais camas do que perdem', !q2.P && !!A.b && A.b.w === 4 && A.b.esc === 'templo' && A.camasFoi > 0 && A.camasNovas > A.camasFoi && A.camposNovos === A.camposFoi && !A.perto.length && !A.semCasa.length && !!A.linha,
+    `${set2.name} ergue ${lado(A.b)} derrubando ${A.tipos.join(', ') || 'nada'}${A.qt}${mao2}: ${A.camasFoi} camas derrubadas, ${A.camasNovas} em ${A.casas.length} casas novas (${A.casas.map(o => o.type).join(', ')}); campos ${A.camposFoi} → ${A.camposNovos} em lote novo; ${A.perto.length} no lote ou no anel; ${A.semCasa.length} com casa derrubada por casa; «${A.linha ? A.linha.txt : 'nenhuma linha'}»`);
+  const c2 = checa(); ok('e3i verificador', c2.ok, c2.txt);
 });
 // ------------------------------ e3x: o juiz do lote, regra a regra ------------------------------
 run('e3x', () => {
