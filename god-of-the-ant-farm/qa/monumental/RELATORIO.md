@@ -294,6 +294,11 @@ obrigaria a gerar os mundos prontos outra vez; cada um está descrito no AUDIT, 
 - L-687: quem foge de um chamado à guerra fica alguns segundos ainda na lista do exército; um segundo chamado do mesmo povo
   nessa janela pode pô-lo em dois exércitos ao mesmo tempo, até o primeiro se formar. O conserto já está testado e guardado
   (`qa/patch3/consertos/L-687-leva.patch`).
+- L-688: quem mora fora do bairro principal da sua cidade pode sair da caverna pela boca errada, de onde os pés não o levam
+  para casa. O conserto também está testado e guardado (`qa/patch3/consertos/L-688-caverna.patch`).
+- L-689: na metrópole pronta, a muralha de Birka foi erguida por cima da borda de Kaupang, e o portão dela ficou encostado na
+  fogueira da vizinha: uma faixa de Kaupang com 6 casas e 23 moradores ficou presa entre a muralha e a água, sem saída a pé.
+  É da família dos portões que não deixam passar (L-491), o primeiro item dos Bairros Vivos, e entra com ele.
 - O load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros módulos. É o
   mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
 

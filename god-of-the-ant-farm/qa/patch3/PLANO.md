@@ -237,7 +237,12 @@ acertos:
   campos do lote guardado deixa ruínas em cima dele até o dia seguinte; decidido o conserto (B) no D-149, com a prova na
   `escala.js`; a `lote-bolsao` q3 volta a passar com ele) e o L-687 (a leva chama de novo quem está na lista de um exército em
   reunião: o conserto e a prova `qa/leva.js` já testados, prontos para aplicar, em `qa/patch3/consertos/L-687-leva.patch`;
-  a pasta `consertos/` guarda os consertos prontos dos defeitos deixados para cá). Uma pergunta da cidade para medir junto (T-639): Mênfis era metrópole
+  a pasta `consertos/` guarda os consertos prontos dos defeitos deixados para cá), o L-688 (a saída da caverna pela casa de
+  quem sai: conserto pronto em `consertos/L-688-caverna.patch`; a `maos` m13 volta a passar com ele) e o L-689 (a muralha de
+  Birka fechou uma faixa de Kaupang num bolsão: entra com o L-491 e o L-658 no primeiro item — o portão com os dois lados
+  abertos e o `openWays` também para os prédios de outra cidade; a `agua-solta`, a `cais-longe`, o `caminho-longo` e a
+  `represa` voltam a passar com ele). Uma pergunta para verificar (T-645): a carga da obra talvez não pergunte a força das
+  mãos (a Xântipe sem os dois braços recebeu 4 de madeira). Uma pergunta da cidade para medir junto (T-639): Mênfis era metrópole
   no ano 30 da mega e só pediu a cadeia no 49 — a cadeia é o último desejo do planejador, que começa uma obra por vez. E, dito
   pelo C no D-148: o load ainda limpa as reuniões da ordem (`s.meets = []`, o conclave fora do save) e zera os relógios de
   outros módulos — o que o mundo vivo continuaria vai no save (L-419).
