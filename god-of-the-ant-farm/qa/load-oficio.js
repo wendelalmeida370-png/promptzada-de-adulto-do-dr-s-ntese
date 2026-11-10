@@ -53,24 +53,31 @@ settle();
 // ready world has no town where one more beast asks a hunter: the generation-10 «cidade» has Mênfis with five beasts near it,
 // Tenochtitlan and Hedeby with three (a town counts three at most), and Roma with none but its hands too few — a second
 // hunter for one beast gives way to the wood and the forage, and for two beasts it does not (village.js, the trades). T-324
-let town = null, base = 0, wolves = [];
-for (const s of [...S().settlements.values()].filter(q => adults(q).length >= 7 && r2(q.cx) === q.cx && r2(q.cy) === q.cy).sort((a, b) => a.id - b.id)) {
-  const h0 = hunters(s); const put = [];
-  for (let k = 0; k < 3; k++) {
-    const [x, y] = wolfAt(s, k); if (!G.W.inb(x, y)) break;
-    put.push(god(() => G.Animals.spawn('wolf', x, y, { age: 6 }))); settle();
-    if (hunters(s) > h0) { town = s; base = h0; wolves = put; break; }
+let town = null, base = 0, wolves = [], where = world;
+const findTown = () => {
+  for (const s of [...S().settlements.values()].filter(q => adults(q).length >= 7 && r2(q.cx) === q.cx && r2(q.cy) === q.cy).sort((a, b) => a.id - b.id)) {
+    const h0 = hunters(s); const put = [];
+    for (let k = 0; k < 3; k++) {
+      const [x, y] = wolfAt(s, k); if (!G.W.inb(x, y)) break;
+      put.push(god(() => G.Animals.spawn('wolf', x, y, { age: 6 }))); settle();
+      if (hunters(s) > h0) { town = s; base = h0; wolves = put; break; }
+    }
+    if (town) return true;
+    god(() => { for (const w of put) S().animals.delete(w.id); }); settle();
   }
-  if (town) break;
-  god(() => { for (const w of put) S().animals.delete(w.id); }); settle();
-}
-if (!town) { ok('o1 o lobo a um fio das vinte casas: a ida e volta não muda ofício', false, 'precondição: nenhuma cidade onde até três lobos a mais pedem um caçador a mais'); process.exit(1); }
+  return false;
+};
+// (and in the metropole when this world has none: the «cidade» of the generation 19 is a young world — its four towns of 9 to 11
+// grown ones have every hand in a trade the board takes no one from for a hunter (the fields, the fishermen, the shepherds, the
+// works, the priest), and three wolves more ask a hunter the town has no hand for —, as the lar.js l13 goes there for its house)
+if (!findTown() && world !== 'metropole') { M.pronto('metropole'); M.viver(2); settle(); where = 'metropole'; findTown(); }
+if (!town) { ok('o1 o lobo a um fio das vinte casas: a ida e volta não muda ofício', false, `precondição: nenhuma cidade onde até três lobos a mais pedem um caçador a mais (${world === 'metropole' ? 'na metrópole' : `em «${world}» nem na metrópole`})`); process.exit(1); }
 const d0 = Math.max(...wolves.map(w => G.dist(w.x, w.y, town.cx, town.cy)));
 // o1: the round trip — the settled town, saved and loaded: the same trades
 { const h1 = hunters(town); const trip = QA.roundTrip(); const t = S().settlements.get(town.id);
   const d1 = Math.min(...wolves.map(w => { const wb = S().animals.get(w.id); return wb ? G.dist(wb.x, wb.y, t.cx, t.cy) : -1; }));
   ok('o1 o lobo a um fio das vinte casas: a ida e volta não muda ofício', !trip.diff.length && d0 < 20 && d1 >= 20,
-    `${t.name}: ${wolves.length > 1 ? `os lobos ${wolves.map(w => '#' + w.id).join(', ')} a até` : `o lobo #${wolves[0].id} a`} ${d0.toFixed(3)} casas do centro (no save, a ${wolves.length > 1 ? 'no mínimo ' : ''}${d1.toFixed(3)}: fora da conta); ${h1} caçadores com ${wolves.length > 1 ? 'eles' : 'ele'} (${base} sem); o save: ${trip.diff.length ? trip.diff.slice(0, 2).join(' | ') : 'igual'}`);
+    `${t.name}${where !== world ? ` (na metrópole: «${world}» não tem a cidade do caso)` : ''}: ${wolves.length > 1 ? `os lobos ${wolves.map(w => '#' + w.id).join(', ')} a até` : `o lobo #${wolves[0].id} a`} ${d0.toFixed(3)} casas do centro (no save, a ${wolves.length > 1 ? 'no mínimo ' : ''}${d1.toFixed(3)}: fora da conta); ${h1} caçadores com ${wolves.length > 1 ? 'eles' : 'ele'} (${base} sem); o save: ${trip.diff.length ? trip.diff.slice(0, 2).join(' | ') : 'igual'}`);
 }
 // o2: who deals the trades out anew is the world's step — the wolves dead after the load, the town wants back what it wanted
 { const t = S().settlements.get(town.id); const h1 = hunters(t); god(() => { for (const w of wolves) S().animals.delete(w.id); }); live(6);

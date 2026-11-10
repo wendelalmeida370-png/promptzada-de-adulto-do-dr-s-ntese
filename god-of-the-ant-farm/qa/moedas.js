@@ -65,6 +65,11 @@ S.time = 0.2; // (a morning: the markets and the doors open)
 // the generation 15 was saved past midnight, at 0,003, with the town asleep, and the thief of m2, one awake out of doors as the
 // world's thief is, was nobody: «sem ladrão», T-519)
 live(30, () => people().filter(o => o.sleeping).length * 4 <= people().length);
+// (the keeper of the town's tavern kept out of the day's cases: the m3's evening needs him rested. In the metropole of the
+// generation 19 the first grown one of Tenochtitlan, Moctezuma, was its keeper and the collector of m1: the round of 4 kept him
+// at it all day, and at the tavern's hour he had 0 of energy and 100 of hunger: he ate, slept until 0,80 and opened the tavern
+// at 0,815, a little before it shuts at 0,88)
+{ const tv = of(set).find(o => o.type === 'taverna'); if (tv) for (const v of S.villagers.values()) if (v.job === tv.id && v.role === 'taverneiro') used.add(v.id); }
 
 // m1 the tax round: the houses with coins near the tax office, by the economy's own errand
 let tax = null, taxRoute = [];
@@ -88,11 +93,13 @@ let thief = null, robbed = null;
 }
 // m3 the tavern: a drinker with coins at home — sent in the evening, after the day's cases (below): the tavern opens at the
 // evening's hour (act-taverna.js, T.horas — 0,55 in a city), and in the morning of the other cases nobody is served there (T-272)
-let drinker = null, tv0 = null;
+let drinker = null, tv0 = null, why3 = '';
 {
   const tv = tv0 = of(set).find(o => o.type === 'taverna');
   if (tv && !((tv.inv || {}).food >= 2)) D.make('b:' + tv.id, 'food', 6, { code: 'teste', part: true }); // (a meal on the tavern's shelf)
-  drinker = pick(o => (E.homeOf(o).coin || 0) >= 3 && tv && G.dist(o.x, o.y, tv.x, tv.y) < 25);
+  // (and hands that can take the cup — D.strength —: in the metropole of the generation 19 the first, Izel of Tenochtitlan, 57, has
+  // lost both arms; seated at the table, the keeper's serving put nothing in them, and she waited the 45 s and left, three times)
+  drinker = pick(o => (E.homeOf(o).coin || 0) >= 3 && tv && G.dist(o.x, o.y, tv.x, tv.y) < 25 && D.strength(o) > 0);
 }
 // m4 the family's errand of shopping: one of a house that lacks something and has coins
 let shopper = null, shopWhy = '', shopZ = null, shopK = null, shopTries = 0, holdM = null, reopened = 0; const skip4 = [];
@@ -183,6 +190,13 @@ live(150, () => {
     if (!keeper) { keeper = pick(o => o.role !== 'guerreiro' && o !== drinker); if (keeper) { keeper.role = 'taverneiro'; keeper.job = tv0.id; Vg.endTask(keeper); } }
     const keep = () => { if (keeper && (keeper.role !== 'taverneiro' || keeper.job !== tv0.id)) { keeper.role = 'taverneiro'; keeper.job = tv0.id; } };
     const h = G.Taverna && G.Taverna.horas ? G.Taverna.horas(tv0) : { abre: 0.55 }; if (S.time < h.abre) S.time = h.abre + 0.005;
+    // (and the town's feast of the day kept for another day by the god's hand while the evening lasts — festivals.js, the plan of the
+    // day —: the feast calls the whole town, 3,2, the keeper too, as it should (the taverna.js's t8, T-622). In the metropole of the
+    // generation 19 the feast of Tenochtitlan began at 0,75 and took Moctezuma from the counter until 0,85, with the guests left at
+    // the tables)
+    const noFeast = () => { if (!set.festPlan || set.festPlan.day !== S.day || set.festPlan.key || !set.festPlan.done) set.festPlan = { day: S.day, key: null, done: true }; };
+    noFeast(); const tired3 = keeper ? `energia ${Math.round(keeper.energy)}, fome ${Math.round(keeper.hunger)}${keeper.sleeping ? ', dormindo' : ''}` : '';
+    let open3 = null, most3 = 0, fest3 = !!(G.Fest && G.Fest.active(set.id));
     // (sent when the tavern's errand can take him — ashore, awake, at nothing above it —, and a send counted when it took: the
     // world's boat may have him at the evening's hour — in the metropole of the generation 15 Ptahhotep, a fisherman, was
     // aboard, the five sends went in five steps, each cut at once by the boat's own errand, and he came ashore and went home:
@@ -194,7 +208,9 @@ live(150, () => {
     // and he went down a cave for the rest of the evening)
     const toDoor = () => { Vg.endTask(drinker); if (drinker.ug && G.Caves) G.Caves.exitNow(drinker); drinker.inside = 0; if (drinker.carry && drinker.carry.n > 1e-6 && drinker.carry.k !== 'water') Vg.toStore(drinker, G.Fac.idOfV(drinker), 'teste'); const [fx, fy] = V.frontTile(tv0); drinker.x = fx + 0.5; drinker.y = fy + 0.5; drinker.path = null; };
     let sent = 0;
-    live(150, () => { keep(); if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5 && free3()) { toDoor(); const t = E.tavernTask(drinker, Vg.H); if (t && drinker.task === t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
+    live(150, () => { keep(); noFeast(); if (G.Fest && G.Fest.active(set.id)) fest3 = true; const dia3 = G.Taverna && G.Taverna.dia(tv0); if (dia3) { if (open3 === null) open3 = S.time; most3 = Math.max(most3, dia3.data.servidos); } if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5 && free3()) { toDoor(); const t = E.tavernTask(drinker, Vg.H); if (t && drinker.task === t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
+    // (what the evening was, told when nothing was paid: the keeper, the day of the tavern, the sends, the drinker)
+    { const tk = v => (v ? `${v.name} (${v.task ? v.task.type + '/' + v.task.st : 'sem afazer'}${v.aboard ? ', a bordo' : ''}${G.Expe && G.Expe.memberOf(v.id) ? ', da tripulação de uma viagem' : ''}${v.sleeping ? ', dormindo' : ''}${D.strength(v) > 0 ? '' : ', sem força nas mãos'})` : 'ninguém'); why3 = `o taverneiro ${tk(keeper)}, à hora da taverna com ${tired3}; o dia da taverna ${open3 !== null ? 'abriu às ' + r2(open3) + ', ' + most3 + ' servidos' : 'não abriu'}${fest3 ? '; uma festa da cidade no meio da noite' : ''}; ${sent} envio(s); quem bebe: ${tk(drinker)}`; }
   }
 }
 {
@@ -207,7 +223,7 @@ live(150, () => {
 }
 {
   const tv = lines.filter(e => (e[8] === 'taverna' || e[8] === 'rodada') && drinker && e[3] === 'h:' + drinker.home);
-  ok('m3 a taverna: a refeição e as rodadas, da casa de quem bebe, pelo livro', !!drinker && tv.length > 0, drinker ? `${drinker.name}: ${tv.map(e => e[8] + ' ' + r2(e[6]) + ' → ' + e[4]).slice(0, 4).join(', ') || 'nada pago'}` : 'ninguém na taverna');
+  ok('m3 a taverna: a refeição e as rodadas, da casa de quem bebe, pelo livro', !!drinker && tv.length > 0, drinker ? `${drinker.name}: ${tv.map(e => e[8] + ' ' + r2(e[6]) + ' → ' + e[4]).slice(0, 4).join(', ') || `nada pago (${why3})`}` : 'ninguém na taverna');
 }
 {
   const cp = lines.filter(e => shopper && e[3] === 'h:' + shopper.home && e[5] === 'moedas' && (e[8] === 'compra' || e[8] === 'venda' || e[8] === 'compra-em-casa'));

@@ -162,7 +162,20 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
   // back, not the race with the town's works for it before he sets out, which is the e1's (L-400). In the generation 7's
   // Argos the works take the wood that comes to the store in seconds — in the e2's probe the stoker spent the morning at the
   // fields' work and a delivery —, and without the hand the furnace stayed cold for the 90 s, T-281)
-  if (op && A.live(op)) { D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true }); keeping = keep(f); }
+  // (and the stoker at his trade while the wood comes back — the test's hand, as the clock: the errand of a free hour, under the
+  // work's 1 (the play, the market, a chat, the house's evening), given up for his trade's door (E.jobTask) the second he is at
+  // one with his hands free, and the weather held calm, as the ready() leaves it. In the metropole of the generation 19 the cold
+  // part ended at 0,45, with the play of Tenochtitlan's theatre, the Campo de Pelota, in its making ready (from 0,40, Tt.EARLY — and
+  // one far from its doors sets out before they open, Tt.go): Nezahualcóyotl, the stoker, went to the play at his first look, a
+  // storm sent him home, an errand to the cave came after it, and his trade was not asked once in the 90 s: «a fornalha
+  // apagada». The case is the trade's answer to the wood come back — the free hour's choice is the e1's day)
+  const toTrade = () => {
+    S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
+    const k = Te.keeperOf(b); const t = k && k.task;
+    if (!k || k.sleeping || !A.able(k) || (k.carry && k.carry.n > 1e-6) || G.Vg.handsBusy(k) || (t && ((t.pri || 0) >= 1 || t.kind === 'eat' || t.kind === 'sleep'))) return;
+    G.Vg.endTask(k); E.jobTask(k, G.Vg.H);
+  };
+  if (op && A.live(op)) { D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true }); const kp = keep(f); keeping = () => { kp(); toTrade(); }; }
   // (the stoker ends what he does — an idle look at the cold furnace lasts up to 16 s —, walks to the store and back, and feeds
   // it: 90 s, inside the day — the clock held at the hour the wood came back, the test's hand, as the counters' cases hold it:
   // in the metropole of the generation 16 the cold part ended at 0,40, the capital's trade had taken Sitamun, the stoker, who

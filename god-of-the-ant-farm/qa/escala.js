@@ -836,7 +836,10 @@ run('e23', () => {
   // (um teto de 1 — quatro mãos crescidas —: o primeiro da fila leva a única mão; com a comida garantida, os serviços abertos a mais)
   const seguro = V.foodSafe(f.id); const deu = E.share(Object.assign({}, pede), set, f, 4);
   const fs0 = V.foodSafe; V.foodSafe = () => false; const antes = E.share(Object.assign({}, pede), set, f, 4); V.foodSafe = fs0;
-  ok('e23a o teto guarda os serviços com a comida garantida', seguro && sv.taverneiro >= 1 && sv.ator >= 1 && deu.taverneiro === 1 && deu.ator === 1 && antes.taverneiro + antes.ator + antes.oleiro + antes.ferreiro + antes.mercador + antes.feirante === 1,
+  // (one hand guarded for each service open, as far as the town asks — the keeper of each tavern, an actor of each theatre or arena
+  // (E.kept) —: the town of the metrópole of the generation 19 has two taverns open, and the two keepers it asks are both guarded)
+  const guard = r => Math.min(pede[r], sv[r]);
+  ok('e23a o teto guarda os serviços com a comida garantida', seguro && sv.taverneiro >= 1 && sv.ator >= 1 && pede.taverneiro >= 1 && pede.ator >= 1 && deu.taverneiro === guard('taverneiro') && deu.ator === guard('ator') && antes.taverneiro + antes.ator + antes.oleiro + antes.ferreiro + antes.mercador + antes.feirante === 1,
     `abertos ${JSON.stringify(sv)}; pedem ${JSON.stringify(pede)}, teto 1 — com a comida garantida ${JSON.stringify(deu)}; em risco ${JSON.stringify(antes)}`);
   const w1 = { taverneiro: 1, ator: 2, oleiro: 1 }; const n1 = E.cut(w1, 3, { taverneiro: 1, ator: 1 });
   ok('e23b o corte do resto deixa os serviços guardados', n1 === 2 && w1.taverneiro === 1 && w1.ator === 1 && w1.oleiro === 0, `corta 3 de ${JSON.stringify({ taverneiro: 1, ator: 2, oleiro: 1 })} guardando um taverneiro e um ator: ${n1} cortados, ${JSON.stringify(w1)}`);
