@@ -293,6 +293,13 @@ const LEDGER_OK27 = [
   });
   if (!back7) fails.push('o susto: expeditions.js sem o laço da volta da tripulação ao cais (L-367) — a regra 38 (7) não acha onde ele pergunta ao hiding(v)');
   if (!kids7) fails.push('o susto: expeditions.js sem a escolha dos colonos do X.colony (const members = … free(v, f, { minAge: 2 …) — a regra 38 (7) não acha onde as crianças perguntam ao hiding(v)'); }
+// 38 (10). o adeus de uma viagem (expeditions.js, os parentes da tripulação e o governante descendo ao cais, 2,4) é um chamado
+// de fora: não tira ninguém da cama (L-661) nem do meio de uma operação (L-678) — na linha do setTask 'adeus' ou nas duas antes
+// dela, a escolha pergunta ao Vg.busy e ao sono
+{ const ex = src['expeditions.js'] || []; let n = 0;
+  ex.forEach((l, k) => { if (!/G\.Vg\.setTask\(.*type:\s*'adeus'/.test(l)) return; n++; const near = ex.slice(Math.max(0, k - 2), k + 1).join('\n');
+    if (!/Vg\.busy\(/.test(near) || !/sleeping/.test(near)) fails.push(`mãos ocupadas: expeditions.js:${k + 1} o adeus da viagem chama sem perguntar ao Vg.busy e ao sono (L-661, L-678): ${l.trim().slice(0, 100)}`); });
+  if (!n) fails.push('mãos ocupadas: expeditions.js sem o setTask do adeus — a regra 38 (10) não acha onde ele pergunta ao Vg.busy (L-678)'); }
 // 38 (8). as escolhas da guerra não levam mãos ocupadas (L-461): a leva (wars.js, o laço dos candidatos do mobilize), o bando
 // por terra (war.js, Wr.launch), a tripulação do ataque pelo mar (naval.js, pickCrew), a da frota e o almirante (fleets.js,
 // o pool do manShips e os candidatos do form) perguntam ao Vg.handsBusy — o chamado não espera, mas a escolha é feita antes
