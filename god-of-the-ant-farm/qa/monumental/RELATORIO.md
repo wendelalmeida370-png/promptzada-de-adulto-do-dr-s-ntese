@@ -306,8 +306,10 @@ obrigaria a gerar os mundos prontos outra vez; cada um está descrito no AUDIT, 
 
 Os consertos já testados desses defeitos estão guardados em `qa/patch3/consertos/`, prontos para aplicar no começo dos
 Bairros Vivos. Os testes que pegaram cada um continuam falhando com razão até lá, como falhas conhecidas na linha de base.
-- O load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros módulos. É o
-  mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
+- L-694: o load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros
+  módulos. É o mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
+- L-693: quem perdeu os dois braços senta à mesa da taverna toda noite e nunca é servido (as portas que dão coisa às mãos
+  não perguntam a força delas).
 
 **Os buracos antigos que também ficam para os Bairros Vivos:**
 - o governante morar no palácio (a lacuna «palácio/morar» da matriz);

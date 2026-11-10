@@ -245,8 +245,9 @@ acertos:
   `consertos/L-690-quintal.patch`; a `escala` e3h volta a passar), L-691 (o muro que fecha um prédio de caminho longo ao longo
   da linha; `consertos/L-691-muro-caminho.patch`; com o L-491; o `muros` 7a volta a passar) e L-692 (o balanço do bicho de
   árvore desfaz o afastamento do lote novo; da família do L-631; `consertos/L-692-bicho-arvore.patch`; o `rebanho` r12 volta a
-  passar). Todos os patches de `consertos/` aplicam limpo na versão publicada da Arquitetura Monumental. Uma pergunta para verificar (T-645): a carga da obra talvez não pergunte a força das
-  mãos (a Xântipe sem os dois braços recebeu 4 de madeira). Uma pergunta da cidade para medir junto (T-639): Mênfis era metrópole
+  passar). Todos os patches de `consertos/` aplicam limpo na versão publicada da Arquitetura Monumental. E o L-693 (quem perdeu os dois braços senta na taverna e nunca é servido; da mesma família, a carga da obra que
+  talvez não pergunte a força das mãos, T-645) e o L-694 (o load encerra as reuniões da ordem e zera relógios de módulo —
+  o que o C já dizia no D-148). Uma pergunta da cidade para medir junto (T-639): Mênfis era metrópole
   no ano 30 da mega e só pediu a cadeia no 49 — a cadeia é o último desejo do planejador, que começa uma obra por vez. E, dito
   pelo C no D-148: o load ainda limpa as reuniões da ordem (`s.meets = []`, o conclave fora do save) e zera os relógios de
   outros módulos — o que o mundo vivo continuaria vai no save (L-419).
