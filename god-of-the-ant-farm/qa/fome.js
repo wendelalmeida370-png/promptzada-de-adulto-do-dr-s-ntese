@@ -511,9 +511,13 @@ const calmOne = (skip, also) => {
       // (the danger over while she is on the way: the refuge ends in ten calm seconds, before the cave — and she eats)
       set.alarmT = 0; let wentIn = false, ended = null; const t0 = S.clock;
       live(30, () => { if (a.ug) wentIn = true; if (!hiding(a) && ended === null) ended = Math.round((S.clock - t0) * 10) / 10; return ended !== null; });
+      // (the meal the case is about is the one after the refuge: one already on the way to the store when the alarm rang eats there
+      // first, and the refuge takes him fed — in the «cidade» of the generation 18 Quinto ate (95 → 46) a moment before it took him, and
+      // the hunger was 51,6 when the danger passed; the hunger put back at the top by the test's hand, as at the start — T-594)
+      const fedBefore = a.hunger < 90; if (fedBefore) a.hunger = 95;
       const ate = live(60, () => a.hunger < 50);
       good = fled && !farFled && ended !== null && !wentIn && ate;
-      info = `${set.name}, ${C_(cm.cv)}: com o alarme, ${a.name} (${Math.round(a.age)} anos, a ${Math.round(G.dist(near[0], near[1], set.cx, set.cy))} casas do meio da cidade) ${fled ? `fugiu para a caverna (st ${st0})` : 'NÃO fugiu'}; ${b.name} (${Math.round(b.age)} anos, a ${Math.round(fd)} casas, além dos campos) ${farFled ? 'MANDADO À CAVERNA DE LONGE' : 'não foi mandado'}; o perigo passou com ${a.name} a caminho: ${ended !== null ? `o refúgio acabou ${ended} s depois${wentIn ? ', MAS ELA ENTROU NA CAVERNA' : ', antes da caverna'}` : 'o refúgio NÃO acabou'}; com a fome 95, ${ate ? 'comeu' : 'NÃO comeu'}`;
+      info = `${set.name}, ${C_(cm.cv)}: com o alarme, ${a.name} (${Math.round(a.age)} anos, a ${Math.round(G.dist(near[0], near[1], set.cx, set.cy))} casas do meio da cidade) ${fled ? `fugiu para a caverna (st ${st0})` : 'NÃO fugiu'}; ${b.name} (${Math.round(b.age)} anos, a ${Math.round(fd)} casas, além dos campos) ${farFled ? 'MANDADO À CAVERNA DE LONGE' : 'não foi mandado'}; o perigo passou com ${a.name} a caminho: ${ended !== null ? `o refúgio acabou ${ended} s depois${wentIn ? ', MAS ELA ENTROU NA CAVERNA' : ', antes da caverna'}` : 'o refúgio NÃO acabou'}${fedBefore ? ' (tinha comido antes de o refúgio o levar: a fome de volta a 95)' : ''}; com a fome 95, ${ate ? 'comeu' : 'NÃO comeu'}`;
     }
   }
   ok('h16 o refúgio da caverna é da cidade atacada, e acaba com o perigo — também a caminho (L-601)', good, info);
@@ -562,7 +566,7 @@ const calmOne = (skip, also) => {
   const posts = s => !!s && (POSTS.some(t => G.Eco.byType(s.id, t).length) || (w => !!(w && w.done && w.gates.length))(G.Siege && G.Siege.wallOf(s.id)));
   const MEAL = { eat: 1, forage: 1, lar: 1, idle: 1 };
   const v = calmOne([], q => q.role === 'guerreiro' && posts(S.settlements.get(q.set)));
-  let shift = null, tries = 0, took = -1, h0 = 0, info = 'nenhum soldado numa cidade calma com posto de guarda'; const held = { early: null, late: null, task: '-' };
+  let shift = null, tries = 0, took = -1, h0 = 0, info = 'nenhum soldado numa cidade calma com posto de guarda'; let pan2 = 0; const held = { early: null, late: null, task: '-' };
   if (v) {
     const t0 = S.time; const h = S.buildings.get(v.home);
     const pan = h ? D.get('h:' + h.id, 'food') : 0; if (pan > 0) D.use('h:' + h.id, 'food', pan, { code: 'teste', part: true });
@@ -600,6 +604,9 @@ const calmOne = (skip, also) => {
       // (right after a look that found no meal: the stamp is now)
       const st0 = t2 ? t2.noMealT : 0; for (let j = 0; t2 && j < 40 && v.task === t2 && t2.noMealT === st0; j++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); }
       if (t2 && v.task === t2) {
+        // (and the house's pantry empty again for the look, as at the start of the case: the checker always looks at the pantry, and the
+        // family may have filled it meanwhile — in the «cidade» of the generation 18 it had 5 by then, and the look at 1 s spoke of it, T-595)
+        pan2 = h ? D.get('h:' + h.id, 'food') : 0; if (pan2 > 0) D.use('h:' + h.id, 'food', pan2, { code: 'teste', part: true });
         const said = () => QA.check().filter(q => q.sys === 'fome' && q.sev === 2 && q.id === v.id).map(q => q.msg);
         v._noStore = 0; const c1 = S.clock;
         while (S.clock - c1 < 1) { v.think = 99; M.viver(0.1); } held.early = said();
@@ -610,6 +617,7 @@ const calmOne = (skip, also) => {
     }
     for (const [b, [n, g]] of bushes) { b.berries = n; b.grow = g; }
     if (pan > 0 && h) D.make('h:' + h.id, 'food', pan, { code: 'teste', part: true });
+    if (pan2 > 0 && h) D.make('h:' + h.id, 'food', pan2, { code: 'teste', part: true });
     if (h) h.water = w0;
     S.time = Math.max(S.time, t0);
     info = shift ? `${v.name}, de guarda ${shift.at} por falta de refeição (turno de ${shift.dur} s, ${shift.left} ainda por fazer, na ${tries}ª escolha): com o armazém ao alcance de novo, ${took >= 0 ? `foi comer em ${took.toFixed(1)} s` : 'NÃO foi comer em 30 s'}; vida ${shift.hp}` : `${v.name}: em ${tries} escolhas, nenhum turno de guarda no posto por falta de refeição`;
