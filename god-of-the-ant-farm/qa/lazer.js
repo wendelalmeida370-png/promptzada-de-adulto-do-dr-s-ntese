@@ -26,6 +26,12 @@ const world = process.argv[2] || 'metropole';
 // were saved, L-419, and the ready worlds of the generation 7 are older than the trades of the Patch 2, which the load of
 // before dealt at once; the twelve seconds stay for any world, a save of before too, T-298)
 M.pronto(world);
+// (a ready world saved in the night lives it out first, until nine in ten of its grown ones are awake: the cases move the clock
+// to the show's afternoon, and one asleep sleeps on by his own rest, whatever the clock says — the metrópole of the generation 19
+// was saved at 0,002, two of three grown ones in bed, and the two actors of the ball court of Tenochtitlan woke at 0,54 and 0,57,
+// past the preparation's call: the play was called off «sem atores» in nearly every case)
+{ const abed = () => { let n = 0, a = 0; for (const v of G.S.villagers.values()) { if (v.age < 16) continue; a++; if (v.sleeping) n++; } return n > 0.1 * a; };
+  for (let t = 0; t < G.DAY_LEN && abed(); t++) M.viver(1); }
 // (the theatre of the tests is the world's own where one stands. Where none does, the god's hand raises one of a town's own, the
 // most peopled town of coin (else of any) first: a theatre the town is raising, finished (V.completeBuilding) — the metrópole of
 // the generation 18, short of land, had none standing and no lot of 6 in any town, but Roma's and Corinto's going up, T-605 —;
