@@ -17,6 +17,9 @@ const sim = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 const f2 = p => (p ? p.map(n => n.toFixed(2)).join(',') : '-');
 const day = () => sim(() => G.Village.onNewDay()); // (the turn of the day of the villages: the lost among them, the doors)
 M.pronto(KEY); G.Interiors.uncache();
+// (the world lives to its own morning before the case — the case wants two of the town out of doors, and a world saved at night
+// has them asleep in their houses: the «cidade» of the generation 19 is saved at night, and Mênfis had fewer than two out)
+for (let k = 0; k < 400 && !(G.S.time > 0.3 && G.S.time < 0.36); k++) M.viver(1);
 const S = () => G.S, N = G.N; const at = (x, y) => y * N + x;
 const size = p => { const L = W.reachIds(true); if (!p || !W.walkableXY(p[0], p[1])) return -1; const r = L[W.idx(p[0], p[1])]; let n = 0; for (let i = 0; i < L.length; i++) if (L[i] === r) n++; return n; };
 // (a lot of one tile by the main town, in its streets: the lot and two rings round it ground one walks with nothing on it)
