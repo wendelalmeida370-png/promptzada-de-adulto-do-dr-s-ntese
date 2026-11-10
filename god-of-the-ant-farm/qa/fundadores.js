@@ -6,7 +6,8 @@
 // partiam deixando os bebês: L-442), e o casamento real mandava o corpo morar com o outro povo.
 // Cinco que não podem ir — o corpo do deus, um preso na cela, um emissário a caminho, um soldado de um bando e um mercador
 // com a sua caravana:
-//  f1 no mundo pronto (a «mega», por padrão), na maior cidade com cadeia, o corpo uma moça casada: nenhum dos cinco está entre
+//  f1 no mundo pronto (o pedido; sem pedido, a «mega» e, se nenhuma cidade dela tem a cadeia de pé, o primeiro mundo pronto
+//     que tenha uma — e a linha diz qual), na maior cidade com cadeia, o corpo uma moça casada: nenhum dos cinco está entre
 //     os fundadores, em 200 escolhas (200 sortes do mundo);
 //  f2 entre os fundadores, todos podem ir, e cada casal leva os filhos pequenos que estão na cidade;
 //  f3 os colonos de um navio — num mundo de ilhas (num continente dos mundos prontos não sobra praia livre: toda relva fica a
@@ -22,7 +23,10 @@
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const WORLD = process.argv[2] || 'mega';
+// (the ready world of f1, f2 and f4: the one asked for; else the mega and, where no town has its jail standing, the first ready
+// world where one has — in the mega of the generation 19, year 50, the only jail, Mênfis's, founded in the year 49, was still
+// a work: the town finishes it two days later)
+const WORLDS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'mundial', 'cidade', 'anos100', 'anos500', 'anos1000'];
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | fundadores ${name} | ${info}`); if (!c) fails.push(name); };
 (async () => {
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192'] }); const page = await browser.newPage();
@@ -31,7 +35,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
   await page.addInitScript(() => { window.requestAnimationFrame = () => 0; try { localStorage.clear(); } catch (e) { } });
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto(process.env.GAME || 'file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
-  await page.addScriptTag({ path: __dirname + '/qa.js' }); await page.addScriptTag({ path: path.join(ROOT, 'worlds', WORLD + '.js') });
+  await page.addScriptTag({ path: __dirname + '/qa.js' });
   // (in the page: the five who cannot go, made in a town; their state; the families of a list that are not whole)
   await page.evaluate(() => {
     window.__F = {
@@ -69,13 +73,13 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       clean: () => QA.check().filter(e => e.sev <= 2).map(e => e.msg),
     };
   });
-  // f1, f2, f4 — the ready world
-  const r = await page.evaluate(W => {
-    G.Save.apply(JSON.parse(G.Ready.data[W])); G.Main.mode = 'game'; G.UI.setSpeed(0); const S = G.S;
+  // f1, f2, f4 — the ready world (WORLDS: each enters the page only in its turn, and its text goes once read)
+  const f124 = W => page.evaluate(W => {
+    G.Save.apply(JSON.parse(G.Ready.data[W])); delete G.Ready.data[W]; G.Main.mode = 'game'; G.UI.setSpeed(0); const S = G.S;
     if (G.Audio) { G.Audio.mute = true; G.Audio.sfxOn = false; G.Audio.musicOn = false; }
     const pop = s => [...S.villagers.values()].filter(v => v.set === s.id).length;
     const set = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Fac.get(s.fac).alive && [...S.buildings.values()].some(b => b.type === 'cadeia' && b.set === s.id && b.built)).sort((a, b) => pop(b) - pop(a) || a.id - b.id)[0];
-    if (!set) return { err: 'nenhuma cidade com cadeia' };
+    if (!set) return { none: true };
     const c = __F.five(set); if (c.err) return { err: c.err };
     const out = { town: set.name, pop: pop(set), five: c.list.map(v => v.name + '#' + v.id), t0: __F.tasks(c) };
     if (G.Village.pickFounders) {
@@ -95,11 +99,15 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     let envDanger = 0; for (let k = 0; k < 300; k++) { G.debug.step(0.1); const t = c.env.task; if (t && t.pri >= 4 && /^(fight|flee|hunt|panic)$/.test(t.type)) envDanger = 1; }
     out.after = __F.after(c); out.after.envDanger = envDanger; out.after.envHome = c.env.set === set.id; out.bad = __F.clean().slice(0, 4);
     return out;
-  }, WORLD);
+  }, W);
+  let r = null; const tried = [];
+  for (const W of WORLDS) { await page.addScriptTag({ path: path.join(ROOT, 'worlds', W + '.js') }); r = await f124(W); if (!r.none) { r.world = W; break; } tried.push(W); }
+  if (r.none) r = { err: `nenhuma cidade com cadeia pronta em ${tried.join(', ')}` };
+  const where = `${r.world}${tried.length ? ` (sem cadeia pronta em ${tried.join(', ')})` : ''}`;
   if (r.err) ok('f1 a cidade do caso', false, r.err);
   else {
     ok('f1 o corpo do deus, o preso, o emissário, o soldado e o mercador nunca vão fundar a vila nova', !!r.picked && r.gone === 0 && r.t0.body === 'avatar' && /cela|levado/.test(r.t0.pris) && r.t0.env === 'envoy' && r.t0.sold === 'band' && r.t0.merc === 'trade',
-      r.picked ? `${r.town} (${r.pop} almas): ${r.five.join(', ')} (tarefas ${JSON.stringify(r.t0)}); 200 escolhas de ${r.sizes[0]} a ${r.sizes[1]} fundadores, ${r.gone} com algum dos cinco` : 'sem G.Village.pickFounders: a escolha dos fundadores fica dentro do checkExpansion, sem filtro nenhum');
+      r.picked ? `${r.town}, ${where} (${r.pop} almas): ${r.five.join(', ')} (tarefas ${JSON.stringify(r.t0)}); 200 escolhas de ${r.sizes[0]} a ${r.sizes[1]} fundadores, ${r.gone} com algum dos cinco` : 'sem G.Village.pickFounders: a escolha dos fundadores fica dentro do checkExpansion, sem filtro nenhum');
     ok('f2 os fundadores podem ir, e cada casal leva os seus pequenos', !!r.picked && !r.badSend.length && !r.broken.length, !r.picked ? '-' : `${r.badSend.length ? 'não podiam ir: ' + r.badSend.join(', ') : 'todos podiam ir'}; ${r.broken.length ? 'filhos deixados: ' + r.broken.join(', ') : 'nenhum filho pequeno deixado para trás'}`);
   }
   // f3 — the colonists of a ship (G.Expe.colony, where the towns' colonizing by sea goes: Naval.colonize hands it over), on a
@@ -203,7 +211,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
   // (on the islands the envoy to another people has no road on foot and gives up on his own: he is judged on the ready world)
   const good = (a, road) => a.avatar && a.home && a.pris && (!road || a.env === 'envoy' || (a.envDanger && a.envHome)) && a.sold;
   ok('f4 um tempo depois: o corpo é do deus, o preso na cela, o emissário a caminho, o soldado no bando; verificador limpo', !r.err && !r3.err && good(a1, true) && good(a3, false) && !(r.bad || []).length && !(r3.bad2 || []).length && !errs.length,
-    `mundo pronto ${JSON.stringify(a1)}, ilhas ${JSON.stringify(a3)}; ${(r.bad || []).concat(r3.bad2 || []).join(' | ') || 'verificador limpo'}; ${errs.slice(0, 3).join(' · ') || 'sem erro de página'}`);
+    `mundo pronto (${r.world || '-'}) ${JSON.stringify(a1)}, ilhas ${JSON.stringify(a3)}; ${(r.bad || []).concat(r3.bad2 || []).join(' | ') || 'verificador limpo'}; ${errs.slice(0, 3).join(' · ') || 'sem erro de página'}`);
   console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'TUDO PASSOU');
   await browser.close(); process.exit(fails.length ? 1 : 0);
 })();
