@@ -315,26 +315,40 @@ function testeA() {
         [2, [[cu, cv + Bv + 0.85]].concat(podium, [onBig(rb + O.D - O.t - 0.36, am)], top)],
         [0, [[cu + 3, L - 2.0], [L - 0.85, L - 2.0], [L - 0.85, 0.85], [cu, 0.85], [cu, W.fundo.r[1] - 0.45]]],
         [0, [[cu, W.fundo.r[1] - 0.05], [cu, W.fundo.r[3] - 0.05]], 1],
+        // (and up each of the other flights, from its foot to its top: the front one to the podium, the gate's to the sand, the
+        // undercroft's under the hatch — L-665)
+        [0, [[cu, W.frente.r[3] + 0.05], [cu, W.frente.r[1] + 0.05]], 1], [0, [[W.esquerda.r[0] - 0.05, cv], [W.esquerda.r[2] - 0.05, cv]], 1], [0, [[cu, O.hypo.r[1] - 0.05], [cu, O.hypo.r[3] - 0.05]], 1],
         [2, [[cu, W.fundo.r[3] + 0.35], [cu, vL], [cu + g / 2 + 1.0, vL], [(thr[0] + thr[2]) / 2, vL], [(thr[0] + thr[2]) / 2, thr[3] + 0.45]]],
         [2, [[cu, vL], [cu - g / 2 - 1.0, vL], [bm + 0.6, vL], [bm + 0.6, ben[3] + 0.35], [bm - 0.6, ben[3] + 0.35]]],
       ];
-      const treads = F.els.filter(e => e.k === 'bloco' && e.degrau && e.r[0] >= W.fundo.r[0] - 1e-6 && e.r[2] <= W.fundo.r[2] + 1e-6 && e.r[1] >= W.fundo.r[1] - 1e-6 && e.r[3] <= W.fundo.r[3] + 1e-6);
-      const tread = (u, z) => { let y = null; for (const q of treads) if (u >= q.r[0] && u <= q.r[2] && z >= q.r[1] && z <= q.r[3] && (y === null || q.y1 > y)) y = q.y1; return y; };
-      let flight = 0;
+      // (the form's treads of each flight — its blocks marked degrau on the flight's footprint —, and the way up it: along v or u)
+      const LANCES = [['frente', W.frente.r, 1], ['fundo', W.fundo.r, 1], ['esquerda', W.esquerda.r, 0], ['subsolo', O.hypo.r, 1]];
+      const treads = []; for (const [nm, r, ax] of LANCES) for (const e of F.els) if (e.k === 'bloco' && e.degrau && e.r[0] >= r[0] - 1e-6 && e.r[2] <= r[2] + 1e-6 && e.r[1] >= r[1] - 1e-6 && e.r[3] <= r[3] + 1e-6) treads.push({ r: e.r, y1: e.y1, nm, ax });
+      // (the top of the highest tread under a point — a hair either side: the plan's are rounded to the centimetre, and at a
+      // tread's edge the next one's is the feet's —; within a hair of an edge across the way up, a step under it too: L-665)
+      const near = (q, u, z) => u >= q.r[0] - 0.011 && u <= q.r[2] + 0.011 && z >= q.r[1] - 0.011 && z <= q.r[3] + 0.011;
+      const tread = (u, z) => { let y = null, nm = null; for (const q of treads) if (near(q, u, z) && (y === null || q.y1 > y)) { y = q.y1; nm = q.nm; } return y === null ? null : { y, nm }; };
+      // (and within a cell of the grid of a flight's end: there the plan reads the flight where the cell's middle is on it — In.floorY,
+      // as In.walk reads the grid —, the storey's floor before the first tread off it: the back flight's foot at 6.68 m, the cell's
+      // middle at 6.625)
+      const edgeOf = (u, z) => treads.some(q => near(q, u, z) && (q.ax ? Math.abs(z - q.r[1]) <= 0.011 || Math.abs(z - q.r[3]) <= 0.011 : Math.abs(u - q.r[0]) <= 0.011 || Math.abs(u - q.r[2]) <= 0.011))
+        || LANCES.some(([, r, ax]) => { const c = ax ? z : u, x = ax ? u : z, k = ax ? 0 : 1; return x >= r[k] && x <= r[k + 2] && (Math.abs(c - r[ax]) <= 0.261 || Math.abs(c - r[ax + 2]) <= 0.261); });
+      let flight = 0; const per = {}; for (const [nm] of LANCES) per[nm] = 0;
       for (const [lv, path, onFlight] of legs) { let prev = null;
         for (let k = 0; k < path.length - 1; k++) { const [u0, z0] = path[k], [u1, z1] = path[k + 1]; const len = Math.hypot(u1 - u0, z1 - z0), m = Math.max(1, Math.round(len / 0.02));
           for (let j = 0; j <= m; j++) { const u = u0 + (u1 - u0) * j / m, z = z0 + (z1 - z0) * j / m; const X = b.x * TL + u, Z = b.y * TL + z; const ins = Sp.indoor(X, Z, lv, b.id);
             const foot = ins ? ins.y : Math.max(Sp.footAt(X / TL, Z / TL), Sp.stepTop(X, Z)); pts++;
             if (ins && !ins.walk) { shut++; if (!shutAt) shutAt = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; }
             if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
-            // (on the flight: the feet on its slope, within a step under its treads' edges, never over them)
-            if (onFlight) { const ty = tread(u, z); if (ty === null) continue; flight++; const d = foot - (pl.hi + ty + Sp.FLOOR_UP); if ((d > 0.03 || d < -0.3) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) no lance do fundo`; } continue; }
+            // (on a flight: the feet on each of its treads, as the form draws them — the plan has them, L-665)
+            if (onFlight) { const t = tread(u, z); if (t === null) continue; flight++; per[t.nm]++; const d = foot - (pl.hi + t.y + Sp.FLOOR_UP); const under = edgeOf(u, z) ? 0.3 : 0;
+              if ((d > 0.03 || d < -under - 0.03) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) no lance ${t.nm === 'subsolo' ? 'do subsolo' : t.nm === 'esquerda' ? 'do portão' : 'd' + (t.nm === 'frente' ? 'a frente' : 'o fundo')}`; } continue; }
             if (!ins || !ins.shell || edge(lv, u, z)) continue; // (the street before the way in; a step's edge of the rows)
             const d = foot - (pl.hi + want(lv, u, z) + Sp.FLOOR_UP); if (Math.abs(d) > 0.03 && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; } } } }
       if (worst || step > In.BODY.step + 0.01) out.push(`n ${n}: os pés a ${worst.toFixed(2)} m da forma em ${at || '—'}, o maior degrau ${step.toFixed(2)} m`);
       if (shut) out.push(`n ${n}: ${shut} pontos do caminho onde o corpo não passa (o primeiro ${shutAt})`);
-      if (!flight) out.push(`n ${n}: o caminho não subiu o lance do fundo`);
-      said.push(`n ${n}: ${pts} pontos (${flight} no lance do fundo), o maior degrau ${step.toFixed(2)} m`);
+      const sem = Object.keys(per).filter(k => !per[k]); if (sem.length) out.push(`n ${n}: o caminho não subiu o lance ${sem.join(', ')}`);
+      said.push(`n ${n}: ${pts} pontos (nos lances: ${Object.entries(per).map(([k, v]) => `${k} ${v}`).join(', ')}), o maior degrau ${step.toFixed(2)} m`);
     }
     ok('A4 os pés pelo Coliseu: da rua pelos arcos às passagens e ao subsolo, na areia, no pódio, subindo um corredor das fileiras e pelo lance do fundo até o trono e a corte do camarote', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
   }
@@ -747,8 +761,8 @@ function testeC() {
       const p = Sp.planNow(b); if (!p || !p.ok) { out.push(`${style} n ${n}: sem planta (${p ? p.errs.slice(0, 2).join('; ') : '—'})`); continue; }
       const F = Fo.of('maravilha', style, n), L = n * TL, pl = Sp.plinth(b); let worst = 0, at = '', step = 0, shut = 0, shutAt = '', pts = 0, flight = 0;
       // (the legs, each on its storey, the floor the form has under each point: on a flight, the top of the tread under it — the
-      // feet go up its slope, within a step under the treads' edges, never over them; on the Templo Mayor's, whose plan has the
-      // form's treads, on each of them — but within a hair of an edge, where the plan's are rounded to the centimetre: L-665)
+      // feet on each of them, as the form draws them — the Templo Mayor's double stair, the Great Pyramid's gallery: their plans
+      // have the form's treads —, but within a hair of an edge, where the plan's are rounded to the centimetre: L-665)
       let legs, floor, treads;
       if (style === 'egipcio') { const A = F.amphi.piramide, cu = A.cu, K = A.chamber, sv = A.sarco[3] + 0.55, fv = A.face + (A.temple ? 0.75 : 1.0), al = A.temple && A.temple.altar;
         treads = F.els.filter(e => e.oculto && e.degrau).map(e => ({ r: e.r, y1: e.y1 }));
@@ -778,7 +792,7 @@ function testeC() {
             if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
             if (!ins || !ins.shell) continue; // (the street before the way in)
             if (onFlight) { const ty = tread(u, z); if (ty === null) continue; flight++; const d = foot - (pl.hi + ty + Sp.FLOOR_UP);
-              const under = style === 'asteca' && !treads.some(q => Math.abs(z - q.r[1]) <= 0.011 || Math.abs(z - q.r[3]) <= 0.011) ? 0 : rise;
+              const under = treads.some(q => Math.abs(z - q.r[1]) <= 0.011 || Math.abs(z - q.r[3]) <= 0.011) ? rise : 0;
               if ((d > 0.03 || d < -under - 0.03) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) no lance`; } continue; }
             const d = foot - (pl.hi + floor(lv) + Sp.FLOOR_UP); if (Math.abs(d) > 0.03 && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; } } } }
       if (worst || step > In.BODY.step + 0.01) out.push(`${style} n ${n}: os pés a ${worst.toFixed(2)} m da forma em ${at || '—'}, o maior degrau ${step.toFixed(2)} m`);
@@ -1199,9 +1213,14 @@ function testeH() {
       const p = Sp.planNow(b); if (!p || !p.ok) { out.push(`n ${n}: sem planta`); continue; }
       const F = Fo.of('teatro', 'asteca', n), A = F.amphi.campo, L = n * TL, pl = Sp.plinth(b); const q = A.stands.find(z => z.s > 0), f = q.flight, inner = q.room[0], a = A.aisles[0];
       const rowY = (u, v) => { let y = A.Hw; for (const e of F.els) if (e.k === 'bloco' && (e.piso || e.degrau) && e.y0 === A.Hw && u >= e.r[0] && u <= e.r[2] && v >= e.r[1] && v <= e.r[3]) y = Math.max(y, e.y1); return y; };
-      const treads = F.els.filter(e => e.degrau && e.y0 === 0 && Math.abs(e.r[1] - f[1]) < 1e-6);
+      // (the treads of the two flights — each stand's, up its front wall from the field: the form's blocks marked degrau from the
+      // ground —; the feet on each of them, as the plan has them — but within a hair of an edge along the way up, where the plan's
+      // are rounded to the centimetre: L-665)
+      const q2 = A.stands.find(z => z.s < 0), f2 = q2.flight;
+      const treads = F.els.filter(e => e.degrau && e.y0 === 0 && [f, f2].some(r => Math.abs(e.r[1] - r[1]) < 1e-6));
+      const nearT = (e, u, z) => u >= e.r[0] - 0.011 && u <= e.r[2] + 0.011 && z >= e.r[1] - 1e-6 && z <= e.r[3] + 1e-6;
       // (from the street to the field and the alley; up the front wall's flight; along the walk by the slope; up a stairway to the walk behind the rows)
-      const legs = [[0, [[A.cu, L + 0.8], [A.cu, q.vO + 1.0], [f[0] - 0.8, q.vO + 1.0], [f[0] - 0.8, A.cv], [A.cu - 2, A.cv], [f[0] - 0.8, A.cv], [f[0] - 0.8, q.vm]]], [0, [[f[0] + 0.05, q.vm], [f[2] - 0.05, q.vm]], 1],
+      const legs = [[0, [[A.cu, L + 0.8], [A.cu, q.vO + 1.0], [f[0] - 0.8, q.vO + 1.0], [f[0] - 0.8, A.cv], [A.cu - 2, A.cv], [f[0] - 0.8, A.cv], [f[0] - 0.8, q.vm]]], [0, [[f[0] + 0.05, q.vm], [f[2] - 0.05, q.vm]], 1], [0, [[f2[0] + 0.05, q2.vm], [f2[2] - 0.05, q2.vm]], 1],
         [1, [[A.ua + 0.5, q.vm], [A.ua + 0.5, inner + 0.6], [a, inner + 0.6], [a, q.room[1] - 0.4], [a + 1.5, q.room[1] - 0.4]]]];
       let worst = 0, at = '', step = 0, shut = 0, shutAt = '', pts = 0;
       for (const [lv, path, onFlight] of legs) { let prev = null;
@@ -1212,7 +1231,7 @@ function testeH() {
             if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
             if (!ins || !ins.shell) continue;
             let want;
-            if (onFlight) { want = null; for (const e of treads) if (u >= e.r[0] && u <= e.r[2]) want = Math.max(want ?? 0, e.y1); if (want === null) continue; const d = foot - (pl.hi + want + Sp.FLOOR_UP); if ((d > 0.03 || d < -0.3) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) no lance`; } continue; }
+            if (onFlight) { want = null; for (const e of treads) if (nearT(e, u, z)) want = Math.max(want ?? 0, e.y1); if (want === null) continue; const d = foot - (pl.hi + want + Sp.FLOOR_UP); const under = treads.some(e => nearT(e, u, z) && (Math.abs(u - e.r[0]) <= 0.011 || Math.abs(u - e.r[2]) <= 0.011)) ? 0.3 : 0; if ((d > 0.03 || d < -under - 0.03) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) no lance`; } continue; }
             want = lv === 0 ? A.yq : rowY(u, z); if (lv === 1 && [[0.18, 0], [-0.18, 0], [0, 0.18], [0, -0.18]].some(([dx, dz]) => rowY(u + dx, z + dz) !== want)) continue;
             const d = foot - (pl.hi + want + Sp.FLOOR_UP); if (Math.abs(d) > 0.03 && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; } } } }
       if (worst || step > In.BODY.step + 0.01) out.push(`n ${n}: os pés a ${worst.toFixed(2)} m da forma em ${at || '—'}, o maior degrau ${step.toFixed(2)} m`);
@@ -1600,25 +1619,31 @@ function testeW() {
       // tread's edge the next one's is the feet's)
       const top = (list, u, z) => { let y = null; for (const q of list) if (u >= q.r[0] - 0.01 && u <= q.r[2] + 0.01 && z >= q.r[1] - 0.01 && z <= q.r[3] + 0.01 && (y === null || q.y1 > y)) y = q.y1; return y; };
       const onTread = (u, z) => top(treads, u, z);
+      // (within a hair of a tread's edge across the way up — the plan's rounded to the centimetre —, a step under it too: elsewhere
+      // the feet on each tread, as the form draws it, L-665)
+      const edgeV = (list, z) => list.some(q => Math.abs(z - q.r[1]) <= 0.011 || Math.abs(z - q.r[3]) <= 0.011);
       if (st === 'nordico') {
         // (from the street up the treads, in by the door, along the nave between the posts — past the hearths — to its ends)
         const R = A.r, steps = F.els.filter(e => e.degrau);
         legs = [[0, [[A.cu, L + 0.8], [A.cu, R[3] - 0.6], [A.cu, A.cv + 1.2], [R[2] - 2.0, A.cv + 1.2], [R[0] + 2.0, A.cv + 1.2]]]];
-        floor = (lv, u, z) => { if (u > R[0] && u < R[2] && z > R[1] && z < R[3]) return [A.yb, 0]; const t = top(steps, u, z); return t === null ? null : [t, 0.3]; };
+        floor = (lv, u, z) => { if (u > R[0] && u < R[2] && z > R[1] && z < R[3]) return [A.yb, 0]; const t = top(steps, u, z); return t === null ? null : [t, edgeV(steps, z) ? 0.3 : 0]; };
       } else if (st === 'grego') {
         // (up the great stair to the rock's top, between the altar and Promachos to the temple's steps, up between the middle
         // columns, through the pronaos and the cella's door to the place of prayer; round the left side of the colonnade)
         const T = A.top, S0 = A.stylo, C = A.cella, pv = A.ped[3] + 1.4;
         const lw = (S0[0] + 0.6 + F.els.find(e => e.k === 'colunata').r * Fo.COLUMN_BASE / 2 + C[0]) / 2, fw = (C[3] + S0[3] - 0.6) / 2;
-        legs = [[0, [[A.cu - 1.5, L + 0.8], [A.cu - 1.5, T[3] - 1.0], [A.cu, T[3] - 1.0], [A.cu, S0[3] + 0.68]]], [1, [[A.cu, S0[3] - 0.1], [A.cu, fw], [A.cu, pv], [A.cu, fw], [lw, fw], [lw, (C[1] + C[3]) / 2]]]];
-        floor = (lv, u, z) => { if (lv === 1) return [A.ys, 0]; const ty = onTread(u, z); if (ty !== null && z > T[3]) return [ty, 0.3]; if (u > T[0] && u < T[2] && z > T[1] && z < T[3] && z > S0[3] + 1.05) return [A.zr, 0]; return null; };
+        // (and up the temple's two steps between the middle columns, on each: the krepis' and the stylobate's blocks, or the rock's
+        // top before them — L-665)
+        const kr = F.els.filter(e => e.k === 'bloco' && e.degrau), kf = [A.cu - 0.6, S0[3], A.cu + 0.6, S0[3] + 2 * A.krepis];
+        legs = [[0, [[A.cu - 1.5, L + 0.8], [A.cu - 1.5, T[3] - 1.0], [A.cu, T[3] - 1.0], [A.cu, S0[3] + 0.02]]], [1, [[A.cu, S0[3] - 0.1], [A.cu, fw], [A.cu, pv], [A.cu, fw], [lw, fw], [lw, (C[1] + C[3]) / 2]]]];
+        floor = (lv, u, z) => { if (lv === 1) return [A.ys, 0];
+          if (u >= kf[0] && u <= kf[2] && z >= kf[1] && z <= kf[3]) { const t = top(kr, u, z); return [t === null ? A.zr : t, edgeV(kr, z) ? 0.3 : 0]; }
+          const ty = onTread(u, z); if (ty !== null && z > T[3]) return [ty, edgeV(treads, z) ? 0.3 : 0]; if (u > T[0] && u < T[2] && z > T[1] && z < T[3] && z > S0[3] + 1.05) return [A.zr, 0]; return null; };
       } else {
         // (across the court, up the stair to the terrace, before the eye to the priest's place, round the left side to the back)
         const T = A.top, Q = A.quarto, yq = F.els.find(e => e.piso).y1;
         legs = [[0, [[A.cu - 3.5, L + 0.8], [A.cu - 3.5, L - 0.6], [A.cu - 1.0, L - 0.6], [A.cu - 1.0, A.stair.top + 0.05]]], [1, [[A.cu - 1.0, T[3] - 0.3], [A.cu - 1.0, Q[3] + 0.6], [(T[0] + Q[0]) / 2, Q[3] + 0.6], [(T[0] + Q[0]) / 2, (T[1] + Q[1]) / 2], [A.cu, (T[1] + Q[1]) / 2]]]];
-        // (on the stair, on each of the form's treads, as its plan has them — a hair either side of an edge, either: L-665)
-        const edge = z => treads.some(q => Math.abs(z - q.r[1]) <= 0.011 || Math.abs(z - q.r[3]) <= 0.011);
-        floor = (lv, u, z) => { if (lv === 1) return [A.yt, 0]; const ty = onTread(u, z); if (ty !== null) return [ty, edge(z) ? 0.3 : 0]; if (z > A.cv + A.e0 && z < L - 0.1) return [yq, 0]; return null; };
+        floor = (lv, u, z) => { if (lv === 1) return [A.yt, 0]; const ty = onTread(u, z); if (ty !== null) return [ty, edgeV(treads, z) ? 0.3 : 0]; if (z > A.cv + A.e0 && z < L - 0.1) return [yq, 0]; return null; };
       }
       const r = feetAlong(b, legs, floor);
       if (r.worst || r.step > In.BODY.step + 0.01) out.push(`${tag}: os pés a ${r.worst.toFixed(2)} m da forma em ${r.at || '—'}, o maior degrau ${r.step.toFixed(2)} m`);
