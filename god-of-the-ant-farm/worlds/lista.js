@@ -93,38 +93,38 @@ G.Ready.list({
  },
  "anos500": {
   "day": 501,
-  "pop": 1018,
+  "pop": 1033,
   "peoples": 2,
   "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Tenochtitlan",
-   "tier": 4,
-   "pop": 217
+   "name": "Hedeby",
+   "tier": 3,
+   "pop": 144
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 6140232
+  "bytes": 5963751
  },
  "anos1000": {
   "day": 1001,
-  "pop": 897,
+  "pop": 983,
   "peoples": 2,
-  "towns": 14,
+  "towns": 13,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
    "name": "Tenochtitlan",
-   "tier": 4,
-   "pop": 217
+   "tier": 3,
+   "pop": 131
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 6540268
+  "bytes": 6192861
  }
 });
