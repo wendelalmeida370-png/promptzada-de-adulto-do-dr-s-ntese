@@ -514,7 +514,7 @@
   }
   // falling past a ledge the rim hangs over — a jump that fell short of a square's plinth, the rim carried over its edge while
   // the feet were within a step of its top —: the body slides out along the face as far as it was in, never left inside the
-  // stone (climbed from there, the feet went through the edge: the e6 «plano» of the generation 17, L-xxE). The rim's points
+  // stone (climbed from there, the feet went through the edge: the e6 «plano» of the generation 17, L-653). The rim's points
   // over a floor too high for the feet push it back; caught between two such, or with nowhere free behind, it is left
   function unwedge(feet) {
     const r = TUNE.radius, hit0 = b.stairHit; let px = 0, pz = 0;

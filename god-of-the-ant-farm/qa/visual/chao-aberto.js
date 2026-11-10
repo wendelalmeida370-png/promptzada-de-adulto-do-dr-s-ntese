@@ -17,7 +17,7 @@
 //      corpo anda até ela e pula um pouco antes, a seis distâncias; os pulos curtos caem ao pé dela — e nunca com um ponto da
 //      borda do corpo dentro do degrau (fora da escalada), nunca com os pés sob o chão (nem escalando), e todos acabam em cima
 //      (antes: a borda do corpo, levada por cima da quina no ar, ficava dentro da pedra quando os pés caíam abaixo do topo, e a
-//      escalada dali passava os pés pela quina — o e6 «plano» da geração 17, L-xxE)
+//      escalada dali passava os pés pela quina — o e6 «plano» da geração 17, L-653)
 //   4. o verificador limpo (S0 a S2 novos), sem erro de módulo
 const path = require('path');
 const M = require(path.join(__dirname, '..', 'nodemundo.js'));
@@ -143,7 +143,7 @@ const placeAt = (X, Z) => { const ok0 = G.Avatar.place(X / TL, Z / TL); for (let
 // it and jumps a little before it, at each of six distances; the jumps that fall short land at its foot. In every frame but the
 // climb's, no point of the body's rim over a floor higher than its feet by more than a step — the rim carried over the edge in
 // the air was left inside the stone when the feet fell below its top, and climbed from there the feet went through the edge,
-// the e6 «plano» of the generation 17, L-xxE —; in every frame, the climb's too, the feet never under the floor at the centre;
+// the e6 «plano» of the generation 17, L-653 —; in every frame, the climb's too, the feet never under the floor at the centre;
 // and every jump ends on top, by the feet or by the hands)
 { const TU = G.Avatar.TUNE, R = TU.radius, RIM = [[1, 0], [0.707, 0.707], [0, 1], [-0.707, 0.707], [-1, 0], [-0.707, -0.707], [0, -1], [0.707, -0.707]];
   const high = [];
