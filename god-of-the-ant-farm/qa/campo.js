@@ -212,8 +212,11 @@ else {
 // (and, with none such, the first of them with no hands at all: its trade given by the god's hand in the case — the metropole
 // of the generation 16 is a younger world, and its orchards and plantations stand with nobody of the trade at them; the
 // keeper of the case's hands below holds them in it, as T-484)
+// (picked on the world of the cases — the snapshot —, not on what the case before left: the press of the c7 was picked after
+// the c6's last minute, and with the c6 kept short in the generation 19 another olive grove came out, one whose hands the
+// world had elsewhere)
 function estPick(test) {
-  let best = null, bare = null;
+  fresh(); let best = null, bare = null;
   for (const b of [...S().buildings.values()].sort(byId)) {
     if (!b.built || !Es.is(b.type) || !test(b)) continue;
     const role = G.BDEF[b.type].role; const ws = [...S().villagers.values()].filter(v => v.job === b.id && v.role === role && fit(v));
@@ -262,11 +265,18 @@ const fieldAt = b => [b.x + 1, b.y + 1];
     const pickedK = new Set(); let atK = new Set(), lastF = b.pl.map(p => p.f);
     const pick = () => { b.pl.forEach((p, i) => { if (i < 3 && atK.has(i) && p.f < lastF[i] - 0.4) pickedK.add(i); }); lastF = b.pl.map(p => p.f);
       atK = new Set(P.ws.map(x => S().villagers.get(x.id)).filter(v => v && v.task && v.task.type === 'estate' && v.task.id === b.id && v.task.k < 3).map(v => v.task.k)); };
+    // (and the hand sent kept at the estate by the hand of the proof, as the c9's keeper at his hives: when the town calls it
+    // away — the theatre, a celebration, a fire to fight, the house's water — it is sent back, fed and rested, until the three
+    // are picked; its fruit on its way to the store is never cut. In the metrópole of the generation 19 Tlacaélel, of the
+    // Cafezal #9547, picked the first tree in 60 s, and then the theatre, the night and a celebration took his day, and a fire in
+    // Tenochtitlan burned the coffee trees — and the Bananal #16313 of the case before, on the town's kept lot: «colhidos 1 de 3»)
+    const atEst = v => { const t = v && v.task; return !!t && ((t.type === 'estate' && t.id === b.id) || ((t.type === 'deliver' || t.type === 'haul') && held(v)[k] > 0)); };
+    let back = 0; const keep = () => { const v = S().villagers.get(P.ws[0].id); if (!v || !fit(v) || atEst(v) || pickedK.size === 3) return; send(v, b, fieldAt(b)); back++; };
     send(P.ws[0], b, fieldAt(b)); const kh = keepHands(P);
-    live(400, () => { kh(); Hd.step(); pick(); }, () => pickedK.size === 3 && P.ws.every(x => !(held(x)[k] > 0)));
+    live(400, () => { kh(); keep(); Hd.step(); pick(); }, () => pickedK.size === 3 && P.ws.every(x => !(held(x)[k] > 0)));
     const picked = pickedK.size; const lost = Hd.lost(); const bad = newBad(P.base);
     const okk = picked === 3 && Hd.born(k) > 0 && Hd.reached(k) && !lost.length && !bad.length; good = good && okk;
-    out.push(`${V.buildName(b)} #${b.id}${handEst ? " (o ofício pela mão do deus a " + handEst + ")" : ""}: colhidos ${picked} de 3 pés maduros; ${Hd.say(k)}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    out.push(`${V.buildName(b)} #${b.id}${handEst ? " (o ofício pela mão do deus a " + handEst + ")" : ""}: colhidos ${picked} de 3 pés maduros; ${Hd.say(k)}; sumiu sem linha: ${lost.join(', ') || 'nada'}${back ? ` (a mão mandada de volta ao pomar ${back} vez(es))` : ''}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   if (ids.length) ok('c6', good, out.join(' · '));
 }

@@ -44,7 +44,12 @@ const storeIn = v => { const d = G.Village.nearestDropoff(v.x, v.y, v.set); retu
 // (a calm town: no festival, assembly, levy, fire or execution calling its people — the world's call would take the person
 // from the case, and the load with it)
 const GATHER = { justice: 1, assembly: 1, fest: 1, muster: 1, fire: 1 };
-const calm = id => { let n = 0; for (const o of S.villagers.values()) if (o.set === id && o.task && GATHER[o.task.type]) n++; return n < 3 && !(S.execs || []).some(e => e.set === id && e.phase === 'wait'); };
+// (nor a fight about the town — the enemy's people in its lands, a riot —: the war at home calls its people to fight, flee or
+// hide over any errand (Wr.emergency). In the metrópole of the generation 19 Pólis de Argos went to war while the cases ran,
+// and eighteen of Argos were fighting the people of Uppsala and Texcoco about the town when the m11 sent Leif down its mine:
+// he was called to the fight a tenth of a second later, and came up with the wood, never having dug)
+const FIGHT = { combat: 1, riot: 1, riotguard: 1, flee: 1, hide: 1 };
+const calm = id => { let n = 0, f = 0; for (const o of S.villagers.values()) if (o.set === id && o.task) { if (GATHER[o.task.type]) n++; if (FIGHT[o.task.type]) f++; } return n < 3 && f < 3 && !(S.execs || []).some(e => e.set === id && e.phase === 'wait'); };
 // (and none of a voyage's crew: a voyage being made ready calls its crew to the quay, 3,25, again and again until it sails —
 // the m9's own among them —, T-326)
 const free = v => !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.air && !(S.avatar && S.avatar.id === v.id) && v.hp > 50 && v.home && storeIn(v) && calm(v.set) && !(G.Expe && G.Expe.memberOf(v.id));
@@ -280,15 +285,17 @@ S.weather.storm = 0;
     tried.push(f.name + (e ? '' : ' (não)'));
   }
   const crew = e ? e.crew.map(id => S.villagers.get(id)).filter(v => v && v.task && v.task.type === 'cais' && !v.aboard && !(S.avatar && S.avatar.id === v.id)) : [];
-  const v = crew.find(q => !(q.carry && q.carry.n > 1e-6)) || null;
+  // (one whose hands can hold the load: Xântipe, the first of the crew in the m9 of the generation 19, had lost both arms — her
+  // hands hold nothing, and the ore the test's hand gave her never came into them)
+  const v = crew.find(q => !(q.carry && q.carry.n > 1e-6) && D.room('v:' + q.id, 'minerio') >= 1) || null;
   if (!e || !v) ok('m9 a tripulação guarda a carga antes do cais', false, e ? `a expedição ${e.name} sem tripulante livre no cais` : `nenhum povo do mar lançou uma expedição (${tried.join(', ') || 'nenhum com navegação'})`);
   else {
-    D.make('v:' + v.id, 'minerio', 1, { code: 'teste' });
+    const made = D.make('v:' + v.id, 'minerio', 1, { code: 'teste' }).ok;
     const n0 = lines.length; const seen = [];
     const went = live(120, () => { const ty = v.task ? v.task.type : '-'; if (seen[seen.length - 1] !== ty) seen.push(ty); return outOf(v.id, n0).some(e2 => e2[5] === 'minerio') || v.aboard; });
     const out = outOf(v.id, n0).find(e2 => e2[5] === 'minerio');
-    ok('m9 a tripulação guarda a carga antes do cais', went && !!out && out[8] === 'entrega' && out[4] === store(v) && !look().length,
-      `${v.name}, da tripulação de ${e.name}, chamado(a) ao cais com 1 de minério nas mãos: ${out ? `${out[8]} ${out[6]} para ${out[4]}` : `NÃO guardou (${v.aboard ? 'embarcou com ele' : 'nas mãos: ' + hands(v)})`}; afazeres: ${seen.join(' → ')}`);
+    ok('m9 a tripulação guarda a carga antes do cais', made && went && !!out && out[8] === 'entrega' && out[4] === store(v) && !look().length,
+      `${v.name}, da tripulação de ${e.name}, chamado(a) ao cais com 1 de minério nas mãos: ${made ? '' : 'o minério NÃO coube nas mãos; '}${out ? `${out[8]} ${out[6]} para ${out[4]}` : `NÃO guardou (${v.aboard ? 'embarcou com ele' : 'nas mãos: ' + hands(v)})`}; afazeres: ${seen.join(' → ')}`);
   }
 }
 // ---------------- m10: the checker sees a child's load standing still in the hands by day
