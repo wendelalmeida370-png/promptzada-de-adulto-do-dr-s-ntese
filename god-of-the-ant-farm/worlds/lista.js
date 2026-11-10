@@ -3,93 +3,93 @@
 G.Ready.list({
  "cidade": {
   "day": 20,
-  "pop": 152,
+  "pop": 154,
   "peoples": 4,
   "towns": 4,
   "N": 128,
   "map": "continente",
   "seed": 3101,
   "city": {
-   "name": "Mênfis",
+   "name": "Tenochtitlan",
    "tier": 3,
-   "pop": 38
+   "pop": 42
   },
   "wars": 0,
   "ww": null,
   "world": "Ysdun",
-  "bytes": 1118155
+  "bytes": 1134642
  },
  "metropole": {
-  "day": 49,
-  "pop": 540,
-  "peoples": 5,
-  "towns": 16,
+  "day": 70,
+  "pop": 877,
+  "peoples": 4,
+  "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
    "name": "Mênfis",
    "tier": 4,
-   "pop": 103
+   "pop": 132
   },
   "wars": 0,
   "ww": null,
   "world": "Valante",
-  "bytes": 2655330
+  "bytes": 3911424
  },
  "mega": {
-  "day": 65,
-  "pop": 773,
-  "peoples": 4,
-  "towns": 19,
+  "day": 99,
+  "pop": 1403,
+  "peoples": 8,
+  "towns": 21,
   "N": 160,
   "map": "continente",
   "seed": 3309,
   "city": {
    "name": "Mênfis",
    "tier": 5,
-   "pop": 163
+   "pop": 422
   },
   "wars": 0,
   "ww": null,
   "world": "Thalael",
-  "bytes": 3369640
+  "bytes": 5831377
  },
  "mundial": {
-  "day": 69,
-  "pop": 447,
-  "peoples": 5,
+  "day": 114,
+  "pop": 859,
+  "peoples": 7,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Tebas",
+   "name": "Roma",
    "tier": 4,
-   "pop": 70
+   "pop": 261
   },
-  "wars": 1,
+  "wars": 3,
   "ww": "a Grande Coalizão",
   "world": "Coressa",
-  "bytes": 3605241
+  "bytes": 4815442
  },
  "anos100": {
   "day": 101,
-  "pop": 520,
+  "pop": 1033,
   "peoples": 2,
-  "towns": 14,
+  "towns": 13,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Hedeby",
+   "name": "Argos",
    "tier": 4,
-   "pop": 100
+   "pop": 200
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 3047584
+  "bytes": 4219764
  },
  "anos500": {
   "day": 501,
