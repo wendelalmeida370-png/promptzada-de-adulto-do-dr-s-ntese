@@ -31,13 +31,14 @@ const path = require('path');
 const T = require(path.join(__dirname, 'tres-node.js'));
 const { G, M } = T.load();
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | disputa ${name} | ${info}`); if (!c) fails.push(name); };
-// (the world: the one asked, or — none asked — the first ready world of the metropole, the megalopolis and the world war one of
-// whose towns with a quay and a harbour store keeps its quay the three hands of the proof by its own ceiling of the trades
-// (D-090; T-378) — the generation-13 metropole has none: Roma, the most, keeps two; the megalopolis has five, T-388)
+// (the world and the town: the one asked, or — none asked — the ready worlds of the metropole, the megalopolis and the world war
+// one in order, and in each the towns with a quay and a harbour store whose ceiling of the trades keeps its quay the three hands
+// of the proof (D-090; T-378) first; and the town is the one whose own board, with a boat on its quay, calls the three hands in
+// its time — below. The ceiling judged before the waits is not the board after them: in the metropole of the generation 18,
+// Delfos (22 grown ones, a ceiling of eight) kept its quay three hands at the first look, and after the board's quiet and the
+// boat the trades asking then took the ceiling, and the quay kept the one hand its open service keeps (D-102) — the town's own
+// rule, the next town tried, T-625)
 const asked = process.argv[2];
-const hands3 = () => [...G.S.settlements.values()].some(s => { const B = [...G.S.buildings.values()]; if (!B.some(b => b.set === s.id && b.type === 'doca' && b.built) || !B.some(b => b.set === s.id && b.type === 'armazem' && b.built)) return false; const f = G.Fac.get(s.fac); if (!f) return false; const n = [...G.S.villagers.values()].filter(o => o.set === s.id && !o.captive && o.age >= 16 && o.age < 62).length; const d = G.Eco.demand(s, f, n); d.estivador = Math.max(d.estivador || 0, 3); return (G.Eco.share(d, s, f, n).estivador || 0) >= 3; });
-let world = null;
-for (const w of asked ? [asked] : ['metropole', 'mega', 'mundial']) { M.pronto(w); M.viver(2); world = w; if (asked || hands3()) break; }
 let S = G.S; const W = G.W, TL = G.Space.TILE, A = G.Act, P = G.Porto, D = G.Depot, I = G.Interact, P3 = G.People3D;
 const RDT = 1 / 30;
 // (the frame as the game's: the world's step, the body's frame, the people drawn around the body)
@@ -46,9 +47,6 @@ const frame = () => { G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); loo
 const still = n => { for (let k = 0; k < (n || 4); k++) { G.Avatar.frame(RDT); look(); } }; // (the world stopped: only the body and the drawing)
 // (what the test does to the world stands for the god's hand, in the world's step)
 const god = f => { G.inSim++; const r = f(); G.inSim--; return r; };
-const bad0 = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg));
-const vbad = () => QA.check().filter(q => q.sev <= 2 && !bad0.has(q.sys + '|' + q.msg));
-const vtxt = l => (l.length ? l.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo');
 const faceTo = (X, Z) => { const st = G.Avatar.state(); st.yaw = Math.atan2(Z - st.Z, X - st.X); G.Avatar.input.camYaw = st.yaw; };
 const said = []; G.IncUI.toast = t => { said.push([t, G.S.clock]); }; // (the words the hands' acts say, and when: the HUD has none in Node)
 const busyOut = (n) => { let k = 0; for (; k < (n || 600) && G.Avatar.busy(); k++) frame(); for (let q = 0; q < 3; q++) frame(); return k; };
@@ -60,29 +58,11 @@ const porters = s => [...S.villagers.values()].filter(v => v.set === s.id && v.r
 // asked; then the most dockers, then the id. In the generation-12 metropole the first by the dockers was Mênfis, of 24 grown
 // ones, whose ceiling of nine kept its quay one hand: with a boat on the quay the town called nobody more, T-378)
 const quayHands = s => { const f = G.Fac.get(s.fac); if (!f) return 0; const A = [...S.villagers.values()].filter(o => o.set === s.id && !o.captive && o.age >= 16 && o.age < 62).length; const d = G.Eco.demand(s, f, A); d.estivador = Math.max(d.estivador || 0, 3); return G.Eco.share(d, s, f, A).estivador || 0; };
-const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).map(s => ({ s, three: quayHands(s) >= 3 })).sort((a, b) => b.three - a.three || porters(b.s) - porters(a.s) || a.s.id - b.s.id).map(o => o.s);
-let set = null, dock = null, fac = null;
 const dry = (x, y) => { const i = W.idx(x, y); const t = S.type[i]; return !((t === G.T.RIVER && !S.road[i]) || t <= G.T.SEA) && W.walkableXY(x, y); };
-for (const s of towns) {
-  for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) {
-    const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} }));
-    if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) { set = s; dock = d; break; }
-  }
-  if (dock) break;
-}
-if (!dock) { ok('um cais com armazém do porto', false, `nenhum em ${world}`); process.exit(1); }
-fac = G.Fac.get(set.fac);
-const ids = { set: set.id, dock: dock.id, fac: fac.id };
-const refresh = () => { S = G.S; set = S.settlements.get(ids.set); dock = S.buildings.get(ids.dock); fac = G.Fac.get(ids.fac); };
-// (a clean quay, by day: what was on it goes to the store, the unloading under way ended)
-god(() => {
-  for (const op of A.all()) if (op.def === 'descarga' && op.at === dock.id && A.live(op)) A.end(op, 'cancel', 'teste');
-  for (const c of (dock.crates || []).slice()) D.move('q:' + dock.id, 'f:' + fac.id, c.k, c.n, { code: 'teste', part: true });
-  dock.crates = []; S.time = 0.15;
-});
-const sp0 = god(() => G.Fishers.crateSpot(dock));
 // (the hands emptied into the people's store as the world stores a delivery — Depot.store: what does not fit is lost, with its
 // line 'sem-lugar' in the ledger —, so they are empty whatever room the store has: T-070)
+let set = null, dock = null, fac = null, sp0 = null, world = null, ids = null;
+const refresh = () => { S = G.S; set = S.settlements.get(ids.set); dock = S.buildings.get(ids.dock); fac = G.Fac.get(ids.fac); };
 const clearHands = o => { if (o.carry && o.carry.n > 0) god(() => D.store('v:' + o.id, fac.id, o.carry.k, o.carry.n, { op: o.carry.op || 0, code: 'teste', by: o.id })); };
 // (the hands of the quay: stevedores of this town where the feet reach the crates — the first lived by the god, the others the
 // world's porters, brought a few steps from the pile so that they go for a crate at once —; those with free hands first, and
@@ -99,16 +79,44 @@ const able = o => o.set === set.id && o.role === 'estivador' && G.Possess.can(o)
 // behind six trades one hand short and the works' builders, and by the time the board was free the dockers had taken two
 // crates and the quay asked two. The world lives until no trade of the town changes for two passes of the board (9 s), a
 // minute at most: T-303)
-let called = '';
-if ([...S.villagers.values()].filter(able).length < 3) {
-  const trades = () => [...S.villagers.values()].filter(o => o.set === set.id).map(o => o.id + ':' + o.role).join(',');
-  let w = 0; for (let quiet = 0, r0 = trades(); w < 60 && quiet < 9; w++) { M.viver(1); const r1 = trades(); quiet = r1 === r0 ? quiet + 1 : 0; r0 = r1; }
-  const n0 = [...S.villagers.values()].filter(able).length; god(() => { S.time = 0.15; P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); });
-  let t = 0; for (; t < 30 && [...S.villagers.values()].filter(able).length < 3; t++) M.viver(1);
-  called = ` (o quadro dos ofícios quieto depois de ${w} s; eram ${n0}: com um barco no cais a cidade chamou mais em ${t} s)`;
+let called = ''; const tried = []; let cands = [];
+for (const w of asked ? [asked] : ['metropole', 'mega', 'mundial']) {
+  M.pronto(w); M.viver(2); S = G.S; world = w;
+  const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).map(s => ({ s, three: quayHands(s) >= 3 })).sort((a, b) => b.three - a.three || porters(b.s) - porters(a.s) || a.s.id - b.s.id).map(o => o.s);
+  for (const s of towns) {
+    set = null; dock = null;
+    for (const d of [...S.buildings.values()].filter(b => b.set === s.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) {
+      const sp = god(() => G.Fishers.crateSpot(d)); const st = god(() => P.destOf({ at: d.id, fac: G.Village.facOfSet(d.set), x: d.x + 1, y: d.y + 1, data: {} }));
+      if (sp && dry(sp[0], sp[1]) && st && st.type === 'armazem' && god(() => P.access(d, st))) { set = s; dock = d; break; }
+    }
+    if (!dock) continue;
+    fac = G.Fac.get(set.fac); ids = { set: set.id, dock: dock.id, fac: fac.id };
+    // (a clean quay, by day: what was on it goes to the store, the unloading under way ended)
+    god(() => {
+      for (const op of A.all()) if (op.def === 'descarga' && op.at === dock.id && A.live(op)) A.end(op, 'cancel', 'teste');
+      for (const c of (dock.crates || []).slice()) D.move('q:' + dock.id, 'f:' + fac.id, c.k, c.n, { code: 'teste', part: true });
+      dock.crates = []; S.time = 0.15;
+    });
+    sp0 = god(() => G.Fishers.crateSpot(dock)); called = '';
+    if ([...S.villagers.values()].filter(able).length < 3) {
+      const trades = () => [...S.villagers.values()].filter(o => o.set === set.id).map(o => o.id + ':' + o.role).join(',');
+      let wq = 0; for (let quiet = 0, r0 = trades(); wq < 60 && quiet < 9; wq++) { M.viver(1); const r1 = trades(); quiet = r1 === r0 ? quiet + 1 : 0; r0 = r1; }
+      const n0 = [...S.villagers.values()].filter(able).length; god(() => { S.time = 0.15; P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); });
+      let t = 0; for (; t < 30 && [...S.villagers.values()].filter(able).length < 3; t++) M.viver(1);
+      called = ` (o quadro dos ofícios quieto depois de ${wq} s; eram ${n0}: com um barco no cais a cidade chamou mais em ${t} s)`;
+    }
+    cands = [...S.villagers.values()].filter(able).sort((a, b) => loaded(a) - loaded(b) || a.id - b.id);
+    if (cands.length >= 3) break;
+    tried.push(`${w}: ${cands.length} em ${set.name}${called}`);
+  }
+  if (cands.length >= 3) break;
 }
-const cands = [...S.villagers.values()].filter(able).sort((a, b) => loaded(a) - loaded(b) || a.id - b.id);
-if (cands.length < 3) { ok('um estivador para viver e dois carregadores do mundo', false, `${cands.length} em ${set.name}${called || ''}`); process.exit(1); }
+if (!dock && !tried.length) { ok('um cais com armazém do porto', false, `nenhum em ${world}`); process.exit(1); }
+if (cands.length < 3) { ok('um estivador para viver e dois carregadores do mundo', false, tried.join(' · ')); process.exit(1); }
+if (tried.length) called += ` — antes, pela regra delas: ${tried.join(' · ')}`;
+const bad0 = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg));
+const vbad = () => QA.check().filter(q => q.sev <= 2 && !bad0.has(q.sys + '|' + q.msg));
+const vtxt = l => (l.length ? l.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo');
 let v = cands[0]; const p1 = cands[1], p2 = cands[2]; for (const o of [v, p1, p2]) clearHands(o);
 const near = []; for (let r = 2; r <= 4 && near.length < 4; r += 0.5) for (let k = 0; k < 24 && near.length < 4; k++) { const a = k / 24 * Math.PI * 2; const x = sp0[0] + Math.cos(a) * r, y = sp0[1] + Math.sin(a) * r; if (dry(x, y) && W.canWalk(sp0[0], sp0[1], x, y, false)) near.push([x, y]); }
 if (near.length < 3) { ok('lugares perto do cais', false, near.length); process.exit(1); }
