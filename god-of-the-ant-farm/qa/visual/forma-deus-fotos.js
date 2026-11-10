@@ -15,7 +15,8 @@
 //   7. a memória dos desenhos grandes (Art.BIG)
 //   8. o lote reservado para a obra grande (D-121; o que a reserva do jogo guarda, pedido pela guarda de prova): de perto,
 //      com o mouse sobre o lote e nada mais sob ele («Reservado para o Coliseu»), o canto da frente de perto, e de longe; o
-//      mundo igual (QA.canon)
+//      mundo igual (QA.canon). Na metrópole; sem chão para o lote nela, no primeiro mundo pronto que guarde um (MUNDO_K, como a
+//      (k) da visual/forma-deus.js)
 // Numa pasta do jogo de antes do pintor (sem G.Arch.formSprite), só tira as fotos de antes (o degrau desenhado à moda antiga).
 const path = require('path'), fs = require('fs'), os = require('os');
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')), OUT = path.resolve(process.argv[3] || path.join(os.tmpdir(), 'forma-deus'));
@@ -125,19 +126,31 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     // the proof's guard (qa/guarda-lib.js, its source sent into the page: the capital at the guard's level, a ground laid flat
     // where the land will not do; T-443) —; near, the mouse on a tile of it with nothing else under the pointer (main.js gives
     // the tile, the render the label), its front corner close, and from afar; the world unchanged by the frames, after the guard
-    const o8 = await page.evaluate(src => {
-      G.Save.apply(JSON.parse(G.Ready.data.metropole)); G.Main.mode = 'game'; G.UI.setSpeed(0); if (G.FX && G.FX.list) G.FX.list.length = 0;
-      const V = G.Village, S = G.S, R = G.Render; const g = (0, eval)('(' + src + ')')(G); if (!g) return { err: 'a guarda de prova não fez cidade nenhuma guardar um lote na metrópole' };
-      const set = S.settlements.get(g.set), r = set && V.reserva(set); if (!r) return { err: 'a cidade da guarda sem o lote reservado' };
-      const cx = r.x + r.n / 2, cy = r.y + r.n / 2;
-      R.centerOn(cx, cy, 1.25); window.__VIS.f(3);
-      // (a tile of the lot, from its middle out, whose screen point picks nothing: no field nor building under the pointer)
-      let at = null; for (let k = 0; k <= r.n / 2 && !at; k++) for (const [dx, dy] of [[0, 0], [k, 0], [-k, 0], [0, k], [0, -k], [k, k], [-k, -k], [k, -k], [-k, k]]) {
-        const x = cx + dx, y = cy + dy; if (x < r.x + 0.5 || y < r.y + 0.5 || x > r.x + r.n - 0.5 || y > r.y + r.n - 0.5) continue;
-        const p = R.proj(x, y, G.W.groundH(x, y)), s2 = R.worldPxToScreen(p[0], p[1]); if (!G.Main.pick(s2[0], s2[1], false)) { at = s2; break; } }
-      return { set: set.name, sid: set.id, r, at, provocado: g.provocado, canon0: window.QA && QA.canon ? JSON.stringify(QA.canon()) : null };
-    }, guarda.toString()).catch(e => ({ err: e.message }));
-    if (o8.err) ok('8: o lote reservado', false, o8.err);
+    // (the world: MUNDO_K; else the metrópole and, where none of its capitals has ground for the lot, the next ready world in
+    // which the guard gets one — the rule of the (k) of visual/forma-deus.js, T-621: in the metrópole of the generation 18 no
+    // capital had it within its reach —; each world put into the page only when its turn comes, and its text dropped once read:
+    // the page holds the text of one world at a time)
+    const W8 = process.env.MUNDO_K ? [process.env.MUNDO_K] : ['metropole', 'cidade', 'mundial', 'mega', 'anos100', 'anos500', 'anos1000'];
+    const tried8 = []; let o8 = null;
+    for (const w of W8) {
+      if (!(await page.evaluate(k => !!(G.Ready.data && G.Ready.data[k]), w))) { const f = path.join(ROOT, 'worlds', w + '.js'); if (!fs.existsSync(f)) { tried8.push(w + ' (não existe)'); continue; } await page.addScriptTag({ path: f }); }
+      o8 = await page.evaluate(([src, k]) => {
+        const txt = G.Ready.data[k]; delete G.Ready.data[k]; G.Save.apply(JSON.parse(txt)); G.Main.mode = 'game'; G.UI.setSpeed(0); if (G.FX && G.FX.list) G.FX.list.length = 0;
+        const V = G.Village, S = G.S, R = G.Render; const g = (0, eval)('(' + src + ')')(G); if (!g) return { none: true };
+        const set = S.settlements.get(g.set), r = set && V.reserva(set); if (!r) return { err: 'a cidade da guarda sem o lote reservado' };
+        const cx = r.x + r.n / 2, cy = r.y + r.n / 2;
+        R.centerOn(cx, cy, 1.25); window.__VIS.f(3);
+        // (a tile of the lot, from its middle out, whose screen point picks nothing: no field nor building under the pointer)
+        let at = null; for (let k = 0; k <= r.n / 2 && !at; k++) for (const [dx, dy] of [[0, 0], [k, 0], [-k, 0], [0, k], [0, -k], [k, k], [-k, -k], [k, -k], [-k, k]]) {
+          const x = cx + dx, y = cy + dy; if (x < r.x + 0.5 || y < r.y + 0.5 || x > r.x + r.n - 0.5 || y > r.y + r.n - 0.5) continue;
+          const p = R.proj(x, y, G.W.groundH(x, y)), s2 = R.worldPxToScreen(p[0], p[1]); if (!G.Main.pick(s2[0], s2[1], false)) { at = s2; break; } }
+        return { set: set.name, sid: set.id, r, at, provocado: g.provocado, canon0: window.QA && QA.canon ? JSON.stringify(QA.canon()) : null };
+      }, [guarda.toString(), w]).catch(e => ({ err: e.message }));
+      if (!o8.none) { o8.world = w; break; }
+      tried8.push(w); o8 = null;
+    }
+    if (!o8) ok('8: o lote reservado', false, `a guarda de prova não fez cidade nenhuma guardar um lote em ${tried8.join(', ') || 'nenhum mundo'}`);
+    else if (o8.err) ok('8: o lote reservado', false, o8.err);
     else {
       if (o8.at) await page.mouse.move(o8.at[0], o8.at[1]);
       const near = await page.evaluate(sid => { window.__VIS.f(4); const R = G.Render; const q = R.reserves().find(o => o.s.id === sid); return { n: R.reserves().length, mine: !!q, pt: R.pointer, hover: !!R.hover, name: q ? R.reserveName(q) : null }; }, o8.sid);
@@ -149,7 +162,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       await shot('deus-reserva-longe');
       const end = await page.evaluate(c0 => { const canon = window.QA && QA.canon ? JSON.stringify(QA.canon()) : null; G.Main.frameFor(33); return { same: c0 === null || c0 === canon }; }, o8.canon0);
       const inLot = !!near.pt && near.pt[0] >= o8.r.x && near.pt[0] < o8.r.x + o8.r.n && near.pt[1] >= o8.r.y && near.pt[1] < o8.r.y + o8.r.n;
-      ok('8: o lote reservado, de perto e de longe', near.mine && inLot && !near.hover && end.same, `${o8.set}: o lote (${o8.r.x}, ${o8.r.y}) de ${o8.r.n} casas que a reserva do jogo guarda${o8.provocado ? ' (o chão aplainado pela guarda)' : ''}; ${near.mine ? 'no quadro' : 'FORA do quadro'}; o ponteiro ${inLot ? 'no lote' : 'FORA dele'}${near.hover ? ', sobre um prédio' : `, «${near.name}»`}; ${end.same ? 'o mundo igual (QA.canon) depois dos quadros' : 'o mundo MUDOU'}`);
+      ok('8: o lote reservado, de perto e de longe', near.mine && inLot && !near.hover && end.same, `${o8.world}${tried8.length ? ` (sem chão para o lote em ${tried8.join(', ')})` : ''} — ${o8.set}: o lote (${o8.r.x}, ${o8.r.y}) de ${o8.r.n} casas que a reserva do jogo guarda${o8.provocado ? ' (o chão aplainado pela guarda)' : ''}; ${near.mine ? 'no quadro' : 'FORA do quadro'}; o ponteiro ${inLot ? 'no lote' : 'FORA dele'}${near.hover ? ', sobre um prédio' : `, «${near.name}»`}; ${end.same ? 'o mundo igual (QA.canon) depois dos quadros' : 'o mundo MUDOU'}`);
     }
     const mod6 = await page.evaluate(() => (G.modErr ? Object.keys(G.modErr) : [])); for (const k of mod6) if (!after.mod.includes(k)) after.mod.push(k);
     ok('5: nenhum erro', !errs.length && !after.mod.length, errs.length || after.mod.length ? errs.slice(0, 4).join(' | ') + ' ' + after.mod.join(',') : 'nenhum erro de página nem de módulo');
