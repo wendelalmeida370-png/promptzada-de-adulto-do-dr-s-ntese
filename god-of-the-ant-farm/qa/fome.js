@@ -37,6 +37,9 @@
 //    mandado à caverna com o alarme tocando o tempo todo (um ataque longo), come do estoque do povo no refúgio e nunca chega à
 //    fome máxima (L-605; apontado pelo C na geração 15: Kamose, de Tebas em guerra, levado ao refúgio a caminho de comer, morreu
 //    a duas casas de um armazém)
+// h18 o turno dado no lugar de uma refeição (sem comida ao alcance) larga quando a refeição volta: o soldado de guarda por
+//    falta de comer vai comer na escolha seguinte, não quando o turno acaba (L-xx3; achado pela regra S2 no volta.js da reg17:
+//    Tezcatl, de guarda no portão de Tenochtitlan, morreu de fome no posto com o armazém cheio de novo)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -541,6 +544,52 @@ const calmOne = (skip, also) => {
     }
   }
   ok('h17 quem se esconde na caverna come das provisões, como quem foge da guerra (L-605)', good, info);
+}
+// ---------------- h18 the work given for a meal there was not lets go when the meal is back in reach (L-xx3) ----------------
+// (found by the rule S2 in the volta.js of the reg17: Tezcatl of Tenochtitlan, with the store empty, was given a shift on guard
+// at the gate for want of a meal — villagers.js start, 'eat' —; the shift kept the meal's kind, and the choice, every two
+// seconds, saw the meal it wanted already there and looked no further; the store filled again, and she died of hunger at her
+// post. The case: a soldier of a calm town, by day, with the hunger at the top and no meal in reach — the store out of the way,
+// the mark the world leaves (_noStore), as h9; nor the house's pantry, berries or food in the hands — is given the shift by the
+// choice; then the store is in reach again: he leaves the post for the meal at the next choice, not when the shift ends)
+{
+  const POSTS = ['torre', 'palacio', 'paco', 'grande_palacio', 'palacio_colossal', 'coletoria', 'quartel', 'mercado_negro', 'mercado'];
+  const posts = s => !!s && (POSTS.some(t => G.Eco.byType(s.id, t).length) || (w => !!(w && w.done && w.gates.length))(G.Siege && G.Siege.wallOf(s.id)));
+  const MEAL = { eat: 1, forage: 1, lar: 1, idle: 1 };
+  const v = calmOne([], q => q.role === 'guerreiro' && posts(S.settlements.get(q.set)));
+  let shift = null, tries = 0, took = -1, h0 = 0, info = 'nenhum soldado numa cidade calma com posto de guarda';
+  if (v) {
+    const t0 = S.time; const h = S.buildings.get(v.home);
+    const pan = h ? D.get('h:' + h.id, 'food') : 0; if (pan > 0) D.use('h:' + h.id, 'food', pan, { code: 'teste', part: true });
+    // (and the house's jar full: the morning's errand for water takes whoever of the house is at a shift of priority under it —
+    // with the code before the fix, the jar took him off the post six seconds in, and the meal came after the water; the case
+    // is about the meal)
+    const w0 = h ? h.water : 0; if (h) h.water = 1;
+    const bushes = new Map(); const pick = () => { for (const b of S.bushes.values()) if ((b.berries > 0 || b.grow > 0) && G.dist(b.x, b.y, v.x, v.y) < 30) { if (!bushes.has(b)) bushes.set(b, [b.berries, b.grow]); b.berries = 0; b.grow = 0; } };
+    S.time = 0.3;
+    // (the shift the choice gives for want of a meal: a post — drill and patrol are the soldier's other shifts, and a short one
+    // ends before the case can tell; the choice is asked again until it is a post, ten times at most)
+    for (; tries < 10 && !shift; tries++) {
+      Vg.endTask(v); v.hunger = 100; v.hp = 58; v._hungerT = 0; v.sleeping = false;
+      if (v.carry && v.carry.k === 'food') D.use('v:' + v.id, 'food', v.carry.n, { code: 'teste', mine: true, part: true });
+      for (let k = 0; k < 40; k++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); const t = v.task; if (t && t.kind === 'eat' && !MEAL[t.type]) break; }
+      const t = v.task; if (!(t && t.kind === 'eat' && t.type === 'guard')) continue;
+      // (and at the post: a post he cannot reach ends the shift on the way, and the choice after it finds the meal anyway)
+      for (let k = 0; k < 300 && v.task === t && t.st !== 1; k++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); }
+      if (v.task === t && t.st === 1) shift = { dur: Math.round(t.dur || 0), left: Math.round((t.dur || 0) - (v.actT || 0)), at: t.gate !== undefined ? 'no portão' : t.tower ? 'na torre' : 'no posto' };
+    }
+    if (shift) {
+      v._noStore = 0; h0 = v.hunger; const c0 = S.clock;
+      live(30, () => { if (!S.villagers.has(v.id)) return true; const t = v.task; if ((t && t.type === 'eat') || v.hunger < h0 - 20) { took = S.clock - c0; return true; } return false; });
+    }
+    for (const [b, [n, g]] of bushes) { b.berries = n; b.grow = g; }
+    if (pan > 0 && h) D.make('h:' + h.id, 'food', pan, { code: 'teste', part: true });
+    if (h) h.water = w0;
+    S.time = Math.max(S.time, t0);
+    info = shift ? `${v.name}, de guarda ${shift.at} por falta de refeição (turno de ${shift.dur} s, ${shift.left} ainda por fazer, na ${tries}ª escolha): com o armazém ao alcance de novo, ${took >= 0 ? `foi comer em ${took.toFixed(1)} s` : 'NÃO foi comer em 30 s'}; vida ${Math.round(v.hp)}` : `${v.name}: em ${tries} escolhas, nenhum turno de guarda no posto por falta de refeição`;
+  }
+  // (at the next choice: one every 1,4 to 3 s, villagers.js)
+  ok('h18 o turno dado no lugar de uma refeição larga quando a refeição volta ao alcance (L-xx3)', !!shift && took >= 0 && took <= 3.5, info);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }

@@ -712,7 +712,10 @@
         if (!t && !(v.think > 1)) continue;
         const set = s.settlements.get(v.set); if (!set || G.War.threat(v.set) || (G.Vg.alarms && (G.Vg.alarms.get(v.set) || []).length)) continue;
         const where = [];
-        const st = G.Fac.stockV(v); const d = st && st.food >= 1 ? G.Village.nearestDropoff(v.x, v.y, v.set) : null;
+        // (a shift given in place of a meal there was not — the store empty, villagers.js start —: the store in reach again is the
+        // next choice's, within 3 s, which leaves the shift for it (qa/fome.js h18); the pantry and the hands are still looked at
+        // — L-xx3)
+        const st = G.Fac.stockV(v); const d = st && st.food >= 1 && !(t && t.noMeal) ? G.Village.nearestDropoff(v.x, v.y, v.set) : null;
         if (d) { const ft = G.Village.frontTile(d); if (G.W.reaches(v, ft[0], ft[1])) where.push(`o armazém (${Math.floor(st.food)} no estoque)`); }
         const h = v.home && s.buildings.get(v.home);
         if (h && h.built && (h.pantry || 0) >= 1) { const ft = G.Village.frontTile(h); if (G.W.reaches(v, ft[0], ft[1])) where.push(`a despensa da casa (${Math.floor(h.pantry)})`); }
