@@ -161,7 +161,7 @@
   // the one rule of the body in a plan (In.BODY, Possess.onPlan). Barred by the flight's drawn outline instead, the body met the
   // ladder of the house#18346 of the generation-17 metropole a little past its cells, in the way the walk has between it and a
   // chest — 0,61 m there for a body of 0,64 —, and put up from the bed on the far side it never came back to the stairs down;
-  // the plan's side — every cell the outline touches — would have moved the furniture of many houses, and the world: L-xx1)
+  // the plan's side — every cell the outline touches — would have moved the furniture of many houses, and the world: L-645)
   function flightCells(r) { const cs = G.Interiors.CS; return [Math.ceil(r[0] / cs - 0.5) * cs, Math.ceil(r[1] / cs - 0.5) * cs, (Math.floor(r[2] / cs - 0.5) + 1) * cs, (Math.floor(r[3] / cs - 0.5) + 1) * cs]; }
   const inBox = (r, x, z) => x > r[0] && x < r[2] && z > r[1] && z < r[3];
   Av.flightBox = flightCells; // (for the proofs: what of a flight's outline bars the body — visual/pe-da-escada 1b)

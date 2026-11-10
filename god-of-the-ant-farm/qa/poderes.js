@@ -352,14 +352,20 @@ const key = process.argv[2] || 'cidade';
       const again = G.Powers.canCast('ghosts', ...G.Village.center(cem)); const why = G.Powers.why;
       H.toNight();
       let maxFled = 0, bad = []; const day0 = S.day;
-      while (S.beyond.haunts.length && S.day < day0 + 4) { H.run(5); maxFled = Math.max(maxFled, h.fled); const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(q => q.msg)); }
-      const hunted = [...S.villagers.values()].some(g => g.hunt === crime.id) || crime.st !== 'aberto';
-      return { set: set.name, ok, again, why, ghosts: h ? h.ghosts.length : 0, seen: h ? h.seen : 0, fled: maxFled, told: h ? h.told.slice() : [], theft: h ? h.told.includes('c' + crime.id) : false, hunted, crimeSt: crime.st, killer: h ? h.told.includes('k' + killer.id) : false, fear0, fear1: killer.fear, kbio: (killer.bio || []).some(e => /fantasma/.test(e[2] || '')), ended: !S.beyond.haunts.length, bad, qa: H.qa() };
+      // (the guard who goes after the thief once the ghost has told — Cr.reveal: the nearest of the watch takes up the hunt —,
+      // caught in the step he takes it up: the hunt itself is the search's, and a thief out of sight is looked for at home and
+      // around and given up after four looks (crime.js, runPrender). In the cidade of the generation 17 the thief was praying
+      // in the temple, Xiuhcoatl went after him and gave up, and the crime was still open at the end, where the case looked)
+      let chaser = null; const chase = () => { if (chaser) return; const g = [...S.villagers.values()].find(o => o.hunt === crime.id); if (g) chaser = `${g.name} (${g.role})`; };
+      chase();
+      while (S.beyond.haunts.length && S.day < day0 + 4) { H.run(5, chase); maxFled = Math.max(maxFled, h.fled); const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(q => q.msg)); }
+      const hunted = !!chaser || [...S.villagers.values()].some(g => g.hunt === crime.id) || crime.st !== 'aberto';
+      return { set: set.name, ok, again, why, ghosts: h ? h.ghosts.length : 0, seen: h ? h.seen : 0, fled: maxFled, told: h ? h.told.slice() : [], theft: h ? h.told.includes('c' + crime.id) : false, hunted, chaser, crimeSt: crime.st, killer: h ? h.told.includes('k' + killer.id) : false, fear0, fear1: killer.fear, kbio: (killer.bio || []).some(e => /fantasma/.test(e[2] || '')), ended: !S.beyond.haunts.length, bad, qa: H.qa() };
     });
     if (!r) ok('f1 fantasmas', false, 'nenhuma cidade com cemitério');
     else {
       ok('f1 fantasmas: andam à noite, o povo vê e foge', r.ok && r.ghosts >= 1 && r.seen >= 3 && r.ended && !r.again && !r.bad.length && !r.qa.length, `${r.set}: ${r.ghosts} fantasmas; ${r.seen} pessoas viram, ${r.fled} fugiram; terminou ${r.ended}; de novo no mesmo cemitério: ${r.why}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
-      ok('f1 o fantasma aponta o ladrão', r.theft && r.hunted, `contou o roubo ${r.theft}; guarda atrás do ladrão (ou já preso) ${r.hunted} (crime: ${r.crimeSt})`);
+      ok('f1 o fantasma aponta o ladrão', r.theft && r.hunted, `contou o roubo ${r.theft}; guarda atrás do ladrão (ou já preso) ${r.hunted} (${r.chaser ? r.chaser + " foi atrás; " : ""}crime: ${r.crimeSt})`);
       ok('f1 o fantasma vai atrás de quem o matou', r.killer && r.fear1 > r.fear0 && r.kbio, `foi atrás ${r.killer}; medo do assassino ${Math.round(r.fear0)} → ${Math.round(r.fear1)}; biografia ${r.kbio}`);
     }
   }
@@ -709,7 +715,13 @@ const key = process.argv[2] || 'cidade';
     const r = await page.evaluate(() => {
       const H = __H; H.fresh(); const S = G.S; const W = G.W, T = G.T; const bad = []; const chk = () => { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); };
       // the god's own hand: a lightning bolt in flight, the impact of a meteor, a last bolt — it falls from the sky
-      const a = H.dragon().d; let k = 0; while (a.st !== 'passe' && k++ < 3000) G.debug.step(0.05);
+      // (struck in its pass over dry ground, with dry ground ahead where it falls — it drops a couple of tiles along its way,
+      // and one that falls into the water leaves no bones: dragon.js, slain —: in the cidade of the generation 17 the first
+      // moment of its pass was two tiles from the lake of Tenochtitlan, and it fell into it)
+      const dry = (x, y) => { if (!W.inb(x, y)) return false; const t = S.type[W.idx(x, y)]; return t >= T.SAND && t !== T.RIVER; };
+      const ahead = d => [0, 1, 2, 3].every(s => dry(d.x + Math.cos(d.hd) * s, d.y + Math.sin(d.hd) * s));
+      const a = H.dragon().d; let k = 0; while (!(a.st === 'passe' && ahead(a)) && k++ < 6000) G.debug.step(0.05);
+      const overLand = a.st === 'passe' && ahead(a);
       const hp0 = a.hp; G.Powers.lightning(a.x, a.y); const bolt = Math.round(hp0 - a.hp);
       G.Powers.meteorImpact({ x: a.x, y: a.y, r: 3.4 }); G.Powers.lightning(a.x, a.y);
       const falling = a.st === 'morre' || a.hp <= 0; H.until(() => !S.dragons.includes(a), 20); chk();
@@ -728,9 +740,9 @@ const key = process.argv[2] || 'cidade';
       let loaded = true; try { G.Save.apply(o); G.Main.mode = 'game'; G.UI.setSpeed(0); } catch (e) { loaded = false; }
       const kept = loaded ? G.S.dragons.map(q => q.id) : [];
       H.run(5); chk();
-      return { bolt, falling, godKill, bones: (S.dragonBones || []).length, moved, newLair, leaving, gone, loaded, kept: kept.length === 1 && kept[0] === c.id, bad, qa: H.qa() };
+      return { bolt, overLand, falling, godKill, bones: (S.dragonBones || []).length, moved, newLair, leaving, gone, loaded, kept: kept.length === 1 && kept[0] === c.id, bad, qa: H.qa() };
     });
-    ok('g4 a mão do deus: raio e meteoro derrubam o dragão em pleno voo', r.bolt >= 200 && r.falling && r.godKill && r.bones >= 1, `o raio tirou ${r.bolt} de vida; caindo ${r.falling}; crônica ${r.godKill}; ${r.bones} esqueleto(s)`);
+    ok('g4 a mão do deus: raio e meteoro derrubam o dragão em pleno voo', r.overLand && r.bolt >= 200 && r.falling && r.godKill && r.bones >= 1, `sobre terra ${r.overLand}; o raio tirou ${r.bolt} de vida; caindo ${r.falling}; crônica ${r.godKill}; ${r.bones} esqueleto(s)`);
     ok('g4 o covil afunda no mar: outro covil; depois parte levando o tesouro', r.moved && r.newLair && r.leaving && r.gone, `covil mudou ${r.moved}, novo covil em terra firme ${r.newLair}; partindo ${r.leaving}; sumiu com 25 moedas ${r.gone}`);
     ok('g4 save danificado: o dragão quebrado fica de fora, o mundo carrega', r.loaded && r.kept && !r.bad.length && !r.qa.length, `carregou ${r.loaded}, ficou só o dragão bom ${r.kept}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
   }

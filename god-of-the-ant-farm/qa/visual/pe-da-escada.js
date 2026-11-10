@@ -87,7 +87,7 @@ let nFl = 0, footBad = [], wayBad = [], nWay = 0;
 // (1b: the body and the people of the world by the same cells — the flight bars the body by the plan's cells of it, C.STAIR on the
 // storey it goes up from (Avatar.flightBox) —, and the drawing may pass them by half a cell at most: the body never comes into a
 // flight's drawn outline by more than 0,125 m. Barred by the outline itself, the body met the ladder of the house#18346 of the
-// generation-17 metropole past its cells, where the walk of the plan and the people go — L-xx1, D-xx1)
+// generation-17 metropole past its cells, where the walk of the plan and the people go — L-645, D-146)
 const CS = In.CS, cellBad = [], deep = {}; let worstIn = null;
 for (const b of blds) {
   const p = Sp.planNow(b); if (!p || !p.ok) continue; const fl = p.stairs.filter(s => s.kind !== 'degraus'); if (!fl.length) continue;

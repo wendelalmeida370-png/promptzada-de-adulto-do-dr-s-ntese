@@ -279,7 +279,7 @@ else {
       // (turned to it, until E offers it — a minute of the world at most: the house's own people take its places as they live, and
       // one taken is not offered (Interiors.freeNear: never a place someone holds) until it is let go, as a player waits for it
       // (T-304). In the house#18346 of the generation-17 metropole two of the children sat down to talk at home, at the table
-      // and by the brazier, while the body came down the stairs; the place at the table was let go 12 s after — T-xx1)
+      // and by the brazier, while the body came down the stairs; the place at the table was let go 12 s after — T-581)
       let best = null, k = 0; for (; k < 1800 && !(best && best.id === 'lugar' && best.t.pl.item === pl.item); k++) { const ya = Math.atan2(b.y * TL + pl.z - st().Z, b.x * TL + pl.x - st().X); IN.camYaw = ya; st().yaw = ya; best = G.Interact.best(); frame(); }
       if (k > 30) waited7 = +(k / 30).toFixed(1);
       if (!(best && best.id === 'lugar')) return { why: `o E oferece ${best ? `«${best.label}»` : 'nada'}${k >= 1800 ? ' (o lugar tomado, um minuto esperando)' : ''}` };
