@@ -13,6 +13,8 @@
 //     com ela inteira (L-367: a grande viagem de Públio, no mar 8, saiu com um de vinte e seis)
 //  k6 os dois primeiros da fila do embarque longe do cais: quem está no cais embarca assim mesmo (L-367) — quem está no cais
 //     numa cena de despedida é esperado pelo próprio embarque, e não conta (T-358)
+//  k7 a volta com dois navios: a gente desce de dois em dois, e o navio que fica vazio volta na hora ao trabalho do porto —
+//     nenhum navega sem ninguém a bordo enquanto o outro desembarca (L-679)
 //  e o verificador limpo (S0–S3 novos), sem erro de módulo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -130,8 +132,37 @@ else {
       let k = 0; while (k++ < 100 && X.get(e.id) && e.st === 'embarque') { for (const h of held) { h.x = far[0]; h.y = far[1]; h.path = null; } G.debug.step(0.1); for (const v of quay) if (!v.aboard && inScene(v)) scened.add(v.id); }
       const free = quay.filter(v => !scened.has(v.id)); const went = free.filter(v => v.aboard).length;
       const sc = quay.filter(v => scened.has(v.id)).map(v => v.name);
-      ok(K6, free.length > 0 && went >= Math.min(4, free.length), `${held.map(h => h.name).join(' e ')}, os primeiros da fila, a ${G.dist(far[0], far[1], e.port[0], e.port[1]).toFixed(0)} casas do cais; dos outros, ${quay.length} no cais${sc.length ? ` (${sc.join(', ')} numa cena de despedida, que o embarque espera)` : ''}: ${free.length ? `em 10 s, ${went} dos ${free.length} livres embarcaram` : 'NINGUÉM livre no cais — o caso não se fez'}`);
+      ok(K6, free.length > 0 && went >= Math.min(4, free.length), `${held.map(h => h.name).join(' e ')}, os primeiros da fila, a ${G.dist(far[0], far[1], e.port[0], e.port[1]).toFixed(0)} casas do cais; dos outros, ${quay.length} no cais${sc.length ? ` (${sc.join(', ')} numa cena de despedida, que o embarque espera)` : ''}: ${free.length ? `em 10 s, ${went} dos ${free.length} livres embarcaram` :'NINGUÉM livre no cais — o caso não se fez'}`);
       for (const h of held) h.path = null;
+    }
+  }
+  // k7 — the voyage home with two hulls: as its people step ashore, two at a time, a hull already emptied goes back to the port's work,
+  // never «sailing» with nobody aboard while the other one still unloads (L-679: three of the four hulls of As Velas de Clio, home in the
+  // metropole of the generation 18, out and empty in the seconds the others unloaded — the S3 of the agua-solta). The test's hand: a
+  // «média» voyage and a second hull of the people beside its own — an idle one, or one built by the world's door with the people's
+  // wood —, the first two of the crew (the first to step ashore) aboard the first hull and the others aboard the second, both at the
+  // mooring, and the voyage on its way home there; the checker looked at every half second of the landing
+  {
+    S = M.pronto(KEY); moved.clear(); p = findPick() || p;
+    const e = media(p); const K7 = 'k7 a volta com dois navios: o que a gente deixou volta ao trabalho do porto, nenhum navega sem ninguém a bordo';
+    const crew = e ? e.crew.map(id => S.villagers.get(id)).filter(v => v && !v.aboard) : [];
+    const A = e && S.ships.find(s => s.id === e.flag); let B = null;
+    if (A && crew.length >= 3) {
+      B = S.ships.find(s => s !== A && s.fac === p.f.id && s.kind === 'explorador' && s.st === 'idle' && !s.exp && !s.fleet && !Nv.aboardOf(s).length) || null;
+      if (!B) { const need = Nv.SHIP.explorador.cost + 6 - (p.f.stock.wood || 0); if (need > 0) G.Depot.make('f:' + p.f.id, 'wood', need, { code: 'teste', part: true }); B = Nv.spawn('explorador', p.f, S.buildings.get(e.dock)); }
+    }
+    if (!e || !A || !B || crew.length < 3) ok(K7, false, !e ? 'a viagem «média» não saiu' : crew.length < 3 ? `${e.name}: só ${crew.length} na tripulação` : 'sem um segundo navio para a volta');
+    else {
+      B.exp = e.id; e.ships.push(B.id);
+      const w = Nv._nearestWater(e.moor[0] + 1.2, e.moor[1], 3) || e.moor;
+      for (const [s, at] of [[A, e.moor], [B, w]]) { s.x = at[0]; s.y = at[1]; s.path = null; s.pi = 0; s.st = 'out'; }
+      crew.forEach((v, k) => Nv.board(v, k < 2 ? A : B));
+      e.st = 'volta'; e.t = 0; e.homeTo = e.moor.slice(); e.dayOut = S.day; e.evT = 1e9; e.flw = 1e9;
+      const ids = [A.id, B.id]; const seen = new Set(); let n = 0;
+      while (n++ < 600 && X.get(e.id) && e.st !== 'fim') { G.debug.step(0.1); if (n % 5) continue; for (const q of QA.check()) if (q.sys === 'sea' && q.sev <= 3 && /sem ninguém a bordo/.test(q.msg) && ids.some(id => q.msg.includes('#' + id + ':'))) seen.add(q.msg.split(':')[0]); }
+      const ashore = crew.filter(v => G.S.villagers.has(v.id) && !v.aboard).length;
+      ok(K7, e.st === 'fim' && !seen.size && ashore === crew.length,
+        `${e.name}: ${crew.length} a bordo na volta a ${e.fromName} — 2 em ${A.kind}#${A.id}, ${crew.length - 2} em ${B.kind}#${B.id}; o desembarque em ${(n / 10).toFixed(1)} s: ${seen.size ? `NAVEGANDO SEM NINGUÉM A BORDO: ${[...seen].join(', ')}` : 'nenhum navio navegando vazio'}; ${ashore} de ${crew.length} em terra; a viagem ${e.st === 'fim' ? 'acabou' : 'em «' + e.st + '»'}`);
     }
   }
 }

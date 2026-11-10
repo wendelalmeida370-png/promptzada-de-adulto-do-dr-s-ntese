@@ -27,6 +27,8 @@
 //     o material a caminho da obra, ninguém escolhido tem as mãos ocupadas, e cada escolha acontece com os outros (L-461)
 //  m13 a caverna de duas bocas em chãos que os pés não juntam: o afazer de baixo vai pela boca que os pés alcançam — não pela
 //     mais perto em linha reta, fora do alcance —, faz o que foi fazer e sai onde os pés o levam para casa (L-651)
+//  m14 o adeus de uma viagem não leva quem tem as mãos ocupadas: dos parentes da tripulação que ele levaria primeiro, quem leva uma
+//     compra para casa e quem leva o material a caminho da obra seguem no que faziam; o adeus leva os outros (L-678)
 //  e o verificador limpo nos casos, sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/oficio-inv.js'] });
@@ -446,6 +448,47 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
     const b13 = bad(); const dA = Math.round(G.dist(P.x, P.y, P.A.x + 0.5, P.A.y + 0.5)), dB = Math.round(G.dist(P.x, P.y, P.B.x + 0.5, P.B.y + 0.5));
     const said = !given ? 'a caverna NÃO lhe deu o afazer' : !byB ? `foi mandado à boca (${mo.x}, ${mo.y}) — a que os pés NÃO alcançam` : !wentIn ? `NÃO entrou (${tk(v)})` : !out ? `NÃO saiu em 150 s (${tk(v)})` : home ? `entrou pela boca ao alcance, a ${dB} casas, e saiu em ${Math.round(S.clock - t0)} s onde os pés o levam para casa` : `saiu em (${out[0].toFixed(1)}, ${out[1].toFixed(1)}), de onde os pés NÃO o levam para casa`;
     ok('m13 a caverna pela boca que os pés alcançam', given && byB && wentIn && !!out && home && !b13.length, `${v.name} posto(a) diante d${G.Caves.a ? G.Caves.a(P.cv) : 'a caverna'}, a ${dA} casas da boca mais perto em linha reta, fora do alcance, e a ${dB} da outra: ${said}${b13.length ? '; o verificador: ' + b13[0] : ''}`);
+  }
+}
+// ---------------- m14: the farewell of a voyage takes no busy hands (L-678) ----------------
+// (a voyage made ready by the test's hand — the first people of the sea that has one, as the m10 —, and the first of its crew whose
+// two kin the farewell would take first are grown, of a house, with free hands: the first of them on the way home with a purchase,
+// the second with the work's wood on the way to the site, the leg of a work; its gathering, by its own step: neither goes down to say
+// goodbye, and the farewell takes whoever else it takes. The farewell, 2,4, is a call from outside and asks what the Vg.give asks: it
+// took a builder of Mileto, on his way to the store for a work's stone, in the metropole of the generation 18)
+{
+  fresh(); let e = null, C = null, two = null; const tried = [];
+  // (the kin the farewell weighs, in its order — awake, of no voyage, near the quay, nothing of 3 or more —, the first two of them grown,
+  // of a house, with their hands empty and nothing of the farewell's weight: the ones it would take first, before the hands were busy)
+  const weighed = (x, k) => !k.captive && !k.sleeping && k.age >= 4 && !G.Expe.memberOf(k.id) && !(k.task && k.task.pri >= 3) && G.dist(k.x, k.y, x.port[0], x.port[1]) < 50;
+  const fit = k => k.age >= 16 && !k.aboard && !k.ug && !k.held && !k.air && !(S.avatar && S.avatar.id === k.id) && k.home && S.buildings.get(k.home) && !(k.task && (k.task.pri || 0) >= 2.4) && !(k.carry && k.carry.n > 1e-6);
+  for (const f of G.Fac.all().filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
+    let x = null; for (let k = 0; k < 12 && !x; k++) x = G.Expe.consider(f, { scale: 'media', many: true });
+    if (!x) { tried.push(`${f.name}: nenhuma viagem`); continue; }
+    for (const id of x.crew) { const c = S.villagers.get(id); const ks = c ? G.Stories.kin(c).filter(k => weighed(x, k)) : []; if (ks.length >= 2 && fit(ks[0]) && fit(ks[1])) { e = x; C = c; two = ks.slice(0, 2); break; } }
+    if (e) break; tried.push(`${x.name}: ninguém da tripulação com dois parentes livres perto do cais`);
+  }
+  if (!e) ok('m14 o adeus de uma viagem', false, tried.join(' · ') || 'nenhum povo do mar');
+  else {
+    const [buyer, bld] = two; used.add(buyer.id); used.add(bld.id);
+    purchase(buyer);
+    // (the builder's own leg, runBuild st 2: the store's wood in the hands and the way to the site asked — a work of his town six tiles off
+    // or more, that his feet reach: with no way the step takes him as there, and the wood goes into the work at once)
+    Vg.endTask(bld); D.make('v:' + bld.id, 'wood', 2, { code: 'teste' });
+    const site = [...S.buildings.values()].filter(b => b.set === bld.set && b.type !== 'ruin' && G.dist(b.x, b.y, bld.x, bld.y) > 6).sort((p, q) => (p.built - q.built) || p.id - q.id).find(b => { Vg.setTask(bld, { type: 'build', id: b.id, pri: 1, st: 2, mat: 'wood' }); return Vg.gotoB(bld, b); });
+    const legB = A.leg(bld);
+    // (the gathering, by the voyage's own step: the families come down once — the two held on their ways by the test's hand, as the
+    // obra-longe holds its builder —; and what the farewell saw is what the two were doing at the step it chose, the first of its calls)
+    const sp = [buyer.speed, bld.speed]; buyer.speed = 0; bld.speed = 0;
+    let atBye = null; const set0 = Vg.setTask;
+    Vg.setTask = function (v, t) { if (t && t.type === 'adeus' && !atBye) atBye = { b: holds(buyer), l: A.leg(bld) }; return set0.apply(this, arguments); };
+    try { e.st = 'reunir'; e.bye = 0; e.t = 0; for (let k = 0; k < 30 && !e.bye; k++) G.debug.step(0.1); } finally { Vg.setTask = set0; }
+    const bye = v => !!(v.task && v.task.type === 'adeus' && v.task.exp === e.id);
+    const went = [...S.villagers.values()].filter(bye);
+    const b14 = bad();
+    ok('m14 o adeus de uma viagem', !!site && legB === 'obra' && !!e.bye && !!atBye && atBye.b && atBye.l === 'obra' && !bye(buyer) && !bye(bld) && !b14.length,
+      !site ? `${bld.name}: nenhuma obra da cidade dele a mais de seis casas, ao alcance dos pés` : `${e.name} (de ${e.fromName}), na reunião do cais: de ${C.name}, ${buyer.name} com uma compra a caminho de casa ${bye(buyer) ? 'DESCEU PARA O ADEUS' : `seguiu com ela (${tk(buyer)})`}, ${bld.name} com a madeira a caminho da obra (${legB || 'SEM perna'}) ${bye(bld) ? 'DESCEU PARA O ADEUS' : `seguiu (${tk(bld)})`}; ${e.bye ? `o adeus levou ${went.length} ao cais${atBye ? ` — na hora dele, ${atBye.b ? 'a compra nas mãos' : 'SEM a compra'} e ${atBye.l === 'obra' ? 'a madeira a caminho da obra' : 'SEM a perna da obra'}` : ''}` : 'a reunião NÃO veio'}${b14.length ? '; o verificador: ' + b14[0] : ''}`);
+    buyer.speed = sp[0]; bld.speed = sp[1]; drop(buyer); drop(bld);
   }
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));

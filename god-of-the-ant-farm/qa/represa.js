@@ -29,14 +29,26 @@ const youngAt = d => {
   for (let r = 1.5; r <= 4.5 && !t; r += 1) for (let k = 0; k < 8 && !t; k++) { const an = k / 8 * 6.283; const x = Math.floor(d.x + Math.cos(an) * r), y = Math.floor(d.y + Math.sin(an) * r); const i = G.W.idx(x, y); if (!G.W.dryXY(x + 0.5, y + 0.5) || S.road[i]) continue; let kind = G.Biome.pickTree(G.Biome.of(i)); if (!G.Biome.canGrow(kind, i)) kind = 'oak'; t = G.Nature.addTree(x + 0.5, y + 0.5, kind, 0.7); made = !!t; }
   return { t, made };
 };
-// (the beaver nearest a dam, and a young tree by that dam)
+// (the beaver nearest a dam, and a young tree by that dam — of the pairs by their distance, the nearest whose dam has one, or ground
+// for one: in the metropole of the generation 18, by the r3, the dam nearest a beaver had none round it — «nenhum chão para uma árvore
+// na represa» —, and the case stopped there with two other dams standing, T-633)
 const plant = () => {
   const S = G.S; const bv = [...S.animals.values()].filter(a => a.kind === 'beaver' && !a.dead && !a.held).sort((p, q) => p.id - q.id);
-  let best = null; for (const a of bv) for (const d of S.dams || []) { const dd = G.dist(a.x, a.y, d.x, d.y); if (!best || dd < best.dd) best = { a, d, dd }; }
-  if (!best) return { why: 'nenhum castor perto de represa' };
-  const { t, made } = youngAt(best.d); if (!t) return { why: 'nenhum chão para uma árvore na represa' };
-  return { a: best.a, d: best.d, t, made };
+  const pairs = []; for (const a of bv) for (const d of S.dams || []) pairs.push({ a, d, dd: G.dist(a.x, a.y, d.x, d.y) });
+  if (!pairs.length) return { why: 'nenhum castor perto de represa' };
+  pairs.sort((p, q) => p.dd - q.dd); // (stable: the beavers by id, then the dams in their order, as the nearest pair was taken before)
+  const bare = [];
+  for (const p of pairs) { if (bare.includes(p.d.id)) continue; const { t, made } = youngAt(p.d); if (t) return { a: p.a, d: p.d, t, made, bare }; bare.push(p.d.id); }
+  return { why: `nenhum chão para uma árvore em nenhuma das ${bare.length} represa(s) (${bare.map(id => `#${id}: ${whyBare((S.dams || []).find(q => q.id === id))}`).join(' · ')})` };
 };
+// (what stands where a tree could go round a dam, at the spots youngAt tries: the water and the road, a tree or what is left of one, a
+// stone or a bush, a building — said by the case that finds no ground)
+const whyBare = d => {
+  const S = G.S; const c = { agua: 0, rua: 0, 'árvore': 0, 'toco ou tronco': 0, 'pedra ou arbusto': 0, 'prédio': 0 };
+  for (let r = 1.5; r <= 4.5; r += 1) for (let k = 0; k < 8; k++) { const an = k / 8 * 6.283; const x = Math.floor(d.x + Math.cos(an) * r), y = Math.floor(d.y + Math.sin(an) * r); const i = G.W.idx(x, y); if (!G.W.dryXY(x + 0.5, y + 0.5)) c.agua++; else if (S.road[i]) c.rua++; else if (S.treeAt[i]) { const t = S.trees.get(S.treeAt[i]); c[t && t.stage === 'grow' ? 'árvore' : 'toco ou tronco']++; } else if (S.objAt[i]) c['pedra ou arbusto']++; else if (S.occ[i]) c['prédio']++; }
+  return Object.keys(c).filter(k => c[k]).map(k => `${c[k]} ${k}`).join(', ');
+};
+const bareTxt = p => (p.bare && p.bare.length ? ` (a represa #${p.bare.join(', #')}, mais perto, sem chão para uma árvore em volta)` : '');
 // (the beavers fell only a growing tree, big enough, within five steps of their dam, and find their dam by wandering: in the
 // metropole of 28/10 they had none at the open, and by the time they found one the woodcutters had taken the trees round it —
 // the case had nothing to look at for ten minutes. The case is the chronicle, not the beavers' choice: a young tree by the dam
@@ -45,7 +57,7 @@ let fedId = 0, refed = 0;
 const feed = () => {
   const p = plant(); if (p.why) return p.why; const { a, d, t, made } = p;
   a.dam = d.id; a.gnawTree = t.id; a.x = t.x + 0.4; a.y = t.y + 0.3; a.hx = a.x; a.hy = a.y; a.gnawT = 0; fedId = a.id;
-  return `o castor #${a.id} na represa #${d.id}, roendo ${made ? 'uma árvore nova' : 'a árvore #' + t.id}`;
+  return `o castor #${a.id} na represa #${d.id}${bareTxt(p)}, roendo ${made ? 'uma árvore nova' : 'a árvore #' + t.id}`;
 };
 const fed0 = feed();
 // (until the beavers fell one more tree for their dams, or ten minutes of the world. The woodcutters may fell the beaver's tree
@@ -59,11 +71,15 @@ M.salvarCarregar(); const t1 = told(); const fed1 = feed();
 const b = live(1, 600);
 ok('r2 um save no meio: a crônica não ganha a linha', b > 0 && told() === t1, `${b} árvore(s) roída(s) depois do load (${fed1}${again()}): ${told()}× (antes do load ${t1}×)`);
 // r3 — the woodcutter's axe on the tree a beaver chose and gnaws (the beaver at its dam with no tree chooses by itself, and the
-// game holds its choice; the woodcutters of the town may take that tree first: then it chooses again)
+// game holds its choice; the woodcutters of the town may take that tree first: then it chooses again) — in the world opened again: the
+// dams of the metropole of the generation 18 stand among the streets and the houses of their towns, a few free tiles round each, and
+// the trees the r1 and the r2 gave the beavers there (more than a dozen) were felled by the woodcutters, their stumps on that ground — by the r3
+// no dam had a young tree or ground for one, «#3105: 10 agua, 10 rua, 4 toco ou tronco, 8 prédio», T-633
 {
-  let a = null, t = null, why = '', tries = 0;
+  M.pronto(KEY);
+  let a = null, t = null, why = '', tries = 0, skip = '';
   while (tries++ < 4 && !t) {
-    const p = plant(); if (p.why) { why = p.why; break; }
+    const p = plant(); if (p.why) { why = p.why; break; } skip = bareTxt(p);
     a = p.a; a.dam = p.d.id; a.gnawTree = 0; a.gnawT = 0; a.x = p.t.x + 0.4; a.y = p.t.y + 0.3; a.hx = a.x; a.hy = a.y;
     for (let k = 0; k < 3000 && !a.gnawTree && !a.dead && G.S.animals.has(a.id); k++) { M.viver(0.1); if (k % 200 === 199) youngAt(p.d); }
     const c = a.gnawTree ? G.S.trees.get(a.gnawTree) : null;
@@ -78,7 +94,7 @@ ok('r2 um save no meio: a crônica não ganha a linha', b > 0 && told() === t1, 
     t.stage = 'stump'; t.wood = 0; t.t = 0; G.Powers.growth(t.x, t.y);
     const free = t.stage === 'grow' && !taken(t);
     ok('r3 o lenhador derruba a árvore do castor: ele a larga, e o toco que brota é de qualquer castor', a.gnawTree !== t.id && !a.gnawT && free,
-      `o castor #${a.id} roía a árvore #${t.id} (${gT.toFixed(1)} s de roer) quando o machado a derrubou: ${a.gnawTree === t.id ? 'AINDA a rói' : 'largou-a'}${a.gnawT ? `, com ${a.gnawT.toFixed(1)} s de roer levados para a próxima` : ''}; o toco brotou (${t.stage}, ${t.size.toFixed(2)}): ${free ? 'livre para qualquer castor' : 'AINDA tomada'}`);
+      `o castor #${a.id}${skip} roía a árvore #${t.id} (${gT.toFixed(1)} s de roer) quando o machado a derrubou: ${a.gnawTree === t.id ? 'AINDA a rói' : 'largou-a'}${a.gnawT ? `, com ${a.gnawT.toFixed(1)} s de roer levados para a próxima` : ''}; o toco brotou (${t.stage}, ${t.size.toFixed(2)}): ${free ? 'livre para qualquer castor' : 'AINDA tomada'}`);
   }
 }
 const nv = fresh(); const e = M.erros(); const mods = Object.keys(e.mod);

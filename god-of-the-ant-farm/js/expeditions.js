@@ -518,15 +518,17 @@
     const S = G.S;
     const there = crew.filter(v => G.dist(v.x, v.y, e.port[0], e.port[1]) < 6).length;
     // the families come down to the water to see them go (once) — those awake: a farewell is a call from outside, and none takes a
-    // sleeper from bed (Vg.give; the caravan, L-635): a voyage gathered at night took two of its crew's kin from their beds at 21h22, L-661
+    // sleeper from bed (Vg.give; the caravan, L-635): a voyage gathered at night took two of its crew's kin from their beds at 21h22, L-661;
+    // and those with their hands free, as Vg.give asks (Vg.busy, D-094): it took a builder of Mileto on his way to the store for a
+    // work's stone, the leg of a work, L-678
     if (!e.bye) {
-      e.bye = 1; let n = 0;
+      e.bye = 1; let n = 0; const BYE = { type: 'adeus', pri: 2.4 };
       for (const v of crew) {
-        const kin = G.Stories ? G.Stories.kin(v).filter(k => !k.captive && !k.sleeping && k.age >= 4 && !X.memberOf(k.id) && !(k.task && k.task.pri >= 3) && G.dist(k.x, k.y, e.port[0], e.port[1]) < 50) : [];
+        const kin = G.Stories ? G.Stories.kin(v).filter(k => !k.captive && !k.sleeping && k.age >= 4 && !X.memberOf(k.id) && !G.Vg.busy(k, BYE) && G.dist(k.x, k.y, e.port[0], e.port[1]) < 50) : [];
         for (const k of kin.slice(0, e.scale === 'grande' ? 1 : 2)) { if (n > 24) break; G.Vg.endTask(k); G.Vg.setTask(k, { type: 'adeus', exp: e.id, of: v.id, pri: 2.4, st: 0, k: n }); n++; }
       }
       // a royal voyage: the ruler comes down too, and a banner goes up on the quay
-      if (e.scale === 'grande') { const ru = G.Politics.ruler(f); if (ru && !ru.captive && !ru.sleeping && G.dist(ru.x, ru.y, e.port[0], e.port[1]) < 70 && !(ru.task && ru.task.pri >= 3)) { G.Vg.endTask(ru); G.Vg.setTask(ru, { type: 'adeus', exp: e.id, of: e.leader, pri: 2.4, st: 0, k: n, ruler: 1 }); } e.banner = 1; }
+      if (e.scale === 'grande') { const ru = G.Politics.ruler(f); if (ru && !ru.captive && !ru.sleeping && G.dist(ru.x, ru.y, e.port[0], e.port[1]) < 70 && !G.Vg.busy(ru, BYE)) { G.Vg.endTask(ru); G.Vg.setTask(ru, { type: 'adeus', exp: e.id, of: e.leader, pri: 2.4, st: 0, k: n, ruler: 1 }); } e.banner = 1; }
       chapter(e, 'O cais', e.scale === 'grande' ? `No cais de ${e.fromName}, ${crew.length} pessoas esperam a ordem de embarcar. As famílias vieram; há bandeiras, choro, e um sacerdote que abençoa os cascos.` : e.scale === 'media' ? `${crew.length} pessoas no cais de ${e.fromName}, e quem ficou veio dizer adeus.` : `De manhã cedo, ${P(e.leader).name} desce para o cais de ${e.fromName}${n ? ', e quem gosta del' + (P(e.leader).g === 'f' ? 'a' : 'e') + ' vem junto' : ' sozinh' + oa(P(e.leader))}.`, 'ship', e.scale === 'grande');
     }
     if ((there >= crew.length * 0.85 && e.t > 8) || e.t > 70) { e.st = 'embarque'; e.t = 0; e.bq = 0; }
@@ -961,11 +963,15 @@
       if (kin.length) { const k = kin[0]; G.Vg.emote(k, 'heart', 3); G.Vg.emote(v, 'heart', 3); }
       void s;
     }
+    // (a hull whose people are all ashore goes back to the port's work at once: left «out» while the other hulls unloaded, it sailed
+    // with nobody aboard — three of the four hulls of As Velas de Clio, home in the metropole of the generation 18, L-679)
+    for (const s of ships) if (s.exp === e.id && !Nv.aboardOf(s).length) dockHull(e, s);
     e.dq = 0.6; if (ab.length > 2) return;
-    // the ships go back to the port's work
-    for (const s of ships) { s.exp = 0; s.st = 'idle'; s.t = 0; Nv.clearCrew(s, e.port); if (s.kind === 'canoa' || s.kind === 'jangada') Nv._remove(s); }
+    // the ships go back to the port's work (the ones still the voyage's: one already back may be at other work by now)
+    for (const s of ships) if (s.exp === e.id) dockHull(e, s);
     e.st = 'fim'; e.end = e.end || G.S.day;
   }
+  function dockHull(e, s) { s.exp = 0; s.st = 'idle'; s.t = 0; Nv.clearCrew(s, e.port); if (s.kind === 'canoa' || s.kind === 'jangada') Nv._remove(s); }
   // ------------------------------ the end of it ------------------------------
   function finish(e, status, txt, o) {
     o = o || {}; const S = G.S; e.status = status; e.end = S.day; e.st = 'fim';

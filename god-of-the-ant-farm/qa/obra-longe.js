@@ -37,7 +37,9 @@ if (!site) { ok('o1 a ida longe', false, 'nenhuma cidade em paz com um armazém 
 const { set } = site; const f = 'f:' + set.fac;
 // (one who can carry a full load, rested, fed and well, of the town, not the god's body: the test's hand sets them at the
 // site's door, the task given by the world's door)
-const able = o => o.set === set.id && o.age >= 18 && o.age < 50 && o.hp >= 80 && !o.captive && !o.jail && !o.aboard && !o.ug && !o.sick && !o.held && !o.air && !o.carry && !(S.avatar && S.avatar.id === o.id);
+// (and none of the crew of a voyage: the crew's call to the quay, 3,25, takes one from the work at the first step — in the metropole
+// of the generation 18 Aquiles, Tales and Dafne, of Mileto, were of a voyage in preparation, and the call took each at 0,5 s, T-632)
+const able = o => o.set === set.id && o.age >= 18 && o.age < 50 && o.hp >= 80 && !o.captive && !o.jail && !o.aboard && !o.ug && !o.sick && !o.held && !o.air && !o.carry && !(S.avatar && S.avatar.id === o.id) && !(G.Expe && G.Expe.memberOf(o.id));
 function builder(not) { return [...S.villagers.values()].filter(o => able(o) && !not.has(o.id)).sort((a, c) => (a.role === 'construtor' ? 0 : 1) - (c.role === 'construtor' ? 0 : 1) || a.id - c.id)[0] || null; }
 // (the people's stone kept by the god's hand while the case runs: the town's own works take from the same store, and a task
 // with no stone left to fetch ends — the case is the leg, not the store)
