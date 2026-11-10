@@ -37,6 +37,9 @@
 //    mandado à caverna com o alarme tocando o tempo todo (um ataque longo), come do estoque do povo no refúgio e nunca chega à
 //    fome máxima (L-605; apontado pelo C na geração 15: Kamose, de Tebas em guerra, levado ao refúgio a caminho de comer, morreu
 //    a duas casas de um armazém)
+// h19 a cidade que um desastre deixa sem fogueira e sem armazém acende outra: no mesmo dia, mesmo com a busca do dia já falhada
+//    com um armazém de pé, e mais longe quando o chão no raio dela não tem lugar (L-?; achado pela regra S1 no caos da semente 13
+//    da geração 17: Hedeby, com o vulcão no coração dela, três dias sem armazém)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -541,6 +544,41 @@ const calmOne = (skip, also) => {
     }
   }
   ok('h17 quem se esconde na caverna come das provisões, como quem foge da guerra (L-605)', good, info);
+}
+// ---------------- h19 the town a disaster leaves with no fire and no store lights another (L-?) ----------------
+// (found by the rule S1 in the chaos of seed 13 of the generation 17: a volcano at Hedeby's heart took its fire, and its store and
+// its dock a moment after; the town's search for a fire had found nothing that day while the store stood — and a search that finds
+// nothing is not asked again until the next day —, and on the next days the ruins round its heart left it no tile, the ring of a
+// fire taking no building at all: three days with no store, its people starving with 152 of food in the stock. (a) the day's search
+// for a fire already failed, a store standing — the test's hand leaves what that search leaves —, and the god's lava takes the fire
+// and every store: a new fire at once, the same day, and the hungry eat there; (b) the god's lava again, and its scar on the ground
+// of the heart, as a volcano leaves it, as far as the town looks: the fire goes further, where the town's streets still reach it)
+{
+  S.time = 0.3; G.Politics.divinePeace(); const peace = () => { S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); };
+  // (the town by the rule of the start, asked now, as h14 asks it)
+  const set = [...S.settlements.values()].filter(s => builders(s) >= 2 && V.dropoffs(s.id).length).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0] || set0;
+  const fires = () => [...S.buildings.values()].filter(b => b.set === set.id && (b.type === 'campfire' || (b.built && G.BDEF[b.type] && G.BDEF[b.type].dropoff)));
+  const lava = () => { for (const b of fires()) V.damageBuilding(b, 9999, 'lava'); return !fires().length; };
+  const newFire = old => [...S.buildings.values()].find(b => b.set === set.id && b.type === 'campfire' && !old.has(b.id)) || null;
+  const hungry = () => { const q = [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 16 && !o.captive && !o.aboard && !o.inside && !o.jail && !o.ug && W.reachesTown(o, set) && !(S.avatar && S.avatar.id === o.id)).sort((a, b) => a.id - b.id)[0] || null; if (q) q.hunger = 85; return q; };
+  // (a)
+  const n0 = fires().length; const day0 = S.day; (set._noSite || (set._noSite = {})).campfire = S.day;
+  const bare = lava(); const v = hungry(); const h0 = v ? v.hunger : 0;
+  let lit = null, tLit = -1, dLit = -1, ate = false; const t0 = S.clock; const old = new Set();
+  live(300, () => { peace(); const n = newFire(old); if (n && !lit) { lit = n; tLit = r2(S.clock - t0); dLit = S.day; } if (v && S.villagers.has(v.id) && v.hunger < h0 - 30) ate = true; return !!(lit && lit.built && (ate || !v)); });
+  ok('h19a a cidade que perde a fogueira e todo armazém acende outra no mesmo dia, mesmo com a busca do dia já falhada (L-?)', bare && !!lit && tLit >= 0 && tLit <= 10 && dLit === day0 && lit.built && (!v || ate),
+    !bare ? `${set.name}: a lava não levou todos os ${n0} (sobrou ${fires().map(b => b.type + '#' + b.id).join(', ')})` : `${set.name}: a busca do dia por uma fogueira já falhada (um armazém de pé); a lava levou a fogueira e os armazéns (${n0}) → ${lit ? `fogueira #${lit.id} fundada ${tLit} s depois (dia ${dLit}, o da lava: ${day0}), ${lit.built ? 'acesa' : 'AINDA em obra'}` : 'NENHUMA fogueira nova em 300 s'}${v ? `; ${v.name} (fome ${h0}) ${ate ? 'comeu lá' : 'NÃO comeu'}` : ''}`);
+  // (b)
+  const R = G.Urban.radius(set, G.BDEF.campfire, V.pop(set.id)); const scar = new Map();
+  if (lit) old.add(lit.id);
+  const bare2 = lava(); delete set._noSite.campfire; delete set._noSite['campfire!']; // (a new day's question: the case is the ground, not the day's search)
+  for (let dy = -R - 1; dy <= R + 1; dy++) for (let dx = -R - 1; dx <= R + 1; dx++) { const x = Math.floor(set.cx) + dx, y = Math.floor(set.cy) + dy; if (!W.inb(x, y) || G.dist(x + 0.5, y + 0.5, set.cx, set.cy) > R) continue; const i = W.idx(x, y); scar.set(i, S.scar[i]); S.scar[i] = Math.max(S.scar[i], G.DAY_LEN * 3); }
+  let far = null, tFar = -1; const t1 = S.clock;
+  live(300, () => { peace(); const n = newFire(old); if (n && !far) { far = n; tFar = r2(S.clock - t1); } return !!(far && far.built); });
+  for (const [i, s] of scar) S.scar[i] = s; // (the scar gone again, for the cases after)
+  const dFar = far ? r2(G.dist(...V.center(far), set.cx, set.cy)) : 0;
+  ok('h19b sem chão no raio da cidade (as ruínas, a cicatriz da lava), a fogueira nova vai mais longe, onde as ruas da cidade chegam (L-?)', bare2 && !!far && tFar >= 0 && tFar <= 10 && dFar > R && dFar <= R + 12.5 && W.townReaches(set, ...V.frontTile(far)) && far.built,
+    `${set.name}: a lava de novo${bare2 ? '' : ' (NÃO levou tudo)'}, e a cicatriz dela no chão até o raio da cidade (${R} casas) → ${far ? `fogueira #${far.id} fundada ${tFar} s depois, a ${dFar} casas do centro${W.townReaches(set, ...V.frontTile(far)) ? ', onde as ruas chegam' : ', ONDE AS RUAS NÃO CHEGAM'}, ${far.built ? 'acesa' : 'AINDA em obra'}` : 'NENHUMA fogueira nova em 300 s'}`);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }

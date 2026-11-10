@@ -508,7 +508,14 @@
   // on its podium: the ground's relief under its lot up to V.PODIUM, D-115)
   V.findSite = function (set, type, reach, n) {
     const S = G.S; const def0 = G.BDEF[type];
-    const def = n && n !== def0.w ? Object.assign({}, def0, { w: n, h: n, podium: true }) : def0; const nk = def === def0 ? type : type + ':' + n;
+    const def = n && n !== def0.w ? Object.assign({}, def0, { w: n, h: n, podium: true }) : def0;
+    // (a town with no store left to eat at — its fire and its stores taken by a disaster — asks for its fire anew, not held by what
+    // the same day found while a store still stood, and looks further when its ground has no room: the ruins the disaster leaves
+    // stand three days, and the ring of a fire takes no building at all — Hedeby, in the chaos of seed 13 of the generation 17, its
+    // fire, its store and its dock taken by the lava of a volcano at its heart, found no tile for a fire for three days, and starved
+    // with 152 of food in its people's stock)
+    const bare = type === 'campfire' && def === def0 && !V.dropoffs(set.id).length;
+    const nk = (def === def0 ? type : type + ':' + n) + (bare ? '!' : '');
     if (type === 'doca' && G.City) return G.City.dockSite(set);
     if (G.Eco && def === def0) { const e = G.Eco.findSite(set, type); if (e !== undefined) return e; }
     // a search that found nothing today is not repeated until tomorrow (big cities ask many times a day)
@@ -535,6 +542,7 @@
       if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, false);
       if (!best && def.civic && def === def0) best = search(set, type, def, R + 6, field, counts, true);
     }
+    if (bare) for (const e of [6, 12]) if (!best) best = search(set, type, def, R + e, field, counts, false, undefined, reach);
     if (!best) noSite[nk] = S.day;
     return best;
   };
