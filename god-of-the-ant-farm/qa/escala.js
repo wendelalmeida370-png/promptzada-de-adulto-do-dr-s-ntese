@@ -157,10 +157,12 @@ const arma = (set, quer, quadra) => {
     // (a field wanted, and none in the way of a lot the step would open — the metrópole of the generation 18: only the old block's
     // houses, and with them down no lot left to open —: the god's hand plants a field of the town where the houses of the lot the
     // step opens stood, on its corner — of a kind the town has a lot to move to, the step's rule: a field comes down only with a
-    // lot of its kind to go to, and Tenochtitlan has none for a farm, T-626)
+    // lot of its kind to go to, and Tenochtitlan has none for a farm, T-626). The meteor leaves ruins, and the hand clears them
+    // before it plants — a field put down on a ruin takes its ground from under it, and the work that opens the lot later took
+    // the ruin's tile: «ruin#3273: 1 casa(s) do terreno marcadas como de temple#27037», in the metrópole of the generation 19
     if (quer === campo && !plantou) {
       const x = o[0], y = o[1]; const tipo = ['farm', 'pomar', 'plantacao', 'vinhedo', 'apiario'].find(t => { set._noSite = {}; const p = sim(() => V.findSite(set, t)); set._noSite = {}; return !!p && !p.demolish; });
-      if (tipo) sim(() => { for (const id of o.demolish) { const b = S.buildings.get(id); caiu.push(b.type); V.destroyBuilding(b, 'meteor'); } const f = V.addBuilding(tipo, x, y, set.id, true); if (f) { plantou = ` e plantou ${V.buildName(f)} #${f.id} (${tipo}) no lote ${x},${y}`; G.W.touchWalk(); } });
+      if (tipo) sim(() => { for (const id of o.demolish) { const b = S.buildings.get(id); if (!b) continue; caiu.push(b.type); V.destroyBuilding(b, 'meteor'); if (S.buildings.get(id) === b && b.type === 'ruin') V.removeBuilding(b); } const f = V.addBuilding(tipo, x, y, set.id, true); if (f) { plantou = ` e plantou ${V.buildName(f)} #${f.id} (${tipo}) no lote ${x},${y}`; G.W.touchWalk(); } });
       if (plantou) continue;
     }
     sim(() => { for (const id of o.demolish) { const x = S.buildings.get(id); caiu.push(x.type); V.destroyBuilding(x, 'meteor'); } });
@@ -836,7 +838,10 @@ run('e23', () => {
   // (um teto de 1 — quatro mãos crescidas —: o primeiro da fila leva a única mão; com a comida garantida, os serviços abertos a mais)
   const seguro = V.foodSafe(f.id); const deu = E.share(Object.assign({}, pede), set, f, 4);
   const fs0 = V.foodSafe; V.foodSafe = () => false; const antes = E.share(Object.assign({}, pede), set, f, 4); V.foodSafe = fs0;
-  ok('e23a o teto guarda os serviços com a comida garantida', seguro && sv.taverneiro >= 1 && sv.ator >= 1 && deu.taverneiro === 1 && deu.ator === 1 && antes.taverneiro + antes.ator + antes.oleiro + antes.ferreiro + antes.mercador + antes.feirante === 1,
+  // (the hands kept are one for each service open of what the town asks — E.kept: two taverns, two keepers; the town of the
+  // generation 19 has two, and the case asked one)
+  const guarda = r => Math.min(pede[r], sv[r]);
+  ok('e23a o teto guarda os serviços com a comida garantida', seguro && sv.taverneiro >= 1 && sv.ator >= 1 && deu.taverneiro === guarda('taverneiro') && deu.ator === guarda('ator') && antes.taverneiro + antes.ator + antes.oleiro + antes.ferreiro + antes.mercador + antes.feirante === 1,
     `abertos ${JSON.stringify(sv)}; pedem ${JSON.stringify(pede)}, teto 1 — com a comida garantida ${JSON.stringify(deu)}; em risco ${JSON.stringify(antes)}`);
   const w1 = { taverneiro: 1, ator: 2, oleiro: 1 }; const n1 = E.cut(w1, 3, { taverneiro: 1, ator: 1 });
   ok('e23b o corte do resto deixa os serviços guardados', n1 === 2 && w1.taverneiro === 1 && w1.ator === 1 && w1.oleiro === 0, `corta 3 de ${JSON.stringify({ taverneiro: 1, ator: 2, oleiro: 1 })} guardando um taverneiro e um ator: ${n1} cortados, ${JSON.stringify(w1)}`);

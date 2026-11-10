@@ -148,6 +148,12 @@ function stealNow(P, v) {
   // seconds —; the night a few seconds on, and the theft at once, as in the k1. Waiting for the next dusk, some 200 s, both
   // smugglers the proof set up had left the trade before the night came)
   const P = setup(0.7); const town = S().settlements.get(P.b.set); if (town && town.watchDay === S().day) town.watchDay = S().day - 1;
+  // (the town awake at dusk, as the world has it then: the snapshot is of the night, and the clock turned back to dusk left the
+  // watchmen and the soldiers in their beds — and the world gives the round only to one awake, out and free at dusk (crime.js).
+  // In the metrópole of the generation 19 every watchman of Tenochtitlan slept, and no round was given. The god's hand wakes them,
+  // rested and fed as at dusk — woken with the night's hunger, Nenetl took the round and left it for her supper (the meal, 2,5,
+  // over the round, 1,6) before the night came —, at their doors; the round is the world's, by its own rule)
+  for (const g of S().villagers.values()) if (g.set === P.b.set && (g.role === 'vigia' || g.role === 'guerreiro') && !g.captive) { if (g.sleeping || g.inside) { const hb = S().buildings.get(g.inside); G.Vg.endTask(g); g.sleeping = false; if (hb) { const d = G.Vg.door(hb); g.x = d[0]; g.y = d[1]; g.path = null; } g.inside = 0; } g.energy = Math.max(g.energy || 0, 90); g.hunger = Math.min(g.hunger || 0, 10); }
   const roundOf = () => [...S().villagers.values()].filter(o => o.set === P.b.set && o.task && o.task.type === 'ronda' && o.task.loop && !P.crew.includes(o)).sort((a, c) => a.id - c.id)[0];
   let w = null; live(30, null, () => { w = roundOf() || null; return !!w && G.isNight(); });
   const v = P.crew.find(c => S().villagers.has(c.id) && c.role === 'contrabandista' && fit(c)) || P.crew[0]; const crook0 = v.role === 'contrabandista';

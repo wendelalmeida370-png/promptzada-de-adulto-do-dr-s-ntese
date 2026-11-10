@@ -3,7 +3,7 @@
 // O caso 6 do guerra10 («medium») julga a derrota numa batalha que a guerra encontra sozinha; com a economia da v37 a
 // guerra determinística daquele mundo termina por desgaste antes de os exércitos se encontrarem, e o caso ficava sem
 // batalha para julgar. Aqui o reino A levanta um exército contra a capital do B, o B levanta a guarda dela, e eles se
-// encontram. d1 a batalha acontece; d2 ninguém luta até o último homem (nenhum lado de 10 ou mais com 90% de mortos);
+// encontram (os que a guerra já levantou nos seus primeiros segundos; só o que falta, pela porta do jogo). d1 a batalha acontece; d2 ninguém luta até o último homem (nenhum lado de 10 ou mais com 90% de mortos);
 // d3 quem perde foge, se rende ou deixa o campo; d4 os exércitos terminam (o que sobrou volta para casa) e o
 // verificador fica limpo do começo ao fim.
 const M = require('./nodemundo.js');
@@ -22,9 +22,15 @@ const [A, B] = G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).sli
 const grow = (f, want) => { const sets = G.Fac.settlementsOf(f.id); let k = 0; while (G.Fac.pop(f.id) < want && k++ < 9000) { const s = sets[k % sets.length]; const a = G.R() * 6.283, r = G.R() * (s.radius || 6); const p = G.W.nearestLand(s.cx + Math.cos(a) * r, s.cy + Math.sin(a) * r, 5); if (!p) continue; G.Vg.create({ set: s.id, x: p[0], y: p[1], age: 17 + G.R() * 38 }); } f.stock.food = Math.max(f.stock.food, want * 7); f.stock.armas = (f.stock.armas || 0) + Math.round(want * 0.15); };
 grow(A, 320); grow(B, 260); G.Fac.updateTerritory();
 G.Politics.declareWar(A, B, 'ambicao'); live(5);
-const Wz = G.Wars; const w = Wz.warOf(A.id, B.id); const tg = G.Fac.capitalOf(B.id);
-const host = w && tg && Wz.mobilize(w, G.Fac.get(A.id), 'campanha', tg, {});
-const guard = w && tg && Wz.mobilize(w, G.Fac.get(B.id), 'defesa', tg, {});
+const Wz = G.Wars; const w = Wz.warOf(A.id, B.id);
+// (the armies the war raised, and by the game's door only what is missing: in its first five seconds the war may have called
+// A's campaign and B's guard already — in the generation 19 it had, and the hand's second campaign and second guard of Mênfis
+// took four of the first guard, called and fled back to work: «#5458 em dois exércitos (3 e 5)». The game raises one campaign
+// of a people at a time and one guard for a town)
+const raised = (f, role, t) => w && Wz.state().armies.find(a => !a.done && a.war === w.id && a.fac === f.id && a.role === role && (!t || a.target === t.id));
+const host0 = raised(A, 'campanha'); const tg = host0 ? G.S.settlements.get(host0.target) : G.Fac.capitalOf(B.id);
+const host = w && tg && (host0 || Wz.mobilize(w, G.Fac.get(A.id), 'campanha', tg, {}));
+const guard = w && tg && (raised(B, 'defesa', tg) || Wz.mobilize(w, G.Fac.get(B.id), 'defesa', tg, {}));
 console.log(`(${A.name} ${G.Fac.pop(A.id)} contra ${B.name} ${G.Fac.pop(B.id)}; exército ${host ? host.members.length : '-'} contra a guarda de ${tg ? tg.name : '-'} ${guard ? guard.members.length : '-'})`);
 if (!host || !guard) { ok('d1 a batalha', false, `precondição: ${!host ? A.name + ' não convocou' : B.name + ' não convocou a guarda'}`); process.exit(1); }
 // the field battle: a closed record out of the towns (an assault on a town is judged by the conquest) with both sides of ten or more

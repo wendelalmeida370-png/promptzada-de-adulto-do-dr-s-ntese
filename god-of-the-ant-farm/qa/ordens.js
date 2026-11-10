@@ -3,7 +3,8 @@
 // a festa, o lar, um bando), a testemunha ficava no limbo — nem calada nem falando —, e só um load mandava caçar de novo (os
 // mundos prontos da geração 18 guardavam homens marcados para três e quatro testemunhas). Agora a caça vale enquanto o homem
 // está nela, a testemunha cuja caça parou espera a ordem um intervalo (G.Secrets.RETRY) e é caçada de novo, e o save guarda as
-// caças como estão. o1 o save de antes (o mundo pronto): as marcas sem caça por trás saem e cada testemunha espera a ordem — o
+// caças como estão. o1 o save de antes (o mundo pronto, sem as caças e os relógios da ordem que um mundo feito depois do L-662
+// guarda): as marcas sem caça por trás saem e cada testemunha espera a ordem — o
 // load não manda caçar ninguém; o2 a caça cortada (a mão da prova tira o homem dela, como a festa, o sono ou o lar tiram): no
 // olhar seguinte a testemunha fica sem caçador e esperando, nenhuma caça nela antes da hora, e caça nova quando a hora chega
 // (as outras caças da ordem nesse meio-tempo cortadas também, para o homem estar livre; se ela vai por outro caminho — a ordem
@@ -35,7 +36,11 @@ const bad = [];
 const live = (secs, each) => { for (let k = 0; k < Math.round(secs * 10); k++) { M.viver(0.1); if (each && each(k) === true) return true; if (k % 100 === 0) { const w = secret(); if (w.length) bad.push(w[0]); } } return false; };
 
 // ---------------- o1 the save of before: its marks have no hunt behind them; they go, and the load sends nobody hunting ----------------
-M.pronto(WORLD);
+// (a ready world made after the L-662 keeps its hunts and the order's clocks — secretsStalk, secretsT —, and its load gives the
+// hunts back as they were, D-148: the mega of the generation 19 kept one, and the load sent it on — «1 caça(s) mandada(s) pelo
+// load». The save of before is that same save without them, as the game saved it then: the test's hand takes them out)
+const after = Array.isArray(raw.secretsStalk) || Array.isArray(raw.secretsT);
+{ const old = Object.assign({}, raw); delete old.secretsStalk; delete old.secretsT; M.abrir(old); }
 const t0 = G.S.clock; const p0 = pending();
 {
   // (the witnesses the save kept marked: none marked now, each waiting for the order; one the save kept unmarked is the step's)
@@ -44,7 +49,7 @@ const t0 = G.S.clock; const p0 = pending();
   // (and no hunt on them in the first looks of the order: the wait is the step's rule, not a hunt the load decided)
   let early = 0; live(9, () => { early = Math.max(early, stalks().filter(v => was.has(v.task.w)).length); });
   ok(`o1 ${WORLD}`, rawMarks.length > 0 && marked === 0 && waiting === kept.length && kept.length === rawMarks.length && sent === 0 && early === 0 && !secret().length,
-    `o save do mundo pronto guardava ${rawMarks.length} testemunha(s) a calar com caçador marcado, sem caça nenhuma (a tarefa não ia no save); depois do load: ${marked} marcada(s), ${waiting} de ${kept.length} esperando a ordem até ${Math.round(t0 + RETRY())} s (agora ${Math.round(t0)}), ${sent} caça(s) mandada(s) pelo load, ${early} nelas nos primeiros 9 s`);
+    `o save do mundo pronto${after ? ' (de depois do L-662, sem as caças e os relógios da ordem, como um save de antes)' : ''} guardava ${rawMarks.length} testemunha(s) a calar com caçador marcado, sem caça nenhuma (a tarefa não ia no save); depois do load: ${marked} marcada(s), ${waiting} de ${kept.length} esperando a ordem até ${Math.round(t0 + RETRY())} s (agora ${Math.round(t0)}), ${sent} caça(s) mandada(s) pelo load, ${early} nelas nos primeiros 9 s`);
 }
 
 // ---------------- o2 a hunt cut: the next look leaves the witness waiting; a new hunt only when the time comes ----------------
