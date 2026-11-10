@@ -310,6 +310,8 @@ Bairros Vivos. Os testes que pegaram cada um continuam falhando com razão até 
   módulos. É o mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
 - L-693: quem perdeu os dois braços senta à mesa da taverna toda noite e nunca é servido (as portas que dão coisa às mãos
   não perguntam a força delas).
+- L-696: a família que aluga uma casa deixa a marca de «juntando para a casa nova» na casa de onde saiu. O mundo vive igual,
+  mas a marca vai no save e o verificador pode acusar depois. Conserto pronto, com a prova dele.
 
 **Os buracos antigos que também ficam para os Bairros Vivos:**
 - o governante morar no palácio (a lacuna «palácio/morar» da matriz);

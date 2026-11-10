@@ -63,7 +63,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       // empty houses bought (c.free), nor one its owner lets (c.lease), which ask no builder. In the metrópole of the generation 19
       // the first that could pay, Kamose's of Mênfis, had 4 coins and could only rent Ahmose's house, at 0,5 a year: the offer
       // «Alugar a casa de Ahmose», lit with the builders full, and the god's check of it rented the house — «a oferta ACESA, a
-      // decisão «pagou», e o mundo MUDOU»)
+      // decisão «pagou», e o mundo MUDOU» — T-668)
       const raises = o => { const c = K.can(o); return c.ok && !c.lease && !c.free; };
       const empty = o => !!K.plan(o, null, S.settlements.get(o.set)).free; // (an empty house of the people that fits: it would be bought)
       const room = o => works(o.set) + 2 <= K.MAX_WORKS; let A = L.find(o => raises(o) && room(o)), given = 0;
@@ -164,7 +164,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     // (the body to a grown one of B's family the god can live now — the goal is the family's, D-061: any grown one of it lets it go —,
     // B first, waiting a while for one; and the case is asked of that body, never of the one before. In the metrópole of the
     // generation 19 Snorri, B, was at sea by then (« a bordo de um navio — o mar em 3D ainda não existe »): the switch was refused,
-    // the body stayed Kamose, A, and the button let go the goal of A's family, not B's — «AINDA JUNTANDO, até o dia 0»)
+    // the body stayed Kamose, A, and the button let go the goal of A's family, not B's — «AINDA JUNTANDO, até o dia 0» — T-669)
     const sw = await page.evaluate(() => { const V = window.__VIS, S = G.S, D0 = window.__D; const b = S.villagers.get(D0.B);
       const grown = G.Casa.family(b).filter(m => m.age >= 16).sort((p, q) => (p.id === D0.B ? -1 : q.id === D0.B ? 1 : p.id - q.id));
       const who = () => grown.find(m => S.villagers.has(m.id) && G.Possess.can(m).ok) || null; let o = null;
@@ -212,7 +212,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     // need thought of again — the goal back, with its button —, unless the family no longer needs a house; or, the coins enough by
     // then, the house decided that day by the family's own rule: the house it raises ordered, and the goal says so — a house under
     // way has no button. In the metrópole of the generation 19 Snorri's family of Kaupang had 14 of 19 when it let the house go, and
-    // on the fourth day it ordered its house: «A nossa casa está sendo levantada (0%).»)
+    // on the fourth day it ordered its house: «A nossa casa está sendo levantada (0%).» — T-670)
     const day4 = d => !d.gaveUp4 && (d.ok4 ? (d.waiting4 ? !!d.goal4 && /sendo levantada/.test(d.goal4) && !d.drop4 && !d.saving4 : !d.goal4) : d.need4 ? !!d.goal4 && d.drop4 : !d.goal4);
     ok('6. os três dias do D-061: o dia da cidade e a decisão da própria família não voltam a juntar; no quarto dia a família volta a pensar na casa, e o objetivo volta', days3.rows.length >= 1 && days3.rows.length === days3.waits && days3.rows.every(r => !r.saving && !r.goal && /deixou a casa nova para depois/.test(r.why)) && day4(days3),
       `deixada no dia ${days3.d0}: ${days3.rows.map(r => `dia ${r.day} ${r.saving ? 'JUNTANDO' : 'sem juntar'}${r.goal ? ', COM o objetivo' : ''} («${r.why}»)`).join('; ')}; dia ${days3.day4}: ${days3.ok4 ? (days3.waiting4 ? 'decidiu: a casa encomendada' : 'decidiu: mudou-se') : days3.saving4 ? 'junta de novo' : 'não junta'} («${days3.why4}»), o objetivo ${days3.goal4 ? `de volta: «${days3.goal4}»` : 'NÃO voltou'}`);
