@@ -19,26 +19,35 @@ const qa = [];
 // ------------------------------ c1. the well's bucket against the fire ------------------------------
 { // (a well of a town with people about it, and something that burns a few steps from it — a tree, a bush, the grass of a warm land —,
   // nothing built there: the fire the god lights; the ones who fight it fill their bucket at the nearest well within 14 tiles of
-  // them — Villagers' runFire —, so a fire two to six tiles from the well)
+  // them — Villagers' runFire —, so a fire in the ring two to six tiles around the well, the corners some 8 tiles off)
+  // (the longest fire first — a tree burns some thirteen seconds, a bush five, the grass four and a half (nature.js) —, the wells
+  // by id: the bucket has the walk to the well and back to the fire to make. In the «cidade» of the generation 17 the first well
+  // had only grass by it, at 3,2 tiles: it burned out in 5 s, with Coatlicue's bucket filled and still on its way)
+  const RANK = { tree: 0, bush: 1, grass: 2 };
   let pick = null;
   for (const w of [...S.buildings.values()].filter(b => b.type === 'well' && b.built).sort((a, b) => a.id - b.id)) {
     const near = [...S.villagers.values()].filter(v => v.set === w.set && v.age >= 16 && v.age < 62 && !v.inside && !v.aboard && G.dist(v.x, v.y, w.x + 0.5, w.y + 0.5) < 14).length; if (near < 3) continue;
-    for (let r = 2; r <= 6 && !pick; r++) for (let dy = -r; dy <= r && !pick; dy++) for (let dx = -r; dx <= r && !pick; dx++) {
+    for (let r = 2; r <= 6; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = w.x + dx, y = w.y + dy; if (!W.inb(x, y)) continue; const i = y * N + x;
-      const fu = G.Nature.fuel(i); if (!fu || fu === 'building' || fu === 'crop' || S.occ[i] || S.road[i]) continue; pick = { w, i, x, y, fu };
+      const fu = G.Nature.fuel(i); if (!(fu in RANK) || S.occ[i] || S.road[i]) continue; // (nothing built nor sown: no building, no crop)
+      if (!pick || RANK[fu] < RANK[pick.fu]) pick = { w, i, x, y, fu };
     }
-    if (pick) break;
+    if (pick && pick.fu === 'tree') break;
   }
   if (!pick) ok('c1 o balde do poço contra o fogo', false, 'nenhum poço com gente perto e algo que queime a poucos passos');
   else {
     const { w, i, x, y } = pick; const front = V.frontTile(w);
+    // (the weather dry while the case lasts — the test's hand, as the compras c9's: the rain puts a fire out by the world's rule,
+    // and the «cidade» of the generation 17 opens at night in a storm, 0,85 of rain: the grass the god lit went out in 0,8 s,
+    // before anyone got to the well)
+    const dry = () => { S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0; }; dry();
     const lit = god(() => G.Nature.ignite(i, 0.9));
     let filled = null, threw = 0, fighters = new Set(), out = -1;
     const fireNear = () => { for (const j of G.Nature.fireSet) { const fx = j % N, fy = (j / N) | 0; if (Math.abs(fx - x) <= 6 && Math.abs(fy - y) <= 6) return true; } return false; };
     // (up to two minutes of the world, looked at every step of it: the throw is a step or two of the task — looked at every
     // half a second it was seen or not by the luck of where the half second fell, 1 frame on the P4's branch, 0 in the junction)
     for (let k = 0; k < 1200; k++) {
-      M.viver(0.1);
+      dry(); M.viver(0.1);
       for (const v of S.villagers.values()) { const t = v.task; if (!t || t.type !== 'fire') continue; fighters.add(v.id);
         if (t.st === 2 && v.act === 'fill' && G.dist(v.x, v.y, front[0], front[1]) < 1.6 && !filled) filled = v.name;
         if (t.st === 5 && !t.beat && v.act === 'throw') threw++; }
