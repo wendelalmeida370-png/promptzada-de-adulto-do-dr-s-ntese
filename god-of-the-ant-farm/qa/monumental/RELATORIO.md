@@ -285,6 +285,9 @@ obrigaria a gerar os mundos prontos outra vez; cada um está descrito no AUDIT, 
   isso não fere ninguém, mas é gente acordada sem precisar.
 - L-683: o posto de trabalho fica com quem está no cais ou a bordo: os banhos de Mênfis ficaram sem foguista a viagem
   inteira. Quem cobre o posto e quando a pessoa volta a ele é assunto dos marinheiros de verdade dos Bairros Vivos.
+- L-685: a conquista que deixa um povo só com cidades vazias não o acaba na hora. Ele fica «vivo sem ninguém» por até
+  10 segundos de jogo, até a política olhar de novo. Pela morte da última alma o povo acaba junto (L-090); pela conquista,
+  ainda não.
 - O load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros módulos. É o
   mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
 

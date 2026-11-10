@@ -231,7 +231,9 @@ acertos:
   crime), L-652 (efeitos que só se veem sorteiam do acaso do mundo — candidata a regra do `guard.js`), L-656 (a fera que dorme
   na toca sai do elenco de uma história), L-657 (a receita do painel do desenvolvedor), e os dois que a reg18 achou nos
   marinheiros: L-682 (quem espera no cais durante a preparação nunca dorme) e L-683 (o posto de trabalho fica com quem está
-  no cais ou a bordo) — entram com a tripulação de verdade (item dos marinheiros), com o teto dos ofícios (D-102). E, dito
+  no cais ou a bordo) — entram com a tripulação de verdade (item dos marinheiros), com o teto dos ofícios (D-102); e o que a
+  reg19 achou na guerra: L-685 (a conquista que deixa um povo só com cidades vazias não o acaba na hora — o conserto proposto
+  e a prova estão no AUDIT: o `emptied` do L-090 tornado porta pública, chamado no fim do `Wr.conquer`). E, dito
   pelo C no D-148: o load ainda limpa as reuniões da ordem (`s.meets = []`, o conclave fora do save) e zera os relógios de
   outros módulos — o que o mundo vivo continuaria vai no save (L-419).
 - **As decisões deixadas para cá:** D-128 (uma cidade que põe prédios no coração de outra), D-132 (a)–(c) (o degrau antigo, o
