@@ -11,7 +11,11 @@ const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | cadafalso ${name} | ${info}`); if (!c) fails.push(name); };
 const KEY = process.argv[2] || 'metropole';
 let base = null;
-const fresh = () => QA.check().filter(q => q.sev <= 3 && !base.has(q.sys + '|' + q.msg)).map(q => `[S${q.sev}] ${q.sys}: ${q.msg}`);
+// (a finding is the same one while it is the same rule on the same one: its message less the task it ends with, in brackets — as
+// the poderes.js keys them —; in the metrópole of the generation 19 five of Kaupang stood at load where their town is not reached
+// on foot, and a task changed in the case made each a «new» one)
+const qkey = q => q.sys + '|' + q.id + '|' + q.msg.replace(/\s*\([^)]*\)\s*$/, '');
+const fresh = () => QA.check().filter(q => q.sev <= 3 && !base.has(qkey(q))).map(q => `[S${q.sev}] ${q.sys}: ${q.msg}`);
 // (a people with a ruler, its capital and its scaffold free; one of its grown people, free, sentenced for the case — soon —,
 // and the world lived until the last blow: the condemned dead, the sentence not yet told)
 // (one no kin of whom goes to the scaffold to cut the rope: the rescue is a story of the world — story-politics.js, the cadafalso: a
@@ -19,14 +23,24 @@ const fresh = () => QA.check().filter(q => q.sev <= 3 && !base.has(q.sys + '|' +
 // the generation 17 Dafne, of Argos, was the first by id, and her kin's scene freed her while the sentence was read: the execution
 // went off the list in «read», 41 s in)
 const rescue = (o, f, set) => { const D = G.Stories && G.Stories.DEF && G.Stories.DEF.cadafalso; return !!(D && D.on && D.on.sentenca && D.on.sentenca({ ids: [o.id], fac: f.id, set: set.id, ex: 0, reason: 'por teste', x: set.cx, y: set.cy }).length); };
-const upTo = () => {
-  M.pronto(KEY); const S = G.S; base = new Set(QA.check().filter(q => q.sev <= 3).map(q => q.sys + '|' + q.msg));
-  let f = null, set = null, v = null;
+// (and the world lives until one serves, up to a day: at the hour the world was saved its people may be at home and their kin near
+// — the metrópole of the generation 19 was saved at midnight, and in every capital each grown one out of doors had a kin near
+// enough and brave enough to cut the rope, by the rescue's own rule; with the morning, the kin gone to their work, one did not —;
+// the checker's base taken then, at the case's start)
+const pickCase = () => {
+  const S = G.S;
   for (const q of G.Fac.all().filter(q => q.alive && G.Politics.ruler(q) && G.Fac.capitalOf(q.id) && !(q.exec && q.exec.j)).sort((a, b) => a.id - b.id)) {
     const s = G.Fac.capitalOf(q.id);
-    v = [...S.villagers.values()].filter(o => o.set === s.id && o.age >= 20 && !o.captive && !o.jail && !o.aboard && !o.inside && !(o.task && o.task.j) && o.id !== q.leader && !(S.avatar && S.avatar.id === o.id) && !rescue(o, q, s)).sort((a, b) => a.id - b.id)[0];
-    if (v) { f = q; set = s; break; }
+    const v = [...S.villagers.values()].filter(o => o.set === s.id && o.age >= 20 && !o.captive && !o.jail && !o.aboard && !o.inside && !(o.task && o.task.j) && o.id !== q.leader && !(S.avatar && S.avatar.id === o.id) && !rescue(o, q, s)).sort((a, b) => a.id - b.id)[0];
+    if (v) return { f: q, set: s, v };
   }
+  return null;
+};
+const upTo = () => {
+  M.pronto(KEY); const S = G.S;
+  let w = pickCase(); for (let t = 0; !w && t < G.DAY_LEN; t++) { M.viver(1); w = pickCase(); }
+  base = new Set(QA.check().filter(q => q.sev <= 3).map(qkey));
+  const { f, set, v } = w || {};
   if (!v || !G.Justice.sentence(f, [v], 'por teste', { soon: true, quiet: true })) return null;
   const e = S.execs[S.execs.length - 1]; const name = v.name;
   let n = 0; while (n++ < 8000 && S.execs.includes(e) && !(e.done || []).includes(v.id)) G.debug.step(0.1);
