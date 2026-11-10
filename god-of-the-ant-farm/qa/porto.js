@@ -86,9 +86,13 @@ ok('p2 o manifesto', !!op && op.goods.sal === 14 && op.from === 's:' + sh.id && 
   // (the house of each one paid, at the moment of the pay — the ledger's own listener: a family moves on in the case's minutes —
   // in the metropole of the generation 17 a stevedore of Mênfis had her pay in her house #9533 and moved with her family to the new
   // #19315 2 s after it: the house at the end of the case was not the one paid, «ALGUM PARA QUEM NÃO CARREGOU»)
-  const homeAt = new Map(); D.onMove.push(e => { if (e[7] === op.id && e[8] === 'paga') homeAt.set(e[0], (S.villagers.get(e[9]) || {}).home); });
+  // (and the unloading's own lines, as they are written: the ledger keeps its last three to four thousand — LEDGER_MAX —, and
+  // in the generation-18 metropole the world wrote 3695 in the case's minutes; read at the end, the first crate's delivery and
+  // pay were gone from it: «10 de sal nele pelo livro», «4.33… 3.9 no livro-razão», T-609)
+  const homeAt = new Map(), heard = []; const hear = e => { if (e[7] !== op.id) return; heard.push(e); if (e[8] === 'paga') homeAt.set(e[0], (S.villagers.get(e[9]) || {}).home); }; D.onMove.push(hear);
   const done = live(400, () => { for (const v of S.villagers.values()) if (v.carry && v.carry.op === op.id) seen.add(v.id); if (watch()) return true; return !A.live(op); });
-  const deps = book(op, 'depositar'), pays = book(op, 'paga');
+  D.onMove.splice(D.onMove.indexOf(hear), 1);
+  const deps = heard.filter(e => e[8] === 'depositar'), pays = heard.filter(e => e[8] === 'paga');
   const paid = Object.values(op.data.paid || {}).reduce((a, b) => a + b, 0);
   // (each pay: from the people's treasury to the house — or the purse — of one who carried a crate of it, the house that was theirs then)
   const payOk = pays.every(e => e[3] === 'f:' + fac.id && e[5] === 'moedas' && seen.has(e[9]) && (e[4] === 'h:' + homeAt.get(e[0]) || e[4] === 'p:' + e[9]));
@@ -138,8 +142,13 @@ function apart(v, h) {
       if (saw === null && w && w.way > 0.5) saw = apart(v, h);
     }
   };
+  // (the case's stone home — all the unloading took of it in the store, none of it left in its keeping —: one quay, one
+  // unloading, and what the quay's boats land joins it and keeps it going, as in p6 (T-198); in the generation-18 metropole the
+  // boats of Mênfis landed 153 of food and 12 of tuna into it, and after the 400 s, the night between, it still had 35 of food
+  // to bring in, the stone in long before: T-610)
+  const stoneIn = () => { const want = (op4.taken || {}).stone || 0; return want >= 8 && (op4.done.stone || 0) >= want - 1e-6 && !((dock.crates || []).some(c => c.op === op4.id && c.k === 'stone') || (S.loose || []).some(o => o.op === op4.id && o.k === 'stone') || [...S.villagers.values()].some(v => v.carry && v.carry.op === op4.id && v.carry.k === 'stone')); };
   let done = false;
-  for (let k = 0; k < 400 && !done; k++) { for (let j = 0; j < 10; j++) { M.viver(0.1); look(); } if (watch() || !A.live(op4)) done = true; }
+  for (let k = 0; k < 400 && !done; k++) { for (let j = 0; j < 10; j++) { M.viver(0.1); look(); } if (watch() || !A.live(op4) || stoneIn()) done = true; }
   // (what arrived is what the unloading took — the 8 of the test's ship, and whatever else came ashore into it meanwhile: a
   // merchant ship home with its return cargo lands it into the unloading under way)
   const want4 = op4.taken.stone || 0;
@@ -147,7 +156,8 @@ function apart(v, h) {
   const ahead = W4.reduce((a, w) => a + w.ahead, 0), stops = W4.reduce((a, w) => a + w.stops, 0), way = r2(W4.reduce((a, w) => a + w.way, 0)), looks = W4.reduce((a, w) => a + w.n, 0);
   const together = W4.length >= 1 && W4.some(w => w.way >= 1) && min >= 0.15 && max <= 0.35 && !ahead && !stops;
   const walk = W4.length ? `; a dupla a ${r2(min)}–${r2(max)} casa uma da outra em ${looks} olhadas (${W4.length} viagem(ns), ${way} casas de caminho), ${ahead ? ahead + ' vez(es) À FRENTE de quem conduz' : 'nunca à frente'}, ${stops ? stops + ' PARADA(S) com ele andando' : 'nunca parada com ele andando'}; o verificador ${saw ? 'vê' : saw === null ? 'NÃO olhou' : 'NÃO vê'} a dupla separada` : '';
-  ok('p4 a caixa pesada vai a dois', done && op4.st === 'ok' && want4 >= 8 && Math.abs(op4.done.stone - want4) < 1e-6 && !!pair && !twice && together && !!saw && !bad().length, pair ? `${nm(pair.lead)} na frente e ${nm(pair.help)} atrás, uma caixa de pedra só (no livro, nas mãos de quem vai na frente); chegou ${op4.done.stone} de ${want4}${want4 > 8 ? ' (as 8 do teste e ' + r2(want4 - 8) + ' que outro navio desembarcou na mesma descarga)' : ''}${walk}` : `ninguém levou a dois (caixas de 4 pedras = ${D.weight('stone', 4)} de peso; um adulto aguenta ${D.strength([...S.villagers.values()].find(v => v.set === set.id && v.role === 'estivador'))}) — chegou ${op4.done.stone} de ${want4}`);
+  const others4 = Object.keys(op4.goods || {}).filter(k => k !== 'stone' && op4.goods[k] - ((op4.done || {})[k] || 0) > 1e-6);
+  ok('p4 a caixa pesada vai a dois', done && (op4.st === 'ok' || (A.live(op4) && stoneIn())) && want4 >= 8 && Math.abs(op4.done.stone - want4) < 1e-6 && !!pair && !twice && together && !!saw && !bad().length, pair ? `${nm(pair.lead)} na frente e ${nm(pair.help)} atrás, uma caixa de pedra só (no livro, nas mãos de quem vai na frente); chegou ${op4.done.stone} de ${want4}${want4 > 8 ? ' (as 8 do teste e ' + r2(want4 - 8) + ' que outro navio desembarcou na mesma descarga)' : ''}${A.live(op4) && others4.length ? ` (a descarga segue com o que os barcos e os navios do cais desembarcaram nela: ${others4.map(k => `${r2(op4.goods[k] - ((op4.done || {})[k] || 0))} de ${E.name(k) || k} a trazer`).join(', ')})` : ''}${walk}` : `ninguém levou a dois (caixas de 4 pedras = ${D.weight('stone', 4)} de peso; um adulto aguenta ${D.strength([...S.villagers.values()].find(v => v.set === set.id && v.role === 'estivador'))}) — chegou ${op4.done.stone} de ${want4}`);
 }
 // ---------------- p4b: the helper called in the middle of the way (L-330): an errand of the day — a cave's, pri 1,3, by the
 // door caves.js gives it through — waits for the crate (the hands under it are busy hands); one that cannot wait — pri 6 —
@@ -304,12 +314,20 @@ const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim ||
     const owed = r2((op8.data.owed || {})[pv.id] || 0); // (an empty treasury owes it, and pays when it has coin)
     // (given back in the working hours, rested and fed — the test's hand: what comes next is the work, not the night or a meal)
     day(0.2); pv.energy = Math.max(pv.energy, 70); pv.hunger = Math.min(pv.hunger, 30);
+    // (and with a crate of the unloading for the hands given back: a porter goes for the first one nobody has, and a fisherman
+    // with none to take goes back to his boat — the world's rule, Porto.claim and the fisher's day. In the generation-18
+    // metropole the other three crates were in the hands of Horemheb, Neferu and Narmer when the god let Khafre go, and Khafre
+    // went fishing, as he should: T-608. Where none is free, another ship's 4 of salt for the same unloading, as for the body)
+    const heldBy = x => { const o = x.by && x.by !== pv.id && S.villagers.get(x.by); return !!(o && o.task && (o.task.cid === x.id || o.task.gid === x.id)); };
+    const free = () => (dock.crates || []).some(c => c.op === op8.id && !heldBy(c)) || (S.loose || []).some(x => x.op === op8.id && !heldBy(x));
+    let spare = false; if (A.live(op8) && !free()) { const s3 = ship(); s3.goods = { k: 'sal', n: 4 }; G.Harbor.land(dock, s3.goods, s3); spare = true; }
+    const want8 = 14 + (more ? 4 : 0) + (spare ? 4 : 0);
     G.Possess.release('deus'); M.viver(0.2); const after = A.role(pv);
     const did = []; const goes = live(60, () => { const ty = pv.task ? pv.task.type : '-'; if (did[did.length - 1] !== ty) did.push(ty); return !!(pv.task && (pv.task.type === 'descarga' || pv.task.op === op8.id)) || !A.live(op8); });
     const done = work(op8, 400, () => watch() || !A.live(op8));
-    fine = tk.ok && !!role && role.op === op8.id && r1.ok && r2_.ok && (!E.coinage(fac.id) || (pay.length >= 1 && pay.every(e => e[4] === payee) && Math.abs(m1 - m0 - net8) < 0.01) || owed > 0) && goes && done && op8.st === 'ok' && op8.done.sal === (more ? 18 : 14) && !bad().length;
+    fine = tk.ok && !!role && role.op === op8.id && r1.ok && r2_.ok && (!E.coinage(fac.id) || (pay.length >= 1 && pay.every(e => e[4] === payee) && Math.abs(m1 - m0 - net8) < 0.01) || owed > 0) && goes && done && op8.st === 'ok' && Math.abs(op8.done.sal - want8) < 1e-6 && !bad().length;
     const where = kept ? 'ficou nas mãos' : !fate ? 'sumiu' : fate.code === 'pousou' ? 'foi ao chão e o corpo a levantou' : fate.code === 'devolveu' ? (more ? 'voltou ao monte do cais e outro a levou; o corpo pegou a caixa de um navio que chegou' : 'voltou ao monte do cais e o corpo a pegou lá') : fate.code === 'depositar' ? 'entrou no armazém (estava na porta) e o corpo pegou a seguinte no cais' : fate.code;
-    info = `${pv.name} levava ${n0} de ${E.name(k0)}; o deus tomou o corpo (${tk.ok ? 'ok' : tk.why}), o papel ficou (${role ? role.role : 'nenhum'}), a caixa ${where} (${r1.ok ? r1.msg || 'ok' : r1.why}); guardou no armazém pela mesma porta (${r2_.ok ? r2_.msg : r2_.why}); paga ${pay.length ? got + ' para ' + pay[0][4] : owed > 0 ? 'devida (o tesouro estava sem moeda: ' + r2(owed) + ' anotados)' : 'nenhuma'}; devolvido: ${after ? 'papel ' + after.role : 'sem papel'}, ${goes ? 'voltou às caixas' : 'NÃO voltou (fez: ' + did.join(' → ') + ')'}; no fim ${A.STATES[op8.st]}, chegou ${op8.done.sal} de ${more ? 18 : 14}`;
+    info = `${pv.name} levava ${n0} de ${E.name(k0)}; o deus tomou o corpo (${tk.ok ? 'ok' : tk.why}), o papel ficou (${role ? role.role : 'nenhum'}), a caixa ${where} (${r1.ok ? r1.msg || 'ok' : r1.why}); guardou no armazém pela mesma porta (${r2_.ok ? r2_.msg : r2_.why}); paga ${pay.length ? got + ' para ' + pay[0][4] : owed > 0 ? 'devida (o tesouro estava sem moeda: ' + r2(owed) + ' anotados)' : 'nenhuma'}; devolvido${spare ? ' (as caixas do cais todas nas mãos dos outros: mais 4 de sal de outro navio para a mesma descarga)' : ''}: ${after ? 'papel ' + after.role : 'sem papel'}, ${goes ? 'voltou às caixas' : 'NÃO voltou (fez: ' + did.join(' → ') + ')'}; no fim ${A.STATES[op8.st]}, chegou ${op8.done.sal} de ${want8}`;
   } else info = 'ninguém carregou uma caixa';
   ok('p8 o corpo assume a caixa', fine, info);
 }
