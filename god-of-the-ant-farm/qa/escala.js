@@ -155,7 +155,12 @@ run('e3', () => {
   ok('e3c só casas baixas e campos da cidade', tipos.every(t => V.OPEN[t]) && pub() === pub0 + 1 && farms() >= Math.min(2, farms0), `os públicos ${pub0} → ${pub()} (só o templo novo), as fazendas ${farms0} → ${farms()}`);
   ok('e3d o limite do degrau', foi.length <= lim.bld && camasFoi <= lim.beds, `${foi.length} prédios e ${camasFoi} camas${qt} (o limite do degrau de 4: ${lim.bld} e ${lim.beds})`);
   const perto = novos.filter(o => o.x + o.w > b.x - 1 && o.x < b.x + b.w + 1 && o.y + o.h > b.y - 1 && o.y < b.y + b.h + 1);
-  ok('e3e mais camas do que derrubou; os campos mudam de lugar', camasNovas > camasFoi && camposNovos === camposFoi && !perto.length, `as famílias: ${camasFoi} camas derrubadas, ${camasNovas} em ${novos.filter(o => G.BDEF[o.type].housing).length} casas novas (${novos.filter(o => G.BDEF[o.type].housing).map(o => o.type).join(', ')}); campos ${camposFoi} → ${camposNovos} em lote novo${qt}; nenhum no lote nem no anel do templo`);
+  // (a mudança pela regra do que caiu — relocation, village.js —: cada campo num lote novo do seu tipo, nenhum no lote nem no anel
+  // do templo; as famílias de casa derrubada, mais camas do que perderam; e, sem casa no lote aberto, nenhuma casa nova: a regra
+  // só ergue casa para as camas perdidas. Na metrópole da geração 17, Tenochtitlan abriu o espaço numa plantação — um campo é mais
+  // barato de derrubar que uma casa, e a cidade tem campos de sobra —, e a prova cobrava mais camas de nenhuma casa)
+  const familias = camasFoi > 0 ? camasNovas > camasFoi : camasNovas === 0;
+  ok('e3e mais camas do que derrubou; os campos mudam de lugar', familias && camposNovos === camposFoi && !perto.length, `as famílias: ${camasFoi} camas derrubadas, ${camasNovas} em ${novos.filter(o => G.BDEF[o.type].housing).length} casas novas (${novos.filter(o => G.BDEF[o.type].housing).map(o => o.type).join(', ')})${camasFoi ? '' : ' — nenhuma casa no lote aberto, nenhuma casa nova'}; campos ${camposFoi} → ${camposNovos} em lote novo${qt}; nenhum no lote nem no anel do templo`);
   const semCasa = [...S.villagers.values()].filter(v => v.home && !S.buildings.has(v.home));
   ok('e3f a crônica e as famílias', !!linha && !semCasa.length, `«${linha ? linha.txt : 'nenhuma linha'}»; ninguém com casa derrubada por casa (${semCasa.length})`);
   const c = checa(); ok('e3g verificador', c.ok, c.txt);
@@ -754,7 +759,10 @@ const servicos = () => {
     const sv = E.services(set);
     if (!(sv.taverneiro >= 1)) sim(() => V.handFound(set, 'taverna', Es.classic('taverna').id, { R: 40, built: true }));
     if (!(sv.ator >= 1)) sim(() => V.handFound(set, 'teatro', 'teatro', { R: 40, built: true }));
-    if (tem(set)) return set;
+    // (and the world on a second and a half: the buildings by town and type the trades count from — E.byType — are made again once
+    // a second, and the theatre raised now enters them at the next: asked in the same second, the theatre of Mênfis, raised by the
+    // hand in the metrópole of the generation 17, asked for no actor)
+    if (tem(set)) { M.viver(1.5); return set; }
   }
   return null;
 };
@@ -833,18 +841,23 @@ run('e24', () => {
 // (o planejador da cidade pede o palácio antes do teatro, dos banhos e da maravilha; o da corte o troca pelo que o governante quer
 // — e o punha no fim da fila: com uma obra cívica grande de cada vez, o palácio esperava cada praça, mercado, biblioteca, teatro e
 // banho que a cidade crescendo pedia, e nenhuma capital dos mundos de teste ergueu um. Agora ele entra antes dos rivais da coroa)
+// (the capitals of a city or more: one with no palace yet wants the plain one — a ruler of middling vanity, 0,45 —; one with a
+// palace wants a grander one when its ruler is vain — 0,95: the court's rule (court.js, G.City.plan): a palace only gives way to
+// a far grander one —, the same rule putting it before the crown's rivals. In the metrópole of the generation 17, a young world,
+// every capital of a city already had its palace, and none was left to ask for the first one)
 run('e25', () => {
-  abre(); const P = G.Politics;
-  const caps = [...S.factions.values()].map(f => G.Fac.capitalOf(f.id)).filter(s => s && (s.tier || 0) >= 3 && f0(s) && !G.Court.bestPalace(f0(s)));
+  abre(); const P = G.Politics, Co = G.Court;
+  const caps = [...S.factions.values()].map(f => G.Fac.capitalOf(f.id)).filter(s => s && (s.tier || 0) >= 3 && f0(s));
   function f0(s) { return G.Fac.get(s.fac); }
   const out = []; let bad = 0, seen = 0;
   for (const set of caps) {
     const f = f0(set), r = P.ruler(f); if (!r || f.gov === 'tribo') continue;
-    P.persona(r).vai = 0.45; f.rulerSince = S.day - 5; rico(set, 100); pedra(set, 200); civicas(set);
+    const cur = Co.bestPalace(f);
+    P.persona(r).vai = cur ? 0.95 : 0.45; f.rulerSince = S.day - 5; rico(set, 100); pedra(set, 200); civicas(set);
     const want = []; sim(() => G.City.plan(set, f, V.counts(set.id), want, V.pop(set.id)));
-    const p = want.indexOf('palacio'), q = want.findIndex(t => t === 'teatro' || t === 'banhos' || t === 'maravilha');
-    if (p < 0 || q < 0) { out.push(`${set.name}: ${want.join(', ') || 'nada'}`); continue; }
-    seen++; if (p > q) bad++; out.push(`${set.name}: ${want.join(', ')}`);
+    const p = want.findIndex(t => Co.RANK[t] && (!cur || Co.RANK[t] > Co.RANK[cur.type])), q = want.findIndex(t => t === 'teatro' || t === 'banhos' || t === 'maravilha');
+    if (p < 0 || q < 0) { out.push(`${set.name}${cur ? ` (com ${cur.type})` : ''}: ${want.join(', ') || 'nada'}`); continue; }
+    seen++; if (p > q) bad++; out.push(`${set.name}${cur ? ` (com ${cur.type})` : ''}: ${want.join(', ')}`);
   }
   ok('e25 o palácio do governante vem antes do teatro, dos banhos e da maravilha', seen > 0 && !bad, `${seen} capitais com o palácio e um rival na fila — ${out.join(' · ')}`);
 });
