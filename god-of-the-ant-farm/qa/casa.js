@@ -250,6 +250,12 @@ if (hb) {
   let info = 'sem a obra de h3', fine4 = false;
   if (hb) {
     const from = hHome; const L0 = S.ledgerN; const pantry0 = D.get('h:' + from.id, 'food');
+    // (the family of the order as it stands now: in the years a small town takes to raise the house one of them may die — in the
+    // Argos of the generation 18 Clio, who ordered it, a smuggler, was executed a year into the work, and her partner Castor moved
+    // in with their son and owns it, as G.Casa's rule gives it, h7's case by the world's own hand; the test looked for her in the
+    // house and for the tidying in her diary, T-619 —: the living ones of the town move in, the first of them — the one who
+    // ordered, while alive — owns it and tidies it, in the diary)
+    const ordem = hb.encomenda ? hb.encomenda.fam.slice() : [hv.id, hv.partner].filter(Boolean);
     // (up to h7's time: a small town of few builders takes longer — Hedeby, of 13 people, in the final metrópole, T-201)
     peace(); const done = fine(3000, () => { peace(); return hb.built; });
     // (the move into the new house, from the house the family lives in when it stands — in the generation 7's metrópole the
@@ -257,12 +263,15 @@ if (hb) {
     // #3270: the move came from there, T-270)
     const moved = book(e => e[0] > L0 && e[8] === 'mudança' && /^h:/.test(e[3]) && e[3] !== 'h:' + hb.id && e[4] === 'h:' + hb.id);
     const via = [...new Set(moved.map(e => e[3]).filter(r => r !== 'h:' + from.id))];
-    const fam = [hv, S.villagers.get(hv.partner)].filter(Boolean);
-    const arranged = (hv.diary || []).some(e => /Arrumamos a casa nova/.test(e.txt));
+    const moves = v => !!v && S.villagers.has(v.id) && !v.captive && v.set === hb.set; // (who the house's rule moves in: act-casa.js)
+    const lead = ordem.map(id => S.villagers.get(id)).find(moves);
+    const gone = ordem.filter(id => !S.villagers.has(id)).map(id => (id === hv.id ? hv.name : '#' + id));
+    const fam = [hv, S.villagers.get(hv.partner)].filter(moves);
+    const arranged = !!lead && (lead.diary || []).some(e => /Arrumamos a casa nova/.test(e.txt));
     const people = book(e => e[0] > L0 && e[8] === 'obra-casa' && e[3] === 'h:' + hb.id && e[4] === 'f:' + set.fac)[0]; // (the coins set aside, to the people)
     // (what the house cost the family is kept with it: the materials and the ground it paid — L-236)
-    fine4 = done && fam.every(v => v.home === hb.id) && hb.dono === hv.id && !hb.encomenda && moved.length >= 1 && arranged && !!people && hPaid > 0 && Math.abs(costOf(hb) - hPaid) < 0.01;
-    info = `${done ? `levantada no dia ${Math.round(S.day)}` : 'NÃO terminou em 3000 s'}: ${fam.map(v => `${v.name} mora ${v.home === hb.id ? 'nela' : 'em #' + v.home}`).join(', ')}; a mudança no livro: ${moved.map(e => `${e[6]} ${e[5]}`).join(', ') || 'NADA'} (a despensa da casa velha tinha ${r2(pantry0)}${via.length ? `; a mudança veio de ${via.join(', ')}, a casa onde a família morava quando a obra ficou pronta` : ''}); dona: ${hb.dono === hv.id ? 'a família' : hb.dono}; no diário: ${arranged ? '«Arrumamos a casa nova…»' : 'NADA da arrumação'}; as moedas guardadas na obra ao povo: ${people ? people[6] + ' (livro ' + people[0] + ')' : 'NADA'}; o custo guardado: ${costOf(hb)} (pagou ${hPaid})`;
+    fine4 = done && !!lead && fam.length > 0 && fam.every(v => v.home === hb.id) && hb.dono === lead.id && !hb.encomenda && moved.length >= 1 && arranged && !!people && hPaid > 0 && Math.abs(costOf(hb) - hPaid) < 0.01;
+    info = `${done ? `levantada no dia ${Math.round(S.day)}` : 'NÃO terminou em 3000 s'}${gone.length ? ` (morreu no meio da obra: ${gone.join(', ')})` : ''}: ${fam.map(v => `${v.name} mora ${v.home === hb.id ? 'nela' : 'em #' + v.home}`).join(', ') || 'ninguém do casal vivo'}; a mudança no livro: ${moved.map(e => `${e[6]} ${e[5]}`).join(', ') || 'NADA'} (a despensa da casa velha tinha ${r2(pantry0)}${via.length ? `; a mudança veio de ${via.join(', ')}, a casa onde a família morava quando a obra ficou pronta` : ''}); dona: ${lead && hb.dono === lead.id ? `${lead.name}, da família` : hb.dono}; no diário${lead ? ` de ${lead.name}` : ''}: ${arranged ? '«Arrumamos a casa nova…»' : 'NADA da arrumação'}; as moedas guardadas na obra ao povo: ${people ? people[6] + ' (livro ' + people[0] + ')' : 'NADA'}; o custo guardado: ${costOf(hb)} (pagou ${hPaid})`;
   }
   ok('h4 levantar e mudar', fine4 && !bad().length, info);
 }
@@ -617,12 +626,17 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
     info1 += `; o verificador: a venda por 12 ${seenLow ? 'vista' : 'NÃO vista'}, a dos inquilinos ${seenLet ? 'vista' : lord ? 'NÃO vista' : '(ninguém de fora para ser o dono)'}, a pelo custo ${quiet ? 'calada' : 'ACUSADA'}`;
   }
   ok('h17 a terra cara paga o que a casa custou (1: falta dinheiro)', ok1 && seenLow && seenLet && quiet && !bad().length, info1);
-  // (2) the rich family has the cost and more: a trade comes, at a fair price — ours, or another the day found better
+  // (2) the rich family has the cost and more: a trade comes, at a fair price — ours, or another the day found better: the dear
+  // house bought by another rich family, on land cheaper still — the day weighs every rich family against every plain one and
+  // takes the widest gap (social.js moveUp): in the Roma of the generation 18 the family of the #27900, rich on cheaper land than
+  // the test's, bought it, and the test asked for its own buyer, T-618 —; then the family that sold lives in the house of the one
+  // that bought, whoever it is
   const b2 = part(p => p + 6); let ok2 = false, info2 = b2.why || '';
   if (!b2.why) {
-    const o2 = b2.ours; const went = b2.fam0.every(id => !S.villagers.has(id) || S.villagers.get(id).home === b2.cheap.b.id);
-    ok2 = b2.sales.length >= 1 && b2.fair && b2.booked && !b2.lar.length && (!o2 || (Math.abs(o2[6] - fairPrice(b2.paid)) < 1e-6 && o2[4] === 'h:' + b2.cheap.b.id && b2.books && went));
-    info2 = `${b2.city.name}: a casa #${b2.dear.b.id} custou ${b2.paid}; a família rica da #${b2.cheap.b.id} com ${r2(b2.paid + 6)} → ${o2 ? `comprou-a por ${o2[6]} (livro ${o2[0]}); a família que vendeu mora ${went ? 'na casa barata' : 'NÃO na casa barata'}; o custo agora: #${b2.dear.b.id} ${costOf(b2.dear.b)}, #${b2.cheap.b.id} ${costOf(b2.cheap.b)}; as moedas das duas casas ${b2.books ? 'pelo livro' : 'FORA DO LIVRO'}` : 'outra troca'}; as trocas do dia: ${saleTxt(b2)}${b2.fair ? '' : ' — ABAIXO DO CUSTO'}${b2.booked ? '' : ' — o custo NÃO passou certo'}${b2.lar.length ? ' — o verificador: ' + b2.lar[0] : ''}`;
+    const o2 = b2.ours, to = o2 ? +o2[4].slice(2) : 0; const went = b2.fam0.every(id => !S.villagers.has(id) || S.villagers.get(id).home === to);
+    const buyer = !o2 ? '' : to === b2.cheap.b.id ? 'comprou-a' : `a família da #${to}, rica em terra mais barata ainda, comprou-a`;
+    ok2 = b2.sales.length >= 1 && b2.fair && b2.booked && !b2.lar.length && (!o2 || (Math.abs(o2[6] - fairPrice(b2.paid)) < 1e-6 && b2.books && went));
+    info2 = `${b2.city.name}: a casa #${b2.dear.b.id} custou ${b2.paid}; a família rica da #${b2.cheap.b.id} com ${r2(b2.paid + 6)} → ${o2 ? `${buyer} por ${o2[6]} (livro ${o2[0]}); a família que vendeu mora ${went ? `na casa de quem comprou (#${to})` : `NÃO na casa de quem comprou (#${to})`}; o custo agora: #${b2.dear.b.id} ${costOf(b2.dear.b)}, #${to} ${costOf(S.buildings.get(to))}; as moedas da casa vendida ${b2.books ? 'pelo livro' : 'FORA DO LIVRO'}` : 'outra troca'}; as trocas do dia: ${saleTxt(b2)}${b2.fair ? '' : ' — ABAIXO DO CUSTO'}${b2.booked ? '' : ' — o custo NÃO passou certo'}${b2.lar.length ? ' — o verificador: ' + b2.lar[0] : ''}`;
   }
   ok('h17 a terra cara paga o que a casa custou (2: a troca justa)', ok2 && !bad().length, info2);
   // (3) a let house: its owner lives in another — the test's hand gives the dear one to someone of the town who lives
