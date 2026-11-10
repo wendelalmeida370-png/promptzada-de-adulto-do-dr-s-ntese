@@ -524,11 +524,18 @@
   function supplyDays(a) { const n = a.band && G.War.bands.get(a.band) ? G.War.bands.get(a.band).members.length : a.members.length; return n ? a.food / (n * FOOD) : 0; }
   Wz.supplyDays = supplyDays;
   // a soldier on campaign eats from the wagons; near home, from the granary; in enemy land, what can be foraged
-  // (null: not on campaign, eat as anyone in the field does; true: fed; false: the wagons are empty — an army that is over
-  // feeds no one: the one a scene holds with the call of an army closed at the muster eats as anyone, L-641)
+  // (null: not on campaign — nor on the road home with the wagons empty —, eat as anyone in the field does; true: fed; false:
+  // the wagons are empty — an army that is over feeds no one: the one a scene holds with the call of an army closed at the
+  // muster eats as anyone, L-641)
   Wz.provision = function (v) {
     const a = Wz.armyOf(v); if (!a || a.done || a.phase === 'mobilizar' || a.role === 'defesa' && a.food < 1) return null;
     if (a.food >= 1) { a.food -= 1; return true; }
+    // (on the road home — after a peace, or a retreat (G.War.retreat) — the campaign is over: with the wagons empty, the soldier
+    // eats as anyone in the field does. The army's tick stops on the road (no forage, no wagons filled from the granary), and
+    // the empty wagons that turn a host home fed no one on the way: since a retreat runs home and fights no more (L-647), a host
+    // of Altepetl de Tenoch crossed the land between the realms with its wagons at 0, and its wounded starved there, 37 tiles
+    // from home, with 2380 in the granary — L-671)
+    if (a.phase === 'retorno' || a.phase === 'retirada') return null;
     const f = F(a.fac); const home = G.S.settlements.get(v.set);
     if (f && home && home.fac === f.id && dist(v.x, v.y, home.cx, home.cy) < (home.radius || 8) + 6 && f.stock.food >= 1) { f.stock.food -= 1; return true; }
     a.hungry = G.S.clock; return false;

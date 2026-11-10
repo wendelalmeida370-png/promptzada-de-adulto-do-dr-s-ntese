@@ -5,7 +5,9 @@
 // e as armas que o arsenal emprestou (o bando que as devolve ao se desfazer não existia mais).
 // v1 a retirada: depois do load o bando volta com o mesmo número, alguém morre no caminho, o exército termina em casa e as
 //    armas voltam ao arsenal; v2 os dois que sobraram de um exército em campo voltam para casa; v3 a paz com o exército em
-//    campo; v4 o mesmo save carregado duas vezes vive o mesmo futuro; e o verificador limpo do começo ao fim.
+//    campo; v5 a fome no caminho de casa: com as carroças vazias, o soldado do bando em retirada, longe do celeiro, come no
+//    caminho pela ração de campo (L-671); v4 o mesmo save carregado duas vezes vive o mesmo futuro; e o verificador limpo do
+//    começo ao fim.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const seed = +(process.argv[2] || 7);
@@ -161,6 +163,39 @@ else {
   live(G.DAY_LEN * 1.5, () => a.done);
   const still = armed(roster); const back = roster.map(P).filter(v => v && !v.captive); const vets = back.filter(v => v._vetWar === war).length;
   ok('v3 em casa', a.done && !still.length && !Wr().bands.has(band), `encerrado ${a.done ? 'sim' : 'não'}; ${still.length} ainda com as armas do exército; veteranos marcados ${vets} de ${back.length}`);
+}
+
+// ---------------- v5 hunger on the road home: the wagons empty, the soldier eats as anyone in the field (L-671) ----------------
+// (the v1 save — a host of A in retreat on its road home —, its wagons emptied by the test's hand, as a campaign's hunger leaves
+// them, and one of the band set down by the test's hand on his road, farther from home than his granary feeds (the town's
+// radius and six), his hunger at 95: in a few seconds he eats on the road, by the field ration — the people's stock —, still of
+// the band. Before, the road home fed no one: the wounded of a host in retreat starved 37 tiles from home, with 2380 in the
+// granary — L-671)
+{
+  G.Save.apply(JSON.parse(str1)); G.Main.mode = 'game'; S = G.S;
+  const a5 = (Wz().state().armies || []).filter(x => !x.done && x.phase === 'retirada' && Wr().bands.has(x.band)).sort((p, q) => p.id - q.id)[0];
+  const b5 = a5 && Wr().bands.get(a5.band);
+  const v = b5 && b5.members.map(P).filter(o => o && !o.captive && o.task && o.task.type === 'band' && o.task.band === b5.id && o.id !== a5.gen).sort((p, q) => p.id - q.id)[0];
+  const home = v && S.settlements.get(v.set); const R0 = home ? (home.radius || 8) + 6 : 0;
+  // (the place: a tile his feet reach, from his home out through where he is, 20 to 50 tiles beyond what the granary feeds)
+  let spot = null;
+  if (v && home) {
+    const ang0 = Math.atan2(v.y - home.cy, v.x - home.cx);
+    for (let r = R0 + 20; r <= R0 + 50 && !spot; r++) for (let k = 0; k < 25 && !spot; k++) {
+      const ang = ang0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.12; const x = Math.floor(home.cx + Math.cos(ang) * r) + 0.5, y = Math.floor(home.cy + Math.sin(ang) * r) + 0.5;
+      if (G.W.walkableXY(x, y) && G.W.reaches(v, x, y)) spot = [x, y];
+    }
+  }
+  if (!a5 || !v || !spot) ok('v5 a fome no caminho de casa', false, `precondição: ${!a5 ? 'nenhum exército em retirada no save do v1' : !v ? 'ninguém do bando' : 'nenhum lugar ao alcance longe da cidade'}`);
+  else {
+    a5.food = 0; v.x = spot[0]; v.y = spot[1]; v.path = null; v.hunger = 95;
+    // (where he eats: on the road, beyond what the granary feeds — running home, he would reach its reach in some seconds and
+    // eat there, as before)
+    let ate = null, onRoad = false, dAt = 0, k = 0;
+    live(20, () => { k++; if (v.hunger < 65 && ate === null) { ate = +(k * 0.1).toFixed(1); onRoad = !!(v.task && v.task.type === 'band'); dAt = G.dist(v.x, v.y, home.cx, home.cy); } return ate !== null; });
+    ok('v5 a fome no caminho de casa', ate !== null && onRoad && dAt > R0,
+      `${v.name}, do bando em retirada (as carroças em 0), posto a ${Math.round(G.dist(spot[0], spot[1], home.cx, home.cy))} casas de ${home.name} (o celeiro alimenta até ${R0}), com a fome em 95: ${ate !== null ? `comeu em ${ate} s, a ${Math.round(dAt)} casas de casa (${dAt > R0 ? 'no caminho' : 'só ao chegar ao alcance do celeiro'}; ${onRoad ? 'ainda do bando' : 'FORA do bando'}), a fome em ${Math.round(v.hunger)}` : `NÃO comeu em 20 s (a fome em ${Math.round(v.hunger)}, a vida em ${Math.round(v.hp)})`}`);
+  }
 }
 
 // ---------------- v4 the same save loaded twice lives the same future (v1's, an army on the road home in it) ----------------
