@@ -6,8 +6,9 @@
 // 3 morre a última alma livre de um povo que tinha cativos nas suas cidades: os cativos ficam livres, e a cidade é deles;
 // 4 entre esses cativos, a governante de outro povo, feita cativa um instante antes: livre e da cidade, o povo dela tem outro
 //   governante na hora, nunca um governante livre de outro povo (L-542);
-// 5 a capital tomada com o governante dentro, por um povo que faz cidadãos dos vencidos: ele é do vencedor agora, e o povo
-//   dele tem outro governante na hora (L-542);
+// 5 a capital tomada com o governante dentro, por um povo que faz cidadãos dos vencidos — de um povo que tem fora dela quem a
+//   corte coroe (um adulto livre noutra cidade dele): ele é do vencedor agora, e o povo dele tem outro governante na hora
+//   (L-542);
 // e o verificador fica limpo em todos.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
@@ -87,13 +88,19 @@ const ROOT = path.resolve(__dirname, '..');
   console.log(`${r4.ok ? 'PASSOU' : 'FALHOU'} | a governante de outro povo, cativa, herda a cidade: o povo dela tem outro governante na hora | ${r4.info}`);
   // 5 a capital taken with its ruler inside, by a people that makes citizens of the vanquished (no captives, no sword): the ruler
   // is the conqueror's now, and her people gets its new ruler at once (L-542: the ruler of Lavínio in Roma, the Clã's and still
-  // Lavínio's for the second the court takes to look)
+  // Lavínio's for the second the court takes to look). Her people has someone to crown outside the capital: a soul the court
+  // would crown (politics.js, P.pickLeader: an adult of the people, P.adultsOf — alive, not captive, 18 to 75 —; and here not
+  // aboard, not jailed) in another of its towns. Two towns are not that: in the 19th generation cases 3 and 4 left the Clã de
+  // Hrafn with all its souls in Hedeby and Lindholm empty, and taking Hedeby left it nobody (a people with towns and no soul
+  // after a conquest is an open defect, for the Bairros Vivos)
   const r5 = await page.evaluate(() => {
     const S = G.S; const F = G.Fac.all();
     let X = null, Y = null;
-    for (const a of F) { const cap = G.Fac.capitalOf(a.id); const lv = S.villagers.get(a.leader); if (X || !cap || !lv || lv.captive || lv.set !== cap.id || G.Fac.settlementsOf(a.id).length < 2) continue; Y = F.find(c => c !== a && !G.Politics.tyr(c) && [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === c.id && !v.captive && v.age >= 18 && v.age < 50 && !v.aboard && !v.jail && !v.ug).length >= 2) || null; if (Y) X = a; }
-    if (!X) return { ok: false, info: 'nenhuma capital com o governante dentro e um povo para tomá-la' };
+    const heirs = (a, cap) => G.Politics.adultsOf(a.id).filter(v => v.set !== cap.id && !v.aboard && !v.jail);
+    for (const a of F) { const cap = G.Fac.capitalOf(a.id); const lv = S.villagers.get(a.leader); if (X || !cap || !lv || lv.captive || lv.set !== cap.id || !heirs(a, cap).length) continue; Y = F.find(c => c !== a && !G.Politics.tyr(c) && [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === c.id && !v.captive && v.age >= 18 && v.age < 50 && !v.aboard && !v.jail && !v.ug).length >= 2) || null; if (Y) X = a; }
+    if (!X) return { ok: false, info: 'nenhuma capital com o governante dentro, quem coroar fora dela e um povo para tomá-la' };
     const set = G.Fac.capitalOf(X.id); const lv = S.villagers.get(X.leader);
+    const hs = heirs(X, set); const out = `${hs.length} adulto${hs.length > 1 ? 's' : ''} livre${hs.length > 1 ? 's' : ''} fora dela, em ${[...new Set(hs.map(v => S.settlements.get(v.set).name))].slice(0, 3).join(', ')}`;
     const men = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === Y.id && v.age >= 18 && v.age < 50 && !v.captive && !v.aboard && !v.jail && !v.ug).slice(0, 4);
     const b = G.War.makeBand(Y, X, set, men, 'conquista', {}); G.Politics.leaderPe(Y).cru = 0; // (the test's hand: a people that makes citizens)
     G.War.conquer(set, b);
@@ -101,7 +108,7 @@ const ROOT = path.resolve(__dirname, '..');
     const bad0 = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
     for (let k = 0; k < 24; k++) G.debug.step(0.05);
     const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
-    return { ok: !lv.captive && S.villagers.has(lv.id) && G.Fac.idOfV(lv) === Y.id && now && !bad0.length && !bad.length, info: `${set.name}, capital de ${X.name} com ${lv.name} dentro, tomada por ${Y.name}: ${lv.name} é de ${G.Fac.ofV(lv) ? G.Fac.ofV(lv).name : '?'}; ${X.name} ${now ? 'teve outro governante na hora (' + nl.name + ')' : 'NÃO TEVE OUTRO GOVERNANTE NA HORA'}; ${[...bad0, ...bad].slice(0, 3).join(' | ') || 'verificador limpo na hora e um segundo depois'}` };
+    return { ok: !lv.captive && S.villagers.has(lv.id) && G.Fac.idOfV(lv) === Y.id && now && !bad0.length && !bad.length, info: `${set.name}, capital de ${X.name} com ${lv.name} dentro (e ${out}), tomada por ${Y.name}: ${lv.name} é de ${G.Fac.ofV(lv) ? G.Fac.ofV(lv).name : '?'}; ${X.name} ${now ? 'teve outro governante na hora (' + nl.name + ')' : 'NÃO TEVE OUTRO GOVERNANTE NA HORA'}; ${[...bad0, ...bad].slice(0, 3).join(' | ') || 'verificador limpo na hora e um segundo depois'}` };
   });
   console.log(`${r5.ok ? 'PASSOU' : 'FALHOU'} | a capital tomada com o governante dentro: o povo dele tem outro governante na hora | ${r5.info}`);
   r.ok = r.ok && r2.ok && r3.ok && r4.ok && r5.ok;
