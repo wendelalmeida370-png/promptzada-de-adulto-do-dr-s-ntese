@@ -299,6 +299,13 @@ obrigaria a gerar os mundos prontos outra vez; cada um está descrito no AUDIT, 
 - L-689: na metrópole pronta, a muralha de Birka foi erguida por cima da borda de Kaupang, e o portão dela ficou encostado na
   fogueira da vizinha: uma faixa de Kaupang com 6 casas e 23 moradores ficou presa entre a muralha e a água, sem saída a pé.
   É da família dos portões que não deixam passar (L-491), o primeiro item dos Bairros Vivos, e entra com ele.
+- L-690: a obra que derruba uma casa para abrir espaço muda o quintal dela de lugar, como se fosse um campo. Conserto pronto.
+- L-691: o plano do muro ainda fecha um prédio cujo caminho corre por mais de duas casas ao longo da linha (o mercado
+  clandestino de Roma). Conserto pronto; entra com o L-491.
+- L-692: o bicho-preguiça afastado do lote de uma obra volta para dentro dela no balanço entre as árvores. Conserto pronto.
+
+Os consertos já testados desses defeitos estão guardados em `qa/patch3/consertos/`, prontos para aplicar no começo dos
+Bairros Vivos. Os testes que pegaram cada um continuam falhando com razão até lá, como falhas conhecidas na linha de base.
 - O load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros módulos. É o
   mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
 

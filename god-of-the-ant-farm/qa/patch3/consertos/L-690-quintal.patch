@@ -1,0 +1,12 @@
+diff --git a/god-of-the-ant-farm/js/village.js b/god-of-the-ant-farm/js/village.js
+index 19d22a5..f35ff18 100644
+--- a/god-of-the-ant-farm/js/village.js
++++ b/god-of-the-ant-farm/js/village.js
+@@ -792,6 +792,7 @@
+     for (const id of gone.slice().sort((a, b) => a - b)) {
+       const o = S.buildings.get(id); const d = G.BDEF[o.type];
+       if (d.housing) { need += d.housing; continue; }
++      if (o.home && gone.includes(o.home)) continue; // (a house's yard goes with it — L-079 —: no field of the town to move, L-690)
+       const p = put(o.type); if (!p) return null; out.push([o.type, p]);
+     }
+     if (!need) return out;
