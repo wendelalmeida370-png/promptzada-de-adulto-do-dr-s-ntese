@@ -2,8 +2,9 @@
 //   bash qa/navegador.sh node qa/visual/diario.js [PASTA_DO_JOGO] [SAIDA]
 // The page of a life's diary (js/diario-ui.js), read from the world's own record of it (G.Act.diary: only what the person
 // knows), over the body's eyes and in the god's view. Two families of a town of coin that need a house: one with the coins for
-// it, lived first (where the builders have room for it — and, where the world has none that can pay, one short of coin only,
-// what it lacks put in its house by the proof through the ledger: T-488); one the town's day put to saving for it, lived after.
+// a new one the builders raise — not a house bought nor one let —, lived first (where the builders have room for it — and, where
+// the world has none that can pay, one short of coin only, what it lacks put in its house by the proof through the ledger:
+// T-488); one the town's day put to saving for it, lived after — by a grown one of it the god can live then.
 // The proofs:
 //   1. the panel over the body's eyes: its key (J) opens and closes it, the HUD's button and the self card's open it; each line
 //      of it says where it came from and the day; only the kinds of the diary the world has lines of (SAIDA/diario-antes.png)
@@ -17,7 +18,8 @@
 //      stopped, the note with the day in the diary of each grown one of the family (SAIDA/diario-deixado.png)
 //   5. saved and loaded with the body lived: the goal still let go, the note there, the saving still stopped
 //   6. the three days of D-061: the god's view back, the town's day (G.Casa.day) and the family's own decision (G.Casa.order)
-//      leave the family unsaving those days; the fourth day it saves again and its goal comes back — mind changed again
+//      leave the family unsaving those days; the fourth day it saves again and its goal comes back — mind changed again —, or,
+//      with the coins enough by then, it orders its house, and the goal says it is being raised
 //   7. the god's view: the same page of the person, read only — no button to let anything go; the god's pause and the page
 //      drawn change nothing in the world (SAIDA/diario-deus.png)
 //   8. no page error, no module error, and the checker clean of the house's rules (D-061 among them)
@@ -57,12 +59,19 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       // (A by the rule, never by name: a family that can pay, in a town whose builders have room for two houses more; where the
       // world has none, a family there short of coin only — one not saving first: those are B's —, the coins it lacks put in its
       // house by the proof's hand, through the ledger with the proof's own cause, as the world's goods are born (T-488))
-      const room = o => works(o.set) + 2 <= K.MAX_WORKS; let A = L.find(o => K.can(o).ok && room(o)), given = 0;
-      if (!A) for (const c of [...L.filter(o => room(o) && short(o) && !saves(o)), ...L.filter(o => room(o) && short(o) && saves(o))]) {
+      // (and a house raised by the people's builders, the one the builders with no room refuse — L-451 —: never one of the people's
+      // empty houses bought (c.free), nor one its owner lets (c.lease), which ask no builder. In the metrópole of the generation 19
+      // the first that could pay, Kamose's of Mênfis, had 4 coins and could only rent Ahmose's house, at 0,5 a year: the offer
+      // «Alugar a casa de Ahmose», lit with the builders full, and the god's check of it rented the house — «a oferta ACESA, a
+      // decisão «pagou», e o mundo MUDOU»)
+      const raises = o => { const c = K.can(o); return c.ok && !c.lease && !c.free; };
+      const empty = o => !!K.plan(o, null, S.settlements.get(o.set)).free; // (an empty house of the people that fits: it would be bought)
+      const room = o => works(o.set) + 2 <= K.MAX_WORKS; let A = L.find(o => raises(o) && room(o)), given = 0;
+      if (!A) for (const c of [...L.filter(o => room(o) && short(o) && !saves(o) && !empty(o)), ...L.filter(o => room(o) && short(o) && saves(o) && !empty(o))]) {
         const n = Math.ceil(K.can(c).price - K.savings(c)) + 1; const r = god(() => G.Depot.make('h:' + c.home, 'moedas', n, { code: 'prova' }));
-        if (r.ok && K.can(c).ok) { A = c; given = n; break; } }
+        if (r.ok && raises(c)) { A = c; given = n; break; } }
       const B = L.find(o => A && o.home !== A.home && !fam(A).includes(o.id) && o.set === A.set && saves(o) && short(o)) || L.find(o => A && o.home !== A.home && !fam(A).includes(o.id) && saves(o) && short(o));
-      if (!A || !B) return { err: `famílias que precisam de casa numa cidade de moeda: ${L.length}; com com que pagar, numa cidade com construtores para mais duas: ${A ? A.name : 'nenhuma'} (com com que pagar: ${L.filter(o => K.can(o).ok).length}); juntando pelo dia da cidade: ${B ? B.name : 'nenhuma'} (juntando: ${L.filter(saves).length})` };
+      if (!A || !B) return { err: `famílias que precisam de casa numa cidade de moeda: ${L.length}; com com que pagar, numa cidade com construtores para mais duas: ${A ? A.name : 'nenhuma'} (com com que pagar uma casa nova: ${L.filter(raises).length}; com com que pagar, de qualquer jeito: ${L.filter(o => K.can(o).ok).length}); juntando pelo dia da cidade: ${B ? B.name : 'nenhuma'} (juntando: ${L.filter(saves).length})` };
       // (the family short of coin decides now what the day of its town decided — to save: by the god's hand)
       const rb = god(() => K.order(B)); const hb = S.buildings.get(B.home);
       // (what the checker said of the activities before the cases: only what comes after counts)
@@ -152,7 +161,17 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     await page.evaluate(() => { G.Modes.menu(false); window.__VIS.f(1); });
 
     // ------------------------------ 4. the other family's body lets its goal go ------------------------------
-    await page.evaluate(() => { const V = window.__VIS; G.IncUI.closeAll(); G.Modes.setPanel(null); G.Modes.switchTo(G.S.villagers.get(window.__D.B)); V.until(() => (G.Possess.body() || {}).id === window.__D.B, 200, 50); V.f(20); });
+    // (the body to a grown one of B's family the god can live now — the goal is the family's, D-061: any grown one of it lets it go —,
+    // B first, waiting a while for one; and the case is asked of that body, never of the one before. In the metrópole of the
+    // generation 19 Snorri, B, was at sea by then (« a bordo de um navio — o mar em 3D ainda não existe »): the switch was refused,
+    // the body stayed Kamose, A, and the button let go the goal of A's family, not B's — «AINDA JUNTANDO, até o dia 0»)
+    const sw = await page.evaluate(() => { const V = window.__VIS, S = G.S, D0 = window.__D; const b = S.villagers.get(D0.B);
+      const grown = G.Casa.family(b).filter(m => m.age >= 16).sort((p, q) => (p.id === D0.B ? -1 : q.id === D0.B ? 1 : p.id - q.id));
+      const who = () => grown.find(m => S.villagers.has(m.id) && G.Possess.can(m).ok) || null; let o = null;
+      V.until(() => !!(o = who()), 300, 50); const why = G.Possess.can(b).why || '';
+      G.IncUI.closeAll(); G.Modes.setPanel(null); if (o) { G.Modes.switchTo(o); V.until(() => (G.Possess.body() || {}).id === o.id, 200, 50); } V.f(20);
+      const body = G.Possess.body(); D0.Bb = body && grown.some(m => m.id === body.id) ? body.id : 0;
+      return { ok: !!D0.Bb, who: body ? `${body.name} #${body.id}` : 'ninguém', why: o && o.id !== D0.B ? why : '' }; });
     await page.keyboard.press('j'); await frames(1);
     const p4 = await panel(); const goal = p4.rows.find(r => r.sec === 'goals' && r.drop);
     await shot('diario-b-antes');
@@ -166,11 +185,11 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     const gone = p5 && !p5.rows.some(r => r.sec === 'goals' && /a casa nova/.test(r.meta));
     const memo = p5 && p5.rows.find(r => r.sec === 'memories' && /Deixamos a casa nova para depois/.test(r.txt));
     await shot('diario-deixado');
-    ok('4. o corpo deixa o objetivo da casa nova de lado: pedido pelas mãos do corpo e feito pelo mundo no passo seguinte — o objetivo sai, a casa para de juntar, a nota com o dia no diário de cada adulto da família', !!goal && h0.saving && !!asked && asked.saving && asked.q > 0 && !!h1 && !h1.saving && !!h1.gaveUp && h1.notes.length >= 1 && h1.notes.every(m => m.n.includes(h1.day)) && gone && !!memo,
-      `o objetivo: ${goal ? `«${goal.txt}» (${goal.meta})` : 'SEM botão de deixar de lado'}; antes: ${h0.saving ? 'juntando' : 'NÃO juntava'}; logo depois do clique: ${asked ? `${asked.q} pedido na fila, ${asked.saving ? 'ainda juntando (o mundo não fez ainda)' : 'JÁ MUDOU (a tela escreveu?)'}` : '—'}; no passo seguinte: ${h1 ? `${h1.saving ? 'AINDA JUNTANDO' : 'parou de juntar'}, até o dia ${h1.gaveUp}; notas em ${h1.notes.map(m => '#' + m.id + ' ' + m.n.join('/')).join(', ')}` : '—'}; no painel: ${gone ? 'o objetivo saiu' : 'o objetivo AINDA LÁ'}, ${memo ? `«${memo.txt}» (${memo.meta})` : 'SEM a nota'}`);
+    ok('4. o corpo deixa o objetivo da casa nova de lado: pedido pelas mãos do corpo e feito pelo mundo no passo seguinte — o objetivo sai, a casa para de juntar, a nota com o dia no diário de cada adulto da família', sw.ok && !!goal && h0.saving && !!asked && asked.saving && asked.q > 0 && !!h1 && !h1.saving && !!h1.gaveUp && h1.notes.length >= 1 && h1.notes.every(m => m.n.includes(h1.day)) && gone && !!memo,
+      `${sw.ok ? `o corpo: ${sw.who}${sw.why ? ` (o B não: ${sw.why})` : ''}` : `o corpo NÃO é da família B (${sw.who})`}; o objetivo: ${goal ? `«${goal.txt}» (${goal.meta})` : 'SEM botão de deixar de lado'}; antes: ${h0.saving ? 'juntando' : 'NÃO juntava'}; logo depois do clique: ${asked ? `${asked.q} pedido na fila, ${asked.saving ? 'ainda juntando (o mundo não fez ainda)' : 'JÁ MUDOU (a tela escreveu?)'}` : '—'}; no passo seguinte: ${h1 ? `${h1.saving ? 'AINDA JUNTANDO' : 'parou de juntar'}, até o dia ${h1.gaveUp}; notas em ${h1.notes.map(m => '#' + m.id + ' ' + m.n.join('/')).join(', ')}` : '—'}; no painel: ${gone ? 'o objetivo saiu' : 'o objetivo AINDA LÁ'}, ${memo ? `«${memo.txt}» (${memo.meta})` : 'SEM a nota'}`);
 
     // ------------------------------ 5. saved and loaded with the body lived ------------------------------
-    const sl = await page.evaluate(() => { const V = window.__VIS; const str = G.Save.serialize(); G.Save.apply(JSON.parse(str)); V.until(() => G.Modes.state === 'INC', 300, 100); V.f(6); const b = G.Possess.body(); return { size: str.length, inc: G.Modes.state, body: b ? b.id : 0, same: !!b && b.id === window.__D.B }; });
+    const sl = await page.evaluate(() => { const V = window.__VIS; const str = G.Save.serialize(); G.Save.apply(JSON.parse(str)); V.until(() => G.Modes.state === 'INC', 300, 100); V.f(6); const b = G.Possess.body(); return { size: str.length, inc: G.Modes.state, body: b ? b.id : 0, same: !!b && b.id === window.__D.Bb }; });
     await page.keyboard.press('j'); await frames(1);
     const h2 = await hState(); const p6 = await panel();
     ok('5. salvo e carregado com o corpo vivido: o objetivo continua deixado, a nota lá, a casa sem juntar', sl.inc === 'INC' && sl.same && !h2.saving && !!h2.gaveUp && h2.notes.every(m => m.n.length >= 1) && !p6.rows.some(r => r.sec === 'goals' && /a casa nova/.test(r.meta)) && p6.rows.some(r => /Deixamos a casa nova para depois/.test(r.txt)),
@@ -187,12 +206,16 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       while (S.day < d0 + K.DROP_DAYS) { god(() => K.day(set)); const r = god(() => K.order(v)); rows.push({ day: S.day, saving: saving(), why: r.why || (r.ok ? 'decidiu' : ''), goal: (G.Act.diary(v).goals || []).some(g => g.src === 'casa-nova') }); next(); }
       // (the fourth day: the family may think of it again — the need, the goal, and short of coin, the saving)
       const r4 = god(() => K.order(v)); const g4 = (G.Act.diary(v).goals || []).find(g => g.src === 'casa-nova');
-      return { d0, rows, day4: S.day, saving4: saving(), why4: r4.why || (r4.ok ? 'decidiu' : ''), need4: K.need(v), goal4: g4 ? g4.txt : null, drop4: !!(g4 && g4.drop), gaveUp4: K.gaveUp(v), waits: Math.max(0, d0 + K.DROP_DAYS - (rows.length ? rows[0].day : S.day)) };
+      return { d0, rows, day4: S.day, saving4: saving(), why4: r4.why || (r4.ok ? 'decidiu' : ''), need4: K.need(v), ok4: !!r4.ok, waiting4: !!K.waiting(v), goal4: g4 ? g4.txt : null, drop4: !!(g4 && g4.drop), gaveUp4: K.gaveUp(v), waits: Math.max(0, d0 + K.DROP_DAYS - (rows.length ? rows[0].day : S.day)) };
     });
     // (the days of the letting go, from the one after the load to the third: none saving, none with the goal; the fourth, the
-    // need thought of again — the goal back, with its button —, unless the family no longer needs a house)
-    ok('6. os três dias do D-061: o dia da cidade e a decisão da própria família não voltam a juntar; no quarto dia a família volta a pensar na casa, e o objetivo volta', days3.rows.length >= 1 && days3.rows.length === days3.waits && days3.rows.every(r => !r.saving && !r.goal && /deixou a casa nova para depois/.test(r.why)) && !days3.gaveUp4 && (days3.need4 ? !!days3.goal4 && days3.drop4 : !days3.goal4),
-      `deixada no dia ${days3.d0}: ${days3.rows.map(r => `dia ${r.day} ${r.saving ? 'JUNTANDO' : 'sem juntar'}${r.goal ? ', COM o objetivo' : ''} («${r.why}»)`).join('; ')}; dia ${days3.day4}: ${days3.saving4 ? 'junta de novo' : 'não junta'} («${days3.why4}»), o objetivo ${days3.goal4 ? `de volta: «${days3.goal4}»` : 'NÃO voltou'}`);
+    // need thought of again — the goal back, with its button —, unless the family no longer needs a house; or, the coins enough by
+    // then, the house decided that day by the family's own rule: the house it raises ordered, and the goal says so — a house under
+    // way has no button. In the metrópole of the generation 19 Snorri's family of Kaupang had 14 of 19 when it let the house go, and
+    // on the fourth day it ordered its house: «A nossa casa está sendo levantada (0%).»)
+    const day4 = d => !d.gaveUp4 && (d.ok4 ? (d.waiting4 ? !!d.goal4 && /sendo levantada/.test(d.goal4) && !d.drop4 && !d.saving4 : !d.goal4) : d.need4 ? !!d.goal4 && d.drop4 : !d.goal4);
+    ok('6. os três dias do D-061: o dia da cidade e a decisão da própria família não voltam a juntar; no quarto dia a família volta a pensar na casa, e o objetivo volta', days3.rows.length >= 1 && days3.rows.length === days3.waits && days3.rows.every(r => !r.saving && !r.goal && /deixou a casa nova para depois/.test(r.why)) && day4(days3),
+      `deixada no dia ${days3.d0}: ${days3.rows.map(r => `dia ${r.day} ${r.saving ? 'JUNTANDO' : 'sem juntar'}${r.goal ? ', COM o objetivo' : ''} («${r.why}»)`).join('; ')}; dia ${days3.day4}: ${days3.ok4 ? (days3.waiting4 ? 'decidiu: a casa encomendada' : 'decidiu: mudou-se') : days3.saving4 ? 'junta de novo' : 'não junta'} («${days3.why4}»), o objetivo ${days3.goal4 ? `de volta: «${days3.goal4}»` : 'NÃO voltou'}`);
 
     // ------------------------------ 7. the god's view: the same page, read only ------------------------------
     const gv = await page.evaluate(() => { const D0 = window.__D; G.UI.setSpeed(0); window.__VIS.f(1); G.UI.select(G.S.villagers.get(D0.B)); window.__VIS.f(2);
