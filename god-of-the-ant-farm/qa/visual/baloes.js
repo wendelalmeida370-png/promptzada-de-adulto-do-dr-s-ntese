@@ -37,7 +37,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       const market = id => { const b = S.buildings.get(id); return !!b && b.type === 'mercado' && b.built; };
       // (and one the world has not taken for something above his counter: the crew of a voyage is called to the quay over it —
       // the merchant Tales of the Argos of the generation-18 metropole was of the crew of a great expedition being made ready, and
-      // 0.17 s after the god's hand put him at his stall the voyage called him to the quay: «Não há ninguém na banca.», T-xxB)
+      // 0.17 s after the god's hand put him at his stall the voyage called him to the quay: «Não há ninguém na banca.», T-636)
       const away = o => !!(G.Expe && G.Expe.memberOf(o.id)) || !!(G.War && G.War.busyDiplomat && G.War.busyDiplomat(o));
       const merchant = () => [...S.villagers.values()].filter(o => o.role === 'mercador' && market(o.job) && G.Eco.homeOf(o) && free(o) && !away(o)).sort((a, c) => a.id - c.id)[0];
       // (the market's hours as the world lives them: from the hour of the save, the world's own step runs on — the town wakes and
