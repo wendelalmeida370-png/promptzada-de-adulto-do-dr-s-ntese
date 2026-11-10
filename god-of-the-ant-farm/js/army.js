@@ -278,7 +278,7 @@
     }
     const standing = A.cos.filter(c => !c.rout);
     if (b.st !== 'retorno' && (standing.length === 0 || (A.cos.length >= 2 && standing.length / A.cos.length < 0.4))) {
-      b.st = 'retorno'; b.t = 0; b.retreat = true;
+      G.War.retreat(b);
       const where = set ? set.name : 'o campo';
       log(`O exército de ${f.name} foi desbaratado diante de ${where}${A.routed ? ` — ${A.routed} ${A.routed > 1 ? 'companhias fugiram' : 'companhia fugiu'}` : ''}.`, 'war', set ? set.cx : undefined, set ? set.cy : undefined);
       if (en) en.st.battles++;
@@ -569,7 +569,7 @@
     if (tired && !breach && !starving && b.campaign && !sg.assault) {
       let inside = 0; for (const v of S.villagers.values()) if (v.set === set.id && !v.captive && v.age >= 16 && v.age < 62) inside++;
       if (inside * 0.9 > b.members.length) {
-        endSiege(set, 'fim'); b.st = 'retorno'; b.t = 0; b.retreat = true;
+        endSiege(set, 'fim'); G.War.retreat(b);
         G.Wars && G.Wars.siegeEnd(set, 'levantado', b.fac);
         log(`Sem pão para mais um inverno e diante de muros ainda bem guardados, ${f.name} levantou o cerco de ${set.name}.`, 'siege', set.cx, set.cy);
         return true;
@@ -750,9 +750,7 @@
       const home = S.settlements.get(b.from) || G.Fac.capitalOf(b.fac);
       if (!home) return false;
       v.act = 'run';
-      // caught: wounded, an enemy at arm's length — better a prisoner than dead
-      t.yield = (t.yield || 0) - dt;
-      if (t.yield <= 0) { t.yield = 1.2; if (v.hp < 45 && b.campaign) { let foe = null; for (const o of G.War.fightersNear(v.x, v.y, 1.5)) { if (o.captive || !G.Fac.atWar(b.fac, fid(o)) || G.dist2(o.x, o.y, v.x, v.y) > 2.2) continue; foe = o; break; } if (foe && G.R() < 0.45) { const fb = foe.task && foe.task.type === 'band' ? G.War.bands.get(foe.task.band) : null; G.Vg.emote(v, 'fear', 2); G.War.capture(v, foe, fb); return true; } } }
+      if (AR.yields(v, t, b, dt)) return true;
       if (!v.path || t.routTo !== home.id) { t.routTo = home.id; H.goto(v, home.cx + G.rr(-2, 2), home.cy + G.rr(-2, 2), false); }
       if (H.move(v, dt, 1.35) || dist(v.x, v.y, home.cx, home.cy) < 4) { if (v.carry) G.Vg.spoils(v, b.fac); H.end(v); }
       return true;
@@ -819,6 +817,19 @@
       v.act = co.hidden ? 'sneak' : phase === 'cerco' ? (k % 5 === 0 ? 'dig' : k % 3 === 0 ? 'sit' : 'guard') : t.general && phase === 'reunir' ? 'talk' : 'guard';
       if (phase === 'cerco' && k % 5 === 0 && G.R() < dt * 0.4) G.FX && G.FX.chips(v.x, v.y, '#7a5a3a');
     }
+    return true;
+  };
+  // caught: wounded, an enemy at arm's length — better a prisoner than dead (the routed, above; and the soldier of a band in
+  // retreat on the road home, war.js — L-xx1)
+  AR.yields = function (v, t, b, dt) {
+    t.yield = (t.yield || 0) - dt;
+    if (t.yield > 0) return false;
+    t.yield = 1.2;
+    if (!(v.hp < 45 && b.campaign)) return false;
+    let foe = null; for (const o of G.War.fightersNear(v.x, v.y, 1.5)) { if (o.captive || !G.Fac.atWar(b.fac, fid(o)) || G.dist2(o.x, o.y, v.x, v.y) > 2.2) continue; foe = o; break; }
+    if (!foe || G.R() >= 0.45) return false;
+    const fb = foe.task && foe.task.type === 'band' ? G.War.bands.get(foe.task.band) : null;
+    G.Vg.emote(v, 'fear', 2); G.War.capture(v, foe, fb);
     return true;
   };
   // straight to the slot when the way is open; A* only when stuck

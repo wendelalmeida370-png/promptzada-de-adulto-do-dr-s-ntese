@@ -579,7 +579,7 @@
       desertion(a, b, w, dd, starving);
       // a siege that eats itself: lift it or storm the walls
       if (starving && b.army && b.army.phase === 'cerco' && b.army.siege) b.army.siege.impatient = true;
-      if (starving && a.food <= 0 && (a.starveT = (a.starveT || 0) + dd) > 0.6 && b.st !== 'retorno') { b.st = 'retorno'; b.t = 0; b.retreat = true; event(w, `Sem comida, ${a.name} desistiu da campanha e voltou para casa.`, lead ? lead.x : undefined, lead ? lead.y : undefined, 'army'); }
+      if (starving && a.food <= 0 && (a.starveT = (a.starveT || 0) + dd) > 0.6 && b.st !== 'retorno') { G.War.retreat(b); event(w, `Sem comida, ${a.name} desistiu da campanha e voltou para casa.`, lead ? lead.x : undefined, lead ? lead.y : undefined, 'army'); }
     }
   }
   // men leave in the night: hunger, fear, a long war, a bad commander
@@ -760,6 +760,10 @@
     const z = G.S.wz; if (!z) return;
     for (const a of z.armies) if (!a.done && a.members.includes(v.id)) a.members = a.members.filter(id => id !== v.id);
   };
+  // a band of a campaign retreats (war.js, G.War.retreat): its army is «retirada» then and there. (The save keeps the army,
+  // not the band, and the army read its band every half second: a retreat ordered in between was lost to a save made then,
+  // and the load called the host back to arms where it stood, in the middle of the enemy — L-xx2)
+  Wz.onRetreat = function (b) { const a = Wz.armyOfBand(b); if (a && !a.done) a.phase = 'retirada'; };
   // a soldier who leaves the field running (a broken company, a wound): counted once
   Wz.onFlee = function (v, b) { const bt = b && b.battle ? Wz.battle(b.battle) : null; if (bt && bt.open && bt.sides[b.fac]) bt.sides[b.fac].fled++; };
   Wz.onCapture = function (o, captor) {

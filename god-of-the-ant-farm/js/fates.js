@@ -274,7 +274,7 @@
     for (const b of G.War.bands.values()) {
       const lead = b.fac === fl && S.villagers.get(b.members[0]);
       if (!lead || G.dist2(lead.x, lead.y, rec.x, rec.y) > 40 * 40) continue;
-      if (b.st !== 'retorno') { b.st = 'retorno'; b.retreat = true; b.t = 0; fled++; }
+      if (b.st !== 'retorno') { G.War.retreat(b); fled++; }
     }
     for (const a of (S.wz && S.wz.armies) || []) { if (a.done || !Number.isFinite(a.morale)) continue; if (a.fac === fl) a.morale = Math.max(0, a.morale - 35); else if (a.fac === fw) a.morale = Math.min(100, a.morale + 20); }
     for (const v of S.villagers.values()) {
