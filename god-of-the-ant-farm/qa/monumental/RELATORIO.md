@@ -288,6 +288,9 @@ obrigaria a gerar os mundos prontos outra vez; cada um está descrito no AUDIT, 
 - L-685: a conquista que deixa um povo só com cidades vazias não o acaba na hora. Ele fica «vivo sem ninguém» por até
   10 segundos de jogo, até a política olhar de novo. Pela morte da última alma o povo acaba junto (L-090); pela conquista,
   ainda não.
+- L-686: quando um fogo queima as plantações que ficam no terreno guardado para uma obra grande, as ruínas ficam em cima dele
+  até a cidade olhar de novo, no dia seguinte. O conserto já está escolhido (D-149: a ruína de um campo da própria cidade
+  passa, como o fogo no trigo). Até lá, o caso que o pegou (a `lote-bolsao` q3) fica como falha conhecida.
 - O load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros módulos. É o
   mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
 
