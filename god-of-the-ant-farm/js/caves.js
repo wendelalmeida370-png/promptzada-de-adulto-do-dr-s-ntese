@@ -429,6 +429,17 @@
   }
   const nearestMouth = (cv, x, y) => { let b = null, bd = 1e9; for (const m of cv.mouths) { const d = G.dist2(x, y, m.x + 0.5, m.y + 0.5); if (d < bd) { bd = d; b = m; } } return b; };
   C.nearestMouth = nearestMouth;
+  // (the mouth one sets out for: the nearest the feet reach — the map of regions, W.reaches —; the nearest in a straight line
+  // may lie across the water or a cliff, and the errand ended at its first step. Nebet, of a voyage of Mênfis, sent to the
+  // refuge of the Furna do Abismo with the town's alarm up, was given the mouth 24 tiles off that his feet did not reach — the
+  // other, which they did, was farther —, and the voyage called him to the quay 0,7 s later, the alarm still up. One already
+  // underground walks to a mouth below, as before)
+  const mouthFor = (cv, v) => { if (v.ug) return nearestMouth(cv, v.x, v.y); let b = null, bd = 1e9; for (const m of cv.mouths) { const d = G.dist2(v.x, v.y, m.x + 0.5, m.y + 0.5); if (d < bd && W.reaches(v, m.x + 0.5, m.y + 0.5)) { bd = d; b = m; } } return b; };
+  // (and the mouth one comes out by: the nearest of those whose ground one's town reaches on foot — the way home,
+  // W.townReaches —, else the nearest: the nearest to where one stands below may open on ground the feet do not join to the
+  // town. Quinto, in by the mouth of the Furna do Abismo his feet reached, to the hall by the other one, came out by that
+  // other, where his feet could not take him home — maos m13)
+  const outMouth = (cv, v) => { const s = G.S.settlements.get(v.set); let b = null, bd = 1e9; if (s) for (const m of cv.mouths) { const d = G.dist2(v.x, v.y, m.x + 0.5, m.y + 0.5); if (d < bd && W.townReaches(s, m.x, m.y)) { bd = d; b = m; } } return b || nearestMouth(cv, v.x, v.y); };
   // a known cave a people can walk to from a town
   function caveFor(set, maxD, test) {
     let best = null, bd = maxD * maxD;
@@ -450,7 +461,7 @@
   }
   function exit(v) {
     const S = G.S; const cv = C.get(v.ug);
-    let m = cv && nearestMouth(cv, v.x, v.y);
+    let m = cv && outMouth(cv, v);
     let x = m ? m.x + 0.5 : v.x, y = m ? m.y + 0.5 : v.y;
     if (!W.walkableXY(x, y)) { const n = W.nearestLand(x, y, 5); if (n) { x = n[0]; y = n[1]; } }
     v.ug = 0; if (v.inside === UGIN) v.inside = 0; v.x = x; v.y = y; v.path = null; v.moving = false;
@@ -484,7 +495,7 @@
   // with her in the cave all day, L-395 —; and the flight from an attack cannot wait (o.urge): the load goes with them, and
   // gets where it goes when they come out)
   C.give = function (v, kind, cv, goal, o) {
-    const m = nearestMouth(cv, v.x, v.y); if (!m) return false;
+    const m = mouthFor(cv, v); if (!m) return false;
     const t = Object.assign({ type: 'caverna', kind, cave: cv.id, goal, pri: 1.3, st: 0, stay: rr(8, 14), torch: 1, mouth: m }, o || {});
     if (o && o.force) {
       const wait = o.urge ? false : o.job ? ((t.pri || 0) < 3 && G.Vg.handsBusy && G.Vg.handsBusy(v)) : (G.Vg.busy && G.Vg.busy(v, t));
@@ -519,7 +530,7 @@
         work(v, t, cv, dt);
         // hunger and the night call everyone home (the hidden stay while the danger lasts)
         const late = t.kind !== 'refuge' && t.kind !== 'oracle' && t.kind !== 'raid' && (G.isNight() || v.hunger > 86);
-        if (t.done || t.t >= t.stay || late) { v.act = ''; done(v, t, cv); const m = nearestMouth(cv, v.x, v.y); goUG(v, t, cv, m.y * N + m.x); t.st = 4; }
+        if (t.done || t.t >= t.stay || late) { v.act = ''; done(v, t, cv); const m = outMouth(cv, v); goUG(v, t, cv, m.y * N + m.x); t.st = 4; }
         break;
       }
       case 4: if (walkUG(v, t, dt)) {

@@ -25,6 +25,8 @@
 //  m12 as escolhas da guerra — a leva, a tripulação da frota (e o almirante), a do ataque pelo mar, o bando por terra — não
 //     levam quem tem as mãos ocupadas: com os guerreiros e caçadores do povo levando uma compra para casa e um construtor com
 //     o material a caminho da obra, ninguém escolhido tem as mãos ocupadas, e cada escolha acontece com os outros (L-461)
+//  m13 a caverna de duas bocas em chãos que os pés não juntam: o afazer de baixo vai pela boca que os pés alcançam — não pela
+//     mais perto em linha reta, fora do alcance —, faz o que foi fazer e sai onde os pés o levam para casa (L-…)
 //  e o verificador limpo nos casos, sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/oficio-inv.js'] });
@@ -73,6 +75,9 @@ const drop = v => { if (v && v.carry && v.carry.n > 1e-6) D.use('v:' + v.id, v.c
 const ASM = () => ({ type: 'assembly', x: set.cx, y: set.cy, pri: 1.7, kind: 'assembly' });
 const URGENT = () => ({ type: 'dragao', id: 0, pri: 4.5, st: 0, kind: 'dragao' });
 const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.task.st : '') : 'sem tarefa');
+// (the beasts of prey and the ones that turn on whoever hunts them — a rhino, an elephant, a boar — within forty tiles of the
+// places given, taken away by the god's hand: the lazer.js's rule, T-356)
+const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a.dead || a.dom || a.tamed) continue; const sp = G.Animals.DEF[a.kind]; if (!sp || !(G.Animals.predator(a.kind) || sp.defend || sp.bold > 0 || a.kind === 'boar' || G.Animals.threat(a))) continue; if (at.some(p => G.dist2(a.x, a.y, p[0], p[1]) < 40 * 40)) G.Animals.remove(a); } };
 
 // ---------------- m1: an errand takes only a task of less priority than its own (the rule 4) ----------------
 {
@@ -293,18 +298,32 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
     if (c && dOf(c) < 45 && x.crew.length >= 2) { e = x; home = t; cv = c; break; }
     tried.push(`${x.name}: ${c ? `caverna a ${Math.round(dOf(c))} casas` : 'sem caverna conhecida'}`);
   }
-  const v = e && e.crew.map(id => S.villagers.get(id)).filter(q => q && q.id !== e.leader && !q.aboard && q.set === home.id).sort((a, b) => a.id - b.id)[0];
-  if (!e || !v) ok('m10 a tripulação escondida na caverna', false, `nenhuma viagem que saia de uma cidade com caverna perto: ${tried.join(' · ') || 'nenhum povo do mar'}`);
+  // (one who can walk to the cave — a mouth of it his feet reach, W.reaches —: the refuge sets out for the nearest such mouth, and
+  // the case says it — in the metropole of the generation 17 the mouth of the Furna do Abismo nearest to Nebet, 24 tiles off,
+  // was beyond his feet, the refuge given to it ended at its first step, and the voyage called him to the quay 0,7 s later, the
+  // alarm still up, L-…)
+  const v = e && e.crew.map(id => S.villagers.get(id)).filter(q => q && q.id !== e.leader && !q.aboard && q.set === home.id && cv.mouths.some(m => G.W.reaches(q, m.x + 0.5, m.y + 0.5))).sort((a, b) => a.id - b.id)[0];
+  if (!e || !v) ok('m10 a tripulação escondida na caverna', false, `nenhuma viagem que saia de uma cidade com caverna perto, de um tripulante que chegue a ela a pé: ${tried.join(' · ') || (e ? `${e.name}: ninguém da tripulação chega a pé ${G.Caves.na ? G.Caves.na(cv) : 'à caverna'}` : 'nenhum povo do mar')}`);
   else {
     home.alarmT = 40; Vg.endTask(v);
+    // (the beasts that come at people kept away by the god's hand round him, the cave and the quay while the case lasts — the
+    // ones of prey and the ones that turn on whoever hunts them —, as the lazer.js keeps them from the stage (T-356): on his way
+    // to the cave in the generation 17 an elephant took Nebet to the fight, 4, and from it to flight, and the refuge was over
+    // with the alarm still up)
+    const calm10 = () => calmBeasts([v.x, v.y], ...cv.mouths.map(m => [m.x + 0.5, m.y + 0.5]), ...(e.port ? [e.port] : []));
+    calm10();
     const hall = cv.halls && cv.halls[0]; const cell = hall ? Math.floor(hall.y) * G.N + Math.floor(hall.x) : -1;
     const hid = !!G.Caves.give(v, 'refuge', cv, cell, { pri: 2.7, stay: 1e9, force: 1, urge: 1 });
     const hiding = () => !!(v.task && v.task.type === 'caverna' && v.task.kind === 'refuge');
+    // (the mouth the refuge set out for: one his feet reach)
+    const mo = hid && v.task && v.task.mouth; const reach = !!mo && G.W.reaches(v, mo.x + 0.5, mo.y + 0.5);
+    const near0 = G.Caves.nearestMouth(cv, v.x, v.y); const dM = m => Math.round(G.dist(v.x, v.y, m.x + 0.5, m.y + 0.5));
+    const way = !mo ? '' : near0 && (near0.x !== mo.x || near0.y !== mo.y) ? ` (pela boca que os pés alcançam, a ${dM(mo)} casas; a mais perto em linha reta, a ${dM(near0)}, ${G.W.reaches(v, near0.x + 0.5, near0.y + 0.5) ? 'também ao alcance' : 'fora do alcance'})` : ` (pela boca mais perto, a ${dM(mo)} casas)`;
     let early = null, back = null; const t0 = S.clock;
-    fine(120, () => { const quay = v.task && v.task.type === 'cais' && v.task.exp === e.id; if (quay && home.alarmT > 0 && early === null) early = Math.round((S.clock - t0) * 10) / 10; if (quay && back === null) back = Math.round((S.clock - t0) * 10) / 10; return back !== null; });
+    fine(120, () => { calm10(); const quay = v.task && v.task.type === 'cais' && v.task.exp === e.id; if (quay && home.alarmT > 0 && early === null) early = Math.round((S.clock - t0) * 10) / 10; if (quay && back === null) back = Math.round((S.clock - t0) * 10) / 10; return back !== null; });
     const b10 = bad();
-    const said = !hid ? 'o refúgio NÃO o levou' : early !== null ? `CHAMADO AO CAIS ${early} s depois, com o alarme ainda aceso` : back !== null ? `o cais esperou o susto passar: de volta ao cais ${back} s depois, com o refúgio acabado` : `NÃO voltou ao cais em 120 s (${hiding() ? 'ainda no refúgio' : v.task ? v.task.type : 'sem tarefa'})`;
-    ok('m10 a tripulação escondida na caverna', hid && early === null && back !== null && !b10.length, `${v.name}, da tripulação de ${e.name} (${home.name}), escondido ${G.Caves.na ? G.Caves.na(cv) : 'na caverna'} com o alarme da cidade aceso: ${said}${b10.length ? '; o verificador: ' + b10[0] : ''}`);
+    const said = !hid ? 'o refúgio NÃO o levou' : !reach ? 'o refúgio o mandou a uma boca que os pés dele NÃO alcançam' : early !== null ? `CHAMADO AO CAIS ${early} s depois, com o alarme ainda aceso` : back !== null ? `o cais esperou o susto passar: de volta ao cais ${back} s depois, com o refúgio acabado` : `NÃO voltou ao cais em 120 s (${hiding() ? 'ainda no refúgio' : v.task ? v.task.type : 'sem tarefa'})`;
+    ok('m10 a tripulação escondida na caverna', hid && reach && early === null && back !== null && !b10.length, `${v.name}, da tripulação de ${e.name} (${home.name}), escondido ${G.Caves.na ? G.Caves.na(cv) : 'na caverna'}${way} com o alarme da cidade aceso: ${said}${b10.length ? '; o verificador: ' + b10[0] : ''}`);
   }
 }
 // ---------------- m11: the colony and the children hiding in the cave: its second rule asks too (L-459) ----------------
@@ -383,6 +402,51 @@ const tk = v => (v && v.task ? v.task.type + (v.task.st !== undefined ? '.' + v.
   }
   const b12 = bad();
   ok('m12 as escolhas da guerra com as mãos livres', okAll && !b12.length, `os guerreiros e caçadores do povo com uma compra para casa, e um construtor com o material a caminho da obra: ${lines.join(' · ')}${b12.length ? '; o verificador: ' + b12[0] : ''}`);
+}
+// ---------------- m13: the cave's errand goes in by the mouth the feet reach, and comes out where they take one home (L-…) ----------------
+// (a cave with two mouths on ground the feet do not join — water or a cliff between them —, and one set down by the test's hand
+// on a tile from which the mouth nearer in a straight line is beyond the feet and the other in reach; an errand below by the
+// world's door, G.Caves.give, as the cave's own day gives them, to the hall nearest the mouth out of reach: in by the mouth in
+// reach, the business below, and out where the feet take one home. Before, the nearest mouth in a straight line: the errand
+// ended at its first step — Nebet, m10, in the metropole of the generation 17)
+{
+  fresh();
+  const reachXY = (x, y, tx, ty) => G.W.reaches({ x, y, inside: 0 }, tx, ty);
+  // (the place: the first cave by id with two mouths A and B and a walkable tile within 40 of A, nearer A than B, whose feet do
+  // not reach A and reach B)
+  let P = null;
+  for (const cv of G.Caves.all().filter(c => c.mouths.length >= 2 && !c.gone && c.halls && c.halls.length).sort((a, b) => a.id - b.id)) {
+    for (const A of cv.mouths) for (const Bm of cv.mouths) {
+      if (P || A === Bm) continue;
+      for (let r = 2; r <= 40 && !P; r++) for (let dy = -r; dy <= r && !P; dy++) for (let dx = -r; dx <= r && !P; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = A.x + dx + 0.5, y = A.y + dy + 0.5;
+        if (!G.W.inb(x, y) || !G.W.walkableXY(x, y) || G.dist2(x, y, A.x + 0.5, A.y + 0.5) >= G.dist2(x, y, Bm.x + 0.5, Bm.y + 0.5)) continue;
+        if (reachXY(x, y, A.x + 0.5, A.y + 0.5) || !reachXY(x, y, Bm.x + 0.5, Bm.y + 0.5)) continue;
+        P = { cv, A, B: Bm, x, y };
+      }
+    }
+    if (P) break;
+  }
+  // (who goes: a grown one free — awake, out of doors, hands empty, of no voyage —, whose house the feet reach from that tile:
+  // the first by id)
+  const doorOf = o => { const h = o.home && S.buildings.get(o.home); return h ? Vg.door(h) : null; };
+  const v = P && [...S.villagers.values()].filter(o => o.age >= 18 && o.age < 55 && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !o.inside && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.n > 1e-6) && !(G.Expe && G.Expe.memberOf(o.id)) && doorOf(o) && reachXY(P.x, P.y, ...doorOf(o))).sort((a, b) => a.id - b.id)[0];
+  if (!P || !v) ok('m13 a caverna pela boca que os pés alcançam', false, !P ? 'nenhuma caverna com duas bocas em chãos que os pés não juntam (um lugar mais perto de uma, fora do alcance dela, e ao alcance da outra)' : `ninguém livre com a casa ao alcance do lugar diante d${G.Caves.a ? G.Caves.a(P.cv) : 'a caverna'}`);
+  else {
+    Vg.endTask(v); v.x = P.x; v.y = P.y; v.path = null; v.hunger = Math.min(v.hunger, 20); v.energy = Math.max(v.energy, 80);
+    const calm13 = () => calmBeasts([v.x, v.y], ...P.cv.mouths.map(m => [m.x + 0.5, m.y + 0.5])); calm13();
+    const hall = P.cv.halls.slice().sort((a, b) => G.dist2(a.x, a.y, P.A.x, P.A.y) - G.dist2(b.x, b.y, P.A.x, P.A.y))[0];
+    const cell = Math.floor(hall.y) * G.N + Math.floor(hall.x);
+    const given = !!G.Caves.give(v, 'explore', P.cv, cell, { pri: 2.5, stay: 6, force: 1, urge: 1 });
+    const mo = given && v.task && v.task.mouth; const byB = !!mo && mo.x === P.B.x && mo.y === P.B.y;
+    let wentIn = false, out = null; const t0 = S.clock;
+    fine(150, () => { calm13(); if (v.ug === P.cv.id) wentIn = true; if (wentIn && !v.ug && out === null) out = [v.x, v.y]; return out !== null || !(v.task && v.task.type === 'caverna') && !v.ug; });
+    const door = doorOf(v); const home = !!out && !!door && G.W.reaches(v, door[0], door[1]);
+    const b13 = bad(); const dA = Math.round(G.dist(P.x, P.y, P.A.x + 0.5, P.A.y + 0.5)), dB = Math.round(G.dist(P.x, P.y, P.B.x + 0.5, P.B.y + 0.5));
+    const said = !given ? 'a caverna NÃO lhe deu o afazer' : !byB ? `foi mandado à boca (${mo.x}, ${mo.y}) — a que os pés NÃO alcançam` : !wentIn ? `NÃO entrou (${tk(v)})` : !out ? `NÃO saiu em 150 s (${tk(v)})` : home ? `entrou pela boca ao alcance, a ${dB} casas, e saiu em ${Math.round(S.clock - t0)} s onde os pés o levam para casa` : `saiu em (${out[0].toFixed(1)}, ${out[1].toFixed(1)}), de onde os pés NÃO o levam para casa`;
+    ok('m13 a caverna pela boca que os pés alcançam', given && byB && wentIn && !!out && home && !b13.length, `${v.name} posto(a) diante d${G.Caves.a ? G.Caves.a(P.cv) : 'a caverna'}, a ${dA} casas da boca mais perto em linha reta, fora do alcance, e a ${dB} da outra: ${said}${b13.length ? '; o verificador: ' + b13[0] : ''}`);
+  }
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `MAOS: FALHOU (${fails.join(', ')})` : 'MAOS: ok');

@@ -337,11 +337,15 @@ else {
     // a quarter of a day, and the evening takes the keeper home after the first — the case starts early in the morning, and has
     // the time of two trips and a night, if it comes, T-269)
     S().time = 0.08;
-    send(P.ws[0], b, fieldAt(b));
-    live(400, Hd.step, () => b.hv[0] < 1 && b.hv[1] < 1 && P.ws.every(x => !(held(x).mel > 0)));
+    // (and the case's hands kept in the trade while it lasts, as the c6's and the c7's (T-484): in the metropole of the
+    // generation 17 the town's board made Ameyali, the keeper of the Apiário #8930, a miner some thirty seconds into the case,
+    // while she fetched her house's water, and the hives filled to 3/3/3/3 with nobody at them; and hands the god's hand gave an
+    // apiary with no keeper (estSetup) the board would take back at its next pass)
+    send(P.ws[0], b, fieldAt(b)); const kh = keepHands(P);
+    live(400, () => { kh(); Hd.step(); }, () => b.hv[0] < 1 && b.hv[1] < 1 && P.ws.every(x => !(held(x).mel > 0)));
     const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c9', b.hv[0] < 1 && b.hv[1] < 1 && Hd.born('mel') > 0 && Hd.reached('mel') && !lost.length && !bad.length,
-      `${V.buildName(b)} #${b.id}: as colmeias ${b.hv.map(r2).join('/')}; ${Hd.say('mel')}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `${V.buildName(b)} #${b.id}${handEst ? ' (o ofício pela mão do deus a ' + handEst + ')' : ''}: as colmeias ${b.hv.map(r2).join('/')}; ${Hd.say('mel')}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 const er = M.erros();
