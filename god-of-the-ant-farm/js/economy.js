@@ -1139,7 +1139,10 @@
       const cap = G.BDEF[b.type].pen;
       if (adults.length >= 2 && herd.length < cap && fed && G.R() < dt / DAY() * (kind === 'peru' ? 3 : kind === 'porco' ? 2.4 : 1.4)) {
         const m = G.pick(adults);
-        G.Animals.spawn(kind, m.x + G.rr(-0.3, 0.3), m.y + G.rr(-0.3, 0.3), { dom: set.fac, pen: b.id, grown: 0.3, age: 0, hunger: 0.1, hx: m.x, hy: m.y, state: 'pen' }); E.penDirty();
+        // (beside its mother, on ground it stands on: the hand round her reached into the house by the pen — a lamb born in a
+        // longhouse of the metrópole, L-631)
+        const jx = m.x + G.rr(-0.3, 0.3), jy = m.y + G.rr(-0.3, 0.3); const at = G.Animals.walkOK(m, jx, jy) ? [jx, jy] : [m.x, m.y];
+        G.Animals.spawn(kind, at[0], at[1], { dom: set.fac, pen: b.id, grown: 0.3, age: 0, hunger: 0.1, hx: m.x, hy: m.y, state: 'pen' }); E.penDirty();
       }
     }
   }

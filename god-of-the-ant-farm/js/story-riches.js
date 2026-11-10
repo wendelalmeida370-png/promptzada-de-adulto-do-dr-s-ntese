@@ -43,7 +43,7 @@
   // ====================================================================================
   const nm = id => (P(id) || {}).name || '';
   St.observe('rareSeen', d => St.offer(St.draft('fera-rara', { beast: d.beast, kind: d.kind, morph: d.morph, set: d.set, x: d.x, y: d.y })));
-  St.observe('rarekill', d => St.offer(St.draft('pele-rara', { a: d.who, kind: d.kind, morph: d.morph, x: d.x, y: d.y, n: { a: nm(d.who) } })));
+  St.observe('rarekill', d => St.offer(St.draft('pele-rara', { a: d.who, beast: d.id, kind: d.kind, morph: d.morph, x: d.x, y: d.y, n: { a: nm(d.who) } })));
   St.observe('palace', d => St.offer(St.draft('palacio', { a: d.who, fac: d.fac, type: d.type, b: d.b, x: d.x, y: d.y, n: { a: nm(d.who) } })));
   St.observe('palaceDone', d => St.offer(St.draft('palacio-pronto', { fac: d.fac, b: d.b, x: d.x, y: d.y })));
   St.observe('blackpearl', d => St.offer(St.draft('perola-negra', { a: d.who, fac: d.fac, x: d.x, y: d.y, n: { a: nm(d.who) } })));
@@ -139,6 +139,10 @@
   K('fr-morreu', { h: 'O fim', text: [c => `${c.P} ${c.DEATH} sem chegar perto ${c.dB}.`] });
 
   const rareOf = s => G.S.animals.get(s.cast.beast);
+  // (the beast is in the cast while it lives; once the protagonist has slain it, the body leaves the cast and the story keeps its
+  // id in data.carc: the body is the world's — the skinner's, the scavengers', the rot's — and the story waits for the pelt, not
+  // for the body, which went from the world while the story still counted on it, up to a day, L-xxx)
+  const beastId = s => s.cast.beast || s.data.carc;
   function rc(s) {
     const d = s.data; const a = d.art; const B = `${a} ${d.bname}`;
     return { B, Bc: cap1(B), dB: (a === 'a' ? 'da ' : 'do ') + d.bname, oB: a, MORPH: d.morph, MOTIVE: d.motive, APEX: d.apex, town: d.town, NEARAT: d.at && d.town && d.at.includes(d.town) ? ' bem perto da cidade' : d.at || '',
@@ -184,7 +188,9 @@
     begin(s) { s.phase = 'visto'; St.beat(s, 'fr-visto', rc(s), { x: s.place.x, y: s.place.y }); },
     tick(s) {
       const p = P(s.protag); if (!p || p.dead) return;
-      if (s.data.killed) { if (G.S.day - s.data.killed >= 1) finishPelt(s, p, false); return; }
+      // the pelt: the protagonist's skinning comes as a fact, another hand's too (both heard before the turn); the body gone
+      // otherwise — eaten, rotten, sunk, its last meat taken — the pelt is lost now, not at the turn of the year (L-xxx)
+      if (s.data.killed) { if (G.S.day - s.data.killed >= 1 || !G.S.animals.has(beastId(s))) finishPelt(s, p, false); return; }
       const a = rareOf(s);
       if (!a || a.dead) { if (!a) { if (!s.data.gone) s.data.gone = G.S.day; else if (G.S.day - s.data.gone >= 2) St.finish(s, 'esquecida', 'sereno', St.say(s, 'fr-sumiu', rc(s))); } return; }
       const set = homeOf(p);
@@ -198,15 +204,17 @@
     react(s, f) {
       if (f.k === 'fera-morta' && f.beast === s.cast.beast) {
         const at = St.where(f.x, f.y).at;
-        if (f.by === s.protag) { const p = P(s.protag); s.data.killed = G.S.day; s.phase = 'pele'; St.beat(s, 'fr-abateu', Object.assign(rc(s), { at, HURT: p && p.hp < 70 }), { x: f.x, y: f.y, hot: 20, big: 1 }); return true; }
+        if (f.by === s.protag) { const p = P(s.protag); s.data.killed = G.S.day; s.phase = 'pele'; s.data.carc = s.cast.beast; delete s.cast.beast; St.beat(s, 'fr-abateu', Object.assign(rc(s), { at, HURT: p && p.hp < 70 }), { x: f.x, y: f.y, hot: 20, big: 1 }); return true; }
         const by = P(f.by);
         if (by) St.finish(s, 'roubada', s.data.motive === 'sagrado' ? 'tragico' : 'agridoce', St.say(s, s.data.motive === 'sagrado' ? 'fr-outro-sagrado' : 'fr-outro', Object.assign(rc(s), { K: by.name })), { x: f.x, y: f.y, log: true });
         else St.finish(s, 'roubada', 'sereno', St.say(s, 'fr-bicho', rc(s)));
         return true;
       }
-      if (f.k === 'pele-rara' && f.a === s.protag && f.kind === s.data.kind && s.data.killed) { finishPelt(s, P(f.a), true); return true; }
+      // (this beast's pelt, by its id: in the protagonist's hands it is the story's, in another's it is lost — said when heard, not
+      // at the turn of the year with the body long gone, L-xxx)
+      if (f.k === 'pele-rara' && s.data.killed && f.beast === beastId(s)) { finishPelt(s, alive(s.protag) ? P(s.protag) : null, f.a === s.protag); return true; }
       if (f.k === 'morte' && f.a === s.protag) {
-        if (f.beast && f.beast === s.cast.beast) {
+        if (f.beast && f.beast === beastId(s)) {
           St.chapter(s, St.say(s, 'fr-morto', Object.assign(rc(s), { at: St.where(f.x, f.y).at })), { x: f.x, y: f.y, big: 1, log: true, toast: true, k: 'fr-morto' });
           if (!St.bequeath(s, P(f.a), 'fera')) St.finish(s, 'fracassada', 'tragico', null, { clima: 'caçada' });
         } else { St.chapter(s, St.say(s, 'fr-morreu', Object.assign(rc(s), { DEATH: deathTxt(f.a) })), { k: 'fr-morreu' }); if (!St.bequeath(s, P(f.a), 'morte')) St.finish(s, 'interrompida', 'sereno', null); }

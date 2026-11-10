@@ -762,7 +762,7 @@
   };
   // a band of a campaign retreats (war.js, G.War.retreat): its army is «retirada» then and there. (The save keeps the army,
   // not the band, and the army read its band every half second: a retreat ordered in between was lost to a save made then,
-  // and the load called the host back to arms where it stood, in the middle of the enemy — L-xx2)
+  // and the load called the host back to arms where it stood, in the middle of the enemy — L-648)
   Wz.onRetreat = function (b) { const a = Wz.armyOfBand(b); if (a && !a.done) a.phase = 'retirada'; };
   // a soldier who leaves the field running (a broken company, a wound): counted once
   Wz.onFlee = function (v, b) { const bt = b && b.battle ? Wz.battle(b.battle) : null; if (bt && bt.open && bt.sides[b.fac]) bt.sides[b.fac].fled++; };

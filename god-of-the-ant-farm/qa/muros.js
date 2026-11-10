@@ -305,29 +305,54 @@ for (const old of [false, true]) {
     ok('7b a forja de Hedeby (o mega), aberta do save: um portão no muro, e a forja ao alcance', around.includes(R) && (w.ways || []).length > 0, `em volta da forja as regiões ${[...new Set(around)].join(',')}, a cidade na ${R}; portões a mais ${(w.ways || []).map(g => `(${g % G.N},${(g / G.N) | 0})${S.wall[g]}`).join(' ') || 'nenhum'}`); }
 }
 // 7c. a standing wall with every gate shut into wall, in a save: loaded, the town's buildings reached again
-for (const k of ['metropole', 'mega', 'cidade', 'anos100', 'mundial']) {
-  M.pronto(k); const S = G.S, N = G.N, W = G.W;
-  const around = (b, L) => { const o = []; for (let x = b.x - 1; x <= b.x + b.w; x++) for (let y = b.y - 1; y <= b.y + b.h; y++) if (x >= 0 && y >= 0 && x < N && y < N && (x < b.x || x >= b.x + b.w) !== (y < b.y || y >= b.y + b.h)) o.push(L[y * N + x]); return o; };
-  const reachedNow = s => { const L = W.reachIds(true), R = W.townRegion(s); return [...G.S.buildings.values()].filter(b => b.set === s.id && b.built && b.type !== 'ruin' && around(b, L).includes(R)).map(b => b.id); };
+{
+  const NAME = '7c o muro de pé com todo portão fechado em muro, num save: carregado, os prédios da cidade ao alcance de novo';
+  const around = (b, L) => { const N = G.N, o = []; for (let x = b.x - 1; x <= b.x + b.w; x++) for (let y = b.y - 1; y <= b.y + b.h; y++) if (x >= 0 && y >= 0 && x < N && y < N && (x < b.x || x >= b.x + b.w) !== (y < b.y || y >= b.y + b.h)) o.push(L[y * N + x]); return o; };
+  const reachedNow = s => { const L = G.W.reachIds(true), R = G.W.townRegion(s); return [...G.S.buildings.values()].filter(b => b.set === s.id && b.built && b.type !== 'ruin' && around(b, L).includes(R)).map(b => b.id); };
   const outside = (w, b) => b.x + b.w <= w.box[0] || b.x > w.box[2] || b.y + b.h <= w.box[1] || b.y > w.box[3];
-  // (a wall whose gates, shut into wall, shut buildings of its town off: walls with a gap — a square on the line, a breach —
-  // shut nothing, and are passed by)
-  let w = null, before = [], shut = 0;
-  for (const q of S.walls.filter(q => q.done && S.settlements.has(q.set)).sort((p, q) => p.id - q.id)) {
-    const s = S.settlements.get(q.set); const b0 = reachedNow(s); if (![...S.buildings.values()].some(b => b0.includes(b.id) && outside(q, b))) continue;
-    const keep = q.gates.map(g => [g, S.wall[g], S.wallHp[g]]); for (const g of q.gates) { S.wall[g] = 1; S.wallHp[g] = 80; } W.touchWalk();
-    const n = b0.filter(id => !reachedNow(s).includes(id)).length;
-    if (n > 0) { w = q; before = b0; shut = n; w.gates = []; w.ways = []; break; }
-    for (const [g, v, hp] of keep) { S.wall[g] = v; S.wallHp[g] = hp; } W.touchWalk();
-  }
-  if (!w) { if (k === 'mundial') ok('7c o muro de pé com todo portão fechado em muro, num save: carregado, os prédios da cidade ao alcance de novo', false, 'em nenhum mundo um muro de pé que, com os portões fechados em muro, feche um prédio da cidade'); continue; }
-  {
+  const walls = () => G.S.walls.filter(q => q.done && G.S.settlements.has(q.set)).sort((p, q) => p.id - q.id);
+  // (the world open now: a wall whose gates, shut into wall, shut buildings of its town off — walls with a gap, a square on the
+  // line, a breach, shut nothing, and are passed by —; shut so, saved and loaded)
+  const try7c = (k, how) => {
+    const S = G.S, N = G.N, W = G.W;
+    let w = null, before = [], shut = 0;
+    for (const q of walls()) {
+      const s = S.settlements.get(q.set); const b0 = reachedNow(s); if (![...S.buildings.values()].some(b => b0.includes(b.id) && outside(q, b))) continue;
+      // (every gate shut into wall: the four of the plan and the ones beyond them for a building, w.ways — L-344, L-604 —, as
+      // the record is left with none of either)
+      const all = q.gates.concat(q.ways || []); const keep = all.map(g => [g, S.wall[g], S.wallHp[g]]); for (const g of all) { S.wall[g] = 1; S.wallHp[g] = 80; } W.touchWalk();
+      const n = b0.filter(id => !reachedNow(s).includes(id)).length;
+      if (n > 0) { w = q; before = b0; shut = n; w.gates = []; w.ways = []; break; }
+      for (const [g, v, hp] of keep) { S.wall[g] = v; S.wallHp[g] = hp; } W.touchWalk();
+    }
+    if (!w) return false;
     const s = S.settlements.get(w.set), sid = s.id, wid = w.id;
     M.salvarCarregar(); const S1 = G.S, s1 = S1.settlements.get(sid), w1 = S1.walls.find(q => q.id === wid);
     const L = W.reachIds(true), R = W.townRegion(s1); const back = before.filter(id => { const b = S1.buildings.get(id); return !b || around(b, L).includes(R); }).length;
-    ok('7c o muro de pé com todo portão fechado em muro, num save: carregado, os prédios da cidade ao alcance de novo', shut > 0 && back === before.length && w1 && w1.gates.length > 0, `${k}: o muro de ${s.name} (#${wid}), sem portão: ${shut} de ${before.length} prédios da cidade fora de alcance; carregado, ${(w1 && w1.gates.length) || 0} portão(ões) abertos (${w1 ? w1.gates.map(g => `(${g % N},${(g / N) | 0})`).join(' ') : '-'}), ${back} de ${before.length} ao alcance`);
-    break;
+    ok(NAME, shut > 0 && back === before.length && w1 && w1.gates.length > 0, `${k}${how ? ` (${how})` : ''}: o muro de ${s.name} (#${wid}), sem portão: ${shut} de ${before.length} prédios da cidade fora de alcance; carregado, ${(w1 && w1.gates.length) || 0} portão(ões) abertos (${w1 ? w1.gates.map(g => `(${g % N},${(g / N) | 0})`).join(' ') : '-'}), ${back} de ${before.length} ao alcance`);
+    return true;
+  };
+  let ran = false;
+  for (const k of ['metropole', 'mega', 'cidade', 'anos100', 'mundial']) { M.pronto(k); if (try7c(k, '')) { ran = true; break; } }
+  // (no world has one today: the walls of the generation 17 leave the town a way round them — their lines stop at the rivers,
+  // which are forded, and at the shallows —, and with every gate shut each but three shut not one tile round it off, and those
+  // three a pocket of a dozen between the wall and the water, with no building of the town and no room for one. The case is
+  // armed by the rule, as the 7b's soleira was by the god's hand: a wall raised at once by the game's door (Siege.raiseWalls,
+  // the plan the world makes), for a town at peace without one whose plan runs all on dry land — a line that crosses a river
+  // has a ford in it —, in each world in turn; the plan of a grown town walls the old one and leaves its new quarters
+  // outside, reached through its gates. Twelve walls at most)
+  const tried = [];
+  for (const k of ['metropole', 'mega', 'cidade', 'anos100']) {
+    if (ran || tried.length >= 12) break;
+    M.pronto(k);
+    const towns = [...G.S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac) && !G.Fac.enemiesOf(q.fac).length).sort((a, b) => a.id - b.id);
+    for (const s of towns) {
+      if (tried.length >= 12) break; const p = plan(s); if (!p || p.tiles.some(i => G.S.type[i] < G.T.SAND)) continue;
+      const w = G.Siege.raiseWalls(s, null, true); if (!w || !w.done) continue; tried.push(`${k}: ${s.name}`);
+      if (try7c(k, `armado: o muro de ${s.name} (#${w.id}) erguido de uma vez pela porta do jogo, Siege.raiseWalls`)) { ran = true; break; }
+    }
   }
+  if (!ran) ok(NAME, false, `em nenhum mundo um muro de pé que, com todo portão fechado em muro, feche um prédio da cidade; armado pela porta do jogo (${tried.join(' · ') || 'nenhuma cidade sem muro, em paz, que possa erguer um'}): nenhum desses muros, fechado, fechou um prédio da cidade`);
 }
 // 8. the site finder and the gates
 {

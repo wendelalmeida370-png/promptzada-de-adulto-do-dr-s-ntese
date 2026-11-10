@@ -38,7 +38,7 @@
 //    fome máxima (L-605; apontado pelo C na geração 15: Kamose, de Tebas em guerra, levado ao refúgio a caminho de comer, morreu
 //    a duas casas de um armazém)
 // h18 o turno dado no lugar de uma refeição (sem comida ao alcance) larga quando a refeição volta: o soldado de guarda por
-//    falta de comer vai comer na escolha seguinte, não quando o turno acaba (L-xx3; achado pela regra S2 no volta.js da reg17:
+//    falta de comer vai comer na escolha seguinte, não quando o turno acaba (L-649; achado pela regra S2 no volta.js da reg17:
 //    Tezcatl, de guarda no portão de Tenochtitlan, morreu de fome no posto com o armazém cheio de novo)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
@@ -545,7 +545,7 @@ const calmOne = (skip, also) => {
   }
   ok('h17 quem se esconde na caverna come das provisões, como quem foge da guerra (L-605)', good, info);
 }
-// ---------------- h18 the work given for a meal there was not lets go when the meal is back in reach (L-xx3) ----------------
+// ---------------- h18 the work given for a meal there was not lets go when the meal is back in reach (L-649) ----------------
 // (found by the rule S2 in the volta.js of the reg17: Tezcatl of Tenochtitlan, with the store empty, was given a shift on guard
 // at the gate for want of a meal — villagers.js start, 'eat' —; the shift kept the meal's kind, and the choice, every two
 // seconds, saw the meal it wanted already there and looked no further; the store filled again, and she died of hunger at her
@@ -557,7 +557,7 @@ const calmOne = (skip, also) => {
   const posts = s => !!s && (POSTS.some(t => G.Eco.byType(s.id, t).length) || (w => !!(w && w.done && w.gates.length))(G.Siege && G.Siege.wallOf(s.id)));
   const MEAL = { eat: 1, forage: 1, lar: 1, idle: 1 };
   const v = calmOne([], q => q.role === 'guerreiro' && posts(S.settlements.get(q.set)));
-  let shift = null, tries = 0, took = -1, h0 = 0, info = 'nenhum soldado numa cidade calma com posto de guarda';
+  let shift = null, tries = 0, took = -1, h0 = 0, info = 'nenhum soldado numa cidade calma com posto de guarda'; const held = { early: null, late: null, task: '-' };
   if (v) {
     const t0 = S.time; const h = S.buildings.get(v.home);
     const pan = h ? D.get('h:' + h.id, 'food') : 0; if (pan > 0) D.use('h:' + h.id, 'food', pan, { code: 'teste', part: true });
@@ -581,15 +581,39 @@ const calmOne = (skip, also) => {
     if (shift) {
       v._noStore = 0; h0 = v.hunger; const c0 = S.clock;
       live(30, () => { if (!S.villagers.has(v.id)) return true; const t = v.task; if ((t && t.type === 'eat') || v.hunger < h0 - 20) { took = S.clock - c0; return true; } return false; });
+      shift.hp = Math.round(v.hp);
+    }
+    // (h18b: and the checker still sees one whose choice stops looking. Dying — life under 40 — on a shift given for want of a
+    // meal, the store in reach again and the choice held by the test's hand (the next look put off, v.think): the rule S2
+    // leaves the store out for 3.5 s from the last look, which stamped the shift, and then speaks as before)
+    if (shift && S.villagers.has(v.id)) {
+      let t2 = null;
+      for (let k = 0; k < 10 && !t2; k++) {
+        Vg.endTask(v); v.hunger = 100; v.hp = 35; v._hungerT = 0; v.sleeping = false;
+        for (let j = 0; j < 40; j++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); const t = v.task; if (t && t.kind === 'eat' && t.noMeal) { t2 = t; break; } }
+      }
+      // (right after a look that found no meal: the stamp is now)
+      const st0 = t2 ? t2.noMealT : 0; for (let j = 0; t2 && j < 40 && v.task === t2 && t2.noMealT === st0; j++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); }
+      if (t2 && v.task === t2) {
+        const said = () => QA.check().filter(q => q.sys === 'fome' && q.sev === 2 && q.id === v.id).map(q => q.msg);
+        v._noStore = 0; const c1 = S.clock;
+        while (S.clock - c1 < 1) { v.think = 99; M.viver(0.1); } held.early = said();
+        while (S.clock - c1 < 4) { v.think = 99; M.viver(0.1); } held.late = said();
+        held.task = v.task === t2 ? t2.type : v.task ? v.task.type : '-';
+        v.think = 0; live(5, () => !!(v.task && v.task.type === 'eat')); // (let go: the next look takes him to the meal)
+      }
     }
     for (const [b, [n, g]] of bushes) { b.berries = n; b.grow = g; }
     if (pan > 0 && h) D.make('h:' + h.id, 'food', pan, { code: 'teste', part: true });
     if (h) h.water = w0;
     S.time = Math.max(S.time, t0);
-    info = shift ? `${v.name}, de guarda ${shift.at} por falta de refeição (turno de ${shift.dur} s, ${shift.left} ainda por fazer, na ${tries}ª escolha): com o armazém ao alcance de novo, ${took >= 0 ? `foi comer em ${took.toFixed(1)} s` : 'NÃO foi comer em 30 s'}; vida ${Math.round(v.hp)}` : `${v.name}: em ${tries} escolhas, nenhum turno de guarda no posto por falta de refeição`;
+    info = shift ? `${v.name}, de guarda ${shift.at} por falta de refeição (turno de ${shift.dur} s, ${shift.left} ainda por fazer, na ${tries}ª escolha): com o armazém ao alcance de novo, ${took >= 0 ? `foi comer em ${took.toFixed(1)} s` : 'NÃO foi comer em 30 s'}; vida ${shift.hp}` : `${v.name}: em ${tries} escolhas, nenhum turno de guarda no posto por falta de refeição`;
   }
   // (at the next choice: one every 1,4 to 3 s, villagers.js)
-  ok('h18 o turno dado no lugar de uma refeição larga quando a refeição volta ao alcance (L-xx3)', !!shift && took >= 0 && took <= 3.5, info);
+  ok('h18 o turno dado no lugar de uma refeição larga quando a refeição volta ao alcance (L-649)', !!shift && took >= 0 && took <= 3.5, info);
+  const sawLate = !!held.late && held.late.length === 1 && /o armazém/.test(held.late[0]);
+  ok('h18b o verificador ainda vê quem a escolha deixou de olhar: o armazém fica de fora 3,5 s depois da última olhada, não mais (L-649)', !!held.early && !held.early.length && sawLate,
+    held.early ? `${v.name}, morrendo de fome num turno de ${held.task} por falta de refeição, o armazém ao alcance de novo e a escolha segurada: 1 s depois, ${held.early.length ? '«' + held.early[0] + '»' : 'o verificador espera a próxima olhada'}; 4 s depois, ${held.late.length ? '«' + held.late[0] + '»' : 'o verificador NÃO acusou'}` : 'nenhum turno por falta de refeição para segurar');
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }

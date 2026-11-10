@@ -305,7 +305,8 @@
         if (tr) { tr.size = 0.7 + G.R() * 0.3; n++; }
       } else if (G.R() < 0.22) G.Nature.addBush(tx + 0.5, ty + 0.5);
     }
-    for (let k = 0; k < 2 + (G.R() < 0.5 ? 1 : 0); k++) { const a = G.R() * 6.28; const px = x + Math.cos(a) * 2, py = y + Math.sin(a) * 2; if (W.inb(px, py) && W.isLand(W.idx(px, py))) G.Animals.spawn('deer', px, py); }
+    // (the deer only where a deer stands — not inside a house of the town the god blessed: L-631)
+    for (let k = 0; k < 2 + (G.R() < 0.5 ? 1 : 0); k++) { const a = G.R() * 6.28; const px = x + Math.cos(a) * 2, py = y + Math.sin(a) * 2; if (W.inb(px, py) && W.isLand(W.idx(px, py)) && G.Animals.walkOK({ kind: 'deer' }, px, py)) G.Animals.spawn('deer', px, py); }
     G.FX && G.FX.growth(x, y, r);
     G.Audio && G.Audio.play('magic');
     P.witness(x, y, 12, 8, 0);

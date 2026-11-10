@@ -65,9 +65,11 @@
     const S = G.S; const list = nests();
     for (let k = list.length - 1; k >= 0; k--) {
       const n = list[k]; n.t += dt;
-      // the tree fell, the house burned: the nest is gone
+      // the tree fell, the house burned: the nest is gone — and so is the one on the ground or the cliff a building or a wall
+      // was raised over (its chicks hatched inside the building: a penguin in the mead hall founded on the lot, L-631)
       const host = n.type === 'tree' ? S.trees.get(n.host) : n.type === 'roof' ? S.buildings.get(n.host) : 1;
-      if (!host || (n.type === 'tree' && host.stage !== 'grow') || (n.type === 'roof' && !host.built) || S.fire[W.idx(n.x, n.y)] > 0.3) { dropParent(n); list.splice(k, 1); continue; }
+      const at = W.idx(n.x, n.y); const under = (n.type === 'ground' || n.type === 'cliff') && (S.occ[at] || S.wall[at]);
+      if (!host || under || (n.type === 'tree' && host.stage !== 'grow') || (n.type === 'roof' && !host.built) || S.fire[at] > 0.3) { dropParent(n); list.splice(k, 1); continue; }
       const sp = SP[n.kind];
       if (n.st === 'build' && n.t > DAY() * 0.12) { n.st = 'eggs'; n.t = 0; n.eggs = n.kind === 'penguin' ? 1 : n.kind === 'eagle' ? 2 : 2 + Math.floor(G.R() * 3); }
       else if (n.st === 'eggs' && n.t > DAY() * 0.22) { n.st = 'chicks'; n.t = 0; n.chicks = n.eggs; n.eggs = 0; }
@@ -76,7 +78,8 @@
         // (not every chick lives to fly: never more than the land can feed)
         const room = Math.max(0, A.capacity(n.kind) - (A.counts()[n.kind] || 0));
         const fly = Math.min(n.chicks, room);
-        for (let q = 0; q < fly; q++) A.spawn(n.kind, n.x + G.rr(-0.6, 0.6), n.y + G.rr(-0.6, 0.6), { grown: 0.45, age: 0 });
+        // (beside the nest, on ground the chick stands on: the hand round it reached into the house by it — L-631)
+        for (let q = 0; q < fly; q++) { const jx = n.x + G.rr(-0.6, 0.6), jy = n.y + G.rr(-0.6, 0.6); const xy = sp.cls === 'air' || A.walkOK({ kind: n.kind }, jx, jy) ? [jx, jy] : [n.x, n.y]; A.spawn(n.kind, xy[0], xy[1], { grown: 0.45, age: 0 }); }
         n.st = 'empty'; n.t = 0; n.chicks = 0; dropParent(n);
         if (!S.firstFledge) { S.firstFledge = S.day; log(`Os filhotes ${sp.g === 'f' ? 'da' : 'do'} ${sp.name.toLowerCase()} deixaram o ninho${G.Stories ? G.Stories.where(n.x, n.y).at : ''} e voaram pela primeira vez.`, 'bird', n.x, n.y); }
       } else if (n.st === 'empty' && n.t > DAY()) { list.splice(k, 1); continue; }

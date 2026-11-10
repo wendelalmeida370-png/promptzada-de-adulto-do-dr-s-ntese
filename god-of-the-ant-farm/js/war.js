@@ -159,8 +159,8 @@
     return b;
   };
   // a band leaves the field beaten — its own losses, the host's rout, the champion's fall, the siege lifted, hunger: one
-  // order, and on the road home its soldiers look for no fight and answer none (runBand, L-xx1); the campaign's army knows
-  // it at once (wars.js, onRetreat: L-xx2)
+  // order, and on the road home its soldiers look for no fight and answer none (runBand, L-647); the campaign's army knows
+  // it at once (wars.js, onRetreat: L-648)
   Wr.retreat = function (b) { b.st = 'retorno'; b.t = 0; b.retreat = true; G.Wars && G.Wars.onRetreat(b); };
   // (o.home: a band already on the road home, under the number of the one a load lost — wars.js resume, L-185)
   Wr.makeBand = function (f, enemy, set, members, goal, o) {
@@ -773,7 +773,7 @@
     t.scan = (t.scan || 0) - dt;
     // (a beaten band leaves the field: on the road home it looks for no fight and answers none. The routed of a host ran,
     // and the rest stood where the retreat found them and fought whoever was within four steps — the Legião do Leste
-    // before Argos, 56 of them, the town in arms around them, all dead in 22 s and 54 steps from home: L-xx1)
+    // before Argos, 56 of them, the town in arms around them, all dead in 22 s and 54 steps from home: L-647)
     const away = b.st === 'retorno' && b.retreat;
     if (t.scan <= 0) { t.scan = 0.35 + G.R() * 0.2; if (b.st !== 'reunir' && !away) t.foe = pickFoe(v, b); }
     if (away) t.foe = 0;

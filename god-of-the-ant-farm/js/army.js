@@ -820,7 +820,7 @@
     return true;
   };
   // caught: wounded, an enemy at arm's length — better a prisoner than dead (the routed, above; and the soldier of a band in
-  // retreat on the road home, war.js — L-xx1)
+  // retreat on the road home, war.js — L-647)
   AR.yields = function (v, t, b, dt) {
     t.yield = (t.yield || 0) - dt;
     if (t.yield > 0) return false;

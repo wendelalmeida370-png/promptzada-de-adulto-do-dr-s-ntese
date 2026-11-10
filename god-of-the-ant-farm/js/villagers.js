@@ -611,9 +611,10 @@
     if (!night && best !== 'eat' && best !== 'sleep' && best !== 'shelter' && Vg.plainLoad(v) && (!cur || (cur.pri < 1 && cur.type !== 'deliver')) && !(v._noStore > S.clock) && G.Lar && G.Lar.minder(v)) { const t = deliverTask(v); if (t) { t.kind = 'deliver'; return; } }
     if (cur) {
       // (the work — or the bed — given for a meal there was not keeps the meal's kind, so the choice does not undo it every
-      // turn; but a meal back in reach takes the hungry one to it: Tezcatl of Tenochtitlan, on guard at the gate for want of
-      // a meal, kept her post while the store filled again, and died of hunger at it — L-xx3)
-      if (cur.kind === best && !(cur.noMeal && mealBack(v))) return;
+      // turn; but a meal back in reach takes the hungry one to it, and each look that finds none is stamped on the shift — the
+      // checker leaves the store to the next look for a while, never for good: Tezcatl of Tenochtitlan, on guard at the gate
+      // for want of a meal, kept her post while the store filled again, and died of hunger at it — L-649)
+      if (cur.kind === best) { if (!cur.noMeal) return; if (!mealBack(v)) { cur.noMealT = S.clock; return; } }
       if (cur.pri >= bp) return;
     }
     start(v, best, bp);
@@ -629,7 +630,7 @@
       // (nothing to eat in reach — no store, the store out of the way or empty, no berries —: at night back to sleep, the
       // hunger waking one again in a while (runSleep); by day the work, which may be what brings food or a store — the fire
       // of a town just founded, the field, the hunt —, not a day of wandering. L-165, L-171)
-      case 'eat': t = eatTask(v); if (!t) { t = (G.Lar ? G.Lar.sleepy(v) : G.isNight()) ? setTask(v, { type: 'sleep', pri: 1.5, stay: v.home }) : workTask(v); if (t) t.noMeal = 1; } break;
+      case 'eat': t = eatTask(v); if (!t) { t = (G.Lar ? G.Lar.sleepy(v) : G.isNight()) ? setTask(v, { type: 'sleep', pri: 1.5, stay: v.home }) : workTask(v); if (t) { t.noMeal = 1; t.noMealT = S.clock; } } break;
       case 'sleep': t = setTask(v, { type: 'sleep', pri: Math.max(pri, 1.2), stay: v.home }); break;
       case 'lar': { const u = G.Lar && G.Lar.urge(v, G.isNight()); t = u && G.Lar.task(v, H, u.why); break; }
       case 'work': t = workTask(v); break;
@@ -713,7 +714,7 @@
   }
 
   // ------------------------------ task factories ------------------------------
-  // a meal at the store in reach again — eatTask's store, asked without giving anything (the choice, L-xx3)
+  // a meal at the store in reach again — eatTask's store, asked without giving anything (the choice, L-649)
   function mealBack(v) { return ((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1 && !(v._noStore > G.S.clock) && !!G.Village.nearestDropoff(v.x, v.y, v.set); }
   function eatTask(v) {
     const S = G.S;

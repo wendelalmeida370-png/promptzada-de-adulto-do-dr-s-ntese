@@ -23,7 +23,8 @@
 //  r12 o prédio erguido por cima de um bicho: uma vaca no lote de uma casa e outra no meio do lote de 40 m de um teatro, fundados
 //     por cima delas — cada uma posta onde fica, de onde chega ao seu curral; e a metrópole vivida: nenhum bicho posto dentro de
 //     um prédio que bloqueia pelo prédio que sobe nem pelo nascimento (L-629: ficavam dentro — doze bichos num teatro, galinhas
-//     nascidas dentro das casas)
+//     nascidas dentro das casas; L-631: o pinguim chocado no salão erguido por cima do ninho, a ovelha nascida ao lado da mãe
+//     dentro da casa longa), e nenhum ninho no chão deixado debaixo de um prédio ou de um muro
 //  r10 a volta sozinha com um chão cercado no caminho: uma vaca do curral posta do outro lado de um cercado alheio (um curral,
 //     um cemitério) que o caminho das pessoas atravessa — ela dá a volta e chega ao seu curral (o caminho dela não atravessa
 //     cerca alheia senão pela porteira; o das pessoas não conhece cercas, e as vacas de Birka ficaram presas na cerca do
@@ -402,7 +403,9 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
 // edge) near it, and on each a building founded by the game's door (Village.startProject at the lot: a house, and the
 // monumental theatre the pen's people know how to raise), raised whole: each cow out of the lot, where it stands, from where it
 // reaches its pen. And the metrópole lived three hundred seconds: no beast set inside a building that blocks by the building
-// raised over it, nor by its birth (a hen hatched by the door of a house came out inside the house)
+// raised over it, nor by its birth (a hen hatched by the door of a house came out inside the house; a penguin hatched in the
+// mead hall founded over its nest, and a lamb by its mother at the pen's edge in a longhouse, L-631) — and no nest left on the
+// ground under a building or a wall)
 {
   const P = setup(0.5, 0.1); const b = P.b; const W = G.W; const set = S().settlements.get(b.set);
   const herd = P.herd.slice().sort((p, q) => p.age / G.Animals.DEF[p.kind].life - q.age / G.Animals.DEF[q.kind].life || p.id - q.id);
@@ -426,6 +429,11 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
     const bt = G.Village.startProject(set, big.t, l2, big.st); if (bt && !bt.built) G.Village.completeBuilding(bt);
     const where = (a, o) => { const inLot = !!o && Math.floor(a.x) >= o.x && Math.floor(a.x) < o.x + o.w && Math.floor(a.y) >= o.y && Math.floor(a.y) < o.y + o.h; return { inLot, ok: !inLot && G.Animals.walkOK(a, a.x, a.y) && W.canWalk(a.x, a.y, hx, hy), at: `(${r2(a.x)},${r2(a.y)})` }; };
     const wa = where(ca, bh), wb = where(cb, bt);
+    // (the nests on the ground of the lots: the building raised over one leaves it gone, not hatching inside — a penguin of the
+    // metrópole of the generation 17 was born in the mead hall from the nest on its lot, L-631)
+    const inLot = (n, o) => !!o && n.x >= o.x && n.x < o.x + o.w && n.y >= o.y && n.y < o.y + o.h;
+    const groundNest = n => n.type === 'ground' || n.type === 'cliff';
+    const lotNests = (S().nests || []).filter(n => groundNest(n) && (inLot(n, bh) || inLot(n, bt))).length;
     // (the metrópole lived: who was set inside a building that blocks by the building put over it, or by its birth)
     const land = a => { const d = G.Animals.DEF[a.kind]; return !!d && d.cls !== 'air' && d.cls !== 'water' && !a.held && !a.air && !a.dead; };
     const inB = a => { const i = W.idx(a.x, a.y); const o = S().occ[i] && S().buildings.get(S().occ[i]); return o && o.blocks ? o : null; };
@@ -433,8 +441,9 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
     for (const a of S().animals.values()) if (land(a)) last.set(a.id, true);
     live(300, () => { for (const a of S().animals.values()) { if (!land(a)) continue; const o = inB(a); const seen = last.has(a.id); last.set(a.id, true); if (!o) continue; if (!seen && born.length < 4 && !born.some(q => q.startsWith(a.kind + ' #' + a.id))) born.push(`${a.kind} #${a.id} dentro de ${V.buildName(o)} #${o.id}`); else if (!bIds.has(o.id) && put.length < 4 && !put.some(q => q.startsWith(a.kind + ' #' + a.id))) put.push(`${a.kind} #${a.id} dentro de ${V.buildName(o)} #${o.id}`); } for (const id of S().buildings.keys()) bIds.add(id); });
     const bad = newBad(P.base);
-    ok('r12', !!bh && !!bt && wa.ok && wb.ok && !put.length && !born.length && !bad.length,
-      `${ca.kind} #${ca.id} no lote (${l1[0]},${l1[1]}) da ${bh ? V.buildName(bh) + ' #' + bh.id : 'casa NÃO fundada'}: agora em ${wa.at}${wa.inLot ? ', DENTRO DO LOTE' : wa.ok ? ', onde fica, de onde chega ao curral' : ', ONDE NÃO FICA ou de onde não chega'}; ${cb.kind} #${cb.id} no meio do lote (${l2[0]},${l2[1]}) do ${bt ? V.buildName(bt) + ' #' + bt.id + ' ' + bt.w + '×' + bt.h : 'teatro NÃO fundado'}: agora em ${wb.at}${wb.inLot ? ', DENTRO DO LOTE' : wb.ok ? ', onde fica, de onde chega ao curral' : ', ONDE NÃO FICA ou de onde não chega'}; a metrópole vivida 300 s: ${put.length ? 'POSTOS DENTRO pelo prédio que subiu — ' + put.join(' · ') : 'nenhum posto dentro pelo prédio que sobe'}, ${born.length ? 'NASCIDOS DENTRO — ' + born.join(' · ') : 'nenhum nascido dentro'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    const under = (S().nests || []).filter(n => groundNest(n) && (S().occ[W.idx(n.x, n.y)] || S().wall[W.idx(n.x, n.y)]));
+    ok('r12', !!bh && !!bt && wa.ok && wb.ok && !put.length && !born.length && !under.length && !bad.length,
+      `${ca.kind} #${ca.id} no lote (${l1[0]},${l1[1]}) da ${bh ? V.buildName(bh) + ' #' + bh.id : 'casa NÃO fundada'}: agora em ${wa.at}${wa.inLot ? ', DENTRO DO LOTE' : wa.ok ? ', onde fica, de onde chega ao curral' : ', ONDE NÃO FICA ou de onde não chega'}; ${cb.kind} #${cb.id} no meio do lote (${l2[0]},${l2[1]}) do ${bt ? V.buildName(bt) + ' #' + bt.id + ' ' + bt.w + '×' + bt.h : 'teatro NÃO fundado'}: agora em ${wb.at}${wb.inLot ? ', DENTRO DO LOTE' : wb.ok ? ', onde fica, de onde chega ao curral' : ', ONDE NÃO FICA ou de onde não chega'}; a metrópole vivida 300 s: ${put.length ? 'POSTOS DENTRO pelo prédio que subiu — ' + put.join(' · ') : 'nenhum posto dentro pelo prédio que sobe'}, ${born.length ? 'NASCIDOS DENTRO — ' + born.join(' · ') : 'nenhum nascido dentro'}; ${lotNests} ninho(s) no chão dos lotes, ${under.length ? `${under.length} NINHO(S) DEBAIXO DE PRÉDIO OU MURO (${under.slice(0, 2).map(n => `${n.kind} #${n.id}`).join(', ')})` : 'nenhum ninho debaixo de prédio'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 // r13 a town's beasts and a new pen (L-637): the rule of the lost beast (animals.js) took in every beast with an owner, and a pen
