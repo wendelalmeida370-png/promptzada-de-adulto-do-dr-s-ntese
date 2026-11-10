@@ -3,7 +3,8 @@
 // O caso 7 do guerra10 («medium») julga a paz da guerra que aquele mundo encontra sozinho; com o navegador da máquina de
 // 28/10 (o Chrome 153 no lugar do Chromium 1194, T-123) a guerra daquele mundo acaba pela conquista — o povo que perde
 // deixa de existir, e não há tratado a julgar. Aqui os dois reinos crescem em paz (como no derrota.js), a guerra começa,
-// o exército de A marcha contra a capital de B e a guarda dela se levanta; depois da primeira batalha de campo (ou de um
+// o exército de A marcha contra a capital de B e a guarda dela se levanta (os que a guerra já levantou; só o que falta, pela
+// porta do jogo); depois da primeira batalha de campo (ou de um
 // dia e meio), B, cansado, aceita a paz que A oferece, pela porta do jogo (G.Politics.answerPeace). p1 a guerra acaba com
 // um tratado (nome e termos); p2 os dois povos deixam de estar em guerra (trégua ou vassalagem) e o registro da guerra
 // fecha, com os mortos contados; p3 os soldados voltam: logo depois da paz nenhum bando da guerra marcha mais contra o
@@ -27,9 +28,14 @@ const [A, B] = G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).sli
 const grow = (f, want) => { const sets = G.Fac.settlementsOf(f.id); let k = 0; while (G.Fac.pop(f.id) < want && k++ < 9000) { const s = sets[k % sets.length]; const a = G.R() * 6.283, r = G.R() * (s.radius || 6); const p = G.W.nearestLand(s.cx + Math.cos(a) * r, s.cy + Math.sin(a) * r, 5); if (!p) continue; G.Vg.create({ set: s.id, x: p[0], y: p[1], age: 17 + G.R() * 38 }); } f.stock.food = Math.max(f.stock.food, want * 7); f.stock.armas = (f.stock.armas || 0) + Math.round(want * 0.15); };
 grow(A, 320); grow(B, 260); G.Fac.updateTerritory();
 G.Politics.declareWar(A, B, 'ambicao'); live(5);
-const Wz = G.Wars; const w = Wz.warOf(A.id, B.id); const tg = G.Fac.capitalOf(B.id);
-const host = w && tg && Wz.mobilize(w, G.Fac.get(A.id), 'campanha', tg, {});
-const guard = w && tg && Wz.mobilize(w, G.Fac.get(B.id), 'defesa', tg, {});
+const Wz = G.Wars; const w = Wz.warOf(A.id, B.id); let tg = G.Fac.capitalOf(B.id);
+// (the armies the war raised, and by the game's door only what is missing — as in qa/derrota.js: in the generation 19 the war
+// had called both in its first five seconds, and the hand's second guard of Mênfis took four of the first, «#5458 em dois
+// exércitos (3 e 5)»)
+const raised = (f, role, t) => w && Wz.state().armies.find(a => !a.done && a.war === w.id && a.fac === f.id && a.role === role && (!t || a.target === t.id));
+const host0 = raised(A, 'campanha'); if (host0) tg = G.S.settlements.get(host0.target);
+const host = w && tg && (host0 || Wz.mobilize(w, G.Fac.get(A.id), 'campanha', tg, {}));
+const guard = w && tg && (raised(B, 'defesa', tg) || Wz.mobilize(w, G.Fac.get(B.id), 'defesa', tg, {}));
 console.log(`(${A.name} ${G.Fac.pop(A.id)} contra ${B.name} ${G.Fac.pop(B.id)}; exército ${host ? host.members.length : '-'} contra a guarda de ${tg ? tg.name : '-'} ${guard ? guard.members.length : '-'})`);
 if (!w || !host || !guard) { ok('p1 o tratado', false, `precondição: ${!w ? 'sem guerra' : !host ? A.name + ' não convocou' : B.name + ' não convocou a guarda'}`); process.exit(1); }
 // the war goes on until it has hurt someone (a field battle, as qa/derrota.js) or a day and a half has passed
