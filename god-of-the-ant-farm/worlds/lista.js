@@ -111,20 +111,20 @@ G.Ready.list({
  },
  "anos1000": {
   "day": 1001,
-  "pop": 1002,
+  "pop": 897,
   "peoples": 2,
   "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Birka",
-   "tier": 3,
-   "pop": 126
+   "name": "Tenochtitlan",
+   "tier": 4,
+   "pop": 217
   },
   "wars": 0,
   "ww": null,
   "world": "Selara",
-  "bytes": 6602667
+  "bytes": 6540268
  }
 });
