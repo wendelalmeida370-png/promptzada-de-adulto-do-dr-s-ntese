@@ -718,8 +718,29 @@
   // ============================== save ==============================
   G.saveHooks = G.saveHooks || [];
   G.saveHooks.push({
-    save(out) { if (G.S.saga) { const s = G.S.saga; out.saga = { v: s.v, facts: s.facts, nf: s.nf, seeds: s.seeds, stories: s.stories, ns: s.ns, mem: s.mem, know: s.know, wars: s.wars, lastPromo: Math.round(s.lastPromo), follow: s.follow || 0, recent: s.recent || {} }; } },
-    load(o) { G.S.saga = o.saga ? Object.assign(fresh(), o.saga) : null; idxFor = null; factFor = null; pending.length = 0; St.hotList = []; },
+    save(out) {
+      if (!G.S.saga) return; const s = G.S.saga;
+      out.saga = { v: s.v, facts: s.facts, nf: s.nf, seeds: s.seeds, stories: s.stories, ns: s.ns, mem: s.mem, know: s.know, wars: s.wars, lastPromo: Math.round(s.lastPromo), follow: s.follow || 0, recent: s.recent || {} };
+      // (and the travellers of its journeys, each as he was on his road: the people's tasks are not in the save, and a journey camping
+      // at night was lost at a load — the one asleep by the fire woke in the dark and walked home, the journey given up: Metztli, in the
+      // «cidade» of the generation 18, L-660)
+      const act = new Set(s.stories.filter(q => q.st === 'ativa').map(q => q.id)); const r2 = x => Math.round(x * 100) / 100;
+      out.sagaJ = []; for (const v of G.S.villagers.values()) { const t = v.task; if (t && t.type === 'saga' && t.j && act.has(t.story)) out.sagaJ.push([v.id, Object.assign({}, t), r2(v.x), r2(v.y), v.sleeping ? 1 : 0]); }
+    },
+    load(o) {
+      G.S.saga = o.saga ? Object.assign(fresh(), o.saga) : null; idxFor = null; factFor = null; pending.length = 0; St.hotList = [];
+      // (each traveller back on his road, as the riot gives its people back (L-190): at his camp, asleep by the fire; on the way, the way
+      // asked again — the save keeps no paths —; at the place of the journey, the moment where it was)
+      const S = G.S; const body = o.avatar && Number.isFinite(o.avatar.id) ? o.avatar.id : 0;
+      for (const e of Array.isArray(o.sagaJ) ? o.sagaJ : []) {
+        if (!Array.isArray(e) || !e[1] || typeof e[1] !== 'object' || !Number.isFinite(e[2]) || !Number.isFinite(e[3])) continue;
+        const v = S.villagers.get(e[0]); if (!v || v.id === body || v.task || v.captive || v.jail || v.aboard || v.ug || v.held || v.air) continue;
+        const sto = S.saga && S.saga.stories.find(q => q.id === e[1].story); if (!sto || sto.st !== 'ativa') continue;
+        const t = Object.assign({}, e[1]); if (t.st === 1) t.st = 0;
+        G.Vg.setTask(v, t); if (v.task !== t) continue;
+        v.x = e[2]; v.y = e[3]; v.path = null; v.moving = false; v.sleeping = t.st === 4 && !!e[4];
+      }
+    },
   });
 
   // ============================== the world, observed ==============================

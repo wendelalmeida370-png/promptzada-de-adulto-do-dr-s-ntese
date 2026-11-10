@@ -8,6 +8,8 @@
 //  l5  a morte no meio da noite: quem dormia na mesma casa continua dormindo; o morto sai do save
 //  l4  o save no meio da noite: os mesmos dentro, dormindo ou acordados, na mesma tarefa (D-073, L-220); e de manhã cada um
 //      levanta na sua hora
+//  l4b a caravana de luxo, o comércio entre os povos e o adeus de uma viagem não tiram ninguém da cama (L-635, L-661): todos na
+//      cama, ninguém acordado para eles; um de pé, ele vai
 //  l6  o deus interfere: o fogo numa casa à noite (quem dormia acorda e sai pela porta) e a casa derrubada com gente dentro
 //      (ninguém fica dentro do que caiu)
 //  l2  a vigia: um adulto sai para vigiar a vila de noite e quem mora com ele o espera em casa ('esperar'); ele volta
@@ -43,7 +45,8 @@
 //  l18 o inquérito do load não tira da cama quem o conduz (L-380): dormindo em casa no save, dormindo depois; nas
 //      perguntas, nelas de novo; noutro afazer, sem as perguntas
 //  l19 o sono atravessa o save onde se dorme (L-399): quem do mundo dorme na rua segue dormindo ali depois do load (D-073);
-//      o corpo encarnado dormindo na rua («Dormir aqui») e numa sala de um prédio que não é a casa dele, também
+//      o corpo encarnado dormindo na rua («Dormir aqui») e numa sala de um prédio que não é a casa dele, também; e quem acampa na
+//      estrada da jornada de uma história, dormindo junto ao fogo, segue na jornada, dormindo ali (L-660)
 //  l11 a reza dentro do templo (L-224): os fiéis entram pela porta até os lugares da planta, os outros nas fileiras de fora;
 //      um save no meio; todos terminam e saem
 //  l11b quem reza dentro do templo está num lugar de rezar da planta (as esteiras, os bancos, o altar do sacerdote — o
@@ -198,10 +201,15 @@ if (want('l1', 'l1b')) {
   const early = grown.filter(f => f.t < f.bed - 0.01 && f.e >= 30);
   const ts = grown.map(f => f.t); const mean = a => a.reduce((s, x) => s + x, 0) / (a.length || 1);
   const span = ts.length ? Math.max(...ts) - Math.min(...ts) : 0;
-  const mg = mean(ts), mk = mean(kids.map(f => f.t));
-  const fine = dw.n() >= 5 && !dw.wrong.length && grown.length >= 5 && early.length <= Math.max(1, grown.length * 0.05) && span >= 0.03 && (!kids.length || mk < mg - 0.02)
+  // (the little ones before the grown ones, by the clock of each — L.clock —: the means over those who lay down by it, not worn out
+  // (energy 30 or more, as «antes da própria hora sem cansaço» counts): in the «cidade» of the generation 18 three grown ones, tired to
+  // 15–18 of energy, lay down at 14h46–15h51 — the fatigue's rule, not the clock's — and pulled the grown ones' mean to 18h02, 13 min
+  // after the little ones', T-600)
+  const byClock = f => f.e >= 30; const tired = grown.filter(f => !byClock(f)).length;
+  const kc = kids.filter(byClock); const mg = mean(grown.filter(byClock).map(f => f.t)), mk = mean(kc.map(f => f.t));
+  const fine = dw.n() >= 5 && !dw.wrong.length && grown.length >= 5 && early.length <= Math.max(1, grown.length * 0.05) && span >= 0.03 && (!kc.length || mk < mg - 0.02)
     && !!snap && snap.grownA > 0 && snap.grownW > 0 && !!k78 && (!k78.kidsN || k78.kidsA >= k78.kidsN * 0.6);
-  ok('l1 cada um na sua hora', fine, `${dw.n()} entradas em casa${dw.wrong.length ? ` — ERRADAS: ${dw.wrong.slice(0, 3).join(' · ')}` : ', todas pela porta'}; ${grown.length} adultos deitaram entre ${fmtT(Math.min(...ts))} e ${fmtT(Math.max(...ts))} (média ${fmtT(mg)}), ${kids.length} crianças em média às ${kids.length ? fmtT(mk) : '—'}; antes da própria hora sem cansaço: ${early.length}${early.length ? ' (' + early.slice(0, 2).map(f => `${fmtT(f.t)} < ${fmtT(f.bed)}, ${f.task}`).join(', ') + ')' : ''}; às ${snap ? String(snap.t).replace('.', ',') : '—'}: ${snap ? `${snap.grownA} adultos dormindo e ${snap.grownW} acordados em casa (${snap.awakeLate} pela hora deles: ${snap.wake.join(', ')}), às 0,78 ${k78 ? k78.kidsA : 0} de ${k78 ? k78.kidsN : 0} crianças dormindo; adultos acordados fora de casa: ${[...snap.away].map(([k, n]) => `${k} ${n}`).join(', ') || 'nenhum'}` : 'NÃO CHEGOU'}`);
+  ok('l1 cada um na sua hora', fine, `${dw.n()} entradas em casa${dw.wrong.length ? ` — ERRADAS: ${dw.wrong.slice(0, 3).join(' · ')}` : ', todas pela porta'}; ${grown.length} adultos deitaram entre ${fmtT(Math.min(...ts))} e ${fmtT(Math.max(...ts))} (média ${fmtT(mg)}${tired ? `, sem os ${tired} que deitaram de cansaço` : ''}), ${kids.length} crianças em média às ${kids.length ? fmtT(mk) : '—'}; antes da própria hora sem cansaço: ${early.length}${early.length ? ' (' + early.slice(0, 2).map(f => `${fmtT(f.t)} < ${fmtT(f.bed)}, ${f.task}`).join(', ') + ')' : ''}; às ${snap ? String(snap.t).replace('.', ',') : '—'}: ${snap ? `${snap.grownA} adultos dormindo e ${snap.grownW} acordados em casa (${snap.awakeLate} pela hora deles: ${snap.wake.join(', ')}), às 0,78 ${k78 ? k78.kidsA : 0} de ${k78 ? k78.kidsN : 0} crianças dormindo; adultos acordados fora de casa: ${[...snap.away].map(([k, n]) => `${k} ${n}`).join(', ') || 'nenhum'}` : 'NÃO CHEGOU'}`);
   // (the rule asks the P4 allocator's places — In.placeRule —: without it there is nothing to ask, and the case says so)
   const rep1b = !!(G.Interiors && G.Interiors.placeRule);
   ok('l1b quem dorme está deitado', rep1b && !lying.length, !rep1b ? 'sem o repartidor dos lugares do P4 (In.placeRule): ainda não há lugar de deitar a dar' : lying.length ? `${lying.length} de pé ou sentados dormindo (L-228, o repartidor do P4): ${lying.slice(0, 2).join(' · ')}` : `${looks} olhadas do verificador: ninguém dormindo de pé`);
@@ -249,7 +257,10 @@ if (want('l4')) {
   // (but the night watch, up by its duty — the torch of the town, villagers.js —: the hunter of the watch of the generation 16 was
   // in bed at the save, and up at 21h07 for his round; and the fight, as the fire and the flight: a revolution's rebels rise at
   // once, at any hour — polity.js uprising —: with l5 alone before it, Lucrécia, Cláudia and Tito rose at 22h05)
-  const soon = ws.filter(w => fromNoon(w.t) < fromNoon(w.wake) - 0.005 && w.hunger < 80 && w.task !== 'flee' && w.task !== 'fire' && w.task !== 'patrol' && w.task !== 'combat');
+  // (and the secret society's night — its meeting, the one it lures, the sleepless one who sees it, its hunter: secrets.js wakes them for
+  // it by design, as the meeting of T-274 —: in the generation 18 Túlia, the order's hunter, rose at 21h21 to follow a witness, T-596)
+  const SECRET = { conclave: 1, lured: 1, insone: 1, stalk: 1 };
+  const soon = ws.filter(w => fromNoon(w.t) < fromNoon(w.wake) - 0.005 && w.hunger < 80 && w.task !== 'flee' && w.task !== 'fire' && w.task !== 'patrol' && w.task !== 'combat' && !SECRET[w.task]);
   const span = ws.length ? Math.max(...ws.map(w => fromNoon(w.t))) - Math.min(...ws.map(w => fromNoon(w.t))) : 0;
   ok('l4 o save no meio da noite', !lar.length && !moved.length && ws.length >= 3 && soon.length <= Math.max(1, ws.length * 0.05) && span >= 0.02,
     `${atHome} em casa no save (${rt.bytes} caracteres)${lar.length ? ' — DIFERENÇA: ' + lar.slice(0, 2).join(' · ') : ', a mesma casa depois'}${moved.length ? ` — MUDARAM: ${moved.slice(0, 3).join(' · ')}` : ''}${rt.diff.length > lar.length ? ` (outras partes do save: ${rt.diff.length - lar.length})` : ''}; de manhã ${ws.length} de ${asleep.length} acordaram, entre ${ws.length ? fmtT(ws.slice().sort((x, y) => fromNoon(x.t) - fromNoon(y.t))[0].t) : '—'} e ${ws.length ? fmtT(ws.slice().sort((x, y) => fromNoon(y.t) - fromNoon(x.t))[0].t) : '—'}; antes da própria hora: ${soon.length}${soon.length ? ' (' + soon.slice(0, 2).map(w => `${fmtT(w.t)} < ${fmtT(w.wake)}`).join(', ') + ')' : ''}`);
@@ -304,7 +315,34 @@ if (want('l4b')) {
     infoT = `${cap.name} (${a.name}, ${give} para ${b.name}): ${LT.length} que podiam levar o comércio, todos na cama — ${wokenT.length ? `ACORDADOS para ele: ${wokenT.slice(0, 3).map(v => `${nm(v)} (${v.task ? v.task.type : '-'})`).join(', ')}` : 'nenhum acordado'}; com ${nm(upT)} de pé, ${ledT ? 'ele levou o comércio' : sentUp.length ? `o comércio saiu com ${sentUp.map(nm).join(', ')}` : 'o comércio NÃO saiu'}`;
     break;
   }
-  ok('l4b a caravana e o comércio entre os povos não tiram ninguém da cama', fine && fineT, info + ' · o comércio entre os povos: ' + infoT);
+  // (and the farewell of a voyage, expeditions.js: the families come down to the quay to see the crew go — those awake, as no call
+  // from outside takes a sleeper (L-661): in the l4 of the generation 18 a voyage gathered at night took two of its crew's kin from
+  // their beds at 21h22. A voyage made ready by the test's hand at night — the first people of the sea that has one, in this world or
+  // the metrópole —, every kin of its crew near the quay asleep, and its gathering: none of them woken; one of them up, a second
+  // gathering, and that one goes)
+  let fineA = false, infoA = 'nenhuma viagem para o caso, nem na metrópole';
+  {
+    const voyage = () => { for (const q of G.Fac.all().filter(o => o.alive && G.Civ.has(o.id, 'navegacao')).sort((x, y) => x.id - y.id)) { let x = null; for (let k = 0; k < 12 && !x; k++) x = G.Expe.consider(q, { scale: 'media', many: true }); if (x) return x; } return null; };
+    open(); S.time = 0.9; let e = voyage();
+    if (!e && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; S.time = 0.9; e = voyage(); }
+    if (e) {
+      const crew = new Set(e.crew); const K = [];
+      for (const id of e.crew) { const v = S.villagers.get(id); if (v) for (const k of G.Stories.kin(v)) if (!crew.has(k.id) && !K.includes(k) && !k.captive && !k.aboard && k.age >= 4 && !isBody(k) && !G.Expe.memberOf(k.id) && G.dist(k.x, k.y, e.port[0], e.port[1]) < 50) K.push(k); } // (not of a voyage: its own crew's call to the quay goes, 3,25)
+      K.sort((a, c) => a.id - c.id);
+      if (K.length < 2) infoA = `${e.name}: ${K.length} parente(s) da tripulação perto do cais`;
+      else {
+        for (const k of K) { G.Vg.endTask(k); G.Vg.setTask(k, { type: 'sleep', pri: 1.5, st: 2, home: k.home || 0, kind: 'sleep' }); k.sleeping = true; k.path = null; k.moving = false; }
+        const watch = o => { if (o && (!o.task || o.task.type === 'sleep')) { G.Vg.endTask(o); o.sleeping = false; G.Vg.setTask(o, { type: 'patrol', pri: 1.6, torch: true, n: 0 }); } };
+        const gather = keep => { e.st = 'reunir'; e.bye = 0; e.t = 0; for (let i = 0; i < 30 && !e.bye; i++) { watch(keep); G.debug.step(0.1); } return !!e.bye; };
+        const g1 = gather(null); const wokenA = K.filter(k => !k.sleeping || (k.task && k.task.type === 'adeus'));
+        // (up for the night watch by the test's hand — the torch of the town, as l2 gives it —: awake at the gathering, not back in bed)
+        const upA = K[0]; const g2 = gather(upA); const wentA = !!(upA.task && upA.task.type === 'adeus');
+        fineA = g1 && g2 && !wokenA.length && wentA;
+        infoA = `${e.name} (de ${e.fromName}), de noite (${fmtT(S.time)}): ${K.length} parentes da tripulação perto do cais, todos na cama — ${!g1 ? 'a reunião NÃO veio' : wokenA.length ? `ACORDADOS para o adeus: ${wokenA.slice(0, 3).map(k => `${nm(k)} (${k.task ? k.task.type : '-'})`).join(', ')}` : 'nenhum acordado'}; com ${nm(upA)} de pé, ${wentA ? 'ele desceu para dizer adeus' : 'NÃO desceu para o adeus'}`;
+      }
+    }
+  }
+  ok('l4b a caravana, o comércio entre os povos e o adeus de uma viagem não tiram ninguém da cama', fine && fineT && fineA, info + ' · o comércio entre os povos: ' + infoT + ' · o adeus: ' + infoA);
 }
 
 // ======================= l6: the god's fire on a house at night; a house pulled down with people in it =======================
@@ -1082,7 +1120,11 @@ if (want('l17')) {
       if (G.Casa && G.Casa.day) G.Casa.day(st);
       const room = [...S.buildings.values()].some(o => o.set === st.id && o.built && housing(o) && G.BDEF[o.type].housing > res(o).length + 1);
       const homes = [...S.buildings.values()].filter(b => b.set === st.id && UP[b.type] && b.built && !b.upgradeFrom && !b.encomenda && res(b).length >= 3 && res(b).length <= G.BDEF[b.type].housing
-        && res(b).some(v => v.id === b.dono && v.age >= 18) && res(b).some(v => v.id !== b.dono && v.age >= 16)).sort((a, c) => a.id - c.id);
+        && res(b).some(v => v.id === b.dono && v.age >= 18) && res(b).some(v => v.id !== b.dono && v.age >= 16)
+        // (and a family whose grown ones have their nights to themselves — none of a secret society: its meeting and its hunter take its
+        // people out at night by design, secrets.js (the meeting of T-274) —: in the «cidade» of the generation 18 Faustina, of the house
+        // of the case, was out all night as the order's hunter, and one of the three slept inside, T-601)
+        && !res(b).some(v => v.age >= 16 && v.secret)).sort((a, c) => a.id - c.id);
       for (const b of homes) if (room && [...S.villagers.values()].filter(v => v.set === st.id && v.home && v.home !== b.id && v.age >= 18 && v.age < 62 && !v.partner && free(v)).length >= 2) return { st, h: b };
     }
     return null;
@@ -1289,6 +1331,30 @@ if (want('l19')) {
   // (d) and it wakes by its own rule, by day with its strength back (Po.live): the sleep given back is not a sleep for ever
   if (cOk) { const body = S.villagers.get(S.avatar.id); let up = -1; liveTo(0.45, () => { if (up < 0 && !body.sleeping) up = S.time; return up >= 0; }); say('(d) de manhã', up >= 0, up >= 0 ? `acordou às ${fmtT(up)}, pela regra dele` : 'NÃO ACORDOU até as ' + fmtT(S.time)); }
   if (S.avatar) G.Possess.release('deus');
+  // (e) the traveller of a story camping on the road at night, asleep by the fire — the journey's camp, stories.js: the test's hand puts
+  // one of the world on the road of an active story, at its camp —: after the load, at the camp, asleep, the journey on. The journey was
+  // not in the save: the one asleep by the fire woke in the dark and walked home, the journey given up — Metztli, in the l4 of the
+  // generation 18, L-660
+  {
+    if (!G.isNight()) S.time = 0.9;
+    const sto = S.saga && S.saga.stories.find(q => q.st === 'ativa');
+    const tr = sto && [...S.villagers.values()].filter(o => adult(o) && !o.inside && !o.sleeping && !o.task && W.dryXY(o.x, o.y)).sort((a, c) => a.id - c.id)[0]
+      || (sto && [...S.villagers.values()].filter(o => adult(o) && !o.inside && W.dryXY(o.x, o.y) && !(o.task && o.task.pri >= 2)).sort((a, c) => a.id - c.id)[0]);
+    let eOk = false, eTxt = sto ? 'ninguém do mundo na rua para a viagem' : 'nenhuma história ativa no mundo';
+    if (sto && tr) {
+      const st0 = S.settlements.get(tr.set) || { cx: tr.x, cy: tr.y };
+      G.Vg.endTask(tr);
+      const t = G.Vg.setTask(tr, { type: 'saga', j: 1, story: sto.id, pri: 2.05, st: 4, leg: 0, legs: 2, hx: st0.cx, hy: st0.cy, x: st0.cx, y: st0.cy, dur: 12, act: '', emo: '', sub: 'jornada', max: 1600, food: 0, camps: 1, cx: tr.x + 0.55, cy: tr.y + 0.25 });
+      tr.sleeping = true; tr.moving = false; tr.path = null; live(0.5);
+      const at = [tr.x, tr.y]; const camping = !!t && tr.task === t && t.st === 4 && tr.sleeping;
+      M.salvarCarregar(); S = G.S; const t2 = S.villagers.get(tr.id);
+      const kept = !!t2 && !!t2.task && t2.task.type === 'saga' && t2.task.j === 1 && t2.task.story === sto.id && t2.task.st === 4 && t2.sleeping && G.dist(t2.x, t2.y, at[0], at[1]) < 0.01;
+      live(2); const still = !!t2 && t2.sleeping && !!t2.task && t2.task.type === 'saga' && G.isNight();
+      eOk = camping && kept && still;
+      eTxt = `${nm(tr)} na jornada da história «${sto.type}» #${sto.id}, no acampamento${camping ? '' : ' (NÃO deitou)'}: depois do load ${t2 ? `${t2.task ? (t2.task.type === 'saga' ? `na jornada (passo ${t2.task.st})` : 'NA TAREFA ' + t2.task.type) : 'SEM TAREFA'}, ${t2.sleeping ? 'dormindo' : 'ACORDADO'}${G.dist(t2.x, t2.y, at[0], at[1]) < 0.01 ? ', no mesmo lugar' : ', NOUTRO LUGAR'}` : 'SUMIU'}; 2 s de noite depois: ${!G.isNight() ? 'JÁ DE DIA' : still ? 'dormindo na jornada' : 'ACORDADO'}`;
+    }
+    say('(e) quem acampa na estrada de uma história', eOk, eTxt);
+  }
   ok('l19 o sono atravessa o save onde se dorme (L-399)', fine, notes.join(' · '));
 }
 // ======================= l11: the faithful inside the temple =======================
