@@ -249,7 +249,8 @@ acertos:
   talvez não pergunte a força das mãos, T-645) e o L-694 (o load encerra as reuniões da ordem e zera relógios de módulo —
   o que o C já dizia no D-148), e o L-696 (o aluguel deixa a marca de juntar na casa antiga; `consertos/L-696-aluguel.patch`,
   com a prova `qa/aluguel-poupa.js` dentro dele), e o L-698 (a morte do corpo por uma fera com nome sai duas vezes na
-  crônica; o conserto, no `possess.js`, e a prova vão para `consertos/`). Uma pergunta da cidade para medir junto (T-639): Mênfis era metrópole
+  crônica; `consertos/L-698-fera.patch`, com a prova `qa/corpo-fera.js` dentro dele; junto, a fera que o registro dos mortos
+  não guarda: a cova, o além e a tela da morte do corpo dizem «uma fera»). Uma pergunta da cidade para medir junto (T-639): Mênfis era metrópole
   no ano 30 da mega e só pediu a cadeia no 49 — a cadeia é o último desejo do planejador, que começa uma obra por vez. E, dito
   pelo C no D-148: o load ainda limpa as reuniões da ordem (`s.meets = []`, o conclave fora do save) e zera os relógios de
   outros módulos — o que o mundo vivo continuaria vai no save (L-419).
