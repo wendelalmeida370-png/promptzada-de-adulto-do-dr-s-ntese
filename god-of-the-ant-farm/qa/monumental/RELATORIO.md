@@ -281,6 +281,12 @@ obrigaria a gerar os mundos prontos outra vez; cada um está descrito no AUDIT, 
 - L-656: a fera que dorme na toca ou migra sai do mundo, e uma história que a tinha no elenco a perderia (latente).
 - L-657: a receita «um animal raro perto de gente» do painel do desenvolvedor não dá a fera nas cidades grandes.
 - L-658: os muros param no vau dos rios, e com os portões fechados a cidade não fica fechada.
+- L-682: quem espera no cais enquanto uma viagem se prepara nunca dorme (o chamado ao cais fica acima do sono). Em terra
+  isso não fere ninguém, mas é gente acordada sem precisar.
+- L-683: o posto de trabalho fica com quem está no cais ou a bordo: os banhos de Mênfis ficaram sem foguista a viagem
+  inteira. Quem cobre o posto e quando a pessoa volta a ele é assunto dos marinheiros de verdade dos Bairros Vivos.
+- O load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros módulos. É o
+  mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
 
 **Os buracos antigos que também ficam para os Bairros Vivos:**
 - o governante morar no palácio (a lacuna «palácio/morar» da matriz);

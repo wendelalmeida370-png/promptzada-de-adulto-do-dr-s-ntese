@@ -229,7 +229,11 @@ acertos:
   antes da primeira geração dos mundos deste patch, cada um com a sua prova): L-631 (o resto: o bicho dentro de prédio por
   escritas de posição), L-636 (o passeio de compras não pergunta pelas mãos), L-646 (o guarda que perde o ladrão esquece o
   crime), L-652 (efeitos que só se veem sorteiam do acaso do mundo — candidata a regra do `guard.js`), L-656 (a fera que dorme
-  na toca sai do elenco de uma história), L-657 (a receita do painel do desenvolvedor).
+  na toca sai do elenco de uma história), L-657 (a receita do painel do desenvolvedor), e os dois que a reg18 achou nos
+  marinheiros: L-682 (quem espera no cais durante a preparação nunca dorme) e L-683 (o posto de trabalho fica com quem está
+  no cais ou a bordo) — entram com a tripulação de verdade (item dos marinheiros), com o teto dos ofícios (D-102). E, dito
+  pelo C no D-148: o load ainda limpa as reuniões da ordem (`s.meets = []`, o conclave fora do save) e zera os relógios de
+  outros módulos — o que o mundo vivo continuaria vai no save (L-419).
 - **As decisões deixadas para cá:** D-128 (uma cidade que põe prédios no coração de outra), D-132 (a)–(c) (o degrau antigo, o
   paço que cede ao palácio, a maravilha no fogo), D-135 (a fogueira das ruas antes do segundo ofício de comida), D-138 (a
   agenda de quem governa: a festa da cidade contra a audiência), D-144 (o ofício que precisa das mãos), D-145 (quem herda o
