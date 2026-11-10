@@ -919,7 +919,7 @@ async function browserPart() {
       const V = window.__VIS, H = window.__MON; let op = V.open('cidade', 'baixa');
       // (a ready world saved in the night is lived out first, by the world's own step, until nine in ten of its grown ones are awake,
       // and the town's first one up is lived — the «cidade» of the generation 19 was saved at 0,005, the grown ones of its biggest
-      // town all asleep at home: «ninguém para encarnar», T-xxC; the lazer's own, T-642)
+      // town all asleep at home: «ninguém para encarnar», T-666; the lazer's own, T-642)
       if (!op.ok && op.why === 'ninguém para encarnar') { const abed = () => { let n = 0, a = 0; for (const q of G.S.villagers.values()) { if (q.age < 16) continue; a++; if (q.sleeping) n++; } return n > 0.1 * a; };
         for (let t = 0; t < G.DAY_LEN * 10 && abed(); t++) G.debug.step(0.1); op = V.enterTown(); }
       if (!op.ok) return { ok: false, why: 'a cidade não abriu: ' + op.why }; G.S.time = 0.42;

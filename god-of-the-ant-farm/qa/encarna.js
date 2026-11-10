@@ -71,7 +71,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         // (a ready world saved in the night with no grown-up of its biggest town to be lived is lived out first, by the world's own
         // step, until nine in ten of its grown ones are awake — a day at most —, before the checker's base: the «cidade» of the
         // generation 19 was saved at 0,005, the ten of Mênfis asleep at home, and the parts on it broke at their first person (the
-        // e2 at v.x): T-xxF; the lazer's own, T-642. A world with someone to be lived is taken as it was saved)
+        // e2 at v.x): T-667; the lazer's own, T-642. A world with someone to be lived is taken as it was saved)
         if (!E.adults(E.town()).length) { const abed = () => { let n = 0, a = 0; for (const q of G.S.villagers.values()) { if (q.age < 16) continue; a++; if (q.sleeping) n++; } return n > 0.1 * a; };
           for (let t = 0; t < G.DAY_LEN * 20 && abed(); t++) G.debug.step(0.05); }
         E.base = new Set(QA.check().filter(e => e.sev <= 3).map(E.qk)); },
@@ -221,7 +221,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // that slow a body as the world has it (Avatar's move). The Penélope #1667 of the final city stood in a ford at midnight
     // with a load and no strength left — 0.9 to 1.2 m/s, as the world gives it: 5.1 m in 4.6 s, T-208)
     // (of the biggest town; none there outside with a family and a past, of the next by size — the «cidade» of the generation 19,
-    // its night lived out, four towns of thirty-odd souls: none such of the six outside in Tenochtitlan, two in Mênfis: T-xxF)
+    // its night lived out, four towns of thirty-odd souls: none such of the six outside in Tenochtitlan, two in Mênfis: T-667)
     const fam = o => o.mother && o.bio && o.bio.length >= 3; let s = __E.town(); for (let k = 1; s && !__E.adults(s, fam).length && __E.town(k); k++) s = __E.town(k);
     const dry = (X, Z) => { const sf = G.Space.surface(X, Z); return sf.walk && sf.kind === 'ground'; };
     const fit = o => o.energy >= 30 && (o.hunger || 0) < 100 && !(o.carry && o.carry.n > 0) && !(o.sick > 0) && !(o.lost && o.lost.leg) && dry(o.x * 4, o.y * 4);
