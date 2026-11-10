@@ -316,6 +316,9 @@ Bairros Vivos. Os testes que pegaram cada um continuam falhando com razão até 
   não perguntam a força delas).
 - L-696: a família que aluga uma casa deixa a marca de «juntando para a casa nova» na casa de onde saiu. O mundo vive igual,
   mas a marca vai no save e o verificador pode acusar depois. Conserto pronto, com a prova dele.
+- L-698: quando a pessoa que o deus está vivendo é devorada por uma fera com nome, a crônica conta a morte duas vezes (uma
+  com o nome da fera, outra com «uma fera»). O mundo vive igual; o conserto é do corpo encarnado, e vai com a prova dele
+  junto dos outros, para não mexer no corpo depois da rodada inteira do Modo Encarnado desta regressão.
 
 **Os buracos antigos que também ficam para os Bairros Vivos:**
 - o governante morar no palácio (a lacuna «palácio/morar» da matriz);
