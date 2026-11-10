@@ -158,6 +158,10 @@
     if (G.Army && members.length >= 8) G.Army.organize(b, members, f, enemy, best, from, opts);
     return b;
   };
+  // a band leaves the field beaten — its own losses, the host's rout, the champion's fall, the siege lifted, hunger: one
+  // order, and on the road home its soldiers look for no fight and answer none (runBand, L-647); the campaign's army knows
+  // it at once (wars.js, onRetreat: L-648)
+  Wr.retreat = function (b) { b.st = 'retorno'; b.t = 0; b.retreat = true; G.Wars && G.Wars.onRetreat(b); };
   // (o.home: a band already on the road home, under the number of the one a load lost — wars.js resume, L-185)
   Wr.makeBand = function (f, enemy, set, members, goal, o) {
     o = o || {};
@@ -268,7 +272,7 @@
         set.alarmT = Math.max(set.alarmT || 0, 5);
         const besieging = b.campaign && b.army && b.army.phase === 'cerco';
         if (alive < b.start * 0.4 || (defenders > alive * 2.2 && b.t > (b.siege ? 60 : 10) && !besieging)) {
-          b.st = 'retorno'; b.t = 0; b.retreat = true;
+          Wr.retreat(b);
           log(`${f.name} recuou de ${set.name}.`, 'war', set.cx, set.cy);
           en.st.battles++;
           G.Wars && G.Wars.assaultEnd(b, false);
@@ -767,7 +771,12 @@
     if (b.army && G.Army.runSoldier(v, t, b, dt, H)) return;
     if (b.goal === 'defesa') { t.foe = pickFoe(v, b); const fo = t.foe && S.villagers.get(t.foe); if (fo) return fightStep(v, t, fo, dt, H, b); return; }
     t.scan = (t.scan || 0) - dt;
-    if (t.scan <= 0) { t.scan = 0.35 + G.R() * 0.2; if (b.st !== 'reunir') t.foe = pickFoe(v, b); }
+    // (a beaten band leaves the field: on the road home it looks for no fight and answers none. The routed of a host ran,
+    // and the rest stood where the retreat found them and fought whoever was within four steps — the Legião do Leste
+    // before Argos, 56 of them, the town in arms around them, all dead in 22 s and 54 steps from home: L-647)
+    const away = b.st === 'retorno' && b.retreat;
+    if (t.scan <= 0) { t.scan = 0.35 + G.R() * 0.2; if (b.st !== 'reunir' && !away) t.foe = pickFoe(v, b); }
+    if (away) t.foe = 0;
     let foe = t.foe ? S.villagers.get(t.foe) : null;
     if (foe && (foe.captive || foe.held || foe.air || !hostile(b.fac, fid(foe)))) { foe = null; t.foe = 0; }
     if (foe && G.dist(v.x, v.y, foe.x, foe.y) > 14) { foe = null; t.foe = 0; }
@@ -780,10 +789,13 @@
       case 'retorno': {
         if (b.fleet && G.Fleets && G.Fleets.bandReturn(v, b, t, dt, H)) break;
         if (b.ship && G.Naval && G.Naval.bandReturn(v, b, t, dt, H)) break;
+        // (in retreat they run, as the routed do; the wounded one caught on the way yields)
+        if (away && G.Army && G.Army.yields(v, t, b, dt)) break;
         let home = S.settlements.get(v.set);
         if (!home || home.fac !== b.fac) home = G.Fac.capitalOf(b.fac);
         if (!home) return H.end(v);
-        if (goPoint(v, t, home.cx, home.cy, 2.5, dt, H, 1)) {
+        if (away) v.act = 'run';
+        if (goPoint(v, t, home.cx, home.cy, 2.5, dt, H, away ? 1.35 : 1)) {
           if (v.carry) { const k = v.carry.k, n = G.Vg.spoils(v, b.fac); if (n > 0) G.FX && G.FX.deposit(v.x, v.y, k, n); }
           // (home: the host's arms go back to the armoury and the war welcomes its veteran — each as he gets in, not only
           // the last of the band: L-187)

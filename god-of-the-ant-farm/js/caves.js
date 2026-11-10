@@ -957,7 +957,8 @@
         if (!m) continue;
         a.x = m.x + 0.5; a.y = m.y + 0.5; a.state = 'idle'; a.t = 1; a.hunger = Math.min(0.9, (a.hunger || 0) + 0.15); S.animals.set(a.id, a);
         if (a.grown >= 1 && G.R() < 0.18 && G.Animals.counts().bear < G.Animals.capacity('bear') + 2) {
-          const cub = G.Animals.spawn('bear', a.x + 0.4, a.y + 0.3, { grown: 0.1, age: 0 });
+          // (beside her, on ground it stands on — L-631)
+          const cub = G.Animals.walkOK(a, a.x + 0.4, a.y + 0.3) ? G.Animals.spawn('bear', a.x + 0.4, a.y + 0.3, { grown: 0.1, age: 0 }) : G.Animals.spawn('bear', a.x, a.y, { grown: 0.1, age: 0 });
           if (cub && G.R() < 0.4) log(`Uma ursa saiu ${C.da(cv)} com um filhote que nasceu no escuro.`, 'wolf', m.x, m.y);
         }
       }

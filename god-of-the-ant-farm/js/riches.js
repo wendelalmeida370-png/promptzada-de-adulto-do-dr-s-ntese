@@ -123,7 +123,7 @@
       const nm = G.Animals.rareName ? G.Animals.rareName(a) : sp.name.toLowerCase();
       const fem = nm === 'pantera-negra' || sp.g === 'f';
       log(`${v.name} matou ${fem ? 'a' : 'o'} ${nm}${near}. A pele de cor rara vale mais que uma casa — e todo mundo quer ver.`, 'star', a.x, a.y);
-      G.Stories && G.Stories.signal('rarekill', { who: v.id, kind: a.kind, morph: a.morph, x: a.x, y: a.y });
+      G.Stories && G.Stories.signal('rarekill', { who: v.id, id: a.id, kind: a.kind, morph: a.morph, x: a.x, y: a.y });
       if (f) { f.rareKills = (f.rareKills || 0) + 1; }
       return;
     }
