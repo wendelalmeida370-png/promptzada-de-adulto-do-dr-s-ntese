@@ -307,18 +307,19 @@ obrigaria a gerar os mundos prontos outra vez; cada um está descrito no AUDIT, 
 - L-691: o plano do muro ainda fecha um prédio cujo caminho corre por mais de duas casas ao longo da linha (o mercado
   clandestino de Roma). Conserto pronto; entra com o L-491.
 - L-692: o bicho-preguiça afastado do lote de uma obra volta para dentro dela no balanço entre as árvores. Conserto pronto.
-
-Os consertos já testados desses defeitos estão guardados em `qa/patch3/consertos/`, prontos para aplicar no começo dos
-Bairros Vivos. Os testes que pegaram cada um continuam falhando com razão até lá, como falhas conhecidas na linha de base.
-- L-694: o load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros
-  módulos. É o mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
 - L-693: quem perdeu os dois braços senta à mesa da taverna toda noite e nunca é servido (as portas que dão coisa às mãos
   não perguntam a força delas).
+- L-694: o load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros
+  módulos. É o mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
 - L-696: a família que aluga uma casa deixa a marca de «juntando para a casa nova» na casa de onde saiu. O mundo vive igual,
   mas a marca vai no save e o verificador pode acusar depois. Conserto pronto, com a prova dele.
 - L-698: quando a pessoa que o deus está vivendo é devorada por uma fera com nome, a crônica conta a morte duas vezes (uma
   com o nome da fera, outra com «uma fera»). O mundo vive igual; o conserto é do corpo encarnado, e vai com a prova dele
   junto dos outros, para não mexer no corpo depois da rodada inteira do Modo Encarnado desta regressão.
+
+Os consertos já testados de vários desses defeitos estão guardados em `qa/patch3/consertos/`, prontos para aplicar no
+começo dos Bairros Vivos. Os testes que pegaram cada um continuam falhando com razão até lá, como falhas conhecidas na linha
+de base.
 
 **Os buracos antigos que também ficam para os Bairros Vivos:**
 - o governante morar no palácio (a lacuna «palácio/morar» da matriz);
