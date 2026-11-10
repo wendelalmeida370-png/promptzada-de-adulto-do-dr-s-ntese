@@ -120,7 +120,19 @@ let six = 0; for (let k = 0; k < 6; k++) six = Math.min(1, six + 0.5 / 3); // (t
     for (let t = 0; t < 30; t++) { live(1); looks++; if (onIt(id).length) onAll++; }
     waited = !builtNow(id) && Math.abs(S.buildings.get(id).progress - prog0) < 1e-9 && onAll === 0;
     D.make('f:' + f0.id, k, 3, { code: 'teste' }); // (the material comes to the store)
-    nb = nextBuilder(S.buildings.get(id)); came = live(150, () => builtNow(id));
+    // (and the case armed in any course, as the obra.js's b8 (T-465): the weather calm and the town's feast of the day kept for
+    // another day while the work goes on, and what it still lacks — beyond what is on its way to it — kept in the people's store
+    // until the builder comes for it: the case is the work going on when its material comes, not the race for it. In the «cidade»
+    // of the generation 19 a storm sent Ahmose home from the hut at once, a caravan of Mênfis took one of the three ivories to
+    // trade at 50 s, his sleep and the feast came after the storm, and he brought the other two at 145 s: the hut at 0,9, one short)
+    const keep3 = () => {
+      S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0;
+      if (!set0.festPlan || set0.festPlan.day !== S.day || set0.festPlan.key || !set0.festPlan.done) set0.festPlan = { day: S.day, key: null, done: true };
+      const ob = S.buildings.get(id); if (!ob || ob.built) return;
+      const lack = (ob.need[k] || 0) - ((ob.incoming || {})[k] || 0) - D.free('f:' + f0.id, k);
+      if (lack > 1e-6) D.make('f:' + f0.id, k, lack, { code: 'teste' });
+    };
+    keep3(); nb = nextBuilder(S.buildings.get(id)); came = live(150, () => { keep3(); return builtNow(id); });
   }
   ok('h3 a obra sem o material continua esperando, sem ninguém preso nela, e anda quando ele chega', !!b && !!k && waited && came, b && k ? `faltando 3 de ${k} (o povo tem ${Math.floor(f0.stock[k] || 0)} agora): ${waited ? 'esperou' : 'não esperou'} (construtores nela em ${onAll} de ${looks} olhadas, o progresso ${r2(prog0)} → ${r2((S.buildings.get(id) || {}).progress || 0)}); com o material, o próximo construtor, ${nb && nb.o ? nb.o.name : '-'}, ao lado dela, ${nb ? nb.why : '-'}: ${came ? 'pronta' : 'não ficou pronta'}` : 'sem obra ou sem um material que falte');
 }
@@ -565,7 +577,16 @@ const calmOne = (skip, also) => {
   const POSTS = ['torre', 'palacio', 'paco', 'grande_palacio', 'palacio_colossal', 'coletoria', 'quartel', 'mercado_negro', 'mercado'];
   const posts = s => !!s && (POSTS.some(t => G.Eco.byType(s.id, t).length) || (w => !!(w && w.done && w.gates.length))(G.Siege && G.Siege.wallOf(s.id)));
   const MEAL = { eat: 1, forage: 1, lar: 1, idle: 1 };
-  const v = calmOne([], q => q.role === 'guerreiro' && posts(S.settlements.get(q.set)));
+  let v = calmOne([], q => q.role === 'guerreiro' && posts(S.settlements.get(q.set)));
+  // (with no soldier in such a town — the «cidade» of the generation 19 is a young world, its day 15: four towns of some 35, and
+  // no soldier in any; Tenochtitlan has a barracks and a market —, one grown one of a calm town with a post, free, with nothing
+  // in the hands (a load goes to the store before any shift: Izel, a fisherwoman, had 8 of cod) and at no voyage, takes the
+  // soldier's trade by the god's hand, held in it while the case lasts — the town's board, every four seconds, would deal him
+  // back: a peaceful town of 35 asks no soldier —, as the termas.js's stoker; and his trade back after)
+  let made = null;
+  if (!v) { v = calmOne([], q => posts(S.settlements.get(q.set)) && !(q.carry && q.carry.n > 1e-6) && !Vg.handsBusy(q) && !(G.Expe && G.Expe.memberOf(q.id))); if (v) { made = { id: v.id, role: v.role, job: v.job }; Vg.endTask(v); v.role = 'guerreiro'; v.job = 0; } }
+  const holdS = () => { if (made && v && S.villagers.has(v.id) && v.role !== 'guerreiro') v.role = 'guerreiro'; };
+  const step = () => { holdS(); M.viver(0.1); };
   let shift = null, tries = 0, took = -1, h0 = 0, info = 'nenhum soldado numa cidade calma com posto de guarda'; let pan2 = 0; const held = { early: null, late: null, task: '-' };
   if (v) {
     const t0 = S.time; const h = S.buildings.get(v.home);
@@ -581,15 +602,15 @@ const calmOne = (skip, also) => {
     for (; tries < 10 && !shift; tries++) {
       Vg.endTask(v); v.hunger = 100; v.hp = 58; v._hungerT = 0; v.sleeping = false;
       if (v.carry && v.carry.k === 'food') D.use('v:' + v.id, 'food', v.carry.n, { code: 'teste', mine: true, part: true });
-      for (let k = 0; k < 40; k++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); const t = v.task; if (t && t.kind === 'eat' && !MEAL[t.type]) break; }
+      for (let k = 0; k < 40; k++) { v._noStore = S.clock + 5; pick(); step(); const t = v.task; if (t && t.kind === 'eat' && !MEAL[t.type]) break; }
       const t = v.task; if (!(t && t.kind === 'eat' && t.type === 'guard')) continue;
       // (and at the post: a post he cannot reach ends the shift on the way, and the choice after it finds the meal anyway)
-      for (let k = 0; k < 300 && v.task === t && t.st !== 1; k++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); }
+      for (let k = 0; k < 300 && v.task === t && t.st !== 1; k++) { v._noStore = S.clock + 5; pick(); step(); }
       if (v.task === t && t.st === 1) shift = { dur: Math.round(t.dur || 0), left: Math.round((t.dur || 0) - (v.actT || 0)), at: t.gate !== undefined ? 'no portão' : t.tower ? 'na torre' : 'no posto' };
     }
     if (shift) {
       v._noStore = 0; h0 = v.hunger; const c0 = S.clock;
-      live(30, () => { if (!S.villagers.has(v.id)) return true; const t = v.task; if ((t && t.type === 'eat') || v.hunger < h0 - 20) { took = S.clock - c0; return true; } return false; });
+      live(30, () => { holdS(); if (!S.villagers.has(v.id)) return true; const t = v.task; if ((t && t.type === 'eat') || v.hunger < h0 - 20) { took = S.clock - c0; return true; } return false; });
       shift.hp = Math.round(v.hp);
     }
     // (h18b: and the checker still sees one whose choice stops looking. Dying — life under 40 — on a shift given for want of a
@@ -599,28 +620,29 @@ const calmOne = (skip, also) => {
       let t2 = null;
       for (let k = 0; k < 10 && !t2; k++) {
         Vg.endTask(v); v.hunger = 100; v.hp = 35; v._hungerT = 0; v.sleeping = false;
-        for (let j = 0; j < 40; j++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); const t = v.task; if (t && t.kind === 'eat' && t.noMeal) { t2 = t; break; } }
+        for (let j = 0; j < 40; j++) { v._noStore = S.clock + 5; pick(); step(); const t = v.task; if (t && t.kind === 'eat' && t.noMeal) { t2 = t; break; } }
       }
       // (right after a look that found no meal: the stamp is now)
-      const st0 = t2 ? t2.noMealT : 0; for (let j = 0; t2 && j < 40 && v.task === t2 && t2.noMealT === st0; j++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); }
+      const st0 = t2 ? t2.noMealT : 0; for (let j = 0; t2 && j < 40 && v.task === t2 && t2.noMealT === st0; j++) { v._noStore = S.clock + 5; pick(); step(); }
       if (t2 && v.task === t2) {
         // (and the house's pantry empty again for the look, as at the start of the case: the checker always looks at the pantry, and the
         // family may have filled it meanwhile — in the «cidade» of the generation 18 it had 5 by then, and the look at 1 s spoke of it, T-595)
         pan2 = h ? D.get('h:' + h.id, 'food') : 0; if (pan2 > 0) D.use('h:' + h.id, 'food', pan2, { code: 'teste', part: true });
         const said = () => QA.check().filter(q => q.sys === 'fome' && q.sev === 2 && q.id === v.id).map(q => q.msg);
         v._noStore = 0; const c1 = S.clock;
-        while (S.clock - c1 < 1) { v.think = 99; M.viver(0.1); } held.early = said();
-        while (S.clock - c1 < 4) { v.think = 99; M.viver(0.1); } held.late = said();
+        while (S.clock - c1 < 1) { v.think = 99; step(); } held.early = said();
+        while (S.clock - c1 < 4) { v.think = 99; step(); } held.late = said();
         held.task = v.task === t2 ? t2.type : v.task ? v.task.type : '-';
-        v.think = 0; live(5, () => !!(v.task && v.task.type === 'eat')); // (let go: the next look takes him to the meal)
+        v.think = 0; live(5, () => { holdS(); return !!(v.task && v.task.type === 'eat'); }); // (let go: the next look takes him to the meal)
       }
     }
     for (const [b, [n, g]] of bushes) { b.berries = n; b.grow = g; }
     if (pan > 0 && h) D.make('h:' + h.id, 'food', pan, { code: 'teste', part: true });
     if (pan2 > 0 && h) D.make('h:' + h.id, 'food', pan2, { code: 'teste', part: true });
     if (h) h.water = w0;
+    if (made && S.villagers.has(v.id)) { v.role = made.role; v.job = made.job; }
     S.time = Math.max(S.time, t0);
-    info = shift ? `${v.name}, de guarda ${shift.at} por falta de refeição (turno de ${shift.dur} s, ${shift.left} ainda por fazer, na ${tries}ª escolha): com o armazém ao alcance de novo, ${took >= 0 ? `foi comer em ${took.toFixed(1)} s` : 'NÃO foi comer em 30 s'}; vida ${shift.hp}` : `${v.name}: em ${tries} escolhas, nenhum turno de guarda no posto por falta de refeição`;
+    info = shift ? `${v.name}${made ? ` (soldado pela mão do deus; era ${made.role || "sem ofício"})` : ""}, de guarda ${shift.at} por falta de refeição (turno de ${shift.dur} s, ${shift.left} ainda por fazer, na ${tries}ª escolha): com o armazém ao alcance de novo, ${took >= 0 ? `foi comer em ${took.toFixed(1)} s` : 'NÃO foi comer em 30 s'}; vida ${shift.hp}` : `${v.name}${made ? ` (soldado pela mão do deus; era ${made.role || "sem ofício"})` : ""}: em ${tries} escolhas, nenhum turno de guarda no posto por falta de refeição`;
   }
   // (at the next choice: one every 1,4 to 3 s, villagers.js)
   ok('h18 o turno dado no lugar de uma refeição larga quando a refeição volta ao alcance (L-649)', !!shift && took >= 0 && took <= 3.5, info);

@@ -8,7 +8,7 @@
 //    outro prédio, fora de onde está um vendedor (o seu e os das outras bancas do mercado), a um passo do anterior. Ao lado,
 //    a regra antiga (reta, sem voltar atrás) no mesmo chão
 // f2 três dias de mercado na metrópole com as portas ligadas (e mais, até seis, enquanto os balcões viram menos de 20
-//    chegadas): quem acha a fila cheia e vai embora é raro (contado contra
+//    chegadas; o tempo calmo e a paz do deus seguros nesses dias): quem acha a fila cheia e vai embora é raro (contado contra
 //    quem chegou ao balcão, e à parte o que foi numa fila com menos lugares que os seus), e as filas do mundo — bancas,
 //    poços, lojas — seguem a regra o tempo todo (o verificador)
 // e o verificador limpo, sem erro de módulo.
@@ -94,18 +94,28 @@ for (const world of ['metropole', 'mundial']) {
     if (r && typeof key === 'string' && key.startsWith('biz:') && G.inSim) { full++; const q = L.queues().find(o => o.key === key); const n = q ? q.slots.length : 0; if (n < B.LINE) { short++; if (!(q && q.why)) noWhy++; } where.set(`${key} (${n} lugares${q && q.why ? ': ' + q.why : n < B.LINE ? ': SEM MOTIVO' : ''})`, (where.get(`${key} (${n} lugares${q && q.why ? ': ' + q.why : n < B.LINE ? ': SEM MOTIVO' : ''})`) || 0) + 1); }
     return r;
   };
-  const L0 = S.ledgerN; let fila = new Map(); const t0 = S.clock;
+  // (the sales counted as the ledger writes them — the ledger itself is trimmed in a busy town: after the 1200 s of the generation
+  // 19 it kept none of them, «0 vendas no livro»)
+  let sold = 0; const onSale = e => { if (e[8] === 'venda') sold++; }; G.Depot.onMove.push(onSale);
+  let fila = new Map(); const t0 = S.clock;
   // (three market days, and more while the counters have seen fewer than twenty arrivals, up to six: the rate asks its sample,
   // and a younger world gives it in more days — the metropole of the generation 16, its first metropolis of the year 41, has a
   // merchant at most in each market, one stall each, and the three days brought fifteen to a counter, 3, 9 and 3 —; the
   // checker of the lines over all of them)
+  // (market days: the weather held calm and the god's peace kept while they last — the test's hand, as the obra.js's b8 (T-465):
+  // the case is the line at the counters, not the world's hard times. The metropole of the generation 19 had a storm over 60% of
+  // the first day's light, and a war in the towns of its markets from the second — the levy, the alarms —, and no family's errand
+  // to a stall after it: in the six days, 16 errands and 10 at a counter. Its merchants were at their stalls — nine of the ten
+  // open —, none of a voyage. With the weather and the peace held, 22 had come by the second day)
+  const calm = () => { S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0; if (!(S.divinePeace > 0)) sim(() => G.Politics.divinePeace()); };
   for (let k = 0; k < 12000 && (k < 6000 || at < 20); k++) {
+    if (k % 10 === 0) calm();
     G.debug.step(0.1);
     for (const v of S.villagers.values()) { const t = v.task; if (t && t.type === 'compra' && t.st >= 1 && !seen.has(v.id + ':' + t.biz + ':' + (t.k || ''))) { seen.add(v.id + ':' + t.biz + ':' + (t.k || '')); at++; } }
     if (k % 50 === 49) for (const q of QA.check()) if (q.sys === 'fila') fila.set(q.msg, (fila.get(q.msg) || 0) + 1);
   }
   L.queueFull = q0;
-  const sold = G.Depot.ledger().filter(e => e[0] > L0 && e[8] === 'venda').length;
+  G.Depot.onMove.splice(G.Depot.onMove.indexOf(onSale), 1);
   const lines = L.queues(); const wells = lines.filter(q => q.key.startsWith('well:')).length, shops = lines.filter(q => q.key.startsWith('shop:')).length, stalls = lines.filter(q => q.key.startsWith('biz:')).length;
   const rate = at ? (full - short) / at : 0;
   ok('f2 três dias de mercado com as portas ligadas', at >= 20 && rate <= 0.05 && !noWhy && !fila.size,

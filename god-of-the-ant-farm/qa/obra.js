@@ -65,9 +65,11 @@ const firstNeed = (b, n) => Object.keys(b.need).sort().find(k => b.need[k] >= n)
 const freeBuilder = id => builders(set0).filter(v => !(v.carry && v.carry.n > 0) && !(v.task && v.task.type === 'build' && v.task.id === id) && !v.sleeping && !v.inside).sort((a, b) => a.id - b.id)[0] || null;
 const nextLooks = () => { const w = freeBuilder(0); if (w) { Vg.endTask(w); Vg.H.workTask(w); } return w; };
 // (by day: a builder is sent in the morning — the night's sleep would keep the load for the next day)
-const send = b => {
-  if (S.time < 0.25 || S.time > 0.6) { S.time = 0.27; live(3); }
-  let w = null; for (let k = 0; k < 30 && !(w = freeBuilder(b.id)); k++) live(1); // (one with free hands: the other may be carrying)
+// (stop: the case's own question, asked at every step of the wait — the b8's load on its way, which the town's builders may bring
+// before one is free)
+const send = (b, stop) => {
+  if (S.time < 0.25 || S.time > 0.6) { S.time = 0.27; if (live(3, stop)) return null; }
+  let w = null; for (let k = 0; k < 30 && !(w = freeBuilder(b.id)); k++) if (live(1, stop)) return null; // (one with free hands: the other may be carrying)
   // (rested and fed, as the planner's builder of a morning — the test's hand: in the branch joined with b8c072c the builder
   // sent to the well, Sabina, went to bed 5 s later, her morning's energy spent, and then to a cave and to eat, and nobody
   // brought a load to it in 120 s: the case is the load on its way, not who is fit to carry it. A work left by one who goes to
@@ -111,8 +113,12 @@ const send = b => {
     if (++k8 % 20 === 0) stock();
   };
   calm8(); hold(); stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0;
-  if (b) send(b);
-  const mid0 = !!b && live(240, () => { calm8(); hold(); return !!carrying(id); });
+  // (the load looked for from the work's first step, the wait for a free builder too: in the «cidade» of the generation 19 the well
+  // was begun at 0,12, the clock went to the morning, and Mênfis's two builders took it by themselves — the send waited for one
+  // not on it — and built it in the 14 s of the wait, before the case looked for a load: «salva com ninguém carregando»)
+  const look8 = () => { calm8(); hold(); return !!carrying(id); };
+  if (b) send(b, look8);
+  const mid0 = !!b && (look8() || live(240, look8));
   const w = b && carrying(id); const was = w ? `${w.carry.n} de ${w.carry.k} nas mãos de ${w.name}` : 'ninguém carregando';
   const wid = w ? w.id : 0, wk = w ? w.carry.k : null, wn = w ? w.carry.n : 0;
   if (b) reload();

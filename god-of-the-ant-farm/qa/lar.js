@@ -626,9 +626,18 @@ if (want('l13')) {
     // (7) in to bed, and a save: the house as it was, the body in its bed
     if (table) inside(table); v.energy = Math.min(v.energy, 60); G.Possess.sleep(v); live(0.5, () => { dw.step(); });
     const f5 = famOf(); const bed0 = v.sleeping && v.inside === h.id;
+    // (the house as it was: who of the family is in it, or out of doors, the same; one of them in another building at the save —
+    // and the baby in those arms — at that building's door, awake, as the save lets everyone out of every building (save.js): the
+    // house's hook keeps its own (D-073), a sleep in any house and the prayer inside the temple, nothing else. In the «cidade» of
+    // the generation 19 Sitamun, the mother, was at her order's meeting in a storehouse at 20h14 with Henut in her arms, and the
+    // meeting is not in the save (secrets.js))
+    const kept5 = o => { const t = o.task; const b = o.inside ? S.buildings.get(o.inside) : null; return !!(b && t && ((b.type === 'temple' && t.type === 'pray' && t.st === 2 && t.inT === b.id) || (G.BDEF[b.type] && G.BDEF[b.type].housing && t.type === 'sleep'))); };
+    const away6 = fam().filter(o => o.inside && o.inside !== h.id && !(o.age < 2 && o.carrier ? kept5(S.villagers.get(o.carrier) || {}) : kept5(o))).map(o => o.id);
+    const want6 = f5.split(' ').map(e => away6.includes(+e.split('/')[0]) ? e.split('/')[0] + '/0/0' : e).join(' ');
+    const at6 = away6.map(id => { const o = S.villagers.get(id); const b = S.buildings.get(o.inside); return `${o.name} n${b ? (b.type === 'storehouse' ? 'o armazém' : 'o prédio ' + b.type) : 'outro prédio'}`; });
     M.salvarCarregar(); S = G.S; v = S.villagers.get(v.id); h = S.buildings.get(h.id); G.debug.step(0.1); // (a step: the babies back in the arms that hold them, babyUpdate)
     const f6 = famOf(); const bed1 = v && v.sleeping && v.inside === h.id && isBody(v);
-    say('save', bed0 && f5 === f6 && bed1, `${f5 === f6 ? 'a família igual depois do save' : `a família mudou no save: ${f5} → ${f6}`}; o corpo ${bed0 ? 'deitado em casa' : 'NÃO deitado'} antes, ${bed1 ? 'deitado em casa' : 'NÃO deitado em casa'} depois (possess.js)`);
+    say('save', bed0 && f6 === want6 && bed1, `${f6 === want6 ? `a família igual depois do save${away6.length ? ` (${at6.join(', ')}: à porta, acordad${away6.length > 1 ? 'os' : 'o'}, como de todo prédio)` : ''}` : `a família mudou no save: ${f5} → ${f6}${f6 !== f5 ? ` (esperado ${want6})` : ''}`}; o corpo ${bed0 ? 'deitado em casa' : 'NÃO deitado'} antes, ${bed1 ? 'deitado em casa' : 'NÃO deitado em casa'} depois (possess.js)`);
     D.onMove.splice(D.onMove.indexOf(onMv), 1);
     if (S.avatar) G.Possess.release('deus');
     ok('l13 a casa contínua', fine && !dw.wrong.length, notes.join(' · ') + (dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''));

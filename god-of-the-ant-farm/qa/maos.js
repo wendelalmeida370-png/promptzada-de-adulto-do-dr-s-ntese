@@ -492,7 +492,9 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
   // (the kin the farewell weighs, in its order — awake, of no voyage, near the quay, nothing of 3 or more —, the first two of them grown,
   // of a house, with their hands empty and nothing of the farewell's weight: the ones it would take first, before the hands were busy)
   const weighed = (x, k) => !k.captive && !k.sleeping && k.age >= 4 && !G.Expe.memberOf(k.id) && !(k.task && k.task.pri >= 3) && G.dist(k.x, k.y, x.port[0], x.port[1]) < 50;
-  const fit = k => k.age >= 16 && !k.aboard && !k.ug && !k.held && !k.air && !(S.avatar && S.avatar.id === k.id) && k.home && S.buildings.get(k.home) && !(k.task && (k.task.pri || 0) >= 2.4) && !(k.carry && k.carry.n > 1e-6);
+  // (and hands that can carry — D.strength —: in the metropole of the generation 19 the first of them, Xântipe of Delfos, 54, has lost
+  // both arms, the test's hand could put no purchase in them, and the farewell took her with her hands free, as it should)
+  const fit = k => k.age >= 16 && !k.aboard && !k.ug && !k.held && !k.air && !(S.avatar && S.avatar.id === k.id) && k.home && S.buildings.get(k.home) && !(k.task && (k.task.pri || 0) >= 2.4) && !(k.carry && k.carry.n > 1e-6) && D.strength(k) > 0;
   for (const f of G.Fac.all().filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
     let x = null; for (let k = 0; k < 12 && !x; k++) x = G.Expe.consider(f, { scale: 'media', many: true });
     if (!x) { tried.push(`${f.name}: nenhuma viagem`); continue; }
@@ -502,7 +504,7 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
   if (!e) ok('m14 o adeus de uma viagem', false, tried.join(' · ') || 'nenhum povo do mar');
   else {
     const [buyer, bld] = two; used.add(buyer.id); used.add(bld.id);
-    purchase(buyer);
+    purchase(buyer); const got = holds(buyer); // (the purchase in the arms, before anything else: the case asks it of the hands)
     // (the builder's own leg, runBuild st 2: the store's wood in the hands and the way to the site asked — a work of his town six tiles off
     // or more, that his feet reach: with no way the step takes him as there, and the wood goes into the work at once)
     Vg.endTask(bld); D.make('v:' + bld.id, 'wood', 2, { code: 'teste' });
@@ -517,8 +519,8 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
     const bye = v => !!(v.task && v.task.type === 'adeus' && v.task.exp === e.id);
     const went = [...S.villagers.values()].filter(bye);
     const b14 = bad();
-    ok('m14 o adeus de uma viagem', !!site && legB === 'obra' && !!e.bye && !!atBye && atBye.b && atBye.l === 'obra' && !bye(buyer) && !bye(bld) && !b14.length,
-      !site ? `${bld.name}: nenhuma obra da cidade dele a mais de seis casas, ao alcance dos pés` : `${e.name} (de ${e.fromName}), na reunião do cais: de ${C.name}, ${buyer.name} com uma compra a caminho de casa ${bye(buyer) ? 'DESCEU PARA O ADEUS' : `seguiu com ela (${tk(buyer)})`}, ${bld.name} com a madeira a caminho da obra (${legB || 'SEM perna'}) ${bye(bld) ? 'DESCEU PARA O ADEUS' : `seguiu (${tk(bld)})`}; ${e.bye ? `o adeus levou ${went.length} ao cais${atBye ? ` — na hora dele, ${atBye.b ? 'a compra nas mãos' : 'SEM a compra'} e ${atBye.l === 'obra' ? 'a madeira a caminho da obra' : 'SEM a perna da obra'}` : ''}` : 'a reunião NÃO veio'}${b14.length ? '; o verificador: ' + b14[0] : ''}`);
+    ok('m14 o adeus de uma viagem', got && !!site && legB === 'obra' && !!e.bye && !!atBye && atBye.b && atBye.l === 'obra' && !bye(buyer) && !bye(bld) && !b14.length,
+      !got ? `${buyer.name}: a compra não coube nas mãos (força ${D.strength(buyer)})` : !site ? `${bld.name}: nenhuma obra da cidade dele a mais de seis casas, ao alcance dos pés` : `${e.name} (de ${e.fromName}), na reunião do cais: de ${C.name}, ${buyer.name} com uma compra a caminho de casa ${bye(buyer) ? 'DESCEU PARA O ADEUS' : `seguiu com ela (${tk(buyer)})`}, ${bld.name} com a madeira a caminho da obra (${legB || 'SEM perna'}) ${bye(bld) ? 'DESCEU PARA O ADEUS' : `seguiu (${tk(bld)})`}; ${e.bye ? `o adeus levou ${went.length} ao cais${atBye ? ` — na hora dele, ${atBye.b ? 'a compra nas mãos' : 'SEM a compra'} e ${atBye.l === 'obra' ? 'a madeira a caminho da obra' : 'SEM a perna da obra'}` : ''}` : 'a reunião NÃO veio'}${b14.length ? '; o verificador: ' + b14[0] : ''}`);
     buyer.speed = sp[0]; bld.speed = sp[1]; drop(buyer); drop(bld);
   }
 }

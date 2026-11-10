@@ -69,7 +69,11 @@ const digest = op => JSON.stringify([op.st, op.data.servidos, op.data.receita, o
   fresh(); const b = S().buildings.get(P.id); ready(b); const bad = []; seen.length = 0;
   const opened = liveSec(30, () => !!T.dia(b), bad);
   const op = T.dia(b); let most = 0, strangers = 0; const who = new Set();
-  if (op) liveSec(120, () => !A.live(op), bad, () => { if (!A.live(op)) return; most = Math.max(most, atTables(op)); for (const id of Object.keys(op.data.mesa)) { who.add(+id); const v = S().villagers.get(+id); if (v && v.set !== b.set && !op.data.mesa[id].body) strangers++; } });
+  // (the whole night, however long the sun takes: it lingers at a third of its pace while a story's scene is shown (main.js,
+  // G.Scene.lingers) — in the metropole of the generation 19 the scene «iq-vigilia» held it from the 23rd second to the closing, and
+  // the 120 s of before ended at 0,835 with the day open, «fechou (on, )» —; its closing hour at that pace, and ten seconds over)
+  const night = op ? Math.ceil(Math.max(0, T.horas(b).fecha - S().time) * G.DAY_LEN / 0.35) + 10 : 0;
+  if (op) liveSec(night, () => !A.live(op), bad, () => { if (!A.live(op)) return; most = Math.max(most, atTables(op)); for (const id of Object.keys(op.data.mesa)) { who.add(+id); const v = S().villagers.get(+id); if (v && v.set !== b.set && !op.data.mesa[id].body) strangers++; } });
   const paid = op ? r2(seen.filter(e => e[7] === op.id && e[8] === 'taverna' && e[5] === 'moedas').reduce((n, e) => n + e[6], 0)) : 0;
   const left = insideOf(b).length;
   ok('t1 uma-noite', opened && !!op && !A.live(op) && op.st === 'ok' && op.data.servidos >= 1 && most <= seats(b) && !strangers && !left && Math.abs(paid - (op.data.receita || 0)) < 0.01 && !bad.length,
@@ -190,16 +194,22 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); return !!T.visitTask
       const [fx, fy] = V.frontTile(o); const x0 = k.x, y0 = k.y; k.x = fx + 0.5; k.y = fy + 0.5;
       if (G.W.walkableXY(k.x, k.y) && G.W.reaches(k, tx, ty)) { at = [fx, fy]; break; } k.x = x0; k.y = y0; }
     if (at) { G.Vg.endTask(k); k.inside = 0; k.path = null; far = r2(G.dist(k.x, k.y, tx, ty)); G.Vg.setTask(k, { type: 'atender', id: b.id, op: op.id, pri: 1.05, st: 0 }); }
+    // (and held on his way by the test's hand until a guest has served himself — the guests walk from the town too: in the metropole of
+    // the generation 19 Khufu walked his 25 tiles in 17 s, the three sat down a few seconds before him, and the while of twelve at the
+    // table had not gone by, «0 rodada(s)»; let go, he walks on to the counter, as the obra-longe o2 holds its builder)
+    const ksp = k.speed; if (at) k.speed = 0;
     went = send(b, guests(b, 3)); const ids = new Set(went.map(v => v.id));
     liveSec(45, () => !A.live(op) || !(k.task && k.task.type === 'atender' && k.task.st === 0), bad, () => {
       feast = feast || !!(G.Fest && G.Fest.active(b.set));
       if (!A.live(op) || !(k.task && k.task.type === 'atender' && k.task.st === 0)) return;
       // (the keeper still on his way: a round taken by a guest's own hand, and none left waiting past the while)
       self = seen.filter(e => e[7] === op.id && e[8] === 'taverna' && ids.has(e[9]) && e[5] !== 'moedas').length;
+      if (self >= 1 && k.speed === 0) k.speed = ksp;
       for (const id of ids) { const v = S().villagers.get(id); const m = op.data.mesa[id]; const wt = v && m && m.st === 2 && v.task && v.task.type === 'tavern' ? v.task.wt || 0 : 0;
         if (wt > 16 && waited.length < 3 && !waited.includes(v.name)) waited.push(v.name); }
       walk = r2(S().clock - c0);
     });
+    k.speed = ksp;
   }
   // (the case where it happened: a round by a guest's own hand while the keeper walked — the while is 12 s at the table —, and
   // none left waiting past it)
