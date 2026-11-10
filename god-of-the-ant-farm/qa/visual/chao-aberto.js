@@ -13,6 +13,11 @@
 //      e sobe ao topo (antes: não havia onde ficar diante do pé); onde a borda ali é mais alta que um passo (a praça no chão
 //      mais alto do lote, num declive), o corpo sobe com as mãos — e nunca pousa dentro do lance (L-411: subindo a borda, os pés
 //      caíam no lance dos rostros, que só se toma pelo pé, e o corpo ficava preso nele)
+//   3b. o pulo que não alcança o topo: onde a borda do lote fica mais alta que um passo sobre a rua (o plinto num declive), o
+//      corpo anda até ela e pula um pouco antes, a seis distâncias; os pulos curtos caem ao pé dela — e nunca com um ponto da
+//      borda do corpo dentro do degrau (fora da escalada), nunca com os pés sob o chão (nem escalando), e todos acabam em cima
+//      (antes: a borda do corpo, levada por cima da quina no ar, ficava dentro da pedra quando os pés caíam abaixo do topo, e a
+//      escalada dali passava os pés pela quina — o e6 «plano» da geração 17, L-xxE)
 //   4. o verificador limpo (S0 a S2 novos), sem erro de módulo
 const path = require('path');
 const M = require(path.join(__dirname, '..', 'nodemundo.js'));
@@ -132,6 +137,42 @@ const placeAt = (X, Z) => { const ok0 = G.Avatar.place(X / TL, Z / TL); for (let
       low++; if (st().lv === 1) up++; else why.push(`praca#${b.id}: diante do pé a ${d.toFixed(2)} m do lugar, parado em ${(st().X - X0).toFixed(2)};${(st().Z - Z0).toFixed(2)} do lote (o lance ${r.join(',')}, para ${dx},${dz}), no piso ${st().lv}, em ${st().inB ? st().inB.type + '#' + st().inB.id : 'nenhum prédio'}${st().block ? ' (' + st().block + ')' : ''}`);
     }
     ok('3. os rostros da praça romana: o corpo fica diante do pé, na borda do lote, e sobe ao topo', low > 0 && up === low, `${up} de ${low} praças com a borda de um passo diante do pé${why.length ? ' — ' + why.join(' · ') : ''}; com a borda mais alta que um passo (sobe-se com as mãos, e nunca para dentro do lance): ${high.join(', ') || 'nenhuma'}`); } }
+
+// ------------------------------ 3b. the jump that falls short of the plinth's top ------------------------------
+// (where the edge of a square or a market stands higher than a step over the street — a plinth on a slope —: the body walks at
+// it and jumps a little before it, at each of six distances; the jumps that fall short land at its foot. In every frame but the
+// climb's, no point of the body's rim over a floor higher than its feet by more than a step — the rim carried over the edge in
+// the air was left inside the stone when the feet fell below its top, and climbed from there the feet went through the edge,
+// the e6 «plano» of the generation 17, L-xxE —; in every frame, the climb's too, the feet never under the floor at the centre;
+// and every jump ends on top, by the feet or by the hands)
+{ const TU = G.Avatar.TUNE, R = TU.radius, RIM = [[1, 0], [0.707, 0.707], [0, 1], [-0.707, 0.707], [-1, 0], [-0.707, -0.707], [0, -1], [0.707, -0.707]];
+  const high = [];
+  for (const b of open) for (const sd of sidesOf(b)) for (let a = sd.a0 + 1; a < sd.a1 - 1 && high.length < 8; a += 0.5) {
+    // (the street free from the edge to 2.4 m out and the floor inside to 1.2 m in, on three lanes the body's width apart)
+    let clear = true; for (const l of [-0.35, 0, 0.35]) { if (!freeIn(b, sd, a + l, -1.2) || !inPlan(b, ...sd.P(a + l, -1.2))) clear = false; for (let t = 2.4; t > 0.05 && clear; t -= 0.05) { const [x, z] = sd.P(a + l, t); if (!world(x, z) || feet(x, z) === null) clear = false; } }
+    if (!clear) continue; const yo = feet(...sd.P(a, 0.4)), yi = feet(...sd.P(a, -0.6)); if (yo === null || yi === null) continue;
+    if (yi - yo < TU.stepUp + 0.1 || yi - yo > TU.climbMax - 0.2) continue;
+    high.push({ b, sd, a, rise: yi - yo }); a += 2;
+  }
+  if (!high.length) ok('3b. o pulo que não alcança o topo do plinto: o corpo escorrega para fora da face, nunca fica com a borda dentro do degrau, e sobe com as mãos sem os pés passarem pela quina', true, 'nenhuma borda de praça ou feira mais alta que um passo neste mundo (nada a provar)');
+  else { let runs = 0, wedged = 0, under = 0, top = 0, climbed = 0; const exW = [], exU = [], exT = [];
+    for (const c of high) for (const j of [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]) {
+      const { b, sd, a } = c; const o = sd.P(a, 2.3), i = sd.P(a, -1.0); placeAt(o[0], o[1]); stop(); runs++;
+      const yaw = Math.atan2(i[1] - o[1], i[0] - o[0]), edge = sd.P(a, 0); let jumped = false, w = 0, u = 0, cl = false;
+      for (let k = 0; k < 150; k++) {
+        const s0 = st(); if (!jumped && Math.hypot(edge[0] - s0.X, edge[1] - s0.Z) <= j) { IN.jump = true; jumped = true; }
+        IN.camYaw = yaw; IN.mz = 1; IN.mx = 0; frame(); check();
+        const s = st(), fl = G.Avatar.floorAt(s.X, s.Z); if (s.loco === 'climb') cl = true;
+        if (s.Y < fl - 0.05) { if (!u++ && exU.length < 2) exU.push(`${b.type}#${b.id} ${sd.name}, pulo a ${j} m: os pés ${(fl - s.Y).toFixed(2)} m sob o chão (${s.loco})`); }
+        if (s.loco !== 'climb') { const inn = RIM.filter(([dx, dz]) => G.Avatar.floorAt(s.X + dx * R * 0.9, s.Z + dz * R * 0.9) > s.Y + TU.stepUp + 0.01);
+          if (inn.length) { if (!w++ && exW.length < 2) exW.push(`${b.type}#${b.id} ${sd.name}, pulo a ${j} m: ${inn.length} ponto(s) da borda do corpo dentro do degrau (${s.loco}, a ${(Math.hypot(edge[0] - s.X, edge[1] - s.Z)).toFixed(2)} m da borda do lote)`); } }
+      }
+      stop(); for (let q = 0; q < 6; q++) { frame(); check(); }
+      const s = st(), ins = Sp.indoor(s.X, s.Z, 0, 0); if (ins && ins.b === b && ins.walk) top++; else if (exT.length < 2) exT.push(`${b.type}#${b.id} ${sd.name}, pulo a ${j} m: não subiu (${s.loco}${s.block ? ', ' + s.block : ''})`);
+      if (w) wedged++; if (u) under++; if (cl) climbed++;
+    }
+    ok('3b. o pulo que não alcança o topo do plinto: o corpo escorrega para fora da face, nunca fica com a borda dentro do degrau, e sobe com as mãos sem os pés passarem pela quina', !wedged && !under && top === runs,
+      `${runs} pulos em ${high.length} bordas mais altas que um passo (${[...new Set(high.map(c => c.b.type + '#' + c.b.id))].join(', ')}; degraus de ${Math.min(...high.map(c => c.rise)).toFixed(2)} a ${Math.max(...high.map(c => c.rise)).toFixed(2)} m): com a borda do corpo dentro do degrau ${wedged}, com os pés sob o chão ${under}; em cima ${top} (${climbed} com as mãos)${exW.length + exU.length + exT.length ? ' — ' + exW.concat(exU, exT).join(' · ') : ''}`); } }
 
 // ------------------------------ 4. the verifier ------------------------------
 ok('os pés do corpo sempre no chão que a planta ou a rua dão', !bad.length, bad.length ? `${bad.length}: ${bad.slice(0, 3).join(' · ')}` : 'em todos os quadros');
