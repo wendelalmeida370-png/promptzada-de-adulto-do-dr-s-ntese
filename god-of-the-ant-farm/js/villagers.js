@@ -678,7 +678,10 @@
     if (sleepy && cur && (cur.type === 'listen' || cur.type === 'family') && S.time > 0.5 && S.time < 0.8) return;
     // (to bed — but a child the hunger woke goes to bed after the meal, not before: L-171)
     if (sleepy) { if (!cur || (cur.type !== 'sleep' && cur.kind !== 'eat')) setTask(v, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: v.home }); return; }
-    if (v.hunger > 60 && (!cur || cur.pri < 1.2)) { const t = eatTask(v); if (t) { t.kind = 'eat'; return; } }
+    // (and at the top of hunger over anything below the meal's own urgency — the bed of the wounded, 1,3, too —, as a grown one's
+    // choice puts the meal of more than 85 at 2,5: Ahuízotl, 7, of Tenochtitlan, hurt on his way to the store, was put to bed over
+    // his meal of 1,2, the pantry empty, and died of hunger in bed with the store in reach — L-659)
+    if (v.hunger > 60 && (!cur || cur.pri < 1.2 || (v.hunger > 85 && cur.pri < 2.5 && cur.kind !== 'eat'))) { const t = eatTask(v); if (t) { t.kind = 'eat'; return; } }
     if (v.energy < 15 && (!cur || cur.pri < 1.2)) { setTask(v, { type: 'sleep', pri: 1.2, kind: 'sleep', stay: v.home }); return; }
     // (ill or badly hurt: in bed at home while the fever or the wound lasts — L-227)
     if (G.Lar && G.Lar.bedrest(v) && (!cur || cur.pri < 1.3)) { const t = G.Lar.task(v, H, 'acamado'); if (t) return; }
