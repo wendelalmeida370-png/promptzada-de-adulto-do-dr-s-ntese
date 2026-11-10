@@ -13,8 +13,8 @@
 // morre a bordo (uma flecha no convés) deixa a carga como o afogado: a compra vai para casa, a carga comum ao estoque, pelo
 // livro (L-460); m13 quem cuida dos pequenos em casa, de dia, com uma carga comum nas mãos, a leva ao armazém antes de
 // cuidar deles, e volta a cuidar (L-471); m14 o mesmo, salvo e carregado no meio do cuidar; m15 o verificador vê a carga
-// parada nas mãos de quem cuida; e o
-// verificador limpo, sem erro de módulo. Quem o caso precisa (a criança, o arbusto, a árvore, a colmeia, a praia
+// parada nas mãos de quem cuida — de m13 a m15, cada um no mundo como ele abre (o velho que cuida é raro num mundo jovem, e
+// os casos de antes vivem dois anos dele); e o verificador limpo, sem erro de módulo. Quem o caso precisa (a criança, o arbusto, a árvore, a colmeia, a praia
 // na maré baixa, o povo do mar) vem pela regra; sem um que sirva, o caso falha dizendo o que falta.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
@@ -386,8 +386,14 @@ S.weather.storm = 0;
 // load stayed in the hands for days: Nefertari, the shepherd of Mênfis, with the trough's hay
 const minder = () => person(55, 85, o => !o.sleeping && !!(G.Lar && G.Lar.minder(o)));
 const mindsNow = v => !!(v && v.task && v.task.type === 'lar' && v.task.what === 'cuidar');
+// (each minder case on the world as it opens: the old one who minds little ones at home by the rule is rare in a young world,
+// and the cases before live two days of it — a day is a year of their lives. In the metropole of the generation 17, the year
+// 49, ten of the 540 are 55 or more, and two mind little ones at the opening, Nubet (70) and Sitamun (56); by m13 Nubet had
+// died of old age, on the day 50, and Sitamun, the m6's first try, was of a voyage's crew: «ninguém de 55 anos ou mais cuidando
+// dos pequenos de uma casa, livre». The world opened again, the first of them by id, as the case always took)
+const opened = () => { M.pronto('metropole'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); S.weather.storm = 0; used.clear(); };
 {
-  S.time = 0.3;
+  opened(); S.time = 0.3;
   const v = minder();
   if (!v || !give(v, 'wood', 2)) ok('m13 quem cuida dos pequenos leva a carga antes', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, com armazém ao alcance');
   else {
@@ -407,7 +413,7 @@ const mindsNow = v => !!(v && v.task && v.task.type === 'lar' && v.task.what ===
 // ---------------- m14: the same, saved and loaded in the middle of the minding — the test's hand holds her thinking until
 // the save, which finds her minding them at home with the load —: loaded, the load goes to the store
 {
-  S.time = 0.3;
+  opened(); S.time = 0.3;
   const v = minder();
   if (!v || !give(v, 'wood', 2)) ok('m14 salvo e carregado no meio do cuidar', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre');
   else {
@@ -427,6 +433,7 @@ const mindsNow = v => !!(v && v.task && v.task.type === 'lar' && v.task.what ===
 // it goes to the store. A call of the world in the middle takes her from the minding: the case again with another, up to three
 {
   let info = 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, com armazém ao alcance', fine = false; const calls = [];
+  opened();
   for (let att = 0; att < 3 && !fine; att++) {
     S.time = 0.3;
     const v = minder(); if (!v || !give(v, 'wood', 2)) break;
