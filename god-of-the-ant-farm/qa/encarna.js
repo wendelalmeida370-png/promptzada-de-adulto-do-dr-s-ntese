@@ -1078,18 +1078,30 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       // (the god's hand: the day — and the unloading of the quay sees it at its overseer's next look, once a second: one waiting
       // for the night gives no errand, T-249 —; then, of those the day brings out of their houses, the docker, and the errand the
       // world gives a docker)
-      G.inSim++; S.time = 0.15; G.inSim--; __E.until(() => { const op = G.Porto.opAt(dock); return !op || op.st !== 'wait'; }, 90);
+      G.inSim++; S.time = 0.15; G.inSim--;
       // (one the world leaves at the unloading the whole case, by its own rules: hands free and in the middle of nothing an errand
       // of 1.1 does not take one from (Vg.busy), awake and not abed (Lar), fed and rested — past 50 of hunger a meal comes before
       // the unloading, under 22 of strength the bed (villagers.js decide), and the case is some 11 s of the world: 5 more of
       // hunger, 7 less of strength. The first adult of Mênfis out of doors at night, in the «cidade» of the generation 12, was
       // Nebet #3024, up with 83 of hunger: she left the crate she was lifting for a meal at the store, T-365)
       const fit = q => q.id !== v.id && free(q) && !G.Vg.busy(q, { pri: 1.1 }) && q.hunger < 40 && q.energy > 35 && !G.Lar.sleepy(q) && !G.Lar.bedrest(q) && G.W.reaches(q, sp[0], sp[1]);
-      let o = null; __E.until(() => !!(o = __E.adults(__E.town(), fit)[0]), 300);
-      if (!o && __E.adults(__E.town(), q => q.id !== v.id && free(q) && G.W.reaches(q, sp[0], sp[1])).length) out.docker = { given: false, why: 'ninguém de mãos livres, alimentado e descansado chega ao cais' };
-      if (o) { const near = G.W.nearestLand(sp[0] + 0.6, sp[1], 3) || sp; o.x = near[0]; o.y = near[1]; o.path = null;
+      // (of the quay's own town, as the world's dockers are; and the world lived, frame by frame, until one serves, a day at most —
+      // the morning of the «cidade» of the generation 19 had a storm until 0,53, the town sheltered at home, and the case looked 10 s
+      // and gave the quay of Roma a woman of Tenochtitlan: T-674)
+      const town = S.settlements.get(dock.set) || __E.town();
+      let o = null; const sought = __E.until(() => !!(o = __E.adults(town, fit)[0]), G.DAY_LEN * 30);
+      if (!o && __E.adults(town, q => q.id !== v.id && free(q) && G.W.reaches(q, sp[0], sp[1])).length) out.docker = { given: false, why: 'ninguém de mãos livres, alimentado e descansado chega ao cais' };
+      if (o) {
+        // (the quay topped up again as at the start, by the world's own door for a catch — while the storm kept the case waiting, the
+        // town's own dockers carried its crates off, one left on it and that one claimed —; and the unloading going: the overseer
+        // looks once a second, and it waits on the night, a danger, a full store — the stores of Roma had no room for food, and the
+        // case looked 3 s: the errand was never given —, the world lived until it goes, a day at most: T-674)
+        if (dock.crates.length < 6) { G.inSim++; G.Porto.landCatch(dock, 'food', 4 * (6 - dock.crates.length), 'arenque', '#a8c0d0', 0); G.inSim--; }
+        __E.until(() => { const op = G.Porto.opAt(dock); return !op || op.st !== 'wait'; }, G.DAY_LEN * 30);
+        const near = G.W.nearestLand(sp[0] + 0.6, sp[1], 3) || sp; o.x = near[0]; o.y = near[1]; o.path = null;
         G.inSim++; const given = G.Porto.work(o, dock, G.Vg.H); G.inSim--;
-        const r = { who: `${o.name} #${o.id}`, given: !!given, op: (G.Porto.opAt(dock) || { st: '-' }).st, frames: 0, extra: 0, ghost: 0, lifts: 0, n0: dock.crates.length };
+        const op0 = G.Porto.opAt(dock) || { st: '-' };
+        const r = { who: `${o.name} #${o.id}`, sought, given: !!given, op: op0.st, wait: op0.wait || '', frames: 0, extra: 0, ghost: 0, lifts: 0, n0: dock.crates.length };
         for (let k = 0; k < 900 && dock.crates.length > r.n0 - 2; k++) { G.Main.frameFor(33); r.frames++;
           const world = new Set(dock.crates.map(c => c.id)); for (const e of P3.lying) if (e[5] === dock.id && !world.has(e[4])) r.ghost++;
           // (whoever the world has holding a thing the 3D draws as a crate — the crates of the quays, the gear's box)
@@ -1274,22 +1286,33 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     let best = null; for (let k = 0; k < 30 && !(best && best.id === 'portaPlanta'); k++) { G.Cam3D.yaw = Math.atan2(D[1] - st.Z, D[0] - st.X); best = G.Interact.best(); G.Main.frameFor(33); }
     if (best && best.id === 'portaPlanta') G.Interact.run(best); __E.until(() => !G.Avatar.busy(), 120); __E.f(40);
     out.open = Object.assign(lf(), { state: In.doorState(b, e.door).state, label: best && best.label, d: +Math.hypot(D[0] - st.X, D[1] - st.Z).toFixed(2) });
-    // 3. in through it, square to its wall: the world has it inside; the eye in a room, never in a wall
-    go(e.x - nx * 0.6, e.z - nz * 0.6, 200); go(e.x + nx * 1.3, e.z + nz * 1.3, 300); __E.f(30);
+    // (the storey of the entrance, the one the house was chosen by its stair up from — the way in and the climb below read it; and
+    // the body's rule on it: its rim on what the feet walk, never over a flight going up from the storey — the body takes a flight
+    // whole, from its foot: L-391)
+    const lv0 = p.entrance.lv || 0; const fl = p.stairs.filter(q => q.kind !== 'degraus' && q.lv0 === lv0);
+    const fits = (x, z) => { for (const [ax, az] of [[0, 0], [0.32, 0], [-0.32, 0], [0, 0.32], [0, -0.32]]) { const X = x + ax, Z = z + az; if (fl.some(f => X > f.r[0] - 0.02 && X < f.r[2] + 0.02 && Z > f.r[1] - 0.02 && Z < f.r[3] + 0.02)) return false; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, lv0, b.id); if (!q || !q.walk) return false; } return true; };
+    // 3. in through it, square to its wall, to a point the body stands on by that rule and past a stride from the door — within it
+    // the eye stays out, its back to the street (cam3d, L-179): the world has it inside; the eye in a room, never in a wall. 1,3 m
+    // in; where that is on a flight, less, and then a step along the wall: the sobrado#2943 of the metropole of the generation 19
+    // has its stair's foot a metre in from the door, along the way in — the body pushed into it and went up it whole, the climb of
+    // the 5 never began, and its line was never written: T-675)
+    const pt = k => [e.x + nx * k, e.z + nz * k]; let way = null;
+    for (const k of [1.3, 1.1]) if (!way && fits(...pt(k))) way = [pt(k)];
+    for (const k of [0.9, 0.8]) for (const u of [0.5, -0.5, 0.9, -0.9]) { const a = pt(k), q = [a[0] - nz * u, a[1] + nx * u]; if (!way && fits(...a) && fits(...q) && Math.hypot(q[0] - e.x, q[1] - e.z) >= 1) way = [a, q]; }
+    go(e.x - nx * 0.6, e.z - nz * 0.6, 200); for (const q of way || [pt(1.3)]) go(q[0], q[1], 300); __E.f(30);
     const c = G.Realm.camera().position; const cx = c.x - b.x * TL, cz = c.z - b.y * TL; const R = p.shell.r;
     out.inside = { v: v.inside === b.id, lv: G.Possess.level(), camIn, camRoom: cx > R[0] && cx < R[2] && cz > R[1] && cz < R[3] && !G.Cam3D.solid(c.x, c.y, c.z), open: B3.isOpen(b.id) };
     // 4. who is at home stands, sits, lies where Interiors puts them — drawn there
     const home = [...S.villagers.values()].filter(o => o.inside === b.id && o !== v);
     out.people = { n: home.length, placed: home.filter(o => { const q = B3.openPlace(o); return q && q.X > b.x * TL && q.X < (b.x + b.w) * TL && q.Z > b.y * TL && q.Z < (b.y + b.h) * TL; }).length };
-    // 5. up the stair from its foot (the flight whole): its lid, where it has one, lifts while the body goes through
-    const s = p.stairs.find(q => q.kind === 'escada' && q.lv0 === G.Possess.level());
-    // (the way by the body's rule: its rim on what the feet walk, never over a flight going up from the storey — the body takes a
-    // flight whole, from its foot: L-391)
-    if (s) { const n = p.grid.n, cs = p.grid.cs; const fl = p.stairs.filter(q => q.kind !== 'degraus' && q.lv0 === G.Possess.level());
-      const fits = (x, z) => { for (const [ax, az] of [[0, 0], [0.32, 0], [-0.32, 0], [0, 0.32], [0, -0.32]]) { const X = x + ax, Z = z + az; if (fl.some(f => X > f.r[0] - 0.02 && X < f.r[2] + 0.02 && Z > f.r[1] - 0.02 && Z < f.r[3] + 0.02)) return false; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, G.Possess.level(), b.id); if (!q || !q.walk) return false; } return true; };
+    // 5. up the stair from its foot (the flight whole): its lid, where it has one, lifts while the body goes through — the stair the
+    // house was chosen by, from the storey of the entrance, the body on it (else the line says why: T-675)
+    const s = p.stairs.find(q => q.kind === 'escada' && q.lv0 === lv0);
+    if (!s || G.Possess.level() !== lv0) out.upWhy = !s ? `nenhuma escada sobe do piso ${lv0}, o da entrada` : `o corpo no piso ${G.Possess.level()} depois de entrar; a escada sobe do ${lv0}, o da entrada`;
+    else { const n = p.grid.n, cs = p.grid.cs;
       const cell = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const key = (x, z) => z * n + x;
       // (the shut doors of the storey, by their middle and their wall's normal: a cell by one is passed through it, once open)
-      const shut = []; for (const dr of p.doors) { const ww = p.walls[dr.wall]; if (dr.kind === 'vao' || dr.id === e.door || !ww || ww.lv !== G.Possess.level() || In.doorState(b, dr.id).state === 'aberta') continue; const LL = Math.hypot(ww.b[0] - ww.a[0], ww.b[1] - ww.a[1]) || 1; const ux = (ww.b[0] - ww.a[0]) / LL, uz = (ww.b[1] - ww.a[1]) / LL; shut.push({ id: dr.id, x: ww.a[0] + ux * dr.at, z: ww.a[1] + uz * dr.at, nx: -uz, nz: ux }); }
+      const shut = []; for (const dr of p.doors) { const ww = p.walls[dr.wall]; if (dr.kind === 'vao' || dr.id === e.door || !ww || ww.lv !== lv0 || In.doorState(b, dr.id).state === 'aberta') continue; const LL = Math.hypot(ww.b[0] - ww.a[0], ww.b[1] - ww.a[1]) || 1; const ux = (ww.b[0] - ww.a[0]) / LL, uz = (ww.b[1] - ww.a[1]) / LL; shut.push({ id: dr.id, x: ww.a[0] + ux * dr.at, z: ww.a[1] + uz * dr.at, nx: -uz, nz: ux }); }
       const atDoor = (x, z) => shut.find(o => Math.hypot(x - o.x, z - o.z) < 0.45);
       const route = thru => { const [sx, sz] = cell(st.X - b.x * TL, st.Z - b.y * TL), [tx, tz] = cell(s.a[0], s.a[1]); const prev = new Map(); const q = [[sx, sz]]; prev.set(key(sx, sz), null);
         for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break; for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Z = z + az; if (X < 0 || Z < 0 || X >= n || Z >= n || prev.has(key(X, Z))) continue; const cx = (X + 0.5) * cs, cz = (Z + 0.5) * cs; if (!(X === tx && Z === tz) && !fits(cx, cz) && !(thru && atDoor(cx, cz))) continue; prev.set(key(X, Z), [x, z]); q.push([X, Z]); } }
@@ -1323,7 +1346,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     ok('e18 as mãos abrem a porta: a folha gira para dentro como o mundo a tem', e18.open.state === 'aberta' && e18.open.leaf !== null && Math.abs(e18.open.leaf) > 1.2, JSON.stringify(e18.open));
     ok('e18 entra: o mundo o tem dentro; o olho num cômodo, nunca numa parede', e18.inside.v && e18.inside.open && e18.inside.camRoom && e18.inside.camIn === 0, JSON.stringify(e18.inside));
     ok('e18 quem está em casa está onde a planta põe (desenhado)', e18.people.placed === e18.people.n, JSON.stringify(e18.people));
-    if (e18.up) ok('e18 sobe a escada inteira; o alçapão abre enquanto passa', e18.up.lv === e18.up.want && e18.up.flown > 5 && (!e18.up.hole || e18.up.lid > 0), JSON.stringify(e18.up));
+    ok('e18 sobe a escada inteira; o alçapão abre enquanto passa', !!e18.up && e18.up.lv === e18.up.want && e18.up.flown > 5 && (!e18.up.hole || e18.up.lid > 0), e18.up ? JSON.stringify(e18.up) : e18.upWhy || 'a subida não rodou');
     if (e18.load) ok('e18 salvar e carregar dentro de casa: dentro ainda, desenhada aberta', e18.load.body && e18.load.inside && e18.load.open && e18.load.err === '{}', JSON.stringify(e18.load));
   }
   await shot('e18-dentro');
@@ -1346,12 +1369,22 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   const pairs = async () => {
     const towns = await E(() => [...G.S.settlements.values()].sort((x, y) => G.Village.pop(y.id) - G.Village.pop(x.id)).slice(0, 2).map(s => s.id));
     const out = [];
-    for (const sid of towns) for (let k = 0; k < 4; k++) out.push(await E(([sid, k]) => {
+    // (each pair's A and B two of the town not yet in a pair of the battery, and a third for the swap from inside: when the town
+    // has them not out of doors, the world is lived first, the god watching, by its own step, until it has them — a day at most.
+    // The «cidade» of the generation 19, ten grown-ups a town, had a storm in its morning until 0,53 and its people sheltered at
+    // home; at the next midnight and a while, most still in bed: one pair and five where the battery takes six, T-673)
+    for (const sid of towns) { const used = []; for (let k = 0; k < 4; k++) { const r = await E(([sid, used]) => {
       const S = G.S; const s = S.settlements.get(sid); if (!s) return null;
-      const L = __E.adults(s); const a = L[2 * k], b1 = L[2 * k + 1]; if (!a || !b1) return null;
+      // (and no storm about to send them in: under rain and a storm, by day, the world shelters everyone at home — villagers.js,
+      // the 'shelter' of the decide —, and the third of the swap had gone in before it came: «ninguém», T-673)
+      const fresh = () => __E.adults(s, o => !used.includes(o.id)); const storm = () => S.weather.storm > 0 && S.weather.rain > 0.3;
+      for (let t = 0; t < G.DAY_LEN * 20 && !(fresh().length >= 2 && __E.adults(s).length >= 3 && !storm()); t++) G.debug.step(0.05);
+      const L = fresh(); const a = L[0], b1 = L[1]; if (!a || !b1) return null;
       const now = o => ({ task: o.task ? o.task.type : '-', inside: o.inside, sleeping: !!o.sleeping, can: G.Possess.can(o).ok ? 1 : G.Possess.can(o).why, mode: G.Modes.state });
       const inA = __E.enter(a); __E.f(30); __E.leave();
       const aiA = __E.until(() => a.task && a.task.type !== 'avatar', 120) >= 0;
+      const aNow = aiA ? null : Object.assign(now(a), { think: +(a.think || 0).toFixed(2), held: !!a.held, air: !!a.air, aboard: a.aboard || 0, ug: a.ug || 0, act: a.act || '', speed: G.speed, clock: +S.clock.toFixed(1),
+        dead: (d => d ? { cause: d.cause, by: d.by, age: Math.floor(d.age), day: d.died } : null)(S.dead.get(a.id)), told: S.history.slice(-40).filter(e => e.txt.includes(a.name)).map(e => e.txt).slice(-3) });
       // (B taken among those free at the time of the swap — the one chosen at the start if still so: after A's turn and the night,
       // Messalina of Rome had gone into a cave, whom no body enters yet, and the world said so — as the e15 chooses, T-247)
       const b = G.Possess.can(b1).ok ? b1 : __E.adults(s).find(o => o.id !== a.id && o.id !== b1.id); if (!b) return null;
@@ -1364,8 +1397,8 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       const aiB = __E.until(() => b.task && b.task.type !== 'avatar', 120) >= 0;
       __E.leave();
       const good = inA && aiA && bOk && aOk && sw && cOk && aiB;
-      return { town: s.name, names: [a.name, b.name, c ? c.name : '-'], good, why: good ? null : { inA, aiA, inB, whyB, b0, bOk, aOk, sw, whyC, cOk, aiB } };
-    }, [sid, k]));
+      return { town: s.name, names: [a.name, b.name, c ? c.name : '-'], ids: [a.id, b1.id, b.id], good, why: good ? null : { inA, aiA, aNow, inB, whyB, b0, bOk, aOk, sw, whyC, cOk, aiB } };
+    }, [sid, used]); if (r) used.push(...r.ids); out.push(r); } }
     return out.filter(Boolean);
   };
   const r19 = { manha: await pairs() };
