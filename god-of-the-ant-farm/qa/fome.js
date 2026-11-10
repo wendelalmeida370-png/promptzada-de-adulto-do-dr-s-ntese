@@ -43,6 +43,8 @@
 // h19 a cidade que um desastre deixa sem fogueira e sem armazém acende outra: no mesmo dia, mesmo com a busca do dia já falhada
 //    com um armazém de pé, e mais longe quando o chão no raio dela não tem lugar (L-650; achado pela regra S1 no caos da semente 13
 //    da geração 17: Hedeby, com o vulcão no coração dela, três dias sem armazém)
+// h20 a criança ferida, de cama em casa com a despensa vazia, levanta com a fome no máximo e come no armazém, como um adulto
+//    (L-659; achado pela regra S2 no caos da semente 7 da geração 18: Ahuízotl, 7 anos, de Tenochtitlan, morreu de fome na cama)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -509,9 +511,13 @@ const calmOne = (skip, also) => {
       // (the danger over while she is on the way: the refuge ends in ten calm seconds, before the cave — and she eats)
       set.alarmT = 0; let wentIn = false, ended = null; const t0 = S.clock;
       live(30, () => { if (a.ug) wentIn = true; if (!hiding(a) && ended === null) ended = Math.round((S.clock - t0) * 10) / 10; return ended !== null; });
+      // (the meal the case is about is the one after the refuge: one already on the way to the store when the alarm rang eats there
+      // first, and the refuge takes him fed — in the «cidade» of the generation 18 Quinto ate (95 → 46) a moment before it took him, and
+      // the hunger was 51,6 when the danger passed; the hunger put back at the top by the test's hand, as at the start — T-594)
+      const fedBefore = a.hunger < 90; if (fedBefore) a.hunger = 95;
       const ate = live(60, () => a.hunger < 50);
       good = fled && !farFled && ended !== null && !wentIn && ate;
-      info = `${set.name}, ${C_(cm.cv)}: com o alarme, ${a.name} (${Math.round(a.age)} anos, a ${Math.round(G.dist(near[0], near[1], set.cx, set.cy))} casas do meio da cidade) ${fled ? `fugiu para a caverna (st ${st0})` : 'NÃO fugiu'}; ${b.name} (${Math.round(b.age)} anos, a ${Math.round(fd)} casas, além dos campos) ${farFled ? 'MANDADO À CAVERNA DE LONGE' : 'não foi mandado'}; o perigo passou com ${a.name} a caminho: ${ended !== null ? `o refúgio acabou ${ended} s depois${wentIn ? ', MAS ELA ENTROU NA CAVERNA' : ', antes da caverna'}` : 'o refúgio NÃO acabou'}; com a fome 95, ${ate ? 'comeu' : 'NÃO comeu'}`;
+      info = `${set.name}, ${C_(cm.cv)}: com o alarme, ${a.name} (${Math.round(a.age)} anos, a ${Math.round(G.dist(near[0], near[1], set.cx, set.cy))} casas do meio da cidade) ${fled ? `fugiu para a caverna (st ${st0})` : 'NÃO fugiu'}; ${b.name} (${Math.round(b.age)} anos, a ${Math.round(fd)} casas, além dos campos) ${farFled ? 'MANDADO À CAVERNA DE LONGE' : 'não foi mandado'}; o perigo passou com ${a.name} a caminho: ${ended !== null ? `o refúgio acabou ${ended} s depois${wentIn ? ', MAS ELA ENTROU NA CAVERNA' : ', antes da caverna'}` : 'o refúgio NÃO acabou'}${fedBefore ? ' (tinha comido antes de o refúgio o levar: a fome de volta a 95)' : ''}; com a fome 95, ${ate ? 'comeu' : 'NÃO comeu'}`;
     }
   }
   ok('h16 o refúgio da caverna é da cidade atacada, e acaba com o perigo — também a caminho (L-601)', good, info);
@@ -560,7 +566,7 @@ const calmOne = (skip, also) => {
   const posts = s => !!s && (POSTS.some(t => G.Eco.byType(s.id, t).length) || (w => !!(w && w.done && w.gates.length))(G.Siege && G.Siege.wallOf(s.id)));
   const MEAL = { eat: 1, forage: 1, lar: 1, idle: 1 };
   const v = calmOne([], q => q.role === 'guerreiro' && posts(S.settlements.get(q.set)));
-  let shift = null, tries = 0, took = -1, h0 = 0, info = 'nenhum soldado numa cidade calma com posto de guarda'; const held = { early: null, late: null, task: '-' };
+  let shift = null, tries = 0, took = -1, h0 = 0, info = 'nenhum soldado numa cidade calma com posto de guarda'; let pan2 = 0; const held = { early: null, late: null, task: '-' };
   if (v) {
     const t0 = S.time; const h = S.buildings.get(v.home);
     const pan = h ? D.get('h:' + h.id, 'food') : 0; if (pan > 0) D.use('h:' + h.id, 'food', pan, { code: 'teste', part: true });
@@ -598,6 +604,9 @@ const calmOne = (skip, also) => {
       // (right after a look that found no meal: the stamp is now)
       const st0 = t2 ? t2.noMealT : 0; for (let j = 0; t2 && j < 40 && v.task === t2 && t2.noMealT === st0; j++) { v._noStore = S.clock + 5; pick(); M.viver(0.1); }
       if (t2 && v.task === t2) {
+        // (and the house's pantry empty again for the look, as at the start of the case: the checker always looks at the pantry, and the
+        // family may have filled it meanwhile — in the «cidade» of the generation 18 it had 5 by then, and the look at 1 s spoke of it, T-595)
+        pan2 = h ? D.get('h:' + h.id, 'food') : 0; if (pan2 > 0) D.use('h:' + h.id, 'food', pan2, { code: 'teste', part: true });
         const said = () => QA.check().filter(q => q.sys === 'fome' && q.sev === 2 && q.id === v.id).map(q => q.msg);
         v._noStore = 0; const c1 = S.clock;
         while (S.clock - c1 < 1) { v.think = 99; M.viver(0.1); } held.early = said();
@@ -608,6 +617,7 @@ const calmOne = (skip, also) => {
     }
     for (const [b, [n, g]] of bushes) { b.berries = n; b.grow = g; }
     if (pan > 0 && h) D.make('h:' + h.id, 'food', pan, { code: 'teste', part: true });
+    if (pan2 > 0 && h) D.make('h:' + h.id, 'food', pan2, { code: 'teste', part: true });
     if (h) h.water = w0;
     S.time = Math.max(S.time, t0);
     info = shift ? `${v.name}, de guarda ${shift.at} por falta de refeição (turno de ${shift.dur} s, ${shift.left} ainda por fazer, na ${tries}ª escolha): com o armazém ao alcance de novo, ${took >= 0 ? `foi comer em ${took.toFixed(1)} s` : 'NÃO foi comer em 30 s'}; vida ${shift.hp}` : `${v.name}: em ${tries} escolhas, nenhum turno de guarda no posto por falta de refeição`;
@@ -652,6 +662,43 @@ const calmOne = (skip, also) => {
   const dFar = far ? r2(G.dist(...V.center(far), set.cx, set.cy)) : 0;
   ok('h19b sem chão no raio da cidade (as ruínas, a cicatriz da lava), a fogueira nova vai mais longe, onde as ruas da cidade chegam (L-650)', bare2 && !!far && tFar >= 0 && tFar <= 10 && dFar > R && dFar <= R + 12.5 && W.townReaches(set, ...V.frontTile(far)) && far.built,
     `${set.name}: a lava de novo${bare2 ? '' : ' (NÃO levou tudo)'}, e a cicatriz dela no chão até o raio da cidade (${R} casas) → ${far ? `fogueira #${far.id} fundada ${tFar} s depois, a ${dFar} casas do centro${W.townReaches(set, ...V.frontTile(far)) ? ', onde as ruas chegam' : ', ONDE AS RUAS NÃO CHEGAM'}, ${far.built ? 'acesa' : 'AINDA em obra'}` : 'NENHUMA fogueira nova em 300 s'}`);
+}
+// ---------------- h20 the hurt child in bed at home, the pantry empty, at the top of hunger, gets up to eat at the store (L-659) ----------------
+// (found by the rule S2 in the chaos of seed 7 of the generation 18: Ahuízotl, 7, of Tenochtitlan, hurt on his way to the store —
+// life 22 —, was put to bed in his house over his meal — the bed of the wounded, act-lar.js, 1,3, over the meal of 1,2 —, the
+// pantry empty; the children's choice gave a meal only over what weighs less than 1,2, and he died of hunger in bed with the store
+// in reach. A grown one's choice puts the meal of more than 85 at 2,5, over the bed: the child, by day, in bed at home with the
+// pantry empty, the hunger at 70 — the bed may wait for it —, and then at 92: up, to the store, and he eats)
+{
+  const kid = (() => {
+    const ok2 = s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5;
+    for (const s of [...S.settlements.values()].filter(ok2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) {
+      const o = [...S.villagers.values()].filter(q => q.set === s.id && q.age >= 6 && q.age < 15 && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air && !(q.sick > 0) && q.home && S.buildings.get(q.home) && S.buildings.get(q.home).built && W.reaches(q, ...V.frontTile(V.nearestDropoff(q.x, q.y, q.set)))).sort((a, b) => a.id - b.id)[0];
+      if (o) return o;
+    }
+    return null;
+  })();
+  let bed = false, wait = 0, rose = null, ate = false, h1 = 0, hp1 = 0; const t0 = S.time; let info = 'nenhuma criança com casa numa cidade calma com armazém';
+  if (kid) {
+    const h = S.buildings.get(kid.home);
+    if (kid.carry) D.use('v:' + kid.id, kid.carry.k, kid.carry.n, { code: 'teste', mine: true, part: true });
+    const pan = D.get('h:' + h.id, 'food'); if (pan > 0) D.use('h:' + h.id, 'food', pan, { code: 'teste', part: true }); // (the pantry empty)
+    // (by day, hurt — the test's hand: 25 of life —, the hunger at 70, and in bed at home by the world's own door for the wounded)
+    S.time = 0.3; Vg.endTask(kid); kid.sleeping = false; kid.hp = 25; kid.hunger = 70; kid.energy = 90; kid._hungerT = 0;
+    G.Lar.task(kid, Vg.H, 'acamado');
+    const inBed = () => !!(kid.task && kid.task.type === 'lar' && kid.task.what === 'acamado' && kid.task.st === 2);
+    // (to bed, the hunger held at 70 the while: the way home is the world's)
+    while (wait < 300 && !inBed()) { kid.hunger = 70; M.viver(0.1); wait++; } bed = inBed();
+    // (in bed, with no one to bring him food: the hunger at 92, and the case's seconds — the store's errand of a child to it)
+    if (bed) {
+      kid.hunger = 92; h1 = kid.hunger; hp1 = kid.hp; const c0 = S.clock;
+      live(60, () => { if (!S.villagers.has(kid.id)) return true; if (rose === null && kid.task && kid.task.type === 'eat') rose = Math.round((S.clock - c0) * 10) / 10; if (kid.hunger < 60) ate = true; return ate; });
+    }
+    const pan2 = h ? D.get('h:' + h.id, 'food') : 0;
+    info = `${kid.name}, ${Math.floor(kid.age)} anos, ferido (vida 25), de cama em casa (#${h.id}, a despensa vazia${pan2 > 0 ? `, AGORA com ${r2(pan2)}` : ''})${bed ? '' : ' — NÃO chegou à cama em 30 s'}: a fome de 70, deitado; a 92 → ${!S.villagers.has(kid.id) ? 'MORREU' : rose !== null ? `levantou para comer ${rose} s depois, e ${ate ? `comeu (fome ${Math.round(h1)} → ${Math.round(kid.hunger)})` : 'NÃO comeu em 60 s'}` : `FICOU na cama (fome ${Math.round(kid.hunger)}, vida ${Math.round(hp1)} → ${Math.round(kid.hp)}; tarefa ${kid.task ? kid.task.type + (kid.task.what ? ' ' + kid.task.what : '') : '—'})`}`;
+  }
+  ok('h20 a criança ferida, de cama em casa com a despensa vazia, levanta com a fome no máximo e come no armazém (L-659)', !!kid && bed && rose !== null && ate, info);
+  S.time = Math.max(S.time, t0);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }
