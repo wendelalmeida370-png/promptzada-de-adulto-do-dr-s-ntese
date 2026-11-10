@@ -291,6 +291,9 @@ obrigaria a gerar os mundos prontos outra vez; cada um está descrito no AUDIT, 
 - L-686: quando um fogo queima as plantações que ficam no terreno guardado para uma obra grande, as ruínas ficam em cima dele
   até a cidade olhar de novo, no dia seguinte. O conserto já está escolhido (D-149: a ruína de um campo da própria cidade
   passa, como o fogo no trigo). Até lá, o caso que o pegou (a `lote-bolsao` q3) fica como falha conhecida.
+- L-687: quem foge de um chamado à guerra fica alguns segundos ainda na lista do exército; um segundo chamado do mesmo povo
+  nessa janela pode pô-lo em dois exércitos ao mesmo tempo, até o primeiro se formar. O conserto já está testado e guardado
+  (`qa/patch3/consertos/L-687-leva.patch`).
 - O load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros módulos. É o
   mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
 
