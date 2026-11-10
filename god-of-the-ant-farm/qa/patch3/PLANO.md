@@ -215,3 +215,29 @@ do pedido viram provas concretas:
 **A atualização só termina** com: as provas acima passando; a regressão completa nos mundos gerados de novo, com cada linha
 `NOVO:` explicada; o `AUDIT.md`, o `README` das provas e o `CLAUDE.md` em dia; o relatório final nos 12 itens do pedido, separando
 «feito e provado», «feito e ainda sem prova», «parcial» e «planejado e não feito»; e o jogo publicado.
+
+## 14. O que mudou com a Arquitetura Monumental (antes de começar)
+A Arquitetura Monumental veio antes (D-105) e mexeu no que este plano lê: a cidade escolhe o tamanho de cada prédio, abre
+espaço e guarda terra para as obras grandes (`G.Escala`, D-106, D-115 a D-121). O plano acima continua valendo, com estes
+acertos:
+- **Já feito:** a L-494 (o teatro grego, a planta contra o desenho) foi consertada; a D-101 foi decidida como D-102 (o teto
+  dos ofícios guarda uma pessoa para cada serviço aberto — a taverna, o teatro, o cais com carga).
+- **Em parte:** a L-491 (os portões que não deixam passar) continua o primeiro item, mas dois casos dela já foram consertados
+  (L-603, o portão entre dois prédios; L-604, o prédio fechado pelo plano do muro). A L-658 (o muro para no vau e nos rasos)
+  entra junto com ela.
+- **Os defeitos que a Arquitetura Monumental achou no fim e deixou para cá**, porque consertá-los muda o passo do mundo (entram
+  antes da primeira geração dos mundos deste patch, cada um com a sua prova): L-631 (o resto: o bicho dentro de prédio por
+  escritas de posição), L-636 (o passeio de compras não pergunta pelas mãos), L-646 (o guarda que perde o ladrão esquece o
+  crime), L-652 (efeitos que só se veem sorteiam do acaso do mundo — candidata a regra do `guard.js`), L-656 (a fera que dorme
+  na toca sai do elenco de uma história), L-657 (a receita do painel do desenvolvedor).
+- **As decisões deixadas para cá:** D-128 (uma cidade que põe prédios no coração de outra), D-132 (a)–(c) (o degrau antigo, o
+  paço que cede ao palácio, a maravilha no fogo), D-135 (a fogueira das ruas antes do segundo ofício de comida), D-138 (a
+  agenda de quem governa: a festa da cidade contra a audiência), D-144 (o ofício que precisa das mãos), D-145 (quem herda o
+  quê do cativo), T-447 (a família rica pede a casa rica), e as lacunas da matriz «palácio/morar» (o governante mora no
+  palácio) e «cidade/juntar» (o povo se junta na praça).
+- **A terra das capitais:** nos mundos prontos da geração 18 nenhuma Roma ergue o Coliseu de 40 m, e nenhum degrau acima de
+  6 casas fica pronto sozinho fora das maravilhas (a Grande Pirâmide de Mênfis e o Templo Mayor de Tenochtitlan; o grande
+  palácio de 32 m de Argos está em obra). O bairro nobre, a
+  terra cara e quem mora onde (lacuna 9) são o mesmo assunto: medir a terra das capitais junto com a D-128 e a D-132 (a).
+- **Fora deste patch, registrado:** os prédios de serviço (os banhos, a biblioteca, o mercado, a administração, o paço) já têm
+  a escada escrita no `escala.js`, mas nenhum povo sabe erguê-los maiores — falta a forma e a planta desses tamanhos.
