@@ -49,7 +49,7 @@
 // (m) As cores da forma pelo nome inteiro (L-564): 'trim2' e 'acc2' são as cores da paleta, não 'trim' e 'acc'; o palácio
 //     asteca de 6 com as duas faixas dos tetos planos, a vermelha e a verde-azulada.
 //   node qa/visual/forma-deus.js [a,b,c,d,e,f,g,h,i,j,k,l,m]   (as partes; todas sem nada)    PNG=pasta  as folhas (deus à mão | pintor; deus | 3D)
-//   MUNDO_K=mundo  o mundo pronto da (k) (metropole)
+//   MUNDO_K=mundo  o mundo pronto da (k) (sem ele: a metrópole; sem chão para o lote nela, o primeiro mundo pronto que guarde um)
 //   VERB=1  cada tipo e povo                   JSON=arquivo  os números
 'use strict';
 const path = require('path'), fs = require('fs');
@@ -472,7 +472,12 @@ if (want('j')) {
 // the right size; the stakes, their ropes, the label; from afar the line alone; gone with the reserve; nothing of the world
 // changed by drawing it (its chance, its clock, its save); the same world with and without frames)
 if (want('k')) {
-  const world = process.env.MUNDO_K || 'metropole';
+  // (the world: MUNDO_K; else the metrópole and, where none of its capitals has ground for the lot, the next ready world where
+  // the guard gets one. In the metrópole of the generation 18, year 70, no capital had within its reach a ground for the lot
+  // of 40 m — none free of buildings round it, of walls and highways, of the water and the world's edge —: «a guarda de prova
+  // não fez cidade nenhuma guardar um lote em metropole»; the cidade's Hedeby keeps one by the world's own rule)
+  const worlds = process.env.MUNDO_K ? [process.env.MUNDO_K] : ['metropole', 'cidade', 'mundial', 'mega', 'anos100', 'anos500', 'anos1000'];
+  let world = null; const tried = [];
   // (the terrain's outlines are the browser's Path2D: in Node, nothing — the ground's pictures are not what is looked at here)
   if (!global.Path2D) global.Path2D = class { moveTo() { } lineTo() { } closePath() { } rect() { } arc() { } ellipse() { } quadraticCurveTo() { } bezierCurveTo() { } addPath() { } };
   const V = G.Village, R = G.Render, W = G.W, cam = R.cam, real = V.reserva; let gone = false; const out = [];
@@ -486,10 +491,13 @@ if (want('k')) {
   const clockOf = S => JSON.stringify([S.clock, S.day, S.time, S.rng]);
   const same = (c, p) => Math.abs(c[0] - p[0]) < 1 && Math.abs(c[1] - p[1]) < 1 && Math.abs(c[2] - p[2]) < 1;
   try {
-    let S = M.pronto(world); R.init({ getContext: () => pc, width: 0, height: 0, style: {} });
     // (the lot the game keeps, by the proof's guard — in the ready world of now no town keeps one —: a world it changes)
-    const g = guarda(G), cap = g && S.settlements.get(g.set), r = cap && V.reserva(cap);
-    if (!r) ok('k: a reserva do lote no deus', false, `a guarda de prova não fez cidade nenhuma guardar um lote em ${world}`);
+    let S = null, g = null, cap = null, r = null;
+    for (const w of worlds) {
+      S = M.pronto(w); R.init({ getContext: () => pc, width: 0, height: 0, style: {} });
+      g = guarda(G); cap = g && S.settlements.get(g.set); r = cap && V.reserva(cap); if (r) { world = w; break; } tried.push(w);
+    }
+    if (!r) ok('k: a reserva do lote no deus', false, `a guarda de prova não fez cidade nenhuma guardar um lote em ${tried.join(', ')}`);
     else {
       const n = r.n, col = F.parseCol(G.Fac.hex(cap.fac)), cx = r.x + n / 2, cy = r.y + n / 2;
       const look = z => { const c = R.proj(cx, cy, W.groundH(cx, cy)); cam.follow = 0; cam.target = null; cam.x = c[0]; cam.y = c[1]; cam.zoom = cam.tz = z; };
@@ -516,7 +524,7 @@ if (want('k')) {
           for (const o of rc.ops) { if (!o.f && same(o.col, [176, 146, 100])) ropes += o.segs.length / 10; if (o.f && same(o.col, col)) flags++; } }
         okV = okV && ropes === st.length && flags === 4; views.push(`${ropes} cordas, ${flags} bandeirolas`); });
       const okLab = lab.length === 1 && lab[0].s === R.reserveName(q) && (() => { const p = R.proj(cx, cy, W.groundH(cx, cy)), is = G.clamp(1.5 / cam.zoom, 0.7, 1.4); return Math.abs(lab[0].x - p[0]) < 0.01 && Math.abs(lab[0].y - (p[1] - 10 * is)) < 0.01; })();
-      out.push(`${cap.name}: o lote (${r.x}, ${r.y}) de ${n} × ${n} casas que a reserva do jogo guarda${g.provocado ? ' (o chão aplainado pela guarda)' : ''} — ${L1.length} traços pelos ${4 * n} pontos da borda (${okL ? `a linha escura na borda clara, ${cord(L1).w.toFixed(1)} px na tela` : 'NÃO os dois'}); ${st.length} estacas (esperadas ${wantN}), ${onEdge ? 'todas na borda' : 'FORA DA BORDA'}; nas quatro vistas: ${views.join(' / ')}; o rótulo: «${lab.length ? lab[0].s : '-'}»${lab.length > 1 ? ` (${lab.length} vezes)` : ''}`);
+      out.push(`${world}${tried.length ? ` (sem chão para o lote em ${tried.join(', ')})` : ''} — ${cap.name}: o lote (${r.x}, ${r.y}) de ${n} × ${n} casas que a reserva do jogo guarda${g.provocado ? ' (o chão aplainado pela guarda)' : ''} — ${L1.length} traços pelos ${4 * n} pontos da borda (${okL ? `a linha escura na borda clara, ${cord(L1).w.toFixed(1)} px na tela` : 'NÃO os dois'}); ${st.length} estacas (esperadas ${wantN}), ${onEdge ? 'todas na borda' : 'FORA DA BORDA'}; nas quatro vistas: ${views.join(' / ')}; o rótulo: «${lab.length ? lab[0].s : '-'}»${lab.length > 1 ? ` (${lab.length} vezes)` : ''}`);
       // (2) the label only with nothing else under the pointer, and only on the lot
       R.hover = [...S.buildings.values()].find(b => b.set === cap.id) || null; frame(); const labH = labels().length; R.hover = null;
       R.pointer = [r.x - 2, r.y - 2]; frame(); const labO = labels().length; R.pointer = [cx, cy];

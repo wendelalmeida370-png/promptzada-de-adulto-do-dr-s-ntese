@@ -46,6 +46,12 @@ function houseIn(set, min, pred, what) {
 // 16 or more: under it the child's choice — childDecide — never asks the wish to shop, though the wish counts from 14)
 const grown16 = h => adults(h).filter(v => v.age >= 16);
 const canSend = h => grown16(h).some(v => !(v.job || (E.isJobRole && E.isJobRole(v.role))) && !(v.work > 1));
+// (and a house the town does not call away from an errand by its own rules: nobody of it in a voyage — the farewell at the
+// quay calls its people (2,4), and the crew to the quay (3,25) — nor a merchant of the caravans — trade.js takes the one who
+// has been one first, over any errand under 2. In the metrópole of the generation 18 the first house of Argos had Calista, the
+// merchant of nine caravans: the house sent her to the fair, a caravan took her with spices to Mênfis, and then hunger and the
+// farewell of the two of the house in a voyage — «nenhuma compra no livro»)
+const unbound = h => members(h).every(v => !v.merchant && v.role !== 'mercador' && !(G.Expe && G.Expe.memberOf(v.id)));
 // the test's hand on a house: what it keeps taken away (so that it lacks), coins given or taken, the last errand forgotten
 function lacking(h, coins) {
   for (const k of Object.keys(E.HOUSE_WANTS)) { const n = D.get('h:' + h.id, k); if (n > 0) D.use('h:' + h.id, k, n, { code: 'teste' }); }
@@ -130,7 +136,7 @@ S.time = 0.15;
 const fair = stockFair(set);
 // ---------------- c1/c2/c5: a house that lacks sends one of its people; the purchase is paid by the house and gets home
 {
-  const h = houseLacking(set, 2, 30, canSend, 'que possa mandar alguém (um adulto sem ofício e não trabalhador)');
+  const h = houseLacking(set, 2, 30, q => canSend(q) && unbound(q), 'que possa mandar alguém (um adulto sem ofício e não trabalhador), sem ninguém de uma viagem nem mercador das caravanas');
   const L0 = S.ledgerN; const list = C.list(h).map(q => q.k);
   let most = 0; let errand = null;
   const sent = fine(90, () => { const v = errandOf(h); if (v) errand = errand || { v, k: v.task.k, type: v.task.type, n: v.task.n }; let c = 0; for (const o of S.villagers.values()) if (o.task && o.task.casa === h.id) c++; most = Math.max(most, c); return !!errand || watch(); });
