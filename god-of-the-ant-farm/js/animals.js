@@ -361,12 +361,14 @@
   // hair across the edge of its tile (L-607) —: set down on the nearest ground it can stand on from where it reaches its home
   // (its pen, its range: the map of regions), within r tiles — never into a pocket, nor beyond what now stands between it and
   // home —; with no such ground near, on the nearest it can stand on at all
-  A.aside = function (a, r) {
+  // (reach: the caller's own way home, when the map of now does not tell it — a wall still going up judges it with its whole line,
+  // L-680)
+  A.aside = function (a, r, reach) {
     const sp = SP[a.kind]; if (!sp || sp.cls === 'air' || sp.cls === 'water' || a.held || a.air) return false;
     distances(); // (the shore's distances the amphibians' ground is read by: maybe not built yet, at a load)
     if (walkOK(a, a.x, a.y)) return false;
     const can = (x, y) => walkOK(a, x, y);
-    const home = (x, y) => can(x, y) && (!Number.isFinite(a.hx) || !Number.isFinite(a.hy) || W.canWalk(x, y, a.hx, a.hy));
+    const home = (x, y) => can(x, y) && (!Number.isFinite(a.hx) || !Number.isFinite(a.hy) || (reach ? reach(x, y) : W.canWalk(x, y, a.hx, a.hy)));
     const p = W.nearestLand(a.x, a.y, r || 3, home) || W.nearestLand(a.x, a.y, r || 3, can);
     if (!p) return false;
     a.x = p[0]; a.y = p[1]; a.tx = a.x; a.ty = a.y; a.path = null; a.moving = false; a.blk = 0; a.stk = 0; a.noGo = undefined;
@@ -1575,7 +1577,9 @@
       const mul = G.Nature.zoneMul(a.x, a.y, 'fertility');
       const p = dt / DAY() * sp.breed * (1 - Math.pow(n / cap, 3)) * mul;
       if (G.R() >= p) continue;
-      const q = pickNear(a, 1.2, true) || [a.x, a.y];
+      // (beside the mother where it stands, or at her side; a mother off her ground — inside a building — gives no birth there:
+      // a wolf's cub was born in a theatre of the metrópole, its mother inside it, L-681, L-631)
+      const q = pickNear(a, 1.2, true) || (walkOK(a, a.x, a.y) ? [a.x, a.y] : null); if (!q) continue;
       const kid = A.spawn(a.kind, q[0], q[1], { leader: a.leader || a.id, age: 0, grown: 0.35, hunger: 0.2, z: sp.cls === 'air' ? a.z : 0, hx: a.hx, hy: a.hy, morph: a.morph && G.R() < 0.3 ? a.morph : rollMorph(sp) });
       kid.hp = kid.maxHp * 0.6; a.hunger += 0.2; count[a.kind] = n + 1;
       const eco = S.eco || (S.eco = { deaths: {}, born: {} }); eco.born[a.kind] = (eco.born[a.kind] || 0) + 1;
@@ -1628,10 +1632,14 @@
   };
   A.spawnPack = function (x, y, n, summoned) {
     let leader = null;
+    // (each wolf where a wolf stands — its own ground, no house nor wall —, else at the pack's spot, itself where one stands: the
+    // pack of a raid spread a step round its spot and one wolf came down inside a theatre of the metrópole, L-681)
+    const WOLF = { kind: 'wolf' }; const at = (px, py) => W.inb(px, py) && walkOK(WOLF, px, py);
+    if (!at(x, y)) { const p = W.nearestLand(x, y, 4, at); if (!p) return null; x = p[0]; y = p[1]; }
     for (let k = 0; k < n; k++) {
       const a = G.rr(0, 6.28), r = G.rr(0, 1.2);
       let px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
-      if (!W.inb(px, py) || G.S.type[W.idx(px, py)] <= T.SEA) { px = x; py = y; }
+      if (!at(px, py)) { px = x; py = y; }
       const w = A.spawn('wolf', px, py, { summoned: !!summoned, raid: !summoned, leader: leader ? leader.id : 0, leaveT: G.DAY_LEN * G.rr(1.2, 1.8), grown: 1, hunger: 0.5 });
       if (!leader) leader = w;
     }

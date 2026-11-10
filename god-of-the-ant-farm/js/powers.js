@@ -312,7 +312,7 @@
   };
 
   P.wolves = function (x, y) {
-    G.Animals.spawnPack(x, y, 3, true);
+    if (!G.Animals.spawnPack(x, y, 3, true)) return; // (no ground a wolf stands on near where the hand pointed: no pack, L-681)
     G.FX && G.FX.summon(x, y);
     G.Audio && G.Audio.at(x, y, 'howl', true, 1.2);
     P.witness(x, y, 12, -3, 18);

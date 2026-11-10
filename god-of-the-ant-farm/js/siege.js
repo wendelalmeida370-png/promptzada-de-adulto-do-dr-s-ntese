@@ -199,11 +199,30 @@
   const keepsWall = o => !!o && (o.blocks || o.type === 'praca' || !!W.FENCED[o.type] || !!(G.Interiors && G.Interiors.TYPES && G.Interiors.TYPES[o.type]));
   // nobody stays buried inside a new wall: who stands on its tiles steps to the nearest ground beside it — a person, and a beast by
   // its own rule of where it can stand, towards its home (Animals.aside). A beast where the wall rose stayed inside it for good,
-  // and a wall raised at once moved nobody at all (L-606)
-  function unbury(tiles) {
-    const S = G.S;
-    for (const v of S.villagers.values()) if (tiles.has(W.idx(v.x, v.y)) && !v.aboard) { const p = W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; v.path = null; } }
-    if (G.Animals && G.Animals.aside) for (const a of S.animals.values()) if (tiles.has(W.idx(a.x, a.y))) G.Animals.aside(a, 3);
+  // and a wall raised at once moved nobody at all (L-606). The way home is judged with the whole line raised — the wall's plan,
+  // its gates open —, not with the tiles raised so far: the cow on the first tile of Tenochtitlan's line stepped into a pocket
+  // the rest of the line closed, and never reached its pen again (L-680); a person goes towards the door of home, or the town
+  function unbury(tiles, w) {
+    const S = G.S; const s = w && S.settlements.get(w.set);
+    for (const v of S.villagers.values()) {
+      if (!tiles.has(W.idx(v.x, v.y)) || v.aboard) continue;
+      const h = v.home && S.buildings.get(v.home); const [hx, hy] = h ? G.Vg.door(h) : s ? [s.cx, s.cy] : [v.x, v.y];
+      const p = (w && W.nearestLand(v.x, v.y, 3, (x, y) => reachesPast(w, x, y, hx, hy))) || W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; v.path = null; }
+    }
+    if (G.Animals && G.Animals.aside) for (const a of S.animals.values()) if (tiles.has(W.idx(a.x, a.y))) G.Animals.aside(a, 3, w ? (x, y) => reachesPast(w, x, y, a.hx, a.hy) : null);
+  }
+  // (from (sx, sy) to (tx, ty) or beside it, over the ground one walks with the wall w's line shut but for its gates — the tiles
+  // not raised yet as if they were —, side by side as the map of reach is made (W.reachIds). Pure)
+  function reachesPast(w, sx, sy, tx, ty) {
+    const S = G.S, n = N * N; const open = new Set(w.gates.concat(w.ways || [])); const shut = new Set(); for (const i of w.tiles) if (!open.has(i) && !S.wall[i]) shut.add(i);
+    const pass = i => W.ground(i) && W.wallOpen(S.wall[i]) && !shut.has(i);
+    const s0 = W.idx(sx, sy), t0 = W.idx(tx, ty), txi = t0 % N, tyi = (t0 / N) | 0;
+    const seen = new Uint8Array(n); const q = [];
+    const push = i => { if (i >= 0 && i < n && !seen[i] && pass(i)) { seen[i] = 1; q.push(i); } };
+    const near = a => { const x = a % N; if (x > 0) push(a - 1); if (x < N - 1) push(a + 1); push(a - N); push(a + N); };
+    push(s0); if (!q.length) near(s0);
+    for (let k = 0; k < q.length; k++) { const a = q[k]; if (Math.abs((a % N) - txi) <= 1 && Math.abs(((a / N) | 0) - tyi) <= 1) return true; near(a); }
+    return false;
   }
   const takenAt = i => { const o = G.S.occ[i]; return !!o && keepsWall(G.S.buildings.get(o)); };
   // (nor a lot a town keeps for its great work, D-121: the wall passes by it as by the square, and the work, when it stands, is
@@ -276,7 +295,7 @@
     S.walls.push(w);
     const up = new Set();
     if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || takenAt(i) || keptAt(i) || Sg.walledIn(i, w)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; up.add(i); }
-    if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); if (up.size) unbury(up); }
+    if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); if (up.size) unbury(up, w); }
     return w;
   };
   function considerWalls() {
@@ -318,7 +337,7 @@
         S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; G.W.touchWalk();
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
         G.FX && G.FX.dust(x, y, 2);
-        unbury(new Set([i]));
+        unbury(new Set([i]), w);
       }
       if (w.built >= w.tiles.length) {
         w.done = true;
