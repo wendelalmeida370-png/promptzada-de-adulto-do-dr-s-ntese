@@ -480,6 +480,18 @@
       // (as with an active story: a death the stories have not heard yet is not theirs to have settled — once heard, its seeds go, L-351)
       for (const sd of s.saga.seeds) if (!P(sd.protag) && !(G.Stories.unheard && G.Stories.unheard(sd.protag))) add('story', 3, `semente ${sd.type}: protagonista morto`);
     }
+    // ---- the secret orders (secrets.js): a hunt holds while its man is on it, and a man is marked for one witness of his order
+    // at a time; one waiting for the order again waits until a time (L-662, D-148: the order marked its man once and never looked
+    // again, and the marks piled up on him — three witnesses on one man asleep in the metrópole, four on one in a band in the mega)
+    if (s.secrets && Array.isArray(s.secrets.socs)) for (const q of s.secrets.socs) {
+      const on = new Map();
+      for (const w of q.wit || []) {
+        if (!w || w.done) continue;
+        if (w.next !== undefined && !fin(w.next)) add('secret', 2, `${q.name}: a testemunha #${w.id} espera a ordem até ${w.next}`);
+        if (!w.hunter) continue;
+        if (on.has(w.hunter)) add('secret', 3, `${q.name}: #${w.hunter} marcado para duas testemunhas (#${on.get(w.hunter)} e #${w.id}) — uma no limbo (L-662)`); else on.set(w.hunter, w.id);
+      }
+    }
     // ---- duplicated events: the same chronicle line twice on the same day
     { const seen = new Map(); for (const h of s.history.slice(-300)) { const k = Math.floor(h.d) + '|' + (h.x === undefined ? '' : Math.round(h.x) + ',' + Math.round(h.y)) + '|' + h.txt; seen.set(k, (seen.get(k) || 0) + 1); } for (const [k, n] of seen) if (n > 1) add('chron', 3, `crônica: linha repetida ${n}× no mesmo dia e lugar: ${k.split('|')[2].slice(0, 90)}`); }
     // ---- history

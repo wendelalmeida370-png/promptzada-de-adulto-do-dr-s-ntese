@@ -275,14 +275,28 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     // 8 the theft on the feast night (D-126): the feast of the year takes everyone, the watch too — the thieves' night —, and the
     // guard who saw the theft arrests after the feast (the arrest waits). The town's feast of the night begun at its hour, on the
     // town of now (the plan of the day kept by it: no second feast after it); case 5's guard on his round when it begins — the
-    // feast takes him, or the case's guard is one of its people —; the same thief, out of the cell, not at the feast, poor again,
+    // feast takes him, or the case's guard is one of its people —; the same thief (or, if he is sworn to an order, one whom no
+    // order calls, T-597), out of the cell, not at the feast, poor again,
     // a few steps from the door on ground from which it is reached; a house standing, with its coins (the case 5's was going up
     // a floor by then — built false while the work lasts —, and a thief does not rob a work: the errand ended at its first step,
     // the way to the door was there, T-453). When the thief reaches in, the guard of the feast is by the door (the test's hand:
-    // the feast passing by): he sees it, keeps the case and stays at the feast; when it is over, he goes after the thief
+    // the feast passing by; one the world called away from the feast before it, another of the feast, T-598): he sees it, keeps
+    // the case and stays at the feast; when it is over, he goes after the thief
     await until(() => (G.Fest.active(window.__set.id) ? null : 1), 600);
     const f8 = await page.evaluate(o => {
-      const S = G.S; const set = window.__set; const f = G.Fac.get(set.fac); const t = S.villagers.get(o.thief); if (!t || t.jail) return { skip: 'sem o ladrão solto' };
+      const S = G.S; const set = window.__set; const f = G.Fac.get(set.fac); let t = S.villagers.get(o.thief); if (!t || t.jail) return { skip: 'sem o ladrão solto' };
+      // (the thief sworn to an order is not the night's: its meeting (2,3) and its hunt (2,6) take a member from an errand of
+      // 2,05 — a call of more weight takes one of less, D-094, L-456. In the world of the generation 18, seed 7, the case 5's
+      // thief, Bjorn, the hunter of the Culto da Serpente Antiga, went to the order's conclave and was then taken from the door
+      // three times, by the witnesses the order had to silence (the load of case 6 sends them hunting again): the case's thief
+      // is then another of the town whom no order calls, made poor as he was, T-597)
+      let swap = '';
+      if (t.secret) {
+        const q = G.Secrets && G.Secrets.of(t);
+        const t2 = window.__adults().find(v => !v.secret && !v.jail && v.home && v.home !== o.rich && v.id !== o.guard && v.role !== 'guerreiro' && v.role !== 'vigia' && v.role !== 'carcereiro' && v.role !== 'pescador' && v.role !== 'estivador' && !(v.traits || []).includes('Devoto') && !(v.task && v.task.pri >= 2.05) && !G.Vg.handsBusy(v));
+        if (!t2) return { skip: `o ladrão do caso 5, ${t.name}, é de uma ordem (${q ? q.name : '?'}), e não há outro adulto livre de ordem` };
+        swap = `o ladrão do caso 5, ${t.name}, é de uma ordem (${q ? q.name : '?'}), que o chama: o do caso é ${t2.name}`; t = t2;
+      }
       let r = S.buildings.get(o.rich); if (!r || !r.built) r = [...S.buildings.values()].find(b => b.set === set.id && b.built && G.BDEF[b.type].housing && b.type !== 'barraco' && b.id !== t.home) || null;
       if (!r) return { skip: 'sem casa de pé' };
       // (the feasts of the night first: the theft is a night's)
@@ -292,7 +306,7 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
       const [dx, dy] = G.Vg.door(r); let lugar = null; const probe = { x: 0, y: 0, inside: 0 };
       for (let rr = 2; rr <= 4 && !lugar; rr++) for (let k = 0; k < 16 && !lugar; k++) { const a = k / 16 * 6.283; const x = Math.floor(dx + Math.cos(a) * rr), y = Math.floor(dy + Math.sin(a) * rr); if (!G.W.inb(x, y) || !G.W.walkable(G.W.idx(x, y))) continue; probe.x = x + 0.5; probe.y = y + 0.5; if (G.W.reaches(probe, dx, dy) && G.W.findPath(probe.x, probe.y, dx, dy, false, 4000)) lugar = [x, y]; }
       if (!lugar) return { skip: 'nenhum chão perto da porta de onde se chegue a ela' };
-      return { thief: t.id, guard: o.guard, rich: r.id, keys, lugar };
+      return { thief: t.id, guard: o.guard, rich: r.id, keys, lugar, swap };
     }, th);
     if (f8.skip) ok('8 o roubo na noite da festa (D-126): o guarda que viu prende depois dela', false, f8.skip);
     else {
@@ -308,7 +322,8 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
         if (!fe) return { skip: 'nenhuma festa do povo começou' };
         const on = () => { const a = F.active(set.id); return !!a && a.id === fe.id; };
         const inFest = q => !!q && !!q.task && q.task.type === 'fest' && q.task.fid === fe.id;
-        const crowd = fe.parts.map(id => S.villagers.get(id)).filter(q => inFest(q) && q.task.role === 'crowd' && q.id !== o.thief && q.age >= 18 && q.age < 55);
+        const crowdNow = () => fe.parts.map(id => S.villagers.get(id)).filter(q => inFest(q) && q.task.role === 'crowd' && q.id !== o.thief && q.age >= 18 && q.age < 55);
+        const crowd = crowdNow();
         let g = null, how = '';
         if (inFest(g0)) { g = g0; how = 'a festa levou o guarda da ronda'; }
         else if ((g = crowd.find(law))) how = `a festa não levou o guarda da ronda; o guarda do caso é um ${g.role} da festa`;
@@ -322,15 +337,22 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
         const go = () => { G.Vg.endTask(t); awake(t); t.x = o.lugar[0] + 0.5; t.y = o.lugar[1] + 0.5; t.path = null; G.Vg.setTask(t, { type: 'furto', house: r.id, pri: 2.05, st: 0, kind: 'furto' }); };
         go();
         const before = (S.crimes || []).filter(q => q.thief === o.thief).length;
-        let crime = null, tries = 1;
+        let crime = null, tries = 1, left = ''; const took = [];
         for (let k = 0; k < 900 && !crime && on(); k++) {
-          if (!(t.task && t.task.type === 'furto')) { if (t.jail || tries >= 4) break; tries++; go(); }
+          if (!(t.task && t.task.type === 'furto')) { took.push(t.task ? t.task.type : 'nada'); if (t.jail || tries >= 4) break; tries++; go(); }
           // (the guard of the feast by the door when the thief reaches in: the feast passing by)
+          // (the case's guard called away from the feast before the theft — an emergency, a beast at the town, takes him, as the world
+          // does: in the world of the L-662, seed 7, the jól's guard went to fight a beast 0,1 s after it began —: the guard of the case
+          // is then another of the feast, chosen as at its start, T-598)
+          if (t.task && t.task.type === 'furto' && t.task.st === 2 && t.actT >= 2.7 && !inFest(g) && !left) {
+            const cw = crowdNow(); const g2 = cw.find(law) || cw[0];
+            if (g2) { left = `${g.name} saiu da festa antes do roubo (${g.task ? g.task.type : 'sem afazer'}): o guarda do caso é ${g2.name}${law(g2) ? '' : ', feito vigia'}`; if (!law(g2)) g2.role = 'vigia'; g = g2; g.hunt = 0; }
+          }
           if (t.task && t.task.type === 'furto' && t.task.st === 2 && t.actT >= 2.7 && inFest(g)) { g.x = o.lugar[0] + 0.5; g.y = o.lugar[1] + 0.5; g.path = null; g.inside = 0; g.sleeping = false; }
           G.debug.step(0.1);
           const l = (S.crimes || []).filter(q => q.thief === o.thief); if (l.length > before) crime = l[l.length - 1];
         }
-        if (!crime) return { skip: `o roubo não aconteceu durante a festa (${key}; ${tries} tentativas; o ladrão: ${t.task ? t.task.type + '/' + t.task.st : 'sem tarefa'}; a festa ${on() ? 'continua' : 'acabou'})` };
+        if (!crime) return { skip: `o roubo não aconteceu durante a festa (${key}; ${tries} tentativas; o ladrão: ${t.task ? t.task.type + '/' + t.task.st : 'sem tarefa'}, levado por: ${took.join(', ') || 'nada'}; a festa ${on() ? 'continua' : 'acabou'})${o.swap ? '; ' + o.swap : ''}` };
         const viu = crime.seen.includes(g.id), caca = g.hunt === crime.id;
         // (who arrests may be another of the law who knew of it — a witness at the feast, or one a witness told —: the rule is the
         // arrest after the feast; in a life with nine witnesses another guard of the feast got to the thief first, T-462. And the
@@ -350,10 +372,10 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
         }
         const c = (S.crimes || []).find(q => q.id === crime.id) || crime; const who = S.villagers.get(c.by);
         const bad = QA.check().filter(x => x.sys === 'urb' && x.sev <= 3).map(x => x.sev + ' ' + x.msg);
-        return { key, how, tries, seen: crime.seen.length, viu, caca, saiu, fim, preso, presoNaFesta, byFest: festAt.has(c.by), by: c.by === g.id, knew: knew.has(c.by), who: who ? `${who.name} (${who.role}${crime.seen.includes(who.id) ? ', que viu' : ', a quem contaram'})` : '?', bad };
+        return { swap: o.swap, key, how: how + (left ? '; ' + left : ''), tries, seen: crime.seen.length, viu, caca, saiu, fim, preso, presoNaFesta, byFest: festAt.has(c.by), by: c.by === g.id, knew: knew.has(c.by), who: who ? `${who.name} (${who.role}${crime.seen.includes(who.id) ? ', que viu' : ', a quem contaram'})` : '?', bad };
       }, f8);
       ok('8 o roubo na noite da festa (D-126): o guarda que viu prende depois dela', !r8.skip && r8.viu && r8.caca && !r8.saiu && r8.preso !== null && r8.knew && !r8.bad.length && (r8.presoNaFesta ? !r8.byFest : r8.fim !== null && r8.preso >= r8.fim),
-        r8.skip || `${r8.key}: ${r8.how}; o roubo na ${r8.tries}ª tentativa, ${r8.seen} testemunha${r8.seen > 1 ? 's' : ''} — o guarda ${r8.viu ? 'viu' : 'NÃO VIU'}, ${r8.caca ? 'guardou o caso' : 'NÃO GUARDOU o caso'} e ${r8.saiu ? 'SAIU DA FESTA' : 'ficou na festa'}; a festa acabou ${r8.fim === null ? 'NUNCA' : r8.fim + ' s depois'}; ${r8.preso === null ? 'o ladrão NÃO FOI PRESO' : r8.presoNaFesta ? (r8.byFest ? `preso NA FESTA (${r8.preso} s) POR UM DA FESTA: ${r8.who}` : `preso durante a festa (${r8.preso} s) por quem não estava nela: ${r8.who}`) : `preso ${Math.round((r8.preso - r8.fim) * 10) / 10} s depois dela, ${r8.by ? 'pelo guarda que viu' : r8.knew ? 'por outro da lei que sabia: ' + r8.who : 'POR QUEM NÃO SABIA: ' + r8.who}`}${r8.bad.length ? '; o verificador: ' + r8.bad.slice(0, 2).join('; ') : ''}`);
+        r8.skip || `${r8.key}: ${r8.swap ? r8.swap + '; ' : ''}${r8.how}; o roubo na ${r8.tries}ª tentativa, ${r8.seen} testemunha${r8.seen > 1 ? 's' : ''} — o guarda ${r8.viu ? 'viu' : 'NÃO VIU'}, ${r8.caca ? 'guardou o caso' : 'NÃO GUARDOU o caso'} e ${r8.saiu ? 'SAIU DA FESTA' : 'ficou na festa'}; a festa acabou ${r8.fim === null ? 'NUNCA' : r8.fim + ' s depois'}; ${r8.preso === null ? 'o ladrão NÃO FOI PRESO' : r8.presoNaFesta ? (r8.byFest ? `preso NA FESTA (${r8.preso} s) POR UM DA FESTA: ${r8.who}` : `preso durante a festa (${r8.preso} s) por quem não estava nela: ${r8.who}`) : `preso ${Math.round((r8.preso - r8.fim) * 10) / 10} s depois dela, ${r8.by ? 'pelo guarda que viu' : r8.knew ? 'por outro da lei que sabia: ' + r8.who : 'POR QUEM NÃO SABIA: ' + r8.who}`}${r8.bad.length ? '; o verificador: ' + r8.bad.slice(0, 2).join('; ') : ''}`);
     }
   }
   const news = await page.evaluate(() => G.S.history.filter(h => /barraco|roub|prend|cadeia|horta|estivador|caixa|taverna|cela/i.test(h.txt)).slice(-8).map(h => h.d + ': ' + h.txt));
