@@ -80,12 +80,28 @@ const reachT = (set, b) => sidesOf(b).some(p => W.townReaches(set, p[0], p[1]));
 G.inSim++;
 
 // ---------------- c1 and c2: the islet, without and with a save right after the cut ----------------
+// (the town: the most people of all with a free builder, a store and a forager or a woodcutter free on its streets — the one the
+// L-389 swaps with an islet's builder, so that the town has its builder of the streets at that very count. In the cidade of the
+// generation 19 no town has one — some ten grown in each, every one in a trade —: Mênfis's islet builders were left with no
+// trade, and the board gave its few spare hands to the other trades it lacked, «construtores das ruas: -». The world of c1 to c3:
+// the one asked for, else the cidade and, with no such town in it, the first ready world with one — the line says which)
+const swapper = s => [...S.villagers.values()].some(v => v.set === s.id && (v.role === 'coletor' || v.role === 'lenhador') && free(v) && W.reachesTown(v, s));
+const swapTown = () => [...S.settlements.values()].filter(s => builders(s).some(free) && V.dropoffs(s.id).length && swapper(s)).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0] || null;
+let snapSwap = snap, worldSwap = world; const triedSwap = [];
+if (!swapTown() && !process.argv[2]) {
+  triedSwap.push(world);
+  for (const k of ['metropole', 'mega', 'mundial', 'anos100', 'anos500', 'anos1000'].filter(k => k !== world)) { M.pronto(k); S = G.S; M.viver(2); if (swapTown()) { snapSwap = G.Save.serialize(); worldSwap = k; break; } triedSwap.push(k); }
+  if (worldSwap === world) snapSwap = null;
+}
+const freshSwap = () => { M.reseed(4242); G.Save.apply(JSON.parse(snapSwap || snap)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); S = G.S; S.time = 0.3; G.Politics.divinePeace(); G.inSim = Math.max(G.inSim || 0, 1); said = []; };
+const whereSwap = worldSwap !== world ? ` (mundo ${worldSwap}; no ${triedSwap.join(', ')}, nenhuma cidade com coletor ou lenhador livre)` : '';
 let after1 = null;
 for (const saved of [false, true]) {
-  fresh(); const B = base();
-  const set0 = pickTown(); const at = set0 && islet(set0);
+  freshSwap(); const B = base();
+  const set0 = snapSwap === null ? null : swapTown();
+  const at = set0 && islet(set0);
   let info = '', pass = false;
-  if (!set0) info = 'nenhuma cidade com construtor livre e armazém';
+  if (!set0) info = `nenhuma cidade com construtor livre, armazém e um coletor ou lenhador livre nas ruas em ${triedSwap.join(', ') || world}`;
   else if (!at) info = `${set0.name}: nenhum chão para a ilhota em volta`;
   else {
     const was = flood(at[0], at[1]); const gone = strand(set0, at).map(v => v.id);
@@ -122,7 +138,7 @@ for (const saved of [false, true]) {
     let moved = false; live(600, () => { look(); const o = site(bid); moved = !o || o.built || o.progress > p0 + 1e-6; return moved; });
     const o = site(bid);
     pass = town && cut && held.length > 0 && left.length === held.length && reach.length > 0 && moved && workers.size > 0 && !strangers.size;
-    info = `${set.name}: ${gone.length} construtor(es) na ilhota (${names(roleOf(gone))}) ${cut ? 'sem caminho para a obra' : 'AINDA alcançando a obra'}${saved ? ', salvo e carregado logo depois do corte' : ''}; na conta dos ofícios (${tSwap} s), ${left.length} de ${held.length} ainda na ilhota trocaram de ofício (${heldRoles.join(', ') || '-'}); construtores das ruas: ${names(named)} (${reach.length} alcançam a obra); ${b ? `${b.type}#${bid}${town ? '' : ' FORA das ruas'}` : 'nenhuma obra'}: ${o ? (o.built ? 'pronta' : `progresso ${Math.round(p0 * 100)}% → ${Math.round(o.progress * 100)}%`) : 'saiu do mundo'}, com ${names(roleOf([...workers]))}${strangers.size ? ` (${names(roleOf([...strangers]))} DA ILHOTA, sem caminho)` : ''}`;
+    info = `${set.name}${whereSwap}: ${gone.length} construtor(es) na ilhota (${names(roleOf(gone))}) ${cut ? 'sem caminho para a obra' : 'AINDA alcançando a obra'}${saved ? ', salvo e carregado logo depois do corte' : ''}; na conta dos ofícios (${tSwap} s), ${left.length} de ${held.length} ainda na ilhota trocaram de ofício (${heldRoles.join(', ') || '-'}); construtores das ruas: ${names(named)} (${reach.length} alcançam a obra); ${b ? `${b.type}#${bid}${town ? '' : ' FORA das ruas'}` : 'nenhuma obra'}: ${o ? (o.built ? 'pronta' : `progresso ${Math.round(p0 * 100)}% → ${Math.round(o.progress * 100)}%`) : 'saiu do mundo'}, com ${names(roleOf([...workers]))}${strangers.size ? ` (${names(roleOf([...strangers]))} DA ILHOTA, sem caminho)` : ''}`;
     const bad = newBad(B); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
     if (said.length) { pass = false; info += obrasSaid(); }
     if (!saved) after1 = { was, gone, sid, bid };
@@ -143,7 +159,7 @@ for (const saved of [false, true]) {
     const works = [...S.buildings.values()].filter(b => b.set === set.id && !b.built && b.type !== 'ruin' && reachT(set, b));
     const lost = works.length ? builders(set).filter(v => free(v) && !works.some(b => reachV(v, b))) : [];
     const bad = newBad(B3);
-    ok('c3 a água vai embora: sem vai e vem', !twice.length && !lost.length && !bad.length && !said.length, `${set.name}, sem a ilhota: em 60 s, ${changes.size} troca(s) de ofício na cidade, ${twice.length ? `${names(twice)} trocaram DUAS vezes` : 'ninguém duas vezes'}; ${works.length} obra(s) das ruas, ${lost.length ? `${names(lost)} SEM caminho a elas` : 'todo construtor livre as alcança'}${bad.length ? ' — o verificador: ' + bad.join(' · ') : ''}${obrasSaid()}`);
+    ok('c3 a água vai embora: sem vai e vem', !twice.length && !lost.length && !bad.length && !said.length, `${set.name}${whereSwap}, sem a ilhota: em 60 s, ${changes.size} troca(s) de ofício na cidade, ${twice.length ? `${names(twice)} trocaram DUAS vezes` : 'ninguém duas vezes'}; ${works.length} obra(s) das ruas, ${lost.length ? `${names(lost)} SEM caminho a elas` : 'todo construtor livre as alcança'}${bad.length ? ' — o verificador: ' + bad.join(' · ') : ''}${obrasSaid()}`);
     after1 = null;
   }
 }
@@ -200,9 +216,13 @@ for (const saved of [false, true]) {
     const was = new Map(); for (const i of ring) { was.set(i, S.type[i]); S.type[i] = G.T.DEEP; } S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); W.touchWalk();
     const left = [...S.buildings.values()].filter(b => b.set === s.id && G.BDEF[b.type] && (b.built ? G.BDEF[b.type].dropoff : b.type === 'campfire') && W.townReaches(s, ...V.frontTile(b))).length;
     const d = Vg.door(h); const houseCut = !W.townReaches(s, d[0], d[1]);
-    tried.push(`${s.name}/${q.name}: ${left ? left + ' armazém(ns) ainda nas ruas' : houseCut ? 'cortados' : 'a casa não cortou'}`);
+    // (and no builder whose house the water leaves across walks, from his door, to a work the streets reach: the cut is the case
+    // only where it cuts — who reaches a work of the streets stays its builder, by the rule, L-389)
+    const works = [...S.buildings.values()].filter(b => b.set === s.id && !b.built && b.type !== 'ruin' && reachT(s, b));
+    const leak = builders(s).filter(o => free(o) && homeOf(o)).filter(o => { const dd = Vg.door(homeOf(o)); return !W.townReaches(s, dd[0], dd[1]) && works.some(b => sidesOf(b).some(p => W.canWalk(dd[0], dd[1], p[0], p[1], false))); });
+    tried.push(`${s.name}/${q.name}: ${left ? left + ' armazém(ns) ainda nas ruas' : !houseCut ? 'a casa não cortou' : leak.length ? `${names(leak)} de casa ainda alcança(m) uma obra das ruas` : 'cortados'}`);
     for (const [i, t] of was) S.type[i] = t; S.typeVer++; W.invalidateLand(); W.touchWalk();
-    if (!left && houseCut) { C = { sid, qid }; break; }
+    if (!left && houseCut && !leak.length) { C = { sid, qid }; break; }
   }
   fresh(); const B = base();
   const set = C ? S.settlements.get(C.sid) : null; let pass = false, info = '';
@@ -241,9 +261,14 @@ for (const saved of [false, true]) {
     // (the count of the trades at once, as in the c1: the far builder's every errand fails and the world sets him on the shore
     // within seconds — the count every 4 s came after it —; at the count he gives his trade to one of the streets, T-337)
     V.forceUpdate();
+    // (the trades at that count — the case: who stands across gives his trade there. The world brings them back to the streets
+    // in its own time — the strays set on the shore, a feast that calls them, L-306 —, and back there the board makes a builder
+    // of whom it will: in the cidade of the generation 19 Tenochtitlan lit its fire at 370 s, and Tochtli, at the feast on the
+    // streets at 317 s, was its builder again at 320 s and built it; read at the end, the case took him for one who stayed across)
+    const atCount = stuck.map(v => v.role || '-'); const gave = stuck.every(v => v.role !== 'construtor');
     // (who built it: the ones on a task on it who could walk to it — one from the far side may take it in the seconds before the
-    // town counts its builders again, and fail his way to it)
-    let lit = null; const t0 = S.clock; const workers = new Set();
+    // town counts its builders again, and fail his way to it; one who walks to it from across is a way the cut left open)
+    let lit = null; const t0 = S.clock; const workers = new Set(), across1 = new Set();
     // (what the hands set down with no store within reach — L-406: a builder with wood in the hands never built the fire —
     // is picked up when the fire stands, by one who reaches it and takes it there, L-408: before, it lay there for ever)
     const down = []; const book = e => { if (e[8] === 'pousou' && !e[7] && String(e[4]).startsWith('g:')) down.push(+String(e[4]).slice(2)); };
@@ -253,16 +278,15 @@ for (const saved of [false, true]) {
     const gone = () => down.every(id => { const o = pile(id); return !o || !W.townReaches(set, o.x, o.y); });
     const across = () => down.filter(id => { const o = pile(id); return o && !W.townReaches(set, o.x, o.y); }).length;
     D.onMove.push(book);
-    if (cut) live(900, () => { const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (lit) for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === lit.id && reachV(v, lit)) workers.add(v.id); return !!(lit && lit.built); });
+    if (cut) live(900, () => { const n = reached().find(b => !fire0.has(b.id)); if (n && !lit) lit = n; if (lit) for (const v of S.villagers.values()) if (v.task && v.task.type === 'build' && v.task.id === lit.id && reachV(v, lit)) { workers.add(v.id); if (far.includes(v.id) && !W.reachesTown(v, set)) across1.add(v.id); } return !!(lit && lit.built); });
     const tLit = Math.round(S.clock - t0); let tUp = -1;
     if (lit && lit.built && down.length) { const t1 = S.clock; live(300, gone); if (gone()) tUp = Math.round(S.clock - t1); }
     D.onMove.splice(D.onMove.indexOf(book), 1);
-    const helped = [...workers].filter(id => far.includes(id));
     // (and the builders left on the far side gave the trade to one of the streets, at the count — L-389: a town of two builders
-    // has one on its streets, and the fire would stand without the count's rule)
-    const gave = stuck.every(v => v.role !== 'construtor');
+    // has one on its streets, and the fire would stand without the count's rule —: gave, above)
+    const helped = [...across1]; const back = [...workers].filter(id => far.includes(id) && !across1.has(id));
     pass = cut && stuck.length > 0 && gave && !!lit && lit.built && !helped.length && gone();
-    info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : !stuck.length ? `${set.name}: nenhum construtor com a casa do outro lado da água (${q0 ? `a casa de ${q0.name} não ficou cortada` : 'nenhum construtor livre com casa'})` : `${set.name}, ${stores.length} armazém(ns) e a casa de ${q0.name} cortados pela água (${moved} tirado(s) de cima da água antes); ${stuck.length} construtor(es) em casa do outro lado (${names(stuck)}), deixados lá (agora ${stuck.map(v => v.role).join(', ')}${gave ? '' : ' — NÃO deixaram o ofício na conta'}): ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${tLit} s, com ${names(roleOf([...workers]))}${helped.length ? ` (${names(roleOf(helped))} DO OUTRO LADO, por um caminho que o corte não fechou)` : ''}` : 'NENHUMA fogueira nova do lado das ruas em 900 s'}; carga pousada sem armazém ao alcance: ${down.length}${down.length ? (gone() ? `, apanhada toda a das ruas${tUp >= 0 ? ' ' + tUp + ' s depois da fogueira' : ''}` : ', NÃO apanhada (ainda no chão das ruas)') : ''}${across() ? ` (${across()} do outro lado da água, ficou lá)` : ''}`;
+    info = !cut ? `a água em volta dos ${stores.length} armazéns de ${set.name} não os cortou das ruas` : !stuck.length ? `${set.name}: nenhum construtor com a casa do outro lado da água (${q0 ? `a casa de ${q0.name} não ficou cortada` : 'nenhum construtor livre com casa'})` : `${set.name}, ${stores.length} armazém(ns) e a casa de ${q0.name} cortados pela água (${moved} tirado(s) de cima da água antes); ${stuck.length} construtor(es) em casa do outro lado (${names(stuck)}), deixados lá (na conta: ${atCount.join(', ')}${gave ? '' : ' — NÃO deixaram o ofício'}; agora ${stuck.map(v => v.role).join(', ')}): ${lit ? `${lit.type}#${lit.id} nova, ${lit.built ? 'acesa' : 'AINDA em obra'} em ${tLit} s, com ${names(roleOf([...workers]))}${helped.length ? ` (${names(roleOf(helped))} DO OUTRO LADO, por um caminho que o corte não fechou)` : ''}${back.length ? ` (${names(roleOf(back))} de volta às ruas pelo mundo antes)` : ''}` : 'NENHUMA fogueira nova do lado das ruas em 900 s'}; carga pousada sem armazém ao alcance: ${down.length}${down.length ? (gone() ? `, apanhada toda a das ruas${tUp >= 0 ? ' ' + tUp + ' s depois da fogueira' : ''}` : ', NÃO apanhada (ainda no chão das ruas)') : ''}${across() ? ` (${across()} do outro lado da água, ficou lá)` : ''}`;
     // (a town cut from its stores for days is the hunger rule's own case, S1 — the fome.js h5 —: not this case's to judge)
     const bad = newBad(B, new Set(['fome'])); if (bad.length) { pass = false; info += ` — o verificador: ${bad.join(' · ')}`; }
     if (said.length) { pass = false; info += obrasSaid(); }
