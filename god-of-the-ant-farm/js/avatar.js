@@ -124,7 +124,12 @@
   // after each step: the building the body is in (or on the doorstep of), its storey, the flight under it; the world's record
   // of it — v.inside while within its walls, asked of the world in its step; the storey, with the body's record (Possess.level)
   function indoorAfter(v) {
-    const ins = indoorAt(b.X, b.Z);
+    let ins = indoorAt(b.X, b.Z);
+    // (the plan made over under the body — a work done, the house become another —: never left in what the new plan has where it
+    // stood, a wall or a piece; up beside it, where the feet stand and the door's walk reaches, as a game loaded with the plan made
+    // over has it (L-391). The hut#2221 of the generation-19 «cidade», done into a house with the body inside: a piece of the
+    // house where it stood, and the body in it — L-xxD)
+    if (ins && ins.shell && !ins.walk && ins.door < 0 && b.loco === 'ground' && !b.seat && offBed()) ins = indoorAt(b.X, b.Z); // (a door shut on it is the door's: never a piece)
     if (!ins) { b.inB = null; b.inP = null; b.lv = undefined; b.stair = null; b.stairF = 0; b.inShell = false; }
     else { b.inB = ins.b; b.inP = ins.p; b.lv = ins.lv; b.inShell = ins.shell; b.stair = G.Space.stairIn(ins.p, ins.lv, ins.x, ins.z); b.stairF = b.stair ? stairF(b.stair, ins.x, ins.z) : 0; b.crawl = (ins.p.levels.find(q => q.lv === ins.lv) || {}).kind === 'jirau'; }
     // (an open ground — a square, a fair — is walked on as the town's: the world has the body in it only by a place of it,
