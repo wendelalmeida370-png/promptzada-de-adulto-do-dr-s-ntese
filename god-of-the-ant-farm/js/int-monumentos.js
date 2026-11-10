@@ -655,11 +655,14 @@
     P.level(0, y0, 3.0, 'chao', sh); P.entryLv = 0;
     P.level(1, H, 3.0, 'chao', T);
     wayIn(P, sh[0], sh[2], sh[3], [[r2(cu - sw / 2 - 2), r2(cu + sw / 2 + 2)]]);
-    // (the top's parapet, open where the stair comes up; the stair from the square's front to the top's front edge)
+    // (the top's parapet, open where the stair comes up; the stair from the square's front to the top's front edge, on the form's
+    // own treads — the steps the 3D lays, D-093: on a slope across them the feet stood up to a step under the drawn treads, 24 cm
+    // on the Templo Mayor of Tenochtitlan in the mundial of the generation 18)
+    const st = F.els.find(e => e.k === 'escada'); if (!st) { P.errs.push('a forma do Templo Mayor sem a escada'); return; }
     const pw = (a, b) => P.wall(1, a.map(r2), b.map(r2), pt, 0.9, 0, 'parapeito'), h2 = pt / 2;
     pw([T[0], T[1] + h2], [T[2], T[1] + h2]); pw([T[0] + h2, T[1]], [T[0] + h2, T[3]]); pw([T[2] - h2, T[1]], [T[2] - h2, T[3]]);
     pw([T[0], T[3] - h2], [cu - sw / 2, T[3] - h2]); pw([cu + sw / 2, T[3] - h2], [T[2], T[3] - h2]);
-    P.stair('escada', 0, 1, [r2(cu - sw / 2), A.stair.top, r2(cu + sw / 2), A.stair.foot], 0, -1, null);
+    P.stair('escada', 0, 1, [r2(cu - sw / 2), A.stair.top, r2(cu + sw / 2), A.stair.foot], 0, -1, null, { treads: G.Forma.flight(st).map(q => ({ r: q.r.map(r2), y: q.y1 })) });
     if (P.inside()) return;
     // (the square's four sides; the top round the shrines — the platform before them, its sides, behind them)
     const fr = P.room(0, 'praca', [sh[0], r2(cv + e0), sh[2], sh[3]], 1);
@@ -688,11 +691,13 @@
     P.level(0, y0, 3.0, 'chao', sh); P.entryLv = 0;
     P.level(1, yt, 3.0, 'chao', T);
     wayIn(P, sh[0], sh[2], sh[3], [[r2(cu - sw / 2 - 2), r2(cu + sw / 2 + 2)]]);
-    // (the terrace's parapet, open where the stair comes up; the stair from the court to the terrace's front edge)
+    // (the terrace's parapet, open where the stair comes up; the stair from the court to the terrace's front edge, on the form's
+    // own treads, as the Templo Mayor's)
+    const st = F.els.find(e => e.k === 'escada'); if (!st) { P.errs.push('a forma do zigurate sem a escada'); return; }
     const pw = (a, b) => P.wall(1, a.map(r2), b.map(r2), pt, 0.9, 0, 'parapeito'), h2 = pt / 2;
     pw([T[0], T[1] + h2], [T[2], T[1] + h2]); pw([T[0] + h2, T[1]], [T[0] + h2, T[3]]); pw([T[2] - h2, T[1]], [T[2] - h2, T[3]]);
     pw([T[0], T[3] - h2], [cu - sw / 2, T[3] - h2]); pw([cu + sw / 2, T[3] - h2], [T[2], T[3] - h2]);
-    P.stair('escada', 0, 1, [r2(cu - sw / 2), A.stair.top, r2(cu + sw / 2), A.stair.foot], 0, -1, null);
+    P.stair('escada', 0, 1, [r2(cu - sw / 2), A.stair.top, r2(cu + sw / 2), A.stair.foot], 0, -1, null, { treads: G.Forma.flight(st).map(q => ({ r: q.r.map(r2), y: q.y1 })) });
     if (P.inside()) return;
     // (the court's four sides; the terrace round the fourth level — before it, its sides, behind it)
     const fr = P.room(0, 'praca', [sh[0], r2(cv + e0), sh[2], sh[3]], 1);

@@ -339,15 +339,16 @@ function testeA() {
     ok('A4 os pés pelo Coliseu: da rua pelos arcos às passagens e ao subsolo, na areia, no pódio, subindo um corredor das fileiras e pelo lance do fundo até o trono e a corte do camarote', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
   }
   // ---------------------------------------------------------------- A5 the world: the god's hand in a Roman town
-  // (the town by the game's rule, never by its name — handFor, T-505: the Roman capital, while the hand finds its lot there)
+  // (the town by the game's rule, never by its name — handFor, T-505: the Roman capital, while the hand finds its lot there —, in
+  // the metrópole while the Roman people has a town in it: mundoDe, T-604)
   {
-    const out = [];
-    M.pronto('metropole');
+    const out = []; const w = mundoDe('romano');
+    M.pronto(w || 'metropole');
     const bad = what => { const q = globalThis.QA.check().filter(x => x.sev <= 2 || x.sys === 'monumental' || x.sys === 'escala'); if (q.length) out.push(`${what}: ${q.slice(0, 2).map(x => `${x.sys} S${x.sev} ${x.msg.slice(0, 90)}`).join(' · ')}`); };
     bad('antes');
     const hf = handFor('romano', 'maravilha', 'maravilha'), set = hf.set, b = hf.b;
     let info = '';
-    if (!set) out.push('sem cidade romana na metrópole');
+    if (!set) out.push('sem cidade romana em mundo pronto nenhum');
     else if (!b) out.push(`a mão do deus não achou nem abriu lote de 10 casas para o povo romano (${set.name})`);
     else {
       const p = In.plan(b), F = Fo.of(b.type, b.style, b.w);
@@ -358,14 +359,14 @@ function testeA() {
       M.salvarCarregar(); const b2 = G.S.buildings.get(b.id); const p2 = b2 && In.plan(b2); if (!p2 || !p2.ok || p2.sig !== sig || b2.w !== 10 || b2.esc !== 'maravilha') out.push('depois do save: outro prédio ou outra planta'); bad('carregado');
       G.inSim++; try { G.Village.damageBuilding(G.S.buildings.get(b.id), 1e6, 'quake'); } finally { G.inSim--; }
       const b3 = G.S.buildings.get(b.id); if (b3 && b3.type !== 'ruin') out.push('o deus derrubou e ficou de pé'); bad('derrubado'); M.viver(1); bad('a ruína vivendo');
-      info = `${set.name}: #${b.id} ${b.w}×${b.h} casas a ${G.dist(b.x + b.w / 2, b.y + b.h / 2, set.cx, set.cy).toFixed(1)} casas do centro${goneTxt(hf)}, ${p && p.cap.watch} assentos; vivo, salvo e carregado (a mesma planta), derrubado: o verificador limpo`;
+      info = `${set.name}: #${b.id} ${b.w}×${b.h} casas a ${G.dist(b.x + b.w / 2, b.y + b.h / 2, set.cx, set.cy).toFixed(1)} casas do centro${goneTxt(hf)}, ${p && p.cap.watch} assentos; vivo, salvo e carregado (a mesma planta), derrubado: o verificador limpo${ondeTxt(w, 'romano')}`;
     }
     if (!M.limpo()) { const e = M.erros(); out.push(`erros: ${JSON.stringify(e.mod)} ${e.console.slice(0, 2).join(' | ')}`); }
     ok('A5 o Coliseu pela mão do deus numa cidade romana (a metrópole; a cidade pela regra do jogo): de pé, vivendo, salvo e carregado, derrubado — o verificador limpo', !out.length, out.slice(0, 3).join(' · ') || info);
   }
   // ---------------------------------------------------------------- A6 the checker
   {
-    const out = []; M.pronto('metropole'); const { b } = handFor('romano', 'maravilha', 'maravilha');
+    const out = []; M.pronto(mundoDe('romano') || 'metropole'); const { b } = handFor('romano', 'maravilha', 'maravilha');
     const mine = () => globalThis.QA.check().filter(q => q.sys === 'monumental');
     const clean = b ? mine() : []; if (!b) out.push('sem o Coliseu'); else if (clean.length) out.push(`com a planta inteira: ${clean.map(q => q.msg.slice(0, 80)).join(' · ')}`);
     const plan0 = In.plan; In.plan = x => { const p = plan0(x); return x === b && p ? Object.assign({}, p, { cap: Object.assign({}, p.cap, { watch: 120 }) }) : p; };
@@ -746,7 +747,8 @@ function testeC() {
       const p = Sp.planNow(b); if (!p || !p.ok) { out.push(`${style} n ${n}: sem planta (${p ? p.errs.slice(0, 2).join('; ') : '—'})`); continue; }
       const F = Fo.of('maravilha', style, n), L = n * TL, pl = Sp.plinth(b); let worst = 0, at = '', step = 0, shut = 0, shutAt = '', pts = 0, flight = 0;
       // (the legs, each on its storey, the floor the form has under each point: on a flight, the top of the tread under it — the
-      // feet go up its slope, within a step under the treads' edges, never over them)
+      // feet go up its slope, within a step under the treads' edges, never over them; on the Templo Mayor's, whose plan has the
+      // form's treads, on each of them — but within a hair of an edge, where the plan's are rounded to the centimetre: L-665)
       let legs, floor, treads;
       if (style === 'egipcio') { const A = F.amphi.piramide, cu = A.cu, K = A.chamber, sv = A.sarco[3] + 0.55, fv = A.face + (A.temple ? 0.75 : 1.0), al = A.temple && A.temple.altar;
         treads = F.els.filter(e => e.oculto && e.degrau).map(e => ({ r: e.r, y1: e.y1 }));
@@ -764,7 +766,9 @@ function testeC() {
           [0, [[cu - 1.5, B.stair.foot - 0.05], [cu - 1.5, B.stair.top + 0.05]], 1],
           [1, [[cu - 1.5, T[3] - 0.35], [cu - 1.5, vl], [lit[0].c[0], vl], [l0, vl], [l0, back], [l1, back], [l1, vl], [lit[1].c[0], vl], [cu + 1.5, vl], [cu + 1.5, fr], [Math.max(...doors), fr], [Math.min(...doors), fr]]]];
         floor = lv => (lv === 0 ? F.els.find(e => e.k === 'bloco' && e.piso).y1 : B.H); }
-      const tread = (u, z) => { let y = null; for (const q of treads) if (u >= q.r[0] && u <= q.r[2] && z >= q.r[1] && z <= q.r[3] && (y === null || q.y1 > y)) y = q.y1; return y; };
+      // (the top of the highest tread under a point — a hair either side along the flight: the plan's are rounded to the
+      // centimetre, and at a tread's edge the next one's is the feet's, as W4's)
+      const tread = (u, z) => { let y = null; for (const q of treads) if (u >= q.r[0] && u <= q.r[2] && z >= q.r[1] - 0.01 && z <= q.r[3] + 0.01 && (y === null || q.y1 > y)) y = q.y1; return y; };
       const rise = treads.length > 1 ? Math.abs(treads[1].y1 - treads[0].y1) : 0.3;
       for (const [lv, path, onFlight] of legs) { let prev = null;
         for (let k = 0; k < path.length - 1; k++) { const [u0, z0] = path[k], [u1, z1] = path[k + 1]; const len = Math.hypot(u1 - u0, z1 - z0), m = Math.max(1, Math.round(len / 0.02));
@@ -773,7 +777,9 @@ function testeC() {
             if (ins && !ins.walk) { shut++; if (!shutAt) shutAt = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; }
             if (prev !== null) step = Math.max(step, Math.abs(foot - prev)); prev = foot;
             if (!ins || !ins.shell) continue; // (the street before the way in)
-            if (onFlight) { const ty = tread(u, z); if (ty === null) continue; flight++; const d = foot - (pl.hi + ty + Sp.FLOOR_UP); if ((d > 0.03 || d < -rise - 0.03) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) no lance`; } continue; }
+            if (onFlight) { const ty = tread(u, z); if (ty === null) continue; flight++; const d = foot - (pl.hi + ty + Sp.FLOOR_UP);
+              const under = style === 'asteca' && !treads.some(q => Math.abs(z - q.r[1]) <= 0.011 || Math.abs(z - q.r[3]) <= 0.011) ? 0 : rise;
+              if ((d > 0.03 || d < -under - 0.03) && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) no lance`; } continue; }
             const d = foot - (pl.hi + floor(lv) + Sp.FLOOR_UP); if (Math.abs(d) > 0.03 && Math.abs(d) > Math.abs(worst)) { worst = d; at = `(${u.toFixed(2)}, ${z.toFixed(2)}) piso ${lv}`; } } } }
       if (worst || step > In.BODY.step + 0.01) out.push(`${style} n ${n}: os pés a ${worst.toFixed(2)} m da forma em ${at || '—'}, o maior degrau ${step.toFixed(2)} m`);
       if (shut) out.push(`${style} n ${n}: ${shut} pontos do caminho onde o corpo não passa (o primeiro ${shutAt})`);
@@ -783,50 +789,56 @@ function testeC() {
   }
   // ---------------------------------------------------------------- C5 the world: the god's hand in an Egyptian and an Aztec town
   // (each town by the game's rule, never by its name — handFor, T-505: Tebas, by its name, had no lot of 10 in the metrópole of
-  // the generation 15)
+  // the generation 15 —, in the ready world that has a town of its people, the metrópole first: mundoDe, T-604)
   const WORLD = ['egipcio', 'asteca'];
   {
     const out = [], said = [];
-    M.pronto('metropole');
     const bad = what => { const q = globalThis.QA.check().filter(x => x.sev <= 2 || x.sys === 'monumental' || x.sys === 'escala'); if (q.length) out.push(`${what}: ${q.slice(0, 2).map(x => `${x.sys} S${x.sev} ${x.msg.slice(0, 90)}`).join(' · ')}`); };
-    bad('antes'); const built = [];
-    for (const style of WORLD) {
-      const hf = handFor(style, 'maravilha', 'maravilha'), set = hf.set; if (!set) { out.push(`sem cidade ${style}`); continue; }
-      // (its people raises the wonder of its capital now, never the old one: the ladder's steps for it)
-      const steps = hf.steps; if (steps.includes('antiga') || !steps.includes('maravilha')) out.push(`${set.name}: os degraus da maravilha ${steps.join(', ')}`);
-      const b = hf.b; if (!b) { out.push(`a mão do deus não achou nem abriu lote de 10 casas para o povo ${style} (${set.name})`); continue; }
-      const p = In.plan(b), F = Fo.of(b.type, b.style, b.w);
-      if (b.w !== 10 || b.h !== 10 || b.esc !== 'maravilha' || !b.built || b.style !== style) out.push(`${set.name}: o prédio ${b.w}×${b.h} esc=${b.esc} ${b.style} pronto=${b.built}`);
-      if (!F || F.L !== b.w * 4 || !p || !p.ok || In.nOf(b.ip) !== b.w) out.push(`${set.name}: o lote, a forma e a planta: ${b.w * 4} m, ${F ? F.L : '—'} m, ${p && p.ok ? In.nOf(b.ip) * 4 + ' m' : 'sem planta'}`);
-      const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`${set.name} no mundo: ${fal.map(q => q.what).join('; ')}`);
-      built.push({ b, set, sig: p && p.sig, steps, gone: hf.gone });
+    const { grupos, sem } = porMundo(WORLD); for (const st of sem) out.push(`sem cidade ${st} em mundo pronto nenhum`);
+    for (const [w, styles] of grupos) {
+      M.pronto(w); bad('antes'); const built = [];
+      for (const style of styles) {
+        const hf = handFor(style, 'maravilha', 'maravilha'), set = hf.set;
+        // (its people raises the wonder of its capital now, never the old one: the ladder's steps for it)
+        const steps = hf.steps; if (steps.includes('antiga') || !steps.includes('maravilha')) out.push(`${set.name}: os degraus da maravilha ${steps.join(', ')}`);
+        const b = hf.b; if (!b) { out.push(`a mão do deus não achou nem abriu lote de 10 casas para o povo ${style} (${set.name})`); continue; }
+        const p = In.plan(b), F = Fo.of(b.type, b.style, b.w);
+        if (b.w !== 10 || b.h !== 10 || b.esc !== 'maravilha' || !b.built || b.style !== style) out.push(`${set.name}: o prédio ${b.w}×${b.h} esc=${b.esc} ${b.style} pronto=${b.built}`);
+        if (!F || F.L !== b.w * 4 || !p || !p.ok || In.nOf(b.ip) !== b.w) out.push(`${set.name}: o lote, a forma e a planta: ${b.w * 4} m, ${F ? F.L : '—'} m, ${p && p.ok ? In.nOf(b.ip) * 4 + ' m' : 'sem planta'}`);
+        const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`${set.name} no mundo: ${fal.map(q => q.what).join('; ')}`);
+        built.push({ b, set, sig: p && p.sig, steps, gone: hf.gone });
+      }
+      bad('de pé'); M.viver(5); bad('vivendo');
+      M.salvarCarregar(); for (const q of built) { const b2 = G.S.buildings.get(q.b.id); const p2 = b2 && In.plan(b2); if (!p2 || !p2.ok || p2.sig !== q.sig || b2.w !== 10 || b2.esc !== 'maravilha') out.push(`${q.set.name}: depois do save, outro prédio ou outra planta`); }
+      bad('carregado');
+      G.inSim++; try { for (const q of built) G.Village.damageBuilding(G.S.buildings.get(q.b.id), 1e6, 'quake'); } finally { G.inSim--; }
+      for (const q of built) { const b3 = G.S.buildings.get(q.b.id); if (b3 && b3.type !== 'ruin') out.push(`${q.set.name}: o deus derrubou e ficou de pé`); }
+      bad('derrubados'); M.viver(1); bad('as ruínas vivendo');
+      for (const q of built) said.push(`${q.set.name}: #${q.b.id} ${q.b.w}×${q.b.h} casas a ${G.dist(q.b.x + q.b.w / 2, q.b.y + q.b.h / 2, q.set.cx, q.set.cy).toFixed(1)} casas do centro${goneTxt(q)} (os degraus ${q.steps.join(', ')})${ondeTxt(w, q.b.style)}`);
     }
-    bad('de pé'); M.viver(5); bad('vivendo');
-    M.salvarCarregar(); for (const q of built) { const b2 = G.S.buildings.get(q.b.id); const p2 = b2 && In.plan(b2); if (!p2 || !p2.ok || p2.sig !== q.sig || b2.w !== 10 || b2.esc !== 'maravilha') out.push(`${q.set.name}: depois do save, outro prédio ou outra planta`); }
-    bad('carregado');
-    G.inSim++; try { for (const q of built) G.Village.damageBuilding(G.S.buildings.get(q.b.id), 1e6, 'quake'); } finally { G.inSim--; }
-    for (const q of built) { const b3 = G.S.buildings.get(q.b.id); if (b3 && b3.type !== 'ruin') out.push(`${q.set.name}: o deus derrubou e ficou de pé`); }
-    bad('derrubados'); M.viver(1); bad('as ruínas vivendo');
     if (!M.limpo()) { const e = M.erros(); out.push(`erros: ${JSON.stringify(e.mod)} ${e.console.slice(0, 2).join(' | ')}`); }
-    for (const q of built) said.push(`${q.set.name}: #${q.b.id} ${q.b.w}×${q.b.h} casas a ${G.dist(q.b.x + q.b.w / 2, q.b.y + q.b.h / 2, q.set.cx, q.set.cy).toFixed(1)} casas do centro${goneTxt(q)} (os degraus ${q.steps.join(', ')})`);
     ok('C5 as pirâmides pela mão do deus numa cidade egípcia e numa asteca (a metrópole; cada cidade pela regra do jogo): de pé, vivendo, salvas e carregadas, derrubadas — o verificador limpo', !out.length, out.slice(0, 3).join(' · ') || `${said.join(' · ')}; vivas, salvas e carregadas (a mesma planta), derrubadas: o verificador limpo`);
   }
   // ---------------------------------------------------------------- C6 the checker
+  // (each wonder in the world of its people's town, as in C5: the checker provoked there, and quiet again)
   {
-    const out = []; M.pronto('metropole'); const got = {};
-    for (const style of WORLD) got[style] = handFor(style, 'maravilha', 'maravilha').b;
+    const out = [], got = {}, hit = [];
     const mine = () => globalThis.QA.check().filter(q => q.sys === 'monumental');
-    if (!got.egipcio || !got.asteca) out.push('sem as duas maravilhas'); else if (mine().length) out.push(`com as plantas inteiras: ${mine().map(q => q.msg.slice(0, 80)).join(' · ')}`);
-    // (the king's chamber a metre off the form's; the top of the Templo Mayor with no priest before the shrines)
-    const plan0 = In.plan; let hit = [];
-    In.plan = x => { const p = plan0(x); if (!p) return p;
-      if (x === got.egipcio) return Object.assign({}, p, { levels: p.levels.map(l => (l.lv === 1 ? Object.assign({}, l, { y: l.y + 1 }) : l)) });
-      if (x === got.asteca) return Object.assign({}, p, { marks: (p.marks || []).filter(M2 => M2.use !== 'oficiar') });
-      return p; };
-    try { hit = got.egipcio && got.asteca ? mine() : []; } finally { In.plan = plan0; }
+    for (const [w, styles] of porMundo(WORLD).grupos) {
+      M.pronto(w); const here = {}; for (const style of styles) got[style] = here[style] = handFor(style, 'maravilha', 'maravilha').b;
+      if (mine().length) out.push(`com as plantas inteiras (${w}): ${mine().map(q => q.msg.slice(0, 80)).join(' · ')}`);
+      // (the king's chamber a metre off the form's; the top of the Templo Mayor with no priest before the shrines)
+      const plan0 = In.plan;
+      In.plan = x => { const p = plan0(x); if (!p) return p;
+        if (x === here.egipcio) return Object.assign({}, p, { levels: p.levels.map(l => (l.lv === 1 ? Object.assign({}, l, { y: l.y + 1 }) : l)) });
+        if (x === here.asteca) return Object.assign({}, p, { marks: (p.marks || []).filter(M2 => M2.use !== 'oficiar') });
+        return p; };
+      try { hit.push(...mine()); } finally { In.plan = plan0; }
+      if (mine().length) out.push(`de volta (${w}), o verificador não calou`);
+    }
+    if (!got.egipcio || !got.asteca) out.push('sem as duas maravilhas');
     const k1 = hit.find(q => q.sev === 1 && q.msg.includes('câmara')), k2 = hit.find(q => q.sev === 2 && q.msg.includes('oficiar'));
     if (!k1) out.push('com a câmara noutra altura o verificador calou'); if (!k2) out.push('sem os lugares de oficiar o verificador calou');
-    if (got.egipcio && got.asteca && mine().length) out.push('de volta, o verificador não calou');
     ok('C6 o verificador das pirâmides: pega a câmara noutra altura e o alto sem quem oficia, e cala quando elas voltam', !out.length, out.join(' · ') || `limpo; «${k1.msg.slice(0, 80)}»; «${k2.msg.slice(0, 80)}»; limpo de novo`);
   }
   // ---------------------------------------------------------------- C7 the places' table
@@ -1031,49 +1043,56 @@ function testeE() {
   }
   // ---------------------------------------------------------------- E5 the world: the god's hand in a Roman and a Greek town
   // (each town by the game's rule, never by its name — handFor, T-505: in the metrópole of the generation 15 the one lot of 10
-  // left, by Roma, served the Roman, and Argos, by its name, had none)
+  // left, by Roma, served the Roman, and Argos, by its name, had none —, in the ready world that has a town of its people, the
+  // metrópole first: mundoDe, T-604)
   const WORLD = ['romano', 'grego'];
   {
     const out = [], said = [];
-    M.pronto('metropole');
     const bad = what => { const q = globalThis.QA.check().filter(x => x.sev <= 2 || x.sys === 'monumental' || x.sys === 'escala'); if (q.length) out.push(`${what}: ${q.slice(0, 2).map(x => `${x.sys} S${x.sev} ${x.msg.slice(0, 90)}`).join(' · ')}`); };
-    bad('antes'); const built = [];
-    for (const style of WORLD) {
-      const hf = handFor(style, 'teatro', 'monumental'), set = hf.set; if (!set) { out.push(`sem cidade ${style}`); continue; }
-      const steps = hf.steps; if (steps.includes('antigo') || !steps.includes('teatro')) out.push(`${set.name}: os degraus do teatro ${steps.join(', ')}`);
-      const b = hf.b; if (!b) { out.push(`a mão do deus não achou nem abriu lote de 10 casas para o povo ${style} (${set.name})`); continue; }
-      const p = In.plan(b), F = Fo.of(b.type, b.style, b.w);
-      if (b.w !== 10 || b.esc !== 'monumental' || !b.built || b.style !== style) out.push(`${set.name}: o prédio ${b.w}×${b.h} esc=${b.esc} ${b.style} pronto=${b.built}`);
-      if (!F || F.L !== b.w * 4 || !p || !p.ok || In.nOf(b.ip) !== b.w) out.push(`${set.name}: o lote, a forma e a planta: ${b.w * 4} m, ${F ? F.L : '—'} m, ${p && p.ok ? In.nOf(b.ip) * 4 + ' m' : 'sem planta'}`);
-      const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`${set.name} no mundo: ${fal.map(q => q.what).join('; ')}`);
-      built.push({ b, set, sig: p && p.sig, steps, watch: p && p.cap.watch, gone: hf.gone });
+    const { grupos, sem } = porMundo(WORLD); for (const st of sem) out.push(`sem cidade ${st} em mundo pronto nenhum`);
+    for (const [w, styles] of grupos) {
+      M.pronto(w); bad('antes'); const built = [];
+      for (const style of styles) {
+        const hf = handFor(style, 'teatro', 'monumental'), set = hf.set;
+        const steps = hf.steps; if (steps.includes('antigo') || !steps.includes('teatro')) out.push(`${set.name}: os degraus do teatro ${steps.join(', ')}`);
+        const b = hf.b; if (!b) { out.push(`a mão do deus não achou nem abriu lote de 10 casas para o povo ${style} (${set.name})`); continue; }
+        const p = In.plan(b), F = Fo.of(b.type, b.style, b.w);
+        if (b.w !== 10 || b.esc !== 'monumental' || !b.built || b.style !== style) out.push(`${set.name}: o prédio ${b.w}×${b.h} esc=${b.esc} ${b.style} pronto=${b.built}`);
+        if (!F || F.L !== b.w * 4 || !p || !p.ok || In.nOf(b.ip) !== b.w) out.push(`${set.name}: o lote, a forma e a planta: ${b.w * 4} m, ${F ? F.L : '—'} m, ${p && p.ok ? In.nOf(b.ip) * 4 + ' m' : 'sem planta'}`);
+        const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`${set.name} no mundo: ${fal.map(q => q.what).join('; ')}`);
+        built.push({ b, set, sig: p && p.sig, steps, watch: p && p.cap.watch, gone: hf.gone });
+      }
+      bad('de pé'); M.viver(5); bad('vivendo');
+      M.salvarCarregar(); for (const q of built) { const b2 = G.S.buildings.get(q.b.id); const p2 = b2 && In.plan(b2); if (!p2 || !p2.ok || p2.sig !== q.sig || b2.w !== 10 || b2.esc !== 'monumental') out.push(`${q.set.name}: depois do save, outro prédio ou outra planta`); }
+      bad('carregado');
+      G.inSim++; try { for (const q of built) G.Village.damageBuilding(G.S.buildings.get(q.b.id), 1e6, 'quake'); } finally { G.inSim--; }
+      for (const q of built) { const b3 = G.S.buildings.get(q.b.id); if (b3 && b3.type !== 'ruin') out.push(`${q.set.name}: o deus derrubou e ficou de pé`); }
+      bad('derrubados'); M.viver(1); bad('as ruínas vivendo');
+      for (const q of built) said.push(`${q.set.name}: #${q.b.id} ${q.b.w}×${q.b.h} casas a ${G.dist(q.b.x + q.b.w / 2, q.b.y + q.b.h / 2, q.set.cx, q.set.cy).toFixed(1)} casas do centro${goneTxt(q)}, ${q.watch} assentos (os degraus ${q.steps.join(', ')})${ondeTxt(w, q.b.style)}`);
     }
-    bad('de pé'); M.viver(5); bad('vivendo');
-    M.salvarCarregar(); for (const q of built) { const b2 = G.S.buildings.get(q.b.id); const p2 = b2 && In.plan(b2); if (!p2 || !p2.ok || p2.sig !== q.sig || b2.w !== 10 || b2.esc !== 'monumental') out.push(`${q.set.name}: depois do save, outro prédio ou outra planta`); }
-    bad('carregado');
-    G.inSim++; try { for (const q of built) G.Village.damageBuilding(G.S.buildings.get(q.b.id), 1e6, 'quake'); } finally { G.inSim--; }
-    for (const q of built) { const b3 = G.S.buildings.get(q.b.id); if (b3 && b3.type !== 'ruin') out.push(`${q.set.name}: o deus derrubou e ficou de pé`); }
-    bad('derrubados'); M.viver(1); bad('as ruínas vivendo');
     if (!M.limpo()) { const e = M.erros(); out.push(`erros: ${JSON.stringify(e.mod)} ${e.console.slice(0, 2).join(' | ')}`); }
-    for (const q of built) said.push(`${q.set.name}: #${q.b.id} ${q.b.w}×${q.b.h} casas a ${G.dist(q.b.x + q.b.w / 2, q.b.y + q.b.h / 2, q.set.cx, q.set.cy).toFixed(1)} casas do centro${goneTxt(q)}, ${q.watch} assentos (os degraus ${q.steps.join(', ')})`);
     ok('E5 os teatros monumentais pela mão do deus numa cidade romana e numa grega (a metrópole; cada cidade pela regra do jogo): de pé, vivendo, salvos e carregados, derrubados — o verificador limpo', !out.length, out.slice(0, 3).join(' · ') || `${said.join(' · ')}; vivos, salvos e carregados (a mesma planta), derrubados: o verificador limpo`);
   }
   // ---------------------------------------------------------------- E6 the checker
+  // (each theatre in the world of its people's town, as in E5: the checker provoked there, and quiet again)
   {
-    const out = []; M.pronto('metropole'); const got = {};
-    for (const style of WORLD) got[style] = handFor(style, 'teatro', 'monumental').b;
+    const out = [], got = {}, hit = [];
     const mine = () => globalThis.QA.check().filter(q => q.sys === 'monumental');
-    if (!got.romano || !got.grego) out.push('sem os dois teatros'); else if (mine().length) out.push(`com as plantas inteiras: ${mine().map(q => q.msg.slice(0, 80)).join(' · ')}`);
-    // (the Roman's stage a metre off the form's; the Greek's rows seating 120)
-    const plan0 = In.plan; let hit = [];
-    In.plan = x => { const p = plan0(x); if (!p) return p;
-      if (x === got.romano) return Object.assign({}, p, { levels: p.levels.map(l => (l.lv === 1 ? Object.assign({}, l, { y: l.y + 1 }) : l)) });
-      if (x === got.grego) return Object.assign({}, p, { cap: Object.assign({}, p.cap, { watch: 120 }) });
-      return p; };
-    try { hit = got.romano && got.grego ? mine() : []; } finally { In.plan = plan0; }
+    for (const [w, styles] of porMundo(WORLD).grupos) {
+      M.pronto(w); const here = {}; for (const style of styles) got[style] = here[style] = handFor(style, 'teatro', 'monumental').b;
+      if (mine().length) out.push(`com as plantas inteiras (${w}): ${mine().map(q => q.msg.slice(0, 80)).join(' · ')}`);
+      // (the Roman's stage a metre off the form's; the Greek's rows seating 120)
+      const plan0 = In.plan;
+      In.plan = x => { const p = plan0(x); if (!p) return p;
+        if (x === here.romano) return Object.assign({}, p, { levels: p.levels.map(l => (l.lv === 1 ? Object.assign({}, l, { y: l.y + 1 }) : l)) });
+        if (x === here.grego) return Object.assign({}, p, { cap: Object.assign({}, p.cap, { watch: 120 }) });
+        return p; };
+      try { hit.push(...mine()); } finally { In.plan = plan0; }
+      if (mine().length) out.push(`de volta (${w}), o verificador não calou`);
+    }
+    if (!got.romano || !got.grego) out.push('sem os dois teatros');
     const k1 = hit.find(q => q.sev === 1 && q.msg.includes('palco')), k2 = hit.find(q => q.sev === 2 && q.msg.includes('assistir'));
     if (!k1) out.push('com o palco noutra altura o verificador calou'); if (!k2) out.push('com 120 assentos o verificador calou');
-    if (got.romano && got.grego && mine().length) out.push('de volta, o verificador não calou');
     ok('E6 o verificador dos teatros: pega o palco noutra altura e a plateia menor que o degrau, e cala quando eles voltam', !out.length, out.join(' · ') || `limpo; «${k1.msg.slice(0, 80)}»; «${k2.msg.slice(0, 80)}»; limpo de novo`);
   }
   // ---------------------------------------------------------------- E7 the places' table
@@ -1203,25 +1222,33 @@ function testeH() {
     ok('H4 os pés pelo campo de bola: da rua ao campo e à pista, subindo o lance do muro, pelo passeio e por uma escada até o alto das fileiras', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
   }
   // ---------------------------------------------------------------- H5 the world: each people raises its own, never the old one
+  // (each people in the ready world that has a town of it, the metrópole first: mundoDe, T-604 — in the metrópole of the generation
+  // 18 the Aztec people was gone)
   {
-    const out = [], said = []; M.pronto('metropole'); const S = G.S;
+    const out = [], said = [];
     const bad = what => { const q = globalThis.QA.check().filter(x => x.sev <= 2 || x.sys === 'monumental' || x.sys === 'escala'); if (q.length) out.push(`${what}: ${q.slice(0, 2).map(x => `${x.sys} S${x.sev} ${x.msg.slice(0, 90)}`).join(' · ')}`); };
-    const townOf = st => [...S.settlements.values()].filter(s => G.Civ.idOfFac(s.fac) === st).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
-    for (const t in TYPES) for (const st of TYPES[t].peoples) { const set = townOf(st); if (!set) { if (st === 'classico') said.push(`${t}: o povo clássico sem cidade na metrópole`); else out.push(`sem cidade ${st}`); continue; } const ids = G.Escala.choose(set, t).map(s => s.id);
-      if (ids.some(id => (G.Escala.steps(t).find(s => s.id === id) || {}).legado)) out.push(`${set.name} (${st}): os degraus de ${t} ${ids.join(', ')}`); else said.push(`${t} em ${set.name}: ${ids.join(', ')}`); }
-    // (the ball court by the god's hand in an Aztec town — by the game's rule, handFor, T-505 —: standing, living, saved and loaded,
-    // thrown down)
-    const hf = handFor('asteca', 'teatro', 'monumental'), set = hf.set, b = hf.b;
-    if (!b) out.push(`a mão do deus não achou nem abriu lote para o campo de bola${set ? ` (${set.name})` : ': sem cidade asteca'}`); else {
-      const p = In.plan(b); if (!p || !p.ok || b.style !== 'asteca' || b.w !== 10) out.push(`o campo de bola: ${b.style} ${b.w} casas, a planta ${p && p.ok}`);
-      const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`no mundo: ${fal.map(q => q.what).join('; ')}`);
-      bad('de pé'); M.viver(5); bad('vivendo'); const sig = p && p.sig; M.salvarCarregar(); const b2 = G.S.buildings.get(b.id), p2 = b2 && In.plan(b2); if (!p2 || p2.sig !== sig) out.push('depois do save, outra planta'); bad('carregado');
-      // (the checker: the stands a metre off the form's, and quiet again)
-      const plan0 = In.plan; let hit = []; In.plan = x => { const q = plan0(x); return x === b2 && q ? Object.assign({}, q, { levels: q.levels.map(l => (l.lv === 1 ? Object.assign({}, l, { y: l.y + 1 }) : l)) }) : q; };
-      try { hit = globalThis.QA.check().filter(q => q.sys === 'monumental'); } finally { In.plan = plan0; }
-      if (!hit.some(q => q.sev === 1 && q.msg.includes('arquibancadas'))) out.push('com as arquibancadas noutra altura o verificador calou'); bad('de volta');
-      G.inSim++; try { G.Village.damageBuilding(G.S.buildings.get(b.id), 1e6, 'quake'); } finally { G.inSim--; } bad('derrubado'); M.viver(1); bad('a ruína vivendo');
-      said.push(`o campo de bola em ${set.name}: #${b.id}${goneTxt(hf)}, ${p && p.cap.watch} assentos; vivo, salvo e carregado; o verificador pega as arquibancadas noutra altura e cala de volta; derrubado: limpo`); }
+    const { grupos, sem } = porMundo([...new Set(Object.values(TYPES).flatMap(T => T.peoples).concat('asteca'))]);
+    for (const st of sem) if (st === 'classico') said.push('o povo clássico sem cidade em mundo pronto nenhum'); else out.push(`sem cidade ${st} em mundo pronto nenhum`);
+    for (const [w, sts] of grupos) {
+      M.pronto(w); const S = G.S;
+      const townOf = st => [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === st).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+      for (const t in TYPES) for (const st of TYPES[t].peoples) { if (!sts.includes(st)) continue; const set = townOf(st); const ids = G.Escala.choose(set, t).map(s => s.id);
+        if (ids.some(id => (G.Escala.steps(t).find(s => s.id === id) || {}).legado)) out.push(`${set.name} (${st}): os degraus de ${t} ${ids.join(', ')}`); else said.push(`${t} em ${set.name}: ${ids.join(', ')}${ondeTxt(w, st)}`); }
+      if (!sts.includes('asteca')) continue;
+      // (the ball court by the god's hand in an Aztec town — by the game's rule, handFor, T-505 —: standing, living, saved and loaded,
+      // thrown down)
+      const hf = handFor('asteca', 'teatro', 'monumental'), set = hf.set, b = hf.b;
+      if (!b) out.push(`a mão do deus não achou nem abriu lote para o campo de bola (${set.name})`); else {
+        const p = In.plan(b); if (!p || !p.ok || b.style !== 'asteca' || b.w !== 10) out.push(`o campo de bola: ${b.style} ${b.w} casas, a planta ${p && p.ok}`);
+        const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`no mundo: ${fal.map(q => q.what).join('; ')}`);
+        bad('de pé'); M.viver(5); bad('vivendo'); const sig = p && p.sig; M.salvarCarregar(); const b2 = G.S.buildings.get(b.id), p2 = b2 && In.plan(b2); if (!p2 || p2.sig !== sig) out.push('depois do save, outra planta'); bad('carregado');
+        // (the checker: the stands a metre off the form's, and quiet again)
+        const plan0 = In.plan; let hit = []; In.plan = x => { const q = plan0(x); return x === b2 && q ? Object.assign({}, q, { levels: q.levels.map(l => (l.lv === 1 ? Object.assign({}, l, { y: l.y + 1 }) : l)) }) : q; };
+        try { hit = globalThis.QA.check().filter(q => q.sys === 'monumental'); } finally { In.plan = plan0; }
+        if (!hit.some(q => q.sev === 1 && q.msg.includes('arquibancadas'))) out.push('com as arquibancadas noutra altura o verificador calou'); bad('de volta');
+        G.inSim++; try { G.Village.damageBuilding(G.S.buildings.get(b.id), 1e6, 'quake'); } finally { G.inSim--; } bad('derrubado'); M.viver(1); bad('a ruína vivendo');
+        said.push(`o campo de bola em ${set.name}: #${b.id}${goneTxt(hf)}, ${p && p.cap.watch} assentos; vivo, salvo e carregado; o verificador pega as arquibancadas noutra altura e cala de volta; derrubado: limpo${ondeTxt(w, 'asteca')}`); }
+    }
     if (!M.limpo()) { const e = M.erros(); out.push(`erros: ${JSON.stringify(e.mod)} ${e.console.slice(0, 2).join(' | ')}`); }
     ok('H5 o mundo: cada povo funda o seu degrau grande, nunca o antigo; o campo de bola pela mão do deus numa cidade asteca (pela regra do jogo), de pé, vivendo, salvo e carregado, o verificador, derrubado', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
   }
@@ -1318,26 +1345,32 @@ function testeM() {
     ok('M3 os pés no grande monumento: da rua pelos degraus ao alto, em volta do que está no meio, até o lugar de ofertar; no navio de pedras, pelo gramado e pelo meio aberto do navio', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
   }
   // ---------------------------------------------------------------- M4 the world: the god's hand in a town of each people
+  // (each people in the ready world that has a town of it, the metrópole first: mundoDe, T-604)
   {
-    const out = [], said = []; M.pronto('metropole'); const S = G.S;
+    const out = [], said = [];
     const bad = what => { const q = globalThis.QA.check().filter(x => x.sev <= 2 || x.sys === 'monumental' || x.sys === 'escala'); if (q.length) out.push(`${what}: ${q.slice(0, 2).map(x => `${x.sys} S${x.sev} ${x.msg.slice(0, 90)}`).join(' · ')}`); };
-    bad('antes'); const built = [];
-    // (each town by the game's rule — handFor, T-505 —, never the biggest by its numbers alone)
-    for (const st of MPEOPLES) { const hf = handFor(st, 'monument', 'grande'), set = hf.set; if (!set) { if (st === 'classico') said.push('o povo clássico sem cidade na metrópole (T-401)'); else out.push(`sem cidade ${st}`); continue; }
-      const b = hf.b; if (!b) { out.push(`a mão do deus não achou nem abriu lote de 4 casas para o povo ${st} (${set.name})`); continue; }
-      const p = In.plan(b); if (!p || !p.ok || b.w !== 4 || b.esc !== 'grande' || b.style !== st) out.push(`${set.name}: ${b.style} ${b.w} casas esc=${b.esc}, a planta ${p && p.ok}`);
-      const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`${set.name} no mundo: ${fal.map(q => q.what).join('; ')}`);
-      built.push({ b, set, sig: p && p.sig, gone: hf.gone }); }
-    bad('de pé'); M.viver(5); bad('vivendo');
-    M.salvarCarregar(); for (const q of built) { const b2 = G.S.buildings.get(q.b.id), p2 = b2 && In.plan(b2); if (!p2 || p2.sig !== q.sig) out.push(`${q.set.name}: depois do save, outra planta`); } bad('carregado');
-    // (the checker: the top of the Egyptian's a metre off the form's)
-    const eg = built.find(q => q.b.style === 'egipcio'); if (eg) { const b2 = G.S.buildings.get(eg.b.id), plan0 = In.plan; let hit = [];
-      In.plan = x => { const q = plan0(x); return x === b2 && q ? Object.assign({}, q, { levels: q.levels.map(l => (l.lv === 0 ? Object.assign({}, l, { y: l.y + 1 }) : l)) }) : q; };
-      try { hit = globalThis.QA.check().filter(q => q.sys === 'monumental'); } finally { In.plan = plan0; } if (!hit.some(q => q.sev === 1 && q.msg.includes('monumento'))) out.push('com o alto noutra altura o verificador calou'); bad('de volta'); }
-    G.inSim++; try { for (const q of built) G.Village.damageBuilding(G.S.buildings.get(q.b.id), 1e6, 'quake'); } finally { G.inSim--; }
-    bad('derrubados'); M.viver(1); bad('as ruínas vivendo');
+    const { grupos, sem } = porMundo(MPEOPLES); let eg = null;
+    for (const st of sem) if (st === 'classico') said.push('o povo clássico sem cidade em mundo pronto nenhum (T-401)'); else out.push(`sem cidade ${st} em mundo pronto nenhum`);
+    for (const [w, sts] of grupos) {
+      M.pronto(w); bad('antes'); const built = [];
+      // (each town by the game's rule — handFor, T-505 —, never the biggest by its numbers alone)
+      for (const st of sts) { const hf = handFor(st, 'monument', 'grande'), set = hf.set;
+        const b = hf.b; if (!b) { out.push(`a mão do deus não achou nem abriu lote de 4 casas para o povo ${st} (${set.name})`); continue; }
+        const p = In.plan(b); if (!p || !p.ok || b.w !== 4 || b.esc !== 'grande' || b.style !== st) out.push(`${set.name}: ${b.style} ${b.w} casas esc=${b.esc}, a planta ${p && p.ok}`);
+        const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`${set.name} no mundo: ${fal.map(q => q.what).join('; ')}`);
+        built.push({ b, set, sig: p && p.sig, gone: hf.gone }); }
+      bad('de pé'); M.viver(5); bad('vivendo');
+      M.salvarCarregar(); for (const q of built) { const b2 = G.S.buildings.get(q.b.id), p2 = b2 && In.plan(b2); if (!p2 || p2.sig !== q.sig) out.push(`${q.set.name}: depois do save, outra planta`); } bad('carregado');
+      // (the checker: the top of the Egyptian's a metre off the form's)
+      const e0 = built.find(q => q.b.style === 'egipcio'); if (e0) { eg = e0; const b2 = G.S.buildings.get(e0.b.id), plan0 = In.plan; let hit = [];
+        In.plan = x => { const q = plan0(x); return x === b2 && q ? Object.assign({}, q, { levels: q.levels.map(l => (l.lv === 0 ? Object.assign({}, l, { y: l.y + 1 }) : l)) }) : q; };
+        try { hit = globalThis.QA.check().filter(q => q.sys === 'monumental'); } finally { In.plan = plan0; } if (!hit.some(q => q.sev === 1 && q.msg.includes('monumento'))) out.push('com o alto noutra altura o verificador calou'); bad('de volta'); }
+      G.inSim++; try { for (const q of built) G.Village.damageBuilding(G.S.buildings.get(q.b.id), 1e6, 'quake'); } finally { G.inSim--; }
+      bad('derrubados'); M.viver(1); bad('as ruínas vivendo');
+      for (const q of built) said.push(`${q.set.name} (${q.b.style}): #${q.b.id}${goneTxt(q)}${ondeTxt(w, q.b.style)}`);
+    }
+    if (!eg) out.push('sem o monumento egípcio, o verificador sem prova');
     if (!M.limpo()) { const e = M.erros(); out.push(`erros: ${JSON.stringify(e.mod)} ${e.console.slice(0, 2).join(' | ')}`); }
-    for (const q of built) said.push(`${q.set.name} (${q.b.style}): #${q.b.id}${goneTxt(q)}`);
     ok('M4 o grande monumento pela mão do deus em uma cidade de cada povo (a metrópole): de pé, vivendo, salvo e carregado, o verificador, derrubado', !out.length, out.slice(0, 3).join(' · ') || `${said.join(' · ')}; vivos, salvos e carregados (a mesma planta), o verificador pega o alto noutra altura, derrubados: limpo`);
   }
   // ---------------------------------------------------------------- M5 the places' table
@@ -1430,29 +1463,53 @@ function handFor(style, type, esc, R) {
 }
 // (what the place opened for a building cost, for the proofs' lines)
 const goneTxt = h => (h.gone ? ` — o lugar aberto pela prova: ${h.gone.length} prédio${h.gone.length > 1 ? 's' : ''} derrubado${h.gone.length > 1 ? 's' : ''} (${[...new Set(h.gone)].join(', ')})` : '');
-// (a world test of the god's hand: in the ready metropolis, a step of a type in a town of each people by the game's rule —
-// handFor —, the people no longer founding the old one; standing, living, saved and loaded (the same plan), the checker
-// catching each one's floor a metre off the form's and quiet again, thrown down → [out, said])
+// (the ready world a people's test of the god's hand opens: the metrópole, where the people has a living town; else the first of
+// the other ready worlds that has one, said on the line — in the metrópole of the generation 18 the Aztec people was gone and
+// Tenochtitlan a Norse town, T-604 —; null in none. Each world opened once a run to see whose towns it has)
+const MUNDOS = ['metropole', 'cidade', 'mega', 'mundial'], povosDe = {};
+function mundoDe(style) {
+  for (const w of MUNDOS) {
+    if (!povosDe[w]) { M.pronto(w); povosDe[w] = new Set([...G.S.settlements.values()].filter(s => G.Fac.get(s.fac)).map(s => G.Civ.idOfFac(s.fac))); }
+    if (povosDe[w].has(style)) return w;
+  }
+  return null;
+}
+// (the peoples by the world their test opens, the metrópole first: { grupos: [[world, peoples]…], sem: the peoples in none })
+function porMundo(peoples) {
+  const by = new Map(), sem = [];
+  for (const st of peoples) { const w = mundoDe(st); if (!w) { sem.push(st); continue; } if (!by.has(w)) by.set(w, []); by.get(w).push(st); }
+  return { grupos: [...by.entries()].sort((a, b) => MUNDOS.indexOf(a[0]) - MUNDOS.indexOf(b[0])), sem };
+}
+// (where a people's test ran, for its line: nothing for the metrópole)
+const ondeTxt = (w, st) => (w === 'metropole' ? '' : ` — no mundo pronto «${w}»: o povo ${st} sem cidade na metrópole`);
+// (a world test of the god's hand: in the ready metropolis — or, for a people with no town in it, the ready world that has one:
+// mundoDe —, a step of a type in a town of each people by the game's rule — handFor —, the people no longer founding the old
+// one; standing, living, saved and loaded (the same plan), the checker catching each one's floor a metre off the form's and quiet
+// again, thrown down → [out, said])
 function handWorld(type, esc, peoples) {
-  const out = [], said = []; M.pronto('metropole'); const S = G.S;
+  const out = [], said = [];
   const bad = what => { const q = globalThis.QA.check().filter(x => x.sev <= 2 || x.sys === 'monumental' || x.sys === 'escala'); if (q.length) out.push(`${what}: ${q.slice(0, 2).map(x => `${x.sys} S${x.sev} ${x.msg.slice(0, 90)}`).join(' · ')}`); };
-  const n = G.Escala.steps(type).find(q => q.id === esc).n; bad('antes'); const built = [];
-  for (const st of peoples) { const hf = handFor(st, type, esc), set = hf.set; if (!set) { said.push(`${st}: sem cidade na metrópole pronta`); continue; }
-    const ids = hf.steps; if (ids.some(id => (G.Escala.steps(type).find(q => q.id === id) || {}).legado)) out.push(`${set.name} (${st}): os degraus ${ids.join(', ')} — o antigo ainda`);
-    const b = hf.b; if (!b) { out.push(`a mão do deus não achou nem abriu lote de ${n} casas para o povo ${st} (${set.name})`); continue; }
-    const p = In.plan(b); if (!p || !p.ok || b.w !== n || b.style !== st) out.push(`${set.name}: ${b.style} ${b.w} casas, a planta ${p && p.ok}`);
-    const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`${set.name} no mundo: ${fal.map(q => q.what).join('; ')}`);
-    built.push({ b, set, sig: p && p.sig, gone: hf.gone }); }
-  bad('de pé'); M.viver(5); bad('vivendo');
-  M.salvarCarregar(); for (const q of built) { const b2 = G.S.buildings.get(q.b.id), p2 = b2 && In.plan(b2); if (!p2 || p2.sig !== q.sig) out.push(`${q.set.name}: depois do save, outra planta`); } bad('carregado');
-  for (const q of built) { const b2 = G.S.buildings.get(q.b.id), plan0 = In.plan; let hit = [];
-    In.plan = x => { const r = plan0(x); return x === b2 && r ? Object.assign({}, r, { levels: r.levels.map(l => Object.assign({}, l, { y: l.y + 1 })) }) : r; };
-    try { hit = globalThis.QA.check().filter(x => x.sys === 'monumental'); } finally { In.plan = plan0; } if (!hit.some(x => x.sev === 1 && x.msg.includes('#' + q.b.id))) out.push(`${q.set.name}: com o piso noutra altura o verificador calou`); }
-  bad('de volta');
-  G.inSim++; try { for (const q of built) G.Village.damageBuilding(G.S.buildings.get(q.b.id), 1e6, 'quake'); } finally { G.inSim--; }
-  bad('derrubados'); M.viver(1); bad('as ruínas vivendo');
+  const n = G.Escala.steps(type).find(q => q.id === esc).n; const { grupos, sem } = porMundo(peoples);
+  for (const st of sem) said.push(`${st}: sem cidade em mundo pronto nenhum`);
+  for (const [w, sts] of grupos) {
+    M.pronto(w); bad('antes'); const built = [];
+    for (const st of sts) { const hf = handFor(st, type, esc), set = hf.set;
+      const ids = hf.steps; if (ids.some(id => (G.Escala.steps(type).find(q => q.id === id) || {}).legado)) out.push(`${set.name} (${st}): os degraus ${ids.join(', ')} — o antigo ainda`);
+      const b = hf.b; if (!b) { out.push(`a mão do deus não achou nem abriu lote de ${n} casas para o povo ${st} (${set.name})`); continue; }
+      const p = In.plan(b); if (!p || !p.ok || b.w !== n || b.style !== st) out.push(`${set.name}: ${b.style} ${b.w} casas, a planta ${p && p.ok}`);
+      const fal = p && p.ok ? In.report(b, p, { world: true, sides: true }).filter(q => q.k === 'FALHA') : []; if (fal.length) out.push(`${set.name} no mundo: ${fal.map(q => q.what).join('; ')}`);
+      built.push({ b, set, sig: p && p.sig, gone: hf.gone }); }
+    bad('de pé'); M.viver(5); bad('vivendo');
+    M.salvarCarregar(); for (const q of built) { const b2 = G.S.buildings.get(q.b.id), p2 = b2 && In.plan(b2); if (!p2 || p2.sig !== q.sig) out.push(`${q.set.name}: depois do save, outra planta`); } bad('carregado');
+    for (const q of built) { const b2 = G.S.buildings.get(q.b.id), plan0 = In.plan; let hit = [];
+      In.plan = x => { const r = plan0(x); return x === b2 && r ? Object.assign({}, r, { levels: r.levels.map(l => Object.assign({}, l, { y: l.y + 1 })) }) : r; };
+      try { hit = globalThis.QA.check().filter(x => x.sys === 'monumental'); } finally { In.plan = plan0; } if (!hit.some(x => x.sev === 1 && x.msg.includes('#' + q.b.id))) out.push(`${q.set.name}: com o piso noutra altura o verificador calou`); }
+    bad('de volta');
+    G.inSim++; try { for (const q of built) G.Village.damageBuilding(G.S.buildings.get(q.b.id), 1e6, 'quake'); } finally { G.inSim--; }
+    bad('derrubados'); M.viver(1); bad('as ruínas vivendo');
+    for (const q of built) said.push(`${q.set.name} (${q.b.style}): #${q.b.id} a ${G.dist(q.b.x + q.b.w / 2, q.b.y + q.b.h / 2, q.set.cx, q.set.cy).toFixed(1)} casas do centro${goneTxt(q)}${ondeTxt(w, q.b.style)}`);
+  }
   if (!M.limpo()) { const e = M.erros(); out.push(`erros: ${JSON.stringify(e.mod)} ${e.console.slice(0, 2).join(' | ')}`); }
-  for (const q of built) said.push(`${q.set.name} (${q.b.style}): #${q.b.id} a ${G.dist(q.b.x + q.b.w / 2, q.b.y + q.b.h / 2, q.set.cx, q.set.cy).toFixed(1)} casas do centro${goneTxt(q)}`);
   return [out, said];
 }
 
@@ -1559,7 +1616,9 @@ function testeW() {
         // (across the court, up the stair to the terrace, before the eye to the priest's place, round the left side to the back)
         const T = A.top, Q = A.quarto, yq = F.els.find(e => e.piso).y1;
         legs = [[0, [[A.cu - 3.5, L + 0.8], [A.cu - 3.5, L - 0.6], [A.cu - 1.0, L - 0.6], [A.cu - 1.0, A.stair.top + 0.05]]], [1, [[A.cu - 1.0, T[3] - 0.3], [A.cu - 1.0, Q[3] + 0.6], [(T[0] + Q[0]) / 2, Q[3] + 0.6], [(T[0] + Q[0]) / 2, (T[1] + Q[1]) / 2], [A.cu, (T[1] + Q[1]) / 2]]]];
-        floor = (lv, u, z) => { if (lv === 1) return [A.yt, 0]; const ty = onTread(u, z); if (ty !== null) return [ty, 0.3]; if (z > A.cv + A.e0 && z < L - 0.1) return [yq, 0]; return null; };
+        // (on the stair, on each of the form's treads, as its plan has them — a hair either side of an edge, either: L-665)
+        const edge = z => treads.some(q => Math.abs(z - q.r[1]) <= 0.011 || Math.abs(z - q.r[3]) <= 0.011);
+        floor = (lv, u, z) => { if (lv === 1) return [A.yt, 0]; const ty = onTread(u, z); if (ty !== null) return [ty, edge(z) ? 0.3 : 0]; if (z > A.cv + A.e0 && z < L - 0.1) return [yq, 0]; return null; };
       }
       const r = feetAlong(b, legs, floor);
       if (r.worst || r.step > In.BODY.step + 0.01) out.push(`${tag}: os pés a ${r.worst.toFixed(2)} m da forma em ${r.at || '—'}, o maior degrau ${r.step.toFixed(2)} m`);
