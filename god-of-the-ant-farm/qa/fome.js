@@ -38,7 +38,7 @@
 //    fome máxima (L-605; apontado pelo C na geração 15: Kamose, de Tebas em guerra, levado ao refúgio a caminho de comer, morreu
 //    a duas casas de um armazém)
 // h19 a cidade que um desastre deixa sem fogueira e sem armazém acende outra: no mesmo dia, mesmo com a busca do dia já falhada
-//    com um armazém de pé, e mais longe quando o chão no raio dela não tem lugar (L-?; achado pela regra S1 no caos da semente 13
+//    com um armazém de pé, e mais longe quando o chão no raio dela não tem lugar (L-650; achado pela regra S1 no caos da semente 13
 //    da geração 17: Hedeby, com o vulcão no coração dela, três dias sem armazém)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
@@ -545,7 +545,7 @@ const calmOne = (skip, also) => {
   }
   ok('h17 quem se esconde na caverna come das provisões, como quem foge da guerra (L-605)', good, info);
 }
-// ---------------- h19 the town a disaster leaves with no fire and no store lights another (L-?) ----------------
+// ---------------- h19 the town a disaster leaves with no fire and no store lights another (L-650) ----------------
 // (found by the rule S1 in the chaos of seed 13 of the generation 17: a volcano at Hedeby's heart took its fire, and its store and
 // its dock a moment after; the town's search for a fire had found nothing that day while the store stood — and a search that finds
 // nothing is not asked again until the next day —, and on the next days the ruins round its heart left it no tile, the ring of a
@@ -566,7 +566,7 @@ const calmOne = (skip, also) => {
   const bare = lava(); const v = hungry(); const h0 = v ? v.hunger : 0;
   let lit = null, tLit = -1, dLit = -1, ate = false; const t0 = S.clock; const old = new Set();
   live(300, () => { peace(); const n = newFire(old); if (n && !lit) { lit = n; tLit = r2(S.clock - t0); dLit = S.day; } if (v && S.villagers.has(v.id) && v.hunger < h0 - 30) ate = true; return !!(lit && lit.built && (ate || !v)); });
-  ok('h19a a cidade que perde a fogueira e todo armazém acende outra no mesmo dia, mesmo com a busca do dia já falhada (L-?)', bare && !!lit && tLit >= 0 && tLit <= 10 && dLit === day0 && lit.built && (!v || ate),
+  ok('h19a a cidade que perde a fogueira e todo armazém acende outra no mesmo dia, mesmo com a busca do dia já falhada (L-650)', bare && !!lit && tLit >= 0 && tLit <= 10 && dLit === day0 && lit.built && (!v || ate),
     !bare ? `${set.name}: a lava não levou todos os ${n0} (sobrou ${fires().map(b => b.type + '#' + b.id).join(', ')})` : `${set.name}: a busca do dia por uma fogueira já falhada (um armazém de pé); a lava levou a fogueira e os armazéns (${n0}) → ${lit ? `fogueira #${lit.id} fundada ${tLit} s depois (dia ${dLit}, o da lava: ${day0}), ${lit.built ? 'acesa' : 'AINDA em obra'}` : 'NENHUMA fogueira nova em 300 s'}${v ? `; ${v.name} (fome ${h0}) ${ate ? 'comeu lá' : 'NÃO comeu'}` : ''}`);
   // (b)
   const R = G.Urban.radius(set, G.BDEF.campfire, V.pop(set.id)); const scar = new Map();
@@ -577,7 +577,7 @@ const calmOne = (skip, also) => {
   live(300, () => { peace(); const n = newFire(old); if (n && !far) { far = n; tFar = r2(S.clock - t1); } return !!(far && far.built); });
   for (const [i, s] of scar) S.scar[i] = s; // (the scar gone again, for the cases after)
   const dFar = far ? r2(G.dist(...V.center(far), set.cx, set.cy)) : 0;
-  ok('h19b sem chão no raio da cidade (as ruínas, a cicatriz da lava), a fogueira nova vai mais longe, onde as ruas da cidade chegam (L-?)', bare2 && !!far && tFar >= 0 && tFar <= 10 && dFar > R && dFar <= R + 12.5 && W.townReaches(set, ...V.frontTile(far)) && far.built,
+  ok('h19b sem chão no raio da cidade (as ruínas, a cicatriz da lava), a fogueira nova vai mais longe, onde as ruas da cidade chegam (L-650)', bare2 && !!far && tFar >= 0 && tFar <= 10 && dFar > R && dFar <= R + 12.5 && W.townReaches(set, ...V.frontTile(far)) && far.built,
     `${set.name}: a lava de novo${bare2 ? '' : ' (NÃO levou tudo)'}, e a cicatriz dela no chão até o raio da cidade (${R} casas) → ${far ? `fogueira #${far.id} fundada ${tFar} s depois, a ${dFar} casas do centro${W.townReaches(set, ...V.frontTile(far)) ? ', onde as ruas chegam' : ', ONDE AS RUAS NÃO CHEGAM'}, ${far.built ? 'acesa' : 'AINDA em obra'}` : 'NENHUMA fogueira nova em 300 s'}`);
 }
 // ---------------- clean ----------------

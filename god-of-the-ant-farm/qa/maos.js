@@ -26,7 +26,7 @@
 //     levam quem tem as mãos ocupadas: com os guerreiros e caçadores do povo levando uma compra para casa e um construtor com
 //     o material a caminho da obra, ninguém escolhido tem as mãos ocupadas, e cada escolha acontece com os outros (L-461)
 //  m13 a caverna de duas bocas em chãos que os pés não juntam: o afazer de baixo vai pela boca que os pés alcançam — não pela
-//     mais perto em linha reta, fora do alcance —, faz o que foi fazer e sai onde os pés o levam para casa (L-…)
+//     mais perto em linha reta, fora do alcance —, faz o que foi fazer e sai onde os pés o levam para casa (L-651)
 //  e o verificador limpo nos casos, sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/oficio-inv.js'] });
@@ -301,7 +301,7 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
   // (one who can walk to the cave — a mouth of it his feet reach, W.reaches —: the refuge sets out for the nearest such mouth, and
   // the case says it — in the metropole of the generation 17 the mouth of the Furna do Abismo nearest to Nebet, 24 tiles off,
   // was beyond his feet, the refuge given to it ended at its first step, and the voyage called him to the quay 0,7 s later, the
-  // alarm still up, L-…)
+  // alarm still up, L-651)
   const v = e && e.crew.map(id => S.villagers.get(id)).filter(q => q && q.id !== e.leader && !q.aboard && q.set === home.id && cv.mouths.some(m => G.W.reaches(q, m.x + 0.5, m.y + 0.5))).sort((a, b) => a.id - b.id)[0];
   if (!e || !v) ok('m10 a tripulação escondida na caverna', false, `nenhuma viagem que saia de uma cidade com caverna perto, de um tripulante que chegue a ela a pé: ${tried.join(' · ') || (e ? `${e.name}: ninguém da tripulação chega a pé ${G.Caves.na ? G.Caves.na(cv) : 'à caverna'}` : 'nenhum povo do mar')}`);
   else {
@@ -403,7 +403,7 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
   const b12 = bad();
   ok('m12 as escolhas da guerra com as mãos livres', okAll && !b12.length, `os guerreiros e caçadores do povo com uma compra para casa, e um construtor com o material a caminho da obra: ${lines.join(' · ')}${b12.length ? '; o verificador: ' + b12[0] : ''}`);
 }
-// ---------------- m13: the cave's errand goes in by the mouth the feet reach, and comes out where they take one home (L-…) ----------------
+// ---------------- m13: the cave's errand goes in by the mouth the feet reach, and comes out where they take one home (L-651) ----------------
 // (a cave with two mouths on ground the feet do not join — water or a cliff between them —, and one set down by the test's hand
 // on a tile from which the mouth nearer in a straight line is beyond the feet and the other in reach; an errand below by the
 // world's door, G.Caves.give, as the cave's own day gives them, to the hall nearest the mouth out of reach: in by the mouth in
