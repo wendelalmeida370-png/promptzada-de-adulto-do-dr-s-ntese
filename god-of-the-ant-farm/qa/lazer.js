@@ -26,16 +26,22 @@ const world = process.argv[2] || 'metropole';
 // were saved, L-419, and the ready worlds of the generation 7 are older than the trades of the Patch 2, which the load of
 // before dealt at once; the twelve seconds stay for any world, a save of before too, T-298)
 M.pronto(world);
-// (the theatre of the tests is the world's own where one stands; where none does — the metrópole of the generation 17, a young
-// world of the year 49, had only the ball court of Tenochtitlan going up —, the most peopled town of coin (else of any) founds
-// its own where its planner puts it — V.startProject: the step it justifies, on a lot by the town's edge, or the room it opens
-// (D-115, D-120) — and the god's hand raises it whole (V.completeBuilding); then the world lives a day with it, and the town
-// gives it its actors by its own dealing, as a theatre of the town has them. Raised by the hand on the nearest free lot of its
-// size, the theatre of Mênfis stood 63 tiles from its middle, and no actor came to the stage before the show was called off;
-// raised by Argos and played at once, its two new actors went to eat and to buy before the stage)
+// (the theatre of the tests is the world's own where one stands. Where none does, the god's hand raises one of a town's own, the
+// most peopled town of coin (else of any) first: a theatre the town is raising, finished (V.completeBuilding) — the metrópole of
+// the generation 18, short of land, had none standing and no lot of 6 in any town, but Roma's and Corinto's going up, T-605 —;
+// with none going up, the one its planner founds where it puts it — V.startProject: the step it justifies, on a lot by the
+// town's edge, or the room it opens (D-115, D-120) —, raised whole (the metrópole of the generation 17, a young world of the year
+// 49, had only the ball court of Tenochtitlan going up). Then the world lives a day with it, and the town gives it its actors by
+// its own dealing, as a theatre of the town has them. Raised by the hand on the nearest free lot of its size, the theatre of
+// Mênfis stood 63 tiles from its middle, and no actor came to the stage before the show was called off; raised by Argos and
+// played at once, its two new actors went to eat and to buy before the stage)
 if (![...G.S.buildings.values()].some(b => b.type === 'teatro' && b.built)) {
   const towns = [...G.S.settlements.values()].filter(s => G.Fac.get(s.fac)).sort((a, c) => (E.coinage(c.fac) ? 1 : 0) - (E.coinage(a.fac) ? 1 : 0) || V.pop(c.id) - V.pop(a.id) || a.id - c.id);
-  G.inSim++; try { for (const s of towns) { s._noSite = {}; const b = V.startProject(s, 'teatro'); if (b && b.type === 'teatro') { V.completeBuilding(b); break; } } } finally { G.inSim--; }
+  const obra = towns.map(s => [...G.S.buildings.values()].filter(b => b.type === 'teatro' && b.set === s.id && !b.built).sort((a, c) => a.id - c.id)[0]).find(Boolean);
+  G.inSim++; try {
+    if (obra) V.completeBuilding(obra);
+    else for (const s of towns) { s._noSite = {}; const b = V.startProject(s, 'teatro'); if (b && b.type === 'teatro') { V.completeBuilding(b); break; } }
+  } finally { G.inSim--; }
   M.viver(G.DAY_LEN);
 }
 M.viver(12);

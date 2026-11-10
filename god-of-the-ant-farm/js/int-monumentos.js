@@ -37,6 +37,21 @@
   // street the steps before the way in come down to it, as before a house's door (on a solid base the feet met a wall of the
   // slope's height there, up to 1.6 m in the world map: L-390)
   const openBase = y => (y >= In.BODY.step ? 'macica' : 'chao');
+  // (the treads a form draws over a flight's footprint r, the way up (du, dv) — its steps, the blocks marked degrau, as Build3D
+  // lays them —: the footprint cut across the way up at each edge of a step on it, each strip at the top of the highest step over
+  // its middle, or with none at the floor the flight starts from, y0. The feet on each, as they are drawn (D-093): on a slope
+  // across them the feet stood up to a step under them — the Great Pyramid's gallery, the Acropolis temple's two steps, the
+  // Colosseum's flights, the ball court's —, L-665. → [{ r, y }])
+  function formSteps(F, r, du, dv, y0) {
+    const ax = du ? 0 : 1, lo = r[ax], hi = r[ax + 2], mid = du ? (r[1] + r[3]) / 2 : (r[0] + r[2]) / 2, k = du ? 1 : 0;
+    const on = F.els.filter(e => e.k === 'bloco' && e.degrau && e.r[ax] < hi - 1e-6 && e.r[ax + 2] > lo + 1e-6 && e.r[k] <= mid && e.r[k + 2] >= mid);
+    const cut = [...new Set([lo, hi].concat(...on.map(e => [e.r[ax], e.r[ax + 2]])).filter(c => c >= lo && c <= hi).map(c => Math.round(c * 1000) / 1000))].sort((a, b) => a - b);
+    const out = [];
+    for (let j = 0; j < cut.length - 1; j++) { const a = cut[j], b = cut[j + 1]; if (b - a < 1e-3) continue; const c = (a + b) / 2;
+      let y = y0; for (const e of on) if (e.r[ax] <= c && e.r[ax + 2] >= c) y = Math.max(y, e.y1);
+      out.push({ r: (du ? [a, r[1], b, r[3]] : [r[0], a, r[2], b]).map(r2), y }); }
+    return out;
+  }
   // (what stands solid on the form's ground — its walls, its stage, its columns, its trees, a pool's rim — a piece of no use at
   // each foot, the biggest first: where a foot meets one already laid — two walls at a corner, a rim round a pool's floor, the
   // posts of a stall at its counter's corners — what is left of it, 5 cm off the other (two pieces of a plan keep 2 cm apart), and
@@ -368,8 +383,10 @@
     // (the flights: up to the podium's landings, rising toward the sand — open to the sky over them: their footprint the well in
     // the podium's storey, open (In.grandWell); with none the 3D laid that storey's floor over them, 27 cm over the top steps,
     // L-600 —; up to the gate, under the bridge and the vault; up from the undercroft through the hatch)
-    P.stair('escada', 0, 2, W.frente.r, 0, -1, W.frente.r); P.stair('escada', 0, 2, W.fundo.r, 0, 1, W.fundo.r);
-    P.stair('escada', 0, 1, W.esquerda.r, 1, 0, null); P.stair('escada', 0, 1, O.hypo.r, 0, 1, O.hatch);
+    // (each on the form's own treads, as they are drawn: formSteps, L-665)
+    const steps = (r, du, dv) => ({ treads: formSteps(F, r, du, dv, y0) });
+    P.stair('escada', 0, 2, W.frente.r, 0, -1, W.frente.r, steps(W.frente.r, 0, -1)); P.stair('escada', 0, 2, W.fundo.r, 0, 1, W.fundo.r, steps(W.fundo.r, 0, 1));
+    P.stair('escada', 0, 1, W.esquerda.r, 1, 0, null, steps(W.esquerda.r, 1, 0)); P.stair('escada', 0, 1, O.hypo.r, 0, 1, O.hatch, steps(O.hypo.r, 0, 1));
     // (the rows: each wedge of the oval, the form's own rings about its own centre)
     // (by the emperor's box: the first three rows over the rest of the arc — n —, and from the fourth the whole arc — skip)
     for (const B of O.blocks) P.tiers(2, null, { ring: [B.c[0], B.c[1], B.r0, B.r1], arc: B.arco, dir: 'out', rows: B.n || O.rows - (B.skip || 0), rise: O.rise, tread: O.tread, first: O.rise * (1 + (B.skip || 0)), aisles: B.aisles, aisleW: 1.0, climb: 2 });
@@ -591,7 +608,7 @@
     const pw = (a, b) => P.wall(0, a.map(r2), b.map(r2), A.pt, 0.9, 0, 'parapeito'), h2 = A.pt / 2;
     pw([T[0], T[1] + h2], [T[2], T[1] + h2]); pw([T[0] + h2, T[1]], [T[0] + h2, T[3]]); pw([T[2] - h2, T[1]], [T[2] - h2, T[3]]);
     pw([T[0], T[3] - h2], [cu - A.sw / 2, T[3] - h2]); pw([cu + A.sw / 2, T[3] - h2], [T[2], T[3] - h2]);
-    P.stair('escada', 0, 1, [r2(cu - 0.6), S0[3], r2(cu + 0.6), r2(S0[3] + 2 * kr)], 0, -1, null);
+    const kf = [r2(cu - 0.6), S0[3], r2(cu + 0.6), r2(S0[3] + 2 * kr)]; P.stair('escada', 0, 1, kf, 0, -1, null, { treads: formSteps(F, kf, 0, -1, y) }); // (on its two steps, as they are drawn: L-665)
     // (the cella's walls, its great door in the front one)
     const H = A.yc - A.ys, h = wt / 2;
     P.wall(1, [C[0], r2(C[1] + h)], [C[2], r2(C[1] + h)], wt, H, 0, 'parede'); P.wall(1, [r2(C[0] + h), C[1]], [r2(C[0] + h), C[3]], wt, H, 0, 'parede'); P.wall(1, [r2(C[2] - h), C[1]], [r2(C[2] - h), C[3]], wt, H, 0, 'parede');
@@ -628,7 +645,7 @@
     // (the chamber's front wall between the landing and it, its door; the gallery's flight)
     const wv = r2(A.doorK[3] - 0.2); const w = P.wall(1, [r2(A.chamber[0] - 0.4), wv], [r2(A.chamber[2] + 0.4), wv], 0.4, 4.4, 0, 'parede');
     P.door(w, P.atOf(w, [cu, wv]), r2(A.doorK[1] - A.doorK[0]), A.doorK[4], -1, -1, 0, 'vao');
-    P.stair('escada', 0, 1, A.gallery.r, 0, -1, null);
+    P.stair('escada', 0, 1, A.gallery.r, 0, -1, null, { treads: formSteps(F, A.gallery.r, 0, -1, y0) }); // (on its own steps, as they are drawn: L-665)
     if (P.inside()) return;
     // (the rooms: the square before the face, the ways round the pyramid, the corridor, the gallery; the landing, the chamber)
     const sq = P.room(0, 'esplanada', [sh[0], r2(face), sh[2], sh[3]], 1);
@@ -655,11 +672,14 @@
     P.level(0, y0, 3.0, 'chao', sh); P.entryLv = 0;
     P.level(1, H, 3.0, 'chao', T);
     wayIn(P, sh[0], sh[2], sh[3], [[r2(cu - sw / 2 - 2), r2(cu + sw / 2 + 2)]]);
-    // (the top's parapet, open where the stair comes up; the stair from the square's front to the top's front edge)
+    // (the top's parapet, open where the stair comes up; the stair from the square's front to the top's front edge, on the form's
+    // own treads — the steps the 3D lays, D-093: on a slope across them the feet stood up to a step under the drawn treads, 24 cm
+    // on the Templo Mayor of Tenochtitlan in the mundial of the generation 18)
+    const st = F.els.find(e => e.k === 'escada'); if (!st) { P.errs.push('a forma do Templo Mayor sem a escada'); return; }
     const pw = (a, b) => P.wall(1, a.map(r2), b.map(r2), pt, 0.9, 0, 'parapeito'), h2 = pt / 2;
     pw([T[0], T[1] + h2], [T[2], T[1] + h2]); pw([T[0] + h2, T[1]], [T[0] + h2, T[3]]); pw([T[2] - h2, T[1]], [T[2] - h2, T[3]]);
     pw([T[0], T[3] - h2], [cu - sw / 2, T[3] - h2]); pw([cu + sw / 2, T[3] - h2], [T[2], T[3] - h2]);
-    P.stair('escada', 0, 1, [r2(cu - sw / 2), A.stair.top, r2(cu + sw / 2), A.stair.foot], 0, -1, null);
+    P.stair('escada', 0, 1, [r2(cu - sw / 2), A.stair.top, r2(cu + sw / 2), A.stair.foot], 0, -1, null, { treads: G.Forma.flight(st).map(q => ({ r: q.r.map(r2), y: q.y1 })) });
     if (P.inside()) return;
     // (the square's four sides; the top round the shrines — the platform before them, its sides, behind them)
     const fr = P.room(0, 'praca', [sh[0], r2(cv + e0), sh[2], sh[3]], 1);
@@ -688,11 +708,13 @@
     P.level(0, y0, 3.0, 'chao', sh); P.entryLv = 0;
     P.level(1, yt, 3.0, 'chao', T);
     wayIn(P, sh[0], sh[2], sh[3], [[r2(cu - sw / 2 - 2), r2(cu + sw / 2 + 2)]]);
-    // (the terrace's parapet, open where the stair comes up; the stair from the court to the terrace's front edge)
+    // (the terrace's parapet, open where the stair comes up; the stair from the court to the terrace's front edge, on the form's
+    // own treads, as the Templo Mayor's)
+    const st = F.els.find(e => e.k === 'escada'); if (!st) { P.errs.push('a forma do zigurate sem a escada'); return; }
     const pw = (a, b) => P.wall(1, a.map(r2), b.map(r2), pt, 0.9, 0, 'parapeito'), h2 = pt / 2;
     pw([T[0], T[1] + h2], [T[2], T[1] + h2]); pw([T[0] + h2, T[1]], [T[0] + h2, T[3]]); pw([T[2] - h2, T[1]], [T[2] - h2, T[3]]);
     pw([T[0], T[3] - h2], [cu - sw / 2, T[3] - h2]); pw([cu + sw / 2, T[3] - h2], [T[2], T[3] - h2]);
-    P.stair('escada', 0, 1, [r2(cu - sw / 2), A.stair.top, r2(cu + sw / 2), A.stair.foot], 0, -1, null);
+    P.stair('escada', 0, 1, [r2(cu - sw / 2), A.stair.top, r2(cu + sw / 2), A.stair.foot], 0, -1, null, { treads: G.Forma.flight(st).map(q => ({ r: q.r.map(r2), y: q.y1 })) });
     if (P.inside()) return;
     // (the court's four sides; the terrace round the fourth level — before it, its sides, behind it)
     const fr = P.room(0, 'praca', [sh[0], r2(cv + e0), sh[2], sh[3]], 1);
@@ -785,7 +807,7 @@
       pw([ua, inner - s * pt / 2], [ub, inner - s * pt / 2]); pw([ua, outer + s * pt / 2], [ub, outer + s * pt / 2]);
       pw([ua + pt / 2, Math.min(v0, v1)], [ua + pt / 2, q.vm - 0.7]); pw([ua + pt / 2, q.vm + 0.7], [ua + pt / 2, Math.max(v0, v1)]); pw([ub - pt / 2, Math.min(v0, v1)], [ub - pt / 2, Math.max(v0, v1)]);
       pw([ua + ew - pt / 2, rv[0]], [ua + ew - pt / 2, rv[1]]); pw([ub - ew + pt / 2, rv[0]], [ub - ew + pt / 2, rv[1]]);
-      P.stair('escada', 0, 1, q.flight, 1, 0, null); }
+      P.stair('escada', 0, 1, q.flight, 1, 0, null, { treads: formSteps(F, q.flight, 1, 0, yq) }); } // (on its own steps, as they are drawn: L-665)
     if (P.inside()) return;
     const id = P.room(0, 'campo', sh, 1); for (const q of A.stands) P.room(1, 'arquibancada', [ua, Math.min(...q.room), ub, Math.max(...q.room)], 1);
     if (!solids(P, F, id)) return;
