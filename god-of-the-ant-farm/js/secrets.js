@@ -193,6 +193,15 @@
   // leg of an operation, the actor on the stage of a show among them —, as the feast does not, D-094, L-426)
   const MEAL = { eat: 1, forage: 1 };
   const meal = v => !!(v.task && MEAL[v.task.type]) || (v.hunger >= 99.9 && v.hp < 60) || !!(G.Vg.handsBusy && G.Vg.handsBusy(v));
+  // (the order's man is on a hunt while his errand is that hunt: the stalk of this order after this one — key 'w', a witness;
+  // 'inq', an inquiry's asker)
+  const onHunt = (h, q, key, id) => !!(h && h.task && h.task.type === 'stalk' && h.task.soc === q.id && h.task[key] === id);
+  // (a hunt that failed is tried again a day later: one hunt on a witness a day. Measured in the metrópole of the generation 18,
+  // 3,5 days with every witness due: a hunt ends after 45 s on average, most of them on their own — the witness out of reach —;
+  // with a quarter or half a day the same man went after the same witness three or two times a day and silenced no more (one in
+  // each), with a day once a day and one silenced, with two days none silenced in that time — L-662, D-148)
+  const RETRY = () => DAY() * 1;
+  Sc.RETRY = RETRY; // (read by the proof, qa/ordens.js)
   function startMeet(q, l) {
     const S = G.S;
     const go = Sc.membersOf(q).filter(v => G.dist(v.x, v.y, l.x, l.y) < 34 && !v.captive && !v.aboard && !v.held && !v.ug && !(v.task && v.task.pri >= 3) && !meal(v));
@@ -286,8 +295,13 @@
         w.fate = 'fala';
       }
       if (w.fate === 'calar') {
-        if (w.hunter) continue;
-        const hunter = Sc.membersOf(q).filter(o => o.id !== q.master && !o.captive && !o.held && !o.aboard && o.age < 60).sort((a, b) => (P.persona(b).cru + P.persona(b).agg) - (P.persona(a).cru + P.persona(a).agg))[0] || person(q.master);
+        // (the hunt holds while its man is on it: a 'stalk' ended without the kill — the time, the bed, the feast, the home, a
+        // band took him — leaves the witness waiting for the order again, RETRY later, not marked for ever. The order marked its
+        // man once and never looked again: the witness lived on in limbo, never silenced and never speaking, and only a load
+        // sent the hunts out again — three witnesses on one man asleep in the metrópole, L-662, D-148)
+        if (w.hunter) { if (onHunt(person(w.hunter), q, 'w', w.id)) continue; w.hunter = 0; w.next = S.clock + RETRY(); }
+        if (w.next > S.clock) continue;
+        const hunter =Sc.membersOf(q).filter(o => o.id !== q.master && !o.captive && !o.held && !o.aboard && o.age < 60).sort((a, b) => (P.persona(b).cru + P.persona(b).agg) - (P.persona(a).cru + P.persona(a).agg))[0] || person(q.master);
         if (!hunter || hunter.captive) { w.fate = 'fala'; continue; }
         // (the order's man goes when nothing weightier holds him — a call from outside takes only an errand of less weight than
         // its own, never hands with a load on its way (Vg.busy, D-094) —: the order took a rioter of Mênfis out of the square,
@@ -689,14 +703,23 @@
       const S = G.S; out.secrets = S.secrets || null;
       const inq = S.secrets && Array.isArray(S.secrets.inq) ? S.secrets.inq : [];
       out.secretsAsk = inq.filter(i => { const v = S.villagers.get(i.by); return !!(v && v.task && v.task.type === 'inquire' && v.task.inq === i.id); }).map(i => i.id);
+      // (who was following whom — the order's hunts, of a witness or of an inquiry's asker —, and how long the hunt had gone on:
+      // the task is not in the save, and the load gives it back as it was; and the order's clocks, its next look at the
+      // witnesses and its day — a load gives the order no second day, nor a look out of its time. D-148, L-662)
+      out.secretsStalk = [];
+      for (const v of S.villagers.values()) { const t = v.task; if (t && t.type === 'stalk') out.secretsStalk.push([v.id, t.target, t.soc, t.w || 0, t.inq || 0, t.st || 0, t.age || 0, t.rt || 0]); }
+      out.secretsT = [tA, tB, lastDay];
     },
     load(o) {
       const S = G.S; S.secrets = o.secrets || null;
       for (const v of S.villagers.values()) { v.robe = null; }
       const s = S.secrets; if (!s) return;
-      // the night's meeting is over; the hunts and the questions start again
+      // the night's meeting is over (the conclave is not in the save); the hunts go on as they were — the hunter marked, the
+      // retry, who followed whom (below) — and the order's clocks: a load decides no hunt (D-148). It cleared every hunter
+      // marked, and an opened save sent the order after every witness it had in limbo, the world gone on never: the load of the
+      // urb2's case 6 sent Bjorn after four, T-597, L-662
       s.meets = [];
-      for (const q of s.socs) for (const w of q.wit || []) if (!w.done && w.hunter) w.hunter = 0;
+      const T = o.secretsT; if (Array.isArray(T) && T.length === 3 && T.every(Number.isFinite)) { tA = T[0]; tB = T[1]; lastDay = T[2]; }
       // (not to one another system has just given back what he was doing when the game was saved — the riot's guard (L-190) —:
       // that was his task then, not the questions, and the world gone on would have left him there. Jasão of Argos guarded the
       // riot and came back from the load asking questions in the streets, his post in the square empty: L-376)
@@ -706,6 +729,19 @@
       // back who was asleep, and found her busy: L-380. A save of before, with no such list, as L-376)
       const ask = Array.isArray(o.secretsAsk) ? new Set(o.secretsAsk.filter(Number.isFinite)) : null;
       for (const i of s.inq) { const v = S.villagers.get(i.by); if (v && !v.task && (!ask || ask.has(i.id))) G.Vg.setTask(v, { type: 'inquire', inq: i.id, pri: 2.15, st: 0, kind: 'inquire' }); }
+      // (who was following whom, given back as it was. A save of before kept no hunt — no such list —: its marks have none behind
+      // them, as the step would find at its next look, and they go, the witness waiting the retry; the step decides the hunt)
+      if (Array.isArray(o.secretsStalk)) {
+        for (const e of o.secretsStalk) {
+          if (!Array.isArray(e)) continue;
+          const [id, target, sid, wid, iid, stp, age, rt] = e; const v = S.villagers.get(id), q = soc(sid);
+          if (!v || v.task || !q || !person(target)) continue;
+          const t0 = { type: 'stalk', target, soc: sid, pri: 2.6, st: stp | 0, kind: 'stalk' }; if (wid) t0.w = wid; else if (iid) t0.inq = iid;
+          // (given back only to hands nothing weightier holds — none, at a load, but the rule of the order's man is one: L-456)
+          if (G.Vg.busy(v, t0)) continue;
+          const t = G.Vg.setTask(v, t0); if (t) { t.age = Number.isFinite(age) ? age : 0; if (Number.isFinite(rt) && rt) t.rt = rt; }
+        }
+      } else for (const q of s.socs) for (const w of q.wit || []) if (!w.done && w.hunter) { w.hunter = 0; w.next = S.clock + RETRY(); }
     },
   });
 
