@@ -164,16 +164,21 @@ const key = process.argv[2] || 'cidade';
     const r = await page.evaluate(() => {
       const H = __H; H.fresh(); const S = G.S;
       const set = H.town(); const f = G.Fac.get(set.fac);
-      // (a people that does not know coins: the god's gold is metal for the store)
+      // (a people that does not know coins: the god's gold is metal for the store — and the coin held from it while the case runs,
+      // the test's hand on the door of the arts, as nodemundo.semMoeda holds it (D-143): the arts spread between peoples by chance,
+      // T-098, and in the cidade of the generation 19 the Egyptians learned it again by contact in the middle of the rain)
       if (G.Eco.coinage(f.id)) delete f.tech.known.moeda;
-      const coin0 = [...S.buildings.values()].filter(b => b.set === set.id).reduce((a, b) => a + (b.coin || 0), 0);
-      const ouro0 = f.stock.ouro || 0;
-      G.Powers.cast('goldrain', set.cx, set.cy); const rn = S.gifts.rains[0];
-      H.run(70);
-      const coin1 = [...S.buildings.values()].filter(b => b.set === set.id).reduce((a, b) => a + (b.coin || 0), 0);
-      return { coinage: G.Eco.coinage(f.id), houses: rn.houses, n: rn.n, ouro0, ouro1: f.stock.ouro || 0, coin0, coin1, qa: H.qa() };
+      const aprende = G.Civ.learn; G.Civ.learn = function (ff, t) { if (t === 'moeda' && ff && ff.id === f.id) return false; return aprende.apply(this, arguments); };
+      try {
+        const coin0 = [...S.buildings.values()].filter(b => b.set === set.id).reduce((a, b) => a + (b.coin || 0), 0);
+        const ouro0 = f.stock.ouro || 0;
+        G.Powers.cast('goldrain', set.cx, set.cy); const rn = S.gifts.rains[0];
+        H.run(70);
+        const coin1 = [...S.buildings.values()].filter(b => b.set === set.id).reduce((a, b) => a + (b.coin || 0), 0);
+        return { coinage: G.Eco.coinage(f.id), houses: rn.houses, n: rn.n, ouro0, ouro1: f.stock.ouro || 0, coin0, coin1, qa: H.qa() };
+      } finally { G.Civ.learn = aprende; }
     });
-    ok('o4 povo sem moeda: o ouro vai ao armazém', !r.coinage && r.houses === 0 && r.n > 0 && r.ouro1 > r.ouro0 && r.coin1 <= r.coin0 + 0.01 && !r.qa.length, `${r.n} moedas catadas; ouro no armazém ${r.ouro0.toFixed(1)} → ${r.ouro1.toFixed(1)}; moedas nas casas ${r.coin0.toFixed(1)} → ${r.coin1.toFixed(1)}`);
+    ok('o4 povo sem moeda: o ouro vai ao armazém', !r.coinage && r.houses === 0 && r.n > 0 && r.ouro1 > r.ouro0 && r.coin1 <= r.coin0 + 0.01 && !r.qa.length, `${r.n} moedas catadas; ouro no armazém ${r.ouro0.toFixed(1)} → ${r.ouro1.toFixed(1)}; moedas nas casas ${r.coin0.toFixed(1)} → ${r.coin1.toFixed(1)}; ${r.coinage ? 'o povo SABE a moeda no fim' : 'o povo sem moeda até o fim'}; ${r.houses} nos telhados; ${r.qa.slice(0, 2).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
   }
 
   // ------------------------------ Vinho nos Poços ------------------------------
@@ -250,14 +255,17 @@ const key = process.argv[2] || 'cidade';
 
   // ------------------------------ Ressurreição ------------------------------
   await page.evaluate(() => {
-    // a married adult of the biggest town, free and on the ground
-    __H.mate = set => [...G.S.villagers.values()].filter(v => v.set === set.id && v.partner && G.S.villagers.has(v.partner) && v.age >= 18 && v.age < 55 && !v.captive && !v.aboard && !v.ug && !v.jail && !v.inside && !(v.task && v.task.type === 'scene')).sort((a, b) => a.id - b.id)[0];
+    // a married adult of the biggest town, free and on the ground (a body falls on the ground only out of a house: Carnage.onKill);
+    // with none out at the hour the world was saved, the world lives until one is, up to a day (the cidade of the generation 19 was
+    // saved just after midnight, every one of them asleep at home, and r1 and r3 went by without a line)
+    __H.mate = set => { const pick = () => [...G.S.villagers.values()].filter(v => v.set === set.id && v.partner && G.S.villagers.has(v.partner) && v.age >= 18 && v.age < 55 && !v.captive && !v.aboard && !v.ug && !v.jail && !v.inside && !(v.task && v.task.type === 'scene')).sort((a, b) => a.id - b.id)[0];
+      let v = pick(); for (let t = 0; !v && t < G.DAY_LEN; t += 0.5) { __H.run(0.5); v = pick(); } return v || null; };
     __H.raise = (x, y, id) => { const o = G.Powers.options('resurrect', x, y) || []; const k = o.find(q => +q.k === id); return k ? G.Powers.castChoice('resurrect', x, y, k.k) : 'não está entre as escolhas: ' + o.map(q => q.name).join(', '); };
   });
   {
     const r = await page.evaluate(() => {
       const H = __H; H.fresh(); const S = G.S;
-      const set = H.town(); const v = H.mate(set); if (!v) return null;
+      const set = H.town(); const v = H.mate(set); if (!v) return { none: true };
       const id = v.id, name = v.name, mate = v.partner, kids = v.kids.slice(), x = v.x, y = v.y;
       G.Village.kill(v, 'war', true); H.run(0.5);
       const body = G.Carnage.byVid(id);
@@ -266,7 +274,8 @@ const key = process.argv[2] || 'cidade';
       const w = S.villagers.get(id); const m = S.villagers.get(mate);
       return { name, cast, body: !!body, back: !!w, dead: S.dead.has(id), corpse: !!G.Carnage.byVid(id), sameName: w && w.name === name, together: !!(w && m && w.partner === m.id && m.partner === w.id && !m.widow), kids: w ? w.kids.length + '/' + kids.length : '-', bio: w ? (w.bio || []).some(e => /Voltou dos mortos/.test(e[2] || '')) : false, qa: H.qa() };
     });
-    if (r) ok('r1 ressurreição de um corpo: volta igual e casad' + 'o de novo', r.cast === true && r.body && r.back && !r.dead && !r.corpse && r.sameName && r.together && r.bio && !r.qa.length, `${r.name}: corpo ${r.body}; lançado ${r.cast}; vivo ${r.back}, no registro dos mortos ${r.dead}, corpo no chão ${r.corpse}; casal de novo ${r.together}; filhos ${r.kids}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+    if (r.none) ok('r1 ressurreição de um corpo: volta igual e casad' + 'o de novo', false, 'nenhum casado de 18 a 55 anos fora de casa na maior cidade, num dia do mundo');
+    else ok('r1 ressurreição de um corpo: volta igual e casad' + 'o de novo', r.cast === true && r.body && r.back && !r.dead && !r.corpse && r.sameName && r.together && r.bio && !r.qa.length, `${r.name}: corpo ${r.body}; lançado ${r.cast}; vivo ${r.back}, no registro dos mortos ${r.dead}, corpo no chão ${r.corpse}; casal de novo ${r.together}; filhos ${r.kids}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
   }
   {
     const r = await page.evaluate(() => {
@@ -308,7 +317,7 @@ const key = process.argv[2] || 'cidade';
   {
     const r = await page.evaluate(() => {
       const H = __H; H.fresh(); const S = G.S;
-      const set = H.town(); const v = H.mate(set); if (!v) return null;
+      const set = H.town(); const v = H.mate(set); if (!v) return { none: true };
       const id = v.id;
       // dies, comes back, dies again (the god's lightning), comes back again
       G.Village.kill(v, 'sick', true); H.run(0.5);
@@ -322,7 +331,8 @@ const key = process.argv[2] || 'cidade';
       const b = H.raise(px, py, id); H.run(1);
       return { a, b, died2, back: S.villagers.has(id), dead: S.dead.has(id), qa: H.qa() };
     });
-    if (r) ok('r3 volta, morre de novo, volta de novo', r.a === true && r.b === true && r.back && !r.dead && !r.qa.length, `primeira volta ${r.a}; o raio ${r.died2 ? 'matou' : 'não matou (morte forçada)'}; segunda volta ${r.b}; vivo ${r.back}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
+    if (r.none) ok('r3 volta, morre de novo, volta de novo', false, 'nenhum casado de 18 a 55 anos fora de casa na maior cidade, num dia do mundo');
+    else ok('r3 volta, morre de novo, volta de novo', r.a === true && r.b === true && r.back && !r.dead && !r.qa.length, `primeira volta ${r.a}; o raio ${r.died2 ? 'matou' : 'não matou (morte forçada)'}; segunda volta ${r.b}; vivo ${r.back}; ${r.qa.slice(0, 3).map(e => e.msg).join(' | ') || 'verificador limpo'}`);
   }
 
   // ------------------------------ Fantasmas ------------------------------
