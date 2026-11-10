@@ -229,15 +229,19 @@ poucos, sem parar o mundo (L-495, L-511, T-432).
   dia da festa da cidade (D-130). A audiência do palácio chama quem está de folga (D-124), sem tirar a ronda do posto
   (D-103). A taverna e o teatro das cidades pequenas têm gente (D-102).
 - **A cidade constrói o monumento de verdade.** Ela escolhe o tamanho, acha ou abre a terra, junta a pedra durante anos e
-  amplia quando cresce. Somando os sete mundos prontos da geração 18, isto é o que as cidades ergueram sozinhas, sem a mão
-  do deus:
-  - **dois monumentos de 40 m:** a Grande Pirâmide de Mênfis (megalópole, que chega ao nível 5 no ano 99) e o Templo
-    Mayor de Tenochtitlan (guerra mundial, ano 114);
-  - **palácios de 24 m:** nove de pé e um em obra; e o grande palácio de 32 m de Argos, em obra (metrópole);
-  - **teatros de 24 m:** dez, três deles ainda em obra;
-  - **templos de 16 m:** cinco;
-  - **grandes monumentos de 16 m:** dois (anos 500 e 1000);
-  - **tavernas de 12 m:** vinte e seis (três em obra), e uma hospedaria de 16 m (megalópole).
+  amplia quando cresce. Somando os sete mundos prontos da geração 19 (a última), isto é o que as cidades ergueram
+  sozinhas, sem a mão do deus:
+  - **dois monumentos de 40 m:** a Grande Pirâmide de Mênfis, de pé (megalópole: Mênfis chega ao nível 5 no ano 50), e a
+    de Tebas, em obra (guerra mundial, ano 63);
+  - **o grande palácio de 32 m** de Roma, de pé (megalópole);
+  - **palácios de 24 m:** um de pé (Hedeby, na guerra mundial) e três em obra (Tenochtitlan na metrópole e na guerra
+    mundial, Argos na megalópole);
+  - **teatros de 24 m:** doze, dois deles ainda em obra;
+  - **templos de 16 m:** onze;
+  - **tavernas de 12 m:** onze (uma em obra).
+
+  A geração 19 é mais nova que a 18 (a megalópole tem 50 anos, não 99), e nela não apareceu nenhum grande monumento de
+  16 m nem hospedaria de 16 m.
 
   Os degraus maiores (o teatro de 32 e 40 m, o templo de 24 e 32 m, o palácio colossal de 40 m, os colossais de 52 m) ainda
   não aparecem em nenhum mundo pronto. São provados pela mão do deus (`handFound`) e pelas regras da escala (§12).
