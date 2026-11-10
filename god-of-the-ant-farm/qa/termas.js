@@ -23,14 +23,22 @@ M.pronto(world); M.viver(12);
 // the year 41: «nenhum banho com foguista» —: the baths the world has, in the most peopled town of coin first, or, with none,
 // the god's hand puts them where the town's own planner would; and one of the town takes the stoker's trade by the god's hand,
 // held in it while the cases last — the town's board would deal him back at its next pass —, as the mina.js's miners (T-387))
-let handT = null, byGodT = false;
-if (![...G.S.buildings.values()].some(b => b.type === 'banhos' && b.built && Te.keeperOf(b))) {
+// (and a stoker at hand: none of the crew of a voyage — the crew's call to the quay, 3,25, takes him from the furnace, and on board
+// he holds the post with nobody at it. In the metropole of the generation 18 the stoker of the baths of the cases — the Sacred Lake of
+// Mênfis, the most peopled town of coin —, Narmer, was of a voyage gathering that day: the call took him to the quay at 0,23, he went
+// aboard at 0,49, and the baths were cold all day, the e1 and the e2. The baths of the cases are ones with a stoker at hand; with none,
+// the god's hand gives the sailor's post to one who stays — he keeps the trade, without the post —, T-623)
+const sails = k => !!(k && G.Expe && G.Expe.memberOf(k.id));
+const atHand = b => { const k = Te.keeperOf(b); return !!k && !sails(k); };
+let handT = null, byGodT = false, sailor = null;
+if (![...G.S.buildings.values()].some(b => b.type === 'banhos' && b.built && atHand(b))) {
   const order = (a, c) => (E.coinage(c.fac) - E.coinage(a.fac)) || V.pop(c.id) - V.pop(a.id) || a.id - c.id;
   let b = [...G.S.buildings.values()].filter(q => q.type === 'banhos' && q.built).sort((p, q) => order(G.S.settlements.get(p.set), G.S.settlements.get(q.set)) || p.id - q.id)[0] || null;
   if (!b) for (const s of [...G.S.settlements.values()].sort(order)) { const pos = V.findSite(s, 'banhos'); if (!pos || pos.demolish) continue; b = V.addBuilding('banhos', pos[0], pos[1], s.id, true); byGodT = true; break; }
   if (b) {
+    const k0 = Te.keeperOf(b); if (sails(k0)) { sailor = k0; for (const o of G.S.villagers.values()) if (o.job === b.id && o.role === 'foguista') o.job = 0; }
     const f = G.Fac.get(V.facOfSet(b.set));
-    const v = [...G.S.villagers.values()].filter(o => o.set === b.set && o.age >= 18 && o.age < 55 && !o.captive && !o.jail && !o.aboard && !o.ug && o.role !== 'guerreiro' && !(f && f.leader === o.id) && D.strength(o) > 0).sort((a, c) => (!!a.job - !!c.job) || a.id - c.id)[0];
+    const v = [...G.S.villagers.values()].filter(o => o.set === b.set && o.age >= 18 && o.age < 55 && !o.captive && !o.jail && !o.aboard && !o.ug && !sails(o) && o.role !== 'guerreiro' && !(f && f.leader === o.id) && D.strength(o) > 0).sort((a, c) => (!!a.job - !!c.job) || a.id - c.id)[0];
     if (v) { G.Vg.endTask(v); v.role = 'foguista'; v.job = b.id; handT = { id: v.id, b: b.id }; }
   }
 }
@@ -44,11 +52,11 @@ const watch = bad => rule((sys, sev, msg) => { if (sys === 'oficio' && sev <= 2 
 const liveSec = (sec, until, bad, each) => { for (let k = 0; k < sec; k++) { if (keeping) keeping(); holdT(); M.viver(1); if (each) each(); if (bad && k % 5 === 4) watch(bad); if (until && until()) return true; } return false; };
 const seen = []; D.onMove.push(e => { seen.push(e); });
 G.inSim++;
-// the baths of the tests: with their stoker, in the most peopled town of coin (else of any)
+// the baths of the tests: with their stoker at hand, in the most peopled town of coin (else of any)
 function pick() {
   let best = null;
   for (const b of S().buildings.values()) {
-    if (b.type !== 'banhos' || !b.built || !Te.keeperOf(b)) continue;
+    if (b.type !== 'banhos' || !b.built || !atHand(b)) continue;
     const sc = (Te.withCoin(b) ? 1e6 : 0) + V.pop(b.set);
     if (!best || sc > best.sc) best = { b, sc };
   }
@@ -57,7 +65,7 @@ function pick() {
 const P = pick();
 if (!P) { console.log(`FALHOU | termas mundo | ${world}: nenhum banho com foguista`); process.exit(1); }
 const town = () => S().settlements.get(P.set);
-console.log(`${world}: ${V.buildName(P)} #${P.id} de ${town().name} (${(G.Fac.get(V.facOfSet(P.set)) || {}).civ}, ${V.pop(P.set)} habitantes, ${Te.withCoin(P) ? 'de moeda' : 'sem moeda'}); abrem ${Te.horas(P).abre}, fecham ${Te.horas(P).fecha}${handT ? (byGodT ? "; os banhos e o foguista pela mão do deus" : "; o foguista pela mão do deus") : ""}`);
+console.log(`${world}: ${V.buildName(P)} #${P.id} de ${town().name} (${(G.Fac.get(V.facOfSet(P.set)) || {}).civ}, ${V.pop(P.set)} habitantes, ${Te.withCoin(P) ? 'de moeda' : 'sem moeda'}); abrem ${Te.horas(P).abre}, fecham ${Te.horas(P).fecha}${handT ? (byGodT ? "; os banhos e o foguista pela mão do deus" : "; o foguista pela mão do deus") : ""}${sailor ? ` (o deles, ${sailor.name}, é da tripulação de uma viagem)` : ""}`);
 // wood in the store beyond what it keeps for its works, the morning before the opening
 function ready(b) {
   const f = G.Fac.get(V.facOfSet(b.set)); if (D.free('f:' + f.id, 'wood') < 40) D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true });

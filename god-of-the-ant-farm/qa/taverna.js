@@ -174,8 +174,14 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); return !!T.visitTask
 // counter serves himself there and pays as to the keeper; called from the market across the town, the keeper walked half a
 // minute, the guests waited for him all of it, and none served himself, L-592)
 {
-  fresh(); const b = S().buildings.get(P.id); ready(b); const bad = [];
+  // (the town calm for the walk: its feast of the day kept for another day by the god's hand — festivals.js, the plan of the day —
+  // and none under way: the feast calls the whole town, 3,2, over the keeper's errand, as it should. The clock the case puts at 0,63
+  // fell in the hour of the feast of Mênfis of the generation 18, which took Hatshepsut at the first step — «0 s a caminho» —; and
+  // the rounds counted from the case's start: each case opens the same snapshot, and its day has the number of the others', T-622)
+  fresh(); const b = S().buildings.get(P.id); ready(b); const bad = []; seen.length = 0;
+  town().festPlan = { day: S().day, key: null, done: true };
   liveSec(30, () => !!T.dia(b), bad); const op = T.dia(b); const k = T.keeperOf(b);
+  let feast = !!(G.Fest && G.Fest.active(b.set)); // (and none on the way: a feast that began while he walked is seen too)
   let far = 0, went = [], self = 0, waited = [], walk = 0; const c0 = S().clock;
   if (op && k) {
     S().time = 0.63;
@@ -186,6 +192,7 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); return !!T.visitTask
     if (at) { G.Vg.endTask(k); k.inside = 0; k.path = null; far = r2(G.dist(k.x, k.y, tx, ty)); G.Vg.setTask(k, { type: 'atender', id: b.id, op: op.id, pri: 1.05, st: 0 }); }
     went = send(b, guests(b, 3)); const ids = new Set(went.map(v => v.id));
     liveSec(45, () => !A.live(op) || !(k.task && k.task.type === 'atender' && k.task.st === 0), bad, () => {
+      feast = feast || !!(G.Fest && G.Fest.active(b.set));
       if (!A.live(op) || !(k.task && k.task.type === 'atender' && k.task.st === 0)) return;
       // (the keeper still on his way: a round taken by a guest's own hand, and none left waiting past the while)
       self = seen.filter(e => e[7] === op.id && e[8] === 'taverna' && ids.has(e[9]) && e[5] !== 'moedas').length;
@@ -196,8 +203,8 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); return !!T.visitTask
   }
   // (the case where it happened: a round by a guest's own hand while the keeper walked — the while is 12 s at the table —, and
   // none left waiting past it)
-  ok('t8 o-taverneiro-longe', !!op && !!k && far >= 10 && went.length >= 1 && self >= 1 && !waited.length && !bad.length,
-    op && k ? `${k.name} chamado ao balcão de ${far} casas dali (${walk} s a caminho); ${went.length} da cidade à mesa; enquanto ele vinha, ${self} rodada(s) servida(s) pela mão do próprio freguês${waited.length ? `; ESPERARAM SEM SE SERVIR: ${waited.join(', ')}` : ''}${bad.length ? '; ' + bad.slice(0, 2).join(' | ') : ''}` : 'não abriu ou sem taverneiro');
+  ok('t8 o-taverneiro-longe', !feast && !!op && !!k && far >= 10 && went.length >= 1 && self >= 1 && !waited.length && !bad.length,
+    op && k ? `${feast ? 'UMA FESTA DA CIDADE NO MEIO DO CASO; ' : ''}${k.name} chamado ao balcão de ${far} casas dali (${walk} s a caminho); ${went.length} da cidade à mesa; enquanto ele vinha, ${self} rodada(s) servida(s) pela mão do próprio freguês${waited.length ? `; ESPERARAM SEM SE SERVIR: ${waited.join(', ')}` : ''}${bad.length ? '; ' + bad.slice(0, 2).join(' | ') : ''}` : 'não abriu ou sem taverneiro');
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `TAVERNA: FALHOU (${fails.join(', ')})` : 'TAVERNA: ok');

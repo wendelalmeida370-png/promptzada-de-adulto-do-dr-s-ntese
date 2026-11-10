@@ -77,7 +77,10 @@ function buyer(P, k) {
 // (with free hands: what is in them put away first, as send() does — a purchase the two hands have no room for is not made, the
 // world's rule (economy.js, runShop). In the Argos of the generation 16 the buyer, Jasão, had 3 of wood in his arms, and his
 // errand ended at the stall without a word, «das bancas às mãos 0»)
-const shopAt = (o, P, k) => { G.Vg.endTask(o); o.hunger = 10; o.sleeping = false; if (o.carry && o.carry.n > 1e-6 && o.carry.k !== 'water') G.Vg.toStore(o, G.Fac.idOfV(o), 'teste'); return G.Vg.H.setTask(o, { type: 'shop', id: P.b.id, k, pri: 1.05 }); };
+// (and rested, as the feirante of send(): one worn out goes to bed over the errand — the sleep of one under 8 of energy, 2,5 —; in the
+// Argos of the generation 18 the buyer, Clio, of the town's secret society, came from a night of it with no energy left, and went to
+// bed at the first step, «das bancas às mãos 0», T-624)
+const shopAt = (o, P, k) => { G.Vg.endTask(o); o.hunger = 10; o.energy = Math.max(o.energy, 95); o.sleeping = false; if (o.carry && o.carry.n > 1e-6 && o.carry.k !== 'water') G.Vg.toStore(o, G.Fac.idOfV(o), 'teste'); return G.Vg.H.setTask(o, { type: 'shop', id: P.b.id, k, pri: 1.05 }); };
 
 // f1 the morning of the fair
 {
