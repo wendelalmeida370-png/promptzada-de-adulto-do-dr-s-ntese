@@ -99,11 +99,13 @@ skip fundacao || { F() { local n=$1; shift; timeout 7200 node "$@" > "$OUT/fund_
 echo "== fundação: $(cat "$OUT"/fund_*.txt 2>/dev/null | grep -c '^PASSOU') passaram, $(cat "$OUT"/fund_*.txt 2>/dev/null | grep -c '^FALHOU') falharam; $(grep -L '^saída 0' "$OUT"/fund_*.txt 2>/dev/null | wc -l) arquivos com saída de erro"
 # 7c. o Modo Encarnado: a cidade real em 3D, a pessoa real, o mundo que continua, a troca, a morte, o terreno, os saves A–E,
 # o estresse (30 idas e voltas, a caminhada longa, o salto de 10 anos), os casos ruins e o visual (e11) — com fotos em encarna-fotos/
-# (≈ 1 h 20 sozinho: o 3D é desenhado de verdade, sem placa de vídeo — desde a v33, com o chão e os padrões, mais pesado: T-032)
+# (≈ 1 h 20 sozinho: o 3D é desenhado de verdade, sem placa de vídeo — desde a v33, com o chão e os padrões, mais pesado: T-032;
+# na Arquitetura Monumental, com as partes novas e a «cidade» da geração 19, mais de 3 h: o limite é de 5 h, porque o de 3 h cortava
+# a e8, a última parte, e o «sem erros de página» desde a reg18 — T-677)
 # (e, depois, as falas e os textinhos do mundo sobre os olhos do corpo, numa pechincha: visual/baloes.js, L-211 — fotos em baloes-fotos/;
 # e o Diário de Vida, a página e o deixar de lado pelas mãos do corpo: visual/diario.js, D-061 — fotos em diario-fotos/;
 # e o degrau grande na visão do deus, o Coliseu de 10 casas em Roma: visual/forma-deus-fotos.js, D-113/D-114 — fotos em forma-deus-fotos/)
-skip encarnado || { (timeout 10800 node encarna.js "$OUT/encarna-fotos" > "$OUT/encarnado.txt" 2>&1); (timeout 3600 node visual/baloes.js .. "$OUT/baloes-fotos" > "$OUT/baloes.txt" 2>&1); (timeout 3600 node visual/diario.js .. "$OUT/diario-fotos" > "$OUT/diario.txt" 2>&1); (timeout 1800 node visual/forma-deus-fotos.js .. "$OUT/forma-deus-fotos" > "$OUT/forma-deus-fotos.txt" 2>&1); }
+skip encarnado || { (timeout 18000 node encarna.js "$OUT/encarna-fotos" > "$OUT/encarnado.txt" 2>&1); (timeout 3600 node visual/baloes.js .. "$OUT/baloes-fotos" > "$OUT/baloes.txt" 2>&1); (timeout 3600 node visual/diario.js .. "$OUT/diario-fotos" > "$OUT/diario.txt" 2>&1); (timeout 1800 node visual/forma-deus-fotos.js .. "$OUT/forma-deus-fotos" > "$OUT/forma-deus-fotos.txt" 2>&1); }
 echo "== encarnado: $(grep -c '^PASSOU' "$OUT/encarnado.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/encarnado.txt" 2>/dev/null) falharam; balões: $(grep -c '^PASSOU' "$OUT/baloes.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/baloes.txt" 2>/dev/null) falharam; diário: $(grep -c '^PASSOU' "$OUT/diario.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/diario.txt" 2>/dev/null) falharam; o deus do degrau grande: $(grep -c '^PASSOU' "$OUT/forma-deus-fotos.txt" 2>/dev/null) passaram, $(grep -c '^FALHOU' "$OUT/forma-deus-fotos.txt" 2>/dev/null) falharam; $(grep -h '^DESEMPENHO' "$OUT/encarnado.txt" 2>/dev/null | cut -c1-200)"
 # 8. desempenho: sozinho na máquina, para os tempos valerem alguma coisa
 # (e o quadro do Modo Encarnado com o Coliseu à vista em tempo de relógio, a 8t do visual/monumental.js — D-134, D-137)
