@@ -1044,13 +1044,18 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     { const snap = () => JSON.stringify([dock.crates, dock._dock, dock.wd]); const s0 = snap(), c0 = S.clock; G.Modes.menu(true); __E.f(60); const s1 = snap(), c1 = S.clock; G.Modes.menu(false); __E.f(4);
       out.still = { quay: s0 === s1, clock: c0 === c1, drawn: drawnIds() === ids() }; }
     // 2. a stroke asked with the menu open waits: the tree as it was, until the world goes on
-    { const b = __E.body(); const tr = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.8 && !t.claim && G.W.reaches(b, t.x, t.y)).sort((p, q) => G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y))[0];
+    { const b = __E.body(); const near = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.8 && !t.claim && G.W.reaches(b, t.x, t.y)).sort((p, q) => G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y));
       out.stroke = null;
-      // (a step from the trunk, on the side the world's path comes from)
-      if (tr) { const p = G.W.findPath(b.x, b.y, tr.x, tr.y, true, 30000); const e = p && p.length ? p[p.length - 1] : [tr.x, tr.y]; const d = Math.hypot(e[0] - tr.x, e[1] - tr.y) || 1;
-        for (const k of [0.3, 0.4, 0.22, 0.5]) if (G.Avatar.place(tr.x + (e[0] - tr.x) / d * k, tr.y + (e[1] - tr.y) / d * k)) break; __E.f(4); G.Avatar.state().yaw = Math.atan2(tr.y - b.y, tr.x - b.x); b.carry = null;
+      // (a step from the trunk, on the side the world's path comes from — where the body may stand: a tree on a rock, felled by the
+      // world's woodcutter from the tile beside it, may have no ground within the reach of the body's hands — the birch #4067 of
+      // the «cidade» of the generation 18, on a rocky tile by the sea and a harbour warehouse, its nearest ground 3.1 m from the
+      // trunk: «Longe demais.» —; then the next nearest, T-630)
+      let tr = null;
+      for (const t of near.slice(0, 12)) { const p = G.W.findPath(b.x, b.y, t.x, t.y, true, 30000); const e = p && p.length ? p[p.length - 1] : [t.x, t.y]; const d = Math.hypot(e[0] - t.x, e[1] - t.y) || 1;
+        if ([0.3, 0.4, 0.22, 0.5].some(k => G.Avatar.place(t.x + (e[0] - t.x) / d * k, t.y + (e[1] - t.y) / d * k))) { tr = t; break; } }
+      if (tr) { __E.f(4); G.Avatar.state().yaw = Math.atan2(tr.y - b.y, tr.x - b.x); b.carry = null;
         const c0 = tr.chop; const r = G.Interact.run({ id: 'arvore', t: { tr, X: tr.x * TL, Z: tr.y * TL } }); G.Modes.menu(true); __E.f(90); const during = tr.chop; G.Modes.menu(false); __E.until(() => !G.Avatar.busy(), 200); __E.f(2);
-        out.stroke = { ran: !!(r && r.ok), during: +(during - c0).toFixed(3), after: +(tr.chop - c0).toFixed(3) }; } }
+        out.stroke = { ran: !!(r && r.ok), during: +(during - c0).toFixed(3), after: +(tr.chop - c0).toFixed(3), tree: tr.id, nearer: near.indexOf(tr), msg: r && !r.ok ? r.msg : undefined }; } }
     // 3. a load carried to the store: drawn in the hands while the world has it in them, never after
     { const b = __E.body(); const sh = G.Village.nearestDropoff(b.x, b.y, b.set); out.carry = null;
       if (sh && G.Village.facOfSet(sh.set) === G.Fac.idOfV(b)) { const d = G.Vg.door(sh); G.Avatar.place(d[0], d[1]); __E.f(6); G.Avatar.state().yaw = Math.atan2(d[1] - b.y, d[0] - b.x); b.carry = { k: 'wood', n: 3 }; b.hunger = 5; __E.f(4);
