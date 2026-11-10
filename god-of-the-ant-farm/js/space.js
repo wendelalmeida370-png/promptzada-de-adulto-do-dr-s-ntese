@@ -363,11 +363,14 @@
     // the body, stopped at its second tread — L-360. So the feet's own step is held there too, where they are (0.02 out, on
     // their ground), to the body's whole step — the very point, no margin —: the foot is the higher of the drawn one and the
     // feet's less those 0.04, and the 0.56 of the walk holds both)
+    // (and the feet stand on a tread a hair over its top — the drawn floor's, Space.FLOOR_UP —, in the street on its ground: the
+    // step they take onto the second is that hair higher than the tops say. The very point counts it: the house#10712 of the
+    // generation-18 metropole, 0.59 by the tops, was 0.6007 to the body, climbed with the hands — L-668)
     const footG = (a, n) => { const p = P(a, n); return Sp.footAt(Math.min(N - 0.001, b.x + p[0] / TILE), Math.min(N - 0.001, b.y + p[1] / TILE)) - y0; };
     const STEP_UP = 0.6; // (the body's step, Avatar.TUNE.stepUp: kept here as its radius is)
     const footStep = () => { const t = treads[treads.length - 1]; const sd = t && t.kind === 'side', st = !sd && treads.length > 1; const n = t ? t.n + t.wn / 2 : n0, a = t ? t.a : 0, q = (t ? t.wa : wd) / 4;
       const at = (g, off) => (t ? t.y : top) - Math.min(g(a, n + off), g(a - q, n + off), g(a + q, n + off));
-      return sd ? at(footG, 0.25) : st ? Math.max(at(gAt, 0.12), at(footG, 0.02) - (STEP_UP - 0.56)) : at(gAt, 0.12); };
+      return sd ? at(footG, 0.25) : st ? Math.max(at(gAt, 0.12), at(footG, 0.02) + Sp.FLOOR_UP - (STEP_UP - 0.56)) : at(gAt, 0.12); };
     // (the foot of a flight with the rise above it within one step, with a margin — 0.56 of the body's 0.6 —; a lone step within
     // a span and a half: L-183, the flights the body walked up and could not — soleira 4b, T-090)
     const riseUp = () => (treads.length > 1 ? treads[treads.length - 2].y - treads[treads.length - 1].y : 0);

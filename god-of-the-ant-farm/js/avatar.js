@@ -515,14 +515,17 @@
   // falling past a ledge the rim hangs over — a jump that fell short of a square's plinth, the rim carried over its edge while
   // the feet were within a step of its top —: the body slides out along the face as far as it was in, never left inside the
   // stone (climbed from there, the feet went through the edge: the e6 «plano» of the generation 17, L-653). The rim's points
-  // over a floor too high for the feet push it back; caught between two such, or with nowhere free behind, it is left
+  // over a floor too high for the feet push it back; caught between two such, or with nowhere free behind, it is left. Out
+  // along the face and down, never up: onto ground no higher than the feet — pushed back onto the floor it walked off, a body
+  // falls off it again, and again: the feira#11718 of the generation-18 metropole, its floor 0.35 m under the street, a strip
+  // of the lot's own ground 0.48 m lower between them, and the body never got back to the street — L-669)
   function unwedge(feet) {
     const r = TUNE.radius, hit0 = b.stairHit; let px = 0, pz = 0;
     for (const [dx, dz] of RIM) if (solidAt(b.X + dx * r, b.Z + dz * r, feet) === 'ledge') { px -= dx; pz -= dz; }
     const l = Math.hypot(px, pz); let out = false;
     if (l > 0.5) { px /= l; pz /= l;
       for (let s = 0.02; s < r + 0.03 && !out; s += 0.02) { const X = b.X + px * s, Z = b.Z + pz * s;
-        if (blocked(X, Z, feet, px, pz) || RIM.some(([dx, dz]) => solidAt(X + dx * r, Z + dz * r, feet) === 'ledge')) continue;
+        if (floorAt(X, Z) > feet + 0.1 || blocked(X, Z, feet, px, pz) || RIM.some(([dx, dz]) => solidAt(X + dx * r, Z + dz * r, feet) === 'ledge')) continue;
         b.X = X; b.Z = Z; out = true; const vn = b.vx * px + b.vz * pz; if (vn < 0) { b.vx -= px * vn; b.vz -= pz * vn; } } }
     b.stairHit = hit0; // (asking is not running into a flight)
     return out;
