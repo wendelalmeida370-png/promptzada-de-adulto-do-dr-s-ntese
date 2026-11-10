@@ -33,12 +33,17 @@ const R = 0.32;
 const RIM = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]];
 const ups = (p, lv) => p.stairs.filter(s => s.kind !== 'degraus' && s.lv0 === lv);
 const inRect = (r, x, z, m) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
+// (what of a flight bars the body: the plan's cells of it — Avatar.flightBox; the body and the people of the world by the same
+// cells, the drawn outline up to half a cell past them, D-146 —: the body's rule, for its ways and its steps here. By the
+// outline, the way of the 3 went 0,06 m from the ladder of the sobrado#3002 of the generation-18 metropole, inside its cells:
+// the body was barred there, short of the foot, T-615)
+const bar = s => G.Avatar.flightBox(s.r);
 // (where the body takes a flight from: before its first step, up to 0.7 m, across its width — Avatar's atFoot)
 function atFoot(s, x, z) { const r = s.r, dx = s.dir[0], dz = s.dir[1]; if (dx) { const e = dx > 0 ? r[0] - x : x - r[2]; return e >= -0.05 && e < 0.7 && z > r[1] - 0.05 && z < r[3] + 0.05; } const e = dz > 0 ? r[1] - z : z - r[3]; return e >= -0.05 && e < 0.7 && x > r[0] - 0.05 && x < r[2] + 0.05; }
 // a path over a storey of a plan, by the body's rule (qa/visual/corpo-casa.js's: the rim round each point on what the feet walk
 // — Space.indoor —, never over a flight going up from the storey, a door of the rooms taken whole, its corridor)
 function pathIn(b, p, lv, from, to) {
-  const fl = ups(p, lv); const onUp = (x, z) => fl.some(s => inRect(s.r, x, z, 0.02));
+  const fl = ups(p, lv), fb = fl.map(bar); const onUp = (x, z) => fb.some(r => inRect(r, x, z, 0.02));
   const doors = p.doors.map((d, id) => { const w = p.walls[d.wall]; if (!w || w.lv !== lv || d.outer) return null; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const ux = (w.b[0] - w.a[0]) / L, uz = (w.b[1] - w.a[1]) / L;
     return { id, M: [w.a[0] + ux * d.at, w.a[1] + uz * d.at], u: [ux, uz], n: [-uz, ux], half: Math.max(0.1, d.w / 2 - 0.25) }; }).filter(Boolean);
   const doorOf = (x, z) => { for (const d of doors) { const dx = x - d.M[0], dz = z - d.M[1]; if (Math.abs(dx * d.u[0] + dz * d.u[1]) <= d.half && Math.abs(dx * d.n[0] + dz * d.n[1]) <= 0.7) return d; } return null; };
@@ -48,7 +53,7 @@ function pathIn(b, p, lv, from, to) {
   // the feet walk and off every flight of the storey, to the centimetre — for the last search: as the body slides past two
   // corners, the rim behind it never looked at)
   const stepOK = (x, z, mx, mz) => { const d = doorOf(x, z); if (d) { const q = Sp.indoor(b.x * TL + x, b.y * TL + z, lv, b.id); return !!q && (q.walk || q.door === d.id); }
-    for (const [dx, dz] of RIM) { if ((dx || dz) && dx * mx + dz * mz <= 0.05) continue; const X = x + dx * R, Z = z + dz * R; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, lv, b.id); if (!q || !(q.walk || q.door >= 0) || fl.some(s => inRect(s.r, X, Z, 0))) return false; } return true; };
+    for (const [dx, dz] of RIM) { if ((dx || dz) && dx * mx + dz * mz <= 0.05) continue; const X = x + dx * R, Z = z + dz * R; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, lv, b.id); if (!q || !(q.walk || q.door >= 0) || fb.some(r => inRect(r, X, Z, 0))) return false; } return true; };
   const cells = (cs, r) => { const n = Math.round(p.grid.n * p.grid.cs / cs); const c = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const [sx, sz] = c(from[0], from[1]), [tx, tz] = c(to[0], to[1]);
     const prev = new Map(); const key = (x, z) => z * n + x; const q = [[sx, sz]]; prev.set(key(sx, sz), null);
     for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break;
@@ -72,14 +77,15 @@ function pathIn(b, p, lv, from, to) {
 const inward = (p, k) => { const e = p.entrance; const d = p.doors[e.door]; const w = p.walls[d.wall]; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; let nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L;
   if ((p.lot.w / 2 - e.x) * nx + (p.lot.w / 2 - e.z) * nz < 0) { nx = -nx; nz = -nz; } return [e.x + nx * k, e.z + nz * k]; };
 // (the rim of the body at a point of a storey: on what the feet walk there — a door of the rooms too, the hands open it —, off
-// every flight going up from it; null when it stands, else what the first point of the rim that does not stand is on)
-const rimWhy = (b, p, lv, x, z) => { for (const [dx, dz] of RIM) { const X = x + dx * R, Z = z + dz * R; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, lv, b.id);
-  if (!q) return `${X.toFixed(2)},${Z.toFixed(2)} fora da planta`; if (!(q.walk || q.door >= 0)) return `${X.toFixed(2)},${Z.toFixed(2)} na casa ${q.code}`; const f = ups(p, lv).find(s => inRect(s.r, X, Z, 0)); if (f) return `${X.toFixed(2)},${Z.toFixed(2)} no lance ${f.id}`; } return null; };
-const rimOK = (b, p, lv, x, z) => !rimWhy(b, p, lv, x, z);
+// every flight going up from it (but own: the flight it is at the foot of, which it takes there by walking into its cells);
+// null when it stands, else what the first point of the rim that does not stand is on)
+const rimWhy = (b, p, lv, x, z, own) => { for (const [dx, dz] of RIM) { const X = x + dx * R, Z = z + dz * R; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, lv, b.id);
+  if (!q) return `${X.toFixed(2)},${Z.toFixed(2)} fora da planta`; if (!(q.walk || q.door >= 0)) return `${X.toFixed(2)},${Z.toFixed(2)} na casa ${q.code}`; const f = ups(p, lv).find(s => s !== own && inRect(bar(s), X, Z, 0)); if (f) return `${X.toFixed(2)},${Z.toFixed(2)} no lance ${f.id}`; } return null; };
+const rimOK = (b, p, lv, x, z, own) => !rimWhy(b, p, lv, x, z, own);
 // (the body's own step there — Avatar's blocked: the centre and the points of the rim on the side it moves toward (mx, mz), on
 // what the feet walk and off every flight of the storey; null when it steps, else what the first point that does not is on)
 const stepWhy = (b, p, lv, x, z, mx, mz) => { for (const [dx, dz] of RIM) { if ((dx || dz) && dx * mx + dz * mz <= 0.05) continue; const X = x + dx * R, Z = z + dz * R; const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, lv, b.id);
-  if (!q) return `${X.toFixed(2)},${Z.toFixed(2)} fora da planta`; if (!(q.walk || q.door >= 0)) return `${X.toFixed(2)},${Z.toFixed(2)} na casa ${q.code}`; const f = ups(p, lv).find(s => inRect(s.r, X, Z, 0)); if (f) return `${X.toFixed(2)},${Z.toFixed(2)} no lance ${f.id}`; } return null; };
+  if (!q) return `${X.toFixed(2)},${Z.toFixed(2)} fora da planta`; if (!(q.walk || q.door >= 0)) return `${X.toFixed(2)},${Z.toFixed(2)} na casa ${q.code}`; const f = ups(p, lv).find(s => inRect(bar(s), X, Z, 0)); if (f) return `${X.toFixed(2)},${Z.toFixed(2)} no lance ${f.id}`; } return null; };
 
 // ------------------------------ 1 and 2: every flight of the world's plans ------------------------------
 const blds = [...S.buildings.values()].filter(b => b.built && b.type !== 'ruin' && In.has(b)).sort((a, c) => a.id - c.id);
@@ -113,9 +119,12 @@ for (const b of blds) {
     // takes the flight by walking into it, and the loft's ladder of a house cut front and back had its foot past the partition,
     // L-447. The step, not the whole rim: walking in, the body slides along what stands beside it — a hut's loft ladder beside
     // the annex's wall had the side of the rim in the wall's cell, 7 cm off its face, and the body went up it, T-471
-    const toStep = () => { const r = s.r, du = s.dir[0], dv = s.dir[1], e0 = du ? (du > 0 ? r[0] : r[2]) : (dv > 0 ? r[1] : r[3]); const e = du ? (du > 0 ? e0 - ax : ax - e0) : (dv > 0 ? e0 - az : az - e0);
+    const toStep = () => { const r = bar(s), du = s.dir[0], dv = s.dir[1], e0 = du ? (du > 0 ? r[0] : r[2]) : (dv > 0 ? r[1] : r[3]); const e = du ? (du > 0 ? e0 - ax : ax - e0) : (dv > 0 ? e0 - az : az - e0);
       const K = R + 0.01; if (e <= K) return null; for (let k = Math.max(K, e - 0.02); ; k = Math.max(K, k - 0.02)) { const x = du ? e0 - du * k : ax, z = du ? az : e0 - dv * k; const w = stepWhy(b, p, s.lv0, x, z, du, dv); if (w) return `a ${(k - R).toFixed(2)} m do primeiro degrau, ${w}`; if (k <= K) return null; } }; // (up to a centimetre from it: there the rim meets it)
-    if (!atFoot(s, ax, az) || (!open && !rimOK(b, p, s.lv0, ax, az))) footBad.push(`${tag}: o pé ${ax},${az} ${atFoot(s, ax, az) ? 'sem a borda do corpo no chão (' + rimWhy(b, p, s.lv0, ax, az) + ')' : 'fora de onde o corpo toma o lance'}`);
+    // (by the cells, the plan's foot may stand nearer its own flight than the body's rim: the sobrado#3002 of the generation-18
+    // metropole, its ladder's cells 0,12 m past the outline at its foot — the body takes it there, its rim meeting them, and lands
+    // there coming down —: its middle off them, and the rim off the others)
+    if (!atFoot(s, ax, az) || (!open && (!rimOK(b, p, s.lv0, ax, az, s) || inRect(bar(s), ax, az, 0)))) footBad.push(`${tag}: o pé ${ax},${az} ${atFoot(s, ax, az) ? (inRect(bar(s), ax, az, 0) ? 'dentro das casas do lance' : 'sem a borda do corpo no chão (' + rimWhy(b, p, s.lv0, ax, az, s) + ')') : 'fora de onde o corpo toma o lance'}`);
     else if (!open) { const w = toStep(); if (w) footBad.push(`${tag}: do pé ${ax},${az} o corpo não chega ao lance (${w})`); }
     // 2. the way to it — from the door on the entrance's storey, from the top of a flight coming up to the others (a storey below
     // the entrance is come down to by the flight itself: its foot is where the body lands; an open ground is the street's)

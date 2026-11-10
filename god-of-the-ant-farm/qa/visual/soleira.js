@@ -361,22 +361,30 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
       // (straight out of the door's middle, a tile and more into the street, its foot walked)
       if (!fl || !fl.walks || !fl.ground || fl.treads.some(t => t.kind !== 'out' || Math.abs(t.a) > 0.01)) continue;
       const far = fl.treads.filter(t => t.n > fl.room + 0.3); if (far.length < 3) continue; const mid = far[Math.floor(far.length / 2)];
-      const before = look(fl), ts0 = Sp.treeSig(b);
+      const before = look(fl);
       // (on the line; beside it, just past the narrowest steps the street may take — a metre wide —, over the edge of these)
       for (const [where, a] of [['na linha', 0], ['ao lado', 0.5 + R1 + 0.02], ['ao lado', -(0.5 + R1 + 0.02)]]) {
         if (where === 'ao lado' && recs.some(r => r.b === b && r.where === 'ao lado')) continue;
-        const q = fl.P(a, mid.n); const tr = god(() => Nat.addTree(b.x + q[0] / TL, b.y + q[1] / TL, 'oak', 1.0)); if (!tr) continue;
+        const q = fl.P(a, mid.n), tsB = Sp.treeSig(b); const tr = god(() => Nat.addTree(b.x + q[0] / TL, b.y + q[1] / TL, 'oak', 1.0)); if (!tr) continue;
         const old = inTrunk(fl, b, tr); if (!old) { god(() => Nat.removeTree(tr)); continue; } // (beside treads narrower than that: not in their way)
         const fl2 = flightOf(b, p, w, h, ly); const ts1 = Sp.treeSig(b);
         const r = { b, where, n0: fl.treads.length, n2: fl2.treads.length, old, through: inTrunk(fl2, b, tr), walks: fl2.walks && fl2.ground, round: fl2.treads.some(t => t.n > fl.room + 0.3) };
         r.how = r.walks ? climb(b, fl2) : 'não cabe'; if (S.avatar) G.Possess.release('deus');
-        god(() => Nat.removeTree(tr)); r.back = look(flightOf(b, p, w, h, ly)) === before; r.sig = ts1 !== ts0 && Sp.treeSig(b) === ts0; recs.push(r); }
+        god(() => Nat.removeTree(tr)); r.back = look(flightOf(b, p, w, h, ly)) === before; const ts2 = Sp.treeSig(b);
+        // (the signature is of what the steps reckoned so far reach — the tiles and the elders about them, kept in Space —: steps
+        // reckoned round the tree may come near an elder the straight ones did not, and it takes that one in for good — the
+        // house#4286 of the generation-18 metropole, its steps gone round the tree beside them, T-607: redrawn with the tree and
+        // without it all the same, the signature changed both times. So: changed with the tree, and again without it; and the
+        // tree planted and taken away once more — both flights reckoned —, changed with it and exactly back without it)
+        const t2 = god(() => Nat.addTree(tr.x, tr.y, 'oak', 1.0)); let again = false;
+        if (t2) { flightOf(b, p, w, h, ly); const ts3 = Sp.treeSig(b); god(() => Nat.removeTree(t2)); flightOf(b, p, w, h, ly); again = ts3 !== ts2 && Sp.treeSig(b) === ts2; }
+        r.sig = ts1 !== tsB && ts2 !== ts1 && again; r.sigBack = ts2 === tsB; recs.push(r); }
     }
     const line = recs.filter(r => r.where === 'na linha'), side = recs.filter(r => r.where === 'ao lado');
     const good = r => !r.through && r.back && r.sig && (!r.walks || r.how === 'subido');
     ok('4d. uma árvore crescida no caminho dos degraus que entram na rua: nunca o tronco num degrau; ao lado da linha deles, eles a contornam e o corpo os sobe sem as mãos; na linha, param antes ou a contornam; onde o pé deles anda, o corpo os sobe sem as mãos; sem a árvore, os degraus de antes, e o 3D os refaz com ela e sem ela',
       line.length >= 1 && side.length >= 1 && recs.every(good) && side.some(r => r.walks && r.how === 'subido'),
-      recs.length ? recs.map(r => `${r.b.type}#${r.b.id} ${r.where}: ${r.n0} degraus sem ela (${r.old} no tronco), ${r.n2} com ela, ${r.through} no tronco, ${r.walks ? (r.round ? 'contornam, ' : 'no lote, ') + r.how : 'param antes (não cabe)'}${r.back ? '' : ', sem ela OUTROS'}${r.sig ? '' : ', a assinatura das árvores não seguiu'}`).join(' · ') : 'nenhuma casa com degraus na rua');
+      recs.length ? recs.map(r => `${r.b.type}#${r.b.id} ${r.where}: ${r.n0} degraus sem ela (${r.old} no tronco), ${r.n2} com ela, ${r.through} no tronco, ${r.walks ? (r.round ? 'contornam, ' : 'no lote, ') + r.how : 'param antes (não cabe)'}${r.back ? '' : ', sem ela OUTROS'}${r.sig ? (r.sigBack ? '' : ', a assinatura mudou com ela e sem ela — os degraus em volta dela chegaram perto de outro prédio —, e da segunda vez voltou') : ', a assinatura das árvores não seguiu'}`).join(' · ') : 'nenhuma casa com degraus na rua');
   }
   // (and the street before such a door taken — the ground of a building where the steps ran on into it, the world told:
   // W.touchWalk —: the steps reckoned anew from that ground, the 3D's and the feet's — none left standing on the other's lot —,

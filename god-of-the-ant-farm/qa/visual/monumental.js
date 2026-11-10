@@ -521,10 +521,13 @@ function nodePart() {
     ok('P6. a câmera no pátio e no salão do trono: a distância pedida, nunca na pedra', qC.cur >= 4.3 && qH.cur >= Math.min(4.8, roomH) * 0.8 && !qC.stone && !qH.stone, `no pátio ${qC.cur.toFixed(1)} m de 4,8${qC.stone ? ' (NA PEDRA)' : ''}; no salão do trono ${qH.cur.toFixed(1)} m (até a parede do pátio ${roomH.toFixed(1)})${qH.stone ? ' (NA PEDRA)' : ''}`);
     G.Cam3D.OPT.follow = true;
   }
-  // P7. the colours of a form by their whole names (L-564): the Aztec palace of 6 — M2's, founded in Tenochtitlan —, the second band
-  // of its flat roofs ('trim2', the blue-green) in its own colour, not in the first's ('trim', the red)
-  { const AZ = H.palace('Tenochtitlan', 'palacio', 'palacio', 60);
-    if (!AZ.b) ok('P7. o palácio asteca fundado em Tenochtitlan', false, AZ.why);
+  // P7. the colours of a form by their whole names (L-564): the Aztec palace of 6 — M2's —, the second band of its flat roofs
+  // ('trim2', the blue-green) in its own colour, not in the first's ('trim', the red). In a town of the Aztec people by the game's
+  // rule, never a town by its name (T-515): the Tenochtitlan of the generation-18 metropole is the Norse's — the Clan of Hrafn took
+  // it —, and the palace the hand raised there by its name was a Norse one, with no band of 'trim2' (T-616). Where the world has
+  // no town of the Aztecs, in the «cidade»'s, after the C13
+  const p7 = world => { const S = G.S, AZ = H.palaceFor('asteca', 'palacio', 'palacio', 60);
+    if (!AZ.b) ok('P7. o palácio asteca fundado numa cidade asteca', false, AZ.why);
     else { const Pa = G.Arch.PAL.asteca; const bands = AZ.F.els.filter(e => e.k === 'faixa' && e.cor === 'trim2'); const lin = s => { const c = new THREE.Color(s).convertSRGBToLinear(); return [c.r, c.g, c.b]; };
       const want = lin(Pa.trim2), not = lin(Pa.trim); const d2 = (a, c2) => (a[0] - c2[0]) ** 2 + (a[1] - c2[1]) ** 2 + (a[2] - c2[2]) ** 2;
       const tally = (geo, base) => { const P = geo.attributes.position.array, Cc = geo.attributes.color.array; let mine = 0, first = 0;
@@ -533,7 +536,8 @@ function nodePart() {
       const az = AZ.b; const cx = Math.floor(az.x / C) * C, cy = Math.floor(az.y / C) * C; const all4 = S.buildings; S.buildings = new Map([[az.id, az]]); let ng; try { ng = B3.nearGeo(cx, cy, C); } finally { S.buildings = all4; }
       const tn = tally(ng.solid, AZ.base);
       ok('P7. as cores da forma pelo nome inteiro (L-564): a segunda faixa dos tetos planos do palácio asteca na cor dela', bands.length > 0 && tn.mine > 0 && tn.first === 0,
-        `#${az.id} em ${az.x},${az.y}: ${bands.length} faixas «trim2» (${Pa.trim2}, a primeira «trim» ${Pa.trim}): perto ${tn.mine} triângulos na cor dela, ${tn.first} na da primeira (pela forma: ${B3.byForm(az)}; ${AZ.p ? 'a planta pronta' : AZ.why})`); } }
+        `#${az.id} em ${AZ.town} (${az.x},${az.y}; o mundo «${world}»): ${bands.length} faixas «trim2» (${Pa.trim2}, a primeira «trim» ${Pa.trim}): perto ${tn.mine} triângulos na cor dela, ${tn.first} na da primeira (pela forma: ${B3.byForm(az)}; ${AZ.p ? 'a planta pronta' : AZ.why})`); } };
+  const p7Later = ![...G.S.settlements.values()].some(s => G.Fac.get(s.fac) && G.Civ.idOfFac(s.fac) === 'asteca'); if (!p7Later) p7('metropole');
   // ================ Tp. the temples of the bigger steps by their form (M2's risks — T-439, T-410, L-558): the Greek's, the Roman's,
   // the Egyptian's and the Norse's of 8 tiles, founded whole by the god's hand in a town of each people — by the game's rule, never
   // a town by its name: T-515 ================
@@ -651,6 +655,7 @@ function nodePart() {
   if (!f13.b) ok('C13. o Coliseu de 13 casas fundado em Roma (cidade)', false, f13.why); else colosseum(f13, 'C13 · ', G.S);
   const vb13 = QA.check().filter(q => q.sev <= 2 && !bad13.has(q.sys + '|' + q.msg)); const er13 = M.erros();
   ok('C13 · 6. o verificador limpo, sem erro de módulo', !vb13.length && !Object.keys(er13.mod).length && !er13.console.length, `${vb13.length ? vb13.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo'}; módulos ${JSON.stringify(er13.mod)}; console ${er13.console.slice(0, 2).join(' | ') || 'limpo'}`);
+  if (p7Later) p7('cidade'); // (the Aztec palace in the «cidade»'s Tenochtitlan: the world it was looked for in had no town of theirs)
   return fails;
 }
 
@@ -706,17 +711,26 @@ async function browserPart() {
     const before = quadro ? await measure() : null;
     const r1 = await page.evaluate(() => {
       const H = window.__MON; const s = window.__site; const set = G.S.settlements.get(s.set);
-      G.inSim++; let b; try { b = G.Village.handFound(set, 'maravilha', 'maravilha', { built: true, x: s.site[0] + Math.floor(s.n / 2), y: s.site[1] + Math.floor(s.n / 2), R: 0.5 }); } finally { G.inSim--; }
-      if (!b) return { ok: false }; window.__b = b.id; H.keep(b.id); const nm = H.numbers(b); const e = nm.p.entrance; const dx = e.out[0] - e.x, dz = e.out[1] - e.z, l = Math.hypot(dx, dz) || 1; const o = [dx / l, dz / l];
+      const found = q => { G.inSim++; try { return G.Village.handFound(set, 'maravilha', 'maravilha', { built: true, x: q.site[0] + Math.floor(q.n / 2), y: q.site[1] + Math.floor(q.n / 2), R: 0.5 }); } finally { G.inSim--; } };
+      // (the lot levelled for it is free ground the town builds on too: in the seconds the body went in by, the metrópole's Rome of
+      // the generation 18 began a farm and a market on it, and the hand found no lot there — and none other free of 10 within 60
+      // of the town — T-617. Then what the town began on the lot and its ring since it was levelled is thrown down by the god's
+      // hand — as under the god's meteor, its ruin cleared: the doors the proofs open a place by, qa/mao-regra.js —, and the
+      // Colosseum founded there at once)
+      let b = found(s), again = null;
+      if (!b) { const on = new Map(); for (let ty = s.site[1] - 1; ty <= s.site[1] + s.n; ty++) for (let tx = s.site[0] - 1; tx <= s.site[0] + s.n; tx++) { const o = G.S.buildings.get(G.S.occ[ty * G.N + tx]); if (o) on.set(o.id, o); }
+        again = { by: [...on.values()].map(o => o.type + (o.built ? '' : ' (obra)') + '#' + o.id) };
+        if (![...on.values()].some(o => o.type === 'cemetery')) { G.inSim++; try { for (const o of on.values()) { if (G.S.buildings.has(o.id) && o.type !== 'ruin') G.Village.destroyBuilding(o, 'meteor'); if (G.S.buildings.has(o.id)) G.Village.removeBuilding(o); } } finally { G.inSim--; } b = found(s); } }
+      if (!b) return { ok: false, again }; window.__b = b.id; H.keep(b.id); const nm = H.numbers(b); const e = nm.p.entrance; const dx = e.out[0] - e.x, dz = e.out[1] - e.z, l = Math.hypot(dx, dz) || 1; const o = [dx / l, dz / l];
       const reach = q => H.reach(nm.face, nm.C, q); const dg = [(o[0] - o[1]) / Math.SQRT2, (o[1] + o[0]) / Math.SQRT2];
       window.__nm = { C: nm.C, H: nm.H, base: nm.base, sandY: nm.sandY, e, o, front: reach(o), back: reach([-o[0], -o[1]]), diag: reach(dg), dg };
-      return { ok: true, id: b.id, x: b.x, y: b.y, teste: !!G.ColiseuTeste };
+      return { ok: true, id: b.id, x: b.x, y: b.y, teste: !!G.ColiseuTeste, again };
     });
-    if (!r1.ok) { ok('7. o Coliseu fundado', false, 'o handFound não fundou'); return fails; }
+    if (!r1.ok) { ok('7. o Coliseu fundado', false, `o handFound não fundou${r1.again ? ` (nem com o lote aberto pela mão do deus: a cidade tinha começado nele ${r1.again.by.join(', ') || 'nada'})` : ''}`); return fails; }
     // (its plan made — once, when the eye first asks for it: Space.plan, the pump's — and its chunk drawn with it: the frame
     // measured with the Colosseum in view as it stays; the one time a chunk is drawn again for it is the part 1's measure)
     await page.evaluate(() => { const V = window.__VIS; G.Space.planNow(G.S.buildings.get(window.__b)); V.warm(2); V.f(10, 33); });
-    console.log(`(o Coliseu ${r1.teste ? 'DE TESTE' : 'do M1'} #${r1.id} em ${r1.x},${r1.y}; o chão do lote tinha ${r0.drop0} m de desnível${r0.h0 !== null ? ', aplainado pela mão do deus' : ''}; o corpo: ${r0.who})`);
+    console.log(`(o Coliseu ${r1.teste ? 'DE TESTE' : 'do M1'} #${r1.id} em ${r1.x},${r1.y}; o chão do lote tinha ${r0.drop0} m de desnível${r0.h0 !== null ? ', aplainado pela mão do deus' : ''}${r1.again ? `; no lote aplainado a cidade começou no meio ${r1.again.by.join(', ')}: derrubado pela mão do deus, como o meteoro, e o Coliseu fundado ali` : ''}; o corpo: ${r0.who})`);
     // (the chunk of the Colosseum's corner in turns, three views swapped every 15 frames, six times each — the same load of the
     // machine for the three, T-433 —: the Colosseum as it is drawn near — the chunk's solid mesh as the realm drew it, the one
     // with as many points as the chunk's buildings drawn again here —; the same chunk without it and in its place its figure from
