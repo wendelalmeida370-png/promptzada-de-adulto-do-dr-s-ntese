@@ -21,12 +21,14 @@
 //  m10 a tripulação escondida na caverna: com a cidade atacada, o refúgio de um tripulante segura o chamado da viagem ao cais
 //     até o susto passar, e depois ele volta ao cais (L-459)
 //  m11 a colônia e as crianças escondidas na caverna: uma criança no refúgio não é levada para a colônia, nem a família dela
-//     (que vai inteira ou não vai); as que não se escondiam vão (L-459)
+//     (que vai inteira ou não vai); as que não se escondiam vão (L-459) — na primeira cidade do mar, das que têm mais crianças,
+//     de onde a colônia sai (cinco crescidos que a cidade pode mandar)
 //  m12 as escolhas da guerra — a leva, a tripulação da frota (e o almirante), a do ataque pelo mar, o bando por terra — não
 //     levam quem tem as mãos ocupadas: com os guerreiros e caçadores do povo levando uma compra para casa e um construtor com
 //     o material a caminho da obra, ninguém escolhido tem as mãos ocupadas, e cada escolha acontece com os outros (L-461)
 //  m13 a caverna de duas bocas em chãos que os pés não juntam: o afazer de baixo vai pela boca que os pés alcançam — não pela
-//     mais perto em linha reta, fora do alcance —, faz o que foi fazer e sai onde os pés o levam para casa (L-651)
+//     mais perto em linha reta, fora do alcance —, faz o que foi fazer e sai onde os pés o levam para casa (L-651); sem uma
+//     caverna assim no mundo, a mão do deus afunda a terra em volta de uma boca (Afundar Terra)
 //  e o verificador limpo nos casos, sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/oficio-inv.js'] });
@@ -336,18 +338,25 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
   fresh(); const tried = [];
   const docksOf = q => [...S.buildings.values()].filter(b => b.type === 'doca' && b.built && G.Village.facOfSet(b.set) === q.id).sort((a, b) => a.id - b.id);
   const kidsOf = s => [...S.villagers.values()].filter(v => v.set === s.id && v.age >= 3 && v.age < 14 && !v.captive && !v.aboard && !v.ug && !v.held && !v.air).sort((a, b) => a.id - b.id);
-  const c = G.Fac.all().filter(q => q.alive && G.Civ.has(q.id, 'navegacao') && docksOf(q).length).map(q => ({ f: q, dock: docksOf(q)[0], s: S.settlements.get(docksOf(q)[0].set) })).filter(o => o.s).sort((a, b) => kidsOf(b.s).length - kidsOf(a.s).length || a.f.id - b.f.id)[0] || null;
-  let e = null, hid = [], best = null;
-  if (c) {
-    c.s.alarmT = 40;
-    const dOf = cv => Math.min(...cv.mouths.map(m => G.dist(m.x, m.y, c.s.cx, c.s.cy)));
+  // (the sea towns by their children, the most first, each tried from the same world: the first whose colony sails is the case.
+  // The colony wants five grown the town can send (X.colony): in the metrópole of the generation 18, Mênfis had 20 of its grown
+  // aboard and 13 at the quay, for an exploration of 38 out of Luxor, and four it could send — the colony did not sail there)
+  const order = G.Fac.all().filter(q => q.alive && G.Civ.has(q.id, 'navegacao') && docksOf(q).length).map(q => ({ fid: q.id, dock: docksOf(q)[0].id, s: S.settlements.get(docksOf(q)[0].set) })).filter(o => o.s).sort((a, b) => kidsOf(b.s).length - kidsOf(a.s).length || a.fid - b.fid);
+  let c = null, e = null, hid = [];
+  for (const o of order) {
+    fresh(); const f = G.Fac.get(o.fid), dock = S.buildings.get(o.dock), s = dock && S.settlements.get(dock.set); if (!f || !s) continue;
+    c = { f, dock, s }; hid = []; let best = null;
+    s.alarmT = 40;
+    const dOf = cv => Math.min(...cv.mouths.map(m => G.dist(m.x, m.y, s.cx, s.cy)));
     const cv = G.Caves.all().filter(q => q.mouths.length && !q.mine).sort((a, b) => dOf(a) - dOf(b) || a.id - b.id)[0];
     const hall = cv && cv.halls && cv.halls[0]; const cell = hall ? Math.floor(hall.y) * G.N + Math.floor(hall.x) : -1;
-    if (cv) for (const v of kidsOf(c.s)) { Vg.endTask(v); if (G.Caves.give(v, 'refuge', cv, cell, { pri: 2.7, stay: 1e9, force: 1, urge: 1 }) && v.task && v.task.type === 'caverna') hid.push(v); }
-    for (const r of G.Know.regions()) { const site = G.Expe.siteFor(r, c.f.id); if (site) { best = { r, site, motive: 'expansao' }; break; } }
-    if (!best) tried.push('nenhuma região com lugar para a colônia');
-    else { c.f.stock.food = Math.max(c.f.stock.food, 2000); c.f.stock.wood = Math.max(c.f.stock.wood, 200); e = G.Expe.colony(c.f, best, 26, [c.dock]); if (!e) tried.push('a colônia não saiu'); }
-  } else tried.push('nenhum povo do mar com doca');
+    if (cv) for (const v of kidsOf(s)) { Vg.endTask(v); if (G.Caves.give(v, 'refuge', cv, cell, { pri: 2.7, stay: 1e9, force: 1, urge: 1 }) && v.task && v.task.type === 'caverna') hid.push(v); }
+    for (const r of G.Know.regions()) { const site = G.Expe.siteFor(r, f.id); if (site) { best = { r, site, motive: 'expansao' }; break; } }
+    if (!best) { tried.push(`${s.name}: nenhuma região com lugar para a colônia`); continue; }
+    f.stock.food = Math.max(f.stock.food, 2000); f.stock.wood = Math.max(f.stock.wood, 200); e = G.Expe.colony(f, best, 26, [dock]);
+    if (e) break; tried.push(`${s.name}: a colônia não saiu (${hid.length} criança(s) no refúgio)`);
+  }
+  if (!order.length) tried.push('nenhum povo do mar com doca');
   if (!e) ok('m11 as crianças escondidas e a colônia', false, `sem o caso: ${tried.join(' · ')}`);
   else {
     const ids = new Set(e.crew); const taken = hid.filter(v => ids.has(v.id));
@@ -357,7 +366,7 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
     const kids = e.crew.map(id => S.villagers.get(id)).filter(v => v && v.age < 16 && !hid.includes(v));
     const b11 = bad();
     ok('m11 as crianças escondidas e a colônia', !taken.length && still === hid.length && !parents.length && hid.length > 0 && !b11.length,
-      `${e.name}, de ${c.s.name} (${e.crew.length} colonos, ${kids.length} criança(s) de fora do refúgio), com o alarme da cidade aceso e ${hid.length} criança(s) no refúgio da caverna: ${taken.length ? `LEVOU ${taken.length} escondida(s) (${taken.slice(0, 3).map(v => `${v.name}, ${v.age | 0} anos, agora ${tk(v)}`).join('; ')})` : 'nenhuma escondida levada'}; ${still} de ${hid.length} ainda no refúgio; ${parents.length ? `${parents.length} com o pai ou a mãe na colônia, SEM elas` : 'as famílias delas ficaram inteiras'}${b11.length ? '; o verificador: ' + b11[0] : ''}`);
+      `${tried.length ? `(antes: ${tried.join(' · ')}) ` : ''}${e.name}, de ${c.s.name} (${e.crew.length} colonos, ${kids.length} criança(s) de fora do refúgio), com o alarme da cidade aceso e ${hid.length} criança(s) no refúgio da caverna: ${taken.length ? `LEVOU ${taken.length} escondida(s) (${taken.slice(0, 3).map(v => `${v.name}, ${v.age | 0} anos, agora ${tk(v)}`).join('; ')})` : 'nenhuma escondida levada'}; ${still} de ${hid.length} ainda no refúgio; ${parents.length ? `${parents.length} com o pai ou a mãe na colônia, SEM elas` : 'as famílias delas ficaram inteiras'}${b11.length ? '; o verificador: ' + b11[0] : ''}`);
   }
 }
 // ---------------- m12: the choices of war take the hands free (L-461) ----------------
@@ -408,31 +417,53 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
 // on a tile from which the mouth nearer in a straight line is beyond the feet and the other in reach; an errand below by the
 // world's door, G.Caves.give, as the cave's own day gives them, to the hall nearest the mouth out of reach: in by the mouth in
 // reach, the business below, and out where the feet take one home. Before, the nearest mouth in a straight line: the errand
-// ended at its first step — Nebet, m10, in the metropole of the generation 17)
+// ended at its first step — Nebet, m10, in the metropole of the generation 17. With no such cave in the world, the god's hand
+// sinks the land round a mouth, below)
 {
   fresh();
   const reachXY = (x, y, tx, ty) => G.W.reaches({ x, y, inside: 0 }, tx, ty);
   // (the place: the first cave by id with two mouths A and B and a walkable tile within 40 of A, nearer A than B, whose feet do
   // not reach A and reach B)
-  let P = null;
-  for (const cv of G.Caves.all().filter(c => c.mouths.length >= 2 && !c.gone && c.halls && c.halls.length).sort((a, b) => a.id - b.id)) {
-    for (const A of cv.mouths) for (const Bm of cv.mouths) {
-      if (P || A === Bm) continue;
-      for (let r = 2; r <= 40 && !P; r++) for (let dy = -r; dy <= r && !P; dy++) for (let dx = -r; dx <= r && !P; dx++) {
+  const caves = () => G.Caves.all().filter(c => c.mouths.length >= 2 && !c.gone && c.halls && c.halls.length).sort((a, b) => a.id - b.id);
+  const findP = () => {
+    for (const cv of caves()) for (const A of cv.mouths) for (const Bm of cv.mouths) {
+      if (A === Bm) continue;
+      for (let r = 2; r <= 40; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const x = A.x + dx + 0.5, y = A.y + dy + 0.5;
         if (!G.W.inb(x, y) || !G.W.walkableXY(x, y) || G.dist2(x, y, A.x + 0.5, A.y + 0.5) >= G.dist2(x, y, Bm.x + 0.5, Bm.y + 0.5)) continue;
         if (reachXY(x, y, A.x + 0.5, A.y + 0.5) || !reachXY(x, y, Bm.x + 0.5, Bm.y + 0.5)) continue;
-        P = { cv, A, B: Bm, x, y };
+        return { cv, A, B: Bm, x, y };
       }
     }
-    if (P) break;
+    return null;
+  };
+  let P = findP(), cut = '';
+  // (none on the ground as it is — in the ready worlds of the generation 18 every cave of two mouths has them on one ground —:
+  // the god's hand makes it by the world's own door, the power that «separates continents, opens channels» (Afundar Terra, by
+  // G.Powers.cast): eight sinkings in a ring four tiles round a mouth, which leave it on an islet, with the other mouth ten
+  // tiles off or more on the mainland — the mouth with the fewest buildings, then people, around it, both walkable, away from
+  // the edge of the world —; and the world lives the fright of it out (the panic of a sinking lasts 3 s) before the case)
+  if (!P) {
+    const crowd = (m, R) => { let b = 0, p = 0; for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const x = m.x + dx, y = m.y + dy; if (G.W.inb(x, y) && S.occ[y * G.N + x]) b++; } for (const o of S.villagers.values()) if (!o.ug && G.dist2(o.x, o.y, m.x + 0.5, m.y + 0.5) < R * R) p++; return b * 1000 + p; };
+    let best = null;
+    for (const cv of caves()) for (const A of cv.mouths) for (const Bm of cv.mouths) {
+      if (A === Bm || G.dist(A.x, A.y, Bm.x, Bm.y) < 10 || A.x < 8 || A.y < 8 || A.x > G.N - 9 || A.y > G.N - 9) continue;
+      if (!G.W.walkableXY(A.x + 0.5, A.y + 0.5) || !G.W.walkableXY(Bm.x + 0.5, Bm.y + 0.5)) continue;
+      const sc = crowd(A, 8); if (!best || sc < best.sc) best = { cv, A, sc };
+    }
+    if (best) {
+      S.faith = Math.max(S.faith, 1e7); let n = 0;
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; if (G.Powers.cast('sink', best.A.x + 0.5 + 4 * Math.cos(a), best.A.y + 0.5 + 4 * Math.sin(a))) n++; }
+      fine(4); P = findP();
+      cut = `a mão do deus afundou a terra ${n}× em volta da boca (${best.A.x}, ${best.A.y}) d${G.Caves.a ? G.Caves.a(best.cv) : 'a caverna'}; `;
+    }
   }
   // (who goes: a grown one free — awake, out of doors, hands empty, of no voyage —, whose house the feet reach from that tile:
   // the first by id)
   const doorOf = o => { const h = o.home && S.buildings.get(o.home); return h ? Vg.door(h) : null; };
   const v = P && [...S.villagers.values()].filter(o => o.age >= 18 && o.age < 55 && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !o.inside && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.n > 1e-6) && !(G.Expe && G.Expe.memberOf(o.id)) && doorOf(o) && reachXY(P.x, P.y, ...doorOf(o))).sort((a, b) => a.id - b.id)[0];
-  if (!P || !v) ok('m13 a caverna pela boca que os pés alcançam', false, !P ? 'nenhuma caverna com duas bocas em chãos que os pés não juntam (um lugar mais perto de uma, fora do alcance dela, e ao alcance da outra)' : `ninguém livre com a casa ao alcance do lugar diante d${G.Caves.a ? G.Caves.a(P.cv) : 'a caverna'}`);
+  if (!P || !v) ok('m13 a caverna pela boca que os pés alcançam', false, !P ? `${cut}nenhuma caverna com duas bocas em chãos que os pés não juntam (um lugar mais perto de uma, fora do alcance dela, e ao alcance da outra)` : `${cut}ninguém livre com a casa ao alcance do lugar diante d${G.Caves.a ? G.Caves.a(P.cv) : 'a caverna'}`);
   else {
     Vg.endTask(v); v.x = P.x; v.y = P.y; v.path = null; v.hunger = Math.min(v.hunger, 20); v.energy = Math.max(v.energy, 80);
     const calm13 = () => calmBeasts([v.x, v.y], ...P.cv.mouths.map(m => [m.x + 0.5, m.y + 0.5])); calm13();
@@ -445,7 +476,7 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
     const door = doorOf(v); const home = !!out && !!door && G.W.reaches(v, door[0], door[1]);
     const b13 = bad(); const dA = Math.round(G.dist(P.x, P.y, P.A.x + 0.5, P.A.y + 0.5)), dB = Math.round(G.dist(P.x, P.y, P.B.x + 0.5, P.B.y + 0.5));
     const said = !given ? 'a caverna NÃO lhe deu o afazer' : !byB ? `foi mandado à boca (${mo.x}, ${mo.y}) — a que os pés NÃO alcançam` : !wentIn ? `NÃO entrou (${tk(v)})` : !out ? `NÃO saiu em 150 s (${tk(v)})` : home ? `entrou pela boca ao alcance, a ${dB} casas, e saiu em ${Math.round(S.clock - t0)} s onde os pés o levam para casa` : `saiu em (${out[0].toFixed(1)}, ${out[1].toFixed(1)}), de onde os pés NÃO o levam para casa`;
-    ok('m13 a caverna pela boca que os pés alcançam', given && byB && wentIn && !!out && home && !b13.length, `${v.name} posto(a) diante d${G.Caves.a ? G.Caves.a(P.cv) : 'a caverna'}, a ${dA} casas da boca mais perto em linha reta, fora do alcance, e a ${dB} da outra: ${said}${b13.length ? '; o verificador: ' + b13[0] : ''}`);
+    ok('m13 a caverna pela boca que os pés alcançam', given && byB && wentIn && !!out && home && !b13.length, `${cut}${v.name} posto(a) diante d${G.Caves.a ? G.Caves.a(P.cv) : 'a caverna'}, a ${dA} casas da boca mais perto em linha reta, fora do alcance, e a ${dB} da outra: ${said}${b13.length ? '; o verificador: ' + b13[0] : ''}`);
   }
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));

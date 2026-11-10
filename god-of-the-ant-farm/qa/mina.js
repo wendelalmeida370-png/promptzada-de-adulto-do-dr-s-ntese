@@ -9,11 +9,12 @@
 //  m4 um save com o mineiro na face, carregado: ele sai da galeria; o veio inteiro, nada contado nem pago pelo que não saiu;
 //     e o turno seguinte sai certo
 //  m5 as mãos ocupadas na saída (um jarro d'água): o minério fica no veio, sem conta nem salário, e o jarro nas mãos
-//  m6 o fim do veio: sai só o que havia (o veio em zero, nunca abaixo), a crônica diz que a mina se esgotou, e ninguém mais
-//     desce
+//  m6 o fim do veio: sai só o que havia (o veio em zero, nunca abaixo), a crônica diz que a mina se esgotou (uma vez, no lugar
+//     dela), e ninguém mais desce
 //  m7 o deus derruba a galeria com o mineiro na face: ele morre com ela, e nada do que não saiu é contado; a mina segue, por
 //     uma galeria nova
-//  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
+//  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console. Os mineiros dos casos não são de uma
+// viagem (o chamado ao cais os tira do turno no primeiro segundo).
 // O corpo do deus não minera (o interact.js não tem o verbo): o terceiro nível é o salto (m2).
 //   node qa/mina.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/mina.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true });
@@ -38,6 +39,10 @@ const pithead = [];
 D.onMove.push(e => { if (e[8] !== 'mina') return; const v = S().villagers.get(e[9]); const t = v && v.task; if (t && t.type === 'minejob') pithead.push({ v: v.id, b: t.id, n: r2(e[6]) }); });
 G.inSim++;
 const U = () => C.U();
+// (a miner free for the cases: of no voyage either — a hand of a voyage is called to the quay (3,25) and leaves the shift at
+// once: in the metrópole of the generation 18 Calista and Febe, two of the four miners of Argos, were of an exploration getting
+// ready, waiting at the quay; the case sent Calista to the pithead and the call took her back to the quay in the first second)
+const free = x => !x.captive && !x.jail && !x.aboard && x.age >= 16 && x.age < 60 && !(G.Expe && G.Expe.memberOf(x.id));
 // (a mine with ore in its vein whose gallery can be dug — the one it has, or a new one at its pithead, caves.js mineCave —, and
 // its miners; the one with the most)
 function pick() {
@@ -47,7 +52,7 @@ function pick() {
     const o = (S().ores || []).find(q => q.id === b.ore); if (!o || o.amt < 12) continue;
     const cv = b.cave && C.get(b.cave); const can = (cv && !cv.gone && cv.mine === b.id) || (!U().id[b.y * G.N + b.x] && b.x >= 2 && b.y >= 2 && b.x < G.N - 2 && b.y < G.N - 2);
     if (!can) continue;
-    const ms = [...S().villagers.values()].filter(x => x.role === 'mineiro' && x.job === b.id && !x.captive && !x.jail && !x.aboard && x.age >= 16 && x.age < 60).sort((p, q) => p.id - q.id);
+    const ms = [...S().villagers.values()].filter(x => x.role === 'mineiro' && x.job === b.id && free(x)).sort((p, q) => p.id - q.id);
     if (ms.length && (!best || ms.length > best.ms.length)) best = { b, o, ms: ms.map(x => x.id) };
   }
   return best;
@@ -66,7 +71,7 @@ if (!pick()) {
     if (can && (!o0 || o.amt > o0.amt)) { b0 = b; o0 = o; }
   }
   if (b0) {
-    for (const v of [...S().villagers.values()].filter(x => x.set === b0.set && x.age >= 18 && x.age < 55 && !x.captive && !x.jail && !x.aboard && !x.ug && x.role !== 'guerreiro' && !(S().avatar && S().avatar.id === x.id)).sort((p, q) => p.id - q.id).slice(0, 2)) {
+    for (const v of [...S().villagers.values()].filter(x => x.set === b0.set && x.age >= 18 && x.age < 55 && free(x) && !x.ug && x.role !== 'guerreiro' && !(S().avatar && S().avatar.id === x.id)).sort((p, q) => p.id - q.id).slice(0, 2)) {
       G.Vg.endTask(v); v.role = 'mineiro'; v.job = b0.id; handMade.push(v.id);
     }
     snap = G.Save.serialize();
@@ -195,7 +200,9 @@ const say = (P, B) => `o veio deu ${B.out}, o povo contou ${B.sum} em ${B.n} tur
   const P = setup(); P.o.amt = 3; P.amt0 = 3; const crew = P.ms.slice(0, 2);
   for (const v of crew) send(P, v);
   let done = false; for (let q = 0; q < 3000 && !done; q++) { M.viver(0.1); done = P.o.amt <= 0 && crew.every(v => !v.ug && !atFace(v)); }
-  const said = S().history.filter(h => /se esgotou/.test(h.txt) && h.d === S().day).length;
+  // (the chronicle's word for this mine — at its place, as runMine and G.Eco.mined say it —: in the metrópole of the generation
+  // 18 the mine of Roma, across the map, ran out by its own miners on the day of the case, and its line counted as a second)
+  const said = S().history.filter(h => /se esgotou/.test(h.txt) && h.d === S().day && h.x === P.b.x && h.y === P.b.y).length;
   // nobody goes down this mine any more: a minute of the world with the miners sent again (the caves of the hills are other
   // errands: caves.js plan)
   let down = 0; for (const v of crew) if (S().villagers.has(v.id)) send(P, v);

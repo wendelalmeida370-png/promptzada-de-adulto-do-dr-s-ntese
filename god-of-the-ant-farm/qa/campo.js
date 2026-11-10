@@ -14,8 +14,9 @@
 //  c7 a prensa (o vinhedo ou o olival): a fruta na tina, o vinho ou o azeite na prateleira pelo livro ('prensa') e dali ao
 //     armazém ('recolher', 'entrega'): o que chega é o que a prensa fez
 //  c8 a tina presa: segura por quem não está nela (largou a prensa no meio, mudou de ofício, um save no meio) não prende
-//     ninguém — o próximo prensa
-//  c9 o apiário: o mel ao armazém
+//     ninguém — o próximo prensa (com duas mãos do ofício: faltando, a outra pela mão do deus)
+//  c9 o apiário: o mel ao armazém, em duas idas (o apicultor mandado de volta às colmeias quando a cidade o chama)
+// As mãos de um caso não são de uma viagem (o chamado ao cais as tira do trabalho no primeiro segundo).
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console.
 // (Quem leva comida nas mãos e sente fome come dela: a c1 e a c2 pedem que seja pelo livro — a L-385, a troca do eatTask.)
 // O corpo do deus não lavra (o interact.js não tem o verbo): o salto é das vidas longas da regressão.
@@ -82,7 +83,10 @@ function send(v, b, at) {
   return G.Vg.H.workTask(v);
 }
 const morning = () => { S().time = 0.25; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0; };
-const fit = v => v && !v.captive && !v.jail && !v.aboard && !v.held && v.age >= 16 && v.age < 60;
+// (fit for a case: of no voyage either — a hand of a voyage is called to the quay (3,25) and leaves the work at once: in the
+// metrópole of the generation 18 Meresankh, the keeper of the Apiário #14522, and Irene, of the Olival #14665, were of voyages,
+// and the call took them from the hives and from the vat in the case's first second — then aboard)
+const fit = v => v && !v.captive && !v.jail && !v.aboard && !v.held && v.age >= 16 && v.age < 60 && !(G.Expe && G.Expe.memberOf(v.id));
 const byId = (a, b) => a.id - b.id;
 
 // ------------------------------ the farm ------------------------------
@@ -218,14 +222,17 @@ function estPick(test) {
   }
   return best ? best.id : bare;
 }
-function estSetup(id, prep) {
+// (need: the hands the case wants — the c8 wants the other hand at the vat: with fewer, the god's hand gives the trade to some
+// of the town to make them up, as to an estate with none)
+function estSetup(id, prep, need) {
   fresh(); morning(); const b = S().buildings.get(id); const role = G.BDEF[b.type].role;
   let ws = [...S().villagers.values()].filter(v => v.job === b.id && v.role === role && fit(v)).sort(byId);
-  if (!ws.length) {
+  handEst = 0;
+  if (ws.length < (need || 1)) {
     const f = G.Fac.get(V.facOfSet(b.set));
-    ws = [...S().villagers.values()].filter(v => v.set === b.set && fit(v) && v.role !== 'guerreiro' && !(f && f.leader === v.id) && D.strength(v) > 0 && !(S().avatar && S().avatar.id === v.id)).sort((p, q) => (!!p.job - !!q.job) || p.id - q.id).slice(0, 2);
-    for (const v of ws) { G.Vg.endTask(v); v.role = role; v.job = b.id; } handEst = ws.length;
-  } else handEst = 0;
+    const more = [...S().villagers.values()].filter(v => v.set === b.set && fit(v) && !ws.includes(v) && v.role !== 'guerreiro' && !(f && f.leader === v.id) && D.strength(v) > 0 && !(S().avatar && S().avatar.id === v.id)).sort((p, q) => (!!p.job - !!q.job) || p.id - q.id).slice(0, Math.max(ws.length ? 0 : 2, (need || 1) - ws.length));
+    for (const v of more) { G.Vg.endTask(v); v.role = role; v.job = b.id; } handEst = more.length; ws = ws.concat(more);
+  }
   b.claim = {}; if (prep) prep(b);
   return { b, ws, role, base: base() };
 }
@@ -287,7 +294,7 @@ else {
   const parts = []; let good = true;
   // (1) held by someone of the town who is not of the trade (in another errand, far from it)
   {
-    const P = estSetup(PRESS, vatPrep); const b = P.b;
+    const P = estSetup(PRESS, vatPrep, 2); const b = P.b;
     const other = [...S().villagers.values()].sort(byId).find(o => o.set === b.set && fit(o) && o.job !== b.id && !P.ws.includes(o));
     b.claim = { vat: other.id }; const L0 = seen.length;
     send(P.ws[0], b, fieldAt(b)); live(90, keepHands(P), () => pressedBy(L0, b).length > 0);
@@ -296,7 +303,7 @@ else {
   }
   // (2) the presser called away in the middle of the press: the other hand presses (he, kept away at the fire, does not)
   {
-    const P = estSetup(PRESS, vatPrep); const b = P.b; const a = P.ws[0]; const next = P.ws[1] || null;
+    const P = estSetup(PRESS, vatPrep, 2); const b = P.b; const a = P.ws[0]; const next = P.ws[1] || null;
     const kh = keepHands(P); send(a, b, fieldAt(b)); live(60, kh, () => a.task && a.task.type === 'estate' && a.task.do === 'press' && a.task.st === 1);
     const was = !!(a.task && a.task.do === 'press'); const L0 = seen.length;
     const away = () => { if (!(a.task && a.task.type === 'rest')) { G.Vg.endTask(a); G.Vg.setTask(a, { type: 'rest', pri: 2.5 }); } };
@@ -307,7 +314,7 @@ else {
   }
   // (3) a save with the vat held: after the load nobody is at it, and the other hand presses it
   {
-    const P = estSetup(PRESS, vatPrep); const b = P.b; const a = P.ws[0];
+    const P = estSetup(PRESS, vatPrep, 2); const b = P.b; const a = P.ws[0];
     const kh = keepHands(P); send(a, b, fieldAt(b)); live(60, kh, () => b.claim && b.claim.vat);
     const heldBy = b.claim && b.claim.vat; M.salvarCarregar(); G.inSim = Math.max(G.inSim, 1);
     const b2 = S().buildings.get(PRESS); const a2 = S().villagers.get(a.id); const nx = P.ws[1] ? S().villagers.get(P.ws[1].id) : a2;
@@ -325,7 +332,7 @@ else {
     good = good && !!heldBy && !!hand && by.includes(hand.id) && !bad.length;
     parts.push(`save com a tina segura (${heldBy ? '#' + heldBy : 'por ninguém'}): ${by.length ? 'prensada depois do load por #' + by[0] + (hand && by.includes(hand.id) ? (hand === a2 ? ' (a mesma mão: não há outra)' : ' (a outra mão)') : '') : 'ninguém prensou depois do load'}${back ? ` (a mão do caso mandada de volta à tina ${back} vez(es)${hand !== nx ? ', a seguinte do ofício: #' + hand.id : ''})` : ''}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
-  ok('c8', good, parts.join(' · '));
+  ok('c8', good, (handEst ? `(a outra mão pela mão do deus: ${handEst}) ` : '') + parts.join(' · '));
 }
 // c9 the apiary: honey to the store
 {
@@ -341,11 +348,19 @@ else {
     // generation 17 the town's board made Ameyali, the keeper of the Apiário #8930, a miner some thirty seconds into the case,
     // while she fetched her house's water, and the hives filled to 3/3/3/3 with nobody at them; and hands the god's hand gave an
     // apiary with no keeper (estSetup) the board would take back at its next pass)
+    // (and the keeper kept at his hives by the hand of the proof, as the c8's at the vat (T-313): when a call of the town takes
+    // him from them — a feast, a riot, the court, an execution, an assembly — or a pass of the board leaves him at another
+    // trade's work, he is sent back to them, fed and rested as he was sent; his honey on its way to the store is never cut. In
+    // the metrópole of the generation 18 Ícaro, of the Apiário #16743, smoked the first hive and took its honey to the store in
+    // 5 s, and then the town's feast, a riot, the court, an execution and an assembly took his two days, and a pass of the board
+    // sent him to a farm: the second hive was never smoked, and the first filled again)
+    const atHives = v => { const t = v && v.task; return !!t && ((t.type === 'estate' && t.id === b.id) || ((t.type === 'deliver' || t.type === 'haul') && held(v).mel > 0)); };
+    let back = 0; const keep = () => { const v = S().villagers.get(P.ws[0].id); if (!v || !fit(v) || atHives(v) || (b.hv[0] < 1 && b.hv[1] < 1)) return; send(v, b, fieldAt(b)); back++; };
     send(P.ws[0], b, fieldAt(b)); const kh = keepHands(P);
-    live(400, () => { kh(); Hd.step(); }, () => b.hv[0] < 1 && b.hv[1] < 1 && P.ws.every(x => !(held(x).mel > 0)));
+    live(400, () => { kh(); keep(); Hd.step(); }, () => b.hv[0] < 1 && b.hv[1] < 1 && P.ws.every(x => !(held(x).mel > 0)));
     const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c9', b.hv[0] < 1 && b.hv[1] < 1 && Hd.born('mel') > 0 && Hd.reached('mel') && !lost.length && !bad.length,
-      `${V.buildName(b)} #${b.id}${handEst ? ' (o ofício pela mão do deus a ' + handEst + ')' : ''}: as colmeias ${b.hv.map(r2).join('/')}; ${Hd.say('mel')}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `${V.buildName(b)} #${b.id}${handEst ? ' (o ofício pela mão do deus a ' + handEst + ')' : ''}: as colmeias ${b.hv.map(r2).join('/')}; ${Hd.say('mel')}; sumiu sem linha: ${lost.join(', ') || 'nada'}${back ? ` (o apicultor mandado de volta às colmeias ${back} vez(es))` : ''}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 const er = M.erros();
