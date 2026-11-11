@@ -1,5 +1,5 @@
 #!/bin/bash
-# A regressão completa, antes de cada versão: bash qa/regress.sh [pasta de saída]   (≈ 3 h numa máquina de 4 núcleos — 2 h dela é o Modo Encarnado, sozinho)
+# A regressão completa, antes de cada versão: bash qa/regress.sh [pasta de saída]   (≈ 7 h numa máquina de 4 núcleos — perto de 3 h dela é o Modo Encarnado, sozinho)
 # Roda o vigia do código, as 17 provas do mar, as 10 da guerra (e o cativo em casa), as da cidade (bairros, porto, taverna, moradia, crime, quarteirão), a memória dos mortos, os mundos prontos, vidas longas com o verificador, a mão divina, saves danificados,
 # o save como ponto fixo, os mapas de alcance e de quem está a bordo, o determinismo, os painéis, o desenho, o macaco no teclado, os poderes (os novos e o deus caótico)
 # e o Modo Encarnado (encarna.js: o 3D de verdade, com o WebGL por software do navegador de testes).

@@ -1,6 +1,6 @@
 # A matriz por prédio
 
-Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas `qa/categorias/pN.js` (o formato está no `p4.js`); nunca editada à mão. Resultado da regressão: `/tmp/claude-0/-home-user-promptzada-de-adulto-do-dr-s-ntese/9e17ed97-a1b5-5d1c-a5da-c23519ea4f04/scratchpad/reg-g13-final`. A geometria dos mundos prontos: `geometria-metropole.json`.
+Gerada por `node qa/matriz-predios.js` em 2026-11-11 — do código e das folhas `qa/categorias/pN.js` (o formato está no `p4.js`); nunca editada à mão. Resultado da regressão: `/tmp/claude-0/-home-user-promptzada-de-adulto-do-dr-s-ntese/9e17ed97-a1b5-5d1c-a5da-c23519ea4f04/scratchpad/reg19`. A geometria dos mundos prontos: `geometria-metropole.json`.
 
 | Categoria | Tipos | Estado | Essenciais feitas | Falhas geométricas | Folhas |
 |---|---|---|---|---|---|
@@ -10,7 +10,7 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 | Comércio | 3 | **validada** | 3/3 | 0 | P2 |
 | Ofícios | 9 | **validada** | 1/1 | 0 | P2 |
 | Serviços e convívio | 2 | **validada** | 2/2 | 0 | P2 |
-| Campo e criação | 10 | **validada** | 3/3 | 0 | P2 |
+| Campo e criação | 10 | **funcional** | 3/3 | 0 | P2 |
 | Extração e pesca | 2 | **validada** | 3/3 | 0 | P2 |
 | Governo, justiça e guarda | 5 | **validada** | 3/3 | 0 | P2 |
 | Palácios | 4 | **parcial** | 0/1 | 0 | P2 |
@@ -25,10 +25,10 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 
 | Tipo | Planta | Peças nas plantas de amostra | Usos | Geometria |
 |---|---|---|---|---|
-| hut (Cabana) | 27 famílias, 6 de 6 povos armados | arca, banco, banco-cama, braseiro, cama-casal, cesto, cesto-pendurado, esteira, esteira-casal, fogao, fogareiro, jarros, lar, mesa, prateleira-parede | acesso, aquecer, comer, cozinhar, deitar, guardar, sentar | amostra: 0 falhas, 0 escolhas; mundos: 29 plantas, 0 falhas |
-| house (Casa) | 54 famílias, 4 de 6 povos armados | arca, bancada, banco, banco-cama, braseiro, cama-casal, cesto, cesto-pendurado, esteira, esteira-casal, fogao, forno, jarros, lar, mesa, nicho, prateleira-parede | acesso, aquecer, assar, comer, cozinhar, deitar, guardar, sentar, trabalhar | amostra: 0 falhas, 4 escolhas; mundos: 98 plantas, 0 falhas |
-| sobrado (Sobrado) | 56 famílias, 6 de 6 povos armados | arca, bancada, banco, banco-cama, braseiro, cama-casal, cesto, cesto-pendurado, esteira, esteira-casal, fogao, forno, jarros, lar, mesa, mesa-baixa, nicho, prateleira-parede | acesso, aquecer, assar, comer, cozinhar, deitar, guardar, sentar, trabalhar | amostra: 0 falhas, 10 escolhas; mundos: 47 plantas, 0 falhas |
-| insula (Ínsula) | 60 famílias, 6 de 6 povos armados | arca, bancada, banco, banco-cama, braseiro, cama-casal, cesto, cesto-pendurado, esteira, esteira-casal, fogao, forno, jarros, lar, mesa, mesa-baixa, nicho, prateleira-parede | acesso, aquecer, assar, comer, cozinhar, deitar, guardar, sentar, trabalhar | amostra: 0 falhas, 17 escolhas; mundos: 5 plantas, 0 falhas |
+| hut (Cabana) | 27 famílias, 6 de 6 povos armados | arca, banco, banco-cama, braseiro, cama-casal, cesto, cesto-pendurado, esteira, esteira-casal, fogao, fogareiro, jarros, lar, mesa, mesa-baixa, prateleira-parede | acesso, aquecer, comer, cozinhar, deitar, guardar, sentar | amostra: 0 falhas, 0 escolhas; mundos: 35 plantas, 0 falhas |
+| house (Casa) | 55 famílias, 4 de 6 povos armados | arca, bancada, banco, banco-cama, braseiro, cama-casal, cesto, cesto-pendurado, esteira, esteira-casal, fogao, forno, jarros, lar, mesa, nicho, prateleira-parede | acesso, aquecer, assar, comer, cozinhar, deitar, guardar, sentar, trabalhar | amostra: 0 falhas, 4 escolhas; mundos: 131 plantas, 0 falhas |
+| sobrado (Sobrado) | 56 famílias, 6 de 6 povos armados | arca, bancada, banco, banco-cama, braseiro, cama-casal, cesto, cesto-pendurado, esteira, esteira-casal, fogao, forno, jarros, lar, mesa, mesa-baixa, nicho, prateleira-parede | acesso, aquecer, assar, comer, cozinhar, deitar, guardar, sentar, trabalhar | amostra: 0 falhas, 10 escolhas; mundos: 36 plantas, 0 falhas |
+| insula (Ínsula) | 60 famílias, 6 de 6 povos armados | arca, bancada, banco, banco-cama, braseiro, cama-casal, cesto, cesto-pendurado, esteira, esteira-casal, fogao, forno, jarros, lar, mesa, mesa-baixa, nicho, prateleira-parede | acesso, aquecer, assar, comer, cozinhar, deitar, guardar, sentar, trabalhar | amostra: 0 falhas, 17 escolhas; mundos: 1 plantas, 0 falhas |
 | quarteirao (Quarteirão) | 16 famílias, 6 de 6 povos armados | arca, banco-cama, braseiro, cama-casal, cesto, esteira, esteira-casal, fogao, forno, jarros, lar | acesso, aquecer, assar, cozinhar, deitar, guardar | amostra: 0 falhas, 16 escolhas |
 | barraco (Barraco) | 2 famílias, 6 de 6 povos armados | arca, banco-cama, braseiro, cesto, esteira, jarros | acesso, aquecer, deitar, guardar | amostra: 0 falhas, 0 escolhas |
 
@@ -76,9 +76,9 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 
 | Tipo | Planta | Peças nas plantas de amostra | Usos | Geometria |
 |---|---|---|---|---|
-| storehouse (Armazém) | 23 famílias, 6 de 6 povos armados | baia, mesa-conferencia, mesa-escriba, pipas, prateleira | conferir, entregar, escrever, guardar | amostra: 0 falhas, 0 escolhas; mundos: 24 plantas, 0 falhas |
-| celeiro (Celeiro) | 17 famílias, 6 de 6 povos armados | baia, mesa-conferencia, mesa-escriba, pipas, prateleira, tulha | conferir, entregar, escrever, guardar | amostra: 0 falhas, 0 escolhas; mundos: 5 plantas, 0 falhas |
-| armazem (Armazém do Porto) | 23 famílias, 6 de 6 povos armados | baia, estrado, mesa-conferencia, mesa-escriba, pipas, prateleira | conferir, entregar, escrever, guardar | amostra: 0 falhas, 0 escolhas; mundos: 9 plantas, 0 falhas |
+| storehouse (Armazém) | 23 famílias, 6 de 6 povos armados | baia, mesa-conferencia, mesa-escriba, pipas, prateleira | conferir, entregar, escrever, guardar | amostra: 0 falhas, 0 escolhas; mundos: 27 plantas, 0 falhas |
+| celeiro (Celeiro) | 17 famílias, 6 de 6 povos armados | baia, mesa-conferencia, mesa-escriba, tulha | conferir, entregar, escrever, guardar | amostra: 0 falhas, 0 escolhas; mundos: 5 plantas, 0 falhas |
+| armazem (Armazém do Porto) | 23 famílias, 6 de 6 povos armados | baia, estrado, mesa-conferencia, mesa-escriba, pipas, prateleira | conferir, entregar, escrever, guardar | amostra: 0 falhas, 0 escolhas; mundos: 5 plantas, 0 falhas |
 
 | Atividade | Essencial | Quem faz | Feita | No código | Provas |
 |---|---|---|---|---|---|
@@ -98,8 +98,8 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 
 | Tipo | Planta | Peças nas plantas de amostra | Usos | Geometria |
 |---|---|---|---|---|
-| mercado (Mercado) | 20 famílias, 6 de 6 povos armados | baia, banca, banquinha, prateleira, solido | comprar, guardar, vender | amostra: 0 falhas, 0 escolhas; mundos: 15 plantas, 0 falhas |
-| feira (Feira) | 6 famílias, 6 de 6 povos armados | banca, fonte | beber, comprar, vender | amostra: 0 falhas, 6 escolhas; mundos: 12 plantas, 0 falhas |
+| mercado (Mercado) | 20 famílias, 6 de 6 povos armados | baia, banca, banquinha, prateleira, solido | comprar, guardar, vender | amostra: 0 falhas, 0 escolhas; mundos: 12 plantas, 0 falhas |
+| feira (Feira) | 6 famílias, 6 de 6 povos armados | banca, fonte | beber, comprar, vender | amostra: 0 falhas, 6 escolhas; mundos: 10 plantas, 0 falhas |
 | mercado_negro (Mercado Clandestino) | sem planta | — | — | — |
 
 | Atividade | Essencial | Quem faz | Feita | No código | Provas |
@@ -122,11 +122,11 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 | Tipo | Planta | Peças nas plantas de amostra | Usos | Geometria |
 |---|---|---|---|---|
 | workshop (Oficina) | 15 famílias, 6 de 6 povos armados | balcao, bancada, cepo, prateleira | comprar, cortar, guardar, trabalhar, vender | amostra: 0 falhas, 0 escolhas; mundos: 5 plantas, 0 falhas |
-| forja (Forja) | 11 famílias, 6 de 6 povos armados | balcao, bancada, bigorna, forja-fogo, prateleira, tina | comprar, forjar, guardar, martelar, temperar, trabalhar, vender | amostra: 0 falhas, 0 escolhas; mundos: 13 plantas, 0 falhas |
-| tecelagem (Tecelagem) | 11 famílias, 6 de 6 povos armados | balcao, secador, tear | comprar, guardar, tecer, vender | amostra: 0 falhas, 0 escolhas; mundos: 9 plantas, 0 falhas |
-| olaria (Olaria) | 12 famílias, 6 de 6 povos armados | balcao, bancada, eira, forno-olaria, pilha-tijolos, roda-oleiro, secador, tanque-barro | amassar, comprar, cozer, guardar, moldar, tornear, trabalhar, vender | amostra: 0 falhas, 0 escolhas; mundos: 18 plantas, 0 falhas |
-| ourives (Ourivesaria) | 9 famílias, 6 de 6 povos armados | bancada-ourives, cofre, fornalha | fundir, guardar, lavrar | amostra: 0 falhas, 0 escolhas; mundos: 15 plantas, 0 falhas |
-| acougue (Açougue) | 9 famílias, 6 de 6 povos armados | cepo, ganchos | cortar, pendurar | amostra: 0 falhas, 0 escolhas; mundos: 16 plantas, 0 falhas |
+| forja (Forja) | 11 famílias, 6 de 6 povos armados | balcao, bancada, bigorna, forja-fogo, prateleira, tina | comprar, forjar, guardar, martelar, temperar, trabalhar, vender | amostra: 0 falhas, 0 escolhas; mundos: 5 plantas, 0 falhas |
+| tecelagem (Tecelagem) | 11 famílias, 6 de 6 povos armados | balcao, secador, tear | comprar, guardar, tecer, vender | amostra: 0 falhas, 0 escolhas; mundos: 7 plantas, 0 falhas |
+| olaria (Olaria) | 12 famílias, 6 de 6 povos armados | balcao, bancada, eira, forno-olaria, pilha-tijolos, roda-oleiro, secador, tanque-barro | amassar, comprar, cozer, guardar, moldar, tornear, trabalhar, vender | amostra: 0 falhas, 0 escolhas; mundos: 15 plantas, 0 falhas |
+| ourives (Ourivesaria) | 9 famílias, 6 de 6 povos armados | bancada-ourives, cofre, fornalha | fundir, guardar, lavrar | amostra: 0 falhas, 0 escolhas; mundos: 4 plantas, 0 falhas |
+| acougue (Açougue) | 9 famílias, 6 de 6 povos armados | cepo, ganchos | cortar, pendurar | amostra: 0 falhas, 0 escolhas; mundos: 13 plantas, 0 falhas |
 | sericultura (Casa da Seda) | sem planta | — | — | — |
 | salga (Salga) | sem planta | — | — | — |
 | perolaria (Casa dos Mergulhadores) | sem planta | — | — | — |
@@ -148,8 +148,8 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 
 | Tipo | Planta | Peças nas plantas de amostra | Usos | Geometria |
 |---|---|---|---|---|
-| taverna (Taverna) | 21 famílias, 6 de 6 povos armados | balcao, banco, braseiro, cuba, fogao, mesa, mesa-terreiro, pipas, talha | acesso, aquecer, comer, comprar, cozinhar, guardar, mexer, sentar, vender | amostra: 0 falhas, 0 escolhas; mundos: 13 plantas, 0 falhas |
-| banhos (Banhos) | 9 famílias, 6 de 6 povos armados | banco, cabide, fornalha-banho, piscina, solido, tina-banho | acesso, alimentar, banhar, despir, entrar, sentar | amostra: 0 falhas, 0 escolhas; mundos: 10 plantas, 0 falhas |
+| taverna (Taverna) | 22 famílias, 6 de 6 povos armados | balcao, banco, braseiro, cuba, fogao, mesa, mesa-terreiro, pipas, talha | acesso, aquecer, comer, comprar, cozinhar, guardar, mexer, sentar, vender | amostra: 0 falhas, 0 escolhas; mundos: 8 plantas, 0 falhas |
+| banhos (Banhos) | 9 famílias, 6 de 6 povos armados | banco, cabide, fornalha-banho, piscina, solido, tina-banho | acesso, alimentar, banhar, despir, entrar, sentar | amostra: 0 falhas, 0 escolhas; mundos: 4 plantas, 0 falhas |
 
 | Atividade | Essencial | Quem faz | Feita | No código | Provas |
 |---|---|---|---|---|---|
@@ -159,7 +159,7 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 
 **Notas:** a taverna e os banhos têm a prova de mão (vila de mentira) e a do mundo pronto (qa/taverna.js, qa/termas.js: a noite e o dia inteiros, o save no meio, quem cuida morrendo, o deus que derruba); o terreiro da taverna nova (P4: a mesa-terreiro, as pipas, a talha) usa os mesmos usos
 
-## Campo e criação — validada
+## Campo e criação — funcional
 
 **Função:** onde o povo planta e cria: as fazendas, os pomares, as plantações, os vinhedos, os apiários, as salinas, as hortas, os currais e os estábulos · **Quem:** os agricultores, os lavradores, os fruticultores, os vinhateiros, os apicultores, os salineiros, os pastores e os cavalariços
 
@@ -182,7 +182,7 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 |---|---|---|---|---|---|
 | plantar, cuidar e colher a fazenda (`plantar`) | sim | P2 | sim | sim | qa/campo.js ✓ |
 | o pomar, a plantação, o vinhedo, o apiário e a salina: cuidar, colher, prensar, defumar, rastelar (`propriedades`) | sim | P2 | sim | sim | qa/campo.js ✓ |
-| levar o rebanho ao pasto, dar feno, tosquiar, ordenhar, escovar (`rebanho`) | sim | P2 | sim | sim | qa/rebanho.js ✓ |
+| levar o rebanho ao pasto, dar feno, tosquiar, ordenhar, escovar (`rebanho`) | sim | P2 | sim | sim | qa/rebanho.js ✗ |
 | a horta da casa (`horta`) |  | P2 | parcial | sim | — |
 
 **Notas:** o campo não tem planta (o corpo pisa o chão como o mundo o tem); a roça e as propriedades têm a prova do mundo pronto qa/campo.js (o ciclo, a morte com a colheita nas mãos, o save, o fogo, o deus que derruba; o pomar, a plantação, a prensa pelo livro, a tina segura por quem não está nela — L-383, L-384 —, o apiário), e o curral a qa/rebanho.js (o pasto, o feno, a tosquia e a ordenha, o save e a morte no pasto); a salina não está nos mundos da prova; a colheita nasce nas mãos fora do livro, como a coleta, e o livro a vê da mão ao armazém; o cercado não tem atividade (só cerca)
@@ -216,7 +216,7 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 |---|---|---|---|---|
 | administracao (Administração) | sem planta | — | — | — |
 | coletoria (Coletoria) | sem planta | — | — | — |
-| cadeia (Cadeia) | 6 famílias, 6 de 6 povos armados | balde, banco, chaves, mesa-escriba, palha | acesso, deitar, escrever, pegar, sentar | amostra: 0 falhas, 0 escolhas |
+| cadeia (Cadeia) | 6 famílias, 6 de 6 povos armados | balde, banco, chaves, mesa-escriba, palha | acesso, deitar, escrever, pegar, sentar | amostra: 0 falhas, 0 escolhas; mundos: 2 plantas, 0 falhas |
 | quartel (Quartel) | 8 famílias, 6 de 6 povos armados | arca, armeiro, banco, catre, manequim, mesa, mesa-escriba | acesso, armar, comer, deitar, escrever, guardar, sentar, treinar | amostra: 0 falhas, 0 escolhas; mundos: 5 plantas, 0 falhas |
 | torre (Torre de Vigia) | sem planta | — | — | — |
 
@@ -239,16 +239,16 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 | Tipo | Planta | Peças nas plantas de amostra | Usos | Geometria |
 |---|---|---|---|---|
 | paco (Casa do Chefe) | 12 famílias, 6 de 6 povos armados | arca, banco, braseiro, fogao, lampadario, lar, mesa, trono | acesso, aquecer, audiencia, comer, cozinhar, guardar, sentar | amostra: 0 falhas, 0 escolhas |
-| palacio (Palácio) | 10 famílias, 6 de 6 povos armados | arca, armeiro, banco, cama-casal, fogao, fonte, forno, jarros, lampadario, lar, mesa, trono | acesso, armar, assar, audiencia, beber, comer, cozinhar, deitar, guardar, sentar | amostra: 0 falhas, 0 escolhas |
-| grande_palacio (Grande Palácio) | 9 famílias, 6 de 6 povos armados | arca, armeiro, banco, cama, cama-casal, fogao, fonte, forno, jarros, lampadario, mesa, pipas, trono | acesso, armar, assar, audiencia, beber, comer, cozinhar, deitar, guardar, sentar | amostra: 0 falhas, 0 escolhas |
-| palacio_colossal (Palácio Colossal) | 9 famílias, 6 de 6 povos armados | arca, armeiro, banco, cama-casal, fogao, fonte, forno, jarros, lampadario, mesa, pipas, trono | acesso, armar, assar, audiencia, beber, comer, cozinhar, deitar, guardar, sentar | amostra: 0 falhas, 0 escolhas |
+| palacio (Palácio) | 10 famílias, 6 de 6 povos armados | arca, armeiro, banco, cama-casal, fogao, fonte, forno, jarros, lampadario, lar, mesa, trono | acesso, armar, assar, audiencia, beber, comer, cozinhar, deitar, guardar, sentar | amostra: 0 falhas, 0 escolhas; mundos: 1 plantas, 0 falhas |
+| grande_palacio (Grande Palácio) | 10 famílias, 6 de 6 povos armados | arca, armeiro, banco, cama, cama-casal, fogao, fonte, forno, jarros, lampadario, mesa, pipas, trono | acesso, armar, assar, audiencia, beber, comer, cozinhar, deitar, guardar, sentar | amostra: 0 falhas, 0 escolhas |
+| palacio_colossal (Palácio Colossal) | 10 famílias, 6 de 6 povos armados | arca, armeiro, banco, cama-casal, fogao, fonte, forno, jarros, lampadario, mesa, pipas, trono | acesso, armar, assar, audiencia, beber, comer, cozinhar, deitar, guardar, sentar | amostra: 0 falhas, 0 escolhas |
 
 | Atividade | Essencial | Quem faz | Feita | No código | Provas |
 |---|---|---|---|---|---|
 | o governante e a família moram ali (`morar`) | sim | P2 | parcial | sim | qa/civicos.js ✓ |
-| o governante recebe em audiência no trono (`audiencia`) |  | P2 | não | sim | — |
+| o governante recebe em audiência no trono (`audiencia`) |  | C | sim | sim | qa/escala.js ✗ |
 
-**Notas:** as plantas dos palácios têm o trono e a audiência, mas o mundo ainda não leva ninguém a eles: fica para a próxima onda
+**Notas:** a audiência (D-124, da Arquitetura Monumental): quem governa senta no trono e a cidade entra pelos lugares da planta — o voto e o pão continuam na praça; o «morar» é parcial: o palácio pronto fica marcado como o de quem o mandou erguer (v.palace), mas nenhuma família o tem como casa: o governante e os seus continuam morando na casa deles
 
 ## Cultura e espetáculo — validada
 
@@ -258,9 +258,9 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 
 | Tipo | Planta | Peças nas plantas de amostra | Usos | Geometria |
 |---|---|---|---|---|
-| teatro (Teatro) | 1 famílias, 6 de 6 povos armados | banco, cena, lar, luta, solido | acesso, assistir, atuar, cozinhar, lutar, sentar | amostra: 0 falhas, 0 escolhas; mundos: 1 plantas, 0 falhas |
-| biblioteca (Biblioteca) | 1 famílias, 6 de 6 povos armados | banco, estante, mesa-escriba, mesa-leitura | acesso, escrever, guardar, ler, sentar | amostra: 0 falhas, 0 escolhas; mundos: 5 plantas, 0 falhas |
-| maravilha (Maravilha) | 1 famílias, 6 de 6 povos armados | banco, lar, mesa, solido, trono | acender, acesso, assistir, atuar, audiencia, comer, cozinhar, lutar, ofertar, oficiar, rezar, sentar, topo | amostra: 0 falhas, 0 escolhas; mundos: 1 plantas, 0 falhas |
+| teatro (Teatro) | 1 famílias, 6 de 6 povos armados | banco, cena, lar, luta, solido | acesso, assistir, atuar, cozinhar, lutar, sentar | amostra: 0 falhas, 0 escolhas; mundos: 5 plantas, 0 falhas |
+| biblioteca (Biblioteca) | 1 famílias, 6 de 6 povos armados | banco, estante, mesa-escriba, mesa-leitura | acesso, escrever, guardar, ler, sentar | amostra: 0 falhas, 0 escolhas; mundos: 3 plantas, 0 falhas |
+| maravilha (Maravilha) | 1 famílias, 6 de 6 povos armados | banco, lar, mesa, solido, trono | acender, acesso, assistir, atuar, audiencia, comer, cozinhar, lutar, ofertar, oficiar, rezar, sentar, topo | amostra: 0 falhas, 0 escolhas |
 | monument (Monumento) | 1 famílias, 6 de 6 povos armados | solido | ofertar, rezar | amostra: 0 falhas, 0 escolhas; mundos: 4 plantas, 0 falhas |
 | estatua (Estátua de Ouro) | sem planta | — | — | — |
 
@@ -290,7 +290,7 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 
 | Tipo | Planta | Peças nas plantas de amostra | Usos | Geometria |
 |---|---|---|---|---|
-| praca (Praça) | 1 famílias, 6 de 6 povos armados | banco, fonte, solido, tribuna | acesso, beber, conversar, falar, ouvir, sentar | amostra: 0 falhas, 6 escolhas; mundos: 16 plantas, 0 falhas |
+| praca (Praça) | 1 famílias, 6 de 6 povos armados | banco, fonte, solido, tribuna | acesso, beber, conversar, falar, ouvir, sentar | amostra: 0 falhas, 6 escolhas; mundos: 14 plantas, 0 falhas |
 | well (Poço) | sem planta | — | — | — |
 | aqueduto (Aqueduto) | sem planta | — | — | — |
 | campfire (Fogueira) | sem planta | — | — | — |
@@ -298,7 +298,7 @@ Gerada por `node qa/matriz-predios.js` em 2026-11-04 — do código e das folhas
 
 | Atividade | Essencial | Quem faz | Feita | No código | Provas |
 |---|---|---|---|---|---|
-| buscar água no poço para a casa, na fila (`agua`) | sim | P1 | sim | sim | qa/agua-solta.js ✓ |
+| buscar água no poço para a casa, na fila (`agua`) | sim | P1 | sim | sim | qa/agua-solta.js ✗ |
 | o corpo do deus fala ao povo de cima da pedra da praça (`falar`) |  | P2 | sim | sim | qa/lazer-mao.js ✓ |
 | o balde do poço contra o fogo (`fogo`) | sim | P4 | sim | sim | qa/cidade-obras.js ✓ |
 | juntar-se na praça: conversar, ouvir quem fala, a festa (`juntar`) | sim | P2 | não | sim | qa/biblioteca-praca.js ✓ |

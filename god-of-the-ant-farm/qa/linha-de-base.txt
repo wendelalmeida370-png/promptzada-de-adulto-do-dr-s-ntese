@@ -9,6 +9,7 @@ PASSOU | mar 8 ilha conhecida só por quem soube
 PASSOU | mar frota-luta l2 a ida e volta do mundo sem diferença nas frotas 
 PASSOU | mar frota-luta l3 uma frota posta a lutar (sem batalha) passa pelo save ainda lutando 
 PASSOU | mar frota-luta l4 a luta acaba como no mundo vivo; verificador limpo 
+PASSOU | mar frota-luta l5 o navio de guerra com alguém a bordo levado pela frota nova: todo mundo a bordo no rol 
 PASSOU | mar 17 desempenho com muitos barcos 
 PASSOU | mar 1 ilha rica não coloniza tudo 
 PASSOU | mar 14 salvar/carregar durante uma expedição 
@@ -26,7 +27,7 @@ PASSOU | mar navio-terra n5 o deus abre o mar no meio do rumo de um barco que vo
 PASSOU | mar navio-terra n6 o verificador vê o navio deixado parado em terra 
 PASSOU | cidade 1 bairros nascem do que a cidade tem 
 PASSOU | cidade 2 nomes únicos e guardados no save 
-FALHOU | cidade 3 a terra vale mais no bairro nobre 
+PASSOU | cidade 3 a terra vale mais no bairro nobre 
 PASSOU | cidade 4 a cidade cresce de vários núcleos 
 PASSOU | cidade 5 avenidas ligam os núcleos e são calçadas primeiro 
 PASSOU | cidade 6 o centro é denso, a borda tem espaço 
@@ -35,18 +36,24 @@ PASSOU | cidade 8 as hortas da borda foram cuidadas e colhidas
 PASSOU | cidade 9 as tavernas serviram bebida 
 PASSOU | cidade 10 a carga dos navios entrou pelo armazém 
 PASSOU | cidade 11 os roubos tiveram resposta 
-FALHOU | cidade 12 os ricos moram em terra mais cara 
+PASSOU | cidade 12 os ricos moram em terra mais cara 
 PASSOU | cidade fundadores f1 o corpo do deus, o preso, o emissário, o soldado e o mercador nunca vão fundar a vila nova 
 PASSOU | cidade fundadores f2 os fundadores podem ir, e cada casal leva os seus pequenos 
 PASSOU | cidade fundadores f3 os colonos de um navio: os cinco ficam (o corpo uma criança, e os pais com ela), as famílias inteiras 
 PASSOU | cidade fundadores f5 a cidade funda uma vila no dia novo do mundo: o corpo do deus fica dela e do deus, o preso na cela 
 PASSOU | cidade fundadores f6 o casamento real: o filho que iria morar com o outro povo é o corpo do deus — ele fica 
 PASSOU | cidade fundadores f4 um tempo depois: o corpo é do deus, o preso na cela, o emissário a caminho, o soldado no bando; verificador limpo 
+PASSOU | cidade lote-bolsao q1 o lote só pela quina: o buscador não o dá; com um lado para a rua, dá 
+PASSOU | cidade lote-bolsao q2 os lugares do buscador nos mundos prontos têm um lado no chão da cidade 
+FALHOU | cidade lote-bolsao q3 dois anos de salto: todo lugar dado tem um lado no chão da cidade 
+PASSOU | cidade lote-bolsao q4 a corte pergunta o alcance do lote do palácio no degrau do próprio tipo também 
+PASSOU | cidade 7b de propósito: a rua calçada sim, a estrada e a rua sem volta não (L-602) 
 PASSOU | cidade 4 um save no meio da obra 
 PASSOU | cidade 1 cada quarteirão em terra cara, derrubando só o que pode 
 PASSOU | cidade 2 os desalojados sem casa, as moedas guardadas 
 PASSOU | cidade 3 o verificador todo ano (o anel dos quarteirões livre) 
 PASSOU | cidade 5 um desalojado morre, um raio cai na obra 
+PASSOU | cidade 7a cada quarteirão posto sobre rua: nunca a estrada, e o anel religa (L-602) 
 PASSOU | cidade 6 os anos passam: quarteirões prontos e morados 
 PASSOU | cidade 1 a carga do navio desce no cais e vai a pé ao armazém 
 PASSOU | cidade 2 a taverna faz a bebida do seu povo e cobra cada rodada 
@@ -55,6 +62,7 @@ PASSOU | cidade 4 a casa queima: a família vai para a rua (por isso), levanta u
 PASSOU | cidade 5 o roubo: a moeda muda de casa, o guarda vê, prende e leva à cadeia 
 PASSOU | cidade 6 o preso continua na cela depois do save e sai quando a lei manda 
 PASSOU | cidade 7 o verificador não vê nada errado 
+PASSOU | cidade 8 o roubo na noite da festa (D-126): o guarda que viu prende depois dela 
 PASSOU | salto 1 quinze anos com o verificador todo ano 
 PASSOU | salto 2 a mesma semente, o mesmo mundo 
 PASSOU | salto 3 um save carregado duas vezes salta o mesmo futuro 
@@ -68,6 +76,8 @@ PASSOU | salto-igual 2 o G.shuffle: a mesma sorte, a mesma ordem e n − 1 sorte
 PASSOU | guerra guerreiro que muda de povo sai do bando 
 PASSOU | guerra a última alma morre e o povo acaba junto 
 PASSOU | guerra a última alma livre morre e os cativos herdam a cidade 
+PASSOU | guerra a governante de outro povo, cativa, herda a cidade: o povo dela tem outro governante na hora 
+PASSOU | guerra a capital tomada com o governante dentro: o povo dele tem outro governante na hora 
 PASSOU | guerra sem erros 
 PASSOU | cativos 1 a cidade tomada se rebela e volta para o seu povo: os cativos desse povo lá dentro ficam livres 
 PASSOU | cativos 1 o cativo de um terceiro povo que vive lá continua cativo 
@@ -303,13 +313,22 @@ PASSOU | diario 5. salvo e carregado com o corpo vivido: o objetivo continua dei
 PASSOU | diario 6. os três dias do D-061: o dia da cidade e a decisão da própria família não voltam a juntar; no quarto dia a família volta a pensar na casa, e o objetivo volta 
 PASSOU | diario 7. no Modo Deus, a mesma página da pessoa, só leitura (sem botão de deixar de lado); a pausa do deus e a página desenhada não mudam o mundo 
 PASSOU | diario 8. nenhum erro de página nem de módulo, e o verificador limpo das regras da casa 
+PASSOU | forma-deus-fotos 1: o «sprite» do degrau, do tamanho do lote 
+PASSOU | forma-deus-fotos 2: o quadro com o Coliseu na tela 
+PASSOU | forma-deus-fotos 3: a ordem do desenho em volta do Coliseu 
+PASSOU | forma-deus-fotos 5: o desenho não muda o mundo 
+PASSOU | forma-deus-fotos 6: a obra do Coliseu pela metade, da altura da forma 
+PASSOU | forma-deus-fotos 7: a memória dos desenhos grandes, com teto 
+PASSOU | forma-deus-fotos 8: o lote reservado, de perto e de longe 
+PASSOU | forma-deus-fotos 5: nenhum erro 
+PASSOU
 PASSOU | agua-solta a1 a água solta vai para casa ou é derramada 
 PASSOU | agua-solta a2 o jarro chega em casa 
 PASSOU | agua-solta a3 nenhuma colheita começa por cima de outra coisa 
 PASSOU | agua-solta a4 o save no meio do caminho: o recado volta, e o jarro chega em casa (ou o mundo o corta, e a água sai pelo livro) 
-PASSOU | agua-solta verificador 
+FALHOU | agua-solta verificador 
 PASSOU | agua-solta erros 
-PASSOU | fundação agua-solta saiu limpo
+FALHOU | fundação agua-solta saiu limpo
 PASSOU | atividades d1 tudo ou nada 
 PASSOU | atividades d2 a mesma chave 
 PASSOU | atividades d3 reserva 
@@ -351,9 +370,10 @@ PASSOU | cais-longe k3 a líder levada a uma ilhota: a viagem não sai
 PASSOU | cais-longe k4 o mesmo, salvo e carregado no meio: carregado, sai da tripulação 
 PASSOU | cais-longe k5 um susto no cais: a tripulação foge, volta, e a viagem sai com ela inteira 
 PASSOU | cais-longe k6 os dois primeiros da fila longe do cais: quem está no cais embarca assim mesmo 
-PASSOU | cais-longe verificador 
+PASSOU | cais-longe k7 a volta com dois navios: o que a gente deixou volta ao trabalho do porto, nenhum navega sem ninguém a bordo 
+FALHOU | cais-longe verificador 
 PASSOU | cais-longe erros 
-PASSOU | fundação cais-longe saiu limpo
+FALHOU | fundação cais-longe saiu limpo
 PASSOU | cais 1. cada cais do mundo: nenhuma superfície deitada dele cortada pelo chão 
 PASSOU | cais 2. um cais em obra junto à água que não fica ao sul: o deque sobre a água, o lado achado pelo desenho e não escrito no mundo 
 PASSOU | cais 3. um cais com água só num canto: nenhum deque sobre a terra, sem lado da água e com o que o mundo lhe dá 
@@ -370,9 +390,9 @@ PASSOU | caminho-longo l1 o caminho de casa de dentro de uma cidade murada longe
 PASSOU | caminho-longo l2 ela vive o mundo dali: chega à cidade dela, sem 6 caminhos falhos seguidos 
 PASSOU | caminho-longo l3 todo par longo que tem caminho o Vg.goto acha 
 PASSOU | caminho-longo l4 um prédio que nasce no caminho: o caminho refeito chega aonde ia 
-PASSOU | caminho-longo verificador 
+FALHOU | caminho-longo verificador 
 PASSOU | caminho-longo erros 
-PASSOU | fundação caminho-longo saiu limpo
+FALHOU | fundação caminho-longo saiu limpo
 PASSOU | campo c1 
 PASSOU | campo c2 
 PASSOU | campo c3 
@@ -476,6 +496,7 @@ PASSOU | fundação cena-lugar saiu limpo
 PASSOU | chao-aberto 1. a borda da praça e da feira se cruza andando, de fora para dentro, em todo ponto onde a rua e o chão de dentro estão livres 
 PASSOU | chao-aberto 2. o corpo entra andando da rua no chão da praça e da feira, por cada lado, e volta para a rua 
 PASSOU | chao-aberto 3. os rostros da praça romana: o corpo fica diante do pé, na borda do lote, e sobe ao topo 
+PASSOU | chao-aberto 3b. o pulo que não alcança o topo do plinto: o corpo escorrega para fora da face, nunca fica com a borda dentro do degrau, e sobe com as mãos sem os pés passarem pela quina 
 PASSOU | chao-aberto os pés do corpo sempre no chão que a planta ou a rua dão 
 PASSOU | chao-aberto 4. o verificador limpo, sem erro de módulo 
 PASSOU | fundação chao-aberto saiu limpo
@@ -500,24 +521,22 @@ PASSOU | cidade-obras c2 a entrega na fogueira: numa aldeia sem armazém, a carg
 PASSOU | cidade-obras verificador e módulos 
 PASSOU | fundação cidade-obras saiu limpo
 PASSOU | civicos metropole aberto 
+PASSOU | civicos metropole aberto presos nas celas 
 PASSOU | civicos metropole aberto verificador 
 PASSOU | civicos metropole salvar e carregar 
+PASSOU | civicos metropole carregado presos nas celas 
 PASSOU | civicos metropole ruínas 
 PASSOU | civicos metropole um ano de salto 
 PASSOU | civicos metropole um ano de salto verificador 
 PASSOU | civicos mundial aberto 
-PASSOU | civicos mundial aberto presos nas celas 
 PASSOU | civicos mundial aberto verificador 
 PASSOU | civicos mundial salvar e carregar 
-PASSOU | civicos mundial carregado presos nas celas 
 PASSOU | civicos mundial ruínas 
 PASSOU | civicos mundial um ano de salto 
 PASSOU | civicos mundial um ano de salto verificador 
 PASSOU | civicos mega aberto 
-PASSOU | civicos mega aberto presos nas celas 
 PASSOU | civicos mega aberto verificador 
 PASSOU | civicos mega salvar e carregar 
-PASSOU | civicos mega carregado presos nas celas 
 PASSOU | civicos mega ruínas 
 PASSOU | civicos mega um ano de salto 
 PASSOU | civicos mega um ano de salto verificador 
@@ -563,6 +582,7 @@ PASSOU | contrabando k2
 PASSOU | contrabando k3 
 PASSOU | contrabando k4 
 PASSOU | contrabando k5 
+PASSOU | contrabando k6 
 PASSOU | contrabando erros 
 PASSOU | fundação contrabando saiu limpo
 PASSOU | corpo-casa há uma casa com planta, porta na rua e um morador que se pode viver 
@@ -574,14 +594,14 @@ PASSOU | corpo-casa 3. sobe a escada: no topo, o piso de cima (o seu chão)
 PASSOU | corpo-casa 3. desce a escada: ao pé dela, o piso de baixo 
 PASSOU | corpo-casa 4. deita na sua cama: o sono do mundo, o corpo deitado nela 
 PASSOU | corpo-casa 4. acordado, levanta ao lado da cama, dentro de casa 
-PASSOU | corpo-casa 7. senta: o mundo marca o lugar, o corpo nele, virado como o lugar 
-PASSOU | corpo-casa 7. as mãos no lugar: o corpo segue nele 
-PASSOU | corpo-casa 7. anda e levanta: de pé onde subiu, o lugar solto 
 PASSOU | corpo-casa 6. salvar e carregar dentro de casa: dentro ainda, no mesmo piso e lugar 
-PASSOU | corpo-casa 6. salvo sentado, senta de novo no mesmo lugar 
 PASSOU | corpo-casa 5. sai pela porta: o mundo o tem fora, sem piso guardado 
 PASSOU | corpo-casa verificador (S0 a S2) durante tudo isso 
 PASSOU | corpo-casa 6. o deus tira a casa com o corpo dentro: o mundo o põe fora, em chão firme 
+PASSOU | corpo-casa 7. senta: o mundo marca o lugar, o corpo nele, virado como o lugar 
+PASSOU | corpo-casa 7. as mãos no lugar: o corpo segue nele 
+PASSOU | corpo-casa 7. anda e levanta: de pé onde subiu, o lugar solto 
+PASSOU | corpo-casa 6. salvo sentado, senta de novo no mesmo lugar 
 PASSOU | corpo-casa verificador no fim (S0 a S2) 
 PASSOU | corpo-casa sem erros de módulo nem do console 
 PASSOU | fundação corpo-casa saiu limpo
@@ -652,6 +672,133 @@ PASSOU | dupla 5. salvo e carregado com os dois debaixo da caixa: o que se desen
 PASSOU | dupla 6. todo gesto de G.Act.ANIM com uma pose das pessoas do mundo — pagar, pechinchar, examinar, contar, esperar, o ajudante (parado e andando) 
 PASSOU | dupla módulos 
 PASSOU | fundação dupla saiu limpo
+PASSOU | escala e0 só o clássico: nada muda 
+PASSOU | escala e0b os tipos sem degrau maior escolhem o clássico 
+PASSOU | escala e1 a capital e a aldeia 
+PASSOU | escala e1a a escolha 
+PASSOU | escala e1b a capital ergue o grande 
+PASSOU | escala e1c a aldeia ergue o pequeno 
+PASSOU | escala e1d verificador 
+PASSOU | escala e2a uma cidade que justifica o templo de 4 
+PASSOU | escala e2b o degrau de baixo 
+PASSOU | escala e2c a maravilha sem terra não vira a antiga 
+PASSOU | escala e3a sem lote livre 
+PASSOU | escala e3b abre espaço 
+PASSOU | escala e3c só casas baixas e campos da cidade 
+PASSOU | escala e3d o limite do degrau 
+PASSOU | escala e3e mais camas do que derrubou; os campos mudam de lugar 
+PASSOU | escala e3f a crônica e as famílias 
+PASSOU | escala e3g verificador 
+FALHOU | escala e3h a casa que cai: as famílias ganham mais camas do que perdem 
+PASSOU | escala e3i verificador 
+PASSOU | escala e3x0 um lote livre 
+PASSOU | escala e3x as regras 
+PASSOU | escala e3x as duas últimas fazendas 
+PASSOU | escala e4a a obra grande 
+PASSOU | escala e4b o save no meio 
+PASSOU | escala e4c a obra segue 
+PASSOU | escala e4d verificador 
+PASSOU | escala e5a o deus derruba 
+PASSOU | escala e5b verificador, depois do save 
+PASSOU | escala e5c a ruína some e o lote fica livre 
+PASSOU | escala e6a o templo grande de pé 
+PASSOU | escala e6b a cidade que encolheu escolhe o pequeno, o grande fica 
+PASSOU | escala e6c verificador 
+PASSOU | escala e7a o santuário 
+PASSOU | escala e7b o planejador amplia 
+PASSOU | escala e7c o mesmo prédio, maior 
+PASSOU | escala e7d a mesma história, e o fato novo 
+PASSOU | escala e7e a conta do que cresce 
+PASSOU | escala e7f a crônica 
+PASSOU | escala e7g verificador 
+PASSOU | escala e7h o save no meio da ampliação 
+PASSOU | escala e7i pronta 
+PASSOU | escala e7j verificador 
+PASSOU | escala e8a o palácio de antes 
+PASSOU | escala e8b o palácio cresce, o patrono mora nele 
+PASSOU | escala e8c verificador 
+PASSOU | escala e9a o santuário 
+PASSOU | escala e9b ampliado 
+PASSOU | escala e9c volta ao que era 
+PASSOU | escala e9d verificador 
+PASSOU | escala e10a a maravilha em obra guarda a pedra 
+PASSOU | escala e10b nenhum extra de pedra começa enquanto ela espera 
+PASSOU | escala e13a a corte acha o lote do degrau 
+PASSOU | escala e13b o grande palácio pela escada 
+PASSOU | escala e13c verificador 
+PASSOU | escala e14 uma cidade com o lote mais perto íngreme e um plano no raio 
+PASSOU | escala e14 a mão do deus prefere o pódio 
+PASSOU | escala e15 uma capital com lote para o palácio de 6 
+PASSOU | escala e15a a renda pelo livro 
+PASSOU | escala e15b o palácio de 6 pela renda 
+PASSOU | escala e15c sem a pedra, o degrau maior fica para depois 
+PASSOU | escala e15d o clássico pela pedra guardada 
+PASSOU | escala e15e verificador 
+PASSOU | escala e16a a obra grande 
+PASSOU | escala e16b a vez 
+PASSOU | escala e16c a vez vai no save 
+PASSOU | escala e17 a capital romana e uma de maravilha dentro 
+PASSOU | escala e17a de fora e de dentro 
+PASSOU | escala e17c o Coliseu sem terra diz por quê 
+PASSOU | escala e17b o palácio de 6 de Roma, dentro do alcance 
+PASSOU | escala e18a um lote de 4 
+PASSOU | escala e18b a rua menor que o anel junta 
+PASSOU | escala e18c a madeira do lote vai para a obra 
+PASSOU | escala e18d verificador 
+PASSOU | escala e19a o Coliseu de pé 
+PASSOU | escala e19b os lugares da planta 
+PASSOU | escala e19c os jogos do dia 
+PASSOU | escala e19g o save no meio dos jogos 
+PASSOU | escala e19h o camarote: quem governa no trono, a corte no banco 
+PASSOU | escala e19i o save no meio dos jogos devolve o camarote 
+PASSOU | escala e19d os lutadores na areia, o público nas fileiras 
+PASSOU | escala e19e no fim, ninguém lá dentro 
+PASSOU | escala e19f verificador 
+PASSOU | escala e21a uma capital no nível da guarda, num chão aplainado 
+PASSOU | escala e21b a cidade guarda o lote 
+PASSOU | escala e21c as buscas o deixam de fora 
+PASSOU | escala e21d o save 
+PASSOU | escala e21e verificador 
+PASSOU | escala e21f o deus põe um poço nele 
+PASSOU | escala e21g a cidade que perde o nível 
+PASSOU | escala e21i guardado outra vez 
+PASSOU | escala e21n o fogo no lote guardado passa 
+PASSOU | escala e21j a obra no lote guardado, com a pedra do lote 
+PASSOU | escala e21p o campo começado no lote, derrubado pela obra grande, devolve o que a obra dele tinha 
+PASSOU | escala e21k o verificador vê um prédio no lote 
+PASSOU | escala e21h o chão muda (o deus afoga o meio do lote) 
+PASSOU | escala e21l a cidade que some 
+PASSOU | escala e21m verificador 
+PASSOU | escala e21o uma cidade sem muro, com o muro planejado 
+PASSOU | escala e21o o muro passa ao lado do campo guardado 
+PASSOU | escala e22a o palácio pronto e quem governa 
+PASSOU | escala e22b quem governa no trono, a cidade nos lugares 
+PASSOU | escala e22c a ronda fica 
+PASSOU | escala e22d verificador 
+PASSOU | escala e22m o verificador vê 
+PASSOU | escala e22e o save no meio 
+PASSOU | escala e22f quem governa morre no meio 
+PASSOU | escala e22g o deus derruba o palácio no meio 
+PASSOU | escala e22i verificador 
+PASSOU | escala e22h o voto e o pão iguais 
+PASSOU | escala e22j as três chamadas 
+PASSOU | escala e22k sem palácio, nenhuma reunião 
+PASSOU | escala e22l verificador 
+PASSOU | escala e23a o teto guarda os serviços com a comida garantida 
+PASSOU | escala e23b o corte do resto deixa os serviços guardados 
+PASSOU | escala e23c na vida, a taverna e o teatro abertos 
+PASSOU | escala e23d o save devolve os ofícios 
+PASSOU | escala e23e o verificador vê 
+PASSOU | escala e24a sem o tijolo para todas, as que esperam há mais tempo voltam à pedra 
+PASSOU | escala e24b com o tijolo coberto, ninguém volta 
+PASSOU | escala e25 o palácio do governante vem antes do teatro, dos banhos e da maravilha 
+PASSOU | escala e20 metropole: o porquê de cada capital 
+PASSOU | escala e20 mundial: o porquê de cada capital 
+PASSOU | escala e20 mega: o porquê de cada capital 
+PASSOU | escala e11a o save de antes abre igual 
+PASSOU | escala e11b nada se refaz à força 
+PASSOU | escala e12 a mesma semente, a mesma escolha 
+FALHOU | fundação escala saiu limpo
 PASSOU | estiva 2. sem descarga, nenhum chamado ao cais 
 PASSOU | estiva 1. o barco descarrega: uma descarga do mundo, as caixas no cais, desenhadas onde estão 
 PASSOU | estiva 2. o estivador encarnado é chamado ao cais, com palavras que dizem o que é 
@@ -681,6 +828,13 @@ PASSOU | feira f4
 PASSOU | feira f5 
 PASSOU | feira erros 
 PASSOU | fundação feira saiu limpo
+PASSOU | fera-rara f1 cidade 
+PASSOU | fera-rara f2 cidade 
+PASSOU | fera-rara f3 cidade 
+PASSOU | fera-rara f4 cidade 
+PASSOU | fera-rara f5 cidade 
+PASSOU | fera-rara erros 
+PASSOU | fundação fera-rara saiu limpo
 PASSOU | fidelidade as formas do 3D enroladas para fora 
 PASSOU | fidelidade os tipos com forma 
 PASSOU | fidelidade todo prédio com o desenho do deus 
@@ -719,8 +873,42 @@ PASSOU | fome h12 a criança que a fome acorda de noite come antes de voltar par
 PASSOU | fome h13 a tripulação esperando no cais da viagem come, como quem está em campo 
 PASSOU | fome h14 a cidade cortada de todos os seus armazéns acende uma fogueira do lado das ruas, e quem tem fome come 
 PASSOU | fome h15 comer o que se leva nas mãos passa pelo livro, e a fome cai pelo que foi comido (L-385) 
+PASSOU | fome h16 o refúgio da caverna é da cidade atacada, e acaba com o perigo — também a caminho (L-601) 
+PASSOU | fome h17 quem se esconde na caverna come das provisões, como quem foge da guerra (L-605) 
+PASSOU | fome h18 o turno dado no lugar de uma refeição larga quando a refeição volta ao alcance (L-649) 
+PASSOU | fome h18b o verificador ainda vê quem a escolha deixou de olhar: o armazém fica de fora 3,5 s depois da última olhada, não mais (L-649) 
+PASSOU | fome h19a a cidade que perde a fogueira e todo armazém acende outra no mesmo dia, mesmo com a busca do dia já falhada (L-650) 
+PASSOU | fome h19b sem chão no raio da cidade (as ruínas, a cicatriz da lava), a fogueira nova vai mais longe, onde as ruas da cidade chegam (L-650) 
+PASSOU | fome h20 a criança ferida, de cama em casa com a despensa vazia, levanta com a fome no máximo e come no armazém (L-659) 
 PASSOU | fome limpo 
 PASSOU | fundação fome saiu limpo
+PASSOU | forma-deus a: o pintor sem a porta que a vista não vê 
+PASSOU | forma-deus a: o pintor da forma e o desenho à mão 
+PASSOU | forma-deus b: o degrau de 10 casas desenhado pelo pintor, do tamanho dele 
+PASSOU | forma-deus b: o deus e o 3D do mesmo prédio grande, a mesma massa 
+PASSOU | forma-deus b: o deus contra a forma de 10 casas 
+PASSOU | forma-deus b: o 3D contra a forma de 10 casas 
+PASSOU | forma-deus b: sem forma do tamanho, nenhum desenho; no tamanho clássico, o de antes 
+PASSOU | forma-deus b: o «sprite» grande feito uma vez e guardado 
+PASSOU | forma-deus b: os degraus pelo pintor (todos os que têm forma, e os palácios nos quatro povos) 
+PASSOU | forma-deus b: os degraus no 3D, contra a forma e contra o deus 
+PASSOU | forma-deus c: a ordem do desenho ao lado e atrás do prédio grande 
+PASSOU | forma-deus d: a ordem no mundo vivo, em volta dos prédios de 2 casas ou mais 
+PASSOU | forma-deus e: o desenho não muda o mundo 
+PASSOU | forma-deus f: a obra do degrau de 10 casas, da altura da forma desse tamanho 
+PASSOU | forma-deus f: sem forma do tamanho, a altura do tipo escalada 
+PASSOU | forma-deus f: no tamanho clássico, a obra de antes 
+PASSOU | forma-deus f: pintar a obra não muda o mundo 
+PASSOU | forma-deus g: a memória dos desenhos grandes, com teto 
+PASSOU | forma-deus h: o que mais o deus vê de um lote grande 
+PASSOU | forma-deus i: o pódio de pedra do degrau, até o chão de cada canto 
+PASSOU | forma-deus j: o ninho no degrau, a planta aberta, o fogo 
+PASSOU | forma-deus k: a reserva do lote no deus 
+PASSOU | forma-deus k: com e sem quadros, o mesmo mundo 
+PASSOU | forma-deus l: a escada em degraus, como o 3D 
+PASSOU | forma-deus m: as cores da forma pelo nome inteiro 
+PASSOU | forma-deus sem erro do jogo 
+PASSOU | fundação forma-deus saiu limpo
 PASSOU | forma-vida 1 o mundo aberto: os prédios de planta pela forma na família dela, com planta válida; o verificador limpo 
 PASSOU | forma-vida 2 um mercado com a família da receita é acusado; de volta à da forma, nada 
 PASSOU | forma-vida 3 salvar e carregar no meio: as famílias, as cascas de longe e as plantas as mesmas 
@@ -732,9 +920,9 @@ PASSOU | forma-vida 8 diante de toda entrada com a rua mais de um passo abaixo d
 PASSOU | forma-vida 9 em todos os mundos prontos, os degraus diante de cada porta de fora dos prédios pela forma (e do pé do lance dela fora das paredes): nenhum se choca com outro, nenhum dentro do corpo da planta nem sobre o que a forma tem em pé 
 PASSOU | forma-vida sem erros de módulo 
 PASSOU | fundação forma-vida saiu limpo
-PASSOU | geometria 380 prédios do mundo metropole: 0 falhas, 378 escolhas
+PASSOU | geometria 362 prédios do mundo metropole: 0 falhas, 371 escolhas
 PASSOU | fundação geometria-metropole saiu limpo
-PASSOU | geometria 744 prédios de mentira: 0 falhas, 505 escolhas
+PASSOU | geometria 744 prédios de mentira: 0 falhas, 509 escolhas
 PASSOU | fundação geometria saiu limpo
 PASSOU | grao o grainFor dá o grão que o grainOf daria, sem acaso e sem gravar 
 PASSOU | grao o mesmo grão com e sem desenho 
@@ -826,7 +1014,7 @@ PASSOU | interior3d 1. todo número é número
 PASSOU | interior3d 1. nada fora do lote nem fora da altura do prédio 
 PASSOU | interior3d 2. as paredes estão onde a planta diz, com a face virada para o cômodo 
 PASSOU | interior3d 3. portas e janelas abertas: nada no vão 
-FALHOU | interior3d 4. o chão é o de Interiors.floorY em cada casa do piso (os degraus dentro de um degrau; o alçapão fechado é chão) 
+PASSOU | interior3d 4. o chão é o de Interiors.floorY em cada casa do piso (os degraus dentro de um degrau; o alçapão fechado é chão) 
 PASSOU | interior3d 5. um teto virado para o cômodo, alto bastante para ficar de pé (no jirau, sob as águas até o beiral), nunca o céu 
 PASSOU | interior3d 6. cada móvel no seu retângulo e no seu piso; todo tipo do catálogo desenhado 
 PASSOU | interior3d 7. as folhas das portas: fechadas no vão, abertas para o primeiro cômodo; os alçapões: fechados no buraco, abertos para cima 
@@ -837,13 +1025,13 @@ PASSOU | interior3d 11. o pátio e o terraço veem o céu
 PASSOU | interior3d 12. as portas e os arcos de fora: fechada, a folha no vão; com o interior desenhado, o vão livre (o recorte) 
 PASSOU | interior3d 13. o terreiro por fora: o chão sob os pés, a cerca, o portão fechado e livre com o interior, as peças e o recorte delas 
 PASSOU | interior3d sem erros de módulo 
-FALHOU | fundação interior3d-mega saiu limpo
+PASSOU | fundação interior3d-mega saiu limpo
 PASSOU | interior3d há plantas de lares neste mundo, e uma cabana redonda 
 PASSOU | interior3d 1. todo número é número 
 PASSOU | interior3d 1. nada fora do lote nem fora da altura do prédio 
 PASSOU | interior3d 2. as paredes estão onde a planta diz, com a face virada para o cômodo 
 PASSOU | interior3d 3. portas e janelas abertas: nada no vão 
-FALHOU | interior3d 4. o chão é o de Interiors.floorY em cada casa do piso (os degraus dentro de um degrau; o alçapão fechado é chão) 
+PASSOU | interior3d 4. o chão é o de Interiors.floorY em cada casa do piso (os degraus dentro de um degrau; o alçapão fechado é chão) 
 PASSOU | interior3d 5. um teto virado para o cômodo, alto bastante para ficar de pé (no jirau, sob as águas até o beiral), nunca o céu 
 PASSOU | interior3d 6. cada móvel no seu retângulo e no seu piso; todo tipo do catálogo desenhado 
 PASSOU | interior3d 7. as folhas das portas: fechadas no vão, abertas para o primeiro cômodo; os alçapões: fechados no buraco, abertos para cima 
@@ -854,7 +1042,7 @@ PASSOU | interior3d 11. o pátio e o terraço veem o céu
 PASSOU | interior3d 12. as portas e os arcos de fora: fechada, a folha no vão; com o interior desenhado, o vão livre (o recorte) 
 PASSOU | interior3d 13. o terreiro por fora: o chão sob os pés, a cerca, o portão fechado e livre com o interior, as peças e o recorte delas 
 PASSOU | interior3d sem erros de módulo 
-FALHOU | fundação interior3d-mundial saiu limpo
+PASSOU | fundação interior3d-mundial saiu limpo
 PASSOU | interior3d há plantas de lares neste mundo, e uma cabana redonda 
 PASSOU | interior3d 1. todo número é número 
 PASSOU | interior3d 1. nada fora do lote nem fora da altura do prédio 
@@ -873,6 +1061,7 @@ PASSOU | interior3d 13. o terreiro por fora: o chão sob os pés, a cerca, o por
 PASSOU | interior3d sem erros de módulo 
 PASSOU | fundação interior3d saiu limpo
 PASSOU | interiores cidade aberto 
+PASSOU | interiores a tabela pela fila (T-432) 
 PASSOU | interiores salvar e carregar duas vezes 
 PASSOU | interiores 1 ano(s) de salto 
 PASSOU | interiores reforma 
@@ -1014,6 +1203,7 @@ PASSOU | lar l1 cada um na sua hora
 PASSOU | lar l1b quem dorme está deitado 
 PASSOU | lar l5 a morte no meio da noite 
 PASSOU | lar l4 o save no meio da noite 
+PASSOU | lar l4b a caravana, o comércio entre os povos e o adeus de uma viagem não tiram ninguém da cama 
 PASSOU | lar l6 o fogo e a casa derrubada 
 PASSOU | lar l2 a vigia e a casa que espera 
 PASSOU | lar l3 o doente de cama 
@@ -1076,8 +1266,12 @@ PASSOU | lazer l8 com-fome-90-sai
 PASSOU | lazer l9 a-leitora-vai-dormir 
 PASSOU | lazer l10 chamados-antes-do-save 
 PASSOU | lazer l11 leitor-chamado-antes-do-save 
+PASSOU | lazer l12 o-ator-chamado-nao-e-levado (L-503) 
+PASSOU | lazer l13 a-festa-e-a-peca (D-130) 
 PASSOU | lazer erros 
 PASSOU | fundação lazer saiu limpo
+PASSOU | load-oficio o4 o recém-nascido nasce bebê, e o save não muda o papel dele 
+PASSOU | load-oficio o5 a criança criada aos cinco anos já é criança 
 PASSOU | load-oficio o1 o lobo a um fio das vinte casas: a ida e volta não muda ofício 
 PASSOU | load-oficio o2 o passo do mundo redistribui os ofícios depois do load 
 PASSOU | load-oficio o3 um ofício que não existe mais, no save, é consertado no load 
@@ -1113,8 +1307,10 @@ PASSOU | maos m9 a caverna forçada
 PASSOU | maos m10 a tripulação escondida na caverna 
 PASSOU | maos m11 as crianças escondidas e a colônia 
 PASSOU | maos m12 as escolhas da guerra com as mãos livres 
+FALHOU | maos m13 a caverna pela boca que os pés alcançam 
+PASSOU | maos m14 o adeus de uma viagem 
 PASSOU | maos erros 
-PASSOU | fundação maos-ocupadas saiu limpo
+FALHOU | fundação maos-ocupadas saiu limpo
 PASSOU | maos cada forma feita, no orçamento, do tamanho da tabela e com o meio na origem 
 PASSOU | maos a carga é o registro do mundo: o bem, as marcas, o equipamento, o jeito do povo — e nada na mão sem carga 
 PASSOU | maos em cada pegada de duas mãos, parado e andando: as palmas na coisa (≤3,5 cm), a coisa fora do tronco e acima do chão 
@@ -1151,6 +1347,169 @@ PASSOU | moedas m7 o dia inteiro: casa por casa, bolso por bolso e mãos por mã
 PASSOU | moedas m7 os tesouros: o livro e o que se escreveu à mão (T-063) fecham a conta 
 PASSOU | moedas limpo 
 PASSOU | fundação moedas saiu limpo
+PASSOU | monumental F1 as fileiras: no meio de cada casinha andada das fileiras — os teatros de 6, 8 e 10 casas (romano, grego), o Coliseu de 10 e de 13, nos quatro lados —, o chão da planta é o que o 3D desenha (L-494, 2: um polígono só, G.Forma.ringEdge) 
+PASSOU | monumental L1 o lago do jardim sagrado de longe (o antigo e os de 6, 8 e 10 casas): no meio dele, o alto da figura de longe é a água, na altura dela, azul (era o fundo dele: chão marrom) 
+PASSOU | monumental E1 a entrada da Grande Pirâmide (D-108, L-579), de 10 e 13 casas nos quatro lados: de cada casa do corredor, para cima, o primeiro teto do 3D é o do corredor, virado para baixo, a uma altura de corpo ao menos 
+PASSOU | monumental 1. a forma do tamanho do lote 
+PASSOU | monumental 1. os triângulos perto no teto (o detalhe fino) 
+PASSOU | monumental 1. o pedaço refeito com a geometria do monumento guardada: igual, sem desenhar o Coliseu de novo 
+PASSOU | monumental 1. as ordens da fachada em meias-colunas (a toscana, a jônica, a coríntia) 
+PASSOU | monumental 1. a silhueta de longe no teto e do tamanho da forma 
+PASSOU | monumental 2. o Coliseu atravessa pedaços: cada pedaço que ele toca chama o do canto 
+PASSOU | monumental 3. de fora, olhando para cima: o topo da fachada e a cabeça no quadro, a câmera longe do corpo 
+PASSOU | monumental 4. dentro: na arena a câmera com a distância pedida até o muro dela; na beira dela e no pódio, segura pelo muro e pelas fileiras, nunca na pedra 
+PASSOU | monumental 5. sobe os lances ao piso de assistir e fica nele 10 s (o mundo não o tira: L-550) 
+PASSOU | monumental 5. no piso de assistir, contra o parapeito e ao longo dele, sem cair 
+PASSOU | monumental 5. senta para assistir (o verbo «lugar»), levanta e segue no piso 
+PASSOU | monumental 2. junto da ponta de lá do Coliseu, o detalhe fino (pela beira do que o pedaço desenha) 
+PASSOU | monumental P1. o palácio desenhado pela forma: perto e longe 
+PASSOU | monumental T. o pódio de pedra (D-120): o desnível do lote em pedra aparelhada, em fiadas, na pedra do povo 
+PASSOU | monumental P2. a frente do pátio aberta: da rua, pelo vão do portão, o olhar chega ao fundo do pátio 
+PASSOU | monumental P3. as peças dos pátios que a planta marca da forma: desenhadas, e de pé com o interior aberto 
+PASSOU | monumental P4. as escadas grandes: o poço aberto, sem alçapão, com o guarda-corpo em volta 
+PASSOU | monumental P5. o corpo sobe a escada grande, não anda sobre o poço aberto e desce pelo lance andando 
+PASSOU | monumental P6. a câmera no pátio e no salão do trono: a distância pedida, nunca na pedra 
+PASSOU | monumental P7. as cores da forma pelo nome inteiro (L-564): a segunda faixa dos tetos planos do palácio asteca na cor dela 
+PASSOU | monumental Tp1. os templos de 8 casas pela forma: perto e longe, do alto da forma 
+PASSOU | monumental Tp2. o pórtico do templo grego entre as antas: da rua, pelo meio, o olhar chega ao fundo dele (a parede da cela), de fora e com o interior desenhado; o teto, o entablamento 
+PASSOU | monumental Tp3. o corpo sobe o lance do templo grego, entra no pórtico entre as colunas e, pelo portal aberto, na nave 
+PASSOU | monumental Tp4. o templo egípcio: as torres do pilone até o alto delas, as bandeiras no alto da forma; o portão pintado cede à folha do interior; as colunas do salão hipostilo com o interior (L-558) 
+PASSOU | monumental Tp5. o hof nórdico: a torre de pé no telhado, a flecha no alto da forma, o telhado de tabuinhas até a cumeeira; os esteios do salão com o interior (L-558) 
+PASSOU | monumental Tp6. a câmera nos templos: na cela nunca na pedra; sob o piso do recinto, na pedra da plataforma 
+PASSOU | monumental M. o corpo à própria mesa (D-104): sem fome, senta; sentado, a refeição da casa 
+PASSOU | monumental 6. o verificador limpo, sem erro de módulo 
+PASSOU | monumental C13 · 1. a forma do tamanho do lote 
+PASSOU | monumental C13 · 1. os triângulos perto no teto (o detalhe fino) 
+PASSOU | monumental C13 · 1. o pedaço refeito com a geometria do monumento guardada: igual, sem desenhar o Coliseu de novo 
+PASSOU | monumental C13 · 1. as ordens da fachada em meias-colunas (a toscana, a jônica, a coríntia) 
+PASSOU | monumental C13 · 1. a silhueta de longe no teto e do tamanho da forma 
+PASSOU | monumental C13 · 2. o Coliseu atravessa pedaços: cada pedaço que ele toca chama o do canto 
+PASSOU | monumental C13 · 3. de fora, olhando para cima: o topo da fachada e a cabeça no quadro, a câmera longe do corpo 
+PASSOU | monumental C13 · 4. dentro: na arena a câmera com a distância pedida até o muro dela; na beira dela e no pódio, segura pelo muro e pelas fileiras, nunca na pedra 
+PASSOU | monumental C13 · 5. sobe os lances ao piso de assistir e fica nele 10 s (o mundo não o tira: L-550) 
+PASSOU | monumental C13 · 5. no piso de assistir, contra o parapeito e ao longo dele, sem cair 
+PASSOU | monumental C13 · 5. senta para assistir (o verbo «lugar»), levanta e segue no piso 
+PASSOU | monumental C13 · 2. junto da ponta de lá do Coliseu, o detalhe fino (pela beira do que o pedaço desenha) 
+PASSOU | monumental C13 · 6. o verificador limpo, sem erro de módulo 
+PASSOU | monumental 8. o custo do quadro com o Coliseu à vista, em CPU do navegador (o processo da página e o do GL por software), em turnos; D-134: contra a figura dele de longe no mesmo lugar: a mediana dos turnos não acima da da figura × 1,15, e o pior turno não pior que o pior da figura × 1,20 (D-150) 
+PASSOU | monumental 7. as fotos: de fora, da arena, do alto de um anel 
+PASSOU | monumental 9. na qualidade leve, além da ponta de lá do Coliseu, o pedaço do canto dele perto 
+PASSOU | monumental 11. o palácio de pátios (6 casas, romano): de fora, no pátio e no salão do trono, em terceira pessoa 
+PASSOU | monumental 12. os templos de 8 casas (grego, egípcio, nórdico) e os palácios de 6 (grego, egípcio, nórdico) pela forma: de fora; o salão hipostilo por dentro 
+PASSOU | monumental 13. o camarote do imperador (D-125) no Coliseu de 10: de sobre a arena, diante dele, e de perto, da beira do pódio 
+PASSOU | monumental 14. o Coliseu colossal de 13 casas (a «cidade», Roma): de fora, o corpo diante da entrada; da arena 
+PASSOU | monumental 10. sem erro de página nem aviso no console 
+PASSOU | fundação monumental-3d saiu limpo
+PASSOU | monumental B1a a forma de cada povo e tamanho: o lote, o pé dentro dele, o risco; o degrau só no tamanho da forma 
+PASSOU | monumental B1b as formas dos povos diferentes entre si em cada tamanho (a parte H dos palácios); o clássico com o desenho do grego 
+PASSOU | monumental B2a a planta em todo povo, tamanho e lado, pela família da forma — a que o mundo dá ao registro do degrau 
+PASSOU | monumental B2b os degraus clássicos ficam com as suas plantas (o grande palácio de 4 e o colossal de 5 com as da receita) 
+PASSOU | monumental B2c a mesma planta duas vezes da mesma entrada 
+PASSOU | monumental B2d a casca de longe igual à da planta 
+PASSOU | monumental B2e o tempo de fazer a planta (alvo: 400 ms em Node) 
+PASSOU | monumental B2f a tabela dos lugares de cada palácio a tempo (alvo: 1 s em Node) 
+PASSOU | monumental B3a o palácio imperial contra a casa: o lote e o chão dos cômodos ≥ 30 vezes os da casa do povo (o lote, em todo colossal) 
+PASSOU | monumental B4a o salão do trono ≥ 14 × 9 m e ≥ 9 m de pé-direito, o trono e a audiência diante dele alcançada da porta 
+PASSOU | monumental B5a os pátios: o colossal com o de dentro e o de honra, o palácio com o seu; abertos ao céu 
+PASSOU | monumental B6a a escadaria da rua ao pódio pelos degraus da forma (espelho ≤ 0,30, piso ≥ 0,28, ≥ 1,2 m), a entrada no alto; o parapeito do pátio de honra 
+PASSOU | monumental B7a os lugares da guarda, dos funcionários, dos visitantes e os aposentos, alcançados da porta 
+PASSOU | monumental B8a as regras do corpo: a porta da rua e a principal ≥ 2,2 m, as escadas que os pés sobem, os peitoris de cima ≥ 0,9 m 
+PASSOU | monumental B9a os pés da rua para dentro, subindo os degraus da forma, sempre num chão onde ficam 
+PASSOU | monumental B10a de pé num mundo pronto (a metrópole, ou o primeiro com lote para dois povos): o colossal pela mão do deus — a planta, a entrada, o relatório, o verificador; salvar e carregar 
+PASSOU | monumental B10b de pé num mundo novo: os três palácios de cada povo com cidade, perto dela — a planta, o relatório, a entrada onde o chão cabe no pódio, o verificador; um ano; salvar e carregar 
+PASSOU | monumental B11a os casos ruins: a obra salva no meio, o palácio derrubado, o verificador limpo — e a regra nova do verificador pega a planta de outra família 
+PASSOU | monumental B12a o andar de cima em volta do poço vazio da escada grande: todo palácio arma em quatro registros de cada lado (os contextos do plantas.js, os sais da T-436), e o palacio#5773 da lar l9 nos quatro lados; o alto de cada escada alcançado, nenhum móvel a menos de 0,6 m do poço 
+PASSOU | monumental B13a os lugares da audiência: em pé no salão do trono, em filas viradas para ele, o corredor livre (≥ 40); no grande e no colossal também na sala da audiência (≥ 20); todos alcançados da porta 
+PASSOU | monumental B14a o telhado da planta é o da forma: um por ala, a subida e o começo sobre o beiral de cada uma (o egípcio e o asteca planos), nunca um em volta do pátio 
+PASSOU | monumental B15a as palmeiras dos pátios com a copa inteira sob o céu, e a colunata da frente do pátio aberta só no vão do portão — a balaustrada da forma nos outros, a planta sem vão neles (uma regra só, a do risco) 
+PASSOU | monumental B16a o portão da rua de um prédio pelo risco: o de folha pintado fechado pela forma no vão dele (portao) — o egípcio e o nórdico, o palácio, o colossal e o recinto do templo —, o de vão aberto sem nada pintado 
+PASSOU | monumental D1a a forma do templo de cada povo e tamanho (4, 6, 8): o lote, o pé dentro dele, o risco; o degrau só nos tamanhos da forma 
+PASSOU | monumental D1b as formas dos povos diferentes entre si em cada tamanho (a parte H dos templos); o clássico com o desenho do grego 
+PASSOU | monumental D2a a planta do templo em todo povo, tamanho e lado, pela família da forma — a que o mundo dá ao registro do degrau 
+PASSOU | monumental D2b o santuário da aldeia (2 casas) com a sua planta pela forma de antes 
+PASSOU | monumental D2c a mesma planta duas vezes da mesma entrada 
+PASSOU | monumental D2d a casca de longe igual à da planta 
+PASSOU | monumental D2e o tempo de fazer a planta (alvo: 400 ms em Node) 
+PASSOU | monumental D2f a tabela dos lugares do santuário monumental a tempo (alvo: 1 s em Node) 
+PASSOU | monumental D3a o santuário monumental (8 casas) contra o santuário da aldeia (2): o lote e o chão coberto ≥ 9 vezes 
+PASSOU | monumental D4a a nave do santuário monumental ≥ 10 × 16 m e ≥ 8 m de altura, o altar alcançado da porta 
+PASSOU | monumental D5a os lugares de rezar (bancos, esteiras, de pé diante do templo): ≥ 40 no santuário monumental, cada um alcançado da porta; o de oficiar 
+PASSOU | monumental D6a a escadaria da rua ao pódio (espelho ≤ 0,30, piso ≥ 0,28, ≥ 1,2 m), a entrada no alto; o parapeito onde o pódio cai mais de 1 m; a porta da rua e o portal ≥ 2,2 m 
+PASSOU | monumental D7a os pés da rua até dentro da nave, subindo os degraus da forma, sempre num chão onde ficam 
+PASSOU | monumental D8a de pé num mundo pronto (a metrópole): o santuário monumental pela mão do deus — a planta, o relatório, a entrada onde o chão cabe no pódio, o verificador; salvar e carregar 
+PASSOU | monumental D8b de pé num mundo novo: os três degraus de cada povo com cidade, perto dela — a planta, o relatório, a entrada onde o chão cabe no pódio, o verificador; um ano; salvar e carregar 
+PASSOU | monumental D9a os casos ruins do templo: a obra salva no meio, o templo derrubado, o verificador limpo — e a sua regra pega a planta de outra família 
+PASSOU | monumental D10a os fiéis dentro do templo de 4 de cada povo, nos lugares da tabela da planta — bancos, esteiras, de pé diante da cela —: nunca mais que os lugares, cada um num lugar de rezar; o templo só de pé também; um save no meio; todos terminam 
+PASSOU | monumental F1a a escada da taverna — a taberna (2 casas), a taverna (3), a hospedaria (4) — oferecida a todo povo pela planta do tamanho (a taverna não tem forma) 
+PASSOU | monumental F2a a planta da taverna e da hospedaria em todo povo e lado pela estalagem — a família que o mundo dá ao registro do degrau 
+PASSOU | monumental F2b a taberna (2 casas) com as famílias da receita de antes 
+PASSOU | monumental F2c a mesma planta duas vezes da mesma entrada 
+PASSOU | monumental F2d a casca de longe igual à da planta 
+PASSOU | monumental F2e o tempo de fazer a planta (alvo: 400 ms em Node) 
+PASSOU | monumental F2f a tabela dos lugares da hospedaria a tempo (alvo: 1 s em Node) 
+PASSOU | monumental F3a a hospedaria: o salão ≥ 10 × 8 m, ≥ 8 mesas, a cozinha com o fogo, o depósito das pipas, o balcão; ≥ 20 fregueses sentados ao mesmo tempo 
+PASSOU | monumental F4a as regras do corpo: o portão e a porta do salão ≥ 2,2 m, a escada que os pés sobem, os quartos de cima alcançados 
+PASSOU | monumental F4b as camas de cima: nenhuma peça sem tamanho; cada quarto e o do taverneiro com uma cama de um lugar ao menos, onde o corpo deita — o banco-cama do nórdico, 0,7 m por lugar 
+PASSOU | monumental F5a de pé num mundo pronto (a metrópole): a hospedaria pela mão do deus — a planta, o relatório, os lugares da tabela do mundo (≥ 20 sentados), o verificador; salvar e carregar 
+PASSOU | monumental F5b de pé num mundo novo: a taverna e a hospedaria de cada povo com cidade, perto dela — a planta, o relatório, o verificador; um ano; salvar e carregar 
+PASSOU | monumental F6a os casos ruins da taverna: a obra salva no meio, a taverna derrubada, o verificador limpo — e a sua regra pega a planta de outra família 
+PASSOU | monumental G1a a cabana e a casa continuam com 4 × 4 m — a tabela, o degrau clássico, a planta do registro novo pelas famílias de antes 
+PASSOU | monumental G2a a casa rica (domus): o degrau de uma família (familia), 2 casas — o lote de 8 × 8 m —, a planta em todo povo, lado e riqueza pela família do degrau (a do registro novo e do catálogo) 
+PASSOU | monumental G2b a casa rica abriga a família (≥ 6 lugares de dormir), com o fogo e o pátio aberto, cada um alcançado da porta 
+PASSOU | monumental G2c a mesma planta duas vezes da mesma entrada; a casca de longe igual à da planta 
+PASSOU | monumental G2d o tempo de fazer a planta (alvo: 400 ms) e a tabela dos lugares (alvo: 1 s) em Node 
+PASSOU | monumental G3a de pé num mundo pronto (a metrópole): a casa rica pela mão do deus em cada povo — a planta, o relatório, o verificador; salvar e carregar; o degrau só para a família; a regra do verificador 
+PASSOU | monumental G3b de pé num mundo novo: a casa rica de cada povo — a planta, o verificador; um ano; uma derrubada; salvar e carregar 
+PASSOU | fundação monumental-poder saiu limpo
+PASSOU | monumental A1 a forma do Coliseu: o lote, a fachada, a arena oval, as fileiras do corpo, os parapeitos, os degraus, o subsolo 
+PASSOU | monumental A2 a planta do Coliseu: nos quatro lados e nos dois tamanhos, ≥ 600 assentos alcançados, em pé no pódio, a luta na areia, o tempo 
+PASSOU | monumental A3 a forma × a planta: só se anda onde a forma tem chão, na altura dela, a arena e o pódio inteiros, a fachada nas baias 
+PASSOU | monumental A4 os pés pelo Coliseu: da rua pelos arcos às passagens e ao subsolo, na areia, no pódio, subindo um corredor das fileiras e pelo lance do fundo até o trono e a corte do camarote 
+PASSOU | monumental A5 o Coliseu pela mão do deus numa cidade romana (a metrópole; a cidade pela regra do jogo): de pé, vivendo, salvo e carregado, derrubado — o verificador limpo 
+PASSOU | monumental A6 o verificador do Coliseu: pega uma planta com menos lugares que o degrau, ou sem o trono do camarote, e cala quando ela volta 
+PASSOU | monumental A7 os lugares do Coliseu (In.places, a tabela da planta): feita a tempo, um lugar livre de assistir e de lutar, o trono e a corte do camarote 
+PASSOU | monumental A8 o parapeito do pódio do anfiteatro de hoje em volta de uma arena de 10 m (L-551): aberto sobre os degraus da areia como o 3D, o corpo no alto deles 
+PASSOU | monumental A9 as passagens da esquerda e da direita do Coliseu: cobertas da ponte do pódio à fachada (a abóbada; sem ela, o vão azul do céu entre as pontas das fileiras) 
+PASSOU | monumental A10 o camarote do imperador (D-125): a forma — o chão no pódio, a fileira de trás com o parapeito, o trono e o banco —, o trono e a corte que o corpo toma alcançados da porta, nenhum assento nem lugar em pé no camarote 
+PASSOU | monumental A11 os pisos da planta do Coliseu contra a forma: as paredes da areia no polígono do 3D, nenhuma parede do subsolo pela areia acima, os lances do pódio abertos, o chão na área do seu piso e fora da pedra da fachada e das jaulas, as fileiras até a fachada 
+PASSOU | monumental C1 as formas das pirâmides: a Grande Pirâmide lisa (50–54°, base ≥ 36 m, a entrada, o corredor, a galeria, a câmara), o Templo Mayor (≥ 4 terraços, a escada dupla, os santuários, o parapeito), as massas 
+PASSOU | monumental C2 as plantas das pirâmides: nos quatro lados e nos dois tamanhos, sem falha, os dois pisos e o lance, os cômodos alcançados, os lugares do rito, o tempo 
+PASSOU | monumental C3 a forma × a planta das pirâmides: só se anda onde a forma tem chão e na altura dela, o corredor, a câmara e a plataforma inteiros 
+PASSOU | monumental C4 os pés pelas pirâmides: da rua pela entrada e o corredor, a galeria, a câmara; pela praça, a escada dupla e o alto em volta dos santuários 
+PASSOU | monumental C5 as pirâmides pela mão do deus numa cidade egípcia e numa asteca (a metrópole; cada cidade pela regra do jogo): de pé, vivendo, salvas e carregadas, derrubadas — o verificador limpo 
+PASSOU | monumental C6 o verificador das pirâmides: pega a câmara noutra altura e o alto sem quem oficia, e cala quando elas voltam 
+PASSOU | monumental C7 os lugares das pirâmides (In.places, a tabela da planta): feita a tempo, um lugar livre de cada uso do rito 
+PASSOU | monumental E1 as formas dos teatros: a cávea (meio círculo, mais que meio), as fileiras do corpo em níveis, a galeria e os parapeitos, a orquestra, o palco, a frons e a skene, as entradas, os bastidores 
+PASSOU | monumental E2 as plantas dos teatros: nos quatro lados e nos três tamanhos, sem falha, todo assento alcançado (≥ 300 no monumental), os níveis, o palco, os bastidores, os camarins, quem atua e quem toca, o tempo 
+PASSOU | monumental E3 a forma × a planta dos teatros: o chão e as fileiras na altura da forma, nada andado nos muros, as paredes e as portas da planta nas da forma; a L-494 (1), (2) e (3) 
+PASSOU | monumental E4 os pés pelos teatros: da rua pelo adro e pelas entradas à orquestra, ao palco e aos bastidores, subindo a escada do meio pelas fileiras, o passeio e a galeria 
+PASSOU | monumental E5 os teatros monumentais pela mão do deus numa cidade romana e numa grega (a metrópole; cada cidade pela regra do jogo): de pé, vivendo, salvos e carregados, derrubados — o verificador limpo 
+PASSOU | monumental E6 o verificador dos teatros: pega o palco noutra altura e a plateia menor que o degrau, e cala quando eles voltam 
+PASSOU | monumental E7 os lugares dos teatros (In.places, a tabela da planta): feita a tempo, um lugar livre de assistir, de atuar e de tocar 
+PASSOU | monumental H1 cada tipo grande em cada povo, cada um com a sua forma: a maravilha (o Coliseu, a Grande Pirâmide, o Templo Mayor, Valhala, a Acrópole, o zigurate), o teatro (o romano, o grego — e o clássico, o mesmo —, o campo de bola, o salão do hidromel, o jardim sagrado) 
+PASSOU | monumental H2 a forma do campo de bola (o teatro asteca): a pista, os muros com a rampa e os aros, as fileiras do corpo em cima deles, os parapeitos, os lances 
+PASSOU | monumental H3 as plantas do campo de bola: nos quatro lados e nos três tamanhos, sem falha, todo assento alcançado, os jogadores e quem assiste, o tempo 
+PASSOU | monumental H4 os pés pelo campo de bola: da rua ao campo e à pista, subindo o lance do muro, pelo passeio e por uma escada até o alto das fileiras 
+PASSOU | monumental H5 o mundo: cada povo funda o seu degrau grande, nunca o antigo; o campo de bola pela mão do deus numa cidade asteca (pela regra do jogo), de pé, vivendo, salvo e carregado, o verificador, derrubado 
+PASSOU | monumental H6 os lugares do campo de bola (In.places, a tabela da planta): feita a tempo, um lugar livre de assistir e de jogar 
+PASSOU | monumental M1 as formas do grande monumento (16 m) em seis povos — o obelisco egípcio e o clássico, a coluna do triunfo, a Pedra do Sol, o deus de ouro, o navio de pedras: os degraus do corpo, o alto, a peça do meio, a altura, cada um a sua 
+PASSOU | monumental M2 as plantas do grande monumento: nos quatro lados e nos seis povos, sem falha, o alto (o gramado do navio) alcançado, quem oferta, quem reza, quem acende os braseiros, o tempo 
+PASSOU | monumental M3 os pés no grande monumento: da rua pelos degraus ao alto, em volta do que está no meio, até o lugar de ofertar; no navio de pedras, pelo gramado e pelo meio aberto do navio 
+PASSOU | monumental M4 o grande monumento pela mão do deus em uma cidade de cada povo (a metrópole): de pé, vivendo, salvo e carregado, o verificador, derrubado 
+PASSOU | monumental M5 os lugares do grande monumento (In.places, a tabela da planta): feita a tempo, um lugar livre de cada uso 
+PASSOU | monumental W1 as formas das maravilhas que faltavam (10 e 13 casas): Valhala, a Acrópole, o zigurate — o lote, os degraus e as escadas do corpo, os parapeitos, as portas, o vão do meio do templo, a mesma forma para todo prédio do degrau 
+PASSOU | monumental W2 as plantas das maravilhas que faltavam: nos quatro lados e nos dois tamanhos, sem falha, todo cômodo alcançado, os lugares de cada uma (os bancos, as mesas e o escaldo; a prece na cela e a oferta no alto; o sacerdote, a prece e os braseiros no terraço), o tempo 
+PASSOU | monumental W3 a forma × a planta das maravilhas que faltavam: os pisos na altura da forma, os parapeitos e as paredes da cela da planta nos da forma, nenhum chão na base de uma coluna 
+PASSOU | monumental W4 os pés nas maravilhas que faltavam: em Valhala pelos degraus e pela porta ao longo da nave; na Acrópole pela grande escada, entre as colunas do meio, pela cela à prece e em volta da colunata; no zigurate pela praça e pela escada ao terraço, diante do olho e em volta 
+PASSOU | monumental W5 as maravilhas que faltavam pela mão do deus (a metrópole: uma cidade nórdica e uma grega, pela regra do jogo — o povo clássico sem cidade nela, T-401): cada povo as ergue, nunca a antiga; de pé, vivendo, salvas e carregadas, o verificador, derrubadas 
+PASSOU | monumental W6 os lugares das maravilhas que faltavam (In.places, a tabela da planta): feita a tempo, um lugar livre de cada uso 
+PASSOU | monumental T1 as formas dos teatros que faltavam (6, 8 e 10 casas): o salão do hidromel nórdico e o jardim sagrado egípcio — o lote, os degraus, a porta, os postes, o lago, as palmeiras, a entrada entre as esfinges 
+PASSOU | monumental T2 as plantas dos teatros que faltavam: nos quatro lados e nos três tamanhos, sem falha, todo cômodo alcançado, quem assiste (nos bancos do salão; em pé diante do lago) e quem atua, o tempo 
+PASSOU | monumental T3 a forma × a planta dos teatros que faltavam: o chão na altura da forma, nada andado no que ela tem de sólido (as paredes, o lago, as palmeiras, as esfinges) 
+PASSOU | monumental T4 os pés nos teatros que faltavam: no salão pelos degraus e pela porta ao longo da nave; no jardim entre as esfinges até diante do lago e ao longo dele 
+PASSOU | monumental T5 os teatros que faltavam pela mão do deus (a metrópole: uma cidade nórdica e uma egípcia, pela regra do jogo; o clássico, o do grego, sem cidade nela): cada povo os ergue, nunca o antigo; de pé, vivendo, salvos e carregados, o verificador, derrubados 
+PASSOU | monumental T6 os lugares dos teatros que faltavam (In.places, a tabela da planta): feita a tempo, um lugar livre de cada uso 
+PASSOU | fundação monumental saiu limpo
 PASSOU | monumentos 1a o teatro, a maravilha e o monumento de cada povo se armam pela forma, em todo lado 
 PASSOU | monumentos 1b o relatório geométrico: nenhuma falha 
 PASSOU | monumentos 2a os lugares de cada teatro, maravilha e monumento, onde o corpo fica, e um livre de cada uso 
@@ -1202,12 +1561,15 @@ PASSOU | motor-plantas 5b a colunata: as colunas são parede, os intercolúnios 
 PASSOU | motor-plantas 5c os degraus largos de fora: 2 m, a classe pela inclinação, da rua ao piso 
 PASSOU | motor-plantas 5d a escada larga estreita é recusada 
 PASSOU | fundação motor-plantas saiu limpo
+PASSOU | muros 3b Jelling planejada de novo: um portão no lado oeste 
 PASSOU | muros 1 cada lado o seu portão, nunca lado a lado, no máximo quatro 
 PASSOU | muros 1b nenhum muro planejado no lote de uma praça ou feira (chão aberto de planta, L-466) 
 PASSOU | muros 1c o muro de antes no lote de uma feira, num save: carregado, sai do lote, e o resto do muro fica 
 PASSOU | muros 2 o portão do lado fica onde se anda (a rua ou o caminho gasto que o cruza) 
 PASSOU | muros 3 o caso ruim do L-140, pela regra: nos muros cujos lados andados mais diferem no movimento, o lado mais quieto tem o seu portão 
-PASSOU | muros 7a nenhum plano fecha um prédio da sua cidade 
+FALHOU | muros 7a nenhum plano fecha um prédio da sua cidade 
+PASSOU | muros 10a nenhum portão planejado entre dois prédios, um de cada lado da linha (L-603) 
+PASSOU | muros 11a nenhum muro planejado num chão cercado — curral, estábulo, cercado, cemitério (L-606) 
 PASSOU | muros 6a nenhum plano corre dentro do muro de outra cidade 
 PASSOU | muros 4 um muro começado, salvo e carregado no meio: as mesmas casas e os mesmos portões, e no mapa o que o plano diz 
 PASSOU | muros 4b o portão do plano onde já há muro de pé: aberto nele (pelos construtores) 
@@ -1219,8 +1581,12 @@ PASSOU | muros 8 nada que bloqueia no caminho de um portão: o buscador de lugar
 PASSOU | muros 8b o buscador de lugar só dá lugar que as ruas da cidade alcançam 
 PASSOU | muros 9b o atalho dos muros (um prédio que não encosta em nada e deixa o chão em volta inteiro não fecha nada) nunca erra 
 PASSOU | muros 9 um prédio novo no único caminho de outro, atrás do muro de pé: o portão na hora, e no save 
+PASSOU | muros 10b dois prédios, um de cada lado de uma casa de rua onde o plano tem o portão: o portão vai para outra casa 
+PASSOU | muros 11b um curral na linha do muro e uma vaca numa casa dele: nenhum muro no curral, e a vaca posta ao lado (pelos construtores) 
+PASSOU | muros 11b um curral na linha do muro e uma vaca numa casa dele: nenhum muro no curral, e a vaca posta ao lado (o muro erguido de uma vez) 
+PASSOU | muros 11c o muro de antes num chão cercado, num save: o verificador o vê; carregado, sai de lá, e o resto do muro fica 
 PASSOU | muros 5 verificador e erros de módulo 
-PASSOU | fundação muros saiu limpo
+FALHOU | fundação muros saiu limpo
 PASSOU | negocio n1 as bancas abrem 
 PASSOU | negocio n2 o atacado é pago 
 PASSOU | negocio n3 a banca mostra o que tem 
@@ -1330,6 +1696,11 @@ PASSOU | olaria o4 a-obra-largada-devolve
 PASSOU | olaria o5 sem-tijolo 
 PASSOU | olaria erros 
 PASSOU | fundação olaria saiu limpo
+PASSOU | ordens o1 mega 
+PASSOU | ordens o2 mega 
+PASSOU | ordens o3 mega 
+PASSOU | ordens verificador e erros 
+PASSOU | fundação ordens saiu limpo
 PASSOU | palacios 1a o palácio, os banhos e o paço se armam em todo povo e lado pela família da forma, a que o tipo prefere (o grande palácio e o colossal com as suas) 
 PASSOU | palacios 2a a casca pelo corpo da forma: paredes, piso, porta, janelas; o pórtico, o portão do pilone, a passagem do temazcal, o lago aberto; o lance; da rua ao cômodo de cada um 
 PASSOU | palacios 2b o corpo (0,32 m, a regra da planta) vai da porta da rua ao lugar de pedir audiência, à fornalha e à água, ponto a ponto 
@@ -1352,9 +1723,12 @@ PASSOU | paz p1 o tratado
 PASSOU | paz p2 o fim da guerra 
 PASSOU | paz p3 os soldados voltam 
 PASSOU | paz p4 os presos trocados 
+PASSOU | paz p5 a paz com um convocado numa cena 
+PASSOU | paz p6 o load de um exército sem ninguém 
 PASSOU | paz erros 
 PASSOU | fundação paz saiu limpo
 PASSOU | pe-da-escada 1. o pé de cada lance onde o corpo o toma, com a borda inteira no chão dos pés e fora dos lances 
+PASSOU | pe-da-escada 1b. o corpo e as pessoas do mundo pelas mesmas células: cada lance barra o corpo pelas casas dele na planta, e o desenho passa delas meia casa no máximo (0,125 m) 
 PASSOU | pe-da-escada 2. um caminho do corpo, pela regra dele, da porta (ou do topo do lance de baixo) até o pé de cada lance 
 PASSOU | pe-da-escada 3. o corpo de verdade entra, anda até o pé do lance pelo caminho do corpo e sobe ao piso de cima 
 PASSOU | pe-da-escada 4. o verificador limpo, sem erro de módulo 
@@ -1386,7 +1760,11 @@ PASSOU | fundação pesca saiu limpo
 PASSOU | plantas todas as plantas válidas 
 PASSOU | plantas a casca de longe 
 PASSOU | plantas o chão fora das escadas 
+PASSOU | plantas o lugar de ofertar diante do altar (L-502) 
+PASSOU | plantas a peça pendurada fora da cabeça de quem sobe (L-584) 
 PASSOU | plantas poucas caídas 
+PASSOU | plantas o poço da escada grande vazio (L-562) 
+PASSOU | plantas o pé da escada sem chão (T-409) 
 PASSOU | plantas abaixo de 5 pelo gerador 
 PASSOU | fundação plantas saiu limpo
 PASSOU | porta-deus as faces da porta 
@@ -1408,6 +1786,7 @@ PASSOU | porta 3. a regra, em volta da porta: o bicho só quando o corpo está m
 PASSOU | porta 4. longe de qualquer porta, o bicho diante do corpo ainda é para fazer carinho 
 PASSOU | porta 5. a porta trancada de outra casa, da soleira: «Bater à porta» — o corpo dá o passo até ela e bate; ela fica trancada 
 PASSOU | porta 5b. na soleira na água (um canal, um vau) e um pouco atrás dela, de frente para a porta: a porta, não o peixe que a água oferece à frente; virado um quarto dela, o peixe 
+PASSOU | porta 5c. na soleira na água, um bicho um passo à frente e a porta de lado (dentro de Interact.FACE): o bicho, mais perto e mais de frente que ela — o peixe à frente não a faz ganhar dele 
 PASSOU | porta verificador e módulos 
 PASSOU | fundação porta saiu limpo
 PASSOU | portas-casos ligadas 
@@ -1459,6 +1838,11 @@ PASSOU | protagonista p3 mundial a morte no salto
 PASSOU | protagonista p4 mundial a semente de quem morre 
 PASSOU | protagonista erros 
 PASSOU | fundação protagonista saiu limpo
+PASSOU | quadro-limpo o save igual depois dos quadros: de dia 
+PASSOU | quadro-limpo o save igual depois dos quadros: de noite, com chuva 
+PASSOU | quadro-limpo o mundo não lê o que o quadro escreve 
+PASSOU | quadro-limpo sem erro do jogo 
+PASSOU | fundação quadro-limpo saiu limpo
 PASSOU | quina 1. a reta pela quina de uma casa bloqueada nunca é limpa 
 PASSOU | quina 1. puxada para fora da quina, a reta é limpa 
 PASSOU | quina 2. os caminhos alisados nunca entram numa casa onde não se anda 
@@ -1472,14 +1856,28 @@ PASSOU | rebanho r4
 PASSOU | rebanho r5 
 PASSOU | rebanho r6 
 PASSOU | rebanho r7 
+PASSOU | rebanho r8 
+PASSOU | rebanho r9 
+PASSOU | rebanho r10 
+PASSOU | rebanho r11 
+FALHOU | rebanho r12 
+PASSOU | rebanho r13 
+PASSOU | rebanho r14 
 PASSOU | rebanho erros 
-PASSOU | fundação rebanho saiu limpo
+FALHOU | fundação rebanho saiu limpo
 PASSOU | represa r1 aberto o mundo, a primeira represa não é contada de novo 
 PASSOU | represa r2 um save no meio: a crônica não ganha a linha 
 PASSOU | represa r3 o lenhador derruba a árvore do castor: ele a larga, e o toco que brota é de qualquer castor 
-PASSOU | represa verificador 
+FALHOU | represa verificador 
 PASSOU | represa erros 
-PASSOU | fundação represa saiu limpo
+FALHOU | fundação represa saiu limpo
+PASSOU | retirada r1 a hoste em contato quando recua 
+PASSOU | retirada r2 quem recua não luta 
+PASSOU | retirada r3 a retirada sai do campo 
+PASSOU | retirada r4 a hoste em contato quando recua, e o save logo depois 
+PASSOU | retirada r5 depois do load, a retirada segue: ninguém luta e sai do campo 
+PASSOU | retirada erros 
+PASSOU | fundação retirada saiu limpo
 PASSOU | salvo-dentro 1. salvo numa parede, numa peça e na pegada de um lance da planta de agora: aberto, de pé num chão da planta que a porta alcança, fora dos lances 
 PASSOU | salvo-dentro 2. salvo no meio da subida de um lance: aberto, de pé ao lado dele, fora dele; volta ao pé e sobe 
 PASSOU | salvo-dentro 3. o verificador limpo, sem erro de módulo 
@@ -1501,6 +1899,9 @@ PASSOU | soleira 4e. a rua diante da porta tomada (o chão de um prédio onde os
 PASSOU | soleira 5. salvo e carregado de pé numa soleira: lá ainda, sem ser movido, sem a marca de quem nada; o corpo onde a planta deixa ficar 
 PASSOU | soleira 6. um prédio nasce onde o corpo está: o corpo não fica dentro nem nos cômodos — não entrou por porta nenhuma —; o mundo o tira como a qualquer um 
 PASSOU | soleira 6. salvo e carregado no vão da porta, entrando, antes de o mundo o ter dentro: lá ainda, sem a marca de quem nada; o mundo o tem dentro pela porta por onde veio 
+PASSOU | soleira 7a. uma pedra grande na rua debaixo dos degraus de uma porta: nenhum degrau sobre ela onde o mundo diz que a entrada cabe — subidos sem as mãos —; sem ela, os degraus de antes; a virada leva a porta para onde cabe 
+PASSOU | soleira 7b. dois prédios frente a frente, os degraus da porta do mais novo cruzando os do mais velho: o mais novo cede — nenhum degrau dele onde estão os do mais velho, nem no caminho ao pé deles —, a entrada dele não cabe ali, o mais velho é subido; a virada leva a porta do mais novo para onde cabe 
+PASSOU | soleira 7c. em todo o mundo: nenhum lance de um prédio mais novo onde estão os degraus de um mais velho, nem no caminho ao pé deles, nem com os deles no caminho ao pé dos seus 
 PASSOU | soleira módulos 
 PASSOU | fundação soleira saiu limpo
 PASSOU | taverna-mao fechada-antes 
@@ -1537,6 +1938,8 @@ PASSOU | taverna t3 o-taverneiro-morre
 PASSOU | taverna t4 ninguem-servido-do-nada 
 PASSOU | taverna t5 a-taverna-cai 
 PASSOU | taverna t6 sem-demanda 
+PASSOU | taverna t7 a-noite-cai 
+PASSOU | taverna t8 o-taverneiro-longe 
 PASSOU | taverna erros 
 PASSOU | fundação taverna saiu limpo
 PASSOU | templo 1a o templo se arma em todo povo e lado pela família da forma, a que o tipo prefere 
@@ -1630,9 +2033,13 @@ PASSOU | volta v2 os dois que sobraram atravessam o save
 PASSOU | volta v2 em casa 
 PASSOU | volta v3 a paz no caminho atravessa o save 
 PASSOU | volta v3 em casa 
+PASSOU | volta v5 a fome no caminho de casa 
 PASSOU | volta v4 o mesmo futuro 
 PASSOU | volta erros 
 PASSOU | fundação volta saiu limpo
+PASSOU | monumental 8t. o quadro do Modo Encarnado com o Coliseu à vista em tempo de relógio, sozinha na máquina (a medida do e8, qualidade média, em turnos; D-134: contra a figura dele de longe no mesmo lugar): mediana ≤ 13 ms (ou não acima da da figura × 1,15) e, numa placa de vídeo, p95 não pior que o da figura × 1,15 (D-137) 
+PASSOU | monumental 10. sem erro de página nem aviso no console (o quadro) 
+PASSOU | desempenho monumental saiu limpo
 PASSOU | caos sem violações S0–S2
 PASSOU | caos_13 sem violações S0–S2
 PASSOU | guerra 2 reinos médios: dezenas
