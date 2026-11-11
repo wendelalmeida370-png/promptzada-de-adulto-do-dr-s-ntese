@@ -44,7 +44,11 @@
       PLANK = new THREE.BufferGeometry(); PLANK.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); PLANK.setAttribute('normal', new THREE.Float32BufferAttribute(Nn, 3)); bx.dispose(); }
     // (a window shows the sky it faces — pale low, deeper above — more as one looks along the wall; at night, its lamp)
     const sk = realm.skyU;
-    if (sk) glass.onBeforeCompile = sh => {
+    glass.onBeforeCompile = sh => {
+      // (each pane carries how dark its house is — aDark: 0 its lamp lit at night, 1 nobody awake behind it; B3.night keeps it)
+      sh.vertexShader = 'attribute float aDark; varying float vDark;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vDark = aDark;');
+      sh.fragmentShader = 'varying float vDark;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance *= (1.0 - vDark);');
+      if (!sk) return;
       Object.assign(sh.uniforms, { uSkyTop: sk.top, uSkyHor: sk.hor });
       sh.vertexShader = 'varying vec3 vGW;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vGW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       sh.fragmentShader = 'uniform vec3 uSkyTop; uniform vec3 uSkyHor; varying vec3 vGW;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
@@ -398,7 +402,26 @@ float m3scale(float p) {
   };
   B3.glassMat = () => glass;
   // (the windows light up at night: the hour's light, only seen)
-  B3.night = k => { if (glass) glass.emissiveIntensity = k * 0.9; };
+  B3.night = k => { if (glass) glass.emissiveIntensity = k * 0.9; if (k > 0.02) { const t = performance.now(); if (t - paneT > 250 || t < paneT) { paneT = t; B3.paneStep(); } } };
+  // the panes of the chunks drawn near, by building: a window is lit at night only with someone awake behind it (G.Atmos.lit,
+  // D-164) — each pane's own mark (aDark) set again when its house wakes or goes to sleep; nothing drawn again for it. Kept
+  // by the geometry they are in: gone with it. Only seen
+  const GLASS = new Set(); let paneT = 0; G.worldHooks.push(() => { GLASS.clear(); paneT = 0; });
+  function litGeo(geo, panes) {
+    const at = new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count), 1); at.setUsage(THREE.DynamicDrawUsage); geo.setAttribute('aDark', at);
+    const rec = { geo, panes, dark: new Map() }; geo.userData.panes = panes; GLASS.add(rec); geo.addEventListener('dispose', () => GLASS.delete(rec));
+    paneSet(rec);
+  }
+  function paneSet(rec) {
+    const S = G.S, At = G.Atmos, P = rec.panes, at = rec.geo.attributes.aDark, A = at.array; let any = false;
+    for (let k = 0; k < P.length; k += 3) {
+      const b = S.buildings.get(P[k]); const d = At && At.lit && b && !At.lit(b) ? 1 : 0; if (rec.dark.get(P[k]) === d) continue;
+      rec.dark.set(P[k], d); A.fill(d, P[k + 1], P[k + 2]); any = true;
+    }
+    if (any) at.needsUpdate = true;
+  }
+  B3.paneStep = () => { for (const rec of GLASS) paneSet(rec); };
+  B3.panes = () => [...GLASS]; // (for the proofs: each near picture's panes — its geometry, [building, first point, past the last]…, who is dark)
   const TL = () => G.Space.TILE, HM = () => G.Space.HM;
   const palOf = b => { const P = G.Arch && G.Arch.PAL || {}; const st = b.style || ((G.Fac.ofSet ? G.Fac.ofSet(b.set) : null) || {}).civ || 'classico'; return P[st] || P.classico || { wl: '#efe2c4', wr: '#d2c19e', base: ['#8a8478', '#6f6a60', '#a09a8e'], roof: ['#b85a3c', '#94452d', '#7a3826'], gable: '#dccba6', trim: '#6b4a30', win: '#2f3a48', door: '#5a3b25', kind: 'gable' }; };
   const styleOf = b => b.style || ((G.Fac.ofSet ? G.Fac.ofSet(b.set) : null) || {}).civ || 'classico';
@@ -437,7 +460,9 @@ float m3scale(float p) {
     // the body's feet read the same: Space.plinth)
     const { lo, hi, y0 } = G.Space.plinth(b);
     g.ao = () => lo; // (its walls darken toward the ground)
-    const P = palOf(b); const hurt = b.maxHp ? G.clamp(b.hp / b.maxHp, 0, 1) : 1; const soot = hurt < 0.6 ? 0.55 + hurt * 0.75 : 1;
+    // (and the grime of its years where nobody cares for the walls, a little darker: G.Atmos.wear)
+    const worn = b.built ? wornBy(b) : null; const hvw = [-1, -1];
+    const P = palOf(b); const hurt = b.maxHp ? G.clamp(b.hp / b.maxHp, 0, 1) : 1; const soot = (hurt < 0.6 ? 0.55 + hurt * 0.75 : 1) * (worn ? 1 - worn.grime * 0.12 : 1);
     const c = cc => (soot < 1 ? (typeof cc === 'function' ? (X, Y, Z, a, b2, d2) => dim(cc(X, Y, Z, a, b2, d2), soot) : dim(cc, soot)) : cc);
     const K = {
       g, b, P, L, x0, z0, w, d, y0, lo, hi, st: styleOf(b), cx: x0 + w / 2, cz: z0 + d / 2, c, built: b.built, prog: b.built ? 1 : G.clamp(b.progress || 0, 0, 1), hurt,
@@ -464,7 +489,7 @@ float m3scale(float p) {
       // the pattern of what is put next (Build3D.PAT, or a code: an anchored door), and back to plain after fn
       as(pat, fn) { const o = g.pat; g.pat = typeof pat === 'number' ? pat : PAT[pat] || 0; fn(); g.pat = o; },
       // the house's own dice: the same house is always the same house (its id, never chance)
-      hv: k => hvOf(b, k),
+      hv: k => (k === 3 || k === 4 ? (hvw[k - 3] < 0 ? (hvw[k - 3] = hvOf(b, k)) : hvw[k - 3]) : hvOf(b, k)),
       // a slanted box: its base's middle at o, u its length, v its height, w its depth (vectors in metres) — boards that
       // follow a slope, braces, rafters
       para(o, u, v, w, col) {
@@ -828,7 +853,13 @@ float m3scale(float p) {
   }
   // the turf of one roof: the green of the people's palette calmed to a living roof's, and its age — fresh, greying,
   // mossy, damp — by the house's id
-  const hvOf = (b, k) => G.hash(b.id * 7919 + k * 104729 + 13);
+  // (and the age and the damp a building shows — the moss and the sag of its roof, the moss on its footing, the planks of a
+  // wall replaced — are the world's: its years, the water by its walls, the care of its quarter and of who lives in it,
+  // G.Atmos.wear (D-165), each house a little its own by its id; a monument drawn by its form keeps the id's, as it always
+  // had. Every other number is the id's)
+  const hv0 = (b, k) => G.hash(b.id * 7919 + k * 104729 + 13);
+  const wornBy = b => (G.Atmos && G.Atmos.wear && !formOf(b) ? G.Atmos.wear(b) : null);
+  const hvOf = (b, k) => { if (k !== 3 && k !== 4) return hv0(b, k); const w = wornBy(b); return w ? G.clamp((k === 3 ? w.age : w.damp) * 0.75 + hv0(b, k) * 0.25, 0, 1) : hv0(b, k); };
   // (on a square lot a timber house of the north turns its ridge along the wall with its door — the door in the long side,
   // as the north builds — save now and then one entered by its gable)
   const ridgeX = (b, side) => (side === 'N' || side === 'S') !== (hvOf(b, 14) < 0.2);
@@ -1449,7 +1480,8 @@ float m3scale(float p) {
     K.as('plankV', () => { for (const s of [-1, 1]) bx(lt / 2 - 0.04, 0, s * (wdt / 2 - 0.03), lt - 0.08, hLo - 0.05, 0.05, dim(P.wl || '#7e5e40', 0.92)); });
     const a = at(-0.05, hHi + 0.08, 0), b2 = at(lt + 0.22, hLo - 0.06, 0);
     K.as('shingle', () => K.bar(a, b2, [0, 0.07, 0], along ? [0, 0, wdt + 0.3] : [wdt + 0.3, 0, 0], dim(fc, 0.9)));
-    if (G.Props3D && K.fine) { const c0 = at(lt / 2 - 0.05, 0, 0); G.Props3D.woodpile(K, c0[0], 0, c0[2], wdt - 0.24, lt - 0.3, hLo * 0.72, along ? Math.PI / 2 : 0); }
+    // (the firewood in it is the woodcutter's who lives there — Atmos.about, D-163 —: any other house's shed stands empty)
+    if (G.Props3D && K.fine && G.Props3D.aboutOf(K).wood) { const c0 = at(lt / 2 - 0.05, 0, 0); G.Props3D.woodpile(K, c0[0], 0, c0[2], wdt - 0.24, lt - 0.3, hLo * 0.72, along ? Math.PI / 2 : 0); }
   }
   // the shields of a hall along its long walls, in the colours of the house (its id), each with its iron boss
   function shields(K, x, z, lx, lz, h, along, door) {
@@ -3007,7 +3039,10 @@ float m3scale(float p) {
     for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.type === 'salina' && b.salt ? b.salt.reduce((a, q, k) => a + Math.floor(q * 2) * (k + 3), 0) * 13 : 0) + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (ESTATE3[b.type] ? B3.estateSig(b) * 41 : 0) + (b.graves ? b.graves.length : 0) * 17 + B3.shellSig(b) * 19 + G.Space.treeSig(b) * 37) | 0;
       // (a store's heaps are its people's stock: drawn again, where they are drawn — fine, in its yard —, when a count of them
       // changes; a store drawn from its plan has no yard: it shows its stock inside, in its keeping pieces — Build3D.fillOf)
-      if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b) && !B3.shellOf(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; } }
+      if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b) && !B3.shellOf(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; }
+      // (its wear and what lies about it are the world's — G.Atmos: drawn again when a step of them is crossed; what lies
+      // about it, only where its picture has room for things — one drawn from its plan fills its lot: Props3D.yardOf)
+      if (b.built && G.Atmos && G.Atmos.sig) s = (s * 5 + G.Atmos.sig(b, !!formOf(b), !fine || !(G.Props3D && G.Props3D.yardOf && G.Props3D.yardOf(b))) * 43) | 0; }
     // (the arches standing in this chunk: one built across the map does not change it)
     for (const a of G.S.aqueducts || []) for (let k = 0; k < a.built; k++) { const t = a.tiles[k]; if (t[0] >= x0 && t[1] >= y0 && t[0] < x0 + n && t[1] < y0 + n) s = (s + (k + 1) * 23 + (a.dead ? 5 : 0)) | 0; }
     // (a chunk with buildings or ways the body comes near is drawn again, finer — its walks of planks too; one without has
@@ -3017,11 +3052,12 @@ float m3scale(float p) {
   };
   B3.nearGeo = function (x0, y0, n) {
     const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(), gq = R3.WGeo();
-    const ck = x0 + ',' + y0; for (const id of litOf.get(ck) || []) B3.lamps.delete(id); const lit = []; litOf.set(ck, lit); const fine = fineAt(x0, y0, n);
+    const ck = x0 + ',' + y0; for (const id of litOf.get(ck) || []) B3.lamps.delete(id); const lit = []; litOf.set(ck, lit); const fine = fineAt(x0, y0, n); const panes = [];
     for (const b of G.S.buildings.values()) {
       if (!inChunk(b, x0, y0, n)) continue;
-      const K = kit(g, b, gp, gq, fine); const n0 = g.p.length; K.lit = [];
+      const K = kit(g, b, gp, gq, fine); const n0 = g.p.length; K.lit = []; const w0 = gw.p.length / 3;
       draw(g, gw, K, true);
+      if (gw.p.length / 3 > w0) panes.push(b.id, w0, gw.p.length / 3); // (its panes among the chunk's: lit by who is awake in it)
       if (K.lit.length) { const L = K.lit, m = Math.min(8, L.length); B3.lamps.set(b.id, Array.from({ length: m }, (_, i) => L[Math.floor(i * L.length / m)])); lit.push(b.id); } // (eight at most, spread round it)
       // (how high it really stands, for the eye that must not go into its roof)
       let top = -1e9; for (let k = n0 + 1; k < g.p.length; k += 3) if (g.p[k] > top) top = g.p[k]; if (top > -1e9) B3.tops.set(b.id, top);
@@ -3029,7 +3065,8 @@ float m3scale(float p) {
     for (const i of deckOf.get(ck) || []) decks.delete(i); deckOf.delete(ck); if (fine) walksInto(g, x0, y0, n);
     g.ao = (X, Z) => W.hAt(X / TL(), Z / TL()) * HM();
     wallsInto(g, x0, y0, n, gq);
-    return { solid: g.empty ? null : g.build(true), glass: gw.empty ? null : gw.build(), plants: gp.empty ? null : gp.build(), water: gq.empty ? null : gq.build() };
+    const glassGeo = gw.empty ? null : gw.build(); if (glassGeo) litGeo(glassGeo, panes);
+    return { solid: g.empty ? null : g.build(true), glass: glassGeo, plants: gp.empty ? null : gp.build(), water: gq.empty ? null : gq.build() };
   };
   // a yard from afar (B2d), from the shell alone: its floor on the plinth's top with its edge down to the ground, the fence's
   // runs (the plan's walls of kind 'cerca', whole: from afar the gate is one with them), what stands in it as blocks — the

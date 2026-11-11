@@ -978,7 +978,11 @@
     if (gdt > 0) spawnAmbient(Math.min(gdt, 0.1));
   };
 
-  const SMOKE = { house: 1, workshop: 1, sobrado: 1, insula: 1, quarteirao: 1, banhos: 1, hut: 1, forja: 1, olaria: 1 };
+  // (the roofs that can smoke — where the picture has a chimney —: each smokes only with a fire under it, G.Atmos.fire, D-164;
+  // and a window is lit only with someone awake behind it, G.Atmos.lit — the two questions the body's 3D asks too)
+  R.smokeOf = b => (SMOKE[b.type] && G.Atmos ? G.Atmos.fire(b) : null);
+  R.windowLit = b => !!G.Atmos && G.Atmos.lit(b);
+  const SMOKE = { house: 1, workshop: 1, sobrado: 1, insula: 1, quarteirao: 1, banhos: 1, hut: 1, forja: 1, olaria: 1, taverna: 1, ourives: 1, barraco: 1 };
   const KILN = { workshop: 1, forja: 1, olaria: 1, ourives: 1 };
   const APRON = { monument: 1, temple: 1, palacio: 1, maravilha: 1, teatro: 1, biblioteca: 1, mercado: 1, banhos: 1, paco: 1, grande_palacio: 1, palacio_colossal: 1 };
   const FIRELIT = { temple: 1, torre: 1, quartel: 1, maravilha: 1, praca: 1, palacio: 1 };
@@ -1006,16 +1010,20 @@
       if (b.type === 'campfire') {
         if (G.VR() < dt * 1.3) G.FX.spawn({ x: cx + G.vrr(-0.1, 0.1), y: cy + G.vrr(-0.1, 0.1), z: 10, vz: G.vrr(12, 22), vx: wx * 0.6, vy: wy * 0.6, life: G.vrr(2, 3.5), s0: 3, s1: 9, c: 'rgba(150,150,150,0.3)', k: 2 });
         if (G.VR() < dt * 2.2) G.FX.spawn({ x: cx, y: cy, z: 5, vz: G.vrr(20, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: G.vrr(0.6, 1.4), s0: 0.9, s1: 0.2, c: '#ffc060', k: 4, layer: 1 });
-      } else if (SMOKE[b.type] && (KILN[b.type] || b.type === 'banhos' || G.VR() < 0.5 + night)) {
+      } else if (SMOKE[b.type]) {
+        // (only with a fire under the roof — a batch burning in the kiln, the forge hot, the furnace of the baths, the tavern
+        // open, someone at the house's fire: what the body's 3D asks too; a building at rest does not smoke)
+        const fr = R.smokeOf(b); if (!fr) continue;
+        const kiln = fr.why === 'fornada' || fr.why === 'forja';
         const dv = doorView(b); const spr = homeSprite(b, false) || G.Art.building(b.type, b.v, b.style, b.wd, dv.back, b.w); // (the chimney of the picture drawn)
         const steam = b.type === 'banhos';
-        if (spr && spr.fires.length && G.VR() < dt * (KILN[b.type] ? 1.2 : steam ? 1.4 : 0.55 + night * 0.5)) {
+        if (spr && spr.fires.length && G.VR() < dt * (kiln ? 1.2 : steam ? 1.4 : 0.8 + night * 0.5) * fr.k) {
           const h = W.groundH(cx, cy);
           const f = G.vpick(spr.fires);
           // convert sprite-local px to world tile offset
           const wo = R.sprToWorld(f[0], dv.m), oz = -f[1];
           G.FX.spawn({ x: cx + wo[0], y: cy + wo[1], h, z: oz, vz: G.vrr(10, 18), vx: wx * 0.5, vy: wy * 0.5, life: G.vrr(2.5, 4), s0: 2.2, s1: steam ? 9 : 7, c: steam ? 'rgba(240,245,250,0.45)' : 'rgba(200,200,205,0.35)', k: 2 });
-          if ((b.type === 'workshop' || b.type === 'forja') && G.VR() < 0.3) G.FX.spawn({ x: cx + wo[0], y: cy + wo[1], h, z: oz, vz: G.vrr(25, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: 0.8, s0: 0.8, s1: 0.1, c: '#ffb040', k: 4, layer: 1 });
+          if (kiln && b.type === 'forja' && G.VR() < 0.3) G.FX.spawn({ x: cx + wo[0], y: cy + wo[1], h, z: oz, vz: G.vrr(25, 45), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: 0.8, s0: 0.8, s1: 0.1, c: '#ffb040', k: 4, layer: 1 });
         }
       }
     }
@@ -1249,7 +1257,7 @@
     if (HK.ents.length) { const add = (d, e, x, y, h) => { const p = proj(x, y, h === undefined ? W.groundH(x, y) : h); if (p[0] > view[0] - 70 && p[0] < view[2] + 70 && p[1] > view[1] - 20 && p[1] < view[3] + 120) pushD(rot ? depth(x, y) + (d - x - y) : d, 13, e, p[0], p[1]); }; for (const h of HK.ents) h(add, view, R.cam.zoom); }
     const list = drawList.slice(0, drawN).sort((a, b) => a.d - b.d);
     G.Art.px = R.cam.zoom * dpr; G.Art.frame++;
-    if (nightF > 0.15) { homesLit.clear(); for (const v of S.villagers.values()) if (v.home) homesLit.add(v.home); }
+
     // shadows first
     ctx.fillStyle = 'rgba(20,30,20,0.2)';
     ctx.beginPath();
@@ -2691,14 +2699,17 @@
     Art.drawMx(ctx, spr, sx, sy, 1, dv.m);
     const m = dv.m;
     if (b.hp < b.maxHp * 0.6) { ctx.fillStyle = 'rgba(30,20,15,0.25)'; ctx.beginPath(); ctx.ellipse(sx, sy - 8, 10 * b.w, 6 * b.h, 0, 0, TAU); ctx.fill(); }
+    // (and the years on walls nobody cares for — a house with no one in it, a quarter in decline, the poorest ground —: the
+    // damp green of neglect, as the 3D grows its moss by the same measure, G.Atmos.wear, D-165)
+    else if (G.Atmos) { const wr = G.Atmos.wear(b); if (wr && wr.care === 0 && wr.ageLv >= 2) { ctx.fillStyle = wr.dampLv ? 'rgba(46,62,40,0.2)' : 'rgba(58,52,38,0.16)'; ctx.beginPath(); ctx.ellipse(sx, sy - 8, 10 * b.w, 6 * b.h, 0, 0, TAU); ctx.fill(); } }
     // night windows & fires
-    const occupied = G.Village && (!def.housing ? true : hasResidents(b));
-    if (nightF > 0.15 && occupied && spr.win.length && !(G.Fest && G.Fest.darkB(b))) {
+    // (a window is lit only with someone awake behind it — G.Atmos.lit, the 3D's own question: D-164)
+    if (nightF > 0.15 && R.windowLit(b) && spr.win.length) {
       emisWin.push(spr, sx, sy, nightF * (0.85 + 0.15 * Math.sin(t * 3 + b.id)) * m);
       light(sx, sy - 8, 30 + b.w * 12, 'warm', 0.55 * nightF);
     }
     if (b.type === 'temple' || b.type === 'maravilha' || b.type === 'palacio' || b.type === 'paco' || b.type === 'grande_palacio' || b.type === 'palacio_colossal') { for (const f of spr.fires) { emisFire.push(sx + f[0] * m, sy + f[1], 0.45); light(sx + f[0] * m, sy + f[1], 40, 'warm', 0.8); } for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'maravilha' ? 14 : 8, 'gold', 0.4 + nightF * 0.5 + (b.type === 'maravilha' ? 0.15 * Math.sin(t * 2) : 0)); if (b.type === 'maravilha') { const k = Math.sqrt(b.w / def.w); light(sx, sy - 50 * k, 110 * k, 'gold', 0.6 * nightF + 0.1); } }
-    else if (KILN[b.type]) { for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'ourives' ? 3 : 6, b.type === 'ourives' ? 'gold' : 'fire', 0.6 + 0.3 * Math.sin(t * 9 + b.id)); light(sx + 10 * m, sy - 4, 28, 'warm', 0.5 * nightF + 0.1); for (const f of spr.fires) if (b.type !== 'workshop' && b.type !== 'forja' && b.type !== 'olaria') emisFire.push(sx + f[0] * m, sy + f[1], 0.3); }
+    else if (KILN[b.type]) { if (!G.Atmos || G.Atmos.fire(b)) for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'ourives' ? 3 : 6, b.type === 'ourives' ? 'gold' : 'fire', 0.6 + 0.3 * Math.sin(t * 9 + b.id)); if (!G.Atmos || G.Atmos.fire(b)) { light(sx + 10 * m, sy - 4, 28, 'warm', 0.5 * nightF + 0.1); for (const f of spr.fires) if (b.type !== 'workshop' && b.type !== 'forja' && b.type !== 'olaria') emisFire.push(sx + f[0] * m, sy + f[1], 0.3); } }
     else if (b.type === 'estatua' || b.type === 'mina') { for (const g of spr.glow) emisGlow.push(sx + g[0] * m, sy + g[1], b.type === 'estatua' ? 12 : 3, 'gold', (b.type === 'estatua' ? 0.45 : 0.3) + nightF * 0.5 + 0.15 * Math.sin(t * 2 + g[1])); if (b.type === 'estatua') light(sx, sy - 30, 60, 'gold', 0.6 * nightF + 0.1); for (const f of spr.fires) { emisTorch.push(sx + f[0] * m, sy + f[1]); light(sx + f[0] * m, sy + f[1], 22, 'warm', 0.6 * nightF); } }
     else if (b.type === 'mercado_negro') { for (const f of spr.fires) { emisTorch.push(sx + f[0] * m, sy + f[1]); light(sx + f[0] * m, sy + f[1], 20, 'warm', 0.7 * nightF + 0.05); } }
     else if (FIRELIT[b.type]) for (const f of spr.fires) { emisFire.push(sx + f[0] * m, sy + f[1], 0.35); light(sx + f[0] * m, sy + f[1], 34, 'warm', 0.7); }
@@ -2707,8 +2718,6 @@
     if (b.type === 'torre') { const f = G.Fac.ofSet(b.set); if (f) drawBanner(sx + 1 * m, sy - 50, G.Fac.hex(f.id), t, 10); }
     if (burning) emisFire.push(sx, sy - 14, 1.2);
   }
-  const homesLit = new Set(); // homes with someone living in them (rebuilt each night frame)
-  function hasResidents(b) { return homesLit.has(b.id); }
   function drawPiles(b, sx, sy) {
     const fac = G.Fac.ofSet(b.set); if (!fac) return;
     const cap = G.Village.cap(fac.id); const st = fac.stock;

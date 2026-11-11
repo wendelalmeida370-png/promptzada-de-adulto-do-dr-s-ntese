@@ -10,11 +10,12 @@
 // ============================================================
 (function (G) {
   const W = G.W;
-  const F3 = G.FX3D = { fires: 0, ships: 0, drops: 0 };
+  const F3 = G.FX3D = { fires: 0, ships: 0, drops: 0, smoke: [] }; // (smoke: the roofs smoking this frame — [building, what burns, puffs a second], for the proofs)
+  const SMK = [0, 0, 0];
   let THREE = null, R3 = null, scene = null, flame = null, glow = null, rain = null, rainP = null, hull = null, mast = null, sail = null, deck = null, streaks = null, rainL = null;
   const MAXF = 140, MAXS = 40, NR = 1600;
   const TAU = Math.PI * 2;
-  const svis = new Map(); G.worldHooks.push(() => { svis.clear(); for (const pl of [PA, PG]) if (pl) pl.n = 0; emit.clear(); leafT = 0; ripN = 0; fpN = 0; steps.clear(); for (const f of falling.values()) R3.dropMesh(f.m); falling.clear(); lmOn = false; F3.lmSources = 0; if (R3 && R3.GX) R3.GX.gxLMB.value.w = 0; if (blob) blob.count = 0; });
+  const svis = new Map(); G.worldHooks.push(() => { svis.clear(); F3.smoke.length = 0; for (const pl of [PA, PG]) if (pl) pl.n = 0; emit.clear(); leafT = 0; ripN = 0; fpN = 0; steps.clear(); for (const f of falling.values()) R3.dropMesh(f.m); falling.clear(); lmOn = false; F3.lmSources = 0; if (R3 && R3.GX) R3.GX.gxLMB.value.w = 0; if (blob) blob.count = 0; });
   // ------------------------------ particles ------------------------------
   // (two pools of soft points: smoke, dust, leaves, chips, splashes, drawn over what is behind them; sparks and
   // fireflies, glowing. Each point: where, how fast, how long it lives, its size from birth to death, its colour, its
@@ -138,6 +139,16 @@
     return out;
   };
   F3.fallingN = () => falling.size;
+  // how many puffs a second rise over a building's roof: none without a fire under it (G.Atmos.fire — a batch burning in the
+  // kiln, the forge hot, the furnace of the baths, the tavern open, someone at the house's fire; the campfire's column is
+  // its own); a kiln more than a kitchen, a kitchen more than a hearth one sits by, a hearth more at night and in the snow
+  F3.smokeRate = function (b, night, snow) {
+    const fr = G.Atmos && b.type !== 'campfire' ? G.Atmos.fire(b) : null; if (!fr) return 0;
+    const kiln = fr.why === 'fornada' || fr.why === 'forja';
+    return (kiln ? (b.type === 'forja' ? 4 : 2.6) : 1.4 + (night || 0) + (snow ? 0.8 : 0)) * fr.k;
+  };
+  // the light out of a doorway at night, how bright (0: dark): only with someone awake inside — as its panes, Build3D.night
+  F3.doorLit = b => (LIT[b.type] && (!G.Atmos || G.Atmos.lit(b)) ? LIT[b.type] : 0);
   function stepRings(dt) {
     if (!ring) return; const u = ring.userData; let k = 0;
     while (k < ripN) { u.age[k] += dt; if (u.age[k] >= u.max[k]) { const j = --ripN; u.age[k] = u.age[j]; u.max[k] = u.max[j]; u.pos[k * 3] = u.pos[j * 3]; u.pos[k * 3 + 1] = u.pos[j * 3 + 1]; u.pos[k * 3 + 2] = u.pos[j * 3 + 2]; continue; }
@@ -384,13 +395,14 @@
     if (best > 0) src.push([18 * best / (1 + near2(bx, bz) / 900), 'f' + bi, bx, by, bz, 18 * best, 26, FIRE, 0.15]);
     // (night: how much the windows are lit — as the realm lights them)
     const nightK = G.clamp((G.Render.nightness() - 0.25) * 1.6, 0, 1);
-    // (the campfires of the towns: always burning, as the god sees them — flames, sparks, a column of smoke, their light;
-    // and at night the doorways of the houses round the body, where the light of the hearth comes out)
+    // (the campfires of the towns: burning, as the god sees them — flames, sparks, a column of smoke, their light — but on the
+    // night of the New Fire, when every flame of the town is out; and at night the doorways of the houses round the body,
+    // where the light of the hearth comes out)
     for (const b of S.buildings.values()) {
-      if (nightK > 0.05 && b.built && LIT[b.type]) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; const d2 = near2(X, Z); if (d2 < 2100) { const dr = G.Vg.door(b); const DX = dr[0] * L, DZ = dr[1] * L; const k = LIT[b.type] * nightK; src.push([2.6 * k / (1 + near2(DX, DZ) / 70), 'w' + b.id, DX + (DX - X) * 0.08, W.hAt(dr[0], dr[1]) * H + 1.7, DZ + (DZ - Z) * 0.08, 2.6 * k, 11, HEARTH, 0.03]);
+      if (nightK > 0.05 && b.built && F3.doorLit(b)) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; const d2 = near2(X, Z); if (d2 < 2100) { const dr = G.Vg.door(b); const DX = dr[0] * L, DZ = dr[1] * L; const k = LIT[b.type] * nightK; src.push([2.6 * k / (1 + near2(DX, DZ) / 70), 'w' + b.id, DX + (DX - X) * 0.08, W.hAt(dr[0], dr[1]) * H + 1.7, DZ + (DZ - Z) * 0.08, 2.6 * k, 11, HEARTH, 0.03]);
         // (and its lit windows, where the drawing of the houses says they are: [X, Y, Z, out x, out z] of each pane)
         const ps = G.Build3D && G.Build3D.lamps && G.Build3D.lamps.get(b.id); if (ps) for (let q = 0; q < ps.length && q < 8; q++) { const p = ps[q]; src.push([0.9 * k / (1 + near2(p[0], p[2]) / 40), 'p' + b.id + ':' + q, p[0] + p[3] * 0.35, p[1], p[2] + p[4] * 0.35, 0.9 * k, 7, HEARTH, 0.02]); halo(p[0] + p[3] * 0.08, p[1], p[2] + p[4] * 0.08, 1.1, 0.28 * k, b.id * 13 + q); } } }
-      if (b.type !== 'campfire' || !b.built || n >= MAXF - 2) continue; const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 3600) continue;
+      if (b.type !== 'campfire' || !b.built || n >= MAXF - 2 || (G.Atmos && !G.Atmos.fire(b))) continue; const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 3600) continue;
       const gY = W.hAt(b.x + b.w / 2, b.y + b.h / 2) * H + 0.55;
       // (four tongues: the tall one in the middle with the core, three lower round it — each trembling, now taller, now shorter)
       for (let k = 0; k < 4 && n < MAXF; k++) { const s = G.hash(b.id * 7 + k); const fl = 0.78 + Math.sin(t * (7 + k * 2.3) + b.id + k) * 0.14 + G.VR() * 0.12;
@@ -492,16 +504,19 @@
   }
   function emitters(dt, focus, t) {
     const S = G.S; const L = G.Space.TILE, H = G.Space.HM; const w = S.weather; const ws = G.clamp(w.windS || 0, 0, 2); const wx = Math.cos(w.windA || 0) * (0.4 + ws * 1.4), wz = Math.sin(w.windA || 0) * (0.4 + ws * 1.4);
-    const night = G.clamp(G.Render.nightness(), 0, 1); const tm = S.time; const snowAt = R3.snowAt || (() => 0);
-    // the chimneys: houses at the cold hours (and all day where it snows), the forge, the kiln and the inn while they work
-    if (G.Build3D) for (const [id, c] of G.Build3D.chim) {
-      if ((c[0] - focus.X) ** 2 + (c[2] - focus.Z) ** 2 > 6400) continue;
-      const b = S.buildings.get(id); if (!b || !b.built) { G.Build3D.chim.delete(id); continue; }
-      const work = b.type === 'forja' || b.type === 'olaria' || b.type === 'workshop' || b.type === 'taverna';
-      // (as the god's view smokes them: the kilns always, a house more at night and in the cold)
-      const rate = work ? (b.type === 'forja' ? 4 : 2.6) : 0.8 + night * 1.4 + (snowAt(W.idx(b.x, b.y)) > 0.3 ? 0.8 : 0) + (tm < 0.14 ? 0.8 : 0);
-      if (S.fire[W.idx(b.x, b.y)] > 0.05) continue;
-      for (let k = every('c' + id, rate, dt); k > 0; k--) spawn(PA, { x: c[0] + G.vrr(-0.15, 0.15), y: c[1], z: c[2] + G.vrr(-0.15, 0.15), vx: G.vrr(-0.1, 0.1), vy: G.vrr(0.7, 1.1), vz: G.vrr(-0.1, 0.1), life: G.vrr(5, 7.5), s0: 0.5, s1: G.vrr(3, 4.4), c: b.type === 'forja' ? [0.34, 0.33, 0.34] : [0.68, 0.68, 0.7], a: 0.4, drag: 0.35, fade: 1 });
+    const night = G.clamp(G.Render.nightness(), 0, 1); const snowAt = R3.snowAt || (() => 0);
+    // the smoke over a roof: only with a fire under it — a batch burning in the kiln, the forge hot, the furnace of the baths,
+    // the tavern open, someone at the house's fire (G.Atmos.fire, the god's view asks the same); a building at rest does not
+    // smoke (D-164). Out of its chimney where the picture has one, else through the roof; how much by what burns — a kiln
+    // more than a hearth, a hearth more in the cold; the baths' white with the steam of their water
+    F3.smoke.length = 0;
+    if (G.Build3D && G.Atmos) for (const b of S.buildings.values()) {
+      if (!b.built || b.type === 'campfire') continue; const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 6400) continue;
+      const rate = F3.smokeRate(b, night, snowAt(W.idx(b.x, b.y)) > 0.3); if (!rate || S.fire[W.idx(b.x, b.y)] > 0.05) continue;
+      let c = G.Build3D.chim.get(b.id); if (!c) { const top = G.Build3D.tops.get(b.id); if (top === undefined) continue; c = SMK; c[0] = X; c[1] = top + 0.1; c[2] = Z; }
+      if (F3.smoke.length < 80) F3.smoke.push([b.id, +rate.toFixed(2)]);
+      const steam = b.type === 'banhos';
+      for (let k = every('c' + b.id, rate, dt); k > 0; k--) spawn(PA, { x: c[0] + G.vrr(-0.15, 0.15), y: c[1], z: c[2] + G.vrr(-0.15, 0.15), vx: G.vrr(-0.1, 0.1), vy: G.vrr(0.7, 1.1), vz: G.vrr(-0.1, 0.1), life: G.vrr(5, 7.5), s0: 0.5, s1: G.vrr(3, 4.4), c: b.type === 'forja' ? [0.34, 0.33, 0.34] : steam ? [0.9, 0.92, 0.94] : [0.68, 0.68, 0.7], a: 0.4, drag: 0.35, fade: 1 });
     }
     // fire: a column of smoke over each burning tile near the eye, and sparks flying up out of it
     if (G.Nature && G.Nature.fireSet && G.Nature.fireSet.size) { let m = 0; for (const i of G.Nature.fireSet) {
