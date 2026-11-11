@@ -61,4 +61,13 @@
     P.opt(() => { for (const q of R.seats.concat(R.extras)) P.at(q.kind, 0, ids[q.room], q.r.slice(), q.f[0], q.f[1]); });
   }
   In.formSized('banhos', termasByForm);
+  // (the recipe's halls on the lot of a bigger step would be the three rooms of the village baths grown to 20 m — never what
+  // the god and the 3D draw there: where the form of that size is the people's, the thermae are the form's alone, as the
+  // palace of a bigger step is. The halls are other types' too: only a record of the baths is refused)
+  const classic = () => (G.BDEF.banhos || {}).w || 1;
+  const formOnly = rec => rec.t === 'banhos' && In.nOf(rec) !== classic() && !!(G.Forma && G.Forma.has('banhos', rec.c, In.nOf(rec)));
+  for (const id of (In.TYPES.banhos && In.TYPES.banhos.fams) || []) {
+    const F = In.FAMS[id]; if (!F || /^forma\./.test(id)) continue; const can0 = F.can;
+    F.can = (rec, T, tr) => (formOnly(rec) ? 'as termas de um degrau maior são as da forma' : can0 ? can0(rec, T, tr) : null);
+  }
 })(window.G);

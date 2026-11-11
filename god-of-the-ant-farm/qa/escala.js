@@ -65,8 +65,10 @@ function run(id, fn) { if (ONLY && !ONLY.includes(id)) return; try { fn(); } cat
 // clássico, como antes das formas grandes —, nenhum degrau abre espaço, o planejador não amplia nada, não guarda a pedra, não
 // tira do acaso do mundo, e nenhuma cidade guarda lote. Com as formas do M1 e do M2, todo povo tem alguma forma grande e não
 // sobrou cidade «quieta» para ser a referência — T-399 —: a referência é a escada só clássica, pedida assim na prova; e os
-// tipos que ainda não têm degrau maior em povo nenhum — os banhos, a biblioteca, o mercado, o paço municipal — escolhem o
-// clássico de verdade em toda cidade)
+// tipos que ainda não têm degrau maior em povo nenhum — a biblioteca, o mercado, o paço municipal — escolhem o clássico de
+// verdade em toda cidade. Os banhos têm degrau maior desde as termas grandes (T-784, D-183), mas só nos povos da terma — o
+// romano, o grego e o clássico —: nos outros três, com desenho próprio dos banhos, o clássico em toda cidade (D-182), e
+// num povo da terma só a cidade que justifica o degrau o escolhe)
 const PUB = ['maravilha', 'teatro', 'temple', 'palacio', 'grande_palacio', 'palacio_colossal', 'paco', 'monument', 'banhos', 'biblioteca', 'mercado', 'administracao'];
 // (a town with a great work of the world's own already going up when the ready world was saved — a step the ladder chose before
 // the proof — is not of the classic reference: that work keeps its stone whatever the proof asks now. In the metrópole of the
@@ -86,9 +88,18 @@ run('e0', () => {
     }
   } finally { Es.choose = choose0; }
   ok('e0 só o clássico: nada muda', !opens && !grew && !great && !mexeu && cidades > 0, `${cidades} cidades, ${classic} escadas só com o clássico: nenhuma abre espaço (${opens}); ampliações ${grew}, obras que guardam a pedra ${great}, o acaso do mundo tocado ${mexeu}${doMundo.length ? `; fora da referência, com a obra grande do mundo já em obra: ${doMundo.join(', ')}` : ''}`);
-  const sem = ['banhos', 'biblioteca', 'mercado', 'administracao']; let maior = [];
+  const sem = ['biblioteca', 'mercado', 'administracao']; let maior = [];
   for (const set of S.settlements.values()) for (const t of sem) if (Es.choose(set, t).some(st => st.n !== Es.n0(t))) maior.push(`${set.name}/${t}`);
   ok('e0b os tipos sem degrau maior escolhem o clássico', !maior.length, maior.length ? `com degrau maior: ${maior.slice(0, 4).join(', ')}` : `${sem.join(', ')}: o clássico em toda cidade`);
+  // (the baths: a bigger step only where the people is one of the thermae's and the town justifies it — its ladder's req)
+  const TERMA = ['romano', 'grego', 'classico'], OUTROS = ['egipcio', 'asteca', 'nordico']; const errado = []; let da = 0, n = 0;
+  const pode = st => Es.steps('banhos').filter(q => !q.classico && Es.can('banhos', st, q.n)).map(q => q.n);
+  for (const st of TERMA) if (pode(st).join() !== '5,7') errado.push(`${st} sabe ${pode(st).join(',') || 'nenhum'}`);
+  for (const st of OUTROS) if (pode(st).length) errado.push(`${st} sabe ${pode(st).join(',')}`);
+  for (const set of S.settlements.values()) { const f = G.Fac.get(set.fac); if (!f) continue; n++; const st = G.Civ.idOfFac(set.fac) || 'classico'; const pop = V.pop(set.id);
+    const big = Es.choose(set, 'banhos').filter(q => q.n !== Es.n0('banhos')).map(q => q.n); const want = TERMA.includes(st) ? Es.steps('banhos').filter(q => !q.classico && (!q.req.pop || pop >= q.req.pop) && (!q.req.tier || (set.tier || 0) >= q.req.tier)).map(q => q.n).reverse() : [];
+    if (big.length) da++; if (big.join() !== want.join()) errado.push(`${set.name} (${st}, ${pop} hab., grau ${set.tier}): escolhe ${big.join(',') || 'só o clássico'}, devia ${want.join(',') || 'só o clássico'}`); }
+  ok('e0c os banhos: o degrau maior só nos povos da terma, e só na cidade que o justifica', !errado.length && n > 0, errado.length ? errado.slice(0, 4).join('; ') : `o romano, o grego e o clássico sabem as termas de 5 e de 7 casas; o egípcio, o asteca e o nórdico, só o seu; das ${n} cidades do mundo, ${da} justificam um degrau maior hoje`);
 });
 
 // ------------------------------ os geradores de teste (só nesta prova) ------------------------------
