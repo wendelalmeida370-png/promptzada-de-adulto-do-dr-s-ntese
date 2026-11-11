@@ -109,6 +109,28 @@ const lines = (code) => G.S.ledger.filter(e => e[8] === code);
   op.data.custo = 1.5; delete op.data.gasto; hook.load({}); sec(1, [k, sit]);
   ok('save-de-antes-do-gasto', op.data.gasto === 1.5 && !('custo' in op.data), `o livro do dia depois do load: gasto ${op.data.gasto}, custo ${op.data.custo === undefined ? '(nenhum)' : op.data.custo}`);
 }
+// ---------------- who lost both arms: given to drink by the keeper's hand, paid the same; never served at a counter alone (D-152, L-693)
+{
+  const { S, tv, person } = world('grego', true);
+  const k = person('Taverneiro', 6, { job: 3, role: 'taverneiro' }); const kh = S.buildings.get(k.home);
+  const dora = person('Dora', 3, { lost: { armL: 1, armR: 1 } }); const dh = S.buildings.get(dora.home);
+  G.S.time = 0.6; for (let r = 0; r < 2; r++) { E.jobTask(k, H); for (let s = 0; s < 6 && k.task; s++) sec(1, [k, dora]); }
+  sec(2, [k, dora]); const op = T.dia(tv);
+  const t = T.visitTask(dora, H); sec(1, [k, dora]);
+  const sat = !!(op && op.data.mesa[dora.id]); const d0 = dh.coin, k0 = kh.coin, shelf0 = op ? D.get('b:3', 'vinho') : 0;
+  let held = 0, kept = 0;
+  for (let r = 0; r < 6 && op && (op.data.fila.length || (dora.task && dora.task.st === 4)); r++) { if (!k.task || k.task.type !== 'atender') E.jobTask(k, H); for (let s = 0; s < 3; s++) { sec(1, [k, dora]); if (dora.carry) held++; if (k.carry && k.carry.n > 1e-6) kept++; } }
+  const drunkLine = lines('bebida').filter(e => String(e[7]) === String(dora.id) || e.includes(dora.id)).length;
+  ok('sem-bracos-servida', !!t && sat && op.data.servidos >= 1 && (dora.drinks || 0) >= 1 && !held && !kept && !dora.carry && dh.coin < d0 && kh.coin > k0 && D.get('b:3', 'vinho') < shelf0 && drunkLine >= 1,
+    `Dora (força ${D.strength(dora)}) ${t ? 'veio' : 'NÃO veio'}, ${sat ? 'sentou' : 'não sentou'}; servidos ${op ? op.data.servidos : 0}; bebeu ${dora.drinks || 0} rodada(s) pela mão do taverneiro, as mãos dela ${held ? 'SEGURARAM o copo' : 'sem nada'}${kept ? ', o copo FICOU na mão do taverneiro' : ''}; casa dela ${d0} → ${dh.coin}, a do dono ${k0} → ${kh.coin}; vinho na prateleira ${shelf0} → ${D.get('b:3', 'vinho')}; no livro ${drunkLine} «bebida» dela`);
+  // the keeper away: she is not served at the counter by herself — she waits, and leaves unserved (the others serve themselves)
+  for (let s = 0; s < 80 && dora.task; s++) sec(1, [k, dora]);
+  G.S.time = 0.62; const op2 = T.dia(tv); k.task = null; const n0 = op2 ? op2.data.servidos : 0; const r0 = op2 ? op2.data.recusas : 0;
+  dora.drinks = 0; const t2 = op2 ? T.visitTask(dora, H) : null; let held2 = 0;
+  for (let s = 0; s < 60 && dora.task; s++) { sec(1, [dora]); if (dora.carry) held2++; }
+  ok('sem-bracos-balcao', !!t2 && !held2 && op2.data.servidos === n0 && op2.data.recusas === r0 + 1 && !dora.task && !(dora.drinks > 0),
+    `o taverneiro fora: Dora ${t2 ? 'sentou' : 'não veio'}, ${op2 && op2.data.servidos === n0 ? 'não se serviu no balcão' : 'SERVIU-SE sozinha'}, ${op2 && op2.data.recusas === r0 + 1 ? 'esperou e saiu sem serviço' : 'recusas ' + (op2 ? op2.data.recusas - r0 : '?')}`);
+}
 // ---------------- a people without coin: the store gives, nobody pays
 {
   const { S, f, tv, person } = world('egipcio', false);

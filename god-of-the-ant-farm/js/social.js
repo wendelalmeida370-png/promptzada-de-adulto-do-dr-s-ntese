@@ -35,15 +35,15 @@
   function homeless(set) { const out = []; for (const v of G.S.villagers.values()) if (v.set === set.id && !v.captive && v.age >= 16 && !v.home && !v.aboard && !v.ug) out.push(v); return out; }
 
   // ------------------------------ a day in the street ------------------------------
-  let lastDay = -1, cur = 0;
-  G.worldHooks.push(() => { lastDay = -1; cur = 0; }); // (a new world, or a save loaded: it starts over)
   So.update = function (dt) {
     const S = G.S; if (!S) return;
     So.daylight(dt || 0);
-    if (S.day !== lastDay) { lastDay = S.day; cur = 0; }
+    // (the day's round among the towns is the world's — G.mod, in the save —: a load gave every town a second day, L-694)
+    if (S.day !== G.mod('social.day')) { G.mod('social.day', S.day); G.mod('social.cur', 0); }
+    const cur = G.mod('social.cur');
     const sets = [...S.settlements.values()].sort((a, b) => a.id - b.id);
     if (cur >= sets.length) return;
-    const set = sets[cur++];
+    const set = sets[cur]; G.mod('social.cur', cur + 1);
     // who lost the roof, and why
     for (const v of S.villagers.values()) {
       if (v.set !== set.id || v.captive || v.age < 16) continue;

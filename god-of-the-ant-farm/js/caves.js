@@ -993,8 +993,8 @@
   }
 
   // ------------------------------ every tick ------------------------------
-  let tSec = 0, tPlan = 0, lastDay = -1, tRefuge = 0, tShelter = 0;
-  G.worldHooks.push(() => { tSec = 0; tPlan = 0; lastDay = -1; tRefuge = 0; tShelter = 0; });
+  let tSec = 0, tPlan = 0, tRefuge = 0, tShelter = 0;
+  G.worldHooks.push(() => { tSec = 0; tPlan = 0; tRefuge = 0; tShelter = 0; });
   // a storm drives the wild animals into the caves: deer and a wolf under the same roof, and nobody bites
   function shelter() {
     const S = G.S; const W8 = S.weather || {}; const storm = W8.storm > 0 && W8.rain > 0.3;
@@ -1086,7 +1086,7 @@
       if ((tShelter += 1) >= 2) { tShelter = 0; shelter(); }
     }
     if (tRefuge >= 1.5) { tRefuge = 0; refuge(); }
-    if (S.day !== lastDay) { lastDay = S.day; daily(); }
+    if (S.day !== G.mod('caves.day')) { G.mod('caves.day', S.day); daily(); } // (the day is the world's, in the save: no second day on a load, L-694)
     if (tPlan >= DAY() / 12) { tPlan = 0; plan(); }
     // a raid each night for a band that is hungry for it
     if (S.time > 0.76 && S.time < 0.8) for (const cv of U.caves) { const b = cv.bandits; if (b && b.night !== S.day && G.R() < 0.6 && !C.actors.some(a => a.cave === cv.id)) raid(cv); else if (b && b.night !== S.day) b.night = S.day; }
@@ -1466,7 +1466,7 @@
     if (f && G.S && G.S.ug) try { onRulerDeath(v, f, cause); } catch (e) { console.warn(e); }
     return r;
   };
-  C.reset = function () { C.inside.clear(); C.actors.length = 0; lastDay = -1; };
+  C.reset = function () { C.inside.clear(); C.actors.length = 0; };
   // a guest under a cave's roof goes to the save whole, as the animals in the open do (L-699), with its spot inside; and comes
   // back whole (a save of before kept the kind, the age and the name only: no rare coat appears on loading, as in save.js)
   const guestOut = a => Object.assign(G.Save.packAnimal(a), { sx: a.sx, sy: a.sy });

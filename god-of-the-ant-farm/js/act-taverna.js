@@ -199,18 +199,24 @@
     const item = asked || (m.r === 0 ? menu[0] : null); // (on the first round one takes what there is; later, only what one wants)
     if (!item) { d.faltas++; say(v, 'acabou', { bem: m.want === 'food' ? 'a comida' : 'a bebida' }); m.out = 1; return { ok: false, why: 'Acabou.' }; }
     const key = 'tv:' + op.id + ':' + d.q;
-    let r;
-    if (coin(b)) {
-      const from = E.coinRef(c);
-      if (D.get(from, 'moedas') + EPS < item.p) { d.recusas++; say(c, 'sem_dinheiro', {}); m.out = 1; return { ok: false, why: 'Sem dinheiro para pagar.' }; }
-      r = D.swap(['b:' + b.id, 'v:' + c.id, item.k, item.n], [from, payeeOf(b), 'moedas', item.p], { op: op.id, code: 'taverna', by: v.id, key });
-    } else r = D.move('b:' + b.id, 'v:' + c.id, item.k, item.n, { op: op.id, code: 'taverna', by: v.id, key });
+    const from = coin(b) ? E.coinRef(c) : null;
+    if (from && D.get(from, 'moedas') + EPS < item.p) { d.recusas++; say(c, 'sem_dinheiro', {}); m.out = 1; return { ok: false, why: 'Sem dinheiro para pagar.' }; }
+    // who cannot hold a cup (both arms lost) is given to eat and to drink by the hand that serves (D-152, L-693): the cup goes
+    // from the shelf to the server's hand — the same round in the book, paid the same — and from that hand to the mouth, there
+    // and then; nobody is served so at a counter with no keeper. Before, the cup never fitted the customer's hands: the customer
+    // waited, left unserved, and came back every night
+    const fed = D.strength(c) <= 0;
+    if (fed && self) return { ok: false, why: 'Não consegue se servir.' };
+    const to = 'v:' + (fed ? v.id : c.id);
+    const r = from ? D.swap(['b:' + b.id, to, item.k, item.n], [from, payeeOf(b), 'moedas', item.p], { op: op.id, code: 'taverna', by: v.id, key })
+      : D.move('b:' + b.id, to, item.k, item.n, { op: op.id, code: 'taverna', by: v.id, key });
     if (!r.ok) return { ok: false, why: r.why || 'Não deu.' };
-    d.q++; d.servidos++; d.vendas[item.k] = r2((d.vendas[item.k] || 0) + item.n); if (coin(b)) d.receita = r2(d.receita + item.p);
-    m.st = 3; m.k = item.k;
+    if (fed) D.use(to, item.k, item.n, { op: op.id, code: item.k === 'food' ? 'refeicao' : 'bebida', by: c.id, mine: true, key: key + ':boca' });
+    d.q++; d.servidos++; d.vendas[item.k] = r2((d.vendas[item.k] || 0) + item.n); if (from) d.receita = r2(d.receita + item.p);
+    m.st = fed ? 4 : 3; m.k = item.k; if (fed) taste(c, item.k, b);
     if (!self) say(v, 'servir_taverna', { bem: T.nome(item.k) });
-    if (c.task && c.task.type === 'tavern' && c.task.op === op.id) { c.task.st = 3; c.actT = 0; }
-    return { ok: true, k: item.k, n: item.n, p: coin(b) ? item.p : 0 };
+    if (c.task && c.task.type === 'tavern' && c.task.op === op.id) { c.task.st = m.st; c.actT = 0; }
+    return { ok: true, k: item.k, n: item.n, p: from ? item.p : 0 };
   }
   T.serve = (op, v, c) => (G.inSim && op && live(op) ? serve(op, v, c) : { ok: false, why: '' });
   // what was served, eaten or drunk (in the ledger: the meal, the round) — and what it does to one
@@ -218,14 +224,17 @@
     const c = v.carry; if (!c || c.op !== op.id || !(c.n > EPS)) return null;
     const k = c.k; const r = D.use('v:' + v.id, k, c.n, { op: op.id, code: k === 'food' ? 'refeicao' : 'bebida', by: v.id, mine: true });
     if (!r.ok) return null;
+    taste(v, k, S_().buildings.get(op.at)); return k;
+  }
+  // what a meal or a round does to one (from one's own cup, or from the server's hand)
+  function taste(v, k, b) {
     const S = S_();
-    if (k === 'food') { v.hunger = Math.max(0, v.hunger - 35); return k; }
+    if (k === 'food') { v.hunger = Math.max(0, v.hunger - 35); return; }
     // the second round makes one tipsy, the third drunk for a long while (tavern.js counts the morning after)
     v.drinks = (v.drinks || 0) + 1; v.drinkDay = S.day;
-    const b = S.buildings.get(op.at); if (b) b.served = (b.served || 0) + 1;
+    if (b) b.served = (b.served || 0) + 1;
     const heavy = (v.traits || []).includes('Glutão') || (v.traits || []).includes('Sociável');
     if (v.drinks >= 2 || (heavy && G.R() < 0.35)) v.drunk = Math.max(v.drunk || 0, S.clock + 30 + v.drinks * 22);
-    return k;
   }
   // what one asks for: a meal when hungry (and there is one), a round otherwise
   const want = (v, b) => (v.hunger > 40 && D.free('b:' + b.id, 'food') >= 1 - EPS ? 'food' : 'drink');
@@ -302,6 +311,14 @@
       life(v, t, b, op, dt);
       if (v.actT < g.dur) return;
       finishCup(v, op); m.r++;
+      if (again(v, b, m)) { m.want = want(v, b); m.st = 2; d.fila.push(v.id); t.st = 2; t.wt = 0; t.use = 'sentar'; return; }
+      return leave(v, t, op, H);
+    }
+    if (t.st === 4) { // given to eat or to drink by the server's hand (D-152): the same while at the table, nothing in the hands
+      v.act = 'sit'; t.use = m.k === 'food' ? 'comer' : 'sentar';
+      life(v, t, b, op, dt);
+      if (v.actT < (m.k === 'food' ? AN.comer : AN.beber).dur) return;
+      m.r++;
       if (again(v, b, m)) { m.want = want(v, b); m.st = 2; d.fila.push(v.id); t.st = 2; t.wt = 0; t.use = 'sentar'; return; }
       return leave(v, t, op, H);
     }

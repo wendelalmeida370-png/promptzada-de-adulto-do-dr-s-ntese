@@ -291,7 +291,8 @@
       const A = FA(); const set = A && bigTown(A); if (!set) return;
       const kinds = G.Animals.ids.filter(k => { const d = G.Animals.sp({ kind: k }); return d.cls === 'land' && d.size >= 0.8 && !d.dom && !d.town; });
       let p = null, kind = null;
-      for (let g = 0; g < 40 && !p; g++) { const a = G.R() * 6.283, r = (set.radius || 6) + G.rr(4, 9); const q = G.W.nearestLand(set.cx + Math.cos(a) * r, set.cy + Math.sin(a) * r, 4); if (!q) continue; const k = kinds.find(x => G.Animals.habitat(G.Animals.sp({ kind: x }), G.W.idx(Math.floor(q[0]), Math.floor(q[1])))); if (k) { p = q; kind = k; } }
+      // (just beyond the houses, where the town sees it: G.Stories.rareSight — beyond the radius by 4 to 9 no wide town saw it, L-657)
+      for (let g = 0; g < 40 && !p; g++) { const a = G.R() * 6.283, r = (set.radius || 6) + G.rr(3, 6); const q = G.W.nearestLand(set.cx + Math.cos(a) * r, set.cy + Math.sin(a) * r, 4); if (!q || G.dist(q[0], q[1], set.cx, set.cy) > G.Stories.rareSight(set) - 0.5) continue; const k = kinds.find(x => G.Animals.habitat(G.Animals.sp({ kind: x }), G.W.idx(Math.floor(q[0]), Math.floor(q[1])))); if (k) { p = q; kind = k; } }
       if (!p) return say('Nenhum bicho grande vive perto dessa cidade.', true);
       const a = G.Animals.spawn(kind, p[0], p[1], { morph: G.Animals.sp({ kind }).morphs && G.Animals.sp({ kind }).morphs.melanico ? 'melanico' : 'albino' });
       go(a.x, a.y, a.id); storyHunt('fera-rara', `alguém ver ${G.Animals.rareName ? G.Animals.rareName(a) : 'o bicho raro'}`, 3);

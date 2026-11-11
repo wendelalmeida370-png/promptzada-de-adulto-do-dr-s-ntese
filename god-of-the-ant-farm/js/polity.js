@@ -595,12 +595,12 @@
   };
 
   // ------------------------------ the loop ------------------------------
-  let tA = 0, tB = 0, lastDay = -1;
-  G.worldHooks.push(() => { tA = 0; tB = 0; lastDay = -1; }); // (a new world, or a save loaded: it starts over)
+  let tA = 0, tB = 0;
+  G.worldHooks.push(() => { tA = 0; tB = 0; }); // (a new world, or a save loaded: it starts over)
   Po.update = function (dt) {
     const S = G.S; if (!S) return;
     tA += dt; tB += dt;
-    const newDay = S.day !== lastDay; if (newDay) lastDay = S.day;
+    const newDay = S.day !== G.mod('polity.day'); if (newDay) G.mod('polity.day', S.day); // (the world's, in the save: no second day on a load, L-694)
     if (tA >= 4 || newDay) {
       const d = tA; tA = 0;
       for (const f of G.Fac.all()) { if (!f.alive) continue; Po.econOf(f); recount(f, d); landTick(f, newDay); }

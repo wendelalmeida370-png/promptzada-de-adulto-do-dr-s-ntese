@@ -9,7 +9,9 @@
 // e a história resolvida no passo em que a ouve («a pele ficou para trás»); f2 o mesmo com save e load entre o abate e a esfola;
 // f3 o corpo some sem esfola (os carniceiros comeram a carne — a mão da prova põe a carne em zero — e o resto apodrece):
 // resolvida no turno seguinte, não na virada do ano; f4 o próprio protagonista esfola: a pele é dele (o desfecho de antes);
-// f5 o deus mata o protagonista entre o abate e a esfola: o verificador limpo e a história resolvida; e nenhum erro.
+// f5 o deus mata o protagonista entre o abate e a esfola: o verificador limpo e a história resolvida;
+// f6 a cidade larga vê a fera rara na borda dela (L-657: via só a 15 casas do centro, e numa cidade de raio 19 a fera teria de
+// andar entre as casas — a receita do painel a punha além do raio, e a semente nunca nascia); e nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const WORLDS = (process.argv[2] || 'cidade').split(',');
@@ -172,6 +174,33 @@ for (const world of WORLDS) {
       const r = v ? skin(c, v) : null; const s = story(c.sid);
       const good = !w.length && (!r || !r.bad.length) && (s.st === 'fim' || (r && r.at < 0 && G.S.villagers.has(s.protag)));
       ok(`f5 ${world}`, good, `o protagonista morto depois do abate: história ${s1.st}${s1.data.waitHeir ? ' (à espera de herdeiro)' : ''}${r ? (r.at >= 0 ? `; esfolado por #${r.by} em ${r.secs} s` : '; ninguém esfolou') : ''}; no fim ${s.st}${s.end ? ' (' + s.end.k + ')' : ''}; verificador ${w.concat(r ? r.bad : []).length ? w.concat(r ? r.bad : []).join(' · ') : 'limpo'}`);
+    }
+  }
+  // ---------------- f6 a wide town sees the rare beast at its edge (L-657) ----------------
+  if (on('f6')) {
+    const S = G.S; S.time = 0.3;
+    // a wide town (the widest with ground at its edge), and the beast where the panel's recipe puts it: just beyond the houses
+    // (radius + 3 to 6)
+    const wide = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Village.pop(s.id) >= 6 && (s.radius || 0) >= 12.5).sort((a, b) => (b.radius || 0) - (a.radius || 0) || a.id - b.id);
+    const kinds = G.Animals.ids.filter(k => { const d = G.Animals.sp({ kind: k }); return d.cls === 'land' && d.size >= 0.8 && !d.dom && !d.town && !d.apex; });
+    let spot = null, kind = null, set = null;
+    for (const s of wide) {
+      for (let g = 0; g < 64 && !spot; g++) {
+        const ang = g * 0.393, r = (s.radius || 6) + 3 + (g % 4);
+        const q = G.W.nearestLand(s.cx + Math.cos(ang) * r, s.cy + Math.sin(ang) * r, 2); if (!q) continue; const d = G.dist(q[0], q[1], s.cx, s.cy);
+        // (beyond the fifteen tiles of before, and out of the sight of every other town)
+        if (d <= 15.5 || d > G.Stories.rareSight(s) - 0.5 || [...S.settlements.values()].some(o => o.id !== s.id && G.dist(q[0], q[1], o.cx, o.cy) < G.Stories.rareSight(o))) continue;
+        const k = kinds.find(x => G.Animals.walkOK({ kind: x }, q[0], q[1])); if (k) { spot = q; kind = k; set = s; }
+      }
+      if (spot) break;
+    }
+    if (!spot) ok(`f6 ${world}`, false, `nenhum chão além de 15 casas na borda de uma cidade larga (${wide.length} de raio 12,5 ou mais)`);
+    else {
+      const d0 = G.dist(spot[0], spot[1], set.cx, set.cy);
+      const a = G.Animals.spawn(kind, spot[0], spot[1], { morph: 'albino' });
+      let sd = null, k = 0;
+      for (; k < 30 && !sd && S.animals.has(a.id) && !a.dead; k++) { M.viver(1); sd = S.saga.seeds.find(x => x.type === 'fera-rara' && x.cast && x.cast.beast === a.id) || S.saga.stories.find(x => x.type === 'fera-rara' && x.cast.beast === a.id); }
+      ok(`f6 ${world}`, !!sd, `${set.name} (raio ${set.radius.toFixed(0)}): ${kind} raro a ${d0.toFixed(1)} casas do centro, na borda — ${sd ? 'a cidade viu em ' + k + ' s e a semente nasceu' : 'a cidade NÃO viu em 30 s'}`);
     }
   }
 }

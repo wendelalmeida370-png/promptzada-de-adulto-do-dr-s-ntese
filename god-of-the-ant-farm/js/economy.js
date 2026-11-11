@@ -920,6 +920,8 @@
   // (want: the house's own list, when the house sends someone for it — act-compras.js; without it, a stroll's whim)
   E.shopTask = function (v, H, want) {
     const S = G.S; const h = homeOf(v); if (!h || v.captive) return null;
+    // (no hands to bring it home — both arms lost —: another of the house goes, D-152)
+    if (G.Depot.strength(v) <= 0) return null;
     // (a stroll asks the hands, as the house's errand does, D-094: with a load in the arms one went to the stall, what the two
     // hands could not take was not bought, and one came back with nothing said — Jasão, three of wood in his arms, L-636)
     if (!want && ((v.carry && v.carry.n > 1e-6) || G.Vg.handsBusy(v))) return null;
@@ -1186,8 +1188,8 @@
   };
 
   // ------------------------------ update ------------------------------
-  let tPen = 0, tHouse = 0, tBM = 0, tDay = -1;
-  G.worldHooks.push(() => { tPen = 0; tHouse = 0; tBM = 0; tDay = -1; });
+  let tPen = 0, tHouse = 0, tBM = 0;
+  G.worldHooks.push(() => { tPen = 0; tHouse = 0; tBM = 0; });
   E.update = function (dt) {
     const S = G.S; if (!S) return;
     if (!S.ores) E.genDeposits(S);
@@ -1195,7 +1197,8 @@
     if (tPen >= 2) { penTick(tPen); tPen = 0; }
     if (tHouse >= 3) { houseTick(tHouse); tHouse = 0; }
     if (tBM >= 30) { tBM = 0; for (const s of S.settlements.values()) { const f = G.Fac.get(s.fac); if (f) { E.ensure(f); considerBlackMarket(s, f); } } }
-    if (tDay !== S.day) { tDay = S.day; for (const f of G.Fac.all()) { E.ensure(f); f.eco.last = { made: f.eco.made, used: f.eco.used, tax: f.eco.tax, wages: f.eco.wages, sales: f.eco.sales, stolen: f.eco.stolen || 0 }; f.eco.made = {}; f.eco.used = {}; f.eco.tax = 0; f.eco.wages = 0; f.eco.sales = 0; f.eco.stolen = 0; } }
+    // (the day's books close once a day — the day is the world's, in the save: a load closed them again at any hour, L-694)
+    if (G.mod('eco.day') !== S.day) { G.mod('eco.day', S.day); for (const f of G.Fac.all()) { E.ensure(f); f.eco.last = { made: f.eco.made, used: f.eco.used, tax: f.eco.tax, wages: f.eco.wages, sales: f.eco.sales, stolen: f.eco.stolen || 0 }; f.eco.made = {}; f.eco.used = {}; f.eco.tax = 0; f.eco.wages = 0; f.eco.sales = 0; f.eco.stolen = 0; } }
   };
 
   // ------------------------------ words ------------------------------

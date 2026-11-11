@@ -182,6 +182,16 @@ window.G = window.G || {};
   G.tryRun = function (name, fn, dt) { try { fn(dt); } catch (e) { const n = G.modErr[name] = (G.modErr[name] || 0) + 1; if (n <= 3 || n % 500 === 0) console.error(`[${name}]${n > 1 ? ` (${n}×)` : ''}`, e); } };
   // a new world begins (a new game, a save loaded): the modules drop what belonged to the one before
   G.worldHooks = [];
+  // a module's clock that is the world's — the day its daily routine last ran, the place of its round among the towns — lives
+  // in S.mod and goes in the save: a load gives no module a second day (L-694; before, each kept it in a variable the load
+  // zeroed, and every town had its day of rent, of street life, of books closed, twice on a day with a load). G.mod(key) reads
+  // (undefined when never set: a new world, a save of before — the routine runs, as it always did), G.mod(key, n) writes
+  G.mod = function (k, v) { const S = G.S; const m = S.mod || (S.mod = {}); if (v === undefined) return m[k]; m[k] = v; return v; };
+  (G.saveHooks = G.saveHooks || []).push({
+    save(out) { out.mod = G.S.mod || {}; },
+    // (only whole numbers come back: a damaged save gives a module its day again, never a broken clock)
+    load(o) { const m = {}; const q = o && o.mod; if (q && typeof q === 'object' && !Array.isArray(q)) for (const k in q) if (Number.isFinite(q[k])) m[k] = q[k]; G.S.mod = m; },
+  });
   G.newWorld = function () { for (const h of G.worldHooks) { try { h(); } catch (e) { console.warn('world hook', e); } } };
   G.setMapSize = function (n) { G.N = n; for (const h of G.mapHooks) h(n); };
 

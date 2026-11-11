@@ -57,7 +57,10 @@
   St.observe('migration', d => St.offer(St.draft('migracao', { kind: d.kind, n: d.n, x: d.x, y: d.y, tx: d.tx, ty: d.ty, ford: d.ford ? 1 : 0, fx: d.fx, fy: d.fy, crocs: d.crocs || 0, preds: d.preds || 0 })));
   St.observe('nest', d => St.offer(St.draft('ninho', { nest: d.id, bird: d.kind, type: d.type, host: d.host, x: d.x, y: d.y })));
 
-  // a beast of a rare coat near a town: the town sees it (once)
+  // a beast of a rare coat near a town: the town sees it (once). How far from its centre a town sees: fifteen tiles for a
+  // village, and from the edge of its own houses for a wide town — a city of radius 19 never saw a rare beast, which would have
+  // to walk among the houses for it (L-657)
+  const sightOf = St.rareSight = set => Math.max(15, (set.radius || 6) + 8);
   let pollT = 0;
   G.worldHooks.push(() => { pollT = 0; }); // (a new world, or a save loaded: it starts over)
   function poll(dt) {
@@ -66,8 +69,8 @@
     for (const a of S.animals.values()) {
       if (!a.morph || a.dead || a.tamed || a.dom || a.held || a.rareSeen) continue;
       const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls !== 'land' || (sp.size || 1) < 0.8 || (a.grown !== undefined && a.grown < 0.7)) continue;
-      let best = null, bd = 15 * 15;
-      for (const s of S.settlements.values()) { const d = G.dist2(a.x, a.y, s.cx, s.cy); if (d < bd) { bd = d; best = s; } }
+      let best = null, bd = Infinity;
+      for (const s of S.settlements.values()) { const d = G.dist(a.x, a.y, s.cx, s.cy); if (d < sightOf(s) && d < bd) { bd = d; best = s; } }
       if (!best) continue;
       a.rareSeen = S.day;
       St.signal('rareSeen', { beast: a.id, kind: a.kind, morph: a.morph, set: best.id, x: a.x, y: a.y });
@@ -201,7 +204,7 @@
         return;
       }
       const set = homeOf(p);
-      if (set && G.dist(a.x, a.y, set.cx, set.cy) < 30) s.data.gone = 0;
+      if (set && G.dist(a.x, a.y, set.cx, set.cy) < sightOf(set) + 15) s.data.gone = 0;
       else { if (!s.data.gone) s.data.gone = G.S.day; else if (G.S.day - s.data.gone >= 3) { St.finish(s, 'esquecida', 'sereno', St.say(s, 'fr-sumiu', rc(s))); return; } }
       if (!s.data.met && G.dist(a.x, a.y, p.x, p.y) < 7 && !p.inside && !p.sleeping) {
         s.data.met = 1; s.phase = 'perto';

@@ -10,6 +10,7 @@
 //  t6 sem demanda: as casas da cidade sem moeda não vêm — a taverna aberta e vazia não é defeito (o verificador limpo)
 //  t7 a noite cai com gente à mesa: ninguém levado pelo trabalhinho da noite (L-591) — saem no sono, no fechar, na fome
 //  t8 o taverneiro longe, a caminho do balcão: quem espera se serve no balcão e paga como ao taverneiro (L-592)
+//  t9 um freguês que perdeu os dois braços: quem serve dá de comer e de beber na boca, e a casa paga igual (D-152, L-693)
 //  e nenhum erro de módulo nem aviso no console.
 //   node qa/taverna.js [mundo]    (rodar pela catraca: bash SP/onda2/catraca.sh node qa/taverna.js)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js'] });
@@ -215,6 +216,32 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); return !!T.visitTask
   // none left waiting past it)
   ok('t8 o-taverneiro-longe', !feast && !!op && !!k && far >= 10 && went.length >= 1 && self >= 1 && !waited.length && !bad.length,
     op && k ? `${feast ? 'UMA FESTA DA CIDADE NO MEIO DO CASO; ' : ''}${k.name} chamado ao balcão de ${far} casas dali (${walk} s a caminho); ${went.length} da cidade à mesa; enquanto ele vinha, ${self} rodada(s) servida(s) pela mão do próprio freguês${waited.length ? `; ESPERARAM SEM SE SERVIR: ${waited.join(', ')}` : ''}${bad.length ? '; ' + bad.slice(0, 2).join(' | ') : ''}` : 'não abriu ou sem taverneiro');
+}
+// ---------------- t9 a guest who lost both arms: given to eat and to drink by the keeper's hand (D-152, L-693) ----------------
+// (the cup never fitted the hands — the store's rule: no strength in the arms, no load —, the round was not served, the guest
+// waited 45 s, left «sem serviço», and came back every night: in the metropole of the generation 19, two grown people of 375)
+{
+  fresh(); const b = S().buildings.get(P.id); ready(b); const bad = []; seen.length = 0;
+  liveSec(30, () => !!T.dia(b), bad); const op = T.dia(b);
+  let g = null, sat = false, held = 0, kept = 0, served = 0, left = false, coin0 = 0, paid = 0;
+  if (op) {
+    // (the test's hand takes the arms of one of the evening's guests — what a wound of war does, carnage.js — and nothing else)
+    const went0 = guests(b, 3); g = went0[0];
+    if (g) {
+      g.lost = { armL: true, armR: true }; const h = S().buildings.get(g.home); coin0 = h ? h.coin : 0;
+      const went = send(b, went0); const k = T.keeperOf(b);
+      liveSec(90, () => !A.live(op) || (sat && !(g.task && g.task.type === 'tavern')), bad, () => {
+        if (op.data.mesa[g.id]) sat = true;
+        if (g.carry && g.carry.n > 1e-6 && g.task && g.task.type === 'tavern') held++; // (on the errand: what she takes up after it is another matter)
+        if (k && k.carry && k.carry.op === op.id && k.carry.n > 1e-6) kept++;
+      });
+      served = seen.filter(e => e[7] === op.id && (e[8] === 'bebida' || e[8] === 'refeicao') && e[9] === g.id).length;
+      paid = h ? r2(coin0 - h.coin) : 0; left = !(g.task && g.task.type === 'tavern');
+      void went;
+    }
+  }
+  ok('t9 sem-bracos', !!op && !!g && sat && served >= 1 && !held && !kept && left && (!T.withCoin(b) || paid > 0) && !bad.length,
+    op && g ? `${g.name} (força ${D.strength(g)}) ${sat ? 'sentou' : 'NÃO chegou à mesa'}; ${served} rodada(s) pela mão de quem serve (no livro, dela)${T.withCoin(b) ? `, a casa pagou ${paid}` : ''}; as mãos dela ${held ? 'SEGURARAM carga' : 'sem nada'}${kept ? '; o copo FICOU na mão do taverneiro' : ''}; ${left ? 'saiu depois' : 'AINDA à mesa aos 90 s'}; verificador ${bad.join(' | ') || 'limpo'}` : `${op ? 'nenhum freguês' : 'a taverna não abriu'}`);
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `TAVERNA: FALHOU (${fails.join(', ')})` : 'TAVERNA: ok');

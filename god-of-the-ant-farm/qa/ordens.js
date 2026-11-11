@@ -11,7 +11,9 @@
 // a deixa falar, ela morre —, o caso se arma noutra caça, até três vezes); o3 a mesma vida com e sem um save/load
 // no meio: o load devolve as caças como estavam (a marca, a espera, quem segue quem e há quanto tempo), e nas duas vidas o corte
 // da mesma caça no mesmo instante limpa a mesma marca no mesmo olhar e a ordem manda o mesmo homem atrás da mesma testemunha no
-// mesmo olhar; e o verificador limpo, e nenhum erro.
+// mesmo olhar; o4 a reunião da noite atravessa um save e um load (L-694: o load a encerrava e mandava todos embora): quem estava
+// no lugar segue no lugar, de manto, e ela acaba pela regra dela; o5 um load não dá um segundo dia a nenhum módulo (os relógios
+// do dia moram no mundo, S.mod); e o verificador limpo, e nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const WORLD = process.argv[2] || 'mega';
@@ -114,6 +116,54 @@ if (!H && tried.length) ok(`o2 ${WORLD}`, false, tried.join(' · '));
     ok(`o3 ${WORLD}`, B0 === A0 && same(A.clear, B.clear) && same(A.nxt, B.nxt) && sameSent,
       `salvo em ${T.toFixed(1)} s com #${hid} atrás de #${wid}; o load devolveu as caças ${B0 === A0 ? 'como estavam' : 'DIFERENTES: ' + A0.slice(0, 160) + ' ≠ ' + B0.slice(0, 160)}; sem save: ${say(A)} · com save: ${say(B)}`);
   }
+}
+// ---------------- o4 the night's meeting goes on over a save and a load (L-694) ----------------
+// (the load ended every meeting — «the conclave is not in the save» — and sent the members home awake. The meeting is the
+// game's own: the test's hand sets the hour of the meetings and the lodge's day; the order calls its people by its rule)
+{
+  M.pronto(WORLD); M.viver(2); const S = G.S; S.weather.storm = 0; S.weather.rain = 0;
+  let m = null, q = null;
+  S.time = 0.805;
+  for (const s of socs()) { if (s.gone) continue; for (const l of s.lodges) l.next = S.day; }
+  for (let k = 0; k < 60 && !m; k++) { M.viver(0.5); m = (S.secrets.meets || []).find(x => x.ids.length >= 2) || null; }
+  q = m && socs().find(x => x.id === m.soc);
+  if (!m) ok(`o4 ${WORLD}`, false, 'nenhuma ordem reuniu dois dos seus à noite');
+  else {
+    // until the rite, with two of them at the place
+    const at = () => m.ids.map(id => S.villagers.get(id)).filter(v => v && v.task && v.task.type === 'conclave' && v.task.m === m.id);
+    for (let k = 0; k < 900 && S.secrets.meets.includes(m) && !(m.phase === 'rite' && at().filter(v => v.task.st === 2).length >= 2); k++) M.viver(0.1);
+    const live0 = S.secrets.meets.includes(m) && m.phase === 'rite';
+    const before = at().map(v => [v.id, v.task.st, !!v.robe, v.inside || 0, v.sleeping ? 1 : 0]).sort((a, b) => a[0] - b[0]); const mid = m.id, ph = m.phase, mt = m.t;
+    M.salvarCarregar(); const S2 = G.S;
+    const m2 = (S2.secrets.meets || []).find(x => x.id === mid) || null;
+    const ph2 = m2 ? m2.phase : '', t2 = m2 ? m2.t : -1; // (as it came from the load)
+    const after = m2 ? m2.ids.map(id => S2.villagers.get(id)).filter(v => v && v.task && v.task.type === 'conclave' && v.task.m === mid).map(v => [v.id, v.task.st, !!v.robe, v.inside || 0, v.sleeping ? 1 : 0]).sort((a, b) => a[0] - b[0]) : [];
+    // (who was at the place is at the place, robed, inside the front's house if there is one; who was walking walks again)
+    const same = before.length === after.length && before.every((x, i) => x[0] === after[i][0] && (x[1] === 2 ? after[i][1] === 2 && after[i][2] === x[2] && after[i][3] === x[3] : after[i][1] < 2));
+    const w0 = secret();
+    // and it ends by its own rule: the rite's time, everyone let go, no robe left on
+    let ended = -1; for (let k = 0; k < 1300 && ended < 0; k++) { M.viver(0.1); if (!(S2.secrets.meets || []).some(x => x.id === mid)) ended = k / 10; if (k % 100 === 0) { const w = secret(); if (w.length) bad.push(w[0]); } }
+    const left = m2 ? m2.ids.map(id => S2.villagers.get(id)).filter(v => v && ((v.task && v.task.type === 'conclave') || v.robe)).length : -1;
+    ok(`o4 ${WORLD}`, live0 && before.length >= 2 && !!m2 && ph2 === ph && Math.abs(t2 - mt) < 0.2 && same && !w0.length && ended >= 0 && left === 0,
+      `reunião #${mid} ${q ? 'de ' + q.name : ''} (${ph}, ${before.length} dos ${m.ids.length} nela, ${before.filter(x => x[1] === 2).length} no lugar): depois do load ${m2 ? 'segue (' + ph2 + ' há ' + t2.toFixed(1) + ' s, como no save: ' + mt.toFixed(1) + ' s; ' + after.length + ' nela, ' + after.filter(x => x[1] === 2).length + ' no lugar' + (same ? ', cada um como estava' : ', MUDADOS: ' + JSON.stringify(before) + ' → ' + JSON.stringify(after)) + ')' : 'ACABOU'}; verificador ${w0[0] || 'limpo'}; ${ended >= 0 ? 'acabou pela regra dela ' + ended + ' s depois, ' + (left === 0 ? 'todos soltos e sem manto' : left + ' AINDA nela ou de manto') : 'NÃO acabou em 130 s'}`);
+  }
+}
+// ---------------- o5 a load gives no module a second day (L-694) ----------------
+// (the day a daily routine last ran, and the place of its round among the towns, were a variable of the module, zeroed by the
+// load: every town had its day of rent, of street life, the books closed, the morning after, twice on a day with a load. They
+// are the world's now — S.mod, in the save)
+{
+  M.pronto(WORLD); M.viver(2); const S = G.S; S.time = 0.3; M.viver(40); // (well into the day: every town had its round)
+  const KEYS = ['casa.day', 'casa.cur', 'social.day', 'social.cur', 'caves.day', 'eco.day', 'polity.day', 'tavern.day', 'ww.day'];
+  const before = KEYS.map(k => G.mod(k)); const made = JSON.stringify([...G.Fac.all()].map(f => [f.id, f.eco && f.eco.made]));
+  M.salvarCarregar();
+  const after = KEYS.map(k => G.mod(k)); const kept = before.every((x, i) => x === after[i]) && before.every(x => Number.isFinite(x));
+  M.viver(0.3);
+  const after2 = KEYS.map(k => G.mod(k)); const made2 = JSON.stringify([...G.Fac.all()].map(f => [f.id, f.eco && f.eco.made]));
+  // (the day's books of each people as they were: a second closing emptied them)
+  const books = made === made2 || JSON.parse(made2).every(([id, m], i) => Object.keys(JSON.parse(made)[i][1] || {}).every(k => (m || {})[k] >= JSON.parse(made)[i][1][k] - 1e-6));
+  ok(`o5 ${WORLD}`, kept && before.every((x, i) => x === after2[i]) && books,
+    `os relógios dos módulos (${KEYS.length}): ${kept ? 'os mesmos depois do load' : 'MUDARAM: ' + JSON.stringify(before) + ' → ' + JSON.stringify(after)}; três passos depois ${before.every((x, i) => x === after2[i]) ? 'nenhum deu outro dia' : 'OUTRO DIA: ' + JSON.stringify(after2)}; os livros do dia de cada povo ${books ? 'como estavam' : 'ZERADOS pelo load'}`);
 }
 const e = M.erros(); const errs = e.console.filter(l => /error|warn/.test(l));
 ok('verificador e erros', !bad.length && !secret().length && !Object.keys(e.mod).length && !errs.length, `ordens: ${bad.length ? bad.slice(0, 2).join(' · ') : 'limpo'}; erros de módulo ${JSON.stringify(e.mod)}; console ${errs.length ? errs.slice(0, 3).join(' | ') : 'limpo'}`);

@@ -30,10 +30,8 @@
   };
 
   // the morning after: the drinks of the night are counted, and too many weigh on the day
-  let lastDay = -1;
-  G.worldHooks.push(() => { lastDay = -1; }); // (a new world, or a save loaded: it starts over)
   Tv.update = function () {
-    const S = G.S; if (!S || S.day === lastDay) return; lastDay = S.day;
+    const S = G.S; if (!S || S.day === G.mod('tavern.day')) return; G.mod('tavern.day', S.day); // (the world's, in the save: no second morning after on a load, L-694)
     for (const v of S.villagers.values()) {
       if (!v.drinks) continue;
       if (v.drinkDay !== S.day) {

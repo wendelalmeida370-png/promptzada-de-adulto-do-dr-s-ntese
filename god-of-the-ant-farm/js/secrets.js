@@ -187,6 +187,8 @@
 
   // ------------------------------ the meeting ------------------------------
   function meetOf(l) { return st().meets.find(m => m.lodge === l.id) || null; }
+  // (the parts of a meeting of the night and their weight, as startMeet gives them — and as the load gives them back)
+  const MEET = { conclave: 2.3, lured: 2.4, insone: 1.9 };
   // (who is on the way to a meal, or at the top of hunger with the life going, eats first: a meeting that begins then does not
   // call them, lure them or keep them up — the festival's rule, L-234: a conclave took Túlia #1709 of Roma on her way to the
   // store, hunger 100 and life 30, and she starved at it with 390 of food in the store, L-397); nor one with busy hands — the
@@ -709,16 +711,33 @@
       out.secretsStalk = [];
       for (const v of S.villagers.values()) { const t = v.task; if (t && t.type === 'stalk') out.secretsStalk.push([v.id, t.target, t.soc, t.w || 0, t.inq || 0, t.st || 0, t.age || 0, t.rt || 0]); }
       out.secretsT = [tA, tB, lastDay];
+      // (who was at a meeting of the night — the members, the one lured, the one who could not sleep —, at which step and for
+      // how long: the meeting is in the save with the rest of the order, and the load gives each one's part back, L-694)
+      out.secretsMeet = [];
+      for (const v of S.villagers.values()) { const t = v.task; if (t && MEET[t.type]) out.secretsMeet.push([v.id, t.type, t.m, t.st || 0, +(+t.x).toFixed(2), +(+t.y).toFixed(2), t.master ? 1 : 0, +(t.age || 0).toFixed(1)]); }
     },
     load(o) {
       const S = G.S; S.secrets = o.secrets || null;
       for (const v of S.villagers.values()) { v.robe = null; }
       const s = S.secrets; if (!s) return;
-      // the night's meeting is over (the conclave is not in the save); the hunts go on as they were — the hunter marked, the
-      // retry, who followed whom (below) — and the order's clocks: a load decides no hunt (D-148). It cleared every hunter
-      // marked, and an opened save sent the order after every witness it had in limbo, the world gone on never: the load of the
-      // urb2's case 6 sent Bjorn after four, T-597, L-662
-      s.meets = [];
+      // the hunts go on as they were — the hunter marked, the retry, who followed whom (below) — and the order's clocks: a load
+      // decides no hunt (D-148). It cleared every hunter marked, and an opened save sent the order after every witness it had
+      // in limbo, the world gone on never: the load of the urb2's case 6 sent Bjorn after four, T-597, L-662.
+      // And the night's meeting goes on as it was saved (L-694): each one at it gets the part back by setTask — at the place if
+      // already there (the robe on, inside the front's house), else on the way again (the path is not in the save). The load
+      // ended every meeting and sent the members home awake — Sitamun, at her order's meeting in a storehouse with the baby in
+      // her arms, came back from the load at the door. A save of before (no such list) has its meetings ended, as it always loaded
+      if (!Array.isArray(s.meets)) s.meets = [];
+      if (!Array.isArray(o.secretsMeet)) s.meets = [];
+      else for (const e of o.secretsMeet) {
+        if (!Array.isArray(e)) continue;
+        const [id, type, mid, stp, x, y, master, age] = e; const v = S.villagers.get(id); const m = s.meets.find(q => q && q.id === mid);
+        if (!v || v.task || !m || !MEET[type] || !Number.isFinite(x) || !Number.isFinite(y)) continue;
+        const t0 = { type, m: mid, pri: MEET[type], st: stp >= 2 ? 2 : 0, x, y, kind: type }; if (type === 'conclave') t0.master = master ? 1 : 0;
+        const tk = G.Vg.setTask(v, t0); if (!tk) continue;
+        tk.age = Number.isFinite(age) ? age : 0;
+        if (tk.st === 2 && type === 'conclave') { const q = soc(m.soc); if (q) { v.robe = CREED[q.creed].robe; v.robeMark = CREED[q.creed].mark; } if (m.kind === 'fachada' && m.b && S.buildings.get(m.b)) v.inside = m.b; }
+      }
       const T = o.secretsT; if (Array.isArray(T) && T.length === 3 && T.every(Number.isFinite)) { tA = T[0]; tB = T[1]; lastDay = T[2]; }
       // (not to one another system has just given back what he was doing when the game was saved — the riot's guard (L-190) —:
       // that was his task then, not the questions, and the world gone on would have left him there. Jasão of Argos guarded the

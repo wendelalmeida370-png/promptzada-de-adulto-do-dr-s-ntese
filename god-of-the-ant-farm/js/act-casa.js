@@ -120,13 +120,14 @@
   // ------------------------------ the day of each town ------------------------------
   // once a day per town, in the world's step: owners settled, the rents paid, the families in need looked at — saving,
   // buying, renting, raising
-  let cur = 0, lastDay = -1, tAcc = 0;
-  G.worldHooks.push(() => { cur = 0; lastDay = -1; tAcc = 0; });
+  // (the day's round among the towns is the world's — G.mod, in the save —: a load gave every town a second day, L-694)
+  let tAcc = 0;
+  G.worldHooks.push(() => { tAcc = 0; });
   A.hooks.tick.push(function (step) {
-    const S = G.S; if (S.day !== lastDay) { lastDay = S.day; cur = 0; }
+    const S = G.S; if (S.day !== G.mod('casa.day')) { G.mod('casa.day', S.day); G.mod('casa.cur', 0); }
     tAcc += step || 1; if (tAcc + 1e-9 < 2) return; tAcc = 0; // (every other second of the world: a town)
-    const sets = [...S.settlements.values()].sort((a, b) => a.id - b.id); if (cur >= sets.length) return;
-    day(sets[cur++]);
+    const sets = [...S.settlements.values()].sort((a, b) => a.id - b.id); const cur = G.mod('casa.cur'); if (cur >= sets.length) return;
+    G.mod('casa.cur', cur + 1); day(sets[cur]);
   });
   // (K.day: the day of one town, as the world's step runs it — the scenario's hand calls it at once)
   K.day = set => day(set);

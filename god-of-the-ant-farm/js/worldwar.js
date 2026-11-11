@@ -139,11 +139,11 @@
     log(txt, 'peace'); G.UI && G.UI.toast('Paz no mundo', txt, 'peace');
     G.Lore && G.Lore.legend && G.Lore.legend('wwEnd' + w.n + ':' + S.day, `O fim d${w.name.startsWith('a ') ? 'a' : 'o'} ${w.name.replace(/^(a|o) /, '')}`, txt, { kind: 'war' });
   }
-  let lastDay = -1, tChk = 0;
-  G.worldHooks.push(() => { lastDay = -1; tChk = 0; }); // (a new world, or a save loaded: it starts over)
+  let tChk = 0;
+  G.worldHooks.push(() => { tChk = 0; }); // (a new world, or a save loaded: it starts over)
   WW.update = function (dt) {
     const S = G.S; if (!S) return;
-    if (S.day !== lastDay) { lastDay = S.day; WW.daily(); }
+    if (S.day !== G.mod('ww.day')) { G.mod('ww.day', S.day); WW.daily(); } // (the world's, in the save: no second day on a load, L-694)
     tChk += dt; if (tChk >= 3) { tChk = 0; check(); }
   };
   G.saveHooks = G.saveHooks || [];
