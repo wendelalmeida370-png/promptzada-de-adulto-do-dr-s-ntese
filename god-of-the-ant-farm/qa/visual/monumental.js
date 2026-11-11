@@ -56,6 +56,10 @@
 //   8t. (PARTE=quadro, sozinha na máquina) o mesmo em tempo de relógio, a medida do e8 do encarna (simulação + 3D, quadros de 16 ms
 //      na qualidade média, mediana e p95); alvo: mediana ≤ 13 ms (ou não acima da da figura × 1,15) e p95 não pior que o da figura ×
 //      1,15. E, para ler, antes e depois de fundá-lo (um minuto entre as duas), as chamadas e os triângulos
+//   A 8 e a 8t medem no mundo de referência (qa/visual/ref8/: a metrópole que o salto do 75a40e2 salvou, a Roma da T-492 e da
+//      D-134), sempre o mesmo, aberto pela porta do jogo (G.Main.openSave): nos mundos prontos de cada geração a vista mudava com o
+//      mundo (T-671). As fotos e as outras partes seguem na metrópole da geração. O mundo de referência que não abrir falha as duas.
+//      E as duas, na qualidade média, a das vistas: um turno desenhado noutra falha as duas, dizendo qual (T-672)
 //   9. na qualidade leve (um pedaço em volta), o corpo no pedaço além do da ponta de lá do Coliseu: o pedaço do canto dele perto
 //      (sem a silhueta de longe no lugar do prédio inteiro)
 //   10. sem erro de página nem aviso no console
@@ -69,6 +73,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const handFor = require(path.join(__dirname, '..', 'mao-regra.js'));
 const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'qa', 'monumental', 'fotos'));
 const PARTE = process.env.PARTE || '';
+const REF8 = path.join(__dirname, 'ref8', 'metropole-75a40e2.js'); // (the reference world of the 8 and the 8t: T-671)
 
 // ------------------------------ what both parts share (serialized into the page: only G) ------------------------------
 function HELP(G) {
@@ -679,37 +684,41 @@ async function browserPart() {
     await page.addScriptTag({ path: path.join(__dirname, 'coliseu-teste.js') });
     await page.evaluate(`window.handFor = ${handFor.toString()}`); // (the god's hand by the game's rule, for HELP's temples: T-515)
     await page.evaluate(`window.__MON = (${HELP.toString()})(window.G)`);
+    // the reference world of the 8 and the 8t (T-671): the metropole the skip of 75a40e2 saved — the city the T-492 measured the
+    // Colosseum in, the D-134's own —, kept as it was saved and never made again (qa/visual/ref8/), its data taken aside as it comes
+    // (G.Ready.got: the ready metropole of the generation stays the photos')
+    if (fs.existsSync(REF8)) { await page.evaluate(() => { const got = G.Ready.got; G.Ready.got = (k, s) => { window.__ref8 = s; G.Ready.got = got; }; }); await page.addScriptTag({ path: REF8 }); }
     // the world, and the body in Roma where the god's hand will found the Colosseum: the lot found and levelled first, the body on
-    // its square before the way in, facing it — the frame measured there before, with the Colosseum after
-    const r0 = await page.evaluate(() => {
-      const V = window.__VIS, H = window.__MON; V.open('metropole', 'baixa'); const S = G.S; G.S.time = 0.42;
-      const set = [...S.settlements.values()].find(s => s.name === 'Roma'); const n = G.Escala.steps('maravilha').find(s => s.id === 'maravilha').n;
-      const site = H.siteOf(set, n, 60, { cross: true }) || H.siteOf(set, n, 60); const drop0 = H.drop(site[0], site[1], n); const h0 = drop0 > 3 ? H.aplainar(site[0], site[1], n) : null;
+    // its square before the way in, facing it — the frame measured there before, with the Colosseum after. In a ready world of the
+    // generation (V.open), or — for the 8 and the 8t — in the reference world, opened by the game's own door (Main.openSave) and the
+    // town entered as V.open enters it (T-671)
+    const place = w => page.evaluate(w => {
+      const V = window.__VIS, H = window.__MON;
+      if (w !== 'ref8') V.open(w, 'baixa');
+      else { if (!window.__ref8) return { ok: false, why: 'o arquivo do mundo de referência não veio' };
+        if (G.Modes.state !== 'GOD') { G.Modes.leave('deus'); V.until(() => G.Modes.state === 'GOD', 400, 100); }
+        let o = null; try { o = JSON.parse(window.__ref8); } catch (e) { return { ok: false, why: 'o mundo de referência não se lê: ' + e.message }; }
+        G.Realm.setQuality('baixa'); G.Main.openSave(o, 'O mundo de referência da prova 8.'); if (G.Audio) G.Audio.mute = true;
+        if (!(G.S && G.S.day === o.day && G.S.clock === o.clock)) return { ok: false, why: `o mundo de referência não carregou (o save: dia ${o.day}; o mundo: ${G.S ? 'dia ' + G.S.day : 'nenhum'})` };
+        V.enterTown(); }
+      const S = G.S; G.S.time = 0.42;
+      const set = [...S.settlements.values()].find(s => s.name === 'Roma'); if (!set) return { ok: false, why: 'sem Roma' };
+      const n = G.Escala.steps('maravilha').find(s => s.id === 'maravilha').n;
+      const site = H.siteOf(set, n, 60, { cross: true }) || H.siteOf(set, n, 60); if (!site) return { ok: false, why: 'nenhum lote de ' + n + ' casas perto de Roma' };
+      const drop0 = H.drop(site[0], site[1], n); const h0 = drop0 > 3 ? H.aplainar(site[0], site[1], n) : null;
       window.__site = { set: set.id, site, n, drop0, h0 };
       // (the body: a grown-up of Roma, put on the square before the lot's south side — the way in faces the street, found below)
       const v = [...S.villagers.values()].filter(q => q.set === set.id && q.age >= 18 && q.age < 55 && !q.inside && G.Possess.can(q).ok).sort((a, b) => a.id - b.id)[0];
+      if (!v) return { ok: false, why: 'ninguém de Roma para encarnar' };
       if (G.Modes.state !== 'GOD') { G.Modes.leave('deus'); V.until(() => G.Modes.state === 'GOD', 400, 100); }
       // (on the square before the lot's south side, the nearest open ground)
       let at = null; for (let d = 0; d < 6 && !at; d++) for (const dx of [0, -1, 1, -2, 2]) { const q = [site[0] + n / 2 + dx, site[1] + n + 2.5 + d]; if (G.W.inb(q[0], q[1]) && G.W.walkableXY(q[0], q[1]) && !G.S.treeAt[G.W.idx(q[0], q[1])]) { at = q; break; } }
       if (at) { G.inSim++; G.Vg.endTask(v); v.x = at[0]; v.y = at[1]; v.path = null; G.inSim--; }
       const can = G.Possess.can(v); const went = G.Modes.enter(v); V.until(() => G.Modes.state === 'INC', 300, 100); V.f(6);
       return { ok: G.Modes.state === 'INC', site, drop0: +drop0.toFixed(1), h0, who: v.name, at, can: can.ok ? 'ok' : can.why, went: !!went, state: G.Modes.state };
-    });
-    if (!r0.ok) { ok('7. o corpo em Roma', false, JSON.stringify(r0)); return fails; }
-    // the frame as the e8 measures it (the medium quality, 40 frames, then 90 timed), the camera held facing the lot
-    const measure = () => page.evaluate(() => {
-      const V = window.__VIS; const st = G.Avatar.state(); const s = window.__site; const T = G.Space.TILE;
-      const cx = (s.site[0] + s.n / 2) * T, cz = (s.site[1] + s.n / 2) * T; const yaw = Math.atan2(cz - st.Z, cx - st.X);
-      G.Realm.setQuality('media'); V.warm(2); st.yaw = yaw; G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = 0.12; G.Cam3D.dist = 4.8; V.f(40, 33);
-      const times = []; for (let k = 0; k < 90; k++) { const t0 = performance.now(); G.Main.frameFor(16); times.push(performance.now() - t0); } times.sort((a, b) => a - b);
-      const c = V.count(); G.Realm.setQuality('baixa');
-      return { med: +times[45].toFixed(1), p95: +times[85].toFixed(1), calls: c.calls, tris: c.tris };
-    });
-    // (the frame's clock is measured only in PARTE=quadro — worth something only with the machine free: alone, in the regression's
-    // phase of performance; with five queues on four cores its p95 was the machine's, T-472. The other parts measure its CPU: 8)
-    const quadro = PARTE === 'quadro';
-    const before = quadro ? await measure() : null;
-    const r1 = await page.evaluate(() => {
+    }, w);
+    // the Colosseum founded on the lot by the god's hand
+    const found = () => page.evaluate(() => {
       const H = window.__MON; const s = window.__site; const set = G.S.settlements.get(s.set);
       const found = q => { G.inSim++; try { return G.Village.handFound(set, 'maravilha', 'maravilha', { built: true, x: q.site[0] + Math.floor(q.n / 2), y: q.site[1] + Math.floor(q.n / 2), R: 0.5 }); } finally { G.inSim--; } };
       // (the lot levelled for it is free ground the town builds on too: in the seconds the body went in by, the metrópole's Rome of
@@ -726,11 +735,23 @@ async function browserPart() {
       window.__nm = { C: nm.C, H: nm.H, base: nm.base, sandY: nm.sandY, e, o, front: reach(o), back: reach([-o[0], -o[1]]), diag: reach(dg), dg };
       return { ok: true, id: b.id, x: b.x, y: b.y, teste: !!G.ColiseuTeste, again };
     });
-    if (!r1.ok) { ok('7. o Coliseu fundado', false, `o handFound não fundou${r1.again ? ` (nem com o lote aberto pela mão do deus: a cidade tinha começado nele ${r1.again.by.join(', ') || 'nada'})` : ''}`); return fails; }
+    const notFound = r1 => `o handFound não fundou${r1.again ? ` (nem com o lote aberto pela mão do deus: a cidade tinha começado nele ${r1.again.by.join(', ') || 'nada'})` : ''}`;
+    const told = (r0, r1) => `o Coliseu ${r1.teste ? 'DE TESTE' : 'do M1'} #${r1.id} em ${r1.x},${r1.y}; o chão do lote tinha ${r0.drop0} m de desnível${r0.h0 !== null ? ', aplainado pela mão do deus' : ''}${r1.again ? `; no lote aplainado a cidade começou no meio ${r1.again.by.join(', ')}: derrubado pela mão do deus, como o meteoro, e o Coliseu fundado ali` : ''}; o corpo: ${r0.who}`;
     // (its plan made — once, when the eye first asks for it: Space.plan, the pump's — and its chunk drawn with it: the frame
     // measured with the Colosseum in view as it stays; the one time a chunk is drawn again for it is the part 1's measure)
-    await page.evaluate(() => { const V = window.__VIS; G.Space.planNow(G.S.buildings.get(window.__b)); V.warm(2); V.f(10, 33); });
-    console.log(`(o Coliseu ${r1.teste ? 'DE TESTE' : 'do M1'} #${r1.id} em ${r1.x},${r1.y}; o chão do lote tinha ${r0.drop0} m de desnível${r0.h0 !== null ? ', aplainado pela mão do deus' : ''}${r1.again ? `; no lote aplainado a cidade começou no meio ${r1.again.by.join(', ')}: derrubado pela mão do deus, como o meteoro, e o Coliseu fundado ali` : ''}; o corpo: ${r0.who})`);
+    const planned = () => page.evaluate(() => { const V = window.__VIS; G.Space.planNow(G.S.buildings.get(window.__b)); V.warm(2); V.f(10, 33); });
+    // the frame as the e8 measures it (the medium quality, 40 frames, then 90 timed), the camera held facing the lot
+    const measure = () => page.evaluate(() => {
+      const V = window.__VIS; const st = G.Avatar.state(); const s = window.__site; const T = G.Space.TILE;
+      const cx = (s.site[0] + s.n / 2) * T, cz = (s.site[1] + s.n / 2) * T; const yaw = Math.atan2(cz - st.Z, cx - st.X);
+      G.Realm.setQuality('media'); V.warm(2); st.yaw = yaw; G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = 0.12; G.Cam3D.dist = 4.8; V.f(40, 33);
+      const times = []; for (let k = 0; k < 90; k++) { const t0 = performance.now(); G.Main.frameFor(16); times.push(performance.now() - t0); } times.sort((a, b) => a - b);
+      const c = V.count(); G.Realm.setQuality('baixa');
+      return { med: +times[45].toFixed(1), p95: +times[85].toFixed(1), calls: c.calls, tris: c.tris };
+    });
+    // (the frame's clock is measured only in PARTE=quadro — worth something only with the machine free: alone, in the regression's
+    // phase of performance; with five queues on four cores its p95 was the machine's, T-472. The other parts measure its CPU: 8)
+    const quadro = PARTE === 'quadro';
     // (the chunk of the Colosseum's corner in turns, three views swapped every 15 frames, six times each — the same load of the
     // machine for the three, T-433 —: the Colosseum as it is drawn near — the chunk's solid mesh as the realm drew it, the one
     // with as many points as the chunk's buildings drawn again here —; the same chunk without it and in its place its figure from
@@ -741,7 +762,7 @@ async function browserPart() {
     // the software GL's too, and the next turn begins with nothing of it behind. The one time the chunk is drawn again for it is
     // part 1's)
     const VIEWS = [0, 1, 2, 1, 2, 0, 2, 0, 1, 0, 1, 2, 1, 2, 0, 2, 0, 1]; // (near, figure, empty: each first, second and last twice)
-    const prep = await page.evaluate(() => {
+    const views = () => page.evaluate(() => {
       const V = window.__VIS, R3 = G.Realm, B3 = G.Build3D, S = G.S; const b = S.buildings.get(window.__b); const T = G.Space.TILE, C = 16;
       const st = G.Avatar.state(); const s = window.__site; const cx = (s.site[0] + s.n / 2) * T, cz = (s.site[1] + s.n / 2) * T; const yaw = Math.atan2(cz - st.Z, cx - st.X);
       R3.setQuality('media'); V.warm(2); st.yaw = yaw; G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = 0.12; G.Cam3D.dist = 4.8; V.f(20, 33);
@@ -752,45 +773,77 @@ async function browserPart() {
       const keep = S.buildings.get(b.id); S.buildings.delete(b.id); let wo; try { wo = B3.nearGeo(x0, y0, C); } finally { S.buildings.set(b.id, keep); }
       const withG = M.geometry, noG = wo.solid || new THREE.BufferGeometry(); const gl = R3.renderer().getContext(), px = new Uint8Array(4);
       const figG = B3.farGeo(b.x, b.y, 1), fig = new THREE.Mesh(figG, MS); fig.visible = false; M.parent.add(fig);
-      window.__run = (view, n, sync) => { M.geometry = view === 0 ? withG : noG; fig.visible = view === 1; const out = []; for (let k = 0; k < n; k++) { const t0 = performance.now(); G.Main.frameFor(16); out.push(performance.now() - t0); }
+      window.__runQ = new Set(); // (the quality each turn is drawn at: the medium the views are made at, the e8's — T-672)
+      window.__run = (view, n, sync) => { window.__runQ.add(R3.q); M.geometry = view === 0 ? withG : noG; fig.visible = view === 1; const out = []; for (let k = 0; k < n; k++) { const t0 = performance.now(); G.Main.frameFor(16); out.push(performance.now() - t0); }
         if (sync) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); fig.visible = false; return out; };
       window.__undo = () => { M.geometry = withG; fig.parent.remove(fig); figG.dispose(); for (const q in wo) if (wo[q] && wo[q] !== noG) wo[q].dispose(); noG.dispose();
         { const re = B3.nearGeo(x0, y0, C); for (const q in re) if (re[q]) re[q].dispose(); } // (the chunk's lamps and tops as they were)
         R3.setQuality('baixa'); };
       // (the GL the frames are drawn by: the browser's own name of it — the test machine's is by software, SwiftShader —, D-137)
       const dbg = gl.getExtension('WEBGL_debug_renderer_info'); const gpu = String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
-      return { none: false, gpu, tris: [Math.round(withG.attributes.position.count / 3), wo.solid ? Math.round(wo.solid.attributes.position.count / 3) : 0, Math.round(figG.attributes.position.count / 3)] };
+      // (and where the view is: the body, the eye and the Colosseum's middle, metres)
+      const c3 = R3.camera().position; const view = { body: [+st.X.toFixed(2), +st.Y.toFixed(2), +st.Z.toFixed(2)], eye: [+c3.x.toFixed(2), +c3.y.toFixed(2), +c3.z.toFixed(2)], C: [cx, cz], site: s.site };
+      return { none: false, gpu, view, tris: [Math.round(withG.attributes.position.count / 3), wo.solid ? Math.round(wo.solid.attributes.position.count / 3) : 0, Math.round(figG.attributes.position.count / 3)] };
     });
     const qn = (a, p) => { if (!a.length) return NaN; const s2 = a.slice().sort((x, y) => x - y); return +s2[Math.min(s2.length - 1, Math.floor(s2.length * p))].toFixed(1); };
     const load = () => require('os').loadavg()[0].toFixed(1), cores = require('os').cpus().length;
-    const trisTxt = () => `o pedaço do canto ${prep.tris[1]} triângulos sem o Coliseu, ${prep.tris[1] + prep.tris[2]} com a figura dele (${prep.tris[2]}), ${prep.tris[0]} com ele de perto`;
-    if (quadro) {
-      // 8t. the clock (alone on the machine: the regression's phase of performance): the frame as the e8 measures it, in turns of
-      // the three views; the Colosseum near against its figure
-      const after = await measure(); const T3 = [[], [], []];
-      if (!prep.none) { await page.evaluate(() => window.__run(0, 6, true)); for (const w of VIEWS) T3[w].push(...await page.evaluate(([x]) => window.__run(x, 15, true), [w])); await page.evaluate(() => window.__undo()); }
-      const tm = T3.map(a => qn(a, 0.5)), tp = T3.map(a => qn(a, 0.95));
-      // (the p95 of the clock judged only on a GL of a video card: by software — the test machine's SwiftShader —, the slow frames
-      // of a turn are the GL's queue filling sooner, at the end of the turns, neither the shadow's frames nor the first; the queue
-      // a card does not have. The worst turn's cost is the 8's, in CPU, every turn drawn to its end — D-137)
-      const soft = /swiftshader|llvmpipe|software|softpipe/i.test(prep.gpu || '');
-      ok('8t. o quadro do Modo Encarnado com o Coliseu à vista em tempo de relógio, sozinha na máquina (a medida do e8, qualidade média, em turnos; D-134: contra a figura dele de longe no mesmo lugar): mediana ≤ 13 ms (ou não acima da da figura × 1,15) e, numa placa de vídeo, p95 não pior que o da figura × 1,15 (D-137)', !prep.none && (tm[0] <= 13 || tm[0] <= tm[1] * 1.15 + 0.5) && (soft || tp[0] <= tp[1] * 1.15 + 0.5),
-        prep.none ? 'o pedaço do Coliseu não achado na cena' : `carga da máquina ${load()} em ${cores} núcleos; GL ${soft ? 'por software' : 'da placa'} (${(prep.gpu || '?').slice(0, 60)}); em turnos (6 × 15 quadros cada vista): a vista sem ele ${tm[2]} ms (p95 ${tp[2]}) · a figura de longe no lugar dele ${tm[1]} ms (p95 ${tp[1]}) · o Coliseu de perto ${tm[0]} ms (p95 ${tp[0]}${soft ? ', não julgado: a fila do GL por software' : ''}); ${trisTxt()}`);
-      console.log(`DESEMPENHO | monumental | Roma da metrópole, o corpo diante do Coliseu, em turnos: mediana ${tm[2]} (vazia) · ${tm[1]} (a figura) · ${tm[0]} ms (de perto), p95 ${tp[2]} · ${tp[1]} · ${tp[0]} ms; antes e depois de fundá-lo (um minuto entre as duas, carga ${load()}): mediana ${before.med} → ${after.med} ms, p95 ${before.p95} → ${after.p95} ms, chamadas ${before.calls} → ${after.calls}, triângulos ${before.tris} → ${after.tris}`);
-      return fails; } // (the quadro only: the photos are the other parts')
-    // 8. what the frame costs with the Colosseum in view, in the CPU of the browser — the page's process and the GPU process, the
-    // software GL's, where the raster of a frame is done, after the page's frame: out of the page's clock, which times only the
-    // page's thread and the waits when the GL is behind, as the machine has it (T-472: the p95 of the clock was five queues on
-    // four cores) —, every turn drawn to its end (a pixel read back) before the CPU is read; the Colosseum near against its
-    // figure from afar in its place (D-134), by the frame, the limit of the clock's: the middle of the turns and the worst not
-    // above the figure's × 1,15
-    const cpuR = [[], [], []]; let cpuNo = false;
-    if (!prep.none) { await page.evaluate(() => window.__run(0, 6, true));
-      for (const w of VIEWS) { const c0 = browserCPU(); await page.evaluate(([x]) => window.__run(x, 15, true), [w]); const c1 = browserCPU(); if (c0 === null) { cpuNo = true; break; } cpuR[w].push((c1 - c0) / 15); }
-      await page.evaluate(() => window.__undo()); }
-    const cm = cpuR.map(a => qn(a, 0.5)), cw = cpuR.map(a => qn(a, 0.95));
-    ok('8. o custo do quadro com o Coliseu à vista, em CPU do navegador (o processo da página e o do GL por software), em turnos; D-134: contra a figura dele de longe no mesmo lugar: a mediana dos turnos não acima da da figura × 1,15, e o pior turno não pior que o pior da figura × 1,15', !prep.none && !cpuNo && cm[0] <= cm[1] * 1.15 + 0.5 && cw[0] <= cw[1] * 1.15 + 0.5,
-      prep.none ? 'o pedaço do Coliseu não achado na cena' : cpuNo ? 'sem /proc: o CPU dos processos não se lê nesta máquina' : `carga da máquina ${load()} em ${cores} núcleos; em turnos (6 × 15 quadros cada vista), o CPU de um quadro: a vista sem ele ${cm[2]} ms (o pior turno ${cw[2]}) · a figura de longe no lugar dele ${cm[1]} ms (${cw[1]}) · o Coliseu de perto ${cm[0]} ms (${cw[0]}): ${((cm[0] / cm[1] - 1) * 100).toFixed(0)}% sobre a figura; ${trisTxt()} (o tempo de relógio: PARTE=quadro, sozinha na máquina)`);
+    // (the quality the turns were drawn at, by the menu's name: the medium, or the 8 and the 8t fail saying which — T-672)
+    const turnsQ = () => page.evaluate(() => { const R3 = G.Realm, q = [...window.__runQ]; return { media: q.length === 1 && q[0] === 'media', txt: q.map(k => (R3.QNAMES.find(n => n[0] === k) || [k, k])[1].toLowerCase()).join(', ') || 'nenhuma' }; });
+    const offQ = q => q.media ? '' : `os turnos na qualidade ${q.txt}, não na média em que as vistas são feitas (T-672); `;
+    // 8 and 8t: the frame with the Colosseum in view, in the reference world — the city of the T-492 and of the D-134, the same in
+    // every generation of the ready worlds: in those, the view followed the world, and the Rome of the generation 19 gave +17% where
+    // the T-492's gave +12%, the Colosseum drawn the same (T-671). A reference world that does not open fails the two, saying so
+    const N8 = '8. o custo do quadro com o Coliseu à vista, em CPU do navegador (o processo da página e o do GL por software), em turnos; D-134: contra a figura dele de longe no mesmo lugar: a mediana dos turnos não acima da da figura × 1,15, e o pior turno não pior que o pior da figura × 1,15';
+    const N8t = '8t. o quadro do Modo Encarnado com o Coliseu à vista em tempo de relógio, sozinha na máquina (a medida do e8, qualidade média, em turnos; D-134: contra a figura dele de longe no mesmo lugar): mediana ≤ 13 ms (ou não acima da da figura × 1,15) e, numa placa de vídeo, p95 não pior que o da figura × 1,15 (D-137)';
+    {
+      // (the frame before the Colosseum, in PARTE=quadro, then the Colosseum founded: in the reference world as ever)
+      const r8 = await place('ref8'); const before = r8.ok && quadro ? await measure() : null; const r81 = r8.ok ? await found() : null;
+      if (!r8.ok || !r81.ok) ok(quadro ? N8t : N8, false, `o mundo de referência (${path.relative(ROOT, REF8)}): ${!r8.ok ? r8.why || JSON.stringify(r8) : notFound(r81)}`);
+      else {
+        await planned(); console.log(`(no mundo de referência: ${told(r8, r81)})`);
+        // (and, in PARTE=quadro, the frame's clock with it founded, for the line of DESEMPENHO beside the one before: before the
+        // views are made ready — measure leaves the light quality behind it, and measured after them, the turns of the 8t were drawn
+        // at the light quality, not the medium one the e8 measures and the views are made at: T-672)
+        const after = quadro ? await measure() : null;
+        const prep = await views(); if (!prep.none) console.log(`(a vista da 8: ${JSON.stringify(prep.view)})`);
+        const trisTxt = () => `o pedaço do canto ${prep.tris[1]} triângulos sem o Coliseu, ${prep.tris[1] + prep.tris[2]} com a figura dele (${prep.tris[2]}), ${prep.tris[0]} com ele de perto`;
+        if (quadro) {
+          // 8t. the clock (alone on the machine: the regression's phase of performance): the frame as the e8 measures it, in turns
+          // of the three views, at the medium quality the views were made at (T-672); the Colosseum near against its figure
+          const T3 = [[], [], []];
+          if (!prep.none) { await page.evaluate(() => window.__run(0, 6, true)); for (const w of VIEWS) T3[w].push(...await page.evaluate(([x]) => window.__run(x, 15, true), [w])); await page.evaluate(() => window.__undo()); }
+          const tm = T3.map(a => qn(a, 0.5)), tp = T3.map(a => qn(a, 0.95));
+          // (the p95 of the clock judged only on a GL of a video card: by software — the test machine's SwiftShader —, the slow frames
+          // of a turn are the GL's queue filling sooner, at the end of the turns, neither the shadow's frames nor the first; the queue
+          // a card does not have. The worst turn's cost is the 8's, in CPU, every turn drawn to its end — D-137)
+          const soft = /swiftshader|llvmpipe|software|softpipe/i.test(prep.gpu || ''); const tq = prep.none ? null : await turnsQ();
+          ok(N8t, !prep.none && tq.media && (tm[0] <= 13 || tm[0] <= tm[1] * 1.15 + 0.5) && (soft || tp[0] <= tp[1] * 1.15 + 0.5),
+            prep.none ? 'o pedaço do Coliseu não achado na cena' : `${offQ(tq)}no mundo de referência; carga da máquina ${load()} em ${cores} núcleos; GL ${soft ? 'por software' : 'da placa'} (${(prep.gpu || '?').slice(0, 60)}); em turnos na qualidade ${tq.txt} (6 × 15 quadros cada vista): a vista sem ele ${tm[2]} ms (p95 ${tp[2]}) · a figura de longe no lugar dele ${tm[1]} ms (p95 ${tp[1]}) · o Coliseu de perto ${tm[0]} ms (p95 ${tp[0]}${soft ? ', não julgado: a fila do GL por software' : ''}); ${trisTxt()}`);
+          console.log(`DESEMPENHO | monumental | Roma do mundo de referência (a metrópole do 75a40e2), o corpo diante do Coliseu, em turnos: mediana ${tm[2]} (vazia) · ${tm[1]} (a figura) · ${tm[0]} ms (de perto), p95 ${tp[2]} · ${tp[1]} · ${tp[0]} ms; antes e depois de fundá-lo (um minuto entre as duas, carga ${load()}): mediana ${before.med} → ${after.med} ms, p95 ${before.p95} → ${after.p95} ms, chamadas ${before.calls} → ${after.calls}, triângulos ${before.tris} → ${after.tris}`);
+        } else {
+          // 8. what the frame costs with the Colosseum in view, in the CPU of the browser — the page's process and the GPU process,
+          // the software GL's, where the raster of a frame is done, after the page's frame: out of the page's clock, which times only
+          // the page's thread and the waits when the GL is behind, as the machine has it (T-472: the p95 of the clock was five queues
+          // on four cores) —, every turn drawn to its end (a pixel read back) before the CPU is read; the Colosseum near against its
+          // figure from afar in its place (D-134), by the frame, the limit of the clock's: the middle of the turns and the worst not
+          // above the figure's × 1,15
+          const cpuR = [[], [], []]; let cpuNo = false;
+          if (!prep.none) { await page.evaluate(() => window.__run(0, 6, true));
+            for (const w of VIEWS) { const c0 = browserCPU(); await page.evaluate(([x]) => window.__run(x, 15, true), [w]); const c1 = browserCPU(); if (c0 === null) { cpuNo = true; break; } cpuR[w].push((c1 - c0) / 15); }
+            await page.evaluate(() => window.__undo()); }
+          const cm = cpuR.map(a => qn(a, 0.5)), cw = cpuR.map(a => qn(a, 0.95)); const cq = prep.none ? null : await turnsQ();
+          ok(N8, !prep.none && !cpuNo && cq.media && cm[0] <= cm[1] * 1.15 + 0.5 && cw[0] <= cw[1] * 1.15 + 0.5,
+            prep.none ? 'o pedaço do Coliseu não achado na cena' : cpuNo ? 'sem /proc: o CPU dos processos não se lê nesta máquina' : `${offQ(cq)}no mundo de referência; carga da máquina ${load()} em ${cores} núcleos; em turnos na qualidade ${cq.txt} (6 × 15 quadros cada vista), o CPU de um quadro: a vista sem ele ${cm[2]} ms (o pior turno ${cw[2]}) · a figura de longe no lugar dele ${cm[1]} ms (${cw[1]}) · o Coliseu de perto ${cm[0]} ms (${cw[0]}): ${((cm[0] / cm[1] - 1) * 100).toFixed(0)}% sobre a figura, o detalhe ${(cm[0] - cm[1]).toFixed(0)} ms; ${trisTxt()} (o tempo de relógio: PARTE=quadro, sozinha na máquina)`);
+        }
+      }
+      if (quadro) return fails; // (the quadro only: the photos are the other parts')
+    }
+    // the photos' world: the metropole of the generation, its Rome, the Colosseum founded as above
+    const r0 = await place('metropole');
+    if (!r0.ok) { ok('7. o corpo em Roma', false, JSON.stringify(r0)); return fails; }
+    const r1 = await found();
+    if (!r1.ok) { ok('7. o Coliseu fundado', false, notFound(r1)); return fails; }
+    await planned(); console.log(`(${told(r0, r1)})`);
     // the photos: the eye's pose set after the game's own (the photos only: what the camera does is the part 1's proof)
     // (the body put at the pose's point first, when it has one — by Avatar.place, or taken there and attached again (attach: out of
     // a building it stood in — out of it first: the world puts one inside a building where it is not back at its door —) —;
