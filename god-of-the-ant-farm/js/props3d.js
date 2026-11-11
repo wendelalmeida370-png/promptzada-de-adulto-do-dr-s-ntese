@@ -208,8 +208,9 @@
   const NOTHING = { res: 0, roles: [], wood: false, cask: 0, bench: false, wash: 0, pots: 0, casks: 0, baskets: 0, nets: 0, rope: 0 };
   const aboutOf = K => (G.Atmos && G.Atmos.about ? G.Atmos.about(K.b) : NOTHING);
   P3.aboutOf = aboutOf;
-  // (for the proofs: the piece just put is this thing)
-  const tag = (n0, thing) => { if (rec && rec.length > n0) rec[n0].thing = thing; };
+  // (for the proofs: the pieces just put are this thing — its first, and the parts that go with it: the block by the wood,
+  // the oars by the nets)
+  const tag = (n0, thing) => { if (rec) for (let k = n0; k < rec.length; k++) if (!rec[k].thing) { rec[k].thing = thing; if (k > n0) rec[k].part = true; } };
   function home(K, S0) {
     const h = k => K.hv(900 + k); const A = aboutOf(K); const S = S0.filter(q => !q.thin), T = S0.filter(q => q.thin);
     // the firewood under the eaves of the house a woodcutter lives in, the block beside it (a house keeps no wood of its own)
@@ -625,7 +626,7 @@
     const o = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[G.Build3D.doorSide(K.b)]; const x = K.w / 2, z = K.d / 2;
     G.Build3D.runeStone(K, x - o[0] * 1.48, z - o[1] * 1.48, Math.atan2(o[0], o[1]), 0.7);
   }
-  const KIND = { well: wellStone, hut: home, house: home, sobrado: home, insula: home, barraco: home, storehouse: store, armazem: store, celeiro: store, workshop: smithy, forja: smithy, doca: quay, olaria: potter, mercado: market, feira: market, mercado_negro: market, taverna: tavern };
+  const KIND = { well: wellStone, hut: home, house: home, sobrado: home, insula: home, quarteirao: home, barraco: home, storehouse: store, armazem: store, celeiro: store, workshop: smithy, forja: smithy, doca: quay, olaria: potter, mercado: market, feira: market, mercado_negro: market, taverna: tavern };
   // what a built building has about it (build3d calls this after drawing it, with its kit)
   // (whether a building's picture has room for what lies about it: one drawn from its kit, always — its yard, its woodshed —;
   // one drawn from its plan fills its lot, and has it only if its last picture found a strip to put things on. Build3D's

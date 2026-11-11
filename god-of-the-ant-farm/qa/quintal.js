@@ -36,7 +36,7 @@ G.People3D.init(THREE, realm);
 const At = G.Atmos, B3 = G.Build3D, PR = G.Props3D, A = G.Act, Sp = G.Space;
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | quintal ${name} | ${info}`); if (!c) fails.push(name); };
 const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const run = k => !ONLY.length || ONLY.includes(k);
-const world = process.argv[2] || 'metropole';
+const world = process.argv[2] || process.env.MUNDO || 'metropole';
 M.pronto(world);
 G.Realm.setQuality('alta'); // (the preset that draws all of the decoration: what a house has is never left out for the machine's sake)
 let S = G.S;
@@ -58,7 +58,7 @@ const drink = b => DRINK.filter(k => ((b.inv || {})[k] || 0) >= 1).length;
 const pour = b => POUR.reduce((a, k) => a + ((b.inv || {})[k] || 0), 0);
 const rawOps = b => A.all().filter(o => o.def === 'oficio' && A.live(o) && o.at === b.id);
 const raw = b => rawOps(b).reduce((a, o) => a + (o.data.cru || 0), 0);
-const things = b => PR.pieces(b).map(p => p.thing).filter(Boolean);
+const things = b => PR.pieces(b).filter(p => !p.part).map(p => p.thing).filter(Boolean);
 const sigOf = b => B3.sig(b.x, b.y, 1);
 const kindOf = b => { const s = B3.shellOf(b); return s ? s.shell.kind : 'kit'; };
 
@@ -68,7 +68,7 @@ if (run('q1')) {
   let houses = 0, lived = 0, livedShow = 0, empty = 0, emptyThings = 0, wood = 0, woodShow = 0, cask = 0, caskShow = 0, trade = 0, tradeShow = 0, plan = 0, thin = 0, pieces = 0;
   const why = (b, what) => { const k = kindOf(b); (k === 'round' ? ex.redonda : !(PR.roomOf(b) > 0) ? ex.semFaixa : ex.semVao).push(`${tag(b)} (${what})`); };
   for (const b of built()) {
-    if (!housing(b)) continue; houses++; const L = res(b), P = PR.pieces(b), T = P.map(p => p.thing).filter(Boolean), roles = rolesOf(b); pieces += P.length; thin += P.filter(p => p.thin).length; if (kindOf(b) !== 'kit') plan++;
+    if (!housing(b)) continue; houses++; const L = res(b), P = PR.pieces(b), T = P.filter(p => !p.part).map(p => p.thing).filter(Boolean), roles = rolesOf(b); pieces += P.length; thin += P.filter(p => p.thin).length; if (kindOf(b) !== 'kit') plan++;
     for (const t of T) cnt[t] = (cnt[t] || 0) + 1;
     if (!L.length) { empty++; emptyThings += P.length; if (P.length) bad.push(`${tag(b)} vazia com ${P.length} coisa(s) em volta`); continue; }
     lived++; if (P.length) livedShow++; else why(b, 'habitada, nada à vista');
@@ -87,11 +87,13 @@ if (run('q1')) {
     if (b.type === 'olaria') { pot++; const T = things(b), n = raw(b); if (n > 0) { potHas++; if (T.includes('potes')) potShow++; else why(b, 'peças cruas sem potes à vista'); } else if (T.length) bad.push(`${tag(b)}: ${T.join(', ')} sem nada cru`); }
   }
   const nEx = ex.redonda.length + ex.semFaixa.length + ex.semVao.length;
-  // (what must hold: nothing without its cause; of the houses drawn from a rectangular plan with a strip, all the lived ones
-  // show something and all the woodcutters' their wood; the round huts, with no strip at all, are the exception said)
-  const strict = ex.semVao.filter(q => /habitada|lenhador|bebida/.test(q));
+  // (what must hold: nothing without its cause; every lived house shows something, every woodcutter's its wood, every house
+  // with drink its cask, every tavern and pottery with the cause its things — but a house in twenty at the most, with no room
+  // at all, said; of the houses of a trade, seven in ten at the least show a thing of it: the rest have no span of wall free
+  // of windows for it, said too)
+  const strict = ex.semVao.filter(q => /habitada|lenhador|bebida/.test(q)); const few = n => Math.max(1, Math.ceil(n * 0.05));
   ok(`q1 o lugar (${world}): toda casa habitada mostra algo, toda casa de lenhador a lenha, todo ofício as suas coisas, toda taverna com o que servir os barris, toda olaria com peças cruas os potes — ou a exceção contada; nada sem causa; casa vazia, nada`,
-    !bad.length && !strict.length && lived > 5 && livedShow >= lived - ex.redonda.length - ex.semFaixa.length && woodShow + tradeShow > 0 && tavShow === tavHas - ex.semFaixa.filter(q => /^taverna/.test(q)).length && potShow === potHas - ex.semFaixa.filter(q => /^olaria/.test(q)).length,
+    !bad.length && !strict.length && lived > 5 && lived - livedShow <= few(lived) && wood - woodShow <= (wood ? few(wood) : 0) && cask - caskShow <= (cask ? few(cask) : 0) && tradeShow >= trade * 0.7 && tavShow === tavHas && potShow === potHas,
     `${houses} casas (${plan} pela planta): ${lived} habitadas, ${livedShow} com algo à vista · lenhador ${woodShow}/${wood} · bebida ${caskShow}/${cask} · ofício ${tradeShow}/${trade} · ${empty} vazias com ${emptyThings} coisas · tavernas ${tavShow}/${tavHas} com o que servir (de ${tav}) · olarias ${potShow}/${potHas} com peças cruas (de ${pot}) · ${pieces} coisas nas casas (${thin} finas): ${JSON.stringify(cnt)} · exceções ${nEx}: cabana redonda ${ex.redonda.length}${ex.redonda.length ? ' [' + ex.redonda.slice(0, 4).join('; ') + ']' : ''}, sem faixa ${ex.semFaixa.length}${ex.semFaixa.length ? ' [' + ex.semFaixa.slice(0, 4).join('; ') + ']' : ''}, sem vão livre na parede ${ex.semVao.length}${ex.semVao.length ? ' [' + ex.semVao.slice(0, 6).join('; ') + ']' : ''}${bad.length ? ' · SEM CAUSA: ' + bad.slice(0, 4).join(' · ') : ''}`);
 }
 
@@ -179,6 +181,13 @@ if (run('q4')) {
   }
   // an empty house: nothing to show, nothing to make again when a house beside it changes
   const emptyH = H.find(b => !res(b).length); if (emptyH) { const a = sigOf(emptyH); const o = H.find(b => b !== emptyH && res(b).length); const I = o.inv || (o.inv = {}); const had = I.mel; I.mel = 3; flush(); const c = sigOf(emptyH); if (had === undefined) delete I.mel; else I.mel = had; flush(); if (a !== c) bad.push(`${tag(emptyH)} vazia refeita pelo que outra casa tem`); info.push(`${tag(emptyH)} vazia: o quadro ${a === c ? 'o mesmo' : 'REFEITO'} quando outra casa ganha mel`); }
+  // a store drawn from its plan, where its lot leaves it a yard: the heaps of its people's stock are in its signature (L-841:
+  // they stood as they were drawn, whatever the stock did since)
+  const store = built().find(b => PR.shows(b) && B3.shellOf(b) && PR.pieces(b).some(p => p.pile));
+  if (store) { const f = G.Fac.ofSet(store.set); const st = f.stock; const keep = [st.wood, st.stone, st.food]; const p0 = PR.piles(store).join('/'), a = sigOf(store);
+    const cap = Math.max(1, G.Village.cap(f.id)); st.wood = keep[0] > cap / 2 ? 0 : cap; st.stone = keep[1] > cap / 2 ? 0 : cap; st.food = keep[2] > cap / 2 ? 0 : cap; const p1 = PR.piles(store).join('/'), c = sigOf(store); st.wood = keep[0]; st.stone = keep[1]; st.food = keep[2];
+    info.push(`${tag(store)} (de planta, com quintal): os montes do estoque ${p0} → ${p1}, o quadro ${a === c ? 'O MESMO' : 'refeito'}`); if (p0 === p1 || a === c) bad.push(`${tag(store)}: os montes do estoque mudam (${p0} → ${p1}) e o quadro não é refeito`); }
+  else info.push('nenhum armazém de planta com montes no quintal neste mundo');
   ok(`q4 o quadro (${world}): refeito só pelo que mostra — o mesmo mundo, a mesma assinatura; um ofício que não mostra nada, a mesma; a casa sem lugar para coisas, a mesma com uma jarra de vinho`, !bad.length, `${H.length} casas, ${drift} com a assinatura mudada sem causa · ${info.join(' · ')}${bad.length ? ' · ' + bad.join(' · ') : ''}`);
 }
 

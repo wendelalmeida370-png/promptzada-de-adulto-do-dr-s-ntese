@@ -12,7 +12,7 @@ foto 04-olaria-antes-depois metropole 3463 coisa:0:4.4:1.5 PAR=1
 foto 05-casa-de-pescador-e-lenhador-antes-depois metropole 12999 olho:5.0,-5.6,1.6,0.6,-0.6,1.0,56 PAR=1
 [ -n "$SO_PARES" ] && exit 0
 foto 06-escudo-e-lanca-do-guerreiro metropole 2941 coisa:0:4.2:1.4 Q=1
-foto 07-varal-rente-a-parede metropole 3055 coisa:0:3.2:1.0 Q=1
+foto 07-varal-rente-a-parede metropole 3055 coisa:2:3.4:1.0 Q=1
 foto 08-botijas-da-bebida-a-porta metropole 2941 coisa:0:3:0.5 VINHO=2
 foto 09-couro-do-cacador metropole 16146 coisa:0:4.2:1.4 Q=1
 foto 10-forcado-ancinho-e-cesto-do-lavrador metropole 7815 coisa:0:4.2:1.4 Q=1
