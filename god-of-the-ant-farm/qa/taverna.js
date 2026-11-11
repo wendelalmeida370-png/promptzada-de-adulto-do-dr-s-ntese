@@ -145,9 +145,11 @@ const digest = op => JSON.stringify([op.st, op.data.servidos, op.data.receita, o
 // (the guests of the cases t7 and t8: the town's grown people, awake, fed and rested, with their hands free and — in a people of
 // coin — the price of a round, nearest the tavern first; sent by the world's own door, T.visitTask, which calls the keeper)
 // (not the night watch nor the smuggler, whose work of the night still calls)
-const guests = (b, n) => [...S().villagers.values()].filter(v => v.set === b.set && v.age >= 16 && v.age < 62 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.sleeping && !A.isBody(v) && v.role !== 'taverneiro' && v.role !== 'guerreiro' && v.role !== 'contrabandista' && !(G.Vg.nightWatch && G.Vg.nightWatch.get(v.set) === v.id) && v.hunger < 40 && v.energy > 50 && !(v.carry && v.carry.n > 1e-6) && (!v.task || v.task.pri < 1.5) && (!T.withCoin(b) || E.purse(v) >= 1))
+const guests = (b, n) => [...S().villagers.values()].filter(v => v.set === b.set && v.age >= 16 && v.age < 62 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.sleeping && !A.isBody(v) && v.role !== 'taverneiro' && v.role !== 'guerreiro' && v.role !== 'contrabandista' && !(G.Vg.nightWatch && G.Vg.nightWatch.get(v.set) === v.id) && v.hunger < 40 && v.energy > 50 && !(v.carry && v.carry.n > 1e-6) && (!v.task || v.task.pri < 1.5) && (!T.withCoin(b) || E.purse(v) >= 1) && (!T.dia(b) || !T.pick(v) || T.pick(v) === b))
   .sort((a, c) => G.dist2(a.x, a.y, b.x, b.y) - G.dist2(c.x, c.y, b.x, b.y) || a.id - c.id).slice(0, n);
-const send = (b, who) => who.filter(v => { G.Vg.endTask(v); return !!T.visitTask(v, G.Vg.H); });
+// (to this tavern: in a town with two, each one goes to the tavern of their own streets — D-157 —, and a guest who would
+// choose the other is not this case's guest: the game's own choice, T.pick, asked before the errand)
+const send = (b, who) => who.filter(v => { G.Vg.endTask(v); if (T.pick(v) !== b) return false; const t = T.visitTask(v, G.Vg.H); return !!t && t.id === b.id; });
 // ---------------- t7 night falls on the guests at the tables ----------------
 // (the evening's guests, the night falling while they sit: none taken by the night's little work of one awake with nothing to
 // do — of priority 1, it took everyone at the tables at the fall of night, long before the closing and their bed, L-591 —; they
@@ -230,13 +232,20 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); return !!T.visitTask
     if (g) {
       g.lost = { armL: true, armR: true }; const h = S().buildings.get(g.home); coin0 = h ? h.coin : 0;
       const went = send(b, went0); const k = T.keeperOf(b);
+      // (her evening held above the day's work by the test's hand, as the termas' bathers are, T-301: the case runs in the
+      // afternoon, and Tiye, a vine-dresser in the metropole of the sailors, was called to her vines — a work of 1 over an
+      // errand of 0,5 — one second after she set out, and «never reached the table», T-685)
+      if (g.task && g.task.type === 'tavern') g.task.pri = 1.45;
       liveSec(90, () => !A.live(op) || (sat && !(g.task && g.task.type === 'tavern')), bad, () => {
         if (op.data.mesa[g.id]) sat = true;
         if (g.carry && g.carry.n > 1e-6 && g.task && g.task.type === 'tavern') held++; // (on the errand: what she takes up after it is another matter)
         if (k && k.carry && k.carry.op === op.id && k.carry.n > 1e-6) kept++;
       });
       served = seen.filter(e => e[7] === op.id && (e[8] === 'bebida' || e[8] === 'refeicao') && e[9] === g.id).length;
-      paid = h ? r2(coin0 - h.coin) : 0; left = !(g.task && g.task.type === 'tavern');
+      // (what the house paid for the rounds, by the ledger's own lines — the coins out of her house in this evening's
+      // operation —: the difference of the pot counted the wage the vineyard paid her family in the same minute, and the
+      // house that paid 0,10 read as «paid −0,52», T-685)
+      paid = h ? r2(seen.filter(e => e[7] === op.id && e[5] === 'moedas' && e[8] === 'taverna' && e[3] === 'h:' + h.id).reduce((n, e) => n + e[6], 0)) : 0; left = !(g.task && g.task.type === 'tavern');
       void went;
     }
   }

@@ -123,8 +123,10 @@
       if (G.Life && (n === 1 || n === 10 || n === 25 || n === 50)) G.Life.bio(v, 'note', n === 1 ? `Fez a primeira viagem de mar, até ${port}` : `Já fez ${n} viagens de mar`);
     }
   };
-  // (home from the sea today: the evening's first wish is the tavern — villagers.js asks)
-  Hb.shoreLeave = v => !!(v && v.role === 'marinheiro' && v.st && v.st.volta === G.S.day);
+  // (home from the sea today: the evening's first wish is the tavern — villagers.js asks. Of whoever came home in the crew,
+  // whatever the trade says now: the town deals the trades again while a ship is out, and a sailor whose trade went to
+  // another on the way had no leave on the night of the homecoming)
+  Hb.shoreLeave = v => !!(v && v.st && v.st.volta === G.S.day);
   // the sailor ashore, by day: the rigging, by the water of the quay
   const oldJob2 = E.jobTask;
   E.jobTask = function (v, H) {

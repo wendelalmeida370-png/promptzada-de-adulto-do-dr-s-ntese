@@ -94,6 +94,8 @@
         if ((t.type === 'riot' || t.type === 'riotguard') && !(s.riots || []).some(R => R.id === t.r)) add('pol', 2, `${nm}: ${t.type === 'riot' ? 'no motim' : 'na guarda do motim'} ${t.r}, que não existe`, v.id);
         if (t.type === 'aboard' && !v.aboard) add('sea', 2, `${nm}: tarefa 'aboard' em terra`, v.id);
         if ((t.type === 'combat' || t.type === 'fight') && t.id && t.age > 60) add('ai', 3, `${nm}: combate há ${Math.round(t.age)} s`, v.id);
+        // (who fetches a beast's body gets to it or leaves it: nobody waits beside a body the feet don't reach, L-706)
+        if (t.type === 'hunt' && t.id && t.age > 45 && t.sk === undefined && !v.moving && !(v.downT > s.clock)) { const a = s.animals.get(t.id); const d = a && a.dead ? G.dist(v.x, v.y, a.x, a.y) : 0; if (d > 0.8) add('ai', 2, `${nm}: há ${Math.round(t.age)} s sem se mexer diante de uma presa morta que não alcança (a ${d.toFixed(2)}, prioridade ${t.pri || 0})`, v.id); }
         if (t.age > G.DAY_LEN * 3 && !{ aboard: 1, jail: 1, band: 1, swim: 0, scene: 0 }[t.type] && !t.saga) add('ai', 3, `${nm}: mesma tarefa '${t.type}' há ${(t.age / G.DAY_LEN).toFixed(1)} dias`, v.id);
       }
       if (v.captive) {

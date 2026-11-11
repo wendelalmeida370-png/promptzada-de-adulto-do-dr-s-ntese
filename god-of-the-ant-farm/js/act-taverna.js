@@ -255,17 +255,27 @@
   // ------------------------------ the customer (the errand 'tavern': st 0 on the way, ≥ 1 inside) ------------------------------
   // a tavern for this person this evening: open, in reach, with a seat, and — in a people of coin — a house that can pay for
   // a round; none of it, no errand (nobody is made up to fill a table)
-  T.visitTask = function (v, H) {
+  T.HOME = 0.5; // (how much the way home weighs in the choice of a tavern)
+  // (the choice alone — which tavern this person would go to now, or none —: it only reads; the errand is T.visitTask)
+  T.pick = function (v) {
     const S = S_(); if (v.captive || v.age < 16 || (v.carry && v.carry.n > EPS)) return null;
-    let best = null, bd = 30 * 30;
+    // (the tavern of one's own streets: the way there from where one is, and half the way from it home after — of two in
+    // reach, the one by home, not the one by the workplace across the town: the nights of a quarter are its residents',
+    // Bairros Vivos, D-157. A sailor ashore today drinks where he landed: the tavern of the port, D-155)
+    const hm = v.home && S.buildings.get(v.home); const hw = hm && !(G.Harbor && G.Harbor.shoreLeave && G.Harbor.shoreLeave(v)) ? T.HOME : 0;
+    let best = null, bd = 1e9;
     for (const b of E.byType(v.set, 'taverna')) {
       const op = T.dia(b); if (!op || !T.aberta(b) || full(b, op)) continue;
       if (coin(b) && E.purse(v) + EPS < T.PRICE.drink) continue;
-      const d = G.dist2(v.x, v.y, b.x, b.y); if (d >= bd) continue;
+      const d0 = G.dist(v.x, v.y, b.x, b.y); if (d0 >= 30) continue;
+      const d = d0 + (hw ? hw * G.dist(hm.x, hm.y, b.x, b.y) : 0); if (d >= bd) continue;
       const dr = G.Vg.door(b); if (!G.W.reaches(v, dr[0], dr[1])) continue;
       best = b; bd = d;
     }
-    if (!best) return null;
+    return best;
+  };
+  T.visitTask = function (v, H) {
+    const best = T.pick(v); if (!best) return null;
     callKeeper(best, T.dia(best)); // (one coming: the keeper to the counter)
     // (a little above going home: the evening's choice is not undone on the way, nor at the table — sleep, hunger and the
     // closing still end it)

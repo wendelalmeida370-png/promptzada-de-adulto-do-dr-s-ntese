@@ -114,9 +114,10 @@ if (on('m2')) {
       `${pays.length} linha(s) «soldo» para ${crew.length} tripulante(s): ${pays.map(e => `${e[3]}→${e[4]} ${e[6]} ${e[5]}`).join('; ') || 'nenhuma'}`);
     const tale = crew.every(v => v.st.viagens === viag0.get(v.id) + 1 && v.st.volta === S.day && (viag0.get(v.id) > 0 || (v.bio || []).some(b => b[1] === 'note' && /primeira viagem de mar/.test(String(b[2])))));
     ok('m2 a viagem na vida e na biografia de cada um', tale, crew.map(v => `${v.name}: ${v.st.viagens} viagem(ns), «${((v.bio || []).filter(b => b[1] === 'note' && /viage/.test(String(b[2]))).pop() || [0, 0, 'NADA'])[2]}»`).join('; '));
-    const leave = crew.every(v => Hb.shoreLeave(v)); const d0 = S.day; live(() => S.day > d0, 260, 1); const nx = crew.map(P).filter(Boolean).every(v => !Hb.shoreLeave(v));
+    // (the leave is of who came home, not of the trade: the town may deal the trades again while the ship is out)
+    const leave = crew.every(v => Hb.shoreLeave(v)) && crew.every(v => { const r0 = v.role; v.role = r0 === 'marinheiro' ? 'agricultor' : 'marinheiro'; const l = Hb.shoreLeave(v); v.role = r0; return l; }); const d0 = S.day; live(() => S.day > d0, 260, 1); const nx = crew.map(P).filter(Boolean).every(v => !Hb.shoreLeave(v));
     const nv = novas();
-    ok('m2 a noite da volta é de folga, o dia seguinte não; verificador limpo', leave && nx && !nv.length && !nvSea.length, `folga no dia da volta: ${leave}; no dia seguinte: ${!nx}; verificador no mar: ${nvSea.length ? nvSea.slice(0, 2).join(' | ') : 'limpo'}; depois: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
+    ok('m2 a noite da volta é de folga, o dia seguinte não; verificador limpo', leave && nx && !nv.length && !nvSea.length, `folga no dia da volta, com qualquer ofício: ${leave}; no dia seguinte: ${!nx}; verificador no mar: ${nvSea.length ? nvSea.slice(0, 2).join(' | ') : 'limpo'}; depois: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
   }
 }
 

@@ -71,6 +71,11 @@
     // (grown is 16, the age of decide: under it the child's own choice — childDecide — never asks this wish, and a house that
     // counted a boy of 15 as the one to send sent nobody)
     if (v.age < 16 || v.captive || v.jail || v.aboard || v.held || v.ug || A.isBody(v)) return 0;
+    // (no hands to bring it home — both arms lost —: no wish to go, and another of the house goes, D-152. The wish asked
+    // nothing of the hands: the freest of a house of Argos, with no arms, took the errand every time, the errand's door
+    // turned her back and marked the house as having tried — its wait never grew, nobody else of it went, and the house did
+    // not shop, L-710)
+    if (D.strength(v) <= 0) return 0;
     const h = E.homeOf(v); if (!h || !h.res) return 0;
     const out = C.outOf(h); if (out && out.id !== v.id) return 0;
     const L = C.list(h); if (!L.length) return 0;
@@ -119,6 +124,7 @@
   // or the market's shelf — marked with the house; tried or not, the house waits a while before the next one
   C.task = function (v, H) {
     const S = G.S; const h = E.homeOf(v); if (!h) return null;
+    if (D.strength(v) <= 0) return null; // (turned back at the door, the house's try unspent: L-710)
     h.shopT = S.clock;
     const L = C.list(h); if (!L.length || !C.canPay(h)) return null;
     const need = L.map(q => q.k);

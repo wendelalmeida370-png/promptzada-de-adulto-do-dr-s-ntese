@@ -286,26 +286,32 @@
       const h = S.buildings.get(v.home); if (!G.Village.livable(h)) continue; // (a house standing or under the works: L-371)
       G.Vg.setTask(v, { type: 'water', home: h.id, pri: 1.05, st: 6, kind: 'water' });
     }
+    // (and the errand of who was on the way to the well is not in the save: the house's try is free again, and it sends one
+    // of its people as the live world would have gone on — it waited a third of a day after every load, L-708)
+    for (const b of S.buildings.values()) if (b.waterTry) b.waterTry = 0;
   } });
   function runWater(v, t, dt, H) {
     const S = G.S; const h = S.buildings.get(t.home); if (!G.Village.livable(h)) { L.jarHome(v, null); return H.end(v); } // (L-371)
     if (t.st === 6) { if (!G.Vg.gotoB(v, h)) { L.jarHome(v, null); return H.end(v); } t.st = 3; return; }
+    // (a fetch that failed — no water to be had, no way to it, the line too long, the hands full — is a try of the house: it
+    // waits a third of a day before the next. One lost to another call is not: L.onEndTask, L-708)
+    const fail = () => { H.end(v); h.waterTry = S.clock; };
     if (t.st === 0) {
-      const src = waterSource(v); if (!src) { h.waterTry = S.clock; return H.end(v); }
+      const src = waterSource(v); if (!src) return fail();
       t.src = src; t.st = src.well ? 1 : 5;
-      if (t.st === 5 && !H.goto(v, src.x, src.y, false)) return H.end(v);
+      if (t.st === 5 && !H.goto(v, src.x, src.y, false)) return fail();
       return;
     }
     if (t.st === 1) { // the line at the well
-      const w = S.buildings.get(t.src.well.id); if (!w) return H.end(v);
-      if (G.dist(v.x, v.y, t.src.x, t.src.y) > 5 && !v._q) { if (!t.walk) { if (!H.goto(v, t.src.x + t.src.dx * 1.5, t.src.y + t.src.dy * 1.5, false)) { if (!G.Vg.gotoB(v, w)) return H.end(v); } t.walk = true; } if (!H.move(v, dt)) return; }
-      if (!L.inLine(v, t, 'well:' + w.id, t.src.x, t.src.y, t.src.dx, t.src.dy, dt, H, { own: w.id })) { if (t.waited > 40) { L.leaveQueue(v); return H.end(v); } return; }
+      const w = S.buildings.get(t.src.well.id); if (!w) return fail();
+      if (G.dist(v.x, v.y, t.src.x, t.src.y) > 5 && !v._q) { if (!t.walk) { if (!H.goto(v, t.src.x + t.src.dx * 1.5, t.src.y + t.src.dy * 1.5, false)) { if (!G.Vg.gotoB(v, w)) return fail(); } t.walk = true; } if (!H.move(v, dt)) return; }
+      if (!L.inLine(v, t, 'well:' + w.id, t.src.x, t.src.y, t.src.dx, t.src.dy, dt, H, { own: w.id })) { if (t.waited > 40) { L.leaveQueue(v); return fail(); } return; }
       t.st = 2; v.actT = 0; G.faceTo(v, w.x - v.x, w.y - v.y);
       return;
     }
     if (t.st === 5) { if (!H.move(v, dt)) return; t.st = 2; v.actT = 0; return; }
     if (t.st === 2) { // draw the water
-      if (v.carry && v.carry.n > 0 && v.carry.k !== 'water') { L.leaveQueue(v); return H.end(v); } // (the hands are full: no jar)
+      if (v.carry && v.carry.n > 0 && v.carry.k !== 'water') { L.leaveQueue(v); return fail(); } // (the hands are full: no jar)
       v.act = 'fill';
       if (G.VR() < dt * 1.5) G.FX && G.FX.splash(v.x + 0.2, v.y - 0.2, 0.2);
       if (v.actT < (v._q && L.queueLen(v._q) > 1 ? 1.1 : 1.8)) return;
@@ -674,6 +680,11 @@
     if (v._q) L.leaveQueue(v);
     const t = v.task; if (!t) return;
     if (t.row) L.rowRelease(v);
+    // (a fetch of water that ends before the jar is drawn — the hunger that takes one out of the line at the well, a feast's
+    // call — is not a try that failed: the house sends the next of its people now, not a third of a day later. In
+    // Tenochtitlan one left the line at the well for a meal, the next was called by a feast, the fifth in that line, and the
+    // jar of the house stayed dry all morning, L-708. A fetch that fails marks the try after this, runWater)
+    if (t.type === 'water' && t.st !== 3 && t.st !== 6) { const h = G.S.buildings.get(t.home); if (h && h.waterTry) h.waterTry = 0; }
     if (t.type === 'family') { const f = fams.get(t.fk); if (f) f.members.delete(v.id); if (t.lifted || t.perch) v.z = 0; }
   };
   L.taskText = function (v, t) {

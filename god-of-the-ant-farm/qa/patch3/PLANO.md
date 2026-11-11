@@ -284,6 +284,12 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   estado `embark`, `Nv.crewHome`, o soldo pelo livro, a viagem na biografia, a folga da noite da volta), a carga do navio
   que volta do meio do caminho (L-702), o chamado ao cais que atravessa o save (L-703), o posto de quem viaja (L-683) e a
   noite de quem espera no cais (L-682); `marinheiros.js` m1–m10, dez sabotagens.
-- **A seguir:** o mundo pelo bairro (o ladrão, o freguês, o tempo livre perto de casa, a terra e quem mora onde), o que se
-  vê, o que se ouve, a tela que respeita o que o personagem sabe, os ajustes da Arquitetura Monumental, e o fecho (os mundos
-  prontos da geração 20, a regressão inteira, o relatório).
+- **Feito, o mundo pelo bairro (primeira parte):** a ronda da vigia vai primeiro ao bairro perigoso e o ladrão pesa a ronda
+  e a vida do bairro da casa (D-156, `ladrao-bairro.js`); o descanso à porta de casa e a taverna das próprias ruas (D-157,
+  `tempo-livre.js`); a crônica diz o bairro (`G.Urban.ofPlace`); e os defeitos que as provas vizinhas acharam no caminho: a
+  noite do roubo no save (L-704), o porquê de quem dorme ao relento no save (L-705, `relento.js`), a presa caída onde os pés
+  não vão (L-706, `caca-margem.js`, com verificador novo), a folga de quem voltou do mar qualquer que seja o ofício (L-707),
+  a busca d'água perdida no caminho (L-708, `jarra.js`), o cuidado do rebanho largado no meio (L-709), a casa de quem perdeu
+  os braços, que não comprava (L-710); e os limites de prova T-685 a T-693.
+- **A seguir:** a terra e quem mora onde, o que se vê, o que se ouve, a tela que respeita o que o personagem sabe, os
+  ajustes da Arquitetura Monumental, e o fecho (os mundos prontos da geração 20, a regressão inteira, o relatório).

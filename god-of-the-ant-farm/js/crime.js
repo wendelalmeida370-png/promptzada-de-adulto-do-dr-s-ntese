@@ -105,18 +105,33 @@
     if (tr.includes('Corajoso')) w += 0.1; if (tr.includes('Medroso')) w -= 0.2; if (tr.includes('Devoto')) w -= 0.25;
     return Math.max(0, w);
   }
+  // tonight's round of a town's watch: the crossings it goes by, or null with nobody on it
+  Cr.roundOf = function (sid) { for (const g of G.S.villagers.values()) if (g.set === sid && g.task && g.task.type === 'ronda' && g.task.pts) return g.task.pts; return null; };
+  // how watched a house is tonight, as a thief of the town knows it (Bairros Vivos, D-156): by a crossing of tonight's round, the
+  // watch is on top of it; far from every one of them, nobody comes; and streets awake at night — the tavern's quarter, by the
+  // life the quarter has had (G.Urban.at, d.vida.noite) — have eyes, where an emptied quarter has none
+  Cr.NEAR = 7; Cr.FAR = 14;
+  Cr.watched = function (h, round) {
+    let w = 0;
+    if (round) { let near = 1e9; for (const p of round) near = Math.min(near, G.dist(p[0], p[1], h.x, h.y)); w += near < Cr.NEAR ? 1.5 : near > Cr.FAR ? -0.5 : 0; }
+    const q = G.Urban && G.Urban.at ? G.Urban.at(h.x, h.y) : null;
+    if (q && q.vida) w += Math.min(1, (q.vida.noite || 0) * 2);
+    if (q && G.Urban.is(q, 'vazio')) w -= 0.4;
+    return w;
+  };
   function victimFor(v) {
-    const S = G.S; let best = null, bs = -1e9;
+    const S = G.S; let best = null, bs = -1e9; const round = Cr.roundOf(v.set);
     for (const h of S.buildings.values()) {
       if (h.set !== v.set || !h.built || !G.BDEF[h.type].housing || h.id === v.home || (h.coin || 0) < 6) continue;
       if (h.robbed && S.day - h.robbed < 2) continue;
-      // the fatter purse, not too far, and a house where no one in the family of the thief lives
+      // the fatter purse, not too far, where the watch is weak, and a house where no one in the family of the thief lives
       const d = G.dist(v.x, v.y, h.x, h.y);
-      const sc = Math.min(40, h.coin) * 0.1 - d * 0.08 + G.R();
+      const sc = Math.min(40, h.coin) * 0.1 - d * 0.08 - Cr.watched(h, round) + G.R();
       if (sc > bs) { bs = sc; best = h; }
     }
     return best;
   }
+  Cr.victimFor = victimFor;
 
   // ------------------------------ the night of the theft ------------------------------
   function runFurto(v, t, dt, H) {
@@ -153,6 +168,8 @@
     if (H.move(v, dt, 0.9) || t.age > 60) H.end(v);
   }
 
+  // (the chronicle says the quarter of the house, in a city that has quarters: Bairros Vivos)
+  const ofPlace = (c, set) => (G.Urban && G.Urban.ofPlace ? G.Urban.ofPlace(c.x, c.y, set) : ` de ${set.name}`);
   // ------------------------------ the watch: rounds, witnesses, the hunt, the arrest ------------------------------
   // (the theft a guard knows of: he goes after the thief — unless he gave up for today already (c.gave): «then the guard gives up
   // for today», and he is back at it the next day, until the arrest or until nobody has solved it in PRESC days — the code wiped
@@ -177,13 +194,17 @@
     return oldGuard(v, H);
   };
   function rondaPoints(set) {
-    const out = [];
-    for (const d of (G.Urban && G.Urban.districtsOf(set)) || []) if (d.k !== 'agrario') out.push([d.x, d.y]);
-    if (out.length < 3) { const r = Math.max(4, (set.radius || 8) * 0.55); for (let k = 0; k < 4; k++) { const a = k / 4 * Math.PI * 2 + set.id; out.push([set.cx + Math.cos(a) * r, set.cy + Math.sin(a) * r]); } }
+    const out = []; const first = [];
+    // (the watch goes where the thefts are: the quarters the life of the town calls dangerous come first in the night's round,
+    // the one with the most of them first of all — Bairros Vivos, D-156 —; the others as before)
+    for (const d of (G.Urban && G.Urban.districtsOf(set)) || []) if (d.k !== 'agrario') { if (G.Urban.is(d, 'perigoso')) first.push(d); else out.push([d.x, d.y]); }
+    first.sort((a, b) => ((b.vida && b.vida.crime) || 0) - ((a.vida && a.vida.crime) || 0) || a.id - b.id);
+    if (out.length + first.length < 3) { const r = Math.max(4, (set.radius || 8) * 0.55); for (let k = 0; k < 4; k++) { const a = k / 4 * Math.PI * 2 + set.id; out.push([set.cx + Math.cos(a) * r, set.cy + Math.sin(a) * r]); } }
     // (a round is a few of them, starting from the one the hash of the night picks)
-    const k0 = Math.floor(G.hash(set.id * 13 + G.S.day) * out.length);
-    return out.slice(k0).concat(out.slice(0, k0)).slice(0, 4).map(p => { const q = W.nearestLand(p[0], p[1], 3) || p; return [Math.round(q[0] * 10) / 10, Math.round(q[1] * 10) / 10]; });
+    const k0 = out.length ? Math.floor(G.hash(set.id * 13 + G.S.day) * out.length) : 0;
+    return first.map(d => [d.x, d.y]).concat(out.slice(k0), out.slice(0, k0)).slice(0, 4).map(p => { const q = W.nearestLand(p[0], p[1], 3) || p; return [Math.round(q[0] * 10) / 10, Math.round(q[1] * 10) / 10]; });
   }
+  Cr.rondaPoints = rondaPoints;
   function runRonda(v, t, dt, H) {
     const S = G.S;
     // (the round goes on, crossing to crossing, until the sky lightens)
@@ -255,7 +276,7 @@
       c.st = 'devolvido'; c.how = jail ? law.how : law.days ? 'não havia cela livre: só a devolução' : law.how;
       bio(th, `Foi peg${oa(th)} por roubar moedas em ${set ? set.name : 'sua cidade'} e teve de devolvê-las.`, null);
       G.Vg.endTask(th); G.Vg.emote(th, 'sad', 2);
-      if (set && (set.tier || 0) >= 2 && newsOK(set)) log(`${g.name} pegou ${th.name}, que tinha roubado ${fmt(c.n)} moedas de uma casa de ${set.name}: ${c.how}.`, 'theft', th.x, th.y);
+      if (set && (set.tier || 0) >= 2 && newsOK(set)) log(`${g.name} pegou ${th.name}, que tinha roubado ${fmt(c.n)} moedas de uma casa${ofPlace(c, set)}: ${c.how}.`, 'theft', th.x, th.y);
       return H.end(g);
     }
     th.jail = jail.id; th.jailUntil = S.day + law.days; c.how = law.how; c.jail = jail.id;
@@ -263,7 +284,7 @@
     bio(g, `Prendeu ${th.name}, que tinha roubado uma casa de ${set ? set.name : 'sua cidade'}.`, `Peguei um ladrão com as moedas ainda no bolso`);
     G.Vg.setTask(th, { type: 'levado', by: g.id, pri: 5.4, kind: 'levado' });
     G.Vg.setTask(g, { type: 'levar', id: th.id, jail: jail.id, pri: 3.2, kind: 'levar', st: 0 });
-    if (set && newsOK(set)) log(`${g.name} prendeu ${th.name}, que roubou ${fmt(c.n)} moedas de uma casa de ${set.name}. Vai para a cadeia: ${law.how}.`, 'theft', th.x, th.y);
+    if (set && newsOK(set)) log(`${g.name} prendeu ${th.name}, que roubou ${fmt(c.n)} moedas de uma casa${ofPlace(c, set)}. Vai para a cadeia: ${law.how}.`, 'theft', th.x, th.y);
     G.Stories && G.Stories.signal && G.Stories.signal('arrest', { fac: f ? f.id : 0, id: th.id, by: g.id, set: th.set, x: th.x, y: th.y });
   }
   const fmt = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
@@ -365,8 +386,10 @@
   };
 
   // ------------------------------ the days and nights of the town ------------------------------
-  let tA = 0, lastNight = -1;
-  G.worldHooks.push(() => { tA = 0; lastNight = -1; }); // (a new world, or a save loaded: it starts over)
+  // (the half-night whose theft was already drawn is the world's — G.mod, in the save —: in a variable of the module, a save
+  // loaded in the evening drew the town's theft of that evening a second time, L-704, as the L-694's second day)
+  let tA = 0;
+  G.worldHooks.push(() => { tA = 0; }); // (a new world, or a save loaded: it starts over)
   // what a witness would have told, told by another (the ghosts of the god's Fantasmas): the nearest guard of the town goes after the thief
   Cr.reveal = function (c) {
     const S = G.S; if (!c || c.st !== 'aberto') return null;
@@ -419,8 +442,8 @@
     if (!night) for (const c of crimes()) if (c.st === 'aberto' && !c.found && S.day > c.day - 1 && S.time > 0.05) c.found = S.day;
     // the night: one theft at most in each town, by whoever has a reason (and the courage)
     const eve = G.isEvening(); const nk = S.day * 2 + (night ? 1 : 0);
-    if ((night || eve) && nk !== lastNight) {
-      lastNight = nk;
+    if ((night || eve) && nk !== G.mod('crime.night')) {
+      G.mod('crime.night', nk);
       for (const set of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
         if ((set.tier || 0) < 1) continue;
         let best = null, bw = 0;

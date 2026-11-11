@@ -139,15 +139,17 @@ if (on('v3')) {
 let Q6 = null;
 if (on('v6') || on('v7')) {
   const S = G.S;
-  // a quarter of homes with people, in a people of coin, not rich yet
+  // a quarter of homes with people, in a people of coin, not rich yet — nor poor, nor on its way to it: the life of a quarter
+  // is a slow mean, and one that was «pobre» before the rain was still «pobre» six days into it, with eight of its nine homes
+  // rich; the dragon's first day then read «pobre em 1 dia», with no line of its own in the history (T-692)
   const homesOf = d => [...S.buildings.values()].filter(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && b.type !== 'barraco' && d.cells.includes(U.cellOf(b.x + b.w / 2, b.y + b.h / 2)) && b.set === d.set);
   const lived = b => [...S.villagers.values()].some(v => v.home === b.id && v.age >= 16 && !v.captive);
-  const cand = allQ().filter(([s, q]) => !q.whole && q.dias >= U.YOUNG && G.Eco.coinage(s.fac) && !U.is(q, 'nobre') && !(q.tp || {}).nobre && (q.vida.rica || 0) < 0.3 && homesOf(q).filter(lived).length >= 4)
+  const cand = allQ().filter(([s, q]) => !q.whole && q.dias >= U.YOUNG && G.Eco.coinage(s.fac) && !U.is(q, 'nobre') && !(q.tp || {}).nobre && (q.vida.rica || 0) < 0.3 && !U.is(q, 'pobre') && !(q.tp || {}).pobre && homesOf(q).filter(lived).length >= 4)
     .sort((a, b) => homesOf(b[1]).filter(lived).length - homesOf(a[1]).filter(lived).length)[0];
   if (cand) Q6 = { set: cand[0], d: cand[1], homes: () => homesOf(cand[1]), lived };
 }
 if (on('v6')) {
-  if (!Q6) ok('v6 rico-e-pobre', false, 'nenhum bairro com quatro casas habitadas num povo de moeda, ainda não rico');
+  if (!Q6) ok('v6 rico-e-pobre', false, 'nenhum bairro com quatro casas habitadas num povo de moeda, ainda não rico nem pobre');
   else {
     const S = G.S; const { set, d } = Q6; const day0 = S.day;
     // the rain of coins on every home (the god's door), every day while it lasts

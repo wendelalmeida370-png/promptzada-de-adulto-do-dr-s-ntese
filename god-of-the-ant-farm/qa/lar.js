@@ -260,7 +260,10 @@ if (want('l4')) {
   // (and the secret society's night — its meeting, the one it lures, the sleepless one who sees it, its hunter: secrets.js wakes them for
   // it by design, as the meeting of T-274 —: in the generation 18 Túlia, the order's hunter, rose at 21h21 to follow a witness, T-596)
   const SECRET = { conclave: 1, lured: 1, insone: 1, stalk: 1 };
-  const soon = ws.filter(w => fromNoon(w.t) < fromNoon(w.wake) - 0.005 && w.hunger < 80 && w.task !== 'flee' && w.task !== 'fire' && w.task !== 'patrol' && w.task !== 'combat' && !SECRET[w.task]);
+  // (and the town's feast: one that begins before the day wakes the people its rite needs — the ones asleep last, the children
+  // in their beds never: festivals.js, its own rule —: in the «cidade» of the sailors a feast of dawn called two of the fifteen
+  // asleep, seven minutes before their hour, and the one in twenty the case allows is one of fifteen, T-687)
+  const soon = ws.filter(w => fromNoon(w.t) < fromNoon(w.wake) - 0.005 && w.hunger < 80 && w.task !== 'flee' && w.task !== 'fire' && w.task !== 'patrol' && w.task !== 'combat' && w.task !== 'fest' && !SECRET[w.task]);
   const span = ws.length ? Math.max(...ws.map(w => fromNoon(w.t))) - Math.min(...ws.map(w => fromNoon(w.t))) : 0;
   ok('l4 o save no meio da noite', !lar.length && !moved.length && ws.length >= 3 && soon.length <= Math.max(1, ws.length * 0.05) && span >= 0.02,
     `${atHome} em casa no save (${rt.bytes} caracteres)${lar.length ? ' — DIFERENÇA: ' + lar.slice(0, 2).join(' · ') : ', a mesma casa depois'}${moved.length ? ` — MUDARAM: ${moved.slice(0, 3).join(' · ')}` : ''}${rt.diff.length > lar.length ? ` (outras partes do save: ${rt.diff.length - lar.length})` : ''}; de manhã ${ws.length} de ${asleep.length} acordaram, entre ${ws.length ? fmtT(ws.slice().sort((x, y) => fromNoon(x.t) - fromNoon(y.t))[0].t) : '—'} e ${ws.length ? fmtT(ws.slice().sort((x, y) => fromNoon(y.t) - fromNoon(x.t))[0].t) : '—'}; antes da própria hora: ${soon.length}${soon.length ? ' (' + soon.slice(0, 2).map(w => `${fmtT(w.t)} < ${fmtT(w.wake)}`).join(', ') + ')' : ''}`);
@@ -630,8 +633,10 @@ if (want('l13')) {
     // and the baby in those arms — at that building's door, awake, as the save lets everyone out of every building (save.js): the
     // house's hook keeps its own (D-073), a sleep in any house and the prayer inside the temple, nothing else. In the «cidade» of
     // the generation 19 Sitamun, the mother, was at her order's meeting in a storehouse at 20h14 with Henut in her arms, and the
-    // meeting is not in the save (secrets.js))
-    const kept5 = o => { const t = o.task; const b = o.inside ? S.buildings.get(o.inside) : null; return !!(b && t && ((b.type === 'temple' && t.type === 'pray' && t.st === 2 && t.inT === b.id) || (G.BDEF[b.type] && G.BDEF[b.type].housing && t.type === 'sleep'))); };
+    // meeting was not in the save (secrets.js). Since the L-694 it is: who sat at a meeting of an order when the game was saved
+    // sits at it after the load, in the building it meets in — Sneferu's wife and their child, in the metropole of the
+    // Bairros Vivos, stayed in the storehouse, and the case read «the family changed in the save», T-686)
+    const kept5 = o => { const t = o.task; const b = o.inside ? S.buildings.get(o.inside) : null; return !!(b && t && ((b.type === 'temple' && t.type === 'pray' && t.st === 2 && t.inT === b.id) || (G.BDEF[b.type] && G.BDEF[b.type].housing && t.type === 'sleep') || (t.type === 'conclave' && t.st === 2))); };
     const away6 = fam().filter(o => o.inside && o.inside !== h.id && !(o.age < 2 && o.carrier ? kept5(S.villagers.get(o.carrier) || {}) : kept5(o))).map(o => o.id);
     const want6 = f5.split(' ').map(e => away6.includes(+e.split('/')[0]) ? e.split('/')[0] + '/0/0' : e).join(' ');
     const at6 = away6.map(id => { const o = S.villagers.get(id); const b = S.buildings.get(o.inside); return `${o.name} n${b ? (b.type === 'storehouse' ? 'o armazém' : 'o prédio ' + b.type) : 'outro prédio'}`; });
@@ -799,7 +804,11 @@ if (want('l15')) {
   // (none in its mother's arms in such a house: one whose mother is home with it and another of the house, put in her arms by the
   // world's own door — G.Vg.handBaby, the test's hand: in the generation 16 Senusret, of a year, slept at home in the arms of one of
   // another house, his mother asleep by him)
-  const A = babies().find(homeA) || [...S.villagers.values()].filter(b => b.age < 2 && !b.ug && !b.captive && b.mother).sort((a, c) => a.id - c.id).find(b => homeA(b) && G.Vg.handBaby(b, S.villagers.get(b.mother)));
+  const findA = () => babies().find(homeA) || [...S.villagers.values()].filter(b => b.age < 2 && !b.ug && !b.captive && b.mother).sort((a, c) => a.id - c.id).find(b => homeA(b) && G.Vg.handBaby(b, S.villagers.get(b.mother)));
+  let A = findA();
+  // (no such house in this world tonight — the «cidade» of the sailors has four babies, none at home with the mother and another
+  // of the house —: the metropolis, as l16 does, T-687)
+  if (!A && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); liveTo(0.86); A = findA(); }
   if (!A) fail('(a) nenhuma casa à noite com a mãe, o bebê e outro da casa dentro');
   else {
     const m = S.villagers.get(A.mother), h = builtHome(m); m.fury = 6;

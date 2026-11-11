@@ -526,7 +526,10 @@
           else continue; // (another errand in a house — the end of a day's work —: out at the door, as before)
           list.push(e);
         } else if (b && b.type === 'temple' && t && t.type === 'pray' && t.st === 2 && t.inT === b.id) list.push([v.id, b.id, r3(v.x), r3(v.y), 0, 'pray', t.priest ? 1 : 0, r3(v.actT || 0)]); // (at prayer inside the temple)
-        else if (!v.inside && v.sleeping && t && t.type === 'sleep' && t.st >= 2) list.push([v.id, 0, r3(v.x), r3(v.y), 1, 'sleep']);
+        // (asleep out of doors, with why: the way home that ended off its door — t.re, the night where one is, L-231 — and the
+        // bed the sleep was chosen for — t.stay. Without them the one who lay down where they were came back from the load as
+        // one who had just chosen the street by the door of home, and the checker read a defect in every load, L-705)
+        else if (!v.inside && v.sleeping && t && t.type === 'sleep' && t.st >= 2) list.push([v.id, 0, r3(v.x), r3(v.y), 1, 'sleep', t.re || 0, Number.isFinite(t.stay) ? t.stay : -1]);
       }
       out.lar = list;
     },
@@ -547,7 +550,7 @@
         }
         if (e[1] && !livable(b)) continue; // (the house is gone, or a ruin: at the door, as the save left them)
         let t = null;
-        if (k === 'sleep') t = { type: 'sleep', pri: 1.5, st: 2, home: b ? b.id : 0, kind: 'sleep' };
+        if (k === 'sleep') { t = { type: 'sleep', pri: 1.5, st: 2, home: b ? b.id : 0, kind: 'sleep' }; if (!b) { if (Number.isFinite(e[6]) && e[6] > 0) t.re = e[6]; if (Number.isFinite(e[7]) && e[7] >= 0) t.stay = e[7]; } }
         else if (k === 'shelter' && b && b.id === v.home) t = { type: 'shelter', pri: 1.05, st: 2, kind: 'shelter' };
         else if (WHAT[k] && b && b.id === v.home) { t = { type: 'lar', what: k, home: b.id, pri: pri(k), st: 2, stay: b.id, kind: 'lar' }; if (e[6]) t.ate = 1; if (Number.isFinite(e[7]) && e[7] > 0) t.w = e[7]; }
         if (!t) continue;

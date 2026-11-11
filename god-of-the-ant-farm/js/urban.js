@@ -318,6 +318,13 @@
   U.theName = d => U.article(d) + ' ' + d.name;
   U.ofName = d => ({ a: 'da', o: 'do', as: 'das', os: 'dos' })[d.g] + ' ' + d.name;
   U.inName = d => ({ a: 'na', o: 'no', as: 'nas', os: 'nos' })[d.g] + ' ' + d.name;
+  // «of» a place of a town, in words, for the chronicle: in a city of quarters (tier 3 and up), the quarter by its name — « do
+  // Bairro do Porto de Mênfis» —; anywhere else, the town — « de Mênfis». Only reads
+  U.ofPlace = function (x, y, set) {
+    if (!set) return '';
+    const q = (set.tier || 0) >= 3 && x !== undefined ? U.at(x, y) : null;
+    return q && !q.whole && q.set === set.id ? ` ${U.ofName(q)} de ${set.name}` : ` de ${set.name}`;
+  };
 
   // ------------------------------ a day in the life of the quarters ------------------------------
   const BIRTH = {

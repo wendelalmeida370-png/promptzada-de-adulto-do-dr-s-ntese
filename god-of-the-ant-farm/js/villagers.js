@@ -135,6 +135,19 @@
     const to = v.path.to, last = v.path[v.path.length - 1];
     return to ? Vg.goto(v, to[0], to[1], to[2] || !W.walkableXY(to[0], to[1])) : Vg.goto(v, last[0], last[1], true);
   }
+  // the reach of the blow that kills a beast — and of the arm that takes its body up from where feet don't go
+  const HIT = 1.2;
+  // where the feet stand to take up what lies where they don't go: the point of the ground beside it nearest to it that the
+  // walker reaches (the eight tiles round its own); none: it lies out in the water, or walled in
+  function edgeBy(v, x, y) {
+    const tx = Math.floor(x), ty = Math.floor(y); let best = null, bd = 1e9;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const nx = tx + dx, ny = ty + dy; if ((!dx && !dy) || !W.walkableXY(nx, ny)) continue;
+      const px = G.clamp(x, nx + 0.12, nx + 0.88), py = G.clamp(y, ny + 0.12, ny + 0.88), d = G.dist(px, py, x, y);
+      if (d < bd && W.reaches(v, px, py)) { bd = d; best = [px, py]; }
+    }
+    return best;
+  }
   // a tree, bush or boulder up on a ledge nobody from this town can climb to: for a day they go for another one
   const cantReach = (o, v) => !!o.noPath && G.S.clock - (o.noPath[v.set] || -1e9) < G.DAY_LEN;
   const noReach = (o, v) => { (o.noPath || (o.noPath = {}))[v.set] = G.S.clock; };
@@ -239,6 +252,10 @@
     else if (t.type === 'gather') { const o = S.bushes.get(t.id); if (o && o.claim === v.id) o.claim = 0; }
     else if (t.type === 'mine') { const o = S.rocks.get(t.id); if (o && o.claim === v.id) o.claim = 0; }
     else if (t.type === 'hunt' || t.type === 'fight') { const o = S.animals.get(t.id); if (o && o.claim === v.id) o.claim = 0; }
+    // (a tending left before it was done — the herder called to the well, to a meal — frees the beast for the next one of the
+    // pen: the mark of «being tended» stayed its twenty seconds on a turkey nobody was tending, and the other herder, finding
+    // nothing to tend, turned to the pen's chores until the evening, L-709)
+    else if (t.type === 'tend' && t.a && !t.did) { const o = S.animals.get(t.a); if (o && o.tended > S.clock) o.tended = 0; }
     else if (t.type === 'farm') { const b = S.buildings.get(t.id); if (b && b.crops && b.crops[t.k] && b.crops[t.k].c === v.id) b.crops[t.k].c = 0; }
     else if (t.type === 'fish' || t.type === 'quarry') { Vg.fishSpots.delete(t.spot); }
     else if ((t.type === 'mariscar' || t.type === 'pocas') && t.bx !== undefined && t.k > 0) { v.x = t.bx; v.y = t.by; } // (called away from the flats: back on the beach)
@@ -655,6 +672,13 @@
     if (!t) { if (!v.task) wander(v, 4); }
     else t.kind = kind;
   }
+  // the rest at the door of home: a town of two quarters or more, a home of one's own, more than REST_FAR houses from the fire
+  Vg.REST_FAR = 9;
+  Vg.restAtDoor = function (v, set, cf) {
+    const hm = v.home && G.S.buildings.get(v.home); if (!hm || !hm.built || !set || !cf || !G.Urban) return null;
+    if (G.Urban.districtsOf(set).length < 2 || G.dist(hm.x, hm.y, cf.x, cf.y) <= Vg.REST_FAR) return null;
+    return hm;
+  };
   function wander(v, r) {
     const set = G.S.settlements.get(v.set);
     const cx = set ? set.cx : v.x, cy = set ? set.cy : v.y;
@@ -1273,7 +1297,18 @@
         if (a.dead) {
           if (t.type === 'fight') { emote(v, 'happy', 2); if (G.Riches && G.Riches.spoils(v, a, t)) return; return end(v); }
           // collect the meat
-          if (G.dist(v.x, v.y, a.x, a.y) > 0.8) { if (!t.carc) { if (!Vg.goto(v, a.x, a.y, false)) return end(v); t.carc = true; } move(v, dt); }
+          // (a beast that fell where feet don't go — an anaconda in the shallows, a goat under a ledge —: the hunter stands on
+          // the ground beside it nearest to the body and takes it from there, at the reach that killed it; a body out of that
+          // reach is left where it lies, and so is one the way to is cut. The fetch asked its way once and stood at the end of
+          // it until the general limit of a task (70 s), above the hunger and the bed — a defender's kill is a 4 —: a woman of
+          // Mênfis, starving with the barn full (hunger 100, her life at 40 and falling), stood beside an anaconda dead in
+          // the water 0.93 from her, L-706)
+          const dc = G.dist(v.x, v.y, a.x, a.y), wet = !W.walkableXY(a.x, a.y);
+          if (dc > 0.8 && !(wet && t.carc && arrived(v) && dc <= HIT)) {
+            if (!t.carc) { const p = wet ? edgeBy(v, a.x, a.y) : [a.x, a.y]; if (!p || !Vg.goto(v, p[0], p[1], false)) return end(v); t.carc = true; }
+            else if (arrived(v)) return end(v);
+            move(v, dt);
+          }
           // (the meat and the hide only into free hands: what is in them — wood taken up from the ground, an errand's — goes to its
           // place first, and the carcass waits; the meat was written over the load, and four of wood went with no line in the
           // ledger, L-583)
@@ -1286,7 +1321,7 @@
         const d = G.dist(v.x, v.y, a.x, a.y);
         if (t.age > (t.type === 'fight' ? 40 : 28) || d > 30) return end(v);
         t.rt -= dt;
-        if (d > 1.2) {
+        if (d > HIT) {
           if (t.rt <= 0 || arrived(v)) { t.rt = 0.7; if (!Vg.goto(v, a.x, a.y, false)) { if (t.age > 3) return end(v); } }
           move(v, dt, 1.25); v.act = '';
         } else {
@@ -1461,6 +1496,17 @@
         if (t.st === 0) {
           const set = S.settlements.get(v.set); const cf = set && S.buildings.get(set.campfire);
           if (!cf) return end(v);
+          // (in a town of quarters, who lives far from the fire of the square rests at the door of home — a seat in one's own
+          // street, the neighbours passing: the free time is the quarter's, not only the centre's, Bairros Vivos, D-157 —; the
+          // fire stays the rest of who lives by it, and of every village)
+          const hm = Vg.restAtDoor(v, set, cf);
+          if (hm) {
+            const dr = Vg.door(hm); const p = W.randomNear(dr[0], dr[1], 1.2) || dr;
+            if (!W.walkableXY(p[0], p[1]) || !Vg.goto(v, p[0], p[1], false)) return end(v);
+            // (facing the street: away from the house)
+            t.st = 1; t.door = hm.id; t.cx = 2 * p[0] - (hm.x + 0.5); t.cy = 2 * p[1] - (hm.y + 0.5);
+            break;
+          }
           const a = G.R() * 6.28; const tx = cf.x + 0.5 + Math.cos(a) * 1.25, ty = cf.y + 0.5 + Math.sin(a) * 1.25;
           if (!W.walkableXY(tx, ty) || !Vg.goto(v, tx, ty, false)) return end(v);
           t.st = 1; t.cx = cf.x + 0.5; t.cy = cf.y + 0.5;
@@ -2136,7 +2182,7 @@
       case 'visit': { const o = S.villagers.get(t.id); if (!o) return 'Visitando a família'; const rel = o.id === v.mother ? 'a mãe' : o.id === v.father ? 'o pai' : o.id === v.partner ? (o.g === 'f' ? 'a parceira' : 'o parceiro') : (o.g === 'f' ? 'a filha' : 'o filho'); return `Visitando ${rel}, ${o.name}`; }
       case 'pray': return t.priest ? 'Conduzindo orações' : v.captive ? 'Rezando por liberdade' : 'Rezando para você';
       case 'explore': return 'Explorando a ilha';
-      case 'rest': return t.stories ? 'Contando histórias junto à fogueira' : 'Descansando junto à fogueira';
+      case 'rest': return t.door ? (t.stories ? 'Contando histórias à porta de casa' : 'Descansando à porta de casa') : t.stories ? 'Contando histórias junto à fogueira' : 'Descansando junto à fogueira';
       case 'play': return 'Brincando';
       case 'follow': return 'Seguindo a mãe';
       case 'migrate': { const s = S.settlements.get(v.set); return `Migrando para ${s ? s.name : 'novas terras'}`; }

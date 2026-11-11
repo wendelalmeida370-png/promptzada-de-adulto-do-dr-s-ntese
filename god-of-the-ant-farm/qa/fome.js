@@ -408,7 +408,10 @@ const calmOne = (skip, also) => {
       e = X.consider(f, { many: true }) || X.launch(f, { k: 'terra', w: 1, why: 'terra', txt: '', x: G.N / 2, y: G.N / 2 }, 'media', {});
       tried.push(f.name + (e ? '' : ' (não)'));
     }
-    if (e) v = e.crew.map(id => S.villagers.get(id)).filter(onQuay).sort((a, b) => a.id - b.id)[0] || null;
+    // (the call to the quay asks the hands first, D-094: a crew whose people are all in the middle of something comes to the
+    // quay as each one finishes — in the metropole of the Bairros Vivos nobody of the Clã de Hrafn's crew was on the quay at
+    // the instant of the launch, and the case read «nobody on a quay», T-691: up to forty seconds for the first one)
+    if (e) { const first = () => e.crew.map(id => S.villagers.get(id)).filter(onQuay).sort((a, b) => a.id - b.id)[0] || null; v = first(); if (!v) live(40, () => !!(v = first())); }
   }
   let ate = false, h0 = 0, where = '-', food = 0, t0 = S.clock, left = '';
   if (v) {

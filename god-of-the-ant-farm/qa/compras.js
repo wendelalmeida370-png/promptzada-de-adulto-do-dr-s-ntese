@@ -3,7 +3,8 @@
 // «cidade» (um povo sem moeda). Sem uma cidade que sirva, falha dizendo o que falta.   node qa/compras.js   (em Node)
 // c1 a casa que precisa manda um dos seus; c2 a compra paga pela casa (no livro-razão) chega em casa; c3 sem moeda,
 // ninguém sai; c4 nada faltando, ninguém sai; c5 um de cada vez; c6 fora das horas do mercado, ninguém sai; c7 save no
-// meio do recado: o recado perdido não prende a casa, e ela compra de novo, um de cada vez; c8 quem compra morre com a
+// meio do recado: o recado perdido não prende a casa, e ela compra de novo, um de cada vez; c18 quem perdeu os dois braços
+// não vai às compras — outro da casa vai, e a tentativa da casa não é gasta (L-710); c8 quem compra morre com a
 // compra nas mãos: ela vai para a casa, pelo livro; c9 um povo sem moeda compra em espécie; c10 o salto: as casas compram
 // também no salto; c11 o volume de um dia (antes da Etapa 4: nenhuma compra no dia que começa às 0,10); c13 com uma compra
 // nas mãos, um afazer de fora espera (a caverna punha as suas coisas por cima dela), um chamado urgente leva; c12 o corpo do
@@ -45,7 +46,8 @@ function houseIn(set, min, pred, what) {
 // hard-working farmer, and nobody went in 90 s, T-179. Grown is
 // 16 or more: under it the child's choice — childDecide — never asks the wish to shop, though the wish counts from 14)
 const grown16 = h => adults(h).filter(v => v.age >= 16);
-const canSend = h => grown16(h).some(v => !(v.job || (E.isJobRole && E.isJobRole(v.role))) && !(v.work > 1));
+// (and with hands to bring the purchase home: one who lost both arms has no wish to go, L-710)
+const canSend = h => grown16(h).some(v => !(v.job || (E.isJobRole && E.isJobRole(v.role))) && !(v.work > 1) && G.Depot.strength(v) > 0);
 // (and a house the town does not call away from an errand by its own rules: nobody of it in a voyage — the farewell at the
 // quay calls its people (2,4), and the crew to the quay (3,25) — nor a merchant of the caravans — trade.js takes the one who
 // has been one first, over any errand under 2. In the metrópole of the generation 18 the first house of Argos had Calista, the
@@ -110,7 +112,7 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
 const oracleOf = q => G.Caves.all().some(cv => cv.oracle && cv.oracle.id === q.id);
 function hand(h, done) {
   const r = { sent: [], t: S.clock };
-  const free = q => !(q.task && (GATHER[q.task.type] || q.task.type === 'shelter' || (q.task.pri || 0) >= 2)) && !(q.carry && q.carry.n > 0) && !oracleOf(q);
+  const free = q => !(q.task && (GATHER[q.task.type] || q.task.type === 'shelter' || (q.task.pri || 0) >= 2)) && !(q.carry && q.carry.n > 0) && !oracleOf(q) && G.Depot.strength(q) > 0;
   r.step = () => {
     if (errandOf(h) || done()) { r.t = S.clock; return; }
     if (S.clock - r.t <= 60 || r.sent.length >= 3) return;
@@ -388,6 +390,28 @@ const fair = stockFair(set);
   break;
   }
 }
+// ---------------- c18: the freest of the house has no arms: no wish to go, the house's try unspent, another of it goes (L-710)
+{
+  S.time = 0.15;
+  const t18 = [set].concat([...S.settlements.values()].filter(s => s !== set && E.coinage(s.fac) && hasB(s, 'feira')).sort((a, b) => (a.founded || 0) - (b.founded || 0) || a.id - b.id)).find(s => homesOf(s, 2, q => canSend(q) && grown16(q).filter(o => G.Depot.strength(o) > 0).length >= 2).length) || set;
+  stockFair(t18);
+  const h = houseLacking(t18, 2, 30, q => canSend(q) && grown16(q).filter(o => G.Depot.strength(o) > 0).length >= 2, 'com dois adultos de braços inteiros, um deles sem ofício');
+  // (the one the house would send — grown, no trade, no hard worker — loses both arms by the test's hand)
+  const one = grown16(h).filter(v => !(v.job || (E.isJobRole && E.isJobRole(v.role))) && !(v.work > 1) && G.Depot.strength(v) > 0).sort((a, b) => a.id - b.id)[0];
+  const lost0 = one.lost; one.lost = { armL: true, armR: true };
+  const u0 = C.urge(one), uOthers = grown16(h).filter(o => o !== one).map(o => C.urge(o));
+  let hers = 0; const task18 = C.task; C.task = function (o) { if (o && o.id === one.id) hers++; return task18.apply(this, arguments); };
+  const try0 = h.shopT; const hd18 = hand(h, () => false); let errand = null, hadIt = false;
+  const sent = fine(150, atHour(0.3, () => { hd18.step(); if (one.task && one.task.casa === h.id) hadIt = true; const v = errandOf(h); if (v) errand = errand || v; return !!errand || watch(); }));
+  C.task = task18;
+  // (and the errand's door itself turns her back with the house's try unspent — whoever calls it)
+  const tryA = h.shopT; const door = C.task(one, G.Vg.H); const turned = door === null && h.shopT === tryA && !(one.task && one.task.casa === h.id);
+  ok('c18 quem perdeu os braços não vai às compras: outro da casa vai', u0 === 0 && uOthers.some(u => u > 0) && hers === 0 && !hadIt && sent && !!errand && errand.id !== one.id && turned && !bad().length,
+    `${t18.id !== set.id ? `(em ${t18.name}) ` : ''}a casa #${h.id}: ${one.name}, sem ofício e sem os dois braços, vontade de ir ${u0.toFixed(2)} (os outros: ${uOthers.map(u => u.toFixed(2)).join(', ')}); a porta do recado chamada por ela ${hers} vez(es); ${errand ? `${errand.name} foi comprar` : 'NINGUÉM foi em 150 s'}${hd18.said()}; a porta do recado, chamada para ela, ${turned ? 'a devolve sem gastar a tentativa da casa' : 'GASTA a tentativa da casa'}`);
+  void try0;
+  one.lost = lost0;
+}
+
 // ---------------- c7: a save in the middle of the errand: the errand lost does not hold the house; it buys again, one at a time
 {
   S.time = 0.15;

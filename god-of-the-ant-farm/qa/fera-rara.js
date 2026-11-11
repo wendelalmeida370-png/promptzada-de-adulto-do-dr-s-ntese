@@ -197,10 +197,18 @@ for (const world of WORLDS) {
     if (!spot) ok(`f6 ${world}`, false, `nenhum chão além de 15 casas na borda de uma cidade larga (${wide.length} de raio 12,5 ou mais)`);
     else {
       const d0 = G.dist(spot[0], spot[1], set.cx, set.cy);
-      const a = G.Animals.spawn(kind, spot[0], spot[1], { morph: 'albino' });
-      let sd = null, k = 0;
-      for (; k < 30 && !sd && S.animals.has(a.id) && !a.dead; k++) { M.viver(1); sd = S.saga.seeds.find(x => x.type === 'fera-rara' && x.cast && x.cast.beast === a.id) || S.saga.stories.find(x => x.type === 'fera-rara' && x.cast.beast === a.id); }
-      ok(`f6 ${world}`, !!sd, `${set.name} (raio ${set.radius.toFixed(0)}): ${kind} raro a ${d0.toFixed(1)} casas do centro, na borda — ${sd ? 'a cidade viu em ' + k + ' s e a semente nasceu' : 'a cidade NÃO viu em 30 s'}`);
+      // (the case is the town's sight, which looks every ten seconds — not the nerve of the beast, nor the luck of the hunt:
+      // the beast is held at the edge by the test's hand, and one killed before the town's look is not the case — another is
+      // put there, three times at most. In the «cidade» of the sailors the rare rabbit took fright in the second second and
+      // was dead, hunted, in the fifth, T-689)
+      let sd = null, k = 0, killed = 0;
+      for (let n = 0; n < 4 && !sd; n++) {
+        const a = G.Animals.spawn(kind, spot[0], spot[1], { morph: 'albino' });
+        const hold = () => { G.inSim++; try { if (S.animals.has(a.id) && !a.dead && !a.rareSeen) { a.x = spot[0]; a.y = spot[1]; a.tx = spot[0]; a.ty = spot[1]; a.state = 'idle'; a.t = 3; a.path = undefined; } } finally { G.inSim--; } };
+        for (k = 0; k < 30 && !sd && S.animals.has(a.id) && !a.dead; k++) { hold(); M.viver(1); sd = S.saga.seeds.find(x => x.type === 'fera-rara' && x.cast && x.cast.beast === a.id) || S.saga.stories.find(x => x.type === 'fera-rara' && x.cast.beast === a.id); }
+        if (!sd && (a.dead || !S.animals.has(a.id)) && !a.rareSeen) killed++; else break;
+      }
+      ok(`f6 ${world}`, !!sd, `${set.name} (raio ${set.radius.toFixed(0)}): ${kind} raro a ${d0.toFixed(1)} casas do centro, na borda — ${sd ? 'a cidade viu em ' + k + ' s e a semente nasceu' : 'a cidade NÃO viu em 30 s'}${killed ? ` (${killed} morto(s) pela caça antes de a cidade olhar)` : ''}`);
     }
   }
 }

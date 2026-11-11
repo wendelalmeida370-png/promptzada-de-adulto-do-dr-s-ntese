@@ -6,6 +6,9 @@
 //     armazém ('feno', do armazém às mãos) e o rebanho come ('feno', das mãos ao uso): sai do armazém só o que o rebanho comeu
 //  r3 a tosquia, a ordenha e os ovos: o que o bicho dá nasce nas mãos pelo livro ('tosquia', 'ordenha', 'ovos') e vai ao
 //     armazém ('entrega'); o bicho fica sem lã, sem leite, sem ovos até dar de novo
+//  r15 o cuidado largado no meio solta o bicho: o pastor que ia recolher os ovos é chamado ao poço (a água da casa, 1,05 sobre
+//     o 1 do cuidado) — a marca «sendo cuidado» sai na hora, e o próximo cuidado o pega; o cuidado feito guarda a marca dos
+//     vinte segundos (L-709: a marca ficava vinte segundos num peru de que ninguém cuidava)
 //  r4 um save com o rebanho no pasto: carregado, o rebanho volta para o curral, nenhum fica solto para sempre
 //  r5 o pastor morre no pasto: o rebanho volta sozinho para o curral
 //  r6 sem capim em volta do curral (a cidade o cercou de ruas): o pastor não leva o rebanho ao chão nu, e o feno vem do armazém
@@ -168,7 +171,11 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   // the giving and the delivery, not the room. Tenochtitlan's store was full of food: of the 10 of eggs, 2 were lost at its
   // door, T-327)
   const GOODS = ['food', 'la', 'queijo'].filter(k => k === 'food' || k in G.Eco.GOODS);
-  const keepRoom = () => { for (const k of GOODS) { const room = V.cap(f.id) - (f.stock[k] || 0); if (room < 12) D.use('f:' + f.id, k, 12 - room, { code: 'teste', part: true }); } };
+  // (forty of room, not twelve: the store of a great town lives at its cap, and what its people bring in one step of the world
+  // can be more than twelve — in the metropole of the Bairros Vivos the twelve kept at 12283,3 were taken in the next tenth
+  // of a second, and the herder's two of eggs were lost at the door, T-690)
+  const ROOM = 40;
+  const keepRoom = () => { for (const k of GOODS) { const room = V.cap(f.id) - (f.stock[k] || 0); if (room < ROOM) D.use('f:' + f.id, k, ROOM - room, { code: 'teste', part: true }); } };
   keepRoom();
   // (and the herder's house with its water full, by the god's hand, as lazer.js and obra-longe.js bring theirs: the house's
   // jar low sends one of the house to the well — the world's own errand —, and in the generation-12 metropole Meresankh took
@@ -184,7 +191,11 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   // (each one seen giving — what it had down to nothing, the tending's mark, economy.js —, at the step it gave: a turkey lays
   // again in a third of a day (animals.js), and the first ones laid again before the third was tended, and counted as not
   // given — only the tending takes it down, T-327)
-  const gave = new Set(); const seeGive = () => { keepRoom(); for (const a of ready) if (!gave.has(a.id) && a[GIVES[a.kind]] < 1) gave.add(a.id); };
+  // (and the herder kept at the pen's work by the test's hand while a beast is still to give: the case is the giving and the
+  // delivery, not what else the afternoon offers — in the metropole of the Bairros Vivos a show at the theatre (0,45) took
+  // both herders of the pen at 0,49, with two turkeys still to tend, and the evening came, T-693. Up to six times, told)
+  let back = 0; const idle = () => { const t = P.v.task; return !P.v.sleeping && !P.v.inside && !(P.v.carry && P.v.carry.n > 1e-6) && (!t || (t.pri || 0) < 1); };
+  const gave = new Set(); const seeGive = () => { keepRoom(); for (const a of ready) if (!gave.has(a.id) && a[GIVES[a.kind]] < 1) gave.add(a.id); if (back < 6 && idle() && dueNow().some(a => !gave.has(a.id))) { back++; G.Vg.endTask(P.v); G.Vg.H.workTask(P.v); } };
   live(300, seeGive, () => dueNow().every(a => gave.has(a.id)) && !(P.v.carry && P.v.carry.n > 1e-6));
   const made = {}, sent = {}; const L = seen.slice(L0);
   for (const e of L) { if (e[3] === '@mundo' && e[4] === 'v:' + P.v.id && ['tosquia', 'ordenha', 'ovos'].includes(e[8])) made[e[5]] = r2((made[e[5]] || 0) + e[6]); if (e[3] === 'v:' + P.v.id && String(e[4]).startsWith('f:') && e[8] === 'entrega') sent[e[5]] = r2((sent[e[5]] || 0) + e[6]); }
@@ -192,7 +203,30 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
   const given = due.filter(a => gave.has(a.id)).length; const bad = newBad(P.base);
   const same = Object.keys(made).length > 0 && Object.keys(made).every(k => Math.abs((sent[k] || 0) - made[k]) < 0.01);
   ok('r3', due.length > 0 && given === due.length && same && !(P.v.carry && P.v.carry.n > 1e-6) && !bad.length,
-    `${ready.length} bicho(s) prontos (${[...new Set(ready.map(a => a.kind))].join(', ')})${ready.some(a => a.dead && a.cause === 'old') ? `, ${ready.filter(a => a.dead && a.cause === 'old').length} morreu de velhice no caso` : ''}${ready.some(a => CUT.has(a.id)) ? `, ${ready.filter(a => CUT.has(a.id)).length} levad${ready.filter(a => CUT.has(a.id)).length === 1 ? 'o' : 'os'} pelo açougueiro` : ''}: deram ${given} de ${due.length}; nasceu nas mãos pelo livro ${JSON.stringify(made)}, ao armazém ${JSON.stringify(sent)}; ${f ? '' : 'sem povo; '}nas mãos no fim ${P.v.carry ? r2(P.v.carry.n) + ' de ' + P.v.carry.k : 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    `${ready.length} bicho(s) prontos (${[...new Set(ready.map(a => a.kind))].join(', ')})${ready.some(a => a.dead && a.cause === 'old') ? `, ${ready.filter(a => a.dead && a.cause === 'old').length} morreu de velhice no caso` : ''}${ready.some(a => CUT.has(a.id)) ? `, ${ready.filter(a => CUT.has(a.id)).length} levad${ready.filter(a => CUT.has(a.id)).length === 1 ? 'o' : 'os'} pelo açougueiro` : ''}: deram ${given} de ${due.length}; nasceu nas mãos pelo livro ${JSON.stringify(made)}, ao armazém ${JSON.stringify(sent)}; ${f ? '' : 'sem povo; '}nas mãos no fim ${P.v.carry ? r2(P.v.carry.n) + ' de ' + P.v.carry.k : 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}${back ? `; chamado de volta ao curral pela mão da prova ${back} vez(es)` : ''}`);
+}
+
+// r15 the tending left in the middle frees the beast (L-709)
+{
+  const P = setup(0.43, 0.1); const one = P.herd.find(a => GIVES[a.kind] && a.grown >= 1) || null;
+  for (const a of P.herd) if (GIVES[a.kind]) { a[GIVES[a.kind]] = 0; a.tended = 0; }
+  let took = false, mark0 = 0, freed = false, again = false, gave = false, kept = false, t0 = 0;
+  if (one) {
+    one[GIVES[one.kind]] = 1.5; if (one.kind === 'ovelha') one.shorn = 0;
+    const h = S().buildings.get(P.v.home); if (h) { h.water = 1; h.waterTry = undefined; }
+    send(P.v, P.b); t0 = S().clock;
+    took = !!(P.v.task && P.v.task.type === 'tend' && P.v.task.a === one.id); mark0 = one.tended;
+    // (called away as the world calls: the house's water)
+    if (h) G.Vg.setTask(P.v, { type: 'water', home: h.id, pri: 1.05, st: 0, kind: 'water' });
+    freed = !(P.v.task && P.v.task.type === 'tend') && !(one.tended > S().clock);
+    // (the errand ended by the test's hand: the next tending is the herder's own, or another of the pen's)
+    send(P.v, P.b);
+    again = [...S().villagers.values()].some(o => o.task && o.task.type === 'tend' && o.task.a === one.id);
+    live(60, null, () => one[GIVES[one.kind]] < 1);
+    gave = one[GIVES[one.kind]] < 1; kept = one.tended > S().clock;
+  }
+  ok('r15', !!one && took && mark0 > t0 && freed && again && gave && kept,
+    one ? `${P.v.name} ia cuidar de ${one.kind}#${one.id} (a marca posta: ${mark0 > t0}); chamado ao poço: a marca ${freed ? 'saiu na hora' : 'FICOU'}; o cuidado seguinte ${again ? 'o pegou' : 'NÃO o pegou'}; ${gave ? 'deu' : 'NÃO deu'} em ${Math.round(S().clock - t0)} s; depois do cuidado feito a marca ${kept ? 'guarda os vinte segundos' : 'NÃO ficou'}` : 'nenhum bicho pronto no curral');
 }
 // r4 a save with the flock out at pasture
 {

@@ -385,7 +385,8 @@
     G.Audio && G.Audio.at(cx, cy, 'collapse', true);
     G.City && G.City.onDestroyed(b);
     if (b.origType !== 'hut' || G.R() < 0.6)
-      V.log(`${nm}${set ? ' de ' + set.name : ''} foi destruíd${G.gen(nm)}${cause === 'fire' ? ' pelo fogo' : cause === 'meteor' ? ' por um meteoro' : cause === 'lightning' ? ' por um raio' : cause === 'quake' ? ' pelo terremoto' : cause === 'siege' ? ' pelas máquinas de cerco' : cause === 'wave' ? ' pelo maremoto' : cause === 'lava' ? ' pela lava' : cause === 'sea' ? ' pelo mar' : cause === 'riot' ? ' pela multidão' : ''}.`, cause === 'quake' ? 'stone' : 'fire', cx, cy);
+      // (in a city of quarters the chronicle says where: «do Bairro do Porto de Mênfis» — Bairros Vivos)
+      V.log(`${nm}${set ? (G.Urban && G.Urban.ofPlace ? G.Urban.ofPlace(cx, cy, set) : ' de ' + set.name) : ''} foi destruíd${G.gen(nm)}${cause === 'fire' ? ' pelo fogo' : cause === 'meteor' ? ' por um meteoro' : cause === 'lightning' ? ' por um raio' : cause === 'quake' ? ' pelo terremoto' : cause === 'siege' ? ' pelas máquinas de cerco' : cause === 'wave' ? ' pelo maremoto' : cause === 'lava' ? ' pela lava' : cause === 'sea' ? ' pelo mar' : cause === 'riot' ? ' pela multidão' : ''}.`, cause === 'quake' ? 'stone' : 'fire', cx, cy);
   };
 
   // ------------------------------ stock (each people has its own) ------------------------------

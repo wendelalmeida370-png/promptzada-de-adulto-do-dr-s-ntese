@@ -748,7 +748,7 @@
     else if (t.what === 'milk') a.milk = 0;
     else if (t.what === 'eggs') a.eggs = 0;
     else { a.hunger = Math.max(0, a.hunger - 0.2); if (f) f._grooms = (f._grooms || 0) + 1; }
-    a.hold = 0;
+    a.hold = 0; t.did = 1; // (tended: the mark keeps its twenty seconds; a tending left before this frees the beast, L-709)
     if (carry) { const r = D.make('v:' + v.id, carry.k, carry.n, { code: carry.code, by: v.id, pack: true }); if (r.ok) { if (f) made(f, carry.k, r.n); E.pay(v, carry.k, r.n); if (G.Urban) G.Urban.note(v.x, v.y, 'campo', 1); } H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' }); }
     else H.end(v);
   }
