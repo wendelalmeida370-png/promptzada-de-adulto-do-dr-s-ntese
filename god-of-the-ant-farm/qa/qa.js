@@ -381,6 +381,9 @@
           if (v.aboard || v.jail || v.captive || v.held || v.air || v.ug) add('avatar', 1, `${nm}: ${v.aboard ? 'a bordo' : v.jail ? 'preso' : v.captive ? 'cativo' : v.held ? 'na mão do deus' : v.air ? 'no ar' : 'na caverna'} e ainda encarnado`, v.id);
           // (dentro só onde a planta tem lugar para o corpo — um cômodo, uma escada, a casca de um prédio de planta —, ou dormindo na
           // própria cama; fora, na soleira e nos degraus que a planta anda: Possess.onPlan, a mesma regra do passo do mundo — L-162)
+          // (the floor of a plan is of a body on that plan — in a room, or out on its steps, its square, its rows —: taken in a
+          // room, the mark put the body out at the door, off the plan, with the floor still written, L-741)
+          if (!v.inside && a.lv !== null && a.lv !== undefined && !G.Possess.onPlan(v)) add('avatar', 2, `${nm}: fora de qualquer prédio e de qualquer planta com o piso de dentro escrito (${a.lv}) — L-741`, v.id);
           if (v.inside && !(v.sleeping && v.inside === v.home) && !G.Possess.onPlan(v)) add('avatar', 2, `${nm}: dentro de ${v.inside} fora de um lugar da planta e sem estar dormindo em casa`, v.id);
           // (where the world does not walk, the body may only be in the water — swimming, or wading the sea's shallows — and
           // marked so, for the world to leave it there; out of the water the mark goes)

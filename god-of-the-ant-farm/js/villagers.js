@@ -183,8 +183,10 @@
       G.Life.jarHome(v, G.Village.livable(h) && (v.inside === h.id || atDoor(v, h)) ? h : null); // (L-371)
     }
     // (an errand that goes on in the building one is in — t.stay: from the fire to the table, to bed — keeps one there: the
-    // door is for going out)
-    Vg.endTask(v, t.stay && v.inside && v.inside === t.stay ? { stay: t.stay } : undefined);
+    // door is for going out. And the mark of the god's body leaves it where it was taken, in the room: the errand had ended
+    // before the mark, and the mark — an errand like any other to «one left in a building with no errand» — put the body
+    // out at the door, its inner floor still written, L-741)
+    Vg.endTask(v, v.inside && (t.stay === v.inside || t.type === 'avatar') ? { stay: v.inside } : undefined);
     t.age = 0; if (t.st === undefined) t.st = 0;
     v.task = t; v.act = ''; v.actT = 0;
     return t;
