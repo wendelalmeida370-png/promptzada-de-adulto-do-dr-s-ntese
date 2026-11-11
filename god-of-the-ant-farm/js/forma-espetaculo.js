@@ -21,7 +21,8 @@
   //           ground up, [{ y0, y1, arco: { w (its share of the bay), a, b (shares of the storey's height: its sill — 0, the
   //           ground — and the top of its round head) } | null, janela: { w (metres), a, b, cada (every so many bays) } |
   //           null, ordem: 'toscana' | 'jonica' | 'corintia' | 'pilastra' (the half-columns, or the pilasters, at the
-  //           piers) }]; each arch is dark behind (the galleries the god draws: closed) but on the bays of abertos (their
+  //           piers), escudo: { r, cor } (a round shield of gilded bronze on its outer face, on the bays with no window: the
+  //           attic's clipea) }]; each arch is dark behind (the galleries the god draws: closed) but on the bays of abertos (their
   //           numbers: the bay k from pts[k] to pts[k+1]), whose ground arch is a way in, through the ring's whole depth —
   //           its soffit the passage's vault —; dentro: { y0 } — its inner face, from y0 up (under it the seats lean on it;
   //           no face there), with the same storeys' arches, dark behind —; cor [lit, shaded], escuro (the dark), mat
@@ -120,7 +121,7 @@
       { y0: 0, y1: yTop, arco: { w: 0.6, a: 0, b: 0.725 }, ordem: 'toscana' },
       { y0: yTop, y1: s1, arco: { w: 0.6, a: 0.175, b: 0.725 }, ordem: 'jonica' },
       { y0: s1, y1: s2, arco: { w: 0.6, a: 0.175, b: 0.725 }, ordem: 'corintia' },
-      { y0: s2, y1: H, janela: { w: 0.7, a: 0.3, b: 0.65, cada: 2 }, ordem: 'pilastra' },
+      { y0: s2, y1: H, janela: { w: 0.7, a: 0.3, b: 0.65, cada: 2 }, ordem: 'pilastra', escudo: { r: 0.5, cor: '#d9a441' } },
     ];
     const els = [];
     // (the square: the travertine over the lot, a step from the street; the posts along its edges)
@@ -128,7 +129,7 @@
     const way = [cu - 2.4, cu + 2.4]; // (the way in from the street, at the front: as wide as an axial bay's arch and a stride either side)
     for (let x = 1.2; x <= L - 1.2 + 1e-6; x += 2.8) for (const [u, v] of [[x, L - 0.3], [x, 0.3], [0.3, x], [L - 0.3, x]]) {
       if (v > L - 1 && u > way[0] - 0.5 && u < way[1] + 0.5) continue;
-      els.push({ k: 'coluna', c: [k3(u), k3(v)], r: 0.17, y0: 0, y1: 0.95, cor: ['#e8dcc0', '#c8b890'], mat: 'base' });
+      els.push({ k: 'coluna', c: [k3(u), k3(v)], r: 0.17, y0: 0, y1: 0.95, cor: ['#e8dcc0', '#c8b890'], mat: 'base', lados: 8 }); // (a post a hand thick: eight sides, D-178)
     }
     // (the undercroft: the long corridor, the cross one, their walls under the sand — 0.2 m thick, up to the sand's underside —,
     // the cages behind the long one's walls, a barred window onto it each; the flight up to the hatch, rising to the front)
@@ -146,7 +147,7 @@
       // (its two sides and its back, each kept for the plan too — its walls the same, L-600)
       c.walls = [[c.u0 - wt, lo, c.u0, hi], [c.u1, lo, c.u1 + wt, hi], [c.u0 - wt, c.sv > 0 ? hi : lo - wt, c.u1 + wt, c.sv > 0 ? hi + wt : lo]].map(q => q.map(k3));
       for (const q of c.walls) wall(q, 0, yc);
-      els.push({ k: 'janelas', na: c.sv > 0 ? 'fundo' : 'frente', em: k3(c.sv > 0 ? cv + h / 2 : cv - h / 2), de: k3(c.u0 + 0.4), ate: k3(c.u1 - 0.4), y0: 0.9, y1: 1.9, n: 0, grade: 6 });
+      els.push({ k: 'janelas', na: c.sv > 0 ? 'fundo' : 'frente', em: k3(c.sv > 0 ? cv + h / 2 : cv - h / 2), de: k3(c.u0 + 0.4), ate: k3(c.u1 - 0.4), y0: 0.9, y1: 1.9, n: 0, grade: 4 }); // (four bars: a hand does not pass, D-178)
     }
     // (a flight's treads, each a block from the ground to its top — no riser over 0.225: m of them —, the way up dir: along v
     // (du 0) rising to dv, along u rising to du)
@@ -255,6 +256,14 @@
     // (the masts of the awning: one over each pier, out of the attic's face on its corbels)
     for (let k = 0; k < nb; k++) { const p = pts[k], q = pts1[k]; const l = Math.hypot(p[0] - q[0], p[1] - q[1]) || 1; const x = k3(p[0] + (p[0] - q[0]) / l * 0.18), z = k3(p[1] + (p[1] - q[1]) / l * 0.18);
       els.push({ k: 'tora', a: [x, z, k3(H - 1.4)], b: [x, z, k3(H + 4.5)], r: 0.11, cor: '#7a5a3a' }); }
+    // (the awning — the velarium, D-179 —: a strip of sailcloth over each bay, tied at the tops of its two masts and narrowing
+    // down to the rope ring over the third row — the arena open to the sky inside it, the seats in its shade —; between two
+    // strips a gap widening toward the ring, the sky in it; two of cream to one of madder, as the awnings of Rome were dyed.
+    // Cloth: no body's way, no mass — the plan and the eye's stone know nothing of it)
+    const vy0 = k3(H + 3.9), vy1 = k3(H - 2.2); const ring = B.at.map(p => primAt(O.prims[p.i], p.f, dp + 2 * TREAD));
+    const mixP = (a, b2, f) => [k3(a[0] + (b2[0] - a[0]) * f), k3(a[1] + (b2[1] - a[1]) * f)];
+    for (let k = 0; k < nb; k++) { const j = (k + 1) % nb; const c = mixP(ring[k], ring[j], 0.82), d = mixP(ring[k], ring[j], 0.18);
+      els.push({ k: 'pano', p: [[pts[k][0], pts[k][1], vy0], [pts[j][0], pts[j][1], vy0], [c[0], c[1], vy1], [d[0], d[1], vy1]], cor: k % 3 === 1 ? '#b5553c' : '#ece2c8', mat: 'canvas', velario: 1 }); }
     // (the arch of a way in: as the facade's ground storey has it)
     const aw = k3(0.6 * B.W * Math.min(1, Math.hypot(pts[axes[1] + 1][0] - pts[axes[1]][0], pts[axes[1] + 1][1] - pts[axes[1]][1]) / B.W)), ah = k3(0.725 * yTop);
     // (and the plan's questions of it: the arena's edge d out, as sides — its primitives: 0 and 12 the right end's halves, 3 the
@@ -306,7 +315,20 @@
     const inner = [], els = [box([0, 0, L, L], 0, y0, ['base0', 'base1', 'base2'], { mat: 'slab', piso: 1 })];
     // (the corridor: from the face's foot 5 m in; its walls 0.4 m, its ceiling 0.4 m)
     const cw = 0.8, ct = 0.4, ch = 2.4, vC = face - 5.0;
-    inner.push(box([cu - cw - ct, vC, cu - cw, face], y0, y0 + ch), box([cu + cw, vC, cu + cw + ct, face], y0, y0 + ch), box([cu - cw - ct, vC, cu + cw + ct, face], y0 + ch, y0 + ch + 0.4));
+    // (its mouth, D-180: the gate of red granite the corridor leaves the sloping face by — its two battered jambs from the face's
+    // foot line back into the mass, the lintel between them, the cornice of limestone over both, out over the square higher than
+    // any head, the gilded sun on the lintel —, seen from the street and painted by the god; the corridor's own walls and ceiling,
+    // inside the mass, begin where the gate ends. All of it behind the face's foot: the square before it is the plan's whole)
+    const gd = 3.0, gh = 3.3, gj = 1.7, vM = face - gd;
+    inner.push(box([cu - cw - ct, vC, cu - cw, vM], y0, y0 + ch), box([cu + cw, vC, cu + cw + ct, vM], y0, y0 + ch), box([cu - cw - ct, vC, cu + cw + ct, vM], y0 + ch, y0 + ch + 0.4));
+    const gate = [];
+    for (const sg of [-1, 1]) { const a = cu + sg * cw, b = cu + sg * (cw + gj);
+      gate.push({ k: 'talude', r: [Math.min(a, b), vM, Math.max(a, b), face].map(k3), r1: [Math.min(a, b - sg * 0.22), vM, Math.max(a, b - sg * 0.22), face - 0.22].map(k3), y0, y1: k3(y0 + gh), cor: GRANITE, mat: 'ashlar' }); }
+    // (the lintel out to the face's foot line: the corridor's ceiling to its very mouth — short of it, the last cells of the
+    // corridor had the cornice's back over them, the sky through it)
+    gate.push(box([cu - cw, vM, cu + cw, face], y0 + ch, y0 + gh, GRANITE),
+      box([cu - cw - gj + 0.1, vM, cu + cw + gj - 0.1, face], y0 + gh, y0 + gh + 0.45, LSTONE),
+      { k: 'disco', na: 'frente', u: cu, v: k3(face), y: k3(y0 + ch + (gh - ch) / 2), r: 0.3, cor: '#f2c14e' });
     // (the great gallery: its flight up toward the back, a tread of 0.25 m and no riser over 0.25, from the ground; its walls
     // 0.5 m, as high as its vault; the vault in four courses, each over a quarter of the flight, 3 m over its steps there)
     const yK = k3(y0 + 5.4), m = Math.ceil((yK - y0) / 0.25 - 1e-9), run = m * 0.25, vG = vC - run, gw = 1.0;
@@ -324,7 +346,7 @@
     const sarco = [cu - 1.1, vK + 0.5, cu + 1.1, vK + 1.5].map(k3); inner.push(box(sarco, yK, yK + 1.05, ['#5a3a30', '#4a2e26', '#6a4a3e']));
     for (const q of inner) q.oculto = 1;
     els.push(...inner);
-    els.push({ k: 'piramide', c: [cu, cv], e, y0, y1: k3(y0 + H), cor: LIME, fiadas: 60, ponta: { f: 0.05, cor: ['#ffe27a', '#d9a93a'] }, entrada: { u: cu, w: 2 * cw, y0, y1: y0 + ch } });
+    els.push({ k: 'piramide', c: [cu, cv], e, y0, y1: k3(y0 + H), cor: LIME, fiadas: 60, ponta: { f: 0.07, cor: ['#ffe27a', '#d9a93a'] }, entrada: { u: cu, w: 2 * cw, y0, y1: y0 + ch } }, ...gate); // (the capstone a man tall: seen from the street)
     // (the temple before the face, on the colossal's lot: its court's walls — the gate in the front one —, the pillars along its
     // sides, the altar before the way in)
     let temple = null;

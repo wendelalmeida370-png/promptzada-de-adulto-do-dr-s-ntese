@@ -1654,8 +1654,13 @@ float m3scale(float p) {
         K.as(X.mat(e, stuff(K.b).base), () => { for (const sg of [-1, 1]) { const uu = u + sg * (hw + e.alfarda / 2);
           const A = X.pt(uu, e.a[1], e.a[2]), B = X.pt(uu, e.b[1], e.b[2]);
           K.bar([A[0], A[1] - 0.12, A[2]], [B[0], B[1] - 0.12, B[2]], [0, 0.42, 0], [X.across[0] * e.alfarda, 0, X.across[1] * e.alfarda], ac); } }); }
-      if (e.divisor) { const d = e.divisor; const A = X.pt(u + d.u, e.a[1] + 0.01, e.a[2] + 0.02), B = X.pt(u + d.u, e.b[1] + 0.01, e.b[2] + 0.02);
-        K.as('stucco', () => K.bar([A[0], A[1], A[2]], [B[0], B[1], B[2]], [0, 0.06, 0], [X.across[0] * d.w, 0, X.across[1] * d.w], X.col(d.cor))); }
+      // (the painted line down its middle: on each step's riser and tread, a hair over them — the feet walk on it. One slab from
+      // the foot to the top lay along the risers' feet, inside the steps, and only its edge showed at each riser: a row of
+      // dashes where the god paints a line, L-801)
+      if (e.divisor) { const d = e.divisor, ua = u + d.u - d.w / 2, ub = u + d.u + d.w / 2, dc = X.col(d.cor), fo = [X.front[0], 0, X.front[1]], h = 0.006;
+        K.as('stucco', () => { for (let k = 0; k < n; k++) { const yA = e.a[2] + rise * k / n, yT = e.a[2] + rise * (k + 1) / n, vF = e.a[1] - run * k / n, vN = k === n - 1 ? e.b[1] : e.a[1] - run * (k + 1) / n;
+          K.quad(X.pt(ua, vF + h, yA), X.pt(ub, vF + h, yA), X.pt(ub, vF + h, yT + h), X.pt(ua, vF + h, yT + h), dc, fo);
+          K.quad(X.pt(ua, vF + h, yT + h), X.pt(ub, vF + h, yT + h), X.pt(ub, vN, yT + h), X.pt(ua, vN, yT + h), dc, UP); } }); }
     },
     // the drum of arcades: one flat bay a segment round, each tier's arch in it — its piers, the sill under the arch (not on
     // the ground tier: its arches are the ways in), the wall over it, the corners round its round head, the reveals through
@@ -1810,7 +1815,7 @@ float m3scale(float p) {
     // pier where the machine carries detail; the inner face from dentro.y0 up, the same arches, their dark at the gallery's middle;
     // the walk on its top
     arcada(K, e, X) {
-      const n = e.pts.length; const lit = rgbOf(X.col(e.cor[0])); const dark = X.col(e.escuro || '#2a1e18'); const M = K.fine ? 6 : 4; // (an arch's half-round in 12 pieces near, 8 beyond the fine detail)
+      const n = e.pts.length; const lit = rgbOf(X.col(e.cor[0])); const dark = X.col(e.escuro || '#2a1e18');
       const open = new Set(e.abertos || []); const yFoot = X.foot(e.y0); const din = e.dentro ? e.dentro.y0 : Infinity;
       // (a face of a bay: the middle of its line, the way along it, the way out of it — away from the other face —, its length)
       const frame = (p0, p1, q0, q1) => { const m = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2], mq = [(q0[0] + q1[0]) / 2, (q0[1] + q1[1]) / 2]; const bw = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1e-6;
@@ -1821,6 +1826,9 @@ float m3scale(float p) {
         const P = (s, y, d) => [f.m[0] + f.tg[0] * s - f.o[0] * d, y, f.m[1] + f.tg[1] * s - f.o[1] * d]; const out = [f.o[0], 0, f.o[1]], T3 = [f.tg[0], 0, f.tg[1]];
         const face = (s0, y0, s1, y1) => { if (y1 - y0 > 1e-4 && s1 - s0 > 1e-4) K.quad(P(s0, y0, 0), P(s1, y0, 0), P(s1, y1, 0), P(s0, y1, 0), tone, out); };
         const h = st.y1 - st.y0, bw = f.bw; const win = !st.arco && st.janela && q % (st.janela.cada || 1) === 0 ? st.janela : null;
+        // (an arch's half-round in 12 pieces where an eye comes near it — the ground storey from the street, the inner face's on
+        // the walk behind the top row —, in 8 over them, a storey and more over every head, and beyond the fine detail: D-178)
+        const M = K.fine && (plain || st.y0 <= 0.001) ? 6 : 4;
         if (st.arco) {
           const aw = Math.min(bw - 0.3, bw * st.arco.w); const ya = X.Y(st.y0 + st.arco.a * h), yt = X.Y(st.y0 + st.arco.b * h); const yh = yt - aw / 2;
           face(-bw / 2, yb, -aw / 2, ytop); face(aw / 2, yb, bw / 2, ytop); face(-aw / 2, yb, aw / 2, ya); face(-aw / 2, yt, aw / 2, ytop);
@@ -1831,8 +1839,9 @@ float m3scale(float p) {
             K.quad(P(c0[0], c0[1], 0), P(c1[0], c1[1], 0), P(c1[0], c1[1], dd), P(c0[0], c0[1], dd), dim(tone, 0.7), inw); }
           for (const sg of [-1, 1]) K.quad(P(sg * aw / 2, ya, 0), P(sg * aw / 2, yh, 0), P(sg * aw / 2, yh, dd), P(sg * aw / 2, ya, dd), dim(tone, 0.78), [T3[0] * -sg, 0, T3[2] * -sg]);
           K.quad(P(-aw / 2, ya, 0), P(aw / 2, ya, 0), P(aw / 2, ya, dd), P(-aw / 2, ya, dd), dim(tone, 0.88), UP);
-          if (!through) { K.quad(P(-aw / 2, ya, dd), P(aw / 2, ya, dd), P(aw / 2, yh, dd), P(-aw / 2, yh, dd), dark, out);
-            for (let j = 0; j < M * 2; j++) K.tri(P(0, yh, dd), P(arc[j][0], arc[j][1], dd), P(arc[j + 1][0], arc[j + 1][1], dd), dark, out); }
+          // (the dark of the gallery behind: one sheet as wide and as tall as the opening — its corners over the round head lie
+          // behind the soffit, where no eye reaches them; it was the head's fan of 12 more, D-178)
+          if (!through) K.quad(P(-aw / 2, ya, dd), P(aw / 2, ya, dd), P(aw / 2, yt, dd), P(-aw / 2, yt, dd), dark, out);
         } else if (win) {
           const ww = Math.min(bw - 0.4, win.w), wa = X.Y(st.y0 + win.a * h), wb = X.Y(st.y0 + win.b * h), wd = Math.min(0.4, dd);
           face(-bw / 2, yb, -ww / 2, ytop); face(ww / 2, yb, bw / 2, ytop); face(-ww / 2, yb, ww / 2, wa); face(-ww / 2, wb, ww / 2, ytop);
@@ -1870,6 +1879,9 @@ float m3scale(float p) {
         e.andares.forEach((st, k) => {
           const yb = st.y0 <= 0.001 ? yFoot : X.Y(st.y0), ytop = X.Y(st.y1); const inner = st.y0 >= din - 1e-6;
           storey(fo, st, yb, ytop, tone, way && k === 0 ? t : inner ? t / 2 : t * 0.85, way && k === 0, q);
+          // (the attic's shields of gilded bronze — the clipea —: a round on the outer face of each bay with no window, D-179)
+          if (st.escudo && K.fine && !(st.janela && q % (st.janela.cada || 1) === 0)) { const ym = (yb + ytop) / 2 - 0.12;
+            K.as('iron', () => formDisc(K, [fo.m[0] + fo.o[0] * 0.05, ym, fo.m[1] + fo.o[1] * 0.05], [fo.o[0], 0, fo.o[1]], st.escudo.r, X.col(st.escudo.cor), 10)); }
           // (the inner face's storey on the walk plain of its order: its half-columns' bases stood 0.16 m over the plan's floor of the
           // walk, 0.3 m out of the face — the body walked through them)
           if (inner) storey(fi, st, yb, ytop, dim(tone, 0.94), t / 2, false, q, st.y0 < din + 0.5);
@@ -2247,7 +2259,7 @@ float m3scale(float p) {
     // masts — are under a pixel there, and the Colosseum has some 180 of them. The classic forms keep theirs: the god's figures)
     const big = F.L >= 24; const small = m => (m.k === 'box' && (Math.min(m.r[2] - m.r[0], m.r[3] - m.r[1]) < 0.5 || (m.r[2] - m.r[0]) * (m.r[3] - m.r[1]) * (m.y1 - m.y0) < 3)) || (m.k === 'tronco' && Math.max(m.r0, m.r1) < 0.25);
     for (const m of G.Forma.mass(F)) {
-      if (big && small(m)) continue;
+      if (m.fino || (big && small(m))) continue; // (fino: a palisade's stakes and their points, at any size — its planks are the fence from afar, L-800)
       const y0 = m.y0 <= 0.001 ? lo - hi - 0.2 : m.y0; g.pat = PAT[m.k === 'piramide' ? 'sandstone' : m.k === 'telhado' ? 'tile' : 'stone']; const cc = col(m.cor);
       if (m.k === 'box' || m.k === 'talude') { const a = m.r, t2 = m.r1 || m.r; const lo4 = [[a[0], a[3]], [a[2], a[3]], [a[2], a[1]], [a[0], a[1]]], hi4 = [[t2[0], t2[3]], [t2[2], t2[3]], [t2[2], t2[1]], [t2[0], t2[1]]];
         const C = W((a[0] + a[2]) / 2, (a[1] + a[3]) / 2, 0);
@@ -2257,13 +2269,17 @@ float m3scale(float p) {
       else if (m.k === 'piramide') { const Q = [[-1, 1], [1, 1], [1, -1], [-1, -1]]; const C = W(m.c[0], m.c[1], 0);
         for (let k = 0; k < 4; k++) { const q = (k + 1) % 4; const A = W(m.c[0] + Q[k][0] * m.e, m.c[1] + Q[k][1] * m.e, y0), B = W(m.c[0] + Q[q][0] * m.e, m.c[1] + Q[q][1] * m.e, y0); const md = mid(A, B);
           tri(A, B, W(m.c[0], m.c[1], m.y1), cc, [md[0] - C[0], 0.5, md[2] - C[2]]); } }
-      else if (m.k === 'anel') { const A0 = m.a0 !== undefined ? m.a0 : 0, A1 = m.a1 !== undefined ? m.a1 : TAU; const S = Math.max(4, Math.round(24 * (A1 - A0) / TAU)); const p = (r, a, y) => W(m.c[0] + Math.cos(a) * r, m.c[1] + Math.sin(a) * r, y);
+      // (a part of the round as finely as the whole — a side every 15° —; of a big form's, a narrow wedge of rows in as few as
+      // that gives: four sides to each of the hundred wedges of a great theatre made its far figure 3,276 triangles, over the
+      // ceiling of two thousand — L-802)
+      else if (m.k === 'anel') { const A0 = m.a0 !== undefined ? m.a0 : 0, A1 = m.a1 !== undefined ? m.a1 : TAU; const S = Math.max(big ? 1 : 4, Math.round(24 * (A1 - A0) / TAU)); const yi = m.yi !== undefined ? m.yi : m.y1; const p = (r, a, y) => W(m.c[0] + Math.cos(a) * r, m.c[1] + Math.sin(a) * r, y);
         for (let k = 0; k < S; k++) { const a0 = A0 + (A1 - A0) * k / S, a1 = A0 + (A1 - A0) * (k + 1) / S, am = (a0 + a1) / 2;
           const o = G.Forma.dirLot(side, Math.cos(am), Math.sin(am)); const out = [o[0], 0, o[1]], inn = [-o[0], 0, -o[1]];
-          quad(p(m.r, a0, y0), p(m.r, a1, y0), p(m.r, a1, m.y1), p(m.r, a0, m.y1), cc, out); quad(p(m.r - m.t, a0, m.y1), p(m.r, a0, m.y1), p(m.r, a1, m.y1), p(m.r - m.t, a1, m.y1), cc, UP);
-          quad(p(m.r - m.t, a1, y0), p(m.r - m.t, a0, y0), p(m.r - m.t, a0, m.y1), p(m.r - m.t, a1, m.y1), dim(rgbOf(cc), 0.8), inn); }
+          // (its top the slope of its rows where the mass has one — yi at its inner edge, L-803 —, flat else: a drum's walk)
+          quad(p(m.r, a0, y0), p(m.r, a1, y0), p(m.r, a1, m.y1), p(m.r, a0, m.y1), cc, out); quad(p(m.r - m.t, a0, yi), p(m.r, a0, m.y1), p(m.r, a1, m.y1), p(m.r - m.t, a1, yi), cc, UP);
+          quad(p(m.r - m.t, a1, y0), p(m.r - m.t, a0, y0), p(m.r - m.t, a0, yi), p(m.r - m.t, a1, yi), dim(rgbOf(cc), 0.8), inn); }
         // (a part of the round: its two ends)
-        if (A1 - A0 < TAU - 1e-6) for (const [a, sg] of [[A0, -1], [A1, 1]]) { const t = G.Forma.dirLot(side, -Math.sin(a), Math.cos(a)); quad(p(m.r - m.t, a, y0), p(m.r, a, y0), p(m.r, a, m.y1), p(m.r - m.t, a, m.y1), cc, [t[0] * sg, 0, t[1] * sg]); } }
+        if (A1 - A0 < TAU - 1e-6) for (const [a, sg] of [[A0, -1], [A1, 1]]) { const t = G.Forma.dirLot(side, -Math.sin(a), Math.cos(a)); quad(p(m.r - m.t, a, y0), p(m.r, a, y0), p(m.r, a, m.y1), p(m.r - m.t, a, yi), cc, [t[0] * sg, 0, t[1] * sg]); } }
       else if (m.k === 'telhado' && m.quatro) for (const f of G.Forma.hip(m.r, m.y0, m.y1, m.ov || 0)) { const P = f.p.map(q => W(q[0], q[1], q[2])); const o = G.Forma.dirLot(side, f.n[0], f.n[1]); const out = [o[0], f.n[2], o[1]];
         if (P.length === 4) quad(P[0], P[1], P[2], P[3], cc, out); else tri(P[0], P[1], P[2], cc, out); }
       else if (m.k === 'telhado') { const ov = m.ov || 0; const a = W(m.r[0] - ov, m.r[1] - ov, 0), b2 = W(m.r[2] + ov, m.r[3] + ov, 0); const x0 = Math.min(a[0], b2[0]), x1 = Math.max(a[0], b2[0]), z0 = Math.min(a[2], b2[2]), z1 = Math.max(a[2], b2[2]);

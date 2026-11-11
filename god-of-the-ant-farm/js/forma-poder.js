@@ -12,6 +12,11 @@
   const Fo = G.Forma; if (!Fo) return;
   const TILE = 4;
   const r2 = x => Math.round(x * 100) / 100;
+  // (a palisade's planks between its stakes, along the middle of its run — rr its rect, along: across the lot —, from the floor
+  // to under the stakes' points: the wall the plan has there, and from afar the fence itself — the stakes, a hand thick, are no
+  // part of the far figure: fino, L-800)
+  const fenceOf = (along, rr, y, h) => { const c = along ? r2((rr[1] + rr[3]) / 2) : r2((rr[0] + rr[2]) / 2), y1 = r2(y + h - 0.45);
+    return { k: 'pano', p: along ? [[rr[0], c, y], [rr[2], c, y], [rr[2], c, y1], [rr[0], c, y1]] : [[c, rr[1], y], [c, rr[3], y], [c, rr[3], y1], [c, rr[1], y1]], cor: '#5c4028', mat: 'plankV' }; };
   const BASE = ['base0', 'base1', 'base2'], WALL = ['wl', 'wr', 'top'], COL = ['col0', 'col1', 'col0'], PAR = ['par0', 'par1', 'par0'];
   const ROOF = ['roof0', 'roof1', 'gable', 'roof2'];
 
@@ -359,7 +364,8 @@
         if (NO) { // (the palisade: its pointed stakes, a little under a metre apart)
           const len = along ? rr[2] - rr[0] : rr[3] - rr[1]; const k = Math.max(1, Math.round(len / 0.8));
           for (let q = 0; q <= k; q++) { const p = along ? [r2(rr[0] + len * q / k), r2((rr[1] + rr[3]) / 2)] : [r2((rr[0] + rr[2]) / 2), r2(rr[1] + len * q / k)];
-            els.push({ k: 'tora', a: [p[0], p[1], Hp], b: [p[0], p[1], r2(Hp + w.h - 0.4)], r: 0.14, cor: '#6a4a2c' }, { k: 'piramide', c: p, e: 0.12, y0: r2(Hp + w.h - 0.4), y1: r2(Hp + w.h + 0.3), cor: ['#6a4a2c', '#5a3c22'], mat: 'beam' }); }
+            els.push({ k: 'tora', a: [p[0], p[1], Hp], b: [p[0], p[1], r2(Hp + w.h - 0.4)], r: 0.14, cor: '#6a4a2c', fino: 1 }, { k: 'piramide', c: p, e: 0.12, y0: r2(Hp + w.h - 0.4), y1: r2(Hp + w.h + 0.3), cor: ['#6a4a2c', '#5a3c22'], mat: 'beam', fino: 1 }); }
+          els.push(fenceOf(along, rr, Hp, w.h));
         } else els.push(bloco(rr, Hp, r2(Hp + w.h), EG ? WALL : PAR, { mat: EG ? 'parede' : 'slab' }));
       }
       if (gate && NO) for (const s of [-1, 1]) { const u = r2(gate.p[0] + s * (gate.w / 2 + 0.2)); els.push({ k: 'tora', a: [u, gate.p[1], Hp], b: [u, gate.p[1], r2(Hp + 4.2)], r: 0.2, cor: '#5a3a22' }); }
@@ -642,7 +648,8 @@
         const rr = along ? [a, r[1], b, r[3]] : [r[0], a, r[2], b];
         if (NO) { const len = b - a; const m = Math.max(1, Math.round(len / 0.8)); // (the palisade: its pointed stakes)
           for (let q = 0; q <= m; q++) { const pnt = along ? [r2(a + len * q / m), r2((r[1] + r[3]) / 2)] : [r2((r[0] + r[2]) / 2), r2(a + len * q / m)];
-            els.push({ k: 'tora', a: [pnt[0], pnt[1], Hp], b: [pnt[0], pnt[1], r2(Hp + w.h - 0.4)], r: 0.14, cor: '#6a4a2c' }, { k: 'piramide', c: pnt, e: 0.12, y0: r2(Hp + w.h - 0.4), y1: r2(Hp + w.h + 0.3), cor: ['#6a4a2c', '#5a3c22'], mat: 'beam' }); }
+            els.push({ k: 'tora', a: [pnt[0], pnt[1], Hp], b: [pnt[0], pnt[1], r2(Hp + w.h - 0.4)], r: 0.14, cor: '#6a4a2c', fino: 1 }, { k: 'piramide', c: pnt, e: 0.12, y0: r2(Hp + w.h - 0.4), y1: r2(Hp + w.h + 0.3), cor: ['#6a4a2c', '#5a3c22'], mat: 'beam', fino: 1 }); }
+          els.push(fenceOf(along, rr, Hp, w.h));
         } else els.push(bloco(rr, Hp, r2(Hp + w.h), EG ? WALL : PAR, { mat: EG ? 'parede' : 'slab' }));
       }
       if (gate && NO) for (const s of [-1, 1]) { const u = r2(gate.p[0] + s * (gate.w / 2 + 0.2)); els.push({ k: 'tora', a: [u, gate.p[1], Hp], b: [u, gate.p[1], r2(Hp + w.h + 1.2)], r: 0.2, cor: '#5a3a22' }); }
@@ -669,7 +676,8 @@
       els.push(bloco(B, Hp, top, WALL, { mat: 'parede' }), { k: 'faixa', r: B.slice(), y0: r2(top - 1.3), y1: r2(top - 0.7), cor: 'trim' }, { k: 'faixa', r: B.slice(), y0: r2(top - 0.7), y1: r2(top - 0.25), cor: 'trim2' },
         bloco([r2(B[0] - 0.15), r2(B[1] - 0.15), r2(B[2] + 0.15), r2(B[3] + 0.15)], top, r2(top + 0.45), ['top', 'top', 'top'], { mat: 'slab' }));
       els.push({ k: 'porta', na: 'frente', v: B[3], u: r2(L / 2), w: R.doorD.w, y0: Hp, y1: R.doorD.y1, cor: '#3e2e1c' });
-      const [a, b] = R.towers; els.push(bloco([a[2], a[1], b[0], a[3]], r2(Hp + R.Ht * 0.6), r2(Hp + R.Ht * 0.6 + 1.4), WALL, { mat: 'parede' }));
+      const [a, b] = R.towers; els.push(bloco([a[2], a[1], b[0], a[3]], r2(Hp + R.Ht * 0.6), r2(Hp + R.Ht * 0.6 + 1.4), WALL, { mat: 'parede' }),
+        { k: 'disco', na: 'frente', u: r2(L / 2), v: a[3], y: r2(Hp + R.Ht * 0.6 + 0.7), r: r2(0.4 + 0.08 * R.k), cor: '#f2c14e' }); // (the gilded sun on the lintel, D-181)
       roofTop = Math.max(roofTop, Hp + R.Ht);
     } else if (AZ) {
       // the shrine on the top: its walls of stucco under the painted band, its dark door, the crest on its flat roof
@@ -704,6 +712,8 @@
       else if (p.k === 'papiro') els.push({ k: 'colunata', pts: [c], r: p.rc, y0: Hp, y1: r2(Hp + p.h), cor: ['col0', 'col1'], papiro: pap });
       else if (p.k === 'torre') { const bb = 0.5; els.push({ k: 'talude', r: p.r, r1: [p.r[0] + bb, p.r[1] + bb, p.r[2] - bb, p.r[3] - bb].map(r2), y0: Hp, y1: r2(Hp + p.h), cor: WALL, mat: 'parede' },
         { k: 'faixa', r: [p.r[0] + 0.45, p.r[1] + 0.45, p.r[2] - 0.45, p.r[3] - 0.45].map(r2), y0: r2(Hp + p.h - 1.6), y1: r2(Hp + p.h - 0.6), cor: 'trim' },
+        // (the cornice a pylon's tower ends in, out a hand over its battered faces — the hollow moulding of Egypt —, D-181)
+        bloco([p.r[0] + bb - 0.25, p.r[1] + bb - 0.25, p.r[2] - bb + 0.25, p.r[3] - bb + 0.25], r2(Hp + p.h), r2(Hp + p.h + 0.4), ['top', 'top', 'top'], { mat: 'slab' }),
         { k: 'bandeira', p: [r2((p.r[0] + p.r[2]) / 2), r2(p.r[3] + 0.3), Hp], h: r2(p.h + 6), cor: '#e8b83a' }); }
     }
     for (const f of R.fires) els.push(bloco(f.pe, Hp, r2(Hp + f.h * 0.8), BASE, { mat: 'base' }), { k: 'braseiro', p: [f.c[0], f.c[1], r2(Hp + f.h * 0.8)], r: r2(f.r * 0.6), uso: 'acender' });

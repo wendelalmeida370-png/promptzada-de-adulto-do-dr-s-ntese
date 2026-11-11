@@ -1886,13 +1886,16 @@
                 const pts = [at(0.5 - w / 2, za), at(0.5 - w / 2, zh)]; for (let q = 1; q < 8; q++) { const f = q / 8 * Math.PI; pts.push(at(0.5 - Math.cos(f) * w / 2, zh + Math.sin(f) * (zt - zh))); }
                 pts.push(at(0.5 + w / 2, zh), at(0.5 + w / 2, za)); poly(c, pts, way && j === 0 ? esc : dark); }
               if (sd.janela && k % (sd.janela.cada || 1) === 0) { const hw = Math.min(0.45, sd.janela.w / 2 / bayM); poly(c, [at(0.5 - hw, zb + sd.janela.a * th), at(0.5 + hw, zb + sd.janela.a * th), at(0.5 + hw, zb + sd.janela.b * th), at(0.5 - hw, zb + sd.janela.b * th)], dark); }
+              // (the attic's shields of gilded bronze on the outer face's bays with no window — the clipea, D-179: a round as the 3D's)
+              else if (sd.escudo && way !== null) { const hw = sd.escudo.r / bayM, zm = zb + th / 2 - 0.12 * ZPX, zr = sd.escudo.r * ZPX; const pts = [];
+                for (let q = 0; q < 10; q++) { const f = q / 10 * TAU; pts.push(at(0.5 + Math.cos(f) * hw, zm + Math.sin(f) * zr)); } poly(c, pts, col(sd.escudo.cor)); }
               if (sd.ordem) for (const s of [0.05, 0.95]) ln(c, at(s, Math.max(zf, zb)), at(s, zc - 0.6), tone(tf, sd.ordem === 'pilastra' ? 1.05 : 1.1), sd.ordem === 'pilastra' ? 0.5 : 0.7);
               if (j < ss.length - 1) { const cz = Math.min(th * 0.08, 0.22 * ZPX); poly(c, [at(0, zc - cz), at(1, zc - cz), at(1, zc), at(0, zc)], tone(tf, 1.07)); ln(c, at(0, zc - cz - 0.3), at(1, zc - cz - 0.3), 'rgba(0,0,0,0.15)', 0.5); }
             });
             const V = [a, b, bi, ai].map(q => [q[0], q[1], z0 / 16]).concat([a, b, bi, ai].map(q => [q[0], q[1], z1 / 16]));
             const part = put(hullP(V, BOXF), () => {
               if (fwd) { const at = on(a, b); poly(c, [at(0, z0), at(1, z0), at(1, z1), at(0, z1)], tn); storeys(at, z0, tn, open.has(k)); }
-              else if (back) { const at = on(ai, bi), tb = tone(tn, 0.78); poly(c, [at(0, zi), at(1, zi), at(1, z1), at(0, z1)], tb); storeys(at, zi, tb, false); }
+              else if (back) { const at = on(ai, bi), tb = tone(tn, 0.78); poly(c, [at(0, zi), at(1, zi), at(1, z1), at(0, z1)], tb); storeys(at, zi, tb, null); } // (null: the inner face — no shield on it)
               poly(c, [P(a[0], a[1], z1), P(b[0], b[1], z1), P(bi[0], bi[1], z1), P(ai[0], ai[1], z1)], tone(tn, 1.06));
               if (fwd) ln(c, P(a[0], a[1], z1), P(b[0], b[1], z1), 'rgba(255,255,255,0.35)', 0.7);
             }, k);
