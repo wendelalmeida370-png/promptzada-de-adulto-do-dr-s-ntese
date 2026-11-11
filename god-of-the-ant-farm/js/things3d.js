@@ -332,7 +332,8 @@
     for (const h of S.buildings.values()) {
       if (!h.built) continue;
       if (h.elite) { const x = h.x + h.w - 0.1, y = h.y + h.h - 0.1; const X = x * TL(), Z = y * TL(); if (!near2(X, Z, f, R * 0.7)) continue; const Y = gY(x, y); const col = (E && E.GOODS && E.GOODS[h.elite.k] && E.GOODS[h.elite.k].col) || '#c83a2a'; put('pole', X, Y, Z, 0, 0.08, 5.2, 0.08, '#5a3c22'); const w = (G.S.weather && G.S.weather.windA) || 0; put('flag', X, Y + 4.6, Z, w, 1.3, 1.3, 1.3, col); }
-      if (h.type === 'taverna' && night > 0.3) { const [dx, dy] = G.Vg.door(h); const X = dx * TL(), Z = dy * TL(); if (!near2(X, Z, f, R * 0.7)) continue; const Y = gY(dx, dy); put('lamp', X, Y + 2.3, Z, 0, 0.22, 0.3, 0.22, '#ffd38a'); flame(X, Y + 2.5, Z, 0.7); }
+      // (the lamp at the tavern's door: lit while the tavern is open — G.Atmos.fire —, dark once it has shut)
+      if (h.type === 'taverna' && night > 0.3 && (!G.Atmos || G.Atmos.fire(h))) { const [dx, dy] = G.Vg.door(h); const X = dx * TL(), Z = dy * TL(); if (!near2(X, Z, f, R * 0.7)) continue; const Y = gY(dx, dy); put('lamp', X, Y + 2.3, Z, 0, 0.22, 0.3, 0.22, '#ffd38a'); flame(X, Y + 2.5, Z, 0.7); }
     }
     for (const s of S.scaffolds || []) {
       const X = s.x * TL(), Z = s.y * TL(); if (!near2(X, Z, f, R)) continue; const Y = gY(s.x, s.y);
