@@ -142,11 +142,12 @@
     // the families in need, the most urgent first (one decision a day per town — the dear ground of a city moves slowly); the
     // body's family is the body's to decide (its offer at the store), whoever of its grown ones heads it in the queue — with the
     // partner at the head, the day moved the body to a house the player never chose (L-452)
-    let done = false;
-    for (const [v] of K.queue(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; const r = K.order(v); if (r.ok) { done = true; break; } }
-    // (and, with no family in need served today, a rich one may ask for the rich house: T-447)
-    if (!done) for (const v of K.rich(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; if (K.orderRich(v).ok) break; }
+    for (const [v] of K.queue(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; const r = K.order(v); if (r.ok) break; }
+    // (and a rich family may ask for the rich house — one of them under way in a town at a time, after the families in need:
+    // the builders' second paid work is never a second rich house. T-447)
+    if (!richUnderWay(set)) for (const v of K.rich(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; if (K.orderRich(v).ok) break; }
   }
+  const richUnderWay = set => { for (const b of G.S.buildings.values()) if (b.set === set.id && !b.built && b.encomenda && b.encomenda.why === 'rica') return true; return false; };
   // the families in need of a town, in the order the day asks them: [head, why], the most urgent first. Of a house too many
   // for its beds, or full with a couple of others, only its youngest family — its eldest grown one's age —: the old ones of
   // the house wait for the young to go (D-098); the house is as urgent as its most urgent family. Reads only
@@ -293,7 +294,7 @@
   // ------------------------------ the rich house (T-447, D-177) ------------------------------
   // a family with coins to spare asks for the rich house — the house's bigger step, a family's own choice (G.Escala: the step
   // marked familia, never the planner's) —, on dear land (the city says where: G.Urban.valueAt), paid by the ledger as any house
-  // a family raises: one a day in a town, when no family in need was served. The family: the owner of the house it lives in,
+  // a family raises: one a day in a town, after the families in need, and one under way in a town at a time. The family: the owner of the house it lives in,
   // grown, with — past the price, out of its own share of the house's pot — what keeps its house a rich one in the city's eyes
   // (K.RICH, the coins of a rich household: urban.js); never one already in a rich house, in a house of the people's mark
   // (elite) or in the ruler's palace, never one in need or waiting for a house. A city only (its land has a price), of a people

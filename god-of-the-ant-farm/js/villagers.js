@@ -973,6 +973,10 @@
   }
   function buildTask(v) {
     const S = G.S; let best = null, bd = 1e9;
+    // (a house a family paid for keeps its turn ahead of the town's great work, however far the great work's turn reaches — L-313,
+    // D-174: what the great work that keeps the stone weighs for this builder today, added to the paid house's own)
+    const town = S.settlements.get(v.set); const gw = town && town.vez && town.gw ? S.buildings.get(town.gw) : null;
+    const ahead = gw && G.Village.workPri ? G.Village.workPri(gw, v) : 0;
     for (const b of S.buildings.values()) {
       if (b.built || b.set !== v.set || b.type === 'ruin') continue;
       if (b.unreach) { if (b.unreach >= 6) { abandonSite(b); continue; } if (S.clock - b.unreachT < 30) continue; }
@@ -985,7 +989,7 @@
       const [cx, cy] = G.Village.center(b);
       // (a family's house paid for — its materials paid at the town's prices, act-casa.js — has its turn before the city's
       // own works: the stone of the store went to a palace, and the house stood at 92% for years, L-313)
-      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0) + (b.encomenda ? -200 : 0) + (G.Village.workPri ? G.Village.workPri(b, v) : 0); // (a great work's turn, with the town fed and housed: D-120)
+      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0) + (b.encomenda ? -200 + ahead : 0) + (G.Village.workPri ? G.Village.workPri(b, v) : 0); // (a great work's turn, with the town fed and housed: D-120)
       if (d < bd) { bd = d; best = b; }
     }
     if (!best) return null;

@@ -4,7 +4,7 @@
 // onde: em terra cara (G.Urban.valueAt ≥ K.RICH_LAND); como: pelo livro (obra-casa), a obra dos construtores do povo, a mudança
 // quando fica pronta, a casa antiga continua dela.
 //   r1  o pedido: a casa de 2 casas em obra, em terra cara, paga pelo livro, com a conta e o trabalho do degrau
-//   r2  o dia da cidade pede por ela (K.day), depois das famílias que precisam de casa
+//   r2  o dia da cidade pede por ela (K.day), depois das famílias que precisam de casa; uma casa rica em obra de cada vez
 //   r3  a obra pelos construtores, a mudança, a casa antiga, a planta da casa do pátio; o save no meio
 //   r4  quem encomendou morre no meio; a família inteira morre
 //   r5  o deus derruba a obra: as moedas voltam, pelo livro
@@ -40,10 +40,11 @@ const valor = (set, b) => U.valueAt(set, b.x + b.w / 2, b.y + b.h / 2);
 const lote = set => { const st = K.richStep(set); if (!st) return null; set._noSite = {}; const p = sim(() => V.findSite(set, 'house', (x, y) => U.valueAt(set, x + st.n / 2, y + st.n / 2) >= K.RICH_LAND, st.n)); set._noSite = {}; return p && !p.demolish ? p : null; };
 // (the cities where a rich house can be raised today, the most peopled first)
 const cidades = () => [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && K.richStep(s) && lote(s)).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
-// (a family that owns the house it lives in, in no need of one, not the god's body's — the eldest head first)
+// (a family that owns the house it lives in, in no need of one, not the god's body's — the head nearest thirty-two first: an
+// old one dies of age before the house stands, and the case of the death in the middle is r4's)
 const familias = set => [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && b.type !== 'barraco' && !(b.type === 'house' && b.w === 2) && !b.elite && b.dono)
   .map(b => S.villagers.get(b.dono)).filter(v => v && v.home && S.buildings.get(v.home).dono === v.id && v.set === set.id && v.age >= 18 && !v.captive && !v.jail && !v.aboard && !K.need(v) && !K.waiting(v) && !K.gaveUp(v) && K.family(v).length <= G.BDEF.house.housing && !(S.avatar && K.family(v).some(m => m.id === S.avatar.id)))
-  .sort((a, c) => c.age - a.age || a.id - c.id);
+  .sort((a, c) => Math.abs(a.age - 32) - Math.abs(c.age - 32) || a.id - c.id);
 // (the coins that make it rich enough — by the proof's hand, into the house's pot, in the ledger —: its share of the pot past
 // the price and what keeps it rich)
 function enriquece(v, set, extra) {
@@ -83,8 +84,13 @@ run('r2', () => {
   const a = arma(); if (!ok('r2a a cidade e a família', !!a, a ? `${a.set.name}: ${a.v.name}` : 'sem premissa')) return;
   const { set, v } = a; enriquece(v, set, 400); // (the richest of the town: the first asked)
   let b = null, dias = 0, servidas = 0;
-  for (; dias < 8 && !b; dias++) { const antes = [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why !== 'rica').length; sim(() => K.day(set)); servidas += [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why !== 'rica').length - antes; b = K.waiting(v); S.day++; }
-  ok('r2b o dia da cidade pede por ela', !!b && b.w === 2 && b.encomenda.why === 'rica' && b.encomenda.by === v.id, b ? `em ${dias} dia(s) da cidade (${servidas} casas de quem precisava encomendadas antes): ${lado(b)} para ${v.name}` : `em ${dias} dias a cidade não pediu a casa rica de ${v.name}`);
+  for (; dias < 8 && !b; dias++) { const antes = [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why !== 'rica').length; sim(() => K.day(set)); servidas += [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why !== 'rica').length - antes; b = K.waiting(v); }
+  ok('r2b o dia da cidade pede por ela', !!b && b.w === 2 && b.encomenda.why === 'rica' && b.encomenda.by === v.id, b ? `em ${dias} olhar(es) do dia da cidade (${servidas} casas de quem precisava encomendadas antes): ${lado(b)} para ${v.name}` : `em ${dias} dias a cidade não pediu a casa rica de ${v.name}`);
+  // (one rich house under way in a town at a time: a second rich family waits)
+  const outra = familias(set).find(o => o.id !== v.id && !K.family(v).includes(o));
+  if (b && outra) { enriquece(outra, set, 600); const antes = [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why === 'rica').length; for (let k = 0; k < 4; k++) sim(() => K.day(set));
+    const depois = [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why === 'rica').length;
+    ok('r2d uma casa rica em obra de cada vez', K.rich(set).includes(outra) && depois === antes, `${outra.name}, rica também, pediria; em 4 olhares do dia da cidade, casas ricas em obra: ${antes} → ${depois}`); }
   const c = checa(); ok('r2c verificador', c.ok, c.txt);
 });
 

@@ -39,6 +39,8 @@ function arma() {
   abre(); let best = null;
   for (const set of capitais()) { if (V.pop(set.id) < 12) continue; if (pracas(set).length && palacio(set)) return { set, posta: '' }; if (!best) best = set; }
   if (!best) return null; const posta = [];
+  // (a palace of the capital still going up is the people's best: finished by the god's hand)
+  { const f = G.Fac.get(best.fac); const p = f && G.Court && G.Court.bestPalace ? G.Court.bestPalace(f) : null; if (p && !p.built && p.set === best.id) { sim(() => V.completeBuilding(p)); posta.push('o palácio em obra terminado'); } }
   if (!pracas(best).length) { const b = sim(() => V.handFound(best, 'praca', G.Escala.n0('praca'), { built: true, R: 40 })); if (!b) return null; posta.push('a praça'); }
   if (!palacio(best)) { const b = sim(() => V.handFound(best, 'paco', G.Escala.n0('paco'), { built: true, R: 40 })); if (!b) return null; posta.push('a casa do chefe'); }
   return pracas(best).length && palacio(best) ? { set: best, posta: posta.join(' e ') } : null;
