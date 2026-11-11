@@ -481,5 +481,5 @@ com o código final, e a prova delas passou (52 de 52).
 | `11-palacio-grego.jpg`, `12-palacio-egipcio.jpg`, `13-palacio-nordico.jpg` | o palácio de três outros povos: o grego de dois pisos com a colunata, o egípcio de telhado plano, o nórdico de tábua sob turfa com a paliçada |
 | `7-templo-grego.jpg`, `8-templo-egipcio.jpg`, `9-templo-nordico.jpg`, `10-templo-egipcio-salao.jpg` | os templos: o grego no crepidoma, o egípcio com o pilone e o salão, o hof nórdico |
 
-A página do relatório com as fotos: <!--LINK-RELATORIO-->. O jogo com esta versão:
+A página do relatório com as fotos: https://claude.ai/artifact/Qy9pYXjJCE9uH1EZ4jYHfo. O jogo com esta versão:
 https://claude.ai/artifact/FRcF3GmtiP1aMhyqU7cKUe.
