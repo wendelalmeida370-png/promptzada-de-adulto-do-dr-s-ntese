@@ -97,6 +97,18 @@
   const water = b => { const In = G.Interiors; return !(In && In.freePlace && In.table && In.table(b)) || !!In.freePlace(b, 'banhar'); };
   Te.water = water;
   Te.WAIT = 30; // (how long one undressed waits at the pegs for a place in the water, before dressing again and going)
+  // which pool: the emptiest of the baths' now — by the share of its places taken; a tie, the plan's order —, so that baths of
+  // several pools have people in them all, not a crowd in the first while the others stand empty (D-184). The allotter gives
+  // the place in it (the errand's t.item; with none free there, a place of another pool). Baths of one pool, or with no plan: 0
+  function pool(b) {
+    const In = G.Interiors; if (!(In && In.slots && In.places && In.table && In.table(b))) return 0;
+    const n = new Map(); for (const q of In.slots(b, 'banhar')) { const c = n.get(q.item.id); if (c) c[0]++; else n.set(q.item.id, [1, 0]); }
+    if (n.size < 2) return 0;
+    for (const pl of In.places(b).by.values()) { const c = pl.use === 'banhar' && n.get(pl.item); if (c) c[1]++; }
+    let best = 0, share = Infinity; for (const [id, c] of n) if (c[1] / c[0] < share - EPS) { share = c[1] / c[0]; best = id; }
+    return best;
+  }
+  Te.pool = pool;
 
   // ------------------------------ the day opens and closes ------------------------------
   // (once a day, at its hour: the baths open with or without their stoker — the water is cold then —; a day ended is not
@@ -222,12 +234,13 @@
         t.wt = (t.wt || 0) + dt; if (t.wt < Te.WAIT) return;
         refund(v, op, m); say(v, 'termas_cheia', {}); return leave(v, op, H);
       }
-      m.st = 2; m.t2 = S.clock; t.st = 2; t.use = 'banhar'; v.actT = 0;
+      const it = pool(b); // (chosen while still at the pegs: in the water, one would count in a pool already)
+      m.st = 2; m.t2 = S.clock; m.it = it; t.st = 2; t.use = 'banhar'; t.item = it; v.actT = 0;
       say(v, d.calor > EPS ? 'banho_quente' : 'banho_frio', {}); return;
     }
     if (t.st === 2) { // in the water
       v.act = AN.banhar.act; if (v.actT < m.dur) return;
-      bathe(v, op, 1); m.st = 3; t.st = 3; t.use = 'despir'; v.actT = 0; return;
+      bathe(v, op, 1); m.st = 3; t.st = 3; t.use = 'despir'; t.item = 0; v.actT = 0; return;
     }
     // dressed again, and out by the door
     v.act = AN.despir.act; if (v.actT < AN.despir.dur) return;
@@ -426,7 +439,8 @@
           if (!v || m.body || v.captive || v.jail) { delete d.banho[id]; continue; }
           if (keep && !keep.has(op.id + ':' + id)) continue;
           const st = Math.max(1, Math.min(3, m.st || 1));
-          G.Vg.setTask(v, { type: 'termas', id: op.at, op: op.id, pri: 0.4, st, use: st === 2 ? 'banhar' : 'despir', kind: 'leisure' });
+          // (in the water, in the pool one was in: the day's book keeps it — D-184)
+          G.Vg.setTask(v, { type: 'termas', id: op.at, op: op.id, pri: 0.4, st, use: st === 2 ? 'banhar' : 'despir', item: st === 2 && typeof m.it === 'string' ? m.it : 0, kind: 'leisure' });
           if (v.task && v.task.type === 'termas') { v.inside = op.at; if (st === 2) v.actT = Math.max(0, S.clock - (m.t2 || S.clock)); } else delete d.banho[id];
         }
       }

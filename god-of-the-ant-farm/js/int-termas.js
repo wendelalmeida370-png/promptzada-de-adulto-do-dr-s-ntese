@@ -45,8 +45,10 @@
     for (const w of R.walls) if (!w.casca) Ly.lay(w);
     const ids = R.rooms.map(m => P.room(m.lv, m.fn, m.r, m.open));
     for (const p of R.pieces) if (!P.at('solido', 0, ids[p.room], p.r.slice(), 0, 1, { h: p.h, form: 1 })) { P.errs.push(`${p.k} da forma onde a planta não o põe (${p.r.join(', ')})`); return; }
-    // the water
-    for (const q of R.pools) {
+    // the water — the hot pools first, then the warm, the cold, the open ones: the order the bathers take them in when they are
+    // all as empty (G.Termas' choice of the emptiest pool, D-184)
+    const WATER = { quente: 0, morna: 1, fria: 2, natacao: 3 };
+    for (const q of R.pools.slice().sort((a, c) => WATER[a.k] - WATER[c.k])) {
       const it = P.at('piscina', 0, ids[q.room], q.r.slice(), q.f[0], q.f[1], q.open ? FM : undefined);
       if (!it) { P.errs.push(`a piscina ${q.k} onde a planta não a põe (${q.r.join(', ')})`); return; }
       keepStand(P, it, ['entrar']);
