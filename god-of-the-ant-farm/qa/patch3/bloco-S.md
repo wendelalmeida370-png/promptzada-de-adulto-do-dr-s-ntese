@@ -117,9 +117,9 @@ prova inteira antes da versão).»
 
 | nome | o que desfaz | quem acusou |
 |---|---|---|
-| t1 | um gesto sem linha (tira a do `forjar`) | s1a, s1b |
-| t2 | uma linha com som fora da biblioteca | s1a |
-| t3 | um silêncio sem motivo dito | s1a |
+| t1 | um gesto sem linha (tira a do `forjar`) | s1a, s1b, verificador (`som-inv.js`) |
+| t2 | uma linha com som fora da biblioteca | s1a, verificador |
+| t3 | um silêncio sem motivo dito | s1a, verificador |
 | t4 | um ato do mundo sem linha (a colheita) | s1c |
 | c6 | quem está sentado em qualquer lugar soa a banho | s1d |
 | d1 | nenhum lado | s2a |
@@ -156,7 +156,8 @@ prova inteira antes da versão).»
 | e3 | o ouvido fica onde o corpo foi tomado | s13 |
 
 (A c6 passou sem ninguém acusar na primeira vez — na hora da prova ninguém estava sentado na cidade das termas —: virou o caso
-s1d, que pergunta à regra sem depender de quem está sentado.)
+s1d, que pergunta à regra sem depender de quem está sentado. Depois do último commit do código rodei as 37 de novo, cada uma
+só com o caso dela (`ONLY`): todas acusadas, com os casos da tabela acima.)
 
 ### O que ficou aberto
 
