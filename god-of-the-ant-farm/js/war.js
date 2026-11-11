@@ -1012,7 +1012,7 @@
       if (rank) { t.row = q.id; t.face = rank[3] - rank[4] > 0 ? 1 : -1; t.fx = rank[3]; t.fy = rank[4]; if (!H.goto(v, rank[0], rank[1], false)) { G.Life.rowRelease(v); t.row = 0; return H.end(v); } }
       else { const p = spotNear(c[0] + G.rr(-1.5, 1.5), c[1] + G.rr(-1.5, 1.5), 1); if (!p || !H.goto(v, p[0], p[1], false)) return H.end(v); }
       t.st = 1;
-    } else if (t.st === 1) { if (H.move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.rr(8, 13); if (G.R() < 0.5) G.faceAs(v, v, true); } }
+    } else if (t.st === 1) { if (H.move(v, dt)) { t.st = 2; v.actT = 0; t.dur = G.rr(8, 13); if (G.R() < 0.5) G.faceAs(v, v, true); if (G.Urban) G.Urban.note(v.x, v.y, 'armas', 1); } }
     else if (t.row) { v.act = 'drill'; G.faceAs(v, t); v.actT = G.S.clock % 2.4; t.dur -= dt; if (t.dur <= 0) H.end(v); }
     else { v.act = 'fight'; if (v.actT > 2.5) v.actT = 0; t.dur -= dt; if (t.dur <= 0) H.end(v); }
   }

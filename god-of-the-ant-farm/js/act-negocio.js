@@ -438,7 +438,7 @@
           r = pg && q > EPS ? D.swap(['z:' + z.id, 'v:' + v.id, k, n], ['h:' + h.id, kindTo(z), pg, q], { code: 'venda', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } }) : { ok: false, why: 'nada com que trocar' }; if (r.ok) z.got[pg] = r2((z.got[pg] || 0) + q);
         }
         if (!r.ok) { t.talk = 8; v.actT = 0; return; }
-        const d = z.day; d.rev = r2(d.rev + total); d.sold[k] = (d.sold[k] || 0) + n; d.cust++; d.n++;
+        const d = z.day; d.rev = r2(d.rev + total); d.sold[k] = (d.sold[k] || 0) + n; d.cust++; d.n++; if (G.Urban) G.Urban.noteB(G.S.buildings.get(z.b), 'troca', 1);
         say(seller, 'agradecer', {});
         G.Vg.emote(v, 'happy', 1.2); G.Life && G.Life.leaveQueue(v);
         return H.setTask(v, { type: 'carga', to: 'h:' + h.id, pri: 0.5, st: 0 });
@@ -644,7 +644,7 @@
       r = pg && q > EPS ? D.swap(['z:' + z.id, 'v:' + v.id, k, n], ['h:' + h.id, kindTo(z), pg, q], { code: 'venda', by: v.id, to: 'h:' + h.id, tag: { bought: 1 } }) : { ok: false, why: 'Você não tem com que trocar.' }; if (r.ok) z.got[pg] = r2((z.got[pg] || 0) + q);
     }
     if (!r.ok) { const txt = say(v, 'sem_dinheiro', {}); return { ok: false, why: txt || r.why }; }
-    const d = z.day; d.rev = r2(d.rev + total); d.sold[k] = (d.sold[k] || 0) + n; d.cust++; d.n++;
+    const d = z.day; d.rev = r2(d.rev + total); d.sold[k] = (d.sold[k] || 0) + n; d.cust++; d.n++; if (G.Urban) G.Urban.noteB(G.S.buildings.get(z.b), 'troca', 1);
     say(G.S.villagers.get(z.owner), 'agradecer', {});
     return { ok: true, n, msg: `Você compra ${n} de ${E.name(k)} por ${coin(z) ? String(total).replace('.', ',') + ' ' + B.money(z.fac).plural : says(z, h, k, total)}.` };
   }

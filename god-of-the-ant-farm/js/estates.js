@@ -368,7 +368,7 @@
           if (c.press) { v.carry = { k: 'food', n: 0, basket: c.col, must: take }; t.st = 2; unclaim(b, t.k); t.k = 'vat'; const q = Es.plantPos(b, vatOf(b)); t.x = q[0] - 0.05; t.y = q[1] - 0.05; t.go = 0; return; }
           const n = c.out === 'food' ? Math.max(1, Math.round(take * c.n)) : Math.max(1, Math.round(take * c.n * 1.6));
           v.carry = c.out === 'food' ? { k: 'food', n, basket: c.col } : { k: c.out, n };
-          E.made(f, c.out, n); E.pay(v, c.out, n); first(f, b, c);
+          E.made(f, c.out, n); E.pay(v, c.out, n); first(f, b, c); if (G.Urban) G.Urban.noteB(b, 'campo', 1);
           G.Vg.emote(v, 'happy', 1); unclaim(b, t.k); H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
           return;
         }
@@ -383,7 +383,7 @@
         const m = Math.min(b.must || 0, 4); b.must = (b.must || 0) - m;
         // (what the press makes is born on the shelf, in the ledger — L-384)
         const r = G.Depot.make('b:' + b.id, c.out, Math.max(1, Math.round(m * c.n * 1.2)), { code: 'prensa', by: v.id, part: true });
-        if (r.ok) { E.made(f, c.out, r.n); first(f, b, c); }
+        if (r.ok) { E.made(f, c.out, r.n); first(f, b, c); if (G.Urban) G.Urban.noteB(b, 'campo', 1); }
         return done(v, b, t, H);
       }
       case 'smoke': {
@@ -397,7 +397,7 @@
         const take = Math.min(h[t.k], 2); h[t.k] -= take;
         const n = Math.max(1, Math.round(take * 1.3));
         v.carry = { k: 'mel', n, extra: G.R() < 0.6 ? { cera: 1 } : null }; if (!v.carry.extra) delete v.carry.extra;
-        E.made(f, 'mel', n); E.pay(v, 'mel', n); first(f, b, { out: 'mel' });
+        E.made(f, 'mel', n); E.pay(v, 'mel', n); first(f, b, { out: 'mel' }); if (G.Urban) G.Urban.noteB(b, 'campo', 1);
         unclaim(b, t.k); H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
         return;
       }
@@ -408,7 +408,7 @@
         if (v.actT < 4 / mul(v)) return;
         const take = Math.min(b.salt[t.k], 3); b.salt[t.k] -= take;
         const n = Math.max(1, Math.round(take * 1.4));
-        v.carry = { k: 'sal', n }; E.made(f, 'sal', n); E.pay(v, 'sal', n); first(f, b, { out: 'sal' });
+        v.carry = { k: 'sal', n }; E.made(f, 'sal', n); E.pay(v, 'sal', n); first(f, b, { out: 'sal' }); if (G.Urban) G.Urban.noteB(b, 'campo', 1);
         unclaim(b, t.k); H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
         return;
       }
@@ -426,7 +426,7 @@
         v.act = 'reel'; if (v.actT < 6 / mul(v)) return;
         // (the thread is born on the shelf, in the ledger — L-384)
         b.worms = Math.max(0, (b.worms || 0) - 3); const r = G.Depot.make('b:' + b.id, 'seda', 1, { code: 'seda', by: v.id, part: true });
-        if (r.ok) { E.made(f, 'seda', r.n); first(f, b, { out: 'seda' }); }
+        if (r.ok) { E.made(f, 'seda', r.n); first(f, b, { out: 'seda' }); if (G.Urban) G.Urban.noteB(b, 'campo', 1); }
         G.FX && G.FX.sparkle(v.x, v.y); return H.end(v);
       }
       case 'salt': {
@@ -438,7 +438,7 @@
         const D = G.Depot, ref = 'b:' + b.id;
         if (D.free(ref, 'sal') < 1 || D.free(ref, 'food') < 4) return H.end(v);
         D.use(ref, 'sal', 1, { code: 'salga', by: v.id }); D.use(ref, 'food', 4, { code: 'salga', by: v.id }); E.used(f, 'sal', 1); E.used(f, 'food', 4);
-        const r = D.make(ref, 'carne_seca', 2, { code: 'salga', by: v.id, part: true }); if (r.ok) { E.made(f, 'carne_seca', r.n); first(f, b, { out: 'carne_seca' }); }
+        const r = D.make(ref, 'carne_seca', 2, { code: 'salga', by: v.id, part: true }); if (r.ok) { E.made(f, 'carne_seca', r.n); first(f, b, { out: 'carne_seca' }); if (G.Urban) G.Urban.noteB(b, 'oficio', 1); }
         return H.end(v);
       }
     }

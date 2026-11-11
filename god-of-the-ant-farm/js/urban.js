@@ -54,8 +54,9 @@
   // ------------------------------ the snapshot of each town (rebuilt once a day, in the simulation) ------------------------------
   // (derived from the world, never saved: a loaded world rebuilds it on its first day)
   const snap = new Map();
-  G.worldHooks.push(() => { snap.clear(); lastDay = -1; cur = 0; townsDay = -1; });
-  let lastDay = -1, cur = 0;
+  // (the day's round among the towns is the world's — G.mod, in the save —: the load gave every town a second day, and its
+  // quarters a day more towards a change of vocation, L-694)
+  G.worldHooks.push(() => { snap.clear(); townsDay = -1; });
   U.peek = setId => snap.get(setId) || null; // (for what only looks: the panels, the labels)
   U.cellOf = (x, y) => Math.floor(y / C) * NC + Math.floor(x / C);
   U.cellXY = c => [(c % NC) * C, Math.floor(c / NC) * C];
@@ -95,11 +96,15 @@
     if (h.fish * 2 >= h.n) return 'pescador';
     return 'povo';
   };
+  const LOW = 2; // (a home with less than two coins has next to nothing: U.LOW, read by the life of the quarter)
+  U.LOW = LOW;
   const HOUSEW = { rica: { nobre: 1.8 }, mercador: { mercantil: 1, nobre: 0.4 }, artesao: { artesao: 0.6, popular: 0.6 }, pescador: { porto: 0.7, popular: 0.5 }, povo: { popular: 1.2 }, vazia: { popular: 0.6 } };
 
   function build(set, bs, H) {
     const S = G.S; const cells = new Map();
-    const cell = c => { let o = cells.get(c); if (!o) { o = { c, n: 0, tiles: 0, born: 0, w: {}, homes: 0, beds: 0, res: 0, rich: 0, poor: 0, nuis: 0, prest: 0, coin: 0, types: {} }; cells.set(c, o); } return o; };
+    // (a home with next to no coin is a poor home only where there is coin: in a people that has none, every pot is empty)
+    const coinOn = !!(G.Eco && G.Eco.coinage && G.Eco.coinage(set.fac));
+    const cell = c => { let o = cells.get(c); if (!o) { o = { c, n: 0, tiles: 0, born: 0, w: {}, homes: 0, beds: 0, res: 0, rich: 0, poor: 0, empty: 0, shack: 0, low: 0, nuis: 0, prest: 0, coin: 0, types: {} }; cells.set(c, o); } return o; };
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (const b of bs) {
       const [bx, by] = G.Village.center(b); const o = cell(U.cellOf(bx, by));
@@ -112,6 +117,9 @@
         for (const q in HOUSEW[k]) o.w[q] = (o.w[q] || 0) + HOUSEW[k][q] * hw;
         o.homes++; o.beds += def.housing; o.res += h ? h.n : 0; o.coin += b.coin || 0;
         if (k === 'rica') o.rich++; else if (k === 'povo' || k === 'pescador') o.poor++;
+        // (for the life of the quarter: the home with nobody in it, the shack, the home with next to no coin)
+        if (k === 'vazia') o.empty++; else if (coinOn && (b.coin || 0) < LOW) o.low++;
+        if (b.type === 'barraco') o.shack++;
       } else { const w = BW[b.type]; if (w) for (const q in w) o.w[q] = (o.w[q] || 0) + w[q]; }
       if (NUIS[b.type]) o.nuis += NUIS[b.type];
       if (PREST[b.type]) o.prest += PREST[b.type];
@@ -244,11 +252,9 @@
   // the quarters of a town, with what lives in them now
   U.districtsOf = set => ((set && set.urb && set.urb.d) || []).filter(d => d.cells.length);
   U.allDistrictsOf = set => (set && set.urb && set.urb.d) || [];
-  U.districtAt = function (x, y) {
-    const c = U.cellOf(x, y);
-    for (const s of G.S.settlements.values()) for (const d of U.districtsOf(s)) if (d.cells.includes(c)) return d;
-    return null;
-  };
+  // (the quarter with a name on this ground — by the index of U.at, which took the place of a look through every quarter's
+  // cells at each call)
+  U.districtAt = function (x, y) { const q = U.at(x, y); return q && !q.whole ? q : null; };
   U.byId = function (id) { for (const s of G.S.settlements.values()) for (const d of U.districtsOf(s)) if (d.id === id) return d; return null; };
 
   // (later modules add kinds of their own: what a building weighs, how such a quarter is named, how its birth is told)
@@ -362,17 +368,25 @@
       if (newsOK(set)) log(BIRTH[d.k](set, d), 'city', d.x, d.y);
     });
     // what lives in each quarter today
+    stats(set, sn);
     for (const d of u.d) {
-      let res = 0, homes = 0, beds = 0, coin = 0, value = 0, n = 0, rich = 0, poor = 0, x = 0, y = 0, work = 0;
-      for (const c of d.cells) { const o = sn.cells.get(c); if (!o) continue; res += o.res; homes += o.homes; beds += o.beds; coin += o.coin; value += o.value; rich += o.rich; poor += o.poor; n++; const [mx, my] = cellCenter(c); x += mx; y += my; for (const t in o.types) if (G.BDEF[t] && G.BDEF[t].jobs) work += o.types[t]; }
-      if (n) { d.x = Math.round(x / n * 10) / 10; d.y = Math.round(y / n * 10) / 10; }
-      const st = { res, homes, beds, coin: homes ? coin / homes : 0, value: n ? value / n : 0, rich, poor, work };
-      Object.defineProperty(d, '_st', { value: st, writable: true, configurable: true, enumerable: false });
+      const res = d._st.res;
+      if (d._st.n) { d.x = d._st.x; d.y = d._st.y; }
+      // (the most people it ever had; a quarter that empties or decays is told by its profiles — «vazio», «em decadência»,
+      // with their patience and their cause: the «esvaziou / a gente voltou» of before went back and forth within a few days)
       if (res > (d.peak || 0)) d.peak = res;
-      // a quarter that loses half its people is noticed once
-      if (d.peak >= 10 && res <= d.peak * 0.5 && !d.emptied) { d.emptied = S.day; hist(d, 'Esvaziou: metade da gente foi embora ou morreu.'); if (newsOK(set)) log(`${G.cap(U.theName(d))}, em ${set.name}, esvaziou: as casas estão fechadas e as ruas, quietas.`, 'city', d.x, d.y); }
-      else if (d.emptied && res >= d.peak * 0.8) { d.emptied = 0; hist(d, 'A gente voltou: o bairro encheu de novo.'); }
     }
+  }
+  // what lives on a quarter's ground today, read from the town's look: derived, never saved (d._st), made again by the look
+  // of a town just loaded
+  function census(q, sn) {
+    let res = 0, homes = 0, beds = 0, coin = 0, value = 0, n = 0, rich = 0, poor = 0, empty = 0, shack = 0, low = 0, x = 0, y = 0, work = 0;
+    for (const c of q.cells || []) { const o = sn.cells.get(c); if (!o) continue; res += o.res; homes += o.homes; beds += o.beds; coin += o.coin; value += o.value; rich += o.rich; poor += o.poor; empty += o.empty; shack += o.shack; low += o.low; n++; const [mx, my] = cellCenter(c); x += mx; y += my; for (const t in o.types) if (G.BDEF[t] && G.BDEF[t].jobs) work += o.types[t]; }
+    return { res, homes, beds, coin: homes ? coin / homes : 0, value: n ? value / n : 0, rich, poor, empty, shack, low, work, n, x: n ? Math.round(x / n * 10) / 10 : 0, y: n ? Math.round(y / n * 10) / 10 : 0 };
+  }
+  function stats(set, sn) {
+    const u = set.urb; if (!u) return;
+    for (const d of u.d.concat(u.w ? [u.w] : [])) Object.defineProperty(d, '_st', { value: census(d, sn), writable: true, configurable: true, enumerable: false });
   }
   const KDESC = k => U.KINDS[k].what;
   function changeKind(set, d, k, sn, cl) {
@@ -396,7 +410,9 @@
   const FIELD = { farm: 1, curral: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, sericultura: 1 };
   const GRAND = { palacio: 1, paco: 1, grande_palacio: 1, palacio_colossal: 1, temple: 1, maravilha: 1 };
   // the snapshot the planner uses (built today in the simulation, or right now if the town has none yet)
-  function sim(set) { let sn = snap.get(set.id); if (!sn) { sn = build(set, townBuildings(set.id), households()); snap.set(set.id, sn); } return sn; }
+  // (asked before the town's turn of the day, or in a world just loaded: the whole look, derived — the yards and the
+  // quarters' counts too —, changing nothing in the world)
+  function sim(set) { return snap.get(set.id) || derive(set); }
   U.siteScore = function (set, type, def, x, y, fx, fy, d, ideal) {
     const sn = sim(set); const c = sn.cells.get(U.cellOf(fx, fy));
     const value = c ? c.value : Math.max(0, 40 - d), nuis = c ? c.nuisN : 0, dens = c ? c.tiles / (C * C) : 0;
@@ -535,13 +551,19 @@
     const yards = []; for (const g of G.S.buildings.values()) if (g.type === 'horta' && g.home === b.id) yards.push(g);
     for (const g of yards) oldRemove(g);
   };
+  // (a yard the town keeps: its house standing and the town's, no wall on it, the ground around not thick with buildings, one a house)
+  function yardOK(set, sn, b, byHome) {
+    const S = G.S; const h = S.buildings.get(b.home); const o = sn.cells.get(U.cellOf(b.x + 0.5, b.y + 0.5));
+    return !(!h || h.type === 'ruin' || !G.BDEF[h.type].housing || h.set !== set.id || S.wall[b.y * N + b.x] || (o && o.tiles / (C * C) > 0.55) || byHome.has(b.home));
+  }
+  // the yards of a town by their house — what only derives (the look of a town just loaded): nothing grows, nothing is lost
+  function yards(set, sn, bs) { const byHome = new Map(); for (const b of bs) if (b.type === 'horta' && yardOK(set, sn, b, byHome)) byHome.set(b.home, b.id); return byHome; }
   function gardens(set, sn, bs) {
     const S = G.S; const list = bs.filter(b => b.type === 'horta'); const byHome = new Map();
     // the yards the town has kept, and the ones it lost
     for (const b of list) {
-      const h = S.buildings.get(b.home); const o = sn.cells.get(U.cellOf(b.x + 0.5, b.y + 0.5));
       const i = b.y * N + b.x;
-      if (!h || h.type === 'ruin' || !G.BDEF[h.type].housing || h.set !== set.id || S.wall[i] || (o && o.tiles / (C * C) > 0.55) || byHome.has(b.home)) { G.Village.removeBuilding(b); continue; }
+      if (!yardOK(set, sn, b, byHome)) { G.Village.removeBuilding(b); continue; }
       byHome.set(b.home, b.id);
       // a garden tended in the last day and a half grows; one left alone goes to weeds
       const fert = S.fert[i] || 0.4; const dry = S.weather.drought > 0 ? 0.4 : 1;
@@ -599,7 +621,7 @@
       if (t.ripe && (b.g || 0) >= 1) {
         const h = S.buildings.get(b.home); const n = 3 + Math.round((S.fert[b.y * N + b.x] || 0.5) * 2);
         if (h && G.Depot) G.Depot.make('h:' + h.id, 'food', n, { code: 'horta', by: v.id, part: true }); // (into the pantry, in the ledger, as far as it has room — T-130)
-        b.g = 0.05; b.v = 0; b.picked = (b.picked || 0) + 1; b.yield = (b.yield || 0) + n;
+        b.g = 0.05; b.v = 0; b.picked = (b.picked || 0) + 1; b.yield = (b.yield || 0) + n; U.note(x, y, 'campo', 1);
         G.FX && G.FX.chips(x, y, '#6aa84a'); G.Vg.emote(v, 'happy', 1.4);
       }
       b.tend = S.clock; H.end(v);
@@ -629,24 +651,239 @@
     }
   });
 
+  // ------------------------------ the life of the quarters ------------------------------
+  // What happens on the ground, not what is built on it (Bairros Vivos). The real activity of the day comes in by one door,
+  // G.Urban.note — a crate across the quay, a catch landed, a sale, a batch out of the kiln, ore out of the rock, a harvest, a
+  // drill, a prayer, a lesson, a round at the tavern, a theft —, counted by the patch of ground where it happened (S.urbAcc, in
+  // the save). At each town's day the counts close into its quarters: d.vida, a slow mean of each count by patch of ground —
+  // with who lives there: people, rich homes, homes with nothing, empty homes —, and d.tags, the profiles they add up to. A
+  // town of any size has its whole (set.urb.w): a village is one quarter. Only the world's step calls the door — never what
+  // draws or sounds (the guard) —, and the same event counts once at the skip, at the step and with a body in the street.
+  U.KEYS = ['cais', 'pesca', 'troca', 'oficio', 'mina', 'campo', 'armas', 'fe', 'saber', 'noite', 'crime'];
+  const KEY = {}; for (const k of U.KEYS) KEY[k] = 1;
+  U.note = function (x, y, k, n) {
+    const S = G.S; if (!KEY[k]) throw new Error('G.Urban.note: chave desconhecida «' + k + '»');
+    if (n === undefined) n = 1; if (!(n > 0) || !Number.isFinite(n) || !W.inb(x, y)) return;
+    const a = S.urbAcc || (S.urbAcc = {}); const c = U.cellOf(x, y);
+    const o = a[c] || (a[c] = { d: S.day }); o[k] = (o[k] || 0) + n;
+  };
+  // (the same door by a building: its middle)
+  U.noteB = function (b, k, n) { if (b) U.note(b.x + (b.w || 1) / 2, b.y + (b.h || 1) / 2, k, n); };
+  // (what no town claimed in a whole round of days — a catch landed on an empty shore — is let go, by the world's own count)
+  function sweep() { const S = G.S; const a = S.urbAcc; if (a) for (const c in a) if (a[c].d < S.day - 1) delete a[c]; }
+  const ALPHA = 0.2; // (the weight of a day in the slow mean: about five days of memory)
+  const r3 = x => Math.round(x * 1000) / 1000;
+  U.VIDA = U.KEYS.concat(['gente', 'rica', 'pobre', 'vazia']);
+  // a day folded into the slow mean: the plain mean of the days so far while they are few, the slow one after — a quarter
+  // just born, or a save of before, fills on its first day
+  function fold(q, cnt, st) {
+    const S = G.S; const n = Math.max(1, (q.cells || []).length); const v = q.vida || (q.vida = {}); const ult = q.ult || (q.ult = {});
+    const a = Math.max(ALPHA, 1 / ((q.dias || 0) + 1));
+    const put = (k, x) => { v[k] = r3((v[k] || 0) * (1 - a) + x * a); };
+    // (each count by patch of ground; the crimes by who lives there — by ten people, ten at the least: a theft among ten
+    // weighs what ten among a hundred do —, and always by the slow mean: one theft on a quarter's first day is no reign of crime)
+    for (const k of U.KEYS) { const x = cnt[k] || 0; if (k === 'crime') v.crime = r3((v.crime || 0) * (1 - ALPHA) + x * 10 / Math.max(10, st.res) * ALPHA); else put(k, x / n); if (x > 0) ult[k] = S.day; }
+    q.cr = r3((q.cr || 0) * 0.85 + (cnt.crime || 0)); // (the thefts and brawls of the last ten days or so, for the telling)
+    put('gente', st.res / n); put('rica', st.homes ? st.rich / st.homes : 0); put('pobre', st.homes ? (st.low + st.shack) / (st.homes + st.shack) : 0); put('vazia', st.homes ? st.empty / st.homes : 0);
+    q.dias = (q.dias || 0) + 1;
+    // the most it has been (fading a little each day: a quarter may be born again): its people, and its activity — each
+    // count against what makes a profile of it, added up
+    q.pg = r3(Math.max(v.gente, (q.pg || 0) * 0.995)); q.pa = r3(Math.max(activity(q), (q.pa || 0) * 0.995));
+    // who died of what, of the people who lived here (fading: the last ten days or so) — the cause the history tells
+    const lu = q.luto || (q.luto = {}); for (const g in lu) { lu[g] = r3(lu[g] * 0.85); if (lu[g] < 0.2) delete lu[g]; }
+    for (const k in cnt) if (k[0] === 'm' && k[1] === ':') lu[k.slice(2)] = r3((lu[k.slice(2)] || 0) + cnt[k]);
+  }
+  const activity = q => { let a = 0; for (const id in U.TAGS) { const T = U.TAGS[id]; if (T.k && KEY[T.k] && T.k !== 'crime') a += (q.vida[T.k] || 0) / U.mark(q, id, false); } return a; };
+  // a death, at the house the dead lived in: by what kind of death (the cause the quarter's history tells when it empties)
+  const LUTO = { war: 'guerra', arrow: 'guerra', massacre: 'guerra', hunger: 'fome', sick: 'peste', fire: 'fogo', quake: 'terremoto', wave: 'maremoto', lava: 'lava', meteor: 'meteoro', dragon: 'dragao', kraken: 'mar', drown: 'mar', wolf: 'feras', boar: 'feras', beast: 'feras', riot: 'motim', execution: 'carrasco', sacrifice: 'sacrificio', lightning: 'raio' };
+  const LUTO_TXT = { guerra: 'a guerra', fome: 'a fome', peste: 'a peste', fogo: 'o fogo', terremoto: 'o terremoto', maremoto: 'o maremoto', lava: 'a lava', meteoro: 'o meteoro', dragao: 'o dragão', mar: 'o mar', feras: 'as feras', motim: 'o motim', carrasco: 'o carrasco', sacrificio: 'o altar', raio: 'o raio' };
+  U.mourn = function (v, cause) {
+    const S = G.S; const g = LUTO[cause]; const h = g && v.home && S.buildings.get(v.home); if (!h) return;
+    const a = S.urbAcc || (S.urbAcc = {}); const c = U.cellOf(h.x + h.w / 2, h.y + h.h / 2);
+    const o = a[c] || (a[c] = { d: S.day }); o['m:' + g] = (o['m:' + g] || 0) + 1;
+  };
+  function closeLife(set, sn) {
+    const S = G.S; const u = set.urb || (set.urb = { d: [], names: [] }); const acc = S.urbAcc || (S.urbAcc = {});
+    // the town's whole: every patch of its ground (a village is one quarter; a city has its own profile over its quarters')
+    const w = u.w || (u.w = { set: set.id, whole: 1, born: S.day, hist: [] });
+    w.cells = [...sn.cells.keys()].sort((a, b) => a - b);
+    const units = [w].concat(u.d.filter(d => d.cells.length));
+    const own = new Map(); for (const d of u.d) for (const c of d.cells) own.set(c, d);
+    const day = new Map(); for (const q of units) day.set(q, {});
+    for (const c of w.cells) {
+      const a = acc[c]; if (!a) continue; const d = own.get(c);
+      for (const k in a) { if (!KEY[k] && !(k[0] === 'm' && k[1] === ':')) continue; day.get(w)[k] = (day.get(w)[k] || 0) + a[k]; if (d) day.get(d)[k] = (day.get(d)[k] || 0) + a[k]; }
+      delete acc[c];
+    }
+    stats(set, sn);
+    for (const q of units) { fold(q, day.get(q), q._st); retag(set, q); }
+  }
+  // who only reads — the 3D, the sound, the screen, the stories — asks by the patch of ground: the quarter there, else the
+  // whole of the town whose ground it is (an index made from what the save has, made again when a town has its day)
+  U.ver = 0; let idx = null, idxS = null, idxV = -1;
+  G.worldHooks.push(() => { idx = null; });
+  function index() {
+    const S = G.S; if (idx && idxS === S && idxV === U.ver) return idx;
+    idx = new Map(); idxS = S; idxV = U.ver;
+    const sets = [...S.settlements.values()].sort((a, b) => a.id - b.id);
+    for (const s of sets) { const w = s.urb && s.urb.w; if (w && w.cells) for (const c of w.cells) if (!idx.has(c)) idx.set(c, w); }
+    for (const s of sets) for (const d of U.districtsOf(s)) for (const c of d.cells) idx.set(c, d);
+    return idx;
+  }
+  U.at = (x, y) => index().get(U.cellOf(x, y)) || null;
+  U.wholeOf = set => (set && set.urb && set.urb.w) || null;
+  (G.saveHooks = G.saveHooks || []).push({
+    save(out) { out.urbAcc = G.S.urbAcc || {}; },
+    // (a damaged save: only counts of known kinds, by patch of ground, come back; a save of before has none — it fills)
+    load(o) {
+      const a = {}; const q = o && o.urbAcc;
+      if (q && typeof q === 'object' && !Array.isArray(q)) for (const c in q) { const e = q[c]; if (!e || typeof e !== 'object' || !/^\d+$/.test(c)) continue; const r = { d: Number.isFinite(e.d) ? e.d : G.S.day }; for (const k in e) if ((KEY[k] || /^m:[a-z]+$/.test(k)) && Number.isFinite(e[k]) && e[k] > 0) r[k] = e[k]; a[c] = r; }
+      G.S.urbAcc = a; U.ver++;
+    },
+  });
+  // ------------------------------ the profiles ------------------------------
+  // What a quarter is by what happens in it — several at once. Each has a mark to come and a lower one to go, held four days
+  // in a row (the vocation's own patience): one busy day makes no port, one quiet day ends none. The marks were read off the
+  // ready worlds (qa/vida-bairro.js prints them): a working quay of the metropolis has 8 to 35 of cargo a patch a day, a
+  // temple's quarter 2 to 5 prayers, a garrison's 1 to 3 drills, the fields 2 to 5 harvests.
+  const STILL = { porto: ['porto', 'pesqueiro'], artesao: ['oficinas', 'minas'], mercantil: ['mercado', 'boemio'], militar: ['quartel'], templo: ['sagrado'], agrario: ['campo'] };
+  U.TAGS = {
+    porto: { name: 'porto movimentado', k: 'cais', on: 2, off: 1 },
+    pesqueiro: { name: 'pesqueiro', k: 'pesca', on: 0.6, off: 0.3 },
+    mercado: { name: 'de comércio vivo', k: 'troca', on: 0.3, off: 0.15 },
+    oficinas: { name: 'de oficinas', k: 'oficio', on: 0.4, off: 0.2 },
+    minas: { name: 'mineiro', k: 'mina', on: 0.5, off: 0.25 },
+    campo: { name: 'de lavoura', k: 'campo', on: 2, off: 1.2 },
+    quartel: { name: 'de soldados', k: 'armas', on: 0.5, off: 0.25 },
+    sagrado: { name: 'sagrado', k: 'fe', on: 1, off: 0.5 },
+    letrado: { name: 'letrado', k: 'saber', on: 0.15, off: 0.07 },
+    boemio: { name: 'boêmio', k: 'noite', on: 0.3, off: 0.15 },
+    perigoso: { name: 'perigoso', k: 'crime', on: 0.15, off: 0.07 },
+    nobre: { name: 'rico', k: 'rica', on: 0.5, off: 0.35, homes: 3 },
+    pobre: { name: 'pobre', k: 'pobre', on: 0.35, off: 0.2, homes: 3 },
+    vazio: { name: 'vazio', k: 'vazia', on: 0.5, off: 0.35, homes: 3 },
+    // built for a thing that does not happen there: the quay with no cargo, the workshops cold, the barracks with no drill
+    parado: { name: 'parado', fn(q, has) { const ts = STILL[q.k]; if (!ts) return false; return !ts.some(id => (q.vida[U.TAGS[id].k] || 0) >= U.mark(q, id, !has)); } },
+    // half its people gone, or what it did fallen to less than half of what it once was
+    decadencia: { name: 'em decadência', fn(q, has) {
+      if ((q.dias || 0) < 10) return false; const g = q.vida.gente || 0, a = activity(q);
+      if (has) return !((q.pg < 1 || g >= q.pg * 0.75) && (q.pa < 1 || a >= q.pa * 0.7));
+      return (q.pg >= 1 && g <= q.pg * 0.5) || (q.pa >= 1 && a <= q.pa * 0.4);
+    } },
+  };
+  const TAG_ORDER = Object.keys(U.TAGS);
+  U.PATIENCE = 4; U.YOUNG = 5;
+  U.tagNames = q => ((q && q.tags) || []).map(id => U.TAGS[id].name);
+  U.is = (q, id) => !!(q && q.tags && q.tags.includes(id));
+  // (the whole of a town counts over all its ground — houses, fields, shore —: what happens there is thinner by the patch, and
+  // its marks are half a quarter's; who lives there is a share of the homes, the same for both)
+  U.mark = (q, id, has) => { const T = U.TAGS[id]; return (has ? T.off : T.on) * (q.whole && KEY[T.k] && T.k !== 'crime' ? 0.5 : 1); };
+  function retag(set, q) {
+    const v = q.vida; const tags = q.tags || (q.tags = []); const tp = q.tp || (q.tp = {}); const st = q._st || {};
+    if ((q.dias || 0) < U.YOUNG) return; // (a quarter has no profile before it has lived a few days)
+    for (const id of TAG_ORDER) {
+      const T = U.TAGS[id]; const has = tags.includes(id);
+      const want = T.fn ? !!T.fn(q, has) : !(T.homes && (st.homes || 0) < T.homes) && (v[T.k] || 0) >= U.mark(q, id, has);
+      if (want === has) { if (tp[id]) delete tp[id]; continue; }
+      tp[id] = (tp[id] || 0) + 1; if (tp[id] < U.PATIENCE) continue;
+      delete tp[id];
+      if (want) { tags.push(id); tags.sort((a, b) => TAG_ORDER.indexOf(a) - TAG_ORDER.indexOf(b)); } else tags.splice(tags.indexOf(id), 1);
+      told(set, q, id, want);
+    }
+  }
+  // the history with its cause: what changed, and why — told in the quarter's own history, and in the chronicle of a city
+  const years = n => (n === 1 ? '1 ano' : n + ' anos');
+  const quiet = (q, k, none, less) => { const u = q.ult && q.ult[k]; const n = u === undefined ? -1 : G.S.day - u; return n < 0 ? none : n >= 2 ? `${none} há ${years(n)}` : less; };
+  const grief = q => { let best = null, bn = 1.5; for (const g in q.luto || {}) if (q.luto[g] > bn) { bn = q.luto[g]; best = g; } return best ? { g: best, txt: LUTO_TXT[best], n: Math.round(bn) } : null; };
+  U.grief = grief;
+  const WHY = {
+    porto: (q, on) => (on ? 'O cais encheu: carga cruzando o cais todo dia.' : `O cais parou: ${quiet(q, 'cais', 'nenhuma carga', 'cada vez menos carga')}.`),
+    pesqueiro: (q, on) => (on ? 'Virou pesqueiro: peixe chegando à beira todo dia.' : `A pesca minguou: ${quiet(q, 'pesca', 'nenhum peixe', 'cada vez menos peixe')}.`),
+    mercado: (q, on) => (on ? 'O comércio pegou: fregueses todo dia.' : `O comércio esfriou: ${quiet(q, 'troca', 'nenhuma venda', 'cada vez menos fregueses')}.`),
+    oficinas: (q, on) => (on ? 'As oficinas não param: uma fornada atrás da outra.' : `As oficinas esfriaram: ${quiet(q, 'oficio', 'nenhuma fornada', 'cada vez menos trabalho')}.`),
+    minas: (q, on) => (on ? 'Virou lugar de mineiros: pedra e minério saindo todo dia.' : `A mina calou: ${quiet(q, 'mina', 'nada tirado da rocha', 'cada vez menos minério')}.`),
+    campo: (q, on) => (on ? 'Terra de lavoura: colheita todo dia.' : `A lavoura parou: ${quiet(q, 'campo', 'nenhuma colheita', 'cada vez menos colheita')}.`),
+    quartel: (q, on) => (on ? 'Encheu de soldados: treino todo dia.' : `Os treinos pararam: ${quiet(q, 'armas', 'nenhum treino', 'cada vez menos soldados')}.`),
+    sagrado: (q, on) => (on ? 'Virou lugar de reza: gente rezando todo dia.' : `As rezas rarearam: ${quiet(q, 'fe', 'nenhuma reza', 'cada vez menos fiéis')}.`),
+    letrado: (q, on) => (on ? 'Virou lugar de letras: rolos lidos e copiados todo dia.' : `As letras calaram: ${quiet(q, 'saber', 'nenhum rolo lido', 'cada vez menos leitores')}.`),
+    boemio: (q, on) => (on ? 'A noite pegou: taverna, banho e espetáculo cheios.' : `As noites esfriaram: ${quiet(q, 'noite', 'ninguém na taverna', 'cada vez menos gente à noite')}.`),
+    perigoso: (q, on, set) => (on ? `Ficou perigoso: ${Math.max(2, Math.round(q.cr || 0))} roubos e brigas em pouco tempo${watchOf(set) ? '' : ', e nenhum vigia na ronda'}.` : `Voltou a ser tranquilo: ${quiet(q, 'crime', 'nenhum roubo', 'os roubos rarearam')}.`),
+    nobre: (q, on) => { const s = q._st || {}; return on ? `Enriqueceu: ${s.rich} das ${s.homes} casas são ricas.` : `Deixou de ser rico: ${s.empty * 2 >= s.homes ? 'as casas ricas ficaram vazias' : `só ${s.rich} das ${s.homes} casas ainda são ricas`}.`; },
+    pobre: (q, on) => { const s = q._st || {}; return on ? `Empobreceu: ${s.low + s.shack} das ${s.homes + s.shack} casas não têm quase nada${s.shack ? ` (${s.shack} são barracos)` : ''}.` : 'Saiu da pobreza: as casas voltaram a ter com que viver.'; },
+    vazio: (q, on) => { const s = q._st || {}; const g = grief(q); return on ? `Esvaziou: ${s.empty} das ${s.homes} casas estão sem ninguém${g ? ` — ${g.txt} levou ${g.n} dos que moravam aqui` : ''}.` : 'A gente voltou: as casas têm moradores de novo.'; },
+    parado: (q, on) => (on ? ({ porto: `O cais está parado: ${quiet(q, 'cais', 'nenhuma carga', 'quase nenhuma carga')}.`, artesao: `As oficinas estão paradas: ${quiet(q, 'oficio', 'nenhuma fornada', 'quase nenhum trabalho')}.`, mercantil: `As bancas estão paradas: ${quiet(q, 'troca', 'nenhuma venda', 'quase nenhum freguês')}.`, militar: `O quartel está parado: ${quiet(q, 'armas', 'nenhum treino', 'quase nenhum treino')}.`, templo: `O templo está quieto: ${quiet(q, 'fe', 'nenhuma reza', 'quase nenhuma reza')}.`, agrario: `Os campos estão parados: ${quiet(q, 'campo', 'nenhuma colheita', 'quase nenhuma colheita')}.` })[q.k] : 'Voltou a trabalhar.'),
+    decadencia: (q, on) => { const g = grief(q); return on ? `Entrou em decadência: ${(q.vida.gente || 0) <= q.pg * 0.5 ? 'perdeu metade da gente' : 'faz menos da metade do que já fez'}${g ? ` (${g.txt} levou ${g.n})` : ''}.` : 'Recuperou-se: a gente e o trabalho voltaram.'; },
+  };
+  const watchOf = set => { for (const v of G.S.villagers.values()) if (v.set === set.id && v.role === 'vigia') return true; return false; };
+  // (what the chronicle of the world tells of a city's quarters: the turns that matter, said with the quarter's name)
+  const NEWS = { porto: 1, perigoso: 1, vazio: 1, decadencia: 1, nobre: 1, pobre: 1, parado: 1, boemio: 1 };
+  function told(set, q, id, on) {
+    const txt = WHY[id](q, on, set); hist(q, txt);
+    if (q.whole || !NEWS[id] || (!on && id !== 'porto' && id !== 'perigoso' && id !== 'decadencia') || G.S.day - q.born < 6 || !newsOK(set)) return;
+    log(`${G.cap(U.theName(q))}, em ${set.name}: ${txt.charAt(0).toLowerCase() + txt.slice(1)}`, 'city', q.x, q.y);
+  }
+  // what a quarter is, in a line: its profiles («porto movimentado, boêmio»), or the plain word for a place with none yet
+  U.profile = q => { const n = U.tagNames(q); return n.length ? n.join(', ') : (q && q.dias >= U.YOUNG + U.PATIENCE ? 'sossegado' : ''); };
+
+  // ------------------------------ the memory of a town that ended ------------------------------
+  // a town left to the wind keeps its quarters in the world's memory (S.urbPast, in the save): where each one was, what it
+  // had been, its history — the ground still answers «here was the Bairro do Porto of Mênfis» (U.pastAt), and the chronicle
+  // keeps the names. The oldest go first when the memory is full
+  const PAST_MAX = 60;
+  U.remember = function (set) {
+    const S = G.S; const u = set && set.urb; if (!u) return;
+    const past = S.urbPast || (S.urbPast = []);
+    const keep = q => ({ town: set.name, set: set.id, name: q.whole ? set.name : q.name, g: q.g || 'a', whole: q.whole ? 1 : 0, k: q.k || '', tags: (q.tags || []).slice(), born: q.born, ended: S.day, x: q.x || set.cx, y: q.y || set.cy, cells: (q.cells && q.cells.length ? q.cells : q.was || []).slice(), hist: (q.hist || []).slice(-8).concat([[S.day, `${set.name} foi deixada ao vento.`]]) });
+    const list = U.allDistrictsOf(set).filter(d => (d.cells.length || (d.was || []).length) && S.day - d.born >= 3).map(keep);
+    if (u.w && u.w.cells && u.w.cells.length) list.push(keep(u.w));
+    for (const p of list) past.push(p);
+    while (past.length > PAST_MAX) past.shift();
+    U.ver++;
+    const named = list.filter(p => !p.whole).map(p => p.name);
+    if (named.length && (set.tier || 0) >= 3 && G.Lore && G.Lore.legend) G.Lore.legend('bairros' + set.id, `As ruas de ${set.name}`, `De ${set.name}, deixada ao vento no ano ${S.day}, ficaram os nomes das ruas: ${named.slice(0, 5).join(', ')}${named.length > 5 ? ' e outras' : ''}.`, { x: set.cx, y: set.cy });
+  };
+  let pidx = null, pidxS = null, pidxV = -1;
+  G.worldHooks.push(() => { pidx = null; });
+  U.pastAt = function (x, y) {
+    const S = G.S; if (!pidx || pidxS !== S || pidxV !== U.ver) { pidx = new Map(); pidxS = S; pidxV = U.ver; for (const p of S.urbPast || []) for (const c of p.cells) if (!p.whole || !pidx.has(c)) pidx.set(c, p); }
+    return pidx.get(U.cellOf(x, y)) || null;
+  };
+  (G.saveHooks = G.saveHooks || []).push({
+    save(out) { out.urbPast = G.S.urbPast || []; },
+    load(o) { G.S.urbPast = Array.isArray(o && o.urbPast) ? o.urbPast.filter(p => p && typeof p === 'object' && typeof p.name === 'string' && Array.isArray(p.cells) && Array.isArray(p.hist)).slice(-PAST_MAX) : []; },
+  });
+
   // ------------------------------ update ------------------------------
   function townBuildings(setId) { const list = []; for (const b of G.S.buildings.values()) if (b.set === setId && b.type !== 'ruin') list.push(b); return list; }
+  // the look of a town: what stands on each patch of its ground and what that ground is worth — derived from the world, never
+  // saved, changing nothing in it
+  function look(set) {
+    const bs = townBuildings(set.id); const sn = build(set, bs, households());
+    sn.rank = set.tier || 0; // (the rank the town had at its look of the day: what its quarters were judged by)
+    snap.set(set.id, sn);
+    sn.cross = (set.tier || 0) >= 2 ? crossings(set) : [];
+    return sn;
+  }
+  function derive(set) { const sn = look(set); sn.gardens = yards(set, sn, townBuildings(set.id)); stats(set, sn); return sn; }
   U.update = function () {
     const S = G.S; if (!S) return;
-    if (S.day !== lastDay) { lastDay = S.day; cur = 0; }
+    if (S.day !== G.mod('urb.day')) { G.mod('urb.day', S.day); G.mod('urb.cur', 0); sweep(); }
+    const sets = [...S.settlements.values()].sort((a, b) => a.id - b.id); const cur = G.mod('urb.cur');
+    // a world just loaded: the towns that already had their day get their look again, one a step — the look only: their
+    // gardens grew and their quarters were dealt that day, and the save has them (L-694)
+    for (let k = 0; k < cur && k < sets.length; k++) {
+      const set = sets[k]; if (snap.has(set.id)) continue;
+      derive(set);
+      return;
+    }
     // one town per step, until every town had its day
-    const sets = [...S.settlements.values()].sort((a, b) => a.id - b.id);
-    while (cur < sets.length) {
-      const set = sets[cur++];
-      const old = snap.get(set.id); if (old && old.day === S.day) continue;
-      const H = households();
-      const sn = build(set, townBuildings(set.id), H);
-      sn.rank = set.tier || 0; // (the rank the town had at its look of the day: what its quarters were judged by)
-      snap.set(set.id, sn);
-      sn.cross = (set.tier || 0) >= 2 ? crossings(set) : [];
+    if (cur < sets.length) {
+      const set = sets[cur]; G.mod('urb.cur', cur + 1);
+      const sn = look(set);
       gardens(set, sn, townBuildings(set.id));
       if ((set.tier || 0) >= 2 || (set.urb && set.urb.d.length)) updateDistricts(set, sn);
-      break;
+      closeLife(set, sn);
+      U.ver++;
     }
     for (const id of [...snap.keys()]) if (!S.settlements.has(id)) snap.delete(id);
   };
@@ -676,8 +913,10 @@
     const crates = B.filter(b => b.type === 'doca').reduce((a, b) => a + (b.crates || []).length, 0);
     const yards = B.filter(b => b.type === 'horta'); const picks = yards.reduce((a, b) => a + (b.picked || 0), 0);
     const served = B.filter(b => b.type === 'taverna').reduce((a, b) => a + (b.served || 0), 0);
+    const w = U.wholeOf(s); const life = w ? U.profile(w) : '';
     const rows = [
       ['Gente', `${vs.length} pessoas em ${homes} casas${n('barraco') ? ` e ${n('barraco')} barracos` : ''}`],
+      ['Vida', life || 'ainda sem perfil: é cedo para dizer do que o lugar vive'],
       ['Riqueza', homes ? `${Math.round(coin / homes)} moedas por casa, em média` : '—'],
       ['Terra', val.length ? `vale ${Math.round(avgV)} de 100 em média (V no teclado mostra o mapa)` : '—'],
       ['Sem teto', homeless.length ? `${homeless.length}: ${Object.entries(why).map(([w, k]) => `${k} — ${w}`).join('; ')}` : 'ninguém dorme na rua'],
@@ -689,7 +928,8 @@
     ];
     return `<div class="insp-head"><div class="insp-title"><h3>${esc(s.name)}</h3><div class="sub">${esc(G.City.tierName(s))}${f ? ' · ' + esc(f.name) : ''}${f && G.Fac.capitalOf(f.id) === s ? ' · capital' : ''}</div></div><button class="x" data-act="close">✕</button></div>
       <div class="food-chain">${rows.map(([a, b]) => `<div><span>${a}</span>${esc(b)}</div>`).join('')}</div>
-      ${ds.length ? `<div class="family"><div>Bairros (${ds.length}):</div><div>${ds.map(d => `<a data-act="urb" data-id="${d.id}" style="border-bottom:1px solid ${(U.KINDS[d.k] || {}).col}">${esc(d.name)}</a> <span class="muted">${esc(U.kindName(d.k).toLowerCase())}, ${(d._st || {}).res || 0}</span>`).join(' · ')}</div></div>` : `<div class="meta">${(s.tier || 0) >= 3 ? 'Os bairros ainda estão se formando.' : 'Ainda não é cidade: os bairros nascem quando ela for.'}</div>`}
+      ${ds.length ? `<div class="family"><div>Bairros (${ds.length}):</div><div>${ds.map(d => `<a data-act="urb" data-id="${d.id}" style="border-bottom:1px solid ${(U.KINDS[d.k] || {}).col}">${esc(d.name)}</a> <span class="muted">${esc(U.profile(d) || U.kindName(d.k).toLowerCase())}, ${(d._st || {}).res || 0}</span>`).join(' · ')}</div></div>` : `<div class="meta">${(s.tier || 0) >= 3 ? 'Os bairros ainda estão se formando.' : 'Ainda não é cidade: os bairros nascem quando ela for.'}</div>`}
+      ${w && w.hist && w.hist.length ? `<div class="family"><div>O que mudou por aqui:</div><div>${w.hist.slice().reverse().slice(0, 8).map(([day, t]) => `<div class="muted">ano ${day} · ${esc(t)}</div>`).join('')}</div></div>` : ''}
       <div class="btns"><button data-act="urbgo">Ir até lá</button></div>`;
   }
   U.inspectorHTML = function (o, esc) {
@@ -702,6 +942,7 @@
     const age = S.day - d.born;
     const rows = [
       ['Vocação', `<b style="color:${K.col}">${esc(K.name)}</b> — ${esc(K.what)}`],
+      ['Vida', esc(U.profile(d) || 'ainda sem perfil: é cedo para dizer o que acontece aqui')],
       ['Gente', `${st.res || 0} moradores em ${st.homes || 0} casas${st.beds ? ` (${st.beds} camas)` : ''}${d.peak > (st.res || 0) ? ` · já foram ${d.peak}` : ''}`],
       ['Riqueza', `${wealth}${st.homes ? ` · ${Math.round(st.coin)} moedas por casa` : ''}${st.rich ? ` · ${st.rich} casas ricas` : ''}${st.poor ? ` · ${st.poor} casas pobres` : ''}`],
       ['Terra', `vale ${Math.round(st.value || 0)} de 100`],

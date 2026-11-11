@@ -82,8 +82,15 @@
   function where(x, y) {
     if (x === undefined) return { name: '', at: '' };
     const S = G.S; let best = null, bd = 1e9;
+    // (the quarter where it happened, by its name, in a city that has quarters — «no Bairro do Porto de Mênfis» —; anywhere
+    // else on a town's own ground, the town; where a town once stood, its ruins — the ground remembers, Bairros Vivos)
+    const q = G.Urban && G.Urban.at ? G.Urban.at(x, y) : null; const qs = q && S.settlements.get(q.set);
+    if (qs && !q.whole && (qs.tier || 0) >= 3) return { name: qs.name, at: ` ${G.Urban.inName(q)} de ${qs.name}`, town: 1, bairro: q.name };
+    if (qs) return { name: qs.name, at: ' em ' + qs.name, town: 1 };
     for (const s of S.settlements.values()) { const d = G.dist(x, y, s.cx, s.cy); if (d < bd) { bd = d; best = s; } }
     if (best && bd < 6) return { name: best.name, at: ' em ' + best.name, town: 1 };
+    const past = G.Urban && G.Urban.pastAt ? G.Urban.pastAt(x, y) : null;
+    if (past && !(best && bd < 18)) return { name: past.town, at: ' nas ruínas de ' + past.town, ruin: 1 };
     let pl = null, pd = 9; if (G.Relief && G.Relief.places) for (const p of G.Relief.places()) { const d = G.dist(x, y, p.x, p.y); if (d < pd) { pd = d; pl = p; } }
     if (pl) return { name: pl.name, at: ' perto ' + (/^(Lagoa|Cachoeira|Agulha|Garganta|Trilha|Escadaria|Subida|Portela|Queda|Gruta|Lapa|Furna|Toca|Caverna|Serra|Cordilheira|Pedra|Boca|Cova|Fenda|Ponta|Montanha|Colina|Cratera|Ilha|Praia|Baía|Enseada|Garganta)/.test(pl.name) ? 'da ' : 'do ') + pl.name };
     if (best && bd < 18) return { name: best.name, at: ' perto de ' + best.name, town: 1 };

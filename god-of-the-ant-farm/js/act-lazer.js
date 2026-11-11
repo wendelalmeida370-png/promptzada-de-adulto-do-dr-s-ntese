@@ -354,7 +354,7 @@
       if (wait) { t.at = 1; v.act = 'wait'; v.moving = false; return; }
       if (full(b, op)) { G.Vg.emote(v, 'sad', 1); say(v, 'teatro_cheio', {}); return H.end(v); }
       const p = payEntry(v, op, b); if (!p.ok) return H.end(v);
-      goIn(v, t, b, rowUse(v, b)); d.entradas++;
+      goIn(v, t, b, rowUse(v, b)); d.entradas++; if (G.Urban) G.Urban.noteB(b, 'noite', 1); // (the life of the quarter: one more at the show)
       d.plateia[v.id] = { t: Math.round(S.clock * 10) / 10, st: d.fase === 'peca' ? 2 : 1, paid: p.n };
       t.st = 1; v.actT = 0; return;
     }
@@ -421,6 +421,7 @@
     const f = G.Fac.get(facOf(b)); const k = book(b);
     if (kind === 'ler' ? k.lidos >= Bi.MAX : k.copias >= Bi.MAX - 2) return 0;
     if (kind === 'ler') k.lidos++; else k.copias++;
+    if (G.Urban) G.Urban.noteB(b, 'saber', 1); // (the life of the quarter: a scroll read or copied)
     if (!f || !f.tech) return 0;
     if (!f.tech.cur && G.Civ && G.Civ.nextTech) f.tech.cur = G.Civ.nextTech(f);
     if (!f.tech.cur) return 0;
@@ -530,7 +531,7 @@
       assistir: {
         deed: 'espetaculo',
         can(v, o) { const op = A.get(o.op); if (!op || !live(op)) return { ok: false, why: 'Não há espetáculo.' }; const b = S_().buildings.get(op.at); if (!b || !aberto(b, op)) return { ok: false, why: G.cap(shut(op)) + '.' }; if (op.data.plateia[v.id]) return { ok: false, why: 'Você já está na plateia.' }; if (full(b, op)) return { ok: false, why: 'O teatro está cheio.' }; if (coin(b) && E.purse(v) + EPS < Tt.FEE) return { ok: false, why: 'Falta dinheiro para a entrada.' }; return { ok: true }; },
-        run(v, o) { const S = S_(); const op = A.get(o.op); const b = S.buildings.get(op.at); const p = payEntry(v, op, b); if (!p.ok) return { ok: false, why: p.why || 'Não deu para pagar.' }; op.data.entradas++; op.data.plateia[v.id] = { t: Math.round(S.clock * 10) / 10, st: op.data.fase === 'peca' ? 2 : 1, paid: p.n, body: 1 }; return { ok: true, msg: `Você ${p.n ? `paga ${money(b, p.n)} e ` : ''}senta nas fileiras${op.data.fase === 'peca' ? ': a peça já começou' : ': a peça começa logo'}.` }; },
+        run(v, o) { const S = S_(); const op = A.get(o.op); const b = S.buildings.get(op.at); const p = payEntry(v, op, b); if (!p.ok) return { ok: false, why: p.why || 'Não deu para pagar.' }; op.data.entradas++; if (G.Urban) G.Urban.noteB(b, 'noite', 1); op.data.plateia[v.id] = { t: Math.round(S.clock * 10) / 10, st: op.data.fase === 'peca' ? 2 : 1, paid: p.n, body: 1 }; return { ok: true, msg: `Você ${p.n ? `paga ${money(b, p.n)} e ` : ''}senta nas fileiras${op.data.fase === 'peca' ? ': a peça já começou' : ': a peça começa logo'}.` }; },
       },
       atuar: {
         deed: 'trabalho',

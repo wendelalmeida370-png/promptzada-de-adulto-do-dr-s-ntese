@@ -747,7 +747,7 @@
     else if (t.what === 'eggs') a.eggs = 0;
     else { a.hunger = Math.max(0, a.hunger - 0.2); if (f) f._grooms = (f._grooms || 0) + 1; }
     a.hold = 0;
-    if (carry) { const r = D.make('v:' + v.id, carry.k, carry.n, { code: carry.code, by: v.id, pack: true }); if (r.ok) { if (f) made(f, carry.k, r.n); E.pay(v, carry.k, r.n); } H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' }); }
+    if (carry) { const r = D.make('v:' + v.id, carry.k, carry.n, { code: carry.code, by: v.id, pack: true }); if (r.ok) { if (f) made(f, carry.k, r.n); E.pay(v, carry.k, r.n); if (G.Urban) G.Urban.note(v.x, v.y, 'campo', 1); } H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' }); }
     else H.end(v);
   }
   function runSlaughter(v, t, dt, H) {
@@ -780,6 +780,7 @@
     const D = G.Depot; const hr = hide ? D.make('b:' + b.id, 'couro', hide, { code: 'abate', by: v.id, part: true }) : null;
     const mr = D.make('v:' + v.id, 'food', meat, { code: 'abate', by: v.id, pack: true, tag: { meat: a.kind } });
     if (f) { if (mr.ok) made(f, 'food', mr.n); if (hr && hr.ok) made(f, 'couro', hr.n); }
+    if (mr.ok && G.Urban) G.Urban.noteB(b, 'oficio', 1);
     if (mr.ok) E.pay(v, 'food', mr.n);
     H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
   }
@@ -819,6 +820,7 @@
   E.mined = function (v, bId, o, n) {
     const S = G.S; const b = S.buildings.get(bId); const k = o.kind === 'ouro' ? 'ouro' : 'minerio';
     const f = G.Fac.ofV(v); if (f) made(f, k, n); E.pay(v, k, n);
+    if (G.Urban) G.Urban.noteB(b, 'mina', 1); // (the life of the quarter: a shift at the face)
     if (o.kind === 'ouro' && f && !f._gold && b) { f._gold = S.day; const st = S.settlements.get(b.set); log(`Os mineiros de ${st ? st.name : f.name} encontraram ouro na montanha!`, 'star', b.x, b.y); G.Village.milestone('firstGold', 'Ouro!', 'Mineiros tiraram o primeiro ouro da montanha.', 'star'); }
     if (o.amt <= 0 && b) { const st = S.settlements.get(b.set); log(`A mina de ${o.kind === 'ouro' ? 'ouro' : 'minério'}${st ? ' de ' + st.name : ''} se esgotou.`, 'stone', b.x, b.y); }
   };
@@ -853,7 +855,7 @@
     if (v.actT < 6) return;
     const D = G.Depot; const ref = 'f:' + f.id;
     if (D.free(ref, 'ouro') >= 1 && D.use(ref, 'ouro', 1, { code: 'cunhagem', by: v.id }).ok) {
-      D.make(ref, 'moedas', 6, { code: 'cunhagem', by: v.id }); used(f, 'ouro', 1); made(f, 'moedas', 6);
+      D.make(ref, 'moedas', 6, { code: 'cunhagem', by: v.id }); used(f, 'ouro', 1); made(f, 'moedas', 6); if (G.Urban) G.Urban.noteB(b, 'oficio', 1);
       if (!f._minted) { f._minted = G.S.day; const s = G.S.settlements.get(b.set); log(`${f.name} cunhou suas primeiras moedas${s ? ' em ' + s.name : ''}.`, 'trade', b.x, b.y); }
     }
     H.end(v);
@@ -1008,6 +1010,7 @@
       } else r = D.move(goods[0], goods[1], k, n, Object.assign({}, c, { code: 'feira' }));
       G.Life && G.Life.leaveQueue(v);
       if (!r.ok) return H.end(v);
+      if (G.Urban) G.Urban.noteB(b, 'troca', 1); // (the life of the quarter: a purchase at the market)
       G.Vg.emote(v, 'happy', 1.2);
       // (what was bought is the house's from here: it knows where it goes, and gets there after a save or a lost way)
       return H.setTask(v, { type: 'carga', to: 'h:' + h.id, pri: 0.5, st: 0 });

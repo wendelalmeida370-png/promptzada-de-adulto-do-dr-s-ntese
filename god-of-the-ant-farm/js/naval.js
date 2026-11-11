@@ -931,6 +931,7 @@
         const n = Math.min(16, Math.floor(f.stock[give] * 0.08)); if (n < 4) continue;
         const s = spawn('mercante', f, mine, { route: r.id }); if (!s) continue;
         f.stock[give] -= n; s.goods = { k: give, n };
+        if (G.Urban) G.Urban.noteB(mine, 'cais', n); // (the life of the quarter: cargo aboard at the quay)
         G.Trade && G.Trade.loadShip(f, s, r);
       }
     }

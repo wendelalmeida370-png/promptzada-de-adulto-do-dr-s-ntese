@@ -134,6 +134,7 @@
       if (!G.Depot.move('h:' + h.id, 'p:' + v.id, 'moedas', n, { code: 'roubo', by: v.id }).ok) return H.end(v);
       h.robbed = S.day;
       v.thefts = (v.thefts || 0) + 1;
+      if (G.Urban) G.Urban.noteB(h, 'crime', 1); // (the life of the quarter: a theft)
       // who saw it: anyone awake out of doors close by (and they know only what they saw)
       const seen = [];
       for (const o of S.villagers.values()) {

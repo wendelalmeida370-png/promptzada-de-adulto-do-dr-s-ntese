@@ -235,7 +235,8 @@
     const fb = G.Fac.get(G.Village.facOfSet(ob.set)); if (!fb || fb.id === f.id || !partnerOK(f, fb)) return;
     const k = TRADE.filter(q => surplus(f, q) >= 2 && (fb.stock[q] || 0) < 4).sort((x, y) => (E.PRICE[y] || 0) - (E.PRICE[x] || 0))[0]; if (!k) return;
     // (the fine things out of the store into the ship's hold of them, in the ledger)
-    const n = Math.min(surplus(f, k), 10); G.Depot.move('f:' + f.id, 'l:' + s.id, k, n, { code: 'navio-luxo' });
+    const n = Math.min(surplus(f, k), 10); const r = G.Depot.move('f:' + f.id, 'l:' + s.id, k, n, { code: 'navio-luxo' });
+    if (r.ok && G.Urban) G.Urban.noteB(S.buildings.get(s.dock), 'cais', r.n);
   };
   // the ship sells as a merchant does (P.tradeArrive below): from its hold of fine things, what they fetch into another hold
   Tr.shipArrive = function (s, fa, fb) {

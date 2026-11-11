@@ -160,6 +160,7 @@
     if (m < 1) return { ok: false, why: other ? 'Não há mão para outro peixe.' : 'Não cabe mais peixe nas mãos: leve ao armazém.', full: 1, other: other ? 1 : 0, name: nm0 };
     const r = D.make('v:' + v.id, fish.k, m, { code: 'pesca', by: v.id, rec: { fish: fish.fish } });
     if (!r.ok) { untake(x, y, back(m)); return { ok: false, why: 'Não cabe mais peixe nas mãos.', full: 1, name: nm0 }; }
+    if (G.Urban) G.Urban.note(v.x, v.y, 'pesca', r.n); // (the life of the quarter: a catch at the water's edge)
     v.fishXp = Math.min(240, (v.fishXp || 0) + 1);
     const F = G.Waters.FISH[fish.fish]; const nm = F ? F.name : 'peixe';
     // (took: the fish that left the ground — the haul less what went back)

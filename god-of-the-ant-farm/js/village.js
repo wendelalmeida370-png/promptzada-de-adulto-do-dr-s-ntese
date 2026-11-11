@@ -1702,6 +1702,7 @@
     if (!S.villagers.has(v.id)) return;
     // a violent death leaves a body on the ground, to be carried away later (or not)
     const body = !!(G.Carnage && G.Carnage.onKill(v, cause));
+    if (G.Urban && G.Urban.mourn) G.Urban.mourn(v, cause); // (the quarter of the dead remembers what took them)
     G.Vg.endTask(v);
     S.villagers.delete(v.id);
     S.stats.deaths++;
@@ -1835,6 +1836,7 @@
   V.abandon = function (s) {
     const S = G.S;
     if (!S.settlements.has(s.id)) return;
+    if (G.Urban && G.Urban.remember) G.Urban.remember(s); // (its quarters stay in the world's memory)
     S.settlements.delete(s.id);
     for (const b of [...S.buildings.values()]) {
       if (b.set !== s.id) continue;

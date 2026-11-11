@@ -1336,6 +1336,7 @@
               c.s = 0; c.g = 0;
               if (v.carry && v.carry.k === 'food') v.carry.n += y; else v.carry = { k: 'food', n: y, grain: 1 };
               G.FX && G.FX.chips(px, py, '#e8c24a');
+              if (G.Urban) G.Urban.note(px, py, 'campo', 1); // (the life of the quarter: a harvest)
             } else { c.s = 1; c.g = 0.02; G.FX && G.FX.chips(px, py, '#7a5a36'); }
             if (v.carry && v.carry.n >= 6) return deliverTask(v);
             const nt = farmTask(v); if (!nt) { if (v.carry) deliverTask(v); else end(v); }
@@ -1432,7 +1433,7 @@
           if (row) { t.row = target.id; if (!Vg.goto(v, row[0], row[1], false)) { G.Life.rowRelease(v); t.row = 0; if (!Vg.goto(v, fx + G.rr(-0.4, 0.4), fy + G.rr(-0.4, 0.4), true)) return end(v); } }
           else if (!Vg.goto(v, fx + G.rr(-0.4, 0.4), fy + G.rr(-0.4, 0.4), true)) return end(v);
           t.st = 1;
-        } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; const b = t.inT && S.buildings.get(t.inT); if (b && b.built && atDoor(v, b, IN_R)) v.inside = b.id; else t.inT = 0; } } // (away from the door: the prayer where one is)
+        } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; const b = t.inT && S.buildings.get(t.inT); if (b && b.built && atDoor(v, b, IN_R)) v.inside = b.id; else t.inT = 0; if (G.Urban) G.Urban.note(v.x, v.y, 'fe', 1); } } // (away from the door: the prayer where one is)
         else {
           v.act = 'pray';
           const b = S.buildings.get(t.b);

@@ -117,6 +117,7 @@
     A.log(op, 'chegou', k, r2(n0 - n));
     op.data.boxes = (op.data.boxes || 0) + Math.ceil((n0 - n) / 4);
     dock.lastCargo = S.day;
+    if (G.Urban) G.Urban.noteB(dock, 'cais', r2(n0 - n)); // (the life of the quarter: cargo across the quay)
     return n;
   };
   // a boat's catch: born of the sea (the shoal already gave it), set down in crates; what has no room on the quay goes
@@ -135,6 +136,7 @@
     // (the part that came ashore: the manifest is what landed)
     if (left > EPS) op.goods[k] = r2(op.goods[k] - left);
     A.log(op, 'pesca', k, r2(n - left));
+    if (G.Urban) G.Urban.noteB(dock, 'pesca', r2(n - left)); // (the life of the quarter: a catch landed)
     return left;
   };
 

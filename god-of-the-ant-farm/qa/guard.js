@@ -385,5 +385,16 @@ for (const f of files) if (!LOOK.includes(f)) src[f].forEach((l, k) => { if (!l.
 // da chuva fica na lista da caverna — G.Caves.guest o acha) e o save.js (o load refaz a lista). Os outros chamam G.Animals.remove
 for (const f of files) if (!['animals.js', 'caves.js', 'save.js'].includes(f)) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (/\banimals\.delete\(/.test(c)) fails.push(`bicho fora da porta: ${f}:${k + 1} tira um bicho de S.animals sem passar por G.Animals.remove (L-656): ${l.trim().slice(0, 110)}`); });
+// 50. "a vida do bairro entra por uma porta só, e só o mundo a abre" (Bairros Vivos): a atividade real do dia entra no bairro
+// por G.Urban.note / noteB (e a morte, por G.Urban.mourn; a cidade que acaba, por G.Urban.remember) — chamadas só de dentro
+// do passo do mundo: o que só se vê ou se ouve (a lista LOOK da regra 3) e o 3D nunca as chamam, e ninguém fora do urban.js
+// escreve as contagens do dia (S.urbAcc), a vida (d.vida), os perfis (d.tags, d.tp) nem a memória (S.urbPast). Quem só lê
+// pergunta por G.Urban.at, G.Urban.profile, G.Urban.is, G.Urban.wholeOf, G.Urban.pastAt
+const LIFE_3D = ['realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'cam3d.js', 'incui.js', 'input3d.js', 'modes.js', 'props3d.js'];
+for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if ((LOOK.includes(f) || LIFE_3D.includes(f)) && /Urban\.(note|noteB|mourn|remember)\s*\(/.test(c)) fails.push(`vida do bairro: ${f}:${k + 1} o que só se vê ou se ouve abre a porta da vida do bairro (G.Urban.note): ${l.trim().slice(0, 110)}`);
+  if (f !== 'urban.js' && (/\.urbAcc\b(?!\s*(\|\||&&|\)|;|,|$))/.test(c) && /\.urbAcc\s*(\[[^\]]*\])?(\.[a-zA-Z_]+)?\s*(=(?!=)|\+=|-=)/.test(c))) fails.push(`vida do bairro: ${f}:${k + 1} escreve as contagens do dia fora do urban.js: ${l.trim().slice(0, 110)}`);
+  if (f !== 'urban.js' && /\.(vida|tags|tp)\s*(\[[^\]]*\])?\s*(=(?!=)|\+=|-=)/.test(c) && /\b(d|q|w|bairro|urb)\.(vida|tags|tp)\b/.test(c)) fails.push(`vida do bairro: ${f}:${k + 1} escreve a vida ou os perfis de um bairro fora do urban.js: ${l.trim().slice(0, 110)}`);
+  if (f !== 'urban.js' && /\.urbPast\s*(=(?!=)|\.push|\.splice|\.shift)/.test(c)) fails.push(`vida do bairro: ${f}:${k + 1} escreve a memória dos bairros fora do urban.js: ${l.trim().slice(0, 110)}`); });
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

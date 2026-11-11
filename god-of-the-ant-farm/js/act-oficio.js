@@ -264,7 +264,7 @@
       // the goods counted: each one sound or broken by the world's chance (in the world's step), the sound ones on the shelf
       let broke = 0; if (s.brk > 0) for (let k = 0; k < Math.round(out); k++) if (G.R() < s.brk) broke++;
       const good = r2(out - broke);
-      if (good > EPS) { const r = D.make('b:' + b.id, R.k, good, { op: op.id, code: 'fornada', by: v.id, key: key + ':m' }); if (r.ok) d.feitos = r2(d.feitos + r.n); }
+      if (good > EPS) { const r = D.make('b:' + b.id, R.k, good, { op: op.id, code: 'fornada', by: v.id, key: key + ':m' }); if (r.ok) { d.feitos = r2(d.feitos + r.n); if (G.Urban) G.Urban.noteB(b, 'oficio', 1); } }
       d.quebrados = r2(d.quebrados + broke);
       const gm = R.g === 'f' ? 'a' : 'o';
       msg = `${Math.round(good)} ${Math.round(good) === 1 ? R.one || R.name : R.name} pront${gm}${Math.round(good) === 1 ? '' : 's'}${broke ? `, ${broke} quebrad${gm}${broke > 1 ? 's' : ''}` : ''}.`;
@@ -468,6 +468,7 @@
           const r = n >= 1 ? D.make('v:' + v.id, 'argila', n, { op: op.id, code: 'barreiro', by: v.id, to: 'b:' + b.id }) : { ok: false };
           if (!r.ok) return H.end(v);
           const f = G.Fac.ofV(v); if (f) E.made(f, 'argila', r.n);
+          if (G.Urban) G.Urban.note(t.x, t.y, 'mina', 1);
           t.st = 2; t.wk = null; return;
         }
         return carryIn(v, t, b, op, dt, H);

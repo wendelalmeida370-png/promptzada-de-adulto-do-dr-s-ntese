@@ -213,6 +213,7 @@
     if (!r.ok) return { ok: false, why: r.why || 'Não deu.' };
     if (fed) D.use(to, item.k, item.n, { op: op.id, code: item.k === 'food' ? 'refeicao' : 'bebida', by: c.id, mine: true, key: key + ':boca' });
     d.q++; d.servidos++; d.vendas[item.k] = r2((d.vendas[item.k] || 0) + item.n); if (from) d.receita = r2(d.receita + item.p);
+    if (G.Urban) G.Urban.noteB(b, 'noite', 1); // (the life of the quarter: a round served)
     m.st = fed ? 4 : 3; m.k = item.k; if (fed) taste(c, item.k, b);
     if (!self) say(v, 'servir_taverna', { bem: T.nome(item.k) });
     if (c.task && c.task.type === 'tavern' && c.task.op === op.id) { c.task.st = m.st; c.actT = 0; }
@@ -352,6 +353,7 @@
       let o = null; for (const id of Object.keys(op.data.mesa)) { const q = S.villagers.get(+id); if (q && q !== v && q.drunk > S.clock && !brawls.has(q.id) && !op.data.mesa[id].body) { o = q; break; } }
       if (o) {
         const until = S.clock + G.rr(4, 7); brawls.set(v.id, { with: o.id, t: until }); brawls.set(o.id, { with: v.id, t: until });
+        if (G.Urban) G.Urban.noteB(b, 'crime', 1); // (the life of the quarter: a brawl)
         G.Vg.emote(v, 'angry', 3); G.Vg.emote(o, 'angry', 3);
         const set = S.settlements.get(b.set);
         if (G.R() < 0.35 || !(set && set._brawl)) { if (set) set._brawl = S.day; G.Village.log(G.pick([`Briga na taverna de ${set ? set.name : ''}: ${v.name} e ${o.name} beberam demais e saíram no braço.`, `${v.name} acusou ${o.name} de roubar no jogo de dados. A taverna de ${set ? set.name : ''} virou ringue.`, `Uma jarra voou na taverna de ${set ? set.name : ''}: ${v.name} e ${o.name}, bêbados, foram separados à força.`]), 'war', b.x, b.y); }

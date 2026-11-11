@@ -187,9 +187,11 @@
   const faceB = (v, b) => { const [cx, cy] = G.Village.center(b); G.faceTo(v, cx - v.x, cy - v.y); };
   // the entry: in a people of coin, from the bather's house (or purse) to the people's treasury — once (the key of the entry)
   function payEntry(v, op, b) {
-    if (!coin(b)) return { ok: true, n: 0 };
+    // (the life of the quarter: one more at the baths — paid or, in a people with no coin, let in)
+    if (!coin(b)) { if (G.Urban) G.Urban.noteB(b, 'noite', 1); return { ok: true, n: 0 }; }
     const d = op.data; const r = D.move(E.coinRef(v), 'f:' + op.fac, 'moedas', Te.FEE, { op: op.id, code: 'termas', by: v.id, key: 'te:' + op.id + ':' + d.q });
     if (!r.ok) return r;
+    if (!r.again && G.Urban) G.Urban.noteB(b, 'noite', 1);
     d.q++; d.receita = r2(d.receita + Te.FEE); E.ensure(G.Fac.get(op.fac)); return { ok: true, n: Te.FEE };
   }
   // the entry back, to one who never got into the water — from the people's treasury, once (the key of the visit)
@@ -446,6 +448,7 @@
     if (!from) return { ok: false, why: 'Não há de onde dar.' };
     const m = Math.min(n, D.free(from, k)); if (!(m > EPS)) return { ok: false, why: 'Não há o que dar.' };
     const r = D.move(from, 'b:' + b.id, k, m, { code: 'oferenda', by: v.id, part: true }); if (!r.ok) return r;
+    if (G.Urban) G.Urban.noteB(b, 'fe', 1); // (the life of the quarter: an offering)
     return { ok: true, n: r.n };
   };
   // each morning: the priests of the town eat of what was given (a meal each, who is hungry); the food beyond what the temple
