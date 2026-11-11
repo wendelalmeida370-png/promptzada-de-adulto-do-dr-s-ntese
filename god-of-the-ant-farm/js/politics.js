@@ -679,7 +679,7 @@
   // the last few survivors of a broken people join a neighbour — or surrender to it
   // the last free soul of a people died: the people is gone with them, not a minute later — or, if it kept captives in its
   // towns, they are free now and the towns are theirs (L-090)
-  function emptied(f, last) {
+  function emptied(f, last, by) {
     const S = G.S;
     const held = [...S.villagers.values()].filter(o => o.captive && (S.settlements.get(o.set) || {}).fac === f.id);
     if (held.length) {
@@ -692,9 +692,11 @@
       return;
     }
     const sets = G.Fac.settlementsOf(f.id);
-    P.extinct(f, null);
+    P.extinct(f, by || null);
     for (const s of sets) G.Village.abandon(s);
   }
+  // (the same door for a people a conquest left with towns and no soul: asked by the war at the end of the conquest, L-685)
+  P.emptied = emptied;
   P.lastSoul = function (v) {
     const S = G.S; if (v.captive) return;
     const s0 = S.settlements.get(v.set); const f = s0 && G.Fac.get(s0.fac);

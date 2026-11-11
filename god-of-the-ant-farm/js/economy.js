@@ -920,6 +920,9 @@
   // (want: the house's own list, when the house sends someone for it — act-compras.js; without it, a stroll's whim)
   E.shopTask = function (v, H, want) {
     const S = G.S; const h = homeOf(v); if (!h || v.captive) return null;
+    // (a stroll asks the hands, as the house's errand does, D-094: with a load in the arms one went to the stall, what the two
+    // hands could not take was not bought, and one came back with nothing said — Jasão, three of wood in his arms, L-636)
+    if (!want && ((v.carry && v.carry.n > 1e-6) || G.Vg.handsBusy(v))) return null;
     // (the market's stalls first: each merchant's own, with its price and its talk — act-negocio.js)
     if (G.Biz) { const t = G.Biz.shop(v, H, want); if (t) return t; }
     const I = inv(h); const res = h.res || 1;

@@ -28,7 +28,7 @@
       const tag = `${set.name}: o campo guardado para ${r.type}/${r.esc}`; const st = Es.steps(r.type).find(q => q.id === r.esc);
       if (!st || st.n !== r.n) add('escala', 2, `${tag} tem ${r.n} casas, e não é um degrau do tipo`);
       if (!(r.x >= 0 && r.y >= 0 && r.x + r.n <= N && r.y + r.n <= N)) { add('escala', 2, `${tag} sai do mapa (${r.x}, ${r.y}, ${r.n})`); continue; }
-      let on = null; for (let y = r.y; y < r.y + r.n && !on; y++) for (let x = r.x; x < r.x + r.n; x++) { const o = s.occ[y * N + x] ? s.buildings.get(s.occ[y * N + x]) : null; if (o && !(o.set === set.id && FIELD[o.type])) { on = o; break; } }
+      let on = null; for (let y = r.y; y < r.y + r.n && !on; y++) for (let x = r.x; x < r.x + r.n; x++) { const o = s.occ[y * N + x] ? s.buildings.get(s.occ[y * N + x]) : null; if (o && !(o.set === set.id && (FIELD[o.type] || (o.type === 'ruin' && FIELD[o.origType])))) { on = o; break; } } // (the ruin of a field of its own passes as the fire, D-149)
       if (on) add('escala', 2, `${tag}: ${on.type}#${on.id} em cima dele — no campo guardado não se ergue nada`);
       if ((r.chk || 0) < s.day - 1) add('escala', 3, `${tag}: a cidade não olha para ele desde o ano ${r.chk}`);
     }

@@ -153,13 +153,26 @@
   }
 
   // ------------------------------ the watch: rounds, witnesses, the hunt, the arrest ------------------------------
+  // (the theft a guard knows of: he goes after the thief — unless he gave up for today already (c.gave): «then the guard gives up
+  // for today», and he is back at it the next day, until the arrest or until nobody has solved it in PRESC days — the code wiped
+  // the hunt at the fourth search, neither the round nor the job came back to it, and the theft stayed open for good, the thief
+  // with the coins: L-646. A hunt of a theft no longer open, of a thief gone or jailed, is over)
+  const PRESC = Cr.PRESC = 6;
+  function huntTask(v, H) {
+    const S = G.S; if (!v.hunt) return null;
+    const c = crimes().find(q => q.id === v.hunt && q.st === 'aberto'); if (!c) { v.hunt = 0; return null; }
+    if (S.day - c.day > PRESC) { c.st = 'prescrito'; v.hunt = 0; return null; }
+    const th = S.villagers.get(c.thief); if (!th || th.set !== v.set || th.jail) { v.hunt = 0; return null; }
+    if (c.gave === S.day) return null;
+    return H.setTask(v, { type: 'prender', crime: c.id, id: th.id, pri: 1.6, st: 0, look: 0 });
+  }
+  const giveUp = (v, c, H) => { if (c) c.gave = G.S.day; return H.end(v); };
   // soldiers walk the streets at night with a torch, from crossing to crossing
   const oldGuard = E.guardTask;
   E.guardTask = function (v, H) {
     const S = G.S; const set = S.settlements.get(v.set);
     // a guard who knows of a theft goes after the thief
-    const c = v.hunt && crimes().find(q => q.id === v.hunt && q.st === 'aberto');
-    if (c) { const th = S.villagers.get(c.thief); if (th && th.set === v.set && !th.jail) return H.setTask(v, { type: 'prender', crime: c.id, id: th.id, pri: 1.6, st: 0, look: 0 }); v.hunt = 0; }
+    { const t = huntTask(v, H); if (t) return t; }
     return oldGuard(v, H);
   };
   function rondaPoints(set) {
@@ -201,17 +214,17 @@
     if (!t.goal) {
       const hb = th.home && S.buildings.get(th.home);
       t.goal = t.lastSeen && !t.homeSeen ? t.lastSeen : hb ? G.Vg.door(hb) : null; t.homeSeen = !t.lastSeen;
-      if (!t.goal || !H.goto(v, t.goal[0], t.goal[1], false, 4000)) { t.look++; t.goal = null; if (t.look > 3) { v.hunt = 0; return H.end(v); } return; }
+      if (!t.goal || !H.goto(v, t.goal[0], t.goal[1], false, 4000)) { t.look++; t.goal = null; if (t.look > 3) return giveUp(v, c, H); return; }
     }
     if (H.move(v, dt)) {
       // at the door: if he is inside, he is called out
       const hb = th.home && S.buildings.get(th.home);
       if (th.inside && hb && th.inside === hb.id && G.dist2(v.x, v.y, ...G.Vg.door(hb)) < 2) { th.inside = 0; th.sleeping = false; G.Vg.endTask(th); th.x = v.x + 0.3; th.y = v.y + 0.2; return arrest(v, th, c, H); }
       t.goal = null; t.look++; t.lastSeen = null;
-      if (t.look > 3) { v.hunt = 0; return H.end(v); }
+      if (t.look > 3) return giveUp(v, c, H);
       const a = G.R() * 6.28; const p = W.randomNear(v.x + Math.cos(a) * 5, v.y + Math.sin(a) * 5, 2); if (p) { t.goal = p; H.goto(v, p[0], p[1], false, 3000); }
     }
-    if (t.age > 90) { v.hunt = 0; H.end(v); }
+    if (t.age > 90) giveUp(v, c, H);
   }
   function runFugir(v, t, dt, H) {
     const S = G.S; const g = S.villagers.get(t.from);
@@ -301,8 +314,7 @@
     if (v.role !== 'carcereiro' && v.role !== 'vigia') return oldJob(v, H);
     const S = G.S; const set = S.settlements.get(v.set);
     // whoever of the law knows of an open theft goes after the thief
-    const c = v.hunt && crimes().find(q => q.id === v.hunt && q.st === 'aberto');
-    if (c) { const th = S.villagers.get(c.thief); if (th && th.set === v.set && !th.jail) return H.setTask(v, { type: 'prender', crime: c.id, id: th.id, pri: 1.6, st: 0, look: 0 }); v.hunt = 0; }
+    { const t = huntTask(v, H); if (t) return t; }
     if (v.role === 'carcereiro') {
       const b = v.job && S.buildings.get(v.job); if (!b || !b.built || b.type !== 'cadeia') return null;
       return H.setTask(v, { type: 'guard', id: b.id, pri: 1, dur: G.rr(30, 50), jailer: 1 });

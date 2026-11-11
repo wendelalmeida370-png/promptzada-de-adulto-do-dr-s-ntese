@@ -352,9 +352,9 @@
   }
   A.walkOK = (a, x, y) => !!SP[a.kind] && walkOK(a, x, y);
   // can it walk straight there? (no cliff, wall, house or deep water on the way)
-  function lineOK(a, x1, y1, x0, y0) {
+  function lineOK(a, x1, y1, x0, y0, ground) {
     if (x0 === undefined) { x0 = a.x; y0 = a.y; }
-    const sp = SP[a.kind]; if (sp.cls === 'air') return true;
+    const sp = SP[a.kind]; if (sp.cls === 'air' && !ground) return true; // (ground: a bird that would go there on its feet)
     const d = Math.hypot(x1 - x0, y1 - y0); const n = Math.ceil(d / 0.5);
     for (let k = 1; k <= n; k++) { const f = k / n; if (!walkOK(a, x0 + (x1 - x0) * f, y0 + (y1 - y0) * f)) return false; }
     return true;
@@ -367,7 +367,9 @@
   // (reach: the caller's own way home, when the map of now does not tell it — a wall still going up judges it with its whole line,
   // L-680)
   A.aside = function (a, r, reach) {
-    const sp = SP[a.kind]; if (!sp || sp.cls === 'air' || sp.cls === 'water' || a.held || a.air) return false;
+    // (a bird in the air is not moved; one on the ground under a new building steps out as any beast — L-631)
+    const sp = SP[a.kind]; if (!sp || sp.cls === 'water' || a.held || a.air) return false;
+    if (sp.cls === 'air' && ((a.z || 0) > 0.25 || a.state === 'fly' || a.state === 'perch' || a.nest)) return false;
     distances(); // (the shore's distances the amphibians' ground is read by: maybe not built yet, at a load)
     if (walkOK(a, a.x, a.y)) return false;
     const can = (x, y) => walkOK(a, x, y);
@@ -505,10 +507,13 @@
     const x0 = a.x, y0 = a.y;
     let blocked = false;
     // a fence in the way: slide along it, or give up this way
-    if (def.cls !== 'air' && W.fenceBlocks(a, a.x, a.y, nx, ny)) {
+    // (who walks the ground walks it as a beast of the ground — the wader in the shallows too: a heron went through a pearl shop
+    // and a goose through a forge on its feet, the walk of a bird asked nothing of what stood in the way, L-631)
+    const walks = def.cls !== 'air' || a.state === 'wade';
+    if (walks && W.fenceBlocks(a, a.x, a.y, nx, ny)) {
       blocked = true;
       if (!W.fenceBlocks(a, a.x, a.y, nx, a.y) && walkOK(a, nx, a.y)) a.x = nx; else if (!W.fenceBlocks(a, a.x, a.y, a.x, ny) && walkOK(a, a.x, ny)) a.y = ny;
-    } else if (def.cls !== 'air' && !walkOK(a, nx, ny)) {
+    } else if (walks && !walkOK(a, nx, ny)) {
       blocked = true;
       if (walkOK(a, nx, a.y)) a.x = nx; else if (walkOK(a, a.x, ny)) a.y = ny;
     } else { a.x = G.clamp(nx, 0.3, N - 0.3); a.y = G.clamp(ny, 0.3, N - 0.3); }
@@ -1174,9 +1179,12 @@
     }
     const pen = a.pen && S.buildings.get(a.pen);
     if (!pen) { a.t -= dt; if (a.t <= 0) { const p = pickNear({ x: a.hx, y: a.hy, kind: a.kind }, 2.5); if (p) { a.tx = p[0]; a.ty = p[1]; } a.t = G.rr(3, 7); } if (G.dist(a.x, a.y, a.tx, a.ty) > 0.1) moveTo(a, dt, sp.sp * 0.5); else a.moving = false; return; }
-    const x0 = pen.x + 0.3, x1 = pen.x + pen.w - 0.3, y0 = pen.y + 0.3, y1 = pen.y + pen.h - 0.3;
-    if (a.x < pen.x - 0.2 || a.x > pen.x + pen.w + 0.2 || a.y < pen.y - 0.2 || a.y > pen.y + pen.h + 0.2) { // strayed: back through the gate
-      a.tx = pen.x + pen.w / 2 + G.rr(-0.5, 0.5); a.ty = pen.y + pen.h / 2 + G.rr(-0.5, 0.5); moveTo(a, dt, sp.sp * 1.2); return;
+    // (a «pen» that is a building one does not stand in — the store or the fire a caravan's pack horse is left at, trade.js: a
+    // horse of the mundial stood on the campfire's own tile for 550 s — is the ground before it, the row south of it: L-631)
+    const pb = !!pen.blocks, py = pb ? pen.y + pen.h : pen.y, ph = pb ? 1 : pen.h;
+    const x0 = pen.x + 0.3, x1 = pen.x + pen.w - 0.3, y0 = py + 0.3, y1 = py + ph - 0.3;
+    if (a.x < pen.x - 0.2 || a.x > pen.x + pen.w + 0.2 || a.y < py - 0.2 || a.y > py + ph + 0.2) { // strayed: back through the gate
+      a.tx = pen.x + pen.w / 2 + G.rr(-0.5, 0.5); a.ty = py + ph / 2 + (pb ? G.rr(-0.15, 0.15) : G.rr(-0.5, 0.5)); moveTo(a, dt, sp.sp * 1.2); return;
     }
     a.t -= dt;
     if (a.eating > 0) { graze(a, dt); a.moving = false; return; }
@@ -1370,7 +1378,8 @@
         a.ang = (a.ang || 0) + dt * 1.4; const r = 1.6 + a.t * 0.4;
         a.tx = c.x + Math.cos(a.ang) * r; a.ty = c.y + Math.sin(a.ang) * r; a.z = Math.max(0, a.z - dt * 8);
         moveDirect(a, dt, sp.sp);
-        if (a.t <= 0) { a.state = 'eat'; a.x = c.x + G.rr(-0.4, 0.4); a.y = c.y + G.rr(-0.4, 0.4); a.z = 0; a.t = 25; }
+        // (down beside the carcass on ground it stands on — the step aside drawn as ever, kept where it leaves the bird in a house, L-631)
+        if (a.t <= 0) { const jx = G.rr(-0.4, 0.4), jy = G.rr(-0.4, 0.4); const on = walkOK(a, c.x + jx, c.y + jy); a.state = 'eat'; a.x = on ? c.x + jx : c.x; a.y = on ? c.y + jy : c.y; a.z = 0; a.t = 25; }
         return;
       }
       case 'eat': {
@@ -1399,13 +1408,20 @@
     }
     // cruising: gulls follow the coast, parrots hop between trees, waders walk the shallows
     if (sp.wader) {
-      if (a.state === 'fly') { a.z += ((a.t > 0 ? 12 : 0) - a.z) * Math.min(1, dt * 2); if (moveDirect(a, dt, sp.sp) && a.t <= 0) { a.state = 'idle'; a.z = 0; a.t = G.rr(3, 10); } return; }
+      if (a.state === 'fly') { a.z += ((a.t > 0 ? 12 : 0) - a.z) * Math.min(1, dt * 2);
+        if (moveDirect(a, dt, sp.sp) && a.t <= 0) {
+          // (down only where it stands: a spot a building took since it was picked, or one a fright sent it to — a goose came down
+          // inside a forge of the mundial and stood there eleven seconds, L-631)
+          if (!walkOK(a, a.x, a.y)) { const q = W.nearestLand(a.x, a.y, 4, (x, y) => walkOK(a, x, y)); if (q) { a.tx = q[0]; a.ty = q[1]; a.t = 0.5; return; } }
+          a.state = 'idle'; a.z = 0; a.t = G.rr(3, 10); }
+        return; }
       if (a.state === 'wade') { if (moveTo(a, dt, 0.35) ) { a.state = 'idle'; a.t = G.rr(2, 6); } return; }
       a.moving = false;
       if (a.t > 0) return;
       const L = a.leader && S.animals.get(a.leader);
       const p = L && !L.dead && L !== a && G.R() < 0.7 ? pickNear({ x: L.x, y: L.y, kind: a.kind }, 1.5, true) : pickNear(a, 4, true);
-      if (p) { const far = G.dist(a.x, a.y, p[0], p[1]) > 2.5; a.tx = p[0]; a.ty = p[1]; a.state = far ? 'fly' : 'wade'; a.t = far ? 2 : 0; } else a.t = 2;
+      // (on its feet only where the walk is open: a house in the way, and it flies the hop — L-631)
+      if (p) { const far = G.dist(a.x, a.y, p[0], p[1]) > 2.5 || !lineOK(a, p[0], p[1], undefined, undefined, true); a.tx = p[0]; a.ty = p[1]; a.state = far ? 'fly' : 'wade'; a.t = far ? 2 : 0; } else a.t = 2;
       return;
     }
     if (a.state === 'perch') { a.moving = false; a.z = Math.max(a.perchZ || 0, a.z - dt * 30); if (a.t <= 0) { a.state = 'fly'; a.t = 0; } return; }

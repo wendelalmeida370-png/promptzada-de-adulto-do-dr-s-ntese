@@ -120,6 +120,23 @@ const shopAt = (o, P, k) => { G.Vg.endTask(o); o.hunger = 10; o.energy = Math.ma
   ok('f2', !feast && !!o && !!t && goods > 0 && (coin ? toState > 0 : !pay.length) && !elsewhere && Math.abs(home - goods) < 0.01 && !bad.length,
     `${feast ? 'uma festa já em curso na cidade; ' : ''}${o ? o.name : 'ninguém'}: das bancas às mãos ${goods} de ${k}, à casa ${home}; pagou ${toState} ao tesouro${elsewhere ? ' e ' + elsewhere + ' a outro' : ''}${coin ? '' : ' (povo sem moeda)'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
+// f2b the stroll asks the hands (L-636): the same buyer with a common load in the arms — three of wood from the people's store,
+// by the ledger — gets no shopping stroll (E.shopTask without the house's list), twenty times asked; the load put away, the
+// stroll is given again (the stalls stocked with what the house lacks)
+{
+  const P = setup(0.2); const o = buyer(P, 'food');
+  if (!o) ok('f2b', false, 'ninguém para o passeio');
+  else {
+    G.Vg.endTask(o); if (o.carry && o.carry.n > 1e-6) G.Vg.toStore(o, G.Fac.idOfV(o), 'teste');
+    const h = E.homeOf(o); for (const k of ['tecido', 'ceramica']) { if (D.free('f:' + P.f.id, k) < 4) D.make('f:' + P.f.id, k, 6, { code: 'teste' }); D.move('f:' + P.f.id, 'b:' + P.b.id, k, 4, { code: 'teste', part: true }); const have = D.free('h:' + h.id, k); if (have > 0) D.use('h:' + h.id, k, have, { code: 'teste' }); }
+    const ask = () => { let n = 0; for (let q = 0; q < 20; q++) { const t = G.Eco.shopTask(o, G.Vg.H); if (t) n++; } return n; };
+    const free0 = ask();
+    D.move('f:' + P.f.id, 'v:' + o.id, 'wood', 3, { code: 'teste', part: true }); const load = o.carry ? `${o.carry.n} de ${o.carry.k}` : 'NADA'; const full = ask();
+    G.Vg.toStore(o, G.Fac.idOfV(o), 'teste'); const free1 = ask();
+    ok('f2b o passeio de compras pergunta às mãos', free0 > 0 && !!o.carry === false && full === 0 && free1 > 0, `${o.name}: de mãos livres, ${free0} de 20 passeios dados; com ${load} nos braços, ${full}; a carga guardada, ${free1}`);
+  }
+}
+
 // f3 noon: the fair closes — the feirante leaves the stall, and nobody buys at closed stalls
 {
   const P = setup(0.47); const k = 'food'; const I = P.b.inv || (P.b.inv = {}); if ((I[k] || 0) < 4) D.move('f:' + P.f.id, 'b:' + P.b.id, k, 6, { code: 'teste', part: true });

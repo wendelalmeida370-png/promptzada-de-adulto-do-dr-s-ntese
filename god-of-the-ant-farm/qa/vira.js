@@ -111,7 +111,28 @@ const ROOT = path.resolve(__dirname, '..');
     return { ok: !lv.captive && S.villagers.has(lv.id) && G.Fac.idOfV(lv) === Y.id && now && !bad0.length && !bad.length, info: `${set.name}, capital de ${X.name} com ${lv.name} dentro (e ${out}), tomada por ${Y.name}: ${lv.name} é de ${G.Fac.ofV(lv) ? G.Fac.ofV(lv).name : '?'}; ${X.name} ${now ? 'teve outro governante na hora (' + nl.name + ')' : 'NÃO TEVE OUTRO GOVERNANTE NA HORA'}; ${[...bad0, ...bad].slice(0, 3).join(' | ') || 'verificador limpo na hora e um segundo depois'}` };
   });
   console.log(`${r5.ok ? 'PASSOU' : 'FALHOU'} | a capital tomada com o governante dentro: o povo dele tem outro governante na hora | ${r5.info}`);
-  r.ok = r.ok && r2.ok && r3.ok && r4.ok && r5.ok;
+  // 6 a people left with towns and no soul by a conquest ends at once (L-685: Hedeby taken, Lindholm empty — the Clã stayed
+  // «alive with nobody» for the ten seconds the politics takes to look again). By hand: a people with two towns or more, the
+  // souls outside its fullest town dead of sickness (those towns stand empty), and that town taken by a people that makes
+  // citizens of the vanquished: no soul of it left — the people is gone at once, its empty towns abandoned (or, if it kept
+  // captives in them, they are free and the people lives with them); the checker clean at once and a second later
+  const r6 = await page.evaluate(() => {
+    const S = G.S; const F = G.Fac.all(); let X = null, Y = null, set = null;
+    const free = (f, s) => [...S.villagers.values()].filter(v => !v.captive && G.Fac.idOfV(v) === f.id && (!s || v.set === s.id));
+    const men = c => [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === c.id && v.age >= 18 && v.age < 50 && !v.captive && !v.aboard && !v.jail && !v.ug);
+    for (const a of F) { const sets = G.Fac.settlementsOf(a.id); if (sets.length < 2) continue; const s0 = sets.slice().sort((p, q) => free(a, q).length - free(a, p).length || p.id - q.id)[0]; if (!free(a, s0).length) continue;
+      const y = F.find(c => c !== a && !G.Politics.tyr(c) && men(c).length >= 2); if (!y) continue; X = a; Y = y; set = s0; break; }
+    if (!X) return { ok: false, info: 'nenhum povo com duas cidades e gente numa delas, e outro para tomá-la' };
+    const others = G.Fac.settlementsOf(X.id).filter(s => s !== set).map(s => s.name); const gone = free(X).filter(v => v.set !== set.id); for (const v of gone) G.Village.kill(v, 'sick');
+    const n0 = free(X).length; const b = G.War.makeBand(Y, X, set, men(Y).slice(0, 4), 'conquista', {}); G.Politics.leaderPe(Y).cru = 0;
+    G.War.conquer(set, b);
+    const souls = free(X).length; const bad0 = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
+    for (let k = 0; k < 24; k++) G.debug.step(0.05);
+    const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
+    return { ok: n0 > 0 && (!X.alive || souls > 0) && !bad0.length && !bad.length, info: `${set.name}, a única cidade com gente de ${X.name} (${n0} almas; ${others.join(', ')} ${gone.length ? 'esvaziada' + (others.length > 1 ? 's' : '') + ' pela doença, ' + gone.length + ' mortos' : 'já vazia' + (others.length > 1 ? 's' : '')}), tomada por ${Y.name}: ${X.alive ? (souls ? 'o povo segue com ' + souls + ' cativos libertos' : 'VIVO SEM NINGUÉM') : 'o povo acabou na hora'}; ${[...bad0, ...bad].slice(0, 2).join(' | ') || 'verificador limpo na hora e um segundo depois'}` };
+  });
+  console.log(`${r6.ok ? 'PASSOU' : 'FALHOU'} | a conquista que deixa um povo só com cidades vazias: o povo acaba na hora | ${r6.info}`);
+  r.ok = r.ok && r2.ok && r3.ok && r4.ok && r5.ok && r6.ok;
   console.log(`${errs.length ? 'FALHOU' : 'PASSOU'} | sem erros | ${errs.slice(0, 2).join(' | ') || 'nenhum'}`);
   await browser.close(); process.exit(r.ok && !errs.length ? 0 : 1);
 })();

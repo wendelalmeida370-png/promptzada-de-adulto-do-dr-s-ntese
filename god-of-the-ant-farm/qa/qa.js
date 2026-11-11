@@ -506,6 +506,12 @@
     // ---- animals
     let an = 0; for (const a of s.animals.values()) { if (!fin(a.x) || !fin(a.y)) add('fauna', 1, `animal ${a.kind}#${a.id}: posição inválida`); if (!a.dead) an++; if (a.hp !== undefined && !fin(a.hp)) add('fauna', 1, `animal ${a.kind}#${a.id}: hp ${a.hp}`); }
     // a town's beast (a dog, a cat, a hen, a pigeon) lives with the people, never in a pen (L-637)
+    // a beast on the ground inside a building one does not stand in (L-631): none but the birds that live on the roofs (the town's
+    // pigeon on its house, the gull on its perch), those in flight — a dive, a circle, a take-off — and the one in a hold or in the air
+    { const FLY = { fly: 1, dive: 1, fishdive: 1, circle: 1, perch: 1, tree: 1, swing: 1 }; const l = [];
+      for (const a of s.animals.values()) { const sp = G.Animals.DEF[a.kind]; if (!sp || a.dead || a.held || a.caught || a.air || sp.cls === 'water' || a.kind === 'pombo' || FLY[a.state] || a.perch || a.nest || (a.z || 0) > 0.25) continue;
+        if (!(a.x >= 0 && a.y >= 0 && a.x < N && a.y < N)) continue; const o = s.occ[(a.y | 0) * N + (a.x | 0)]; const b = o && s.buildings.get(o); if (b && b.blocks) l.push(`${a.kind}#${a.id} (${a.state}) em ${b.type}#${b.id}`); }
+      if (l.length) add('fauna', 3, `${l.length} bicho(s) no chão dentro de um prédio que bloqueia: ${l.slice(0, 3).join(', ')}`); }
     { const l = []; for (const a of s.animals.values()) { const sp = G.Animals.DEF[a.kind]; if (a.pen && !a.dead && sp && sp.town) l.push(`${a.kind}#${a.id}`); } if (l.length) add('fauna', 3, `${l.length} bicho(s) da cidade num curral: ${l.slice(0, 4).join(', ')}`); }
     // ---- counts shown vs real
     { let real = 0; for (const v of s.villagers.values()) if (!v.captive) real++; let sum = 0; for (const f of G.Fac.all()) sum += G.Fac.pop(f.id); if (Math.abs(sum - real) > 0) add('pop', 2, `soma das populações dos povos (${sum}) ≠ pessoas livres (${real})`); }
@@ -1570,7 +1576,7 @@
       const tag = `${set.name}: o campo guardado para ${r.type}/${r.esc}`; const st = Es.steps(r.type).find(q => q.id === r.esc);
       if (!st || st.n !== r.n) add('escala', 2, `${tag} tem ${r.n} casas, e não é um degrau do tipo`);
       if (!(r.x >= 0 && r.y >= 0 && r.x + r.n <= N && r.y + r.n <= N)) { add('escala', 2, `${tag} sai do mapa (${r.x}, ${r.y}, ${r.n})`); continue; }
-      let on = null; for (let y = r.y; y < r.y + r.n && !on; y++) for (let x = r.x; x < r.x + r.n; x++) { const o = s.occ[y * N + x] ? s.buildings.get(s.occ[y * N + x]) : null; if (o && !(o.set === set.id && FIELD[o.type])) { on = o; break; } }
+      let on = null; for (let y = r.y; y < r.y + r.n && !on; y++) for (let x = r.x; x < r.x + r.n; x++) { const o = s.occ[y * N + x] ? s.buildings.get(s.occ[y * N + x]) : null; if (o && !(o.set === set.id && (FIELD[o.type] || (o.type === 'ruin' && FIELD[o.origType])))) { on = o; break; } } // (the ruin of a field of its own passes as the fire, D-149)
       if (on) add('escala', 2, `${tag}: ${on.type}#${on.id} em cima dele — no campo guardado não se ergue nada`);
       if ((r.chk || 0) < s.day - 1) add('escala', 3, `${tag}: a cidade não olha para ele desde o ano ${r.chk}`);
     }

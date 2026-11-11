@@ -871,7 +871,10 @@
       const i = ty * N + tx; const inLot = tx >= x && tx < x + n && ty >= y && ty < y + n; const o = S.occ[i] ? S.buildings.get(S.occ[i]) : null;
       if (inLot) {
         if (S.type[i] < T.SAND || S.wall[i] || S.road[i] >= 3 || (!keep && S.fire[i] > 0)) return false;
-        if (o && !(FIELDS[o.type] && o.set === set.id)) return false;
+        // (and, on a lot kept, the ruin of one of its own fields passes as the fire does — an orchard burnt cost the lot where the
+        // wheat burnt did not: the farm leaves the map, the orchard stays a ruin three days, L-537, L-686, D-149. The choice and
+        // the founding judge whole: the work waits for the ruin to go)
+        if (o && !(o.set === set.id && (FIELDS[o.type] || (keep && o.type === 'ruin' && FIELDS[o.origType])))) return false;
         if (S.road[i] || (G.City && G.City.onStreet(set, i))) streets = true;
       } else {
         if (S.type[i] >= T.SAND && S.cliff[i]) return false;

@@ -636,6 +636,19 @@ run('e21', () => {
   const fi = (R5.y + 1) * G.N + R5.x + 1; const f0 = S.fire[fi]; S.fire[fi] = 5; const R5f = sim(() => V.reservaDia(set2)); S.fire[fi] = f0;
   ok('e21n o fogo no lote guardado passa', !!R5f && R5f.x === R5.x && R5f.y === R5.y, R5f ? `com fogo em ${R5.x + 1},${R5.y + 1}: o lote fica` : `com fogo: SOLTO (${set2.urb.resGone && set2.urb.resGone.why})`);
   if (!R5f) return;
+  // (e21r: um campo do lote guardado queimado pela porta do jogo — um pomar da própria cidade posto no lote, e destruído pelo fogo
+  // (V.destroyBuilding): fica a ruína dele três dias. O lote fica guardado na hora e no olhar do dia seguinte, e o verificador não
+  // acusa nada em cima dele; a obra não é fundada enquanto a ruína está lá (V.resSite), e é quando ela some — L-686, D-149)
+  { const N = G.N; const spot = (() => { for (let y = R5.y; y + 3 <= R5.y + R5.n; y++) for (let x = R5.x; x + 3 <= R5.x + R5.n; x++) { let free = true; for (let dy = 0; dy < 3 && free; dy++) for (let dx = 0; dx < 3; dx++) { const i = (y + dy) * N + x + dx; if (S.occ[i] || S.treeAt[i] || S.objAt[i] || S.road[i] || S.type[i] < G.T.SAND) { free = false; break; } } if (free) return [x, y]; } return null; })();
+    const lote = () => (set2.urb.res ? `${set2.urb.res.x},${set2.urb.res.y}` : 'SOLTO (' + (set2.urb.resGone && set2.urb.resGone.why) + ')');
+    if (!spot) ok('e21r a ruína de um campo do lote guardado passa como o fogo', false, 'sem três por três casas livres no lote para o pomar');
+    else { const pm = sim(() => V.addBuilding('pomar', spot[0], spot[1], set2.id, true)); const kept0 = !!set2.urb.res;
+      sim(() => V.destroyBuilding(pm, 'fire')); const ruin = pm.type === 'ruin' && S.buildings.has(pm.id); const cheque = () => QA.check().filter(q => /campo guardado/.test(q.msg)).map(q => q.msg);
+      const v0 = cheque(); const Ra = sim(() => V.reservaDia(set2)); const v1 = cheque(); const site0 = set2.urb.res ? sim(() => V.resSite(set2, set2.urb.res.type, set2.urb.res.n)) : null;
+      sim(() => V.removeBuilding(pm)); const site1 = set2.urb.res ? sim(() => V.resSite(set2, set2.urb.res.type, set2.urb.res.n)) : null;
+      ok('e21r a ruína de um campo do lote guardado passa como o fogo', kept0 && ruin && !!Ra && !v0.length && !v1.length && !site0 && !!site1,
+        `um pomar da cidade em ${spot[0]},${spot[1]} do lote (${kept0 ? 'o lote fica' : 'O LOTE SOLTOU'}), queimado: ${ruin ? 'a ruína dele no lote' : 'SEM RUÍNA'}; o lote na hora e no olhar do dia seguinte: ${lote()}; o verificador: ${[...v0, ...v1][0] || 'nada'}; a obra com a ruína lá: ${site0 ? 'FUNDARIA' : 'espera'}; a ruína sumida: ${site1 ? 'funda' : 'NÃO FUNDA'}`); } }
+  if (!set2.urb.res) return;
   // (a obra fundada no lote: as pedras do lote quebradas para ela, o lote solto — as pedras no meio do lote, onde fica o degrau
   // fundado, centrado no lote (V.resSite): postas a partir do canto, a obra de 10 no lote de 13 de Mênfis, num mundo do zero com
   // os consertos da 16ª rodada, deixou de fora a primeira fileira, onde as três estavam, e nenhuma foi quebrada, T-570)

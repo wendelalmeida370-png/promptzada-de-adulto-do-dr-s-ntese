@@ -343,7 +343,15 @@
     if (b.campaign && G.Wars) G.Wars.afterConquest(b, set); else Wr.disband(b, true);
     G.Fac.updateTerritory();
     if (!G.Fac.settlementsOf(old.id).length) G.Politics.extinct(old, f);
-    else if (wasCapital) { old.capital = 0; const c = G.Fac.capitalOf(old.id); if (c) log(`${old.name} perdeu sua capital e se reagrupou em ${c.name}.`, 'war', c.cx, c.cy); }
+    else {
+      // (a people left with towns and no free soul — its only town with people fallen, the others empty — ends here, by the door
+      // of the last soul, L-090: it stayed «alive with nobody» until the politics looked again, ten seconds later — Hedeby taken,
+      // Lindholm empty, L-685. Counted straight, as P.lastSoul counts: G.Fac.pop holds for a part of the step in the skip. Its
+      // captives, if it keeps any in its towns, are free and the towns theirs: the people lives on with them)
+      let soul = false; for (const o of G.S.villagers.values()) { if (o.captive) continue; const so = G.S.settlements.get(o.set); if (so && so.fac === old.id) { soul = true; break; } }
+      if (!soul) G.Politics.emptied(old, null, f);
+    }
+    if (old.alive && G.Fac.settlementsOf(old.id).length && wasCapital) { old.capital = 0; const c = G.Fac.capitalOf(old.id); if (c) log(`${old.name} perdeu sua capital e se reagrupou em ${c.name}.`, 'war', c.cx, c.cy); }
     G.Politics.reseat(); // (a ruler of the fallen town who was neither taken nor killed is of the conqueror's people now: L-542)
   };
 
