@@ -11,6 +11,11 @@
 //  pause menu holds the way back up, saving, the keys and the
 //  picture's quality. Built once, the first time the body is
 //  entered, and only shown or hidden after (nothing piles up).
+//  What it says of the world it asks of Possess.knows: the name
+//  of a quarter, of a person, the coins of a house, only where
+//  the person lived could say them — else what is seen (D-170).
+//  The key H puts all of it away: the place must say what it is
+//  by itself (D-173).
 //  Its look is the god's gold and letters, quieter: small type,
 //  dark glass that reads over snow and a white sky, the compass
 //  across the top, words that fade out (arte/BIBLIA.md, a HUD).
@@ -24,9 +29,24 @@
   let swimTold = false, lowTold = false, drownTold = false; // (the water's words: said once, and again each time it comes back)
   let waits = []; // (what was asked of the world from here — a click, a key —, waiting for its answer to be told)
   let lead = null, leadT = 0; // (the lead to the work near: Interact.lead, asked a few times a second)
-  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; news = []; waits = []; lead = null; leadT = 0; if (root) renderNews(); });   // (the old world's news go with it)
+  G.worldHooks.push(() => { swimTold = lowTold = drownTold = false; news = []; waits = []; lead = null; leadT = 0; lastBody = 0; if (root) renderNews(); });   // (the old world's news go with it)
   IU.best = () => best;
   IU.lead = () => lead; // (for the tests: the lead shown, and where its mark is — IU.markAt)
+  // the screen put away (D-173): the place has to say what it is by itself — who goes by and how they are dressed, what
+  // sounds, the smoke, the lights. Put away: who one is, the place, the hour, the compass, the news, the calls, the lead, what
+  // can be done, the name over a head. Kept: the words people say (they are the world's), what the world answers to the hands
+  // (a refusal has to be heard), the word for waking, the fingers' buttons; the cards, the menu, the death and the way back up
+  // open as ever — nothing of the game is lost, E still does what the hands reach. Kept in this browser, like the keys
+  let hudOff = false, lastBody = 0;
+  try { hudOff = localStorage.getItem('gotaf-tela') === 'off'; } catch (e) { }
+  IU.hudOff = () => hudOff;
+  IU.setHud = function (on, quiet) {
+    hudOff = !on; try { localStorage.setItem('gotaf-tela', on ? 'on' : 'off'); } catch (e) { }
+    if (!root) return;
+    root.classList.toggle('hud-off', hudOff); upT = 0; bestT = 0;
+    if (hudOff) { label.classList.add('hidden'); G.People3D.highlight = 0; }
+    if (!quiet) IU.toast(hudOff ? `Tela desligada — ${G.Input3D.label('tela')} liga de novo.` : 'Tela ligada.', 3);
+  };
   const bar = (k, txt) => `<div class="ih-bar ${k}"><span class="ih-bl">${txt}</span><i><b></b></i></div>`;
 
   IU.init = function () {
@@ -60,6 +80,7 @@
     document.body.appendChild(root);
     hud = $('#inc-hud'); card = $('#inc-card'); menu = $('#inc-menu'); fadeEl = $('#inc-fade'); banner = $('#inc-banner'); deathEl = $('#inc-death'); label = $('#inc-label'); stickEl = $('.ih-stick', hud);
     leadEl = $('.ih-lead', hud); markEl = $('.ih-mark', hud);
+    root.classList.toggle('hud-off', hudOff);
     $('.ih-god', hud).onclick = () => G.Modes.leave('deus');
     $('.ih-diary', hud).onclick = () => G.Input3D.press('diario'); // (the same as its key)
     for (const b of hud.querySelectorAll('.ih-touch button')) {
@@ -85,7 +106,8 @@
   // (while the banner speaks the news step back: on a narrow screen they sit right behind it)
   IU.banner = function (txt, dur) { if (!root) return; banner.textContent = txt; banner.classList.remove('hidden'); root.classList.add('ib-on'); bannerT = dur || 2.6; };
   IU.hello = function (v) {
-    const id = G.Possess.identity(v); const w = G.Possess.where(v);
+    if (hudOff) return; // (the screen put away: no word of who and where)
+    const id = G.Possess.identity(v); const w = G.Possess.knows.where(v);
     IU.banner(`${id.name} · ${id.age} ${id.age === 1 ? 'ano' : 'anos'} · ${id.role}${w.town || w.near ? ' · ' + (w.town || 'perto de ' + w.near) : ''}`, 3.4);
   };
   // the fade (to and from black): from, to in 0..1, seconds, and what to do at the end
@@ -101,6 +123,8 @@
   G.Possess.onLog.push((e, v) => {
     if (!root || !G.Modes.inc()) return;
     const near = v && Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) < 30;
+    // (what happens far away reaches the ears only from where the person could have heard of: Possess.knows.hears, D-171)
+    if (!near && !G.Possess.knows.hears(v, e)) return;
     // (the same thing happening in several places at once — the games of three cities, the feast of two — is one line,
     // with how many more places: the view stays open)
     const same = news.find(n => alike(n.txt, e.txt));
@@ -139,6 +163,8 @@
     if (!G.Modes.inc()) { label.classList.add('hidden'); markEl.classList.add('hidden'); return; }
     drawAir();
     const v = G.Possess.body(); if (!v) return;
+    // (another body: what reached the ears of the one before is not this one's)
+    if (v.id !== lastBody) { lastBody = v.id; if (news.length) { news = []; renderNews(); } }
     // (the diary's page, while it is open: read again once a second — the world goes on while one reads)
     if (G.Modes.panelIs('diario')) { diaryT -= rdt; if (diaryT <= 0) { diaryT = 1; renderDiary(); } }
     // the best thing to do, a few times a second (the world is asked, not the picture)
@@ -146,7 +172,7 @@
     if (bestT <= 0) {
       bestT = 0.12;
       best = G.Modes.panel() || v.sleeping || G.Avatar.busy() ? null : G.Interact.best();
-      G.People3D.highlight = best && best.id === 'pessoa' ? best.t.o.id : 0;
+      G.People3D.highlight = best && best.id === 'pessoa' && !hudOff ? best.t.o.id : 0; // (the mark over the one faced is the screen's)
       const pr = $('.ih-prompt', hud);
       if (best) { pr.classList.remove('hidden'); pr.classList.toggle('no', !best.ok); pr.querySelector('kbd').textContent = G.Input3D.label('interagir'); pr.querySelector('span').textContent = best.ok ? best.label : `${best.label} — ${best.why}`; }
       else pr.classList.add('hidden');
@@ -162,7 +188,8 @@
     // (a machine that cannot keep up: said once, with the way out — the lighter picture in the menu)
     if (G.Realm.fps && G.Realm.fps < 22 && G.Realm.q !== 'baixa') { slowT += rdt; if (slowT > 8 && !slowSaid) { slowSaid = true; IU.toast(`O 3D está pesado neste computador (${Math.round(G.Realm.fps)} quadros por segundo): no menu (${G.Input3D.label('menu')}) → Gráficos → Leve.`, 7); } } else slowT = 0;
     upT -= rdt; if (upT > 0) return; upT = 0.1;
-    const id = G.Possess.identity(v); const w = G.Possess.where(v); const st = G.Avatar.state(); const caps = G.Possess.caps(v);
+    // (where one is, as the person can say it: the quarter and the town by name when they know them, else what is seen there)
+    const id = G.Possess.identity(v); const w = G.Possess.knows.where(v); const st = G.Avatar.state(); const caps = G.Possess.caps(v);
     $('.ih-name', hud).textContent = id.name + (id.epithet ? ', ' + id.epithet : '');
     $('.ih-sub', hud).textContent = `${id.age} ${id.age === 1 ? 'ano' : 'anos'} · ${id.role}${id.set ? ' · ' + id.set : ''}`;
     const setBar = (k, val, warn) => { const e = $('.ih-bar.' + k, hud); e.querySelector('b').style.width = G.clamp(val, 0, 100) + '%'; e.classList.toggle('warn', !!warn); };
@@ -176,7 +203,7 @@
     hud.classList.toggle('drowning', !!(sw && st && st.stamina <= 0));
     $('.ih-carry', hud).textContent = v.carry && v.carry.n > 0 ? `Carregando ${v.carry.n} de ${G.Eco ? G.Eco.name(v.carry.k) : v.carry.k}` : '';
     $('.ih-time', hud).textContent = `Dia ${S.day} · ${hourOf(S.time)}${S.weather && S.weather.rain > 0.2 ? ' · chuva' : ''}`;
-    $('.ih-place', hud).textContent = w.district ? `${w.district}, ${w.town || w.near}` : w.town ? w.town : w.near ? `${w.ground === 'estrada' ? 'Na estrada' : w.ground === 'bosque' ? 'No bosque' : w.ground === 'mar' ? 'No mar' : w.ground === 'rio' ? 'Na água' : 'No campo'}, ${w.nearD > 2 ? w.nearD * 4 + ' m de ' : 'perto de '}${w.near}` : 'Terras selvagens';
+    $('.ih-place', hud).textContent = w.txt;
     // the compass: the strip turns with the eye
     const yaw = G.Cam3D.yaw; const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
     // (a tick every 15°, the eight winds at every 45° — the four great ones bigger, the north in gold —, 1.4 px a degree)
@@ -194,7 +221,7 @@
     $('.ih-sleep', hud).classList.toggle('hidden', !v.sleeping);
     hud.classList.toggle('asleep', !!v.sleeping);
     const h = $('.ih-hint', hud); h.classList.toggle('hidden', hintT <= 0);
-    if (hintT > 0) h.innerHTML = [['frente', 'andar'], ['correr', 'correr'], ['pular', 'pular'], ['interagir', 'interagir'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? 'WASD' : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + '<span><kbd>Mouse</kbd> olhar</span>';
+    if (hintT > 0) h.innerHTML = [['frente', 'andar'], ['correr', 'correr'], ['pular', 'pular'], ['interagir', 'interagir'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? 'WASD' : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + '<span><kbd>Mouse</kbd> olhar</span>';
   };
   // the words over the heads and the little texts of the world: what the god's view draws over it, over the body's eyes too —
   // the words said (G.Talk: a bubble over the one who speaks, typed out by the world's clock; the same bubble by the same hand,
@@ -254,8 +281,9 @@
     const cam = G.Realm.camera(); const THREE = window.THREE; const p = IU._v || (IU._v = new THREE.Vector3());
     p.set(s.X, G.W.groundH(o.x, o.y) * G.Space.HM + 2.25 * G.People3D.look(o).s, s.Z); p.project(cam);
     if (p.z > 1) { label.classList.add('hidden'); return; }
-    const k = G.Possess.kin(G.Possess.body(), o);
-    label.textContent = o.name + (k ? ' · ' + k : ''); label.classList.remove('hidden');
+    // (the name of someone the body knows; of a stranger, what is seen: Possess.knows)
+    const me = G.Possess.body(); const k = G.Possess.kin(me, o);
+    label.textContent = G.Possess.knows.name(me, o) + (k ? ' · ' + k : ''); label.classList.remove('hidden');
     label.style.transform = `translate(${(p.x * 0.5 + 0.5) * window.innerWidth}px, ${(-p.y * 0.5 + 0.5) * window.innerHeight}px) translate(-50%, -100%)`;
   }
 
@@ -308,7 +336,9 @@
       const o = G.S.villagers.get(c.id);
       h += `<div class="ic-head"><div><h3>${esc(c.name)}</h3><div class="sub">${esc(c.sub)}${c.kin ? ` · <b class="gold">${esc(c.kin)}</b>` : ''}</div></div></div>`;
       if (said) h += `<div class="ic-said">“${esc(said)}”</div>`;
+      // (as much of them as the body knows — Interact.personCard, by Possess.knows —, and how it knows them)
       const rows = [];
+      if (c.why) rows.push(['Você conhece', c.why]);
       if (c.from) rows.push([c.first ? 'Despertou em' : 'Natural de', c.from]);
       if (c.set) rows.push(['Vive em', c.set + (c.fac ? ` (${c.fac})` : '')]);
       if (c.parents.length) rows.push([c.parents.length > 1 ? 'Filh' + (o && o.g === 'f' ? 'a' : 'o') + ' de' : 'Filiação', c.parents.join(' e ')]);
@@ -324,7 +354,7 @@
       const can = o ? G.Possess.can(o) : { ok: false };
       // (one's own, or anyone in mourning: a hug)
       const hug = o ? G.Interact.canHug(G.Possess.body(), o) : { ok: false };
-      h += `<div class="btns">${hug.label ? `<button data-c="hug" data-id="${c.id}"${hug.ok ? '' : ` disabled title="${esc(hug.why)}"`}>${esc(hug.label)}</button>` : ''}${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
+      h += `<div class="btns">${hug.label ? `<button data-c="hug" data-id="${c.id}"${hug.ok ? '' : ` disabled title="${esc(hug.why)}"`}>${esc(hug.label)}</button>` : ''}${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(c.knows === 0 ? 'esta pessoa' : o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
     } else {
       h += `<div class="ic-head"><div><h3>${esc(c.name)}</h3><div class="sub">${esc(c.sub || '')}</div></div></div>`;
       if (c.desc) h += `<div class="ic-desc">${esc(c.desc)}</div>`;
@@ -341,7 +371,7 @@
     const caps = c.caps; const kind = (G.Possess.KINDS[c.kind] || {}).label || c.kind;
     let h = `<button class="x" data-c="close">×</button><div class="ic-head"><div><h3>${esc(pc.name)}</h3><div class="sub">${esc(pc.sub)} · ${esc(kind)}</div></div></div>`;
     const rows = [];
-    rows.push(['Onde', c.where.district ? `${c.where.district}, ${c.where.town}` : c.where.town || (c.where.near ? 'perto de ' + c.where.near : 'terras selvagens')]);
+    rows.push(['Onde', c.where.txt]); // (as the person can say it: Possess.knows.where)
     if (pc.from) rows.push([pc.first ? 'Despertou em' : 'Natural de', pc.from]);
     if (pc.parents.length) rows.push(['Pais', pc.parents.join(' e ')]); if (pc.partner) rows.push(['Companhia', pc.partner]); if (pc.kids.length) rows.push(['Filhos', pc.kids.join(', ')]); if (pc.home) rows.push(['Mora', pc.home]);
     rows.push(['O corpo', `anda ${caps.walk.toFixed(1)} m/s${caps.run > 1 ? ', corre' : ', não corre'}${caps.jump > 0 ? ', pula' : ', não pula'}; nadar, escalar e planar: ainda não`]);
@@ -413,6 +443,7 @@
         <button data-m="resume" class="big">Continuar</button>
         <button data-m="god" class="big gold">Voltar ao Modo Deus</button>
         <button data-m="save">Salvar o jogo</button></div>
+        <div class="im-row"><label><input type="checkbox" data-h="tela" ${hudOff ? '' : 'checked'}> Mostrar a tela — nome, lugar, hora, avisos <kbd>${esc(G.Input3D.label('tela'))}</kbd></label></div>
         <div class="im-note">Enquanto você vive esta vida, o mundo segue no mesmo relógio — só que no passo de uma pessoa (o tempo corre a 0,35× da velocidade normal do Modo Deus).</div>`;
     } else if (tab === 'controles') {
       h += `<div class="im-title">Controles</div><table class="im-keys">${G.Input3D.ACTIONS.map(([a, t]) => `<tr><td>${esc(t)}</td><td><button data-m="bind" data-a="${a}">${esc(G.Input3D.label(a))}</button></td></tr>`).join('')}</table>
@@ -448,6 +479,7 @@
   }
   function onMenuInput(e) {
     const t = e.target; const O = G.Cam3D.OPT;
+    if (t.dataset.h === 'tela') IU.setHud(t.checked, true);
     if (t.dataset.o) { const k = t.dataset.o; O[k] = t.type === 'checkbox' ? t.checked : +t.value; G.Cam3D.saveOpt(); }
     // (a box turned back on returns to what the preset itself has — the Ultra's shadows are 4096, not 1024; a preset that
     // has none, the Leve, gets the middle size)

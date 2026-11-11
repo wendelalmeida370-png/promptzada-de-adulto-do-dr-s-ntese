@@ -16,11 +16,14 @@
   const ACTIONS = In.ACTIONS = [
     ['frente', 'Andar para a frente', ['w', 'arrowup']], ['tras', 'Andar para trás', ['s', 'arrowdown']], ['esquerda', 'Andar para a esquerda', ['a', 'arrowleft']], ['direita', 'Andar para a direita', ['d', 'arrowright']],
     ['correr', 'Correr (segurar)', ['shift']], ['pular', 'Pular', [' ']], ['interagir', 'Interagir', ['e']], ['agachar', 'Andar agachado (segurar)', ['c']], ['sentar', 'Sentar no chão / levantar', ['x']], ['acenar', 'Acenar', ['v']], ['dancar', 'Dançar / parar', ['b']],
-    ['ficha', 'Quem sou eu', ['tab']], ['diario', 'Diário de Vida', ['j']], ['deus', 'Voltar ao Modo Deus', ['g']], ['menu', 'Menu / pausa', ['escape']],
+    ['ficha', 'Quem sou eu', ['tab']], ['diario', 'Diário de Vida', ['j']], ['tela', 'Mostrar / esconder a tela', ['h']], ['deus', 'Voltar ao Modo Deus', ['g']], ['menu', 'Menu / pausa', ['escape']],
   ];
   const DEF = {}; for (const [a, , k] of ACTIONS) DEF[a] = k.slice();
-  let binds = JSON.parse(JSON.stringify(DEF));
-  try { const o = JSON.parse(localStorage.getItem('gotaf-keys') || 'null'); if (o && typeof o === 'object') for (const a in DEF) if (Array.isArray(o[a]) && o[a].every(k => typeof k === 'string')) binds[a] = o[a].slice(0, 3); } catch (e) { }
+  let binds = JSON.parse(JSON.stringify(DEF)); const kept = new Set();
+  try { const o = JSON.parse(localStorage.getItem('gotaf-keys') || 'null'); if (o && typeof o === 'object') for (const a in DEF) if (Array.isArray(o[a]) && o[a].every(k => typeof k === 'string')) { binds[a] = o[a].slice(0, 3); kept.add(a); } } catch (e) { }
+  // (a key does one thing: an action that came after the keys were kept — the kept table has none for it — gives up a key
+  // the player had already given to another)
+  for (const a in DEF) if (!kept.has(a)) binds[a] = binds[a].filter(k => !Object.keys(binds).some(b => b !== a && binds[b].includes(k)));
   In.binds = () => binds;
   In.keyName = k => ({ ' ': 'Espaço', shift: 'Shift', control: 'Ctrl', alt: 'Alt', tab: 'Tab', escape: 'Esc', enter: 'Enter', arrowup: '↑', arrowdown: '↓', arrowleft: '←', arrowright: '→', backspace: '⌫' })[k] || k.toUpperCase();
   In.label = a => (binds[a] || []).map(In.keyName).join(' / ');

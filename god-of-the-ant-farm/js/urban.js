@@ -463,7 +463,11 @@
   // a block is ínsulas round a yard, so it stands where an ínsula may (at 62 no heart had room for one: L-077)
   const DEAR = U.DEAR = { quarteirao: 52, insula: 52, sobrado: 40 };
   const LOWER = { quarteirao: 'insula', insula: 'sobrado', sobrado: 'house' };
-  U.valueAt = function (set, x, y) { const sn = sim(set); const c = sn.cells.get(U.cellOf(x, y)); return c ? c.value : 30; };
+  // (asked from outside the world's step — a screen: the price of a house on the diary's page, Casa.price — it answers from
+  // the look the town has, and makes none. A look made for a screen was kept: in a world just loaded, whose towns get their
+  // looks back one a step (U.update), the round ended a step sooner, and the day's count of whose ground is whose
+  // (cellOwner) was taken at the screen's moment — with the Diário de Vida open the world lived another future, L-760)
+  U.valueAt = function (set, x, y) { const sn = G.inSim ? sim(set) : snap.get(set.id); const c = sn ? sn.cells.get(U.cellOf(x, y)) : null; return c ? c.value : 30; };
   U.homeFor = function (set, type, pos) {
     if (!DEAR[type] || (set.tier || 0) < 2) return type;
     const def = G.BDEF[type]; const v = U.valueAt(set, pos[0] + def.w / 2, pos[1] + def.h / 2);

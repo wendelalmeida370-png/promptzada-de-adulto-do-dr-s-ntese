@@ -156,6 +156,10 @@
   const deny = r => { if (r && r.why) say(r.why); G.Audio && G.Audio.play && G.Audio.play('deny'); };
   // (a deed that only says what was done — a look, a knock: counted by the world in its step)
   const deed = (k, n) => G.Possess.apply(() => { G.Possess.deed(k, n); return { ok: true }; });
+  // (someone, in the words of the body: the name when it knows them, else what is seen of them — «o ferreiro» —; Who: at the
+  // head of a sentence. The one door of a name on the body's screens: Possess.knows, D-172)
+  const who = (v, o) => G.Possess.knows.call(v, o);
+  const Who = (v, o) => G.cap(who(v, o));
 
   // ============================== people ==============================
   // what someone says when spoken to: from what is true of them now (their errand, their body, their family, their past)
@@ -179,18 +183,29 @@
     return ab ? 'Oi!' : 'Bom dia.';
   }
   I.line = line;
-  // the card of a person: who they are, from the world's records only
-  I.personCard = function (o, me) {
-    const S = G.S; const id = G.Possess.identity(o); const L1 = G.Life ? G.Life.bioList(o).slice(-6).reverse() : [];
-    const nm = x => { const p = x && G.person(x); return p ? p.name + (p.dead ? ' (†)' : '') : null; };
-    const st = G.Stories ? G.Stories.of(o.id).map(s => s.title).filter(Boolean).slice(0, 3) : [];
-    return {
-      kind: 'person', id: o.id, name: id.name + (id.epithet ? ', ' + id.epithet : ''), sub: `${id.age} ${id.age === 1 ? 'ano' : 'anos'} · ${id.role}`,
-      kin: me ? G.Possess.kin(me, o) : null, from: id.from, first: id.first, set: id.set, fac: id.fac, home: id.home,
+  // the card of a person: who they are, from the world's records — as much of them as the one who reads it knows (Possess.knows,
+  // D-172). Of the blood and of the house, everything; of someone known by name — or just spoken to (told: they said who they
+  // are) —, the name, the trade, the town, what they are at, their fame, and of their family those the reader knows too; of a
+  // stranger, what the eyes see. With no reader (me: null) it is the god's: everything
+  const AGES = [[2, 'de colo'], [12, 'criança'], [16, 'bem jovem'], [30, 'jovem'], [50, 'de meia-idade'], [62, 'já de idade'], [1e9, 'de muita idade']];
+  const seenDoing = o => (o.sleeping ? 'Dormindo' : o.carry && o.carry.n > 0 ? `Carregando ${G.Eco ? G.Eco.name(o.carry.k) : o.carry.k}` : o.moving ? 'Andando' : 'Parad' + oa(o));
+  I.personCard = function (o, me, told) {
+    const S = G.S; const K = G.Possess.knows; const id = G.Possess.identity(o);
+    const how = K.how(me, o); const lvl = Math.max(how.n, told ? 1 : 0);
+    const nm = x => { const p = x && G.person(x); return p && K.person(me, p) ? p.name + (p.dead ? ' (†)' : '') : null; };
+    const base = { kind: 'person', id: o.id, knows: lvl, kin: me ? G.Possess.kin(me, o) : null, hp: Math.round(o.hp), hunger: Math.round(o.hunger), energy: Math.round(o.energy) };
+    if (!lvl) return Object.assign(base, { name: G.cap(K.looks(o, me).um), sub: AGES.find(a => o.age < a[0])[1], from: null, first: false, set: null, fac: null, home: null, parents: [], partner: null, kids: [], traits: [], doing: seenDoing(o), bio: [], stories: [], ruler: false, kills: 0, why: '' });
+    const all = lvl >= 2; const L1 = all && G.Life ? G.Life.bioList(o).slice(-6).reverse() : [];
+    // (the stories they lead — what they would say they have to settle; the ones others weave around them only the god reads)
+    const st = all && G.Stories ? G.Stories.of(o.id).filter(s => !me || s.protag === o.id).map(s => s.title).filter(Boolean).slice(0, 3) : [];
+    const town = S.settlements.get(o.set); const kt = !me || (town && K.town(me, town));
+    return Object.assign(base, {
+      name: id.name + (id.epithet ? ', ' + id.epithet : ''), sub: `${id.age} ${id.age === 1 ? 'ano' : 'anos'} · ${id.role}`,
+      from: all ? id.from : null, first: id.first, set: kt ? id.set : null, fac: kt ? id.fac : null, home: id.home,
       parents: [nm(id.mother), nm(id.father)].filter(Boolean), partner: nm(id.partner), kids: id.kids.map(nm).filter(Boolean),
-      traits: id.traits, doing: G.Vg.taskText(o), bio: L1.map(e => ({ age: e.age, txt: e.txt })), stories: st, ruler: id.ruler, kills: id.kills,
-      hp: Math.round(o.hp), hunger: Math.round(o.hunger), energy: Math.round(o.energy),
-    };
+      traits: all ? id.traits : [], doing: doingOf(me, o), bio: L1.map(e => ({ age: e.age, txt: e.txt })), stories: st, ruler: id.ruler, kills: id.kills,
+      why: all || !me ? '' : K.WHY[how.why] || 'de conversa',
+    });
   };
   I.add({
     id: 'pessoa', prio: 5, reach: 3.2,
@@ -203,11 +218,12 @@
       }
       return out;
     },
-    label(ctx, t) { const k = G.Possess.kin(ctx.v, t.o); return k ? `Conversar com ${k === 'mãe' || k === 'filha' || k === 'irmã' || k === 'avó' || k === 'tia' || k === 'companheira' ? 'sua' : 'seu'} ${k}, ${t.o.name}` : `Conversar com ${t.o.name}`; },
+    // (the other by their name when the body knows them, else by what is seen of them: Possess.knows)
+    label(ctx, t) { const k = G.Possess.kin(ctx.v, t.o); return k ? `Conversar com ${k === 'mãe' || k === 'filha' || k === 'irmã' || k === 'avó' || k === 'tia' || k === 'companheira' ? 'sua' : 'seu'} ${k}, ${t.o.name}` : `Conversar com ${who(ctx.v, t.o)}`; },
     can(ctx, t) {
       const o = t.o; if (!G.S.villagers.has(o.id)) return { ok: false, why: 'Não está mais aqui.' };
-      if (o.sleeping) return { ok: false, why: `${o.name} está dormindo.` };
-      if (o.age < 2) return { ok: false, why: `${o.name} ainda é um bebê.` };
+      if (o.sleeping) return { ok: false, why: `${Who(ctx.v, o)} está dormindo.` };
+      if (o.age < 2) return { ok: false, why: `${Who(ctx.v, o)} ainda é um bebê.` };
       return { ok: true };
     },
     run(ctx, t) {
@@ -227,7 +243,8 @@
         return { ok: true };
       });
       G.Avatar.act({ anim: 'talk', dur: 1.4, lock: false, face: face(ctx, t.X, t.Z) });
-      return { ok: true, card: I.personCard(o, me), said: txt };
+      // (spoken to, they say who they are: the card with their name — what else the body knows of them, by what it knew)
+      return { ok: true, card: I.personCard(o, me, true), said: txt };
     },
   });
 
@@ -237,11 +254,11 @@
     if (!me || !o || !G.S.villagers.has(o.id) || o.id === me.id) return { ok: false, why: 'Não está mais aqui.' };
     const k = G.Possess.kin(me, o); const grief = o.mourn > 0;
     if (!k && !grief) return { ok: false, why: '' };
-    const label = grief && !k ? `Consolar ${o.name}` : `Abraçar ${o.name}`;
-    if (o.sleeping) return { ok: false, label, why: `${o.name} está dormindo.` };
-    if (o.inside || o.aboard || o.held || o.air || o.jail || o.age < 2) return { ok: false, label, why: `Não dá para abraçar ${o.name} agora.` };
-    if (o.fear > 60) return { ok: false, label, why: `${o.name} está assustad${oa(o)} demais.` };
-    if (o.task && o.task.pri > 1) return { ok: false, label, why: `${o.name} está ocupad${oa(o)} com algo que não pode esperar.` };
+    const label = grief && !k ? `Consolar ${who(me, o)}` : `Abraçar ${who(me, o)}`;
+    if (o.sleeping) return { ok: false, label, why: `${Who(me, o)} está dormindo.` };
+    if (o.inside || o.aboard || o.held || o.air || o.jail || o.age < 2) return { ok: false, label, why: `Não dá para abraçar ${who(me, o)} agora.` };
+    if (o.fear > 60) return { ok: false, label, why: `${Who(me, o)} está assustad${oa(o)} demais.` };
+    if (o.task && o.task.pri > 1) return { ok: false, label, why: `${Who(me, o)} está ocupad${oa(o)} com algo que não pode esperar.` };
     if (G.dist(me.x, me.y, o.x, o.y) * L() > 3.8) return { ok: false, label, why: 'Longe demais.' };
     if (G.Avatar.swimming()) return { ok: false, label, why: 'Agora não dá.' };
     return { ok: true, label, kin: k, grief };
@@ -270,7 +287,7 @@
         return { ok: true };
       } });
     // (what is said of it is said once the one hugged has answered: ask, for the card that asked)
-    return { ok: true, ask, msg: c.grief ? `Você abraça ${o.name}, que chora no seu ombro.` : `Você abraça ${o.name}.`, said };
+    return { ok: true, ask, msg: c.grief ? `Você abraça ${who(me, o)}, que chora no seu ombro.` : `Você abraça ${who(me, o)}.`, said };
   };
   // the dance: whoever is free near the body joins it a while (the children, the merry, the family first) — the world's doing, asked
   // of it in its step (Possess.apply)
@@ -545,18 +562,29 @@
     const r = G.Vg.deliver(w, b); if (r.ok) G.Possess.deed('entrega');
     return r;
   }
-  // a building's card: what it is, whose it is, who lives or works there, what it holds — the world's own numbers
+  // a building's card: what it is, whose it is, who lives or works there, what it holds — the world's own numbers, as much of
+  // them as the one who reads it knows (Possess.knows, D-172): the town and its people by their names when they can name them;
+  // who lives there by name when they know them, the others counted; who is at home now, and the family's coins, only of
+  // their own house — walls are not seen through, and a pot of coins is the house's own —; the people's stock only of their
+  // own people's store; who works there now, in sight, by name or by what is seen of them. With no reader (a reader who is no
+  // one of the world): the god's, everything
   function buildingCard(b, me) {
-    const S = G.S; const def = G.BDEF[b.type] || {}; const set = S.settlements.get(b.set); const fac = G.Fac.get(G.Village.facOfSet(b.set));
+    const S = G.S; const K = G.Possess.knows; const def = G.BDEF[b.type] || {}; const set = S.settlements.get(b.set); const fac = G.Fac.get(G.Village.facOfSet(b.set));
+    if (!me || !me.id) me = null; const mine = K.house(me, b); const kt = !!set && !!K.town(me, set);
     const res = def.housing ? [...S.villagers.values()].filter(o => o.home === b.id) : [];
-    const card = { kind: 'building', id: b.id, name: G.Village.buildName(b), sub: [set ? set.name : null, fac ? fac.name : null].filter(Boolean).join(' · '), desc: G.BDESC ? G.BDESC[b.type] || '' : '', rows: [] };
+    const card = { kind: 'building', id: b.id, name: G.Village.buildName(b), sub: kt ? [set.name, fac ? fac.name : null].filter(Boolean).join(' · ') : '', desc: G.BDESC ? G.BDESC[b.type] || '' : '', rows: [] };
     if (!b.built) { card.rows.push(['Obra', Math.round((b.progress || 0) * 100) + '%']); const miss = Object.keys(b.need || {}).filter(k => b.need[k] > 0).map(k => `${Math.ceil(b.need[k])} de ${G.Eco ? G.Eco.name(k) : k}`); if (miss.length) card.rows.push(['Faltam', miss.join(', ')]); }
     if (b.maxHp && b.hp < b.maxHp) card.rows.push(['Estrutura', Math.round(b.hp / b.maxHp * 100) + '%']);
-    if (res.length) { card.rows.push(['Moram aqui', res.map(o => o.name + (o.id === me.id ? ' (você)' : '')).join(', ')]); const inside = res.filter(o => o.inside === b.id); card.rows.push(['Em casa agora', inside.length ? inside.map(o => o.name).join(', ') : 'ninguém']); }
-    if (b.coin !== undefined && res.length) card.rows.push(['Moedas da família', Math.round(b.coin)]);
-    if (isStore(b) && b.built) { const f = G.Fac.get(G.Village.facOfSet(b.set)); if (f) card.rows.push(['No estoque do povo', ['food', 'wood', 'stone'].map(k => `${Math.floor(f.stock[k] || 0)} de ${G.Eco ? G.Eco.name(k) : k}`).join(', ')]); }
+    if (res.length) {
+      const known = res.filter(o => K.person(me, o)), n = res.length - known.length;
+      const names = known.map(o => o.name + (me && o.id === me.id ? ' (você)' : ''));
+      card.rows.push(['Moram aqui', names.length ? names.join(', ') + (n ? ` e mais ${n} que você não conhece` : '') : n === 1 ? 'uma pessoa que você não conhece' : `${n} pessoas que você não conhece`]);
+      if (mine) { const inside = res.filter(o => o.inside === b.id); card.rows.push(['Em casa agora', inside.length ? inside.map(o => o.name).join(', ') : 'ninguém']); }
+    }
+    if (b.coin !== undefined && res.length && K.house(me, b)) card.rows.push(['Moedas da família', Math.round(b.coin)]);
+    if (isStore(b) && b.built && K.stock(me, b)) { const f = G.Fac.get(G.Village.facOfSet(b.set)); if (f) card.rows.push(['No estoque do povo', ['food', 'wood', 'stone'].map(k => `${Math.floor(f.stock[k] || 0)} de ${G.Eco ? G.Eco.name(k) : k}`).join(', ')]); }
     const work = [...S.villagers.values()].filter(o => o.task && o.task.id === b.id && o.task.type !== 'avatar').slice(0, 6);
-    if (work.length) card.rows.push(['Trabalhando aqui', work.map(o => o.name).join(', ')]);
+    if (work.length) card.rows.push(['Trabalhando aqui', work.map(o => K.name(me, o)).join(', ')]);
     return card;
   }
   I.buildingCard = buildingCard;
@@ -581,7 +609,7 @@
       if (!G.S.trees.has(tr.id)) return { ok: false, why: 'A árvore não está mais aqui.' };
       if (!G.Nature.isChoppable(tr)) return { ok: true };
       if (!hands(v)) return { ok: false, why: 'Você não tem força nem mãos para isso.' };
-      if (tr.claim && tr.claim !== v.id) { const o = G.S.villagers.get(tr.claim); if (o && o.task && o.task.id === tr.id) return { ok: false, why: `${o.name} já está cortando esta árvore.` }; }
+      if (tr.claim && tr.claim !== v.id) { const o = G.S.villagers.get(tr.claim); if (o && o.task && o.task.id === tr.id) return { ok: false, why: `${Who(v, o)} já está cortando esta árvore.` }; }
       if (v.carry && v.carry.n > 0 && (v.carry.k !== 'wood' || v.carry.n >= G.Vg.cap(v))) return { ok: false, why: 'Suas mãos já estão cheias: guarde a carga no armazém.' };
       if (G.S.fire[W.idx(tr.x, tr.y)] > 0) return { ok: false, why: 'Está pegando fogo!' };
       return { ok: true };
@@ -609,7 +637,7 @@
       G.Avatar.act({ world: true, anim: 'swing', dur: WT.chop, contact: WT.chop * 0.62, face: f, vact: 'chop',
         op: w => {
           if (!G.S.trees.has(tr.id) || (tr.stage !== 'grow' && tr.stage !== 'burnt') || !G.Nature.isChoppable(tr)) return { ok: false, why: 'A árvore não está mais de pé.' };
-          if (tr.claim && tr.claim !== w.id) { const o = G.S.villagers.get(tr.claim); if (o && o.task && o.task.id === tr.id) return { ok: false, why: `${o.name} já está cortando esta árvore.` }; }
+          if (tr.claim && tr.claim !== w.id) { const o = G.S.villagers.get(tr.claim); if (o && o.task && o.task.id === tr.id) return { ok: false, why: `${Who(w, o)} já está cortando esta árvore.` }; }
           if (G.S.fire[W.idx(tr.x, tr.y)] > 0) return { ok: false, why: 'Está pegando fogo!' };
           const need = 3 * Math.max(0.5, tr.size); tr.claim = w.id; tr.chop += WT.chop * wm(w);
           if (tr.chop >= need) { G.Nature.fellTree(tr, w.face); P.deed('lenha'); tr.claim = 0; return { ok: true, fell: true }; }
@@ -637,7 +665,7 @@
     can(ctx, t) {
       const b = t.bu; const v = ctx.v; if (!G.S.bushes.has(b.id)) return { ok: false, why: 'Não está mais aqui.' };
       if (b.berries < 1) return { ok: true };
-      if (b.claim && b.claim !== v.id) { const o = G.S.villagers.get(b.claim); if (o && o.task && o.task.id === b.id) return { ok: false, why: `${o.name} está colhendo aqui.` }; }
+      if (b.claim && b.claim !== v.id) { const o = G.S.villagers.get(b.claim); if (o && o.task && o.task.id === b.id) return { ok: false, why: `${Who(v, o)} está colhendo aqui.` }; }
       if (v.hunger <= 40 && v.carry && v.carry.n > 0 && (v.carry.k !== 'food' || v.carry.n >= G.Vg.cap(v))) return { ok: false, why: 'Suas mãos já estão cheias.' };
       return { ok: true };
     },
@@ -649,7 +677,7 @@
       G.Avatar.act({ world: true, anim: 'low', dur, face: f, vact: 'gather',
         op: w => {
           if (!G.S.bushes.has(b.id) || b.berries < 1) return { ok: false, why: 'Não sobrou fruta neste arbusto.' };
-          if (b.claim && b.claim !== w.id) { const o = G.S.villagers.get(b.claim); if (o && o.task && o.task.id === b.id) return { ok: false, why: `${o.name} está colhendo aqui.` }; }
+          if (b.claim && b.claim !== w.id) { const o = G.S.villagers.get(b.claim); if (o && o.task && o.task.id === b.id) return { ok: false, why: `${Who(w, o)} está colhendo aqui.` }; }
           if (eat) { const n = Math.min(b.berries, 2); b.berries -= n; w.hunger = Math.max(0, w.hunger - 32 * n); G.Vg.emote(w, 'food', 1.5); P.deed('frutas'); return { ok: true, ate: n }; }
           const had = w.carry && w.carry.k === 'food' ? w.carry.n : 0; if (w.carry && w.carry.n > 0 && w.carry.k !== 'food') return { ok: false, why: 'Suas mãos já estão cheias.' };
           const n = Math.min(G.Vg.cap(w) - had, b.berries); if (n <= 0) return { ok: false, why: 'Suas mãos já estão cheias.' };
@@ -670,7 +698,7 @@
     can(ctx, t) {
       const r = t.r; const v = ctx.v; if (!G.S.rocks.has(r.id) || r.stone < 1) return { ok: false, why: 'Não sobrou pedra aqui.' };
       if (!hands(v)) return { ok: false, why: 'Você não tem força nem mãos para isso.' };
-      if (r.claim && r.claim !== v.id) { const o = G.S.villagers.get(r.claim); if (o && o.task && o.task.id === r.id) return { ok: false, why: `${o.name} está trabalhando nesta pedra.` }; }
+      if (r.claim && r.claim !== v.id) { const o = G.S.villagers.get(r.claim); if (o && o.task && o.task.id === r.id) return { ok: false, why: `${Who(v, o)} está trabalhando nesta pedra.` }; }
       if (v.carry && v.carry.n > 0 && (v.carry.k !== 'stone' || v.carry.n >= G.Vg.cap(v))) return { ok: false, why: 'Suas mãos já estão cheias.' };
       return { ok: true };
     },
@@ -681,7 +709,7 @@
       G.Avatar.act({ world: true, anim: 'swing', dur: WT.mine, contact: WT.mine * 0.62, face: f, vact: 'mine',
         op: w => {
           if (!G.S.rocks.has(r.id) || r.stone < 1) { mineW = null; return { ok: false, why: 'Não sobrou pedra aqui.' }; }
-          if (r.claim && r.claim !== w.id) { const o = G.S.villagers.get(r.claim); if (o && o.task && o.task.id === r.id) return { ok: false, why: `${o.name} está trabalhando nesta pedra.` }; }
+          if (r.claim && r.claim !== w.id) { const o = G.S.villagers.get(r.claim); if (o && o.task && o.task.id === r.id) return { ok: false, why: `${Who(w, o)} está trabalhando nesta pedra.` }; }
           const had = w.carry && w.carry.k === 'stone' ? w.carry.n : 0; if ((w.carry && w.carry.n > 0 && w.carry.k !== 'stone') || had >= G.Vg.cap(w)) return { ok: false, why: 'Suas mãos já estão cheias.' };
           if (!mineW || mineW.id !== r.id || mineW.v !== w.id) mineW = { id: r.id, v: w.id, w: 0 };
           mineW.w += WT.mine * wm(w);
@@ -773,11 +801,26 @@
     return t;
   }
   I.placed = placed; // (for the tests)
+  // the words of an offer of the world, for the body: where they name the one the act is done with (the offer's own cust, to,
+  // baby — the world writes its offers for anyone), a name the body cannot say gives way to what is seen of them
+  // («de o ferreiro» is «do ferreiro»: the words joined as the language joins them)
+  const JOIN = { 'de o': 'do', 'de a': 'da', 'em o': 'no', 'em a': 'na', 'por o': 'pelo', 'por a': 'pela', 'a o': 'ao', 'a a': 'à' };
+  function veil(v, txt, ids) {
+    if (!txt) return txt; let did = false;
+    for (const id of ids) { const p = id ? G.S.villagers.get(id) : null; if (p && txt.includes(p.name) && !G.Possess.knows.person(v, p)) { const head = txt.startsWith(p.name); txt = txt.split(p.name).join(who(v, p)); if (head) txt = G.cap(txt); did = true; } }
+    return did ? txt.replace(/(^|[\s(«“])(de|em|por|a) (o|a) (?=\S)/g, (m, a, b, c) => a + JOIN[b + ' ' + c] + ' ') : txt;
+  }
+  const said = (v, o, txt) => veil(v, txt, [o.cust, o.to, o.baby]);
+  I.said = said;
+  // (what someone is at, as the world words it — their errand may name who it is with: the one spoken to, the keeper of the
+  // stall —, for a body that may not know them)
+  const doingOf = (me, o) => { const t = o.task; const txt = G.Vg.taskText(o); if (!me || !t) return txt; const z = t.biz && G.Biz ? G.Biz.get(t.biz) : null; return veil(me, txt, [t.id, t.who, t.to, t.cust, z ? z.owner : 0]); };
   I.add({
     id: 'atividade', prio: 4.2, reach: 2.6,
     find(ctx) { if (!G.Act || !G.Act.offers) return []; return G.Act.offers(ctx.v, ctx.x, ctx.y, 2.6 / L() + 2).filter(o => o && o.at).map(o => placed(ctx, o)); },
-    label(ctx, t) { return t.o.label || 'Ajudar'; },
-    can(ctx, t) { return t.o.ok === false ? { ok: false, why: t.o.why || 'Agora não dá.' } : { ok: true }; },
+    // (an offer that names who it is done with — «Servir Aelia» — says them as the body can: Possess.knows)
+    label(ctx, t) { return said(ctx.v, t.o, t.o.label) || 'Ajudar'; },
+    can(ctx, t) { return t.o.ok === false ? { ok: false, why: said(ctx.v, t.o, t.o.why) || 'Agora não dá.' } : { ok: true }; },
     run(ctx, t) {
       const o = t.o; const v = ctx.v; const g = AN(o.anim); const gx = t.hand ? t.hand[0] : t.X, gz = t.hand ? t.hand[2] : t.Z; const f = face(ctx, gx, gz);
       const { to, go } = walkUp(ctx, v, gx, gz, 0.7); const goW = go * G.Space.TIME; const hand = g.act === 'lift' || g.act === 'arrange';

@@ -54,6 +54,9 @@
     'bathDay', 'trainDay', 'showDay', 'readDay', 'speakDay',
     // (the roof lost — the house that burnt, fell, was pulled down: social.js —, apart from the limbs lost: L-712)
     'roofLost',
+    // (what the person lived in the god's hands: whom they met face to face, the quarters their feet were in — only possess.js
+    // writes it, G.Possess.knows reads it: D-170)
+    'ken',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
