@@ -973,10 +973,13 @@
   }
   function buildTask(v) {
     const S = G.S; let best = null, bd = 1e9;
-    // (a house a family paid for keeps its turn ahead of the town's great work, however far the great work's turn reaches — L-313,
-    // D-174: what the great work that keeps the stone weighs for this builder today, added to the paid house's own)
+    // (a house a family paid for keeps the turn it had beside the town's great work — L-313, D-117: two hundred against four
+    // hundred —, however far the great work's turn reaches: what the great work that keeps the stone is brought nearer for
+    // this builder today, past its four hundred, the paid house is brought nearer too. Without it a rich house paid for stood
+    // at 13% in three years beside a palace 34 tiles off; with the whole of the great work's turn, the great work never got a
+    // stone while any family's house was going up — D-174)
     const town = S.settlements.get(v.set); const gw = town && town.vez && town.gw ? S.buildings.get(town.gw) : null;
-    const ahead = gw && G.Village.workPri ? G.Village.workPri(gw, v) : 0;
+    const ahead = gw && G.Village.workPri ? Math.min(0, G.Village.workPri(gw, v) + G.Village.GREAT_PRI) : 0;
     for (const b of S.buildings.values()) {
       if (b.built || b.set !== v.set || b.type === 'ruin') continue;
       if (b.unreach) { if (b.unreach >= 6) { abandonSite(b); continue; } if (S.clock - b.unreachT < 30) continue; }
