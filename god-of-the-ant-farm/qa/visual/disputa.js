@@ -70,7 +70,7 @@ const clearHands = o => { if (o.carry && o.carry.n > 0) god(() => D.store('v:' +
 const loaded = o => !!(o.carry && o.carry.n > 0);
 // (none of a voyage's crew: a voyage being made ready calls its crew to the quay, 3,25 — what cannot wait —, again and again
 // until it sails, T-326)
-const able = o => o.set === set.id && o.role === 'estivador' && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1]) && !(G.Expe && G.Expe.memberOf(o.id));
+const able = o => o.set === set.id && o.role === 'estivador' && !o.aboard && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1]) && !(G.Expe && G.Expe.memberOf(o.id));
 // (the stevedores of a town are as many as the crates waiting on its quays ask, up to three a store — harbor.js, the town's job
 // board every 4 s of the world —: a clean quay asks one. Fewer than the proof needs: the god lands a catch on the quay — the
 // one the proof lands first anyway — and the town calls its hands by its own rule, in 30 s at most: T-224. But first the board
@@ -117,7 +117,7 @@ if (tried.length) called += ` — antes, pela regra delas: ${tried.join(' · ')}
 const bad0 = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg));
 const vbad = () => QA.check().filter(q => q.sev <= 2 && !bad0.has(q.sys + '|' + q.msg));
 const vtxt = l => (l.length ? l.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo');
-let v = cands[0]; const p1 = cands[1], p2 = cands[2]; for (const o of [v, p1, p2]) clearHands(o);
+let v = cands[0], p1 = cands[1], p2 = cands[2]; for (const o of [v, p1, p2]) clearHands(o);
 const near = []; for (let r = 2; r <= 4 && near.length < 4; r += 0.5) for (let k = 0; k < 24 && near.length < 4; k++) { const a = k / 24 * Math.PI * 2; const x = sp0[0] + Math.cos(a) * r, y = sp0[1] + Math.sin(a) * r; if (dry(x, y) && W.canWalk(sp0[0], sp0[1], x, y, false)) near.push([x, y]); }
 if (near.length < 3) { ok('lugares perto do cais', false, near.length); process.exit(1); }
 // (brought out of a cave first, as the god's hand would: a porter who went down one by himself between two parts — the
@@ -210,13 +210,43 @@ const hold = c => (c ? `#${c.id} de ${c.by ? (c.by === v.id ? 'corpo' : (S.villa
 // unloading in the hands sets it down where the porter stands when the quay has no room for it — the world's own rule,
 // Porto.drop —, and by the pile that crate on the ground took the prompt from the crates of the quay: «Pegar a caixa de comida
 // do chão» from every side, cases 7 and 8 of the generation-14 world, at 9fecc74 — the quay full, its ten crates: T-473)
-const rest = o => god(() => { clearHands(o); if (o.task && o.task.type !== 'avatar') G.Vg.endTask(o); });
+const rest = o => god(() => { if (o.aboard) return; clearHands(o); if (o.task && o.task.type !== 'avatar') G.Vg.endTask(o); });
+// (the porters of each case are dockers of the town ashore at that moment. The town's board deals its trades every 4 s, and
+// since the sailors are a trade of the town (D-155) a docker of a minute ago may be a sailor now, at sea with a merchant: in
+// the generation-19 metropole the board made Nebet, the first porter, a sailor between the cases 2 and 3, and a merchant of
+// Mênfis took him aboard — by the rule, his hands were free. The proof went on with him: its hand put his feet by the pile
+// with him aboard, the world's step gave him the ship back at once, and case 3 waited three times for a lift that could not
+// come («chamado a aboard»); the body was left with the crate, and the cases 4 and 5 fell after it. Each case asks who is on
+// the quay then: the same porter while he is a docker ashore — the person of the world of now, after a load —, else another
+// docker of the town, the lowest id; with none, a catch lands on the quay and the town's own board calls its hands, in 30 s
+// at most, as at the staging (T-224). Told in a line of its own. And the hand of the proof touches nobody aboard: T-803)
+const ashore = o => !!o && S.villagers.get(o.id) === o && able(o);
+const swaps = [];
+function portersNow(n) {
+  const cur = o => (o && S.villagers.get(o.id)) || o; p1 = cur(p1); p2 = cur(p2);
+  const pool = () => [...S.villagers.values()].filter(o => o !== v && ashore(o)).sort((a, b) => loaded(a) - loaded(b) || a.id - b.id);
+  if (pool().length < n) {
+    const n0 = pool().length; god(() => { S.time = 0.15; P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); op = P.opAt(dock); });
+    const t0 = S.clock; while (S.clock - t0 < 30 && pool().length < n) frame();
+    swaps.push(`${n0} carregador(es) em terra: com mais um barco no cais a cidade ${pool().length >= n ? 'chamou' : 'NÃO chamou'} em ${(S.clock - t0).toFixed(0)} s`);
+  }
+  const L = pool(); const was = [p1, p2]; const why = o => (o.aboard ? 'a bordo, ' : '') + (o.role === 'estivador' ? 'estivador' : 'agora ' + (o.role || 'sem ofício'));
+  const a = ashore(p1) && p1 !== v ? p1 : L.find(o => o !== p2) || L[0] || p1;
+  const b = ashore(p2) && p2 !== v && p2 !== a ? p2 : L.find(o => o !== a) || (n < 2 ? a : p2);
+  if (a !== was[0]) swaps.push(`${was[0].name} (${why(was[0])}) deu lugar a ${a.name}`);
+  if (b !== was[1] && b !== a) swaps.push(`${was[1].name} (${why(was[1])}) deu lugar a ${b.name}`);
+  p1 = a; p2 = b;
+  // (kept ashore for the case, as at the staging: T-326)
+  god(() => { for (const o of [p1, p2]) if (ashore(o)) o.expCD = S.day; });
+  if (swaps.length) { console.log(`(os carregadores do caso: ${swaps.join('; ')})`); swaps.length = 0; }
+  return ashore(p1) && ashore(p2) && (n < 2 || p1 !== p2);
+}
 
 fresh(6);
 ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCrates().length >= 6 && drawnOf().length === opCrates().length, op ? `descarga #${op.id}: ${opCrates().length} caixas no cais, ${drawnOf().length} desenhadas` : 'nenhuma');
 
 // ------------------------------ 1. the rule, one for both ------------------------------
-{ const rows = []; const row = (name, body, porter, wb, wp) => rows.push({ name, body, porter, wb, wp });
+{ portersNow(2); const rows = []; const row = (name, body, porter, wb, wp) => rows.push({ name, body, porter, wb, wp });
   const b = atPile(); const X = b ? b.t.o.cid : 0; const o0 = b ? b.t.o : null;
   // (a free crate)
   row('livre', b ? bodyMay(X, o0).may && offeredFree(X) : null, porterMay(p2, X), true, true);
@@ -252,7 +282,7 @@ ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCra
 // porter by the pile, with room in the store for the crate, as the god's hand would: the porter's door asks for both, and in
 // the generation-6 mega the town filled the store with food in those 61 s, and the door passed over the crate, free, for one
 // of stone: T-234)
-{ fresh(6); rest(p1); rest(p2);
+{ fresh(6); portersNow(1); rest(p1); rest(p2);
   const o = A.offers(v, v.x, v.y, 2.6 / TL + 2).find(q => q.act === 'pegar' && q.op === op.id && q.ok !== false); const X = o ? o.cid : 0;
   const h = o ? god(() => A.begin(v, o)) : { ok: false, why: 'sem oferta' }; const t0 = S.clock;
   const ready = () => { const c = crate(X); if (c) roomFor(c.k); bring(p2, near[2]); };
@@ -272,7 +302,7 @@ ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCra
 // taken from counts for the rest of the rule all the same — the crate he went for, the body's, the body's lift: T-234)
 { let R = null; const called = [];
   for (let tries = 0; tries < 3; tries++) {
-    fresh(6); rest(p1); rest(p2); bring(p2, near[2]);
+    fresh(6); portersNow(1); rest(p1); rest(p2); bring(p2, near[2]);
     const t0 = S.clock; const pr = pressHold(); const X = pr ? pr.X : 0;
     god(() => { S.time = 0.15; P.work(p2, dock, G.Vg.H); }); const p2c = p2.task && p2.task.cid;
     // (each frame: whether he went for the body's crate, lifted his, or was taken from his unloading before lifting it — his
@@ -305,7 +335,7 @@ ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCra
 // shows then —, up to three times, as pressHold does — T-157)
 { let R = null; const called = [];
   for (let tries = 0; tries < 3; tries++) {
-    fresh(6); rest(p1); bring(p1, near[1]);
+    fresh(6); portersNow(1); rest(p1); bring(p1, near[1]);
     const b = atPile(); const X = b ? b.t.o.cid : 0;
     // (the porter goes for the crate the prompt shows, in the step before the key: the prompt the player saw is a step old)
     god(() => { S.time = 0.15; const L0 = dock.crates; const c = crate(X); if (c) dock.crates = [c, ...L0.filter(q => q !== c)]; P.work(p1, dock, G.Vg.H); dock.crates = L0; }); const his = !!p1.task && p1.task.cid === X;
@@ -321,11 +351,11 @@ ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCra
   const { b, X, his, tStop, w, c1, bodyLift, p1had, t0 } = R; const g = A.ANIM.levantar;
   ok('3. o carregador primeiro: o E na caixa dele é recusado no aperto, com as palavras do mundo, e o gesto para antes do contato; ele a levanta', !!b && his && !!w && tStop < g.contact && !G.Avatar.busy() && !!c1 && c1.by === p1.id && !bodyLift && !(v.carry && v.carry.n > 0) && p1had === X,
     `${called.length ? '(' + called.join('; ') + ') ' : ''}${b ? '' : 'ao pé da pilha: ' + pileWhy + '; '}«${b ? b.label : '-'}» (#${X}), já de ${p1.name}: ${w ? `«${w[0]}» ${(w[1] - t0).toFixed(3)} s depois do aperto` : 'nenhuma palavra'}; o gesto parou em ${tStop.toFixed(3)} s do mundo (o contato: ${g.contact} s); a caixa ${hold(c1)}; o corpo ${bodyLift ? 'levantou' : 'não levantou'}; ${p1.name} levantou a #${p1had || '-'}`);
-  clearHands(p1); rest(p1);
+  clearHands(v); clearHands(p1); rest(p1);
 }
 
 // ------------------------------ 4. the gesture cut short ------------------------------
-{ fresh(6); rest(p2);
+{ fresh(6); portersNow(1); rest(p2);
   const led0 = D.ledger().length; const pr = pressHold(); const X = pr ? pr.X : 0;
   // (the world pushes the body a hand's breadth: what the hands meant there is not done)
   god(() => { v.x += 0.03; }); frame(); frame();
@@ -336,7 +366,7 @@ ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCra
 }
 
 // ------------------------------ 5. saved and loaded in the middle ------------------------------
-{ fresh(6);
+{ fresh(6); portersNow(1);
   const pr = pressHold(); const X = pr ? pr.X : 0;
   M.salvarCarregar(); refresh(); op = op && A.get(op.id); v = G.Possess.body();
   const c0 = v ? crate(X) : null; const s0 = hold(c0); const let0 = !!c0 && !c0.by; const pm = v ? porterMay(S.villagers.get(p2.id), X) : false;
@@ -387,7 +417,7 @@ ok('o barco descarrega: as caixas de verdade no cais, desenhadas', !!op && opCra
 }
 
 // ------------------------------ 8. the body dies in the middle ------------------------------
-{ fresh(6); bring(p2, near[2]);
+{ fresh(6); portersNow(1); bring(p2, near[2]);
   const pr = pressHold(); const X = pr ? pr.X : 0;
   const vid = v.id; G.Village.kill(v, 'old'); frame(); G.Avatar.detach(); for (let k = 0; k < 4; k++) G.debug.step(0.1);
   const c1 = crate(X); const s1 = c1 ? hold(c1) : ''; const pm = !c1 || c1.by !== vid || porterMay(S.villagers.get(p2.id), X);

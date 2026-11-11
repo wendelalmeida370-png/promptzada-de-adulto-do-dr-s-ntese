@@ -148,6 +148,10 @@ function fishPlace() {
       let seen = S.ledgerN || 0, catches = 0, food = 0, T = 0, n = 0, k = 0, t0 = null;
       for (; T < SEC && k < 40000; k++) {
         v.hunger = 10; v.energy = 90;
+        // (fair weather through the measured minute, by the test's hand: in a storm nobody fishes at the water's edge — the
+        // game's own rule, «Com esta tempestade, ninguém fica na beira da água» —, and a storm that broke nineteen seconds into
+        // the body's minute left it ten casts in two minutes against the world's thirty-three in one, T-802)
+        S.weather.storm = 0; S.weather.rain = 0;
         // (a cast's time: from the one before — or, for the world's fisher, from the moment it is at the water, st 2 — to it; the
         // body's first is from the key, half a gesture: not counted)
         if (!body && !(v.task && v.task.type === 'fish' && v.task.st === 2)) t0 = null; else if (!body && t0 === null) t0 = S.clock;
