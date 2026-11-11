@@ -1,13 +1,17 @@
 # Bloco do agente K — BV-6, «a tela que respeita o que o personagem sabe»
 
 Ramo: `worktree-agent-a878e9323a48527c3` (base `61dc62b`). Tudo abaixo está pronto para colar; os números são os reservados ao K
-(L-760 a L-779, T-740 a T-759, D-170 a D-173, regras 55 e 56 do guard). Usados: L-760, L-761; T-740 a T-743; D-170 a D-173.
+(L-760 a L-779, T-740 a T-759, D-170 a D-173, regras 55 e 56 do guard). Usados: L-760, L-761; T-740 a T-744; D-170 a D-173.
 
 **Atenção ao juntar:**
-- **O save muda** (pouco): a pessoa ganha a chave `ken` (na lista `SHAPE` do `villagers.js`). Só existe em quem o deus viveu e em
-  quem ele conheceu vivendo alguém; nos outros é `undefined` e nem vai para o save. Save antigo abre (o `sabe.js` s3 abre o
-  `qa/oldsave_7.json` e a porta responde). **Peço ao líder rodar o `qa/oldsave.js` com uma pasta antiga**, como a regra manda:
-  eu não tinha uma pasta do jogo antigo para rodá-lo.
+- **O save muda** (pouco): a pessoa ganha a chave `ken`. **Onde, exatamente:** `js/villagers.js`, **no fim da lista `SHAPE`**
+  — a linha `'ken',` (com duas linhas de comentário em cima), logo depois de `'bathDay', 'trainDay', 'showDay', 'readDay',
+  'speakDay',` e antes do `];`. É o mesmo lugar onde o líder pôs o `roofLost` (ce191ac): **vai conflitar ali; ficam as duas
+  linhas, a ordem não importa.** **Não mexi no `js/save.js`:** a pessoa vai inteira para o save (o `serialize` copia todas as
+  chaves), e o conserto de um registro danificado ao abrir é do gancho de save do próprio `possess.js` (`mendKen`, no `load`).
+  A chave só existe em quem o deus viveu e em quem ele conheceu vivendo alguém; nos outros é `undefined` e nem vai para o
+  save. Save antigo abre (o `sabe.js` s3 abre o `qa/oldsave_7.json` e a porta responde). **Peço ao líder rodar o
+  `qa/oldsave.js` com uma pasta antiga**, como a regra manda: eu não tinha uma pasta do jogo antigo para rodá-lo.
 - **Mexi em três arquivos fora das telas**, uma linha cada: `js/villagers.js` (a chave `ken` na `SHAPE`), `js/activity.js`
   (`A.commit`: depois do feito do corpo, `G.Possess.dealt(oferta)`) e `js/urban.js` (`U.valueAt`: fora do passo do mundo responde
   pelo retrato que a cidade tem e não faz outro — L-760, num commit só dele). Se algum conflitar, o conserto é a linha.
@@ -50,6 +54,7 @@ da encarnação e acabam com ela. **Faltava** só: «falei com esta pessoa» e �
 | T-741 | limite de teste (aberto, K) | O `sabe-tela.js` roda o 3D por software: 8 minutos com a máquina ocupada. As regras da porta estão todas no `sabe.js` (Node, 1,5 minuto); no navegador fica só o que aparece escrito e a tela desligada. |
 | T-742 | limite de teste (aberto, K) | A porta lê se dois povos se encontraram direto do registro (`f.rel[id]`), porque o `G.Fac.rel` **cria** o registro que falta — uma tela escreveria o mundo. A sabotagem (trocar a leitura pelo `G.Fac.rel`, s14) **não é acusada**: o mundo cria as relações de todos os pares quando nasce (3 povos, 6 registros no instante zero), e a tela não acha par sem registro para criar. A regra fica pela leitura do código; o `sabe.js` v2 conta as relações antes e depois das perguntas (0 criadas), e acusaria num mundo com um povo novo ainda sem relações. |
 | T-743 | limite de teste (aberto, K; fora do escopo: de quem cuida da banca) | O `negocio.js` n7 («sem dinheiro») **falha na base** (`61dc62b`, sem nada meu) com a mesma linha do meu ramo: «Creonte, com a casa sem moedas: "—" (falas: perguntar, recusar_caro; a compra parou em st 2 fala 9; agora sem tarefa; a casa com 0.98 moedas; a banca atendida)» — 19 passam, 1 falha, nos dois. Na linha de base ele passa. Como reproduzir: `node qa/negocio.js` (5 minutos) num checkout do `61dc62b`. Parece que a casa «sem moedas» do caso ficou com 0,98 (um troco) e o freguês diz «caro» em vez de «sem dinheiro»; não mexi. |
+| T-744 | limite de teste (aberto, K; fora do escopo: de quem cuida das casas) | O `lar.js` l16 e l16b (D-098, «da casa cheia saem os moços primeiro») **falham na base** (`61dc62b`) com o mesmo texto do meu ramo, palavra por palavra: l16 — «FALHA (verificador) sem gente para a prova do verificador em Tenochtitlan (nenhum solteiro de 18 a 35, nem fora nem na casa)»; os dois — «o verificador no meio: S3 lar: Frida #23655: dorme ao relento a 4 casas da porta de hut#19668, a casa onde mora — L-371» (e a Frida #25577, a 2 casas). Na linha de base os dois passam. No meu ramo o `lar.js` inteiro dá 24 passam e esses 2 falham; na base a rodada foi cortada pela reinicialização da máquina depois do l16b (14 passam, os mesmos 2 falham). Como reproduzir: `node qa/lar.js` (10 minutos) num checkout do `61dc62b`. Não mexi. |
 
 ## 2. Linhas do README (tabela das provas)
 
@@ -167,11 +172,21 @@ numa cópia nova do jogo estão no rascunho da sessão, em `ag/K/` (`sab-sabe.py
 - `node qa/visual/guarda3d.js ..` — PASSOU (27 arquivos do 3D, 0 avisos).
 - As provas vizinhas das mãos do corpo: `taverna-mao.js` (29 passam), `maos.js` (15 passam), `negocio.js` (19 passam, 1 falha: o
   n7, igual na base — T-743).
-- `ONLY=e9,e10,e15 node qa/encarna.js` e `node qa/invariancia.js` — ver o relatório final do K (rodavam quando este bloco foi
-  escrito; o resultado está lá).
+- `ONLY=e9,e10,e15 node qa/encarna.js` — 32 passam, 0 falham («TUDO PASSOU», 45 minutos com a máquina cheia): as mãos, a
+  conversa e a ficha, a interface, os braços e o coração. Rodou no código do segundo commit mais as palavras juntas e a cidade
+  no registro; a última mudança (as histórias alheias fora do «Quem sou eu») veio depois e está coberta pelo `sabe.js` p7 e
+  pela última rodada do `sabe-tela.js`.
+- `node qa/invariancia.js` — 6 passam, 0 falham («INVARIÂNCIA: ok»), no código final.
+- `node qa/vida-bairro.js` — 11 passam, 0 falham («TUDO PASSOU»), no código final (o `urban.js` mexido).
+- `node qa/visual/corpo-rig.js` — 10 passam, 0 falham; `ONLY=e11 node qa/encarna.js` — 9 passam, 0 falham (o 3D desenha sem
+  erro de módulo), no código final.
+- `node qa/lar.js` (o corpo entrega o bebê: o feito com alguém, `A.commit` → `Po.dealt`) — 24 passam, 2 falham (l16 e l16b),
+  **iguais na base** (T-744).
 - O guard de bolso com as regras 55 e 56 — passa no ramo, acusa três linhas na base.
 - **Não rodei** (por regra ou por tempo): `regress.sh`, `prontos.js`, a prova de desempenho; `oldsave.js` (precisa de uma pasta
-  do jogo antigo); `lar.js`, `casa-deus.js`, `vida-bairro.js`, `urb2.js`, `visual/diario.js`, `visual/baloes.js`.
+  do jogo antigo); `casa-deus.js`, `urb2.js`, `visual/diario.js`, `visual/baloes.js`, e as outras partes do `encarna.js`
+  (rodei a e9, a e10, a e11 e a e15). A máquina reiniciou no fim (provas demais ao mesmo tempo): a única rodada cortada foi a
+  do `lar.js` **na cópia da base**, já depois dos dois casos que interessavam; nada do ramo ficou por rodar de novo.
 
 ## 8. O que ficou aberto
 
@@ -188,4 +203,5 @@ numa cópia nova do jogo estão no rascunho da sessão, em `ag/K/` (`sab-sabe.py
 6. O painel do deus não mostra «o que esta pessoa sabe» (o `v.ken`): a porta está pronta para isso, não fiz a tela.
 7. Com os mundos da geração 20 (com a vida do bairro), olhar de novo as linhas do `sabe.js` b1 e as fotos do `sabe-tela.js`: as
    descrições passam a sair dos perfis de verdade (T-740).
-8. `qa/oldsave.js` com uma pasta antiga (o líder), e o `negocio.js` n7, que já falha na base (T-743).
+8. `qa/oldsave.js` com uma pasta antiga (o líder); e dois defeitos que já estão na base e não são meus: o `negocio.js` n7
+   (T-743) e o `lar.js` l16 e l16b (T-744).
