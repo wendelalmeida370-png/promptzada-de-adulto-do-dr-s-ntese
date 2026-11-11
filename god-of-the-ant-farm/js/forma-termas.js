@@ -119,8 +119,8 @@
         bench(vest, 'frente', r2(q[0] + 0.6)); bench(vest, 'frente', r2(q[2] - 1.7)); }
       { const q = R.rooms[morno].r; bench(morno, 'esquerda', r2(q[1] + 0.5)); } { const q = R.rooms[quente].r; bench(quente, 'fundo', r2(q[0] + 0.8)); bench(quente, 'fundo', r2(q[2] - 1.9)); }
       // the roofs: one along each wing, the pediment over the changing room; over the hot room the attic and the dome
-      R.roofs.push({ r: [B[0], B[1], cA, B[3]], ao: 'v', h: 1.7 }, { r: [cB, B[1], B[2], B[3]], ao: 'v', h: 1.7 }, { r: [cA, cM, cB, B[3]], ao: 'v', h: 2.3, frontao: 1 });
-      R.attic.push({ r: [cA, B[1], cB, cM], h: 1.2 });
+      R.roofs.push({ r: [B[0], B[1], cA, B[3]], ao: 'v', h: 1.7 }, { r: [cB, B[1], B[2], B[3]], ao: 'v', h: 1.7 }, { r: [cA, cM, cB, B[3]], ao: 'v', h: 2.0, frontao: 1 });
+      R.attic.push({ r: [cA, B[1], cB, cM], h: 2.0 }); // (the attic as high as the pediment roof's ridge: the roof ends against it)
       Object.assign(R.domo, RO ? { drum: 1.2, h: 4.2 } : { drum: 0, h: 3.6 });
       // the palaestra: its floor to the gate's edge; the statues at its front corners
       const por = room('portico', [Y0, B[3], Y2, r2(vP - 2 * rc)], { host: 'portico' }), pal = room('palestra', [Y0, vP, Y2, r2(Yr[3] - 0.1)], { open: 1 });
