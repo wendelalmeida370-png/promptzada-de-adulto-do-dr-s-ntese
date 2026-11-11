@@ -352,9 +352,9 @@
   let cena = null, earNow = null; const rung = new Map(); let stamp = 0, bedMix = null, bedAt = 0; const bedT = {};
   G.worldHooks.push(() => { cena = null; A.cena = null; earNow = null; rung.clear(); bedMix = null; bedAt = 0; scapeT = 0; A.musNow = null; });
   A.tocou = []; // (what the place rang, and of whom — kept while A.gravar is on: the proofs')
-  function ring(f, vol, far) {
+  function ring(f, vol, far, peso) {
     if (!emit(f.s, vol, { pan: f.pan, muf: far ? Math.max(0.7, f.muf || 0) : f.muf, to: 'amb', o: { tom: f.tom, notas: f.notas || null } })) return;
-    if (A.gravar) { A.tocou.push({ t: ac.currentTime, s: f.s, k: f.k, de: f.de, gain: vol, pan: f.pan, muf: f.muf, longe: far ? 1 : 0 }); if (A.tocou.length > 600) A.tocou.splice(0, 200); }
+    if (A.gravar) { A.tocou.push({ t: ac.currentTime, s: f.s, k: f.k, de: f.de, gain: vol, pan: f.pan, muf: f.muf, longe: far ? 1 : 0, peso: far ? peso : 0 }); if (A.tocou.length > 600) A.tocou.splice(0, 200); }
   }
   const LOOK = 0.25; // (seconds between two looks at the scene)
   function place(t, dtLook) {
@@ -380,11 +380,13 @@
     for (const [k, st] of rung) { if (st.seen === stamp) continue; if (stamp - st.seen === 1 && reached(st)) ring(st.f, st.f.gain); if (stamp - st.seen > 12 || st.f.q === 'contato') rung.delete(k); }
     // the quarter's bed: the far voices of its own work, as loud as its habit and the hands at it now — moving slowly
     bedMix = A.blend(bedMix, c.fundo ? c.fundo.w : null, dtLook);
-    if (c.fundo) for (const fam of A.FAMS) {
+    // (the god from high above hears as little of it as of anything else: the ear's own measure, k)
+    const kb = c.ear.k;
+    if (c.fundo && kb > 0.05) for (const fam of A.FAMS) {
       const m = bedMix[fam]; const L = c.fundo.de[fam]; if (!(m > 0.03) || !L || !L.length) continue;
       if (t < (bedT[fam] || 0)) continue;
       bedT[fam] = t + G.vrr(1.2, 3.2) / (0.4 + m);
-      ring(G.vpick(L), 0.05 + 0.12 * m, true);
+      ring(G.vpick(L), (0.05 + 0.12 * m) * kb, true, m);
     }
   }
   A.update = function (dt) {
@@ -395,7 +397,8 @@
     if (scapeT <= 0 && (!A.mute || !cena)) { // (while the sound is off — the skip of time — the scene is not asked again)
       scapeT = LOOK; analyse(ear); cena = A.cena = A.scene(ear); A.musNow = cena.musica;
       scape.people = cena.gente; scape.sell = cena.fundo ? cena.fundo.maos.troca || 0 : 0; const luta = cena.fontes.find(f => f.tipo === 'luta'); scape.fight = luta ? luta.n : 0;
-      if (A.ambOn && !A.mute) place(t, bedAt ? Math.min(2, t - bedAt) : LOOK);
+      // (a world standing still — paused, a panel open — makes no gesture: nothing of the place rings; the land goes on)
+      if (A.ambOn && !A.mute && (G.speed || 0) > 0 && !(G.Main && G.Main.modalOpen)) place(t, bedAt ? Math.min(2, t - bedAt) : LOOK);
       bedAt = t;
     }
     const zf = scape.zoomF;

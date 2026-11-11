@@ -42,7 +42,8 @@ const [seed, secs] = [+(process.argv[2] || 7), +(process.argv[3] || 90)];
       if (k % 3 === 2 && G.Render.rotate) { G.Render.rotate(1); out.rot = 1; }
       if (k % 5 === 3) { G.UI.setSpeed([1, 2, 4, 8, 16][k % 5]); }
       if (k === 6 || k === 8) { G.Render.setUnder(!G.Render.under); out.under = G.Render.under; }
-      if (k === 9) { G.Save.save(true); const o = JSON.parse(localStorage.getItem('gotaf-save-v1') || 'null'); out.saved = !!o; }
+      // (the autosave is written compressed — 'gz1:…', when its packing ends —: it is there, or on its way; read as JSON it broke the run at its tenth tick, T-728)
+      if (k === 9) { G.Save.save(true); out.saved = !!(localStorage.getItem('gotaf-save-v1') || G.Save.pending); }
       out.ac = window.__ac ? window.__ac.state : 'none'; out.live = window.__src.made - window.__src.ended; out.made = window.__src.made; out.day = S.day; out.frames = window.__frames; out.plays = window.__plays; out.pop = S.villagers.size;
       return out;
     }, [k, acts]);

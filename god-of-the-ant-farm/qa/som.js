@@ -7,8 +7,9 @@
 // vai por vontade própria) e a mão da prova só dá minério e lenha ao armazém (pelo livro) e conta atividade pela porta da
 // vida do bairro (G.Urban.note, dentro do passo). Num segundo mundo («cidade»), a mesma vida com e sem o som.
 //  s1 a tabela: todo gesto de G.Act.ANIM tem a sua linha (um som da biblioteca, ou um silêncio dito de propósito); nenhuma
-//     linha de gesto que não existe; todo som que uma tabela nomeia está na biblioteca; e, num dia vivido, todo ato que o
-//     mundo mostrou numa pessoa tem linha
+//     linha de gesto que não existe; todo som que uma tabela nomeia está na biblioteca; o gesto de um ato sai da tarefa, da
+//     carga e do apetrecho (sentado em casa, nas termas, no teatro: três gestos); e, num dia vivido, todo ato que o mundo
+//     mostrou numa pessoa tem linha
 //  s2 o ouvido: a mesma fonte à esquerda e à direita (o ouvido vira, o lado troca; de frente, no meio); a distância derruba
 //     o ganho até o silêncio; uma parede abafa (a rua ouvida de dentro de casa, a casa ouvida da rua), duas abafam mais,
 //     nenhuma entre os dois no mesmo prédio
@@ -29,13 +30,16 @@
 //  s10 a causa: toda fonte de toda cena aponta para uma pessoa acordada num ato, um prédio com a sua operação viva, um navio
 //     que anda ou um bicho vivo; e tudo o que o tocador tocou de um lugar tem a sua fonte
 //  s11 a mesma cena: o mesmo mundo e o mesmo ouvido dão a mesma cena, duas vezes
-//  s12 o fogo só estala onde queima perto do ouvido (L-740): uma árvore em chamas longe não soa, a do lado soa
+//  s12 o fogo só estala onde queima perto do ouvido (L-740): uma árvore em chamas longe não soa, a do lado soa; e os golpes
+//     que o mundo toca na hora (G.Audio.at) são ouvidos pelo mesmo ouvido — o lado, a distância, as paredes
 //  s13 o ouvido é o corpo: tomado um corpo, o ouvido está onde ele está e vai com ele, virado como o olho, sob o teto que o
 //     mundo diz; devolvido o corpo, o ouvido volta a ser o do deus
-//  e nenhum erro de módulo nem aviso, e o verificador sem nada novo.
+//  s14 o verificador vê (qa/som-inv.js): as regras do som — toda fonte da cena de cada cidade com dono vivo e números de
+//     verdade, o fundo sem peso onde não há mãos, a tabela cobrindo todo gesto — limpas no mundo e acusando cada defeito posto
+//  e nenhum erro de módulo nem aviso, e o verificador sem nada novo (as regras do som entre elas).
 const fs = require('fs'), path = require('path');
 const M = require('./nodemundo.js');
-const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js'] });
+const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/som-inv.js'] });
 const WORLD = process.argv[2] || 'metropole';
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 // (ONLY=s7 a whole case; ONLY=s7b one part of it — the case runs as far as that part needs)
@@ -62,6 +66,14 @@ function causal(c, tag) {
     sources++; const de = f.de || {};
     if (de.v !== undefined) { const v = S.villagers.get(de.v); if (!v) return bad(f, 'de ninguém'); if (v.sleeping) return bad(f, 'de quem dorme'); if (f.tipo !== 'luta' && !v.act) return bad(f, 'de quem não faz nada'); if (f.tipo !== 'luta' && (Math.abs(f.x - v.x) > 0.002 || Math.abs(f.y - v.y) > 0.002)) return bad(f, 'fora do lugar de quem a faz'); }
     if (de.op) { const op = G.Act.get(de.op); if (!op || !G.Act.live(op)) return bad(f, 'de uma operação que não está viva'); }
+    // (a gesture is the one its person is making: its act is the act the world shows; the water is of who bathes, the
+    // watching of who is at the play, the lute of the one the tavern has playing, the anvil of a batch at its hammering)
+    if (f.tipo === 'gesto') { const v = S.villagers.get(de.v); const t = v.task || {}; const g = G.Act.ANIM[f.g];
+      if (!g || g.act !== v.act) return bad(f, `com o gesto «${f.g}», que não é do ato «${v.act}»`);
+      if (f.g === 'banhar' && t.type !== 'termas') return bad(f, 'a água de quem não está no banho');
+      if (f.g === 'assistir' && t.type !== 'teatro') return bad(f, 'a plateia de quem não está no espetáculo');
+      if (f.g === 'tocar') { const b = S.buildings.get(v.inside); if (!b || b._music !== v.id) return bad(f, 'o alaúde de quem não está tocando'); }
+      if (f.g === 'forjar') { const op = G.Act.get(t.op); const s = op && G.Oficio.stage(op); if (t.type !== 'oficio' || !s || s.anim !== 'forjar') return bad(f, 'o martelo de quem não está numa fornada na bigorna'); } }
     if (de.b) { if (!S.buildings.has(de.b)) return bad(f, 'de um prédio que não existe'); }
     if (de.navio !== undefined) { const s = S.ships.find(x => x.id === de.navio); if (!s || !s.moving) return bad(f, 'de um navio parado ou que não existe'); }
     if (de.bicho !== undefined) { const a = S.animals.get(de.bicho); if (!a || a.dead) return bad(f, 'de um bicho morto ou que não existe'); }
@@ -178,10 +190,13 @@ function day() {
     if (!hit) ok('s6a as-termas', false, `ninguém no banho (${baths.length} termas abertas)`);
     else {
       const { b, v } = hit; const op = G.Termas.dia(b); const [bx, by] = mid(b);
+      // (and in the whole town about, the water sounds of nobody who is not in a bath: who sits elsewhere sits in silence)
+      const town = townOf(b); const wide = scene(earAt(town.cx, town.cy, { r: 45 }), 's6 cidade'); const dry = wide.fontes.filter(x => x.s === 'slosh' && (S.villagers.get(x.de.v).task || {}).type !== 'termas').length;
+      const sitters = [...S.villagers.values()].filter(p => p.set === b.set && p.act === 'sit' && !p.sleeping && (p.task || {}).type !== 'termas' && A.gestoDe(p) === 'banhar').length;
       const c = scene(earAt(bx + 2, by + 0.5, { inside: b.id }), 's6'); const f = c.fontes.find(x => x.de.v === v.id); const fur = c.fontes.find(x => x.s === 'fornalha' && x.de.b === b.id);
       const empty = baths.filter(x => x !== b && !Object.keys(G.Termas.dia(x).data.banho).length).map(x => { const [x0, y0] = mid(x); const cc = scene(earAt(x0 + 2, y0 + 0.5, { inside: x.id }), 's6 vazia'); return { id: x.id, slosh: cc.fontes.filter(q => q.s === 'slosh' && q.de.b === x.id).length, fur: cc.fontes.filter(q => q.s === 'fornalha' && q.de.b === x.id).length, calor: G.Termas.dia(x).data.calor }; });
-      ok('s6a as-termas', !!f && f.g === 'banhar' && f.s === 'slosh' && f.de.b === b.id && f.de.op === op.id && f.fam === 'noite' && f.muf === 0 && !!fur === (op.data.calor > 0) && (!fur || fur.de.op === op.id),
-        `${townOf(b).name}, termas #${b.id}, hora ${S.time.toFixed(2)}: ${v.name} #${v.id} no banho → «${f ? f.g : '?'}» som «${f ? f.s : '?'}», da operação #${f ? f.de.op : '?'}; a fornalha ${op.data.calor > 0 ? 'acesa' : 'apagada'} (calor ${r3(op.data.calor)}) ${fur ? 'ronca' : 'não ronca'}`);
+      ok('s6a as-termas', !!f && f.g === 'banhar' && f.s === 'slosh' && f.de.b === b.id && f.de.op === op.id && f.fam === 'noite' && f.muf === 0 && !!fur === (op.data.calor > 0) && (!fur || fur.de.op === op.id) && dry === 0 && sitters === 0,
+        `${townOf(b).name}, termas #${b.id}, hora ${S.time.toFixed(2)}: ${v.name} #${v.id} no banho → «${f ? f.g : '?'}» som «${f ? f.s : '?'}», da operação #${f ? f.de.op : '?'}; a fornalha ${op.data.calor > 0 ? 'acesa' : 'apagada'} (calor ${r3(op.data.calor)}) ${fur ? 'ronca' : 'não ronca'}; na cidade em volta, ${dry} som(ns) de água de quem não está no banho, ${sitters} sentado(s) fora das termas tomado(s) por banhista`);
       ok('s6b as-termas-vazias', empty.every(x => x.slosh === 0 && (x.fur > 0) === (x.calor > 0)), empty.length ? empty.map(x => `termas #${x.id}: ${x.slosh} som de água, fornalha ${x.calor > 0 ? 'acesa' : 'apagada'} ${x.fur ? 'ronca' : 'calada'}`).join('; ') : 'não há outras termas abertas sem banhista — a noite (s3b) diz o resto');
     }
   }
@@ -304,7 +319,9 @@ function s9() {
   // scene for three ears at every step, the player on (the world's own blows ring through it too), a beat of the music
   let worldDraws = 0, lookDraws = 0, inSound = 0;
   const life = sound => {
-    M.pronto(SMALL); const S = G.S; skipTo(0.3);
+    // (two days first, by the game's skip: the quarters have the life the town really lived — a ready world of before has none —,
+    // and the bed has what to say)
+    M.pronto(SMALL); M.saltar(2); const S = G.S; skipTo(0.3);
     const out = { plays: 0, scenes: 0, srcs: 0, lost: [], afterLoad: null };
     if (sound) { A.mute = false; A.sfxOn = true; A.ambOn = true; A.musicOn = true; A.gravar = true; A.tocou.length = 0; out.made0 = FakeAC.last.made; }
     const set = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
@@ -319,15 +336,19 @@ function s9() {
         for (const e of ears) { const c = scene(e, 's9'); out.scenes++; out.srcs += c.fontes.length; }
         // (the ear stays where it is through the next step: the world's own blows — G.Audio.at — are heard by it)
         A.ouvido = ears[k % 3]; FakeAC.last.currentTime += 0.1; out.plays += FakeAC.last.made - (out.m0 || FakeAC.last.made);
-        A.update(0.1); if (k % 8 === 0) A.batida();
+        // (the world of the proof stands at speed 0 and is stepped by hand: for the player it moves — a paused world's gestures do not ring)
+        const sp0 = G.speed; G.speed = 1; A.update(0.1); G.speed = sp0; if (k % 8 === 0) A.batida();
         out.m0 = FakeAC.last.made;
+        // (a world standing still makes no gesture: ten seconds of the player with the world paused ring nothing of the place)
+        if (k === 150) { const n0 = A.tocou.length; for (let j = 0; j < 40; j++) { FakeAC.last.currentTime += 0.3; A.update(0.3); } out.paused = A.tocou.length - n0; }
         // (what the place rang just now is of something alive)
-        for (const e of A.tocou.splice(0)) { const de = e.de || {}; const live2 = (de.v !== undefined && S2.villagers.has(de.v)) || (de.b && S2.buildings.has(de.b)) || (de.navio !== undefined && S2.ships.some(s => s.id === de.navio)) || (de.bicho !== undefined && S2.animals.has(de.bicho)); out.rung = (out.rung || 0) + 1; if (!live2 && out.lost.length < 5) out.lost.push(`${e.s} de ${JSON.stringify(de)}`); }
+        for (const e of A.tocou.splice(0)) { const de = e.de || {}; const live2 = (de.v !== undefined && S2.villagers.has(de.v)) || (de.b && S2.buildings.has(de.b)) || (de.navio !== undefined && S2.ships.some(s => s.id === de.navio)) || (de.bicho !== undefined && S2.animals.has(de.bicho)); out.rung = (out.rung || 0) + 1; if (!live2 && out.lost.length < 5) out.lost.push(`${e.s} de ${JSON.stringify(de)}`);
+          if (e.longe) { out.far = (out.far || 0) + 1; if (!(e.peso > 0.03)) out.farBad = (out.farBad || 0) + 1; } }
       } finally { inSound--; }
     }
     A.ouvido = null; out.plays = FakeAC.last && sound ? FakeAC.last.made - (out.made0 || 0) : 0;
     out.canon = QA.canon(); out.rng = G.S.rng; out.day = G.S.day; out.time = G.S.time; out.pop = G.S.villagers.size;
-    out.bad = QA.check().filter(q => q.sev <= 2).map(q => `S${q.sev} ${q.sys}: ${q.msg}`);
+    out.bad = QA.check().filter(q => q.sev <= 2 || q.sys === 'som').map(q => `S${q.sev} ${q.sys}: ${q.msg}`);
     return out;
   };
   global.AudioContext = FakeAC; G.Audio.init();
@@ -339,8 +360,8 @@ function s9() {
   ok('s9a a-mesma-vida', !d.length && a.rng === b.rng && a.day === b.day && a.time === b.time && a.scenes > 1000 && a.plays > 50 && !a.bad.length && !b.bad.length,
     `«${SMALL}», ${STEPS} passos com um save no meio (${a.pop} pessoas, hora ${a.time.toFixed(3)}): com o som — ${a.scenes} cenas, ${a.srcs} fontes, ${a.plays} nós de som feitos pelo tocador — e sem ele: ${d.length ? 'DIFERENTE: ' + d.slice(0, 4).join(' · ') : 'a mesma impressão do mundo'}, o acaso ${a.rng === b.rng ? 'igual' : 'DIFERENTE'}; verificador ${a.bad.length || b.bad.length ? a.bad.concat(b.bad).slice(0, 3).join(' · ') : 'limpo'}`);
   ok('s9b nenhum-sorteio-do-mundo', worldDraws === 0 && lookDraws > 0, `durante a cena e o tocador: ${worldDraws} sorteio(s) do acaso do mundo, ${lookDraws} do acaso do que só se vê ou se ouve`);
-  ok('s9d o-tocador-toca-o-que-existe', (a.rung || 0) > 20 && !a.lost.length && a.afterLoad === null,
-    `${a.rung || 0} sons de lugar tocados, cada um com a sua fonte viva${a.lost.length ? ' — SEM DONO: ' + a.lost.join('; ') : ''}; depois do load a cena guardada ${a.afterLoad === null ? 'foi largada (o mundo é outro)' : 'FICOU'}`);
+  ok('s9d o-tocador-toca-o-que-existe', (a.rung || 0) > 20 && !a.lost.length && a.afterLoad === null && a.paused === 0 && (a.far || 0) > 0 && !a.farBad,
+    `${a.rung || 0} sons de lugar tocados, cada um com a sua fonte viva${a.lost.length ? ' — SEM DONO: ' + a.lost.join('; ') : ''}; ${a.far || 0} deles do fundo do bairro (a voz longe de um trabalhador de verdade, onde o bairro tem hábito e mãos${a.farBad ? ' — ' + a.farBad + ' SEM PESO' : ''}); com o mundo parado, em 12 s do tocador: ${a.paused} som(ns) de lugar; depois do load a cena guardada ${a.afterLoad === null ? 'foi largada (o mundo é outro)' : 'FICOU'}`);
   // the code of the scene: it writes nothing, draws nothing, opens no door of the world (the rule the guard should hold)
   const src = fs.readFileSync(path.join(M.root, 'js/audio-src.js'), 'utf8').split('\n'); const hits = [];
   const code = l => l.replace(/(^|\s)\/\/\s.*$/, '');
@@ -421,7 +442,22 @@ function s12() {
   const f0 = look();
   stepIn(() => G.Nature.ignite(far, 0.9)); const farOn = G.Nature.fireSet.has(far); const f1 = look();
   stepIn(() => G.Nature.ignite(near, 0.9)); const nearOn = G.Nature.fireSet.has(near); const f2 = look();
-  A.ouvido = null; A.mute = true;
+  // ---- the world's own blows (G.Audio.at, rung in its step) are heard by the same ear: the side, the distance, the walls
+  const played = []; const play0 = A.play; A.play = (name, vol, sp) => { played.push({ name, vol, sp: sp || {} }); };
+  let blows = null;
+  try {
+    const house = [...S.buildings.values()].find(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && A.fechado(b.id) === b.id);
+    const [hx, hy] = house ? mid(house) : [x1, y1]; const ex = x1 + 2, ey = y1; // (the ear by the first tree, out in the woods: no roof about)
+    const free = (x, y) => G.W.inb(Math.floor(x), Math.floor(y)) && !S.occ[G.W.idx(Math.floor(x), Math.floor(y))];
+    const at = (ear, x, y, imp) => { played.length = 0; A.ouvido = ear; A.at(x, y, 'thud', imp); return played[0] || null; };
+    const north = A.earOf({ x: ex, y: ey, yaw: -Math.PI / 2 });
+    blows = { east: at(north, ex + 5, ey), west: at(north, ex - 5, ey), far: at(north, ex + 40, ey), farBig: at(north, ex + 40, ey, true), near: at(north, ex + 1, ey), mid: at(north, ex + 6, ey),
+      open: [[ex + 5, ey], [ex - 5, ey], [ex + 1, ey], [ex + 6, ey]].every(p => free(p[0], p[1])),
+      inHouse: house ? at(A.earOf({ x: hx + 4, y: hy, yaw: 0 }), hx, hy) : null, sameHouse: house ? at(A.earOf({ x: hx + 0.2, y: hy, yaw: 0, inside: house.id }), hx, hy) : null, house: !!house };
+  } finally { A.play = play0; A.ouvido = null; A.mute = true; }
+  const B = blows;
+  ok('s12b o-golpe-do-mundo-pelo-ouvido', B.open && !!B.east && B.east.sp.pan > 0.5 && !!B.west && B.west.sp.pan < -0.5 && B.far === null && !!B.farBig && B.farBig.vol >= 0.35 && !!B.near && !!B.mid && B.near.vol > B.mid.vol && B.house && !!B.inHouse && B.inHouse.sp.muf === 1 && !!B.sameHouse && B.sameHouse.sp.muf === 0,
+    `um golpe a 5 casas a leste: volume ${B.east ? r3(B.east.vol) : 'nenhum'}, pan ${B.east ? B.east.sp.pan : '?'}; a oeste: pan ${B.west ? B.west.sp.pan : '?'}; a 1 casa ${B.near ? r3(B.near.vol) : '?'}, a 6 casas ${B.mid ? r3(B.mid.vol) : '?'}; a 40 casas ${B.far ? 'TOCA' : 'não toca'}, e o importante (um raio, uma trompa) toca a ${B.farBig ? r3(B.farBig.vol) : '?'}; dentro de uma casa fechada, ouvido da rua: abafado ${B.inHouse ? B.inHouse.sp.muf : '?'}; ouvido da mesma casa: abafado ${B.sameHouse ? B.sameHouse.sp.muf : '?'}`);
   const [fx, fy] = xy(far);
   ok('s12 o-fogo-so-estala-perto', f0 === 0 && farOn && f1 === 0 && nearOn && f2 >= 1,
     `o ouvido em (${x1 + 2}, ${y1}), alcance ${A.EAR}: sem fogo ${f0} estalo(s); uma árvore em chamas a ${Math.round(Math.hypot(fx - x1, fy - y1))} casas ${farOn ? '' : '(NÃO PEGOU) '}→ ${f1}; a árvore ao lado em chamas ${nearOn ? '' : '(NÃO PEGOU) '}→ ${f2}`);
@@ -447,6 +483,24 @@ function s13() {
 }
 
 // =============================================================================================================
+// s14 the checker's own rules for the sound (qa/som-inv.js): clean on the world, and each one says what it sees
+// =============================================================================================================
+function s14() {
+  const som = () => QA.check().filter(x => x.sys === 'som').map(x => x.msg);
+  const clean = som();
+  // (a gesture with no line: the table, without one of its lines for a moment)
+  const keep = A.GESTO.forjar; delete A.GESTO.forjar; const noLine = som(); A.GESTO.forjar = keep;
+  // (a source of nobody, a number that is no number, a bed that sounds with no hands: the scene, wrapped for a moment)
+  const scene0 = A.scene; const twist = fn => { A.scene = function (ear) { const c = scene0.call(A, ear); if (c) fn(c); return c; }; const r = som(); A.scene = scene0; return r; };
+  const nobody = twist(c => c.fontes.push({ k: 'x', tipo: 'gesto', s: 'anvil', de: { v: -5 }, x: 1, y: 1, gain: 0.5, pan: 0, muf: 0 }));
+  const nan = twist(c => c.fontes.push({ k: 'y', tipo: 'bicho', s: 'bark', de: { bicho: [...G.S.animals.keys()][0] }, x: 1, y: 1, gain: NaN, pan: 0, muf: 0 }));
+  const handless = twist(c => { if (c.fundo) { c.fundo.w.saber = 0.5; c.fundo.maos.saber = 0; } });
+  const after = som();
+  ok('s14 o-verificador-ve', !clean.length && noLine.some(m => /gesto sem linha.*forjar/.test(m)) && nobody.some(m => /de ninguém/.test(m)) && nan.some(m => /número ou som inválido/.test(m)) && handless.some(m => /sem mãos/.test(m)) && !after.length,
+    `as regras do som no verificador (qa/som-inv.js): no mundo como está ${clean.length ? 'ACUSAM: ' + clean.slice(0, 2).join(' · ') : 'nada'}; a tabela sem a linha do «forjar» → «${(noLine[0] || 'NADA').slice(0, 70)}»; uma fonte de ninguém → «${(nobody[0] || 'NADA').slice(0, 70)}»; um ganho que não é número → ${nan.length ? 'acusado' : 'NADA'}; o fundo com peso e sem mãos → «${(handless[0] || 'NADA').slice(0, 80)}»; desfeito tudo, ${after.length ? 'AINDA ACUSA' : 'nada'}`);
+}
+
+// =============================================================================================================
 // s1 the table
 // =============================================================================================================
 function s1() {
@@ -465,6 +519,23 @@ function s1() {
   const round = Object.keys(AN).filter(k => AN[k].act).every(k => { const v = { act: AN[k].act, task: null, carry: null }; const g = A.gestoDe(v); return g === null || (AN[g] && AN[g].act === AN[k].act); });
   ok('s1b gesto-novo-sem-linha', !!g0 && caught && !A.semLinha().length && round, `um gesto registrado agora (addAnim) ${caught ? 'aparece como sem linha' : 'PASSA SEM LINHA'}; o gesto de cada ato é sempre um gesto desse ato: ${round ? 'sim' : 'NÃO'}`);
 }
+// (which gesture an act is, where several gestures share it — or none: by the errand, the load, the gear. The rule alone,
+// asked for a person as the world would have them: nobody need be sitting in the town for the proof to know who bathes)
+function s1d() {
+  const C = { k: 'food', n: 2 };
+  const want = [['sit', { type: 'lar' }, null, 'sentar'], ['sit', { type: 'tavern' }, null, 'sentar'], ['sit', { type: 'termas' }, null, 'banhar'], ['sit', { type: 'teatro' }, null, 'assistir'],
+    ['talk', { type: 'atuar' }, null, 'atuar'], ['talk', { type: 'social' }, null, 'falar'], ['write', { type: 'copiar' }, null, 'copiar'], ['write', { type: 'desk' }, null, 'escrever'],
+    ['lift', { type: 'descarga' }, null, 'levantar'], ['lift', { type: 'carga' }, C, 'pousar'], ['arrange', { type: 'banca' }, C, 'porNaBanca'], ['arrange', { type: 'banca' }, null, 'tirarDaBanca'],
+    ['fight', { type: 'combat' }, null, null], ['fight', { type: 'drill' }, null, null], ['fight', { type: 'atuar' }, null, 'lutarJogo'], ['feed', { type: 'fodder' }, null, null], ['feed', { type: 'fornalha' }, null, 'alimentarFogo'],
+    ['craft', { type: 'mint' }, null, 'cunhar'], ['craft', { type: 'caverna' }, null, null], ['fill', { type: 'water' }, null, null], ['fish', { type: 'fish', how: 'rede' }, null, 'pescarRede'], ['fish', { type: 'fish' }, null, 'pescarMaos'],
+    ['pay', { type: 'banca' }, null, 'receberMoedas'], ['pay', { type: 'compra' }, null, 'pagar'], ['play', { type: 'tavern' }, null, 'tocar'], ['forge', { type: 'oficio' }, null, 'forjar'], ['drink', { type: 'fest' }, null, 'beber'],
+    ['chop', { type: 'chop' }, null, null], ['dance', { type: 'fest' }, null, null], ['harvest', { type: 'farm' }, null, null], ['', { type: 'idle' }, null, null]];
+  const wrong = want.filter(([act, task, carry, g]) => A.gestoDe({ act, task, carry }) !== g).map(([act, task, carry, g]) => `«${act}» na tarefa ${task.type}${carry ? ' com carga' : ''}: ${A.gestoDe({ act, task, carry })} (devia ser ${g})`);
+  // (and what the acts of no gesture sound like: the sparring of a drill is wood on wood, the blow of a war is the world's to ring)
+  const spar = A.linhaDe({ act: 'fight', task: { type: 'drill' } }), war = A.linhaDe({ act: 'fight', task: { type: 'combat' } }), fire = A.linhaDe({ act: 'beat', task: { type: 'fire' } });
+  ok('s1d o-gesto-pelo-ato-e-pela-tarefa', !wrong.length && spar.linha.s === 'clack' && war.linha.s === null && war.linha.mundo === 1 && fire.linha.s === 'thud',
+    `${want.length} perguntas à regra (A.gestoDe): ${wrong.length ? 'ERRADAS: ' + wrong.slice(0, 5).join('; ') : 'todas certas — sentado em casa «sentar», nas termas «banhar», no teatro «assistir»; a luta do treino soa a madeira, a da guerra é o mundo que toca'}`);
+}
 function s1c() {
   const list = Object.keys(unlined);
   ok('s1c todo-ato-visto-tem-linha', !list.length && (!!ONLY || actsSeen > 5000), `${actsSeen} atos olhados em pessoas ao longo da prova: ${list.length ? 'SEM LINHA: ' + list.slice(0, 8).join(', ') : 'todos com linha (um som, ou um silêncio dito)'}`);
@@ -473,14 +544,15 @@ function s1c() {
 // =============================================================================================================
 const hr = () => Number(process.hrtime.bigint() / 1000000n); const t0 = hr();
 M.pronto(WORLD); M.viver(1); cover();
-if (on('s1')) s1();
+if (on('s1')) { s1(); s1d(); }
 if (on('s2')) s2();
 if (on('s8')) s8();
 if (on('s3') || on('s4') || on('s5') || on('s6')) day();
 if (on('s11')) { if (G.S.time > 0.6 || G.S.time < 0.2) skipTo(0.33); M.viver(2); s11(); }
+if (on('s14')) { if (G.S.time > 0.6 || G.S.time < 0.2) skipTo(0.33); M.viver(2); s14(); }
 if (on('s1') && (on('s3') || on('s4') || on('s5') || on('s6'))) s1c();
 if (on('s10')) ok('s10 toda-fonte-tem-dono', !orphans.length && (!!ONLY || (scenes > 10 && sources > 30)), `${scenes} cenas e ${sources} fontes olhadas ao longo da prova (as do s9 e do s7 entram no fim): ${orphans.length ? 'SEM DONO: ' + orphans.join(' · ') : 'cada uma de uma pessoa acordada num ato, um prédio com a operação viva, um navio que anda ou um bicho vivo'}`);
-{ const bad = QA.check().filter(q => q.sev <= 2).map(q => `S${q.sev} ${q.sys}: ${q.msg}`); ok('verificador', !bad.length, bad.length ? bad.slice(0, 4).join(' · ') : `«${WORLD}» limpo depois do dia da prova`); }
+{ const bad = QA.check().filter(q => q.sev <= 2 || q.sys === 'som').map(q => `S${q.sev} ${q.sys}: ${q.msg}`); ok('verificador', !bad.length, bad.length ? bad.slice(0, 4).join(' · ') : `«${WORLD}» limpo depois do dia da prova`); }
 if (on('s7')) s7();
 if (on('s9')) s9();
 if (on('s12')) s12();
