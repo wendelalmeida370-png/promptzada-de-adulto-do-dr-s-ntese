@@ -15,7 +15,8 @@
 //                      world's map, the plan's doorsteps, the steps before the doors —, before no door or gate, on no window,
 //                      none on another; the same with the plans made and not made
 //   q4  o quadro       the picture is made again only for what it shows: the same world, the same signature; a change that
-//                      shows nothing, the same; a house with no room for things, the same with a jar of wine
+//                      shows nothing, the same; a house with no room for things, the same with a jar of wine; the first
+//                      picture of a building is not made twice; a store's heaps are in its signature
 //   q5  só desenha     every piece asked, the plans made, the near pictures built: the world the same to the last number
 //   q6  o save         saved and loaded in the middle: the same pieces about every building
 //   q7  o verificador  the rules of qa/quintal-inv.js (QA.yard) clean over the world — and each accuses a lie told by the test's
@@ -61,6 +62,9 @@ const raw = b => rawOps(b).reduce((a, o) => a + (o.data.cru || 0), 0);
 const things = b => PR.pieces(b).filter(p => !p.part).map(p => p.thing).filter(Boolean);
 const sigOf = b => B3.sig(b.x, b.y, 1);
 const kindOf = b => { const s = B3.shellOf(b); return s ? s.shell.kind : 'kit'; };
+// (before any picture is made: whether each building's picture has room for things, as its chunk's signature first has it —
+// told by its shell alone; q4 looks at it again once drawn)
+const firstRoom = new Map(mine().map(b => [b.id, PR.yardOf(b)]));
 
 // ------------------------------ q1: the place ------------------------------
 if (run('q1')) {
@@ -162,6 +166,12 @@ if (run('q4')) {
   const H = built().filter(housing); for (const b of H) PR.pieces(b); // (every house drawn once: its room known)
   // the same world, the same signature
   const s0 = H.map(sigOf); flush(); const s1 = H.map(sigOf); const drift = s0.filter((q, k) => q !== s1[k]).length; if (drift) bad.push(`${drift} casas com outra assinatura sem nada mudar`);
+  // the first picture is not made twice: whether a building's picture has room for things — what its signature counts — is
+  // told by its shell alone before any picture of it, and is the same once it is drawn (but where every span of its strips
+  // is cut away by its doors and steps: said)
+  { const B = mine(); for (const b of B) PR.pieces(b); const twice = B.filter(b => firstRoom.get(b.id) !== PR.yardOf(b)); const cut = twice.filter(b => firstRoom.get(b.id) && PR.roomOf(b) === 0); const had = B.filter(b => firstRoom.get(b.id)).length;
+    info.push(`o primeiro quadro: ${B.length} prédios, ${had} com lugar pela casca antes de qualquer desenho, ${twice.length} com outra resposta depois de desenhados${cut.length ? ' (' + cut.length + ' sem vão nenhum depois dos cortes)' : ''}`);
+    if (twice.length - cut.length > 0 || cut.length > Math.max(2, B.length * 0.02) || had < B.length * 0.8) bad.push(`${twice.length} prédios têm o primeiro quadro feito duas vezes (o lugar para coisas só é sabido depois do primeiro desenho; ${had} de ${B.length} com lugar pela casca): ${twice.slice(0, 3).map(tag).join(', ')}`); }
   // a change that shows nothing: a trade with no thing of its own (a builder becomes a smith)
   const plainH = H.find(b => res(b).some(v => v.role === 'construtor' && v.age >= 14 && !v.captive));
   if (plainH) { const v = res(plainH).find(q => q.role === 'construtor' && q.age >= 14 && !q.captive); const a = sigOf(plainH); v.role = 'ferreiro'; flush(); const c = sigOf(plainH); v.role = 'construtor'; flush(); info.push(`${tag(plainH)}: um construtor vira ferreiro — o quadro ${a === c ? 'o mesmo' : 'REFEITO'}`); if (a !== c) bad.push(`${tag(plainH)} refeita por um ofício que não mostra nada`); }

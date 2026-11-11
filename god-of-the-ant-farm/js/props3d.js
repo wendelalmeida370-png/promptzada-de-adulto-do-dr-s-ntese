@@ -21,6 +21,12 @@
 //  never out on a street, on the ground (or on the plinth), and
 //  goes into the chunk's one geometry with its building (no draw
 //  calls of its own). Only where the machine carries detail.
+//  A building drawn from its plan fills its lot or nearly: its
+//  strips are read from its shell (shellSlots, D-186) — deep
+//  ones as a yard's, a hand's depth for things made thin, that
+//  stand on the footing's ledge or hang on the wall (D-187); a
+//  round hut's, the corners of its lot. On the lot always:
+//  nobody walks there, and nothing here is solid to the body.
 // ============================================================
 (function (G) {
   const W = G.W;
@@ -57,21 +63,16 @@
   // stand). Never before a door or a gate, nor where a flight of steps is laid (Build3D's own: K.steps); nothing on a side an
   // outside flight goes up along; none round a house on posts but on its ground. Null: no shell to read (drawn as before)
   const LEDGE = -0.02, THIN = 0.06, THIN_MAX = 0.15, GROUND = 0.22;
-  function shellSlots(K) {
-    const B3 = G.Build3D; const S = B3 && B3.shellOf ? B3.shellOf(K.b) : null; if (!S || !S.shell) return null;
-    if (S.shell.kind === 'round') return roundSlots(K, S); if (S.shell.kind !== 'rect') return null;
-    const sh = S.shell; const byLv = new Map(S.levels.map(l => [l.lv, l]));
-    const body = S.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y); const l0 = body[0] || S.levels[0];
+  // (the strips a rectangular shell leaves on a lot of w × d, from the shell alone — before any cut: side by side, piece by
+  // piece along it, the outer face nearest the lot's edge there, how deep the strip is and whether it is thin)
+  function runsOf(S, w, d) {
+    const sh = S.shell; const body = S.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y); const l0 = body[0] || S.levels[0];
     const raised = !!l0 && (l0.kind === 'elevado' || sh.base === 'esteios');
-    // (the peoples whose windows have shutters, open flat on the wall beside them: Build3D's winDress)
-    const shut = K.st === 'classico' || K.st === 'grego' || K.st === 'romano' || K.st === 'nordico';
     const solids = [{ r: sh.r, k: 'wall' }]; for (const a of sh.annex || []) solids.push({ r: a.r, k: 'wall' });
     if (sh.yard) solids.push({ r: sh.yard.r, k: 'fence' }); for (const st of S.steps || []) solids.push({ r: st.r, k: 'stair' });
-    // (the treads Build3D laid before the doors and the gates, on the lot)
-    const treads = (K.steps || []).map(t => [t[0] - K.x0, t[2] - K.z0, t[1] - K.x0, t[3] - K.z0]);
     const out = [];
     for (const [side, o] of [['S', [0, 1]], ['N', [0, -1]], ['E', [1, 0]], ['W', [-1, 0]]]) {
-      const ax = o[1] !== 0, sg = o[0] + o[1]; const edge = sg > 0 ? (ax ? K.d : K.w) : 0;
+      const ax = o[1] !== 0, sg = o[0] + o[1]; const edge = sg > 0 ? (ax ? d : w) : 0;
       const ext = q => (ax ? [q.r[0], q.r[2]] : [q.r[1], q.r[3]]), faceOf = q => (sg > 0 ? (ax ? q.r[3] : q.r[2]) : (ax ? q.r[1] : q.r[0]));
       // (along the side, piece by piece: the outer face nearest the lot's edge there)
       const cuts = [...new Set(solids.flatMap(q => ext(q)))].sort((a, b) => a - b); const runs = [];
@@ -82,39 +83,56 @@
         if (last && last.q === best.q && Math.abs(last.u1 - u0) < 1e-6) last.u1 = u1; else runs.push({ q: best.q, d: best.d, u0, u1 });
       }
       for (const run of runs) {
-        const q = run.q; if (q.k === 'stair') continue; const face = faceOf(q); const fence = q.k === 'fence';
+        const q = run.q; if (q.k === 'stair') continue; const fence = q.k === 'fence';
         const off = fence ? 0.03 : raised ? 0.1 : 0.2; const gd = run.d - 0.05 - off - 0.02;
         let depth, thin = false;
         if (gd >= GROUND) depth = gd; else if (!fence && !raised) { depth = Math.min(THIN_MAX, run.d - 0.02); thin = true; if (depth < THIN) continue; } else continue;
-        // (the openings of the walls on this face: the doors and the gates cut the strip; the windows of the ground storey
-        // keep what is thin clear of them)
-        const F = { ax, o, line: face, u0: run.u0, u1: run.u1 }; const cut = [], wins = []; let da = null;
-        for (const h of S.holes) {
-          const w = S.byId.get(h.wall); const l = w && byLv.get(w.lv); if (!l || l.kind === 'terraco' || w.kind === 'parapeito' || w.kind === 'guarda-corpo' || !wallOn(w, F)) continue;
-          const Lw = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const uc = ax ? w.a[0] + (w.b[0] - w.a[0]) / Lw * h.at : w.a[1] + (w.b[1] - w.a[1]) / Lw * h.at; const y0 = l.y + (h.sill || 0);
-          if (h.kind !== 'janela') { if (y0 < 2.2) { cut.push([uc - h.w / 2 - 0.65, uc + h.w / 2 + 0.65]); if (da === null || Math.abs(uc - (run.u0 + run.u1) / 2) < Math.abs(da - (run.u0 + run.u1) / 2)) da = uc; } }
-          else if (y0 < 2.4) { const reach = h.w / 2 + 0.2 + (shut ? h.w / 2 + 0.13 : 0); wins.push([uc - reach, uc + reach, y0 - 0.45]); }
-        }
-        // (and the steps laid in the strip: a flight along the wall, the steps of a gate)
-        const n0 = Math.min(face, edge) - 0.05, n1 = Math.max(face, edge) + 0.05;
-        for (const t of treads) { const a = ax ? [t[0], t[2]] : [t[1], t[3]], n = ax ? [t[1], t[3]] : [t[0], t[2]]; if (n[1] > n0 && n[0] < n1 && a[1] > run.u0 && a[0] < run.u1) cut.push([a[0] - 0.12, a[1] + 0.12]); }
-        const inset = fence || K.st !== 'nordico' ? 0.1 : 0.22; // (clear of the corners: the north's posts stand a hand out of them)
-        let spans = [[run.u0 + inset, run.u1 - inset]];
-        for (const c of cut) spans = spans.flatMap(s => (c[1] <= s[0] || c[0] >= s[1] ? [s] : [[s[0], c[0]], [c[1], s[1]]]));
-        for (const s of spans) { if (s[1] - s[0] < 0.3) continue;
-          out.push({ side, o, ax, a0: s[0], a1: s[1], cur: s[0], wall: face + sg * (thin ? 0 : off), depth, ry: Math.atan2(o[0], o[1]), door: da !== null, da: da === null ? 0 : da, near: da === null ? 0 : Math.abs((s[0] + s[1]) / 2 - da), thin, fence, wins: thin ? wins : NOWINS }); }
+        out.push({ side, o, ax, sg, edge, face: faceOf(q), fence, off, depth, thin, u0: run.u0, u1: run.u1 });
       }
     }
     return out;
   }
+  function shellSlots(K) {
+    const B3 = G.Build3D; const S = B3 && B3.shellOf ? B3.shellOf(K.b) : null; if (!S || !S.shell) return null;
+    if (S.shell.kind === 'round') return roundSlots(K, S); if (S.shell.kind !== 'rect') return null;
+    const byLv = new Map(S.levels.map(l => [l.lv, l]));
+    // (the peoples whose windows have shutters, open flat on the wall beside them: Build3D's winDress)
+    const shut = K.st === 'classico' || K.st === 'grego' || K.st === 'romano' || K.st === 'nordico';
+    // (the treads Build3D laid before the doors and the gates, on the lot)
+    const treads = (K.steps || []).map(t => [t[0] - K.x0, t[2] - K.z0, t[1] - K.x0, t[3] - K.z0]);
+    const out = [];
+    for (const run of runsOf(S, K.w, K.d)) {
+      const { side, o, ax, sg, edge, face, fence, off, depth, thin } = run;
+      // (the openings of the walls on this face: the doors and the gates cut the strip; the windows of the ground storey
+      // keep what is thin clear of them)
+      const F = { ax, o, line: face, u0: run.u0, u1: run.u1 }; const cut = [], wins = []; let da = null;
+      for (const h of S.holes) {
+        const w = S.byId.get(h.wall); const l = w && byLv.get(w.lv); if (!l || l.kind === 'terraco' || w.kind === 'parapeito' || w.kind === 'guarda-corpo' || !wallOn(w, F)) continue;
+        const Lw = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const uc = ax ? w.a[0] + (w.b[0] - w.a[0]) / Lw * h.at : w.a[1] + (w.b[1] - w.a[1]) / Lw * h.at; const y0 = l.y + (h.sill || 0);
+        if (h.kind !== 'janela') { if (y0 < 2.2) { cut.push([uc - h.w / 2 - 0.65, uc + h.w / 2 + 0.65]); if (da === null || Math.abs(uc - (run.u0 + run.u1) / 2) < Math.abs(da - (run.u0 + run.u1) / 2)) da = uc; } }
+        else if (y0 < 2.4) { const reach = h.w / 2 + 0.2 + (shut ? h.w / 2 + 0.13 : 0); wins.push([uc - reach, uc + reach, y0 - 0.45]); }
+      }
+      // (and the steps laid in the strip: a flight along the wall, the steps of a gate)
+      const n0 = Math.min(face, edge) - 0.05, n1 = Math.max(face, edge) + 0.05;
+      for (const t of treads) { const a = ax ? [t[0], t[2]] : [t[1], t[3]], n = ax ? [t[1], t[3]] : [t[0], t[2]]; if (n[1] > n0 && n[0] < n1 && a[1] > run.u0 && a[0] < run.u1) cut.push([a[0] - 0.12, a[1] + 0.12]); }
+      const inset = fence || K.st !== 'nordico' ? 0.1 : 0.22; // (clear of the corners: the north's posts stand a hand out of them)
+      let spans = [[run.u0 + inset, run.u1 - inset]];
+      for (const c of cut) spans = spans.flatMap(s => (c[1] <= s[0] || c[0] >= s[1] ? [s] : [[s[0], c[0]], [c[1], s[1]]]));
+      for (const s of spans) { if (s[1] - s[0] < 0.3) continue;
+        out.push({ side, o, ax, a0: s[0], a1: s[1], cur: s[0], wall: face + sg * (thin ? 0 : off), depth, ry: Math.atan2(o[0], o[1]), door: da !== null, da: da === null ? 0 : da, near: da === null ? 0 : Math.abs((s[0] + s[1]) / 2 - da), thin, fence, wins: thin ? wins : NOWINS }); }
+    }
+    return out;
+  }
   const NOWINS = [];
+  // (a corner of the lot of a round hut: the side of the square that stands out of its ring and of the stones round its foot)
+  const cornerOf = (sh, cx, cz) => Math.min(1, (Math.hypot(cx - sh.cx, cz - sh.cz) - sh.r - 0.22) / Math.SQRT2 - 0.05);
   // (a round hut fills its lot to its edge on the four sides: what lies about it stands on the ground of the lot's corners,
   // out of its ring and of the stones round its foot — a square a stride across at the most; none where a step is laid)
   function roundSlots(K, S) {
     const sh = S.shell, m = 0.05, out = []; const D = K.body && K.body.door; const da = D ? (D.o[1] !== 0 ? K.body.x : K.body.z) + D.a : 0;
     const treads = (K.steps || []).map(t => [t[0] - K.x0, t[2] - K.z0, t[1] - K.x0, t[3] - K.z0]);
     for (const [side, o, e] of [['S', [0, 1], 0], ['S', [0, 1], 1], ['N', [0, -1], 0], ['N', [0, -1], 1]]) {
-      const cx = e ? K.w : 0, cz = o[1] > 0 ? K.d : 0; const a = Math.min(1, (Math.hypot(cx - sh.cx, cz - sh.cz) - sh.r - 0.22) / Math.SQRT2 - m); if (a < 0.3) continue;
+      const cx = e ? K.w : 0, cz = o[1] > 0 ? K.d : 0; const a = cornerOf(sh, cx, cz); if (a < 0.3) continue;
       const a0 = e ? K.w - m - a : m, z0 = o[1] > 0 ? K.d - m - a : m; if (treads.some(t => t[2] > a0 - 0.1 && t[0] < a0 + a + 0.1 && t[3] > z0 - 0.1 && t[1] < z0 + a + 0.1)) continue;
       const door = !!D && D.side === side;
       out.push({ side, o, ax: true, a0, a1: a0 + a, cur: a0, wall: o[1] > 0 ? z0 : z0 + a, depth: a - 0.02, ry: Math.atan2(o[0], o[1]), door, da: door ? da : 0, near: door ? Math.abs(a0 + a / 2 - da) : 0, thin: false, fence: false, corner: true, wins: NOWINS });
@@ -632,7 +650,15 @@
   // one drawn from its plan fills its lot, and has it only if its last picture found a strip to put things on. Build3D's
   // signature asks: what a house with no yard has about it changes nothing in its picture)
   const yard = new Map(); G.worldHooks.push(() => yard.clear());
-  P3.yardOf = b => !!KIND[b.type] && (!(G.Build3D && G.Build3D.shellOf && G.Build3D.shellOf(b)) || yard.get(b.id) > 0);
+  // (before its first picture: by its shell alone — a strip on its lot, thin only for a house —, so that the signature counts
+  // what lies about it from the start, and its first picture is not made twice)
+  function roomBy(b) {
+    const S = G.Build3D.shellOf(b), sh = S && S.shell; if (!sh || (sh.kind !== 'rect' && sh.kind !== 'round')) return true;
+    const L = G.Space.TILE, w = b.w * L, d = b.h * L; const thin = KIND[b.type] === home;
+    if (sh.kind === 'round') return thin && [[0, 0], [w, 0], [0, d], [w, d]].some(c => cornerOf(sh, c[0], c[1]) >= 0.3);
+    return runsOf(S, w, d).some(r => (thin || !r.thin) && r.u1 - r.u0 >= 0.5);
+  }
+  P3.yardOf = b => !!KIND[b.type] && (!(G.Build3D && G.Build3D.shellOf && G.Build3D.shellOf(b)) || (yard.has(b.id) ? yard.get(b.id) > 0 : roomBy(b)));
   P3.roomOf = b => yard.get(b.id); // (for the proofs: the strips its last picture had for things — undefined, never drawn)
   const span = new Map(); G.worldHooks.push(() => span.clear());
   P3.spanOf = b => span.get(b.id) || 0; // (and the longest of them, metres along its wall)
