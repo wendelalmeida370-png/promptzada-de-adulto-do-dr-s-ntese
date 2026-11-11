@@ -122,21 +122,23 @@
     for (const f of Po.onEnd) f(why, v, detail, a);
     return v;
   };
-  function died(rec, cause, a) {
+  function died(rec, cause, a, beast) {
     const S = G.S; if (!a) return;
     S.avatar = null; cur = null; drop();
-    record(rec, a, 'morte', cause);
+    record(rec, a, 'morte', cause, beast);
     for (const f of Po.onEnd) f('morte', rec, cause, a);
   }
   // what the time in the body leaves in the world: a line of the biography, a line of the chronicle
-  function record(v, a, why, cause) {
+  function record(v, a, why, cause, beast) {
     const S = G.S; const days = Math.max(0, S.day - a.since); const dd = summary(a.deeds);
     if (why !== 'morte') G.Life && G.Life.bio(v, 'god', days, dd);
     else if (v.bio) { v.bio.push([S.day, 'god', days, dd, 1]); }
     const set = S.settlements.get(v.set);
     if (why === 'morte') {
       // (the death is already in the chronicle when the world tells of it: that line says it happened in the god's body)
-      const dt = G.Village.deathText({ ...v, cause }); const H = S.history; let told = false;
+      // (the text the world told it with: the beast by its name where the world knew it — the record of the dead keeps no beast,
+      // and «uma fera» found no line of «um rinoceronte»: the death told twice, L-698)
+      const dt = G.Village.deathText({ ...v, cause, lastBeast: beast !== undefined ? beast : v.lastBeast }); const H = S.history; let told = false;
       for (let k = H.length - 1, m = 0; k >= 0 && m < 12; k--, m++) { const e = H[k]; if (e.d !== S.day) break; if (e.txt.includes(v.name) && e.txt.includes(dt)) { e.txt = e.txt.replace(/\.$/, '') + ' — com o deus vivendo em seu corpo.'; told = true; break; } }
       if (!told) G.Village.log(`${v.name}${set ? ' de ' + set.name : ''} ${dt} — com o deus vivendo em seu corpo.`, 'skull', v.x, v.y);
     }
@@ -363,7 +365,7 @@
   G.Village.kill = function (v, cause, byGod) {
     const a = G.S && G.S.avatar; const was = !!(a && v && a.id === v.id);
     const r = kill0.apply(this, arguments);
-    if (was && G.S.avatar === a && !G.S.villagers.has(v.id)) died(G.S.dead.get(v.id) || v, cause, a);
+    if (was && G.S.avatar === a && !G.S.villagers.has(v.id)) died(G.S.dead.get(v.id) || v, cause, a, v.lastBeast);
     return r;
   };
   // what the body witnessed: the chronicle's lines told near it, while it was lived

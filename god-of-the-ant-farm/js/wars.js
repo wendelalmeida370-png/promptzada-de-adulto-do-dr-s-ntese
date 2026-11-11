@@ -427,8 +427,11 @@
     // (the levy is chosen with the hands free, D-094: the call cannot wait, but the choice is made before it, among many — a
     // purchase for home went to the muster in the arms, the material of a work to the war, L-461; the hands are free in a
     // moment, and the next levy finds them so)
+    // (one called to an army is on its list until it forms or ends — also one whose call a danger took, back at his work: the
+    // list is the truth, not the task, and a second levy of his people does not take him: «em dois exércitos», L-687)
+    const listed = new Set(); for (const a0 of armies()) if (!a0.done) for (const id of a0.members) listed.add(id);
     for (const v of S.villagers.values()) {
-      if (fid(v) !== f.id || keep.has(v.id) || !canServe(v) || G.Vg.handsBusy(v)) continue;
+      if (fid(v) !== f.id || keep.has(v.id) || !canServe(v) || listed.has(v.id) || G.Vg.handsBusy(v)) continue;
       if (v.id === f.leader && role !== 'defesa' && !(G.Politics.leaderPe(f).agg > 0.7 && G.R() < 0.5)) continue;
       if (land && land[W.idx(v.x, v.y)] !== myLand) continue;
       const d = dist(v.x, v.y, muster[0], muster[1]); if (d > 70) continue;

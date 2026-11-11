@@ -16,11 +16,14 @@
   // cls: land | water | air | amph (land near water, swims too)
   // diet: herb (grass), browse (leaves & fruit), insect, fish, filter, carn, omni, scav
   // dens: animals per 100 habitat tiles · herd: group size · life: years · breed: young per year when fed
+  // (the small ones that breed fast — the rabbit, the hare, the frog, the lizard — keep to a density near the others': at 3 and 4.5
+  // a hundred tiles they were a third of all the wild life of a continent for good, the frog and the rabbit one in seven each,
+  // every river bank a line of frogs — the owner's «a plague of frogs and rabbits», D-151)
   // fear: flees people inside this radius · bold: will attack people · hunt: people hunt it
   const SP = A.DEF = {
     // ---------------- grazers & browsers ----------------
-    rabbit: { name: 'Coelho', g: 'm', cls: 'land', diet: 'herb', hab: [0, 2, 5], dens: 3.0, herd: [2, 3], hp: 10, sp: 1.1, run: 3.0, meat: 3, size: 0.8, fear: 3.5, life: 4, breed: 2.2, app: 0.3, hunt: true, art: 'rabbit', col: ['#b89a7a', '#9a7a5a'] },
-    hare: { name: 'Lebre-ártica', g: 'f', cls: 'land', diet: 'herb', hab: [1, 2], dens: 2.4, herd: [1, 3], hp: 10, sp: 1.1, run: 3.2, meat: 3, size: 0.85, fear: 3.5, life: 4, breed: 2, app: 0.3, hunt: true, art: 'rabbit', col: ['#f4f4ee', '#d8d8d0'] },
+    rabbit: { name: 'Coelho', g: 'm', cls: 'land', diet: 'herb', hab: [0, 2, 5], dens: 1.7, herd: [2, 3], hp: 10, sp: 1.1, run: 3.0, meat: 3, size: 0.8, fear: 3.5, life: 4, breed: 2.2, app: 0.3, hunt: true, art: 'rabbit', col: ['#b89a7a', '#9a7a5a'] },
+    hare: { name: 'Lebre-ártica', g: 'f', cls: 'land', diet: 'herb', hab: [1, 2], dens: 1.5, herd: [1, 3], hp: 10, sp: 1.1, run: 3.2, meat: 3, size: 0.85, fear: 3.5, life: 4, breed: 2, app: 0.3, hunt: true, art: 'rabbit', col: ['#f4f4ee', '#d8d8d0'] },
     deer: { name: 'Cervo', g: 'm', cls: 'land', diet: 'herb', hab: [0, 2], dens: 1.3, herd: [2, 4], hp: 26, sp: 1.0, run: 3.1, meat: 7, size: 1, fear: 5.2, life: 10, breed: 0.8, app: 1, hunt: true, art: 'quad', q: { len: 4, h: 5, leg: 4, neck: 4, col: '#b07a48', belly: '#e8d8c0', antler: 1, tail: 'tuft' } },
     reindeer: { name: 'Rena', g: 'f', cls: 'land', diet: 'herb', hab: [1, 2], dens: 1.2, herd: [3, 6], hp: 30, sp: 0.95, run: 2.9, meat: 8, size: 1.05, fear: 5, life: 10, breed: 0.75, app: 1, hunt: true, art: 'quad', q: { len: 4.2, h: 5, leg: 4, neck: 3.5, col: '#8a7866', belly: '#e8e2d8', antler: 2, collar: '#f0ece4' } },
     muskox: { name: 'Boi-almiscarado', g: 'm', cls: 'land', diet: 'herb', hab: [1], dens: 0.5, herd: [3, 5], hp: 60, sp: 0.7, run: 2.1, meat: 14, size: 1.2, fear: 2.5, defend: true, life: 14, breed: 0.5, app: 1.6, hunt: true, art: 'quad', q: { len: 4.6, h: 3.4, leg: 2.6, neck: 1.2, col: '#4a3a2e', belly: '#6a5646', shag: 1, horn: 'curl' } },
@@ -34,8 +37,8 @@
     elephant: { name: 'Elefante', g: 'm', cls: 'land', diet: 'browse', hab: [5, 4], dens: 0.35, herd: [3, 5], hp: 170, sp: 0.7, run: 1.9, meat: 40, size: 1.9, fear: 3, defend: true, life: 40, breed: 0.2, app: 3.5, hunt: true, art: 'elephant' },
     camel: { name: 'Camelo', g: 'm', cls: 'land', diet: 'browse', hab: [6, 5], dens: 0.6, herd: [2, 4], hp: 50, sp: 0.85, run: 2.4, meat: 14, size: 1.25, fear: 3.5, life: 25, breed: 0.35, app: 1, hunt: true, art: 'quad', q: { len: 4.4, h: 5.4, leg: 4.6, neck: 4, col: '#c8a066', belly: '#dcc08c', hump: 1, tail: 'tuft' } },
     hippo: { name: 'Hipopótamo', g: 'm', cls: 'amph', diet: 'herb', hab: [5, 4, 3], near: 'water', dens: 0.9, herd: [2, 4], hp: 130, sp: 0.6, run: 2.2, meat: 30, size: 1.5, fear: 2, defend: true, bold: 0.25, life: 30, breed: 0.3, app: 2.4, hunt: false, art: 'quad', q: { len: 5, h: 3.4, leg: 1.8, neck: 1, col: '#7a6470', belly: '#b08a90', stout: 2, ear: 0.4, noTail: 1, snout: 2 } },
-    frog: { name: 'Rã', g: 'f', cls: 'land', diet: 'insect', hab: [3, 4, 0], near: 'water', swims: 1, dens: 4.5, herd: [1, 2], hp: 4, sp: 0.8, run: 2.2, meat: 1, size: 0.6, fear: 2, life: 3, breed: 2.8, app: 0.1, hunt: false, art: 'frog' },
-    lizard: { name: 'Lagarto', g: 'm', cls: 'land', diet: 'insect', hab: [6, 5], dens: 3.0, herd: [1, 1], hp: 6, sp: 0.9, run: 2.6, meat: 1, size: 0.65, fear: 2.5, life: 4, breed: 2.2, app: 0.1, hunt: false, art: 'lizard', col: ['#9a8a4a', '#c8b060'] },
+    frog: { name: 'Rã', g: 'f', cls: 'land', diet: 'insect', hab: [3, 4, 0], near: 'water', swims: 1, dens: 2.2, herd: [1, 2], hp: 4, sp: 0.8, run: 2.2, meat: 1, size: 0.6, fear: 2, life: 3, breed: 2.8, app: 0.1, hunt: false, art: 'frog' },
+    lizard: { name: 'Lagarto', g: 'm', cls: 'land', diet: 'insect', hab: [6, 5], dens: 1.9, herd: [1, 1], hp: 6, sp: 0.9, run: 2.6, meat: 1, size: 0.65, fear: 2.5, life: 4, breed: 2.2, app: 0.1, hunt: false, art: 'lizard', col: ['#9a8a4a', '#c8b060'] },
     // ---------------- predators ----------------
     fox: { name: 'Raposa', g: 'f', cls: 'land', diet: 'carn', prey: ['rabbit', 'frog', 'lizard'], hab: [0, 2], dens: 0.35, herd: [1, 1], hp: 16, sp: 1.1, run: 3.4, meat: 3, size: 0.8, fear: 4, life: 6, breed: 0.9, app: 0.4, hunt: false, art: 'quad', q: { len: 3.2, h: 3, leg: 2.4, neck: 1.2, col: '#d06a2a', belly: '#f4e8dc', tail: 'bushy', ear: 1.2, pred: 1 } },
     arcticfox: { name: 'Raposa-do-ártico', g: 'f', cls: 'land', diet: 'carn', prey: ['hare', 'rabbit'], hab: [1, 2], dens: 0.3, herd: [1, 1], hp: 15, sp: 1.1, run: 3.4, meat: 3, size: 0.75, fear: 4, life: 6, breed: 0.9, app: 0.4, hunt: false, art: 'quad', q: { len: 3, h: 2.8, leg: 2.2, neck: 1.2, col: '#f4f6f8', belly: '#ffffff', tail: 'bushy', ear: 1, pred: 1 } },
@@ -372,6 +375,9 @@
     const p = W.nearestLand(a.x, a.y, r || 3, home) || W.nearestLand(a.x, a.y, r || 3, can);
     if (!p) return false;
     a.x = p[0]; a.y = p[1]; a.tx = a.x; a.ty = a.y; a.path = null; a.moving = false; a.blk = 0; a.stk = 0; a.noGo = undefined;
+    // (set down on the ground: a swing between two trees or a perch is over — the swing, worked out between its two trees, put the
+    // sloth back on the lot it was set aside from, inside the work raised there, L-692)
+    if (a.state === 'swing' || a.state === 'tree') { a.state = 'idle'; a.z = 0; a.perch = 0; a.swing = 0; a.slow = 0; a.t = 1; }
     return true;
   };
   // a way around, a few searches a frame: the beast's own — the ground it stands on (walkOK: cliffs, walls and houses in the way),
@@ -871,7 +877,7 @@
     // in the canopy: eating, grooming, watching — then a swing on a vine to the next tree, or down
     tree(a, dt, sp, S) {
       const tr = S.trees.get(a.perch);
-      if (!tr || tr.stage !== 'grow') { a.state = 'idle'; a.z = 0; a.perch = 0; a.t = 1; return true; }
+      if (!tr || tr.stage !== 'grow') { a.state = 'idle'; a.z = 0; a.perch = 0; a.t = 1; if (!walkOK(a, a.x, a.y)) A.aside(a, 4); return true; } // (down where a tree stood: on a ground it stands on — the work that cut the tree stands there, L-692)
       a.moving = false; a.t -= dt;
       if (sp.diet === 'browse' || sp.diet === 'omni') { if (a.hunger > 0.2 && G.R() < dt * 0.5) { a.hunger = Math.max(0, a.hunger - (tr.fruit > 0 ? 0.25 : 0.1)); a.eating = 0.8; if (tr.fruit > 0) tr.fruit = Math.max(0, tr.fruit - 0.25); } }
       if (sp.climb === 'tree' && a.target && S.animals.get(a.target) && S.animals.get(a.target).dead) return false; // (a leopard eating in its tree: the eat state carries on)

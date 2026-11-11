@@ -174,7 +174,8 @@
     const coin = coinPeople(set), has = K.savings(v);
     if (coin && has + EPS < plan.price + keep) {
       // short of coin for a roof of its own: an empty house its owner lets, rented — three days of rent in hand
-      if (plan.lease && has + EPS >= plan.rent * 3) { lease(v, fam, plan.lease, set, plan.rent, why); return { ok: true, b: plan.lease, rented: 1, rent: plan.rent }; }
+      // (and the house it leaves keeps no mark of its saving, as with a house bought or raised — L-696)
+      if (plan.lease && has + EPS >= plan.rent * 3) { lease(v, fam, plan.lease, set, plan.rent, why); if (h && h.poupa && fam.some(m => m.id === h.poupa.by)) h.poupa = null; return { ok: true, b: plan.lease, rented: 1, rent: plan.rent }; }
       if (h) h.poupa = { by: v.id, alvo: r2(plan.price + keep), d: h.poupa && h.poupa.by === v.id ? h.poupa.d : S.day, why };
       return { ok: false, why: `Falta dinheiro: uma casa custa ${plan.price} moedas e a família tem ${Math.floor(has)}.`, saving: 1 };
     }

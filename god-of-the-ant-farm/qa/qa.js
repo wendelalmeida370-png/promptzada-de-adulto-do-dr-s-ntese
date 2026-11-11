@@ -176,6 +176,13 @@
       for (let i = 0; i < N * N; i++) { const w = s.wall[i]; if (w !== 2 && w !== 4) continue; const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) continue;
         const ew = wl(i - 1) && wl(i + 1), ns = wl(i - N) && wl(i + N); const a = ew ? [i - N, i + N] : ns ? [i - 1, i + 1] : null;
         if (a && blk(a[0]) && blk(a[1])) add('city', 3, `o portão em (${x},${y}) está fechado por prédios dos dois lados`); } }
+    // a gate of a wall planned by the rule of the gates that open (w.v >= 2) lets one through: never a blocking building or a wall
+    // glued to a side of it across the line, never a corner of the line (L-491, L-689; the gates cut for a pocket, w.ways, apart)
+    for (const w of s.walls || []) { if (!(w.v >= 2)) continue; const on = new Set(w.tiles), ways = new Set(w.ways || []); const ln = j => on.has(j) || s.wall[j] === 1 || s.wall[j] === 2 || s.wall[j] === 4; const blk = j => { const o = s.occ[j]; const b = o && s.buildings.get(o); return !!(b && b.blocks); };
+      for (const i of w.gates) { if (ways.has(i) || (s.wall[i] !== 2 && s.wall[i] !== 4)) continue; const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) continue;
+        const ew = ln(i - 1) || ln(i + 1), ns = ln(i - N) || ln(i + N); const bad = j => blk(j) || ln(j);
+        const why = ew && ns ? 'num canto do muro' : (ew ? bad(i - N) || bad(i + N) : ns ? bad(i - 1) || bad(i + 1) : false) ? 'com um prédio ou um muro colado num lado' : '';
+        if (why) add('city', 3, `o portão em (${x},${y}) não deixa passar: ${why} (L-491)`); } }
     // a building of a town shut off by the town's own standing wall, where a gate in it would open the way (L-344)
     if (G.Siege && G.Siege.openWays) { const ws = (s.walls || []).filter(w => w.done && s.settlements.has(w.set)); if (ws.length) { const w = ws[(wallTurn++) % ws.length], st = s.settlements.get(w.set); const o = G.Siege.openWays(st, w, true); if (o.length) add('city', 3, `o muro de ${st.name} (#${w.id}) fecha ${o.length} prédio(s) da cidade: um portão em (${o[0] % N},${(o[0] / N) | 0}) abriria o caminho`); } }
     if (G.Siege && G.Siege.walledIn) for (const w of s.walls || []) { const st = s.settlements.get(w.set); for (const i of w.tiles) if (s.wall[i] && s.wall[i] !== 3 && G.Siege.walledIn(i, w)) { add('city', 3, `o muro de ${st ? st.name : '#' + w.set} (#${w.id}) tem casa de pé em (${i % G.N},${(i / G.N) | 0}), dentro do muro de outra cidade`); break; } }

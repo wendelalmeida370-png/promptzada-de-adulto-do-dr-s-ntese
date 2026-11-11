@@ -314,7 +314,7 @@
     const S = G.S; b.progress = 1;
     V.siteGone(b, 'obra-feita'); // (what the work got is built in: out of its holder, in the ledger — and it needs nothing)
     b.built = true; for (const k in b.need) b.need[k] = 0; b.upgradeFrom = null;
-    G.Siege && G.Siege.keepWays(b.set); // (a building of the town now, to be reached: one finished in a pocket its wall shuts gets its gate, L-382)
+    G.Siege && G.Siege.keepWays(b.set, b); // (a building of the town now, to be reached: one finished in a pocket its wall — or a neighbour's, L-689 — shuts gets its gate, L-382)
     G.Interiors && G.Interiors.complete(b); // (a fact of its life; a type made over — a hut become a house — a new plan)
     S.stats.built++;
     const [cx, cy] = V.center(b);
@@ -792,6 +792,7 @@
     for (const id of gone.slice().sort((a, b) => a - b)) {
       const o = S.buildings.get(id); const d = G.BDEF[o.type];
       if (d.housing) { need += d.housing; continue; }
+      if (o.home && gone.includes(o.home)) continue; // (a house's yard goes with it — L-079 —: no field of the town to move, L-690)
       const p = put(o.type); if (!p) return null; out.push([o.type, p]);
     }
     if (!need) return out;
@@ -1092,7 +1093,7 @@
     b.built = true; b.progress = 1; b.need = { wood: 0, stone: 0 }; b.incoming = { wood: 0, stone: 0 }; b.brick = null; b.troca = null; b.unreach = 0; b.amp = null;
     if (growing) growing.delete(b.id);
     for (const o of S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) G.Vg.endTask(o);
-    G.Siege && G.Siege.keepWays(b.set);
+    G.Siege && G.Siege.keepWays(b.set, b);
     G.Interiors && G.Interiors.resized(b, n);
     const set = S.settlements.get(b.set); const nm = V.buildName(b); const [cx, cy] = V.center(b);
     V.log(`${set ? set.name + ' desistiu' : 'Desistiram'} de ampliar ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: ninguém chegava à obra.`, 'city', cx, cy);

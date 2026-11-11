@@ -96,6 +96,16 @@
     const ew = line(i - 1) && line(i + 1), ns = line(i - N) && line(i + N); const a = ew ? [i - N, i + N] : ns ? [i - 1, i + 1] : null;
     return !!a && blk(a[0]) && blk(a[1]);
   };
+  // (and a gate lets somebody through only with open ground on each side of the line — an older building glued to one side of
+  // it, a corner of the wall, the sea or the rock beside it: 9 of the 26 gates of the metrópole of the generation 13 let nobody
+  // through, L-491; Birka's east gate with Kaupang's fire against it on the inside, L-689. Across the line where it runs
+  // straight; a corner of the line is no gate. Pure: the map and the line)
+  const gateOpens = Sg.gateOpens = function (i, line) {
+    const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) return false;
+    const ew = line(i - 1) || line(i + 1), ns = line(i - N) || line(i + N); if (ew && ns) return false;
+    const free = j => W.ground(j) && !line(j);
+    return ew ? free(i - N) && free(i + N) : ns ? free(i - 1) && free(i + 1) : (free(i - N) && free(i + N)) || (free(i - 1) && free(i + 1));
+  };
   const lineOf = tiles => { const S = G.S; const on = new Set(tiles); return j => on.has(j) || S.wall[j] === 1 || S.wall[j] === 2 || S.wall[j] === 4; };
   // (the ground inside another town's walls is walled already — an older wall, standing or still going up —: a wall of the
   // town next door run inside it shuts a pocket between the two with no gate of either — Corinto's east wall inside Argos's,
@@ -113,6 +123,7 @@
   // into the town through what the wall closes — Hedeby's in the mega of 28/10, its smith in failed searches all day, four
   // gates and none there —: where the wall would shut one off, a gate, beyond the four (w.ways), L-344. The wall as planned:
   // its tiles shut, its gates open, whether raised yet or not. dry: only the tiles it would open)
+  const nearBox = (w, b) => { const [x0, y0, x1, y1] = w.box || [1, 1, 0, 0]; const M = 8; return b.x + b.w > x0 - M && b.x <= x1 + M && b.y + b.h > y0 - M && b.y <= y1 + M; };
   Sg.openWays = function (s, w, dry) {
     const S = G.S, n = N * N; const R = W.townRegion(s); if (R < 0) return [];
     const L = W.reachIds(true); const plan = new Set(w.tiles); const gates = new Set(w.gates); const out = []; const line = lineOf(w.tiles);
@@ -124,7 +135,12 @@
     // (each building of the town by the ground round it — the tiles beside its footprint one could stand on —: reached when one
     // of them is; a function of the map alone, as the plan and the load must see it alike)
     const ring = b => { const o = []; for (let x = b.x; x < b.x + b.w; x++) o.push([x, b.y - 1], [x, b.y + b.h]); for (let y = b.y; y < b.y + b.h; y++) o.push([b.x - 1, y], [b.x + b.w, y]); return o.filter(([x, y]) => x >= 0 && y >= 0 && x < N && y < N).map(([x, y]) => y * N + x).filter(W.ground); };
-    const left = [...S.buildings.values()].filter(b => b.set === s.id && b.built && b.type !== 'ruin').sort((a, b) => a.id - b.id).map(b => [b, ring(b)]).filter(q => q[1].length);
+    // (the town's own, and after them the buildings of another town that this line would shut off — the six houses of Kaupang on
+    // the strip by the water, east of Birka's wall planned over the town's edge, their 23 people with no way out, L-689 —: those
+    // within eight tiles of the wall's box, where a run of the line can still open them. A function of the map and the plan
+    // alone: the load judges a standing wall by it too, and opens the pockets of the worlds already lived)
+    const mine = b => b.set === s.id, close = b => !!b.set && nearBox(w, b);
+    const left = [...S.buildings.values()].filter(b => b.built && b.type !== 'ruin' && (mine(b) || close(b))).sort((a, b) => (mine(a) ? 0 : 1) - (mine(b) ? 0 : 1) || a.id - b.id).map(b => [b, ring(b)]).filter(q => q[1].length);
     const near = (i, m) => { const x = i % N; return (x > 0 && mark[i - 1] === m) || (x < N - 1 && mark[i + 1] === m) || (i >= N && mark[i - N] === m) || (i + N < n && mark[i + N] === m); };
     let dirty = true; const later = []; // (one with no tile to open yet: a gate opened for another may give it one)
     while (out.length < 8 && left.length) {
@@ -144,8 +160,23 @@
         if (!can(i) || !(near(i, 2) || around.includes(i))) continue; const x = i % N;
         for (const j of [x > 0 ? i - 1 : -1, x < N - 1 ? i + 1 : -1, i - N, i + N]) { if (j < 0 || j >= n || !plan.has(j) || !can(j) || !near(j, 1)) continue; if (dd(i) < bd) { bd = dd(i); best = i; pair = j; } }
       }
-      if (best < 0) { later.push([b, around]); continue; } // (shut off by something else — water, another wall —: not this wall's to open, unless a gate opened for another reaches it)
-      gates.add(best); out.push(best); if (pair >= 0) { gates.add(pair); out.push(pair); } dirty = true; left.push(...later.splice(0));
+      // (and where that way along the line is longer than two tiles — Roma's black market in the metrópole of the generation 19, on
+      // a strip between the water and the north line, three tiles of the line to the first that leads into the town —: the
+      // shortest run of the line's tiles from one beside the pocket to one beside the town, up to RUN, L-691)
+      let run = null;
+      if (best < 0) {
+        const RUN = 6; const prev = new Map(); const q = [];
+        for (const i of w.tiles) if (can(i) && (near(i, 2) || around.includes(i))) { prev.set(i, -1); q.push([i, 1]); }
+        for (let h = 0; h < q.length && !run; h++) {
+          const [i, d] = q[h]; if (near(i, 1)) { run = []; for (let j = i; j >= 0; j = prev.get(j)) run.push(j); break; }
+          if (d >= RUN) continue; const x = i % N;
+          for (const j of [x > 0 ? i - 1 : -1, x < N - 1 ? i + 1 : -1, i - N, i + N]) { if (j < 0 || j >= n || !plan.has(j) || prev.has(j) || !can(j)) continue; prev.set(j, i); q.push([j, d + 1]); }
+        }
+      }
+      if (best < 0 && !run) { later.push([b, around]); continue; } // (shut off by something else — water, another wall —: not this wall's to open, unless a gate opened for another reaches it)
+      if (run) for (const j of run) { gates.add(j); out.push(j); }
+      else { gates.add(best); out.push(best); if (pair >= 0) { gates.add(pair); out.push(pair); } }
+      dirty = true; left.push(...later.splice(0));
     }
     if (!dry && out.length) { for (const i of out) w.gates.push(i); w.ways = (w.ways || []).concat(out); }
     return out;
@@ -157,9 +188,10 @@
   // the land raised or sunk, a wall going up. setId: only the walls of that town, the ground the same)
   let judged = '';
   const groundKey = () => { const S = G.S; return (S.walkVer || 0) + ':' + (S.typeVer || 0); };
-  Sg.keepWays = function (setId) {
+  Sg.keepWays = function (setId, b) {
     const S = G.S; let cut = 0;
-    for (const w of S.walls || []) { if (setId && w.set !== setId) continue; const s = S.settlements.get(w.set); if (!s) continue; for (const i of Sg.openWays(s, w)) if (S.wall[i] === 1) { S.wall[i] = 2; S.wallHp[i] = WALLHP[w.mat][1]; cut++; } }
+    // (the walls of that town, and — for a building — a neighbour's wall it stands close by: a wall shuts another town's too, L-689)
+    for (const w of S.walls || []) { if (setId && w.set !== setId && !(b && nearBox(w, b))) continue; const s = S.settlements.get(w.set); if (!s) continue; for (const i of Sg.openWays(s, w)) if (S.wall[i] === 1) { S.wall[i] = 2; S.wallHp[i] = WALLHP[w.mat][1]; cut++; } }
     if (cut) G.W.touchWalk();
     if (!setId) judged = groundKey();
     return cut;
@@ -173,7 +205,7 @@
     if (!(S.walls || []).length) { judged = groundKey(); return; } // (no wall anywhere: nothing to keep)
     if (judged === before && (!b.blocks || apart(b))) judged = groundKey();
     else if (b.blocks) return Sg.keepWays();
-    if (b.built) Sg.keepWays(b.set); // (one that stands at once: a building of its town now, to be reached)
+    if (b.built) Sg.keepWays(b.set, b); // (one that stands at once: a building of its town now, to be reached)
   };
   const apart = Sg.apart = function (b) {
     const S = G.S; const inF = (x, y) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
@@ -249,13 +281,17 @@
     const per = perimeter(x0, y0, x1, y1);
     for (const [x, y] of per) {
       const i = y * N + x;
-      if (S.type[i] < T.SAND || S.wall[i] === 3 || Sg.walledIn(i, { set: s.id, id: Infinity })) continue;
+      // (the line crosses the ford and the bridge — the shallow water the feet walk, the road over the deep —: stopped at the
+      // river, the wall left the ford open, and a town with every gate shut was not shut, L-658; the deep and the sea are the wall there)
+      const wet = S.type[i] < T.SAND && !(S.type[i] === T.RIVER && (!S.deep[i] || S.road[i]));
+      if (wet || S.wall[i] === 3 || Sg.walledIn(i, { set: s.id, id: Infinity })) continue;
       if (takenAt(i) || keptAt(i)) continue;
       tiles.push(i);
     }
     if (tiles.length < 12) return null;
     // (a gate only where the way across the line is open — not between two buildings, one on each side of it: L-603)
-    const line = lineOf(tiles); const opens = i => !shutAcross(i, line);
+    // (and only where one passes: open ground on each side of the line, never a corner — L-491)
+    const line = lineOf(tiles); const opens = i => !shutAcross(i, line) && gateOpens(i, line);
     const gates = tiles.filter(i => (S.road[i] || S.wear[i] > 22) && opens(i));
     // at least one gate on each side, where the people already walk
     const sides = [[x0, null], [x1, null], [null, y0], [null, y1]];
@@ -282,7 +318,8 @@
       if (alt !== undefined) g2.push(alt);
     }
     for (const i of gates) if (g2.length < 4 && !g2.includes(i) && !g2.some(j => near(i, j))) g2.push(i);
-    const w = { id: S.nextId++, set: s.id, fac: f.id, mat: G.Civ.has(f.id, 'alvenaria') ? 'pedra' : 'madeira', tiles, gates: g2, built: 0, done: false, style: f.civ || 'classico', box: [x0, y0, x1, y1] };
+    // (v 2: a plan of the rule of the gates that open, L-491 — the checker holds those to it; an older wall stays as it was planned)
+    const w = { id: S.nextId++, set: s.id, fac: f.id, mat: G.Civ.has(f.id, 'alvenaria') ? 'pedra' : 'madeira', tiles, gates: g2, built: 0, done: false, style: f.civ || 'classico', box: [x0, y0, x1, y1], v: 2 };
     Sg.openWays(s, w);
     return w;
   }

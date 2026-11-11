@@ -14,6 +14,15 @@
 //      side's busiest tile against the quietest walked side's) — where the old planner, keeping the four busiest gates of
 //      all, gave the busy side a third gate and the quiet side none — have a gate for their quietest walked side; and Jelling
 //      (anos100), where it was found, on its west side, while that world still has it
+//   12. a gate lets one through, and the wall crosses the ford (L-491, L-658, L-689):
+//      12a every gate of every plan of the ready worlds (the gates cut for a pocket apart) has open ground on each side of the
+//          line where it runs straight — no building glued to a side, no corner, no water or rock beside it
+//      12b no ford on the line of a plan left out of it: the shallow water the feet walk and the bridge are the wall's too
+//      12c the bad case on purpose: a house glued to one side of the tile where the plan has its gate — the gate goes to another
+//          tile; raised at once, the checker sees no gate of it that lets nobody through
+//      12d another town's house in a pocket the line would shut: planned with it there, a way of the wall opens the pocket;
+//          finished beside the standing wall, the way is cut at once; and in an old save (the wall whole, the pocket shut),
+//          the load opens it
 //   4. a wall begun, saved and loaded halfway: the same tiles, the same gates; and then finished, its gates are gates on the map
 //   4b. a gate of the plan over a wall that already stands (a neighbour's, raised first): the gate is cut in it (L-340)
 //   6. a wall never runs inside another town's walls (L-342: Corinto's east wall planned inside Argos's, in the metropole of
@@ -94,6 +103,15 @@ const shutGate = (w, i) => {
   return !!a && blk(a[0]) && blk(a[1]);
 };
 const sim = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
+// (where a gate of a plan lets one through — the rule read again here, apart from the game's: open ground on each side of the
+// line where it runs straight, never a corner, L-491)
+const opensGate = (w, i) => {
+  const S = G.S, N = G.N, W = G.W; const on = new Set(w.tiles); const ln = j => on.has(j) || S.wall[j] === 1 || S.wall[j] === 2 || S.wall[j] === 4;
+  const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) return false;
+  const ew = ln(i - 1) || ln(i + 1), ns = ln(i - N) || ln(i + N); if (ew && ns) return false; const fr = j => W.ground(j) && !ln(j);
+  return ew ? fr(i - N) && fr(i + N) : ns ? fr(i - 1) && fr(i + 1) : (fr(i - N) && fr(i + N)) || (fr(i - 1) && fr(i + 1));
+};
+const bad12 = [], bad12b = []; let fords12 = 0;
 const bad7 = []; let ways7 = 0; const bad10 = [];
 // (the fenced grounds, as the world fences them — world.js: an animal crosses their fence only at the gate)
 const FEN = { curral: 1, estabulo: 1, cercado: 1, cemetery: 1 }; const bad11 = [];
@@ -120,6 +138,11 @@ for (const k of WORLDS) {
     { const own = G.Siege.wallOf(s.id); const keep = own ? own.tiles.filter(i => S.wall[i]).map(i => [i, S.wall[i]]) : []; for (const [i] of keep) S.wall[i] = 0; if (keep.length) G.W.touchWalk();
       try { const w0 = keep.length ? plan(s) : w; const cut = w0 && shutOff(s, w0); if (cut && cut.length) bad7.push(`${name}: ${cut.length} prédio(s) fechados (${cut.slice(0, 2).map(b => b.type + '#' + b.id).join(', ')})`); if (w0 && (w0.ways || []).length) ways7++; }
       finally { for (const [i, v] of keep) S.wall[i] = v; if (keep.length) G.W.touchWalk(); } }
+    // (12a: every gate of the plan lets one through; 12b: no ford of its line left out of it, and how many plans cross one)
+    { const main = w.gates.filter(g => !(w.ways || []).includes(g)); const dead = main.filter(g => !opensGate(w, g)); if (dead.length) bad12.push(`${name}: ${dead.map(g => `(${g % G.N},${(g / G.N) | 0})`).join(' ')}`);
+      const [bx0, by0, bx1, by1] = w.box; const on = new Set(w.tiles); const per = []; for (let x = bx0; x <= bx1; x++) per.push(by0 * G.N + x, by1 * G.N + x); for (let y = by0 + 1; y < by1; y++) per.push(y * G.N + bx0, y * G.N + bx1);
+      const ford = i => S.type[i] === G.T.RIVER && (!S.deep[i] || S.road[i]); const out = per.filter(i => ford(i) && !on.has(i) && S.wall[i] !== 3 && !S.occ[i] && !G.Siege.walledIn(i, w));
+      if (out.length) bad12b.push(`${name}: ${out.length} casa(s) de vau fora da linha`); if (w.tiles.some(ford)) fords12++; }
     // (10a: no gate of the plan between two blocking buildings across its line, L-603)
     { const shut = w.gates.filter(g => shutGate(w, g)); if (shut.length) bad10.push(`${name}: ${shut.map(g => `(${g % G.N},${(g / G.N) | 0})`).join(' ')}`); }
     // (11a: none of it on a fenced ground — its fence is the wall there, as the square's lot is ground the wall goes round —, L-606)
@@ -139,14 +162,17 @@ for (const k of WORLDS) {
     // (a side cut by another town's walls — its tiles inside them left out, L-342 —: its people walk out that way through the
     // other wall's gates, and the side is judged by what it keeps, its streets and worn paths)
     const cut = sd => { const [x0, y0, x1, y1] = w.box; const line = []; if (sd === 'O' || sd === 'L') for (let y = y0; y <= y1; y++) line.push(y * G.N + (sd === 'O' ? x0 : x1)); else for (let x = x0; x <= x1; x++) line.push((sd === 'N' ? y0 : y1) * G.N + x); return line.some(i => G.Siege.walledIn(i, w)); };
-    const miss = Object.keys(sides).filter(sd => { if (w.gates.some(g => sideOf(w, g).includes(sd))) return false; const ways = sides[sd].filter(walked); if (!ways.length && cut(sd)) return false; if (!ways.length) { const b = busiest(sd); return !(S.wear[b] >= 3 && w.gates.some(g => dist(b, g) <= 3)); } return !ways.every(i => w.gates.some(g => dist(i, g) <= 3)); });
+    // (and a side asks a gate only where one can open — L-491: a side with no tile that lets one through has none to ask; one of
+    // light wear, served by the next side's gate a step from where the planner would put its own: its busiest tile, or its middle)
+    const miss = Object.keys(sides).filter(sd => { if (w.gates.some(g => sideOf(w, g).includes(sd))) return false; const can = sides[sd].filter(i => opensGate(w, i)); if (!can.length) return false; const ways = can.filter(walked); if (!ways.length && cut(sd)) return false;
+      if (!ways.length) { const b = can.reduce((a, i) => (S.wear[i] > S.wear[a] ? i : a), can[0]); const pick = S.wear[b] >= 3 ? b : can[Math.floor(can.length / 2)]; return !w.gates.some(g => dist(pick, g) <= 3); } return !ways.every(i => w.gates.some(g => dist(i, g) <= 3)); });
     // (the gates for a building the wall would shut off, w.ways — L-344 —, are beyond the four, and where that building needs them)
     const main = w.gates.filter(g => !(w.ways || []).includes(g));
     const close = main.some((g, a) => main.some((h, b) => a < b && dist(g, h) < 4));
     if (miss.length || close || main.length > 4) bad1.push(`${name}: lados sem portão ${miss.join('') || '-'}${close ? ', portões lado a lado' : ''}${main.length > 4 ? ', ' + main.length + ' portões' : ''}`);
     // 2. a side a street or a worn path crosses has its gate on one (where the people walk — the planner's own test)
     for (const sd of Object.keys(sides)) {
-      const ways = sides[sd].filter(walked); if (!ways.length) continue;
+      const ways = sides[sd].filter(i => walked(i) && opensGate(w, i)); if (!ways.length) continue;
       const g = w.gates.filter(q => sideOf(w, q).includes(sd)); if (g.length && !g.some(walked)) bad2.push(`${name}, lado ${sd}: ${ways.length} casa(s) de rua ou caminho, o portão fora deles`);
     }
     // (3: how unevenly its walked sides are used — the rank the planner itself gives a gate: the worn path, a street more)
@@ -200,6 +226,8 @@ ok('2 o portão do lado fica onde se anda (a rua ou o caminho gasto que o cruza)
 ok('7a nenhum plano fecha um prédio da sua cidade', !bad7.length, `${plans} muros planejados; ${ways7} com portão a mais para um prédio que o muro fecharia; ${bad7.length ? bad7.slice(0, 4).join(' · ') : 'nenhum prédio fechado'}`);
 ok('10a nenhum portão planejado entre dois prédios, um de cada lado da linha (L-603)', plans > 20 && !bad10.length, `${plans} muros planejados; ${bad10.length ? bad10.length + ' com portão fechado pelos dois lados — ' + bad10.slice(0, 4).join(' · ') : 'nenhum portão fechado'}`);
 ok('11a nenhum muro planejado num chão cercado — curral, estábulo, cercado, cemitério (L-606)', plans > 20 && !bad11.length, `${plans} muros planejados; ${bad11.length ? bad11.length + ' sobre um chão cercado — ' + bad11.slice(0, 4).join(' · ') : 'nenhum sobre um chão cercado'}`);
+ok('12a todo portão planejado deixa passar: chão aberto dos dois lados da linha, nunca um canto (L-491)', plans > 20 && !bad12.length, `${plans} muros planejados${bad12.length ? '; SEM PASSAGEM: ' + bad12.slice(0, 4).join(' | ') : ''}`);
+ok('12b o muro atravessa o vau e a ponte: nenhuma casa de rio que os pés andam fica fora da linha (L-658)', plans > 20 && !bad12b.length, `${plans} muros planejados, ${fords12} com vau ou ponte na linha${bad12b.length ? '; FORA: ' + bad12b.slice(0, 4).join(' | ') : ''}`);
 ok('6a nenhum plano corre dentro do muro de outra cidade', !bad6.length, `${plans} muros planejados; ${reach6} com o retângulo entrando no de outro muro; ${bad6.length ? bad6.slice(0, 4).join(' · ') : 'nenhuma casa dentro'}`);
 // 4. a wall begun, saved and loaded halfway; then finished
 {
@@ -544,6 +572,83 @@ for (const instant of [false, true]) {
     got ? `${got.k}: o muro #${got.w.id} com ${got.put.length} casa(s) de pé no chão cercado de ${got.lots.join(', ')} — o verificador ${got.said0 ? 'o vê' : 'NÃO o vê'}; carregado, ${got.still} de pé lá, ${got.walk} que o mundo anda; o resto do muro: ${got.kept} de ${got.rest} de pé; o verificador ${got.said1 ? 'AINDA QUEIXA' : 'cala'}` : 'nenhum muro de pé nos mundos (nada a provar)');
 }
 // 5. the checker, the module errors
+// 12c. the bad case on purpose (L-491): a house — another town's, so the box of the plan, its own buildings', stays — glued to
+//      one side of the tile where the plan of a town with no wall has a gate, on a straight run of the line with free dry ground
+//      on both sides: planned again, the same line and no gate on that tile, every gate of the plan one that lets through;
+//      raised at once, the checker sees no gate of it that lets nobody through
+{
+  const nm = '12c um prédio colado num lado da casa onde o plano tem o portão: o portão vai para outra casa';
+  let got = null;
+  for (const k of ['metropole', 'cidade', 'mega']) {
+    M.pronto(k); const S = G.S, N = G.N, V = G.Village;
+    for (const s of [...S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac)).sort((a, b) => a.id - b.id)) {
+      const other = [...S.settlements.values()].find(q => q.id !== s.id); const w0 = other && plan(s); if (!w0) continue; const on = new Set(w0.tiles);
+      const free = j => j >= 0 && j < N * N && !S.occ[j] && !S.wall[j] && !on.has(j) && S.type[j] >= G.T.SAND && !S.treeAt[j] && !S.objAt[j];
+      const across = i => { const ew = on.has(i - 1) && on.has(i + 1), ns = on.has(i - N) && on.has(i + N); return ew === ns ? null : ew ? [i - N, i + N] : [i - 1, i + 1]; };
+      const g = w0.gates.find(i => { if ((w0.ways || []).includes(i) || sideOf(w0, i).length !== 1) return false; const a = across(i); return !!a && free(a[0]) && free(a[1]); });
+      if (g === undefined) continue;
+      const sd = sideOf(w0, g)[0]; const j = across(g)[0]; const h = sim(() => V.addBuilding('house', j % N, (j / N) | 0, other.id, true)); if (!h) continue;
+      const w1 = plan(s); const same = !!w1 && w1.tiles.join() === w0.tiles.join();
+      const dead = w1 ? w1.gates.filter(q => !(w1.ways || []).includes(q) && !opensGate(w1, q)) : [];
+      let mine = null;
+      if (w1) { const keep = w1.tiles.map(i => [i, S.wall[i], S.wallFac[i], S.wallHp[i]]); const w = sim(() => G.Siege.raiseWalls(s, 'pedra', true));
+        try { mine = QA.check().filter(q => /não deixa passar/.test(q.msg) && w.gates.some(i => q.msg.includes(`(${i % N},${(i / N) | 0})`))).map(q => q.msg); }
+        finally { for (const [i, a, b, c] of keep) { S.wall[i] = a; S.wallFac[i] = b; if (c === undefined) delete S.wallHp[i]; else S.wallHp[i] = c; } S.walls.splice(S.walls.indexOf(w), 1); G.W.touchWalk(); } }
+      sim(() => V.removeBuilding(h));
+      got = { k, s, g, sd, h, w1, same, dead, mine }; break;
+    }
+    if (got) break;
+  }
+  if (!got) ok(nm, false, 'em nenhum mundo pronto um plano com o portão num trecho reto da linha, com chão livre dos dois lados');
+  else { const N = G.N, at = i => `(${i % N},${(i / N) | 0})`;
+    ok(nm, got.same && !got.w1.gates.includes(got.g) && !got.dead.length && !!got.mine && !got.mine.length,
+      `${got.k}: ${got.s.name} — o portão do plano em ${at(got.g)} (lado ${got.sd}); com ${got.h.type}#${got.h.id} colado num lado: ${got.same ? 'a mesma linha' : 'A LINHA MUDOU'}, ${got.w1.gates.includes(got.g) ? 'O PORTÃO FICOU ALI' : 'o portão saiu dali'}; os portões do plano: ${got.w1.gates.map(at).join(' ')}${got.dead.length ? '; SEM PASSAGEM: ' + got.dead.map(at).join(' ') : ', todos deixam passar'}; de pé, o verificador: ${got.mine && got.mine.length ? got.mine[0] : 'nada'}`); }
+}
+// 12d. another town's house in a pocket the line would shut (L-689: the six houses of Kaupang on the strip east of Birka's wall,
+//      in the metrópole of the generation 19, 23 people with no way out): by hand, outside a straight run of the line of a town
+//      with no wall, a free tile P against the line, a house H of another town beyond it and five more round the two — P's only
+//      way the line's tile. (a) planned with them there: a way of the plan opens P; (b) the wall raised at once without them, and
+//      the houses finished after: the way is cut at once (a neighbour's wall is judged when a building is finished by it);
+//      (c) the old save — the same wall whole, the way walled up by hand, P shut —: loaded and lived an instant, the way is
+//      open again, and the checker clean
+{
+  const nm = '12d a casa de outra cidade num bolsão que a linha fecharia: o muro abre o caminho — no plano, no prédio que fica pronto e no save de antes';
+  let got = null;
+  for (const k of ['metropole', 'cidade', 'mega']) {
+    M.pronto(k); let S = G.S; const N = G.N, V = G.Village, W = G.W;
+    for (const s of [...S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac)).sort((a, b) => a.id - b.id)) {
+      const other = [...S.settlements.values()].find(q => q.id !== s.id && q.fac !== s.fac) || [...S.settlements.values()].find(q => q.id !== s.id); const w0 = other && plan(s); if (!w0) continue; const on = new Set(w0.tiles);
+      const free = j => j >= 0 && j < N * N && !S.occ[j] && !S.wall[j] && !on.has(j) && S.type[j] >= G.T.SAND && !S.treeAt[j] && !S.objAt[j] && W.ground(j);
+      const OUT = { N: -N, S: N, O: -1, L: 1 }, PERP = { N: 1, S: 1, O: N, L: N };
+      const g = w0.tiles.find(i => { const sd = sideOf(w0, i); const x = i % N, y = (i / N) | 0; if (sd.length !== 1 || x < 4 || y < 4 || x > N - 5 || y > N - 5 || w0.gates.some(q => dist(q, i) < 5)) return false; const o = OUT[sd[0]], p = PERP[sd[0]];
+        if (!on.has(i - p) || !on.has(i + p) || !on.has(i - 2 * p) || !on.has(i + 2 * p)) return false;
+        return W.ground(i) && free(i - o) && [i + o, i + 2 * o, i + 3 * o, i + o - p, i + o + p, i + 2 * o - p, i + 2 * o + p].every(free); });
+      if (g === undefined) continue;
+      const sd = sideOf(w0, g)[0], o = OUT[sd], p = PERP[sd]; const P = g + o, H = g + 2 * o; const spots = [H, g + 3 * o, P - p, P + p, H - p, H + p];
+      const put = () => sim(() => spots.map(j => V.addBuilding('house', j % N, (j / N) | 0, other.id, true)));
+      const inTown = () => { const L = W.reachIds(true); return L[P] >= 0 && L[P] === W.townRegion(s); };
+      // (a) the plan, the houses there
+      let hs = put(); if (hs.some(h => !h)) { sim(() => hs.forEach(h => h && V.removeBuilding(h))); continue; }
+      const w1 = plan(s); const wayA = w1 ? (w1.ways || []).filter(i => dist(i, P) <= 1) : [];
+      sim(() => hs.forEach(h => V.removeBuilding(h)));
+      // (b) the wall standing, then the houses
+      const w = sim(() => G.Siege.raiseWalls(s, 'pedra', true)); if (!w) continue;
+      const before = (w.ways || []).filter(i => dist(i, P) <= 1).length; hs = put();
+      const wayB = (w.ways || []).filter(i => dist(i, P) <= 1); const openB = wayB.length > 0 && wayB.every(i => S.wall[i] === 2) && inTown(); const badB = QA.check().filter(q => q.sev <= 2).map(q => q.msg);
+      // (c) the old save: the way walled up, saved, loaded, lived an instant
+      for (const i of wayB) { S.wall[i] = 1; } w.gates = w.gates.filter(q => !wayB.includes(q)); w.ways = (w.ways || []).filter(q => !wayB.includes(q)); G.W.touchWalk();
+      const shutC = !inTown(); const sid = s.id; M.salvarCarregar(); S = G.S; M.viver(0.3);
+      const s1 = S.settlements.get(sid), w2 = G.Siege.wallOf(sid); const L = W.reachIds(true); const openC = !!w2 && (w2.ways || []).some(i => dist(i, P) <= 1 && S.wall[i] === 2) && L[P] >= 0 && L[P] === W.townRegion(s1);
+      const badC = QA.check().filter(q => q.sev <= 2 || /fecha \d+ prédio|não deixa passar/.test(q.msg)).map(q => q.msg);
+      got = { k, name: s.name, other: other.name, P, sd, wayA, before, wayB, openB, badB, shutC, openC, badC }; break;
+    }
+    if (got) break;
+  }
+  if (!got) ok(nm, false, 'em nenhum mundo pronto um trecho reto de plano com chão livre para o bolsão de mentira');
+  else { const N = G.N, at = i => `(${i % N},${(i / N) | 0})`;
+    ok(nm, got.wayA.length > 0 && !got.before && got.openB && !got.badB.length && got.shutC && got.openC && !got.badC.length,
+      `${got.k}: ${got.name}, lado ${got.sd}; seis casas de ${got.other} em volta de ${at(got.P)}. (a) no plano: ${got.wayA.length ? 'um caminho em ' + got.wayA.map(at).join(' ') : 'NENHUM CAMINHO'}; (b) o muro de pé (sem caminho ali: ${got.before ? 'NÃO' : 'sim'}), as casas prontas depois: ${got.openB ? 'o caminho aberto em ' + got.wayB.map(at).join(' ') : 'FECHADO'}${got.badB.length ? '; VERIFICADOR: ' + got.badB[0] : ''}; (c) o save de antes (${got.shutC ? 'o bolsão fechado' : 'O BOLSÃO NÃO FECHOU'}), carregado: ${got.openC ? 'aberto' : 'FECHADO'}${got.badC.length ? '; VERIFICADOR: ' + got.badC[0] : ', verificador limpo'}`); }
+}
 { const bad = QA.check().filter(q => q.sev <= 2); const e = M.erros(); ok('5 verificador e erros de módulo', !bad.length && !Object.keys(e.mod).length, bad.length ? bad.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : `limpo; erros de módulo: ${JSON.stringify(e.mod)}`); }
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
 process.exit(fails.length ? 1 : 0);

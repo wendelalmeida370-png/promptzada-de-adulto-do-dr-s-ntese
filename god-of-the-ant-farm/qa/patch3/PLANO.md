@@ -265,3 +265,13 @@ acertos:
   terra cara e quem mora onde (lacuna 9) são o mesmo assunto: medir a terra das capitais junto com a D-128 e a D-132 (a).
 - **Fora deste patch, registrado:** os prédios de serviço (os banhos, a biblioteca, o mercado, a administração, o paço) já têm
   a escada escrita no `escala.js`, mas nenhum povo sabe erguê-los maiores — falta a forma e a planta desses tamanhos.
+
+## 15. A execução (um agente só, a pedido do dono)
+O dono pediu que os Bairros Vivos fossem tocados por um agente só, sem especialistas, junto com os ajustes da Arquitetura
+Monumental e uma conferência do equilíbrio da fauna. A ordem do plano fica: primeiro o que muda o mundo (os consertos
+deixados para cá, a fauna, a vida do bairro, os marinheiros, o mundo pelo bairro), depois o que só se vê e se ouve, e no fim
+os mundos prontos de novo, a regressão inteira e o relatório.
+- **Feito, primeiro lote:** os sete consertos guardados aplicados (L-687, L-688, L-690, L-691, L-692, L-696, L-698; a pasta
+  `consertos/` saiu, os patches estão no histórico); os portões que deixam passar, o muro que atravessa o vau e a cidade
+  vizinha que não fica presa (L-491, L-658, L-689: `muros.js` 12a–12d); a fauna (D-151, `fauna.js`).
+
