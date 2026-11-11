@@ -54,6 +54,8 @@
         const mid = w.kind === 'cerca' && sh.yard ? sh.yard.r : sh.r; const sg = ax ? (cz > (mid[1] + mid[3]) / 2 ? 1 : -1) : (cx > (mid[0] + mid[2]) / 2 ? 1 : -1);
         const hw = hl.w / 2 + (hl.kind === 'janela' ? 0.02 : 0.3); const near = ax ? cz : cx, edge = sg > 0 ? (ax ? ld : lw) : 0, far = Math.abs(edge - near) > 1.2 ? near + sg * 1.2 : edge; // (a stride out at the most: a door onto a yard)
         const r = ax ? [cx - hw, Math.min(near, far), cx + hw, Math.max(near, far)] : [Math.min(near, far), cz - hw, Math.max(near, far), cz + hw];
+        // (an opening behind an annex is the annex's door, the inside's: no way out there)
+        const o3 = ax ? [cx, cz + sg * (w.t / 2 + 0.3)] : [cx + sg * (w.t / 2 + 0.3), cz]; if ((sh.annex || []).some(q => o3[0] > q.r[0] && o3[0] < q.r[2] && o3[1] > q.r[1] && o3[1] < q.r[3])) continue;
         if (hl.kind !== 'janela') { if (y0 < 2.2) doors.push(r); } else if (y0 < 2.4) wins.push({ r, top: y0 - 0.45, sill: y0 }); }
       const over = (p, r, e) => Math.min(p.x1, r[2]) - Math.max(p.x0, r[0]) > e && Math.min(p.z1, r[3]) - Math.max(p.z0, r[1]) > e;
       let n = 0; const bad = msg => { if (n++ < 2) out.push([3, `${tag}: ${msg}`, b.id]); };

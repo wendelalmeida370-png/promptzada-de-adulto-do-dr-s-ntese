@@ -226,13 +226,16 @@
     // what the trade of the people who live there leaves about the house (the world's own: who has this house for home), and
     // the washing on its line — as many cloths as the house has people to wash for — at the houses that hang it out (the id)
     let trade = false;
-    for (const [r, fn, thin] of TRADE) if (A.roles.includes(r)) { const n0 = rec ? rec.length : 0; trade = !!fn(K, S) || !!thin(K, T); tag(n0, r); if (trade) break; } // (the first of its trades that has room)
+    // (in a yard, the first of its trades that has room; on the walls of a house with a hand of room, two of them: each wall
+    // has a span for one, and a house of a fisher and a hunter is told as both)
+    let nt = 0; const seen = new Set();
+    for (const [r, fn, thin] of TRADE) { if (!A.roles.includes(r) || seen.has(fn)) continue; const n0 = rec ? rec.length : 0; const got = (!nt && !!fn(K, S)) || !!thin(K, T); tag(n0, r); if (got) { trade = true; seen.add(fn); if (++nt >= (T.length ? 2 : 1)) break; } }
     let wash = false;
     if (A.wash && h(12) < 0.4) { const n0 = rec ? rec.length : 0; wash = !!washing(K, S, A.wash) || !!line(K, T, A.wash); tag(n0, 'varal'); }
     // (a house someone lives in, with only a hand of room at its walls: by its door its broom, its washing tub on a peg or a
-    // braid of onions — which, by the house's id; where its windows leave no wall for them, a basket on the ledge —, at the
-    // houses that have no bench out; and at every one with nothing else to show, so that a lived house is told from an empty one)
-    if (A.bench && !seat && T.length && (h(8) < 0.5 || !(wood || cask || trade || wash))) { const k = Math.floor(h(9) * 3) % 3;
+    // braid of onions — which, by the house's id; where its windows leave no wall for them, a basket on the ledge —: a lived
+    // house is told from an empty one)
+    if (A.bench && !seat && T.length) { const k = Math.floor(h(9) * 3) % 3;
       for (const [fn, name] of [LIVED[k], LIVED[(k + 1) % 3], LIVED[(k + 2) % 3], [hamper, 'cesto']]) { const n0 = rec ? rec.length : 0; if (fn(K, T)) { tag(n0, name); break; } } }
     // (and the round hut someone lives in, with nothing else in its corners: a basket by its door)
     if (A.bench && !(wood || cask || seat || trade || wash)) { const s = ds.concat(S).find(q => q.corner && q.a1 - q.cur >= 0.34); const n0 = rec ? rec.length : 0; const f = s ? take(K, s, 0.34, 0.34, s.a1 <= s.da ? 'end' : 'start') : null;
@@ -246,7 +249,8 @@
   // ------------------------------ what is thin: on the footing's ledge, on the wall ------------------------------
   // (D-186: a house of a town's centre fills its lot but for a hand or two; what it has is told there all the same — the
   // wood split small and stacked one billet deep, flasks for the casks, things hung on the wall. Each is its strip deep
-  // at the most; lz out from the piece's middle, the wall at wallZ)
+  // at the most; lz out from the piece's middle, the wall at wallZ. The wood, the flasks and the things of a trade are the
+  // world's — who lives there —: never left out for the preset's sake; the washing and the house's own small things are)
   const outOf = f => [Math.sin(f.ry), 0, Math.cos(f.ry)];
   // (the strips in the order a thing takes them: by the door first or last, the roomier first)
   const byDoor = T => T.filter(q => q.door).sort((a, b) => a.near - b.near).concat(T.filter(q => !q.door).sort((a, b) => (b.a1 - b.cur) - (a.a1 - a.cur)));
@@ -332,10 +336,10 @@
   }
   // the fisher's net hung on two pegs, its floats at its foot, an oar upright beside it
   function netsFlat(K, T) {
-    for (const oar of [true, false]) for (const s of away(T)) { const dp = Math.min(s.depth, 0.1); const f = take(K, s, oar ? 1.5 : 0.96, dp, undefined, false, 1.95); if (!f) continue;
+    for (const oar of [true, false]) for (const s of away(T)) { const dp = Math.min(s.depth, 0.1); const f = take(K, s, oar ? 1.5 : 0.96, dp, undefined, true, 1.95); if (!f) continue;
       const wz = wallZ(K, f), top = 1.62, x0 = oar ? -0.68 : -0.42, nw = oar ? 1.1 : 0.84; peg(K, f, x0, top, 0.07); peg(K, f, x0 + nw, top, 0.07);
-      const nu = 6, nv = 2, P = []; for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const t = i / nu, d = j / nv; const p = xyz(f, x0 + nw * t, top - 0.03 - d * (0.95 + 0.2 * t), wz + 0.035 + Math.sin(t * Math.PI * 3) * 0.012 * d); P.push(p); }
-      K.as('wicker', () => K.sheet(P, nu, nv, [86, 82, 70], outOf(f)));
+      const nu = 6, nv = 2, P = []; for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const t = i / nu, d = j / nv; const p = xyz(f, x0 + nw * t, top - 0.03 - Math.sin(t * Math.PI) * 0.07 * (1 - d) - d * (0.95 + 0.2 * t - Math.sin(t * Math.PI * 2) * 0.06), wz + 0.035 + Math.sin(t * Math.PI * 3) * 0.012 * d); P.push(p); }
+      K.as('wicker', () => K.sheet(P, nu, nv, [112, 108, 92], outOf(f)));
       const R3 = G.Realm; for (let q = 0; q < 4; q++) { const k = P[nv * (nu + 1) + 1 + q]; K.g.put(R3.SH.ico0, R3.mat(K.x0 + k[0], K.y0 + k[1] - 0.03, K.z0 + k[2], q, 0.07, 0.07, 0.05), K.c([188, 160, 112])); }
       if (!oar) return true; const a = xyz(f, 0.62, 0.02, wz + 0.04), e = xyz(f, 0.62, 1.86, wz + 0.04);
       K.as('jamb', () => { K.bar(a, e, [Math.cos(f.ry) * 0.045, 0, -Math.sin(f.ry) * 0.045], [Math.sin(f.ry) * 0.035, 0, Math.cos(f.ry) * 0.035], [150, 120, 86]);
@@ -345,7 +349,7 @@
   }
   // the hunter's hide pegged out flat on the wall to dry
   function hideFlat(K, T) {
-    for (const s of away(T)) { const dp = Math.min(s.depth, 0.08); const f = take(K, s, 1.02, dp, undefined, false, 1.7); if (!f) continue;
+    for (const s of away(T)) { const dp = Math.min(s.depth, 0.08); const f = take(K, s, 1.02, dp, undefined, true, 1.7); if (!f) continue;
       const wz = wallZ(K, f) + 0.03; const P = []; const W = [0.44, 0.38, 0.46], Y = [1.5, 1.02, 0.55];
       for (let j = 0; j <= 2; j++) for (let i = 0; i <= 2; i++) P.push(xyz(f, (i - 1) * W[j] + (K.hv(1770 + j) - 0.5) * 0.04, Y[j] + (i === 1 ? (j === 0 ? 0.06 : j === 2 ? -0.07 : 0) : 0), wz));
       K.as('leather', () => K.sheet(P, 2, 2, [150, 118, 84], outOf(f)));
@@ -355,7 +359,7 @@
   }
   // the warrior's round shield on the wall, painted in the house's colours, his spear upright beside it
   function armsFlat(K, T) {
-    for (const spear of [true, false]) for (const s of byDoor(T)) { const dp = Math.min(s.depth, 0.1); const f = take(K, s, spear ? 0.95 : 0.76, dp, s.door && s.a1 <= s.da ? 'end' : 'start', false, spear ? 1.95 : 1.62); if (!f) continue;
+    for (const spear of [true, false]) for (const s of byDoor(T)) { const dp = Math.min(s.depth, 0.1); const f = take(K, s, spear ? 0.95 : 0.76, dp, s.door && s.a1 <= s.da ? 'end' : 'start', true, spear ? 1.95 : 1.62); if (!f) continue;
       const P = K.P; const col = [P.trim || '#a23c2a', P.acc || '#d8b25a', '#3f6fb0', '#e8e0c8'][Math.floor(K.hv(1700) * 4)]; const wz = wallZ(K, f); const w = xyz(f, spear ? -0.1 : 0, 1.22, wz + 0.005), o = outOf(f);
       const R3 = G.Realm; const th = Math.min(0.09, dp * 1.6);
       K.as('plankV', () => K.g.put(R3.SH.sph, R3.mat(K.x0 + w[0], K.y0 + w[1], K.z0 + w[2], f.ry, 0.72, 0.72, th), K.c(col)));
@@ -369,7 +373,7 @@
   // the weaver's skeins of dyed yarn hung from a rail to dry
   function yarn(K, T) {
     const DYE = [[176, 70, 52], [70, 96, 140], [196, 170, 110], [122, 106, 86], [84, 120, 76]];
-    for (const n of [5, 3]) for (const s of away(T)) { const dp = Math.min(s.depth, 0.09); const e = n * 0.1; const f = take(K, s, 2 * e + 0.1, dp, undefined, false, 1.7); if (!f) continue;
+    for (const n of [5, 3]) for (const s of away(T)) { const dp = Math.min(s.depth, 0.09); const e = n * 0.1; const f = take(K, s, 2 * e + 0.1, dp, undefined, true, 1.7); if (!f) continue;
       const wz = wallZ(K, f), y = 1.52; peg(K, f, -e, y, dp); peg(K, f, e, y, dp);
       K.as('beam', () => K.log(xyz(f, -e - 0.02, y, wz + dp - 0.02), xyz(f, e + 0.02, y, wz + dp - 0.02), 0.014, [110, 86, 60]));
       const R3 = G.Realm; for (let q = 0; q < n; q++) { const p = xyz(f, (q - (n - 1) / 2) * 0.2, y - 0.24 - K.hv(1790 + q) * 0.05, wz + dp - 0.03);
@@ -379,7 +383,7 @@
   }
   // a hay fork and a rake upright against the wall, a flat basket on its peg
   function toolsFlat(K, T) {
-    for (const bk of [true, false]) for (const s of away(T)) { const dp = Math.min(s.depth, 0.09); const f = take(K, s, bk ? 0.95 : 0.6, dp, undefined, false, 1.85); if (!f) continue;
+    for (const bk of [true, false]) for (const s of away(T)) { const dp = Math.min(s.depth, 0.09); const f = take(K, s, bk ? 0.95 : 0.6, dp, undefined, true, 1.85); if (!f) continue;
       const wz = wallZ(K, f) + 0.035; const x0 = bk ? 0 : 0.12; const u = [Math.cos(f.ry), 0, -Math.sin(f.ry)], o = outOf(f); const sc = (v, k) => [v[0] * k, v[1] * k, v[2] * k];
       K.as('jamb', () => { K.bar(xyz(f, x0 - 0.3, 0.3, wz), xyz(f, x0 - 0.3, 1.72, wz), sc(u, 0.032), sc(o, 0.032), [140, 112, 78]); K.bar(xyz(f, x0 - 0.02, 0.02, wz), xyz(f, x0 - 0.02, 1.68, wz), sc(u, 0.032), sc(o, 0.032), [140, 112, 78]);
         K.bar(xyz(f, x0 - 0.2, 1.7, wz), xyz(f, x0 + 0.16, 1.7, wz), [0, 0.05, 0], sc(o, 0.035), [140, 112, 78]); });

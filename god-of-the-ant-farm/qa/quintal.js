@@ -167,7 +167,16 @@ if (run('q4')) {
   const noRoom = H.find(b => B3.shellOf(b) && PR.roomOf(b) === 0 && res(b).length && !drink(b));
   if (noRoom) { const I = noRoom.inv || (noRoom.inv = {}); const a = sigOf(noRoom), a0 = At.about(noRoom).sig; I.vinho = 2; flush(); const c = sigOf(noRoom), a1 = At.about(noRoom).sig; delete I.vinho; flush();
     info.push(`${tag(noRoom)} (${kindOf(noRoom)}, sem lugar) com vinho: o que tem ${a0} → ${a1}, o quadro ${a === c ? 'o mesmo' : 'REFEITO'}`); if (a !== c || a0 === a1) bad.push(`${tag(noRoom)}, sem lugar para coisas, refeita pelo que não mostra`); }
-  else info.push('nenhuma casa de planta sem lugar, habitada e sem bebida, neste mundo');
+  else {
+    // (none in this world — every house has its hand of wall or its corners —: one made by the test's hand, its shell to the
+    // very edge of its lot while it is looked at; put back after)
+    const cand = H.find(b => kindOf(b) === 'rect' && res(b).length && !drink(b) && PR.roomOf(b) > 0);
+    if (!cand) bad.push('nenhuma casa de planta habitada e sem bebida para a prova do quadro sem lugar');
+    else { const real = B3.shellOf, L2 = cand.w * Sp.TILE; B3.shellOf = b => { const S0 = real(b); return b !== cand || !S0 ? S0 : Object.assign({}, S0, { shell: Object.assign({}, S0.shell, { r: [0.005, 0.005, L2 - 0.005, L2 - 0.005] }) }); };
+      try { const n = PR.pieces(cand).length, room = PR.roomOf(cand); const I = cand.inv || (cand.inv = {}); const a = sigOf(cand), a0 = At.about(cand).sig; I.vinho = 2; flush(); const c = sigOf(cand), a1 = At.about(cand).sig; delete I.vinho; flush();
+        info.push(`${tag(cand)} com a casca até a beira do lote pela mão da prova (${room} faixas, ${n} coisas) e vinho: o que tem ${a0} → ${a1}, o quadro ${a === c ? 'o mesmo' : 'REFEITO'}`); if (room !== 0 || n || a !== c || a0 === a1) bad.push(`${tag(cand)}, sem lugar para coisas, refeita pelo que não mostra (faixas ${room}, coisas ${n})`); }
+      finally { B3.shellOf = real; PR.pieces(cand); flush(); } }
+  }
   // an empty house: nothing to show, nothing to make again when a house beside it changes
   const emptyH = H.find(b => !res(b).length); if (emptyH) { const a = sigOf(emptyH); const o = H.find(b => b !== emptyH && res(b).length); const I = o.inv || (o.inv = {}); const had = I.mel; I.mel = 3; flush(); const c = sigOf(emptyH); if (had === undefined) delete I.mel; else I.mel = had; flush(); if (a !== c) bad.push(`${tag(emptyH)} vazia refeita pelo que outra casa tem`); info.push(`${tag(emptyH)} vazia: o quadro ${a === c ? 'o mesmo' : 'REFEITO'} quando outra casa ganha mel`); }
   ok(`q4 o quadro (${world}): refeito só pelo que mostra — o mesmo mundo, a mesma assinatura; um ofício que não mostra nada, a mesma; a casa sem lugar para coisas, a mesma com uma jarra de vinho`, !bad.length, `${H.length} casas, ${drift} com a assinatura mudada sem causa · ${info.join(' · ')}${bad.length ? ' · ' + bad.join(' · ') : ''}`);
