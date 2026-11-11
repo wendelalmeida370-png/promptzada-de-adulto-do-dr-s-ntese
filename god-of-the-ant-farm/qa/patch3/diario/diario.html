@@ -1,0 +1,315 @@
+<title>Diário dos Bairros Vivos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* layout: a site diary of the patch. One wide column; each entry is a real picture of the game with its note
+   beside it; a ledger of the works at the end. One look by choice: the city at night under torchlight. */
+:root {
+  color-scheme: dark;
+  --noite: #10141f;      /* the night sky of the game */
+  --muro: #19202f;       /* a wall in shadow: cards, bands */
+  --linha: #2b3449;      /* joints between stones */
+  --cal: #ece6d8;        /* whitewash: main text */
+  --po: #a7a59c;         /* dust: secondary text */
+  --tocha: #f2a541;      /* the torch: works in progress, emphasis */
+  --turquesa: #2bbba9;   /* the teal band of the houses: done, in the game */
+  --cinabrio: #dc5a48;   /* the red band: old bugs */
+  --display: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --texto: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --t-s: 0.8125rem; --t-m: 1rem; --t-l: 1.1875rem; --t-xl: 1.625rem; --t-xxl: clamp(2.4rem, 7vw, 4.4rem);
+}
+body { background: var(--noite); color: var(--cal); font-family: var(--texto); font-size: var(--t-m); line-height: 1.6; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.15; margin: 0; text-wrap: balance; letter-spacing: 0.01em; }
+h1 { font-size: var(--t-xxl); color: var(--cal); }
+h2 { font-size: var(--t-xl); }
+h3 { font-size: var(--t-l); font-weight: 500; }
+p { margin: 0; max-width: 66ch; }
+a { color: var(--tocha); }
+a:focus-visible { outline: 2px solid var(--tocha); outline-offset: 3px; }
+.eyebrow { font-size: var(--t-s); letter-spacing: 0.14em; text-transform: uppercase; color: var(--po); }
+.muted { color: var(--po); }
+
+/* the head */
+.head { display: flex; flex-direction: column; gap: 14px; }
+.head .lead { font-size: var(--t-l); color: var(--cal); max-width: 58ch; }
+.tally { display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: var(--t-s); color: var(--po); font-variant-numeric: tabular-nums; }
+.tally b { color: var(--cal); font-weight: 600; }
+.hero { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.hero img { width: 100%; height: auto; display: block; border-radius: 6px; }
+figcaption { font-size: var(--t-s); color: var(--po); max-width: 80ch; }
+
+/* state marks: a dot and a word, the same three everywhere */
+.estado { display: inline-flex; align-items: center; gap: 8px; font-size: var(--t-s); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
+.estado::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.estado.feito { color: var(--turquesa); }
+.estado.obra { color: var(--tocha); }
+.estado.fila { color: var(--po); }
+.legenda { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 14px 0; border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
+.legenda span.txt { color: var(--po); font-size: var(--t-s); text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+/* an entry: picture and note */
+.secao { display: flex; flex-direction: column; gap: 36px; }
+.secao > header { display: flex; flex-direction: column; gap: 8px; }
+.entrada { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 28px; align-items: start; }
+.entrada.inv { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+.entrada.inv .fotos { order: 2; }
+.entrada .nota { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.entrada .fotos { display: flex; flex-direction: column; gap: 12px; min-width: 0; margin: 0; }
+.fotos img { width: 100%; height: auto; display: block; border-radius: 6px; }
+.fotos .par { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fotos .par figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.fotos .par .rot { font-size: var(--t-s); color: var(--po); letter-spacing: 0.08em; text-transform: uppercase; }
+.muda { border-left: 3px solid var(--tocha); padding: 2px 0 2px 14px; color: var(--cal); }
+.muda strong { font-family: var(--display); font-weight: 500; letter-spacing: 0.03em; color: var(--tocha); display: block; font-size: var(--t-s); text-transform: uppercase; margin-bottom: 4px; }
+.nota ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 62ch; }
+.nota li::marker { color: var(--turquesa); }
+.perfis { display: flex; flex-wrap: wrap; gap: 6px; }
+.perfis span { font-size: var(--t-s); padding: 3px 9px; border: 1px solid var(--linha); border-radius: 999px; color: var(--cal); }
+
+/* the works in progress */
+.obras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.obra-c { background: var(--muro); border-top: 3px solid var(--tocha); padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.obra-c p { font-size: 0.9375rem; }
+.obra-c .fase { font-size: var(--t-s); color: var(--tocha); }
+
+/* the road to release: a real sequence */
+.caminho { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: passo; }
+.caminho li { counter-increment: passo; border-top: 1px solid var(--linha); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.caminho li::before { content: counter(passo); font-family: var(--display); font-size: var(--t-xl); color: var(--po); line-height: 1; }
+.caminho li.agora::before { color: var(--tocha); }
+.caminho b { font-weight: 600; }
+.caminho span { font-size: 0.9375rem; color: var(--po); }
+
+/* numbers */
+.numeros { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; padding: 22px 0; border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
+.numeros div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.numeros b { font-family: var(--display); font-size: var(--t-xl); font-variant-numeric: tabular-nums; }
+.numeros span { font-size: var(--t-s); color: var(--po); }
+
+/* old bugs */
+.mortos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px; margin: 0; padding: 0; list-style: none; }
+.mortos li { border-left: 3px solid var(--cinabrio); padding-left: 14px; font-size: 0.9375rem; }
+.mortos b { display: block; font-weight: 600; }
+
+footer { color: var(--po); font-size: var(--t-s); border-top: 1px solid var(--linha); padding-top: 18px; }
+
+@media (max-width: 820px) {
+  .entrada, .entrada.inv { grid-template-columns: minmax(0, 1fr); }
+  .entrada.inv .fotos { order: 0; }
+  .obras { grid-template-columns: minmax(0, 1fr); }
+  .caminho { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mortos { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+
+<div class="wrap">
+
+<header class="head">
+  <div class="eyebrow">God of the Ant Farm · diário do patch</div>
+  <h1>Bairros Vivos</h1>
+  <p class="lead">Um bairro deixa de ser um nome no mapa e passa a ser o que acontece nele. Aqui está o que já entrou no jogo, o que está em obras e o que cada coisa muda quando você joga.</p>
+  <div class="tally"><span><b>8</b> frentes já no jogo</span><span><b>6</b> em obras agora</span><span>atualizado em <b>11 de novembro de 2026</b></span></div>
+</header>
+
+<figure class="hero">
+  <img src="img/templo.jpg" alt="Rua de Mênfis diante do templo egípcio: pilones, obelisco, palmeiras, gente de saiote branco passando e um curral ao fundo" width="1600" height="900">
+  <figcaption>Mênfis, diante do templo, numa manhã comum. Todas as imagens grandes desta página são capturas de verdade do jogo em desenvolvimento, no Modo Encarnado, sem retoque.</figcaption>
+</figure>
+
+<div class="legenda">
+  <span class="estado feito">No jogo <span class="txt">— juntado ao ramo principal, com prova automática passando</span></span>
+  <span class="estado obra">Em obras <span class="txt">— um agente trabalhando agora</span></span>
+  <span class="estado fila">Na fila <span class="txt">— só depois que o resto estiver junto</span></span>
+</div>
+
+<section class="secao" id="no-jogo">
+  <header>
+    <span class="estado feito">No jogo</span>
+    <h2>O que já está feito</h2>
+  </header>
+
+  <article class="entrada">
+    <figure class="fotos">
+      <img src="img/praca-tarde.jpg" alt="Banca do mercado de Tenochtitlan ao fim da tarde, com frutas sobre a mesa, canais de água e casas de faixa turquesa e vermelha" width="1600" height="900">
+      <figcaption>O mercado de Tenochtitlan ao fim da tarde. Cada troca feita aqui conta para a fama do bairro.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>Cada bairro tem a vida que acontece nele</h3>
+      <p>O jogo agora anota o que as pessoas fazem em cada bairro, todo dia: cargas descidas no cais, peixe pescado, trocas no mercado, ofícios, minério, lavoura, treino de armas, reza, estudo, noites na taverna, crimes e mortes. Disso sai a fama do bairro, um destes dezesseis perfis:</p>
+      <div class="perfis"><span>porto movimentado</span><span>pesqueiro</span><span>de comércio vivo</span><span>de oficinas</span><span>mineiro</span><span>de lavoura</span><span>de soldados</span><span>sagrado</span><span>letrado</span><span>boêmio</span><span>perigoso</span><span>rico</span><span>pobre</span><span>vazio</span><span>parado</span><span>em decadência</span></div>
+      <p>A fama não muda num dia ruim: precisa de quatro dias seguidos, e a crônica do mundo conta a causa. Uma aldeia é um bairro só. Uma cidade que acaba deixa a memória do que foi.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Duas cidades do mesmo povo deixam de ser iguais. O bairro do porto que perde os navios vai ficando parado e a história diz por quê. Se você, como deus, queima a taverna do bairro boêmio, em poucos dias ele deixa de ser boêmio.</p>
+    </div>
+  </article>
+
+  <article class="entrada inv">
+    <figure class="fotos">
+      <img src="img/porto.jpg" alt="Porto de Mênfis de dia: navios de vela amarela no cais, campos alagados, gente andando pela margem" width="1600" height="900">
+      <figcaption>O porto de Mênfis. Estes navios agora só saem com marinheiros da própria cidade a bordo.</figcaption>
+      <img src="img/taverna-noite.jpg" alt="Noite junto ao cais de Mênfis: uma pessoa com uma tocha acesa, um navio parado e o céu estrelado" width="1600" height="900">
+      <figcaption>A mesma cidade à noite, a caminho da taverna.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>O mundo passa a decidir pelo bairro</h3>
+      <ul>
+        <li><b>Marinheiros de verdade.</b> Marinheiro virou ofício da cidade. Um navio mercante só sai com gente a bordo; sem ninguém livre, a carga espera. Na volta a tripulação pisa o cais, recebe o soldo e passa a primeira noite na taverna. A viagem entra na vida de cada um.</li>
+        <li><b>Ladrão e vigia.</b> A ronda vai primeiro ao bairro perigoso, e o ladrão pesa o quanto a casa está vigiada naquela noite.</li>
+        <li><b>Tempo livre perto de casa.</b> Quem mora longe da fogueira descansa à porta de casa, e o freguês vai à taverna das suas ruas.</li>
+        <li><b>A casa mercante é da família.</b> A bandeira na porta acompanha a família quando ela muda de casa e passa de pai para filho, irmão ou viúva.</li>
+        <li><b>Aluguel.</b> Quem mora na casa de um dono que vive noutro lugar paga aluguel a ele, a não ser que seja parente. A família rica compra a casa da terra cara, e quem vendeu vai morar de aluguel na casa que ela deixou.</li>
+      </ul>
+      <p class="muda"><strong>O que muda quando você joga</strong>Viver um marinheiro é embarcar, voltar e gastar o soldo. Viver um ladrão é escolher a rua pela ronda. E a cidade tem famílias ricas que você reconhece pela bandeira, geração após geração.</p>
+    </div>
+  </article>
+
+  <article class="entrada">
+    <figure class="fotos">
+      <img src="img/praca-noite.jpg" alt="Praça do mercado de Tenochtitlan à noite, iluminada por uma tocha na mão de uma pessoa, com as bancas vazias e estrelas no céu" width="1600" height="900">
+      <figcaption>A praça à noite. A luz e a fumaça agora só aparecem onde há fogo e gente de verdade.</figcaption>
+      <img src="img/rua-dia.jpg" alt="Rua calçada de Tenochtitlan de dia: duas pessoas vistas de costas, uma de vestido claro e outra de manto e chapéu de palha, com as bancas do mercado ao fundo" width="1600" height="900">
+      <figcaption>Duas vizinhas a caminho do mercado. A roupa de cada pessoa diz o grupo dela e o que o povo sabe tecer.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>O que se vê tem causa</h3>
+      <p>A vista do deus e o 3D passaram a perguntar a mesma coisa ao mundo antes de desenhar:</p>
+      <ul>
+        <li><b>Fumaça</b> só sai de telhado com fogo embaixo: a fornada ardendo, a forja com alguém nela, a fornalha dos banhos, a taverna aberta, a casa com gente acordada junto ao fogo.</li>
+        <li><b>Janela acesa</b> só com gente acordada dentro.</li>
+        <li><b>Roupa</b> pelo grupo da pessoa (nobre, mercadora, artesã, do povo), pelo que o povo sabe fazer (tear, seda, bronze, ferro), pelo frio da rua e pela bebida. Bêbado cambaleia.</li>
+        <li><b>Desgaste</b> das paredes pelos anos, pela água e pelo cuidado do bairro.</li>
+      </ul>
+      <p class="muda"><strong>O que muda quando você joga</strong>Dá para ler a cidade só de olhar. Bairro de janelas apagadas cedo é bairro de quem acorda cedo. Chaminé fumando é oficina trabalhando. Seda na rua é cidade rica.</p>
+    </div>
+  </article>
+
+  <article class="entrada inv">
+    <figure class="fotos">
+      <img src="img/sabe-conhecido.jpg" alt="Tela do Modo Encarnado: Coatlicue, fruticultora, junto ao mercado; no canto de cima a linha do lugar diz «Cidade Velha, Tenochtitlan»" width="1200" height="675">
+      <figcaption>Coatlicue mora aqui: no canto de cima, a tela diz o nome do bairro dela, «Cidade Velha, Tenochtitlan».</figcaption>
+      <img src="img/sabe-bairro.jpg" alt="Tela do Modo Encarnado: um agricultor visto de costas e, no canto, a linha do lugar dizendo «Um quartel e seus muros, bancas — Tenochtitlan»" width="1000" height="640">
+      <figcaption>Cuetlachtli nunca esteve neste outro bairro. Em vez do nome, a tela descreve o que ele vê: «Um quartel e seus muros, bancas».</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>A tela só diz o que o personagem sabe</h3>
+      <p>Vivendo uma pessoa, você deixa de saber tudo. Quem ela nunca viu é «um ferreiro», não um nome. O bairro onde ela nunca pisou é descrito pelo que se enxerga. As moedas e os guardados de uma casa só aparecem para quem é de lá. O que ela conheceu de frente fica guardado e vai no save.</p>
+      <p>A tecla <b>H</b> esconde a tela inteira, para andar pela cidade só olhando.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Chegar a uma cidade estranha passa a ser chegar a uma cidade estranha. E voltar para a sua rua, onde você sabe o nome de todo mundo, tem outro gosto.</p>
+    </div>
+  </article>
+
+  <article class="entrada">
+    <figure class="fotos">
+      <img src="img/mercado-dia.jpg" alt="Mercado de Tenochtitlan de dia, com bancas de toldo vermelho, turquesa e amarelo, celeiros em cone e a muralha ao fundo" width="1600" height="533">
+      <figcaption>Num minuto de gravação na metrópole tocaram 46 sons de lugar, e todos tinham dono: cães, velas de navio, cantos, foices, fogo, vozes.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>O que se ouve tem dono</h3>
+      <p>Todo som de lugar agora sai de alguém ou de alguma coisa que existe: a pessoa num gesto, o prédio com o trabalho vivo, o navio que anda, o bicho. O som vem do lado certo, enfraquece com a distância e fica abafado atrás de parede.</p>
+      <p>O fundo de um bairro é o costume dele vezes as mãos que estão trabalhando naquele momento. Porto vazio não soa a porto. A música tira a escala e o timbre do povo do chão e da época das artes dele.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>De olhos fechados dá para saber onde você está. São 42 sons de lugar novos. Estes só o seu ouvido julga: quando publicar, me diga os que soarem errado.</p>
+    </div>
+  </article>
+
+  <article class="entrada inv" id="monumentos">
+    <figure class="fotos">
+      <img src="img/piramide.jpg" alt="A Grande Pirâmide de Mênfis vista de perto: a face de pedra clara, o portal de granito avermelhado com um disco dourado, um espelho d'água e gente passando" width="1600" height="900">
+      <figcaption>A Grande Pirâmide de Mênfis, no mundo pronto da megalópole, com o portal novo de granito e o disco do sol.</figcaption>
+      <img src="img/coliseu-velario.jpg" alt="O Coliseu visto da arena: três ordens de arcos e, no alto, tiras de toldo creme e vermelho presas a mastros" width="960" height="600">
+      <figcaption>O velário novo do Coliseu visto da arena. Este é um desenho de conferência das provas, em cor chapada; a foto de verdade entra aqui na próxima atualização.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>Monumentos mais bonitos de perto e de longe</h3>
+      <ul>
+        <li><b>Coliseu</b> com o velário, o toldo de tiras creme e vermelhas sobre as fileiras, e escudos dourados no alto. De perto tem 17% menos triângulos para desenhar.</li>
+        <li><b>Grande Pirâmide</b> com portal de granito no lugar da caixa crua da entrada.</li>
+        <li><b>Templo egípcio</b> com cornija nas torres, bandeiras e o sol na verga.</li>
+        <li><b>Templo Mayor</b> com a linha da escada em todo degrau.</li>
+        <li><b>Teatros</b> que de longe parecem uma bacia de fileiras, não um tambor chato. <b>Paliçada</b> que de longe vira cerca de tábuas, sem pontas soltas no ar.</li>
+      </ul>
+      <p class="muda"><strong>O que muda quando você joga</strong>O que já era grande agora também é bonito. Falta o principal, que está em obras logo abaixo: as cidades erguerem essas obras sozinhas.</p>
+    </div>
+  </article>
+
+  <article class="entrada">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>Fauna em equilíbrio e defeitos antigos mortos no caminho</h3>
+      <p>Você notou rãs e coelhos demais depois de muitos anos. Era verdade: rã, coelho, lebre e lagarto cresciam sem freio. Agora ficam com densidade perto da dos outros bichos, século após século, e há uma prova que mede isso.</p>
+      <ul class="mortos">
+        <li><b>A casa que pegava fogo custava uma perna.</b> Quem perdia a casa num incêndio trabalhava a 85% para sempre e aparecia «Sem uma perna». E quem tinha perdido um braço de verdade o ganhava de volta.</li>
+        <li><b>O corpo posto na rua.</b> Tomar o corpo de alguém dentro de casa punha a pessoa do lado de fora da porta. Agora ela fica onde estava.</li>
+        <li><b>A bandeira que morria com o dono.</b> A casa mercante não passava ao irmão pequeno; a família perdia tudo numa morte.</li>
+        <li><b>O relógio duplo.</b> Carregar um save dava a alguns sistemas um segundo «dia» no mesmo dia.</li>
+      </ul>
+      <p class="muted">Ao todo, 57 defeitos registrados e consertados neste patch, cada um com a causa escrita e uma prova que falhava antes e passa agora.</p>
+    </div>
+  </article>
+</section>
+
+<section class="secao" id="em-obras">
+  <header>
+    <span class="estado obra">Em obras</span>
+    <h2>O que está sendo feito agora</h2>
+    <p class="muted">Seis agentes trabalhando em paralelo, cada um na sua cópia do jogo. Eu junto, confiro e publico.</p>
+  </header>
+  <div class="obras">
+    <div class="obra-c">
+      <h3>Cidades que erguem monumentos sozinhas</h3>
+      <p>Hoje nenhum dos sete mundos prontos tem um Coliseu. O maior prédio que uma cidade ergueu por conta própria é a Grande Pirâmide de Mênfis; depois dela vêm um grande palácio, teatros e templos médios. Esta frente faz a capital rica o bastante começar a obra grande sozinha, põe a casa rica na terra cara, o governante morando no palácio e o povo na praça.</p>
+      <span class="fase">Código escrito, em provas</span>
+    </div>
+    <div class="obra-c">
+      <h3>As termas grandes</h3>
+      <p>A escada dos banhos já previa termas de 20 e de 28 metros, mas nenhum povo sabia erguê-las. Com desenho próprio, não as mesmas três salas aumentadas: vestiário, piscina fria, sala morna, sala quente com cúpula e fornalha, e a palestra com colunata na frente.</p>
+      <span class="fase">Forma e planta escritas, em provas</span>
+    </div>
+    <div class="obra-c">
+      <h3>A lenha, os barris e os potes à porta</h3>
+      <p>A regra já existe: em volta de uma casa só aparece o que ela tem. Mas as casas das cidades ocupam o lote inteiro e não sobrava lugar. Na metrópole, de umas 200 casas, uma ou duas mostravam alguma coisa. Esta frente dá lugar às coisas: a pilha de lenha do lenhador, o barril de quem guarda bebida, os potes secando diante da olaria.</p>
+      <span class="fase">Código escrito, prova sendo escrita</span>
+    </div>
+    <div class="obra-c">
+      <h3>Pontes de pedra de verdade</h3>
+      <p>Tirando as fotos deste diário apareceu um defeito bem no meio das cidades: a ponte de rua calçada é uma laje cinza lisa, sem junta nem arco. Tenochtitlan, cheia de canais, tem várias em cada vista. Esta frente dá a elas pedra, mureta e arco, no estilo de cada povo.</p>
+      <span class="fase">Começou agora</span>
+    </div>
+    <div class="obra-c">
+      <h3>A grande biblioteca e o paço municipal</h3>
+      <p>Mais dois prédios de serviço que a escada já previa com 16 metros e nenhum povo sabia erguer. A biblioteca com sala de leitura, estantes e pórtico; o paço com a sala do conselho e o pátio onde o povo espera. Um desenho para cada um dos seis povos.</p>
+      <span class="fase">Começou agora</span>
+    </div>
+    <div class="obra-c">
+      <h3>A casa por dentro</h3>
+      <p>Muita casa não tem mesa nem fogo: a planta só punha a mesa no chão que sobrava depois das camas. As cabanas egípcias não tinham nenhuma. Esta frente põe o lugar de comer e o fogo no coração de toda casa, para a família aparecer junta à noite.</p>
+      <span class="fase">Começou agora</span>
+    </div>
+  </div>
+</section>
+
+<section class="secao" id="caminho">
+  <header>
+    <span class="estado fila">Na fila</span>
+    <h2>O caminho até você poder jogar</h2>
+  </header>
+  <ol class="caminho">
+    <li class="agora"><b>Juntar as seis frentes</b><span>Cada uma com as provas dela passando na árvore principal.</span></li>
+    <li><b>Gerar de novo os sete mundos prontos</b><span>Só então os bairros deles nascem com fama e com as obras grandes.</span></li>
+    <li><b>A regressão completa</b><span>Cerca de sete horas de provas. Toda linha nova precisa de explicação.</span></li>
+    <li><b>Relatório final e publicação</b><span>O jogo novo no artefato de sempre.</span></li>
+  </ol>
+</section>
+
+<section class="numeros" aria-label="O patch em números">
+  <div><b>34</b><span>versões gravadas no ramo</span></div>
+  <div><b>27</b><span>arquivos de prova novos</span></div>
+  <div><b>57</b><span>defeitos consertados</span></div>
+  <div><b>25</b><span>decisões de design escritas</span></div>
+  <div><b>10</b><span>regras novas do guarda do código</span></div>
+</section>
+
+<footer>
+  <p>Este diário é atualizado a cada frente que entra. As capturas são dos mundos prontos atuais, gerados antes da vida do bairro: as famas dos bairros aparecem nelas só depois que os mundos forem gerados de novo.</p>
+</footer>
+
+</div>

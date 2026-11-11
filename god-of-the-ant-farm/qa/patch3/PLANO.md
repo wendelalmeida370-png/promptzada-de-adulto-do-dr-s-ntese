@@ -319,12 +319,18 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   aberto na de agora, sem violação em dez anos (`oldsave`). Duas provas que caíam por causa de mudanças do patch foram
   acertadas: a pesca do corpo medida debaixo de tempestade (T-802) e os carregadores da disputa no cais, que a cidade
   agora manda para o mar como marinheiros (T-803).
-- **Em curso, três frentes:** a Arquitetura Monumental no mundo (M): os degraus grandes erguidos pelas próprias cidades, a
-  casa rica em terra cara, o governante no palácio, o povo na praça; **as termas grandes** (T; o T-784: a forma, a planta
-  e o 3D das termas de 20 e de 28 m, que a escada dos banhos já previa e nenhum povo sabia erguer); e **as coisas em
-  volta das casas** (Q; o T-703: lugar para a lenha, os barris, os potes e as redes nos prédios desenhados pela planta —
-  hoje quase nada se vê numa cidade de verdade).
+- **Em curso, seis frentes** (o dono deu carta branca para quantos agentes fossem precisos): a Arquitetura Monumental no
+  mundo (M): os degraus grandes erguidos pelas próprias cidades, a casa rica em terra cara, o governante no palácio, o
+  povo na praça; **as termas grandes** (T; o T-784: a forma, a planta e o 3D das termas de 20 e de 28 m); **as coisas em
+  volta das casas** (Q; o T-703: lugar para a lenha, os barris, os potes e as redes nos prédios desenhados pela planta);
+  **as pontes** (P: a ponte de rua calçada era uma laje cinza lisa — vista nas fotos do diário —, e ganha pedra, mureta
+  e arco pelo povo do chão; só desenho); **a grande biblioteca e o paço municipal** (B; o resto do T-784: 16 m, seis
+  povos); e **a casa por dentro** (G; T-403, T-436, T-446: o lugar de comer e o fogo no núcleo de toda casa, o motor que
+  recusa a peça onde o corpo não cabe, os depósitos do celeiro em qualquer semente).
+- **O diário do patch para o dono** (`qa/patch3/diario/`, publicado como artefato): o que entrou, o que está em obras e o
+  que cada coisa muda no jogo, com capturas de verdade do Modo Encarnado (`qa/visual/fotos-diario.js`); atualizado a
+  cada frente juntada.
 - **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
   novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** juntar as frentes M, T e Q, e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
+- **A seguir:** juntar as frentes M, T, Q, P, B e G, e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
   seis sementes da terra, o relatório).
