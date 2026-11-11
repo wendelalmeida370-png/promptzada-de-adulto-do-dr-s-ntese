@@ -119,6 +119,8 @@
   //   (cavea, a part of the round: arco [a0, a1], the angles it spans — from +u toward +v —; fecho: the colour of its back
   //   wall and its ends, standing on the ground where no drum holds it)
   // (mat on an element: the stuff it is built of — 'base' the people's own stone, 'parede' its walls')
+  // (fino on an element: too thin to be seen from afar — a palisade's stakes and their points —: its masses keep the mark, and
+  // the far figure leaves them out — what stands for them there is the form's own, the planks between the stakes; L-800)
   // (and for the plan — D-093: G.Forma.uses, solids, body —: uso, what a piece is for — 'fonte', 'tribuna', 'banco' —, vira
   // [du, dv] the way one faces using it; piso: a floor one walks on (the square's pavement); degrau: a tread of a flight — 1
   // the body's way in, or the use it climbs to ('tribuna'); a form's body: { walls, porch: { r, y1, cols }, base, steps })
@@ -1683,6 +1685,7 @@
     const out = [];
     for (const e of F.els) {
       if (e.oculto) continue; // (inside a mass — the pyramid's corridor, gallery and chamber, D-108 —: no part of its figure)
+      const n0 = out.length;
       if (e.k === 'bloco') out.push({ k: 'box', r: e.r, y0: e.y0, y1: e.y1, cor: e.cor[0] });
       else if (e.k === 'talude') out.push({ k: 'talude', r: e.r, r1: e.r1, y0: e.y0, y1: e.y1, cor: e.cor[0] });
       else if (e.k === 'piramide') out.push({ k: 'piramide', c: e.c, e: e.e, y0: e.y0, y1: e.y1, cor: e.cor[0] });
@@ -1710,8 +1713,12 @@
       else if (e.k === 'pedra') out.push({ k: 'talude', r: [e.c[0] - e.e, e.c[1] - e.e, e.c[0] + e.e, e.c[1] + e.e], r1: [e.c[0] - e.e1, e.c[1] - e.e1, e.c[0] + e.e1, e.c[1] + e.e1], y0: e.y0, y1: e.y1, cor: e.cor[0] });
       else if (e.k === 'roda') out.push({ k: 'tronco', a: [e.c[0], e.c[1] - e.t / 2, e.y], b: [e.c[0], e.c[1] + e.t / 2, e.y], r0: e.r, r1: e.r, cor: e.cor[1] });
       else if (e.k === 'estatua') for (const p of Fo.figure(e)) { const m = partMass(p); if (m) out.push(m); }
-      else if (e.k === 'cavea' && e.arco) out.push({ k: 'anel', c: e.c, r: e.aneis[0][0], t: e.aneis[0][0] - e.fundo, y0: 0, y1: e.aneis[0][1], a0: e.arco[0], a1: e.arco[1], cor: e.cor });
+      // (the rows of a part of the round: one ring, its top the slope of its rows — from its lowest row at its inner edge, yi, up
+      // to its top row at its outer one: from afar a bowl, as it is; flat at its top row's height it was a drum, L-803)
+      else if (e.k === 'cavea' && e.arco) out.push({ k: 'anel', c: e.c, r: e.aneis[0][0], t: e.aneis[0][0] - e.fundo, y0: 0, y1: e.aneis[0][1], yi: e.aneis[e.aneis.length - 1][1], a0: e.arco[0], a1: e.arco[1], cor: e.cor });
       else if (e.k === 'palmeira') out.push({ k: 'tronco', a: e.p, b: [e.p[0], e.p[1], e.p[2] + e.h], r0: 0.12, r1: 0.1, cor: '#8a6a44' }, { k: 'tronco', a: [e.p[0], e.p[1], e.p[2] + e.h - 0.35], b: [e.p[0], e.p[1], e.p[2] + e.h + 0.3], r0: e.s, r1: e.s * 0.5, cor: '#4f9d45' });
+      // (a palisade's stakes and their points: masses as any, marked — from afar the fence is its planks, L-800)
+      if (e.fino) for (let q = n0; q < out.length; q++) out[q].fino = true;
     }
     return out;
   };
