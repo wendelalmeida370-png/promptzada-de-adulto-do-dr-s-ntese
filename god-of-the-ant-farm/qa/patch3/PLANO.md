@@ -314,10 +314,17 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   - **a Arquitetura Monumental no 3D e na forma** (E; D-178 a D-181, L-800 a L-803): o Coliseu 17% mais leve de perto e
     com o velário, o portal da Grande Pirâmide, a paliçada, os teatros e a cávea de longe (`visual/monumentos-ajustes.js`).
   E, achado pelo S e consertado pelo líder: quem é tomado dentro de um prédio fica dentro dele (L-741, `corpo-dentro.js`).
-- **Em curso:** a Arquitetura Monumental no mundo (M): os degraus grandes erguidos pelas próprias cidades, a casa rica em
-  terra cara, o governante no palácio, o povo na praça.
-- **Aberto das frentes juntadas, dito no AUDIT:** os prédios de serviço maiores (T-784); a medida do quadro do Coliseu com a
-  máquina livre (T-781); as coisas em volta das casas fora do lote (T-703); os 42 sons novos, que só o ouvido do dono julga;
-  o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** juntar a frente M, e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das seis
-  sementes da terra, o relatório).
+- **Conferido na árvore juntada, no navegador:** o 3D desenha sem erro de módulo (`encarna` e11), a tela do corpo
+  (`sabe-tela`), as trocas de corpo e a casa por dentro (e4, e18), e um mundo salvo na versão da linha de base (c2d68e1)
+  aberto na de agora, sem violação em dez anos (`oldsave`). Duas provas que caíam por causa de mudanças do patch foram
+  acertadas: a pesca do corpo medida debaixo de tempestade (T-802) e os carregadores da disputa no cais, que a cidade
+  agora manda para o mar como marinheiros (T-803).
+- **Em curso, três frentes:** a Arquitetura Monumental no mundo (M): os degraus grandes erguidos pelas próprias cidades, a
+  casa rica em terra cara, o governante no palácio, o povo na praça; **as termas grandes** (T; o T-784: a forma, a planta
+  e o 3D das termas de 20 e de 28 m, que a escada dos banhos já previa e nenhum povo sabia erguer); e **as coisas em
+  volta das casas** (Q; o T-703: lugar para a lenha, os barris, os potes e as redes nos prédios desenhados pela planta —
+  hoje quase nada se vê numa cidade de verdade).
+- **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
+  novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
+- **A seguir:** juntar as frentes M, T e Q, e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
+  seis sementes da terra, o relatório).
