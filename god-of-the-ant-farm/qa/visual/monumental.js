@@ -48,11 +48,13 @@
 // Parte 2 (o navegador, o 3D desenhado por software — lento: poucas fotos, pequenas):
 //   7. as fotos em JPG: de fora (o corpo diante da fachada), da arena olhando as arquibancadas, do alto de um anel
 //   8. o custo do quadro do Modo Encarnado com o corpo diante do Coliseu, em turnos — o pedaço do canto dele em três vistas, trocadas
-//      a cada 15 quadros, seis vezes cada (a mesma carga da máquina para as três, T-433): o Coliseu de perto, a figura dele de longe
+//      a cada 15 quadros, doze vezes cada (a mesma carga da máquina para as três, T-433): o Coliseu de perto, a figura dele de longe
 //      no lugar dele (como o 3D o desenha além da distância) e a vista sem ele —, em CPU do navegador: o processo da página e o do GL
 //      por software, onde se faz o desenho de um quadro, fora do relógio da página (T-472), cada turno desenhado até o fim; o de
 //      perto julgado contra a figura (D-134: um monumento que enche a vista custa os pixels que cobre; a prova guarda o custo do
-//      detalhe de perto); alvo: a mediana dos turnos não acima da da figura × 1,15, e o pior turno não pior que o da figura × 1,15
+//      detalhe de perto); alvo: a mediana dos turnos não acima da da figura × 1,15 (D-134), e o pior turno não pior que o pior da
+//      figura × 1,20 (D-150: o pior de doze turnos soma ao nível o ruído da máquina, ±1,8% por turno; um tranco de +15% num turno só
+//      ainda é pego). E os turnos um a um, para ler: (TURNOS)
 //   8t. (PARTE=quadro, sozinha na máquina) o mesmo em tempo de relógio, a medida do e8 do encarna (simulação + 3D, quadros de 16 ms
 //      na qualidade média, mediana e p95); alvo: mediana ≤ 13 ms (ou não acima da da figura × 1,15) e p95 não pior que o da figura ×
 //      1,15. E, para ler, antes e depois de fundá-lo (um minuto entre as duas), as chamadas e os triângulos
@@ -752,7 +754,7 @@ async function browserPart() {
     // (the frame's clock is measured only in PARTE=quadro — worth something only with the machine free: alone, in the regression's
     // phase of performance; with five queues on four cores its p95 was the machine's, T-472. The other parts measure its CPU: 8)
     const quadro = PARTE === 'quadro';
-    // (the chunk of the Colosseum's corner in turns, three views swapped every 15 frames, six times each — the same load of the
+    // (the chunk of the Colosseum's corner in turns, three views swapped every 15 frames, twelve times each — the same load of the
     // machine for the three, T-433 —: the Colosseum as it is drawn near — the chunk's solid mesh as the realm drew it, the one
     // with as many points as the chunk's buildings drawn again here —; the same chunk without it and in its place its figure from
     // afar, as the realm draws a building beyond the distance (Build3D.farGeo, the solid material, no shadow); the chunk without
@@ -761,7 +763,9 @@ async function browserPart() {
     // view, the frame as the e8 measures it, the page's clock of each, and — sync — reads a pixel back: the turn drawn to its end,
     // the software GL's too, and the next turn begins with nothing of it behind. The one time the chunk is drawn again for it is
     // part 1's)
-    const VIEWS = [0, 1, 2, 1, 2, 0, 2, 0, 1, 0, 1, 2, 1, 2, 0, 2, 0, 1]; // (near, figure, empty: each first, second and last twice)
+    // (near, figure, empty: in the eighteen, each first, second and last twice; the eighteen twice — twelve turns a view, each view
+    // first, second and last four times, the 8's and the 8t's: D-150)
+    const V18 = [0, 1, 2, 1, 2, 0, 2, 0, 1, 0, 1, 2, 1, 2, 0, 2, 0, 1], VIEWS = V18.concat(V18);
     const views = () => page.evaluate(() => {
       const V = window.__VIS, R3 = G.Realm, B3 = G.Build3D, S = G.S; const b = S.buildings.get(window.__b); const T = G.Space.TILE, C = 16;
       const st = G.Avatar.state(); const s = window.__site; const cx = (s.site[0] + s.n / 2) * T, cz = (s.site[1] + s.n / 2) * T; const yaw = Math.atan2(cz - st.Z, cx - st.X);
@@ -793,7 +797,7 @@ async function browserPart() {
     // 8 and 8t: the frame with the Colosseum in view, in the reference world — the city of the T-492 and of the D-134, the same in
     // every generation of the ready worlds: in those, the view followed the world, and the Rome of the generation 19 gave +17% where
     // the T-492's gave +12%, the Colosseum drawn the same (T-671). A reference world that does not open fails the two, saying so
-    const N8 = '8. o custo do quadro com o Coliseu à vista, em CPU do navegador (o processo da página e o do GL por software), em turnos; D-134: contra a figura dele de longe no mesmo lugar: a mediana dos turnos não acima da da figura × 1,15, e o pior turno não pior que o pior da figura × 1,15';
+    const N8 = '8. o custo do quadro com o Coliseu à vista, em CPU do navegador (o processo da página e o do GL por software), em turnos; D-134: contra a figura dele de longe no mesmo lugar: a mediana dos turnos não acima da da figura × 1,15, e o pior turno não pior que o pior da figura × 1,20 (D-150)';
     const N8t = '8t. o quadro do Modo Encarnado com o Coliseu à vista em tempo de relógio, sozinha na máquina (a medida do e8, qualidade média, em turnos; D-134: contra a figura dele de longe no mesmo lugar): mediana ≤ 13 ms (ou não acima da da figura × 1,15) e, numa placa de vídeo, p95 não pior que o da figura × 1,15 (D-137)';
     {
       // (the frame before the Colosseum, in PARTE=quadro, then the Colosseum founded: in the reference world as ever)
@@ -818,22 +822,26 @@ async function browserPart() {
           // a card does not have. The worst turn's cost is the 8's, in CPU, every turn drawn to its end — D-137)
           const soft = /swiftshader|llvmpipe|software|softpipe/i.test(prep.gpu || ''); const tq = prep.none ? null : await turnsQ();
           ok(N8t, !prep.none && tq.media && (tm[0] <= 13 || tm[0] <= tm[1] * 1.15 + 0.5) && (soft || tp[0] <= tp[1] * 1.15 + 0.5),
-            prep.none ? 'o pedaço do Coliseu não achado na cena' : `${offQ(tq)}no mundo de referência; carga da máquina ${load()} em ${cores} núcleos; GL ${soft ? 'por software' : 'da placa'} (${(prep.gpu || '?').slice(0, 60)}); em turnos na qualidade ${tq.txt} (6 × 15 quadros cada vista): a vista sem ele ${tm[2]} ms (p95 ${tp[2]}) · a figura de longe no lugar dele ${tm[1]} ms (p95 ${tp[1]}) · o Coliseu de perto ${tm[0]} ms (p95 ${tp[0]}${soft ? ', não julgado: a fila do GL por software' : ''}); ${trisTxt()}`);
+            prep.none ? 'o pedaço do Coliseu não achado na cena' : `${offQ(tq)}no mundo de referência; carga da máquina ${load()} em ${cores} núcleos; GL ${soft ? 'por software' : 'da placa'} (${(prep.gpu || '?').slice(0, 60)}); em turnos na qualidade ${tq.txt} (12 × 15 quadros cada vista): a vista sem ele ${tm[2]} ms (p95 ${tp[2]}) · a figura de longe no lugar dele ${tm[1]} ms (p95 ${tp[1]}) · o Coliseu de perto ${tm[0]} ms (p95 ${tp[0]}${soft ? ', não julgado: a fila do GL por software' : ''}); ${trisTxt()}`);
           console.log(`DESEMPENHO | monumental | Roma do mundo de referência (a metrópole do 75a40e2), o corpo diante do Coliseu, em turnos: mediana ${tm[2]} (vazia) · ${tm[1]} (a figura) · ${tm[0]} ms (de perto), p95 ${tp[2]} · ${tp[1]} · ${tp[0]} ms; antes e depois de fundá-lo (um minuto entre as duas, carga ${load()}): mediana ${before.med} → ${after.med} ms, p95 ${before.p95} → ${after.p95} ms, chamadas ${before.calls} → ${after.calls}, triângulos ${before.tris} → ${after.tris}`);
         } else {
           // 8. what the frame costs with the Colosseum in view, in the CPU of the browser — the page's process and the GPU process,
           // the software GL's, where the raster of a frame is done, after the page's frame: out of the page's clock, which times only
           // the page's thread and the waits when the GL is behind, as the machine has it (T-472: the p95 of the clock was five queues
           // on four cores) —, every turn drawn to its end (a pixel read back) before the CPU is read; the Colosseum near against its
-          // figure from afar in its place (D-134), by the frame, the limit of the clock's: the middle of the turns and the worst not
-          // above the figure's × 1,15
+          // figure from afar in its place (D-134), by the frame: the middle of the turns not above the figure's × 1,15 (D-134), and
+          // the worst not above the figure's worst × 1,20 (D-150: the worst of twelve turns adds the machine's noise to the level —
+          // ±1.8% a turn, alone on the machine —, and at the median's × 1,15 it was tighter than the median; a jolt of +15% in one
+          // turn alone is still caught)
           const cpuR = [[], [], []]; let cpuNo = false;
           if (!prep.none) { await page.evaluate(() => window.__run(0, 6, true));
             for (const w of VIEWS) { const c0 = browserCPU(); await page.evaluate(([x]) => window.__run(x, 15, true), [w]); const c1 = browserCPU(); if (c0 === null) { cpuNo = true; break; } cpuR[w].push((c1 - c0) / 15); }
             await page.evaluate(() => window.__undo()); }
           const cm = cpuR.map(a => qn(a, 0.5)), cw = cpuR.map(a => qn(a, 0.95)); const cq = prep.none ? null : await turnsQ();
-          ok(N8, !prep.none && !cpuNo && cq.media && cm[0] <= cm[1] * 1.15 + 0.5 && cw[0] <= cw[1] * 1.15 + 0.5,
-            prep.none ? 'o pedaço do Coliseu não achado na cena' : cpuNo ? 'sem /proc: o CPU dos processos não se lê nesta máquina' : `${offQ(cq)}no mundo de referência; carga da máquina ${load()} em ${cores} núcleos; em turnos na qualidade ${cq.txt} (6 × 15 quadros cada vista), o CPU de um quadro: a vista sem ele ${cm[2]} ms (o pior turno ${cw[2]}) · a figura de longe no lugar dele ${cm[1]} ms (${cw[1]}) · o Coliseu de perto ${cm[0]} ms (${cw[0]}): ${((cm[0] / cm[1] - 1) * 100).toFixed(0)}% sobre a figura, o detalhe ${(cm[0] - cm[1]).toFixed(0)} ms; ${trisTxt()} (o tempo de relógio: PARTE=quadro, sozinha na máquina)`);
+          ok(N8, !prep.none && !cpuNo && cq.media && cm[0] <= cm[1] * 1.15 + 0.5 && cw[0] <= cw[1] * 1.2 + 0.5,
+            prep.none ? 'o pedaço do Coliseu não achado na cena' : cpuNo ? 'sem /proc: o CPU dos processos não se lê nesta máquina' : `${offQ(cq)}no mundo de referência; carga da máquina ${load()} em ${cores} núcleos; em turnos na qualidade ${cq.txt} (12 × 15 quadros cada vista), o CPU de um quadro: a vista sem ele ${cm[2]} ms (o pior turno ${cw[2]}) · a figura de longe no lugar dele ${cm[1]} ms (${cw[1]}) · o Coliseu de perto ${cm[0]} ms (${cw[0]}): ${((cm[0] / cm[1] - 1) * 100).toFixed(0)}% sobre a figura, o detalhe ${(cm[0] - cm[1]).toFixed(0)} ms; ${trisTxt()} (o tempo de relógio: PARTE=quadro, sozinha na máquina)`);
+          // (and the turns one by one, each view's as they came, to read: D-150)
+          if (!prep.none && !cpuNo) console.log('(TURNOS) ' + JSON.stringify({ perto: cpuR[0], figura: cpuR[1], vazia: cpuR[2] }, (k, x) => typeof x === 'number' ? +x.toFixed(1) : x));
         }
       }
       if (quadro) return fails; // (the quadro only: the photos are the other parts')
