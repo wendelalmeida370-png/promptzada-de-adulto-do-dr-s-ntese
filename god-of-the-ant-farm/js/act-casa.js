@@ -89,7 +89,7 @@
     return keep && K.family(v).length <= G.BDEF[h.type].housing ? null : w;
   };
   K.minds = o => !!(G.Lar && G.Lar.minder && G.Lar.minder(o)); // (the old one of the house who minds its little ones, act-lar.js)
-  const WHY = { rua: 'sem teto', barraco: 'num barraco', casal: 'na casa de outros, cheia', lotada: 'gente demais para as camas', aluga: 'de aluguel' };
+  const WHY = { rua: 'sem teto', barraco: 'num barraco', casal: 'na casa de outros, cheia', lotada: 'gente demais para as camas', aluga: 'de aluguel', rica: 'uma casa à altura da família' };
   const URGENT = { rua: 0, barraco: 1, lotada: 2, casal: 3, aluga: 4 };
   // the family that would move: the person, the partner, the children under sixteen living with them
   K.family = function (v) {
@@ -105,10 +105,11 @@
     return 'hut';
   }
   // a house paid by the family: its materials at the town's prices, and the land it stands on (the city's value there)
-  K.price = function (set, type, pos) {
-    const def = G.BDEF[type || 'house']; let n = 0;
-    for (const k in def.cost) n += (def.cost[k] || 0) * (E.PRICE[k] || 0.3);
-    const at = pos ? [pos[0] + def.w / 2, pos[1] + def.h / 2] : [set.cx, set.cy];
+  // (step: the step of the type's ladder it is raised at — the rich house —: its bill and its lot, G.Escala)
+  K.price = function (set, type, pos, step) {
+    const def = G.BDEF[type || 'house']; let n = 0; const cost = step ? G.Escala.bill(type, step).cost : def.cost; const w = step ? step.n : def.w;
+    for (const k in cost) n += (cost[k] || 0) * (E.PRICE[k] || 0.3);
+    const at = pos ? [pos[0] + w / 2, pos[1] + w / 2] : [set.cx, set.cy];
     const land = G.Urban && G.Urban.valueAt && (set.tier || 0) >= 2 ? G.Urban.valueAt(set, at[0], at[1]) * 0.12 : 2;
     return r2(n + land);
   };
@@ -141,7 +142,10 @@
     // the families in need, the most urgent first (one decision a day per town — the dear ground of a city moves slowly); the
     // body's family is the body's to decide (its offer at the store), whoever of its grown ones heads it in the queue — with the
     // partner at the head, the day moved the body to a house the player never chose (L-452)
-    for (const [v] of K.queue(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; const r = K.order(v); if (r.ok) break; }
+    let done = false;
+    for (const [v] of K.queue(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; const r = K.order(v); if (r.ok) { done = true; break; } }
+    // (and, with no family in need served today, a rich one may ask for the rich house: T-447)
+    if (!done) for (const v of K.rich(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; if (K.orderRich(v).ok) break; }
   }
   // the families in need of a town, in the order the day asks them: [head, why], the most urgent first. Of a house too many
   // for its beds, or full with a couple of others, only its youngest family — its eldest grown one's age —: the old ones of
@@ -286,6 +290,55 @@
     A.note(v, 'memory', coinPeople(set) ? `Pagamos ${price} moedas pelos materiais da nossa casa.` : 'O povo vai levantar a nossa casa.', NOTE);
     return b;
   }
+  // ------------------------------ the rich house (T-447, D-177) ------------------------------
+  // a family with coins to spare asks for the rich house — the house's bigger step, a family's own choice (G.Escala: the step
+  // marked familia, never the planner's) —, on dear land (the city says where: G.Urban.valueAt), paid by the ledger as any house
+  // a family raises: one a day in a town, when no family in need was served. The family: the owner of the house it lives in,
+  // grown, with — past the price, out of its own share of the house's pot — what keeps its house a rich one in the city's eyes
+  // (K.RICH, the coins of a rich household: urban.js); never one already in a rich house, in a house of the people's mark
+  // (elite) or in the ruler's palace, never one in need or waiting for a house. A city only (its land has a price), of a people
+  // with coin that knows the step. The house it leaves stays its own: let to who needs one, as any house an owner leaves
+  K.RICH = 40; K.RICH_LAND = 40;
+  K.richStep = function (set) {
+    if (!set || (set.tier || 0) < 2 || !coinPeople(set) || !(G.Urban && G.Urban.valueAt)) return null;
+    const st = G.Escala.choose(set, 'house', { familia: true })[0]; return st && st.familia ? st : null;
+  };
+  const isRich = b => !!b && ((b.type === 'house' && b.w !== G.Escala.n0('house')) || !!b.elite || !housing(b));
+  // (the family's share of the coins of the house it lives in: the pot is everyone's in it)
+  const shareOf = (v, fam) => { const h = G.S.buildings.get(v.home); const all = h ? h.res || fam.length : fam.length; return K.savings(v) * Math.min(1, fam.length / Math.max(1, all)); };
+  // the families of a town that would ask for the rich house now, the richest first (read only): their heads
+  K.rich = function (set) {
+    const S = G.S; const st = K.richStep(set); if (!st) return [];
+    const least = K.price(set, 'house', null, st) + K.RICH; const out = [];
+    for (const b of S.buildings.values()) {
+      if (b.set !== set.id || !built(b) || isRich(b) || b.type === 'barraco' || !b.dono || (b.coin || 0) + EPS < least) continue;
+      const v = P(b.dono); if (!v || v.home !== b.id || v.set !== set.id || v.age < 18 || v.captive || v.jail || v.aboard) continue;
+      const fam = K.family(v); if (fam.length > G.BDEF.house.housing || shareOf(v, fam) + EPS < least) continue;
+      if (K.need(v) || K.waiting(v) || K.gaveUp(v)) continue;
+      out.push(v);
+    }
+    return out.sort((a, c) => K.savings(c) - K.savings(a) || a.id - c.id);
+  };
+  // the rich house ordered: the city says where (dear land only), the family pays its materials and its ground, the people's
+  // builders raise it. → { ok, b, price } or { ok: false, why }
+  K.orderRich = function (v) {
+    const S = G.S; const set = v && S.settlements.get(v.set); const st = set && K.richStep(set); if (!st) return { ok: false, why: 'Aqui ninguém levanta uma casa rica.' };
+    const h = S.buildings.get(v.home); if (!lived(h) || isRich(h)) return { ok: false, why: 'A família já mora numa casa rica.' };
+    if (K.waiting(v)) return { ok: false, why: 'A casa da família já está sendo levantada.' };
+    const no = K.cannotRaise(set, 'house'); if (no) return { ok: false, why: no };
+    const fam = K.family(v);
+    const dear = (x, y) => G.Urban.valueAt(set, x + st.n / 2, y + st.n / 2) >= K.RICH_LAND;
+    const pos = G.Village.findSite(set, 'house', dear, st.n); if (!pos || pos.demolish) return { ok: false, why: 'A cidade não tem terra cara livre para uma casa rica agora.' };
+    const price = K.price(set, 'house', pos, st);
+    if (shareOf(v, fam) + EPS < price + K.RICH) return { ok: false, why: `Falta dinheiro: a casa rica custa ${price} moedas ali.` };
+    const b = G.Village.startProject(set, 'house', pos, st); if (!b) return { ok: false, why: 'A cidade não achou lugar para a casa rica.' };
+    if (!D.move('h:' + h.id, 'h:' + b.id, 'moedas', price, { code: 'obra-casa', by: v.id }).ok) { G.Village.removeBuilding(b); return { ok: false, why: 'O pagamento não deu.' }; }
+    b.dono = v.id; b.encomenda = { fam: fam.map(m => m.id), d: S.day, paid: price, by: v.id, why: 'rica', fac: set.fac };
+    const nm = G.Escala.of(b).nome.toLowerCase() || 'casa rica';
+    bio(v, `Pagou ${price} moedas pelos materiais e pelo chão de uma ${nm} para a família, em terra cara de ${set.name}; os construtores começaram a obra.`, 'Juntamos o bastante para uma casa à nossa altura');
+    A.note(v, 'memory', `Pagamos ${price} moedas por uma ${nm} em terra cara.`, NOTE);
+    return { ok: true, b, price };
+  };
   // a commission that never started (no hands, no ground): the coins come back to the household that paid, in the ledger; and
   // what its builders had already brought to the site — the people's — goes back to the people's store before the work leaves
   // the ground, as a work given up does (V.siteBack, L-246). It went with the work, unwritten: a house of Birka paid for on day

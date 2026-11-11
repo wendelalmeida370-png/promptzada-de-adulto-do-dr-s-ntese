@@ -462,6 +462,7 @@
   function pickPave(set, fac, v, near) {
     const S = G.S; const t = set.tier || 0;
     const lvl = has(fac, 'alvenaria') ? 2 : 1;
+    const stone = G.Village.stoneSpare(fac.id); // (the paving's stone: what a great work does not keep, D-174)
     // (only what the paver walks to, by the map of regions: the town's street on another island, the far half of a road past
     // the water, is not theirs — they tried it every twelve seconds, a whole failed search each time, L-322). And the stretch
     // itself, where the paver stands to work, not beside it: from an islet, a street diagonal across the water was «beside»,
@@ -470,7 +471,7 @@
     let best = null, bs = 1e9;
     // a bridge over the water the town keeps wading (half the pavers, the ones already on it, before any street:
     // the streets are never finished, and the bridge would never come)
-    if (fac.stock.stone >= 3 && fac.stock.wood >= 2 && (near !== undefined || G.hash(v.id * 7 + S.day) < 0.5)) {
+    if (stone >= 3 && fac.stock.wood >= 2 && (near !== undefined || G.hash(v.id * 7 + S.day) < 0.5)) {
       for (const pl of planBridges(set, fac)) for (const i of pl) {
         if (S.road[i] >= 3 || S.occ[i] || claimed(i, v)) continue;
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
@@ -482,7 +483,7 @@
     }
     // first the planned streets: a dirt street costs nothing but work; stone once the town knows masonry
     if (G.Village.pop(set.id) >= 6) {
-      const want = t >= 2 && fac.stock.stone >= 4 ? lvl : 1;
+      const want = t >= 2 && stone >= 4 ? lvl : 1;
       for (const i of Ci.streetPlan(set)) {
         if (S.road[i] >= want || S.occ[i] || S.fire[i] > 0 || S.objAt[i] || claimed(i, v)) continue;
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
@@ -494,7 +495,7 @@
     }
     // streets of the town itself, growing from the centre outwards
     const room = (set.streets || 0) < STREETS[t];
-    if (t >= 2 && (lvl === 1 || fac.stock.stone >= 4)) {
+    if (t >= 2 && (lvl === 1 || stone >= 4)) {
       const r = 3 + t * 2.3; const cx = Math.floor(set.cx), cy = Math.floor(set.cy); const R = Math.ceil(r);
       for (let y = Math.max(1, cy - R); y <= Math.min(N - 2, cy + R); y++) for (let x = Math.max(1, cx - R); x <= Math.min(N - 2, cx + R); x++) {
         const i = y * N + x;
@@ -510,7 +511,7 @@
       if (best) return best;
     }
     // highways along the routes, each town paving its own half
-    if (!highways(fac) || fac.stock.stone < 3) return null;
+    if (!highways(fac) || stone < 3) return null;
     for (const r of S.routes) {
       if (!r.ok || (r.a !== set.id && r.b !== set.id)) continue;
       const other = S.settlements.get(r.a === set.id ? r.b : r.a); if (!other) continue;
@@ -554,7 +555,7 @@
     const bridge = S.type[t.i] === T.RIVER;
     const stone = t.lvl === 1 ? 0 : bridge ? 3 : 1, wood = bridge ? 2 : 0;
     const D = G.Depot; const F = 'f:' + fac.id;
-    if (D.free(F, 'stone') < stone || D.free(F, 'wood') - (wood ? fac._rsv || 0 : 0) < wood || S.occ[t.i]) { Ci.claims.delete(t.i); return H.end(v); }
+    if (Math.min(D.free(F, 'stone'), G.Village.stoneSpare(fac.id)) < stone || D.free(F, 'wood') - (wood ? fac._rsv || 0 : 0) < wood || S.occ[t.i]) { Ci.claims.delete(t.i); return H.end(v); }
     // (the paving stones and the bridge's timber, out of the people's store — in the ledger)
     if (stone > 0) D.use(F, 'stone', stone, { code: 'calcamento', by: v.id }); if (wood > 0) D.use(F, 'wood', wood, { code: 'calcamento', by: v.id });
     if (S.road[t.i] < t.lvl) { if (!S.road[t.i] && S.deep[t.i]) { S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); } S.road[t.i] = t.lvl; }
@@ -654,6 +655,8 @@
     if (!D || !L || !(L.n > 1e-6)) return;
     if (D.exists('f:' + c.fac)) D.store(ref, c.fac, L.k, L.n, { code: 'carroca-volta' }); else D.use(ref, L.k, L.n, { code: 'carroca-perdida', mine: true });
   }
+  // (what a people's store has for the road: its stone, what its great works do not keep — D-174)
+  const roadFree = (f, k) => { const n = G.Depot.free('f:' + f.id, k); return k === 'stone' ? Math.min(n, G.Village.stoneSpare(f.id)) : n; };
   function spawnCart(r, from, to) {
     const S = G.S; const fa = G.Fac.get(from.fac), fb = G.Fac.get(to.fac); if (!fa || !fb) return;
     const capA = G.Village.cap(fa.id), capB = G.Village.cap(fb.id);
@@ -662,7 +665,7 @@
       // send what we have plenty of and they lack
       const sur = k => fa.stock[k] / capA - fb.stock[k] / capB;
       const give = RES.slice().sort((x, y) => sur(y) - sur(x))[0];
-      const n = Math.min(14, Math.floor(G.Depot.free('f:' + fa.id, give) * 0.08));
+      const n = Math.min(14, Math.floor(roadFree(fa, give) * 0.08));
       if (n < 3) return;
       goods = { k: give, n };
     } else {
@@ -690,7 +693,7 @@
       if (gn > 0) D.store(ref, fb.id, gk, gn, { code: 'carroca' });
       const deal = 1.05 * G.Civ.t(fa.id, 'trade') * (has(fa, 'moeda') ? 1.15 : 1) * (G.Fac.has(fa.id, 'mercado') ? 1.2 : 1);
       const want = RES.filter(k => !gk || k !== gk).sort((x, y) => (fb.stock[y] - fa.stock[y]) - (fb.stock[x] - fa.stock[x]))[0];
-      const m = Math.min(Math.round((gk ? gn : 5) * deal), Math.floor(D.free('f:' + fb.id, want) * 0.12));
+      const m = Math.min(Math.round((gk ? gn : 5) * deal), Math.floor(roadFree(fb, want) * 0.12));
       c.back = true;
       if (m > 0) D.move('f:' + fb.id, ref, want, m, { code: 'carroca-troca' });
       if (rel) { rel.op = Math.min(100, rel.op + 1.5); rel.friend = Math.min(100, (rel.friend || 0) + 1); rel.trade = (rel.trade || 0) + 1; }
