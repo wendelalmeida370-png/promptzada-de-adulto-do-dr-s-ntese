@@ -96,6 +96,7 @@ skip fundacao || { F() { local n=$1; shift; timeout 7200 node "$@" > "$OUT/fund_
   (F olaria-mao olaria-mao.js; F oficinas-mao oficinas-mao.js; F taverna-mao taverna-mao.js; F termas-mao termas-mao.js; F lazer-mao lazer-mao.js; F obra obra.js; F olaria olaria.js; F taverna taverna.js; F termas termas.js; F lazer lazer.js) &
   (F maos-ocupadas maos.js; F mina mina.js; F guardados guardados.js; F campo campo.js; F rebanho rebanho.js; F fera-rara fera-rara.js; F fera-toca fera-toca.js; F marinheiros marinheiros.js; F ladrao-bairro ladrao-bairro.js; F tempo-livre tempo-livre.js; F caca-margem caca-margem.js; F relento relento.js; F jarra jarra.js; F casa-mercante casa-mercante.js; F perdas perdas.js; F feira feira.js; F contrabando contrabando.js; F chao chao.js; F cidade-cortada cidade-cortada.js) &
   (F vida-bairro vida-bairro.js) &
+  (F som som.js) &
   wait; F matriz-predios matriz-predios.js --geometria "$OUT/geometria-metropole.json" --resultados "$OUT" "$OUT/MATRIZ-PREDIOS.md"; }
 echo "== fundação: $(cat "$OUT"/fund_*.txt 2>/dev/null | grep -c '^PASSOU') passaram, $(cat "$OUT"/fund_*.txt 2>/dev/null | grep -c '^FALHOU') falharam; $(grep -L '^saída 0' "$OUT"/fund_*.txt 2>/dev/null | wc -l) arquivos com saída de erro"
 # 7c. o Modo Encarnado: a cidade real em 3D, a pessoa real, o mundo que continua, a troca, a morte, o terreno, os saves A–E,
