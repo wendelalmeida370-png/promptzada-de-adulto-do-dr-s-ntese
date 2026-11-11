@@ -13,7 +13,7 @@ Também pediu que a casa pequena continuasse pequena: «escala arquitetônica co
 monumentalidade», sem «gigantismo indiscriminado». Este patch veio antes dos Bairros Vivos (D-105), porque o tamanho dos
 prédios muda o desenho das cidades que os bairros leem.
 
-**364 commits desde o pedido (`1cd85d3`).** Cinco especialistas trabalharam em paralelo, cada um no seu ramo, e o líder
+**456 commits do pedido (`1cd85d3`) até a linha de base final (`c2d68e1`).** Cinco especialistas trabalharam em paralelo, cada um no seu ramo, e o líder
 juntou, conferiu e publicou.
 
 ## 1. O diagnóstico original
@@ -54,8 +54,8 @@ só 12% da sua área com prédios.
 
 ## 3. Os sistemas e os arquivos modificados
 
-Do pedido até aqui: **364 commits, 155 arquivos do jogo e das provas (fora as fotos), 17.264 linhas acrescentadas e 1.702
-tiradas.**
+Do pedido até a linha de base final (`c2d68e1`): **456 commits, 179 arquivos do jogo e das provas (fora as fotos), 20.071
+linhas acrescentadas e 2.063 tiradas.**
 
 **Os arquivos novos do jogo:**
 - `js/escala.js` (`G.Escala`, D-106): a escada de tamanhos de cada tipo, o que a cidade precisa ter para cada degrau,
@@ -150,12 +150,13 @@ mexerem no mesmo arquivo. O desenho do deus, a cidade e o 3D são domínios inte
 rodando provas ao mesmo tempo deixariam todos mais lentos.
 
 As rodadas contam cada volta de trabalho e entrega. A partir da rodada final, as rodadas foram a triagem das regressões
-15 a 18: cada falha ia ao dono do arquivo, e um defeito fora do domínio de alguém ia a quem tinha folga.
+15 a 19: cada falha ia ao dono do arquivo, e um defeito fora do domínio de alguém ia a quem tinha folga.
 
-O registro de defeitos e decisões (`qa/AUDIT.md`, seção 17) ganhou **359 linhas** nesta versão:
-- 137 defeitos: 130 consertados e 7 abertos, deixados para os Bairros Vivos (§12);
-- 181 limites de prova: 174 resolvidos ou registrados e 7 abertos (§12);
-- 41 decisões.
+O registro de defeitos e decisões (`qa/AUDIT.md`, seção 17) ganhou **467 linhas** nesta versão:
+- 164 defeitos: 143 consertados e 21 abertos, deixados para os Bairros Vivos (§12; sete deles com o conserto já testado
+  e guardado em `qa/patch3/consertos/`);
+- 259 limites de prova: 252 resolvidos ou registrados e 7 abertos (§12);
+- 44 decisões.
 
 ## 6. A estratégia de contexto e de tokens
 
@@ -177,7 +178,70 @@ O registro de defeitos e decisões (`qa/AUDIT.md`, seção 17) ganhou **359 linh
 
 ## 7. As categorias arquitetônicas atualizadas
 
-<!--SEC7-->
+**A escada de tamanhos (D-106).** Antes, cada tipo de prédio tinha um tamanho só. Agora cada tipo tem uma escada de
+degraus (`js/escala.js`). A cidade pede o maior degrau que a população e o nível dela justificam e que ela pode pagar; se
+não acha terra para ele, desce para o menor. O prédio guarda o degrau em que foi erguido, e a obra custa e demora o do
+degrau. Um degrau só é oferecido a um povo que sabe erguê-lo: que tem a forma ou a planta daquele tamanho. A lista abaixo
+sai do jogo (`G.Escala`), não deste texto.
+
+| Tipo | Os degraus (o lado do lote) | O que a cidade precisa para o maior | Quem sabe erguer |
+|---|---|---|---|
+| Maravilha | antiga 12 m (de antes) · **40 m** · colossal **52 m** | a colossal: nível 5 e 250 pessoas | os 5 povos, cada um a sua (o Coliseu, a Grande Pirâmide, o Templo Mayor, Valhala, a Acrópole) |
+| Teatro | antigo 12 m (de antes) · **24 m** · grande **32 m** · monumental **40 m** | o monumental: nível 4 e 220 pessoas | os 5 povos |
+| Palácio | antigo 12 m (de antes) · **24 m** | — | os 5 povos |
+| Grande palácio | antigo 16 m (de antes) · **32 m** | — | os 5 povos |
+| Palácio colossal | antigo 20 m (de antes) · **40 m** | — | os 5 povos |
+| Templo | santuário 8 m · templo **16 m** · grande **24 m** · santuário monumental **32 m** | o monumental: nível 4 e 180 pessoas | os 5 povos |
+| Taverna | taberna 8 m · taverna **12 m** · hospedaria **16 m** | a hospedaria: 120 pessoas | os 5 povos |
+| Monumento | 8 m · grande **16 m** | 120 pessoas | os 5 povos |
+| Casa | casa 4 m · casa rica **8 m** (um degrau da família, não da cidade) | — (nenhuma família a pede ainda: T-447, §12) | os 5 povos (a forma e a planta existem) |
+| Banhos | 8 m · termas 20 m · grandes termas 28 m | — | nenhum povo ainda acima de 8 m (§12) |
+| Biblioteca, mercado, administração | 8 m · 16 m (grande biblioteca, mercado coberto, paço municipal) | — | nenhum povo ainda acima de 8 m (§12) |
+| Casa do chefe | 8 m · paço 12 m | — | nenhum povo ainda acima de 8 m (§12) |
+
+Os degraus «de antes» (12, 16 e 20 m) são o tamanho que esses prédios tinham. Eles continuam no jogo só para os saves
+antigos e para o povo que não tem outro: uma cidade nova ergue o degrau novo.
+
+**As doze categorias.** Cada tipo de prédio está numa das 12 categorias da matriz por prédio (`qa/MATRIZ-PREDIOS.md`,
+D-089). O estado de cada categoria é calculado do código e das provas desta regressão, nunca escrito à mão: **validada**
+quer dizer que as atividades essenciais estão feitas e as provas delas passaram; **funcional**, que estão
+feitas, mas alguma prova delas falha; **parcial**, que falta uma atividade essencial.
+
+| Categoria | Tipos | Estado | Atividades essenciais feitas | Falhas na geometria das plantas |
+|---|---|---|---|---|
+| Moradias | 6 | **validada** | 6 de 6 | 0 |
+| Religião e memória | 2 | **validada** | 3 de 3 | 0 |
+| Armazéns e celeiros | 3 | **validada** | 3 de 3 | 0 |
+| Comércio | 3 | **validada** | 3 de 3 | 0 |
+| Ofícios | 9 | **validada** | 1 de 1 | 0 |
+| Serviços e convívio | 2 | **validada** | 2 de 2 | 0 |
+| Campo e criação | 10 | **funcional** | 3 de 3 | 0 |
+| Extração e pesca | 2 | **validada** | 3 de 3 | 0 |
+| Governo, justiça e guarda | 5 | **validada** | 3 de 3 | 0 |
+| Palácios | 4 | **parcial** | 0 de 1 | 0 |
+| Cultura e espetáculo | 5 | **validada** | 4 de 4 | 0 |
+| Obras abertas da cidade | 5 | **parcial** | 3 de 4 | 0 |
+
+Na soma: 9 categorias validadas, 1 funcional e 2 parciais.
+
+O que este patch mudou nas categorias: os **palácios** ganharam salões, pátio, escadaria e a sala do trono no tamanho de
+um palácio (§8 e §9); a **cultura e espetáculo** ganhou o Coliseu, o teatro de três degraus e as maravilhas de cada povo,
+com a plateia, o palco e a arena por dentro; a **religião** ganhou o templo de quatro degraus; os **serviços e convívio**
+ganharam a taverna de três degraus; as **moradias** ganharam a forma e a planta da casa rica, e a casa pequena continuou
+pequena (4 × 4 m).
+
+**O que ainda não está completo, dito com clareza** (o pedido manda não declarar concluída uma categoria só pela
+fachada):
+- **Palácios — parcial.** O palácio por fora e por dentro está no tamanho certo, e a audiência acontece: quem governa
+  senta no trono e a cidade entra pelos lugares da planta (D-124). O que falta é o «morar»: o palácio pronto fica marcado
+  como o de quem o mandou erguer, mas nenhuma família o tem como casa: o governante e os seus continuam morando na casa
+  deles. (A prova da audiência fica no arquivo da `escala`, que acusa o L-690 noutro caso, §11.)
+- **Campo e criação — funcional.** As atividades essenciais estão feitas, mas a prova do rebanho acusa o L-692, um defeito
+  que fica para os Bairros Vivos (§11).
+- **Obras abertas da cidade — parcial**, por uma atividade de antes deste patch: o povo ainda não se junta na praça para
+  conversar e ouvir quem fala.
+- **Os prédios de serviço** (banhos, biblioteca, mercado, administração, paço) continuam no tamanho de antes: a escada
+  deles está escrita, mas nenhum povo sabe erguer os degraus maiores (§12).
 
 ## 8. As melhorias de escala externa
 
@@ -248,7 +312,69 @@ poucos, sem parar o mundo (L-495, L-511, T-432).
 
 ## 11. Os resultados dos testes
 
-<!--SEC11-->
+**Os testes de aceitação do pedido (§16, A a I).** Cada teste é um conjunto de provas que rodam de verdade, no jogo, nos
+mundos prontos da geração 19 ou em mundos montados pela própria prova. A contagem abaixo vem das saídas da regressão
+final (`qa/monumental/` não guarda número escrito à mão: o líder contou as linhas «PASSOU» e «FALHOU» de cada arquivo).
+
+| Teste | O que verifica | As provas | Resultado |
+|---|---|---|---|
+| **A — Coliseu** | o lado e a altura, os andares, a arena, a lotação das arquibancadas, a circulação e o acesso, o de dentro igual ao de fora, a vista do corpo | `monumental`, `visual/monumental`, `monumentos`, `visual/forma-deus-fotos` | 53 de 53 ✓ |
+| **B — Palácio** | a diferença clara entre a casa comum e o palácio: os volumes, os salões, o pátio, a escadaria, as medidas | `monumental-poder`, `visual/monumental`, `palacios` | 47 de 47 ✓ |
+| **C — Pirâmides** | a egípcia e a mesoamericana: as duas monumentais e cada uma com a sua identidade | `monumental`, `visual/monumental` | 8 de 8 ✓ |
+| **D — Templo** | o santuário pequeno contra o grande complexo religioso: a diferença de escala | `monumental-poder`, `visual/monumental`, `templo` | 30 de 30 ✓ |
+| **E — Teatro** | o palco, a plateia, as galerias, os bastidores, a circulação e a lotação | `monumental` | 13 de 13 ✓ |
+| **F — Taverna** | o salão amplo da casa grande, o serviço, as mesas, os fregueses e a circulação | `monumental-poder`, `taverna` | 22 de 22 ✓ |
+| **G — Habitações** | a casa pequena continua pequena; a casa rica pode ser maior | `monumental-poder` | 7 de 7 ✓ |
+| **H — Diversidade** | a solução em pelo menos três culturas: aqui, nos cinco povos | `monumental`, `monumentos` | 24 de 24 ✓ |
+| **I — Experiência real** | entrar nos prédios com o corpo, em terceira pessoa, e sentir o tamanho: não só as medidas no código | `visual/monumental`, `encarna` | 166 de 166 ✓ |
+
+Os nove testes passam: 370 linhas de 370.
+
+O G prova a casa pequena com 4 × 4 m e a casa rica de 8 × 8 m em todo povo, de pé pela mão do deus num mundo pronto e
+num mundo novo; no mundo vivido, nenhuma família pede ainda o degrau dela (T-447, §12). O I é a experiência com o corpo:
+o Coliseu, os palácios, os templos e o colossal vistos e andados em 3D (`visual/monumental`), e a prova inteira do Modo
+Encarnado (`encarna`), que entra, sobe, senta e vive nos prédios.
+
+**A regressão completa** (a prova de tudo, antes de publicar; `qa/regress.sh`, na geração 19 dos mundos prontos):
+
+| Fase | Passaram | Falharam |
+|---|---:|---:|
+| O vigia do código (as regras que se leem no código) | 1 | 0 |
+| O mar: navios, frotas, colônias, o navio que não passa por cima da terra | 26 | 0 |
+| A guerra, a virada e os cativos | 23 | 0 |
+| Vidas longas com o verificador | 2 | 0 |
+| Saves danificados, alcance, a bordo, isolados, determinismo, o salto | 15 | 0 |
+| O que se vê: o macaco no teclado, a planta no Modo Deus | 2 | 0 |
+| A cidade: bairros, quarteirões, fundadores, a memória dos mortos, os mundos prontos | 39 | 1 |
+| Os poderes do deus e o deus caótico | 60 | 0 |
+| A fundação: atividades, economia, interiores, portas, muros, o corpo, os prédios e as provas deste patch | 1699 | 16 |
+| O Modo Encarnado (o 3D de verdade), os balões, o Diário de Vida, o deus do degrau grande | 175 | 0 |
+| O desempenho, sozinho na máquina | 4 | 0 |
+| Erros de página ou de módulo em qualquer arquivo | 0 | 0 |
+| **Total** | **2046** | **17** |
+
+Na soma, 2.046 linhas passaram e 17 falharam: as 17 são as falhas conhecidas abaixo. Nenhum erro de página, aviso no
+console ou erro de módulo em arquivo nenhum. O desempenho foi medido sozinho na máquina, no fim: o quadro inteiro do Modo
+Encarnado na metrópole (a simulação e o 3D, sem placa de vídeo) fica em 10,8 ms de mediana (p95 13,5 ms); com o Coliseu
+à vista, em 8,0 ms (o orçamento é 13 ms); o mar com 38 barcos a mais passou. Em CPU, o Coliseu de perto custa +14% sobre
+a figura dele de longe, perto do limite de +15% (D-134, D-150; §12).
+
+**As falhas conhecidas que ficam para os Bairros Vivos.** São defeitos do jogo achados nesta regressão cujo conserto muda
+o passo do mundo: consertar agora obrigaria a gerar de novo os mundos prontos e a rodar outra regressão inteira. A
+decisão foi guardar os consertos já testados (`qa/patch3/consertos/`) e aplicá-los no começo dos Bairros Vivos, que vão
+mexer nas mesmas cidades; os dois sem conserto guardado (L-686, L-689) entram lá com o trabalho da terra e dos portões. As provas continuam acusando a falha, e a linha de base aponta para a entrada do AUDIT:
+
+| A prova que falha | O defeito do jogo | O conserto |
+|---|---|---|
+| `lote-bolsao` q3 | **L-686**: o fogo nos campos do lote guardado para um monumento deixa ruínas em cima do lote até o dia seguinte | a decidir nos Bairros Vivos (D-149) |
+| `maos-ocupadas` m13 | **L-688**: quem sai da caverna de refúgio procura o chão da cidade, não a própria casa | guardado (`L-688-caverna.patch`) |
+| o verificador da `agua-solta`, da `cais-longe`, do `caminho-longo` e da `represa` | **L-689**: a muralha de uma cidade planejada por cima de outra fecha parte da outra num bolsão (Kaupang, na metrópole) | a decidir nos Bairros Vivos, com o L-491 e o L-658 |
+| `escala` e3h | **L-690**: o espaço aberto para uma obra muda de lugar o quintal da casa que ela derruba | guardado (`L-690-quintal.patch`) |
+| `muros` 7a | **L-691**: o plano do muro fecha um prédio cujo caminho corre ao longo da linha | guardado (`L-691-muro-caminho.patch`) |
+| `rebanho` r12 | **L-692**: o balanço do bicho de árvore desfaz o afastamento do lote novo | guardado (`L-692-bicho-arvore.patch`) |
+
+As da fundação também acusam «não saiu limpo» (a prova termina com falha), uma linha a mais cada: são as 17 linhas. Os outros consertos guardados (`L-687-leva.patch`, `L-696-aluguel.patch`, `L-698-fera.patch`) são de defeitos que
+as provas desta regressão não acusam como falha (o L-696 e o L-698 trazem a prova nova junto do conserto).
 
 ## 12. As limitações que ainda persistem
 
@@ -271,8 +397,10 @@ poucos, sem parar o mundo (L-495, L-511, T-432).
   nórdico, e o telhado do hof sai de turfa; o deus desenha tudo.
 - **As plantas dependem dos dados** (T-436, T-403, T-446). Elas passam em todos os prédios dos mundos de hoje e no catálogo
   inteiro, mas uma rodada de robustez da gramática das plantas, com outras sementes, fica para depois.
-- **O desenho de perto do Coliseu pesa.** No desenho por software das provas, custa +12% sobre a figura de longe. A
-  medida fina do tempo de quadro só vale numa placa de vídeo (D-134, D-137).
+- **O desenho de perto do Coliseu pesa, e está perto do limite.** No desenho por software das provas, o Coliseu de perto
+  custa +14% sobre a figura dele de longe na regressão final (de +10% a +14% nas medidas do E), e o limite é +15%
+  (D-134). A prova mede sempre no mesmo mundo de referência (T-671) e com 12 turnos por vista (D-150); se a mediana passar
+  do limite, alivia-se o detalhe. A medida fina do tempo de quadro só vale numa placa de vídeo (D-137).
 - **Sentar à própria mesa em casa quase nunca aparece:** a planta da casa só põe a mesa no chão que sobra depois das camas.
 
 **Os defeitos achados no fim e deixados para os Bairros Vivos.** Consertar qualquer um deles muda o passo do mundo e
@@ -337,7 +465,8 @@ de base.
 
 Fotos tiradas pelo próprio jogo, nas provas (`qa/visual/monumental.js`, `qa/visual/forma-deus-fotos.js`), com o corpo
 encarnado e na visão do deus. Estão em `qa/monumental/fotos/`; a imagem de antes é a que o dono mandou
-(`qa/monumental/antes.png`).
+(`qa/monumental/antes.png`). São das rodadas do patch (de 4 a 10 de novembro); a regressão final tirou todas de novo,
+com o código final, e a prova delas passou (52 de 52).
 
 | Foto | O que mostra |
 |---|---|
