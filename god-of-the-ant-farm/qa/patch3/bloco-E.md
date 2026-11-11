@@ -50,6 +50,8 @@ Em «A forma — `G.Forma`», no fim:
 
 ## 6. O que ficou aberto
 
+**O mundo não mudou.** Tudo o que este ramo mexe é desenho e forma; a planta — o que o mundo lê de um prédio — ficou igual. Conferido: a planta (`G.Space.planNow`, inteira, em texto) de 17 prédios cuja forma mudou (o Coliseu de 10 e 13, a Grande Pirâmide de 10 e 13, o Templo Mayor de 3, 10 e 13, os templos egípcio e nórdico de 4, 6 e 8, o palácio nórdico de 6 e de 10, os teatros grego e romano de 10), em dois lados, no 61dc62b e na ponta deste ramo: os 34 resumos iguais. **Os mundos prontos não precisam ser gerados de novo por causa deste ramo.**
+
 - **A medida do quadro do Coliseu** (T-781): pedida ao líder, com a máquina livre.
 - **As fotos de navegador** (T-782): saem na regressão.
 - **O desgaste da pedra** do Coliseu: é do agente V (o `build3d.js` nas janelas, na fumaça e no desgaste); não toquei.
