@@ -1358,6 +1358,12 @@
     if (WORK_ROLES === BASE_ROLES && G.Eco) WORK_ROLES = BASE_ROLES.concat(G.Eco.JOB_ROLES);
     const adults = [];
     let pop = 0;
+    // (who holds a workplace's trade and is away on a voyage — of the crew of an expedition, or aboard a ship of the open sea —
+    // is not one of the hands the town deals its trades among: the town counts the hands it has, and the post goes to another
+    // while the voyage lasts — the baths of Mênfis stood with no stoker for a whole voyage, L-683. The traveller keeps the
+    // trade's name; at the homecoming the trade has one hand too many, as any surplus, and who holds the post keeps it. The
+    // sailor's own trade is the sea)
+    const gone = v => !!(v.role && v.role !== 'marinheiro' && G.Eco && G.Eco.isJobRole(v.role) && G.Naval && G.Naval.away(v));
     for (const v of S.villagers.values()) {
       if (v.set !== set.id) continue;
       if (v.captive) { v.role = 'cativo'; continue; }
@@ -1366,7 +1372,7 @@
       if (v.age < 2) v.role = 'bebe';
       else if (v.age < 16) v.role = 'crianca';
       else if (v.age >= 62) { v.role = 'anciao'; if (prev !== 'anciao' && G.Life) G.Life.onRole(v, prev); }
-      else { if (!WORK_ROLES.includes(v.role)) v.role = null; adults.push(v); }
+      else { if (!WORK_ROLES.includes(v.role)) v.role = null; if (!gone(v)) adults.push(v); }
     }
     const A = adults.length; if (!A) return;
     const c = counts(set.id);

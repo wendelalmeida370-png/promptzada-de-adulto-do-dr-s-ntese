@@ -379,8 +379,8 @@
     const why = whyTxt(e, f, lead, sponsor);
     chapter(e, 'O chamado', why, 'ship', scale !== 'so' || !!c.rumor);
     G.Stories && G.Stories.signal('expPlanned', { exp: e.id, fac: f.id, leader: e.leader, sponsor: e.sponsor, scale, ids: e.crew.slice(), x: di.moor[0], y: di.moor[1] });
-    // the crew goes to the quay; a few carry the provisions down
-    let k = 0; for (const id of e.crew) { const v = P(id); if (!v) continue; G.Vg.endTask(v); G.Vg.setTask(v, { type: 'cais', exp: e.id, k: k, job: k > 0 && k <= Math.min(4, Math.ceil(e.provT / 8)) ? 'load' : 'wait', pri: 3.25, st: 0 }); k++; }
+    // the crew goes to the quay; a few carry the provisions down (who is in bed is called in the morning, by the tick: L-682)
+    let k = 0; for (const id of e.crew) { const v = P(id); if (!v) continue; if (!abed(v)) { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'cais', exp: e.id, k: k, job: quayJob(e, k), pri: 3.25, st: 0 }); } k++; }
     return e;
   };
   const WHY = {
@@ -469,7 +469,10 @@
       // of twenty-six; a save gave the errand back, the living world did not, L-367)
       // (and the cave's refuge of one hiding from an attack is the fright too: the call waits for it to end — Cássio, of a voyage
       // of Óstia, hidden in the cave with the town's alarm still up, was called to the quay a tenth of a second later, L-459)
-      for (const v of crew) if (!v.aboard && !v.captive && !hiding(v) && !(v.task && ((v.task.type === 'cais' && v.task.exp === e.id) || v.task.pri > 3.25)) && !(G.Scene && G.Scene.actorScene(v))) G.Vg.setTask(v, { type: 'cais', exp: e.id, k: e.crew.indexOf(v.id), job: 'wait', pri: 3.25, st: 0 });
+      // (and while the voyage is only being made ready — up to a day and more —, the night is for sleeping: the call to the quay
+      // comes back in the morning. It stood above sleep, and the crews of the Expedição Real and of As Velas de Clio waited the
+      // whole night on the quay with no strength left, L-682)
+      for (const v of crew) if (!v.aboard && !v.captive && !hiding(v) && !(e.st === 'prep' && abed(v)) && !(v.task && ((v.task.type === 'cais' && v.task.exp === e.id) || v.task.pri > 3.25)) && !(G.Scene && G.Scene.actorScene(v))) G.Vg.setTask(v, { type: 'cais', exp: e.id, k: e.crew.indexOf(v.id), job: quayJob(e, e.crew.indexOf(v.id)), pri: 3.25, st: 0 });
     }
     if (flag && Nv.atSea(flag)) { if (!e.track.length || G.dist2(e.track[e.track.length - 1][0], e.track[e.track.length - 1][1], flag.x, flag.y) > 9) { e.track.push([+flag.x.toFixed(1), +flag.y.toFixed(1)]); if (e.track.length > 160) e.track.splice(1, 1); } e.lastX = flag.x; e.lastY = flag.y; }
     switch (e.st) {
@@ -494,7 +497,9 @@
     const why = abort(e, f, crew); if (why) return finish(e, 'cancelada', why);
     const ready = ships.length && ships.every(s => s.st !== 'build');
     const loaded = e.prov >= e.provT || e.t > DAY() * 0.45;
-    if (ready && loaded) {
+    // (the gathering on the quay is called by day, with the crew up: nobody is taken from bed for it — each one by the clock
+    // of the house —, L-682)
+    if (ready && loaded && !G.isNight() && !crew.some(v => !v.aboard && abed(v))) {
       // whatever was not carried down is loaded at the last moment (if the stores have it)
       const miss = Math.max(0, e.provT - e.prov); const got = Math.min(miss, Math.max(0, Math.floor(f.stock.food - G.Fac.pop(f.id) * 0.8))); f.stock.food -= got; e.prov += got; e.prov0 = e.prov;
       if (e.prov < e.crew.length * FOOD * e.dur * 0.6) return finish(e, 'cancelada', `Não havia comida para tanta gente no mar: ${e.name} não saiu do porto.`);
@@ -1155,6 +1160,11 @@
     return 0;
   }
   // on the quay before a voyage: carry the crates, wait by the ship, look at the sea
+  // (one's bedtime, by the house's clock)
+  const abed = v => v.sleeping || (G.Lar && G.Lar.sleepy ? G.Lar.sleepy(v) : G.isNight());
+  // (the errand of the quay, by the place in the crew: the first few carry the provisions down while the voyage is made
+  // ready — also the one called in the morning, who was in bed when the voyage was called)
+  const quayJob = (e, k) => (e.st === 'prep' && e.prov < e.provT && k > 0 && k <= Math.min(4, Math.ceil(e.provT / 8)) ? 'load' : 'wait');
   function runCais(v, t, dt, H) {
     const e = X.get(t.exp); if (!e || (e.st !== 'prep' && e.st !== 'reunir' && e.st !== 'embarque')) { v.gear = null; return H.end(v); }
     // (a plain load in the hands — the day's ore, a basket of fruit — goes to the people's store before the quay: called
@@ -1167,6 +1177,9 @@
       if (r > 0 && G.Vg.deliver(v, d).ok) return;
       const c = v.carry; G.Depot.drop('v:' + v.id, c.k, c.n, v.x, v.y, { code: 'pousou', by: v.id, fac: G.Fac.idOfV(v) }); return;
     }
+    // (while the voyage is only being made ready: at one's bedtime, home to sleep — the crate in the arms is set on the quay
+    // first —; the call comes back in the morning, L-682)
+    if (e.st === 'prep' && abed(v) && !(t.job === 'load' && t.st === 2)) { v.gear = null; return H.end(v); }
     const spot = () => { const k = t.k || 0; const a = k * 2.39996, r = 0.6 + Math.sqrt(k) * 0.45; const p = [e.port[0] + Math.cos(a) * r, e.port[1] + Math.sin(a) * r]; return W.walkableXY(p[0], p[1]) ? p : e.port; };
     if (t.job === 'load' && e.st === 'prep' && e.prov < e.provT) {
       const f = F(e.fac);
@@ -1495,7 +1508,7 @@
     X.prof(f).lastCol = S.day;
     const WHYC = { ferro: `por causa do ferro ${K.na(K.name(r))}`, ouro: `atrás do ouro ${K.na(K.name(r))}`, terra: `porque em ${from.name} já não cabe tanta gente`, porto: 'para ter um porto perto do inimigo', expansao: `porque ${K.name(r)} é boa terra e ninguém mora lá` };
     chapter(e, 'Os colonos', `${crew.length} pessoas de ${from.name} vão fundar ${colName || 'uma colônia'} ${K.na(K.name(r))}, ${WHYC[best.motive] || ''}. Levam sementes, ferramentas e o que cabe nos braços.`, 'settle', true);
-    let k = 0; for (const v of crew) { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'cais', exp: e.id, k, job: k > 0 && k <= 3 ? 'load' : 'wait', pri: 3.25, st: 0 }); k++; }
+    let k = 0; for (const v of crew) { if (!abed(v)) { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'cais', exp: e.id, k, job: k > 0 && k <= 3 ? 'load' : 'wait', pri: 3.25, st: 0 }); } k++; } // (who is in bed, in the morning: L-682)
     G.Stories && G.Stories.signal('expPlanned', { exp: e.id, fac: f.id, leader: e.leader, colony: 1, ids: e.crew.slice(), x: di.moor[0], y: di.moor[1] });
     // the colony sails straight to the known shore
     e.obj.a = e.a;
@@ -1655,7 +1668,7 @@
         // the people ashore get back to what they were doing (the ones aboard are still aboard)
         for (const id of e.crew) {
           const v = P(id); if (!v || v.aboard) continue;
-          if (e.st === 'prep' || e.st === 'reunir' || e.st === 'embarque') G.Vg.setTask(v, { type: 'cais', exp: e.id, k: e.crew.indexOf(id), job: 'wait', pri: 3.25, st: 0 });
+          if (e.st === 'prep' || e.st === 'reunir' || e.st === 'embarque') { if (!(e.st === 'prep' && abed(v))) G.Vg.setTask(v, { type: 'cais', exp: e.id, k: e.crew.indexOf(id), job: 'wait', pri: 3.25, st: 0 }); }
           else if (e.st === 'exploracao' || e.st === 'contato' || e.st === 'desembarque') G.Vg.setTask(v, { type: 'expl', exp: e.id, pri: 3.3, st: 'walk', n: 0 });
           else if (e.st === 'reembarque') G.Vg.setTask(v, { type: 'expl', exp: e.id, pri: 3.3, st: 'back', n: 0 });
         }

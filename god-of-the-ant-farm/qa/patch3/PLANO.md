@@ -274,4 +274,16 @@ os mundos prontos de novo, a regressão inteira e o relatório.
 - **Feito, primeiro lote:** os sete consertos guardados aplicados (L-687, L-688, L-690, L-691, L-692, L-696, L-698; a pasta
   `consertos/` saiu, os patches estão no histórico); os portões que deixam passar, o muro que atravessa o vau e a cidade
   vizinha que não fica presa (L-491, L-658, L-689: `muros.js` 12a–12d); a fauna (D-151, `fauna.js`).
-
+- **Feito, o resto do que muda o mundo antes da vida do bairro:** o povo sem alma que acaba na hora (L-685), a ruína no lote
+  guardado (L-686), os bichos fora dos prédios (L-631), o passeio de compras e as mãos (L-636), o guarda que volta ao roubo
+  (L-646); o efeito fora do acaso do mundo (L-652, regra 48), a fera na toca (L-656, regra 49), o save dos bichos (L-699), a
+  fera na borda da cidade (L-657), a taverna de quem não tem braços (L-693, D-152), o load sem segundo dia (L-694, `G.mod`).
+- **Feito, a vida do bairro (D-153):** `G.Urban.note` / `at` / `profile` / `is`, `d.vida`, `d.tags`, o todo da cidade, a
+  história com a causa, a memória da cidade que acabou; regra 50; `vida-bairro.js` v1–v9 (L-700, L-701, D-154).
+- **Feito, os marinheiros de verdade (D-155):** o ofício `marinheiro`, a tripulação do navio mercante (`Nv.crewFor`, o
+  estado `embark`, `Nv.crewHome`, o soldo pelo livro, a viagem na biografia, a folga da noite da volta), a carga do navio
+  que volta do meio do caminho (L-702), o chamado ao cais que atravessa o save (L-703), o posto de quem viaja (L-683) e a
+  noite de quem espera no cais (L-682); `marinheiros.js` m1–m10, dez sabotagens.
+- **A seguir:** o mundo pelo bairro (o ladrão, o freguês, o tempo livre perto de casa, a terra e quem mora onde), o que se
+  vê, o que se ouve, a tela que respeita o que o personagem sabe, os ajustes da Arquitetura Monumental, e o fecho (os mundos
+  prontos da geração 20, a regressão inteira, o relatório).

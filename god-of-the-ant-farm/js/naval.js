@@ -26,7 +26,7 @@
     jangada: { hp: 16, sp: 0.75, cost: 0, crew: 4, small: 1, build: 0 },
     pesca: { hp: 40, sp: 1.5, cost: 12, crew: 3, small: 1, build: 0.25 },
     explorador: { hp: 70, sp: 1.85, cost: 22, crew: 8, build: 0.45 },
-    mercante: { hp: 70, sp: 1.3, cost: 28, crew: 4, build: 0.5 },
+    mercante: { hp: 70, sp: 1.3, cost: 28, crew: 2, build: 0.5 }, // (two sailors of the town, D-155: one alone sails it slower)
     guerra: { hp: 130, sp: 1.8, cost: 34, dmg: 11, crew: 12, build: 0.6 },
     transporte: { hp: 95, sp: 1.55, cost: 22, dmg: 5, crew: 16, build: 0.45 },
   };
@@ -359,6 +359,9 @@
   }
   Nv.shipName = shipName;
   Nv.aboard = id => G.S.ships.find(s => s.id === id);
+  // away on a voyage: aboard a ship that is not a boat of the shore, or of the crew of an expedition — from the day it is
+  // made ready on the quay to the day it ends (the post of a workplace is not held from there: another covers it — L-683)
+  Nv.away = v => { if (G.Expe && G.Expe.memberOf(v.id)) return true; if (!v.aboard) return false; const s = Nv.aboard(v.aboard); return !!(s && !Nv.small(s)); };
 
   // ------------------------------ fishing ------------------------------
   function fishingSpot(s) {
@@ -636,8 +639,28 @@
   function runMerchant(s, dt) {
     const S = G.S; const r = S.seaRoutes.find(q => q.id === s.route);
     const hb = S.buildings.get(s.dock), ob = r ? S.buildings.get(r.a === s.dock ? r.b : r.a) : null;
-    if (!r || !r.ok || !hb || !ob) { const h = home(s); if (h && s.st !== 'back2' && sailTo(s, h.moor[0], h.moor[1])) { s.st = 'back2'; return; } if (s.st === 'back2' && !moveShip(s, dt)) return; return removeShip(s); }
-    if (s.st === 'back2') { if (moveShip(s, dt)) { Nv.arrived(s); removeShip(s); } return; }
+    // (a crewed merchant at sea with nobody left aboard — the sailors died, or were taken — is a hull adrift, as any other:
+    // the wind has it until it breaks on a coast or someone finds it; the route is free for another ship)
+    if (s.tr && Nv.atSea(s) && !Nv.aboardOf(s).length) { s.ghost = 1; s.st = 'deriva'; s.driftT = G.DAY_LEN * G.rr(0.4, 1); s.route = 0; s.crew = []; s.path = null; return; }
+    if (!r || !r.ok || !hb || !ob) {
+      const h = home(s);
+      if (h && s.st !== 'back2' && sailTo(s, h.moor[0], h.moor[1])) { if (s.st === 'embark') ashoreAgain(s); s.st = 'back2'; return; }
+      if (s.st === 'back2' && !moveShip(s, dt)) return;
+      if (s.st === 'back2' && hb) homeAgain(s, hb);
+      return removeShip(s);
+    }
+    if (s.st === 'back2') { if (moveShip(s, dt)) { homeAgain(s, hb); Nv.arrived(s); removeShip(s); } return; }
+    if (s.st === 'embark') {
+      // (the crew comes down to the quay: the ship sails when all who were called are aboard, or after a while with who came;
+      // with nobody, the voyage is off — the cargo back in the store, the hull's wood too)
+      s.t += dt;
+      const walking = s.crew.filter(id => { const v = S.villagers.get(id); return v && !v.aboard && v.task && v.task.type === 'embark' && v.task.ship === s.id; }).length;
+      const n = Nv.aboardOf(s).length;
+      if ((walking || !n) && s.t <= 45) return;
+      ashoreAgain(s);
+      if (!n) { const f = G.Fac.get(s.fac); homeAgain(s, hb); if (f) f.stock.wood += Nv.SHIP.mercante.cost; return removeShip(s); }
+      s.st = 'idle'; return;
+    }
     if (threat(s, 5) && s.st === 'go') { const h = home(s); if (h && sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; }
     if (s.st === 'idle') { const oi = Nv.dockInfo(ob); if (oi.moor && sailTo(s, oi.moor[0], oi.moor[1])) s.st = 'go'; else removeShip(s); return; }
     if (s.st === 'go' && moveShip(s, dt)) {
@@ -656,10 +679,26 @@
         }
       }
       s.goods = null;
+      { const st = S.settlements.get(ob.set); s.port = st ? st.name : fb ? fb.name : ''; } // (where it has been: the crew's tale, and its pay)
       const h = home(s); if (h && sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; else removeShip(s);
       return;
     }
-    if (s.st === 'back' && moveShip(s, dt)) { if (s.ret) { if (G.Harbor) G.Harbor.land(hb, s.ret, s); else G.Village.addStock(s.ret.k, s.ret.n, s.fac); } G.Trade && G.Trade.shipHome(s); Nv.arrived(s); removeShip(s); }
+    if (s.st === 'back' && moveShip(s, dt)) { homeAgain(s, hb); Nv.arrived(s); removeShip(s); }
+  }
+  // home again, at the quay of its port: what the hold has comes ashore — what it brought back, and what it never delivered (a
+  // ship that turned back from a threat, or whose route ended on the way, lost its cargo with the hull, L-702) —, and the crew
+  // steps ashore and is paid for the voyage (harbor.js)
+  function homeAgain(s, hb) {
+    for (const g of [s.goods, s.ret]) if (g && g.n > 0) { if (G.Harbor && hb) G.Harbor.land(hb, g, s); else G.Village.addStock(g.k, g.n, s.fac); }
+    s.goods = null; s.ret = null;
+    G.Trade && G.Trade.shipHome(s);
+    if (Nv.crewHome) Nv.crewHome(s, hb, s.port || '');
+  }
+  // (the call to the quay is over: who had not come aboard yet is let go, and the roster is who is aboard)
+  function ashoreAgain(s) {
+    const S = G.S;
+    for (const id of s.crew) { const v = S.villagers.get(id); if (v && !v.aboard && v.task && v.task.type === 'embark' && v.task.ship === s.id) G.Vg.endTask(v); }
+    s.crew = s.crew.filter(id => { const v = S.villagers.get(id); return v && v.aboard === s.id; });
   }
 
   // ------------------------------ expeditions: raids & colonies ------------------------------
@@ -774,13 +813,18 @@
     return false;
   };
   Nv.taskText = function (v, t) {
-    if (t.type === 'embark') { const s = G.S.ships.find(o => o.id === t.ship); return t.army ? 'Subindo no transporte para a guerra do outro lado do mar' : s && s.fleet ? `Embarcando n${Nv.fem(s) ? 'a' : 'o'} ${Nv.title(s).replace(/^(a|o) /, '')}, para a frota` : s && s.purpose === 'colony' ? 'Embarcando para colonizar novas terras' : 'Embarcando para uma expedição'; }
+    if (t.type === 'embark') { const s = G.S.ships.find(o => o.id === t.ship); return t.army ? 'Subindo no transporte para a guerra do outro lado do mar' : s && s.fleet ? `Embarcando n${Nv.fem(s) ? 'a' : 'o'} ${Nv.title(s).replace(/^(a|o) /, '')}, para a frota` : s && s.purpose === 'colony' ? 'Embarcando para colonizar novas terras' : s && s.kind === 'mercante' ? `Descendo ao cais para embarcar n${Nv.fem(s) ? 'a' : 'o'} ${Nv.title(s).replace(/^(a|o) /, '')}` : 'Embarcando para uma expedição'; }
     if (t.type === 'aboard' || v.aboard) {
       const s = G.S.ships.find(o => o.id === v.aboard); if (!s) return 'No mar';
       const x = (G.Expe && G.Expe.aboardText(v, s)) || (G.Fleets && G.Fleets.aboardText(v, s)); if (x) return x;
       const nm = Nv.title(s);
       if (s.kind === 'pesca') return ({ board: `No ${Nv.noun(s)}, esperando os companheiros`, out: 'Remando para o pesqueiro', fish: 'Puxando a rede', adrift: 'Arrastado pela tempestade, longe da costa', back: 'Voltando para o porto com o peixe', unload: 'Descendo para o cais' })[s.st] || `A bordo d${Nv.fem(s) ? 'a' : 'o'} ${nm.replace(/^(a|o) /, '')}`;
       if (s.kind === 'jangada') return 'Numa jangada, tentando voltar para casa';
+      // (the crew of a merchant ship: where it is taking the cargo, where it comes from)
+      if (s.kind === 'mercante' && s.tr) {
+        const tn = nm.replace(/^(a|o) /, ''), dn = Nv.fem(s) ? 'a' : 'o'; const r = (G.S.seaRoutes || []).find(q => q.id === s.route); const ob = r && G.S.buildings.get(r.a === s.dock ? r.b : r.a); const to = ob && G.S.settlements.get(ob.set);
+        return s.st === 'embark' ? `A bordo d${dn} ${tn}, esperando a partida` : s.st === 'go' ? `No mar n${dn} ${tn}, levando a carga${to ? ' a ' + to.name : ''}` : s.port ? `No mar n${dn} ${tn}, de volta de ${s.port}` : `No mar n${dn} ${tn}, de volta para casa`;
+      }
       return s.purpose === 'colony' ? 'No mar, rumo a uma nova terra' : s.st === 'return' ? 'Voltando para casa pelo mar' : s.kind === 'mercante' ? 'A bordo de um navio mercante' : s.purpose === 'raid' ? 'No mar, rumo à batalha' : `A bordo d${Nv.fem(s) ? 'a' : 'o'} ${nm.replace(/^(a|o) /, '')}`;
     }
     return null;
@@ -929,10 +973,14 @@
         if (Nv.blockaded(S.buildings.get(r.a)) || Nv.blockaded(S.buildings.get(r.b))) continue;
         const give = RES.slice().sort((x, y) => f.stock[y] - f.stock[x])[0];
         const n = Math.min(16, Math.floor(f.stock[give] * 0.08)); if (n < 4) continue;
+        // (a merchant ship sails with a crew of the town's sailors — harbor.js, D-155 —: with none free, it waits)
+        // (the cargo waits on the quay for the first of them to be free — the morning, if it is night —, not for the route's next turn)
+        const crew = Nv.crewFor ? Nv.crewFor(f, mine) : null; if (Nv.crewFor && !(crew && crew.length)) { r.t = 6; continue; }
         const s = spawn('mercante', f, mine, { route: r.id }); if (!s) continue;
         f.stock[give] -= n; s.goods = { k: give, n };
         if (G.Urban) G.Urban.noteB(mine, 'cais', n); // (the life of the quarter: cargo aboard at the quay)
         G.Trade && G.Trade.loadShip(f, s, r);
+        if (crew) { s.st = 'embark'; s.t = 0; s.tr = 1; board(s, crew); }
       }
     }
   }
@@ -1146,6 +1194,12 @@
         else if (s.st === 'return' || s.st === 'back' || s.st === 'back2') { const h = home(s); if (h && h.moor) sailTo(s, h.moor[0], h.moor[1]); }
         // (a ship of a voyage or a fleet is put back on course by its expedition or its admiral)
         else if (((s.st === 'out' && s.kind !== 'pesca') || s.st === 'go' || s.st === 'patrol') && !s.exp && !s.fleet) { s.st = 'idle'; }
+        // (a ship waiting at the quay for its crew: who was on the way down when the game was saved is on the way down
+        // again — the people's tasks are not in the save, and a load called the voyage off; L-190's rule)
+        if (s.st === 'embark' && (s.tr || s.purpose) && !s.exp && !s.fleet && !s.army) {
+          const h = home(s);
+          for (const id of s.crew || []) { const v = S.villagers.get(id); if (h && h.quay && v && !v.captive && !v.aboard) G.Vg.setTask(v, { type: 'embark', ship: s.id, pri: 3.3, kind: 'embark', x: h.quay[0], y: h.quay[1] }); }
+        }
       }
       Nv.reset();
     },

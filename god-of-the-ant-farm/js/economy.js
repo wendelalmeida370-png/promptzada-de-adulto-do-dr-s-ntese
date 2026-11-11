@@ -236,7 +236,7 @@
   // (18% in a hungry town) — once, over every trade its workplaces ask for, the ones the other modules add too (the
   // watch, the docks, the estates, the stokers...). First one hand for each kind of workplace the town has, while the
   // ceiling holds them, in the fixed order below — the docks, the jail and the watch, the baths, the tavern, the market and
-  // the fair first: a town's flows live from them; then the crafts —, so that no kind of place stands all empty for being
+  // the fair first: a town's flows live from them; then the sailors of its sea routes (harbor.js) and the crafts —, so that no kind of place stands all empty for being
   // small (the warehouse lost its dockers to the potters' shares); then the quay's, whole: the dockers the crates waiting on
   // it ask (L-428); then the rest by the largest remainder: each trade its
   // floor, then one hand more to the largest fractions, in a fixed order (the role's name), no chance (the floor of each
@@ -244,7 +244,7 @@
   // of the time, and what the other modules added after the ceiling was outside it). The trades that bring food — the
   // fishermen, the orchards — are the fields the hungry towns send their hands to: outside it. A shepherd always stays
   // with the herds.
-  const FIRST = ['estivador', 'carcereiro', 'vigia', 'foguista', 'taverneiro', 'mercador', 'feirante', 'cobrador', 'escriba', 'copista', 'ator', 'oleiro', 'ferreiro', 'tecelao', 'ourives', 'acougueiro', 'mineiro', 'cavalarico', 'apicultor', 'vinhateiro', 'lavrador', 'salineiro', 'salgador', 'sericultor', 'mergulhador', 'pastor', 'contrabandista'];
+  const FIRST = ['estivador', 'carcereiro', 'vigia', 'foguista', 'taverneiro', 'mercador', 'feirante', 'cobrador', 'escriba', 'copista', 'ator', 'marinheiro', 'oleiro', 'ferreiro', 'tecelao', 'ourives', 'acougueiro', 'mineiro', 'cavalarico', 'apicultor', 'vinhateiro', 'lavrador', 'salineiro', 'salgador', 'sericultor', 'mergulhador', 'pastor', 'contrabandista'];
   const rank = k => { const i = FIRST.indexOf(k); return i < 0 ? FIRST.length : i; };
   const FOOD = { pescador: 1, fruticultor: 1 };
   E.FOOD_TRADES = FOOD;
@@ -324,6 +324,8 @@
     for (const v of S.villagers.values()) {
       if (v.set !== set.id || v.captive) continue;
       const r = v.role;
+      // (away on a voyage: the post is not held from the sea — another takes it, L-683)
+      if (r !== 'marinheiro' && E.isJobRole(r) && G.Naval && G.Naval.away(v)) { if (v.job) v.job = 0; continue; }
       const isW = E.isJobRole(r) || (r === 'mineiro' && v.job);
       if (!isW) { if (v.job) v.job = 0; continue; }
       if (r === 'mineiro' && !v.job) continue;

@@ -217,7 +217,11 @@ function apart(v, h) {
   // count «nothing lost» asked for 14, T-099)
   const all = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
   const kept = r2(P.custody(op5) + all(op5.done)), took5 = r2(all(op5.taken)); const atDoor = (S.loose || []).filter(o => o.op === op5.id).length;
-  const quiet = live(15, () => { fac.stock.coral = Math.max(fac.stock.coral, cap()); return book(op5, 'pegar').some(e => e[2] > S.clock - 1 && op5.st === 'wait'); });
+  // (a crate lifted after the unloading stopped — by the book's own hour of the stop —, never «in the last second»: a ship that
+  // comes in brings the unloading back for its cargo, a porter lifts a crate, finds the store full and the unloading stops
+  // again; the crate lifted a tenth of a second before that second stop was read as lifted with the unloading stopped, T-681)
+  const stopAt = () => { const l = (op5.log || []).filter(x => x[2] === 'parou'); return l.length ? l[l.length - 1][1] : Infinity; };
+  const quiet = live(15, () => { fac.stock.coral = Math.max(fac.stock.coral, cap()); return op5.st === 'wait' && book(op5, 'pegar').some(e => e[2] > stopAt() + 0.05); });
   D.use('f:' + fac.id, 'coral', 30, { code: 'teste' }); // (room again: some went away in a caravan)
   const done = work(op5, 400, () => watch() || !A.live(op5));
   const coral = (op5.taken || {}).coral || 0;

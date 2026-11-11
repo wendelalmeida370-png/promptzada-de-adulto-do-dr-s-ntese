@@ -288,7 +288,7 @@ const LEDGER_OK27 = [
   if (xf >= 0 && !/hiding\(v\)/.test(ex.slice(xf, xf + 4).join('\n'))) fails.push(`o susto: expeditions.js:${xf + 1} o free() da tripulação não pergunta ao hiding(v) — quem se esconde na caverna é escolhido para a viagem (L-459)`);
   let back7 = 0, kids7 = 0;
   ex.forEach((l, k) => {
-    if (/for \(const v of crew\) if \(/.test(l) && /type: 'cais'.*job: 'wait'/.test(l)) { back7++; if (!/hiding\(v\)/.test(l)) fails.push(`o susto: expeditions.js:${k + 1} a volta da tripulação ao cais não espera o refúgio da caverna (hiding(v), L-459): ${l.trim().slice(0, 100)}`); }
+    if (/for \(const v of crew\) if \(/.test(l) && /type: 'cais'.*job: (?:'wait'|quayJob\()/.test(l)) { back7++; if (!/hiding\(v\)/.test(l)) fails.push(`o susto: expeditions.js:${k + 1} a volta da tripulação ao cais não espera o refúgio da caverna (hiding(v), L-459): ${l.trim().slice(0, 100)}`); }
     if (/const members = .*free\(v, f, \{ minAge: 2/.test(l)) { kids7++; if (!/v\.age < 16[^|]*hiding\(v\)/.test(l)) fails.push(`o susto: expeditions.js:${k + 1} a colônia escolhe criança escondida no refúgio da caverna (a segunda regra sem o hiding(v), L-459): ${l.trim().slice(0, 100)}`); }
   });
   if (!back7) fails.push('o susto: expeditions.js sem o laço da volta da tripulação ao cais (L-367) — a regra 38 (7) não acha onde ele pergunta ao hiding(v)');

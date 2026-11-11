@@ -40,7 +40,11 @@ let S;
 // step of the cases)
 let peace = false;
 const godsPeace = () => { G.Politics.divinePeace(); peace = true; };
-const held2 = () => { if (peace) S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); };
+// (and the market of the cases stands while the counters work — the test's hand mends what a fire, a storm or the years break
+// in it, at every second: the case is the counter, not the roof. In the metropole of the sailors the market of Argos, at 37
+// of its strength when the cases began, was a ruin between n4 and n5: its two merchants had no trade left, the stalls no
+// place, and the cases after it nobody to sell, T-683)
+const held2 = () => { if (peace) S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); if (peace && typeof mk !== 'undefined' && mk && mk.type !== 'ruin' && mk.hp < mk.maxHp) mk.hp = mk.maxHp; };
 const live = (sec, until) => { for (let k = 0; k < sec; k++) { M.viver(1); held2(); if (until && until()) return true; } return false; };
 const fine = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); held2(); if (until && until()) return true; } return false; };
 const book = (code, f) => D.ledger().filter(e => e[8] === code && (!f || f(e)));
@@ -120,7 +124,20 @@ S.time = 0.1; godsPeace();
   ok('n1 as bancas abrem', zs.length === merchants().length && zs.length >= 1 && slots.size === zs.length && !lost.length && !bad().length,
     `${zs.length} banca(s) para ${merchants().length} mercador(es), nos lugares ${[...slots].join(', ')}; da prateleira velha passaram ${Object.keys(moved).length} bens às bancas (${shelfOut} lançamento(s) saindo dela no livro)${lost.length ? ', MAS NÃO FECHA: ' + lost.map(k => `${k} ${r2(shelf0[k] || 0)} ${r2(shelfFlow[k] || 0)} → ${r2(left[k] || 0)}`).join(', ') : ', o resto ao armazém pelo livro — nada sumiu'}`);
 }
-const z1 = B.of(merchants()[0]); const m1 = S.villagers.get(z1.owner);
+let z1 = B.of(merchants()[0]); const m1 = S.villagers.get(z1.owner); const nMer0 = merchants().length;
+// (the merchant of the cases back in the post: one of a voyage's crew leaves the post of the workplace to another while the
+// voyage lasts (L-683) — Irene, of the metropole of the sailors, went on the world's own voyage between two cases, the town
+// named another for her market and her stall closed —: back from it, the test's hand gives her the post again, sends the one
+// who covered it back to the town's dealing, and opens the stall as her own morning would open it, T-683)
+function reown() {
+  if (m1.role === 'mercador' && m1.job === mk.id && z1 && z1.st === 'on' && B.of(m1) === z1) return '';
+  if (!S.villagers.has(m1.id) || (G.Expe && G.Expe.memberOf(m1.id))) return '';
+  const extra = merchants().filter(o => o !== m1).sort((a, b) => b.id - a.id);
+  while (extra.length + 1 > nMer0) { const o = extra.shift(); o.role = null; o.job = 0; }
+  m1.role = 'mercador'; m1.job = mk.id;
+  const zz = B.of(m1) || B.open(m1, mk); if (zz) z1 = zz;
+  return `${m1.name} de volta ao posto e à banca pela mão da prova`;
+}
 // ---------------- n2: the wholesale is paid; no coin, no goods
 {
   // (back from a voyage first, as the counter cases wait for the merchant back from what he did — the world's own voyage,
@@ -286,7 +303,7 @@ function prep(zz, mer, pri) {
     const q = quiet(zz); if (!q) { r = true; break; }
     notes.push(q, body(mer)); r = sit();
   }
-  if (!r) console.log(`   (o mercador ${mer.name} não chegou à banca: ${mer.task ? mer.task.type + '.' + mer.task.st : 'sem tarefa'}, a ${r2(G.dist(mer.x, mer.y, B.spots(zz).seller[0], B.spots(zz).seller[1]))} do lugar, mãos ${JSON.stringify(mer.carry)}, banca ${zz.st} aberta ${zz.open}, hora ${S.time.toFixed(3)})`);
+  if (!r) console.log(`   (o mercador ${mer.name} não chegou à banca: ${mer.task ? mer.task.type + '.' + mer.task.st : 'sem tarefa'}, a ${B.spots(zz) ? r2(G.dist(mer.x, mer.y, B.spots(zz).seller[0], B.spots(zz).seller[1])) : '? (a banca sem lugar: fechada)'} do lugar, mãos ${JSON.stringify(mer.carry)}, banca ${zz.st} aberta ${zz.open}, hora ${S.time.toFixed(3)})`);
   S.time = t0; return told(...notes);
 }
 // the merchant at the counter
@@ -294,7 +311,7 @@ function prep(zz, mer, pri) {
 // (the test's hand: a fresh day at the counter, that a caravan or an errand does not take him from while the case runs —
 // a stall attended at this instant may be at the end of its own day there —, and something on it: a stall sold out
 // closes at once, and its merchant goes for more: T-c)
-const man = () => { start = prep(z1, m1, 2); return B.manned(z1); };
+const man = () => { const back = reown(); start = prep(z1, m1, 2); if (back) start += ` (${back})`; return B.manned(z1); };
 const goodOf = (zz = z1) => Object.keys(zz.inv).filter(k => zz.inv[k] >= 1 && k !== 'food').sort()[0] || Object.keys(zz.inv).find(k => zz.inv[k] >= 1);
 // a case at the counter whose deal did not happen because the world called the buyer or the merchant away (the square, his
 // bed, a fire) starts over — the town calm, the merchant back, another buyer — up to three times, told in the case

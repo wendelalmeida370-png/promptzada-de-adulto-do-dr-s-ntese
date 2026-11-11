@@ -446,7 +446,8 @@
       // landing sent across an island lay there at anchor, unseen, until a fleet took it 37 acts later: T-344)
       else if (!moving && s.type[i] > G.T.SEA && s.type[i] !== G.T.RIVER) add('sea', 2, `${nm}: parado (${sh.st}) em terra (${s.type[i]})`);
       const aboard = [...s.villagers.values()].filter(v => v.aboard === sh.id).length;
-      if (moving && !aboard && !sh.ghost && sh.st !== 'deriva' && sh.kind !== 'pesca' && sh.kind !== 'mercante') add('sea', 3, `${nm}: navegando (${sh.st}) sem ninguém a bordo`);
+      // (a merchant sails with its crew aboard — the sailors, D-155 —; one of before, with no crew at all, ends its last voyage)
+      if (moving && !aboard && !sh.ghost && sh.st !== 'deriva' && sh.kind !== 'pesca' && (sh.kind !== 'mercante' || sh.tr)) add('sea', sh.kind === 'mercante' ? 2 : 3, `${nm}: navegando (${sh.st}) sem ninguém a bordo`);
       if (sh.kind === 'pesca' && moving && !aboard && sh.st !== 'adrift') add('sea', 3, `${nm}: barco de pesca (${sh.st}) sem ninguém a bordo`);
     }
     // who is aboard comes from v.aboard alone; the index of who is on which ship must not miss anyone (someone put aboard without Naval.board)

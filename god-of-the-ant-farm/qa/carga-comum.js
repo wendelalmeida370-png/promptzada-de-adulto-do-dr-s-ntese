@@ -157,6 +157,9 @@ S.weather.storm = 0;
     const n0 = lines.length, f0 = tr.fruit; let cut = '';
     const went = live(120, () => { if (calledAway(v, 'pick')) cut = v.task.type; return !!cut || outOf(v.id, n0).some(e => e[5] === 'stone' && e[8] === 'entrega'); });
     if (cut) { away.push(`${nm(v)} chamad${v.g === 'f' ? 'a' : 'o'} para ${cut}`); continue; }
+    // (a tree felled, burnt or dead in the case's two minutes has no fruit to keep — its three were «lost» to a woodcutter's
+    // axe in the metropole of the sailors —: the case is the hands of who was sent, and goes to the next tree, T-682)
+    if (!S.trees.has(tr.id) || tr.stage !== 'grow') { away.push(`a ${K.name} de ${nm(v)} acabou no meio (${S.trees.has(tr.id) ? tr.stage : 'derrubada'})`); continue; }
     const fr = outOf(v.id, n0).filter(e => e[5] === (K.good || 'food'));
     // (kept its fruit: none picked — a tree not yet full grows a little in the case's two minutes, and the growth is not a
     // pick; the generation 14's apple tree gained 0,05, T-470)
@@ -277,18 +280,25 @@ S.weather.storm = 0;
 // ---------------- m9: an expedition's crew puts the load in the store before the quay
 {
   S.time = 0.25;
-  const X = G.Expe; let e = null; const tried = [];
+  const X = G.Expe; let e = null, v = null; const tried = [];
+  // (one of the crew on the errand of the quay whose hands can hold the load: Xântipe, the first of the crew in the m9 of the
+  // generation 19, had lost both arms — her hands hold nothing, and the ore the test's hand gave her never came into them)
+  const freeOf = ex => ex.crew.map(id => S.villagers.get(id)).filter(q => q && q.task && q.task.type === 'cais' && !q.aboard && !(S.avatar && S.avatar.id === q.id)).find(q => !(q.carry && q.carry.n > 1e-6) && D.room('v:' + q.id, 'minerio') >= 1) || null;
   for (const f of [...S.factions.values()].filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
-    if (!X || e) break;
-    // (the people's own reasons first; with none today, the god's word: a voyage toward the middle of the sea)
-    e = X.consider(f, { many: true }) || X.launch(f, { k: 'terra', w: 1, why: 'terra', txt: '', x: G.N / 2, y: G.N / 2 }, 'media', {});
-    tried.push(f.name + (e ? '' : ' (não)'));
+    if (!X || v) break;
+    // (the people's own reasons first; then the god's word: a voyage toward the middle of the sea — the first of them with one
+    // of the crew on the quay's errand, hands free, within twenty seconds: a voyage «alone» whose one sailor comes with a load
+    // in the arms, or a crew still in bed — called in the morning, L-682 —, gives the turn to the next: the case is the load
+    // of who is called, not which voyage the world launches first, T-682)
+    for (const mk of [() => X.consider(f, { many: true }), () => X.launch(f, { k: 'terra', w: 1, why: 'terra', txt: '', x: G.N / 2, y: G.N / 2 }, 'media', {})]) {
+      const ex = mk(); if (!ex) continue; e = e || ex;
+      live(20, () => !!freeOf(ex)); const q = freeOf(ex);
+      tried.push(`${f.name}: ${ex.name}${q ? '' : ' (ninguém de mãos livres no cais)'}`);
+      if (q) { e = ex; v = q; break; }
+    }
+    if (!e) tried.push(f.name + ' (não)');
   }
-  const crew = e ? e.crew.map(id => S.villagers.get(id)).filter(v => v && v.task && v.task.type === 'cais' && !v.aboard && !(S.avatar && S.avatar.id === v.id)) : [];
-  // (one whose hands can hold the load: Xântipe, the first of the crew in the m9 of the generation 19, had lost both arms — her
-  // hands hold nothing, and the ore the test's hand gave her never came into them)
-  const v = crew.find(q => !(q.carry && q.carry.n > 1e-6) && D.room('v:' + q.id, 'minerio') >= 1) || null;
-  if (!e || !v) ok('m9 a tripulação guarda a carga antes do cais', false, e ? `a expedição ${e.name} sem tripulante livre no cais` : `nenhum povo do mar lançou uma expedição (${tried.join(', ') || 'nenhum com navegação'})`);
+  if (!e || !v) ok('m9 a tripulação guarda a carga antes do cais', false, e ? `nenhuma expedição com tripulante de mãos livres no cais (${tried.join('; ')})` : `nenhum povo do mar lançou uma expedição (${tried.join(', ') || 'nenhum com navegação'})`);
   else {
     const made = D.make('v:' + v.id, 'minerio', 1, { code: 'teste' }).ok;
     const n0 = lines.length; const seen = [];

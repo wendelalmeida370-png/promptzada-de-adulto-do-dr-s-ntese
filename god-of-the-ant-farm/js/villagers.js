@@ -595,7 +595,7 @@
       if (eve || elder) opt(0.3 * G.R() * (elder ? 2 : 1), 0, 'rest');
       // the working day ends: home, or a cup at the tavern
       if (eve && v.home) opt(0.55 + G.R() * 0.4, 0.45, 'home');
-      if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0), 0.4, 'tavern');
+      if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0) + (G.Harbor && G.Harbor.shoreLeave(v) ? 0.5 : 0), 0.4, 'tavern'); // (home from the sea today: the tavern first, D-155)
       // (the theatre's show of the day, its doors open: an evening out — act-lazer.js)
       if (G.Teatro) { const u = G.Teatro.urge(v, cur); if (u > 0) opt(u, 0.45, 'teatro'); }
       if (G.Eco && !eve) opt(0.16 * G.R() * 1.6, 0.35, 'shop');
