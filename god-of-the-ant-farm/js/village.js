@@ -1230,6 +1230,9 @@
   // temple, theatre and monument there is a highway, a statue, a tall house, a workshop, a wall or the water — Mênfis of the
   // mega, 181 people and the stone of a pyramid, kept its shrine of 8 m for the 25 years measured)
   const ONE = { maravilha: 1 };
+  // (another of the type in town with room round it for the step: it grows where it stands before any is raised anew — the
+  // town's older shrine, with no room, raised a temple elsewhere and the one with room never grew: the proof escala e7, L-782)
+  const roomFor = (set, b, st) => { for (const o of G.S.buildings.values()) if (o !== b && o.set === set.id && o.built && o.type === b.type && o.w < st.n && V.affords(set, o.type, st, 0, G.Escala.of(o)) && V.growLot(set, o, st)) return true; return false; };
   V.grow = function (set, fac, c) {
     const S = G.S;
     if ((set.tier || 0) < 2 || (G.City && G.City.saving(set, fac))) return null;
@@ -1247,6 +1250,7 @@
         if (!V.affords(set, b.type, st, 0, G.Escala.of(b))) continue; // (the stone of what grows, by the people's income: D-120)
         const pos = V.growLot(set, b, st); if (pos) return V.enlarge(b, st, pos);
         if (ONE[b.type] || b.w < top[b.type] || !V.affords(set, b.type, st)) continue;
+        if (roomFor(set, b, st)) break; // (that one's turn comes further on in this round)
         const at = V.findSite(set, b.type, undefined, st.n) || (V.opens(b.type, st) ? V.openSite(set, b.type, st) : null); if (!at) continue;
         const old = V.buildName(b); const nb = V.startProject(set, b.type, at, st); if (!nb) continue;
         const nm = V.nameOf(b.type, nb); const [cx, cy] = V.center(nb);
