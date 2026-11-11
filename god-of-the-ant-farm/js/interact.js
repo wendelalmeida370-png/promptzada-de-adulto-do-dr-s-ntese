@@ -196,13 +196,14 @@
     const base = { kind: 'person', id: o.id, knows: lvl, kin: me ? G.Possess.kin(me, o) : null, hp: Math.round(o.hp), hunger: Math.round(o.hunger), energy: Math.round(o.energy) };
     if (!lvl) return Object.assign(base, { name: G.cap(K.looks(o, me).um), sub: AGES.find(a => o.age < a[0])[1], from: null, first: false, set: null, fac: null, home: null, parents: [], partner: null, kids: [], traits: [], doing: seenDoing(o), bio: [], stories: [], ruler: false, kills: 0, why: '' });
     const all = lvl >= 2; const L1 = all && G.Life ? G.Life.bioList(o).slice(-6).reverse() : [];
-    const st = all && G.Stories ? G.Stories.of(o.id).map(s => s.title).filter(Boolean).slice(0, 3) : [];
+    // (the stories they lead — what they would say they have to settle; the ones others weave around them only the god reads)
+    const st = all && G.Stories ? G.Stories.of(o.id).filter(s => !me || s.protag === o.id).map(s => s.title).filter(Boolean).slice(0, 3) : [];
     const town = S.settlements.get(o.set); const kt = !me || (town && K.town(me, town));
     return Object.assign(base, {
       name: id.name + (id.epithet ? ', ' + id.epithet : ''), sub: `${id.age} ${id.age === 1 ? 'ano' : 'anos'} · ${id.role}`,
       from: all ? id.from : null, first: id.first, set: kt ? id.set : null, fac: kt ? id.fac : null, home: id.home,
       parents: [nm(id.mother), nm(id.father)].filter(Boolean), partner: nm(id.partner), kids: id.kids.map(nm).filter(Boolean),
-      traits: all ? id.traits : [], doing: G.Vg.taskText(o), bio: L1.map(e => ({ age: e.age, txt: e.txt })), stories: st, ruler: id.ruler, kills: id.kills,
+      traits: all ? id.traits : [], doing: doingOf(me, o), bio: L1.map(e => ({ age: e.age, txt: e.txt })), stories: st, ruler: id.ruler, kills: id.kills,
       why: all || !me ? '' : K.WHY[how.why] || 'de conversa',
     });
   };
@@ -802,12 +803,18 @@
   I.placed = placed; // (for the tests)
   // the words of an offer of the world, for the body: where they name the one the act is done with (the offer's own cust, to,
   // baby — the world writes its offers for anyone), a name the body cannot say gives way to what is seen of them
-  function said(v, o, txt) {
-    if (!txt) return txt;
-    for (const id of [o.cust, o.to, o.baby]) { const p = id ? G.S.villagers.get(id) : null; if (p && txt.includes(p.name) && !G.Possess.knows.person(v, p)) { const head = txt.startsWith(p.name); txt = txt.split(p.name).join(who(v, p)); if (head) txt = G.cap(txt); } }
-    return txt;
+  // («de o ferreiro» is «do ferreiro»: the words joined as the language joins them)
+  const JOIN = { 'de o': 'do', 'de a': 'da', 'em o': 'no', 'em a': 'na', 'por o': 'pelo', 'por a': 'pela', 'a o': 'ao', 'a a': 'à' };
+  function veil(v, txt, ids) {
+    if (!txt) return txt; let did = false;
+    for (const id of ids) { const p = id ? G.S.villagers.get(id) : null; if (p && txt.includes(p.name) && !G.Possess.knows.person(v, p)) { const head = txt.startsWith(p.name); txt = txt.split(p.name).join(who(v, p)); if (head) txt = G.cap(txt); did = true; } }
+    return did ? txt.replace(/(^|[\s(«“])(de|em|por|a) (o|a) (?=\S)/g, (m, a, b, c) => a + JOIN[b + ' ' + c] + ' ') : txt;
   }
+  const said = (v, o, txt) => veil(v, txt, [o.cust, o.to, o.baby]);
   I.said = said;
+  // (what someone is at, as the world words it — their errand may name who it is with: the one spoken to, the keeper of the
+  // stall —, for a body that may not know them)
+  const doingOf = (me, o) => { const t = o.task; const txt = G.Vg.taskText(o); if (!me || !t) return txt; const z = t.biz && G.Biz ? G.Biz.get(t.biz) : null; return veil(me, txt, [t.id, t.who, t.to, t.cust, z ? z.owner : 0]); };
   I.add({
     id: 'atividade', prio: 4.2, reach: 2.6,
     find(ctx) { if (!G.Act || !G.Act.offers) return []; return G.Act.offers(ctx.v, ctx.x, ctx.y, 2.6 / L() + 2).filter(o => o && o.at).map(o => placed(ctx, o)); },

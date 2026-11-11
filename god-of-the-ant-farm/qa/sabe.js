@@ -30,6 +30,8 @@
 //  p4 a família e a casa, sempre e inteiras (as memórias na ficha); a rua, o ofício, quem governa, pelo nome;
 //  p5 a pessoa conhecida morre: o nome continua sabido, nada quebra;
 //  p6 a oferta do mundo que diz o nome de alguém («Servir …») o troca pelo que se vê, quando o corpo não o conhece;
+//  p7 a história que outro tece em volta de alguém (o alvo de uma vingança) não aparece no «Quem sou eu» dele nem na ficha
+//     dele lida pela família; o deus a lê;
 // A casa:
 //  c1 as moedas e quem está em casa agora: só da própria casa; as da casa alheia em nenhum texto (o cartão dela, a ficha do
 //     dono, o diário, a linha do lugar); o estoque só do armazém do próprio povo;
@@ -268,7 +270,11 @@ if (on('p1', 'p2', 'p3', 'p4', 'p5', 'p6')) {
       const st2 = people(x => x.set === set.id && x.age >= 18 && x.id !== st.id && !K.person(v, x))[0]; const kn = people(o => o.id !== v.id && K.person(v, o) >= 1)[0];
       const o1 = st2 ? { cust: st2.id, label: `Servir ${st2.name} (bebida)`, why: `${st2.name} não quer mais nada.` } : null, o2 = kn ? { cust: kn.id, label: `Servir ${kn.name} (bebida)` } : null;
       const s1 = o1 ? I.said(v, o1, o1.label) : '', s1w = o1 ? I.said(v, o1, o1.why) : '', s2 = o2 ? I.said(v, o2, o2.label) : '';
-      ok('p6 a oferta que diz o nome de um estranho diz o que se vê', !!o1 && !!o2 && s1 === `Servir ${K.looks(st2, v).o} (bebida)` && !s1w.includes(st2.name) && s2 === o2.label, `«${o1 ? o1.label : '-'}» → «${s1}»; «${o1 ? o1.why : '-'}» → «${s1w}»; de um conhecido fica «${s2}»`);
+      // (and the words join as the language joins them: «a o ferreiro» is «ao ferreiro», «de a ferreira», «da ferreira»)
+      const L2 = st2 ? K.looks(st2, v) : null, f2 = st2 && st2.g === 'f';
+      const s3 = st2 ? I.said(v, { to: st2.id }, `Dar o bebê a ${st2.name}`) : '', s4 = st2 ? I.said(v, { cust: st2.id }, `Levar à banca de ${st2.name}`) : '';
+      ok('p6 a oferta que diz o nome de um estranho diz o que se vê', !!o1 && !!o2 && s1 === `Servir ${L2.o} (bebida)` && s1w === `${G.cap(L2.o)} não quer mais nada.` && s2 === o2.label && s3 === `Dar o bebê ${f2 ? 'à' : 'ao'} ${L2.w}` && s4 === `Levar à banca ${f2 ? 'da' : 'do'} ${L2.w}`,
+        `«${o1 ? o1.label : '-'}» → «${s1}»; «${o1 ? o1.why : '-'}» → «${s1w}»; «Dar o bebê a …» → «${s3}»; «…banca de …» → «${s4}»; de um conhecido fica «${s2}»`);
     }
     // ---------------- p3
     if (on('p3')) {
@@ -286,11 +292,16 @@ if (on('p1', 'p2', 'p3', 'p4', 'p5', 'p6')) {
       else {
         const h = homeOf(b3); god(() => D.make('h:' + h.id, 'moedas', 30, { code: 'teste' }));
         const tk3 = take(b3); const sp = G.Biz.spots(z); put(b3, sp.buyer); const n0 = K.name(b3, m);
+        // (what someone is at may name a third: «Indo comprar … na banca de Meresankh» — on the card of one just spoken to,
+        // the merchant the body does not know is what is seen of her; no step of the world in between)
+        const c2 = people(o => o.set === z.set && grown(o) && o.id !== b3.id && o.id !== m.id)[0]; const t0 = c2 ? c2.task : null; let doing = '', raw = '';
+        if (c2) { c2.task = { type: 'compra', biz: z.id, st: 0, k: Object.keys(z.inv)[0] || 'food', pri: 0.3 }; raw = G.Vg.taskText(c2); doing = I.personCard(c2, b3, true).doing; c2.task = t0; }
+        const veiled = !c2 || !raw.includes(m.name) ? null : !doing.includes(m.name) && /banca d[ao] /.test(doing);
         let r = { ok: false, why: 'sem oferta de compra' }; const tried = [];
         for (const o of A.offers(b3, b3.x, b3.y, 2).filter(o => o.act === 'comprar' && o.biz === z.id && o.ok !== false)) { r = god(() => A.perform(b3, o)); tried.push(`${o.label}: ${r.ok ? 'feito' : r.why}`); if (r.ok) break; }
         const how = K.how(b3, m), back = K.how(m, b3);
-        ok('p3 depois de uma compra, o nome de quem vende', tk3 && !n0.includes(m.name) && r.ok && how.n === 1 && how.why === 'encontro' && back.n >= 1 && K.name(b3, m) === m.name,
-          `${b3.name} na banca de ${m.name} (antes: «${n0}»): ${tried.join('; ') || r.why} → «${K.name(b3, m)}» (${how.why})`);
+        ok('p3 depois de uma compra, o nome de quem vende', tk3 && !n0.includes(m.name) && veiled !== false && r.ok && how.n === 1 && how.why === 'encontro' && back.n >= 1 && K.name(b3, m) === m.name,
+          `${b3.name} na banca de ${m.name} (antes: «${n0}»${veiled === null ? '' : `; o que outro faz, «${raw}», na ficha: «${doing}»`}): ${tried.join('; ') || r.why} → «${K.name(b3, m)}» (${how.why})`);
         Po.release('deus'); M.viver(0.2);
       }
     }
@@ -303,6 +314,28 @@ if (on('p1', 'p2', 'p3', 'p4', 'p5', 'p6')) {
         `${name} morreu; para ${v.name} continua «${rec ? K.name(v, rec) : '?'}» (${how.why}); o cartão da casa dela ${card ? 'não a lista mais' : '(sem casa)'}`);
     }
     const nv = novas(), e = errs(); ok('p verificador', !nv.length && !e, nv.slice(0, 3).join(' | ') || e || 'limpo');
+  }
+}
+
+// ================================================================ the stories others weave around someone
+if (on('p7')) {
+  // (someone sought, mourned or plotted against in another's story — its target, its victim —, alive and able to be lived:
+  // the story is not theirs to read; the god reads it on their card. In the world of the cases, else in the «cidade», where
+  // Quinto has sworn against Tito)
+  let tg = null, story = null, where = '';
+  for (const w of [...new Set([WORLD, 'cidade'])]) {
+    open(w);
+    for (const s of (S.saga ? S.saga.stories : []).filter(x => x.st === 'ativa' && x.title).sort(byId)) { for (const k of ['target', 'victim', 'captive', 'lost', 'ruler']) { const o = typeof s.cast[k] === 'number' ? S.villagers.get(s.cast[k]) : null; const i = o ? G.Stories.of(o.id).indexOf(s) : -1; if (o && o.id !== s.protag && Po.can(o).ok && i >= 0 && i < 3) { tg = o; story = s; break; } } if (tg) break; }
+    if (tg) { where = w; break; }
+  }
+  if (!tg) ok('p7 a história que outro tece em volta de alguém não é dele para ler', true, `em ${WORLD} e na cidade, nenhuma história ativa com alguém vivo no elenco além de quem a conduz (nada a provar)`);
+  else {
+    const tk7 = take(tg); const mine = Po.context().stories; const kin = people(o => o.id !== tg.id && Po.kin(o, tg))[0];
+    const gods = I.personCard(tg, null).stories, kins = kin ? I.personCard(tg, kin).stories : [];
+    const own = G.Stories.of(tg.id).filter(s => s.protag === tg.id);
+    ok('p7 a história que outro tece em volta de alguém não é dele para ler', tk7 && !mine.some(s => s.id === story.id) && mine.length === own.length && gods.includes(story.title) && !kins.includes(story.title),
+      `(${where}) ${tg.name} está em «${story.title}» (de ${(G.person(story.protag) || {}).name}): na ficha «Quem sou eu» ${mine.some(s => s.id === story.id) ? 'APARECE' : 'não aparece'} (as suas: ${mine.length}); o deus a lê na ficha dele (${gods.includes(story.title)})${kin ? `; ${kin.name}, da família, não (${!kins.includes(story.title)})` : ''}`);
+    const nv = novas(), e = errs(); ok('p7 verificador', !nv.length && !e, nv.slice(0, 3).join(' | ') || e || 'limpo');
   }
 }
 

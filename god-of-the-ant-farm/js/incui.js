@@ -11,6 +11,11 @@
 //  pause menu holds the way back up, saving, the keys and the
 //  picture's quality. Built once, the first time the body is
 //  entered, and only shown or hidden after (nothing piles up).
+//  What it says of the world it asks of Possess.knows: the name
+//  of a quarter, of a person, the coins of a house, only where
+//  the person lived could say them — else what is seen (D-170).
+//  The key H puts all of it away: the place must say what it is
+//  by itself (D-173).
 //  Its look is the god's gold and letters, quieter: small type,
 //  dark glass that reads over snow and a white sky, the compass
 //  across the top, words that fade out (arte/BIBLIA.md, a HUD).

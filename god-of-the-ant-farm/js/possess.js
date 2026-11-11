@@ -446,7 +446,9 @@
   Po.context = function () {
     const S = G.S; const a = S.avatar; const v = Po.body(); if (!a || !v) return null;
     const around = []; for (const o of S.villagers.values()) if (o.id !== v.id && !o.inside && G.dist2(o.x, o.y, v.x, v.y) < 100) around.push(o.id);
-    const stories = G.Stories ? G.Stories.of(v.id).map(s => ({ id: s.id, title: s.title, type: s.type, protag: s.protag === v.id })) : [];
+    // (the stories the person knows they are in: their own — the ones they lead. The one who is sought, mourned or plotted
+    // against in someone else's does not read it here: D-172)
+    const stories = G.Stories ? G.Stories.of(v.id).filter(s => s.protag === v.id).map(s => ({ id: s.id, title: s.title, type: s.type, protag: true })) : [];
     return {
       who: Po.identity(v), where: K.where(v), kind: a.kind, caps: Po.caps(v),
       stories, knows: { family: [v.mother, v.father, v.partner, ...(v.kids || [])].filter(Boolean), met: a.met.slice(), people: v.ken ? v.ken.p.slice() : [], places: v.ken ? v.ken.q.map(e => e.slice()) : [] },
@@ -478,9 +480,10 @@
     if (told) e[2] = 1;
   }
   // where the body's feet are, and where its house and its work stand, kept as the person's own — each step of the world lived
-  // (one knows where one lives and works: told; a quarter lived in stays known after the family moves)
+  // (one knows where one lives and works: told; a quarter lived in stays known after the family moves; the feet in a quarter
+  // of a city are in that city)
   function remember(v) {
-    const S = G.S; const here = quarterAt(v.x, v.y); if (here) notePlace(v, K.keyOf(here), 0);
+    const S = G.S; const here = quarterAt(v.x, v.y); if (here) { notePlace(v, K.keyOf(here), 0); if (!here.whole) notePlace(v, -here.set, 0); }
     for (const id of [v.home, v.job]) { const q = id ? quarterOf(S.buildings.get(id)) : null; if (q) notePlace(v, K.keyOf(q), 1); }
   }
   // (a place of the record: 2 — its name was said by one of it; 1 — the feet were there on a day before today; 0 — not known)

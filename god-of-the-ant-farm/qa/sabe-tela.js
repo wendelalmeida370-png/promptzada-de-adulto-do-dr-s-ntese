@@ -1,4 +1,4 @@
-// sabe-tela: node qa/sabe-tela.js [pasta das fotos] [mundo] — a tela do corpo, no navegador, diz o que a porta do que o
+// sabe-tela: [ONLY=k4] node qa/sabe-tela.js [pasta das fotos] [mundo] — a tela do corpo, no navegador, diz o que a porta do que o
 // personagem sabe responde (Bairros Vivos, BV-6; D-170 a D-173). As regras da porta (G.Possess.knows) são provadas em Node
 // pelo qa/sabe.js; aqui, com o 3D de verdade (WebGL sem GPU — é lento), o que aparece escrito:
 //  k1 a linha do lugar (a HUD): num bairro que o corpo não conhece, o que se vê, sem o nome; é a resposta da porta;
@@ -16,6 +16,8 @@ const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
 const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'sabe-tela'); fs.mkdirSync(OUT, { recursive: true });
 const WORLD = process.argv[3] || 'metropole';
+// (k1 to k3 are one walk and always run; ONLY=k4 or ONLY=k5 leaves the other out)
+const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const on = k => !ONLY || ONLY.includes(k);
 (async () => {
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 1000, height: 640 } });
@@ -117,7 +119,7 @@ const WORLD = process.argv[3] || 'metropole';
     ok('k verificador', !r.qa.length && r.err === '{}', `${r.qa.slice(0, 3).join(' · ') || 'limpo'} · ${r.err}`);
 
     // ================================ k4: the screen put away
-    const h = await E(() => {
+    const h = !on('k4') ? null : await E(() => {
       const S = G.S, T = window.__T, IU = G.IncUI, I = G.Interact; const out = {}; const v = G.Possess.body(); if (!v) return { none: 'sem corpo' };
       const HUD = ['.ih-who', '.ih-clock', '.ih-compass', '.ih-corner', '.ih-reticle']; const vis = () => HUD.filter(s => T.shown('#inc-hud ' + s)).length;
       out.on0 = { vis: vis(), cls: document.querySelector('#inc-root').classList.contains('hud-off'), off: IU.hudOff() };
@@ -140,16 +142,16 @@ const WORLD = process.argv[3] || 'metropole';
       out.again = w ? { entered: T.enter(w), vis: (T.f(8), vis()), cls: document.querySelector('#inc-root').classList.contains('hud-off'), banner: T.shown('#inc-banner') } : null;
       return out;
     });
-    await shot('sabe-tela-desligada');
-    if (h.none) ok('k4 a tela desligada', false, h.none);
+    if (h) await shot('sabe-tela-desligada');
+    if (!h) console.log('(k4 fora do ONLY)'); else if (h.none) ok('k4 a tela desligada', false, h.none);
     else ok('k4 a tela desligada: some a tela, o jogo segue, o menu liga de novo, outro corpo não muda', h.on0.vis === 5 && !h.on0.cls && h.off.vis === 0 && h.off.cls && h.off.off && h.off.store === 'off' && /Tela desligada/.test(h.off.toast) && h.off.toasts && h.off.clock
       && h.off.mark === 0 && !h.off.label && !h.off.prompt && (!h.off.best || (h.off.card && h.off.closed)) && h.off.menu && h.off.box === false && h.on1.vis === 5 && !h.on1.cls && h.on1.store === 'on' && !h.on1.menu && (!h.again || (h.again.entered && h.again.vis === 0 && h.again.cls && !h.again.banner)),
       `ligada: ${h.on0.vis} painéis; H: ${h.off.vis} painéis, «${h.off.toast}», o relógio anda: ${h.off.clock}, marca ${h.off.mark}, letreiro ${h.off.label}, «E — » ${h.off.prompt}; o E ${h.off.best ? `faz «${h.off.best}» (a ficha abre: ${h.off.card}, fecha: ${h.off.closed})` : '(nada ao alcance)'}; menu com a caixa ${h.off.box ? 'MARCADA' : 'desmarcada'}; a caixa liga: ${h.on1.vis} painéis; outro corpo: ${h.again ? `${h.again.vis} painéis, sem faixa: ${!h.again.banner}` : '-'}`);
 
     // ================================ k5: the screen's frames with the world still
-    const w = await E(() => {
+    const w = !on('k5') ? null : await E(() => {
       const T = window.__T; const v = G.Possess.body(); if (!v) return { none: 'sem corpo' };
-      T.key('h'); T.f(4); // (the screen on: every panel drawn)
+      if (G.IncUI.hudOff()) { T.key('h'); T.f(4); } // (the screen on: every panel drawn)
       const o = [...G.S.villagers.values()].filter(x => x.id !== v.id && !x.inside && x.age >= 6).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
       if (o) { G.Avatar.state().yaw = Math.atan2(o.y - v.y, o.x - v.x); G.Cam3D.yaw = G.Avatar.state().yaw; } T.f(4);
       T.key('Escape'); T.f(2); const f0 = T.fp(), c0 = G.S.clock; T.f(60); const f1 = T.fp();
@@ -157,9 +159,9 @@ const WORLD = process.argv[3] || 'metropole';
       G.Modes.menu(false); T.f(4);
       return { same: f0 === f1 && f1 === f2, still, f0, f1, f2, qa: T.novas(), err: JSON.stringify(G.modErr) };
     });
-    if (w.none) ok('k5 os quadros da tela não mudam o mundo', false, w.none);
+    if (!w) console.log('(k5 fora do ONLY)'); else if (w.none) ok('k5 os quadros da tela não mudam o mundo', false, w.none);
     else ok('k5 com o mundo parado, os quadros da tela (a HUD, a ficha, o diário) não mudam o mundo', w.same && w.still, `${w.f0.slice(0, 22)}… → ${w.f1.slice(0, 22)}… → ${w.f2.slice(0, 22)}… (o relógio parado: ${w.still})`);
-    ok('k verificador no fim', w.qa && !w.qa.length && w.err === '{}', `${(w.qa || []).slice(0, 3).join(' · ') || 'limpo'} · ${w.err}`);
+    if (w) ok('k verificador no fim', w.qa && !w.qa.length && w.err === '{}', `${(w.qa || []).slice(0, 3).join(' · ') || 'limpo'} · ${w.err}`);
   }
   ok('nenhum erro de página nem de console', !errs.length, errs.length ? [...new Set(errs)].slice(0, 4).join(' || ') : 'nenhum');
   await browser.close();
