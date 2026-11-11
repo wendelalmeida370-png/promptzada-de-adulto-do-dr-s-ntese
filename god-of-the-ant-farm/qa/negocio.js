@@ -48,6 +48,10 @@ const held2 = () => { if (peace) S.divinePeace = Math.max(S.divinePeace || 0, G.
 const live = (sec, until) => { for (let k = 0; k < sec; k++) { M.viver(1); held2(); if (until && until()) return true; } return false; };
 const fine = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); held2(); if (until && until()) return true; } return false; };
 const book = (code, f) => D.ledger().filter(e => e[8] === code && (!f || f(e)));
+// (the test's hand carries the god's body to a counter: out of the room it was taken in first — a body taken indoors stays in
+// it, L-741, and the offers of a store and of a stall are of one who stands at them; the hand set the feet at the store and
+// left the body «inside» its house: «sem oferta de atacado», T-800)
+const lift = v => { if (v.inside) { v.inside = 0; G.Possess.setLevel(null); } };
 const nm = id => (S.villagers.get(id) || {}).name || '#' + id;
 // the words said at the counters (what G.Falas said, by whom, with which key)
 const said = []; let falas0 = null;
@@ -506,6 +510,7 @@ function stallNow() {
   M.viver(0.2);
   if (!tk.ok) { ok('n12 o corpo é o mercador', false, `o deus NÃO tomou ${m.name} em 5 s: ${tk.why}`); } else {
   // (to the store's door, wholesale; to the stall, set it out; open)
+  lift(m);
   const d = G.Village.nearestDropoff(m.x, m.y, m.set); const [dx, dy] = G.Village.frontTile(d); m.x = dx; m.y = dy; M.viver(0.2);
   const ow = A.offers(m, m.x, m.y, 2).find(o => o.act === 'atacado' && o.biz === z.id);
   const r1 = ow ? A.perform(m, ow) : { ok: false, why: 'sem oferta de atacado' };
@@ -551,7 +556,7 @@ function stallNow() {
   // (one whose house has room for the counter's first good: a full house does not buy — D-059)
   const kq = goodOf(z); const v = pickBuyer(set, sp, [m.id], true, kq);
   const h = E.homeOf(v); D.make('h:' + h.id, 'moedas', 30, { code: 'teste' });
-  const tk = G.Possess.take(v); M.viver(0.2); v.x = sp.buyer[0]; v.y = sp.buyer[1]; M.viver(0.2);
+  const tk = G.Possess.take(v); M.viver(0.2); lift(v); v.x = sp.buyer[0]; v.y = sp.buyer[1]; M.viver(0.2);
   // (a good the counter offers the body — that one, or the first ones shown — dearer today, so that the haggle has room)
   const offs = A.offers(v, v.x, v.y, 2).filter(o => o.act === 'pechinchar' && o.biz === z.id);
   const o0 = offs.find(o => o.k === kq) || offs.find(o => o.k !== 'food') || offs[0];
@@ -675,13 +680,20 @@ function stallNow() {
 {
   start = stallNow();
   const home = m.home ? 'h:' + m.home : null; const inv0 = Object.assign({}, z.inv);
+  // (and what the owner had in the arms for the stall as death came — goods bought wholesale on their way to it —: by the
+  // game's rule it goes to the stall, and what the stall has no room for, to the people's store (activity.js, 'herdado');
+  // the count is of the stall's stock and of that load. Irene died with 2 of food in her arms, the stall full: the 2 went
+  // to the store, and a count of the stall alone read them as goods come from nowhere — «NÃO FECHA», T-801)
+  const c10 = m.carry && m.carry.n > 0.001 && m.carry.to === 'z:' + z.id ? { k: m.carry.k, n: m.carry.n } : null; if (c10 && inv0[c10.k] === undefined) inv0[c10.k] = 0;
   const h0 = {}; for (const k in inv0) h0[k] = home ? D.get(home, k) : 0; const f0 = {}; for (const k in inv0) f0[k] = D.get('f:' + fac.id, k);
   G.Village.kill(m, 'teste');
   const zid = z.id; const zz = () => (S.biz || []).find(q => q.id === zid);
   const closed = zz() && (zz().st === 'fim' || zz().st === 'saindo') && !zz().open;
-  const ok10 = Object.keys(inv0).every(k => Math.abs(((home ? D.get(home, k) : 0) - h0[k]) + (D.get('f:' + fac.id, k) - f0[k]) + ((zz().inv || {})[k] || 0) - inv0[k]) < 0.01);
+  const had = k => inv0[k] + (c10 && c10.k === k ? c10.n : 0);
+  const ok10 = Object.keys(inv0).every(k => Math.abs(((home ? D.get(home, k) : 0) - h0[k]) + (D.get('f:' + fac.id, k) - f0[k]) + ((zz().inv || {})[k] || 0) - had(k)) < 0.01);
+  const toStore = c10 ? r2(D.get('f:' + fac.id, c10.k) - f0[c10.k]) : 0;
   live(3);
-  ok('n10 o dono morre', closed && ok10 && !bad().length, `${m.name} morreu: a banca ${closed ? 'fechou na hora' : 'NÃO fechou'}; o estoque (${Object.keys(inv0).length} bens) foi para ${home ? 'a casa da família' : 'o armazém'}${ok10 ? ', nada sumiu' : ' — MAS NÃO FECHA'}`);
+  ok('n10 o dono morre', closed && ok10 && !bad().length, `${m.name} morreu: a banca ${closed ? 'fechou na hora' : 'NÃO fechou'}; o estoque (${Object.keys(inv0).length} bens) foi para ${home ? 'a casa da família' : 'o armazém'}${c10 ? `; o que tinha nos braços para a banca (${c10.n} de ${c10.k}): ${toStore > 0.001 ? `${toStore} ao armazém do povo (a banca cheia)` : 'à banca, e dela para casa'}` : ''}${ok10 ? ', nada sumiu' : ' — MAS NÃO FECHA'}`);
 }
 // ---------------- n11: the market is gone: its stalls close, their stock goes home (or to the store) — the ledger says
 {
@@ -881,7 +893,7 @@ function stallNow() {
       const z17 = B.of(mer17) || B.open(mer17, mkt);
       roomOn(z17, K, 8); for (const q of [K, 'food']) if ((f.stock[q] || 0) < 20) D.make('f:' + f.id, q, 20, { code: 'teste' });
       if (mer17.carry) D.use('v:' + mer17.id, mer17.carry.k, mer17.carry.n, { code: 'teste', mine: true });
-      const tk = G.Possess.take(mer17); M.viver(0.2);
+      const tk = G.Possess.take(mer17); M.viver(0.2); lift(mer17);
       const d = G.Village.nearestDropoff(mer17.x, mer17.y, mer17.set); const [dx, dy] = G.Village.frontTile(d); mer17.x = dx; mer17.y = dy;
       const offs = A.offers(mer17, dx, dy, 2).filter(o => o.act === 'atacado' && o.biz === z17.id && o.ok !== false);
       const ow = offs.find(o => o.k === K) || offs[0];
@@ -928,7 +940,7 @@ function stallNow() {
       // world the world had left her wading, and the doors of its dense city stood on the next building's ground)
       const d = G.Village.nearestDropoff(mer.x, mer.y, mer.set); const [dx, dy] = G.Village.frontTile(d);
       for (const p of [[mer.x, mer.y], G.Village.frontTile(mkt), [dx, dy], G.W.nearestLand(mer.x, mer.y, 6), G.W.nearestLand(dx, dy, 6)]) { if (!p) continue; mer.x = p[0]; mer.y = p[1]; mer.path = null; if (G.Possess.can(mer).ok) break; }
-      const tk = G.Possess.take(mer); M.viver(0.2); mer.x = dx; mer.y = dy;
+      const tk = G.Possess.take(mer); M.viver(0.2); lift(mer); mer.x = dx; mer.y = dy;
       const offs = A.offers(mer, dx, dy, 2).filter(o => o.act === 'atacado' && o.biz === z.id && o.ok !== false);
       const ow = offs.find(o => o.k === K) || offs[0];
       const r = ow ? A.perform(mer, ow) : { ok: false, why: 'sem oferta de atacado' };

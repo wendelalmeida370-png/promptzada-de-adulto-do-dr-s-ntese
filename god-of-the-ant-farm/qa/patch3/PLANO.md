@@ -302,6 +302,22 @@ os mundos prontos de novo, a regressão inteira e o relatório.
 - **Achado no caminho, antigo:** a casa perdida era escrita no campo dos membros perdidos — quem morava numa casa que pegou
   fogo trabalhava a 85% para sempre e aparecia «Sem uma perna», e quem tinha perdido um braço o ganhava de volta (L-712,
   `perdas.js`, com verificador novo); e os limites de prova T-695 (`casa` h12), T-696 (`lar` l17), T-697 (`ladrao-bairro` b1), T-698 (`compras` c18) e T-699 (`casa-mercante` k2–k4); e a bandeira que não passava ao irmão pequeno (L-713, `casa-mercante.js` k8).
-- **Em curso, com cinco frentes em paralelo (cada uma no seu ramo, juntadas pelo líder):** o que se vê (V), o que se ouve
-  (S), a tela que respeita o que o personagem sabe (K), os ajustes da Arquitetura Monumental no mundo (M) e no 3D (E).
-- **A seguir:** juntar as cinco frentes, e o fecho (os mundos prontos da geração 20, a regressão inteira, o relatório).
+- **Feito e juntado, quatro das cinco frentes paralelas** (cada uma num ramo, com o bloco dela em `qa/patch3/bloco-*.md`):
+  - **o que se vê** (V; D-162 a D-165): `G.Atmos`, a fonte única do que a vista do deus e o 3D mostram do que acontece —
+    a roupa pelo grupo, pelo que o povo sabe fazer, pelo frio e pela bebida; a fumaça só com fogo de verdade, a janela só
+    com gente acordada, as coisas em volta só do que o prédio tem, o desgaste pelos anos e pelo cuidado do bairro
+    (`roupa.js`, `atmosfera.js`, regras 51 e 52);
+  - **o que se ouve** (S; D-166 a D-169): a cena de som com dono, lado, distância e paredes; o fundo do bairro pelo hábito
+    vezes as mãos no trabalho agora; a música pelo povo e pela época (`som.js`, regras 53 e 54);
+  - **a tela que respeita o que o personagem sabe** (K; D-170 a D-173): `G.Possess.knows`, o registro `v.ken`, a tecla H
+    (`sabe.js`, `sabe-tela.js`, regras 55 e 56; L-760, L-761);
+  - **a Arquitetura Monumental no 3D e na forma** (E; D-178 a D-181, L-800 a L-803): o Coliseu 17% mais leve de perto e
+    com o velário, o portal da Grande Pirâmide, a paliçada, os teatros e a cávea de longe (`visual/monumentos-ajustes.js`).
+  E, achado pelo S e consertado pelo líder: quem é tomado dentro de um prédio fica dentro dele (L-741, `corpo-dentro.js`).
+- **Em curso:** a Arquitetura Monumental no mundo (M): os degraus grandes erguidos pelas próprias cidades, a casa rica em
+  terra cara, o governante no palácio, o povo na praça.
+- **Aberto das frentes juntadas, dito no AUDIT:** os prédios de serviço maiores (T-784); a medida do quadro do Coliseu com a
+  máquina livre (T-781); as coisas em volta das casas fora do lote (T-703); os 42 sons novos, que só o ouvido do dono julga;
+  o aspecto da roupa e das janelas, que pede fotos antes de publicar.
+- **A seguir:** juntar a frente M, e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das seis
+  sementes da terra, o relatório).
