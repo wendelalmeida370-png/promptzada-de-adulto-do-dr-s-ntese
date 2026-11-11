@@ -291,5 +291,17 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   não vão (L-706, `caca-margem.js`, com verificador novo), a folga de quem voltou do mar qualquer que seja o ofício (L-707),
   a busca d'água perdida no caminho (L-708, `jarra.js`), o cuidado do rebanho largado no meio (L-709), a casa de quem perdeu
   os braços, que não comprava (L-710); e os limites de prova T-685 a T-693.
-- **A seguir:** a terra e quem mora onde, o que se vê, o que se ouve, a tela que respeita o que o personagem sabe, os
-  ajustes da Arquitetura Monumental, e o fecho (os mundos prontos da geração 20, a regressão inteira, o relatório).
+- **Feito, a terra e quem mora onde (lacuna 9, primeira parte):** medida em seis mundos crescidos como os do `urb1`
+  (sementes 41, 7, 13, 23, 57, 88). A bandeira da casa mercante é da família, não das paredes (D-158, L-711,
+  `casa-mercante.js`); quem mora de aluguel também compra a casa cara, e quem vende fica de inquilino na casa deixada (D-159,
+  `casa.js` h19, a porta `G.Casa.lease`, regra 61 do guard); o caso 3 do `urb1` mede a terra sob o que faz o bairro (T-694).
+  Com isso: o caso 3 passa em cinco das seis (falha na 23: o bairro do paço de Argos nasce em terra barata) e o caso 12 em
+  quatro (empata na 57 e na 88, por 0,1 e 0,2). **Aberto para o fecho** (o teste 11 pede várias sementes, e a 41 da
+  regressão passa nos dois): repetir a medida das seis com a casa rica em terra cara (T-447) junto, e decidir se a casa cara
+  alugada por um dono que mora noutro lugar também se vende.
+- **Achado no caminho, antigo:** a casa perdida era escrita no campo dos membros perdidos — quem morava numa casa que pegou
+  fogo trabalhava a 85% para sempre e aparecia «Sem uma perna», e quem tinha perdido um braço o ganhava de volta (L-712,
+  `perdas.js`, com verificador novo); e os limites de prova T-695 (`casa` h12), T-696 (`lar` l17), T-697 (`ladrao-bairro` b1), T-698 (`compras` c18) e T-699 (`casa-mercante` k2–k4); e a bandeira que não passava ao irmão pequeno (L-713, `casa-mercante.js` k8).
+- **Em curso, com cinco frentes em paralelo (cada uma no seu ramo, juntadas pelo líder):** o que se vê (V), o que se ouve
+  (S), a tela que respeita o que o personagem sabe (K), os ajustes da Arquitetura Monumental no mundo (M) e no 3D (E).
+- **A seguir:** juntar as cinco frentes, e o fecho (os mundos prontos da geração 20, a regressão inteira, o relatório).

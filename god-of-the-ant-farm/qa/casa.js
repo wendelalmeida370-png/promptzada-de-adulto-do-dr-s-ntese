@@ -19,7 +19,8 @@
 // pedra e a madeira do povo enquanto o salto roda, T-202); h16 a ruína (a casa que caiu, a da cidade abandonada) sem dono
 // quando o dono morre (L-304); h9 um povo sem moeda: o povo levanta com o que tem; o h10 vê, quando a terra cara compra a
 // casa nova, que pagou pelo menos o que a família pagou por ela; h18 o dia da cidade não decide a casa da família do corpo,
-// nem com o par do corpo à frente dela na fila (L-452);
+// nem com o par do corpo à frente dela na fila (L-452); h19 a família de posição que mora de aluguel também compra a casa cara:
+// é a dona da casa nova, e quem vendeu vai morar de aluguel na casa que ela deixou (D-159);
 // e o verificador limpo. Os casos que vivem dias do mundo (h7, h8, h15, h14, h10) partem do mundo pronto de novo, e o h7
 // e o h10 preparam a cidade pelas portas do mundo: em paz, com os materiais de uma casa no armazém (a guerra que vier no
 // meio só faz esperar mais).
@@ -305,7 +306,10 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       // T-111)
       const H12 = lord ? 'h:' + lord.home : null; const own12 = []; const onOwn = e => { if (e[5] === 'moedas' && (e[3] === H12 || e[4] === H12)) own12.push(e); }; D.onMove.push(onOwn);
       if (lets) { setCoins('h:' + b.id, rent * 2); b.aluga.pago = S.day - 1; townDay(t12); }
-      const paid = lets && book(e => e[0] > L0 && e[8] === 'aluguel' && e[3] === 'h:' + b.id && e[4] === 'h:' + lord.home)[0];
+      // (to the house where the owner lived as it was paid: the owner's own family may move that very day — Ahmose's, of the
+      // metrópole, moved to another house in the town's day that paid him, with the rent in what it took along, T-695)
+      const paid = lets && book(e => e[0] > L0 && e[8] === 'aluguel' && e[3] === 'h:' + b.id && e[4] === H12)[0];
+      const moved12 = lets && H12 !== 'h:' + lord.home ? `, que se mudou no mesmo dia para a casa #${lord.home}` : '';
       const need = K.need(v);
       // (then nothing to pay with, for days: owed; too much owed and the owner sells the house to the people)
       let gaveUp = false, owed = 0, sold = null;
@@ -324,7 +328,7 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       // street — into his purse, T-529)
       const elsewhere = !paid && lets ? book(e => e[0] > L0 && e[8] === 'aluguel' && e[3] === 'h:' + b.id) : [];
       const whyNot = elsewhere.length ? `o aluguel do dia foi a ${elsewhere.map(e => e[4]).join(', ')}, não à casa de ${lord.name} (${lord.captive ? 'cativo' : lord.home ? 'casa #' + lord.home : 'sem casa'})` : 'NENHUM aluguel no livro';
-      info = `${v.name} ${lets ? `alugou a casa #${b.id} de ${lord.name} (${rent} moedas ao ano)${kinLord.length ? ` — PARENTE de ${kinLord.join(', ')}` : ''}` : 'NÃO alugou: ' + (r.why || JSON.stringify(r))}; ${paid ? `o aluguel do dia foi à casa de ${lord.name} (livro ${paid[0]}, ${paid[6]})` : whyNot}; no diário, a família de aluguel quer casa: ${need || 'NÃO'}; sem moeda dois dias: deve ${owed}; ${gaveUp ? `devendo demais, ${lord.name} vendeu a casa ao povo${sold ? ` por ${sold[6]} moedas` : ''}; a família continua nela` : 'o dono NÃO desistiu'}`;
+      info = `${v.name} ${lets ? `alugou a casa #${b.id} de ${lord.name} (${rent} moedas ao ano)${kinLord.length ? ` — PARENTE de ${kinLord.join(', ')}` : ''}` : 'NÃO alugou: ' + (r.why || JSON.stringify(r))}; ${paid ? `o aluguel do dia foi à casa de ${lord.name} (livro ${paid[0]}, ${paid[6]})${moved12}` : whyNot}; no diário, a família de aluguel quer casa: ${need || 'NÃO'}; sem moeda dois dias: deve ${owed}; ${gaveUp ? `devendo demais, ${lord.name} vendeu a casa ao povo${sold ? ` por ${sold[6]} moedas` : ''}; a família continua nela` : 'o dono NÃO desistiu'}`;
     } else info = 'a cidade não tem lugar para uma casa vazia';
   }
   if (v && t12 !== set) info = `(em ${t12.name}: ${set.name} não tem mais com quem fazer um casal) ` + info;
@@ -544,8 +548,10 @@ function dearPair() {
 // seller's new one —, each with what the house sold had cost its family as the price was paid: cAt, filled by onSale)
 const isH = r => typeof r === 'string' && r[0] === 'h' && r[1] === ':';
 const salesFrom = L0 => book(e => e[0] > L0 && e[8] === 'compra-casa' && e[5] === 'moedas' && isH(e[3]) && isH(e[4]));
-// (and the cost of the house the buyer gave for it: gAt)
-const saleWatch = () => { const cAt = new Map(), gAt = new Map(); const f = e => { if (e[8] === 'compra-casa' && e[5] === 'moedas' && isH(e[3]) && isH(e[4])) { cAt.set(e[0], costOf(S.buildings.get(+e[3].slice(2)))); gAt.set(e[0], costOf(S.buildings.get(+e[4].slice(2)))); } }; D.onMove.push(f); return { cAt, gAt, stop: () => D.onMove.splice(D.onMove.indexOf(f), 1) }; };
+// (and the cost of the house the buyer gave for it: gAt — none when the buyers rented the roof they leave, D-159: tAt, with
+// that house's owner, lAt; as the price is paid the families have not moved yet, and the owner of a house given in trade
+// still lives in it)
+const saleWatch = () => { const cAt = new Map(), gAt = new Map(), tAt = new Map(), lAt = new Map(); const f = e => { if (e[8] === 'compra-casa' && e[5] === 'moedas' && isH(e[3]) && isH(e[4])) { const hl = S.buildings.get(+e[4].slice(2)); const o = hl && hl.dono ? S.villagers.get(hl.dono) : null; cAt.set(e[0], costOf(S.buildings.get(+e[3].slice(2)))); gAt.set(e[0], costOf(hl)); tAt.set(e[0], !(o && o.home === hl.id)); lAt.set(e[0], hl ? hl.dono || 0 : 0); } }; D.onMove.push(f); return { cAt, gAt, tAt, lAt, stop: () => D.onMove.splice(D.onMove.indexOf(f), 1) }; };
 const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least the house's cost, and twelve — social.js)
 // ---------------- h14: the dear land (social.js): a rich family buys the house of a plain family in the heart, each with its own, in the ledger
 {
@@ -604,7 +610,9 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
       // (every sale of the day at least the house's cost as it was paid, and twelve; then the house sold costs the buyer the
       // price and the house it gave, and the cheap one costs the seller nothing)
       fair: sales.every(e => e[6] + 0.01 >= fairPrice(sw.cAt.get(e[0]) || 0)),
-      booked: sales.every(e => Math.abs(costOf(B(e[3])) - r2(e[6] + (sw.gAt.get(e[0]) || 0))) < 0.01 && !costOf(B(e[4]))),
+      // (bought by a family that rented its roof: the house sold costs it the price alone, and the house it leaves is its
+      // owner's as before)
+      booked: sales.every(e => (sw.tAt.get(e[0]) ? Math.abs(costOf(B(e[3])) - r2(e[6])) < 0.01 : Math.abs(costOf(B(e[3])) - r2(e[6] + (sw.gAt.get(e[0]) || 0))) < 0.01 && !costOf(B(e[4])))),
       kept: dear.b.dono === dono0 && (S.villagers.get(dono0) || {}).home === dear.b.id,
       books: Math.abs(c0 + net - (coins(R[0]) + coins(R[1]))) < 0.02 };
   };
@@ -656,6 +664,62 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
     info4 = d.x.body ? `${d.city.name}: o deus vivendo ${d.x.body.name}, da casa #${d.dear.b.id} → ${d.ours ? `a casa VENDIDA por ${d.ours[6]}` : 'a casa ficou de fora da troca'}; ${d.x.body.name} mora ${(S.villagers.get(d.x.body.id) || {}).home === d.dear.b.id ? 'nela' : 'NOUTRA'}; as trocas do dia: ${saleTxt(d)}` : 'ninguém da casa que o deus pudesse viver';
   }
   ok('h17 a terra cara paga o que a casa custou (4: a casa do corpo)', ok4 && !bad().length, info4);
+}
+// ---------------- h19: the family of standing that rents its roof buys the dear house too (D-159): it has no house to give
+// in trade — the family that sells goes to live in the house it leaves, as tenants of that house's owner (the lease made as
+// they move in); when it is the owner's kin it lives there for nothing, as the house's rule has it, and its life does not
+// say «de aluguel»
+{
+  const kinOf = (o, v) => o.id === v.id || o.id === v.partner || o.mother === v.id || o.father === v.id || v.mother === o.id || v.father === o.id || (!!o.mother && v.mother === o.mother) || (!!o.father && v.father === o.father);
+  const B = ref => S.buildings.get(+ref.slice(2));
+  // (the town as h14 has it: a rich family on cheap ground, a plain one that owns its house on dear ground; and a day)
+  const stage = () => { reload(); const pr = dearPair(); if (pr.why) return pr; setCoins('h:' + pr.cheap.b.id, Math.max(40, fairPrice(costOf(pr.dear.b)) + 28)); setCoins('h:' + pr.dear.b.id, 5); return pr; };
+  // (a trade of the day, as the day ends: who owns what, what it cost, and how the sellers live in the house the buyers left)
+  const judge = (sale, sw) => {
+    const hs = B(sale[3]), hl = B(sale[4]); const buyers = residents(hs), sellers = residents(hl); const o = S.villagers.get(hl.dono);
+    const ten = !!sw.tAt.get(sale[0]), owner = buyers.some(v => v.id === hs.dono), stays = hl.dono === sw.lAt.get(sale[0]) && !sellers.some(v => v.id === hl.dono);
+    const kin = !!o && sellers.some(v => kinOf(o, v)), rents = sellers.some(v => v.age >= 16 && K.tenant(v, hl));
+    const cost = Math.abs(costOf(hs) - r2(sale[6])) < 0.01, fair = sale[6] + 0.01 >= fairPrice(sw.cAt.get(sale[0]) || 0);
+    const said = re => sellers.some(v => (v.bio || []).some(b2 => re.test(String(b2[2]))));
+    const told = said(/^Vendeu a casa/), toldRent = said(/foi morar de aluguel/);
+    // (the house left is its owner's as before, and costs that owner what it had cost: 21, by the test's hand)
+    const lcost = Math.abs(costOf(hl) - 21) < 0.01;
+    const fine = ten && buyers.length > 0 && sellers.length > 0 && owner && stays && lcost && cost && fair && told && (kin ? !rents && !hl.aluga && !toldRent : rents && toldRent);
+    return { fine, ten, rents, kin, txt: !ten ? `a casa #${hs.id} foi comprada por uma família DONA da casa que deixou (#${hl.id})` : `a família que morava de aluguel na casa #${hl.id} comprou a casa #${hs.id} por ${sale[6]} moedas (custava ${r2(sw.cAt.get(sale[0]) || 0)} à família que a tinha): ${owner ? 'é a dona dela' : 'NÃO é a dona dela'}, e ela lhe custou ${costOf(hs)}; a casa que deixou ${stays ? `segue de ${o ? o.name : '?'}` : 'MUDOU de dono'}${lcost ? '' : ` (e o que ela custou ao dono MUDOU: ${costOf(hl)}, não 21)`}, e a família que vendeu ${!sellers.length ? 'NÃO mora nela' : kin ? `é parente do dono e mora nela ${rents || hl.aluga ? 'PAGANDO aluguel' : 'sem aluguel'}, e a vida dela ${toldRent ? 'DIZ' : 'não diz'} «de aluguel»` : `${rents ? 'mora nela de aluguel' : 'NÃO mora nela de aluguel'}, e a vida dela ${toldRent ? 'diz' : 'NÃO diz'}`}` };
+  };
+  // (who buys that day, left to itself: the day takes the widest step up among all the rich of the town — the house that
+  // family lives in is the one the test's hand lets, and the house it buys the one whose family goes to live there)
+  let pr = stage(), info19 = pr.why || '', fine19 = false;
+  if (!pr.why) {
+    const L00 = S.ledgerN; nextDay(); const s0 = salesFrom(L00)[0];
+    if (!s0) info19 = `${pr.city.name}: NENHUMA troca da terra cara no dia`;
+    else {
+      const idL = +s0[4].slice(2), idS = +s0[3].slice(2);
+      // (a day with the house the buyers live in owned by `pick`'s choice — someone who lives elsewhere, the lease made by the
+      // house's own port)
+      const part = pick => {
+        const q = stage(); if (q.why) return { txt: q.why };
+        const hl = S.buildings.get(idL), hs = S.buildings.get(idS); if (!hl || !hs) return { txt: 'as casas do caso não existem mais' };
+        const lord = pick(hl, hs, q.city); if (!lord) return { none: true };
+        hl.dono = lord.id; hl.custo = 21; K.lease(hl, true);
+        const let0 = !!K.landlord(hl) && residents(hl).some(v => K.tenant(v, hl));
+        const L0 = S.ledgerN, sw = saleWatch(); nextDay(); sw.stop();
+        const sale = salesFrom(L0).find(e => e[3] === 'h:' + idS && e[4] === 'h:' + idL);
+        const lar = QA.check().filter(q2 => q2.sys === 'lar' && /L-236/.test(q2.msg)).map(q2 => q2.msg);
+        if (!sale) return { txt: `a casa #${idL}, de ${lord.name} (mora na #${lord.home}), alugada (${let0 ? 'o aluguel feito' : 'SEM aluguel'}): a família dela NÃO comprou a casa #${idS} no dia (as trocas: ${salesFrom(L0).map(e => `${e[3]} por ${e[6]}`).join(', ') || 'nenhuma'})` };
+        const c = judge(sale, sw); c.fine = c.fine && let0 && !lar.length; c.txt += lar.length ? ' — o verificador: ' + lar[0] : ''; return c;
+      };
+      const free = (v, hl, hs) => v.age >= 30 && v.home && v.home !== hl.id && v.home !== hs.id && !v.captive && !v.jail && !v.aboard && !taken.has(v.id);
+      const all = () => [...S.villagers.values()].sort((x, y) => x.id - y.id);
+      // (1) the owner kin of neither family: the family that sold rents the house
+      const a = part((hl, hs, city) => all().find(v => v.set === city.id && free(v, hl, hs) && ![...residents(hl), ...residents(hs)].some(o => kinOf(o, v))));
+      // (2) the owner kin of the family that sells — a father, a mother, a brother who lives elsewhere —: it lives there for nothing
+      const k = part((hl, hs) => all().find(v => free(v, hl, hs) && residents(hs).some(o => kinOf(o, v)) && !residents(hl).some(o => kinOf(o, v))));
+      fine19 = !!a.fine && a.rents && !a.kin && (k.none || (!!k.fine && k.kin));
+      info19 = `${pr.city.name}: (1) o dono sem parentesco: ${a.none ? 'ninguém de fora para ser o dono' : a.txt}; (2) o dono parente de quem vende: ${k.none ? '(ninguém da família que vende mora noutra casa: o caso não se faz neste mundo)' : k.txt}`;
+    }
+  }
+  ok('h19 quem mora de aluguel também compra a casa cara', fine19 && !bad().length, info19);
 }
 // ---------------- h10: the skip: the work ends and the family moves in
 {

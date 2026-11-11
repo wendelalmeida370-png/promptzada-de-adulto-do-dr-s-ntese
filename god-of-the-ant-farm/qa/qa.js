@@ -62,6 +62,9 @@
       if (!s.settlements.has(v.set)) add('pop', 2, `${nm}: povoado ${v.set} não existe (captive=${!!v.captive})`, v.id);
       { const set = s.settlements.get(v.set); if (set && !v.captive && !v.aboard && !v.ug && !v.wrecked && v.age >= 3 && !(G.Expe && G.Expe.memberOf(v.id)) && !(v.task && (v.task.type === 'band' || v.task.type === 'swim' || v.task.type === 'naufrago' || v.task.type === 'muster')) && !(G.W.reachesTown ? G.W.reachesTown(v, set) : G.W.sameLand(v.x, v.y, set.cx, set.cy))) add('pop', v._stray && s.day - v._stray >= 2 ? 2 : 3, `${nm}: mora em ${set.name}, numa terra aonde não chega a pé${v._stray && s.day - v._stray >= 2 ? ' há ' + (s.day - v._stray) + ' dias' : ' (recente)'} (${v.task ? v.task.type : '-'})`, v.id); }
       const f = G.Fac.ofV(v); if (f && !f.alive) add('pop', 1, `${nm}: pertence a povo extinto ${f.name}`, v.id);
+      // (the limbs a body has lost are limbs — armL, armR, leg —: the house lost was written over them, and whoever lived in a
+      // house that fell worked and was shown as maimed, L-712)
+      if (v.lost) { const odd = Object.keys(v.lost).filter(k => k !== 'armL' && k !== 'armR' && k !== 'leg'); if (odd.length) add('pop', 2, `${nm}: o campo dos membros perdidos guarda outra coisa (${odd.join(', ')}) — L-712`, v.id); }
       if (v.home) { const h = s.buildings.get(v.home); if (!h) add('pop', 2, `${nm}: casa ${v.home} não existe`, v.id); else if (h.set !== v.set && !v.captive) add('pop', 3, `${nm}: mora em outro povoado (${h.set} ≠ ${v.set})`, v.id); }
       if (v.partner) {
         const p = P(v.partner);
@@ -165,6 +168,13 @@
       if (b.built && b.progress !== undefined && b.progress < 0.999 && !b.upgradeFrom) add('city', 3, `prédio ${b.type}#${b.id}: pronto com progresso ${b.progress}`);
       for (const k in b.need || {}) if (!fin(b.need[k]) || b.need[k] < -0.01) add('city', 2, `prédio ${b.type}#${b.id}: falta ${k} = ${b.need[k]}`);
       if (fin(b.x) && fin(b.y)) { let bad = 0, by = 0; for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const o = s.occ[ty * G.N + tx]; if (o !== b.id) { bad++; by = o; } } if (bad) add('city', 2, `prédio ${b.type}#${b.id}: ${bad} casa(s) do terreno marcadas como de ${by ? (s.buildings.get(by) ? s.buildings.get(by).type + '#' + by : 'fantasma #' + by) : 'ninguém'}`); }
+    }
+    // a merchant house flies its banner over the family that earned it (trade.js, D-158): the town's day saw its holder under
+    // it — or away with no roof — within the last two days; a banner left on the walls of a house let to others is L-711
+    for (const b of s.buildings.values()) {
+      const e = b.elite; if (!e || e.dono === undefined) continue; // (a banner of before the rule: the town's next day reads it)
+      const o = e.dono ? s.villagers.get(e.dono) : null; const late = s.day - (fin(e.ok) ? e.ok : -1e9);
+      if (late > 2) add('eco', 3, `${b.type}#${b.id}: a bandeira da casa de mercadores de ${e.fam} ${o ? (o.home === b.id ? 'não foi vista pelo dia da cidade' : 'está numa casa onde a família (' + o.name + ') não mora') : 'está numa casa sem ninguém da família'} há ${Math.min(999, Math.round(late))} dias (L-711)`);
     }
     // a block of a metropolis keeps a walkable ring: no building that blocks touches it, not even one it did not pull down (L-077)
     for (const b of s.buildings.values()) {

@@ -1198,7 +1198,10 @@ if (want('l17')) {
       const pool = [...S.villagers.values()].filter(v => v.set === set.id && v.home && v.home !== hh.id && v.age >= 18 && free(v)).sort((a, c) => a.id - c.id);
       // (the young single one of the town, and another grown one — single or not — made old by the test's hand: in the «cidade»
       // of the generation 7, Roma had one single grown one outside the house, and the case asked for two, T-279)
-      const singles = pool.filter(v => !v.partner && v.age < 62);
+      // (young enough not to be the one who minds the little ones of the house it is put in — the old of 55 or more, act-lar.js
+      // minder —, whom the checker rightly leaves out of those who could go first: Atzi, of 61, the first single of
+      // Tenochtitlan by the id, became the minder of the house's child of three, and the checker had no young single to name, T-696)
+      const singles = pool.filter(v => !v.partner && v.age < 55);
       const Yn = singles[0] || null, O = pool.find(v => v !== Yn) || null;
       const other = O && [...S.buildings.values()].find(b => b.set === set.id && b.id !== hh.id && b.id !== O.home && b.built && housing(b) && G.BDEF[b.type].housing > res(b).length);
       if (O && Yn && other) {
@@ -1221,11 +1224,14 @@ if (want('l17')) {
     const builder = builderOf(set); if (builder) G.Vg.H.workTask(builder);
     const gaveUp = (hh.built && !hh.upgradeFrom) || live(120, () => hh.built && !hh.upgradeFrom);
     const back = hh.built && hh.type === from && !hh.upgradeFrom && !!hh.ip && hh.ip.t === from;
-    // (the family goes on in it — or, a grown single of it, in another house of the town: of a house too full the young single
-    // ones leave first, D-098 —, nobody of it put out in the street)
-    const kept = id => { const v = S.villagers.get(id); return !!v && (v.home === hh.id || (v.age >= 18 && !v.partner && !!v.home)); };
+    // (the family goes on in it — or, a grown one of it, in another house of the town: a single, as of a house too full the
+    // young single ones leave first, D-098, or one who married in the days of the case and lives with the partner: Ahuízotl,
+    // of Tenochtitlan, came of age and married on the day of the works, T-696 —, nobody of it put out in the street)
+    const wed = v => { const p = v.partner && S.villagers.get(v.partner); return !!p && p.home === v.home; };
+    const kept = id => { const v = S.villagers.get(id); return !!v && (v.home === hh.id || (v.age >= 18 && !!v.home && (!v.partner || wed(v)))); };
     const stayed = fam0.filter(id => id !== ownerId && kept(id)).length;
-    const away = () => { const n = fam0.filter(id => id !== ownerId && kept(id) && S.villagers.get(id).home !== hh.id).length; return n ? ` (${n} solteiro(s) da casa cheia noutra casa da cidade, D-098)` : ''; };
+    const away = () => { const L = fam0.filter(id => id !== ownerId && kept(id) && S.villagers.get(id).home !== hh.id).map(id => S.villagers.get(id)); const w = L.filter(v => v.partner).length, n = L.length - w;
+      return L.length ? ` (${[n ? `${n} solteiro(s) da casa cheia noutra casa da cidade, D-098` : '', w ? `${w} casado(s) nos dias do caso, na casa do par` : ''].filter(Boolean).join('; ')})` : ''; };
     const backSaid = back ? `voltou a ${from}, de pé, com o registro dela, e ${stayed} seguem nela${away()}` : `NÃO voltou (${hh.type}${hh.built ? '' : ', em obra'}, registro ${hh.ip ? hh.ip.t : 'nenhum'}${builder ? '' : ', sem construtor na cidade'})`;
     // (raised again and finished — the materials in, the last stroke by the world's own door —: the family in the new house)
     let done = false, regEnd = null, inNew = 0;

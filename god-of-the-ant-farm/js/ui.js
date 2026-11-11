@@ -589,7 +589,7 @@
     if (v.prophet) status.push(`<span class="st gold">${v.g === 'f' ? 'Profetisa' : 'Profeta'}</span>`);
     else if (v.kills) status.push(`<span class="st grey">${v.kills} ${v.kills > 1 ? 'inimigos derrubados' : 'inimigo derrubado'}</span>`);
     if (v.fury > 0) status.push('<span class="st red">Em fúria</span>');
-    if (v.lost) status.push(`<span class="st grey">${v.lost.armL ? 'Sem o braço esquerdo' : v.lost.armR ? 'Sem o braço direito' : 'Sem uma perna'}</span>`);
+    { const l = v.lost, t = !l ? '' : l.armL && l.armR ? 'Sem os dois braços' : l.armL ? 'Sem o braço esquerdo' : l.armR ? 'Sem o braço direito' : l.leg ? 'Sem uma perna' : ''; if (t) status.push(`<span class="st grey">${t}</span>`); }
     if (v.coup) status.push('<span class="st red">Conspirador' + (f ? 'a' : '') + '</span>');
     if (v.rebel || v.revolt) status.push('<span class="st red">Rebelde</span>');
     const title = ruler ? esc(P.styled(fac, v)) : esc(v.name) + (v.ep ? ', ' + esc(P.epithet(v)) : '');

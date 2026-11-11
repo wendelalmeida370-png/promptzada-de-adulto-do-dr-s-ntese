@@ -47,8 +47,9 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
       const sn = U.peek(s.id); if (!sn) continue;
       const bs = [...S.buildings.values()].filter(b => b.set === s.id && b.type !== 'ruin');
       const ds = U.districtsOf(s).map(d => {
-        const types = {}; for (const c of d.cells) { const o = sn.cells.get(c); if (o) for (const t in o.types) types[t] = (types[t] || 0) + o.types[t]; }
-        return { id: d.id, k: d.k, name: d.name, born: d.born, cells: d.cells.length, hist: (d.hist || []).length, types, st: d._st || null };
+        // (and the land under what makes the quarter what it is: each patch's value weighed by the quarter's own vocation in it)
+        const types = {}; let vw = 0, ww = 0; for (const c of d.cells) { const o = sn.cells.get(c); if (!o) continue; for (const t in o.types) types[t] = (types[t] || 0) + o.types[t]; const x = (o.w && o.w[d.k]) || 0; vw += o.value * x; ww += x; }
+        return { id: d.id, k: d.k, name: d.name, born: d.born, cells: d.cells.length, hist: (d.hist || []).length, types, st: d._st || null, vw: ww > 0 ? vw / ww : null, ww };
       });
       // density by distance: beds (the roofs people sleep under) per patch of town, in the inner and the outer half
       // (fields, pens and orchards at the edge are its air, not its density)
@@ -93,22 +94,29 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
   // dearer on the whole. (Across towns the land is not the same land: the two noble quarters of Mênfis and Argos against the
   // one popular quarter of Uppsala, new on good land, read «nobre 48, popular 52»; and with no popular quarter anywhere the
   // case passed by default, T-335)
-  const vOf = l => (l.length ? l.reduce((n, d) => n + d.st.value, 0) / l.length : null);
+  // (The land of a quarter is the land under what makes it that quarter — its palace and rich homes for a noble one, its
+  // people's homes for a popular one —, not the mean of every patch it holds: a quarter of a city takes in the small bits
+  // that touch it (urban.js, clusters), and the noble quarter of Tenochtitlan, in the world of the Bairros Vivos, was the
+  // town hall on land worth 62 and three sobrados on 54, with a pen, a forge, the jail and an orchard on 15 to 42 joined to
+  // it: «nobre 38 contra 42». The mean of all its patches is told beside it, T-694)
+  const landOf = d => (d.vw !== null && d.vw !== undefined ? d.vw : d.st.value), wOf = d => (d.ww > 0 ? d.ww : 1);
+  const vOf = l => (l.length ? l.reduce((n, d) => n + landOf(d) * wOf(d), 0) / l.reduce((n, d) => n + wOf(d), 0) : null);
+  const mOf = l => (l.length ? Math.round(l.reduce((n, d) => n + d.st.value, 0) / l.length) : null);
   const pairs = towns.map(t => {
     const ds = t.ds.filter(d => d.st); const nob = ds.filter(d => d.k === 'nobre'); if (!nob.length) return null;
     const pop = ds.filter(d => d.k === 'popular'); const ref = pop.length ? pop : ds.filter(d => d.k !== 'nobre' && d.k !== 'centro');
-    return ref.length ? { town: t.name, nob: vOf(nob), ref: vOf(ref), vs: pop.length ? 'o popular' : 'os outros' } : null;
+    return ref.length ? { town: t.name, nob: vOf(nob), ref: vOf(ref), vs: pop.length ? 'o popular' : 'os outros', all: `${mOf(nob)} contra ${mOf(ref)}` } : null;
   }).filter(Boolean);
   // (with no noble quarter anywhere, the old heart against the popular quarters of its own town, as before — the heart is dear
   // by its own rule)
   const hearts = pairs.length ? [] : towns.map(t => {
     const ds = t.ds.filter(d => d.st); const c = ds.filter(d => d.k === 'centro'), pop = ds.filter(d => d.k === 'popular');
-    return c.length && pop.length ? { town: t.name, nob: vOf(c), ref: vOf(pop), vs: 'o popular', k: 'centro' } : null;
+    return c.length && pop.length ? { town: t.name, nob: vOf(c), ref: vOf(pop), vs: 'o popular', k: 'centro', all: `${mOf(c)} contra ${mOf(pop)}` } : null;
   }).filter(Boolean);
   const P3 = pairs.length ? pairs : hearts;
   const dearer = P3.filter(p => p.nob > p.ref).length, gap = P3.reduce((n, p) => n + p.nob - p.ref, 0);
   const alone = all.filter(d => d.k === 'popular' && !P3.some(p => p.town === d.town)).map(d => `${d.town}: popular ${Math.round(d.st ? d.st.value : 0)}, sem par`);
-  ok('3 a terra vale mais no bairro nobre', !P3.length || (gap > 0 && dearer * 2 >= P3.length), `${P3.length ? P3.map(p => `${p.town}: ${p.k || 'nobre'} ${Math.round(p.nob)} contra ${p.vs} ${Math.round(p.ref)}`).join('; ') + ` — mais cara em ${dearer} de ${P3.length}, ${gap >= 0 ? '+' : ''}${(gap / P3.length).toFixed(1)} em média${hearts.length ? ' (sem bairro nobre: o centro)' : ''}` : 'nenhuma cidade com bairro nobre (ou centro) e outro bairro (só informação)'}${alone.length ? ' · ' + alone.join('; ') : ''}`);
+  ok('3 a terra vale mais no bairro nobre', !P3.length || (gap > 0 && dearer * 2 >= P3.length), `${P3.length ? P3.map(p => `${p.town}: ${p.k || 'nobre'} ${Math.round(p.nob)} contra ${p.vs} ${Math.round(p.ref)} (a média de todo o chão do bairro: ${p.all})`).join('; ') + ` — mais cara em ${dearer} de ${P3.length}, ${gap >= 0 ? '+' : ''}${(gap / P3.length).toFixed(1)} em média${hearts.length ? ' (sem bairro nobre: o centro)' : ''}` : 'nenhuma cidade com bairro nobre (ou centro) e outro bairro (só informação)'}${alone.length ? ' · ' + alone.join('; ') : ''}`);
   // 4 more than one core gathers homes
   const big = A.towns.slice().sort((a, b) => b.pop - a.pop)[0];
   ok('4 a cidade cresce de vários núcleos', !!big && big.coreHomes.length >= 1, big ? `${big.name}: núcleos ${big.cores.join(', ')}; com casas em volta (além do fogo): ${big.coreHomes.join(', ') || 'nenhum'}` : 'nenhuma cidade');

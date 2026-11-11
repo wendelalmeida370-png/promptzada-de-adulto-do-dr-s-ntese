@@ -242,13 +242,25 @@
     A.note(v, 'memory', `Alugamos a casa de ${o.name}: ${rent} moedas ao ano.`, NOTE);
     A.note(o, 'memory', `Aluguei a minha casa vazia a ${v.name}.`, NOTE);
   }
+  // the lease of a house as it is lived in now: made for a household that is no kin of an owner who lives elsewhere, undone
+  // otherwise — the town's day keeps it
+  function leaseNow(b, set, L) {
+    const S = G.S; const o = K.landlord(b);
+    if (!o || !L.length || !coinPeople(set) || L.some(v => kin(o, v))) { if (b.aluga) b.aluga = null; return null; }
+    return b.aluga || (b.aluga = { d: S.day, pago: S.day, deve: 0, por: (L.find(v => v.age >= 16) || L[0]).id });
+  }
+  // (K.lease: who changes the household of a let house asks at once — the family that sells its house to one that rented its
+  // roof goes to live in the house that one leaves, social.js, D-159; anew: the lease of the household that left is over)
+  K.lease = function (b, anew) {
+    const set = b && G.S.settlements.get(b.set); if (!set || !lived(b)) return null;
+    if (anew && b.aluga) b.aluga = null;
+    return leaseNow(b, set, residents(b));
+  };
   // the rent of a day, paid by the household of a let house to the owner's, in the ledger ('aluguel'): what it cannot pay
   // is owed, and paid first when there is coin; too much owed and the owner gives the house up — the people buy it
   function rent(b, set, L) {
-    const S = G.S; const o = K.landlord(b);
-    if (!o || !L.length || !coinPeople(set) || L.some(v => kin(o, v))) { if (b.aluga) b.aluga = null; return; }
-    const a = b.aluga || (b.aluga = { d: S.day, pago: S.day, deve: 0, por: (L.find(v => v.age >= 16) || L[0]).id });
-    if (a.pago >= S.day) return;
+    const S = G.S; const o = K.landlord(b); const a = leaseNow(b, set, L);
+    if (!a || a.pago >= S.day) return;
     const per = K.rentOf(set, b.type); const due = r2(per * (S.day - a.pago) + (a.deve || 0));
     const head = L.filter(v => v.age >= 16).sort((x, y) => y.age - x.age || x.id - y.id)[0] || L[0];
     const to = o.home && lived(S.buildings.get(o.home)) ? 'h:' + o.home : 'p:' + o.id;

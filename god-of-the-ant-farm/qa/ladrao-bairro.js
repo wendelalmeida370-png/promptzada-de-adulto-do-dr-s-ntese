@@ -50,11 +50,22 @@ if (on('b1')) {
   const p0 = bad ? (G.W.nearestLand(bad.x, bad.y, 3) || [bad.x, bad.y]) : [0, 0];
   const d0 = S.day; for (let k = 0; k < 3; k++) { S.day = d0 + k; const pts = god(() => Cr.rondaPoints(set)); firsts.push(pts[0].map(x => x.toFixed(1)).join(',')); if (G.dist(pts[0][0], pts[0][1], bad.x, bad.y) <= 3.5) hit++; } S.day = d0;
   ok('b1 a ronda vai aonde há crime: o bairro perigoso é o primeiro cruzamento, três noites seguidas', danger && hit === 3, `${bad ? bad.name : '—'} ${danger ? 'é «perigoso»' : 'NÃO ficou «perigoso»'} (${bad ? U.profile(bad) : ''}); o primeiro cruzamento da ronda nas três noites: ${firsts.join(' · ')} (o do bairro: ${p0.map(x => x.toFixed(1)).join(',')}): ${hit} de 3`);
-  // (and the round the watch takes at dusk is that one)
-  S.time = 0.6; let g = null; for (let t = 0; t < 40 && !g; t++) { M.viver(1); g = [...S.villagers.values()].find(v => v.set === set.id && v.task && v.task.type === 'ronda') || null; }
+  // (and the round the watch takes at dusk is that one — on an evening with the watch in town: after the ten years of the skip
+  // the town may be mustering an army that very evening, and its vigia and its warrior, called to arms (muster 3,15, embark
+  // 3,3), take no round, as the game has it — crime.js: nobody with a task of 1,6 or more —: Tenochtitlan, in the metrópole
+  // of the Bairros Vivos, T-697. The gods' peace by the test's hand, and up to three evenings)
+  if (!(S.divinePeace > G.DAY_LEN * 0.25)) G.Politics.divinePeace();
+  let g = null; const armed = [];
+  const watchOf = () => [...S.villagers.values()].filter(v => v.set === set.id && (v.role === 'vigia' || v.role === 'guerreiro') && !v.captive);
+  for (let e = 0; e < 3 && !g; e++) {
+    if (e) { const d = S.day; S.time = Math.max(S.time, 0.9995); for (let k = 0; k < 60 && S.day === d; k++) M.viver(0.1); }
+    S.time = 0.6; const busy = new Set();
+    for (let t = 0; t < 40 && !g; t++) { M.viver(1); g = [...S.villagers.values()].find(v => v.set === set.id && v.task && v.task.type === 'ronda') || null; if (G.isEvening()) for (const w of watchOf()) if (w.task && (w.task.pri || 0) >= 1.6) busy.add(`${w.role} ${w.task.type}`); }
+    if (!g) armed.push(`no dia ${S.day} ninguém (${watchOf().length} da vigia${busy.size ? ': ' + [...busy].join(', ') : ''})`);
+  }
   const pts = g ? g.task.pts : null; const nv = novas(base);
   // (the crossing is the free ground nearest the quarter's middle, three houses around it at the most: W.nearestLand)
-  ok('b1 ao escurecer o vigia recebe essa ronda', !!pts && G.dist(pts[0][0], pts[0][1], bad.x, bad.y) <= 3.5 && !nv.length, g ? `${g.name} (${g.role}) na ronda: primeiro a ${pts[0].join(',')}, depois ${pts.slice(1).map(p => p.join(',')).join(' · ')}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}` : 'ninguém tomou a ronda em 40 s do entardecer');
+  ok('b1 ao escurecer o vigia recebe essa ronda', !!pts && G.dist(pts[0][0], pts[0][1], bad.x, bad.y) <= 3.5 && !nv.length, g ? `${g.name} (${g.role}) na ronda: primeiro a ${pts[0].join(',')}, depois ${pts.slice(1).map(p => p.join(',')).join(' · ')}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}${armed.length ? ` (antes: ${armed.join('; ')})` : ''}` : `ninguém tomou a ronda em três entardeceres: ${armed.join('; ')}`);
 }
 
 // ---------------------------------------------------------------- b2

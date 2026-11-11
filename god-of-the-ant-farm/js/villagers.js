@@ -52,6 +52,8 @@
     'diary', '_hungerT',
     // (the day of a thing done once a day: the bath, the drill, the show, the reading, the speech at the plaza — P2)
     'bathDay', 'trainDay', 'showDay', 'readDay', 'speakDay',
+    // (the roof lost — the house that burnt, fell, was pulled down: social.js —, apart from the limbs lost: L-712)
+    'roofLost',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
@@ -108,7 +110,7 @@
     else { const f = G.Fac.get(fid); if (f && G.Politics.tyr(f)) m *= 1.08; }
     // the trade learned as a child goes faster; a lost arm makes everything slower
     if (v.skill && v.skill === v.role) m *= 1.15;
-    if (v.lost) m *= v.lost.armL || v.lost.armR ? 0.72 : 0.85;
+    if (v.lost) m *= v.lost.armL || v.lost.armR ? 0.72 : v.lost.leg ? 0.85 : 1;
     if (G.S.blessed) m *= 1.5; // years of plenty: everything gets done faster
     return m;
   }

@@ -182,7 +182,10 @@
     }
     // (nobody stands in a line the save does not keep: the lines start empty, and one who still thought he stood in one
     // broke the shop and the well — L-085)
-    for (const v0 of o.villagers) { const v = G.Vg.shape(v0); v.path = null; v.task = null; v.emo = null; v._q = null; v.think = lr(); v.scan = lr() * 0.3; S.villagers.set(v.id, v); }
+    // (a save of before kept the house lost in the field of the limbs lost — { day, why } —: it goes to its own, and the
+    // limbs written over it are not known any more, L-712)
+    const roof = v => { const l = v.lost; if (!l || (l.day === undefined && l.why === undefined)) return; v.roofLost = { day: l.day, why: l.why }; const m = {}; for (const k of ['armL', 'armR', 'leg']) if (l[k]) m[k] = true; v.lost = Object.keys(m).length ? m : null; };
+    for (const v0 of o.villagers) { const v = G.Vg.shape(v0); roof(v); v.path = null; v.task = null; v.emo = null; v._q = null; v.think = lr(); v.scan = lr() * 0.3; S.villagers.set(v.id, v); }
     for (const d of o.dead) S.dead.set(d.id, d);
     const took = new Set();
     for (const a of o.animals) {

@@ -398,6 +398,11 @@ const fair = stockFair(set);
   const h = houseLacking(t18, 2, 30, q => canSend(q) && grown16(q).filter(o => G.Depot.strength(o) > 0).length >= 2, 'com dois adultos de braços inteiros, um deles sem ofício');
   // (the one the house would send — grown, no trade, no hard worker — loses both arms by the test's hand)
   const one = grown16(h).filter(v => !(v.job || (E.isJobRole && E.isJobRole(v.role))) && !(v.work > 1) && G.Depot.strength(v) > 0).sort((a, b) => a.id - b.id)[0];
+  // (nobody of the house out for it as the case begins: in the metrópole of the Bairros Vivos the house had sent Cassandra to
+  // the fair that very morning, the hand took her arms on the way, and she kept the errand she already had — «Cassandra foi
+  // comprar», T-698)
+  for (let o = errandOf(h); o; o = errandOf(h)) G.Vg.endTask(o);
+  h.shopOut = 0; h.shopT = undefined;
   const lost0 = one.lost; one.lost = { armL: true, armR: true };
   const u0 = C.urge(one), uOthers = grown16(h).filter(o => o !== one).map(o => C.urge(o));
   let hers = 0; const task18 = C.task; C.task = function (o) { if (o && o.id === one.id) hers++; return task18.apply(this, arguments); };

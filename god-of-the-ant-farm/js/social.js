@@ -24,10 +24,13 @@
   U.addBirth('informal', (s, d) => `Quem não achou casa em ${s.name} juntou tábuas e barro na borda da cidade: nasceu ${U.theName(d)}.`);
 
   // ------------------------------ why someone sleeps in the street ------------------------------
-  // (the reason is kept on the person while it lasts: the house that burnt, the house pulled down, no room)
+  // (the reason is kept on the person while it lasts: the house that burnt, the house pulled down, no room — in a field of its
+  // own, v.roofLost: it was written in v.lost, the limbs a body has lost — carnage.js —, and whoever lived in a house that
+  // fell counted as maimed ever after — the work at 85%, «Sem uma perna» on the screen —, while one who had lost an arm and
+  // went to the street had it back, L-712)
   const oldDestroy = G.Village.destroyBuilding;
   G.Village.destroyBuilding = function (b, cause) {
-    if (b && G.BDEF[b.type] && G.BDEF[b.type].housing) for (const v of G.S.villagers.values()) if (v.home === b.id) v.lost = { day: G.S.day, why: cause === 'fire' ? 'fogo' : cause === 'quake' ? 'terremoto' : cause === 'meteor' || cause === 'lightning' ? 'raio' : cause === 'war' || cause === 'siege' || cause === 'raid' ? 'guerra' : 'ruína' };
+    if (b && G.BDEF[b.type] && G.BDEF[b.type].housing) for (const v of G.S.villagers.values()) if (v.home === b.id) v.roofLost = { day: G.S.day, why: cause === 'fire' ? 'fogo' : cause === 'quake' ? 'terremoto' : cause === 'meteor' || cause === 'lightning' ? 'raio' : cause === 'war' || cause === 'siege' || cause === 'raid' ? 'guerra' : 'ruína' };
     return oldDestroy(b, cause);
   };
   const WHY = { fogo: 'a casa pegou fogo', terremoto: 'a casa caiu no terremoto', raio: 'a casa foi destruída por um raio', guerra: 'a casa foi destruída na guerra', 'ruína': 'a casa virou ruína', obra: 'a casa foi derrubada para uma obra', barraco: 'o barraco caiu', lotada: 'a cidade não tem casa para todos', chegou: 'chegou à cidade e não achou lugar' };
@@ -51,12 +54,14 @@
       if (v.aboard || v.ug) continue;
       if (!v.rua) {
         const had = v.hh && S.buildings.get(v.hh);
-        v.ruaWhy = v.lost && S.day - v.lost.day <= 2 ? v.lost.why : v.hh ? (!had ? (v.hhType === 'barraco' ? 'barraco' : 'obra') : had.type === 'ruin' ? 'ruína' : 'lotada') : (v.age < 18 ? 'lotada' : 'chegou');
-        v.rua = S.day; v.lost = null;
+        v.ruaWhy = v.roofLost && S.day - v.roofLost.day <= 2 ? v.roofLost.why : v.hh ? (!had ? (v.hhType === 'barraco' ? 'barraco' : 'obra') : had.type === 'ruin' ? 'ruína' : 'lotada') : (v.age < 18 ? 'lotada' : 'chegou');
+        v.rua = S.day; v.roofLost = null;
       }
     }
     for (const v of S.villagers.values()) if (v.set === set.id && v.home) { const h = S.buildings.get(v.home); v.hhType = h ? h.type : null; }
     shacks(set);
+    // (the merchant houses of the town: each banner where its family lives, D-158)
+    if (G.Trade && G.Trade.keepHouses) G.Trade.keepHouses(set);
     moveUp(set);
   };
   // ------------------------------ the dear land goes to those who can pay for it ------------------------------
@@ -80,15 +85,21 @@
       // (a family trades only a house of its own, where its owner lives: a let house is its owner's, not its tenants' to sell
       // or to give away — and the house of the god's body is the player's to leave, as in D-098 —, L-236)
       const own = l.some(v => v.id === b.dono) && !l.some(v => v.id === body);
-      homes.push({ b, l, val: o.value, cap: G.BDEF[b.type].housing, own, rich: !!(b.elite || (b.coin || 0) >= 30 || l.some(v => v.grp === 'nobreza')) });
+      // (and a family of standing that rents its roof buys too — it has no house to give in trade: the family that sells goes
+      // to live in the house it leaves, as tenants of that house's owner. Measured in six worlds grown as the city proof
+      // grows them, most of the rich on cheap ground were tenants, whom the purchase never asked, D-159)
+      const ten = !own && !l.some(v => v.id === body) && !!(G.Casa && G.Casa.landlord && G.Casa.landlord(b)) && !l.some(v => v.id === b.dono);
+      homes.push({ b, l, val: o.value, cap: G.BDEF[b.type].housing, own, ten, rich: !!(b.elite || (b.coin || 0) >= 30 || l.some(v => v.grp === 'nobreza')) });
     }
     if (homes.length < 8) return;
-    const vals = homes.map(h => h.val).sort((a, b) => a - b); const mid = vals[vals.length >> 1], high = vals[Math.floor(vals.length * 0.75)];
+    const vals = homes.map(h => h.val).sort((a, b) => a - b); const mid = vals[vals.length >> 1];
     let best = null, gain = 8;
     for (const r of homes) {
-      if (!r.own || !r.rich || r.val >= mid || (r.b.coin || 0) < PRICE) continue;
+      if (!(r.own || r.ten) || !r.rich || r.val >= mid || (r.b.coin || 0) < PRICE) continue;
       for (const p of homes) {
-        if (!p.own || p.rich || p.val < high || (p.b.coin || 0) >= 10 || p.b.elite || p.cap < r.l.length || r.cap < p.l.length) continue;
+        // (a seller on the dear half of the town's homes, the trade a real step up — more than eight of land: the top quarter
+        // alone, in a town of ten homes, was two houses, and both were rich already)
+        if (!p.own || p.rich || p.val < mid || (p.b.coin || 0) >= 10 || p.b.elite || p.cap < r.l.length || r.cap < p.l.length) continue;
         if ((r.b.coin || 0) + 1e-6 < priceOf(p.b)) continue; // (a rich family short of what the house cost does not buy it)
         if (p.val - r.val > gain) { gain = p.val - r.val; best = [r, p]; }
       }
@@ -109,20 +120,23 @@
     D.move('h:' + hp.id, 'h:' + hr.id, 'moedas', price, { code: 'compra-casa', by, part: true });
     // (what each house cost the family that has it now: the buyer, the price and the house it gave for it; the seller was paid
     // at least what its own had cost it — the cheap house costs it nothing)
-    hp.custo = Math.round((price + gave) * 100) / 100; hr.custo = 0;
+    hp.custo = Math.round((price + (r.ten ? 0 : gave)) * 100) / 100; if (!r.ten) hr.custo = 0;
     const ke = b => ({ elite: b.elite || null, trade: b.trade || 0, tradeGood: b.tradeGood || null });
     const er = ke(hr), ep = ke(hp);
     hp.elite = er.elite; hp.trade = er.trade; hp.tradeGood = er.tradeGood; hr.elite = ep.elite; hr.trade = ep.trade; hr.tradeGood = ep.tradeGood;
-    hp.dono = by; hr.dono = (p.l.find(v => v.age >= 18) || p.l[0]).id;
+    hp.dono = by; if (!r.ten) hr.dono = (p.l.find(v => v.age >= 18) || p.l[0]).id;
     for (const v of r.l) { v.home = hp.id; v.hhType = hp.type; }
     for (const v of p.l) { v.home = hr.id; v.hhType = hr.type; }
+    // (the house a tenant leaves stays its owner's: the family that sold lives in it as that owner's tenants — or for nothing,
+    // when it is the owner's kin, as the house's rule has it —, the lease made at once by the house's own port, act-casa.js)
+    const rents = r.ten && !!G.Casa.lease(hr, true);
     const dTo = U.districtAt(hp.x + 0.5, hp.y + 0.5), dFrom = U.districtAt(hr.x + 0.5, hr.y + 0.5);
     const at = d => (d ? ' n' + U.theName(d).replace(/^(a|o|as|os) /, (m, x) => x + ' ') : '');
     const a = r.l.find(v => v.age >= 18) || r.l[0], q = p.l.find(v => v.age >= 18) || p.l[0];
     note(set, a, `comprou uma casa${at(dTo)} e se mudou com a família`);
     bio(a, `Comprou uma casa${at(dTo)}, em terra mais cara, e se mudou com a família.`, `Juntei o bastante para comprar uma casa${at(dTo)}`);
-    note(set, q, `vendeu a casa${at(dTo)} e foi morar${at(dFrom) || ' na borda'}, com moedas no bolso`);
-    bio(q, `Vendeu a casa${at(dTo)} e foi morar${at(dFrom) || ' mais longe do centro'}, com moedas no bolso.`, `Vendi a nossa casa${at(dTo)} — o centro tinha ficado caro demais para nós`);
+    note(set, q, `vendeu a casa${at(dTo)} e foi morar${rents ? ' de aluguel' : ''}${at(dFrom) || ' na borda'}, com moedas no bolso`);
+    bio(q, `Vendeu a casa${at(dTo)} e foi morar${rents ? ' de aluguel' : ''}${at(dFrom) || ' mais longe do centro'}, com moedas no bolso.`, `Vendi a nossa casa${at(dTo)} — o centro tinha ficado caro demais para nós`);
   }
   // (the shacks themselves go up in daylight: once a day in each town, when the homeless are awake)
   let tR = 0;

@@ -153,12 +153,57 @@
   function checkElite(h, v, f, k) {
     const S = G.S;
     if (h.elite || h.trade < 45) return;
-    h.elite = { k, since: S.day, fam: v.name };
+    // (the banner is the family's — the household of the merchant who earned it, e.dono —, not the walls': Tr.keepHouses)
+    h.elite = { k, since: S.day, fam: v.name, dono: v.id, ok: S.day };
     const set = S.settlements.get(h.set);
     log(`A família de ${v.name} enriqueceu vendendo ${E.name(k)} a outros povos: é a primeira casa de mercadores de ${set ? set.name : f.name}. Bandeira na porta, criados, seda na janela.`, 'trade', h.x, h.y);
     G.Stories && G.Stories.signal('elite', { who: v.id, fac: f.id, k, house: h.id });
   }
   Tr.eliteOf = function (fid) { const out = []; for (const h of G.S.buildings.values()) if (h.elite && G.Village.facOfSet(h.set) === fid) out.push(h); return out; };
+  // ------------------------------ the merchant house is the family's, not the walls' (D-158) ------------------------------
+  // The banner at the door, the tally of the house's trade and its good belong to a household — that of e.dono, the merchant
+  // who earned them, and after him or her of the one of the house who inherits. Once a day in each town (social.js): the
+  // household moved — the banner goes with it to the house where it lives now, if that one flies none; the house let to
+  // others, left empty, or with nobody of the family: the banner comes down. The mark stayed on the walls for ever: in the
+  // worlds grown for the Bairros Vivos half of a city's «merchant houses» were let to strangers with two coins in the pot,
+  // who counted as its merchant class (polity.js), its rich homes and its noble quarter (urban.js) — L-711
+  const homeOK = b => !!(b && b.built && G.BDEF[b.type] && G.BDEF[b.type].housing);
+  // who of the house takes the banner when its holder dies: the partner, then the eldest grown child, a child, the eldest
+  // brother or sister, a parent, a grandchild — living in the house, of any age: the banner is the family's while one of it
+  // lives there. (Only a grown brother took it: the heir of a merchant house of Tenochtitlan starved, his eldest son, who had
+  // it after him, fell in the war, and the four little brothers left in the house had a banner of nobody, to come down the
+  // next morning with «ninguém da família mora mais ali» — L-713)
+  function heirIn(h, v) {
+    const S = G.S; const l = []; for (const o of S.villagers.values()) if (o.home === h.id && o.id !== v.id && !o.captive) l.push(o);
+    l.sort((a, b) => b.age - a.age || a.id - b.id);
+    const kid = o => o.mother === v.id || o.father === v.id, sib = o => (!!v.mother && o.mother === v.mother) || (!!v.father && o.father === v.father);
+    const kids = v.kids || []; const grand = o => kids.includes(o.mother) || kids.includes(o.father);
+    const q = l.find(o => o.id === v.partner) || l.find(o => o.age >= 16 && kid(o)) || l.find(kid) || l.find(o => o.age >= 16 && sib(o)) || l.find(sib)
+      || l.find(o => o.id === v.mother || o.id === v.father) || l.find(grand);
+    return q ? q.id : 0;
+  }
+  const kill0 = G.Village.kill;
+  G.Village.kill = function (v) {
+    if (v && G.S.villagers.has(v.id)) for (const h of G.S.buildings.values()) if (h.elite && h.elite.dono === v.id) h.elite.dono = heirIn(h, v);
+    return kill0.apply(this, arguments);
+  };
+  Tr.keepHouses = function (set) {
+    const S = G.S; const P = id => (id ? S.villagers.get(id) : null);
+    for (const h of [...S.buildings.values()]) {
+      if (h.set !== set.id || !h.elite) continue;
+      const e = h.elite;
+      // (a banner of before this rule has no household written: it is the owner's, wherever the owner lives now)
+      if (e.dono === undefined) { const o = P(h.dono); e.dono = o ? o.id : 0; }
+      const o = P(e.dono);
+      // (under it — or away with no roof of their own: a voyage, a war, a captivity)
+      if (homeOK(h) && o && (o.home === h.id || !o.home)) { e.ok = S.day; continue; }
+      const nh = o && o.home ? S.buildings.get(o.home) : null;
+      if (homeOK(nh) && !nh.elite) { nh.elite = e; e.ok = S.day; nh.trade = Math.max(nh.trade || 0, h.trade || 0); nh.tradeGood = h.tradeGood || nh.tradeGood || null; }
+      // (one line of the chronicle in two days in each town, by the world's own clock: G.mod, L-694)
+      else if ((set.tier || 0) >= 2 && !(S.day - G.mod('trade.down.' + set.id) < 2)) { G.mod('trade.down.' + set.id, S.day); log(`A bandeira da casa de mercadores de ${e.fam} desceu da porta, em ${set.name}: ${o ? 'a família foi morar noutra casa de mercadores' : 'ninguém da família mora mais ali'}.`, 'trade', h.x, h.y); }
+      h.elite = null; h.trade = 0; h.tradeGood = null;
+    }
+  };
   // a strong merchant elite under a cruel or greedy ruler: the council of merchants takes over
   function eliteTick(f) {
     const S = G.S; if (G.Politics.free(f) || f.gov === 'tribo') return;
