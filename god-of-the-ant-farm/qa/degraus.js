@@ -12,7 +12,8 @@
 //   g4  sem pedra: o povo sem renda nem estoque não pede o degrau grande; a obra em curso, sem pedra nem rocha, espera sem ser
 //       largada — e anda quando a pedra chega
 //   g5  o degrau erguido de novo (D-175): sem espaço em volta, o degrau maior nasce noutro lugar e o antigo fica; do maior para o
-//       menor; uma obra grande de cada vez; cada degrau uma vez; nunca outra maravilha; uma vila não
+//       menor; uma obra grande de cada vez; cada degrau uma vez; nunca outra maravilha (g5m); uma vila não (g5v); e, numa
+//       capital com terra de sobra (g5t), o que esperava a vez é o que o planejador ergue quando a primeira fica de pé
 //   g6  a maravilha do campo guardado vem antes de qualquer outra obra grande (D-176)
 //   g7  a guerra no meio: a cidade tomada com a obra grande em curso — a obra e a marca passam ao novo povo, nada preso
 //   g8  o mundo crescido pelo salto, do zero (duas sementes): uma capital ergue sozinha um degrau grande, e nenhuma vila
@@ -171,19 +172,37 @@ run('g2', () => {
   // (one by one: a builder who gave the works more stone than he took from the store brought it from the rock himself)
   const diretos = [...quem].filter(id => L.filter(e => e[9] === id && String(e[4]).startsWith('o:')).reduce((a, e) => a + e[6], 0) > L.filter(e => e[9] === id && e[3] === 'f:' + f.id).reduce((a, e) => a + e[6], 0) + 1e-6);
   ok('g2d a pedra quebrada vai direto para uma obra', diretos.length >= 1 && deram > 0, `em 120 s, com o armazém sem material: das mãos de quem quebrou pedra, ${deram.toFixed(0)} entregues às obras (${grandeObra.toFixed(0)} à obra grande), ${tiraram.toFixed(0)} tiradas do armazém; ${diretos.length} deles deram às obras mais pedra do que tiraram do armazém`);
-  // (the people's quarry: another town of the same people, with rock about it, keeps a gang at the quarry while the work waits)
-  const irmas = [...S.settlements.values()].filter(s => s.fac === set.fac && s !== set && adultos(s) >= 6).sort((a, c) => adultos(c) - adultos(a) || a.id - c.id);
-  if (irmas.length) {
-    const s2 = irmas[0]; if (rochasPerto(s2) < 4) rochas(s2, 8);
-    // (the people's granaries full, as the rule asks — the repartidor's own «fed» —; the most at the quarry in a minute of looks)
-    let m = 0, cheio = true; const farto = () => (f.stock.food || 0) > Math.max(50, G.Fac.pop(f.id) * 7);
-    const quebram = new Set();
-    for (let k = 0; k < 44; k++) { alimenta(set); if (k % 3 === 0) semMaterial(set); cheio = cheio && farto(); M.viver(5); m = Math.max(m, oficio(s2, 'construtor')); for (const v of S.villagers.values()) if (v.set === s2.id && v.role === 'construtor' && v.task && (v.task.type === 'mine' || v.task.type === 'quarry')) quebram.add(v.id); }
-    const A2 = adultos(s2), g = Math.ceil(A2 * V.GANG_Q);
-    if (!cheio) console.log(`  (g2e: os celeiros do povo não enchem neste mundo — ${Math.round(f.stock.food || 0)} de comida para ${G.Fac.pop(f.id)} pessoas, o armazém cabe ${Math.round(V.cap(f.id))} —: a pedreira do povo só se junta com fartura; sem caso)`);
-    else ok('g2e a pedreira do povo', V.stoneKept(f.id) > 0 && V.quarries(s2) && m >= g && quebram.size >= 1, `${s2.name}, do mesmo povo, ${A2} adultos: até ${m} construtores (a turma de 1/12: ${g}), ${quebram.size} deles quebraram pedra em 220 s, enquanto a obra de ${set.name} guarda ${V.stoneKept(f.id).toFixed(0)} de pedra`);
-  } else console.log('  (g2e: o povo da capital não tem outra cidade com gente; a pedreira do povo fica sem caso neste mundo)');
+  // (the gang is the great work's own rule: with it the town's only work under way — the others finished by the proof's hand —
+  // the repartidor's count by works is two or three builders, and the town keeps the gang all the same. It looks every 4 s)
+  sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && !o.built && o.type !== 'ruin' && o.id !== b.id) V.completeBuilding(o); });
+  comVez(set); let pior = 1e9, olhares = 0, obras2 = 0, turma2 = 0, tem = 0;
+  for (let k = 0; k < 9; k++) {
+    alimenta(set); semMaterial(set); M.viver(5); if (k < 2) continue;
+    const A2 = adultos(set), n2 = [...S.buildings.values()].filter(o => o.set === set.id && !o.built && o.type !== 'ruin').length, t2 = Math.min(Math.ceil(A2 * V.GANG), Math.max(1, Math.floor(A2 * 0.2)));
+    if (!(V.keeps(set) > 0) || Math.ceil(n2 * 1.4) + 1 >= t2) continue; // (a look with the work waiting and few works: the gang's own)
+    const n = oficio(set, 'construtor'); olhares++; if (n - t2 < pior) { pior = n - t2; obras2 = n2; turma2 = t2; tem = n; }
+  }
+  ok('g2c2 a turma é da obra grande', olhares >= 3 && pior >= 0, `as outras obras de ${set.name} prontas pela mão da prova: em ${olhares} olhares com a obra grande à espera e poucas obras, o pior: ${tem} construtores com ${obras2} obra(s) em curso (pela conta das obras seriam ${Math.ceil(obras2 * 1.4) + 1} no máximo; a turma: ${turma2})`);
   const c = checa(); ok('g2f verificador', c.ok, c.txt);
+  // (the people's quarry: another town of the same people, with rock about it, keeps a gang at the quarry while the work waits.
+  // Where the capital of the hands has no other town with people — Mênfis of the mega —, the first ready world with a capital
+  // that has one, its great work founded as above, or its own that waits for stone)
+  const irmas = s => [...S.settlements.values()].filter(o => o.fac === s.fac && o !== s && adultos(o) >= 6).sort((a, c) => adultos(c) - adultos(a) || a.id - c.id);
+  let cap = set, mundo = r.mundo;
+  if (!irmas(cap).length) { cap = null; for (const w of MUNDOS) { abre(w); const q = capitalCom('teatro', 6, s => irmas(s).length > 0); if (q) { cap = q.set; mundo = w; semPedra(cap); comVez(cap); break; } } }
+  if (!cap) { console.log('  (g2e: em nenhum mundo pronto uma capital com obra grande tem outra cidade do povo com gente; a pedreira do povo fica sem caso)'); return; }
+  const f2 = G.Fac.get(cap.fac), s2 = irmas(cap)[0]; if (rochasPerto(s2) < 4) rochas(s2, 8);
+  // (room in the people's stores for plenty, by the god's hand: where they hold less than seven of food a head the granaries
+  // are never «full», and the people's quarry never gathers — 890 for 131 people in the mega)
+  for (let k = 0; k < 8 && V.cap(f2.id) * 0.95 <= G.Fac.pop(f2.id) * 7.5; k++) if (!sim(() => V.handFound(cap, 'storehouse', Es.n0('storehouse'), { built: true, R: 50 }))) break;
+  // (the people's granaries full, as the rule asks — the repartidor's own «fed» —; the most at the quarry in a minute of looks)
+  let m = 0, cheio = true; const farto = () => (f2.stock.food || 0) > Math.max(50, G.Fac.pop(f2.id) * 7);
+  const quebram = new Set();
+  for (let k = 0; k < 44; k++) { alimenta(cap); if (k % 3 === 0) semMaterial(cap); cheio = cheio && farto(); M.viver(5); m = Math.max(m, oficio(s2, 'construtor')); for (const v of S.villagers.values()) if (v.set === s2.id && v.role === 'construtor' && v.task && (v.task.type === 'mine' || v.task.type === 'quarry')) quebram.add(v.id); }
+  const A2 = adultos(s2), g = Math.ceil(A2 * V.GANG_Q);
+  if (!cheio) console.log(`  (g2e: os celeiros do povo não enchem neste mundo — ${Math.round(f2.stock.food || 0)} de comida para ${G.Fac.pop(f2.id)} pessoas, o armazém cabe ${Math.round(V.cap(f2.id))} —: a pedreira do povo só se junta com fartura; sem caso)`);
+  else ok('g2e a pedreira do povo', V.stoneKept(f2.id) > 0 && V.quarries(s2) && m >= g && quebram.size >= 1, `${mundo}: ${s2.name}, do povo de ${cap.name}, ${A2} adultos: até ${m} construtores (a turma de 1/12: ${g}), ${quebram.size} deles quebraram pedra em 220 s, enquanto a obra de ${cap.name} guarda ${V.stoneKept(f2.id).toFixed(0)} de pedra`);
+  const c3 = checa(); ok('g2g verificador', c3.ok, c3.txt);
 });
 
 // ------------------------------ g3: a obra anda, custa e demora o do degrau; o save no meio ------------------------------
@@ -302,21 +321,51 @@ run('g5', () => {
   const c = checa(); ok('g5g verificador', c.ok, c.txt);
   salva(); const c2 = checa(); ok('g5h depois do save', c2.ok && !!S.buildings.get(nb.id) && S.buildings.get(nb.id).w === nb.w && !!S.buildings.get(b0.id), c2.txt);
 });
+run('g5t', () => {
+  // (the two rules that hold back a town with land to spare — one great work at a time, each step once —, in the first ready
+  // world with a capital that raises a step anew by itself, as the world has it: what waited while the first went up is what
+  // the planner raises when it stands, and of a type no step is raised anew after a bigger one)
+  let caso = null;
+  busca: for (const wd of MUNDOS) { abre(wd); for (const s of capitais()) {
+    const fac = G.Fac.get(s.fac); civicas(s); rico(s, 400); pedra(s, 300); s._noSite = {};
+    const r1 = sim(() => V.grow(s, fac, V.counts(s.id))); if (r1 && !r1.built && !r1.amp) { caso = { set: s, fac, r1, mundo: wd }; break busca; }
+  } }
+  if (!caso) { console.log('  (g5t: em nenhum mundo pronto uma capital ergue sozinha um degrau de novo: sem caso)'); return; }
+  const { set, fac, r1, mundo } = caso; const novas = [{ type: r1.type, w: r1.w, txt: lado(r1) }];
+  set._noSite = {}; const junto = sim(() => V.grow(set, fac, V.counts(set.id)));
+  let r = null; const depois = () => { civicas(set); set._noSite = {}; r = sim(() => V.grow(set, fac, V.counts(set.id))); if (r && !r.amp) novas.push({ type: r.type, w: r.w, txt: lado(r) }); return r; };
+  sim(() => V.completeBuilding(r1)); const r2 = depois();
+  if (!r2) console.log(`  (g5t: ${mundo}, ${set.name}: pronto ${lado(r1)}, nada mais cresceria — a regra de uma obra de cada vez não é o que segura aqui: sem caso)`);
+  else ok('g5ta uma obra grande de cada vez, seja qual for', !junto, `${mundo}, ${set.name}: com ${lado(r1)} em obra, V.grow: ${junto ? lado(junto) : 'nada'}; pronta ela, V.grow: ${lado(r2)} — era o que esperava a vez`);
+  for (let k = 0; k < 10 && r; k++) { const q = r; sim(() => V.completeBuilding(q)); depois(); }
+  const volta = novas.filter((a, i) => novas.some((b, j) => j < i && b.type === a.type && b.w >= a.w));
+  ok('g5tb cada degrau uma vez', !r && !volta.length, `erguidos de novo até a cidade não ter o que crescer: ${novas.map(q => q.txt).join('; ')}; de um mesmo tipo, depois de um degrau, outro igual ou menor: ${volta.map(q => q.txt).join('; ') || 'nenhum'}`);
+  const c = checa(); ok('g5tc verificador', c.ok, c.txt);
+});
 run('g5m', () => {
   // (never a second wonder: a people's wonder standing with no room round it, in a town that would justify the colossal one — the
   // proof holds the town's rank and its head count, as M.semMoeda holds the door of the arts)
-  abre(); let set = null, w = null;
-  for (const s of capitais()) { const st = Es.steps('maravilha').find(q => q.n === 13); if (!st || !Es.can('maravilha', G.Civ.idOfFac(s.fac) || 'classico', 13)) continue; const b = sim(() => V.handFound(s, 'maravilha', 'maravilha', { R: 60, built: true })); if (b) { set = s; w = b; break; } }
-  if (!ok('g5m a maravilha de pé', !!set, set ? `${set.name}: ${lado(w)}` : 'nenhuma capital com lote de 10 e povo que saiba a colossal')) return;
-  const fac = G.Fac.get(set.fac); const pop0 = V.pop; const t0 = set.tier;
-  V.pop = id => (id === set.id ? 320 : pop0(id)); set.tier = 5;
-  try {
+  abre(); const st13 = Es.steps('maravilha').find(q => q.n === 13); let set = null, w = null, lote = false, mundo = MUNDO;
+  const colosso = (s, fn) => { const pop0 = V.pop, t0 = s.tier; V.pop = id => (id === s.id ? 320 : pop0(id)); s.tier = 5; try { return fn(); } finally { V.pop = pop0; s.tier = t0; } };
+  const poe = s => { const b = sim(() => V.handFound(s, 'maravilha', 'maravilha', { R: 60, built: true })); if (!b) return null;
+    sim(() => { for (const [x, y] of [[b.x - 1, b.y], [b.x + b.w, b.y + b.h - 1], [b.x, b.y - 1], [b.x + b.w - 1, b.y + b.h]]) if (!S.occ[y * G.N + x] && S.type[y * G.N + x] >= G.T.SAND) V.addBuilding('well', x, y, s.id, true); }); return b; };
+  const lote13 = s => colosso(s, () => { s._noSite = {}; const p = sim(() => V.findSite(s, 'maravilha', undefined, 13) || (V.opens('maravilha', st13) ? V.openSite(s, 'maravilha', st13) : null)); s._noSite = {}; return !!p; });
+  const sabe = s => !!st13 && Es.can('maravilha', G.Civ.idOfFac(s.fac) || 'classico', 13);
+  // (the first ready world with a capital where the colossal one would find land with the wonder standing: there only the
+  // rule holds it back; with none, the first capital with a lot for the wonder — no land for a second one anyway)
+  busca: for (const wd of MUNDOS) { abre(wd); for (const s of capitais()) { if (!sabe(s)) continue; const b = poe(s); if (!b) continue; if (lote13(s)) { set = s; w = b; lote = true; mundo = wd; break busca; } sim(() => V.removeBuilding(b)); } }
+  if (!set) { abre(); for (const s of capitais()) { if (!sabe(s)) continue; const b = poe(s); if (b) { set = s; w = b; break; } } }
+  if (!ok('g5m a maravilha de pé', !!set, set ? `${mundo}, ${set.name}: ${lado(w)}; lote para uma colossal de 13 casas: ${lote ? 'há' : 'em nenhum mundo pronto (sem terra, nada a provar da regra)'}` : 'nenhuma capital com lote de 10 e povo que saiba a colossal')) return;
+  const fac = G.Fac.get(set.fac);
+  colosso(set, () => {
     const quer = Es.choose(set, 'maravilha')[0]; civicas(set); rico(set, 400); pedra(set, 300);
-    sim(() => { let n = 0; for (const [x, y] of [[w.x - 1, w.y], [w.x + w.w, w.y + w.h - 1], [w.x, w.y - 1], [w.x + w.w - 1, w.y + w.h]]) if (!S.occ[y * G.N + x] && S.type[y * G.N + x] >= G.T.SAND && V.addBuilding('well', x, y, set.id, true)) n++; return n; });
-    const antes = [...S.buildings.values()].filter(o => o.type === 'maravilha').length; set._noSite = {};
-    const r = sim(() => V.grow(set, fac, V.counts(set.id))); const depois = [...S.buildings.values()].filter(o => o.type === 'maravilha').length;
-    ok('g5n nunca outra maravilha', quer.n === 13 && depois === antes && (!r || r.type !== 'maravilha'), `${set.name} justificaria ${quer.id}/${quer.n}; sem espaço em volta da de 10, V.grow: ${r ? lado(r) : 'nada'}; maravilhas no mundo: ${antes} → ${depois}`);
-  } finally { V.pop = pop0; set.tier = t0; }
+    const conta = () => [...S.buildings.values()].filter(o => o.type === 'maravilha').length; const antes = conta(); const feitas = [];
+    // (asked again and again, each work it begins finished by the proof's hand, until the town has nothing left to grow: the
+    // wonder's turn comes, with no room round it — and it is never raised anew)
+    for (let k = 0; k < 12; k++) { set._noSite = {}; const r = sim(() => V.grow(set, fac, V.counts(set.id))); if (!r) break; feitas.push(lado(r)); if (r.type === 'maravilha') break; sim(() => V.completeBuilding(r)); civicas(set); }
+    const depois = conta();
+    ok('g5n nunca outra maravilha', quer.n === 13 && depois === antes && feitas.length < 12, `${set.name} justificaria ${quer.id}/${quer.n}; sem espaço em volta da de 10, V.grow até não ter o que crescer: ${feitas.join('; ') || 'nada'}; maravilhas no mundo: ${antes} → ${depois}`);
+  });
 });
 run('g5v', () => {
   // (a village does not: below a vila the planner raises no bigger step, whatever its stone)
@@ -399,7 +448,9 @@ run('g8', () => {
     console.log(`  semente ${seed}, ano ${S.day}: ${S.villagers.size} pessoas, ${res[res.length - 1].t3} cidades de nível 3+; degraus grandes fundados pelo planejador: ${fundadas.map(q => `${q.type}/${q.n}${q.amp ? ' (ampliado)' : ''} no ano ${q.day} (nível ${q.tier}, ${q.pop} pessoas)`).join('; ') || 'nenhum'}; de pé: ${prontas.map(q => q.type + '/' + q.n).join(', ') || 'nenhum'} (${ms()} ms)`);
   }
   const todas = res.flatMap(r => r.fundadas), prontas = res.flatMap(r => r.prontas);
-  ok('g8a uma capital ergue sozinha um degrau grande', prontas.some(q => q.n >= 4), `em ${SEMENTES.length} mundos do zero, ${ANOS} anos de salto, sem a mão do deus: ${todas.length} degraus grandes fundados, ${prontas.length} de pé (${prontas.map(q => q.type + ' de ' + q.n * 4 + ' m').join(', ') || 'nenhum'})`);
+  // (a step of 24 m or more standing, and a big step standing in every world: with the code of before, the same two worlds in
+  // the same 90 years founded three big steps and had one standing — a temple of 16 m —, and nothing of 24 m: the block M)
+  ok('g8a uma capital ergue sozinha um degrau grande', prontas.some(q => q.n >= 6) && res.every(r => r.prontas.length > 0), `em ${SEMENTES.length} mundos do zero, ${ANOS} anos de salto, sem a mão do deus: ${todas.length} degraus grandes fundados, ${prontas.length} de pé (${prontas.map(q => q.type + ' de ' + q.n * 4 + ' m').join(', ') || 'nenhum'}); pelo menos um de 24 m ou mais, e algum em cada mundo`);
   ok('g8b nenhuma vila', todas.every(q => q.tier >= 2) && todas.filter(q => q.n >= 6).every(q => q.tier >= 3), `o nível da cidade ao fundar: ${todas.map(q => q.type + '/' + q.n + ' nível ' + q.tier).join(', ') || '—'} (um degrau grande só numa vila ou mais; de 6 casas para cima, só numa cidade)`);
   ok('g8c verificador e erros', res.every(r => r.c.ok), res.map(r => `semente ${r.seed}: ${r.c.txt}`).join(' · '));
 });

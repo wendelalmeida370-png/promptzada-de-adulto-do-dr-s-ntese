@@ -88,9 +88,11 @@ run('r2', () => {
   ok('r2b o dia da cidade pede por ela', !!b && b.w === 2 && b.encomenda.why === 'rica' && b.encomenda.by === v.id, b ? `em ${dias} olhar(es) do dia da cidade (${servidas} casas de quem precisava encomendadas antes): ${lado(b)} para ${v.name}` : `em ${dias} dias a cidade não pediu a casa rica de ${v.name}`);
   // (one rich house under way in a town at a time: a second rich family waits)
   const outra = familias(set).find(o => o.id !== v.id && !K.family(v).includes(o));
-  if (b && outra) { enriquece(outra, set, 600); const antes = [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why === 'rica').length; for (let k = 0; k < 4; k++) sim(() => K.day(set));
-    const depois = [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why === 'rica').length;
-    ok('r2d uma casa rica em obra de cada vez', K.rich(set).includes(outra) && depois === antes, `${outra.name}, rica também, pediria; em 4 olhares do dia da cidade, casas ricas em obra: ${antes} → ${depois}`); }
+  // (with room for more paid works — the limit of them all, K.MAX_WORKS, lifted here: the rule proved is the rich houses' own)
+  if (b && outra) { enriquece(outra, set, 600); const ricas = () => [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why === 'rica').length;
+    const antes = ricas(), mw = K.MAX_WORKS; let depois = -1, cabe = '';
+    K.MAX_WORKS = 9; try { cabe = K.cannotRaise(set, 'house'); for (let k = 0; k < 4; k++) sim(() => K.day(set)); depois = ricas(); } finally { K.MAX_WORKS = mw; }
+    ok('r2d uma casa rica em obra de cada vez', K.rich(set).includes(outra) && !cabe && depois === antes, `${outra.name}, rica também, pediria, e os construtores teriam lugar para mais uma obra paga${cabe ? ' (NÃO: ' + cabe + ')' : ''}; em 4 olhares do dia da cidade, casas ricas em obra: ${antes} → ${depois}`); }
   const c = checa(); ok('r2c verificador', c.ok, c.txt);
 });
 
