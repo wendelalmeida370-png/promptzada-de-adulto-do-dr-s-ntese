@@ -141,9 +141,12 @@
     const by = (SIZED[type] = SIZED[type] || {}); (by[style] = by[style] || []).push({ sizes: sizes.slice(), fn });
   };
   const n0Of = type => (G.BDEF && G.BDEF[type] ? G.BDEF[type].w : 3);
-  // (the generator of a size: the people's own, else the classical one's — as a classic form falls back on it)
+  // (the generator of a size: the people's own, else the classical one's — as a classic form falls back on it: for a people
+  // whose classic form of the type is the classical one's too. A people with a drawing of its own — the Egyptian's sacred lake,
+  // the Aztec's temazcal, the Norse's sauna — has the bigger steps it draws itself, never another people's building: D-182)
+  const stylesOf = (type, style) => (FORMS[type] && FORMS[type][style] ? [style] : [style, 'classico']);
   const sizedFn = (type, style, n) => { const by = SIZED[type]; if (!by) return null;
-    for (const st of [style, 'classico']) for (const e of by[st] || []) if (e.sizes.includes(n)) return { st, fn: e.fn }; return null; };
+    for (const st of stylesOf(type, style)) for (const e of by[st] || []) if (e.sizes.includes(n)) return { st, fn: e.fn }; return null; };
 
   // ------------------------------ the god's kit, as forms ------------------------------
   // (arch.js and cityart.js draw a building with a few helpers — a plinth, the walls, a row of windows, a band, the people's
@@ -1632,7 +1635,7 @@
   };
   // (the sizes a people raises a type in: the classic and its steps')
   Fo.sizes = (type, style) => { if (!Fo.has(type, style)) return []; const out = [n0Of(type)];
-    for (const st of [style, 'classico']) for (const e of (SIZED[type] || {})[st] || []) for (const n of e.sizes) if (!out.includes(n)) out.push(n);
+    for (const st of stylesOf(type, style)) for (const e of (SIZED[type] || {})[st] || []) for (const n of e.sizes) if (!out.includes(n)) out.push(n);
     return out.sort((a, b) => a - b); };
   Fo.types = () => Object.keys(FORMS);
   // (a column's base: a square slab COLUMN_BASE radii a side, 0.12 m high, at its foot — the 3D draws it so, and the plan keeps
