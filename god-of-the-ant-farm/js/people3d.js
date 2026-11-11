@@ -444,15 +444,19 @@
     L.held = P3.held(v, (fac && fac.civ) || v._civ || v.civ || 'nordico'); L.carry = !!L.held;
     L.str = (ad < 12 ? 0.35 : ad < 16 ? 0.7 : ad >= 70 ? 0.6 : ad >= 55 ? 0.8 : 1) * (v.g === 'f' ? 0.85 : 1);
     if (L.held) { if (BUSY_HANDS.has(v.act) || v.sleeping) L.held = setDown(L.held); if (L.held.hands.includes('L')) { L.torch = false; L.lantern = false; } if (L.held.hands.includes('R')) L.tool = false; }
+    // (how drunk the world has them — the tavern's rounds, the wine of the wells —: the body weaves, Anim.stagger)
+    L.drunk = P3.drunkOf(v);
     if (skin) {
       L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM || L.out.topM ? 0.07 : 0;
       // (the face's mood, from the world's feeling: joy smiles with the eyes, love too and blushes; grief frowns with the
       // brows' inner ends raised and the lids drooping; fear and awe open the eyes wide and the mouth; anger draws the brows
-      // down and in and glares; a question lifts the brows; sickness and sleep half close the eyes; a calm face a little warm)
-      const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad'; L.mood = MOOD[grief ? 'sad' : e] || MOOD.calm;
+      // down and in and glares; a question lifts the brows; sickness and sleep half close the eyes; a calm face a little warm;
+      // and the drink shows on a face with no other feeling on it: flushed, the lids heavy, a loose smile)
+      const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad'; L.mood = MOOD[grief ? 'sad' : e] || (L.drunk > 0 ? MOOD.drunk : MOOD.calm);
     }
     return L;
   };
+  P3.drunkOf = v => (G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0);
 
   // (the faces of the feelings: smile (−1 frown .. 1), brows up, anger, grief, eyes wide, eyes smiling, the jaw open, blush)
   const MOOD = {
@@ -460,6 +464,7 @@
     happy: { smile: 0.9, squint: 0.55, jaw: 0.25 }, joy: { smile: 1, squint: 0.6, jaw: 0.4 }, heart: { smile: 0.65, squint: 0.35, blush: 0.4 },
     sad: { smile: -0.6, up: 0.15, sad: 1 }, angry: { smile: -0.45, angry: 1, squint: 0.3, jaw: 0.08 }, fear: { smile: -0.3, up: 1, wide: 1, jaw: 0.45 }, fire: { smile: -0.3, up: 1, wide: 1, jaw: 0.4 },
     awe: { smile: 0.1, up: 0.9, wide: 0.6, jaw: 0.35 }, question: { up: 0.65, smile: -0.05 }, sick: { smile: -0.35, sad: 0.6, squint: 0.45 }, zzz: { squint: 0.75 }, pray: { squint: 0.8, smile: 0.1 },
+    drunk: { smile: 0.45, squint: 0.55, blush: 0.7, jaw: 0.1 },
   };
   const FACE = ['smile', 'up', 'angry', 'sad', 'wide', 'squint', 'jaw', 'blush'];
   // (a face moves from one feeling to the next in a third of a second or so, never at once — the view's own memory)
@@ -472,10 +477,25 @@
   // and age, their wealth (a cloak, a brooch of gold, trims of a dyed thread), the ruler's crown, the captive's undyed
   // rags. The colour of their trade is the god's (Art.CLOTH), only softened to a dyed wool's. Every choice by the
   // person's id (G.hash): the same person always the same — never a roll. Kept a while per person (only seen).
+  // And, read from the world by G.Atmos.dress (D-162): their standing among their people (v.grp — the noble's mantle of a
+  // deep dye with its border, the merchant's bright cape, the craftsman's rolled sleeves, the plain people's tunic; one in a
+  // dozen dresses out of their station, by their id, and goes on doing it), what their people can make (no loom standing:
+  // hides and undyed wool; silk only where the people have it and the house is rich; no bronze: horn and bone for a
+  // buckle, no helmet of metal; bronze, then iron), what their house has to wear (furs for a collar, jewels for the gold),
+  // and the cold out of doors (a cloak; freezing, a hood too — nobody bare-chested, barefoot or short-sleeved in the snow)
   const OUT = new Map(); G.worldHooks.push(() => OUT.clear());
   const mixHex = (a, b, t) => { const p = G.hex2rgb(a), q = G.hex2rgb(b); return '#' + p.map((v, i) => Math.round(v + (q[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
   const wool = hex => mixHex(hex, '#8a7d6a', 0.28); // (a trade's colour, as a dyed wool would show it: never a neon)
-  const LEATHER = ['#5a3e28', '#6b4a2e', '#4a3322', '#7a5634'], METAL = { bronze: '#b08a4a', gold: '#d8b04a', iron: '#8a8e96', silver: '#c8ccd2' };
+  const LEATHER = ['#5a3e28', '#6b4a2e', '#4a3322', '#7a5634'], METAL = { bronze: '#b08a4a', gold: '#d8b04a', iron: '#8a8e96', silver: '#c8ccd2', bone: '#d6ccb2' };
+  // (undyed: the fleece as it comes off the sheep — cream, grey, brown — and the hide)
+  const RAW = ['#b9aa8c', '#a39478', '#8c7c64', '#c4b79c', '#97886c'], HIDE = ['#6e5236', '#7c5c3c', '#5e452e'];
+  // (the deep dye of a noble's mantle and the bright one of a merchant's cape: each one's own, by their id — Atmos has the
+  // dyes of each people, the god's view paints the same ones)
+  const deepOf = (id, civ) => (G.Atmos && G.Atmos.deep ? G.Atmos.deep(id, civ) : '#6a2858'), brightOf = id => (G.Atmos && G.Atmos.bright ? G.Atmos.bright(id) : '#c8962a');
+  const PURPLE = '#6a2050'; // (the border of a Roman's toga)
+  // (no world to ask — a proof's bare person —: dressed as the plain people of a people that weaves and has bronze)
+  const DRESS0 = { code: -1, grp: 'povo', weave: true, silk: false, fur: false, jewel: false, metal: 1, cold: 0 };
+  P3.dressOf = v => (G.Atmos && G.Atmos.dress ? G.Atmos.dress(v) : DRESS0);
   const IRIS = ['#4a3020', '#5a3a22', '#3a2a1a', '#4a6a8a', '#5a7a9a', '#6a7a5a', '#7a6a3a'];
   const HAIRS = { m: ['curto', 'curto', 'rabo', 'longo', 'curto'], f: ['trancas', 'coque', 'longo', 'trancas', 'coque'] };
   function outfitOf(v, L, fac) {
@@ -484,11 +504,18 @@
     const home = G.Eco && G.Eco.homeOf && v.home ? G.Eco.homeOf(v) : null;
     const ruler = !!(fac && fac.leader && fac.leader === v.id);
     const wealth = v.captive ? 0 : ruler ? 3 : !home ? (v.home ? 1 : 0) : home.type === 'barraco' ? 0 : home.type === 'hut' ? 1 + ((home.coin || 0) > 25 ? 1 : 0) : 2 + ((home.coin || 0) > 40 || home.type === 'sobrado' ? 1 : 0);
-    const sig = `${v.role}|${Math.floor(v.age)}|${civ}|${v.captive ? 1 : 0}|${ruler ? 1 : 0}|${wealth}|${v.robe || ''}|${v.unmask ? 1 : 0}|${v.g}|${L.cloth}|${L.hair}`;
+    // (what the world says besides: the standing, the people's arts, the house's furs and jewels, the cold — one code)
+    const D = P3.dressOf(v);
+    const sig = `${v.role}|${Math.floor(v.age)}|${civ}|${v.captive ? 1 : 0}|${ruler ? 1 : 0}|${wealth}|${v.robe || ''}|${v.unmask ? 1 : 0}|${v.g}|${L.cloth}|${L.hair}|${D.code}`;
     let o = OUT.get(id); if (o && o.sig === sig) return o;
     o = { sig, t: now };
     const hh = k => G.hash(id * 13 + k * 7919); // (this person's own coin flips, always the same)
     const ad = v.age, fem = v.g === 'f', kid = ad < 13, role = v.role || '';
+    // (the standing: the mantle is the noble's and the merchant's — and of one in a dozen of the plain people, who dress out
+    // of their station as one in a dozen of the high dress plainly: by the id, so always the same ones)
+    const grp = kid || v.captive ? '' : D.grp; const odd = !!grp && hh(41) < 0.08; // (Atmos.odd: the god's view asks the same)
+    const high = grp === 'nobreza' || grp === 'mercadores', low = grp === 'povo' || grp === 'artesaos';
+    const mantle = high ? !odd : low ? odd : wealth >= 2;
     o.body = fem && ad >= 11 ? 'corpoF' : 'corpoM';
     o.headK = kid ? 1 + 0.32 * G.clamp(1 - ad / 13, 0, 1) : 1;
     // (the colours: the trade's, softened; the people's trim; the trousers and boots of leather and wool)
@@ -496,7 +523,9 @@
     o.cloth = wool(base); o.trim = CV.trim ? mixHex(CV.trim, ['#b33a2a', '#3f6fb0', '#c8a040', '#2f7a5a'][Math.floor(hh(1) * 4)], hh(2) * 0.5) : '#9a3a2a';
     o.pants = v.captive ? '#6a645a' : ['#4a4038', '#3e3a34', '#5a4a3a', '#4a4a44'][Math.floor(hh(3) * 4)];
     o.boots = LEATHER[Math.floor(hh(4) * LEATHER.length)]; o.belt = darker(LEATHER[Math.floor(hh(5) * LEATHER.length)], 0.8);
-    o.metal = ruler ? METAL.gold : wealth >= 3 ? (hh(6) < 0.5 ? METAL.gold : METAL.silver) : METAL.bronze;
+    // (the metal of a brooch and a buckle: gold where the house has jewels — and on a ruler —, silver on the well-off, bronze,
+    // iron on the soldiers of a people that forges it; horn and bone before the bronze)
+    o.metal = ruler ? METAL.gold : D.jewel || (grp === 'nobreza' && !odd && D.metal > 0) ? (hh(6) < 0.5 ? METAL.gold : METAL.silver) : D.metal === 0 ? METAL.bone : wealth >= 3 || (grp === 'mercadores' && !odd) ? METAL.silver : D.metal >= 2 && grp === 'militares' ? METAL.iron : METAL.bronze;
     o.over = o.cloth; o.beads = ['#c87a2a', '#d89a3a', '#b8582a'][Math.floor(hh(7) * 3)]; o.cloak = wool(darker(base, 0.75)); o.hat = o.cloth;
     o.iris = IRIS[(Math.floor(hh(8) * 7) + (G.hex2rgb(L.skin)[0] < 170 ? 0 : 0)) % IRIS.length];
     if (G.hex2rgb(L.skin)[0] < 175) o.iris = IRIS[Math.floor(hh(8) * 3)]; // (dark skin, dark eyes)
@@ -512,7 +541,7 @@
     else if (civ === 'nordico') {
       if (fem) { o.skirt = 'saiaL'; o.over = wool(base); o.cloth = ['#e8e0cc', '#d8cfb8', '#c8b898'][Math.floor(hh(16) * 3)]; o.overK = 1; o.legs = 0; if (hh(17) < 0.38 && ad >= 18) o.hatM = 'lenco', o.hat = ['#e8e2d0', '#c8b898', '#9a3a2a'][Math.floor(hh(18) * 3)]; }
       else { o.skirt = 'saiaC'; o.legs = hh(19) < 0.7 ? 2 : 1; if (hh(20) < 0.3) o.hatM = 'gorro', o.hat = wool(['#7a3a2a', '#3a4a6a', '#5a5a3a', '#6a4a3a'][Math.floor(hh(21) * 4)]); }
-      if (wealth >= 2 && hh(22) < 0.6 || ad >= 50 && hh(22) < 0.5) o.cloakM = 'capa';
+      if (mantle && hh(22) < 0.6 || ad >= 50 && hh(22) < 0.5) o.cloakM = 'capa';
       o.bootTop = hh(23) < 0.4 ? 0.2 : 0.11;
     } else if (civ === 'grego' || civ === 'romano' || civ === 'classico') {
       o.cloth = mixHex(CV.cloth || '#efe9dc', o.cloth, kid ? 0.6 : 0.35); o.sleeve = 0.16; o.legs = 0; o.feetK = 2; o.skirt = fem ? 'saiaL' : 'saiaC'; o.bootTop = 0.0;
@@ -520,7 +549,7 @@
       // (a Greek woman's chiton falls doubled at the top: its overfold, a loose blouse; a rich man's mantle is a toga — of
       // white wool for a Roman — or a himation of colour; a rich woman's, a palla over the shoulders)
       if (fem && civ === 'grego' && ad >= 13) o.topM = 'bata';
-      if (wealth >= 2) { if (fem) o.cloakM = 'capa', o.cloak = wool(darker(base, 0.9)); else o.cloakM = 'toga', o.cloak = civ === 'romano' ? '#ebe5d5' : wool(darker(base, 0.9)); }
+      if (mantle) { if (fem) o.cloakM = 'capa', o.cloak = wool(darker(base, 0.9)); else o.cloakM = 'toga', o.cloak = civ === 'romano' ? '#ebe5d5' : wool(darker(base, 0.9)); }
     } else if (civ === 'egipcio') {
       o.cloth = '#f1ead6'; o.legs = 0; o.feetK = hh(25) < 0.5 ? 1 : 2; o.bootTop = 0; o.skirt = fem ? 'saiaL' : 'saiaC';
       if (!fem) { o.torso = wealth >= 2 || role === 'sacerdote' ? 2 : 1; o.beltY = 0.98; } else { o.sleeve = 0.04; o.torso = wealth >= 2 ? 0 : 0; }
@@ -546,6 +575,40 @@
       if (role === 'pescador') { o.hatM = civ === 'nordico' ? 'gorro' : 'chapeu'; o.hat = civ === 'nordico' ? wool('#5a5a4a') : '#d8b86a'; o.sleeve = 0.3; }
       if (role === 'contrabandista') { o.cloakM = 'capa'; o.hatM = 'capuz'; o.cloak = '#2a2430'; }
       if (role === 'mercador' || role === 'ourives') { o.cloakM = 'capa'; o.motif = 1; }
+      // (the helmet is of the metal the people forge: bronze, then iron — the Greek's stays of bronze —; before the bronze,
+      // no helmet of metal: a cap of hide in the north, a bare head elsewhere)
+      if (role === 'guerreiro' && (o.hatM === 'elmo' || o.hatM === 'galea')) { if (D.metal === 0) { o.hatM = civ === 'nordico' ? 'gorro' : null; o.hat = HIDE[Math.floor(hh(47) * HIDE.length)]; } else o.hat = D.metal >= 2 && civ !== 'grego' ? METAL.iron : METAL.bronze; }
+    }
+    // (the standing among one's people, within the people's own dress)
+    o.rank = 0;
+    if (grp) {
+      const south = civ === 'romano' || civ === 'grego' || civ === 'classico';
+      const deep = deepOf(id, civ), bright = brightOf(id);
+      const trade = role === 'sacerdote' || role === 'guerreiro' || role === 'anciao' || role === 'escriba'; // (dressed by their office)
+      if (grp === 'nobreza' && !odd) {
+        // (the noble: the mantle of a deep dye with its woven border and the brooch; their cloth of a better dye than a
+        // trade's; a Roman's toga white with its purple border; on the Nile the wig, the broad collar and gold)
+        o.rank = 3; o.motif = 1; o.cloakTrim = 1;
+        if (civ === 'egipcio') { o.hairM = role === 'sacerdote' ? o.hairM : 'peruca'; if (!fem && !trade) o.torso = 2; o.trim = METAL.gold; o.beads = '#2f8f8a'; }
+        else {
+          if (!o.cloakM) o.cloakM = south && !fem ? 'toga' : 'capa';
+          if (!v.robe) { o.cloak = civ === 'romano' && o.cloakM === 'toga' ? '#ebe5d5' : wool(deep); o.trim = civ === 'romano' ? PURPLE : mixHex(deep, METAL.gold, 0.35); }
+        }
+        if (!trade && o.overK !== 2 && civ !== 'egipcio') { const c = wool(mixHex(base, deep, 0.5)); if (o.overK === 1 || o.overK === 3) o.over = c; else o.cloth = south ? mixHex(CV.cloth || '#efe9dc', c, 0.3) : c; }
+      } else if (grp === 'mercadores' && !odd) {
+        // (the merchant: a cape of a bright dye over the shoulders, the strap of the purse across the chest, a woven band)
+        o.rank = 2; o.motif = 1; o.strap = 1; o.cloakTrim = 1;
+        if (!o.cloakM && civ !== 'egipcio') o.cloakM = 'capa';
+        if ((o.cloakM === 'capa' || (o.cloakM === 'toga' && civ !== 'romano')) && !v.robe && role !== 'contrabandista') o.cloak = wool(bright); // (a Roman's toga stays white)
+        if (civ === 'egipcio') o.beads = bright;
+      } else if (grp === 'artesaos') {
+        // (the craftsman: the sleeves rolled to the elbow, the broad belt of the work — nothing loose in the way of the hands)
+        o.rank = 1; o.sleeve = Math.min(o.sleeve, 0.42); o.beltH = 0.03;
+      } else if (grp === 'militares' || grp === 'sacerdotes') o.rank = grp === 'sacerdotes' ? 2 : 1;
+      // (out of their station: one of the plain people in a cape of colour — the high one's plain dress is the people's own, above)
+      if (odd && low && !trade) { if (!o.cloakM) o.cloakM = 'capa'; if (o.cloakM === 'capa' && !v.robe) o.cloak = wool(bright); o.motif = 1; }
+      // (the plain people: no woven band unless the house is well off)
+      if (grp === 'povo' && !odd && wealth < 3) { o.motif = civ === 'asteca' ? o.motif : 0; o.cloakTrim = 0; }
     }
     if (v.robe && !v.hood) { o.cloakM = 'capa'; o.cloak = v.robe; o.hatM = v.unmask ? o.hatM : 'capuz'; }
     // (a ruler: the crown and the cloak of the people's colour — the laurel of gold and a toga of purple in the south, the nemes
@@ -558,8 +621,32 @@
     // (what the clothes are made of: wool in the north and on soldiers, linen and cotton in the south, on the Nile and in the
     // jungle — a northern woman's dress of linen under her apron-dress of wool; an apron of leather on the smith)
     o.fab = (civ === 'nordico' && !(fem && o.overK === 1)) || role === 'guerreiro' ? 1 : 2; o.fabO = o.overK === 2 ? (role === 'ferreiro' ? 3 : 2) : o.overK === 3 ? 2 : 1;
-    // (a northern cloak has a collar of fur — white on a ruler's —; every other cloak, a collar of its own cloth)
-    o.fur = o.cloakM === 'capa' && civ === 'nordico' && !v.robe ? (ruler ? 2 : 1) : 0;
+    // (what the people can make. No loom standing among them and no cloth in the house: hides and the fleece as it comes
+    // off the sheep — nothing dyed, no woven band; the robe of an order is the order's. Silk — the people have it and the
+    // house is rich, or the house has a bolt of it —: a paler, finer cloth with a thread of gold)
+    o.raw = 0; o.silk = 0;
+    if (!D.weave && !v.robe) {
+      const raw = RAW[Math.floor(hh(44) * RAW.length)], hide = HIDE[Math.floor(hh(45) * HIDE.length)]; const leather = !fem && hh(46) < 0.5;
+      o.raw = leather ? 2 : 1; o.cloth = leather ? hide : raw; if (o.overK !== 2) o.over = mixHex(raw, hide, 0.35);
+      o.trim = darker(o.cloth, 0.78); o.motif = 0; o.cloakTrim = 0; o.cloak = hide; o.pants = darker(hide, 0.85);
+      if (o.hatM === 'gorro' || o.hatM === 'capuz' || o.hatM === 'lenco') o.hat = mixHex(raw, hide, 0.5);
+      o.fab = leather ? 3 : 1; if (o.overK !== 2) o.fabO = 1;
+    } else if (D.silk && !v.captive && !kid && role !== 'guerreiro' && !v.robe) {
+      o.silk = 1; o.motif = 1; o.trim = METAL.gold; o.fab = 2;
+      if (o.overK === 1 || o.overK === 3) o.over = mixHex(o.over, '#f6eede', 0.3); else o.cloth = mixHex(o.cloth, '#f6eede', 0.3);
+    }
+    // (the cold out of doors: a cloak over whatever one wears — of hide where the people do not weave —, the chest and the
+    // arms covered, the legs wrapped, shoes on the feet; freezing, a hood too — a cap in the north. Indoors it comes off)
+    o.cold = 0;
+    if (D.cold >= 1 && !v.captive && ad >= 3) {
+      o.cold = D.cold;
+      if (!o.cloakM) { o.cloakM = 'capa'; o.cloak = o.raw ? HIDE[Math.floor(hh(45) * HIDE.length)] : wool(darker(base, 0.7)); o.cloakTrim = 0; }
+      if (o.torso) o.torso = 0; if (o.sleeve < 0.4) o.sleeve = 0.585; if (o.feetK) { o.feetK = 0; o.bootTop = Math.max(o.bootTop, 0.11); }
+      if (o.legs === 0 && o.skirt !== 'saiaL') o.legs = 2; if (o.skirt === 'tanga') o.skirt = 'saiaC';
+      if (D.cold >= 2 && (!o.hatM || o.hatM === 'chapeu' || o.hatM === 'lenco' || o.hatM === 'louro')) { o.hatM = civ === 'nordico' && !fem ? 'gorro' : 'capuz'; o.hat = o.cloakM === 'capa' ? o.cloak : wool(darker(base, 0.7)); }
+    }
+    // (a cloak's collar of fur: the north's own — white on a ruler's —, and anyone's whose house has furs; else of its cloth)
+    o.fur = o.cloakM === 'capa' && !v.robe && (civ === 'nordico' || D.fur) ? (ruler ? 2 : 1) : 0;
     // (nobody naked: the hips always under a skirt, a kilt or trousers — and no cloth the colour of its wearer's skin: a linen
     // as pale as the skin is dyed a little darker, until it reads as cloth; Body3D.bare is the verifier's own rule)
     if (!o.skirt && !(o.legs >= 1)) o.skirt = 'saiaC';
@@ -570,6 +657,8 @@
     return o;
   }
   P3.outfit = v => outfitOf(v, P3.look(v), G.Fac.ofV ? G.Fac.ofV(v) : null);
+  // (the one colour a simple figure far off is dressed in: what the fine body wears over all)
+  P3.farCol = L => { const o = L.out; return o ? (o.cloakM ? o.cloak : o.overK === 1 || o.overK === 3 ? o.over : o.cloth) : L.cloth; };
   // (who carries a torch: the god's own rule — at night, walking, one in three grown people, those whose errand asks for one,
   // and those the scenes hand one to; and the body, at night, always: the player has to see)
   function torchOf(v) {
@@ -768,6 +857,23 @@
     if (!('tool' in want)) pose.tool = 0;
   };
   Anim.pose = (state, t, sp) => (ST[state] || ST.idle)(t, sp || 0);
+  // the drink in the body (k: how drunk, 0 to 1 — Atmos.drunk): standing or walking, the trunk leans from side to side and the
+  // hips go after it, the knee gives on the side one leans to, the head hangs and rolls, the arms come out for a balance that
+  // is always late, one bows forward and catches oneself. Only the pose: the feet stay where the world has them — the same
+  // weave the god's view gives its drunks (Court.sway). t: the view's own clock; id: each one on their own beat
+  const WEAVE = new Set(['idle', 'walk', 'carryWalk', 'carry', 'talk', 'turn', 'wave', 'interact']);
+  Anim.stagger = function (want, t, id, k, st) {
+    if (!(k > 0) || !WEAVE.has(st)) return want;
+    const a = Math.sin(t * 2.3 + id), b = Math.sin(t * 1.3 + id * 1.7), c = Math.sin(t * 0.7 + id * 0.3);
+    const add = (j, x) => { want[j] = (want[j] || 0) + x; };
+    add('sway', a * 0.2 * k); add('shift', a * 0.07 * k); add('pelR', -a * 0.06 * k);
+    add('lean', (0.07 + b * 0.09) * k); add('twist', c * 0.25 * k); add('neck', (0.18 + b * 0.12) * k);
+    add('shLr', (0.12 + a * 0.1) * k); add('shRr', (-0.12 + a * 0.1) * k); add('elL', 0.2 * k); add('elR', 0.2 * k);
+    add('knL', Math.max(0, a) * 0.18 * k); add('knR', Math.max(0, -a) * 0.18 * k);
+    return want;
+  };
+  // (the way a drunk faces as they walk: weaving a little to each side of the way they go — drawn, never walked)
+  Anim.weave = (t, id, k) => (k > 0 ? Math.sin(t * 0.9 + id * 0.7) * 0.24 * k : 0);
   // the state of a place inside a building (Interiors.places: its st — a state of the 3D, or an act of the world's people, as
   // the household's rule gives it): the state itself, else the act's, else standing
   Anim.resolve = st => (st && ST[st] ? st : st && ACT[st] && ACT[st] !== 'run' ? ACT[st] : 'idle');
@@ -1394,7 +1500,9 @@
       if (st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak') s.ph += dt * s.sp * Anim.rate(st, s.sp, Lv.s); else s.ph += dt * 4;
       // (the load in the hands and the hands reaching: the view's own memory of the lift and the setting down — reachOf)
       Lv.ground = swim || v.z > 0.05 ? undefined : Y; reachOf(s, v, Lv, X, Y, Z, dt);
-      { const tt = st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' ? s.ph : s.t; Anim.blend(s.pose, Anim.hold(Anim.pose(st, tt, s.sp), Lv, st, tt, s.sp), dt, 10); }
+      // (and the drink, where the world has them drunk and on their feet: Anim.stagger — inside, at their place, they sit)
+      const dk = pl ? 0 : Lv.drunk || 0; s.dk = dk;
+      { const tt = st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' ? s.ph : s.t; Anim.blend(s.pose, Anim.stagger(Anim.hold(Anim.pose(st, tt, s.sp), Lv, st, tt, s.sp), s.t, v.id, dk, st), dt, 10); }
       // (someone standing near the body turns their head to it — and back when it goes; a blink now and then)
       const look = P3.lookFor(s.yaw, X, Z, av, st);
       s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dt));
@@ -1408,7 +1516,7 @@
       // and lights round it, about where their hand is)
       s.cull = inField(X, Y, Z, Lv.s) ? 0 : 1;
       if (s.cull) { culled++; if ((Lv.torch || Lv.lantern) && P3.flames.length < 40) { const c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = Lv.s; P3.flames.push([X + (c * 0.28 + n * 0.2) * k, Y + (Lv.lantern ? 0.85 : 1.6) * k, Z + (n * 0.28 - c * 0.2) * k, Lv.lantern ? 0.5 : 0.85]); } continue; }
-      P3.body(idx++, X, Y, Z, s.yaw, s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
+      P3.body(idx++, X, Y, Z, s.yaw + (dk > 0 && (st === 'walk' || st === 'carryWalk') ? Anim.weave(s.t, v.id, dk) : 0), s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
       if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } const L2 = P3.look(v).s; sp.position.set(X, Y + 2.2 * L2 + Math.sin(s.t * 3) * 0.03, Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
     }
     for (const id of vis.keys()) if (!seen.has(id) && !(av && id === av.id)) vis.delete(id);
@@ -1430,7 +1538,10 @@
       const L = P3.look(v); const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = Y0 + Math.abs(st) * 0.04;
       const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
       M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
-      M.a.copy(M.root); M.b.makeTranslation(0, 0.72, 0); M.a.multiply(M.b); M.c.makeScale(1, 0.92, 0.72); M.a.multiply(M.c); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, color(L.cloth));
+      // (from afar, the colour of what they wear over all: the mantle of their standing, the apron-dress, the undyed fleece —
+      // the same clothes the fine body has, so a street of nobles and a street of the plain people read apart from far off)
+      const far = P3.farCol(L);
+      M.a.copy(M.root); M.b.makeTranslation(0, 0.72, 0); M.a.multiply(M.b); M.c.makeScale(1, 0.92, 0.72); M.a.multiply(M.c); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, color(far));
       M.a.copy(M.root); M.b.makeTranslation(0, 1.62, 0.01); M.a.multiply(M.b); crowdHead.setMatrixAt(c, M.a); crowdHead.setColorAt(c, color(L.skin));
       M.a.copy(M.root); M.b.makeTranslation(0, 1.64, -0.01); M.a.multiply(M.b); M.c.makeRotationX(-0.6); M.a.multiply(M.c); crowdHair.setMatrixAt(c, M.a); crowdHair.setColorAt(c, color(L.hair));
       for (const sd of [0, 1]) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.09 : 0.09, 0.86, 0); M.a.multiply(M.b); M.c.makeRotationX((sd ? -st : st) * 0.45); M.a.multiply(M.c); crowdLegs[sd].setMatrixAt(c, M.a); crowdLegs[sd].setColorAt(c, color(L.robe ? L.cloth : L.pants)); }

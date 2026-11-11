@@ -769,6 +769,17 @@
   Art.CLOTH = CLOTH;
   function line(c, x0, y0, x1, y1) { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); }
   Art.clothOf = v => (v.captive ? '#8b8478' : v.age < 16 ? v.kidCloth : v.role === 'guerreiro' ? (v._fc || '#8a3a2a') : (CLOTH[v.role] || '#c9763a'));
+  // what the god reads of a person's standing and of the cold on them (only read — G.Atmos.dress, what the 3D dresses them
+  // by —; null for who shows neither: a child, a captive, one dressed by their office — the priest's robe, the soldier in
+  // the people's colour, the smuggler's cloak, an order's robe —, one who dresses out of their station; k: the standing shown
+  // ('nobreza', 'mercadores' or ''), col: its dye — a hide where the people do not weave —, cold: 0 to 2, cloak: its colour)
+  Art.rank = function (v) {
+    const At = G.Atmos; if (!At || !At.dress || !v || !v.id || !(v.age >= 16) || v.captive) return null;
+    const D = At.dress(v); const office = v.role === 'sacerdote' || v.role === 'guerreiro' || v.role === 'contrabandista' || (v.robe && !v.hood);
+    const k = office || At.odd(v.id) || (D.grp !== 'nobreza' && D.grp !== 'mercadores') ? '' : D.grp;
+    if (!k && !D.cold) return null;
+    return { k, col: !k ? '' : !D.weave ? '#6e5236' : k === 'nobreza' ? At.deep(v.id, v._civ || 'classico') : At.bright(v.id), cold: v.robe && !v.hood ? 0 : D.cold, cloak: D.weave ? '#6a5a48' : '#6e5236' };
+  };
   Art.villager = function (c, v, x, y, t, lod) {
     const S = G.S;
     const age = v.age;
@@ -781,6 +792,8 @@
     const cloth = v._cloth || (v.captive ? '#8b8478' : age < 16 ? v.kidCloth : warrior ? (v._fc || '#8a3a2a') : (CLOTH[v.role] || '#c9763a'));
     if (lod) { // far away: simple dots
       c.fillStyle = cloth; c.fillRect(x - 1.6 * sc, y - 7 * sc, 3.2 * sc, 5 * sc);
+      // (the standing still reads from far: a stripe of the mantle's or the sash's dye down the back)
+      const rk0 = Art.rank(v); if (rk0 && rk0.k) { c.fillStyle = rk0.col; c.fillRect(x - 1.6 * sc, y - 7 * sc, 1.1 * sc, 5 * sc); }
       c.fillStyle = v.skin; c.fillRect(x - 1.2 * sc, y - 9.5 * sc, 2.4 * sc, 2.4 * sc);
       return;
     }
@@ -863,6 +876,15 @@
     if (warrior) { c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(-2, -8.8, 4, 1.1); }
     if (age >= 16 && !v.captive && APRON[v.role]) { c.fillStyle = APRON[v.role]; c.fillRect(0.3, -7.6, 1.9, 4.6); if (v.role === 'acougueiro') { c.fillStyle = 'rgba(170,40,30,0.55)'; c.fillRect(0.9, -5.6, 0.8, 0.9); c.fillRect(1.4, -4.2, 0.6, 0.6); } }
     if (age >= 16 && v.role === 'contrabandista' && !v.captive) { c.fillStyle = '#2a2430'; c.beginPath(); c.moveTo(-2.4, -9.4); c.lineTo(2.2, -9.4); c.lineTo(2.8, -2.2); c.lineTo(-2.9, -2.2); c.closePath(); c.fill(); }
+    // the standing among one's people, read at a glance (Art.rank — the same source the 3D's clothes have, D-162): the noble's
+    // mantle of a deep dye down the back with its clasp of gold, the merchant's bright sash across the chest; and whoever is
+    // out in the cold, a cloak over the shoulders
+    const rk = Art.rank(v);
+    if (rk) {
+      if (rk.k === 'nobreza') { c.fillStyle = rk.col; c.beginPath(); c.moveTo(-2.3, -8.9); c.lineTo(-0.5, -8.9); c.lineTo(-1.1, -1.9); c.lineTo(-3.1, -1.9); c.closePath(); c.fill(); c.fillStyle = '#e8c24a'; c.fillRect(-3.1, -2.6, 2, 0.6); c.beginPath(); c.arc(-0.6, -8.4, 0.55, 0, TAU); c.fill(); }
+      else if (rk.k === 'mercadores') { c.fillStyle = rk.col; c.beginPath(); c.moveTo(-2, -8.8); c.lineTo(-0.9, -8.8); c.lineTo(2.1, -4.9); c.lineTo(2.1, -3.7); c.closePath(); c.fill(); }
+      if (rk.cold && rk.k !== 'nobreza') { c.fillStyle = rk.cloak; c.beginPath(); c.moveTo(-2.4, -9); c.lineTo(-0.7, -9); c.lineTo(-1.2, -2.6); c.lineTo(-3, -2.6); c.closePath(); c.fill(); }
+    }
     // arms & tools
     c.strokeStyle = v.skin; c.lineWidth = 1;
     const sh = [-0.2, -8]; // shoulder
@@ -1103,6 +1125,8 @@
       else if ((warrior || v.role === 'arqueiro') && G.Arch.helmet(c, v, hy)) { /* culture's helmet */ }
       else if (warrior) { c.fillStyle = '#8a8e96'; c.beginPath(); c.arc(0, hy - 0.8, 2.35, Math.PI, TAU); c.fill(); c.fillRect(-2.35, hy - 0.9, 4.7, 0.7); c.fillStyle = v._fc || '#c83a2a'; c.fillRect(-0.4, hy - 4.2, 0.8, 1.6); }
     }
+    // (freezing: a hood over a head with no crown or helmet on it — the face still shows under it)
+    if (rk && rk.cold >= 2 && !v._ruler && !warrior && v.role !== 'contrabandista') { c.fillStyle = rk.cloak; c.beginPath(); c.arc(-0.3, hy - 0.2, 2.5, Math.PI * 0.8, Math.PI * 1.95); c.lineTo(-0.9, hy + 0.4); c.lineTo(-2.5, hy + 2.3); c.closePath(); c.fill(); }
     }
     // the robe of a secret order: a long cloak and a deep hood, the face lost in its shadow
     if (v.robe && !v.headless && !v.hood) {
