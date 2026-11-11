@@ -356,7 +356,7 @@
         const pp = Es.plantPos(b, t.k); faceTo(v, pp[0], pp[1]);
         if (t.do === 'tend') {
           v.act = b.type === 'vinhedo' ? 'pick' : 'dig';
-          if (G.R() < dt * 1.2) G.FX && G.FX.chips(pp[0], pp[1], '#7a5a3a');
+          if (G.VR() < dt * 1.2) G.FX && G.FX.chips(pp[0], pp[1], '#7a5a3a');
           if (v.actT < 3 / mul(v)) return;
           p.g = Math.min(1, p.g + 0.08); p.tT = S.clock + 30; return done(v, b, t, H);
         }
@@ -378,7 +378,7 @@
         const c = CR[b.crop]; if (!c) return done(v, b, t, H);
         if (!t.st) { const r = walk(v, t, t.x, t.y, dt, H); if (r < 0) return done(v, b, t, H); if (r > 0) { t.st = 1; v.actT = 0; } return; }
         v.act = b.crop === 'grape' ? 'press' : 'crank'; G.faceTo(v, 1, -1);
-        if (G.R() < dt * 3) G.FX && G.FX.chips(v.x + G.rr(-0.2, 0.2), v.y + 0.1, b.crop === 'grape' ? '#6a1a3a' : '#8a8a3a');
+        if (G.VR() < dt * 3) G.FX && G.FX.chips(v.x + G.vrr(-0.2, 0.2), v.y + 0.1, b.crop === 'grape' ? '#6a1a3a' : '#8a8a3a');
         if (v.actT < 5 / mul(v)) return;
         const m = Math.min(b.must || 0, 4); b.must = (b.must || 0) - m;
         // (what the press makes is born on the shelf, in the ledger — L-384)
@@ -391,8 +391,8 @@
         if (!t.st) { const r = walk(v, t, t.x, t.y, dt, H); if (r < 0) return done(v, b, t, H); if (r > 0) { t.st = 1; v.actT = 0; } return; }
         const hp = hivePos(b, t.k); faceTo(v, hp[0], hp[1]); v.act = 'smoke';
         b.angry = S.clock + 3;
-        if (G.FX && G.R() < dt * 5) G.FX.spawn({ x: v.x + G.rr(-0.2, 0.2), y: v.y + G.rr(-0.2, 0.2), z: 8, vz: G.rr(5, 10), vx: G.rr(-0.3, 0.3), life: G.rr(1, 1.8), s0: 1.4, s1: 4.5, c: 'rgba(220,220,220,0.5)', k: 2 });
-        if (G.R() < dt * 0.4) G.Audio && G.Audio.at(hp[0], hp[1], 'bees');
+        if (G.FX && G.VR() < dt * 5) G.FX.spawn({ x: v.x + G.vrr(-0.2, 0.2), y: v.y + G.vrr(-0.2, 0.2), z: 8, vz: G.vrr(5, 10), vx: G.vrr(-0.3, 0.3), life: G.vrr(1, 1.8), s0: 1.4, s1: 4.5, c: 'rgba(220,220,220,0.5)', k: 2 });
+        if (G.VR() < dt * 0.4) G.Audio && G.Audio.at(hp[0], hp[1], 'bees');
         if (v.actT < 4.2 / mul(v)) return;
         const take = Math.min(h[t.k], 2); h[t.k] -= take;
         const n = Math.max(1, Math.round(take * 1.3));
@@ -404,7 +404,7 @@
       case 'rake': {
         if (!t.st) { const r = walk(v, t, t.x, t.y, dt, H); if (r < 0) return done(v, b, t, H); if (r > 0) { t.st = 1; v.actT = 0; } return; }
         const pp = Es.plantPos(b, t.k); faceTo(v, pp[0], pp[1]); v.act = 'rake';
-        if (G.R() < dt * 2) G.FX && G.FX.chips(pp[0], pp[1], '#f4f4f0');
+        if (G.VR() < dt * 2) G.FX && G.FX.chips(pp[0], pp[1], '#f4f4f0');
         if (v.actT < 4 / mul(v)) return;
         const take = Math.min(b.salt[t.k], 3); b.salt[t.k] -= take;
         const n = Math.max(1, Math.round(take * 1.4));
@@ -432,7 +432,7 @@
       case 'salt': {
         if (!t.st) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
         const [cx, cy] = G.Village.center(b); faceTo(v, cx, cy); v.act = 'salt';
-        if (G.R() < dt * 2) G.FX && G.FX.chips(v.x + v.face * 0.3, v.y, '#f4f4f0');
+        if (G.VR() < dt * 2) G.FX && G.FX.chips(v.x + v.face * 0.3, v.y, '#f4f4f0');
         if (v.actT < 6 / mul(v)) return;
         // (the salt and the meat used up, the dried meat born, on the shelf — in the ledger, L-384)
         const D = G.Depot, ref = 'b:' + b.id;

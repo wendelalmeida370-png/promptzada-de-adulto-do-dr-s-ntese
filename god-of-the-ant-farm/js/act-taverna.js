@@ -319,7 +319,7 @@
     }
     if (b._music === v.id) {
       v.act = AN.tocar.act; G.faceTo(v, 1, 1);
-      if (G.R() < dt * 0.8 && G.FX && G.FX.floater) G.FX.floater(v.x + G.rr(-0.2, 0.3), v.y - 0.1, G.pick(['♪', '♫']), '#ffe9a8', 1.6);
+      if (G.VR() < dt * 0.8 && G.FX && G.FX.floater) G.FX.floater(v.x + G.vrr(-0.2, 0.3), v.y - 0.1, G.vpick(['♪', '♫']), '#ffe9a8', 1.6);
       if (!night || v.actT > 15) b._music = 0;
       return;
     }

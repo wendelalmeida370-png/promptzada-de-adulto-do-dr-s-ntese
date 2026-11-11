@@ -145,7 +145,7 @@
       if (t.st === 1) { if (H.move(v, dt)) { t.st = 2; v.actT = 0; } return true; }
       // the smoke first, then the comb — and a few stings anyway
       v.act = 'smoke'; G.faceTo(v, h.x - v.x, h.y - v.y); h.sting = Math.max(h.sting, 2);
-      if (G.FX && G.R() < dt * 6) G.FX.spawn({ x: v.x + G.rr(-0.2, 0.2), y: v.y + G.rr(-0.2, 0.2), z: 9, vz: G.rr(6, 12), vx: G.rr(-0.3, 0.3), life: G.rr(1.2, 2), s0: 1.5, s1: 5, c: 'rgba(220,220,220,0.5)', k: 2 });
+      if (G.FX && G.VR() < dt * 6) G.FX.spawn({ x: v.x + G.vrr(-0.2, 0.2), y: v.y + G.vrr(-0.2, 0.2), z: 9, vz: G.vrr(6, 12), vx: G.vrr(-0.3, 0.3), life: G.vrr(1.2, 2), s0: 1.5, s1: 5, c: 'rgba(220,220,220,0.5)', k: 2 });
       if (v.actT < 5 / G.Vg.workMul(v)) return true;
       // (with another thing in the hands the comb stays in the hive, and what is in them goes to its place first — L-186)
       if (!G.Vg.handsFor(v, 'mel')) { h.claim = 0; H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1 }); return true; }

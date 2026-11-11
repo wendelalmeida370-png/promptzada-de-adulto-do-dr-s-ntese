@@ -1437,7 +1437,7 @@
           v.act = 'pray';
           const b = S.buildings.get(t.b);
           if (b) G.faceTo(v, b.x - v.x, b.y - v.y);
-          if (G.R() < dt * 1.5) G.FX && G.FX.prayer(v.x, v.y);
+          if (G.VR() < dt * 1.5) G.FX && G.FX.prayer(v.x, v.y);
           const dur = t.priest ? 12 : 5;
           if (v.actT > dur) {
             const temple = b && (b.type === 'temple' || b.type === 'monument');
@@ -1546,7 +1546,7 @@
         else {
           v.act = 'dance';
           if (G.R() < dt * 0.6) emote(v, G.R() < 0.5 ? 'happy' : 'heart', 1.4);
-          if (G.R() < dt * 0.8) G.FX && G.FX.sparkle(cf.x + 0.5 + G.rr(-0.5, 0.5), cf.y + 0.5 + G.rr(-0.5, 0.5));
+          if (G.VR() < dt * 0.8) G.FX && G.FX.sparkle(cf.x + 0.5 + G.vrr(-0.5, 0.5), cf.y + 0.5 + G.vrr(-0.5, 0.5));
           if (v.actT > 14) end(v);
         }
         break;
@@ -1568,7 +1568,7 @@
         else { v.x += dx / d * sp; v.y += dy / d * sp; G.faceTo(v, dx, dy); v.walkPh += sp * 6; }
         v.energy -= dt * 3;
         if (v.energy <= 0) Vg.damage(v, dt * 6, 'drown', true);
-        if (G.R() < dt * 2) G.FX && G.FX.splash(v.x, v.y, 0.25);
+        if (G.VR() < dt * 2) G.FX && G.FX.splash(v.x, v.y, 0.25);
         break;
       }
       case 'saga': if (G.Stories) G.Stories.run(v, t, dt, H); else end(v); break;
@@ -1643,7 +1643,7 @@
       if (b.progress < allowed) {
         v.act = 'build';
         b.progress = Math.min(allowed, b.progress + dt * workMul(v) * G.Civ.tV(v, 'build') / Math.max(1, G.Village.workOf(b)));
-        if (v.actT > 0.5) { v.actT = 0; G.Audio && G.Audio.at(cx, cy, 'hammer'); G.FX && G.FX.dust(cx + G.rr(-0.5, 0.5), cy + G.rr(-0.5, 0.5)); }
+        if (v.actT > 0.5) { v.actT = 0; G.Audio && G.Audio.at(cx, cy, 'hammer'); G.FX && G.FX.dust(cx + G.vrr(-0.5, 0.5), cy + G.vrr(-0.5, 0.5)); }
         if (b.progress >= 1) { G.Village.completeBuilding(b); v.st.built++; emote(v, 'happy', 2.5); return end(v); }
       } else { t.st = 0; v.act = ''; }
     }

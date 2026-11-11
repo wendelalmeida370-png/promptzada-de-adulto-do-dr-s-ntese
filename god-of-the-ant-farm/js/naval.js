@@ -221,7 +221,7 @@
     if (d <= sp) { s.x = p[0]; s.y = p[1]; s.pi++; } else { s.x += dx / d * sp; s.y += dy / d * sp; }
     if (Math.abs(dx - dy) > 0.02) G.faceTo(s, dx, dy);
     s.moving = true;
-    if (G.R() < dt * 2.2) G.FX && G.FX.spawn({ x: s.x - dx / (d || 1) * 0.5, y: s.y - dy / (d || 1) * 0.5, h: G.SEA, z: 0, vz: 0, life: 1.4, s0: 1.5, s1: 4, c: 'rgba(255,255,255,0.45)', k: 2 });
+    if (G.VR() < dt * 2.2) G.FX && G.FX.spawn({ x: s.x - dx / (d || 1) * 0.5, y: s.y - dy / (d || 1) * 0.5, h: G.SEA, z: 0, vz: 0, life: 1.4, s0: 1.5, s1: 4, c: 'rgba(255,255,255,0.45)', k: 2 });
     return s.pi >= s.path.length;
   }
   function home(s) { const d = G.S.buildings.get(s.dock); return d && d.type === 'doca' ? Nv.dockInfo(d) : null; }
@@ -292,7 +292,7 @@
     const quiet = Nv.small(s) && !lost && !swam && !s.exp && G.R() < 0.6;
     if (!quiet) log(`${G.cap(nm)}${f ? ' de ' + f.name : ''} ${Nv.small(s) ? 'virou' : 'afundou'}${by ? ', atacad' + (Nv.fem(s) ? 'a' : 'o') + ' por ' + (G.Fac.get(by.fac) || {}).name : why === 'storm' ? ' na tempestade' : why === 'fire' ? ' em chamas' : why === 'god' ? ' pela fúria do mar' : why === 'reef' ? ' num recife' : why === 'flood' ? ', com o casco aberto' : ''}${lost ? ` — ${lost} ${lost > 1 ? 'afogados' : 'afogado'}` : ''}${swam ? `${lost ? ', ' : ' — '}${swam} ${swam > 1 ? 'nadam' : 'nada'} para a vida` : ''}.`, 'naval', s.x, s.y);
     G.FX && G.FX.splash(s.x, s.y, 1.4);
-    for (let k = 0; k < 8; k++) G.FX && G.FX.spawn({ x: s.x + G.rr(-0.5, 0.5), y: s.y + G.rr(-0.5, 0.5), h: G.SEA, z: G.rr(2, 8), vz: G.rr(10, 30), vx: G.rr(-0.6, 0.6), vy: G.rr(-0.6, 0.6), g: 60, life: G.rr(1, 2), s0: 1.6, s1: 1, c: '#6e4a2c', k: 0 });
+    for (let k = 0; k < 8; k++) G.FX && G.FX.spawn({ x: s.x + G.vrr(-0.5, 0.5), y: s.y + G.vrr(-0.5, 0.5), h: G.SEA, z: G.vrr(2, 8), vz: G.vrr(10, 30), vx: G.vrr(-0.6, 0.6), vy: G.vrr(-0.6, 0.6), g: 60, life: G.vrr(1, 2), s0: 1.6, s1: 1, c: '#6e4a2c', k: 0 });
     G.Audio && G.Audio.at(s.x, s.y, 'collapse', true);
     if (by) { const bf = G.Fac.get(by.fac); if (bf) bf.st.kills += drowned; }
     G.Stories && G.Stories.signal('shipSunk', { ship: s.id, name: nm, fac: s.fac, by: by ? by.fac : 0, why, lost, swam, ids: swimmers.map(v => v.id), exp: s.exp || 0, fleet: s.fleet || 0, x: s.x, y: s.y, wreck: wk ? wk.id : 0 });
@@ -382,7 +382,7 @@
       case 'idle': if (s.t > 5 && !G.isNight() && !Nv.blockaded(G.S.buildings.get(s.dock))) { const sp = fishingSpot(s); if (sp && sailTo(s, sp[0], sp[1])) { s.st = 'out'; s.shoal = sp[2] ? sp[2].id : 0; } s.t = 0; } break;
       case 'out': if (moveShip(s, dt)) { s.st = 'fish'; s.t = 0; s.dur = G.rr(16, 26); } break;
       case 'fish': {
-        if (G.R() < dt * 0.4) G.FX && G.FX.splash(s.x + G.rr(-0.4, 0.4), s.y + G.rr(-0.4, 0.4), 0.3);
+        if (G.VR() < dt * 0.4) G.FX && G.FX.splash(s.x + G.vrr(-0.4, 0.4), s.y + G.vrr(-0.4, 0.4), 0.3);
         if (s.t > s.dur) {
           const sh = S.fish.find(f => f.id === s.shoal && G.dist(f.x, f.y, s.x, s.y) < 3);
           let n = G.rr(4, 8) * G.Civ.t(s.fac, 'fish') * (sh ? 1.8 : 1);
@@ -425,7 +425,7 @@
     o.hp -= dmg; o.hurt = 0.3;
     // arrows / fire arrows arc across the water
     G.FX && G.FX.spawn({ x: s.x, y: s.y, h: G.SEA, z: 6, vz: 30, vx: (o.x - s.x) * 1.1, vy: (o.y - s.y) * 1.1, g: 60, life: 0.9, s0: 1.2, s1: 1.2, c: '#ffcf6a', k: 4, layer: 1 });
-    if (dmg > 0 && G.R() < 0.3) G.FX && G.FX.spawn({ x: o.x, y: o.y, h: G.SEA, z: 5, vz: 12, life: 1.2, s0: 2, s1: 6, c: 'rgba(80,70,65,0.5)', k: 2 });
+    if (dmg > 0 && G.VR() < 0.3) G.FX && G.FX.spawn({ x: o.x, y: o.y, h: G.SEA, z: 5, vz: 12, life: 1.2, s0: 2, s1: 6, c: 'rgba(80,70,65,0.5)', k: 2 });
     if (!s.announced && G.R() < 0.3) { s.announced = true; const a = G.Fac.get(s.fac), b = G.Fac.get(o.fac); if (a && b && (!G.S._navalLog || G.S.day - G.S._navalLog > 2)) { G.S._navalLog = G.S.day; log(`Batalha naval: navios de ${a.name} e ${b.name} trocam flechas no mar.`, 'naval', o.x, o.y); } }
     if (o.hp <= 0) Nv.sink(o, s);
   }
@@ -485,7 +485,7 @@
     const S = G.S;
     const dmg = G.rr(34, 52) * (G.Civ.has(s.fac, 'bronze') ? 1.15 : 1);
     o.hp -= dmg; o.hurt = 0.5; s.hp -= dmg * 0.15;
-    for (let k = 0; k < 10; k++) G.FX && G.FX.spawn({ x: o.x + G.rr(-0.4, 0.4), y: o.y + G.rr(-0.4, 0.4), h: G.SEA, z: G.rr(2, 5), vz: G.rr(15, 35), vx: G.rr(-0.6, 0.6), vy: G.rr(-0.6, 0.6), g: 60, life: G.rr(0.8, 1.4), s0: 1.2, s1: 0.8, c: '#6e4a2c', k: 0 });
+    for (let k = 0; k < 10; k++) G.FX && G.FX.spawn({ x: o.x + G.vrr(-0.4, 0.4), y: o.y + G.vrr(-0.4, 0.4), h: G.SEA, z: G.vrr(2, 5), vz: G.vrr(15, 35), vx: G.vrr(-0.6, 0.6), vy: G.vrr(-0.6, 0.6), g: 60, life: G.vrr(0.8, 1.4), s0: 1.2, s1: 0.8, c: '#6e4a2c', k: 0 });
     G.FX && G.FX.splash(o.x, o.y, 1); G.Audio && G.Audio.at(o.x, o.y, 'collapse');
     const a = G.Fac.get(s.fac), b = G.Fac.get(o.fac);
     if (a && b && (!a._ramLog || S.day - a._ramLog > 1)) { a._ramLog = S.day; log(`${G.cap(shipName(s))} de ${a.name} abalroou ${shipName(o)} de ${b.name} com o esporão de bronze!`, 'naval', o.x, o.y); }
@@ -549,7 +549,7 @@
   function runFireship(s, dt) {
     const S = G.S; const tg = S.ships.find(o => o.id === s.fireship);
     if (!tg) { Nv.sink(s, null, 'fire'); return; }
-    if (G.R() < dt * 8) G.FX && G.FX.spawn({ x: s.x + G.rr(-0.3, 0.3), y: s.y + G.rr(-0.3, 0.3), h: G.SEA, z: G.rr(2, 6), vz: G.rr(12, 25), life: G.rr(0.6, 1.2), s0: 1.6, s1: 0.4, c: G.R() < 0.5 ? '#ffb040' : '#ff6a20', k: 4, layer: 1 });
+    if (G.VR() < dt * 8) G.FX && G.FX.spawn({ x: s.x + G.vrr(-0.3, 0.3), y: s.y + G.vrr(-0.3, 0.3), h: G.SEA, z: G.vrr(2, 6), vz: G.vrr(12, 25), life: G.vrr(0.6, 1.2), s0: 1.6, s1: 0.4, c: G.VR() < 0.5 ? '#ffb040' : '#ff6a20', k: 4, layer: 1 });
     const d = G.dist(s.x, s.y, tg.x, tg.y);
     if (d < 1) {
       for (const o of S.ships) if (o !== s && G.Fac.atWar(s.fac, o.fac) && G.dist(o.x, o.y, s.x, s.y) < 1.8) { o.hp -= 30; o.burn = 10; o.hurt = 0.5; }
@@ -955,7 +955,7 @@
       // storms can sink small boats
       if (S.weather.storm > 0 && Nv.atSea(s) && (Nv.small(s) || s.kind === 'explorador') && G.R() < dt * (s.kind === 'explorador' ? 0.0006 : 0.002) * (s.stormMul || 1)) { Nv.sink(s, null, 'storm'); continue; }
       if (s.dead) { removeShip(s); continue; }
-      if (s.burn > 0) { s.burn -= dt; s.hp -= dt * 4; if (G.R() < dt * 6) G.FX && G.FX.spawn({ x: s.x + G.rr(-0.4, 0.4), y: s.y + G.rr(-0.4, 0.4), h: G.SEA, z: G.rr(3, 8), vz: G.rr(10, 22), life: G.rr(0.6, 1.1), s0: 1.4, s1: 0.3, c: '#ff8a30', k: 4, layer: 1 }); if (s.hp <= 0) { Nv.sink(s, null, 'fire'); continue; } }
+      if (s.burn > 0) { s.burn -= dt; s.hp -= dt * 4; if (G.VR() < dt * 6) G.FX && G.FX.spawn({ x: s.x + G.vrr(-0.4, 0.4), y: s.y + G.vrr(-0.4, 0.4), h: G.SEA, z: G.vrr(3, 8), vz: G.vrr(10, 22), life: G.vrr(0.6, 1.1), s0: 1.4, s1: 0.3, c: '#ff8a30', k: 4, layer: 1 }); if (s.hp <= 0) { Nv.sink(s, null, 'fire'); continue; } }
       if (s.st === 'fireship') { runFireship(s, dt); continue; }
       if (s.st === 'build') { G.Fishers && G.Fishers.slip(s, dt); continue; }
       s._nAb = s.crew && s.crew.length ? Nv.aboardOf(s).length : undefined;

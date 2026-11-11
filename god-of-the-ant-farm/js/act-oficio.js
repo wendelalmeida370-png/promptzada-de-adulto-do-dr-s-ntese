@@ -461,7 +461,7 @@
         if (t.st === 0) { const r = walkTo(v, t, 'pit', t.x, t.y, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
         if (t.st === 1) {
           v.act = AN.cavar.act; G.faceTo(v, t.x - v.x, t.y - v.y);
-          if (G.R() < dt * 1.5) G.FX && G.FX.chips(t.x, t.y, '#8a5a3a');
+          if (G.VR() < dt * 1.5) G.FX && G.FX.chips(t.x, t.y, '#8a5a3a');
           if (v.actT < AN.cavar.dur) return;
           // (the bank's clay, born of the world into the hands — marked for this batch's shelf)
           const n = Math.min(t.n || 3, Math.floor(D.room('v:' + v.id, 'argila', { op: op.id, to: 'b:' + b.id }) + EPS));

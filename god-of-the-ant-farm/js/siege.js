@@ -419,7 +419,7 @@
     const S = G.S; if (!S.wall[i] || S.wall[i] === 3) return false;
     S.wallHp[i] = (S.wallHp[i] || 50) - dmg;
     const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
-    if (G.R() < 0.4) G.FX && G.FX.chips(x, y, '#a8a090');
+    if (G.VR() < 0.4) G.FX && G.FX.chips(x, y, '#a8a090');
     if (S.wallHp[i] > 0) return false;
     const gate = S.wall[i] === 2 || S.wall[i] === 4;
     S.wall[i] = 0; delete S.wallHp[i]; G.W.touchWalk();
@@ -579,7 +579,7 @@
         if (G.War.bands) for (const b of G.War.bands.values()) if (b.engines) for (const e of b.engines.slice()) if (e.kind === 'ariete' && G.dist(e.x, e.y, gx, gy) < 1.6) { e.hp -= 12; hit++; if (e.hp <= 0) { b.engines.splice(b.engines.indexOf(e), 1); log(`O aríete diante de ${(S.settlements.get(w.set) || {}).name} pegou fogo com o óleo e desabou.`, 'siege', gx, gy); break; } }
         if (!hit) continue;
         f.stock.food -= 1;
-        for (let q = 0; q < 14; q++) G.FX && G.FX.spawn({ x: gx + G.rr(-0.4, 0.4), y: gy + G.rr(-0.4, 0.4), z: 22, vz: G.rr(-20, -6), vx: G.rr(-0.5, 0.5), vy: G.rr(-0.5, 0.5), g: 30, life: G.rr(0.5, 0.9), s0: 1.4, s1: 0.4, c: q % 3 ? '#e8a23a' : '#c86a1a', k: 4, layer: 1 });
+        for (let q = 0; q < 14; q++) G.FX && G.FX.spawn({ x: gx + G.vrr(-0.4, 0.4), y: gy + G.vrr(-0.4, 0.4), z: 22, vz: G.vrr(-20, -6), vx: G.vrr(-0.5, 0.5), vy: G.vrr(-0.5, 0.5), g: 30, life: G.vrr(0.5, 0.9), s0: 1.4, s1: 0.4, c: q % 3 ? '#e8a23a' : '#c86a1a', k: 4, layer: 1 });
         G.FX && G.FX.smokePuff && G.FX.smokePuff(gx, gy);
         if (!w.oilDay || S.day - w.oilDay > 0.5) { w.oilDay = S.day; const s = S.settlements.get(w.set); log(`Do alto do portão de ${s ? s.name : 'a cidade'}, os defensores despejam óleo fervente sobre os sitiantes!`, 'siege', gx, gy); }
       }
@@ -611,7 +611,7 @@
         // a corpse over the walls: the plague begins where it lands
         let n = 0;
         for (const v of S.villagers.values()) if (G.dist2(v.x, v.y, m.x1, m.y1) < 9 && !(v.sick > 0) && !(v.immune > 0)) { v.sick = G.DAY_LEN * G.rr(0.5, 0.9); n++; }
-        for (let q = 0; q < 16; q++) G.FX && G.FX.spawn({ x: m.x1 + G.rr(-1, 1), y: m.y1 + G.rr(-1, 1), z: 4, vz: G.rr(3, 9), vx: G.rr(-0.3, 0.3), vy: G.rr(-0.3, 0.3), life: G.rr(2, 3.5), s0: 2, s1: 7, c: 'rgba(120,150,70,0.35)', k: 2 });
+        for (let q = 0; q < 16; q++) G.FX && G.FX.spawn({ x: m.x1 + G.vrr(-1, 1), y: m.y1 + G.vrr(-1, 1), z: 4, vz: G.vrr(3, 9), vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.3, 0.3), life: G.vrr(2, 3.5), s0: 2, s1: 7, c: 'rgba(120,150,70,0.35)', k: 2 });
         const s = G.Village.nearSettlementName(m.x1, m.y1);
         if (n) log(`${n} ${n > 1 ? 'pessoas adoeceram' : 'pessoa adoeceu'} perto de onde o cadáver caiu${s ? ' em ' + s : ''}.`, 'plague', m.x1, m.y1);
         continue;
@@ -656,7 +656,7 @@
         const from = G.Fac.get(v.captive.from);
         const gain = 8 + Math.round(v.age / 8);
         G.FX && G.FX.ring(cx, cy, 0.2, 2.5, 1.4, 'rgba(220,40,30,0.9)', 2, true);
-        for (let k = 0; k < 14; k++) G.FX && G.FX.spawn({ x: cx + G.rr(-0.3, 0.3), y: cy + G.rr(-0.3, 0.3), z: 30, vz: G.rr(20, 50), vx: G.rr(-0.4, 0.4), vy: G.rr(-0.4, 0.4), g: -8, life: G.rr(0.8, 1.6), s0: 1.2, s1: 0.2, c: '#ff7040', k: 4, layer: 1 });
+        for (let k = 0; k < 14; k++) G.FX && G.FX.spawn({ x: cx + G.vrr(-0.3, 0.3), y: cy + G.vrr(-0.3, 0.3), z: 30, vz: G.vrr(20, 50), vx: G.vrr(-0.4, 0.4), vy: G.vrr(-0.4, 0.4), g: -8, life: G.vrr(0.8, 1.6), s0: 1.2, s1: 0.2, c: '#ff7040', k: 4, layer: 1 });
         const name = v.name, age = Math.floor(v.age);
         G.Village.kill(v, 'sacrifice', false);
         S.faith = Math.min(999, S.faith + gain);

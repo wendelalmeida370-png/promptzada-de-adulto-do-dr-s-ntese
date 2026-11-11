@@ -654,6 +654,9 @@
   }
   // (a death the stories have not heard yet — its signal waits for their next turn, or the world was just loaded —: for the
   // checker, an active story's protagonist gone is a fault only once they have)
+  // a living animal left the world for good: every active cast lets go of it at once — the story keeps who it was in data.fled
+  // and settles it on its own turn (the hunt fades after days without a sign), and no cast points at what is nowhere (L-656)
+  St.left = function (id) { const S = G.S; if (!S || !S.saga) return; for (const story of S.saga.stories) { if (story.st !== 'ativa') continue; for (const k in story.cast) if (story.cast[k] === id) { story.data.fled = id; delete story.cast[k]; } } };
   St.unheard = id => !heard || pending.some(([k, d]) => k === 'death' && d && d.v && d.v.id === id);
   St.update = function (dt) {
     const S = G.S; if (!S) return;

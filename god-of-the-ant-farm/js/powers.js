@@ -343,7 +343,7 @@
       const tid = S.treeAt[i];
       if (tid) { const t = S.trees.get(tid); if (t && t.stage === 'grow' && t.size > 0.5 && G.R() < 0.3 * (1 - d / r) + 0.08) G.Nature.fellTree(t, G.R() < 0.5 ? 1 : -1); }
       if (W.isLand(i) && S.type[i] !== T.RIVER && G.R() < 0.18 * (1 - d / r)) { S.scar[i] = Math.max(S.scar[i], G.DAY_LEN * 3); G.Nature.markDirty(i); }
-      if (G.R() < 0.07) G.FX && G.FX.dust(tx + 0.5, ty + 0.5, 3);
+      if (G.VR() < 0.07) G.FX && G.FX.dust(tx + 0.5, ty + 0.5, 3);
     }
     for (let k = 0; k < 3; k++) { const a = G.R() * 6.28, dd = G.rr(1, r); const rx = Math.floor(x + Math.cos(a) * dd) + 0.5, ry = Math.floor(y + Math.sin(a) * dd) + 0.5; const i = W.idx(rx, ry); if (W.inb(rx, ry) && W.isLand(i) && !S.occ[i] && !S.objAt[i] && !S.treeAt[i] && S.type[i] !== T.RIVER) G.Nature.addRock(rx, ry, 18); }
     G.FX && G.FX.ring(x, y, 0.5, r + 1, 1.2, 'rgba(160,120,80,0.7)', 3);

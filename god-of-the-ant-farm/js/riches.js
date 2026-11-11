@@ -96,7 +96,7 @@
     v.act = 'skin'; G.faceTo(v, a.x - v.x, a.y - v.y); v.path = null; v.moving = false;
     t.sk += dt * (G.Vg.workMul ? G.Vg.workMul(v) : 1);
     a.flay = Math.min(1, t.sk / 4);
-    if (G.R() < dt * 2.2) G.FX && G.FX.blood(a.x + G.rr(-0.2, 0.2), a.y + G.rr(-0.1, 0.1));
+    if (G.VR() < dt * 2.2) G.FX && G.FX.blood(a.x + G.vrr(-0.2, 0.2), a.y + G.vrr(-0.1, 0.1));
     if (t.sk < 4) return true;
     a.skinned = true; a.flay = 1;
     const spoils = spoilsOf(a); const sp = G.Animals.DEF[a.kind];

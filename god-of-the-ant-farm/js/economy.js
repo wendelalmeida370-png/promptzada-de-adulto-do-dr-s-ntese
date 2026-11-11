@@ -626,7 +626,7 @@
     if (act === 'write' && G.R() < dt * 0.03) G.Vg.emote(v, 'chat', 1);
     if (act === 'lurk' && G.R() < dt * 0.03) G.Vg.emote(v, 'question', 1);
     if (act === 'serve' && G.R() < dt * 0.05) G.Vg.emote(v, 'food', 1.2);
-    if (act === 'sweep' && G.R() < dt * 0.3) { G.FX && G.FX.dust(v.x + v.face * 0.3, v.y, 1); }
+    if (act === 'sweep' && G.VR() < dt * 0.3) { G.FX && G.FX.dust(v.x + v.face * 0.3, v.y, 1); }
     if (t.type === 'desk') { const f = G.Fac.ofV(v); if (f) f._scribes = G.S.clock; }
     if (v.actT > (t.dur || 12)) H.end(v);
   }
@@ -732,7 +732,7 @@
     v.act = t.what === 'shear' ? 'shear' : t.what === 'milk' ? 'milk' : t.what === 'groom' ? 'groom' : 'gather';
     G.faceTo(v, a.x - v.x, a.y - v.y);
     a.hold = 1;
-    if (t.what === 'shear' && G.R() < dt * 3) G.FX && G.FX.chips(a.x, a.y - 0.1, '#f4f0e6');
+    if (t.what === 'shear' && G.VR() < dt * 3) G.FX && G.FX.chips(a.x, a.y - 0.1, '#f4f0e6');
     if (v.actT < (t.what === 'shear' ? 4.5 : 3.2)) return;
     const f = G.Fac.ofV(v); const D = G.Depot;
     let carry = null;
@@ -799,7 +799,7 @@
     }
     if (t.st === 1) {
       v.act = 'mine';
-      if (G.R() < dt * 0.8) G.Audio && G.Audio.at(b.x, b.y, 'mine');
+      if (G.VR() < dt * 0.8) G.Audio && G.Audio.at(b.x, b.y, 'mine');
       const need = (o.kind === 'ouro' ? 13 : 10) / Math.max(0.5, (v.work || 1) * G.Civ.tV(v, 'build'));
       if (v.actT < need) return;
       const n = Math.min(o.amt, o.kind === 'ouro' ? 1 + (G.R() < 0.4 ? 1 : 0) : 2 + (G.R() < 0.5 ? 1 : 0));
@@ -849,7 +849,7 @@
     const f = G.Fac.ofV(v); if (!f) return H.end(v);
     if (t.st === 0) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
     v.act = 'craft'; faceB(v, b);
-    if (G.R() < dt * 2) G.FX && G.FX.chips(v.x, v.y, '#f2c14e');
+    if (G.VR() < dt * 2) G.FX && G.FX.chips(v.x, v.y, '#f2c14e');
     if (v.actT < 6) return;
     const D = G.Depot; const ref = 'f:' + f.id;
     if (D.free(ref, 'ouro') >= 1 && D.use(ref, 'ouro', 1, { code: 'cunhagem', by: v.id }).ok) {

@@ -59,7 +59,7 @@
     if (!G.FX) return;
     for (let k = 0; k < n; k++) {
       const s = G.rr(0.6, 2.2);
-      G.FX.spawn({ x, y, z: G.rr(5, 9), vx: ux * s + G.rr(-0.5, 0.5), vy: uy * s + G.rr(-0.5, 0.5), vz: G.rr(18, 60), g: 240, life: G.rr(0.35, 0.7), s0: G.rr(0.8, 1.5), s1: 0.6, c: k % 3 ? '#a8222c' : '#7a1218', k: 0 });
+      G.FX.spawn({ x, y, z: G.vrr(5, 9), vx: ux * s + G.vrr(-0.5, 0.5), vy: uy * s + G.vrr(-0.5, 0.5), vz: G.vrr(18, 60), g: 240, life: G.vrr(0.35, 0.7), s0: G.vrr(0.8, 1.5), s1: 0.6, c: k % 3 ? '#a8222c' : '#7a1218', k: 0 });
     }
   }
 
@@ -78,13 +78,13 @@
       if (o.age >= 12 && r < (heavy ? 0.1 : 0.035)) { o._decap = { ux, uy }; G.Audio && G.Audio.at(o.x, o.y, 'gore', true); shakeAt(o.x, o.y, 0.07); }
       else if (o.age >= 12 && r < (heavy ? 0.3 : 0.12)) sever(o, ux, uy, false);
     } else if (dmg > 11 && o.age >= 14 && G.R() < (heavy ? 0.07 : 0.03)) sever(o, ux, uy, true);
-    if (lethal && G.R() < 0.35) G.Audio && G.Audio.at(o.x, o.y, 'scream');
+    if (lethal && G.VR() < 0.35) G.Audio && G.Audio.at(o.x, o.y, 'scream');
   };
   // a parried blow: sparks and the ring of metal
   C.onParry = function (by, o) {
     if (!(o.role === 'guerreiro' || o.unit) || !G.FX) return;
     const mx = (by.x + o.x) / 2, my = (by.y + o.y) / 2;
-    for (let k = 0; k < 5; k++) G.FX.spawn({ x: mx, y: my, z: G.rr(6, 9), vx: G.rr(-1.2, 1.2), vy: G.rr(-1.2, 1.2), vz: G.rr(20, 50), g: 160, life: G.rr(0.15, 0.3), s0: 0.9, s1: 0.2, c: '#fff2b0', k: 4, layer: 1 });
+    for (let k = 0; k < 5; k++) G.FX.spawn({ x: mx, y: my, z: G.vrr(6, 9), vx: G.vrr(-1.2, 1.2), vy: G.vrr(-1.2, 1.2), vz: G.vrr(20, 50), g: 160, life: G.vrr(0.15, 0.3), s0: 0.9, s1: 0.2, c: '#fff2b0', k: 4, layer: 1 });
     G.Audio && G.Audio.at(mx, my, 'clang');
   };
   function shakeAt(x, y, a) {
@@ -277,7 +277,7 @@
     for (let k = gush.length - 1; k >= 0; k--) {
       const g = gush[k]; g.t -= dt; if (g.t <= 0) { gush.splice(k, 1); continue; }
       const o = S.villagers.get(g.id); if (o) { g.x = o.x; g.y = o.y; }
-      if (G.FX && G.R() < dt * 30) G.FX.spawn({ x: g.x, y: g.y, z: g.neck ? 3 : 7, vx: G.rr(-0.7, 0.7), vy: G.rr(-0.7, 0.7), vz: G.rr(15, 45), g: 200, life: G.rr(0.3, 0.6), s0: 1.1, s1: 0.5, c: '#9a1a22', k: 0 });
+      if (G.FX && G.VR() < dt * 30) G.FX.spawn({ x: g.x, y: g.y, z: g.neck ? 3 : 7, vx: G.vrr(-0.7, 0.7), vy: G.vrr(-0.7, 0.7), vz: G.vrr(15, 45), g: 200, life: G.vrr(0.3, 0.6), s0: 1.1, s1: 0.5, c: '#9a1a22', k: 0 });
     }
     // pyres
     for (const p of pyres) {
@@ -285,8 +285,8 @@
       if (p.burn > 0) {
         p.burn -= dt;
         if (G.FX) {
-          if (G.R() < dt * 9) G.FX.spawn({ x: p.x + G.rr(-0.3, 0.3), y: p.y + G.rr(-0.3, 0.3), z: G.rr(3, 8), vz: G.rr(20, 40), life: G.rr(0.5, 1), s0: 1.8, s1: 0.2, c: G.pick(['#ffb040', '#ff7a1a', '#ffd070']), k: 4, layer: 1 });
-          if (G.R() < dt * 2.5) G.FX.spawn({ x: p.x, y: p.y, z: 10, vz: G.rr(14, 24), vx: Math.cos(S.weather.windA) * 0.4, vy: Math.sin(S.weather.windA) * 0.4, life: G.rr(3, 5), s0: 4, s1: 14, c: 'rgba(60,56,54,0.4)', k: 2 });
+          if (G.VR() < dt * 9) G.FX.spawn({ x: p.x + G.vrr(-0.3, 0.3), y: p.y + G.vrr(-0.3, 0.3), z: G.vrr(3, 8), vz: G.vrr(20, 40), life: G.vrr(0.5, 1), s0: 1.8, s1: 0.2, c: G.vpick(['#ffb040', '#ff7a1a', '#ffd070']), k: 4, layer: 1 });
+          if (G.VR() < dt * 2.5) G.FX.spawn({ x: p.x, y: p.y, z: 10, vz: G.vrr(14, 24), vx: Math.cos(S.weather.windA) * 0.4, vy: Math.sin(S.weather.windA) * 0.4, life: G.vrr(3, 5), s0: 4, s1: 14, c: 'rgba(60,56,54,0.4)', k: 2 });
         }
         if (p.burn <= 0) { decal(p.x, p.y, 0.45, 'ash'); p.heap = 0; p.burn = 0; }
       }
@@ -317,7 +317,7 @@
         }
       }
       c.crows = (st === 'rot' || st === 'dry') && !near && !c.drag && !c.bdrag && G.hash(c.id) < 0.7 ? 1 + ((G.hash(c.id * 3) * 3) | 0) : 0;
-      if (c.crows && G.R() < 0.04) G.Audio && G.Audio.at(c.x, c.y, 'caw');
+      if (c.crows && G.VR() < 0.04) G.Audio && G.Audio.at(c.x, c.y, 'caw');
     }
     if (corpses.some(c => c.gone)) corpses = corpses.filter(c => !c.gone);
     for (const [sid, n] of newSick) {

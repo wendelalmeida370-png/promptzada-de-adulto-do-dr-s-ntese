@@ -359,7 +359,7 @@
       case 'fogueira': {
         if (el > 2.2 && e.sub === 1) { e.sub = 2; if (exe) { exe.task.act = 'torchfwd'; exe.actT = 0; } }
         if (el > 3.4 && e.sub === 2) { e.sub = 3; e.fire = S.clock; const sc = scaffolds().find(s => s.id === e.sc); if (sc) { sc.burn = sc.burn || {}; sc.burn[i] = S.clock; } G.Audio && G.Audio.at(v.x, v.y, 'fire', true); }
-        if (e.sub === 3) { t.pose = 'writhe'; if (G.R() < dt * 2) G.Audio && G.Audio.at(v.x, v.y, 'scream', true); flames(sx, sy, M.z, 1); }
+        if (e.sub === 3) { t.pose = 'writhe'; if (G.VR() < dt * 2) G.Audio && G.Audio.at(v.x, v.y, 'scream', true); flames(sx, sy, M.z, 1); }
         if (el > 10.5 && e.sub === 3) die(e, v, 'burnt');
         break;
       }
@@ -375,7 +375,7 @@
       }
       case 'sacrificio': {
         if (el > 1.6 && e.sub === 1) { e.sub = 2; if (exe) { exe.task.act = 'stab'; exe.actT = 0; } }
-        if (el > 3.4 && e.sub === 2) { e.sub = 3; G.Audio && G.Audio.at(v.x, v.y, 'gore', true); if (G.FX) for (let k = 0; k < 14; k++) G.FX.spawn({ x: v.x, y: v.y, z: e.top + 6, vz: G.rr(20, 50), vx: G.rr(-0.5, 0.5), vy: G.rr(-0.5, 0.5), g: 120, life: G.rr(0.5, 1.1), s0: 1.3, s1: 0.3, c: k % 2 ? '#b8121e' : '#7a0a12', k: 0 }); if (exe) { exe.task.act = 'heart'; exe.actT = 0; } }
+        if (el > 3.4 && e.sub === 2) { e.sub = 3; G.Audio && G.Audio.at(v.x, v.y, 'gore', true); if (G.FX) for (let k = 0; k < 14; k++) G.FX.spawn({ x: v.x, y: v.y, z: e.top + 6, vz: G.vrr(20, 50), vx: G.vrr(-0.5, 0.5), vy: G.vrr(-0.5, 0.5), g: 120, life: G.vrr(0.5, 1.1), s0: 1.3, s1: 0.3, c: k % 2 ? '#b8121e' : '#7a0a12', k: 0 }); if (exe) { exe.task.act = 'heart'; exe.actT = 0; } }
         if (el > 6.5 && e.sub === 3) { e.sub = 4; t.pose = 'limp'; t.roll = S.clock; t.rx0 = v.x; t.ry0 = v.y; }
         if (e.sub === 4) { const k = Math.min(1, (S.clock - t.roll) / 2.4); v.x = t.rx0 + (e.fx - t.rx0) * k; v.y = t.ry0 + (e.fy + 0.6 - t.ry0) * k; v.z = e.top * (1 - k); v.dz = (e.dz || 0) * (1 - k); if (k >= 1) die(e, v, null); }
         break;
@@ -435,8 +435,8 @@
   }
   function flames(x, y, z, k) {
     if (!G.FX || G.R() > 0.6 * k) return;
-    G.FX.spawn({ x: x + G.rr(-0.25, 0.25), y: y + G.rr(-0.15, 0.15), z: z + G.rr(0, 6), vz: G.rr(14, 30), vx: G.rr(-0.1, 0.1), vy: 0, g: -6, life: G.rr(0.4, 0.9), s0: G.rr(1.4, 2.4), s1: 0.2, c: G.R() < 0.5 ? '#ff8a2a' : '#ffd25a', k: 4 });
-    if (G.R() < 0.3) G.FX.spawn({ x, y, z: z + 10, vz: G.rr(8, 14), vx: G.rr(-0.2, 0.2), vy: 0, g: -2, life: G.rr(1.4, 2.4), s0: 1.6, s1: 4, c: 'rgba(60,56,52,0.45)', k: 4 });
+    G.FX.spawn({ x: x + G.vrr(-0.25, 0.25), y: y + G.vrr(-0.15, 0.15), z: z + G.vrr(0, 6), vz: G.vrr(14, 30), vx: G.vrr(-0.1, 0.1), vy: 0, g: -6, life: G.vrr(0.4, 0.9), s0: G.vrr(1.4, 2.4), s1: 0.2, c: G.VR() < 0.5 ? '#ff8a2a' : '#ffd25a', k: 4 });
+    if (G.VR() < 0.3) G.FX.spawn({ x, y, z: z + 10, vz: G.vrr(8, 14), vx: G.vrr(-0.2, 0.2), vy: 0, g: -2, life: G.vrr(1.4, 2.4), s0: 1.6, s1: 4, c: 'rgba(60,56,52,0.45)', k: 4 });
   }
   function stones(e, v, dt) {
     const S = G.S;
@@ -444,7 +444,7 @@
       const t = o.task; if (!t || t.j !== e.id || t.role !== 'watch' || t.st !== 2 || t.stance !== 'cheer' || G.R() > dt * 0.9) continue;
       o.act = 'throw'; o.actT = 0; t.thrown = S.clock;
       if (G.FX) G.FX.spawn({ x: o.x, y: o.y, z: 9, vx: (v.x - o.x) * 1.6, vy: (v.y - o.y) * 1.6, vz: 26, g: 60, life: 0.62, s0: 1.2, s1: 1.1, c: '#8a857c', k: 0 });
-      if (G.R() < 0.4) { G.Audio && G.Audio.at(v.x, v.y, 'hit', false); G.FX && G.FX.blood && G.FX.blood(v.x, v.y); }
+      if (G.VR() < 0.4) { G.Audio && G.Audio.at(v.x, v.y, 'hit', false); G.FX && G.FX.blood && G.FX.blood(v.x, v.y); }
     }
   }
 

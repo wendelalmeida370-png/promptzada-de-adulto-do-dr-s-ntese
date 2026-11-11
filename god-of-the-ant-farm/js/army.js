@@ -815,7 +815,7 @@
     if (arrived) {
       v.moving = false; G.faceTo(v, Math.cos(co.dir), Math.sin(co.dir));
       v.act = co.hidden ? 'sneak' : phase === 'cerco' ? (k % 5 === 0 ? 'dig' : k % 3 === 0 ? 'sit' : 'guard') : t.general && phase === 'reunir' ? 'talk' : 'guard';
-      if (phase === 'cerco' && k % 5 === 0 && G.R() < dt * 0.4) G.FX && G.FX.chips(v.x, v.y, '#7a5a3a');
+      if (phase === 'cerco' && k % 5 === 0 && G.VR() < dt * 0.4) G.FX && G.FX.chips(v.x, v.y, '#7a5a3a');
     }
     return true;
   };

@@ -558,7 +558,7 @@
     const S = G.S, n = Sea.nest; if (!n) return;
     n.t += dt;
     if (n.st === 'crawl') { n.p = Math.min(1, n.p + dt / 22); if (n.p >= 1) { n.st = 'dig'; n.t = 0; } }
-    else if (n.st === 'dig') { if (G.R() < dt * 1.5) G.FX && G.FX.dust && G.FX.dust(n.x, n.y, 2); if (n.t > 16) { n.st = 'back'; n.t = 0; n.mound = 1; } }
+    else if (n.st === 'dig') { if (G.VR() < dt * 1.5) G.FX && G.FX.dust && G.FX.dust(n.x, n.y, 2); if (n.t > 16) { n.st = 'back'; n.t = 0; n.mound = 1; } }
     else if (n.st === 'back') { n.p = Math.max(0, n.p - dt / 20); if (n.p <= 0) { n.st = 'wait'; n.t = 0; } }
     else if (n.st === 'wait') {
       if (S.day > n.hatchDay + 1) { Sea.nest = null; return; }

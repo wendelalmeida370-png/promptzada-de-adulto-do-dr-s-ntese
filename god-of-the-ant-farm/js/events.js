@@ -290,7 +290,7 @@
           if (b.st === 'arrive') { b.st = 'unload'; b.t = 0; land(b); }
           else { S.boats.splice(k, 1); continue; }
         } else { b.x += dx / d * sp; b.y += dy / d * sp; }
-        if (G.R() < dt * 3) G.FX && G.FX.wake(b.x, b.y);
+        if (G.VR() < dt * 3) G.FX && G.FX.wake(b.x, b.y);
       } else if (b.st === 'unload') { b.t += dt; if (b.t > 4) b.st = 'leave'; }
     }
   }

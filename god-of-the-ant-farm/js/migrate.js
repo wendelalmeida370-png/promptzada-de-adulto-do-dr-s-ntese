@@ -179,7 +179,7 @@
         Mg.flocks.splice(k, 1); continue;
       }
       f.x += (f.tx - f.x) / d * sp; f.y += (f.ty - f.y) / d * sp; f.t += dt;
-      if (G.R() < dt * 0.15) G.Audio && G.Audio.at(f.x, f.y, 'flap');
+      if (G.VR() < dt * 0.15) G.Audio && G.Audio.at(f.x, f.y, 'flap');
     }
   }
   // drawn high in the sky, with their shadows racing over the land
@@ -230,7 +230,7 @@
       if (!a.fishAt || a.dead || a.state === 'chase' || a.state === 'flee') continue;
       if (G.dist(a.x, a.y, a.fishAt[0], a.fishAt[1]) > 3.5) continue;
       a.state = 'idle'; a.t = Math.max(a.t || 0, 1); G.faceTo(a, a.fishAt[0] - a.x, a.fishAt[1] - a.y);
-      if (G.R() < dt * 0.35) { a.catchT = S.clock + 2.2; a.hunger = Math.max(0, a.hunger - 0.35); G.FX && G.FX.splash(a.fishAt[0] + G.rr(-0.4, 0.4), a.fishAt[1] + G.rr(-0.4, 0.4), 0.4); }
+      if (G.R() < dt * 0.35) { a.catchT = S.clock + 2.2; a.hunger = Math.max(0, a.hunger - 0.35); G.FX && G.FX.splash(a.fishAt[0] + G.vrr(-0.4, 0.4), a.fishAt[1] + G.vrr(-0.4, 0.4), 0.4); }
     }
   }
   // people fishing the river during the run catch salmon

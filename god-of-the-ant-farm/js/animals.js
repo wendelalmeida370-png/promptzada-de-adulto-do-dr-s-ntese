@@ -313,7 +313,11 @@
   A.MORPH = { albino: ['branco', 'branca'], melanico: ['negro', 'negra'] };
   // 'o tigre branco', 'a onça negra' — the name people give a rare animal
   A.rareName = function (a) { const sp = SP[a.kind]; const m = A.MORPH[a.morph]; if (!m) return sp.name.toLowerCase(); if (a.morph === 'melanico' && (a.kind === 'leopard' || a.kind === 'jaguar')) return 'pantera-negra'; return sp.name.toLowerCase() + ' ' + m[sp.g === 'f' ? 1 : 0]; };
-  A.remove = a => G.S.animals.delete(a.id);
+  // the one door out of the world for an animal that is not a body rotting away. A living one that goes for good (it walked off
+  // the map, the sea took it, a flock or a pack dissolved it) tells the stories at once: no cast keeps what is nowhere (L-656)
+  A.remove = a => { G.S.animals.delete(a.id); if (!a.dead && G.Stories && G.Stories.left) G.Stories.left(a.id); };
+  // the animal wherever it lives: in the open, or under a cave's roof (asleep in a den, out of the storm — L-656)
+  A.find = id => G.S.animals.get(id) || ((G.Caves && G.Caves.guest && G.Caves.guest(id)) || {}).a || null;
   A.sp = a => SP[a.kind] || SP.rabbit;
   A.huntable = a => { const sp = SP[a.kind]; return !!(sp && sp.hunt && !a.held && !a.air && !(sp.cls === 'water') && !(a.swim) && !a.tamed && !a.legend && !a.dom); };
   // a wild predator going after somebody's herd
@@ -550,7 +554,7 @@
   A.damage = function (a, dmg, by) {
     if (a.dead) return;
     a.hp -= dmg; a.hurt = 0.3;
-    if (SP[a.kind].cls !== 'water' || G.R() < 0.5) G.FX && G.FX.blood(a.x, a.y);
+    if (SP[a.kind].cls !== 'water' || G.VR() < 0.5) G.FX && G.FX.blood(a.x, a.y);
     if (a.hp <= 0) return A.kill(a, by);
     const sp = SP[a.kind];
     if (by && (sp.defend || sp.bold > 0 || a.kind === 'boar') && a.hp > a.maxHp * 0.25) { a.angry = 14; a.target = by.id; a.state = 'chase'; }
@@ -698,9 +702,9 @@
     a.ft = (a.ft || 0) - dt; if (a.ft > 0 || !G.FX) return;
     a.ft = G.rr(0.9, 1.8);
     const fx = G.wface(a);
-    for (let k = 0; k < 5; k++) G.FX.spawn({ x: c.x + G.rr(-0.2, 0.2), y: c.y + G.rr(-0.2, 0.2), h: W.groundH(c.x, c.y), z: (c.z || 0) + G.rr(1, 3), vx: G.rr(-0.8, 0.8) + fx * 0.3, vy: G.rr(-0.8, 0.8), vz: G.rr(15, 40), g: 160, life: G.rr(0.3, 0.6), s0: 1, s1: 0.4, c: k < 4 ? '#9a1a22' : '#c86a6a', k: 0 });
+    for (let k = 0; k < 5; k++) G.FX.spawn({ x: c.x + G.vrr(-0.2, 0.2), y: c.y + G.vrr(-0.2, 0.2), h: W.groundH(c.x, c.y), z: (c.z || 0) + G.vrr(1, 3), vx: G.vrr(-0.8, 0.8) + fx * 0.3, vy: G.vrr(-0.8, 0.8), vz: G.vrr(15, 40), g: 160, life: G.vrr(0.3, 0.6), s0: 1, s1: 0.4, c: k < 4 ? '#9a1a22' : '#c86a6a', k: 0 });
     if (G.Carnage && G.Carnage.decal && !(c.z > 3) && G.R() < 0.5) G.Carnage.decal(c.x + G.rr(-0.3, 0.3), c.y + G.rr(-0.3, 0.3), G.rr(0.07, 0.13), 'splat');
-    if (G.R() < 0.3) G.Audio && G.Audio.at(c.x, c.y, 'bite');
+    if (G.VR() < 0.3) G.Audio && G.Audio.at(c.x, c.y, 'bite');
   }
   // the one being held: pinned under a cat, dragged by a crocodile, crushed in a snake's coils
   function heldDown(a, dt) {
@@ -849,7 +853,7 @@
     roll(a, dt, sp, S) {
       a.roll -= dt; a.moving = false;
       const tg = S.animals.get(a.target) || S.villagers.get(a.target);
-      if (G.FX && G.R() < dt * 10) G.FX.splash(a.x + G.rr(-0.4, 0.4), a.y + G.rr(-0.4, 0.4), 0.5);
+      if (G.FX && G.VR() < dt * 10) G.FX.splash(a.x + G.vrr(-0.4, 0.4), a.y + G.vrr(-0.4, 0.4), 0.5);
       a.rd = (a.rd || 0) - dt;
       if (tg && !tg.dead && a.rd <= 0) {
         a.rd = 0.45;
@@ -908,7 +912,7 @@
       const [x0, y0, z0] = a.sw0, [x1, y1, z1] = a.sw1;
       a.x = x0 + (x1 - x0) * f; a.y = y0 + (y1 - y0) * f; a.z = z0 + (z1 - z0) * f - Math.sin(f * Math.PI) * (a.slow ? 2 : 7);
       a.moving = true;
-      if (f >= 1) { a.swing = 0; a.slow = 0; a.state = 'tree'; a.perch = a.tree; a.z = z1; a.moving = false; a.t = sp.arbor === true ? G.rr(80, 220) : G.rr(4, 12); if (G.R() < 0.2) G.Audio && G.Audio.at(a.x, a.y, 'monkey'); }
+      if (f >= 1) { a.swing = 0; a.slow = 0; a.state = 'tree'; a.perch = a.tree; a.z = z1; a.moving = false; a.t = sp.arbor === true ? G.rr(80, 220) : G.rr(4, 12); if (G.VR() < 0.2) G.Audio && G.Audio.at(a.x, a.y, 'monkey'); }
       return true;
     },
   };

@@ -482,7 +482,7 @@
     fe.riteDone = true;
     const S = G.S; const f = G.Fac.get(fe.fac); const set = S.settlements.get(fe.set);
     const at = fe.T ? G.Village.center(fe.T) : fe.B || fe.C;
-    const blood = (x, y, z) => { G.FX && G.FX.ring(x, y, 0.2, 2.2, 1.2, 'rgba(210,40,30,0.9)', 2, true); for (let k = 0; k < 12; k++) G.FX && G.FX.spawn({ x: x + G.rr(-0.3, 0.3), y: y + G.rr(-0.3, 0.3), z: z || 6, vz: G.rr(15, 40), vx: G.rr(-0.4, 0.4), vy: G.rr(-0.4, 0.4), g: -8, life: G.rr(0.7, 1.4), s0: 1.1, s1: 0.2, c: '#c8281e', k: 4, layer: 1 }); };
+    const blood = (x, y, z) => { G.FX && G.FX.ring(x, y, 0.2, 2.2, 1.2, 'rgba(210,40,30,0.9)', 2, true); for (let k = 0; k < 12; k++) G.FX && G.FX.spawn({ x: x + G.vrr(-0.3, 0.3), y: y + G.vrr(-0.3, 0.3), z: z || 6, vz: G.vrr(15, 40), vx: G.vrr(-0.4, 0.4), vy: G.vrr(-0.4, 0.4), g: -8, life: G.vrr(0.7, 1.4), s0: 1.1, s1: 0.2, c: '#c8281e', k: 4, layer: 1 }); };
     if (fe.victimV) {
       const v = S.villagers.get(fe.victimV); if (!v) return;
       const name = v.name; const from = v.captive && G.Fac.get(v.captive.from);
@@ -618,7 +618,7 @@
           const fx = T.x + T.w / 2 + 0.25 + (T.w / 2 + 0.05) * (1 - f) + off, fy = T.y + T.h / 2 + 0.25 + (T.h / 2 + 0.05) * (1 - f) - off;
           v.x = fx; v.y = fy; v.z = top * f; v.path = null; t.perch = true;
           v.act = f < 1 ? '' : role === 'victim' ? '' : 'pray'; v.moving = f < 1; if (f < 1) v.walkPh += dt * 4; G.faceTo(v, -1, 1);
-          if (role === 'victim' && f < 1 && G.R() < dt * 1.5) G.FX && G.FX.chips(v.x, v.y, '#c8a060');
+          if (role === 'victim' && f < 1 && G.VR() < dt * 1.5) G.FX && G.FX.chips(v.x, v.y, '#c8a060');
           void cx; void cy; return true;
         }
         if (toSlot(v, t, dt, H, slot)) { faceTo(v, (fe.B || C)[0], (fe.B || C)[1]); v.act = role === 'leader' ? 'pray' : role === 'bearer' ? '' : (G.R() < 0.5 ? 'pray' : ''); }

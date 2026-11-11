@@ -260,8 +260,8 @@
   P.reshape = reshape;
 
   function landFX(x, y, r, dir) {
-    for (let k = 0; k < 50; k++) { const a = G.rr(0, 6.28), d = Math.sqrt(G.R()) * r; const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; G.FX && G.FX.spawn({ x: px, y: py, z: G.rr(0, 6), vz: G.rr(10, 40), vx: G.rr(-0.4, 0.4), vy: G.rr(-0.4, 0.4), drag: 0.5, life: G.rr(1.2, 2.6), s0: G.rr(4, 7), s1: G.rr(10, 18), c: dir > 0 ? G.pick(['rgba(150,120,90,0.45)', 'rgba(120,100,80,0.4)']) : G.pick(['rgba(220,240,255,0.55)', 'rgba(170,215,240,0.5)']), k: 2 }); }
-    for (let k = 0; k < 30; k++) G.FX && G.FX.spawn({ x: x + G.rr(-r, r), y: y + G.rr(-r, r), h: SEA, z: 0, vz: G.rr(60, 200), vx: G.rr(-1.5, 1.5), vy: G.rr(-1.5, 1.5), g: 300, life: G.rr(0.8, 1.6), s0: 1.8, s1: 0.8, c: dir > 0 ? '#6e5a44' : 'rgba(220,240,255,0.9)', k: dir > 0 ? 6 : 0 });
+    for (let k = 0; k < 50; k++) { const a = G.vrr(0, 6.28), d = Math.sqrt(G.VR()) * r; const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; G.FX && G.FX.spawn({ x: px, y: py, z: G.vrr(0, 6), vz: G.vrr(10, 40), vx: G.vrr(-0.4, 0.4), vy: G.vrr(-0.4, 0.4), drag: 0.5, life: G.vrr(1.2, 2.6), s0: G.vrr(4, 7), s1: G.vrr(10, 18), c: dir > 0 ? G.vpick(['rgba(150,120,90,0.45)', 'rgba(120,100,80,0.4)']) : G.vpick(['rgba(220,240,255,0.55)', 'rgba(170,215,240,0.5)']), k: 2 }); }
+    for (let k = 0; k < 30; k++) G.FX && G.FX.spawn({ x: x + G.vrr(-r, r), y: y + G.vrr(-r, r), h: SEA, z: 0, vz: G.vrr(60, 200), vx: G.vrr(-1.5, 1.5), vy: G.vrr(-1.5, 1.5), g: 300, life: G.vrr(0.8, 1.6), s0: 1.8, s1: 0.8, c: dir > 0 ? '#6e5a44' : 'rgba(220,240,255,0.9)', k: dir > 0 ? 6 : 0 });
     G.FX && G.FX.ring(x, y, 0.3, r + 2, 1.3, dir > 0 ? 'rgba(190,150,100,0.8)' : 'rgba(150,210,255,0.85)', 3, true);
   }
 
@@ -321,7 +321,7 @@
       const i = ty * N + tx; if (!W.isLand(i)) continue;
       if (S.type[i] !== T.SAND || d < r * 0.6) { S.type[i] = T.ROCKY; G.Nature.markDirty(i); }
       if (!S.occ[i] && !S.objAt[i] && !S.treeAt[i] && !S.road[i] && !S.wall[i] && G.R() < 0.45) { const rk = G.Nature.addRock(tx + 0.5, ty + 0.5, Math.round(G.rr(35, 60))); if (rk) rocks++; }
-      if (G.R() < 0.4) G.FX && G.FX.dust(tx + 0.5, ty + 0.5, 3);
+      if (G.VR() < 0.4) G.FX && G.FX.dust(tx + 0.5, ty + 0.5, 3);
     }
     G.Render && G.Render.invalidateTerrain(x, y, r + 2); G.Render && G.Render.shake(0.5);
     G.Audio && G.Audio.play('quake');
@@ -370,9 +370,9 @@
       const h = W.groundH(vo.x, vo.y);
       // smoke and embers
       if (G.FX) {
-        for (let k = 0; k < Math.ceil(dt * 18); k++) G.FX.spawn({ x: vo.x + G.rr(-0.3, 0.3), y: vo.y + G.rr(-0.3, 0.3), h, z: G.rr(0, 8), vz: G.rr(25, 55), vx: G.rr(-0.25, 0.25) + Math.cos(S.weather.windA) * 0.2, vy: G.rr(-0.25, 0.25) + Math.sin(S.weather.windA) * 0.2, drag: 0.15, life: G.rr(4, 8), s0: G.rr(6, 10), s1: G.rr(26, 44), c: G.pick(['rgba(58,50,48,0.55)', 'rgba(80,70,66,0.5)', 'rgba(40,34,32,0.6)']), k: 2 });
-        for (let k = 0; k < Math.ceil(dt * 10); k++) G.FX.spawn({ x: vo.x, y: vo.y, h, z: G.rr(2, 8), vz: G.rr(60, 160), vx: G.rr(-1, 1), vy: G.rr(-1, 1), g: 160, life: G.rr(0.8, 1.8), s0: G.rr(1.4, 2.4), s1: 0.3, c: G.pick(['#ffdd88', '#ff9944', '#ff6622']), k: 4, layer: 1 });
-        if (G.R() < dt * 2) G.FX.glowAt(vo.x, vo.y, 0.9, 'fire', 150);
+        for (let k = 0; k < Math.ceil(dt * 18); k++) G.FX.spawn({ x: vo.x + G.vrr(-0.3, 0.3), y: vo.y + G.vrr(-0.3, 0.3), h, z: G.vrr(0, 8), vz: G.vrr(25, 55), vx: G.vrr(-0.25, 0.25) + Math.cos(S.weather.windA) * 0.2, vy: G.vrr(-0.25, 0.25) + Math.sin(S.weather.windA) * 0.2, drag: 0.15, life: G.vrr(4, 8), s0: G.vrr(6, 10), s1: G.vrr(26, 44), c: G.vpick(['rgba(58,50,48,0.55)', 'rgba(80,70,66,0.5)', 'rgba(40,34,32,0.6)']), k: 2 });
+        for (let k = 0; k < Math.ceil(dt * 10); k++) G.FX.spawn({ x: vo.x, y: vo.y, h, z: G.vrr(2, 8), vz: G.vrr(60, 160), vx: G.vrr(-1, 1), vy: G.vrr(-1, 1), g: 160, life: G.vrr(0.8, 1.8), s0: G.vrr(1.4, 2.4), s1: 0.3, c: G.vpick(['#ffdd88', '#ff9944', '#ff6622']), k: 4, layer: 1 });
+        if (G.VR() < dt * 2) G.FX.glowAt(vo.x, vo.y, 0.9, 'fire', 150);
       }
       if (G.R() < dt * 0.7) G.Render && G.Render.shake(0.25);
       // lava bombs
@@ -391,7 +391,7 @@
     } else {
       // asleep: a thin plume; sometimes it wakes again
       vo.sleep += dt;
-      if (G.FX && G.R() < dt * 2.5) G.FX.spawn({ x: vo.x, y: vo.y, h: W.groundH(vo.x, vo.y), z: 4, vz: G.rr(12, 22), vx: Math.cos(S.weather.windA) * 0.3, vy: Math.sin(S.weather.windA) * 0.3, drag: 0.1, life: G.rr(4, 7), s0: 4, s1: 16, c: 'rgba(120,112,108,0.35)', k: 2 });
+      if (G.FX && G.VR() < dt * 2.5) G.FX.spawn({ x: vo.x, y: vo.y, h: W.groundH(vo.x, vo.y), z: 4, vz: G.vrr(12, 22), vx: Math.cos(S.weather.windA) * 0.3, vy: Math.sin(S.weather.windA) * 0.3, drag: 0.1, life: G.vrr(4, 7), s0: 4, s1: 16, c: 'rgba(120,112,108,0.35)', k: 2 });
       if (vo.sleep > DAY() * 5 && G.R() < dt / (DAY() * 6)) {
         vo.erupt = 30; vo.flows = []; vo.flowT = 0.5;
         log(`${vo.name} despertou de novo! Fogo e cinzas caem do céu.`, 'fire', vo.x, vo.y);
@@ -413,7 +413,7 @@
       }
       if (!best) { vo.flows.splice(k, 1); continue; }
       if (!W.isLand(best[2])) { // hissing steam where lava meets water
-        for (let q = 0; q < 14; q++) G.FX && G.FX.spawn({ x: best[0] + 0.5 + G.rr(-0.4, 0.4), y: best[1] + 0.5 + G.rr(-0.4, 0.4), h: SEA, z: 0, vz: G.rr(15, 40), drag: 0.3, life: G.rr(1.5, 3), s0: 5, s1: 14, c: 'rgba(235,240,245,0.55)', k: 2 });
+        for (let q = 0; q < 14; q++) G.FX && G.FX.spawn({ x: best[0] + 0.5 + G.vrr(-0.4, 0.4), y: best[1] + 0.5 + G.vrr(-0.4, 0.4), h: SEA, z: 0, vz: G.vrr(15, 40), drag: 0.3, life: G.vrr(1.5, 3), s0: 5, s1: 14, c: 'rgba(235,240,245,0.55)', k: 2 });
         vo.flows.splice(k, 1); continue;
       }
       fl.x = best[0]; fl.y = best[1];
@@ -446,7 +446,7 @@
       if (!W.isLand(i)) { G.FX && G.FX.splash(b.x, b.y, 0.8); continue; }
       const vo = m.volcanoes.find(q => q.id === b.vo);
       G.FX && G.FX.spawn({ x: b.x, y: b.y, z: 1, vz: 20, life: 1.2, s0: 6, s1: 14, c: 'rgba(60,50,46,0.5)', k: 2 });
-      for (let q = 0; q < 8; q++) G.FX && G.FX.spawn({ x: b.x, y: b.y, z: 2, vx: G.rr(-1.2, 1.2), vy: G.rr(-1.2, 1.2), vz: G.rr(40, 110), g: 260, life: G.rr(0.5, 1), s0: 1.6, s1: 0.3, c: G.pick(['#ffcf6a', '#ff7a2a']), k: 4, layer: 1 });
+      for (let q = 0; q < 8; q++) G.FX && G.FX.spawn({ x: b.x, y: b.y, z: 2, vx: G.vrr(-1.2, 1.2), vy: G.vrr(-1.2, 1.2), vz: G.vrr(40, 110), g: 260, life: G.vrr(0.5, 1), s0: 1.6, s1: 0.3, c: G.vpick(['#ffcf6a', '#ff7a2a']), k: 4, layer: 1 });
       G.Audio && G.Audio.at(b.x, b.y, 'hit');
       G.Nature.ignite(i, 0.9);
       if (G.R() < 0.35) lavaAt(i, DAY() * 0.15);
@@ -458,7 +458,7 @@
   // ============================== MAR ==============================
   P.shoal = function (x, y) {
     G.Naval.addShoal(x, y, 60);
-    for (let k = 0; k < 20; k++) G.FX && G.FX.spawn({ x: x + G.rr(-1.5, 1.5), y: y + G.rr(-1.5, 1.5), h: SEA, z: 0, vz: G.rr(30, 70), g: 180, life: G.rr(0.6, 1.2), s0: 1.2, s1: 0.8, c: G.pick(['#cfe8f0', '#9fd0e0', '#ffffff']), k: 0 });
+    for (let k = 0; k < 20; k++) G.FX && G.FX.spawn({ x: x + G.vrr(-1.5, 1.5), y: y + G.vrr(-1.5, 1.5), h: SEA, z: 0, vz: G.vrr(30, 70), g: 180, life: G.vrr(0.6, 1.2), s0: 1.2, s1: 0.8, c: G.vpick(['#cfe8f0', '#9fd0e0', '#ffffff']), k: 0 });
     G.FX && G.FX.ring(x, y, 0.2, 2.5, 1.1, 'rgba(160,220,255,0.9)', 2, true);
     G.Audio && G.Audio.play('magic');
     P.witness(x, y, 12, 5, 0);
@@ -468,7 +468,7 @@
   P.wind = function (x, y) {
     const S = G.S; const facs = new Set(); let n = 0;
     for (const s of S.ships) if (G.dist(s.x, s.y, x, y) < 9) { s.wind = 1.8; s.windT = DAY() * 2; facs.add(s.fac); n++; }
-    for (let k = 0; k < 40; k++) { const a = S.weather.windA; G.FX && G.FX.spawn({ x: x + G.rr(-6, 6), y: y + G.rr(-6, 6), h: SEA, z: G.rr(6, 20), vx: Math.cos(a) * 5, vy: Math.sin(a) * 5, life: G.rr(0.8, 1.6), s0: 1, s1: 0.4, c: 'rgba(255,255,255,0.7)', k: 11 }); }
+    for (let k = 0; k < 40; k++) { const a = S.weather.windA; G.FX && G.FX.spawn({ x: x + G.vrr(-6, 6), y: y + G.vrr(-6, 6), h: SEA, z: G.vrr(6, 20), vx: Math.cos(a) * 5, vy: Math.sin(a) * 5, life: G.vrr(0.8, 1.6), s0: 1, s1: 0.4, c: 'rgba(255,255,255,0.7)', k: 11 }); }
     G.FX && G.FX.ring(x, y, 0.5, 9, 1.2, 'rgba(230,245,255,0.8)', 2, true);
     G.Audio && G.Audio.play('magic');
     P.witness(x, y, 12, 5, 0);
@@ -500,7 +500,7 @@
         const a = G.R() * 6.28, d = Math.sqrt(G.R()) * st.r; const bx = st.x + Math.cos(a) * d, by = st.y + Math.sin(a) * d;
         if (W.inb(bx, by) && water(W.idx(bx, by))) { P.strike(bx, by, true); for (const s of [...S.ships]) if (G.dist(s.x, s.y, bx, by) < 1.4) hurtShip(s, 30, 'storm'); }
       }
-      if (G.FX) for (let q = 0; q < Math.ceil(dt * 20); q++) { const a = G.R() * 6.28, d = Math.sqrt(G.R()) * st.r; const px = st.x + Math.cos(a) * d, py = st.y + Math.sin(a) * d; if (W.inb(px, py) && water(W.idx(px, py))) G.FX.spawn({ x: px, y: py, h: SEA, z: 0, vz: G.rr(30, 80), vx: G.rr(-1, 1), vy: G.rr(-1, 1), g: 200, life: G.rr(0.5, 1), s0: 1.6, s1: 0.6, c: 'rgba(230,245,255,0.85)', k: 0 }); }
+      if (G.FX) for (let q = 0; q < Math.ceil(dt * 20); q++) { const a = G.VR() * 6.28, d = Math.sqrt(G.VR()) * st.r; const px = st.x + Math.cos(a) * d, py = st.y + Math.sin(a) * d; if (W.inb(px, py) && water(W.idx(px, py))) G.FX.spawn({ x: px, y: py, h: SEA, z: 0, vz: G.vrr(30, 80), vx: G.vrr(-1, 1), vy: G.vrr(-1, 1), g: 200, life: G.vrr(0.5, 1), s0: 1.6, s1: 0.6, c: 'rgba(230,245,255,0.85)', k: 0 }); }
     }
     for (const s of S.ships) if (s.stormT > 0) { s.stormT -= dt; s.wind = s.windT > 0 ? 1.8 * 0.5 : 0.5; if (s.stormT <= 0) s.wind = s.windT > 0 ? 1.8 : 1; }
   }
@@ -529,7 +529,7 @@
         const edge = 1 - Math.abs(s) / (wv.w + 1);
         if (water(i) || S.type[i] === T.RIVER) {
           for (const sh of [...S.ships]) if (G.dist(sh.x, sh.y, fx, fy) < 1.2) hurtShip(sh, 90 * edge, 'god');
-          if (G.FX && G.R() < 0.5) G.FX.spawn({ x: fx, y: fy, h: SEA, z: 2, vz: G.rr(40, 110), vx: wv.dx * 2, vy: wv.dy * 2, g: 220, life: G.rr(0.6, 1.2), s0: 2, s1: 1, c: 'rgba(235,248,255,0.9)', k: 0 });
+          if (G.FX && G.VR() < 0.5) G.FX.spawn({ x: fx, y: fy, h: SEA, z: 2, vz: G.vrr(40, 110), vx: wv.dx * 2, vy: wv.dy * 2, g: 220, life: G.vrr(0.6, 1.2), s0: 2, s1: 1, c: 'rgba(235,248,255,0.9)', k: 0 });
           continue;
         }
         if (inland > 6) continue;
@@ -540,7 +540,7 @@
         const tid = S.treeAt[i]; if (tid && G.R() < 0.6 * f) { const tr = S.trees.get(tid); if (tr && tr.stage === 'grow' && tr.size > 0.3) G.Nature.fellTree(tr, wv.dx + wv.dy > 0 ? 1 : -1); }
         const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid); if (bu) bu.berries = 0; }
         G.Nature.markDirty(i);
-        if (G.FX && G.R() < 0.7) G.FX.spawn({ x: fx, y: fy, z: 4, vz: G.rr(50, 130), vx: wv.dx * 3, vy: wv.dy * 3, g: 240, life: G.rr(0.6, 1.3), s0: 2.2, s1: 1, c: G.pick(['rgba(235,248,255,0.9)', 'rgba(170,215,235,0.85)']), k: 0 });
+        if (G.FX && G.VR() < 0.7) G.FX.spawn({ x: fx, y: fy, z: 4, vz: G.vrr(50, 130), vx: wv.dx * 3, vy: wv.dy * 3, g: 240, life: G.vrr(0.6, 1.3), s0: 2.2, s1: 1, c: G.vpick(['rgba(235,248,255,0.9)', 'rgba(170,215,235,0.85)']), k: 0 });
       }
       // people in the way are swept inland
       for (const v of [...S.villagers.values()]) {
@@ -562,7 +562,7 @@
         G.Lore && G.Lore.note('tsunami', { where: wv.where, killed: wv.killed, lost: wv.lost });
         continue;
       }
-      if (G.R() < dt * 3) G.Audio && G.Audio.at(wv.x + wv.dx * wv.d, wv.y + wv.dy * wv.d, 'splash');
+      if (G.VR() < dt * 3) G.Audio && G.Audio.at(wv.x + wv.dx * wv.d, wv.y + wv.dy * wv.d, 'splash');
     }
   }
 
@@ -571,7 +571,7 @@
     const S = G.S; const m = M();
     const name = G.mythName();
     m.krakens.push({ id: S.nextId++, x, y, name, st: 'rise', t: 0, life: 75, idle: 0, target: 0, eaten: 0, hp: 260, path: null, pi: 0, face: 1, repath: 0 });
-    for (let k = 0; k < 60; k++) G.FX && G.FX.spawn({ x: x + G.rr(-1, 1), y: y + G.rr(-1, 1), h: SEA, z: 0, vz: G.rr(40, 160), vx: G.rr(-1, 1), vy: G.rr(-1, 1), g: 260, life: G.rr(0.8, 1.6), s0: 2, s1: 1, c: G.pick(['rgba(220,240,255,0.9)', 'rgba(120,180,210,0.8)']), k: 0 });
+    for (let k = 0; k < 60; k++) G.FX && G.FX.spawn({ x: x + G.vrr(-1, 1), y: y + G.vrr(-1, 1), h: SEA, z: 0, vz: G.vrr(40, 160), vx: G.vrr(-1, 1), vy: G.vrr(-1, 1), g: 260, life: G.vrr(0.8, 1.6), s0: 2, s1: 1, c: G.vpick(['rgba(220,240,255,0.9)', 'rgba(120,180,210,0.8)']), k: 0 });
     G.FX && G.FX.ring(x, y, 0.3, 4, 1.4, 'rgba(120,80,160,0.85)', 3, true);
     G.Audio && G.Audio.play('boom'); G.Audio && G.Audio.at(x, y, 'howl', true, 0.6);
     G.Render && G.Render.shake(0.6);
@@ -607,7 +607,7 @@
         const s = S.ships.find(q => q.id === kr.target);
         if (!s) { kr.st = 'hunt'; kr.t = 0; continue; }
         s.x = kr.x + Math.cos(kr.t * 3) * 0.2; s.y = kr.y + 0.4; s.path = null;
-        if (G.R() < dt * 6) G.FX && G.FX.splash(s.x, s.y, 0.6);
+        if (G.VR() < dt * 6) G.FX && G.FX.splash(s.x, s.y, 0.6);
         if (kr.t > 2.6) { kr.eaten++; kr.st = 'hunt'; kr.t = 0; G.Naval.sink(s, null, 'god'); G.Render && G.Render.shake(0.3); }
         continue;
       }
@@ -625,7 +625,7 @@
         const p = kr.path[kr.pi]; const dx = p[0] - kr.x, dy = p[1] - kr.y; const d = Math.hypot(dx, dy); const sp = 2.4 * dt;
         if (d <= sp) { kr.x = p[0]; kr.y = p[1]; kr.pi++; } else { kr.x += dx / d * sp; kr.y += dy / d * sp; }
         if (Math.abs(dx - dy) > 0.02) G.faceTo(kr, dx, dy);
-        if (G.R() < dt * 4) G.FX && G.FX.wake(kr.x, kr.y);
+        if (G.VR() < dt * 4) G.FX && G.FX.wake(kr.x, kr.y);
       }
     }
   }
@@ -734,7 +734,7 @@
         if (f.tech && f.tech.cur) { f.tech.pts += G.Civ.techCost(f, f.tech.cur) * 0.25; }
         if (G.Civ.has(f.id, 'escrita')) omen.push(`os escribas de ${f.name} mapearam as estrelas`);
       }
-      if (cap && G.R() < 0.5) G.FX && G.FX.faithText && G.FX.faithText(cap.cx, cap.cy, 1);
+      if (cap && G.VR() < 0.5) G.FX && G.FX.faithText && G.FX.faithText(cap.cx, cap.cy, 1);
     }
     const TXT = { cometa: 'Um cometa cruzou o céu de ponta a ponta', eclipse: 'O sol escureceu ao meio-dia', aurora: 'Cortinas de luz dançaram no céu', estrelas: 'Choveram estrelas a noite inteira' };
     log(`${TXT[kind]}.${omen.length ? ' ' + G.cap(omen.slice(0, 3).join('; ')) + '.' : ''}`, 'eye');
@@ -811,7 +811,7 @@
     const p = P.byId('divwall');
     const w = G.Siege.raiseWalls(s, 'pedra', true);
     if (!w || !w.done) { S.faith = Math.min(999, S.faith + p.cost); G.UI && G.UI.notice('As muralhas não encontraram onde se erguer. A fé foi devolvida.', 'wall'); return; }
-    for (const i of w.tiles) if (G.R() < 0.4) G.FX && G.FX.dust((i % N) + 0.5, ((i / N) | 0) + 0.5, 2);
+    for (const i of w.tiles) if (G.VR() < 0.4) G.FX && G.FX.dust((i % N) + 0.5, ((i / N) | 0) + 0.5, 2);
     G.FX && G.FX.ring(s.cx, s.cy, 0.5, 10, 1.6, 'rgba(220,210,190,0.9)', 3, true);
     G.Render && G.Render.shake(0.7); G.Audio && G.Audio.play('quake');
     P.witness(s.cx, s.cy, 14, 9, 8);
@@ -856,7 +856,7 @@
     for (const s of S.ships) if (s.windT > 0) {
       s.windT -= dt;
       if (s.windT <= 0) { s.windT = 0; if (!(s.stormT > 0)) s.wind = 1; }
-      else if (s.moving && G.FX && G.R() < dt * 2) G.FX.spawn({ x: s.x, y: s.y, h: G.SEA, z: 14, vx: Math.cos(S.weather.windA) * 3, vy: Math.sin(S.weather.windA) * 3, life: 0.8, s0: 0.9, s1: 0.3, c: 'rgba(255,255,255,0.7)', k: 11 });
+      else if (s.moving && G.FX && G.VR() < dt * 2) G.FX.spawn({ x: s.x, y: s.y, h: G.SEA, z: 14, vx: Math.cos(S.weather.windA) * 3, vy: Math.sin(S.weather.windA) * 3, life: 0.8, s0: 0.9, s1: 0.3, c: 'rgba(255,255,255,0.7)', k: 11 });
     }
     for (const vo of m.volcanoes) updateVolcano(vo, dt);
     updateBombs(dt);

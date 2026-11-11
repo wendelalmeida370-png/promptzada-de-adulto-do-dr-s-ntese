@@ -205,7 +205,7 @@
     if (t.st === 0) { if (!H.goto(v, t.x + 0.5, t.y + 1.3, false, 4000)) return H.end(v); t.st = 1; t.walk = 0; return; }
     if (t.st === 1) { t.walk += dt; if (H.move(v, dt)) { t.st = 2; v.actT = 0; } else if (t.walk > 60) H.end(v); return; }
     G.faceTo(v, t.x + 0.5 - v.x, t.y + 0.5 - v.y); v.act = 'build';
-    if (G.R() < dt * 0.8) { G.FX && G.FX.dust(t.x + 0.5, t.y + 0.5, 1); G.Audio && G.Audio.at(t.x, t.y, 'hammer'); }
+    if (G.VR() < dt * 0.8) { G.FX && G.FX.dust(t.x + 0.5, t.y + 0.5, 1); G.Audio && G.Audio.at(t.x, t.y, 'hammer'); }
     if (v.actT < 10) return;
     const i = t.y * N + t.x;
     if (S.occ[i] || S.objAt[i] || S.treeAt[i] || S.road[i] || S.wall[i]) return H.end(v);

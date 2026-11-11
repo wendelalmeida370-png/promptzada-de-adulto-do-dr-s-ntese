@@ -184,7 +184,7 @@
           data: { kind: a.kind, morph: a.morph, bname: name, art: fem ? 'a' : 'o', apex: sp.apex ? 1 : 0, motive, at: w.at, town: set.name }, motifs: ['gatilho:raro', 'amb:ermos', 'rel:nenhuma'] }];
       },
     },
-    valid: sd => { const a = G.S.animals.get(sd.cast.beast); return !!(a && !a.dead); },
+    valid: sd => { const a = G.Animals.find(sd.cast.beast); return !!(a && !a.dead); }, // (asleep in a den it is still there, L-656)
     begin(s) { s.phase = 'visto'; St.beat(s, 'fr-visto', rc(s), { x: s.place.x, y: s.place.y }); },
     tick(s) {
       const p = P(s.protag); if (!p || p.dead) return;
@@ -192,7 +192,14 @@
       // otherwise — eaten, rotten, sunk, its last meat taken — the pelt is lost now, not at the turn of the year (L-655)
       if (s.data.killed) { if (G.S.day - s.data.killed >= 1 || !G.S.animals.has(beastId(s))) finishPelt(s, p, false); return; }
       const a = rareOf(s);
-      if (!a || a.dead) { if (!a) { if (!s.data.gone) s.data.gone = G.S.day; else if (G.S.day - s.data.gone >= 2) St.finish(s, 'esquecida', 'sereno', St.say(s, 'fr-sumiu', rc(s))); } return; }
+      if (!a || a.dead) {
+        if (a) return;
+        // under a cave's roof (asleep in the den, out of the storm) it is not gone: it comes out again. Nowhere at all (the cast
+        // let go of it when it left, St.left): the story waits its days without a sign (L-656)
+        if (s.cast.beast && G.Animals.find(s.cast.beast)) { s.data.gone = 0; return; }
+        if (!s.data.gone) s.data.gone = G.S.day; else if (G.S.day - s.data.gone >= 2) St.finish(s, 'esquecida', 'sereno', St.say(s, 'fr-sumiu', rc(s)));
+        return;
+      }
       const set = homeOf(p);
       if (set && G.dist(a.x, a.y, set.cx, set.cy) < 30) s.data.gone = 0;
       else { if (!s.data.gone) s.data.gone = G.S.day; else if (G.S.day - s.data.gone >= 3) { St.finish(s, 'esquecida', 'sereno', St.say(s, 'fr-sumiu', rc(s))); return; } }
@@ -202,7 +209,7 @@
       }
     },
     react(s, f) {
-      if (f.k === 'fera-morta' && f.beast === s.cast.beast) {
+      if (f.k === 'fera-morta' && s.cast.beast && f.beast === s.cast.beast) {
         const at = St.where(f.x, f.y).at;
         if (f.by === s.protag) { const p = P(s.protag); s.data.killed = G.S.day; s.phase = 'pele'; s.data.carc = s.cast.beast; delete s.cast.beast; St.beat(s, 'fr-abateu', Object.assign(rc(s), { at, HURT: p && p.hp < 70 }), { x: f.x, y: f.y, hot: 20, big: 1 }); return true; }
         const by = P(f.by);

@@ -364,5 +364,26 @@ for (const f of files) if (!LOOK.includes(f)) src[f].forEach((l, k) => { const c
 const RETREAT_OK = [['wars.js', "b.retreat = a.phase === 'retirada';"]];
 for (const f of files) if (f !== 'war.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (/\.retreat\s*=(?!=)/.test(c) && !ok(RETREAT_OK, f, l)) fails.push(`retirada: ${f}:${k + 1} escreve a marca de retirada de um bando fora da porta G.War.retreat (L-647): ${l.trim().slice(0, 110)}`); });
+// 48. "o efeito não tira do acaso do mundo" (L-652): num módulo do mundo, o que vai dentro de uma chamada de efeito (G.FX.*,
+// G.Audio.at, G.Audio.play) e o sorteio que só decide se o efeito sai («if (sorteio) <só efeitos>») vêm do acaso do que só se
+// vê (G.VR, vrr, vri, vpick, vchance). O sorteio que decide o mundo e também respinga (o bote da cobra, o peixe fisgado) fica:
+// ali o «if» faz mais do que o efeito. Sem isto, um caminho sem o G.FX faria outro mundo com a mesma semente
+const WRND = /\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\()/;
+const closeP = (s, i) => { let d = 0; for (let j = i; j < s.length; j++) { if (s[j] === '(') d++; else if (s[j] === ')' && --d === 0) return j; } return -1; };
+const EFF = /\s*(?:G\.(?:FX|Audio) && )?(?:G\.FX\.[A-Za-z]+ && )?G\.(?:FX\.[A-Za-z]+|Audio\.(?:at|play))\(/y;
+const effEnd = (s, i) => { EFF.lastIndex = i; if (!EFF.exec(s)) return -1; let e = closeP(s, EFF.lastIndex - 1); if (e < 0) return -1; e++; if (s[e] === ';') e++; return e; };
+for (const f of files) if (!LOOK.includes(f)) src[f].forEach((l, k) => { if (!l.includes('G.FX') && !l.includes('G.Audio')) return; const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  for (const m of c.matchAll(/G\.(?:FX\.[A-Za-z]+|Audio\.(?:at|play))\(/g)) { const a = m.index + m[0].length - 1, b = closeP(c, a);
+    if (b > a && WRND.test(c.slice(a, b + 1))) fails.push(`acaso do efeito: ${f}:${k + 1} o que vai dentro de uma chamada de efeito tira do acaso do mundo (use G.VR, vrr, vri, vpick — L-652): ${c.slice(m.index, m.index + 110)}`); }
+  for (const m of c.matchAll(/\bif \(/g)) { const a = m.index + m[0].length - 1, b = closeP(c, a); if (b < 0 || !WRND.test(c.slice(a, b + 1))) continue;
+    let j = b + 1, only = false; const blk = /\s*\{/y; blk.lastIndex = j;
+    if (blk.exec(c)) { j = blk.lastIndex; let n = 0; for (let e; (e = effEnd(c, j)) >= 0;) { j = e; n++; } const end = /\s*\}/y; end.lastIndex = j; if (n && end.exec(c)) { only = true; j = end.lastIndex; } }
+    else { const e = effEnd(c, j); if (e >= 0) { only = true; j = e; } }
+    if (only && !/^\s*else\b/.test(c.slice(j))) fails.push(`acaso do efeito: ${f}:${k + 1} um sorteio do mundo só decide se um efeito sai (use G.VR / G.vchance — L-652): ${c.slice(m.index, m.index + 110)}`); } });
+// 49. "um bicho sai do mundo por uma porta só" (L-656): quem tira um bicho de S.animals é o animals.js (a porta A.remove, que
+// avisa as histórias na hora quando o bicho estava vivo, e a limpeza dos corpos), o caves.js (quem dorme na toca ou se abriga
+// da chuva fica na lista da caverna — G.Caves.guest o acha) e o save.js (o load refaz a lista). Os outros chamam G.Animals.remove
+for (const f of files) if (!['animals.js', 'caves.js', 'save.js'].includes(f)) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\banimals\.delete\(/.test(c)) fails.push(`bicho fora da porta: ${f}:${k + 1} tira um bicho de S.animals sem passar por G.Animals.remove (L-656): ${l.trim().slice(0, 110)}`); });
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

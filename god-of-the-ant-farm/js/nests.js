@@ -153,7 +153,7 @@
       if (dd > 3) continue;
       if (dd > 0.5) { const f = Math.min(1, dt * 1.2 / dd); a.x += (t.x + 0.4 - a.x) * f; a.y += (t.y + 0.3 - a.y) * f; a.moving = true; G.faceTo(a, t.x - a.x, t.y - a.y); continue; }
       a.moving = false; a.state = 'idle'; a.t = Math.max(a.t || 0, 0.6); G.faceTo(a, t.x - a.x, t.y - a.y);
-      a.gnawT = (a.gnawT || 0) + dt; if (G.R() < dt * 3) G.FX && G.FX.chips(t.x, t.y, '#c9a26b');
+      a.gnawT = (a.gnawT || 0) + dt; if (G.VR() < dt * 3) G.FX && G.FX.chips(t.x, t.y, '#c9a26b');
       if (a.gnawT > 16) {
         a.gnawT = 0; a.gnawTree = 0; G.Nature.fellTree(t, a.face || 1);
         d.prog = Math.min(1, d.prog + 0.22); d.trees++;

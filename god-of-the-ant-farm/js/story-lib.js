@@ -1218,7 +1218,7 @@
 
   const beastOf = s => G.S.animals.get(s.cast.beast);
   // a beast that went to ground (asleep or sheltering in a cave) is not gone: it comes out again
-  const denOf = id => { if (!G.Caves) return null; for (const cv of G.Caves.all()) if ((cv.sleepers || []).some(a => a.id === id) || (cv.sheltered || []).some(a => a.id === id)) return cv; return null; };
+  const denOf = id => { const g = id && G.Caves && G.Caves.guest(id); return g ? g.cv : null; };
   const bctx = s => { const d = G.Animals.DEF[s.data.kind] || {}; return { B: s.data.beastName, BK: d.nameA || 'uma fera', oB: d.g === 'f' ? 'a' : 'o' }; };
   St.define('cacada', {
     name: 'Caçada', icon: 'wolves', tone: 'sombrio', tags: ['criatura', 'caçada'], struct: 'perda-perseguicao', seedLife: 4, maxDays: 60,
@@ -1253,7 +1253,7 @@
         out.sort((x, y) => y.score - x.score); return out.slice(0, 1);
       },
     },
-    valid: sd => { const a = G.S.animals.get(sd.cast.beast); return !!(a && !a.dead); },
+    valid: sd => { const a = G.Animals.find(sd.cast.beast); return !!(a && !a.dead); }, // (asleep in a den it is still there, L-656)
     begin(s) { const p = P(s.protag); s.phase = 'cacar'; St.beat(s, s.data.hunter ? 'cf-cacador' : 'cf-presa', Object.assign(bctx(s), { ROLE: p ? G.roleName(p).toLowerCase() : 'caçador' }), { x: s.place.x, y: s.place.y }); },
     tick(s) {
       const p = P(s.protag); if (!p || p.dead) return;
@@ -1261,7 +1261,8 @@
       if (!a) {
         const den = denOf(s.cast.beast);
         if (den) { s.data.gone = 0; if (s.data.den !== den.id) { s.data.den = den.id; s.data.denName = G.Caves.a ? G.Caves.a(den) : den.name; s.data.lx = den.mouths[0] ? den.mouths[0].x + 0.5 : s.data.lx; s.data.ly = den.mouths[0] ? den.mouths[0].y + 0.5 : s.data.ly; St.beat(s, 'cf-toca', Object.assign(bctx(s), { DEN: s.data.denName }), { x: s.data.lx, y: s.data.ly }); } return; }
-        // gone from the land: only after some days without a sign does the hunt fade
+        // gone from the land (the cast let go of it when it left, St.left — L-656): only after some days without a sign does
+        // the hunt fade
         if (!s.data.gone) s.data.gone = G.S.day;
         if (G.S.day - s.data.gone >= 3) St.finish(s, 'esquecida', 'sereno', St.say(s, 'cf-sumiu', bctx(s)));
         return;
@@ -1278,7 +1279,7 @@
     },
     react(s, f) {
       const b = bctx(s);
-      if (f.k === 'fera-morta' && f.beast === s.cast.beast) {
+      if (f.k === 'fera-morta' && s.cast.beast && f.beast === s.cast.beast) {
         const at = St.where(f.x, f.y).at;
         if (f.by === s.protag) {
           const p = P(s.protag); if (p) { p.courage = Math.min(1, (p.courage || 0.5) + 0.08); G.Life && G.Life.bio(p, 'note', `Matou ${s.data.beastName}, ${b.BK}`); }
@@ -1289,7 +1290,7 @@
         else St.finish(s, 'roubada', 'sereno', St.say(s, 'cf-morreu-so', b));
         return true;
       }
-      if (f.k === 'morte' && f.beast === s.cast.beast) {
+      if (f.k === 'morte' && s.cast.beast && f.beast === s.cast.beast) {
         const at = St.where(f.x, f.y).at;
         if (f.a === s.protag) {
           St.chapter(s, St.say(s, 'cf-morto', Object.assign(b, { at })), { x: f.x, y: f.y, big: 1, log: true, toast: true, k: 'cf-morto' });

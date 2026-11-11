@@ -295,7 +295,7 @@
         if (b.t > 100) Wr.disband(b);
         break;
     }
-    if (lead && b.st === 'marcha' && G.R() < dt * 0.3) G.FX && G.FX.dust(lead.x, lead.y, 1);
+    if (lead && b.st === 'marcha' && G.VR() < dt * 0.3) G.FX && G.FX.dust(lead.x, lead.y, 1);
   }
   Wr.finishMassacre = function (b, set, left) {
     const S = G.S; const f = G.Fac.get(b.fac), en = G.Fac.get(b.enemy);

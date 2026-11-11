@@ -176,7 +176,7 @@
     if (!s || !b || (s.st !== 'build' && !(s.st === 'idle' && s.hp < s.maxHp))) { v.act = ''; return H.end(v); }
     if (t.st === 0) { const k = 10 + (v.id % 4); const p = Fi.quaySpot(b, k); const r = walk(v, t, 'slip', p[0], p[1], dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
     v.act = 'build'; v.moving = false; G.faceTo(v, s.x - v.x, s.y - v.y);
-    if (G.R() < dt * 1.2) { G.FX && G.FX.chips && G.FX.chips(G.lerp(v.x, s.x, 0.6), G.lerp(v.y, s.y, 0.6), '#c8a070'); G.Audio && G.Audio.at(s.x, s.y, 'chop', false, 0.25); }
+    if (G.VR() < dt * 1.2) { G.FX && G.FX.chips && G.FX.chips(G.lerp(v.x, s.x, 0.6), G.lerp(v.y, s.y, 0.6), '#c8a070'); G.Audio && G.Audio.at(s.x, s.y, 'chop', false, 0.25); }
     if (s.st === 'build') s.work = (s.work || 0) + dt * G.clamp((v.fishXp || 0) / 40 + 0.8, 0.8, 1.4);
     else { s.hp = Math.min(s.maxHp, s.hp + dt * 2.2); s.sail = Math.min(100, (s.sail || 100) + dt * 3); if (s.hp >= s.maxHp) { s.mast = 1; s.flood = 0; } }
     if (t.age > 45) { v.act = ''; H.end(v); }
@@ -289,7 +289,7 @@
       }
       case 'out': if (Nv._move(s, dt)) { s.st = 'fish'; s.t = 0; s.dur = G.rr(18, 30); } break;
       case 'fish': {
-        if (G.R() < dt * 0.6) G.FX && G.FX.splash(s.x + G.rr(-0.5, 0.5), s.y + G.rr(-0.5, 0.5), 0.3);
+        if (G.VR() < dt * 0.6) G.FX && G.FX.splash(s.x + G.vrr(-0.5, 0.5), s.y + G.vrr(-0.5, 0.5), 0.3);
         if (s.t > s.dur || S.time > 0.64) {
           s.cargo = (s.cargo || 0) + catchOf(s, crew, b); s.catchKind = G.Waters ? G.Waters.fishAt(s.x, s.y, true) : null;
           if (Nv._sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; else Nv._remove(s);

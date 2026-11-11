@@ -105,7 +105,7 @@
   function hen(a, dt, sp, S) {
     a.scan -= dt; if (a.scan <= 0) { a.scan = 0.35; a.foe = 0; G.Animals.near(a.x, a.y, 1.4, o => { if (!a.foe && o.kind === 'cao' && o.moving) a.foe = o.id; }); }
     const dogN = a.foe && S.animals.get(a.foe);
-    if (dogN) { const dx = a.x - dogN.x, dy = a.y - dogN.y, d = Math.hypot(dx, dy) || 1; a.pose = ''; step(a, a.x + dx / d, a.y + dy / d, 2, dt); if (G.R() < dt * 2) G.Audio && G.Audio.at(a.x, a.y, 'cluck'); return; }
+    if (dogN) { const dx = a.x - dogN.x, dy = a.y - dogN.y, d = Math.hypot(dx, dy) || 1; a.pose = ''; step(a, a.x + dx / d, a.y + dy / d, 2, dt); if (G.VR() < dt * 2) G.Audio && G.Audio.at(a.x, a.y, 'cluck'); return; }
     const home = S.buildings.get(a.home);
     const [cx, cy] = home ? doorOf(home) : [a.hx, a.hy];
     if (G.isNight()) { if (G.dist(a.x, a.y, cx, cy) > 0.4) { a.pose = ''; step(a, cx, cy, 0.8, dt); } else { a.moving = false; a.pose = 'sleep'; } return; }
@@ -131,7 +131,7 @@
       if (!spook) { const cx = a.x >> 1, cy = a.y >> 1; for (let dy = -1; dy <= 1 && !spook; dy++) for (let dx = -1; dx <= 1 && !spook; dx++) { const l = vgrid.get(((cx + dx) << 12) | (cy + dy)); if (l) for (const v of l) { if (Math.abs(v.x - a.x) < 0.9 && Math.abs(v.y - a.y) < 0.9 && (v.moving || v.age < 12)) { spook = true; break; } } } }
       if (spook) { // the whole flock goes up together
         for (const o of S.animals.values()) if (o.kind === 'pombo' && o.home === a.home && !o.fly && G.dist2(o.x, o.y, a.x, a.y) < 9) { const ang = G.R() * TAU, r = G.rr(1.5, 3.5); let tx = c[0] + Math.cos(ang) * r, ty = c[1] + Math.sin(ang) * r; if (!W.walkableXY(tx, ty)) { tx = c[0]; ty = c[1]; } o.fly = true; o.tx = tx; o.ty = ty; o.z = Math.max(o.z, 0.6); }
-        if (G.R() < 0.5) G.Audio && G.Audio.at(a.x, a.y, 'flap');
+        if (G.VR() < 0.5) G.Audio && G.Audio.at(a.x, a.y, 'flap');
         return;
       }
     }
@@ -247,7 +247,7 @@
 
   // ------------------------------ saving ------------------------------
   (G.saveHooks = G.saveHooks || []).push({
-    save(out) { const l = []; for (const a of G.S.animals.values()) { const sp = G.Animals.DEF[a.kind]; if (sp && sp.town && !a.dead) l.push([a.id, a.dom, a.set, a.home, a.owner || 0, a.coat || 0, a.rooster ? 1 : 0]); } out.pets = l; },
+    save(out) { const l = []; for (const a of G.S.animals.values()) { const sp = G.Animals.DEF[a.kind]; if (sp && sp.town && (!a.dead || a.set)) l.push([a.id, a.dom, a.set, a.home, a.owner || 0, a.coat || 0, a.rooster ? 1 : 0]); } out.pets = l; }, // (the body too: the load took a dead cat for a stray and removed it, L-699)
     load(o) { for (const [id, dom, set, home, owner, coat, rooster] of o.pets || []) { const a = G.S.animals.get(id); if (!a) continue; Object.assign(a, { dom, set, home, owner, coat, rooster: !!rooster }); } for (const a of G.S.animals.values()) { const sp = G.Animals.DEF[a.kind]; if (sp && sp.town && !a.set) G.Animals.remove(a); } },
   });
 })(window.G);

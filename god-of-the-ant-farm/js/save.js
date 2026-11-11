@@ -63,6 +63,15 @@
       const o = JSON.parse(s); return { day: o.day, pop: o.villagers.length, era: o.era, when: o.savedAt }; // (a save from before the note)
     } catch (e) { return null; }
   };
+  // an animal as the save keeps it — one packer for the ones in the open and the ones under a cave's roof (the bear asleep in
+  // a den lost its rare coat, its wounds, its kills and its legend over a save, L-699). What a town already saw of a rare coat
+  // and the hide already taken go too: without them a load showed the beast to the town again and gave a second pelt
+  Sv.packAnimal = function (a) {
+    const o = { id: a.id, kind: a.kind, x: Sv.posR(a.x), y: Sv.posR(a.y), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false, morph: a.morph || null, seen: a.seen || 0, perch: a.perch || 0, dom: a.dom || 0, pen: a.pen || 0, wool: r(a.wool || 0, 2), milk: r(a.milk || 0, 2), eggs: r(a.eggs || 0, 2), shorn: r(a.shorn || 0, 0), tended: a.tended || 0 };
+    if (a.rareSeen) o.rareSeen = a.rareSeen;
+    if (a.skinned) { o.skinned = true; o.flay = 1; }
+    return o;
+  };
   Sv.serialize = function () {
     const S = G.S;
     const vill = [...S.villagers.values()].map(v => {
@@ -88,7 +97,7 @@
       buildings: [...S.buildings.values()].map(b => { const o = Object.assign({}, b); delete o.res; delete o._sg; /* (what a stall's picture shows: the drawing's) */ if (o.crops) o.crops = o.crops.map(c => ({ s: c.s, g: r(c.g, 3), c: 0 })); o.incoming = { wood: 0, stone: 0 }; return o; }),
       villagers: vill,
       dead: [...S.dead.values()],
-      animals: [...S.animals.values()].map(a => ({ id: a.id, kind: a.kind, x: Sv.posR(a.x), y: Sv.posR(a.y), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false, morph: a.morph || null, seen: a.seen || 0, perch: a.perch || 0, dom: a.dom || 0, pen: a.pen || 0, wool: r(a.wool || 0, 2), milk: r(a.milk || 0, 2), eggs: r(a.eggs || 0, 2), shorn: r(a.shorn || 0, 0), tended: a.tended || 0 })),
+      animals: [...S.animals.values()].map(Sv.packAnimal),
       settlements: [...S.settlements.values()],
       N: S.N || N, mapType: S.mapType, temper: S.temper || 'normal', genOpts: S.genOpts || null, divinePeace: S.divinePeace || 0,
       factions: [...S.factions.values()].map(f => { const o = Object.assign({}, f); o.rel = {}; for (const k in f.rel) if (+k > f.id) o.rel[k] = Object.assign({}, f.rel[k], { envoy: 0 }); o.targets = null; o.coup = null; o.rev = null; o.revolt = null; o.exec = null; return o; }), usedNames: S.usedNames || [], starts: S.starts,

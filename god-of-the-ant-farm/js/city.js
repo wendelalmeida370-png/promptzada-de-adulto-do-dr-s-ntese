@@ -546,7 +546,7 @@
     }
     if (t.st === 1) { t.walk += dt; if (H.move(v, dt)) { t.st = 2; v.actT = 0; } else if (t.walk > 70) { Ci.claims.delete(t.i); H.end(v); } return; }
     v.act = 'build'; G.faceTo(v, x - v.x, y - v.y);
-    if (v.actT > 0.5 && G.R() < 0.2) { G.Audio && G.Audio.at(x, y, 'hammer'); G.FX && G.FX.dust(x, y, 1); }
+    if (v.actT > 0.5 && G.VR() < 0.2) { G.Audio && G.Audio.at(x, y, 'hammer'); G.FX && G.FX.dust(x, y, 1); }
     const need = (t.lvl >= 3 ? 2.6 : t.lvl === 2 ? 2 : 1.3) / Math.max(0.5, v.work || 1);
     if (v.actT < need) return;
     const set = S.settlements.get(v.set); const fac = set && G.Fac.get(set.fac);

@@ -944,6 +944,9 @@
     if (t >= 0.71 || t <= 0.03) return { night: 1 };
     return null;
   };
+  // who is under a cave's roof is out of the world's list, not out of the world — the bear asleep in a den, the beast out of
+  // the storm (L-656): the one door to ask for it, the animal and the cave that holds it
+  C.guest = id => { for (const cv of C.all()) { const a = (cv.sleepers || []).find(x => x.id === id) || (cv.sheltered || []).find(x => x.id === id); if (a) return { a, cv }; } return null; };
   function bears() {
     const S = G.S; const t = S.time;
     const evening = t > 0.66 && t < 0.72, morning = t > 0.12 && t < 0.2;
@@ -1464,6 +1467,10 @@
     return r;
   };
   C.reset = function () { C.inside.clear(); C.actors.length = 0; lastDay = -1; };
+  // a guest under a cave's roof goes to the save whole, as the animals in the open do (L-699), with its spot inside; and comes
+  // back whole (a save of before kept the kind, the age and the name only: no rare coat appears on loading, as in save.js)
+  const guestOut = a => Object.assign(G.Save.packAnimal(a), { sx: a.sx, sy: a.sy });
+  const guestIn = (cv, a) => { if (!('morph' in a)) a.morph = null; const x = G.Animals.spawn(a.kind, a.sx || cv.cx, a.sy || cv.cy, a); G.S.animals.delete(x.id); x.id = a.id; x.sx = a.sx; x.sy = a.sy; x.shelter = 0; return x; };
   G.saveHooks = G.saveHooks || [];
   G.saveHooks.push({
     save(out) {
@@ -1471,7 +1478,7 @@
       const rl = a => { const o = []; let v = a[0], n = 0; for (let k = 0; k < a.length; k++) { if (a[k] === v) n++; else { o.push(v, n); v = a[k]; n = 1; } } o.push(v, n); return { e: o }; };
       out.ug = { k: rl(U.k), f: rl(U.f), ore: rl(U.ore), oreN: rl(U.oreN), id: rl(U.id), nextBeast: U.nextBeast, opt: G.S.cavesOpt,
         beasts: U.beasts.map(b => [b.id, b.kind, b.cave, +b.x.toFixed(2), +b.y.toFixed(2)]),
-        caves: U.caves.map(cv => Object.assign({}, cv, { sleepers: cv.sleepers.map(a => ({ id: a.id, kind: a.kind, age: a.age, grown: a.grown, named: a.named, sx: a.sx, sy: a.sy })), sheltered: (cv.sheltered || []).map(a => ({ id: a.id, kind: a.kind, age: a.age, grown: a.grown, sx: a.sx, sy: a.sy })), bandits: cv.bandits ? Object.assign({}, cv.bandits, { hunt: null }) : null, oracle: cv.oracle ? Object.assign({}, cv.oracle, { here: 0 }) : null })) };
+        caves: U.caves.map(cv => Object.assign({}, cv, { sleepers: cv.sleepers.map(guestOut), sheltered: (cv.sheltered || []).map(guestOut), bandits: cv.bandits ? Object.assign({}, cv.bandits, { hunt: null }) : null, oracle: cv.oracle ? Object.assign({}, cv.oracle, { here: 0 }) : null })) };
     },
     load(o) {
       const S = G.S; C.reset();
@@ -1481,8 +1488,8 @@
       U.beasts = (o.ug.beasts || []).map(a => ({ id: a[0], kind: a[1], cave: a[2], x: a[3], y: a[4], t: G.R() * 3, face: 1, tx: 0, ty: 0 }));
       const nid = S.nextId; // (spawn takes a fresh id before the saved one replaces it)
       U.caves = (o.ug.caves || []).map(cv => {
-        cv.sleepers = (cv.sleepers || []).map(a => { const x = G.Animals.spawn(a.kind, a.sx || cv.cx, a.sy || cv.cy, a); S.animals.delete(x.id); x.id = a.id; x.sx = a.sx; x.sy = a.sy; return x; });
-        cv.sheltered = (cv.sheltered || []).map(a => { const x = G.Animals.spawn(a.kind, a.sx || cv.cx, a.sy || cv.cy, a); S.animals.delete(x.id); x.id = a.id; x.sx = a.sx; x.sy = a.sy; x.shelter = 0; return x; }).filter(Boolean);
+        cv.sleepers = (cv.sleepers || []).map(a => guestIn(cv, a));
+        cv.sheltered = (cv.sheltered || []).map(a => guestIn(cv, a));
         return cv;
       });
       S.nextId = nid;

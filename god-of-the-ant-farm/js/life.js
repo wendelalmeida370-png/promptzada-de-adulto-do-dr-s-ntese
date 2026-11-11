@@ -307,7 +307,7 @@
     if (t.st === 2) { // draw the water
       if (v.carry && v.carry.n > 0 && v.carry.k !== 'water') { L.leaveQueue(v); return H.end(v); } // (the hands are full: no jar)
       v.act = 'fill';
-      if (G.R() < dt * 1.5) G.FX && G.FX.splash(v.x + 0.2, v.y - 0.2, 0.2);
+      if (G.VR() < dt * 1.5) G.FX && G.FX.splash(v.x + 0.2, v.y - 0.2, 0.2);
       if (v.actT < (v._q && L.queueLen(v._q) > 1 ? 1.1 : 1.8)) return;
       L.leaveQueue(v); v.carry = { k: 'water', n: 1, jar: 1 }; v.act = '';
       if (!G.Vg.gotoB(v, h)) { L.jarHome(v, null); return H.end(v); }
