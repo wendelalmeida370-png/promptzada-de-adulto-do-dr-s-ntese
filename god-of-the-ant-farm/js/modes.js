@@ -300,6 +300,8 @@
     if (a === 'deus') { M3.leave('deus'); return; }
     if (a === 'ficha') { if (panel === 'self') { G.IncUI.closeAll(); panel = null; } else { G.IncUI.selfCard(); } return; }
     if (a === 'diario') { if (panel === 'diario') { G.IncUI.closeAll(); panel = null; } else { G.IncUI.diary(); } return; }
+    // (the screen put away, and back: the place has to say what it is by itself — D-173)
+    if (a === 'tela') { G.IncUI.setHud(G.IncUI.hudOff()); return; }
     if (a === 'sentar') { G.Avatar.sit(); return; }
     // (a wave of the hand: those standing near turn to it and wave back — the hello of the people, only seen)
     // (a dance: whoever is free and merry near the body joins in — the world's people, stopping a while to dance with it)

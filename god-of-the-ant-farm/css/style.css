@@ -1207,6 +1207,9 @@ canvas#game3d { touch-action: none; transition: none; }
 #inc-hud.drowning::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(10,40,80,0) 35%, rgba(6,24,60,.82) 100%); animation: drownPulse 1.1s ease-in-out infinite; }
 @keyframes drownPulse { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
 #inc-hud.asleep::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(8,8,20,.45), rgba(4,4,12,.85)); }
+/* (the screen put away, D-173: only the world — what stays is the words people say, the world's answers to the hands, the word for waking, the fingers' buttons) */
+#inc-root.hud-off .ih-who, #inc-root.hud-off .ih-clock, #inc-root.hud-off .ih-compass, #inc-root.hud-off .ih-news, #inc-root.hud-off .ih-calls, #inc-root.hud-off .ih-lead, #inc-root.hud-off .ih-mark,
+#inc-root.hud-off .ih-prompt, #inc-root.hud-off .ih-reticle, #inc-root.hud-off .ih-hint, #inc-root.hud-off .ih-corner, #inc-root.hud-off #inc-label { display: none !important; }
 .ih-touch button { pointer-events: auto; position: absolute; width: 58px; height: 58px; border-radius: 50%; border: 1px solid rgba(240, 198, 110, .4); background: rgba(13, 11, 16, .58); color: var(--ih-gold-2); font-weight: 900; font-size: 12px; text-shadow: var(--ih-ts); }
 .ih-touch button[data-k="pular"] { right: 24px; bottom: 120px; } .ih-touch button[data-k="correr"] { right: 92px; bottom: 70px; }
 .ih-touch button[data-k="interagir"] { right: 96px; bottom: 150px; } .ih-touch button[data-k="menu"] { right: 24px; top: 120px; width: 44px; height: 44px; }

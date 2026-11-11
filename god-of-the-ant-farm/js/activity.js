@@ -775,6 +775,8 @@
     const c = act.can ? act.can(v, H0.offer, H0.b) : { ok: true }; if (!c.ok) { if (act.abort) act.abort(v, H0.offer, H0.b, c.why); return c; }
     const r = act.run(v, H0.offer, H0.b) || { ok: true };
     if (r.ok && G.Possess && G.Possess.is(v) && act.deed) G.Possess.deed(act.deed, r.n || 1);
+    // (an act done with someone face to face — a sale, a cup served —: the body and the other have met, Possess.knows)
+    if (r.ok && G.Possess && G.Possess.is(v) && G.Possess.dealt) G.Possess.dealt(H0.offer);
     return r;
   };
   A.abort = function (h, why) { const H0 = hands.get(h); if (!H0) return; hands.delete(h); const v = G.S.villagers.get(H0.v); const def = A.DEFS[H0.offer.def]; const act = def && def.acts[H0.offer.act]; if (v && act && act.abort) act.abort(v, H0.offer, H0.b, why); };

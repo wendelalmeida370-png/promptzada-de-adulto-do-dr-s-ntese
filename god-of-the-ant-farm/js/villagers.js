@@ -52,6 +52,9 @@
     'diary', '_hungerT',
     // (the day of a thing done once a day: the bath, the drill, the show, the reading, the speech at the plaza — P2)
     'bathDay', 'trainDay', 'showDay', 'readDay', 'speakDay',
+    // (what the person lived in the god's hands: whom they met face to face, the quarters their feet were in — only possess.js
+    // writes it, G.Possess.knows reads it: D-170)
+    'ken',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
