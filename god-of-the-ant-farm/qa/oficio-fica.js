@@ -42,6 +42,10 @@ const V = G.Village; const DAY = G.DAY_LEN;
 const TMIN = V.TRADE_MIN === undefined ? 3 : V.TRADE_MIN;
 // the ceilings (changes for the need that lasted, per grown hand, per day): the measure of before in each line
 const TETO = 0.12, ANTES = { metropole: 0.69, mega: 0.42 };
+// (a world from nothing is of towns of ten to forty grown hands, and of villages in their founding day, dealt by the instant:
+// it changed trades less than a metropolis before — 0.22 a grown hand a day, every change counted, by the meter of the
+// block — and changes about half of that now; its ceiling is three quarters of what it was. T-954)
+const TETO_ZERO = 0.16, ANTES_ZERO = 0.22;
 // (what the houses show of their people's trades — G.Atmos.about, D-163 —: the changes a day before, by this proof's own count
 // run on the game of before; the ceiling is six tenths of it, a war in the middle of the days counted)
 const VOLTA = { metropole: 156, mega: 75 }, SHOWN = ['lenhador', 'pescador', 'cacador', 'guerreiro', 'arqueiro', 'tecelao', 'agricultor', 'coletor', 'vinhateiro'];
@@ -113,12 +117,12 @@ if (on('x3')) {
   for (let y = 0; y < 20; y++) { M.saltar(1); store(); } const l0 = LOG.length; const d0 = G.S.day; let adultDays = 0;
   for (let y = 0; y < 10; y++) { M.saltar(1); store(); adultDays += adults().length; }
   const L = LOG.slice(l0); const n = L.filter(e => e.why === 'falta').length; const r = n / Math.max(1, adultDays); const bad = twice(L);
-  ok('x3 do zero: as trocas no salto', r <= TETO && !bad, `semente 103, os anos 20 a 30 no salto (dia ${d0} a ${G.S.day}): ${n} trocas pela necessidade em ${adultDays} adultos-dia = ${r.toFixed(3)} por adulto por dia (o teto: ${TETO}); todas: ${whys(L)}${bad ? ` · a pessoa #${bad.id} trocou duas vezes às pressas` : ''}`);
+  ok('x3 do zero: as trocas no salto', r <= TETO_ZERO && !bad, `semente 103, os anos 20 a 30 no salto (dia ${d0} a ${G.S.day}): ${n} trocas pela necessidade em ${adultDays} adultos-dia = ${r.toFixed(3)} por adulto por dia (o teto: ${TETO_ZERO}; antes ${ANTES_ZERO}, todas as trocas); todas: ${whys(L)}${bad ? ` · a pessoa #${bad.id} trocou duas vezes às pressas` : ''}`);
   ok('x3 do zero: o armazém nunca esvaziou, o povo cresceu', low >= 1.5 && fome <= 5 && G.S.villagers.size >= p0 * 2, `em 30 anos: a comida por pessoa mais baixa de um povo, olhada a cada ano, ${low.toFixed(2)} (o piso: 1,5 — um dia de comer são 2,5); ${fome} mortos de fome (gente longe de casa: o teto 5); ${p0} pessoas → ${G.S.villagers.size} em ${G.S.settlements.size} cidades`);
   const T = watch(); T.live(DAY); const L2 = T.log(); const R = rate(L2, 1); const un = T.unsaid();
   // (one day of a world of fifty to eighty grown hands is a handful of changes — six or seven by the mean of the ten years
   // before, and the chance of a day carries it past the ceiling one time in ten: twice the ceiling here, T-954)
-  ok('x3 do zero: um dia no passo', R.r <= TETO * 2 && !un.length && !twice(L2), `${R.n} trocas pela necessidade entre ${R.A} adultos = ${R.r.toFixed(3)} por adulto por dia (um dia só de um mundo pequeno: o teto aqui é ${(TETO * 2).toFixed(2)}); todas: ${whys(L2)}; sem causa dita: ${un.length}`);
+  ok('x3 do zero: um dia no passo', R.r <= 0.24 && !un.length && !twice(L2), `${R.n} trocas pela necessidade entre ${R.A} adultos = ${R.r.toFixed(3)} por adulto por dia (um dia só de um mundo pequeno: o teto aqui é 0.24); todas: ${whys(L2)}; sem causa dita: ${un.length}`);
   V.kill = kill0; const q = inv(); ok('x3 o verificador e os erros', !q.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + clean());
 }
 
