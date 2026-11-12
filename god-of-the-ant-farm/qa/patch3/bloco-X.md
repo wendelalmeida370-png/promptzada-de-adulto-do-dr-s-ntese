@@ -141,19 +141,25 @@ de guerra 529 → 558 (+5 %; desvio 11, a média +3 a 0,8 desvio), mortos de fom
 adultos dos povos em guerra, guerreiros 20,8 % antes, 21,7 % na `v6`, **20,6 % na `v7`**; em paz 2,9 %, 3,5 %, **3,3 %**;
 mortos de guerra por povo-ano em guerra 2,46, 3,64, **2,34**.
 
-**RODANDO AGORA: a economia `v8`** (só o conserto (1), sem a leva: uma cópia com a sabotagem s35, `eco2/v8-dir.txt`;
-`lote-r.sh <cópia> v8`, pode ser lançada de novo): se a `v8` der o mesmo que a `v7`, a leva não é precisa e sai.
+**A economia `v8`, lida** (só o conserto (1), a leva só dos bravos): gente 1536 (−7 %), mortos de guerra 635 (+20 %), 2,79
+por povo-ano de guerra; quatro dos dez mundos idênticos aos da `v7` (num mundo de vilas a guerra tira de ofícios de uma ou
+duas mãos, e não há o que escolher: na metrópole, de 18 chamados de Argos só 4 saíram de ofícios com mais de duas mãos). A
+diferença para a `v7` (+8 mortos de guerra por mundo, desvio 17: 1,4 desvio) não se separa do acaso, mas as três medidas com
+«só os bravos» (`v5` +14 %, `v8` +20 %, e a `v3` de antes +9 %) ficaram acima de antes e a da leva de sempre não (+5 %):
+**a leva ficou** — é o peso de antes (o sorteio trocado pela sorte de cada um), a mudança menor. **Commit `9ab1a24`**: os
+dois consertos, o x15, o x5 com o caso montado da leva e o povo cansado pela conta da própria guerra (T-957: a mão da prova
+em `f.weariness` era desfeita a cada passo pelo `wars.js`; o caso passava por outra causa), e o medidor `qa/oficio-eco.js`.
+
+**RODANDO AGORA: a última fila** (`fila-g.sh <jogo> scratchpad/ag/X/fila8`, pode ser lançada de novo — pula o que tem a
+saída inteira): a prova inteira (`fila8/prova.txt`), as outras provas (`fila8/provas/resumo.txt`), as 36 sabotagens
+(`fila8/sab/resumo.txt`), os mundos prontos em dez dias e as trocas do zero com a regra final, e por último o vida-bairro.
 **Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar** (o `qa/oficio-fica.js` pode: o `eco.js` não o lê).
 
 **Falta (nesta ordem):**
-1. ler a `v7`: a gente, os mortos de guerra por povo-ano em guerra e os guerreiros em paz têm de voltar para perto de antes;
-   se voltarem, medir só o conserto (1) (`v8`: a variante sem a leva — `sab-X.py` s35 numa cópia) para saber se a leva é
-   precisa; commit;
-2. as sabotagens todas com a regra final (`sab-X.py` tem 36: as cinco de padrão velho foram acertadas, e há quatro novas —
-   s34 sem a volta pelo instante → x15, s35 a leva só dos bravos, s36 a memória não acompanha → x15, s37 sem a margem da
-   emergência; conferidas a seco com `sab-seco.sh`), e a prova inteira uma última vez (`node qa/oficio-fica.js`);
-   as outras provas de novo com a regra final (ao menos guard, vida curta e de 20 anos, det3, salto-igual, load-oficio,
-   marinheiros, fome, motim na metrópole, atividades, fundadores, porto, degraus sem o g8, oldsave);
+1. ler a última fila: o que falhar de novo nas outras provas, olhar (as oito de antes: a conta da borboleta acima); uma
+   sabotagem não acusada → a prova ganha a conferência ou a condição sai do jogo (a s37, a margem da emergência, não tem
+   caso próprio: se não for acusada, dizer);
+2. (feito: a `v7`, a `v8`, o commit dos consertos)
 3. fechar este bloco: as seções 4 a 10 estão em `scratchpad/ag/X/bloco-final-4a10.md` (cópia em
    `qa/patch3/bloco-X-fim-rascunho.md`) — faltam os números finais (ANTES_ZERO = 0,22; DEPOIS_RESUMO; ECO_RESUMO; ECO_GUERRA;
    ECO_FOME; PRONTO_RESUMO; X4_X5_RESUMO; ZERO_SALTO; TETO_ZERO_TXT; T840_DEPOIS; OUTRAS_PROVAS_NOTA = a conta das sete
