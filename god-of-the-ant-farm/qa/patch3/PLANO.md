@@ -422,10 +422,30 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   juntada passam as 33 provas vizinhas (entre elas `oficio-fica` 64/0, `marinheiros` 21/0, `vida-bairro` 11/0 com o
   verificador limpo, `urb2`, `det3`, `oldsave`, `corrupt` 135 casos). Aberto do X: T-956 e T-958 não se repetem na árvore
   juntada (a vigiar na regressão); duas guardas sem caso próprio.
-- **Em curso (três frentes):** **a praça ao fim da tarde, o foguista no posto e o bairro dos banhos** (F, segunda
-  rodada; T-918, D-202); **a família grande demais para a casa** (H, segunda rodada, entregue: D-235 a D-238 — em
-  validação na árvore de integração); e **a terra guardada cedo, o fogo nos monumentos e a última pedra** (M, terceira
-  rodada, entregue: D-219, D-230 a D-233 — em validação na árvore de integração).
+- **Quem deixa a sede, a família antes do solteiro, os moços** (agente H, segunda rodada; D-235 a D-238, L-973 a L-975,
+  regras 83 e 84): o bolso de quem tem teto vai ao pote da casa pelo livro (a família que saía da sede ficava com as moedas
+  no bolso do chefe para sempre: 53 moedas e oito dias sem poupar para uma casa de 19); o par de quem pode morar na sede
+  já não entra e sai dela a cada poucos segundos (128 → 7 linhas de saída na crônica em vinte anos); a casa vazia do povo
+  que uma família espera é dela, não do solteiro; a família sem teto tem as duas estradas no mesmo dia; os crescidos sem par
+  de uma casa acima da lotação levantam juntos a sua cabana. **O limite, medido:** a casa acima da lotação de uma família
+  só é a de pais e pequenos, onde não há quem saia — a regra dos moços não muda esse número (T-981, aberto). 47 sabotagens
+  acusadas nas duas rodadas.
+- **Monumentos que duram, a terra guardada cedo, a última pedra** (agente M, terceira rodada; D-219, D-230 a D-233,
+  L-786, L-787, regras 81 e 82; fecha o T-771 e entrega a D-160): o degrau maior de obra pública pronto, de pedra, é ferido
+  pelo fogo e pelo motim e não cai sozinho; a obra em curso perde a madeira e fica; a capital que é cidade guarda um campo
+  cívico de 6 casas, os degraus de 8 e 10 procuram até o anel de vinte, e nenhuma cidade nova nasce a menos de 20 casas de
+  uma capital que guarda campo; a última carga de pedra da obra grande com a vez é dela. 33 sabotagens acusadas.
+- **As duas juntadas numa árvore de integração** (sobre o ofício que fica): sem conflito; regras 81 a 84 no `guard.js`
+  (as seis violações plantadas numa cópia são acusadas), `casa-cheia2-inv` e `terra-guardada-inv` no `qa.js` (25
+  arquivos), `terra-guardada` e `fogo-pedra` na regressão. **Na árvore juntada passam as 36 provas vizinhas**; as sete
+  que acusaram eram limites de prova, cada um com rastro e registro: T-833 e T-834 (`fogo-pedra`: os moradores apagam fogo
+  com baldes; a madeira que volta antes do save), T-835 (`casa-cheia` c18j: o par de um dos moços), T-836 (`casa-mercante`
+  k5, e o caso novo k10), T-837 (`fundadores` f5: a pena renovada um dia tarde), T-839 (`atmosfera` a3: a noite da festa),
+  T-846 (`oficio-fica` x5: a turma da obra grande antes da guerra). **A medida das dez sementes na árvore juntada**
+  (T-838): aos 90 anos 3774 pessoas (a 3ª rodada do M sozinha: 3732; antes das obras: 3875), 36 degraus grandes de pé de 39
+  fundados, nenhum caído (antes: 15 de pé, 10 caídos). D-199: o que os dois agentes deixaram para o líder decidir.
+- **Em curso (uma frente):** **a praça ao fim da tarde, o foguista no posto e o bairro dos banhos** (F, segunda rodada;
+  T-918, D-202).
 - **O diário do patch para o dono** (`qa/patch3/diario/`, publicado como artefato): o que entrou, o que está em obras e o
   que cada coisa muda no jogo, com capturas de verdade do Modo Encarnado (`qa/visual/fotos-diario.js`); atualizado a
   cada frente juntada.
