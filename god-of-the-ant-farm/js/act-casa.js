@@ -35,7 +35,7 @@
   K.OWE_DAYS = 5;   // days of rent owed before the owner gives the house up to the people
   K.KEEP = 2;       // the little a family keeps for itself when it pays for a roof
   K.HANDS_DAYS = 2; // days a family too many for its beds saves without reaching the price before it raises a hut with its hands
-  K.MAX_HANDS = 2;  // huts of families' own hands going up in a town at a time
+  K.MAX_HANDS = 1;  // huts of families' own hands going up in a town at a time (a site of the town's while it stands: the planner counts it)
 
   // ------------------------------ who owns a house ------------------------------
   // b.dono: the owner's id; 0 = the people's. A house of an older world (or one the planner filled) gets its owner the day

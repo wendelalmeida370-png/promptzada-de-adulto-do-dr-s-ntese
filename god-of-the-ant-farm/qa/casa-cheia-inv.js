@@ -13,6 +13,8 @@
 (function () {
   if (!window.QA || !QA.more) return;
   const aberta = { s: null, day: -1, m: new Map() }; // (the houses seen with the road open, by id: the day first seen)
+  // (what a save must give back: the works of families' own hands, and since when each house saves — the patience counts from it)
+  if (QA.canonMore) QA.canonMore.push(['casa-cheia', () => (G.S ? [...G.S.buildings.values()].filter(b => (b.encomenda && b.encomenda.maos) || b.poupa).sort((a, b) => a.id - b.id).map(b => [b.id, b.encomenda && b.encomenda.maos ? 1 : 0, b.poupa ? b.poupa.d + ':' + (b.poupa.chao || 0) : '']) : null)]);
   QA.more.push(function (add, s) {
     const K = G.Casa, V = G.Village, D = G.Depot; if (!K || !K.road || !V || !D) return;
     const P = id => (id && s.villagers.get(id)) || null; const fin = Number.isFinite;

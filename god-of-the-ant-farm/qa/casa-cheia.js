@@ -439,11 +439,13 @@ run('c14', () => {
   const a = arma({ maos: true }); if (!ok('c14a a casa cheia', !!a, diz(a))) return;
   const { set, v, h } = a; semVazias(v, set); calaFila(set, v); poe('h:' + h.id, 1); madeira(set, 40); sim(() => K.day(set)); h.poupa.d -= K.HANDS_DAYS;
   M.viver(1);
-  const antes = JSON.stringify(QA.canon()); const rng = JSON.stringify(S.rng); const nos = JSON.stringify(set._noSite || {}); let n = 0;
+  // (the world's canon, and every mark of the houses whole: who owns, who waits, who rents, who saves and since when, the cost)
+  const casas = () => JSON.stringify([...S.buildings.values()].map(b => [b.id, b.dono || 0, b.encomenda || 0, b.aluga || 0, b.poupa || 0, b.custo || 0, b.res || 0]));
+  const antes = JSON.stringify(QA.canon()) + casas(); const rng = JSON.stringify(S.rng); const nos = JSON.stringify(set._noSite || {}); let n = 0;
   for (const o of S.villagers.values()) if (o.set === set.id && o.age >= 16) { A.diary(o); K.road(o); K.can(o); n++; }
   let fichas = 0; for (const b of S.buildings.values()) if (b.set === set.id && b.built && housing(b)) { const t = E.buildingHTML(b, id => String(id), s => String(s)); if (/Casa cheia/.test(t)) fichas++; }
   const d = V.nearestDropoff(v.x, v.y, v.set); const ft = V.frontTile(d); A.offers(v, ft[0], ft[1], 2.5);
-  const depois = JSON.stringify(QA.canon());
+  const depois = JSON.stringify(QA.canon()) + casas();
   ok('c14b o diário, a estrada, a oferta e a ficha não mudam o mundo', antes === depois && rng === JSON.stringify(S.rng) && nos === JSON.stringify(set._noSite || {}) && fichas >= 1, `${n} diários, estradas e ofertas e ${fichas} ficha(s) de casa cheia lidos em ${set.name}: o mundo ${antes === depois ? 'igual' : 'MUDOU'}; o acaso do mundo ${rng === JSON.stringify(S.rng) ? 'igual' : 'MUDOU'}; a busca de lotes do dia ${nos === JSON.stringify(set._noSite || {}) ? 'igual' : 'MUDOU'}`);
 });
 
