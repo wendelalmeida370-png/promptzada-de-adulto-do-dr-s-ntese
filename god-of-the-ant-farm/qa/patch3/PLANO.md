@@ -379,7 +379,8 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   pronto há casas com o dobro ou o triplo da lotação (a pior: 22 numa casa de 6, ao lado de uma casa com cinco lugares
   vagos), e a razão de quase todas as famílias é «falta dinheiro» — o casal na casa cheia dos parentes nunca junta o preço
   de uma casa. É regra de economia e de moradia, com decisão de design: fica para uma frente própria.
-- **Em curso (três frentes):** **a casa cheia que não esvazia** (H; L-718: a família que não cabe e não pode pagar
+- **Em curso (quatro frentes):** **a praça ao fim da tarde, o foguista no posto e o bairro dos banhos** (F, segunda
+  rodada; T-918, D-202); **a casa cheia que não esvazia** (H; L-718: a família que não cabe e não pode pagar
   levanta a própria cabana; a casa vazia do povo antes da obra); **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a obra
   grande que anda e acha terra** (M, segunda rodada; T-760, T-761, T-767: o canteiro da obra longe, a terra das capitais
   velhas, o olhar do planejador para as provas). A medir de novo com o M: os dois mundos do zero de 90 anos da `degraus`
@@ -389,5 +390,5 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   cada frente juntada.
 - **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
   novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** juntar as frentes X, M2 e H; depois a praça ao fim da tarde, o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
+- **A seguir:** juntar as frentes X, M2, H e F2; depois o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
   seis sementes da terra, o relatório).
