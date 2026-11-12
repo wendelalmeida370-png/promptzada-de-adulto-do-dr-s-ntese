@@ -16,11 +16,12 @@ aplainar), `longe-mega-*.txt`, `tempo-metropole-teatro6.txt`.
 |---|---|---|
 | T-767: a porta `V.planNow` e os dois casos que faltavam | FEITO | `b70b0b0` |
 | T-760: a carroça da obra grande (D-215), a prova `qa/canteiro.js` | FEITO | `7840218` |
-| T-761: aplainar o lote (a D-120 (3)) — D-217 | EM CURSO (no `village.js`, sem commit; faltam os casos de prova e as vizinhas `escala` e7/e8/e9 e `degraus` g3f, que falham com a mudança — ver a seção 4) | — |
-| «o degrau do tamanho da pedra do povo»: a renda média e os 15 anos — D-216 | EM CURSO (no `village.js`, sem commit; falta a prova) | — |
-| as medidas de depois (o g8, as três sementes de 60 anos, a obra longe, a terra) | A FAZER (a terra dos mundos prontos e a obra longe já medidas: seções 2 e 3) | — |
-| as sabotagens da carroça, do aplainar e da renda média | A FAZER | — |
-| as provas vizinhas no fim (`urb1`, `moedas`, `muros`, `lote-bolsao`, `det3`, a vida de 20 anos) | A FAZER | — |
+| T-761: aplainar o lote (a D-120 (3)) — D-217, a prova `qa/aterro.js` t1–t5 | FEITO | `77cf5d9` |
+| «o degrau do tamanho da pedra do povo»: a renda média e os 15 anos — D-216, `qa/aterro.js` m1–m3 | FEITO | `77cf5d9` |
+| L-783: a pedra que a obra grande guarda escapava para as casas novas das cidades-irmãs; a carroça para toda obra a mais de 6 casas, com 20 de pedra deixados no armazém | FEITO | `77cf5d9` |
+| as medidas de depois (o g8, as três sementes de 60 anos, a terra nos mundos do zero) | A FAZER (a terra dos mundos prontos e a obra longe já medidas: seções 2 e 3) | — |
+| as sabotagens da carroça, do aplainar, da renda média e da L-783 | A FAZER | — |
+| as provas vizinhas no fim (`casa-rica`, `juntar`, `obra`, `calcada`, `urb1`, `moedas`, `muros`, `lote-bolsao`, a `escala` inteira, `det3`, a vida de 20 anos) | A FAZER (já rodadas com o código do `77cf5d9`: `aterro` ok, `canteiro` ok, `degraus` g1 a g7 ok, `escala` e0, e7 a e10, e15, e16, e21 sem falha, o guard, a vida curta) | — |
 
 ## 1. O g8 na árvore juntada, antes de mexer (o que cada capital tentou, fundou, acabou)
 
@@ -118,27 +119,41 @@ maior degrau que pagam para o menor; os mundos prontos da geração 19):
 | os campos das cidades-irmãs | nada |
 | a maravilha de 10 na metrópole (Roma, Hedeby, Argos, Mênfis) | **nenhuma regra abre**: 68 a 86% de água, 50 a 87% de prédio de outra cidade, e o relevo dos poucos lotes secos passa de 13,5 m. Só a reserva cedo (D-121) — que com o aplainar passa a poder guardar um lote que se aplaina |
 
-## 4. O que está EM CURSO na árvore (sem commit) — para quem retomar
+## 4. O que foi feito no `77cf5d9` (o aplainar, a renda média, a pedra que escapava)
 
-No `js/village.js`:
-1. **O aplainar (D-217)**: `earth(x, y, n, apply)` / `V.earthOf` / `V.podiumFits` / `V.levelLot`, `V.LEVEL = 3`, `V.EARTH = 2`. Os
-   juízes de lote (`search` para os lotes com pódio, `lotFor`, `resFits`, o `landWhy`) aceitam o lote que o pódio cobre **ou** que
-   se aplaina; a ampliação no lugar (`lotFor` com `own`) continua só com o pódio; `V.startProject` aplaina antes de fundar
-   (`b.terra`, a linha na crônica) e `V.workOf` soma a terra movida (`b.terra × V.EARTH`). A regra: os cantos do lote são
-   trazidos para uma faixa da altura do pódio, a meio entre o mais baixo e o mais alto; os cantos a uma e a duas casas seguem
-   por dois terços e um terço; um canto da margem que toca água, muro, estrada, boca de caverna ou prédio que não é campo fica
-   onde está, e um canto da beira do lote que toca um desses barra o lote; nenhum canto mexe mais de 3 níveis; o anel fica sem
-   penhasco e nenhuma casa da margem vira um. Os códigos do `V.earthOf`: 0 o pódio cobre; > 0 a terra a mover; -1 relevo demais;
-   -2 água ou caverna; -3 muro, estrada ou prédio; -4 um canto mexe demais; -5 penhasco.
-2. **A renda média (D-216)**: `V.stoneMean(fid)` (a média lenta dos anos, guardada ao lado da conta do ano: `f.pedra[3]` o dia,
-   `f.pedra[4]` a média; um quinto de cada ano que passa); `V.affords` passa a perguntar o estoque mais **15** anos (`V.YEARS`, era
-   20) da **menor** entre a renda do último ano (`V.stoneIncome`) e a média.
-3. **O que falha com isto e ainda não olhei**: `escala` e7b e e9b (o santuário da prova no meio de um lote de 4: o `V.grow`
-   ergueu de novo «temple#27028 4×4 em 76,38» em vez de ampliar no lugar — provavelmente o outro templo da cidade acha agora
-   um lote aplainável antes de o da prova crescer; ver a ordem no `V.grow` e o `roomFor`), `escala` e8b (o palácio que cresce no
-   lugar: `growLot` deu nada — o `lotFor` com `own` ficou mais estrito? conferir a linha do `own`), `degraus` g3f («a pedra que
-   entrou na obra pelo livro: 0; a conta diz 189» — a carroça entrega com o código «obra-carroca» e a prova só soma o código
-   «obra»: ajustar a prova para somar o que entra no canteiro por qualquer mão).
+1. **O aplainar (D-217)**, no `js/village.js`: `earth(x, y, n, apply, plan)` / `V.earthOf` / `V.earthPlan` / `V.podiumFits` /
+   `V.levelLot`, `V.LEVEL = 3`, `V.EARTH = 2`, `V.LEVEL_LAST`. A regra: os cantos do lote são trazidos para uma faixa da altura do
+   pódio (menos um centésimo: as alturas vão ao save com dois decimais), a meio entre o mais baixo e o mais alto; os cantos a uma
+   e a duas casas seguem por dois terços e um terço; um canto da margem que toca água, boca de caverna, muro, estrada (de
+   calçada para cima) ou prédio que não é campo fica onde está, e um canto da beira do lote que toca um desses barra o lote;
+   nenhum canto mexe mais de 3 níveis (4,5 m); o anel fica sem penhasco e nenhuma casa seca da margem vira um. Os códigos do
+   `V.earthOf`: 0 o pódio cobre; > 0 a terra a mover (a soma dos níveis de todos os cantos); -1 relevo demais (mais que o pódio e
+   duas vezes `V.LEVEL`: 13,5 m); -2 água, caverna ou beira do mapa; -3 muro, estrada ou prédio; -4 um canto mexe demais; -5
+   penhasco. **O plano primeiro**: `V.findSite` pergunta os lotes que o pódio cobre em todos os anéis (o raio, + 6, + 12) e só
+   então, com a marca `levelOK`, os que se aplainam, na mesma ordem; `V.openSite` põe um lote que se aplaina atrás de todos os
+   planos (`V.LEVEL_LAST`); o campo guardado (`resLot`) fica com o plano mais perto e, sem nenhum, com o aplainável mais perto.
+   A ampliação no lugar (`lotFor` com `own`) continua só com o pódio: um prédio de pé não tem o chão mexido debaixo dele.
+   `V.startProject` aplaina antes de fundar um degrau maior de obra pública (`b.terra`, a linha na crônica: «Mênfis aplainou o
+   chão para o Palácio Colossal: o lote tinha 7,2 m de relevo.») e avisa o mapa (`S.typeVer++`, `W.invalidateLand()`,
+   `W.touchWalk()`, `G.Relief.fixArea`, as pessoas no lugar postas no chão novo); `V.workOf` soma a terra (`b.terra × V.EARTH`).
+2. **A renda média (D-216)**: `V.stoneMean(fid)` — a média lenta dos anos, guardada ao lado da conta do ano (`f.pedra[3]` o dia
+   até onde a média foi levada, `f.pedra[4]` a média; um quinto de cada ano que passa, `V.MEAN`; os anos sem pedra contam; uma
+   conta sem média, a de um save de antes ou a posta à mão por uma prova, começa no último ano inteiro). `V.affords` pergunta o
+   estoque mais **15** anos (`V.YEARS`, eram 20) da **menor** entre a renda do último ano (`V.stoneIncome`) e a média.
+3. **L-783, a pedra que escapava**: o armazém é do povo inteiro (L-714), e a pedra que a obra grande guarda saía para (a) as casas
+   novas das cidades-irmãs — o planejador escolhia o tipo de casa (`Ci.homeType`: sobrado com 22 de pedra, ínsula com 40) pelo
+   estoque inteiro: agora pelo estoque menos o que as obras grandes do povo guardam (`V.stoneKept`), no `plan()`; e (b) quem
+   chegava primeiro ao armazém — a obra grande a 8 casas de um armazém esperava as mãos da turma enquanto as obras pequenas das
+   irmãs, ao lado do armazém delas, levavam: a carroça serve toda obra grande com a vez a mais de **6** casas do armazém mais
+   perto (`Ci.WORK_FAR`, era 12) e deixa **20** de pedra no armazém (`Ci.WORK_FLOOR`), para o poço e a oficina de quem mora ali.
+   Medido no `degraus` g4e (Roma da metrópole, o teatro de 24 m, 150 de pedra dados ao povo): em dois anos a obra recebia 8 a 9
+   (o resto: sobrados de Lavínio, Óstia, Cápua e Tíbur, um ourives, uma forja, um poço); agora **85**.
+4. **As provas vizinhas que mudaram com isto** (no mesmo commit): `degraus` g3 ouve o livro desde a fundação (com a carroça o
+   teatro da prova fica pronto no primeiro ano), g4 acaba as obras do povo inteiro antes de medir, g5 pergunta o degrau com o
+   chão como o planejador o acha (sem os outros templos da cidade um lote que se aplaina guarda o templo de 24 m em vez do de
+   16) e confere o trabalho com a terra movida. A `escala` e7b/e8b/e9b falhava com a primeira forma do aplainar (um lote
+   aplainável perto ganhava de um plano mais longe, e um templo era erguido de novo em vez de ampliado): por isso «o plano
+   primeiro»; hoje `ONLY=e0,e7,e8,e9,e10,e15,e16,e21 node escala.js` não acusa nada.
 
 ## 5. O que mediu o `tempo.js` (quanto leva um teatro de 24 m, a capital alimentada, a pedra por conta dela; já com a carroça)
 
