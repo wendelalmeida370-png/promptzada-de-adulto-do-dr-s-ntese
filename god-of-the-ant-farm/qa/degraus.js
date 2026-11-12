@@ -152,6 +152,27 @@ run('g1', () => {
   const c = checa(); ok('g1f verificador', c.ok, c.txt);
 });
 
+// ------------------------------ g1p: o olhar do planejador (T-767) ------------------------------
+// (no house that stands is bettered while the great work waits for stone — the planner's own look, V.planNow, asked again and
+// again with nothing else in its way: a hut to rebuild in stone, a workshop, stone and timber in the store, every other work of
+// the town finished by the proof's hand before each look. A year lived in Rome of the metropole bettered no house with the
+// rule or without it — the town's works took every look —, and the rule had no proof)
+run('g1p', () => {
+  abre(); const r = capitalCom('teatro', 6); if (!ok('g1p a obra grande', !!r && grande(r.b) && !r.b.built, r ? `${r.set.name} (${V.pop(r.set.id)} pessoas): ${lado(r.b)}` : 'nenhuma capital com lote de 6 nem obra grande em curso')) return;
+  const { set, b } = r; const f = G.Fac.get(set.fac); semPedra(set); const vez = comVez(set);
+  const hut = [...S.buildings.values()].some(q => q.set === set.id && q.type === 'hut' && q.built) || !!sim(() => V.handFound(set, 'hut', 1, { built: true, R: 40 }));
+  const melhorias = () => [...S.buildings.values()].filter(q => q.set === set.id && q.upgradeFrom && !q.built).length;
+  const arma = () => sim(() => { for (const q of [...S.buildings.values()]) if (q.set === set.id && !q.built && q.type !== 'ruin' && q.id !== b.id && !q.upgradeFrom) V.completeBuilding(q); for (const m of ['stone', 'wood']) if ((f.stock[m] || 0) < 40) D.make('f:' + f.id, m, 40 - (f.stock[m] || 0), { code: 'teste' }); });
+  const olha = (n, para) => { let k = 0; for (; k < n; k++) { arma(); alimenta(set); sim(() => V.planNow(set)); if (para && para()) break; } return k; };
+  const m0 = melhorias(); olha(20); const com = melhorias() - m0, guarda = V.keeps(set);
+  // (all the work waits for, by the god's hand — its brick too: a bill short of brick takes stone in its place, swapBill)
+  for (let k = 0; k < 4; k++) sim(() => { for (const m in b.need) { const n = b.need[m] || 0; if (n > 0) { D.make('f:' + f.id, m, n, { code: 'teste' }); D.move('f:' + f.id, 'o:' + b.id, m, n, { code: 'teste' }); } } });
+  const livre = V.keeps(set) === 0; const m1 = melhorias(); const olhares = olha(20, () => melhorias() > m1) + 1; const sem = melhorias() - m1;
+  ok('g1p2 nenhuma casa melhorada enquanto a obra grande espera pedra', vez && hut && guarda > 0 && com === 0 && livre && sem >= 1,
+    `${set.name}, a vez ${set.vez}, uma cabana por refazer, 40 de pedra e de madeira no armazém, nenhuma outra obra no caminho: em 20 olhares do planejador com a obra esperando ${guarda.toFixed(0)} de pedra, casas postas em melhoria: ${com}; dado à obra o que ela esperava (guarda ${livre ? 0 : 'AINDA ' + V.keeps(set)}): ${sem} em ${olhares} olhar(es)`);
+  const c = checa(); ok('g1p3 verificador', c.ok, c.txt);
+});
+
 // ------------------------------ g2: os braços ------------------------------
 run('g2', () => {
   const r = capitalGrande('teatro', 6); if (!ok('g2a a obra grande', !!r, r ? `${r.mundo}, ${r.set.name} (${V.pop(r.set.id)} pessoas): ${lado(r.b)}, a ${r.longe} casas de um armazém` : 'nenhuma capital com lote de 6')) return;
@@ -364,8 +385,18 @@ run('g5m', () => {
   const sabe = s => !!st13 && Es.can('maravilha', G.Civ.idOfFac(s.fac) || 'classico', 13);
   // (the first ready world with a capital where the colossal one would find land with the wonder standing: there only the
   // rule holds it back; with none, the first capital with a lot for the wonder — no land for a second one anyway)
-  busca: for (const wd of MUNDOS) { abre(wd); for (const s of capitais()) { if (!sabe(s)) continue; const b = poe(s); if (!b) continue; if (lote13(s)) { set = s; w = b; lote = true; mundo = wd; break busca; } sim(() => V.removeBuilding(b)); } }
-  if (!set) { abre(); for (const s of capitais()) { if (!sabe(s)) continue; const b = poe(s); if (b) { set = s; w = b; break; } } }
+  // (the free dry ground of 13 × 13 tiles nearest a town — no building, wall, highway nor water on it: the land the proof hands
+  // the planner where the rules find none; its relief and its streets are the rules' matter, not the proof's)
+  const chao13 = s => { const N = G.N; let best = null;
+    for (let y = 3; y + 13 <= N - 3; y++) for (let x = 3; x + 13 <= N - 3; x++) {
+      const d = G.dist(x + 6.5, y + 6.5, s.cx, s.cy); if (d > 70 || (best && d >= best[2])) continue; let livre = true;
+      for (let ty = y; ty < y + 13 && livre; ty++) for (let tx = x; tx < x + 13; tx++) { const i = ty * N + tx; if (S.type[i] < G.T.SAND || S.type[i] === G.T.RIVER || S.occ[i] || S.wall[i] || S.road[i] >= 3) { livre = false; break; } }
+      if (livre) best = [x, y, d];
+    }
+    return best; };
+  let chao = null;
+  busca: for (const wd of MUNDOS) { abre(wd); for (const s of capitais()) { if (!sabe(s)) continue; const b = poe(s); if (!b) continue; if (lote13(s)) { set = s; w = b; lote = true; mundo = wd; break busca; } if (!chao && chao13(s)) chao = [wd, s.id]; sim(() => V.removeBuilding(b)); } }
+  if (!set) { abre(chao ? chao[0] : undefined); if (chao) mundo = chao[0]; for (const s of capitais()) { if (!sabe(s) || (chao && s.id !== chao[1])) continue; const b = poe(s); if (b) { set = s; w = b; break; } } }
   if (!ok('g5m a maravilha de pé', !!set, set ? `${mundo}, ${set.name}: ${lado(w)}; lote para uma colossal de 13 casas: ${lote ? 'há' : 'em nenhum mundo pronto (sem terra, nada a provar da regra)'}` : 'nenhuma capital com lote de 10 e povo que saiba a colossal')) return;
   const fac = G.Fac.get(set.fac);
   colosso(set, () => {
@@ -375,7 +406,16 @@ run('g5m', () => {
     // wonder's turn comes, with no room round it — and it is never raised anew)
     for (let k = 0; k < 12; k++) { set._noSite = {}; const r = sim(() => V.grow(set, fac, V.counts(set.id))); if (!r) break; feitas.push(lado(r)); if (r.type === 'maravilha') break; sim(() => V.completeBuilding(r)); civicas(set); }
     const depois = conta();
-    ok('g5n nunca outra maravilha', quer.n === 13 && depois === antes && feitas.length < 12, `${set.name} justificaria ${quer.id}/${quer.n}; sem espaço em volta da de 10, V.grow até não ter o que crescer: ${feitas.join('; ') || 'nada'}; maravilhas no mundo: ${antes} → ${depois}`);
+    // (and with land for the colossal one: a free dry lot of 13 handed to the planner in its search's place — no ready world has
+    // one beside a wonder that stands, T-767 —, the wonder's turn the only one left: the rule alone holds it back)
+    const dado = chao13(set);
+    if (!dado) console.log(`  (g5n2: nenhum chão seco e livre de 13 × 13 casas até 70 de uma capital, em nenhum mundo pronto: sem caso)`);
+    else {
+      const fs0 = V.findSite; V.findSite = function (s, t, reach, n) { return s === set && t === 'maravilha' && n === 13 ? [dado[0], dado[1]] : fs0.apply(this, arguments); };
+      let r2 = null; try { set._noSite = {}; r2 = sim(() => V.grow(set, fac, V.counts(set.id))); } finally { V.findSite = fs0; }
+      ok('g5n2 nunca outra maravilha, com terra para ela', quer.n === 13 && conta() === antes && (!r2 || r2.type !== 'maravilha'), `um chão livre de 13 × 13 em ${dado[0]},${dado[1]}, a ${Math.round(dado[2])} casas do meio, dado à busca do planejador: V.grow ${r2 ? lado(r2) : 'nada'}; maravilhas no mundo: ${antes} → ${conta()}`);
+    }
+    ok('g5n nunca outra maravilha', quer.n === 13 && depois === antes && feitas.length < 12,`${set.name} justificaria ${quer.id}/${quer.n}; sem espaço em volta da de 10, V.grow até não ter o que crescer: ${feitas.join('; ') || 'nada'}; maravilhas no mundo: ${antes} → ${depois}`);
   });
 });
 run('g5v', () => {

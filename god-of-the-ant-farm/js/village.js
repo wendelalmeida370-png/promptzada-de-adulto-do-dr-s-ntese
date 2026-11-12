@@ -1426,6 +1426,9 @@
     // what it wished for found no room (or no materials): a full town grows upwards instead
     if (!improved) improve();
   }
+  // (the planner's look at a town, now — the proofs' and the developer's: the same look the village's clock gives it, with the
+  // world's own dice. Nothing of the world calls it: a rule read in the planner had no proof that could ask for one look, T-767)
+  V.planNow = set => { if (set && G.S.settlements.get(set.id) === set) plan(set); };
 
   // ------------------------------ jobs ------------------------------
   const BASE_ROLES = ['lenhador', 'coletor', 'agricultor', 'construtor', 'mineiro', 'cacador', 'sacerdote', 'guerreiro'];
