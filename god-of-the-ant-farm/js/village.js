@@ -85,14 +85,19 @@
     const to = work && D.exists('o:' + work.id) && D.room('o:' + work.id, 'wood') >= 1 ? 'o:' + work.id : 'f:' + fid;
     const r = D.make(to, 'wood', 1, { code: 'clareira', part: true }); if (r.ok && G.S.stats) G.S.stats.woodProduced += r.n;
   }
+  // (what a building stands — its type's, and for a step bigger than the type's own, by its lot: the bill and the work of a
+  // step were its own, D-106, and its strength the classic step's — a theatre of 24 m had the 320 of one of 12, and a fire,
+  // which takes the same from a building of any size, took it in the same minute. Mênfis of a world from scratch lost its
+  // theatre to a fire 27 years after raising it, and its palace 17: L-784)
+  V.hpOf = function (type, n) { const def = G.BDEF[type]; const n0 = G.Escala.n0(type); return Math.round(def.hp * Math.max(1, (n * n) / (n0 * n0))); };
   // step: the step of the type's ladder it is raised at (G.Escala, D-106) — its lot (n × n tiles) and its bill; absent, the
   // classic step, the size of the type's table
   V.addBuilding = function (type, x, y, setId, built, step) {
-    const S = G.S; const def = G.BDEF[type]; const st = step || G.Escala.classic(type); const bill = G.Escala.bill(type, st);
+    const S = G.S; const def = G.BDEF[type]; const st = step || G.Escala.classic(type); const bill = G.Escala.bill(type, st); const hp = V.hpOf(type, st.n);
     const b = {
       id: S.nextId++, type, x, y, w: st.n, h: st.n, built: !!built, progress: built ? 1 : 0,
       need: Object.assign({ wood: 0, stone: 0 }, built ? {} : bill.cost), incoming: Object.fromEntries(Object.keys(Object.assign({ wood: 0, stone: 0 }, bill.cost)).map(k => [k, 0])),
-      hp: def.hp, maxHp: def.hp, set: setId, blocks: def.blocks, v: Math.floor(G.R() * 3), born: S.day, burnHp: 0,
+      hp, maxHp: hp, set: setId, blocks: def.blocks, v: Math.floor(G.R() * 3), born: S.day, burnHp: 0,
       style: G.Civ.idOfFac(V.facOfSet(setId)) || null, // architecture of the people who built it
       esc: st.id, // (its step of the ladder: the lot's size, the bill — written here only, D-106)
       ip: null, // (the record of its plan: what its builders knew and where they built, and the facts of its life — interiors.js)
@@ -1147,6 +1152,7 @@
     if (pos.demolish) renew(set, b.type, pos.demolish, pos.moves);
     b.amp = { de: n0, esc: s0.id, x: b.x, y: b.y, d: S.day };
     b.x = pos[0]; b.y = pos[1]; b.w = b.h = n; b.esc = step.id; // (its step and its lot: written here only, D-106)
+    { const m = V.hpOf(b.type, n); b.hp = Math.max(1, b.hp + m - b.maxHp); b.maxHp = m; } // (and its strength, what it had lost kept lost: L-784)
     let logs = 0; const grown = new Set();
     for (let ty = b.y; ty < b.y + n; ty++) for (let tx = b.x; tx < b.x + n; tx++) {
       const i = ty * N + tx; if (S.occ[i] === b.id) continue;
@@ -1184,6 +1190,7 @@
     V.siteBack(b, 'obra-largada');
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }
     const n = b.w; b.x = a.x; b.y = a.y; b.w = b.h = a.de; b.esc = a.esc;
+    { const m = V.hpOf(b.type, b.w); b.hp = Math.max(1, b.hp - (b.maxHp - m)); b.maxHp = m; } // (its strength again what it was, less what it had lost: L-784)
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) S.occ[ty * N + tx] = b.id;
     W.touchWalk();
     b.built = true; b.progress = 1; b.need = { wood: 0, stone: 0 }; b.incoming = { wood: 0, stone: 0 }; b.brick = null; b.troca = null; b.unreach = 0; b.amp = null;
