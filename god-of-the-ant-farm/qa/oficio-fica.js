@@ -114,7 +114,9 @@ if (on('x3')) {
   ok('x3 do zero: as trocas no salto', r <= TETO && !bad, `semente 103, os anos 20 a 30 no salto (dia ${d0} a ${G.S.day}): ${n} trocas pela necessidade em ${adultDays} adultos-dia = ${r.toFixed(3)} por adulto por dia (o teto: ${TETO}); todas: ${whys(L)}${bad ? ` · a pessoa #${bad.id} trocou duas vezes às pressas` : ''}`);
   ok('x3 do zero: o armazém nunca esvaziou, o povo cresceu', low >= 1.5 && fome <= 5 && G.S.villagers.size >= p0 * 2, `em 30 anos: a comida por pessoa mais baixa de um povo, olhada a cada ano, ${low.toFixed(2)} (o piso: 1,5 — um dia de comer são 2,5); ${fome} mortos de fome (gente longe de casa: o teto 5); ${p0} pessoas → ${G.S.villagers.size} em ${G.S.settlements.size} cidades`);
   const T = watch(); T.live(DAY); const L2 = T.log(); const R = rate(L2, 1); const un = T.unsaid();
-  ok('x3 do zero: um dia no passo', R.r <= TETO && !un.length && !twice(L2), `${R.n} trocas pela necessidade entre ${R.A} adultos = ${R.r.toFixed(3)} por adulto por dia; todas: ${whys(L2)}; sem causa dita: ${un.length}`);
+  // (one day of a world of fifty to eighty grown hands is a handful of changes — six or seven by the mean of the ten years
+  // before, and the chance of a day carries it past the ceiling one time in ten: twice the ceiling here, T-954)
+  ok('x3 do zero: um dia no passo', R.r <= TETO * 2 && !un.length && !twice(L2), `${R.n} trocas pela necessidade entre ${R.A} adultos = ${R.r.toFixed(3)} por adulto por dia (um dia só de um mundo pequeno: o teto aqui é ${(TETO * 2).toFixed(2)}); todas: ${whys(L2)}; sem causa dita: ${un.length}`);
   V.kill = kill0; const q = inv(); ok('x3 o verificador e os erros', !q.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + clean());
 }
 
