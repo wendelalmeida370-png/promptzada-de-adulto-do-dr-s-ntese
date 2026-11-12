@@ -194,8 +194,16 @@ próprio**, como a s37 (a margem de duas mãos: na metrópole, 0 chamados de nov
 com a margem e sem ela). Tirá-las muda a regra medida (a economia e todas as provas foram medidas com elas): para o líder,
 num momento em que os dez mundos possam ser medidos de novo.
 
-**RODANDO AGORA:** as sabotagens de novo com a prova apertada (`fila8/sab/resumo.txt`; a s34 e a s36 já rodadas e
-acusadas pelo x15), os mundos prontos em dez dias e as trocas do zero com a regra final, e por último o vida-bairro.
+**E o x6 também** (a s32, «o posto vazio espera como qualquer necessidade», não era acusada: sem a regra, 3 dos 4 postos
+eram tomados no mesmo oitavo de dia — havia por acaso um ofício com meia mão de sobra pela memória): a prova agora põe a
+memória das cidades do caso em repouso pela mão dela (lembra de cada ofício as mãos que ele tem) — com a regra 4 de 4 postos
+tomados em um oitavo de dia, com a s32 0 de 4 (acusada).
+
+**As sabotagens já rodadas com a prova apertada** (`fila8/sab/resumo.txt`): acusadas s34, s36 (x15), s35, s29, s30 (x5), s28
+(x4), s31 (x14), s1 (x2 e x11), s8 (x4 e x15); não acusadas s33 e s37 (ditas acima).
+
+**RODANDO AGORA:** as outras 25 sabotagens, os mundos prontos em dez dias e as trocas do zero com a regra final, e por
+último o vida-bairro.
 **Depois:** a prova inteira uma última vez (a de 60 linhas é de antes do aperto do x5/x15: `node qa/oficio-fica.js`),
 guard + vida curta, commit da prova, e fechar o bloco (`python3 scratchpad/ag/X/monta.py`).
 **Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar** (o `qa/oficio-fica.js` pode: o `eco.js` não o lê).
