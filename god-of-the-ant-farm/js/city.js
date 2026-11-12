@@ -609,7 +609,7 @@
       r.ok = !!rel && !!PEACE[rel.st] && a.fac !== b.fac;
       if (a.fac === b.fac) r.dead = true;
     }
-    if (S.routes.some(r => r.dead)) { S.routes = S.routes.filter(r => !r.dead); S.carts = S.carts.filter(c => { const keep = S.routes.some(r => r.id === c.route); if (!keep) unload(c); return keep; }); }
+    if (S.routes.some(r => r.dead)) { S.routes = S.routes.filter(r => !r.dead); S.carts = S.carts.filter(c => { const keep = !!c.obra || S.routes.some(r => r.id === c.route); if (!keep) unload(c); return keep; }); } // (a great work's cart has no road of its own: D-215)
     // new routes: at most one path search per round
     for (const f of G.Fac.all()) {
       if (!has(f, 'roda')) continue;
@@ -706,8 +706,66 @@
     if (c.ret && c.ret.n > 0) D.store(ref, fa.id, c.ret.k, c.ret.n, { code: 'carroca' });
     return true;
   }
+  // ------------------------------ the cart of the great work (T-760, D-215) ------------------------------
+  // a great work with its turn that stands far from every store of its town is fed by cart: an ox-cart of a people that knows
+  // the wheel takes what the work waits for — its stone, its timber, its brick — from the store nearest the work, WORK_LOAD at
+  // a time, to the work's own site (the depot 'o:' of the work, what came to it and is not built in yet: L-246), in the
+  // ledger at both ends, and the builders lay it there. Carried four at a time by its builders, a work 35 tiles from the
+  // store got a load a day each: a theatre of 24 m, the store full, a fifth of its stone in three years, against all of it
+  // 14 tiles off. Two carts on the way at most; a cart whose work stands, falls, is let go or changes people on its way
+  // takes its load home to its people's store (unload). Its clock and the day it found no way are the town's, in the save
+  Ci.WORK_FAR = 12; Ci.WORK_LOAD = 20; Ci.WORK_CARTS = 2; Ci.WORK_EVERY = 20;
+  const cartWork = c => { const b = G.S.buildings.get(c.obra); return b && !b.built && b.type !== 'ruin' && b.need && G.Village.facOfSet(b.set) === c.fac ? b : null; };
+  // (what the carts have on their way to a work, of a material: it counts as coming for who would fetch it — the builders, the
+  // next cart —, read off the carts themselves: the work's own count, b.incoming, is its builders' loads alone)
+  Ci.carted = function (b, k) { let n = 0; for (const c of G.S.carts || []) if (c.obra === b.id && !c.back && c.goods && c.goods.k === k) n += c.goods.n || 0; return n; };
+  Ci.workCart = function (set) {
+    const S = G.S; const b = set.vez && set.gw ? S.buildings.get(set.gw) : null; if (!b || b.built || b.set !== set.id || set.cartNo === S.day) return null;
+    const f = G.Fac.get(set.fac); if (!f || !has(f, 'roda')) return null;
+    let n = 0; for (const c of S.carts) if (c.obra === b.id) n++; if (n >= Ci.WORK_CARTS) return null;
+    const [fx, fy] = G.Village.frontTile(b); let d = null, bd = 1e9;
+    for (const o of G.Village.dropoffs(set.id)) { const [ox, oy] = G.Village.frontTile(o); const q = G.dist(ox, oy, fx, fy); if (q < bd) { bd = q; d = o; } }
+    if (!d || bd <= Ci.WORK_FAR) return null;
+    const coming = m => (b.incoming[m] || 0) + Ci.carted(b, m);
+    const mk = Object.keys(b.need).find(m => b.need[m] - coming(m) >= 1 && G.Fac.free(b.set, m) >= 1); if (!mk) return null;
+    const load = Math.min(Ci.WORK_LOAD, Math.ceil(b.need[mk] - coming(mk)), Math.floor(G.Fac.free(b.set, mk)));
+    const [sx, sy] = G.Village.frontTile(d); const p = W.findPath(sx, sy, fx, fy, true, N * N);
+    if (!p || !p.length) { set.cartNo = S.day; return null; }
+    const pts = [[sx, sy]].concat(p).map(q => [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]);
+    const c = { id: S.nextId++, obra: b.id, pts, fwd: true, k: 1, x: pts[0][0], y: pts[0][1], fac: f.id, home: set.id, dest: set.id, goods: null, back: false, face: 1, civ: f.civ || null, t: 0 };
+    S.carts.push(c);
+    const r = G.Depot.move('f:' + f.id, 'c:' + c.id, mk, load, { code: 'carroca-obra', part: true });
+    if (!r.ok || !(r.n > 0)) { S.carts.splice(S.carts.indexOf(c), 1); return null; }
+    return c;
+  };
+  // (a step of a work's cart → true when it is done: home again, or its work no more its people's to feed)
+  function workCartStep(c, dt) {
+    const S = G.S; const D = G.Depot; const ref = 'c:' + c.id; const b = cartWork(c);
+    if (!c.back && !b) { unload(c); return true; }
+    c.t += dt; const pts = c.pts; const dir = c.back ? -1 : 1;
+    if (c.k < 0 || c.k >= pts.length) {
+      if (c.back) { unload(c); return true; }
+      // (at the work: what it still waits for into its site; what it no longer needs goes home on the cart)
+      const L = c.goods;
+      if (L && L.n > 1e-6) { const used = Math.min(L.n, Math.max(0, b.need[L.k] || 0)); if (used > 0) D.move(ref, 'o:' + b.id, L.k, used, { code: 'obra-carroca' }); }
+      c.ret = c.goods && c.goods.n > 1e-6 ? c.goods : null; c.goods = null; c.back = true; c.k = pts.length - 2; return false;
+    }
+    const p = pts[c.k]; const i = W.idx(c.x, c.y);
+    const sp = 1.25 * (S.road[i] >= 3 ? 1.6 : S.road[i] ? 1.35 : S.type[i] === T.RIVER ? 0.5 : 1) * dt;
+    const dx = p[0] - c.x, dy = p[1] - c.y; const d = Math.hypot(dx, dy);
+    if (d <= sp) { c.x = p[0]; c.y = p[1]; c.k += dir; } else { c.x += dx / d * sp; c.y += dy / d * sp; }
+    if (Math.abs(dx - dy) > 0.02) G.faceTo(c, dx, dy);
+    c.dx = dx / (d || 1); c.dy = dy / (d || 1);
+    if (c.t > 400) { unload(c); return true; }
+    return false;
+  }
   function updateCarts(dt) {
     const S = G.S;
+    for (const set of S.settlements.values()) {
+      if (!set.vez || !set.gw) continue;
+      set.cartT = (set.cartT || 0) - dt; if (set.cartT > 0) continue;
+      set.cartT = Ci.WORK_EVERY; Ci.workCart(set);
+    }
     for (const r of S.routes) {
       if (!r.ok) continue;
       r.cartT -= dt; if (r.cartT > 0) continue;
@@ -721,7 +779,9 @@
       spawnCart(r, flip ? b : a, flip ? a : b);
     }
     for (let k = S.carts.length - 1; k >= 0; k--) {
-      const c = S.carts[k]; const r = S.routes.find(q => q.id === c.route);
+      const c = S.carts[k];
+      if (c.obra) { if (workCartStep(c, dt)) S.carts.splice(k, 1); continue; }
+      const r = S.routes.find(q => q.id === c.route);
       if (!r || !r.ok) { unload(c); S.carts.splice(k, 1); continue; }
       c.t += dt;
       const pts = r.pts; const dir = (c.fwd !== c.back) ? 1 : -1;
