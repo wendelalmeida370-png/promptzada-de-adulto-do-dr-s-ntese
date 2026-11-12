@@ -1666,9 +1666,20 @@
         // quarter of a hand by the memory, a hand by the instant — and the one he is in can let him go: a hand apart, not
         // V.TRADE_GAP; the pull was the instant's, and so is half of its undoing)
         const room = WORK_ROLES.filter(r => gap(r) >= 0.25 && short(r) >= 1).sort((a, b) => gap(b) - gap(a));
+        // (but the hands an emergency pulled go home by the instant, as they came: the trade one is in has a hand too many
+        // now — two, while it is an emergency's still: the count of a town's grown hands blinks by one —, the one he left is
+        // short of one now, and the memory of the two follows the hand: the trade he goes back to remembers the hands it has
+        // with him — it has none to spare for a third —, the one he leaves no more than it keeps. By the memory of both, the
+        // soldiers of a war went home over a day and a half after the peace — a year and a half of their lives —, a weary or
+        // a hungry people kept its army while the fields' memory caught up, and the peoples had a fifth more of their grown
+        // hands in arms than before, at war and at peace: measured, D-211)
+        const over = WORK_ROLES.filter(q => short(q) <= (urgent[q] ? -2 : -1)).sort((x, y) => short(x) - short(y));
+        const lacks = over.length ? WORK_ROLES.filter(r => short(r) >= 1).sort((x, y) => short(y) - short(x)) : [];
+        for (const q of over) { for (const r of lacks) { v = pickHand(have[q].filter(o => o.roleBack === r), r, fits, true); if (v) { from = q; to = r; break; } } if (v) break; }
+        if (v && mem) { mem[to] = Math.max(mem[to], have[to].length + 1); mem[from] = Math.min(mem[from], have[from].length - 1); }
         // (and an emergency's trade with more hands than the instant asks lets any of them go so — the weary army its soldiers,
         // the ones the war pulled first: by the half hand of the need that lasts three soldiers too many stood a day in arms)
-        for (const r of room) { for (const q of gives) { if (gap(r) - gap(q) < 1) break; v = pickHand(urgent[q] && short(q) <= -1 ? have[q] : have[q].filter(o => o.roleBack === r), r, fits, true); if (v) { from = q; to = r; break; } } if (v) break; }
+        if (!v) for (const r of room) { for (const q of gives) { if (gap(r) - gap(q) < 1) break; v = pickHand(urgent[q] && short(q) <= -1 ? have[q] : have[q].filter(o => o.roleBack === r), r, fits, true); if (v) { from = q; to = r; break; } } if (v) break; }
         // (then the post left empty — the only smith dies, the jailer sails: nobody left in the trade, the memory has the whole
         // hand and so has the instant, and the trade the instant has most to spare gives one at once, if the memory does not
         // ask more of it than it has. Its memory lets go of the hand with it: it would ask the hand back at the next blink of
@@ -1721,8 +1732,11 @@
       // pulled from it by an emergency goes back to it or, before those days, nowhere else)
       if (calm && v.roleBack !== r && V.tenure(v) < V.TRADE_MIN) continue;
       // (a war calls the brave, whatever their days in a trade — the newest hands of a town are its young, and with them
-      // first the levy was of boys and girls of sixteen: they keep the trade they leave, and come back to it)
-      let s = !calm && r === 'guerreiro' ? 0 : -V.tenure(v);
+      // first the levy was of boys and girls of sixteen: they keep the trade they leave, and come back to it. The levy weighs
+      // as it always did: the free hand first (L-461), and a lot of each one's own in the place of the draw — the id's, the
+      // same in every war. With the bravest alone called, ten worlds of forty years had 635 dead of war where they have 558
+      // so, and had 529 before: on the side of the weights the wars were tuned with, D-212)
+      let s = !calm && r === 'guerreiro' ? (v.task ? 0 : 2) + G.hash(v.id * 13 + 7) : -V.tenure(v);
       if (v.roleBack) s += v.roleBack === r ? 1000 : 500;
       if (r === 'cacador') s += v.courage * 3;
       if (r === 'guerreiro') s += v.courage * 3 + (v.g === 'm' ? 1 : 0) + (v.kills || 0) * 0.5;

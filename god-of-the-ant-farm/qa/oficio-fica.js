@@ -30,6 +30,8 @@
 // x13 a obra grande com a vez puxa: uma obra à espera de pedra ganha a vez (D-174), e a turma dela se junta na hora;
 // x14 o dia da fundação: um mundo novo tem os construtores das primeiras casas nos primeiros segundos (a cidade no dia em que
 //    nasce não tem memória: a repartição dela é a do instante);
+// x15 a paz devolve: a guerra acabada, as mãos que ela puxou voltam ao ofício delas pelo instante, como vieram — não pela
+//    memória dos dois ofícios, que as devolvia ao longo de um dia e meio;
 // e nenhum erro, e o verificador limpo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/oficio-fica-inv.js'] });
@@ -56,7 +58,7 @@ const adults = pred => [...G.S.villagers.values()].filter(v => grown(v) && (!pre
 const inv = () => QA.check().filter(q => q.sys === 'oficio' && q.sev <= 3).map(q => `[S${q.sev}] ${q.msg}`);
 const clean = () => (M.limpo() ? '' : ' · ERROS: ' + JSON.stringify(M.erros()).slice(0, 300));
 // (every change the dealing writes, kept past the 600 of its own list)
-const LOG = []; if (V.tradeLog) V.tradeLog.push = function (e) { LOG.push(e); return Array.prototype.push.call(this, e); };
+const LOG = []; if (V.tradeLog) V.tradeLog.push = function (e) { const v = G.S.villagers.get(e.id); e.idle = !!v && !v.task; LOG.push(e); return Array.prototype.push.call(this, e); };
 // a watch over everybody's trade: each step, who changed (and what the dealing said of it)
 function watch() {
   const roles = new Map(); for (const v of G.S.villagers.values()) roles.set(v.id, v.role || null);
@@ -173,6 +175,22 @@ if (on('x5')) {
     const back5 = new Map(); for (const v of G.S.villagers.values()) if (v.roleBack) back5.set(v.id, v.roleBack); // (… or one an emergency before had already kept)
     // (a fresh people, fed: its weariness and its store held by the test's hand while the levy is made — a weary or a hungry
     // people asks fewer soldiers from the first instant, G.War.warriorWant)
+    // (who the war calls, by the test's hand on one trade of one town of the people — the first of the trades the war takes
+    // from with three hands or more: two of them made brave, the others not; and of the two, the one with the smaller lot —
+    // each one's own, the id's: the same in every war — made a little braver than the one with the greater. The war calls
+    // the brave before the others, and between the two the lot weighs as the draw of the dealing always did: the one with
+    // the greater lot goes first. With the bravest alone called, the other went)
+    const lot = v => G.hash(v.id * 13 + 7); let stage = null;
+    for (const q of ['mineiro', 'lenhador', 'coletor', 'agricultor', 'cacador']) {
+      for (const s of [...G.S.settlements.values()].filter(s => s.fac === a.id).sort((x, y) => x.id - y.id)) {
+        const hs = adults(v => v.set === s.id && v.role === q && !v.roleBack && !v.jail && !(G.S.avatar && v.id === G.S.avatar.id)).sort((x, y) => lot(y) - lot(x));
+        if (hs.length >= 3 && lot(hs[0]) - lot(hs[hs.length - 1]) >= 0.45 && (!stage || hs.length > stage.hs.length)) stage = { s, q, hs, x: hs[0], y: hs[hs.length - 1] };
+      }
+      if (stage) break;
+    }
+    // (courage × 3 and one more for a man is what the levy weighs: the two brave at 2.5 and 2.8, the others at 1.3 at most)
+    const brave = (v, e) => { v.courage = (e - (v.g === 'm' ? 1 : 0)) / 3; v.kills = 0; v.skill = null; };
+    if (stage) god(() => { for (const v of stage.hs) brave(v, v === stage.x ? 2.5 : v === stage.y ? 2.8 : v.g === 'm' ? 1.3 : 0.3); });
     const T = watch(); god(() => { G.Politics.declareWar(a, b, 'ambicao'); a.stock.food = Math.max(a.stock.food, G.Fac.pop(a.id) * 6); }); T.live(90, () => god(() => { a.weariness = 0; }));
     // (the trade kept: the one the first emergency of these seconds took him from — the great work's gang goes to war too)
     const first5 = new Map(); for (const e of T.log()) if ((e.why === 'fome' || e.why === 'guerra' || e.why === 'obra') && !first5.has(e.id)) first5.set(e.id, e.from);
@@ -180,23 +198,27 @@ if (on('x5')) {
     if (process.env.DBG) for (const p of P) if (p.v.roleBack !== p.e.from) console.log(`  #${p.v.id}: é ${p.v.role}, volta a ${p.v.roleBack}, esperado ${p.e.from} (antes ${back5.get(p.v.id)}) | ` + T.log().filter(e => e.id === p.v.id).map(e => `${e.from}→${e.to} ${e.why}`).join(' '));
     const w1 = adults(v => G.Fac.idOfV(v) === a.id && v.role === 'guerreiro').length;
     // (the war calls the brave, not the newest hands — a town's newest hands are its young)
-    const side = new Set(L.map(e => e.set)); const called = new Set(L.map(e => e.id)); const mean = l => l.reduce((x, v) => x + v.courage, 0) / Math.max(1, l.length);
-    const cc = mean(adults(v => called.has(v.id))), co = mean(adults(v => side.has(v.set) && !called.has(v.id) && v.role !== 'guerreiro'));
-    ok('x5 a guerra chama os bravos', cc >= co + 0.05, `a coragem média de quem foi chamado: ${cc.toFixed(2)}; a de quem ficou nos ofícios, nas mesmas cidades: ${co.toFixed(2)}`);
+    const staged = stage ? L.filter(e => e.set === stage.s.id && e.from === stage.q).map(e => e.id) : [];
+    const two = stage ? [stage.x.id, stage.y.id] : [];
+    ok('x5 a guerra chama os bravos', !!stage && staged.length >= 1 && staged.slice(0, 2).every(id => two.includes(id)), stage ? `${stage.s.name}, ${stage.hs.length} mãos de ${stage.q}, duas feitas bravas pela mão da prova (#${two.join(', #')}): a guerra chamou desse ofício ${staged.length ? '#' + staged.join(', #') : 'ninguém'}` : `nenhum ofício de três mãos ou mais numa cidade de ${a.name}`);
+    ok('x5 a leva: a sorte de cada um pesa', !!stage && staged[0] === stage.x.id, stage ? `das duas, a de sorte maior (#${stage.x.id}: ${lot(stage.x).toFixed(2)}) foi chamada antes da um pouco mais brava (#${stage.y.id}: ${lot(stage.y).toFixed(2)}): a primeira chamada foi ${staged.length ? '#' + staged[0] : 'ninguém'}` : '—');
     ok('x5 a guerra puxa na hora', L.length >= 3 && P.every(p => p.v.roleBack === p.e.from) && w1 > w0, `${a.name} declara guerra a ${b.name}: em 90 s ${L.length} mãos chamadas às armas pela guerra (os soldados de ${a.name}: ${w0} → ${w1}, de ${A} adultos); cada uma guarda o ofício de onde saiu: ${P.filter(p => p.v.roleBack === p.e.from).length} de ${P.length}`);
-    // (an emergency's trades ask what the instant asks, down too: a weary people — the test's hand on its weariness, held —
+    // (an emergency's trades ask what the instant asks, down too: a weary people — the test's hand on the battles it lost:
+    // at war the war itself measures the weariness, wars.js, and a hand on f.weariness alone is undone each step —
     // wants seven tenths of its soldiers, and the others go home; with the memory held at the most the instant had asked the
     // army kept them all, and six worlds had half as many dead of war again)
     // (what the instant asks of soldiers, over the people's towns — V.tradeAsked —, before and after; at the memory's pace
     // the other trades take the hands back: three quarters of a day at most, and half of the soldiers too many gone)
     const sold = () => adults(v => G.Fac.idOfV(v) === a.id && v.role === 'guerreiro').length; const s1 = sold(); const l1 = LOG.length;
     const asked = () => { let n = 0; for (const s of G.S.settlements.values()) if (s.fac === a.id) n += (V.tradeAsked(s.id) || {}).guerreiro || 0; return n; };
-    const q1 = asked(); let q2 = q1, s2 = s1, sec = 0; const tired = () => god(() => { a.weariness = 90; });
-    while (sec < 150 && !(q2 <= q1 - 2 && s2 <= s1 - Math.max(1, Math.ceil((s1 - q2) / 2)))) { T.live(15, tired); sec += 15; q2 = asked(); s2 = sold(); }
+    const q1 = asked(); let q2 = q1, s2 = s1, sec = 0; const tired = () => god(() => { for (const w of G.Wars.active()) { const sd = w.side[a.id]; if (sd) sd.lost = Math.max(sd.lost, 20); } a.weariness = 100; });
+    const dbg5 = tag => { if (process.env.DBG) console.log(`  ${tag}: cansaço ${Math.round(a.weariness)}, comida ${Math.round(a.stock.food)} para ${G.Fac.pop(a.id)}, inimigos ${G.Fac.enemiesOf(a.id).length} | ` + [...G.S.settlements.values()].filter(s => s.fac === a.id).map(s => `${s.name}: ${adults(v => v.set === s.id).length} adultos, pede ${(V.tradeAsked(s.id) || {}).guerreiro}, tem ${adults(v => v.set === s.id && v.role === 'guerreiro').length}`).join('; ')); };
+    dbg5('antes do cansaço');
+    while (sec < 150 && !(q2 <= q1 - 2 && s2 <= s1 - Math.max(1, Math.ceil((s1 - q2) / 2)))) { T.live(15, tired); sec += 15; q2 = asked(); s2 = sold(); dbg5('cansado +' + sec + ' s'); }
     const home = LOG.slice(l1).filter(e => e.from === 'guerreiro' && G.S.settlements.get(e.set) && G.S.settlements.get(e.set).fac === a.id);
-    ok('x5 o exército cansado solta soldados', q2 <= q1 - 2 && s2 <= s1 - Math.max(1, Math.ceil((s1 - q2) / 2)), `o povo cansado da guerra (o cansaço a 90, pela mão da prova): o instante pedia ${q1} soldados e pede ${q2}; os soldados: ${s1} → ${s2} em ${sec} s; ${home.length} deixaram as armas (${whys(home)})`);
+    ok('x5 o exército cansado solta soldados', q2 <= q1 - 2 && s2 <= s1 - Math.max(1, Math.ceil((s1 - q2) / 2)) && G.Fac.enemiesOf(a.id).length > 0, `o povo cansado da guerra, ainda em guerra (vinte batalhas perdidas pela mão da prova: o cansaço a ${Math.round(a.weariness)}): o instante pedia ${q1} soldados e pede ${q2}; os soldados: ${s1} → ${s2} em ${sec} s; ${home.length} deixaram as armas (${whys(home)})`);
     // (and a hungry people at war sends soldiers to the fields: one emergency gives its hands to another, by the instant's count)
-    const l2 = LOG.length; T.live(40, () => god(() => { a.weariness = 90; a.stock.food = 0; }));
+    const l2 = LOG.length; T.live(40, () => { tired(); god(() => { a.stock.food = 0; }); });
     const field = LOG.slice(l2).filter(e => e.why === 'fome' && e.from === 'guerreiro');
     ok('x5 com fome, a guerra dá soldados à roça', field.length >= 1, `o armazém de ${a.name} a zero em plena guerra: em 40 s ${field.length} soldados foram aos ofícios que dão de comer (${[...new Set(field.map(e => e.to))].join(', ') || '—'})`);
     god(() => { a.stock.food = Math.max(a.stock.food, G.Fac.pop(a.id) * 8); });
@@ -410,6 +432,40 @@ if (on('x14')) {
   const homed = [...S.villagers.values()].filter(v => v.home).length;
   ok('x14 o dia da fundação: todas as mãos ao que falta', s12 > 0 && b12 >= Math.min(6, s12) && first > 0 && first <= 45, `um mundo novo (semente 7): aos 12 s, ${s12} obras e ${b12} construtores; a primeira casa pronta aos ${first || '—'} s (pela memória: nenhum construtor aos 10 s, a primeira casa aos 59 s; antes: 22,6 s); com casa aos 60 s: ${homed} de ${S.villagers.size}`);
   const q = inv(); ok('x14 o verificador e os erros', !q.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + clean());
+}
+
+// ---------------------------------------------------------------- x15: the peace sends the soldiers home
+if (on('x15')) {
+  M.pronto('metropole'); M.viver(0.25 * DAY);
+  const F = G.Fac.all().filter(f => f.alive !== false).sort((a, b) => a.id - b.id); let pair = null;
+  for (const a of F) { if (G.Fac.enemiesOf(a.id).length) continue; for (const b of F) { if (b === a || G.Fac.enemiesOf(b.id).length) continue; const r = a.rel && a.rel[b.id] || b.rel && b.rel[a.id]; if (r && r.met && r.st !== 'guerra' && adults(v => G.Fac.idOfV(v) === a.id).length >= 20) { pair = [a, b]; break; } } if (pair) break; }
+  if (!pair) ok('x15 a paz devolve', false, 'nenhum par de povos em paz que já se encontraram');
+  else {
+    const [a, b] = pair; const day0 = new Map(); for (const v of G.S.villagers.values()) day0.set(v.id, v.roleDay);
+    const hold = () => god(() => { a.weariness = 0; a.stock.food = Math.max(a.stock.food, G.Fac.pop(a.id) * 6); });
+    const T = watch(); god(() => { G.Politics.declareWar(a, b, 'ambicao'); }); T.live(90, hold);
+    // (every hand a war pulled, of any people — the god's peace ends every war —, with the trade it kept)
+    const P = adults(v => v.role === 'guerreiro' && v.roleBack).map(v => ({ id: v.id, back: v.roleBack }));
+    const sold = () => adults(v => G.Fac.idOfV(v) === a.id && v.role === 'guerreiro').length;
+    const asked = () => { let n = 0; for (const s of G.S.settlements.values()) if (s.fac === a.id) n += (V.tradeAsked(s.id) || {}).guerreiro || 0; return n; };
+    const s0 = sold(); const l1 = LOG.length; god(() => { G.Politics.divinePeace(); });
+    // (an eighth of a day of peace: the hands the war pulled are back in the trade they left, with the days they had in it —
+    // the ones whose trade is short of a hand now; by the memory of the two trades the same eighth of a day gave back one in
+    // six, and the army of the people that declared the war stood a day and a half over what the peace asks)
+    T.live(0.125 * DAY, hold);
+    const alive = P.filter(p => { const v = G.S.villagers.get(p.id); return v && grown(v); });
+    const sentOn = new Set(LOG.slice(l1).filter(e => e.why === 'falta').map(e => e.id));
+    const home = alive.filter(p => { const v = G.S.villagers.get(p.id); return v.role === p.back && !v.roleBack; });
+    const days = home.filter(p => sentOn.has(p.id) || G.S.villagers.get(p.id).roleDay === day0.get(p.id));
+    const s1 = sold(), q1 = asked(); const L = LOG.slice(l1);
+    // (and the memory of the trade one goes back to follows him: a trade that has just got its hand back is not one with a
+    // hand to spare — nobody is taken from it for the need of a third, in the same town, while the peace is an eighth old)
+    const got = new Set(); let raided = 0;
+    for (const e of L) { if (e.why === 'volta') got.add(e.set + ':' + e.to); else if (e.why === 'falta' && got.has(e.set + ':' + e.from)) raided++; }
+    ok('x15 quem voltou não é levado adiante', raided === 0, `mãos tiradas pela necessidade de um ofício que acabava de receber a dele de volta, na mesma cidade, no oitavo de dia: ${raided}`);
+    ok('x15 a paz feita, os soldados voltam para casa', home.length >= 3 && home.length >= alive.length * 0.35 && days.length === home.length && s0 - s1 >= (s0 - q1) * 0.4, `${a.name} declara guerra a ${b.name} e o deus faz a paz: num oitavo de dia, das ${alive.length} mãos que a guerra tinha puxado (de todos os povos) ${home.length} estão de volta no ofício delas, com os dias que tinham nele (${days.length}); os soldados de ${a.name}: ${s0} → ${s1} (a paz pede ${q1}); as trocas desde a paz: ${whys(L)} (pela memória dos dois ofícios, medido: 7 de 43 de volta no oitavo de dia, e os soldados 19 → 16)`);
+    const un = T.unsaid(); const q = inv(); ok('x15 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
+  }
 }
 
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'PASSOU');
