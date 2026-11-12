@@ -183,9 +183,21 @@ guerra não cansa nem acaba por tratado no meio), no x5 e no x15. Com isso: x5 e
 prova ganhou uma linha de informação («chamados de novo pela mesma emergência em menos de um dia») para ver se a margem
 tem efeito na metrópole; se não tiver, fica dito como guarda sem caso próprio.
 
-**RODANDO AGORA:** as 36 sabotagens de novo com a prova apertada (`fila8/sab/resumo.txt`), os mundos prontos em dez dias e
-as trocas do zero com a regra final, e por último o vida-bairro. **Depois:** a prova inteira uma última vez (a de 60 linhas
-é de antes do aperto do x5/x15: apagar `fila8/prova.feito` e rodar de novo), guard + vida curta, commit da prova.
+**O x5 apertado mais duas vezes (na árvore, sem commit):** com a guerra fresca a s29 e a s33 seguiam sem acusação — nos
+mundos delas a guerra tinha a primeira batalha dentro dos 90 s da leva (Argos de 38 a 32 adultos, outro governante: o que o
+instante pedia era obra da guerra, não da regra). Agora **a leva do x5 é de 30 s** (antes de os exércitos marcharem: 8 → 25
+soldados, igual com a regra e com as sabotagens) e **o exército cansado tem de chegar ao que o instante pede, mais um, em
+45 s** (com a regra: 25 → 16 em 15 s, o instante pede 16). A s29 passou a ser acusada (25 → 14 em 45 s, o instante pede
+12). **A s33 não é acusada** nem assim (25 → 15 em 15 s): com a volta pelo instante e a regra calma, a cláusula «o ofício
+de uma emergência com mãos demais solta qualquer uma» ficou sem efeito que se veja — **fica dita como guarda sem caso
+próprio**, como a s37 (a margem de duas mãos: na metrópole, 0 chamados de novo pela mesma emergência em menos de um dia,
+com a margem e sem ela). Tirá-las muda a regra medida (a economia e todas as provas foram medidas com elas): para o líder,
+num momento em que os dez mundos possam ser medidos de novo.
+
+**RODANDO AGORA:** as sabotagens de novo com a prova apertada (`fila8/sab/resumo.txt`; a s34 e a s36 já rodadas e
+acusadas pelo x15), os mundos prontos em dez dias e as trocas do zero com a regra final, e por último o vida-bairro.
+**Depois:** a prova inteira uma última vez (a de 60 linhas é de antes do aperto do x5/x15: `node qa/oficio-fica.js`),
+guard + vida curta, commit da prova, e fechar o bloco (`python3 scratchpad/ag/X/monta.py`).
 **Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar** (o `qa/oficio-fica.js` pode: o `eco.js` não o lê).
 
 **Falta (nesta ordem):**
