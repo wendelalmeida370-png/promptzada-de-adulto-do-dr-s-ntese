@@ -168,6 +168,57 @@ A lição: com a carroça e a turma, **o que decide o tempo é a pedra que o pov
 de um ano (a que o `V.affords` usava, vezes 20) é a de um ano bom: Tenochtitlan tinha 156 no ano medido e uns 5 por ano nos
 seis seguintes, com as rochas em volta quebradas. Daí a D-216 (a média dos anos, 15 anos).
 
+## 5b. «Não custar a cidade» (T-764): três sementes do zero, 60 anos, antes e depois
+
+Continente de 128, 4 povos, 60 anos de salto, sem a mão do deus (`scratchpad/ag/M/vida.js`; as saídas em `scratchpad/ag/M/m1/`).
+«Antes» é o código do `b2b61f0` (a base da rodada, exportada em `scratchpad/ag/M/base2/`); «depois», o do `77cf5d9`.
+
+| semente | | gente | adultos sem casa | com fome no ano 61 | mortos de fome em 60 anos | cidades | casas | degraus grandes de pé / em obra |
+|---|---|---|---|---|---|---|---|---|
+| 41 | antes | 217 | 1 | 25 | 2 | 9 | 48 de pedra, 25 cabanas, 8 sobrados | 1 / 0 |
+| 41 | depois | 243 | 1 | 13 | 2 | 10 | 36 de pedra, 43 cabanas, 8 sobrados | 1 / 2 |
+| 7 | antes | 217 | 1 | 27 | 3 | 10 | 37, 60, 13 | 2 / 0 |
+| 7 | depois | 243 | 0 | 21 | 4 | 12 | 37, 72, 13 | 2 / 1 |
+| 103 | antes | 190 | 7 | 9 | 1 | 10 | 25, 60, 11 | 0 / 2 |
+| 103 | depois | 200 | 0 | 15 | 1 | 12 | 39, 68, 11 | 0 / 1 |
+
+A cidade não pagou: mais gente nos três mundos (+12%, +12%, +5%), a fome igual (7 mortos de fome antes, 7 depois, em 180 anos de
+mundo), ninguém a mais sem casa. Na semente 41 há menos casas de pedra e mais cabanas (48/25 → 36/43): é a L-783 — enquanto a
+obra grande guarda a pedra, as casas novas são de madeira.
+
+**O que cada capital fundou e acabou em 60 anos:**
+
+| semente | antes | depois |
+|---|---|---|
+| 41 | templo de 16 m de Argos (42 pessoas): ano 32 → 45, **13 anos**. Mais nada | o mesmo templo (ano 32 → 45: o mundo é o mesmo até ali); **o palácio de 24 m de Mênfis** (30 pessoas) fundado no ano 52, 85% aos 9 anos (faltam 46 de pedra); **o palácio de 24 m de Tenochtitlan** (31 pessoas) no ano 56, num lote aplainado, 98% aos 5 anos (faltam 5 de pedra). Antes estes dois eram fundados nos anos 69 e 77 (o g8 de antes, seção 1) |
+| 7 | teatro de 24 m de Mênfis (47 pessoas): ano 33 → 51, **18 anos**; o templo de Hedeby ampliado para 16 m no ano 47, 1 ano | o mesmo teatro: ano 33 → 44, **11 anos**; o templo de Hedeby ampliado no ano 44, 5 anos; **o palácio de 24 m de Mênfis** fundado no ano 51 num lote aplainado, 60% aos 10 anos |
+| 103 | teatro de 24 m de Hedeby (50 pessoas), ano 49: **35% em 12 anos**; a maravilha de 40 m de Tenochtitlan (47 pessoas), ano 54: **11% em 7 anos, faltam 740 de pedra**; o palácio de 24 m de Argos (34 pessoas), ano 54: perdido | **o templo de 16 m de Tenochtitlan** (46 pessoas), ano 53: 77% aos 8 anos (faltam 42 de pedra). A maravilha e o teatro que o povo não podia pagar não são mais fundados (D-216) |
+
+## 5c. A pedra que não rende — o que mais segura as obras hoje (medido; não mexi)
+
+Depois da carroça, do aplainar e da D-216, o relógio de toda obra grande dos mundos do zero é a pedra que o povo tira por ano.
+Medido na semente 103, ano 56, com o código de agora (`geologia.js`, `turma.js`, `pedreira.js`):
+
+- **O mundo inteiro (219 pessoas, 4 povos) entrega 97 de pedra por ano** aos armazéns. Um templo de 16 m pede uns 150, um
+  palácio ou um teatro de 24 m uns 200, a maravilha de 40 m uns 850.
+- **Não falta rocha**: Tenochtitlan (50 pessoas, nível 3, o templo de 16 m parado em 46% esperando 99 de pedra) tem a 26 casas
+  do meio 4 rochas (125 de pedra), a 44 casas 17 rochas (550), todas alcançáveis, e chão rochoso onde se anda e a cidade
+  alcança: 14 casas a 10 do meio, 41 a 26. `Vg.canQuarry` diz sim.
+- **Faltam mãos na pedra**: a cidade tem 5 construtores (a turma, 15% de 29 adultos) e 2 mineiros — os dois na mina (o
+  minério), nenhum na pedra. Num ano, de 574 amostras dos construtores (uma a cada 2 s): 27% dormindo, 17% «stalk» (um deles
+  seguindo alguém para a sociedade secreta dele, o ano inteiro), 12% em peregrinação à caverna, 15% indo e vindo com a pouca
+  pedra do armazém para o templo, 15% na vida de cada um (comer, água, loja, família, conclave), 3,5% calçando — e **3,1%
+  quebrando pedra**. Em um ano a obra recebeu 14 de pedra, todos do armazém; da pedreira da turma, nada.
+- Uma viagem à pedreira rende 3 de pedra (4 de uma rocha): com a vida que as pessoas têm (um ano são 200 s), um construtor que
+  só quebrasse pedra traria uns 15 por ano.
+
+**O que eu faria (não fiz: mexe em áreas de outros agentes ou é decisão de jogo — fica como T-769, aberto):**
+1. mineiros de pedra quando a obra grande espera pedra: hoje os «mineiros» que a cidade tem vão todos para a mina, e a turma
+   é de construtores (D-174) — o repartidor de ofícios (`assignJobs`, do agente X) poderia dar à cidade da obra um ou dois
+   mineiros sem mina enquanto a obra guarda pedra;
+2. a turma inteira na pedreira nos dias sem nada para assentar (hoje metade, pelo dia): dobra os 3% — pouco;
+3. a carga da pedreira: uma padiola (dois levam 8) ou a carroça indo à pedreira — pede corpo e desenho (T-768).
+
 ## 6. As linhas do AUDIT (prontas para colar) — as partes FEITAS
 
 | D-215 | decisão (do agente M, 2ª rodada, sobre a T-760) | **A carroça da obra grande.** Medido (megalópole, Mênfis, um teatro de 24 m com o armazém do povo cheio): a 14 casas de um armazém os construtores levam 33 cargas no primeiro ano e a obra fica pronta em três; a 35 casas, 9 cargas num ano e nenhuma no terceiro — o trabalho de assentar é pouco (200 s de um construtor para o teatro inteiro), o relógio de uma obra é o material que chega, quatro de cada vez, e a 35 casas cada construtor faz menos de uma viagem por dia. O canteiro já existia: o lugar `o:` do depósito, o que chegou a uma obra e ainda não foi assentado (L-246). Decidido (`city.js`, `Ci.workCart`): a obra grande com a vez (`set.vez`, `set.gw`) a mais de 12 casas (`Ci.WORK_FAR`) do armazém mais perto recebe por carroça de bois do povo que sabe a roda — 20 de cada vez (`WORK_LOAD`), duas a caminho no máximo (`WORK_CARTS`), uma a cada 20 s (`WORK_EVERY`) —, do armazém mais perto da obra ao canteiro, pelo livro nas duas pontas («carroca-obra», «obra-carroca»); os construtores assentam. A carroça cuja obra fica pronta, cai, é largada, queima ou muda de povo leva a carga para casa («carroca-volta»: ao armazém do povo que a mandou, nunca ao do vencedor). O relógio e o dia sem caminho são da cidade (`set.cartT`, `set.cartNo`, no save). O que as carroças trazem conta como «a caminho» para quem iria buscar (`Ci.carted`, lido das próprias carroças; `villagers.js` `coming`); a conta da obra (`b.incoming`) continua só das mãos dos construtores. Não é uma fogueira nem um prédio: nenhum núcleo novo do `G.Urban`, nenhum fogo das histórias. Depois: a 37 casas, em dois anos, 79 → 227 entraram na obra. Prova: `qa/canteiro.js` (35 linhas), `qa/canteiro-inv.js`. |
