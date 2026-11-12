@@ -77,7 +77,9 @@ const r2 = x => Math.round(x * 100) / 100;
   const paid = lines('termas').filter(e => e[5] === 'moedas').reduce((n, e) => n + e[6], 0);
   ok('caixa-e-livro', Math.abs(paid - op.data.receita) < 0.01 && op.data.entradas === 3, `caixa ${op.data.receita}, entradas no livro ${r2(paid)}; ${op.data.entradas} banhos`);
   // the closing hour: everyone out, the fire out
-  for (const v of c) Te.visit(v, ba, H); sec(1, all); const before = Object.keys(op.data.banho).length;
+  // (the same three again, for the case of the closing: one bath a day is the rule now — D-200, the old door too —, so the
+  // test's hand takes today's bath off each one before sending them in; T-911)
+  for (const v of c) { v.bathDay = 0; Te.visit(v, ba, H); } sec(1, all); const before = Object.keys(op.data.banho).length;
   G.S.time = 0.7; sec(2, all);
   ok('fecha-na-hora', before === 3 && !A.live(op) && op.data.calor === 0 && c.every(v => !v.inside && (!v.task || v.task.type !== 'termas')), `${before} lá dentro antes de fechar; depois: dia ${op.st}, fogo ${op.data.calor}, ${c.filter(v => v.inside).length} dentro`);
   ok('nao-reabre', (() => { G.S.time = 0.5; sec(1, all); return !Te.dia(ba); })(), 'o dia acabado não abre de novo no mesmo dia');

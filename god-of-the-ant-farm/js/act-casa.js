@@ -291,8 +291,18 @@
     if (rd.kind === 'maos') return rd.wait > 0 ? `se em ${rd.wait} dia${rd.wait > 1 ? 's' : ''} não juntarmos o preço, levantamos a nossa cabana com as nossas mãos` : rd.chao ? 'não juntamos o preço, e a cidade não tem chão livre para levantarmos a nossa cabana' : 'não juntamos o preço: vamos levantar a nossa cabana com as nossas mãos';
     return ROAD_NO[rd.why] ? `não juntamos o preço, e ${ROAD_NO[rd.why]}` : '';
   };
-  // (the family's house, still being raised)
-  K.waiting = v => { for (const b of G.S.buildings.values()) if (b.encomenda && !b.built && b.encomenda.fam.includes(v.id)) return b; return null; };
+  // (the family's house, still being raised: a commission any of the family is written in — the one asked now may not be the
+  // one who ordered it. A partner who came to the house after the order is not written in it, and at the head of the town's
+  // queue ordered a second house with the first one of the family in it: «#17292 espera duas casas encomendadas», L-719)
+  K.waiting = v => {
+    let ids = null;
+    for (const b of G.S.buildings.values()) {
+      if (!b.encomenda || b.built) continue; if (b.encomenda.fam.includes(v.id)) return b;
+      if (!ids) ids = K.family(v).map(m => m.id);
+      if (ids.length > 1 && b.encomenda.fam.some(id => ids.includes(id))) return b;
+    }
+    return null;
+  };
   // why the people cannot raise a new house now (read only; '' when they can): their builders take two paid houses at a time,
   // and a people without coin raises one from its own store. One rule for the town's day and for the body's offer — the offer
   // lit while the builders were full let the body pay with its hands and be refused, again and again (L-451)

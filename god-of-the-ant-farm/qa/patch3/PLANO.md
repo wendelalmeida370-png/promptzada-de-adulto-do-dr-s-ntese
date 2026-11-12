@@ -364,12 +364,23 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   cozinha e a lareira da sede fumam como as de uma casa (fecha o T-931), e três provas ajustadas ao mundo de agora (T-812:
   a despensa vazia; T-813: a casa mercante segue a família e espera a ronda do dia — fecha o T-936). **Aberto do R:** a
   oferta ao corpo do deus de mudar para a sede (T-932, com a T-763), T-930, T-933 a T-935, T-937, T-938.
+- **Juntada, da terceira leva: a freguesia** (F; D-200 a D-204, L-910; conserta o L-717): quem vai aos banhos e à biblioteca
+  vai pela sua escolha do dia (`decide`: «banho», «ler»), com causa — quem (o ofício sujo, o nobre e o mercador, o cansado,
+  o doente; o hábito do povo da terma), quando (a hora de cada um, com tempo antes de fechar), quanto (a sorte do dia pelo
+  `G.hash` da pessoa e do dia, nunca o acaso do mundo; uma vez por dia), o que impede (a moeda, a casa cheia, a distância,
+  a fome, as mãos ocupadas). Quem entrou fica para o banho; o foguista com a fornalha por alimentar não sai para o lazer.
+  A medida, cinco dias vividos sem ninguém mandado: a metrópole de 0 para 85 banhos, a mega de 7 para 60; dez anos de paz
+  na metrópole custam 3,7 % da comida e 2,6 % da gente, sem morte de fome (`qa/freguesia.js`, regras 69 e 70). Na junção,
+  pelo líder: **o par que chega à casa depois da encomenda encomendava uma segunda casa** (L-719, achado pelo F nas medidas
+  — T-920; consertado no `K.waiting`, caso r9 do `casa-rica`), e a prova e2 que guardava um banhista de um instante atrás
+  (T-815). **Aberto do F:** a praça e o mercado ao fim da tarde (medido e desenhado, não feito), a fornalha fria pela água
+  de casa e pela fome do foguista (T-918), as crianças nos banhos, T-914 a T-916, T-919.
 - **Achado pelo líder ao fotografar as casas por dentro: a casa cheia que não esvazia** (L-718, aberto): em todo mundo
   pronto há casas com o dobro ou o triplo da lotação (a pior: 22 numa casa de 6, ao lado de uma casa com cinco lugares
   vagos), e a razão de quase todas as famílias é «falta dinheiro» — o casal na casa cheia dos parentes nunca junta o preço
   de uma casa. É regra de economia e de moradia, com decisão de design: fica para uma frente própria.
-- **Em curso, a terceira leva (três frentes):** **a freguesia** (F; L-717:
-  a vontade do banho e da leitura na escolha de cada um, a praça e o mercado como lugar de estar); **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a obra
+- **Em curso (três frentes):** **a casa cheia que não esvazia** (H; L-718: a família que não cabe e não pode pagar
+  levanta a própria cabana; a casa vazia do povo antes da obra); **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a obra
   grande que anda e acha terra** (M, segunda rodada; T-760, T-761, T-767: o canteiro da obra longe, a terra das capitais
   velhas, o olhar do planejador para as provas). A medir de novo com o M: os dois mundos do zero de 90 anos da `degraus`
   g8 dão, na árvore juntada, 5 degraus grandes fundados e 4 de pé (antes do M: 3 e 1), nenhum Coliseu.
@@ -378,5 +389,5 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   cada frente juntada.
 - **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
   novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** juntar as frentes F, X e M2; a casa cheia que não esvazia (L-718), com um agente próprio (H); depois o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
+- **A seguir:** juntar as frentes X, M2 e H; depois a praça ao fim da tarde, o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
   seis sementes da terra, o relatório).

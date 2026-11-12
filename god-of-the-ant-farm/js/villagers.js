@@ -619,9 +619,14 @@
       if (eve || elder) opt(0.3 * G.R() * (elder ? 2 : 1), 0, 'rest');
       // the working day ends: home, or a cup at the tavern
       if (eve && v.home) opt(0.55 + G.R() * 0.4, 0.45, 'home');
-      if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0) + (G.Harbor && G.Harbor.shoreLeave(v) ? 0.5 : 0), 0.4, 'tavern'); // (home from the sea today: the tavern first, D-155)
+      // (the stoker of baths still open, the fire not fed to their closing, keeps the furnace: G.Termas.onDuty, D-204)
+      if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length && !(G.Termas && G.Termas.onDuty && G.Termas.onDuty(v))) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0) + (G.Harbor && G.Harbor.shoreLeave(v) ? 0.5 : 0), 0.4, 'tavern'); // (home from the sea today: the tavern first, D-155)
       // (the theatre's show of the day, its doors open: an evening out — act-lazer.js)
       if (G.Teatro) { const u = G.Teatro.urge(v, cur); if (u > 0) opt(u, 0.45, 'teatro'); }
+      // (the baths in their hours and the library's tables: a pause of one's day, by each one's own wish — act-servicos.js,
+      // act-lazer.js; D-200, D-201)
+      if (G.Termas) { const u = G.Termas.urge(v, cur); if (u > 0) opt(u, G.Termas.PRI, 'banho'); }
+      if (G.Biblioteca) { const u = G.Biblioteca.urge(v, cur); if (u > 0) opt(u, G.Biblioteca.PRI, 'ler'); }
       if (G.Eco && !eve) opt(0.16 * G.R() * 1.6, 0.35, 'shop');
       // (the house lacks something it uses up, and can pay: one of the family goes to buy it — act-compras.js)
       if (G.Compras) { const u = G.Compras.urge(v); if (u > 0) opt(u, 0.6, 'compras'); }
@@ -672,6 +677,8 @@
       case 'tavern': t = G.Eco && G.Eco.tavernTask(v, H); break;
       case 'shop': t = G.Eco && G.Eco.shopTask(v, H); break;
       case 'teatro': t = G.Teatro && G.Teatro.go(v, H); break;
+      case 'banho': t = G.Termas && G.Termas.go(v, H); break;
+      case 'ler': t = G.Biblioteca && G.Biblioteca.go(v, H); break;
       case 'compras': t = G.Compras && G.Compras.task(v, H); break;
       case 'garden': t = G.Urban && G.Urban.gardenTask(v, H); break;
       case 'saga': t = G.Stories && G.Stories.task(v, H); break;

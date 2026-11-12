@@ -10,8 +10,10 @@
 //  povo para os banhos e alimenta a fornalha; a água fica quente
 //  enquanto há fogo (D-079). Sem lenha, ou sem foguista, a água é
 //  fria e o banho vale menos. Quem vem, vem por vontade sua (a
-//  vida da cidade, ou a casa: G.Termas.visit) — ninguém nasce
-//  para encher piscina: num povo de moeda paga a entrada ao
+//  pausa do dia de cada um — G.Termas.urge, uma escolha entre as
+//  outras do dia, D-200 —, ou o passeio de quem está sem trabalho:
+//  G.Termas.visit) — ninguém nasce para encher piscina, e ninguém
+//  se banha duas vezes no dia: num povo de moeda paga a entrada ao
 //  tesouro; tira a roupa nos cabides, entra na água (um lugar na
 //  piscina, pelo repartidor dos interiores: o uso 'banhar'), fica,
 //  sai e se veste. O banho quente cura um pouco a doença e
@@ -127,6 +129,10 @@
     const S = S_(); const d = op.data;
     // everyone out: who was in the water takes what the time in it gave, and goes out by the door
     for (const id of Object.keys(d.banho)) { const v = S.villagers.get(+id); if (!v) continue; out(v, op, 'saiu'); if (v.task && v.task.type === 'termas' && v.task.op === op.id) G.Vg.endTask(v); }
+    // (and who is on the way to them: the errand ends with the day, there — as the theatre's with its show, L-595. With the
+    // wish there is nearly always someone on the way, and baths enlarged in the middle of their day left one walking to a
+    // building site until the next step — L-910)
+    for (const v of S.villagers.values()) if (v.task && v.task.type === 'termas' && v.task.op === op.id) G.Vg.endTask(v);
     d.banho = {}; d.calor = 0;
     A.end(op, st, why);
   }
@@ -184,9 +190,142 @@
     if (!v || !b || v.captive || v.jail || v.age < 6 || (v.carry && v.carry.n > EPS) || A.isBody(v)) return null;
     if (b.type !== 'banhos' || !b.built || facOf(b) !== G.Fac.idOfV(v)) return null;
     const op = Te.dia(b); if (!op || op.st !== 'on' || !inHours(b) || full(b, op) || op.data.banho[v.id]) return null;
+    if (v.bathDay === S.day) return null; // (one bath a day: the wish and the town's leisure alike — D-200)
     if (coin(b) && E.purse(v) + EPS < Te.FEE) return null;
     const dr = G.Vg.door(b); if (!G.W.reaches(v, dr[0], dr[1])) return null;
-    void S; return H.setTask(v, { type: 'termas', id: b.id, op: op.id, pri: 0.4, st: 0 });
+    return H.setTask(v, { type: 'termas', id: b.id, op: op.id, pri: Te.PRI, st: 0 });
+  };
+
+  // ------------------------------ the wish for a bath (D-200) ------------------------------
+  // The bath is a pause of one's day, chosen among the day's other choices (villagers.js, decide: 'banho', beside the tavern
+  // and the theatre) — nobody is sent to fill a pool. Who: every grown one of a town with baths now and then; more the
+  // people of the thermae (the Roman, the Greek, the classic: the habit), the dirty trades (the mine, the forge, the kiln,
+  // the works, the quay, the axe), the well-off (the nobles, the merchants) and the tired; and the ill who are up and about,
+  // every day — the bath takes a part of the illness away. Less who lives far from the baths, and half as much to cold water
+  // (no fire in the furnace: the bath is worth less). When: in the baths' hours, each one from an hour of one's own — who
+  // works, from the early afternoon; the old, the nobles and the ill from the morning —, and only with the time to walk
+  // there and bathe before the closing. How often: the wish is a share of the days (Te.wish), and whether today is one of
+  // them is the day's own lot for each one (G.hash of the person and the day: none of the world's chance is drawn, and the
+  // person has no new field), once a day (v.bathDay, which the bath itself writes). What stops it: no coin for the entry,
+  // the baths full — who is on the way there counts —, too long a walk, hunger, a load in the hands or the leg of an
+  // operation (D-094), the little ones to mind at home, the furnace to feed (the stoker at his post: Te.onDuty); never the
+  // god's body, which bathes when the player says.
+  Te.PRI = 0.4;      // (the errand's priority: below any work — a bath never cuts a task under way)
+  Te.IN = 1.5;       // (what the bath is worth to one inside, the entry paid: above every other wish of the day)
+  Te.BASE = 0.3;     // (the share of the days with a bath, of any people …)
+  Te.HABIT = 0.5;    // (… and of a people of the thermae)
+  Te.DIRT = 0.25;    // (added for a dirty trade,)
+  Te.RICH = 0.15;    // (for a noble's or a merchant's house,)
+  Te.TIRE = 0.15;    // (and for one tired — under Te.TIRED of energy)
+  Te.TIRED = 50;
+  Te.NEAR = 10;      // (home within this many tiles of the baths: the whole wish; beyond, less with each tile — over Te.SPAN
+  Te.SPAN = 40;      //  tiles more —, never under Te.FLOOR of it)
+  Te.FLOOR = 0.25;
+  Te.COLD = 0.5;     // (the wish for cold water, of the wish for hot)
+  Te.REACH = 30;     // (a walk to the door longer than this: no bath — the tavern's own reach)
+  Te.WALK = 1.5;     // (the seconds a tile takes on the straight line, the streets going round — for the time's rule: half the
+                     //  bathers of the ready metropolis took 0,8, nine in ten 1,3 or less, the slowest 1,64; who is late pays for a dip)
+  Te.DIP = 16;       // (the seconds in the water that make a bath of the longest one — half of it: bathe)
+  Te.SLACK = 0.06;   // (of the day: who is far from the baths may set out this long before it is too late to — see Te.pick)
+  Te.HOME = 0.5;     // (of two baths, how much the way home weighs: the baths of one's own streets — the tavern's, D-157)
+  Te.HUNGRY = 55;    // (hungrier than this, the meal first: the way there and the bath add a quarter of a day's hunger)
+  Te.SPENT = 25;     // (and more worn out than this, the bed)
+  const DIRTY = { mineiro: 1, ferreiro: 1, oleiro: 1, construtor: 1, estivador: 1, lenhador: 1 };
+  const THERMAE = { romano: 1, grego: 1, classico: 1 };
+  const WELL = { nobreza: 1, mercadores: 1 };
+  Te.DIRTY = DIRTY;
+  const civOf = b => (G.Fac.get(facOf(b)) || {}).civ || 'classico';
+  const mid = b => [b.x + b.w / 2, b.y + b.h / 2];
+  // (how far one lives from these baths — with no home, where one is)
+  const farOf = (v, b) => { const hm = v.home && S_().buildings.get(v.home); const [bx, by] = mid(b); return hm ? G.dist(hm.x + hm.w / 2, hm.y + hm.h / 2, bx, by) : G.dist(v.x, v.y, bx, by); };
+  // the share of the days this person wants a bath at these baths, as things are now — 0 to 1
+  Te.wish = function (v, b) {
+    let p = THERMAE[civOf(b)] ? Te.HABIT : Te.BASE;
+    if (v.sick > 0) p = 1;
+    else { if (DIRTY[v.role]) p += Te.DIRT; if (WELL[v.grp]) p += Te.RICH; if (v.energy < Te.TIRED) p += Te.TIRE; }
+    const far = farOf(v, b); if (far > Te.NEAR) p *= Math.max(Te.FLOOR, 1 - (far - Te.NEAR) / Te.SPAN);
+    if (!Te.quente(b)) p *= Te.COLD;
+    return Math.min(1, p);
+  };
+  // (the day's lot of each one, 0 to 1: under the wish, today is a day for a bath — the same all day, another tomorrow)
+  Te.lot = v => G.hash(Math.imul(v.id | 0, 131) + Math.imul(S_().day | 0, 7919) + 5);
+  // (the hour of one's own, from which the bath may be: the old, the nobles and the ill from the morning; who works, from
+  // the early afternoon — the bath is the end of a shorter working day: a walk across the town, the pegs and a bath's worth
+  // of water take a quarter of the day, and the baths shut before dusk. With the baths' hours of today, 0,27 to 0,43 and
+  // 0,38 to 0,46)
+  Te.hourOf = function (v, b) {
+    const h = Te.horas(b); const len = h.fecha - h.abre; const q = G.hash(Math.imul(v.id | 0, 31) + 11);
+    return v.age >= 62 || v.sick > 0 || v.grp === 'nobreza' ? h.abre + len * (0.04 + 0.36 * q) : h.abre + len * (0.29 + 0.18 * q);
+  };
+  // (who is on the way to each baths, counted once a step of the world when someone asks; the one just sent, added)
+  let cIdx = null, cS = null, cT = -1;
+  // (who found no way to the baths is not sent again for the rest of the day: the search that fails is the dearest one, and
+  // the wish would ask it again at every look — the house's own rule, act-lar.js)
+  let noWay = new Map();
+  G.worldHooks.push(() => { cIdx = null; cS = null; cT = -1; noWay = new Map(); });
+  const lost = v => { const t = noWay.get(v.id); return t !== undefined && S_().clock - t < G.DAY_LEN * 0.5 && S_().clock >= t; };
+  // (kept for the step of the world it was counted in; asked from outside the step — a panel, a proof —, counted afresh and
+  // not kept: the world is the same with or without anyone looking)
+  function coming(b) {
+    const S = S_(); if (G.inSim && cIdx && cS === S && cT === S.clock) return cIdx.get(b.id) || 0;
+    const m = new Map(); for (const v of S.villagers.values()) { const t = v.task; if (t && t.type === 'termas' && t.st === 0) m.set(t.id, (m.get(t.id) || 0) + 1); }
+    if (G.inSim) { cIdx = m; cS = S; cT = S.clock; }
+    return m.get(b.id) || 0;
+  }
+  // (the places in the water one more could count on: the plan's, less who is inside — at the pegs, in the water, dressing —
+  // and who is on the way; with no plan, the count)
+  function places(b) { const In = G.Interiors; const t = In && In.freePlace && In.table ? In.table(b) : null; const L = t && t.byUse && t.byUse.get('banhar'); return t ? (L ? L.length : 0) : Te.CAP; }
+  Te.places = places;
+  const room = (b, op) => places(b) - Object.keys(op.data.banho).length - coming(b);
+  Te.room = b => { const op = Te.dia(b); return op ? room(b, op) : 0; };
+  // the baths this person would go to now, by the wish — or none: it only reads
+  Te.pick = function (v) {
+    const S = S_(); const fid = G.Fac.idOfV(v); const hm = v.home && S.buildings.get(v.home); let best = null, bd = 1e9, lot = -1;
+    for (const b of E.byType(v.set, 'banhos')) {
+      if (!b.built || facOf(b) !== fid) continue;
+      const op = Te.dia(b); if (!op || op.st !== 'on' || !inHours(b) || op.data.banho[v.id]) continue;
+      if (coin(b) && E.purse(v) + EPS < Te.FEE) continue;
+      const dr = G.Vg.door(b); const d0 = G.dist(v.x, v.y, dr[0], dr[1]); if (d0 >= Te.REACH) continue;
+      // (the walk, the pegs and a bath's worth of water before the closing: who cannot have it does not set out — and who is
+      // far sets out before the hour of one's own, with Te.SLACK of the day to spare before it is too late)
+      const last = Te.horas(b).fecha - (d0 * Te.WALK + AN.despir.dur + Te.DIP) / G.DAY_LEN;
+      if (S.time > last || S.time < Math.min(Te.hourOf(v, b), last - Te.SLACK) - EPS) continue;
+      if (lot < 0) lot = Te.lot(v);
+      if (lot >= Te.wish(v, b)) continue;
+      if (room(b, op) < 1 || full(b, op)) continue;
+      const d = d0 + (hm ? Te.HOME * G.dist(hm.x, hm.y, b.x, b.y) : 0); if (d >= bd) continue;
+      if (!G.W.reaches(v, dr[0], dr[1])) continue;
+      best = b; bd = d;
+    }
+    return best;
+  };
+  // the stoker at his post (D-204): the day of his baths open and the fire not enough to last to the closing — he does not
+  // leave the furnace for a bath, a scroll, the theatre or the tavern (the wishes of decide ask this); the fire fed to the end
+  // of the day, he is as free as anyone. The water was cold on days full of bathers because the stoker had gone to bathe
+  Te.onDuty = function (v) {
+    if (v.role !== 'foguista' || !v.job) return false;
+    const b = S_().buildings.get(v.job); if (!b || b.type !== 'banhos' || !b.built) return false;
+    const op = Te.dia(b); if (!op || op.st !== 'on' || !inHours(b)) return false;
+    return op.data.calor < (Te.horas(b).fecha - S_().time) * G.DAY_LEN;
+  };
+  // how much this grown one wants a bath now (a choice of decide, among the others), or 0; one already on the way stays
+  // for the bath — the work, a chat, the way home do not take one from it; hunger and sleep do —, and one inside, who has
+  // paid, more so (D-203): no other wish takes one from the pegs or the water (the theatre's own, of a curious one, is worth up to
+  // 1,05, a courtship 1,28: a bather left the water for the play with half a bath to go, the entry paid), only starving
+  Te.urge = function (v, cur) {
+    if (cur && cur.type === 'termas') return cur.st >= 1 ? Te.IN : 1;
+    const S = S_();
+    if (cur && (cur.pri || 0) >= Te.PRI) return 0; // (an errand under way that weighs as much: the bath waits, and hides no other wish)
+    if (v.bathDay === S.day || v.age < 16 || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || (v.carry && v.carry.n > EPS)) return 0;
+    if (v.hunger > Te.HUNGRY || v.energy < Te.SPENT || A.isBody(v)) return 0;
+    if (!E.byType(v.set, 'banhos').length) return 0;
+    if (lost(v) || G.Vg.handsBusy(v) || Te.onDuty(v) || (G.Lar && (G.Lar.bedrest(v) || G.Lar.minder(v)))) return 0;
+    return Te.pick(v) ? (v.sick > 0 ? 0.9 : 0.75) : 0;
+  };
+  Te.go = function (v, H) {
+    const b = Te.pick(v); const t = b ? Te.visit(v, b, H) : null;
+    if (t && G.inSim && cIdx && cS === S_() && cT === S_().clock) cIdx.set(b.id, (cIdx.get(b.id) || 0) + 1);
+    return t;
   };
   function walkB(v, t, b, dt, H) {
     const key = 'b' + b.id;
@@ -218,7 +357,7 @@
     const d = op.data;
     if (t.st === 0) {
       if (!Te.aberta(b)) return H.end(v);
-      const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r === 0) return;
+      const r = walkB(v, t, b, dt, H); if (r < 0) { noWay.set(v.id, S.clock); return H.end(v); } if (r === 0) return;
       if (full(b, op)) { G.Vg.emote(v, 'sad', 1); say(v, 'termas_cheia', {}); return H.end(v); }
       const p = payEntry(v, op, b); if (!p.ok) return H.end(v);
       goIn(v, t, b, 'despir'); d.entradas++;
