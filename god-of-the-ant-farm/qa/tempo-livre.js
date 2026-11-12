@@ -29,7 +29,9 @@ const homeOf = v => v.home && S.buildings.get(v.home);
 // bathers are: the case is where one rests, not whether the evening lets one
 function rest(v) {
   god(() => { Vg.endTask(v); v.sleeping = false; v.hunger = Math.min(v.hunger, 20); v.energy = Math.max(v.energy, 80); Vg.setTask(v, { type: 'rest', pri: 0.9 }); });
-  for (let t = 0; t < 90; t++) { M.viver(0.5); if (!v.task || v.task.type !== 'rest') return null; if (v.task.st === 2) return v.task; }
+  // (seated: the step of the arrival sets the errand's stage, the next one the gesture — one step more, or the look falls
+  // between the two: T-924)
+  for (let t = 0; t < 90; t++) { M.viver(0.5); if (!v.task || v.task.type !== 'rest') return null; if (v.task.st === 2) { const k = v.task; M.viver(0.1); return v.task === k ? k : null; } }
   return null;
 }
 

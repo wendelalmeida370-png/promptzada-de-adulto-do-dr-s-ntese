@@ -155,10 +155,13 @@
   // (the executioner and the herald: their 5 and 4,5 are to keep them at the scaffold, not to take one from a leg under way —
   // a purchase on its way home, a crate kept for one —: another is chosen, as the feast does, D-094)
   const handsBusy = v => !!(G.Vg.handsBusy && G.Vg.handsBusy(v));
+  // (nor one from the meal of need — the hunger over 85, which the choice puts above any work, villagers.js decide, 2,5 —: a
+  // priest of Roma, a night at the fire, at 100 of hunger and 9 of life, was called from his meal to be the herald, L-913)
+  const starving = v => v.hunger > 85;
   function pickExecutioner(f, set, e) {
     const S = G.S; let best = null, bs = -1e9;
     for (const v of S.villagers.values()) {
-      if (v.set !== set.id || v.captive || v.age < 20 || v.age > 60 || e.ids.includes(v.id) || v.id === f.leader || (v.task && v.task.pri >= 3) || handsBusy(v)) continue;
+      if (v.set !== set.id || v.captive || v.age < 20 || v.age > 60 || e.ids.includes(v.id) || v.id === f.leader || (v.task && v.task.pri >= 3) || handsBusy(v) || starving(v)) continue;
       const priest = e.method === 'sacrificio';
       const s = (priest ? (v.role === 'sacerdote' ? 10 : 0) : (v.role === 'guerreiro' ? 6 : 0)) + (P.persona(v).cru * 6) + v.courage * 2 - G.dist(v.x, v.y, e.x, e.y) * 0.05;
       if (s > bs) { bs = s; best = v; }
@@ -166,9 +169,9 @@
     return best;
   }
   function pickHerald(f, set, e) {
-    const r = P.ruler(f); if (r && r.set === set.id && !busy(r) && !r.sleeping && G.dist(r.x, r.y, e.x, e.y) < 30 && !(r.task && r.task.pri >= 3) && !handsBusy(r)) return r;
+    const r = P.ruler(f); if (r && r.set === set.id && !busy(r) && !r.sleeping && G.dist(r.x, r.y, e.x, e.y) < 30 && !(r.task && r.task.pri >= 3) && !handsBusy(r) && !starving(r)) return r;
     let best = null, bs = -1e9;
-    for (const v of G.S.villagers.values()) { if (v.set !== set.id || v.captive || v.age < 18 || e.ids.includes(v.id) || v.id === e.exe || (v.task && v.task.pri >= 3) || handsBusy(v)) continue; const s = (v.role === 'escriba' ? 6 : v.role === 'sacerdote' ? 3 : 0) + (v.age > 40 ? 1 : 0) - G.dist(v.x, v.y, e.x, e.y) * 0.05; if (s > bs) { bs = s; best = v; } }
+    for (const v of G.S.villagers.values()) { if (v.set !== set.id || v.captive || v.age < 18 || e.ids.includes(v.id) || v.id === e.exe || (v.task && v.task.pri >= 3) || handsBusy(v) || starving(v)) continue; const s = (v.role === 'escriba' ? 6 : v.role === 'sacerdote' ? 3 : 0) + (v.age > 40 ? 1 : 0) - G.dist(v.x, v.y, e.x, e.y) * 0.05; if (s > bs) { bs = s; best = v; } }
     return best;
   }
   // the town comes to see: called by the herald, and more trickle in until the first death

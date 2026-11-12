@@ -749,7 +749,7 @@
     // (the baths are a service with its day, its entry and its water: act-servicos.js — closed, full or too dear, no bath;
     // the theatre is its show of the day and the library its reading tables: act-lazer.js — no show, no theatre; nobody
     // watches an empty stage)
-    if (b.type === 'banhos') return G.Termas ? G.Termas.visit(v, b, H) : null;
+    if (b.type === 'banhos') return G.Termas && (!G.Termas.inTime || G.Termas.inTime(v, b)) ? G.Termas.visit(v, b, H) : null; // (with the time for a bath before they shut: T-919)
     if (b.type === 'teatro') return G.Teatro ? G.Teatro.visit(v, b, H) : null;
     if (b.type === 'biblioteca') return G.Biblioteca ? G.Biblioteca.visit(v, b, H) : null;
     return H.setTask(v, { type: 'citylife', id: b.id, pri: 0.3, st: 0 });

@@ -312,6 +312,10 @@
     }
     return best;
   };
+  // (the time's rule by itself, for the town's stroll — G.City.leisureTask, the door of before —: the walk, the pegs and a
+  // bath's worth of water before the closing; who cannot have it does not set out. The stroll sent one at any hour, and
+  // the closing took her out of the water with the entry paid and no bath: T-919)
+  Te.inTime = function (v, b) { const dr = G.Vg.door(b); return S_().time <= Te.horas(b).fecha - (G.dist(v.x, v.y, dr[0], dr[1]) * Te.WALK + AN.despir.dur + Te.DIP) / G.DAY_LEN; };
   // the stoker at his post (D-204, D-227): the day of his baths open and the fire not enough to last to the closing — and
   // the moments before the doors open (Te.EARLY), the fire still to light. He does not leave the furnace for a bath, a
   // scroll, the theatre, the tavern or the plaza (the wishes of decide ask this), nor for a call from outside — a feast, a
@@ -330,7 +334,10 @@
   Te.onDuty = function (v) {
     const b = stokerOf(v); if (!b) return false;
     const S = S_(); const h = Te.horas(b); const op = Te.dia(b);
-    if (!op) return S.time >= h.abre - lead(v, b) && S.time < h.abre + EPS && !openedToday(b); // (about to open)
+    // (about to open — or the hour come and the day opening within the second: no gap for a meal to slip through. Once on
+    // his way to the furnace he is on duty till the doors open: the walk's lead shrinks as he nears them, and the duty went
+    // with it — he reached the furnace early, was free again, and went for a meal as the doors opened)
+    if (!op) return S.time < h.fecha && !openedToday(b) && (S.time >= h.abre - lead(v, b) || (S.time >= h.abre - Te.EARLY - Te.LEAD && !!v.task && v.task.type === 'fornalha' && !!v.task.pre));
     if (op.st !== 'on' || !inHours(b)) return false;
     return op.data.calor < (h.fecha - S.time) * G.DAY_LEN;
   };

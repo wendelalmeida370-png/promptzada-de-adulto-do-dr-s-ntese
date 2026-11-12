@@ -88,6 +88,7 @@ function actors(b) {
 const calm = b => { const w = S().weather; w.rain = 0; if (w.storm) w.storm = 0; G.Politics.divinePeace(); for (const s of S().settlements.values()) if (s.alarmT > 0) s.alarmT = 0; const st = S().settlements.get(b.set); if (st) st.festPlan = { day: S().day, key: null, done: true }; };
 // (the afternoon before the theatre opens its preparation — at the hour its farthest actor needs to walk to the stage, L-425:
 // the clock set just before it, once the actors are known)
+const dry = () => { const w = S().weather; w.rain = 0; if (w.storm) w.storm = 0; };
 function ready(b) { S().time = Tt.EARLY - 0.02; calm(b); const cast = actors(b); S().time = Math.max(S().time, Tt.opensAt(b) - 0.01); return cast; }
 // (the audience called when the doors open: Tt.visit takes nobody while the actors make ready behind closed doors — called in
 // the preparation, the hand's audience of the l1 to the l4 never came, and the l1 hung on one who came by his own choice; on
@@ -201,14 +202,16 @@ const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.d
 // (the day sought, three at most — each the next afternoon of the world, its weather and its peace kept by the hand as ready()
 // keeps them —: the choice of the evening out is the townsfolk's, and what calls them from the rows after it is the world's.
 // On the dice of the T-436 the one fisherman who came was called from the rows by a story (a saga, 1,02) four seconds into
-// the play, «0 viram a peça»: the case is a day when one who came of his own choice sees the play to its end, T-404)
+// the play, «0 viram a peça»: the case is a day when one who came of his own choice sees the play to its end, T-404. The
+// weather of the afternoon is kept through the show, as ready() keeps it at its start: with the plaza of the D-225 the dice of
+// the first day brought a rain at 0,555 — the doors open at 0,56 —, and 49 of Tenochtitlan took shelter on their way: T-924)
 {
   fresh(); const b = S().buildings.get(P.id); const cast = ready(b); const bad = []; const days = [];
   let op = null, came = new Set();
   for (let k = 0; k < 3; k++) {
     if (k) { const d0 = S().day; liveSec(G.DAY_LEN, () => S().day > d0 && S().time >= Tt.EARLY - 0.02, bad); ready(b); }
     liveSec(20, () => !!Tt.dia(b), bad); op = Tt.dia(b); came = new Set();
-    if (op) liveSec(160, () => !A.live(op), bad, () => { if (A.live(op)) for (const id of Object.keys(op.data.plateia)) came.add(+id); });
+    if (op) liveSec(160, () => !A.live(op), bad, () => { dry(); if (A.live(op)) for (const id of Object.keys(op.data.plateia)) came.add(+id); });
     days.push(op ? `${came.size} vieram, ${op.data.vistos} viram (${op.st})` : 'não abriu');
     if (op && came.size >= 1 && op.data.vistos >= 1 && op.st === 'ok') break;
   }
@@ -381,10 +384,13 @@ const backTo = (w, ty) => !!w && !!w.task && w.task.type === ty;
     const reading = backTo(rd, 'ler') && rd.task.st >= 1;
     if (reading) G.Vg.setTask(rd, { type: 'sleep', pri: 1.5, kind: 'sleep', stay: rd.home });
     const held = reading && !!Bi.book(lib).quem[rd.id];
-    const same = reading && across(); const w = S().villagers.get(rd.id);
+    const same = reading && across(); const w = S().villagers.get(rd.id); const tLoad = S().clock;
     const out = !backTo(w, 'ler') && w.inside !== lib.id;
-    liveSec(2); const let_go = !Bi.book(S().buildings.get(lib.id)).quem[rd.id];
-    ok('l11 leitor-chamado-antes-do-save', reading && held && same && out && let_go, `${rd.name} lendo ${n(lib)}: ${reading ? 'sim' : 'NÃO'}; à cama um momento antes do save (ainda no livro: ${held ? 'sim' : 'NÃO'}); depois do load ${out ? 'fora da biblioteca' : 'DE VOLTA À LEITURA'}; dois segundos depois o livro ${let_go ? 'o soltou' : 'AINDA O TEM'}; a casa e as operações na ida e volta: ${same ? 'iguais' : 'DIFERENTES'}`);
+    // (free after the load, at the library's door, she may choose the scroll again — by her own wish of the day, D-200 —: a
+    // place taken after the load is a new one, as the l10's; with the dice of the D-225 Xântipe was at a table again within
+    // the two seconds, T-924)
+    liveSec(2); const m2 = Bi.book(S().buildings.get(lib.id)).quem[rd.id]; const let_go = !m2 || m2.t > tLoad + 0.05;
+    ok('l11 leitor-chamado-antes-do-save', reading && held && same && out && let_go, `${rd.name} lendo ${n(lib)}: ${reading ? 'sim' : 'NÃO'}; à cama um momento antes do save (ainda no livro: ${held ? 'sim' : 'NÃO'}); depois do load ${out ? 'fora da biblioteca' : 'DE VOLTA À LEITURA'}; dois segundos depois o livro ${let_go ? `soltou o lugar de antes${m2 ? ' (de novo à mesa, por escolha depois do load)' : ''}` : 'AINDA TEM O LUGAR DE ANTES'}; a casa e as operações na ida e volta: ${same ? 'iguais' : 'DIFERENTES'}`);
   }
 }
 // ---------------- l12 the actor called is not taken from the show by an errand from outside (L-503) ----------------
@@ -402,7 +408,9 @@ const backTo = (w, ty) => !!w && !!w.task && w.task.type === ty;
   if (a && cv) {
     took = G.Caves.give(a, 'mine', cv, -1, { stay: 12, pri: 1.25 }); kept = walking(a);
     txt = `${a.name} a caminho do palco: a mina da ${cv.name} ${took ? 'A LEVOU' : 'não a levou'}${kept ? ', segue para o palco' : ` (${a.task ? a.task.type : 'sem afazer'})`}`;
-    if (kept) { const dr = G.Vg.door(b); a.x = dr[0]; a.y = dr[1]; a.path = null; liveSec(10, () => !A.live(op) || !!op.data.atores[a.id], bad); }
+    // (rested by the hand, as the reader of the l11: the case is the errand from outside, not her sleep — with the dice of the
+    // D-225 the one on her way was Itzel, at 38 of energy by 0,40, who left the stage for her bed at 0,53, before the play: T-924)
+    if (kept) { const dr = G.Vg.door(b); a.x = dr[0]; a.y = dr[1]; a.path = null; a.energy = Math.max(a.energy, 85); liveSec(10, () => !A.live(op) || !!op.data.atores[a.id], bad); }
     if (kept && A.live(op) && op.data.atores[a.id] && op.data.fase === 'preparo') { busy = G.Vg.busy(a, { type: 'caverna', kind: 'mine', pri: 1.25 }) && !!G.Vg.handsBusy(a); txt += `; no palco de portas fechadas: ${busy ? 'ocupada para um afazer de fora' : 'LIVRE para um afazer de fora'}`; }
     else if (kept) txt += `; no palco de portas fechadas: ${A.live(op) && op.data.atores[a.id] ? 'as portas já abertas' : 'não chegou'}`;
     if (kept) { liveSec(150, () => { if (A.live(op) && op.data.atores[a.id] && op.data.fase === 'peca') on = true; return !A.live(op); }, bad, () => calmBeasts([a.x, a.y])); txt += `; ${on ? 'no palco na peça' : 'não chegou à peça'}, o espetáculo ${op.st}${op.end ? ' (' + op.end.why + ')' : ''}`; }

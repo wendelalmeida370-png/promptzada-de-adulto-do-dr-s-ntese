@@ -381,12 +381,16 @@ function D1() {
     bad.length = 0; const { S, f, ba, person } = vila(civ, n); const t = In.table(ba); const places = t ? (t.byUse.get('banhar') || []).length : 0; const npools = t ? new Set((t.byUse.get('banhar') || []).map(e => e.it.id)).size : 0;
     const k = person('Foguista', 2, { job: ba.id, role: 'foguista' });
     const c = []; for (let i = 0; i < nb; i++) c.push(person('Banhista ' + (i + 1), 3, i === 1 ? { sick: 60 } : null)); const poor = person('Pobre', 0.05); const all = [k, ...c, poor];
-    S.time = 0.2; sec(2, all); const shut = !Te.dia(ba); S.time = 0.26; sec(1, all); const op = Te.dia(ba);
+    S.time = 0.1; sec(2, all); const shut = !Te.dia(ba) && !k.task;
+    // (the stoker: called to his post by the day of the baths a little before the doors open — D-227: the proof's hand gives
+    // him no task, T-929 —, wood from the people's store to the baths, then at the furnace — his place the furnace's, by the
+    // allotter)
+    const w0 = f.stock.wood; S.time = 0.2; sec(1, all); const t1 = k.task && k.task.type; for (let s = 0; s < 10 && !(k.task && k.task.type === 'fornalha'); s++) sec(1, [k]);
+    const got = D.get('b:' + ba.id, 'wood');
+    S.time = 0.26; sec(1, all); const op = Te.dia(ba);
     if (!op || !t) { ok(`D1 o dia d${nomes[n]} (${civ})`, false, !t ? 'sem a tabela dos lugares' : 'não abriram'); return; }
     const cold = op.st === 'on' && op.data.calor === 0;
-    // (the stoker: wood from the people's store to the baths, then at the furnace — his place the furnace's, by the allotter)
-    const w0 = f.stock.wood; E.jobTask(k, H); const t1 = k.task && k.task.type; for (let s = 0; s < 6 && k.task; s++) sec(1, [k]);
-    const got = D.get('b:' + ba.id, 'wood'); E.jobTask(k, H); const t2 = k.task && k.task.type; sec(2, [k]); const kat = at(k); for (let s = 0; s < 8 && k.task; s++) sec(1, [k]);
+    sec(3, [k]); const t2 = k.task && k.task.type; const kat = at(k); for (let s = 0; s < 8; s++) sec(1, [k]);
     const fire = t1 === 'lenhaTermas' && got === 3 && f.stock.wood === w0 - 3 && t2 === 'fornalha' && op.data.lenha === 2 && op.data.calor > 80 && !!kat && kat.use === 'alimentar' && kat.kind === 'fornalha-banho';
     // (the bathers: who can pay comes — by their own wish, here asked —, pays, undresses at a peg, goes into the water at a place
     // of a pool, bathes, dresses and leaves)

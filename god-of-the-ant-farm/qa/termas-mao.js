@@ -51,15 +51,18 @@ const r2 = x => Math.round(x * 100) / 100;
   const k = person('Foguista', 2, { job: 3, role: 'foguista' });
   const c = [person('Ana', 3), person('Bia', 3, { sick: 60 }), person('Caio', 3)]; const poor = person('Pobre', 0.05);
   const all = [k, ...c, poor];
-  G.S.time = 0.2; sec(2, all); ok('fechada-antes', !Te.dia(ba), `S.time ${G.S.time.toFixed(2)}: ${Te.dia(ba) ? 'abertos' : 'fechados'}`);
+  // (before the stoker's own hour: the day of the baths calls him to his post a little before the doors open — D-227 —, and
+  // from then on the proof's hand gives him no task: the day does. The proof asked the job for him with the doors open, T-929)
+  G.S.time = 0.17; sec(2, all); ok('fechada-antes', !Te.dia(ba) && !k.task, `S.time ${G.S.time.toFixed(2)}: ${Te.dia(ba) ? 'abertos' : 'fechados'}; o foguista ${k.task ? 'em «' + k.task.type + '»' : 'sem afazer'}`);
+  // the stoker: called to his post, wood from the store (beyond what it keeps for its works), into the baths — and by the furnace till the hour
+  const w0 = f.stock.wood;
+  G.S.time = 0.2; sec(1, all); const t1 = k.task && k.task.type; for (let s = 0; s < 8 && !(k.task && k.task.type === 'fornalha'); s++) sec(1, [k]);
+  ok('foguista-busca-lenha', t1 === 'lenhaTermas' && D.get('b:3', 'wood') === 3 && f.stock.wood === w0 - 3 && !!k.task && k.task.type === 'fornalha' && !Te.dia(ba), `chamado ao posto às 0,20: tarefa ${t1}; lenha junto à fornalha ${D.get('b:3', 'wood')}; armazém ${w0} → ${f.stock.wood}; depois, ${k.task ? '«' + k.task.type + '»' : 'nada'} à espera da hora`);
   G.S.time = 0.26; sec(1, all); const op = Te.dia(ba);
   ok('abre-fria', !!op && op.st === 'on' && op.data.calor === 0, op ? `o dia #${op.id} aberto, a água ${op.data.calor > 0 ? 'quente' : 'fria'}` : 'não abriu');
-  // the stoker: wood from the store (beyond what it keeps for its works), into the baths, into the furnace
-  const w0 = f.stock.wood;
-  E.jobTask(k, H); const t1 = k.task && k.task.type; for (let s = 0; s < 6 && k.task; s++) sec(1, [k]);
-  ok('foguista-busca-lenha', t1 === 'lenhaTermas' && D.get('b:3', 'wood') === 3 && f.stock.wood === w0 - 3, `tarefa ${t1}; lenha junto à fornalha ${D.get('b:3', 'wood')}; armazém ${w0} → ${f.stock.wood}`);
-  E.jobTask(k, H); const t2 = k.task && k.task.type; for (let s = 0; s < 8 && k.task; s++) sec(1, [k]);
-  ok('a-agua-esquenta', t2 === 'fornalha' && op.data.lenha === 2 && op.data.calor > 80 && D.get('b:3', 'wood') === 1, `tarefa ${t2}; ${op.data.lenha} achas queimando, ${op.data.calor} s de fogo; sobra ${D.get('b:3', 'wood')}`);
+  // … and, the doors open, into the furnace
+  for (let s = 0; s < 10; s++) sec(1, [k]);
+  ok('a-agua-esquenta', op.data.lenha === 2 && op.data.calor > 75 && D.get('b:3', 'wood') === 1 && !Te.onDuty(k), `${op.data.lenha} achas queimando, ${op.data.calor} s de fogo; sobra ${D.get('b:3', 'wood')}; o foguista de posto: ${Te.onDuty(k) ? 'ainda' : 'já não'}`);
   ok('livro-da-lenha', lines('fornalha').length === 2 && lines('termas').some(e => e[5] === 'wood' && e[3] === 'f:1'), `${lines('fornalha').length} linhas 'fornalha', ${lines('termas').filter(e => e[5] === 'wood').length} de lenha do armazém`);
   // the bathers: by their own wish (here, asked), those who can pay
   const tasks = c.map(v => Te.visit(v, ba, H)); const tp = Te.visit(poor, ba, H);
