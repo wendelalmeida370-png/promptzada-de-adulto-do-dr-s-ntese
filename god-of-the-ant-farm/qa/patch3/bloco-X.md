@@ -134,8 +134,15 @@ antes e ganha menos com a regra: o teto do x3 passou a 0,16 (três quartos de an
   coragem dá golpe e segura o soldado na linha: `war.js` 581, `wars.js` 604) cada povo-ano de guerra matava metade a mais.
   x5 com as duas: passa (a coragem de quem foi chamado 0,56, a de quem ficou 0,47).
 
-**RODANDO AGORA: a economia `v7`** (`lote-r.sh <jogo> v7`, pode ser lançada de novo: pula a semente pronta; a tabela:
-`python3 armas.py eco2 a6,v6,v7 <sementes>` e `python3 tabela.py eco2 antes v7 <sementes>`).
+**A economia `v7`, lida** (os dois consertos; `eco2/tabela-v7.md`, `python3 armas.py eco2 a6,v6,v7 <sementes>`; antes →
+`v7`): gente 1657 → 1608 (−3 %; mundo a mundo a diferença tem desvio de 37: a média −5 fica a 0,4 desvio do zero), mortos
+de guerra 529 → 558 (+5 %; desvio 11, a média +3 a 0,8 desvio), mortos de fome 15 → 7, comida −1 %, madeira +13 %, pedra
++20 %, prédios +3 %, cidades 67 → 67, a comida por pessoa mais baixa 1,65 → 1,53. **As armas voltaram ao que eram:** dos
+adultos dos povos em guerra, guerreiros 20,8 % antes, 21,7 % na `v6`, **20,6 % na `v7`**; em paz 2,9 %, 3,5 %, **3,3 %**;
+mortos de guerra por povo-ano em guerra 2,46, 3,64, **2,34**.
+
+**RODANDO AGORA: a economia `v8`** (só o conserto (1), sem a leva: uma cópia com a sabotagem s35, `eco2/v8-dir.txt`;
+`lote-r.sh <cópia> v8`, pode ser lançada de novo): se a `v8` der o mesmo que a `v7`, a leva não é precisa e sai.
 **Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar** (o `qa/oficio-fica.js` pode: o `eco.js` não o lê).
 
 **Falta (nesta ordem):**
