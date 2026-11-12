@@ -412,15 +412,52 @@
     return v.pi >= (v.path ? v.path.length : 0);
   }
 
+  // ------------------------------ rest (D-240) ------------------------------
+  // Who rests tires less than who works. Awake, the energy falls by what the body does: still and at leisure — seated at the
+  // tavern's table, in the rows of a show, in the water of the baths, over a scroll, at prayer, at the talk of the plaza or
+  // of a friend, by the fire or at one's door, at home by the hearth — it falls Vg.REST of what it falls at work or on the
+  // way (the walk there tires as a walk: nobody on the move rests). The work's own tiredness and the thresholds of the bed
+  // stay where they were: the working day is the same, and the evening lasts to each one's hour of bed (G.Lar.clock) — the
+  // people were up before the light and worn out before dark, 236 of 390 grown ones of the ready metropolis in bed or on
+  // their way to it by 0,70, the town dark at dusk and the tavern empty by 0,75 (T-921). One table, read by needs() alone;
+  // it only reads — no field of the person, nothing in the save, no chance drawn. The god's body by the same rule: the
+  // place its hands hold (S.avatar.use)
+  Vg.REST = 0.2;
+  // (the errands of rest, and the state of each in which the body is at it — the walk there is not)
+  const REST_TASK = {
+    tavern: t => t.st >= 2,                      // (seated: waiting to be served, eating, drinking — act-taverna.js)
+    teatro: t => t.st >= 1,                      // (in the rows — act-lazer.js)
+    ler: t => t.st >= 1,                         // (at the table, over the scroll)
+    termas: t => t.st === 2,                     // (in the water — act-servicos.js; the pegs are not)
+    praca: t => t.st === 2,                      // (at the talk of the plaza)
+    rest: t => t.st === 2,                       // (seated by the fire, or at one's door)
+    talk: t => !t.dance,                         // (a chat, an embrace; the dance is no rest)
+    pray: t => t.st === 2,                       // (kneeling, before the temple or inside it)
+    family: t => t.st >= 2 && !t.lift,           // (with the family at the door — life.js; the child lifted in the arms is no rest)
+    shelter: t => t.st === 2,                    // (at home, out of the storm)
+    lar: t => t.st === 2 && !LAR_WORK[t.what],   // (at home, awake: at the supper, by the hearth, in bed hurt, in mourning)
+  };
+  const LAR_WORK = { cozinhar: 1, cuidar: 1 };   // (cooking the supper and minding the little ones are the house's work)
+  // (the places of rest of a plan, for the body the player lives: the use of the place its hands hold)
+  const REST_USE = { sentar: 1, comer: 1, beber: 1, ler: 1, banhar: 1, rezar: 1, assistir: 1, deitar: 1, aquecer: 1 };
+  Vg.resting = function (v) {
+    if (!v || v.sleeping || v.moving) return false;
+    const a = G.S.avatar; if (a && a.id === v.id) return !!(a.use && REST_USE[a.use.use]);
+    const t = v.task; if (!t) return false;
+    const f = REST_TASK[t.type]; return !!f && f(t);
+  };
+
   // ------------------------------ needs ------------------------------
   function needs(v, dt) {
     const S = G.S; const day = G.DAY_LEN;
     const awake = !v.sleeping;
-    // meals and sleep keep the rhythm of the day, however long the day is
-    const dd = dt / G.DAY_K;
+    // meals and sleep keep the rhythm of the day, however long the day is — and however long the sun lingers over a scene:
+    // the hunger and the tiredness go by the day's pace of this step (G.pace, world.js: L-915); the rest in seconds, as ever
+    const dd = dt / G.DAY_K; const dn = dd * G.pace;
     v.age += dt / day;
-    v.hunger = Math.min(100, v.hunger + dd * (awake ? 0.95 : 0.45) * (v.age < 12 ? 0.6 : 1) * (v.traits.includes('Glutão') ? 1.2 : 1));
-    if (v.age >= 2) v.energy = G.clamp(v.energy + (awake ? -dd * (100 / 80) * (v.age >= 62 ? 1.12 : 1) * (v.task && v.task.type === 'flee' ? 1.6 : 1) : dd * (100 / 22)), 0, 100);
+    v.hunger = Math.min(100, v.hunger + dn * (awake ? 0.95 : 0.45) * (v.age < 12 ? 0.6 : 1) * (v.traits.includes('Glutão') ? 1.2 : 1));
+    // (awake, the energy falls by what the body does: at rest a share of what it falls at work or on the way — Vg.resting, D-240)
+    if (v.age >= 2) v.energy = G.clamp(v.energy + (awake ? -dn * (100 / 80) * (v.age >= 62 ? 1.12 : 1) * (v.task && v.task.type === 'flee' ? 1.6 : 1) * (Vg.resting(v) ? Vg.REST : 1) : dn * (100 / 22)), 0, 100);
     if (v.hurt > 0) v.hurt -= dt;
     // babies are fed from the common stock
     if (v.age < 2 && v.hunger > 60) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 0.5; v.hunger -= 50; } }

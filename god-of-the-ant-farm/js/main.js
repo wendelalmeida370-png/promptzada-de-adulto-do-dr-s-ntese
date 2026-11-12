@@ -178,8 +178,10 @@
   function tick(dt) {
     const S = G.S;
     S.clock += dt;
-    // (while a scene is happening the sun lingers: a night scene does not end in the middle of it — watched or not, the same)
-    S.time += dt / G.DAY_LEN * (G.Scene && G.Scene.lingers && G.Scene.lingers() ? 0.35 : 1);
+    // (while a scene is happening the sun lingers: a night scene does not end in the middle of it — watched or not, the same;
+    // the pace of this step, for the clock and for what keeps its rhythm — G.dayPace, world.js: L-915)
+    G.pace = G.dayPace();
+    S.time += dt / G.DAY_LEN * G.pace;
     if (S.time >= 1) {
       S.time -= 1; S.day++;
       (S.popHist = S.popHist || []).push(S.villagers.size); if (S.popHist.length > 500) S.popHist.shift();
