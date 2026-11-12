@@ -381,7 +381,10 @@ if (want('l2')) {
   const findPair = () => {
     for (const b of [...S.villagers.values()].filter(o => builtHome(o) && !o.captive).sort((x, y) => x.id - y.id)) {
       // (at the fire or talking — not over the pot or at the table: the cook's while is its own)
-      if (b.age < 16 || b.sleeping || b.inside !== b.home || !b.task || b.task.type !== 'lar' || !(b.task.what === 'descansar' || b.task.what === 'conversar') || L.clock(b).bed < S.time + 0.04) continue;
+      // (and under fifty-five: old age takes the old ones of a house in the evening too — Flávia, sixty, died at 17h40 of the
+      // day of the case in the life the second round of the full house lives, 2,6 s into her wait: T-974. The one who goes on
+      // the watch was already asked to be under sixty)
+      if (b.age < 16 || b.age >= 55 || b.sleeping || b.inside !== b.home || !b.task || b.task.type !== 'lar' || !(b.task.what === 'descansar' || b.task.what === 'conversar') || L.clock(b).bed < S.time + 0.04) continue;
       // (not of a secret society: its people go to its meetings by night — secrets.js, the conclave. And no baby in the arms of
       // either: by the house's rule one with a baby in the arms rocks it before waiting (act-lar.js, idle), and the baby of one
       // who goes out on the watch is left with one at home (D-074) — in the «cidade» of the generation 14 Citlali went out with

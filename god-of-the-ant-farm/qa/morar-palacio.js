@@ -465,12 +465,17 @@ run('m13', () => {
 run('m14', () => {
   // (a ruler of a merchant house, at home in the capital: in the first of the ready worlds that has one)
   const mer = q => { const h = B(q.r.home); const d = h && h.elite ? (h.elite.dono === undefined ? h.dono : h.elite.dono) : 0; return !!d && K.court(q.r).some(v => v.id === d); };
-  let o = null, onde = ''; for (const m of [MUNDO, 'cidade', 'mundial', 'mega']) { o = arma(true, mer, m); if (o) { onde = m; break; } }
-  if (!ok('m14a uma casa de mercadores que governa', !!o && todosEm(K.court(o.r), o.b), o ? `${onde}, ${o.cap.name}: ${nomes(moram(o.b))}, da casa de bandeira ${lado(o.casa0)}` : 'nenhum governante de casa de mercadores numa capital com lote, em nenhum mundo pronto')) return;
+  // (and another of the capital to be chosen after: of no kin of the ruler, of a house with no banner. Who may live in the seat
+  // is, since L-974, also who is married to a grandchild or a nephew of the ruler: in Argos of the metrópole 25 of the 27 grown
+  // ones of the town are of Helena's, the two others live under a banner, and the choice of the case was nobody — the people
+  // then chose her sister, and the family stayed in the seat, as the rule has it. T-988)
+  const outroDe = q => [...S.villagers.values()].filter(v => v.set === q.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !B(v.home).elite && !K.ofCourt(v, q.r)).sort((a, c) => a.id - c.id)[0];
+  let o = null, onde = ''; for (const m of [MUNDO, 'cidade', 'mundial', 'mega']) { o = arma(true, q => mer(q) && !!outroDe(q), m); if (o) { onde = m; break; } }
+  if (!ok('m14a uma casa de mercadores que governa', !!o && todosEm(K.court(o.r), o.b), o ? `${onde}, ${o.cap.name}: ${nomes(moram(o.b))}, da casa de bandeira ${lado(o.casa0)}` : 'nenhum governante de casa de mercadores numa capital com lote e com outro para governar, em nenhum mundo pronto')) return;
   const b = o.b; sim(() => G.Trade.keepHouses(o.cap));
   ok('m14b a bandeira vai com a família para a sede', !!b.elite && !o.casa0.elite, `a sede com bandeira: ${!!b.elite} (de ${b.elite ? b.elite.fam : '-'}); a casa de antes: ${!!o.casa0.elite}`);
   let q = checa(); ok('m14c verificador', q.ok, q.txt);
-  const antes = moram(b); const outro = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !B(v.home).elite && !K.ofCourt(v, o.r)).sort((a, c) => a.id - c.id)[0];
+  const antes = moram(b); const outro = outroDe(o);
   sim(() => { Pl.endReign(o.f, 'mandato'); Pl.crown(o.f, outro, 'eleicao', true); }); M.viver(3); sim(() => G.Trade.keepHouses(o.cap));
   const nh = B(antes[0].home);
   ok('m14d e volta com ela', !b.elite && !!nh && !!nh.elite && antes.every(v => v.home === nh.id), `a sede com bandeira: ${!!b.elite}; a família em ${lado(nh)}, com bandeira: ${!!(nh && nh.elite)}`);

@@ -606,5 +606,26 @@ for (const f of files) if (f !== 'village.js') src[f].forEach((l, k) => { const 
     if (/pickRoleForList/.test(c)) fails.push(`o ofício que fica: ${f}:${k + 1} chama pickRoleForList, que não existe mais (D-212): ${l.trim().slice(0, 110)}`);
     if (f === 'village.js') return; const m = c.match(/\.role\s*=\s*'([a-z_]+)'/); if (!m || m[1] === 'cativo' || /BDEF\.[A-Za-z_]+\.role\s*=/.test(c)) return;
     if (!((f === 'economy.js' && m[1] === 'contrabandista') || (f === 'miracles.js' && m[1] === 'guerreiro'))) fails.push(`o ofício que fica: ${f}:${k + 1} dá um ofício a uma pessoa — só o repartidor (village.js), o mercado clandestino e a mão do deus (D-212): ${l.trim().slice(0, 110)}`); }); }
+// 83. "a casa do povo guardada para uma família, o barraco e a marca dos moços" (D-235 a D-237): o js/village.js pergunta ao
+// G.Casa.heldFor antes de mandar quem vai só para uma casa (as duas chamadas do findHome com `true`), o js/social.js não manda
+// levantar barraco quem espera a sua casa (G.Casa.waiting), e a marca da cabana dos moços (b.encomenda.mocos) só o
+// js/act-casa.js escreve
+{ const L = (src['village.js'] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, ''));
+  if (!L.some(l => /G\.Casa\.heldFor\s*\(\s*set\s*\)/.test(l))) fails.push('a casa guardada: village.js não pergunta ao G.Casa.heldFor no assignHousing (D-236)');
+  if (L.filter(l => /findHome\(1,\s*true\)/.test(l)).length < 2) fails.push('a casa guardada: village.js manda alguém só para uma casa sem dizer que vai só — findHome(1, true), nas duas chamadas (D-236)');
+  const So = (src['social.js'] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, ''));
+  if (!So.some(l => /G\.Casa\.waiting\s*\(\s*v\s*\)/.test(l))) fails.push('o barraco: social.js manda levantar barraco quem espera a sua casa — falta a pergunta ao G.Casa.waiting (D-237)'); }
+for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/encomenda\.mocos\s*=(?!=)|encomenda\s*=\s*\{[^}]*\bmocos\s*:/.test(c)) fails.push(`a cabana dos moços: ${f}:${k + 1} escreve a marca fora de act-casa.js (D-235): ${l.trim().slice(0, 110)}`); });
+// 84. "o bolso de quem tem teto vai ao pote pelo livro, e as portas novas só leem" (L-973, D-236): a linha «bolso» do livro só o
+// js/act-casa.js escreve (pocket, gather); e K.mates, K.heldFor e K.queue — pedidas pelo repartidor de casas, pela ficha e pelo
+// verificador — não buscam lote, não fundam, não movem nem pagam, não marcam casa nenhuma (a regra 78, com mais três portas)
+for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/code:\s*'bolso'/.test(c)) fails.push(`o bolso: ${f}:${k + 1} escreve a linha «bolso» do livro fora de act-casa.js (L-973): ${l.trim().slice(0, 110)}`); });
+{ const L = src['act-casa.js'] || []; const bad = /findSite\s*\(|startProject\s*\(|addBuilding\s*\(|removeBuilding\s*\(|\bD\.(move|make|use|store)\s*\(|\.(poupa|dono|encomenda|aluga|custo|home|res|maos|mocos|chao|purse)\s*=(?!=)|\bG\.(R|rr|ri|pick|chance|shuffle)\s*\(|\b(cede|raiseByHand|lease|buy|raise|move|pay|pocket|gather)\s*\(/;
+  for (const st of [/^  K\.mates = function/, /^  K\.heldFor = function/, /^  K\.queue = function/]) {
+    const a = L.findIndex(l => st.test(l)); if (a < 0) { fails.push(`as portas que só leem: act-casa.js sem ${st} — a regra 84 não acha a porta`); continue; }
+    let z = a + 1; while (z < L.length && !/^  \};?$/.test(L[z])) z++;
+    for (let k = a; k < z; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); if (bad.test(c)) fails.push(`as portas que só leem: act-casa.js:${k + 1} escreve no mundo dentro de uma porta de leitura (D-236): ${L[k].trim().slice(0, 110)}`); } } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
