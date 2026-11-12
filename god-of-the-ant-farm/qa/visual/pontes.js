@@ -248,7 +248,7 @@ for (const w of WORLDS) {
     P3.clear();
     ok(`p10 ${w}: os outros pisam onde o corpo pisa sobre a ponte`, tiles.length > 0 && okN === tiles.length, `${okN} de ${tiles.length} casas (antes: no nível da água, 17 cm abaixo dos pés do corpo e 32 cm abaixo do tabuleiro desenhado)${bad.length ? ' — ' + bad.slice(0, 3).join(' · ') : ''}`);
   }
-  if (want('p11') && w !== 'mundial' || (want('p11') && WORLDS.length === 1)) crossAll(w);
+  if (want('p11')) crossAll(w);
   if (!M.limpo()) ok(`${w}: sem erro de módulo nem aviso`, false, JSON.stringify(M.erros()).slice(0, 300));
 }
 // (two peoples' bridges are not the same bridge: Rome's and Memphis's, by their stuff and by their parts)

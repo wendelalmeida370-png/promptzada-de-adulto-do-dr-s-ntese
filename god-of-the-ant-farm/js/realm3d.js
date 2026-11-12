@@ -1200,8 +1200,8 @@ vec3 gxGrade( vec3 c ) {
         g.pat = 0; if (b[0] - a[0] > 1e-6) bface(g, [pt(a[0], BF - BREC, yw), pt(b[0], BF - BREC, yw), pt(b[0], BF - BREC, b[1]), pt(a[0], BF - BREC, a[1])], ON, BDARK); }
       g.pat = PAT[B.cut];
       if (arc) {
-        // (the wedge stones round the arch, each its own shade, the keystone prouder — only those out of the water)
-        // (each under its own piece of the arch, a finger below it)
+        // (the wedge stones round the arch — each under its own piece of it, a finger below; each its own shade, the keystone
+        // prouder —, only those out of the water)
         const n = arc.n, ring = B.gap === 0 ? 0.22 : 0.2, len = 2 * arc.rr * Math.sin(arc.tm / n), ri = arc.rr * Math.cos(arc.tm / n) - 0.006; mk('aduela');
         for (let k = 0; k < n; k++) { const th = -arc.tm + 2 * arc.tm * (k + 0.5) / n, key = k === (n - 1) / 2; if (arc.cy + (arc.rr + ring) * Math.cos(th) < wf) continue;
           const c = pt(ac + ri * Math.sin(th), BF - (key ? 0 : 0.012), arc.cy + ri * Math.cos(th));
