@@ -106,9 +106,10 @@
   }
   // a house paid by the family: its materials at the town's prices, and the land it stands on (the city's value there)
   // (step: the step of the type's ladder it is raised at — the rich house —: its bill and its lot, G.Escala)
+  // (the materials alone, at the town's prices: the least a house costs anywhere — the ground is never less than nothing)
+  const goods = (type, step) => { let n = 0; const cost = step ? G.Escala.bill(type, step).cost : G.BDEF[type || 'house'].cost; for (const k in cost) n += (cost[k] || 0) * (E.PRICE[k] || 0.3); return n; };
   K.price = function (set, type, pos, step) {
-    const def = G.BDEF[type || 'house']; let n = 0; const cost = step ? G.Escala.bill(type, step).cost : def.cost; const w = step ? step.n : def.w;
-    for (const k in cost) n += (cost[k] || 0) * (E.PRICE[k] || 0.3);
+    const def = G.BDEF[type || 'house']; const n = goods(type, step); const w = step ? step.n : def.w;
     const at = pos ? [pos[0] + w / 2, pos[1] + w / 2] : [set.cx, set.cy];
     const land = G.Urban && G.Urban.valueAt && (set.tier || 0) >= 2 ? G.Urban.valueAt(set, at[0], at[1]) * 0.12 : 2;
     return r2(n + land);
@@ -322,10 +323,14 @@
   // the families of a town that would ask for the rich house now, the richest first (read only): their heads
   K.rich = function (set) {
     const S = G.S; const st = K.richStep(set); if (!st) return [];
-    const least = K.price(set, 'house', null, st) + K.RICH; const out = [];
+    // (the price is the materials and the ground: a house that could not pay the materials is out before anything is asked,
+    // and the town is asked what its ground is worth — its look — only for an owner living in a house that could. T-805)
+    const floor = r2(goods('house', st)) + K.RICH; let least = -1; const out = [];
     for (const b of S.buildings.values()) {
-      if (b.set !== set.id || !built(b) || isRich(b) || b.type === 'barraco' || !b.dono || (b.coin || 0) + EPS < least) continue;
+      if (b.set !== set.id || !built(b) || isRich(b) || b.type === 'barraco' || !b.dono || (b.coin || 0) + EPS < floor) continue;
       const v = P(b.dono); if (!v || v.home !== b.id || v.set !== set.id || v.age < 18 || v.captive || v.jail || v.aboard) continue;
+      if (least < 0) least = K.price(set, 'house', null, st) + K.RICH;
+      if ((b.coin || 0) + EPS < least) continue;
       const fam = K.family(v); if (fam.length > G.BDEF.house.housing || shareOf(v, fam) + EPS < least) continue;
       if (K.need(v) || K.waiting(v) || K.gaveUp(v)) continue;
       out.push(v);

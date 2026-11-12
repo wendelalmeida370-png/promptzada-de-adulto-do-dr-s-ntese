@@ -43,7 +43,9 @@
   Es.define('temple', [C('santuario', 'Santuário'), { id: 'templo', nome: 'Templo', n: 4, k: 2.2, req: { tier: 2, pop: 40 } }, { id: 'grande', nome: 'Grande templo', n: 6, k: 2.8, kw: 3.6, req: { tier: 3, pop: 90 } }, { id: 'monumental', nome: 'Santuário monumental', n: 8, k: 4.2, kw: 5.5, req: { tier: 4, pop: 180 } }]);
   Es.define('monument', [C('monumento', 'Monumento'), { id: 'grande', nome: 'Grande monumento', n: 4, k: 2.5, req: { pop: 120 } }]);
   Es.define('taverna', [C('taberna', 'Taberna'), { id: 'taverna', nome: 'Taverna', n: 3, k: 1.8, req: { pop: 60 } }, { id: 'hospedaria', nome: 'Hospedaria', n: 4, k: 2.6, req: { pop: 120 } }]);
-  Es.define('banhos', [C('banhos', 'Banhos'), { id: 'termas', nome: 'Termas', n: 5, k: 2.6, kw: 3, req: { pop: 120 } }, { id: 'grandes', nome: 'Grandes termas', n: 7, k: 3.6, kw: 4.5, req: { tier: 4, pop: 220 } }]);
+  // (the baths at 80 and, in a metropolis, 160 — D-161: at the 120 and 220 first written no town of a people of the thermae
+  // reached them in any ready world — Argos 89, Rome 41 and 91 —, and the thermae stood only by the god's hand, T-820)
+  Es.define('banhos', [C('banhos', 'Banhos'), { id: 'termas', nome: 'Termas', n: 5, k: 2.6, kw: 3, req: { pop: 80 } }, { id: 'grandes', nome: 'Grandes termas', n: 7, k: 3.6, kw: 4.5, req: { tier: 4, pop: 160 } }]);
   Es.define('biblioteca', [C('biblioteca', 'Biblioteca'), { id: 'grande', nome: 'Grande biblioteca', n: 4, k: 2.4, req: { pop: 150 } }]);
   Es.define('mercado', [C('mercado', 'Mercado'), { id: 'coberto', nome: 'Mercado coberto', n: 4, k: 2.4, req: { pop: 150 } }]);
   Es.define('administracao', [C('administracao', 'Administração'), { id: 'paco_municipal', nome: 'Paço municipal', n: 4, k: 2.2, req: { pop: 150 } }]);
