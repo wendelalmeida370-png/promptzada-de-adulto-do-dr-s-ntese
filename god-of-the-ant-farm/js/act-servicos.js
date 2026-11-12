@@ -139,8 +139,21 @@
   Te.close = (op, why) => { if (op && live(op) && G.inSim) close(op, 'ok', why || 'fechada'); };
   A.hooks.tick.push(function () {
     const S = S_();
-    for (const set of S.settlements.values()) for (const b of E.byType(set.id, 'banhos')) if (!Te.dia(b) && inHours(b)) open(b);
+    for (const set of S.settlements.values()) for (const b of E.byType(set.id, 'banhos')) { if (!Te.dia(b) && inHours(b)) open(b); callStoker(b); }
   });
+  // the stoker called to his post (D-227): the doors about to open, or open with the fire still to feed to the closing
+  // (Te.onDuty), and he on another chore of his day — the axe or the hoe of the morning, the house's jar, a stroll —: the
+  // furnace first. His day's work holds itself against the next choice (a chore of the same kind is never put down for
+  // another), and the doors opened on a cold furnace while he finished a tree. Not from his bed, a meal (whatever the meal's
+  // errand weighs: at the post he only eats starving, and then he must), a danger or a call that weighs more, nor with a
+  // load in his hands (it goes where it is going first), nor the god's body
+  const POST = { fornalha: 1, lenhaTermas: 1 };
+  function callStoker(b) {
+    const k = keeperOf(b); if (!k || !Te.onDuty(k) || k.sleeping || A.isBody(k) || (k.carry && k.carry.n > EPS)) return;
+    const t = k.task; if (t && (POST[t.type] || t.kind === 'eat' || t.kind === 'sleep' || (t.pri || 0) > 1.05 + EPS)) return;
+    const f = G.Fac.ofV(k); if (!f) return;
+    const n = Te.task(k, b, f, G.Vg.H); if (n && k.task === n) n.kind = 'work';
+  }
   // (who is in the baths: a person of the world in them by the errand of this day, or the god's body by its door)
   function inside(v, op) {
     const m = op.data.banho[v.id]; if (!m) return false;
@@ -299,14 +312,50 @@
     }
     return best;
   };
-  // the stoker at his post (D-204): the day of his baths open and the fire not enough to last to the closing — he does not
-  // leave the furnace for a bath, a scroll, the theatre or the tavern (the wishes of decide ask this); the fire fed to the end
-  // of the day, he is as free as anyone. The water was cold on days full of bathers because the stoker had gone to bathe
+  // (the time's rule by itself, for the town's stroll — G.City.leisureTask, the door of before —: the walk, the pegs and a
+  // bath's worth of water before the closing; who cannot have it does not set out. The stroll sent one at any hour, and
+  // the closing took her out of the water with the entry paid and no bath: T-919)
+  Te.inTime = function (v, b) { const dr = G.Vg.door(b); return S_().time <= Te.horas(b).fecha - (G.dist(v.x, v.y, dr[0], dr[1]) * Te.WALK + AN.despir.dur + Te.DIP) / G.DAY_LEN; };
+  // (the town's stroll to the baths, its one door: with the time for a bath, and a place one more can count on — who is on
+  // the way counted, as the wish counts them. The stroll asked neither: it sent Penélope and Zoé of Argos to baths of eight
+  // places with ten and eleven inside or on their way, and the full door turned them back: T-919)
+  Te.stroll = function (v, b, H) { return Te.inTime(v, b) && Te.room(b) >= 1 ? Te.visit(v, b, H) : null; };
+  // the stoker at his post (D-204, D-227): the day of his baths open and the fire not enough to last to the closing — and
+  // the moments before the doors open (Te.EARLY), the fire still to light. He does not leave the furnace for a bath, a
+  // scroll, the theatre, the tavern or the plaza (the wishes of decide ask this), nor for a call from outside — a feast, a
+  // celebration, a trial, a farewell at the quay: at the furnace's errand the post is the leg of his operation, as the
+  // actor's stage (D-094; the hook below) —, nor for the house's water, which another of the house fetches (life.js), nor for a meal short of
+  // starving, which he has before the doors open (Te.mealFirst). The fire fed to the end of the day — two logs give the
+  // day —, he is as free as anyone. The water was cold on days full of bathers because the stoker had gone to bathe; and,
+  // the wishes held, because he was at a trial, at a feast, seeing a ship off, at the well or at his meal when the doors
+  // opened: 17 of 20 days of baths lit in the ready metropolis
+  Te.EARLY = 0.05;   // (of the day, before the doors open: the stoker to his furnace, the wood by it — and the walk there
+  Te.LEAD = 0.08;    //  from where he is, by Te.WALK, up to this much more: he is at the furnace when the doors open)
+  Te.MEAL = 0.2;     // (of the day, before the doors open: from then to his post, the stoker's meal, if he is hungrier than Te.FED)
+  Te.FED = 30;
+  const stokerOf = v => { if (v.role !== 'foguista' || !v.job) return null; const b = S_().buildings.get(v.job); return b && b.type === 'banhos' && b.built ? b : null; };
+  const lead = (v, b) => Te.EARLY + Math.min(Te.LEAD, (v.inside === b.id ? 0 : G.dist(v.x, v.y, b.x + b.w / 2, b.y + b.h / 2)) * Te.WALK / G.DAY_LEN);
   Te.onDuty = function (v) {
-    if (v.role !== 'foguista' || !v.job) return false;
-    const b = S_().buildings.get(v.job); if (!b || b.type !== 'banhos' || !b.built) return false;
-    const op = Te.dia(b); if (!op || op.st !== 'on' || !inHours(b)) return false;
-    return op.data.calor < (Te.horas(b).fecha - S_().time) * G.DAY_LEN;
+    const b = stokerOf(v); if (!b) return false;
+    const S = S_(); const h = Te.horas(b); const op = Te.dia(b);
+    // (about to open — or the hour come and the day opening within the second: no gap for a meal to slip through. Once on
+    // his way to the furnace he is on duty till the doors open: the walk's lead shrinks as he nears them, and the duty went
+    // with it — he reached the furnace early, was free again, and went for a meal as the doors opened)
+    if (!op) return S.time < h.fecha && !openedToday(b) && (S.time >= h.abre - lead(v, b) || (S.time >= h.abre - Te.EARLY - Te.LEAD && !!v.task && v.task.type === 'fornalha' && !!v.task.pre));
+    if (op.st !== 'on' || !inHours(b)) return false;
+    return op.data.calor < (h.fecha - S.time) * G.DAY_LEN;
+  };
+  // (the post is a leg: a call from outside below 3 does not take the stoker on duty, Vg.busy, Vg.handsBusy — at the
+  // furnace's errand, at a plain task the day of the baths has not called him from yet, and between two errands: with the
+  // leg on the furnace's errand alone, the second between the wait and the feeding left him nobody's, and the scaffold
+  // took Messalina of Roma from the furnace as the doors opened, L-914. Not the duty alone: one already at something that
+  // weighs more — a feast or a trial he was at when the post began, a meal, his bed — holds no leg: it keeps him to its end)
+  A.hooks.leg.push(v => { const t = v.task; return (!t || (t.pri || 0) <= 1.05 + EPS) && Te.onDuty(v) ? 'fornalha' : null; });
+  // (the stoker's meal fits his day: in the hours before his doors open, hungrier than Te.FED, he eats — decide asks —, and
+  // the shift finds him fed: from a meal to the hunger that calls, more than half a day)
+  Te.mealFirst = function (v) {
+    const b = stokerOf(v); if (!b || !(v.hunger > Te.FED) || Te.dia(b) || openedToday(b)) return false;
+    const S = S_(); const h = Te.horas(b); return S.time >= h.abre - Te.MEAL && S.time < h.abre - lead(v, b);
   };
   // how much this grown one wants a bath now (a choice of decide, among the others), or 0; one already on the way stays
   // for the bath — the work, a chat, the way home do not take one from it; hunger and sleep do —, and one inside, who has
@@ -338,11 +387,12 @@
   const faceB = (v, b) => { const [cx, cy] = G.Village.center(b); G.faceTo(v, cx - v.x, cy - v.y); };
   // the entry: in a people of coin, from the bather's house (or purse) to the people's treasury — once (the key of the entry)
   function payEntry(v, op, b) {
-    // (the life of the quarter: one more at the baths — paid or, in a people with no coin, let in)
-    if (!coin(b)) { if (G.Urban) G.Urban.noteB(b, 'noite', 1); return { ok: true, n: 0 }; }
+    // (the life of the quarter: one more at the baths — paid or, in a people with no coin, let in. By its own key, 'banho':
+    // a bath by day is no night out — counted as 'noite', the baths alone made a quarter «boêmio», D-228)
+    if (!coin(b)) { if (G.Urban) G.Urban.noteB(b, 'banho', 1); return { ok: true, n: 0 }; }
     const d = op.data; const r = D.move(E.coinRef(v), 'f:' + op.fac, 'moedas', Te.FEE, { op: op.id, code: 'termas', by: v.id, key: 'te:' + op.id + ':' + d.q });
     if (!r.ok) return r;
-    if (!r.again && G.Urban) G.Urban.noteB(b, 'noite', 1);
+    if (!r.again && G.Urban) G.Urban.noteB(b, 'banho', 1);
     d.q++; d.receita = r2(d.receita + Te.FEE); E.ensure(G.Fac.get(op.fac)); return { ok: true, n: Te.FEE };
   }
   // the entry back, to one who never got into the water — from the people's treasury, once (the key of the visit)
@@ -407,6 +457,8 @@
       }
     }
     if (isOpen) { A.join(op, v, 'foguista'); return H.setTask(v, { type: 'fornalha', id: b.id, op: op.id, pri: 1, st: 0, idle: 1 }); }
+    // (the moments before the doors open: at the furnace, waiting for the hour — D-227)
+    if (!op && Te.onDuty(v)) return H.setTask(v, { type: 'fornalha', id: b.id, op: 0, pri: 1.05, st: 0, pre: 1 });
     return null;
   };
   // a log into the furnace, from the stoker's hands (wood carried in) or from the wood by it — in the ledger, burnt
@@ -423,6 +475,12 @@
   Te.feed = (op, v) => (G.inSim && op && live(op) ? feed(op, v) : { ok: false, why: '' });
   function runFornalha(v, t, dt, H) {
     const S = S_(); const b = S.buildings.get(t.id); const op = t.op ? A.get(t.op) : null;
+    // (before the doors open: to the furnace, and there until the day opens — the next look feeds it)
+    if (t.pre) {
+      if (!b || !b.built || Te.dia(b) || !Te.onDuty(v)) return H.end(v);
+      if (t.st === 0) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; goIn(v, t, b, 'alimentar'); } return; }
+      faceB(v, b); return;
+    }
     if (!b || !b.built || !op || !live(op) || !inHours(b)) return H.end(v);
     if (t.st === 0) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; t.wt = 0; goIn(v, t, b, 'alimentar'); } return; }
     v.act = AN.alimentarFogo.act; faceB(v, b);
@@ -473,7 +531,7 @@
     tick,
     text(v, t, op) {
       if (t.type === 'termas') { if (t.st === 0) return 'Indo para os banhos'; if (t.st === 1) return 'Tirando a roupa nos banhos'; if (t.st === 2) return op.data.calor > EPS ? 'Relaxando na água quente dos banhos' : 'Na água fria dos banhos'; return 'Vestindo-se para sair dos banhos'; }
-      if (t.type === 'fornalha') return t.st < 1 ? 'Indo para a fornalha dos banhos' : 'Alimentando a fornalha dos banhos';
+      if (t.type === 'fornalha') return t.st < 1 ? 'Indo para a fornalha dos banhos' : t.pre ? 'Junto à fornalha, à espera da hora de abrir os banhos' : 'Alimentando a fornalha dos banhos';
       return null;
     },
     offers(v, x, y, r) {

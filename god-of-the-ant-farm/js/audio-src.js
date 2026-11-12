@@ -47,7 +47,7 @@
     comprar: still('o freguês olha a banca; a fala dele é a do regateio (pechinchar)'),
     comer: still('come de boca fechada'),
     sentar: still('quem está sentado não soa'),
-    banhar: { s: 'slosh', q: 'curso', cada: 2.6, v: 0.4, alc: 0.6, fam: 'noite' },
+    banhar: { s: 'slosh', q: 'curso', cada: 2.6, v: 0.4, alc: 0.6, fam: 'banho' },
     assistir: still('a plateia assiste calada: soa quem está no palco'),
     pescarMaos: { s: 'splash', q: 'contato', v: 0.35, alc: 0.7, fam: 'pesca' },
     pescarArpao: { s: 'splash', q: 'contato', v: 0.45, alc: 0.8, fam: 'pesca' },
@@ -191,11 +191,11 @@
 
   // ------------------------------ the life a pair of hands belongs to ------------------------------
   // (G.Urban's keys: what the world counts where the same work closes — the operation's, the errand's, the gesture's)
-  A.FAMS = ['cais', 'pesca', 'troca', 'oficio', 'mina', 'campo', 'armas', 'fe', 'saber', 'noite'];
-  const FAM_DEF = { descarga: 'cais', negocio: 'troca', pesca: 'pesca', oficio: 'oficio', taverna: 'noite', termas: 'noite', lenhaTermas: 'noite', espetaculo: 'noite', leitura: 'saber' };
+  A.FAMS = ['cais', 'pesca', 'troca', 'oficio', 'mina', 'campo', 'armas', 'fe', 'saber', 'noite', 'banho'];
+  const FAM_DEF = { descarga: 'cais', negocio: 'troca', pesca: 'pesca', oficio: 'oficio', taverna: 'noite', termas: 'banho', lenhaTermas: 'banho', espetaculo: 'noite', leitura: 'saber' };
   const FAM_TASK = { farm: 'campo', horta: 'campo', estate: 'campo', herd: 'campo', tend: 'campo', penwork: 'campo', fodder: 'campo', slaughter: 'campo', mine: 'mina', minejob: 'mina', quarry: 'mina',
     drill: 'armas', muster: 'armas', pray: 'fe', banca: 'troca', sell: 'troca', shop: 'troca', compra: 'troca', atacado: 'troca', fish: 'pesca', redes: 'pesca', barco: 'pesca',
-    tavern: 'noite', atender: 'noite', teatro: 'noite', atuar: 'noite', termas: 'noite', fornalha: 'noite', copiar: 'saber', ler: 'saber', descarga: 'cais', cais: 'cais', conferir: 'cais', oficio: 'oficio' };
+    tavern: 'noite', atender: 'noite', teatro: 'noite', atuar: 'noite', termas: 'banho', fornalha: 'banho', copiar: 'saber', ler: 'saber', descarga: 'cais', cais: 'cais', conferir: 'cais', oficio: 'oficio' };
   A.famDe = function (v, r) {
     const t = v.task || NONE;
     if (r && r.g === 'cavar') return t.type === 'oficio' ? 'mina' : t.type === 'horta' ? 'campo' : null;
@@ -277,7 +277,7 @@
   // what a quarter sounds like from within, beyond the sources one can tell apart: for each life of it, its habit (the slow
   // mean of what really happened there, against the mark that makes a profile of it — G.Urban) times the hands at that
   // work in it now. No cargo on the quay, no hands: the port is silent, whatever it is called. The rain covers what is far
-  const TAG_OF = { cais: 'porto', pesca: 'pesqueiro', troca: 'mercado', oficio: 'oficinas', mina: 'minas', campo: 'campo', armas: 'quartel', fe: 'sagrado', saber: 'letrado', noite: 'boemio' };
+  const TAG_OF = { cais: 'porto', pesca: 'pesqueiro', troca: 'mercado', oficio: 'oficinas', mina: 'minas', campo: 'campo', armas: 'quartel', fe: 'sagrado', saber: 'letrado', noite: 'boemio', banho: 'termal' };
   A.HANDS = 2; // (this many pairs of hands at a work make the whole of its presence)
   A.habito = function (q) {
     const U = G.Urban; const h = {}; const v = (q && q.vida) || NONE;

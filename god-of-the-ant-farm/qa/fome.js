@@ -45,6 +45,9 @@
 //    da geração 17: Hedeby, com o vulcão no coração dela, três dias sem armazém)
 // h20 a criança ferida, de cama em casa com a despensa vazia, levanta com a fome no máximo e come no armazém, como um adulto
 //    (L-659; achado pela regra S2 no caos da semente 7 da geração 18: Ahuízotl, 7 anos, de Tenochtitlan, morreu de fome na cama)
+// h21 o cadafalso não tira ninguém da refeição da fome: o carrasco e o arauto saem de entre os que comeram, nunca de quem tem a
+//    fome acima de 85 (L-913; achado pela regra S2 no salto da qa/freguesia.js: Graco, sacerdote de Roma, uma noite a apagar o
+//    fogo, com a fome no máximo e 9 de vida, chamado da refeição para ser o arauto)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -728,6 +731,32 @@ const calmOne = (skip, also) => {
   }
   ok('h20 a criança ferida, de cama em casa com a despensa vazia, levanta com a fome no máximo e come no armazém (L-659)', !!kid && bed && rose !== null && ate, info);
   S.time = Math.max(S.time, t0);
+}
+// ---------------- h21 the scaffold takes nobody from the meal of need (L-913) ----------------
+// (found by the rule S2 in the skip of the qa/freguesia.js: Graco, a priest of Roma, a night at the fire of the town — 4, over
+// the meal's 2,5 —, at 100 of hunger and 9 of life, on his way to eat, was called to be the herald of an execution — 4,5 —,
+// «morre de fome com comida ao alcance … tarefa justice». The case: an execution called «soon» in a calm town, every grown one
+// of it hungry over 85 by the test's hand but two, fed and free: the executioner and the herald are those two)
+{
+  const v = calmOne(); let info = 'ninguém numa cidade calma', good = false;
+  if (v) {
+    const set = S.settlements.get(v.set); const f = G.Fac.get(set.fac); const t0 = S.time; S.time = 0.3;
+    const grown = [...S.villagers.values()].filter(q => q.set === set.id && q.age >= 18 && q.id !== v.id && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air).sort((a, b) => a.id - b.id);
+    const fed = grown.filter(q => q.age >= 20 && q.age <= 60 && !q.inside && q.id !== f.leader && !(S.avatar && S.avatar.id === q.id) && !(q.sick > 0)).slice(0, 2);
+    const h0 = new Map(grown.map(q => [q.id, q.hunger])); const hungry = grown.filter(q => !fed.includes(q));
+    for (const q of fed) { Vg.endTask(q); q.sleeping = false; q.hunger = 10; q.energy = Math.max(q.energy, 80); if (q.carry && q.carry.n > 1e-6 && !q.carry.op && !q.carry.to) Vg.toStore(q, f.id, 'teste'); }
+    Vg.endTask(v); const set0x = G.Justice.sentence(f, [v], 'pelo teste', { set: set.id, soon: true, quiet: true });
+    const e = (S.execs || []).find(q => q.ids.includes(v.id)); let exe = null, her = null, hx = -1, hh = -1;
+    // (the hunger of need, held by the hand until the scaffold calls its two: a meal eaten meanwhile is undone)
+    if (e) for (let k = 0; k < 80 && e.phase === 'wait'; k++) { for (const q of hungry) if (S.villagers.has(q.id) && q.hunger < 90) q.hunger = 90; M.viver(0.1); }
+    if (e && e.phase !== 'wait') { exe = S.villagers.get(e.exe) || null; her = S.villagers.get(e.her) || null; hx = exe ? Math.round(exe.hunger) : -1; hh = her ? Math.round(her.hunger) : -1; }
+    good = !!e && fed.length === 2 && !!exe && !!her && fed.includes(exe) && fed.includes(her);
+    info = `${set.name}: ${v.name} condenado pela mão da prova, a hora «logo»; ${hungry.length} crescidos com a fome a 90 pela mão da prova, dois de fora (${fed.map(q => q.name).join(' e ')}, a fome a 10): ${!e ? (set0x ? 'A EXECUÇÃO SUMIU' : 'a sentença NÃO foi dada') : e.phase === 'wait' ? 'o cadafalso NÃO chamou em 8 s' : `o carrasco, ${exe ? `${exe.name} (fome ${hx})${fed.includes(exe) ? '' : ' — TIRADO DA REFEIÇÃO'}` : 'NENHUM'}; o arauto, ${her ? `${her.name} (fome ${hh})${fed.includes(her) ? '' : ' — TIRADO DA REFEIÇÃO'}` : 'NENHUM'}`}`;
+    if (e) G.Justice.free(e, 'perdao'); else Vg.endTask(v);
+    for (const q of hungry) if (S.villagers.has(q.id) && q.hunger >= 85) q.hunger = h0.get(q.id); // (the town's hunger given back)
+    S.time = Math.max(S.time, t0);
+  }
+  ok('h21 o cadafalso não tira ninguém da refeição da fome: o carrasco e o arauto saem de entre os que comeram (L-913)', good, info);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }

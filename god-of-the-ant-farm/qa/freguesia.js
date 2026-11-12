@@ -212,7 +212,7 @@ function watch() {
   const go0 = Te.go; Te.go = function (v, H) { const p = pre(v); const b = Te.pick(v); if (b) { p.b = b.id; p.hour = Te.hourOf(v, b); p.far = farOf(v, b); p.lot = Te.lot(v); p.wish = Te.wish(v, b); p.fecha = Te.horas(b).fecha; p.abre = Te.horas(b).abre; p.d0 = G.dist(v.x, v.y, ...Vg.door(b)); } const t = go0.apply(this, arguments); if (t) w.go.push(p); return t; };
   const lg0 = Bi.go; Bi.go = function (v, H) { const p = pre(v); const b = Bi.pick(v); if (b) { p.b = b.id; p.hour = Bi.hourOf(v, b); p.far = farOf(v, b); p.lot = Bi.lot(v); p.wish = Bi.wish(v, b); } const t = lg0.apply(this, arguments); if (t) w.goLib.push(p); return t; };
   const tap = e => { if (e[8] === 'termas' || e[8] === 'termas-volta' || e[8] === 'fornalha') w.led.push(e.slice()); }; D.onMove.push(tap);
-  const nb0 = U.noteB; U.noteB = function (b, k, n) { if (b && b.type === 'banhos' && k === 'noite') w.notes.banho += n === undefined ? 1 : n; if (b && b.type === 'biblioteca' && k === 'saber') w.notes.saber += n === undefined ? 1 : n; return nb0.apply(this, arguments); };
+  const nb0 = U.noteB; U.noteB = function (b, k, n) { if (b && b.type === 'banhos' && k === 'banho') w.notes.banho += n === undefined ? 1 : n; if (b && b.type === 'banhos' && k !== 'banho') w.notes.outra = (w.notes.outra || 0) + 1; if (b && b.type === 'biblioteca' && k === 'saber') w.notes.saber += n === undefined ? 1 : n; return nb0.apply(this, arguments); };
   const errand = new Map(); // (who has the errand of the baths: id → { b, st, t0 })
   let open = new Set(); // (the entries in a day's book now: one that leaves it is closed there — bathed or not, read at that moment)
   const shutEntry = k => { const e = w.ent.get(k); if (!e || e.gone) return; e.gone = true; const v = S.villagers.get(e.id); e.bathed = e.done || !!(v && v.bathDay === e.day); e.now = v ? (v.task ? v.task.type + ':' + (v.task.pri || 0) : 'nada') : 'morreu'; if (!e.body && !e.bathed) w.dips.push(e); };
@@ -239,7 +239,10 @@ function watch() {
     for (const [id, e] of errand) { if (now.has(id)) continue; errand.delete(id); if (e.st >= 1) continue; const v = S.villagers.get(id); const b = S.buildings.get(e.b);
       if (!v) { w.dropped['morreu'] = (w.dropped['morreu'] || 0) + 1; continue; }
       const dr = b ? Vg.door(b) : null; const at = dr && G.dist(v.x, v.y, dr[0], dr[1]) < 3.2;
-      if (at && b && Te.aberta(b)) w.door.push(`${v.name} #${id} no dia ${S.day} às ${S.time.toFixed(2)}`); else { const k = v.task ? v.task.type : 'nada'; w.dropped[k] = (w.dropped[k] || 0) + 1; } }
+      // (turned at the FULL door: at it, the baths open, and every place taken — one called away at the door of baths with
+      // room, by the cave or by the trade between the peoples, dropped the errand for that: it was counted as a knock, T-923e)
+      const op = b ? Te.dia(b) : null; const cheia = !!op && Object.keys(op.data.banho).length >= Te.places(b);
+      if (at && b && Te.aberta(b) && cheia) w.door.push(`${v.name} #${id} no dia ${S.day} às ${S.time.toFixed(2)}`); else { const k = v.task ? v.task.type : 'nada'; w.dropped[k] = (w.dropped[k] || 0) + 1; } }
   };
   w.close = function () { Te.go = go0; Bi.go = lg0; G.Teatro.go = tg0; E.tavernTask = tv0; U.noteB = nb0; D.onMove.splice(D.onMove.indexOf(tap), 1); for (const p of w.go.concat(w.goLib)) if (p.duty) w.duty.push(`#${p.id} ${w.go.includes(p) ? 'aos banhos' : 'à biblioteca'} no dia ${p.day} às ${p.t.toFixed(2)}`); };
   // (who paid and had no bath: by the closing — the time's rule failed —, or called away from the pegs or the water)
@@ -340,9 +343,9 @@ function partB() {
   if (on('b7')) {
     const ent = ops.reduce((s, r) => s + r.ent, 0) + [...w.ops.values()].filter(r => !full.includes(r.day)).reduce((s, r) => s + r.ent, 0);
     const reads = [...w.lib.values()].reduce((s, r) => s + r.lidos + r.copias, 0);
-    const q = baths().map(b => { const d = U.at(b.x, b.y); return `${setOf(b).name}: ${d ? (d.whole ? 'a cidade' : d.name) + ' [' + U.tagNames(d).join(', ') + '] noite ' + ((d.vida || {}).noite || 0) : '—'}`; });
-    ok('b7 a vida do bairro conta cada entrada nos banhos e cada leitura uma vez (G.Urban.note, no passo do mundo)', Math.abs(w.notes.banho - ent) <= 1 && w.notes.saber >= reads - 8 && w.notes.saber <= reads + 1 && ent >= 4,
-      `${w.notes.banho} notas «noite» nos banhos para ${ent} entradas; ${w.notes.saber} notas «saber» nas bibliotecas para ${reads} leituras e cópias contadas; os bairros dos banhos no fim: ${q.join(' · ')}`);
+    const q = baths().map(b => { const d = U.at(b.x, b.y); return `${setOf(b).name}: ${d ? (d.whole ? 'a cidade' : d.name) + ' [' + U.tagNames(d).join(', ') + '] banho ' + ((d.vida || {}).banho || 0) + ', noite ' + ((d.vida || {}).noite || 0) : '—'}`; });
+    ok('b7 a vida do bairro conta cada entrada nos banhos (a chave «banho», nunca «noite»: D-228) e cada leitura uma vez (G.Urban.note, no passo do mundo)', Math.abs(w.notes.banho - ent) <= 1 && !w.notes.outra && w.notes.saber >= reads - 8 && w.notes.saber <= reads + 1 && ent >= 4,
+      `${w.notes.banho} notas «banho» nos banhos para ${ent} entradas${w.notes.outra ? ' E ' + w.notes.outra + ' NOUTRA CHAVE' : ''}; ${w.notes.saber} notas «saber» nas bibliotecas para ${reads} leituras e cópias contadas; os bairros dos banhos no fim: ${q.join(' · ')}`);
   }
   if (on('b8')) ok('b8 o verificador (com as regras novas da freguesia) e nenhum erro nos dias vividos', !w.bad.length && M.limpo(), w.bad.slice(0, 4).join(' | ') || (M.limpo() ? `limpo (S0–S2 novas: 0; freguesia: 0) em ${DIAS} dias` : JSON.stringify(M.erros()).slice(0, 300)));
   return w;
@@ -365,7 +368,7 @@ function partI() {
   const reads = [...w.lib.values()].filter(r => r.day >= d0 && r.day < d0 + anos).reduce((s, r) => s + r.lidos, 0); const all = [...w.ops.values()].reduce((s, r) => s + r.ent, 0);
   ok(`i a mesma causa no salto (${anos} anos saltados, na paz do deus): os banhos têm banhistas pela mesma vontade, cada entrada é uma linha do livro e uma nota na vida do bairro, ninguém duas vezes no dia, ninguém chamado com as mãos ocupadas; a biblioteca tem leitores`,
     ent >= ops.length && ops.length >= anos * 2 && !bad.length && !w.again.length && !badG.length && Math.abs(w.notes.banho - all) <= 1 && reads >= 1 && !w.bad.length && M.limpo(),
-    `${ops.length} dias de banhos no salto, ${ent} banhos (${(ent / Math.max(1, ops.length)).toFixed(1)} por dia e por prédio): ${Object.entries(per).map(([n, l]) => `${n} ${l}`).join(' · ')}; o livro e o caixa ${bad.length ? 'NÃO BATEM: ' + bad.slice(0, 2).join('; ') : 'batem'}; ${w.again.length} entradas de quem já se tinha banhado no dia; ${g.length} idas pela vontade, ${badG.length} de quem não podia; ${w.notes.banho} notas «noite» para ${all} entradas; ${reads} leituras; o verificador ${w.bad.length ? w.bad.slice(0, 2).join(' | ') : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
+    `${ops.length} dias de banhos no salto, ${ent} banhos (${(ent / Math.max(1, ops.length)).toFixed(1)} por dia e por prédio): ${Object.entries(per).map(([n, l]) => `${n} ${l}`).join(' · ')}; o livro e o caixa ${bad.length ? 'NÃO BATEM: ' + bad.slice(0, 2).join('; ') : 'batem'}; ${w.again.length} entradas de quem já se tinha banhado no dia; ${g.length} idas pela vontade, ${badG.length} de quem não podia; ${w.notes.banho} notas «banho» para ${all} entradas; ${reads} leituras; o verificador ${w.bad.length ? w.bad.slice(0, 2).join(' | ') : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 
 // ================================================================ c, d, e1, e2: the thermae and the grand library by the god's hand
@@ -398,6 +401,13 @@ function handDay(step, lib, extra) {
   const b = god(() => V.handFound(set, 'banhos', step, { built: true, x: at[0], y: at[1], R: 2 })); if (!b) return { none: `${set.name}: sem lote para ${step} em ${at}` };
   const L = lib ? god(() => V.handFound(set, 'biblioteca', 'grande', { built: true, R: 60 })) : null;
   const kid = god(() => stokerFor(b)); const fid = facOf(b);
+  // (the baths and the library of the god's hand are what the town lacked to be a metropolis — city.js, tierOf: baths, an
+  // aqueduct or a library —, and the day the rest of it comes — the streets, the tall houses — the whole town comes out to
+  // celebrate (tierUp: seven in ten, 1,1, over any wish): a feast of the hand's own making, in the day of the case. In the
+  // tree joined with the leader's tip it fell at 0,465 of the great baths' day — 123 of 215 grown ones at it in the baths'
+  // best hours, 7 bathed, one read —, and at 0,565 in the other two. The town is told it has been one already, by the
+  // hand, as the rain is held: the tier rises in silence. T-923d)
+  const tier0 = `${set.tier}/${set.best}`; set.best = Math.max(set.best || 0, 5);
   const hold = () => god(() => { const v = S.villagers.get(kid); if (v && !v.captive && (v.role !== 'foguista' || v.job !== b.id)) { v.role = 'foguista'; v.job = b.id; } if (D.free('f:' + fid, 'wood') < 30) D.make('f:' + fid, 'wood', 40, { code: 'teste', part: true }); S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0; });
   rebase(); const w = watch(); S.time = Te.horas(b).abre - 0.02; const day = S.day; let mid = null, midInfo = null;
   // (the clock held at the opening hour until the furnace is lit — the lot of the god's hand may be far from the store, and

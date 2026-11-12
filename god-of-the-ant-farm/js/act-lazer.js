@@ -606,6 +606,189 @@
     return out;
   };
 
+  // ------------------------------ the plaza at the end of the afternoon (D-225) ------------------------------
+  // The plaza of one's streets is where the day ends for a part of the town: one stops there to talk on the way home — a
+  // choice of the person, nobody is sent to fill it. Who: every grown one with a home now and then; more the old, the
+  // young and the sociable; the trader where there is a market — at its door while it sells, at the plaza beside it after.
+  // Less who lives far from it. When: the end of the afternoon — the world's people are up before the light and worn out
+  // before dark: the evening is short. Each one from an hour of one's own, a little before the working day ends (the old
+  // from the middle of the afternoon): decide's own 'praca', worth more than a plain day's work and less than a hard
+  // worker's — on a day of the plaza the working day ends there: the axe, the hoe, the net, the trowel and the drill are put down
+  // (Pr.CUT; never a load, an operation, a post, the stone of the works) —; and, the working day over, on the way home
+  // (decide's 'home': the supper and the garden first, then the plaza, then the family at the door) — until dark, and no
+  // longer than one's legs hold (Pr.TIRED). Not in the rain, in bitter cold, with the war at the gates, in a panic or
+  // during a feast of the town (Pr.fair). How often: the wish is a share of the days (Pr.wish),
+  // and whether today is one of them is the day's own lot of each one (G.hash of the person and the day: none of the
+  // world's chance is drawn, the person has no new field). What stops it: hunger, weariness, an illness, a load or the leg
+  // of an operation (D-094), the little ones to mind, a baby in one's arms, the furnace to feed, the plaza full, too long a
+  // walk; never the god's body. What one does there: stands and talks (the task 'praca', this file's alone), at a place
+  // of one's own off the fountain, facing whoever is nearest. It holds as the evening at home does (Pr.PRI): the tavern's
+  // cup and the theatre, chosen before it, lose nobody to it, and one at the plaza is not taken to them
+  Pr.PRI = 0.45;     // (the errand's priority: the evening at home's — below any work, above a stroll)
+  Pr.CUT = 1.01;     // (the choice's own weight before the working day ends: a plain task of the day — 1 — is put down for it)
+  Pr.OPEN = 0.5;     // (the hour from which the old may be there,)
+  Pr.WORK = 0.53;    // (and the others: each from an hour of one's own in the 0,07 of the day after it — the working day ends at 0,6;)
+  Pr.EVE = 0.6;      // (from then on the plaza is on the way home — and, for a little longer, for whom the working day's
+  Pr.LATE = 0.62;    //  end found in the middle of a plain task: the task holds itself against the way home, not against the plaza)
+  Pr.SHUT = 0.73;    // (and the dark sends everyone home)
+  Pr.EARLY = 0.6;    // (what the plaza is worth before the working day ends: above a plain day's work — 0,55 —, below a hard worker's;)
+  Pr.OVER = 0.96;    // (and to one still at a plain task after it: above the way home — a task under way is never left for home, nor for the tavern)
+  Pr.BASE = 0.6;    // (the share of the evenings with the plaza on the way home, of anyone …)
+  Pr.OLD = 0.25;     // (… added for the old — 62 and over —,)
+  Pr.YOUNG = 0.2;    // (for the young — under 26 —,)
+  Pr.SOCIAL = 0.15;  // (for the sociable,)
+  Pr.TRADER = 0.3;   // (and for a trader where the market is: at its door, or at a plaza within Pr.NEAR of it)
+  Pr.NEAR = 8;       // (home within this many tiles: the whole wish; beyond, less with each tile — over Pr.SPAN tiles
+  Pr.SPAN = 30;      //  more —, never under Pr.FLOOR of it)
+  Pr.FLOOR = 0.2;
+  Pr.REACH = 30;     // (a walk there longer than this: not today — the tavern's own reach)
+  Pr.WALK = 1.5;     // (the seconds a tile takes, the streets going round: the baths' own measure)
+  Pr.STAY = 6;       // (the seconds there that make it worth the walk)
+  Pr.HERE = 0.5;     // (of two plazas, how much the walk from here weighs beside the way home: the plaza of one's streets, D-157)
+  Pr.HUNGRY = 65;    // (hungrier than this, the meal first)
+  Pr.SPENT = 23;     // (more worn out than this, one does not set out: the bed calls at 22;)
+  Pr.TIRED = 15;     // (and worn out to this, home — the family at the door stays up as long)
+  Pr.PER = 3;        // (who a plaza holds, for each tile of it: twelve on the plaza of two by two — 5 m² each)
+  Pr.DOOR = 6;       // (and who stands talking at a market's door)
+  const TRADERS = { mercador: 1, feirante: 1 };
+  // (the day's work one puts down for the plaza: no load in it, no operation, no post, no stone a great work waits for —
+  // and of the works, never the great one of the town, which has the turn: D-174)
+  const PLAIN = { chop: 1, farm: 1, gather: 1, shell: 1, fish: 1, estate: 1, pave: 1, drill: 1, build: 1 };
+  const plain = (v, t) => !!PLAIN[t.type] && t.kind === 'work' && t.pri <= 1 && !(t.type === 'build' && t.id === (S_().settlements.get(v.set) || {}).gw);
+  const isTrader = v => !!TRADERS[v.role] || v.grp === 'mercadores';
+  const homeOf = v => { const h = v.home ? S_().buildings.get(v.home) : null; return h && h.built ? h : null; };
+  const midOf = b => [b.x + b.w / 2, b.y + b.h / 2];
+  // (a market sells in the stalls' hours — with stalls of its own, while one of the town is open and manned)
+  const sells = b => !!(G.Biz && G.Biz.hours()) && (!G.Biz.hasStalls(b) || G.Biz.selling(b.set));
+  // the weather and the peace of a plaza: no rain, no bitter cold (the land's, or a winter of the god's over it), no war at
+  // the gates of its town, no feast of the town under way (the feast has its own gathering), no panic about it
+  Pr.fair = function (b) {
+    const S = S_(); const w = S.weather || {}; if (w.rain > 0.3 || w.storm > 0) return false;
+    const [cx, cy] = midOf(b); const i = G.W.inb(cx, cy) ? G.W.idx(cx, cy) : -1;
+    if (i >= 0 && S.temp && S.temp[i] / 255 < 0.2) return false;
+    for (const q of S.winters || []) if (q.t > 2 && G.dist(cx, cy, q.x, q.y) <= q.r) return false;
+    for (const p of S.panic || []) if (G.dist(cx, cy, p.x, p.y) <= p.r + 2) return false;
+    if (G.War && G.War.threat && G.War.threat(b.set)) return false;
+    if (G.Fest && G.Fest.active && G.Fest.active(b.set)) return false;
+    return true;
+  };
+  // (asked by everyone standing there, every step: kept for the second of the world it was asked in, in its step only)
+  let fIdx = new Map(), fS = null, fT = -1;
+  const fairNow = b => { const S = S_(); if (!G.inSim) return Pr.fair(b); const sec = Math.floor(S.clock); if (fS !== S || fT !== sec) { fIdx = new Map(); fS = S; fT = sec; } let r = fIdx.get(b.id); if (r === undefined) fIdx.set(b.id, r = Pr.fair(b)); return r; };
+  // the share of the evenings this person stops at this plaza (or at this market's door), as things are — 0 to 1
+  const own = v => Pr.BASE + (v.age >= 62 ? Pr.OLD : v.age < 26 ? Pr.YOUNG : 0) + ((v.traits || []).includes('Sociável') ? Pr.SOCIAL : 0);
+  Pr.wish = function (v, b, far) {
+    let p = own(v);
+    if (isTrader(v) && (b.type === 'mercado' || E.byType(b.set, 'mercado').some(m => G.dist(m.x, m.y, b.x, b.y) <= Pr.NEAR))) p += Pr.TRADER;
+    if (far === undefined) { const hm = homeOf(v); far = hm ? G.dist(...midOf(hm), ...midOf(b)) : 0; }
+    if (far > Pr.NEAR) p *= Math.max(Pr.FLOOR, 1 - (far - Pr.NEAR) / Pr.SPAN);
+    return Math.min(1, p);
+  };
+  // (the day's lot of each one, 0 to 1: under the wish, today the plaza is on the way home — the same all day)
+  Pr.lot = v => G.hash(Math.imul(v.id | 0, 151) + Math.imul(S_().day | 0, 7901) + 23);
+  // (the hour of one's own from which one may be there: the old in the afternoon, the others as the working day ends)
+  Pr.hourOf = v => { const q = G.hash(Math.imul(v.id | 0, 41) + 17); return v.age >= 62 ? Pr.OPEN + 0.06 * q : Pr.WORK + (Pr.EVE - Pr.WORK) * q; };
+  // (who is at each plaza or on the way, counted once a step of the world when someone asks; the one just sent, added — and
+  // who found no way there is not sent again for the rest of the day)
+  let pIdx = null, pS = null, pT = -1, pNoWay = new Map();
+  G.worldHooks.push(() => { pIdx = null; pS = null; pT = -1; pNoWay = new Map(); fIdx = new Map(); fS = null; fT = -1; });
+  const pLost = v => { const t = pNoWay.get(v.id); return t !== undefined && S_().clock - t < G.DAY_LEN * 0.5 && S_().clock >= t; };
+  function atPlaza(b) {
+    const S = S_(); if (G.inSim && pIdx && pS === S && pT === S.clock) return pIdx.get(b.id) || 0;
+    const m = new Map(); for (const v of S.villagers.values()) { const t = v.task; if (t && t.type === 'praca') m.set(t.id, (m.get(t.id) || 0) + 1); }
+    if (G.inSim) { pIdx = m; pS = S; pT = S.clock; }
+    return m.get(b.id) || 0;
+  }
+  Pr.holds = b => (b.type === 'praca' ? Math.round(Pr.PER * b.w * b.h) : Pr.DOOR);
+  Pr.room = b => Pr.holds(b) - atPlaza(b);
+  // (the person's own: grown, at liberty, awake, well, hands free, fed and rested enough — the cheap ones first)
+  const able = v => !(v.age < 16 || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.sleeping || v.sick > 0 || v.fear > 60 || (v.carry && v.carry.n > EPS) || v.hunger > Pr.HUNGRY || v.energy < Pr.SPENT || A.isBody(v));
+  const tied = v => pLost(v) || G.Vg.handsBusy(v) || !!G.Vg.holdsBaby(v) || !!(G.Termas && G.Termas.onDuty && G.Termas.onDuty(v)) || !!(G.Lar && (G.Lar.bedrest(v) || G.Lar.minder(v) || G.Lar.grief(v)));
+  // the plaza (or the market's door, while it sells) this person would stop at now, by the wish — or none: it only reads
+  Pr.pick = function (v) {
+    const S = S_(); if (S.time < Pr.OPEN || S.time >= Pr.SHUT || !able(v)) return null;
+    const hm = homeOf(v); if (!hm) return null;
+    const lot = Pr.lot(v); if (lot >= own(v) + (isTrader(v) ? Pr.TRADER : 0)) return null; // (no wish of this one reaches it today)
+    const fid = G.Fac.idOfV(v); const [hx, hy] = midOf(hm); let best = null, bd = 1e9;
+    for (const type of ['praca', 'mercado']) for (const b of E.byType(v.set, type)) {
+      if (!b.built || facOf(b) !== fid || (type === 'mercado' && !sells(b))) continue;
+      const [cx, cy] = midOf(b); const d0 = G.dist(v.x, v.y, cx, cy); if (d0 >= Pr.REACH) continue;
+      const far = G.dist(hx, hy, cx, cy);
+      // (the walk there and a while of talk before dark: who cannot have it goes home)
+      if (S.time + (d0 * Pr.WALK + Pr.STAY) / G.DAY_LEN > Pr.SHUT) continue;
+      if (lot >= Pr.wish(v, b, far)) continue;
+      const d = far + Pr.HERE * d0; if (d >= bd) continue;
+      // (the plaza full — one already there keeps the place —, or no place to be now)
+      if ((Pr.room(b) < 1 && !(v.task && v.task.type === 'praca' && v.task.id === b.id)) || !fairNow(b)) continue;
+      if (!G.W.reaches(v, ...Pr.spot(v, b))) continue;
+      best = b; bd = d;
+    }
+    return best && !tied(v) ? best : null;
+  };
+  // where this person stands there today: about the plaza's middle, off the fountain — or about the market's door —, by
+  // the person and the day (no chance drawn)
+  Pr.spot = function (v, b) {
+    const k = Math.imul(v.id | 0, 53) + Math.imul(S_().day | 0, 389); const a = G.hash(k + 1) * Math.PI * 2, q = G.hash(k + 2);
+    if (b.type === 'praca') { const [cx, cy] = midOf(b); const r = 0.55 + 0.4 * q; return [G.clamp(cx + Math.cos(a) * r, b.x + 0.2, b.x + b.w - 0.2), G.clamp(cy + Math.sin(a) * r, b.y + 0.2, b.y + b.h - 0.2)]; }
+    const d = G.Vg.door(b);
+    for (const s of [1, -1]) { const x = d[0] + s * Math.cos(a) * (0.3 + 0.5 * q), y = d[1] + s * Math.sin(a) * (0.3 + 0.5 * q); if (G.W.walkableXY(x, y) && !S_().occ[G.W.idx(x, y)]) return [x, y]; }
+    return [d[0], d[1]];
+  };
+  // how much this grown one wants the plaza now (a choice of decide, among the others), or 0: before the working day
+  // ends, from one's hour; and for a little after it, only to one still in the middle of a plain task — from then on one
+  // stops there on the way home (decide's 'home': Pr.go), the tavern and the theatre chosen before it as ever
+  Pr.urge = function (v, cur) {
+    const S = S_(); if (S.time >= Pr.LATE || S.time < Pr.hourOf(v)) return 0;
+    const over = S.time >= Pr.EVE; // (the working day over)
+    if (cur && cur.type === 'praca') return over ? 0 : Pr.EARLY; // (there, or on the way: one stays — the errand holds itself)
+    // (an errand under way that weighs as much: the plaza waits — but a plain task of the day's work, which is put down)
+    if (cur ? (cur.pri || 0) >= Pr.PRI && !plain(v, cur) : over) return 0;
+    if (over && !(cur && plain(v, cur))) return 0;
+    return Pr.pick(v) ? (over ? Pr.OVER : Pr.EARLY) : 0;
+  };
+  Pr.go = function (v, H) {
+    const S = S_(); const b = Pr.pick(v); if (!b) return null;
+    const [x, y] = Pr.spot(v, b);
+    const t = H.setTask(v, { type: 'praca', id: b.id, pri: Pr.PRI, st: 0, x: r2(x), y: r2(y) });
+    if (!t || v.task !== t) return null;
+    if (G.inSim && pIdx && pS === S && pT === S.clock) pIdx.set(b.id, (pIdx.get(b.id) || 0) + 1);
+    return t;
+  };
+  // the task: to one's place there, and the talk — until it is time to go home, or the plaza is no place to be (the rain
+  // that starts, the war at the gates, a feast, a panic; the plaza pulled down; the market shut)
+  function runPraca(v, t, dt, H) {
+    const S = S_(); const b = S.buildings.get(t.id);
+    if (!b || !b.built || (b.type !== 'praca' && b.type !== 'mercado') || S.time >= Pr.SHUT || S.time < Pr.OPEN || v.energy < Pr.TIRED || !fairNow(b) || (b.type === 'mercado' && !sells(b))) return H.end(v);
+    if (t.st === 0) { if (!H.goto(v, t.x, t.y, false)) { pNoWay.set(v.id, S.clock); return H.end(v); } t.st = 1; return; }
+    if (t.st === 1) { if (H.move(v, dt, 0.85)) { t.st = 2; v.actT = 0; t.look = 0; } else if (t.age > 45) H.end(v); return; }
+    v.act = 'talk';
+    // (now and then: facing whoever stands nearest — alone, the plaza's middle —, and a word seen, by the person and the
+    // second: no chance drawn)
+    if (S.clock >= t.look) {
+      t.look = S.clock + 3; let o = null, od = 2.5 * 2.5;
+      for (const w of S.villagers.values()) { if (w === v || w.inside || w.sleeping || w.set !== v.set) continue; const d = G.dist2(v.x, v.y, w.x, w.y); if (d < od && d > 0.01) { od = d; o = w; } }
+      const [cx, cy] = midOf(b); G.faceTo(v, (o ? o.x : cx) - v.x, (o ? o.y : cy) - v.y);
+      const h = G.hash(Math.imul(v.id | 0, 29) + Math.floor(S.clock)); if (o && h < 0.5) G.Vg.emote(v, h < 0.35 ? 'chat' : 'happy', 1.4);
+    }
+  }
+  // the children's afternoon (D-226): on the days their lot says, the children of the streets about a plaza — seven and
+  // over: the little ones stay with whoever minds them — play at it and not about their door, from the middle of the
+  // afternoon until dark, in fair weather. The game is the children's own (villagers.js, 'play'): this only says where —
+  // the plaza's middle, or null
+  Pr.KIDS = 0.6;     // (the share of the afternoons a child of the plaza's streets plays at it)
+  Pr.playAt = function (v) {
+    const S = S_(); if (v.age < 7 || v.age >= 16 || S.time < Pr.OPEN || S.time >= Pr.SHUT) return null;
+    if (G.hash(Math.imul(v.id | 0, 157) + Math.imul(S.day | 0, 7879) + 31) >= Pr.KIDS) return null;
+    const hm = homeOf(v); if (!hm) return null; const fid = G.Fac.idOfV(v); const [hx, hy] = midOf(hm); let best = null, bd = Pr.NEAR;
+    for (const b of E.byType(v.set, 'praca')) { if (!b.built || facOf(b) !== fid) continue; const [cx, cy] = midOf(b); const d = G.dist(hx, hy, cx, cy); if (d < bd && fairNow(b)) { best = b; bd = d; } }
+    return best ? midOf(best) : null;
+  };
+  Pr.taskText = function (v, t) {
+    const b = S_().buildings.get(t.id); const mk = !!b && b.type === 'mercado';
+    if (t.st < 2) return mk ? 'Indo ao mercado, para a conversa do fim do dia' : 'Indo à praça, para a conversa do fim do dia';
+    return mk ? `De conversa à porta ${de(b)}` : `De conversa ${b ? n_(b) : 'na praça'}`;
+  };
+
   // ============================== the definitions, and the god's body ==============================
   A.def('espetaculo', {
     name: 'Espetáculo', conserve: false, many: false,
@@ -715,6 +898,7 @@
     if (t.type === 'atuar') { runAtor(v, t, dt, H); return true; }
     if (t.type === 'ler') { runLeitor(v, t, dt, H); return true; }
     if (t.type === 'copiar') { runCopista(v, t, dt, H); return true; }
+    if (t.type === 'praca') { runPraca(v, t, dt, H); return true; }
     return oldRun(v, t, dt, H);
   };
   const oldJob = E.jobTask;
@@ -737,6 +921,7 @@
   E.taskText = function (v, t) {
     if (t.type === 'ler') return t.st < 1 ? 'Indo à biblioteca' : 'Lendo um rolo na biblioteca';
     if (t.type === 'copiar') return t.st < 1 ? 'Indo à biblioteca' : 'Copiando um rolo na biblioteca';
+    if (t.type === 'praca') return Pr.taskText(v, t);
     return oldText(v, t);
   };
   // the panels: the show of the day; the library's day
@@ -762,7 +947,8 @@
   // their tables — and the show and the reading go on; L-190's rule. Only who was there at the save: the rows, the stage and
   // the library's book keep for a second whoever left by another door — to bed, to the family at the door, to eat —, and the
   // load sat them down again, out of their beds; the save says who was there by the errand each one had, and the one who had
-  // left is let go at the next look, as the world without the save does — L-435)
+  // left is let go at the next look, as the world without the save does — L-435. And who was at the plaza's talk, or on
+  // the way to it, goes on with it: the place, the spot and the kind of the choice it came from — D-225)
   (G.saveHooks = G.saveHooks || []).push({
     save(out) {
       const S = S_(); const plateia = [], atores = [], ler = [];
@@ -773,7 +959,8 @@
         for (const id in d.atores || {}) { const v = S.villagers.get(+id); if (v && !d.atores[id].body && onStage(v, op, b)) atores.push(op.id + ':' + id); }
       }
       for (const b of S.buildings.values()) if (b.type === 'biblioteca' && b.livros && b.livros.quem) for (const id in b.livros.quem) if (reading(S.villagers.get(+id), b)) ler.push(b.id + ':' + id);
-      out.lazer = { plateia, atores, ler };
+      const praca = []; for (const v of S.villagers.values()) { const t = v.task; if (t && t.type === 'praca') praca.push([v.id, t.id, r2(t.x), r2(t.y), t.kind === 'praca' ? 1 : 0]); }
+      out.lazer = { plateia, atores, ler, praca };
     },
     load(o) {
       const S = S_();
@@ -806,6 +993,13 @@
           G.Vg.setTask(v, { type: 'ler', id: b.id, pri: 0.35, st: 1, use: 'ler', kind: 'leisure' });
           if (v.task && v.task.type === 'ler') { v.inside = b.id; v.actT = Math.max(0, S.clock - (m.t || S.clock)); } else delete b.livros.quem[id];
         }
+      }
+      // (the plaza's talk: back on the way to one's spot — who stood there is there in a step; a damaged list, nothing)
+      if (sv && Array.isArray(sv.praca)) for (const e of sv.praca) {
+        if (!Array.isArray(e) || !e.slice(0, 4).every(Number.isFinite)) continue;
+        const v = S.villagers.get(e[0]); const b = S.buildings.get(e[1]);
+        if (!v || v.captive || v.jail || v.sleeping || v.age < 16 || !b || !b.built || (b.type !== 'praca' && b.type !== 'mercado') || b.set !== v.set || !G.W.inb(e[2], e[3])) continue;
+        const t = G.Vg.setTask(v, { type: 'praca', id: b.id, pri: Pr.PRI, st: 0, x: e[2], y: e[3] }); if (t && v.task === t) t.kind = e[4] ? 'praca' : 'home';
       }
     },
   });
