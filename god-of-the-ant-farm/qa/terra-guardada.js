@@ -14,6 +14,8 @@
 //   f5  o save no meio: o mesmo campo, o verificador limpo
 //   f8  a ordem do campo guardado (T-773): o lote plano mais perto; um por aplainar só sem nenhum plano ao alcance — conferido
 //       por uma varredura da própria prova (V.resFits), nas capitais dos mundos prontos, onde há dos dois
+//   f9  a terra que não serve mais: o mar entra no campo guardado (o mapa muda) — a cidade o larga («terra») no olhar do dia e
+//       guarda outro depois, fora dali
 //   f6  as cidades novas longe (D-232): V.keptNear a menos de RES_CLEAR do meio de uma capital com campo guardado, por terra e
 //       por mar — os três que escolhem o sítio de uma cidade perguntam
 //   f7  procurar mais longe (D-231): os degraus de 8 e 10 casas olham a 6, a 12 e a 20 casas além do raio; os de 6, a 6 e 12;
@@ -224,6 +226,18 @@ run('f8', () => {
     }
   }
   ok('f8 o plano mais perto; por aplainar só sem nenhum plano', !mal.length && planos >= 1 && ambos >= 1, `nos mundos prontos: ${planos} capitais guardam o lote plano mais perto, ${aplainados} um por aplainar (nenhum plano ao alcance), ${nenhum} nenhum; em ${ambos} delas há um lote por aplainar mais perto que o plano mais perto, e o campo é o plano (${diz.slice(0, 3).join('; ')})${mal.length ? ' — MAL: ' + mal.slice(0, 3).join(' | ') : ''}`);
+});
+
+// ------------------------------ f9: a terra que não serve mais ------------------------------
+run('f9', () => {
+  const c = caso(); if (!ok('f9a um campo guardado', !!c, c ? `${c.mundo}, ${c.set.name}: em ${c.r.x},${c.r.y}` : 'nenhuma capital guarda')) return;
+  const { set, r } = c; const mx = r.x + 3, my = r.y + 3; const i = my * N + mx;
+  // (the sea comes into the middle of it, by the proof's hand — as who changes the ground must: S.typeVer, W.invalidateLand)
+  S.type[i] = T.SEA; S.typeVer = (S.typeVer || 0) + 1; if (W.invalidateLand) W.invalidateLand();
+  olha(set); const solto = !civ(set) && !!set.urb.civGone && set.urb.civGone.why === 'terra'; olha(set); const hoje = civ(set);
+  M.saltar(1); pega(); const set2 = S.settlements.get(set.id); const r2 = set2 ? civ(set2) : null;
+  ok('f9b o mar entra no campo: a cidade o larga', solto && !hoje && (!r2 || !sobre(r2, mx, my, 1)), `uma casa de mar em ${mx},${my}, no meio do campo de ${r.x},${r.y}: no olhar do dia o campo ${solto ? 'foi largado («terra»)' : 'NÃO foi largado'}; no mesmo dia a cidade ${hoje ? 'GUARDOU outro' : 'não guarda outro'}; um ano depois ${r2 ? `guarda um em ${r2.x},${r2.y}` : 'não achou outra terra'}`);
+  const q = checa(); ok('f9c verificador', q.ok, q.txt);
 });
 
 console.log(fails.length ? `TERRA-GUARDADA: FALHOU (${fails.join(', ')})` : `TERRA-GUARDADA: ok (${ms()} ms)`);

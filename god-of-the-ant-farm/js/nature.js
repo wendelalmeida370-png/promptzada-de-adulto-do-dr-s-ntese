@@ -130,9 +130,9 @@
       } else if (fuel === 'building' || fuel === 'pedra') {
         const b = S.buildings.get(S.occ[i]);
         // (a great work of stone: all its timber is gone in STONE_SECS seconds a tile of its side with one tile burning, sooner
-        // with more — a monument's fire lasts as a big house's does. By its strength, a lot at a time, one tile of a theatre of
-        // 24 m burning low would have burnt for 49 minutes, a torch in the middle of the town calling its people all that
-        // while: L-787)
+        // with more — a monument's fire lasts as a big house's does. By its strength, a lot at a time and the flame low, a
+        // theatre of 24 m lit at a corner burnt for two minutes and a half, a fire in the middle of the town all that while;
+        // now half a minute: L-787)
         if (b) G.Village.damageBuilding(b, fuel === 'pedra' ? G.Village.fireRoom(b) * f * dt / (Nat.STONE_SECS * b.w) : (b.built ? 5 : 9) * f * dt / Math.max(1, b.w * b.h) * 1.3, 'fire');
       }
       if (f <= 0.01) { S.fire[i] = 0; S.fireT[i] = 0; Nat.fireSet.delete(i); continue; }

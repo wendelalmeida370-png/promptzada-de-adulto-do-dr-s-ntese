@@ -81,16 +81,18 @@ run('p2', () => {
     const set = abre(); M.reseed(77); const b = grande(set, true); if (!b) return null; const f0 = V.fireFuel;
     if (comoCasa) V.fireFuel = o => (o === b ? 'building' : f0(o));
     try {
-      estia(b); sim(() => Nat.ignite(b.y * N + b.x, 0.9)); let t = 0; for (; t < 30; t++) M.viver(1); const o = S.buildings.get(b.id);
-      const r = { n: o && o.type !== 'ruin' ? emChamas(o) : 36, hp: o ? o.hp : 0, max: b.maxHp, de: o && o.type !== 'ruin' };
-      // (as stone, left to itself: out when the fire has had its timber — a house's fire, not a torch of an hour: L-787)
+      // (the most tiles of it in flames at once in the half minute: with its timber gone in seconds a count at the end says little)
+      estia(b); sim(() => Nat.ignite(b.y * N + b.x, 0.9)); let pico = 0; for (let t = 0; t < 30; t++) { M.viver(1); const q = S.buildings.get(b.id); pico = Math.max(pico, q && q.type !== 'ruin' ? emChamas(q) : 36); }
+      const o = S.buildings.get(b.id);
+      const r = { n: o && o.type !== 'ruin' ? emChamas(o) : 36, pico, hp: o ? o.hp : 0, max: b.maxHp, de: o && o.type !== 'ruin' };
+      // (as stone, left to itself: out when the fire has had its timber — a house's fire, half a minute, not two and a half: L-787)
       if (!comoCasa && r.de) { r.seg = 30 + ateApagar(o, 900); const f = S.buildings.get(b.id); r.fim = f ? f.hp : 0; r.piso = V.fireFloor(b); r.ch = f && f.type !== 'ruin' ? emChamas(f) : -1; }
       return r;
     } finally { V.fireFuel = f0; }
   };
   const casa = vive(true), pedra = vive(false);
-  ok('p2 o fogo não se alastra por ele', !!casa && !!pedra && pedra.de && casa.n >= 12 && pedra.n * 3 <= casa.n, casa && pedra ? `um canto aceso, 30 s depois: queimando como casa, ${casa.n} das 36 casas dele em chamas (a resistência ${Math.round(casa.hp)} de ${casa.max}); como pedra, ${pedra.n} (${Math.round(pedra.hp)} de ${pedra.max})` : 'a mão do deus não fundou o teatro');
-  ok('p2b e apaga sozinho, em minutos', !!pedra && pedra.ch === 0 && pedra.seg <= 360 && Math.abs(pedra.fim - pedra.piso) < 1e-6, pedra ? `um canto aceso e deixado a si: apagado em ${pedra.seg} s, com ${pedra.fim} de ${pedra.max} (o que o fogo deixa: ${pedra.piso}); em chamas ${pedra.ch}` : 'sem teatro');
+  ok('p2 o fogo não se alastra por ele', !!casa && !!pedra && pedra.de && casa.pico >= 24 && pedra.pico * 12 <= casa.pico * 5, casa && pedra ? `um canto aceso, meio minuto: queimando como casa, até ${casa.pico} das 36 casas dele em chamas ao mesmo tempo (a resistência ${Math.round(casa.hp)} de ${casa.max}); como pedra, até ${pedra.pico} (${Math.round(pedra.hp)} de ${pedra.max})` : 'a mão do deus não fundou o teatro');
+  ok('p2b e apaga sozinho, em menos de um minuto e meio', !!pedra && pedra.ch === 0 && pedra.seg <= 90 && Math.abs(pedra.fim - pedra.piso) < 1e-6, pedra ? `um canto aceso e deixado a si: apagado em ${pedra.seg} s, com ${pedra.fim} de ${pedra.max} (o que o fogo deixa: ${pedra.piso}); em chamas ${pedra.ch}` : 'sem teatro');
 });
 
 // ------------------------------ p3: o save no meio do fogo ------------------------------
@@ -130,12 +132,14 @@ run('p6', () => {
   const set = abre(); const f = G.Fac.get(set.fac); const b = grande(set, false), c = classico(set, false);
   if (!ok('p6a a obra grande e a obra comum, em curso', !!b && !!c && !b.built && !c.built, `${lado(b)}, a conta ${b ? JSON.stringify(V.bill(b)) : '-'}; ${lado(c)}`)) return;
   da(b, f); da(c, f); const tinha = Object.assign({}, V.delivered(b)); const bill = V.bill(b); const hi = marca();
+  // (and what came to the great work laid, as its builders would have it: its progress at what its materials allow)
+  b.progress = G.Vg.allowedProgress(b); const p0 = b.progress;
   const L = []; const fn = e => { if (e[3] === 'o:' + b.id || e[4] === 'o:' + b.id) L.push(e.slice()); }; D.onMove.push(fn);
   const q = queima(b); D.onMove.splice(D.onMove.indexOf(fn), 1); const o = S.buildings.get(b.id); const tem = o ? V.delivered(o) : {};
   const fogoLivro = L.filter(e => e[3] === 'o:' + b.id && e[5] === 'wood' && e[8] === 'fogo').reduce((a, e) => a + e[6], 0); const outros = Object.keys(tinha).filter(m => m !== 'wood');
   const cron = linhas(hi, /O fogo levou os andaimes/);
-  ok('p6b o fogo leva a madeira, a pedra fica', !!o && o.type === 'teatro' && !o.built && (tinha.wood || 0) > 0 && !(tem.wood > 0) && Math.abs((o.need.wood || 0) - (bill.wood || 0)) < 1e-6 && outros.length > 0 && outros.every(m => (tem[m] || 0) >= tinha[m] - 1e-6) && fogoLivro >= tinha.wood - 1e-6 && emChamas(o) === 0 && V.fireFuel(o) === null && acende(o) === 0 && cron.length >= 1 && o.progress <= G.Vg.allowedProgress(o) + 1e-9,
-    `o canteiro tinha ${JSON.stringify(tinha)}; aceso ${q.vezes} vez(es), ${q.seg} s de fogo: ${o ? (o.type === 'ruin' ? 'RUÍNA' : `a obra continua (${Math.round(100 * o.progress)}%), o canteiro com ${JSON.stringify(tem)}, espera ${JSON.stringify(o.need)}`) : 'SUMIU'}; madeira saída do canteiro pelo livro («fogo»): ${fogoLivro}; em chamas ${o ? emChamas(o) : '-'}; «${cron.length ? cron[0].txt : 'NENHUMA LINHA'}»`);
+  ok('p6b o fogo leva a madeira, a pedra fica', !!o && o.type === 'teatro' && !o.built && (tinha.wood || 0) > 0 && !(tem.wood > 0) && Math.abs((o.need.wood || 0) - (bill.wood || 0)) < 1e-6 && outros.length > 0 && outros.every(m => (tem[m] || 0) >= tinha[m] - 1e-6) && fogoLivro >= tinha.wood - 1e-6 && emChamas(o) === 0 && V.fireFuel(o) === null && acende(o) === 0 && cron.length >= 1 && p0 > 0.2 && o.progress <= G.Vg.allowedProgress(o) + 1e-9 && o.progress < p0 - 1e-9,
+    `o canteiro tinha ${JSON.stringify(tinha)}; aceso ${q.vezes} vez(es), ${q.seg} s de fogo: ${o ? (o.type === 'ruin' ? 'RUÍNA' : `a obra continua (assentada até ${Math.round(100 * p0)}%, de volta a ${Math.round(100 * o.progress)}%: o que a pedra permite), o canteiro com ${JSON.stringify(tem)}, espera ${JSON.stringify(o.need)}`) : 'SUMIU'}; madeira saída do canteiro pelo livro («fogo»): ${fogoLivro}; em chamas ${o ? emChamas(o) : '-'}; «${cron.length ? cron[0].txt : 'NENHUMA LINHA'}»`);
   const qc = queima(c); const oc = S.buildings.get(c.id);
   ok('p6c a obra comum em curso queima como antes', !oc || oc.type === 'ruin', `o teatro de 12 m em obra, aceso ${qc.vezes} vez(es): ${!oc ? 'saiu do mapa' : oc.type === 'ruin' ? 'ruína' : 'CONTINUA, com ' + oc.hp}`);
   const v = checa(); ok('p6d verificador', v.ok, v.txt);
