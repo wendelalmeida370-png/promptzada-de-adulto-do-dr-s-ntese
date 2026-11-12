@@ -1,8 +1,10 @@
 # Bloco M — os ajustes da Arquitetura Monumental que são regra do mundo (Bairros Vivos)
 
-Ramo: `worktree-agent-a8f5af9594fd9a4f1` (base `61dc62b`). Números usados: L-780…, T-760…, D-174 a D-177, regras 57 e 58.
+Ramo: `worktree-agent-a8f5af9594fd9a4f1` (base `61dc62b`). Números usados: L-780 a L-782, T-760 a T-767, D-174 a D-177, regras 57 e 58.
 Arquivos do jogo mexidos: `js/village.js`, `js/villagers.js`, `js/city.js`, `js/act-casa.js`, `js/polity.js`.
 Arquivos novos: `qa/degraus.js`, `qa/degraus-inv.js`, `qa/casa-rica.js`, `qa/juntar.js`, este bloco.
+Provas e folhas de antes mexidas: `qa/escala.js` (só o caso e22h: o lugar do voto e do pão, L-781), `qa/categorias/p4.js` («cidade/juntar» parcial).
+Nenhum campo novo na lista `SHAPE` das pessoas; não toquei em `rent`/`K.lease` (`act-casa.js`), no `social.js` nem no `trade.js`.
 **O mundo muda** (o passo do mundo: quem quebra pedra, onde a pedra vai, o que a cidade pede): os mundos prontos precisam ser
 gerados de novo, e a linha de base refeita.
 
@@ -128,7 +130,7 @@ mesmo mundo pronto, antes (a base, exportada em `scratchpad/ag/M/base/`) e depoi
 F degraus degraus.js; F casa-rica casa-rica.js; F juntar juntar.js;
 ```
 
-(as três rodam em Node, sem navegador; `degraus.js` sem `ONLY` roda também o g8 — o tempo dele está na seção 8.)
+(as três rodam em Node, sem navegador; `degraus.js` sem `ONLY` roda também o g8 — ≈ 9 dos ≈ 14 min da prova.)
 
 ## 6. As regras novas do `guard.js` (57 e 58, prontas para colar)
 
@@ -174,12 +176,27 @@ for (const f of files) if (f !== 'act-casa.js' && f !== 'escala.js') src[f].forE
 
 | prova | como rodar | resultado |
 |---|---|---|
-| `degraus.js` | `node degraus.js` (≈ 14 min; sem o g8 ≈ 5 min) | RESULTADO-DEGRAUS |
-| `casa-rica.js` | `node casa-rica.js` (≈ 70 s) | RESULTADO-CASA-RICA |
-| `juntar.js` | `node juntar.js` (≈ 35 s) | RESULTADO-JUNTAR |
+| `degraus.js` | `node degraus.js` (≈ 14 min; sem o g8 ≈ 5 min) | **54 passam, 0 falham** (826 s com a máquina ocupada) |
+| `casa-rica.js` | `node casa-rica.js` (≈ 70 s) | 43 passam, 0 falham |
+| `juntar.js` | `node juntar.js` (≈ 35 s) | 24 passam, 0 falham |
 | as regras 57 e 58 | `node scratchpad/ag/M/regras.js <pasta do jogo>` (o texto da seção 6 contra o `js/` do ramo, e linhas plantadas em memória) | 4 passam, 0 falham: nenhuma acusação no ramo; as três linhas plantadas (`set.gw = 0` no `city.js`, `familia: true` no `social.js` e no `village.js`) acusadas |
 
-**As provas vizinhas** (do que toquei): RESULTADO-VIZINHAS
+**As provas vizinhas** (do que toquei; todas com o `js/` final do ramo):
+
+| prova | resultado |
+|---|---|
+| `node guard.js` | PASSOU (150 arquivos) |
+| `node soak.js 103 continente 128 4 normal 5 1 1` (pelo `navegador.sh`) | 5 anos, nenhuma violação, erros: nenhum |
+| `node det3.js 77 arquipelago 96 3 2` (pelo `navegador.sh`) | PASSOU: igual nas quatro comparações (com e sem quadros, o mesmo mundo de novo na página, o save carregado duas vezes) |
+| `escala.js` | a prova inteira, antes de ajustar o e22h: 126 passam, 1 falha (o e22h, a regra de antes da L-781); depois do ajuste só rodei os casos: `ONLY=e22` 14 passam, 0 falham; `ONLY=e0,e7,e8,e9,e10,e15,e16` 31 passam, 0 falham. **A prova inteira depois do ajuste não foi rodada** (a máquina ficou com a carga acima de 6 e eu esperei sem conseguir a vez): o líder roda `node escala.js` |
+| `casa.js` (só rodei, não toquei) | 23 passam, 0 falham |
+| `moedas.js` | 9 passam, 0 falham |
+| `lote-bolsao.js` | 4 passam, 0 falham |
+| `calcada.js` | 6 passam, 0 falham |
+| `obra.js` | 13 passam, 0 falham |
+
+Não rodei: a regressão, os mundos prontos, o desempenho (como combinado), nem o gerador da matriz por prédio
+(`matriz-predios.js`: a folha `qa/categorias/p4.js` mudou — «cidade/juntar» passa a `parcial`, com a prova `qa/juntar.js`).
 
 **As sabotagens** (`scratchpad/ag/M/sab-M.py`, cada uma numa cópia nova do jogo, `scratchpad/bv/sab-run.sh`; 28 ao todo):
 
@@ -191,12 +208,12 @@ for (const f of files) if (f !== 'act-casa.js' && f !== 'escala.js') src[f].forE
 | s14 | a vez da obra grande não alcança a obra longe do meio (`V.workPri`) | `degraus` g1b2 |
 | s5 | nenhum construtor quebra pedra para as obras | `degraus` g2b, g2d |
 | s6 | sem a turma da obra grande (`V.GANG`) | `degraus` g2c2 (o g2c sozinho não acusava: com muitas obras em curso a conta das obras já dá a turma — o caso g2c2 é o que prova) |
-| s7 | sem a pedreira do povo (`V.GANG_Q`, `V.quarries` nas outras cidades) | SAB-S7 |
+| s7 | sem a pedreira do povo (`V.GANG_Q`, `V.quarries` nas outras cidades) | `degraus` g2e (só depois de o caso ter um mundo: na megalópole, Delfos, do povo de Roma — antes ficava «sem caso» e a sabotagem passava) |
 | s15 | a pedra que a turma quebra dá a volta pelo armazém (`haulStone`) | `degraus` g2d |
 | s8 | sem espaço em volta, nada (o degrau não é erguido de novo) | `degraus` g5b |
 | s11 | só o maior degrau é tentado | `degraus` g5b |
-| s10 | várias obras grandes de uma vez (`greatUp` no `V.grow`) | SAB-S10 |
-| s12 | o degrau é erguido de novo outra e outra vez (o antigo pede de novo) | SAB-S12 |
+| s10 | várias obras grandes de uma vez (`greatUp` no `V.grow`) | `degraus` g5ta (o caso novo, numa capital com terra de sobra — Mênfis da megalópole; o g5e sozinho não acusava: em Mênfis da metrópole nada mais cresceria) |
+| s12 | o degrau é erguido de novo outra e outra vez (o antigo pede de novo) | `degraus` g5tb (o caso novo; o g5f sozinho não acusava: em Mênfis da metrópole não há outro lote) |
 | s17 | quem não tem espaço ergue de novo embora outro do tipo tenha espaço (L-782) | `escala` e7b, e9b |
 | s13 | a maravilha do campo guardado não passa à frente (D-176) | `degraus` g6b |
 | s16 | o campo guardado julgado pelo plano de ruas na fundação (L-780) | `degraus` g6b |
@@ -212,7 +229,7 @@ for (const f of files) if (f !== 'act-casa.js' && f !== 'escala.js') src[f].forE
 | f1 | o povo se junta onde o governante recebe | `juntar` j1b, j1c, j2b, j2c, j5b, j5c |
 | f2 | a praça mais nova, não a mais antiga | `juntar` j5b |
 | **s4** | as casas de pé são melhoradas enquanto a obra grande espera pedra (`improve`) | **nenhuma prova acusa** (T-767) |
-| **s9** | uma segunda maravilha (`ONE`) | SAB-S9 |
+| **s9** | uma segunda maravilha (`ONE`) | **nenhuma prova acusa** (T-767): em nenhum mundo pronto há terra para uma colossal de 13 casas |
 
 ## 9. O que ficou aberto
 
