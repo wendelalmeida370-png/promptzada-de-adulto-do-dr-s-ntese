@@ -358,11 +358,13 @@ run('m11', () => {
   ok('m11c quem é do povo sabe quem mora na sede, pela fama', row(cp, 'Casa de quem governa') === o.r.name && row(cp, 'Moedas da família') === undefined, `${povo.name}: «Casa de quem governa: ${row(cp, 'Casa de quem governa')}»; moram aqui: ${row(cp, 'Moram aqui')}`);
   ok('m11d o estrangeiro vê só o que é', !!fora && row(cf, 'Casa de quem governa') !== o.r.name && /quem governa/.test(row(cf, 'Casa de quem governa') || '') && row(cf, 'Moedas da família') === undefined, fora ? `${fora.name}: «Casa de quem governa: ${row(cf, 'Casa de quem governa')}»; moram aqui: ${row(cf, 'Moram aqui')}` : 'sem estrangeiro');
   ok('m11e quem mora nela vê a casa por dentro; o deus, tudo', /você/.test(row(cm, 'Casa de quem governa') || '') && row(cm, 'Moedas da família') !== undefined && row(cg, 'Casa de quem governa') === o.r.name && row(cg, 'Moedas da família') !== undefined, `${o.r.name}: «${row(cm, 'Casa de quem governa')}», moedas ${row(cm, 'Moedas da família')}; o deus: «${row(cg, 'Casa de quem governa')}», moedas ${row(cg, 'Moedas da família')}`);
-  // (an empty seat says why)
-  const st0 = moram(b); for (const v of st0) v.held = 1; const outra = povos(true)[0];
-  for (const v of st0) v.held = 0;
-  const vazio = K.seatSays(funda(o.cap, 'paco', 'paco', true), id => `<${P(id).name}>`, t => t);
-  ok('m11f a sede que não é a do governo diz que ninguém mora', /Ninguém mora aqui/.test(vazio), vazio.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() + (outra ? '' : ''));
+  // (a seat that is not the people's says so)
+  const p2 = funda(o.cap, 'paco', 'paco', true); const vazio = K.seatSays(p2, id => `<${P(id).name}>`, t => t);
+  ok('m11f a sede que não é a do governo diz que ninguém mora', /Ninguém mora aqui/.test(vazio), vazio.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+  // (the screens only read: the panel, the card and the state asked again and again from outside the step leave the world as it was)
+  const foto = () => assina() + '|' + JSON.stringify(S.rng) + '|' + JSON.stringify(S.mod || {}) + '|' + [...S.factions.values()].map(f => f.capital).join(',');
+  const f0 = foto(); for (let k = 0; k < 3; k++) for (const q of [b, p2]) { K.seatSays(q, id => String(id), t => t); I.buildingCard(q, povo); I.buildingCard(q, null); K.lordOf(q); } for (const f of G.Fac.all()) K.seatState(f);
+  ok('m11g a tela só lê', foto() === f0, `as casas, os guardados das sedes, o acaso do mundo, os relógios do mundo e as capitais iguais depois de 3 voltas do painel, da ficha e do estado: ${hash(f0)} = ${hash(foto())}`);
 });
 
 // ------------------------------ m12: the household whole; the partner comes; the house it had paid for ------------------------------

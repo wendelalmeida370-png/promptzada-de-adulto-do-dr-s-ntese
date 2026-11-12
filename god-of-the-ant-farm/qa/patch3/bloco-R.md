@@ -163,7 +163,16 @@ a rodada inteira depois dos últimos ajustes: ver a tabela das vizinhas).
 | `node nodemundo.js metropole 2` / `mega 2` / `mundial 2` | PASSOU os três (abrir, viver, 2 anos de salto, salvar e carregar, verificador) |
 | `node catalogo.js confere 120` | PASSOU (121 linhas); mais as 36 chaves do paço e as 72 dos palácios recalculadas (`catalogo.js parte … tudo paco` e `… palacio grande_palacio palacio_colossal`): iguais ao arquivo |
 | `node palacios.js` | TUDO PASSOU |
-| a segunda rodada (`monumental-poder`, `interiores`, `relento`, `lar-puro`, `fundadores`, `compras`, `atmosfera`, `visual/corpo-casa`, `lar`, `plantas`, e a `morar-palacio` inteira de novo) | **em curso quando este bloco foi escrito: ver o fim desta seção** |
+| `node morar-palacio.js` (inteira, com o código final) | **97 passam, 0 falham** (206 s) |
+| `node monumental-poder.js` | 61 passam, 0 falham |
+| `node interiores.js` | 9 passam, 0 falham |
+| `node relento.js` | 4 passam, 0 falham |
+| `node lar-puro.js` | 38 passam, 0 falham |
+| `node fundadores.js` | 6 passam, 0 falham |
+| `node compras.js` | 19 passam, 0 falham (823 s, com a máquina ocupada) |
+| `node atmosfera.js` | 10 passam, 0 falham |
+| `node visual/corpo-casa.js` | 19 passam, 0 falham |
+| `node lar.js`, `node plantas.js` | **em curso quando esta linha foi escrita: ver o fim desta seção** |
 
 **As sabotagens** (`scratchpad/ag/R/sab-R.py`, cada uma numa cópia nova do jogo, `scratchpad/bv/sab-run.sh`; 33; o resumo em
 `scratchpad/ag/R/sab/resumo.txt`):
