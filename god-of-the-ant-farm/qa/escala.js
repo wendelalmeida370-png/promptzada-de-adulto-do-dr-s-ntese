@@ -588,7 +588,11 @@ run('e19', () => {
   let mais = 0, quem = 0, naAreia = 0, nasFileiras = 0;
   for (let k = 0; k < 160 && Tt.dia(b); k++) {
     passo();
-    if (op.data.fase === 'portas' && !caixa) { caixa = { mandados: 0 }; for (const v of [rei, ...corte]) { const t = sim(() => Tt.visit(v, b)); if (t) caixa.mandados++; else if (VERB) console.log('  não foi aos jogos:', v.name, v.id, 'tarefa', v.task && v.task.type, 'moedas', E.purse(v), 'chega', G.W.reaches(v, ...G.Vg.door(b)), 'dentro', v.inside, 'dorme', v.sleeping); } }
+    // (the errand to the games held by the proof's hand — its priority over the day's chores, as termas-grandes holds its
+    // bathers —: the question here is who sits where in the box, not whether they would rather come. Públio, a potter of
+    // another town who rules Rome in the joined tree, was sent, and the water of his house (a chore of 1,05) and then the
+    // firing of his kiln (1) took him on the way: the box never had its throne. T-807)
+    if (op.data.fase === 'portas' && !caixa) { caixa = { mandados: 0 }; for (const v of [rei, ...corte]) { const t = sim(() => Tt.visit(v, b)); if (t) { caixa.mandados++; t.pri = 2.9; } else if (VERB) console.log('  não foi aos jogos:', v.name, v.id, 'tarefa', v.task && v.task.type, 'moedas', E.purse(v), 'chega', G.W.reaches(v, ...G.Vg.door(b)), 'dentro', v.inside, 'dorme', v.sleeping); } }
     if (VERB && caixa && k % 15 === 0) console.log(`  k${k} ${op.data.fase}:`, [rei, ...corte].map(v => `${v.name}#${v.id} ${v.task ? v.task.type + '/' + v.task.st : '-'} ${v.inside === b.id ? 'dentro ' + ((In.placeOf(v) || {}).use || '?') : 'fora'}`).join(' | '));
     // (no camarote, quem governa e os da corte que vieram — um chamado do mundo pode levar algum antes —, depois de um passo dentro)
     if (op.data.fase === 'peca' && caixa && !caixa.rei && rei.inside === b.id && corte.some(v => v.inside === b.id)) { const vieram = corte.filter(v => v.inside === b.id); caixa = Object.assign(caixa, { rei: lugar(rei), corte: vieram.map(lugar), ids: vieram.map(v => v.id), todos: daCorte() }); }
