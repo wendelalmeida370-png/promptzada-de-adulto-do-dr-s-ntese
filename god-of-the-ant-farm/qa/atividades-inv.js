@@ -185,12 +185,15 @@
       }
       for (const v of s.villagers.values()) {
         if (!dying(v) || v.captive || v.jail || v.aboard || v.ug || v.held || v.air) continue;
-        const t = v.task; if (t && (t.type === 'eat' || t.type === 'forage' || t.type === 'flee' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'fire' || t.type === 'fight' || t.type === 'combat')) continue;
+        // (the one at the fire is not let off: the starving leave its line to eat, between two buckets — L-725; a town with the
+        // alarm of fire ringing is let off for the others, who flee it or are kept from the store by it)
+        const t = v.task; const atFire = !!t && t.type === 'fire';
+        if (t && (t.type === 'eat' || t.type === 'forage' || t.type === 'flee' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'fight' || t.type === 'combat')) continue;
         // (between two errands, and right after a load — which leaves no task and spreads the choice over [0, 1), save.js —: the
         // choice comes at the next step. One that found nothing leaves 1.4 to 3.0, villagers.js; 0.5 took a freshly loaded child for
         // one that found nothing, and the escala's e5b saw Kamose of Tebas starving with the store in reach — T-495)
         if (!t && !(v.think > 1)) continue;
-        const set = s.settlements.get(v.set); if (!set || G.War.threat(v.set) || (G.Vg.alarms && (G.Vg.alarms.get(v.set) || []).length)) continue;
+        const set = s.settlements.get(v.set); if (!set || G.War.threat(v.set) || (!atFire && G.Vg.alarms && (G.Vg.alarms.get(v.set) || []).length)) continue;
         const where = [];
         // (a shift given in place of a meal there was not — the store empty, villagers.js start —: the store in reach again is the
         // next look's, which leaves the shift for it (qa/fome.js h18). Each look that found no meal stamps the shift (noMealT), and

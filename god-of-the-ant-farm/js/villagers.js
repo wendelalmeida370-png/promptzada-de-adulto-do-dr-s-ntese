@@ -511,7 +511,9 @@
       const nx = xi + dx, ny = yi + dy; if (!W.inb(nx, ny)) continue;
       const f = S.fire[ny * N + nx]; if (f > fmax) { fmax = f; fx = nx + 0.5; fy = ny + 0.5; }
     }
-    const canFight = !child && v.age < 62 && v.courage > 0.3 && v.hp > 40;
+    // (who is starving does not answer the fire: the fire weighs 4 and the meal of need 2.5 — one who fought a fire of a night,
+    // or of the days a forest burns beside the town, never ate: L-725)
+    const canFight = !child && v.age < 62 && v.courage > 0.3 && v.hp > 40 && !(v.hunger > 85);
     if (fmax > 0.12) {
       if (canFight && (Vg.fireFighters.get(v.set) || 0) < 10) { setTask(v, { type: 'fire', pri: 4, st: 0 }); emote(v, 'fire', 2.5); return; }
       fleeFrom(v, fx, fy, 6, 'fire'); emote(v, 'fear', 2.5); return;
@@ -1883,6 +1885,10 @@
     };
     if (t.st === 0) {
       if (nearestFire() < 0) return end(v);
+      // (between two buckets the starving leave the line to eat, and come back fed while it burns — the alarm calls again: the
+      // one builder of Hedeby, in the chaos of seed 13, fought five days at the top of hunger while the town's new fire, its
+      // one place to eat, waited for him unbuilt; four of the metropolis came out of a night of fire at 5 to 13 of life, L-725)
+      if (v.hunger > 85) return end(v);
       // (hands that carry something — a crate, a purchase, wood — keep it and beat the flames: the bucket would take its place)
       if (v.carry && v.carry.n > 0 && v.carry.k !== 'water') { t.beat = true; t.st = 3; t.target = -1; return; }
       // water source: well of the settlement, or any water tile nearby
@@ -1924,7 +1930,7 @@
         v.act = 'beat'; G.Nature.extinguish(i, 0.22 * dt * workMul(v));
         if (v.actT > 0.5) { v.actT = 0; G.FX && G.FX.smokePuff(x, y); }
         if (S.fire[i] <= 0) t.st = 3;
-        if (t.age > 30) return end(v);
+        if (t.age > 30 || v.hunger > 85) return end(v); // (and the starving one who beats the flames, as between two buckets: L-725)
       } else {
         v.act = 'throw';
         if (v.actT > 0.45) {

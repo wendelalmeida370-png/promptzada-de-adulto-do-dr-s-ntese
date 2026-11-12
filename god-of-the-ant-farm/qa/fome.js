@@ -48,6 +48,9 @@
 // h21 o cadafalso não tira ninguém da refeição da fome: o carrasco e o arauto saem de entre os que comeram, nunca de quem tem a
 //    fome acima de 85 (L-913; achado pela regra S2 no salto da qa/freguesia.js: Graco, sacerdote de Roma, uma noite a apagar o
 //    fogo, com a fome no máximo e 9 de vida, chamado da refeição para ser o arauto)
+// h22 quem apaga o fogo com a fome acima de 85 larga a fila entre dois baldes, come e volta enquanto ele arde; e quem tem essa
+//    fome não é chamado ao fogo (L-725: o fogo pesa 4 e a refeição da fome 2,5 — quem combatia um fogo de uma noite ou de dias
+//    não comia)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -757,6 +760,54 @@ const calmOne = (skip, also) => {
     S.time = Math.max(S.time, t0);
   }
   ok('h21 o cadafalso não tira ninguém da refeição da fome: o carrasco e o arauto saem de entre os que comeram (L-913)', good, info);
+}
+// ---------------- h22 the starving leave the line of the fire to eat, and come back (L-725) ----------------
+// (found by the chaos of seed 13 and by the night of fire of the freguesia: the fire weighs 4 and the meal of need 2.5 — the one
+// builder of Hedeby fought five days at the top of hunger, with the town's new fire, its one place to eat, waiting for him
+// unbuilt; four of the metropolis came out of one night at 5 to 13 of life. The case: a fire held burning on one tile beside a
+// calm town with food in its store — the test's hand keeps it lit and keeps it from spreading —; of those who answer it, one
+// is made starving and another fed; a third, starving, is by the alarm and free)
+{
+  const calm = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 20 && V.pop(s.id) >= 12).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
+  let info = 'nenhuma cidade calma com comida', good = false; const N = G.N;
+  const set = calm[0]; let spot = -1;
+  if (set) {
+    // (a tile that burns, with nothing built in two tiles of it, 5 to 9 from the heart, that the town walks to)
+    for (let r = 5; r <= 9 && spot < 0; r++) for (let k = 0; k < 32 && spot < 0; k++) {
+      const x = Math.floor(set.cx + Math.cos(k / 32 * 6.283) * r), y = Math.floor(set.cy + Math.sin(k / 32 * 6.283) * r); if (!W.inb(x, y)) continue; const i = y * N + x;
+      if (!G.Nature.fuel(i) || S.occ[i] || !W.walkable(i) || !W.townReaches(set, x + 0.5, y + 0.5)) continue;
+      let free = true; for (let dy = -2; dy <= 2 && free; dy++) for (let dx = -2; dx <= 2; dx++) if (W.inb(x + dx, y + dy) && S.occ[(y + dy) * N + x + dx]) { free = false; break; }
+      if (free) spot = i;
+    }
+  }
+  if (set && spot >= 0) {
+    const t0 = S.time; S.time = 0.3; const wet0 = S.wet[spot];
+    const hold = () => { S.wet[spot] = 0; S.fire[spot] = Math.max(S.fire[spot], 0.5); G.Nature.fireSet.add(spot); for (const i of [...G.Nature.fireSet]) if (i !== spot) G.Nature.extinguish(i, 9); };
+    const atFire = () => [...S.villagers.values()].filter(q => q.set === set.id && q.task && q.task.type === 'fire').sort((a, b) => a.id - b.id);
+    const step = (sec, until) => { for (let k = 0; k < sec * 10; k++) { hold(); M.viver(0.1); if (k % 50 === 49) watch(); if (until && until()) return true; } return false; };
+    const came = step(40, () => atFire().length >= 2); const F0 = atFire();
+    if (!came) info = `${set.name}: um fogo aceso a ${G.dist(spot % N + 0.5, ((spot / N) | 0) + 0.5, set.cx, set.cy).toFixed(1)} casas do centro — só ${F0.length} vieram em 40 s`;
+    else {
+      const A = F0[0], B = F0[1]; const hA = A.hunger, hB = B.hunger; A.hunger = 95; B.hunger = 20;
+      // (the third: a grown one of the town, free, awake, by the alarm, made starving and held so by the hand — never called)
+      const C = [...S.villagers.values()].filter(q => q.set === set.id && q.age >= 20 && q.age < 55 && q.courage > 0.3 && q.hp > 60 && !q.captive && !q.jail && !q.aboard && !q.ug && !q.inside && !(q.task && q.task.pri >= 3) && !F0.includes(q) && !(S.avatar && S.avatar.id === q.id) && G.dist(q.x, q.y, spot % N + 0.5, ((spot / N) | 0) + 0.5) < 14).sort((a, b) => a.id - b.id)[0] || null;
+      const hC = C ? C.hunger : 0; let cFire = 0, bLeft = 0; if (C) C.hunger = 95;
+      const eye = () => { if (C && S.villagers.has(C.id)) { C.hunger = 95; if (C.task && C.task.type === 'fire') cFire++; } if (S.villagers.has(B.id) && B.hunger > 60) B.hunger = 20; if (!(B.task && B.task.type === 'fire')) bLeft++; };
+      // (the line left: within the bucket in hand, a walk to the well and back at the most)
+      let tLeft = -1, did = '-'; const c0 = S.clock;
+      step(25, () => { eye(); if (!(A.task && A.task.type === 'fire')) { tLeft = S.clock - c0; return true; } return false; });
+      let ate = false, tAte = -1;
+      if (tLeft >= 0) { ate = step(60, () => { eye(); if (A.task && did === '-') did = A.task.type; if (A.task && A.task.type === 'fire') return true; return A.hunger < 60; }) && A.hunger < 60; tAte = S.clock - c0; }
+      // (fed, and the fire still burning: back at it)
+      let back = false, tBack = -1; if (ate) { back = step(60, () => { eye(); return !!(A.task && A.task.type === 'fire'); }); tBack = S.clock - c0; }
+      good = tLeft >= 0 && ate && back && cFire === 0;
+      info = `${set.name}: um fogo seguro aceso pela mão da prova a ${G.dist(spot % N + 0.5, ((spot / N) | 0) + 0.5, set.cx, set.cy).toFixed(1)} casas do centro, ${F0.length} na fila; ${A.name} com a fome a 95 pela mão: ${tLeft < 0 ? 'NÃO LARGOU a fila em 25 s (a fome ' + Math.round(A.hunger) + ', a vida ' + Math.round(A.hp) + ')' : 'largou a fila em ' + tLeft.toFixed(1) + ' s (' + did + ')'}${tLeft >= 0 ? (ate ? '; comeu aos ' + tAte.toFixed(1) + ' s (a fome ' + Math.round(A.hunger) + ')' : '; NÃO COMEU em 60 s (a fome ' + Math.round(A.hunger) + ', ' + (A.task ? A.task.type : '-') + ')') : ''}${ate ? (back ? '; de volta ao fogo aos ' + tBack.toFixed(1) + ' s' : '; NÃO VOLTOU ao fogo em 60 s (' + (A.task ? A.task.type : '-') + ')') : ''}; ${B.name}, alimentado, ${bLeft ? 'fora da fila em ' + bLeft + ' passos' : 'na fila o tempo todo'}; ${C ? C.name + ', com a fome a 95 e livre junto do alarme: ' + (cFire ? 'CHAMADO AO FOGO (' + cFire + ' passos)' : 'nunca chamado') : 'ninguém livre junto do alarme'}`;
+      if (S.villagers.has(A.id) && A.hunger > 60) A.hunger = hA; if (S.villagers.has(B.id)) B.hunger = Math.max(B.hunger, Math.min(hB, 60)); if (C && S.villagers.has(C.id)) C.hunger = hC;
+    }
+    for (const i of [...G.Nature.fireSet]) G.Nature.extinguish(i, 9); S.wet[spot] = wet0; for (const q of atFire()) Vg.endTask(q);
+    M.viver(1.5); S.time = Math.max(S.time, t0);
+  } else if (set) info = `${set.name}: nenhuma casa que arda, livre e alcançada, a 5 a 9 do centro`;
+  ok('h22 quem apaga o fogo com fome larga a fila entre dois baldes, come e volta; o faminto não é chamado (L-725)', good, info);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }
