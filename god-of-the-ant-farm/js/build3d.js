@@ -4419,8 +4419,8 @@ float m3scale(float p) {
       f = q => {
         if (cellaEl(R, q)) return true;
         if (q.k === 'porta') return !q.portao && outer(q);
-        // (the windows the form paints on the shell's walls — the great baths', forma-termas.js —: the shell's own, with the plan's
-        // openings; those over the eaves — a clerestory's — the form's)
+        // (the windows the form paints on the shell's walls — the great baths', forma-termas.js; the grand library's,
+        // forma-saber.js —: the shell's own, with the plan's openings; those over the eaves — a clerestory's — the form's)
         if (q.k === 'janelas') return outer(q) && q.y0 < top - 0.01;
         if (q.piso) return Object.assign({}, q, { y1: q.y0 + 0.004 });
         if (q.k === 'bloco' && over(q) && ((R.Hc && Math.abs(q.y0 - (R.Hp + R.Hc)) < 0.01) || Math.abs(q.y0 - top) < 0.01)) return Object.assign({}, q, { sob: [closed] });

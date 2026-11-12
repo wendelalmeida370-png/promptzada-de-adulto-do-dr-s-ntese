@@ -46,7 +46,7 @@
   // (the baths at 80 and, in a metropolis, 160 — D-161: at the 120 and 220 first written no town of a people of the thermae
   // reached them in any ready world — Argos 89, Rome 41 and 91 —, and the thermae stood only by the god's hand, T-820)
   Es.define('banhos', [C('banhos', 'Banhos'), { id: 'termas', nome: 'Termas', n: 5, k: 2.6, kw: 3, req: { pop: 80 } }, { id: 'grandes', nome: 'Grandes termas', n: 7, k: 3.6, kw: 4.5, req: { tier: 4, pop: 160 } }]);
-  Es.define('biblioteca', [C('biblioteca', 'Biblioteca'), { id: 'grande', nome: 'Grande biblioteca', n: 4, k: 2.4, req: { pop: 150 } }]);
+  Es.define('biblioteca', [C('biblioteca', 'Biblioteca'), { id: 'grande', nome: 'Grande biblioteca', n: 4, k: 2.4, req: { pop: 120 } }]);
   Es.define('mercado', [C('mercado', 'Mercado'), { id: 'coberto', nome: 'Mercado coberto', n: 4, k: 2.4, req: { pop: 150 } }]);
   Es.define('administracao', [C('administracao', 'Administração'), { id: 'paco_municipal', nome: 'Paço municipal', n: 4, k: 2.2, req: { pop: 150 } }]);
   Es.define('house', [C('casa', 'Casa'), { id: 'domus', nome: 'Casa rica', n: 2, k: 2.5, familia: true }]);

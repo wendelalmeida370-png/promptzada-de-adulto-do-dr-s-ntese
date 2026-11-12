@@ -146,7 +146,9 @@
     if (G.Biblioteca) {
       for (const b of s.buildings.values()) {
         const k = b.livros; if (b.type !== 'biblioteca' || !k) continue;
-        if (!fin(k.lidos) || k.lidos < 0 || k.lidos > G.Biblioteca.MAX || !fin(k.copias) || k.copias < 0 || k.copias > G.Biblioteca.MAX - 2) add('oficio', 2, `biblioteca #${b.id}: ${k.lidos} leituras e ${k.copias} cópias num dia (o dia conta ${G.Biblioteca.MAX} e ${G.Biblioteca.MAX - 2})`);
+        // (the day of the library's own step: the grand library's counts twice the classic one's — G.Biblioteca.maxOf, D-192)
+        const mx = G.Biblioteca.maxOf(b), mc = G.Biblioteca.maxCopias(b);
+        if (!fin(k.lidos) || k.lidos < 0 || k.lidos > mx || !fin(k.copias) || k.copias < 0 || k.copias > mc) add('oficio', 2, `biblioteca #${b.id}: ${k.lidos} leituras e ${k.copias} cópias num dia (o dia conta ${mx} e ${mc})`);
         // (and only who reads there: the errand of reading in this library, seated — the rule the library's look lets go by)
         for (const id in k.quem || {}) { const v = s.villagers.get(+id); if (!v) { add('oficio', 2, `biblioteca #${b.id}: #${id} lendo não existe`); continue; } listed(`livro:${b.id}:${id}`, fine(v, null, b, 'ler', 0, b.id), `biblioteca #${b.id}: ${v.name} #${id} no livro`); }
       }

@@ -88,7 +88,7 @@ run('e0', () => {
     }
   } finally { Es.choose = choose0; }
   ok('e0 só o clássico: nada muda', !opens && !grew && !great && !mexeu && cidades > 0, `${cidades} cidades, ${classic} escadas só com o clássico: nenhuma abre espaço (${opens}); ampliações ${grew}, obras que guardam a pedra ${great}, o acaso do mundo tocado ${mexeu}${doMundo.length ? `; fora da referência, com a obra grande do mundo já em obra: ${doMundo.join(', ')}` : ''}`);
-  const sem = ['biblioteca', 'mercado', 'administracao']; let maior = [];
+  const sem = ['mercado', 'administracao']; let maior = [];
   for (const set of S.settlements.values()) for (const t of sem) if (Es.choose(set, t).some(st => st.n !== Es.n0(t))) maior.push(`${set.name}/${t}`);
   ok('e0b os tipos sem degrau maior escolhem o clássico', !maior.length, maior.length ? `com degrau maior: ${maior.slice(0, 4).join(', ')}` : `${sem.join(', ')}: o clássico em toda cidade`);
   // (the baths: a bigger step only where the people is one of the thermae's and the town justifies it — its ladder's req)
@@ -100,6 +100,12 @@ run('e0', () => {
     const big = Es.choose(set, 'banhos').filter(q => q.n !== Es.n0('banhos')).map(q => q.n); const want = TERMA.includes(st) ? Es.steps('banhos').filter(q => !q.classico && (!q.req.pop || pop >= q.req.pop) && (!q.req.tier || (set.tier || 0) >= q.req.tier)).map(q => q.n).reverse() : [];
     if (big.length) da++; if (big.join() !== want.join()) errado.push(`${set.name} (${st}, ${pop} hab., grau ${set.tier}): escolhe ${big.join(',') || 'só o clássico'}, devia ${want.join(',') || 'só o clássico'}`); }
   ok('e0c os banhos: o degrau maior só nos povos da terma, e só na cidade que o justifica', !errado.length && n > 0, errado.length ? errado.slice(0, 4).join('; ') : `o romano, o grego e o clássico sabem as termas de 5 e de 7 casas; o egípcio, o asteca e o nórdico, só o seu; das ${n} cidades do mundo, ${da} justificam um degrau maior hoje`);
+  // (the library has its bigger step — the grand library of 16 m, D-192, qa/saber.js —: the form of the six peoples, and a town
+  // under the step's people chooses the classic one, as before)
+  { const T = 'biblioteca', st = Es.steps(T).find(s => s.n === 4), povos = ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico'];
+    const cedo = st ? [...S.settlements.values()].filter(set => V.pop(set.id) < st.req.pop && Es.choose(set, T).some(q => q.n !== Es.n0(T))).map(set => set.name) : [];
+    const semForma = povos.filter(c => !G.Forma.has(T, c, 4));
+    ok('e0d a grande biblioteca (16 m) tem a forma dos seis povos, e a cidade abaixo das pessoas do degrau escolhe a clássica', !!st && !semForma.length && !cedo.length, st ? `o degrau ${st.id} de ${st.n} casas, ${st.req.pop} pessoas; sem forma: ${semForma.join(', ') || 'nenhum'}; escolhem cedo: ${cedo.join(', ') || 'nenhuma'}` : 'sem o degrau'); }
 });
 
 // ------------------------------ os geradores de teste (só nesta prova) ------------------------------

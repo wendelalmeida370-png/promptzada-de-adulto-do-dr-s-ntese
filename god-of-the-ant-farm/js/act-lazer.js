@@ -394,9 +394,17 @@
   Bi.COPY = 0.4;   // (and a scroll copied)
   Bi.MAX = 8;      // (readings a library counts in a day — and copies: MAX - 2)
   Bi.CAP = 8;      // (the readers of a library whose plan does not say)
+  // the grand library (the bigger step of the type's ladder, G.Escala: a lot of 16 m — D-192): the same reading and the same
+  // copying for more people — its plan seats twice the readers and has the desks of three copyists (js/int-saber.js), its day
+  // counts twice the readings and the copies of a classic library's, and it employs three copyists
+  Bi.grande = b => !!b && b.type === 'biblioteca' && b.w > G.BDEF.biblioteca.w;
+  Bi.maxOf = b => Bi.MAX * (Bi.grande(b) ? 2 : 1);
+  Bi.maxCopias = b => (Bi.MAX - 2) * (Bi.grande(b) ? 2 : 1);
+  Bi.copistas = b => (Bi.grande(b) ? 3 : 1);
   A.addAnim('ler', { act: 'read', dur: 4, contact: 3, hands: 1 });
   A.addAnim('copiar', { act: 'write', dur: 6, contact: 5.4, hands: 1 });
   G.BDEF.biblioteca.jobs = 1; G.BDEF.biblioteca.role = 'copista';
+  { const jobs0 = E.jobsOf; E.jobsOf = b => (Bi.grande(b) ? { n: Bi.copistas(b), role: 'copista' } : jobs0(b)); } // (the grand library's three)
   G.ROLE.copista = ['Copista', 'Copista'];
   if (!E.JOB_ROLES.includes('copista')) E.JOB_ROLES.push('copista');
   E.JOB_OF.copista = ['biblioteca'];
@@ -419,7 +427,7 @@
   // what a reading or a copy adds to the people's research: a little, and no more than the day of each library allows
   function learn(b, pts, kind) {
     const f = G.Fac.get(facOf(b)); const k = book(b);
-    if (kind === 'ler' ? k.lidos >= Bi.MAX : k.copias >= Bi.MAX - 2) return 0;
+    if (kind === 'ler' ? k.lidos >= Bi.maxOf(b) : k.copias >= Bi.maxCopias(b)) return 0;
     if (kind === 'ler') k.lidos++; else k.copias++;
     if (G.Urban) G.Urban.noteB(b, 'saber', 1); // (the life of the quarter: a scroll read or copied)
     if (!f || !f.tech) return 0;
@@ -469,7 +477,7 @@
   });
   // ---- the copyist (the errand 'copiar' at the scribe's desk, 'escrever')
   Bi.task = function (v, b, f, H) {
-    if (!libOpen(b) || book(b).copias >= Bi.MAX - 2) return null;
+    if (!libOpen(b) || book(b).copias >= Bi.maxCopias(b)) return null;
     return H.setTask(v, { type: 'copiar', id: b.id, pri: 1, st: 0, dur: Math.round(G.rr(24, 36)) });
   };
   function runCopista(v, t, dt, H) {
@@ -610,12 +618,13 @@
     if (v.role === 'copista') { const b = v.job && S.buildings.get(v.job); const f = G.Fac.ofV(v); if (!b || !b.built || b.type !== 'biblioteca' || !f) return null; return Bi.task(v, b, f, H); }
     return oldJob(v, H);
   };
-  // (the trades of these buildings: two actors for each theatre, a copyist for each library — under the ceiling, D-090)
+  // (the trades of these buildings: two actors for each theatre, a copyist for each library — three for a grand one, D-192 —,
+  // under the ceiling, D-090)
   const oldDemand = E.demand;
   E.demand = function (set, fac, Ad) {
     const out = oldDemand(set, fac, Ad);
     if (Ad >= 12) { let n = 2 * E.byType(set.id, 'teatro').length; for (const b of E.byType(set.id, 'maravilha')) if (arena(b)) n += fighters(b); if (n) out.ator = (out.ator || 0) + n; }
-    if (Ad >= 10 && fac.tech && fac.tech.known && fac.tech.known.escrita) { const n = E.byType(set.id, 'biblioteca').length; if (n) out.copista = (out.copista || 0) + n; }
+    if (Ad >= 10 && fac.tech && fac.tech.known && fac.tech.known.escrita) { let n = 0; for (const b of E.byType(set.id, 'biblioteca')) n += Bi.copistas(b); if (n) out.copista = (out.copista || 0) + n; }
     return out;
   };
   const oldText = E.taskText;
