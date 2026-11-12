@@ -99,21 +99,35 @@ mais, 5 seis ou mais, o que mais 14); depois 126 entre 84 = 0,129 (76 trocaram, 
 pela necessidade, 20 pela guerra, 3 voltas, 7 idas e voltas). Um mundo novo de cidades pequenas troca menos que uma metrópole
 antes e ganha menos com a regra: o teto do x3 passou a 0,16 (três quartos de antes), e a prova passa (commit `407689f`).
 
-**RODANDO AGORA: a fila B** (`fila-b.sh <jogo> scratchpad/ag/X/fila6 v5`): a economia com a regra final em dez sementes
-(`eco2/v5-<semente>.txt`; a tabela: `python3 tabela.py eco2 antes v5 103 7 2024 11 42 555 9 31 77 314`), as trocas do zero
-de novo (`fila6/mede-*-zero.txt`) e os mundos prontos dez dias antes e depois (`fila-prontos/pronto-antes-*.txt`,
-`fila6/pronto-depois-*.txt`: a gente, os mortos por causa, a fome). **Depois: a fila C** (`fila-c.sh <jogo>
-scratchpad/ag/X/fila6`): as 32 sabotagens de novo com a regra final (`sab-out/resumo.txt`).
+**A fila B, lida até onde chegou** (a sessão caiu no meio dos mundos prontos; o que ficou inteiro):
+- *a economia com a regra final* (`eco2/tabela-v5.md`; dez sementes, 40 anos; antes → depois): gente 1657 → 1551 (−6 %),
+  mortos de guerra 529 → 604 (+14 %), mortos de fome 15 → 5, comida +6 %, madeira +15 %, pedra +20 %, prédios +10 %, cidades
+  67 → 67, a comida por pessoa mais baixa 1,65 → 1,53. Por década (`python3 guerra.py eco2 antes v5 <sementes>`): até o ano
+  30 a regra não custa nada (gente 1386 → 1410; mortos de guerra e flecha 339 → 331); a diferença é toda da última década
+  (224 mortos de guerra antes, 324 depois), em que dois mundos trocam de sorte (o 9: 120 → 211 de gente; o 31: 211 → 120).
+  As diferenças mundo a mundo têm desvio de 52 de gente e de 22 de mortos de guerra: a média (−11 de gente, +7,5 mortos por
+  mundo) fica a 0,6 e a 1,1 desvio do zero — **não se distingue do acaso das guerras com dez mundos**. Mas nos olhares das
+  décadas há mais gente de guerreiro depois (ano 30: 25 → 56 na `v3` e na `v5`): a medida a seguir conta isso ano a ano;
+- *as trocas do zero* (`fila6/mede-*-zero.txt`): 0,216 → 0,129 por adulto por dia (já dito acima).
+
+**RODANDO AGORA: a fila D** (`fila-d.sh <jogo> scratchpad/ag/X/fila7`; pode ser lançada de novo — pula o passo cuja saída
+tem a linha «as armas»): os mundos prontos vividos dez dias antes e depois (`fila-prontos/pronto-antes-*.txt`,
+`fila7/pronto-depois-*.txt`: a gente, os mortos por causa, a fome, os guerreiros), e a economia com **as armas olhadas a
+cada ano** (quantos adultos são guerreiros nos povos em guerra e em paz): antes (`eco2/a6-*.txt`), depois (`eco2/v6-*.txt`,
+a mesma regra da `v5`) e antes com o acaso deslocado de um sorteio (`eco2/borb-*.txt`: quanto o acaso sozinho mexe as somas).
 **Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar.**
 
 **Falta (nesta ordem):**
-1. ler a fila B: se a economia `v5` custar gente ou comida, ou a guerra dos mundos prontos matar mais que antes, ajustar e
-   medir de novo; senão, a fila C;
-2. fechar este bloco: as seções 4 a 10 estão em `scratchpad/ag/X/bloco-final-4a10.md` (cópia em
+1. ler a fila D: se os povos em guerra têm mais guerreiros com a regra do que antes (e não só mais guerra), a guerra está
+   puxando mais do que puxava — acertar (a variante `leva` do `var.py`, ou a guerra só passa à frente dos outros ofícios
+   como antes) e medir de novo; se a diferença couber no acaso (a `borb`), dizer os números e deixar;
+2. a fila C (`fila-c.sh <jogo> scratchpad/ag/X/fila7`): as 32 sabotagens de novo com a regra final (`sab-out/resumo.txt`), e
+   a prova inteira uma última vez (`node qa/oficio-fica.js`, 15 min);
+3. fechar este bloco: as seções 4 a 10 estão em `scratchpad/ag/X/bloco-final-4a10.md` (cópia em
    `qa/patch3/bloco-X-fim-rascunho.md`) — faltam os números finais (ANTES_ZERO = 0,22; DEPOIS_RESUMO; ECO_RESUMO; ECO_GUERRA;
    ECO_FOME; PRONTO_RESUMO; X4_X5_RESUMO; ZERO_SALTO; TETO_ZERO_TXT; T840_DEPOIS; OUTRAS_PROVAS_NOTA = a conta das sete
    provas acima), o T-956 e a tabela das sabotagens; juntar tudo no `bloco-X.md` e apagar o rascunho;
-3. o último commit (a árvore limpa; o `qa/oldsave_7.json` que a prova oldsave reescreve volta com `git checkout --`) e o
+4. o último commit (a árvore limpa; o `qa/oldsave_7.json` que a prova oldsave reescreve volta com `git checkout --`) e o
    relatório final.
 
 **Nota:** não existe `qa/oficios.js` (o pedido o cita): as provas dos ofícios são `load-oficio.js`, `oficinas-mao.js`,
