@@ -6,29 +6,31 @@ Ramo: `worktree-agent-ab1e0b6fbb80f0a8d` (base `b2b61f0`). Rascunho e medidores:
 
 ## 0. ESTADO DO TRABALHO (em dia a cada passo — para quem retomar)
 
-**Feito e no ramo (commit 1):**
+**Feito e no ramo (commits `deb8d5c`, `9bdbb6c` e o seguinte):**
 - a regra nova no `js/village.js` (`assignJobs`, `pickHand` no lugar de `pickRoleForList`, `took`, `V.tenure`, `V.tradeLog`,
-  `V.TRADE_TAU / TRADE_GAP / TRADE_MIN / TRADE_BREAD`; o chamador em `V.update` passa o tempo decorrido);
+  `V.tradeAsked`, `V.TRADE_TAU / TRADE_GAP / TRADE_MIN / TRADE_BREAD`; o chamador em `V.update` passa o tempo decorrido);
 - os campos novos da pessoa `roleDay` e `roleBack` na lista `SHAPE` (`js/villagers.js`); a memória da cidade `set.ofm` (vai no
   save com a cidade, como tudo dela; o save das pessoas é genérico: nada a mexer no `js/save.js`);
 - a causa na biografia (`js/life.js`: `L.onRole(v, prev, why)` → «Voltou a ser lenhador.», «Tornou-se guerreira — a guerra
   chamou.»);
-- a prova `qa/oficio-fica.js` (x1 a x13) e as regras `qa/oficio-fica-inv.js` — **a prova inteira (x1 a x11) rodou de uma vez
-  e passou (41 linhas); x12 (o celeiro por graus) e x13 (a obra grande puxa) e as conferências novas do x1/x2 (quem troca é a
-  mão mais nova), do x3 (o armazém nunca esvaziou) e do x5 (a guerra chama os bravos) rodadas e passando uma a uma**;
-- as sabotagens: `scratchpad/ag/X/sab-X.py` (27) e `sab-all.sh` — **rodando**; o resumo sai em `scratchpad/ag/X/sab-out/resumo.txt`;
-- `V.tradeAsked(id)`: o que o instante pediu de cada ofício na última passada de uma cidade (só para quem pergunta: as provas);
+- a prova `qa/oficio-fica.js` (x1 a x13) e as regras `qa/oficio-fica-inv.js`: a prova inteira x1 a x11 rodou de uma vez e
+  passou; x12, x13 e as conferências novas rodadas uma a uma;
+- **as sabotagens** (`scratchpad/ag/X/sab-X.py`, `sab-all.sh`; as saídas em `sab-out/`): a primeira rodada das 27 — 23
+  acusadas pelo caso delas; das 4 que não: a s22 («a emergência tira de quem só o instante diz que sobra») não fazia falhar
+  nada e a condição saiu do jogo (a emergência tira de quem o instante tem sobrando, como sempre foi); a s8 («sem a volta
+  primeiro»), a s20 («nenhum ofício dá a mão») e a s26 («o load reparte») fizeram a prova ganhar três conferências (x4: quem
+  vai a um terceiro ofício pela necessidade não foi devolvido; x6: a mão vem de outro ofício; x10: duas mãos por trocar na
+  hora do save) — **a segunda rodada dessas (s20, s8, s26, s8b, s25, s7) está rodando**;
 - o guard e a vida curta (`soak 103 … 5 1 1`: 0 violações) passam com a regra.
 
 **Falta (nesta ordem):**
-1. conferir o resumo das sabotagens (cada uma tem de fazer falhar o caso dela) e acertar a prova onde uma não for acusada;
-2. a prova inteira de uma vez de novo (`node qa/oficio-fica.js`, uns 10 min);
-3. a economia de novo com a regra final (o lote de seis sementes abaixo foi medido ANTES de três acertos pequenos: a guerra
-   chama os bravos, a volta primeiro, o puxado não vai a um terceiro ofício antes dos dias) e os mundos prontos vividos 10
-   dias (a fome antes e depois: `eco.js <raiz> pronto:metropole 10`);
+1. conferir a segunda rodada das sabotagens (`sab-out/resumo.txt`);
+2. a prova inteira de uma vez de novo (`node qa/oficio-fica.js`, uns 12 min);
+3. a economia de novo com a regra final (`lote-eco.sh … v2 40 103 7 2024 11 42 555`; o lote da seção 2 foi medido antes dos
+   acertos pequenos) e os mundos prontos vividos 10 dias (`eco.js <raiz> pronto:metropole 10`, antes e depois);
 4. a medida de antes num mundo do zero (`mede.js <antes> novo:103:continente:128:4:20 10 saltar`);
-5. as outras provas do pedido (load-oficio, as «-mao», marinheiros, porto, degraus sem o g8, fome, motim, fundadores,
-   atividades, vida-bairro, quintal, roupa, sabe, det3, salto-igual, oldsave, a vida de 20 anos);
+5. as outras provas do pedido (`provas.sh <jogo> <saída>`: load-oficio, as «-mao», marinheiros, porto, degraus sem o g8, fome,
+   motim, fundadores, atividades, vida-bairro, quintal, roupa, sabe, det3, salto-igual, oldsave, a vida de 20 anos);
 6. fechar este bloco (as linhas do AUDIT, do README, do regress, as regras 73 e 74, as frases do CLAUDE.md, o que ficou aberto).
 
 **Nota:** não existe `qa/oficios.js` (o pedido o cita): as provas dos ofícios são `load-oficio.js`, `oficinas-mao.js`,

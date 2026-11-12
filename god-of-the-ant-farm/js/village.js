@@ -1635,12 +1635,11 @@
     while (!keep && changes < 3) {
       if (works.length) uncovered();
       let v = null, from = null, to = null, why = null;
-      // (the emergencies first, D-211: by the instant's count, from the trade the instant has most to spare — one the memory
-      // too has a quarter of a hand to spare of: a trade that only this instant asks less gives nobody yet. Two emergencies
-      // at once took each other's hands back every time one of them blinked — the great work's turn, the hunger's mark)
+      // (the emergencies first, D-211: by the instant's count, from the trade the instant has most to spare, as the dealing
+      // always did — never from another emergency's trade)
       const call = Object.keys(urgent).filter(r => short(r) >= 1).sort((a, b) => short(b) - short(a));
       if (call.length) {
-        const sur = WORK_ROLES.filter(r => !urgent[r] && short(r) <= -1 && gap(r) <= -0.25).sort((a, b) => short(a) - short(b));
+        const sur = WORK_ROLES.filter(r => !urgent[r] && short(r) <= -1).sort((a, b) => short(a) - short(b));
         for (const r of call) { for (const q of sur) { v = pickHand(have[q], r, fits); if (v) { from = q; to = r; break; } } if (v) break; }
         if (v) why = v.roleBack === to ? 'volta' : to === 'guerreiro' ? 'guerra' : to === 'construtor' ? 'obra' : 'fome';
       }

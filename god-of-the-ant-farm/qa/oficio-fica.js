@@ -140,9 +140,12 @@ if (on('x4')) {
   const home = new Map(); let seen = LOG.length, days = 0;
   const look = () => { for (; seen < LOG.length; seen++) { const e = LOG[seen]; const o = own.get(e.id); if (!o || home.has(e.id)) continue; const v = G.S.villagers.get(e.id); if (e.why === 'volta' && e.to === o.keep) home.set(e.id, { ok: !!v && !v.roleBack && v.roleDay === day0.get(e.id) }); else if (e.why !== 'volta') home.set(e.id, { other: e.why }); } };
   while (days < 2 && home.size < own.size) { T.live(0.125 * DAY, look); days += 0.125; }
-  const went = [...home.values()]; const backN = went.filter(h => h.ok !== undefined).length, backOk = went.filter(h => h.ok).length, called = went.filter(h => h.other).length;
+  // (another emergency may call one before he is back — the great work, a war —; one sent to a third trade by the need
+  // that lasted was not given back)
+  const EMERG = { fome: 1, guerra: 1, obra: 1 };
+  const went = [...home.values()]; const backN = went.filter(h => h.ok !== undefined).length, backOk = went.filter(h => h.ok).length, called = went.filter(h => h.other && EMERG[h.other]).length, astray = went.filter(h => h.other && !EMERG[h.other]).length;
   const waiting = [...own.keys()].filter(id => !home.has(id) && G.S.villagers.get(id) && grown(G.S.villagers.get(id)));
-  ok('x4 e devolve', backN >= 3 && backN >= (backN + waiting.length) * 0.7 && backOk === backN, `com o armazém cheio, em ${days} dias ${backN} das ${own.size} mãos puxadas voltaram ao ofício delas («volta»), com os dias que tinham nele (${backOk}); ${called} foram chamadas antes por outra causa (${[...new Set(went.filter(h => h.other).map(h => h.other))].join(', ') || '—'}); ainda fora do ofício delas: ${waiting.length}${waiting.length ? ' (' + waiting.slice(0, 4).map(id => `#${id} ${own.get(id).keep} → ${G.S.villagers.get(id).role}`).join(', ') + ')' : ''}`);
+  ok('x4 e devolve', backN >= 3 && backN >= (backN + waiting.length + astray) * 0.7 && backOk === backN, `com o armazém cheio, em ${days} dias ${backN} das ${own.size} mãos puxadas voltaram ao ofício delas («volta»), com os dias que tinham nele (${backOk}); ${called} foram chamadas antes por outra emergência (${[...new Set(went.filter(h => h.other && EMERG[h.other]).map(h => h.other))].join(', ') || '—'}); mandadas a um terceiro ofício pela necessidade: ${astray}; ainda fora do ofício delas: ${waiting.length}${waiting.length ? ' (' + waiting.slice(0, 4).map(id => `#${id} ${own.get(id).keep} → ${G.S.villagers.get(id).role}`).join(', ') + ')' : ''}`);
   const un = T.unsaid(); const q = inv(); ok('x4 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
 }
 
@@ -187,6 +190,10 @@ if (on('x6')) {
   while (days < 1 && !cases.every(filled)) { T.live(0.125 * DAY); days += 0.125; }
   for (const c of cases) { const n = filled(c); const e = n && T.log().find(x => x.id === n.id && x.to === c.r);
     ok(`x6 a vaga: ${G.ROLE[c.r][0].toLowerCase()} de ${c.set.name}`, !!n && !!e, n ? `${c.v.name}, a única mão do ofício, morreu; ${n.name} tomou o ofício e o posto em até ${days} dias (${e ? `«${e.why}»: vinha de ${e.from || 'nenhum ofício'}` : 'sem causa dita'})` : `${c.v.name} morreu e em ${days} dias ninguém tomou o ofício (a memória da cidade pede ${Math.round((c.set.ofm[c.r] || 0) * 100) / 100})`); }
+  // (and it is the dealing that gives the hand: half of the posts or more taken by one who had another trade, within half a
+  // day — not only by a youth who came of age meanwhile)
+  const moved = cases.filter(c => { const n = filled(c); const e = n && T.log().find(x => x.id === n.id && x.to === c.r); return e && e.from && (e.why === 'falta' || e.why === 'volta') && e.t - T.t0 <= 0.5 * DAY; }).length;
+  if (cases.length >= 2) ok('x6 a vaga: a mão vem de outro ofício', moved * 2 >= cases.length, `${moved} dos ${cases.length} postos foram tomados em meio dia por uma mão que tinha outro ofício (a necessidade que durou); os outros, por um moço que fez dezesseis anos`);
   const un = T.unsaid(); const q = inv(); ok('x6 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
 }
 
@@ -274,6 +281,11 @@ if (on('x10')) {
   M.pronto('metropole'); M.viver(0.3 * DAY);
   const canon = () => JSON.stringify([[...G.S.villagers.values()].sort((a, b) => a.id - b.id).map(v => [v.id, v.role || '', v.roleDay === undefined || v.roleDay === null ? '' : v.roleDay, v.roleBack || '', v.job || 0]), [...G.S.settlements.values()].sort((a, b) => a.id - b.id).map(s => [s.id, s.ofm ? Object.keys(s.ofm).sort().map(r => r + ':' + s.ofm[r]).join(' ') : ''])]);
   const mem = () => [...G.S.settlements.values()].filter(s => s.ofm).length;
+  // (two hands in a trade their town does not ask — the test's hand, right before the save: the next dealing would move them
+  // at once, and the load must not be that dealing)
+  { const anyIn = (set, t) => [...G.S.buildings.values()].some(b => b.set === set.id && b.type === t); const set = biggest(s => !anyIn(s, 'ourives') && !G.Fac.enemiesOf(s.fac).length);
+    const two = set ? adults(v => v.set === set.id && (v.role === 'coletor' || v.role === 'lenhador' || v.role === 'agricultor') && !v.roleBack && !v.jail && !v.aboard).slice(0, 2) : [];
+    god(() => { for (const v of two) { v.role = 'ourives'; v.job = 0; v.roleDay = G.S.day - 5; } }); ok('x10 duas mãos por trocar na hora do save', two.length === 2, set ? `${two.map(v => v.name).join(' e ')}, de ${set.name}, ourives sem ourivesaria` : 'nenhuma cidade em paz sem ourivesaria'); }
   const c0 = canon(); const save = G.Save.serialize(); const l0 = LOG.length;
   G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; const c1 = canon(); const atLoad = LOG.length - l0;
   ok('x10 o load não decide nada', c0 === c1 && atLoad === 0 && mem() > 0, `depois do load os ofícios, os dias, os ofícios a que se volta, os postos e a memória de ${mem()} cidades são os de antes (${c0 === c1 ? 'iguais' : 'DIFERENTES'}); trocas feitas pelo load: ${atLoad}`);
