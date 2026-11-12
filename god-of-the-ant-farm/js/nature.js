@@ -104,7 +104,7 @@
     if (S.fire[i] <= 0.02) { S.fire[i] = 0; Nat.fireSet.delete(i); }
   };
   const NB8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
-  Nat.STONE_SPREAD = 0.05;
+  Nat.STONE_SPREAD = 0.05; Nat.STONE_SECS = 12;
   function updateFire(dt) {
     const S = G.S; const wth = S.weather;
     const dry = 1 + (wth.drought > 0 ? 0.9 : 0) - wth.rain * 0.8;
@@ -129,7 +129,11 @@
         S.burnt[i] = G.DAY_LEN * 1.5; Nat.markDirty(i);
       } else if (fuel === 'building' || fuel === 'pedra') {
         const b = S.buildings.get(S.occ[i]);
-        if (b) G.Village.damageBuilding(b, (b.built ? 5 : 9) * f * dt / Math.max(1, b.w * b.h) * 1.3, 'fire');
+        // (a great work of stone: all its timber is gone in STONE_SECS seconds a tile of its side with one tile burning, sooner
+        // with more — a monument's fire lasts as a big house's does. By its strength, a lot at a time, one tile of a theatre of
+        // 24 m burning low would have burnt for 49 minutes, a torch in the middle of the town calling its people all that
+        // while: L-787)
+        if (b) G.Village.damageBuilding(b, fuel === 'pedra' ? G.Village.fireRoom(b) * f * dt / (Nat.STONE_SECS * b.w) : (b.built ? 5 : 9) * f * dt / Math.max(1, b.w * b.h) * 1.3, 'fire');
       }
       if (f <= 0.01) { S.fire[i] = 0; S.fireT[i] = 0; Nat.fireSet.delete(i); continue; }
       S.fire[i] = f;

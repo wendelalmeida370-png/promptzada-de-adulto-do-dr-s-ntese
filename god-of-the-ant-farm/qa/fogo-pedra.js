@@ -80,16 +80,23 @@ run('p2', () => {
   const vive = comoCasa => {
     const set = abre(); M.reseed(77); const b = grande(set, true); if (!b) return null; const f0 = V.fireFuel;
     if (comoCasa) V.fireFuel = o => (o === b ? 'building' : f0(o));
-    try { sim(() => Nat.ignite(b.y * N + b.x, 0.9)); let t = 0; for (; t < 30; t++) M.viver(1); const o = S.buildings.get(b.id); return { n: o && o.type !== 'ruin' ? emChamas(o) : 36, hp: o ? o.hp : 0, max: b.maxHp, de: o && o.type !== 'ruin' }; } finally { V.fireFuel = f0; }
+    try {
+      estia(b); sim(() => Nat.ignite(b.y * N + b.x, 0.9)); let t = 0; for (; t < 30; t++) M.viver(1); const o = S.buildings.get(b.id);
+      const r = { n: o && o.type !== 'ruin' ? emChamas(o) : 36, hp: o ? o.hp : 0, max: b.maxHp, de: o && o.type !== 'ruin' };
+      // (as stone, left to itself: out when the fire has had its timber — a house's fire, not a torch of an hour: L-787)
+      if (!comoCasa && r.de) { r.seg = 30 + ateApagar(o, 900); const f = S.buildings.get(b.id); r.fim = f ? f.hp : 0; r.piso = V.fireFloor(b); r.ch = f && f.type !== 'ruin' ? emChamas(f) : -1; }
+      return r;
+    } finally { V.fireFuel = f0; }
   };
   const casa = vive(true), pedra = vive(false);
   ok('p2 o fogo não se alastra por ele', !!casa && !!pedra && pedra.de && casa.n >= 12 && pedra.n * 3 <= casa.n, casa && pedra ? `um canto aceso, 30 s depois: queimando como casa, ${casa.n} das 36 casas dele em chamas (a resistência ${Math.round(casa.hp)} de ${casa.max}); como pedra, ${pedra.n} (${Math.round(pedra.hp)} de ${pedra.max})` : 'a mão do deus não fundou o teatro');
+  ok('p2b e apaga sozinho, em minutos', !!pedra && pedra.ch === 0 && pedra.seg <= 360 && Math.abs(pedra.fim - pedra.piso) < 1e-6, pedra ? `um canto aceso e deixado a si: apagado em ${pedra.seg} s, com ${pedra.fim} de ${pedra.max} (o que o fogo deixa: ${pedra.piso}); em chamas ${pedra.ch}` : 'sem teatro');
 });
 
 // ------------------------------ p3: o save no meio do fogo ------------------------------
 run('p3', () => {
   const set = abre(); const b = grande(set, true); if (!ok('p3a o teatro de 24 m', !!b, lado(b))) return;
-  const piso = V.fireFloor(b); acende(b); for (let t = 0; t < 20; t++) M.viver(1);
+  const piso = V.fireFloor(b); estia(b); sim(() => Nat.ignite(b.y * N + b.x, 0.9)); for (let t = 0; t < 20; t++) M.viver(1); // (one corner lit: the fire half-way)
   const meio = S.buildings.get(b.id); const hp0 = meio.hp, ch0 = emChamas(meio); const save = G.Save.serialize();
   const vive = () => { G.Save.apply(JSON.parse(save)); pega(); M.reseed(99); const o = S.buildings.get(b.id); const antes = [o.hp, emChamas(o), o.burnHp]; const q = queima(o); const f = S.buildings.get(b.id); return { antes, fim: [f ? f.type : '-', f ? f.hp : 0, f ? f.burnHp : 0, f ? emChamas(f) : 0, q.vezes, q.seg] }; };
   const v1 = vive(), v2 = vive();
@@ -101,7 +108,7 @@ run('p3', () => {
 // ------------------------------ p4: a chuva no meio ------------------------------
 run('p4', () => {
   const set = abre(); const b = grande(set, true); if (!ok('p4a o teatro de 24 m', !!b, lado(b))) return;
-  const piso = V.fireFloor(b); acende(b); for (let t = 0; t < 12; t++) M.viver(1); const antes = S.buildings.get(b.id).hp;
+  const piso = V.fireFloor(b); estia(b); sim(() => Nat.ignite(b.y * N + b.x, 0.9)); for (let t = 0; t < 12; t++) M.viver(1); const antes = S.buildings.get(b.id).hp; // (one corner lit)
   // (the god's rain over it: a divine cloud — and, where the door of the clouds is not there, the tiles put out by the fire's own door)
   sim(() => { if (Nat.addCloud) Nat.addCloud(b.x + 3, b.y + 3, 7, 40, 'divine'); for (const i of casas(b)) Nat.extinguish(i, 1); });
   let t = 0; for (; t < 60 && emChamas(S.buildings.get(b.id)); t++) M.viver(1);

@@ -12,6 +12,8 @@
 //       guarda outro para o próximo que lhe falta — nunca em cima da obra
 //   f4  quem não guarda: a cidade que não é capital; a capital abaixo de cidade (solta depois de RES_YEARS); a que já tem os três
 //   f5  o save no meio: o mesmo campo, o verificador limpo
+//   f8  a ordem do campo guardado (T-773): o lote plano mais perto; um por aplainar só sem nenhum plano ao alcance — conferido
+//       por uma varredura da própria prova (V.resFits), nas capitais dos mundos prontos, onde há dos dois
 //   f6  as cidades novas longe (D-232): V.keptNear a menos de RES_CLEAR do meio de uma capital com campo guardado, por terra e
 //       por mar — os três que escolhem o sítio de uma cidade perguntam
 //   f7  procurar mais longe (D-231): os degraus de 8 e 10 casas olham a 6, a 12 e a 20 casas além do raio; os de 6, a 6 e 12;
@@ -196,6 +198,32 @@ run('f7', () => {
     }
   }
   ok('f7b degraus de 8 e 10 que só acham lote mais longe', so20 >= 1 && !mal.length, `nos mundos prontos: ${com12} buscas de degraus de 8 casas ou mais já achavam lote até o raio e doze; ${so20} só acham com o anel de vinte (${diz.slice(0, 5).join('; ')})${mal.length ? '; FALHAS: ' + mal.join(' | ') : ''}`);
+});
+
+// ------------------------------ f8: a ordem do campo guardado (T-773) ------------------------------
+run('f8', () => {
+  let planos = 0, aplainados = 0, ambos = 0, nenhum = 0; const mal = [], diz = [];
+  for (const w of MUNDOS) {
+    M.pronto(w); pega();
+    for (const set of capitais()) {
+      if ((set.tier || 0) < V.RES_TIER || !V.civWork(set).length) continue; const u = set.urb || (set.urb = { d: [], names: [] }); const c0 = u.civ, g0 = u.civGone;
+      u.civ = null; u.civGone = null; sim(() => V.reservaDia(set)); const r = u.civ; const n = V.CIVIC_N;
+      // (the proof's own sweep, by the door of the fit: the nearest flat lot and the nearest to be levelled, as far as the town looks)
+      const R = Math.round(G.Urban ? G.Urban.radius(set, { w: n }, V.pop(set.id)) : 20) + V.CIVIC_REACH; const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy); let dF = 1e9, dL = 1e9;
+      u.civ = null;
+      for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+        const x = cxi + dx - Math.floor((n - 1) / 2), y = cyi + dy - Math.floor((n - 1) / 2); const d = G.dist(x + n / 2, y + n / 2, set.cx, set.cy); if (d > R) continue;
+        const flat = W.slope(x, y, n, n) <= V.PODIUM; if (d >= (flat ? dF : dL)) continue; if (!V.resFits(set, 'civico', x, y, n)) continue; if (flat) dF = d; else dL = d;
+      }
+      u.civ = c0; u.civGone = g0; const tag = `${w} ${set.name}`;
+      if (dF < 1e9 && dL < dF) { ambos++; diz.push(`${tag}: um por aplainar a ${dL.toFixed(1)} casas e o plano mais perto a ${dF.toFixed(1)}`); }
+      if (!r) { nenhum++; if (dF < 1e9 || dL < 1e9) mal.push(`${tag}: não guardou campo e há lote (plano a ${dF.toFixed(1)}, por aplainar a ${dL.toFixed(1)})`); continue; }
+      const dr = G.dist(r.x + n / 2, r.y + n / 2, set.cx, set.cy); const plano = W.slope(r.x, r.y, n, n) <= V.PODIUM;
+      if (plano) { planos++; if (Math.abs(dr - dF) > 1e-6) mal.push(`${tag}: guardou um plano a ${dr.toFixed(1)} casas e o mais perto está a ${dF.toFixed(1)}`); }
+      else { aplainados++; if (dF < 1e9) mal.push(`${tag}: guardou um lote por aplainar a ${dr.toFixed(1)} casas havendo um plano a ${dF.toFixed(1)}`); else if (Math.abs(dr - dL) > 1e-6) mal.push(`${tag}: guardou um por aplainar a ${dr.toFixed(1)} e o mais perto está a ${dL.toFixed(1)}`); }
+    }
+  }
+  ok('f8 o plano mais perto; por aplainar só sem nenhum plano', !mal.length && planos >= 1 && ambos >= 1, `nos mundos prontos: ${planos} capitais guardam o lote plano mais perto, ${aplainados} um por aplainar (nenhum plano ao alcance), ${nenhum} nenhum; em ${ambos} delas há um lote por aplainar mais perto que o plano mais perto, e o campo é o plano (${diz.slice(0, 3).join('; ')})${mal.length ? ' — MAL: ' + mal.slice(0, 3).join(' | ') : ''}`);
 });
 
 console.log(fails.length ? `TERRA-GUARDADA: FALHOU (${fails.join(', ')})` : `TERRA-GUARDADA: ok (${ms()} ms)`);

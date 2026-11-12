@@ -317,6 +317,7 @@
   // capital, a wonder with the sand of its games, the fighters of its arena — act-lazer.js). → { n, role }, or null
   E.jobsOf = b => { const d = G.BDEF[b.type]; return d && d.jobs ? { n: d.jobs, role: d.role } : null; };
   // every worker of a workplace role gets a concrete workplace (and keeps it)
+  E.CREW_CAP = true;
   E.place = function (set) {
     const S = G.S; const slots = new Map();
     for (const b of S.buildings.values()) { if (b.set !== set.id || !b.built) continue; const j = E.jobsOf(b); if (j && j.n > 0) slots.set(b.id, { b, left: j.n, role: j.role }); }
@@ -342,11 +343,17 @@
       for (const s of slots.values()) { if (s.left <= 0 || s.role !== v.role) continue; const d = G.dist2(v.x, v.y, s.b.x, s.b.y); if (d < bd) { bd = d; best = s; } }
       if (best) { v.job = best.b.id; best.left--; }
     }
-    // idle miners take up the free places in the mines
+    // idle miners take up the free places in the mines — as many as the crew the planner gave the mines (set.minaN, village.js:
+    // what it added to the town's quarrymen for them), no more: the other «mineiros» are the stone's. Every idle one went down
+    // the mine while there was a place, four a mine, and a people of 146 with rock about every town and fifteen works waiting
+    // for stone brought in 6 of stone a year, its six «mineiros» all at the ore (seed 211, year 81: L-785). A town not
+    // planned yet — a save of before, just opened — as it was
+    const maxCrew = E.CREW_CAP && set.minaN !== undefined ? set.minaN : Infinity; let crew = 0;
+    for (const v of workers) if (v.role === 'mineiro' && v.job) { if (crew < maxCrew) crew++; else v.job = 0; }
     for (const s of slots.values()) {
       if (s.b.type !== 'mina' || s.left <= 0) continue;
       const o = S.ores && S.ores.find(q => q.id === s.b.ore); if (!o || o.amt <= 0) continue;
-      for (const v of S.villagers.values()) { if (s.left <= 0) break; if (v.set === set.id && v.role === 'mineiro' && !v.job && !v.captive) { v.job = s.b.id; s.left--; } }
+      for (const v of S.villagers.values()) { if (s.left <= 0 || crew >= maxCrew) break; if (v.set === set.id && v.role === 'mineiro' && !v.job && !v.captive) { v.job = s.b.id; s.left--; crew++; } }
     }
   };
 

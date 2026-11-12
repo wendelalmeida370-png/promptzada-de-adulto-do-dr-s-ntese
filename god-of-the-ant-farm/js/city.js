@@ -731,7 +731,9 @@
     for (const o of G.Village.dropoffs(set.id)) { const [ox, oy] = G.Village.frontTile(o); const q = G.dist(ox, oy, fx, fy); if (q < bd) { bd = q; d = o; } }
     if (!d || bd <= Ci.WORK_FAR) return null;
     const coming = m => (b.incoming[m] || 0) + Ci.carted(b, m);
-    const has1 = m => Math.floor(G.Fac.free(b.set, m)) - (m === 'stone' ? Ci.WORK_FLOOR : 0);
+    // (the last load has no floor: what the work still waits for, once a cart's load or less, is its own in the store — D-233)
+    const last = G.Village.lastStone(set) > 0;
+    const has1 = m => (m === 'stone' ? Math.floor(G.Village.stoneFor(b)) - (last ? 0 : Ci.WORK_FLOOR) : Math.floor(G.Fac.free(b.set, m)));
     const mk = Object.keys(b.need).find(m => b.need[m] - coming(m) >= 1 && has1(m) >= 1); if (!mk) return null;
     const load = Math.min(Ci.WORK_LOAD, Math.ceil(b.need[mk] - coming(mk)), has1(mk));
     const [sx, sy] = G.Village.frontTile(d); const p = W.findPath(sx, sy, fx, fy, true, N * N);

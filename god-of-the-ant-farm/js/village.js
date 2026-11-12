@@ -386,6 +386,8 @@
     const c = G.Escala.billOf(b).cost; let tot = 0; for (const k in c) tot += c[k] || 0;
     return Math.max(1, Math.round((b.maxHp || 1) * (tot > 0 ? 1 - (c.wood || 0) / tot : 1)));
   };
+  // (the timber's share of its strength: what a fire can take of it in all)
+  V.fireRoom = b => Math.max(0, (b.maxHp || 0) - V.fireFloor(b));
   // (what a great work of stone feeds a fire with: 'pedra' — its timber, a low flame — while it stands above what the fire
   // leaves; 'building' while one going up has timber on it; else nothing. Any other building: 'building'. Pure)
   V.fireFuel = function (b) {
@@ -400,7 +402,7 @@
     G.Act && G.Act.atGone(b);
     if (D && D.exists(ref)) { D.unclaim(ref); if (w > 0) D.use(ref, 'wood', w, { code: 'fogo', mine: true }); }
     if (G.Vg && G.Vg.allowedProgress) b.progress = Math.min(b.progress || 0, G.Vg.allowedProgress(b));
-    const fl = V.fireFloor(b); b.burnHp = Math.max(0, b.maxHp - fl); b.hp = fl;
+    const fl = V.fireFloor(b); b.burnHp = Math.max(0, b.maxHp - fl); b.hp = Math.min(b.hp, fl);
     const set = G.S.settlements.get(b.set); const nm = V.nameOf(b.type, b); const [cx, cy] = V.center(b);
     V.log(`O fogo levou os andaimes e a madeira d${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}${set ? ' de ' + set.name : ''}, ainda em obra: a pedra ficou.`, 'fire', cx, cy);
   }
@@ -417,7 +419,7 @@
           }
         }
         if (cause === 'fire') b.burnHp = (b.burnHp || 0) + amount;
-      } else if (cause === 'fire' && b.hp - amount <= 0) { siteBurnt(b); return; }
+      } else if (cause === 'fire' && b.hp - amount <= V.fireFloor(b)) { siteBurnt(b); return; } // (the fire has had its timber's share: L-787)
     }
     b.hp -= amount;
     if (b.hp <= 0) V.destroyBuilding(b, cause);
@@ -1111,6 +1113,7 @@
   }
   // (the town's daily look at its kept lots: its wonder's — → that lot, or null — and its civic field)
   V.reservaDia = function (set) { const r = resDia(set); civDia(set); return r; };
+  V.resFits = (set, type, x, y, n) => resFits(set, type, x, y, n); // (read only: whether a lot may be kept — the proofs)
   function resDia(set) {
     const S = G.S; const u = set.urb || (set.urb = { d: [], names: [] }); const r = u.res; const fac = G.Fac.get(set.fac);
     if (r) {
@@ -1422,6 +1425,26 @@
   V.stoneKept = function (fid) { let n = 0; for (const s of G.S.settlements.values()) if (s.fac === fid && s.vez && s.gw) n += V.keeps(s); return n; };
   // (the people's stone left for what is not a work's: the paving, the carts)
   V.stoneSpare = function (fid) { const f = G.Fac.get(fid); return f ? Math.max(0, (f.stock.stone || 0) - V.stoneKept(fid)) : 0; };
+  // ------------------------------ the last stones of a great work (L-786, D-233) ------------------------------
+  // what a great work with its turn still waits for of stone, once it is no more than a cart's load (V.LAST), is its own in
+  // its people's store: the builders of every other work leave it there (villagers.js asks V.stoneFor) and its cart takes it
+  // below the floor it leaves for the towns (city.js). The houses a town needs go on by the stone of the store — D-174 —, and
+  // with a people's stone coming in by fours and eights a year every stone of it went to the works nearer the store, by hand,
+  // before the builder of the great work had walked his twenty tiles: the palace of Tenochtitlan of seed 41 stood at 98% and
+  // at 100% from year 61 past year 67, waiting for 5 of stone and then for 1. Nothing kept: read off the world each time
+  V.LAST = 20;
+  V.lastStone = function (set) {
+    let k = V.keeps(set); if (!(k > 0)) return 0;
+    if (G.City && G.City.carted) k -= G.City.carted(G.S.buildings.get(set.gw), 'stone'); // (what its carts have on the road is out of the store already)
+    return k > 0 && k <= V.LAST ? k : 0;
+  };
+  // (the people's stone the work b may be brought: all that is free for a great work with its turn — less the last stones of
+  // another of its people's —; for any other work, what is left past the last stones its people's great works keep)
+  V.stoneFor = function (b) {
+    const free = G.Fac.free(b.set, 'stone'); const set = G.S.settlements.get(b.set); if (!set) return free;
+    let kept = 0; for (const s of G.S.settlements.values()) if (s.fac === set.fac && s.vez && s.gw && s.gw !== b.id) kept += V.lastStone(s);
+    return kept > 0 ? Math.max(0, free - kept) : free;
+  };
   // (the hands of a great work — D-174: a tenth and a half of the town's grown hands are its builders while it waits for stone
   // with its turn, a twelfth of those of its people's other towns that are fed and have rock, and a builder of them with nothing
   // to lay breaks its stone, villagers.js: V.quarries)
@@ -1768,8 +1791,10 @@
       want.mineiro = Math.round(rest * wS / tot);
       want.lenhador = Math.max(0, rest - want.coletor - want.mineiro);
     }
-    // the mines take their crews from the quarrymen and woodcutters
-    if (mineJobs) { const m = Math.min(mineJobs, want.lenhador + want.coletor - 1); if (m > 0) { want.mineiro += m; const fromL = Math.min(m, want.lenhador); want.lenhador -= fromL; want.coletor -= m - fromL; } }
+    // the mines take their crews from the quarrymen and woodcutters — and no more than that crew (set.minaN: what economy.js,
+    // E.place, may post in the mines; the other «mineiros» are the stone's: L-785)
+    set.minaN = 0;
+    if (mineJobs) { const m = Math.min(mineJobs, want.lenhador + want.coletor - 1); if (m > 0) { set.minaN = m; want.mineiro += m; const fromL = Math.min(m, want.lenhador); want.lenhador -= fromL; want.coletor -= m - fromL; } }
     // current counts
     const have = {}; for (const r of WORK_ROLES) have[r] = [];
     const none = [];

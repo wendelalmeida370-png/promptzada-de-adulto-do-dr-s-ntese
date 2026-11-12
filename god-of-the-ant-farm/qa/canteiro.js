@@ -10,11 +10,17 @@
 //   c4  o deus derruba a obra com a carroça a caminho: a carga volta; o que estava no canteiro volta (siteBack)
 //   c5  o save com a carroça a caminho: a mesma carroça, a mesma carga, e o mesmo futuro duas vezes
 //   c6  a cidade tomada com a carroça a caminho: a carga volta ao povo que a mandou, nunca ao armazém do vencedor
-//   c7  o fogo leva a obra com a carroça a caminho: a carga volta, e nenhuma carroça vai à ruína
+//   c7  o fogo leva a madeira da obra com a carroça a caminho (D-219): a obra fica, a carroça segue e entrega; o cerco a
+//       derruba: a carga volta, e nenhuma carroça vai à ruína
 //   c8  a pedra que a carroça deixa no armazém (L-783): com o chão só, nenhuma carroça; leva o que passa dele; a madeira não
 //       tem chão; duas a caminho no máximo; a estrada do povo que morre não leva a carroça da obra
 //   c9  a obra que já não espera o que a carroça traz: a carga volta para casa na carroça, pelo livro
 //   c10 o que a carroça traz conta para quem iria buscar (Vg.coming = as mãos + as carroças): ninguém busca no armazém
+//   c11 as últimas pedras são da obra grande (L-786, D-233; o palácio de Tenochtitlan da semente 41, seis anos em 98% e em
+//       100% à espera de 5 e depois de 1 de pedra): o que a obra com a vez ainda espera, quando é uma carga de carroça ou
+//       menos, fica para ela no armazém do povo — as portas (V.lastStone, V.stoneFor), a carroça leva a última carga abaixo
+//       do chão, e, vivido, o povo sem a roda: as casas em obra junto do armazém não tocam nas pedras dela e os construtores
+//       dela as levam nas mãos; o mesmo sem a regra (o controle da própria prova); o save; a obra que perde a vez
 //   node qa/canteiro.js [mundo]        (ONLY=c1,c3 só esses; VERB=1 conta mais)
 'use strict';
 process.chdir(__dirname);
@@ -48,7 +54,10 @@ function comVez(set) {
 // whose middle lies nearest that distance)
 function arma(dist, o) {
   M.pronto(MUNDO); pega(); o = o || {};
-  const set = [...new Set(G.Fac.all().filter(f => f.alive).map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)[0];
+  const caps = [...new Set(G.Fac.all().filter(f => f.alive).map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
+  // (o.irma: the biggest capital whose people has another town of fifteen or more — a sister with builders of its own)
+  const irmaDe = c => [...S.settlements.values()].filter(s => s.fac === c.fac && s !== c && V.pop(s.id) >= 15).sort((a, q) => V.pop(q.id) - V.pop(a.id) || a.id - q.id)[0] || null;
+  const set = o.irma ? caps.find(c => irmaDe(c)) : caps[0]; if (!set) return null;
   const f = G.Fac.get(set.fac); const n = 6;
   if (o.semRoda) { delete f.tech.known.roda; const ap = G.Civ.learn; G.Civ.learn = function (q, t) { return t === 'roda' && q && q.id === f.id ? false : ap.apply(this, arguments); }; } else if (!G.Civ.has(f.id, 'roda')) sim(() => G.Civ.learn(f, 'roda'));
   let best = null;
@@ -62,7 +71,7 @@ function arma(dist, o) {
   sim(() => { for (let ty = best[1] - 1; ty <= best[1] + n; ty++) for (let tx = best[0] - 1; tx <= best[0] + n; tx++) { const rk = S.rocks.get(S.objAt[ty * N + tx]); if (rk) G.Nature.removeRock(rk); } });
   const b = sim(() => V.handFound(set, 'teatro', 6, { x: best[0] + 3, y: best[1] + 3, R: 0 })); if (!b) { if (VERB) console.log(`  (arma: a mão do deus não fundou em ${best})`); return null; }
   const [fx, fy] = V.frontTile(b); const vez = comVez(set); abastece(set, b);
-  return { set, f, b, vez, longe: Math.round(aoArmazem(set, fx, fy)) };
+  return { set, f, b, vez, longe: Math.round(aoArmazem(set, fx, fy)), irma: o.irma ? irmaDe(set) : null };
 }
 // (the ledger's lines of the road and of the work, heard as they are written)
 function escuta(b) { const L = []; const fn = e => { if (/^c:/.test(String(e[3])) || /^c:/.test(String(e[4])) || e[4] === 'o:' + b.id || e[3] === 'o:' + b.id) L.push(e.slice()); }; D.onMove.push(fn); return { L, fim: () => { const k = D.onMove.indexOf(fn); if (k >= 0) D.onMove.splice(k, 1); } }; }
@@ -149,13 +158,25 @@ run('c4', () => {
 run('c7', () => {
   const a = arma(35); if (!ok('c7a a obra longe', !!a && a.vez, a ? `${lado(a.b)} a ${a.longe} casas` : 'sem chão')) return;
   const { set, f, b } = a; const c = ateCarroca(set, b); if (!ok('c7b uma carroça a caminho', !!c, c ? `a carroça #${c.id} com ${c.goods.n} de ${c.goods.k}` : 'nenhuma carroça saiu em 200 s')) return;
-  const k = c.goods.k, n = c.goods.n; const E = escuta(b);
-  sim(() => V.damageBuilding(b, 99999, 'fire')); M.viver(2); E.fim(); const o = S.buildings.get(b.id);
-  const volta = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'f:' + f.id && e[8] === 'carroca-volta');
-  ok('c7c a carga volta', (!o || o.type === 'ruin' || o.built) && !daObra(b).length && Math.abs(volta - n) < 1e-6, `a obra queimada (${o ? o.type : 'tirada do mapa'}): a carroça #${c.id} saiu da estrada, ${volta} de ${k} de volta ao armazém, pelo livro`);
-  for (let y = 0; y < 2; y++) { alimenta(set); M.viver(50); }
-  ok('c7d nenhuma carroça para a ruína', !daObra(b).length, `meio ano depois, carroças para a obra queimada: ${daObra(b).length}`);
+  const k = c.goods.k, n = c.goods.n; let E = escuta(b); const tinha = Object.assign({}, V.delivered(b));
+  // (the fire has the timber of a great work going up, and the work stays — D-219: its cart goes on, and what it brings is laid)
+  sim(() => V.damageBuilding(b, 99999, 'fire')); M.viver(2); const o = S.buildings.get(b.id); const noFogo = soma(E.L, e => e[3] === 'o:' + b.id && e[5] === 'wood' && e[8] === 'fogo');
+  const volta = soma(E.L, e => e[3] === 'c:' + c.id && e[8] === 'carroca-volta');
+  ok('c7c o fogo leva a madeira, a obra fica e a carroça segue', !!o && o.type === b.type && !o.built && !(V.delivered(o).wood > 0) && Math.abs(noFogo - (tinha.wood || 0)) < 1e-6 && daObra(b).some(q => q.id === c.id) && volta === 0,
+    `o fogo na obra em curso: ${o ? (o.type === 'ruin' ? 'RUÍNA' : 'de pé, em obra') : 'TIRADA DO MAPA'}; a madeira do canteiro (${tinha.wood || 0}) saiu pelo livro («fogo»: ${noFogo}); a carroça #${c.id} ${daObra(b).some(q => q.id === c.id) ? 'segue na estrada' : 'SAIU da estrada'}, ${volta} de volta ao armazém`);
+  for (let y = 0; y < 2; y++) { alimenta(set); abastece(set, b); M.viver(50); }
+  E.fim(); const chegou = soma(E.L, e => e[4] === 'o:' + b.id && e[8] === 'obra-carroca');
+  ok('c7d as carroças continuam a servir a obra queimada', chegou >= n - 1e-6, `meio ano depois: ${chegou} chegou ao canteiro pelas carroças (a carga que ia a caminho: ${n} de ${k})`);
   const q = checa(); ok('c7e verificador', q.ok, q.txt);
+  // (what does take it to the ground — the siege's stones —, with a cart on the way: the load goes home, no cart to the ruin)
+  const c2 = daObra(b).find(w => !w.back && w.goods) || ateCarroca(set, b);
+  if (!ok('c7f outra carroça a caminho', !!c2 && !!c2.goods, c2 && c2.goods ? `a carroça #${c2.id} com ${c2.goods.n} de ${c2.goods.k}` : 'nenhuma carroça saiu em 200 s')) return;
+  const n2 = c2.goods.n, k2 = c2.goods.k; E = escuta(b);
+  sim(() => V.damageBuilding(S.buildings.get(b.id), 99999, 'siege')); M.viver(2); const o2 = S.buildings.get(b.id);
+  const volta2 = soma(E.L, e => e[3] === 'c:' + c2.id && e[4] === 'f:' + f.id && e[8] === 'carroca-volta');
+  for (let y = 0; y < 2; y++) { alimenta(set); M.viver(50); } E.fim();
+  ok('c7g o cerco derruba: a carga volta, nenhuma carroça para a ruína', (!o2 || o2.type === 'ruin') && Math.abs(volta2 - n2) < 1e-6 && !daObra(b).length, `a obra derrubada pelo cerco (${o2 ? o2.type : 'tirada do mapa'}): ${volta2} de ${k2} de volta ao armazém, pelo livro (a carga: ${n2}); meio ano depois, carroças para a ruína: ${daObra(b).length}`);
+  const q2 = checa(); ok('c7h verificador', q2.ok, q2.txt);
 });
 
 // ------------------------------ c5: o save com a carroça a caminho ------------------------------
@@ -249,6 +270,75 @@ run('c10', () => {
   for (; seg < 120 && daObra(b).some(q => !q.back); seg++) { M.viver(0.5); for (const m in b.incoming) { const x = b.incoming[m] || 0; if (x > (inc[m] || 0) + 1e-9) novas += x - (inc[m] || 0); inc[m] = x; } }
   ok('c10d ninguém busca o que a carroça traz', so && novas === 0, `dado à obra tudo menos o que vem a caminho: em ${(seg / 2).toFixed(0)} s, até as carroças chegarem, cargas novas tiradas do armazém pelos construtores para esta obra: ${novas}`);
   const q = checa(); ok('c10e verificador', q.ok, q.txt);
+});
+
+// ------------------------------ c11: as últimas pedras são da obra grande (L-786, D-233) ------------------------------
+run('c11', () => {
+  // (the far work a few stones short — all else it waits for put in its site by the god's hand, by the ledger —, the store
+  // with its stone counted, and houses going up beside the store that wait for stone too)
+  const monta = o => {
+    // (no cart while the case is set up: the proof sends its own)
+    const far0 = G.City.WORK_FAR; let a = null; try { G.City.WORK_FAR = 1e9; a = arma(35, o); } finally { G.City.WORK_FAR = far0; }
+    if (!a || !a.vez) return null; const { set, f, b } = a;
+    // (the houses going up: beside the town's own stores — or, o.irma, in a sister town of its people, with builders of its own)
+    const onde = a.irma || set;
+    a.casas = []; for (let k = 0; k < 3; k++) { const h = sim(() => V.handFound(onde, 'house', Es.n0('house'), { R: 12 })); if (h) a.casas.push(h); }
+    // (n of stone still to come to it, past what its builders already carry)
+    a.falta = n => sim(() => { const w = S.buildings.get(b.id); for (const m in w.need) { const q = Math.floor((w.need[m] || 0) - (m === 'stone' ? n + ((w.incoming && w.incoming.stone) || 0) : 0)); if (q > 0) { D.make('f:' + f.id, m, q, { code: 'teste' }); D.move('f:' + f.id, 'o:' + b.id, m, q, { code: 'teste' }); } } });
+    a.so = n => sim(() => { if ((f.stock.stone || 0) > 0) D.use('f:' + f.id, 'stone', f.stock.stone, { code: 'teste', mine: true }); if (n > 0) D.make('f:' + f.id, 'stone', n, { code: 'teste' }); });
+    return a;
+  };
+  let a = monta();
+  if (!ok('c11a a obra longe com a vez e casas em obra junto do armazém', !!a && a.casas.length >= 1 && a.casas.every(h => !h.built && (h.need.stone || 0) >= 2), a ? `${lado(a.b)} a ${a.longe} casas do armazém; ${a.casas.length} casas em obra, cada uma à espera de ${a.casas.map(h => h.need.stone).join(', ')} de pedra` : 'sem chão ou sem a vez')) return;
+  { const { set, f, b, casas } = a; const h = casas[0]; const FL = Ci.WORK_FLOOR, LAST = V.LAST;
+    // (the doors: more than a load to come — nothing kept from the houses, D-174; a load or less — the work's own)
+    a.so(12); const muito = [V.keeps(set), V.lastStone(set), V.stoneFor(h), V.stoneFor(b)];
+    a.falta(5); const k5 = V.keeps(set); const u5 = V.lastStone(set); const p12 = [V.stoneFor(h), V.stoneFor(b)]; a.so(5); const p5 = [V.stoneFor(h), V.stoneFor(b)]; a.so(3); const p3 = [V.stoneFor(h), V.stoneFor(b)];
+    ok('c11b as portas', muito[0] > LAST && muito[1] === 0 && muito[2] === 12 && muito[3] === 12 && Math.abs(k5 - 5) < 1e-6 && Math.abs(u5 - 5) < 1e-6 && Math.abs(p12[0] - 7) < 1e-6 && p12[1] === 12 && p5[0] === 0 && p5[1] === 5 && p3[0] === 0 && p3[1] === 3,
+      `à espera de ${Math.round(muito[0])} de pedra (mais que uma carga de ${LAST}): nada guardado (${muito[1]}), a casa pode levar ${muito[2]} dos 12 do armazém; à espera de ${k5}: as últimas ${u5} são dela — com 12 no armazém a casa pode levar ${p12[0]} e a obra ${p12[1]}; com 5, ${p5[0]} e ${p5[1]}; com 3, ${p3[0]} e ${p3[1]}`);
+    // (the cart: the last load has no floor; the people knows the wheel)
+    a.so(5); const antes = daObra(b).length; const c = sim(() => Ci.workCart(set)); const fica = f.stock.stone || 0;
+    ok('c11c a carroça leva a última carga abaixo do chão', antes === 0 && !!c && !!c.goods && c.goods.k === 'stone' && Math.abs(c.goods.n - 5) < 1e-6 && fica < 1e-6 && FL > 5 && V.lastStone(set) === 0,
+      `5 de pedra no armazém (o chão da carroça: ${FL}): a carroça ${c ? '#' + c.id + ' leva ' + JSON.stringify(c.goods) : 'NÃO saiu'}; ficam ${fica}; com a carga na estrada, guardado no armazém ${V.lastStone(set)}`);
+    const q = checa(); ok('c11d verificador', q.ok, q.txt);
+  }
+  // (lived, the people without the wheel: every load of stone a builder takes from the store, heard at the ledger with the
+  // work it is for; a take for another work that leaves the store below the last stones of the great work is a breach)
+  const vive = (semRegra, T) => {
+    const m = monta({ semRoda: true, irma: true }); if (!m || !m.casas.length || !m.irma) return null; const { set, f, b } = m; const f0 = V.stoneFor, l0 = V.lastStone;
+    if (semRegra) { V.stoneFor = w => G.Fac.free(w.set, 'stone'); }
+    m.falta(5); m.so(0);
+    // (a quarter of a minute with no stone at all in the store: the sister town gives its houses their builders)
+    for (let t = 0; t < 15; t++) { sim(() => { const s = G.Fac.get(f.id).stock.stone || 0; if (s > 0) D.use('f:' + f.id, 'stone', s, { code: 'teste', mine: true }); }); M.viver(1); alimenta(S.settlements.get(set.id)); }
+    let quebras = 0, dasCasas = 0, daObraN = 0, salvo = -1; const ini = V.delivered(S.buildings.get(b.id)).stone || 0;
+    // (the people's stone comes in a trickle, as it did to Tenochtitlan: a stone every three seconds, never more than five in
+    // the store — what its quarrymen bring past that is taken away by the proof's hand)
+    const goteja = t => sim(() => { const s = G.Fac.get(f.id).stock.stone || 0; if (s > 5 + 1e-9) D.use('f:' + f.id, 'stone', s - 5, { code: 'teste', mine: true }); else if (s < 5 && t % 3 === 0) D.make('f:' + f.id, 'stone', 1, { code: 'teste' }); });
+    const fn = e => {
+      if (e[5] !== 'stone' || e[8] !== 'obra' || e[3] !== 'f:' + f.id) return; const v = S.villagers.get(+String(e[4]).slice(2)); const w = v && v.task && v.task.type === 'build' ? v.task.id : 0;
+      if (w === b.id) { daObraN += e[6]; return; } dasCasas += e[6];
+      if ((G.Fac.get(f.id).stock.stone || 0) < l0(S.settlements.get(set.id)) - 1e-6) quebras++;
+    };
+    D.onMove.push(fn);
+    try {
+      let t = 0; for (; t < T; t++) {
+        goteja(t); M.viver(1); alimenta(S.settlements.get(set.id));
+        if (!semRegra && salvo < 0 && t === 40) { D.onMove.splice(D.onMove.indexOf(fn), 1); M.salvarCarregar(); pega(); D.onMove.push(fn); salvo = t; }
+        const w = S.buildings.get(b.id); if (!w || w.built || !((w.need.stone || 0) > 1e-6)) break;
+      }
+      const w = S.buildings.get(b.id); const q = checa();
+      return { irma: m.irma.name, t, quebras, dasCasas, daObraN, chegou: w ? (V.delivered(w).stone || 0) - ini : -1, falta: w && !w.built ? w.need.stone || 0 : 0, pronta: !!w && w.built, salvo, q, nome: f.name };
+    } finally { V.stoneFor = f0; const k = D.onMove.indexOf(fn); if (k >= 0) D.onMove.splice(k, 1); }
+  };
+  const T = +(process.env.C11_T || 700); const com = vive(false, T);
+  if (!ok('c11e vivido, sem a roda: as casas não tocam nas últimas pedras e a obra as recebe', !!com && com.quebras === 0 && com.falta < 1e-6 && com.chegou >= 5 - 1e-6 && com.q.ok,
+    com ? `a pedra do povo chegando uma a uma (nunca mais de 5 no armazém), a obra de ${com.nome} à espera de 5, as casas em obra de uma cidade-irmã à espera de 12: em ${com.t} s a obra recebeu ${com.chegou} (nas mãos dos construtores dela: ${com.daObraN}), falta ${com.falta}${com.pronta ? ', e ficou pronta' : ''}; as casas levaram ${com.dasCasas} sem nunca deixar o armazém abaixo do que é da obra (${com.quebras} quebras); o save aos ${com.salvo} s; ${com.q.txt}` : 'sem chão ou sem a vez')) return;
+  const sem = vive(true, Math.max(T, com.t + 60));
+  ok('c11f o mesmo sem a regra (o controle): as casas levam a pedra da obra', !!sem && sem.quebras > 0, sem ? `em ${sem.t} s: ${sem.quebras} vez(es) uma casa levou a pedra que era da obra (${sem.dasCasas} de pedra para as casas antes de a obra ter as suas); a obra recebeu ${sem.chegou}, falta ${sem.falta}` : 'sem chão');
+  // (the work that loses its turn keeps nothing: read off the world, nothing stored)
+  a = monta(); if (a) { const { set, b } = a; a.falta(5); a.so(9); const h = a.casas[0]; const tinha = [V.lastStone(set), V.stoneFor(h)]; set.vez = 0; const sv = [V.lastStone(set), V.stoneFor(h)]; set.vez = 1;
+    sim(() => V.damageBuilding(b, 99999, 'meteor')); const caiu = [V.lastStone(set), V.stoneFor(h)];
+    ok('c11g a obra que perde a vez, ou cai, não guarda nada', tinha[0] === 5 && tinha[1] === 4 && sv[0] === 0 && sv[1] === 9 && caiu[0] === 0 && caiu[1] === 9, `com a vez: ${tinha[0]} guardadas, a casa pode levar ${tinha[1]} das 9; sem a vez: ${sv[0]} e ${sv[1]}; a obra derrubada pelo deus: ${caiu[0]} e ${caiu[1]}`); }
 });
 
 console.log(fails.length ? `CANTEIRO: FALHOU (${fails.join(', ')})` : `CANTEIRO: ok (${ms()} ms)`);
