@@ -410,11 +410,22 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   metrópole em guerra); T-829 e T-830 (duas provas que a história nova do mundo desarmou). **Aberto do H → segunda rodada:**
   a família sozinha maior que a casa (T-975 → **a D-194 do líder: os filhos crescidos levantam a sua cabana**), a família
   antes do solteiro (T-976), quem deixa a sede sem teto (T-818), a madeira média (T-978).
-- **Em curso (quatro frentes):** **a praça ao fim da tarde, o foguista no posto e o bairro dos banhos** (F, segunda
-  rodada; T-918, D-202); **a família grande demais para a casa** (H, segunda rodada: a D-194, T-976, T-818, T-978);
-  **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a terra guardada
-  cedo, o fogo nos monumentos e a última pedra** (M, terceira rodada: a D-160, a D-219, a obra parada em 98%, a gente em dez
-  sementes — T-772).
+- **O ofício que fica** (agente X; D-210 a D-214, regras 73 e 74; fecha o T-840), juntado em `19f702d` e `30eb97d`: o
+  ofício é da pessoa — o repartidor lê a memória da cidade (meio dia), troca a mão mais nova do ofício, sem sorteio, e um
+  ofício tomado fica ao menos três dias; a fome, a guerra e a obra grande puxam na hora e devolvem (`v.roleBack`). Medido:
+  as trocas pela necessidade por adulto por dia 0,69 → 0,10 na metrópole (0,42 → 0,09 na mega), quem mora com o ofício que
+  a casa mostra 62% → 80%; dez mundos de 40 anos sem custo além do acaso (`qa/oficio-eco.js`); 36 sabotagens acusadas.
+  **Na junção:** D-195 (a casa mostra o ofício a que o morador volta: a lenha fica à porta do lenhador que foi à guerra);
+  L-723 (a tarefa da cela acabava aos 70 s: o preso ficava parte de um passo sem tarefa — `cela`, `levado` e `levar` entre
+  as tarefas longas); L-724 (o load dava o primeiro ofício a quem tinha feito dezesseis anos desde a última repartição);
+  T-831 (o `fome` h13 e a viagem cancelada pela guerra), T-832 (o `degraus` g2c2 sem obra à espera de pedra). Na árvore
+  juntada passam as 33 provas vizinhas (entre elas `oficio-fica` 64/0, `marinheiros` 21/0, `vida-bairro` 11/0 com o
+  verificador limpo, `urb2`, `det3`, `oldsave`, `corrupt` 135 casos). Aberto do X: T-956 e T-958 não se repetem na árvore
+  juntada (a vigiar na regressão); duas guardas sem caso próprio.
+- **Em curso (três frentes):** **a praça ao fim da tarde, o foguista no posto e o bairro dos banhos** (F, segunda
+  rodada; T-918, D-202); **a família grande demais para a casa** (H, segunda rodada, entregue: D-235 a D-238 — em
+  validação na árvore de integração); e **a terra guardada cedo, o fogo nos monumentos e a última pedra** (M, terceira
+  rodada, entregue: D-219, D-230 a D-233 — em validação na árvore de integração).
 - **O diário do patch para o dono** (`qa/patch3/diario/`, publicado como artefato): o que entrou, o que está em obras e o
   que cada coisa muda no jogo, com capturas de verdade do Modo Encarnado (`qa/visual/fotos-diario.js`); atualizado a
   cada frente juntada.
