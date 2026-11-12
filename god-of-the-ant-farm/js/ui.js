@@ -579,6 +579,8 @@
     if (v.hunger >= 95) status.push('<span class="st red">Faminto</span>');
     if (!v.home && v.age >= 16) status.push(`<span class="st grey" title="${G.Social && G.Social.whyText(v) ? esc(G.Social.whyText(v)) : ''}">Sem casa${v.rua ? ' há ' + Math.max(0, G.S.day - v.rua) + (G.S.day - v.rua === 1 ? ' ano' : ' anos') : ''}</span>`);
     else if (v.home && (G.S.buildings.get(v.home) || {}).type === 'barraco') status.push('<span class="st grey">Mora num barraco</span>');
+    // (of the ruler's household, in the seat: D-205)
+    else if (home && G.Casa && G.Casa.isSeat && G.Casa.isSeat(home)) status.push(`<span class="st gold" title="A casa de quem governa">Mora n${G.gen(G.Village.buildName(home)) === 'a' ? 'a' : 'o'} ${esc(G.Village.buildName(home))}</span>`);
     const feats = [];
     if (v.st.wood) feats.push(`${v.st.wood} de madeira`); if (v.st.food) feats.push(`${v.st.food} de comida`); if (v.st.stone) feats.push(`${v.st.stone} de pedra`); if (v.st.built) feats.push(`${v.st.built} ${v.st.built > 1 ? 'obras concluídas' : 'obra concluída'}`);
     const following = G.Render.cam.follow === v.id;

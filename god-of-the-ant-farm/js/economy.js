@@ -362,7 +362,7 @@
     if (f.golden > 0) r *= 0.6;
     return G.clamp(r, 0, 0.45);
   };
-  const homeOf = v => { const h = v.home && G.S.buildings.get(v.home); return h && G.BDEF[h.type].housing ? h : null; };
+  const homeOf = v => { const h = v.home && G.S.buildings.get(v.home); return h && G.Village.bedsOf(h) > 0 ? h : null; }; // (a house, or the seat one lives in: D-205)
   // the coins of a person, as a holder of the depot: the house's pot (the household's), or the purse with no house
   const coinRef = v => { const h = homeOf(v); return h ? 'h:' + h.id : 'p:' + v.id; };
   E.coinRef = coinRef;

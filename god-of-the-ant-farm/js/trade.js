@@ -167,7 +167,8 @@
   // others, left empty, or with nobody of the family: the banner comes down. The mark stayed on the walls for ever: in the
   // worlds grown for the Bairros Vivos half of a city's «merchant houses» were let to strangers with two coins in the pot,
   // who counted as its merchant class (polity.js), its rich homes and its noble quarter (urban.js) — L-711
-  const homeOK = b => !!(b && b.built && G.BDEF[b.type] && G.BDEF[b.type].housing);
+  // (a house — or the seat where the family lives while one of it rules: the banner goes there with it, and comes back, D-206)
+  const homeOK = b => !!(b && b.built && G.Village.bedsOf(b) > 0);
   // who of the house takes the banner when its holder dies: the partner, then the eldest grown child, a child, the eldest
   // brother or sister, a parent, a grandchild — living in the house, of any age: the banner is the family's while one of it
   // lives there. (Only a grown brother took it: the heir of a merchant house of Tenochtitlan starved, his eldest son, who had
