@@ -202,8 +202,28 @@ tomados em um oitavo de dia, com a s32 0 de 4 (acusada).
 **As sabotagens já rodadas com a prova apertada** (`fila8/sab/resumo.txt`): acusadas s34, s36 (x15), s35, s29, s30 (x5), s28
 (x4), s31 (x14), s1 (x2 e x11), s8 (x4 e x15); não acusadas s33 e s37 (ditas acima).
 
-**RODANDO AGORA:** as outras 25 sabotagens, os mundos prontos em dez dias e as trocas do zero com a regra final, e por
-último o vida-bairro.
+**A última fila terminou** (`fila8/`): as 36 sabotagens rodadas — 33 acusadas na primeira passada; a s3 (a mão mais velha
+primeiro) era acusada por engano («nenhum cativo no repartidor»: uma pessoa repartida e capturada um instante depois) e a
+s20 (nenhum ofício dá a mão) não era acusada; **a prova ganhou** «quem troca é a mão mais nova» medido de verdade (das mãos
+do ofício deixado que o repartidor podia levar, a parte com menos dias que quem trocou: 8 % na metrópole e 0 % na mega com
+a regra, 90 % com a s3), «nenhum cativo» pela troca do próprio repartidor, e «a necessidade que durou move mãos» (18 das 33
+trocas da mega foram para um ofício que já tinha mãos; com a s20, 0 de 12) — s3 e s20 acusadas (`fila8/sab2`, `sab3`).
+Ficam sem caso próprio só a s33 e a s37. Os mundos prontos vividos dez dias com a regra final: metrópole 689 pessoas (antes
+638), 216 mortos de guerra e flecha (231), 8 de fome (4), em paz 7,8 % de guerreiros (7,9 %); mega 508 (550), 106 (87), 1
+(2), 6,8 % (5,7 %). As trocas do zero com a regra final: 0,115 por adulto por dia (antes 0,216), 4 idas e voltas (39).
+O vida-bairro com a regra final: v6 falha de novo (e o v7, que usa o mesmo bairro): T-956 — olhado (`v6cand.js`): o bairro
+que a prova escolhe no dia 68 é outro em cada futuro (no jogo de antes Argos / Cidade Velha ou, com um sorteio a mais,
+Tenochtitlan / Cidade Velha; com a regra Mênfis / Cidade Velha do Leste, Argos / Cidade Velha, Roma / Colina do Templo), e
+os que saíram com a regra estavam meio vazios (4 de 10 casas com gente: casa vazia não fica rica, e «rica» para em 0,41).
+
+**Disco** (pedido do líder): apaguei as cópias descartáveis do jogo do meu rascunho (as 94 das sabotagens e as de
+depuração: 2,3 G); o rascunho ficou com 97 M (as duas cópias de referência do jogo de antes e as saídas).
+
+**RODANDO AGORA:** a prova inteira uma última vez na ponta do meu ramo (`fila9/prova-final.txt`) e a metrópole dez dias com
+os mortos de fome ditos. **Depois (pedido do líder):** guard + vida curta, commit da prova; `git merge
+claude/god-ant-farm-game-v7t3xm` (a ponta `bedce41`), guard, vida curta e a prova inteira na árvore juntada, dizer o commit;
+fechar o bloco (`python3 scratchpad/ag/X/numeros.py && python3 scratchpad/ag/X/monta.py <bloco> fila8/sab fila8/sab2
+fila8/sab3`), apagar o rascunho `bloco-X-fim-rascunho.md`, e o relatório final.
 **Depois:** a prova inteira uma última vez (a de 60 linhas é de antes do aperto do x5/x15: `node qa/oficio-fica.js`),
 guard + vida curta, commit da prova, e fechar o bloco (`python3 scratchpad/ag/X/monta.py`).
 **Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar** (o `qa/oficio-fica.js` pode: o `eco.js` não o lê).
