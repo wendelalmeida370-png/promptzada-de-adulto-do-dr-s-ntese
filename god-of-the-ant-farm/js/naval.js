@@ -757,7 +757,7 @@
       if (S.type[i] !== T.GRASS && S.type[i] !== T.MEADOW) continue;
       if (S.occ[i] || S.objAt[i]) continue;
       let md = 1e9; for (const o of S.settlements.values()) md = Math.min(md, G.dist(x, y, o.cx, o.cy));
-      if (md < 16) continue;
+      if (md < 16 || (G.Village.keptNear && G.Village.keptNear(x, y))) continue; // (off a capital that keeps a lot for a great work: D-232)
       const fake = { cx: x + 0.5, cy: y + 0.5 };
       const l = Nv.landing(fake, c); if (!l || G.dist(l.land[0], l.land[1], x, y) > 7) continue;
       const land = !!W.findPath(set.cx, set.cy, x + 0.5, y + 0.5, true, 2500);

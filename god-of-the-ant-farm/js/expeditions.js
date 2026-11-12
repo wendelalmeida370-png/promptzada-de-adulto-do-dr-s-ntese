@@ -1431,7 +1431,7 @@
     for (let k = 0; k < 120; k++) {
       const x = G.ri(r.x0, r.x1), y = G.ri(r.y0, r.y1); if (!W.inb(x, y)) continue; const i = y * N + x;
       if (K.compAt(i) !== r.idx || (S.type[i] !== T.GRASS && S.type[i] !== T.MEADOW) || S.occ[i] || S.objAt[i]) continue;
-      let md = 1e9; for (const o of S.settlements.values()) md = Math.min(md, G.dist(x, y, o.cx, o.cy)); if (md < 14) continue;
+      let md = 1e9; for (const o of S.settlements.values()) md = Math.min(md, G.dist(x, y, o.cx, o.cy)); if (md < 14 || (G.Village.keptNear && G.Village.keptNear(x, y))) continue; // (off a capital that keeps a lot: D-232)
       let water = 0, trees = 0; for (let dy = -6; dy <= 6; dy += 2) for (let dx = -6; dx <= 6; dx += 2) { const xx = x + dx, yy = y + dy; if (!W.inb(xx, yy)) continue; const j = yy * N + xx; if (S.type[j] <= T.RIVER) water++; if (S.treeAt[j]) trees++; }
       const ore = (r.ores || []).map(id => (S.ores || []).find(o => o.id === id)).filter(o => o && K.knowsOre(fid, o.id)).reduce((m, o) => Math.max(m, 12 - G.dist(o.x, o.y, x, y) * 0.3), 0);
       const foes = [...S.settlements.values()].filter(o => o.fac !== fid && K.at(o.cx, o.cy) === r).length;

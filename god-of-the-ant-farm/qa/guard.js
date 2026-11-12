@@ -606,6 +606,27 @@ for (const f of files) if (f !== 'village.js') src[f].forEach((l, k) => { const 
     if (/pickRoleForList/.test(c)) fails.push(`o ofício que fica: ${f}:${k + 1} chama pickRoleForList, que não existe mais (D-212): ${l.trim().slice(0, 110)}`);
     if (f === 'village.js') return; const m = c.match(/\.role\s*=\s*'([a-z_]+)'/); if (!m || m[1] === 'cativo' || /BDEF\.[A-Za-z_]+\.role\s*=/.test(c)) return;
     if (!((f === 'economy.js' && m[1] === 'contrabandista') || (f === 'miracles.js' && m[1] === 'guerreiro'))) fails.push(`o ofício que fica: ${f}:${k + 1} dá um ofício a uma pessoa — só o repartidor (village.js), o mercado clandestino e a mão do deus (D-212): ${l.trim().slice(0, 110)}`); }); }
+// 81. "quem escolhe o sítio de uma cidade nova pergunta ao V.keptNear" (D-232): nenhuma cidade nasce a menos de V.RES_CLEAR
+// casas de uma capital que guarda campo para uma obra grande. Os arquivos que fundam uma cidade num sítio escolhido — o
+// village.js (a expansão por terra), o naval.js (a colônia), o expeditions.js (a expedição), o war.js (o povo que se separa) —
+// perguntam; o main.js (o primeiro povoado do mundo) e o events.js (o povoado dos náufragos, que não escolhe) não; um arquivo
+// novo que chame addSettlement entra numa das duas listas
+{ const ASK = { 'village.js': 1, 'naval.js': 1, 'expeditions.js': 1, 'war.js': 1 }, NOT = { 'main.js': 1, 'events.js': 1 };
+  for (const f of files) { const L = src[f].map(l => l.replace(/(^|\s)\/\/\s.*$/, ''));
+    if (NOT[f] || !L.some(l => /\baddSettlement\s*\(/.test(l) && !/addSettlement\s*=\s*function/.test(l))) continue;
+    if (!ASK[f]) { fails.push(`a cidade nova: ${f} funda uma cidade (addSettlement) e não está entre os que perguntam ao V.keptNear nem entre os que não escolhem o sítio (D-232)`); continue; }
+    if (!L.some(l => /keptNear\s*\((x, y|tx, ty)\)/.test(l))) fails.push(`a cidade nova: ${f} escolhe o sítio de uma cidade nova sem perguntar ao V.keptNear (D-232)`); } }
+// 82. "as marcas da obra grande que só o village.js escreve, e as portas que os outros perguntam" (D-219, D-230, D-233): o campo
+// cívico (set.urb.civ) e a marca do fogo (b.burnHp) só o village.js escreve; o nature.js pergunta o que um prédio dá ao fogo ao
+// V.fireFuel; no villagers.js o construtor olha o armazém pelo freeFor (um só G.Fac.free(b.set, o da definição dele); e no
+// city.js a carroça da obra pergunta a pedra ao V.stoneFor
+for (const f of files) if (f !== 'village.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\bu\.civ\s*=[^=]|urb\.civ\s*=[^=]|burnHp\s*[-+]?=[^=]/.test(c)) fails.push(`a obra grande: ${f}:${k + 1} escreve o campo cívico ou a marca do fogo fora do village.js (D-219, D-230): ${l.trim().slice(0, 110)}`); });
+{ const strip = f => (src[f] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, ''));
+  if (!strip('nature.js').some(l => /\bfireFuel\s*\(/.test(l))) fails.push('o fogo: nature.js não pergunta ao V.fireFuel o que um prédio dá ao fogo (D-219)');
+  const Vl = strip('villagers.js'); if (!Vl.some(l => /const freeFor\s*=/.test(l))) fails.push('as últimas pedras: villagers.js sem o freeFor (D-233)');
+  Vl.forEach((l, k) => { if (/G\.Fac\.free\s*\(\s*b\.set/.test(l) && !/const freeFor\s*=/.test(l)) fails.push(`as últimas pedras: villagers.js:${k + 1} olha o armazém para uma obra sem passar pelo freeFor (D-233): ${l.trim().slice(0, 110)}`); });
+  if (!strip('city.js').some(l => /\bstoneFor\s*\(/.test(l))) fails.push('as últimas pedras: city.js — a carroça da obra não pergunta a pedra ao V.stoneFor (D-233)'); }
 // 83. "a casa do povo guardada para uma família, o barraco e a marca dos moços" (D-235 a D-237): o js/village.js pergunta ao
 // G.Casa.heldFor antes de mandar quem vai só para uma casa (as duas chamadas do findHome com `true`), o js/social.js não manda
 // levantar barraco quem espera a sua casa (G.Casa.waiting), e a marca da cabana dos moços (b.encomenda.mocos) só o

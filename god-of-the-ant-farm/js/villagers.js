@@ -997,6 +997,9 @@
   // from the stores bring, city.js: nobody walks to the store for what a cart has on the road, D-215)
   const coming = (b, k) => (b.incoming[k] || 0) + (G.City && G.City.carted ? G.City.carted(b, k) : 0);
   Vg.coming = coming; // (read only: for who asks what a work still has to be brought — and the proofs)
+  // (what the people's store has for a work, of a material: its free stock — and of stone, past the last stones a great work
+  // of the people keeps for itself, village.js: D-233)
+  const freeFor = (b, k) => (k === 'stone' && G.Village.stoneFor ? G.Village.stoneFor(b) : G.Fac.free(b.set, k));
   function buildTask(v) {
     const S = G.S; let best = null, bd = 1e9;
     // (a house a family paid for keeps the turn it had beside the town's great work — L-313, D-117: two hundred against four
@@ -1013,7 +1016,7 @@
       if (b.encomenda && b.encomenda.maos) continue;
       if (b.unreach) { if (b.unreach >= 6) { abandonSite(b); continue; } if (S.clock - b.unreachT < 30) continue; }
       const st = G.Fac.stockOfSet(b.set);
-      let needMat = false; for (const k in b.need) if (b.need[k] - coming(b, k) > 0 && G.Fac.free(b.set, k) >= 1) { needMat = true; break; }
+      let needMat = false; for (const k in b.need) if (b.need[k] - coming(b, k) > 0 && freeFor(b, k) >= 1) { needMat = true; break; }
       const work = canWork(b);
       const carryFits = Vg.plainLoad(v) && b.need[v.carry.k] > 0;
       if (!needMat && !work && !carryFits) continue;
@@ -1726,7 +1729,7 @@
       }
       if (v.carry) return deliverTask(v);
       const stk = G.Fac.stockOfSet(b.set);
-      const mat = Object.keys(b.need).find(k => b.need[k] - coming(b, k) > 0 && G.Fac.free(b.set, k) >= 1);
+      const mat = Object.keys(b.need).find(k => b.need[k] - coming(b, k) > 0 && freeFor(b, k) >= 1);
       if (mat) {
         const d = G.Village.nearestDropoff(v.x, v.y, v.set); if (!d) return end(v);
         const [dx, dy] = G.Village.frontTile(d);
@@ -1738,7 +1741,7 @@
     }
     if (t.st === 1) {
       if (!move(v, dt)) return;
-      const n = Math.min(cap(v), Math.ceil(b.need[t.mat] - coming(b, t.mat)), Math.floor(G.Fac.free(b.set, t.mat)));
+      const n = Math.min(cap(v), Math.ceil(b.need[t.mat] - coming(b, t.mat)), Math.floor(freeFor(b, t.mat)));
       if (n <= 0) { t.st = 0; return; }
       // (out of the store into the hands, in the ledger — the builder's load by its own measure, cap(v), as it always was)
       const r = G.Depot.move('f:' + G.Village.facOfSet(b.set), 'v:' + v.id, t.mat, n, { code: 'obra', by: v.id, pack: true, part: true });

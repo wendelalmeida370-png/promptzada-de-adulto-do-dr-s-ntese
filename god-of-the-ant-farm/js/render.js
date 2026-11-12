@@ -2573,7 +2573,8 @@
   let frameRes = []; G.worldHooks.push(() => { frameRes = []; });
   function reserves() {
     const V = G.Village, S = G.S; if (!V || !V.reserva || !S) return []; const out = [];
-    for (const s of S.settlements.values()) { const r = V.reserva(s); if (r && r.n > 0 && W.inb(r.x, r.y) && W.inb(r.x + r.n - 1, r.y + r.n - 1)) out.push({ s, r, col: G.Fac.hex(s.fac) || '#d8b25a' }); }
+    // (every lot the town keeps: its wonder's and its civic field — V.reservas, D-230)
+    for (const s of S.settlements.values()) for (const r of (V.reservas ? V.reservas(s) : [V.reserva(s)])) { if (r && r.n > 0 && W.inb(r.x, r.y) && W.inb(r.x + r.n - 1, r.y + r.n - 1)) out.push({ s, r, col: G.Fac.hex(s.fac) || '#d8b25a' }); }
     return out;
   }
   R.reserves = () => frameRes; // (for the proofs: the reserves the last frame drew)
@@ -2619,7 +2620,7 @@
   // «a Grande Pirâmide», «a Acrópole»: the article by the name's head word, after «Grande» the next)
   R.keptFor = (type, civ) => { const nm = G.Civ && G.Civ.bname ? G.Civ.bname(type, civ || null) : type; const w = String(nm).split(' '), head = w[0] === 'Grande' && w[1] ? w[1] : w[0];
     return 'Reservado para ' + (/a$/.test(head) || /^(Acrópole|Pirâmide)$/.test(head) ? 'a ' : 'o ') + nm; };
-  R.reserveName = q => R.keptFor(q.r.type, G.Civ && G.Civ.idOfFac ? G.Civ.idOfFac(q.s.fac) : null);
+  R.reserveName = q => (q.r.type === 'civico' ? 'Reservado para as grandes obras da cidade' : R.keptFor(q.r.type, G.Civ && G.Civ.idOfFac ? G.Civ.idOfFac(q.s.fac) : null));
   // (a building on fire, for its glow: a fire on any tile of its lot — D-106: one on the far side of a 10-tile lot is a fire in
   // the building; a lot of 13 is 169 looks a frame, nothing)
   const fireOn = b => { const F = G.S.fire; for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) if (F[W.idx(tx, ty)] > 0.15) return true; return false; };

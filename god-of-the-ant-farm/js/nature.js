@@ -79,7 +79,11 @@
   Nat.fuel = function (i) {
     const S = G.S;
     const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t && (t.stage === 'grow' || t.stage === 'log') && t.size > 0.25) return 'tree'; }
-    const bid = S.occ[i]; if (bid) { const b = S.buildings.get(bid); if (b && b.hp > 0 && b.type !== 'campfire' && b.type !== 'well' && b.type !== 'ruin' && b.type !== 'monument') return b.type === 'farm' ? 'crop' : 'building'; }
+    const bid = S.occ[i]; if (bid) { const b = S.buildings.get(bid); if (b && b.hp > 0 && b.type !== 'campfire' && b.type !== 'well' && b.type !== 'ruin' && b.type !== 'monument') {
+      if (b.type === 'farm') return 'crop';
+      // (a great work of stone: its timber alone — 'pedra', a low flame —, and nothing once the fire has had it; D-219)
+      return G.Village.fireFuel ? G.Village.fireFuel(b) : 'building';
+    } }
     const oid = S.objAt[i]; if (oid && S.bushes.has(oid)) return 'bush';
     const ty = S.type[i];
     if ((ty === T.GRASS || ty === T.MEADOW) && S.burnt[i] <= 0 && S.scar[i] <= 0 && G.Biome.grassFire(i) > 0) return 'grass';
@@ -100,6 +104,7 @@
     if (S.fire[i] <= 0.02) { S.fire[i] = 0; Nat.fireSet.delete(i); }
   };
   const NB8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  Nat.STONE_SPREAD = 0.05; Nat.STONE_SECS = 12;
   function updateFire(dt) {
     const S = G.S; const wth = S.weather;
     const dry = 1 + (wth.drought > 0 ? 0.9 : 0) - wth.rain * 0.8;
@@ -110,7 +115,7 @@
       let f = S.fire[i];
       const x = i % N, y = (i / N) | 0;
       if (!fuel) f -= 0.45 * dt;
-      else f = Math.min(fuel === 'grass' ? 0.55 : 1, f + 0.22 * dt);
+      else f = Math.min(fuel === 'grass' || fuel === 'pedra' ? 0.55 : 1, f + 0.22 * dt);
       f -= (S.wet[i] * 0.9 + wth.rain * 0.7 + Nat.rainAt(x + 0.5, y + 0.5) * 1.6) * dt;
       S.fireT[i] += dt;
       if (fuel === 'tree' && S.fireT[i] > 13) {
@@ -122,9 +127,13 @@
       } else if (fuel === 'bush' && S.fireT[i] > 5) {
         const b = S.bushes.get(S.objAt[i]); if (b) { b.berries = 0; b.burnt = G.DAY_LEN; }
         S.burnt[i] = G.DAY_LEN * 1.5; Nat.markDirty(i);
-      } else if (fuel === 'building') {
+      } else if (fuel === 'building' || fuel === 'pedra') {
         const b = S.buildings.get(S.occ[i]);
-        if (b) G.Village.damageBuilding(b, (b.built ? 5 : 9) * f * dt / Math.max(1, b.w * b.h) * 1.3, 'fire');
+        // (a great work of stone: all its timber is gone in STONE_SECS seconds a tile of its side with one tile burning, sooner
+        // with more — a monument's fire lasts as a big house's does. By its strength, a lot at a time and the flame low, a
+        // theatre of 24 m lit at a corner burnt for two minutes and a half, a fire in the middle of the town all that while;
+        // now half a minute: L-787)
+        if (b) G.Village.damageBuilding(b, fuel === 'pedra' ? G.Village.fireRoom(b) * f * dt / (Nat.STONE_SECS * b.w) : (b.built ? 5 : 9) * f * dt / Math.max(1, b.w * b.h) * 1.3, 'fire');
       }
       if (f <= 0.01) { S.fire[i] = 0; S.fireT[i] = 0; Nat.fireSet.delete(i); continue; }
       S.fire[i] = f;
@@ -134,7 +143,8 @@
           const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue;
           const j = ny * N + nx; if (S.fire[j] > 0) continue;
           const fu = Nat.fuel(j); if (!fu) continue;
-          const base = (fu === 'tree' ? 0.24 : fu === 'building' ? 0.2 : fu === 'bush' ? 0.24 : fu === 'crop' ? 0.18 : 0.045) * (fu === 'building' || fu === 'crop' ? 1 : Math.max(0.1, G.Biome.grassFire(j)));
+          // (into a great work of stone the fire passes a quarter as fast as into a house: D-219)
+          const base = (fu === 'tree' ? 0.24 : fu === 'building' ? 0.2 : fu === 'pedra' ? Nat.STONE_SPREAD : fu === 'bush' ? 0.24 : fu === 'crop' ? 0.18 : 0.045) * (fu === 'building' || fu === 'crop' || fu === 'pedra' ? 1 : Math.max(0.1, G.Biome.grassFire(j)));
           const wind = 1 + ((dx * wx + dy * wy) / Math.hypot(dx, dy)) * wth.windS * 1.6;
           const diag = (dx && dy) ? 0.6 : 1;
           const p = f * base * dry * wind * diag * (1 - S.wet[j]) * dt;
