@@ -193,7 +193,8 @@
       R.deco.push(bloco(Te, r2(Hp + Hc), top, COL, { mat: 'slab' }), { k: 'faixa', r: Te, y0: r2(top - He * 0.6), y1: r2(top - He * 0.3), cor: 'acc2' },
         { k: 'telhado', r: Te, y0: top, y1: r2(top + rh), ao: 'u', ov: 0.2, quatro: true, cor: ROOF },
         { k: 'placa', v: r2(Te[3] + 0.02), u: L / 2, w: 3.2, y0: r2(Hp + Hc + 0.25), y1: r2(top - 0.2), cor: '#e8d8a8' });
-      for (const s of [B[0], B[2]]) { const pts = []; for (let v = r2(B[1] + 1.0); v <= B[3] - 0.8 + 1e-6; v = r2(v + 3.0)) pts.push([s, v]); R.deco.push({ k: 'colunata', pts, r: r2(t * 0.55), y0: Hp, y1: r2(Hp + Hc), cor: ['col0', 'col1'] }); } // (the engaged columns of the sides)
+      // (the engaged columns of the sides: at the corners and between the two windows of each side, never before one — L-874)
+      for (const s of [B[0], B[2]]) { const pts = []; for (let v = r2(B[1] + 0.9); v <= B[3] - 0.8 + 1e-6; v = r2(v + 4.0)) pts.push([s, v]); R.deco.push({ k: 'colunata', pts, r: r2(t * 0.55), y0: Hp, y1: r2(Hp + Hc), cor: ['col0', 'col1'] }); }
       R.roof = under('quatro-aguas', 'u', rh, (B[3] - B[1]) / 2, (Te[3] - Te[1]) / 2 + 0.2, 0.1); R.mat = 'reboco'; R.pave = '#e4dccb';
       return K.done();
     }
@@ -225,7 +226,9 @@
         { k: 'telhado', r: Te, y0: top, y1: r2(top + rh), ao: 'u', ov: 0.2, cor: ROOF });
       for (let q = 1; q < 3; q++) R.deco.push({ k: 'faixa', r: R.podium.slice(), y0: r2(Hp * q / 3 - 0.05), y1: r2(Hp * q / 3), cor: 'base2' }); // (the crepidoma's steps)
       // (the painted panels of the stoa's back wall, between its doors)
-      for (const s of [-1, 1]) R.deco.push({ k: 'placa', v: r2(B[3] + 0.02), u: r2(L / 2 + s * 3.4), w: 3.4, y0: r2(Hp + 0.9), y1: r2(Hp + 3.0), cor: s < 0 ? '#b8452f' : '#3f6fb0' });
+      // (the painted panels of the stoa's back wall, at the eyes' height: a finger off the wall's face — the 3D draws a plaque
+      // 3 cm before its v, and the wall one stands by under the stoa is where the plan has it, L-872)
+      for (const s of [-1, 1]) R.deco.push({ k: 'placa', v: r2(B[3] - 0.02), u: r2(L / 2 + s * 3.4), w: 3.4, y0: r2(Hp + 0.9), y1: r2(Hp + 3.0), cor: s < 0 ? '#b8452f' : '#3f6fb0' });
       R.roof = under('duas-aguas', 'u', rh, (B[3] - B[1]) / 2, (Te[3] - Te[1]) / 2 + 0.2, 0.1); R.mat = 'reboco'; R.pave = '#e4dccb';
       return K.done();
     }
@@ -244,7 +247,7 @@
       const pw = K.wall([I[0], pv], [I[2], pv], ti, Hw, 'parede'); K.door(pw, [L / 2, pv], 1.8, 3.2, 'portal');
       for (const x of [s0, s1]) { const w = K.wall([x, r2(pv + ti / 2)], [x, I[3]], ti, Hw, 'divisoria'); K.door(w, [x, r2((pv + ti / 2 + I[3]) / 2)], 1.0, DOOR_H, 'porta'); }
       // (the slits high under the roof)
-      K.wins(ws.fundo, 'u', I[0], I[2], 2.6, 1.0, 0.6, r2(Hw - 1.4)); K.wins(ws.esquerda, 'v', I[1], I[3], 2.4, 1.0, 0.6, r2(Hw - 1.4)); K.wins(ws.direita, 'v', I[1], I[3], 2.4, 1.0, 0.6, r2(Hw - 1.4));
+      K.wins(ws.fundo, 'u', I[0], I[2], 2.6, 1.0, 0.6, r2(Hw - 2.3)); K.wins(ws.esquerda, 'v', I[1], I[3], 2.4, 1.0, 0.6, r2(Hw - 2.3)); K.wins(ws.direita, 'v', I[1], I[3], 2.4, 1.0, 0.6, r2(Hw - 2.3)); // (under the painted bands)
       // the hall's four papyrus columns, either side of the way to the image
       for (const du of [-1.35, 1.35]) for (const v of [r2(I[1] + 1.9), r2(pv - ti / 2 - 1.5)]) { const u = r2(L / 2 + du); K.solid(hall, [u - 0.4, v - 0.4, u + 0.4, v + 0.4], Hw, 'papiro', { rc: 0.4, inner: 1 }); }
       // the porch along the block's front, six papyrus columns; the court, its pool at the left, its palms at the right

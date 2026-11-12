@@ -18,8 +18,11 @@
 //      (oficio, saber) limpo em todo segundo — e ele acusa o livro que mente
 //   b7 de pé num mundo pronto (a metrópole): a grande biblioteca pela mão do deus em cada povo com cidade — a planta, a
 //      entrada, o relatório, o verificador —; os leitores pela porta do jogo (G.Biblioteca.visit), andando de verdade: mais
-//      de oito sentados ao mesmo tempo, cada um num lugar de ler; salvar e carregar com eles sentados; a obra salva no meio
-//      e acabada; a grande biblioteca derrubada pelo deus (a ruína e a planta dela)
+//      de oito sentados ao mesmo tempo, cada um num lugar de ler; salvar e carregar com eles sentados; o corpo do deus (um
+//      leitor tomado na sala: dentro, num chão da planta; toma um lugar de ler, lê pelo ato do corpo, e, devolvido, sai pela
+//      porta); a obra salva no meio e acabada; a grande biblioteca derrubada pelo deus (a ruína e a planta dela).
+//      SALVA=<arquivo.json> grava este mundo com as grandes bibliotecas de pé, para a prova do 3D de dentro
+//      (node qa/visual/interior3d.js <arquivo.json>: os mundos prontos não têm nenhuma)
 //   b8 a cidade que justifica e pode pagar: no mundo de 500 anos (Mênfis, 189 pessoas) escolhe o degrau grande primeiro, e a
 //      menor só o clássico — e lá não há mais lote de 4 casas (T-870, dito com a medida); no mundo da metrópole, a cidade passa
 //      a justificá-lo com as famílias que chegam (a porta do modo desenvolvedor), sem pedra não o pode pagar, e com pedra
@@ -27,13 +30,13 @@
 //      no lugar a biblioteca que já tinha (V.grow: o mesmo prédio, salvo no meio e acabado); pronta, a planta da forma
 //   b9 um save de antes: as bibliotecas clássicas de um mundo pronto como eram (2 casas, a planta, um copista, o dia de 8), e
 //      nenhuma cidade abaixo do degrau o escolhe
-//   node qa/saber.js [b1,b2,…]      VERB=1: cada caso que falha · SALT=n: as plantas noutros dados (T-436)
+//   node qa/saber.js [b1,b2,…]      (ou ONLY=b1,b2) · VERB=1: cada caso que falha · SALT=n: as plantas noutros dados (T-436)
 'use strict';
 process.chdir(__dirname);
 const M = require('./nodemundo.js');
-const G = M.load({ qa: true, dev: true, extra: ['qa/escala-inv.js', 'qa/poder-inv.js', 'qa/saber-inv.js'] }); // (dev: the door of the families, b8)
+const G = M.load({ qa: true, dev: true, extra: ['js/space.js', 'js/possess.js', 'qa/escala-inv.js', 'qa/poder-inv.js', 'qa/saber-inv.js'] }); // (dev: the door of the families, b8; possess: the god's body, b7e)
 const In = G.Interiors, Fo = G.Forma, Sp = G.Space, Es = G.Escala, Bi = G.Biblioteca, E = G.Eco, A = G.Act;
-const ONLY = process.argv[2] ? process.argv[2].split(',') : null; const want = k => !ONLY || ONLY.includes(k);
+const ONLY = process.argv[2] || process.env.ONLY ? (process.argv[2] || process.env.ONLY).split(',') : null; const want = k => !ONLY || ONLY.includes(k);
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | saber ${name} | ${info}`); if (!c) fails.push(name); return c; };
 const some = L => (process.env.VERB ? L : L.slice(0, 3));
 const clock = () => { const u = process.cpuUsage(); return (u.user + u.system) / 1000; };
@@ -307,6 +310,9 @@ function b7() {
     const p = Sp.planNow(b); const rep = p && p.ok ? In.report(b, p, {}).filter(q => q.k === 'FALHA') : [{ what: 'sem planta' }];
     res.push({ set, civ, b, ok: !!p && p.ok && b.w === N && b.esc === 'grande' && b.ip.f === FAM && b.ip.n === N && !rep.length && In.entrySaid(b) !== false, why: `${civ} #${b.id} em ${b.x},${b.y} lado ${b.ip.s}: ${p && p.ok ? 'planta ok' : 'planta NÃO: ' + (p ? p.errs[0] : '-')}${rep.length ? ', ' + rep[0].what : ''}, a entrada ${In.entrySaid(b)}` }); }
   const q1 = qaS();
+  // (SALVA=<file.json>, a whole path: this world saved with the grand libraries standing — the inside's 3D proof reads it, the
+  // ready worlds have none: node qa/visual/interior3d.js <file.json>)
+  if (process.env.SALVA) require('fs').writeFileSync(process.env.SALVA, G.Save.serialize());
   ok(`b7a de pé num mundo pronto (${WORLD}): a grande biblioteca pela mão do deus em cada capital — a planta, a família da forma, o relatório, a entrada, o verificador`, res.length >= 3 && res.every(r => r.ok) && !q0.length && !q1.length, `${res.length} de pé: ${res.map(r => r.why).join('; ')}; o verificador S0–S2: ${q0.length} antes, ${q1.length} com elas${said(q1)}`);
   // ---- the readers by the game's own door, walking for real: more than eight seated at once, each at a place of reading
   const r0 = res.slice().sort((a, c) => V.pop(c.set.id) - V.pop(a.set.id))[0]; const lib = r0.b; S.time = 0.33;
@@ -327,6 +333,33 @@ function b7() {
     const l0 = Bi.book(lib2).lidos; for (let k = 0; k < 600; k++) { G.debug.step(0.1); if (S.time > 0.6) S.time = 0.4; if (!Object.keys(Bi.book(lib2).quem).length) break; } const q2 = qaS();
     ok('b7c salvar e carregar com eles sentados: os mesmos de volta à mesa, e a leitura segue até o fim', back === saved.length && Bi.book(lib2).lidos - l0 >= saved.length - 1 && !q2.length && In.plan(lib2).ok, `${back} de ${saved.length} de volta; depois, ${Bi.book(lib2).lidos - l0} leituras contadas (o livro do dia: ${Bi.book(lib2).lidos}); o verificador ${q2.length ? said(q2) : 'limpo'}`);
   } else ok('b7c salvar e carregar com eles sentados', false, 'nunca houve nove sentados');
+  // ---- the god's body: a reader who walked in is taken in the reading room — inside, on the plan's floor —; its hands take a
+  // free place of reading by it (Possess.use, the place the share-out then gives the body and nobody else), it reads by the
+  // act of the offers, lets the place go and, given back, the person leaves by the door
+  { const Po = G.Possess; const lib2 = S.buildings.get(lib.id); const out = []; S.time = 0.4; const dr2 = G.Vg.door(lib2);
+    const cand = [...S.villagers.values()].filter(v => v.set === lib2.set && v.age >= 16 && !v.captive && !v.jail && !v.aboard && !v.sleeping && !v.inside && !v.merchant && !(v.carry && v.carry.n > 1e-6) && !(v.task && (v.task.pri || 0) >= 1) && Po.can(v).ok)
+      .sort((a, c) => G.dist2(a.x, a.y, dr2[0], dr2[1]) - G.dist2(c.x, c.y, dr2[0], dr2[1]) || a.id - c.id);
+    let me = null; for (const v of cand.slice(0, 4)) { const t = Bi.visit(v, lib2); if (t) { t.kind = 'work'; t.leisure = true; t.pri = 2.9; v.energy = Math.max(v.energy, 70); v.hunger = Math.min(v.hunger, 30); me = v; break; } }
+    let seated = false; if (me) for (let k = 0; k < 1500 && !seated; k++) { G.debug.step(0.1); if (S.time > 0.6) S.time = 0.4; const pl = me.inside === lib2.id ? In.placeOf(me) : null; seated = !!pl && pl.use === 'ler' && Bi.book(lib2).quem[me.id] !== undefined; if (!seated && !(me.task && me.task.type === 'ler')) break; }
+    let told = '';
+    if (!me || !seated) out.push(me ? `${me.name} não chegou à mesa` : 'ninguém para ler');
+    else { const r = sim(() => Po.take(me)); const a = S.avatar;
+      if (!r || !r.ok || !a || a.id !== me.id) out.push('o corpo não foi tomado: ' + ((r && r.why) || ''));
+      else { if (me.inside !== lib2.id || !Po.onPlan(me)) out.push(`tomado: ${me.inside === lib2.id ? 'dentro, fora de um chão da planta' : 'FORA da biblioteca'}`);
+        const near = In.freeNear(lib2, a.lv, me.x * Sp.TILE - lib2.x * Sp.TILE, me.y * Sp.TILE - lib2.y * Sp.TILE, 2.4).filter(q => q.use === 'ler'); const pl = near[0];
+        if (!pl) out.push('nenhum lugar de ler livre junto do corpo');
+        else { const took = sim(() => Po.use(me, lib2, pl)); const mine = In.placeOf(me); const others = Object.keys(Bi.book(lib2).quem).map(Number).filter(id => id !== me.id).map(id => In.placeOf(S.villagers.get(id))).filter(q => q && q.item === pl.item && q.q === pl.q).length;
+          if (!took || !Po.useOf() || Po.useOf().use !== 'ler' || !mine || mine.item !== pl.item || mine.q !== pl.q || others) out.push(`o lugar: tomado ${took}, o do corpo ${mine ? mine.item + ':' + mine.q : 'nenhum'} (pedido ${pl.item}:${pl.q}), outros nele ${others}`);
+          const l0 = Bi.book(lib2).lidos; const of =A.offers(me, me.x, me.y, 2.5).find(o => o.def === 'leitura' && o.act === 'ler' && o.b === lib2.id);
+          const rr = of && of.ok !== false ? sim(() => A.perform(me, of)) : { ok: false, why: of ? of.why : 'sem oferta' };
+          if (!rr.ok || Bi.book(lib2).lidos !== l0 + 1) out.push(`ler: ${rr.ok ? rr.msg : rr.why}; o livro do dia ${l0} → ${Bi.book(lib2).lidos}`);
+          told = `${me.name} tomado na sala (piso ${a.lv}), senta em ${pl.item}:${pl.q}, «${rr.ok ? rr.msg : rr.why}» (o livro do dia ${l0} → ${Bi.book(lib2).lidos})`;
+          sim(() => Po.unuse(me)); }
+        const q4 = qaS(); if (q4.length) out.push('o verificador com o corpo dentro' + said(q4));
+        sim(() => Po.release('deus')); let outside = false; for (let k = 0; k < 900 && !outside; k++) { G.debug.step(0.1); outside = !me.inside; }
+        if (S.avatar) out.push('o corpo não foi devolvido'); if (!outside) out.push(`devolvido, ${me.name} não saiu (tarefa ${me.task ? me.task.type : 'nenhuma'})`);
+        const q5 = qaS(); if (q5.length) out.push('o verificador depois' + said(q5)); told += `; devolvido, sai pela porta: ${outside ? 'sim' : 'NÃO'}`; } }
+    ok('b7e o corpo do deus: um leitor tomado na sala de leitura fica dentro, num chão da planta; as mãos dele tomam um lugar de ler livre, lê pelo ato do corpo (o livro do dia conta), e, devolvido, sai pela porta; o verificador limpo', !out.length && M.limpo(), out.length ? out.join(' / ') : told); }
   // ---- the work saved in the middle and finished; the grand library pulled down by the god
   { const out = []; const sets = capitais(); const set = sets[sets.length - 1]; const b = sim(() => G.Village.handFound(set, T, 'grande', { built: false, R: 60, x: set.cx + 6, y: set.cy + 6 }));
     if (!b) out.push('a obra sem lote'); else { const id = b.id; M.salvarCarregar(); S = G.S; const b1 = S.buildings.get(id);
