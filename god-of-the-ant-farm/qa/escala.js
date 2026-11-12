@@ -791,11 +791,12 @@ run('e22', () => {
   sim(() => V.destroyBuilding(S.buildings.get(A.b.id), 'meteor')); M.viver(4); const n4 = naDe(A.f.id); const fora = [...S.villagers.values()].filter(v => v.inside === A.b.id).length;
   ok('e22g o deus derruba o palácio no meio', A.okA && n3 > 0 && !A.f.aud && !n4 && !fora, `${n3} na audiência; depois do palácio caído: ${n4} nela, ${fora} lá dentro`);
   const c2 = checa(); ok('e22i verificador', c2.ok, c2.txt);
-  // (o voto e o pão: com o palácio pronto de pé, na praça, diante do assento do poder — Po.seat —, como antes; nenhuma audiência)
-  A = audiencia(null); const seat = G.Polity.seat(A.f); const praca = [];
+  // (o voto e o pão: com o palácio pronto de pé, onde o povo se junta — Po.forum: a praça da cidade, e sem praça diante do
+  // assento do poder, Po.seat, como antes (L-781: iam à porta do palácio com a praça vazia ao lado) —; nenhuma audiência)
+  A = audiencia(null); const seat = G.Polity.forum(A.set); const praca = [];
   for (const why of ['voto', 'pao']) {
     sim(() => G.Polity.crowd(A.set, why)); const L = [...S.villagers.values()].filter(v => v.task && v.task.type === 'assembly');
-    praca.push(`${why}: ${L.length} na praça${L.every(v => v.task.kind === 'assembly' && v.task.x === seat[0] && v.task.y === seat[1]) ? ', diante do assento' : ' (FORA DO ASSENTO)'}`);
+    praca.push(`${why}: ${L.length} na praça${L.every(v => v.task.kind === 'assembly' && v.task.x === seat[0] && v.task.y === seat[1]) ? ', onde o povo se junta' : ' (FORA DO LUGAR)'}`);
     if (!L.length || !L.every(v => v.task.kind === 'assembly' && v.task.x === seat[0] && v.task.y === seat[1])) praca.push('FALHA');
     for (const v of L) sim(() => G.Vg.endTask(v));
   }

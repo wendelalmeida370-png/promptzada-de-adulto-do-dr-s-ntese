@@ -566,6 +566,9 @@
   const RENEW = { farm: 1, hut: 2, house: 3 };
   const RENEW_BLOCK = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1, hut: 2, house: 3, sobrado: 4 };
   const KEEP = { farm: 2, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
+  // (what pulling a building down costs a great work or a block — 0: never. A house of a family's own step — the rich house a
+  // family asked for and paid, D-177 — is never the town's to pull down: the tables are by type, and a domus is a 'house': L-715)
+  V.razes = (o, block) => { const may = block ? RENEW_BLOCK : RENEW; const d = o && G.BDEF[o.type]; if (!d || !may[o.type]) return 0; return d.housing && (o.w || 1) !== G.Escala.n0(o.type) ? 0 : may[o.type]; };
   // (a site whose work the town's streets reach: a tile round the lot that one walks, from which the town reaches — the ring of
   // V.townReachesWork, the lot not yet standing —, on a side of the lot and on the town's own ground: the map of reach steps only
   // north, south, east and west, so a corner of the ring touches no tile of the lot, and whoever comes out of a door stands on
@@ -602,9 +605,9 @@
         const i = ty * N + tx; const t = S.type[i];
         if (renew && S.occ[i]) {
           const o = S.buildings.get(S.occ[i]);
-          if (!o || !o.built || !may[o.type] || o.set !== set.id) { ok = false; break; }
+          if (!o || !o.built || !V.razes(o, block) || o.set !== set.id) { ok = false; break; }
           if (!gone) gone = [];
-          if (!gone.includes(o.id)) { gone.push(o.id); cost += may[o.type]; beds += G.BDEF[o.type].housing || 0; }
+          if (!gone.includes(o.id)) { gone.push(o.id); cost += V.razes(o, block); beds += G.BDEF[o.type].housing || 0; }
         } else if (S.occ[i]) { ok = false; break; }
         // (a podium's lot clears its bushes, breaks its rocks into the work — D-121 — and takes the town's minor streets the ring
         // joins again, never the highway: D-120)
@@ -689,8 +692,9 @@
   // (a lot of a bigger step may take the town's minor streets — dirt and stone, never the highway — when the ring round it joins
   // again every street it cuts: the street tiles of the ring beside a street of the lot, the ends of the cut, all reach each other
   // along the ring, on tiles one walks or that come down with the lot — D-120; and a block of the heart's, L-602)
-  function relinks(set, x, y, n, gone) {
-    const S = G.S; const street = i => S.road[i] > 0 || !!(G.City && G.City.onStreet(set, i));
+  // (laid: only the streets on the ground count, not the town's plan of them — the kept lot's, at the founding: L-780)
+  function relinks(set, x, y, n, gone, laid) {
+    const S = G.S; const street = i => S.road[i] > 0 || (!laid && !!(G.City && G.City.onStreet(set, i)));
     const inLot = (tx, ty) => tx >= x && tx < x + n && ty >= y && ty < y + n; const ring = new Map();
     for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) {
       if (inLot(tx, ty) || !W.inb(tx, ty)) continue; const i = ty * N + tx; const o = S.occ[i];
@@ -865,7 +869,7 @@
   // town's lot over it; the minor streets on it joined again round it; the town's streets reaching it. One kept (keep) is
   // judged by what stays: a field on fire burns out, and the streets the town lays over it are joined again when the work
   // comes, or the work waits — Argos let go of its lot of 40 m for the fire in its wheat, year 21 of a life from scratch)
-  function resFits(set, type, x, y, n, keep) {
+  function resFits(set, type, x, y, n, keep, kept) {
     const S = G.S; if (x < 2 || y < 2 || x + n > N - 2 || y + n > N - 2) return false;
     let streets = false;
     for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) {
@@ -876,14 +880,18 @@
         // wheat burnt did not: the farm leaves the map, the orchard stays a ruin three days, L-537, L-686, D-149. The choice and
         // the founding judge whole: the work waits for the ruin to go)
         if (o && !(o.set === set.id && (FIELDS[o.type] || (keep && o.type === 'ruin' && FIELDS[o.origType])))) return false;
-        if (S.road[i] || (G.City && G.City.onStreet(set, i))) streets = true;
+        // (on a lot already kept, the streets that count are the ones on the ground: the town's plan of its streets changes with
+        // every building, and a street only planned across the kept lot — never laid — made the wonder wait for a plan that
+        // suited it: Tenochtitlan of the metrópole, its lot kept for years, could not found on it a few seconds after a palace
+        // stood and the plan was drawn again. The plan is drawn round the work once it stands. L-780)
+        if (S.road[i] || (!kept && G.City && G.City.onStreet(set, i))) streets = true;
       } else {
         if (S.type[i] >= T.SAND && S.cliff[i]) return false;
         if (o && o.blocks) return false;
       }
     }
     if (W.slope(x, y, n, n) > V.PODIUM || resOver(set, type, x, y, n, n, true)) return false;
-    if (streets && !keep && !relinks(set, x, y, n, null)) return false;
+    if (streets && !keep && !relinks(set, x, y, n, null, kept)) return false;
     return siteReached(set, x, y, { w: n, h: n });
   }
   // (the nearest lot of n that serves, as far as the town's radius and RES_REACH. → [x, y], or null)
@@ -941,7 +949,7 @@
   // it to come down and go up elsewhere when they can. → [x, y] (.demolish, .moves), or null)
   function resSite(set, type, n) {
     const r = set.urb && set.urb.res; if (!r || r.type !== type || n > r.n) return null;
-    if (!resFits(set, type, r.x, r.y, r.n)) return null;
+    if (!resFits(set, type, r.x, r.y, r.n, false, true)) return null;
     const x = r.x + Math.floor((r.n - n) / 2), y = r.y + Math.floor((r.n - n) / 2); const S = G.S; const gone = [];
     for (let ty = y; ty < y + n; ty++) for (let tx = x; tx < x + n; tx++) { const o = S.occ[ty * N + tx]; if (o && !gone.includes(o)) gone.push(o); }
     if (!gone.length) return [x, y];
@@ -1161,15 +1169,51 @@
     }
     return null;
   };
+  // ------------------------------ the stone of a great work (D-174) ------------------------------
+  // a great work that waits for stone, in a town with its turn (set.vez: fed and housed), keeps its people's stone — what it still
+  // waits for (set.gw, the planner's, each time it plans the town: the work, or 0) — from what never ends: the paving and the
+  // carts of trade take only what is left past it (V.stoneSpare), no house that stands is bettered (the planner's improve) and
+  // no other extra that costs stone is begun (V.greatWork). The works already under way finish, the houses a town needs go on:
+  // they are few, and they end. Measured in the worlds of the generation 19 (qa/patch3/bloco-M.md): the palace of Tenochtitlan
+  // stood 21 years with none of its 210 of stone, the theatre of Rome 21, the palace of Argos 25 and more — the people's stone,
+  // some 20 to 60 a year, went to every house bettered, to the paving and out on the carts, and with one great work at a time
+  // nothing bigger was ever begun
+  V.keeps = function (set) {
+    if (!set || !set.vez || !set.gw) return 0; const b = G.S.buildings.get(set.gw);
+    if (!b || b.built || b.type === 'ruin' || b.set !== set.id || !b.need) return 0;
+    return Math.max(0, (b.need.stone || 0) - ((b.incoming && b.incoming.stone) || 0));
+  };
+  // (what the great works of a people keep of its store's stone)
+  V.stoneKept = function (fid) { let n = 0; for (const s of G.S.settlements.values()) if (s.fac === fid && s.vez && s.gw) n += V.keeps(s); return n; };
+  // (the people's stone left for what is not a work's: the paving, the carts)
+  V.stoneSpare = function (fid) { const f = G.Fac.get(fid); return f ? Math.max(0, (f.stock.stone || 0) - V.stoneKept(fid)) : 0; };
+  // (the hands of a great work — D-174: a tenth and a half of the town's grown hands are its builders while it waits for stone
+  // with its turn, a twelfth of those of its people's other towns that are fed and have rock, and a builder of them with nothing
+  // to lay breaks its stone, villagers.js: V.quarries)
+  V.GANG = 0.15; V.GANG_Q = 1 / 12;
+  // (a town whose builders break stone for a great work: its own, that keeps its stone, or — full granaries — one of its people's)
+  V.quarries = function (set) {
+    if (!set) return false; if (V.keeps(set) > 0) return true;
+    const f = G.Fac.get(set.fac); if (!f || !(V.stoneKept(f.id) > 0)) return false;
+    return (f.stock.food || 0) > Math.max(50, G.Fac.pop(f.id) * (G.S.blessed ? 5 : 7));
+  };
   // (the turn a work has with the builders who choose where to bring materials and hands — the builders' choice, villagers.js,
   // adds it to the walk to each work: a great work of the town comes before the smaller works about it as if it were V.GREAT_PRI
   // (tiles²) nearer, else every work nearer the builders took its stone and the Colosseum of Rome got none in eight years —
   // D-117 —, but only while its town is fed and housed (set.vez, the planner's: its people's food safe, nobody grown without a
   // home — D-120): a hungry or crowded town builds its fields and houses first. Nothing for any other work: with only the
   // classic steps, no turn changes)
-  V.GREAT_PRI = 400;
+  // (and three days in four of each builder — by the day, G.hash: no chance drawn —, as if it stood at the town's middle besides:
+  // the lot of a bigger step may lie as far as the town's radius and twenty (V.reachOf), and at 34 tiles from the middle of
+  // Tenochtitlan every work nearer the builders still took the stone before its palace, the turn and all — D-174. The fourth
+  // day is the nearer works': a house paid for, a store a few stones short, are finished too)
+  V.GREAT_PRI = 400; V.GREAT_SHARE = 0.75;
   const great = b => !b.built && b.type !== 'ruin' && publicWork(b.type) && (!!b.amp || b.w !== G.Escala.n0(b.type));
-  V.workPri = b => { if (!great(b)) return 0; const s = G.S.settlements.get(b.set); return s && s.vez ? -V.GREAT_PRI : 0; };
+  V.workPri = (b, v) => {
+    if (!great(b)) return 0; const s = G.S.settlements.get(b.set); if (!s || !s.vez) return 0;
+    if (!v || G.hash(v.id * 17 + G.S.day) >= V.GREAT_SHARE) return -V.GREAT_PRI;
+    const c = V.center(b); return -V.GREAT_PRI - G.dist2(c[0], c[1], s.cx, s.cy);
+  };
   // (a great work of the town under way — asked only when a public work of it is, c.siteTypes)
   const greatUp = (set, c) => { let any = false; for (const k in c.siteTypes) if (publicWork(k)) { any = true; break; } if (!any) return false; for (const b of G.S.buildings.values()) if (b.set === set.id && great(b)) return true; return false; };
   // (the turn of a town's great work, set.vez — its planner's, each time it plans it: with a great work under way, its people's
@@ -1180,22 +1224,42 @@
     return set.vez || 0;
   };
   // (the planner's question, with nothing the town needs to live first: with no great work going up, the first public work of
-  // the town that a bigger step it justifies now fits round. Nothing while only each type's classic step is known: no step
-  // bigger than the one it has)
+  // the town that a bigger step it justifies now fits round — the steps tried from the biggest to the smallest above the one it
+  // has, as a new work's are (D-106): only the biggest was tried, and a shrine of 8 m with no room for 32 never grew to 16.
+  // Nothing while only each type's classic step is known: no step bigger than the one it has.
+  // With no room round it for a step, that step is raised anew, elsewhere — the town's new temple, its great theatre —, and the
+  // old one stands as it was (D-175): the town's biggest of the type only, each step once, and never a second wonder (the
+  // wonder is its people's one). In the worlds of the generation 19 no work of before ever found room to grow: round every
+  // temple, theatre and monument there is a highway, a statue, a tall house, a workshop, a wall or the water — Mênfis of the
+  // mega, 181 people and the stone of a pyramid, kept its shrine of 8 m for the 25 years measured)
+  const ONE = { maravilha: 1 };
+  // (another of the type in town with room round it for the step: it grows where it stands before any is raised anew — the
+  // town's older shrine, with no room, raised a temple elsewhere and the one with room never grew: the proof escala e7, L-782)
+  const roomFor = (set, b, st) => { for (const o of G.S.buildings.values()) if (o !== b && o.set === set.id && o.built && o.type === b.type && o.w < st.n && V.affords(set, o.type, st, 0, G.Escala.of(o)) && V.growLot(set, o, st)) return true; return false; };
   V.grow = function (set, fac, c) {
     const S = G.S;
     if ((set.tier || 0) < 2 || (G.City && G.City.saving(set, fac))) return null;
     for (const k in c.siteTypes) if (G.BDEF[k] && G.BDEF[k].civic) return null; // (one great work at a time)
+    if (greatUp(set, c)) return null; // (a temple or a monument of a bigger step going up is one too: D-175)
     const grows = {}; let any = false;
-    for (const t in c) { if (!(c[t] > 0) || !publicWork(t)) continue; const st = G.Escala.choose(set, t)[0]; if (st && st.n > G.Escala.n0(t) && !st.familia) { grows[t] = st; any = true; } }
+    for (const t in c) { if (!(c[t] > 0) || !publicWork(t)) continue; const L = G.Escala.choose(set, t).filter(st => st.n > G.Escala.n0(t) && !st.familia); if (L.length) { grows[t] = L; any = true; } }
     if (!any) return null;
     const noSite = set._noSite || (set._noSite = {}); if (noSite.amplia === S.day) return null;
+    const top = {}; for (const b of S.buildings.values()) if (b.set === set.id && b.type !== 'ruin' && grows[b.type]) top[b.type] = Math.max(top[b.type] || 0, b.w);
     for (const b of S.buildings.values()) {
-      if (b.set !== set.id || !b.built || b.type === 'ruin' || !grows[b.type] || grows[b.type].n <= b.w) continue;
-      const st = grows[b.type];
-      if (!V.affords(set, b.type, st, 0, G.Escala.of(b))) continue; // (the stone of what grows, by the people's income: D-120)
-      const pos = V.growLot(set, b, st); if (!pos) continue;
-      return V.enlarge(b, st, pos);
+      if (b.set !== set.id || !b.built || b.type === 'ruin' || !grows[b.type]) continue;
+      for (const st of grows[b.type]) {
+        if (st.n <= b.w) break; // (big to small: nothing bigger than it left)
+        if (!V.affords(set, b.type, st, 0, G.Escala.of(b))) continue; // (the stone of what grows, by the people's income: D-120)
+        const pos = V.growLot(set, b, st); if (pos) return V.enlarge(b, st, pos);
+        if (ONE[b.type] || b.w < top[b.type] || !V.affords(set, b.type, st)) continue;
+        if (roomFor(set, b, st)) break; // (that one's turn comes further on in this round)
+        const at = V.findSite(set, b.type, undefined, st.n) || (V.opens(b.type, st) ? V.openSite(set, b.type, st) : null); if (!at) continue;
+        const old = V.buildName(b); const nb = V.startProject(set, b.type, at, st); if (!nb) continue;
+        const nm = V.nameOf(b.type, nb); const [cx, cy] = V.center(nb);
+        V.log(`${set.name} começou ${G.gen(nm) === 'a' ? 'uma' : 'um'} ${nm} de ${st.n * 4} metros de lado: em volta ${G.gen(old) === 'a' ? 'da antiga' : 'do antigo'}, de ${b.w * 4}, não havia espaço para crescer.`, 'city', cx, cy);
+        return nb;
+      }
     }
     noSite.amplia = S.day; return null;
   };
@@ -1260,6 +1324,7 @@
   // what a growing town builds before any extra, and what it builds to defend itself
   const ESSENTIAL = { hut: 1, house: 1, storehouse: 1, farm: 1, well: 1, workshop: 1, praca: 1, mercado: 1, temple: 1, celeiro: 1, doca: 1 };
   const DEFENCE = { quartel: 1, torre: 1, muralha: 1, portao: 1, wall: 1, gate: 1 };
+  V.ESSENTIAL = ESSENTIAL; V.DEFENCE = DEFENCE;
   function plan(set) {
     const S = G.S;
     const c = counts(set.id);
@@ -1268,6 +1333,7 @@
     const fac = G.Fac.get(set.fac); if (!fac) return;
     V.growStuck(set); // (an enlargement its builders cannot reach is given up before their rule takes the building: D-116)
     V.vez(set, c, hi); // (the builders' turn of a great work, V.workPri: while the town is fed and housed — D-120)
+    { const gw = V.greatWork(set, c); if (gw || set.gw) set.gw = gw ? gw.id : 0; } // (the great work that waits for stone, and keeps it: D-174)
     if (!(set.urb && set.urb.resDay === S.day)) { (set.urb || (set.urb = { d: [], names: [] })).resDay = S.day; V.reservaDia(set); } // (the kept lot, once a day: D-121)
     const isMain = G.Fac.capitalOf(fac.id) === set;
     const facHas = type => G.Fac.has(fac.id, type);
@@ -1297,13 +1363,26 @@
     G.Eco && G.Eco.plan(set, fac, c, want, pop);
     G.Harbor && G.Harbor.plan(set, fac, c, want, pop);
     if (c.storehouse && !c.siteTypes.storehouse && (st.wood > cap * 0.9 || st.food > cap * 0.9 || st.stone > cap * 0.9) && c.storehouse < 1 + Math.floor(pop / 30)) want.push('storehouse');
+    // (the wonder a capital keeps a lot for comes before any other great work — a step up for its temple, its theatre, its
+    // baths —, as soon as the planner wishes it: Mênfis of a world from scratch kept its field of 40 m from the year 40 to the
+    // 80 and never asked for its pyramid, the last of the town's wishes behind every square, market and bath. D-176)
+    const crown = want.includes('maravilha') && !!(set.urb && set.urb.res && set.urb.res.type === 'maravilha');
+    if (crown) { want.splice(want.indexOf('maravilha'), 1); const k = want.findIndex(t => !ESSENTIAL[t] && !DEFENCE[t]); if (k < 0) want.push('maravilha'); else want.splice(k, 0, 'maravilha'); }
     // (a public work the town has outgrown goes a step up its ladder, in place — before a new great work, after what it needs to
     // live and to keep itself: D-116)
-    if (!want.some(t => ESSENTIAL[t] || DEFENCE[t]) && V.grow(set, fac, c)) return;
+    if (!crown && !want.some(t => ESSENTIAL[t] || DEFENCE[t]) && V.grow(set, fac, c)) return;
     // the town improves what it has: an old hut becomes a stone house, stone houses grow a second
     // floor and then become apartment blocks
+    // (the people's store is one for all its towns: while a great work of the people keeps stone, a sister town betters its
+    // houses and begins its stone extras only from what the work does not keep — V.stoneSpare, as the paving and the carts.
+    // The guards were the great work's town's alone: in the metropole Rome's theatre, with its turn and 150 of stone given, got
+    // 4 in two years — Lavínio, Cápua, Óstia and Tíbur bettered their houses and raised three goldsmiths, a forge and a square
+    // with it. What a town needs to live and to keep itself goes on everywhere: L-714)
+    const sister = !(V.keeps(set) > 0) && V.stoneKept(fac.id) > 0; const spare = sister ? V.stoneSpare(fac.id) : Infinity;
+    const stI = sister ? Object.assign({}, st, { stone: Math.min(st.stone || 0, spare) }) : st;
     const improve = () => {
-      if (workshop && c.hut > 0 && !c.siteTypes.house && st.stone >= 10 && st.wood >= 14) {
+      if (V.keeps(set) > 0) return false; // (the stone is the great work's while it has its turn: D-174)
+      if (workshop && c.hut > 0 && !c.siteTypes.house && stI.stone >= 10 && st.wood >= 14) {
         let old = null;
         for (const b of S.buildings.values()) if (b.set === set.id && b.type === 'hut' && b.built && (!old || b.born < old.born)) old = b;
         if (old) {
@@ -1313,7 +1392,7 @@
           return true;
         }
       }
-      return !!(G.City && G.City.upgradeHomes(set, fac, c, st));
+      return !!(G.City && G.City.upgradeHomes(set, fac, c, stI));
     };
     let improved = false;
     // a vila one step from city, short of stone houses: the huts are rebuilt before any extra
@@ -1327,6 +1406,8 @@
     // stone, no other extra that costs stone is begun, and what the town needs to live and to keep itself goes on. Its stone
     // went to every smaller work begun beside it, and the Colosseum of Rome got none in eight years: D-117)
     if (V.greatWork(set, c)) for (let k = want.length - 1; k >= 0; k--) { const t = want[k], d = G.BDEF[t]; if (d && !ESSENTIAL[t] && !DEFENCE[t] && ((d.cost && d.cost.stone) || 0) >= 8) want.splice(k, 1); }
+    // (and in a sister town of a great work's, an extra that costs more stone than the work leaves: L-714)
+    else if (sister) for (let k = want.length - 1; k >= 0; k--) { const t = want[k], d = G.BDEF[t]; const n = (d && d.cost && d.cost.stone) || 0; if (d && !ESSENTIAL[t] && !DEFENCE[t] && n >= 8 && n > spare) want.splice(k, 1); }
     if ((set.tier || 0) === 2 && stoneHomes < 6 && c.hut > 0 && !want.some(t => ESSENTIAL[t])) { if (improve()) return; improved = true; }
     if (!want.length && !improved) { if (improve()) return; improved = true; }
     // proactive housing for growing families
@@ -1334,6 +1415,9 @@
     for (const type of want) {
       if (c.siteTypes[type] && !G.BDEF[type].housing) continue;
       const def = G.BDEF[type];
+      // (the wonder wished and not begun yet — its timber short, today —: no other great civic work is begun in its place, or the
+      // one great work at a time would be the baths, and the wonder would wait for years again. D-176)
+      if (crown && type !== 'maravilha' && def.civic && !ESSENTIAL[type] && !DEFENCE[type]) continue;
       // don't open too many sites when materials are scarce
       if (c.sites > 0 && (st.wood < (def.cost.wood || 0) * 0.3 && (def.cost.wood || 0) > 0) && !(type === 'doca' && !c.doca)) continue;
       const b = V.startProject(set, type);
@@ -1398,6 +1482,16 @@
     want.construtor = sites ? Math.min(Math.max(1, Math.ceil(sites * 1.4) + (matNeed > 40 ? 1 : 0)), Math.max(1, Math.floor(A * 0.35))) : 0;
     // a great palace going up takes the town's hands
     G.Court && G.Court.builders(set, fac, want, A);
+    // (and so does any great work that waits for stone with its turn — its gang lays what comes and breaks the rest, D-174 —; and
+    // the people's quarry: while a great work of the people keeps its stone, every other town of it with full granaries and rock
+    // to break keeps a gang of builders too, a twelfth of its grown hands, who break stone for the people's store. Builders, never
+    // quarrymen: a town's mines take every quarryman without a post — economy.js —, and the 8 «mineiros» of Mênfis dug ore, all
+    // of them, while its theatre waited for stone. The stone of a capital with no rock left about it comes from its people's
+    // other towns: Rome of the mega broke the last rock about it in the third year of its Colosseum)
+    let rocks = 0; for (const r of S.rocks.values()) if (G.dist(r.x, r.y, set.cx, set.cy) < 26) { rocks++; if (rocks > 2) break; }
+    if (!rocks && G.Vg.canQuarry(set)) rocks = 1;
+    if (V.keeps(set) > 0) want.construtor = Math.max(want.construtor, Math.ceil(A * V.GANG));
+    else if (rocks && fed && V.stoneKept(fac.id) > 0) want.construtor = Math.max(want.construtor, Math.ceil(A * V.GANG_Q));
     want.cacador = (A >= 7 ? 1 : 0) + (A >= 22 ? 1 : 0) + Math.min(3, threats);
     const restOf = () => A - want.sacerdote - want.agricultor - want.construtor - want.cacador - want.guerreiro - ecoN;
     // at least two hands for wood and forage; the trades give way last
@@ -1413,8 +1507,6 @@
       // (the hands a town with its food safe keeps for its open services stay, D-102)
       if (rest < MIN_REST && G.Eco && G.Eco.cut) { const cut = G.Eco.cut(want, MIN_REST - rest, G.Eco.kept ? G.Eco.kept(set, fac, want) : null); ecoN -= cut; rest += cut; }
     }
-    let rocks = 0; for (const r of S.rocks.values()) if (G.dist(r.x, r.y, set.cx, set.cy) < 26) { rocks++; if (rocks > 2) break; }
-    if (!rocks && G.Vg.canQuarry(set)) rocks = 1;
     // how much of each resource the whole island wants to keep in stock
     const totalPop = G.Fac.pop(fac.id);
     let allWood = 0, allStone = 0;

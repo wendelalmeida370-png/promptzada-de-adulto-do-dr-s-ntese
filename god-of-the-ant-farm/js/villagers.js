@@ -767,18 +767,20 @@
     emote(v, 'food', 2);
     return null;
   }
-  function nearestInGrid(v, maxR, test) {
+  // (about: a point past the town's bounds about which one may look too — the lot of a great work, for its gang: aboutWork;
+  // from: the point the look goes out from, when it is not where one stands)
+  function nearestInGrid(v, maxR, test, about, from) {
     const S = G.S; const set = S.settlements.get(v.set);
-    const x0 = v.x | 0, y0 = v.y | 0;
+    const x0 = (from ? from[0] : v.x) | 0, y0 = (from ? from[1] : v.y) | 0;
     for (let r = 0; r <= maxR; r++) {
       let best = null, bd = 1e9;
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const x = x0 + dx, y = y0 + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue;
         const o = test(y * N + x); if (!o) continue;
-        if (set && G.dist2(o.x, o.y, set.cx, set.cy) > 28 * 28) continue;
+        if (set && G.dist2(o.x, o.y, set.cx, set.cy) > 28 * 28 && !(about && G.dist2(o.x, o.y, about[0], about[1]) <= 24 * 24)) continue;
         if (!W.reaches(v, o.x, o.y)) continue;
-        const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd) { bd = d; best = o; }
+        const d = from ? G.dist2(from[0], from[1], o.x, o.y) : G.dist2(v.x, v.y, o.x, o.y); if (d < bd) { bd = d; best = o; }
       }
       if (best) return best;
     }
@@ -799,12 +801,12 @@
       if (!b || b.berries < 1 || claimedByOther(b, v) || S.fire[i] > 0 || cantReach(b, v)) return null; return b;
     });
   }
-  function nearestRock(v, maxR) {
+  function nearestRock(v, maxR, about, from) {
     const S = G.S;
     return nearestInGrid(v, maxR || 24, i => {
       const id = S.objAt[i]; if (!id) return null; const r = S.rocks.get(id);
       if (!r || r.stone < 1 || claimedByOther(r, v) || cantReach(r, v)) return null; return r;
-    });
+    }, about, from);
   }
   function chopTask(v) { const t = nearestTree(v); if (!t) return null; t.claim = v.id; return setTask(v, { type: 'chop', id: t.id, pri: 1 }); }
   // an island without forest still has its beaches: the sea brings planks, branches, whole trunks
@@ -831,12 +833,21 @@
     const sp = G.Sea.shellSpot(v.x, v.y, 18); if (!sp) return null;
     return setTask(v, { type: 'mariscar', x: sp.x, y: sp.y, wx: sp.wx, wy: sp.wy, rock: sp.rock, pri: 1 });
   }
+  // (the quarry about a great work: the builders of its gang break the rock about its lot too, past the town's own bounds — the
+  // lot of a bigger step may lie as far as the town's radius and twenty, and a load walked forty tiles from the heart of the
+  // town is one trip a day: the theatre of Mênfis, 39 tiles off, got 14 of stone in a year from ten builders. D-174)
+  function aboutWork(v) {
+    if (v.role !== 'construtor') return null; const s = G.S.settlements.get(v.set); if (!s || !(G.Village.keeps(s) > 0)) return null;
+    const b = G.S.buildings.get(s.gw); return b ? G.Village.center(b) : null;
+  }
   function mineTask(v) {
-    const r = nearestRock(v);
+    const about = aboutWork(v);
+    // (the rock nearest the work first — what is broken there is a short way from it —, then the nearest to where one stands)
+    const r = (about && nearestRock(v, 20, about, about)) || nearestRock(v, undefined, about);
     if (r) { r.claim = v.id; return setTask(v, { type: 'mine', id: r.id, pri: 1 }); }
     // no loose boulders left: quarry the rocky highlands (slow but endless)
     const S = G.S;
-    const q = nearestInGrid(v, 26, i => (S.type[i] === T.ROCKY && W.walkable(i) && !S.objAt[i] && !S.treeAt[i] && S.fire[i] <= 0 && G.R() < 0.6) ? { x: (i % N) + 0.5, y: ((i / N) | 0) + 0.5, i } : null);
+    const q = nearestInGrid(v, 26, i => (S.type[i] === T.ROCKY && W.walkable(i) && !S.objAt[i] && !S.treeAt[i] && S.fire[i] <= 0 && G.R() < 0.6) ? { x: (i % N) + 0.5, y: ((i / N) | 0) + 0.5, i } : null, about);
     if (!q) return null;
     return setTask(v, { type: 'quarry', spot: -1, x: q.x, y: q.y, pri: 1 });
   }
@@ -954,8 +965,28 @@
     }
     for (const o of G.S.villagers.values()) if (o.task && o.task.type === 'build' && o.task.id === b.id) end(o);
   }
+  // (the works of a town wait for stone its people's store has not, and for more of it than of wood: its builders, with nothing
+  // to lay, break stone before they fell wood for the store — they felled wood while the wood was short of the store's wish,
+  // which it nearly always is, and the works stood for decades with their timber in and no stone, D-174)
+  function worksWaitStone(setId) {
+    const S = G.S; let w = 0, st = 0;
+    for (const b of S.buildings.values()) {
+      if (b.set !== setId || b.built || b.type === 'ruin' || !b.need) continue;
+      w += Math.max(0, (b.need.wood || 0) - ((b.incoming && b.incoming.wood) || 0)); st += Math.max(0, (b.need.stone || 0) - ((b.incoming && b.incoming.stone) || 0));
+    }
+    if (st <= 0) return false; const k = G.Fac.stockOfSet(setId);
+    st -= k.stone || 0; w -= G.Fac.free(setId, 'wood');
+    return st > 0 && st >= w;
+  }
   function buildTask(v) {
     const S = G.S; let best = null, bd = 1e9;
+    // (a house a family paid for keeps the turn it had beside the town's great work — L-313, D-117: two hundred against four
+    // hundred —, however far the great work's turn reaches: what the great work that keeps the stone is brought nearer for
+    // this builder today, past its four hundred, the paid house is brought nearer too. Without it a rich house paid for stood
+    // at 13% in three years beside a palace 34 tiles off; with the whole of the great work's turn, the great work never got a
+    // stone while any family's house was going up — D-174)
+    const town = S.settlements.get(v.set); const gw = town && town.vez && town.gw ? S.buildings.get(town.gw) : null;
+    const ahead = gw && G.Village.workPri ? Math.min(0, G.Village.workPri(gw, v) + G.Village.GREAT_PRI) : 0;
     for (const b of S.buildings.values()) {
       if (b.built || b.set !== v.set || b.type === 'ruin') continue;
       if (b.unreach) { if (b.unreach >= 6) { abandonSite(b); continue; } if (S.clock - b.unreachT < 30) continue; }
@@ -968,7 +999,7 @@
       const [cx, cy] = G.Village.center(b);
       // (a family's house paid for — its materials paid at the town's prices, act-casa.js — has its turn before the city's
       // own works: the stone of the store went to a palace, and the house stood at 92% for years, L-313)
-      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0) + (b.encomenda ? -200 : 0) + (G.Village.workPri ? G.Village.workPri(b) : 0); // (a great work's turn, with the town fed and housed: D-120)
+      const d = G.dist2(v.x, v.y, cx, cy) + builders * 40 + (b.type === 'campfire' ? -500 : 0) + (b.type === 'hut' || b.type === 'house' ? -30 : 0) + (b.type === 'doca' ? -40 : 0) + (b.encomenda ? -200 + ahead : 0) + (G.Village.workPri ? G.Village.workPri(b, v) : 0); // (a great work's turn, with the town fed and housed: D-120)
       if (d < bd) { bd = d; best = b; }
     }
     if (!best) return null;
@@ -989,6 +1020,12 @@
   function canWork(b) { const al = allowedProgress(b); return al >= 1 ? b.progress < 1 : b.progress < al - 0.001; }
   Vg.canWork = canWork;
   function deliverTask(v) { return setTask(v, { type: 'deliver', pri: 1 }); }
+  // (the stone a builder of the gang of a great work breaks goes straight to a work that waits for it — the builders' own choice,
+  // the great work first on its days —, never round by the store: D-174. Anyone else's, to the store, as it always went)
+  function haulStone(v) {
+    if (v.role === 'construtor' && v.carry && Vg.plainLoad(v) && G.Village.keeps(G.S.settlements.get(v.set)) > 0) { const t = buildTask(v); if (t) return t; }
+    return deliverTask(v);
+  }
   function exploreTask(v) {
     const S = G.S; const set = S.settlements.get(v.set);
     const cx = set ? set.cx : v.x, cy = set ? set.cy : v.y;
@@ -1081,7 +1118,16 @@
       case 'lenhador': t = (need('wood') && (chopTask(v) || driftTask(v))) || (need('food') && gatherTask(v)); break;
       case 'coletor': t = need('food') ? ((G.R() < 0.5 && shellTask(v)) || gatherTask(v) || (G.R() < 0.7 ? fishTask(v) : (preyCount() > 8 && huntTask(v, 14))) || fishTask(v)) : (need('wood') && chopTask(v)); break;
       case 'agricultor': t = farmTask(v) || (need('food') && gatherTask(v)); break;
-      case 'construtor': t = buildTask(v) || (G.City && G.City.paveTask(v, H)) || (need('wood') && chopTask(v)) || (need('stone') && mineTask(v)); break;
+      // (a builder with nothing to lay: of the gang of a great work that keeps its stone — the town's, or its people's:
+      // G.Village.quarries —, half of them, by the day, break stone before any street; the others pave, and with no street to
+      // pave any builder breaks the stone his town's works wait for before he fells wood for the store. The streets are never finished, and the great work stood for
+      // decades; but a street is a third faster under every foot, and with every idle builder at the quarry two worlds from
+      // scratch had a fifth fewer people at the year 50: only the great work takes hands from the streets. D-174)
+      case 'construtor': {
+        t = buildTask(v); if (t) break;
+        const gang = G.hash(v.id * 13 + G.S.day) < 0.5 && G.Village.quarries(G.S.settlements.get(v.set));
+        t = (gang && mineTask(v)) || (G.City && G.City.paveTask(v, H)) || (worksWaitStone(v.set) && mineTask(v)) || (need('wood') && chopTask(v)) || (need('stone') && mineTask(v)); break;
+      }
       case 'mineiro': t = (need('stone') && mineTask(v)) || (need('wood') && chopTask(v)); break;
       case 'cacador': t = ((need('food') || G.R() < 0.2) && preyCount() > 6 && huntTask(v)) || setTask(v, { type: 'patrol', pri: 1 }); break;
       case 'sacerdote': t = setTask(v, { type: 'pray', pri: 1, priest: true }); break;
@@ -1194,7 +1240,7 @@
             if (!Vg.handsFor(v, 'stone')) { deliverTask(v); break; } // (the hands first: L-583)
             const n = Math.min(room(v), r.stone); r.stone -= n;
             if (r.stone <= 0) G.Nature.removeRock(r);
-            Vg.fillHands(v, 'stone', n); deliverTask(v);
+            Vg.fillHands(v, 'stone', n); haulStone(v);
           }
         }
         break;
@@ -1273,7 +1319,7 @@
           v.act = 'mine';
           t.w += dt * workMul(v);
           if (v.actT > 0.6) { v.actT = 0; G.Audio && G.Audio.at(t.x, t.y, 'mine'); G.FX && G.FX.chips(t.x + 0.2, t.y + 0.2, '#b0aca4'); }
-          if (t.w > 5) { if (Vg.handsFor(v, 'stone')) Vg.fillHands(v, 'stone', Math.min(room(v), 3)); deliverTask(v); } // (the hands first: L-583)
+          if (t.w > 5) { if (Vg.handsFor(v, 'stone')) Vg.fillHands(v, 'stone', Math.min(room(v), 3)); haulStone(v); } // (the hands first: L-583)
         }
         break;
       }

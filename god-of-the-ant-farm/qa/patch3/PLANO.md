@@ -319,14 +319,21 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   aberto na de agora, sem violação em dez anos (`oldsave`). Duas provas que caíam por causa de mudanças do patch foram
   acertadas: a pesca do corpo medida debaixo de tempestade (T-802) e os carregadores da disputa no cais, que a cidade
   agora manda para o mar como marinheiros (T-803).
-- **Em curso, seis frentes** (o dono deu carta branca para quantos agentes fossem precisos): a Arquitetura Monumental no
-  mundo (M): os degraus grandes erguidos pelas próprias cidades, a casa rica em terra cara, o governante no palácio, o
-  povo na praça; **as termas grandes** (T; o T-784: a forma, a planta e o 3D das termas de 20 e de 28 m); **as coisas em
-  volta das casas** (Q; o T-703: lugar para a lenha, os barris, os potes e as redes nos prédios desenhados pela planta);
-  **as pontes** (P: a ponte de rua calçada era uma laje cinza lisa — vista nas fotos do diário —, e ganha pedra, mureta
-  e arco pelo povo do chão; só desenho); **a grande biblioteca e o paço municipal** (B; o resto do T-784: 16 m, seis
-  povos); e **a casa por dentro** (G; T-403, T-436, T-446: o lugar de comer e o fogo no núcleo de toda casa, o motor que
-  recusa a peça onde o corpo não cabe, os depósitos do celeiro em qualquer semente).
+- **Feita e juntada, a Arquitetura Monumental no mundo** (M; D-174 a D-177, L-780 a L-782): a obra grande que tem a vez
+  guarda a pedra do povo, tem a turma de construtores que quebra pedra e a leva direto à obra, e a vez alcança a obra
+  longe; o degrau maior é erguido de novo noutro lugar quando não há espaço em volta; a maravilha do campo guardado passa
+  à frente; a família rica encomenda a casa rica em terra cara (T-447); o voto e o pão são na praça (`degraus.js`,
+  `casa-rica.js`, `juntar.js`, regras 57 e 58). **Na junção, três defeitos achados e consertados pelo líder:** as
+  cidades-irmãs gastavam a pedra guardada (L-714: o armazém é do povo inteiro), a cidade «melhorava» a casa rica para um
+  sobrado de lote inválido (L-715) e o soldo ia para quem já era de outro povo (L-716, do D-155) — os dois últimos
+  achados pelos dois mundos do zero de 90 anos da `degraus` g8 —; e um limite de prova (T-804, `casa` h12). **Não feito
+  pelo M, aberto:** o governante morar no palácio (T-765), os lugares da praça para o ajuntamento (T-762), a obra grande
+  longe dos armazéns (T-760), a terra das capitais velhas (T-761).
+- **Feitas, a juntar:** as termas grandes (T) e as coisas em volta das casas (Q).
+- **Em curso, três frentes:** **as pontes** (P: a ponte de rua calçada era uma laje cinza lisa — vista nas fotos do
+  diário —, e ganha pedra, mureta e arco pelo povo do chão; só desenho); **a grande biblioteca e o paço municipal** (B; o
+  resto do T-784: 16 m, seis povos); e **a casa por dentro** (G; T-403, T-436, T-446: o lugar de comer e o fogo no núcleo
+  de toda casa, o motor que recusa a peça onde o corpo não cabe, os depósitos do celeiro em qualquer semente).
 - **O diário do patch para o dono** (`qa/patch3/diario/`, publicado como artefato): o que entrou, o que está em obras e o
   que cada coisa muda no jogo, com capturas de verdade do Modo Encarnado (`qa/visual/fotos-diario.js`); atualizado a
   cada frente juntada.

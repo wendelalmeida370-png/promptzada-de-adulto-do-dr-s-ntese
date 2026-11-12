@@ -115,10 +115,14 @@
     for (const v of crew) {
       if (!v.st) v.st = {};
       v.st.viagens = (v.st.viagens || 0) + 1; v.st.volta = S.day;
-      if (f && E.coinage(f.id)) {
+      // (the pay is the ship's people's to its own: a sailor whose town went over to another people while he was at sea — a
+      // revolt, a conquest — is no longer theirs to pay. In a world made from nothing, year 91, the treasury's coins went to the
+      // purse of a sailor of the Irmandade Livre, a people that knows no coin: coins born where there are none, L-716)
+      const own = !!f && G.Fac.ofV(v) === f;
+      if (own && E.coinage(f.id)) {
         if ((f.stock.moedas || 0) >= Hb.SOLDO && G.Depot.move('f:' + f.id, E.coinRef(v), 'moedas', Hb.SOLDO, { code: 'soldo', by: v.id }).ok) { f.eco.wages += Hb.SOLDO; v.unpaid = 0; }
         else v.unpaid = (v.unpaid || 0) + 1;
-      } else if (f) { const h = v.home && S.buildings.get(v.home); if (h) G.Depot.move('f:' + f.id, 'h:' + h.id, 'food', 1, { code: 'soldo', by: v.id, part: true }); }
+      } else if (own) { const h = v.home && S.buildings.get(v.home); if (h) G.Depot.move('f:' + f.id, 'h:' + h.id, 'food', 1, { code: 'soldo', by: v.id, part: true }); }
       const n = v.st.viagens;
       if (G.Life && (n === 1 || n === 10 || n === 25 || n === 50)) G.Life.bio(v, 'note', n === 1 ? `Fez a primeira viagem de mar, até ${port}` : `Já fez ${n} viagens de mar`);
     }

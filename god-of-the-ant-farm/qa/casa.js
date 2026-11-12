@@ -312,11 +312,17 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       const moved12 = lets && H12 !== 'h:' + lord.home ? `, que se mudou no mesmo dia para a casa #${lord.home}` : '';
       const need = K.need(v);
       // (then nothing to pay with, for days: owed; too much owed and the owner sells the house to the people)
-      let gaveUp = false, owed = 0, sold = null;
+      let gaveUp = false, owed = 0, sold = null, took12 = false;
       if (lets) {
         setCoins('h:' + b.id, 0); if (b.aluga) b.aluga.pago = S.day - 2; townDay(t12); owed = b.aluga ? b.aluga.deve : -1;
         const L1 = S.ledgerN; if (b.aluga) { b.aluga.pago = S.day - K.OWE_DAYS; townDay(t12); }
-        gaveUp = !b.aluga && !b.dono; sold = book(e => e[0] > L1 && e[8] === 'venda-casa' && e[4] === 'h:' + lord.home)[0];
+        // (the owner gave up: no rent, the house sold to the people by the ledger, his no more. The same day of the town
+        // then asks its families in need, the most urgent first, and the family living in the people's house may take it for
+        // its own, at no cost — L-236: in Tenochtitlan Nenetl's was the first of the queue, and the house had her for owner
+        // when the proof looked for «no owner»; in Mênfis another family went first and it had none. Both are the rule: T-804)
+        sold = book(e => e[0] > L1 && e[8] === 'venda-casa' && e[4] === 'h:' + lord.home)[0];
+        const mine = !!b.dono && K.family(v).some(m => m.id === b.dono) && !costOf(b);
+        gaveUp = !b.aluga && !!sold && b.dono !== lord.id && (!b.dono || mine); took12 = mine;
       }
       D.onMove.splice(D.onMove.indexOf(onOwn), 1);
       const net12 = r2(own12.reduce((a, e) => a + (e[4] === H12 ? e[6] : 0) - (e[3] === H12 ? e[6] : 0), 0));
@@ -328,7 +334,7 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       // street — into his purse, T-529)
       const elsewhere = !paid && lets ? book(e => e[0] > L0 && e[8] === 'aluguel' && e[3] === 'h:' + b.id) : [];
       const whyNot = elsewhere.length ? `o aluguel do dia foi a ${elsewhere.map(e => e[4]).join(', ')}, não à casa de ${lord.name} (${lord.captive ? 'cativo' : lord.home ? 'casa #' + lord.home : 'sem casa'})` : 'NENHUM aluguel no livro';
-      info = `${v.name} ${lets ? `alugou a casa #${b.id} de ${lord.name} (${rent} moedas ao ano)${kinLord.length ? ` — PARENTE de ${kinLord.join(', ')}` : ''}` : 'NÃO alugou: ' + (r.why || JSON.stringify(r))}; ${paid ? `o aluguel do dia foi à casa de ${lord.name} (livro ${paid[0]}, ${paid[6]})${moved12}` : whyNot}; no diário, a família de aluguel quer casa: ${need || 'NÃO'}; sem moeda dois dias: deve ${owed}; ${gaveUp ? `devendo demais, ${lord.name} vendeu a casa ao povo${sold ? ` por ${sold[6]} moedas` : ''}; a família continua nela` : 'o dono NÃO desistiu'}`;
+      info = `${v.name} ${lets ? `alugou a casa #${b.id} de ${lord.name} (${rent} moedas ao ano)${kinLord.length ? ` — PARENTE de ${kinLord.join(', ')}` : ''}` : 'NÃO alugou: ' + (r.why || JSON.stringify(r))}; ${paid ? `o aluguel do dia foi à casa de ${lord.name} (livro ${paid[0]}, ${paid[6]})${moved12}` : whyNot}; no diário, a família de aluguel quer casa: ${need || 'NÃO'}; sem moeda dois dias: deve ${owed}; ${gaveUp ? `devendo demais, ${lord.name} vendeu a casa ao povo${sold ? ` por ${sold[6]} moedas` : ''}; a família continua nela${took12 ? ' e, a primeira da fila do dia, ficou com a casa do povo sem custo' : ''}` : 'o dono NÃO desistiu'}`;
     } else info = 'a cidade não tem lugar para uma casa vazia';
   }
   if (v && t12 !== set) info = `(em ${t12.name}: ${set.name} não tem mais com quem fazer um casal) ` + info;

@@ -308,6 +308,32 @@ if (on('m10')) {
   }
 }
 
+// ---------------------------------------------------------------- m11
+// (L-716: the pay is the ship's people's to its own. A sailor who is of another people when the ship comes home — his town went
+// over while he was at sea — gets no soldo from the people he left: its coins went to a purse of a people that knows no coin)
+if (on('m11')) {
+  mundo();
+  const r = rota(); const s = r && zarpa(r, 90);
+  if (!s) ok('m11 o soldo é só dos seus', false, r ? `nenhum navio saiu na rota ${r.id} em 90 s` : 'nenhuma rota com marinheiros neste mundo');
+  else {
+    const f = G.Fac.get(s.fac); const crew0 = s.crew.slice();
+    const sailed = live(() => s.st === 'go', 90); const ab = Nv.aboardOf(s);
+    // (the other people: one that knows no coin if the world has one, else the first other; one of its towns)
+    const outros = G.Fac.all().filter(q => q.id !== f.id && [...S.settlements.values()].some(t => t.fac === q.id)).sort((a, b) => (E.coinage(a.id) ? 1 : 0) - (E.coinage(b.id) ? 1 : 0) || a.id - b.id);
+    const o = outros[0]; const town = o && [...S.settlements.values()].filter(t => t.fac === o.id).sort((a, b) => a.id - b.id)[0];
+    if (!sailed || ab.length < 1 || !town) ok('m11 o soldo é só dos seus', false, `partiu: ${sailed}; a bordo ${ab.length}; outro povo: ${o ? o.name : 'nenhum'}`);
+    else {
+      const v1 = ab[0]; const home0 = v1.set;
+      god(() => { v1.set = town.id; v1.home = 0; v1.job = 0; });
+      const home = live(() => !S.ships.includes(s), 1800, 1);
+      const pays = led.filter(e => e[8] === 'soldo'); const dele = pays.filter(e => e[9] === v1.id); const outrosPagos = crew0.filter(id => id !== v1.id && P(id)).every(id => pays.filter(e => e[9] === id).length === 1);
+      const nv = novas().filter(q => /moeda/.test(q));
+      ok('m11 o soldo é só dos seus', home && !dele.length && outrosPagos && !nv.length,
+        `${v1.name}, da tripulação de ${f.name}, passou a ${town.name} (${o.name}${E.coinage(o.id) ? '' : ', que não conhece a moeda'}) com o navio fora; de volta: ${home}; soldos dele: ${dele.length}${dele.length ? ' (' + dele.map(e => `${e[3]}→${e[4]} ${e[6]}`).join('; ') + ')' : ''}; os outros ${crew0.length - 1} pagos uma vez: ${outrosPagos}; o verificador ${nv.length ? 'acusa: ' + nv[0].slice(0, 140) : 'calado sobre moedas'}`);
+    }
+  }
+}
+
 const er = M.erros();
 ok('nenhum erro', M.limpo(), M.limpo() ? 'nenhum erro de módulo, nenhum aviso' : JSON.stringify(er).slice(0, 300));
 console.log(fails.length ? `MARINHEIROS: FALHOU (${fails.length})` : 'MARINHEIROS: PASSOU');

@@ -552,7 +552,7 @@
     }
     const ranked = cands.slice().sort((a, b) => votes.get(b.id) - votes.get(a.id) || (b === r ? 1 : 0) - (a === r ? 1 : 0));
     const win = ranked[0], second = ranked[1];
-    const cap = G.Fac.capitalOf(f.id); const at = Po.seat(f) || (cap ? [cap.cx, cap.cy] : [win.x, win.y]);
+    const cap = G.Fac.capitalOf(f.id); const at = (cap && Po.forum(cap)) || Po.seat(f) || [win.x, win.y]; // (where the vote is held: the square)
     Po.crowd(cap, 'voto');
     const vt = n => Math.round(n);
     if (win === r) { log(`Eleição em ${cap ? cap.name : f.name}: ${P.styled(f, r)} foi reeleit${oa(r)} com ${vt(votes.get(r.id))} votos contra ${vt(votes.get(second.id))} de ${second.name}.`, 'scroll', at[0], at[1]); return; }
@@ -564,13 +564,23 @@
   const St = () => G.Stories;
   // the street rises (riots.js)
   Po.riot = (f, set, why, o) => (G.Riots ? G.Riots.start(f, set, why, o) : null);
+  // where the people of a town gather — to vote, to get its bread —: on its square, where it has one (the oldest: its middle);
+  // only with none, where the ruler receives (the palace's door, the fire: Po.seat) — a capital with a palace held its votes at
+  // the palace's door, its square empty beside it. The audience is the palace's (D-124); the sentence is the square's already
+  // (justice.js), the feast too (festivals.js). Reads only
+  Po.forum = function (set) {
+    if (!set) return null; let sq = null;
+    for (const b of G.S.buildings.values()) if (b.set === set.id && b.built && b.type === 'praca' && (!sq || b.id < sq.id)) sq = b;
+    if (sq) return G.Village.center(sq);
+    const f = G.Fac.get(set.fac); return (f && G.Fac.capitalOf(f.id) === set && Po.seat(f)) || [set.cx, set.cy];
+  };
   // the people gather in the square: to vote, to get bread, to hear a sentence (the watch on its round stays there: D-103)
   Po.crowd = function (set, why) {
     if (!set) return; const S = G.S; const f = G.Fac.get(set.fac);
     // (the audience — D-124 —: with the seat of power a ready palace of the capital with its plan, the ruler on the throne and the
     // town in it, as many as its places — court.js —; with none, no meeting, as before it)
     if (why === 'audiencia') { if (f && G.Court && G.Court.audiencia) G.Court.audiencia(f, 'peticao'); return; }
-    const at = (f && Po.seat(f)) || [set.cx, set.cy];
+    const at = Po.forum(set);
     let n = 0;
     for (const o of S.villagers.values()) { if (n >= 24) break; if (o.set !== set.id || o.age < 8 || o.captive || G.dist(o.x, o.y, at[0], at[1]) > 22 || (o.task && o.task.type === 'ronda')) continue; if (G.Vg.give(o, { type: 'assembly', x: at[0], y: at[1], pri: 1.7, kind: 'assembly', why })) n++; }
   };
