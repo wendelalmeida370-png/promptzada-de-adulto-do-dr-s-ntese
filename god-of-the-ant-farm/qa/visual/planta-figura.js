@@ -83,7 +83,7 @@ function draw(C, ox, oy, P, lv) {
 const plans = specs.map(planOf); const PAD = 22, HEAD = 62, FOOT = 34;
 const cols = []; for (const P of plans) { const lvs = P.p.levels ? P.p.levels.filter(l => P.p.rooms.some(m => m.lv === l.lv)).map(l => l.lv) : []; for (const lv of lvs) cols.push({ P, lv, first: lv === lvs[0], n: lvs.length }); }
 const widthOf = c => c.P.p.lot.w * PPM; const W = cols.reduce((s, c) => s + widthOf(c) + PAD, PAD); const H = HEAD + Math.max(...cols.map(c => c.P.p.lot.w * PPM)) + FOOT + PAD + 26;
-const C = canvas(Math.max(W, 520), H, [250, 248, 242]); let ox = PAD;
+const C = canvas(Math.max(W, 700), H, [250, 248, 242]); let ox = PAD;
 for (const c of cols) {
   const p = c.P.p; const ea = p.items.filter(isEat); const seats = ea.reduce((s, it) => s + it.spots.filter(q => q.use === 'comer' && q.ok).length, 0); const fires = p.items.filter(it => it.fire).length;
   if (c.first) { text(C, ox, 10, c.P.title, COL.ink, 2); text(C, ox, 30, `${p.ok ? '' : 'INVALIDA - '}${p.cap ? p.cap.places : 0} lugares de dormir - fogo: ${fires ? 'sim' : 'NAO'} - onde comer: ${ea.length ? seats + ' lugares' : 'NAO TEM'}`, ea.length ? COL.eatD : COL.ember, 1); }
@@ -92,7 +92,7 @@ for (const c of cols) {
 }
 // the legend
 { let x = PAD; const y = H - 30; const sw = (col, s) => { C.rect(x, y, x + 14, y + 14, col); C.frame(x, y, x + 14, y + 14, COL.ink, 1); x = text(C, x + 19, y + 4, s, COL.ink, 1) + 14; };
-  sw(COL.fire, 'fogo'); sw(COL.eat, 'onde a familia come (ponto verde: um lugar)'); sw(COL.bed, 'camas e esteiras'); sw(COL.store, 'guardados'); sw(COL.wood, 'outros'); }
+  sw(COL.fire, 'fogo'); sw(COL.eat, 'onde a familia come (ponto verde: um lugar)'); sw(COL.bed, 'camas e esteiras'); sw(COL.store, 'guardados'); sw(COL.stair, 'escada'); }
 // the PNG (zlib, no library)
 const raw = Buffer.alloc((C.W * 3 + 1) * C.H); for (let y = 0; y < C.H; y++) { raw[y * (C.W * 3 + 1)] = 0; C.d.copy(raw, y * (C.W * 3 + 1) + 1, y * C.W * 3, (y + 1) * C.W * 3); }
 const crcT = []; for (let n = 0; n < 256; n++) { let c = n; for (let q = 0; q < 8; q++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crcT[n] = c >>> 0; }
