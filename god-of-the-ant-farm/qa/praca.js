@@ -42,6 +42,7 @@ const WORLD = process.argv[2] || 'metropole';
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 const on = k => !ONLY || ONLY.some(o => k === o || k.startsWith(o) || o.startsWith(k));
 const DIAS = +(process.env.DIAS || 3);
+const SHIFT = +(process.env.SHIFT || 0); // (another history of the lived days: k draws of the world's chance before the first step)
 const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | praca ${name} | ${info}`); if (!c) fails.push(name.split(' ')[0]); };
 const Vg = G.Vg, V = G.Village, E = G.Eco, D = G.Depot, A = G.Act, Te = G.Termas, Pr = G.Praca, U = G.Urban, W = G.W;
@@ -235,10 +236,11 @@ function watch() {
         const duty = Te.onDuty(v); const p = prev.get(v.id); const tt = t ? t.type : '';
         if (duty && t && WISH[tt] && !(tt === 'termas' && t.st >= 1)) { t._off = (t._off || 0) + 1; if (t._off > 2) w.post.push(`${v.name} #${v.id} de posto e em «${tt}» há ${t._off} s, às ${S.time.toFixed(2)} do dia ${S.day}`); }
         if (duty && tt === 'water' && !(v.carry && v.carry.n > EPS)) { t._off = (t._off || 0) + 1; if (t._off > 2) w.post.push(`${v.name} #${v.id} de posto e a caminho da água de casa há ${t._off} s, às ${S.time.toFixed(2)} do dia ${S.day}`); }
-        // (taken from the furnace's errand by a call: the post is a leg while he is at it — one on duty with a load still in his
-        // hands, or already at the call, holds none)
-        if (p && p.duty && (p.tt === 'fornalha' || p.tt === 'lenhaTermas') && CALLS[tt]) w.post.push(`${v.name} #${v.id} de posto, levado da fornalha por «${tt}» às ${S.time.toFixed(2)} do dia ${S.day} (estava em «${p.tt}»)`);
-        prev.set(v.id, { duty, tt });
+        // (taken from the post by a call: the post is a leg — at the furnace's errand, at a plain task, and between two errands
+        // too (L-914) —; one already at something that weighs more when the post began holds none. On duty a second ago and
+        // still: the fire did not come to last in between)
+        if (p && p.duty && duty && p.pri <= 1.05 + EPS && p.tt !== tt && CALLS[tt]) w.post.push(`${v.name} #${v.id} de posto, levado do posto por «${tt}» às ${S.time.toFixed(2)} do dia ${S.day} (estava em «${p.tt || 'nada'}»)`);
+        prev.set(v.id, { duty, tt, pri: t ? (t.pri || 0) : 0 });
       }
     }
     for (const [id, r] of w.towns) { const n = now.get(id) || 0; if (n > r.peak) r.peak = n; if (eveWin) { r.sum += n; r.n++; r.kidSum += r.kidNow || 0; } r.kidNow = 0; }
@@ -256,7 +258,7 @@ function watch() {
 
 // ================================================================ b, f1, f2, q1: the lived days
 function partB() {
-  M.pronto(WORLD); const S = G.S; rebase(); const w = watch(); const d0 = S.day; let g = 0; const t00 = S.time;
+  M.pronto(WORLD); const S = G.S; for (let i = 0; i < SHIFT; i++) G.R(); rebase(); const w = watch(); const d0 = S.day; let g = 0; const t00 = S.time;
   while (S.day < d0 + DIAS && g++ < 40000) { peace(); M.viver(1); w.look(); if (g % 25 === 24) w.qa(); }
   w.close(); w.qa(); const days = S.day - d0;
   const name = id => (S.settlements.get(id) || {}).name || '?';
@@ -264,7 +266,10 @@ function partB() {
   const big = [...S.settlements.values()].filter(s => V.pop(s.id) >= 50 && plazas(s.id).length).sort((a, c) => a.id - c.id);
   const per = big.map(s => { const r = w.towns.get(s.id) || { who: new Map(), peak: 0, sum: 0, n: 0, kidSum: 0 }; return { s, visits: r.who.size, peak: r.peak, mean: r.n ? r.sum / r.n : 0, kids: r.n ? r.kidSum / r.n : 0 }; });
   let visits = 0; for (const r of w.towns.values()) visits += r.who.size;
-  if (on('b1')) ok(`b1 em ${days} dias vividos, sem ninguém mandado, a praça tem gente na conversa — 15 paradas por dia no mundo, uma por dia ou mais em toda cidade de 110 pessoas ou mais, dois ou mais juntos nalguma — e crianças a brincar à tarde (as cidades de 50 ou mais, ditas uma a uma)`, per.length >= 2 && per.filter(r => V.pop(r.s.id) >= 110).length >= 1 && per.filter(r => V.pop(r.s.id) >= 110).every(r => r.visits >= days) && visits >= days * 15 && Math.max(...per.map(r => r.peak)) >= 2 && w.kids.size >= days * 20,
+  // (the floor of the world's stops a day is half the least seen in four histories of these three days — the branch before
+  // the leader's tip was joined and the joined tree, SHIFT 0 and 1: 24,3 · 16,0 · 13,0 · 25,3 —; the first floor, 15, was
+  // taken from one history and fell inside the dice: T-923c)
+  if (on('b1')) ok(`b1 em ${days} dias vividos, sem ninguém mandado, a praça tem gente na conversa — 8 paradas por dia no mundo, uma por dia ou mais em toda cidade de 110 pessoas ou mais, dois ou mais juntos nalguma — e crianças a brincar à tarde (as cidades de 50 ou mais, ditas uma a uma)`, per.length >= 2 && per.filter(r => V.pop(r.s.id) >= 110).length >= 1 && per.filter(r => V.pop(r.s.id) >= 110).every(r => r.visits >= days) && visits >= days * 8 && Math.max(...per.map(r => r.peak)) >= 2 && w.kids.size >= days * 20,
     `${visits} paradas na praça (${(visits / days).toFixed(1)} por dia no mundo), ${w.kids.size} tardes de criança a brincar na praça; ${per.map(r => `${r.s.name} (${V.pop(r.s.id)}): ${(r.visits / days).toFixed(1)} por dia, ${r.peak} de uma vez, das 0,60 às 0,675 em média ${r.mean.toFixed(1)} na conversa e ${r.kids.toFixed(1)} crianças`).join(' · ')}`);
   // ---- b2
   const g2 = w.go; const asleep = g2.filter(p => p.sleeping), load = g2.filter(p => p.carry), hands = g2.filter(p => p.hands), body = g2.filter(p => p.body), luck = g2.filter(p => !(p.lot < p.wish)), kid = g2.filter(p => p.age < 16), duty = g2.filter(p => p.duty), heavy = g2.filter(p => p.pri > 1 + EPS), wet = g2.filter(p => p.rain > 0.3), hungry = g2.filter(p => p.hunger > Pr.HUNGRY), late = g2.filter(p => p.t >= Pr.SHUT || p.t < Pr.OPEN);
@@ -306,6 +311,10 @@ function partF3() {
   god(() => { Vg.endTask(k); k.hunger = 10; k.energy = 90; k.sick = 0; k.carry = null; k.sleeping = false; k.inside = 0; k.x = near[0]; k.y = near[1]; Vg.setTask(k, { type: 'chop', id: 0, pri: 1, st: 0, kind: 'work' }); });
   z.antes = Te.onDuty(k) ? 1 : 0; M.viver(1); z.t0 = k.task ? k.task.type : '';
   S.time = h.abre - ld + 0.006; god(() => { k.x = near[0]; k.y = near[1]; }); M.viver(2); z.duty = Te.onDuty(k) ? 1 : 0; z.t1 = k.task ? k.task.type : ''; z.busy = Vg.busy(k, { type: 'celebrate', pri: 1.1 }) ? 1 : 0; z.hands = Vg.handsBusy(k) ? 1 : 0;
+  // (between two errands of the furnace — the errand ended by the proof's hand, nothing in his hands —: the post still holds,
+  // L-914; the day of the baths calls him back at its next look)
+  god(() => { Vg.endTask(k); }); z.gap = !k.task && !(k.carry && k.carry.n > EPS) && Te.onDuty(k) ? (Vg.busy(k, { type: 'justice', pri: 1.95 }) && Vg.handsBusy(k) ? 1 : 0) : -1;
+  M.viver(1.2); z.back = k.task ? k.task.type : '';
   // a call from outside does not take him; the house's water goes with another
   const gave = god(() => Vg.give(k, { type: 'celebrate', pri: 1.1, kind: 'celebrate' })); z.gave = gave && k.task && k.task.type === 'celebrate' ? 1 : 0;
   // the hunger that does not take him from the post, and the one that does (asked of the choice: the world's own decide)
@@ -315,8 +324,8 @@ function partF3() {
   // the fire fed to the closing: he is free — a call takes him now
   for (let s = 0; s < 40 && Te.onDuty(k); s++) M.viver(1);
   z.free = Te.onDuty(k) ? 0 : 1; z.busy2 = Vg.busy(k, { type: 'celebrate', pri: 1.1 }) && !(k.task && k.task.pri >= 1.1) ? 1 : 0;
-  ok('f3a o dia dos banhos chama o foguista do machado à fornalha antes de as portas abrirem; de posto, um chamado de fora não o leva (Vg.busy) nem a fome abaixo de 85; a fornalha acende logo; com o fogo alimentado até fechar, ele é livre', z.antes === 0 && z.t0 === 'chop' && z.duty === 1 && (z.t1 === 'fornalha' || z.t1 === 'lenhaTermas' || z.t1 === 'carga') && z.busy === 1 && z.hands === 1 && z.gave === 0 && lit >= 0 && lit <= h.abre + 0.04 && z.ate === 0 && z.len >= 1 && z.free === 1 && z.busy2 === 0 && M.limpo(),
-    `${k.name} #${k.id}, foguista de ${set.name}, a ${far.toFixed(1)} casas dos banhos: às ${(h.abre - ld - 0.012).toFixed(3)} de posto ${z.antes ? 'SIM' : 'não'}, em «${z.t0}»; às ${(h.abre - ld + 0.006).toFixed(3)} de posto ${z.duty ? 'sim' : 'NÃO'}, em «${z.t1}»; a comemoração ${z.gave ? 'LEVOU-O' : 'não o leva'} (Vg.busy ${z.busy ? 'sim' : 'NÃO'}); com a fome entre 70 e 80 ${z.ate ? 'FOI COMER' : 'não sai para comer'}; a água quente às ${lit < 0 ? '— (NUNCA)' : lit.toFixed(3)} (as portas às ${h.abre}), ${z.len} de lenha; o que fez: ${Object.entries(types).map(([t, n]) => t + ' ' + n + ' s').join(', ')}; com o fogo até fechar: de posto ${z.free ? 'não' : 'AINDA'}, um chamado ${z.busy2 ? 'AINDA NÃO o leva' : 'já o leva'}`);
+  ok('f3a o dia dos banhos chama o foguista do machado à fornalha antes de as portas abrirem; de posto, um chamado de fora não o leva (Vg.busy) nem a fome abaixo de 85; a fornalha acende logo; entre dois afazeres da fornalha o posto ainda segura (L-914); com o fogo alimentado até fechar, ele é livre', z.antes === 0 && z.t0 === 'chop' && z.duty === 1 && (z.t1 === 'fornalha' || z.t1 === 'lenhaTermas' || z.t1 === 'carga') && z.busy === 1 && z.hands === 1 && z.gap === 1 && (z.back === 'fornalha' || z.back === 'lenhaTermas' || z.back === 'carga') && z.gave === 0 && lit >= 0 && lit <= h.abre + 0.04 && z.ate === 0 && z.len >= 1 && z.free === 1 && z.busy2 === 0 && M.limpo(),
+    `${k.name} #${k.id}, foguista de ${set.name}, a ${far.toFixed(1)} casas dos banhos: às ${(h.abre - ld - 0.012).toFixed(3)} de posto ${z.antes ? 'SIM' : 'não'}, em «${z.t0}»; às ${(h.abre - ld + 0.006).toFixed(3)} de posto ${z.duty ? 'sim' : 'NÃO'}, em «${z.t1}»; a comemoração ${z.gave ? 'LEVOU-O' : 'não o leva'} (Vg.busy ${z.busy ? 'sim' : 'NÃO'}); entre dois afazeres da fornalha (o afazer acabado pela mão da prova) o cadafalso ${z.gap === 1 ? 'não o leva' : z.gap === 0 ? 'LEVA-O' : 'NÃO FOI PERGUNTADO (de mãos cheias ou fora do posto)'}, e um segundo depois está em «${z.back || 'nada'}»; com a fome entre 70 e 80 ${z.ate ? 'FOI COMER' : 'não sai para comer'}; a água quente às ${lit < 0 ? '— (NUNCA)' : lit.toFixed(3)} (as portas às ${h.abre}), ${z.len} de lenha; o que fez: ${Object.entries(types).map(([t, n]) => t + ' ' + n + ' s').join(', ')}; com o fogo até fechar: de posto ${z.free ? 'não' : 'AINDA'}, um chamado ${z.busy2 ? 'AINDA NÃO o leva' : 'já o leva'}`);
   // ---- f3b: the meal before the doors; starving at the post (in the first town whose morning has no gathering: the vote of
   // a capital takes its people from the way to a meal, and the stoker with them — not on duty yet, as anyone)
   let y = null, k2 = null, h2 = null, secs = 0, did = {}, did2 = {}; const tried = [];

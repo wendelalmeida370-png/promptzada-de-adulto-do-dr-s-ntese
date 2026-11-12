@@ -341,10 +341,12 @@
     if (op.st !== 'on' || !inHours(b)) return false;
     return op.data.calor < (h.fecha - S.time) * G.DAY_LEN;
   };
-  // (the post is a leg, while he is at it — on the furnace's errand, the fire still to feed: a call from outside below 3
-  // does not take the stoker from it, Vg.busy, Vg.handsBusy. Not the duty alone: one already at a feast or a trial when the
-  // doors are about to open holds no leg — the call keeps him to its end, as it keeps anyone)
-  A.hooks.leg.push(v => { const t = v.task; return t && (t.type === 'fornalha' || t.type === 'lenhaTermas') && Te.onDuty(v) ? 'fornalha' : null; });
+  // (the post is a leg: a call from outside below 3 does not take the stoker on duty, Vg.busy, Vg.handsBusy — at the
+  // furnace's errand, at a plain task the day of the baths has not called him from yet, and between two errands: with the
+  // leg on the furnace's errand alone, the second between the wait and the feeding left him nobody's, and the scaffold
+  // took Messalina of Roma from the furnace as the doors opened, L-914. Not the duty alone: one already at something that
+  // weighs more — a feast or a trial he was at when the post began, a meal, his bed — holds no leg: it keeps him to its end)
+  A.hooks.leg.push(v => { const t = v.task; return (!t || (t.pri || 0) <= 1.05 + EPS) && Te.onDuty(v) ? 'fornalha' : null; });
   // (the stoker's meal fits his day: in the hours before his doors open, hungrier than Te.FED, he eats — decide asks —, and
   // the shift finds him fed: from a meal to the hunger that calls, more than half a day)
   Te.mealFirst = function (v) {
