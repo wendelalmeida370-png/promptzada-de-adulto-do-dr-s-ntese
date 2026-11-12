@@ -34,25 +34,39 @@ prédios +7 %, cidades 67 → 69; a comida por pessoa mais baixa de um povo 1,65
 teste, só da regra): quem a emergência puxou e a necessidade mandou a um terceiro ofício segue com o ofício a que volta; a
 prova x5 ganhou «o exército cansado solta soldados» e «com fome, a guerra dá soldados à roça» (as duas passam).
 
-**RODANDO AGORA: a última fila** (`scratchpad/ag/X/fila2.sh <jogo>`, um node de cada vez; o andamento em
-`scratchpad/ag/X/fila2/andamento.txt`): (1) a prova inteira → `fila2/prova.txt`; (2) as outras provas → `fila2/provas/resumo.txt`
-(`provas.sh`: guard, load-oficio, as «-mao», atividades, fome, motim, marinheiros, porto, vida-bairro, sabe, roupa, quintal,
-degraus sem o g8, taverna, olaria, termas, lazer, obra, leva, maos, casa-mercante, tempo-livre, ladrao-bairro, fundadores,
-det3, a vida de 5 e de 20 anos, oldsave, salto-igual); (3) a economia com a regra final, dez sementes → `eco2/v4-<semente>.txt`
-(a tabela: `python3 tabela.py eco2 antes v4 103 7 2024 11 42 555 9 31 77 314`); (4) as trocas num mundo do zero, antes e
-depois → `fila2/mede-*-zero.txt`; (5) os mundos prontos vividos dez dias, antes e depois → `fila2/pronto-*.txt`; (6) todas as
-29 sabotagens de novo → `sab-out/resumo.txt` (as da primeira rodada em `sab-out/rodada1/`).
-**Enquanto a fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar.** Se a fila for cortada (duas horas é o teto de um
-comando), relançar só as partes que faltam (o `andamento.txt` diz quais terminaram).
+**A primeira rodada da fila achou três coisas (a fila foi parada para consertá-las):**
+1. *A prova inteira*: 52 linhas passam, 1 falha — o x3 «um dia no passo» (11 trocas entre 81 adultos = 0,136, o teto 0,12): um
+   dia só de um mundo de cinquenta a oitenta adultos é um punhado de trocas, e o acaso de um dia o leva além do teto (0,056,
+   0,104 e 0,136 em três rodadas). O teto desse dia passou a duas vezes o da década do salto (que segue em 0,12, com dez vezes
+   a amostra) — T-954. (As outras medidas dessa rodada: metrópole 0,079, 85 % das casas guardam a cara, 70 mudanças por dia em
+   volta das casas — com uma guerra no meio: 95 chamados às armas —; mega 0,076, 91 %, 23 por dia; do zero no salto 0,080.)
+2. *O começo de um mundo novo ficou mais lento* (o `qa/atividades.js` caiu: aos 40 s o primeiro adulto da capital não tinha
+   casa). Medido (`scratchpad/ag/X/comeco.js`, semente 7): antes, 9 construtores aos 10 s, a primeira casa aos 22,6 s, todos
+   com casa aos 200 s; com a memória, nenhum construtor aos 10 s (a primeira passada veio antes das primeiras obras, e a
+   memória de zero construtores demorou a soltar), a primeira casa aos 59 s, todos com casa aos 300 s. **Consertado (na
+   árvore, ainda sem commit):** a cidade no dia da fundação (`V.TRADE_NEW`: um dia desde `set.founded`) não tem memória — a
+   repartição dela é a do instante, como sempre foi. Depois: 9 construtores aos 10 s, a primeira casa aos 18,8 s, 31 de 33
+   com casa aos 200 s.
+3. *O `qa/load-oficio.js` (L-419) dependia da repartição do instante*: o caso o1 punha lobos a um fio das vinte casas e
+   esperava um caçador a mais «assentado» em 30 passadas; e o o2 esperava a volta em 6 s. **Acertado (na árvore, ainda sem
+   commit):** os ofícios assentam com os lobos no passo da memória (até 150 passadas, até ninguém mudar por 50), e o passo do
+   mundo redistribui depois do load no ritmo da memória (até 400 s).
+
+**RODANDO AGORA:** `provas.sh <jogo> scratchpad/ag/X/fila3/provas` — as outras provas, uma a uma, com a regra de agora (o
+resumo em `fila3/provas/resumo.txt`). **Enquanto roda, o `js/` e o `qa/*.js` da árvore não podem mudar.** Depois dela:
+conferir cada prova que falhar (as que dependem de um ofício pedido na hora — o cais, os marinheiros, a turma da obra — podem
+precisar do ritmo da memória, como o load-oficio; se um ofício precisa mesmo de braços na hora, é emergência: D-211), o
+commit, e então o resto da fila (`fila2.sh` sem as partes 1 e 2: a economia `v4` em dez sementes, as trocas num mundo do
+zero antes e depois, os mundos prontos dez dias antes e depois, as 29 sabotagens de novo, a prova inteira de novo).
 
 **Falta (nesta ordem):**
-1. ler os resultados da fila; consertar o que uma prova acusar (causa, não sintoma) e anotar aqui;
-2. fechar este bloco: as seções 4 a 10 estão escritas em `qa/patch3/bloco-X-fim-rascunho.md` (as linhas do AUDIT, do README,
-   do regress, as regras 73 e 74, as frases do CLAUDE.md, o que ficou aberto) — faltam os números finais (ECO_RESUMO,
-   PRONTO_RESUMO, ANTES_ZERO, ECO_FOME), o achado da guerra no texto do D-211 (os ofícios da emergência seguem o instante nos
-   dois sentidos; uma emergência dá mãos a outra; o puxado mandado a um terceiro ofício segue com o ofício a que volta) e as
-   sabotagens s28, s29, s30; juntar tudo no `bloco-X.md` e apagar o rascunho;
-3. o último commit (a árvore limpa) e o relatório final.
+1. ler `fila3/provas/resumo.txt`; consertar o que uma prova acusar (causa, não sintoma) e anotar aqui; guard; commit;
+2. o resto da fila (acima);
+3. fechar este bloco: as seções 4 a 10 estão escritas em `qa/patch3/bloco-X-fim-rascunho.md` — faltam os números finais
+   (ECO_RESUMO, PRONTO_RESUMO, ANTES_ZERO, ECO_FOME), o achado da guerra no texto do D-211 (os ofícios da emergência seguem o
+   instante nos dois sentidos; uma emergência dá mãos a outra; o puxado mandado a um terceiro ofício segue com o ofício a que
+   volta), o dia da fundação no D-210, o T-954 e as sabotagens s28, s29, s30; juntar tudo no `bloco-X.md` e apagar o rascunho;
+4. o último commit (a árvore limpa) e o relatório final.
 
 **Nota:** não existe `qa/oficios.js` (o pedido o cita): as provas dos ofícios são `load-oficio.js`, `oficinas-mao.js`,
 `olaria-mao.js`, `taverna-mao.js`, `termas-mao.js`, `lazer-mao.js`.
