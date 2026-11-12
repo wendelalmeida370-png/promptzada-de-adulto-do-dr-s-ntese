@@ -1025,33 +1025,244 @@ vec3 gxGrade( vec3 c ) {
     }
     return { water: g.empty ? null : g.build(), ice: ice.empty ? null : ice.build(), walls: walls.empty ? null : walls.build() };
   }
-  // the bridges: where a road crosses the water, a deck of planks (or of stone, on a paved road) on its beams and posts,
-  // with a rail on each side (the road on land is painted on the ground by the Ground3D)
-  function roadGeo(x0, y0, w, h) {
-    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; const g = new Geo();
-    const isB = (x, y) => W.inb(x, y) && S.road[y * N + x] && S.type[y * N + x] === T.RIVER;
-    const onRoad = (x, y) => W.inb(x, y) && S.road[y * N + x];
-    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
-      if (!isB(x, y)) continue; const i = y * N + x; const r = S.road[i];
-      const top = Math.max(W.hAt(x + 0.5, y + 0.5), S.wl[i]) * HM + 0.32;
-      const alongX = onRoad(x - 1, y) || onRoad(x + 1, y) || !(onRoad(x, y - 1) || onRoad(x, y + 1));
-      const X = (x + 0.5) * TL, Z = (y + 0.5) * TL; const ry = alongX ? 0 : Math.PI / 2; const stone = r >= 2;
-      const deck = stone ? '#9a948a' : '#8a6a44', beam = stone ? '#7a756c' : '#5e4630';
-      // (the deck in planks across the way, each a little different)
-      const n = stone ? 1 : 8;
-      for (let k = 0; k < n; k++) { const f = (k + 0.5) / n - 0.5; const v = stone ? 0 : (G.hash(i * 9 + k) - 0.5) * 18; const c = G.hex2rgb(deck).map(q => q + v);
-        g.put(SH.box, R3.mat(X + (alongX ? f * TL : 0), top - 0.22, Z + (alongX ? 0 : f * TL), ry, stone ? TL : TL / n - 0.04, 0.22, 3.0), c); }
-      for (const s of [-1, 1]) {
-        const ox = alongX ? 0 : s * 1.55, oz = alongX ? s * 1.55 : 0;
-        g.put(SH.box, R3.mat(X + ox, top - 0.5, Z + oz, ry, TL, 0.3, 0.3), beam);
-        g.put(SH.box, R3.mat(X + ox, top, Z + oz, ry, TL, stone ? 0.75 : 0.1, stone ? 0.3 : 0.1), stone ? deck : beam);
-        if (!stone) { g.put(SH.box, R3.mat(X + ox, top + 0.85, Z + oz, ry, TL, 0.12, 0.12), beam); for (const e of [-0.5, 0]) g.put(SH.box, R3.mat(X + ox + (alongX ? e * TL : 0), top - 0.1, Z + oz + (alongX ? 0 : e * TL), 0, 0.16, 1.05, 0.16), beam); }
-        // (the posts down into the bed)
-        const bed = W.tileH(i) * HM; g.put(SH.box, R3.mat(X + ox, bed - 0.3, Z + oz, 0, 0.32, top - bed, 0.32), beam);
+  // ------------------------------ the bridges ------------------------------
+  // where a road crosses the water (a road on a river's tile). The world gives a bridge little height: its deck is the feet's
+  // own (Space.deckAt, 12 cm over the water's face; the land's own height where that stands higher), so a bridge here is a low
+  // one, as over a canal at high water — the feet of its arches under the water, only their crowns out of it, in the face of
+  // the parapet's own wall. All the tiles that touch are one bridge (corners too), in the stone and the manner of the people
+  // whose houses stand nearest its middle (as a house reads its own: b.style): Rome's round arch of wedge stones; Egypt's slab
+  // on piers under its roll and its cavetto; the Aztec causeway of red volcanic stone, its ends in steps; the Greek corbelled
+  // gap in pale stone; the classic's low arch of brick; in the north, and on every road not yet paved, timber — on dry stone
+  // there. A side over the water has its parapet; a side the way goes on through (the land, the bridge's next tile, a corner
+  // another tile touches) is open. From far, a slab and its walls. Only seen, and no chance in it: G.hash by the tile
+  const BRC = [null, [184, 164, 128], [190, 182, 164], [146, 142, 134]]; // (a road's colours, as the ground paints them: Ground3D's)
+  const BSIDE = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // (out of a tile's sides: N, E, S, W; along a side: [-oz, ox])
+  const BF = 1.92, BT = 0.34, BGAP = 1.3, BREC = 0.22; // (m: a side's face from the tile's middle, the wall's thickness, a corner left open, how deep a gap is cut)
+  const BDARK = [30, 33, 38]; // (the dark under an arch)
+  // each people's bridge of stone — gap: 0 a round arch, 1 a low segment of one, 2 bays under a slab, 3 one gap under a lintel,
+  // 4 a corbelled gap; the stuff of its walls (Build3D.PAT) and its own colour, or the people's (Arch.PAL's base); how high the
+  // wall stands over the deck; the stuff of its wedge stones and lintels, and of its coping
+  const BRIDGE = {
+    romano: { gap: 0, pat: 'ashlar', col: [180, 171, 154], h: 0.8, cut: 'marble', cap: 'ashlar' }, classico: { gap: 1, pat: 'brick', col: [172, 108, 82], h: 0.8, cut: 'brick', cap: 'ashlar' },
+    egipcio: { gap: 2, pat: 'sandstone', h: 0.46, cut: 'sandstone', cap: 'sandstone' }, asteca: { gap: 3, pat: 'tezontle', col: [150, 110, 98], h: 0.5, cut: 'stucco', cap: 'stucco' },
+    grego: { gap: 4, pat: 'marble', h: 0.76, cut: 'marble', cap: 'marble' },
+  };
+  // (what lies across a side of a bridge's tile, or at its corner — 0 the way goes on: land one walks; 1 the bridge itself;
+  // 2 water; 3 a wall: a building, a city's wall, a cliff)
+  function bridgeNb(x, y) {
+    const S = G.S; if (!W.inb(x, y)) return 2; const i = y * N + x, t = S.type[i];
+    if (t <= T.RIVER) return t === T.RIVER && S.road[i] ? 1 : 2;
+    return W.blocked(i) || S.wall[i] === 1 || S.cliff[i] ? 3 : 0;
+  }
+  // (a bridge's tile: what lies across each side — k: N, E, S, W — and at each corner — c: NE, SE, SW, NW —, and how the parapet
+  // of a side over water ends, at its start and at its end — e: 0 it goes on along the next tile, 1 it ends there (the bank, a
+  // wall), 2 it meets the next side's at the corner, 3 it stops short of a corner the way goes through: one with the bridge's
+  // next tile across it, or with the land across it and no way beside it — water or a wall on the side next to it)
+  function bridgePlan(x, y) {
+    const k = [], c = [], e = [];
+    for (let s = 0; s < 4; s++) { const o = BSIDE[s], o2 = BSIDE[(s + 1) % 4]; k.push(bridgeNb(x + o[0], y + o[1])); c.push(bridgeNb(x + o[0] + o2[0], y + o[1] + o2[1])); }
+    const end = (s2, cn) => (c[cn] === 1 ? 3 : k[s2] >= 2 ? (c[cn] === 0 ? 3 : k[s2] === 2 ? 2 : 1) : k[s2] === 1 && c[cn] === 2 ? 0 : 1);
+    for (let s = 0; s < 4; s++) e.push(k[s] === 2 && !G.S.wall[y * N + x] ? [end((s + 3) % 4, (s + 3) % 4), end((s + 1) % 4, s)] : null); // (under a city's wall, no parapet: the wall is one)
+    return { k, c, e };
+  }
+  // (the whole bridge a tile is of: the tiles of road over the river that touch it, corners too, and the people in whose manner
+  // it is built — of the building nearest its middle, within ten tiles; else of the nearest town. memo: the tiles already asked)
+  function bridgeOf(i, memo) {
+    let br = memo && memo.get(i); if (br) return br;
+    const S = G.S; const tiles = [i], seen = new Set([i]); let sx = 0, sy = 0;
+    for (let q = 0; q < tiles.length; q++) { const x = tiles[q] % N, y = (tiles[q] / N) | 0; sx += 2 * x + 1; sy += 2 * y + 1;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (!seen.has(j) && S.type[j] === T.RIVER && S.road[j]) { seen.add(j); tiles.push(j); } } }
+    const cx = sx / (2 * tiles.length), cy = sy / (2 * tiles.length), X0 = Math.floor(cx), Y0 = Math.floor(cy); let st = null, bd = 1e9;
+    const civ = id => { const f = G.Fac && G.Fac.ofSet ? G.Fac.ofSet(id) : null; return f ? f.civ : null; };
+    for (let y = Y0 - 10; y <= Y0 + 10; y++) for (let x = X0 - 10; x <= X0 + 10; x++) {
+      if (!W.inb(x, y)) continue; const o = S.occ[y * N + x]; if (!o) continue; const d = (x + 0.5 - cx) * (x + 0.5 - cx) + (y + 0.5 - cy) * (y + 0.5 - cy); if (d >= bd) continue;
+      const b = S.buildings.get(o), s = b && (b.style || civ(b.set)); if (s) { bd = d; st = s; } }
+    if (!st) { let sd = 1e9; for (const q of S.settlements.values()) { const d = (q.cx - cx) * (q.cx - cx) + (q.cy - cy) * (q.cy - cy), s = d < sd && civ(q.id); if (s) { sd = d; st = s; } } }
+    br = { tiles, st: st === 'nordico' || BRIDGE[st] ? st : 'classico' }; if (memo) for (const j of tiles) memo.set(j, br);
+    return br;
+  }
+  // (what a bridge's tile is drawn from, in one number, for the chunk's signature: its people, its sides, its corners)
+  const BPEOPLE = ['classico', 'grego', 'romano', 'egipcio', 'asteca', 'nordico'];
+  function bridgeSig(i, memo) { const pl = bridgePlan(i % N, (i / N) | 0); let s = BPEOPLE.indexOf(bridgeOf(i, memo).st) + 1; for (let k = 0; k < 4; k++) s = s * 16 + pl.k[k] * 4 + pl.c[k]; return s | 0; }
+  // (a flat piece — its corners in order round it —, wound to face the way n points)
+  function bface(g, P, n, col) {
+    const a = P[0];
+    for (let k = 1; k + 1 < P.length; k++) { const b = P[k], c = P[k + 1]; const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+      const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx; if (cx * cx + cy * cy + cz * cz < 1e-12) continue;
+      if (cx * n[0] + cy * n[1] + cz * n[2] >= 0) g.tri(a, b, c, col); else g.tri(a, c, b, col); }
+  }
+  // (the deck's top over a rectangle of the map — tiles —: at the feet's own height dk, and over the land where that stands
+  // higher; cut along the land's own picture — a point every half tile, each cell cut from its +x corner to its +y corner:
+  // Space.drawnAt —, so the land never comes through it)
+  function deckTop(g, u0, v0, u1, v1, dk, col) {
+    const Sp = G.Space, TL = Sp.TILE; const Y = (u, v) => Math.max(dk, Sp.drawnAt(Math.min(N - 1e-6, u), Math.min(N - 1e-6, v)) + 0.03);
+    for (let j = Math.floor(v0 * 2 + 1e-9); j / 2 < v1 - 1e-9; j++) for (let i = Math.floor(u0 * 2 + 1e-9); i / 2 < u1 - 1e-9; i++) {
+      const a0 = Math.max(u0, i / 2), a1 = Math.min(u1, (i + 1) / 2), b0 = Math.max(v0, j / 2), b1 = Math.min(v1, (j + 1) / 2); if (a1 - a0 < 1e-6 || b1 - b0 < 1e-6) continue;
+      const R = [[a0, b0], [a1, b0], [a1, b1], [a0, b1]], c = (i + j + 1) / 2; // (the cell's cut: u + v = c)
+      for (const sg of [1, -1]) { const P = [];
+        for (let k = 0; k < 4; k++) { const p = R[k], q = R[(k + 1) % 4]; const dp = (c - p[0] - p[1]) * sg, dq = (c - q[0] - q[1]) * sg; if (dp >= 0) P.push(p); if ((dp > 0 && dq < 0) || (dp < 0 && dq > 0)) { const t = dp / (dp - dq); P.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]); } }
+        if (P.length >= 3) bface(g, P.map(p => [p[0] * TL, Y(p[0], p[1]), p[1] * TL]), [0, 1, 0], col); }
+    }
+  }
+  // one tile of a bridge into a chunk's geometry (marks: for the proofs — [the part's name, the tile, its first point])
+  function bridgeInto(g, x, y, br, far, marks) {
+    const S = G.S, Sp = G.Space, TL = Sp.TILE, HM = Sp.HM; const PAT = G.Build3D.PAT; const i = y * N + x, r = Math.min(3, S.road[i]);
+    const mk = n => { if (marks) marks.push([n, i, g.p.length / 3]); };
+    const pl = bridgePlan(x, y), CX = (x + 0.5) * TL, CZ = (y + 0.5) * TL; const wf = S.wl[i] * HM + 0.05, dk = Sp.deckAt(x + 0.5, y + 0.5);
+    // (down into the bed: under the water's face and under the lowest of the land round the tile)
+    const yb = Math.min(wf, W.vh(x, y) * HM, W.vh(x + 1, y) * HM, W.vh(x, y + 1) * HM, W.vh(x + 1, y + 1) * HM) - 0.6, yw = wf - 0.45;
+    const timber = r < 2 || br.st === 'nordico', north = br.st === 'nordico', B = BRIDGE[br.st] || BRIDGE.classico;
+    const P = ((G.Arch && G.Arch.PAL) || {})[br.st] || {}; const base = (P.base || ['#8a8478', '#6f6a60', '#a09a8e']).map(c => G.hex2rgb(c));
+    const tone = (c, f) => [c[0] * f, c[1] * f, c[2] * f], hs = q => G.hash(i * 31 + q);
+    const stone = B.col || base[0], dark = tone(stone, 0.72), light = B.col ? (B.cut === 'stucco' ? G.hex2rgb(P.wl || '#f1e9d6') : base[2]) : base[2];
+    const wood = q => (north ? G.lerpColor([128, 106, 80], [112, 106, 98], hs(q) * 0.8) : [138, 106, 68]).map(c => c * (0.88 + hs(q + 7) * 0.2)), beam = north ? [78, 60, 46] : [94, 70, 48];
+    // (the way over a timber deck runs along X unless only its north and south are open: the planks lie across it)
+    const wayX = pl.k[1] !== 2 || pl.k[3] !== 2 || (pl.k[0] === 2 && pl.k[2] === 2);
+    // ---- the deck: the road's own paving, at the feet's height; of planks across the way on a timber one
+    // (how far the deck runs toward each side, from the tile's middle: to the tile's edge; over water, to the bridge's face —
+    // under a wall of stone only to its inner face: in the gaps cut into the wall it would show as a floor)
+    const lim = s => (pl.k[s] !== 2 ? 2 : pl.e[s] && !timber && !far ? BF - BT + 0.01 : BF);
+    mk('deck');
+    const paving = G.lerpColor(BRC[r], base[2], 0.3); // (the street's slabs, a third toward the people's own stone)
+    if (!timber || far) { g.pat = timber ? PAT.plankH : PAT.slab; const c = timber ? wood(0) : paving;
+      if (far) g.put(SH.box, R3.mat(CX + (lim(1) - lim(3)) / 2, yb, CZ + (lim(2) - lim(0)) / 2, 0, lim(1) + lim(3), dk - yb, lim(0) + lim(2)), c);
+      else deckTop(g, x + 0.5 - lim(3) / TL, y + 0.5 - lim(0) / TL, x + 0.5 + lim(1) / TL, y + 0.5 + lim(2) / TL, dk, c);
+    } else { const n = 12, a0 = -lim(wayX ? 3 : 0), a1 = lim(wayX ? 1 : 2), b0 = -lim(wayX ? 0 : 3), b1 = lim(wayX ? 2 : 1); g.pat = wayX ? PAT.beamZ : PAT.beamX;
+      for (let k = 0; k < n; k++) { const p0 = a0 + (a1 - a0) * k / n + 0.012, p1 = a0 + (a1 - a0) * (k + 1) / n - 0.012, pm = (p0 + p1) / 2; let top = dk;
+        // (a plank is level: over the highest of the land under it)
+        for (let q = 0; q <= 4; q++) { const b = b0 + (b1 - b0) * q / 4; top = Math.max(top, Sp.drawnAt(Math.min(N - 1e-6, x + 0.5 + (wayX ? pm : b) / TL), Math.min(N - 1e-6, y + 0.5 + (wayX ? b : pm) / TL)) + 0.03); }
+        const e0 = b0 === -2 ? b0 : b0 + hs(k * 3 + 1) * 0.05, e1 = b1 === 2 ? b1 : b1 - hs(k * 3 + 2) * 0.05; // (each a little shorter or longer over the water)
+        g.put(SH.box, R3.mat(CX + (wayX ? pm : (e0 + e1) / 2), top - 0.08, CZ + (wayX ? (e0 + e1) / 2 : pm), 0, wayX ? p1 - p0 : e1 - e0, 0.08, wayX ? e1 - e0 : p1 - p0), wood(k)); }
+    }
+    for (let s = 0; s < 4; s++) {
+      const o = BSIDE[s], tx = -o[1], tz = o[0], ax = o[1] !== 0, ry = Math.atan2(o[0], o[1]), ON = [o[0], 0, o[1]];
+      // (the side's own frame: a along it, d out from the tile's middle, yy up)
+      const pt = (a, d, yy) => [CX + a * tx + d * o[0], yy, CZ + a * tz + d * o[1]];
+      const box = (a0, a1, d0, d1, y0b, y1b, col) => { if (a1 - a0 < 1e-4 || y1b - y0b < 1e-4) return; const c = pt((a0 + a1) / 2, (d0 + d1) / 2, 0); g.put(SH.box, R3.mat(c[0], y0b, c[2], 0, ax ? a1 - a0 : d1 - d0, y1b - y0b, ax ? d1 - d0 : a1 - a0), col); };
+      // (a bar leaning in the side's face: from [a0, y0] to [a1, y1], w wide in the face and th out of it, its middle at d)
+      const bar = (shape, a0, y0b, a1, y1b, d, w, th, col) => { const c = pt(a0, d, y0b); g.put(shape, R3.mat(c[0], y0b, c[2], ry, w, Math.hypot(a1 - a0, y1b - y0b), th, 0, Math.atan2(a1 - a0, y1b - y0b)), col); };
+      const e = pl.e[s];
+      if (!e) {
+        // ---- a side the way goes on through: the deck's edge, down into the ground (none against a wall; over water under a
+        // city's wall, the bridge's bare flank)
+        if (!far && pl.k[s] !== 3) { mk('soleira'); g.pat = timber ? (ax ? PAT.beamX : PAT.beamZ) : PAT[B.pat]; const d1 = pl.k[s] === 2 ? BF : 1.98; box(-lim((s + 3) % 4), lim((s + 1) % 4), d1 - 0.14, d1, yb, dk - 0.012, timber ? beam : dark); }
+        continue;
+      }
+      // (the wall's run along the side: to the tile's edge where it goes on or ends, to the next side's face at a corner, short
+      // of a corner left open)
+      const run = q => (q === 0 ? 2 : q === 1 ? 1.94 : q === 2 ? BF : 2 - BGAP), A0 = -run(e[0]), A1 = run(e[1]);
+      if (timber) {
+        // ---- timber: a kerb log on the planks' ends, posts down into the bed, a rail on them, braces crossed between; in the
+        // north, at each end, a block of dry stone
+        const yt = dk + 0.98; g.pat = ax ? PAT.beamX : PAT.beamZ;
+        if (far) { mk('mureta'); box(A0, A1, BF - 0.24, BF - 0.03, dk, dk + 0.15, beam); box(A0, A1, BF - 0.2, BF - 0.07, yt - 0.13, yt, beam); continue; }
+        mk('mureta'); box(A0, A1, BF - 0.24, BF - 0.03, dk, dk + 0.15, beam);
+        const stub = q => (q === 0 ? 0 : north && r >= 2 ? 0.5 : 0.07), p0 = A0 + stub(e[0]), p1 = A1 - stub(e[1]), n = Math.max(1, Math.round((p1 - p0) / 1.3)), dm = BF - 0.135;
+        for (let k = 0; k <= n; k++) { if (k === n && e[1] === 0) break; const a = p0 + (p1 - p0) * k / n; g.pat = PAT.beam; mk('poste'); box(a - 0.065, a + 0.065, dm - 0.065, dm + 0.065, yb, yt + 0.06 + hs(40 + k) * 0.04, beam); }
+        g.pat = ax ? PAT.beamX : PAT.beamZ; mk('corrimao'); bar(SH.cyl, A0 + (e[0] ? stub(e[0]) - 0.07 : 0), yt - 0.06, A1 - (e[1] ? stub(e[1]) - 0.07 : 0), yt - 0.06, dm, 0.13, 0.13, tone(beam, 1.12));
+        box(p0, p1, dm - 0.03, dm + 0.03, dk + 0.5, dk + 0.57, beam);
+        g.pat = PAT.beam; mk('escora');
+        for (let k = 0; k < n; k++) { const a = p0 + (p1 - p0) * k / n + 0.07, b = p0 + (p1 - p0) * (k + 1) / n - 0.07; bar(SH.box, a, dk + 0.17, b, dk + 0.5, dm - 0.02, 0.05, 0.035, tone(beam, 1.08)); bar(SH.box, b, dk + 0.17, a, dk + 0.5, dm + 0.02, 0.05, 0.035, tone(beam, 1.08)); }
+        if (north && r >= 2) { g.pat = PAT.stone; mk('encontro');
+          for (const [q, a] of [[e[0], A0], [e[1], A1]]) { if (q === 0 || (q === 2 && a < 0)) continue; const sg = a < 0 ? 1 : -1, a0 = q === 2 ? BF - 0.47 : Math.min(a, a + sg * 0.5), d0 = BF - 0.47;
+            box(a0, a0 + 0.5, d0, BF + 0.03, yb, dk + 0.52 + hs(50 + s) * 0.08, tone(base[0], 0.96 + hs(52 + s) * 0.1)); box(a0 + 0.05, a0 + 0.45, d0 + 0.05, BF - 0.02, dk + 0.5, dk + 0.72 + hs(54 + s) * 0.06, tone(base[2], 0.9 + hs(56 + s) * 0.1)); }
+        }
+        continue;
+      }
+      // ---- stone: the wall — the bridge's flank and its parapet in one — with its gaps, and what crowns it
+      const yt = dk + B.h, top = yt + (B.gap === 2 ? 0.44 : 0.12);
+      if (far) { mk('mureta'); g.pat = PAT[B.pat]; box(A0, A1, BF - BT, BF, yb, top, stone); continue; }
+      // (the gaps, between the piers: the points of each one's top, from its start to its end — [a, yy])
+      const m0 = A0 + (e[0] === 0 ? 0.35 : 0.55), m1 = A1 - (e[1] === 0 ? 0.35 : 0.55), ac = (m0 + m1) / 2, gaps = []; let arc = null;
+      if (m1 - m0 >= 1.2) {
+        if (B.gap < 2) {
+          // (a round arch whole, its middle under the water; the low one springs at the water's face)
+          const hw = (m1 - m0) / 2, rr = B.gap === 0 ? hw : (hw * hw + 0.27) / 1.04, cy = wf + 0.5 - rr, tm = B.gap === 0 ? Math.acos(G.clamp((yw - cy) / rr, 0, 1)) : Math.asin(Math.min(1, hw / rr)), n = B.gap === 0 ? 11 : 15, q = [];
+          for (let k = 0; k <= n; k++) { const th = -tm + 2 * tm * k / n; q.push([ac + rr * Math.sin(th), cy + rr * Math.cos(th)]); }
+          if (q[0][1] > yw + 1e-6) { q.unshift([q[0][0], yw]); q.push([q[q.length - 1][0], yw]); }
+          gaps.push(q); arc = { rr, cy, tm, n };
+        } else if (B.gap === 2) { const yl = wf + 0.34; for (const [b0, b1] of m1 - m0 >= 2.6 ? [[m0, ac - 0.27], [ac + 0.27, m1]] : [[m0, m1]]) gaps.push([[b0, yw], [b0, yl], [b1, yl], [b1, yw]]); }
+        else if (B.gap === 3) { const hw = Math.min(0.8, (m1 - m0) / 2), yl = wf + 0.36; gaps.push([[ac - hw, yw], [ac - hw, yl], [ac + hw, yl], [ac + hw, yw]]); }
+        else { const hw = Math.min(1.05, (m1 - m0) / 2), st = hw * 0.27, q = [[ac - hw, yw]]; for (let k = 0; k < 3; k++) q.push([ac - hw + st * k, wf + 0.17 * (k + 1)], [ac - hw + st * (k + 1), wf + 0.17 * (k + 1)]);
+          q.pop(); for (let k = q.length - 1; k >= 0; k--) q.push([2 * ac - q[k][0], q[k][1]]); gaps.push(q); }
+      }
+      mk('flanco'); g.pat = PAT[B.pat];
+      const rect = (a0, a1) => { if (a1 - a0 > 1e-6) bface(g, [pt(a0, BF, yb), pt(a1, BF, yb), pt(a1, BF, yt), pt(a0, BF, yt)], ON, stone); };
+      let at = A0;
+      for (const q of gaps) { rect(at, q[0][0]); at = q[q.length - 1][0];
+        for (let k = 0; k + 1 < q.length; k++) if (q[k + 1][0] - q[k][0] > 1e-6) bface(g, [pt(q[k][0], BF, q[k][1]), pt(q[k + 1][0], BF, q[k + 1][1]), pt(q[k + 1][0], BF, yt), pt(q[k][0], BF, yt)], ON, stone); }
+      rect(at, A1);
+      bface(g, [pt(A0, BF - BT, dk - 0.06), pt(A1, BF - BT, dk - 0.06), pt(A1, BF - BT, yt), pt(A0, BF - BT, yt)], [-o[0], 0, -o[1]], stone);
+      // (each gap cut into the wall: its soffit and its sides, and the dark at its back)
+      mk('vao');
+      for (const q of gaps) for (let k = 0; k + 1 < q.length; k++) { const a = q[k], b = q[k + 1], na = b[1] - a[1], ny = a[0] - b[0];
+        g.pat = PAT[B.pat]; bface(g, [pt(a[0], BF, a[1]), pt(b[0], BF, b[1]), pt(b[0], BF - BREC, b[1]), pt(a[0], BF - BREC, a[1])], [na * tx, ny, na * tz], dark);
+        g.pat = 0; if (b[0] - a[0] > 1e-6) bface(g, [pt(a[0], BF - BREC, yw), pt(b[0], BF - BREC, yw), pt(b[0], BF - BREC, b[1]), pt(a[0], BF - BREC, a[1])], ON, BDARK); }
+      g.pat = PAT[B.cut];
+      if (arc) {
+        // (the wedge stones round the arch, each its own shade, the keystone prouder — only those out of the water)
+        // (each under its own piece of the arch, a finger below it)
+        const n = arc.n, ring = B.gap === 0 ? 0.22 : 0.2, len = 2 * arc.rr * Math.sin(arc.tm / n), ri = arc.rr * Math.cos(arc.tm / n) - 0.006; mk('aduela');
+        for (let k = 0; k < n; k++) { const th = -arc.tm + 2 * arc.tm * (k + 0.5) / n, key = k === (n - 1) / 2; if (arc.cy + (arc.rr + ring) * Math.cos(th) < wf) continue;
+          const c = pt(ac + ri * Math.sin(th), BF - (key ? 0 : 0.012), arc.cy + ri * Math.cos(th));
+          g.put(SH.box, R3.mat(c[0], c[1], c[2], ry, len - 0.014, ring + (key ? 0.06 : 0), key ? 0.15 : 0.1, 0, th), tone(B.gap === 0 ? light : stone, (key ? 1.0 : 0.86) + hs(60 + s * 16 + k) * 0.16)); }
+      } else for (const q of gaps) { // (a lintel over each gap)
+        mk('verga'); let a0 = q[0][0], a1 = q[q.length - 1][0], yl = yw; for (const p of q) yl = Math.max(yl, p[1]); if (B.gap === 4) { a0 = ac - 0.55; a1 = ac + 0.55; }
+        box(a0 - 0.16, a1 + 0.16, BF - 0.06, BF + 0.035, yl - 0.008, yl + (B.gap === 3 ? 0.16 : 0.2), tone(light, 0.94 + hs(70 + s) * 0.08)); }
+      // (a pilaster where the wall goes on over a pier into the next tile)
+      g.pat = PAT[B.pat]; mk('pilar');
+      if (e[0] === 0) box(-2, -1.7, BF - 0.02, BF + 0.045, yb, yt, tone(stone, 0.94)); if (e[1] === 0) box(1.7, 2, BF - 0.02, BF + 0.045, yb, yt, tone(stone, 0.94));
+      // (a corner left open: the deck only, out to the tile's own corner — the way goes over it)
+      for (const [a0, a1] of [e[0] === 3 ? [-2, A0] : null, e[1] === 3 ? [A1, 2] : null].filter(Boolean)) { box(a0, a1, BF - BT, 2, yb, dk - 0.012, dark); const p = pt(a0, BF - BT, 0), q = pt(a1, 2, 0);
+        g.pat = PAT.slab; deckTop(g, Math.min(p[0], q[0]) / TL, Math.min(p[2], q[2]) / TL, Math.max(p[0], q[0]) / TL, Math.max(p[2], q[2]) / TL, dk, paving); g.pat = PAT[B.pat]; }
+      // ---- what crowns the wall
+      mk('capa'); g.pat = PAT[B.cap];
+      if (B.gap === 2) {
+        // (Egypt's: a roll along the wall's head and, over it, the cavetto leaning out to its fillet)
+        bar(SH.cyl, A0, yt + 0.055, A1, yt + 0.055, BF - 0.015, 0.13, 0.13, tone(light, 0.96));
+        const C = [[0, 0.11], [0.02, 0.21], [0.065, 0.3], [0.14, 0.36], [0.14, 0.44]]; // (out of the wall's face, up from its head)
+        for (let k = 0; k + 1 < C.length; k++) bface(g, [pt(A0, BF + C[k][0], yt + C[k][1]), pt(A1, BF + C[k][0], yt + C[k][1]), pt(A1, BF + C[k + 1][0], yt + C[k + 1][1]), pt(A0, BF + C[k + 1][0], yt + C[k + 1][1])], [o[0] * 0.6, -0.4, o[1] * 0.6], k === 3 ? light : tone(light, 0.9 + k * 0.03));
+        bface(g, [pt(A0, BF - BT - 0.03, top), pt(A1, BF - BT - 0.03, top), pt(A1, BF + 0.14, top), pt(A0, BF + 0.14, top)], [0, 1, 0], light);
+        bface(g, [pt(A0, BF - BT - 0.03, yt), pt(A1, BF - BT - 0.03, yt), pt(A1, BF - BT - 0.03, top), pt(A0, BF - BT - 0.03, top)], [-o[0], 0, -o[1]], tone(light, 0.94));
+        bface(g, [pt(A0, BF - BT - 0.03, yt), pt(A1, BF - BT - 0.03, yt), pt(A1, BF - BT, yt), pt(A0, BF - BT, yt)], [0, -1, 0], dark);
+        // (the people's own colour, a thread under the roll)
+        g.pat = 0; if (P.trim) box(A0, A1, BF - 0.01, BF + 0.012, yt - 0.095, yt - 0.035, G.hex2rgb(P.trim));
+      } else {
+        const ov = B.gap === 3 ? 0.03 : B.gap === 4 ? 0.04 : 0.05; box(A0, A1, BF - BT - ov, BF + ov, yt, top, light);
+        // (the Aztec's: the red and the turquoise of their houses, two threads round the cap's foot)
+        if (B.gap === 3) { g.pat = 0;
+          for (const [y0b, y1b, c] of [[yt - 0.11, yt - 0.07, P.trim || '#b33a2a'], [yt - 0.05, yt - 0.015, P.trim2 || '#2fae8f']]) for (const [d, n] of [[BF + 0.006, ON], [BF - BT - 0.006, [-o[0], 0, -o[1]]]])
+            bface(g, [pt(A0, d, y0b), pt(A1, d, y0b), pt(A1, d, y1b), pt(A0, d, y1b)], n, G.hex2rgb(c)); }
+      }
+      // ---- its ends: a pier where it ends — at the bank, short of an open corner: a finger past the wall's end, their end
+      // faces never one —, one at a corner for the two walls that meet there (the side that ends at it draws it)
+      for (const [q, a] of [[e[0], A0], [e[1], A1]]) {
+        if (q === 0 || (q === 2 && a < 0)) continue; const sg = a < 0 ? 1 : -1; mk('pilar');
+        // (Egypt's stands out round the cavetto's end)
+        const w = B.gap === 4 ? 0.44 : B.gap === 2 ? 0.6 : 0.52, out = B.gap === 2 ? 0.16 : 0.06, a0 = q === 2 ? BF + out - w : sg > 0 ? a - 0.025 : a - w + 0.025, d0 = BF + out - w, hp = top + (B.gap === 2 ? 0.1 : 0.2);
+        if (B.gap === 3) {
+          // (the Aztec's ends in steps: two blocks, each a hand higher, each under its cap)
+          for (let k = 0; k < 2; k++) { const b0 = q === 2 ? a0 : a0 + sg * k * 0.46, yk = top + (k ? 0.16 : 0.4); if (q === 2 && k) break;
+            g.pat = PAT[B.pat]; box(b0, b0 + w, d0, BF + 0.06, yb, yk, tone(stone, k ? 0.94 : 1)); g.pat = PAT[B.cap]; box(b0 - 0.03, b0 + w + 0.03, d0 - 0.03, BF + 0.09, yk, yk + 0.09, light); }
+          continue;
+        }
+        g.pat = PAT[B.pat]; box(a0, a0 + w, d0, BF + out, yb, hp, tone(stone, 1.03));
+        g.pat = PAT[B.cap]; box(a0 - 0.035, a0 + w + 0.035, d0 - 0.035, BF + out + 0.035, hp, hp + 0.09, light);
+        if (B.gap === 0) { const c = pt(a0 + w / 2, d0 + w / 2, 0); g.put(SH.hip, R3.mat(c[0], hp + 0.09, c[2], 0, w, 0.17, w), tone(light, 0.95)); } // (Rome's: a low point on its cap)
       }
     }
+    g.pat = 0;
+  }
+  // (a chunk's bridges: the near picture, or the far one)
+  function roadGeo(x0, y0, w, h, far, marks) {
+    const S = G.S; const g = new Geo(), memo = new Map();
+    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { if (!W.inb(x, y)) continue; const i = y * N + x; if (S.type[i] === T.RIVER && S.road[i]) bridgeInto(g, x, y, bridgeOf(i, memo), far, marks); }
     return g.empty ? null : g.build(true);
   }
+  // (for the proofs: a stretch's bridges as they are drawn, near or far, with the parts' marks; the whole bridge a tile is of;
+  // a tile's sides)
+  R3.bridgesOf = (x0, y0, w, h, far) => { if (!THREE) return null; const marks = []; return { geo: roadGeo(x0, y0, w, h, !!far, marks), marks }; };
+  R3.bridgeOf = i => bridgeOf(i, null); R3.bridgePlan = (x, y) => bridgePlan(x, y);
   // ------------------------------ trees, rocks, bushes ------------------------------
   const KIND = {
     oak: ['round', '#4f8f36', '#6b4a2e'], apple: ['round', '#5a9a3a', '#6b4a2e', '#d23a2a'], mulberry: ['round', '#4a7f32', '#5a3e28', '#4a1a3a'], olive: ['round', '#8a9a6a', '#7a6a5a'],
@@ -1494,7 +1705,7 @@ vec3 gxGrade( vec3 c ) {
   // (what makes a chunk need building again: the shape of its ground, its trees, its houses, its roads, its water — all of
   // it read inside the chunk: a house built across the map does not make this one be built again)
   function sigOf(cx, cy) {
-    const S = G.S; let a = 0, b = 0, c = 0;
+    const S = G.S; let a = 0, b = 0, c = 0, brm = null;
     const x0 = cx * C, y0 = cy * C; const V = N + 1;
     for (let y = y0; y <= y0 + C && y <= N; y++) for (let x = x0; x <= x0 + C && x <= N; x++) a = (a * 31 + Math.round(S.H[y * V + x] * 8)) | 0;
     for (let y = y0; y < y0 + C && y < N; y++) for (let x = x0; x < x0 + C && x < N; x++) {
@@ -1502,7 +1713,7 @@ vec3 gxGrade( vec3 c ) {
       const tid = S.treeAt[i]; if (tid) { const t = S.trees.get(tid); if (t) b = (b * 31 + tid * 3 + (t.stage.charCodeAt(0)) + Math.floor(t.size * 4)) | 0; }
       const oid = S.objAt[i]; if (oid) { const bu = S.bushes.get(oid), rk = !bu && S.rocks.get(oid); b = (b * 17 + oid + (bu ? (bu.berries > 0 ? 1 : 0) + (bu.burnt > 0 ? 2 : 0) : 0) + (rk ? G.Space.stoneSize(rk) * 5 : 0)) | 0; }
       c = (c * 7 + S.road[i] + (S.burnt[i] > 0 ? 3 : 0) + (S.ice && S.ice[i] ? 5 : 0) + (S.dry && S.dry[i] ? 11 : 0) + S.wall[i] * 13 + S.occ[i] * 19 + S.type[i] * 23 + (S.cliff[i] ? 29 : 0)) | 0;
-      if (S.type[i] === T.RIVER) a = (a * 7 + Math.round(S.wl[i] * 8)) | 0;
+      if (S.type[i] === T.RIVER) { a = (a * 7 + Math.round(S.wl[i] * 8)) | 0; if (S.road[i]) c = (c * 31 + bridgeSig(i, (brm = brm || new Map()))) | 0; } // (a bridge: its people and its sides too)
     }
     b = (b * 3 + (R3.floraFine ? R3.floraFine(x0, y0, C) : 1)) | 0; // (the near plants finer where the body comes: the preset's lod — A3)
     const bs = G.Build3D ? G.Build3D.sig(x0, y0, C) : 0;
@@ -1516,6 +1727,7 @@ vec3 gxGrade( vec3 c ) {
     const wg = waterGeo(x0, y0, C, C, true); addMesh(grp, wg.water, MAT.water, { order: 2 }); addMesh(grp, wg.ice, MAT.ice);
     addMesh(grp, floraGeo(x0, y0, C, C, true).flora, MAT.flora);
     if (G.Build3D) addMesh(grp, G.Build3D.farGeo(x0, y0, C), MAT.solid);
+    addMesh(grp, roadGeo(x0, y0, C, C, true), MAT.solid);
     scene.add(grp); grp.visible = !ch.near;
   }
   // a near picture is three parts, each made again only when what it shows has changed: the ground (terrain, water,
@@ -1526,7 +1738,7 @@ vec3 gxGrade( vec3 c ) {
     if (part === 'ground') {
       addMesh(grp, terrainGeo(x0, y0, C, C, 0.5), MAT.land, { recv: true });
       const wg = waterGeo(x0, y0, C, C, false); addMesh(grp, wg.water, MAT.water, { order: 2 }); addMesh(grp, wg.ice, MAT.ice, { recv: true }); addMesh(grp, wg.walls, MAT.wallWater, { order: 3 });
-      addMesh(grp, roadGeo(x0, y0, C, C), MAT.solid, { cast: true, recv: true });
+      addMesh(grp, roadGeo(x0, y0, C, C, false), MAT.solid, { cast: true, recv: true });
     } else if (part === 'flora') {
       const fg = floraGeo(x0, y0, C, C, false); addMesh(grp, fg.flora, MAT.flora, { cast: true, recv: true }); addMesh(grp, fg.plants, MAT.plant, { cast: true, recv: true }); addMesh(grp, fg.leaves, MAT.leaf, { cast: true, recv: true });
       // (the near grass is the field of blades round the eye (Grass3D) where the machine carries it; the tufts otherwise)
