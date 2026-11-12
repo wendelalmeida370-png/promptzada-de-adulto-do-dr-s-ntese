@@ -36,7 +36,8 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     // gives its tavern the keeper by its own sharing of the trades, T-336)
     const cap = G.Village.cap(f.id) * 0.95; for (const k of ['food', 'wood', 'stone']) f.stock[k] = Math.max(f.stock[k] || 0, cap);
   });
-  const step = (secs) => page.evaluate(n => { for (let k = 0; k < n; k++) G.debug.step(0.1); }, Math.round(secs * 10));
+  // (what the test's hand holds from a step to the next, while a case lasts: window.__hold — the guard of the case 5, T-850)
+  const step = (secs) => page.evaluate(n => { for (let k = 0; k < n; k++) { if (window.__hold) window.__hold(); G.debug.step(0.1); } }, Math.round(secs * 10));
   const until = async (fn, maxSecs, arg) => { for (let k = 0; k < maxSecs / 5; k++) { const r = await page.evaluate(fn, arg); if (r) return r; await step(5); } return page.evaluate(fn, arg); };
   // helpers in the page: a free spot near a point, a building put down finished, a person given a trade
   await page.evaluate(() => {
@@ -225,6 +226,10 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     const ad = window.__adults(); const thief = ad.find(v => v.home && v.home !== rich.id && v.role !== 'guerreiro' && v.role !== 'pescador' && v.role !== 'estivador' && !(v.traits || []).includes('Devoto')); if (!thief) return { skip: 'sem ladrão' };
     const h = S.buildings.get(thief.home); if (h) h.coin = 0; thief.purse = 0; thief.thefts = 1; thief.traits = (thief.traits || []).filter(t => t !== 'Medroso');
     const guard = ad.find(v => v !== thief && (v.role === 'vigia' || v.role === 'guerreiro') && v.home !== rich.id) || ad.find(v => v !== thief && v.home !== rich.id); if (guard.role !== 'guerreiro') guard.role = 'vigia'; G.Vg.endTask(guard);
+    // (one made of the watch by the test's hand is held in it while the case lasts, as the case 8's is: the town's board gives the
+    // trades back at its next pass — with the 2nd round of the F joined, seed 7, Bjorn was a fisherman again when the thief reached
+    // in: he saw it as one of the town, kept no case, and nobody arrested that night, «não foi preso» — T-850)
+    window.__g5 = guard.id; window.__hold = () => { const q = G.S.villagers.get(window.__g5); if (q && q.role !== 'vigia' && q.role !== 'guerreiro') q.role = 'vigia'; };
     // a jail with its jailer
     const jail = window.__put('cadeia', set.cx - 3, set.cy - 3) || (() => { const R = Math.max(8, set.radius || 8); for (const fr of [0.5, 0.8, 1.1]) for (let k = 0; k < 12; k++) { const a = k / 12 * 6.283; const p = window.__spot(set.cx + Math.cos(a) * R * fr, set.cy + Math.sin(a) * R * fr, 2, 2, 8); if (p) { const b = G.Village.addBuilding('cadeia', p[0], p[1], set.id, true); G.W.touchWalk(); return b; } } return null; })();
     if (!jail) return { skip: 'sem lugar para a cadeia' };
@@ -246,7 +251,7 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     for (let k = 0; k < 5 && !(stole && stole.seen >= 1); k++) {
       if (k) await page.evaluate(o => {
         const S = G.S; const t = S.villagers.get(o.thief), r = S.buildings.get(o.rich); if (!t || !r) return;
-        let g = S.villagers.get(o.guard); const law = q => q && (q.role === 'vigia' || q.role === 'guerreiro'); if (!law(g) || (g.task && g.task.pri >= 3)) { g = window.__adults().find(v => law(v) && v !== t && !(v.task && v.task.pri >= 3)) || g; if (g && !law(g)) g.role = 'vigia'; if (g) o.guard = g.id; }
+        let g = S.villagers.get(o.guard); const law = q => q && (q.role === 'vigia' || q.role === 'guerreiro'); if (!law(g) || (g.task && g.task.pri >= 3)) { g = window.__adults().find(v => law(v) && v !== t && !(v.task && v.task.pri >= 3)) || g; if (g && !law(g)) g.role = 'vigia'; if (g) { o.guard = g.id; window.__g5 = g.id; } }
         S.time = 0.76; window.__set.festPlan = { day: S.day, key: null, done: true }; r.coin = o.coin0; const [dx, dy] = G.Vg.door(r);
         G.Vg.endTask(t); t.sleeping = false; t.inside = 0; G.Vg.setTask(t, { type: 'furto', house: r.id, pri: 2.05, st: 0, kind: 'furto' });
         if (g) { G.Vg.endTask(g); g.sleeping = false; g.inside = 0; g.energy = Math.max(g.energy, 85); g.hunger = Math.min(g.hunger, 10); g.x = dx + 1.2; g.y = dy + 0.8; G.Vg.setTask(g, { type: 'ronda', pts: Array.from({ length: 40 }, (_, i) => i % 2 ? [dx - 1.2, dy + 0.8] : [dx + 1.5, dy + 0.6]), k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' }); }
@@ -289,6 +294,7 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
     // the case and stays at the feast; when it is over, he goes after the thief
     await until(() => (G.Fest.active(window.__set.id) ? null : 1), 600);
     const f8 = await page.evaluate(o => {
+      window.__hold = null; // (the case 5's hold ends here: the case 8 holds its own guard)
       const S = G.S; const set = window.__set; const f = G.Fac.get(set.fac); let t = S.villagers.get(o.thief); if (!t || t.jail) return { skip: 'sem o ladrão solto' };
       // (the thief sworn to an order is not the night's: its meeting (2,3) and its hunt (2,6) take a member from an errand of
       // 2,05 — a call of more weight takes one of less, D-094, L-456. In the world of the generation 18, seed 7, the case 5's

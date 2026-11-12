@@ -103,15 +103,17 @@ function partA() {
     tryIt('sem tempo antes de escurecer', () => { S.time = Pr.SHUT - 0.01; }, () => { S.time = 0.62; });
     tryIt('a chuva', () => { S.weather.rain = 0.5; }, () => { S.weather.rain = 0; });
     tryIt('a tempestade', () => { S.weather.storm = 5; }, () => { S.weather.storm = 0; });
-    { const [cx, cy] = mid(b); const i = W.idx(cx, cy); const t0 = S.temp[i]; tryIt('o frio forte', () => { S.temp[i] = 20; }, () => { S.temp[i] = t0; });
+    // (the cold of the place does not empty the plaza — who lives in it is dressed for it —: only the weather does, D-245)
+    let frio = 0;
+    { const [cx, cy] = mid(b); const i = W.idx(cx, cy); const t0 = S.temp[i]; S.temp[i] = 5; frio = Pr.pick(p) === b ? 1 : 0; S.temp[i] = t0;
       const w0 = S.winters; tryIt('o inverno do deus', () => { S.winters = [{ x: cx, y: cy, r: 6, t: 30 }]; }, () => { S.winters = w0; });
       tryIt('o pânico', () => { S.panic = [{ x: cx, y: cy, r: 4, t: 3, why: 'panic' }]; }, () => { S.panic = []; }); }
     tryIt('a guerra à porta', () => { set.alarmT = 20; }, () => { set.alarmT = 0; });
     { const f = G.Fac.get(set.fac); const key = G.Fest && G.Fest.of ? G.Fest.of(f.civ)[0] : null; let fe = null;
       if (key) { fe = god(() => G.Fest.start(set, key, {})); z['a festa da cidade'] = Pr.pick(p) ? 1 : 0; z.festa = fe ? 1 : 0; } }
     const names = Object.keys(z).filter(k => k !== 'festa'); const bad = names.filter(k => z[k] !== 0);
-    ok('a1 o que impede a praça: cada um, sozinho, zera a vontade de quem a tinha', !!got0 && got0 === b && names.length >= 21 && !bad.length && (z.festa === undefined || z.festa === 1),
-      `${p.name} #${p.id} de ${set.name} (${Math.floor(p.age)} anos, a ${farOf(p, b).toFixed(1)} casas da praça, a sorte ${Pr.lot(p).toFixed(2)} e a vontade ${Pr.wish(p, b).toFixed(2)}): com tudo em ordem ${got0 ? 'vai' : 'NÃO VAI'}; ${names.length} impedimentos, ${bad.length ? 'NÃO IMPEDEM: ' + bad.join(', ') : 'todos impedem'}${z.festa === 0 ? '; A FESTA NÃO COMEÇOU' : ''} (${names.join(', ')})`);
+    ok('a1 o que impede a praça: cada um, sozinho, zera a vontade de quem a tinha', !!got0 && got0 === b && names.length >= 20 && !bad.length && frio === 1 && (z.festa === undefined || z.festa === 1),
+      `${p.name} #${p.id} de ${set.name} (${Math.floor(p.age)} anos, a ${farOf(p, b).toFixed(1)} casas da praça, a sorte ${Pr.lot(p).toFixed(2)} e a vontade ${Pr.wish(p, b).toFixed(2)}): com tudo em ordem ${got0 ? 'vai' : 'NÃO VAI'}; ${names.length} impedimentos, ${bad.length ? 'NÃO IMPEDEM: ' + bad.join(', ') : 'todos impedem'}${z.festa === 0 ? '; A FESTA NÃO COMEÇOU' : ''} (${names.join(', ')}); o frio do lugar ${frio ? 'não impede' : 'IMPEDE'} (D-245)`);
   }
   // (a new world for the rest: the feast of a1 goes on)
   M.pronto(WORLD); S.time; const S2 = G.S; S2.time = 0.62; M.viver(1); const set2 = townOfPlaza(); fair0(set2); const P2 = plazas(set2.id);

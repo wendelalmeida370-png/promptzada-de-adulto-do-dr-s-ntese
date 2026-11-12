@@ -616,7 +616,7 @@
   // worker's — on a day of the plaza the working day ends there: the axe, the hoe, the net, the trowel and the drill are put down
   // (Pr.CUT; never a load, an operation, a post, the stone of the works) —; and, the working day over, on the way home
   // (decide's 'home': the supper and the garden first, then the plaza, then the family at the door) — until dark, and no
-  // longer than one's legs hold (Pr.TIRED). Not in the rain, in bitter cold, with the war at the gates, in a panic or
+  // longer than one's legs hold (Pr.TIRED). Not in the rain, under a winter the god sends, with the war at the gates, in a panic or
   // during a feast of the town (Pr.fair). How often: the wish is a share of the days (Pr.wish),
   // and whether today is one of them is the day's own lot of each one (G.hash of the person and the day: none of the
   // world's chance is drawn, the person has no new field). What stops it: hunger, weariness, an illness, a load or the leg
@@ -660,12 +660,14 @@
   const midOf = b => [b.x + b.w / 2, b.y + b.h / 2];
   // (a market sells in the stalls' hours — with stalls of its own, while one of the town is open and manned)
   const sells = b => !!(G.Biz && G.Biz.hours()) && (!G.Biz.hasStalls(b) || G.Biz.selling(b.set));
-  // the weather and the peace of a plaza: no rain, no bitter cold (the land's, or a winter of the god's over it), no war at
+  // the weather and the peace of a plaza: no rain, no winter of the god's over it, no war at
   // the gates of its town, no feast of the town under way (the feast has its own gathering), no panic about it
   Pr.fair = function (b) {
     const S = S_(); const w = S.weather || {}; if (w.rain > 0.3 || w.storm > 0) return false;
-    const [cx, cy] = midOf(b); const i = G.W.inb(cx, cy) ? G.W.idx(cx, cy) : -1;
-    if (i >= 0 && S.temp && S.temp[i] / 255 < 0.2) return false;
+    // (the weather, not the land: who lives in the cold is dressed for it — G.Atmos.dress — and stops at the plaza as the others
+    // do. The cold of the place itself shut the plaza of Hedeby, of every ready world, for good — and Mileto's —: D-245. What
+    // empties it is what comes and goes: the rain, the storm, the winter the god sends)
+    const [cx, cy] = midOf(b);
     for (const q of S.winters || []) if (q.t > 2 && G.dist(cx, cy, q.x, q.y) <= q.r) return false;
     for (const p of S.panic || []) if (G.dist(cx, cy, p.x, p.y) <= p.r + 2) return false;
     if (G.War && G.War.threat && G.War.threat(b.set)) return false;
