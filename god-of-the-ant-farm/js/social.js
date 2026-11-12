@@ -179,7 +179,8 @@
     const all = homeless(set); if (!all.length) return;
     let room = 2 - (set.shackD === S.day ? set.shackN || 0 : 0) - all.filter(v => v.task && v.task.type === 'barraco').length;
     if (room <= 0) return;
-    const hl = all.filter(v => S.day - (v.rua || S.day) >= 2 && !(v.task && v.task.pri >= 1.15) && !(v.shackTry && S.clock - v.shackTry < 30));
+    // (a family that is raising its own house raises no shack beside it: act-casa.js, D-237)
+    const hl = all.filter(v => S.day - (v.rua || S.day) >= 2 && !(v.task && v.task.pri >= 1.15) && !(v.shackTry && S.clock - v.shackTry < 30) && !(G.Casa && G.Casa.waiting && G.Casa.waiting(v)));
     for (const v of hl) {
       if (room <= 0) break;
       const p = siteFor(set); if (!p) break;

@@ -1767,7 +1767,10 @@
     // (the seat where who rules lives keeps its household — its children, a partner who joins it —, and is no house of the town's:
     // never offered to who needs one, never emptied of its grown ones. Who lives there is act-casa.js's to say: D-205)
     const space = b => V.bedsOf(b) - b.res; const common = b => !!G.BDEF[b.type].housing;
-    const findHome = (need) => { let best = null; for (const b of homes) if (b.built && common(b) && space(b) >= need && (!best || space(b) > space(best))) best = b; return best; };
+    // (alone: one who goes alone to a house — never to the people's empty house a family of the town is to take on the town's
+    // day: G.Casa.heldFor, act-casa.js, D-236; asked only when there is such a house and one to send)
+    let held = null; const kept = b => !b.res && !b.dono && !!G.Casa && !!G.Casa.heldFor && (held || (held = G.Casa.heldFor(set))).has(b.id);
+    const findHome = (need, alone) => { let best = null; for (const b of homes) if (b.built && common(b) && space(b) >= need && (!best || space(b) > space(best)) && !(alone && kept(b))) best = b; return best; };
     // children live with parents
     for (const v of vs) {
       if (v.age >= 16) continue;
@@ -1786,7 +1789,7 @@
         }
         if (!v.home && !p.home) { const b = findHome(2); if (b) { v.home = b.id; p.home = b.id; b.res += 2; } continue; }
       }
-      if (!v.home) { const b = findHome(1); if (b) { v.home = b.id; b.res++; } }
+      if (!v.home) { const b = findHome(1, true); if (b) { v.home = b.id; b.res++; } }
     }
     // grown single adults move out of an overcrowded home when possible, the youngest first — never the parent the children
     // follow, the house's owner, the old one who minds the little ones there (G.Lar.minder), nor the god's body (its house is
@@ -1798,7 +1801,7 @@
       if (!b.built || !common(b) || space(b) >= 0) continue;
       for (const v of vs.filter(o => o.home === b.id).sort((p, q) => p.age - q.age || p.id - q.id)) {
         if (v.age < 18 || v.partner || minders.has(v.id) || v.id === b.dono || v.id === body || cares(v)) continue;
-        const nb = findHome(1); if (nb && nb !== b) { v.home = nb.id; nb.res++; b.res--; }
+        const nb = findHome(1, true); if (nb && nb !== b) { v.home = nb.id; nb.res++; b.res--; }
         if (space(b) >= 0) break;
       }
     }

@@ -108,6 +108,22 @@
     for (const id of v.kids || []) { const k = P(id); if (k && k.age < 16 && k.home === v.home && !k.captive && !out.includes(k)) out.push(k); }
     return out;
   };
+  // (a grown single one the town's housing would send away from a house over its beds, had another house a bed — village.js,
+  // assignHousing: eighteen, no partner, no little ones of one's own there, neither the house's owner nor the old one who
+  // minds its little ones: D-098)
+  const leaver = (v, h) => v.age >= 18 && !v.partner && !v.captive && !v.jail && !v.aboard && h.dono !== v.id && !K.minds(v) && K.family(v).length === 1;
+  const leaversOf = h => residents(h).filter(o => leaver(o, h));
+  // The grown single ones of a house who would raise a hut of their own together (D-235, part of D-194): of the house over
+  // its beds one lives in, the ones the housing would send away — still there: no house of the town has a bed for them —, who
+  // neither wait for a house nor let the new house go; the one asked and the youngest of the others, as many as a hut has
+  // beds. null: not one of them — who has a family of one's own, the owner, one of a house that fits its people. Reads only
+  K.mates = function (v) {
+    const h = v && v.home ? G.S.buildings.get(v.home) : null;
+    if (!h || !lived(h) || !housing(h) || h.type === 'barraco' || !leaver(v, h)) return null;
+    const L = residents(h); if (L.length <= beds(h)) return null;
+    const rest = L.filter(o => o !== v && o.set === v.set && leaver(o, h) && !A.isBody(o) && !K.waiting(o) && !K.gaveUp(o)).sort((a, c) => a.age - c.age || a.id - c.id);
+    return [v].concat(rest.slice(0, G.BDEF[HAND].housing - 1));
+  };
   // the house a family would raise: tall where the people build tall (the city lowers it on cheap ground), else a house
   // of stone where there is a workshop, else a hut
   function wantType(set) {
@@ -148,6 +164,7 @@
     const S = G.S; const res = new Map();
     for (const v of S.villagers.values()) if (v.set === set.id && v.home && !v.captive) { const l = res.get(v.home); if (l) l.push(v); else res.set(v.home, [v]); }
     const homes = []; for (const b of S.buildings.values()) if (b.set === set.id && housing(b)) homes.push(b);
+    pocket(set); // (the purse of who has a roof again: into the house's pot, L-973)
     for (const b of homes) if (lived(b)) { settleOwner(b, res.get(b.id) || []); rent(b, set, res.get(b.id) || []); }
     handsDay(set); // (a family's own work with no grown hands of the family left: the people's builders', D-222)
     // a house paid for and not built: after a few days with no hands for it, the people give back what the family paid
@@ -159,6 +176,28 @@
     // (and a rich family may ask for the rich house — one of them under way in a town at a time, after the families in need:
     // the builders' second paid work is never a second rich house. T-447)
     if (!richUnderWay(set)) for (const v of K.rich(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; if (K.orderRich(v).ok) break; }
+  }
+  // With a roof again, what one carried when one had none is the household's: the purse of who lives in a house goes into the
+  // house's pot, in the ledger ('bolso'), on the town's day. Nothing brought it in: the share of the seat's coins a household
+  // took out of doors with it (leave, below), the coins of a house pulled down for a work of the city, the wage paid in the
+  // street stayed in the purse for ever, counted by nobody — a family of Mênfis with 53 coins in its head's purse, three times
+  // the price of a house, lived eight days in others' house with nothing saved: L-973. What a thief took and still answers for
+  // (crime.js: the theft not yet found out, paid or forgotten) stays hidden in the purse
+  const lootMap = () => { const m = new Map(); for (const c of G.S.crimes || []) if (c.st === 'aberto') m.set(c.thief, (m.get(c.thief) || 0) + (c.n || 0)); return m; };
+  const ownPurse = (v, loot) => Math.floor(((v.purse || 0) - (loot.get(v.id) || 0)) * 100) / 100;
+  function pocket(set) {
+    const S = G.S; let loot = null;
+    for (const v of S.villagers.values()) {
+      if (v.set !== set.id || !(v.purse > EPS) || v.captive || !homeRef(v)) continue;
+      const n = ownPurse(v, loot || (loot = lootMap()));
+      if (n > EPS) D.move('p:' + v.id, 'h:' + v.home, 'moedas', n, { code: 'bolso', by: v.id, part: true });
+    }
+  }
+  // (and of a family out of doors, the purses of its grown ones in the hand of the one the day asks: the head of the household
+  // that left the seat carries its coins, and the day may ask the partner)
+  function gather(v, fam) {
+    if (v.home) return; let loot = null;
+    for (const m of fam) { if (m === v || m.age < 16 || !(m.purse > EPS)) continue; const n = ownPurse(m, loot || (loot = lootMap())); if (n > EPS) D.move('p:' + m.id, 'p:' + v.id, 'moedas', n, { code: 'bolso', by: m.id, part: true }); }
   }
   const richUnderWay = set => { for (const b of G.S.buildings.values()) if (b.set === set.id && !b.built && b.encomenda && b.encomenda.why === 'rica') return true; return false; };
   // the families in need of a town, in the order the day asks them: [head, why], the most urgent first. Of a house too many
@@ -173,7 +212,19 @@
     const eldest = v => Math.max(v.age, ...K.family(v).filter(m => m.age >= 16).map(m => m.age));
     const asked = []; const byHouse = new Map();
     for (const e of heads) { if (e[1] !== 'lotada' && e[1] !== 'casal') { asked.push(e); continue; } const l = byHouse.get(e[0].home); if (l) l.push(e); else byHouse.set(e[0].home, [e]); }
-    for (const l of byHouse.values()) { l.sort((a, b) => eldest(a[0]) - eldest(b[0]) || a[0].id - b[0].id); asked.push([l[0][0], l.some(e => e[1] === 'lotada') ? 'lotada' : 'casal']); }
+    // (of a house's families in need: one that shares the house with another family — two or more who move together —, the
+    // youngest; with none, its grown single ones — the youngest; and the family alone in the house it has. A grown single one
+    // is the town's housing's to send to a bed, village.js: asked first as «the youngest family», the one of eighteen kept the
+    // family of seven beside it from ever being asked, and from the people's empty house, D-236. Where only grown single ones
+    // go first, the family alone is asked too: its road is a bigger house, theirs a hut of their own — D-235)
+    const rank = e => { const fam = K.family(e[0]); return fam.length < 2 ? 1 : shares(e[0], fam) ? 0 : 2; };
+    for (const l of byHouse.values()) {
+      const rk = new Map(l.map(e => [e, rank(e)]));
+      l.sort((a, b) => rk.get(a) - rk.get(b) || eldest(a[0]) - eldest(b[0]) || a[0].id - b[0].id);
+      const why = l.some(e => e[1] === 'lotada') ? 'lotada' : 'casal';
+      asked.push([l[0][0], why]);
+      if (rk.get(l[0]) === 1) { const f = l.find(e => rk.get(e) === 2); if (f) asked.push([f[0], why]); }
+    }
     return asked.sort((a, b) => URGENT[a[1]] - URGENT[b[1]] || a[0].id - b[0].id);
   };
   // the family's decision, now: the people's empty house if there is one with beds for them (bought — or given, in a
@@ -188,27 +239,38 @@
     if (K.gaveUp(v)) return { ok: false, why: 'A família deixou a casa nova para depois.' };
     const r = homeRef(v); const h = r && S.buildings.get(+r.slice(2));
     const fam = K.family(v); const occ = occupancy();
+    gather(v, fam); // (out of doors, the family's coins in one hand: L-973)
     const plan = K.plan(v, fam, set, occ, why);
     const keep = o && o.now ? 0 : K.KEEP; // (a family keeps a little for itself; the god's body decides for it)
     const coin = coinPeople(set), has = K.savings(v);
     if (coin && has + EPS < plan.price + keep) {
-      // (the house it leaves keeps no mark of its saving, as with a house bought or raised — L-696)
-      const left = () => { if (h && h.poupa && fam.some(m => m.id === h.poupa.by)) h.poupa = null; };
-      // short of coin, and too many for the beds it has: the people's empty house, given for what the family has (L-718)
+      // short of coin, and too many for the beds it has — or out of doors: the people's empty house, given for what the family
+      // has (L-718, D-237); the grown single ones of the house, a hut of their own together (D-235)
       const rd = K.road(v, { fam, set, occ, plan, why, now: !!(o && o.now) });
+      const who = rd.mates || fam; // (the ones the road is for)
+      // (the house it leaves keeps no mark of its saving, as with a house bought or raised — L-696)
+      const left = () => { if (h && h.poupa && who.some(m => m.id === h.poupa.by)) h.poupa = null; };
       if (rd.kind === 'cede' && cede(v, fam, rd.b, set, rd.pays, why)) { left(); return { ok: true, b: rd.b, ceded: 1, price: rd.pays }; }
       // short of coin for a roof of its own: an empty house its owner lets, rented — three days of rent in hand
       if (plan.lease && has + EPS >= plan.rent * 3) { lease(v, fam, plan.lease, set, plan.rent, why); left(); return { ok: true, b: plan.lease, rented: 1, rent: plan.rent }; }
       // and, days of saving without the price, a hut raised with the family's own hands (L-718)
       let chao = 0; // (the day the town had no ground for the hut: said in the diary, tried again tomorrow)
-      if (rd.kind === 'maos' && !rd.wait) { const b = raiseByHand(v, fam, set, rd.type, rd.pays, why); if (b) { left(); return { ok: true, b, hands: 1, price: b.encomenda.paid }; } chao = S.day; }
-      if (h) { h.poupa = { by: v.id, alvo: r2(plan.price + keep), d: h.poupa && h.poupa.by === v.id ? h.poupa.d : S.day, why }; if (chao) h.poupa.chao = chao; }
+      if (rd.kind === 'maos' && !rd.wait) { const b = rd.mates ? raiseByHand(eldest(rd.mates), rd.mates, set, rd.type, rd.pays, why, true) : raiseByHand(v, fam, set, rd.type, rd.pays, why); if (b) { left(); return { ok: true, b, hands: 1, price: b.encomenda.paid }; } chao = S.day; }
+      // (the day the saving began stays while one of the same ones is asked — the youngest of the grown single ones changes —;
+      // and the family alone in the house, asked after its grown single ones, leaves the house's mark with them: theirs is
+      // the patience that counts there, D-235)
+      const theirs = !!h && !!h.poupa && rd.why === 'so' && rd.grown > 0 && leaversOf(h).some(m => m.id === h.poupa.by);
+      if (h && !theirs) { h.poupa = { by: v.id, alvo: r2(plan.price + keep), d: h.poupa && who.some(m => m.id === h.poupa.by) ? h.poupa.d : S.day, why }; if (chao) h.poupa.chao = chao; }
       return { ok: false, why: `Falta dinheiro: uma casa custa ${plan.price} moedas e a família tem ${Math.floor(has)}.`, saving: 1 };
     }
     if (plan.free) { const ok = buy(v, fam, plan.free, set, plan.price, why); if (ok && h) h.poupa = null; return ok ? { ok: true, b: plan.free, bought: 1, price: plan.price } : { ok: false, why: 'A compra não deu.' }; }
-    const no = K.cannotRaise(set, plan.type); if (no) return { ok: false, why: no };
-    const b = raise(v, fam, set, plan.type, why); if (b && h) h.poupa = null;
-    return b ? { ok: true, b, price: b.encomenda ? b.encomenda.paid : 0 } : { ok: false, why: 'A cidade não achou lugar para mais uma casa agora.' };
+    const no = K.cannotRaise(set, plan.type);
+    const b = no ? null : raise(v, fam, set, plan.type, why); if (b && h) h.poupa = null;
+    if (b) return { ok: true, b, price: b.encomenda ? b.encomenda.paid : 0 };
+    // (out of doors with the price, and the people's builders full or no ground for a house: who sleeps in the street does
+    // not wait — the hut of the family's own hands, D-237)
+    if (coin && why === 'rua') { const rd = K.road(v, { fam, set, occ, plan, why }); if (rd.kind === 'maos') { const hb = raiseByHand(v, fam, set, rd.type, rd.pays, why); if (hb) return { ok: true, b: hb, hands: 1, price: hb.encomenda.paid }; } }
+    return { ok: false, why: no || 'A cidade não achou lugar para mais uma casa agora.' };
   };
   // what is open to a family now (read only): the people's empty house, the price of a new one, a house to rent
   K.plan = function (v, fam, set, occ, why) {
@@ -273,23 +335,45 @@
   // the other road of a family, as it stands now (read only — the diary, the offer, the day's decision): { kind: 'cede', b,
   // pays } the people's empty house; { kind: 'maos', type, pays, wait } its own hands, in `wait` days; { kind: '', why } none —
   // 'so', 'pequena', 'obras', 'madeira' (noHands), or nothing: not a family the road is for
+  // (out: a family out of doors — the same two roads, with no days of patience: who sleeps in the street does not wait, D-237;
+  // mates: the grown single ones of a house over its beds, who raise a hut of their own together, D-235 — one alone only from
+  // a house at twice its beds: 'um'; grown: of a family alone in the house it has, the grown single ones who would leave it)
   K.road = function (v, o) {
     o = o || {}; const S = G.S; const why = o.why || K.need(v); const set = o.set || S.settlements.get(v.set);
-    if (!set || !crowded(why) || !coinPeople(set)) return { kind: '' };
-    const fam = o.fam || K.family(v); const occ = o.occ || occupancy(); const plan = o.plan || K.plan(v, fam, set, occ, why);
-    const pays = n => r2(Math.min(n, Math.max(0, shareOf(v, fam) - K.KEEP)));
-    if (plan.free) return { kind: 'cede', b: plan.free, pays: pays(plan.price) };
-    const no = noHands(v, fam, set, occ, plan.share); if (no) return { kind: '', why: no };
-    const h = S.buildings.get(v.home); const mine = !!h && !!h.poupa && fam.some(m => m.id === h.poupa.by); const since = mine ? h.poupa.d : S.day;
-    // (chao: the town had no ground for it at the family's last try — today's or yesterday's)
-    return { kind: 'maos', type: HAND, pays: pays(r2(goods(HAND))), wait: o.now ? 0 : Math.max(0, K.HANDS_DAYS - (S.day - since)), chao: mine && S.day - (h.poupa.chao || -9) <= 1 };
+    const out = why === 'rua';
+    if (!set || !(crowded(why) || out) || !coinPeople(set)) return { kind: '' };
+    const occ = o.occ || occupancy(); const h = v.home ? S.buildings.get(v.home) : null;
+    const since = L => (!!h && !!h.poupa && L.some(m => m.id === h.poupa.by) ? h.poupa : null);
+    // (chao: the town had no ground for it at the last try — today's or yesterday's)
+    const hand = (L, mark, now) => ({ kind: 'maos', type: HAND, pays: r2(Math.min(r2(goods(HAND)), Math.max(0, shareOf(v, L) - K.KEEP))), wait: now ? 0 : Math.max(0, K.HANDS_DAYS - (S.day - (mark ? mark.d : S.day))), chao: !!mark && S.day - (mark.chao || -9) <= 1 });
+    // (a grown single one: no house of the people's is given to one alone — the town's housing finds one a bed, village.js)
+    const g = out ? null : K.mates(v);
+    if (g) {
+      if (g.length < 2 && (occ.get(h.id) || 0) < 2 * beds(h)) return { kind: '', why: 'um' };
+      const no = noHands(v, g, set, occ, true); if (no) return { kind: '', why: no, mates: g };
+      return Object.assign(hand(g, since(g), o.now), { mates: g });
+    }
+    const fam = o.fam || K.family(v);
+    // (one alone out of doors: a bed by the town's housing, a shack by one's own hands — social.js)
+    if (out && fam.length < 2) return { kind: '' };
+    const plan = o.plan || K.plan(v, fam, set, occ, why);
+    if (plan.free) return { kind: 'cede', out, b: plan.free, pays: r2(Math.min(plan.price, Math.max(0, shareOf(v, fam) - K.KEEP))) };
+    const no = noHands(v, fam, set, occ, plan.share || out);
+    if (no) return { kind: '', why: no, out, grown: no === 'so' && h ? leaversOf(h).length : 0 };
+    return Object.assign(hand(fam, since(fam), o.now || out), { out });
   };
   // (the other road, said in the family's own words: the diary; '' when there is none to say)
-  const ROAD_NO = { obras: 'há cabanas demais sendo levantadas na cidade agora', madeira: 'o povo não tem madeira de sobra para uma cabana agora' };
+  const ROAD_NO = { obras: 'há cabanas demais sendo levantadas na cidade agora', madeira: 'o povo não tem madeira de sobra para uma cabana agora', pequena: 'numa cabana viveríamos mais apertados do que aqui' };
   K.roadSays = function (rd) {
-    if (rd.kind === 'cede') return 'não temos o preço, mas o povo tem uma casa vazia e a dá a quem não cabe mais onde está';
-    if (rd.kind === 'maos') return rd.wait > 0 ? `se em ${rd.wait} dia${rd.wait > 1 ? 's' : ''} não juntarmos o preço, levantamos a nossa cabana com as nossas mãos` : rd.chao ? 'não juntamos o preço, e a cidade não tem chão livre para levantarmos a nossa cabana' : 'não juntamos o preço: vamos levantar a nossa cabana com as nossas mãos';
-    return ROAD_NO[rd.why] ? `não juntamos o preço, e ${ROAD_NO[rd.why]}` : '';
+    const s = rd.wait > 1 ? 's' : '';
+    if (rd.kind === 'cede') return rd.out ? 'não temos o preço, mas o povo tem uma casa vazia e a dá a quem ficou sem teto' : 'não temos o preço, mas o povo tem uma casa vazia e a dá a quem não cabe mais onde está';
+    if (rd.kind === 'maos' && rd.mates) return rd.wait > 0 ? `não há cama para nós noutra casa: se em ${rd.wait} dia${s} não houver, levantamos a nossa cabana com as nossas mãos` : rd.chao ? 'não há cama para nós noutra casa, e a cidade não tem chão livre para levantarmos a nossa cabana' : 'não há cama para nós noutra casa: vamos levantar a nossa cabana com as nossas mãos';
+    if (rd.kind === 'maos' && rd.out) return 'estamos sem teto e sem o preço de uma casa: vamos levantar a nossa cabana com as nossas mãos';
+    if (rd.kind === 'maos') return rd.wait > 0 ? `se em ${rd.wait} dia${s} não juntarmos o preço, levantamos a nossa cabana com as nossas mãos` : rd.chao ? 'não juntamos o preço, e a cidade não tem chão livre para levantarmos a nossa cabana' : 'não juntamos o preço: vamos levantar a nossa cabana com as nossas mãos';
+    if (rd.why === 'um') return 'sou um só: mudo quando outra casa tiver uma cama';
+    // (a family alone, bigger than the house it has: the cause said — T-975)
+    if (rd.why === 'so') return rd.grown ? 'somos muitos para a casa: os moços saem quando outra casa tiver uma cama' : 'somos muitos para a casa, e os filhos ainda são pequenos';
+    return ROAD_NO[rd.why] ? `${rd.mates ? 'não há cama para nós noutra casa' : rd.out ? 'estamos sem teto e sem o preço de uma casa' : 'não juntamos o preço'}, e ${ROAD_NO[rd.why]}` : '';
   };
   // (the family's house, still being raised: a commission any of the family is written in — the one asked now may not be the
   // one who ordered it. A partner who came to the house after the order is not written in it, and at the head of the town's
@@ -302,6 +386,22 @@
       if (ids.length > 1 && b.encomenda.fam.some(id => ids.includes(id))) return b;
     }
     return null;
+  };
+  // The people's empty houses the families the town's day asks would take, one each, in the day's order (reads only): the
+  // town's housing sends no single one to them (village.js, assignHousing — D-236). A grown single one of a house over its beds
+  // went to the house with most room — the people's empty one —, alone, and was its owner the next morning, while the family
+  // of seven beside it waited for the day to be asked (T-976). A family: two or more who move together; one that would take
+  // the house today — it has the price, or the road gives it; never the body's, whose house is the player's to choose.
+  // → a Map: the house's id → the head of the family it is kept for
+  K.heldFor = function (set) {
+    const out = new Map(); const occ = occupancy(); const coin = coinPeople(set);
+    for (const [v, why] of K.queue(set)) {
+      const fam = K.family(v); if (fam.length < 2 || fam.some(m => m.age >= 16 && A.isBody(m)) || K.waiting(v) || K.gaveUp(v)) continue;
+      const plan = K.plan(v, fam, set, occ, why); if (!plan.free) continue;
+      if (coin && !crowded(why) && why !== 'rua' && K.savings(v) + EPS < plan.price + K.KEEP) continue;
+      out.set(plan.free.id, v.id); occ.set(plan.free.id, fam.length);
+    }
+    return out;
   };
   // why the people cannot raise a new house now (read only; '' when they can): their builders take two paid houses at a time,
   // and a people without coin raises one from its own store. One rule for the town's day and for the body's offer — the offer
@@ -407,7 +507,7 @@
     b.dono = v.id; b.custo = pays > EPS ? pays : 0; move(fam, b, 'cedida');
     if (swap) { from.dono = 0; from.custo = 0; from.aluga = null; from.poupa = null; }
     const nm = G.Village.buildName(b).toLowerCase();
-    bio(v, `Recebeu do povo ${art(nm)} ${nm} que estava vazia${pays > EPS ? `, pelas ${pays} moedas que tinha` : ''}, e se mudou com a família (${WHY[why]})${swap ? '; a casa que tinha ficou para o povo' : ''}.`, `O povo nos deu a casa que tinha vazia — não cabíamos mais onde estávamos`);
+    bio(v, `Recebeu do povo ${art(nm)} ${nm} que estava vazia${pays > EPS ? `, pelas ${pays} moedas que tinha` : ''}, e se mudou com a família (${WHY[why]})${swap ? '; a casa que tinha ficou para o povo' : ''}.`, why === 'rua' ? 'O povo nos deu a casa que tinha vazia — estávamos sem teto' : `O povo nos deu a casa que tinha vazia — não cabíamos mais onde estávamos`);
     A.note(v, 'memory', `Não tínhamos o preço de uma casa: o povo nos deu a que tinha vazia (${nm})${pays > EPS ? `, pelas ${pays} moedas que tínhamos` : ''}.`, NOTE);
     return true;
   }
@@ -431,16 +531,25 @@
     if (!pos) pos = V.findSite(set, type);
     return pos && !pos.demolish ? pos : null;
   }
-  function raiseByHand(v, fam, set, type, pays, why) {
+  // (mates: the grown single ones of a house over its beds, together — the hut is theirs, its owner the eldest of them: D-235)
+  function raiseByHand(v, fam, set, type, pays, why, mates) {
     const pos = handSite(set, type); if (!pos) return null;
     const b = G.Village.startProject(set, type, pos); if (!b) return null;
     if (pays > EPS && !D.move(homeRef(v) || 'p:' + v.id, 'h:' + b.id, 'moedas', pays, { code: 'obra-casa', by: v.id }).ok) { G.Village.removeBuilding(b); return null; }
     // (maos: the family's own work — its grown ones raise it, never the people's builders)
     b.dono = v.id; b.encomenda = { fam: fam.map(m => m.id), d: G.S.day, paid: pays > EPS ? pays : 0, by: v.id, why, fac: set.fac, maos: 1 };
+    if (mates) b.encomenda.mocos = 1;
     HW = null;
     const nm = G.Village.buildName(b).toLowerCase().replace(/ \(obra\)$/, '');
-    bio(v, `Sem o preço de uma casa, começou a levantar ${art(nm)} ${nm} com as próprias mãos, da madeira do povo, na beira de ${set.name} (${WHY[why]}).`, `Não juntamos o preço de uma casa: levantamos a nossa com as nossas mãos`);
-    for (const m of fam) if (m.age >= 16) A.note(m, 'memory', `Não juntamos o preço: vamos levantar a nossa ${nm} com as nossas mãos.`, NOTE);
+    if (mates) {
+      const n = fam.length - 1;
+      bio(v, `Já não cabia na casa onde morava, e nenhuma outra de ${set.name} tinha uma cama: começou a levantar ${art(nm)} ${nm} com as próprias mãos${n ? `, com ${n === 1 ? 'outro moço' : `outros ${n} moços`} da casa` : ''}, da madeira do povo.`, 'Já não cabíamos em casa: levantamos a nossa cabana com as nossas mãos');
+      for (const m of fam) A.note(m, 'memory', `Não cabemos mais em casa, e não há cama noutra: vamos levantar a nossa ${nm} com as nossas mãos.`, NOTE);
+      return b;
+    }
+    if (why === 'rua') bio(v, `Sem teto e sem o preço de uma casa, começou a levantar ${art(nm)} ${nm} com as próprias mãos, da madeira do povo, na beira de ${set.name}.`, 'Ficamos sem teto: levantamos a nossa cabana com as nossas mãos');
+    else bio(v, `Sem o preço de uma casa, começou a levantar ${art(nm)} ${nm} com as próprias mãos, da madeira do povo, na beira de ${set.name} (${WHY[why]}).`, `Não juntamos o preço de uma casa: levantamos a nossa com as nossas mãos`);
+    for (const m of fam) if (m.age >= 16) A.note(m, 'memory', why === 'rua' ? `Estamos sem teto: vamos levantar a nossa ${nm} com as nossas mãos.` : `Não juntamos o preço: vamos levantar a nossa ${nm} com as nossas mãos.`, NOTE);
     return b;
   }
   // The hands of a family's own work (D-222): a grown one of the family works on it before the trade of the day — the working
@@ -599,7 +708,8 @@
     if (fam.some(v => isSeat(S_().buildings.get(v.home)))) return r;
     move(fam, b, o.maos ? 'maos' : 'levantou');
     const v = fam[0]; const nm = G.Village.buildName(b).toLowerCase();
-    if (o.maos) bio(v, `Mudou-se com a família para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} que levantou com as próprias mãos.`, `Nos mudamos para a nossa casa — levantada com as nossas mãos`);
+    if (o.maos && o.mocos) bio(v, `Mudou-se para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} que levantou com as próprias mãos${fam.length > 1 ? `, com ${fam.length - 1 === 1 ? 'outro moço' : `outros ${fam.length - 1} moços`} da casa onde morava` : ''}.`, 'Mudamos para a nossa cabana — levantada com as nossas mãos');
+    else if (o.maos) bio(v, `Mudou-se com a família para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} que levantou com as próprias mãos.`, `Nos mudamos para a nossa casa — levantada com as nossas mãos`);
     else bio(v, `Mudou-se com a família para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} que mandou levantar.`, `Nos mudamos para a nossa casa — levantada com o que juntamos`);
     for (const m of fam) A.note(m, 'memory', o.maos ? 'Mudamos para a casa que levantamos com as nossas mãos.' : `Mudamos para a nossa casa nova.`, NOTE);
     HW = null;
@@ -646,9 +756,13 @@
   // married to one of them, and their children (the grandchildren, the nephews): the dead ones' children too
   K.ofCourt = function (v, r) {
     if (!v || !r) return false; const p = P(r.partner); const fam = o => !!o && (kin(r, o) || (!!p && kin(p, o)));
-    if (fam(v) || fam(P(v.partner)) || fam(P(v.mother)) || fam(P(v.father))) return true;
     const kids = (r.kids || []).concat(p ? p.kids || [] : []);
-    return (!!v.mother && kids.includes(v.mother)) || (!!v.father && kids.includes(v.father));
+    const own = o => !!o && (fam(o) || fam(P(o.mother)) || fam(P(o.father)) || (!!o.mother && kids.includes(o.mother)) || (!!o.father && kids.includes(o.father)));
+    // (and who the town's housing brings to live with one of them — village.js, assignHousing: who is married to one of them,
+    // and the little ones of such a couple. The husband of a ruler's niece, none of the court by the family alone, was put out
+    // of the seat and brought back to his wife's home every few seconds, with a line in the chronicle each time: L-974)
+    const mate = o => own(o) || own(P(o.partner));
+    return mate(v) || (v.age < 16 && [P(v.mother), P(v.father)].some(q => !!q && mate(q)));
   };
   const hasBody = L => L.some(m => A.isBody(m));
   const eldest = L => L.slice().sort((a, c) => (c.age >= 16) - (a.age >= 16) || c.age - a.age || a.id - c.id)[0];
@@ -879,7 +993,10 @@
         if (heir) { bio(heir, `Herdou a casa de ${v.name}.`, `Herdei a casa de ${v.name}`); A.note(heir, 'memory', `Herdei a casa de ${v.name}.`, NOTE); }
       }
       if (b.encomenda && b.encomenda.fam.includes(v.id)) {
-        b.encomenda.fam = b.encomenda.fam.filter(id => id !== v.id); if (b.encomenda.by === v.id) b.encomenda.by = b.encomenda.fam[0] || 0; if (!b.encomenda.fam.length) b.dono = 0;
+        b.encomenda.fam = b.encomenda.fam.filter(id => id !== v.id);
+        // (who answers for it now: the next of the family — of the grown single ones of a house, the eldest left, D-235)
+        if (b.encomenda.by === v.id) { const L = b.encomenda.mocos ? b.encomenda.fam.map(P).filter(Boolean) : []; b.encomenda.by = (L.length ? eldest(L).id : b.encomenda.fam[0]) || 0; }
+        if (!b.encomenda.fam.length) b.dono = 0;
         // (a family's own work with no grown hands of the family left: the people's builders' from now, D-222)
         // (and while it is the family's own, the work is of the one of it who answers for it now)
         if (b.encomenda.maos && !b.built) { if (!hands(b).length) b.encomenda.maos = 0; else if (!b.encomenda.fam.includes(b.dono)) b.dono = b.encomenda.by; HW = null; }
@@ -896,7 +1013,7 @@
     if (!out || !out.goals) return;
     const w = K.waiting(v);
     // (the family's own hands: said so, and what the work waits for — D-223)
-    if (w && w.encomenda.maos) { const nm = G.Village.buildName(w).toLowerCase().replace(/ \(obra\)$/, ''); const lack = Object.keys(w.need || {}).some(k => w.need[k] > EPS && G.Fac.free(w.set, k) < 1); out.goals.push({ id: w.id, kind: 'goal', src: 'casa-nova', txt: `Não juntamos o preço de uma casa: estamos levantando a nossa ${nm} com as nossas mãos (${Math.round((w.progress || 0) * 100)}%)${lack ? ' — falta madeira no armazém do povo' : ''}.`, day: w.encomenda.d, prog: w.progress || 0 }); return; }
+    if (w && w.encomenda.maos) { const nm = G.Village.buildName(w).toLowerCase().replace(/ \(obra\)$/, ''); const lack = Object.keys(w.need || {}).some(k => w.need[k] > EPS && G.Fac.free(w.set, k) < 1); const de = w.encomenda.mocos ? 'Não cabíamos mais em casa' : w.encomenda.why === 'rua' ? 'Ficamos sem teto' : 'Não juntamos o preço de uma casa'; out.goals.push({ id: w.id, kind: 'goal', src: 'casa-nova', txt: `${de}: estamos levantando a nossa ${nm} com as nossas mãos (${Math.round((w.progress || 0) * 100)}%)${lack ? ' — falta madeira no armazém do povo' : ''}.`, day: w.encomenda.d, prog: w.progress || 0 }); return; }
     if (w) { out.goals.push({ id: w.id, kind: 'goal', src: 'casa-nova', txt: `A nossa casa está sendo levantada (${Math.round((w.progress || 0) * 100)}%).`, day: w.encomenda.d }); return; }
     const h = v.home && G.S.buildings.get(v.home); const why = K.need(v);
     if (!why) return;
@@ -927,24 +1044,34 @@
     for (const v of L) { if (v.age < 16 || seen.has(v.id)) continue; const fm = K.family(v); for (const m of fm) seen.add(m.id); if (fm.length > 1) fams++; else lone++; }
     const who = `${fams > 1 ? fams + ' famílias' : fams ? 'uma família' : ''}${fams && lone ? ' e ' : ''}${lone ? (lone > 1 ? lone + ' crescidos solteiros' : 'um crescido solteiro') : ''}`;
     const head = `Casa cheia: ${L.length} moradores para ${cap} camas${who ? ' — ' + who : ''}.`;
-    const e = K.queue(set).find(q => q[0].home === b.id);
+    // (of the ones of the house the day asks, the grown single ones first: the family alone waits for them to go)
+    const es = K.queue(set).filter(q => q[0].home === b.id); const e = es.find(q => K.family(q[0]).length < 2) || es[0];
     if (!e) return `<div class="doing">${head} Ninguém daqui tem de sair hoje${lone ? ': os crescidos solteiros se mudam quando outra casa tiver lugar' : ''}.</div>`;
-    const v = e[0]; const fam = K.family(v); const de = `A família de ${plink(v.id)} (${fam.length})`;
+    const v = e[0]; const fam = K.family(v); const g = K.mates(v);
+    // (the grown single ones of the house, who leave it together: D-235)
+    const um = `${plink(v.id)}, que já é crescido e não tem par,`; const moços = n => `Os moços da casa (${n}: ${plink(v.id)} e ${n === 2 ? 'outro' : 'outros ' + (n - 1)})`;
+    const pl = !!g && g.length > 1; // (the plural of the grown single ones)
+    const de = g ? (pl ? moços(g.length) : um) : `A família de ${plink(v.id)} (${fam.length})`;
+    const deV = g ? um : de; // (what is the asked one's own to decide: the price, the house let go)
     const w = K.waiting(v); let txt;
-    if (w) txt = w.encomenda.maos ? `${de} está levantando a sua cabana com as próprias mãos (${Math.round((w.progress || 0) * 100)}%).` : `${de} espera a casa que pagou ficar pronta (${Math.round((w.progress || 0) * 100)}%).`;
-    else if (K.gaveUp(v)) txt = `${de} deixou a casa nova para depois.`;
-    else if (!coinPeople(set)) { const plan = K.plan(v, fam, set, null, e[1]); const no = plan.free ? '' : K.cannotRaise(set, plan.type); txt = no ? `${de} pediu uma casa ao povo: ${esc(no.charAt(0).toLowerCase() + no.slice(1))}` : `${de} espera a vez de pedir uma casa ao povo.`; }
+    if (w && w.encomenda.maos && w.encomenda.mocos) { const n = w.encomenda.fam.length; txt = `${n > 1 ? moços(n) + ' estão' : um + ' está'} levantando a sua cabana com as próprias mãos (${Math.round((w.progress || 0) * 100)}%).`; }
+    else if (w) txt = w.encomenda.maos ? `${deV} está levantando a sua cabana com as próprias mãos (${Math.round((w.progress || 0) * 100)}%).` : `${deV} espera a casa que pagou ficar pronta (${Math.round((w.progress || 0) * 100)}%).`;
+    else if (K.gaveUp(v)) txt = `${deV} deixou a casa nova para depois.`;
+    else if (!coinPeople(set)) { const plan = K.plan(v, fam, set, null, e[1]); const no = plan.free ? '' : K.cannotRaise(set, plan.type); txt = no ? `${deV} pediu uma casa ao povo: ${esc(no.charAt(0).toLowerCase() + no.slice(1))}` : `${deV} espera a vez de pedir uma casa ao povo.`; }
     else {
       const plan = K.plan(v, fam, set, null, e[1]); const has = K.savings(v); const preco = `${Math.floor(has)} de ${Math.ceil(plan.price + K.KEEP)} moedas`;
-      if (has + EPS >= plan.price + K.KEEP) { const no = plan.free ? '' : K.cannotRaise(set, plan.type); txt = no ? `${de} tem o preço de outra casa, mas ${esc(no.charAt(0).toLowerCase() + no.slice(1))}` : `${de} tem o preço de outra casa e espera a vez (a cidade decide uma casa por dia).`; }
+      if (has + EPS >= plan.price + K.KEEP) { const no = plan.free ? '' : K.cannotRaise(set, plan.type); txt = no ? `${deV} tem o preço de outra casa, mas ${esc(no.charAt(0).toLowerCase() + no.slice(1))}` : `${deV} tem o preço de outra casa e espera a vez (a cidade decide uma casa por dia).`; }
       else {
         const rd = K.road(v, { fam, set, plan, why: e[1] });
-        txt = rd.kind === 'cede' ? `${de} não tem o preço de outra casa (${preco}): o povo vai dar-lhe a que tem vazia.`
+        if (g) txt = rd.kind === 'maos' ? (rd.wait > 0 ? `${de} não ${pl ? 'acham' : 'acha'} cama noutra casa; em ${rd.wait} dia${rd.wait > 1 ? 's' : ''} assim, ${pl ? 'levantam' : 'levanta'} a sua cabana com as próprias mãos.` : rd.chao ? `${de} não ${pl ? 'acham' : 'acha'} cama noutra casa, e a cidade não tem chão livre para a cabana ${pl ? 'deles' : 'dele'}.` : `${de} não ${pl ? 'acham' : 'acha'} cama noutra casa: ${pl ? 'vão' : 'vai'} levantar a sua cabana com as próprias mãos.`)
+          : rd.why === 'um' ? `${de} sai quando outra casa tiver uma cama.`
+            : `${de} não ${pl ? 'acham' : 'acha'} cama noutra casa, e ${esc(ROAD_NO[rd.why] || 'não há como levantar uma cabana agora')}.`;
+        else txt = rd.kind === 'cede' ? `${de} não tem o preço de outra casa (${preco}): o povo vai dar-lhe a que tem vazia.`
           : rd.kind === 'maos' ? (rd.wait > 0 ? `${de} junta o preço de outra casa (${preco}); em ${rd.wait} dia${rd.wait > 1 ? 's' : ''} sem ele, levanta a sua cabana com as próprias mãos.` : rd.chao ? `${de} não juntou o preço de outra casa (${preco}), e a cidade não tem chão livre para ela levantar a sua cabana.` : `${de} não juntou o preço de outra casa (${preco}): vai levantar a sua cabana com as próprias mãos.`)
             : rd.why === 'madeira' ? `${de} não junta o preço de outra casa (${preco}), e o povo não tem madeira de sobra para ela levantar a sua cabana.`
               : rd.why === 'obras' ? `${de} não junta o preço de outra casa (${preco}), e já há cabanas demais sendo levantadas na cidade.`
                 : rd.why === 'pequena' ? `${de} não junta o preço de outra casa (${preco}), e numa cabana viveria mais apertada do que aqui.`
-                  : `${de} é grande demais para as camas que tem e não junta o preço de uma casa maior (${preco}).`;
+                  : `${de} é grande demais para as camas que tem e não junta o preço de uma casa maior (${preco})${rd.grown ? ': os moços saem quando outra casa tiver uma cama' : ': os filhos ainda são pequenos — fica apertada até eles crescerem ou o preço juntar'}.`;
       }
     }
     return `<div class="doing">${head} ${txt}</div>`;
