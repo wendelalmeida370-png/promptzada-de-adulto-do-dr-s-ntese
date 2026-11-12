@@ -536,7 +536,23 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 for (const f of files) if (f !== 'interiors.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (/\bintG\b/.test(c)) fails.push(`plantas: ${f}:${k + 1} mexe na gramática das plantas do save (intG é do interiors.js — D-198): ${l.trim().slice(0, 110)}`); });
 if (!(src['interiors.js'] || []).some(l => /const planKey = /.test(l) && l.includes("':g' + In.VERSION"))) fails.push("plantas: interiors.js — a chave da planta (planKey) não leva a gramática (':g' + In.VERSION): D-198");
-// (as regras 69 e 70 estão guardadas para a freguesia; as 73 a 76, para o ofício que fica e a obra grande)
+// 69. "a vontade do banho e da leitura não sorteia" (D-200, D-201): no js/act-servicos.js, do bloco «the wish for a bath» até
+// o Te.go, e no js/act-lazer.js, do «the wish to read» até o Bi.go, nenhuma chamada ao acaso do mundo nem ao do que só se vê:
+// a sorte do dia de cada um é o G.hash da pessoa e do dia — a mesma dentro e fora do passo, com ou sem gente olhando
+for (const [f, de, ate] of [['act-servicos.js', 'the wish for a bath (D-200)', 'Te.go = function'], ['act-lazer.js', 'the wish to read (D-201)', 'Bi.go = function']]) {
+  const L = src[f] || []; const i0 = L.findIndex(l => l.includes(de)), i1 = L.findIndex(l => l.includes(ate));
+  if (i0 < 0 || i1 < i0) { fails.push(`freguesia: ${f} — não achei o bloco da vontade («${de}» … «${ate}»): a regra 69 não tem o que conferir`); continue; }
+  for (let k = i0; k < i1; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(/.test(c)) fails.push(`freguesia: ${f}:${k + 1} sorteia dentro da vontade do banho ou da leitura (a sorte do dia é o G.hash da pessoa e do dia — D-200): ${L[k].trim().slice(0, 110)}`); }
+}
+// 70. "o dia do banho e da leitura é de quem os dá, e ninguém manda gente a um serviço" (D-200, D-201): v.bathDay só o
+// js/act-servicos.js escreve e v.readDay só o js/act-lazer.js (e o save.js, que os devolve); quem vai aos banhos e à
+// biblioteca vai pela escolha do dia de cada um (G.Termas.go / G.Biblioteca.go, só do start do js/villagers.js) ou pelo
+// passeio — nenhum módulo enche um serviço por fora
+for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (f !== 'act-servicos.js' && f !== 'save.js' && /\.bathDay\s*=[^=]/.test(c)) fails.push(`freguesia: ${f}:${k + 1} escreve o dia do banho de alguém fora de act-servicos.js (D-200): ${l.trim().slice(0, 110)}`);
+  if (f !== 'act-lazer.js' && f !== 'save.js' && /\.readDay\s*=[^=]/.test(c)) fails.push(`freguesia: ${f}:${k + 1} escreve o dia da leitura de alguém fora de act-lazer.js (D-201): ${l.trim().slice(0, 110)}`);
+  if (f !== 'villagers.js' && /\b(Termas|Biblioteca)\.go\s*\(/.test(c)) fails.push(`freguesia: ${f}:${k + 1} manda alguém aos banhos ou à biblioteca fora da escolha de cada um (o start de villagers.js — D-200): ${l.trim().slice(0, 110)}`); });
+// (as regras 73 a 76 estão guardadas para o ofício que fica e a obra grande)
 // 71. "os aposentos da sede têm uma porta só" (D-205): as camas da sede de quem governa (BDEF.aposentos) só o js/court.js dá e
 // só o js/village.js lê (V.bedsOf: as camas de um prédio onde uma casa mora); quem quer saber se um prédio vale para morar
 // pergunta a V.livable, se guarda como casa, a V.bedsOf — e as portas das casas da cidade continuam lendo BDEF.housing

@@ -140,10 +140,12 @@ if (on('k5')) {
     // day by the world's own hand, and the banner goes with it: the case follows the family, not the walls. T-699, T-813)
     const fa = bannersOf(a.o.name, sinceA).filter(x => idsA.includes(x.elite.dono)), fc = bannersOf(c.o.name, sinceC).filter(x => idsC.includes(x.elite.dono));
     const under = L => L.length === 1 && !!P(L[0].elite.dono) && P(L[0].elite.dono).home === L[0].id;
-    const ea = fa[0] && fa[0].elite, e1 = fc[0] && fc[0].elite; const e0 = B(c.b.id) && B(c.b.id).elite; const old = !!e0 && !(fc[0] && fc[0].id === c.b.id);
+    const ea = fa[0] && fa[0].elite, e1 = fc[0] && fc[0].elite; const e0 = B(c.b.id) && B(c.b.id).elite;
+    // (the old mark still on the old walls — not the banner of another family that came to live in the house the family left)
+    const old = !!e0 && e0.fam === c.o.name && e0.since === sinceC && !(fc[0] && fc[0].id === c.b.id); const outra = !!e0 && !old && !(fc[0] && fc[0].id === c.b.id) ? e0 : null;
     const nv = said(a.b.id).concat(said(c.b.id), said(nh.id), fa[0] ? said(fa[0].id) : [], fc[0] ? said(fc[0].id) : []);
     ok('k5 um save de antes: a bandeira vai para onde mora o dono', under(fa) && ea.ok >= S.day - 1 && !old && under(fc) && e1.fam === c.o.name && !nv.length,
-      `(a) ${a.o.name} mora na casa da marca antiga: ${under(fa) ? `a bandeira segue com a família, agora escrita (${fa[0].type}#${fa[0].id}${fa[0].id === a.b.id ? '' : ', a casa para onde a família foi no dia'})` : fa.length ? 'a bandeira NÃO está onde a família mora' : 'a bandeira SUMIU'}; (b) ${c.o.name} mudou e a marca antiga ficou na casa velha: ${old ? 'SEGUE na casa velha' : 'saiu da casa velha'} e ${under(fc) ? `está na casa onde a família mora (${fc[0].type}#${fc[0].id}${fc[0].id === nh.id ? '' : ', a casa para onde a família foi depois, no dia'})` : 'NÃO foi para a casa da família'}; verificador ${nv.join(' | ') || 'limpo'}`);
+      `(a) ${a.o.name} mora na casa da marca antiga: ${under(fa) ? `a bandeira segue com a família, agora escrita (${fa[0].type}#${fa[0].id}${fa[0].id === a.b.id ? '' : ', a casa para onde a família foi no dia'})` : fa.length ? 'a bandeira NÃO está onde a família mora' : 'a bandeira SUMIU'}; (b) ${c.o.name} mudou e a marca antiga ficou na casa velha: ${old ? 'SEGUE na casa velha' : 'saiu da casa velha'}${outra ? ` (que tem agora a bandeira de ${outra.fam}, ${P(outra.dono) && P(outra.dono).home === c.b.id ? 'que veio morar nela' : 'QUE NÃO MORA NELA'})` : ''} e ${under(fc) ? `está na casa onde a família mora (${fc[0].type}#${fc[0].id}${fc[0].id === nh.id ? '' : ', a casa para onde a família foi depois, no dia'})` : 'NÃO foi para a casa da família'}; verificador ${nv.join(' | ') || 'limpo'}`);
   }
 }
 

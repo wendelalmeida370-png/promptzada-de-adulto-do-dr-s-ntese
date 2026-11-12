@@ -17,7 +17,9 @@
 //  do tesouro por peça (num povo de moeda). O corpo do deus assiste,
 //  ou, sendo ator, atua — pelas mesmas portas.
 //
-//  A biblioteca. Quem vem ler senta numa mesa de leitura ('ler') e lê
+//  A biblioteca. Quem vem ler — por vontade sua: a pausa do dia de
+//  quem lê (G.Biblioteca.urge, D-201), ou o passeio de quem está sem
+//  trabalho — senta numa mesa de leitura ('ler') e lê
 //  um rolo; cada leitura soma à pesquisa do povo um tanto — e não mais
 //  que um tanto por dia em cada biblioteca —; o copista, o ofício
 //  dela, copia rolos na mesa do escriba ('escrever'), que também
@@ -336,6 +338,8 @@
   }
   Tt.urge = function (v, cur) {
     if (cur && cur.type === 'teatro') return 1;
+    // (the stoker of baths still open, the fire not fed to their closing, keeps the furnace: no evening out — D-204)
+    if (G.Termas && G.Termas.onDuty && G.Termas.onDuty(v)) return 0;
     if (v.age < 16 || v.captive || v.jail || v.aboard || (v.carry && v.carry.n > EPS) || A.isBody(v) || !tonight(v)) return 0;
     return (v.traits.includes('Curioso') || v.traits.includes('Sociável') ? 0.55 : 0.4) + G.R() * 0.5;
   };
@@ -442,8 +446,110 @@
     if (!v || !b || v.captive || v.jail || v.age < 10 || (v.carry && v.carry.n > EPS) || A.isBody(v)) return null;
     if (b.type !== 'biblioteca' || !b.built || facOf(b) !== G.Fac.idOfV(v) || !libOpen(b) || readersFull(b)) return null;
     const f = G.Fac.get(facOf(b)); if (!f || !f.tech || !f.tech.known || !f.tech.known.escrita) return null; // (reading is the writing's)
+    if (v.readDay === S_().day) return null; // (a scroll a day: the wish and the town's leisure alike — D-201)
     const dr = G.Vg.door(b); if (!G.W.reaches(v, dr[0], dr[1])) return null;
-    return H.setTask(v, { type: 'ler', id: b.id, pri: 0.35, st: 0 });
+    return H.setTask(v, { type: 'ler', id: b.id, pri: Bi.PRI, st: 0 });
+  };
+  // ---- the wish to read (D-201)
+  // Reading is a pause of one's day too, by each one's own wish (villagers.js, decide: 'ler', beside the baths) — of a
+  // people that knows the writing. Who: the curious (the trait), the people of letters (the priests, the scribes), the nobles
+  // and the merchants; the others do not read. Less who lives far from the library. When: in the library's hours, each one
+  // from an hour of one's own in its morning, and only with the time to walk there and read a scroll before it shuts. How
+  // often: a share of the days (Bi.wish), today being one of them or not by the day's own lot of each one (G.hash of the
+  // person and the day: none of the world's chance is drawn, and the person has no new field), once a day (v.readDay, which
+  // the reading itself writes). What stops it: the tables full — who is on the way counts —, too long a walk, hunger, a load
+  // in the hands or the leg of an operation (D-094), the little ones to mind at home; never the god's body
+  Bi.PRI = 0.35;     // (the errand's priority: below any work — a reading never cuts a task under way)
+  Bi.IN = 1.5;       // (what the scroll is worth to one seated at it: above every other wish of the day)
+  Bi.CURIOUS = 0.4;  // (the share of the days with a reading: of the curious,)
+  Bi.LETTERS = 0.3;  // (of the people of letters — the priest, the scribe —)
+  Bi.WELL = 0.25;    // (and of a noble's or a merchant's house; they add up)
+  Bi.NEAR = 10;      // (home within this many tiles of the library: the whole wish; beyond, less with each tile — over Bi.SPAN
+  Bi.SPAN = 40;      //  tiles more —, never under Bi.FLOOR of it)
+  Bi.FLOOR = 0.25;
+  Bi.REACH = 30;     // (a walk to the door longer than this: no reading)
+  Bi.SCROLL = 36;    // (the seconds the longest scroll takes, sat down: runLeitor)
+  Bi.SLACK = 0.06;   // (of the day: who is far from the library may set out this long before it is too late to — see Bi.pick)
+  Bi.HOME = 0.5;     // (of two libraries, how much the way home weighs: D-157)
+  Bi.HUNGRY = 55;    // (hungrier than this, the meal first: the way there and the scroll add a quarter of a day's hunger)
+  Bi.SPENT = 25;     // (and more worn out than this, the bed)
+  const LETTERS = { sacerdote: 1, escriba: 1 }, WELLOFF = { nobreza: 1, mercadores: 1 };
+  const lit = b => { const f = G.Fac.get(facOf(b)); return !!(f && f.tech && f.tech.known && f.tech.known.escrita); };
+  // the share of the days this person wants to read at this library — 0 to 1; 0 for who does not read
+  Bi.wish = function (v, b) {
+    let p = 0;
+    if (v.traits && v.traits.includes('Curioso')) p += Bi.CURIOUS;
+    if (LETTERS[v.role]) p += Bi.LETTERS;
+    if (WELLOFF[v.grp]) p += Bi.WELL;
+    if (!(p > 0)) return 0;
+    const hm = v.home && S_().buildings.get(v.home); const bx = b.x + b.w / 2, by = b.y + b.h / 2;
+    const far = hm ? G.dist(hm.x + hm.w / 2, hm.y + hm.h / 2, bx, by) : G.dist(v.x, v.y, bx, by);
+    if (far > Bi.NEAR) p *= Math.max(Bi.FLOOR, 1 - (far - Bi.NEAR) / Bi.SPAN);
+    return Math.min(1, p);
+  };
+  // (the day's lot of each one, 0 to 1: under the wish, today is a day to read — the same all day, another tomorrow)
+  Bi.lot = v => G.hash(Math.imul(v.id | 0, 137) + Math.imul(S_().day | 0, 7907) + 9);
+  // (the hour of one's own, from which the reading may be: in the library's morning — a walk across the town and a scroll
+  // take a quarter of the day, and the library shuts at dusk. With its hours of today, 0,29 to 0,36)
+  Bi.hourOf = function (v, b) { const h = Bi.horas(b); return h.abre + (h.fecha - h.abre) * (0.02 + 0.16 * G.hash(Math.imul(v.id | 0, 37) + 13)); };
+  // (who is on the way to each library, counted once a step of the world when someone asks; the one just sent, added — and
+  // who found no way there is not sent again for the rest of the day: the search that fails is the dearest one)
+  let cIdx = null, cS = null, cT = -1, noWay = new Map();
+  G.worldHooks.push(() => { cIdx = null; cS = null; cT = -1; noWay = new Map(); });
+  const lost = v => { const t = noWay.get(v.id); return t !== undefined && S_().clock - t < G.DAY_LEN * 0.5 && S_().clock >= t; };
+  // (kept for the step of the world it was counted in; asked from outside the step — a panel, a proof —, counted afresh and
+  // not kept: the world is the same with or without anyone looking)
+  function coming(b) {
+    const S = S_(); if (G.inSim && cIdx && cS === S && cT === S.clock) return cIdx.get(b.id) || 0;
+    const m = new Map(); for (const v of S.villagers.values()) { const t = v.task; if (t && t.type === 'ler' && t.st === 0) m.set(t.id, (m.get(t.id) || 0) + 1); }
+    if (G.inSim) { cIdx = m; cS = S; cT = S.clock; }
+    return m.get(b.id) || 0;
+  }
+  // (the tables one more could count on: the plan's places to read, less who reads and who is on the way; with no plan, the
+  // count — read off the book of the day as it is: the book is the reading's to write)
+  const tables = b => (planned(b) ? placesOf(b, 'ler') : Bi.CAP);
+  Bi.tables = tables;
+  const atTables = b => Object.keys((b.livros && b.livros.quem) || {}).length;
+  const room = b => tables(b) - atTables(b) - coming(b);
+  Bi.room = room;
+  const noSeat = b => (planned(b) ? !In().freePlace(b, 'ler') : atTables(b) >= Bi.CAP);
+  // the library this person would go to now, by the wish — or none: it only reads
+  Bi.pick = function (v) {
+    const S = S_();
+    const fid = G.Fac.idOfV(v); const hm = v.home && S.buildings.get(v.home); let best = null, bd = 1e9, lot = -1;
+    for (const b of E.byType(v.set, 'biblioteca')) {
+      if (!b.built || facOf(b) !== fid || !libOpen(b) || !lit(b)) continue;
+      const dr = G.Vg.door(b); const d0 = G.dist(v.x, v.y, dr[0], dr[1]); if (d0 >= Bi.REACH) continue;
+      // (the walk and a scroll's worth of time before it shuts: who cannot have it does not set out — and who is far sets
+      // out before the hour of one's own, with Bi.SLACK of the day to spare before it is too late)
+      const last = Bi.horas(b).fecha - (d0 * Tt.WALK + Bi.SCROLL) / G.DAY_LEN;
+      if (S.time > last || S.time < Math.min(Bi.hourOf(v, b), last - Bi.SLACK) - EPS) continue;
+      if (lot < 0) lot = Bi.lot(v);
+      if (lot >= Bi.wish(v, b)) continue;
+      if (room(b) < 1 || noSeat(b)) continue;
+      const d = d0 + (hm ? Bi.HOME * G.dist(hm.x, hm.y, b.x, b.y) : 0); if (d >= bd) continue;
+      if (!G.W.reaches(v, dr[0], dr[1])) continue;
+      best = b; bd = d;
+    }
+    return best;
+  };
+  // how much this grown one wants to read now (a choice of decide, among the others), or 0; one already on the way or at
+  // a table stays for the scroll — the work, a chat, the way home do not take one from it; hunger and sleep do; the stoker
+  // at his post does not go (G.Termas.onDuty)
+  Bi.urge = function (v, cur) {
+    if (cur && cur.type === 'ler') return cur.st >= 1 ? Bi.IN : 1; // (at the table, no other wish takes one from the scroll — as the bath's, D-203)
+    const S = S_();
+    if (cur && (cur.pri || 0) >= Bi.PRI) return 0; // (an errand under way that weighs as much: the scroll waits, and hides no other wish)
+    if (v.readDay === S.day || v.age < 16 || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || (v.carry && v.carry.n > EPS)) return 0;
+    if (v.hunger > Bi.HUNGRY || v.energy < Bi.SPENT || A.isBody(v)) return 0;
+    if (!E.byType(v.set, 'biblioteca').length) return 0;
+    if (lost(v) || G.Vg.handsBusy(v) || (G.Termas && G.Termas.onDuty && G.Termas.onDuty(v)) || (G.Lar && (G.Lar.bedrest(v) || G.Lar.minder(v)))) return 0;
+    return Bi.pick(v) ? 0.7 : 0;
+  };
+  Bi.go = function (v, H) {
+    const b = Bi.pick(v); const t = b ? Bi.visit(v, b, H) : null;
+    if (t && G.inSim && cIdx && cS === S_() && cT === S_().clock) cIdx.set(b.id, (cIdx.get(b.id) || 0) + 1);
+    return t;
   };
   function runLeitor(v, t, dt, H) {
     const S = S_(); const b = S.buildings.get(t.id);
@@ -451,7 +557,7 @@
     if (!b || !b.built || b.type !== 'biblioteca') return out();
     if (t.st === 0) {
       if (!libOpen(b)) return H.end(v);
-      const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r === 0) return;
+      const r = walkB(v, t, b, dt, H); if (r < 0) { noWay.set(v.id, S.clock); return H.end(v); } if (r === 0) return;
       if (readersFull(b)) { G.Vg.emote(v, 'sad', 1); return H.end(v); }
       goIn(v, t, b, 'ler'); const k = book(b); k.quem[v.id] = { t: Math.round(S.clock * 10) / 10, dur: Math.round(G.rr(20, 34)) };
       t.st = 1; v.actT = 0; return;
