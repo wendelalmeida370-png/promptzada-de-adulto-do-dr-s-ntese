@@ -1465,6 +1465,8 @@
   // 'fome' 'guerra' 'obra' pulled by one, 'longe' a builder who reaches no work (L-389) —, for whoever asks: the proofs, the
   // developer. Never the world's: nothing reads it in the step, it is not saved, and it starts over with each world)
   V.tradeLog = []; G.worldHooks.push(() => { V.tradeLog.length = 0; });
+  // (and what the instant asked of each trade at a town's last dealing — the same: for whoever asks, never the world's)
+  const asked = new Map(); G.worldHooks.push(() => asked.clear()); V.tradeAsked = id => asked.get(id) || null;
   const PULL = { fome: 1, guerra: 1, obra: 1 };
   // (a trade taken: the day and the trade left for an emergency are written here and nowhere else — the guard, rule 73)
   function took(v, from, why, n) {
@@ -1575,6 +1577,7 @@
     // (the need that lasts, D-210: the town's memory of what each trade asks comes a little closer to what the instant asks, by
     // the time since the last dealing — el; the salto deals half as often and each of its dealings counts double. A load keeps
     // the memory as it was saved; a town with none yet — a new one, a save of before — starts from the instant's)
+    asked.set(set.id, want);
     const mem = set.ofm || (keep ? null : (set.ofm = {}));
     if (!keep) { const dt = el > 0 ? el : 4, kk = dt / (dt + V.TRADE_TAU * G.DAY_LEN); for (const r of WORK_ROLES) { const m = mem[r]; mem[r] = m === undefined || Math.abs(want[r] - m) < 1e-6 ? want[r] : m + (want[r] - m) * kk; } }
     // (what passes over it, D-211: with less than a day of bread, at war, or with a great work that has its turn, the trades that

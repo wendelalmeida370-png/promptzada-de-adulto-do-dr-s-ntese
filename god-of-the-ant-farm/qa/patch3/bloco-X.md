@@ -13,13 +13,16 @@ Ramo: `worktree-agent-ab1e0b6fbb80f0a8d` (base `b2b61f0`). Rascunho e medidores:
   save com a cidade, como tudo dela; o save das pessoas é genérico: nada a mexer no `js/save.js`);
 - a causa na biografia (`js/life.js`: `L.onRole(v, prev, why)` → «Voltou a ser lenhador.», «Tornou-se guerreira — a guerra
   chamou.»);
-- a prova `qa/oficio-fica.js` (x1 a x11) e as regras `qa/oficio-fica-inv.js` — **rodadas e passando até aqui: x1, x2, x3, x4,
-  x5**; x6 a x11 escritas, **ainda não rodadas**;
+- a prova `qa/oficio-fica.js` (x1 a x13) e as regras `qa/oficio-fica-inv.js` — **a prova inteira (x1 a x11) rodou de uma vez
+  e passou (41 linhas); x12 (o celeiro por graus) e x13 (a obra grande puxa) e as conferências novas do x1/x2 (quem troca é a
+  mão mais nova), do x3 (o armazém nunca esvaziou) e do x5 (a guerra chama os bravos) rodadas e passando uma a uma**;
+- as sabotagens: `scratchpad/ag/X/sab-X.py` (27) e `sab-all.sh` — **rodando**; o resumo sai em `scratchpad/ag/X/sab-out/resumo.txt`;
+- `V.tradeAsked(id)`: o que o instante pediu de cada ofício na última passada de uma cidade (só para quem pergunta: as provas);
 - o guard e a vida curta (`soak 103 … 5 1 1`: 0 violações) passam com a regra.
 
 **Falta (nesta ordem):**
-1. rodar e acertar x6 a x11 da prova; conferir as regras do `oficio-fica-inv.js` num mundo vivido;
-2. as sabotagens de cada parte (`sab-X.py` + `bv/sab-run.sh`);
+1. conferir o resumo das sabotagens (cada uma tem de fazer falhar o caso dela) e acertar a prova onde uma não for acusada;
+2. a prova inteira de uma vez de novo (`node qa/oficio-fica.js`, uns 10 min);
 3. a economia de novo com a regra final (o lote de seis sementes abaixo foi medido ANTES de três acertos pequenos: a guerra
    chama os bravos, a volta primeiro, o puxado não vai a um terceiro ofício antes dos dias) e os mundos prontos vividos 10
    dias (a fome antes e depois: `eco.js <raiz> pronto:metropole 10`);
