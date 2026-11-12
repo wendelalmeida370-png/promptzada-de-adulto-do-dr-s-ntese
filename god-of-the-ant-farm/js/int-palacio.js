@@ -343,7 +343,8 @@
       else if (m.fn === 'banquete') P.opt(() => { for (let g = 0; g < 2; g++) if (P.place('mesa', lv, id, { sides: ['livre'], margin: 0.6 })) P.place('banco', lv, id); P.place('jarros', lv, id); });
       else if (m.fn === 'guarda') P.opt(() => { P.place('armeiro', lv, id); P.place('banco', lv, id); P.place('catre', lv, id); });
       else if (m.fn === 'tesouro') P.opt(() => { for (let g = 0; g < 2; g++) P.place('cofre', lv, id); P.place('arca', lv, id); });
-      else if (m.fn === 'aposento') { if (P.place('cama-casal', lv, id) || P.place('cama', lv, id)) { beds++; P.opt(() => P.place('arca', lv, id)); } }
+      // (a chamber: its bed and its chest — and, where it fits, a second bed: the ruler's household lives here, its children too, D-205)
+      else if (m.fn === 'aposento') { if (P.place('cama-casal', lv, id) || P.place('cama', lv, id)) { beds++; P.opt(() => { P.place('arca', lv, id); P.place('cama', lv, id); }); } }
       else if (m.fn === 'patio') P.opt(() => { for (let g = 0; g < 2; g++) P.place('banco', lv, id, { sides: ['livre'], margin: 1.2 }); });
     }
     if (!beds) { P.errs.push('sem cama nos aposentos'); return; }

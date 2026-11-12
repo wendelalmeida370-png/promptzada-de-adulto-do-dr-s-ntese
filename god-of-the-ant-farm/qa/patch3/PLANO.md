@@ -356,13 +356,20 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   provas que julgavam o que o mundo de agora não promete (T-808 a T-811: o colo do bebê, o ator fora da cidade, a manhã do
   foguista, a casa rica julgada depois da guerra). **Aberto do G:** T-892, T-893, T-895 (em quatro de cada cinco casas de
   4 m o que cabe é o banco de dois lugares).
+- **Juntado, da terceira leva: o governante mora no palácio** (R; D-205 a D-208, L-930; fecha o T-765): a sede — a casa do
+  chefe, o palácio, o grande palácio, o colossal — é a casa de quem governa (`BDEF.aposentos`, `G.Village.bedsOf`): a
+  família dorme nos aposentos, come da despensa dela e sai quando outro governa ou quando a sede cai ou entra em obras
+  (`G.Casa.reign`, só do `act-casa.js`); quem é eleito noutra cidade do povo vem para a capital; a sede guarda as camas que
+  tem; nenhuma porta das casas da cidade a enxerga (`qa/morar-palacio.js`, regras 71 e 72). Na junção, pelo líder: a
+  cozinha e a lareira da sede fumam como as de uma casa (fecha o T-931), e três provas ajustadas ao mundo de agora (T-812:
+  a despensa vazia; T-813: a casa mercante segue a família e espera a ronda do dia — fecha o T-936). **Aberto do R:** a
+  oferta ao corpo do deus de mudar para a sede (T-932, com a T-763), T-930, T-933 a T-935, T-937, T-938.
 - **Achado pelo líder ao fotografar as casas por dentro: a casa cheia que não esvazia** (L-718, aberto): em todo mundo
   pronto há casas com o dobro ou o triplo da lotação (a pior: 22 numa casa de 6, ao lado de uma casa com cinco lugares
   vagos), e a razão de quase todas as famílias é «falta dinheiro» — o casal na casa cheia dos parentes nunca junta o preço
   de uma casa. É regra de economia e de moradia, com decisão de design: fica para uma frente própria.
-- **Em curso, a terceira leva (quatro frentes):** **a freguesia** (F; L-717:
-  a vontade do banho e da leitura na escolha de cada um, a praça e o mercado como lugar de estar); **o governante no
-  palácio** (R; T-765); **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a obra
+- **Em curso, a terceira leva (três frentes):** **a freguesia** (F; L-717:
+  a vontade do banho e da leitura na escolha de cada um, a praça e o mercado como lugar de estar); **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a obra
   grande que anda e acha terra** (M, segunda rodada; T-760, T-761, T-767: o canteiro da obra longe, a terra das capitais
   velhas, o olhar do planejador para as provas). A medir de novo com o M: os dois mundos do zero de 90 anos da `degraus`
   g8 dão, na árvore juntada, 5 degraus grandes fundados e 4 de pé (antes do M: 3 e 1), nenhum Coliseu.
@@ -371,5 +378,5 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   cada frente juntada.
 - **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
   novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** juntar as frentes F, R, X e M2; depois a casa cheia que não esvazia (L-718), o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
+- **A seguir:** juntar as frentes F, X e M2; a casa cheia que não esvazia (L-718), com um agente próprio (H); depois o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
   seis sementes da terra, o relatório).

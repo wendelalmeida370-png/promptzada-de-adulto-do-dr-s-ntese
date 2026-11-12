@@ -54,6 +54,19 @@
   });
   Co.RANK = { paco: 1, palacio: 2, grande_palacio: 3, palacio_colossal: 4 };
   Co.isPalace = type => !!Co.RANK[type];
+  // The seat is the house of who rules (D-205): its chambers lodge the ruler's household — BDEF.aposentos, the beds of a seat,
+  // read by G.Village.bedsOf alone: a household lives there as in a house (the one rule of living, V.livable; its pantry, its
+  // coins and its goods a house's, 'h:'), and no door of the town's housing ever sees it (those read BDEF.housing). Who lives
+  // there is act-casa.js's to say (G.Casa.reign)
+  Co.APOSENTOS = { paco: 6, palacio: 10, grande_palacio: 14, palacio_colossal: 18 };
+  for (const t in Co.APOSENTOS) if (G.BDEF[t]) G.BDEF[t].aposentos = Co.APOSENTOS[t];
+  // the seat where who rules a people lives: the best palace standing in its capital (the lowest id among equals) — or null.
+  // Reads only
+  Co.seatOf = function (f) {
+    const cap = f && G.Fac.capitalOf(f.id); if (!cap) return null; let best = null;
+    for (const b of G.S.buildings.values()) if (Co.RANK[b.type] && b.set === cap.id && b.built && (!best || Co.RANK[b.type] > Co.RANK[best.type] || (Co.RANK[b.type] === Co.RANK[best.type] && b.id < best.id))) best = b;
+    return best;
+  };
   if (G.City) Object.assign(G.City.IDEAL, { paco: 2.6, grande_palacio: 6, palacio_colossal: 10 });
   const NAMES = {
     paco: { grego: 'Casa do Basileu', romano: 'Domus do Magistrado', egipcio: 'Casa do Nomarca', asteca: 'Casa do Tlatoani', nordico: 'Salão do Chefe', classico: 'Casa do Chefe' },
@@ -243,7 +256,7 @@
     // (where the tribute goes: the chief's house when it stands near, else the people's store — chosen now, and written on
     // the sacks: the load knows where it goes, after a save or a lost way)
     const pal = bestPalace(f); const d = pal && pal.built && G.dist(pal.x, pal.y, v.x, v.y) < 30 ? pal : G.Village.nearestDropoff(v.x, v.y, v.set);
-    const dest = d ? (Co.RANK[d.type] ? 'b:' + d.id : 'f:' + f.id) : 'f:' + f.id;
+    const dest = d ? (Co.RANK[d.type] ? 'h:' + d.id : 'f:' + f.id) : 'f:' + f.id; // (the seat keeps as a house does: D-205)
     return H.setTask(v, { type: 'tribute', id: b.id, route, k: 0, bag: 0, goods: {}, dest, pri: 1.05 });
   }
   // door to door: the share of the house's pantry into the collector's sacks — in the ledger, marked for where the tribute
@@ -287,13 +300,18 @@
   function courtTick(dt) {
     const S = G.S; const D = G.Depot;
     for (const b of S.buildings.values()) {
-      if (!Co.RANK[b.type] || !b.built || !b.inv) continue;
+      if (!Co.RANK[b.type] || !b.built || (!b.inv && !(b.pantry > 0))) continue;
       const f = G.Fac.get(G.Village.facOfSet(b.set)); if (!f) continue;
-      const ref = 'b:' + b.id; const eat = dt / DAY() * (2 + Co.RANK[b.type] * 2);
-      const acc = (b.eatAcc || 0) + Math.min(eat, D.get(ref, 'food')); const n = Math.floor(acc + 1e-9);
-      if (n >= 1) { const r = D.use(ref, 'food', n, { code: 'corte', mine: true, part: true }); b.eatAcc = Math.max(0, acc - (r.ok ? r.n : 0)); } else b.eatAcc = acc;
+      // (the seat's larder is its pantry — a house's holder, D-205. With the ruler's household living in it, its meals are its
+      // people's own, at its table (act-lar.js), and its goods theirs: only what the pantry has too much of goes to the store)
+      const ref = 'h:' + b.id; const lived = (b.res || 0) > 0;
+      if (!lived) {
+        const eat = dt / DAY() * (2 + Co.RANK[b.type] * 2);
+        const acc = (b.eatAcc || 0) + Math.min(eat, D.get(ref, 'food')); const n = Math.floor(acc + 1e-9);
+        if (n >= 1) { const r = D.use(ref, 'food', n, { code: 'corte', mine: true, part: true }); b.eatAcc = Math.max(0, acc - (r.ok ? r.n : 0)); } else b.eatAcc = acc;
+      }
       if (D.get(ref, 'food') > 30) D.store(ref, f.id, 'food', D.get(ref, 'food') - 20, { code: 'corte' });
-      for (const k of Object.keys(b.inv).sort()) if (k !== 'food' && D.get(ref, k) >= 4) D.store(ref, f.id, k, D.get(ref, k) - 2, { code: 'corte' });
+      if (!lived) for (const k of Object.keys(b.inv || {}).sort()) if (k !== 'food' && D.get(ref, k) >= 4) D.store(ref, f.id, k, D.get(ref, k) - 2, { code: 'corte' });
     }
   }
 
@@ -340,7 +358,9 @@
     if (Co.RANK[b.type]) {
       const v = b.patronId && G.person(b.patronId);
       if (b.patron) h += `<div class="doing">Mandado construir por ${v ? plink(v.id) : esc(b.patron)}${v && !G.S.villagers.has(v.id) ? ' (já morto)' : ''}.${!b.built ? ` Obra em <b>${Math.round(b.progress * 100)}%</b>.` : ''}</div>`;
-      if (b.inv && b.inv.food >= 1) h += `<div class="doing">A corte tem ${Math.floor(b.inv.food)} de comida do tributo.</div>`;
+      if ((b.pantry || 0) >= 1) h += `<div class="doing">A despensa ${b.type === 'paco' ? 'da casa' : 'do palácio'} tem ${Math.floor(b.pantry)} de comida.</div>`;
+      // (who lives in it — the ruler's household, each one where and why, as a house's card says its people — or why nobody does)
+      if (b.built && G.Casa && G.Casa.seatSays) h += G.Casa.seatSays(b, plink, esc);
     }
     return h;
   };
@@ -414,7 +434,14 @@
     if (t.throne) { const th = throneOf(b); return { use: ['sentar'], item: th ? th.id : null, st: 'sit', pri: 4 }; }
     return { use: Co.AUD_USES, item: null, st: 'idle', pri: 3 + Math.min(0.9, Math.max(0, G.S.clock - (t.at || G.S.clock)) / 1e4) }; // (the longer in, the nearer the throne)
   };
-  G.worldHooks.push(() => { if (In_() && In_().placeRule) for (const u of ['palacio', 'paco']) In_().placeRule(u, audPlace); }); // (the chief's hall has its seat too)
+  // (and who lives in the seat, at home in it — asleep in a bed of its chambers, the household's own share-out (In.bedOf); at
+  // supper at its table, cooking at its fire, by the hearth: the house's rule, G.Lar.want — D-205)
+  const homePlace = (b, v) => {
+    const w = G.Lar && G.Lar.want ? G.Lar.want(v, b) : null; if (!w || !w.use || w.item || w.use[0] !== 'deitar' || v.home !== b.id) return w;
+    const own = In_().bedOf ? In_().bedOf(v) : null; return own && own.item ? Object.assign({}, w, { item: own.item.id }) : w;
+  };
+  const seatPlace = (b, v) => audPlace(b, v) || homePlace(b, v);
+  G.worldHooks.push(() => { if (In_() && In_().placeRule) for (const u of ['palacio', 'paco']) In_().placeRule(u, seatPlace); }); // (the chief's hall has its seat too)
   // (who came: at the coronation and at an envoy's arrival — the answer to a petition asks Po.crowd, polity.js)
   const oldCrown = P.crown;
   P.crown = function (f) { const r = oldCrown.apply(this, arguments); if (G.inSim && f && !f.aud) Co.audiencia(f, 'coroacao'); return r; };
@@ -426,6 +453,9 @@
     save(out) { const L = []; for (const v of G.S.villagers.values()) { const t = v.task; if (t && t.type === 'assembly' && t.kind === 'audiencia') L.push([v.id, t.fid, t.b, t.st, t.throne ? 1 : 0, v.inside === t.b ? 1 : 0, t.at || 0]); } out.audiencia = L; },
     load(o) {
       const S = G.S; const L = o && Array.isArray(o.audiencia) ? o.audiencia : [];
+      // (a seat of a save of before D-205 kept the tribute on a building's shelf — 'b:', its food and its coins in b.inv —: the
+      // same things, where a house keeps them now)
+      for (const b of S.buildings.values()) if (Co.RANK[b.type] && b.inv) for (const [k, to] of [['food', 'pantry'], ['moedas', 'coin']]) if (b.inv[k] !== undefined) { if (b.inv[k] > 0) b[to] = Math.round(((b[to] || 0) + b.inv[k]) * 1e4) / 1e4; delete b.inv[k]; }
       for (const [id, fid, bid, st, th, inn, at] of L) {
         const v = S.villagers.get(id); const f = G.Fac.get(fid); const b = S.buildings.get(bid); if (!v || !f || !f.aud || f.aud.b !== bid || !b) continue;
         const dr = G.Vg.door(b); G.Vg.setTask(v, { type: 'assembly', kind: 'audiencia', b: bid, fid, x: dr[0], y: dr[1], throne: th ? 1 : 0, pri: th ? 1.9 : 1.7, st, at });

@@ -24,7 +24,7 @@
   L.COOK = 9; // (seconds of the world over the fire for a household's supper)
   // (and the prayer of the faithful, kneeling — before the temple or inside it: five seconds of the world, villagers.js 'pray')
   if (A.addAnim) { A.addAnim('cozinhar', { act: 'cook', dur: L.COOK, contact: L.COOK - 0.2, hands: 2 }); A.addAnim('ninar', { act: 'rock', dur: 0, contact: 0, hands: 2 }); A.addAnim('rezar', { act: 'pray', dur: 5, contact: 4.8, hands: 0 }); }
-  const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing);
+  const housing = b => !!b && G.Village.bedsOf(b) > 0; // (a house, or the seat where who rules lives: D-205)
   // (the house that serves to live in — standing, or being raised further over its family —: G.Village.livable, L-371)
   const livable = b => G.Village.livable(b);
   const homeOf = v => { const h = v && v.home ? G.S.buildings.get(v.home) : null; return livable(h) ? h : null; };

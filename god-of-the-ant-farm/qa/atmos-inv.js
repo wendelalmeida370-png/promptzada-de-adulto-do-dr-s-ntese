@@ -13,6 +13,7 @@
   if (!window.QA || !QA.more) return;
   const EPS = 1e-6;
   const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing);
+  const lodges = b => !!b && G.Village.bedsOf(b) > 0; // (a house, or the seat of who rules: the kitchen and the hearth of a household — T-931)
   QA.more.push(function (add, s) {
     const At = G.Atmos, A = G.Act; if (!At || !A) return;
     // who is inside each building, awake, at the house's fire, cooking; who lives in each house — the checker's own count
@@ -36,7 +37,7 @@
     for (const b of s.buildings.values()) {
       if (!b.built || b.type === 'ruin') { if (At.fire(b) || At.lit(b)) add('atmos', 2, `${b.type}#${b.id} ${b.built ? 'em ruína' : 'em obra'} com fogo ou janela acesa`, b.id); continue; }
       const dark = !!(G.Fest && G.Fest.darkB && G.Fest.darkB(b)); const e = ins.get(b.id);
-      const want = dark ? null : b.type === 'campfire' ? 'fogueira' : b.type === 'banhos' || b.type === 'taverna' ? fire.get(b.id) || null : fire.get(b.id) || (housing(b) && e ? (e.cook ? 'cozinha' : e.hearth ? 'lareira' : null) : null);
+      const want = dark ? null : b.type === 'campfire' ? 'fogueira' : b.type === 'banhos' || b.type === 'taverna' ? fire.get(b.id) || null : fire.get(b.id) || (lodges(b) && e ? (e.cook ? 'cozinha' : e.hearth ? 'lareira' : null) : null);
       const got = At.fire(b); const why = got ? got.why : null;
       if (why !== want && nf++ < 3) add('atmos', 2, !want ? `${b.type}#${b.id} fumando (${why}) sem fogo nenhum embaixo` : !why ? `${b.type}#${b.id} com fogo de verdade (${want}) e sem fumaça` : `${b.type}#${b.id} fumando por «${why}» quando o fogo embaixo é «${want}»`, b.id);
       const lit = !dark && !!e && e.awake > 0;

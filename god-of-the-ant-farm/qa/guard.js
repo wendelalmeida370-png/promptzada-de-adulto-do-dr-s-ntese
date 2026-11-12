@@ -536,5 +536,16 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 for (const f of files) if (f !== 'interiors.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (/\bintG\b/.test(c)) fails.push(`plantas: ${f}:${k + 1} mexe na gramática das plantas do save (intG é do interiors.js — D-198): ${l.trim().slice(0, 110)}`); });
 if (!(src['interiors.js'] || []).some(l => /const planKey = /.test(l) && l.includes("':g' + In.VERSION"))) fails.push("plantas: interiors.js — a chave da planta (planKey) não leva a gramática (':g' + In.VERSION): D-198");
+// (as regras 69 e 70 estão guardadas para a freguesia; as 73 a 76, para o ofício que fica e a obra grande)
+// 71. "os aposentos da sede têm uma porta só" (D-205): as camas da sede de quem governa (BDEF.aposentos) só o js/court.js dá e
+// só o js/village.js lê (V.bedsOf: as camas de um prédio onde uma casa mora); quem quer saber se um prédio vale para morar
+// pergunta a V.livable, se guarda como casa, a V.bedsOf — e as portas das casas da cidade continuam lendo BDEF.housing
+for (const f of files) if (f !== 'village.js' && f !== 'court.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.aposentos\b/.test(c)) fails.push(`sede: ${f}:${k + 1} lê os aposentos da sede fora de village.js (V.bedsOf) e court.js (D-205): ${l.trim().slice(0, 110)}`); });
+// 72. "quem mora na sede é do act-casa.js" (D-206): só o js/act-casa.js põe e tira gente da sede de quem governa — a porta
+// G.Casa.reign (a cada dois segundos do mundo) e G.Casa.vacate (a sede que cai, é desfeita ou entra em obra) não são chamadas
+// de fora dele; quem quer saber pergunta a G.Casa.seatState / lordOf / isSeat / ofCourt (só leem)
+for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/Casa\.(reign|vacate)\s*\(/.test(c)) fails.push(`sede: ${f}:${k + 1} põe ou tira gente da sede fora de act-casa.js (D-206): ${l.trim().slice(0, 110)}`); });
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
