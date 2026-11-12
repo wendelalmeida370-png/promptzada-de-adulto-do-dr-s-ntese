@@ -36,7 +36,7 @@
 | `visual/termas-fotos.js` | `node qa/visual/termas-fotos.js <pasta> [nome,…]` (de dentro de `god-of-the-ant-farm/`; 5 s) | As figuras das termas para o relatório (não é prova): antes e depois, a vista do deus e o 3D, de fora, a planta colorida e cada cômodo de dentro (`qa/patch3/fotos-T/`). |
 
 E na linha da `escala.js`: «e0c os banhos — o degrau maior só nos povos da terma, e só na cidade que o justifica».
-E na folha dos banhos da matriz (`qa/categorias/p2.js`, a atividade `banho`): a prova `qa/termas-grandes.js` entrou na lista (já está no ramo).
+E na folha dos banhos da matriz (`qa/categorias/p2.js`, a atividade `banho`): a prova `qa/termas-grandes.js` entrou na lista (já está no ramo). A `qa/MATRIZ-PREDIOS.md` **não** foi gerada de novo no ramo: sem a pasta da regressão a `matriz-predios.js` rebaixa as categorias de «validada», e deixei o arquivo como estava — o líder a gera com o resultado da regressão.
 
 ## 3. Entradas do `regress.sh`
 
