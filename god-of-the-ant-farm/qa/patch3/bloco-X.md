@@ -166,9 +166,26 @@ este ramo, na base `b2b61f0`, não tem), e quantas cargas chegam à obra nos doi
 volta pelo instante só para a guerra (a turma da obra grande ficando pela memória): o g4e dá os mesmos 8 — não é dela, e
 ficou a regra medida (a volta pelo instante das três emergências).
 
-**RODANDO AGORA:** o resto da última fila — as outras provas que faltam (casa-mercante, tempo-livre, ladrao-bairro,
-fundadores, det3, as vidas de 5 e de 20 anos, oldsave, salto-igual), as 36 sabotagens (`fila8/sab/resumo.txt`), os mundos
-prontos em dez dias e as trocas do zero com a regra final, e por último o vida-bairro.
+**As outras provas, todas rodadas com a regra final** (`fila8/provas/resumo.txt`): passam também casa-mercante (9),
+tempo-livre, ladrao-bairro, fundadores, det3 («igual» nas três comparações), a vida de 5 e a de 20 anos (0 violações, nenhum
+erro), oldsave e salto-igual (3). Falham as sete ditas acima (fome h13, marinheiros m9, roupa r7, degraus g2c2 e g4e, termas
+e1, maos m10), com as mesmas mensagens de antes.
+
+**As primeiras sabotagens da regra final mostraram a prova frouxa no x5** (`fila8/sab-velho/`): a s34 (sem a volta pelo
+instante) e a s36 (a memória não acompanha a mão) foram acusadas pelo x15; a s35 (a leva só dos bravos) pelo caso montado
+da leva; mas a **s29** (a memória da emergência só sobe) e a **s33** (o exército com mãos demais só solta as que puxou) **não
+foram acusadas** — nos mundos delas o exército de Argos ia só a 11 ou 13 soldados nos 90 s da leva (a guerra de verdade
+cansava o povo durante a leva: a mão da prova em `f.weariness` não segurava nada, T-957), e o caso do povo cansado passava
+com qualquer regra. **A prova foi apertada (na árvore, ainda sem commit):** a guerra é mantida fresca pela mão da prova na
+conta dela mesma (`fresh`: os mortos, as batalhas perdidas, os desertores dos dois lados a zero enquanto a leva se faz — a
+guerra não cansa nem acaba por tratado no meio), no x5 e no x15. Com isso: x5 e x15 passam (21 soldados, o instante pede
+21; cansado, pede 14 e são 14 em 15 s). A **s37** (a margem de duas mãos enquanto a emergência dura) não foi acusada: a
+prova ganhou uma linha de informação («chamados de novo pela mesma emergência em menos de um dia») para ver se a margem
+tem efeito na metrópole; se não tiver, fica dito como guarda sem caso próprio.
+
+**RODANDO AGORA:** as 36 sabotagens de novo com a prova apertada (`fila8/sab/resumo.txt`), os mundos prontos em dez dias e
+as trocas do zero com a regra final, e por último o vida-bairro. **Depois:** a prova inteira uma última vez (a de 60 linhas
+é de antes do aperto do x5/x15: apagar `fila8/prova.feito` e rodar de novo), guard + vida curta, commit da prova.
 **Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar** (o `qa/oficio-fica.js` pode: o `eco.js` não o lê).
 
 **Falta (nesta ordem):**
