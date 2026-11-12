@@ -1,12 +1,21 @@
 # Bloco F2 — a segunda rodada da freguesia: a praça ao fim da tarde, o foguista no posto, o bairro dos banhos
 
-Agente F, segunda rodada. Base: `f5d08ed` (a ponta do líder). Números reservados: L-911 a L-929, T-921 a T-929,
-D-225 a D-229; regras do guard 79 e 80. O `bloco-F.md` (a primeira rodada) fica como está.
+Agente F, segunda rodada. Base: `f5d08ed` (a ponta do líder quando a rodada começou). Números reservados: L-911 a
+L-929, T-921 a T-929, D-225 a D-229; regras do guard 79 e 80. O `bloco-F.md` (a primeira rodada) fica como está.
+
+**As bases, exatas.** Os commits da rodada, no ramo `worktree-agent-a4d17534a654b4869`: `1cd60d7` e `2a9f559` (sobre a
+`f5d08ed`); `85eebd5` (o merge da ponta do líder `bedce41`: a 2ª rodada do M, a casa cheia do H, L-720 a L-722);
+`9fa9647` e `60b6476` (sobre o merge); e o commit do bloco, por cima. **O código final desta rodada é o `60b6476`.** As
+medidas de antes e depois dos §1 a §4 são da `f5d08ed` e do meu ramo antes do merge; as provas finais, as sabotagens e os
+dez anos de paz são do `60b6476` (e, onde dito, da `bedce41` sozinha). A ponta do líder andou depois (`30eb97d`) e **não
+foi juntada** (pedido do líder): nada aqui foi medido com ela.
 
 **Estado:** os itens 1, 2 e 3 feitos, com prova (`qa/praca.js`, `qa/praca-inv.js`), sabotagens e medidas; do item 4, o
 passeio antigo com a regra do tempo e a do lugar (T-919) feito e provado, e **as crianças nos banhos com um dos pais não foram feitas** —
-fica aberto. Um bug de fora dos três itens, achado pelas vizinhas e consertado: o cadafalso chamava da refeição quem
-morria de fome (L-913, §5b).
+fica aberto. Dois bugs achados pelas provas e consertados: o cadafalso chamava da refeição quem morria de fome (L-913,
+§5b), e o posto do foguista tinha um segundo de ninguém entre dois afazeres da fornalha (L-914, §3). **Duas coisas
+ficam abertas sem causa achada** (§6, no fim): o caso v3 da `vida-bairro` falha no código final numa das três histórias
+que rodei (e passa na ponta do líder), e o `oldsave` disse uma vez uma diferença de ida e volta do save na parte «lar».
 
 Os arquivos mexidos:
 
@@ -14,17 +23,17 @@ Os arquivos mexidos:
 |---|---|
 | `js/act-lazer.js` | a praça (`G.Praca`: `wish`, `lot`, `hourOf`, `fair`, `pick`, `spot`, `urge`, `go`, `playAt`, a tarefa `'praca'`, o texto, o save) |
 | `js/villagers.js` | o `decide` (a linha da praça; a refeição do foguista: `post`, `mealFirst`), o `start` (`'home'` passa pela praça; `'praca'`), o `'play'` das crianças |
-| `js/act-servicos.js` | o posto do foguista (`Te.onDuty` com as horas antes de abrir, a perna, `callStoker`, `Te.mealFirst`, a espera à fornalha); o banho na chave «banho» |
+| `js/act-servicos.js` | o posto do foguista (`Te.onDuty` com as horas antes de abrir, a perna — L-914 —, `callStoker`, `Te.mealFirst`, a espera à fornalha); o banho na chave «banho»; a porta do passeio (`Te.stroll`, `Te.inTime`: T-919) |
 | `js/life.js` | **uma linha** (a água da casa não vai com o foguista de posto) — ver §3 |
 | `js/urban.js` | **três linhas** (a chave «banho», o perfil «de banhos», o texto dele; e a palavra «banho» tirada do texto do «boêmio») — ver §4 |
 | `js/audio-src.js` | **cinco palavras** (a família «banho» do som) — ver §4 |
 | `js/possess.js` | **uma entrada** (o que o corpo vê de um bairro «de banhos») — ver §4 |
 | `qa/praca.js`, `qa/praca-inv.js` | a prova e as regras do verificador (novos) |
-| `qa/freguesia.js` | o b7 confere a chave «banho» (e que nenhuma nota dos banhos vai a outra chave) |
+| `qa/freguesia.js` | o b7 confere a chave «banho» (e que nenhuma nota dos banhos vai a outra chave); a festa da subida de degrau que a mão da prova fazia fica fora do dia do caso (T-923d); «bateu na porta cheia» é só de uns banhos cheios (T-923e) |
 | `js/city.js` | **uma linha** no `Ci.leisureTask` (o passeio vai aos banhos pela porta `G.Termas.stroll`: só quem tem tempo e um lugar com que contar — T-919) |
 | `qa/termas-mao.js`, `qa/termas-grandes.js` | o começo do primeiro bloco e o D1: o dia chama o foguista, a mão da prova não (T-929) |
 | `qa/tempo-livre.js` | uma linha no `rest()`: um passo mais antes de olhar o gesto (T-924a) |
-| `qa/lazer.js` | três cuidados da mão da prova, nenhum caso afrouxado: o l6 guarda o tempo da tarde durante a peça, o l11 julga o lugar pela hora (como o l10), o l12 descansa a atriz do caso (T-924b a d) |
+| `qa/lazer.js` | cinco cuidados da mão da prova, nenhum caso afrouxado: o l6 guarda o tempo da tarde durante a peça, o l11 julga o lugar pela hora (como o l10), o l12 descansa a atriz do caso (T-924b a d); o l7 e o l8 deixam feita a compra da casa da atriz, e o l8 acorda-a (T-924e) |
 | `js/justice.js` | **três palavras e uma linha** (`starving`: o carrasco e o arauto não saem de quem tem a fome acima de 85) — L-913, §5b |
 | `qa/fome.js` | o caso h21 (o cadafalso não tira ninguém da refeição da fome) |
 
@@ -347,9 +356,9 @@ conta própria e viram a peça até o fim; na ponta da primeira rodada eram 15).
 
 ## 6. Os resultados
 
-**A prova inteira** (`node qa/praca.js`): na metrópole **31 passam, 0 falham** (≈ 8 min); na mega **31 passam, 0
-falham** (≈ 19 min) — no commit `2a9f559` (antes de juntar a ponta do líder); na árvore juntada, ver «A árvore juntada»
-abaixo. As linhas que dizem números, da metrópole: b1 «73 paradas na praça (24,3 por dia no mundo), 183 tardes de criança a brincar na praça; Argos (95): 1,7
+**A prova inteira** (`node qa/praca.js`): na metrópole **31 passam, 0 falham** (≈ 7 min); na mega **31 passam, 0
+falham** (≈ 4 min) — no commit `2a9f559` (antes de juntar a ponta do líder); no código final (`60b6476`), ver «A árvore
+juntada» abaixo. As linhas que dizem números, da metrópole no `2a9f559`: b1 «73 paradas na praça (24,3 por dia no mundo), 183 tardes de criança a brincar na praça; Argos (95): 1,7
 por dia; Mênfis (120): 2,3; Tenochtitlan (129): 4,3, três de uma vez; Tebas (62): 2,7»; b2 «112 idas à praça: dormindo
 0, com carga 0, as mãos numa operação 0, o foguista de posto 0, com fome 0, na chuva 0, fora de hora 0, criança 0, o corpo
 do deus 0, a sorte fora da vontade 0, um afazer de mais peso 0; o que largaram: pave 2, farm 4, estate 9, chop 12, drill
@@ -361,45 +370,59 @@ boêmio, de banhos]»; e1 «o save às 0,617 com 33 na conversa ou a caminho: lo
 … os dois futuros iguais»; t «às 0,45, 10 de 10 à porta dos banhos têm tempo, e o passeio manda aos banhos 16 vezes em 120
 pedidos; às 0,68 (fecham às 0,70) nenhum tem tempo, e manda 0 vezes em 120».
 
-**As sabotagens** (`scratchpad/ag/F/sab-F2.py`, uma de cada vez numa cópia nova pelo `sab-run.sh`; os resultados em
-`scratchpad/ag/F/r2/provas/sabotagens.txt` e `sabotagens2.txt`): **37 sabotagens, 35 acusadas pela prova.**
+**As sabotagens** (`scratchpad/ag/F/sab-F2.py`; uma de cada vez, numa cópia só do jogo, reaproveitada — o disco está
+curto —, pelo `scratchpad/ag/F/sab-run1.sh`; todas rodadas de novo no código final `60b6476`; os resultados em
+`scratchpad/ag/F/r2/junta/sabotagens.txt` e, de cada uma, em `scratchpad/ag/F/sab2/`): **40 sabotagens, 37 acusadas.**
 
 | sabotagem | o que desfaz | quem acusa |
 |---|---|---|
 | p1 | o mundo de antes: a praça fora da escolha de cada um | b1 |
 | p2, p3, p4, p5, p18 | o corpo do deus mandado; a carga nas mãos; sem a regra da chuva; sem a da guerra; o faminto vai | a1 |
 | p6 | a sorte do dia tirada do acaso do mundo | a3 |
-| p7, p10, p20 | quem vem a caminho não conta; o foguista de posto vai; a praça cheia leva mais um | a1b |
+| p7, p20 | quem vem a caminho não conta; a praça cheia leva mais um | a1b |
 | p8, p9 | quem mora longe quer igual; o velho, o moço e o sociável querem igual | a2 |
 | p11, p19, p21 | larga-se qualquer afazer (a pedra, o posto, a obra grande); sem a hora de cada um; depois do fim do dia a praça passa à frente do caminho de casa | a5 |
-| p12 | o escuro não acaba a conversa | e6 |
+| p12 | o escuro não acaba a conversa | e6 (depois de o caso ficar mais forte: T-923f) |
 | p13 | a chuva e a guerra não acabam a conversa em curso | e3, e4 |
 | p14 | o save não leva a conversa | e1 |
 | p15, p16 | o mercado a qualquer hora; o lugar de cada um dentro da fonte | a4m, a4 |
 | p17 | as crianças brincam na praça na chuva | e4 |
 | f1, f2, f5, f6 | o dia dos banhos não chama o foguista; o posto não é perna; a fome de um dia comum tira-o do posto; não há posto antes de abrir | f3a |
+| f8 | a perna do posto só no afazer da fornalha, como era (L-914) | f3a |
 | f4 | sem a refeição antes de abrir | f3b |
-| t1 | o passeio manda aos banhos a qualquer hora | t |
+| t1, t2 | o passeio manda aos banhos a qualquer hora; o passeio manda a uns banhos tomados por quem vem a caminho | t |
 | q1, q2 | o banho volta a contar como «noite»; o banho conta duas vezes | q1 |
 | q3 | sem o perfil dos banhos | q2 |
 | q4 | o som dos banhos ainda é o da noite | q4 |
 | h1 a h4 | o verificador sem a regra do cativo, da noite, da praça cheia, da praça de outra cidade | h |
+| j1 | o cadafalso volta a chamar quem morre de fome (L-913) | `qa/fome.js` h21 |
 | **f3** | a água de casa leva o foguista (a linha do `life.js` tirada) | **ninguém** — T-928 |
 | **f7** | o dia dos banhos chama o foguista de volta da refeição (a guarda do `callStoker` tirada) | **ninguém** — T-928 |
+| **p10** | o foguista de posto vai à praça (a pergunta ao posto tirada do `tied` da praça) | **ninguém** — T-928 |
 
-As duas que passam (T-928, dito e não escondido): com o chamado ao posto (`callStoker`) o foguista de posto tem sempre
-um afazer da fornalha de prioridade 1,05, ou está **dentro** dos banhos — e a escolha de quem busca a água já pula quem
-tem um afazer de 1,05 e quem está dentro de um prédio; a linha do `life.js` só fecha o segundo em que o posto começa.
-E a refeição de quem tem fome de morrer pesa 1,2 ou 2,5 — o chamado ao posto só tira de afazeres de 1,05 ou menos —, de
-modo que a guarda «não o chama da refeição» só vale para uma refeição que pese menos (a ceia à mesa de casa, 0,5), que a
-prova não provoca. As duas ficam no código como cinto e suspensório; a **regra 80** do guard proposta abaixo cobra a
-primeira pelo código.
+**A p12 passou sem ser acusada na primeira rodada sobre o código final, e o caso foi apertado** (T-923f): na tarde que
+os dados da árvore juntada deram ao e6, todos já tinham ido para casa de cansaço antes das 0,73 (T-921), e o caso
+passava com a regra do escuro tirada do jogo. O e6 agora mantém descansado e comido, pela mão da prova, quem está na
+conversa, até escurecer — e pede que haja alguém lá no último segundo: «22 na conversa no último segundo antes das 0,73;
+depois das 0,742, 0». Com a sabotagem: «depois das 0,742, 17», e o verificador acusa também. *(De passagem, uma medida
+para o T-921: descansados, 22 ficam na conversa até o escuro — onde, cansados, ficavam de nenhum a três.)*
+
+As três que passam (T-928, dito e não escondido). **f3:** com o chamado ao posto (`callStoker`) o foguista de posto tem
+sempre um afazer da fornalha de prioridade 1,05, ou está **dentro** dos banhos — e a escolha de quem busca a água já pula
+quem tem um afazer de 1,05 e quem está dentro de um prédio; a linha do `life.js` só fecha o segundo em que o posto começa.
+**f7:** a refeição de quem tem fome de morrer pesa 1,2 ou 2,5 — o chamado ao posto só tira de afazeres de 1,05 ou menos —,
+de modo que a guarda «não o chama da refeição» só vale para uma refeição que pese menos (a ceia à mesa de casa, 0,5), que
+a prova não provoca. **p10** (acusada pelo a1b antes do L-914; depois dele, não): a perna do posto agora vale também sem
+afazer, e a vontade da praça já pergunta às mãos (`G.Vg.handsBusy`) — a pergunta ao posto no `tied` da praça ficou
+repetida. As três ficam no código como cinto e suspensório; a **regra 80** do guard proposta abaixo cobra a primeira pelo
+código.
 
 **As regras 79 e 80 do guard, experimentadas** (numa cópia do `qa/` fora da árvore, com as duas regras do §7 coladas no
-`guard.js` — o `qa/guard.js` da árvore não foi mexido): na árvore, `PASSOU (156 arquivos)`; e sete mentiras, uma de cada
-vez numa cópia do `js/` (`scratchpad/ag/F/sab-guard.sh`, o resultado em `r2/provas/guard-regras.txt`), todas acusadas:
-a tarefa `'praca'` dada no `city.js`; o `G.Praca.go` chamado no `city.js`; a sorte do dia pelo `G.R()`; a chave «banho»
-notada no `tavern.js`; o banho contado como «noite»; a linha do `life.js` tirada; a perna do posto tirada.
+`guard.js` do código final — o `qa/guard.js` da árvore não foi mexido): na árvore, `PASSOU (156 arquivos)`; e oito
+mentiras, uma de cada vez numa cópia do `js/` (`scratchpad/ag/F/sab-guard.sh`, o resultado em
+`scratchpad/ag/F/r2/junta/guard-regras.txt`), todas acusadas: a tarefa `'praca'` dada no `city.js`; o `G.Praca.go`
+chamado no `city.js`; a sorte do dia pelo `G.R()`; a chave «banho» notada no `tavern.js`; o banho contado como «noite»;
+a linha do `life.js` tirada; a perna do posto tirada; o `city.js` a mandar aos banhos pela porta `G.Termas.visit`.
 
 **As vizinhas, no commit `2a9f559`** (uma de cada vez; as saídas em `scratchpad/ag/F/r2/provas/viz/` e `nav/`):
 
@@ -434,9 +457,99 @@ notada no `tavern.js`; o banho contado como «noite»; a linha do `life.js` tira
 não sei por quê; fica dito.) A praça fica entre 13 e 25 paradas por dia nas duas árvores: a diferença entre uma história e
 outra é maior do que a que a junção faz. Por isso o piso do b1 mudou (T-923c).
 
-**A árvore juntada** — (preenchido no fim)
+**A árvore juntada** (o merge `85eebd5` da ponta do líder `bedce41`, e os dois commits por cima).
 
-**Os dez anos de paz** — (preenchido no fim)
+*O que a junção mostrou.* Na primeira rodada das provas sobre o merge: a `praca` com 2 falhas (b1 — o piso, T-923c; f2 —
+o foguista levado da fornalha, **L-914**, um bug meu que os dados do meu ramo não tinham mostrado), a `freguesia` com 4
+(c, d, e1, e2 — a festa que a mão da prova fazia, T-923d; a conta da porta cheia, T-923e; e o passeio que mandava a
+banhos tomados, T-919) e a `lazer` com 3 (l7 e os dois l8 — a atriz do caso às compras e na cama, T-924e). Na ponta do
+líder sozinha (`bedce41`, numa cópia tirada do git: `scratchpad/ag/F/r2/lider/`): `lazer` 15 passam; `freguesia` 22
+passam e **1 falha, o caso c** («6 bateram na porta cheia» das termas). Tudo o mais passou de primeira.
+
+*O código final (`60b6476`), uma prova de cada vez* (as saídas em `scratchpad/ag/F/r2/junta/`):
+
+| prova | resultado no `60b6476` |
+|---|---|
+| `node qa/guard.js` | PASSOU (156 arquivos) |
+| a vida curta (`soak.js 103 continente 128 4 normal 5 1 1`, no navegador) | 5 anos, nenhuma violação, nenhum erro |
+| `det3.js 77 arquipelago 96 3 2` (no navegador) | PASSOU |
+| `qa/praca.js` (a metrópole) | 31 passam, 0 falham |
+| `qa/praca.js mega` | 31 passam, 0 falham — b1 «90 paradas na praça (30,0 por dia no mundo); Mênfis (155): 11,3 por dia, 12 de uma vez; Roma (106): 7,3 por dia, 7 de uma vez»; f1 «8 dias de banhos, 5 com foguista e lenha: 5 com a fornalha acesa; sem foguista: Hedeby nos três dias» (T-926) |
+| `freguesia` | 23 passam, 0 falham |
+| `fome` (com o h21) · `lazer` · `lazer-mao` | 26 · 15 · 27 passam, 0 falham |
+| `termas` · `termas-mao` · `termas-grandes A,B,C,D` | 6 · 31 · 23 passam, 0 falham |
+| `tempo-livre` · `taverna` · `atividades` · `juntar` · `sabe` | 6 · 10 · 14 · 24 · 32 passam, 0 falham |
+| `invariancia.js` · `som` (`ONLY=s1,s2,s8`) | 6 passam, 0 falham · ok |
+| `termas-grandes` inteira | 33 passam, 0 falham |
+| `lar` | 24 passam, **2 falham: l16 e l16b**, as mesmas duas do `2a9f559` e da base (T-688) |
+| `vida-bairro` | 10 passam, **1 falha: v3, o cais que para** — ver abaixo |
+| `corrupt.js` (no navegador) | 135 casos: 20 recusados, 115 carregaram; falhas: nenhuma |
+| `oldsave.js` (a `bedce41` salva 20 anos, o `60b6476` abre e vive 10), no navegador | o novo: nenhum erro, 0 violações ao abrir, aos 5 e aos 10 anos; aos 10 anos a ida e volta do save diz uma diferença na parte «lar» — ver abaixo |
+
+(Depois do `60b6476` só mudaram provas: a escolha dos banhos do caso t da `qa/praca.js` — na mega o caso caía nos banhos
+de um lugar só de Hedeby, onde um banhista esconde a regra do tempo; passou a pedir banhos de quatro lugares ou mais — e
+o caso e6, apertado (T-923f). O t foi rodado de novo nos dois mundos, a mega inteira também, e o e6 com a sabotagem dele.)
+
+**A `vida-bairro` v3, «o cais que para» — uma falha que não fechei.** O caso corta as rotas de mar de Mênfis, espera o
+perfil «porto movimentado» sair, devolve as rotas e dá 30 anos para o perfil voltar — tudo no salto, sem a paz do deus,
+depois dos casos v1, v2 e v4 da mesma prova. Não mexi na prova. O que rodei:
+
+| árvore | os casos antes do v3 | o v3 |
+|---|---|---|
+| o meu ramo antes de juntar (`2a9f559`) | a prova inteira | passa: saiu em 15 dias, voltou em 26 (de 30) |
+| o código final (`60b6476`) | a prova inteira (v1, v2, v4) | **falha: saiu em 10 dias, não voltou em 30 (cais 0,002)** — três vezes, igual (a prova inteira e dois rastros com `ONLY=v1,v2,v4,v3`) |
+| o código final (`60b6476`) | v1, v2 | passa: saiu em 11, voltou em 5 |
+| o código final (`60b6476`) | nenhum | passa: saiu em 14, voltou em 9 |
+| a ponta do líder (`bedce41`) | nenhum | passa: saiu em 14, voltou em 5 |
+| a ponta do líder (`bedce41`) | v1, v2, v4 | passa: saiu em 16, voltou em 5 (aos cinco anos: 4 marinheiros, 6 navios mercantes no mundo) |
+
+O rastro da história que falha (`scratchpad/ag/F/vb3.js`, a saída em `scratchpad/ag/F/r2/junta/vb3-junta-v1243b.txt`):
+quando as rotas voltam (dia 81), Mênfis tem 92 pessoas (147 a 149 nas histórias que passam), em paz, as cinco rotas dela
+de volta com os dois portos de pé, **nenhum marinheiro e nenhum navio mercante no mundo**; em trinta anos a cidade cresce
+para 228, tem de um a quatro marinheiros e o mundo de nenhum a dois navios mercantes — e **nenhum bairro de Mênfis** (nem
+o todo dela) tem carga no cais: 0,162 aos cinco anos, 0,002 aos trinta. Não é o bairro que mudou de dono (T-925): é o
+comércio de mar que não recomeça nessa história. **Não achei a causa**, e não sei dizer se é desta rodada: a ponta do
+líder passa nas duas histórias que rodei, o código final passa em duas e falha numa. O que medi para separar «os dados»
+de «um efeito meu»: o comércio de mar em dez anos de paz (`scratchpad/ag/F/prod2.js`, a metrópole, duas histórias de cada
+lado; as saídas em `scratchpad/ag/F/r2/junta/mar-*.txt`):
+
+| árvore, história | navios mercantes que saíram em 10 anos | carga notada nos cais | marinheiros no fim | estivadores no fim |
+|---|---|---|---|---|
+| `bedce41`, SHIFT 0 | 51 | 1 843 | 8 | 9 |
+| `60b6476`, SHIFT 0 | 45 | 1 698 | 9 | 8 |
+| `bedce41`, SHIFT 1 | 49 | 1 815 | 7 | 7 |
+| `60b6476`, SHIFT 1 | 57 | 2 183 | 9 | 8 |
+
+Na paz, o comércio de mar é o mesmo com e sem esta rodada (−12% e −8% numa história, +16% e +20% na outra). O que falha
+é uma história de guerra e de rotas cortadas pela mão da prova por dez anos, em que Mênfis chega aos 92 habitantes. **Fica
+aberto, com o rastro**; quem mexer no comércio de mar ou nos marinheiros (D-155) tem aqui uma história em que ele não
+recomeça em trinta anos (`ONLY=v1,v2,v4,v3 node qa/vida-bairro.js`, no `60b6476`).
+
+**O `oldsave` e a ida e volta do save — uma diferença que não expliquei.** No `oldsave.js` com a `bedce41` como velho e o
+`60b6476` como novo, aos dez anos a conferência de ida e volta do save (`QA.roundTrip`) disse uma diferença na parte «lar»
+(a lista de quem dorme em casa ou está à mesa, de noite: entre os da lista, um acamado, um na ceia e um na conversa); aos
+cinco anos, nenhuma; nenhuma violação e nenhum erro. Com a `bedce41` dos dois lados (outra história: 49 pessoas aos dez
+anos) não apareceu; no meu ramo antes de juntar (`f5d08ed` velho, `2a9f559` novo) também não. O gancho do save desta
+rodada só guarda e devolve a conversa da praça (quem tem a tarefa `'praca'`, acordado, fora de casa) — não vejo como
+tocaria quem está em casa —, mas **não reproduzi nem achei a causa**: fica dito. *(O «erro no velho» que essa rodada
+mostra — um arquivo não achado — é da cópia da `bedce41` que tirei do git só com `js/`, `qa/` e o `index.html`, sem o
+`css/`.)*
+
+**Os dez anos de paz** (`scratchpad/ag/F/producao.js`, a metrópole pronta, dez anos saltados na paz do deus, `SHIFT=0` e
+`1`: duas histórias; a ponta do líder `bedce41` sem esta rodada contra o código final `60b6476`; as saídas em
+`scratchpad/ag/F/r2/junta/producao-*.txt`):
+
+| árvore, história | pessoas (de 704) | comida produzida | madeira | pedra | comida nos armazéns no fim | mortos de fome | mortos, todos | banhos (dias abertos) | lenha da fornalha |
+|---|---|---|---|---|---|---|---|---|---|
+| `bedce41`, SHIFT 0 | 964 | 14 098 | 4 894 | 2 185 | 6 062 | 0 | 27 | 223 (44) | 80 |
+| `60b6476`, SHIFT 0 | 967 | 14 103 | 4 183 | 1 962 | 6 005 | 0 | 27 | 191 (36) | 65 |
+| `bedce41`, SHIFT 1 | 972 | 14 916 | 4 992 | 2 327 | 6 583 | 0 | 24 | 221 (35) | 79 |
+| `60b6476`, SHIFT 1 | 948 | 14 470 | 5 254 | 2 320 | 6 742 | 0 | 35 | 229 (46) | 103 |
+
+O verificador (S0 a S2) limpo e nenhum erro nas quatro. A gente e a comida ficam onde estavam (a diferença entre as duas
+histórias da mesma árvore é do tamanho da que há entre as árvores). A madeira e a pedra descem numa história (−15% e
+−10%) e sobem ou empatam na outra (+5% e 0%): **não sei dizer se a praça custa lenha** — o machado é o afazer que mais se
+larga por ela (12 de 40 no b2) —; duas histórias não chegam para afirmar, e fica dito.
 
 ## 7. Para o líder juntar
 
@@ -449,7 +562,7 @@ outra é maior do que a que a junção faz. Por isso o piso do b1 mudou (T-923c)
 | T-919 | limite (fechado, F) | **O passeio com a regra do tempo e a do lugar.** O `G.City.leisureTask` vai aos banhos por uma porta só, `G.Termas.stroll`: só manda quem tem tempo para o banho antes de fechar (`G.Termas.inTime`: a caminhada, os cabides e meio banho) e um lugar com que contar (`G.Termas.room`: quem vem a caminho conta, como na vontade). O passeio não perguntava nem uma coisa nem outra: mandava perto de fechar (a entrada paga, tirado da água sem banho) e mandava a uns banhos de oito lugares com dez e onze já dentro ou a caminho — Penélope e Zoé, de Argos, voltaram da porta cheia (o caso c da `qa/freguesia.js`). A porta `Te.visit` fica como era, para as provas que mandam banhistas pela mão. `qa/praca.js` t; as sabotagens t1 (sem a regra do tempo) e t2 (sem a do lugar). |
 | T-921 | limite (aberto; a decisão é do líder) | **O dia deste mundo acaba antes de escurecer.** A energia de um adulto acordado cai 1,25 por centésimo do dia: de 100 ao acordar (0,03) aos 22 que mandam para a cama são 62 centésimos — às 0,65 —, e o relógio de cada um (`G.Lar.clock`, D-071) diz 0,74 a 0,81. Na metrópole, às 0,70, 253 de 388 adultos têm menos de 20 de energia e 176 dormem ou vão dormir (136 pela energia, 1 pelo relógio). A praça, a taverna, a ceia e a família à porta disputam os mesmos dez centésimos do dia. Proposta, não feita: quem descansa (à mesa, à porta, na praça) cansar menos do que quem trabalha. |
 | T-922 | limite (aberto) | **Os lugares marcados da praça só o corpo do deus usa.** Os bancos e os pares de «conversar» da planta da praça são do repartidor de lugares (`In.places`, regra 29), que dá lugar a quem está *dentro* de um prédio; a praça é chão aberto. Quem para na praça fica num ponto seu em volta do meio dela, fora da fonte (`Pr.spot`, pelo `G.hash`) — sem saber dos bancos nem do que a forma de um povo põe noutro lugar (os rostros). Uma porta do `interiors.js` para os lugares de um chão aberto resolveria. |
-| T-923 | limite de teste (dito) | **Dois cuidados da mão da prova `qa/praca.js`.** (a) A regra pedida de dentro do passo guarda o tempo do segundo: o `Pr.fair` (a chuva, o frio, a guerra, a festa) vale pelo segundo do mundo em que foi pedido, dentro do passo; a prova que muda a chuva com a mão e pergunta na mesma hora pergunta de fora do passo (`a1`). (b) O ajuntamento da primeira hora da capital leva o foguista a caminho da refeição (ainda não de posto: como qualquer um): o `f3b` tenta a refeição antes de abrir cidade a cidade e fica com a primeira cuja manhã não tem chamado; diz as que tentou. (c) **O piso do b1 saiu de uma história só e caía dentro dos dados.** O b1 pedia 15 paradas na praça por dia no mundo (a metrópole, três dias vividos), tirado da única história que eu tinha (24,3). Medido em quatro histórias dos mesmos três dias (`SHIFT=k node qa/praca.js`: k sorteios do acaso do mundo antes do primeiro passo; o meu ramo antes de juntar e a árvore juntada): 24,3 · 16,0 · 13,0 · 25,3 por dia. O piso passou a 8 (metade da menor vista); as outras condições do b1 não mudaram (uma por dia ou mais em toda cidade de 110 ou mais, dois juntos nalguma, 20 tardes de criança por dia), e a sabotagem p1 (o mundo de antes: zero paradas) continua acusada. (d) **A festa da subida de degrau que a própria mão da `qa/freguesia.js` fazia** (os casos c, d, e1, e2, da primeira rodada). Os banhos e a biblioteca que a mão do deus funda em Argos são o que faltava à cidade para ser metrópole (`city.js`, `tierOf`: banhos, aqueduto ou biblioteca); no dia em que o resto chega, a cidade inteira sai a comemorar (`tierUp`: sete em dez, 1,1, por cima de toda vontade). Na árvore juntada a festa caiu às 0,465 do dia das grandes termas — 123 de 215 adultos nela nas melhores horas dos banhos: 7 banhos, uma leitura, e os quatro casos falhavam; nos outros dois dias, às 0,565. A mão da prova diz à cidade que ela já foi metrópole (`set.best`), como segura a chuva: o degrau sobe em silêncio. Depois: 40 banhos nas grandes termas, 7 leituras. *(Uma linha no `handDay` da `qa/freguesia.js`.)* Visto também: **na ponta do líder (`bedce41`, sem esta rodada) o caso c da `freguesia` falha** — «6 bateram na porta cheia» das termas (o caso aceita 2). (e) **O que a `qa/freguesia.js` contava como «bateu na porta cheia»**: toda ida aos banhos que acabava a três casas da porta com os banhos abertos — também quem foi chamado dali por outra coisa, com lugar de sobra lá dentro (na árvore juntada: Amenhotep pela troca entre os povos, com 6 dentro de 35 lugares; Seti e Tiye pela caverna). O vigia conta agora só quem volta de uns banhos **cheios** (todos os lugares tomados); os outros vão para a conta do que largou a ida, como já iam os de longe. Dos seis que «bateram» no caso c da árvore juntada, dois bateram de fato numa porta cheia — os dois mandados pelo passeio (T-919, consertado no jogo) —, três foram chamados embora (a troca, a caverna duas vezes) e um, Dion, largou a ida à porta de uns banhos com 17 dentro de 24 lugares, por uma causa que não achei (o afazer seguinte dele: «visit»). Com o conserto do passeio e a conta certa, o caso c passa: 8, 25 e 43 banhos, nenhum na porta cheia. |
+| T-923 | limite de teste (dito) | **Dois cuidados da mão da prova `qa/praca.js`.** (a) A regra pedida de dentro do passo guarda o tempo do segundo: o `Pr.fair` (a chuva, o frio, a guerra, a festa) vale pelo segundo do mundo em que foi pedido, dentro do passo; a prova que muda a chuva com a mão e pergunta na mesma hora pergunta de fora do passo (`a1`). (b) O ajuntamento da primeira hora da capital leva o foguista a caminho da refeição (ainda não de posto: como qualquer um): o `f3b` tenta a refeição antes de abrir cidade a cidade e fica com a primeira cuja manhã não tem chamado; diz as que tentou. (c) **O piso do b1 saiu de uma história só e caía dentro dos dados.** O b1 pedia 15 paradas na praça por dia no mundo (a metrópole, três dias vividos), tirado da única história que eu tinha (24,3). Medido em quatro histórias dos mesmos três dias (`SHIFT=k node qa/praca.js`: k sorteios do acaso do mundo antes do primeiro passo; o meu ramo antes de juntar e a árvore juntada): 24,3 · 16,0 · 13,0 · 25,3 por dia. O piso passou a 8 (metade da menor vista); as outras condições do b1 não mudaram (uma por dia ou mais em toda cidade de 110 ou mais, dois juntos nalguma, 20 tardes de criança por dia), e a sabotagem p1 (o mundo de antes: zero paradas) continua acusada. (d) **A festa da subida de degrau que a própria mão da `qa/freguesia.js` fazia** (os casos c, d, e1, e2, da primeira rodada). Os banhos e a biblioteca que a mão do deus funda em Argos são o que faltava à cidade para ser metrópole (`city.js`, `tierOf`: banhos, aqueduto ou biblioteca); no dia em que o resto chega, a cidade inteira sai a comemorar (`tierUp`: sete em dez, 1,1, por cima de toda vontade). Na árvore juntada a festa caiu às 0,465 do dia das grandes termas — 123 de 215 adultos nela nas melhores horas dos banhos: 7 banhos, uma leitura, e os quatro casos falhavam; nos outros dois dias, às 0,565. A mão da prova diz à cidade que ela já foi metrópole (`set.best`), como segura a chuva: o degrau sobe em silêncio. Depois: 40 banhos nas grandes termas, 7 leituras. *(Uma linha no `handDay` da `qa/freguesia.js`.)* Visto também: **na ponta do líder (`bedce41`, sem esta rodada) o caso c da `freguesia` falha** — «6 bateram na porta cheia» das termas (o caso aceita 2). (e) **O que a `qa/freguesia.js` contava como «bateu na porta cheia»**: toda ida aos banhos que acabava a três casas da porta com os banhos abertos — também quem foi chamado dali por outra coisa, com lugar de sobra lá dentro (na árvore juntada: Amenhotep pela troca entre os povos, com 6 dentro de 35 lugares; Seti e Tiye pela caverna). O vigia conta agora só quem volta de uns banhos **cheios** (todos os lugares tomados); os outros vão para a conta do que largou a ida, como já iam os de longe. Dos seis que «bateram» no caso c da árvore juntada, dois bateram de fato numa porta cheia — os dois mandados pelo passeio (T-919, consertado no jogo) —, três foram chamados embora (a troca, a caverna duas vezes) e um, Dion, largou a ida à porta de uns banhos com 17 dentro de 24 lugares, por uma causa que não achei (o afazer seguinte dele: «visit»). Com o conserto do passeio e a conta certa, o caso c passa: 8, 25 e 43 banhos, nenhum na porta cheia. (f) **O caso do escuro (`qa/praca.js` e6) passava com a regra do escuro tirada do jogo** quando, na tarde do caso, todos já tinham ido para casa de cansaço antes das 0,73 (T-921) — visto na sabotagem p12 sobre o código final. O caso mantém agora descansado, pela mão da prova, quem está na conversa até escurecer, e pede alguém lá no último segundo: 22 na conversa às 0,73, nenhum às 0,742; com a sabotagem, 17. |
 | L-913 | bug (consertado, F; achado pela regra S2 no salto da `qa/freguesia.js`) | **O cadafalso chamava da refeição quem morria de fome.** O carrasco (5) e o arauto (4,5) de uma execução eram escolhidos entre quem não tinha um afazer de 3 ou mais; a refeição da fome acima de 85 pesa 2,5. Graco, sacerdote de Roma, uma noite a apagar o fogo da cidade, com a fome no máximo e 9 de vida, a caminho de comer, foi chamado para arauto: «morre de fome com comida ao alcance … tarefa justice». O conserto (`js/justice.js`, `starving`): quem tem a fome acima de 85 não é carrasco nem arauto — nem quem governa, como arauto. `qa/fome.js` h21; a sabotagem j1. |
 | L-914 | bug (consertado, F; achado pelo f2 da `qa/praca.js` na árvore juntada) | **Um segundo de ninguém entre dois afazeres da fornalha.** A perna do posto (D-227) era só de quem estava no afazer da fornalha; entre a espera junto dela e o alimentar — o afazer acaba quando as portas abrem, o dia dos banhos dá o seguinte no segundo seguinte — o foguista ficava sem afazer, e o cadafalso levou Messalina, de Roma, da fornalha às 0,26 do dia 59. O conserto: a perna é de quem está de posto e não num afazer de mais peso (até 1,05: na fornalha, num afazer comum, entre dois). `qa/praca.js` f3a (o afazer acabado pela mão: o cadafalso não o leva) e f2 (o vigia dos dias vividos, mais largo); a sabotagem f8. |
 | T-924 | limite de teste (consertado nas provas; nenhum caso afrouxado) | **Quatro casos de provas vizinhas que passavam ou falhavam pelos dados.** (a) O `tempo-livre` t2 olhava entre dois passos. O descanso junto à fogueira marca a chegada num passo (`t.st = 2`) e o gesto (`v.act = 'sit'`) no seguinte; o caso devolvia a tarefa no passo da chegada e conferia o gesto — passava ou falhava pelo passo em que a pessoa chegava (na base: «sentado a 1,2 dela», passa; neste ramo, outra história: «sentado a 1,3 dela», falha, com o texto «Descansando junto à fogueira»). A prova vive um passo mais antes de olhar. *(Uma linha no `rest()` do `qa/tempo-livre.js`.)* (b) O `lazer` l6 (a saída da tarde por conta própria) só tirava a chuva no começo da tarde: nos dados deste ramo choveu às 0,555, as portas abrem às 0,56, e 49 de Tenochtitlan abrigaram-se a caminho; a prova guarda o tempo da tarde durante a peça (`dry()`), e o caso tem 21 que vieram e viram. (c) O `lazer` l11 lia «o livro ainda tem o leitor» quando a leitora, livre depois do load e à porta, escolhia o rolo de novo pela vontade do dia (D-200); julga agora o lugar pela hora dele, como o l10. (d) O `lazer` l12 tomava a primeira atriz a caminho: nos dados deste ramo, uma com 38 de energia às 0,40, que foi dormir antes da peça; a mão da prova descansa-a ao pô-la à porta. (e) Os `lazer` l7 e l8, **na árvore juntada**: a atriz do caso (Coatlicue, tirada dos dados dessa árvore) era a compradora da casa — a compra da família pesa 1,02 e o palco não chama por cima de um afazer acima de 1: foi ao mercado às 0,385 e chegou ao palco às 0,665 — e, no l8, estava ainda na cama às 0,40 (do décimo da cidade que o retrato da prova deixa a dormir). A mão da prova deixa feitas as tarefas da casa dela — a água, como já fazia, e a compra (`h.shopT`) — e acorda-a no l8, como o l7 já acordava. Na ponta do líder sozinha a `lazer` passa (15), com outro ator do dia (Cuauhtémoc); no meu ramo antes de juntar, também (Yaretzi). *(Fica dito para quem cuida do teatro: um ator que é o comprador da casa não é chamado ao palco enquanto compra; com os dois atores às compras a peça é cancelada «sem atores».)* |
@@ -457,7 +570,7 @@ outra é maior do que a que a junção faz. Por isso o piso do b1 mudou (T-923c)
 | T-925 | limite de teste (dito) | **As células dos bairros mudam de dono no salto.** Em doze dias a célula dos banhos de Mênfis passou de um bairro a outro (a Cidade Velha, o Mercado Velho, o Bairro dos Escribas, conforme a história), e a taverna com ela; o `q2` prova pela origem das notas (nenhuma nota de «noite» vem dos banhos) e pelo perfil que há ou está a caminho (`q.tp`), não pelas casas que o bairro tem no fim. |
 | T-926 | limite (aberto, do repartidor: X) | **Banhos sem foguista.** Na mega pronta, os banhos de Hedeby (26 a 35 pessoas) não têm foguista em cinco dias de cinco, e os de Delfos no dia em que abrem: a procura (`E.demand`: um foguista com 8 adultos e a comida garantida) e o teto dos ofícios não o dão. Sem foguista a água é fria e ninguém busca lenha. |
 | T-927 | limite (aberto) | **O foguista já num chamado quando as portas vão abrir.** Quem está numa festa (3,2) ou num julgamento quando o posto começa fica nele até o fim — o posto só é perna de quem não está em algo de mais peso (mais de 1,05), para a regra das mãos ocupadas (`QA.maos`, D-094) continuar limpa —, e nesse dia a água esquenta tarde: 1 dia em 12 na prova (Tebas, às 0,49). |
-| T-928 | limite de teste (dito) | **Duas sabotagens que a prova não acusa** (de 37): a linha do `life.js` (a água de casa não leva o foguista de posto) e a guarda do `callStoker` (o dia dos banhos não o chama de volta da refeição). O chamado ao posto dá ao foguista um afazer de 1,05 no segundo em que o posto começa, e a escolha da água já pula quem tem um afazer de 1,05 e quem está dentro de um prédio; e a refeição de quem tem fome de morrer pesa mais que 1,05. As duas ficam como cinto e suspensório; a regra 80 do guard cobra a primeira pelo código. |
+| T-928 | limite de teste (dito) | **Três sabotagens que a prova não acusa** (de 40): a linha do `life.js` (a água de casa não leva o foguista de posto), a guarda do `callStoker` (o dia dos banhos não o chama de volta da refeição) e a pergunta ao posto no `tied` da praça (repetida desde o L-914: a perna do posto já deixa as mãos dele ocupadas, e a praça pergunta às mãos). O chamado ao posto dá ao foguista um afazer de 1,05 no segundo em que o posto começa, e a escolha da água já pula quem tem um afazer de 1,05 e quem está dentro de um prédio; e a refeição de quem tem fome de morrer pesa mais que 1,05. As duas ficam como cinto e suspensório; a regra 80 do guard cobra a primeira pelo código. |
 | D-225 | decisão (F) | **A praça ao fim da tarde é uma vontade de cada um** (`js/act-lazer.js`, `G.Praca`; a tarefa `'praca'`). Quem (`wish`): todo crescido com casa em 0,60 dos dias; mais o velho, o moço, o sociável, o mercador junto do mercado; menos quem mora longe. Quando: de uma hora sua (`hourOf`: 0,53 a 0,60; os velhos 0,50 a 0,56) ao escurecer; não na chuva, no frio forte, com a guerra à porta, no pânico, numa festa (`fair`). Quanto: a sorte do dia (`lot`, o `G.hash` da pessoa e do dia). O que impede: a fome, o cansaço, a doença, o medo, a carga, a perna de uma operação, os pequenos, o bebê no colo, o luto, o posto, a praça cheia, a distância; nunca o corpo do deus. Onde: a praça mais perto de casa, ou a porta do mercado enquanto vende. Na escolha do dia: antes do fim do dia de trabalho, a opção `'praca'` (0,6: acima do trabalho comum) **larga o afazer comum** — o machado, a enxada, a rede, o calçamento, o treino, a obra comum; nunca a carga, a operação, o posto, a pedra, a obra grande —, e por um instante depois dele só quem ficou no meio de um; com o dia acabado, a praça é a caminho de casa (a ceia e a horta primeiro; a taverna e o teatro escolhidos antes, como sempre). A conversa atravessa um save. Medido: de 0,0 a 2,0 parados na praça por hora para 0,7 a 3,8 na metrópole e 2 a 5 na mega; 24 paradas por dia no mundo. |
 | D-226 | decisão (F) | **As crianças brincam na praça à tarde.** As de sete anos ou mais que moram a 8 casas de uma praça brincam nela, e não à porta de casa, em seis tardes de dez (`G.Praca.playAt`: a sorte do dia pelo `G.hash`; das 0,50 ao escurecer, com tempo bom). O jogo é o delas (`villagers.js`, `'play'`); a praça só diz onde. Sem custo de trabalho. Medido: 0,1 a 1,5 crianças na praça à tarde para 1,6 a 3,7 nas cidades grandes da metrópole. |
 | D-227 | decisão (F: o posto de um serviço aberto) | **O posto do foguista segura.** (1) O posto é a perna da operação dele (`A.hooks.leg`, como o palco do ator, D-094): de posto e sem um afazer de mais peso (até 1,05: na fornalha, num afazer comum, entre dois afazeres — L-914), com o fogo sem dar até fechar, nenhum chamado de fora abaixo de 3 o leva. (2) De posto desde antes de abrir (`Te.onDuty`: 0,05 do dia mais a caminhada, até 0,13). (3) O dia dos banhos chama-o ao posto (`callStoker`): larga o afazer que não pesa mais e vai à fornalha — nunca da cama, de uma refeição, de um chamado de mais peso, com carga, nem sendo o corpo do deus. (4) A água de casa vai com outro da casa (`life.js`). (5) A refeição é antes de abrir (`Te.mealFirst`); de posto só sai para comer com mais de 85 de fome. Os outros serviços: a D-102 guarda a vaga, não o posto; o taverneiro abre fora das horas da água; o ator já tinha a perna. |
@@ -492,11 +605,15 @@ Os números são os da árvore juntada (`85eebd5`).
 
 ### `qa/README.md` — as linhas
 
-- `qa/praca.js` — a praça ao fim da tarde, o foguista no posto e o bairro dos banhos (D-225 a D-228), em Node:
-  `node qa/praca.js [metropole|mega]`, `ONLY=a,b,f3,q2,e,t,h`, `DIAS=n`; a prova inteira ≈ 9 min (a parte `a` e a `h` em
-  20 s). Cobre `js/act-lazer.js` (a praça), `js/act-servicos.js` (o posto do foguista, a chave «banho»), as vontades do
-  `decide` do `js/villagers.js`, a linha da água do `js/life.js`, a chave e o perfil do `js/urban.js`.
+- `qa/praca.js` — a praça ao fim da tarde, o foguista no posto, o bairro dos banhos e o passeio aos banhos (D-225 a
+  D-228, L-914, T-919), em Node: `node qa/praca.js [metropole|mega]`, `ONLY=a,b,f3,q2,e,t,h`, `DIAS=n`, `SHIFT=k` (outra
+  história dos dias vividos: k sorteios do acaso do mundo antes do primeiro passo); a prova inteira ≈ 9 min (a parte `a`
+  e a `h` em 20 s). Cobre `js/act-lazer.js` (a praça), `js/act-servicos.js` (o posto do foguista, a chave «banho», a
+  porta do passeio), as vontades do `decide` do `js/villagers.js`, a linha da água do `js/life.js`, a chave e o perfil
+  do `js/urban.js`, a linha do passeio do `js/city.js`.
 - `qa/praca-inv.js` — as regras do verificador da praça (o sistema «praca»), a juntar pelo `junta-inv.js`.
+- `qa/fome.js` — acrescentar à lista dos casos: «h21 o cadafalso não tira ninguém da refeição da fome (L-913)»; cobre
+  também o `js/justice.js` (`pickExecutioner`, `pickHerald`).
 
 ### `qa/regress.sh`
 
@@ -524,13 +641,16 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (f === 'act-servicos.js' && /Urban\.note(B)?\s*\([^)]*'noite'/.test(c)) fails.push(`banho: ${f}:${k + 1} conta o banho como «noite» (a chave dele é «banho» — D-228): ${l.trim().slice(0, 110)}`); });
 if (!(src['life.js'] || []).some(l => /Termas\.onDuty\(v\)\)\s*continue;/.test(l))) fails.push('posto: life.js — a escolha de quem busca a água da casa não pergunta ao posto do foguista (G.Termas.onDuty — D-227)');
 if (!(src['act-servicos.js'] || []).some(l => /A\.hooks\.leg\.push\(/.test(l) && /Te\.onDuty\(v\)/.test(l))) fails.push('posto: act-servicos.js — o posto do foguista não é perna da operação dele (A.hooks.leg — D-227)');
+// (e o passeio vai aos banhos pela porta dele — G.Termas.stroll: com tempo e com lugar, T-919 —, nunca pela das provas)
+(src['city.js'] || []).forEach((l, k) => { if (/Termas\.visit\s*\(/.test(l.replace(/(^|\s)\/\/\s.*$/, ''))) fails.push(`passeio: city.js:${k + 1} manda aos banhos pela porta G.Termas.visit, e não pela do passeio (G.Termas.stroll — T-919): ${l.trim().slice(0, 110)}`); });
 ```
 
 ### `CLAUDE.md` — as frases
 
 - No protocolo, ponto 3 (depois da linha das termas): «Mexeu na praça (`G.Praca` no `act-lazer.js`, a linha dela no
   `decide`, o `'play'` das crianças), no posto do foguista (`Te.onDuty`, `callStoker`, a linha da água do `life.js`) ou
-  na chave «banho» da vida do bairro? Também `node qa/praca.js` (as partes `a` e `h` em 20 s: `ONLY=a,h`).»
+  na chave «banho» da vida do bairro, ou no passeio aos banhos (`G.Termas.stroll`, a linha do `Ci.leisureTask`)? Também
+  `node qa/praca.js` (as partes `a` e `h` em 20 s: `ONLY=a,h`; o foguista pela mão, `ONLY=f3`; o passeio, `ONLY=t`).»
 - Em «A cidade — `G.Urban`», na lista das chaves: acrescentar `banho`; na dos perfis: «de banhos».
 - Em «Os ofícios e os serviços», depois da frase da freguesia: «**A praça ao fim da tarde é uma vontade** (D-225, D-226):
   quem para na praça das suas ruas vai pela escolha do dia (`decide`: `'praca'` antes do fim do dia de trabalho — larga o
@@ -540,9 +660,22 @@ if (!(src['act-servicos.js'] || []).some(l => /A\.hooks\.leg\.push\(/.test(l) &&
   segura** (D-227): o foguista de posto (`G.Termas.onDuty`: desde antes de as portas abrirem até o fogo dar até fechar)
   é chamado à fornalha pelo dia dos banhos, tem as mãos ocupadas para todo chamado de fora enquanto não está em algo de
   mais peso (`A.hooks.leg`: na fornalha, num afazer comum, entre dois afazeres — L-914), não vai buscar a água de casa (`life.js`) e come antes de abrir (`G.Termas.mealFirst`). **O banho tem
-  a sua chave na vida do bairro** («banho», o perfil «de banhos»: D-228; regra 80) — nunca «noite». `qa/praca.js` prova.»
+  a sua chave na vida do bairro** («banho», o perfil «de banhos»: D-228; regra 80) — nunca «noite». **O passeio de quem
+  está sem trabalho vai aos banhos por uma porta só** (`G.Termas.stroll`, T-919): com tempo para o banho antes de fechar
+  e um lugar com que contar (quem vem a caminho conta); a porta `G.Termas.visit` é a das provas. `qa/praca.js` prova.»
+- Em «As mãos ocupadas», no fim: «e o cadafalso não faz carrasco nem arauto de quem tem a fome acima de 85 — a refeição
+  da fome pesa 2,5 e o chamado dele (5 e 4,5) tirava-o dela (L-913, `qa/fome.js` h21).»
+- Na frase das provas (em «A freguesia é uma vontade de cada um»), depois do T-910: «e **a mão da prova que funda uns
+  banhos ou uma biblioteca numa cidade pode fazer dela uma metrópole** — a cidade inteira sai a comemorar a meio do dia do
+  caso (`city.js` `tierUp`): a prova diz à cidade que ela já o foi (`set.best`), T-923d.»
 
 ### `qa/patch3/PLANO.md`
 
-A segunda rodada do F: feita (itens 1, 2 e 3; do item 4, só o T-919). Abertos: T-921 (o dia do mundo acaba antes de
-escurecer — é o que limita a praça), T-922, T-926 (do X), T-927, as crianças nos banhos com um dos pais.
+A segunda rodada do F: feita (itens 1, 2 e 3; do item 4, só o T-919 — o passeio com tempo e com lugar); dois bugs
+achados e consertados no caminho (L-913, o cadafalso; L-914, o segundo de ninguém do foguista). Abertos: T-921 (o dia do
+mundo acaba antes de escurecer, e o sol que se demora numa cena encurta-o mais — é o que limita a praça), T-922, T-926
+(do X), T-927, as crianças nos banhos com um dos pais; e dois avisos para quem cuida do teatro e do fogo (o ator que é o
+comprador da casa não é chamado ao palco enquanto compra — T-924e; quem apaga o fogo não come — §5b). **Sem causa
+achada:** a `vida-bairro` v3 no código final (uma história em três: o comércio de mar de Mênfis não recomeça em trinta
+anos depois de as rotas voltarem; na paz, medido, o comércio de mar é o mesmo com e sem a rodada) e uma diferença de ida e
+volta do save na parte «lar», vista uma vez no `oldsave` (§6).

@@ -462,18 +462,22 @@ function partE() {
   }
   // ---- e6
   if (on('e6')) {
-    const S6 = fresh(); let g = 0; let after = 0, seenAt = 0; while (S6.time < Pr.SHUT + 0.03 && g++ < 400) { peace(); M.viver(1); const n = talking(null).length; if (S6.time < Pr.SHUT) seenAt = Math.max(seenAt, n); if (S6.time >= Pr.SHUT + 0.012) after = Math.max(after, n); }
+    // (who is at the talk kept rested and fed by the proof's hand until dark: in this world the legs give out before the
+    // light does — T-921 —, and an evening when everyone had gone home tired by 0,73 passed with the dark's rule taken out
+    // of the game; the case is the dark, and it needs someone there for the dark to send home)
+    const S6 = fresh(); let g = 0; let after = 0, seenAt = 0, atDark = 0;
+    while (S6.time < Pr.SHUT + 0.03 && g++ < 400) { peace(); if (S6.time < Pr.SHUT) for (const v of talking(null)) { v.energy = Math.max(v.energy, 60); v.hunger = Math.min(v.hunger, 30); } M.viver(1); const n = talking(null).length; if (S6.time < Pr.SHUT) { seenAt = Math.max(seenAt, n); atDark = n; } if (S6.time >= Pr.SHUT + 0.012) after = Math.max(after, n); }
     const bad = novas().concat(mine().map(q => q.msg));
-    ok('e6 o escuro: às 0,73 a conversa acaba e ninguém fica na praça pela vontade', after === 0 && !bad.length && M.limpo(), `até escurecer, até ${seenAt} de uma vez na conversa; depois das ${(Pr.SHUT + 0.012).toFixed(3)}, ${after}; o verificador ${bad.length ? bad.slice(0, 2).join(' | ') : 'limpo'}`);
+    ok('e6 o escuro: às 0,73 a conversa acaba e ninguém fica na praça pela vontade — nem quem está descansado', atDark >= 1 && after === 0 && !bad.length && M.limpo(), `até escurecer, até ${seenAt} de uma vez na conversa (descansados pela mão da prova), ${atDark} no último segundo antes das ${Pr.SHUT}; depois das ${(Pr.SHUT + 0.012).toFixed(3)}, ${after}; o verificador ${bad.length ? bad.slice(0, 2).join(' | ') : 'limpo'}`);
   }
 }
 
 // ================================================================ t: the old stroll with the time's rule (T-919)
 function partT() {
   M.pronto(WORLD); const S = G.S; S.time = 0.45; M.viver(2); fair0(null);
-  // (the baths nearest eight places in the water: with one place — Tenochtitlan's — a single bather hides the time's rule,
-  // and the thirty-five of Mênfis' the hand of the proof does not fill)
-  const b = baths().filter(x => Te.dia(x)).sort((a, c) => Math.abs(Te.places(a) - 8) - Math.abs(Te.places(c) - 8) || V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0];
+  // (baths of four places in the water or more, the nearest eight first: with one place — Tenochtitlan's, Hedeby's — a single
+  // bather hides the time's rule; the more places, the more of the town the hand of the proof has to put on the way)
+  const b = baths().filter(x => Te.dia(x)).sort((a, c) => (Te.places(a) >= 4 ? 0 : 1) - (Te.places(c) >= 4 ? 0 : 1) || Math.abs(Te.places(a) - 8) - Math.abs(Te.places(c) - 8) || V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0];
   if (!b) { ok('t o passeio com a regra do tempo', false, 'nenhuns banhos abertos às 0,45'); return; }
   // (thirty of the town, their day's task ended by the proof's hand, standing by the baths' door: the walk is no matter here)
   const h = Te.horas(b); const set = setOf(b); const dr = Vg.door(b); const L = adults(set.id).filter(v => !v.jail && !v.aboard && !v.ug && !v.held && v.age < 55 && v.role !== 'foguista' && !(v.task && (v.task.pri || 0) > 1.05) && !(v.carry && v.carry.n > EPS) && !v.sleeping).slice(0, 30);
