@@ -19,9 +19,10 @@ aplainar), `longe-mega-*.txt`, `tempo-metropole-teatro6.txt`.
 | T-761: aplainar o lote (a D-120 (3)) — D-217, a prova `qa/aterro.js` t1–t5 | FEITO | `77cf5d9` |
 | «o degrau do tamanho da pedra do povo»: a renda média e os 15 anos — D-216, `qa/aterro.js` m1–m3 | FEITO | `77cf5d9` |
 | L-783: a pedra que a obra grande guarda escapava para as casas novas das cidades-irmãs; a carroça para toda obra a mais de 6 casas, com 20 de pedra deixados no armazém | FEITO | `77cf5d9` |
-| as medidas de depois (o g8, as três sementes de 60 anos, a terra nos mundos do zero) | A FAZER (a terra dos mundos prontos e a obra longe já medidas: seções 2 e 3) | — |
-| as sabotagens da carroça, do aplainar, da renda média e da L-783 | A FAZER | — |
-| as provas vizinhas no fim (`casa-rica`, `juntar`, `obra`, `calcada`, `urb1`, `moedas`, `muros`, `lote-bolsao`, a `escala` inteira, `det3`, a vida de 20 anos) | A FAZER (já rodadas com o código do `77cf5d9`: `aterro` ok, `canteiro` ok, `degraus` g1 a g7 ok, `escala` e0, e7 a e10, e15, e16, e21 sem falha, o guard, a vida curta) | — |
+| as provas que faltavam (o chão do armazém, as casas pela sobra, o campo guardado, o lote aberto) e as vizinhas todas rodadas | FEITO | `a47508e` |
+| **D-218, a pedra antes de assentar no dia da pedreira** (`villagers.js`, o `case 'construtor'` do `workTask`; o caso `degraus` g2q; a sabotagem q1) | EM CURSO (na árvore, sem commit): medido que em ano e meio os 5 construtores de Tenochtitlan foram à pedra 4 vezes (`mina.js`); com a regra, nos traços de 90 anos (ainda a 1ª forma da regra, sem o limite à cidade da obra) o templo de Argos da semente 41 passa de 13 para 7 anos e o teatro de Mênfis da semente 7 de 18 para 8. Faltam: as três sementes de 60 anos com a regra, o g8, o g2q e as provas de novo | — |
+| as medidas de depois | EM CURSO (a fila `scratchpad/ag/M/fila-b.txt`, saídas em `scratchpad/ag/M/mb/`): feitos o g8 do `a47508e` (seção 1b) e as três sementes (5b); faltam a terra nos mundos do zero e os números finais com a D-218 | — |
+| as sabotagens (36, `scratchpad/ag/M/sab-M2.py`, a fila `fila-s.txt`) | A FAZER (os padrões conferidos: os 36 casam) | — |
 
 ## 1. O g8 na árvore juntada, antes de mexer (o que cada capital tentou, fundou, acabou)
 
@@ -53,6 +54,19 @@ ano 33, **pronto no 51: 18 anos**, a 23 casas de um armazém, 1 a 3 construtores
 (Os números do líder para o g8 da árvore juntada — 5 fundados, 4 de pé nos dois mundos — e os do roteiro — 7 fundados, 4
 acabados — diferem na contagem: o roteiro conta também as termas, e as suas perguntas a cada dez anos não mexem no mundo, mas o
 g8 do líder rodou com o `degraus.js`, sem elas. O que importa aqui é o porquê de cada obra.)
+
+## 1b. O g8 depois (o `degraus` g8 inteiro: dois mundos do zero, 90 anos)
+
+**Com o código do `a47508e`** (a carroça, o aplainar, a renda média, a L-783; ainda sem a D-218) — `DEGRAUS: ok`, o verificador
+limpo nos dois mundos com as invariantes da carroça e do aplainar:
+
+| semente | gente no ano 91 | fundados | de pé no ano 91 |
+|---|---|---|---|
+| 41 | 454 (antes: 315) | templo de 16 m (ano 32), palácio de 24 m (ano 52), palácio de 24 m (ano 56), palácio de 24 m (ano 88) | templo de 16 m, **dois palácios de 24 m** (antes: o templo e um palácio) |
+| 7 | 267 (antes: 495) | teatro de 24 m (ano 33), templo ampliado para 16 m (ano 44), palácio de 24 m (ano 51), palácio de 24 m (ano 63) | o templo de 16 m. O teatro ficou pronto no ano 44 (11 anos; antes 18) e foi perdido depois, com os palácios, nas guerras: o mundo desta semente se parte em 14 povos pequenos entre os anos 60 e 90 (o traço: comida segura em todas as capitais, a gente cai por guerra, não por fome) |
+
+8 fundados, 4 de pé (o g8 de antes: 5 a 7 fundados, 4 de pé). O que mudou é o tempo de cada obra e o que é fundado — não mais a
+maravilha que o povo não paga. O que ainda segura é a pedra (5c), e daí a D-218 (em curso).
 
 ## 2. A obra longe dos armazéns (T-760) — medida, feita, medida de novo
 
