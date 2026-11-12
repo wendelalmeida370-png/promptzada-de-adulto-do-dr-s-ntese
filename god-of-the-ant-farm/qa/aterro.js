@@ -8,11 +8,13 @@
 //   t2  o planejador funda num lote aplainado onde o pódio não cobre nenhum: o chão escrito como o plano dizia, a terra na obra
 //       (b.terra) e no trabalho dela (V.workOf), a crônica, o mapa avisado
 //   t3  a obra pronta e o save: o chão e a marca atravessam o save; o verificador limpo
-//   t4  o pódio primeiro: onde há um lote que o pódio cobre, o planejador fica com ele — o mesmo que acharia sem o aplainar
+//   t4  o pódio primeiro: onde há um lote que o pódio cobre, o planejador fica com ele — o mesmo que acharia sem o aplainar;
+//       e em toda capital, tipo e degrau dos mundos prontos (t4d)
 //   t5  o deus interfere: um poço posto junto de um canto que mexeria — o lote deixa de se aplainar; a obra derrubada — o chão
 //       fica; a ampliação no lugar nunca num lote que se aplaina
 //   t6  o campo guardado (D-121): o lote que o pódio cobre mais perto; só sem nenhum, o que se aplaina
 //   t7  o lote aberto (V.openSite): um lote que se aplaina nunca à frente de um plano
+//   t8  a porta que aplaina (V.levelLot) avisa o mapa: a versão do terreno e a do mapa de andar sobem
 //   m1  a média da renda de pedra: um quinto de cada ano que passa, os anos sem pedra contados; a conta sem média começa no último
 //       ano inteiro
 //   m2  o povo pede pelo estoque e quinze anos da menor entre a renda do último ano e a média: um ano bom sozinho não paga, a
@@ -157,6 +159,17 @@ run('t4', () => {
   set._noSite = {}; const b = sim(() => V.startProject(set, type)); let mudou = 0; for (let k = 0; k < H0.length; k++) if (Math.abs(S.H[k] - H0[k]) > 1e-9) mudou++;
   ok('t4b o planejador fica com ele', !!b && !!sem && b.x === sem[0] && b.y === sem[1] && !b.terra && !mudou && V.workOf(b) === Es.billOf(b).work, b ? `${lado(b)}: o mesmo lote que acharia sem o aplainar (${sem ? sem[0] + ',' + sem[1] : 'NENHUM'}); a terra ${b.terra || 0}; cantos mexidos ${mudou}` : 'não fundou');
   const q = checa(); ok('t4c verificador', q.ok, q.txt);
+  // (and everywhere: every capital, type and step of the ready worlds whose search finds a lot its podium covers finds the
+  // same lot with the levelling — the flat lots of every ring are asked first, the ones to level last)
+  let iguais = 0; const mal = [];
+  for (const w of ['metropole', 'mega', 'mundial', 'cidade']) {
+    abre(w);
+    for (const s of capitais()) for (const t of TIPOS) for (const q of Es.choose(s, t).filter(x => x.n > Es.n0(t) && !x.familia)) {
+      const A = semAplainar(() => acha(s, t, q)); if (!A) continue; const B = acha(s, t, q);
+      if (B && B[0] === A[0] && B[1] === A[1]) iguais++; else mal.push(`${w} ${s.name} ${t}/${q.n}: sem aplainar ${A[0]},${A[1]}; com ele ${B ? B[0] + ',' + B[1] + ' (' + (W.slope(B[0], B[1], q.n, q.n) * 1.5).toFixed(1) + ' m de relevo)' : 'NADA'}`);
+    }
+  }
+  ok('t4d o plano primeiro, em toda capital', iguais >= 10 && !mal.length, `nos mundos prontos, ${iguais} buscas (capital × tipo × degrau) com lote que o pódio cobre: o mesmo lote com o aplainar e sem ele${mal.length ? `; ${mal.length} DIFERENTES: ${mal.slice(0, 3).join(' | ')}` : ''}`);
 });
 
 // ------------------------------ t5: o deus interfere ------------------------------
@@ -174,6 +187,25 @@ run('t5', () => {
   const e = posto ? V.earthOf(p[0], p[1], n) : 0; set._noSite = {}; const outro = posto ? acha(set, type, st) : null;
   ok('t5c um prédio junto de um canto que mexeria', !!posto && e === -3 && !(outro && outro[0] === p[0] && outro[1] === p[1]), posto ? `um poço posto pela mão do deus em ${posto[0]},${posto[1]}, junto do canto ${posto[2]},${posto[3]} da beira do lote: V.earthOf ${e} (-3: prédio na margem); a busca do planejador agora ${outro ? 'dá ' + outro[0] + ',' + outro[1] : 'não acha lote'}` : 'nenhuma casa livre junto de um canto da beira do lote que mexe');
   const q = checa(); ok('t5d verificador', q.ok, q.txt);
+});
+
+// ------------------------------ t8: a porta que aplaina avisa o mapa ------------------------------
+// (V.levelLot asked by the proof on a free lot to be levelled where no cliff changes — nothing founded on it: the ground's
+// version and the walking map's go up by the door's own word; who stood there is on the new ground)
+run('t8', () => {
+  abre('mega'); let lote = null; const CL = G.Relief.CLIFF;
+  busca: for (const set of capitais()) { const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
+    for (let y = Math.max(6, cy - 30); y <= Math.min(N - 12, cy + 30); y++) for (let x = Math.max(6, cx - 30); x <= Math.min(N - 12, cx + 30); x++) {
+      if (!(V.earthOf(x, y, 6) > 0)) continue; let livre = true;
+      for (let ty = y - 3; ty < y + 9 && livre; ty++) for (let tx = x - 3; tx < x + 9; tx++) { const i = ty * N + tx; if (S.occ[i] || S.cliff[i] || S.type[i] < T.SAND) { livre = false; break; } }
+      if (!livre) continue; const to = V.earthPlan(x, y, 6); const at = k => (to.has(k) ? to.get(k) : S.H[k]); let muda = false;
+      for (let ty = y - 4; ty < y + 10 && !muda; ty++) for (let tx = x - 4; tx < x + 10; tx++) { const a = at(ty * VV() + tx), b = at(ty * VV() + tx + 1), c = at((ty + 1) * VV() + tx), d = at((ty + 1) * VV() + tx + 1); if (Math.max(a, b, c, d) - Math.min(a, b, c, d) > CL) { muda = true; break; } }
+      if (!muda) { lote = [x, y, set]; break busca; }
+    } }
+  if (!ok('t8a um lote livre que se aplaina sem mexer em penhasco', !!lote, lote ? `${lote[2].name}: o lote de 6 em ${lote[0]},${lote[1]}, ${(W.slope(lote[0], lote[1], 6, 6) * 1.5).toFixed(1)} m de relevo` : 'nenhum')) return;
+  const [x, y] = lote; const tv0 = S.typeVer || 0, wv0 = S.walkVer || 0; const vol = sim(() => V.levelLot(x, y, 6));
+  ok('t8b a porta avisa o mapa', vol > 0 && W.slope(x, y, 6, 6) <= V.PODIUM + 1e-9 && (S.typeVer || 0) > tv0 && (S.walkVer || 0) > wv0 && V.levelLot(x, y, 6) === 0, `V.levelLot moveu ${vol.toFixed(2)} níveis; o lote agora com ${(W.slope(x, y, 6, 6) * 1.5).toFixed(2)} m; a versão do terreno ${tv0} → ${S.typeVer || 0}, a do mapa de andar ${wv0} → ${S.walkVer || 0}; pedida de novo, nada a mover`);
+  const q = checa(); ok('t8c verificador', q.ok, q.txt);
 });
 
 // ------------------------------ t6: o campo guardado ------------------------------
@@ -245,8 +277,10 @@ run('m3', () => {
   abre('cidade'); const set = capitais()[0]; const f = G.Fac.get(set.fac); f.pedra = [S.day, 0, 0, S.day, 0]; const d0 = S.day;
   sim(() => D.make('f:' + f.id, 'stone', 50, { code: 'entrega' })); const hoje = V.stoneMean(f.id);
   for (let k = 0; k < 60 && S.day === d0; k++) M.viver(5);
-  const p = f.pedra; const ontem = p[0] === S.day ? p[2] : p[0] === S.day - 1 ? p[1] : 0; const m = V.stoneMean(f.id);
-  ok('m3 pelo livro, quando o dia vira', hoje === 0 && S.day === d0 + 1 && ontem >= 50 && Math.abs(m - 0.2 * ontem) < 1e-9, `${set.name}: 50 de pedra entregues hoje (a média ainda ${hoje}); virado o dia, o ano de ontem ${ontem} e a média ${m.toFixed(2)} (um quinto)`);
+  // (the first stone of the new day: the year that ended goes into the mean before the count turns to the new one)
+  sim(() => D.make('f:' + f.id, 'stone', 5, { code: 'entrega' }));
+  const p = f.pedra; const ontem = p[0] === S.day ? p[2] : p[0] === S.day - 1 ? p[1] : 0; const m = sim(() => V.stoneMean(f.id));
+  ok('m3 pelo livro, quando o dia vira', hoje === 0 && S.day === d0 + 1 && ontem >= 50 && Math.abs(m - 0.2 * ontem) < 1e-9 && p[3] === S.day && Math.abs(p[4] - m) < 1e-9, `${set.name}: 50 de pedra entregues hoje (a média ainda ${hoje}); virado o dia e entregue a primeira pedra do novo, o ano de ontem ${ontem} e a média ${m.toFixed(2)} (um quinto), guardada ao lado da conta (${JSON.stringify(p.slice(3))})`);
 });
 
 console.log(fails.length ? `ATERRO: FALHOU (${fails.join(', ')})` : `ATERRO: ok (${ms()} ms)`);

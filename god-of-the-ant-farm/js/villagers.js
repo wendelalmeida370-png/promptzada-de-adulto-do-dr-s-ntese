@@ -981,6 +981,7 @@
   // (what is on its way to a work, of a material: its builders' loads — b.incoming — and what the carts of a great work far
   // from the stores bring, city.js: nobody walks to the store for what a cart has on the road, D-215)
   const coming = (b, k) => (b.incoming[k] || 0) + (G.City && G.City.carted ? G.City.carted(b, k) : 0);
+  Vg.coming = coming; // (read only: for who asks what a work still has to be brought — and the proofs)
   function buildTask(v) {
     const S = G.S; let best = null, bd = 1e9;
     // (a house a family paid for keeps the turn it had beside the town's great work — L-313, D-117: two hundred against four

@@ -4,25 +4,32 @@ Ramo: `worktree-agent-a8f5af9594fd9a4f1` (a base desta rodada: `b2b61f0`, o ramo
 L-799, T-768 a T-779, D-215 a D-219, regras 75 e 76 do guard. **Este arquivo é mantido em dia a cada passo**: o que está marcado
 «FEITO» está em commit; «EM CURSO» está na árvore sem commit; «A FAZER» não começou.
 
-Os roteiros de medida ficam em `scratchpad/ag/M/`: `traca2.js` (um mundo pelo salto: o que cada capital tentou, fundou, acabou,
-o que ficou parado e por quê), `terra.js` (que capitais não acham lote, o que tapa o chão, que regra abriria), `longe.js` (uma
-obra a uma distância dada dos armazéns, com o armazém cheio), `tempo.js` (quanto cada capital leva para erguer um degrau
-sozinha). As saídas: `traca2-s41-a.txt`, `traca2-s7-a.txt`, `terra-<mundo>.txt` (antes) e `terra-<mundo>-d.txt` (com o
-aplainar), `longe-mega-*.txt`, `tempo-metropole-teatro6.txt`.
+Os roteiros de medida ficam em `scratchpad/ag/M/` (a pasta inteira é
+`/tmp/claude-0/-home-user-promptzada-de-adulto-do-dr-s-ntese/9e17ed97-a1b5-5d1c-a5da-c23519ea4f04/scratchpad/ag/M/`): `traca2.js`
+(um mundo pelo salto: o que cada capital tentou, fundou, acabou, o que ficou parado e por quê), `vida.js` (a gente, a fome, as
+casas e os degraus grandes por década; o que derruba um monumento), `terra.js` (que capitais não acham lote, o que tapa o chão,
+que regra abriria), `longe.js` (uma obra a uma distância dada dos armazéns), `tempo.js` (quanto cada capital leva para erguer
+um degrau sozinha), `contas.js` (a conta de cada degrau), `geologia.js`, `pedreira.js`, `turma.js`, `mina.js` (a pedra: onde
+há, quem a quebra, cada ida à rocha), `sab-M2.py` e `fila2.sh` (as sabotagens e a fila de um `node` de cada vez). As saídas:
+`traca2-s41-a.txt`, `traca2-s7-a.txt`, `terra-<mundo>*.txt`, `longe-mega-*.txt`, `tempo-metropole-teatro6.txt` (o começo da
+rodada), `m1/` (as três sementes de 60 anos), `mb/` (o g8, os traços, a terra nos mundos do zero, a pedra), `mc/` (as vidas de
+90 anos, o g8 e as provas com o código final), `qa/` (as provas vizinhas), `ms/` e `ms2/` (as sabotagens). `base2/` é o código
+do `b2b61f0`, o «antes» de todas as medidas.
 
 ## 0. O estado de cada parte
 
 | parte | estado | commit |
 |---|---|---|
-| T-767: a porta `V.planNow` e os dois casos que faltavam | FEITO | `b70b0b0` |
-| T-760: a carroça da obra grande (D-215), a prova `qa/canteiro.js` | FEITO | `7840218` |
-| T-761: aplainar o lote (a D-120 (3)) — D-217, a prova `qa/aterro.js` t1–t5 | FEITO | `77cf5d9` |
-| «o degrau do tamanho da pedra do povo»: a renda média e os 15 anos — D-216, `qa/aterro.js` m1–m3 | FEITO | `77cf5d9` |
-| L-783: a pedra que a obra grande guarda escapava para as casas novas das cidades-irmãs; a carroça para toda obra a mais de 6 casas, com 20 de pedra deixados no armazém | FEITO | `77cf5d9` |
-| as provas que faltavam (o chão do armazém, as casas pela sobra, o campo guardado, o lote aberto) e as vizinhas todas rodadas | FEITO | `a47508e` |
-| a experiência «a pedra antes de assentar no dia da pedreira» | MEDIDA e NÃO ENTREGUE (seção 5d): dobra a pedra de duas de três obras, e a gente fica menor nas três sementes; a árvore voltou ao código do `a47508e` | — |
-| as medidas de depois | EM CURSO (a fila `scratchpad/ag/M/fila-b.txt`, saídas em `scratchpad/ag/M/mb/`): feitos o g8 do `a47508e` (seção 1b) e as três sementes (5b); faltam a terra nos mundos do zero e os números finais com a D-218 | — |
-| as sabotagens (36, `scratchpad/ag/M/sab-M2.py`, a fila `fila-s.txt`) | A FAZER (os padrões conferidos: os 36 casam) | — |
+| T-767: a porta `V.planNow` e os dois casos que faltavam (`degraus` g1p, g5n2) | FEITO | `b70b0b0` |
+| T-760: a carroça da obra grande (D-215), a prova `qa/canteiro.js` (c1 a c9) | FEITO | `7840218`, `77cf5d9`, `a47508e` |
+| T-761: aplainar o lote (a D-120 (3)) — D-217, a prova `qa/aterro.js` t1 a t7 | FEITO | `77cf5d9`, `a47508e` |
+| «o degrau do tamanho da pedra do povo»: a renda média e os 15 anos — D-216, `qa/aterro.js` m1 a m3 | FEITO | `77cf5d9`, `a47508e` |
+| L-783: a pedra que a obra grande guarda escapava para as casas novas das cidades-irmãs (`degraus` g1h, g4e; `canteiro` c8) | FEITO | `77cf5d9`, `a47508e` |
+| L-784: o degrau maior com a resistência do lote dele (`degraus` g9) | FEITO | `aa9ec8e` |
+| a experiência «a pedra antes de assentar no dia da pedreira» | MEDIDA e NÃO ENTREGUE (seção 5d) | — |
+| as medidas de antes e de depois: o g8 (1, 1b), a obra longe (2), a terra nos mundos prontos e do zero aos 60 e aos 100 anos (3), o tempo de cada degrau (5), a gente e a fome em quatro sementes aos 60 e aos 90 anos (5b), a pedra (5c) | FEITO | (neste bloco) |
+| as sabotagens (38, `scratchpad/ag/M/sab-M2.py`, as saídas em `scratchpad/ag/M/ms/` e `ms2/`): 37 acusadas, uma sem caso (a14, T-773) | FEITO (seção 10) | — |
+| as provas vizinhas com o código final: `degraus` g1 a g7, g1h, g1p, g9 (66 passam) e o g8 inteiro (ok); `aterro` (29), `canteiro` (52), `casa-rica` (48), `juntar` (24), `obra` (13), `calcada` (6), `lote-bolsao` (4), `moedas` (9), `muros` (30), `invariancia` (6), `escala` (127 passam; falham só as e19h e e19i, que já falhavam na base e são do agente X), `det3 77 arquipelago 96 3 2` (PASSOU), `urb1 41 128 90` (12 passam), a vida de 20 anos com o verificador (0 violações, nenhum erro), a vida curta, o guard | FEITO (todas com o código final, menos a `invariancia` e o `urb1`, que rodaram com o do `a47508e`: o que veio depois foi só a L-784 e a porta de leitura `Vg.coming`) | — |
 
 ## 1. O g8 na árvore juntada, antes de mexer (o que cada capital tentou, fundou, acabou)
 
@@ -187,7 +194,7 @@ entregue, `mb/terra-s41-100.txt`, `mb/terra-s7-100.txt`):
 - Mênfis da semente 7 (o teatro e o palácio de 6): 73% água, 53% prédio de outra cidade, 53% relevo; o seco mais perto tem
   16,9 m de relevo.
 
-## 4. O que foi feito no `77cf5d9` (o aplainar, a renda média, a pedra que escapava)
+## 4. O que foi feito no `77cf5d9` e no `a47508e` (o aplainar, a renda média, a pedra que escapava)
 
 1. **O aplainar (D-217)**, no `js/village.js`: `earth(x, y, n, apply, plan)` / `V.earthOf` / `V.earthPlan` / `V.podiumFits` /
    `V.levelLot`, `V.LEVEL = 3`, `V.EARTH = 2`, `V.LEVEL_LAST`. A regra: os cantos do lote são trazidos para uma faixa da altura do
@@ -223,44 +230,79 @@ entregue, `mb/terra-s41-100.txt`, `mb/terra-s7-100.txt`):
    aplainável perto ganhava de um plano mais longe, e um templo era erguido de novo em vez de ampliado): por isso «o plano
    primeiro»; hoje `ONLY=e0,e7,e8,e9,e10,e15,e16,e21 node escala.js` não acusa nada.
 
-## 5. O que mediu o `tempo.js` (quanto leva um teatro de 24 m, a capital alimentada, a pedra por conta dela; já com a carroça)
+## 5. Quanto tempo leva cada degrau (o que o líder pediu: cidades de 40, 80, 120 pessoas)
 
-| capital (metrópole) | gente, adultos, construtores | a que distância | por ano | no ritmo |
-|---|---|---|---|---|
-| Tenochtitlan | 118, 64, 10 | 31 casas | 97, 10, 6, 2, 3, 4 | 55% em 6 anos; uns 12 ao todo — **a pedra acaba**: gasto o estoque (93), chegam 2 a 10 por ano |
-| Mênfis | 104, 58, 10 | 30 casas | 98, 62, 15, 4, 3, 9 | 77% em 6 anos; uns 8 ao todo — a pedra acaba |
-| Roma | 41, 23, 4 | 28 casas | 41, 7, 26, 8, 12, 20 | 51% em 6 anos; uns 13 ao todo |
-| Hedeby | 33, 20, 3 | 19 casas | 64, 17, … | **pronta em 3 anos** (o povo com 92 de pedra por ano) |
+**A conta de pedra de cada degrau** (`contas.js`; um povo de tijolo paga uma parte em adobe):
 
-A lição: com a carroça e a turma, **o que decide o tempo é a pedra que o povo tem por ano**, não o tamanho da capital. A renda
-de um ano (a que o `V.affords` usava, vezes 20) é a de um ano bom: Tenochtitlan tinha 156 no ano medido e uns 5 por ano nos
-seis seguintes, com as rochas em volta quebradas. Daí a D-216 (a média dos anos, 15 anos).
+| degrau | pedra | madeira | trabalho |
+|---|---|---|---|
+| templo de 16 m / de 24 m / de 32 m | 121 / 154 / 231 | 62 / 79 / 118 | 143 / 234 / 358 |
+| teatro de 24 m / 32 m / 40 m | 200 / 272 / 368 | 60 / 82 / 111 | 200 / 320 / 440 |
+| termas de 20 m / de 28 m | 130 / 180 | 37 / 51 | 156 / 234 |
+| palácio de 24 m / grande palácio de 32 m / colossal de 40 m | 210 / 432 / 1008 | 105 / 162 / 306 | 250 / 572 / 1584 |
+| maravilha de 40 m / de 52 m | 768 / 1200 | 192 / 300 | 1200 / 1950 |
+| biblioteca de 16 m, monumento de 16 m | 106, 225 | 48, 38 | 132, 225 |
 
-## 5b. «Não custar a cidade» (T-764): três sementes do zero, 60 anos, antes e depois
+**O que decide o tempo é a pedra por ano do povo, não o tamanho da capital.** Medido:
 
-Continente de 128, 4 povos, 60 anos de salto, sem a mão do deus (`scratchpad/ag/M/vida.js`; as saídas em `scratchpad/ag/M/m1/`).
-«Antes» é o código do `b2b61f0` (a base da rodada, exportada em `scratchpad/ag/M/base2/`); «depois», o do `77cf5d9`.
+| capital ao fundar | a pedra do povo por ano | obra | tempo |
+|---|---|---|---|
+| 30 a 50 pessoas (o povo com 30 a 100; os mundos do zero até o ano 60) | 5 a 20 | templo de 16 m | 13 anos (Argos, s41), 10 (Tenochtitlan, s103), 4 (Argos, s211) |
+| | | teatro de 24 m | 11 anos (Mênfis, s7; antes 18), 10 (Roma, s211) |
+| | | palácio de 24 m | 13 e 11 anos (Mênfis e Tenochtitlan, s41), 21 (Mênfis, s7: a cidade encolheu) |
+| 60 a 90 pessoas (Tenochtitlan da s103 do ano 63 ao 89) | uns 50 (pela conta: a maravilha são 768 de pedra em 15 anos) | teatro de 24 m | 5 anos |
+| | | palácio de 24 m | 6 anos |
+| | | maravilha de 40 m | **15 anos** (86 pessoas ao fundar, nível 4) |
+| mundos prontos (`tempo.js`, um teatro de 24 m por cada capital sozinha, com a carroça) | 92 | Hedeby da metrópole, 33 pessoas | 3 anos |
+| | uns 19 | Roma, 41 pessoas | uns 13 |
+| | 156 no ano medido, uns 5 depois | Tenochtitlan, 118 pessoas | uns 12 (a pedra acaba) |
+| | — | Mênfis, 104 pessoas | uns 8 |
 
-| semente | | gente | adultos sem casa | com fome no ano 61 | mortos de fome em 60 anos | cidades | casas | degraus grandes de pé / em obra |
+Pela conta: com 15 de pedra por ano um templo de 16 m leva 8 anos, um teatro ou um palácio de 24 m 13 a 14, a maravilha 51;
+com 40 por ano, 3, 5 e 19; com 80, um ano e meio, dois e meio e 10. A D-216 faz o planejador pedir o degrau que essa conta
+fecha em 15 anos: a capital de 40 pessoas ergue o templo de 16 m ou o teatro de 24 m, não a maravilha.
+
+## 5b. «Não custar a cidade» (T-764): quatro sementes do zero, aos 60 e aos 90 anos, antes e depois
+
+Continente de 128, 4 povos, salto, sem a mão do deus (`scratchpad/ag/M/vida.js`; as saídas em `scratchpad/ag/M/m1/` — os 60
+anos — e `mc/vida90-*.txt`, `mb/vida90-s7-antes.txt` — os 90). «Antes» é o código do `b2b61f0` (a base da rodada, exportada em
+`scratchpad/ag/M/base2/`); «depois», o entregue (`aa9ec8e`).
+
+**Aos 60 anos** (o que o líder pediu: a gente, a fome, as casas):
+
+| semente | | gente | adultos sem casa | com fome no ano 61 | mortos de fome em 60 anos | cidades | casas (de pedra, cabanas, sobrados) | degraus grandes de pé / em obra |
 |---|---|---|---|---|---|---|---|---|
-| 41 | antes | 217 | 1 | 25 | 2 | 9 | 48 de pedra, 25 cabanas, 8 sobrados | 1 / 0 |
-| 41 | depois | 243 | 1 | 13 | 2 | 10 | 36 de pedra, 43 cabanas, 8 sobrados | 1 / 2 |
+| 41 | antes | 217 | 1 | 25 | 2 | 9 | 48, 25, 8 | 1 / 0 |
+| 41 | depois | 243 | 1 | 13 | 2 | 10 | 36, 43, 8 | 1 / 2 |
 | 7 | antes | 217 | 1 | 27 | 3 | 10 | 37, 60, 13 | 2 / 0 |
 | 7 | depois | 243 | 0 | 21 | 4 | 12 | 37, 72, 13 | 2 / 1 |
 | 103 | antes | 190 | 7 | 9 | 1 | 10 | 25, 60, 11 | 0 / 2 |
 | 103 | depois | 200 | 0 | 15 | 1 | 12 | 39, 68, 11 | 0 / 1 |
+| 211 | antes | 217 | 0 | 16 | 5 | 9 | 27, 49, 6 | 0 / 0 |
+| 211 | depois | 163 | 0 | 6 | 8 | 10 | 30, 45, 7 | 1 / 0 |
+| as quatro | antes → depois | 841 → 849 | 9 → 1 | 77 → 55 | 11 → 15 | | | 3 / 2 → 4 / 4 |
 
-A cidade não pagou: mais gente nos três mundos (+12%, +12%, +5%), a fome igual (7 mortos de fome antes, 7 depois, em 180 anos de
-mundo), ninguém a mais sem casa. Na semente 41 há menos casas de pedra e mais cabanas (48/25 → 36/43): é a L-783 — enquanto a
-obra grande guarda a pedra, as casas novas são de madeira.
+**Aos 90 anos:**
 
-**O que cada capital fundou e acabou em 60 anos:**
+| semente | gente por década do ano 61 ao 91, antes | depois | mortos de fome em 90 anos | mortos de guerra | degraus grandes fundados, acabados, de pé no ano 91: antes | depois |
+|---|---|---|---|---|---|---|
+| 41 | 217, 279, 302, **315** | 243, 221, 329, **454** | 5 → 5 | 249 → 145 | 5, 2, 2 | 4, 3, **3** |
+| 7 | 217, 298, 397, **495** | 243, 253, 261, **225** | 5 → 5 | 187 → 294 | 2, 2, 2 | 5, 3, **2** (dois queimados) |
+| 103 | 190, 247, 315, **275** | 200, 208, 253, **323** | 3 → 3 | 290 → 199 | 5, 1, **0** (o teatro 77% em 42 anos, a maravilha 68% em 37, o palácio queimado) | 4, 4, **4**: o templo de 16 m (10 anos), o teatro de 24 m (5), o palácio de 24 m (6) e **a maravilha de 40 m de Tenochtitlan (15 anos, pronta no ano 89)** |
+| 211 | 217, 309, 351, **438** | 163, 192, 224, **307** | 9 → 10 | 177 → 231 | 1, 0, 0 | 3, 2, **2** (o templo de Argos em 4 anos, o teatro de Roma em 10) |
+| as quatro | **1523** | **1309** (−14%) | 22 → 23 | 903 → 869 | 13 fundados, 5 acabados, **4 de pé** | 16 fundados, 12 acabados, **11 de pé** |
 
-| semente | antes | depois |
-|---|---|---|
-| 41 | templo de 16 m de Argos (42 pessoas): ano 32 → 45, **13 anos**. Mais nada | o mesmo templo (ano 32 → 45: o mundo é o mesmo até ali); **o palácio de 24 m de Mênfis** (30 pessoas) fundado no ano 52, 85% aos 9 anos (faltam 46 de pedra); **o palácio de 24 m de Tenochtitlan** (31 pessoas) no ano 56, num lote aplainado, 98% aos 5 anos (faltam 5 de pedra). Antes estes dois eram fundados nos anos 69 e 77 (o g8 de antes, seção 1) |
-| 7 | teatro de 24 m de Mênfis (47 pessoas): ano 33 → 51, **18 anos**; o templo de Hedeby ampliado para 16 m no ano 47, 1 ano | o mesmo teatro: ano 33 → 44, **11 anos**; o templo de Hedeby ampliado no ano 44, 5 anos; **o palácio de 24 m de Mênfis** fundado no ano 51 num lote aplainado, 60% aos 10 anos |
-| 103 | teatro de 24 m de Hedeby (50 pessoas), ano 49: **35% em 12 anos**; a maravilha de 40 m de Tenochtitlan (47 pessoas), ano 54: **11% em 7 anos, faltam 740 de pedra**; o palácio de 24 m de Argos (34 pessoas), ano 54: perdido | **o templo de 16 m de Tenochtitlan** (46 pessoas), ano 53: 77% aos 8 anos (faltam 42 de pedra). A maravilha e o teatro que o povo não podia pagar não são mais fundados (D-216) |
+O que isto diz, sem enfeite:
+- **A fome quase não mudou**: em 90 anos, 22 mortos de fome nos quatro mundos antes e 23 depois; aos 60 anos, 11 e 15 (a
+  diferença é a semente 211: 5 → 8). Os adultos sem casa no ano 61 caem de 9 para 1.
+- **A gente**: aos 60 anos, igual (841 → 849). Aos 90, duas sementes sobem (+44%, +17%) e duas descem (−55%, −30%); a soma
+  desce 14%. O que separa os mundos são as guerras (145 a 294 mortos de guerra por mundo em 90 anos, contra 3 a 10 de fome), e
+  os mundos de antes e de depois deixam de ser o mesmo mundo na primeira obra grande. **Quatro sementes
+  não me deixam dizer que a rodada não custa gente aos 90 anos, nem que custa**: é um risco aberto (T-772), e o líder tem a
+  regressão para medir com mais mundos.
+- **Os monumentos**: de 4 de pé para 11, e a primeira maravilha acabada por um povo sozinho.
+- Na semente 41 há menos casas de pedra e mais cabanas aos 60 anos (48/25 → 36/43): é a L-783 — enquanto a obra grande guarda
+  a pedra, as casas novas são de madeira; aos 90 anos, 81 de pedra e 55 cabanas (antes 97 e 35).
 
 ## 5c. A pedra que não rende — o que mais segura as obras hoje (medido; não mexi)
 
@@ -325,15 +367,16 @@ para o líder decidir o preço (a regra é uma linha).
 | T-769 | limite (aberto; medido, não mexido) | **A pedra não rende: é o relógio de toda obra grande.** Semente 103, ano 56: o mundo inteiro (219 pessoas, 4 povos) entrega 97 de pedra por ano; um templo de 16 m pede uns 150, um teatro ou um palácio de 24 m uns 200, a maravilha uns 850. Não falta rocha (Tenochtitlan, com o templo parado esperando 99: 17 rochas alcançáveis a 44 casas, 550 de pedra, e chão rochoso a 10 casas do meio); faltam mãos na pedra: 5 construtores na turma e 2 mineiros, os dois na mina; num ano os construtores passam 3% do tempo quebrando pedra (27% dormem, 17% um deles segue alguém para a sociedade secreta, 12% em peregrinação à caverna, 15% levam ao templo a pouca pedra do armazém). O que destravaria (decisão de jogo e áreas de outros): mineiros de pedra sem mina enquanto a obra grande guarda pedra (`assignJobs`); uma carga maior da pedreira (padiola, carroça); ou a turma à pedra antes de assentar no dia da pedreira — **experimentada e não entregue**: dobra a pedra de duas de três obras (o templo de Argos da semente 41 de 13 para 7 anos, o de Tenochtitlan da 103 para 5) e a gente fica menor nas três sementes aos 60 anos (243/243/200 → 197/158/189), sem que três sementes separem a causa do acaso das guerras (bloco M2, seção 5d; o diff em `scratchpad/ag/M/d218-restrita.diff`). |
 | T-771 | limite (aberto; a proposta é a D-219) | **Todo prédio que pega fogo queima até o fim se não chover, e ninguém apaga.** Só o tipo «monument» não alimenta o fogo (`nature.js`, `Nat.fuel`); um templo, um teatro, um palácio, a pirâmide queimam como uma cabana, só mais devagar depois da L-784. Semente 7 com o código final: o palácio de 24 m de Mênfis queima 4 anos depois de pronto (21 anos de obra), o de Argos em obra com 55%. |
 | D-219 | proposta (do agente M; **não feita**: é regra do fogo, decisão do líder) | **O monumento de pedra pronto não alimenta o fogo.** Estender a exceção do «monument» no `Nat.fuel` às obras públicas de degrau maior **prontas** (o teatro, o templo, o palácio, a maravilha: pedra), deixando queimar a obra em curso (os andaimes) — uma linha. Ou o contrário, o povo apagar (um balde do poço: corpo, gesto e som novos). |
+| T-773 | limite de teste (aberto) | **A ordem do campo guardado não tem caso que a acuse.** O campo guardado (D-121) fica com o lote plano mais perto e só sem nenhum para o degrau com o que se aplaina (`resLot`: `best || lev`); a sabotagem a14 (`lev || best`) passa pelo `aterro` t6 — nos mundos prontos nenhuma das quatro capitais que guardariam um campo tem, para o mesmo degrau, um lote plano e um que se aplaina ao alcance. O caso de propósito pede o deus erguendo uma colina no lote plano mais perto (`G.Miracles.raise`). |
 | T-770 | limite (aberto) | **A maravilha das capitais velhas não tem terra.** Na metrópole (Roma, Hedeby, Argos, Mênfis) e nos mundos de 500 e 1000 anos nenhuma regra de terra abre o lote de 40 m: 68 a 86% dos lotes têm água, 50 a 87% prédio de outra cidade, e o relevo dos poucos secos passa de 13,5 m. Resta a reserva cedo (D-121), que agora guarda também um lote que se aplaina (`aterro` t6: Roma e Argos da megalópole, Karnak do mundial), e a maravilha noutra cidade do povo (D-121 (3)). |
 
 ## 7. As linhas do README, as entradas da regressão, as regras do guard, as frases do CLAUDE.md
 
 **README** (tabela das provas):
 
-| `canteiro.js` | `[ONLY=c1,c3] node canteiro.js [mundo]` | A carroça da obra grande (T-760, D-215), em Node, na megalópole: a obra a 37 casas de um armazém recebe pela carroça, as cargas pelo livro, nada some nem nasce, duas a caminho no máximo, vinte por carga, ninguém busca o que a carroça traz, e contra o mesmo mundo sem carroça pelo menos o dobro em dois anos (c1); a obra perto não tem carroça, o povo sem a roda também não, sem a vez nenhuma nova (c2); a obra fica pronta (c3), o deus a derruba (c4), o fogo a leva (c7), a cidade é tomada (c6) com a carroça a caminho — a carga volta ao povo que a mandou, pelo livro; o save com a carroça a caminho e o mesmo futuro duas vezes (c5); a pedra que a carroça deixa no armazém, a madeira sem chão, a estrada que morre (c8, L-783); a carga que a obra já não espera volta na carroça (c9). ≈ 3 min. Cobre `city.js` (`Ci.workCart`, `Ci.carted`) e o `coming` do `villagers.js`. |
+| `canteiro.js` | `[ONLY=c1,c3] node canteiro.js [mundo]` | A carroça da obra grande (T-760, D-215), em Node, na megalópole: a obra a 37 casas de um armazém recebe pela carroça, as cargas pelo livro, nada some nem nasce, duas a caminho no máximo, vinte por carga, ninguém busca o que a carroça traz, e contra o mesmo mundo sem carroça pelo menos o dobro em dois anos (c1); a obra perto não tem carroça, o povo sem a roda também não, sem a vez nenhuma nova (c2); a obra fica pronta (c3), o deus a derruba (c4), o fogo a leva (c7), a cidade é tomada (c6) com a carroça a caminho — a carga volta ao povo que a mandou, pelo livro; o save com a carroça a caminho e o mesmo futuro duas vezes (c5); a pedra que a carroça deixa no armazém, a madeira sem chão, duas a caminho no máximo, a estrada que morre (c8, L-783); a carga que a obra já não espera volta na carroça (c9); o que a carroça traz conta para quem iria buscar, e ninguém busca no armazém (c10). ≈ 2 min; 52 linhas. Cobre `city.js` (`Ci.workCart`, `Ci.carted`) e o `Vg.coming` do `villagers.js`. |
 | `canteiro-inv.js` | (carregado pelas provas: `M.load({ qa: true, extra: [..., 'qa/canteiro-inv.js'] })`) | As invariantes da carroça da obra, para o `junta-inv.js` juntar: a carroça de uma obra não é de rota nenhuma, tem caminho, leva um material e no máximo `WORK_LOAD`, a carga de ida só na ida e a de volta só na volta, e no máximo `WORK_CARTS` a caminho de cada obra. |
-| `aterro.js` | `[ONLY=t1,m2] node aterro.js` | O chão aplainado para a obra grande (T-761, D-217) e a renda de pedra ao longo dos anos (D-216), em Node, nos mundos prontos: o plano do aplainar em todo lote que se aplaina perto das capitais da megalópole e da metrópole — nenhum canto mexe mais de 3 níveis nem a mais de 2 casas do lote, nenhum toca água, caverna, muro, estrada ou prédio, o lote fica no pódio, o anel sem penhasco, cada canto vai aonde a regra manda — e cada causa de não se aplainar (t1); o planejador funda num lote aplainado onde o pódio não cobre nenhum: o chão escrito como o plano, a terra na obra e no trabalho dela, a crônica, o mapa avisado (t2); o save no meio, a obra pronta, o deus que a derruba — o chão fica (t3); o pódio primeiro: o mesmo lote que sem o aplainar (t4); a ampliação no lugar só com o pódio, e um poço junto de um canto que mexeria barra o lote (t5); o campo guardado e o lote aberto: o plano primeiro (t6, t7); a média da renda de pedra, um quinto de cada ano (m1); o povo pede pelo estoque e quinze anos da menor entre o último ano e a média (m2); pelo livro, quando o dia vira (m3). ≈ 1 min. Cobre `village.js` (`earth`, `V.levelLot`, `V.findSite`, `lotFor`, `resLot`, `V.openSite`, `V.startProject`, `V.workOf`, `V.affords`, `V.stoneMean`). |
+| `aterro.js` | `[ONLY=t1,m2] node aterro.js` | O chão aplainado para a obra grande (T-761, D-217) e a renda de pedra ao longo dos anos (D-216), em Node, nos mundos prontos: o plano do aplainar em todo lote que se aplaina perto das capitais da megalópole e da metrópole — nenhum canto mexe mais de 3 níveis nem a mais de 2 casas do lote, nenhum toca água, caverna, muro, estrada ou prédio, o lote fica no pódio, o anel sem penhasco, cada canto vai aonde a regra manda — e cada causa de não se aplainar (t1); o planejador funda num lote aplainado onde o pódio não cobre nenhum: o chão escrito como o plano, a terra na obra e no trabalho dela, a crônica, o mapa avisado (t2); o save no meio, a obra pronta, o deus que a derruba — o chão fica (t3); o pódio primeiro: o mesmo lote que sem o aplainar, ali e em 50 buscas dos mundos prontos (t4); a ampliação no lugar só com o pódio, e um poço junto de um canto que mexeria barra o lote (t5); o campo guardado e o lote aberto: o plano primeiro (t6, t7); a porta que aplaina avisa o mapa (t8); a média da renda de pedra, um quinto de cada ano (m1); o povo pede pelo estoque e quinze anos da menor entre o último ano e a média (m2); pelo livro, quando o dia vira (m3). ≈ 1 min. Cobre `village.js` (`earth`, `V.levelLot`, `V.findSite`, `lotFor`, `resLot`, `V.openSite`, `V.startProject`, `V.workOf`, `V.affords`, `V.stoneMean`). |
 | `aterro-inv.js` | (carregado pela prova) | As invariantes do aplainar e da renda média, para o `junta-inv.js` juntar: a terra de uma obra (`b.terra`) é um número de níveis maior que zero e só num degrau maior de obra pública; a conta da renda de pedra de um povo (`f.pedra`) tem o dia, o ano e o anterior, e a média (o dia até onde foi levada, não depois de hoje, e um número que não é negativo). |
 
 E na linha do `degraus.js`: os casos novos g9 (a resistência do degrau, L-784), g1p (o olhar do planejador: nenhuma casa melhorada com a obra grande esperando pedra, T-767), g1h (as casas novas das cidades-irmãs pela sobra, L-783) e g5n2 (nunca uma segunda maravilha); a seleção sem o g8 passa a `ONLY=g1,g1h,g1p,g2,g3,g4,g5,g5t,g5m,g5v,g6,g7,g9` (≈ 3 a 5 min).
@@ -357,7 +400,8 @@ for (const f of files) if (f !== 'city.js') src[f].forEach((l, k) => { const c =
   6 casas do armazém mais perto recebe por carroça do povo que sabe a roda, vinte de cada vez, pelo livro («carroca-obra»,
   «obra-carroca»; a carga da carroça que perde a obra, ou que a obra já não espera, volta por «carroca-volta»), deixando 20 de
   pedra no armazém (`Ci.WORK_FLOOR`, L-783). O canteiro é o lugar `o:` da obra (L-246). O que as carroças trazem conta como a
-  caminho para quem iria buscar — pergunte a `Ci.carted`; `b.incoming` é só das mãos dos construtores. Só o `city.js` cria a
+  caminho para quem iria buscar — pergunte a `G.Vg.coming(b, k)` (as mãos e as carroças) ou a `Ci.carted`; `b.incoming` é só das
+  mãos dos construtores. Só o `city.js` cria a
   carroça e escreve o relógio dela (`set.cartT`, `set.cartNo`; regra 76). `qa/canteiro.js` prova.
 - **O lote aplainado — `G.Village.earthOf` / `earthPlan` / `podiumFits` / `levelLot`** (`js/village.js`, D-217): o lote de um degrau
   maior de obra pública que o pódio não cobre pode ser aplainado pela obra na fundação (até 3 níveis por canto, a margem de duas
@@ -395,8 +439,70 @@ cidades.
 Em uma frase: **o aplainar destrava os primeiros 60 anos; depois disso só a terra guardada cedo** — e a distância entre as
 cidades de um mesmo continente.
 
-## 9. O que ficou aberto (até aqui)
+## 9. O que ficou aberto
 
-- T-768: o povo sem a roda (acima).
-- A pedra que acaba em volta das capitais (as rochas são finitas; a pedreira das terras altas só onde há terra rochosa a 26
-  casas): é o que mais segura as obras nos mundos do zero. Não mexi na economia da pedra.
+- **T-768**: o povo sem a roda leva a obra longe nas mãos.
+- **T-769**: a pedra não rende — o relógio de toda obra grande (seções 5, 5c e 5d). A experiência «a pedra antes de assentar»
+  está medida e guardada (`scratchpad/ag/M/d218-restrita.diff`, `d218-g2q.diff`), não entregue.
+- **T-770 e a D-160**: a terra acaba entre os 60 e os 100 anos; só a reserva cedo alcança (seção 8).
+- **T-771 e a proposta D-219**: o fogo ainda leva o palácio pronto e a obra em curso; ninguém apaga.
+- **T-772 (novo)**: a gente aos 90 anos — duas sementes sobem, duas descem, a soma desce 14% (seção 5b). Não sei separar a
+  rodada do acaso das guerras com quatro sementes; a regressão do líder tem mais mundos.
+- **O tempo de um palácio numa cidade que encolhe**: o de Mênfis da semente 7 levou 21 anos (a D-216 pede o que 15 anos da
+  renda de então pagam; a renda caiu com a cidade). A obra não é largada: espera.
+- **A última pedra**: o palácio de Tenochtitlan da semente 41 ficou em 98% do ano 61 ao 67 esperando 5 de pedra — a carroça
+  não leva o que está abaixo dos 20 do chão do armazém (L-783), e as mãos da turma demoram. Uma regra possível: o chão não vale
+  para a carga que acaba a obra. Não fiz: não medi.
+- `terra.js`: nas termas de uma capital da semente 7 aos 100 anos o `V.landWhy` conta 7 lotes que servem e a busca não acha
+  nenhum — as duas contas não são a mesma (o `landWhy` não aplica todas as regras da busca). Não olhei.
+- **T-773**: a ordem do campo guardado (o plano antes do que se aplaina) não tem caso que a acuse — a sabotagem a14.
+- Os números D-218 (reservado, não usado) e L-785 a L-799, T-774 a T-779 ficam livres.
+
+## 10. As sabotagens (cada parte desfeita numa cópia nova do jogo, e a prova que a acusou)
+
+`scratchpad/ag/M/sab-M2.py <pasta> <nome>` (com `check`: os 38 padrões casam com o código de agora); as saídas em
+`scratchpad/ag/M/ms/` e `ms2/`. **37 de 38 acusadas.** As cinco que não foram acusadas na primeira passada (k3, k11, a7, a9, i5)
+ganharam um caso novo cada uma e foram rodadas de novo; uma ficou sem caso (a14, T-773).
+
+| | a parte desfeita | quem acusou |
+|---|---|---|
+| k1 | nenhuma carroça | `canteiro` c1b, c1d, c1e, c1g |
+| k2 | a carga sem limite | `canteiro` c1d |
+| k3 | sem limite de carroças a caminho | `canteiro` c8g (caso novo: a porta pedida quatro vezes com o armazém cheio) e o verificador (c8f, a invariante do `canteiro-inv.js`) — na primeira passada o c1d não acusava: a 37 casas, uma a cada 20 s, nunca passam de duas |
+| k4 | a obra perto também ganha carroça | `canteiro` c2b |
+| k5 | o povo sem a roda manda carroça | `canteiro` c2d |
+| k6 | a cidade sem a vez manda carroça | `canteiro` c2e |
+| k7 | a carroça que perde a obra some com a carga | `canteiro` c3c |
+| k8 | a carroça segue para a obra da cidade tomada | `canteiro` c6c |
+| k9 | a carroça não deixa pedra no armazém | `canteiro` c8b, c8c, c8d |
+| k10 | a estrada que morre leva a carroça da obra | `canteiro` c8e |
+| k11 | o que a carroça traz não conta para quem iria buscar | `canteiro` c10c, c10d (caso novo: a conta `Vg.coming`, e ninguém busca no armazém) — o c1g sozinho não acusava |
+| k12 | a carga que a obra já não espera some na volta | `canteiro` c9c |
+| k13 | a regra da distância de volta a 12 casas | `degraus` g4e |
+| a1 | a fundação não aplaina | `aterro` t2b |
+| a2 | sem limite do que um canto mexe | `aterro` t1a |
+| a3 | os cantos da margem mexem ao lado de água, muro e prédio | `aterro` t1a |
+| a4 | o canto da beira do lote junto de água ou prédio fica, e o lote aplaina assim mesmo | `aterro` t1a, t1b, t5c |
+| a5 | penhascos no anel e na margem | `aterro` t1a |
+| a6 | a ampliação no lugar aceita um lote que se aplaina | `aterro` t5b |
+| a7 | o lote que se aplaina perguntado junto com os planos | `aterro` t4d (caso novo: 50 buscas dos mundos prontos dão o mesmo lote com e sem o aplainar) — o t4b sozinho não acusava |
+| a8 | a terra movida não entra no trabalho | `aterro` t2d, t3a |
+| a9 | o mapa não é avisado | `aterro` t8b (caso novo: a porta `V.levelLot` pedida sozinha) — no t2 a fundação que vem logo depois avisava por ela |
+| a10 | as alturas escritas sem os centésimos do save | `aterro` t3a, t3c |
+| a11 | sem linha na crônica | `aterro` t2d |
+| a12 | a margem não acompanha | `aterro` t1a |
+| a13 | relevo sem fim | `aterro` t1a, t1b |
+| a14 | o campo guardado fica com o lote que se aplaina antes do plano | **não acusada** (T-773) |
+| a15 | o lote aberto que se aplaina não vai para o fim | `aterro` t7a |
+| i1 | a renda do último ano sozinha | `aterro` m2b |
+| i2 | vinte anos | `aterro` m2c |
+| i3 | os anos sem pedra não contam na média | `aterro` m1a |
+| i4 | a média sozinha | `aterro` m2b |
+| i5 | a média não é levada adiante quando o dia vira | `aterro` m3 (refeito: a primeira pedra do dia novo) |
+| h1 | as casas novas das cidades-irmãs pelo estoque inteiro | `degraus` g1h3 |
+| s4 | casas melhoradas com a obra grande esperando pedra | `degraus` g1p2 |
+| r1 | o degrau maior com a resistência do tipo | `degraus` g9b, g9c |
+| r2 | a ampliação no lugar fica com a resistência de antes | `degraus` g9d |
+| r3 | a ampliação desfeita fica com a resistência maior | `degraus` g9d |
+
+(E a s9 — nunca uma segunda maravilha —, acusada pelo `degraus` g5n2 no começo da rodada: `b70b0b0`.)

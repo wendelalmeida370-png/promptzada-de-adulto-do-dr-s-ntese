@@ -12,8 +12,9 @@
 //   c6  a cidade tomada com a carroça a caminho: a carga volta ao povo que a mandou, nunca ao armazém do vencedor
 //   c7  o fogo leva a obra com a carroça a caminho: a carga volta, e nenhuma carroça vai à ruína
 //   c8  a pedra que a carroça deixa no armazém (L-783): com o chão só, nenhuma carroça; leva o que passa dele; a madeira não
-//       tem chão; a estrada do povo que morre não leva a carroça da obra
+//       tem chão; duas a caminho no máximo; a estrada do povo que morre não leva a carroça da obra
 //   c9  a obra que já não espera o que a carroça traz: a carga volta para casa na carroça, pelo livro
+//   c10 o que a carroça traz conta para quem iria buscar (Vg.coming = as mãos + as carroças): ninguém busca no armazém
 //   node qa/canteiro.js [mundo]        (ONLY=c1,c3 só esses; VERB=1 conta mais)
 'use strict';
 process.chdir(__dirname);
@@ -205,6 +206,9 @@ run('c8', () => {
   const mad = (b.need.wood || 0) >= 5; let c2 = null, fica2 = -1;
   if (mad) { sim(() => { D.make('f:' + f.id, 'wood', 5, { code: 'teste' }); }); c2 = pede(); fica2 = f.stock.wood || 0; }
   ok('c8d a madeira não tem chão', !mad || (!!c2 && !!c2.goods && c2.goods.k === 'wood' && Math.abs(c2.goods.n - 5) < 1e-6 && fica2 < 1e-6), mad ? `5 de madeira no armazém (e ${FL} de pedra): a carroça ${c2 ? '#' + c2.id + ' leva ' + JSON.stringify(c2.goods) : 'NÃO saiu'}; ficam ${fica2} de madeira` : 'a obra não espera madeira: sem caso');
+  // (two on the way at most: the store full again, the door asked until it gives none — and the store back to its floor)
+  so(FL + 80); let mais = 0; for (let k = 0; k < 4; k++) if (pede()) mais++; const indo = daObra(b).filter(q => !q.back).length; so(FL);
+  ok('c8g duas a caminho no máximo', indo === Ci.WORK_CARTS && mais === Ci.WORK_CARTS - (mad ? 2 : 1), `o armazém cheio de novo e a porta pedida quatro vezes: ${mais} carroça(s) a mais saíram; a caminho da obra ${indo} (a regra: ${Ci.WORK_CARTS})`);
   // (a road of the people dies — by the proof's hand on the road's own mark, as city.js sets it when a town of it is gone)
   const r = (S.routes || []).find(q => !q.dead); const antes = daObra(b).map(q => q.id).join(',');
   if (r) { const daRota = S.carts.filter(q => q.route === r.id).length; r.dead = true; for (let k = 0; k < 30 && S.routes.includes(r); k++) M.viver(0.5);
@@ -227,6 +231,24 @@ run('c9', () => {
   const chegou = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'o:' + b.id), volta = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'f:' + f.id && e[8] === 'carroca-volta');
   ok('c9c a carga que a obra já não espera volta na carroça', espera === 0 && !!o && !S.carts.some(q => q.id === c.id) && chegou === 0 && Math.abs(volta - n) < 1e-6, `dado à obra todo o ${k} que esperava (espera agora ${espera}): a carroça #${c.id} foi e voltou em ${(seg / 2).toFixed(0)} s; entraram no canteiro por ela ${chegou}; de volta ao armazém do povo («carroca-volta») ${volta} de ${n}`);
   const q = checa(); ok('c9d verificador', q.ok, q.txt);
+});
+
+// ------------------------------ c10: o que a carroça traz conta para quem iria buscar ------------------------------
+// (the builders' own count of what is coming to a work — Vg.coming — is their hands' loads and the carts': with the site given
+// all it waits for but what is on the road, nobody takes a load of it from the store)
+run('c10', () => {
+  const a = arma(35); if (!ok('c10a a obra longe', !!a && a.vez, a ? `${lado(a.b)} a ${a.longe} casas` : 'sem chão')) return;
+  const { set, f, b } = a; const c = ateCarroca(set, b); if (!ok('c10b uma carroça a caminho', !!c, c ? `a carroça #${c.id} com ${c.goods.n} de ${c.goods.k}` : 'nenhuma carroça saiu em 200 s')) return;
+  const k = c.goods.k; const vem = G.Vg.coming(b, k), maos = b.incoming[k] || 0, car = Ci.carted(b, k);
+  ok('c10c a conta de quem iria buscar', car >= c.goods.n - 1e-9 && Math.abs(vem - maos - car) < 1e-9, `de ${k}, a caminho da obra: ${maos} nas mãos dos construtores (b.incoming) + ${car} nas carroças (Ci.carted) = ${vem} para quem iria buscar (Vg.coming)`);
+  // (the site given what nobody is bringing; then, until the carts arrive, no new load of the builders for this work)
+  const resto = m => (b.need[m] || 0) - G.Vg.coming(b, m);
+  for (let q = 0; q < 4; q++) sim(() => { for (const m in b.need) { const n = (b.need[m] || 0) - (b.incoming[m] || 0) - Ci.carted(b, m); if (n > 1e-9) { D.make('f:' + f.id, m, n, { code: 'teste' }); D.move('f:' + f.id, 'o:' + b.id, m, n, { code: 'teste' }); } } });
+  const so = Object.keys(b.need).every(m => resto(m) <= 1e-6); abastece(set, b);
+  const inc = Object.assign({}, b.incoming); let novas = 0, seg = 0;
+  for (; seg < 120 && daObra(b).some(q => !q.back); seg++) { M.viver(0.5); for (const m in b.incoming) { const x = b.incoming[m] || 0; if (x > (inc[m] || 0) + 1e-9) novas += x - (inc[m] || 0); inc[m] = x; } }
+  ok('c10d ninguém busca o que a carroça traz', so && novas === 0, `dado à obra tudo menos o que vem a caminho: em ${(seg / 2).toFixed(0)} s, até as carroças chegarem, cargas novas tiradas do armazém pelos construtores para esta obra: ${novas}`);
+  const q = checa(); ok('c10e verificador', q.ok, q.txt);
 });
 
 console.log(fails.length ? `CANTEIRO: FALHOU (${fails.join(', ')})` : `CANTEIRO: ok (${ms()} ms)`);
