@@ -247,7 +247,10 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); const set = S().se
   // house's water (1,05, until 0,55) takes whoever of the house has nothing weightier, and the call to the stage is not given
   // over an errand above 1 — in the generation 11's Mênfis Tauret, put down far from the door, went for it at the first step
   // and spent the preparation carrying the jar home, «não chegou à peça», T-356)
-  if (a && sp) { const h = S().buildings.get(a.home); if (h) h.water = 1; }
+  // (and the house's shopping done, as its water: the family's purchase — 1,02, act-compras.js — is an errand of her own, and
+  // the call to the stage is not given over one above 1 — in the tree joined with the leader's tip the actress of the day,
+  // Coatlicue, was her house's buyer: she went to the market at 0,385 and came to the stage at 0,665, «não chegou à peça», T-924)
+  if (a && sp) { const h = S().buildings.get(a.home); if (h) { h.water = 1; h.shopT = S().clock; } }
   const dr = G.Vg.door(b); const far = a ? Math.round(G.dist(a.x, a.y, dr[0], dr[1])) : 0; const at = Tt.opensAt(b);
   // (the case's own show, kept when it opens, and its end waited for: Tt.dia gives only a show alive, and the wait for its end
   // on it never ended — the case lived its 200 s and took the theatre's newest show, which in the tip a39483e, the case begun
@@ -267,7 +270,11 @@ const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); const set = S().se
 // waits —; with hunger 90 he goes to eat, and with the stage empty the play stops: the starving still go)
 function hungryActor(hunger) {
   fresh(); const b = S().buildings.get(P.id); const cast = ready(b); const a = cast.length ? solo(b, cast) : null; const bad = [];
-  if (a) { a.energy = 90; a.hunger = 20; }
+  // (awake, and the chores of her house done — its water, its shopping —, as the far actor of the l7: in the tree joined with
+  // the leader's tip the one actor of the case, Coatlicue, was of the tenth of the town the snapshot leaves in bed — asleep at
+  // 0,40, when the hand calls her to the stage —, and then her house's buyer: at the market till 0,60, home with the purchase,
+  // and the show called off «sem atores»: T-924)
+  if (a) { G.Vg.endTask(a); a.sleeping = false; a.energy = 90; a.hunger = 20; const h = S().buildings.get(a.home); if (h) { h.water = 1; h.shopT = S().clock; } }
   const keep = a ? [a.id] : []; holdOthers(b, keep); const dr = G.Vg.door(b);
   // (and his trade kept by the god's hand for the case, as actors() gave it: a town whose ceiling of the trades leaves its
   // theatre no actor — D-090: the generation-12 metropole's only theatre is Mênfis's, of 24 grown ones, whose nine hands go

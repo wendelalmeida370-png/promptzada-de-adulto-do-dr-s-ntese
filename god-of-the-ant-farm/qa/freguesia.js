@@ -239,7 +239,10 @@ function watch() {
     for (const [id, e] of errand) { if (now.has(id)) continue; errand.delete(id); if (e.st >= 1) continue; const v = S.villagers.get(id); const b = S.buildings.get(e.b);
       if (!v) { w.dropped['morreu'] = (w.dropped['morreu'] || 0) + 1; continue; }
       const dr = b ? Vg.door(b) : null; const at = dr && G.dist(v.x, v.y, dr[0], dr[1]) < 3.2;
-      if (at && b && Te.aberta(b)) w.door.push(`${v.name} #${id} no dia ${S.day} às ${S.time.toFixed(2)}`); else { const k = v.task ? v.task.type : 'nada'; w.dropped[k] = (w.dropped[k] || 0) + 1; } }
+      // (turned at the FULL door: at it, the baths open, and every place taken — one called away at the door of baths with
+      // room, by the cave or by the trade between the peoples, dropped the errand for that: it was counted as a knock, T-923e)
+      const op = b ? Te.dia(b) : null; const cheia = !!op && Object.keys(op.data.banho).length >= Te.places(b);
+      if (at && b && Te.aberta(b) && cheia) w.door.push(`${v.name} #${id} no dia ${S.day} às ${S.time.toFixed(2)}`); else { const k = v.task ? v.task.type : 'nada'; w.dropped[k] = (w.dropped[k] || 0) + 1; } }
   };
   w.close = function () { Te.go = go0; Bi.go = lg0; G.Teatro.go = tg0; E.tavernTask = tv0; U.noteB = nb0; D.onMove.splice(D.onMove.indexOf(tap), 1); for (const p of w.go.concat(w.goLib)) if (p.duty) w.duty.push(`#${p.id} ${w.go.includes(p) ? 'aos banhos' : 'à biblioteca'} no dia ${p.day} às ${p.t.toFixed(2)}`); };
   // (who paid and had no bath: by the closing — the time's rule failed —, or called away from the pegs or the water)
@@ -398,6 +401,13 @@ function handDay(step, lib, extra) {
   const b = god(() => V.handFound(set, 'banhos', step, { built: true, x: at[0], y: at[1], R: 2 })); if (!b) return { none: `${set.name}: sem lote para ${step} em ${at}` };
   const L = lib ? god(() => V.handFound(set, 'biblioteca', 'grande', { built: true, R: 60 })) : null;
   const kid = god(() => stokerFor(b)); const fid = facOf(b);
+  // (the baths and the library of the god's hand are what the town lacked to be a metropolis — city.js, tierOf: baths, an
+  // aqueduct or a library —, and the day the rest of it comes — the streets, the tall houses — the whole town comes out to
+  // celebrate (tierUp: seven in ten, 1,1, over any wish): a feast of the hand's own making, in the day of the case. In the
+  // tree joined with the leader's tip it fell at 0,465 of the great baths' day — 123 of 215 grown ones at it in the baths'
+  // best hours, 7 bathed, one read —, and at 0,565 in the other two. The town is told it has been one already, by the
+  // hand, as the rain is held: the tier rises in silence. T-923d)
+  const tier0 = `${set.tier}/${set.best}`; set.best = Math.max(set.best || 0, 5);
   const hold = () => god(() => { const v = S.villagers.get(kid); if (v && !v.captive && (v.role !== 'foguista' || v.job !== b.id)) { v.role = 'foguista'; v.job = b.id; } if (D.free('f:' + fid, 'wood') < 30) D.make('f:' + fid, 'wood', 40, { code: 'teste', part: true }); S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0; });
   rebase(); const w = watch(); S.time = Te.horas(b).abre - 0.02; const day = S.day; let mid = null, midInfo = null;
   // (the clock held at the opening hour until the furnace is lit — the lot of the god's hand may be far from the store, and

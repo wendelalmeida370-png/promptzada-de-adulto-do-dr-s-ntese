@@ -471,15 +471,28 @@ function partE() {
 // ================================================================ t: the old stroll with the time's rule (T-919)
 function partT() {
   M.pronto(WORLD); const S = G.S; S.time = 0.45; M.viver(2); fair0(null);
-  const b = baths().filter(x => Te.dia(x)).sort((a, c) => V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0];
+  // (the baths nearest eight places in the water: with one place — Tenochtitlan's — a single bather hides the time's rule,
+  // and the thirty-five of Mênfis' the hand of the proof does not fill)
+  const b = baths().filter(x => Te.dia(x)).sort((a, c) => Math.abs(Te.places(a) - 8) - Math.abs(Te.places(c) - 8) || V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0];
   if (!b) { ok('t o passeio com a regra do tempo', false, 'nenhuns banhos abertos às 0,45'); return; }
   // (thirty of the town, their day's task ended by the proof's hand, standing by the baths' door: the walk is no matter here)
   const h = Te.horas(b); const set = setOf(b); const dr = Vg.door(b); const L = adults(set.id).filter(v => !v.jail && !v.aboard && !v.ug && !v.held && v.age < 55 && v.role !== 'foguista' && !(v.task && (v.task.pri || 0) > 1.05) && !(v.carry && v.carry.n > EPS) && !v.sleeping).slice(0, 30);
   god(() => { for (const v of L) { Vg.endTask(v); v.inside = 0; v.x = dr[0]; v.y = dr[1]; v.hunger = 20; v.energy = 70; } });
-  const tryAt = t => { S.time = t; let sent = 0, calls = 0; god(() => { for (let k = 0; k < 12; k++) for (const v of L) { const t0 = v.task; const bd = v.bathDay; v.bathDay = 0; const r = G.City.leisureTask(v, Vg.H); calls++; if (r && r.type === 'termas' && r.id === b.id) sent++; if (v.task !== t0) Vg.endTask(v); v.bathDay = bd; } }); return { sent, calls }; };
-  const inT = L.filter(v => Te.inTime(v, b)).length; const early = tryAt(0.45); const lateT = h.fecha - 0.02; const late = tryAt(lateT); const outT = L.filter(v => Te.inTime(v, b)).length;
-  ok('t o passeio de quem está sem trabalho só leva aos banhos quem tem tempo para o banho antes de fechar (T-919): cedo leva, perto de fechar não', L.length >= 8 && inT === L.length && early.sent >= 3 && outT === 0 && late.sent === 0 && M.limpo(),
-    `${set.name}, ${L.length} pessoas à porta dos banhos: às 0,45 ${inT} têm tempo, e o passeio manda aos banhos ${early.sent} vezes em ${early.calls} pedidos; às ${lateT.toFixed(2)} (os banhos fecham às ${h.fecha}) ${outT} têm tempo, e manda ${late.sent} vezes em ${late.calls}`);
+  // (the places one more can count on, as the stroll itself sees them: asked inside the step, where the count of who is on
+  // the way is the step's own — T-923a)
+  const tryAt = t => { S.time = t; let sent = 0, calls = 0, room = 0; god(() => { room = Te.room(b); for (let k = 0; k < 12; k++) for (const v of L) { const t0 = v.task; const bd = v.bathDay; v.bathDay = 0; const r = G.City.leisureTask(v, Vg.H); calls++; if (r && r.type === 'termas' && r.id === b.id) sent++; if (v.task !== t0) Vg.endTask(v); v.bathDay = bd; } }); return { sent, calls, room }; };
+  const inT = L.filter(v => Te.inTime(v, b)).length; const early = tryAt(0.45);
+  // (the places taken by who is on the way — by the proof's hand, the baths' own door, from far off —, with room still at
+  // the pegs inside: the stroll sends nobody more)
+  S.time = 0.45; const far = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 6 && !v.captive && !L.includes(v) && !v.jail && !v.aboard && !v.ug && !v.held && !v.sleeping && v.role !== 'foguista' && !(v.carry && v.carry.n > EPS)).sort((a, c) => a.id - c.id);
+  // (the count of who is on the way is kept for the step it was asked in — T-923a —: asked from outside the step before the
+  // hand sends, and a step lived after it and after the way is given back)
+  const need = Te.room(b) + 2; const way = []; god(() => { for (const v of far) { if (way.length >= need) break; const bd = v.bathDay; v.bathDay = 0; Vg.endTask(v); const r = Te.visit(v, b, Vg.H); v.bathDay = bd; if (r) way.push(v); } });
+  M.viver(0.1); S.time = 0.45; const opT = Te.dia(b); const inside = opT ? Object.keys(opT.data.banho).length : -1; const fullT = tryAt(0.45); const room0 = fullT.room; god(() => { for (const v of way) Vg.endTask(v); });
+  // (near the closing, with places to count on: the time's rule alone turns the stroll back)
+  const lateT = h.fecha - 0.02; M.viver(0.1); const late = tryAt(lateT); const roomL = late.room; const outT = L.filter(v => Te.inTime(v, b)).length;
+  ok('t o passeio de quem está sem trabalho só leva aos banhos quem tem tempo para o banho antes de fechar e um lugar com que contar — quem vem a caminho conta (T-919): cedo leva, com os lugares tomados não, perto de fechar não', L.length >= 8 && inT === L.length && early.room >= 1 && early.sent >= 3 && way.length >= 1 && room0 < 1 && inside >= 0 && inside < Te.places(b) && fullT.sent === 0 && roomL >= 1 && outT === 0 && late.sent === 0 && M.limpo(),
+    `${set.name}, ${L.length} pessoas à porta dos banhos: às 0,45 ${inT} têm tempo, e o passeio manda aos banhos ${early.sent} vezes em ${early.calls} pedidos; com ${way.length} a caminho pela mão da prova (${inside} dentro, de ${Te.places(b)} lugares; com que mais um pode contar: ${room0}) manda ${fullT.sent} vezes em ${fullT.calls}; às ${lateT.toFixed(2)} (os banhos fecham às ${h.fecha}; ${roomL} lugares com que contar) ${outT} têm tempo, e manda ${late.sent} vezes em ${late.calls}`);
 }
 
 // ================================================================ h: the verifier catches the lie

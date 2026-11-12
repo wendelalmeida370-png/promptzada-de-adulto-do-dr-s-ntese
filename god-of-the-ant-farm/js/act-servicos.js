@@ -316,6 +316,10 @@
   // bath's worth of water before the closing; who cannot have it does not set out. The stroll sent one at any hour, and
   // the closing took her out of the water with the entry paid and no bath: T-919)
   Te.inTime = function (v, b) { const dr = G.Vg.door(b); return S_().time <= Te.horas(b).fecha - (G.dist(v.x, v.y, dr[0], dr[1]) * Te.WALK + AN.despir.dur + Te.DIP) / G.DAY_LEN; };
+  // (the town's stroll to the baths, its one door: with the time for a bath, and a place one more can count on — who is on
+  // the way counted, as the wish counts them. The stroll asked neither: it sent Penélope and Zoé of Argos to baths of eight
+  // places with ten and eleven inside or on their way, and the full door turned them back: T-919)
+  Te.stroll = function (v, b, H) { return Te.inTime(v, b) && Te.room(b) >= 1 ? Te.visit(v, b, H) : null; };
   // the stoker at his post (D-204, D-227): the day of his baths open and the fire not enough to last to the closing — and
   // the moments before the doors open (Te.EARLY), the fire still to light. He does not leave the furnace for a bath, a
   // scroll, the theatre, the tavern or the plaza (the wishes of decide ask this), nor for a call from outside — a feast, a
