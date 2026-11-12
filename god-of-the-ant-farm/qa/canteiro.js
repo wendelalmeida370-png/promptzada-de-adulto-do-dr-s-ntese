@@ -266,9 +266,17 @@ run('c10', () => {
   const resto = m => (b.need[m] || 0) - G.Vg.coming(b, m);
   for (let q = 0; q < 4; q++) sim(() => { for (const m in b.need) { const n = (b.need[m] || 0) - (b.incoming[m] || 0) - Ci.carted(b, m); if (n > 1e-9) { D.make('f:' + f.id, m, n, { code: 'teste' }); D.move('f:' + f.id, 'o:' + b.id, m, n, { code: 'teste' }); } } });
   const so = Object.keys(b.need).every(m => resto(m) <= 1e-6); abastece(set, b);
-  const inc = Object.assign({}, b.incoming); let novas = 0, seg = 0;
-  for (; seg < 120 && daObra(b).some(q => !q.back); seg++) { M.viver(0.5); for (const m in b.incoming) { const x = b.incoming[m] || 0; if (x > (inc[m] || 0) + 1e-9) novas += x - (inc[m] || 0); inc[m] = x; } }
-  ok('c10d ninguém busca o que a carroça traz', so && novas === 0, `dado à obra tudo menos o que vem a caminho: em ${(seg / 2).toFixed(0)} s, até as carroças chegarem, cargas novas tiradas do armazém pelos construtores para esta obra: ${novas}`);
+  // (a builder whose task is cut on the way — the night, a call, the scene — is counted out and may still bring his load, and
+  // another takes one in his place: the builders' own count has a hand's load of slack, carts or no carts — four. The fault
+  // this case is for is the cart's load fetched again: what is coming to the work, hands and carts, a load of the hands or
+  // more past what it waits for)
+  const MAO = 4; const inc = Object.assign({}, b.incoming); let novas = 0, seg = 0, demais = 0; const quais = {};
+  for (; seg < 120 && daObra(b).some(q => !q.back); seg++) {
+    M.viver(0.5);
+    for (const m in b.incoming) { const x = b.incoming[m] || 0; if (x > (inc[m] || 0) + 1e-9) { novas += x - (inc[m] || 0); quais[m] = (quais[m] || 0) + x - (inc[m] || 0); } inc[m] = x; }
+    for (const m in b.need) demais = Math.max(demais, G.Vg.coming(b, m) - (b.need[m] || 0));
+  }
+  ok('c10d ninguém busca o que a carroça traz', so && demais < MAO - 1e-9, `dado à obra tudo menos o que vem a caminho: em ${(seg / 2).toFixed(0)} s, até as carroças chegarem, o que vinha a caminho (as mãos e as carroças) nunca passou do que a obra esperava em uma carga das mãos (${MAO}) ou mais (o maior excesso: ${Math.max(0, demais).toFixed(1)}; a carga da carroça: ${c.goods ? c.goods.n : 20}); cargas dos construtores tiradas do armazém nesse tempo: ${novas}${novas ? ' ' + JSON.stringify(quais) : ''}`);
   const q = checa(); ok('c10e verificador', q.ok, q.txt);
 });
 

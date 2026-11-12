@@ -18,7 +18,7 @@
 //       capital com terra de sobra (g5t), o que esperava a vez é o que o planejador ergue quando a primeira fica de pé
 //   g6  a maravilha do campo guardado vem antes de qualquer outra obra grande (D-176)
 //   g7  a guerra no meio: a cidade tomada com a obra grande em curso — a obra e a marca passam ao novo povo, nada preso
-//   g9  a resistência do degrau (L-784): um degrau maior aguenta o que o lote dele é; ampliado, salvo, desistido; o mesmo fogo
+//   g9  a resistência do degrau (L-784): um degrau maior aguenta o que o lote dele é; ampliado, salvo, desistido; o mesmo golpe (do cerco: o fogo é da D-219)
 //   g8  o mundo crescido pelo salto, do zero (duas sementes): uma capital ergue sozinha um degrau grande, e nenhuma vila
 //   node qa/degraus.js            (ONLY=g1,g5 só esses; VERB=1 conta mais; MUNDO=mega outro mundo pronto para g1–g7)
 'use strict';
@@ -549,10 +549,11 @@ run('g9', () => {
   if (!ok('g9a o teatro de cada tamanho', !!b6 && !!b3 && b6.w === 6 && b3.w === n0, `${set.name}: ${lado(b6)} e ${lado(b3)}`)) return;
   const quer = Math.round(def.hp * 36 / (n0 * n0));
   ok('g9b a resistência pelo lote', b6.maxHp === quer && b6.hp === quer && b3.maxHp === def.hp && b3.hp === def.hp && V.hpOf('teatro', 6) === quer && V.hpOf('teatro', n0) === def.hp, `o teatro de ${n0 * 4} m: ${b3.hp} (o do tipo: ${def.hp}); o de 24 m: ${b6.hp} (${def.hp} × 36 / ${n0 * n0} = ${quer})`);
-  // (the same blow, a little more than the small one stands: the small falls, the big stands)
-  sim(() => { V.damageBuilding(b3, def.hp + 1, 'fire'); V.damageBuilding(b6, def.hp + 1, 'fire'); });
+  // (the same blow, a little more than the small one stands: the small falls, the big stands. The siege's stones: the fire on a
+  // great work stops at what is not timber in it — D-219, qa/fogo-pedra.js —, and would not show the strength by the lot)
+  sim(() => { V.damageBuilding(b3, def.hp + 1, 'siege'); V.damageBuilding(b6, def.hp + 1, 'siege'); });
   const o3 = S.buildings.get(b3.id), o6 = S.buildings.get(b6.id);
-  ok('g9c o mesmo fogo', (!o3 || o3.type === 'ruin') && !!o6 && o6.type === 'teatro' && Math.abs(o6.hp - (quer - def.hp - 1)) < 1e-6, `${def.hp + 1} de dano de fogo em cada um: o de ${n0 * 4} m ${!o3 ? 'saiu do mapa' : o3.type === 'ruin' ? 'virou ruína' : 'DE PÉ'}; o de 24 m ${o6 && o6.type === 'teatro' ? 'de pé com ' + o6.hp + ' de ' + o6.maxHp : 'CAIU'}`);
+  ok('g9c o mesmo golpe', (!o3 || o3.type === 'ruin') && !!o6 && o6.type === 'teatro' && Math.abs(o6.hp - (quer - def.hp - 1)) < 1e-6, `${def.hp + 1} de dano do cerco em cada um: o de ${n0 * 4} m ${!o3 ? 'saiu do mapa' : o3.type === 'ruin' ? 'virou ruína' : 'DE PÉ'}; o de 24 m ${o6 && o6.type === 'teatro' ? 'de pé com ' + o6.hp + ' de ' + o6.maxHp : 'CAIU'}`);
   // (enlarged in place: the strength grows with the lot, what it had lost kept lost; given up: back to what it was)
   let cresceu = null;
   for (const o of [...S.buildings.values()].filter(q => q.built && q.type !== 'ruin' && pub(q.type) && q.set === set.id).sort((a, c) => a.id - c.id)) {

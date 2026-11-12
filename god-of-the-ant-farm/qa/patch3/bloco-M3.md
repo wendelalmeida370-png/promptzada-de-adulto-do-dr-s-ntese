@@ -180,6 +180,26 @@ teatro de 24 m de Argos em obra. A régua das dez sementes (seção 5) diz o que
 **O que fica do repartidor, para o agente X** (medido, não mexido): as mãos livres para a lenha, a coleta e a pedra são 3 ou 4
 numa capital de 23 crescidos; a madeira do mesmo povo está em 25 de um alvo de 239.
 
+## 4b. A maravilha da semente 41 que não está de pé aos 91 anos (a pergunta do líder)
+
+**Reproduzido** com o código do líder (`55d8533`, o mesmo salto de 90 anos de uma vez do `degraus` g8; `maravilha41.js`, que só
+escuta as portas e o livro; a saída em `r3b/maravilha41-lider.txt`; o mesmo mundo: 876 pessoas no ano 91, os mesmos degraus
+fundados nos mesmos anos):
+
+| ano | o que houve |
+|---|---|
+| 36 | **FUNDA a maravilha de 40 m** em Mênfis (nível 3, 38 pessoas; o povo egípcio: 119 pessoas em 5 cidades). A conta do degrau: 192 de madeira, 768 de pedra. O povo tinha 0 de pedra, renda de 44 por ano, média 37 |
+| 56 | **PRONTA a maravilha** — vinte anos de obra; o povo então com 238 pessoas, Mênfis com 84. No mesmo ano funda o palácio de 24 m |
+| 62 | pronto o palácio de 24 m (6 anos) |
+| 76 | **CAI o palácio de 24 m, pronto: fogo** (e a biblioteca de 16 m, pronta: fogo) |
+| 85 | **CAI a maravilha de 40 m, pronta: fogo** — 29 anos de pé |
+
+**As respostas.** A maravilha não parou por pedra nem perdeu a vez, e não queimou em obra: **foi acabada em vinte anos e
+queimou pronta**, no incêndio da cidade do ano 85; o palácio de 24 m, pronto havia 14 anos, queimou no ano 76. É a T-771
+inteira — os dois são de pedra (egípcios), e com a D-219 desta rodada o fogo os fere e não os derruba. **E a cidade de 38
+pessoas não pediu demais**: quem paga é o povo (119 pessoas em 5 cidades, 44 de pedra por ano), e a obra ficou pronta em vinte
+anos, enquanto o povo dobrava; o `V.affords` com a média dos anos (D-216) pagou o que a renda de fato trouxe. Não mexi.
+
 ## 5. As medidas
 
 (a preencher: a régua em dez sementes, antes e depois; a terra depois; as cidades novas.)

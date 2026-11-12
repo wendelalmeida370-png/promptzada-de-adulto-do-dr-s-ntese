@@ -1806,10 +1806,8 @@
       want.mineiro = Math.round(rest * wS / tot);
       want.lenhador = Math.max(0, rest - want.coletor - want.mineiro);
     }
-    // the mines take their crews from the quarrymen and woodcutters — and no more than that crew (set.minaN: what economy.js,
-    // E.place, may post in the mines; the other «mineiros» are the stone's: L-785)
-    set.minaN = 0;
-    if (mineJobs) { const m = Math.min(mineJobs, want.lenhador + want.coletor - 1); if (m > 0) { set.minaN = m; want.mineiro += m; const fromL = Math.min(m, want.lenhador); want.lenhador -= fromL; want.coletor -= m - fromL; } }
+    // the mines take their crews from the quarrymen and woodcutters
+    if (mineJobs) { const m = Math.min(mineJobs, want.lenhador + want.coletor - 1); if (m > 0) { want.mineiro += m; const fromL = Math.min(m, want.lenhador); want.lenhador -= fromL; want.coletor -= m - fromL; } }
     // current counts
     const have = {}; for (const r of WORK_ROLES) have[r] = [];
     const none = [];
