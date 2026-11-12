@@ -17,8 +17,8 @@
 //  l3  o doente (L-227): fica de cama em casa enquanto dura a febre, come da despensa pelo livro-razão, sara e sai
 //  l7  o corpo encarnado em casa (o adendo 4.1): come à mesa o que a despensa tem e cozinha a ceia da casa, pelas mesmas
 //      portas e no livro; dorme em casa; devolvido, segue a vida dele — em casa pelo motivo dele, ou pela porta
-//  l7b o corpo come em casa numa casa sem mesa, banco nem lareira — quase todas as cabanas —, no chão, onde está, como a família
-//      come nela (D-085, L-398)
+//  l7b o corpo come em casa numa cabana: no lugar de comer da planta, que toda casa tem (D-196); e, com as peças escondidas pela
+//      mão da prova, no chão, onde está (a oferta do L-398, que ficou para uma planta sem peça nenhuma: T-890)
 //  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
 //  l14 de dia, um dos velhos da casa cuida dos pequenos (3 a 6 anos) em casa, e os pequenos ficam com ele, sem entrar e sair sem
 //      parar — e esperam por ele quando sai por pouco, para comer ou descansar (L-235); um save no meio do dia; quem cuida
@@ -495,40 +495,48 @@ if (want('l7')) {
   }
 }
 
-// ======================= l7b: the body eats at home in a house with no table, seat nor hearth (L-398) =======================
+// ======================= l7b: the body eats at home in a hut: where its household eats (D-196); with no piece, on the floor (L-398) =======================
 if (want('l7b')) {
-  // (a house of the world whose plan has no table, seat nor hearth on any storey — most huts: its people eat on the floor,
-  // D-085 —, one of it lived by the player, inside on the plan's floor, hungry, with food in the pantry: the meal at home is
-  // offered where the body stands, and it eats by the pantry's ledger. Before, the offer asked for the piece, and the body
-  // never ate at home in a hut)
+  // (since D-196 every house has where its household eats together — a hut's the bench two eat on, the mat on the ground, the
+  // fire on the ground of the round one —, and no house of the world is left without one: the case of before — «a house whose
+  // plan has no table, seat nor hearth» — is in no world any more, T-890. Two parts, in a hut of the biggest town that has one:
+  // (a) the hut's plan has where to eat and a fire, and one of it lived by the player, by the place to eat, hungry, with food
+  // in the pantry, is offered the meal there — not «where the body stands» — and eats by the pantry's ledger; (b) the offer of
+  // L-398 itself — the meal where the body stands, in a house with no such piece —, kept for a plan that has none: the same
+  // hut with its places to eat, to sit and to warm oneself hidden by the test's hand, the meal is offered on the floor and eaten)
   open(); S.time = 0.62;
-  const TABLE = ['comer', 'sentar', 'aquecer'];
-  // (a hut first — the most of them —, else any house so made; in the biggest town that has one)
+  const TABLE = ['comer', 'sentar', 'aquecer']; const TL = G.Space.TILE;
   let v = null, h = null, p = null;
   for (const hut of [true, false]) for (const st of [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)) {
     if (v) break;
     for (const o of people(st)) {
       if (o.age < 18 || o.age >= 60 || o.sleeping || isBody(o) || !G.Possess.can(o).ok) continue;
-      const b = builtHome(o); if ((hut && b.type !== 'hut') || !G.Space.planNow(b) || TABLE.some(u => G.Interiors.slots(b, u).length)) continue;
-      const q = standIn(b, [...new Set(G.Interiors.slots(b).map(x => x.spot.use))].filter(u => u !== 'acesso' && u !== 'entrar')); if (!q) continue;
+      const b = builtHome(o); if ((hut && b.type !== 'hut') || !G.Space.planNow(b)) continue;
+      const q = standIn(b, ['comer', 'aquecer']); if (!q) continue;
       v = o; h = b; p = q; break;
     }
   }
-  const name = 'l7b o corpo come em casa numa casa sem mesa, banco nem lareira (L-398)';
-  if (!v) ok(name, false, 'nenhuma casa sem mesa, banco nem lareira com planta e alguém dela para o corpo');
+  const name = 'l7b o corpo come em casa numa cabana: onde a família come (D-196); sem peça nenhuma, no chão (L-398)';
+  if (!v) ok(name, false, 'nenhuma cabana (nem casa) com planta, com onde comer, e alguém dela para o corpo');
   else {
-    const ref = 'h:' + h.id; D.make(ref, 'food', 3, { code: 'teste', part: true, floor: true }); v.hunger = 50;
+    const In = G.Interiors; const uses = [...new Set(In.slots(h).map(x => x.spot.use))];
+    const eatAt = In.slots(h, 'comer').length + In.slots(h, 'aquecer').length, fire = In.plan(h).items.some(it => it.fire);
+    const ref = 'h:' + h.id; D.make(ref, 'food', 4, { code: 'teste', part: true, floor: true }); v.hunger = 50;
     const took = G.Possess.take(v);
-    // (the body walks in by the door — the 3D's controller in the game; the test's hand here: on the plan's floor)
+    // (the body walks in by the door — the 3D's controller in the game; the test's hand here: on the plan's floor, by the place)
     v.inside = h.id; v.x = p[0]; v.y = p[1]; v.path = null; v.moving = false; G.Possess.setLevel(p[2]); live(0.5);
     const stays = v.inside === h.id;
-    const o1 = G.Act.offers(v, v.x, v.y).find(o => o.id === 'lar.comer:' + h.id);
-    const L0 = S.ledgerN || 0; const hu0 = v.hunger;
-    let r = { ok: false, why: 'sem a oferta' };
-    if (o1) { const it = G.Possess.apply(() => G.Act.perform(v, o1)); live(0.3); r = it.res || { ok: false, why: 'o mundo não fez' }; }
-    const ate = book(e => e[0] > L0 && e[3] === ref && e[5] === 'food' && (e[8] === 'refeicao' || e[8] === 'ceia') && e[9] === v.id);
-    ok(name, took.ok && stays && !!o1 && !!r.ok && ate.length === 1 && v.hunger < hu0,
-      `${h.type}#${h.id} (${h.ip ? h.ip.f : '-'}: ${[...new Set(G.Interiors.slots(h).map(x => x.spot.use))].join(', ')}): ${nm(v)} encarnado ${took.ok ? '' : `NÃO (${took.why}) `}${stays ? 'dentro, no chão da planta' : 'POSTO PARA FORA'}; a oferta ${o1 ? `«${o1.label}» onde o corpo está` : 'NÃO APARECEU'}; comer: ${r.ok ? `sim (fome ${Math.round(hu0)} → ${Math.round(v.hunger)}, livro: ${ate.map(e => e[8]).join(', ') || 'NADA'})` : 'NÃO: ' + (r.why || '?')}`);
+    const meal = () => { const o1 = G.Act.offers(v, v.x, v.y).find(o => o.id === 'lar.comer:' + h.id); const L0 = S.ledgerN || 0; const hu0 = v.hunger; let r = { ok: false, why: 'sem a oferta' };
+      if (o1) { const it = G.Possess.apply(() => G.Act.perform(v, o1)); live(0.3); r = it.res || { ok: false, why: 'o mundo não fez' }; }
+      const ate = book(e => e[0] > L0 && e[3] === ref && e[5] === 'food' && (e[8] === 'refeicao' || e[8] === 'ceia') && e[9] === v.id);
+      return { o1, r, ate, fine: !!o1 && !!r.ok && ate.length === 1 && v.hunger < hu0, txt: `a oferta ${o1 ? `«${o1.label}» ${o1.here ? 'onde o corpo está' : 'no lugar de comer'}` : 'NÃO APARECEU'}; comer: ${r.ok ? `sim (fome ${Math.round(hu0)} → ${Math.round(v.hunger)}, livro: ${ate.map(e => e[8]).join(', ') || 'NADA'})` : 'NÃO: ' + (r.why || '?')}` }; };
+    const A = meal();
+    // (b) the hut's places hidden: the plan as a house of before had it — the offer of L-398
+    v.hunger = 50; live(0.2); const slots0 = In.slots; let B;
+    In.slots = function (b2, u) { return b2 === h && TABLE.includes(u) ? [] : slots0.apply(this, arguments); };
+    try { B = meal(); } finally { In.slots = slots0; }
+    ok(name, took.ok && stays && eatAt >= 2 && fire && A.fine && !A.o1.here && B.fine && !!B.o1.here,
+      `${h.type}#${h.id} (${h.ip ? h.ip.f : '-'}: ${uses.join(', ')}): ${eatAt} lugares de comer, fogo ${fire ? 'sim' : 'NÃO'}; ${nm(v)} encarnado ${took.ok ? '' : `NÃO (${took.why}) `}${stays ? 'dentro, no chão da planta' : 'POSTO PARA FORA'}; (a) ${A.txt}; (b) com as peças escondidas: ${B.txt}`);
     if (S.avatar) G.Possess.release('deus');
   }
 }
