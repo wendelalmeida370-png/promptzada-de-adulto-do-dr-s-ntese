@@ -338,6 +338,8 @@
   }
   Tt.urge = function (v, cur) {
     if (cur && cur.type === 'teatro') return 1;
+    // (the stoker of baths still open, the fire not fed to their closing, keeps the furnace: no evening out — D-204)
+    if (G.Termas && G.Termas.onDuty && G.Termas.onDuty(v)) return 0;
     if (v.age < 16 || v.captive || v.jail || v.aboard || (v.carry && v.carry.n > EPS) || A.isBody(v) || !tonight(v)) return 0;
     return (v.traits.includes('Curioso') || v.traits.includes('Sociável') ? 0.55 : 0.4) + G.R() * 0.5;
   };
@@ -458,6 +460,7 @@
   // the reading itself writes). What stops it: the tables full — who is on the way counts —, too long a walk, hunger, a load
   // in the hands or the leg of an operation (D-094), the little ones to mind at home; never the god's body
   Bi.PRI = 0.35;     // (the errand's priority: below any work — a reading never cuts a task under way)
+  Bi.IN = 1.5;       // (what the scroll is worth to one seated at it: above every other wish of the day)
   Bi.CURIOUS = 0.4;  // (the share of the days with a reading: of the curious,)
   Bi.LETTERS = 0.3;  // (of the people of letters — the priest, the scribe —)
   Bi.WELL = 0.25;    // (and of a noble's or a merchant's house; they add up)
@@ -531,15 +534,16 @@
     return best;
   };
   // how much this grown one wants to read now (a choice of decide, among the others), or 0; one already on the way or at
-  // a table stays for the scroll — the work, a chat, the way home do not take one from it; hunger and sleep do
+  // a table stays for the scroll — the work, a chat, the way home do not take one from it; hunger and sleep do; the stoker
+  // at his post does not go (G.Termas.onDuty)
   Bi.urge = function (v, cur) {
-    if (cur && cur.type === 'ler') return 1;
+    if (cur && cur.type === 'ler') return cur.st >= 1 ? Bi.IN : 1; // (at the table, no other wish takes one from the scroll — as the bath's, D-203)
     const S = S_();
     if (cur && (cur.pri || 0) >= Bi.PRI) return 0; // (an errand under way that weighs as much: the scroll waits, and hides no other wish)
     if (v.readDay === S.day || v.age < 16 || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || (v.carry && v.carry.n > EPS)) return 0;
     if (v.hunger > Bi.HUNGRY || v.energy < Bi.SPENT || A.isBody(v)) return 0;
     if (!E.byType(v.set, 'biblioteca').length) return 0;
-    if (lost(v) || G.Vg.handsBusy(v) || (G.Lar && (G.Lar.bedrest(v) || G.Lar.minder(v)))) return 0;
+    if (lost(v) || G.Vg.handsBusy(v) || (G.Termas && G.Termas.onDuty && G.Termas.onDuty(v)) || (G.Lar && (G.Lar.bedrest(v) || G.Lar.minder(v)))) return 0;
     return Bi.pick(v) ? 0.7 : 0;
   };
   Bi.go = function (v, H) {

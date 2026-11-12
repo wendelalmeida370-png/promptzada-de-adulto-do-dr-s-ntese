@@ -113,7 +113,13 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
   let most = 0, strangers = 0, over = 0, sick = null, dSick = null, dEn = null; const prev = {};
   if (op) {
     liveSec(40, () => op.data.lenha >= 1 || !A.live(op), bad); // (the stoker lights the furnace first)
+    // (since the wish for a bath — D-200 — someone of the town may be on the way to these baths, or in them, when the case
+    // sends its six, and more may come while it lasts; the Temazcal of Tenochtitlan has one place in the water, and the case
+    // is the bath of its own bathers: the test's hand ends the errands of the others and gives them today's bath, so that
+    // nobody else comes — the baths with who comes by their own wish are qa/freguesia.js: T-913)
+    for (const v of S().villagers.values()) if (v.task && v.task.type === 'termas' && v.task.id === b.id) G.Vg.endTask(v);
     const L = bathers(b, 6, 2.9); sick = L[0] || null;
+    for (const v of S().villagers.values()) if (v.set === b.set && !L.includes(v)) v.bathDay = S().day;
     // (each bather tired — not so tired that the tiredness under 22 sends one to bed before the bath ends: at 40 the one
     // watched went to bed from the water after 30 s —, and sick as one still up is: a light sickness, under the fever that
     // puts one in bed at home (G.Lar.fever, L-227 — the 120 of before sent all six home to bed on the way), given as each

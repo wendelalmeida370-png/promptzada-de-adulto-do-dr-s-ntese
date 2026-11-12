@@ -129,6 +129,10 @@
     const S = S_(); const d = op.data;
     // everyone out: who was in the water takes what the time in it gave, and goes out by the door
     for (const id of Object.keys(d.banho)) { const v = S.villagers.get(+id); if (!v) continue; out(v, op, 'saiu'); if (v.task && v.task.type === 'termas' && v.task.op === op.id) G.Vg.endTask(v); }
+    // (and who is on the way to them: the errand ends with the day, there — as the theatre's with its show, L-595. With the
+    // wish there is nearly always someone on the way, and baths enlarged in the middle of their day left one walking to a
+    // building site until the next step — L-910)
+    for (const v of S.villagers.values()) if (v.task && v.task.type === 'termas' && v.task.op === op.id) G.Vg.endTask(v);
     d.banho = {}; d.calor = 0;
     A.end(op, st, why);
   }
@@ -204,8 +208,10 @@
   // them is the day's own lot for each one (G.hash of the person and the day: none of the world's chance is drawn, and the
   // person has no new field), once a day (v.bathDay, which the bath itself writes). What stops it: no coin for the entry,
   // the baths full — who is on the way there counts —, too long a walk, hunger, a load in the hands or the leg of an
-  // operation (D-094), the little ones to mind at home; never the god's body, which bathes when the player says.
+  // operation (D-094), the little ones to mind at home, the furnace to feed (the stoker at his post: Te.onDuty); never the
+  // god's body, which bathes when the player says.
   Te.PRI = 0.4;      // (the errand's priority: below any work — a bath never cuts a task under way)
+  Te.IN = 1.5;       // (what the bath is worth to one inside, the entry paid: above every other wish of the day)
   Te.BASE = 0.3;     // (the share of the days with a bath, of any people …)
   Te.HABIT = 0.5;    // (… and of a people of the thermae)
   Te.DIRT = 0.25;    // (added for a dirty trade,)
@@ -293,16 +299,27 @@
     }
     return best;
   };
-  // how much this grown one wants a bath now (a choice of decide, among the others), or 0; one already on the way or in the
-  // baths stays for the bath — the work, a chat, the way home do not take one from it; hunger and sleep do
+  // the stoker at his post (D-204): the day of his baths open and the fire not enough to last to the closing — he does not
+  // leave the furnace for a bath, a scroll, the theatre or the tavern (the wishes of decide ask this); the fire fed to the end
+  // of the day, he is as free as anyone. The water was cold on days full of bathers because the stoker had gone to bathe
+  Te.onDuty = function (v) {
+    if (v.role !== 'foguista' || !v.job) return false;
+    const b = S_().buildings.get(v.job); if (!b || b.type !== 'banhos' || !b.built) return false;
+    const op = Te.dia(b); if (!op || op.st !== 'on' || !inHours(b)) return false;
+    return op.data.calor < (Te.horas(b).fecha - S_().time) * G.DAY_LEN;
+  };
+  // how much this grown one wants a bath now (a choice of decide, among the others), or 0; one already on the way stays
+  // for the bath — the work, a chat, the way home do not take one from it; hunger and sleep do —, and one inside, who has
+  // paid, more so (D-203): no other wish takes one from the pegs or the water (the theatre's own, of a curious one, is worth up to
+  // 1,05, a courtship 1,28: a bather left the water for the play with half a bath to go, the entry paid), only starving
   Te.urge = function (v, cur) {
-    if (cur && cur.type === 'termas') return 1;
+    if (cur && cur.type === 'termas') return cur.st >= 1 ? Te.IN : 1;
     const S = S_();
     if (cur && (cur.pri || 0) >= Te.PRI) return 0; // (an errand under way that weighs as much: the bath waits, and hides no other wish)
     if (v.bathDay === S.day || v.age < 16 || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || (v.carry && v.carry.n > EPS)) return 0;
     if (v.hunger > Te.HUNGRY || v.energy < Te.SPENT || A.isBody(v)) return 0;
     if (!E.byType(v.set, 'banhos').length) return 0;
-    if (lost(v) || G.Vg.handsBusy(v) || (G.Lar && (G.Lar.bedrest(v) || G.Lar.minder(v)))) return 0;
+    if (lost(v) || G.Vg.handsBusy(v) || Te.onDuty(v) || (G.Lar && (G.Lar.bedrest(v) || G.Lar.minder(v)))) return 0;
     return Te.pick(v) ? (v.sick > 0 ? 0.9 : 0.75) : 0;
   };
   Te.go = function (v, H) {
