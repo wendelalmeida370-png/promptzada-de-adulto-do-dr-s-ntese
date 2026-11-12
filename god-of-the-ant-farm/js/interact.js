@@ -571,7 +571,7 @@
   function buildingCard(b, me) {
     const S = G.S; const K = G.Possess.knows; const def = G.BDEF[b.type] || {}; const set = S.settlements.get(b.set); const fac = G.Fac.get(G.Village.facOfSet(b.set));
     if (!me || !me.id) me = null; const mine = K.house(me, b); const kt = !!set && !!K.town(me, set);
-    const res = def.housing ? [...S.villagers.values()].filter(o => o.home === b.id) : [];
+    const res = G.Village.bedsOf(b) > 0 ? [...S.villagers.values()].filter(o => o.home === b.id) : []; // (a house, or the seat: D-205)
     const card = { kind: 'building', id: b.id, name: G.Village.buildName(b), sub: kt ? [set.name, fac ? fac.name : null].filter(Boolean).join(' · ') : '', desc: G.BDESC ? G.BDESC[b.type] || '' : '', rows: [] };
     if (!b.built) { card.rows.push(['Obra', Math.round((b.progress || 0) * 100) + '%']); const miss = Object.keys(b.need || {}).filter(k => b.need[k] > 0).map(k => `${Math.ceil(b.need[k])} de ${G.Eco ? G.Eco.name(k) : k}`); if (miss.length) card.rows.push(['Faltam', miss.join(', ')]); }
     if (b.maxHp && b.hp < b.maxHp) card.rows.push(['Estrutura', Math.round(b.hp / b.maxHp * 100) + '%']);
@@ -581,6 +581,10 @@
       card.rows.push(['Moram aqui', names.length ? names.join(', ') + (n ? ` e mais ${n} que você não conhece` : '') : n === 1 ? 'uma pessoa que você não conhece' : `${n} pessoas que você não conhece`]);
       if (mine) { const inside = res.filter(o => o.inside === b.id); card.rows.push(['Em casa agora', inside.length ? inside.map(o => o.name).join(', ') : 'ninguém']); }
     }
+    // (the seat where who rules lives: said by name by who can name the ruler — the fame of one's own people, Possess.knows —,
+    // else as what it is: where the one who rules lives is the town's talk, D-208)
+    { const lord = G.Casa && G.Casa.lordOf ? G.Casa.lordOf(b) : null;
+      if (lord && lord.home === b.id) card.rows.push(['Casa de quem governa', K.person(me, lord) ? lord.name + (me && lord.id === me.id ? ' (você)' : '') : kt ? `quem governa ${set.name}` : 'quem governa aqui']); }
     if (b.coin !== undefined && res.length && K.house(me, b)) card.rows.push(['Moedas da família', Math.round(b.coin)]);
     if (isStore(b) && b.built && K.stock(me, b)) { const f = G.Fac.get(G.Village.facOfSet(b.set)); if (f) card.rows.push(['No estoque do povo', ['food', 'wood', 'stone'].map(k => `${Math.floor(f.stock[k] || 0)} de ${G.Eco ? G.Eco.name(k) : k}`).join(', ')]); }
     const work = [...S.villagers.values()].filter(o => o.task && o.task.id === b.id && o.task.type !== 'avatar').slice(0, 6);
