@@ -360,7 +360,7 @@
     K.wall([r2(sx + ti / 2), sv], [I[2], sv], ti, Hw, 'divisoria');
     K.wins(ws.fundo, 'u', I[0], I[2], 2.6, 0.9, 1.0, 2.2); K.wins(ws.esquerda, 'v', I[1], I[3], 2.4, 0.9, 1.0, 2.2); K.wins(ws.direita, 'v', I[1], I[3], 2.4, 0.9, 1.0, 2.2);
     const P1 = r2(B[3] + pd); R.annexes.push({ r: [B[0], B[3], B[2], P1], h: Hc, fn: 'portico' });
-    K.colLine([B[2], r2(P1 - rc)], [B[0], r2(P1 - rc)], K.evenly(B[2] - B[0] - 2 * K.ft, rc, 7).map(x => r2(x + K.ft)), rc, Hc, { porch: 1, wood: 1 });
+    K.colLine([B[2], r2(P1 - rc)], [B[0], r2(P1 - rc)], K.evenly(B[2] - B[0] - 2 * K.ft, rc, 8).map(x => r2(x + K.ft)), rc, Hc, { porch: 1, wood: 1 }); // (eight posts: the bay of the way in on the court's axis)
     const por = K.room('portico', [r2(B[0] + K.ft), B[3], r2(B[2] - K.ft), r2(P1 - 2 * rc)]);
     const court = K.room('patio', [r2(B[0] + K.ft), P1, r2(B[2] - K.ft), r2(Vp - K.ft)], { open: 1 });
     K.solid(court, [11.3, r2(P1 + 0.9), 12.7, r2(P1 + 2.3)], 0.6, 'tina');
