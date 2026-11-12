@@ -177,7 +177,10 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     // casa, com o corpo levado até ela —; sem isso, na geração 15, Yaretzi morreu de fome no quinto dia, T-497)
     while (S.settlements.size === n0 && S.day - d0 < 8 && k++ < 200000) {
       G.debug.step(0.1); if (body.hunger > 70) body.hunger = 20;
-      if (pris.jail && pris.jailUntil < S.day + 1) pris.jailUntil = S.day + 5;
+      // (renewed a day before it ends: at the very turn of its last day the cell lets him go inside the step, before the proof's
+      // hand — the village came on the sixth day, in the life the second round of the full house lives, and the sentence of five
+      // had ended at the turn of that day: T-837)
+      if (pris.jail && pris.jailUntil <= S.day + 1) pris.jailUntil = S.day + 5;
     }
     const ns = [...S.settlements.values()].find(s => s.id !== set.id && s.fac === f.id);
     const went = ns ? [...S.villagers.values()].filter(v => v.set === ns.id).length : 0;
