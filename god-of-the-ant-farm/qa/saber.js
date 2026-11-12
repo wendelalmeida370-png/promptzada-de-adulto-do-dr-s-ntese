@@ -89,7 +89,9 @@ function b1() {
 
 // ---------------------------------------------------------------- b2: the plans
 // (the classic library's plan of each people and side, as it was before this branch: the digest of 24 plans made at 16310aa)
-const CLASSICA = process.env.CLASSICA !== undefined ? process.env.CLASSICA : '466df9fd'; // (CLASSICA= empty: only shows the digest of now — after the plans' engine changed)
+// (CLASSICA= empty: only shows the digest of now — after the plans' engine changed; on other dice — SALT — the plans are others,
+// and the digest of the game's dice is not theirs: only shown)
+const CLASSICA = process.env.CLASSICA !== undefined ? process.env.CLASSICA : (Number(process.env.SALT) | 0) ? '' : '466df9fd';
 function b2() {
   const P = plans(); const bad = P.filter(m => !m.p.ok); const offer = [];
   for (const c of POVOS) { nothing(); const b = { id: 5, type: T, style: c, x: 8, y: 8, w: N, h: N, built: true }; const r = In.newRecord(b, { t: T, c, e: 3, k: 'ae', cl: 't', fl: 0, d: 1, w: 1, pw: 0, s: 'S', o: 15, n: N });
@@ -314,6 +316,11 @@ function b7() {
   // ready worlds have none: node qa/visual/interior3d.js <file.json>)
   if (process.env.SALVA) require('fs').writeFileSync(process.env.SALVA, G.Save.serialize());
   ok(`b7a de pé num mundo pronto (${WORLD}): a grande biblioteca pela mão do deus em cada capital — a planta, a família da forma, o relatório, a entrada, o verificador`, res.length >= 3 && res.every(r => r.ok) && !q0.length && !q1.length, `${res.length} de pé: ${res.map(r => r.why).join('; ')}; o verificador S0–S2: ${q0.length} antes, ${q1.length} com elas${said(q1)}`);
+  // ---- the whole checker (QA.check, the rules joined in it — QA.more) accuses a book of the day that lies in a grand library
+  // standing in the world, and nothing once the lie is taken out
+  if (res.length) { const b = res[0].b; const k = Bi.book(b); const q0_ = k.quem; k.quem = {}; for (let i = 0; i < 40; i++) k.quem[900000 + i] = { t: S.clock, dur: 20 };
+    const lie = QA.check().filter(q => q.sys === 'saber'); k.quem = q0_; const after = QA.check().filter(q => q.sys === 'saber');
+    ok('b7f o verificador inteiro (QA.check) acusa o livro que mente na grande biblioteca de pé, e nada sem a mentira', lie.some(q => q.sev <= 2 && /lendo e a planta só tem/.test(q.msg)) && !after.length, `${lie.length ? `S${lie[0].sev} ${lie[0].msg.slice(0, 90)}` : 'NADA'} · sem a mentira: ${after.length ? after[0].msg.slice(0, 80) : 'limpo'}`); }
   // ---- the readers by the game's own door, walking for real: more than eight seated at once, each at a place of reading
   const r0 = res.slice().sort((a, c) => V.pop(c.set.id) - V.pop(a.set.id))[0]; const lib = r0.b; S.time = 0.33;
   const dr = G.Vg.door(lib); const far = v => G.dist2(v.x, v.y, dr[0], dr[1]); const rs = [];
