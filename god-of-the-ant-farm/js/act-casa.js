@@ -560,14 +560,17 @@
   };
   // (a seat that falls, is taken down or becomes a work again: its household out first, with what is its own)
   K.vacate = function (b, why) { if (!isSeat(b) || !lived(b)) return; const L = residents(b); if (L.length) leave(b, L, why); };
-  // where the people's ruler stands with the seat, for the panel and the proofs (reads only): { seat, ruler, home, why }
+  // where the people's ruler stands with the seat, for the panel and the proofs (reads only): { seat, ruler, home, why }.
+  // Asked from outside the world's step — a panel —, the household of another town is only said to live there: the map of
+  // reach is the step's to ask
   K.seatState = function (f) {
     const b = K.seatOf(f); const r = G.Politics.ruler(f); if (!b) return null;
     if (!r || r.captive) return { seat: b, ruler: null, home: false, why: 'sem governante' };
     if (r.home === b.id) return { seat: b, ruler: r, home: true, why: '' };
-    return { seat: b, ruler: r, home: false, why: !lived(b) ? 'obra' : held(b, r, f, K.court(r)) || 'a caminho' };
+    const fam = K.court(r);
+    return { seat: b, ruler: r, home: false, why: !lived(b) ? 'obra' : (G.inSim || r.set === b.set || hasBody(fam) ? held(b, r, f, fam) : 'outra cidade') || 'a caminho' };
   };
-  const SAYS = { corpo: 'o deus vive nessa família, e a casa dela é dele para escolher', 'sem caminho': 'não há caminho por terra até aqui', ocupado: 'alguém da família não pode partir agora', chamado: 'a família foi chamada hoje', 'a caminho': 'está de mudança', 'sem governante': 'o povo está sem governante', obra: 'está em obras' };
+  const SAYS = { 'outra cidade': 'mora noutra cidade do povo', corpo: 'o deus vive nessa família, e a casa dela é dele para escolher', 'sem caminho': 'não há caminho por terra até aqui', ocupado: 'alguém da família não pode partir agora', chamado: 'a família foi chamada hoje', 'a caminho': 'está de mudança', 'sem governante': 'o povo está sem governante', obra: 'está em obras' };
   K.seatSays = function (b, plink, esc) {
     if (!isSeat(b)) return ''; const f = G.Fac.get(G.Village.facOfSet(b.set)); const st = f && K.seatOf(f) === b ? K.seatState(f) : null;
     const ros = G.Lar && G.Lar.roster ? G.Lar.roster(b).filter(q => q.lives) : [];

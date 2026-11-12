@@ -96,12 +96,12 @@ module.exports = {
     palacio: {
       funcao: 'onde o governante mora e recebe: a casa do chefe e os palácios',
       quem: 'o governante e a família dele; quem vem em audiência',
-      sistemas: ['G.Court', 'G.Interiors'],
+      sistemas: ['G.Court', 'G.Interiors', 'G.Casa', 'G.Lar'],
       atividades: [
-        { id: 'morar', o: 'o governante e a família moram ali', essencial: true, resultado: 'a casa do governante', condicao: 'um governante', feito: 'parcial', provas: ['qa/civicos.js'] },
+        { id: 'morar', o: 'quem governa mora ali com a casa dele: dorme nas camas dos aposentos, come da despensa, acorda ali', essencial: true, dono: 'R', pecas: ['cama-casal', 'arca'], usos: ['deitar', 'comer', 'cozinhar', 'guardar'], tarefa: 'sleep', recursos: ['moedas', 'food'], resultado: 'a sede é a casa de quem governa (v.home): a família entra com o que é seu pelo livro («mudança»), dorme, come e acorda nela; sai quando outro governa, quando a sede cai ou entra em obra; a casa de antes continua dela', condicao: 'uma sede de pé na capital do povo (G.Court.seatOf) e um governante; o de outra cidade do povo vem para a capital; nunca a família do corpo do deus (D-205 a D-207)', feito: true, provas: ['qa/morar-palacio.js'] },
         { id: 'audiencia', o: 'o governante recebe em audiência no trono', usos: ['audiencia'], tarefa: 'assembly', dono: 'C', resultado: 'quem governa no trono e a cidade nos lugares da planta, até a audiência acabar', condicao: 'o melhor palácio do povo (o paço também) pronto na capital, com planta (G.Court.audPalace); na resposta à petição, na coroação e na chegada de um emissário (D-124)', feito: true, provas: ['qa/escala.js'] },
       ],
-      notas: 'a audiência (D-124, da Arquitetura Monumental): quem governa senta no trono e a cidade entra pelos lugares da planta — o voto e o pão continuam na praça; o «morar» é parcial: o palácio pronto fica marcado como o de quem o mandou erguer (v.palace), mas nenhuma família o tem como casa: o governante e os seus continuam morando na casa deles',
+      notas: 'a audiência (D-124, da Arquitetura Monumental): quem governa senta no trono e a cidade entra pelos lugares da planta — o voto e o pão continuam na praça; o «morar» (T-765, fechado pelo agente R nos Bairros Vivos: D-205 a D-208): a sede é a casa de quem governa — só a porta do act-casa.js (G.Casa.reign) põe e tira gente dela, e nenhuma porta das casas da cidade a enxerga; a fumaça da cozinha da sede e a oferta ao corpo do deus para mudar-se ficam abertas (T-932, T-933)',
     },
     cultura: {
       atividades: [

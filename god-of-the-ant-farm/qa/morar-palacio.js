@@ -157,7 +157,9 @@ run('m3', () => {
   sim(() => { Pl.endReign(f, 'mandato'); Pl.crown(f, outro, 'eleicao', true); });
   M.viver(3);
   const foram = antes.map(v => B(v.home)); const volta = casa0 && antes.every(v => v.home === casa0.id);
-  ok('m3c a eleição: a família de antes sai, a nova entra', antes.every(v => v.home !== b.id) && todosEm(nova, b) && foram.every(h => h && G.BDEF[h.type].housing && h.built),
+  // (back to the house it had, while that one has room for it: nobody else moved into it meanwhile)
+  const tomada = !!casa0 && moram(casa0).some(v => !antes.includes(v));
+  ok('m3c a eleição: a família de antes sai para a casa que tinha, a nova entra', antes.every(v => v.home !== b.id) && todosEm(nova, b) && foram.every(h => h && G.BDEF[h.type].housing && h.built) && (volta || tomada || !casa0),
     `os de antes: ${antes.map(v => `${v.name} em ${lado(B(v.home))}`).join(', ')}${volta ? ' (a casa que tinham)' : ''}; agora na sede: ${nomes(moram(b))}`);
   const saiu = livro(L0, e => e[8] === 'mudança' && e[3] === 'h:' + b.id && e[5] === 'moedas').reduce((a, e) => a + e[6], 0);
   ok('m3d as moedas de cada família com ela, pelo livro', Math.abs(saiu - coin) < 0.02, `a sede tinha ${coin} moedas da família de antes: ${r2(saiu)} saíram com ela («mudança»); a sede tem agora ${D.get('h:' + b.id, 'moedas')} (as da nova)`);
@@ -288,7 +290,7 @@ run('m8', () => {
   if (!ok('m8a quem governa mora noutra cidade', !!got, got ? `${got.f.name}: ${got.r.name} mora em ${got.old.name}; a sede: ${lado(got.b)} em ${got.cap.name}` : 'nenhum povo assim na megalópole')) return;
   const fam = K.court(got.r); const casa0 = B(got.r.home); const dono0 = casa0 ? casa0.dono : 0;
   // (first held: one of the household in the god's hand cannot be sent — the cause is said, nobody moves)
-  fam[fam.length - 1].held = 1; M.viver(6); let st = K.seatState(got.f);
+  fam[fam.length - 1].held = 1; M.viver(6); let st = sim(() => K.seatState(got.f));
   ok('m8b sem poder partir, espera com a causa dita', !st.home && st.why === 'ocupado' && fam.every(v => v.set === got.old.id && v.home === (casa0 ? casa0.id : 0)), `«${st.why}»: ${nomes(fam)} seguem em ${got.old.name}`);
   let c = checa(); ok('m8c verificador', c.ok, c.txt);
   fam[fam.length - 1].held = 0; M.viver(5); st = K.seatState(got.f);
@@ -313,10 +315,13 @@ run('m9', () => {
   if (!ok('m9d uma sede de ninguém', !!p2 && !K.lordOf(p2), p2 ? `${lado(p2)} em ${vila.name}, que não é capital` : 'sem vila ou sem lote')) return;
   const sem = [...S.villagers.values()].filter(v => v.set === vila.id && v.age >= 18 && v.home && !v.captive).sort((a, q) => a.id - q.id).slice(0, 4);
   for (const v of sem) { B(v.home).res--; v.home = 0; }
-  sim(() => V.forceUpdate()); M.viver(8);
+  // (the seat with more beds than any house of the town, by the proof's hand: the town's housing gives the roomiest house — and
+  // never this one, not for a step)
+  const ap = G.BDEF.paco.aposentos; G.BDEF.paco.aposentos = 60; let dentro = 0;
+  try { sim(() => V.forceUpdate()); for (let k = 0; k < 80; k++) { M.viver(0.1); if (moram(p2).length) dentro++; } } finally { G.BDEF.paco.aposentos = ap; }
   const plano = sem.map(v => (K.need(v) ? K.plan(v, null, vila) : null)).filter(Boolean);
-  ok('m9e nunca oferecida a quem precisa de casa', !moram(p2).length && plano.every(q => q.free !== p2 && q.lease !== p2) && !K.queue(vila).some(([v]) => v.home === p2.id),
-    `${sem.length} sem casa em ${vila.name}: ${sem.map(v => `${v.name} ${v.home ? 'em ' + lado(B(v.home)) : 'sem teto'}`).join(', ')}; na sede de ninguém: ${nomes(moram(p2))}`);
+  ok('m9e nunca oferecida a quem precisa de casa', !dentro && !moram(p2).length && plano.every(q => q.free !== p2 && q.lease !== p2) && !K.queue(vila).some(([v]) => v.home === p2.id),
+    `${sem.length} sem casa em ${vila.name}, a sede de ninguém com 60 camas (pela mão da prova): alguém morando nela em ${dentro} passos de 80; ${sem.map(v => `${v.name} ${v.home ? 'em ' + lado(B(v.home)) : 'sem teto'}`).join(', ')}`);
   c = checa(); ok('m9f verificador', c.ok, c.txt);
 });
 
@@ -369,7 +374,7 @@ run('m12', () => {
   try { M.viver(8); ok('m12b a casa maior que as camas da sede fica inteira', fam.every(v => v.home === b.id), `${fam.length} na sede de 3 camas (pela mão da prova): ${nomes(moram(b))}`); } finally { G.BDEF[b.type].aposentos = ap; }
   // (one of the seat marries: the partner comes to live in it — the one of the seat never leaves it for the partner's house)
   const c = fam.find(v => v.age >= 18 && !v.partner && v.id !== o.r.id);
-  const x = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 18 && v.age < 45 && !v.partner && v.g !== c.g && v.home && !v.captive && !v.jail && !v.aboard && !K.ofCourt(v, o.r) && G.BDEF[B(v.home).type].housing - (B(v.home).res || 0) >= 1).sort((a, q) => a.id - q.id)[0];
+  const x = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 18 && v.age < 45 && !v.partner && v.g !== c.g && v.home && !v.captive && !v.jail && !v.aboard && !K.ofCourt(v, o.r) && G.BDEF[B(v.home).type].housing - (B(v.home).res || 0) >= 1).sort((a, q) => (q.id > c.id) - (a.id > c.id) || a.id - q.id)[0]; // (one the town's housing looks at after the one of the seat, if there is one: the one looked at first is the one who would move)
   if (ok('m12c o par', !!x, x ? `${c.name} (${Math.floor(c.age)}), da sede, e ${x.name} (${Math.floor(x.age)}), de ${lado(B(x.home))} com lugar` : 'ninguém')) {
     c.partner = x.id; x.partner = c.id; let left = 0; for (let k = 0; k < 80; k++) { M.viver(0.1); if (c.home !== b.id) left++; }
     ok('m12d quem é da sede casa e o par vem morar nela', !left && x.home === b.id, `${c.name} fora da sede em ${left} passos de 80; ${x.name} mora em ${lado(B(x.home))}`);
