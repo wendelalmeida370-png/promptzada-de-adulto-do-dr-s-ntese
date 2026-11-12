@@ -150,9 +150,25 @@ diferença para a `v7` (+8 mortos de guerra por mundo, desvio 17: 1,4 desvio) n�
 dois consertos, o x15, o x5 com o caso montado da leva e o povo cansado pela conta da própria guerra (T-957: a mão da prova
 em `f.weariness` era desfeita a cada passo pelo `wars.js`; o caso passava por outra causa), e o medidor `qa/oficio-eco.js`.
 
-**RODANDO AGORA: a última fila** (`fila-g.sh <jogo> scratchpad/ag/X/fila8`, pode ser lançada de novo — pula o que tem a
-saída inteira): a prova inteira (`fila8/prova.txt`), as outras provas (`fila8/provas/resumo.txt`), as 36 sabotagens
-(`fila8/sab/resumo.txt`), os mundos prontos em dez dias e as trocas do zero com a regra final, e por último o vida-bairro.
+**A última fila, até aqui** (`fila-g.sh <jogo> scratchpad/ag/X/fila8`, pode ser lançada de novo — pula o que tem a saída
+inteira): **a prova inteira com a regra final: 60 linhas passam, nenhuma falha** (`fila8/prova.txt`: a metrópole 0,104 pela
+necessidade por adulto por dia, a mega 0,087, o zero 0,102; a casa guarda a cara 80 % e 92 %; em volta das casas 78 e 29
+por dia). As outras provas (`fila8/provas/resumo.txt`), até o `maos`: passam guard, load-oficio, as cinco «-mao»,
+atividades, motim (metrópole), porto, sabe, quintal, taverna, olaria, lazer, obra, leva; **falham as mesmas de antes** —
+fome h13, marinheiros m9, roupa r7 (a mesma pessoa #9391 que no jogo de antes com o acaso deslocado), termas e1, maos m10,
+degraus g2c2 — **e uma nova, o degraus g4e** («com a pedra dada, anda»: a obra recebeu 8 de pedra em dois anos, o piso é
+12; na rodada de antes desta regra, 12 justos; no jogo de antes com o acaso deslocado, 28). **Olhado com rastro**
+(`dbg-g4.py`, estação por estação, com a regra e no jogo de antes): nos dois Roma tem os mesmos 4 construtores os dois anos
+inteiros (pede 4, lembra 4,00 — **nenhuma troca de ofício na cidade**, só um moço); a pedra do povo vai de 150 a 45 com a
+regra (8 para a obra) e de 150 a 0 no jogo de antes (24 para a obra): **a pedra guardada para a obra grande vaza para
+outras obras do povo nos dois** (é o L-783 do ramo do líder, «as casas novas pela sobra», e a carroça da obra, D-215 — que
+este ramo, na base `b2b61f0`, não tem), e quantas cargas chegam à obra nos dois anos é o acaso do mundo. Testei também a
+volta pelo instante só para a guerra (a turma da obra grande ficando pela memória): o g4e dá os mesmos 8 — não é dela, e
+ficou a regra medida (a volta pelo instante das três emergências).
+
+**RODANDO AGORA:** o resto da última fila — as outras provas que faltam (casa-mercante, tempo-livre, ladrao-bairro,
+fundadores, det3, as vidas de 5 e de 20 anos, oldsave, salto-igual), as 36 sabotagens (`fila8/sab/resumo.txt`), os mundos
+prontos em dez dias e as trocas do zero com a regra final, e por último o vida-bairro.
 **Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar** (o `qa/oficio-fica.js` pode: o `eco.js` não o lê).
 
 **Falta (nesta ordem):**
