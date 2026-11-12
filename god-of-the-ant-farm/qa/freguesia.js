@@ -10,13 +10,16 @@
 //         tira nada do acaso do mundo; a vontade pedida de fora do passo não muda o mundo;
 //      a4 a biblioteca — quem lê (o curioso, o sacerdote, o escriba, o nobre, o mercador), quem não lê, o povo sem a escrita,
 //         o rolo de hoje, a mesa cheia, a hora;
-//   b  os dias vividos no mundo pronto (DIAS=3), sem a mão da prova em ninguém: b1 cada dia de banhos com a fornalha acesa
-//      tem banhistas (quantos por dia e por cidade); b2 ninguém se banha duas vezes no dia; b3 a entrada é a do livro-razão
+//   b  os dias vividos no mundo pronto (DIAS=3), sem a mão da prova em ninguém, na paz do deus (o poder do jogo: a
+//      metrópole pronta entra em guerra no segundo ou no terceiro dia; PAZ=0 a deixa correr): b1 cada dia de banhos com a
+//      fornalha acesa tem banhistas, numa cidade de 50 ou mais (quantos por dia e por cidade); b2 ninguém se banha duas vezes no dia; b3 a entrada é a do livro-razão
 //      (cada entrada uma linha «termas», a soma é o caixa do dia; nenhuma num povo sem moeda); b4 ninguém é chamado dormindo,
 //      com carga, com as mãos numa operação, com uma tarefa de peso, fora de hora ou sendo o corpo do deus; ninguém paga e
 //      fica sem banho por falta de tempo; b5 quem mora longe vai menos, o ofício sujo e o doente vão mais (as contas ditas);
 //      b6 a biblioteca tem leitores (quantos por dia); b7 a vida do bairro conta cada entrada e cada leitura uma vez
 //      (G.Urban.note); b8 o verificador (com as regras novas) e nenhum erro;
+//   i  a mesma causa no salto (ANOS=4): os banhos têm banhistas pela mesma vontade, a entrada é a do livro, ninguém duas
+//      vezes no dia; a biblioteca tem leitores;
 //   c  as termas e as grandes termas pela mão do deus junto de uma cidade de um povo da terma, com a gente que a escada pede
 //      (trazida pela mão da prova: T-820): enchem mais que os banhos pequenos — mais banhos no dia, mais gente na água de uma
 //      vez; e ninguém bate na porta cheia (quem está a caminho conta);
@@ -190,15 +193,20 @@ function watch() {
   const tap = e => { if (e[8] === 'termas' || e[8] === 'termas-volta' || e[8] === 'fornalha') w.led.push(e.slice()); }; D.onMove.push(tap);
   const nb0 = U.noteB; U.noteB = function (b, k, n) { if (b && b.type === 'banhos' && k === 'noite') w.notes.banho += n === undefined ? 1 : n; if (b && b.type === 'biblioteca' && k === 'saber') w.notes.saber += n === undefined ? 1 : n; return nb0.apply(this, arguments); };
   const errand = new Map(); // (who has the errand of the baths: id → { b, st, t0 })
+  let open = new Set(); // (the entries in a day's book now: one that leaves it is closed there — bathed or not, read at that moment)
+  const shutEntry = k => { const e = w.ent.get(k); if (!e || e.gone) return; e.gone = true; const v = S.villagers.get(e.id); e.bathed = e.done || !!(v && v.bathDay === e.day); e.now = v ? (v.task ? v.task.type + ':' + (v.task.pri || 0) : 'nada') : 'morreu'; if (!e.body && !e.bathed) w.dips.push(e); };
   w.look = function () {
+    const seen = new Set();
     for (const op of A.all()) {
       if (op.def !== 'termas' || !op.data) continue; const d = op.data; let r = w.ops.get(op.id);
       if (!r) w.ops.set(op.id, r = { id: op.id, day: d.day, at: op.at, set: op.set, fac: op.fac, ent: 0, len: 0, q: 0, f: 0, rec: 0, max: 0, coin: E.coinage(op.fac), over: 0 });
       r.ent = Math.max(r.ent, d.entradas || 0); r.len = Math.max(r.len, d.lenha || 0); r.q = Math.max(r.q, d.quentes || 0); r.f = Math.max(r.f, d.frios || 0); if (A.live(op)) r.rec = d.receita || 0;
       if (!A.live(op)) continue; const b = S.buildings.get(op.at); let inW = 0;
-      for (const id in d.banho) { const m = d.banho[id]; if (m.st === 2) inW++; const k = op.id + ':' + id + ':' + m.t; if (!w.ent.has(k)) { const v = S.villagers.get(+id); w.ent.set(k, { id: +id, day: d.day, op: op.id, t: S.time, body: !!m.body, had: !!(v && v.bathDay === S.day), done: false, paid: m.paid || 0, st: m.st, last: S.time, dur: m.dur }); if (v && v.bathDay === S.day && !m.body) w.again.push(`${v.name} #${v.id} no dia ${S.day}`); } const e = w.ent.get(k); e.st = m.st; e.last = S.time; if (m.done) e.done = true; }
+      for (const id in d.banho) { const m = d.banho[id]; if (m.st === 2) inW++; const k = op.id + ':' + id + ':' + m.t; seen.add(k); if (!w.ent.has(k)) { const v = S.villagers.get(+id); w.ent.set(k, { id: +id, day: d.day, op: op.id, t: S.time, body: !!m.body, had: !!(v && v.bathDay === S.day), done: false, paid: m.paid || 0, st: m.st, last: S.time, dur: m.dur }); if (v && v.bathDay === S.day && !m.body) w.again.push(`${v.name} #${v.id} no dia ${S.day}`); } const e = w.ent.get(k); e.st = m.st; e.last = S.time; if (m.done) e.done = true; }
       r.max = Math.max(r.max, inW); if (b && inW > Te.places(b)) r.over++;
     }
+    for (const k of open) if (!seen.has(k)) shutEntry(k);
+    open = seen;
     for (const b of S.buildings.values()) {
       if (b.type !== 'biblioteca' || !b.built || !b.livros) continue; const k = b.id + ':' + b.livros.day; let r = w.lib.get(k); if (!r) w.lib.set(k, r = { at: b.id, set: b.set, day: b.livros.day, lidos: 0, copias: 0, max: 0, wrong: 0 });
       r.lidos = Math.max(r.lidos, b.livros.lidos || 0); r.copias = Math.max(r.copias, b.livros.copias || 0); const ids = Object.keys(b.livros.quem || {}); r.max = Math.max(r.max, ids.length);
@@ -212,27 +220,31 @@ function watch() {
       const dr = b ? Vg.door(b) : null; const at = dr && G.dist(v.x, v.y, dr[0], dr[1]) < 3.2;
       if (at && b && Te.aberta(b)) w.door.push(`${v.name} #${id} no dia ${S.day} às ${S.time.toFixed(2)}`); else { const k = v.task ? v.task.type : 'nada'; w.dropped[k] = (w.dropped[k] || 0) + 1; } }
   };
-  // (an entry that ended with no bath: paid, in, and out before half a bath — by the closing: the time's rule; else: called away)
-  w.close = function () {
-    for (const e of w.ent.values()) { if (e.body || e.done) continue; const v = S.villagers.get(e.id); const op = A.get(e.op); const still = op && A.live(op) && op.data.banho[e.id]; if (still) continue; if (v && v.bathDay === e.day) continue; e.now = v ? (v.task ? v.task.type + ':' + (v.task.pri || 0) : 'nada') : 'morreu'; w.dips.push(e); }
-    Te.go = go0; Bi.go = lg0; U.noteB = nb0; D.onMove.splice(D.onMove.indexOf(tap), 1);
-  };
+  w.close = function () { Te.go = go0; Bi.go = lg0; U.noteB = nb0; D.onMove.splice(D.onMove.indexOf(tap), 1); };
   // (who paid and had no bath: by the closing — the time's rule failed —, or called away from the pegs or the water)
   w.shut = () => w.dips.filter(e => { const op = A.get(e.op); const b = op && S.buildings.get(op.at); return e.last >= (b ? Te.horas(b).fecha : 0.7) - 0.012; });
   w.away = () => { const sh = w.shut(); const o = {}; for (const e of w.dips) if (!sh.includes(e)) o[e.now] = (o[e.now] || 0) + 1; return o; };
   w.qa = function () { for (const m of novas().concat(mine().map(q => `[S${q.sev}] freguesia: ${q.msg.slice(0, 120)}`))) if (w.bad.length < 8 && !w.bad.includes(m)) w.bad.push(m); };
   return w;
 }
+// (the world's day is not a fixed count of seconds lived — a scene that lingers slows its clock, main.js —: every case ends
+// by the world's own day and hour, and the count of seconds is only a guard)
 const live = (secs, w, each) => { for (let k = 0; k < secs; k++) { M.viver(1); if (w) { w.look(); if (k % 20 === 19) w.qa(); } if (each && each(k)) return true; } return false; };
 
 const WARLIKE = { fight: 1, combat: 1, band: 1, army: 1, siege: 1, defend: 1, raid: 1, muster: 1, flee: 1, hide: 1, fire: 1 };
 // ================================================================ b: the days lived in the ready world
 function partB() {
-  M.pronto(WORLD); const S = G.S; rebase(); const d0 = S.day; const w = watch();
+  M.pronto(WORLD); const S = G.S; rebase(); const d0 = S.day;
+  // (the days lived are days of peace, by the god's own power — G.Politics.divinePeace, kept up while they last —: the ready
+  // metropolis goes to war on its second or third day, by a history that a hair changes, and a town in arms has no day of
+  // baths; the war is the case e3. PAZ=0: the world as it comes)
+  const peace = process.env.PAZ !== '0'; const keepPeace = () => { if (peace && !(S.divinePeace > G.DAY_LEN * 0.5)) god(() => G.Politics.divinePeace()); };
+  keepPeace(); const w = watch();
   const who = new Map(); // (the grown ones of the towns with baths, at each day's bath hour: for the rates)
   let mark = -1; const arms = new Map(); // (set:day → [looks in arms, looks] in the baths' hours: a town fighting has no day of baths)
-  live(G.DAY_LEN * (DIAS + 1), w, k => {
-    if (k % 4 === 0 && S.time > 0.3 && S.time < 0.66) for (const b of baths()) { const key = b.set + ':' + S.day; const r = arms.get(key) || [0, 0]; arms.set(key, r); for (const v of adults(b.set)) { r[1]++; const t = v.task; if (t && (WARLIKE[t.type] || (t.pri || 0) >= 3)) r[0]++; } }
+  live(G.DAY_LEN * (DIAS + 1) * 4, w, k => {
+    keepPeace();
+    if (k % 4 === 0 && S.time > 0.3 && S.time < 0.66) for (const b of baths()) { const key = b.set + ':' + S.day; const r = arms.get(key) || [0, 0]; arms.set(key, r); for (const v of adults(b.set)) { r[1]++; const t = v.task; if (t && WARLIKE[t.type]) r[0]++; } }
     if (S.day !== mark && S.time > 0.3) { mark = S.day; for (const b of baths()) for (const v of adults(b.set)) who.set(S.day + ':' + v.id, { set: b.set, far: farOf(v, b), dirty: !!Te.DIRTY[v.role], sick: v.sick > 0, habit: ['romano', 'grego', 'classico'].includes(civOfSet(setOf(b))) }); }
     return S.day >= d0 + DIAS && S.time > 0.74;
   });
@@ -241,13 +253,16 @@ function partB() {
   const full = days.filter(d => d > d0 || true); const ops = [...w.ops.values()].filter(r => full.includes(r.day));
   // ---------------------------------------------------------------- b1
   if (on('b1')) {
-    const lines = []; let lit0 = 0, empty = 0, total = 0, warDays = 0;
+    // (the claim is of a town of fifty people or more, with two places in the water or more, not in arms; the small towns
+    // and the baths of one place are told, and must have had someone in the days lived)
+    const lines = []; let lit0 = 0, empty = 0, total = 0, warDays = 0, small = 0, smallNone = 0;
     const inArms = r => { const q = arms.get(r.set + ':' + r.day); return !!q && q[1] > 0 && q[0] / q[1] >= 0.15; };
     for (const b of baths()) { const L = ops.filter(r => r.at === b.id).sort((a, c) => a.day - c.day); if (!L.length) continue; const e = L.reduce((s, r) => s + r.ent, 0); total += e; const calm = L.filter(r => !inArms(r));
-      for (const r of L) { if (inArms(r)) { warDays++; continue; } if (r.len >= 1 && Te.places(b) >= 2) { lit0++; if (r.ent < 1) empty++; } }
-      lines.push(`${setOf(b).name} (${V.pop(b.set)} pessoas, ${Te.places(b)} lugares na água): ${L.map(r => `${r.ent}${r.len >= 1 ? '' : '·fria'}${inArms(r) ? '·armas' : ''}`).join(', ')} → ${calm.length ? (calm.reduce((s, r) => s + r.ent, 0) / calm.length).toFixed(1) : '—'} por dia de paz, até ${Math.max(...L.map(r => r.max))} na água de uma vez, ${(L.reduce((s, r) => s + r.len, 0) / L.length).toFixed(1)} de lenha por dia`); }
-    ok(`b1 cada dia de banhos com a fornalha acesa tem banhistas — fora o dia em que a cidade está em armas (${WORLD}, ${DIAS} dias vividos, ninguém mandado pela prova)`, lit0 >= 2 && !empty && total >= lit0 * 2 && ops.every(r => !r.over),
-      `${ops.length} dias de banhos (${warDays} com a cidade em armas — 15% ou mais dos adultos em luta, em fuga ou chamados às armas nas horas dos banhos), ${lit0} de paz com a fornalha acesa e 2 lugares ou mais: ${empty} vazios; ${total} banhos ao todo — as entradas de cada dia (·fria = sem lenha, ·armas = a cidade em armas): ${lines.join(' · ')}; vezes com mais gente na água que lugares: ${ops.reduce((s, r) => s + r.over, 0)}`);
+      const big = V.pop(b.set) >= 50 && Te.places(b) >= 2; if (!big) { small++; if (!e) smallNone++; }
+      for (const r of L) { if (inArms(r)) { warDays++; continue; } if (big && r.len >= 1) { lit0++; if (r.ent < 1) empty++; } }
+      lines.push(`${setOf(b).name} (${V.pop(b.set)} pessoas, ${Te.places(b)} ${Te.places(b) > 1 ? 'lugares' : 'lugar'} na água): ${L.map(r => `${r.ent}${r.len >= 1 ? '' : '·fria'}${inArms(r) ? '·armas' : ''}`).join(', ')} → ${calm.length ? (calm.reduce((s, r) => s + r.ent, 0) / calm.length).toFixed(1) : '—'} por dia de paz, até ${Math.max(...L.map(r => r.max))} na água de uma vez, ${(L.reduce((s, r) => s + r.len, 0) / L.length).toFixed(1)} de lenha por dia`); }
+    ok(`b1 cada dia de banhos com a fornalha acesa tem banhistas, numa cidade de 50 pessoas ou mais em paz (${WORLD}, ${DIAS} dias vividos${peace ? ' na paz do deus' : ''}, ninguém mandado pela prova)`, lit0 >= 3 && !empty && total >= lit0 * 3 && !smallNone && ops.every(r => !r.over),
+      `${ops.length} dias de banhos (${warDays} com a cidade em armas — 15% ou mais dos adultos em luta ou em fuga nas horas dos banhos), ${lit0} de paz com a fornalha acesa em cidades de 50 ou mais e 2 lugares ou mais: ${empty} vazios; ${small} banhos de cidade pequena ou de um lugar só, ${smallNone} sem ninguém nos dias vividos; ${total} banhos ao todo — as entradas de cada dia (·fria = sem lenha, ·armas = a cidade em armas): ${lines.join(' · ')}; vezes com mais gente na água que lugares: ${ops.reduce((s, r) => s + r.over, 0)}`);
   }
   // ---------------------------------------------------------------- b2
   if (on('b2')) {
@@ -272,8 +287,11 @@ function partB() {
     // (who paid and had no bath: by the closing — the time's rule failed —, or called away from the pegs or the water)
     const shut = w.shut(); const dips = shut.length; const away = w.away();
     const cur = {}; for (const p of g) cur[p.cur || 'nada'] = (cur[p.cur || 'nada'] || 0) + 1;
+    // (the walk as it was: the seconds of the world's clock a tile of the straight line took, of who walked ten tiles or more)
+    const pace = []; for (const p of g) { if (!(p.d0 >= 10)) continue; const e = [...w.ent.values()].find(q => q.id === p.id && q.day === p.day); if (e && e.t > p.t) pace.push((e.t - p.t) * G.DAY_LEN / p.d0); } pace.sort((a, c) => a - c);
+    const pc = q => (pace.length ? pace[Math.min(pace.length - 1, Math.floor(pace.length * q))].toFixed(2) : '—');
     ok('b4 ninguém é chamado dormindo, com carga, com as mãos numa operação, com uma tarefa de peso ou sendo o corpo do deus; cada um vai na sua hora, com tempo para o banho, no dia que a sorte dele diz', g.length >= 4 && !bad.length && !early.length && !late.length && !noLot.length && dips <= Math.max(1, Math.floor(w.ent.size * 0.04)),
-      `${g.length} idas aos banhos pela vontade: ${bad.length} de quem não podia${bad.length ? ' (' + bad.slice(0, 3).map(p => `#${p.id} ${p.sleeping ? 'dormindo' : p.carry ? 'com carga' : p.hands ? 'mãos numa operação' : p.body ? 'o corpo' : p.inside ? 'dentro de um prédio' : 'tarefa de peso ' + p.cur + ':' + p.pri}`).join('; ') + ')' : ''}; ${early.length} antes da hora, ${late.length} sem tempo, ${noLot.length} fora do dia da sorte; o que faziam antes: ${Object.entries(cur).sort((a, c) => c[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; ${workers.length} de quem trabalha, ${morning} deles no primeiro quarto do dia dos banhos; a caminho, largaram: ${JSON.stringify(w.dropped)}; bateram na porta cheia: ${w.door.length}; pagaram e o fechar os tirou sem banho: ${dips}${dips ? ' (' + shut.slice(0, 6).map(e => `#${e.id} dia ${e.day} entrou ${e.t.toFixed(3)}, ${e.st === 1 ? 'nos cabides' : 'na água'}, o banho de ${e.dur} s`).join('; ') + ')' : ''}; pagaram e foram chamados antes do banho: ${w.dips.length - dips} ${JSON.stringify(away)}`);
+      `${g.length} idas aos banhos pela vontade: ${bad.length} de quem não podia${bad.length ? ' (' + bad.slice(0, 3).map(p => `#${p.id} ${p.sleeping ? 'dormindo' : p.carry ? 'com carga' : p.hands ? 'mãos numa operação' : p.body ? 'o corpo' : p.inside ? 'dentro de um prédio' : 'tarefa de peso ' + p.cur + ':' + p.pri}`).join('; ') + ')' : ''}; ${early.length} antes da hora, ${late.length} sem tempo, ${noLot.length} fora do dia da sorte; o que faziam antes: ${Object.entries(cur).sort((a, c) => c[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; ${workers.length} de quem trabalha, ${morning} deles no primeiro quarto do dia dos banhos; a caminho, largaram: ${JSON.stringify(w.dropped)}; bateram na porta cheia: ${w.door.length}; pagaram e o fechar os tirou sem banho: ${dips}${dips ? ' (' + shut.slice(0, 6).map(e => { const p = g.find(q => q.id === e.id && q.day === e.day); return `#${e.id} dia ${e.day} ${p ? `saiu às ${p.t.toFixed(3)} de ${p.d0.toFixed(0)} casas (${p.cur || 'nada'})` : 'pelo passeio'}, entrou ${e.t.toFixed(3)}, ${e.st === 1 ? 'nos cabides' : 'na água'}, o banho de ${e.dur} s`; }).join('; ') + ')' : ''}; pagaram e foram chamados antes do banho: ${w.dips.length - dips} ${JSON.stringify(away)}; o passo de quem veio de 10 casas ou mais (${pace.length}): ${pc(0.5)} s por casa na mediana, ${pc(0.9)} em nove de dez, ${pc(0.999)} o mais lento (a regra conta ${Te.WALK})`);
   }
   // ---------------------------------------------------------------- b5
   if (on('b5')) {
@@ -305,6 +323,26 @@ function partB() {
   }
   if (on('b8')) ok('b8 o verificador (com as regras novas da freguesia) e nenhum erro nos dias vividos', !w.bad.length && M.limpo(), w.bad.slice(0, 4).join(' | ') || (M.limpo() ? `limpo (S0–S2 novas: 0; freguesia: 0) em ${DIAS} dias` : JSON.stringify(M.erros()).slice(0, 300)));
   return w;
+}
+
+// ================================================================ i: the same cause at the skip
+// (the world's own time skip, G.Main.skipStep — as M.saltar —, a look at each second of it: the baths have their bathers there
+// too, by the same wish; each entry is one line of the ledger and one note of the quarter's life; nobody twice a day)
+function partI() {
+  M.pronto(WORLD); const S = G.S; rebase(); const d0 = S.day; const anos = +(process.env.ANOS || 4);
+  god(() => G.Politics.divinePeace()); const w = watch(); let k = 0;
+  G.Skip.on = true; G.FX.off = true; W.pathGreed = 1.3;
+  try { while (S.day - d0 < anos) { if (!(S.divinePeace > G.DAY_LEN * 0.5)) god(() => G.Politics.divinePeace()); G.Main.skipStep(1); w.look(); if (++k % 40 === 0) w.qa(); } } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; }
+  w.close(); w.qa();
+  const ops = [...w.ops.values()].filter(r => r.day >= d0 && r.day < d0 + anos); const ent = ops.reduce((s, r) => s + r.ent, 0); const bad = [];
+  for (const r of ops) { const L = w.led.filter(e => e[7] === r.id && e[5] === 'moedas'); const inn = L.filter(e => e[8] === 'termas'), out = L.filter(e => e[8] === 'termas-volta'); const sum = r2(inn.reduce((s, e) => s + e[6], 0) - out.reduce((s, e) => s + e[6], 0));
+    if (r.coin ? inn.length !== r.ent || Math.abs(sum - r.rec) > 0.011 : inn.length || r.rec) bad.push(`${S.settlements.get(r.set) ? S.settlements.get(r.set).name : r.set} dia ${r.day}: ${r.ent} entradas, ${inn.length} linhas, o livro ${sum}, o caixa ${r.rec}`); }
+  const g = w.go; const badG = g.filter(p => p.sleeping || p.carry || p.hands || p.body || p.pri >= Te.PRI || !(p.lot < p.wish));
+  const per = {}; for (const b of baths()) { const L = ops.filter(r => r.at === b.id).sort((a, c) => a.day - c.day); per[setOf(b).name] = L.map(r => r.ent).join(', '); }
+  const reads = [...w.lib.values()].filter(r => r.day >= d0 && r.day < d0 + anos).reduce((s, r) => s + r.lidos, 0); const all = [...w.ops.values()].reduce((s, r) => s + r.ent, 0);
+  ok(`i a mesma causa no salto (${anos} anos saltados, na paz do deus): os banhos têm banhistas pela mesma vontade, cada entrada é uma linha do livro e uma nota na vida do bairro, ninguém duas vezes no dia, ninguém chamado com as mãos ocupadas; a biblioteca tem leitores`,
+    ent >= ops.length && ops.length >= anos * 2 && !bad.length && !w.again.length && !badG.length && Math.abs(w.notes.banho - all) <= 1 && reads >= 1 && !w.bad.length && M.limpo(),
+    `${ops.length} dias de banhos no salto, ${ent} banhos (${(ent / Math.max(1, ops.length)).toFixed(1)} por dia e por prédio): ${Object.entries(per).map(([n, l]) => `${n} ${l}`).join(' · ')}; o livro e o caixa ${bad.length ? 'NÃO BATEM: ' + bad.slice(0, 2).join('; ') : 'batem'}; ${w.again.length} entradas de quem já se tinha banhado no dia; ${g.length} idas pela vontade, ${badG.length} de quem não podia; ${w.notes.banho} notas «noite» para ${all} entradas; ${reads} leituras; o verificador ${w.bad.length ? w.bad.slice(0, 2).join(' | ') : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 
 // ================================================================ c, d, e1, e2: the thermae and the grand library by the god's hand
@@ -343,7 +381,7 @@ function handDay(step, lib, extra) {
   // the question is who comes to hot water, the same for the three sizes: as qa/termas-grandes.js E2)
   const t1 = Te.horas(b).abre + 0.01; live(240, w, () => { hold(); if (S.time > t1) S.time = t1; const op = Te.dia(b); return !!op && op.data.lenha >= 1; });
   const lit0 = !!(Te.dia(b) && Te.dia(b).data.lenha >= 1);
-  live(Math.round(G.DAY_LEN * 0.52), w, k => { hold(); if (extra) extra(k, b, L, w);
+  live(G.DAY_LEN * 3, w, k => { hold(); if (extra) extra(k, b, L, w);
     if (!mid && lib) { const op = Te.dia(b); const inW = op ? Object.keys(op.data.banho).filter(id => op.data.banho[id].st === 2 && !op.data.banho[id].done).map(Number) : []; const rd = L && L.livros ? Object.keys(L.livros.quem || {}).map(Number).filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.type === 'ler' && v.task.st === 1; }) : [];
       if (inW.length >= 3 && rd.length >= 1) { mid = G.Save.serialize(); midInfo = { inW, rd, op: op.id, t: S.time }; } }
     return S.day > day || S.time > Te.horas(b).fecha + 0.02; });
@@ -418,7 +456,7 @@ function partE3() {
   god(() => { if (G.Fac.rel) G.Fac.rel(f.id, foe.id); const dp = S.divinePeace; S.divinePeace = 0; G.Politics.declareWar(f, foe, 'ambicao'); S.divinePeace = dp; });
   const war = G.Fac.atWar(f.id, foe.id); const w = watch(); S.time = 0.24; const day = S.day;
   let arms = 0, taken = 0;
-  live(Math.round(G.DAY_LEN * 0.5), w, () => { for (const v of S.villagers.values()) { if (v.set !== set.id || !v.task) continue; if (WARLIKE[v.task.type]) arms++; } return S.day > day || S.time > 0.71; });
+  live(G.DAY_LEN * 3, w, () => { for (const v of S.villagers.values()) { if (v.set !== set.id || !v.task) continue; if (WARLIKE[v.task.type]) arms++; } return S.day > day || S.time > 0.71; });
   w.close(); w.qa(); const g = w.go.filter(p => p.set === set.id); const fromWar = g.filter(p => WARLIKE[p.cur] || p.pri >= Te.PRI); taken = fromWar.length;
   const r = [...w.ops.values()].find(q => q.at === b.id) || { ent: 0 };
   ok('e3 a cidade em guerra: quem está em armas não larga nada pelo banho; o dia dos banhos segue com quem está livre; o verificador e nenhum erro', war && !taken && !w.bad.length && !w.again.length && M.limpo(),
@@ -436,7 +474,7 @@ function partE4() {
     const hold = () => god(() => { const v = S.villagers.get(kid); if (v && !v.captive && (v.role !== 'foguista' || v.job !== b.id)) { v.role = 'foguista'; v.job = b.id; } if (D.free('f:' + fid, 'wood') < 30) D.make('f:' + fid, 'wood', 40, { code: 'teste', part: true }); S.weather.rain = 0; if (S.weather.storm) S.weather.storm = 0; });
     rebase(); const w = watch(); S.time = Te.horas(b).abre - 0.03; const d0 = S.day; let days = 0;
     // (a small town: a few days, until five have bathed — the day's lot of each one)
-    live(G.DAY_LEN * 4, w, () => { hold(); if (S.time > 0.72 && S.time < 0.73) days = S.day - d0 + 1; return [...w.ops.values()].filter(q => q.at === b.id).reduce((s, q) => s + q.ent, 0) >= 5 && S.time > 0.71; });
+    live(G.DAY_LEN * 12, w, () => { hold(); if (S.time > 0.72 && S.time < 0.73) days = S.day - d0 + 1; if (S.day >= d0 + 4) return true; return [...w.ops.values()].filter(q => q.at === b.id).reduce((s, q) => s + q.ent, 0) >= 5 && S.time > 0.71; });
     w.close(); w.qa(); const ops = [...w.ops.values()].filter(q => q.at === b.id); const ent = ops.reduce((s, q) => s + q.ent, 0);
     const lines = w.led.filter(e => e[5] === 'moedas' && ops.some(q => q.id === e[7])); const rec = ops.reduce((s, q) => s + q.rec, 0);
     ok('e4 o povo sem moeda: entra sem pagar — nenhuma linha de moeda no livro, o caixa em zero —, e a vida do bairro conta a entrada', !E.coinage(fid) && ent >= 3 && !lines.length && rec === 0 && w.notes.banho === ent && !w.bad.length && M.limpo(),
@@ -479,6 +517,7 @@ function partH() {
 // ================================================================
 if (on('a')) partA();
 if (on('b')) partB();
+if (on('i')) partI();
 if (on('c') || on('d') || on('e1') || on('e2')) partC();
 if (on('e3')) partE3();
 if (on('e4')) partE4();

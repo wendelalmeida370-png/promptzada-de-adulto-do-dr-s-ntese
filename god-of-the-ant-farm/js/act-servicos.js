@@ -217,7 +217,8 @@
   Te.FLOOR = 0.25;
   Te.COLD = 0.5;     // (the wish for cold water, of the wish for hot)
   Te.REACH = 30;     // (a walk to the door longer than this: no bath — the tavern's own reach)
-  Te.WALK = 1.3;     // (the seconds a tile takes on the straight line — the streets go round: the theatre's)
+  Te.WALK = 1.5;     // (the seconds a tile takes on the straight line, the streets going round — for the time's rule: half the
+                     //  bathers of the ready metropolis took 0,8, nine in ten 1,3 or less, the slowest 1,64; who is late pays for a dip)
   Te.DIP = 16;       // (the seconds in the water that make a bath of the longest one — half of it: bathe)
   Te.SLACK = 0.06;   // (of the day: who is far from the baths may set out this long before it is too late to — see Te.pick)
   Te.HOME = 0.5;     // (of two baths, how much the way home weighs: the baths of one's own streets — the tavern's, D-157)

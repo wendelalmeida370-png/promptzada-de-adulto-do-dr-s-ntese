@@ -14,19 +14,23 @@
 - a vontade do banho (`G.Termas.urge` / `go` / `pick` / `wish` / `lot` / `hourOf`, `js/act-servicos.js`) e a da leitura
   (`G.Biblioteca.urge` / `go` / …, `js/act-lazer.js`), as duas linhas no `decide` e as duas no `start` do `js/villagers.js`;
 - um banho por dia e um rolo por dia também pelo passeio (`Te.visit`, `Bi.visit`);
-- as regras do verificador (`qa/freguesia-inv.js`) e a prova (`qa/freguesia.js`): **21 de 22 linhas passam**; a `b1` falha
-  por um defeito **da prova** ainda por achar (o quarto dia sai com 0 banhos na prova e com 7, 6, 3 e 1 na medida sem
-  observador — `scratchpad/ag/F/bare.js` —; o mundo é o mesmo com e sem o `QA.check`, conferido);
-- o guard passa (156 arquivos).
+- as regras do verificador (`qa/freguesia-inv.js`) e a prova (`qa/freguesia.js`): **as 23 linhas passam** (a, b, i, c, d,
+  e1 a e5, h). O que a prova ensinou no caminho: o dia do mundo não tem um número fixo de segundos vividos (uma cena que
+  se demora atrasa o relógio, `main.js`: o primeiro dia da metrópole dura 306 s) — todo caso acaba pelo dia e pela hora
+  do mundo; e a metrópole pronta entra em guerra no segundo ou no terceiro dia, por uma história que um fio muda — os
+  dias vividos da parte `b` e o salto da `i` são na paz do deus (o poder do jogo, `G.Politics.divinePeace`), e a guerra é
+  o caso `e3`;
+- o guard passa (156 arquivos); a vida curta (`soak 103 continente 128 4 normal 5 1 1`): 5 anos, nenhuma violação.
+
+**Em curso:** as 30 sabotagens (`scratchpad/ag/F/sab-todas.sh` → `scratchpad/ag/F/sab/*.txt`, o resumo em `depois/sab-1.txt`).
 
 **Falta (nesta ordem):**
-1. achar por que a `b1` lê 0 no quarto dia (a conta dos dias na `partB`), e fechar a prova;
-2. as sabotagens (`scratchpad/ag/F/sab-F.py`, 30 escritas, nenhuma rodada ainda) pelo `sab-run.sh`;
-3. as provas vizinhas (`termas`, `termas-mao`, `termas-grandes`, `lazer`, `lazer-mao`, `saber`, `tempo-livre`, `lar`,
-   `atividades`, `invariancia.js`, `det3`), na base e no ramo;
-4. as medidas de depois na mega e nos mundos do zero (duas sementes, 30 anos) — a metrópole já está medida (item 7);
-5. a praça e o mercado ao fim da tarde (o item 4 da tarefa): **não começado**; o desenho está no item 6;
-6. um caso do salto na prova (a mesma causa nos três níveis) — o salto de 10 anos da metrópole já mostra banhos no salto.
+1. as provas vizinhas (`scratchpad/ag/F/viz.sh`: `termas`, `termas-mao`, `termas-grandes`, `lazer`, `lazer-mao`, `saber`,
+   `tempo-livre`, `lar`, `atividades`, `invariancia.js`; e o `det3` no navegador), no ramo e, as que falharem, na base;
+2. as medidas de depois na mega e nos mundos do zero (duas sementes, 30 anos; `scratchpad/ag/F/producao.js`) — a
+   metrópole já está medida (item 7);
+3. a praça e o mercado ao fim da tarde (o item 4 da tarefa): **não começado**; o desenho está no item 6;
+4. o guard e a vida curta de novo antes do último commit.
 
 ## 1. Linhas do AUDIT (Bairros Vivos)
 
