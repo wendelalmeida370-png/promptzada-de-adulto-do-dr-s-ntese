@@ -55,18 +55,38 @@ ano 33, **pronto no 51: 18 anos**, a 23 casas de um armazém, 1 a 3 construtores
 acabados — diferem na contagem: o roteiro conta também as termas, e as suas perguntas a cada dez anos não mexem no mundo, mas o
 g8 do líder rodou com o `degraus.js`, sem elas. O que importa aqui é o porquê de cada obra.)
 
-## 1b. O g8 depois (o `degraus` g8 inteiro: dois mundos do zero, 90 anos)
+## 1b. O g8 depois (o `degraus` g8 inteiro e os traços: dois mundos do zero, 90 anos, o código entregue)
 
-**Com o código do `a47508e`** (a carroça, o aplainar, a renda média, a L-783; ainda sem a D-218) — `DEGRAUS: ok`, o verificador
-limpo nos dois mundos com as invariantes da carroça e do aplainar:
+`ONLY=g8 node degraus.js`: **DEGRAUS: ok** — 8 degraus grandes fundados, 4 de pé no ano 91, o verificador limpo nos dois
+mundos (com as invariantes da carroça e do aplainar). O que cada capital fundou e ACABOU (`traca2.js`, saídas em
+`scratchpad/ag/M/mb/traca-s41-f.txt` e `traca-s7-f.txt`):
 
-| semente | gente no ano 91 | fundados | de pé no ano 91 |
-|---|---|---|---|
-| 41 | 454 (antes: 315) | templo de 16 m (ano 32), palácio de 24 m (ano 52), palácio de 24 m (ano 56), palácio de 24 m (ano 88) | templo de 16 m, **dois palácios de 24 m** (antes: o templo e um palácio) |
-| 7 | 267 (antes: 495) | teatro de 24 m (ano 33), templo ampliado para 16 m (ano 44), palácio de 24 m (ano 51), palácio de 24 m (ano 63) | o templo de 16 m. O teatro ficou pronto no ano 44 (11 anos; antes 18) e foi perdido depois, com os palácios, nas guerras: o mundo desta semente se parte em 14 povos pequenos entre os anos 60 e 90 (o traço: comida segura em todas as capitais, a gente cai por guerra, não por fome) |
+**Semente 41** — 454 pessoas no ano 91 (antes: 315); 4 fundados, 3 acabados:
 
-8 fundados, 4 de pé (o g8 de antes: 5 a 7 fundados, 4 de pé). O que mudou é o tempo de cada obra e o que é fundado — não mais a
-maravilha que o povo não paga. O que ainda segura é a pedra (5c), e daí a D-218 (em curso).
+| obra | cidade ao fundar | fundada | acabou | antes desta rodada |
+|---|---|---|---|---|
+| templo de 16 m | Argos (nível 3, 42 pessoas) | ano 32 | **ano 45 (13 anos)** | o mesmo (o mundo é o mesmo até ali) |
+| palácio de 24 m | Mênfis (30 pessoas) | **ano 52** | **ano 65 (13 anos)** | fundado no ano 69, pronto no 85 (16 anos) |
+| palácio de 24 m, num lote aplainado | Tenochtitlan (31 pessoas) | **ano 56** | **ano 67 (11 anos)** | fundado no ano 77; 31% em 14 anos, nunca acabou |
+| palácio de 24 m | Argos (99 pessoas) | ano 88 | 33% em 3 anos | — (antes: as termas de 20 m, 97% em 7 anos; um templo, 26% em 3) |
+
+**Semente 7** — 267 pessoas no ano 91 (antes: 495); 4 fundados, 3 acabados:
+
+| obra | cidade ao fundar | fundada | acabou | antes desta rodada |
+|---|---|---|---|---|
+| teatro de 24 m | Mênfis (47 pessoas) | ano 33 | **ano 44 (11 anos)** | ano 51 (18 anos) |
+| templo ampliado para 16 m | Hedeby (46 pessoas) | ano 44 | ano 49 (5 anos) | ano 47 → 48 (1 ano) |
+| palácio de 24 m, num lote aplainado | Mênfis (30 pessoas) | ano 51 | ano 72 (**21 anos**: 60% aos 10; a cidade encolheu de 36 para 22 pessoas) | não era fundado |
+| palácio de 24 m, num lote aplainado | Argos (41 pessoas) | ano 63 | perdido em obra | não era fundado |
+
+**De pé no ano 91**: semente 41, o templo e dois palácios (antes: o templo e um palácio); semente 7, só o templo de Hedeby —
+o teatro (pronto no ano 44) some entre os anos 71 e 81 e o palácio de Mênfis (pronto no 72) entre o 81 e o 91 (antes: o teatro
+e o templo de pé). A semente 7 depois da rodada é um mundo mais violento que o de antes — em 90 anos, 245 mortos de guerra
+contra 187, 44 em golpes contra 19, 27 executados contra 11; a fome é a mesma (5 e 5) e nenhuma capital fica sem comida — e a
+gente para de crescer entre os anos 61 e 81 (243, 244, 229, 267; antes 217, 298, 397, 495). Duas sementes, dois sentidos
+(+44% e −46% de gente): não sei dizer se a diferença da semente 7 é das obras (dois palácios a mais: corte, golpes?) ou do
+acaso das guerras — digo o que medi. **Aberto (T-771)**: o que derruba um monumento pronto (a medida está na fila:
+`vida90-s7-perdas`).
 
 ## 2. A obra longe dos armazéns (T-760) — medida, feita, medida de novo
 
@@ -84,19 +104,22 @@ armazém, 2 a 4% assentando. O trabalho de assentar é pouco (a obra inteira do 
 relógio de uma obra é o material que chega**, quatro de cada vez nas mãos de cada um. A 35 casas, menos de uma viagem por dia
 de cada construtor.
 
-**Feito (D-215, commit `7840218`)**: a carroça da obra grande (`city.js`, `Ci.workCart`). O canteiro já existia — o lugar `o:` do
-depósito, o que chegou a uma obra e ainda não foi assentado (L-246) —; faltava quem levasse de longe. A obra grande com a vez
-(`set.vez`, `set.gw`) a mais de 12 casas (`Ci.WORK_FAR`) do armazém mais perto recebe por carroça de bois do povo que sabe a
-roda: 20 de cada vez (`WORK_LOAD`), duas a caminho no máximo (`WORK_CARTS`), a cada 20 s (`WORK_EVERY`), do armazém mais perto
-da obra ao canteiro, pelo livro nas duas pontas («carroca-obra» `f:` → `c:`, «obra-carroca» `c:` → `o:`). A carroça cuja obra fica
-pronta, cai, é largada, queima ou muda de povo leva a carga para casa («carroca-volta», ao armazém do povo que a mandou). O
-relógio e o dia em que não achou caminho são da cidade (`set.cartT`, `set.cartNo`: no save). O que as carroças trazem conta
-como «a caminho» para quem iria buscar (`Ci.carted(b, k)`, lido das próprias carroças; `villagers.js` `coming`): a conta da obra,
-`b.incoming`, continua só das mãos dos construtores (a invariante do ofício não muda). O povo sem a roda continua levando nas
-mãos (aberto: T-768).
+**Feito (D-215, commits `7840218` e `77cf5d9`)**: a carroça da obra grande (`city.js`, `Ci.workCart`). O canteiro já existia — o
+lugar `o:` do depósito, o que chegou a uma obra e ainda não foi assentado (L-246) —; faltava quem levasse de longe. A obra
+grande com a vez (`set.vez`, `set.gw`) a mais de 6 casas (`Ci.WORK_FAR`; eram 12 na primeira forma) do armazém mais perto
+recebe por carroça de bois do povo que sabe a roda: 20 de cada vez (`WORK_LOAD`), duas a caminho no máximo (`WORK_CARTS`), a
+cada 20 s (`WORK_EVERY`), deixando 20 de pedra no armazém (`WORK_FLOOR`, L-783), do armazém mais perto da obra ao canteiro,
+pelo livro nas duas pontas («carroca-obra» `f:` → `c:`, «obra-carroca» `c:` → `o:`). A carroça cuja obra fica pronta, cai, é
+largada, queima ou muda de povo leva a carga para casa («carroca-volta», ao armazém do povo que a mandou); o que a obra já não
+espera ao chegar volta na carroça. O relógio e o dia em que não achou caminho são da cidade (`set.cartT`, `set.cartNo`: no
+save). O que as carroças trazem conta como «a caminho» para quem iria buscar (`Ci.carted(b, k)`, lido das próprias carroças;
+`villagers.js` `coming`): a conta da obra, `b.incoming`, continua só das mãos dos construtores (a invariante do ofício não
+muda). O povo sem a roda continua levando nas mãos (aberto: T-768).
 
-**Depois**: na prova (`canteiro` c1e, o mesmo mundo com e sem carroça, a 37 casas, em dois anos): **79 → 227** entraram na obra
-(92% pronta). No `longe.js` a 35 casas: pronta em 2 anos (antes: 75% em três e parada).
+**Depois**: na prova (`canteiro` c1e, o mesmo mundo com e sem carroça, a 37 casas, em dois anos, com 20 de pedra deixados no
+armazém): **71 → 203** entraram na obra (83% pronta). No `longe.js` a 35 casas (a primeira forma da regra): pronta em 2 anos
+(antes: 75% em três e parada). Nos mundos do zero: o teatro de Mênfis da semente 7, a 23 casas de um armazém, de 18 para 11
+anos.
 
 ## 3. A terra (T-761) — medida
 
@@ -132,6 +155,28 @@ maior degrau que pagam para o menor; os mundos prontos da geração 19):
 | derrubar mais casas baixas (o dobro, o triplo) | nada |
 | os campos das cidades-irmãs | nada |
 | a maravilha de 10 na metrópole (Roma, Hedeby, Argos, Mênfis) | **nenhuma regra abre**: 68 a 86% de água, 50 a 87% de prédio de outra cidade, e o relevo dos poucos lotes secos passa de 13,5 m. Só a reserva cedo (D-121) — que com o aplainar passa a poder guardar um lote que se aplaina |
+
+**Nos mundos do zero, aos 60 e aos 100 anos** (`terra.js` com `SEMPAGAR=1`: todo degrau maior que a capital justifica, pague ou
+não — só a terra; três sementes, continente de 128, 4 povos; «antes» o código do `b2b61f0`, «depois» o entregue; os mundos
+de antes e de depois não são o mesmo mundo — o de depois já ergueu mais —, as contas são de cada um):
+
+| semente | aos 60, antes | aos 60, depois | aos 100, antes | aos 100, depois |
+|---|---|---|---|---|
+| 41 | 5 tipos com lote / 11 sem; 1 de 3 capitais sem lote nenhum | 5 / 9; 0 de 3 | 0 / 19; 4 de 4 | 0 / 13; 3 de 3 |
+| 7 | 2 / 17; 3 de 4 | 3 / 13; 2 de 3 | 0 / 17; 3 de 3 | 1 / 20; 3 de 4 |
+| 103 | 4 / 10; 1 de 3 | 7 / 8; 1 de 3 | 2 / 8; 0 de 2 | 0 / 14; 3 de 3 |
+| as três | 11 / 38; 5 de 10 | 15 / 30; 3 de 9 | 2 / 44; 7 de 9 | **1 / 47; 9 de 10** |
+
+Aos 60 anos o aplainar ajuda (de 5 capitais sem lote nenhum para 3). **Aos 100 anos a terra acabou, com ou sem ele**: nenhuma
+capital acha lote para quase nada, e nenhuma das regras candidatas abre (aplainar 4 ou 5 níveis, procurar 8 ou 14 casas mais
+longe, derrubar o dobro, os campos das irmãs: zero em todas as capitais das sementes 41 e 7). O que tapa, no ano 101 (o código
+entregue, `mb/terra-s41-100.txt`, `mb/terra-s7-100.txt`):
+- Argos da semente 41 (nível 4, 109 pessoas na capital e 333 no povo, 81 de pedra por ano — pagaria tudo): 66 a 87% dos lotes
+  com água, 62 a 77% com penhasco em volta, 60 a 77% com relevo além do pódio, 41 a 57% com prédio da cidade que não cai; o
+  lote seco e vazio mais perto, a 22 casas, tem 10,5 m de relevo e penhasco no anel.
+- Mênfis da semente 41: 80 a 91% com prédio de **outra cidade** (13 cidades num continente de 128), 56 a 82% com relevo.
+- Mênfis da semente 7 (o teatro e o palácio de 6): 73% água, 53% prédio de outra cidade, 53% relevo; o seco mais perto tem
+  16,9 m de relevo.
 
 ## 4. O que foi feito no `77cf5d9` (o aplainar, a renda média, a pedra que escapava)
 
@@ -317,19 +362,24 @@ for (const f of files) if (f !== 'city.js') src[f].forEach((l, k) => { const c =
   planejador agora; nada do mundo a chama (regra 75).
 - No protocolo (item 3): «Mexeu no planejador das obras grandes…» ganha `node qa/canteiro.js` e `node qa/aterro.js`.
 
-## 8. A recomendação para a D-160 (a terra) — provisória, até as medidas de depois
+## 8. A recomendação para a D-160 (a terra), com os números de cada alternativa
 
-1. **Aplainar (a D-120 (3)) é a regra que mais abre**, e é a que estou fazendo (D-217): pelos mundos prontos, de 17 lotes com
-   terra e 47 sem, passa-se a 29 com e 35 sem, e na megalópole nenhuma capital fica sem lote. Três níveis de corte e de aterro
-   bastam: quatro ou cinco quase não abrem mais nada.
-2. **Procurar 8 casas mais longe** (os «de dentro» do raio + 6/+ 12 para + 14/+ 20) é a segunda: abre, depois do aplainar, o
-   templo e o palácio de Mênfis da metrópole, o grande palácio de Hedeby e de Tenochtitlan e a maravilha de Hedeby da
-   megalópole. Com a carroça a distância deixou de travar a obra. **Não fiz**: a D-120 (1) diz que os «de dentro» ficam perto,
-   e é decisão do líder. Custa uma linha (`V.reachOf`).
-3. **Derrubar mais casas baixas e tomar os campos das irmãs não abrem nada**: não recomendo.
-4. **A maravilha das capitais velhas** (a metrópole: Roma, Hedeby, Argos, Mênfis; os anos 500 e 1000) não tem regra de terra que a
-   abra: água e prédios de outras cidades. O que resta é a reserva cedo (D-121), que agora pode guardar um lote que se aplaina, e
-   a maravilha noutra cidade do povo (D-121 (3), já feita).
+O que medi (seção 3): nos mundos prontos de 50 a 60 anos, de 64 pares capital × tipo que justificam e pagam um degrau maior,
+17 achavam lote; nos mundos do zero, aos 60 anos 11 de 49, e **aos 100 anos 2 de 46**. A terra em volta de uma capital acaba
+entre os 60 e os 100 anos: água, penhasco, o relevo, os prédios da própria cidade que não caem e, cada vez mais, as outras
+cidades.
+
+| alternativa | o que abre | o que custa | o que fiz |
+|---|---|---|---|
+| **aplainar o lote** (a D-120 (3)): corte e aterro de até 3 níveis, o pódio por cima | mundos prontos: 17 → 29 de 64; megalópole: nenhuma capital sem lote; do zero aos 60 anos: capitais sem lote nenhum 5 de 10 → 3 de 9; aos 100 anos: nada | o trabalho da terra na obra (2 por nível); o chão muda uma vez, na fundação | **FEITO** (D-217) |
+| aplainar mais (4 ou 5 níveis) | quase nada a mais (um grande palácio na metrópole; zero nos mundos do zero aos 100) | paredes de terra de 6 a 7,5 m junto das ruas | não |
+| **procurar 8 casas mais longe** (os «de dentro» a raio + 14 e + 20) | mundos prontos, depois do aplainar: o templo e o palácio de 6 de Mênfis da metrópole, o grande palácio de Hedeby e de Tenochtitlan, a maravilha e o colossal de Hedeby da megalópole; do zero aos 100 anos: nada | o prédio cívico longe do centro (a D-120 (1) os quer perto); com a carroça a distância já não segura a obra (D-215) | **não fiz — recomendo** para os degraus de 8 e 10 casas (o grande palácio, o colossal), que não cabem em centro nenhum: uma linha no `V.reachOf` |
+| derrubar mais casas baixas da própria cidade (o dobro, o triplo) | nada, em nenhuma capital | — | não |
+| os campos das cidades-irmãs | nada | — | não |
+| **guardar o campo cedo** (a D-121, hoje só para a maravilha e o colossal, só na capital de nível 3) | é a única que alcança os 100 anos: aos 60 ainda há lote para 15 de 45, aos 100 para 1 de 47. Com o aplainar a reserva já guarda um lote que se aplaina (`aterro` t6: Roma e Argos da megalópole e Karnak do mundial passam a ter campo para a maravilha) | um lote de 6 a 10 casas sem prédio por décadas (os campos da própria cidade podem ficar nele, como hoje) | **não fiz — é a decisão que recomendo ao líder**: a capital de nível 3 guardar, além do campo da maravilha, **um campo cívico de 6 casas** (o do teatro, do palácio ou do templo de 24 m, o primeiro que ela ainda não tem), pelas mesmas portas (`resLot`, `resFits`, `V.reservaDia`); e as cidades novas do povo não fundarem a menos de 20 casas de uma capital com campo guardado (o que mais tapa aos 100 anos é prédio de outra cidade: 53 a 91%) |
+
+Em uma frase: **o aplainar destrava os primeiros 60 anos; depois disso só a terra guardada cedo** — e a distância entre as
+cidades de um mesmo continente.
 
 ## 9. O que ficou aberto (até aqui)
 
