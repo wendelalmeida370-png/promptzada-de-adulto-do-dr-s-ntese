@@ -243,7 +243,7 @@
   // left to the wind, and the ruin cleared away took it, L-377
   V.keptGone = function (b, code) {
     const D = G.Depot; if (!D || !b) return;
-    const home = !!(G.BDEF[b.type] && G.BDEF[b.type].housing); const ref = (home ? 'h:' : 'b:') + b.id; if (!D.exists(ref)) return;
+    const home = V.bedsOf(b) > 0; const ref = (home ? 'h:' : 'b:') + b.id; if (!D.exists(ref)) return;
     D.unclaim(ref); // (the operations that held part of it back hold nothing now: L-444)
     const L = D.list(ref); for (const k of Object.keys(L).sort()) if (L[k] > 1e-6 && !(home && k === 'moedas')) D.use(ref, k, L[k], { code, mine: true });
   };
@@ -313,7 +313,11 @@
   // house stands while the new floor goes up — as the work given up gives it back whole). The one question for sleeping at
   // home, the evening at home, the water, the family's evening, the minding of the little ones and the town's day of houses:
   // the family under the works slept outdoors with no water and no home, and nobody saw it needed a roof, L-371
-  V.livable = b => !!b && b.type !== 'ruin' && !!G.BDEF[b.type] && !!G.BDEF[b.type].housing && (b.built || !!b.upgradeFrom);
+  // (and the seat where who rules lives — the chief's house, the palaces: BDEF.aposentos, court.js —, standing: a household lives
+  // there as in a house, its pantry and its coins a house's ('h:'), but only the ruler's — no door of the town's housing ever
+  // offers it: those read BDEF.housing. V.bedsOf: the beds of a building a household lives in, 0 where none does. D-205)
+  V.bedsOf = b => { const d = b && G.BDEF[b.type]; return d ? d.housing || d.aposentos || 0 : 0; };
+  V.livable = b => !!b && b.type !== 'ruin' && V.bedsOf(b) > 0 && (b.built || !!b.upgradeFrom);
 
   V.completeBuilding = function (b) {
     const S = G.S; b.progress = 1;
@@ -374,7 +378,7 @@
     }
     G.Court && G.Court.audGone && G.Court.audGone(b); // (the audience in a palace that falls ends with it, on the way in too: D-124)
     // (the coins kept in a house that falls are lost with it — in the ledger: the ruin is no house to hold them)
-    if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
+    if (V.bedsOf(b) > 0 && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
     V.keptGone(b, 'ruina'); // (and what it kept, the house's pantry and chest or the shelf, L-377)
     V.siteGone(b, 'ruina'); // (and what a work had got falls with it, in the ledger)
     if (b.type === 'farm' || b.type === 'campfire') {
@@ -1745,8 +1749,10 @@
       if (v.home && !byId.has(v.home)) v.home = 0;
       if (v.home) byId.get(v.home).res++;
     }
-    const space = b => G.BDEF[b.type].housing - b.res;
-    const findHome = (need) => { let best = null; for (const b of homes) if (b.built && space(b) >= need && (!best || space(b) > space(best))) best = b; return best; };
+    // (the seat where who rules lives keeps its household — its children, a partner who joins it —, and is no house of the town's:
+    // never offered to who needs one, never emptied of its grown ones. Who lives there is act-casa.js's to say: D-205)
+    const space = b => V.bedsOf(b) - b.res; const common = b => !!G.BDEF[b.type].housing;
+    const findHome = (need) => { let best = null; for (const b of homes) if (b.built && common(b) && space(b) >= need && (!best || space(b) > space(best))) best = b; return best; };
     // children live with parents
     for (const v of vs) {
       if (v.age >= 16) continue;
@@ -1760,7 +1766,8 @@
       if (p && p.set === v.set) {
         if (p.home && v.home !== p.home) {
           const ph = byId.get(p.home);
-          if (ph && space(ph) >= 1) { if (v.home && byId.get(v.home)) byId.get(v.home).res--; v.home = p.home; ph.res++; continue; }
+          const seated = v.home && byId.get(v.home) && !common(byId.get(v.home)); // (one of the seat stays: the partner comes to it)
+          if (ph && space(ph) >= 1 && !seated) { if (v.home && byId.get(v.home)) byId.get(v.home).res--; v.home = p.home; ph.res++; continue; }
         }
         if (!v.home && !p.home) { const b = findHome(2); if (b) { v.home = b.id; p.home = b.id; b.res += 2; } continue; }
       }
@@ -1773,7 +1780,7 @@
     const cares = v => !!(G.Lar && G.Lar.minder && G.Lar.minder(v));
     const body = S.avatar ? S.avatar.id : 0;
     for (const b of homes) {
-      if (!b.built || space(b) >= 0) continue;
+      if (!b.built || !common(b) || space(b) >= 0) continue;
       for (const v of vs.filter(o => o.home === b.id).sort((p, q) => p.age - q.age || p.id - q.id)) {
         if (v.age < 18 || v.partner || minders.has(v.id) || v.id === b.dono || v.id === body || cares(v)) continue;
         const nb = findHome(1); if (nb && nb !== b) { v.home = nb.id; nb.res++; b.res--; }
@@ -2062,7 +2069,7 @@
       V.keptGone(b, 'abandono'); // (and what a house or a shelf kept: a ruin keeps nothing, L-377)
       if (b.type === 'farm' || b.type === 'campfire' || !b.built) { V.removeBuilding(b); continue; }
       // (a house left to the wind keeps no coins: what was in it is lost, in the ledger)
-      if (G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
+      if (V.bedsOf(b) > 0 && (b.coin || 0) > 0 && G.Depot) G.Depot.use('h:' + b.id, 'moedas', b.coin, { code: 'ruina', mine: true });
       if (b.type !== 'ruin') { b.origType = b.type; b.type = 'ruin'; b.blocks = false; b.built = true; b.ruinT = G.DAY_LEN * (2 + G.R() * 3); b.hp = 1; W.touchWalk(); G.Interiors && G.Interiors.abandon(b); }
       b.set = 0;
       G.Act && G.Act.atGone(b); // (what was being done in it ends with the town: L-444)

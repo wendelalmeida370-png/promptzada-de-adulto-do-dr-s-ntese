@@ -45,7 +45,7 @@
   I.FACE = Math.PI / 4; // (radians: a door this far round from where the body looks, or less, is the door it faces — L-326)
   I.best = function () {
     const ctx = I.ctx(); if (!ctx || G.Avatar.swimming()) return null; // (the hands are swimming)
-    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1, seat = null, ss = -1, meal = null, ms = -1, other = null, xs = -1;
+    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1, seat = null, ss = -1, meal = null, ms = -1, other = null, xs = -1, bed = null;
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
         // (t.reach: a target reached from farther than its kind — the door of a house from its doorstep)
@@ -55,6 +55,7 @@
         if (sc > bs) { bs = sc; best = c; }
         if (p.id === 'lugar' && sc + (t.pl.use === 'comer' ? 10 : 0) > ss) { ss = sc + (t.pl.use === 'comer' ? 10 : 0); seat = c; } // (a place at a table first)
         if (p.id === 'atividade' && t.o && /^lar\.comer:/.test(t.o.id || '') && sc > ms) { ms = sc; meal = c; } // (the meal of the house)
+        if (p.id === 'cama') bed = c;
         if (p.door && sc > ds) { ds = sc; door = c; }
         if (p.passing && sc > ps) { ps = sc; pass = c; }
         if (p.opens && sc > os) { os = sc; open = c; }
@@ -72,6 +73,10 @@
     // brazier beside it, 0.65 m round to the side, won it: seated and hungry at the table of the house#13413 of the generation-15
     // metropole, «Cozinhar a ceia da casa» — L-625, D-104)
     else if (meal && best !== meal && meal.t.o.ok !== false && best.p.id === 'atividade' && best.t.o && /^lar\.cozinhar:/.test(best.t.o.id || '') && G.Avatar.seated() && (G.Possess.useOf() || {}).use === 'comer') best = meal;
+    // (and the body's own bed, faced, before the house's cooking: the fire by the bed's foot — nearer than the bed's middle, and
+    // the offer's reach the longer — won it from the body turned to its bed: beside the couple's mat of the house of the
+    // metropole whose core D-196 laid by the beds, «Cozinhar a ceia da casa», and never lay down by E — L-892)
+    if (bed && best !== bed && best.p.id === 'atividade' && best.t.o && /^lar\.cozinhar:/.test(best.t.o.id || '')) { const a = aim(ctx, bed.t.X, bed.t.Z); if (a.ang <= I.FACE && a.ang < aim(ctx, best.t.X, best.t.Z).ang) best = bed; }
     // (an offer of the world with no place of its own, where the body stands — the meal on the floor of a house with no table,
     // seat nor hearth —: what the body faces in reach is meant before it. Its point was the body's own, its bearing the noise of
     // two positions a hair apart: by the mat of the house#35280 of the metrópole of the generation 11 the body facing its bed
@@ -571,7 +576,7 @@
   function buildingCard(b, me) {
     const S = G.S; const K = G.Possess.knows; const def = G.BDEF[b.type] || {}; const set = S.settlements.get(b.set); const fac = G.Fac.get(G.Village.facOfSet(b.set));
     if (!me || !me.id) me = null; const mine = K.house(me, b); const kt = !!set && !!K.town(me, set);
-    const res = def.housing ? [...S.villagers.values()].filter(o => o.home === b.id) : [];
+    const res = G.Village.bedsOf(b) > 0 ? [...S.villagers.values()].filter(o => o.home === b.id) : []; // (a house, or the seat: D-205)
     const card = { kind: 'building', id: b.id, name: G.Village.buildName(b), sub: kt ? [set.name, fac ? fac.name : null].filter(Boolean).join(' · ') : '', desc: G.BDESC ? G.BDESC[b.type] || '' : '', rows: [] };
     if (!b.built) { card.rows.push(['Obra', Math.round((b.progress || 0) * 100) + '%']); const miss = Object.keys(b.need || {}).filter(k => b.need[k] > 0).map(k => `${Math.ceil(b.need[k])} de ${G.Eco ? G.Eco.name(k) : k}`); if (miss.length) card.rows.push(['Faltam', miss.join(', ')]); }
     if (b.maxHp && b.hp < b.maxHp) card.rows.push(['Estrutura', Math.round(b.hp / b.maxHp * 100) + '%']);
@@ -581,6 +586,10 @@
       card.rows.push(['Moram aqui', names.length ? names.join(', ') + (n ? ` e mais ${n} que você não conhece` : '') : n === 1 ? 'uma pessoa que você não conhece' : `${n} pessoas que você não conhece`]);
       if (mine) { const inside = res.filter(o => o.inside === b.id); card.rows.push(['Em casa agora', inside.length ? inside.map(o => o.name).join(', ') : 'ninguém']); }
     }
+    // (the seat where who rules lives: said by name by who can name the ruler — the fame of one's own people, Possess.knows —,
+    // else as what it is: where the one who rules lives is the town's talk, D-208)
+    { const lord = G.Casa && G.Casa.lordOf ? G.Casa.lordOf(b) : null;
+      if (lord && lord.home === b.id) card.rows.push(['Casa de quem governa', K.person(me, lord) ? lord.name + (me && lord.id === me.id ? ' (você)' : '') : kt ? `quem governa ${set.name}` : 'quem governa aqui']); }
     if (b.coin !== undefined && res.length && K.house(me, b)) card.rows.push(['Moedas da família', Math.round(b.coin)]);
     if (isStore(b) && b.built && K.stock(me, b)) { const f = G.Fac.get(G.Village.facOfSet(b.set)); if (f) card.rows.push(['No estoque do povo', ['food', 'wood', 'stone'].map(k => `${Math.floor(f.stock[k] || 0)} de ${G.Eco ? G.Eco.name(k) : k}`).join(', ')]); }
     const work = [...S.villagers.values()].filter(o => o.task && o.task.id === b.id && o.task.type !== 'avatar').slice(0, 6);

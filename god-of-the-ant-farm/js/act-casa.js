@@ -69,7 +69,7 @@
   const need0 = function (v) {
     if (!v || v.age < 18 || v.captive || v.jail || v.aboard) return null;
     const S = G.S; if (!v.home) return v.rua ? 'rua' : null;
-    const h = S.buildings.get(v.home); if (!lived(h)) return null;
+    const h = S.buildings.get(v.home); if (!lived(h) || !housing(h)) return null; // (who lives in the seat needs no house: D-205)
     if (h.type === 'barraco') return 'barraco';
     const cap = G.BDEF[h.type].housing, res = h.res || 0;
     const p = P(v.partner);
@@ -209,8 +209,18 @@
     const price = free ? r2(K.price(set, free.type, [free.x, free.y]) * 0.8) : K.price(set, type);
     return { free, type, price, lease: let_, rent: let_ ? K.rentOf(set, let_.type) : 0 };
   };
-  // (the family's house, still being raised)
-  K.waiting = v => { for (const b of G.S.buildings.values()) if (b.encomenda && !b.built && b.encomenda.fam.includes(v.id)) return b; return null; };
+  // (the family's house, still being raised: a commission any of the family is written in — the one asked now may not be the
+  // one who ordered it. A partner who came to the house after the order is not written in it, and at the head of the town's
+  // queue ordered a second house with the first one of the family in it: «#17292 espera duas casas encomendadas», L-719)
+  K.waiting = v => {
+    let ids = null;
+    for (const b of G.S.buildings.values()) {
+      if (!b.encomenda || b.built) continue; if (b.encomenda.fam.includes(v.id)) return b;
+      if (!ids) ids = K.family(v).map(m => m.id);
+      if (ids.length > 1 && b.encomenda.fam.some(id => ids.includes(id))) return b;
+    }
+    return null;
+  };
   // why the people cannot raise a new house now (read only; '' when they can): their builders take two paid houses at a time,
   // and a people without coin raises one from its own store. One rule for the town's day and for the body's offer — the offer
   // lit while the builders were full let the body pay with its hands and be refused, again and again (L-451)
@@ -389,10 +399,11 @@
     }
     for (const m of fam) { m.home = b.id; m.hhType = b.type; m.rua = 0; m.ruaWhy = null; }
     b.res = (b.res || 0) + fam.length;
-    const said = { comprou: 'comprou uma casa e se mudou', alugou: 'alugou uma casa e se mudou', levantou: 'mudou para a casa que levantou' }[how];
+    const said = { comprou: 'comprou uma casa e se mudou', alugou: 'alugou uma casa e se mudou', levantou: 'mudou para a casa que levantou', paco: 'foi morar na casa de quem governa', voltou: 'voltou para a casa que tinha', saiu: 'deixou a casa de quem governa' }[how];
     (fam[0].moves || (fam[0].moves = [])).push([S.day, said]); if (fam[0].moves.length > 6) fam[0].moves.shift();
     A.note(fam[0], 'memory', `Arrumamos a casa nova${brought.length ? ': trouxemos ' + brought.slice(0, 4).join(', ') : ''}.`, NOTE);
   }
+  const S_ = () => G.S;
   // a site paid for that is lost before it stands (a fire, a war, the sea, a site nobody reaches, a town left): the people
   // give back what was not yet built of it, in the ledger
   function lost(b, how) {
@@ -422,12 +433,196 @@
     if (!fam.length) { b.dono = 0; b.custo = 0; return r; }
     if (!P(b.dono)) b.dono = fam[0].id;
     b.custo = o.paid || 0; // (the materials and the ground the family paid for: L-236)
+    // (a family that lives in the seat meanwhile — one of it rules — keeps the house it paid for, and stays where it is: D-206)
+    if (fam.some(v => isSeat(S_().buildings.get(v.home)))) return r;
     move(fam, b, 'levantou');
     const v = fam[0]; const nm = G.Village.buildName(b).toLowerCase();
     bio(v, `Mudou-se com a família para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm} que mandou levantar.`, `Nos mudamos para a nossa casa — levantada com o que juntamos`);
     for (const m of fam) A.note(m, 'memory', `Mudamos para a nossa casa nova.`, NOTE);
     return r;
   };
+
+  // ------------------------------ the house of who rules: the seat (D-205 to D-207) ------------------------------
+  // Who rules a people lives in its seat — the best palace standing in its capital, the chief's house where there is no more
+  // (G.Court.seatOf) — with the household: the partner and the children of the house with no partner of their own, and the
+  // little ones of those. The seat is no house of the town's: nobody owns it, buys it, rents it or is given it — only this door
+  // puts a household in it and takes one out, always whole, with what is its own by the ledger ('mudança': move, above). The
+  // house the family had stays its own — let to who needs one, as any house an owner leaves —, and the merchants' banner goes
+  // with the family (trade.js). Asked every other second of the world, and at once when a seat is finished, falls, is taken down
+  // or becomes a work again (the enlargement):
+  //   out — whoever lives in a seat that is not the seat of its people's ruler, or is none of the ruler's family (K.ofCourt): the
+  //   family of the one who ruled before, a town taken in war. To a house of its own with room for it, else to an empty house of
+  //   the people's, else to the house of the town with most room (the town's own rule; the owner's rent as the day has it,
+  //   D-159), else out of doors with its coins;
+  //   in — the ruler of the seat's town, not living in it yet, with the household;
+  //   called — the ruler who lives in another town of the people comes to the capital with the household (D-207): only who the
+  //   town can send (G.Vg.canSend), the family whole, by land (W.reachesTown), asked once a day.
+  // Never the god's body nor its household: the body's house is the player's (D-098, L-452). Nothing is kept: who should live
+  // where is read from the world each time — the same after a load
+  const isSeat = b => !!b && !housing(b) && G.Village.bedsOf(b) > 0;
+  K.isSeat = isSeat;
+  K.seatOf = f => (G.Court && G.Court.seatOf ? G.Court.seatOf(f) : null);
+  // (the ruler whose seat a building is — its people's, living in it or not — or null: a seat in works, fallen, of a town that
+  // is not its people's capital, or below a better one, is nobody's)
+  K.lordOf = function (b) {
+    if (!isSeat(b) || !lived(b)) return null; const f = G.Fac.get(G.Village.facOfSet(b.set)); if (!f || !f.alive) return null;
+    const r = G.Politics.ruler(f); return r && !r.captive && K.seatOf(f) === b ? r : null;
+  };
+  // the household that goes with the ruler: of those who live with them now, the partner, the children of either with no
+  // partner of their own — of any age: the grown one who married lives with the house they made —, and those children's little ones
+  K.court = function (r) {
+    const out = [r]; const h = r.home || 0; const at = o => !!o && !o.captive && (o.home || 0) === h && o.set === r.set && !out.includes(o);
+    const p = P(r.partner); if (at(p)) out.push(p);
+    const heads = out.slice();
+    for (const q of heads) for (const id of q.kids || []) { const k = P(id); if (at(k) && !k.partner) out.push(k); }
+    for (const q of out.slice(heads.length)) for (const id of q.kids || []) { const k = P(id); if (at(k) && k.age < 16) out.push(k); }
+    return out;
+  };
+  // who may live in the ruler's seat: the ruler's family and the partner's — parents, brothers and sisters, children —, who is
+  // married to one of them, and their children (the grandchildren, the nephews): the dead ones' children too
+  K.ofCourt = function (v, r) {
+    if (!v || !r) return false; const p = P(r.partner); const fam = o => !!o && (kin(r, o) || (!!p && kin(p, o)));
+    if (fam(v) || fam(P(v.partner)) || fam(P(v.mother)) || fam(P(v.father))) return true;
+    const kids = (r.kids || []).concat(p ? p.kids || [] : []);
+    return (!!v.mother && kids.includes(v.mother)) || (!!v.father && kids.includes(v.father));
+  };
+  const hasBody = L => L.some(m => A.isBody(m));
+  const eldest = L => L.slice().sort((a, c) => (c.age >= 16) - (a.age >= 16) || c.age - a.age || a.id - c.id)[0];
+  const headFirst = (L, h) => [h].concat(L.filter(m => m !== h));
+  const theName = b => { const nm = G.Village.buildName(b); return (G.gen(nm) === 'a' ? 'a ' : 'o ') + nm; };
+  // (where a household that leaves the seat goes, in its town: [house, how] or null)
+  function rehouse(fam, set, kin) {
+    const S = G.S; const occ = occupancy(); const ids = new Set(fam.map(m => m.id).concat(kin || [])); let own = null, free = null, best = null, bs = 0;
+    for (const b of S.buildings.values()) {
+      if (b.set !== set.id || !built(b) || b.type === 'barraco') continue;
+      const n = occ.get(b.id) || 0; const room = G.BDEF[b.type].housing - n; if (room < fam.length) continue;
+      if (ids.has(b.dono)) { if (!own || b.id < own.id) own = b; }
+      else if (!b.dono && !n) { if (!free || b.id < free.id) free = b; }
+      else if (!best || room > bs || (room === bs && b.id < best.id)) { best = b; bs = room; }
+    }
+    return own ? [own, 'voltou'] : free ? [free, 'saiu'] : best ? [best, 'saiu'] : null;
+  }
+  const WHY_OUT = { cheia: 'não há camas para todos', governo: 'outro governa agora', queda: 'veio abaixo', obra: 'entrou em obras', desfeita: 'já não existe', sede: 'já não é a sede do governo' };
+  // a household leaves the seat: whole, with its share of what the seat keeps
+  function leave(b, L, why, kin) {
+    const S = G.S; const set = S.settlements.get(b.set); if (!set || !L.length || hasBody(L)) return false;
+    const head = eldest(L); const to = rehouse(L, set, kin);
+    if (to) { move(headFirst(L, head), to[0], to[1]); K.lease(to[0]); }
+    else {
+      // (no house of the town has room for it: out of doors, the coins of its share in the head's purse — the town's housing
+      // and the family's own need take it from there)
+      const all = residents(b).length; const n = r2(D.get('h:' + b.id, 'moedas') * L.length / Math.max(1, all));
+      if (n > EPS) D.move('h:' + b.id, 'p:' + head.id, 'moedas', n, { code: 'mudança', by: head.id, part: true });
+      for (const m of L) m.home = 0; b.res = Math.max(0, (b.res || 0) - L.length);
+      (head.moves || (head.moves = [])).push([S.day, 'deixou a casa de quem governa']); if (head.moves.length > 6) head.moves.shift();
+    }
+    const where = !to ? 'ainda sem teto' : to[1] === 'voltou' ? 'de volta à casa que tinha' : 'numa casa da cidade';
+    bio(head, `Deixou ${theName(b)} de ${set.name}${L.length > 1 ? ' com a família' : ''} (${WHY_OUT[why] || WHY_OUT.sede}): ${where}.`, `Deixamos ${theName(b)}`);
+    for (const m of L) if (m.age >= 16) A.note(m, 'memory', `Deixamos ${theName(b)}: ${WHY_OUT[why] || WHY_OUT.sede}.`, NOTE);
+    // (the chronicle: a household that leaves the seat — not the grown one more who goes to the family's house for want of a bed)
+    const [x, y] = G.Village.center(b);
+    if (why !== 'cheia') G.Village.log(`${head.name}${L.length > 1 ? ' e a família deixaram' : ' deixou'} ${theName(b)} de ${set.name}: ${WHY_OUT[why] || WHY_OUT.sede}. ${L.length > 1 ? 'Estão' : 'Está'} ${where}.`, 'crown', x, y);
+    return true;
+  }
+  // The seat's beds (D-206). Who must live with who rules, whatever its beds: the ruler and the partner, their parents, who is
+  // under eighteen, who has little ones of their own there, who minds its little ones (K.tied). Of the household, they come —
+  // and, while the seat has beds, its grown single ones, the eldest first: the others stay in the house the family has (K.comes).
+  // And from a seat with more people than beds, they leave until it has them (crowd): first the households of the family that
+  // are not the ruler's own — a married child's, a brother's, with their little ones —, the youngest first; then the grown
+  // single ones, the youngest first (D-098) — to the family's own house where it has room, as anyone who leaves a seat
+  const tied = (v, r, L) => { const p = P(r.partner); return v.id === r.id || v.id === r.partner || v.age < 18 || v.id === r.mother || v.id === r.father || (!!p && (v.id === p.mother || v.id === p.father)) || K.minds(v) || L.some(k => k.age < 16 && (k.mother === v.id || k.father === v.id)); };
+  K.tied = tied;
+  K.comes = function (b, r) {
+    const fam = K.court(r); const room = G.Village.bedsOf(b) - residents(b).length; const must = fam.filter(v => tied(v, r, fam));
+    const rest = fam.filter(v => !must.includes(v)).sort((a, c) => c.age - a.age || a.id - c.id);
+    return must.concat(rest.slice(0, Math.max(0, room - must.length)));
+  };
+  function crowd(b, r) {
+    const beds = G.Village.bedsOf(b); let L = residents(b); if (L.length <= beds || hasBody(L)) return;
+    const p = P(r.partner); const kin = [r.id].concat(p ? [p.id] : []);
+    // (the ruler's own: the two, their parents — and who a parent is married to now)
+    const own = v => !!v && (v.id === r.id || v.id === r.partner || v.id === r.mother || v.id === r.father || (!!p && (v.id === p.mother || v.id === p.father))); const core = v => own(v) || own(P(v.partner));
+    const heads = L.filter(v => v.age >= 16 && !core(v) && !!v.partner && L.some(o => o.id === v.partner)).sort((a, c) => a.age - c.age || a.id - c.id);
+    for (const h of heads) { if (L.length <= beds) return; if (!L.includes(h)) continue; const g = K.court(h).filter(v => L.includes(v) && !core(v)); if (leave(b, g, 'cheia', kin)) L = L.filter(v => !g.includes(v)); }
+    for (const v of L.filter(o => o.age >= 18 && !o.partner).sort((a, c) => a.age - c.age || a.id - c.id)) { if (L.length <= beds) return; if (tied(v, r, L)) continue; if (leave(b, [v], 'cheia', kin)) L = L.filter(o => o !== v); }
+  }
+  // the ruler's household comes to live in the seat
+  function enter(b, r, f, fam) {
+    const S = G.S; const set = S.settlements.get(b.set); const from = r.home ? S.buildings.get(r.home) : null;
+    if (from && from.poupa && fam.some(m => m.id === from.poupa.by)) from.poupa = null; // (it saves for no house now)
+    move(headFirst(fam, r), b, 'paco');
+    if (from && built(from)) K.lease(from); // (who stayed in the house it leaves, as the day would have it: D-159)
+    const who = G.Politics.styled(f, r); const [x, y] = G.Village.center(b);
+    bio(r, `Foi morar n${theName(b)} de ${set.name}${fam.length > 1 ? ' com a família' : ''}.`, `Mudamos para ${theName(b)}: é a casa de quem governa`);
+    for (const m of fam) if (m.age >= 16) A.note(m, 'memory', `Mudamos para ${theName(b)}.`, NOTE);
+    G.Village.log(`${who} foi morar n${theName(b)} de ${set.name}${fam.length > 1 ? `, com a família (${fam.length})` : ''}.`, 'crown', x, y);
+  }
+  // (why the ruler's household does not come to the seat now — '' when it can: the body's house is the player's; from another
+  // town, only who the town can send, by land, once a day)
+  function held(b, r, f, fam) {
+    if (hasBody(fam)) return 'corpo';
+    if (r.set === b.set) return '';
+    const cap = G.S.settlements.get(b.set);
+    if (!fam.every(m => G.W.reachesTown(m, cap))) return 'sem caminho';
+    if (!fam.every(m => G.Vg.canSend(m))) return 'ocupado';
+    return G.mod('casa.corte.' + f.id) === G.S.day ? 'chamado' : '';
+  }
+  // (the ruler of another town of the people called to the capital: the household on its way there, its home the seat already)
+  function call(b, r, f, fam) {
+    const S = G.S; const cap = S.settlements.get(b.set); const old = S.settlements.get(r.set);
+    G.mod('casa.corte.' + f.id, S.day);
+    enter(b, r, f, fam);
+    for (const m of fam) { G.Vg.endTask(m); m.set = cap.id; m.sleeping = false; m.inside = 0; G.Vg.setTask(m, { type: 'migrate', pri: 1.6, kind: 'migrate' }); G.Life && G.Life.bio(m, 'moved', cap.name); }
+    if (old) G.Village.log(`${r.name} deixou ${old.name}${fam.length > 1 ? ' com a família' : ''}: quem governa ${f.name} mora em ${cap.name}.`, 'crown', old.cx, old.cy);
+  }
+  K.reign = function () {
+    const S = G.S; if (!G.Court || !G.Court.seatOf) return;
+    const seats = []; for (const b of S.buildings.values()) if (isSeat(b)) seats.push(b);
+    if (!seats.length) return;
+    const res = new Map();
+    for (const v of S.villagers.values()) { if (!v.home || v.captive) continue; const b = S.buildings.get(v.home); if (isSeat(b)) { const l = res.get(b.id); if (l) l.push(v); else res.set(b.id, [v]); } }
+    for (const b of seats) {
+      const L = res.get(b.id); if (!L) continue; const r = K.lordOf(b);
+      const out = r ? L.filter(v => !K.ofCourt(v, r)) : L; if (out.length) leave(b, out, r ? 'governo' : !lived(b) ? 'obra' : 'sede');
+    }
+    for (const f of G.Fac.all()) {
+      const b = K.seatOf(f); const r = G.Politics.ruler(f); if (!b || !lived(b) || !r || r.captive || r.home === b.id) continue;
+      if (held(b, r, f, K.court(r))) continue; const fam = K.comes(b, r);
+      if (r.set === b.set) enter(b, r, f, fam); else call(b, r, f, fam);
+    }
+    for (const b of seats) { const r = K.lordOf(b); if (r && r.home === b.id) crowd(b, r); }
+  };
+  // (a seat that falls, is taken down or becomes a work again: its household out first, with what is its own)
+  K.vacate = function (b, why) { if (!isSeat(b) || !lived(b)) return; const L = residents(b); if (L.length) leave(b, L, why); };
+  // where the people's ruler stands with the seat, for the panel and the proofs (reads only): { seat, ruler, home, why }.
+  // Asked from outside the world's step — a panel —, the household of another town is only said to live there: the map of
+  // reach is the step's to ask
+  K.seatState = function (f) {
+    const b = K.seatOf(f); const r = G.Politics.ruler(f); if (!b) return null;
+    if (!r || r.captive) return { seat: b, ruler: null, home: false, why: 'sem governante' };
+    if (r.home === b.id) return { seat: b, ruler: r, home: true, why: '' };
+    const fam = K.court(r);
+    return { seat: b, ruler: r, home: false, why: !lived(b) ? 'obra' : (G.inSim || r.set === b.set || hasBody(fam) ? held(b, r, f, fam) : 'outra cidade') || 'a caminho' };
+  };
+  const SAYS = { 'outra cidade': 'mora noutra cidade do povo', corpo: 'o deus vive nessa família, e a casa dela é dele para escolher', 'sem caminho': 'não há caminho por terra até aqui', ocupado: 'alguém da família não pode partir agora', chamado: 'a família foi chamada hoje', 'a caminho': 'está de mudança', 'sem governante': 'o povo está sem governante', obra: 'está em obras' };
+  K.seatSays = function (b, plink, esc) {
+    if (!isSeat(b)) return ''; const f = G.Fac.get(G.Village.facOfSet(b.set)); const st = f && K.seatOf(f) === b ? K.seatState(f) : null;
+    const ros = G.Lar && G.Lar.roster ? G.Lar.roster(b).filter(q => q.lives) : [];
+    if (ros.length) return `<div class="family"><div>Mora aqui a casa de quem governa (${ros.length}/${G.Village.bedsOf(b)}):</div>${ros.map(q => `<div>${plink(q.id)} <span class="muted">— ${esc(q.why)}</span></div>`).join('')}</div>`;
+    if (!st) return '<div class="doing">Ninguém mora aqui: não é a sede do governo.</div>';
+    const set = st.ruler ? G.S.settlements.get(st.ruler.set) : null;
+    return `<div class="doing">Ninguém mora aqui agora${st.ruler ? `: ${plink(st.ruler.id)}${set && set.id !== b.set ? `, que mora em ${esc(set.name)},` : ''} ainda não veio — ${esc(SAYS[st.why] || st.why)}` : `: ${esc(SAYS[st.why] || st.why)}`}.</div>`;
+  };
+  let tSeat = 0;
+  G.worldHooks.push(() => { tSeat = 0; });
+  A.hooks.tick.push(function (step) { tSeat += step || 1; if (tSeat + 1e-9 < 2) return; tSeat = 0; K.reign(); });
+  {
+    const V = G.Village;
+    const complete1 = V.completeBuilding; V.completeBuilding = function (b) { const r = complete1.apply(this, arguments); if (isSeat(b) && G.inSim) K.reign(); return r; };
+    const destroy1 = V.destroyBuilding; V.destroyBuilding = function (b) { if (b && b.built) K.vacate(b, 'queda'); return destroy1.apply(this, arguments); };
+    const remove1 = V.removeBuilding; V.removeBuilding = function (b) { if (b && b.built) K.vacate(b, 'desfeita'); return remove1.apply(this, arguments); };
+    const enlarge1 = V.enlarge; V.enlarge = function (b, step, pos) { if (b && b.built && step && step.n > b.w && pos) K.vacate(b, 'obra'); return enlarge1.apply(this, arguments); };
+  }
 
   // ------------------------------ the god's body: the same decision, taken by the player ------------------------------
   // (read only: what the decision would say now — for the offer the body sees)

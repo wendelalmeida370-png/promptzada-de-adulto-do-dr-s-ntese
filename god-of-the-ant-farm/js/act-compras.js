@@ -27,7 +27,7 @@
   // nothing drawn by chance (a rich house's fancies are added when the errand is chosen). As much as the house has room for:
   // with the interiors' furniture a house keeps what its pieces hold (D-053), and a full house feels no lack (D-059)
   C.list = function (h) {
-    const out = []; if (!h || !G.BDEF[h.type] || !G.BDEF[h.type].housing) return out;
+    const out = []; if (!h || !(G.Village.bedsOf(h) > 0)) return out;
     const res = h.res || 0; if (!res) return out;
     const I = h.inv || {}; const room = k => Math.floor(D.room('h:' + h.id, k) + EPS);
     // (a house that saves for a roof of its own — act-casa.js — buys no luxury meanwhile)

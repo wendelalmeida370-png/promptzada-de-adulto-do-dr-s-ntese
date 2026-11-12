@@ -3485,6 +3485,20 @@ float m3scale(float p) {
       F.cyl(0, h - 0.14, 0, 0.22, 0.12, IIRON, 'iron'); F.cyl(0, h - 0.03, 0, 0.17, 0.03, IEMBER); },
     mesa(F, it) { const { w, d, h } = it; F.legs(w, d, h - 0.05, 0.035, IDARK); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH'); F.cyl(w * 0.2, h, 0, 0.09, 0.05, ICLAY); F.cyl(-w * 0.25, h, d * 0.1, 0.05, 0.16, ICLAY); },
     'mesa-baixa'(F, it) { FURN.mesa(F, it); },
+    // (the table of a house between its two benches along its depth — one bench, the board to the wall's side, where the piece
+    // is narrow —: the plan seats who eats on the benches, w/2 − 0.16 out; a bowl, a jug and the bread on the board — D-196)
+    'mesa-casa'(F, it) { const { w, d, h } = it; const sy = it.seat || 0.45, two = w >= 1.05, tw = two ? w - 0.72 : w - 0.4, ta = two ? 0 : -0.2;
+      for (const ea of [-1, 1]) for (const en of [-1, 1]) F.box(ta + ea * (tw / 2 - 0.05), 0, en * (d / 2 - 0.12), 0.07, h - 0.05, 0.07, IDARK, 'beam');
+      F.box(ta, h - 0.05, 0, tw, 0.05, d - 0.06, IWOOD, 'plankH');
+      for (const e of two ? [-1, 1] : [1]) { const a = e * (w / 2 - 0.16); F.box(a, sy - 0.05, 0, 0.3, 0.05, d - 0.04, IWOOD, 'plankH'); for (const s of [-1, 1]) F.box(a, 0, s * (d / 2 - 0.16), 0.24, sy - 0.05, 0.05, IDARK, 'plankV'); }
+      F.cyl(ta + tw * 0.12, h, d * 0.22, 0.09, 0.05, ICLAY); F.cyl(ta - tw * 0.18, h, -d * 0.12, 0.05, 0.15, ICLAY, 'mud'); F.cyl(ta, h, -d * 0.3, 0.1, 0.04, IWOOD); },
+    'banco-comer'(F, it) { FURN.banco(F, it); F.cyl(-it.w * 0.05, it.h, 0, 0.08, 0.05, ICLAY); },
+    // (the mat a household eats round, on the ground: the reed mat, the pot in its middle, three bowls about it — D-196)
+    // (narrow, along a wall — two sit on it —: the pot and the bowls before them, at its front edge)
+    'esteira-comer'(F, it) { const { w, d } = it; F.box(0, 0, 0, w, 0.025, d, ISTRAW, 'wicker');
+      if (d <= 0.5) { F.cyl(0, 0.025, d / 2 - 0.09, 0.08, 0.07, ICLAY, 'mud'); for (const e of [-1, 1]) F.cyl(e * w * 0.27, 0.025, d / 2 - 0.08, 0.06, 0.035, dim(ICLAY, 0.85)); return; }
+      F.cyl(0, 0.025, 0, Math.min(w, d) * 0.2, 0.08, ICLAY, 'mud');
+      for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + 0.5; F.cyl(Math.cos(a) * w * 0.3, 0.025, Math.sin(a) * d * 0.3, 0.07, 0.04, dim(ICLAY, 0.85)); } },
     banco(F, it) { const { w, d, h } = it; for (const e of [-1, 1]) F.box(e * (w / 2 - 0.12), 0, 0, 0.05, h - 0.05, d - 0.04, IDARK, 'plankV'); F.box(0, h - 0.05, 0, w, 0.05, d, IWOOD, 'plankH'); },
     arca(F, it) { const { w, d, h } = it; F.box(0, 0, 0, w, h - 0.06, d, IWOOD, 'plankH'); F.box(0, h - 0.06, 0, w + 0.02, 0.06, d + 0.02, IDARK, 'plankH'); for (const e of [-1, 1]) F.box(e * w / 4, 0, 0, 0.04, h + 0.005, d + 0.025, IIRON, 'iron'); },
     // (a keeping piece shows how full it is when the world says — cx.fill, Interiors.state: its share of the store it holds —, the

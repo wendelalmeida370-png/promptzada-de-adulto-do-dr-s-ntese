@@ -349,7 +349,9 @@ const fair = stockFair(set);
   for (let a = 0; a < 3; a++) {
   S.time = 0.15; stockFair(set);
   const h = houseLacking(set, 1, 30); const H17 = 'h:' + h.id;
-  const v = adults(h).sort((a, b) => b.energy - a.energy || a.id - b.id)[0];
+  // (the one sent is one who can carry a purchase home: the stall turns back at its door who has no arm to lift it — L-710 —,
+  // and in the Argos of the world with the new house plans the most rested of the house was Xântipe, without both arms: T-814, as the T-528)
+  const v = adults(h).filter(o => D.strength(o) > 0).sort((a, b) => b.energy - a.energy || a.id - b.id)[0] || adults(h)[0];
   // (the others of the house asleep — a night of watch —: the one sent is the only one the water could take)
   for (const o of members(h)) if (o !== v) { o.energy = Math.min(o.energy, 5); o.hunger = Math.min(o.hunger, 20); G.Vg.setTask(o, { type: 'sleep', pri: 1.5, kind: 'sleep' }); }
   v.energy = Math.max(v.energy, 70); v.hunger = Math.min(v.hunger, 30);
@@ -404,6 +406,10 @@ const fair = stockFair(set);
   for (let o = errandOf(h); o; o = errandOf(h)) G.Vg.endTask(o);
   h.shopOut = 0; h.shopT = undefined;
   const lost0 = one.lost; one.lost = { armL: true, armR: true };
+  // (the others of the house with free hands as the wish is measured: hands full of something else have no wish to go — in
+  // the Argos of the world with the new house plans Ájax slept with five of food in his hands, his wish read 0,00, and he
+  // went to buy when he woke and put them down. T-814)
+  for (const o of grown16(h)) if (o !== one && o.carry && o.carry.n > 0) D.use('v:' + o.id, o.carry.k, o.carry.n, { code: 'teste', mine: true });
   const u0 = C.urge(one), uOthers = grown16(h).filter(o => o !== one).map(o => C.urge(o));
   let hers = 0; const task18 = C.task; C.task = function (o) { if (o && o.id === one.id) hers++; return task18.apply(this, arguments); };
   const try0 = h.shopT; const hd18 = hand(h, () => false); let errand = null, hadIt = false;

@@ -107,11 +107,20 @@ run('r3', () => {
   salva(); const dep = S.buildings.get(id);
   ok('r3c o save no meio da obra', foto(dep) === f0 && !!dep.encomenda && dep.encomenda.why === 'rica', `${dep ? Math.round(dep.progress * 100) + '% depois de 60 s; a mesma obra e a mesma encomenda depois do save' : 'SUMIU'}`);
   const n0 = S.ledgerN || 0; const set2 = S.settlements.get(set.id);
-  for (let y = 0; y < 3 && !(S.buildings.get(id) || {}).built; y++) { D.make('f:' + set2.fac, 'wood', 40, { code: 'teste' }); D.make('f:' + set2.fac, 'stone', 40, { code: 'teste' }); M.saltar(1); }
-  const b = S.buildings.get(id); const vv = S.villagers.get(v.id); const vivos = fam.map(i => S.villagers.get(i)).filter(m => m && !m.captive && m.set === set.id);
+  // (a mudança é julgada na hora em que a casa fica pronta: o salto vai de ano em ano, e no resto do ano a guerra pode levar
+  //  os pais — a casa fica então de ninguém, que órfão de menos de 16 não herda: T-811)
+  const daFam = () => fam.map(i => S.villagers.get(i)).filter(m => m && !m.captive && m.set === set.id);
+  let pronta = null; const c0 = G.Village.completeBuilding;
+  G.Village.completeBuilding = function (x) { const q = c0.apply(this, arguments); if (x && x.id === id && !pronta) { const L = daFam(); pronta = { n: L.length, moram: L.filter(m => m.home === id).length, enc: !!x.encomenda, dono: x.dono, daCasa: L.some(m => m.id === x.dono), custo: x.custo || 0 }; } return q; };
+  try { for (let y = 0; y < 3 && !(S.buildings.get(id) || {}).built; y++) { D.make('f:' + set2.fac, 'wood', 40, { code: 'teste' }); D.make('f:' + set2.fac, 'stone', 40, { code: 'teste' }); M.saltar(1); } } finally { G.Village.completeBuilding = c0; }
+  const b = S.buildings.get(id); const vv = S.villagers.get(v.id); const vivos = daFam();
   if (!ok('r3d a casa de pé, pelos construtores', !!b && b.built, b ? `${lado(b)}: ${b.built ? 'pronta' : Math.round(b.progress * 100) + '% em 3 anos'}` : 'a obra SUMIU')) return;
-  ok('r3e a mudança', vivos.length > 0 && vivos.every(m => m.home === id) && !b.encomenda && (!vv || b.dono === vv.id || vivos.some(m => m.id === b.dono)) && Math.abs((b.custo || 0) - price) < 0.01,
-    `${vivos.length} da família de ${fam.length} moram na casa rica; o dono #${b.dono}; o que a casa custou à família: ${b.custo}`);
+  ok('r3e a mudança', !!pronta && pronta.n > 0 && pronta.moram === pronta.n && !pronta.enc && pronta.daCasa && Math.abs(pronta.custo - price) < 0.01,
+    pronta ? `na hora em que a casa ficou pronta: ${pronta.moram} dos ${pronta.n} vivos da família de ${fam.length} moram nela; o dono #${pronta.dono}${pronta.daCasa ? ', da família' : ', DE FORA'}; o que a casa custou à família: ${pronta.custo}` : 'a casa ficou pronta SEM passar pela porta da cidade');
+  // (no fim do salto: quem está vivo mora nela; o dono é da família — ou ninguém, sem herdeiro crescido — e o custo vai com o dono)
+  const herd = vivos.some(m => m.id === b.dono);
+  ok('r3e2 a casa no fim do salto', vivos.every(m => m.home === id) && !b.encomenda && (herd ? Math.abs((b.custo || 0) - price) < 0.01 : !b.dono && !(b.custo || 0) && !vivos.some(m => m.age >= 16)),
+    `${vivos.length} da família de ${fam.length} vivos, todos nela; ${herd ? `o dono #${b.dono}, da família; custou ${b.custo}` : `de ninguém (o dono #${b.dono}, o custo ${b.custo || 0}): ${vv ? 'O DONO VIVO' : 'o dono morreu'} e ${vivos.some(m => m.age >= 16) ? 'HÁ herdeiro crescido' : 'nenhum dos vivos tem 16 anos'}`}`);
   const pago = D.ledger().filter(e => e[0] > n0 && e[3] === 'h:' + id && e[4] === 'f:' + set.fac && e[5] === 'moedas' && e[8] === 'obra-casa').reduce((s, e) => s + e[6], 0);
   ok('r3f o povo pago quando a casa fica de pé', Math.abs(pago - price) < 0.01, `${pago} moedas da obra para o tesouro do povo («obra-casa»), das ${price} postas de lado`);
   const velha = S.buildings.get(h0.id);
@@ -208,6 +217,53 @@ run('r8', () => {
   ok('r8d nem a obra grande nem o quarteirão a derrubam', !!d && V.razes(d, false) === 0 && V.razes(d, true) === 0 && (!simplesB || (V.razes(simplesB, false) > 0 && V.razes(simplesB, true) > 0)),
     `derrubar a casa rica custa ${V.razes(d, false)} a uma obra grande e ${V.razes(d, true)} a um quarteirão (0: nunca)${simplesB ? `; uma casa simples, ${V.razes(simplesB, false)} e ${V.razes(simplesB, true)}` : ''}`);
   sim(() => { set.tier = tier0; }); const c = checa(); ok('r8e verificador', c.ok, c.txt);
+});
+
+// ------------------------------ r9: uma casa por família — o par que chegou depois não encomenda a segunda (L-719) ------------------------------
+// The one who ordered the family's house is written in the commission; the partner who comes to the house after it was ordered
+// is not. Asked by the town's day — the other of the couple at the head of the queue —, the partner ordered a second house,
+// with the first one of the family in it: «#20136 espera duas casas encomendadas» (the checker's rule of the D-177, seen in
+// one of the ten-year lives of the agent F). The family waits for a house when any of it is in a commission.
+run('r9', () => {
+  abre(); const E = G.Eco, A = G.Act;
+  const kinOf = (a, b) => (!!a.mother && a.mother === b.mother) || (!!a.father && a.father === b.father) || a.mother === b.id || a.father === b.id || b.mother === a.id || b.father === a.id;
+  const livre = v => v.age >= 18 && v.age < 50 && !v.partner && !v.captive && !v.jail && !v.aboard && !v.held && !!v.home && !(S.avatar && S.avatar.id === v.id);
+  const deQuem = id => [...S.buildings.values()].filter(b => b.encomenda && !b.built && b.encomenda.fam.includes(id));
+  const duas = () => QA.check().filter(q => /espera duas casas/.test(q.msg)).map(q => q.msg.slice(0, 120));
+  // (the proof's hand: the partner comes to live in the house of the one who ordered — a marriage, as the world makes them)
+  const casa = (a, q) => sim(() => { const hq = S.buildings.get(q.home), ha = S.buildings.get(a.home); a.partner = q.id; q.partner = a.id; if (hq) hq.res = Math.max(0, (hq.res || 0) - 1); q.home = ha.id; q.hhType = ha.type; if (q.inside === (hq && hq.id)) q.inside = 0; ha.res = (ha.res || 0) + 1; });
+  const par = (set, a) => [...S.villagers.values()].filter(q => q.set === set.id && q !== a && livre(q) && q.home !== a.home && q.g !== a.g && !kinOf(a, q) && (S.buildings.get(q.home) || {}).dono !== q.id).sort((x, y) => x.id - y.id)[0] || null;
+  // (a) the house a family in need pays for: one alone in a full house that is not theirs, with coins for a new one, in a town
+  // of coin with no empty house of the people's to buy — the work raised
+  let ca = null;
+  for (const set of [...S.settlements.values()].filter(st => G.Fac.get(st.fac) && E.coinage(st.fac)).sort((x, y) => V.pop(y.id) - V.pop(x.id) || x.id - y.id)) {
+    for (const [v, why] of K.queue(set)) {
+      if (!livre(v) || K.family(v).length !== 1 || K.waiting(v) || K.gaveUp(v)) continue; const q = par(set, v); if (!q) continue;
+      const plan = K.plan(v, null, set, null, why); if (plan.free || K.cannotRaise(set, plan.type)) continue;
+      ca = { set, v, q, why, plan }; break;
+    }
+    if (ca) break;
+  }
+  if (ok('r9a a premissa: um só, precisando de casa, numa cidade de moeda sem casa vazia do povo', !!ca, ca ? `${ca.set.name}: ${ca.v.name} #${ca.v.id} (${ca.why}; a casa nova: ${ca.plan.type}, ${ca.plan.price} moedas) e ${ca.q.name} #${ca.q.id}, de outra casa` : 'sem premissa')) {
+    const { set, v, q, plan } = ca; const pote = () => { const h = S.buildings.get(v.home); const t = moedas(h.id); const alvo = plan.price * 3 + 20; if (t < alvo) D.make('h:' + h.id, 'moedas', Math.ceil(alvo - t), { code: 'teste' }); };
+    D.make('f:' + set.fac, 'wood', 80, { code: 'teste' }); D.make('f:' + set.fac, 'stone', 80, { code: 'teste' });
+    pote(); const r1 = sim(() => K.order(v, { now: true }));
+    if (ok('r9b a primeira encomenda', !!r1.ok && !!r1.b && !!r1.b.encomenda && !r1.b.built, r1.ok && r1.b ? `${lado(r1.b)}: a família escrita ${JSON.stringify(r1.b.encomenda.fam)}` : r1.why || 'a família comprou ou alugou: não é o caso')) {
+      casa(v, q); pote();
+      const need = K.need(q); const w = K.waiting(q); const r2 = sim(() => K.order(q, { now: true }));
+      // (and the door of the rich house, asked by either of the two with the pot full: no second work by it either)
+      const rica = !!K.richStep(set); enriquece(q, set, 60); const r3 = sim(() => K.orderRich(q)), r4 = sim(() => K.orderRich(v));
+      const n1 = deQuem(v.id).length + deQuem(q.id).filter(b => !deQuem(v.id).includes(b)).length; const d2 = duas(); const espera = r => !r.ok; // (refused: for the house under way, or before it — the house they live in, the town)
+      ok('r9c o par que chegou depois não encomenda a segunda, nem a casa rica', !r2.ok && /sendo levantada/.test(r2.why || '') && espera(r3) && espera(r4) && w === r1.b && n1 === 1 && !d2.length,
+        `${q.name}, que veio morar com ${v.name} depois da encomenda (precisa de casa: ${need || 'não'}): a casa da família que ${q.name} espera é ${w ? lado(w) : 'NENHUMA'}; pedindo outra: ${r2.ok ? 'ENCOMENDOU ' + lado(r2.b) : '«' + r2.why + '»'}; pedindo a casa rica${rica ? '' : ' (a cidade não ergue uma)'}: ${r3.ok ? 'ENCOMENDOU ' + lado(r3.b) : '«' + r3.why + '»'}, e ${v.name}: ${r4.ok ? 'ENCOMENDOU ' + lado(r4.b) : '«' + r4.why + '»'}; obras da família: ${n1}${d2.length ? '; o verificador: ' + d2[0] : ''}`);
+      // (and the town's day, twice, with the couple at the head of the queue or not: still one)
+      pote(); sim(() => K.day(set)); pote(); sim(() => K.day(set)); const n2 = deQuem(v.id).length + deQuem(q.id).filter(b => !deQuem(v.id).includes(b)).length; const d3 = duas();
+      const goal = (A.diary(q).goals || []).find(g => g.src === 'casa-nova');
+      ok('r9d o dia da cidade, duas vezes: a mesma obra só; o diário do par diz a casa que se levanta', n2 === 1 && !d3.length && !!goal && /levantada/.test(goal.txt),
+        `obras da família depois de dois dias da cidade: ${n2}; no diário de ${q.name}: «${goal ? goal.txt : 'NADA'}»${d3.length ? '; o verificador: ' + d3[0] : ''}`);
+    }
+  }
+  const c = checa(); ok('r9h verificador', c.ok, c.txt);
 });
 
 console.log(fails.length ? `CASA-RICA: FALHOU (${fails.join(', ')})` : `CASA-RICA: ok (${ms()} ms)`);

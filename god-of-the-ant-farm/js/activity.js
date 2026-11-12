@@ -36,7 +36,8 @@
   // 'g:55' a thing on the ground
   D.ref = (kind, id) => kind + ':' + id;
   D.parse = ref => { const i = typeof ref === 'string' ? ref.indexOf(':') : -1; return i > 0 ? [ref.slice(0, i), +ref.slice(i + 1)] : [null, 0]; };
-  const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing);
+  // (a building a household lives in — a house, or the seat where who rules lives: G.Village.bedsOf, D-205 —: its holder is 'h:')
+  const housing = b => !!b && G.Village.bedsOf(b) > 0;
   const loose = () => G.S.loose || (G.S.loose = []);
   // the furniture that keeps things inside a building: a port the interiors fill (G.Depot.stores = b => [{ id, kind, keys:
   // [goods] | '*', cap, slot, dep: 'casa'|'povo'|'predio', sale? }]); with nothing there, the room of today (no limit)

@@ -12,7 +12,9 @@
 //    w across its front, d deep, h high (m); low: one lies or
 //    sits on it (not walked over); tall: not under a window;
 //    wall: stands with its back to a wall; places: sleepers;
-//    job: a work station of the building's trade.
+//    job: a work station of the building's trade; chao: one at a
+//    place by it sits on the ground (the fire on the ground, the
+//    mat one eats round); min: its least places of a use.
 // ============================================================
 (function (G) {
   const In = G.Interiors;
@@ -51,13 +53,37 @@
     forno: { name: 'Forno de pão', w: 0.9, d: 0.9, h: 1.1, solid: 1, fire: 1, wall: 1, tall: 1, spots: front('assar') },
     // (the small clay stove of a poor house: a pot over the coals)
     fogareiro: { name: 'Fogareiro de barro', w: 0.6, d: 0.6, h: 0.5, solid: 1, fire: 1, wall: 1, leva: 1, spots: front('cozinhar', 0.4) },
-    braseiro: { name: 'Braseiro', w: 0.5, d: 0.5, h: 0.6, solid: 1, fire: 1, wall: 1, leva: 1, spots: front('aquecer', 0.4) },
+    // (chao: who warms himself by it sits on the ground before it — as round the fire on the ground: D-196)
+    braseiro: { name: 'Braseiro', w: 0.5, d: 0.5, h: 0.6, solid: 1, fire: 1, wall: 1, leva: 1, chao: 1, spots: front('aquecer', 0.4) },
     // (the round hut's fire, on the ground in its middle: a ring of stones, the embers in it, the smoke out by the cone's top —
     // D-082 (6), T-161; one cooks before it, the others warm themselves about it)
-    'fogo-chao': { name: 'Fogo de chão', w: 0.5, d: 0.5, h: 0.15, solid: 1, fire: 1, free: 1, spots: it => [{ use: 'cozinhar', a: 0, n: it.d / 2 + 0.4 }, { use: 'aquecer', a: 0, n: -(it.d / 2 + 0.4) }, { use: 'aquecer', a: it.w / 2 + 0.4, n: 0 }, { use: 'aquecer', a: -(it.w / 2 + 0.4), n: 0 }] },
+    'fogo-chao': { name: 'Fogo de chão', w: 0.5, d: 0.5, h: 0.15, solid: 1, fire: 1, free: 1, chao: 1, spots: it => [{ use: 'cozinhar', a: 0, n: it.d / 2 + 0.4 }, { use: 'aquecer', a: 0, n: -(it.d / 2 + 0.4) }, { use: 'aquecer', a: it.w / 2 + 0.4, n: 0 }, { use: 'aquecer', a: -(it.w / 2 + 0.4), n: 0 }] },
     mesa: { name: 'Mesa', w: 1.1, d: 0.7, h: 0.75, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     'mesa-baixa': { name: 'Mesa baixa', w: 0.9, d: 0.6, h: 0.35, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     banco: { name: 'Banco', w: 1.1, d: 0.35, h: 0.45, low: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }] },
+    // (where a household eats together — D-196. The table of a house and its benches, one piece: the board between two benches
+    // along its depth — one bench, the board against the wall, where it is narrow: under 1.05 m across —; who eats sits on a
+    // bench, one every half metre, facing the board, and gets onto it from its ends or over it from its outer side)
+    'mesa-casa': { name: 'Mesa com bancos', w: 1.25, d: 1.1, h: 0.75, seat: 0.45, solid: 1, free: 1, min: { comer: 2 }, spots: it => {
+      const k = Math.max(1, Math.floor(it.d / 0.5 + 1e-6)); const ab = it.w / 2 - 0.16; const out = [];
+      for (const e of it.w >= 1.05 ? [-1, 1] : [1]) {
+        for (let q = 0; q < k; q++) out.push({ use: 'comer', a: e * ab, n: -it.d / 2 + it.d * (q + 0.5) / k, on: 1, along: 'a', back: e > 0 ? 1 : 0 });
+        for (const s of [-1, 1]) out.push({ use: 'acesso', a: e * ab, n: s * (it.d / 2 + 0.35) });
+        out.push({ use: 'acesso', a: e * (it.w / 2 + 0.35), n: 0 });
+      }
+      return out;
+    } },
+    // (and the least of them, in a house too small for a table: the bench two eat on side by side, the bowl in the lap)
+    'banco-comer': { name: 'Banco de comer', w: 1.1, d: 0.36, h: 0.45, low: 1, wall: 1, min: { comer: 2 }, spots: it => { const k = Math.max(1, Math.floor(it.w / 0.5 + 1e-6)); const out = [];
+      for (let q = 0; q < k; q++) { const a = -it.w / 2 + it.w * (q + 0.5) / k; out.push({ use: 'comer', a, n: 0, on: 1 }, { use: 'acesso', a, n: it.d / 2 + 0.35 }); } return out; } },
+    // (the mat a household eats at, sitting on the ground — the Egyptian's and the Aztec's way —: the bowls and the bread on
+    // it, one at each of its sides, facing it, two of them at the least; narrow — under half a metre deep, along a wall —, the
+    // least of them: two sit on it side by side, their backs to the wall)
+    'esteira-comer': { name: 'Esteira de comer', w: 0.8, d: 0.8, h: 0.05, low: 1, free: 1, leva: 1, chao: 1, min: { comer: 2 }, spots: it => {
+      if (it.d > 0.5) return [{ use: 'comer', a: 0, n: it.d / 2 + 0.32 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.32) }, { use: 'comer', a: it.w / 2 + 0.32, n: 0 }, { use: 'comer', a: -(it.w / 2 + 0.32), n: 0 }];
+      const k = Math.max(1, Math.floor(it.w / 0.5 + 1e-6)); const out = [];
+      for (let q = 0; q < k; q++) { const a = -it.w / 2 + it.w * (q + 0.5) / k; out.push({ use: 'comer', a, n: -it.d / 2 + 0.16, on: 1 }, { use: 'acesso', a, n: it.d / 2 + 0.35 }); } return out;
+    } },
     // (the trestle table of a tavern's yard and its two benches, one piece (B2d): those who eat sit along both benches, one
     // every 0.6 m, facing the table — the front bench's turned back to it —, and get onto them from their ends)
     'mesa-terreiro': { name: 'Mesa com bancos', w: 2.2, d: 1.7, h: 0.75, seat: 0.45, solid: 1, free: 1, spots: it => {
