@@ -57,6 +57,9 @@
     // (what the person lived in the god's hands: whom they met face to face, the quarters their feet were in — only possess.js
     // writes it, G.Possess.knows reads it: D-170)
     'ken',
+    // (the trade that stays — D-210: the day the person took the trade they have, and the trade an emergency pulled them from,
+    // to go back to — only the dealing of the trades writes them, village.js)
+    'roleDay', 'roleBack',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {

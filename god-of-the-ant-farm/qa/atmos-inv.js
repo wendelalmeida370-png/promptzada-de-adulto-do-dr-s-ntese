@@ -20,7 +20,7 @@
     const ins = new Map(), homes = new Map();
     for (const v of s.villagers.values()) {
       if (v.inside > 0) { let e = ins.get(v.inside); if (!e) ins.set(v.inside, e = { n: 0, awake: 0, cook: 0, hearth: 0 }); e.n++; if (!v.sleeping) { e.awake++; const t = v.task; if (t && t.type === 'lar' && t.st >= 2 && t.home === v.inside) { if (t.what === 'cozinhar') e.cook++; else if (t.what !== 'acamado') e.hearth++; } } }
-      if (v.home > 0) { let h = homes.get(v.home); if (!h) homes.set(v.home, h = { res: 0, cut: 0 }); h.res++; if (v.role === 'lenhador' && v.age >= 14 && !v.captive) h.cut++; }
+      if (v.home > 0) { let h = homes.get(v.home); if (!h) homes.set(v.home, h = { res: 0, cut: 0 }); h.res++; if ((v.roleBack || v.role) === 'lenhador' && v.age >= 14 && !v.captive) h.cut++; }
     }
     // the fires of the trades and of the services, by building — from the operations themselves
     const fire = new Map();

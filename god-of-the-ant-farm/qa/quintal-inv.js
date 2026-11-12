@@ -24,7 +24,7 @@
   QA.yard = function (list) {
     const P3 = G.Props3D, B3 = G.Build3D, Sp = G.Space, s = G.S, A = G.Act; const out = []; if (!P3 || !P3.made || !P3.made() || !A) return out;
     const L = Sp.TILE; const homes = new Map();
-    for (const v of s.villagers.values()) if (v.home > 0) { let h = homes.get(v.home); if (!h) homes.set(v.home, h = { res: 0, roles: new Set() }); h.res++; if (v.role && v.age >= 14 && !v.captive) h.roles.add(v.role); }
+    for (const v of s.villagers.values()) if (v.home > 0) { let h = homes.get(v.home); if (!h) homes.set(v.home, h = { res: 0, roles: new Set() }); h.res++; if ((v.roleBack || v.role) && v.age >= 14 && !v.captive) h.roles.add(v.roleBack || v.role); }
     const cru = new Map(); for (const op of A.all()) if (op.def === 'oficio' && A.live(op) && op.data && op.data.cru > 0) cru.set(op.at, (cru.get(op.at) || 0) + op.data.cru);
     const q0 = G.Realm && G.Realm.Q ? G.Realm.Q() : null; const whole = !q0 || q0.props === undefined || q0.props >= 1; // (the preset draws all of the decoration)
     for (const b of list) {

@@ -23,7 +23,9 @@ const S = () => G.S;
 const adults = s => [...S().villagers.values()].filter(v => v.set === s.id && !v.captive && v.age >= 16 && v.age < 62);
 const hunters = s => adults(s).filter(v => v.role === 'cacador').length;
 const roles = () => { let t = ''; for (const v of S().villagers.values()) t += v.id + ':' + (v.role || '') + ';'; return t; };
-const settle = () => god(() => { for (let k = 0, prev = null; k < 30; k++) { G.Village.forceUpdate(); const r = roles(); if (r === prev) break; prev = r; } });
+// (the trades settled: the town's memory of what each trade asks comes to what the instant asks at its own pace — D-210 —, four
+// seconds of it each dealing: dealt until nobody has changed for a day of dealings, three days of them at most)
+const settle = () => god(() => { for (let k = 0, prev = null, same = 0; k < 150; k++) { G.Village.forceUpdate(); const r = roles(); same = r === prev ? same + 1 : 0; if (same >= 50) break; prev = r; } });
 const r2 = n => Math.round(n * 100) / 100;
 // (the wolves a hair inside the town's twenty tiles, at the four quarters of its centre: 19.996 tiles, which the save's
 // hundredth makes 20.00 — out of the count, `dist < 20`)
@@ -80,8 +82,10 @@ const d0 = Math.max(...wolves.map(w => G.dist(w.x, w.y, town.cx, town.cy)));
     `${t.name}${where !== world ? ` (na metrópole: «${world}» não tem a cidade do caso)` : ''}: ${wolves.length > 1 ? `os lobos ${wolves.map(w => '#' + w.id).join(', ')} a até` : `o lobo #${wolves[0].id} a`} ${d0.toFixed(3)} casas do centro (no save, a ${wolves.length > 1 ? 'no mínimo ' : ''}${d1.toFixed(3)}: fora da conta); ${h1} caçadores com ${wolves.length > 1 ? 'eles' : 'ele'} (${base} sem); o save: ${trip.diff.length ? trip.diff.slice(0, 2).join(' | ') : 'igual'}`);
 }
 // o2: who deals the trades out anew is the world's step — the wolves dead after the load, the town wants back what it wanted
-{ const t = S().settlements.get(town.id); const h1 = hunters(t); god(() => { for (const w of wolves) S().animals.delete(w.id); }); live(6);
-  ok('o2 o passo do mundo redistribui os ofícios depois do load', hunters(t) === base, `${t.name}: ${h1} caçadores no load, ${hunters(t)} seis segundos depois, sem ${wolves.length > 1 ? 'os lobos' : 'o lobo'} (sem ${wolves.length > 1 ? 'eles' : 'ele'} a cidade quer ${base})`);
+{ const t = S().settlements.get(town.id); const h1 = hunters(t); god(() => { for (const w of wolves) S().animals.delete(w.id); });
+  // (at the memory's pace: the need that lasts, D-210 — two days of the world at most)
+  let sec = 0; while (sec < 400 && hunters(t) !== base) { live(10); sec += 10; }
+  ok('o2 o passo do mundo redistribui os ofícios depois do load', hunters(t) === base, `${t.name}: ${h1} caçadores no load, ${hunters(t)} ${sec} segundos depois, sem ${wolves.length > 1 ? 'os lobos' : 'o lobo'} (sem ${wolves.length > 1 ? 'eles' : 'ele'} a cidade quer ${base}; a memória da cidade solta devagar)`);
 }
 // o3: a trade the game no longer has, in the save: mended at the load — and nobody else changes
 { settle(); const str = G.Save.serialize(); const o = JSON.parse(str); const t = S().settlements.get(town.id);

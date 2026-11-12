@@ -589,5 +589,22 @@ for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const
     const a = L.findIndex(l => st.test(l)); if (a < 0) { fails.push(`a estrada só lê: act-casa.js sem ${st} — a regra 78 não acha a porta`); continue; }
     let z = a + 1; while (z < L.length && !/^  \};?$/.test(L[z])) z++;
     for (let k = a; k < z; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); if (bad.test(c)) fails.push(`a estrada só lê: act-casa.js:${k + 1} escreve no mundo dentro de uma porta de leitura (D-223): ${L[k].trim().slice(0, 110)}`); } } }
+// 73. "o dia do ofício, o ofício a que se volta e a memória da cidade são do repartidor" (D-210 a D-212): v.roleDay (o dia em que a
+// pessoa tomou o ofício), v.roleBack (o ofício de que uma emergência a tirou) e set.ofm (a memória do que cada ofício vem
+// pedindo) só o js/village.js escreve — o repartidor (assignJobs, took); o villagers.js só tem os nomes na lista SHAPE
+for (const f of files) if (f !== 'village.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.(roleDay|roleBack)\s*=[^=]|\.ofm\s*=[^=]|\.ofm\s*\[[^\]]+\]\s*=[^=]/.test(c)) fails.push(`o ofício que fica: ${f}:${k + 1} escreve o dia do ofício, o ofício a que se volta ou a memória da cidade — só o repartidor (village.js) escreve (D-210 a D-212): ${l.trim().slice(0, 110)}`); });
+// 74. "o repartidor não sorteia, e o ofício de um adulto só muda por ele ou por uma porta dita" (D-212): (a) no js/village.js, do
+// `function took(` até a linha «housing», nenhum sorteio — quem troca é a mão mais nova do ofício (pickHand), e o nome
+// pickRoleForList não existe mais; (b) fora do village.js, dar um ofício a uma pessoa (v.role = '…') só nas duas portas ditas:
+// o mercado clandestino (economy.js: 'contrabandista') e a mão do deus (miracles.js: 'guerreiro'); 'cativo' é da guerra, e
+// G.BDEF.<tipo>.role é o ofício de um prédio, não de uma pessoa
+{ const L = src['village.js'] || []; const a = L.findIndex(l => /^\s*function took\(/.test(l)); const z = L.findIndex((l, k) => k > a && /^\s*\/\/ -{10,} housing/.test(l));
+  if (a < 0 || z < 0) fails.push('o ofício que fica: village.js sem o `function took(` ou sem a linha «housing» — a regra 74 não acha o repartidor');
+  else for (let k = a; k < z; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); if (/G\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance)\(/.test(c)) fails.push(`o ofício que fica: village.js:${k + 1} sorteia dentro do repartidor de ofícios (D-212): ${L[k].trim().slice(0, 110)}`); }
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/pickRoleForList/.test(c)) fails.push(`o ofício que fica: ${f}:${k + 1} chama pickRoleForList, que não existe mais (D-212): ${l.trim().slice(0, 110)}`);
+    if (f === 'village.js') return; const m = c.match(/\.role\s*=\s*'([a-z_]+)'/); if (!m || m[1] === 'cativo' || /BDEF\.[A-Za-z_]+\.role\s*=/.test(c)) return;
+    if (!((f === 'economy.js' && m[1] === 'contrabandista') || (f === 'miracles.js' && m[1] === 'guerreiro'))) fails.push(`o ofício que fica: ${f}:${k + 1} dá um ofício a uma pessoa — só o repartidor (village.js), o mercado clandestino e a mão do deus (D-212): ${l.trim().slice(0, 110)}`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

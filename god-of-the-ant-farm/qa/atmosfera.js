@@ -185,7 +185,7 @@ if (run('a4')) {
     B3.shellOf = mode === 'kit' ? (b => (housing(b) ? null : shellOf(b))) : shellOf; flush();
     const cnt = {}; let houses = 0, emptyH = 0, emptyThings = 0, total = 0;
     for (const b of built()) {
-      if (!housing(b)) continue; houses++; const L = res(b), T = things(b), all = PR.pieces(b).length; const roles = new Set(L.filter(v => v.age >= 14 && !v.captive).map(v => v.role)); total += all;
+      if (!housing(b)) continue; houses++; const L = res(b), T = things(b), all = PR.pieces(b).length; const roles = new Set(L.filter(v => v.age >= 14 && !v.captive).map(v => v.roleBack || v.role)); total += all; // (the trade one goes back to: D-195)
       for (const t of T) cnt[t] = (cnt[t] || 0) + 1;
       if (!L.length) { emptyH++; emptyThings += all; if (all) bad.push(`${mode}: ${tag(b)} vazia com ${all} coisa(s) em volta`); continue; }
       if (T.includes('lenha') && !roles.has('lenhador')) bad.push(`${mode}: ${tag(b)}: lenha sem lenhador na casa`);
@@ -197,6 +197,10 @@ if (run('a4')) {
     if (wood) { const L = res(wood).filter(v => v.role === 'lenhador'); const s0 = sigOf(wood); for (const v of L) v.role = 'coletor'; flush(); const t1 = things(wood), s1 = sigOf(wood); for (const v of L) v.role = 'lenhador'; flush(); const t2 = things(wood);
       prov.push(`${mode}: a lenha de ${tag(wood)}: ${t1.includes('lenha') ? 'ficou' : 'sumiu'} sem o lenhador, ${t2.includes('lenha') ? 'voltou' : 'não voltou'} com ele`); if (t1.includes('lenha') || !t2.includes('lenha') || s0 === s1) bad.push(`${mode}: a lenha de ${tag(wood)} não segue o lenhador (assinatura ${s0} → ${s1})`); }
     else prov.push(`${mode}: nenhuma casa de lenhador com lugar para a lenha`);
+    // (and called away by an emergency — the war makes him a warrior, with the trade he goes back to kept: village.js, D-212 —,
+    // the pile stays at the door: the house shows the trade its people keep, D-195)
+    if (wood) { const L = res(wood).filter(v => v.role === 'lenhador'); const b0 = L.map(v => v.roleBack); for (const v of L) { v.roleBack = 'lenhador'; v.role = 'guerreiro'; } flush(); const t3 = things(wood); L.forEach((v, k) => { v.role = 'lenhador'; v.roleBack = b0[k]; }); flush(); const t4 = things(wood);
+      prov.push(`${mode}: o lenhador de ${tag(wood)} chamado às armas: a lenha ${t3.includes('lenha') ? 'ficou' : 'SUMIU'} à porta`); if (!t3.includes('lenha') || !t4.includes('lenha')) bad.push(`${mode}: a lenha de ${tag(wood)} sumiu com o lenhador chamado às armas (D-195)`); }
     const lived = built().find(b => housing(b) && res(b).length >= 2 && things(b).some(t => LIVED[t]));
     if (lived) { const L = res(lived); const s0 = sigOf(lived); for (const v of L) v.home = 0; flush(); const n1 = PR.pieces(lived).length, s1 = sigOf(lived); for (const v of L) v.home = lived.id; flush(); const n2 = PR.pieces(lived).length;
       prov.push(`${mode}: ${tag(lived)} esvaziada: ${n1} coisas; de volta: ${n2}`); if (n1 || !n2 || s0 === s1) bad.push(`${mode}: ${tag(lived)} vazia ficou com ${n1} coisas (assinatura ${s0} → ${s1})`); }

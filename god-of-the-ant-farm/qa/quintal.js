@@ -54,7 +54,7 @@ const DRINK = ['vinho', 'mel', 'cerveja', 'pulque', 'azeite', 'oleo'], POUR = ['
 const TR = ['pescador', 'cacador', 'guerreiro', 'arqueiro', 'tecelao', 'agricultor', 'coletor', 'vinhateiro'];
 const LIVED = ['banco', 'varal', 'vassoura', 'tina', 'restia', 'cesto'];
 const res = b => [...S.villagers.values()].filter(v => v.home === b.id);
-const rolesOf = b => new Set(res(b).filter(v => v.role && v.age >= 14 && !v.captive).map(v => v.role));
+const rolesOf = b => new Set(res(b).filter(v => (v.roleBack || v.role) && v.age >= 14 && !v.captive).map(v => v.roleBack || v.role)); // (the trade one goes back to: D-195)
 const drink = b => DRINK.filter(k => ((b.inv || {})[k] || 0) >= 1).length;
 const pour = b => POUR.reduce((a, k) => a + ((b.inv || {})[k] || 0), 0);
 const rawOps = b => A.all().filter(o => o.def === 'oficio' && A.live(o) && o.at === b.id);

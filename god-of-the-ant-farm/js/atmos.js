@@ -41,7 +41,10 @@
       }
       if (v.home > 0) {
         let hm = homes.get(v.home); if (!hm) homes.set(v.home, hm = { res: 0, roles: [] });
-        hm.res += 1; if (v.role && v.age >= 14 && !v.captive && !hm.roles.includes(v.role)) hm.roles.push(v.role);
+        // (the trade a house shows is the one its people keep: who an emergency called away — the war, the hunger, the great work,
+        // village.js — has the trade he goes back to, v.roleBack; the woodcutter's pile does not leave the door with him, D-195)
+        const r = v.roleBack || v.role;
+        hm.res += 1; if (r && v.age >= 14 && !v.captive && !hm.roles.includes(r)) hm.roles.push(r);
       }
     }
     cen = { ins, homes }; cenS = S; cenK = S.clock; cenN = S.villagers.size;

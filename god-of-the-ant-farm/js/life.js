@@ -44,6 +44,7 @@
   const FEST = { win: ['Venceu', 'Venci', 0], bearer: ['Carregou as coisas sagradas', 'Carreguei as coisas sagradas', 1], victim: ['Foi escolhid{o} para morrer', null, 1], athlete: ['Competiu', 'Competi', 1], gladiator: ['Lutou na arena', 'Lutei na arena', 1], actor: ['Atuou', 'Atuei', 1], leader: ['Conduziu', 'Conduzi', 0], chained: ['Desfilou acorrentad{o}', 'Desfilei acorrentad{o}', 1] };
   const em = s => s.replace(/^(os|as|o|a) /, (m, a) => 'n' + a + ' ');
   const festPhrase = (v, a, b, first) => { const F = FEST[b] || ['Participou', 'Participei', 1]; const verb = F[first ? 1 : 0]; if (!verb) return null; return `${verb.replace('{o}', oa(v))} ${F[2] ? em(a) : a}`; };
+  const PULLED = { fome: 'a fome chamou', guerra: 'a guerra chamou', obra: 'a obra grande chamou' };
   // one line of a life, in the third person
   L.bioLine = function (v, e) {
     const [d, code, a, b, c] = e; const o = oa(v);
@@ -53,7 +54,8 @@
       case 'arrived': return `Chegou a ${a}.`;
       case 'appr': return `Começou a aprender o ofício de ${trade(a)} com ${b === v.mother ? 'a mãe' : b === v.father ? 'o pai' : nm(b)}.`;
       case 'learned': return `Aprendeu de verdade o ofício de ${trade(a)}.`;
-      case 'trade': return `Tornou-se ${(G.ROLE[a] || [a, a])[v.g === 'f' ? 1 : 0].toLowerCase()}${b ? ' — o ofício que aprendeu criança' : ''}.`;
+      // (c: why, when the trade was not taken for good — back from an emergency, or pulled by one: D-211)
+      case 'trade': { const t = (G.ROLE[a] || [a, a])[v.g === 'f' ? 1 : 0].toLowerCase(); return c === 'volta' ? `Voltou a ser ${t}.` : `Tornou-se ${t}${b ? ' — o ofício que aprendeu criança' : PULLED[c] ? ' — ' + PULLED[c] : ''}.`; }
       case 'elder': return `Deixou o trabalho pesado: agora é ${v.g === 'f' ? 'uma anciã' : 'um ancião'}.`;
       case 'couple': return `Uniu-se a ${nm(a)}.`;
       case 'child': { const k = person(a); return `Nasceu ${k && k.g === 'f' ? 'sua filha' : 'seu filho'}, ${nm(a)}.`; }
@@ -138,11 +140,12 @@
     for (const id of [v.mother, v.father]) { const q = S.villagers.get(id); if (q) L.bio(q, 'lost', v.id, 'child'); }
     for (const id of v.kids || []) { const k = S.villagers.get(id); if (k && k.age >= 3) L.bio(k, 'lost', v.id, v.g === 'f' ? 'mother' : 'father'); }
   };
-  L.onRole = function (v, prev) {
+  // (why: the dealing's cause — village.js, D-211 —, kept in the line when the trade is an emergency's or the way back from one)
+  L.onRole = function (v, prev, why) {
     const r = v.role; if (!r || r === prev) return;
     if (r === 'anciao') return L.bio(v, 'elder');
     if (r === 'crianca' || r === 'bebe' || r === 'cativo') return;
-    L.bio(v, 'trade', r, v.skill === r ? 1 : 0);
+    if (why === 'volta' || PULLED[why]) L.bio(v, 'trade', r, v.skill === r ? 1 : 0, why); else L.bio(v, 'trade', r, v.skill === r ? 1 : 0);
   };
 
   // ============================== lines ==============================
