@@ -1,38 +1,40 @@
 # Bloco do agente F — a freguesia (os banhos, a biblioteca, a praça; L-717)
 
-> **Estado: EM CURSO — a última rodada está correndo** (este arquivo é mantido em dia a cada passo; o que está dito
-> «passa» foi rodado nesta árvore; o que falta está dito no item 0).
+> **Estado: FECHADO** (o que está dito «passa» foi rodado nesta árvore, um processo de cada vez; o que não foi feito está
+> dito nos itens 0 e 6).
 > Ramo `worktree-agent-a4d17534a654b4869`, sobre o `b2b61f0` (a árvore nasceu no `main` e foi avançada para a ponta do ramo
 > do líder com `git merge --ff-only b2b61f0`, antes de qualquer mudança).
 > Números reservados: L-910 a L-929, T-910 a T-929, D-200 a D-204; regras 69 e 70 do guard.
-> **Usados:** L-910; T-910 a T-918; D-200 a D-204. **Livres:** L-911 a L-929, T-919 a T-929.
+> **Usados:** L-910; T-910 a T-920; D-200 a D-204. **Livres:** L-911 a L-929, T-921 a T-929.
 > Rascunho, medidas e sabotagens: `scratchpad/ag/F/` (`antes/`, `depois/`, `final/`, `sab/`, `sab-F.py`).
 > **Arquivos mexidos:** `js/act-servicos.js`, `js/act-lazer.js`, `js/villagers.js` (4 linhas no `decide`, 2 no `start`);
 > as provas `qa/freguesia.js` e `qa/freguesia-inv.js` (novas), `qa/termas-mao.js` (uma linha do caso «fecha-na-hora») e
 > `qa/termas.js` (três linhas do caso e1, logo antes e depois do `bathers(b, 6, 2.9)` — longe do `ready(b)` que o líder mexeu
-> no T-810). **Não toquei** em `city.js`, `village.js`, `interiors.js`, `polity.js`, `urban.js`, nem em arquivo compartilhado.
+> no T-810) e `qa/categorias/p2.js` (a `freguesia.js` na lista de provas das atividades «banho» e «ler»; a
+> `qa/MATRIZ-PREDIOS.md` não foi gerada de novo — o líder a gera com a regressão). **Não toquei** em `city.js`, `village.js`, `interiors.js`, `polity.js`, `urban.js`, nem em arquivo compartilhado.
 > Nenhum arquivo novo em `js/`; o catálogo das plantas não muda.
 
-## 0. O andamento (para quem retomar)
+## 0. O resumo
 
-**Feito e rodado** (commits `6e27cc8`, `ab7771c` e os seguintes):
+**Feito e rodado** (os commits do ramo: `6e27cc8`, `ab7771c`, `c433aff` e o do fecho):
 - as medidas de antes (item 7), na base limpa (uma cópia do `b2b61f0` em `scratchpad/ag/F/base/`);
 - a vontade do banho e a da leitura (D-200, D-201), o banho e o rolo que seguram quem entrou (D-203), o foguista no
   posto (D-204, o recado do líder do T-810), o dia que fecha com gente a caminho (L-910);
 - a prova `qa/freguesia.js` e as regras `qa/freguesia-inv.js`;
-- as sabotagens (30 rodadas e acusadas; 6 novas escritas — s20 a s23, l9, l10);
-- as provas vizinhas no ramo e, as que falharam, na base (item 8).
-
-**Em curso (a última rodada, `scratchpad/ag/F/fila2.sh`):** a prova inteira com o código final, as vizinhas de novo, as 36
-sabotagens de novo, e as medidas de depois (a metrópole e a mega, cinco dias; os mundos do zero das sementes 41 e 7, 30
-anos, na base e no ramo; dez anos da mega e da metrópole).
+- as 36 sabotagens, todas acusadas com o código final (item 9);
+- as provas vizinhas no ramo e, as que falharam, na base (item 8);
+- as medidas de depois (item 7): cinco dias vividos na metrópole e na mega, os mundos do zero, dez anos dos mundos
+  prontos — e dez anos da metrópole na paz do deus, três histórias de cada lado.
 
 **Não feito (dito no item 6):** a praça e o mercado ao fim da tarde (o item 4 da tarefa) — medido e desenhado, não
-programado; a água da casa e a fome do foguista (as outras duas causas do T-810).
+programado; a água da casa e a fome do foguista (as outras duas causas do T-810); as crianças nos banhos.
+
+**Os mundos prontos:** a vontade muda a vida de toda cidade com banhos ou biblioteca — os mundos prontos de hoje abrem e
+vivem (as provas rodam neles), e a geração 20 do líder já sai com a freguesia.
 
 ## 1. Linhas do AUDIT (Bairros Vivos)
 
-| L-717 | bug (consertado nos Bairros Vivos, F) | **Ninguém ia aos banhos** *(a linha de antes fica; acrescentar:)* **Correção:** o banho e a leitura são uma vontade de cada um, escolhida entre as outras do dia (`villagers.js`, `decide`: os tipos `'banho'` e `'ler'`, ao lado da taverna e do teatro — `G.Termas.urge` / `go`, `G.Biblioteca.urge` / `go`), com causa: quem, quando, quanto, o que impede (D-200, D-201). Medido na metrópole pronta, em dias de paz: de 0 banhos em 20 dias-de-banhos para 9 a 13 por dia em Mênfis (127 pessoas; até 9 na água de uma vez), 5 a 11 em Tebas (63), 0 a 3 em Roma (46), 1 por dia em Tenochtitlan (o Temazcal tem um lugar só na água, T-914); as leituras de 0 para 1 a 3 por dia em cada biblioteca de um povo com a escrita. No salto, o mesmo (5,4 banhos por dia e por prédio em quatro anos). Prova: `qa/freguesia.js` (23 linhas) e as regras `qa/freguesia-inv.js`. Sabotagens (36, cada uma numa cópia): a escolha sem o banho (o mundo de antes): b1 falha («1 banho em 8 dias de banhos, 3 dias de fornalha acesa vazios»); cada impedimento, cada parte de quem quer mais, a sorte do dia tirada do acaso do mundo, a entrada fora do livro, a nota do bairro, a leitura — todas acusadas (o item 9). |
+| L-717 | bug (consertado nos Bairros Vivos, F) | **Ninguém ia aos banhos** *(a linha de antes fica; acrescentar:)* **Correção:** o banho e a leitura são uma vontade de cada um, escolhida entre as outras do dia (`villagers.js`, `decide`: os tipos `'banho'` e `'ler'`, ao lado da taverna e do teatro — `G.Termas.urge` / `go`, `G.Biblioteca.urge` / `go`), com causa: quem, quando, quanto, o que impede (D-200, D-201). Medido na metrópole pronta, em dias de paz: de 0 banhos em 20 dias-de-banhos para 9 a 17 por dia em Mênfis (127 pessoas; até 16 na água de uma vez), 9 a 12 em Tebas (62; até 10), 0 a 2 em Roma (38), 0 ou 1 por dia em Tenochtitlan (o Temazcal tem um lugar só na água, T-914); as leituras de 0 para 1 a 4 por dia em cada biblioteca de um povo com a escrita. No salto, o mesmo (4,4 banhos por dia e por prédio em quatro anos). Prova: `qa/freguesia.js` (23 linhas) e as regras `qa/freguesia-inv.js`. Sabotagens (36, cada uma numa cópia): a escolha sem o banho (o mundo de antes): b1 falha («1 banho em 8 dias de banhos, 3 dias de fornalha acesa vazios»); cada impedimento, cada parte de quem quer mais, a sorte do dia tirada do acaso do mundo, a entrada fora do livro, a nota do bairro, a leitura — todas acusadas (o item 9). |
 | L-910 | bug (pequeno, consertado; achado pela `termas-grandes` F2 com a vontade ligada) | **O dia dos banhos que acaba no meio deixava a caminho quem já tinha saído para lá.** O `close` do dia dos banhos só encerrava a ida de quem estava lá dentro (no livro do dia); quem estava a caminho ficava com a ida até o passo seguinte, andando para um prédio fechado — ou para uma obra, quando a cidade amplia os banhos no meio do dia. Antes quase ninguém estava a caminho; com a vontade há quase sempre alguém, e a `termas-grandes` F2 lia «o dia acabou, 1 ainda lá dentro». Correção: o `close` encerra também a ida de quem está a caminho daquele dia (`act-servicos.js`), como o espetáculo faz com o seu público (L-595). Prova: `termas-grandes` F2 volta a passar; `freguesia` e5 («o dia fechado e o prédio derrubado; na hora 0 ainda com a ida»). Sabotagem s20 (sem o laço): e5 falha. |
 | D-200 | decisão (F: `act-servicos.js`, `villagers.js`) | **A vontade do banho.** *Quem:* todo adulto de uma cidade com banhos, uma parte dos dias (`Te.wish`): 0,30 — 0,50 num povo da terma (o romano, o grego, o clássico: o hábito) —, mais 0,25 no ofício sujo (mineiro, ferreiro, oleiro, construtor, estivador, lenhador), mais 0,15 na casa de nobre ou de mercador, mais 0,15 para o cansado (a energia abaixo de 50); o doente que está de pé, todo dia (o banho quente tira uma parte da doença: é o efeito que o banho já tinha — nenhuma mecânica nova; o de cama com febre fica na cama). *Menos:* quem mora longe (a casa a mais de 10 casas dos banhos: a vontade cai com a distância, até um quarto dela a 40 casas) e **a água fria: a metade** (sem fogo na fornalha o banho vale menos — cura e descansa menos —, e a vontade cai com ele). *Quando:* nas horas dos banhos (0,25 a 0,70), cada um a partir da sua hora (pelo `G.hash` da pessoa, a mesma todo dia: o velho, o nobre e o doente da manhã — 0,27 a 0,43 —; quem trabalha, do começo da tarde — 0,38 a 0,46: o banho é o fim de um dia de trabalho mais curto), e só com tempo de andar até lá (1,5 s por casa), despir-se e ter meio banho antes de fechar; quem está longe sai antes da sua hora. *Quanto:* se hoje é dia de banho é a sorte do dia de cada um (`Te.lot`: o `G.hash` da pessoa e do dia, abaixo da vontade) — **nenhum sorteio do acaso do mundo, nenhum campo novo na pessoa** —, e um banho por dia (`v.bathDay`, que o banho já escrevia; vale também para o passeio: `Te.visit`). *O que impede:* a casa sem moeda para a entrada, os banhos cheios (quem está a caminho conta: `Te.room`), mais de 30 casas a andar, a fome (acima de 55), o cansaço de cama (abaixo de 25), uma carga nas mãos ou a perna de uma operação (D-094), os pequenos para cuidar, a fornalha por alimentar (D-204), uma tarefa em curso que pese tanto quanto o banho (0,4: o banho nunca corta um trabalho; começa quando a tarefa acaba); **nunca o corpo do deus**. A vontade vale 0,75 (o trabalho de um dia vale 0,55), 0,90 a do doente. **As crianças não vão** pela vontade (o `decide` é dos de 16 anos ou mais; ir com o pai ou a mãe fica aberto). |
 | D-201 | decisão (F: `act-lazer.js`, `villagers.js`) | **A vontade de ler.** *Quem:* num povo com a escrita, o curioso (0,40 dos dias), a gente das letras — o sacerdote, o escriba — (0,30), a casa de nobre ou de mercador (0,25); somam; **quem não é nenhum deles não lê** (na metrópole, 9 a 38 pessoas por cidade). Menos quem mora longe (como nos banhos). *Quando:* nas horas da biblioteca (0,28 a 0,72), cada um a partir da sua hora na manhã dela (0,29 a 0,36), com tempo de andar e ler um rolo inteiro antes de fechar. *Quanto:* a sorte do dia de cada um (`Bi.lot`, sem acaso do mundo), um rolo por dia (`v.readDay`; vale para o passeio: `Bi.visit`). *O que impede:* as mesas cheias (quem vem a caminho conta), a distância, a fome, a carga, os pequenos, a fornalha por alimentar, uma tarefa de peso; nunca o corpo do deus. A leitura que passa do que a biblioteca conta no dia (8; 16 na grande) não soma à pesquisa — quem lê, lê para si. |
@@ -45,9 +47,11 @@ programado; a água da casa e a fome do foguista (as outras duas causas do T-810
 | T-913 | limite de teste (consertado na prova) | **O `termas` e1 (um dia de verdade nos banhos) escolhe o Temazcal de Tenochtitlan, que tem um lugar só na água**, e conta com que só os seis banhistas dele venham. Com a vontade, uma moradora chegou antes dos seis e tomou o lugar; os seis bateram na porta cheia («1 entrada, 0 banhos, o banho de Izel: —»; na base o caso passa: «2 entradas, 1 banho quente»). A mão da prova encerra as idas de quem não é do caso e dá-lhes o banho de hoje, para que mais ninguém venha enquanto o caso dura; os banhos com quem vem por vontade sua são a `freguesia.js`. *(As três linhas ficam logo antes e depois do `bathers(b, 6, 2.9)` do e1 — o líder mexeu no `ready(b)` do mesmo arquivo, T-810.)* |
 | T-914 | limite de teste (aberto, não é deste ramo) | **O Temazcal tem um lugar só na água** (a planta do banho asteca: um só ponto de «banhar» alcançado): Tenochtitlan, com 79 a 138 pessoas, tem 1 banho por dia, 2 no máximo — o lugar ocupado, a vontade dos outros é zero (os banhos cheios). Os outros banhos pequenos: Roma 8 lugares, Mênfis e Tebas (o lago sagrado) 35. É da planta do tipo, não da freguesia. |
 | T-915 | limite de teste (aberto, da cidade) | **A terma longe do meio da cidade tem menos gente.** O lote de 7 casas que a mão do deus acha junto de Argos fica a 18 casas do meio; a cidade, pela porta dela, fundou as termas a 34 (T-821). Um dia tem 200 s e uma casa leva 0,8 a 1,5 s a andar: de 30 casas para cima ninguém vai (o alcance, como o da taverna), e quem está a 20 perde a tarde. Medido na `freguesia` c, com 260 pessoas em volta do meio e os três tamanhos no mesmo lote a 18 casas: as grandes termas (120 lugares) têm 20 a 23 banhos no dia e até 18 a 22 na água de uma vez; as termas (24 lugares), 17 a 18 e 16; os banhos (8 lugares), 8 e 8 — enchem mais que os pequenos, e continuam longe de cheias: 120 lugares pedem uma cidade em que uns 100 queiram banho no mesmo dia. |
-| T-916 | limite de teste (aberto, medido) | **Metade de quem tem o dia do banho perde a hora.** A vontade só começa quando a tarefa em curso acaba (o banho nunca corta um trabalho), e a janela de cada um é curta (da sua hora até não dar mais tempo: 12 a 25 s): o pescador no barco, o lavrador no meio da colheita, o soldado de guarda não acham o momento, e ao meio-dia muitos estão com fome. Medido na metrópole (um dia, 173 adultos): 70 passaram todas as portas, 24 foram; por pessoa e por dia de paz, 14 % de quem mora a até 17 casas e 5 % de quem mora mais longe; o ofício sujo 15 %, os outros 8 %. A parte dos dias de cada um (`Te.wish`) é o dobro disso. Subir a parte dos dias enche mais os banhos e tira mais braços do trabalho (cada banho custa a quem trabalha uns 30 % do dia: o caminho, os cabides, a água). |
-| T-917 | limite de teste (aberto, medido — ver o item 7) | **A produção, medida, não mostra queda fora do ruído.** *(os números da última rodada entram aqui)* |
-| T-918 | limite de teste (aberto, do recado do líder no T-810) | **A fornalha ainda pode ficar fria pela água da casa e pela fome do foguista.** As vontades já não o tiram do posto (D-204); a tarefa «water» da casa dele (prioridade 1,05, a mesma da fornalha, e que chega antes de manhã) e a refeição dele (1,2) continuam a vir antes do fogo. Nos dias vividos desta árvore (sem as plantas novas das casas do G) a fornalha acendeu em 14 de 16 dias de banhos de paz (as duas frias: Tenochtitlan sem foguista no dia em que o mundo abre; Roma no primeiro dia). Um conserto do lado do foguista seria o dia dos banhos chamar o seu foguista na abertura, como o espetáculo chama os atores (`callActors`), acima da água da casa — não feito: mexe na ordem das tarefas da casa, que o G acabou de mudar. |
+| T-916 | limite de teste (aberto, medido) | **Metade de quem tem o dia do banho perde a hora.** A vontade só começa quando a tarefa em curso acaba (o banho nunca corta um trabalho), e a janela de cada um é curta (da sua hora até não dar mais tempo: 12 a 25 s): o pescador no barco, o lavrador no meio da colheita, o soldado de guarda não acham o momento, e ao meio-dia muitos estão com fome. Medido na metrópole (um dia, 173 adultos): 70 passaram todas as portas, 24 foram; por pessoa e por dia de paz, 15 % de quem mora a até 17 casas e 8 % de quem mora mais longe; o ofício sujo 17 %, os outros 10 %. A parte dos dias de cada um (`Te.wish`) é o dobro disso. Subir a parte dos dias enche mais os banhos e tira mais braços do trabalho (cada banho custa a quem trabalha uns 30 % do dia: o caminho, os cabides, a água). |
+| T-917 | limite de teste (aberto, medido — ver o item 7) | **A produção, medida, não mostra queda fora do ruído das histórias.** Nos mundos do zero de 30 anos (as sementes 41 e 7) nenhuma cidade ergue banhos nem biblioteca, e o mundo sai igual, número por número, com e sem a mudança — a vontade não toca um mundo sem o prédio. Nos mundos prontos, dez anos no salto: na metrópole a comida produzida cai 11 % e a madeira 7 % com 11 % mais gente viva no fim; na mega a comida sobe 4 %, a madeira 9 % e a pedra 23 %; as mortes de fome, 8 contra 4 numa e 1 contra 7 na outra. As duas rodadas de cada mundo vivem guerras diferentes (256 mortes contra 209; 150 contra 133): o sinal de um mundo é o contrário do outro. **Na paz do deus** (sem a guerra a afogar a conta; três histórias de cada lado, dez anos da metrópole): a comida produzida cai 3,7 % em média (as três de depois abaixo das três de antes) e a gente 2,6 %, a madeira e a pedra não caem, e **não há morte de fome em nenhuma das seis**. É o preço medido da pausa: cada banho custa a quem trabalha uns 30 % do dia, e uns 10 % dos adultos de uma cidade com banhos vão por dia — uns 3 % dos braços dessas cidades. Se o dono achar caro, a alavanca é uma só: a parte dos dias (`Te.BASE` 0,30 e `Te.HABIT` 0,50); pela metade, metade do preço e metade dos banhistas. |
+| T-920 | limite de teste (aberto, achado nas medidas; não é da freguesia) | **Numa das três histórias de dez anos de paz do ramo, o verificador acaba com «S2 degraus: #20136 espera duas casas encomendadas (house#31228 e house#32409)»** — a casa rica da família (D-177: uma encomenda por dono). Não aparece nas três histórias da base nem nas outras duas do ramo, nem em nenhuma prova. O código da freguesia não toca em casas nem em encomendas; a história é outra (os dias de cada um mudaram), e o defeito parece ser um caso raro da casa rica que esta história achou. Como reproduzir, de dentro de `qa/`: `PAZ=1 SHIFT=1 node <scratchpad>/ag/F/producao.js metropole 10` (o salto de dez anos com a paz do deus mantida e um sorteio do acaso do mundo antes do primeiro passo), 2 min 30 s; o verificador no fim. Fica para quem cuida da casa rica (M). |
+| T-919 | limite de teste (aberto, de antes) | **O passeio não tem a regra do tempo.** Quem vai aos banhos pela vontade só sai com tempo para meio banho antes de fechar; quem vai pelo passeio de quem está sem trabalho (`G.City.leisureTask` → `Te.visit`, a porta de antes) sai a qualquer hora: nos quatro dias vividos, 1 das 81 entradas pagou às 0,63 e o fechar a tirou da água sem banho — era do passeio. Pôr a regra do tempo no `Te.visit` vale para as duas portas, mas muda a porta que as provas de antes usam para mandar banhistas pela mão; não mexi. |
+| T-918 | limite de teste (aberto, do recado do líder no T-810) | **A fornalha ainda pode ficar fria pela água da casa e pela fome do foguista.** As vontades já não o tiram do posto (D-204); a tarefa «water» da casa dele (prioridade 1,05, a mesma da fornalha, e que chega antes de manhã) e a refeição dele (1,2) continuam a vir antes do fogo. Nos quatro dias vividos desta árvore (sem as plantas novas das casas do G) a fornalha acendeu em 11 de 16 dias de banhos: Mênfis e Tebas nos quatro, Roma em dois, Tenochtitlan em um (o Temazcal abre o mundo sem foguista; Roma tem 13 de lenha no armazém e o armazém guarda 10 para as obras). Um conserto do lado do foguista seria o dia dos banhos chamar o seu foguista na abertura, como o espetáculo chama os atores (`callActors`), acima da água da casa — não feito: mexe na ordem das tarefas da casa, que o G acabou de mudar. |
 
 ## 2. Linhas do README das provas
 
@@ -97,37 +101,65 @@ No protocolo, item 3, na linha das termas: «…e, pelo lado de quem se banha e 
 
 ### Depois (o ramo) — `scratchpad/ag/F/depois/`, `scratchpad/ag/F/final/`
 
-**Metrópole, quatro dias vividos na paz do deus** (`freguesia` b): Mênfis (127 pessoas, 35 lugares) 1, 9, 9, 13 banhos por dia, até 9 na água de uma vez · Tebas (63, 35 lugares) 1, 5, 11, 11, até 9 · Roma (46, 8 lugares) 0, 0, 3, 2 · Tenochtitlan (138, 1 lugar) 1, 1, 1, 1 (o primeiro dia é o do poder do deus: a cidade festeja a paz). 69 banhos de 56 pessoas, ninguém duas vezes; lenha 1,5 a 2,3 por dia e por prédio (antes: 0,6 a 2,0). Leituras por dia: Argos 0, 2, 3, 1 · Tenochtitlan 0, 3, 3, 2 · Tebas 0, 0, 1, 2 (até 4 à mesa).
-**Sem a paz** (quatro dias, o mundo como vem; a guerra no dia 60): Mênfis 13, 12, 1, 7 · Tebas 6, 10, 3, 6 · Roma 1, 2, 0, 3 · Tenochtitlan 1, 1, 0, 1.
-**Por pessoa e por dia** (718 pessoas-dia de paz): quem mora a até 17 casas dos banhos 14 %, mais longe 5 %; o ofício sujo 15 %, os outros sãos 8 %; num povo da terma (só Roma tem banhos) 5 %, nos outros 10 %.
-**No salto** (`freguesia` i, quatro anos na paz): 87 banhos em 16 dias de banhos — Mênfis 11, 12, 4, 15 · Tebas 5, 4, 9, 16 · Roma 2, 0, 3, 1 · Tenochtitlan 1, 1, 2, 1; 20 leituras.
+**Metrópole, quatro dias vividos na paz do deus** (`freguesia` b, o código final): Mênfis (127 pessoas, 35 lugares) 1, 14, 9, 17 banhos por dia, até 16 na água de uma vez · Tebas (62, 35 lugares) 1, 9, 11, 12, até 10 · Roma (38, 8 lugares) 0, 2, 1, 2 · Tenochtitlan (139, 1 lugar) 1, 0, 1, 0 (o primeiro dia é o do poder do deus: a cidade festeja a paz). 81 banhos de 57 pessoas, ninguém duas vezes; lenha 2,0 e 2,5 por dia em Mênfis e Tebas, 0,5 em Roma e Tenochtitlan (antes: 0,6 a 2,0). Leituras por dia: Argos 1, 3, 4, 2 · Tenochtitlan 1, 4 · Tebas 0, 0, 1, 2 (até 4 à mesa).
+**Sem a paz** (quatro dias, o mundo como vem; a guerra no dia 60; antes dos últimos acertos): Mênfis 13, 12, 1, 7 · Tebas 6, 10, 3, 6 · Roma 1, 2, 0, 3 · Tenochtitlan 1, 1, 0, 1.
+**Por pessoa e por dia** (695 pessoas-dia de paz): quem mora a até 17 casas dos banhos 15 %, mais longe 8 %; o ofício sujo 17 %, os outros sãos 10 %; num povo da terma (só Roma tem banhos, com a fornalha fria em dois dos quatro dias) 6 %, nos outros 12 %.
+**No salto** (`freguesia` i, quatro anos na paz): 71 banhos em 16 dias de banhos — Mênfis 10, 7, 10, 11 · Tebas 5, 5, 9, 3 · Roma 2, 3, 1, 2 · Tenochtitlan 1, 1, 1, 0; 20 leituras.
 **Dez anos da metrópole no salto** (com a guerra; uma rodada, antes do último acerto): 704 → 635 pessoas; comida 12 454 (−7 %), madeira 2 662 (+13 %), pedra 1 898 (+42 %); mortes: fome 8, doença 2, velhice 15, todas 226; banhos: 43 dias abertos, 93 banhos, 40 de lenha; 23 leituras. *(Uma rodada só de cada lado, e a guerra corre diferente nas duas: as diferenças de madeira e de pedra mostram o tamanho do ruído.)*
-*(A mega, os mundos do zero e a praça de depois: da última rodada — entram aqui.)*
+**Cinco dias vividos, o mundo como vem** (as mesmas contas do «antes», `depois/mede-metropole.txt`, `depois/mede-mega.txt`):
+- **Metrópole** (do dia 58 ao 63): **85 banhos em 20 dias-de-banhos** (antes: 0) — Mênfis 9, 6, 3, 12, 7 (7,4 por dia; até 11 na água de uma vez) · Tebas 8, 8, 8, 9, 5 (7,6 por dia; até 9) · Roma 3, 0, 1, 2, 0 · Tenochtitlan 1, 1, 0, 1, 1; a lenha: 25 (antes: 23) — 1,6 e 2,2 por dia em Mênfis e Tebas, 0,4 e 0,8 em Roma e Tenochtitlan. Leituras: Argos 4, —, 1, 1, 3 · Tenochtitlan 2, —, —, 3, — · Tebas 2, 0, 2, —, 2 (antes: 0).
+- **Mega** (do dia 50 ao 55): **60 banhos em 12 dias-de-banhos** (antes: 7 em 14) — Mênfis (139 pessoas) 13, 24, 18, 0, 0 (até 17 na água de uma vez; nos dois últimos dias os banhos abrem sem lenha e sem ninguém) · Hedeby 1, 1, 1, 0, 0 (a água fria) · Kaupang 2, 0; a lenha: 12 (antes: 20). Leituras: Mênfis 6, 4, 4, 2 (até 4 à mesa) · Kaupang 3, 4, 3, 1 · Hedeby 1 (antes: 1 leitura em cinco dias).
+- **A praça e o mercado** não mudaram (não mexi neles): parados na praça ao fim da tarde (0,60 a 0,70), Argos 0,6 a 2,1 · Mênfis (duas praças) 0,8 a 1,3 · Roma 0,2 a 1,4 · Tenochtitlan 0,7 a 1,9 · Tebas 1,1 a 2,6.
+**Os mundos do zero** (as sementes 41 e 7, continente de 128, quatro povos, 30 anos no salto — `M.novo` e o salto do jogo): **o mesmo mundo, número por número, antes e depois** — semente 41: 123 pessoas, comida 6 151, madeira 2 345, pedra 1 308, 2 mortes de fome; semente 7: 149 pessoas, comida 7 610, madeira 2 862, pedra 668, 2 mortes de fome. Em 30 anos nenhuma cidade desses mundos passa de 43 pessoas nem ergue banhos ou biblioteca, e sem o prédio a vontade não muda nada nem tira do acaso do mundo. A medida que vale é a dos mundos prontos:
+**Dez anos no salto, o mundo como vem** (a guerra corre diferente em cada rodada; uma rodada de cada lado):
+
+| | gente | comida | madeira | pedra | mortes de fome | de doença | todas | dias de banhos | banhos | lenha dos banhos | leituras |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| metrópole, antes | 704 → 619 | 13 348 | 2 361 | 1 333 | 4 | 5 | 256 | 34 | 3 | 53 | 0 |
+| metrópole, depois | 704 → 689 | 11 942 | 2 203 | 1 355 | 8 | 0 | 209 | 35 | 134 | 45 | 27 |
+| mega, antes | 446 → 433 | 8 029 | 2 513 | 1 132 | 7 | 2 | 150 | 31 | 5 | 31 | 0 |
+| mega, depois | 446 → 458 | 8 359 | 2 747 | 1 388 | 1 | 0 | 133 | 31 | 73 | 24 | 44 |
+
+**A lenha:** os banhos queimam o mesmo ou menos (1,3 por dia de banhos na metrópole, antes 1,6; 0,8 na mega, antes 1,0) — antes para ninguém, agora para 2 a 4 banhistas por dia e por prédio no salto.
+**Dez anos da metrópole no salto, na paz do deus** (o poder do jogo mantido; três histórias de cada lado — a mesma metrópole com 0, 1 e 2 sorteios do acaso do mundo antes do primeiro passo; `antes/paz-metropole-*.txt`, `depois/paz-metropole-*.txt`):
+
+| | gente no fim | comida | madeira | pedra | mortes de fome | todas as mortes | dias de banhos | banhos | lenha dos banhos | leituras |
+|---|---|---|---|---|---|---|---|---|---|---|
+| antes, três histórias | 968, 975, 978 | 16 086, 15 449, 15 453 | 5 331, 5 391, 5 361 | 2 340, 2 379, 2 293 | 0, 0, 0 | 26, 27, 25 | 44, 43, 46 | 19, 12, 11 | 77, 80, 78 | 1, 1, 0 |
+| depois, três histórias | 923, 952, 970 | 15 417, 14 970, 14 859 | 5 389, 5 526, 5 726 | 2 553, 2 232, 2 340 | 0, 0, 0 | 61, 31, 30 | 50, 46, 50 | 207, 236, 217 | 87, 78, 85 | 62, 62, 80 |
+| a média: antes → depois | 974 → 948 (−2,6 %) | 15 663 → 15 082 (**−3,7 %**) | 5 361 → 5 547 (+3,5 %) | 2 337 → 2 375 (+1,6 %) | 0 → 0 | 26 → 41 | 44 → 49 | 14 → 220 | 78 → 83 | 0,7 → 68 |
+
+Sem a guerra a conta aparece: **a comida produzida cai uns 4 % e a gente uns 3 % em dez anos, sem nenhuma morte de fome** — as três histórias de depois ficam abaixo das três de antes na comida (14 859 a 15 417 contra 15 449 a 16 086). A madeira e a pedra não caem. A lenha dos banhos é a mesma (1,7 por dia de banhos nos dois lados): antes para 0,3 banhistas por dia e por prédio, agora para 4,5. (As 61 mortes de uma das histórias de depois não são de fome, de doença nem de velhice — 23 destas —; não fui atrás.)
 
 ## 8. O que rodei, e o que deu
 
 | Prova | No ramo | Na base (`b2b61f0`) |
 |---|---|---|
 | `node qa/guard.js` | PASSOU (156 arquivos) | — |
-| `node qa/soak.js 103 continente 128 4 normal 5 1 1` (navegador) | 5 anos, nenhuma violação, erros: nenhum | — |
-| `node qa/freguesia.js` | *(a última rodada)* | — |
-| `node qa/termas.js` | *(a última rodada; antes do T-913: 5 passam, 1 falha — e1)* | 6 passam, 0 falham |
+| `node qa/soak.js 103 continente 128 4 normal 5 1 1` (navegador; antes de cada commit) | 5 anos, nenhuma violação, erros: nenhum | — |
+| `node qa/freguesia.js` (8 min 36 s) | 23 passam, 0 falham | — |
+| `node qa/termas.js` | 6 passam, 0 falham (com o T-913; antes dele, 5 e 1 — a e1) | 6 passam, 0 falham |
 | `node qa/termas-mao.js` | 31 passam, 0 falham (com o T-911) | — |
 | `node qa/termas-grandes.js A,B,C,D` | 23 passam, 0 falham | — |
-| `node qa/termas-grandes.js` | *(a última rodada; antes do L-910: 32 passam, 1 falha — F2; a F2 sozinha depois: passa)* | a F2 passa |
-| `node qa/lazer.js` | 15 passam, 0 falham | — |
+| `node qa/termas-grandes.js` (4 min) | 33 passam, 0 falham (com o L-910; antes dele, 32 e 1 — a F2) | a F2 passa |
+| `node qa/lazer.js` (duas rodadas, a última com o código final) | 15 passam, 0 falham | — |
 | `node qa/lazer-mao.js` | 27 passam, 0 falham | — |
 | `node qa/saber.js` | 40 passam, 0 falham | — |
 | `node qa/tempo-livre.js` | 6 passam, 0 falham | — |
 | `node qa/atividades.js` | 14 passam, 0 falham | — |
-| `node qa/invariancia.js` (os testes A, B, C, E, F do adendo) | 6 passam, 0 falham | — |
-| `node qa/lar.js` | 23 passam, **3 falham** (l15, l16, l16b) | 22 passam, **4 falham** (l14, l15, l16, l16b) |
+| `node qa/taverna.js` (a linha da taverna no `decide` ganhou o foguista no posto) | 10 passam, 0 falham | — |
+| `node qa/invariancia.js` — a parte do `invariancia.sh` que cobre o que mexi: os testes A, B, C, E e F do adendo (a loja no salto e no passo, a descarga por passo, salto, corpo e save, as pessoas depois de dois dias longe, o livro-razão sem nada duas vezes, com e sem quadros) | 6 passam, 0 falham | — |
+| `node qa/det3.js 77 arquipelago 96 3 2` (navegador) | PASSOU (o mesmo mundo com e sem quadros; o save carregado duas vezes: igual) | — |
+| `node qa/matriz-predios.js` | PASSOU (12 categorias, 56 tipos, 4 folhas) | — |
+| `node qa/lar.js` (duas rodadas no ramo, iguais) | 23 passam, **3 falham** (l15, l16, l16b) | 22 passam, **4 falham** (l14, l15, l16, l16b) |
+
+**Não rodei:** `qa/regress.sh`, `qa/prontos.js` e a prova de desempenho (proibidos nesta rodada); o resto do `invariancia.sh` (o D dos interiores — `interiores.js`, `casca.js` — e a parte e16 do encarna: não mexi em planta nem no 3D); `qa/oldsave.js` (nenhum campo novo na pessoa nem no save); `qa/som.js`, `qa/sabe.js`, `qa/roupa.js`, `qa/atmosfera.js`, as provas visuais (nenhum gesto, ato, tela, roupa ou desenho novo).
 
 A `lar`: as três que falham no ramo falham na base (a l16 e a l16b são o T-688; a l15 — «o bebê foi para Arne, fora da casa» — falha igual na base); a l14 falha na base e passa no ramo (a história do mundo é outra).
 
 ## 9. As sabotagens (cada uma numa cópia nova do jogo; `scratchpad/ag/F/sab-F.py`, os resultados em `scratchpad/ag/F/sab/`)
 
-*(A primeira rodada, 30 de 30 acusadas; a segunda, com as seis novas, na última rodada.)*
+**36 de 36 acusadas**, com o código final (`depois/fila-3.txt`; a primeira rodada, antes dos últimos acertos, tinha acusado as 30 de então).
 
 | Sabotagem | O caso que a acusa |
 |---|---|
@@ -161,4 +193,9 @@ A `lar`: as três que falham no ramo falham na base (a l16 e a l16b são o T-688
 | h1 o verificador cego ao cativo e à carga a caminho | h |
 | h2 o verificador cego a dois banhos e dois rolos | h |
 | h3 o verificador cego à leitura sem a escrita | h |
-| s20 o dia fechado deixa a ida de quem está a caminho (L-910) · s21 o foguista larga a fornalha pelo banho · s22 lá dentro a ida vale o que vale a caminho · s23 o foguista vai ao teatro e à taverna · l9 o foguista larga a fornalha pelo rolo · l10 à mesa a leitura vale o que vale a caminho | *(a última rodada)* |
+| s20 o dia fechado deixa a ida de quem está a caminho (L-910) | e5: «na hora 2 ainda com a ida» |
+| s21 o foguista larga a fornalha pelo banho | a1: «o foguista com a fornalha por alimentar 0,75» |
+| s22 lá dentro a ida vale o que vale a caminho (D-203) | a1: «já lá dentro 1» |
+| s23 o foguista vai ao teatro e à taverna (D-204) | b4, nos dias vividos: «Messalina #17275 ao teatro no dia 59 às 0,57» — a foguista de Roma, com a fornalha por alimentar |
+| l9 o foguista larga a fornalha pelo rolo | a4 |
+| l10 à mesa a leitura vale o que vale a caminho | a4 |
