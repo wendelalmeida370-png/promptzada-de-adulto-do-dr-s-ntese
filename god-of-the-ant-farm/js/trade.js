@@ -185,7 +185,13 @@
   }
   const kill0 = G.Village.kill;
   G.Village.kill = function (v) {
-    if (v && G.S.villagers.has(v.id)) for (const h of G.S.buildings.values()) if (h.elite && h.elite.dono === v.id) h.elite.dono = heirIn(h, v);
+    // (the heir among those of the banner's house — or, where none of the family lives under it any more, among those of the
+    // house the holder lived in: a family that moved takes its banner at the day's next round, and one whose holder died
+    // before that round had a banner of nobody, to come down with «ninguém da família mora mais ali» — L-721)
+    if (v && G.S.villagers.has(v.id)) for (const h of G.S.buildings.values()) if (h.elite && h.elite.dono === v.id) {
+      const nh = v.home && v.home !== h.id ? G.S.buildings.get(v.home) : null;
+      h.elite.dono = heirIn(h, v) || (nh ? heirIn(nh, v) : 0);
+    }
     return kill0.apply(this, arguments);
   };
   Tr.keepHouses = function (set) {

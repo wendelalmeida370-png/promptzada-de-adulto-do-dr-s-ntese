@@ -397,9 +397,22 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   pronto há casas com o dobro ou o triplo da lotação (a pior: 22 numa casa de 6, ao lado de uma casa com cinco lugares
   vagos), e a razão de quase todas as famílias é «falta dinheiro» — o casal na casa cheia dos parentes nunca junta o preço
   de uma casa. É regra de economia e de moradia, com decisão de design: fica para uma frente própria.
+- **Juntada: a casa cheia ganha saída** (H; D-220 a D-224, L-970 a L-972; fecha a L-718 para a casa de várias famílias):
+  **a casa vazia do povo, dada** no mesmo dia à família que não cabe e não tem o preço (paga o que tem além de duas moedas),
+  o plano que passa a ver a casa onde a família viveria menos apertada (a família de sete nunca tomava a casa de seis: L-970);
+  **a cabana das próprias mãos** depois de dois dias sem juntar o preço (só os crescidos da família, a madeira de sobra do
+  povo, o lote barato, uma por cidade, fora das obras pagas); o Diário e a ficha da casa dizem a estrada com a causa; o corpo
+  do deus escolhe. Medido em dez anos: as pessoas-dia em casa com o dobro caem de 6–8% para 2–4% na metrópole e na
+  megalópole; 28 sabotagens acusadas (`qa/casa-cheia.js`, 102 casos na «cidade», 101 na metrópole e na mega; regras 77 e
+  78). **Na junção, pelo líder:** a bandeira perdida quando o dono morre entre a mudança e a ronda (**L-721**, `trade.js`;
+  `casa-mercante` k9); **a tarefa guardada por uma cena que sumia com a carga contada a caminho de uma obra (L-722**,
+  `villagers.js`/`scene.js`; `obra` b13 — um defeito das cenas, de antes do patch, que o verificador do Patch 2 acusou na
+  metrópole em guerra); T-829 e T-830 (duas provas que a história nova do mundo desarmou). **Aberto do H → segunda rodada:**
+  a família sozinha maior que a casa (T-975 → **a D-194 do líder: os filhos crescidos levantam a sua cabana**), a família
+  antes do solteiro (T-976), quem deixa a sede sem teto (T-818), a madeira média (T-978).
 - **Em curso (quatro frentes):** **a praça ao fim da tarde, o foguista no posto e o bairro dos banhos** (F, segunda
-  rodada; T-918, D-202); **a casa cheia que não esvazia** (H; L-718: a família que não cabe e não pode pagar
-  levanta a própria cabana; a casa vazia do povo antes da obra); **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a terra guardada
+  rodada; T-918, D-202); **a família grande demais para a casa** (H, segunda rodada: a D-194, T-976, T-818, T-978);
+  **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a terra guardada
   cedo, o fogo nos monumentos e a última pedra** (M, terceira rodada: a D-160, a D-219, a obra parada em 98%, a gente em dez
   sementes — T-772).
 - **O diário do patch para o dono** (`qa/patch3/diario/`, publicado como artefato): o que entrou, o que está em obras e o

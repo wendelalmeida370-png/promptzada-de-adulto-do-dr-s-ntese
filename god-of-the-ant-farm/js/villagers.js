@@ -253,6 +253,11 @@
     // (one left in a building with no errand — the body given back in a room — goes out by its door with the next errand too,
     // and one left asleep with none wakes for it: never walking about «inside», nor asleep on their feet)
     if (!t) { if (v.age >= 2) { if (v.inside && !v.ug && !(o && o.stay === v.inside)) leave(v); v.sleeping = false; } return; }
+    // (lent to a scene with the errand put aside to be given back — scene.js, take with keep —, and the scene's hold ended from
+    // outside, by an errand of higher order or by death: the errand put aside ends too, with its own cleanup. It was dropped
+    // in silence: a builder taken to «A Convocação» with four of wood counted on their way to a house went to eat, and the
+    // work waited for ever for wood nobody brought — L-722. The scene that gives the errand back itself does not pass here)
+    if (t.type === 'scene' && G.Scene && G.Scene.dropPrev) { const p = G.Scene.dropPrev(v); if (p) { v.task = p; Vg.endTask(v, o); v.task = t; } }
     G.Life && G.Life.onEndTask(v);
     G.Carnage && G.Carnage.onEndTask(v);
     if (t.type === 'chop') { const o = S.trees.get(t.id); if (o && o.claim === v.id) o.claim = 0; }
@@ -1000,6 +1005,9 @@
     const ahead = gw && G.Village.workPri ? Math.min(0, G.Village.workPri(gw, v) + G.Village.GREAT_PRI) : 0;
     for (const b of S.buildings.values()) {
       if (b.built || b.set !== v.set || b.type === 'ruin') continue;
+      // (a hut a family raises with its own hands is the family's to raise, never the people's builders': its grown ones come
+      // to it by their own door — G.Casa.handsTask, act-casa.js, D-222)
+      if (b.encomenda && b.encomenda.maos) continue;
       if (b.unreach) { if (b.unreach >= 6) { abandonSite(b); continue; } if (S.clock - b.unreachT < 30) continue; }
       const st = G.Fac.stockOfSet(b.set);
       let needMat = false; for (const k in b.need) if (b.need[k] - coming(b, k) > 0 && G.Fac.free(b.set, k) >= 1) { needMat = true; break; }
@@ -1100,6 +1108,9 @@
     // (a crate of an operation, a purchase on its way home: it goes where it belongs, never into the common store — and
     // with the way there cut, as its rule says: G.Act.holdCarry)
     if (v.carry && v.carry.k !== 'water' && (v.carry.op || v.carry.to) && G.Act) { const t = G.Act.resumeCarry(v, H) || G.Act.holdCarry(v, H); if (t) return t; }
+    // (a family raising its own hut with its hands works on it before the trade of the day — a load in the hands to its
+    // place first: act-casa.js, D-222)
+    if (!v.captive && G.Casa && G.Casa.handsTask) { const t = G.Casa.handsTask(v); if (t) return t; }
     if (v.carry && v.carry.k !== 'water') {
       if (v.role === 'construtor') { const t = buildTask(v); if (t) return t; }
       return deliverTask(v);

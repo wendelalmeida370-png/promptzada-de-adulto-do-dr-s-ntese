@@ -15,6 +15,8 @@
 // k6 save e load: a marca e a família atravessam o save, e o dia seguinte é igual;
 // k7 o verificador: a bandeira deixada nas paredes de uma casa de estranhos é acusada (S3), e o dia da cidade a conserta;
 // k8 quem tinha a bandeira morre e na casa só ficam irmãos pequenos: a bandeira é do mais velho deles, e fica (L-713);
+// k9 a família se muda e quem tinha a bandeira morre antes da ronda do dia: a bandeira é de quem da família mora na casa
+//    nova, e vai para lá (L-721);
 // e nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -39,8 +41,11 @@ function house(min, pred) {
   }
   return null;
 }
-// an empty house of the same town, the people's
-const empty = set => [...S.buildings.values()].sort((a, c) => a.id - c.id).find(b => b.set === set.id && isHome(b) && !used.has(b.id) && !res(b).length) || null;
+// an empty house of the same town, the people's — with beds for n, when the case moves a family into it: a family of six put
+// in a hut of four is one the town's day moves on (the people's empty house, given or bought — D-221), T-829
+const empty = (set, n) => [...S.buildings.values()].sort((a, c) => a.id - c.id).find(b => b.set === set.id && isHome(b) && !used.has(b.id) && !res(b).length && (!n || G.BDEF[b.type].housing >= n)) || null;
+// (the family moved on in the day, after the day's round of the banners: the banner follows at the next round — one day more)
+const lag = (name, since) => { const x = bannersOf(name, since)[0]; const hd = x && P(x.elite.dono); return !!x && !!hd && !!hd.home && hd.home !== x.id; };
 // the banner as the game gives it (trade.js checkElite): the years of trade stood in for by the test's hand
 const banner = (h, v, extra) => god(() => { h.trade = 60; h.tradeGood = 'tecido'; h.elite = Object.assign({ k: 'tecido', since: S.day - 3, fam: v.name, dono: v.id, ok: S.day }, extra || {}); return h.elite; });
 // (a day of the world — and on, until every town has had the day's round of the social.js, where the banners are looked at:
@@ -71,13 +76,13 @@ if (on('k1')) {
 
 // ---------------------------------------------------------------- k2
 if (on('k2')) {
-  const c = house(2, (b, l, o) => !!empty(S.settlements.get(b.set)));
+  const c = house(2, (b, l, o) => !!empty(S.settlements.get(b.set), l.length));
   if (!c) none('k2 a família se muda: a bandeira vai com ela');
   else {
-    const { b, l, o, set } = c; const nh = empty(set); used.add(nh.id); const since = banner(b, o).since; const ids = l.map(v => v.id);
+    const { b, l, o, set } = c; const nh = empty(set, l.length); used.add(nh.id); const since = banner(b, o).since; const ids = l.map(v => v.id);
     // the family moves, as any move leaves it: each one with the new home, the new house theirs
     god(() => { for (const v of l) { v.home = nh.id; v.hhType = nh.type; if (v.inside === b.id) v.inside = 0; } nh.dono = o.id; nh.res = l.length; b.res = 0; b.dono = 0; });
-    day(1);
+    day(1); if (lag(o.name, since)) day(1);
     // (a year on: the old house without the family's banner; the banner on one door only, the door of the house where its
     // holder lives — the one who had it, or who of the family has it after him)
     const h0 = B(b.id), at = bannersOf(o.name, since), h1 = at[0] || null; const e = h1 && h1.elite, holder = e && P(e.dono); const nv = said(b.id).concat(h1 ? said(h1.id) : []);
@@ -198,6 +203,25 @@ if (on('k8')) {
     const at = bannersOf(name, since), h = at[0] || null, e = h && h.elite, holder = e && P(e.dono); const nv = said(b.id).concat(h && h.id !== b.id ? said(h.id) : []);
     ok('k8 só os irmãos pequenos na casa: a bandeira é do mais velho deles', now === next.id && at.length === 1 && !!holder && ids.includes(holder.id) && holder.home === h.id && !nv.length,
       `${name} (${Math.floor(first.age)}), de ${set.name}, tinha a bandeira da casa ${b.type}#${b.id} e morreu; na casa, os irmãos: ${k.slice(1).map(v => `${v.name} (${Math.floor(v.age)})`).join(', ')}: no mesmo instante a bandeira é de ${P(now) ? P(now).name : (now ? '#' + now : 'NINGUÉM')}; um ano depois ${at.length === 1 ? `está na porta de ${h.type}#${h.id}, onde mora ${holder ? holder.name : 'NINGUÉM da família'}` : 'a bandeira DESCEU'}; verificador ${nv.join(' | ') || 'limpo'}`);
+  }
+}
+
+// ---------------------------------------------------------------- k9
+if (on('k9')) {
+  // (a family of two grown or more, with an empty house of the town where it fits: it moves by the test's hand, as in k2, and
+  // the one who had the banner dies at once — before the day's round takes the banner to the new house)
+  const c = house(2, (b, l, o) => !!empty(S.settlements.get(b.set), l.length) && l.some(v => v.id !== o.id && (v.id === o.partner || v.mother === o.id || v.father === o.id)));
+  if (!c) none('k9 a família se muda e o dono morre antes da ronda: a bandeira vai para a casa nova');
+  else {
+    const { b, l, o, set } = c; const nh = empty(set, l.length); used.add(nh.id); const since = banner(b, o).since; const ids = l.filter(v => v.id !== o.id).map(v => v.id);
+    god(() => { for (const v of l) { v.home = nh.id; v.hhType = nh.type; if (v.inside === b.id) v.inside = 0; } nh.dono = o.id; nh.res = l.length; b.res = 0; b.dono = 0; });
+    god(() => G.Village.kill(o, 'teste'));
+    const e0 = B(b.id).elite; const now = e0 ? e0.dono : -1;
+    day(1); if (lag(o.name, since)) day(1);
+    const h0 = B(b.id), at = bannersOf(o.name, since), h1 = at[0] || null; const e = h1 && h1.elite, holder = e && P(e.dono); const nv = said(b.id).concat(h1 ? said(h1.id) : []);
+    const left = !h0 || !(h0.elite && h0.elite.fam === o.name);
+    ok('k9 a família se muda e o dono morre antes da ronda: a bandeira vai para a casa nova', ids.includes(now) && left && at.length === 1 && !!holder && ids.includes(holder.id) && holder.home === h1.id && h1.id !== b.id && h1.trade === 60 && !nv.length,
+      `a família de ${o.name} (${l.length}) mudou de ${b.type}#${b.id} para ${nh.type}#${nh.id}, em ${set.name}, e ${o.name} morreu antes da ronda do dia: no mesmo instante a bandeira é de ${P(now) ? P(now).name : (now ? '#' + now : 'NINGUÉM')}; um dia depois a casa antiga ${left ? 'está sem a bandeira' : 'SEGUE com a bandeira'}; a bandeira da família está em ${at.length === 1 ? `${h1.type}#${h1.id}, conta ${h1.trade}, onde mora ${holder ? holder.name : 'NINGUÉM da família'}` : at.length ? `${at.length} PORTAS` : 'NENHUMA porta'}; verificador ${nv.join(' | ') || 'limpo'}`);
   }
 }
 
