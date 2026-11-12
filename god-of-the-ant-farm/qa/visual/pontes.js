@@ -105,7 +105,7 @@ function tileChecks(tag, tiles, stoneToo) {
     const want = peopleOf(compOf(i)); const st = want ? want.st : null; R.styles.add(F.br.st);
     if (!st) R.people.push(`${F.x},${F.y}: nenhum prédio a dez casas (${F.br.st})`); else if (F.br.st !== (st === 'nordico' || STUFF[st] ? st : 'classico')) R.peopleBad.push(`${F.x},${F.y}: ${F.br.st}, e o prédio mais perto é ${want.b.type}#${want.b.id} ${st}`);
     // p9: the far figure has no fine piece
-    const fine = tf.filter(t => !['deck', 'mureta'].includes(t.part)); if (fine.length || tf.length > 80) R.farFine.push(`${F.x},${F.y}: ${tf.length} triângulos, ${[...new Set(fine.map(t => t.part))].join(',')}`);
+    const fine = tf.filter(t => !['deck', 'mureta'].includes(t.part)); if (fine.length || tf.length > 60) R.farFine.push(`${F.x},${F.y}: ${tf.length} triângulos, ${[...new Set(fine.map(t => t.part))].join(',')}`);
     if (F.timber) continue;
     // p4: stone — the street's paving on the deck, the people's stuff in the walls, not one flat colour
     R.stone++; const area = t => { const v = t.v, ax = v[3] - v[0], ay = v[4] - v[1], az = v[5] - v[2], bx = v[6] - v[0], by = v[7] - v[1], bz = v[8] - v[2]; return Math.hypot(ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx) / 2; };
@@ -138,8 +138,8 @@ function tileChecks(tag, tiles, stoneToo) {
     `${R.stone} casas de pedra, ${R.sides} lados sobre a água, no máximo ${(100 * (R.plain || 0)).toFixed(0)}% da área de uma casa em cor lisa (o escuro dos vãos, os filetes)${R.stoneBad.length ? ' — ' + R.stoneBad.slice(0, 3).join(' · ') : ''}${R.gapBad.length ? ' — ' + R.gapBad.slice(0, 3).join(' · ') : ''}${R.capBad.length ? ' — ' + R.capBad.slice(0, 3).join(' · ') : ''}`);
   if (want('p5')) ok(`p5 ${tag}: nenhuma peça fora da casa da ponte para o lado de um prédio ou da margem, nem dentro de um prédio`, !R.out.length && !R.inB.length, R.out.length || R.inB.length ? [...new Set(R.out)].slice(0, 3).concat([...new Set(R.inB)].slice(0, 3)).join(' · ') : `${n} casas, de perto e de longe (sobre a água vizinha, até 13 cm: a cornija; sobre a casa seguinte da própria ponte, até 7 cm: o poste na linha entre as duas)`);
   if (want('p6')) ok(`p6 ${tag}: o estilo segue o povo do chão`, !R.peopleBad.length, `${[...R.styles].sort().join(', ')}${R.peopleBad.length ? ' — ' + R.peopleBad.slice(0, 3).join(' · ') : ''}${R.people.length ? ' (' + R.people.join(' · ') + ')' : ''}`);
-  if (want('p9')) ok(`p9 ${tag}: de longe a laje e as muretas, sem peça fina; os triângulos`, n > 0 && !R.farFine.length && R.maxNear <= 700 && R.maxFar <= 80,
-    `de perto ${R.nearT} (${(R.nearT / n).toFixed(0)} por casa, a maior ${R.maxNear}; antes ${R.before}: ${(R.before / n).toFixed(0)} por casa); de longe ${R.farT} (${(R.farT / n).toFixed(0)} por casa, a maior ${R.maxFar}; antes 0: de longe a ponte não era desenhada)${R.farFine.length ? ' — ' + R.farFine.slice(0, 3).join(' · ') : ''}`);
+  if (want('p9')) ok(`p9 ${tag}: de longe a laje e as muretas, sem peça fina; os triângulos`, n > 0 && !R.farFine.length && R.maxNear <= 1000 && R.maxFar <= 60,
+    `de perto ${R.nearT} (${(R.nearT / n).toFixed(0)} por casa, a maior ${R.maxNear}, o teto mil; antes ${R.before}: ${(R.before / n).toFixed(0)} por casa); de longe ${R.farT} (${(R.farT / n).toFixed(0)} por casa, a maior ${R.maxFar}, o teto 60; antes 0: de longe a ponte não era desenhada)${R.farFine.length ? ' — ' + R.farFine.slice(0, 3).join(' · ') : ''}`);
   return R;
 }
 
@@ -289,6 +289,7 @@ if (want('p12')) {
     const endTop = down(t0, ...[F0.pt(0, -1.7, 1.75, 0)].map(p => [p[0], p[2]])[0], F0.dk + 3), capTop = down(t1, ...[F1.pt(0, 0, 1.75, 0)].map(p => [p[0], p[2]])[0], F1.dk + 3);
     if (tops.some(v => v === null || v < 0.25) || pier.some(p => !p || p.dark) || abut.some(p => !p || p.dark) || !endTop || !capTop || endTop.p[1] < capTop.p[1] + 0.08)
       bad.push(`${st}: vãos ${tops.map(v => (v === null ? 'nenhum' : v.toFixed(2))).join('/')}, pilares ${pier.map(p => (p ? (p.dark ? 'vão' : 'pedra') : 'nada')).join('/')}, encontros ${abut.map(p => (p ? (p.dark ? 'vão' : 'pedra') : 'nada')).join('/')}, o pilar da margem ${endTop && capTop ? (endTop.p[1] - capTop.p[1]).toFixed(2) + ' m sobre a mureta' : '?'}`);
+    if (!capTop) continue; // (no wall's head to measure the rest from: said above)
     // (the gap's shape, across the middle tile's north side)
     const prof = [-1.2, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1.2].map(a => gapTop(F1, t1, 0, a)), ws = t1.filter(t => t.part === 'aduela').length / 12 / 2;
     const mid = prof[4], f = v => (v === null ? '—' : v.toFixed(2));

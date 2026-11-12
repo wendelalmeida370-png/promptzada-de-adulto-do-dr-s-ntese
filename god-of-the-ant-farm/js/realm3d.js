@@ -1155,7 +1155,7 @@ vec3 gxGrade( vec3 c ) {
         // ---- timber: a kerb log on the planks' ends, posts down into the bed, a rail on them, braces crossed between; in the
         // north, at each end, a block of dry stone
         const yt = dk + 0.98; g.pat = ax ? PAT.beamX : PAT.beamZ;
-        if (far) { mk('mureta'); box(A0, A1, BF - 0.24, BF - 0.03, dk, dk + 0.15, beam); box(A0, A1, BF - 0.2, BF - 0.07, yt - 0.13, yt, beam); continue; }
+        if (far) { mk('mureta'); box(A0, A1, BF - 0.2, BF - 0.07, yt - 0.13, yt, beam); continue; } // (from far, its rail)
         mk('mureta'); box(A0, A1, BF - 0.24, BF - 0.03, dk, dk + 0.15, beam);
         const stub = q => (q === 0 ? 0 : north && r >= 2 ? 0.5 : 0.07), p0 = A0 + stub(e[0]), p1 = A1 - stub(e[1]), n = Math.max(1, Math.round((p1 - p0) / 1.3)), dm = BF - 0.135;
         for (let k = 0; k <= n; k++) { if (k === n && e[1] === 0) break; const a = p0 + (p1 - p0) * k / n; g.pat = PAT.beam; mk('poste'); box(a - 0.065, a + 0.065, dm - 0.065, dm + 0.065, yb, yt + 0.06 + hs(40 + k) * 0.04, beam); }
@@ -1208,7 +1208,7 @@ vec3 gxGrade( vec3 c ) {
           g.put(SH.box, R3.mat(c[0], c[1], c[2], ry, len - 0.014, ring + (key ? 0.06 : 0), key ? 0.15 : 0.1, 0, th), tone(B.gap === 0 ? light : stone, (key ? 1.0 : 0.86) + hs(60 + s * 16 + k) * 0.16)); }
       } else for (const q of gaps) { // (a lintel over each gap)
         mk('verga'); let a0 = q[0][0], a1 = q[q.length - 1][0], yl = yw; for (const p of q) yl = Math.max(yl, p[1]); if (B.gap === 4) { a0 = ac - 0.55; a1 = ac + 0.55; }
-        box(a0 - 0.16, a1 + 0.16, BF - 0.06, BF + 0.035, yl - 0.008, yl + (B.gap === 3 ? 0.16 : 0.2), tone(light, 0.94 + hs(70 + s) * 0.08)); }
+        box(a0 - 0.16, a1 + 0.16, BF - 0.06, BF + 0.035, yl - 0.008, yl + (B.gap === 4 ? 0.2 : B.gap === 3 ? 0.16 : 0.14), tone(light, 0.94 + hs(70 + s) * 0.08)); }
       // (a pilaster where the wall goes on over a pier into the next tile)
       g.pat = PAT[B.pat]; mk('pilar');
       if (e[0] === 0) box(-2, -1.7, BF - 0.02, BF + 0.045, yb, yt, tone(stone, 0.94)); if (e[1] === 0) box(1.7, 2, BF - 0.02, BF + 0.045, yb, yt, tone(stone, 0.94));
