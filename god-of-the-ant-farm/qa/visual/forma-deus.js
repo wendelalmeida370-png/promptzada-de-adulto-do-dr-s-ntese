@@ -483,6 +483,8 @@ if (want('k')) {
   const V = G.Village, R = G.Render, W = G.W, cam = R.cam, real = V.reserva; let gone = false; const out = [];
   // (the reserve the world gives, C's, as it is; none while «gone» — the frames only: no step of the world runs then)
   V.reserva = s => (gone ? null : real(s));
+  // (and every lot a town keeps, the same way: the god asks V.reservas — the wonder's lot first, then the civic field, D-230)
+  const realAll = V.reservas; V.reservas = s => (gone ? [] : realAll ? realAll(s).filter(r => r.type !== 'civico') : [real(s)].filter(Boolean));
   // (the god's frame on a recorder: what it paints, and the texts it writes — their own coordinates)
   let rec = F.recorder(); const texts = [];
   const pc = new Proxy({}, { get(t, k) { if (k === 'fillText') return (s, x, y) => texts.push({ s: String(s), x, y }); const c = rec.c; if (k in c) { const v = c[k]; return typeof v === 'function' ? v.bind(c) : v; } return () => { }; }, set(t, k, v) { rec.c[k] = v; return true; } });

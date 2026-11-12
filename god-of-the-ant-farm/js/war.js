@@ -480,7 +480,7 @@
       if (t !== T.GRASS && t !== T.MEADOW) continue;
       if (S.occ[i] || S.objAt[i]) continue;
       let md = 1e9; for (const o of S.settlements.values()) md = Math.min(md, G.dist(tx, ty, o.cx, o.cy));
-      if (md < 12) continue;
+      if (md < 12 || (G.Village.keptNear && G.Village.keptNear(tx, ty))) continue; // (off a capital that keeps a lot for a great work: D-232)
       if (W.slope(tx - 1, ty - 1, 3, 3) > 1.6) continue;
       const d = G.dist(tx, ty, x, y);
       const sc = Math.min(md, 26) * 0.5 - Math.abs(d - 22) * 0.15 + S.fert[i] * 2 + G.R();

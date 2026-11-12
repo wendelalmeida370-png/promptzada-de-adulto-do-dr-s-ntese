@@ -323,6 +323,8 @@
     const S = G.S; b.progress = 1;
     V.siteGone(b, 'obra-feita'); // (what the work got is built in: out of its holder, in the ledger — and it needs nothing)
     b.built = true; for (const k in b.need) b.need[k] = 0; b.upgradeFrom = null;
+    // (the timber a fire took of it going up was brought again by the ledger: finished, it is whole — D-219)
+    if (b.burnHp > 0) { b.hp = Math.min(b.maxHp, b.hp + b.burnHp); b.burnHp = 0; }
     G.Siege && G.Siege.keepWays(b.set, b); // (a building of the town now, to be reached: one finished in a pocket its wall — or a neighbour's, L-689 — shuts gets its gate, L-382)
     G.Interiors && G.Interiors.complete(b); // (a fact of its life; a type made over — a hut become a house — a new plan)
     S.stats.built++;
@@ -361,8 +363,62 @@
     V.updateEra();
   };
 
+  // ------------------------------ the fire and the great works of stone (T-771, D-219) ------------------------------
+  // stone does not burn as thatch does. A public work of a bigger step that stands is wounded by a fire — what is of timber
+  // in it, the roof, what is inside: its strength falls to the stone's share of its bill (two thirds of a palace of 24 m,
+  // four fifths of a wonder), b.burnHp keeps what the fire took —, and the fire alone never takes it to the ground; with its
+  // timber gone it feeds the fire no more, and while it burns the flame is low and passes slowly (nature.js asks V.fireFuel).
+  // One going up burns as any work does — its scaffolds, its beams — until the fire has had its timber: the work stays, with
+  // its stone and its brick, and waits for timber again. The god's powers, the war and the dragon's own blows take a monument
+  // as they did. Before: every building that caught fire burnt to the ground unless it rained — nobody puts a fire out —, and
+  // Mênfis of a world from scratch lost its palace of 24 m four years after the twenty-one it took to raise.
+  // The riot is the same fire and the same hands: its torches and its stones wound a great work of stone down to what the
+  // fire leaves, and do not take it to the ground alone (Mênfis of seed 103 lost its palace of 24 m to a crowd, year 86)
+  V.bigStep = b => !!b && b.type !== 'ruin' && publicWork(b.type) && b.type !== 'monument' && b.w > G.Escala.n0(b.type);
+  // (the peoples whose great works are halls of timber, wall and roof: see V.stoneWork)
+  V.TIMBER = { nordico: 1 };
+  V.TIMBER_BURNS = true;
+  // (the great work a fire does not take to the ground alone: every one going up — its stone stays —, and of those that
+  // stand the ones of stone; a hall of timber that stands burns as a house does, and the fire passes through it as through one)
+  V.stoneWork = b => V.bigStep(b) && !(b.built && V.TIMBER_BURNS && V.TIMBER[b.style]);
+  // (what a fire leaves of a great work's strength: the share of its bill that is not timber)
+  V.fireFloor = function (b) {
+    const c = G.Escala.billOf(b).cost; let tot = 0; for (const k in c) tot += c[k] || 0;
+    return Math.max(1, Math.round((b.maxHp || 1) * (tot > 0 ? 1 - (c.wood || 0) / tot : 1)));
+  };
+  // (what a great work of stone feeds a fire with: 'pedra' — its timber, a low flame — while it stands above what the fire
+  // leaves; 'building' while one going up has timber on it; else nothing. Any other building: 'building'. Pure)
+  V.fireFuel = function (b) {
+    if (!V.stoneWork(b)) return 'building';
+    if (b.built) return b.hp > V.fireFloor(b) + 1e-6 ? 'pedra' : null;
+    return (V.delivered(b).wood || 0) > 1e-6 ? 'building' : null;
+  };
+  // (the fire has had the timber of a great work going up: out of its site by the ledger — what is taken from a site is needed
+  // again —, the progress back to what its stone allows, what was being done in it ended by its own rule; the work stays)
+  function siteBurnt(b) {
+    const D = G.Depot; const ref = 'o:' + b.id; const w = V.delivered(b).wood || 0;
+    G.Act && G.Act.atGone(b);
+    if (D && D.exists(ref)) { D.unclaim(ref); if (w > 0) D.use(ref, 'wood', w, { code: 'fogo', mine: true }); }
+    if (G.Vg && G.Vg.allowedProgress) b.progress = Math.min(b.progress || 0, G.Vg.allowedProgress(b));
+    const fl = V.fireFloor(b); b.burnHp = Math.max(0, b.maxHp - fl); b.hp = fl;
+    const set = G.S.settlements.get(b.set); const nm = V.nameOf(b.type, b); const [cx, cy] = V.center(b);
+    V.log(`O fogo levou os andaimes e a madeira d${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}${set ? ' de ' + set.name : ''}, ainda em obra: a pedra ficou.`, 'fire', cx, cy);
+  }
   V.damageBuilding = function (b, amount, cause) {
     if (!b || b.hp <= 0 || b.type === 'ruin' || b.type === 'cemetery') return;
+    if ((cause === 'fire' || cause === 'riot') && V.stoneWork(b)) {
+      if (b.built) {
+        const room = b.hp - V.fireFloor(b); if (room <= 1e-6) return;
+        if (amount >= room) {
+          amount = room;
+          if (cause === 'fire') {
+            const set = G.S.settlements.get(b.set); const nm = V.nameOf(b.type, b); const [cx, cy] = V.center(b);
+            V.log(`O fogo consumiu o telhado e o que havia dentro d${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}${set ? ' de ' + set.name : ''}: a pedra ficou de pé.`, 'fire', cx, cy);
+          }
+        }
+        if (cause === 'fire') b.burnHp = (b.burnHp || 0) + amount;
+      } else if (cause === 'fire' && b.hp - amount <= 0) { siteBurnt(b); return; }
+    }
     b.hp -= amount;
     if (b.hp <= 0) V.destroyBuilding(b, cause);
   };
@@ -546,9 +602,9 @@
     // as far as twenty tiles past its edge, the others six and then twelve; the old quarter of a work of the type's own size, as
     // before. A bigger step opens its room by its own rules — V.openSite)
     if (def.podium && publicWork(type)) {
-      for (const e of V.reachOf(set, type)) if (!best) best = search(set, type, def, R + e, field, counts, false);
+      for (const e of V.reachOf(set, type, def.w)) if (!best) best = search(set, type, def, R + e, field, counts, false);
       // (with no lot its podium covers as far as it looks, one whose ground its work levels first, the nearest ring first: D-217)
-      if (!best) { levelOK = true; try { best = search(set, type, def, R, field, counts, false, undefined, reach); for (const e of V.reachOf(set, type)) if (!best) best = search(set, type, def, R + e, field, counts, false); } finally { levelOK = false; } }
+      if (!best) { levelOK = true; try { best = search(set, type, def, R, field, counts, false, undefined, reach); for (const e of V.reachOf(set, type, def.w)) if (!best) best = search(set, type, def, R + e, field, counts, false); } finally { levelOK = false; } }
     } else {
       // a full city puts its great buildings out by its edge, beyond the walls if need be,
       // and when even there is no room, it builds them over its own old fields and houses
@@ -701,7 +757,10 @@
   // on its fields and empty ground; the others six, and with no lot there twelve)
   const FORA = { maravilha: { romano: 1, egipcio: 1 } };
   V.fora = (set, type) => !!(FORA[type] && FORA[type][G.Civ.idOfFac(set.fac) || 'classico']);
-  V.reachOf = (set, type) => (V.fora(set, type) ? [20] : [6, 12]);
+  // (a step of 8 tiles or more of a work that stands in the town — the great palace, the colossal one, a wonder — fits no
+  // heart of a town: with no lot at six and at twelve it looks as far as twenty, as the ones that stand outside. The cart
+  // brings what the work waits for: the distance no longer holds it — D-215, D-231)
+  V.reachOf = (set, type, n) => (V.fora(set, type) ? [20] : n >= 8 ? [6, 12, 20] : [6, 12]);
   // ------------------------------ the ground levelled for a great work (D-120 (3), D-217) ------------------------------
   // the podium of a bigger step covers three levels of relief; past that the work begins by levelling its lot — cut and fill,
   // never more than V.LEVEL levels of either at any corner —, the ground about it eased over two tiles: the lot's corners are
@@ -846,7 +905,7 @@
   // txt }
   const WHY = { agua: 'água', outra: 'prédio de outra cidade', fica: 'prédio da cidade que não cai', muro: 'muro ou estrada', pedra: 'pedra', penhasco: 'penhasco em volta', relevo: 'relevo além do pódio', casas: 'casas e campos demais', longe: 'longe das ruas' };
   V.landWhy = function (set, type, n) {
-    const S = G.S; const lim = V.openLimit(n); const R = Math.round(G.Urban ? G.Urban.radius(set, { w: n }, V.pop(set.id)) : 20) + Math.max(...V.reachOf(set, type));
+    const S = G.S; const lim = V.openLimit(n); const R = Math.round(G.Urban ? G.Urban.radius(set, { w: n }, V.pop(set.id)) : 20) + Math.max(...V.reachOf(set, type, n));
     const why = {}; for (const k in WHY) why[k] = 0; let lots = 0, free = 0, near = null; const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
       const x = cxi + dx - Math.floor((n - 1) / 2), y = cyi + dy - Math.floor((n - 1) / 2); const d = G.dist(x + n / 2, y + n / 2, set.cx, set.cy);
@@ -899,7 +958,7 @@
   V.openSite = function (set, type, step) {
     const S = G.S; const n = step.n; const def = Object.assign({}, G.BDEF[type], { w: n, h: n, podium: true, rt: type });
     const noSite = set._noSite || (set._noSite = {}); const nk = type + ':' + n + ':abre'; if (noSite[nk] === S.day) return null;
-    const pop = V.pop(set.id); const R = (G.Urban ? G.Urban.radius(set, def, pop) : 20) + Math.max(...V.reachOf(set, type)); const lim = V.openLimit(n);
+    const pop = V.pop(set.id); const R = (G.Urban ? G.Urban.radius(set, def, pop) : 20) + Math.max(...V.reachOf(set, type, n)); const lim = V.openLimit(n);
     const counts = {}; for (const b of S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
     const ideal = (G.City && G.City.IDEAL[type]) || (type === 'temple' ? 5 : 3.2);
     const cands = []; const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
@@ -926,6 +985,25 @@
   // years of the town below a city, when the town is no more its people's capital or its people no more knows the work; the
   // town gone, it goes with it. Looked at once a day, by the town's planner
   V.RES_TIER = 3; V.RES_YEARS = 10; V.RES_REACH = 20;
+  // (the civic field — part of D-160, D-230: beside the lot of its wonder, a capital that is a city keeps one field of 6 tiles
+  // for the first step of 24 m it has not yet — its theatre, its palace or its temple —, by the same doors, as far as those
+  // works look (its radius and twelve). The land about a capital is gone between its sixtieth and its hundredth year — water,
+  // cliffs, its own buildings and the other towns': of 46 pairs of a capital and a bigger step it justified, in three worlds
+  // from scratch, two had a lot at a hundred years. set.urb.civ, in the save; any of the three of 6 tiles is founded on it,
+  // and the town then keeps another for the next it lacks)
+  V.CIVIC = ['teatro', 'palacio', 'temple']; V.CIVIC_N = 6; V.CIVIC_REACH = 12;
+  const civOK = (type, w) => w === V.CIVIC_N && V.CIVIC.includes(type);
+  // (the works of 24 m a town has not yet, of the three: its people knows the step, and no building of the type of 6 tiles or
+  // more stands or goes up in it)
+  function civWork(set) {
+    const style = G.Civ.idOfFac(set.fac) || 'classico'; const has = {};
+    for (const b of G.S.buildings.values()) if (b.set === set.id && b.type !== 'ruin' && b.w >= V.CIVIC_N) has[b.type] = 1;
+    return V.CIVIC.filter(t => !has[t] && G.Escala.steps(t).some(st => st.n === V.CIVIC_N && !st.legado && !st.familia && G.Escala.can(t, style, st.n)));
+  }
+  V.civWork = civWork;
+  // (a town's kept lots: its wonder's, its civic field)
+  const NONE = [];
+  const keptOf = s => { const u = s.urb; return u ? (u.res ? (u.civ ? [u.res, u.civ] : [u.res]) : (u.civ ? [u.civ] : NONE)) : NONE; };
   const RES_TYPES = ['maravilha', 'palacio_colossal'];
   const FIELDS = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
   // (the great work a town keeps a lot for — the first of RES_TYPES its people knows a bigger step of — and those steps, small to big)
@@ -937,18 +1015,29 @@
   V.resWork = resWork;
   // (the town's kept lot, for the god's eyes and the proofs: its work, its step, its corner and its side in tiles — pure)
   V.reserva = set => { const r = set && set.urb && set.urb.res; return r ? { type: r.type, esc: r.esc, x: r.x, y: r.y, n: r.n } : null; };
+  // (all the lots a town keeps — its wonder's and its civic field, type 'civico' —, the same way: pure)
+  V.reservas = set => (set ? keptOf(set).map(r => ({ type: r.type, esc: r.esc || null, x: r.x, y: r.y, n: r.n })) : []);
   // (the town whose kept lot a rect of a work of type would fall on — its ring too, for a blocking one —: any but the town's own
   // for that type, and but its own fields on its own lot. → the town, or null)
   function resOver(set, type, x, y, w, h, blocks) {
     const S = G.S; if (!S || !S.settlements) return null;
-    for (const s of S.settlements.values()) {
-      const r = s.urb && s.urb.res; if (!r || (s === set && (r.type === type || FIELDS[type]))) continue;
+    for (const s of S.settlements.values()) for (const r of keptOf(s)) {
+      // (the town's own work for that lot — its wonder; on its civic field, any of the three of 24 m — and its own fields)
+      if (s === set && (r.type === type || FIELDS[type] || (r.type === 'civico' && civOK(type, w)))) continue;
       const m = blocks ? 1 : 0;
       if (x < r.x + r.n + m && x + w > r.x - m && y < r.y + r.n + m && y + h > r.y - m) return s;
     }
     return null;
   }
   V.resOver = resOver;
+  // (a new town keeps off the land of a capital that keeps a lot — by land or by sea, its own people's or another's: at a
+  // hundred years what bars most lots of a great work about a capital is another town's building, 53 to 91% of them. Asked by
+  // who chooses the site of a town: checkExpansion, naval.js colonize, expeditions.js siteFor. → the capital, or null — D-232)
+  V.RES_CLEAR = 20;
+  V.keptNear = function (x, y) {
+    for (const s of G.S.settlements.values()) if (keptOf(s).length && G.dist(x, y, s.cx, s.cy) < V.RES_CLEAR) return s;
+    return null;
+  };
   // (a lot of n serves a reserve of the town: every tile on the map, dry, with no wall, highway nor fire, no building on it but
   // the town's own fields; the ring with no blocking building and no cliff on land; the relief within the podium; no other
   // town's lot over it; the minor streets on it joined again round it; the town's streets reaching it. One kept (keep) is
@@ -980,8 +1069,8 @@
     return siteReached(set, x, y, { w: n, h: n });
   }
   // (the nearest lot of n that serves, as far as the town's radius and RES_REACH. → [x, y], or null)
-  function resLot(set, type, n) {
-    const R = Math.round(G.Urban ? G.Urban.radius(set, { w: n }, V.pop(set.id)) : 20) + V.RES_REACH; const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
+  function resLot(set, type, n, reach) {
+    const R = Math.round(G.Urban ? G.Urban.radius(set, { w: n }, V.pop(set.id)) : 20) + (reach || V.RES_REACH); const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
     // (the nearest its podium covers; with none, the nearest that can be levelled under it: D-217)
     let best = null, bd = 1e9, lev = null, ld = 1e9;
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
@@ -992,9 +1081,37 @@
     return best || lev;
   }
   const WORK_NAME = { maravilha: 'a sua maravilha', palacio_colossal: 'o palácio colossal do seu governante' };
-  function letGo(set, why) { const u = set.urb; if (u && u.res) { u.res = null; u.resGone = { why, day: G.S.day }; } return null; }
-  // (the town's daily look at its kept lot. → the lot, or null)
-  V.reservaDia = function (set) {
+  function letGo(set, why, civ) {
+    const u = set.urb; if (!u) return null;
+    if (civ) { if (u.civ) { u.civ = null; u.civGone = { why, day: G.S.day }; } } else if (u.res) { u.res = null; u.resGone = { why, day: G.S.day }; }
+    return null;
+  }
+  // (the town's daily look at its civic field: kept while the town is a city and its people's capital, lacks one of the three
+  // and the land still serves; let go, it is looked for again from the next day. → the field, or null)
+  function civDia(set) {
+    const S = G.S; const u = set.urb || (set.urb = { d: [], names: [] }); const r = u.civ; const fac = G.Fac.get(set.fac);
+    const cap = !!fac && G.Fac.capitalOf(fac.id) === set;
+    if (r) {
+      r.chk = S.day;
+      if ((set.tier || 0) >= V.RES_TIER) r.lost = 0; else if (!r.lost) r.lost = S.day;
+      if (r.lost && S.day - r.lost >= V.RES_YEARS) return letGo(set, 'nivel', true);
+      if (!cap) return letGo(set, 'capital', true);
+      if (!civWork(set).length) return letGo(set, 'feito', true);
+      if (!resFits(set, 'civico', r.x, r.y, r.n, true)) return letGo(set, 'terra', true);
+      return r;
+    }
+    if ((set.tier || 0) < V.RES_TIER || !cap) return null;
+    if (u.civGone && u.civGone.day === S.day) return null;
+    if (!civWork(set).length) return null;
+    const p = resLot(set, 'civico', V.CIVIC_N, V.CIVIC_REACH); if (!p) return null;
+    u.civ = { type: 'civico', n: V.CIVIC_N, x: p[0], y: p[1], d: S.day, chk: S.day, lost: 0 };
+    const cx = p[0] + V.CIVIC_N / 2, cy = p[1] + V.CIVIC_N / 2;
+    V.log(`${set.name} guardou um campo de ${V.CIVIC_N * 4} metros a ${Math.round(G.dist(cx, cy, set.cx, set.cy))} casas do centro para as suas grandes obras: ali não se ergue nada.`, 'city', cx, cy);
+    return u.civ;
+  }
+  // (the town's daily look at its kept lots: its wonder's — → that lot, or null — and its civic field)
+  V.reservaDia = function (set) { const r = resDia(set); civDia(set); return r; };
+  function resDia(set) {
     const S = G.S; const u = set.urb || (set.urb = { d: [], names: [] }); const r = u.res; const fac = G.Fac.get(set.fac);
     if (r) {
       r.chk = S.day;
@@ -1019,23 +1136,25 @@
       return u.res;
     }
     return null;
-  };
+  }
   // (a building put down on a kept lot: the work of it founded on it lets it go — its job is done —, and so does any other
   // building, but the town's own fields on its own lot. Asked by V.addBuilding, for every building)
   function resPlaced(b) {
     const S = G.S; if (!S.settlements) return;
-    for (const s of S.settlements.values()) {
-      const r = s.urb && s.urb.res; if (!r) continue;
+    for (const s of S.settlements.values()) for (const r of keptOf(s).slice()) {
       if (!(b.x < r.x + r.n && b.x + b.w > r.x && b.y < r.y + r.n && b.y + b.h > r.y)) continue;
       if (b.set === s.id && FIELDS[b.type]) continue;
-      letGo(s, b.set === s.id && b.type === r.type ? 'fundada' : 'ocupada');
+      const civ = r.type === 'civico';
+      letGo(s, b.set === s.id && (civ ? civOK(b.type, b.w) : b.type === r.type) ? 'fundada' : 'ocupada', civ);
     }
   }
   // (the lot of a step of n of the kept work on the town's lot — its corner, the step centred in it —, with the town's fields on
   // it to come down and go up elsewhere when they can. → [x, y] (.demolish, .moves), or null)
   function resSite(set, type, n) {
-    const r = set.urb && set.urb.res; if (!r || r.type !== type || n > r.n) return null;
-    if (!resFits(set, type, r.x, r.y, r.n, false, true)) return null;
+    // (the town's civic field, for one of the three of 24 m: D-230)
+    const civ = civOK(type, n) && set.urb ? set.urb.civ : null;
+    const r = civ || (set.urb && set.urb.res); if (!r || (!civ && (r.type !== type || n > r.n))) return null;
+    if (!resFits(set, civ ? 'civico' : type, r.x, r.y, r.n, false, true)) return null;
     const x = r.x + Math.floor((r.n - n) / 2), y = r.y + Math.floor((r.n - n) / 2); const S = G.S; const gone = [];
     for (let ty = y; ty < y + n; ty++) for (let tx = x; tx < x + n; tx++) { const o = S.occ[ty * N + tx]; if (o && !gone.includes(o)) gone.push(o); }
     if (!gone.length) return [x, y];
@@ -1195,6 +1314,7 @@
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) { const i = ty * N + tx; if (S.occ[i] === b.id) S.occ[i] = 0; }
     const n = b.w; b.x = a.x; b.y = a.y; b.w = b.h = a.de; b.esc = a.esc;
     { const m = V.hpOf(b.type, b.w); b.hp = Math.max(1, b.hp - (b.maxHp - m)); b.maxHp = m; } // (its strength again what it was, less what it had lost: L-784)
+    b.burnHp = V.bigStep(b) ? Math.max(0, Math.min(b.burnHp || 0, b.maxHp - b.hp)) : 0; // (the fire's mark is a great step's, and never more than it lacks: D-219)
     for (let ty = b.y; ty < b.y + b.h; ty++) for (let tx = b.x; tx < b.x + b.w; tx++) S.occ[ty * N + tx] = b.id;
     W.touchWalk();
     b.built = true; b.progress = 1; b.need = { wood: 0, stone: 0 }; b.incoming = { wood: 0, stone: 0 }; b.brick = null; b.troca = null; b.unreach = 0; b.amp = null;
@@ -1838,7 +1958,7 @@
         if (t !== T.GRASS && t !== T.MEADOW) continue;
         if (S.occ[i] || S.objAt[i]) continue;
         let md = 1e9; for (const o of S.settlements.values()) md = Math.min(md, G.dist(x, y, o.cx, o.cy));
-        if (md < 15) continue;
+        if (md < 15 || (md < V.RES_CLEAR && V.keptNear(x, y))) continue; // (and off a capital that keeps a lot: D-232)
         if (G.dOcean && G.dOcean[i] < 4) continue;
         const sl = W.slope(x - 2, y - 2, 5, 5); if (sl > 1.6) continue;
         let trees = 0, land = 0;
