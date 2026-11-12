@@ -94,7 +94,10 @@ console.log(`${world}: ${V.buildName(P.b)} #${P.b.id} de ${S().settlements.get(P
   // caravan asks first who went before — he never came to the wheel in 200 s, T-296)
   const nv = [...S().villagers.values()].find(v => v.set === b.set && v.age >= 18 && v.age < 50 && A.able(v) && !v.captive && v.role !== 'oleiro' && !(v.carry && v.carry.n > 1e-6) && !v.merchant);
   if (nv) { nv.role = 'oleiro'; nv.job = b.id; G.Vg.endTask(nv); }
-  liveSec(200, () => !A.live(op) || op.data.s > s0, bad);
+  // (up to three days of the world: the case is that another takes the batch up where it stopped and carries it on, not how
+  // fast — the new potter has his day, his sleep, his table, his bath; in 200 s, one day, he had made 0 to 5 units more and
+  // the stage had not turned in five of the six versions measured from the BV-3 on, T-819)
+  liveSec(600, () => !A.live(op) || op.data.s > s0, bad);
   ok('o2 outro-toma', !!nv && (op.data.s > s0 || !A.live(op)) && op.data.q > q1 && !bad.length, `${nv ? nv.name : 'ninguém'}: etapa ${s0} → ${op.data.s}, unidades ${q1} → ${op.data.q}; ${bad.slice(0, 2).join(' | ') || 'as contas fecham'}`);
 }
 // ---------------- o3 the god pulls the olaria down in the middle of the firing

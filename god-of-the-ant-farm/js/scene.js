@@ -71,6 +71,9 @@
   Sn.get = id => Sn.list.find(s => s.id === id) || null;
   // the errand someone was taken from (and will be given back): a soldier in a scene is still in the army
   Sn.prevTask = v => { const t = v && v.task; if (!t || t.type !== 'scene') return null; const sc = Sn.get(t.sc); const rec = sc && sc.taken.get(v.id); return rec ? rec.prev : null; };
+  // (the errand put aside for one the scene took, handed over — and forgotten by the scene — when the scene's hold is ended
+  // from outside: Vg.endTask runs its cleanup, L-722)
+  Sn.dropPrev = v => { const t = v && v.task; if (!t || t.type !== 'scene') return null; const sc = Sn.get(t.sc); const rec = sc && sc.taken.get(v.id); if (!rec || !rec.prev) return null; const p = rec.prev; rec.prev = null; return p; };
   Sn.lingers = () => { for (const s of Sn.list) if (s.st === 'run') return true; return false; };
   Sn.H = { take: (sc, v, o) => take(sc, v, o) }; // (the tests ask whether a scene could take a body)
   Sn.of = storyId => Sn.list.find(s => s.story === storyId && s.st === 'run') || null;
