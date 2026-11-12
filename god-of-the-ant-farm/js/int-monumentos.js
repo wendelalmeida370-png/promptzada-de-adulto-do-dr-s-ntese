@@ -940,10 +940,17 @@
     const hall = rooms.main;
     if (!throneAt(P, hall)) { P.errs.push('sem lugar para o assento do chefe'); return; }
     const fire = () => { if (!fireIn(P, hall)) P.errs.push('sem lugar para o fogo'); };
-    const benches = () => { let n = 0; for (const s of ['esquerda', 'direita', 'frente']) for (let g = 0; g < 2 && n < 4; g++) if (P.place('banco', 0, hall, { sides: [s] })) n++; if (n < 2) P.errs.push(`só ${n} bancos no salão`); };
+    // (the benches of those he receives: two at the least; the other two after his bed has its wall)
+    let nb = 0; const sit = max => { for (const s of ['esquerda', 'direita', 'frente']) for (let g = 0; g < 2 && nb < max; g++) if (P.place('banco', 0, hall, { sides: [s] })) nb++; };
+    const benches = () => { sit(2); if (nb < 2) P.errs.push(`só ${nb} bancos no salão`); };
     for (const f of [[fire, benches], [benches, fire]][P.attempt % 2]) f();
+    // (the chief lives in his house — D-205 —: his bed against a wall of his hall, before the other benches and the table take
+    // their room; and one more of the household's, where it fits)
+    P.opt(() => { if (!P.place('cama-casal', 0, hall)) P.place('cama', 0, hall); });
+    P.opt(() => sit(4));
     P.opt(() => { if (P.place('mesa', 0, hall, { sides: ['livre'] })) P.place('banco', 0, hall); });
     P.opt(() => P.place('arca', 0, hall));
+    P.opt(() => P.place('cama', 0, hall));
   }
   // the baths (banhos): where one undresses (the pegs on a wall, a bench), the water (the pool; the tub where no pool goes), the
   // furnace that warms it (the keeper's work) — in the thermae's hall the changing room across its front by the door, the cold

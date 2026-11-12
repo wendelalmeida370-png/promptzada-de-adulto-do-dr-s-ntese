@@ -217,6 +217,11 @@
     for (const f of [[fire, benches], [benches, fire]][P.attempt % 2]) f();
     P.opt(() => { if (P.place('mesa', lv, hall, { sides: ['livre'] })) P.place('banco', lv, hall); });
     P.opt(() => { for (const id of W.roomsFor(rooms)) if (P.place('arca', lvOf(P, id), id)) break; });
+    // (the chief lives in his house — D-205 —: his bed in a room of it, or against a wall of his hall, and one more of the
+    // household's, where they fit)
+    const beds = W.roomsFor(rooms).filter(id => id !== hall).concat([hall]);
+    P.opt(() => { for (const id of beds) if (P.place('cama-casal', lvOf(P, id), id) || P.place('cama', lvOf(P, id), id)) break; });
+    P.opt(() => { for (const id of beds) if (P.place('cama', lvOf(P, id), id)) break; });
   }
 
   // ------------------------------ the programmes ------------------------------
