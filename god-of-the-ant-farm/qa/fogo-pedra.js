@@ -80,6 +80,11 @@ run('p2', () => {
   const vive = comoCasa => {
     const set = abre(); M.reseed(77); const b = grande(set, true); if (!b) return null; const f0 = V.fireFuel;
     if (comoCasa) V.fireFuel = o => (o === b ? 'building' : f0(o));
+    // (left to itself: the town's people throw water on a fire — villagers.js, the buckets —, and in the life the trade that
+    // stays lives one of Tenochtitlan reached the corner in 13 s and put it out with 29 of its 295 of timber gone: the case
+    // read «out, and not at what the fire leaves». The measure is the fire's own — how it passes and when it ends with nobody
+    // at it —, so the proof's hand holds the water off its tiles, in both lives; the buckets are counted and said. T-833)
+    const tiles = new Set(casas(b)); const ex0 = Nat.extinguish; baldes = 0; Nat.extinguish = function (i, a) { if (tiles.has(i)) { baldes++; return; } return ex0.call(this, i, a); };
     try {
       // (the most tiles of it in flames at once in the half minute: with its timber gone in seconds a count at the end says little)
       estia(b); sim(() => Nat.ignite(b.y * N + b.x, 0.9)); let pico = 0; for (let t = 0; t < 30; t++) { M.viver(1); const q = S.buildings.get(b.id); pico = Math.max(pico, q && q.type !== 'ruin' ? emChamas(q) : 36); }
@@ -88,11 +93,11 @@ run('p2', () => {
       // (as stone, left to itself: out when the fire has had its timber — a house's fire, half a minute, not two and a half: L-787)
       if (!comoCasa && r.de) { r.seg = 30 + ateApagar(o, 900); const f = S.buildings.get(b.id); r.fim = f ? f.hp : 0; r.piso = V.fireFloor(b); r.ch = f && f.type !== 'ruin' ? emChamas(f) : -1; }
       return r;
-    } finally { V.fireFuel = f0; }
+    } finally { V.fireFuel = f0; Nat.extinguish = ex0; }
   };
-  const casa = vive(true), pedra = vive(false);
+  let baldes = 0; const casa = vive(true), pedra = vive(false); if (pedra) pedra.baldes = baldes;
   ok('p2 o fogo não se alastra por ele', !!casa && !!pedra && pedra.de && casa.pico >= 24 && pedra.pico * 12 <= casa.pico * 5, casa && pedra ? `um canto aceso, meio minuto: queimando como casa, até ${casa.pico} das 36 casas dele em chamas ao mesmo tempo (a resistência ${Math.round(casa.hp)} de ${casa.max}); como pedra, até ${pedra.pico} (${Math.round(pedra.hp)} de ${pedra.max})` : 'a mão do deus não fundou o teatro');
-  ok('p2b e apaga sozinho, em menos de um minuto e meio', !!pedra && pedra.ch === 0 && pedra.seg <= 90 && Math.abs(pedra.fim - pedra.piso) < 1e-6, pedra ? `um canto aceso e deixado a si: apagado em ${pedra.seg} s, com ${pedra.fim} de ${pedra.max} (o que o fogo deixa: ${pedra.piso}); em chamas ${pedra.ch}` : 'sem teatro');
+  ok('p2b e apaga sozinho, em menos de um minuto e meio', !!pedra && pedra.ch === 0 && pedra.seg <= 90 && Math.abs(pedra.fim - pedra.piso) < 1e-6, pedra ? `um canto aceso e deixado a si${pedra.baldes ? ` (a água dos moradores segura pela mão da prova: ${pedra.baldes} vez(es))` : ''}: apagado em ${pedra.seg} s, com ${pedra.fim} de ${pedra.max} (o que o fogo deixa: ${pedra.piso}); em chamas ${pedra.ch}` : 'sem teatro');
 });
 
 // ------------------------------ p3: o save no meio do fogo ------------------------------
@@ -144,8 +149,11 @@ run('p6', () => {
   ok('p6c a obra comum em curso queima como antes', !oc || oc.type === 'ruin', `o teatro de 12 m em obra, aceso ${qc.vezes} vez(es): ${!oc ? 'saiu do mapa' : oc.type === 'ruin' ? 'ruína' : 'CONTINUA, com ' + oc.hp}`);
   const v = checa(); ok('p6d verificador', v.ok, v.txt);
   // (and the work goes on: the save, and timber brought again)
+  // (what the work waits for, the same before and after the save — not «all its timber again»: while the common work burnt,
+  // the town's builders had already brought 20 of timber back to the great one, in the life the trade that stays lives; T-834)
+  const antes = JSON.stringify(S.buildings.get(b.id).need);
   M.salvarCarregar(); pega(); const o2 = S.buildings.get(b.id); const v2 = checa();
-  ok('p6e depois do save', !!o2 && !o2.built && o2.type === 'teatro' && Math.abs((o2.need.wood || 0) - (bill.wood || 0)) < 1e-6 && v2.ok, `${lado(o2)}: espera ${o2 ? JSON.stringify(o2.need) : '-'}; ${v2.txt}`);
+  ok('p6e depois do save', !!o2 && !o2.built && o2.type === 'teatro' && JSON.stringify(o2.need) === antes && (o2.need.wood || 0) > 0 && (o2.need.wood || 0) <= (bill.wood || 0) + 1e-6 && v2.ok, `${lado(o2)}: espera ${o2 ? JSON.stringify(o2.need) : '-'} (antes do save ${antes}; a conta pede ${bill.wood} de madeira); ${v2.txt}`);
   // (finished afterwards: whole — the timber the fire took was brought again)
   if (o2) {
     const piso = V.fireFloor(o2); const era = [o2.hp, o2.burnHp, o2.maxHp]; acaba(o2, f); const v3 = checa();
