@@ -1,5 +1,7 @@
 # as sabotagens da prova da casa cheia (qa/casa-cheia.js, o agente H dos Bairros Vivos — L-718, D-220 a D-224): cada uma desfaz
 # uma parte do conserto numa cópia do jogo; uso: sab-H.py <pasta da cópia> <nome>      (pelo sab-run.sh do líder)
+# (os padrões de s3, s4, s6, s7, s21 e s23 seguem o código da segunda rodada — o K.road ganhou a família ao relento e os moços
+# da casa: qa/patch3/sab-H2.py tem as sabotagens dela)
 import sys, io
 d, name = sys.argv[1], sys.argv[2]
 def sub(p, a, b, n=1):
@@ -11,15 +13,15 @@ S = {
  # s2: a casa vazia do povo não é dada a quem não tem o preço
  's2': lambda: sub(C, "      if (rd.kind === 'cede' && cede(v, fam, rd.b, set, rd.pays, why)) { left(); return { ok: true, b: rd.b, ceded: 1, price: rd.pays }; }\n", ""),
  # s3: dada de graça — a família não paga o que tem além do pouco que guarda
- 's3': lambda: sub(C, "    if (plan.free) return { kind: 'cede', b: plan.free, pays: pays(plan.price) };", "    if (plan.free) return { kind: 'cede', b: plan.free, pays: 0 };"),
+ 's3': lambda: sub(C, "    if (plan.free) return { kind: 'cede', out, b: plan.free, pays: r2(Math.min(plan.price, Math.max(0, shareOf(v, fam) - K.KEEP))) };", "    if (plan.free) return { kind: 'cede', out, b: plan.free, pays: 0 };"),
  # s4: a família paga tudo o que tem — sem guardar o pouco que guarda
- 's4': lambda: sub(C, "    const pays = n => r2(Math.min(n, Math.max(0, shareOf(v, fam) - K.KEEP)));", "    const pays = n => r2(Math.min(n, Math.max(0, shareOf(v, fam))));"),
+ 's4': lambda: (sub(C, "pays: r2(Math.min(plan.price, Math.max(0, shareOf(v, fam) - K.KEEP))) };", "pays: r2(Math.min(plan.price, Math.max(0, shareOf(v, fam)))) };"), sub(C, "Math.max(0, shareOf(v, L) - K.KEEP))), wait:", "Math.max(0, shareOf(v, L)))), wait:")),
  # s5: sem a troca — a família sozinha fica com as duas casas
  's5': lambda: sub(C, "    if (swap) { from.dono = 0; from.custo = 0; from.aluga = null; from.poupa = null; }\n", ""),
  # s6: sem paciência — a cabana das mãos no primeiro dia
- 's6': lambda: sub(C, "wait: o.now ? 0 : Math.max(0, K.HANDS_DAYS - (S.day - since)),", "wait: 0,"),
+ 's6': lambda: sub(C, "wait: now ? 0 : Math.max(0, K.HANDS_DAYS - (S.day - (mark ? mark.d : S.day))),", "wait: 0,"),
  # s7: sem as mãos — a família que não junta o preço só junta, como antes
- 's7': lambda: sub(C, "      if (rd.kind === 'maos' && !rd.wait) { const b = raiseByHand(v, fam, set, rd.type, rd.pays, why); if (b) { left(); return { ok: true, b, hands: 1, price: b.encomenda.paid }; } chao = S.day; }\n", ""),
+ 's7': lambda: sub(C, "      if (rd.kind === 'maos' && !rd.wait) { const b = rd.mates ? raiseByHand(eldest(rd.mates), rd.mates, set, rd.type, rd.pays, why, true) : raiseByHand(v, fam, set, rd.type, rd.pays, why); if (b) { left(); return { ok: true, b, hands: 1, price: b.encomenda.paid }; } chao = S.day; }\n", ""),
  # s8: os construtores do povo pegam a obra das mãos da família
  's8': lambda: sub(V, "      if (b.encomenda && b.encomenda.maos) continue;\n", ""),
  # s9: o dia de trabalho da família não pergunta pela sua obra — ninguém a levanta
@@ -49,11 +51,11 @@ S = {
  # s20: o dia da cidade decide pela família do corpo
  's20': lambda: sub(C, "    for (const [v] of K.queue(set)) { if (K.family(v).some(m => m.age >= 16 && A.isBody(m))) continue; const r = K.order(v); if (r.ok) break; }", "    for (const [v] of K.queue(set)) { const r = K.order(v); if (r.ok) break; }"),
  # s21: a estrada lida escreve — a tela marca a casa que junta
- 's21': lambda: sub(C, "    const no = noHands(v, fam, set, occ, plan.share); if (no) return { kind: '', why: no };", "    const no = noHands(v, fam, set, occ, plan.share); { const hh = S.buildings.get(v.home); if (hh && !hh.poupa) hh.poupa = { by: v.id, alvo: 1, d: S.day, why }; else if (hh && hh.poupa) hh.poupa.d = S.day; } if (no) return { kind: '', why: no };"),
+ 's21': lambda: sub(C, "    const no = noHands(v, fam, set, occ, plan.share || out);", "    const no = noHands(v, fam, set, occ, plan.share || out); { const hh = S.buildings.get(v.home); if (hh && !hh.poupa) hh.poupa = { by: v.id, alvo: 1, d: S.day, why }; else if (hh && hh.poupa) hh.poupa.d = S.day; }"),
  # s22: o save perde a marca das mãos — depois do load a obra é dos construtores
  's22': lambda: sub('js/save.js', "delete o.res; delete o._sg;", "delete o.res; delete o._sg; if (o.encomenda && o.encomenda.maos) o.encomenda = Object.assign({}, o.encomenda, { maos: 0 });"),
  # s23: o povo sem moeda também vai pela estrada nova
- 's23': lambda: sub(C, "    if (!set || !crowded(why) || !coinPeople(set)) return { kind: '' };", "    if (!set || !crowded(why)) return { kind: '' };"),
+ 's23': lambda: sub(C, "    if (!set || !(crowded(why) || out) || !coinPeople(set)) return { kind: '' };", "    if (!set || !(crowded(why) || out)) return { kind: '' };"),
  # s24: sem chão, a obra «começa» sem lote — a falta de chão não é dita nem guardada
  's24': lambda: sub(C, " } chao = S.day; }", " } }"),
  # s25: a casa vazia do povo que aparece depois não interrompe a paciência — a família espera os dias mesmo com casa para ela
