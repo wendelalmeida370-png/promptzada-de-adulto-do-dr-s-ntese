@@ -152,12 +152,15 @@ com as regras coladas** (não edito o `guard.js`).
 **A prova nova** (de dentro de `qa/`, um `node` de cada vez): `node morar-palacio.js` — **107 passam, 0 falham** (240 s, com o
 código final).
 
-**As provas vizinhas** (as duas rodadas em `scratchpad/ag/R/viz1/` e `viz2/`):
+**As provas vizinhas** (as rodadas em `scratchpad/ag/R/viz1/`, `viz2/` e `viz3/`; depois da regra das camas, `fde138c`, rodei de
+novo com o código final: `guard`, `nodemundo` nos três mundos, `casa` 24/0, `casa-rica` 48/0, `juntar` 24/0, `escala` (os
+mesmos casos) 37/0, `sabe` 32/0, `moedas` 9/0, o `soak` e o `det3` — as outras linhas valem pela rodada anterior, do commit
+`b4b1d0d`, em que a regra das camas ainda não existia e nada mais do jogo mudou depois):
 
 | prova | resultado |
 |---|---|
 | `node guard.js` | PASSOU (156 arquivos) |
-| `bash navegador.sh node soak.js 103 continente 128 4 normal 5 1 1` | 5 anos, violações 0 em cada ano, erros: nenhum (rodada de novo depois da última mudança de regra do mundo… ver a nota no fim desta seção) |
+| `bash navegador.sh node soak.js 103 continente 128 4 normal 5 1 1` | 5 anos, violações 0 em cada ano, erros: nenhum (rodada de novo com o código final, `fde138c`) |
 | `node matriz-predios.js` (saída no rascunho, não no repositório) | PASSOU: 12 categorias, 56 tipos, 4 folhas; **Palácios: funcional, 1/1 essenciais, 0 lacunas** (a lacuna «palácio/morar» fechada pelo cálculo: as peças `cama-casal` e `arca`, os usos `deitar`, `comer`, `cozinhar`, `guardar` nas plantas de amostra, a tarefa `sleep`, a prova no disco); no total, 1 lacuna (de outra categoria, de antes) |
 | `node casa.js` | 24 passam, 0 falham |
 | `node casa-rica.js` | 48 passam, 0 falham |
@@ -180,7 +183,7 @@ código final).
 | `node visual/corpo-casa.js` | 19 passam, 0 falham |
 | `node plantas.js` | 10 passam, 0 falham (1057 s) |
 | `node lar.js` | 22 passam, **4 falham: l14, l15, l16, l16b — as mesmas quatro, com o mesmo texto, na base** `b2b61f0` (rodada inteira na cópia exportada: 22 passam, 4 falham; T-939) |
-| `bash navegador.sh node det3.js 77 arquipelago 96 3 2` | PASSOU: igual nas quatro comparações (um mundo novo, sem sede) |
+| `bash navegador.sh node det3.js 77 arquipelago 96 3 2` | PASSOU: igual nas quatro comparações (um mundo novo, sem sede; rodada de novo com o código final) |
 | `scratchpad/ag/R/sonda7.js mega 10` (dez anos de salto, as regras P1 a P7 no verificador, 10 s de passo depois de cada ano) | limpo ano a ano, nenhum erro |
 
 **As sabotagens** (`scratchpad/ag/R/sab-R.py`, cada uma numa cópia nova do jogo, `scratchpad/bv/sab-run.sh`; 37; o resumo em
