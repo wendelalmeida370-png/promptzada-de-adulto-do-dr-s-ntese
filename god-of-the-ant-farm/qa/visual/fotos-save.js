@@ -3,7 +3,8 @@
 //   VIEWS=vistas.json SAVE=mundo.json bash qa/navegador.sh node qa/visual/fotos-save.js PASTA_DO_JOGO PASTA_DAS_FOTOS [nome,…]
 //   (Q=alta|media, VW/VH, DSF; small previews first: VW=640 VH=360 DSF=1 Q=media — a few seconds each)
 // Not a proof: it only looks. A view's place may be 'auto:<id>' — a standpoint found by looking, in front of the building, on
-// ground one walks, with nothing on the line of sight — or 'auto2:<id>' (the straight line only, farther and wider).
+// ground one walks, with nothing on the line of sight —, 'auto2:<id>' (the straight line only, farther and wider) or
+// 'xy:<x>,<y>:<id>' (a standpoint chosen by hand, looking at that building).
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = process.argv[2]; const OUT = process.argv[3]; const ONLY = (process.argv[4] || '').split(',').filter(Boolean);
@@ -66,6 +67,11 @@ const VIEWS = JSON.parse(fs.readFileSync(process.env.VIEWS, 'utf8'));
             const sc = Math.abs(dist - want) + Math.abs(lat) * 0.5 + Math.abs(G.W.hAt(Math.floor(x), Math.floor(y)) - h0) * 6; if (sc < bs) { bs = sc; best = [x - 0.5, y - 0.5]; } }
           if (!best) return { err: 'nenhum ponto de visão livre diante de ' + place };
           at = best; look = [cx, cy]; info = `${b.type}#${b.id} ${b.w}x${b.h} esc ${b.esc} nota ${bs.toFixed(1)}`;
+        }
+        else if (place.startsWith('xy:')) {
+          // (a standpoint chosen by hand: 'xy:<x>,<y>:<id>' — stand there, look at that building)
+          const [, p, id] = place.split(':'); const b = S.buildings.get(+id); if (!b) return { err: 'sem ' + place };
+          at = p.split(',').map(Number); look = [b.x + b.w / 2, b.y + b.h / 2]; info = `${b.type}#${b.id} ${b.w}x${b.h} esc ${b.esc}`;
         }
         else {
           const b = place.startsWith('id:') ? S.buildings.get(+place.slice(3)) : bl(place.slice(2)); if (!b) return { err: 'sem ' + place + ' em ' + s.name };

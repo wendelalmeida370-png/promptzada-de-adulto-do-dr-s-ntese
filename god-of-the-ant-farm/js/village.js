@@ -215,7 +215,8 @@
     get: (b, k) => V.delivered(b)[k] || 0,
     room: (b, k) => Math.max(0, b.need[k] || 0),
     take: (b, k, n) => { b.need[k] = r4((b.need[k] || 0) + n); },
-    put: (b, rec) => { b.need[rec.k] = r4(Math.max(0, (b.need[rec.k] || 0) - rec.n)); },
+    // (and the day a brick last reached a work that takes brick: what its wait is counted from, brickBack — L-720)
+    put: (b, rec) => { b.need[rec.k] = r4(Math.max(0, (b.need[rec.k] || 0) - rec.n)); if (b.brick && rec.k === b.brick.k && rec.n > 0) b.brick.got = G.S.day; },
     list: b => V.delivered(b),
     owner: b => ({ fac: V.facOfSet(b.set), bld: b.id }),
     place: b => b,
@@ -270,20 +271,34 @@
   // town's works wait for: the works that waited longest go back first, until the rest is covered. No work waits for ever on a
   // brick nobody makes, nor on one made a dozen a year for a town that asks a hundred — the theatre of Tenochtitlan stood 18 years
   // at 85%, 40 adobes short with 118 stone in the store, while each batch of its pottery went to the houses (L-540)
+  // And the brick promised that does not come holds no work: one no brick has reached for V.BRICK_WAIT whole days goes back to
+  // stone for what it lacks, unless its people's store has it free to be fetched — the shelves and the batches of the
+  // potteries count for nothing then. A sobrado a family paid for stood four years at 92%, three adobes short, with three on
+  // the pottery's shelf (never a load's worth for the potter to haul) and a dozen in its batches: covered each new day, and
+  // each load that reached the store gone to another work (L-720). The wait is counted from the last brick that reached the
+  // work (b.brick.got, the site's holder), or from the day its brick was decided; and past twice the wait the store's bricks
+  // hold it no more either — they were there at each new day and went to other works. A work the rule looked at and left
+  // waiting keeps the day (b.brick.seen: the checker's rule reads it)
+  V.BRICK_WAIT = 2;
+  const brickSince = b => Math.max(b.brick.day || 0, b.brick.got || 0);
   function brickBack() {
-    const S = G.S; const towns = new Map();
+    const S = G.S, D = G.Depot; const towns = new Map();
     const lacks = b => Math.max(0, (b.need[b.brick.k] || 0) - ((b.incoming && b.incoming[b.brick.k]) || 0));
+    const back = (b, left) => { const k = b.brick.k; b.need[k] -= left; b.need.stone = (b.need.stone || 0) + left; b.brick.n -= left; b.brick.back = (b.brick.back || 0) + left; };
+    const inStore = b => { const f = G.Fac.get(V.facOfSet(b.set)); return f ? (D ? D.free('f:' + f.id, b.brick.k) : f.stock[b.brick.k] || 0) : 0; };
     for (const b of S.buildings.values()) {
       if (b.built || !b.brick || !b.need || b.type === 'ruin' || !(lacks(b) > 0) || S.day - (b.brick.day || 0) < 1) continue;
+      const wait = S.day - brickSince(b);
+      if (wait >= 2 * V.BRICK_WAIT || (wait >= V.BRICK_WAIT && inStore(b) < lacks(b) - 1e-6)) { back(b, lacks(b)); continue; }
+      b.brick.seen = S.day;
       const key = b.set + ':' + b.brick.k; let t = towns.get(key); if (!t) towns.set(key, t = { set: b.set, k: b.brick.k, list: [] }); t.list.push(b);
     }
     for (const t of towns.values()) {
       let short = V.brickWant(t.set, t.k) - brickHave(t.set, t.k); if (!(short > 1e-6)) continue;
-      t.list.sort((a, b) => (a.brick.day || 0) - (b.brick.day || 0) || a.id - b.id);
+      t.list.sort((a, b) => brickSince(a) - brickSince(b) || a.id - b.id);
       for (const b of t.list) {
         if (!(short > 1e-6)) break;
-        const k = t.k, left = lacks(b);
-        b.need[k] -= left; b.need.stone = (b.need.stone || 0) + left; b.brick.n -= left; b.brick.back = (b.brick.back || 0) + left; short -= left;
+        const left = lacks(b); back(b, left); short -= left;
       }
     }
   }

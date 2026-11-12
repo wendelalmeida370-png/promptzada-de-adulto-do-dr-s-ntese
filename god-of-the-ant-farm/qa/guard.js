@@ -552,7 +552,16 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (f !== 'act-servicos.js' && f !== 'save.js' && /\.bathDay\s*=[^=]/.test(c)) fails.push(`freguesia: ${f}:${k + 1} escreve o dia do banho de alguém fora de act-servicos.js (D-200): ${l.trim().slice(0, 110)}`);
   if (f !== 'act-lazer.js' && f !== 'save.js' && /\.readDay\s*=[^=]/.test(c)) fails.push(`freguesia: ${f}:${k + 1} escreve o dia da leitura de alguém fora de act-lazer.js (D-201): ${l.trim().slice(0, 110)}`);
   if (f !== 'villagers.js' && /\b(Termas|Biblioteca)\.go\s*\(/.test(c)) fails.push(`freguesia: ${f}:${k + 1} manda alguém aos banhos ou à biblioteca fora da escolha de cada um (o start de villagers.js — D-200): ${l.trim().slice(0, 110)}`); });
-// (as regras 73 a 76 estão guardadas para o ofício que fica e a obra grande)
+// (as regras 73 e 74 estão guardadas para o ofício que fica)
+// 75. "as portas do planejador" (T-767, D-217): G.Village.planNow — o olhar do planejador agora — só as provas e o modo
+// desenvolvedor chamam, nada do mundo; e só o village.js aplaina um lote (V.levelLot, de dentro do V.startProject). (O
+// G.Space.planNow, a planta feita na hora, é outra porta e fica fora do padrão.)
+for (const f of files) if (f !== 'village.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if ((f !== 'dev.js' && /\b(Village|V)\.planNow\s*\(/.test(c)) || /\blevelLot\s*\(/.test(c)) fails.push(`planejador: ${f}:${k + 1} chama uma porta do planejador (V.planNow é das provas e do modo desenvolvedor, T-767; V.levelLot é do village.js, D-217): ${l.trim().slice(0, 110)}`); });
+// 76. "a carroça da obra é do city.js" (D-215): só o city.js cria uma carroça de obra (Ci.workCart) e só ele escreve o
+// relógio dela na cidade (set.cartT, set.cartNo)
+for (const f of files) if (f !== 'city.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.cart(T|No)\s*(=(?!=)|-=|\+=)/.test(c) || /\bworkCart\s*\(/.test(c)) fails.push(`carroça da obra: ${f}:${k + 1} mexe na carroça da obra grande fora do city.js (D-215): ${l.trim().slice(0, 110)}`); });
 // 71. "os aposentos da sede têm uma porta só" (D-205): as camas da sede de quem governa (BDEF.aposentos) só o js/court.js dá e
 // só o js/village.js lê (V.bedsOf: as camas de um prédio onde uma casa mora); quem quer saber se um prédio vale para morar
 // pergunta a V.livable, se guarda como casa, a V.bedsOf — e as portas das casas da cidade continuam lendo BDEF.housing
@@ -563,5 +572,22 @@ for (const f of files) if (f !== 'village.js' && f !== 'court.js') src[f].forEac
 // de fora dele; quem quer saber pergunta a G.Casa.seatState / lordOf / isSeat / ofCourt (só leem)
 for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (/Casa\.(reign|vacate)\s*\(/.test(c)) fails.push(`sede: ${f}:${k + 1} põe ou tira gente da sede fora de act-casa.js (D-206): ${l.trim().slice(0, 110)}`); });
+// 77. "a obra das mãos de uma família é do act-casa.js" (D-222): a marca de que uma casa em obra é levantada pela própria família
+// (b.encomenda.maos) só o js/act-casa.js escreve; o js/villagers.js a deixa de fora dos construtores do povo (o buildTask) e
+// pergunta por ela no dia de trabalho de cada um (o workTask → G.Casa.handsTask) — sem a primeira linha os construtores a tomam,
+// sem a segunda ninguém a levanta
+for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/encomenda\.maos\s*=(?!=)|encomenda\s*=\s*\{[^}]*\bmaos\s*:/.test(c)) fails.push(`obra das mãos: ${f}:${k + 1} escreve a marca da obra das mãos de uma família fora de act-casa.js (D-222): ${l.trim().slice(0, 110)}`); });
+{ const L = (src['villagers.js'] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, ''));
+  if (!L.some(l => /b\.encomenda\s*&&\s*b\.encomenda\.maos\)\s*continue;/.test(l))) fails.push('obra das mãos: villagers.js sem a linha do buildTask que deixa a obra das mãos de uma família de fora dos construtores do povo (D-222)');
+  if (!L.some(l => /G\.Casa\.handsTask\s*\(/.test(l))) fails.push('obra das mãos: villagers.js sem a pergunta do dia de trabalho ao G.Casa.handsTask (D-222)'); }
+// 78. "a estrada lida não escreve" (D-223): as portas de leitura da casa cheia — K.spare, noHands, K.road, K.roadSays, K.fullSays
+// e K.can, no js/act-casa.js — são pedidas pelo diário, pela ficha da casa e pela oferta do corpo, de fora do passo do mundo: não
+// buscam lote (a busca sorteia e guarda o dia sem lugar), não fundam, não movem nem pagam, não marcam casa nenhuma
+{ const L = src['act-casa.js'] || []; const bad = /findSite\s*\(|startProject\s*\(|addBuilding\s*\(|removeBuilding\s*\(|\bD\.(move|make|use|store)\s*\(|\.(poupa|dono|encomenda|aluga|custo|home|res|maos|chao)\s*=(?!=)|\bG\.(R|rr|ri|pick|chance|shuffle)\s*\(|\b(cede|raiseByHand|lease|buy|raise|move|pay)\s*\(/;
+  for (const st of [/^  K\.spare = function/, /^  function noHands\(/, /^  K\.road = function/, /^  K\.roadSays = function/, /^  K\.fullSays = function/, /^  K\.can = function/]) {
+    const a = L.findIndex(l => st.test(l)); if (a < 0) { fails.push(`a estrada só lê: act-casa.js sem ${st} — a regra 78 não acha a porta`); continue; }
+    let z = a + 1; while (z < L.length && !/^  \};?$/.test(L[z])) z++;
+    for (let k = a; k < z; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); if (bad.test(c)) fails.push(`a estrada só lê: act-casa.js:${k + 1} escreve no mundo dentro de uma porta de leitura (D-223): ${L[k].trim().slice(0, 110)}`); } } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
