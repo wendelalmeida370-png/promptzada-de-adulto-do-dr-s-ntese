@@ -106,6 +106,9 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
       const at = p => (p ? p[0] + ',' + p[1] : 'recusado');
       const road0 = new Map(); const paint = (tiles, r) => { for (const i of tiles) { if (!road0.has(i)) road0.set(i, S.road[i]); S.road[i] = r; } };
       let wallAt = -1, wall0 = 0; const out = {};
+      // (asked as the planner asks, inside the world's step: from outside it, in a world just opened, the land answers neutral —
+      // the town has no look yet and a question from a screen makes none, L-760 —, and no lot of the heart is dear: T-847)
+      G.inSim++;
       try {
         set._noSite = {}; const A = V.blockSite(set); set._noSite = {}; if (!A) return { none: 'nenhum lote de quarteirão hoje' };
         const judge = () => at(V.blockLot(set, A[0], A[1])); out.a = A[0] + ',' + A[1]; out.alone = judge();
@@ -129,7 +132,7 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
       } finally {
         if (wallAt >= 0) { S.wall[wallAt] = wall0; W.touchWalk(); }
         for (const [i, r] of road0) S.road[i] = r;
-        G.R = R0; S.rng = rng0; set._noSite = {};
+        G.R = R0; S.rng = rng0; set._noSite = {}; G.inSim--;
       }
       return out;
     });

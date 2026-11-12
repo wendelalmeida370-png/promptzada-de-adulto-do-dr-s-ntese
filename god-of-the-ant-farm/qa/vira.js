@@ -80,6 +80,7 @@ const ROOT = path.resolve(__dirname, '..');
     const mine = [...S.villagers.values()].filter(v => !v.captive && G.Fac.idOfV(v) === f.id);
     for (const v of mine) G.Village.kill(v, 'sick');
     const now = g.leader !== queen.id && !!S.villagers.get(g.leader) && G.Fac.idOfV(S.villagers.get(g.leader)) === g.id;
+    G.Atmos.flush(); // (the hand changed the world within the instant of the last look: who is where is counted again — T-848)
     const bad0 = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
     for (let k = 0; k < 24; k++) G.debug.step(0.05);
     const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg); const nl = S.villagers.get(g.leader);
@@ -105,6 +106,10 @@ const ROOT = path.resolve(__dirname, '..');
     const b = G.War.makeBand(Y, X, set, men, 'conquista', {}); G.Politics.leaderPe(Y).cru = 0; // (the test's hand: a people that makes citizens)
     G.War.conquer(set, b);
     const nl = S.villagers.get(X.leader); const now = !!nl && nl !== lv && G.Fac.idOfV(nl) === X.id;
+    // (the town taken by the proof's hand within the instant of the case before's last look: the conquest takes nobody's life here,
+    // the people of the town leave their houses, and who is awake where — counted once an instant, atmos.js — is counted again:
+    // the smoke and the lit window of a house just emptied were the checker's own stale count, not the world's — T-848)
+    G.Atmos.flush();
     const bad0 = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
     for (let k = 0; k < 24; k++) G.debug.step(0.05);
     const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
@@ -126,6 +131,7 @@ const ROOT = path.resolve(__dirname, '..');
     const others = G.Fac.settlementsOf(X.id).filter(s => s !== set).map(s => s.name); const gone = free(X).filter(v => v.set !== set.id); for (const v of gone) G.Village.kill(v, 'sick');
     const n0 = free(X).length; const b = G.War.makeBand(Y, X, set, men(Y).slice(0, 4), 'conquista', {}); G.Politics.leaderPe(Y).cru = 0;
     G.War.conquer(set, b);
+    G.Atmos.flush(); // (as in the case 5: T-848)
     const souls = free(X).length; const bad0 = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
     for (let k = 0; k < 24; k++) G.debug.step(0.05);
     const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg);

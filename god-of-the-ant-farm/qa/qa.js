@@ -2193,10 +2193,17 @@
     const body = s.avatar ? s.avatar.id : 0;
     // (of one blood or one bed: self, the partner, a parent, a child, a brother or a sister)
     const near = (a, o) => !!a && !!o && (a.id === o.id || a.partner === o.id || o.mother === a.id || o.father === a.id || a.mother === o.id || a.father === o.id || (!!a.mother && a.mother === o.mother) || (!!a.father && a.father === o.father));
+    // (the family: the ruler's and the partner's — of one blood or one bed —, their children's children and their brothers' and
+    // sisters' — the grandchildren, the nephews —; and who the town's housing brings to live with one of them: who is married
+    // to one, and the little ones of such a couple. The rule of the game since the L-974 — the husband of a ruler's niece was put
+    // out of the seat and brought back to his wife's home every few seconds —, and the checker kept the family of before: in the
+    // chaos of seed 13 it accused the husband of a ruler's granddaughter and their baby, whom the seat rightly keeps — T-849)
     const ofFamily = (v, r) => {
       const p = P(r.partner); const fam = o => near(r, o) || near(p, o);
-      if (fam(v) || fam(P(v.partner)) || fam(P(v.mother)) || fam(P(v.father))) return true;
-      const kids = (r.kids || []).concat(p ? p.kids || [] : []); return kids.includes(v.mother) || kids.includes(v.father);
+      const kids = (r.kids || []).concat(p ? p.kids || [] : []);
+      const own = o => !!o && (fam(o) || fam(P(o.mother)) || fam(P(o.father)) || kids.includes(o.mother) || kids.includes(o.father));
+      const mate = o => !!o && (own(o) || own(P(o.partner)));
+      return mate(v) || (v.age < 16 && (mate(P(v.mother)) || mate(P(v.father))));
     };
     const res = new Map(); // (who lives in each seat)
     for (const v of s.villagers.values()) {
