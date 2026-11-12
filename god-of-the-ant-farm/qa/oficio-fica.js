@@ -203,8 +203,26 @@ if (on('x4')) {
 // ---------------------------------------------------------------- x5: the war pulls
 if (on('x5')) {
   M.pronto('metropole'); M.viver(0.25 * DAY);
+  // (the trades of a people the case can stage: of one town, three hands or more, their lots far enough apart — below)
+  const lot = v => G.hash(v.id * 13 + 7);
+  // (the trades with no post of their own — the levy weighs a post, and the case is of courage and lot alone —; `sur`: the
+  // hands the trade has past what the town asked of it at its last dealing — the war takes from the trades with one to
+  // spare by the instant's count, village.js, never from one that is short: the five farmers of a town that wants six stay)
+  const PLAIN = ['mineiro', 'lenhador', 'coletor', 'agricultor', 'cacador', 'construtor', 'pescador'];
+  const stagesOf = a => { const out = [];
+    for (const q of PLAIN) for (const s of [...G.S.settlements.values()].filter(s => s.fac === a.id).sort((x, y) => x.id - y.id)) {
+      const hs = adults(v => v.set === s.id && v.role === q && !v.roleBack && !v.jail && !(G.S.avatar && v.id === G.S.avatar.id)).sort((x, y) => lot(y) - lot(x));
+      const all = adults(v => v.set === s.id && v.role === q).length; const ask = (V.tradeAsked(s.id) || {})[q] || 0;
+      if (hs.length >= 3 && lot(hs[0]) - lot(hs[hs.length - 1]) >= 0.45) out.push({ s, q, hs, x: hs[0], y: hs[hs.length - 1], sur: all - ask });
+    } return out; };
+  const spare = a => stagesOf(a).filter(st => st.sur >= 1).length;
+  // (the people that declares the war: at peace, twenty grown ones or more — and, where there is one, a people with no great
+  // work keeping its stone and with a trade to stage: a great work's gang takes hands by its own rule, the newest, before the
+  // war asks — in the tree joined with the third round of the great works Argos has one from the first quarter of a day, its
+  // miners and two of the staged farmers went to the gang, and the war found none of the staged in their trade. T-846)
   const F = G.Fac.all().filter(f => f.alive !== false).sort((a, b) => a.id - b.id); let pair = null;
-  for (const a of F) { if (G.Fac.enemiesOf(a.id).length) continue; for (const b of F) { if (b === a || G.Fac.enemiesOf(b.id).length) continue; const r = a.rel && a.rel[b.id] || b.rel && b.rel[a.id]; if (r && r.met && r.st !== 'guerra' && adults(v => G.Fac.idOfV(v) === a.id).length >= 20) { pair = [a, b]; break; } } if (pair) break; }
+  const pairs = []; for (const a of F) { if (G.Fac.enemiesOf(a.id).length) continue; for (const b of F) { if (b === a || G.Fac.enemiesOf(b.id).length) continue; const r = a.rel && a.rel[b.id] || b.rel && b.rel[a.id]; if (r && r.met && r.st !== 'guerra' && adults(v => G.Fac.idOfV(v) === a.id).length >= 20) { pairs.push([a, b]); break; } } }
+  pair = pairs.filter(p => !(V.stoneKept(p[0].id) > 0) && spare(p[0])).sort((p, q) => spare(q[0]) - spare(p[0]))[0] || pairs.filter(p => spare(p[0])).sort((p, q) => spare(q[0]) - spare(p[0]))[0] || pairs.find(p => stagesOf(p[0]).length) || pairs[0] || null;
   if (!pair) ok('x5 a guerra puxa', false, 'nenhum par de povos em paz que já se encontraram');
   else {
     const [a, b] = pair; const w0 = adults(v => G.Fac.idOfV(v) === a.id && v.role === 'guerreiro').length; const A = adults(v => G.Fac.idOfV(v) === a.id).length;
@@ -216,17 +234,12 @@ if (on('x5')) {
     // each one's own, the id's: the same in every war — made a little braver than the one with the greater. The war calls
     // the brave before the others, and between the two the lot weighs as the draw of the dealing always did: the one with
     // the greater lot goes first. With the bravest alone called, the other went)
-    const lot = v => G.hash(v.id * 13 + 7); let stage = null;
-    for (const q of ['mineiro', 'lenhador', 'coletor', 'agricultor', 'cacador']) {
-      for (const s of [...G.S.settlements.values()].filter(s => s.fac === a.id).sort((x, y) => x.id - y.id)) {
-        const hs = adults(v => v.set === s.id && v.role === q && !v.roleBack && !v.jail && !(G.S.avatar && v.id === G.S.avatar.id)).sort((x, y) => lot(y) - lot(x));
-        if (hs.length >= 3 && lot(hs[0]) - lot(hs[hs.length - 1]) >= 0.45 && (!stage || hs.length > stage.hs.length)) stage = { s, q, hs, x: hs[0], y: hs[hs.length - 1] };
-      }
-      if (stage) break;
-    }
+    // (every trade of every town of the people with three hands or more is staged so — the case reads the ones the war then
+    // takes from, not the first of the list alone: T-846)
+    const stages = stagesOf(a);
     // (courage × 3 and one more for a man is what the levy weighs: the two brave at 2.5 and 2.8, the others at 1.3 at most)
     const brave = (v, e) => { v.courage = (e - (v.g === 'm' ? 1 : 0)) / 3; v.kills = 0; v.skill = null; };
-    if (stage) god(() => { for (const v of stage.hs) brave(v, v === stage.x ? 2.5 : v === stage.y ? 2.8 : v.g === 'm' ? 1.3 : 0.3); });
+    god(() => { for (const st of stages) for (const v of st.hs) brave(v, v === st.x ? 2.5 : v === st.y ? 2.8 : v.g === 'm' ? 1.3 : 0.3); });
     // (thirty seconds: the levy is made in the first dealings — three hands a town each four seconds —, before the armies
     // march; with ninety the war had its first battle inside the case, and what the instant asked was the war's doing)
     const T = watch(); god(() => { G.Politics.declareWar(a, b, 'ambicao'); }); T.live(30, () => fresh(a));
@@ -236,10 +249,10 @@ if (on('x5')) {
     if (process.env.DBG) for (const p of P) if (p.v.roleBack !== p.e.from) console.log(`  #${p.v.id}: é ${p.v.role}, volta a ${p.v.roleBack}, esperado ${p.e.from} (antes ${back5.get(p.v.id)}) | ` + T.log().filter(e => e.id === p.v.id).map(e => `${e.from}→${e.to} ${e.why}`).join(' '));
     const w1 = adults(v => G.Fac.idOfV(v) === a.id && v.role === 'guerreiro').length;
     // (the war calls the brave, not the newest hands — a town's newest hands are its young)
-    const staged = stage ? L.filter(e => e.set === stage.s.id && e.from === stage.q).map(e => e.id) : [];
-    const two = stage ? [stage.x.id, stage.y.id] : [];
-    ok('x5 a guerra chama os bravos', !!stage && staged.length >= 1 && staged.slice(0, 2).every(id => two.includes(id)), stage ? `${stage.s.name}, ${stage.hs.length} mãos de ${stage.q}, duas feitas bravas pela mão da prova (#${two.join(', #')}): a guerra chamou desse ofício ${staged.length ? '#' + staged.join(', #') : 'ninguém'}` : `nenhum ofício de três mãos ou mais numa cidade de ${a.name}`);
-    ok('x5 a leva: a sorte de cada um pesa', !!stage && staged[0] === stage.x.id, stage ? `das duas, a de sorte maior (#${stage.x.id}: ${lot(stage.x).toFixed(2)}) foi chamada antes da um pouco mais brava (#${stage.y.id}: ${lot(stage.y).toFixed(2)}): a primeira chamada foi ${staged.length ? '#' + staged[0] : 'ninguém'}` : '—');
+    const called = stages.map(st => ({ st, ids: L.filter(e => e.set === st.s.id && e.from === st.q).map(e => e.id) })).filter(c => c.ids.length);
+    const say = c => `${c.st.s.name}, ${c.st.hs.length} mãos de ${c.st.q} (bravas #${c.st.x.id}, #${c.st.y.id}): chamou #${c.ids.join(', #')}`;
+    ok('x5 a guerra chama os bravos', called.length >= 1 && called.every(c => c.ids.slice(0, 2).every(id => id === c.st.x.id || id === c.st.y.id)), stages.length ? `${stages.length} ofício(s) de três mãos ou mais nas cidades de ${a.name} (${stages.map(st => `${st.s.name}/${st.q}: ${st.hs.length} mãos, ${st.sur >= 1 ? Math.round(st.sur * 10) / 10 + ' de sobra' : 'sem sobra'}`).join('; ')}), em cada um duas mãos feitas bravas pela mão da prova; a guerra tirou gente de ${called.length}: ${called.map(say).join(' · ') || 'NENHUM'}` : `nenhum ofício de três mãos ou mais numa cidade de ${a.name}`);
+    ok('x5 a leva: a sorte de cada um pesa', called.length >= 1 && called.every(c => c.ids[0] === c.st.x.id), called.length ? called.map(c => `${c.st.s.name}/${c.st.q}: das duas, a de sorte maior (#${c.st.x.id}: ${lot(c.st.x).toFixed(2)}) antes da um pouco mais brava (#${c.st.y.id}: ${lot(c.st.y).toFixed(2)}) — a primeira chamada foi #${c.ids[0]}`).join(' · ') : 'a guerra não tirou ninguém de um ofício armado');
     ok('x5 a guerra puxa na hora', L.length >= 3 && P.every(p => p.v.roleBack === p.e.from) && w1 > w0, `${a.name} declara guerra a ${b.name}: em 30 s ${L.length} mãos chamadas às armas pela guerra (os soldados de ${a.name}: ${w0} → ${w1}, de ${A} adultos); cada uma guarda o ofício de onde saiu: ${P.filter(p => p.v.roleBack === p.e.from).length} de ${P.length}`);
     // (an emergency's trades ask what the instant asks, down too: a weary people — the test's hand on the battles it lost:
     // at war the war itself measures the weariness, wars.js, and a hand on f.weariness alone is undone each step —
