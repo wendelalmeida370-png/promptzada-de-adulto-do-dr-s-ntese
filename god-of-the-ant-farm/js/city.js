@@ -707,14 +707,18 @@
     return true;
   }
   // ------------------------------ the cart of the great work (T-760, D-215) ------------------------------
-  // a great work with its turn that stands far from every store of its town is fed by cart: an ox-cart of a people that knows
+  // a great work with its turn that stands more than a few tiles from every store of its town is fed by cart: an ox-cart of a people that knows
   // the wheel takes what the work waits for — its stone, its timber, its brick — from the store nearest the work, WORK_LOAD at
   // a time, to the work's own site (the depot 'o:' of the work, what came to it and is not built in yet: L-246), in the
   // ledger at both ends, and the builders lay it there. Carried four at a time by its builders, a work 35 tiles from the
   // store got a load a day each: a theatre of 24 m, the store full, a fifth of its stone in three years, against all of it
   // 14 tiles off. Two carts on the way at most; a cart whose work stands, falls, is let go or changes people on its way
   // takes its load home to its people's store (unload). Its clock and the day it found no way are the town's, in the save
-  Ci.WORK_FAR = 12; Ci.WORK_LOAD = 20; Ci.WORK_CARTS = 2; Ci.WORK_EVERY = 20;
+  // (the stone the cart leaves in the store, WORK_FLOOR: a people's store is one for all its towns, and what a great work
+  // keeps — D-174 — was taken by the hands of every other town's works before its own few builders came for it: of 150 of
+  // stone given to Rome's store, its theatre, with the turn, got 8 in two years, and Lavínio, Cápua, Óstia and Tíbur the rest.
+  // The cart takes what the work keeps to the work, and leaves a well's and a house's worth for the towns: L-783)
+  Ci.WORK_FAR = 6; Ci.WORK_LOAD = 20; Ci.WORK_CARTS = 2; Ci.WORK_EVERY = 20; Ci.WORK_FLOOR = 20;
   const cartWork = c => { const b = G.S.buildings.get(c.obra); return b && !b.built && b.type !== 'ruin' && b.need && G.Village.facOfSet(b.set) === c.fac ? b : null; };
   // (what the carts have on their way to a work, of a material: it counts as coming for who would fetch it — the builders, the
   // next cart —, read off the carts themselves: the work's own count, b.incoming, is its builders' loads alone)
@@ -727,8 +731,9 @@
     for (const o of G.Village.dropoffs(set.id)) { const [ox, oy] = G.Village.frontTile(o); const q = G.dist(ox, oy, fx, fy); if (q < bd) { bd = q; d = o; } }
     if (!d || bd <= Ci.WORK_FAR) return null;
     const coming = m => (b.incoming[m] || 0) + Ci.carted(b, m);
-    const mk = Object.keys(b.need).find(m => b.need[m] - coming(m) >= 1 && G.Fac.free(b.set, m) >= 1); if (!mk) return null;
-    const load = Math.min(Ci.WORK_LOAD, Math.ceil(b.need[mk] - coming(mk)), Math.floor(G.Fac.free(b.set, mk)));
+    const has1 = m => Math.floor(G.Fac.free(b.set, m)) - (m === 'stone' ? Ci.WORK_FLOOR : 0);
+    const mk = Object.keys(b.need).find(m => b.need[m] - coming(m) >= 1 && has1(m) >= 1); if (!mk) return null;
+    const load = Math.min(Ci.WORK_LOAD, Math.ceil(b.need[mk] - coming(mk)), has1(mk));
     const [sx, sy] = G.Village.frontTile(d); const p = W.findPath(sx, sy, fx, fy, true, N * N);
     if (!p || !p.length) { set.cartNo = S.day; return null; }
     const pts = [[sx, sy]].concat(p).map(q => [Math.round(q[0] * 100) / 100, Math.round(q[1] * 100) / 100]);

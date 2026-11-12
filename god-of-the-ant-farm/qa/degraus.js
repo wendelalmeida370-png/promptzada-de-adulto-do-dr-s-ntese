@@ -248,7 +248,10 @@ run('g3', () => {
   // (rock about the work's lot, by the god's hand: the quarry of its gang — the lot the god's hand found may lie far from the town's heart)
   const postas = rochas(set, 12, V.center(b)); comVez(set);
   console.log(`  (g3: a obra a ${Math.round(G.dist(V.center(b)[0], V.center(b)[1], set.cx, set.cy))} casas do meio de ${set.name}; ${postas} rochas postas em volta dela)`);
+  // (the stone that goes into the work in its first year, heard line by line; what it had at its founding is its lot's rocks')
+  const E1 = escuta(); const tinha0 = (V.bill(b).stone || 0) - (b.need.stone || 0);
   estacoes(set.id, 4);
+  E1.fim(); const livro1 = naObra(E1.linhas, b.id); { const q = S.buildings.get(b.id); var rec1 = q && q.type !== 'ruin' ? (V.bill(q).stone || 0) - (q.built ? 0 : q.need.stone || 0) - tinha0 : 0; }
   // (the save in the middle: the same building, the same mark; the same future twice)
   const o1 = S.buildings.get(b.id); const foto = x => (x ? JSON.stringify([x.x, x.y, x.w, x.esc, x.built, +x.progress.toFixed(6), x.need, x.brick, x.troca]) : 'sumiu');
   // (the mark: the turn and the work that keeps the stone — what it keeps is its need less what is on its way in someone's hands,
@@ -261,14 +264,15 @@ run('g3', () => {
   ok('g3d o mesmo save, o mesmo futuro', A[2] === Bv[2], `60 s depois de carregar, duas vezes: ${A[2]} e ${Bv[2]}`);
   const s3 = S.settlements.get(set.id);
   // (the stone that goes into the work from here on, heard line by line — a load starts the ledger's listeners anew)
-  const E3 = escuta(); const w3 = S.buildings.get(b.id); const jaTinha = w3 && !w3.built ? (V.bill(w3).stone || 0) - (w3.need.stone || 0) : 0;
+  const E3 = escuta(); const w3 = S.buildings.get(b.id); const jaTinha = w3 && w3.type !== 'ruin' ? (V.bill(w3).stone || 0) - (w3.built ? 0 : w3.need.stone || 0) : 0;
   const diz = () => { const w = S.buildings.get(b.id); const ff = G.Fac.get(s3.fac); if (VERB) console.log(`  (g3: ano ${S.day}: pedra do povo ${Math.round(ff.stock.stone || 0)}, renda ${Math.round(V.stoneIncome(ff.id))}, a vez ${s3.vez}, gw ${s3.gw}, sem casa ${V.housingInfo(s3.id).homeless}, comida ${Math.round(ff.stock.food)}/${G.Fac.pop(ff.id)} pessoas, rochas perto ${rochasPerto(s3)}, construtores ${oficio(s3, 'construtor')}, mineiros ${oficio(s3, 'mineiro')}; a obra ${w ? w.type + ' ' + JSON.stringify(w.need) + ' ' + Math.round(w.progress * 100) + '% unreach ' + (w.unreach || 0) : 'sumiu'}; outras obras: ${[...S.buildings.values()].filter(q => q.set === s3.id && !q.built && q.type !== 'ruin' && q.id !== b.id).map(q => q.type + ':' + Math.round(q.need.stone || 0)).join(' ')})`); };
   diz(); for (let y = 0; y < 2; y++) { estacoes(s3.id, 4); diz(); }
   // (what it got, by its own bill: what the step costs in stone — less the brick that took its place, V.bill — less what it still
   // waits for; and by the ledger, line by line. A brick that never comes goes back to stone on the way: L-540)
   E3.fim(); const o = S.buildings.get(b.id); const livro = naObra(E3.linhas, b.id); const recebeu = o && o.type !== 'ruin' ? (V.bill(o).stone || 0) - (o.built ? 0 : o.need.stone || 0) - jaTinha : 0;
-  ok('g3e três anos de salto', !!o && o.type !== 'ruin' && (o.built || recebeu >= 30), `${s3.name}: a obra ${o ? (o.type === 'ruin' ? 'DESTRUÍDA' : o.built ? 'ficou pronta' : `recebeu ${recebeu.toFixed(0)} de pedra (espera ${Math.round(o.need.stone || 0)}; ${Math.round(o.progress * 100)}%)`) : 'SUMIU'}; a vez ${s3.vez}`);
-  ok('g3f pelo livro', !!o && Math.abs(livro - recebeu) < 1e-3 && livro > 0, `a pedra que entrou na obra pelo livro: ${livro.toFixed(0)}; o que a conta dela diz que recebeu: ${recebeu.toFixed(0)}`);
+  ok('g3e três anos de salto', !!o && o.type !== 'ruin' && (o.built || rec1 + recebeu >= 30), `${s3.name}: a obra ${o ? (o.type === 'ruin' ? 'DESTRUÍDA' : o.built ? 'ficou pronta' : `recebeu ${(rec1 + recebeu).toFixed(0)} de pedra (espera ${Math.round(o.need.stone || 0)}; ${Math.round(o.progress * 100)}%)`) : 'SUMIU'}; a vez ${s3.vez}`);
+  // (the first year, to the save, and the two after it: the minute each loaded life lived in between is neither's)
+  ok('g3f pelo livro', !!o && Math.abs(livro1 - rec1) < 1e-3 && Math.abs(livro - recebeu) < 1e-3 && livro1 + livro > 0, `a pedra que entrou na obra pelo livro: ${livro1.toFixed(0)} no primeiro ano e ${livro.toFixed(0)} nos dois seguintes; o que a conta dela diz que recebeu: ${rec1.toFixed(0)} e ${recebeu.toFixed(0)}`);
   const c = checa(); ok('g3g verificador', c.ok, c.txt);
 });
 
@@ -293,12 +297,18 @@ run('g4', () => {
   if (o && o.type === 'ruin') { console.log(`  (g4d: o mundo destruiu a obra no meio — ${o.origType} virou ruína —; sem caso nesta vida)`); return; }
   ok('g4d a obra espera', !!o && !o.built && o.type === tipo && V.pop(set.id) >= gente0 * 0.7, `um ano sem rocha a menos de 34 casas e o armazém esvaziado quatro vezes: a obra ${o ? 'de pé, à espera de ' + Math.round(o.need.stone || 0) + ' de pedra (recebeu ' + sem.toFixed(0) + ', da pedreira do alto)' : 'LARGADA'}; ${set.name} tinha ${gente0} pessoas, tem ${V.pop(set.id)}`);
   if (o) {
-    // (the town's other works finished by the god's hand, the town fed and housed again: the stone given has one work to go to)
-    sim(() => { for (const q of [...S.buildings.values()]) if (q.set === set.id && !q.built && q.type !== 'ruin' && q.id !== b.id) V.completeBuilding(q); });
+    // (the other works of its people — the town's and its sister towns', whose builders take from the same store — finished by
+    // the god's hand, the town fed and housed again: the stone given has one work to go to. With the sisters' works left, Cápua,
+    // Óstia and Lavínio took 76 of the 150 in the first days for what they had begun, and the theatre got 8)
+    sim(() => { for (const q of [...S.buildings.values()]) if (V.facOfSet(q.set) === f.id && !q.built && q.type !== 'ruin' && q.id !== b.id) V.completeBuilding(q); });
     // (two years by the jump, the town fed each season: a house a family pays for in the meantime comes first — L-313 —, a fire
     // takes the builders a day; then the stone goes to the work)
     comVez(set); pedra(set, 150); const E5 = escuta(); estacoes(set.id, 8);
     const o2 = S.buildings.get(b.id); const com = naObra(E5.linhas, b.id); E5.fim();
+    if (VERB) { const sai = {}; for (const e of E5.linhas) if (e[3] === 'f:' + f.id) { const to = String(e[4]); let k = e[8] + ' → ' + to.slice(0, 2); if (to.startsWith('v:')) { const v = S.villagers.get(+to.slice(2)); const st = v && S.settlements.get(v.set); k = e[8] + ' → mãos de ' + (st ? st.name : '?') + (v ? ' (' + v.role + ')' : ''); } sai[k] = (sai[k] || 0) + e[6]; }
+      const para = {}; for (const e of E5.linhas) if (String(e[4]).startsWith('o:')) { const q = S.buildings.get(+String(e[4]).slice(2)); const st = q && S.settlements.get(q.set); const k = (q ? q.type + (q.upgradeFrom ? '(melhoria)' : '') + (q.encomenda ? '(paga)' : '') : '?') + ' de ' + (st ? st.name : '?'); para[k] = (para[k] || 0) + e[6]; }
+      console.log(`  (g4e: a pedra que entrou em obras: ${Object.keys(para).sort((x, y) => para[y] - para[x]).map(k => Math.round(para[k]) + ' ' + k).join('; ')})`);
+      console.log(`  (g4e: a pedra que saiu do armazém do povo em dois anos: ${Object.keys(sai).sort((x, y) => sai[y] - sai[x]).map(k => Math.round(sai[k]) + ' ' + k).join('; ')}; carroças da obra agora: ${(S.carts || []).filter(c => c.obra === b.id).length}; a roda: ${G.Civ.has(f.id, 'roda')}; a vez ${set.vez} gw ${set.gw}; no armazém ${Math.round(f.stock.stone || 0)})`); }
     if (o2 && o2.type === 'ruin') { console.log('  (g4e: o mundo destruiu a obra no meio; sem caso nesta vida)'); return; }
     ok('g4e com a pedra dada, anda', !!o2 && com >= 12 && com > sem, `150 de pedra no armazém do povo, a vez ${set.vez}: em dois anos a obra recebeu ${com.toFixed(0)} pelo livro (no ano sem pedra: ${sem.toFixed(0)})${o2 && o2.built ? ' e ficou pronta' : ''}`);
   }
@@ -320,10 +330,10 @@ run('g5', () => {
   // whose biggest step finds no land and a smaller one does, where the world has one: the ladder tried from the biggest to the
   // smallest. A step that opens its room over the town's own houses is the town's too: the proof asks the search alone)
   let set = null, b0 = null, alvo = null; const cands = [];
+  const acha = (s, st) => { s._noSite = {}; const p = sim(() => V.findSite(s, 'temple', undefined, st.n) || (V.opens('temple', st) ? V.openSite(s, 'temple', st) : null)); s._noSite = {}; return !!p; };
   for (const s of capitais()) {
     const L = Es.choose(s, 'temple').filter(st => st.n > Es.n0('temple')); if (!L.length) continue;
-    const acha = st => { s._noSite = {}; const p = sim(() => V.findSite(s, 'temple', undefined, st.n) || (V.opens('temple', st) ? V.openSite(s, 'temple', st) : null)); s._noSite = {}; return !!p; };
-    const livre = L.find(acha); if (livre) cands.push([s, livre, livre !== L[0] ? 0 : 1]);
+    const livre = L.find(st => acha(s, st)); if (livre) cands.push([s, livre, livre !== L[0] ? 0 : 1]);
   }
   cands.sort((a, c) => a[2] - c[2]);
   for (const [s, livre] of cands) { const b = cercado(s, 'temple', 'santuario'); if (!b) continue; set = s; b0 = b; alvo = livre; break; }
@@ -334,13 +344,20 @@ run('g5', () => {
   // (the town's other temples, standing, would be the ones to grow: the proof's is the biggest only if none is bigger — else it
   // takes them away, by the game's door)
   sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && o.type === 'temple' && o.id !== b0.id) V.removeBuilding(o); });
+  // (the step asked again with the ground as the planner will find it: where a temple taken away stood, a lot the work levels
+  // may hold a bigger step — D-217)
+  const antes = alvo; alvo = Es.choose(set, 'temple').filter(st => st.n > b0.w).find(st => acha(set, st)) || alvo;
+  if (alvo !== antes) console.log(`  (g5: sem os outros templos, o maior degrau com terra passou de ${antes.id}/${antes.n} a ${alvo.id}/${alvo.n})`);
   const nb = sim(() => V.grow(set, fac, V.counts(set.id)));
   const velho = S.buildings.get(b0.id); const fora = nb && (nb.x + nb.w <= b0.x || nb.x >= b0.x + b0.w || nb.y + nb.h <= b0.y || nb.y >= b0.y + b0.h);
   ok('g5b erguido de novo, noutro lugar', cresce && !!nb && nb.id !== b0.id && nb.type === 'temple' && nb.w === alvo.n && !nb.built && fora && !!velho && velho.built && velho.w === 2 && !velho.amp,
     `em volta ${cresce ? 'não há lote para crescer' : 'HAVIA lote'} (${templos0} templos antes); V.grow: ${lado(nb)}${nb ? ', em obra' : ''}; o antigo ${velho ? lado(velho) + (velho.built ? ', de pé' : ', EM OBRA') : 'SUMIU'}`);
   if (!nb) return;
   const B = Es.bill('temple', alvo); const soma = o => Object.values(o || {}).reduce((a, x) => a + (x || 0), 0);
-  ok('g5c o maior degrau que acha terra, com a conta dele', nb.esc === alvo.id && soma(V.bill(nb)) === soma(B.cost) && V.workOf(nb) === B.work, `o degrau ${nb.esc} (${nb.w * 4} m): a conta ${JSON.stringify(V.bill(nb))}, o trabalho ${V.workOf(nb)}`);
+  // (the work of the step, and the earth its lot had to move, where the ground was levelled for it: D-217)
+  const terra = nb.terra || 0;
+  ok('g5c o maior degrau que acha terra, com a conta dele', nb.esc === alvo.id && soma(V.bill(nb)) === soma(B.cost) && Math.abs(V.workOf(nb) - (B.work + terra * V.EARTH)) < 1e-9 && G.W.slope(nb.x, nb.y, nb.w, nb.h) <= V.PODIUM + 1e-9,
+    `o degrau ${nb.esc} (${nb.w * 4} m): a conta ${JSON.stringify(V.bill(nb))}, o trabalho ${V.workOf(nb)} (o do degrau ${B.work}${terra ? `, mais ${terra} de terra aplainada` : ''}); o relevo do lote ${(G.W.slope(nb.x, nb.y, nb.w, nb.h) * 1.5).toFixed(2)} m`);
   const L = linhas(hi, /não havia espaço para crescer/);
   ok('g5d a crônica', L.length === 1, L.length ? `«${L[0].txt}»` : 'nenhuma linha');
   // (one great work at a time: nothing more while it goes up)

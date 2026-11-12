@@ -301,7 +301,7 @@
     G.Court && G.Court.audGone && G.Court.audGone(b); // (and the audience in it: D-124)
   };
   V.totalCost = def => { let n = 0; for (const k in def.cost) n += def.cost[k] || 0; return n; };
-  V.workOf = b => G.Escala.billOf(b).work; // (the work a building takes: its step's, D-106)
+  V.workOf = b => G.Escala.billOf(b).work + (b.terra || 0) * V.EARTH; // (the work a building takes: its step's, D-106 — and the earth its lot's levelling moved, D-217)
   V.nameOf = (type, b) => G.Civ.bname(type, b ? b.style : null);
   V.buildName = b => (b.upgradeFrom && !b.built ? V.nameOf(b.type, b) + ' (obra)' : V.nameOf(b.type === 'ruin' ? (b.origType || 'ruin') : b.type, b));
   // a house that serves to live in: standing, or being raised further over its family by the city (b.upgradeFrom: the old
@@ -536,8 +536,11 @@
     // (a public work of a bigger step looks further, D-120: the ones that stand outside a town — the amphitheatre, the pyramid —
     // as far as twenty tiles past its edge, the others six and then twelve; the old quarter of a work of the type's own size, as
     // before. A bigger step opens its room by its own rules — V.openSite)
-    if (def.podium && publicWork(type)) { for (const e of V.reachOf(set, type)) if (!best) best = search(set, type, def, R + e, field, counts, false); }
-    else {
+    if (def.podium && publicWork(type)) {
+      for (const e of V.reachOf(set, type)) if (!best) best = search(set, type, def, R + e, field, counts, false);
+      // (with no lot its podium covers as far as it looks, one whose ground its work levels first, the nearest ring first: D-217)
+      if (!best) { levelOK = true; try { best = search(set, type, def, R, field, counts, false, undefined, reach); for (const e of V.reachOf(set, type)) if (!best) best = search(set, type, def, R + e, field, counts, false); } finally { levelOK = false; } }
+    } else {
       // a full city puts its great buildings out by its edge, beyond the walls if need be,
       // and when even there is no room, it builds them over its own old fields and houses
       if (!best && def.civic) best = search(set, type, def, R + 6, field, counts, false);
@@ -583,6 +586,7 @@
     const def = G.BDEF.quarteirao; const counts = {}; for (const b of G.S.buildings.values()) if (b.set === set.id) counts[b.type] = (counts[b.type] || 0) + 1;
     return search(set, 'quarteirao', def, G.Urban.radius(set, def, V.pop(set.id)), false, counts, true, G.Urban.DEAR.quarteirao, undefined, [x, y]);
   };
+  let levelOK = false; // (the search's second asking, for a bigger step with no lot its podium covers: V.findSite alone sets it, and unsets it — D-217)
   function search(set, type, def, R, field, counts, renew, dear, reach, only) {
     const S = G.S; const block = renew && type === 'quarteirao'; const may = block ? RENEW_BLOCK : RENEW;
     const left = gone => { const n = {}; for (const id of gone) { const t = S.buildings.get(id).type; if (KEEP[t] && (counts[t] || 0) - (n[t] = (n[t] || 0) + 1) < KEEP[t]) return false; } return true; };
@@ -645,7 +649,7 @@
       }
       if (!ok || bad(gone, beds)) continue;
       const sl = W.slope(x, y, def.w, def.h);
-      if (sl > (type === 'farm' ? 1.6 : def.podium ? V.PODIUM : 1.15)) continue;
+      if (def.podium ? (levelOK ? !podiumFits(x, y, def.w) : sl > V.PODIUM) : sl > (type === 'farm' ? 1.6 : 1.15)) continue; // (a bigger step's lot: under its podium — or, asked last, levelled: D-217)
       if (streets && !relinks(set, x, y, def.w, gone)) continue;
       let ideal = 3;
       if (def.housing) ideal = 2.6 + homes * (type === 'insula' || type === 'sobrado' ? 0.28 : 0.33);
@@ -689,6 +693,77 @@
   const FORA = { maravilha: { romano: 1, egipcio: 1 } };
   V.fora = (set, type) => !!(FORA[type] && FORA[type][G.Civ.idOfFac(set.fac) || 'classico']);
   V.reachOf = (set, type) => (V.fora(set, type) ? [20] : [6, 12]);
+  // ------------------------------ the ground levelled for a great work (D-120 (3), D-217) ------------------------------
+  // the podium of a bigger step covers three levels of relief; past that the work begins by levelling its lot — cut and fill,
+  // never more than V.LEVEL levels of either at any corner —, the ground about it eased over two tiles: the lot's corners are
+  // brought into a band of the podium's height, set midway between its lowest and its highest, and the corners one and two
+  // tiles out follow by two thirds and one third. The ground that moves out of the lot is dry ground, fields, trees and minor
+  // streets: a corner of the margin that touches water, a wall, a highway, a cave mouth or a building but a field stays where
+  // it is, and a corner of the lot's own edge that does bars the lot; no corner moves more than V.LEVEL; and the ring round
+  // the lot is left with no cliff, no tile of the margin made one. In the worlds
+  // measured the relief was what barred most lots: by the nearest dry and empty lot of 6 to every capital there are 7 to 30 m of
+  // it, and no capital of the metropole but one had a lot for its wonder (the block M2).
+  // earthOf → 0: the podium covers the lot; > 0: the earth to move, the sum of the levels each corner goes up or down; < 0: no
+  // (-1 too much relief, -2 water or a cave mouth where the ground would move, -3 a wall, a highway or a building there, -4 a
+  // corner of the margin would move too far, -5 a cliff on the ring or a new one in the margin)
+  V.LEVEL = 3; V.EARTH = 2; V.LEVEL_LAST = 1000; // (levels of cut or of fill; the work a level of a corner costs; what a lot to be levelled loses to one that is not, in a search)
+  const FIELDS_E = { farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 };
+  function earth(x, y, n, apply, plan) {
+    const S = G.S; const H = S.H; const VV = N + 1; const sl = W.slope(x, y, n, n);
+    if (sl <= V.PODIUM) return 0; if (sl > V.PODIUM + 2 * V.LEVEL + 1e-9) return -1;
+    if (x - 3 < 1 || y - 3 < 1 || x + n + 3 > N - 1 || y + n + 3 > N - 1) return -2;
+    let mn = 1e9, mx = -1e9;
+    for (let vy = y; vy <= y + n; vy++) for (let vx = x; vx <= x + n; vx++) { const h = H[vy * VV + vx]; if (h < mn) mn = h; if (h > mx) mx = h; }
+    // (the heights written are the save's own — hundredths of a level —, and the band a hundredth short of the podium: the lot
+    // levelled is under its podium by any count, before and after a save)
+    const r2 = h => Math.round(h * 100) / 100; const band = V.PODIUM - 0.01;
+    const lo = r2((mn + mx - band) / 2), hi = r2(lo + band); const to = new Map(); let vol = 0;
+    for (let vy = y - 2; vy <= y + n + 2; vy++) for (let vx = x - 2; vx <= x + n + 2; vx++) {
+      const d = Math.max(x - vx, vx - (x + n), y - vy, vy - (y + n), 0); // (how far out of the lot the corner is: 0 on it)
+      const k = vy * VV + vx; const h = H[k]; const nh = r2(h + (Math.max(lo, Math.min(hi, h)) - h) * (1 - d / 3));
+      if (Math.abs(nh - h) < 0.005) continue;
+      // (the ground that moves, out of the lot: the four tiles about the corner dry, with no cave mouth, wall, highway nor
+      // building but a field — water keeps its shore, and what stands keeps its floor. A corner of the margin that touches
+      // one stays where it is; a corner of the lot itself has to move, and the lot is not levelled)
+      let bar = 0;
+      for (let ty = vy - 1; ty <= vy && !bar; ty++) for (let tx = vx - 1; tx <= vx; tx++) {
+        if (tx >= x && tx < x + n && ty >= y && ty < y + n) continue;
+        const i = ty * N + tx; if (S.type[i] < T.SAND || (G.Caves && G.Caves.isMouth && G.Caves.isMouth(i))) { bar = -2; break; }
+        const o = S.occ[i] ? S.buildings.get(S.occ[i]) : null; if (S.wall[i] || S.road[i] >= 3 || (o && !FIELDS_E[o.type])) { bar = -3; break; }
+      }
+      if (bar) { if (d === 0) return bar; continue; }
+      if (Math.abs(nh - h) > V.LEVEL + 0.011) return -4;
+      to.set(k, nh); vol += Math.abs(nh - h);
+    }
+    // (the ring is where one walks: no cliff on it; and no tile of the margin becomes one)
+    const at = k => (to.has(k) ? to.get(k) : H[k]); const CL = G.Relief ? G.Relief.CLIFF : 2.8;
+    for (let ty = y - 3; ty < y + n + 3; ty++) for (let tx = x - 3; tx < x + n + 3; tx++) {
+      if ((tx >= x && tx < x + n && ty >= y && ty < y + n) || S.type[ty * N + tx] < T.SAND) continue; // (the water beside may be: D-115)
+      const a = at(ty * VV + tx), b = at(ty * VV + tx + 1), c = at((ty + 1) * VV + tx), d = at((ty + 1) * VV + tx + 1);
+      const cliff = Math.max(a, b, c, d) - Math.min(a, b, c, d) > CL; if (!cliff) continue;
+      const ring = tx >= x - 1 && tx <= x + n && ty >= y - 1 && ty <= y + n;
+      if (ring || !S.cliff[ty * N + tx]) return -5;
+    }
+    if (plan) for (const [k, h] of to) plan.set(k, h);
+    if (apply) {
+      for (const [k, h] of to) H[k] = h;
+      G.Relief && G.Relief.fixArea(x - 3, y - 3, x + n + 2, y + n + 2);
+      for (let ty = y - 3; ty < y + n + 3; ty++) for (let tx = x - 3; tx < x + n + 3; tx++) G.Nature.markDirty(ty * N + tx);
+      S.typeVer = (S.typeVer || 0) + 1; W.invalidateLand(); W.touchWalk();
+      // (who stood where the ground changed is set on it at once, as the round of every second would: L-306)
+      for (const v of S.villagers.values()) if (v.x >= x - 3 && v.x < x + n + 3 && v.y >= y - 3 && v.y < y + n + 3) G.Vg.reground(v);
+    }
+    return vol;
+  }
+  V.earthOf = (x, y, n) => earth(x, y, n, false);
+  // (the plan of a levelling, for the proofs and the developer: each corner that would move — its index in the map of heights —
+  // and the height it would take; null where there is nothing to level, or no levelling. Reads only)
+  V.earthPlan = (x, y, n) => { const to = new Map(); return earth(x, y, n, false, to) > 0 ? to : null; };
+  // (the relief a lot of a bigger step may have: what its podium covers — or what its work can level under it)
+  const podiumFits = (x, y, n) => W.slope(x, y, n, n) <= V.PODIUM || earth(x, y, n, false) > 0;
+  V.podiumFits = podiumFits;
+  // (the lot levelled, as its work is founded: the ground written, the map told. → the earth moved, 0 with nothing to level)
+  V.levelLot = function (x, y, n) { const vol = earth(x, y, n, true); return vol > 0 ? vol : 0; };
   // (a lot of a bigger step may take the town's minor streets — dirt and stone, never the highway — when the ring round it joins
   // again every street it cuts: the street tiles of the ring beside a street of the lot, the ends of the cut, all reach each other
   // along the ring, on tiles one walks or that come down with the lot — D-120; and a block of the heart's, L-602)
@@ -744,7 +819,8 @@
       if (o && o !== own && o.blocks && !(G.BDEF[o.type].housing && take(o))) return null;
     }
     const left = {}; for (const id of gone) { const t = S.buildings.get(id).type; left[t] = (left[t] || 0) + 1; if (KEEP[t] && (counts[t] || 0) - left[t] < KEEP[t]) return null; }
-    const sl = W.slope(x, y, n, n); if (sl > V.PODIUM) return null;
+    // (a work enlarged where it stands is not levelled under: its podium alone — D-217)
+    const sl = W.slope(x, y, n, n); if (own ? sl > V.PODIUM : !podiumFits(x, y, n)) return null;
     if (streets && !relinks(set, x, y, n, gone)) return null; // (the minor streets it takes, joined again round it)
     if (!siteReached(set, x, y, def)) return null;
     return { gone, beds, cost, trees, sl };
@@ -774,7 +850,7 @@
         if (S.objAt[i] && !S.bushes.has(S.objAt[i])) { w.pedra = 1; rocks++; }
         if (o) { if (o.set !== set.id) w.outra = 1; else if (!(OPEN[o.type] && o.built)) w.fica = 1; else if (!take.has(o.id)) { take.add(o.id); beds += G.BDEF[o.type].housing || 0; } }
       }
-      const sl = W.slope(x, y, n, n); if (sl > V.PODIUM) w.relevo = 1;
+      const sl = W.slope(x, y, n, n); if (!podiumFits(x, y, n)) w.relevo = 1;
       if (take.size > lim.bld || beds > lim.beds) w.casas = 1;
       if (!Object.keys(w).length && !siteReached(set, x, y, { w: n, h: n })) w.longe = 1;
       if (!Object.keys(w).length) free++; for (const k in w) why[k]++;
@@ -823,7 +899,7 @@
       const fx = x + n / 2, fy = y + n / 2; const d = G.dist(fx, fy, set.cx, set.cy); if (d > R) continue;
       const L = lotFor(set, def, x, y, null, counts, lim); if (!L || !L.gone.length) continue; // (a free lot is the plain search's)
       const place = G.Urban && (set.tier || 0) >= 2 ? G.Urban.siteScore(set, type, def, x, y, fx, fy, d, ideal) : -Math.abs(d - ideal) * 1.2;
-      cands.push([place - L.trees * 0.7 - L.sl * 1.5 - L.cost * 2 - L.beds * 0.3, x, y, L]);
+      cands.push([place - L.trees * 0.7 - L.sl * 1.5 - L.cost * 2 - L.beds * 0.3 - (L.sl > V.PODIUM ? V.LEVEL_LAST : 0), x, y, L]);
     }
     cands.sort((a, b) => b[0] - a[0] || a[2] - b[2] || a[1] - b[1]);
     for (const [, x, y, L] of cands.slice(0, 6)) { const moves = relocation(set, x, y, n, L.gone); if (moves) return Object.assign([x, y], { demolish: L.gone, moves, beds: L.beds }); }
@@ -890,20 +966,21 @@
         if (o && o.blocks) return false;
       }
     }
-    if (W.slope(x, y, n, n) > V.PODIUM || resOver(set, type, x, y, n, n, true)) return false;
+    if (!podiumFits(x, y, n) || resOver(set, type, x, y, n, n, true)) return false;
     if (streets && !keep && !relinks(set, x, y, n, null, kept)) return false;
     return siteReached(set, x, y, { w: n, h: n });
   }
   // (the nearest lot of n that serves, as far as the town's radius and RES_REACH. → [x, y], or null)
   function resLot(set, type, n) {
     const R = Math.round(G.Urban ? G.Urban.radius(set, { w: n }, V.pop(set.id)) : 20) + V.RES_REACH; const cxi = Math.floor(set.cx), cyi = Math.floor(set.cy);
-    let best = null, bd = 1e9;
+    // (the nearest its podium covers; with none, the nearest that can be levelled under it: D-217)
+    let best = null, bd = 1e9, lev = null, ld = 1e9;
     for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
       const x = cxi + dx - Math.floor((n - 1) / 2), y = cyi + dy - Math.floor((n - 1) / 2); const d = G.dist(x + n / 2, y + n / 2, set.cx, set.cy);
-      if (d > R || d >= bd) continue;
-      if (resFits(set, type, x, y, n)) { best = [x, y]; bd = d; }
+      if (d > R || d >= bd) continue; const flat = W.slope(x, y, n, n) <= V.PODIUM; if (!flat && d >= ld) continue;
+      if (resFits(set, type, x, y, n)) { if (flat) { best = [x, y]; bd = d; } else { lev = [x, y]; ld = d; } }
     }
-    return best;
+    return best || lev;
   }
   const WORK_NAME = { maravilha: 'a sua maravilha', palacio_colossal: 'o palácio colossal do seu governante' };
   function letGo(set, why) { const u = set.urb; if (u && u.res) { u.res = null; u.resGone = { why, day: G.S.day }; } return null; }
@@ -987,7 +1064,14 @@
     // (a city builds tall only where its land is dear; on cheap ground the same family builds a house with a yard)
     if (G.Urban && !pos.demolish) { const t = G.Urban.homeFor(set, type, pos); if (t !== type) { type = t; step = null; } }
     if (pos.demolish) renew(set, type, pos.demolish, pos.moves);
+    // (a bigger step's lot with more relief than its podium covers is levelled first — its work begins there: D-217)
+    let terra = 0, rel0 = 0;
+    if (step && step.n !== G.Escala.n0(type) && publicWork(type)) { rel0 = W.slope(pos[0], pos[1], step.n, step.n); terra = V.levelLot(pos[0], pos[1], step.n); }
     const b = V.addBuilding(type, pos[0], pos[1], set.id, false, step);
+    if (terra > 0) {
+      b.terra = Math.round(terra * 100) / 100; const nm = V.nameOf(type, b); const [cx, cy] = V.center(b);
+      V.log(`${set.name} aplainou o chão para ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: o lote tinha ${String(Math.round(rel0 * 15) / 10).replace('.', ',')} m de relevo.`, 'city', cx, cy);
+    }
     if (type === 'cemetery') V.completeBuilding(b);
     G.Eco && G.Eco.onPlaced(b);
     // (what the step pulled down goes up again elsewhere: the fields on their new lots, the families' new homes)
@@ -1129,9 +1213,23 @@
     if (e[5] !== 'stone' || !EARN[e[8]]) return; const to = e[4];
     if (typeof to !== 'string' || to.charCodeAt(0) !== 102 || to.charCodeAt(1) !== 58) return; // ('f:' + the people)
     const f = G.Fac.get(+to.slice(2)); if (!f) return; const d = G.S.day; const p = f.pedra || (f.pedra = [d, 0, 0]);
-    if (p[0] !== d) { p[2] = p[0] === d - 1 ? p[1] : 0; p[0] = d; p[1] = 0; }
+    if (p[0] !== d) { mean(f, d); p[2] = p[0] === d - 1 ? p[1] : 0; p[0] = d; p[1] = 0; }
     p[1] += e[6];
   }
+  // (the people's stone income over its years, kept beside its years' count — f.pedra[3] the day the mean is brought up to,
+  // f.pedra[4] the mean: a fifth of each year that passed, the years with no stone counted as none; brought up to the day
+  // before d at the first stone of a new day, and when asked. A count with no mean yet — a save of before, a people's first
+  // stone — starts it at its last whole year. A year's income alone is a good year's: Tenochtitlan of the metropole had 156
+  // the year it was measured and some 5 a year in the six after, its rocks broken, and by twenty years of that one year it
+  // asked for every step — D-216)
+  V.MEAN = 0.2;
+  function mean(f, d) {
+    const p = f.pedra; if (!p) return 0;
+    if (p[3] === undefined) { p[3] = d; p[4] = p[0] === d ? p[2] : p[0] === d - 1 ? p[1] : 0; return p[4]; }
+    for (let y = p[3]; y < d; y++) p[4] = p[4] * (1 - V.MEAN) + V.MEAN * (p[0] === y ? p[1] : 0);
+    if (p[3] < d) p[3] = d; return p[4];
+  }
+  V.stoneMean = function (fid) { const f = G.Fac.get(fid); return f ? mean(f, G.S.day) : 0; };
   G.worldHooks.push(() => { if (G.Depot && G.Depot.onMove && !G.Depot.onMove.includes(earn)) G.Depot.onMove.push(earn); });
   V.stoneIncome = function (fid) {
     const f = G.Fac.get(fid); const p = f && f.pedra; if (!p) return 0; const d = G.S.day;
@@ -1148,13 +1246,16 @@
   // a bigger one of a public work by what it will have in V.YEARS years — the stone in store and its people's income —, past the
   // bricks the work will take (V.brickSwap) and the part of it that stands (from: the step it grows from). The work keeps the
   // stone as it comes, V.greatWork. D-120)
-  V.YEARS = 20;
+  // (the years of its stone a people may give a bigger step: what it has and fifteen years of its income — the lesser of its
+  // last year's and the mean of its years; it was twenty of its last year's alone, and the capitals of the worlds measured
+  // began steps that took them 14 to 18 years, or never stood: D-216)
+  V.YEARS = 15;
   V.affords = function (set, type, step, have, from) {
     const f = G.Fac.get(V.facOfSet(set.id)); if (!f || !step) return false;
     if (step.n === G.Escala.n0(type) || !publicWork(type)) return (f.stock.stone || 0) >= (have || 0);
     let stone = (G.Escala.bill(type, step).cost.stone || 0) - (from ? G.Escala.bill(type, from).cost.stone || 0 : 0);
     if (brickOf(set.id)) stone -= Math.floor(stone * (BRICK_SHARE[type] || 0));
-    return (f.stock.stone || 0) + V.YEARS * V.stoneIncome(f.id) >= stone;
+    return (f.stock.stone || 0) + V.YEARS * Math.min(V.stoneIncome(f.id), V.stoneMean(f.id)) >= stone;
   };
   // (whether a town asks for a work of a type, by its stone: a step of it the town would raise it can pay for — the planners'
   // gate, city.js and court.js: have, the stone in store a step of the type's own size asks)
@@ -1346,7 +1447,11 @@
     if (c.sites >= maxSites) return;
     const st = fac.stock; const cap = V.cap(fac.id);
     const workshop = facHas('workshop');
-    const homeType = G.City ? G.City.homeType(set, fac, workshop, st) : (workshop && st.stone >= 6 ? 'house' : 'hut');
+    // (the homes a town raises while a great work of its people keeps stone are of what the work leaves — wooden huts, or a
+    // stone house of the spare: the people's store is one, and the ínsulas and sobrados begun in Cápua, Óstia and Lavínio the
+    // day Rome's store got 150 of stone took 130 of them in two years; its theatre, with the turn, got 8. L-783)
+    const keptAll = V.stoneKept(fac.id); const stH = keptAll > 0 ? Object.assign({}, st, { stone: Math.max(0, (st.stone || 0) - keptAll) }) : st;
+    const homeType = G.City ? G.City.homeType(set, fac, workshop, stH) : (workshop && stH.stone >= 6 ? 'house' : 'hut');
     let pendingHousing = 0; for (const k in c.siteTypes) pendingHousing += (G.BDEF[k].housing || 0) * c.siteTypes[k];
     const want = [];
     if ((hi.homeless > 0 || hi.cap - pop < 2) && hi.cap + pendingHousing < pop + 3) want.push(homeType);
