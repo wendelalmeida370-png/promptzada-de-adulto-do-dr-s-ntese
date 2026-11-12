@@ -372,6 +372,8 @@
       { k: 'telhado', r: Te, y0: top, y1: r2(top + rh), ao: 'u', ov: 0.3, cor: ROOF },
       { k: 'pano', p: [[B[0], r2(P1 + 0.2), yl], [B[2], r2(P1 + 0.2), yl], [B[2], B[3], yh], [B[0], B[3], yh]], cor: 'roof1', mat: 'plankH' },
       { k: 'placa', v: r2(B[3] + 0.02), u: hu, w: 1.6, y0: r2(Hp + dh + 0.25), y1: r2(Hp + dh + 0.75), cor: '#e8d8a8' });
+    { const yc = r2(Hp + Hy), o = 0.1, f = K.ft; // (the tiles over the court's wall: its two sides, its front)
+      for (const r of [[B[0] - o, B[3], B[0] + f + o, Vp], [B[2] - f - o, B[3], B[2] + o, Vp], [B[0] - o, Vp - f - o, B[2] + o, Vp + o]]) R.deco.push(bloco(r, yc, yc + 0.18, ['roof0', 'roof1', 'roof0'])); }
     R.roof = under('duas-aguas', 'u', rh, (B[3] - B[1]) / 2, (Te[3] - Te[1]) / 2 + 0.3, 0.1); R.mat = 'adobe-caiado'; R.pave = '#d8cdb4';
     return K.done();
   }
