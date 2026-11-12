@@ -200,7 +200,7 @@
     }
   }
   // the furniture of a block: the households' mats and beds through the wings (the storeys above first), the common
-  // hearth and the pantry on the ground, a chest on every storey; braziers above, if they fit
+  // hearth, where they eat by it and the pantry on the ground, a chest on every storey; braziers above, if they fit
   function furnishBlock(P, rooms, need) {
     const tr = P.tr; const rich = P.rec.w >= 2; const kinds = rich ? tr.rich : tr.bed;
     const lvOf = id => P.rooms[id].lv;
@@ -226,7 +226,25 @@
       let chest = false; for (const id of order) { if (P.place('arca', lvOf(id), id) || P.niche('nicho', lvOf(id), id) || P.niche('prateleira-parede', lvOf(id), id)) { chest = true; break; } }
       if (!chest) P.errs.push('sem lugar para a arca');
     };
-    const plans = [[fire, keep, beds], [beds, fire, keep], [fire, beds, keep], [keep, fire, beds]];
+    // where the households eat together (D-196): a table and its benches — a mat, where the people eats on the ground — in a
+    // wing of the ground, by the common hearth; of the block's core: the least of them (the bench two eat on, the narrow mat)
+    // keeps its floor before the beds, and at the end, the block laid out, the table it has room for in its place — and one
+    // more in each wing of the ground that has room for it
+    const tabled = tr.eat === 'mesa-casa'; const LEAST = tabled ? ['banco-comer', 1.1, 0.36] : ['esteira-comer', 1.1, 0.4];
+    const EAT = tabled ? [['mesa-casa', 1.25, 1.6], ['mesa-casa', 1.25, 1.1], ['mesa-casa', 0.85, 1.1]] : [['esteira-comer', 0.9, 0.9], ['esteira-comer', 0.7, 0.7]];
+    const eatIn = (id, sizes, near, extra) => sizes.some(([k, w, d]) => !!P.place(k, 0, id, { w, d, near, extra, sides: In.ITEMS[k].wall ? undefined : ['frente', 'esquerda', 'direita', 'fundo', 'livre'], margin: 0.42 }));
+    const hearth = () => P.items.find(it => it.lv === 0 && In.ITEMS[it.kind].fire); const mid = it => [(it.r[0] + it.r[2]) / 2, (it.r[1] + it.r[3]) / 2];
+    const groundBy = f => (f ? [f.room].concat(rooms.ground.filter(id => id !== f.room)) : rooms.ground);
+    const keepEat = () => { if (P.items.some(it => it.res === 1)) return true; const f = hearth(); for (const id of groundBy(f)) if (eatIn(id, [LEAST], f && id === f.room ? mid(f) : undefined, { res: 1 })) return true; return false; };
+    const eatUp = () => {
+      const k0 = P.items.findIndex(it => it.res === 1); let was = null;
+      if (k0 >= 0) { was = P.items[k0]; P.items.splice(k0, 1); P.items.forEach((o, q) => { o.k = q; }); P._ver = (P._ver || 0) + 1; }
+      const f = hearth(); for (const id of groundBy(f)) if (eatIn(id, EAT, f && id === f.room ? mid(f) : undefined)) return;
+      if (was && P.at(was.kind, was.lv, was.room, was.r, was.face[0], was.face[1], { side: was.side, res: 1 })) return;
+      if (!keepEat()) P.errs.push('sem lugar para as famílias comerem');
+    };
+    const core = () => { fire(); keepEat(); };
+    const plans = [[core, keep, beds], [keepEat, beds, fire, keep], [core, beds, keep], [keep, core, beds]];
     for (const step of plans[P.attempt % plans.length]) step();
     // (still short: the free stretches left along the walls filled with beds in rows — K.rowOf —, wing by wing, the longest
     // walls first; and the last of all, in the hot lands and where the people sleeps on its flat roofs out of the cold ones,
@@ -240,6 +258,8 @@
     }
     // (a brazier for each storey above, and a chest, where they still go)
     P.opt(() => { for (const id of rooms.up) P.place('braseiro', lvOf(id), id); });
+    eatUp();
+    P.opt(() => { for (const id of rooms.ground) if (!P.items.some(it => it.room === id && In.ITEMS[it.kind].min && In.ITEMS[it.kind].min.comer)) eatIn(id, EAT.slice(0, 2)); });
   }
   K.blockWindows = blockWindows; // (for the palace's wings: int-palacio.js)
 })(window.G);

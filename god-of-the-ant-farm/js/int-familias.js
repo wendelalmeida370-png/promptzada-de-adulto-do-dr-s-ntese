@@ -20,18 +20,19 @@
   // ------------------------------ the peoples' ways with space ------------------------------
   // mat/t: the wall and its thickness (m) — hutT for a hut; roof: its kind (the god's steep pitches: a roof about 0.8 of
   // its span high); h0/h1: the ground storey's height and the ones above; bed/rich: how the poor and the well-off sleep;
-  // couple: the couple's bed; fire: the hearth; eat: the table; keep: the chest and the jars; win: how much it opens to
+  // couple: the couple's bed; fire: the hearth; eat: where the household eats together — at the table, on its benches
+  // (mesa-casa), or on the ground round the mat (esteira-comer): D-196 —; keep: the chest and the jars; win: how much it opens to
   // the street; round: its huts are round; sunk: it digs its floors; cellar: it keeps a cellar; long: its houses are long;
   // roofSleep: it sleeps on its flat roofs (out of the cold lands) when the house is full; roofK: the god's roof of a house, its
   // height over its span (the classical 1.22, the Greek 0.74, the Roman 0.81 — D-082); insulaN: the storeys of its ínsula (3,
   // the Roman 4, the north's 2); longJirau: its sobrado is the long house with a loft (the north)
   In.addTraditions({
-    nordico: { mat: 'tabua', t: 0.14, hutT: 0.12, roof: 'turfa', insulaN: 2, longJirau: 1, h0: 2.2, h1: 2.3, bed: ['banco-cama'], rich: ['banco-cama'], couple: 'cama-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa', keep: ['arca', 'cesto'], win: 0.3, sunk: 1, long: 1, taste: { 'integrado.terreo': 3, 'integrado.funda': 1.6, 'anexo.terreo': 2.2, 'setores.terreo': 1.2, 'integrado.jirau': 1.4 } },
-    classico: { mat: 'taipa', t: 0.2, hutT: 0.15, roof: 'duas-aguas', roofK: 1.22, hutRoof: 'palha', h0: 2.4, h1: 2.4, bed: ['esteira'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa', keep: ['arca', 'cesto'], win: 0.5, round: 1, sunk: 1, cellar: 1, taste: { 'redonda.terreo': 3, 'integrado.jirau': 2 } },
-    grego: { mat: 'adobe-caiado', t: 0.3, hutT: 0.18, roof: 'duas-aguas', roofK: 0.74, hutRoof: 'palha', h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa', keep: ['jarros', 'arca'], win: 0.6, round: 1, cellar: 1, taste: { 'setores.jirau': 1.8, 'redonda.terreo': 1.5 } },
-    romano: { mat: 'reboco', t: 0.28, hutT: 0.15, roof: 'quatro-aguas', roofK: 0.81, insulaN: 4, hutRoof: 'palha', h0: 2.8, h1: 2.6, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa', keep: ['jarros', 'arca'], win: 0.5, round: 1, cellar: 1, taberna: 1, taste: { 'produtiva.jirau': 2.2 } },
-    egipcio: { mat: 'adobe', t: 0.34, hutT: 0.25, roof: 'plano', roofSleep: 1, h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama', fire: 'forno', hutFire: 'fogareiro', eat: 'mesa-baixa', keep: ['jarros', 'cesto'], win: 0.3, cellar: 1, taste: { 'integrado.quarto': 3, 'integrado.terraco': 2, 'produtiva.quarto': 1.4 } },
-    asteca: { mat: 'adobe-estuque', t: 0.3, hutT: 0.15, roof: 'plano', hutRoof: 'palha', roofSleep: 1, h0: 2.5, h1: 2.4, bed: ['esteira'], rich: ['esteira', 'cama'], couple: 'esteira-casal', coupleRich: 'esteira-casal', fire: 'lar', eat: 'mesa-baixa', keep: ['jarros', 'cesto'], win: 0.4, round: 1, taste: { 'integrado.terraco': 2.5, 'redonda.terreo': 1.4, 'setores.quarto': 1.6 } },
+    nordico: { mat: 'tabua', t: 0.14, hutT: 0.12, roof: 'turfa', insulaN: 2, longJirau: 1, h0: 2.2, h1: 2.3, bed: ['banco-cama'], rich: ['banco-cama'], couple: 'cama-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa-casa', keep: ['arca', 'cesto'], win: 0.3, sunk: 1, long: 1, taste: { 'integrado.terreo': 3, 'integrado.funda': 1.6, 'anexo.terreo': 2.2, 'setores.terreo': 1.2, 'integrado.jirau': 1.4 } },
+    classico: { mat: 'taipa', t: 0.2, hutT: 0.15, roof: 'duas-aguas', roofK: 1.22, hutRoof: 'palha', h0: 2.4, h1: 2.4, bed: ['esteira'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'lar', eat: 'mesa-casa', keep: ['arca', 'cesto'], win: 0.5, round: 1, sunk: 1, cellar: 1, taste: { 'redonda.terreo': 3, 'integrado.jirau': 2 } },
+    grego: { mat: 'adobe-caiado', t: 0.3, hutT: 0.18, roof: 'duas-aguas', roofK: 0.74, hutRoof: 'palha', h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa-casa', keep: ['jarros', 'arca'], win: 0.6, round: 1, cellar: 1, taste: { 'setores.jirau': 1.8, 'redonda.terreo': 1.5 } },
+    romano: { mat: 'reboco', t: 0.28, hutT: 0.15, roof: 'quatro-aguas', roofK: 0.81, insulaN: 4, hutRoof: 'palha', h0: 2.8, h1: 2.6, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama-casal', fire: 'fogao', hutFire: 'fogareiro', eat: 'mesa-casa', keep: ['jarros', 'arca'], win: 0.5, round: 1, cellar: 1, taberna: 1, taste: { 'produtiva.jirau': 2.2 } },
+    egipcio: { mat: 'adobe', t: 0.34, hutT: 0.25, roof: 'plano', roofSleep: 1, h0: 2.6, h1: 2.5, bed: ['esteira', 'cama'], rich: ['cama'], couple: 'esteira-casal', coupleRich: 'cama', fire: 'forno', hutFire: 'fogareiro', eat: 'esteira-comer', keep: ['jarros', 'cesto'], win: 0.3, cellar: 1, taste: { 'integrado.quarto': 3, 'integrado.terraco': 2, 'produtiva.quarto': 1.4 } },
+    asteca: { mat: 'adobe-estuque', t: 0.3, hutT: 0.15, roof: 'plano', hutRoof: 'palha', roofSleep: 1, h0: 2.5, h1: 2.4, bed: ['esteira'], rich: ['esteira', 'cama'], couple: 'esteira-casal', coupleRich: 'esteira-casal', fire: 'lar', eat: 'esteira-comer', keep: ['jarros', 'cesto'], win: 0.4, round: 1, taste: { 'integrado.terraco': 2.5, 'redonda.terreo': 1.4, 'setores.quarto': 1.6 } },
   });
   const PITCHED = { turfa: 1, 'duas-aguas': 1, 'quatro-aguas': 1, palha: 1, 'palha-conica': 1 };
   const roofOf = (rec, tr) => (rec.t === 'hut' && tr.hutRoof ? tr.hutRoof : rec.t === 'barraco' ? 'alpendre' : rec.t === 'insula' && tr.flatTall ? 'plano' : tr.roof);
@@ -90,6 +91,20 @@
     if (rec.t === 'sobrado' && tr.longJirau && n === 1 && v !== 'jirau' && v !== 'porao-jirau') return 'o sobrado do norte é a casa longa com jirau';
     return null;
   };
+  // (a hut of one storey holds its four in one room: with a lean-to taken off its side, or parted in two, the floor left
+  // sleeps two or three of them — measured on the probes in every people and context, before the core of D-196 and after
+  // it: 0 plans of 24 the one with the lean-to and the parted one on stilts, everywhere; the parted one in the centre, where
+  // the lot is full, and the sunken one, wherever the people does not sleep on benches along its walls. Out of the centre the
+  // parted hut stands in its yard's size, one on a floor kept for him. Said by the architecture — it was left to the
+  // generator, which failed all its attempts on them in every combination, counted as its own defect: T-891)
+  const ONEV = { terreo: 1, funda: 1, esteios: 1 };
+  const hutCan = (rec, tr, h, v) => {
+    if (rec.t !== 'hut' || !ONEV[v]) return null;
+    if (h === 'anexo') return 'a cabana de um piso só, com o anexo tirado do lado, não abriga os quatro';
+    if (h !== 'setores') return null;
+    if (v === 'esteios') return 'a cabana sobre esteios é de um cômodo só';
+    return !(tr.bed || []).includes('banco-cama') && (rec.d >= 2 || v === 'funda') ? 'a cabana de um piso só não se divide aqui: os quatro dormem num cômodo só' : null;
+  };
   const preferGod = (rec, list) => { const tr = In.TRAD[rec.c] || In.TRAD.classico || {}; const want = storeysOf(rec, tr); const god = list.filter(f => nOf(f.split('.')[1]) === want); return god.length ? god : list; };
   const famsOf = (hs, vs) => { const out = []; for (const h of hs) for (const v of vs) { if (h === 'redonda' && v !== 'terreo' && v !== 'funda' && v !== 'esteios') continue; if (h === 'produtiva' && (v === 'funda' || v === 'esteios')) continue; out.push(h + '.' + v); } return out; };
   const ONE = ['terreo', 'jirau', 'terraco', 'quarto', 'funda', 'esteios', 'porao-jirau', 'porao-quarto'];
@@ -109,7 +124,7 @@
     if (seenF.has(id)) continue; seenF.add(id); const [h, v] = id.split('.');
     // (S: the shell it raises — the hall, the parted house and the workshop house stand in the same shell; the annexed and
     // the round ones in their own)
-    In.addFamilies([{ id, H: h, V: v, S: (h === 'anexo' || h === 'redonda' ? h : 'casa') + '.' + v, name: (HS[h].name + (VS[v].name ? ' ' + VS[v].name : '')).replace(/^Salão$/, 'Salão único'), can: (rec, T, tr) => (rec.t === 'barraco' && h !== 'integrado' ? 'um barraco é um cômodo só' : HS[h].can(rec, tr) || VS[v].can(rec, tr) || storeysCan(rec, tr, v)), build: P => home(P) }]);
+    In.addFamilies([{ id, H: h, V: v, S: (h === 'anexo' || h === 'redonda' ? h : 'casa') + '.' + v, name: (HS[h].name + (VS[v].name ? ' ' + VS[v].name : '')).replace(/^Salão$/, 'Salão único'), can: (rec, T, tr) => (rec.t === 'barraco' && h !== 'integrado' ? 'um barraco é um cômodo só' : HS[h].can(rec, tr) || VS[v].can(rec, tr) || storeysCan(rec, tr, v) || hutCan(rec, tr, h, v)), build: P => home(P) }]);
   }
   In.addTypes({
     barraco: { use: 'casa', fams: LISTS.barraco }, hut: { use: 'casa', fams: LISTS.hut }, house: { use: 'casa', fams: LISTS.house, prefer: preferGod },
@@ -564,19 +579,59 @@
       if (P.places() < need) for (const id of order) { if (P.places() >= need) break; fill('esteira', id); }
     };
     // the fire: the open hearth in the middle (never under a loft) where the people keeps one, else the wall hearth or the oven,
-    // else a brazier
+    // else a brazier — the one that kept the fire's place before the beds (keepFire), back where it stood
+    const dropAt = k => { const it = P.items[k]; P.items.splice(k, 1); P.items.forEach((o, q) => { o.k = q; }); P._ver = (P._ver || 0) + 1; return it; };
     const fireUp = () => {
       const fire = shack ? 'braseiro' : rec.t === 'hut' && tr.hutFire ? tr.hutFire : tr.fire; let lit = false;
+      const k0 = P.items.findIndex(it => it.res === 2); if (k0 >= 0 && fire === 'braseiro') return; // (the brazier is the fire)
+      const was = k0 >= 0 ? dropAt(k0) : null;
       // (a round hut's fire on the ground in its middle, whatever the people keeps: the ring is the mats' — D-082 (6), T-161)
       if (round) lit = !!P.place('fogo-chao', 0, lar, { sides: ['centro'], margin: 0.3 });
       if (!lit && fire === 'lar') lit = !!(P.place('lar', 0, lar, { sides: ['centro'], margin: 0.3 }) || P.place('lar', 0, lar, { sides: ['livre'], margin: 0.25 }));
       if (!lit && fire !== 'braseiro') lit = !!P.place(fire === 'lar' ? 'fogao' : fire, 0, lar, { sides: P.shuffle(['fundo', 'esquerda', 'direita', 'frente']) });
+      if (!lit && was) lit = !!P.at('braseiro', was.lv, was.room, was.r, was.face[0], was.face[1], { side: was.side, res: 2 });
       if (!lit) lit = !!P.place('braseiro', 0, lar, { sides: ['fundo', 'esquerda', 'direita', 'frente'] });
       // (the last resort, once every attempt left the fire out — the round In.plan makes only then: L-193. In a small house
       // with a loft over the back of the hall and the cellar's hatch under it, the hall's front keeps the door's way and the
       // beds: the brazier in another room of the ground floor)
       if (!lit && P.last) for (const m of P.rooms) { if (m.lv !== 0 || m.id === lar || m.circ) continue; if (P.place('braseiro', 0, m.id, { sides: ['fundo', 'esquerda', 'direita', 'frente', 'livre'] })) { lit = true; break; } }
       if (!lit) { P.lack = 1; P.errs.push('sem lugar para o fogo'); }
+    };
+    // the house's core (D-196): its fire, and where the household eats together — by its people's way: at the table, on its
+    // benches (the long one of six in the house of the well-off, the one of four, the one against a wall with its one
+    // bench; where none of them goes, the bench two eat on side by side — a shack's, whoever raised it: a board on two
+    // stones); on the ground round the mat (the Egyptian's and the Aztec's way; where it does not go, the narrow mat along a
+    // wall, two on it side by side); in the round hut, round the fire on the ground (the fire's own places).
+    // The core's floor is kept before the beds that are not the couple's, never what floor they leave: the least of the
+    // places to eat laid first (keepEat), and a brazier where the fire comes after the beds (keepFire) — in the hall's front,
+    // by a wall: what the beds along its back wall, head to it, leave before them, the back wall and the sides behind it left
+    // whole for the beds —; and at the end, the house laid out, the table it has room for in its place, the nearest the fire
+    // (eatUp), the people's own fire in the brazier's (fireUp)
+    const tabled = tr.eat === 'mesa-casa'; const LEAST = tabled || shack ? ['banco-comer', 1.1, 0.36] : ['esteira-comer', 1.1, 0.4];
+    const bedD = Math.max(...[couple].concat(kinds).filter(k => k && IT[k] && IT[k].d).map(k => IT[k].d)) + 0.05;
+    const frontOf = id => { const r = P.rooms[id].r; return r[3] - r[1] - bedD >= 1.15 && !P.rooms[id].circ ? [r[0], r[1] + bedD, r[2], r[3]] : null; };
+    // (a fire never within 0.3 m of what lies low: the brazier that far before the beds' floor too)
+    const keepAt = (kind, w, d, res) => {
+      for (const id of [lar].concat([rooms.leitos, rooms.anexo].filter(x => x !== undefined && P.rooms[x].lv === 0))) {
+        let fr = frontOf(id); if (fr && IT[kind].fire) fr = fr[3] - fr[1] - 0.3 >= d ? [fr[0], fr[1] + 0.3, fr[2], fr[3]] : null;
+        if (fr && P.place(kind, 0, id, { w, d, sides: ['frente', 'esquerda', 'direita'], in: fr, extra: { res } })) return true;
+        if (P.place(kind, 0, id, { w, d, sides: ['frente', 'esquerda', 'direita', 'fundo'], extra: { res } })) return true;
+      }
+      return false;
+    };
+    const keepEat = () => { if (round || P.items.some(it => it.res === 1)) return; if (!keepAt(LEAST[0], LEAST[1], LEAST[2], 1)) { P.lack = 1; P.errs.push('sem lugar para a família comer'); } };
+    const keepFire = () => { if (!round && !P.items.some(it => IT[it.kind].fire)) keepAt('braseiro', IT.braseiro.w, IT.braseiro.d, 2); };
+    const keepCore = () => { keepEat(); keepFire(); };
+    const eatUp = () => {
+      if (round) return;
+      const k0 = P.items.findIndex(it => it.res === 1); const was = k0 >= 0 ? dropAt(k0) : null;
+      const sizes = shack ? [] : !tabled ? [['esteira-comer', 0.9, 0.9], ['esteira-comer', 0.7, 0.7]] : (rich || P.L >= 8 ? [['mesa-casa', 1.25, 1.6]] : []).concat([['mesa-casa', 1.25, 1.1], ['mesa-casa', 0.85, 1.1]]);
+      const fire = P.items.find(it => it.lv === 0 && it.room === lar && IT[it.kind].fire); const near = fire ? [(fire.r[0] + fire.r[2]) / 2, (fire.r[1] + fire.r[3]) / 2] : undefined;
+      const walls = ['frente', 'esquerda', 'direita', 'fundo']; const sides = P.attempt % 2 ? ['livre'].concat(walls) : walls.concat(['livre']);
+      for (const [k, w, d] of sizes) if (P.place(k, 0, lar, { w, d, near, sides, margin: 0.42 })) return;
+      // (none of them: the least one back where it kept the place — or, never kept, wherever it goes now)
+      if (was && P.at(was.kind, was.lv, was.room, was.r, was.face[0], was.face[1], { side: was.side, res: 1 })) return;
+      if (!keepAt(LEAST[0], LEAST[1], LEAST[2], 1)) { P.lack = 1; P.errs.push('sem lugar para a família comer'); }
     };
     // what keeps the household's things: the pantry (in the cellar, the annex, the hall) and the chest (coins and goods)
     const keep = upFirst => {
@@ -602,7 +657,8 @@
     // (a house of five and more: its beds always before the things it keeps — these go up on the walls when the floor is
     // taken)
     // (the round hut: its fire first, in the middle — then the mats round it, the things kept up on the ring or after them)
-    const plans = round ? [[fireUp, beds, () => keep(true)], [fireUp, beds, keep]] : need >= 5 ? [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, fireUp, beds, keep]] : [[coupleBed, beds, fireUp, keep], [fireUp, coupleBed, beds, keep], [coupleBed, keep, beds, fireUp], [keep, fireUp, coupleBed, beds], [fireUp, keep, coupleBed, beds], [coupleBed, fireUp, beds, keep]];
+    // (the core's floor — the fire's, and where the household eats — always before the beds that are not the couple's: D-196)
+    const plans = round ? [[fireUp, beds, () => keep(true)], [fireUp, beds, keep]] : need >= 5 ? [[coupleBed, keepCore, beds, fireUp, keep], [fireUp, keepEat, coupleBed, beds, keep], [coupleBed, fireUp, keepEat, beds, keep]] : [[coupleBed, keepCore, beds, fireUp, keep], [fireUp, keepEat, coupleBed, beds, keep], [coupleBed, keepCore, keep, beds, fireUp], [keepEat, keep, fireUp, coupleBed, beds], [fireUp, keepEat, keep, coupleBed, beds], [coupleBed, fireUp, keepEat, beds, keep]];
     // (the round hut laid by its ring's own measure — the fire, then the three mats round it: roundHut —, its things up on the
     // ring; where the ring is too small for that, as any other)
     const laid = round && roundHut(P, lar); if (laid) keep(true);
@@ -621,23 +677,44 @@
     // cleared — the same rooms, doors and stairs — and laid out again in two orders more: the beds in rows along every wall,
     // the couple's among them and no longer before them, and the things kept up on the walls first; the fire before the beds,
     // then after them, where it is left a place. The best of the lay-outs stays. A house laid out already is not touched)
+    // (since D-196 the core's floor first in both: the fire and the least of the places to eat, then a brazier for the fire)
     const score = () => (P.errs.length > e0 ? -1000 : 0) + Math.min(P.places(), need);
     const snap = () => ({ s: score(), items: P.items.map(it => Object.assign({}, it, { drop: it.drop ? it.drop.slice() : it.drop })), errs: P.errs.slice() });
     if ((P.places() < need || P.errs.length > e0) && !shack && !laid && need >= 3) {
       let best = snap();
-      for (const steps of round ? [[fireUp, () => keep(true), beds]] : [[fireUp, () => rowsIn(order), () => keep(true), beds], [() => rowsIn(order), beds, () => keep(true), fireUp]]) {
+      for (const steps of round ? [[fireUp, () => keep(true), beds]] : [[fireUp, keepEat, () => rowsIn(order), () => keep(true), beds], [keepCore, () => rowsIn(order), beds, () => keep(true), fireUp]]) {
         P.items.length = 0; P._ver = (P._ver || 0) + 1; P.errs.length = e0;
         for (const st of steps) st(); if (P.places() < need) rowsIn(order.concat(roofTo));
         if (score() > best.s) best = snap(); if (best.s >= need) break;
       }
       P.items.length = 0; P.items.push(...best.items); P.errs.length = 0; P.errs.push(...best.errs); P._ver++;
     }
+    // (still one short, with single mats or beds in it: one of them given up for the mat two share, where that goes in its
+    // room and the single one did not — the first that brings the household in)
+    if (!laid && !shack && P.places() === need - 1 && IT['esteira-casal']) for (let k = P.items.length - 1; k >= 0 && P.places() < need; k--) {
+      const it = P.items[k]; const D = IT[it.kind]; if (D.places !== 1 || D.per || it.places !== undefined || loftOf(it.room) || P.rooms[it.room].circ) continue;
+      const keep0 = snap(); dropAt(k); fill('esteira-casal', it.room);
+      if (P.places() < need) { P.items.length = 0; P.items.push(...keep0.items); P.errs.length = 0; P.errs.push(...keep0.errs); P._ver++; }
+    }
+    // (and a house still short with the core's floor kept before its beds: the least of the places to eat let go — then the
+    // fire too —, the beds laid in the floor they kept, and the fire and the place to eat again wherever they go now — kept
+    // only where more of the household is then in and the house still has its fire and where to eat; else as it was)
+    if (!laid && !round && P.errs.length === e0) for (const both of [false, true]) {
+      if (P.places() >= need || !P.items.some(it => it.res === 1)) break;
+      const keep0 = snap(); const n0 = P.places(); dropAt(P.items.findIndex(it => it.res === 1));
+      if (both) { const k = P.items.findIndex(it => it.lv === 0 && IT[it.kind].fire); if (k < 0) break; dropAt(k); }
+      rowsIn(order.concat(roofTo)); if (P.places() < need) beds(); if (both) fireUp();
+      if (P.places() <= n0 || P.errs.length > e0 || !keepAt(LEAST[0], LEAST[1], LEAST[2], 1)) { P.items.length = 0; P.items.push(...keep0.items); P.errs.length = 0; P.errs.push(...keep0.errs); P._ver++; }
+    }
+    // (the house laid out: the table it has room for, in the place of the least one that kept the core's floor — D-196)
+    if (!laid) eatUp();
     // the work front: the bench (or the counter) facing the door
     if (rooms.oficina !== undefined && !P.place('bancada', 0, rooms.oficina, { sides: ['fundo', 'esquerda', 'direita'] }) && !P.place('balcao', 0, rooms.oficina, { sides: ['livre'] })) P.errs.push('sem lugar para a bancada');
-    // the table and its bench, if there is room (a poor hall goes without); the wood in the annex of a house with an open fire
-    // (laid out for fewer as the last resort — P.relax —, a house short of beds goes without it: its floor is for who sleeps on it)
-    // (the round hut goes without it: its floor is the fire's ring and the fourth's bed)
-    P.opt(() => { if (!shack && !round && !(P.relax && P.places() < need) && P.place(tr.eat, 0, lar, { sides: ['livre'] }) && tr.eat === 'mesa') P.place('banco', 0, lar, { sides: ['esquerda', 'direita', 'fundo'] }); });
+    // a bench by a wall of the hall, if there is room, where the people sits at table (the table is the core's: eatUp); the
+    // wood in the annex of a house with an open fire
+    // (laid out for fewer as the last resort — P.relax —, a house short of beds goes without the bench: its floor is for who
+    // sleeps on it; the round hut too: its floor is the fire's ring and the fourth's bed)
+    P.opt(() => { if (!shack && !round && !(P.relax && P.places() < need) && tr.eat === 'mesa-casa') P.place('banco', 0, lar, { sides: ['esquerda', 'direita', 'fundo'] }); });
     P.opt(() => { if (!shack && tr.fire === 'lar' && rooms.anexo !== undefined) P.place('lenha', 0, rooms.anexo); });
   }
   // the round hut of the god (D-082 (6), T-161 — P3's measures): the fire on the ground in its middle; three single mats of 1.7 m
