@@ -16,11 +16,14 @@
 //                      there is drink, a bench and washing only where someone lives, the things of a trade only where it
 //                      lives; an empty house has nothing; pots only where they dry, casks only with drink to pour, nets
 //                      only with fishing boats, rope only on a quay that works; taken away by hand, gone — and the
-//                      picture knows it must be made again
+//                      picture knows it must be made again. The houses and the tavern as the game draws them, from their
+//                      plans (D-186: no hand on the drawing), and then from their kit; where each thing may lie is
+//                      qa/quintal.js
 //   a5  o desgaste     the years, the water and the care: older shows older, by the water damper, an empty house and a
 //                      quarter in decline more worn, a rich one kept; the 3D's picture changes with it
 //   a6  só desenha     all of it asked for every building, the pictures made: the world the same to the last number
-//   a7  o save         saved and loaded in the middle: the same answers for every building
+//   a7  o save         saved and loaded in the middle: the same answers for every building; the care, that reads the town's
+//                      look of the day, back once every town has its look again (a step a town)
 //   a8  o Fogo Novo    the night every flame of a town is out: no smoke, no lit window, the campfire cold
 //   a9  o verificador  the rules of qa/atmos-inv.js looked at along a lived evening: clean — and each of them accuses a lie
 //                      told by the test's hand (smoke with no fire, a window lit on nobody, things about an empty house,
@@ -163,48 +166,54 @@ if (run('a3')) {
 
 // ------------------------------ a4: what lies about ------------------------------
 if (run('a4')) {
-  flush(); const bad = []; const cnt = {}; let houses = 0, emptyH = 0, emptyThings = 0;
-  // (the houses drawn from their kit, as where a house has no plan: a house drawn from its plan fills its lot — in the ready
-  // worlds every one does, and nothing lies about any, before as now: T-703. The test's hand on the drawing, put back below)
-  const shellOf = B3.shellOf; let planned = 0; for (const b of built()) if (housing(b)) planned += PR.pieces(b).length;
-  // (and a house drawn from its plan, with no yard: what it has about it changes nothing in its picture — a jar of wine given
-  // by hand, the signature the same; its picture is not made again for a thing it has no room to show)
-  const sig0 = b => B3.sig(b.x, b.y, 1);
-  const noYard = built().find(b => housing(b) && shellOf(b) && !PR.pieces(b).length && PR.roomOf(b) === 0 && [...S.villagers.values()].some(v => v.home === b.id) && !['vinho', 'mel', 'cerveja', 'pulque', 'azeite', 'oleo'].some(k => ((b.inv || {})[k] || 0) >= 1));
-  let idle = 'nenhuma casa de planta sem quintal'; if (!noYard && built().filter(b => housing(b) && shellOf(b)).length >= 10) bad.push('nenhuma casa de planta sem quintal, habitada e sem bebida, para o quadro que não se refaz');
-  if (noYard) { const I = noYard.inv || (noYard.inv = {}); const s0 = sig0(noYard), a0 = At.about(noYard).sig; I.vinho = 2; flush(); const s1 = sig0(noYard), a1 = At.about(noYard).sig; delete I.vinho; flush();
-    idle = `${noYard.type}#${noYard.id} (de planta, sem quintal) com vinho: o que tem em volta ${a0} → ${a1}, o quadro ${s0 === s1 ? 'o mesmo' : 'refeito'}`; }
-  B3.shellOf = b => (housing(b) ? null : shellOf(b));
-  const things = b => PR.pieces(b).map(p => p.thing).filter(Boolean);
+  flush(); const bad = [], prov = []; const shellOf = B3.shellOf;
+  const things = b => PR.pieces(b).filter(p => !p.part).map(p => p.thing).filter(Boolean);
   const TR = { lenhador: 1, pescador: 1, cacador: 1, guerreiro: 1, arqueiro: 1, tecelao: 1, agricultor: 1, coletor: 1, vinhateiro: 1 };
+  // (the things of a house someone lives in: the bench and the washing of a yard; on a hand of wall the broom, the tub, the
+  // braid, the basket — D-186)
+  const LIVED = { banco: 1, varal: 1, vassoura: 1, tina: 1, restia: 1, cesto: 1 };
   const res = b => [...S.villagers.values()].filter(v => v.home === b.id);
   const drink = b => ['vinho', 'mel', 'cerveja', 'pulque', 'azeite', 'oleo'].filter(k => ((b.inv || {})[k] || 0) >= 1).length;
-  for (const b of built()) {
-    if (!housing(b)) continue; houses++; const L = res(b), T = things(b), all = PR.pieces(b).length; const roles = new Set(L.filter(v => v.age >= 14 && !v.captive).map(v => v.role));
-    for (const t of T) cnt[t] = (cnt[t] || 0) + 1;
-    if (!L.length) { emptyH++; emptyThings += all; if (all) bad.push(`${tag(b)} vazia com ${all} coisa(s) em volta`); continue; }
-    if (T.includes('lenha') && !roles.has('lenhador')) bad.push(`${tag(b)}: lenha sem lenhador na casa`);
-    if (T.includes('barril') && !drink(b)) bad.push(`${tag(b)}: barril sem bebida nem óleo na casa`);
-    for (const t of T) if (TR[t] && !roles.has(t)) bad.push(`${tag(b)}: coisas de ${t} sem ${t} na casa`);
-  }
-  // taken away by hand, gone: the woodcutter's wood, the cask's drink, the house's people — and the picture's signature says so
   const sigOf = b => B3.sig(b.x, b.y, 1);
-  const prov = [];
-  const wood = built().find(b => housing(b) && things(b).includes('lenha'));
-  if (wood) { const L = res(wood).filter(v => v.role === 'lenhador'); const s0 = sigOf(wood); for (const v of L) v.role = 'coletor'; flush(); const t1 = things(wood), s1 = sigOf(wood); for (const v of L) v.role = 'lenhador'; flush(); const t2 = things(wood);
-    prov.push(`a lenha de ${tag(wood)}: ${t1.includes('lenha') ? 'ficou' : 'sumiu'} sem o lenhador, ${t2.includes('lenha') ? 'voltou' : 'não voltou'} com ele`); if (t1.includes('lenha') || !t2.includes('lenha') || s0 === s1) bad.push(`a lenha de ${tag(wood)} não segue o lenhador (assinatura ${s0} → ${s1})`); }
-  else prov.push('nenhuma casa de lenhador com lugar para a lenha');
-  const lived = built().find(b => housing(b) && res(b).length >= 2 && things(b).some(t => t === 'banco' || t === 'varal'));
-  if (lived) { const L = res(lived); const s0 = sigOf(lived); for (const v of L) v.home = 0; flush(); const n1 = PR.pieces(lived).length, s1 = sigOf(lived); for (const v of L) v.home = lived.id; flush(); const n2 = PR.pieces(lived).length;
-    prov.push(`${tag(lived)} esvaziada: ${n1} coisas; de volta: ${n2}`); if (n1 || !n2 || s0 === s1) bad.push(`${tag(lived)} vazia ficou com ${n1} coisas (assinatura ${s0} → ${s1})`); }
-  else bad.push('nenhuma casa habitada com banco ou varal');
-  // a cask where the house has drink: given a jar of wine by hand, then taken
-  const dry = built().find(b => housing(b) && res(b).length && !drink(b) && !things(b).includes('barril') && (() => { const I = b.inv || (b.inv = {}); I.vinho = 2; flush(); const t = things(b).includes('barril'); delete I.vinho; flush(); return t; })());
-  if (dry) prov.push(`${tag(dry)}: sem bebida, sem barril; com vinho, um barril à porta`); else prov.push('nenhuma casa com lugar para um barril à porta (T-701)');
-  prov.push(idle); if (noYard && !/o mesmo$/.test(idle)) bad.push('a casa de planta, sem quintal, tem o quadro refeito pelo que não mostra');
-  if (noYard && At.about(noYard).sig === undefined) bad.push('sem assinatura do que há em volta');
-  B3.shellOf = shellOf;
+  // (the houses as the game draws them — from their plans: what lies about them has its place on their own lot, D-186, T-703
+  // closed — and then from their kit, as where a house has no plan: the test's hand on the drawing, put back after. The same
+  // rules both ways)
+  const seen = {};
+  for (const mode of ['planta', 'kit']) {
+    B3.shellOf = mode === 'kit' ? (b => (housing(b) ? null : shellOf(b))) : shellOf; flush();
+    const cnt = {}; let houses = 0, emptyH = 0, emptyThings = 0, total = 0;
+    for (const b of built()) {
+      if (!housing(b)) continue; houses++; const L = res(b), T = things(b), all = PR.pieces(b).length; const roles = new Set(L.filter(v => v.age >= 14 && !v.captive).map(v => v.role)); total += all;
+      for (const t of T) cnt[t] = (cnt[t] || 0) + 1;
+      if (!L.length) { emptyH++; emptyThings += all; if (all) bad.push(`${mode}: ${tag(b)} vazia com ${all} coisa(s) em volta`); continue; }
+      if (T.includes('lenha') && !roles.has('lenhador')) bad.push(`${mode}: ${tag(b)}: lenha sem lenhador na casa`);
+      if (T.includes('barril') && !drink(b)) bad.push(`${mode}: ${tag(b)}: barril sem bebida nem óleo na casa`);
+      for (const t of T) if (TR[t] && !roles.has(t)) bad.push(`${mode}: ${tag(b)}: coisas de ${t} sem ${t} na casa`);
+    }
+    // taken away by hand, gone: the woodcutter's wood, the cask's drink, the house's people — and the picture's signature says so
+    const wood = built().find(b => housing(b) && things(b).includes('lenha'));
+    if (wood) { const L = res(wood).filter(v => v.role === 'lenhador'); const s0 = sigOf(wood); for (const v of L) v.role = 'coletor'; flush(); const t1 = things(wood), s1 = sigOf(wood); for (const v of L) v.role = 'lenhador'; flush(); const t2 = things(wood);
+      prov.push(`${mode}: a lenha de ${tag(wood)}: ${t1.includes('lenha') ? 'ficou' : 'sumiu'} sem o lenhador, ${t2.includes('lenha') ? 'voltou' : 'não voltou'} com ele`); if (t1.includes('lenha') || !t2.includes('lenha') || s0 === s1) bad.push(`${mode}: a lenha de ${tag(wood)} não segue o lenhador (assinatura ${s0} → ${s1})`); }
+    else prov.push(`${mode}: nenhuma casa de lenhador com lugar para a lenha`);
+    const lived = built().find(b => housing(b) && res(b).length >= 2 && things(b).some(t => LIVED[t]));
+    if (lived) { const L = res(lived); const s0 = sigOf(lived); for (const v of L) v.home = 0; flush(); const n1 = PR.pieces(lived).length, s1 = sigOf(lived); for (const v of L) v.home = lived.id; flush(); const n2 = PR.pieces(lived).length;
+      prov.push(`${mode}: ${tag(lived)} esvaziada: ${n1} coisas; de volta: ${n2}`); if (n1 || !n2 || s0 === s1) bad.push(`${mode}: ${tag(lived)} vazia ficou com ${n1} coisas (assinatura ${s0} → ${s1})`); }
+    else bad.push(`${mode}: nenhuma casa habitada com as coisas de quem mora (banco, varal, vassoura, tina, réstia)`);
+    // a cask where the house has drink: given a jar of wine by hand, then taken
+    const dry = built().find(b => housing(b) && res(b).length && !drink(b) && !things(b).includes('barril') && (() => { const I = b.inv || (b.inv = {}); I.vinho = 2; flush(); const t = things(b).includes('barril'); delete I.vinho; flush(); return t; })());
+    if (dry) prov.push(`${mode}: ${tag(dry)}: sem bebida, sem barril; com vinho, um barril à porta`); else if (mode === 'planta') bad.push('planta: nenhuma casa com lugar para o barril da bebida à porta'); else prov.push('kit: nenhuma casa com lugar para um barril à porta (T-701)');
+    seen[mode] = { cnt, houses, emptyH, emptyThings, total, lived: Object.keys(cnt).filter(k => LIVED[k]).reduce((a, k) => a + cnt[k], 0) };
+  }
+  B3.shellOf = shellOf; flush();
+  // (and a house drawn from its plan with no room at all for things — where there is one: what it has about it changes nothing
+  // in its picture; in the ready worlds every house has its hand of wall or its corners now — the proof of it by the test's
+  // hand is qa/quintal.js q4)
+  const noYard = built().find(b => housing(b) && shellOf(b) && !PR.pieces(b).length && PR.roomOf(b) === 0 && res(b).length && !drink(b));
+  if (noYard) { const I = noYard.inv || (noYard.inv = {}); const s0 = sigOf(noYard), a0 = At.about(noYard).sig; I.vinho = 2; flush(); const s1 = sigOf(noYard), a1 = At.about(noYard).sig; delete I.vinho; flush();
+    prov.push(`${noYard.type}#${noYard.id} (de planta, sem lugar) com vinho: o que tem em volta ${a0} → ${a1}, o quadro ${s0 === s1 ? 'o mesmo' : 'refeito'}`); if (s0 !== s1) bad.push('a casa de planta, sem lugar, tem o quadro refeito pelo que não mostra'); if (At.about(noYard).sig === undefined) bad.push('sem assinatura do que há em volta'); }
+  else prov.push('nenhuma casa de planta sem lugar para coisas neste mundo (quintal q4)');
   // the pottery's pots, the tavern's casks, the market's baskets, the quay's nets: what they have
+  const cnt = {};
   for (const b of built()) {
     const T = things(b);
     if (b.type === 'olaria') { const cru = G.Oficio.show(b).cru; if (T.includes('potes') && !(cru > 0)) bad.push(`${tag(b)}: potes secando sem nada cru`); }
@@ -215,17 +224,20 @@ if (run('a4')) {
       const q = U.at(b.x + b.w / 2, b.y + b.h / 2); const works = S.ships.some(s => s.dock === b.id) || (q && (U.is(q, 'porto') || U.is(q, 'pesqueiro'))); if (T.includes('corda') && !works) bad.push(`${tag(b)}: cordas num cais parado`); }
     for (const t of T) if (!housing(b)) cnt[t] = (cnt[t] || 0) + 1;
   }
-  // the tavern's casks: wine on the shelf by the test's hand, then the shelf emptied (the tavern drawn from its kit, as the
-  // houses above: drawn from its plan it fills its lot and has no yard, T-703)
+  // the tavern's casks: wine on the shelf by the test's hand, then the shelf emptied — the tavern as the game draws it, from
+  // its plan (the casks on its lot out of its yard: D-186), and from its kit (its yard)
   const POUR = ['vinho', 'mel', 'cerveja', 'pulque'];
-  B3.shellOf = b => (b.type === 'taverna' ? null : shellOf(b));
-  const tav = built().filter(b => b.type === 'taverna').find(b => { const I = b.inv || (b.inv = {}); const keep = {}; for (const k of POUR) keep[k] = I[k]; I.vinho = 6; flush(); const on = things(b).includes('barris');
-    for (const k of POUR) I[k] = 0; flush(); const off = things(b).includes('barris'); for (const k of POUR) { if (keep[k] === undefined) delete I[k]; else I[k] = keep[k]; } flush();
-    if (on) { prov.push(`${tag(b)}: com vinho na prateleira, barris no quintal; vazia, ${off ? 'barris ainda' : 'nenhum'}`); if (off) bad.push(`${tag(b)}: barris com a prateleira vazia`); } return on; });
-  B3.shellOf = shellOf;
-  if (!tav) bad.push('nenhuma taverna com lugar para barris no quintal');
-  ok('a4 os objetos: em volta de cada casa só o que ela tem — lenha só na casa do lenhador, barril só com bebida, banco e varal só com morador, as coisas de um ofício só onde ele mora; casa vazia, nada; potes só secando, barris só com o que servir, redes só com barco de pesca; tirado à mão, some',
-    !bad.length && houses > 50 && (cnt.banco || 0) + (cnt.varal || 0) > 5, `${houses} casas desenhadas sem planta (${emptyH} vazias, ${emptyThings} coisas nelas; com planta, ${planned} coisas ao todo) · visto: ${JSON.stringify(cnt)} · ${prov.join(' · ')}${bad.length ? ' · ' + bad.slice(0, 4).join(' · ') : ''}`);
+  for (const mode of ['planta', 'kit']) {
+    B3.shellOf = mode === 'kit' ? (b => (b.type === 'taverna' ? null : shellOf(b))) : shellOf; flush();
+    const tav = built().filter(b => b.type === 'taverna').find(b => { const I = b.inv || (b.inv = {}); const keep = {}; for (const k of POUR) keep[k] = I[k]; I.vinho = 6; flush(); const on = things(b).includes('barris');
+      for (const k of POUR) I[k] = 0; flush(); const off = things(b).includes('barris'); for (const k of POUR) { if (keep[k] === undefined) delete I[k]; else I[k] = keep[k]; } flush();
+      if (on) { prov.push(`${mode}: ${tag(b)}: com vinho na prateleira, barris; vazia, ${off ? 'barris ainda' : 'nenhum'}`); if (off) bad.push(`${mode}: ${tag(b)}: barris com a prateleira vazia`); } return on; });
+    if (!tav) bad.push(`${mode}: nenhuma taverna com lugar para barris`);
+  }
+  B3.shellOf = shellOf; flush();
+  const P = seen.planta, K = seen.kit;
+  ok('a4 os objetos: em volta de cada casa só o que ela tem — lenha só na casa do lenhador, barril só com bebida, as coisas de quem mora só com morador, as de um ofício só onde ele mora; casa vazia, nada; potes só secando, barris só com o que servir, redes só com barco de pesca; tirado à mão, some — no desenho pela planta (o do jogo) e no do kit',
+    !bad.length && P.houses > 50 && P.lived > 5 && K.lived > 5, `pela planta: ${P.houses} casas (${P.emptyH} vazias, ${P.emptyThings} coisas nelas), ${P.total} coisas: ${JSON.stringify(P.cnt)} · pelo kit: ${K.total} coisas: ${JSON.stringify(K.cnt)} · os outros prédios: ${JSON.stringify(cnt)} · ${prov.join(' · ')}${bad.length ? ' · ' + bad.slice(0, 4).join(' · ') : ''}`);
 }
 
 // ------------------------------ a5: the wear ------------------------------
@@ -289,8 +301,12 @@ if (run('a7')) {
   const a = pic(); const size = M.salvarCarregar(); S = G.S; flush(); const b = pic();
   let fire = 0, lit = 0, about = 0, wear = 0, care = 0, moved = 0, truth = 0;
   for (const [id, p] of a) { const q = b.get(id); if (!q) { about++; continue; } if (q[5] !== p[5]) moved++; else { if (q[0] !== p[0]) fire++; if (q[1] !== p[1]) lit++; } if (q[2] !== p[2]) about++; if (q[3] !== p[3]) wear++; if (q[4] !== p[4]) care++; if (q[0] !== q[6] || q[1] !== q[7]) truth++; }
+  // (the care reads the land's worth from the town's look of the day, derived and never saved: a loaded world gives each town
+  // its look again one a step — Urban.update, L-694 —, the look of the hour of the load, not the dawn's: after a step a town
+  // the care is back but for the few buildings whose land changed its worth since dawn — counted and said, T-702)
+  const towns = S.settlements.size; M.viver(towns * 0.1 + 0.1); flush(); let care2 = 0; for (const q of built()) { const p = a.get(q.id); if (p && At.wear(q).care !== p[4]) care2++; }
   ok('a7 o save no meio: salvo e carregado, as mesmas respostas para cada prédio — o fogo, a janela, o que há em volta, os anos e a umidade — e, carregado, a fumaça e a janela de acordo com a causa', a.size === b.size && !fire && !lit && !about && !wear && !truth && M.limpo(),
-    `${a.size} prédios: fogo ${fire}, janela ${lit}, em volta ${about}, anos e umidade ${wear} diferentes; ${truth} em desacordo com a causa depois do load · ${moved} prédios de onde o save tirou gente (à porta) ficaram fora da conta do fogo e da janela · cuidado diferente em ${care} (o valor da terra é do retrato do dia, que volta no primeiro dia da cidade: T-702) · save de ${size} caracteres`);
+    `${a.size} prédios: fogo ${fire}, janela ${lit}, em volta ${about}, anos e umidade ${wear} diferentes; ${truth} em desacordo com a causa depois do load · ${moved} prédios de onde o save tirou gente (à porta) ficaram fora da conta do fogo e da janela · cuidado diferente em ${care} logo depois do load (o valor da terra é do retrato do dia de cada cidade, que o mundo refaz uma cidade por passo: T-702) e em ${care2} depois de ${towns} passos (${towns} cidades: o retrato de volta, o da hora do load) · save de ${size} caracteres`);
 }
 
 // ------------------------------ a8: the New Fire ------------------------------

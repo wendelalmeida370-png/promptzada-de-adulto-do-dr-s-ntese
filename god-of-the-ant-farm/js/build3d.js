@@ -3038,8 +3038,9 @@ float m3scale(float p) {
     // Space.doorFlight, L-197)
     for (const b of G.S.buildings.values()) { if (!inChunk(b, x0, y0, n)) continue; s = (s * 31 + b.id * 7 + (b.built ? 1 : 0) + Math.floor((b.progress || 0) * 5) * 3 + Math.floor((b.hp / (b.maxHp || 1)) * 4) * 11 + (b.type === 'salina' && b.salt ? b.salt.reduce((a, q, k) => a + Math.floor(q * 2) * (k + 3), 0) * 13 : 0) + (b.crops ? b.crops.reduce((a, c) => a + c.s + Math.floor((c.g || 0) * 3), 0) : 0) * 13 + (ESTATE3[b.type] ? B3.estateSig(b) * 41 : 0) + (b.graves ? b.graves.length : 0) * 17 + B3.shellSig(b) * 19 + G.Space.treeSig(b) * 37) | 0;
       // (a store's heaps are its people's stock: drawn again, where they are drawn — fine, in its yard —, when a count of them
-      // changes; a store drawn from its plan has no yard: it shows its stock inside, in its keeping pieces — Build3D.fillOf)
-      if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b) && !B3.shellOf(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; }
+      // changes; a store drawn from its plan shows its stock inside, in its keeping pieces — Build3D.fillOf —, and heaps only
+      // where its lot leaves a yard beside its walls: Props3D.yardOf)
+      if (fine && b.built && G.Props3D && G.Props3D.shows && G.Props3D.shows(b) && G.Props3D.yardOf(b)) { const p = G.Props3D.piles(b); s = (s * 7 + p[0] * 19 + p[1] * 23 + p[2] * 29) | 0; }
       // (its wear and what lies about it are the world's — G.Atmos: drawn again when a step of them is crossed; what lies
       // about it, only where its picture has room for things — one drawn from its plan fills its lot: Props3D.yardOf)
       if (b.built && G.Atmos && G.Atmos.sig) s = (s * 5 + G.Atmos.sig(b, !!formOf(b), !fine || !(G.Props3D && G.Props3D.yardOf && G.Props3D.yardOf(b))) * 43) | 0; }
@@ -4836,6 +4837,7 @@ float m3scale(float p) {
     return out;
   };
   // (for Props3D's proof: the building drawn again, with what lies about it, at full detail; its body's box and its door)
+  B3.made = () => !!SH; // (the builders started: Build3D.init)
   B3.propsOf = function (b) { const g = R3.Geo(), gw = R3.Geo(), gp = R3.Geo(); const K = kit(g, b, gp, undefined, true); draw(g, gw, K, true); return K.body || null; };
   // (for the tests: the patterns a building's body is drawn with — {pattern code: points} — and the ones its people's
   // walls and roofs should have)
