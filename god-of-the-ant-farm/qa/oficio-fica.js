@@ -15,7 +15,7 @@
 // x4 a fome puxa e devolve: o armazém do povo a zero, e as mãos vão aos ofícios que dão de comer na hora, guardando o ofício e os
 //    dias que tinham; o armazém cheio, e voltam ao ofício delas;
 // x5 a guerra puxa: declarada, os soldados saem dos outros ofícios na hora, guardando o ofício de onde saíram — os bravos, não
-//    as mãos mais novas;
+//    as mãos mais novas; o povo cansado solta soldados, e o povo com fome em guerra manda soldados à roça;
 // x6 a vaga: morre quem tinha sozinho um ofício de oficina, e outro o toma (o posto também);
 // x7 a oficina nova: a cidade ganha uma olaria, e ela ganha gente;
 // x8 o moço que faz dezesseis anos ganha ofício (o primeiro: os dias dele começam V.TRADE_MIN atrás), o velho o larga (e não
@@ -170,6 +170,17 @@ if (on('x5')) {
     const cc = mean(adults(v => called.has(v.id))), co = mean(adults(v => side.has(v.set) && !called.has(v.id) && v.role !== 'guerreiro'));
     ok('x5 a guerra chama os bravos', cc >= co + 0.05, `a coragem média de quem foi chamado: ${cc.toFixed(2)}; a de quem ficou nos ofícios, nas mesmas cidades: ${co.toFixed(2)}`);
     ok('x5 a guerra puxa na hora', L.length >= 3 && P.every(p => p.v.roleBack === p.e.from) && w1 > w0, `${a.name} declara guerra a ${b.name}: em 90 s ${L.length} mãos chamadas às armas pela guerra (os soldados de ${a.name}: ${w0} → ${w1}, de ${A} adultos); cada uma guarda o ofício de onde saiu: ${P.filter(p => p.v.roleBack === p.e.from).length} de ${P.length}`);
+    // (an emergency's trades ask what the instant asks, down too: a weary people — the test's hand on its weariness, held —
+    // wants seven tenths of its soldiers, and the others go home; with the memory held at the most the instant had asked the
+    // army kept them all, and six worlds had half as many dead of war again)
+    const sold = () => adults(v => G.Fac.idOfV(v) === a.id && v.role === 'guerreiro').length; const s1 = sold(); const l1 = LOG.length;
+    T.live(60, () => god(() => { a.weariness = 90; })); const s2 = sold(); const home = LOG.slice(l1).filter(e => e.from === 'guerreiro' && G.S.settlements.get(e.set) && G.S.settlements.get(e.set).fac === a.id);
+    ok('x5 o exército cansado solta soldados', s2 <= s1 - 2 && home.length >= 2, `o povo cansado da guerra (o cansaço a 90, pela mão da prova) quer sete décimos dos soldados: ${s1} → ${s2} em 60 s; ${home.length} deixaram as armas (${whys(home)})`);
+    // (and a hungry people at war sends soldiers to the fields: one emergency gives its hands to another, by the instant's count)
+    const l2 = LOG.length; T.live(40, () => god(() => { a.weariness = 90; a.stock.food = 0; }));
+    const field = LOG.slice(l2).filter(e => e.why === 'fome' && e.from === 'guerreiro');
+    ok('x5 com fome, a guerra dá soldados à roça', field.length >= 1, `o armazém de ${a.name} a zero em plena guerra: em 40 s ${field.length} soldados foram aos ofícios que dão de comer (${[...new Set(field.map(e => e.to))].join(', ') || '—'})`);
+    god(() => { a.stock.food = Math.max(a.stock.food, G.Fac.pop(a.id) * 8); });
     const un = T.unsaid(); const q = inv(); ok('x5 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
   }
 }

@@ -23,28 +23,36 @@ Ramo: `worktree-agent-ab1e0b6fbb80f0a8d` (base `b2b61f0`). Rascunho e medidores:
   hora do save) — **a segunda rodada dessas (s20, s8, s26, s8b, s25, s7) está rodando**;
 - o guard e a vida curta (`soak 103 … 5 1 1`: 0 violações) passam com a regra.
 
-**ACHADO NA SEGUNDA MEDIDA DA ECONOMIA (em curso):** com a regra do commit `409156d`, os seis mundos de 40 anos tinham 414
-mortos de guerra onde antes tinham 287 (por semente, antes → depois: 103: 41 → 98; 7: 53 → 45; 2024: 41 → 76; 11: 45 → 31;
-42: 66 → 65; 555: 41 → 99), e a gente somava 900 onde antes 1050. Causa provável: na emergência a memória só subia
-(`mem = max(mem, pede)`), e o exército ficava com os soldados da melhor hora dele quando o cansaço e a fome mandam soldados para
-casa (`G.War.warriorWant`); e uma emergência não tirava mãos do ofício de outra (o povo com fome em guerra não mandava os
-soldados à roça). **Conserto aplicado na árvore, ainda NÃO commitado nem provado** (`scratchpad/ag/X/ed4.py`): os ofícios de uma
-emergência pedem o que o instante pede, para cima e para baixo (`mem[r] = want[r]`), e a emergência tira de qualquer ofício a
-que o instante sobra, o de outra emergência também. **Rodando:** `lote3.sh <jogo> v3` — a economia com o conserto nas seis
-sementes e mais quatro (9, 31, 77, 314) antes e depois; as saídas em `scratchpad/ag/X/eco2/` (`antes-<semente>.txt`,
-`v3-<semente>.txt`; a linha do ano 40 tem os mortos por causa).
+**Achado na segunda medida da economia, e consertado (commit `25b9f11`):** com a regra do commit `409156d`, seis mundos de 40
+anos tinham 414 mortos de guerra onde antes tinham 287, e a gente somava 900 onde antes 1050. Causa: na emergência a memória
+só subia (`mem = max(mem, pede)`), e o exército ficava com os soldados da melhor hora dele quando o cansaço e a fome mandam
+soldados para casa (`G.War.warriorWant`); e uma emergência não tirava mãos do ofício de outra. Agora os ofícios de uma
+emergência pedem o que o instante pede, para cima e para baixo, e a emergência tira de qualquer ofício a que o instante sobra.
+**Medido em dez sementes** (`scratchpad/ag/X/eco2/tabela-v3.md`; antes → depois): gente 1657 → 1667, mortos de guerra 529 →
+574 (+9 %: dentro do acaso das guerras, de 34 a 91 por mundo), mortos de fome 15 → 4, comida +1 %, madeira +13 %, pedra +2 %,
+prédios +7 %, cidades 67 → 69; a comida por pessoa mais baixa de um povo 1,65 → 2,48. Depois disso (ainda sem commit do
+teste, só da regra): quem a emergência puxou e a necessidade mandou a um terceiro ofício segue com o ofício a que volta; a
+prova x5 ganhou «o exército cansado solta soldados» e «com fome, a guerra dá soldados à roça» (as duas passam).
+
+**RODANDO AGORA: a última fila** (`scratchpad/ag/X/fila2.sh <jogo>`, um node de cada vez; o andamento em
+`scratchpad/ag/X/fila2/andamento.txt`): (1) a prova inteira → `fila2/prova.txt`; (2) as outras provas → `fila2/provas/resumo.txt`
+(`provas.sh`: guard, load-oficio, as «-mao», atividades, fome, motim, marinheiros, porto, vida-bairro, sabe, roupa, quintal,
+degraus sem o g8, taverna, olaria, termas, lazer, obra, leva, maos, casa-mercante, tempo-livre, ladrao-bairro, fundadores,
+det3, a vida de 5 e de 20 anos, oldsave, salto-igual); (3) a economia com a regra final, dez sementes → `eco2/v4-<semente>.txt`
+(a tabela: `python3 tabela.py eco2 antes v4 103 7 2024 11 42 555 9 31 77 314`); (4) as trocas num mundo do zero, antes e
+depois → `fila2/mede-*-zero.txt`; (5) os mundos prontos vividos dez dias, antes e depois → `fila2/pronto-*.txt`; (6) todas as
+29 sabotagens de novo → `sab-out/resumo.txt` (as da primeira rodada em `sab-out/rodada1/`).
+**Enquanto a fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar.** Se a fila for cortada (duas horas é o teto de um
+comando), relançar só as partes que faltam (o `andamento.txt` diz quais terminaram).
 
 **Falta (nesta ordem):**
-1. ler o `eco2/` (dez sementes, antes e `v3`): a gente, os mortos de guerra e de fome, a comida — se o conserto não trouxer os
-   mortos de guerra para perto de antes, procurar a causa (o exército fica maior? `eco.js` diz os guerreiros em cada marco);
-2. com a regra acertada: as partes x4, x5, x13 da prova, as sabotagens s5, s6, s7, s8, s9, s23, s27, o guard, a vida curta, e
-   o commit;
-3. a fila do resto (`fila.sh <jogo>`, sem a parte B já feita): a prova inteira, a medida de antes num mundo do zero
-   (`mede.js <antes> novo:103:continente:128:4:20 10 saltar`), os mundos prontos vividos 10 dias antes e depois
-   (`eco.js <raiz> pronto:metropole 10`), as outras provas (`provas.sh`);
-4. fechar este bloco: as seções 4 a 10 estão escritas em `scratchpad/ag/X/bloco-fim.md` (as linhas do AUDIT, do README, do
-   regress, as regras 73 e 74, as frases do CLAUDE.md, o que ficou aberto) — faltam os números finais (ECO_RESUMO,
-   PRONTO_RESUMO, ANTES_ZERO, ECO_FOME) e o que o achado da guerra mudar no texto do D-211.
+1. ler os resultados da fila; consertar o que uma prova acusar (causa, não sintoma) e anotar aqui;
+2. fechar este bloco: as seções 4 a 10 estão escritas em `qa/patch3/bloco-X-fim-rascunho.md` (as linhas do AUDIT, do README,
+   do regress, as regras 73 e 74, as frases do CLAUDE.md, o que ficou aberto) — faltam os números finais (ECO_RESUMO,
+   PRONTO_RESUMO, ANTES_ZERO, ECO_FOME), o achado da guerra no texto do D-211 (os ofícios da emergência seguem o instante nos
+   dois sentidos; uma emergência dá mãos a outra; o puxado mandado a um terceiro ofício segue com o ofício a que volta) e as
+   sabotagens s28, s29, s30; juntar tudo no `bloco-X.md` e apagar o rascunho;
+3. o último commit (a árvore limpa) e o relatório final.
 
 **Nota:** não existe `qa/oficios.js` (o pedido o cita): as provas dos ofícios são `load-oficio.js`, `oficinas-mao.js`,
 `olaria-mao.js`, `taverna-mao.js`, `termas-mao.js`, `lazer-mao.js`.
