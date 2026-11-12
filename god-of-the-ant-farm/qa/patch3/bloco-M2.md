@@ -20,7 +20,7 @@ aplainar), `longe-mega-*.txt`, `tempo-metropole-teatro6.txt`.
 | «o degrau do tamanho da pedra do povo»: a renda média e os 15 anos — D-216, `qa/aterro.js` m1–m3 | FEITO | `77cf5d9` |
 | L-783: a pedra que a obra grande guarda escapava para as casas novas das cidades-irmãs; a carroça para toda obra a mais de 6 casas, com 20 de pedra deixados no armazém | FEITO | `77cf5d9` |
 | as provas que faltavam (o chão do armazém, as casas pela sobra, o campo guardado, o lote aberto) e as vizinhas todas rodadas | FEITO | `a47508e` |
-| **D-218, a pedra antes de assentar no dia da pedreira** (`villagers.js`, o `case 'construtor'` do `workTask`; o caso `degraus` g2q; a sabotagem q1) | EM CURSO (na árvore, sem commit): medido que em ano e meio os 5 construtores de Tenochtitlan foram à pedra 4 vezes (`mina.js`); com a regra, nos traços de 90 anos (ainda a 1ª forma da regra, sem o limite à cidade da obra) o templo de Argos da semente 41 passa de 13 para 7 anos e o teatro de Mênfis da semente 7 de 18 para 8. Faltam: as três sementes de 60 anos com a regra, o g8, o g2q e as provas de novo | — |
+| a experiência «a pedra antes de assentar no dia da pedreira» | MEDIDA e NÃO ENTREGUE (seção 5d): dobra a pedra de duas de três obras, e a gente fica menor nas três sementes; a árvore voltou ao código do `a47508e` | — |
 | as medidas de depois | EM CURSO (a fila `scratchpad/ag/M/fila-b.txt`, saídas em `scratchpad/ag/M/mb/`): feitos o g8 do `a47508e` (seção 1b) e as três sementes (5b); faltam a terra nos mundos do zero e os números finais com a D-218 | — |
 | as sabotagens (36, `scratchpad/ag/M/sab-M2.py`, a fila `fila-s.txt`) | A FAZER (os padrões conferidos: os 36 casam) | — |
 
@@ -232,6 +232,30 @@ Medido na semente 103, ano 56, com o código de agora (`geologia.js`, `turma.js`
    mineiros sem mina enquanto a obra guarda pedra;
 2. a turma inteira na pedreira nos dias sem nada para assentar (hoje metade, pelo dia): dobra os 3% — pouco;
 3. a carga da pedreira: uma padiola (dois levam 8) ou a carroça indo à pedreira — pede corpo e desenho (T-768).
+
+## 5d. A experiência «a pedra antes de assentar» — medida e NÃO entregue
+
+Por que a turma quase não quebra pedra (`mina.js`, semente 103, ano 56): em ano e meio os 5 construtores de Tenochtitlan
+**foram à pedra 4 vezes** — três interrompidas no caminho (a sede, a fome, a peregrinação), uma rendeu 4 de pedra. A regra de
+hoje (D-174) manda à pedreira só quem não tem nada para assentar, e quase sempre há: uma carga de madeira para uma obra
+pequena, uma pedra que a carroça de uma cidade-irmã deixou no armazém.
+
+Experimentei: no dia da pedreira (metade da turma, pelo dia), com o armazém sem pedra, o construtor da cidade da obra grande
+vai à pedra **antes** de qualquer obra (`villagers.js`, o `case 'construtor'` do `workTask`; o diff está em
+`scratchpad/ag/M/d218-restrita.diff`, o caso de prova em `d218-g2q.diff`). Três sementes, 60 anos:
+
+| semente | a primeira obra grande: sem a regra → com ela | gente no ano 61: antes da rodada / o entregue (`a47508e`) / com a regra | mortos de fome em 60 anos |
+|---|---|---|---|
+| 41 | o templo de 16 m de Argos: 13 → **7 anos** (o mesmo mundo até a fundação) | 217 / 243 / 197 | 2 / 2 / 2 |
+| 7 | o teatro de 24 m de Mênfis: 11 → 11 anos | 217 / 243 / 158 | 3 / 4 / 6 |
+| 103 | o templo de 16 m de Tenochtitlan: 77% em 8 anos → **5 anos** | 190 / 200 / 189 | 1 / 1 / 0 |
+
+A regra dobra a pedra de duas das três obras, e a gente fica menor nas três sementes do que sem ela (−19%, −35%, −5%; contra
+o código de antes da rodada, −9%, −27%, 0%). As guerras dominam esses números (92 a 163 mortos de guerra por mundo) e três
+sementes não separam a causa do acaso; mas o canal existe por construção — os braços que vão à pedra são tirados das obras
+pequenas da cidade (os campos, os poços, as oficinas) em metade dos dias —, e a 1ª rodada já tinha medido um quinto a menos de
+gente com todo construtor ocioso na pedreira. «Sem custar a vida da cidade»: **não entreguei**. Fica na T-769, com os números,
+para o líder decidir o preço (a regra é uma linha).
 
 ## 6. As linhas do AUDIT (prontas para colar)
 
