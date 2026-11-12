@@ -9,7 +9,9 @@
 //   P4  ninguém mora dentro de uma sede em obra ou caída
 //   P5  a sede não é de ninguém: sem dono, sem aluguel, sem encomenda, sem poupança de casa
 //   P6  quem mora na sede não precisa de casa (a fila das casas da cidade nunca o chama)
-// P2, P3 e P4 dão à porta o tempo dela (G.Casa.reign: a cada dois segundos do mundo; o repartidor de casas, a cada 2,5 s): só
+//   P7  numa sede com mais gente que camas só mora quem tem de morar com quem governa: nenhuma casa de filho ou irmão casado,
+//       nenhum crescido solteiro sem pequenos
+// P2, P3, P4 e P7 dão à porta o tempo dela (G.Casa.reign: a cada dois segundos do mundo; o repartidor de casas, a cada 2,5 s): só
 // acusam o que dura mais de GRACE segundos do relógio do mundo.
 (function () {
   if (!window.QA || !QA.more) return;
@@ -48,6 +50,17 @@
       for (const v of L) {
         if (mine || (e && ofFamily(v, e[0]))) continue;
         if (lasts('P2:' + v.id + ':' + bid, s.clock, seen) > GRACE) add('paco', 2, `${v.name} #${v.id} mora em ${b.type}#${bid} sem ser da família de quem governa${e ? ' (' + e[0].name + ')' : ': a sede não é a de povo nenhum'} (D-206)`, v.id);
+      }
+      // ---- P7: a seat with more people than beds keeps only who must live with who rules — the ruler and the partner, their
+      // parents, who is under eighteen, who alone has little ones there, who minds them —: never a married household of the
+      // family's, never a grown single one (D-206)
+      if (e && e[0].home === bid && !mine && L.length > V.bedsOf(b)) {
+        const r = e[0], p = P(r.partner); const own = v => !!v && (v.id === r.id || v.id === r.partner || v.id === r.mother || v.id === r.father || (!!p && (v.id === p.mother || v.id === p.father)));
+        for (const v of L) {
+          if (v.age < 18 || own(v) || own(P(v.partner)) || !ofFamily(v, r)) continue;
+          const pair = !!v.partner && L.some(o => o.id === v.partner), kids = L.some(k => k.age < 16 && (k.mother === v.id || k.father === v.id)), minds = !!(G.Lar && G.Lar.minder && G.Lar.minder(v));
+          if ((pair || (!kids && !minds)) && lasts('P7:' + v.id + ':' + bid, s.clock, seen) > GRACE) add('paco', 2, `${v.name} #${v.id} mora em ${b.type}#${bid}, cheia demais (${L.length} para ${V.bedsOf(b)} camas), sem ser dos que têm de morar com quem governa (D-206)`, v.id);
+        }
       }
       // ---- P6
       for (const v of L) if (v.age >= 18 && K.need && K.need(v)) add('paco', 2, `${v.name} #${v.id} mora em ${b.type}#${bid} e «precisa de casa» (${K.need(v)})`, v.id);

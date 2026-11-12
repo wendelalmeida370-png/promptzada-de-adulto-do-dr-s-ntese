@@ -481,8 +481,8 @@
   const headFirst = (L, h) => [h].concat(L.filter(m => m !== h));
   const theName = b => { const nm = G.Village.buildName(b); return (G.gen(nm) === 'a' ? 'a ' : 'o ') + nm; };
   // (where a household that leaves the seat goes, in its town: [house, how] or null)
-  function rehouse(fam, set) {
-    const S = G.S; const occ = occupancy(); const ids = new Set(fam.map(m => m.id)); let own = null, free = null, best = null, bs = 0;
+  function rehouse(fam, set, kin) {
+    const S = G.S; const occ = occupancy(); const ids = new Set(fam.map(m => m.id).concat(kin || [])); let own = null, free = null, best = null, bs = 0;
     for (const b of S.buildings.values()) {
       if (b.set !== set.id || !built(b) || b.type === 'barraco') continue;
       const n = occ.get(b.id) || 0; const room = G.BDEF[b.type].housing - n; if (room < fam.length) continue;
@@ -492,11 +492,11 @@
     }
     return own ? [own, 'voltou'] : free ? [free, 'saiu'] : best ? [best, 'saiu'] : null;
   }
-  const WHY_OUT = { governo: 'outro governa agora', queda: 'ela veio abaixo', obra: 'ela entrou em obras', desfeita: 'ela foi desfeita', sede: 'ela já não é a sede do governo' };
+  const WHY_OUT = { cheia: 'não há camas para todos', governo: 'outro governa agora', queda: 'veio abaixo', obra: 'entrou em obras', desfeita: 'já não existe', sede: 'já não é a sede do governo' };
   // a household leaves the seat: whole, with its share of what the seat keeps
-  function leave(b, L, why) {
+  function leave(b, L, why, kin) {
     const S = G.S; const set = S.settlements.get(b.set); if (!set || !L.length || hasBody(L)) return false;
-    const head = eldest(L); const to = rehouse(L, set);
+    const head = eldest(L); const to = rehouse(L, set, kin);
     if (to) { move(headFirst(L, head), to[0], to[1]); K.lease(to[0]); }
     else {
       // (no house of the town has room for it: out of doors, the coins of its share in the head's purse — the town's housing
@@ -509,9 +509,32 @@
     const where = !to ? 'ainda sem teto' : to[1] === 'voltou' ? 'de volta à casa que tinha' : 'numa casa da cidade';
     bio(head, `Deixou ${theName(b)} de ${set.name}${L.length > 1 ? ' com a família' : ''} (${WHY_OUT[why] || WHY_OUT.sede}): ${where}.`, `Deixamos ${theName(b)}`);
     for (const m of L) if (m.age >= 16) A.note(m, 'memory', `Deixamos ${theName(b)}: ${WHY_OUT[why] || WHY_OUT.sede}.`, NOTE);
+    // (the chronicle: a household that leaves the seat — not the grown one more who goes to the family's house for want of a bed)
     const [x, y] = G.Village.center(b);
-    G.Village.log(`${head.name}${L.length > 1 ? ' e a família deixaram' : ' deixou'} ${theName(b)} de ${set.name}: ${WHY_OUT[why] || WHY_OUT.sede}. ${L.length > 1 ? 'Estão' : 'Está'} ${where}.`, 'crown', x, y);
+    if (why !== 'cheia') G.Village.log(`${head.name}${L.length > 1 ? ' e a família deixaram' : ' deixou'} ${theName(b)} de ${set.name}: ${WHY_OUT[why] || WHY_OUT.sede}. ${L.length > 1 ? 'Estão' : 'Está'} ${where}.`, 'crown', x, y);
     return true;
+  }
+  // The seat's beds (D-206). Who must live with who rules, whatever its beds: the ruler and the partner, their parents, who is
+  // under eighteen, who has little ones of their own there, who minds its little ones (K.tied). Of the household, they come —
+  // and, while the seat has beds, its grown single ones, the eldest first: the others stay in the house the family has (K.comes).
+  // And from a seat with more people than beds, they leave until it has them (crowd): first the households of the family that
+  // are not the ruler's own — a married child's, a brother's, with their little ones —, the youngest first; then the grown
+  // single ones, the youngest first (D-098) — to the family's own house where it has room, as anyone who leaves a seat
+  const tied = (v, r, L) => { const p = P(r.partner); return v.id === r.id || v.id === r.partner || v.age < 18 || v.id === r.mother || v.id === r.father || (!!p && (v.id === p.mother || v.id === p.father)) || K.minds(v) || L.some(k => k.age < 16 && (k.mother === v.id || k.father === v.id)); };
+  K.tied = tied;
+  K.comes = function (b, r) {
+    const fam = K.court(r); const room = G.Village.bedsOf(b) - residents(b).length; const must = fam.filter(v => tied(v, r, fam));
+    const rest = fam.filter(v => !must.includes(v)).sort((a, c) => c.age - a.age || a.id - c.id);
+    return must.concat(rest.slice(0, Math.max(0, room - must.length)));
+  };
+  function crowd(b, r) {
+    const beds = G.Village.bedsOf(b); let L = residents(b); if (L.length <= beds || hasBody(L)) return;
+    const p = P(r.partner); const kin = [r.id].concat(p ? [p.id] : []);
+    // (the ruler's own: the two, their parents — and who a parent is married to now)
+    const own = v => !!v && (v.id === r.id || v.id === r.partner || v.id === r.mother || v.id === r.father || (!!p && (v.id === p.mother || v.id === p.father))); const core = v => own(v) || own(P(v.partner));
+    const heads = L.filter(v => v.age >= 16 && !core(v) && !!v.partner && L.some(o => o.id === v.partner)).sort((a, c) => a.age - c.age || a.id - c.id);
+    for (const h of heads) { if (L.length <= beds) return; if (!L.includes(h)) continue; const g = K.court(h).filter(v => L.includes(v) && !core(v)); if (leave(b, g, 'cheia', kin)) L = L.filter(v => !g.includes(v)); }
+    for (const v of L.filter(o => o.age >= 18 && !o.partner).sort((a, c) => a.age - c.age || a.id - c.id)) { if (L.length <= beds) return; if (tied(v, r, L)) continue; if (leave(b, [v], 'cheia', kin)) L = L.filter(o => o !== v); }
   }
   // the ruler's household comes to live in the seat
   function enter(b, r, f, fam) {
@@ -554,9 +577,10 @@
     }
     for (const f of G.Fac.all()) {
       const b = K.seatOf(f); const r = G.Politics.ruler(f); if (!b || !lived(b) || !r || r.captive || r.home === b.id) continue;
-      const fam = K.court(r); if (held(b, r, f, fam)) continue;
+      if (held(b, r, f, K.court(r))) continue; const fam = K.comes(b, r);
       if (r.set === b.set) enter(b, r, f, fam); else call(b, r, f, fam);
     }
+    for (const b of seats) { const r = K.lordOf(b); if (r && r.home === b.id) crowd(b, r); }
   };
   // (a seat that falls, is taken down or becomes a work again: its household out first, with what is its own)
   K.vacate = function (b, why) { if (!isSeat(b) || !lived(b)) return; const L = residents(b); if (L.length) leave(b, L, why); };

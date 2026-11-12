@@ -18,13 +18,15 @@
 //   m9   um estranho posto na sede sai; a sede vazia nunca é oferecida a quem precisa de casa
 //   m10  as plantas: cada sede de cada povo tem cama, fogo, onde comer e onde guardar as coisas da casa
 //   m11  a tela: o que o painel da sede diz, e o que a ficha do prédio diz a quem é do povo e a quem não é (D-208)
-//   m12  a casa maior que as camas da sede fica inteira; quem é da sede casa e o par vem morar nela; a casa que a família tinha
-//        pago fica pronta e ninguém sai da sede por ela
+//   m12  quem é da sede casa e o par vem morar nela; a casa que a família tinha pago fica pronta e ninguém sai da sede por ela;
+//        da sede cheia demais sai a casa do filho casado, para a casa da família
 //   m13  a sede guarda como uma casa: as moedas, a casa do mercado e as compras de quem mora nela; a despensa — da corte
 //        quando ninguém mora, da família quando mora
 //   m14  a bandeira dos mercadores vai com a família para a sede e volta com ela (D-158)
 //   m15  o verificador vê: com a porta fechada pela mão da prova, acusa o estranho na sede, quem governa e não mora nela, a
-//        sede com dono e a casa que não é casa
+//        sede com dono, a casa que não é casa e a sede cheia demais
+//   m16  as camas da sede: na entrada o crescido solteiro só entra havendo cama (fica na casa da família); da sede cheia
+//        demais ele sai; quem tem de morar com quem governa fica; quem governa sem par nunca sai
 //   node qa/morar-palacio.js        (ONLY=m1,m3 só esses; MUNDO=metropole o mundo dos casos pela mão do deus)
 'use strict';
 process.chdir(__dirname);
@@ -371,9 +373,6 @@ run('m11', () => {
 run('m12', () => {
   const o = arma(true, q => K.court(q.r).some(v => v.age >= 18 && !v.partner && v.id !== q.r.id)); if (!ok('m12a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo com um filho crescido solteiro em casa')) return;
   const b = o.b; const fam = moram(b); const ap = G.BDEF[b.type].aposentos;
-  // (a household bigger than the seat's beds — three, by the proof's hand —: the town's housing empties no seat of its grown ones)
-  G.BDEF[b.type].aposentos = 3;
-  try { M.viver(8); ok('m12b a casa maior que as camas da sede fica inteira', fam.every(v => v.home === b.id), `${fam.length} na sede de 3 camas (pela mão da prova): ${nomes(moram(b))}`); } finally { G.BDEF[b.type].aposentos = ap; }
   // (one of the seat marries: the partner comes to live in it — the one of the seat never leaves it for the partner's house)
   const c = fam.find(v => v.age >= 18 && !v.partner && v.id !== o.r.id);
   const x = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 18 && v.age < 45 && !v.partner && v.g !== c.g && v.home && !v.captive && !v.jail && !v.aboard && !K.ofCourt(v, o.r) && G.BDEF[B(v.home).type].housing - (B(v.home).res || 0) >= 1).sort((a, q) => (q.id > c.id) - (a.id > c.id) || a.id - q.id)[0]; // (one the town's housing looks at after the one of the seat, if there is one: the one looked at first is the one who would move)
@@ -388,7 +387,52 @@ run('m12', () => {
     sim(() => V.completeBuilding(h));
     ok('m12f fica pronta: é da família, e ninguém sai da sede', now.every(v => v.home === b.id) && h.dono === o.r.id && !h.encomenda && !moram(h).length, `na sede: ${nomes(moram(b))}; ${lado(h)}: dono #${h.dono}, moram ${moram(h).length}`);
   }
-  M.viver(4); const q = checa(); ok('m12g verificador', q.ok, q.txt);
+  M.viver(4); let q = checa(); ok('m12g verificador', q.ok, q.txt);
+  // (the seat with five beds, by the proof's hand, and seven in it: the married child's household leaves for the family's house;
+  // who must live with who rules stays)
+  if (x && x.home === b.id) {
+    G.BDEF[b.type].aposentos = 5;
+    try {
+      M.viver(4); const ficam = fam.filter(v => v !== c);
+      ok('m12b da sede cheia demais sai a casa do filho casado, para a casa da família', c.home === o.casa0.id && x.home === o.casa0.id && ficam.every(v => v.home === b.id) && !o.casa0.aluga,
+        `5 camas (pela mão da prova) para 7: ${c.name} e ${x.name} em ${lado(B(c.home))} (a casa da família: ${lado(o.casa0)}, sem aluguel: ${!o.casa0.aluga}); na sede: ${nomes(moram(b))}`);
+      M.viver(8); q = checa(); ok('m12h verificador', q.ok && ficam.every(v => v.home === b.id), q.txt);
+    } finally { G.BDEF[b.type].aposentos = ap; }
+  }
+});
+
+// ------------------------------ m16: the seat's beds ------------------------------
+run('m16', () => {
+  // (a palace with five beds, by the proof's hand, for a household of six with a grown single son)
+  const ap = G.BDEF.palacio.aposentos; G.BDEF.palacio.aposentos = 5;
+  try {
+    const o = arma(false, q => { const L = K.court(q.r); return L.length === 6 && L.filter(v => v.age >= 18 && !v.partner && v.id !== q.r.id).length === 1; });
+    if (!ok('m16a a obra', !!o, o ? `${o.cap.name}: a casa de ${o.r.name}: ${nomes(K.court(o.r))}; ${lado(o.b)}, 5 camas pela mão da prova` : 'sem povo com a casa de seis e um filho crescido solteiro')) return;
+    const fam = K.court(o.r); const c = fam.find(v => v.age >= 18 && !v.partner && v.id !== o.r.id); const vem = fam.filter(v => v !== c);
+    sim(() => V.completeBuilding(o.b)); let dentro = c.home === o.b.id ? 1 : 0;
+    const naHora = todosEm(vem, o.b) && c.home === o.casa0.id;
+    for (let k = 0; k < 80; k++) { M.viver(0.1); if (c.home === o.b.id) dentro++; }
+    ok('m16b na entrada, o crescido solteiro só entra havendo cama: fica na casa da família', naHora && !dentro && todosEm(vem, o.b) && c.home === o.casa0.id && o.casa0.dono && !o.casa0.aluga,
+      `na hora: ${vem.length} na sede e ${c.name} (${Math.floor(c.age)}) em ${lado(B(c.home))}; ${c.name} na sede em ${dentro} passos de 80; a casa da família: dono #${o.casa0.dono}, sem aluguel: ${!o.casa0.aluga}`);
+    // (put in the seat by the proof's hand: one too many — the grown single one leaves again, for the family's house)
+    B(c.home).res--; c.home = o.b.id; o.b.res++; M.viver(3);
+    ok('m16c da sede cheia demais sai o crescido solteiro, para a casa da família', c.home === o.casa0.id && todosEm(vem, o.b), `${c.name} em ${lado(B(c.home))}; na sede: ${nomes(moram(o.b))}`);
+    // (three beds for five who must all live with who rules: nobody leaves)
+    G.BDEF.palacio.aposentos = 3; M.viver(8);
+    ok('m16d quem tem de morar com quem governa fica, mesmo sem cama para todos', todosEm(vem, o.b), `3 camas para ${vem.length}: ${nomes(moram(o.b))}`);
+    const q = checa(); ok('m16e verificador', q.ok, q.txt);
+  } finally { G.BDEF.palacio.aposentos = ap; }
+  // (a ruler with no partner in a seat too full — the guerra mundial's Hedeby, one bed by the proof's hand —: the grown single
+  // daughter leaves, the ruler never does, not for a step)
+  abre('mundial'); M.viver(8); let got = null;
+  for (const f of G.Fac.all()) { const st = K.seatState(f); if (st && st.home && !st.ruler.partner && moram(st.seat).some(v => v.age >= 18 && !v.partner && v !== st.ruler)) { got = st; break; } }
+  if (!ok('m16f quem governa sem par, com um filho crescido na sede', !!got, got ? `${got.ruler.name} em ${lado(got.seat)}: ${nomes(moram(got.seat))}` : 'nenhum na guerra mundial')) return;
+  const t = got.seat.type; const ap2 = G.BDEF[t].aposentos; G.BDEF[t].aposentos = 1; let fora = 0; const L = moram(got.seat);
+  try { for (let k = 0; k < 80; k++) { M.viver(0.1); if (got.ruler.home !== got.seat.id) fora++; } } finally { G.BDEF[t].aposentos = ap2; }
+  const cres = L.filter(v => v.age >= 18 && !v.partner && v !== got.ruler);
+  ok('m16g o crescido sai, quem governa nunca', !fora && cres.every(v => v.home !== got.seat.id && v.home) && L.filter(v => v.age < 18).every(v => v.home === got.seat.id),
+    `1 cama (pela mão da prova): ${got.ruler.name} fora da sede em ${fora} passos de 80; ${cres.map(v => `${v.name} em ${lado(B(v.home))}`).join(', ')}; na sede: ${nomes(moram(got.seat))}`);
+  const q2 = checa(); ok('m16h verificador', q2.ok, q2.txt);
 });
 
 // ------------------------------ m13: the seat keeps as a house does ------------------------------
@@ -432,6 +476,8 @@ run('m15', () => {
   // (the door shut by the proof's hand: a stranger in the seat, another ruler crowned, a seat with an owner, a home that is no home)
   K.reign = () => { };
   try {
+    // (the seat with two beds, by the proof's hand: its grown single one is one too many)
+    const ap = G.BDEF[b.type].aposentos; G.BDEF[b.type].aposentos = 2; const cedo7 = viu(/cheia demais/).length; M.viver(12); const p7 = cedo7 ? [] : viu(/cheia demais/); G.BDEF[b.type].aposentos = ap;
     const x = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 20 && !v.partner && v.home && !v.captive && !K.ofCourt(v, o.r)).sort((a, c) => a.id - c.id)[0];
     const outro = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 25 && v.age < 60 && !v.captive && v.home && v !== x && !K.ofCourt(v, o.r)).sort((a, c) => a.id - c.id)[0];
     const hx = x.home; B(hx).res--; x.home = b.id; b.res++; b.dono = x.id;
@@ -439,7 +485,7 @@ run('m15', () => {
     sim(() => { Pl.endReign(o.f, 'mandato'); Pl.crown(o.f, outro, 'eleicao', true); });
     const cedo = viu(/sem ser da família|governa .* e não mora/).length; M.viver(12);
     const p2 = viu(/sem ser da família/), p3 = viu(/governa .* e não mora/), p5 = viu(/a sede com dono/);
-    ok('m15b com a porta fechada, o verificador acusa', !cedo && p2.length >= 1 && p3.length === 1 && p5.length === 1 && p1.length === 1, `na hora: ${cedo} (a porta tem o tempo dela); 12 s depois: ${p2.length} «sem ser da família», ${p3.length} «governa e não mora», ${p5.length} «a sede com dono», ${p1.length} «não é prédio de morar» — ${[p3[0], p5[0], p1[0]].join(' · ')}`);
+    ok('m15b com a porta fechada, o verificador acusa', !cedo && p2.length >= 1 && p3.length === 1 && p5.length === 1 && p1.length === 1 && p7.length >= 1, `na hora: ${cedo} (a porta tem o tempo dela); 12 s depois: ${p2.length} «sem ser da família», ${p3.length} «governa e não mora», ${p5.length} «a sede com dono», ${p1.length} «não é prédio de morar», ${p7.length} «cheia demais» — ${[p3[0], p5[0], p1[0], p7[0]].join(' · ')}`);
     b.dono = 0;
   } finally { K.reign = reign; }
   M.viver(5); const q = checa(); ok('m15c a porta aberta de novo: limpo', q.ok && Pl.ruler(o.f).home === b.id, q.txt);
