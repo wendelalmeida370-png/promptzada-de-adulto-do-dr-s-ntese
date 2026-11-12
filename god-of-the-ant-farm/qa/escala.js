@@ -388,8 +388,10 @@ run('e13', () => {
         set._noSite = {}; const p = sim(() => V.findSite(set, t, undefined, n)); if (!p) { out.push(`${set.name} ${t}/${n}: -`); continue; }
         let livre = true; for (let y = p[1]; y < p[1] + n; y++) for (let x = p[0]; x < p[0] + n; x++) if (S.occ[y * G.N + x] || S.wall[y * G.N + x]) livre = false;
         const d = G.dist(p[0] + n / 2, p[1] + n / 2, set.cx, set.cy); const Rc = Math.round((set.radius || 8) + (t === 'palacio_colossal' ? 12 : 8));
-        const bem = livre && G.W.slope(p[0], p[1], n, n) <= V.PODIUM && V.siteReached(set, p[0], p[1], { w: n, h: n });
-        if (bem) bom++; else ruim++; out.push(`${set.name} ${t}/${n} a ${d.toFixed(0)} casas (a corte vai a ${Rc})${bem ? '' : ' RUIM'}`);
+        // (the lot under its podium — or, with none as far as the town looks, one its work levels first: D-217)
+        const sl = G.W.slope(p[0], p[1], n, n), aplaina = sl > V.PODIUM && V.earthOf(p[0], p[1], n) > 0;
+        const bem = livre && (sl <= V.PODIUM || aplaina) && V.siteReached(set, p[0], p[1], { w: n, h: n });
+        if (bem) bom++; else ruim++; out.push(`${set.name} ${t}/${n} a ${d.toFixed(0)} casas (a corte vai a ${Rc})${aplaina ? ', num lote que a obra aplaina' : ''}${bem ? '' : ' RUIM'}`);
         if (bem && !ergueu && t === 'grande_palacio') { rico(set); ergueu = sim(() => V.startProject(set, t)); }
       }
     }

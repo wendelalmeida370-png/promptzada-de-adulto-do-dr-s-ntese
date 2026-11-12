@@ -1213,7 +1213,7 @@
     if (e[5] !== 'stone' || !EARN[e[8]]) return; const to = e[4];
     if (typeof to !== 'string' || to.charCodeAt(0) !== 102 || to.charCodeAt(1) !== 58) return; // ('f:' + the people)
     const f = G.Fac.get(+to.slice(2)); if (!f) return; const d = G.S.day; const p = f.pedra || (f.pedra = [d, 0, 0]);
-    if (p[0] !== d) { mean(f, d); p[2] = p[0] === d - 1 ? p[1] : 0; p[0] = d; p[1] = 0; }
+    if (p[0] !== d) { mean(f, d, true); p[2] = p[0] === d - 1 ? p[1] : 0; p[0] = d; p[1] = 0; }
     p[1] += e[6];
   }
   // (the people's stone income over its years, kept beside its years' count — f.pedra[3] the day the mean is brought up to,
@@ -1223,13 +1223,16 @@
   // the year it was measured and some 5 a year in the six after, its rocks broken, and by twenty years of that one year it
   // asked for every step — D-216)
   V.MEAN = 0.2;
-  function mean(f, d) {
-    const p = f.pedra; if (!p) return 0;
-    if (p[3] === undefined) { p[3] = d; p[4] = p[0] === d ? p[2] : p[0] === d - 1 ? p[1] : 0; return p[4]; }
-    for (let y = p[3]; y < d; y++) p[4] = p[4] * (1 - V.MEAN) + V.MEAN * (p[0] === y ? p[1] : 0);
-    if (p[3] < d) p[3] = d; return p[4];
+  // (keep: written beside the count — at the day's first stone and to the world's own asking; who asks from outside the
+  // world's step — a proof, the developer — is told the same and writes nothing)
+  function mean(f, d, keep) {
+    const p = f.pedra; if (!p) return 0; let at = p[3], m = p[4];
+    if (at === undefined) { at = d; m = p[0] === d ? p[2] : p[0] === d - 1 ? p[1] : 0; }
+    for (let y = at; y < d; y++) m = m * (1 - V.MEAN) + V.MEAN * (p[0] === y ? p[1] : 0);
+    if (keep) { p[3] = at < d ? d : at; p[4] = m; }
+    return m;
   }
-  V.stoneMean = function (fid) { const f = G.Fac.get(fid); return f ? mean(f, G.S.day) : 0; };
+  V.stoneMean = function (fid) { const f = G.Fac.get(fid); return f ? mean(f, G.S.day, G.inSim > 0) : 0; };
   G.worldHooks.push(() => { if (G.Depot && G.Depot.onMove && !G.Depot.onMove.includes(earn)) G.Depot.onMove.push(earn); });
   V.stoneIncome = function (fid) {
     const f = G.Fac.get(fid); const p = f && f.pedra; if (!p) return 0; const d = G.S.day;

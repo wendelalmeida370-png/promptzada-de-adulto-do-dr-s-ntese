@@ -11,11 +11,14 @@
 //   c5  o save com a carroça a caminho: a mesma carroça, a mesma carga, e o mesmo futuro duas vezes
 //   c6  a cidade tomada com a carroça a caminho: a carga volta ao povo que a mandou, nunca ao armazém do vencedor
 //   c7  o fogo leva a obra com a carroça a caminho: a carga volta, e nenhuma carroça vai à ruína
+//   c8  a pedra que a carroça deixa no armazém (L-783): com o chão só, nenhuma carroça; leva o que passa dele; a madeira não
+//       tem chão; a estrada do povo que morre não leva a carroça da obra
+//   c9  a obra que já não espera o que a carroça traz: a carga volta para casa na carroça, pelo livro
 //   node qa/canteiro.js [mundo]        (ONLY=c1,c3 só esses; VERB=1 conta mais)
 'use strict';
 process.chdir(__dirname);
 const M = require('./nodemundo.js');
-const G = M.load({ qa: true, extra: ['qa/degraus-inv.js', 'qa/canteiro-inv.js'] });
+const G = M.load({ qa: true, extra: ['qa/degraus-inv.js', 'qa/canteiro-inv.js', 'qa/aterro-inv.js'] });
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const VERB = !!process.env.VERB; const MUNDO = process.argv[2] || process.env.MUNDO || 'mega';
 const hr = process.hrtime.bigint(); const ms = () => Number((process.hrtime.bigint() - hr) / 1000000n);
 const fails = [];
@@ -90,6 +93,9 @@ run('c1', () => {
   ok('c1c nada some nem nasce', Math.abs(estrada0 + saiu - chegou - voltou - naEstrada(b)) < 1e-3, `o que já ia na estrada (${estrada0.toFixed(2)}) + o que saiu (${saiu.toFixed(2)}) = o que chegou (${chegou.toFixed(2)}) + o que voltou (${voltou.toFixed(2)}) + o que está na estrada (${naEstrada(b).toFixed(2)})`);
   ok('c1d duas a caminho no máximo, vinte por carga', maxCam >= 1 && maxCam <= Ci.WORK_CARTS && maxCarga <= Ci.WORK_LOAD + 1e-6, `a caminho da obra, no máximo ${maxCam} de uma vez (a regra: ${Ci.WORK_CARTS}); a maior carga ${maxCarga} (a regra: ${Ci.WORK_LOAD})`);
   ok('c1e contra o mesmo mundo sem carroça', semCarro === 0 && com >= sem * 2 && com >= sem + 40, `a ${a.longe} casas do armazém, em dois anos, com o armazém cheio: sem carroça entraram ${sem.toFixed(0)} na obra; com ela, ${com.toFixed(0)}`);
+  // (what the carts have on the road counts as coming for who would fetch it — Ci.carted, the builders' own count: nobody walks to
+  // the store for it, and no cart reaches the work with what it no longer waits for)
+  ok('c1g ninguém busca o que a carroça traz', voltou === 0 && chegou > 0, `das ${chegou.toFixed(0)} que as carroças levaram, ${voltou.toFixed(0)} voltaram por a obra já não esperar`);
   const c = checa(); ok('c1f verificador', c.ok, c.txt);
 });
 
@@ -177,6 +183,50 @@ run('c6', () => {
   const novas = daObra(b).filter(q => q.fac !== set.fac);
   ok('c6d um ano depois', !novas.length, `carroças do povo de antes para a obra que perdeu: ${novas.length}; da cidade agora: ${daObra(b).length}`);
   const q = checa(); ok('c6e verificador', q.ok, q.txt);
+});
+
+// ------------------------------ c8: a pedra que a carroça deixa no armazém (L-783) ------------------------------
+// (the door itself, asked by the proof with the store counted by its hand: the people's store is one for all its towns, and the
+// cart leaves in it a well's and a house's worth of stone — WORK_FLOOR —; the timber has no floor. And the work's cart has no
+// road of its own: a road of the people that dies takes its own carts off, never the work's)
+run('c8', () => {
+  M.pronto(MUNDO); pega(); const far0 = Ci.WORK_FAR; let a = null;
+  try { Ci.WORK_FAR = 1e9; a = arma(35); } finally { Ci.WORK_FAR = far0; }
+  if (!ok('c8a a obra longe, nenhuma carroça ainda', !!a && a.vez && !daObra(a.b).length && (a.b.need.stone || 0) >= 30, a ? `${lado(a.b)} a ${a.longe} casas, a vez ${a.set.vez}; espera ${JSON.stringify(a.b.need)}` : 'sem chão')) return;
+  const { set, f, b } = a; const FL = Ci.WORK_FLOOR;
+  // (the store with stone alone, counted: nothing else the work waits for in it)
+  const so = n => sim(() => { for (const m in b.need) if ((f.stock[m] || 0) > 0) D.use('f:' + f.id, m, f.stock[m], { code: 'teste', mine: true }); if (n > 0) D.make('f:' + f.id, 'stone', n, { code: 'teste' }); });
+  const pede = () => sim(() => Ci.workCart(set));
+  so(FL); const c0 = pede(); const fica0 = f.stock.stone || 0;
+  ok('c8b só o chão do armazém: nenhuma carroça', !c0 && !daObra(b).length && Math.abs(fica0 - FL) < 1e-6, `${FL} de pedra no armazém do povo (a regra: a carroça deixa ${FL}): a carroça ${c0 ? '#' + c0.id + ' SAIU com ' + JSON.stringify(c0.goods) : 'não saiu'}; no armazém ${fica0}`);
+  so(FL + 7); const c1 = pede(); const fica1 = f.stock.stone || 0;
+  ok('c8c leva o que passa do chão', !!c1 && !!c1.goods && c1.goods.k === 'stone' && Math.abs(c1.goods.n - 7) < 1e-6 && Math.abs(fica1 - FL) < 1e-6, `${FL + 7} de pedra no armazém: a carroça ${c1 ? '#' + c1.id + ' leva ' + JSON.stringify(c1.goods) : 'NÃO saiu'}; ficam ${fica1}`);
+  // (the timber: no floor — what the work waits for of it goes whole, twenty at a time)
+  const mad = (b.need.wood || 0) >= 5; let c2 = null, fica2 = -1;
+  if (mad) { sim(() => { D.make('f:' + f.id, 'wood', 5, { code: 'teste' }); }); c2 = pede(); fica2 = f.stock.wood || 0; }
+  ok('c8d a madeira não tem chão', !mad || (!!c2 && !!c2.goods && c2.goods.k === 'wood' && Math.abs(c2.goods.n - 5) < 1e-6 && fica2 < 1e-6), mad ? `5 de madeira no armazém (e ${FL} de pedra): a carroça ${c2 ? '#' + c2.id + ' leva ' + JSON.stringify(c2.goods) : 'NÃO saiu'}; ficam ${fica2} de madeira` : 'a obra não espera madeira: sem caso');
+  // (a road of the people dies — by the proof's hand on the road's own mark, as city.js sets it when a town of it is gone)
+  const r = (S.routes || []).find(q => !q.dead); const antes = daObra(b).map(q => q.id).join(',');
+  if (r) { const daRota = S.carts.filter(q => q.route === r.id).length; r.dead = true; for (let k = 0; k < 30 && S.routes.includes(r); k++) M.viver(0.5);
+    ok('c8e a estrada que morre não leva a carroça da obra', daObra(b).map(q => q.id).join(',') === antes && antes.length > 0 && !S.routes.includes(r) && !S.carts.some(q => q.route === r.id), `a estrada #${r.id} morta (tinha ${daRota} carroças dela): as da obra antes [${antes}], depois [${daObra(b).map(q => q.id).join(',')}]; carroças da estrada morta ainda no mundo: ${S.carts.filter(q => q.route === r.id).length}`);
+  } else console.log('  (c8e: o mundo não tem estrada nenhuma; sem caso)');
+  const q = checa(); ok('c8f verificador', q.ok, q.txt);
+});
+
+// ------------------------------ c9: a obra já não espera o que a carroça traz ------------------------------
+// (the work given, by the god's hand, all it waited for of what a cart has on the road: the cart goes, the site takes nothing
+// of it, and the load comes home on the cart, by the ledger)
+run('c9', () => {
+  const a = arma(35); if (!ok('c9a a obra longe', !!a && a.vez, a ? `${lado(a.b)} a ${a.longe} casas` : 'sem chão')) return;
+  const { set, f, b } = a; const c = ateCarroca(set, b); if (!ok('c9b uma carroça a caminho', !!c, c ? `a carroça #${c.id} com ${c.goods.n} de ${c.goods.k}` : 'nenhuma carroça saiu em 200 s')) return;
+  const k = c.goods.k, n = c.goods.n; const E = escuta(b);
+  for (let q = 0; q < 4; q++) sim(() => { const m = b.need[k] || 0; if (m > 0) { D.make('f:' + f.id, k, m, { code: 'teste' }); D.move('f:' + f.id, 'o:' + b.id, k, m, { code: 'teste' }); } });
+  const espera = b.need[k] || 0; let seg = 0;
+  for (; seg < 600 && S.carts.some(q => q.id === c.id); seg++) { if (seg % 40 === 0) alimenta(set); M.viver(0.5); }
+  E.fim(); const o = S.buildings.get(b.id);
+  const chegou = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'o:' + b.id), volta = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'f:' + f.id && e[8] === 'carroca-volta');
+  ok('c9c a carga que a obra já não espera volta na carroça', espera === 0 && !!o && !S.carts.some(q => q.id === c.id) && chegou === 0 && Math.abs(volta - n) < 1e-6, `dado à obra todo o ${k} que esperava (espera agora ${espera}): a carroça #${c.id} foi e voltou em ${(seg / 2).toFixed(0)} s; entraram no canteiro por ela ${chegou}; de volta ao armazém do povo («carroca-volta») ${volta} de ${n}`);
+  const q = checa(); ok('c9d verificador', q.ok, q.txt);
 });
 
 console.log(fails.length ? `CANTEIRO: FALHOU (${fails.join(', ')})` : `CANTEIRO: ok (${ms()} ms)`);

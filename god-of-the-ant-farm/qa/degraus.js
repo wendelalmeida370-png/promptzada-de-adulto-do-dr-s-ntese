@@ -5,6 +5,8 @@
 //   g1  a pedra da obra grande (D-174): a marca do planejador (set.gw, com a vez), o que ela guarda (V.keeps, V.stoneKept), o que
 //       sobra para o calçamento e as carroças (V.stoneSpare), nenhuma casa de pé melhorada; com um adulto sem casa a vez acaba e
 //       a pedra volta a ser de todos
+//   g1h as casas novas das cidades-irmãs pela sobra (L-783): com a pedra guardada pela obra grande, a cabana; dada a pedra, a
+//       casa de pedra que o mesmo armazém paga
 //   g2  os braços (D-174): o construtor sem nada para assentar quebra a pedra que as obras esperam; a turma da obra grande
 //       (V.GANG dos adultos) e a pedreira do povo nas outras cidades (V.GANG_Q)
 //   g3  a obra anda no salto: em 3 anos a obra grande recebe a sua pedra pelo livro; custa e demora o do degrau (G.Escala.bill,
@@ -21,7 +23,7 @@
 'use strict';
 process.chdir(__dirname);
 const M = require('./nodemundo.js');
-const G = M.load({ qa: true, extra: ['qa/degraus-inv.js'] });
+const G = M.load({ qa: true, extra: ['qa/degraus-inv.js', 'qa/canteiro-inv.js', 'qa/aterro-inv.js'] });
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const VERB = !!process.env.VERB; const MUNDO = process.env.MUNDO || 'metropole';
 const hr = process.hrtime.bigint(); const ms = () => Number((process.hrtime.bigint() - hr) / 1000000n);
 const fails = [];
@@ -171,6 +173,40 @@ run('g1p', () => {
   ok('g1p2 nenhuma casa melhorada enquanto a obra grande espera pedra', vez && hut && guarda > 0 && com === 0 && livre && sem >= 1,
     `${set.name}, a vez ${set.vez}, uma cabana por refazer, 40 de pedra e de madeira no armazém, nenhuma outra obra no caminho: em 20 olhares do planejador com a obra esperando ${guarda.toFixed(0)} de pedra, casas postas em melhoria: ${com}; dado à obra o que ela esperava (guarda ${livre ? 0 : 'AINDA ' + V.keeps(set)}): ${sem} em ${olhares} olhar(es)`);
   const c = checa(); ok('g1p3 verificador', c.ok, c.txt);
+});
+
+// ------------------------------ g1h: as casas novas pela sobra (L-783) ------------------------------
+// (the people's store is one: the homes a sister town raises while a great work of its people keeps stone are of what the work
+// leaves. The planner's own look at a sister town with families with no home — their houses taken by fire, the game's door —, every
+// other work of it finished by the proof's hand before each look: with the store's stone all kept by the great work, a hut of
+// timber; the work given what it waited for, the stone home the same store pays for. In the metropole 130 of 150 of stone given
+// to Rome's store went into the sobrados and ínsulas of Lavínio, Cápua, Óstia and Tíbur in two years; its theatre got 8)
+run('g1h', () => {
+  abre(); const r = capitalCom('teatro', 6); if (!ok('g1h a obra grande', !!r && grande(r.b) && !r.b.built, r ? `${r.set.name} (${V.pop(r.set.id)} pessoas): ${lado(r.b)}` : 'nenhuma capital com lote de 6 nem obra grande em curso')) return;
+  const { set, b } = r; const f = G.Fac.get(set.fac); semPedra(set); pedra(set, 60); const vez = comVez(set);
+  const CASAS = { hut: 1, house: 1, sobrado: 1, insula: 1, quarteirao: 1 }; const oficina = G.Fac.has(f.id, 'workshop');
+  const q = [...S.settlements.values()].filter(o => o.fac === f.id && o.id !== set.id && (o.tier || 0) >= 2 && V.pop(o.id) >= 8).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)[0];
+  if (!ok('g1h2 uma cidade-irmã que ergue casas de pedra', !!q && vez && oficina && V.stoneKept(f.id) > 0, q ? `${q.name} (${V.pop(q.id)} pessoas, nível ${q.tier}), de ${f.name}; a vez de ${set.name} ${set.vez}, a obra guarda ${V.stoneKept(f.id).toFixed(0)} de ${(f.stock.stone || 0).toFixed(0)} de pedra do povo` : `nenhuma cidade-irmã de nível 2 de ${set.name}`)) return;
+  // (every other work of the sister finished, the store with timber, and homes of it taken until its planner asks for one)
+  const arma = () => sim(() => { for (const o of [...S.buildings.values()]) if (o.set === q.id && !o.built && o.type !== 'ruin' && !o.upgradeFrom) V.completeBuilding(o); if ((f.stock.wood || 0) < 60) D.make('f:' + f.id, 'wood', 60 - (f.stock.wood || 0), { code: 'teste' }); });
+  const pede = () => { const hi = V.housingInfo(q.id); return (hi.homeless > 0 || hi.cap - hi.pop < 2) && hi.cap < hi.pop + 3; };
+  const tira = () => sim(() => { for (const h of [...S.buildings.values()].filter(o => o.set === q.id && CASAS[o.type] && o.built).sort((a, c) => c.id - a.id)) { if (pede()) break; V.damageBuilding(h, 99999, 'fire'); } });
+  // (the planner's looks, the homes it founds heard at its own door: → the type of the first)
+  const olha = n => { const sp0 = V.startProject; let tipo = null; V.startProject = function (s, type) { const nb = sp0.apply(this, arguments); if (nb && s === q && CASAS[type] && !tipo) tipo = type; return nb; };
+    try { for (let k = 0; k < n && !tipo; k++) { arma(); alimenta(q); q._noSite = {}; sim(() => V.planNow(q)); } } finally { V.startProject = sp0; } return tipo; };
+  arma(); tira(); const hi = V.housingInfo(q.id);
+  // (what the whole store would pay for, asked of the door of the homes with the dice put back)
+  const rng = S.rng; const cru = sim(() => G.City.homeType(q, f, oficina, f.stock)); S.rng = rng;
+  const sobra = V.stoneSpare(f.id); const t1 = olha(12);
+  ok('g1h3 com a pedra guardada, a casa nova é da sobra', pede() || !!t1 ? (cru !== 'hut' && sobra < 6 && t1 === 'hut') : false,
+    `${q.name}: ${hi.homeless} sem casa, ${hi.cap} camas para ${hi.pop}; o povo tem ${(f.stock.stone || 0).toFixed(0)} de pedra, a obra grande guarda ${V.stoneKept(f.id).toFixed(0)}, sobram ${sobra.toFixed(0)}: pelo estoque inteiro a casa seria «${cru}»; o planejador fundou «${t1 || 'nada'}»`);
+  // (the work given all it waits for, by the god's hand — its brick too —: nothing kept, and the same store pays a stone home)
+  for (let k = 0; k < 4; k++) sim(() => { for (const m in b.need) { const n = b.need[m] || 0; if (n > 0) { D.make('f:' + f.id, m, n, { code: 'teste' }); D.move('f:' + f.id, 'o:' + b.id, m, n, { code: 'teste' }); } } });
+  sim(() => { for (const o of [...S.buildings.values()]) if (o.set === q.id && CASAS[o.type] && !o.built && !o.upgradeFrom) V.damageBuilding(o, 99999, 'fire'); });
+  if ((f.stock.stone || 0) < 60) pedra(set, 60 - (f.stock.stone || 0));
+  tira(); const livre = V.stoneKept(f.id) === 0; const t2 = olha(12);
+  ok('g1h4 dada a pedra à obra, a casa de pedra', livre && !!t2 && t2 !== 'hut', `a obra com o que esperava (guardado ${V.stoneKept(f.id).toFixed(0)}), ${(f.stock.stone || 0).toFixed(0)} de pedra no armazém: o planejador de ${q.name} fundou «${t2 || 'nada'}»`);
+  const c = checa(); ok('g1h5 verificador', c.ok, c.txt);
 });
 
 // ------------------------------ g2: os braços ------------------------------

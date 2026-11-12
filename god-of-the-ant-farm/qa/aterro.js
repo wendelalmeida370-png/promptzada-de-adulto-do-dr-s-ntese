@@ -11,6 +11,8 @@
 //   t4  o pódio primeiro: onde há um lote que o pódio cobre, o planejador fica com ele — o mesmo que acharia sem o aplainar
 //   t5  o deus interfere: um poço posto junto de um canto que mexeria — o lote deixa de se aplainar; a obra derrubada — o chão
 //       fica; a ampliação no lugar nunca num lote que se aplaina
+//   t6  o campo guardado (D-121): o lote que o pódio cobre mais perto; só sem nenhum, o que se aplaina
+//   t7  o lote aberto (V.openSite): um lote que se aplaina nunca à frente de um plano
 //   m1  a média da renda de pedra: um quinto de cada ano que passa, os anos sem pedra contados; a conta sem média começa no último
 //       ano inteiro
 //   m2  o povo pede pelo estoque e quinze anos da menor entre a renda do último ano e a média: um ano bom sozinho não paga, a
@@ -20,7 +22,7 @@
 'use strict';
 process.chdir(__dirname);
 const M = require('./nodemundo.js');
-const G = M.load({ qa: true, extra: ['qa/degraus-inv.js', 'qa/canteiro-inv.js'] });
+const G = M.load({ qa: true, extra: ['qa/degraus-inv.js', 'qa/canteiro-inv.js', 'qa/aterro-inv.js'] });
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const VERB = !!process.env.VERB;
 const hr = process.hrtime.bigint(); const ms = () => Number((process.hrtime.bigint() - hr) / 1000000n);
 const fails = [];
@@ -72,7 +74,7 @@ function caso(plano) {
 
 // ------------------------------ t1: o plano do aplainar ------------------------------
 run('t1', () => {
-  let lotes = 0, planos = 0; const mal = []; const nao = {}; let exemplo = '';
+  let lotes = 0, planos = 0, margem = 0; const mal = []; const nao = {}; let exemplo = '';
   for (const w of ['mega', 'metropole']) {
     abre(w); const H = S.H; const CL = G.Relief.CLIFF;
     const barra = i => (S.type[i] < T.SAND || (G.Caves && G.Caves.isMouth && G.Caves.isMouth(i)) ? 'água ou caverna' : S.wall[i] || S.road[i] >= 3 ? 'muro ou estrada' : (S.occ[i] && !({ farm: 1, horta: 1, pomar: 1, plantacao: 1, vinhedo: 1, apiario: 1 })[(S.buildings.get(S.occ[i]) || {}).type]) ? 'prédio' : '');
@@ -93,6 +95,19 @@ run('t1', () => {
           for (let ty = vy - 1; ty <= vy; ty++) for (let tx = vx - 1; tx <= vx; tx++) { if (tx >= x && tx < x + n && ty >= y && ty < y + n) continue; const q = barra(ty * N + tx); if (q) mal.push(`${w} ${x},${y} n${n}: o canto ${vx},${vy} mexe e toca ${q} em ${tx},${ty}`); }
         }
         if (Math.abs(vol - e) > 1e-6) mal.push(`${w} ${x},${y} n${n}: a terra do plano ${vol.toFixed(3)} e V.earthOf ${e.toFixed(3)}`);
+        // (the rule itself, counted again by the proof: the lot's corners into a band of the podium's height, midway between
+        // its lowest and its highest; the corners one and two tiles out by two thirds and one third; a corner beside what bars
+        // stays — and is not in the plan, as checked above)
+        { const r2 = h => Math.round(h * 100) / 100; let mn0 = 1e9, mx0 = -1e9; for (let vy = y; vy <= y + n; vy++) for (let vx = x; vx <= x + n; vx++) { const h = H[vy * VV() + vx]; if (h < mn0) mn0 = h; if (h > mx0) mx0 = h; }
+          const band = V.PODIUM - 0.01, lo = r2((mn0 + mx0 - band) / 2), hi = r2(lo + band);
+          for (let vy = y - 2; vy <= y + n + 2; vy++) for (let vx = x - 2; vx <= x + n + 2; vx++) {
+            const d = faixa(x, y, n, vx, vy), k = vy * VV() + vx, h = H[k], nh = r2(h + (Math.max(lo, Math.min(hi, h)) - h) * (1 - d / 3));
+            if (Math.abs(nh - h) < 0.005) { if (to.has(k)) mal.push(`${w} ${x},${y} n${n}: o canto ${vx},${vy} mexe sem a regra pedir`); continue; }
+            let toca = false; for (let ty = vy - 1; ty <= vy; ty++) for (let tx = vx - 1; tx <= vx; tx++) { if (tx >= x && tx < x + n && ty >= y && ty < y + n) continue; if (barra(ty * N + tx)) toca = true; }
+            if (toca) continue;
+            if (!to.has(k) || Math.abs(to.get(k) - nh) > 1e-6) mal.push(`${w} ${x},${y} n${n}: o canto ${vx},${vy}, a ${d} casas do lote, devia ir de ${h.toFixed(2)} a ${nh.toFixed(2)} e ${to.has(k) ? 'vai a ' + to.get(k).toFixed(2) : 'não mexe'}`);
+            else if (d > 0) margem++;
+          } }
         let mn = 1e9, mx = -1e9; for (let vy = y; vy <= y + n; vy++) for (let vx = x; vx <= x + n; vx++) { const h = at(vy * VV() + vx); if (h < mn) mn = h; if (h > mx) mx = h; }
         if (mx - mn > V.PODIUM + 1e-6 || Math.abs(Math.round(mx * 100) - mx * 100) > 1e-3) mal.push(`${w} ${x},${y} n${n}: aplainado, o lote fica com ${(mx - mn).toFixed(2)} níveis (o pódio: ${V.PODIUM})`);
         for (let ty = y - 3; ty < y + n + 3; ty++) for (let tx = x - 3; tx < x + n + 3; tx++) {
@@ -106,7 +121,7 @@ run('t1', () => {
     }
   }
   const nomes = { '-1': 'relevo demais', '-2': 'água ou caverna', '-3': 'muro, estrada ou prédio', '-4': 'um canto mexe demais', '-5': 'penhasco' };
-  ok('t1a as regras do plano', planos >= 50 && !mal.length, `megalópole e metrópole, os lotes secos de 4, 6, 8 e 10 casas até 36 do meio de cada capital com mais relevo que o pódio: ${lotes}; ${planos} se aplainam (um: ${exemplo}); os outros: ${Object.keys(nao).map(k => nao[k] + ' ' + (nomes[k] || k)).join(', ')}${mal.length ? `; ${mal.length} FALHAS: ${mal.slice(0, 3).join(' | ')}` : '; em todo plano: nenhum canto mexe mais de ' + V.LEVEL + ' níveis nem a mais de 2 casas do lote, nenhum de fora toca água, caverna, muro, estrada ou prédio, o lote fica no pódio, o anel sem penhasco'}`);
+  ok('t1a as regras do plano', planos >= 50 && margem > planos && !mal.length, `megalópole e metrópole, os lotes secos de 4, 6, 8 e 10 casas até 36 do meio de cada capital com mais relevo que o pódio: ${lotes}; ${planos} se aplainam (um: ${exemplo}); os outros: ${Object.keys(nao).map(k => nao[k] + ' ' + (nomes[k] || k)).join(', ')}${mal.length ? `; ${mal.length} FALHAS: ${mal.slice(0, 3).join(' | ')}` : '; em todo plano: nenhum canto mexe mais de ' + V.LEVEL + ' níveis nem a mais de 2 casas do lote, nenhum de fora toca água, caverna, muro, estrada ou prédio, o lote fica no pódio, o anel sem penhasco, e cada canto vai aonde a regra manda (' + margem + ' cantos da margem acompanham, por dois terços e um terço)'}`);
   ok('t1b os que não se aplainam têm cada causa', (nao['-1'] || 0) > 0 && (nao['-2'] || 0) + (nao['-3'] || 0) > 0, `relevo demais ${nao['-1'] || 0}, água ou caverna ${nao['-2'] || 0}, muro, estrada ou prédio ${nao['-3'] || 0}, um canto mexe demais ${nao['-4'] || 0}, penhasco ${nao['-5'] || 0}`);
 });
 
@@ -159,6 +174,50 @@ run('t5', () => {
   const e = posto ? V.earthOf(p[0], p[1], n) : 0; set._noSite = {}; const outro = posto ? acha(set, type, st) : null;
   ok('t5c um prédio junto de um canto que mexeria', !!posto && e === -3 && !(outro && outro[0] === p[0] && outro[1] === p[1]), posto ? `um poço posto pela mão do deus em ${posto[0]},${posto[1]}, junto do canto ${posto[2]},${posto[3]} da beira do lote: V.earthOf ${e} (-3: prédio na margem); a busca do planejador agora ${outro ? 'dá ' + outro[0] + ',' + outro[1] : 'não acha lote'}` : 'nenhuma casa livre junto de um canto da beira do lote que mexe');
   const q = checa(); ok('t5d verificador', q.ok, q.txt);
+});
+
+// ------------------------------ t6: o campo guardado ------------------------------
+// (the lot a capital keeps for its wonder — D-121 —: the nearest its podium covers; only with none, the nearest that can be
+// levelled. Asked of the town's own daily look, with the levelling and without it, the lot it had put back after)
+run('t6', () => {
+  let planos = 0, aplainados = 0, maiores = 0, mantidos = 0; const mal = [], diz = [];
+  for (const w of ['metropole', 'mega', 'anos500', 'anos1000', 'mundial']) {
+    abre(w);
+    for (const set of capitais()) {
+      if ((set.tier || 0) < V.RES_TIER) continue; const wk = V.resWork(set); if (!wk) continue; const f = G.Fac.get(set.fac);
+      if ([...S.buildings.values()].some(b => b.type === wk.type && V.facOfSet(b.set) === f.id)) continue;
+      const u = set.urb || (set.urb = { d: [], names: [] }); const r0 = u.res, g0 = u.resGone;
+      const pede = () => { u.res = null; u.resGone = null; const r = sim(() => V.reservaDia(set)); return r ? { x: r.x, y: r.y, n: r.n, sl: W.slope(r.x, r.y, r.n, r.n) } : null; };
+      const A = semAplainar(pede), B = pede();
+      // (kept a second day: the lot to be levelled is still the town's at its next look)
+      const fica = B ? sim(() => V.reservaDia(set)) : null; if (B && fica && fica.x === B.x && fica.y === B.y) mantidos++;
+      u.res = r0; u.resGone = g0;
+      // (the ladder from the biggest step, as the planner's: without the levelling the town keeps the biggest step with a lot
+      // its podium covers; with it, that same lot — or a bigger step, which then has no flat lot, on one to be levelled)
+      if (A) { const maior = !!B && B.n > A.n && B.sl > V.PODIUM, mesmo = !!B && B.n === A.n && B.x === A.x && B.y === A.y && B.sl <= V.PODIUM;
+        if (mesmo) planos++; else if (maior) { maiores++; diz.push(`${w} ${set.name}: ${wk.type}, o de ${B.n} em ${B.x},${B.y} com ${(B.sl * 1.5).toFixed(1)} m de relevo, em vez do de ${A.n} plano`); }
+        else mal.push(`${w} ${set.name}: sem aplainar guarda ${A.n} em ${A.x},${A.y}; com ele ${B ? `${B.n} em ${B.x},${B.y} (${(B.sl * 1.5).toFixed(1)} m de relevo)` : 'NADA'}`); }
+      else if (B) { aplainados++; if (!(B.sl > V.PODIUM) || !(V.earthOf(B.x, B.y, B.n) > 0)) mal.push(`${w} ${set.name}: guarda ${B.n} em ${B.x},${B.y} que nem o pódio cobre nem se aplaina`); diz.push(`${w} ${set.name}: ${wk.type}, ${B.n} em ${B.x},${B.y}, ${(B.sl * 1.5).toFixed(1)} m de relevo`); }
+    }
+  }
+  ok('t6a o campo guardado: o plano primeiro', planos > 0 && aplainados + maiores > 0 && mantidos === planos + aplainados + maiores && !mal.length, `capitais que guardariam um campo para a sua maravilha nos mundos prontos: ${planos} num lote que o pódio cobre (o mesmo com o aplainar e sem ele), ${maiores} num degrau maior que só tem lote aplainado, ${aplainados} só num lote que se aplaina${diz.length ? ' (' + diz.join('; ') + ')' : ''}; guardado ainda no dia seguinte: ${mantidos}${mal.length ? '; FALHAS: ' + mal.slice(0, 3).join(' | ') : ''}`);
+});
+
+// ------------------------------ t7: o lote aberto ------------------------------
+// (a step that opens its room over the town's own low houses and fields — V.openSite, D-115 —: a lot to be levelled never
+// before one its podium covers. Every capital, every type and step it justifies, with the levelling and without it)
+run('t7', () => {
+  let casos = 0, novos = 0; const mal = [];
+  for (const w of ['metropole', 'mega', 'mundial', 'cidade']) {
+    abre(w);
+    for (const set of capitais()) for (const type of TIPOS) for (const st of Es.choose(set, type).filter(q => q.n > Es.n0(type) && !q.familia && V.opens(type, q))) {
+      const pede = () => quieto(set, () => { const p = V.openSite(set, type, st); return p ? { x: p[0], y: p[1], sl: W.slope(p[0], p[1], st.n, st.n) } : null; });
+      const A = semAplainar(pede), B = pede();
+      if (A) { casos++; if (!B || B.sl > V.PODIUM) mal.push(`${w} ${set.name} ${type}/${st.n}: sem aplainar abre ${A.x},${A.y}; com ele ${B ? `${B.x},${B.y} com ${(B.sl * 1.5).toFixed(1)} m de relevo` : 'NADA'}`); }
+      else if (B) { novos++; if (!(B.sl > V.PODIUM)) mal.push(`${w} ${set.name} ${type}/${st.n}: abre ${B.x},${B.y} plano que sem o aplainar não abria`); }
+    }
+  }
+  ok('t7a o lote aberto: o plano primeiro', casos > 0 && !mal.length, `nos mundos prontos, ${casos} degraus abrem o seu lugar num lote que o pódio cobre — e com o aplainar continuam num lote plano; ${novos} só abrem num lote que se aplaina${mal.length ? '; FALHAS: ' + mal.slice(0, 3).join(' | ') : ''}`);
 });
 
 // ------------------------------ m1 a m3: a renda de pedra ao longo dos anos ------------------------------
