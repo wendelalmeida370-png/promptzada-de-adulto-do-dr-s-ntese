@@ -300,7 +300,8 @@
   function runLevado(v, t, dt, H) {
     const S = G.S; const g = S.villagers.get(t.by);
     if (!v.jail) return H.end(v);
-    if (!g || !g.task || g.task.type !== 'levar') { const b = S.buildings.get(v.jail); if (b) jailIn(v, b); return H.end(v); }
+    // (the guard was called away, or fell: into the cell — and the cell just given is not ended with the walk, L-723)
+    if (!g || !g.task || g.task.type !== 'levar') { const b = S.buildings.get(v.jail); if (b) return jailIn(v, b); return H.end(v); }
     v.act = 'bound';
     const d = G.dist(v.x, v.y, g.x, g.y);
     if (d > 1.1) { t.rt = (t.rt || 0) - dt; if (t.rt <= 0 || H.arrived(v)) { t.rt = 0.6; H.goto(v, g.x + G.rr(-0.4, 0.4), g.y + G.rr(-0.4, 0.4), false, 2000); } H.move(v, dt, 1.05); }

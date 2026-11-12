@@ -244,6 +244,12 @@ run('g2', () => {
   // (the gang is the great work's own rule: with it the town's only work under way — the others finished by the proof's hand —
   // the repartidor's count by works is two or three builders, and the town keeps the gang all the same. It looks every 4 s)
   sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && !o.built && o.type !== 'ruin' && o.id !== b.id) V.completeBuilding(o); });
+  // (the gang is the rule of a work that waits for stone: in the mega of the generation 19 with the trade that stays, the
+  // theatre of Mênfis had all its stone from the gang's own hands in the 120 s before — 88 of it — and waited only for the
+  // brick the proof's hand keeps out of the store: no look «with the great work waiting», and the case read nothing. The
+  // brick it still waits for goes back to stone by the game's door (V.swapBill), as the game does when no brick comes,
+  // L-720: T-832)
+  let tijolo = 0; sim(() => { const k = b.brick && b.brick.k; if (k && !((b.need.stone || 0) > 0)) { const n = (b.need[k] || 0) - ((b.incoming && b.incoming[k]) || 0); if (n > 0 && V.swapBill(b, k, n, 'stone', n)) tijolo = n; } });
   comVez(set); let pior = 1e9, olhares = 0, obras2 = 0, turma2 = 0, tem = 0;
   for (let k = 0; k < 9; k++) {
     alimenta(set); semMaterial(set); M.viver(5); if (k < 2) continue;
@@ -251,7 +257,7 @@ run('g2', () => {
     if (!(V.keeps(set) > 0) || Math.ceil(n2 * 1.4) + 1 >= t2) continue; // (a look with the work waiting and few works: the gang's own)
     const n = oficio(set, 'construtor'); olhares++; if (n - t2 < pior) { pior = n - t2; obras2 = n2; turma2 = t2; tem = n; }
   }
-  ok('g2c2 a turma é da obra grande', olhares >= 3 && pior >= 0, `as outras obras de ${set.name} prontas pela mão da prova: em ${olhares} olhares com a obra grande à espera e poucas obras, o pior: ${tem} construtores com ${obras2} obra(s) em curso (pela conta das obras seriam ${Math.ceil(obras2 * 1.4) + 1} no máximo; a turma: ${turma2})`);
+  ok('g2c2 a turma é da obra grande', olhares >= 3 && pior >= 0, `as outras obras de ${set.name} prontas pela mão da prova${tijolo ? ` (e os ${Math.round(tijolo)} de tijolo que a obra ainda esperava, de volta à pedra pela porta do jogo)` : ''}: em ${olhares} olhares com a obra grande à espera e poucas obras, o pior: ${tem} construtores com ${obras2} obra(s) em curso (pela conta das obras seriam ${Math.ceil(obras2 * 1.4) + 1} no máximo; a turma: ${turma2})`);
   const c = checa(); ok('g2f verificador', c.ok, c.txt);
   // (the people's quarry: another town of the same people, with rock about it, keeps a gang at the quarry while the work waits.
   // Where the capital of the hands has no other town with people — Mênfis of the mega —, the first ready world with a capital

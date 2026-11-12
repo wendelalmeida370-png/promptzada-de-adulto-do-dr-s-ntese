@@ -403,15 +403,19 @@ const calmOne = (skip, also) => {
   // the sea)
   if (!v) {
     S.time = 0.25; const X = G.Expe; let e = null;
-    for (const f of [...S.factions.values()].filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
-      if (!X || e) break;
-      e = X.consider(f, { many: true }) || X.launch(f, { k: 'terra', w: 1, why: 'terra', txt: '', x: G.N / 2, y: G.N / 2 }, 'media', {});
-      tried.push(f.name + (e ? '' : ' (não)'));
-    }
     // (the call to the quay asks the hands first, D-094: a crew whose people are all in the middle of something comes to the
     // quay as each one finishes — in the metropole of the Bairros Vivos nobody of the Clã de Hrafn's crew was on the quay at
-    // the instant of the launch, and the case read «nobody on a quay», T-691: up to forty seconds for the first one)
-    if (e) { const first = () => e.crew.map(id => S.villagers.get(id)).filter(onQuay).sort((a, b) => a.id - b.id)[0] || null; v = first(); if (!v) live(40, () => !!(v = first())); }
+    // the instant of the launch, and the case read «nobody on a quay», T-691: up to forty seconds for the first one. And a
+    // voyage the world calls off before anyone comes — a people at war: «a guerra chegou primeiro», one launch in three — is
+    // not the case: the next people's, T-831)
+    for (const f of [...S.factions.values()].filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
+      if (!X || v) break;
+      e = X.consider(f, { many: true }) || X.launch(f, { k: 'terra', w: 1, why: 'terra', txt: '', x: G.N / 2, y: G.N / 2 }, 'media', {});
+      if (!e) { tried.push(f.name + ' (não)'); continue; }
+      const ex = e; const first = () => ex.crew.map(id => S.villagers.get(id)).filter(onQuay).sort((a, b) => a.id - b.id)[0] || null;
+      v = first(); if (!v) live(40, () => !!(v = first()) || ex.st === 'fim');
+      tried.push(f.name + (v ? '' : ex.st === 'fim' ? ` (a viagem acabou antes de alguém chegar ao cais: ${ex.status || 'fim'})` : ' (ninguém no cais em 40 s)'));
+    }
   }
   let ate = false, h0 = 0, where = '-', food = 0, t0 = S.clock, left = '';
   if (v) {

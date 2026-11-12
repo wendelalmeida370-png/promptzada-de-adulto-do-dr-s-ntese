@@ -16,6 +16,8 @@
 //    nenhum roubo novo começa na mesma meia-noite;
 // b5 a crônica diz o bairro: numa cidade de bairros, «uma casa do Bairro … de Mênfis»; numa vila, «de» a vila (a porta
 //    G.Urban.ofPlace, que só lê);
+// b6 o preso está na cela a cada passo do mundo (L-723): a tarefa da cela não acaba aos 70 s como um afazer comum; o guarda
+//    chamado no meio do caminho deixa o preso na cela, sem um passo solto; a pena cumprida solta;
 // e nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -132,6 +134,37 @@ if (on('b5')) {
   const ws = small ? U.ofPlace(small.cx, small.cy, small) : ''; const acc0 = JSON.stringify(S.urbAcc || {});
   ok('b5 a crônica diz o bairro: «uma casa do Bairro … da cidade»; numa vila, a vila', big && !!q && w === ` ${U.ofName(q)} de ${set5.name}` && w.includes(q.name) && (!small || ws === ` de ${small.name}`) && U.ofPlace(undefined, undefined, set5) === ` de ${set5.name}` && JSON.stringify(S.urbAcc || {}) === acc0,
     `${set5.name} (nível ${set5.tier}): «uma casa${w}»; ${small ? `${small.name} (nível ${small.tier || 0}): «uma casa${ws}»` : 'nenhuma vila neste mundo'}; sem lugar: «${U.ofPlace(undefined, undefined, set5).trim()}»`);
+}
+
+// ---------------------------------------------------------------- b6
+if (on('b6')) {
+  // a prisoner in his cell, every step of the world: the hand of the proof sentences a free grown-up of a town with a jail
+  // and asks an errand of him — the game's own door (Cr.keeps) gives him the cell
+  const jail = [...S.buildings.values()].filter(b => b.type === 'cadeia' && b.built && S.settlements.get(b.set)).sort((a, b) => a.id - b.id)[0] || null;
+  const free = v => v.age >= 18 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !Cr.law(v) && !(S.avatar && S.avatar.id === v.id) && !(v.task && v.task.pri >= 3);
+  const folk = jail ? [...S.villagers.values()].filter(v => v.set === jail.set && free(v)).sort((a, b) => a.id - b.id) : [];
+  const held = v => !!(v.task && (v.task.type === 'cela' || v.task.type === 'levado'));
+  const p = folk[0] || null, q = folk[1] || null, g = folk[2] || null;
+  let gaps = 0, steps = 0, inCell = false, walkGap = 0, walked = false, out = false, again = 0;
+  if (p && q && g) {
+    god(() => { p.jail = jail.id; p.jailUntil = S.day + 3; G.Vg.setTask(p, { type: 'wander', pri: 0 }); });
+    inCell = held(p) && p.task.type === 'cela'; let cell = p.task;
+    // (160 s of the world, a tenth at a time: the cell's task used to end at 70 s and at 140 s, and be given again at the
+    // prisoner's next choice — a part of a step later, so the tenth of a second seldom saw him with none: the task of the
+    // cell is the same one from the first step to the last)
+    for (let k = 0; k < 1600 && p.jail; k++) { M.viver(0.1); steps++; if (p.jail && !held(p)) gaps++; if (p.jail && p.task !== cell) { again++; cell = p.task; } }
+    // the walk to the jail whose guard is called away: the one led is in the cell at the next step, and stays
+    god(() => { q.jail = jail.id; q.jailUntil = S.day + 3; G.Vg.setTask(q, { type: 'levado', by: g.id, pri: 5.4, kind: 'levado' }); G.Vg.setTask(g, { type: 'levar', id: q.id, jail: jail.id, pri: 3.2, kind: 'levar', st: 0 }); });
+    M.viver(1); walked = !!(q.task && q.task.type === 'levado'); god(() => G.Vg.endTask(g));
+    for (let k = 0; k < 30 && q.jail; k++) { M.viver(0.1); if (q.jail && !held(q)) walkGap++; }
+    // the sentence served: out at the next step of the cell
+    god(() => { p.jailUntil = S.day; q.jailUntil = S.day; }); M.viver(1); out = !p.jail && !q.jail;
+  }
+  const nv = novas(base);
+  ok('b6 o preso está na cela a cada passo do mundo: a tarefa da cela não acaba aos 70 s, o guarda chamado no caminho deixa o preso na cela, e a pena cumprida solta (L-723)',
+    !!p && !!q && !!g && inCell && steps >= 1600 && gaps === 0 && again === 0 && walked && walkGap === 0 && out && !nv.length,
+    !jail ? 'nenhuma cadeia de pé neste mundo' : !(p && q && g) ? `só ${folk.length} adultos livres em ${S.settlements.get(jail.set).name}` :
+    `${p.name}, de ${S.settlements.get(jail.set).name}: ${inCell ? 'na cela pela porta do jogo' : 'NÃO foi para a cela'}; em ${steps} passos (160 s), ${gaps} sem a tarefa da cela, e a tarefa da cela ${again ? `ACABOU E FOI DADA DE NOVO ${again} vez(es)` : 'a mesma do começo ao fim'}; ${q.name}, levado por ${g.name}: ${walked ? 'a caminho' : 'NÃO ficou a caminho'}, e com o guarda chamado, ${walkGap} passo(s) sem a cela; a pena cumprida: ${out ? 'os dois soltos' : 'NÃO soltos'}${nv.length ? ' · o verificador: ' + nv.slice(0, 2).join(' · ') : ''}`);
 }
 
 ok('nenhum erro', M.limpo(), M.limpo() ? 'nenhum erro de módulo, nenhum aviso' : JSON.stringify(M.erros()).slice(0, 300));

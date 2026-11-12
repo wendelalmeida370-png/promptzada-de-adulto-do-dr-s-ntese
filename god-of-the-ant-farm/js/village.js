@@ -1638,6 +1638,11 @@
       if (v.captive) { v.role = 'cativo'; continue; }
       pop++;
       const prev = v.role;
+      // (at a load the roles of the ages come back as they were saved, like the trades: a birthday between two dealings is the
+      // next dealing's, four seconds on — a boy of sixteen saved a child came back from the save a woodcutter, with the wood
+      // at his door, and one of sixty-two would leave his trade at the load: L-724. Only a role that is none of the game's is
+      // mended here)
+      if (keep && (prev === 'bebe' || prev === 'crianca' || prev === 'anciao' || WORK_ROLES.includes(prev))) { if (WORK_ROLES.includes(prev) && !gone(v)) adults.push(v); continue; }
       if (v.age < 2) v.role = 'bebe';
       else if (v.age < 16) v.role = 'crianca';
       else if (v.age >= 62) { v.role = 'anciao'; if (v.roleBack) v.roleBack = null; if (prev !== 'anciao' && G.Life) G.Life.onRole(v, prev); } // (the elder goes back to no trade)

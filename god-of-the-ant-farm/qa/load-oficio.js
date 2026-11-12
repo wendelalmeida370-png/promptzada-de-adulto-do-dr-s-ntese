@@ -9,7 +9,9 @@
 //    sem ele (quem redistribui é o passo); o3 um ofício que não existe mais, no save, é consertado no load, e só ele muda;
 //    o4 o recém-nascido nasce bebê: o parto dá 'bebe' na hora, e o save e o load devolvem o bebê como estava; o5 a criança
 //    criada aos cinco anos já é 'crianca' (L-630: nascia sem papel, o mundo dava o de bebê na repartição seguinte e o load
-//    na hora — o papel do bebê mudava no save); e o verificador limpo, nenhum erro.
+//    na hora — o papel do bebê mudava no save); o6 o aniversário entre duas repartições (L-724): quem faz dezesseis, sessenta e
+//    dois ou dois anos um instante antes do save volta do load com o papel que tinha — o primeiro ofício, o descanso do
+//    ancião e o papel de criança são do passo do mundo, quatro segundos depois; e o verificador limpo, nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const world = process.argv[2] || 'cidade';
@@ -95,6 +97,24 @@ const d0 = Math.max(...wolves.map(w => G.dist(w.x, w.y, town.cx, town.cy)));
   const w = S().villagers.get(v.id); const others = [...S().villagers.values()].filter(q => q.id !== v.id && before.get(q.id) !== q.role);
   ok('o3 um ofício que não existe mais, no save, é consertado no load', !!w && !!w.role && w.role !== 'oficio-que-nao-existe' && !others.length,
     `${v.name}#${v.id}: «oficio-que-nao-existe» no save → «${w ? w.role : '-'}» no load; os outros que mudaram: ${others.length ? others.slice(0, 3).map(q => `${q.name} ${before.get(q.id)}→${q.role}`).join(', ') : 'ninguém'}`);
+}
+// o6: the birthdays between two dealings (L-724) — a child who turns sixteen, a hand who turns sixty-two and a baby who turns
+// two, a moment before the save (the hand of the proof moves the ages past the mark, as the time does): the load gives each
+// back as saved and writes no change of trade; the world's own dealing, four seconds on, gives the first trade, the elder's
+// rest and the child's role
+{ settle(); const free = v => !v.captive && !v.aboard && !v.jail && S().settlements.has(v.set) && !(S().avatar && S().avatar.id === v.id);
+  const all = [...S().villagers.values()].filter(free); const by = (f, g) => all.filter(f).sort((a, b) => g(b) - g(a) || a.id - b.id)[0] || null;
+  const kid = by(v => v.role === 'crianca' && v.age >= 10, v => v.age), old = by(v => v.age >= 40 && v.age < 62 && v.role && !['anciao', 'crianca', 'bebe', 'cativo'].includes(v.role) && !G.Naval.away(v), v => v.age), baby = by(v => v.role === 'bebe', v => v.age);
+  if (!kid || !old) ok('o6 o aniversário entre duas repartições: o load devolve o papel como foi salvo', false, `precondição: ${kid ? '' : 'nenhuma criança de dez anos ou mais; '}${old ? '' : 'nenhum adulto de quarenta ou mais num ofício'}`);
+  else {
+    const ids = [kid.id, old.id].concat(baby ? [baby.id] : []); const was = ids.map(id => S().villagers.get(id).role);
+    god(() => { kid.age = 16.01; old.age = 62.01; if (baby) baby.age = 2.01; });
+    const before = roles(); M.salvarCarregar(); const after = roles(); const at = ids.map(id => S().villagers.get(id).role); const logged = G.Village.tradeLog.length;
+    live(6); const then = ids.map(id => S().villagers.get(id).role);
+    const first = then[0] && !['crianca', 'bebe', 'anciao', 'cativo'].includes(then[0]);
+    ok('o6 o aniversário entre duas repartições: o load devolve o papel como foi salvo', before === after && logged === 0 && first && then[1] === 'anciao' && (!baby || then[2] === 'crianca'),
+      `${kid.name}#${kid.id} (16 anos feitos, salvo «${was[0]}»), ${old.name}#${old.id} (62 feitos, salvo «${was[1]}»)${baby ? ` e ${baby.name}#${baby.id} (2 feitos, salvo «${was[2]}»)` : ''}: no load ${at.map(r => `«${r}»`).join(', ')}${before === after ? ' — ninguém mudou de papel no save' : ' — O SAVE MUDOU PAPÉIS'}, ${logged} troca(s) escrita(s) pelo load; seis segundos depois, pelo passo do mundo: ${then.map(r => `«${r}»`).join(', ')}`);
+  }
 }
 const e = M.erros(); const mods = Object.keys(e.mod);
 console.log(`${mods.length || e.console.length ? 'FALHOU' : 'PASSOU'} | load-oficio erros | módulos: ${mods.join(', ') || 'nenhum'}; console: ${e.console.slice(0, 3).join(' · ') || 'nada'}`);
