@@ -606,6 +606,27 @@ for (const f of files) if (f !== 'village.js') src[f].forEach((l, k) => { const 
     if (/pickRoleForList/.test(c)) fails.push(`o ofício que fica: ${f}:${k + 1} chama pickRoleForList, que não existe mais (D-212): ${l.trim().slice(0, 110)}`);
     if (f === 'village.js') return; const m = c.match(/\.role\s*=\s*'([a-z_]+)'/); if (!m || m[1] === 'cativo' || /BDEF\.[A-Za-z_]+\.role\s*=/.test(c)) return;
     if (!((f === 'economy.js' && m[1] === 'contrabandista') || (f === 'miracles.js' && m[1] === 'guerreiro'))) fails.push(`o ofício que fica: ${f}:${k + 1} dá um ofício a uma pessoa — só o repartidor (village.js), o mercado clandestino e a mão do deus (D-212): ${l.trim().slice(0, 110)}`); }); }
+// 79. "a conversa da praça é do act-lazer.js, e a vontade dela não sorteia" (D-225, D-226): a tarefa 'praca' só o
+// js/act-lazer.js dá (a escolha de cada um — G.Praca.go, só do start do js/villagers.js — e o gancho do save dele); e no
+// js/act-lazer.js, do bloco «the plaza at the end of the afternoon» até o Pr.taskText, nenhuma chamada ao acaso do mundo nem
+// ao do que só se vê: a sorte do dia, a hora e o lugar de cada um são o G.hash da pessoa e do dia
+for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (f !== 'act-lazer.js' && /type:\s*'praca'/.test(c)) fails.push(`praca: ${f}:${k + 1} dá a conversa da praça fora de act-lazer.js (D-225): ${l.trim().slice(0, 110)}`);
+  if (f !== 'villagers.js' && /\bPraca\.go\s*\(/.test(c)) fails.push(`praca: ${f}:${k + 1} manda alguém à praça fora da escolha de cada um (o start de villagers.js — D-225): ${l.trim().slice(0, 110)}`); });
+{ const f = 'act-lazer.js'; const L = src[f] || []; const i0 = L.findIndex(l => l.includes('the plaza at the end of the afternoon (D-225)')), i1 = L.findIndex(l => l.includes('Pr.taskText = function'));
+  if (i0 < 0 || i1 < i0) fails.push(`praca: ${f} — não achei o bloco da vontade da praça: a regra 79 não tem o que conferir`);
+  else for (let k = i0; k < i1; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(/.test(c)) fails.push(`praca: ${f}:${k + 1} sorteia dentro da vontade da praça (a sorte do dia é o G.hash da pessoa e do dia — D-225): ${L[k].trim().slice(0, 110)}`); } }
+// 80. "o banho tem a sua chave, e o posto do foguista segura" (D-227, D-228): a chave «banho» da vida do bairro só o
+// js/act-servicos.js nota (a entrada nos banhos, onde ela se fecha), e ele não nota «noite» — o banho de dia não é noite; a
+// água da casa pergunta ao posto antes de levar alguém (js/life.js: G.Termas.onDuty), e o posto é a perna da operação do
+// foguista (A.hooks.leg, no js/act-servicos.js)
+for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (f !== 'act-servicos.js' && /Urban\.note(B)?\s*\([^)]*'banho'/.test(c)) fails.push(`banho: ${f}:${k + 1} nota a chave «banho» fora de act-servicos.js (D-228): ${l.trim().slice(0, 110)}`);
+  if (f === 'act-servicos.js' && /Urban\.note(B)?\s*\([^)]*'noite'/.test(c)) fails.push(`banho: ${f}:${k + 1} conta o banho como «noite» (a chave dele é «banho» — D-228): ${l.trim().slice(0, 110)}`); });
+if (!(src['life.js'] || []).some(l => /Termas\.onDuty\(v\)\)\s*continue;/.test(l))) fails.push('posto: life.js — a escolha de quem busca a água da casa não pergunta ao posto do foguista (G.Termas.onDuty — D-227)');
+if (!(src['act-servicos.js'] || []).some(l => /A\.hooks\.leg\.push\(/.test(l) && /Te\.onDuty\(v\)/.test(l))) fails.push('posto: act-servicos.js — o posto do foguista não é perna da operação dele (A.hooks.leg — D-227)');
+// (e o passeio vai aos banhos pela porta dele — G.Termas.stroll: com tempo e com lugar, T-919 —, nunca pela das provas)
+(src['city.js'] || []).forEach((l, k) => { if (/Termas\.visit\s*\(/.test(l.replace(/(^|\s)\/\/\s.*$/, ''))) fails.push(`passeio: city.js:${k + 1} manda aos banhos pela porta G.Termas.visit, e não pela do passeio (G.Termas.stroll — T-919): ${l.trim().slice(0, 110)}`); });
 // 81. "quem escolhe o sítio de uma cidade nova pergunta ao V.keptNear" (D-232): nenhuma cidade nasce a menos de V.RES_CLEAR
 // casas de uma capital que guarda campo para uma obra grande. Os arquivos que fundam uma cidade num sítio escolhido — o
 // village.js (a expansão por terra), o naval.js (a colônia), o expeditions.js (a expedição), o war.js (o povo que se separa) —
