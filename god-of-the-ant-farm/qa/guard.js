@@ -552,7 +552,16 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (f !== 'act-servicos.js' && f !== 'save.js' && /\.bathDay\s*=[^=]/.test(c)) fails.push(`freguesia: ${f}:${k + 1} escreve o dia do banho de alguém fora de act-servicos.js (D-200): ${l.trim().slice(0, 110)}`);
   if (f !== 'act-lazer.js' && f !== 'save.js' && /\.readDay\s*=[^=]/.test(c)) fails.push(`freguesia: ${f}:${k + 1} escreve o dia da leitura de alguém fora de act-lazer.js (D-201): ${l.trim().slice(0, 110)}`);
   if (f !== 'villagers.js' && /\b(Termas|Biblioteca)\.go\s*\(/.test(c)) fails.push(`freguesia: ${f}:${k + 1} manda alguém aos banhos ou à biblioteca fora da escolha de cada um (o start de villagers.js — D-200): ${l.trim().slice(0, 110)}`); });
-// (as regras 73 a 76 estão guardadas para o ofício que fica e a obra grande)
+// (as regras 73 e 74 estão guardadas para o ofício que fica)
+// 75. "as portas do planejador" (T-767, D-217): G.Village.planNow — o olhar do planejador agora — só as provas e o modo
+// desenvolvedor chamam, nada do mundo; e só o village.js aplaina um lote (V.levelLot, de dentro do V.startProject). (O
+// G.Space.planNow, a planta feita na hora, é outra porta e fica fora do padrão.)
+for (const f of files) if (f !== 'village.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if ((f !== 'dev.js' && /\b(Village|V)\.planNow\s*\(/.test(c)) || /\blevelLot\s*\(/.test(c)) fails.push(`planejador: ${f}:${k + 1} chama uma porta do planejador (V.planNow é das provas e do modo desenvolvedor, T-767; V.levelLot é do village.js, D-217): ${l.trim().slice(0, 110)}`); });
+// 76. "a carroça da obra é do city.js" (D-215): só o city.js cria uma carroça de obra (Ci.workCart) e só ele escreve o
+// relógio dela na cidade (set.cartT, set.cartNo)
+for (const f of files) if (f !== 'city.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.cart(T|No)\s*(=(?!=)|-=|\+=)/.test(c) || /\bworkCart\s*\(/.test(c)) fails.push(`carroça da obra: ${f}:${k + 1} mexe na carroça da obra grande fora do city.js (D-215): ${l.trim().slice(0, 110)}`); });
 // 71. "os aposentos da sede têm uma porta só" (D-205): as camas da sede de quem governa (BDEF.aposentos) só o js/court.js dá e
 // só o js/village.js lê (V.bedsOf: as camas de um prédio onde uma casa mora); quem quer saber se um prédio vale para morar
 // pergunta a V.livable, se guarda como casa, a V.bedsOf — e as portas das casas da cidade continuam lendo BDEF.housing

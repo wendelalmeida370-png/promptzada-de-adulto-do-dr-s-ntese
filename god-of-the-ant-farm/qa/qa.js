@@ -1426,6 +1426,13 @@
       if (!fin(b.brick.n) || b.brick.n < -EPS) { add('oficio', 1, `${b.type}#${b.id}: tijolo da obra ${b.brick.n}`); continue; }
       if (!b.need || (b.need[k] || 0) > b.brick.n + EPS) add('oficio', 2, `${b.type}#${b.id}: a obra pede ${b.need ? b.need[k] : '?'} de ${k}, trocou ${b.brick.n}`);
       if (b.need && (b.need.stone || 0) < -EPS) add('oficio', 1, `${b.type}#${b.id}: a obra pede pedra negativa (${b.need.stone})`);
+      // (no work waits on a brick that does not come: the new day's rule — village.js, brickBack — sends back to stone the
+      // one no brick has reached for twice its wait, V.BRICK_WAIT; one it looked at and left waiting past that is a rule
+      // broken, L-720. b.brick.seen: the day the rule last left it waiting)
+      if (G.Village.BRICK_WAIT && b.brick.seen !== undefined && b.need) {
+        const lack = (b.need[k] || 0) - ((b.incoming && b.incoming[k]) || 0); const since = Math.max(b.brick.day || 0, b.brick.got || 0);
+        if (lack > EPS && b.brick.seen - since >= 2 * G.Village.BRICK_WAIT) add('oficio', 2, `${b.type}#${b.id}: espera ${lack} de ${k} há ${b.brick.seen - since} dias sem que um tijolo lhe chegue, e a regra do dia a deixou esperando (L-720)`);
+      }
       // (the brick takes the place of stone one for one; a material traded on the way, L-416, changes the bill by its trade; the
       // bill of the building's step — G.Escala.billOf, D-106 —, not its type's: a bigger step's is bigger, L-535)
       if (def && G.Village.bill) { let a = 0, z = 0; const bill = G.Village.bill(b); const cost = G.Escala ? G.Escala.billOf(b).cost : def.cost; for (const q in bill) a += bill[q] || 0; for (const q in cost) z += cost[q] || 0; for (const q in b.troca || {}) z += b.troca[q] || 0; if (Math.abs(a - z) > EPS) add('oficio', 2, `${b.type}#${b.id}: a conta da obra (${a}) não é a do degrau (${z})`); }
@@ -2280,6 +2287,52 @@
     }
   };
   QA.more.push(rule); QA.freguesia = rule;
+})();
+  // ---- qa/canteiro-inv.js ----
+// canteiro-inv: as regras do verificador para a carroça da obra grande (Bairros Vivos, o agente M, 2ª rodada: D-215) — carregado
+// depois do qa/qa.js (QA.more), como o degraus-inv.js; o líder o junta (qa/junta-inv.js). Lê as carroças e as obras; nenhuma
+// pergunta muda o mundo.
+(function () {
+  if (!window.QA || !QA.more) return;
+  QA.more.push(function (add, s) {
+    const Ci = G.City; if (!Ci || !Ci.workCart) return;
+    const aCaminho = new Map();
+    for (const c of s.carts || []) {
+      if (!c.obra) continue;
+      // ---- a great work's cart is no road's: its own way, one material, a load of WORK_LOAD at most
+      if (c.route) add('canteiro', 2, `a carroça #${c.id} é de uma obra (#${c.obra}) e de uma rota (#${c.route})`);
+      if (!Array.isArray(c.pts) || c.pts.length < 2) add('canteiro', 2, `a carroça da obra #${c.id} não tem caminho`);
+      const L = c.back ? c.ret : c.goods; const n = L ? L.n || 0 : 0;
+      if (n > Ci.WORK_LOAD + 1e-6) add('canteiro', 2, `a carroça da obra #${c.id} leva ${n} de ${L.k} (mais que ${Ci.WORK_LOAD})`);
+      if (!c.back && c.ret && c.ret.n > 1e-6) add('canteiro', 2, `a carroça da obra #${c.id}, de ida, com carga de volta`);
+      if (c.back && c.goods && c.goods.n > 1e-6) add('canteiro', 2, `a carroça da obra #${c.id}, de volta, com carga de ida`);
+      if (!c.back) aCaminho.set(c.obra, (aCaminho.get(c.obra) || 0) + 1);
+    }
+    for (const [id, n] of aCaminho) if (n > Ci.WORK_CARTS) add('canteiro', 2, `${n} carroças a caminho da obra #${id} (no máximo ${Ci.WORK_CARTS})`);
+  });
+})();
+  // ---- qa/aterro-inv.js ----
+// aterro-inv: as regras do verificador para o chão aplainado da obra grande (D-217) e a renda média de pedra (D-216) — Bairros
+// Vivos, o agente M, 2ª rodada. Carregado depois do qa/qa.js (QA.more), como o degraus-inv.js; o líder o junta
+// (qa/junta-inv.js). Lê os prédios e os povos; nenhuma pergunta muda o mundo.
+(function () {
+  if (!window.QA || !QA.more) return;
+  QA.more.push(function (add, s) {
+    const V = G.Village, Es = G.Escala; if (!V || !V.levelLot || !Es) return;
+    const pub = t => !!G.BDEF[t] && (!!G.BDEF[t].civic || t === 'temple' || t === 'monument');
+    // ---- the earth a work's lot had moved: a count of levels, on a public work of a bigger step alone (a ruin keeps its past)
+    for (const b of s.buildings.values()) {
+      if (b.terra === undefined || b.terra === null || b.type === 'ruin') continue;
+      if (!(b.terra > 0) || !isFinite(b.terra)) add('aterro', 2, `${b.type}#${b.id}: a terra aplainada da obra é ${b.terra}`);
+      else if (!pub(b.type) || b.w === Es.n0(b.type)) add('aterro', 2, `${b.type}#${b.id} (${b.w}×${b.h}) tem terra aplainada (${b.terra}) e não é um degrau maior de obra pública`);
+    }
+    // ---- the people's stone income: [the day, its stone, the day before's, the day the mean is brought up to, the mean]
+    for (const f of s.factions.values()) {
+      const p = f.pedra; if (!p) continue;
+      if (!Array.isArray(p) || !(p[0] <= s.day) || !(p[1] >= 0) || !(p[2] >= 0)) { add('aterro', 2, `${f.name}: a conta da renda de pedra é ${JSON.stringify(p)} no dia ${s.day}`); continue; }
+      if (p[3] !== undefined && p[3] !== null && (!(p[3] <= s.day) || !(p[4] >= 0) || !isFinite(p[4]))) add('aterro', 2, `${f.name}: a média da renda de pedra é ${JSON.stringify(p.slice(3))} no dia ${s.day}`);
+    }
+  });
 })();
   // ==== fim das invariantes dos sistemas novos ====
   // (the executions a load keeps: one in its aftermath, or with nobody left to execute, is over — the load of justice.js drops it,

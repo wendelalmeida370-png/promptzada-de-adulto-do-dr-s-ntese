@@ -160,6 +160,13 @@
       if (!fin(b.brick.n) || b.brick.n < -EPS) { add('oficio', 1, `${b.type}#${b.id}: tijolo da obra ${b.brick.n}`); continue; }
       if (!b.need || (b.need[k] || 0) > b.brick.n + EPS) add('oficio', 2, `${b.type}#${b.id}: a obra pede ${b.need ? b.need[k] : '?'} de ${k}, trocou ${b.brick.n}`);
       if (b.need && (b.need.stone || 0) < -EPS) add('oficio', 1, `${b.type}#${b.id}: a obra pede pedra negativa (${b.need.stone})`);
+      // (no work waits on a brick that does not come: the new day's rule — village.js, brickBack — sends back to stone the
+      // one no brick has reached for twice its wait, V.BRICK_WAIT; one it looked at and left waiting past that is a rule
+      // broken, L-720. b.brick.seen: the day the rule last left it waiting)
+      if (G.Village.BRICK_WAIT && b.brick.seen !== undefined && b.need) {
+        const lack = (b.need[k] || 0) - ((b.incoming && b.incoming[k]) || 0); const since = Math.max(b.brick.day || 0, b.brick.got || 0);
+        if (lack > EPS && b.brick.seen - since >= 2 * G.Village.BRICK_WAIT) add('oficio', 2, `${b.type}#${b.id}: espera ${lack} de ${k} há ${b.brick.seen - since} dias sem que um tijolo lhe chegue, e a regra do dia a deixou esperando (L-720)`);
+      }
       // (the brick takes the place of stone one for one; a material traded on the way, L-416, changes the bill by its trade; the
       // bill of the building's step — G.Escala.billOf, D-106 —, not its type's: a bigger step's is bigger, L-535)
       if (def && G.Village.bill) { let a = 0, z = 0; const bill = G.Village.bill(b); const cost = G.Escala ? G.Escala.billOf(b).cost : def.cost; for (const q in bill) a += bill[q] || 0; for (const q in cost) z += cost[q] || 0; for (const q in b.troca || {}) z += b.troca[q] || 0; if (Math.abs(a - z) > EPS) add('oficio', 2, `${b.type}#${b.id}: a conta da obra (${a}) não é a do degrau (${z})`); }
