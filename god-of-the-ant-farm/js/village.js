@@ -1472,6 +1472,9 @@
   function took(v, from, why, n) {
     if (v.roleBack && v.roleBack === v.role) v.roleBack = null; // (back to its own: the days in it still count)
     else if (PULL[why]) { if (!v.roleBack) v.roleBack = from; } // (pulled: the trade left is kept, and its days)
+    // (one pulled, sent on to a third trade by the need that lasted — his own had no room, and the emergency's trade let him
+    // go —: he still goes back to his own first; his days start over, and he is not sent on again before V.TRADE_MIN of them)
+    else if (v.roleBack && why === 'falta') v.roleDay = G.S.day;
     // (a trade taken for good: its days start today — a first trade's V.TRADE_MIN days back: it was the instant's, and the
     // young are the first to go where the town comes to ask)
     else { v.roleBack = null; v.roleDay = G.S.day - (why === 'novo' ? V.TRADE_MIN : 0); }
@@ -1581,13 +1584,15 @@
     const mem = set.ofm || (keep ? null : (set.ofm = {}));
     if (!keep) { const dt = el > 0 ? el : 4, kk = dt / (dt + V.TRADE_TAU * G.DAY_LEN); for (const r of WORK_ROLES) { const m = mem[r]; mem[r] = m === undefined || Math.abs(want[r] - m) < 1e-6 ? want[r] : m + (want[r] - m) * kk; } }
     // (what passes over it, D-211: with less than a day of bread, at war, or with a great work that has its turn, the trades that
-    // feed, the soldiers and the builders ask what the instant asks, at once)
+    // feed, the soldiers and the builders ask what the instant asks, at once — up and down: with the memory held at the most
+    // the instant had asked, an army kept the soldiers of its best hour through the weariness and the hunger that send them
+    // home, and six worlds of forty years had 414 dead of war where they had 287)
     const urgent = {};
     if (!keep) {
       if (st.food < totalPop * V.TRADE_BREAD) { urgent.coletor = urgent.agricultor = 1; if (G.Eco) for (const r in G.Eco.FOOD_TRADES) if (want[r] !== undefined) urgent[r] = 1; }
       if (G.Fac.enemiesOf(fac.id).length) urgent.guerreiro = 1;
       if (V.keeps(set) > 0) urgent.construtor = 1;
-      for (const r in urgent) if (want[r] > mem[r]) mem[r] = want[r];
+      for (const r in urgent) mem[r] = want[r];
     }
     const ask = r => (mem && mem[r] !== undefined ? mem[r] : want[r]);
     // current counts
@@ -1636,10 +1641,10 @@
       if (works.length) uncovered();
       let v = null, from = null, to = null, why = null;
       // (the emergencies first, D-211: by the instant's count, from the trade the instant has most to spare, as the dealing
-      // always did — never from another emergency's trade)
+      // always did — another emergency's too: a hungry people sends its soldiers back to the fields)
       const call = Object.keys(urgent).filter(r => short(r) >= 1).sort((a, b) => short(b) - short(a));
       if (call.length) {
-        const sur = WORK_ROLES.filter(r => !urgent[r] && short(r) <= -1).sort((a, b) => short(a) - short(b));
+        const sur = WORK_ROLES.filter(r => short(r) <= -1).sort((a, b) => short(a) - short(b));
         for (const r of call) { for (const q of sur) { v = pickHand(have[q], r, fits); if (v) { from = q; to = r; break; } } if (v) break; }
         if (v) why = v.roleBack === to ? 'volta' : to === 'guerreiro' ? 'guerra' : to === 'construtor' ? 'obra' : 'fome';
       }
