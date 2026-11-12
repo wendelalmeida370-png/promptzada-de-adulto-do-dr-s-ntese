@@ -70,6 +70,11 @@ console.log(`${world}: ${V.buildName(P)} #${P.id} de ${town().name} (${(G.Fac.ge
 function ready(b) {
   const f = G.Fac.get(V.facOfSet(b.set)); if (D.free('f:' + f.id, 'wood') < 40) D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true });
   S().time = Te.horas(b).abre - 0.02; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
+  // (the stoker's own day in order before the baths open, by the test's hand, as the lazer.js leaves its far actor's: the
+  // house's water in the jar and the stoker fed — the house's water (a chore of 1,05, until 0,55) took Nezahualcóyotl from
+  // the opening to 0,43, then his hunger, then the theatre's doors: the furnace was never lit, «lenha 0». The case is the
+  // baths' day with their stoker at them, not who else calls him that morning. T-810)
+  for (const v of S().villagers.values()) if (v.job === b.id && v.role === 'foguista') { const h = S().buildings.get(v.home); if (h) h.water = 1; v.hunger = Math.min(v.hunger, 20); }
   return f;
 }
 // (the wood the stoker goes for is his from the step he sets out — held in the store, L-400: in the generation 7's Argos the

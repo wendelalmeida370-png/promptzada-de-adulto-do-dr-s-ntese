@@ -295,7 +295,10 @@ else {
       ok('7. senta: o mundo marca o lugar, o corpo nele, virado como o lugar', !!u && u.it === tp.item && u.q === tp.q && !!sn && st().loco === 'seat' && onIt && Math.abs(dy) < 0.05 && !!mine && mine.item === tp.item, `${s1.best ? s1.best.label : s1.why} (${tp.use} em ${tp.it.kind}${waited7 ? `, depois de ${waited7} s esperando a casa soltar o lugar` : ''}); o mundo: ${u ? u.use + ' ' + u.it : 'nada'}; ${st().loco}, no ponto ${onIt}, virado a ${dy.toFixed(2)} rad; o repartidor: ${mine ? mine.use : 'nada'}`);
       // (the hands at the place: a gesture with no walk keeps the body seated, in the seated state of a seated gesture)
       G.Avatar.act({ anim: 'eat', dur: 0.8, lock: true }); for (let k = 0; k < 8; k++) frame(); const kept = st().loco === 'seat', anim = st().anim; for (let k = 0; k < 30; k++) frame();
-      ok('7. as mãos no lugar: o corpo segue nele', kept && anim === 'eat' && st().loco === 'seat' && !!G.Possess.useOf(), `durante: ${kept ? 'sentado' : 'de pé'} (${anim}); depois: ${st().loco}`);
+      // (seated on the ground — round the mat one eats at, by the fire on the ground: the catalogue's `chao`, D-196 —, the gesture
+      // is the one of the ground, `eatg`; on a seat, `eat` — T-894)
+      const gnd = !!(G.Interiors.ITEMS[tp.it.kind] || {}).chao;
+      ok('7. as mãos no lugar: o corpo segue nele', kept && anim === (gnd ? 'eatg' : 'eat') && st().loco === 'seat' && !!G.Possess.useOf(), `durante: ${kept ? 'sentado' : 'de pé'} (${anim}${gnd ? ', no chão: ' + tp.it.kind : ''}); depois: ${st().loco}`);
       // (up: the player walks — eased back to where it got on, on its feet, the place let go in the world's step)
       const at = [b.x * TL + tp.at[0], b.y * TL + tp.at[1]]; IN.camYaw = st().yaw + Math.PI; IN.mz = 1; frame(); stop(); for (let k = 0; k < 30; k++) frame(); check();
       const upAt = Math.hypot(st().X - at[0], st().Z - at[1]);

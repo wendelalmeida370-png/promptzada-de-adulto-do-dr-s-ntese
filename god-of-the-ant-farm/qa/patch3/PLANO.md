@@ -347,7 +347,20 @@ os mundos prontos de novo, a regressão inteira e o relatório.
 - **Achado pelo líder ao medir, na junção das pontes: ninguém vai aos banhos** (L-717, aberto): um pedido de banho em
   cinco dias nas quatro cidades com banhos da metrópole — o passeio pela cidade só é pedido quando o ofício não acha
   trabalho.
-- **Em curso, a terceira leva (cinco frentes):** **a casa por dentro** (G; T-403, T-436, T-446); **a freguesia** (F; L-717:
+- **Juntada, da terceira leva: a casa por dentro** (G; D-196 a D-198, L-890 a L-893; fecha o T-403, o T-436 e o T-446):
+  toda casa tem o seu núcleo — o fogo e onde a família come junta (a mesa com os bancos, o banco de comer, a esteira de
+  comer, o fogo de chão da cabana redonda), guardados antes das camas —; o encaixe de cada peça pergunta ao corpo
+  (`P.bodyFits`); o save diz a gramática das plantas (`intG`, regra 67) e um save de antes tem os registros julgados ao
+  abrir; `qa/casa-dentro.js` prova nos quatro dados e na noite da cidade e da metrópole. Na junção, pelo líder: a
+  bancada curta da casa-oficina (L-893: a casca de longe volta a ser a da planta), o catálogo gerado de novo, e quatro
+  provas que julgavam o que o mundo de agora não promete (T-808 a T-811: o colo do bebê, o ator fora da cidade, a manhã do
+  foguista, a casa rica julgada depois da guerra). **Aberto do G:** T-892, T-893, T-895 (em quatro de cada cinco casas de
+  4 m o que cabe é o banco de dois lugares).
+- **Achado pelo líder ao fotografar as casas por dentro: a casa cheia que não esvazia** (L-718, aberto): em todo mundo
+  pronto há casas com o dobro ou o triplo da lotação (a pior: 22 numa casa de 6, ao lado de uma casa com cinco lugares
+  vagos), e a razão de quase todas as famílias é «falta dinheiro» — o casal na casa cheia dos parentes nunca junta o preço
+  de uma casa. É regra de economia e de moradia, com decisão de design: fica para uma frente própria.
+- **Em curso, a terceira leva (quatro frentes):** **a freguesia** (F; L-717:
   a vontade do banho e da leitura na escolha de cada um, a praça e o mercado como lugar de estar); **o governante no
   palácio** (R; T-765); **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a obra
   grande que anda e acha terra** (M, segunda rodada; T-760, T-761, T-767: o canteiro da obra longe, a terra das capitais
@@ -358,5 +371,5 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   cada frente juntada.
 - **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
   novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** juntar as frentes G, F, R, X e M2; depois o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
+- **A seguir:** juntar as frentes F, R, X e M2; depois a casa cheia que não esvazia (L-718), o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
   seis sementes da terra, o relatório).

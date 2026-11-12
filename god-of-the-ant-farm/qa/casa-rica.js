@@ -107,11 +107,20 @@ run('r3', () => {
   salva(); const dep = S.buildings.get(id);
   ok('r3c o save no meio da obra', foto(dep) === f0 && !!dep.encomenda && dep.encomenda.why === 'rica', `${dep ? Math.round(dep.progress * 100) + '% depois de 60 s; a mesma obra e a mesma encomenda depois do save' : 'SUMIU'}`);
   const n0 = S.ledgerN || 0; const set2 = S.settlements.get(set.id);
-  for (let y = 0; y < 3 && !(S.buildings.get(id) || {}).built; y++) { D.make('f:' + set2.fac, 'wood', 40, { code: 'teste' }); D.make('f:' + set2.fac, 'stone', 40, { code: 'teste' }); M.saltar(1); }
-  const b = S.buildings.get(id); const vv = S.villagers.get(v.id); const vivos = fam.map(i => S.villagers.get(i)).filter(m => m && !m.captive && m.set === set.id);
+  // (a mudança é julgada na hora em que a casa fica pronta: o salto vai de ano em ano, e no resto do ano a guerra pode levar
+  //  os pais — a casa fica então de ninguém, que órfão de menos de 16 não herda: T-811)
+  const daFam = () => fam.map(i => S.villagers.get(i)).filter(m => m && !m.captive && m.set === set.id);
+  let pronta = null; const c0 = G.Village.completeBuilding;
+  G.Village.completeBuilding = function (x) { const q = c0.apply(this, arguments); if (x && x.id === id && !pronta) { const L = daFam(); pronta = { n: L.length, moram: L.filter(m => m.home === id).length, enc: !!x.encomenda, dono: x.dono, daCasa: L.some(m => m.id === x.dono), custo: x.custo || 0 }; } return q; };
+  try { for (let y = 0; y < 3 && !(S.buildings.get(id) || {}).built; y++) { D.make('f:' + set2.fac, 'wood', 40, { code: 'teste' }); D.make('f:' + set2.fac, 'stone', 40, { code: 'teste' }); M.saltar(1); } } finally { G.Village.completeBuilding = c0; }
+  const b = S.buildings.get(id); const vv = S.villagers.get(v.id); const vivos = daFam();
   if (!ok('r3d a casa de pé, pelos construtores', !!b && b.built, b ? `${lado(b)}: ${b.built ? 'pronta' : Math.round(b.progress * 100) + '% em 3 anos'}` : 'a obra SUMIU')) return;
-  ok('r3e a mudança', vivos.length > 0 && vivos.every(m => m.home === id) && !b.encomenda && (!vv || b.dono === vv.id || vivos.some(m => m.id === b.dono)) && Math.abs((b.custo || 0) - price) < 0.01,
-    `${vivos.length} da família de ${fam.length} moram na casa rica; o dono #${b.dono}; o que a casa custou à família: ${b.custo}`);
+  ok('r3e a mudança', !!pronta && pronta.n > 0 && pronta.moram === pronta.n && !pronta.enc && pronta.daCasa && Math.abs(pronta.custo - price) < 0.01,
+    pronta ? `na hora em que a casa ficou pronta: ${pronta.moram} dos ${pronta.n} vivos da família de ${fam.length} moram nela; o dono #${pronta.dono}${pronta.daCasa ? ', da família' : ', DE FORA'}; o que a casa custou à família: ${pronta.custo}` : 'a casa ficou pronta SEM passar pela porta da cidade');
+  // (no fim do salto: quem está vivo mora nela; o dono é da família — ou ninguém, sem herdeiro crescido — e o custo vai com o dono)
+  const herd = vivos.some(m => m.id === b.dono);
+  ok('r3e2 a casa no fim do salto', vivos.every(m => m.home === id) && !b.encomenda && (herd ? Math.abs((b.custo || 0) - price) < 0.01 : !b.dono && !(b.custo || 0) && !vivos.some(m => m.age >= 16)),
+    `${vivos.length} da família de ${fam.length} vivos, todos nela; ${herd ? `o dono #${b.dono}, da família; custou ${b.custo}` : `de ninguém (o dono #${b.dono}, o custo ${b.custo || 0}): ${vv ? 'O DONO VIVO' : 'o dono morreu'} e ${vivos.some(m => m.age >= 16) ? 'HÁ herdeiro crescido' : 'nenhum dos vivos tem 16 anos'}`}`);
   const pago = D.ledger().filter(e => e[0] > n0 && e[3] === 'h:' + id && e[4] === 'f:' + set.fac && e[5] === 'moedas' && e[8] === 'obra-casa').reduce((s, e) => s + e[6], 0);
   ok('r3f o povo pago quando a casa fica de pé', Math.abs(pago - price) < 0.01, `${pago} moedas da obra para o tesouro do povo («obra-casa»), das ${price} postas de lado`);
   const velha = S.buildings.get(h0.id);
