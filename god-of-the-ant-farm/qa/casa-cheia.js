@@ -710,8 +710,10 @@ run('c18', () => {
   let b3 = a3.b; const id3 = b3.id; const gid = a3.g.map(m => m.id); vive(120, () => b3.built || V.delivered(b3).wood >= 3);
   const enc = JSON.stringify(b3.encomenda); salva(); b3 = S.buildings.get(id3);
   ok('c18i depois do load a cabana é a mesma', !!b3 && (b3.built || (JSON.stringify(b3.encomenda) === enc && b3.encomenda.mocos === 1 && b3.encomenda.maos === 1 && K.waiting(P(gid[0])) === b3)), b3 ? `${lado(b3)}: ${Math.round((b3.progress || 0) * 100)}%, a encomenda ${JSON.stringify(b3.encomenda)}` : 'a obra SUMIU');
-  S.time = 0.15; S.weather.storm = 0; const fora3 = new Set(); const t3 = vive(1400, () => dePe(b3), () => { if (b3.encomenda) for (const o of naObra(b3)) if (!gid.includes(o.id)) fora3.add(o.id); });
-  ok('c18j os moços acabam a cabana e mudam', dePe(b3) && !fora3.size && gid.map(P).filter(Boolean).every(m => m.home === b3.id), dePe(b3) ? `de pé ${t3} s depois do load${jaAmplia(b3)}; de fora deles na obra: ${fora3.size || 'ninguém'}; moram nela ${gid.map(P).filter(Boolean).filter(m => m.home === b3.id).length} de ${gid.map(P).filter(Boolean).length}` : `não ficou de pé (${Math.round((b3.progress || 0) * 100)}%)`);
+  // (the ruler of the c18b: the partner who came to live with one of them works on the hut and moves with them — K.ownHands,
+  // L-972; with the trade that stays, Mazatl, the husband of one of the two, was counted an outsider: T-835)
+  S.time = 0.15; S.weather.storm = 0; const fora3 = new Set(); const t3 = vive(1400, () => dePe(b3), () => { if (b3.encomenda) for (const o of naObra(b3)) if (!gid.includes(o.id) && !K.ownHands(b3, o)) fora3.add(o.id); });
+  ok('c18j os moços acabam a cabana e mudam', dePe(b3) && !fora3.size && gid.map(P).filter(Boolean).every(m => m.home === b3.id), dePe(b3) ? `de pé ${t3} s depois do load${jaAmplia(b3)}; de fora deles e dos pares deles na obra: ${fora3.size || 'ninguém'}; moram nela ${gid.map(P).filter(Boolean).filter(m => m.home === b3.id).length} de ${gid.map(P).filter(Boolean).length}` : `não ficou de pé (${Math.round((b3.progress || 0) * 100)}%)`);
   c = checa(); ok('c18k verificador', c.ok, c.txt);
   // (the god's body among them: the day never decides for it; the offer says the road; the body asks)
   const a4 = mocos(2, false) || mocos(2); if (!a4 || !a4.v) { ok('c18l o corpo entre os moços', false, dizM(a4)); return; }
