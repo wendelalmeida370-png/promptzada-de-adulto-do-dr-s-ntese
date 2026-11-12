@@ -1474,8 +1474,9 @@
     if (v.roleBack && v.roleBack === v.role) v.roleBack = null; // (back to its own: the days in it still count)
     else if (PULL[why]) { if (!v.roleBack) v.roleBack = from; } // (pulled: the trade left is kept, and its days)
     // (one pulled, sent on to a third trade by the need that lasted — his own had no room, and the emergency's trade let him
-    // go —: he still goes back to his own first; his days start over, and he is not sent on again before V.TRADE_MIN of them)
-    else if (v.roleBack && why === 'falta') v.roleDay = G.S.day;
+    // go —, or left with no trade by the war and given one anew: he still goes back to his own first; his days start over,
+    // and he is not sent on again before V.TRADE_MIN of them)
+    else if (v.roleBack && (why === 'falta' || why === 'novo')) v.roleDay = G.S.day - (why === 'novo' ? V.TRADE_MIN : 0);
     // (a trade taken for good: its days start today — a first trade's V.TRADE_MIN days back: it was the instant's, and the
     // young are the first to go where the town comes to ask)
     else { v.roleBack = null; v.roleDay = G.S.day - (why === 'novo' ? V.TRADE_MIN : 0); }
@@ -1584,15 +1585,16 @@
     for (const v of adults) { if (v.role) have[v.role].push(v); else none.push(v); }
     // (the need that lasts, D-210: the town's memory of what each trade asks comes a little closer to what the instant asks, by
     // the time since the last dealing — el; the salto deals half as often and each of its dealings counts double. A load keeps
-    // the memory as it was saved. A town with none yet starts from the trades its people have — a save of before: the first
-    // dealing of a saved world is not a dealing of everybody anew —, and a town in its founding day has no memory to speak of:
-    // every hand goes to what is missing, as it always did (the first huts of a new world waited a minute for their builders,
-    // and its people slept a night more in the open))
+    // the memory as it was saved; a town with none yet — a new one, a save of before — starts from the instant's (from the
+    // trades its people had, a world of before took the same two dozen changes of its first quarter of a day over its first two
+    // days: measured in the mega). And a town in its founding day has no memory to speak of: every hand goes to what is
+    // missing, as it always did (the first huts of a new world waited a minute for their builders, and its people slept a
+    // night more in the open))
     asked.set(set.id, want);
     const mem = set.ofm || (keep ? null : (set.ofm = {}));
     if (!keep) {
       const young = S.day - (set.founded || 0) < V.TRADE_NEW; const dt = el > 0 ? el : 4, kk = young ? 1 : dt / (dt + V.TRADE_TAU * G.DAY_LEN);
-      for (const r of WORK_ROLES) { const m = mem[r]; mem[r] = m === undefined ? (young ? want[r] : have[r].length) : Math.abs(want[r] - m) < 1e-6 ? want[r] : m + (want[r] - m) * kk; }
+      for (const r of WORK_ROLES) { const m = mem[r]; mem[r] = m === undefined ? want[r] : Math.abs(want[r] - m) < 1e-6 ? want[r] : m + (want[r] - m) * kk; }
     }
     // (what passes over it, D-211: with less than a day of bread, at war, or with a great work that has its turn, the trades that
     // feed, the soldiers and the builders ask what the instant asks, at once — up and down: with the memory held at the most
@@ -1664,12 +1666,16 @@
         // quarter of a hand by the memory, a hand by the instant — and the one he is in can let him go: a hand apart, not
         // V.TRADE_GAP; the pull was the instant's, and so is half of its undoing)
         const room = WORK_ROLES.filter(r => gap(r) >= 0.25 && short(r) >= 1).sort((a, b) => gap(b) - gap(a));
-        for (const r of room) { for (const q of gives) { if (gap(r) - gap(q) < 1) break; v = pickHand(have[q].filter(o => o.roleBack === r), r, fits, true); if (v) { from = q; to = r; break; } } if (v) break; }
-        // (then the post left empty — the smith dies, the jailer sails: the memory has the whole hand and so has the instant,
-        // and the trade the instant has most to spare gives one at once, if the memory does not ask more of it than it has.
-        // Its memory lets go of the hand with it: it would ask the hand back at the next blink of the instant)
+        // (and an emergency's trade with more hands than the instant asks lets any of them go so — the weary army its soldiers,
+        // the ones the war pulled first: by the half hand of the need that lasts three soldiers too many stood a day in arms)
+        for (const r of room) { for (const q of gives) { if (gap(r) - gap(q) < 1) break; v = pickHand(urgent[q] && short(q) <= -1 ? have[q] : have[q].filter(o => o.roleBack === r), r, fits, true); if (v) { from = q; to = r; break; } } if (v) break; }
+        // (then the post left empty — the only smith dies, the jailer sails: nobody left in the trade, the memory has the whole
+        // hand and so has the instant, and the trade the instant has most to spare gives one at once, if the memory does not
+        // ask more of it than it has. Its memory lets go of the hand with it: it would ask the hand back at the next blink of
+        // the instant. For a trade that still has hands the need has to last, as any other: with every whole hand missing
+        // asked at once the mega had a fifth more changes)
         if (!v) {
-          const empty = room.filter(r => gap(r) >= 0.95).sort((a, b) => (a === 'contrabandista') - (b === 'contrabandista') || gap(b) - gap(a));
+          const empty = room.filter(r => !have[r].length && gap(r) >= 0.95).sort((a, b) => (a === 'contrabandista') - (b === 'contrabandista') || gap(b) - gap(a));
           const spare = WORK_ROLES.filter(r => have[r].length && short(r) <= -1 && gap(r) <= 0).sort((a, b) => short(a) - short(b));
           for (const r of empty) { for (const q of spare) { v = pickHand(have[q], r, fits, true); if (v) { from = q; to = r; break; } } if (v) break; }
           if (v && mem) mem[from] = Math.max(0, mem[from] - 1);
