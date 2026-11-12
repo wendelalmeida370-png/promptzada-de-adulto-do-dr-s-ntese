@@ -409,11 +409,13 @@ run('m16', () => {
     const o = arma(false, q => { const L = K.court(q.r); return L.length === 6 && L.filter(v => v.age >= 18 && !v.partner && v.id !== q.r.id).length === 1; });
     if (!ok('m16a a obra', !!o, o ? `${o.cap.name}: a casa de ${o.r.name}: ${nomes(K.court(o.r))}; ${lado(o.b)}, 5 camas pela mão da prova` : 'sem povo com a casa de seis e um filho crescido solteiro')) return;
     const fam = K.court(o.r); const c = fam.find(v => v.age >= 18 && !v.partner && v.id !== o.r.id); const vem = fam.filter(v => v !== c);
-    sim(() => V.completeBuilding(o.b)); let dentro = c.home === o.b.id ? 1 : 0;
-    const naHora = todosEm(vem, o.b) && c.home === o.casa0.id;
+    const L0 = S.ledgerN || 0; sim(() => V.completeBuilding(o.b)); let dentro = c.home === o.b.id ? 1 : 0;
+    // (never in and out again: nothing of the seat's leaves it by a move at the entry)
+    const volta = livro(L0, e => e[8] === 'mudança' && e[3] === 'h:' + o.b.id).length;
+    const naHora = todosEm(vem, o.b) && c.home === o.casa0.id && !volta;
     for (let k = 0; k < 80; k++) { M.viver(0.1); if (c.home === o.b.id) dentro++; }
     ok('m16b na entrada, o crescido solteiro só entra havendo cama: fica na casa da família', naHora && !dentro && todosEm(vem, o.b) && c.home === o.casa0.id && o.casa0.dono && !o.casa0.aluga,
-      `na hora: ${vem.length} na sede e ${c.name} (${Math.floor(c.age)}) em ${lado(B(c.home))}; ${c.name} na sede em ${dentro} passos de 80; a casa da família: dono #${o.casa0.dono}, sem aluguel: ${!o.casa0.aluga}`);
+      `na hora: ${vem.length} na sede e ${c.name} (${Math.floor(c.age)}) em ${lado(B(c.home))}, ${volta} mudança(s) para fora da sede no livro; ${c.name} na sede em ${dentro} passos de 80; a casa da família: dono #${o.casa0.dono}, sem aluguel: ${!o.casa0.aluga}`);
     // (put in the seat by the proof's hand: one too many — the grown single one leaves again, for the family's house)
     B(c.home).res--; c.home = o.b.id; o.b.res++; M.viver(3);
     ok('m16c da sede cheia demais sai o crescido solteiro, para a casa da família', c.home === o.casa0.id && todosEm(vem, o.b), `${c.name} em ${lado(B(c.home))}; na sede: ${nomes(moram(o.b))}`);
