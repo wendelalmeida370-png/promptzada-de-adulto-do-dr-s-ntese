@@ -72,26 +72,49 @@ o piso 15), vida-bairro v6 (o dragão não deixou o bairro pobre) e o verificado
 abrigou-se da chuva o dia da prova: conferido com um rastro — ofício, posto e memória intactos), maos m10 (nenhuma viagem
 de uma cidade com caverna perto), casa-mercante k5.
 
-**RODANDO AGORA: a prova da borboleta** (`borboleta.sh 1 scratchpad/ag/X/borb1`): essas sete provas no jogo de ANTES
-(`b2b61f0`) com o acaso do mundo deslocado de um sorteio por passada do repartidor — uma prova que falha ali depende do acaso
-do futuro do mundo pronto, não da regra (o repartidor novo não sorteia mais: o acaso de todo mundo vivido muda). O resumo
-sai em `borb1/resumo.txt`. Para cada caso que passar na borboleta e falhar com a regra: procurar a causa na regra.
-**Depois: a fila B** (`fila-b.sh <jogo> scratchpad/ag/X/fila5 v5`): a economia com a regra final em dez sementes
-(`eco2/v5-<semente>.txt`; a tabela: `python3 tabela.py eco2 antes v5 103 7 2024 11 42 555 9 31 77 314`), as trocas num mundo
-do zero antes e depois (`fila5/mede-*-zero.txt`), os mundos prontos dez dias antes e depois (`fila-prontos/`,
-`fila5/pronto-depois-*.txt`) e as 32 sabotagens de novo (`sab-out/resumo.txt`). A economia medida até aqui (dez sementes,
-`eco2/tabela-v3.md`) é a da regra do commit `25b9f11`.
+**A prova da borboleta, lida** (`scratchpad/ag/X/borb1/resumo.txt`: as sete provas no jogo de ANTES, `b2b61f0`, com o acaso do
+mundo deslocado de um sorteio por passada do repartidor): **falham ali também** o fome (h18 e h18b — outros casos que o meu
+h13), o maos m10 (a mesma mensagem), o roupa r7 (a mesma: uma pessoa vestida diferente depois do save) e o casa-mercante k5 (e
+o k7) — dependem do acaso do futuro do mundo pronto, não da regra. **Passam ali** o termas, o degraus, o marinheiros m9 e o
+vida-bairro v6, que com a regra falham — olhados um a um, com rastro (cópias de depuração em `scratchpad/ag/X/copias/dbg*`):
+- *termas e1*: o foguista de Tenochtitlan está no ofício, no posto e na memória (1 pedido, 1 lembrado, nenhuma troca); passou
+  o dia da prova abrigado da chuva (tarefa `shelter`) — o tempo do mundo mudou com o acaso;
+- *degraus g2c2*: a obra grande (o teatro de Mênfis) já tinha recebido toda a pedra nos 120 s de antes (falta 0: `V.keeps`
+  0), e a prova não achou nenhum olhar «com a obra grande à espera» (pede três) — a turma fez o trabalho dela; o g2c (a
+  turma: 11 construtores de 71 adultos) passa;
+- *marinheiros m9*: a menor energia (13, o piso da prova é 15) é da líder da viagem, uma caçadora de 53 anos na ronda da
+  noite dos caçadores — nenhuma troca de ofício dela, ninguém de pé no cais;
+- *vida-bairro v6* (o bairro que enriquece e empobrece): **falha 4 de 4 com a regra** (e com o acaso deslocado de um e de dois
+  sorteios) e passa 2 de 2 no jogo de antes. Rastro dia a dia: o bairro escolhido (de Argos, de Mênfis, de Roma, conforme a
+  rodada) está numa cidade em guerra — metade das casas vazias desde o primeiro dia da chuva (vazia 0,51), a cidade cai de 35
+  adultos para 12 em quatro dias e muda de povo, e o chão do bairro se refaz a cada dia (17, 14, 23, 6, 10… casas) —: a
+  chuva de moedas e o dragão da prova não têm um bairro parado onde cair. **Fica aberto** (T-956): a guerra da metrópole da
+  geração 19 corre de outro jeito com a regra (o futuro do mundo pronto é outro), e pode ser que corra pior para as cidades
+  grandes — a medida dos mundos prontos vividos dez dias, antes e depois (em curso), diz a gente e os mortos de guerra.
+  O verificador dela (um preso sem tarefa num instante, S3) não se repetiu nas rodadas com o acaso deslocado.
+
+**As trocas num mundo do zero, antes e depois** (`scratchpad/ag/X/zero/`, semente 103, os anos 20 a 30 no salto, todas as
+trocas de ofício a ofício): antes 183 em 11 dias entre 76 adultos = 0,216 por adulto por dia (75 trocaram, 24 três vezes ou
+mais, 5 seis ou mais, o que mais 14); depois 126 entre 84 = 0,129 (76 trocaram, 13 três ou mais, nenhum seis, o que mais 5; 99
+pela necessidade, 20 pela guerra, 3 voltas, 7 idas e voltas). Um mundo novo de cidades pequenas troca menos que uma metrópole
+antes e ganha menos com a regra: o teto do x3 passou a 0,16 (três quartos de antes), e a prova passa (commit `407689f`).
+
+**RODANDO AGORA: a fila B** (`fila-b.sh <jogo> scratchpad/ag/X/fila6 v5`): a economia com a regra final em dez sementes
+(`eco2/v5-<semente>.txt`; a tabela: `python3 tabela.py eco2 antes v5 103 7 2024 11 42 555 9 31 77 314`), as trocas do zero
+de novo (`fila6/mede-*-zero.txt`) e os mundos prontos dez dias antes e depois (`fila-prontos/pronto-antes-*.txt`,
+`fila6/pronto-depois-*.txt`: a gente, os mortos por causa, a fome). **Depois: a fila C** (`fila-c.sh <jogo>
+scratchpad/ag/X/fila6`): as 32 sabotagens de novo com a regra final (`sab-out/resumo.txt`).
 **Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar.**
 
 **Falta (nesta ordem):**
-1. ler `borb1/resumo.txt` e fechar a conta das sete provas (acaso do mundo ou regra); consertar o que for da regra;
-2. o x3 (o teto com a medida de antes) e o x13 de novo; guard; commit;
-3. a fila B; ler; se a economia `v5` custar gente ou comida, ajustar;
-4. fechar este bloco: as seções 4 a 10 estão em `scratchpad/ag/X/bloco-final-4a10.md` (mais novo que o
-   `qa/patch3/bloco-X-fim-rascunho.md`) — faltam os números finais (ANTES_ZERO, DEPOIS_RESUMO, ECO_RESUMO, ECO_GUERRA,
-   ECO_FOME, PRONTO_RESUMO, X4_X5_RESUMO, ZERO_SALTO, TETO_ZERO_TXT, T840_DEPOIS, OUTRAS_PROVAS_NOTA); juntar tudo no
-   `bloco-X.md` e apagar o rascunho;
-5. o último commit (a árvore limpa) e o relatório final.
+1. ler a fila B: se a economia `v5` custar gente ou comida, ou a guerra dos mundos prontos matar mais que antes, ajustar e
+   medir de novo; senão, a fila C;
+2. fechar este bloco: as seções 4 a 10 estão em `scratchpad/ag/X/bloco-final-4a10.md` (cópia em
+   `qa/patch3/bloco-X-fim-rascunho.md`) — faltam os números finais (ANTES_ZERO = 0,22; DEPOIS_RESUMO; ECO_RESUMO; ECO_GUERRA;
+   ECO_FOME; PRONTO_RESUMO; X4_X5_RESUMO; ZERO_SALTO; TETO_ZERO_TXT; T840_DEPOIS; OUTRAS_PROVAS_NOTA = a conta das sete
+   provas acima), o T-956 e a tabela das sabotagens; juntar tudo no `bloco-X.md` e apagar o rascunho;
+3. o último commit (a árvore limpa; o `qa/oldsave_7.json` que a prova oldsave reescreve volta com `git checkout --`) e o
+   relatório final.
 
 **Nota:** não existe `qa/oficios.js` (o pedido o cita): as provas dos ofícios são `load-oficio.js`, `oficinas-mao.js`,
 `olaria-mao.js`, `taverna-mao.js`, `termas-mao.js`, `lazer-mao.js`.
