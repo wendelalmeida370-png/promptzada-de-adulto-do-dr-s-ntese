@@ -338,7 +338,8 @@ os mundos prontos de novo, a regressão inteira e o relatório.
     que pedia o valor da terra à toa (T-805) e o foguista-oráculo da prova (T-806);
   - **as pontes de pedra** (P; D-190, D-191, L-860 a L-863): a ponte na pedra e à maneira do povo de quem a ergueu, o
     tabuleiro na altura dos pés, a mureta só do lado da água, a figura de longe (`visual/pontes.js`, regra 64). A ponte
-    alta de verdade pede uma regra de altura no mundo: decisão do dono (D-191). Na junção: a espera da prova da fumaça
+    alta de verdade pede o rio com leito mais fundo que as margens: fica para um patch do rio (D-189, decidido pelo líder
+    por delegação do dono). Na junção: a espera da prova da fumaça
     (T-700);
   - **a grande biblioteca dos seis povos** (B; D-192, D-193, L-870 a L-874): 16 m, a forma e a planta de cada povo, o dia
     do degrau (`saber.js`, `visual/saber-3d.js`, regra 65). Na junção: o degrau aos 120 (D-185). **Não feito pelo B:** o
