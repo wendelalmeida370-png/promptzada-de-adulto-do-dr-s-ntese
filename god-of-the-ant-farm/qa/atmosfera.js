@@ -143,8 +143,15 @@ if (run('a3')) {
   const set = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0]; const C = 16; const geos = [];
   for (let cy = Math.floor((set.cy - 20) / C); cy <= Math.floor((set.cy + 20) / C); cy++) for (let cx = Math.floor((set.cx - 20) / C); cx <= Math.floor((set.cx + 20) / C); cx++) { const g = B3.nearGeo(cx * C, cy * C, C); if (g.glass) geos.push(g.glass); for (const q of ['solid', 'plants', 'water']) if (g[q]) g[q].dispose(); }
   const paneOf = id => { for (const g of geos) { const P = g.userData.panes; for (let i = 0; i < P.length; i += 3) if (P[i] === id) { const a = g.attributes.aDark.array; let lo = 2, hi = -1; for (let q = P[i + 1]; q < P[i + 2]; q++) { lo = Math.min(lo, a[q]); hi = Math.max(hi, a[q]); } return [lo, hi, P[i + 2] - P[i + 1]]; } } return null; };
+  // (a lit pane among them, so that the count is of both marks: on a night when every glazed house of the pictures sleeps — the
+  // town at a feast in its square, 110 of them, in the life the second round of the full house lives: 2 buildings of the world
+  // with someone awake inside, none of them glazed — the proof's hand wakes one in one of them for the count, and puts them
+  // back to sleep after it. T-839)
+  const glazedLit = () => built().some(b => paneOf(b.id) && litBy(b)); let woke = null;
+  if (!glazedLit()) { const h = built().find(b => housing(b) && paneOf(b.id) && insiders(b).length >= 1 && !awakeIn(b).length); if (h) { woke = insiders(h)[0]; woke.sleeping = false; flush(); } }
   B3.paneStep(); let panes = 0, pbad = 0, plit = 0; const pex = [];
   for (const b of built()) { const p = paneOf(b.id); if (!p) continue; panes++; const want = litBy(b) ? 0 : 1; if (!want) plit++; if (p[0] !== want || p[1] !== want) { pbad++; if (pex.length < 2) pex.push(`${tag(b)}: ${awakeIn(b).length} acordado(s), vidros ${p[0]}..${p[1]}`); } }
+  if (woke) { woke.sleeping = true; flush(); B3.paneStep(); }
   // a house with everyone asleep: dark; one woken: lit; asleep again: dark
   const sleepers = built().find(b => housing(b) && paneOf(b.id) && insiders(b).length >= 2 && !awakeIn(b).length);
   let turn = 'nenhuma casa com vidros e todos dormindo';
@@ -163,7 +170,7 @@ if (run('a3')) {
   for (const g of geos) g.dispose();
   ok('a3 a janela: à noite, acesa só com gente acordada dentro — a conta do mundo, os vidros do 3D (a marca de cada vidro), a luz da porta e as janelas do deus; a casa toda dormindo fica escura, um acorda e ela acende, dorme e apaga',
     night && !off && panes >= 20 && !pbad && plit >= 1 && tOK && !emptyLit.length && shader,
-    `hora ${S.time.toFixed(2)}: ${lit} prédios com gente acordada, ${dark} sem — ${off} em desacordo · ${panes} prédios com vidros em ${geos.length} quadros de ${set.name}: ${plit} acesos, ${pbad} com a marca errada${pex.length ? ' (' + pex.join('; ') + ')' : ''} · ${turn} · ${empty.length} prédios vazios, ${emptyLit.length} acesos · o vidro lê a marca: ${shader}`);
+    `hora ${S.time.toFixed(2)}: ${lit} prédios com gente acordada, ${dark} sem — ${off} em desacordo · ${panes} prédios com vidros em ${geos.length} quadros de ${set.name}: ${plit} acesos${woke ? ' (um acordado pela mão da prova: nesta noite todas as casas de vidro dos quadros dormiam)' : ''}, ${pbad} com a marca errada${pex.length ? ' (' + pex.join('; ') + ')' : ''} · ${turn} · ${empty.length} prédios vazios, ${emptyLit.length} acesos · o vidro lê a marca: ${shader}`);
 }
 
 // ------------------------------ a4: what lies about ------------------------------
