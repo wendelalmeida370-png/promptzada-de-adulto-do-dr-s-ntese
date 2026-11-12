@@ -512,5 +512,15 @@ for (const f of files) if (f !== 'act-casa.js' && f !== 'escala.js') src[f].forE
 // o parente do dono não paga. (As regras 51 a 60 são das frentes dos Bairros Vivos que correm em paralelo)
 for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (/\.aluga\s*=(?!=)/.test(c)) fails.push(`aluguel: ${f}:${k + 1} escreve o aluguel de uma casa fora do act-casa.js (use G.Casa.lease — D-159): ${l.trim().slice(0, 110)}`); });
+// 64. "o tabuleiro da ponte é o dos pés" (D-190, D-191, L-860, L-861): o desenho de uma ponte não tem altura sua — o bloco das
+// pontes do realm3d.js pega a altura do tabuleiro do G.Space (dk = Sp.deckAt) e não soma ao nível da água outra constante
+// que a da face dela (+0,05; a de antes, +0,32, deixava os pés do corpo 15 cm dentro da laje), e os outros pisam onde o corpo
+// pisa: numa casa de rio, a groundY do people3d.js responde por G.Space.footAt. (As regras 62 e 63 estão livres)
+{ const L = src['realm3d.js'] || []; const a = L.findIndex(l => /^\s*\/\/ -+ the bridges/.test(l)), z = L.findIndex(l => /^\s*\/\/ -+ trees, rocks, bushes/.test(l));
+  if (a < 0 || z < a) fails.push('ponte: realm3d.js sem o bloco das pontes (de «the bridges» a «trees, rocks, bushes») — a regra 64 não acha o que guardar');
+  else { const blk = L.slice(a, z);
+    if (!blk.some(l => /\bdk = Sp\.deckAt\(/.test(l))) fails.push('ponte: realm3d.js — o tabuleiro desenhado não pergunta a altura ao G.Space (dk = Sp.deckAt): L-860');
+    blk.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/S\.wl\[[^\]]*\]\s*\*\s*HM\s*\+\s*0\.(?!05\b)\d+/.test(c)) fails.push(`ponte: realm3d.js:${a + k + 1} soma ao nível da água uma altura própria do desenho (a do tabuleiro é a dos pés, G.Space.deckAt — L-860): ${l.trim().slice(0, 110)}`); }); }
+  if (!(src['people3d.js'] || []).some(l => /function groundY\(x, y\) \{[^\n]*T\.RIVER\) return G\.Space\.footAt\(x, y\);/.test(l))) fails.push('ponte: people3d.js — a groundY não responde por G.Space.footAt numa casa de rio (os outros pisam onde o corpo pisa: L-861)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

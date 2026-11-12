@@ -1379,8 +1379,9 @@
   // the parts the skin replaces (the props stay: the torch, the tool, the load, the marker over a head)
   const PROPS = new Set(['torch', 'tool', 'carry', 'marker']);
 
-  // (where the feet of someone walking stand: the ground — and, crossing a ford, the bed under the water, not its face)
-  function groundY(x, y) { const S = G.S; const i = W.idx(x, y); if (S.type[i] === G.T.RIVER && !S.road[i] && !(S.ice && S.ice[i])) return W.hAt(x, y) * G.Space.HM - G.Space.bedAt(x, y); return W.groundH(x, y) * G.Space.HM; }
+  // (where the feet of someone walking stand: the ground — and, over a river, where the body's own stand: the bed of a ford
+  // under its water, a bridge's deck, the ice — Space.footAt; on the water's own level they stood under the deck, L-861)
+  function groundY(x, y) { const S = G.S; const i = W.idx(x, y); if (S.type[i] === G.T.RIVER) return G.Space.footAt(x, y); return W.groundH(x, y) * G.Space.HM; }
   // the hands of the world's people, as the view remembers them: while a gesture of the hands lasts (G.Act.ANIM's acts: 'lift'
   // — levantar, pousar, empilhar —, 'arrange' — porNaBanca, tirarDaBanca —, 'give' — entregar) the empty hands reach down for
   // the load — the crate drawn there, or before the feet —; when the world puts the load in the hands it rises from where the

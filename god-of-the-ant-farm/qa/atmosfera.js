@@ -106,11 +106,13 @@ if (run('a2')) {
   const got = []; const bad = [];
   const three = b => { flush(); return [At.fire(b) ? At.fire(b).why : null, F3.smokeRate(b, 0.5, false) > 0, !!R.smokeOf(b)]; };
   const pair = (name, b, off, on) => { const a0 = three(b); off(); const a1 = three(b); on(); const a2 = three(b); const good = a0[0] && a0[1] && (a0[2] || !SMOKE2D[b.type]) && !a1[0] && !a1[1] && !a1[2] && a2[0] === a0[0] && a2[1]; got.push(`${name} ${tag(b)}: ${a0[0]} → ${a1[0] || 'nada'} → ${a2[0]}`); if (!good) bad.push(`${name} ${tag(b)}: ${JSON.stringify(a0)} → ${JSON.stringify(a1)} → ${JSON.stringify(a2)}`); };
-  // (live on until each cause is there to take — four minutes of the world at the most, two for the forge)
+  // (live on until each cause is there to take — four minutes of the world at the most, two for the forge; the kiln and the
+  // furnace of the baths, up to three days: a town at war, or with no wood, has days with no furnace lit in any of its baths —
+  // measured in the metropole, 11 to 14 lit of 20 baths-days —, and the question here is the smoke, not the stoker. T-700)
   const wait = (find, max) => { for (let k = 0; k < (max || 60); k++) { flush(); const x = find(); if (x) return x; M.viver(4); } return null; };
   // a kiln burning: its heat
-  const kiln = wait(() => { for (const b of built()) for (const op of opsAt(b, 'oficio')) { const [s] = stageOf(op); if (s && s.kind === 'fogo' && op.data.calor > 2) return [b, op]; } return null; });
-  if (kiln) { const [b, op] = kiln; const c = op.data.calor; pair('o forno', b, () => { op.data.calor = 0; }, () => { op.data.calor = c; }); } else bad.push('nenhuma fornada no fogo em um dia');
+  const kiln = wait(() => { for (const b of built()) for (const op of opsAt(b, 'oficio')) { const [s] = stageOf(op); if (s && s.kind === 'fogo' && op.data.calor > 2) return [b, op]; } return null; }, 180);
+  if (kiln) { const [b, op] = kiln; const c = op.data.calor; pair('o forno', b, () => { op.data.calor = 0; }, () => { op.data.calor = c; }); } else bad.push('nenhuma fornada no fogo em três dias');
   // the forge hot with the smith at it: the smith asleep
   const forge = wait(() => { for (const b of built()) if (cause(b) === 'forja') return b; return null; }, 30);
   if (forge) { const L = awakeIn(forge); pair('a forja', forge, () => { for (const v of L) v.sleeping = true; }, () => { for (const v of L) v.sleeping = false; }); } else got.push('a forja: nenhuma quente com o ferreiro nela nesta espera (T-700)');
@@ -118,8 +120,8 @@ if (run('a2')) {
   const tav = wait(() => built().find(b => b.type === 'taverna' && cause(b)));
   if (tav) { const t = S.time; pair('a taverna', tav, () => { S.time = 0.3; }, () => { S.time = t; }); } else bad.push('nenhuma taverna aberta em um dia');
   // the furnace of the baths
-  const bath = wait(() => { for (const b of built()) if (b.type === 'banhos') { const op = opsAt(b, 'termas').find(o => o.data.calor > 2); if (op) return [b, op]; } return null; });
-  if (bath) { const [b, op] = bath; const c = op.data.calor; pair('a fornalha', b, () => { op.data.calor = 0; }, () => { op.data.calor = c; }); } else if (built().some(b => b.type === 'banhos')) bad.push('nenhuma fornalha acesa em um dia'); else got.push('sem banhos neste mundo');
+  const bath = wait(() => { for (const b of built()) if (b.type === 'banhos') { const op = opsAt(b, 'termas').find(o => o.data.calor > 2); if (op) return [b, op]; } return null; }, 180);
+  if (bath) { const [b, op] = bath; const c = op.data.calor; pair('a fornalha', b, () => { op.data.calor = 0; }, () => { op.data.calor = c; }); } else if (built().some(b => b.type === 'banhos')) bad.push('nenhuma fornalha acesa em três dias'); else got.push('sem banhos neste mundo');
   // someone at the house's fire: asleep
   const home = wait(() => built().find(b => housing(b) && cause(b)));
   if (home) { const L = awakeIn(home); pair('o fogo da casa', home, () => { for (const v of L) v.sleeping = true; }, () => { for (const v of L) v.sleeping = false; }); } else bad.push('ninguém junto ao fogo de casa em um dia');
