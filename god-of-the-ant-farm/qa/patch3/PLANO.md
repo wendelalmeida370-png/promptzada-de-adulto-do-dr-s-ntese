@@ -329,15 +329,33 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   achados pelos dois mundos do zero de 90 anos da `degraus` g8 —; e um limite de prova (T-804, `casa` h12). **Não feito
   pelo M, aberto:** o governante morar no palácio (T-765), os lugares da praça para o ajuntamento (T-762), a obra grande
   longe dos armazéns (T-760), a terra das capitais velhas (T-761).
-- **Feitas, a juntar:** as termas grandes (T) e as coisas em volta das casas (Q).
-- **Em curso, três frentes:** **as pontes** (P: a ponte de rua calçada era uma laje cinza lisa — vista nas fotos do
-  diário —, e ganha pedra, mureta e arco pelo povo do chão; só desenho); **a grande biblioteca e o paço municipal** (B; o
-  resto do T-784: 16 m, seis povos); e **a casa por dentro** (G; T-403, T-436, T-446: o lugar de comer e o fogo no núcleo
-  de toda casa, o motor que recusa a peça onde o corpo não cabe, os depósitos do celeiro em qualquer semente).
+- **Feitas e juntadas, mais quatro frentes** (cada bloco em `qa/patch3/bloco-*.md`):
+  - **as coisas em volta das casas** (Q; D-186 a D-188; fecha o T-703): o que a casa tem fica no lote dela, pela casca da
+    planta — a lenha, a rede, o couro, o escudo, o barril, os potes —, nunca na rua (`quintal.js`, regras 59 e 60);
+  - **as termas e as grandes termas** (T; D-182 a D-184; fecha o T-784): 20 e 28 m, no romano, no grego e no clássico, a
+    planta própria, a piscina mais vazia para cada banhista (`termas-grandes.js`, `visual/termas-3d.js`,
+    `visual/termas-corpo.js`). Na junção: os números do degrau (D-161: 80 pessoas; 160 numa cidade de nível 4), a casa rica
+    que pedia o valor da terra à toa (T-805) e o foguista-oráculo da prova (T-806);
+  - **as pontes de pedra** (P; D-190, D-191, L-860 a L-863): a ponte na pedra e à maneira do povo de quem a ergueu, o
+    tabuleiro na altura dos pés, a mureta só do lado da água, a figura de longe (`visual/pontes.js`, regra 64). A ponte
+    alta de verdade pede uma regra de altura no mundo: decisão do dono (D-191). Na junção: a espera da prova da fumaça
+    (T-700);
+  - **a grande biblioteca dos seis povos** (B; D-192, D-193, L-870 a L-874): 16 m, a forma e a planta de cada povo, o dia
+    do degrau (`saber.js`, `visual/saber-3d.js`, regra 65). Na junção: o degrau aos 120 (D-185). **Não feito pelo B:** o
+    paço municipal (T-874; o jogo de peças para riscá-lo ficou pronto).
+- **Achado pelo líder ao medir, na junção das pontes: ninguém vai aos banhos** (L-717, aberto): um pedido de banho em
+  cinco dias nas quatro cidades com banhos da metrópole — o passeio pela cidade só é pedido quando o ofício não acha
+  trabalho.
+- **Em curso, a terceira leva (cinco frentes):** **a casa por dentro** (G; T-403, T-436, T-446); **a freguesia** (F; L-717:
+  a vontade do banho e da leitura na escolha de cada um, a praça e o mercado como lugar de estar); **o governante no
+  palácio** (R; T-765); **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a obra
+  grande que anda e acha terra** (M, segunda rodada; T-760, T-761, T-767: o canteiro da obra longe, a terra das capitais
+  velhas, o olhar do planejador para as provas). A medir de novo com o M: os dois mundos do zero de 90 anos da `degraus`
+  g8 dão, na árvore juntada, 5 degraus grandes fundados e 4 de pé (antes do M: 3 e 1), nenhum Coliseu.
 - **O diário do patch para o dono** (`qa/patch3/diario/`, publicado como artefato): o que entrou, o que está em obras e o
   que cada coisa muda no jogo, com capturas de verdade do Modo Encarnado (`qa/visual/fotos-diario.js`); atualizado a
   cada frente juntada.
 - **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
   novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** juntar as frentes M, T, Q, P, B e G, e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
+- **A seguir:** juntar as frentes G, F, R, X e M2; depois o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
   seis sementes da terra, o relatório).
