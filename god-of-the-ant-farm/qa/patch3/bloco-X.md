@@ -110,23 +110,48 @@ antes e ganha menos com a regra: o teto do x3 passou a 0,16 (três quartos de an
   décadas há mais gente de guerreiro depois (ano 30: 25 → 56 na `v3` e na `v5`): a medida a seguir conta isso ano a ano;
 - *as trocas do zero* (`fila6/mede-*-zero.txt`): 0,216 → 0,129 por adulto por dia (já dito acima).
 
-**RODANDO AGORA: a fila D** (`fila-d.sh <jogo> scratchpad/ag/X/fila7`; pode ser lançada de novo — pula o passo cuja saída
-tem a linha «as armas»): os mundos prontos vividos dez dias antes e depois (`fila-prontos/pronto-antes-*.txt`,
-`fila7/pronto-depois-*.txt`: a gente, os mortos por causa, a fome, os guerreiros), e a economia com **as armas olhadas a
-cada ano** (quantos adultos são guerreiros nos povos em guerra e em paz): antes (`eco2/a6-*.txt`), depois (`eco2/v6-*.txt`,
-a mesma regra da `v5`) e antes com o acaso deslocado de um sorteio (`eco2/borb-*.txt`: quanto o acaso sozinho mexe as somas).
-**Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar.**
+**A fila D, lida** (`fila-d.sh`; a parte `borb` — o acaso deslocado — não rodou):
+- *os mundos prontos vividos dez dias* (`fila-prontos/pronto-antes-*.txt`, `fila7/pronto-depois-*.txt`; antes → depois, a
+  regra `v5`): **metrópole** gente 704 → 638 antes, → 759 depois; mortos de guerra e flecha 231 → 159; de fome 4 → 7; comida
+  produzida nos dez dias 11536 → 14085; prédios 735 → 785; o pior instante de fome 72 → 62 pessoas. **Mega** gente 446 → 550
+  antes, → 554 depois; mortos de guerra e flecha 87 → 59; de fome 2 → 2; comida 9644 → 9420; prédios 495 → 495; o pior
+  instante 41 → 33. **Não custa nos mundos prontos.**
+- *as armas olhadas a cada ano* (`python3 armas.py eco2 a6,v6 <sementes>`; dez mundos de 40 anos, 400 olhares): os
+  povos-ano em guerra 14,5 % antes → 11,9 % depois (menos guerra); **dos adultos dos povos em guerra, guerreiros 20,8 % →
+  21,7 %; dos povos em paz, 2,9 % → 3,5 % (um quinto a mais)**; e os mortos de guerra por povo-ano em guerra 2,5 → 3,6. Nos
+  mundos prontos igual: em paz 7,9 % → 10,1 % (metrópole) e 5,7 % → 6,7 % (mega).
+- **A causa, medida** (`scratchpad/ag/X/paz.js`: uma guerra declarada na metrópole, 90 s de leva, a paz do deus): com a
+  regra `v5` os soldados de Argos iam de 19 a 17 em 10 s, 16 num oitavo de dia, 12 num quarto, 9 em meio dia, 8 num dia e 5
+  em dia e meio (a paz pede 4 a 5) — **o exército voltava para casa ao longo de um dia e meio**, pela memória dos dois
+  ofícios (a do exército só solta devagar, a do ofício de cada um só pede devagar); antes da regra, em segundos.
+- **Consertado (na árvore, ainda sem commit — a medida `v7` roda):** (1) *a emergência acabada, quem ela puxou volta pelo
+  instante, como veio* — o ofício em que está tem uma mão a mais agora (duas, enquanto ainda é o de uma emergência: a conta
+  dos adultos pisca de um), o que deixou tem falta de uma agora, e a memória dos dois acompanha a mão (`village.js`, o bloco
+  `over` / `lacks` antes da volta pela memória). Medido com o `paz.js`: os soldados de Argos 19 → 12 em 10 s, 11 num oitavo
+  de dia, 6 em meio dia; a prova ganhou o **x15** (num oitavo de dia 28 das 40 mãos puxadas de volta, os soldados 23 → 11
+  onde a paz pede 7; e «quem voltou não é levado adiante»). (2) *a leva pesa como sempre pesou* — a mão livre primeiro
+  (L-461) e um tanto de cada um (`G.hash` do id, o mesmo em toda guerra) no lugar do sorteio —: com «os bravos» sozinhos (a
+  coragem dá golpe e segura o soldado na linha: `war.js` 581, `wars.js` 604) cada povo-ano de guerra matava metade a mais.
+  x5 com as duas: passa (a coragem de quem foi chamado 0,56, a de quem ficou 0,47).
+
+**RODANDO AGORA: a economia `v7`** (`lote-r.sh <jogo> v7`, pode ser lançada de novo: pula a semente pronta; a tabela:
+`python3 armas.py eco2 a6,v6,v7 <sementes>` e `python3 tabela.py eco2 antes v7 <sementes>`).
+**Enquanto uma fila roda, o `js/` e o `qa/*.js` da árvore não podem mudar** (o `qa/oficio-fica.js` pode: o `eco.js` não o lê).
 
 **Falta (nesta ordem):**
-1. ler a fila D: se os povos em guerra têm mais guerreiros com a regra do que antes (e não só mais guerra), a guerra está
-   puxando mais do que puxava — acertar (a variante `leva` do `var.py`, ou a guerra só passa à frente dos outros ofícios
-   como antes) e medir de novo; se a diferença couber no acaso (a `borb`), dizer os números e deixar;
-2. a fila C (`fila-c.sh <jogo> scratchpad/ag/X/fila7`): as 32 sabotagens de novo com a regra final (`sab-out/resumo.txt`), e
-   a prova inteira uma última vez (`node qa/oficio-fica.js`, 15 min);
+1. ler a `v7`: a gente, os mortos de guerra por povo-ano em guerra e os guerreiros em paz têm de voltar para perto de antes;
+   se voltarem, medir só o conserto (1) (`v8`: a variante sem a leva — `sab-X.py` s35 numa cópia) para saber se a leva é
+   precisa; commit;
+2. as sabotagens todas com a regra final (`sab-X.py` tem 36: as cinco de padrão velho foram acertadas, e há quatro novas —
+   s34 sem a volta pelo instante → x15, s35 a leva só dos bravos, s36 a memória não acompanha → x15, s37 sem a margem da
+   emergência; conferidas a seco com `sab-seco.sh`), e a prova inteira uma última vez (`node qa/oficio-fica.js`);
+   as outras provas de novo com a regra final (ao menos guard, vida curta e de 20 anos, det3, salto-igual, load-oficio,
+   marinheiros, fome, motim na metrópole, atividades, fundadores, porto, degraus sem o g8, oldsave);
 3. fechar este bloco: as seções 4 a 10 estão em `scratchpad/ag/X/bloco-final-4a10.md` (cópia em
    `qa/patch3/bloco-X-fim-rascunho.md`) — faltam os números finais (ANTES_ZERO = 0,22; DEPOIS_RESUMO; ECO_RESUMO; ECO_GUERRA;
    ECO_FOME; PRONTO_RESUMO; X4_X5_RESUMO; ZERO_SALTO; TETO_ZERO_TXT; T840_DEPOIS; OUTRAS_PROVAS_NOTA = a conta das sete
-   provas acima), o T-956 e a tabela das sabotagens; juntar tudo no `bloco-X.md` e apagar o rascunho;
+   provas acima), o T-956, o x15 e a volta pelo instante no D-211, a leva no D-212, e a tabela das sabotagens; juntar tudo
+   no `bloco-X.md` e apagar o rascunho;
 4. o último commit (a árvore limpa; o `qa/oldsave_7.json` que a prova oldsave reescreve volta com `git checkout --`) e o
    relatório final.
 
