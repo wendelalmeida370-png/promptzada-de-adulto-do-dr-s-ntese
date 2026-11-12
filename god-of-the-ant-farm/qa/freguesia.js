@@ -212,7 +212,7 @@ function watch() {
   const go0 = Te.go; Te.go = function (v, H) { const p = pre(v); const b = Te.pick(v); if (b) { p.b = b.id; p.hour = Te.hourOf(v, b); p.far = farOf(v, b); p.lot = Te.lot(v); p.wish = Te.wish(v, b); p.fecha = Te.horas(b).fecha; p.abre = Te.horas(b).abre; p.d0 = G.dist(v.x, v.y, ...Vg.door(b)); } const t = go0.apply(this, arguments); if (t) w.go.push(p); return t; };
   const lg0 = Bi.go; Bi.go = function (v, H) { const p = pre(v); const b = Bi.pick(v); if (b) { p.b = b.id; p.hour = Bi.hourOf(v, b); p.far = farOf(v, b); p.lot = Bi.lot(v); p.wish = Bi.wish(v, b); } const t = lg0.apply(this, arguments); if (t) w.goLib.push(p); return t; };
   const tap = e => { if (e[8] === 'termas' || e[8] === 'termas-volta' || e[8] === 'fornalha') w.led.push(e.slice()); }; D.onMove.push(tap);
-  const nb0 = U.noteB; U.noteB = function (b, k, n) { if (b && b.type === 'banhos' && k === 'noite') w.notes.banho += n === undefined ? 1 : n; if (b && b.type === 'biblioteca' && k === 'saber') w.notes.saber += n === undefined ? 1 : n; return nb0.apply(this, arguments); };
+  const nb0 = U.noteB; U.noteB = function (b, k, n) { if (b && b.type === 'banhos' && k === 'banho') w.notes.banho += n === undefined ? 1 : n; if (b && b.type === 'banhos' && k !== 'banho') w.notes.outra = (w.notes.outra || 0) + 1; if (b && b.type === 'biblioteca' && k === 'saber') w.notes.saber += n === undefined ? 1 : n; return nb0.apply(this, arguments); };
   const errand = new Map(); // (who has the errand of the baths: id → { b, st, t0 })
   let open = new Set(); // (the entries in a day's book now: one that leaves it is closed there — bathed or not, read at that moment)
   const shutEntry = k => { const e = w.ent.get(k); if (!e || e.gone) return; e.gone = true; const v = S.villagers.get(e.id); e.bathed = e.done || !!(v && v.bathDay === e.day); e.now = v ? (v.task ? v.task.type + ':' + (v.task.pri || 0) : 'nada') : 'morreu'; if (!e.body && !e.bathed) w.dips.push(e); };
@@ -340,9 +340,9 @@ function partB() {
   if (on('b7')) {
     const ent = ops.reduce((s, r) => s + r.ent, 0) + [...w.ops.values()].filter(r => !full.includes(r.day)).reduce((s, r) => s + r.ent, 0);
     const reads = [...w.lib.values()].reduce((s, r) => s + r.lidos + r.copias, 0);
-    const q = baths().map(b => { const d = U.at(b.x, b.y); return `${setOf(b).name}: ${d ? (d.whole ? 'a cidade' : d.name) + ' [' + U.tagNames(d).join(', ') + '] noite ' + ((d.vida || {}).noite || 0) : '—'}`; });
-    ok('b7 a vida do bairro conta cada entrada nos banhos e cada leitura uma vez (G.Urban.note, no passo do mundo)', Math.abs(w.notes.banho - ent) <= 1 && w.notes.saber >= reads - 8 && w.notes.saber <= reads + 1 && ent >= 4,
-      `${w.notes.banho} notas «noite» nos banhos para ${ent} entradas; ${w.notes.saber} notas «saber» nas bibliotecas para ${reads} leituras e cópias contadas; os bairros dos banhos no fim: ${q.join(' · ')}`);
+    const q = baths().map(b => { const d = U.at(b.x, b.y); return `${setOf(b).name}: ${d ? (d.whole ? 'a cidade' : d.name) + ' [' + U.tagNames(d).join(', ') + '] banho ' + ((d.vida || {}).banho || 0) + ', noite ' + ((d.vida || {}).noite || 0) : '—'}`; });
+    ok('b7 a vida do bairro conta cada entrada nos banhos (a chave «banho», nunca «noite»: D-228) e cada leitura uma vez (G.Urban.note, no passo do mundo)', Math.abs(w.notes.banho - ent) <= 1 && !w.notes.outra && w.notes.saber >= reads - 8 && w.notes.saber <= reads + 1 && ent >= 4,
+      `${w.notes.banho} notas «banho» nos banhos para ${ent} entradas${w.notes.outra ? ' E ' + w.notes.outra + ' NOUTRA CHAVE' : ''}; ${w.notes.saber} notas «saber» nas bibliotecas para ${reads} leituras e cópias contadas; os bairros dos banhos no fim: ${q.join(' · ')}`);
   }
   if (on('b8')) ok('b8 o verificador (com as regras novas da freguesia) e nenhum erro nos dias vividos', !w.bad.length && M.limpo(), w.bad.slice(0, 4).join(' | ') || (M.limpo() ? `limpo (S0–S2 novas: 0; freguesia: 0) em ${DIAS} dias` : JSON.stringify(M.erros()).slice(0, 300)));
   return w;

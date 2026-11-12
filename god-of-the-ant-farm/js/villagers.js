@@ -582,7 +582,11 @@
     const sleepy = G.Lar ? G.Lar.sleepy(v) : night;
     let best = null, bs = -1, bp = 0;
     const opt = (score, pri, kind) => { if (score > bs) { bs = score; best = kind; bp = pri; } };
-    if (v.hunger > 50) opt((v.hunger - 40) / 60 * 1.3 + (v.hunger > 88 ? 1 : 0), v.hunger > 85 ? 2.5 : 1.2, 'eat');
+    // (the stoker at his post — the fire of his baths not yet fed to their closing: G.Termas.onDuty — leaves it for a meal
+    // only starving; his meal is before the doors open: G.Termas.mealFirst, D-227)
+    const post = !!(G.Termas && G.Termas.onDuty && G.Termas.onDuty(v));
+    if (v.hunger > 50 && !(post && v.hunger <= 85)) opt((v.hunger - 40) / 60 * 1.3 + (v.hunger > 88 ? 1 : 0), v.hunger > 85 ? 2.5 : 1.2, 'eat');
+    else if (!post && G.Termas && G.Termas.mealFirst && G.Termas.mealFirst(v)) opt(0.9, 1.2, 'eat');
     const atTav = cur && cur.type === 'tavern' && v.energy > 20 && S.time > 0.5 && S.time < (cur.st >= 1 ? 0.88 : 0.78); // (at the tavern: seated, served — act-taverna.js st 2, 3; the walk there, st 0)
     if (sleepy) opt(0.95 + (100 - v.energy) / 250, atTav ? 0.3 : 1.5, 'sleep');
     else if (v.energy < 22) opt(0.6 + (22 - v.energy) / 30, v.energy < 8 ? 2.5 : 1.2, 'sleep');
@@ -620,13 +624,16 @@
       // the working day ends: home, or a cup at the tavern
       if (eve && v.home) opt(0.55 + G.R() * 0.4, 0.45, 'home');
       // (the stoker of baths still open, the fire not fed to their closing, keeps the furnace: G.Termas.onDuty, D-204)
-      if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length && !(G.Termas && G.Termas.onDuty && G.Termas.onDuty(v))) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0) + (G.Harbor && G.Harbor.shoreLeave(v) ? 0.5 : 0), 0.4, 'tavern'); // (home from the sea today: the tavern first, D-155)
+      if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length && !post) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0) + (G.Harbor && G.Harbor.shoreLeave(v) ? 0.5 : 0), 0.4, 'tavern'); // (home from the sea today: the tavern first, D-155)
       // (the theatre's show of the day, its doors open: an evening out — act-lazer.js)
       if (G.Teatro) { const u = G.Teatro.urge(v, cur); if (u > 0) opt(u, 0.45, 'teatro'); }
       // (the baths in their hours and the library's tables: a pause of one's day, by each one's own wish — act-servicos.js,
       // act-lazer.js; D-200, D-201)
       if (G.Termas) { const u = G.Termas.urge(v, cur); if (u > 0) opt(u, G.Termas.PRI, 'banho'); }
       if (G.Biblioteca) { const u = G.Biblioteca.urge(v, cur); if (u > 0) opt(u, G.Biblioteca.PRI, 'ler'); }
+      // (the plaza of one's streets as the working day ends, from an hour of one's own — a plain task of the day is put
+      // down for it; the working day over, one stops there on the way home — 'home', below: act-lazer.js, D-225)
+      if (G.Praca && G.Praca.urge) { const u = G.Praca.urge(v, cur); if (u > 0) opt(u, G.Praca.CUT, 'praca'); }
       if (G.Eco && !eve) opt(0.16 * G.R() * 1.6, 0.35, 'shop');
       // (the house lacks something it uses up, and can pay: one of the family goes to buy it — act-compras.js)
       if (G.Compras) { const u = G.Compras.urge(v); if (u > 0) opt(u, 0.6, 'compras'); }
@@ -672,8 +679,10 @@
       case 'rest': t = setTask(v, { type: 'rest', pri: 0.2 }); break;
       case 'shelter': t = setTask(v, { type: 'shelter', pri: 1.05, stay: v.home }); emote(v, 'fear', 1.5); break;
       // (the end of the working day: the supper at home first — the house's cook to the fire, the hungry to the table —, then
-      // the garden, the family at the door, an evening in the house; act-lar.js)
-      case 'home': t = (G.Lar && G.Lar.task(v, H, 'tarde', true)) || (G.Urban && G.R() < (G.Urban.gardenDue(v) ? 0.75 : 0) && G.Urban.gardenTask(v, H)) || (G.Life && G.Life.familyTask(v, H)) || (G.Lar && G.Lar.task(v, H, 'tarde')) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
+      // the garden, the family at the door, an evening in the house; act-lar.js — and, the supper and the garden seen to, the
+      // plaza of one's streets on the way home, on the days one's wish says so: G.Praca.go, D-225)
+      case 'home': t = (G.Lar && G.Lar.task(v, H, 'tarde', true)) || (G.Urban && G.R() < (G.Urban.gardenDue(v) ? 0.75 : 0) && G.Urban.gardenTask(v, H)) || (G.Praca && G.Praca.go && G.Praca.go(v, H)) || (G.Life && G.Life.familyTask(v, H)) || (G.Lar && G.Lar.task(v, H, 'tarde')) || (G.Eco && G.Eco.goHomeTask(v, H)); break;
+      case 'praca': t = G.Praca && G.Praca.go && G.Praca.go(v, H); break;
       case 'tavern': t = G.Eco && G.Eco.tavernTask(v, H); break;
       case 'shop': t = G.Eco && G.Eco.shopTask(v, H); break;
       case 'teatro': t = G.Teatro && G.Teatro.go(v, H); break;
@@ -1581,13 +1590,15 @@
       case 'play': {
         if (t.st === 0) {
           const home = S.buildings.get(v.home); const set = S.settlements.get(v.set);
-          const bx = home ? home.x + 0.5 : set ? set.cx : v.x, by = home ? home.y + 0.5 : set ? set.cy : v.y;
+          // (in the afternoon, the children of the streets about a plaza play at it, on the days their lot says: D-226)
+          const pz = G.Praca && G.Praca.playAt ? G.Praca.playAt(v) : null;
+          const bx = pz ? pz[0] : home ? home.x + 0.5 : set ? set.cx : v.x, by = pz ? pz[1] : home ? home.y + 0.5 : set ? set.cy : v.y;
           // chase another child sometimes
           if (G.R() < 0.4) {
             let other = null; for (const o of S.villagers.values()) if (o !== v && o.age >= 3 && o.age < 13 && o.set === v.set && !o.inside && !o.sleeping && G.dist2(o.x, o.y, v.x, v.y) < 64) { other = o; break; }
             if (other) { t.chase = other.id; t.st = 2; t.rt = 0; break; }
           }
-          const p = W.randomNear(bx, by, 4.5); if (!p || !Vg.goto(v, p[0], p[1], false)) return end(v);
+          const p = W.randomNear(bx, by, pz ? 1.5 : 4.5); if (!p || !Vg.goto(v, p[0], p[1], false)) return end(v);
           t.st = 1;
         } else if (t.st === 1) { if (move(v, dt, 1.15)) { t.n = (t.n || 0) + 1; t.st = 0; if (t.n > 2) end(v); } }
         else {

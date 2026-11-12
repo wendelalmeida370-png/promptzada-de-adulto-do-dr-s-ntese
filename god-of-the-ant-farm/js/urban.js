@@ -670,7 +670,7 @@
   // with who lives there: people, rich homes, homes with nothing, empty homes —, and d.tags, the profiles they add up to. A
   // town of any size has its whole (set.urb.w): a village is one quarter. Only the world's step calls the door — never what
   // draws or sounds (the guard) —, and the same event counts once at the skip, at the step and with a body in the street.
-  U.KEYS = ['cais', 'pesca', 'troca', 'oficio', 'mina', 'campo', 'armas', 'fe', 'saber', 'noite', 'crime'];
+  U.KEYS = ['cais', 'pesca', 'troca', 'oficio', 'mina', 'campo', 'armas', 'fe', 'saber', 'noite', 'banho', 'crime'];
   const KEY = {}; for (const k of U.KEYS) KEY[k] = 1;
   U.note = function (x, y, k, n) {
     const S = G.S; if (!KEY[k]) throw new Error('G.Urban.note: chave desconhecida «' + k + '»');
@@ -769,6 +769,7 @@
     sagrado: { name: 'sagrado', k: 'fe', on: 1, off: 0.5 },
     letrado: { name: 'letrado', k: 'saber', on: 0.15, off: 0.07 },
     boemio: { name: 'boêmio', k: 'noite', on: 0.3, off: 0.15 },
+    termal: { name: 'de banhos', k: 'banho', on: 0.3, off: 0.15 },
     perigoso: { name: 'perigoso', k: 'crime', on: 0.15, off: 0.07 },
     nobre: { name: 'rico', k: 'rica', on: 0.5, off: 0.35, homes: 3 },
     pobre: { name: 'pobre', k: 'pobre', on: 0.35, off: 0.2, homes: 3 },
@@ -817,7 +818,8 @@
     quartel: (q, on) => (on ? 'Encheu de soldados: treino todo dia.' : `Os treinos pararam: ${quiet(q, 'armas', 'nenhum treino', 'cada vez menos soldados')}.`),
     sagrado: (q, on) => (on ? 'Virou lugar de reza: gente rezando todo dia.' : `As rezas rarearam: ${quiet(q, 'fe', 'nenhuma reza', 'cada vez menos fiéis')}.`),
     letrado: (q, on) => (on ? 'Virou lugar de letras: rolos lidos e copiados todo dia.' : `As letras calaram: ${quiet(q, 'saber', 'nenhum rolo lido', 'cada vez menos leitores')}.`),
-    boemio: (q, on) => (on ? 'A noite pegou: taverna, banho e espetáculo cheios.' : `As noites esfriaram: ${quiet(q, 'noite', 'ninguém na taverna', 'cada vez menos gente à noite')}.`),
+    termal: (q, on) => (on ? 'Os banhos encheram: gente na água todo dia.' : `Os banhos esvaziaram: ${quiet(q, 'banho', 'ninguém nos banhos', 'cada vez menos banhistas')}.`),
+    boemio: (q, on) => (on ? 'A noite pegou: taverna e espetáculo cheios.' : `As noites esfriaram: ${quiet(q, 'noite', 'ninguém na taverna', 'cada vez menos gente à noite')}.`),
     perigoso: (q, on, set) => (on ? `Ficou perigoso: ${Math.max(2, Math.round(q.cr || 0))} roubos e brigas em pouco tempo${watchOf(set) ? '' : ', e nenhum vigia na ronda'}.` : `Voltou a ser tranquilo: ${quiet(q, 'crime', 'nenhum roubo', 'os roubos rarearam')}.`),
     nobre: (q, on) => { const s = q._st || {}; return on ? `Enriqueceu: ${s.rich} das ${s.homes} casas são ricas.` : `Deixou de ser rico: ${s.empty * 2 >= s.homes ? 'as casas ricas ficaram vazias' : `só ${s.rich} das ${s.homes} casas ainda são ricas`}.`; },
     pobre: (q, on) => { const s = q._st || {}; return on ? `Empobreceu: ${s.low + s.shack} das ${s.homes + s.shack} casas não têm quase nada${s.shack ? ` (${s.shack} são barracos)` : ''}.` : 'Saiu da pobreza: as casas voltaram a ter com que viver.'; },
