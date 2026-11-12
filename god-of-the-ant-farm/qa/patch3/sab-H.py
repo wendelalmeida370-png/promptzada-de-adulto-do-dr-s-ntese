@@ -21,7 +21,7 @@ S = {
  # s7: sem as mãos — a família que não junta o preço só junta, como antes
  's7': lambda: sub(C, "      if (rd.kind === 'maos' && !rd.wait) { const b = raiseByHand(v, fam, set, rd.type, rd.pays, why); if (b) { left(); return { ok: true, b, hands: 1, price: b.encomenda.paid }; } chao = S.day; }\n", ""),
  # s8: os construtores do povo pegam a obra das mãos da família
- 's8': lambda: sub(V, "      if (b.encomenda && b.encomenda.maos && !b.encomenda.fam.includes(v.id)) continue;\n", ""),
+ 's8': lambda: sub(V, "      if (b.encomenda && b.encomenda.maos) continue;\n", ""),
  # s9: o dia de trabalho da família não pergunta pela sua obra — ninguém a levanta
  's9': lambda: sub(V, "    if (!v.captive && G.Casa && G.Casa.handsTask) { const t = G.Casa.handsTask(v); if (t) return t; }\n", ""),
  # s10: a obra das mãos conta nas duas obras pagas dos construtores
@@ -58,5 +58,11 @@ S = {
  's24': lambda: sub(C, " } chao = S.day; }", " } }"),
  # s25: a casa vazia do povo que aparece depois não interrompe a paciência — a família espera os dias mesmo com casa para ela
  's25': lambda: sub(C, "      if (rd.kind === 'cede' && cede(v, fam, rd.b, set, rd.pays, why)) {", "      if (rd.kind === 'cede' && h && h.poupa && S.day - h.poupa.d >= K.HANDS_DAYS && cede(v, fam, rd.b, set, rd.pays, why)) {"),
+ # s26: a pergunta de antes da L-719 — só quem está escrito na obra «espera» a casa: o par que chega depois pede outra
+ 's26': lambda: sub(C, "      if (ids.length > 1 && b.encomenda.fam.some(id => ids.includes(id))) return b;\n", ""),
+ # s27: o par que chegou depois não trabalha na cabana da família — só quem está escrito
+ 's27': lambda: sub(C, "    const id = handWorks().get(v.id) || (q && q.home === v.home ? handWorks().get(q.id) : 0);", "    const id = handWorks().get(v.id);"),
+ # s28: de pé a cabana, só muda quem estava escrito — o par que chegou depois fica na casa cheia
+ 's28': lambda: sub(C, "    const fam = famNow(o).filter(v => !v.captive && v.set === b.set);", "    const fam = o.fam.map(P).filter(v => v && !v.captive && v.set === b.set);"),
 }
 S[name]()

@@ -24,6 +24,7 @@
 //       apertado numa cabana, a cidade com cabanas demais em obra
 //   c14 a tela só lê: o diário, a ficha, a oferta e a estrada não mudam o mundo
 //   c15 o mundo: anos de salto com o verificador — nenhuma casa de várias famílias fica com o dobro da lotação além da paciência
+//   c16 o par que chega depois da obra marcada (L-719): não pede outra casa por nenhuma porta, trabalha na cabana e muda com a família
 //   node qa/casa-cheia.js [mundo]        (ONLY=c2,c5 só esses; ANOS=n os anos do c15, 6 por padrão)
 'use strict';
 process.chdir(__dirname);
@@ -56,6 +57,27 @@ function checa(sev) {
   const e = M.erros(); const errs = Object.keys(e.mod).length + e.console.length;
   return { ok: !out.length && !errs, txt: out.length ? out.slice(0, 3).join(' · ') : errs ? 'erros: ' + JSON.stringify(e).slice(0, 240) : 'verificador limpo' };
 }
+// A family alone in a house with fewer beds than people, its own, in a town of coin: one the world has; else one alone in a
+// house of kin who live elsewhere, made its owner by the test's hand; else one alone in a house of its own that fits it, the
+// beds of that type of house fewer for the case (desfaz gives them back). → { set, b, o (the owner), como, desfaz } or null
+function sozinha() {
+  const cand = [];
+  for (const set of [...S.settlements.values()].filter(s => E.coinage(s.fac)).sort((a, c) => a.id - c.id)) {
+    for (const b of [...S.buildings.values()].sort((a, c) => a.id - c.id)) {
+      if (b.set !== set.id || !b.built || !housing(b) || b.type === 'barraco' || b.upgradeFrom || b.elite || b.w !== 1) continue;
+      const L = mora(b); const o = L.filter(m => livre(m)).sort((x, y) => (y.id === b.dono) - (x.id === b.dono) || y.age - x.age || x.id - y.id)[0];
+      if (!o || K.family(o).length !== L.length || L.length < 3 || L.some(m => m.jail || m.aboard)) continue;
+      const dona = L.some(m => m.id === b.dono);
+      cand.push({ set, b, o, L, k: L.length > camas(b) ? (dona ? 0 : 1) : dona && (b.type === 'hut' || b.type === 'house') ? 2 : 9 });
+    }
+  }
+  const c = cand.filter(q => q.k < 9).sort((x, y) => x.k - y.k || y.L.length - x.L.length || x.b.id - y.b.id)[0]; if (!c) return null;
+  let desfaz = () => { }; let como = 'achada no mundo';
+  if (c.k === 1) { c.b.dono = c.o.id; c.b.aluga = null; como = 'a casa era de um parente que mora noutra: a mão da prova a fez dela'; }
+  if (c.k === 2) { const tp = c.b.type; const n0 = G.BDEF[tp].housing; G.BDEF[tp].housing = c.L.length - 1; desfaz = () => { G.BDEF[tp].housing = n0; }; como = `a mão da prova deixou a ${tp} com ${c.L.length - 1} camas enquanto o caso dura (tem ${n0})`; }
+  c.b.res = c.L.length; c.b.poupa = null;
+  return { set: c.set, b: c.b, o: P(c.b.dono), como, desfaz };
+}
 // (the grown couple that heads a family living together: she, he and their little ones — neither the god's body nor away)
 const livre = v => !!v && v.age >= 18 && !v.captive && !v.jail && !v.aboard && !v.held && !(S.avatar && S.avatar.id === v.id) && !K.waiting(v);
 function familias(set, min) {
@@ -70,9 +92,14 @@ function familias(set, min) {
 }
 // (a building taken down by the test's hand: whoever is in it — a guest, one asleep — out at its door first)
 function tira(b) { sim(() => { for (const o of S.villagers.values()) if (o.inside === b.id) G.Vg.endTask(o); }); for (const o of S.villagers.values()) if (o.inside === b.id) { o.inside = 0; o.sleeping = false; } V.removeBuilding(b); }
-// (the people's empty houses of the town the family's plan would take: taken down by the test's hand, as casa.js clears the way;
-// keep: one that stays)
-function semVazias(v, set, keep) { let n = 0; for (let k = 0; k < 12; k++) { const fr = K.plan(v, null, set, null, K.need(v)).free; if (!fr || fr === keep) break; tira(fr); n++; } return n; }
+// (the empty houses of the town the family's plan would take — the people's, and those an owner lets: the family of a case
+// has no roof to rent —: taken down by the test's hand, as casa.js clears the way; keep: one of the people's that stays)
+function semVazias(v, set, keep) {
+  let n = 0;
+  for (let k = 0; k < 40; k++) { const pl = K.plan(v, null, set, null, K.need(v)); const fr = pl.lease || (pl.free !== keep ? pl.free : null); if (!fr) break; tira(fr); n++; }
+  for (let k = 0; k < 12; k++) { const fr = K.plan(v, null, set, null, K.need(v)).free; if (!fr || fr === keep) break; tira(fr); n++; }
+  return n;
+}
 // (the other families in need of the town let their houses go for now — the diary's own door, K.giveUp —: the town's day asks
 // the case's family alone, D-061)
 function calaFila(set, v) { const mine = new Set(K.family(v).map(m => m.id)); let n = 0; sim(() => { for (const [o] of K.queue(set)) if (!mine.has(o.id) && K.giveUp(o).ok) n++; }); return n; }
@@ -97,6 +124,8 @@ function arma(o) {
       if (Af.h.dono !== Af.v.id && Af.h.dono !== Af.p.id) continue; if (Af.fam.length > cap) continue;
       sim(() => { for (const m of Bf.fam) if (m.inside === Bf.h.id) G.Vg.endTask(m); });
       for (const m of Bf.fam) { m.home = Af.h.id; m.hhType = Af.h.type; m.hh = Af.h.id; }
+      // (and what was theirs with them, by the ledger: the house they had is left empty)
+      for (const [k, n] of Object.entries(D.list('h:' + Bf.h.id))) if (n > 1e-6) D.move('h:' + Bf.h.id, 'h:' + Af.h.id, k, n, { code: 'teste', part: true, floor: true });
       Af.h.res = mora(Af.h).length; Bf.h.res = 0; Bf.h.dono = 0; Bf.h.custo = 0; Bf.h.aluga = null; Bf.h.poupa = null; Af.h.poupa = null;
       const e = K.queue(set).find(q => q[0].home === Af.h.id);
       if (!e || !Bf.fam.includes(e[0])) { for (const m of Bf.fam) { m.home = Bf.h.id; m.hhType = Bf.h.type; m.hh = Bf.h.id; } Af.h.res = mora(Af.h).length; Bf.h.res = Bf.fam.length; Bf.h.dono = Bf.v.id; continue; }
@@ -157,7 +186,7 @@ run('c2', () => {
   // (a family with more people than the beds of the house it was given is alone in a house of its own now: no road by hand)
   const resto = K.need(v); const quieta = !resto || (fam.length > camas(hB) && resto === 'lotada' && K.road(v).why === 'so');
   ok('c2c dada no mesmo dia, e a família é a dona', fam.every(m => m.home === hB.id) && hB.dono === v.id && S.day === d0 && quieta && mora(h).length === todos - fam.length, `${fam.filter(m => m.home === hB.id).length} de ${fam.length} da família moram na ${lado(hB)}; dono: ${P(hB.dono) ? P(hB.dono).name : 'o povo'}; a casa cheia ficou com ${mora(h).length} para ${camas(h)}; ${v.name} ${!resto ? 'já não precisa de casa' : quieta ? 'tem a família sozinha numa casa sua, pequena para ela (' + fam.length + ' para ' + camas(hB) + '): não levanta outra com as mãos' : 'AINDA precisa de casa (' + resto + '), e a estrada diz ' + JSON.stringify(K.road(v))}`);
-  ok('c2d pelo livro, com o pouco que guarda', pg.length === (deve > 0 ? 1 : 0) && (!pg.length || (pg[0][3] === 'h:' + h.id && pg[0][4] === 'f:' + set.fac && Math.abs(pg[0][6] - deve) < 0.011)) && Math.abs(moedas('f:' + set.fac) - tes0 - deve) < 0.011 && Math.abs((hB.custo || 0) - deve) < 0.011 && mud.length >= 1,
+  ok('c2d pelo livro, com o pouco que guarda', pg.length === (deve > 0 ? 1 : 0) && (!pg.length || (pg[0][3] === 'h:' + h.id && pg[0][4] === 'f:' + set.fac && Math.abs(pg[0][6] - deve) < 0.011)) && Math.abs((hB.custo || 0) - deve) < 0.011 && mud.length >= 1 && Math.abs(moedas('h:' + hB.id) + moedas('h:' + h.id) - (9 - deve)) < 0.011,
     `${pg.length} linha(s) «compra-casa»${pg.length ? ': ' + pg[0][6] + ' de ' + pg[0][3] + ' para ' + pg[0][4] : ''}; o tesouro ${tes0.toFixed(2)} → ${moedas('f:' + set.fac).toFixed(2)}; a casa custou à família ${hB.custo}; a mudança no livro: ${mud.map(e => e[6] + ' ' + e[5]).join(', ') || 'NADA'}; a família levou ${moedas('h:' + hB.id).toFixed(2)} moedas, a casa cheia ficou com ${moedas('h:' + h.id).toFixed(2)}`);
   ok('c2e a vida diz', (v.moves || []).some(m => /recebeu do povo/.test(m[1])) && (v.diary || []).some(e => /o povo nos deu/.test(e.txt)), `os passos de ${v.name}: «${(v.moves || []).map(m => m[1]).slice(-1)}»; no diário: «${((v.diary || []).filter(e => /povo nos deu/.test(e.txt)).slice(-1)[0] || { txt: 'NADA' }).txt}»`);
   const c = checa(); ok('c2f verificador', c.ok, c.txt);
@@ -171,20 +200,14 @@ run('c2', () => {
 
 // ------------------------------ c3: a troca ------------------------------
 run('c3', () => {
-  abre();
-  // (a family alone in a house of its own with fewer beds than people, in a town of coin)
-  let caso = null;
-  for (const set of [...S.settlements.values()].filter(s => E.coinage(s.fac)).sort((a, c) => a.id - c.id)) {
-    for (const b of [...S.buildings.values()].sort((a, c) => a.id - c.id)) {
-      if (b.set !== set.id || !b.built || !housing(b) || b.type === 'barraco' || b.upgradeFrom || !b.dono) continue;
-      const o = P(b.dono); const L = mora(b); if (!o || !livre(o) || o.home !== b.id || L.length <= camas(b) || K.family(o).length !== L.length || K.need(o) !== 'lotada') continue;
-      const maior = camas(b) < 6 ? 'house' : 'sobrado'; if (G.BDEF[maior].housing < L.length && maior === 'house') continue;
-      caso = { set, b, o, maior }; break;
-    }
-    if (caso) break;
-  }
-  if (!ok('c3a a família sozinha na casa pequena', !!caso, caso ? `${caso.set.name}: ${caso.o.name} #${caso.o.id}, dona da ${lado(caso.b)}, com a família sozinha nela (${mora(caso.b).length} para ${camas(caso.b)} camas)` : `nenhuma família sozinha numa casa sua com menos camas que gente em ${MUNDO}`)) return;
-  const { set, b, o, maior } = caso; const fam = K.family(o);
+  abre(); const caso = sozinha();
+  if (!ok('c3a a família sozinha na casa pequena', !!caso, caso ? `${caso.set.name}: ${caso.o.name} #${caso.o.id}, dona da ${lado(caso.b)}, com a família sozinha nela (${mora(caso.b).length} para ${camas(caso.b)} camas; ${caso.como})` : `nenhuma família sozinha numa casa sua em ${MUNDO}`)) return;
+  try { c3(caso); } finally { caso.desfaz(); }
+});
+function c3(caso) {
+  const { set, b, o } = caso; const fam = K.family(o);
+  // (a house of the people's with more beds than the one the family has — and, if there is such a type, with beds for all of it)
+  const tipos = ['house', 'sobrado', 'insula'].filter(tp => tp !== b.type && G.BDEF[tp].housing > camas(b)); const maior = tipos.find(tp => G.BDEF[tp].housing >= fam.length) || tipos[0];
   semVazias(o, set); calaFila(set, o); poe('h:' + b.id, 1);
   ok('c3b sem casa maior do povo, nada', K.road(o).kind === '' && K.road(o).why === 'so', `a estrada: «${K.road(o).kind || '-'}» (${K.road(o).why}); no diário: «${diario(o)}»`);
   sim(() => K.day(set));
@@ -194,9 +217,10 @@ run('c3', () => {
   const n0 = S.ledgerN || 0; sim(() => K.day(set));
   const dona = P(nova.dono);
   ok('c3e a troca', fam.every(m => m.home === nova.id) && !!dona && fam.includes(dona) && !b.dono && !mora(b).length && !b.aluga && !b.poupa && (dona.moves || []).some(m => /recebeu do povo/.test(m[1])), `a família mora na ${lado(nova)} (dona: ${dona ? dona.name : 'o povo'}); a ${lado(b)} ficou ${b.dono ? 'COM DONO #' + b.dono : 'do povo'}, com ${mora(b).length} moradores; «${dona ? (dona.moves || []).map(m => m[1]).slice(-1) : ''}»`);
-  ok('c3f o que era da família foi com ela', Math.abs(moedas('h:' + b.id)) < 0.011 && Object.keys(D.list('h:' + b.id)).length === 0, `na ${lado(b)} ficou: ${JSON.stringify(D.list('h:' + b.id))}; a mudança no livro: ${livro(n0, e => e[8] === 'mudança').length} linha(s)`);
+  // (all of it, but for what the move's own rounding leaves: less than a hundredth of a thing)
+  ok('c3f o que era da família foi com ela', Math.abs(moedas('h:' + b.id)) < 0.011 && Object.values(D.list('h:' + b.id)).every(n => n < 0.01), `na ${lado(b)} ficou: ${JSON.stringify(D.list('h:' + b.id))}; a mudança no livro: ${livro(n0, e => e[8] === 'mudança').length} linha(s)`);
   const c = checa(); ok('c3g verificador', c.ok, c.txt);
-});
+}
 
 // ------------------------------ c4: as próprias mãos — a paciência, a obra, o diário ------------------------------
 run('c4', () => {
@@ -288,7 +312,7 @@ run('c7', () => {
   sim(() => { for (const m of crescidos) V.kill(m, 'sick'); });
   const orf = a2.fam.filter(m => S.villagers.has(m.id));
   ok('c7e os crescidos morrem: a obra passa aos construtores', !!b2.encomenda && !b2.encomenda.maos && S.buildings.has(b2.id), `${crescidos.map(m => m.name).join(' e ')} morreram: a obra ${lado(b2)} ${b2.encomenda ? (b2.encomenda.maos ? 'CONTINUA das mãos da família' : 'é dos construtores do povo') : 'sem encomenda'}; ficaram ${orf.length} pequenos`);
-  const c2 = checa(3); ok('c7f verificador (sem obra de mãos sem mãos)', c2.ok, c2.txt);
+  const c2 = checa(); ok('c7f verificador (sem obra de mãos sem mãos)', c2.ok, c2.txt);
   void par2;
   const t2 = vive(900, () => b2.built);
   ok('c7g os construtores acabam, e os pequenos mudam (ou a casa é do povo)', b2.built && (orf.length ? orf.filter(m => S.villagers.has(m.id)).every(m => m.home === b2.id) : !b2.dono), b2.built ? `de pé em ${t2} s pelas mãos dos construtores; ${orf.length ? orf.filter(m => m.home === b2.id).length + ' de ' + orf.length + ' pequenos moram nela' : 'sem família: a casa é do povo'}` : `não ficou de pé em 900 s (${Math.round((b2.progress || 0) * 100)}%, falta ${JSON.stringify(b2.need)}; construtores na cidade: ${[...S.villagers.values()].filter(o => o.set === a2.set.id && o.role === 'construtor').length})`);
@@ -304,7 +328,7 @@ run('c8', () => {
   const cativos = fam.filter(m => S.villagers.has(m.id) && P(m.id).captive).length; const vivos = fam.filter(m => S.villagers.has(m.id)).length;
   sim(() => K.day(set));
   const maos = fam.filter(m => S.villagers.has(m.id) && m.age >= 16 && !m.captive && m.set === set.id).length;
-  const c1 = checa(3);
+  const c1 = checa();
   ok('c8c a obra depois da conquista', S.buildings.has(b.id) ? (!!b.encomenda && (maos ? b.encomenda.maos === 1 : !b.encomenda.maos)) : true, `${set.name} é de ${G.Fac.get(set.fac).name}; da família (${vivos} vivos), ${cativos} cativos e ${maos} crescidos livres na cidade: a obra ${S.buildings.has(b.id) ? (b.encomenda && b.encomenda.maos ? 'segue das mãos da família' : 'passou aos construtores do povo que a tomou') : 'se perdeu com a conquista'}`);
   ok('c8d verificador', c1.ok, c1.txt);
   madeira(set, 60);
@@ -393,18 +417,14 @@ run('c12', () => {
 // ------------------------------ c13: quem não vai por esta estrada ------------------------------
 run('c13', () => {
   // (1) the family alone in the house it has: nothing by hand
-  abre(); let so = null;
-  for (const set of [...S.settlements.values()].filter(s => E.coinage(s.fac)).sort((x, y) => x.id - y.id)) {
-    for (const b of [...S.buildings.values()].sort((x, y) => x.id - y.id)) {
-      if (b.set !== set.id || !b.built || !housing(b) || b.type === 'barraco' || !b.dono) continue; const o = P(b.dono); const L = mora(b);
-      if (o && livre(o) && o.home === b.id && L.length > camas(b) && K.family(o).length === L.length && K.need(o) === 'lotada') { so = { set, b, o }; break; }
-    }
-    if (so) break;
-  }
-  if (ok('c13a a família sozinha na casa que tem', !!so, so ? `${so.set.name}: ${so.o.name}, com a família sozinha na sua ${lado(so.b)} (${mora(so.b).length} para ${camas(so.b)})` : `nenhuma família sozinha numa casa sua pequena demais em ${MUNDO}`)) {
-    const { set, b, o } = so; semVazias(o, set); calaFila(set, o); poe('h:' + b.id, 0); madeira(set, 40);
-    sim(() => K.day(set)); if (b.poupa) b.poupa.d -= K.HANDS_DAYS + 3; const rd = K.road(o); sim(() => K.day(set));
-    ok('c13b não levanta nada com as mãos', rd.kind === '' && rd.why === 'so' && !K.waiting(o), `a estrada: «${rd.kind || '-'}» (${rd.why}); a obra: ${lado(K.waiting(o))}; na ficha: «${K.fullSays(b, id => P(id).name, s => s).replace(/<[^>]+>/g, '')}»`);
+  abre(); const so = sozinha();
+  if (ok('c13a a família sozinha na casa que tem', !!so, so ? `${so.set.name}: ${so.o.name}, com a família sozinha na sua ${lado(so.b)} (${mora(so.b).length} para ${camas(so.b)}; ${so.como})` : `nenhuma família sozinha numa casa sua em ${MUNDO}`)) {
+    const { set, b, o } = so;
+    try {
+      semVazias(o, set); calaFila(set, o); poe('h:' + b.id, 0); madeira(set, 40);
+      sim(() => K.day(set)); if (b.poupa) b.poupa.d -= K.HANDS_DAYS + 3; const rd = K.road(o); sim(() => K.day(set));
+      ok('c13b não levanta nada com as mãos', rd.kind === '' && rd.why === 'so' && !K.waiting(o), `a estrada: «${rd.kind || '-'}» (${rd.why}); a obra: ${lado(K.waiting(o))}; na ficha: «${K.fullSays(b, id => P(id).name, s => s).replace(/<[^>]+>/g, '')}»`);
+    } finally { so.desfaz(); }
   }
   // (2) a people without coin: the old road — the people raise it, with their builders
   const a = arma({ maos: true }); if (!ok('c13c a casa cheia', !!a, diz(a))) return;
@@ -478,6 +498,39 @@ run('c15', () => {
   ok('c15c as duas estradas foram andadas', cedidas + maos >= 1, `${cedidas} casa(s) do povo dada(s) e ${maos} cabana(s) das mãos de famílias nos ${ANOS} anos`);
   const c = checa(); ok('c15d verificador e erros', c.ok, c.txt);
   const k = salva(); const c2 = checa(); ok('c15e save e load no fim', c2.ok, `${k} caracteres; ${c2.txt}`);
+});
+
+// ------------------------------ c16: o par que chega depois (L-719) ------------------------------
+// One house for a family, by any door: the family's own hut answers to the same question as a paid house (K.waiting). The
+// one who ordered it is left alone with the little ones (the partner dies), and marries again with the work under way: the new
+// partner, who came to the full house after, is not written in the work.
+run('c16', () => {
+  const a = arma({ maos: true, dobro: true }) || arma({ maos: true }); if (!ok('c16a a casa cheia', !!a, diz(a))) return;
+  const { set, v, h, hB } = a; const q = P(v.partner);
+  // (the test's hand, before the work is ordered: the two live apart — the partner in the house the family had, the one the
+  // day asks alone with the little ones in the full house)
+  sim(() => G.Vg.endTask(q)); v.partner = 0; q.partner = 0; q.home = hB.id; q.hhType = hB.type; q.hh = hB.id; hB.dono = q.id; hB.res = 1; h.res = mora(h).length;
+  semVazias(v, set); calaFila(set, v); poe('h:' + h.id, 0); madeira(set, 40);
+  sim(() => K.day(set)); if (h.poupa) h.poupa.d -= K.HANDS_DAYS; sim(() => K.day(set));
+  const b = K.waiting(v);
+  if (!ok('c16b a obra das mãos, marcada por quem está só', !!b && b.encomenda.maos === 1 && !b.encomenda.fam.includes(q.id) && b.encomenda.fam.includes(v.id), b ? `${v.name}, só com os pequenos na casa cheia (${mora(h).length} para ${camas(h)}; «${K.need(v) || a.why}»), marcou ${lado(b)}: escritos ${JSON.stringify(b.encomenda.fam)} — ${q.name} #${q.id} não` : `${v.name} não marcou obra: precisa de casa «${K.need(v) || 'não'}», a estrada ${JSON.stringify(K.road(v))}`)) return;
+  // (the marriage, with the work under way: the partner comes to live in the full house; the house it leaves is the people's, empty)
+  v.partner = q.id; q.partner = v.id; q.home = h.id; q.hhType = h.type; q.hh = h.id; h.res = mora(h).length; hB.res = 0; hB.dono = 0; hB.aluga = null; const nova = hB;
+  const obras = () => [...S.buildings.values()].filter(o => o.encomenda && !o.built && (o.encomenda.fam.includes(v.id) || o.encomenda.fam.includes(q.id))).length;
+  const duas = () => QA.check().filter(x => /espera duas casas/.test(x.msg)).map(x => x.msg.slice(0, 120));
+  // (asked by every door: the decision, the body's — with coins, with a house of the people's empty —, the town's day twice)
+  poe('h:' + h.id, 60); const r1 = sim(() => K.order(q)); const r2 = sim(() => K.order(q, { now: true })); const can = K.can(q);
+  poe('h:' + h.id, 0); const r3 = sim(() => K.order(q)); sim(() => K.day(set)); sim(() => K.day(set));
+  ok('c16c não pede outra casa por nenhuma porta', K.waiting(q) === b && !r1.ok && !r2.ok && !r3.ok && /sendo levantada/.test(r1.why + r2.why + r3.why) && !can.ok && obras() === 1 && !duas().length && (!nova || (!nova.dono && !mora(nova).length)) && q.home === h.id,
+    `${q.name}, que veio morar com ${v.name} depois da obra marcada (precisa de casa: ${K.need(q) || 'não'}), espera ${lado(K.waiting(q))}; com moedas, pedindo: «${r1.ok ? 'ENCOMENDOU' : r1.why}»; pelo corpo: «${r2.ok ? 'ENCOMENDOU' : r2.why}»; sem moedas e com uma casa vazia do povo${nova ? '' : ' (sem lugar para ela)'}: «${r3.ok ? 'TOMOU' : r3.why}»; depois de dois dias da cidade: ${obras()} obra(s) da família${nova ? ', a casa do povo com ' + mora(nova).length + ' moradores' : ''}; no diário de ${q.name}: «${diario(q)}»${duas().length ? '; o verificador: ' + duas()[0] : ''}`);
+  // (the new partner raises the hut with the family, and goes to live in it with it)
+  const visto = new Set(); const estranhos = new Set(); const ids = new Set(b.encomenda.fam.concat([q.id])); const n0 = S.ledgerN || 0;
+  S.time = 0.15; const t = vive(600, () => b.built, () => { for (const o of naObra(b)) { visto.add(o.id); if (!ids.has(o.id)) estranhos.add(o.id); } });
+  const cargas = livro(n0, e => e[4] === 'o:' + b.id && e[9] === q.id).length;
+  ok('c16d o par trabalha na cabana da família', b.built && !estranhos.size && (visto.has(q.id) || cargas > 0), b.built ? `de pé em ${t} s; na obra: ${[...visto].map(id => (P(id) ? P(id).name : '#' + id)).join(', ')} (${q.name}: ${visto.has(q.id) ? 'trabalhou' : 'NÃO foi visto'}, ${cargas} carga(s)); de fora da família: ${estranhos.size || 'ninguém'}` : `não ficou de pé em 600 s (${Math.round((b.progress || 0) * 100)}%)`);
+  const fam = K.family(v);
+  ok('c16e e muda com ela', b.built && q.home === b.id && v.home === b.id && fam.includes(q) && fam.every(m => m.home === b.id), `${v.name} mora na ${lado(S.buildings.get(v.home))}, ${q.name} na ${lado(S.buildings.get(q.home))}; a família de agora (${fam.length}) inteira na cabana: ${fam.every(m => m.home === b.id) ? 'sim' : 'NÃO'}`);
+  const c = checa(); ok('c16f verificador', c.ok, c.txt);
 });
 
 console.log(fails.length ? `CASA-CHEIA: ${fails.length} FALHA(S): ${fails.join(', ')}` : `CASA-CHEIA: ok (${ms()} ms)`);

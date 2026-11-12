@@ -450,15 +450,22 @@
   let HW = null; // (the families' works under way, by the id of each one of the family: found again from the world)
   G.worldHooks.push(() => { HW = null; });
   const handWorks = () => { if (!HW) { HW = new Map(); for (const b of G.S.buildings.values()) if (b.encomenda && b.encomenda.maos && !b.built) for (const id of b.encomenda.fam) HW.set(id, b.id); } return HW; };
-  const hands = b => b.encomenda.fam.map(P).filter(m => m && m.age >= 16 && !m.captive && m.set === b.set);
+  // (the family of a commission as it is now: those written in it, and the partner who came to live with one of them after
+  // it was ordered — one house for a family, by any door: L-719)
+  const famNow = o => { const out = o.fam.map(P).filter(Boolean); for (const m of out.slice()) { const p = P(m.partner); if (p && !p.captive && !!m.home && p.home === m.home && !out.includes(p)) out.push(p); } return out; };
+  const hands = b => famNow(b.encomenda).filter(m => m.age >= 16 && !m.captive && m.set === b.set);
+  // (whether one may work on a family's own work: one of the family, as it is now — the checker asks)
+  K.ownHands = (b, v) => !!(b && b.encomenda && b.encomenda.maos && famNow(b.encomenda).includes(v));
   K.handsTask = function (v) {
-    const id = handWorks().get(v.id); const b = id ? G.S.buildings.get(id) : null;
+    // (the work one is written in, or the one the partner one lives with is written in)
+    const q = v.partner ? P(v.partner) : null;
+    const id = handWorks().get(v.id) || (q && q.home === v.home ? handWorks().get(q.id) : 0); const b = id ? G.S.buildings.get(id) : null;
     if (!b || b.built || !b.encomenda || !b.encomenda.maos || b.set !== v.set || v.age < 16 || v.captive) return null;
     if (b.unreach && G.S.clock - b.unreachT < 30) return null; // (no way to it just now: the builders' own wait)
-    // (a load in the hands: only the plain one the work still needs goes there — any other to its place first)
-    const load = v.carry && v.carry.n > EPS ? v.carry : null; const fitsIt = !!load && G.Vg.plainLoad(v) && b.need[load.k] > 0 && load.k !== 'food';
-    if (load && !fitsIt) return null;
-    let mat = fitsIt; if (!mat) for (const k in b.need) if (b.need[k] - ((b.incoming && b.incoming[k]) || 0) > 0 && G.Fac.free(b.set, k) >= 1) { mat = true; break; }
+    // (a load in the hands goes to its place first — the wood a woodcutter of the family brings from the forest is the
+    // people's, for the store: what the hut takes is taken from the store, in the ledger, where the people's spare is counted)
+    if (v.carry && v.carry.n > EPS) return null;
+    let mat = false; for (const k in b.need) if (b.need[k] - ((b.incoming && b.incoming[k]) || 0) > 0 && G.Fac.free(b.set, k) >= 1) { mat = true; break; }
     if (!mat && !G.Vg.canWork(b)) return null;
     return G.Vg.setTask(v, { type: 'build', id: b.id, pri: 1, st: 0 });
   };
@@ -582,7 +589,9 @@
     // (the house stands: the coins set aside go to the people who gave the materials and the hands)
     const kept = D.get('h:' + b.id, 'moedas'); const fac = o.fac || G.Village.facOfSet(b.set);
     if (kept > EPS && D.exists('f:' + fac)) D.move('h:' + b.id, 'f:' + fac, 'moedas', kept, { code: 'obra-casa', by: o.by || 0, part: true });
-    const fam = o.fam.map(P).filter(v => v && !v.captive && v.set === b.set);
+    // (who moves: the family as it is now — the partner who came to the house after the order goes with it, L-719: the
+    // family's new house may have no bed left for one who would follow later)
+    const fam = famNow(o).filter(v => !v.captive && v.set === b.set);
     if (!fam.length) { b.dono = 0; b.custo = 0; return r; }
     if (!P(b.dono)) b.dono = fam[0].id;
     b.custo = o.paid || 0; // (the materials and the ground the family paid for: L-236)

@@ -996,8 +996,9 @@
     const ahead = gw && G.Village.workPri ? Math.min(0, G.Village.workPri(gw, v) + G.Village.GREAT_PRI) : 0;
     for (const b of S.buildings.values()) {
       if (b.built || b.set !== v.set || b.type === 'ruin') continue;
-      // (a hut a family raises with its own hands is the family's to raise — act-casa.js, D-222: never the people's builders')
-      if (b.encomenda && b.encomenda.maos && !b.encomenda.fam.includes(v.id)) continue;
+      // (a hut a family raises with its own hands is the family's to raise, never the people's builders': its grown ones come
+      // to it by their own door — G.Casa.handsTask, act-casa.js, D-222)
+      if (b.encomenda && b.encomenda.maos) continue;
       if (b.unreach) { if (b.unreach >= 6) { abandonSite(b); continue; } if (S.clock - b.unreachT < 30) continue; }
       const st = G.Fac.stockOfSet(b.set);
       let needMat = false; for (const k in b.need) if (b.need[k] - (b.incoming[k] || 0) > 0 && G.Fac.free(b.set, k) >= 1) { needMat = true; break; }
@@ -1098,8 +1099,8 @@
     // (a crate of an operation, a purchase on its way home: it goes where it belongs, never into the common store — and
     // with the way there cut, as its rule says: G.Act.holdCarry)
     if (v.carry && v.carry.k !== 'water' && (v.carry.op || v.carry.to) && G.Act) { const t = G.Act.resumeCarry(v, H) || G.Act.holdCarry(v, H); if (t) return t; }
-    // (a family raising its own hut with its hands works on it before the trade of the day — and takes to it the load it
-    // fetched for it: act-casa.js, D-222)
+    // (a family raising its own hut with its hands works on it before the trade of the day — a load in the hands to its
+    // place first: act-casa.js, D-222)
     if (!v.captive && G.Casa && G.Casa.handsTask) { const t = G.Casa.handsTask(v); if (t) return t; }
     if (v.carry && v.carry.k !== 'water') {
       if (v.role === 'construtor') { const t = buildTask(v); if (t) return t; }

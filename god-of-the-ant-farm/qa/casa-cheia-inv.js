@@ -28,14 +28,14 @@
       const fam = Array.isArray(o.fam) ? o.fam.map(P).filter(Boolean) : [];
       if (!fam.length) add('casa-cheia', 2, `${nm}: obra das mãos de uma família sem ninguém da família vivo (D-222)`);
       else if (!b.dono || !o.fam.includes(b.dono)) add('casa-cheia', 2, `${nm}: obra das mãos de uma família e o dono (#${b.dono || 0}) não é dela`);
-      else if (!fam.some(m => m.age >= 16 && !m.captive && m.set === b.set)) add('casa-cheia', 3, `${nm}: obra das mãos de uma família sem um crescido dela na cidade (passa aos construtores no dia da cidade)`);
+      else if (!fam.some(m => { const q = m.partner ? P(m.partner) : null; return (m.age >= 16 && !m.captive && m.set === b.set) || (!!q && q.home === m.home && q.age >= 16 && !q.captive && q.set === b.set); })) add('casa-cheia', 3, `${nm}: obra das mãos de uma família sem um crescido dela na cidade (passa aos construtores no dia da cidade)`);
       const kept = D.get('h:' + b.id, 'moedas');
       if (!fin(o.paid) || o.paid > mat + 0.011) add('casa-cheia', 2, `${nm}: a família pagou ${o.paid} pela cabana das suas mãos, mais do que os materiais dela (${mat.toFixed(2)})`);
       else if (Math.abs(kept - o.paid) > 0.011) add('casa-cheia', 2, `${nm}: a obra das mãos guarda ${kept.toFixed(2)} moedas e a encomenda diz ${o.paid}`);
     }
     for (const v of s.villagers.values()) {
       const t = v.task; if (!t || t.type !== 'build') continue; const b = works.get(t.id); if (!b) continue;
-      if (!b.encomenda.fam.includes(v.id)) add('casa-cheia', 2, `${v.name} #${v.id} (${v.role}) trabalha na cabana das mãos de outra família (${b.type}#${b.id}) (D-222)`);
+      if (!K.ownHands(b, v)) add('casa-cheia', 2, `${v.name} #${v.id} (${v.role}) trabalha na cabana das mãos de outra família (${b.type}#${b.id}) (D-222)`);
     }
     for (const set of s.settlements.values()) {
       // ---- the builders' two paid works: a family's own never counts
