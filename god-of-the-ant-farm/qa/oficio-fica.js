@@ -379,8 +379,10 @@ if (on('x13')) {
   let c = null;
   for (const set of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
     const A = adults(v => v.set === set.id).length; if (A < 30 || G.Fac.enemiesOf(set.fac).length || V.keeps(set) > 0) continue;
-    const b = [...S.buildings.values()].sort((x, y) => x.id - y.id).find(x => x.set === set.id && !x.built && x.type !== 'ruin' && x.need && (x.need.stone || 0) > ((x.incoming && x.incoming.stone) || 0) + 2);
-    if (b) { c = { set, b, A }; break; }
+    // (the work of the town that waits for the most stone: a house's few stones come in the seconds of the case)
+    const wait = x => (x.need ? x.need.stone || 0 : 0) - ((x.incoming && x.incoming.stone) || 0);
+    const b = [...S.buildings.values()].filter(x => x.set === set.id && !x.built && x.type !== 'ruin' && wait(x) > 2).sort((x, y) => wait(y) - wait(x) || x.id - y.id)[0];
+    if (b && (!c || wait(b) > c.w)) c = { set, b, A, w: wait(b) };
   }
   if (!c) ok('x13 a obra grande puxa', false, 'nenhuma cidade em paz de trinta adultos com uma obra à espera de pedra e sem obra grande com a vez');
   else {
@@ -388,8 +390,8 @@ if (on('x13')) {
     const gang = Math.ceil(c.A * V.GANG); const bs = adults(v => v.set === c.set.id && v.role === 'construtor' && !(S.avatar && S.avatar.id === v.id)).slice(1);
     god(() => { for (const v of bs) { v.role = 'coletor'; v.job = 0; v.roleDay = S.day - 5; v.roleBack = null; } c.set.ofm.construtor = 1; c.set.ofm.coletor = (c.set.ofm.coletor || 0) + bs.length; });
     const n0 = adults(v => v.set === c.set.id && v.role === 'construtor').length;
-    const T = watch(); T.live(45, () => god(() => { c.set.vez = 1; c.set.gw = c.b.id; }));
-    const keeps = V.keeps(c.set); const n1 = adults(v => v.set === c.set.id && v.role === 'construtor').length; const L = T.log().filter(e => e.why === 'obra' && e.set === c.set.id);
+    let keeps = 0; const T = watch(); T.live(45, () => god(() => { c.set.vez = 1; c.set.gw = c.b.id; keeps = Math.max(keeps, V.keeps(c.set)); }));
+    const n1 = adults(v => v.set === c.set.id && v.role === 'construtor').length; const L = T.log().filter(e => e.why === 'obra' && e.set === c.set.id);
     const kept = L.filter(e => { const v = G.S.villagers.get(e.id); return v && (v.role !== 'construtor' || v.roleBack === e.from); }).length;
     ok('x13 a obra grande com a vez puxa na hora', keeps > 0 && n1 >= gang - 1 && L.length >= Math.min(3, gang - 2) && kept === L.length, `${c.set.name} (${c.A} adultos): ${V.buildName ? V.buildName(c.b) : c.b.type} ganha a vez e guarda ${Math.round(keeps)} de pedra; a turma é de ${gang} construtores: ${n0} → ${n1} em 45 s, ${L.length} chamados pela obra (cada um guarda o ofício de onde saiu: ${kept})`);
     const un = T.unsaid(); const q = inv(); ok('x13 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
