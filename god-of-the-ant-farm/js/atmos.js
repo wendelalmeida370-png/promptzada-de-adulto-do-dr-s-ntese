@@ -76,6 +76,8 @@
     lareira: Object.freeze({ why: 'lareira', k: 0.5, txt: 'gente acordada junto ao fogo da casa' }),
   });
   const housing = b => !!(G.BDEF[b.type] && G.BDEF[b.type].housing);
+  // (where a household lives: a house of the town's, or the seat of who rules — its kitchen and its hearth burn as a house's, T-931)
+  const lodges = b => G.Village.bedsOf(b) > 0;
   // (the New Fire: every flame of the town is out until it is lit again — festivals.js)
   const dark = b => !!(G.Fest && G.Fest.darkB && G.Fest.darkB(b));
   // the fire a building has burning now, or null: a building at rest does not smoke
@@ -85,7 +87,7 @@
     if (b.type === 'banhos') return G.Termas && G.Termas.quente(b) ? FIRE.fornalha : null;
     if (b.type === 'taverna') return G.Taverna && G.Taverna.aberta(b) ? FIRE.taverna : null;
     const f = fires().get(b.id); if (f) return f;
-    if (housing(b)) { const e = census().ins.get(b.id); if (e) return e.cook ? FIRE.cozinha : e.hearth ? FIRE.lareira : null; }
+    if (lodges(b)) { const e = census().ins.get(b.id); if (e) return e.cook ? FIRE.cozinha : e.hearth ? FIRE.lareira : null; }
     return null;
   };
   // ------------------------------ the light behind the window ------------------------------

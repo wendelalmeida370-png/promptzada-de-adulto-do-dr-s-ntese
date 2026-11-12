@@ -70,6 +70,11 @@ console.log(`${world}: ${V.buildName(P)} #${P.id} de ${town().name} (${(G.Fac.ge
 function ready(b) {
   const f = G.Fac.get(V.facOfSet(b.set)); if (D.free('f:' + f.id, 'wood') < 40) D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true });
   S().time = Te.horas(b).abre - 0.02; S().weather.rain = 0; if (S().weather.storm) S().weather.storm = 0;
+  // (the stoker's own day in order before the baths open, by the test's hand, as the lazer.js leaves its far actor's: the
+  // house's water in the jar and the stoker fed — the house's water (a chore of 1,05, until 0,55) took Nezahualcóyotl from
+  // the opening to 0,43, then his hunger, then the theatre's doors: the furnace was never lit, «lenha 0». The case is the
+  // baths' day with their stoker at them, not who else calls him that morning. T-810)
+  for (const v of S().villagers.values()) if (v.job === b.id && v.role === 'foguista') { const h = S().buildings.get(v.home); if (h) h.water = 1; v.hunger = Math.min(v.hunger, 20); }
   return f;
 }
 // (the wood the stoker goes for is his from the step he sets out — held in the store, L-400: in the generation 7's Argos the
@@ -113,7 +118,13 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
   let most = 0, strangers = 0, over = 0, sick = null, dSick = null, dEn = null; const prev = {};
   if (op) {
     liveSec(40, () => op.data.lenha >= 1 || !A.live(op), bad); // (the stoker lights the furnace first)
+    // (since the wish for a bath — D-200 — someone of the town may be on the way to these baths, or in them, when the case
+    // sends its six, and more may come while it lasts; the Temazcal of Tenochtitlan has one place in the water, and the case
+    // is the bath of its own bathers: the test's hand ends the errands of the others and gives them today's bath, so that
+    // nobody else comes — the baths with who comes by their own wish are qa/freguesia.js: T-913)
+    for (const v of S().villagers.values()) if (v.task && v.task.type === 'termas' && v.task.id === b.id) G.Vg.endTask(v);
     const L = bathers(b, 6, 2.9); sick = L[0] || null;
+    for (const v of S().villagers.values()) if (v.set === b.set && !L.includes(v)) v.bathDay = S().day;
     // (each bather tired — not so tired that the tiredness under 22 sends one to bed before the bath ends: at 40 the one
     // watched went to bed from the water after 30 s —, and sick as one still up is: a light sickness, under the fever that
     // puts one in bed at home (G.Lar.fever, L-227 — the 120 of before sent all six home to bed on the way), given as each

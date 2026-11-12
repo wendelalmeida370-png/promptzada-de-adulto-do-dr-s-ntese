@@ -329,15 +329,96 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   achados pelos dois mundos do zero de 90 anos da `degraus` g8 —; e um limite de prova (T-804, `casa` h12). **Não feito
   pelo M, aberto:** o governante morar no palácio (T-765), os lugares da praça para o ajuntamento (T-762), a obra grande
   longe dos armazéns (T-760), a terra das capitais velhas (T-761).
-- **Feitas, a juntar:** as termas grandes (T) e as coisas em volta das casas (Q).
-- **Em curso, três frentes:** **as pontes** (P: a ponte de rua calçada era uma laje cinza lisa — vista nas fotos do
-  diário —, e ganha pedra, mureta e arco pelo povo do chão; só desenho); **a grande biblioteca e o paço municipal** (B; o
-  resto do T-784: 16 m, seis povos); e **a casa por dentro** (G; T-403, T-436, T-446: o lugar de comer e o fogo no núcleo
-  de toda casa, o motor que recusa a peça onde o corpo não cabe, os depósitos do celeiro em qualquer semente).
+- **Feitas e juntadas, mais quatro frentes** (cada bloco em `qa/patch3/bloco-*.md`):
+  - **as coisas em volta das casas** (Q; D-186 a D-188; fecha o T-703): o que a casa tem fica no lote dela, pela casca da
+    planta — a lenha, a rede, o couro, o escudo, o barril, os potes —, nunca na rua (`quintal.js`, regras 59 e 60);
+  - **as termas e as grandes termas** (T; D-182 a D-184; fecha o T-784): 20 e 28 m, no romano, no grego e no clássico, a
+    planta própria, a piscina mais vazia para cada banhista (`termas-grandes.js`, `visual/termas-3d.js`,
+    `visual/termas-corpo.js`). Na junção: os números do degrau (D-161: 80 pessoas; 160 numa cidade de nível 4), a casa rica
+    que pedia o valor da terra à toa (T-805) e o foguista-oráculo da prova (T-806);
+  - **as pontes de pedra** (P; D-190, D-191, L-860 a L-863): a ponte na pedra e à maneira do povo de quem a ergueu, o
+    tabuleiro na altura dos pés, a mureta só do lado da água, a figura de longe (`visual/pontes.js`, regra 64). A ponte
+    alta de verdade pede o rio com leito mais fundo que as margens: fica para um patch do rio (D-189, decidido pelo líder
+    por delegação do dono). Na junção: a espera da prova da fumaça
+    (T-700);
+  - **a grande biblioteca dos seis povos** (B; D-192, D-193, L-870 a L-874): 16 m, a forma e a planta de cada povo, o dia
+    do degrau (`saber.js`, `visual/saber-3d.js`, regra 65). Na junção: o degrau aos 120 (D-185). **Não feito pelo B:** o
+    paço municipal (T-874; o jogo de peças para riscá-lo ficou pronto).
+- **Achado pelo líder ao medir, na junção das pontes: ninguém vai aos banhos** (L-717, aberto): um pedido de banho em
+  cinco dias nas quatro cidades com banhos da metrópole — o passeio pela cidade só é pedido quando o ofício não acha
+  trabalho.
+- **Juntada, da terceira leva: a casa por dentro** (G; D-196 a D-198, L-890 a L-893; fecha o T-403, o T-436 e o T-446):
+  toda casa tem o seu núcleo — o fogo e onde a família come junta (a mesa com os bancos, o banco de comer, a esteira de
+  comer, o fogo de chão da cabana redonda), guardados antes das camas —; o encaixe de cada peça pergunta ao corpo
+  (`P.bodyFits`); o save diz a gramática das plantas (`intG`, regra 67) e um save de antes tem os registros julgados ao
+  abrir; `qa/casa-dentro.js` prova nos quatro dados e na noite da cidade e da metrópole. Na junção, pelo líder: a
+  bancada curta da casa-oficina (L-893: a casca de longe volta a ser a da planta), o catálogo gerado de novo, e quatro
+  provas que julgavam o que o mundo de agora não promete (T-808 a T-811: o colo do bebê, o ator fora da cidade, a manhã do
+  foguista, a casa rica julgada depois da guerra). **Aberto do G:** T-892, T-893, T-895 (em quatro de cada cinco casas de
+  4 m o que cabe é o banco de dois lugares).
+- **Juntado, da terceira leva: o governante mora no palácio** (R; D-205 a D-208, L-930; fecha o T-765): a sede — a casa do
+  chefe, o palácio, o grande palácio, o colossal — é a casa de quem governa (`BDEF.aposentos`, `G.Village.bedsOf`): a
+  família dorme nos aposentos, come da despensa dela e sai quando outro governa ou quando a sede cai ou entra em obras
+  (`G.Casa.reign`, só do `act-casa.js`); quem é eleito noutra cidade do povo vem para a capital; a sede guarda as camas que
+  tem; nenhuma porta das casas da cidade a enxerga (`qa/morar-palacio.js`, regras 71 e 72). Na junção, pelo líder: a
+  cozinha e a lareira da sede fumam como as de uma casa (fecha o T-931), e três provas ajustadas ao mundo de agora (T-812:
+  a despensa vazia; T-813: a casa mercante segue a família e espera a ronda do dia — fecha o T-936). **Aberto do R:** a
+  oferta ao corpo do deus de mudar para a sede (T-932, com a T-763), T-930, T-933 a T-935, T-937, T-938.
+- **Juntada, da terceira leva: a freguesia** (F; D-200 a D-204, L-910; conserta o L-717): quem vai aos banhos e à biblioteca
+  vai pela sua escolha do dia (`decide`: «banho», «ler»), com causa — quem (o ofício sujo, o nobre e o mercador, o cansado,
+  o doente; o hábito do povo da terma), quando (a hora de cada um, com tempo antes de fechar), quanto (a sorte do dia pelo
+  `G.hash` da pessoa e do dia, nunca o acaso do mundo; uma vez por dia), o que impede (a moeda, a casa cheia, a distância,
+  a fome, as mãos ocupadas). Quem entrou fica para o banho; o foguista com a fornalha por alimentar não sai para o lazer.
+  A medida, cinco dias vividos sem ninguém mandado: a metrópole de 0 para 85 banhos, a mega de 7 para 60; dez anos de paz
+  na metrópole custam 3,7 % da comida e 2,6 % da gente, sem morte de fome (`qa/freguesia.js`, regras 69 e 70). Na junção,
+  pelo líder: **o par que chega à casa depois da encomenda encomendava uma segunda casa** (L-719, achado pelo F nas medidas
+  — T-920; consertado no `K.waiting`, caso r9 do `casa-rica`), e a prova e2 que guardava um banhista de um instante atrás
+  (T-815). **Aberto do F:** a praça e o mercado ao fim da tarde (medido e desenhado, não feito), a fornalha fria pela água
+  de casa e pela fome do foguista (T-918), as crianças nos banhos, T-914 a T-916, T-919.
+- **Juntada: a obra grande anda e acha terra** (M, segunda rodada; D-215 a D-217, L-783, L-784; fecha o T-760 e o T-767, o
+  T-761 em parte): **a carroça da obra grande** (a obra com a vez a mais de 6 casas do armazém recebe por carroça, 20 por
+  carga, pelo livro: a 37 casas, em dois anos, 203 de pedra onde entravam 71); **o lote aplainado** (corte e aterro de até
+  3 níveis na fundação de um degrau maior: os pares capital × tipo com lote nos mundos prontos vão de 17 para 29 de 64);
+  o degrau do tamanho da pedra do povo (a menor entre a renda do último ano e a média dos anos); a pedra que escapava para
+  os sobrados das cidades-irmãs (L-783); a resistência do degrau maior pelo lote (L-784). O `degraus` g8 (dois mundos do
+  zero, 90 anos): 9 degraus grandes fundados e 5 de pé (antes: 5 a 7 e 4); em quatro sementes aos 90 anos, de 4 de pé para
+  11, e **a primeira maravilha de 40 m erguida por uma cidade sozinha, em 15 anos** (`qa/canteiro.js`, `qa/aterro.js`,
+  regras 75 e 76). **Decidido pelo líder: a D-160** (a terra: aplainar — feito —, guardar o campo cedo, procurar mais longe).
+  **Aberto do M2:** a pedra não rende (T-769: é o relógio de toda obra grande), a terra das capitais velhas (T-770), o fogo
+  que leva o palácio pronto (T-771, D-219), a gente aos 90 anos (T-772), T-768, T-773.
+  **Na junção, pelo líder:** o tijolo prometido que não chega (**L-720**, consertado: o `casa` h10 acusou uma casa paga
+  parada quatro anos em 92% por 3 adobes que ficavam na prateleira da olaria — defeito do Patch 2 que a história nova do
+  mundo trouxe à vista; `V.BRICK_WAIT`, `escala` e24c e e24d, a regra no verificador); e, medidos em quatro mundos do zero
+  de 90 anos **na árvore juntada** (`scratchpad/hype/m90/`): 9 degraus grandes acabados e 7 de pé (na cópia do M: 12 e 11;
+  antes: 5 e 4), nenhuma maravilha, e a semente 211 sem obra grande nenhuma (T-816: a renda de pedra do último ano em
+  zero); o palácio de Mênfis queimado por um motim e o grande salão de Hedeby por um incêndio (dois casos reais para a
+  D-219); quem deixa a sede fica sem teto (T-818: é a casa cheia, L-718); o `urb1` 12 por um décimo (T-817).
+- **Achado pelo líder ao fotografar as casas por dentro: a casa cheia que não esvazia** (L-718, aberto): em todo mundo
+  pronto há casas com o dobro ou o triplo da lotação (a pior: 22 numa casa de 6, ao lado de uma casa com cinco lugares
+  vagos), e a razão de quase todas as famílias é «falta dinheiro» — o casal na casa cheia dos parentes nunca junta o preço
+  de uma casa. É regra de economia e de moradia, com decisão de design: fica para uma frente própria.
+- **Juntada: a casa cheia ganha saída** (H; D-220 a D-224, L-970 a L-972; fecha a L-718 para a casa de várias famílias):
+  **a casa vazia do povo, dada** no mesmo dia à família que não cabe e não tem o preço (paga o que tem além de duas moedas),
+  o plano que passa a ver a casa onde a família viveria menos apertada (a família de sete nunca tomava a casa de seis: L-970);
+  **a cabana das próprias mãos** depois de dois dias sem juntar o preço (só os crescidos da família, a madeira de sobra do
+  povo, o lote barato, uma por cidade, fora das obras pagas); o Diário e a ficha da casa dizem a estrada com a causa; o corpo
+  do deus escolhe. Medido em dez anos: as pessoas-dia em casa com o dobro caem de 6–8% para 2–4% na metrópole e na
+  megalópole; 28 sabotagens acusadas (`qa/casa-cheia.js`, 102 casos na «cidade», 101 na metrópole e na mega; regras 77 e
+  78). **Na junção, pelo líder:** a bandeira perdida quando o dono morre entre a mudança e a ronda (**L-721**, `trade.js`;
+  `casa-mercante` k9); **a tarefa guardada por uma cena que sumia com a carga contada a caminho de uma obra (L-722**,
+  `villagers.js`/`scene.js`; `obra` b13 — um defeito das cenas, de antes do patch, que o verificador do Patch 2 acusou na
+  metrópole em guerra); T-829 e T-830 (duas provas que a história nova do mundo desarmou). **Aberto do H → segunda rodada:**
+  a família sozinha maior que a casa (T-975 → **a D-194 do líder: os filhos crescidos levantam a sua cabana**), a família
+  antes do solteiro (T-976), quem deixa a sede sem teto (T-818), a madeira média (T-978).
+- **Em curso (quatro frentes):** **a praça ao fim da tarde, o foguista no posto e o bairro dos banhos** (F, segunda
+  rodada; T-918, D-202); **a família grande demais para a casa** (H, segunda rodada: a D-194, T-976, T-818, T-978);
+  **o ofício que fica** (X; T-840: 206 de 399 adultos trocam de ofício em dois dias); e **a terra guardada
+  cedo, o fogo nos monumentos e a última pedra** (M, terceira rodada: a D-160, a D-219, a obra parada em 98%, a gente em dez
+  sementes — T-772).
 - **O diário do patch para o dono** (`qa/patch3/diario/`, publicado como artefato): o que entrou, o que está em obras e o
   que cada coisa muda no jogo, com capturas de verdade do Modo Encarnado (`qa/visual/fotos-diario.js`); atualizado a
   cada frente juntada.
 - **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
   novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** juntar as frentes M, T, Q, P, B e G, e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
+- **A seguir:** juntar as frentes X, H, F2 e M3; depois o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
   seis sementes da terra, o relatório).

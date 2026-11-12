@@ -223,7 +223,13 @@ const digest = op => JSON.stringify([op.st, op.data.fase, op.data.entradas, op.d
 const solo = (b, cast) => { const a = cast[0]; for (const o of cast.slice(1)) { o.role = 'coletor'; o.job = 0; G.Vg.endTask(o); } return a; };
 // (a tile of the town's ground some 40 tiles from the door — the nearest to 40 —, free, that the actor reaches: by the map of
 // regions, the theatre's door is reached from it too)
-const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); let best = null, bd = Infinity; for (let y = 0; y < G.N; y++) for (let x = 0; x < G.N; x++) { const d = Math.hypot(x + 0.5 - dr[0], y + 0.5 - dr[1]); if (d < 38 || d > 44 || Math.abs(d - 40) >= bd) continue; const i = W.idx(x, y); if (!W.walkable(i) || S().occ[i] || !W.reaches(v, x + 0.5, y + 0.5)) continue; best = [x + 0.5, y + 0.5]; bd = Math.abs(d - 40); } return best; };
+// (far from the door and still in her town, where the town reaches that far: past the town's bounds — the limit of wander(),
+// its radius and four tiles, sixteen at the least — one with nothing in her hands is sent back to it (the errand 'migrate', of
+// 1,5), and the call to the stage is not given over an errand above 1: Yaretzi, put down 40 tiles from the door and 30 from
+// the middle of her town, walked home through the whole preparation and the show was called off «sem atores». T-809)
+const farSpot = (b, v) => { const W = G.W, dr = G.Vg.door(b); const set = S().settlements.get(v.set); const lim = set ? Math.max(16, (set.radius || 0) + 4) - 1 : Infinity;
+  const find = inTown => { let best = null, bd = Infinity; for (let y = 0; y < G.N; y++) for (let x = 0; x < G.N; x++) { const d = Math.hypot(x + 0.5 - dr[0], y + 0.5 - dr[1]); if (d < 38 || d > 44 || Math.abs(d - 40) >= bd) continue; if (inTown && set && Math.hypot(x + 0.5 - set.cx, y + 0.5 - set.cy) > lim) continue; const i = W.idx(x, y); if (!W.walkable(i) || S().occ[i] || !W.reaches(v, x + 0.5, y + 0.5)) continue; best = [x + 0.5, y + 0.5]; bd = Math.abs(d - 40); } return best; };
+  return find(true) || find(false); };
 {
   fresh(); const b = S().buildings.get(P.id); S().time = Tt.EARLY - 0.02; calm(b);
   const cast = actors(b);

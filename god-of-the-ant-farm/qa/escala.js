@@ -388,8 +388,10 @@ run('e13', () => {
         set._noSite = {}; const p = sim(() => V.findSite(set, t, undefined, n)); if (!p) { out.push(`${set.name} ${t}/${n}: -`); continue; }
         let livre = true; for (let y = p[1]; y < p[1] + n; y++) for (let x = p[0]; x < p[0] + n; x++) if (S.occ[y * G.N + x] || S.wall[y * G.N + x]) livre = false;
         const d = G.dist(p[0] + n / 2, p[1] + n / 2, set.cx, set.cy); const Rc = Math.round((set.radius || 8) + (t === 'palacio_colossal' ? 12 : 8));
-        const bem = livre && G.W.slope(p[0], p[1], n, n) <= V.PODIUM && V.siteReached(set, p[0], p[1], { w: n, h: n });
-        if (bem) bom++; else ruim++; out.push(`${set.name} ${t}/${n} a ${d.toFixed(0)} casas (a corte vai a ${Rc})${bem ? '' : ' RUIM'}`);
+        // (the lot under its podium — or, with none as far as the town looks, one its work levels first: D-217)
+        const sl = G.W.slope(p[0], p[1], n, n), aplaina = sl > V.PODIUM && V.earthOf(p[0], p[1], n) > 0;
+        const bem = livre && (sl <= V.PODIUM || aplaina) && V.siteReached(set, p[0], p[1], { w: n, h: n });
+        if (bem) bom++; else ruim++; out.push(`${set.name} ${t}/${n} a ${d.toFixed(0)} casas (a corte vai a ${Rc})${aplaina ? ', num lote que a obra aplaina' : ''}${bem ? '' : ' RUIM'}`);
         if (bem && !ergueu && t === 'grande_palacio') { rico(set); ergueu = sim(() => V.startProject(set, t)); }
       }
     }
@@ -588,7 +590,11 @@ run('e19', () => {
   let mais = 0, quem = 0, naAreia = 0, nasFileiras = 0;
   for (let k = 0; k < 160 && Tt.dia(b); k++) {
     passo();
-    if (op.data.fase === 'portas' && !caixa) { caixa = { mandados: 0 }; for (const v of [rei, ...corte]) { const t = sim(() => Tt.visit(v, b)); if (t) caixa.mandados++; else if (VERB) console.log('  não foi aos jogos:', v.name, v.id, 'tarefa', v.task && v.task.type, 'moedas', E.purse(v), 'chega', G.W.reaches(v, ...G.Vg.door(b)), 'dentro', v.inside, 'dorme', v.sleeping); } }
+    // (the errand to the games held by the proof's hand — its priority over the day's chores, as termas-grandes holds its
+    // bathers —: the question here is who sits where in the box, not whether they would rather come. Públio, a potter of
+    // another town who rules Rome in the joined tree, was sent, and the water of his house (a chore of 1,05) and then the
+    // firing of his kiln (1) took him on the way: the box never had its throne. T-807)
+    if (op.data.fase === 'portas' && !caixa) { caixa = { mandados: 0 }; for (const v of [rei, ...corte]) { const t = sim(() => Tt.visit(v, b)); if (t) { caixa.mandados++; t.pri = 2.9; } else if (VERB) console.log('  não foi aos jogos:', v.name, v.id, 'tarefa', v.task && v.task.type, 'moedas', E.purse(v), 'chega', G.W.reaches(v, ...G.Vg.door(b)), 'dentro', v.inside, 'dorme', v.sleeping); } }
     if (VERB && caixa && k % 15 === 0) console.log(`  k${k} ${op.data.fase}:`, [rei, ...corte].map(v => `${v.name}#${v.id} ${v.task ? v.task.type + '/' + v.task.st : '-'} ${v.inside === b.id ? 'dentro ' + ((In.placeOf(v) || {}).use || '?') : 'fora'}`).join(' | '));
     // (no camarote, quem governa e os da corte que vieram — um chamado do mundo pode levar algum antes —, depois de um passo dentro)
     if (op.data.fase === 'peca' && caixa && !caixa.rei && rei.inside === b.id && corte.some(v => v.inside === b.id)) { const vieram = corte.filter(v => v.inside === b.id); caixa = Object.assign(caixa, { rei: lugar(rei), corte: vieram.map(lugar), ids: vieram.map(v => v.id), todos: daCorte() }); }
@@ -922,7 +928,9 @@ run('e24', () => {
   if (hs.length < 3 || hs.some(b => !b.brick)) return ok('e24 o tijolo que não vem', false, `${set.name}: ${hs.length} casas novas, ${hs.filter(b => b.brick).length} com tijolo`);
   hs[0].brick.day = S.day - 3; hs[1].brick.day = S.day - 2; hs[2].brick.day = S.day;
   const want0 = V.brickWant(set, k), have0 = have();
-  const elig = works().filter(o => S.day - (o.brick.day || 0) >= 1).sort((a, b) => (a.brick.day || 0) - (b.brick.day || 0) || a.id - b.id);
+  // (the wait of a work is counted from the last brick that reached it, or from the day its brick was decided: L-720)
+  const since = o => Math.max(o.brick.day || 0, o.brick.got || 0);
+  const elig = works().filter(o => S.day - (o.brick.day || 0) >= 1).sort((a, b) => since(a) - since(b) || a.id - b.id);
   const st0 = new Map(works().map(o => [o.id, { lack: lacks(o), stone: o.need.stone || 0, back: o.brick.back || 0 }]));
   V.onNewDay();
   const back = elig.filter(o => !(lacks(o) > 0)); const prefix = back.every(o => elig.indexOf(o) < back.length);
@@ -933,6 +941,32 @@ run('e24', () => {
   D.make(ref, k, Math.ceil(V.brickWant(set, k)) + 5, { code: 'teste' }); hs[2].brick.day = S.day - 2; const l2 = lacks(hs[2]);
   V.onNewDay(); const c = checa();
   ok('e24b com o tijolo coberto, ninguém volta', l2 > 0 && lacks(hs[2]) === l2 && c.ok, `a casa de dois dias espera ${l2} de ${k}, com o estoque cobrindo todas: depois do dia, espera ${lacks(hs[2])}; ${c.txt}`);
+  // (e24c, L-720: o tijolo prometido que não chega. O estoque do povo sem tijolo nenhum, e a prateleira da olaria com o que as
+  // obras esperam — coberto no papel, e a regra de cima não devolve ninguém. A casa a que nenhum tijolo chegou em dois dias
+  // volta à pedra; a mais antiga, a que um tijolo chegou ontem, espera. As outras obras da cidade à espera de tijolo, acabadas
+  // pela mão da prova: o caso é só destas duas)
+  for (const o of works()) V.completeBuilding(o);
+  const more = []; for (let n = 0; n < 2; n++) { const p = livre(G.BDEF.house.w, G.BDEF.house.h, taken); if (!p) break; taken.push(p); more.push(V.addBuilding('house', p[0], p[1], set.id, false)); }
+  if (more.length < 2 || more.some(b => !b.brick)) return ok('e24c o tijolo prometido que não chega', false, `${set.name}: ${more.length} casas novas, ${more.filter(b => b.brick).length} com tijolo`);
+  const fr = D.free(ref, k); if (fr > 0) D.use(ref, k, fr, { code: 'teste', mine: true });
+  const ol = [...S.buildings.values()].find(o => o.set === set.id && o.type === 'olaria' && o.built);
+  const falta = Math.ceil(V.brickWant(set, k) - have()); if (falta > 0) D.make('b:' + ol.id, k, Math.min(falta + 2, Math.floor(D.room('b:' + ol.id, k))), { code: 'teste' });
+  // (the day a brick reaches a work is written by the work's own holder of the depot: one brick, by the ledger)
+  D.make(ref, k, 1, { code: 'teste' }); const mv = D.move(ref, 'o:' + more[1].id, k, 1, { code: 'teste' }); const gotC = more[1].brick.got;
+  more[0].brick.day = S.day - 2; more[1].brick.day = S.day - 3; more[1].brick.got = S.day - 1;
+  const wantC = V.brickWant(set, k), haveC = have(), lojaC = D.free(ref, k); const lA = lacks(more[0]), lB = lacks(more[1]), stA = more[0].need.stone || 0;
+  V.onNewDay(); const cc = checa();
+  ok('e24c o tijolo prometido que não chega em dois dias não segura a obra', gotC === S.day && wantC <= haveC + 1e-6 && lojaC < 1 && lA > 0 && lB > 0 && lacks(more[0]) === 0 && Math.abs((more[0].need.stone || 0) - stA - lA) < 1e-6 && Math.abs((more[0].brick.back || 0) - lA) < 1e-6 && lacks(more[1]) === lB && cc.ok,
+    `${set.name} (${k}): as obras esperam ${wantC}, a olaria promete ${haveC} (na prateleira e nas fornadas), o estoque tem ${lojaC}; a casa a que nenhum tijolo chegou em dois dias esperava ${lA} e ${lacks(more[0]) === 0 ? 'voltou' : 'NÃO voltou'} à pedra (agora espera ${lacks(more[0])} de ${k}, ${(more[0].need.stone || 0) - stA} de pedra a mais); a casa mais antiga, a que um tijolo chegou ontem, esperava ${lB} e espera ${lacks(more[1])}; o dia do último tijolo, escrito pela entrega: ${gotC === S.day ? 'sim' : 'NÃO (' + gotC + ', movidos ' + JSON.stringify(mv) + ')'}; ${cc.txt}`);
+  // (e24d: passado o dobro da espera, nem o tijolo do estoque segura a obra — ele estava lá a cada dia novo e foi para as outras.
+  // E a regra do verificador: a obra que a regra do dia olhou e deixou esperando além disso é acusada — aqui pela mão da
+  // prova, que recua os dias da casa que espera)
+  const l720 = () => QA.check().filter(q => /L-720/.test(q.msg));
+  const antes = l720().length; more[1].brick.day = S.day - 6; more[1].brick.got = S.day - 5; const acusa = l720();
+  D.make(ref, k, Math.ceil(V.brickWant(set, k)) + 5, { code: 'teste' }); const lD = lacks(more[1]), stD = more[1].need.stone || 0, lojaD = D.free(ref, k);
+  V.onNewDay(); const cd = checa();
+  ok('e24d passado o dobro da espera, nem o tijolo do estoque segura; o verificador acusa a obra deixada esperando', antes === 0 && acusa.length === 1 && lojaD >= lD && lD > 0 && lacks(more[1]) === 0 && Math.abs((more[1].need.stone || 0) - stD - lD) < 1e-6 && !l720().length && cd.ok,
+    `a casa que esperava ${lD} de ${k} há cinco dias, com ${lojaD} no estoque: o verificador ${acusa.length ? 'acusou («' + acusa[0].msg.slice(0, 90) + '…»)' : 'NÃO acusou'} antes do dia; depois do dia, espera ${lacks(more[1])} de ${k} e ${(more[1].need.stone || 0) - stD} de pedra a mais; ${cd.txt}`);
 });
 
 // ------------------------------ e25: o palácio do governante no lugar do palácio, na fila das obras cívicas (L-541) ------------------------------

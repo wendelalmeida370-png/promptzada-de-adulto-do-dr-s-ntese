@@ -167,7 +167,8 @@
   // others, left empty, or with nobody of the family: the banner comes down. The mark stayed on the walls for ever: in the
   // worlds grown for the Bairros Vivos half of a city's «merchant houses» were let to strangers with two coins in the pot,
   // who counted as its merchant class (polity.js), its rich homes and its noble quarter (urban.js) — L-711
-  const homeOK = b => !!(b && b.built && G.BDEF[b.type] && G.BDEF[b.type].housing);
+  // (a house — or the seat where the family lives while one of it rules: the banner goes there with it, and comes back, D-206)
+  const homeOK = b => !!(b && b.built && G.Village.bedsOf(b) > 0);
   // who of the house takes the banner when its holder dies: the partner, then the eldest grown child, a child, the eldest
   // brother or sister, a parent, a grandchild — living in the house, of any age: the banner is the family's while one of it
   // lives there. (Only a grown brother took it: the heir of a merchant house of Tenochtitlan starved, his eldest son, who had
@@ -184,7 +185,13 @@
   }
   const kill0 = G.Village.kill;
   G.Village.kill = function (v) {
-    if (v && G.S.villagers.has(v.id)) for (const h of G.S.buildings.values()) if (h.elite && h.elite.dono === v.id) h.elite.dono = heirIn(h, v);
+    // (the heir among those of the banner's house — or, where none of the family lives under it any more, among those of the
+    // house the holder lived in: a family that moved takes its banner at the day's next round, and one whose holder died
+    // before that round had a banner of nobody, to come down with «ninguém da família mora mais ali» — L-721)
+    if (v && G.S.villagers.has(v.id)) for (const h of G.S.buildings.values()) if (h.elite && h.elite.dono === v.id) {
+      const nh = v.home && v.home !== h.id ? G.S.buildings.get(v.home) : null;
+      h.elite.dono = heirIn(h, v) || (nh ? heirIn(nh, v) : 0);
+    }
     return kill0.apply(this, arguments);
   };
   Tr.keepHouses = function (set) {

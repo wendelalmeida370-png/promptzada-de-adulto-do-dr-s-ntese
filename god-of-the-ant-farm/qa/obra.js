@@ -200,6 +200,29 @@ const send = (b, stop) => {
     ok('b6 o-construtor-morre-com-a-carga', Math.abs((b.incoming[k] || 0) - others) < 0.01 && Math.abs(sum(store) - n) < 0.01, `${n} de ${k} a caminho de ${b.type}#${id}: a carga foi ao estoque pelo livro (${sum(store)}, 'herdado'); a obra esperava ${before} a caminho, agora ${b.incoming[k]} — o que os outros trazem: ${others}`);
   }
 }
+// ---------------- b13 a scene takes the builder with the load on the way, and another errand takes him from the scene (L-722) ----------------
+{
+  stock(); seen.length = 0; const b = project(set0, 'well'); const id = b ? b.id : 0;
+  if (b) send(b);
+  live(120, () => !!carrying(id) || !site(id));
+  const w = b && carrying(id);
+  if (!w) ok('b13 a-cena-e-a-carga-a-caminho', !!b && !site(id), b ? 'ninguém levou carga a ela em 120 s' : 'nenhuma obra possível');
+  else {
+    // (a scene of the test's hand, never ticked: the builder taken with his errand put aside to be given back, as the scenes
+    // of the stories take — G.Scene.H.take, keep —; then his errand ended from outside, as a call of higher order ends it)
+    const k = w.task.mat, before = b.incoming[k], cn = w.task.cn || 0; const Sn = G.Scene;
+    const sc = { id: S.nextId++, key: 'teste', st: 'run', taken: new Map() }; Sn.list.push(sc);
+    const took = Sn.H.take(sc, w, { keep: true }); const kept = Sn.prevTask(w); const lent = b.incoming[k];
+    G.Vg.endTask(w);
+    const others = onIt(id).filter(v => v.task.counted && v.task.mat === k).reduce((q, v) => q + (v.task.cn || 0), 0);
+    Sn.list.splice(Sn.list.indexOf(sc), 1);
+    watch();
+    ok('b13 a-cena-e-a-carga-a-caminho', took && !!kept && kept.type === 'build' && kept.counted === false && Math.abs(lent - before) < 0.01 && Math.abs((b.incoming[k] || 0) - others) < 0.01 && !w.task,
+      `${w.name} levava ${cn} de ${k} a ${b.type}#${id} (a obra esperava ${before} a caminho) e uma cena o tomou com a tarefa guardada (a obra segue esperando ${lent}); outra tarefa o tirou da cena: a obra espera ${b.incoming[k]} — o que os outros trazem: ${others}; a tarefa guardada ${kept && kept.counted === false ? 'foi encerrada com a conta dela' : 'FICOU contada'}`);
+    // (and the load in his hands goes where the old errands take it; the world lives on, the checker clean)
+    live(30);
+  }
+}
 // ---------------- b9 a cart of trade, by the ledger ----------------
 {
   seen.length = 0; const PEACE = { paz: 1, alianca: 1, vassalo: 1 };
