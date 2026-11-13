@@ -12,6 +12,15 @@
   // harvests) is measured in days; walking and working in seconds, so a longer day gets more done.
   G.DAY_LEN = 200;
   G.DAY_K = G.DAY_LEN / 100; // (rhythms first tuned for a 100-second day divide by this)
+  // the day's pace (L-915, D-240): while a scene is happening the sun lingers — the clock of the day goes at G.LINGER —, and
+  // what keeps the rhythm of the day goes with it: the hunger and the tiredness (villagers.js needs). The clock alone
+  // lingered: an afternoon with a scene cost near three times the energy of its hours, and the rows of a theatre went to bed
+  // in the middle of the play. Asked once a step, by the clock's own step (main.js tick), and kept in G.pace for who lives
+  // that step; the age, the illness and what is counted in seconds go on in seconds
+  G.LINGER = 0.35;
+  G.dayPace = () => (G.Scene && G.Scene.lingers && G.Scene.lingers() ? G.LINGER : 1);
+  G.pace = 1;
+  G.worldHooks.push(() => { G.pace = 1; }); // (a new world, or a save loaded: the pace is the next step's to ask)
   G.WEAR_MAX = 60;           // footpath wear saturation
 
   G.newState = function (seed) {

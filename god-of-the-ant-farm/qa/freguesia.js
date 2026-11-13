@@ -12,7 +12,8 @@
 //         o rolo de hoje, a mesa cheia, a hora;
 //   b  os dias vividos no mundo pronto (DIAS=3), sem a mão da prova em ninguém, na paz do deus (o poder do jogo: a
 //      metrópole pronta entra em guerra no segundo ou no terceiro dia; PAZ=0 a deixa correr): b1 cada dia de banhos com a
-//      fornalha acesa tem banhistas, numa cidade de 50 ou mais (quantos por dia e por cidade); b2 ninguém se banha duas vezes no dia; b3 a entrada é a do livro-razão
+//      fornalha acesa tem banhistas, numa cidade de 50 ou mais (quantos por dia e por cidade; o dia que a tempestade levou —
+//      sobre a cidade em 40% ou mais das horas dos banhos — é dito e não se conta, como o da cidade em armas: T-943); b2 ninguém se banha duas vezes no dia; b3 a entrada é a do livro-razão
 //      (cada entrada uma linha «termas», a soma é o caixa do dia; nenhuma num povo sem moeda); b4 ninguém é chamado dormindo,
 //      com carga, com as mãos numa operação, com uma tarefa de peso, fora de hora ou sendo o corpo do deus; ninguém paga e
 //      fica sem banho por falta de tempo; b5 quem mora longe vai menos, o ofício sujo e o doente vão mais (as contas ditas);
@@ -266,8 +267,13 @@ function partB() {
   keepPeace(); const w = watch();
   const who = new Map(); // (the grown ones of the towns with baths, at each day's bath hour: for the rates)
   let mark = -1; const arms = new Map(); // (set:day → [looks in arms, looks] in the baths' hours: a town fighting has no day of baths)
+  // (baths:day → [looks under a storm, looks] in the baths' own hours: under a storm the town stays under its roofs — the shelter
+  // weighs more than the bath (villagers.js: «shelter», 1,05; the case a1's «uma tarefa de peso em curso») —, and a day the storm
+  // took is no day of baths either: Tebas, the storm from 0,42 to past the closing, 16 on their way gone home — T-943)
+  const storm = new Map(); const stormy = () => S.weather.storm > 0 && S.weather.rain > 0.3;
   live(G.DAY_LEN * (DIAS + 1) * 4, w, k => {
     keepPeace();
+    if (k % 4 === 0) for (const b of baths()) { const h = Te.horas(b); if (S.time < h.abre || S.time > h.fecha) continue; const key = b.id + ':' + S.day; const r = storm.get(key) || [0, 0]; storm.set(key, r); r[1]++; if (stormy()) r[0]++; }
     if (k % 4 === 0 && S.time > 0.3 && S.time < 0.66) for (const b of baths()) { const key = b.set + ':' + S.day; const r = arms.get(key) || [0, 0]; arms.set(key, r); for (const v of adults(b.set)) { r[1]++; const t = v.task; if (t && WARLIKE[t.type]) r[0]++; } }
     if (S.day !== mark && S.time > 0.3) { mark = S.day; for (const b of baths()) for (const v of adults(b.set)) who.set(S.day + ':' + v.id, { set: b.set, far: farOf(v, b), dirty: !!Te.DIRTY[v.role], sick: v.sick > 0, habit: ['romano', 'grego', 'classico'].includes(civOfSet(setOf(b))) }); }
     return S.day >= d0 + DIAS && S.time > 0.74;
@@ -279,14 +285,15 @@ function partB() {
   if (on('b1')) {
     // (the claim is of a town of fifty people or more, with two places in the water or more, not in arms; the small towns
     // and the baths of one place are told, and must have had someone in the days lived)
-    const lines = []; let lit0 = 0, empty = 0, total = 0, warDays = 0, small = 0, smallNone = 0;
+    const lines = []; let lit0 = 0, empty = 0, total = 0, warDays = 0, stormDays = 0, stormEnt = 0, small = 0, smallNone = 0;
+    const inStorm = r => { const q = storm.get(r.at + ':' + r.day); return !!q && q[1] > 0 && q[0] / q[1] >= 0.4; };
     const inArms = r => { const q = arms.get(r.set + ':' + r.day); return !!q && q[1] > 0 && q[0] / q[1] >= 0.15; };
     for (const b of baths()) { const L = ops.filter(r => r.at === b.id).sort((a, c) => a.day - c.day); if (!L.length) continue; const e = L.reduce((s, r) => s + r.ent, 0); total += e; const calm = L.filter(r => !inArms(r));
       const big = V.pop(b.set) >= 50 && Te.places(b) >= 2; if (!big) { small++; if (!e) smallNone++; }
-      for (const r of L) { if (inArms(r)) { warDays++; continue; } if (big && r.len >= 1) { lit0++; if (r.ent < 1) empty++; } }
-      lines.push(`${setOf(b).name} (${V.pop(b.set)} pessoas, ${Te.places(b)} ${Te.places(b) > 1 ? 'lugares' : 'lugar'} na água): ${L.map(r => `${r.ent}${r.len >= 1 ? '' : '·fria'}${inArms(r) ? '·armas' : ''}`).join(', ')} → ${calm.length ? (calm.reduce((s, r) => s + r.ent, 0) / calm.length).toFixed(1) : '—'} por dia de paz, até ${Math.max(...L.map(r => r.max))} na água de uma vez, ${(L.reduce((s, r) => s + r.len, 0) / L.length).toFixed(1)} de lenha por dia`); }
-    ok(`b1 cada dia de banhos com a fornalha acesa tem banhistas, numa cidade de 50 pessoas ou mais em paz (${WORLD}, ${DIAS} dias vividos${peace ? ' na paz do deus' : ''}, ninguém mandado pela prova)`, lit0 >= 3 && !empty && total >= lit0 * 3 && !smallNone && ops.every(r => !r.over),
-      `${ops.length} dias de banhos (${warDays} com a cidade em armas — 15% ou mais dos adultos em luta ou em fuga nas horas dos banhos), ${lit0} de paz com a fornalha acesa em cidades de 50 ou mais e 2 lugares ou mais: ${empty} vazios; ${small} banhos de cidade pequena ou de um lugar só, ${smallNone} sem ninguém nos dias vividos; ${total} banhos ao todo — as entradas de cada dia (·fria = sem lenha, ·armas = a cidade em armas): ${lines.join(' · ')}; vezes com mais gente na água que lugares: ${ops.reduce((s, r) => s + r.over, 0)}`);
+      for (const r of L) { if (inArms(r)) { warDays++; continue; } if (inStorm(r)) { stormDays++; stormEnt += r.ent; continue; } if (big && r.len >= 1) { lit0++; if (r.ent < 1) empty++; } }
+      lines.push(`${setOf(b).name} (${V.pop(b.set)} pessoas, ${Te.places(b)} ${Te.places(b) > 1 ? 'lugares' : 'lugar'} na água): ${L.map(r => `${r.ent}${r.len >= 1 ? '' : '·fria'}${inArms(r) ? '·armas' : ''}${inStorm(r) ? '·tempestade' : ''}`).join(', ')} → ${calm.length ? (calm.reduce((s, r) => s + r.ent, 0) / calm.length).toFixed(1) : '—'} por dia de paz, até ${Math.max(...L.map(r => r.max))} na água de uma vez, ${(L.reduce((s, r) => s + r.len, 0) / L.length).toFixed(1)} de lenha por dia`); }
+    ok(`b1 cada dia de banhos com a fornalha acesa tem banhistas, numa cidade de 50 pessoas ou mais em paz e sem a tempestade a levar o dia (${WORLD}, ${DIAS} dias vividos${peace ? ' na paz do deus' : ''}, ninguém mandado pela prova)`, lit0 >= 3 && !empty && total - stormEnt >= lit0 * 3 && !smallNone && ops.every(r => !r.over),
+      `${ops.length} dias de banhos (${warDays} com a cidade em armas — 15% ou mais dos adultos em luta ou em fuga nas horas dos banhos; ${stormDays} com a tempestade sobre a cidade em 40% ou mais das horas dos banhos — o povo debaixo de teto), ${lit0} de paz e sem tempestade com a fornalha acesa em cidades de 50 ou mais e 2 lugares ou mais: ${empty} vazios; ${small} banhos de cidade pequena ou de um lugar só, ${smallNone} sem ninguém nos dias vividos; ${total} banhos ao todo (${stormEnt} em dias de tempestade, fora da conta da média) — as entradas de cada dia (·fria = sem lenha, ·armas = a cidade em armas, ·tempestade = o dia que a tempestade levou): ${lines.join(' · ')}; vezes com mais gente na água que lugares: ${ops.reduce((s, r) => s + r.over, 0)}`);
   }
   // ---------------------------------------------------------------- b2
   if (on('b2')) {
