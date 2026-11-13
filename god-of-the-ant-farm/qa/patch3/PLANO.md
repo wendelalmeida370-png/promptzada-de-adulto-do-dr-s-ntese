@@ -486,5 +486,21 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   cada frente juntada.
 - **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
   novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** decidir o T-940 (a tarde de descanso); depois o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
-  seis sementes da terra, o relatório).
+- **Na junção da 3ª rodada do F e do lote da descoberta** (a árvore `int20` sobre a `a634b1d`, passada à principal em
+  `faf07e1`): **um defeito do jogo, consertado — a guerra perguntava «há caminho?» à busca de caminho do instante** (L-731,
+  achado pelo `volta` v3): o portão fechado pelo alarme virava «não há caminho», e não havia exército contra a capital murada
+  em alarme, nem socorro para a cidade murada sitiada; agora pelo mapa de regiões, a regra 85 do guard e a prova nova
+  `qa/portao-guerra.js` (sem o conserto, a convocação e o socorro não acontecem; com ele, a hoste sai e «o Exército de Socorro
+  de Kaupang, 117 convocados» vem). **Um achado, aberto para uma rodada própria:** os muros têm buracos (L-732: as hortas,
+  os currais, os pomares e as ruas na linha; só o de Mênfis, dos 22 muros dos mundos prontos, fecha a cidade). Limites de
+  prova: T-961 (`roupa` r5), T-962 e D-246 (`casa-dentro` c5: a noite em casa afirma o que é da família — fecha o aberto da
+  descoberta), T-963 (`som` s3a), T-964 (`som` s7a). **Decidido pelo líder: a T-940** — a tarde em casa e a taverna até
+  fechar ficam para uma rodada própria depois do fecho, cada uma com a sua medida e a sua prova. As 30 sabotagens da 3ª
+  rodada acusadas (T-948). **A régua das dez sementes** na árvore juntada: aos 90 anos 3 106 pessoas contra 3 774 — quase
+  toda a diferença numa semente só, a 77, que muda de história (antes, um império único desde o ano 61; agora quatro a cinco
+  povos em guerra) —, as mortes de guerra +25% (o socorro e as campanhas do L-731), 35 degraus grandes de pé de 42 fundados,
+  dois caídos (as duas nórdicas de madeira em Hedeby, pelo fogo: D-219). O diário na versão 15.
+- **A seguir — o fecho:** os mundos prontos da geração 20 (em curso), o `mundos.js`, a regressão inteira com o desempenho
+  sozinho no fim, as linhas novas explicadas e a linha de base, o relatório final dos doze itens do pedido (§17), a
+  publicação do jogo e o diário do fecho. Depois do fecho, nas rodadas seguintes: a noite (T-940), os muros sem buracos
+  (L-732), o paço municipal (T-874) e o mercado coberto.
