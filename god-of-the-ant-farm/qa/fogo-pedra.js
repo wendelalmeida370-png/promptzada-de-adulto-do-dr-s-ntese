@@ -223,5 +223,26 @@ run('p8', () => {
   ok('p8e em obra guarda a pedra; acabado, é de madeira inteiro', ficou && inteiro && v.ok, `o canteiro tinha ${JSON.stringify(tinha)}; aceso ${qc.vezes} vez(es): ${!oc ? 'SUMIU' : oc.type === 'ruin' ? 'RUÍNA' : 'a obra continua, o canteiro com ' + JSON.stringify(tem)}; ${fim}; ${v.txt}`);
 });
 
+// ------------------------------ p9: o fogo que morre na chuva não devolve nada ao prédio (L-726) ------------------------------
+// (the fire of a step is what is left of it after the wet and the rain — and a flame at its end, on soaked ground, was less than
+// nothing: the damage of that step was negative, the building gained the difference, and what the fire took of a great work
+// went under zero — the checker of the great works saw «o que o fogo levou é -0.0236» at a theatre of Argos, in the day of the
+// termas-grandes. By hand: a great work of stone hurt by the fire, and a house, each with one tile at the last of its flame and
+// soaked; lived a second: neither gains anything, the fire's count never goes down)
+run('p9', () => {
+  const set = abre(); const f = G.Fac.get(set.fac);
+  const b = grande(set, true); if (!ok('p9a um degrau maior de pedra pronto', !!b && b.built && V.stoneWork(b), lado(b))) return;
+  // (hurt a little, by the hand: the fire still has timber of it to take — at its floor nothing more is taken, or given)
+  sim(() => { V.damageBuilding(b, 50, 'fire'); }); const o = S.buildings.get(b.id); if (!ok('p9b ferido pelo fogo, de pé, com madeira ainda por arder', !!o && o.type !== 'ruin' && o.burnHp > 0 && o.hp - V.fireFloor(o) > 1, o ? `${Math.round(o.hp)} de ${o.maxHp}, a marca do fogo ${o.burnHp.toFixed(2)}, o que o fogo deixa ${V.fireFloor(o)}` : 'SUMIU')) return;
+  const casa = [...S.buildings.values()].filter(h => h.set === set.id && h.built && G.BDEF[h.type].housing && h.type !== 'barraco' && h.hp > 20).sort((x, y) => x.id - y.id)[0];
+  sim(() => { V.damageBuilding(casa, 5, 'quake'); });
+  const morre = h => { const i = casas(h)[0]; S.wet[i] = 1; S.fire[i] = 0.03; Nat.fireSet.add(i); return i; };
+  const antes = [o.hp, o.burnHp, casa.hp]; const i1 = morre(o), i2 = morre(casa); const chuva = S.weather.rain; S.weather.rain = 1;
+  for (let k = 0; k < 10; k++) { if (S.fire[i1] <= 0 && k < 5) morre(o); if (S.fire[i2] <= 0 && k < 5) morre(casa); M.viver(0.1); }
+  S.weather.rain = chuva; const o2 = S.buildings.get(b.id), c2 = S.buildings.get(casa.id); const v = checa();
+  ok('p9c a chama que morre molhada não devolve nada: nem ao monumento, nem à casa, e a marca do fogo não desce', !!o2 && !!c2 && o2.hp <= antes[0] + 1e-9 && o2.burnHp >= antes[1] - 1e-9 && c2.hp <= antes[2] + 1e-9 && v.ok,
+    `${lado(o2)}: ${antes[0].toFixed(4)} → ${o2.hp.toFixed(4)} de vida, a marca do fogo ${antes[1].toFixed(4)} → ${o2.burnHp.toFixed(4)}; ${lado(c2)}: ${antes[2].toFixed(4)} → ${c2.hp.toFixed(4)}; ${v.txt}`);
+});
+
 console.log(fails.length ? `FOGO-PEDRA: FALHOU (${fails.join(', ')})` : `FOGO-PEDRA: ok (${ms()} ms)`);
 process.exit(fails.length ? 1 : 0);

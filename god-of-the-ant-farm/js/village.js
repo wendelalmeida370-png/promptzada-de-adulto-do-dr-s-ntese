@@ -423,6 +423,7 @@
   }
   V.damageBuilding = function (b, amount, cause) {
     if (!b || b.hp <= 0 || b.type === 'ruin' || b.type === 'cemetery') return;
+    if (!(amount > 0)) return; // (damage is never less than nothing — a dying flame's was, and the building gained it: L-726)
     if ((cause === 'fire' || cause === 'riot') && V.stoneWork(b)) {
       if (b.built) {
         const room = b.hp - V.fireFloor(b); if (room <= 1e-6) return;
