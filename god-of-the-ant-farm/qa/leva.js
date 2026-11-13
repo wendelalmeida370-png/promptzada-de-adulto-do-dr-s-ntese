@@ -43,19 +43,30 @@ function scene(name, save) {
   if (!a1) return ok(name, false, `precondição: nenhum povo em guerra chamou campanha (${pairs.map(p => p[1].name).join(', ')})`);
   // one of the called, near his own town (the guard of it will call him if it can), loses the call and goes back to his day
   const near = v => { const s = S.settlements.get(v.set); return s ? G.dist(v.x, v.y, s.cx, s.cy) : 1e9; };
-  const m0 = a1.members.map(P).filter(v => v && v.task && v.task.type === 'muster' && v.task.army === a1.id && S.settlements.get(v.set) && S.settlements.get(v.set).fac === A.id).sort((p, q) => near(p) - near(q) || p.id - q.id)[0];
-  if (!m0) return ok(name, false, `precondição: nenhum chamado de ${a1.name} perto da sua cidade`);
-  G.Vg.endTask(m0); G.Vg.setTask(m0, { type: 'wander', pri: 1 });
-  const mid = m0.id, a1id = a1.id, wid = w.id, fid = A.id, town = m0.set;
-  if (save) { M.salvarCarregar(); S = G.S; }
-  const m = P(mid), a1b = Wz.army(a1id), w2 = Wz.get(wid), A2 = G.Fac.get(fid), t2 = S.settlements.get(town);
-  const onRoll = !!a1b && !a1b.done && a1b.members.includes(mid); const called = !!(m.task && m.task.type === 'muster');
-  // the second levy: the guard of his town, with everyone who can go
-  const a2 = Wz.mobilize(w2, A2, 'defesa', t2, { n: 260 });
+  const ms = a1.members.map(P).filter(v => v && v.task && v.task.type === 'muster' && v.task.army === a1.id && S.settlements.get(v.set) && S.settlements.get(v.set).fac === A.id).sort((p, q) => near(p) - near(q) || p.id - q.id).map(v => v.id);
+  if (!ms.length) return ok(name, false, `precondição: nenhum chamado de ${a1.name} perto da sua cidade`);
+  // (o chamado cuja cidade levanta a guarda: a leva só levanta a guarda com quatro de mãos livres perto dela (wars.js, «menos que
+  // isso é uma razia»), e no mundial da geração 20 o primeiro chamado da prova era de Luxor, a cidade do Clã de Hrafn na terra do
+  // Nilo — com a campanha chamada, dezoito do povo a bordo e as guarnições das cidades vizinhas guardadas, sobravam menos de
+  // quatro: «a guarda de Luxor (#-): NÃO SE LEVANTOU», a segunda leva que não houve. Quem perdeu o chamado numa cidade sem guarda
+  // fica na lista e no seu dia, e a prova passa ao chamado seguinte de outra cidade, como o jogo levantaria a guarda dela. T-1018)
+  const a1id = a1.id, wid = w.id, fid = A.id; const semGuarda = []; let mid = 0, town = 0, m = null, a1b = null, A2 = null, t2 = null, a2 = null, onRoll = false, called = false;
+  for (const id of ms) {
+    const v = P(id); if (!v || !v.task || v.task.type !== 'muster' || v.task.army !== a1id || semGuarda.some(q => q.id === v.set)) continue;
+    G.Vg.endTask(v); G.Vg.setTask(v, { type: 'wander', pri: 1 });
+    mid = id; town = v.set;
+    if (save) { M.salvarCarregar(); S = G.S; }
+    m = P(mid); a1b = Wz.army(a1id); const w2 = Wz.get(wid); A2 = G.Fac.get(fid); t2 = S.settlements.get(town);
+    onRoll = !!a1b && !a1b.done && a1b.members.includes(mid); called = !!(m.task && m.task.type === 'muster');
+    // the second levy: the guard of his town, with everyone who can go
+    a2 = Wz.mobilize(w2, A2, 'defesa', t2, { n: 260 });
+    if (a2) break; semGuarda.push(t2);
+  }
+  if (!a2) return ok(name, false, `precondição: a guarda de nenhuma cidade dos chamados de ${a1.name} se levanta (${semGuarda.map(q => q.name).join(', ')})`);
   const took = !!a2 && a2.members.includes(mid); const dup = twice();
   const b0 = bad(); M.viver(5); const b1 = bad(); const e = M.erros();
   ok(name, onRoll && !called && !!a2 && a2.members.length >= 4 && !took && !dup.length && !b0.length && !b1.length && M.limpo(),
-    `${A2.name}: ${m.name} #${mid}, chamado ${a1b ? ('a ' + a1b.name).replace(/^a o /, 'ao ').replace(/^a os /, 'aos ').replace(/^a a /, 'à ').replace(/^a as /, 'às ') : 'a ?'} (#${a1id}), perdeu o chamado${save ? ' (save e load no meio)' : ''} — ${onRoll ? 'ainda na lista' : 'FORA DA LISTA'}, ${called ? 'CHAMADO DE NOVO' : 'no seu dia'}; a guarda de ${t2.name} (#${a2 ? a2.id : '-'}): ${a2 ? a2.members.length + ' chamados' : 'NÃO SE LEVANTOU'}, ${took ? m.name + ' ENTRE ELES' : m.name + ' não'}; ${dup.length ? 'em dois exércitos: ' + dup.slice(0, 3).join(', ') : 'ninguém em dois exércitos'}; ${[...b0, ...b1].slice(0, 2).join(' | ') || 'verificador limpo'}${Object.keys(e.mod).length ? '; erro de módulo: ' + Object.keys(e.mod).join(', ') : ''}`);
+    `${A2.name}: ${semGuarda.length ? `(a guarda de ${semGuarda.map(q => q.name).join(', ')} não se levanta — menos de quatro de mãos livres perto, depois da campanha —: quem perdeu o chamado ali fica na lista e no seu dia, e o caso é o chamado seguinte) ` : ''}${m.name} #${mid}, chamado ${a1b ? ('a ' + a1b.name).replace(/^a o /, 'ao ').replace(/^a os /, 'aos ').replace(/^a a /, 'à ').replace(/^a as /, 'às ') : 'a ?'} (#${a1id}), perdeu o chamado${save ? ' (save e load no meio)' : ''} — ${onRoll ? 'ainda na lista' : 'FORA DA LISTA'}, ${called ? 'CHAMADO DE NOVO' : 'no seu dia'}; a guarda de ${t2.name} (#${a2 ? a2.id : '-'}): ${a2 ? a2.members.length + ' chamados' : 'NÃO SE LEVANTOU'}, ${took ? m.name + ' ENTRE ELES' : m.name + ' não'}; ${dup.length ? 'em dois exércitos: ' + dup.slice(0, 3).join(', ') : 'ninguém em dois exércitos'}; ${[...b0, ...b1].slice(0, 2).join(' | ') || 'verificador limpo'}${Object.keys(e.mod).length ? '; erro de módulo: ' + Object.keys(e.mod).join(', ') : ''}`);
 }
 scene('l1 a segunda leva na janela da primeira: quem perdeu o chamado não vai de novo', false);
 scene('l2 o mesmo com um save no meio: o load devolve a lista, e a leva não o leva', true);
