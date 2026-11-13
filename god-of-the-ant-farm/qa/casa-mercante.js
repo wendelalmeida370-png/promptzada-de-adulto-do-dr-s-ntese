@@ -19,6 +19,8 @@
 //    nova, e vai para lá (L-721);
 // k10 a bandeira de um save de antes (sem a família escrita) cujo dono morre antes da primeira ronda: as casas passam ao
 //    herdeiro na morte, e a ronda leva a bandeira para onde ele mora (T-836: a regra vale; o caso não existia)
+// k11 quem tinha a bandeira morre, ela passa ao par, e o par morre também antes da ronda, com um irmão de quem a ganhou na
+//    casa (e ninguém da família do par): a bandeira é desse irmão, e fica (L-736)
 // e nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -43,6 +45,13 @@ function house(min, pred) {
   }
   return null;
 }
+// (the owner with kin of his or hers in the house — the partner or a child —: the house of a family. The owner alone among
+// strangers is k4's: one who dies in the days of a case — old age, the war — leaves the banner to nobody of the family, and it
+// comes down, as the rule has it. In the metrópole of the generation 20 the first house of k1 was house#2911 of Tenochtitlan:
+// Citlalin, 64, with no partner and no child, lived there with five of another family, died of old age the first day, and «dois
+// dias depois a bandeira SUMIU» — the cases where the family has to be there to keep the banner ask a family: T-1001, as the
+// T-836 of k5)
+const kinIn = (b, l, o) => l.some(v => v.id !== o.id && (v.id === o.partner || v.mother === o.id || v.father === o.id));
 // an empty house of the same town, the people's — with beds for n, when the case moves a family into it: a family of six put
 // in a hut of four is one the town's day moves on (the people's empty house, given or bought — D-221), T-829
 const empty = (set, n) => [...S.buildings.values()].sort((a, c) => a.id - c.id).find(b => b.set === set.id && isHome(b) && !used.has(b.id) && !res(b).length && (!n || G.BDEF[b.type].housing >= n)) || null;
@@ -65,7 +74,7 @@ const none = n => ok(n, false, 'nenhuma casa que sirva ao caso (o dono morando n
 
 // ---------------------------------------------------------------- k1
 if (on('k1')) {
-  const c = house(2);
+  const c = house(2, kinIn);
   if (!c) none('k1 a família em casa: a bandeira fica');
   else {
     const { b, o, set } = c; banner(b, o); const d0 = S.day; day(2);
@@ -78,7 +87,7 @@ if (on('k1')) {
 
 // ---------------------------------------------------------------- k2
 if (on('k2')) {
-  const c = house(2, (b, l, o) => !!empty(S.settlements.get(b.set), l.length));
+  const c = house(2, (b, l, o) => kinIn(b, l, o) && !!empty(S.settlements.get(b.set), l.length));
   if (!c) none('k2 a família se muda: a bandeira vai com ela');
   else {
     const { b, l, o, set } = c; const nh = empty(set, l.length); used.add(nh.id); const since = banner(b, o).since; const ids = l.map(v => v.id);
@@ -163,20 +172,25 @@ if (on('k5')) {
 
 // ---------------------------------------------------------------- k6
 if (on('k6')) {
-  const c = house(2);
+  const c = house(2, kinIn);
   if (!c) none('k6 save e load');
   else {
-    const { b, o } = c; banner(b, o); day(1);
-    const e0 = JSON.stringify(B(b.id).elite); M.salvarCarregar(); S = G.S; const e1 = JSON.stringify(B(b.id).elite);
-    day(1); const e = B(b.id) && B(b.id).elite; const nv = said(b.id);
-    ok('k6 save e load: a marca e a família atravessam o save', e0 === e1 && !!e && e.dono === o.id && e.ok >= S.day - 1 && !nv.length,
-      `a marca antes do save ${e0}; depois do load ${e0 === e1 ? 'igual' : e1}; no dia seguinte ${e ? 'a bandeira segue, vista no dia ' + e.ok : 'a bandeira SUMIU'}; verificador ${nv.join(' | ') || 'limpo'}`);
+    // (the family's banner wherever it is: a merchant family may buy the dear house in the day (social.js, D-159), and the banner
+    // goes with it — in the generation 20 Khafre's family of Mênfis bought sobrado#19455 the day of the case, and the case,
+    // looking at the old door, read «a marca antes do save null … a bandeira SUMIU». It follows the family, not the walls: T-699,
+    // T-1001)
+    const { b, o, l } = c; const since = banner(b, o).since; const ids = l.map(v => v.id); day(1);
+    const fam = () => bannersOf(o.name, since).filter(x => ids.includes(x.elite.dono));
+    const h0 = fam()[0] || null; const e0 = h0 ? JSON.stringify(h0.elite) : 'null'; M.salvarCarregar(); S = G.S; const e1 = h0 && B(h0.id) ? JSON.stringify(B(h0.id).elite) : 'null';
+    day(1); const at = fam(), x = at[0] || null, e = x && x.elite, holder = e && P(e.dono); const nv = said(b.id).concat(x && x.id !== b.id ? said(x.id) : []);
+    ok('k6 save e load: a marca e a família atravessam o save', !!h0 && e0 === e1 && at.length === 1 && !!holder && holder.home === x.id && e.ok >= S.day - 1 && !nv.length,
+      `a marca antes do save ${e0}${h0 && h0.id !== b.id ? ` (em ${h0.type}#${h0.id}, a casa para onde a família foi no dia)` : ''}; depois do load ${e0 === e1 ? 'igual' : e1}; no dia seguinte ${x ? `a bandeira segue em ${x.type}#${x.id}, vista no dia ${e.ok}, de ${holder ? holder.name : 'NINGUÉM'}` : 'a bandeira SUMIU'}; verificador ${nv.join(' | ') || 'limpo'}`);
   }
 }
 
 // ---------------------------------------------------------------- k7
 if (on('k7')) {
-  const c = house(2), far = house(2);
+  const c = house(2, kinIn), far = house(2, kinIn);
   if (!c || !far) none('k7 o verificador acusa a bandeira deixada nas paredes');
   else {
     // the banner of another family (far.o, who lives elsewhere), last seen five days ago, on the walls of this house
@@ -251,6 +265,31 @@ if (on('k10')) {
     const heir = P(B(nh.id).dono);
     ok('k10 a bandeira de um save de antes e o dono morto antes da primeira ronda: fica com a família', now === undefined && !!heir && ids.includes(heir.id) && left && at.length === 1 && !!holder && ids.includes(holder.id) && holder.home === h1.id && h1.trade === 60 && !nv.length,
       `a marca antiga (sem a família escrita) na porta de ${b.type}#${b.id}, em ${set.name}; a família de ${o.name} (${l.length}) mora em ${nh.type}#${nh.id}, e ${o.name}, dono das duas, morreu antes da primeira ronda: no mesmo instante as casas passam a ${heir ? heir.name : 'NINGUÉM'} (a marca ainda sem família escrita: ${now === undefined ? 'sim' : 'NÃO'}); um dia depois a casa antiga ${left ? 'está sem a bandeira' : 'SEGUE com a bandeira'}; a bandeira da família está em ${at.length === 1 ? `${h1.type}#${h1.id}, conta ${h1.trade}, onde mora ${holder ? holder.name : 'NINGUÉM da família'}` : at.length ? `${at.length} portas` : 'NENHUMA porta'}; verificador ${nv.join(' | ') || 'limpo'}`);
+  }
+}
+
+// ---------------------------------------------------------------- k11
+if (on('k11')) {
+  // (who of the house inherits, by the relations of the door of every death — trade.js heirIn: the partner, a child, a brother or
+  // sister, a parent, a grandchild —, of one or the other)
+  const kinOf = (r, x) => x.id === r.partner || x.mother === r.id || x.father === r.id || r.mother === x.id || r.father === x.id || (!!r.mother && x.mother === r.mother) || (!!r.father && x.father === r.father) || (r.kids || []).includes(x.mother) || (r.kids || []).includes(x.father);
+  // a brother or sister of the owner, of the town, living elsewhere, single, no kin of the partner
+  const sibOf = (b, o, p) => [...S.villagers.values()].filter(v => v.id !== o.id && v.set === o.set && ((!!o.mother && v.mother === o.mother) || (!!o.father && v.father === o.father)) && !v.partner && !kinOf(p, v) && v.home && v.home !== b.id && !v.captive && !v.jail && !v.aboard && !(S.avatar && S.avatar.id === v.id)).sort((a, c2) => c2.age - a.age || a.id - c2.id)[0] || null;
+  // a house of a couple, the owner and the partner, with nobody of the partner's kin under it — and a brother or sister of the
+  // owner in the town, whom the test's hand brings to live with them, as the town's housing does (in the generation 20 Thyra of
+  // Hedeby lived with her husband Hakon and her three young brothers and sisters, all of them the ruler's)
+  const c = house(2, (b, l, o) => { const p = l.find(v => v.id === o.partner && v.age >= 16); return !!p && !l.some(v => v !== o && v !== p && kinOf(p, v)) && !!sibOf(b, o, p); });
+  if (!c) none('k11 o par que herdou morre também: a bandeira fica com a família de quem a ganhou');
+  else {
+    const { b, o, set } = c; const p = P(o.partner); const sb = sibOf(b, o, p); const since = banner(b, o).since;
+    god(() => { const from = B(sb.home); sb.home = b.id; sb.hhType = b.type; if (sb.inside) sb.inside = 0; b.res = (b.res || 0) + 1; if (from) from.res = Math.max(0, (from.res || 0) - 1); });
+    // the owner dies — the partner has the banner —; and the partner dies too, before the day's round (a war, an arrow)
+    god(() => G.Village.kill(o, 'teste')); const d1 = B(b.id).elite ? B(b.id).elite.dono : -1;
+    god(() => G.Village.kill(p, 'teste')); const d2 = B(b.id).elite ? B(b.id).elite.dono : -1;
+    day(1);
+    const at = bannersOf(o.name, since), x = at[0] || null, e = x && x.elite, holder = e && P(e.dono); const nv = said(b.id).concat(x && x.id !== b.id ? said(x.id) : []);
+    ok('k11 o par que herdou morre também: a bandeira fica com a família de quem a ganhou', d1 === p.id && d2 === sb.id && at.length === 1 && !!holder && holder.home === x.id && x.trade === 60 && !nv.length,
+      `${o.name}, de ${set.name}, com a bandeira na porta de ${b.type}#${b.id}, morava com ${p.name} (o par) e, pela mão da prova, ${sb.name} (${sb.age | 0}, ${sb.g === 'f' ? 'irmã' : 'irmão'} de ${o.name}): ${o.name} morre e a bandeira é de ${d1 === p.id ? p.name + ' (o par)' : P(d1) ? P(d1).name : d1 > 0 ? '#' + d1 : 'NINGUÉM'}; ${p.name} morre também e ela é de ${d2 === sb.id ? sb.name : P(d2) ? P(d2).name : d2 > 0 ? '#' + d2 : 'NINGUÉM'}; um dia depois ${at.length === 1 ? `está na porta de ${x.type}#${x.id}, onde mora ${holder ? holder.name : 'NINGUÉM da família'}` : at.length ? `está em ${at.length} PORTAS` : 'a bandeira DESCEU'}; verificador ${nv.join(' | ') || 'limpo'}`);
   }
 }
 

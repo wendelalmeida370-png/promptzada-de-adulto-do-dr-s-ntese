@@ -857,8 +857,11 @@
   };
   let pidx = null, pidxS = null, pidxV = -1;
   G.worldHooks.push(() => { pidx = null; });
+  // (the memory of the town that ended last on a patch of ground answers for it, and of a town, its quarter before its whole: the
+  // whole took a patch only where no memory had it, and where two towns ended on the same ground the older answered — the ground
+  // of Abidos, left to the wind, still said «Roma, de Roma (acabou no ano 74)». L-738)
   U.pastAt = function (x, y) {
-    const S = G.S; if (!pidx || pidxS !== S || pidxV !== U.ver) { pidx = new Map(); pidxS = S; pidxV = U.ver; for (const p of S.urbPast || []) for (const c of p.cells) if (!p.whole || !pidx.has(c)) pidx.set(c, p); }
+    const S = G.S; if (!pidx || pidxS !== S || pidxV !== U.ver) { pidx = new Map(); pidxS = S; pidxV = U.ver; for (const p of S.urbPast || []) for (const c of p.cells) { const o = pidx.get(c); if (!p.whole || !o || o.set !== p.set) pidx.set(c, p); } }
     return pidx.get(U.cellOf(x, y)) || null;
   };
   (G.saveHooks = G.saveHooks || []).push({

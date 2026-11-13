@@ -2472,6 +2472,11 @@
       if (v.widow) keep.add(v.widow);
       for (const id of [v.mother, v.father]) { if (!id) continue; keep.add(id); const p = G.person(id); if (p) { if (p.mother) keep.add(p.mother); if (p.father) keep.add(p.father); } }
     }
+    // (and the thief of a theft the town still tells: the list keeps its last sixty, however old — in a quiet town, longer than
+    // the registry's eighty years —, and a theft of a forgotten thief named nobody: Castor #7944 of the metrópole, who died in the
+    // fire of the day 41 with his theft of the day 38 still in the list, was forgotten the day 121 — «crime#15026: ladrão 7944
+    // não existe», L-737)
+    for (const c of S.crimes || []) if (c && c.thief) keep.add(c.thief);
     let n = 0;
     for (const [id, d] of S.dead) if (S.day - (d.died || 0) >= FORGET && !keep.has(id) && !V.remembered(d)) { S.dead.delete(id); n++; }
     return n;
