@@ -14,8 +14,11 @@
 //      mandava mais de longe, nasciam acima do teto, e as tocas pariam acima dele. No continente do f2 vivido dois anos, numa
 //      noite com ursos nas tocas, o censo dos ursos é o da lista e o das cavernas; e nos cinco anos seguintes os ursos, contados
 //      onde estiverem, não passam do teto (com a folga do f2);
-// e o verificador limpo (S0–S2), sem erro de módulo.   [ONLY=f5] node qa/fauna.js (só os casos pedidos: f1, f2 — com o f3 e o
-// f4 —, f5)
+//   f6 a manada que chega de longe (o acontecimento do mundo, G.Events.herd) só é de uma espécie que a terra ainda comporta, e
+//      nunca maior que o lugar que há (L-764): a manada vinha fosse qual fosse o teto — cinco girafas numa terra de quatro, e oito
+//      girafas para o teto quatro, por anos, no f2. A mão da prova chama a manada doze vezes num mundo novo;
+// e o verificador limpo (S0–S2), sem erro de módulo.   [ONLY=f5,f6] node qa/fauna.js (só os casos pedidos: f1, f2 — com o f3 e
+// o f4 —, f5, f6)
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const fails = [];
@@ -56,4 +59,12 @@ if (on('f5')) { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4 });
   for (let y = 0; y < 5; y++) { M.saltar(1); const n = inList() + inCaves(), cap = A.capacity('bear'); top = Math.max(top, n); said.push(`${n}/${cap}`); if (n > cap * 1.25 + 2) over.push(`ano ${G.S.day}: ${n} ursos para o teto ${cap}`); }
   ok('f5 o censo conta quem dorme na toca', z0 > 0 && c0 === l0 + z0 && !over.length,
     `${z0 ? `numa noite do ano ${G.S.day - 5} (${k} s vividos depois do salto): ${l0} ursos na lista do mundo, ${z0} dormindo nas tocas — o censo diz ${c0}` : `NENHUM urso nas tocas em ${k} s`}; nos cinco anos seguintes, os ursos contados onde estiverem / o teto: ${said.join(', ')}${over.length ? ' — ACIMA: ' + over.join('; ') : ''}`); }
+// f6
+if (on('f6')) { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4 }); M.viver(1); const A = G.Animals;
+  const came = [], over = [];
+  for (let k = 0; k < 12; k++) {
+    const c0 = A.counts(); G.inSim++; try { G.Events.herd(); } finally { G.inSim--; } const c1 = A.counts();
+    for (const s of A.ids) { const n = (c1[s] || 0) - (c0[s] || 0); if (n <= 0) continue; const cap = A.capacity(s); came.push(`${s} ${c0[s] || 0}+${n}/${cap}`); if (c1[s] > cap) over.push(`${s}: ${c0[s] || 0} e mais ${n}, para o teto ${cap}`); }
+  }
+  ok('f6 a manada que chega de longe cabe na terra', came.length > 0 && !over.length, `${came.length} manada(s) em 12 chamadas: ${came.join(', ') || 'nenhuma'}${over.length ? ' — ACIMA DO TETO: ' + over.join('; ') : ''}`); }
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'TUDO PASSOU'); process.exit(fails.length ? 1 : 0);

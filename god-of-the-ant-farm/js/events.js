@@ -233,12 +233,15 @@
     if (v) G.Vg.emote(v, 'happy', 3);
   }
   E.herd = function () {
-    // a herd of grazers from beyond the map, of a kind that can live here
-    const A = G.Animals; const ks = A.ids.filter(k => { const d = A.DEF[k]; return (d.diet === 'herb' || d.diet === 'browse') && d.cls === 'land' && d.herd[1] >= 3 && A.capacity(k) >= 3; });
+    // a herd of grazers from beyond the map, of a kind that can live here — and that the land still has room for, a herd of three
+    // at least —, never bigger than the room: the herd came whatever the land fed, ten bison for a land of five, and eight
+    // giraffes on a land of four for years on the continent of the seed 103 (D-151), L-764
+    const A = G.Animals; const cnt = A.counts(); const room = k => A.capacity(k) - (cnt[k] || 0);
+    const ks = A.ids.filter(k => { const d = A.DEF[k]; return (d.diet === 'herb' || d.diet === 'browse') && d.cls === 'land' && d.herd[1] >= 3 && room(k) >= 3; });
     if (!ks.length) return;
     const k = G.pick(ks); const d = A.DEF[k];
     const sp = A.wildSpot(14, d); if (!sp) return;
-    const n = G.ri(Math.max(3, d.herd[0]), d.herd[1] + 1);
+    const n = Math.min(room(k), G.ri(Math.max(3, d.herd[0]), d.herd[1] + 1));
     A.spawnGroup(k, sp[0], sp[1], n);
     G.Village.log(`Uma manada de ${A.plural(d, n).replace(/^\d+ /, '')} chegou ${G.Biome && G.S.biome ? G.Biome.toAt(sp[0], sp[1]) : 'à ilha'}.`, 'deer', sp[0], sp[1]);
   };
