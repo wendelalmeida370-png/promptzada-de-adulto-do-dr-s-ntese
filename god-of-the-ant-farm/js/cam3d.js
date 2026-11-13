@@ -167,9 +167,12 @@
     // (looking up — at a front, a drum, a tower —: the eye goes down its orbit only to a hand over the feet, and from there it
     // tilts up as asked (below); down the orbit it met the ground and came in to a metre behind the head, and the top of a front of
     // 21 m stayed out of the picture 9 m before it)
-    const po = Math.max(C3.pitch, -Math.asin(Math.min(1, Math.max(0.2, piv.Y - (body.Y + 0.45)) / Math.max(0.5, C3.dist))));
-    const d = fwd(C3.yaw, po);
-    const free = reach(piv, d, C3.dist);
+    const poAt = dd => Math.max(C3.pitch, -Math.asin(Math.min(1, Math.max(0.2, piv.Y - (body.Y + 0.45)) / Math.max(0.5, dd))));
+    let po = poAt(C3.dist), d = fwd(C3.yaw, po), free = reach(piv, d, C3.dist);
+    // (and with something behind the body before the orbit's end — a house, a market —, down to a hand over the feet at the
+    // distance the eye has, not the one asked: held up the orbit of the 11 m asked, 0.95 m over the feet at the 5.8 m a market left
+    // it, the look up was the weaker, and the top of the colossal's front, 26 m, stayed out of the picture — L-755)
+    if (free < C3.dist - 0.05 && po > C3.pitch + 1e-6) { po = poAt(free); d = fwd(C3.yaw, po); free = reach(piv, d, free); }
     // (in at once when something is in the way; out again gently)
     C3.cur = free < C3.cur ? free : C3.cur + (free - C3.cur) * (1 - Math.exp(-2.6 * rdt));
     // over the right shoulder, a little (less when close)
