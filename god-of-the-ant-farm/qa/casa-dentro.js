@@ -20,7 +20,9 @@
 //   c5  o que se vê (a noite em casa, G.Lar): num mundo pronto (MUNDO=cidade,metropole), das 0,70 às 0,82 do dia (a gente
 //       grande em casa e ainda de pé), em cada povo, as casas com gente acordada dentro: em quantas há alguém sentado onde a família come (num banco
 //       da mesa, no chão em volta da esteira ou do fogo), em quantas dois ou mais comem juntos na mesma peça, em quantas há
-//       alguém junto ao fogo — e o verificador limpo, sem erro de módulo. Só com c5 no pedido (vive o mundo: minutos)
+//       alguém junto ao fogo — e o verificador limpo, sem erro de módulo. A afirmação é da família (D-246): nas casas com duas
+//       ou mais pessoas acordadas, três em cada quatro com alguém sentado onde a família come (quem está acordado sozinho
+//       descansa junto ao fogo); o total de todas as casas acordadas é dito na linha. Só com c5 no pedido (vive o mundo: minutos)
 //   c6  um save de antes abre (qa/save-g196.json, feito pelo código de antes do D-196 — qa/gera-save-g196.js —: o corpo
 //       encarnado dentro de uma casa, com um lugar da planta de então nas mãos, a família em casa à noite): sem erro; a casa
 //       com o registro julgado ao abrir (o save não diz a gramática das plantas dele: é de antes) e a planta de agora, com
@@ -229,6 +231,7 @@ if (want('c5')) for (const world of (process.env.MUNDO || 'cidade').split(',')) 
   // feast in any town: every town keeps its feast of the year, and a day of the world is a year — the test's hand, as qa/lar.js)
   M.pronto(world); const S = G.S; const HOURS = [0.7, 0.72, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79, 0.8, 0.82];
   S.time = 0.6; for (const st of S.settlements.values()) st.festPlan = { day: S.day, key: null, done: true };
+  const fam = [0, 0]; // (the houses with two or more awake inside, and of them the ones with someone sitting where the family eats: D-246)
   const acc = new Map(); const rowP = c => { let r = acc.get(c); if (!r) acc.set(c, r = { casas: 0, come: 0, juntos: 0, mesa: 0, fogo: 0, ambos: 0, nucleo: 0, chao: 0, gente: 0, sentada: 0 }); return r; };
   const doing = {}; // (what each one awake at home is doing — the task of the home, G.Lar —, and where)
   const housing = b => !!(b && b.built && b.type !== 'ruin' && G.BDEF[b.type] && G.BDEF[b.type].housing && b.ip && In.TYPES[b.ip.t]);
@@ -248,6 +251,7 @@ if (want('c5')) for (const world of (process.env.MUNDO || 'cidade').split(',')) 
         if (pl.use === 'comer') mesa++; if (eats) { come++; W.come++; R.sentada++; at.set(pl.item, (at.get(pl.item) || 0) + 1); }
         if (pl.it.fire || fires.some(f => f.lv === pl.lv && Math.hypot(f.x - pl.x, f.z - pl.z) <= 1.6 + Math.max(f.w, f.d) / 2)) { fogo++; W.fogo++; }
       }
+      if (awake.length >= 2) { fam[0]++; if (come) fam[1]++; }
       if (come) R.come++; if (mesa) R.mesa++; if ([...at.values()].some(k => k >= 2)) R.juntos++; if (fogo) R.fogo++; if (come && fogo) R.ambos++; if (come || fogo) R.nucleo++; if (chao === awake.length) R.chao++;
     }
   }
@@ -262,7 +266,11 @@ if (want('c5')) for (const world of (process.env.MUNDO || 'cidade').split(',')) 
   const ce = doing.ceia || { n: 0, come: 0 };
   ok(`c5b quem ceia senta onde a família come (${world})`, ce.n > 0 && ce.come * 10 >= ce.n * 8, `${ce.come} de ${ce.n} pessoas na ceia sentadas onde se come (${pct(ce.come, ce.n)})`);
   ok(`c5c o núcleo da casa em uso: alguém sentado onde se come ou junto ao fogo em 85% ou mais das casas acordadas (${world})`, N * 100 >= C * 85, `${N} de ${C} casas com gente acordada (${pct(N, C)})`);
-  ok(`c5 a noite em casa: a maioria das casas acordadas com alguém sentado onde se come (${world})`, C > 0 && E * 2 > C && M.limpo() && !mid.length, `${E} de ${C} casas com gente acordada (${pct(E, C)})${mid.length ? ' — o verificador: ' + mid.slice(0, 3).join(' · ') : ''}${M.limpo() ? '' : ' — ERROS: ' + JSON.stringify(M.erros()).slice(0, 300)}`);
+  // (D-246: the claim is the family's — two or more awake at home, one of them sitting where the family eats. One awake alone rests
+  // by the fire, the rule of who stays where (act-lar.js: rest asks the fire first, talk a seat, supper the table): the share of all
+  // the awake houses was the share of the houses with company, 52% in the city when the case was born and 48% with the third round
+  // of the F — 83 of the 110 awake houses with one awake; of the houses with two or more, 93% in the city and 97% in the metropole)
+  ok(`c5 a noite em casa: nas casas com duas ou mais pessoas acordadas, três em cada quatro com alguém sentado onde a família come (${world})`, fam[0] >= 10 && fam[1] * 4 >= fam[0] * 3 && M.limpo() && !mid.length, `${fam[1]} de ${fam[0]} casas com duas ou mais acordadas (${pct(fam[1], fam[0])}); de todas as casas com gente acordada, ${E} de ${C} (${pct(E, C)})${mid.length ? ' — o verificador: ' + mid.slice(0, 3).join(' · ') : ''}${M.limpo() ? '' : ' — ERROS: ' + JSON.stringify(M.erros()).slice(0, 300)}`);
 }
 // ------------------------------ c6: a save of before D-196 ------------------------------
 if (want('c6')) {
