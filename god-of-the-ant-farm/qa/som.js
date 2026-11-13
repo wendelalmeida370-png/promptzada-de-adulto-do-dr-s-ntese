@@ -135,7 +135,12 @@ function day() {
     live(150, () => { for (const op of G.Act.all()) { if (!G.Act.live(op) || op.def !== 'descarga') continue; for (const id in op.roles) { const v = S.villagers.get(+id); if (v && v.task && v.task.op === op.id && v.act === 'lift' && !v.inside) { hit = { op, v }; return true; } } } return false; });
     if (!hit) ok('s3a o-cais-vivo', false, 'nenhum estivador num gesto em 150 s do dia');
     else {
-      const { op, v } = hit; const dock = S.buildings.get(op.at); const ear = earAt(v.x + 2, v.y + 1);
+      // (the ear beside her and in her quarter: the bed of a quarter counts the hands in it, D-166 — two tiles east and one south
+      // crossed the line of the cells into the next quarter, and its bed had «mãos no cais agora: 0» with her heaving two
+      // tiles off, T-963)
+      const { op, v } = hit; const dock = S.buildings.get(op.at); const qv = G.Urban.at(v.x, v.y);
+      const spot = [[2, 1], [-2, 1], [2, -1], [-2, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [0.3, 0.3]].find(([dx, dy]) => G.Urban.at(v.x + dx, v.y + dy) === qv) || [2, 1];
+      const ear = earAt(v.x + spot[0], v.y + spot[1]);
       const c = scene(ear, 's3'); const mine = c.fontes.find(f => f.de.v === v.id);
       const quay = c.fontes.filter(f => f.fam === 'cais');
       const all = quay.every(f => { const p = S.villagers.get(f.de.v); const o = f.de.op ? G.Act.get(f.de.op) : null; return p && f.x === r3(p.x) && f.y === r3(p.y) && (f.de.op ? !!(o && o.def === 'descarga' && o.roles[p.id]) : ['cais', 'conferir', 'descarga'].includes((p.task || {}).type)); });
