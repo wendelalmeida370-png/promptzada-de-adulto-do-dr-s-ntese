@@ -409,6 +409,14 @@ const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim ||
     if (!S.wall[i] && G.W.walkable(i)) { ring.push(i); S.wall[i] = 1; S.wallFac[i] = fac.id; S.wallHp[i] = 400; }
   }
   G.W.touchWalk();
+  // (and where the store's door opens onto the quay itself — the harbour warehouse of Roma, in the metrópole of the generation 20,
+  // two steps from the quay, its door on the free band inside the ring, and the way never cut, T-992 —: the wall goes on that
+  // band too, round the store's walls, the crates' place left free)
+  { const st = P.destOf(op12), sp = G.Fishers && G.Fishers.crateSpot ? G.Fishers.crateSpot(dock) : G.Vg.door(dock), ci = G.W.idx(sp[0], sp[1]);
+    if (st && P.access(dock, st)) { for (let y = st.y - 1; y <= st.y + st.h; y++) for (let x = st.x - 1; x <= st.x + st.w; x++) {
+      if (x < dock.x - 1 || x > dock.x + dock.w || y < dock.y - 1 || y > dock.y + dock.h || !G.W.inb(x, y)) continue; const i = G.W.idx(x + 0.5, y + 0.5);
+      if (i !== ci && !S.wall[i] && G.W.walkable(i)) { ring.push(i); S.wall[i] = 1; S.wallFac[i] = fac.id; S.wallHp[i] = 400; } }
+      G.W.touchWalk(); } }
   const dest = P.destOf(op12); const cut = !P.access(dock, dest);
   const tries = new Set();
   live(30, () => { for (const v of S.villagers.values()) if (v.task && v.task.type === 'descarga' && v.task.op === op12.id && !v.carry && v.task.age < 1) tries.add(v.task); return watch(); });

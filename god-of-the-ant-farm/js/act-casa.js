@@ -668,7 +668,7 @@
     }
     for (const m of fam) { m.home = b.id; m.hhType = b.type; m.rua = 0; m.ruaWhy = null; }
     b.res = (b.res || 0) + fam.length;
-    const said = { comprou: 'comprou uma casa e se mudou', alugou: 'alugou uma casa e se mudou', levantou: 'mudou para a casa que levantou', cedida: 'recebeu do povo uma casa vazia e se mudou', maos: 'mudou para a cabana que levantou com as próprias mãos', paco: 'foi morar na casa de quem governa', voltou: 'voltou para a casa que tinha', saiu: 'deixou a casa de quem governa' }[how];
+    const said = { comprou: 'comprou uma casa e se mudou', alugou: 'alugou uma casa e se mudou', levantou: 'mudou para a casa que levantou', cedida: 'recebeu do povo uma casa vazia e se mudou', maos: 'mudou para a cabana que levantou com as próprias mãos', paco: 'foi morar na casa de quem governa', voltou: 'voltou para a casa que tinha', saiu: 'deixou a casa de quem governa', par: 'deixou a casa de quem governa para morar com o par' }[how];
     (fam[0].moves || (fam[0].moves = [])).push([S.day, said]); if (fam[0].moves.length > 6) fam[0].moves.shift();
     A.note(fam[0], 'memory', `Arrumamos a casa nova${brought.length ? ': trouxemos ' + brought.slice(0, 4).join(', ') : ''}.`, NOTE);
   }
@@ -782,9 +782,9 @@
   }
   const WHY_OUT = { cheia: 'não há camas para todos', governo: 'outro governa agora', queda: 'veio abaixo', obra: 'entrou em obras', desfeita: 'já não existe', sede: 'já não é a sede do governo' };
   // a household leaves the seat: whole, with its share of what the seat keeps
-  function leave(b, L, why, kin) {
+  function leave(b, L, why, kin, mate) {
     const S = G.S; const set = S.settlements.get(b.set); if (!set || !L.length || hasBody(L)) return false;
-    const head = eldest(L); const to = rehouse(L, set, kin);
+    const head = eldest(L); const to = mate ? [mate, 'par'] : rehouse(L, set, kin);
     if (to) { move(headFirst(L, head), to[0], to[1]); K.lease(to[0]); }
     else {
       // (no house of the town has room for it: out of doors, the coins of its share in the head's purse — the town's housing
@@ -794,7 +794,7 @@
       for (const m of L) m.home = 0; b.res = Math.max(0, (b.res || 0) - L.length);
       (head.moves || (head.moves = [])).push([S.day, 'deixou a casa de quem governa']); if (head.moves.length > 6) head.moves.shift();
     }
-    const where = !to ? 'ainda sem teto' : to[1] === 'voltou' ? 'de volta à casa que tinha' : 'numa casa da cidade';
+    const where = !to ? 'ainda sem teto' : to[1] === 'voltou' ? 'de volta à casa que tinha' : to[1] === 'par' ? 'na casa do par' : 'numa casa da cidade';
     bio(head, `Deixou ${theName(b)} de ${set.name}${L.length > 1 ? ' com a família' : ''} (${WHY_OUT[why] || WHY_OUT.sede}): ${where}.`, `Deixamos ${theName(b)}`);
     for (const m of L) if (m.age >= 16) A.note(m, 'memory', `Deixamos ${theName(b)}: ${WHY_OUT[why] || WHY_OUT.sede}.`, NOTE);
     // (the chronicle: a household that leaves the seat — not the grown one more who goes to the family's house for want of a bed)
@@ -820,8 +820,16 @@
     const p = P(r.partner); const kin = [r.id].concat(p ? [p.id] : []);
     // (the ruler's own: the two, their parents — and who a parent is married to now)
     const own = v => !!v && (v.id === r.id || v.id === r.partner || v.id === r.mother || v.id === r.father || (!!p && (v.id === p.mother || v.id === p.father))); const core = v => own(v) || own(P(v.partner));
-    const heads = L.filter(v => v.age >= 16 && !core(v) && !!v.partner && L.some(o => o.id === v.partner)).sort((a, c) => a.age - c.age || a.id - c.id);
-    for (const h of heads) { if (L.length <= beds) return; if (!L.includes(h)) continue; const g = K.court(h).filter(v => L.includes(v) && !core(v)); if (leave(b, g, 'cheia', kin)) L = L.filter(v => !g.includes(v)); }
+    // (a married one of the family is a household of it wherever the partner lives: the son who married in the town, with no bed
+    // in the full seat for his wife — the town's housing brings the partner in only to a bed, village.js — stayed in it while she
+    // stayed in her house, neither a household with its partner there nor a single one, and the seat never had its beds: L-735.
+    // He goes to live with the partner, in the partner's house of the town where it has room for those who go; else by the rule —
+    // unless he is one who must live with who rules: under eighteen, with little ones of his there, minding the house's, K.tied)
+    const heads = L.filter(v => v.age >= 16 && !core(v) && !!v.partner && (L.some(o => o.id === v.partner) || !tied(v, r, L))).sort((a, c) => a.age - c.age || a.id - c.id);
+    const occ = occupancy();
+    const mateOf = (h, g) => { const q = P(h.partner); const hb = q && !q.captive && q.set === b.set && !L.includes(q) && q.home ? G.S.buildings.get(q.home) : null;
+      return hb && built(hb) && housing(hb) && hb.type !== 'barraco' && G.BDEF[hb.type].housing - (occ.get(hb.id) || 0) >= g.length ? hb : null; };
+    for (const h of heads) { if (L.length <= beds) return; if (!L.includes(h)) continue; const g = K.court(h).filter(v => L.includes(v) && !core(v)); const to = mateOf(h, g); if (leave(b, g, 'cheia', kin, to)) { L = L.filter(v => !g.includes(v)); if (to) occ.set(to.id, (occ.get(to.id) || 0) + g.length); } }
     for (const v of L.filter(o => o.age >= 18 && !o.partner).sort((a, c) => a.age - c.age || a.id - c.id)) { if (L.length <= beds) return; if (tied(v, r, L)) continue; if (leave(b, [v], 'cheia', kin)) L = L.filter(o => o !== v); }
   }
   // the ruler's household comes to live in the seat

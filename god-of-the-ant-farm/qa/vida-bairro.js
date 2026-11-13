@@ -3,8 +3,8 @@
 // aconteceu (S.urbAcc); na virada do dia de cada cidade as contagens fecham na vida de cada bairro (d.vida, uma média lenta)
 // e nos perfis (d.tags), com quatro dias seguidos de paciência; a história diz a causa; a cidade que acaba fica na memória.
 // A prova vive o mundo pronto pelo salto do próprio jogo (a mesma simulação, mais depressa) e arma cada caso pela regra do
-// jogo; a mão da prova só corta as rotas do mar, dá e tira moedas (as portas do deus: a chuva de moedas, o dragão) e mata
-// (a peste, pela porta de toda morte).
+// jogo; a mão da prova só corta as rotas do mar, dá e tira moedas (as portas do deus: a chuva de moedas, o dragão), mata
+// (a peste, pela porta de toda morte) e, para o roubo do v1, põe a paz do deus numa cópia do mundo (T-993).
 //  v1 as portas: num dia vivido, cada atividade comum conta (cais, pesca, troca, ofício, campo, armas, fé, noite); uma chave
 //     desconhecida é erro; o roubo (a tarefa do jogo) conta um crime no chão da casa roubada
 //  v2 o fechamento: no dia de uma cidade, o que o chão dela contou entra na vida do bairro pela conta exata (a média lenta),
@@ -61,6 +61,12 @@ if (on('v1')) {
   const miss = need.filter(k => !(seen[k] > 0));
   let threw = false; try { G.inSim++; U.note(10, 10, 'xpto', 1); } catch (e) { threw = /chave desconhecida/.test(String(e.message)); } finally { G.inSim--; }
   // a theft, by the game's own errand: a thief of a town, a house with coins in reach; the count on the house's ground
+  // (in the god's peace, and on a copy of the world: in the metrópole of the generation 20 its peoples are at war in these days,
+  // and each thief the proof chose left the errand to flee the enemy, to muster or to fight — «o roubo NÃO aconteceu», T-993 —:
+  // the game's own power, as the freguesia lives its days (T-910), the alarms down and a few seconds for the bands to go home;
+  // the world as it was given back after the theft, for the parts that follow)
+  const snap = G.Save.serialize();
+  G.inSim++; try { G.Politics.divinePeace(); for (const s of G.S.settlements.values()) if (s.alarmT > 0) s.alarmT = 0; } finally { G.inSim--; } M.viver(5);
   const S = G.S; let stole = null;
   for (const set of towns().filter(s => G.Village.pop(s.id) >= 20).slice(0, 4)) {
     const h = [...S.buildings.values()].find(b => b.set === set.id && b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && (b.coin || 0) >= 6);
@@ -72,6 +78,7 @@ if (on('v1')) {
     for (let k = 0; k < 600 && (th.thefts || 0) === t0 && th.task && th.task.type === 'furto'; k++) M.viver(0.1);
     if ((th.thefts || 0) > t0) { stole = { town: set.name, n: (((S.urbAcc || {})[c] || {}).crime || 0) - before }; break; }
   }
+  M.abrir(JSON.parse(snap)); // (the world before the god's peace: T-993)
   ok('v1 as-portas', !miss.length && threw && !!stole && stole.n === 1,
     `em ${G.S.day - S0day} dias: ${need.map(k => `${k} ${Math.round(seen[k] || 0)}`).join(', ')}${miss.length ? ` — SEM: ${miss.join(', ')}` : ''}; chave desconhecida: ${threw ? 'erro dito' : 'ACEITA'}; o roubo ${stole ? `em ${stole.town} contou ${stole.n} crime no chão da casa` : 'NÃO aconteceu'}`);
 }

@@ -526,7 +526,12 @@ run('e18', () => {
 // tantos quantos vêm, e no fim ninguém lá dentro)
 run('e19', () => {
   abre(); const set = doPovo('romano'); const In = G.Interiors, Tt = G.Teatro, E = G.Eco; // (a capital romana: o Coliseu do M1)
-  let b = set && sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60, built: true }));
+  // (the Coliseum of Rome: the town's own when it has one standing, else the god's hand raises it — the Roma of the metrópole of
+  // the generation 20 has its Coliseum of 10 standing, and the one the proof raised beside it was never the games': the people's
+  // own hand, E.place, gave the fighters the posts of the old one, «0 lutadores com o posto no Coliseu», T-994, as the palace the
+  // proof raised beside Rome's own in the e22 of the generation 14, T-477)
+  const own = set && [...S.buildings.values()].filter(q => q.set === set.id && q.type === 'maravilha' && q.built && q.w === 10 && E.jobsOf(q)).sort((a, c) => a.id - c.id)[0];
+  let b = own || (set && sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60, built: true })));
   if (!ok('e19a o Coliseu de pé', !!b && b.w === 10 && b.built && G.Interiors.plan(b).ok, set ? `${set.name}: ${lado(b)}` : 'nenhuma capital do povo romano')) return;
   const T = In.table(b); const of = u => (T && T.byUse.get(u)) || []; const assentos = of('assistir').filter(e => e.it.kind === 'fileira').length, emPe = of('assistir').filter(e => e.it.kind === 'marca').length;
   const ver = of('assistir').length, luta = of('lutar').length, jb = E.jobsOf(b);
@@ -550,6 +555,7 @@ run('e19', () => {
   const sobra = v => v.set === set.id && v.age >= 18 && v.age <= 55 && !v.captive && !v.jail && !v.aboard && v.role !== 'guerreiro' && v !== rei0 && Tt.boxOf(v, b) !== 'corte' && !(v.carry && v.carry.n > 1e-6) && !(v.task && (v.task.pri || 0) > 1);
   let n = 0; for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (n >= luta) break; if (!sobra(v) || v.role === 'ator') continue; v.role = 'ator'; v.job = 0; sim(() => G.Vg.endTask(v)); v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); n++; }
   sim(() => E.place(set)); const cast = Tt.actorsOf(b);
+  if (VERB) console.log(`  lutadores: ${n} postos à mão, ${cast.length} com o posto no Coliseu — hora ${S.time.toFixed(3)}, dia ${S.day}; os atores de ${set.name}: ${[...S.villagers.values()].filter(v => v.role === 'ator' && v.set === set.id).map(v => `${v.name} #${v.id} (${v.job ? (S.buildings.get(v.job) || {}).type + '#' + v.job : 'sem posto'})`).join(', ') || 'nenhum'}`);
   // (o camarote — D-125 —: quem governa e até cinco da corte de Roma — a família de quem governa, depois os nobres do povo (o
   // grupo 'nobreza' do polity.js) —, descansados e com as moedas da entrada: até quatro no banco, o quinto nas fileiras)
   const rei = G.Politics.ruler(G.Fac.get(set.fac));
@@ -761,6 +767,15 @@ function audiencia(chama) {
   const f = caps.filter(o => seis(o) || !Co.bestPalace(o)).map(o => [nota(o), o]).sort((a, c) => a[0][0] - c[0][0] || a[0][1] - c[0][1] || a[0][2] - c[0][2] || a[1].id - c[1].id).map(q => q[1])[0];
   if (!f) return { set: null, f: null, b: null, r: null };
   const set = G.Fac.capitalOf(f.id);
+  // (and no feast in the middle of it: the hour below is chosen by the feast's window, but with a feast under way the window is that
+  // one's — it goes on for its own seconds whatever hour the proof's hand sets —, and says nothing of the feast the day's plan holds
+  // for later: in the metrópole of the generation 20 the jol of Hedeby was under way when the world opened, and once it ended the
+  // midsommar of the day called Bjorn from the throne a quarter into the audience, T-995 —: the world lives until the feast under
+  // way ends, and the proof's hand gives the capital and the ruler's town a day with no feast after it, as it gives the ruler the
+  // term — f.term, below)
+  { const r0 = P.ruler(f); const towns = [set, r0 && S.settlements.get(r0.set)].filter((s, k, L) => !!s && L.indexOf(s) === k); const on = s => !!(G.Fest && G.Fest.active && G.Fest.active(s.id));
+    for (let k = 0; k < 120 && towns.some(on); k++) M.viver(1);
+    for (const s of towns) s.festPlan = { day: S.day, key: null, done: true }; }
   const b = seis(f) || sim(() => V.handFound(set, 'palacio', 'palacio', { R: 60, built: true })); const r = P.ruler(f);
   if (!b || !r || Co.audPalace(f) !== b) return { set, f, b, r };
   for (const v of [r, ...[...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive).sort((a, c) => a.id - c.id).slice(0, 40)]) { sim(() => G.Vg.endTask(v)); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); }
@@ -779,6 +794,7 @@ function audiencia(chama) {
   // eleição do mundo no meio dela: na metrópole refeita, Febe venceu Jasão em Argos dez segundos depois da audiência, T-496)
   f.term = S.day;
   S.time = hora === undefined ? 0.35 : hora; const okA = chama === null ? false : sim(() => (chama ? chama(f, set) : Co.audiencia(f, 'teste'))); const ronda = vigia.task && vigia.task.type; const longe = DIST(vigia, b);
+  if (VERB) console.log(`  a audiência às ${S.time.toFixed(3)} (dura ${dura.toFixed(3)}); as festas: ${[set, S.settlements.get(r.set)].filter(Boolean).map(s => `${s.name}: ${JSON.stringify(G.Fest && G.Fest.window ? G.Fest.window(s) : null)} plano ${JSON.stringify(s.festPlan || null)}`).join(' · ')}; ${r.name} é de ${(S.settlements.get(r.set) || {}).name}`);
   return { set, f, b, r, vigia, ronda, longe, okA, In, Co, P };
 }
 run('e22', () => {
@@ -789,6 +805,8 @@ run('e22', () => {
   M.viver(25);
   const dentro = [...S.villagers.values()].filter(v => v.inside === b.id && v.task && v.task.kind === 'audiencia' && !v.task.throne); const usos = dentro.map(v => (A.In.placeOf(v) || {}).use || 'sem lugar');
   const tr = A.In.placeOf(r); const th = T22.items.find(it => it.kind === 'trono');
+  if (VERB) { const fe = r.task && r.task.type === 'fest' ? [...S.settlements.values()].map(q => G.Fest.active(q.id)).find(x => x && x.id === r.task.fid) : null; console.log(`  a festa: ${fe ? JSON.stringify({ key: fe.key, set: (S.settlements.get(fe.set) || {}).name, t: fe.t, len: fe.len }) : '-'}; hora ${S.time.toFixed(3)}; plano ${JSON.stringify(A.set.festPlan || null)}`); }
+  if (VERB) console.log(`  ${r.name} #${r.id}: tarefa ${r.task ? JSON.stringify(r.task).slice(0, 160) : 'nenhuma'}; dentro de ${r.inside || 'nada'} (o palácio é #${b.id}); em ${r.x.toFixed(1)},${r.y.toFixed(1)}; mora em ${r.home}; dorme ${!!r.sleeping}; fome ${Math.round(r.hunger)}, energia ${Math.round(r.energy)}; a audiência: ${JSON.stringify(A.f.aud).slice(0, 200)}`);
   // (os lugares de pé do M2 diante do trono — marcas da planta, em fileiras a um metro, tantas quantas a sala do trono de cada povo
   // comporta: 50 no palácio de 6 da geração 14, 47 no nórdico da 15, T-493 — fazem a audiência crescer além dos assentos de
   // visitante: mais marcas do que assentos, chamados mais do que eles, e de pé nas marcas)

@@ -123,12 +123,14 @@ const key = process.argv[2] || 'cidade';
       G.Powers.cast('goldrain', set.cx, set.cy); const rn = S.gifts.rains[0];
       let died = null, bolt = null, sunk = null; const bad = [];
       H.run(40, k => {
+        // (the checker first, on the world as the last step left it: a god's act below and a look in the same instant, before
+        // the world's step that answers it, caught the piles still on the ground the god had just sunk — T-969)
+        if (k % 20 === 0) { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); }
         // the first one running for the gold dies on the way
         if (!died) { const v = H.tasks('ouro').find(o => o.task.st === 1); if (v) { died = v.name; G.Village.kill(v, 'teste', true); } }
         // the god strikes one pile with lightning, and sinks the ground under another into the sea
         if (!bolt && rn.street > 20 && S.gifts.piles.length > 3) { const q = S.gifts.piles[0]; bolt = q.id; G.Powers.lightning(q.x, q.y); }
         if (!sunk && bolt && S.gifts.piles.length > 2) { const q = S.gifts.piles[S.gifts.piles.length - 1]; sunk = q.id; G.Powers.sink(q.x, q.y); }
-        if (k % 20 === 0) { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); }
       });
       const left = S.gifts.piles.filter(q => q.rain === rn.id).reduce((a, q) => a + q.n, 0);
       const onSea = S.gifts.piles.filter(q => S.type[W.idx(q.x, q.y)] < T.SAND).length;
@@ -411,7 +413,7 @@ const key = process.argv[2] || 'cidade';
     // someone free, in the biggest town, with a choice of suitors (of their people, and — if wanted — of another)
     // (a world of married people: the god first frees a few hearts — the partners of some die — in two peoples)
     __H.toDay = () => { const S = G.S; while (!(S.time > 0.12 && S.time < 0.5)) __H.run(2); };
-    __H.freeHearts = () => { __H.toDay(); const S = G.S; const F = G.Fac.all().filter(f => f.alive).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).slice(0, 2); for (const f of F) { let n = 0; for (const v of [...S.villagers.values()].sort((a, b) => a.id - b.id)) { if (n >= 6 || G.Fac.idOfV(v) !== f.id || !v.partner || v.age < 18 || v.age > 45 || v.captive || v.inside) continue; const p = S.villagers.get(v.partner); if (p) { G.Village.kill(p, 'sick'); v.mourn = 0; n++; } } } __H.run(1); };
+    __H.freeHearts = () => { __H.toDay(); const S = G.S; const F = G.Fac.all().filter(f => f.alive).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).slice(0, 2); for (const f of F) { let n = 0; for (const v of [...S.villagers.values()].sort((a, b) => a.id - b.id)) { if (n >= 6 || !S.villagers.has(v.id) || G.Fac.idOfV(v) !== f.id || !v.partner || v.age < 18 || v.age > 45 || v.captive || v.inside) continue; /* (one killed a moment ago as another's partner still names the living one as partner: skipped, or the widow went too — T-968) */ const p = S.villagers.get(v.partner); if (p) { G.Village.kill(p, 'sick'); v.mourn = 0; n++; } } } __H.run(1); };
     __H.lover = foreign => { const S = G.S; for (const v of [...S.villagers.values()].sort((a, b) => a.id - b.id)) { if (v.partner || v.age < 18 || v.age > 45 || v.captive || v.inside || v.aboard || v.jail) continue; const o = G.Powers.options('love', v.x, v.y) || []; const pick = o.find(q => /De outro povo/.test(q.desc) === !!foreign); if (pick && G.Powers.targetAt(v.x, v.y, 1.3) === v) return { v, k: pick.k }; } return null; };
     __H.until = (fn, max) => { let t = 0; while (t < max && !fn()) { __H.run(1); t += 1; } return t; };
   });
@@ -554,7 +556,7 @@ const key = process.argv[2] || 'cidade';
       // the land beyond the sea
       { const f = F[2] || F[0]; const K = G.Know; const before = K.counts ? JSON.stringify(K.counts(f.id)) : ''; out.mar = [dreamOf(f, 'mar'), before, K.counts ? JSON.stringify(K.counts(f.id)) : '']; }
       // peace, in a war made for it
-      { const a = F[0], b = F[1]; if (a && b) { const rel = G.Fac.rel(a.id, b.id); if (rel && !rel.met) G.Politics.meet(a, b, { quiet: true }); const dp = S.divinePeace; S.divinePeace = 0; if (!G.Fac.atWar(a.id, b.id)) G.Politics.declareWar(a, b, 'ambicao'); S.divinePeace = dp; S.day += 2; const w0 = G.Fac.atWar(a.id, b.id); out.paz = [w0, dreamOf(b, 'paz'), G.Fac.atWar(a.id, b.id), S.history.slice(-3).map(e => e.txt).join(' | ')]; } }
+      { const a = F[0], b = F[1]; if (a && b) { const rel = G.Fac.rel(a.id, b.id); if (rel && !rel.met) G.Politics.meet(a, b, { quiet: true }); const dp = S.divinePeace; S.divinePeace = 0; if (!G.Fac.atWar(a.id, b.id)) G.Politics.declareWar(a, b, 'ambicao'); S.divinePeace = dp; for (const d of (S.fates && S.fates.dreams) || []) if (d.fac === b.id) d.day -= 2; /* (b's last dream two days back, so it may dream again — not the world's day: moved by hand, the day left every age behind it, and a trade's days ran past the years, T-967) */ const w0 = G.Fac.atWar(a.id, b.id); out.paz = [w0, dreamOf(b, 'paz'), G.Fac.atWar(a.id, b.id), S.history.slice(-3).map(e => e.txt).join(' | ')]; } }
       H.run(5);
       out.qa = H.qa();
       return out;

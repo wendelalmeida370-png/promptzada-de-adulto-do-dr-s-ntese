@@ -107,12 +107,16 @@ if (run('q2')) {
   const H = built().filter(b => housing(b) && kindOf(b) === 'rect' && PR.pieces(b).length >= 0 && PR.roomOf(b) > 0);
   // the woodcutter's wood: gone with his trade, back with it
   const wood = H.find(b => things(b).includes('lenha'));
-  if (wood) { const L = res(wood).filter(v => v.role === 'lenhador'); const s0 = sigOf(wood); for (const v of L) v.role = 'construtor'; flush(); const t1 = things(wood), s1 = sigOf(wood); for (const v of L) v.role = 'lenhador'; flush(); const t2 = things(wood), s2 = sigOf(wood);
+  // (the woodcutter of the house is who keeps the trade — one the war called away keeps it in the trade he goes back to, D-195 —:
+  // the hand takes the trade from both places and gives both back, as atmosfera a4 does since T-851. With only the trade of now
+  // changed, house#8318 of the metrópole of the generation 20, its woodcutter at the war, had nobody for the hand to change, and
+  // its wood «ficou sem o lenhador», T-991)
+  if (wood) { const L = res(wood).filter(v => (v.roleBack || v.role) === 'lenhador'); const r0 = L.map(v => [v.role, v.roleBack]); const s0 = sigOf(wood); for (const v of L) { v.role = 'construtor'; v.roleBack = null; } flush(); const t1 = things(wood), s1 = sigOf(wood); L.forEach((v, k) => { v.role = r0[k][0]; v.roleBack = r0[k][1]; }); flush(); const t2 = things(wood), s2 = sigOf(wood);
     prov.push(`a lenha de ${tag(wood)}: ${t1.includes('lenha') ? 'ficou' : 'sumiu'} sem o lenhador, ${t2.includes('lenha') ? 'voltou' : 'não voltou'} com ele`); if (t1.includes('lenha') || !t2.includes('lenha') || s0 === s1 || s2 !== s0) bad.push(`a lenha de ${tag(wood)} não segue o lenhador (assinatura ${s0} → ${s1} → ${s2})`); }
   else if (built().some(b => housing(b) && rolesOf(b).has('lenhador'))) bad.push('nenhuma casa de planta com a lenha de um lenhador à vista'); else prov.push('nenhum lenhador mora numa casa deste mundo');
   // a woodcutter come to a house that had none
   const noW = H.find(b => res(b).some(v => v.age >= 14 && !v.captive && v.role && v.role !== 'lenhador') && !rolesOf(b).has('lenhador') && !things(b).includes('lenha') && PR.spanOf(b) >= 0.9);
-  if (noW) { const v = res(noW).find(q => q.age >= 14 && !q.captive && q.role && q.role !== 'lenhador'); const r0 = v.role, s0 = sigOf(noW); v.role = 'lenhador'; flush(); const t1 = things(noW), s1 = sigOf(noW); v.role = r0; flush(); const t2 = things(noW);
+  if (noW) { const v = res(noW).find(q => q.age >= 14 && !q.captive && q.role && q.role !== 'lenhador'); const r0 = v.role, b0 = v.roleBack, s0 = sigOf(noW); v.role = 'lenhador'; v.roleBack = null; flush(); const t1 = things(noW), s1 = sigOf(noW); v.role = r0; v.roleBack = b0; flush(); const t2 = things(noW); // (both trades, as above: T-991)
     prov.push(`${tag(noW)}: ${v.name} vira lenhador — lenha ${t1.includes('lenha') ? 'aparece' : 'NÃO aparece'}; deixa de ser — ${t2.includes('lenha') ? 'FICA' : 'some'}`); if (!t1.includes('lenha') || t2.includes('lenha') || s0 === s1) bad.push(`${tag(noW)}: a lenha não vem com o lenhador (assinatura ${s0} → ${s1})`); }
   else bad.push('nenhuma casa de planta sem lenhador, com parede livre, para receber um');
   // a jar of wine: the cask by the door

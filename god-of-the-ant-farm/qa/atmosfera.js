@@ -68,7 +68,10 @@ function cause(b) {
   let forge = false;
   for (const op of opsAt(b, 'oficio')) { const [s, p] = stageOf(op); if (!s) continue; if (s.kind === 'fogo' && op.data.calor > EPS) return 'fornada'; if (s.kind === 'mao' && s.kiln && op.st === 'on' && p && p.kind === 'fogo' && awakeIn(b).length) forge = true; }
   if (forge) return 'forja';
-  if (housing(b)) { const L = awakeIn(b).filter(v => v.task && v.task.type === 'lar' && v.task.st >= 2 && v.task.home === b.id); if (L.some(v => v.task.what === 'cozinhar')) return 'cozinha'; if (L.some(v => v.task.what !== 'acamado')) return 'lareira'; }
+  // (the fire of a house where a household lives: a house of the town or the seat of who rules — G.Village.bedsOf, as the atmos.js
+  // asks since T-931; by BDEF.housing alone, the palace of the metrópole of the generation 20, with its ruler awake at its fire,
+  // was «a causa é nenhuma, G.Atmos diz lareira», T-989)
+  if (G.Village.bedsOf(b) > 0) { const L = awakeIn(b).filter(v => v.task && v.task.type === 'lar' && v.task.st >= 2 && v.task.home === b.id); if (L.some(v => v.task.what === 'cozinhar')) return 'cozinha'; if (L.some(v => v.task.what !== 'acamado')) return 'lareira'; }
   return null;
 }
 const litBy = b => b.built && b.type !== 'ruin' && awakeIn(b).length > 0 && !(G.Fest && G.Fest.darkB(b));
@@ -215,6 +218,13 @@ if (run('a4')) {
     if (lived) { const L = res(lived); const s0 = sigOf(lived); for (const v of L) v.home = 0; flush(); const n1 = PR.pieces(lived).length, s1 = sigOf(lived); for (const v of L) v.home = lived.id; flush(); const n2 = PR.pieces(lived).length;
       prov.push(`${mode}: ${tag(lived)} esvaziada: ${n1} coisas; de volta: ${n2}`); if (n1 || !n2 || s0 === s1) bad.push(`${mode}: ${tag(lived)} vazia ficou com ${n1} coisas (assinatura ${s0} → ${s1})`); }
     else bad.push(`${mode}: nenhuma casa habitada com as coisas de quem mora (banco, varal, vassoura, tina, réstia)`);
+    // (and by the kit, every house that shows them, not one: emptied, nothing; its people back, the same things — the rule over
+    // every case the kit draws, whatever their number: by the luck of the ids over the few houses whose kit has room, 11 in the
+    // metrópole of the generation 19, 2 or 3 in the one of the 20, with the same code, and a floor of six was a count of luck, T-990)
+    if (mode === 'kit') { let all = 0, fine = 0;
+      for (const b of built().filter(q => housing(q) && res(q).length && things(q).some(t => LIVED[t]))) { all++; const L = res(b), n0 = PR.pieces(b).length, s0 = sigOf(b); for (const v of L) v.home = 0; flush(); const n1 = PR.pieces(b).length, s1 = sigOf(b); for (const v of L) v.home = b.id; flush(); const n2 = PR.pieces(b).length;
+        if (!n1 && n2 === n0 && s0 !== s1) fine++; else bad.push(`kit: ${tag(b)} esvaziada ficou com ${n1} coisa(s), de volta ${n2} de ${n0} (assinatura ${s0} → ${s1})`); }
+      prov.push(`kit: ${all} casas com as coisas de quem mora, cada uma esvaziada e de volta: ${fine} certas`); }
     // a cask where the house has drink: given a jar of wine by hand, then taken
     const dry = built().find(b => housing(b) && res(b).length && !drink(b) && !things(b).includes('barril') && (() => { const I = b.inv || (b.inv = {}); I.vinho = 2; flush(); const t = things(b).includes('barril'); delete I.vinho; flush(); return t; })());
     if (dry) prov.push(`${mode}: ${tag(dry)}: sem bebida, sem barril; com vinho, um barril à porta`); else if (mode === 'planta') bad.push('planta: nenhuma casa com lugar para o barril da bebida à porta'); else prov.push('kit: nenhuma casa com lugar para um barril à porta (T-701)');
@@ -253,7 +263,9 @@ if (run('a4')) {
   B3.shellOf = shellOf; flush();
   const P = seen.planta, K = seen.kit;
   ok('a4 os objetos: em volta de cada casa só o que ela tem — lenha só na casa do lenhador, barril só com bebida, as coisas de quem mora só com morador, as de um ofício só onde ele mora; casa vazia, nada; potes só secando, barris só com o que servir, redes só com barco de pesca; tirado à mão, some — no desenho pela planta (o do jogo) e no do kit',
-    !bad.length && P.houses > 50 && P.lived > 5 && K.lived > 5, `pela planta: ${P.houses} casas (${P.emptyH} vazias, ${P.emptyThings} coisas nelas), ${P.total} coisas: ${JSON.stringify(P.cnt)} · pelo kit: ${K.total} coisas: ${JSON.stringify(K.cnt)} · os outros prédios: ${JSON.stringify(cnt)} · ${prov.join(' · ')}${bad.length ? ' · ' + bad.slice(0, 4).join(' · ') : ''}`);
+    // (the floor of the game's drawing — the plan — is the plan's; the kit, drawn by the test's hand for the same rules, is held to
+    // them in every house of it that shows the things of who lives there, above, T-990)
+    !bad.length && P.houses > 50 && P.lived > 5 && K.lived >= 1, `pela planta: ${P.houses} casas (${P.emptyH} vazias, ${P.emptyThings} coisas nelas), ${P.total} coisas: ${JSON.stringify(P.cnt)} · pelo kit: ${K.total} coisas: ${JSON.stringify(K.cnt)} · os outros prédios: ${JSON.stringify(cnt)} · ${prov.join(' · ')}${bad.length ? ' · ' + bad.slice(0, 4).join(' · ') : ''}`);
 }
 
 // ------------------------------ a5: the wear ------------------------------

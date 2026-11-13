@@ -27,6 +27,8 @@
 //        sede com dono, a casa que não é casa e a sede cheia demais
 //   m16  as camas da sede: na entrada o crescido solteiro só entra havendo cama (fica na casa da família); da sede cheia
 //        demais ele sai; quem tem de morar com quem governa fica; quem governa sem par nunca sai
+//   m17  o casado com o par fora da sede: na sede sem cama o par não entra e o casal mora separado; com a sede cheia demais,
+//        ele sai primeiro, para a casa do par (L-735)
 //   node qa/morar-palacio.js        (ONLY=m1,m3 só esses; MUNDO=metropole o mundo dos casos pela mão do deus)
 'use strict';
 process.chdir(__dirname);
@@ -57,14 +59,38 @@ function checa(sev) {
 const povos = cross => G.Fac.all().map(f => ({ f, r: Pl.ruler(f), cap: G.Fac.capitalOf(f.id) })).filter(o => o.r && o.cap && !o.r.captive && (o.r.set === o.cap.id) === !cross && !Co.seatOf(o.f))
   .sort((a, c) => K.court(c.r).length - K.court(a.r).length || a.f.id - c.f.id);
 const funda = (set, type, step, built, o) => sim(() => V.handFound(set, type, step, Object.assign({ built: !!built, R: 70 }, o || {})));
-// (a people with its ruler at home in the capital, and a palace of 6 raised there by the god's hand — standing, or as a work)
+// (a people with its ruler at home in the capital, and a palace of 6 raised there by the god's hand — standing, or as a work. The
+// case's premise in the ready worlds as the game forms them: the metrópole first, and the next worlds when it has none — the
+// metrópole of the generation 20 has no ruler at home with a grown single child, T-996, as escala.js does since the T-627)
+const MUNDOS = [MUNDO, 'mundial', 'mega', 'cidade'].filter((m, k, L) => L.indexOf(m) === k);
 function arma(built, pick, mundo) {
+  if (!mundo) { for (const m of MUNDOS) { const o = arma(built, pick, m); if (o) return o; } return null; }
   abre(mundo); M.viver(1); const L = povos(false); const o = pick ? L.find(pick) : L[0]; if (!o) return null;
   const fam = K.court(o.r); const casa0 = B(o.r.home); const L0 = S.ledgerN || 0;
   const b = funda(o.cap, 'palacio', 'palacio', built); if (!b) return null;
   return Object.assign(o, { b, fam, casa0, L0 });
 }
 const todosEm = (fam, b) => fam.every(v => v.home === b.id);
+// (a household its own house holds — the house is the family's and the ones who live in it now fit in it —: the one the cases of the
+// family that leaves the seat for the house it had ask for. In the metrópole of the generation 20 the first people's, Tenoch's, was
+// seven in a house of four: back from the seat, by the rule of the seat (D-206: the house it had, if it fits; an empty house of the
+// people's; the house with most room; else out of doors), the street, and «Mazatl em nada», T-996)
+const casaCabe = q => { const h = B(q.r.home); return !!h && K.court(q.r).some(v => v.id === h.dono) && G.BDEF[h.type].housing >= moram(h).length; };
+// (a household with one grown single child of the ruler's or the partner's living with them — the premise of the m12, m16 and m17 —:
+// the ready worlds first; and where none has one — none in the generation 20: the households of the rulers at home there are of
+// little ones or of married grown ones, T-996 —, the proof's hand grows up the eldest child with no partner of the biggest household
+// (nineteen years, as casa-cheia.js does for its young ones): a premise the world gives in time, given now)
+const deles = (q, v) => v.id !== q.r.id && (v.mother === q.r.id || v.father === q.r.id || (!!q.r.partner && (v.mother === q.r.partner || v.father === q.r.partner)));
+const solteiro = (q, v) => deles(q, v) && v.age >= 18 && !v.partner;
+function armaCrescido(built, also) {
+  const mais = also || (() => true);
+  const o = arma(built, q => mais(q) && K.court(q.r).filter(v => solteiro(q, v)).length === 1); if (o) return o;
+  const p = arma(built, q => mais(q) && K.court(q.r).some(v => deles(q, v) && !v.partner)); if (!p) return null;
+  const k = K.court(p.r).filter(v => deles(p, v) && !v.partner).sort((a, c) => c.age - a.age || a.id - c.id)[0];
+  if (k.age < 18) { k.age = 19.2; p.cresceu = k; }
+  return K.court(p.r).filter(v => solteiro(p, v)).length === 1 ? p : null;
+}
+const cresceu = o => (o && o.cresceu ? ` (${o.cresceu.name} crescido pela mão da prova)` : '');
 const assina = () => { let t = ''; for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) t += v.id + ':' + (v.home || 0) + ':' + v.set + ';'; for (const b of S.buildings.values()) if (K.isSeat(b)) t += `|${b.id}:${b.coin || 0}:${b.pantry || 0}:${JSON.stringify(b.inv || {})}`; return t + '|' + (S.ledgerN || 0) + '|' + S.villagers.size; };
 const hash = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(16); };
 
@@ -160,7 +186,7 @@ run('m2', () => {
 
 // ------------------------------ m3: a change of ruler ------------------------------
 run('m3', () => {
-  const o = arma(true); if (!ok('m3a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
+  const o = arma(true, casaCabe); if (!ok('m3a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
   const b = o.b; const f = o.f; const antes = moram(b); const casa0 = o.casa0;
   // (an election: another of the town, of no kin of the ruler, with a household of its own)
   const outro = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !K.ofCourt(v, o.r) && !(S.avatar && S.avatar.id === v.id)).sort((a, c) => K.court(c).length - K.court(a).length || a.id - c.id)[0];
@@ -193,7 +219,7 @@ run('m3', () => {
 
 // ------------------------------ m4: the seat that burns, is taken down, is enlarged ------------------------------
 run('m4', () => {
-  let o = arma(true); if (!ok('m4a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
+  let o = arma(true, casaCabe); if (!ok('m4a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
   let fam = moram(o.b); let L0 = S.ledgerN || 0; let coin = D.get('h:' + o.b.id, 'moedas'); const id = o.b.id;
   sim(() => V.destroyBuilding(o.b, 'fire'));
   const mud = livro(L0, e => e[8] === 'mudança' && e[3] === 'h:' + id && e[5] === 'moedas').reduce((a, e) => a + e[6], 0); const perd = livro(L0, e => e[8] === 'ruina' && e[3] === 'h:' + id && e[5] === 'moedas').reduce((a, e) => a + e[6], 0);
@@ -297,17 +323,29 @@ run('m7', () => {
 // ------------------------------ m8: the ruler of another town ------------------------------
 run('m8', () => {
   // (the megalópole: Rome's great palace stands, and who rules lives in another town of the people)
-  abre('mega'); let got = null;
-  for (const f of G.Fac.all()) { const r = Pl.ruler(f); const b = Co.seatOf(f); if (r && b && r.set !== b.set) { got = { f, r, b, cap: S.settlements.get(b.set), old: S.settlements.get(r.set) }; break; } }
-  if (!ok('m8a quem governa mora noutra cidade', !!got, got ? `${got.f.name}: ${got.r.name} mora em ${got.old.name}; a sede: ${lado(got.b)} em ${got.cap.name}` : 'nenhum povo assim na megalópole')) return;
+  // (and the next worlds when it has none: the megalópole of the generation 20 has every ruler in the capital, T-996)
+  let got = null, onde = '';
+  for (const m of ['mega', 'metropole', 'mundial', 'cidade']) { abre(m);
+    for (const f of G.Fac.all()) { const r = Pl.ruler(f); const b = Co.seatOf(f); if (r && b && r.set !== b.set) { got = { f, r, b, cap: S.settlements.get(b.set), old: S.settlements.get(r.set) }; break; } }
+    if (got) { onde = m; break; } }
+  // (and where no ready world has one — none in the generation 20, T-996 —: an election brings one of another town of the people to
+  // rule, by the proof's hand — the crown, as m3's election —: one with a household of two or more the town can send, by land)
+  if (!got) for (const m of ['mega', 'metropole', 'mundial']) { abre(m); M.viver(1);
+    for (const f of G.Fac.all()) { const b = Co.seatOf(f); const r0 = Pl.ruler(f); if (!b || !r0 || r0.home !== b.id) continue; const cap = S.settlements.get(b.set);
+      const cand = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && v.set !== b.set && v.age >= 25 && v.age < 55 && !v.captive && !v.jail && !v.aboard && v.home && !(S.avatar && S.avatar.id === v.id) && K.court(v).length >= 2 && K.court(v).every(q => G.W.reachesTown(q, cap) && G.Vg.canSend(q))).sort((a, c) => K.court(c).length - K.court(a).length || a.id - c.id)[0];
+      if (cand) { sim(() => { Pl.endReign(f, 'mandato'); Pl.crown(f, cand, 'eleicao', true); }); got = { f, r: cand, b, cap, old: S.settlements.get(cand.set) }; onde = m + ', eleito pela mão da prova'; break; } }
+    if (got) break; }
+  if (!ok('m8a quem governa mora noutra cidade', !!got, got ? `${got.f.name} (${onde}): ${got.r.name} mora em ${got.old.name}; a sede: ${lado(got.b)} em ${got.cap.name}` : 'nenhum povo assim nos mundos prontos')) return;
   const fam = K.court(got.r); const casa0 = B(got.r.home); const dono0 = casa0 ? casa0.dono : 0;
   // (first held: one of the household in the god's hand cannot be sent — the cause is said, nobody moves)
   fam[fam.length - 1].held = 1; M.viver(6); let st = sim(() => K.seatState(got.f));
   ok('m8b sem poder partir, espera com a causa dita', !st.home && st.why === 'ocupado' && fam.every(v => v.set === got.old.id && v.home === (casa0 ? casa0.id : 0)), `«${st.why}»: ${nomes(fam)} seguem em ${got.old.name}`);
   let c = checa(); ok('m8c verificador', c.ok, c.txt);
-  fam[fam.length - 1].held = 0; M.viver(5); st = K.seatState(got.f);
+  // (released: the family is called once all of it can be sent — one of it at an errand of weight finishes it first: Thyra, ruler
+  // by the proof's election, was at an unloading on the quay, T-996 — a minute of the world at the most)
+  fam[fam.length - 1].held = 0; M.viver(5); for (let k = 0; k < 60 && !sim(() => K.seatState(got.f)).home; k++) M.viver(1); st = sim(() => K.seatState(got.f));
   ok('m8d a família vem para a capital', st.home && fam.every(v => v.set === got.cap.id && v.home === got.b.id) && (!casa0 || casa0.dono === dono0),
-    `${nomes(moram(got.b))} agora de ${got.cap.name}, a casa deles a sede; a caminho: ${fam.filter(v => v.task && v.task.type === 'migrate').length} de ${fam.length}; a casa de antes em ${got.old.name} continua de #${casa0 ? casa0.dono : 0}`);
+    `${nomes(moram(got.b))} agora de ${got.cap.name}, a casa deles a sede; a caminho: ${fam.filter(v => v.task && v.task.type === 'migrate').length} de ${fam.length}; a casa de antes em ${got.old.name} continua de #${casa0 ? casa0.dono : 0}${st.home ? '' : ` · a sede diz «${st.why}»; não podem partir: ${sim(() => fam.filter(v => !G.Vg.canSend(v)).map(v => `${v.name} (${v.task ? v.task.type : '-'})`).join(', ')) || 'ninguém'}`}`);
   M.viver(240); const perto = fam.filter(v => S.villagers.has(v.id) && G.dist(v.x, v.y, got.cap.cx, got.cap.cy) < 30).length;
   ok('m8e chegam', perto >= Math.ceil(fam.length * 0.6) && K.seatState(got.f).home, `${perto} de ${fam.length} a menos de 30 casas do meio de ${got.cap.name} depois de 240 s`);
   c = checa(); ok('m8f verificador', c.ok, c.txt);
@@ -381,11 +419,15 @@ run('m11', () => {
 
 // ------------------------------ m12: the household whole; the partner comes; the house it had paid for ------------------------------
 run('m12', () => {
-  const o = arma(true, q => K.court(q.r).some(v => v.age >= 18 && !v.partner && v.id !== q.r.id)); if (!ok('m12a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo com um filho crescido solteiro em casa')) return;
+  // (and in the town a single one of the other sex for the grown child to marry — T-996)
+  const temPar = q => { const k = K.court(q.r).filter(v => deles(q, v) && !v.partner).sort((a, c) => c.age - a.age || a.id - c.id)[0]; return !!k && [...S.villagers.values()].some(v => v.set === q.cap.id && v.age >= 16 && v.age < 50 && !v.partner && v.g !== k.g && v.home && !v.captive && !v.jail && !v.aboard && !deles(q, v) && v.id !== q.r.partner && !K.court(q.r).includes(v)); };
+  const o = armaCrescido(true, temPar); if (!ok('m12a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}${cresceu(o)}` : 'sem povo com um filho crescido solteiro em casa')) return;
   const b = o.b; const fam = moram(b); const ap = G.BDEF[b.type].aposentos;
   // (one of the seat marries: the partner comes to live in it — the one of the seat never leaves it for the partner's house)
   const c = fam.find(v => v.age >= 18 && !v.partner && v.id !== o.r.id);
-  const x = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 18 && v.age < 45 && !v.partner && v.g !== c.g && v.home && !v.captive && !v.jail && !v.aboard && !K.ofCourt(v, o.r) && G.BDEF[B(v.home).type].housing - (B(v.home).res || 0) >= 1).sort((a, q) => (q.id > c.id) - (a.id > c.id) || a.id - q.id)[0]; // (one the town's housing looks at after the one of the seat, if there is one: the one looked at first is the one who would move)
+  // (any single one of the other sex of the town not of the household — in a small capital most are kin of who rules, and its houses
+  // full: the partner comes into the seat, whatever the house it leaves, T-996)
+  const x = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 16 && v.age < 50 && !v.partner && v.g !== c.g && v.home && v.home !== b.id && !v.captive && !v.jail && !v.aboard && !deles(o, v) && v.id !== o.r.partner).sort((a, q) => (q.id > c.id) - (a.id > c.id) || a.id - q.id)[0]; // (one the town's housing looks at after the one of the seat, if there is one: the one looked at first is the one who would move)
   if (ok('m12c o par', !!x, x ? `${c.name} (${Math.floor(c.age)}), da sede, e ${x.name} (${Math.floor(x.age)}), de ${lado(B(x.home))} com lugar` : 'ninguém')) {
     c.partner = x.id; x.partner = c.id; let left = 0; for (let k = 0; k < 80; k++) { M.viver(0.1); if (c.home !== b.id) left++; }
     ok('m12d quem é da sede casa e o par vem morar nela', !left && x.home === b.id, `${c.name} fora da sede em ${left} passos de 80; ${x.name} mora em ${lado(B(x.home))}`);
@@ -401,11 +443,15 @@ run('m12', () => {
   // (the seat with five beds, by the proof's hand, and seven in it: the married child's household leaves for the family's house;
   // who must live with who rules stays)
   if (x && x.home === b.id) {
-    G.BDEF[b.type].aposentos = 5;
+    // (two beds less than who lives there, by the proof's hand: the married child's household leaves — for the family's house where it
+    // has room for the two, else by the rule of who leaves a seat, together: in a town of full houses, T-996)
+    const n0 = moram(b).length; G.BDEF[b.type].aposentos = n0 - 2;
+    const deles0 = h => !!h && (K.court(o.r).some(v => v.id === h.dono) || h.dono === c.id || h.dono === x.id);
+    const cabe2 = !!o.casa0 && deles0(o.casa0) && G.BDEF[o.casa0.type].housing - moram(o.casa0).length >= 2;
     try {
       M.viver(4); const ficam = fam.filter(v => v !== c);
-      ok('m12b da sede cheia demais sai a casa do filho casado, para a casa da família', c.home === o.casa0.id && x.home === o.casa0.id && ficam.every(v => v.home === b.id) && !o.casa0.aluga,
-        `5 camas (pela mão da prova) para 7: ${c.name} e ${x.name} em ${lado(B(c.home))} (a casa da família: ${lado(o.casa0)}, sem aluguel: ${!o.casa0.aluga}); na sede: ${nomes(moram(b))}`);
+      ok('m12b da sede cheia demais sai a casa do filho casado, para a casa da família onde ela tem lugar', c.home !== b.id && x.home === c.home && !!G.BDEF[B(c.home).type].housing && (!cabe2 || (c.home === o.casa0.id && !o.casa0.aluga)) && ficam.every(v => v.home === b.id),
+        `${n0 - 2} camas (pela mão da prova) para ${n0}: ${c.name} e ${x.name} em ${lado(B(c.home))} (a casa da família: ${lado(o.casa0)}${cabe2 ? `, com lugar, sem aluguel: ${!o.casa0.aluga}` : ', sem lugar para os dois'}); na sede: ${nomes(moram(b))}`);
       M.viver(8); q = checa(); ok('m12h verificador', q.ok && ficam.every(v => v.home === b.id), q.txt);
     } finally { G.BDEF[b.type].aposentos = ap; }
   }
@@ -413,12 +459,13 @@ run('m12', () => {
 
 // ------------------------------ m16: the seat's beds ------------------------------
 run('m16', () => {
-  // (a palace with five beds, by the proof's hand, for a household of six with a grown single son)
-  const ap = G.BDEF.palacio.aposentos; G.BDEF.palacio.aposentos = 5;
+  // (a palace with one bed less than the household, by the proof's hand, for a household with one grown single son — the household
+  // of six of the generation 19 with five beds; any household since the T-996, the beds by its size)
+  const ap = G.BDEF.palacio.aposentos;
   try {
-    const o = arma(false, q => { const L = K.court(q.r); return L.length === 6 && L.filter(v => v.age >= 18 && !v.partner && v.id !== q.r.id).length === 1; });
-    if (!ok('m16a a obra', !!o, o ? `${o.cap.name}: a casa de ${o.r.name}: ${nomes(K.court(o.r))}; ${lado(o.b)}, 5 camas pela mão da prova` : 'sem povo com a casa de seis e um filho crescido solteiro')) return;
-    const fam = K.court(o.r); const c = fam.find(v => v.age >= 18 && !v.partner && v.id !== o.r.id); const vem = fam.filter(v => v !== c);
+    const o = armaCrescido(false, casaCabe); const nb = o ? K.court(o.r).length - 1 : 0; if (o) G.BDEF.palacio.aposentos = nb;
+    if (!ok('m16a a obra', !!o, o ? `${o.cap.name}: a casa de ${o.r.name}: ${nomes(K.court(o.r))}${cresceu(o)}; ${lado(o.b)}, ${nb} camas pela mão da prova` : 'sem povo com um filho crescido solteiro')) return;
+    const fam = K.court(o.r); const c = fam.find(v => solteiro(o, v)); const vem = fam.filter(v => v !== c);
     const L0 = S.ledgerN || 0; sim(() => V.completeBuilding(o.b)); let dentro = c.home === o.b.id ? 1 : 0;
     // (never in and out again: nothing of the seat's leaves it by a move at the entry)
     const volta = livro(L0, e => e[8] === 'mudança' && e[3] === 'h:' + o.b.id).length;
@@ -426,9 +473,19 @@ run('m16', () => {
     for (let k = 0; k < 80; k++) { M.viver(0.1); if (c.home === o.b.id) dentro++; }
     ok('m16b na entrada, o crescido solteiro só entra havendo cama: fica na casa da família', naHora && !dentro && todosEm(vem, o.b) && c.home === o.casa0.id && o.casa0.dono && !o.casa0.aluga,
       `na hora: ${vem.length} na sede e ${c.name} (${Math.floor(c.age)}) em ${lado(B(c.home))}, ${volta} mudança(s) para fora da sede no livro; ${c.name} na sede em ${dentro} passos de 80; a casa da família: dono #${o.casa0.dono}, sem aluguel: ${!o.casa0.aluga}`);
-    // (put in the seat by the proof's hand: one too many — the grown single one leaves again, for the family's house)
+    // (put in the seat by the proof's hand: one too many — the grown single one leaves again, for the family's house where it has
+    // room for him; in a town of full houses the empty family's house is soon another family's, and he goes by the rule of who
+    // leaves a seat — an empty house, the house with most room —: the Tenochtitlan of the guerra mundial of the generation 20, T-996)
+    // (the family's houses: the ones of the town whose owner is of the household of who rules, or he himself — the one it had before
+    // the seat, or another: in the Tenochtitlan of the guerra mundial of the generation 20 the household holds two, and he went back
+    // to the one of the lower number, by the rule. Whether one had room is read after: the town's housing may give an empty house to a
+    // family without one before the seat's door looks — a house of the family still with a bed free and him in none is the fault)
     B(c.home).res--; c.home = o.b.id; o.b.res++; M.viver(3);
-    ok('m16c da sede cheia demais sai o crescido solteiro, para a casa da família', c.home === o.casa0.id && todosEm(vem, o.b), `${c.name} em ${lado(B(c.home))}; na sede: ${nomes(moram(o.b))}`);
+    const dela = h => !!h && (K.court(o.r).some(v => v.id === h.dono) || h.dono === c.id);
+    const delas = [...S.buildings.values()].filter(h => h.set === o.cap.id && h.built && G.BDEF[h.type].housing && dela(h));
+    const cabe0 = delas.some(h => G.BDEF[h.type].housing - moram(h).length >= (c.home === h.id ? 0 : 1));
+    ok('m16c da sede cheia demais sai o crescido solteiro, para uma casa da família onde ela tem lugar', c.home !== o.b.id && !!B(c.home) && !!G.BDEF[B(c.home).type].housing && (!cabe0 || dela(B(c.home))) && todosEm(vem, o.b),
+      `${c.name} em ${lado(B(c.home))}${dela(B(c.home)) ? ', da família' : ''} (as casas da família: ${delas.map(lado).join(', ') || 'nenhuma'}${cabe0 ? ', com lugar' : ', cheias'}); na sede: ${nomes(moram(o.b))}`);
     // (three beds for five who must all live with who rules: nobody leaves)
     G.BDEF.palacio.aposentos = 3; M.viver(8);
     ok('m16d quem tem de morar com quem governa fica, mesmo sem cama para todos', todosEm(vem, o.b), `3 camas para ${vem.length}: ${nomes(moram(o.b))}`);
@@ -436,15 +493,52 @@ run('m16', () => {
   } finally { G.BDEF.palacio.aposentos = ap; }
   // (a ruler with no partner in a seat too full — the guerra mundial's Hedeby, one bed by the proof's hand —: the grown single
   // daughter leaves, the ruler never does, not for a step)
-  abre('mundial'); M.viver(8); let got = null;
-  for (const f of G.Fac.all()) { const st = K.seatState(f); if (st && st.home && !st.ruler.partner && moram(st.seat).some(v => v.age >= 18 && !v.partner && v !== st.ruler)) { got = st; break; } }
-  if (!ok('m16f quem governa sem par, com um filho crescido na sede', !!got, got ? `${got.ruler.name} em ${lado(got.seat)}: ${nomes(moram(got.seat))}` : 'nenhum na guerra mundial')) return;
+  // (the premise in the ready worlds; where none has it — none in the generation 20, T-996 —, the proof's hand makes it in a seat where
+  // who rules lives: the eldest child with no partner grown up, as above, and the partner of who rules dead, by the door of every death)
+  const tem = st => !!st && st.home && !st.ruler.partner && moram(st.seat).some(v => v.age >= 18 && !v.partner && v !== st.ruler);
+  let got = null, como = '';
+  for (const m of ['mundial', 'metropole', 'mega', 'cidade']) { abre(m); M.viver(8); for (const f of G.Fac.all()) { const st = K.seatState(f); if (tem(st)) { got = st; como = m; break; } } if (got) break; }
+  if (!got) for (const m of ['mundial', 'metropole', 'mega']) { abre(m); M.viver(8);
+    for (const f of G.Fac.all()) { const st = K.seatState(f); if (!st || !st.home) continue; const r = st.ruler; const kid = moram(st.seat).filter(v => deles({ r }, v) && !v.partner).sort((a, c) => c.age - a.age || a.id - c.id)[0]; if (!kid) continue;
+      if (kid.age < 18) kid.age = 19.2; const p = r.partner ? S.villagers.get(r.partner) : null; if (p) sim(() => V.kill(p, 'teste', true)); M.viver(3);
+      const st2 = K.seatState(f); if (tem(st2)) { got = st2; como = `${m}, pela mão da prova: ${kid.name} crescido${p ? `, ${p.name} morta(o)` : ''}`; break; } }
+    if (got) break; }
+  if (!ok('m16f quem governa sem par, com um filho crescido na sede', !!got, got ? `${got.ruler.name} em ${lado(got.seat)} (${como}): ${nomes(moram(got.seat))}` : 'nenhum nos mundos prontos')) return;
   const t = got.seat.type; const ap2 = G.BDEF[t].aposentos; G.BDEF[t].aposentos = 1; let fora = 0; const L = moram(got.seat);
   try { for (let k = 0; k < 80; k++) { M.viver(0.1); if (got.ruler.home !== got.seat.id) fora++; } } finally { G.BDEF[t].aposentos = ap2; }
   const cres = L.filter(v => v.age >= 18 && !v.partner && v !== got.ruler);
   ok('m16g o crescido sai, quem governa nunca', !fora && cres.every(v => v.home !== got.seat.id && v.home) && L.filter(v => v.age < 18).every(v => v.home === got.seat.id),
     `1 cama (pela mão da prova): ${got.ruler.name} fora da sede em ${fora} passos de 80; ${cres.map(v => `${v.name} em ${lado(B(v.home))}`).join(', ')}; na sede: ${nomes(moram(got.seat))}`);
   const q2 = checa(); ok('m16h verificador', q2.ok, q2.txt);
+});
+
+// ------------------------------ m17: the married one whose partner lives out of the full seat ------------------------------
+// (a grown single child of the seat marries one of the town while the seat has no bed for the partner: the town's housing brings
+// the partner in only to a bed, and the one of the seat never leaves it for the partner's house — the couple lives apart. With the
+// seat then too full, the married child is a household of the family like any other, and leaves first — to the partner's house,
+// which has room. In the chaos of seed 13 Egil, the ruler's son, married one of Hedeby and stayed in the full seat for good, neither
+// a household with its partner there nor a single one: L-735)
+run('m17', () => {
+  const o = armaCrescido(true); if (!ok('m17a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}${cresceu(o)}` : 'sem povo com um filho crescido solteiro em casa')) return;
+  const b = o.b; const fam = moram(b); const ap = G.BDEF[b.type].aposentos; const c = fam.find(v => solteiro(o, v));
+  // (the partner: one of the town who lives in a house of it — one with room for him first: then he goes to live there; in a town of
+  // full houses, by the rule of who leaves a seat — an empty house, the house with most room, out of doors)
+  const room = v => G.BDEF[B(v.home).type].housing - moram(B(v.home)).length >= 1;
+  // (any single one of the other sex of the town not of the seat's household — in a small capital most are kin of who rules)
+  const x = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 16 && v.age < 50 && !v.partner && v.g !== c.g && v.home && v.home !== b.id && G.BDEF[B(v.home).type].housing && !v.captive && !v.jail && !v.aboard && !deles(o, v) && v.id !== o.r.partner).sort((a, q) => room(q) - room(a) || a.id - q.id)[0];
+  const lugar = !!x && room(x);
+  if (!ok('m17b o par numa casa da cidade', !!x, x ? `${c.name} (${Math.floor(c.age)}), da sede, e ${x.name} (${Math.floor(x.age)}), de ${lado(B(x.home))}${lugar ? ', com lugar' : ', cheia'}` : 'ninguém')) return;
+  G.BDEF[b.type].aposentos = fam.length; // (the seat full to the last bed, by the proof's hand: no bed for the partner)
+  try {
+    c.partner = x.id; x.partner = c.id; let apart = 0; for (let k = 0; k < 60; k++) { M.viver(0.1); if (c.home === b.id && x.home !== b.id) apart++; }
+    ok('m17c na sede sem cama, o par não entra e quem é da sede não sai: o casal mora separado', apart === 60, `${c.name} em ${lado(B(c.home))}, ${x.name} em ${lado(B(x.home))}: separados em ${apart} passos de 60`);
+    // (one bed less: one too many in the seat — the married child leaves, to the partner's house; who must live with who rules stays)
+    G.BDEF[b.type].aposentos = fam.length - 1; M.viver(4); const ficam = fam.filter(v => v !== c);
+    ok('m17d da sede cheia demais sai o casado com o par fora — para a casa do par, se ela tem lugar', c.home !== b.id && (!lugar || c.home === x.home) && ficam.every(v => v.home === b.id),
+      `${fam.length - 1} camas (pela mão da prova) para ${fam.length}: ${c.name} em ${c.home ? lado(B(c.home)) : 'lugar nenhum (sem teto)'}, ${x.name} em ${lado(B(x.home))}; na sede: ${nomes(moram(b))}`);
+    // (the checker looks now and again after ten seconds: P7 accuses what lasts past its grace — one look alone starts its clock)
+    QA.check(); M.viver(10); const q = checa(); ok('m17e verificador', q.ok && c.home !== b.id, q.txt);
+  } finally { G.BDEF[b.type].aposentos = ap; }
 });
 
 // ------------------------------ m13: the seat keeps as a house does ------------------------------
@@ -488,7 +582,8 @@ run('m14', () => {
 
 // ------------------------------ m15: the checker sees it ------------------------------
 run('m15', () => {
-  const o = arma(true); if (!ok('m15a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
+  // (a household with its grown single one: the one too many of the seat of two beds, below — T-996)
+  const o = armaCrescido(true); if (!ok('m15a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
   const b = o.b; const reign = K.reign; const viu = re => QA.check().filter(q => q.sys === 'paco' && re.test(q.msg)).map(q => `S${q.sev} ${q.msg.slice(0, 120)}`);
   // (the door shut by the proof's hand: a stranger in the seat, another ruler crowned, a seat with an owner, a home that is no home)
   K.reign = () => { };

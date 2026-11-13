@@ -49,7 +49,7 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
       const ds = U.districtsOf(s).map(d => {
         // (and the land under what makes the quarter what it is: each patch's value weighed by the quarter's own vocation in it)
         const types = {}; let vw = 0, ww = 0; for (const c of d.cells) { const o = sn.cells.get(c); if (!o) continue; for (const t in o.types) types[t] = (types[t] || 0) + o.types[t]; const x = (o.w && o.w[d.k]) || 0; vw += o.value * x; ww += x; }
-        return { id: d.id, k: d.k, name: d.name, born: d.born, cells: d.cells.length, hist: (d.hist || []).length, types, st: d._st || null, vw: ww > 0 ? vw / ww : null, ww };
+        return { id: d.id, k: d.k, pend: d.pend && d.pend !== d.k ? d.pend : null, pn: d.pn || 0, name: d.name, born: d.born, cells: d.cells.length, hist: (d.hist || []).length, types, st: d._st || null, vw: ww > 0 ? vw / ww : null, ww };
       });
       // density by distance: beds (the roofs people sleep under) per patch of town, in the inner and the outer half
       // (fields, pens and orchards at the edge are its air, not its density)
@@ -67,14 +67,18 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
   const towns = A.towns.filter(t => t.ds.length);
   const all = towns.flatMap(t => t.ds.map(d => Object.assign({ town: t.name }, d)));
   console.log(`== urb1 semente ${seed} ${size} — ano ${A.day}, ${A.towns.length} cidades`);
-  for (const t of A.towns) console.log(`  ${t.name} (${t.civ}, degrau ${t.tier}, ${t.pop} pessoas, ${t.builds} prédios): ${t.ds.map(d => `${d.name} [${d.k}, ${d.cells}c, ${d.st ? d.st.res : 0}p, terra ${d.st ? Math.round(d.st.value) : '?'}]`).join(' · ')}`);
+  for (const t of A.towns) console.log(`  ${t.name} (${t.civ}, degrau ${t.tier}, ${t.pop} pessoas, ${t.builds} prédios): ${t.ds.map(d => `${d.name} [${d.k}${d.pend ? ` → ${d.pend} (${d.pn} de 4 dias)` : ''}, ${d.cells}c, ${d.st ? d.st.res : 0}p, terra ${d.st ? Math.round(d.st.value) : '?'}]`).join(' · ')}`);
   // 1 vocation from the buildings
   const VOC = { porto: ['doca', 'salga', 'armazem'], informal: ['barraco'], mercantil: ['mercado', 'feira', 'taverna', 'coletoria', 'mercado_negro', 'ourives'], artesao: ['workshop', 'forja', 'tecelagem', 'olaria', 'acougue', 'ourives', 'mina'], templo: ['temple', 'maravilha', 'monument', 'estatua', 'cemetery'], militar: ['quartel', 'estabulo', 'torre', 'cercado', 'cadeia'], agrario: ['farm', 'curral', 'pomar', 'plantacao', 'vinhedo', 'apiario', 'salina', 'sericultura'] };
   const HOMES = ['hut', 'house', 'sobrado', 'insula', 'quarteirao'];
   // (a merchants' quarter may be where the merchants live, a harbour quarter where the fishermen live: their houses count)
-  const bad = all.filter(d => VOC[d.k] ? !VOC[d.k].some(t => d.types[t]) && !((d.k === 'mercantil' || d.k === 'porto') && HOMES.some(t => d.types[t])) : (d.k === 'popular' || d.k === 'nobre') ? !HOMES.some(t => d.types[t]) && !['palacio', 'paco', 'grande_palacio', 'palacio_colossal', 'administracao'].some(t => d.types[t]) : false);
+  // (a quarter in the patience of its vocation — the cluster it took today is of another kind, and the vocation changes on the
+  // fourth day running, D-153 — is judged by the kind it is becoming: Uppsala's «Bairro da Feira», its feira gone, was «mercantil →
+  // agrario (1 de 4 dias)», with nothing of the trade on its ground, T-997)
+  const kOf = d => d.pend || d.k;
+  const bad = all.filter(d => { const k = kOf(d); return VOC[k] ? !VOC[k].some(t => d.types[t]) && !((k === 'mercantil' || k === 'porto') && HOMES.some(t => d.types[t])) : (k === 'popular' || k === 'nobre') ? !HOMES.some(t => d.types[t]) && !['palacio', 'paco', 'grande_palacio', 'palacio_colossal', 'administracao'].some(t => d.types[t]) : false; });
   const kinds = [...new Set(all.map(d => d.k))];
-  ok('1 bairros nascem do que a cidade tem', towns.length > 0 && all.length >= 3 && kinds.length >= 3 && !bad.length, `${all.length} bairros em ${towns.length} cidades, vocações: ${kinds.join(', ')}${bad.length ? ' · sem o que os define: ' + bad.map(d => d.name + ':' + d.k).join(', ') : ''}`);
+  ok('1 bairros nascem do que a cidade tem', towns.length > 0 && all.length >= 3 && kinds.length >= 3 && !bad.length, `${all.length} bairros em ${towns.length} cidades, vocações: ${kinds.join(', ')}${bad.length ? ' · sem o que os define: ' + bad.map(d => d.name + ':' + d.k + (d.pend ? '→' + d.pend : '')).join(', ') : ''}`);
   // 2 names unique in each town, kept by the save
   const dup = towns.filter(t => new Set(t.ds.map(d => d.name.toLowerCase())).size !== t.ds.length);
   // (the quarters read once the save is loaded — the world in memory replaced —, not at the call: a big world is saved
