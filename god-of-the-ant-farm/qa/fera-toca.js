@@ -127,7 +127,10 @@ if (on('t4') && c1 && story(c1.sid) && story(c1.sid).st === 'ativa' && G.S.anima
   G.inSim++; try { G.Animals.remove(a); } finally { G.inSim--; }
   const s = story(c1.sid); const w0 = said(c1.sid); const let0 = !s.cast.beast && s.data.fled === c1.aid;
   const bad = []; let endDay = -1;
-  for (let k = 0; k < 900 && story(c1.sid).st === 'ativa'; k++) { M.viver(1); if (k % 5 === 0) { const w = said(c1.sid); if (w.length && bad.length < 3) bad.push(w[0]); } }
+  // (who carries the story is kept alive by the proof's hand while it lasts: the case is the story forgotten because its beast
+  // is gone — and Quinto, the hunter of the joined tree's «cidade», died at his next day's hunt, «interrompida» a day after: T-865)
+  const hero = () => { const q = S.villagers.get(story(c1.sid).protag); if (q && q.hp < 100) q.hp = 100; };
+  for (let k = 0; k < 900 && story(c1.sid).st === 'ativa'; k++) { hero(); M.viver(0.5); hero(); M.viver(0.5); if (k % 5 === 0) { const w = said(c1.sid); if (w.length && bad.length < 3) bad.push(w[0]); } }
   const s2 = story(c1.sid); if (s2.st === 'fim') endDay = S.day;
   ok(`t4 ${WORLD}`, let0 && !w0.length && !bad.length && s2.st === 'fim' && s2.end && s2.end.k === 'esquecida' && endDay - d0 >= 2 && endDay - d0 <= 4,
     `a fera saiu do mundo pela porta: o elenco ${let0 ? 'a soltou no mesmo passo (data.fled = ' + s.data.fled + ')' : 'NÃO a soltou (beast=' + s.cast.beast + ')'}; o verificador ${w0.length || bad.length ? 'acusou: ' + (w0[0] || bad[0]) : 'limpo'}; a história ${s2.st === 'fim' ? 'acabou «' + (s2.end ? s2.end.k : '?') + '» ' + (endDay - d0) + ' dia(s) depois' : 'NÃO acabou em 900 s'}`);

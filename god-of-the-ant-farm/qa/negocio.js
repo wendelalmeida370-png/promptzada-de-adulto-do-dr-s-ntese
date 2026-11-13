@@ -186,7 +186,13 @@ function reown() {
   const s1 = D.get('f:' + fac.id, k), L1 = S.ledgerN;
   G.Vg.setTask(m1, { type: 'atacado', biz: z1.id, k, n: 3, pri: 1, st: 0, id: mk.id });
   live(60, () => !m1.task || m1.task.type !== 'atacado');
-  const free = book('atacado', e => e[0] > L1 && e[9] === m1.id).length + book('fiado', e => e[0] > L1 && e[9] === m1.id).length;
+  // (what the store gave him unpaid: a line of goods of the wholesale with no coin of the house to the treasury at the same
+  // instant, or anything on credit. A purchase of his own, paid, in the minute lived is none of it — in the joined tree's history a
+  // housemate's wage reached the house's pot 4 s after the proof emptied it, and Irene bought one of leather and paid its 0,54:
+  // «2 lançamento(s)!» were the goods and their coin, T-866)
+  const lines1 = book('atacado', e => e[0] > L1 && e[9] === m1.id);
+  const unpaid = lines1.filter(e => e[5] !== 'moedas' && !lines1.some(c => c[5] === 'moedas' && c[0] === e[0] + 1 && c[3] === payer && c[4] === 'f:' + fac.id && Math.abs(c[6] - r2((E.PRICE[e[5]] || 0.3) * e[6] * 0.6)) < 0.011)).length;
+  const free = unpaid + book('fiado', e => e[0] > L1 && e[9] === m1.id).length;
   // (nothing of the store to his hands, by the ledger: the store's own count moves with the town's other errands meanwhile)
   const handed = D.ledger().filter(e => e[0] > L1 && e[3] === 'f:' + fac.id && e[4] === 'v:' + m1.id && e[5] === k).length;
   ok('n2 o atacado é pago', got && paidOk && arrived && !free && !handed && !bad().length,

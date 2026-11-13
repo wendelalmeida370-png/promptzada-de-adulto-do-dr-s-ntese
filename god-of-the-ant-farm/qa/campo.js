@@ -290,12 +290,17 @@ if (!PRESS) ok('c7', false, `${world}: nenhum vinhedo nem olival com as mãos do
 else {
   const P = estSetup(PRESS, vatPrep); const b = P.b; const k = Es.CROPS[b.crop].out; const Hd = watchHands(P.ws.map(x => x.id)); const L0 = seen.length;
   send(P.ws[0], b, fieldAt(b)); const kh = keepHands(P);
-  live(200, () => { kh(); Hd.step(); }, () => (b.must || 0) < 2 && !((b.inv && b.inv[k]) > 0) && P.ws.every(x => !(held(x)[k] > 0)));
+  // (and the hand sent kept at the press by the hand of the proof, as the c6's at its trees: on the day of the case the house's
+  // water, the shopping and the theatre took the hand of the olive grove from 0,25 to 0,65, the other slept and read, and the
+  // vat stood at 4 the whole day — «a prensa fez 0» —: sent back until the vat is pressed and the oil gone to the store, T-859)
+  const atEst7 = v => { const t = v && v.task; return !!t && ((t.type === 'estate' && t.id === b.id) || ((t.type === 'deliver' || t.type === 'haul') && held(v)[k] > 0)); };
+  let back7 = 0; const keep7 = () => { const v = S().villagers.get(P.ws[0].id); if (!v || !fit(v) || atEst7(v)) return; send(v, b, fieldAt(b)); back7++; };
+  live(200, () => { kh(); keep7(); Hd.step(); }, () => (b.must || 0) < 2 && !((b.inv && b.inv[k]) > 0) && P.ws.every(x => !(held(x)[k] > 0)));
   const L = shelfLines(b, k, L0); const made = r2(L.filter(e => e[3] === '@mundo' && e[8] === 'prensa').reduce((s, e) => s + e[6], 0));
   const taken = r2(L.filter(e => e[3] === 'b:' + b.id).reduce((s, e) => s + e[6], 0)); const shelf = r2((b.inv && b.inv[k]) || 0);
   const fl = Hd.flow(k); const got = fl.toF; const lost = Hd.lost(); const bad = newBad(P.base);
   ok('c7', made > 0 && Math.abs(made - taken - shelf) < 0.01 && Math.abs(got + fl.h1 - fl.h0 - taken) < 0.01 && !Hd.born(k) && !lost.length && !bad.length,
-    `${V.buildName(b)} #${b.id}: a tina ${r2(b.must || 0)}; a prensa fez ${made} de ${k} na prateleira pelo livro ('prensa'); saiu da prateleira ${taken}, ficou ${shelf}; ao armazém ${got}; nasceu nas mãos fora do livro ${Hd.born(k)}; sumiu sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    `${V.buildName(b)} #${b.id}: a tina ${r2(b.must || 0)}; a prensa fez ${made} de ${k} na prateleira pelo livro ('prensa'); saiu da prateleira ${taken}, ficou ${shelf}; ao armazém ${got}; nasceu nas mãos fora do livro ${Hd.born(k)}; sumiu sem linha: ${lost.join(', ') || 'nada'}${back7 ? ` (a mão mandada de volta à prensa ${back7} vez(es))` : ''}${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
 // c8 a vat held by someone who is not at it: the next hand presses it (who pressed: the 'prensa' line of the ledger, its hand)
 const pressedBy = (L0, b) => seen.slice(L0).filter(e => e[8] === 'prensa' && e[4] === 'b:' + b.id).map(e => e[9]);
@@ -307,14 +312,19 @@ else {
     const P = estSetup(PRESS, vatPrep, 2); const b = P.b;
     const other = [...S().villagers.values()].sort(byId).find(o => o.set === b.set && fit(o) && o.job !== b.id && !P.ws.includes(o));
     b.claim = { vat: other.id }; const L0 = seen.length;
-    send(P.ws[0], b, fieldAt(b)); live(90, keepHands(P), () => pressedBy(L0, b).length > 0);
+    // (the case's hand kept at the vat, as in the c7: T-859)
+    const kh1 = keepHands(P); const at1 = v => { const t = v && v.task; return !!t && t.type === 'estate' && t.id === b.id; };
+    const keep1 = () => { const v = S().villagers.get(P.ws[0].id); if (!v || !fit(v) || at1(v)) return; send(v, b, fieldAt(b)); };
+    send(P.ws[0], b, fieldAt(b)); live(90, () => { kh1(); keep1(); }, () => pressedBy(L0, b).length > 0);
     const by = pressedBy(L0, b); good = good && by.length > 0;
     parts.push(`segura por ${other.name} #${other.id} (${other.role}, longe dela): ${by.length ? 'prensada por #' + by[0] : 'ninguém prensou'}`);
   }
   // (2) the presser called away in the middle of the press: the other hand presses (he, kept away at the fire, does not)
   {
     const P = estSetup(PRESS, vatPrep, 2); const b = P.b; const a = P.ws[0]; const next = P.ws[1] || null;
-    const kh = keepHands(P); send(a, b, fieldAt(b)); live(60, kh, () => a.task && a.task.type === 'estate' && a.task.do === 'press' && a.task.st === 1);
+    // (the hand kept at the vat until it is at the press — T-859: on the day of the case the house's water took it at once)
+    const kh = keepHands(P); const at2 = v => { const t = v && v.task; return !!t && t.type === 'estate' && t.id === b.id; };
+    send(a, b, fieldAt(b)); live(60, () => { kh(); if (fit(a) && !at2(a)) send(a, b, fieldAt(b)); }, () => a.task && a.task.type === 'estate' && a.task.do === 'press' && a.task.st === 1);
     const was = !!(a.task && a.task.do === 'press'); const L0 = seen.length;
     const away = () => { if (!(a.task && a.task.type === 'rest')) { G.Vg.endTask(a); G.Vg.setTask(a, { type: 'rest', pri: 2.5 }); } };
     away(); if (next) send(next, b, fieldAt(b));
