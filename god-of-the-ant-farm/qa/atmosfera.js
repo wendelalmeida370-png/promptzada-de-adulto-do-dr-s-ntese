@@ -201,12 +201,15 @@ if (run('a4')) {
     }
     // taken away by hand, gone: the woodcutter's wood, the cask's drink, the house's people — and the picture's signature says so
     const wood = built().find(b => housing(b) && things(b).includes('lenha'));
-    if (wood) { const L = res(wood).filter(v => v.role === 'lenhador'); const s0 = sigOf(wood); for (const v of L) v.role = 'coletor'; flush(); const t1 = things(wood), s1 = sigOf(wood); for (const v of L) v.role = 'lenhador'; flush(); const t2 = things(wood);
+    // (the woodcutter of the house is who keeps the trade — one the war called away keeps it in the trade he goes back to, D-195 —:
+    // the hand takes the trade from both places and gives both back. With only the trade of now changed, a house whose woodcutter
+    // was at the war had nobody for the hand to change, and «a lenha ficou sem o lenhador»: T-851)
+    if (wood) { const L = res(wood).filter(v => (v.roleBack || v.role) === 'lenhador'); const r0 = L.map(v => [v.role, v.roleBack]); const s0 = sigOf(wood); for (const v of L) { v.role = 'coletor'; v.roleBack = null; } flush(); const t1 = things(wood), s1 = sigOf(wood); L.forEach((v, k) => { v.role = r0[k][0]; v.roleBack = r0[k][1]; }); flush(); const t2 = things(wood);
       prov.push(`${mode}: a lenha de ${tag(wood)}: ${t1.includes('lenha') ? 'ficou' : 'sumiu'} sem o lenhador, ${t2.includes('lenha') ? 'voltou' : 'não voltou'} com ele`); if (t1.includes('lenha') || !t2.includes('lenha') || s0 === s1) bad.push(`${mode}: a lenha de ${tag(wood)} não segue o lenhador (assinatura ${s0} → ${s1})`); }
     else prov.push(`${mode}: nenhuma casa de lenhador com lugar para a lenha`);
     // (and called away by an emergency — the war makes him a warrior, with the trade he goes back to kept: village.js, D-212 —,
     // the pile stays at the door: the house shows the trade its people keep, D-195)
-    if (wood) { const L = res(wood).filter(v => v.role === 'lenhador'); const b0 = L.map(v => v.roleBack); for (const v of L) { v.roleBack = 'lenhador'; v.role = 'guerreiro'; } flush(); const t3 = things(wood); L.forEach((v, k) => { v.role = 'lenhador'; v.roleBack = b0[k]; }); flush(); const t4 = things(wood);
+    if (wood) { const L = res(wood).filter(v => (v.roleBack || v.role) === 'lenhador'); const r0 = L.map(v => [v.role, v.roleBack]); for (const v of L) { v.roleBack = 'lenhador'; v.role = 'guerreiro'; } flush(); const t3 = things(wood); L.forEach((v, k) => { v.role = r0[k][0]; v.roleBack = r0[k][1]; }); flush(); const t4 = things(wood);
       prov.push(`${mode}: o lenhador de ${tag(wood)} chamado às armas: a lenha ${t3.includes('lenha') ? 'ficou' : 'SUMIU'} à porta`); if (!t3.includes('lenha') || !t4.includes('lenha')) bad.push(`${mode}: a lenha de ${tag(wood)} sumiu com o lenhador chamado às armas (D-195)`); }
     const lived = built().find(b => housing(b) && res(b).length >= 2 && things(b).some(t => LIVED[t]));
     if (lived) { const L = res(lived); const s0 = sigOf(lived); for (const v of L) v.home = 0; flush(); const n1 = PR.pieces(lived).length, s1 = sigOf(lived); for (const v of L) v.home = lived.id; flush(); const n2 = PR.pieces(lived).length;
