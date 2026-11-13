@@ -28,6 +28,10 @@ const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | caca-margem ${name} | ${info}`); if (!c) fails.push(name); };
 const Vg = G.Vg, W = G.W, A = G.Animals, T = G.T;
 const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
+// (the sky held clear by the proof's hand, at every step: a storm puts every grown-up of the four towns under a roof —
+// «shelter», 1,05, which also takes the hunter of priority 1 from his prey — and no one is free for the case; the history of
+// now brought one before c8, T-868. The case is the body where the feet do not go, not the weather)
+const step0 = G.debug.step; G.debug.step = dt => { const w = G.S && G.S.weather; if (w) { w.storm = 0; w.rain = 0; } return step0(dt); };
 let S = M.pronto(WORLD);
 const base = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg));
 const novas = () => QA.check().filter(q => q.sev <= 2 && !base.has(q.sys + '|' + q.msg)).map(q => `[S${q.sev}] ${q.sys}: ${q.msg}`);

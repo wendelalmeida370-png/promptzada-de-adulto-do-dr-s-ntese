@@ -643,8 +643,12 @@
     // the wind has it until it breaks on a coast or someone finds it; the route is free for another ship)
     if (s.tr && Nv.atSea(s) && !Nv.aboardOf(s).length) { s.ghost = 1; s.st = 'deriva'; s.driftT = G.DAY_LEN * G.rr(0.4, 1); s.route = 0; s.crew = []; s.path = null; return; }
     if (!r || !r.ok || !hb || !ob) {
+      // (the route ended with the ship still at its quay, calling its crew: the voyage is off, as when nobody comes — the call
+      // is over, the cargo back on the quay, the hull's wood back too. Sent «back» with nobody aboard yet, it was a hull adrift
+      // at its own quay the next instant, the cargo lost with it: L-727)
+      if (s.st === 'embark') { ashoreAgain(s); const f = G.Fac.get(s.fac); if (hb) { homeAgain(s, hb); if (f) f.stock.wood += Nv.SHIP.mercante.cost; } return removeShip(s); }
       const h = home(s);
-      if (h && s.st !== 'back2' && sailTo(s, h.moor[0], h.moor[1])) { if (s.st === 'embark') ashoreAgain(s); s.st = 'back2'; return; }
+      if (h && s.st !== 'back2' && sailTo(s, h.moor[0], h.moor[1])) { s.st = 'back2'; return; }
       if (s.st === 'back2' && !moveShip(s, dt)) return;
       if (s.st === 'back2' && hb) homeAgain(s, hb);
       return removeShip(s);

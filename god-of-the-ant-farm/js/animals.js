@@ -1151,7 +1151,15 @@
       // leader had any task at all, and with the slaughter cut three cows of Birka followed the butcher about for 400 s, L-608)
       if (!v || !v.task || !leads(v.task, a)) { a.state = 'pen'; a.ledBy = 0; return; }
       const d = G.dist(a.x, a.y, v.x, v.y);
-      if (d > 12) { a.x = v.x; a.y = v.y; }
+      // (left far behind: brought to the leader — onto his spot when it is ground it stands on, else the nearest ground within two
+      // tiles from where it reaches him, off any fence not its own, as the herder's flock, L-609 —; none, it waits. Set on his spot
+      // whatever it was, the turkey of a feast of Tenochtitlan was set inside the storehouse its leader was in, and stood there 19 s
+      // after he came out, L-729)
+      if (d > 12) {
+        const F = W.fenceMap(); const fits = (px, py) => walkOK(a, px, py) && W.canWalk(px, py, v.x, v.y) && !(F && F[W.idx(px, py)] && F[W.idx(px, py)] !== a.pen);
+        const p = fits(v.x, v.y) ? [v.x, v.y] : W.nearestLand(v.x, v.y, 2, fits);
+        if (p) { a.x = p[0]; a.y = p[1]; a.path = null; }
+      }
       if (d > 0.75) { a.tx = v.x - v.face * 0.45; a.ty = v.y + 0.15; moveTo(a, dt, Math.max(sp.sp, 1.2) * (d > 2.5 ? 1.7 : 1.05)); } else a.moving = false;
       return;
     }
@@ -1382,8 +1390,13 @@
         a.ang = (a.ang || 0) + dt * 1.4; const r = 1.6 + a.t * 0.4;
         a.tx = c.x + Math.cos(a.ang) * r; a.ty = c.y + Math.sin(a.ang) * r; a.z = Math.max(0, a.z - dt * 8);
         moveDirect(a, dt, sp.sp);
-        // (down beside the carcass on ground it stands on — the step aside drawn as ever, kept where it leaves the bird in a house, L-631)
-        if (a.t <= 0) { const jx = G.rr(-0.4, 0.4), jy = G.rr(-0.4, 0.4); const on = walkOK(a, c.x + jx, c.y + jy); a.state = 'eat'; a.x = on ? c.x + jx : c.x; a.y = on ? c.y + jy : c.y; a.z = 0; a.t = 25; }
+        // (down beside the carcass on ground it stands on — the step aside drawn as ever, kept where it leaves the bird in a house, L-631;
+        // and a carcass under a roof is eaten from the nearest ground beside it, never from its own spot: a vulture of the mundial
+        // came down on one inside a market, L-730. No ground near: up again)
+        if (a.t <= 0) {
+          const jx = G.rr(-0.4, 0.4), jy = G.rr(-0.4, 0.4); const on = walkOK(a, c.x + jx, c.y + jy); a.state = 'eat'; a.x = on ? c.x + jx : c.x; a.y = on ? c.y + jy : c.y; a.z = 0; a.t = 25;
+          if (!on && !walkOK(a, a.x, a.y) && !A.aside(a, 2)) { a.state = 'fly'; a.z = 2; a.t = 0; a.target = 0; }
+        }
         return;
       }
       case 'eat': {

@@ -8,7 +8,12 @@
 //   b3 a garça que pousa onde um prédio ficou: desce ao lado;
 //   b4 um prédio posto em cima de uma garça no chão: ela sai de baixo;
 //   b5 o cavalo de carga deixado numa fogueira: fica no chão diante dela, não em cima;
-//   b6 o verificador limpo (S0–S2) e sem a linha do bicho dentro de prédio; nenhum erro de módulo.
+//   b6 o verificador limpo (S0–S2) e sem a linha do bicho dentro de prédio; nenhum erro de módulo;
+//   b7 o bicho levado pela corda, deixado longe, por quem está dentro de um prédio: vem para o lado do prédio, nunca para dentro
+//      (L-729: o peru da festa de Tenochtitlan foi posto onde estava quem o levava — dentro do armazém — e ficou lá 19 s).
+//   b8 o abutre que desce numa carcaça debaixo de um teto: pousa ao lado dela, no chão onde fica — nunca na carcaça, dentro do
+//      prédio (L-730: um abutre do mundial pousou na carcaça dentro de um mercado);
+//      (o b7 e o b8 rodam antes da linha do b6, que olha o verificador depois deles)
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const fails = [];
@@ -54,6 +59,40 @@ const WORLDS = (process.argv[2] || 'metropole,mundial').split(',');
   else { const fac = V.facOfSet(cf.set); const hz = sim(() => A.spawn('cavalo', cf.x + cf.w / 2, cf.y + cf.h + 0.5, { dom: fac, grown: 1, age: 4, hunger: 0.1, state: 'pen', pen: cf.id })); let in5 = 0, far = 0;
     for (let s = 0; s < 400; s++) { M.viver(0.1); if (dentro(hz)) in5++; if (G.dist(hz.x, hz.y, cf.x + cf.w / 2, cf.y + cf.h + 0.5) > 2.5) far++; }
     ok('b5 o cavalo de carga deixado numa fogueira: fica no chão diante dela, não em cima', !in5 && !far && hz.pen === cf.id, `${cf.type}#${cf.id} em ${cf.x},${cf.y}; o cavalo 40 s: ${in5 ? in5 + ' PASSOS EM CIMA' : 'nunca em cima'}, ${far ? far + ' PASSOS LONGE' : 'sempre ao lado'}; no fim em ${hz.x.toFixed(1)},${hz.y.toFixed(1)}`); }
+  // b7: led on a rope, from far, by one inside a building (L-729): the beast left far behind is brought to its leader — and with
+  // him inside, beside the building, never onto his spot inside it. The hand of the proof leads a turkey from sixteen tiles off
+  // while standing in a storehouse (its errand named among the ones that lead a beast, as a module names its own: A.LEADS)
+  const sh = [...S.buildings.values()].filter(b => b.built && b.blocks && b.type === 'storehouse' && b.w >= 2 && b.h >= 2).sort((a, b) => a.id - b.id)[0];
+  const lv = sh && [...S.villagers.values()].filter(q => q.set === sh.set && q.age >= 18 && q.age < 55 && !q.captive && !q.aboard && !q.jail && !q.ug && !(S.avatar && S.avatar.id === q.id)).sort((a, b) => a.id - b.id)[0];
+  const mid = sh && [sh.x + sh.w / 2, sh.y + sh.h / 2];
+  const far = mid && W.nearestLand(mid[0] + 16, mid[1], 8, (px, py) => G.dist(px, py, mid[0], mid[1]) > 14);
+  if (!sh || !lv || !far) ok('b7 o bicho levado de longe por quem está dentro de um prédio: vem para o lado do prédio, nunca para dentro', false, `armazém ${sh ? sh.id : 'nenhum'}; quem leva ${lv ? lv.name : 'ninguém'}; chão longe ${far ? 'sim' : 'não'}`);
+  else {
+    const pk = sim(() => A.spawn('peru', far[0], far[1], { dom: V.facOfSet(sh.set), grown: 1, age: 2, hunger: 0.1, state: 'led' })); pk.ledBy = lv.id;
+    const L0 = A.LEADS.idle; A.LEADS.idle = (t, a) => t.lead === a.id;
+    const hold = () => sim(() => { if (!lv.task || lv.task.type !== 'idle' || lv.task.lead !== pk.id) { G.Vg.endTask(lv); G.Vg.setTask(lv, { type: 'idle', wait: 1e4, lead: pk.id, stay: sh.id, pri: 9 }); } lv.inside = sh.id; lv.x = mid[0]; lv.y = mid[1]; lv.path = null; lv.moving = false; });
+    let in7 = 0, d0 = G.dist(pk.x, pk.y, mid[0], mid[1]);
+    for (let k = 0; k < 30; k++) { hold(); M.viver(0.1); if (dentro(pk)) in7++; }
+    const near = G.dist(pk.x, pk.y, mid[0], mid[1]); const led = pk.state === 'led' && pk.ledBy === lv.id;
+    if (L0) A.LEADS.idle = L0; else delete A.LEADS.idle;
+    sim(() => { G.Vg.endTask(lv); lv.inside = 0; const q = V.frontTile ? V.frontTile(sh) : null; if (q) { lv.x = q[0] + 0.5; lv.y = q[1] + 0.5; } pk.state = 'pen'; pk.ledBy = 0; });
+    ok('b7 o bicho levado de longe por quem está dentro de um prédio: vem para o lado do prédio, nunca para dentro', !in7 && near < d0 && near <= Math.max(sh.w, sh.h) / 2 + 2.5 && led,
+      `${lv.name} levando um peru, de dentro do ${sh.type}#${sh.id} (${sh.x},${sh.y} ${sh.w}x${sh.h}); o peru a ${d0.toFixed(1)}: ${in7 ? in7 + ' PASSOS DENTRO do armazém' : 'nunca dentro'}; no fim a ${near.toFixed(1)} do meio do armazém, em ${pk.x.toFixed(1)},${pk.y.toFixed(1)}${led ? '' : ' (não estava mais sendo levado)'}`);
+  }
+  // b8: the vulture that comes down on a carcass under a roof (L-730): beside it, on ground it stands on — never onto the carcass
+  // inside the building. The hand of the proof lays a dead deer in the middle of the storehouse and a hungry vulture spiralling
+  // over it, at the end of its circles
+  if (!sh) ok('b8 o abutre que desce numa carcaça debaixo de um teto: pousa ao lado, nunca dentro', false, 'nenhum armazém de 2x2');
+  else {
+    const dc = sim(() => A.spawn('deer', mid[0], mid[1], { grown: 1, age: 3 })); sim(() => A.kill(dc, null, 'other')); dc.meat = Math.max(dc.meat || 0, 6);
+    const vu = sim(() => A.spawn('vulture', mid[0] + 3, mid[1], { grown: 1, age: 3, hunger: 0.6 })); vu.state = 'circle'; vu.target = dc.id; vu.t = 0.05; vu.z = 0.5; vu.scan = 9;
+    let in8 = 0, landed = null;
+    for (let k = 0; k < 30; k++) { M.viver(0.1); if (dentro(vu)) in8++; if (!landed && vu.state === 'eat') landed = [vu.x, vu.y]; }
+    const dd = landed ? G.dist(landed[0], landed[1], dc.x, dc.y) : -1;
+    ok('b8 o abutre que desce numa carcaça debaixo de um teto: pousa ao lado, nunca dentro', !in8 && !!landed && dd <= 2.5,
+      `um cervo morto no meio do ${sh.type}#${sh.id}; o abutre: ${landed ? `pousou a ${dd.toFixed(1)} dele, em ${landed[0].toFixed(1)},${landed[1].toFixed(1)}` : 'NÃO pousou'}; ${in8 ? in8 + ' PASSOS DENTRO do armazém' : 'nunca dentro'}`);
+    sim(() => { A.remove(vu); A.remove(dc); });
+  }
   const v = QA.check().filter(q => q.sev <= 2 || /no chão dentro de um prédio/.test(q.msg)); const e = M.erros();
   ok('b6 verificador e erros de módulo', !v.length && M.limpo(), `${v.length} violações${v.length ? ': ' + v[0].msg : ''}; erros de módulo ${JSON.stringify(e.mod)}`); }
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'TUDO PASSOU'); process.exit(fails.length ? 1 : 0);

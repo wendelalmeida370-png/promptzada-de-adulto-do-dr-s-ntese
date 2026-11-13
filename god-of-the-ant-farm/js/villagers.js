@@ -654,7 +654,10 @@
     // the hands goes to the store before the day at home, as a child's does (L-186) — eating, sleep and a storm first. Under the
     // minding it stayed in the hands for days: Nefertari, the shepherd of Mênfis, 58, minded the little ones of her house with
     // the trough's hay in her arms, ate from it, and was never one for the tavern, which seats no one with a load, L-471)
-    if (!night && best !== 'eat' && best !== 'sleep' && best !== 'shelter' && Vg.plainLoad(v) && (!cur || (cur.pri < 1 && cur.type !== 'deliver')) && !(v._noStore > S.clock) && G.Lar && G.Lar.minder(v)) { const t = deliverTask(v); if (t) { t.kind = 'deliver'; return; } }
+    // (and so whoever's day is at home under the errand's weight — the choice 'lar' by day: the first hours of grief, 0,95 —, with
+    // no working day to take it there either: Harald, a miner of Hedeby, 59, widowed that morning, came up the shaft with the wood
+    // he had gone down with and sat half a day by his fire with it in his arms, L-728. The bed of the ill, 1,3, goes first)
+    if (!night && best !== 'eat' && best !== 'sleep' && best !== 'shelter' && Vg.plainLoad(v) && (!cur || (cur.pri < 1 && cur.type !== 'deliver')) && !(v._noStore > S.clock) && G.Lar && ((best === 'lar' && bp < 1) || G.Lar.minder(v))) { const t = deliverTask(v); if (t) { t.kind = 'deliver'; return; } }
     if (cur) {
       // (the work — or the bed — given for a meal there was not keeps the meal's kind, so the choice does not undo it every
       // turn; but a meal back in reach takes the hungry one to it, and each look that finds none is stamped on the shift — the

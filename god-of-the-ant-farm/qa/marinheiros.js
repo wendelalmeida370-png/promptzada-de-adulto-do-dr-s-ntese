@@ -24,6 +24,9 @@
 //    partida só é chamada de dia;
 // m10 o chamado ao cais de uma razia atravessa o save (a regra do L-190, como a do navio mercante): quem descia ao cais desce
 //    de novo, e a razia zarpa — um load cancelava a razia (ninguém a bordo aos 45 s) ou a mandava só com quem já embarcara;
+// m11 o soldo é só dos seus (L-716): quem passou a outro povo com o navio no mar não é pago pelo povo que deixou;
+// m12 a rota que fecha com o navio ainda no cais, chamando a tripulação (L-727): a viagem não há — o chamado acaba, a carga
+//    volta ao cais pelo livro, a madeira do casco volta, e o casco não fica à deriva no próprio cais;
 // e nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js'] });
@@ -330,6 +333,44 @@ if (on('m11')) {
       const nv = novas().filter(q => /moeda/.test(q));
       ok('m11 o soldo é só dos seus', home && !dele.length && outrosPagos && !nv.length,
         `${v1.name}, da tripulação de ${f.name}, passou a ${town.name} (${o.name}${E.coinage(o.id) ? '' : ', que não conhece a moeda'}) com o navio fora; de volta: ${home}; soldos dele: ${dele.length}${dele.length ? ' (' + dele.map(e => `${e[3]}→${e[4]} ${e[6]}`).join('; ') + ')' : ''}; os outros ${crew0.length - 1} pagos uma vez: ${outrosPagos}; o verificador ${nv.length ? 'acusa: ' + nv[0].slice(0, 140) : 'calado sobre moedas'}`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- m12
+// (L-727: the route that ends with the ship still at its quay, calling its crew. The voyage is off, as when nobody comes: the
+// call is over, the cargo back on the quay by the book, the hull's wood back, the hull gone. It was sent «back» with nobody
+// aboard — an instant «at sea» with no one, the verifier's S2 — and the next instant it was a hull adrift at its own quay, the
+// cargo lost with it. The hand of the proof puts the town's sailors at their doors before the call — the case is the call cut
+// on the way — and takes the route from the list, as m7 does)
+if (on('m12')) {
+  mundo();
+  const r = rota(); const snd = r && sender(r);
+  if (!r) ok('m12 a rota fecha com o navio ainda no cais', false, 'nenhuma rota com marinheiros neste mundo');
+  else {
+    god(() => { for (const v of sailorsOf(snd.set.id)) { const h = S.buildings.get(v.home); const q = h && G.W.nearestLand(h.x + h.w / 2, h.y + h.h + 0.6, 3); if (q && G.W.reaches(v, q[0] + 0.5, q[1] + 0.5)) { G.Vg.endTask(v); v.sleeping = false; v.x = q[0] + 0.5; v.y = q[1] + 0.5; v.path = null; } } });
+    const before = new Set(S.ships.map(q => q.id)); r.t = 0; let s = null;
+    for (let k = 0; k < 900 && !s; k++) { M.viver(0.1); s = S.ships.find(q => q.kind === 'mercante' && q.tr && !before.has(q.id)) || null; }
+    for (const q of S.seaRoutes) q.t = 1e6;
+    if (!s || s.st !== 'embark' || Nv.aboardOf(s).length) ok('m12 a rota fecha com o navio ainda no cais', false, s ? `a premissa: o navio em «${s.st}» com ${Nv.aboardOf(s).length} já a bordo quando apareceu` : `nenhum navio saiu na rota ${r.id} em 90 s`);
+    else {
+      const g = Object.assign({}, s.goods); const crew0 = s.crew.slice(); const f = G.Fac.get(s.fac); const viag0 = crew0.map(id => (P(id).st && P(id).st.viagens) || 0); led.length = 0;
+      const walking0 = crew0.filter(id => { const v = P(id); return v && v.task && v.task.type === 'embark' && v.task.ship === s.id; }).length;
+      S.seaRoutes = S.seaRoutes.filter(q => q !== r);
+      // a minute, step by step: while the hull exists it is never at sea with nobody, never adrift; the wood of the step it goes
+      let bad = '', gone = -1, wood = 0;
+      for (let k = 1; k <= 600; k++) {
+        const w0 = f.stock.wood; M.viver(0.1);
+        if (S.ships.includes(s)) { if (s.ghost || s.st === 'deriva') bad = bad || `casco à deriva aos ${(k / 10).toFixed(1)} s`; else if (Nv.atSea(s) && !Nv.aboardOf(s).length) bad = bad || `no mar («${s.st}») sem ninguém a bordo aos ${(k / 10).toFixed(1)} s`; }
+        else if (gone < 0) { gone = k / 10; wood = f.stock.wood - w0; }
+        if (k % 20 === 0) for (const q of novas()) if (/mercante|navegando|a bordo/.test(q)) bad = bad || q.slice(0, 120);
+      }
+      const landed = led.filter(e => e[8] === 'desembarque' && e[3] === 's:' + s.id && e[5] === g.k).reduce((a, e) => a + e[6], 0);
+      const crew = crew0.map(P).filter(Boolean); const pays = led.filter(e => e[8] === 'soldo').length; const nv = novas();
+      const called = crew.filter(v => v.task && v.task.type === 'embark' && v.task.ship === s.id).length;
+      ok('m12 a rota fecha com o navio ainda no cais: a viagem não há, a carga volta ao cais e o casco não fica à deriva (L-727)',
+        walking0 > 0 && gone >= 0 && gone <= 1 && !bad && Math.abs(landed - g.n) < 0.01 && wood >= Nv.SHIP.mercante.cost - 1 && crew.every(v => !v.aboard) && !called && !pays && crew.every((v, k) => ((v.st && v.st.viagens) || 0) === viag0[k]) && !nv.length,
+        `${crew0.length} chamado(s) ao cais de ${snd.set.name}, ${walking0} a caminho e ninguém a bordo; o porão com ${g.n} de ${g.k}; a rota fecha: ${gone >= 0 ? `o casco saiu do mundo em ${gone} s` : 'o casco NÃO saiu em 60 s (' + s.st + (s.ghost ? ', à deriva' : '') + ')'}${bad ? '; ' + bad : ''}; desceu no cais de casa: ${landed} (pelo livro); a madeira do casco de volta: ${wood.toFixed(1)} (${Nv.SHIP.mercante.cost}); ainda chamados: ${called}; a bordo: ${crew.filter(v => v.aboard).length}; soldos: ${pays}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
     }
   }
 }

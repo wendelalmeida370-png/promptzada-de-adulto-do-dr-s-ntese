@@ -126,11 +126,17 @@ if (on('v3')) {
     if (U.is(d, 'parado')) still = S.day - day0;
     const h1 = histOf(d, day0); const told = h1.find(t => /^O cais parou: /.test(t)); const cMid = d.vida.cais; const mid = S.day;
     // the routes back: the cargo comes again, and the profile after its patience
+    // (the quarter of the quay's ground, as the town draws it now: a port quarter with no cargo for years can lose its ground to
+    // a neighbour — its cluster is no longer a port's —, and the cargo that returns makes a new one on the quay. Hedeby's «Cais
+    // dos Barcos do Norte» was swallowed in the years of the cut, and the «Cais dos Barcos do Leste» born on the same quay had
+    // 7,4 of cargo a day while the proof read the 0,482 of a quarter that was no longer the town's, T-869)
+    const quay = () => { if (U.districtsOf(set).includes(d)) return d; for (const b of [...S.buildings.values()].filter(q => q.set === set.id && q.type === 'doca' && q.built).sort((a, b) => a.id - b.id)) { const q = U.districtAt(b.x + b.w / 2, b.y + b.h / 2); if (q) return q; } return d; };
     openSea(); let back = -1;
-    for (let k = 0; k < 30 && back < 0 && gone >= 0; k++) { M.saltar(1); check(`ano ${S.day} (rotas de volta)`); if (U.is(d, 'porto')) back = S.day - mid; }
-    const h2 = histOf(d, mid); const told2 = h2.find(t => /^O cais encheu/.test(t));
+    for (let k = 0; k < 30 && back < 0 && gone >= 0; k++) { M.saltar(1); check(`ano ${S.day} (rotas de volta)`); if (U.is(quay(), 'porto')) back = S.day - mid; }
+    const d2 = quay(); const other = d2 !== d ? ` (o bairro de antes perdeu o chão nos anos sem carga; no chão do cais, agora, ${nameOf(set, d2)}, nascido no ano ${d2.born})` : '';
+    const h2 = histOf(d2, mid); const told2 = h2.find(t => /^O cais encheu/.test(t));
     ok('v3 o-cais-que-para', gone >= U.PATIENCE && !!told && /nenhuma carga há \d+ anos|cada vez menos carga/.test(told) && back >= U.PATIENCE && !!told2,
-      `${nameOf(set, d)}: cais ${c0} por chão por dia; rotas cortadas → ${gone >= 0 ? `o perfil saiu em ${gone} dias (cais ${cMid})` : 'o perfil NÃO saiu em 34 dias (cais ' + d.vida.cais + ')'}; a história: «${told || '(nada)'}»${still >= 0 ? `; «parado» aos ${still} dias` : ''}; rotas de volta → ${back >= 0 ? `o perfil voltou em ${back} dias: «${told2 || '(nada)'}»` : 'o perfil NÃO voltou em 30 dias (cais ' + d.vida.cais + ')'}`);
+      `${nameOf(set, d)}: cais ${c0} por chão por dia; rotas cortadas → ${gone >= 0 ? `o perfil saiu em ${gone} dias (cais ${cMid})` : 'o perfil NÃO saiu em 34 dias (cais ' + d.vida.cais + ')'}; a história: «${told || '(nada)'}»${still >= 0 ? `; «parado» aos ${still} dias` : ''}; rotas de volta → ${back >= 0 ? `o perfil voltou em ${back} dias: «${told2 || '(nada)'}»` : 'o perfil NÃO voltou em 30 dias (cais ' + d2.vida.cais + ')'}${other}`);
   }
   openSea();
 }

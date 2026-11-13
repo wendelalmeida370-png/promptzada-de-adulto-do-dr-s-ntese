@@ -14,7 +14,8 @@
 // livro (L-460); m13 quem cuida dos pequenos em casa, de dia, com uma carga comum nas mãos, a leva ao armazém antes de
 // cuidar deles, e volta a cuidar (L-471); m14 o mesmo, salvo e carregado no meio do cuidar; m15 o verificador vê a carga
 // parada nas mãos de quem cuida — de m13 a m15, cada um no mundo como ele abre (o velho que cuida é raro num mundo jovem, e
-// os casos de antes vivem dois anos dele); e o verificador limpo, sem erro de módulo. Quem o caso precisa (a criança, o arbusto, a árvore, a colmeia, a praia
+// os casos de antes vivem dois anos dele); m16 quem enviúva, nas primeiras horas do luto em casa, leva a carga comum ao
+// armazém antes de se recolher (L-728); m17 o verificador vê a carga parada nos braços de quem está de luto; e o verificador limpo, sem erro de módulo. Quem o caso precisa (a criança, o arbusto, a árvore, a colmeia, a praia
 // na maré baixa, o povo do mar) vem pela regra; sem um que sirva, o caso falha dizendo o que falta.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/atividades-inv.js'] });
@@ -22,9 +23,9 @@ const fails = []; const mid = []; // (what the checker saw in the middle of a ca
 const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | carga comum ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 const others = new Map();
 // (one look of the checker: what weighs — the activities' rules and the numbers, S0 to S2 — and the two rules of L-186 and
-// the one of L-471, S3)
-let l186 = [], l471 = [];
-const look = () => { const q = QA.check(); l186 = q.filter(x => /L-186/.test(x.msg)); l471 = q.filter(x => /L-471/.test(x.msg)); return q.filter(x => x.sev <= 2).filter(x => { if (x.sys === 'act' || x.sys === 'nan') return true; others.set(x.msg, (others.get(x.msg) || 0) + 1); return false; }); };
+// the ones of L-471 and L-728, S3)
+let l186 = [], l471 = [], l728 = [];
+const look = () => { const q = QA.check(); l186 = q.filter(x => /L-186/.test(x.msg)); l471 = q.filter(x => /L-471/.test(x.msg)); l728 = q.filter(x => /L-728/.test(x.msg)); return q.filter(x => x.sev <= 2).filter(x => { if (x.sys === 'act' || x.sys === 'nan') return true; others.set(x.msg, (others.get(x.msg) || 0) + 1); return false; }); };
 const watch = () => { const bb = look(); for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return bb.length > 0; };
 const D = G.Depot, Fl = G.Flora;
 const r2 = x => Math.round(x * 100) / 100;
@@ -141,16 +142,25 @@ S.weather.storm = 0;
   // (a tree with fruit anywhere in the world, and a grown-up of a people who walks to it — brought beside it by the test's
   // hand: the case is the hands, not the walk)
   const trees = Fl ? [...S.trees.values()].filter(q => Fl.KIND[q.kind] && q.stage === 'grow' && q.fruit >= 1 && !(q.claim && S.villagers.has(q.claim))).sort((a, b) => a.id - b.id) : [];
-  const beside = q => { for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) if (G.W.walkableXY(q.x + dx, q.y + dy)) return [q.x + dx + 0.5, q.y + dy + 0.5]; return null; };
+  // (ground, not the flats the low tide bares: the tide came in under Xochitl, put beside a tree of the shore on a flat, and she
+  // swam — 6 — with the case's stone, T-959)
+  const beside = q => { for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) if (G.W.walkableXY(q.x + dx, q.y + dy) && S.type[G.W.idx(q.x + dx, q.y + dy)] > G.T.SEA) return [q.x + dx + 0.5, q.y + dy + 0.5]; return null; };
   // (one the world calls away before the case ends — the cave's errand, of 1,6, took one for eighty seconds; the night put
   // the next to bed — gives it to another, by day, at the next tree or hive, up to three: the case is the hands, not the call)
   const calledAway = (o, own) => !!(o.task && o.task.type !== own && o.task.type !== 'deliver' && (o.task.pri || 0) > 1);
   const away = [];
   let info = trees.length ? `nenhum adulto livre alcança as ${trees.length} árvores com fruta` : 'nenhuma árvore com fruta no mundo', fine = false;
-  for (let a = 0, i0 = 0; a < 3 && !fine; a++) {
+  for (let a = 0, i0 = 0, waits = 0; a < 3 && !fine; a++) {
     S.time = 0.3;
     let tr = null, v = null;
-    for (; i0 < trees.length && !v; i0++) { const q = trees[i0]; if (!(q.fruit >= 1) || (q.claim && S.villagers.has(q.claim))) continue; const p = beside(q); if (!p) continue; v = person(16, 60, o => G.W.reaches(o, p[0], p[1]) && G.dist(o.x, o.y, p[0], p[1]) < 60); if (v) { tr = q; v.x = p[0]; v.y = p[1]; v.path = null; } }
+    // (a town the world stirred is calm again in a minute, and the case waits for it, three times at most, and looks again from
+    // the first tree: the night's fire at a workshop of Roma had eight at the buckets, a fire is one of the calls that make a
+    // town not calm, and with the first two called away — the fire, the tide — no one of the towns near the trees was free, T-959)
+    for (;;) {
+      for (; i0 < trees.length && !v; i0++) { const q = trees[i0]; if (!(q.fruit >= 1) || (q.claim && S.villagers.has(q.claim))) continue; const p = beside(q); if (!p) continue; v = person(16, 60, o => G.W.reaches(o, p[0], p[1]) && G.dist(o.x, o.y, p[0], p[1]) < 60); if (v) { tr = q; v.x = p[0]; v.y = p[1]; v.path = null; } }
+      if (v || waits >= 3) break;
+      waits++; live(40); S.time = 0.3; i0 = 0;
+    }
     if (!v || !tr || !give(v, 'stone', 2)) break;
     const K = Fl.KIND[tr.kind];
     tr.claim = v.id; G.Vg.setTask(v, { type: 'pick', id: tr.id, pri: 1, st: 0 });
@@ -279,34 +289,46 @@ S.weather.storm = 0;
 }
 // ---------------- m9: an expedition's crew puts the load in the store before the quay
 {
-  S.time = 0.25;
-  const X = G.Expe; let e = null, v = null; const tried = [];
+  const X = G.Expe; const tried = [], away = [];
   // (one of the crew on the errand of the quay whose hands can hold the load: Xântipe, the first of the crew in the m9 of the
-  // generation 19, had lost both arms — her hands hold nothing, and the ore the test's hand gave her never came into them)
-  const freeOf = ex => ex.crew.map(id => S.villagers.get(id)).filter(q => q && q.task && q.task.type === 'cais' && !q.aboard && !(S.avatar && S.avatar.id === q.id)).find(q => !(q.carry && q.carry.n > 1e-6) && D.room('v:' + q.id, 'minerio') >= 1) || null;
-  for (const f of [...S.factions.values()].filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
-    if (!X || v) break;
-    // (the people's own reasons first; then the god's word: a voyage toward the middle of the sea — the first of them with one
-    // of the crew on the quay's errand, hands free, within twenty seconds: a voyage «alone» whose one sailor comes with a load
-    // in the arms, or a crew still in bed — called in the morning, L-682 —, gives the turn to the next: the case is the load
-    // of who is called, not which voyage the world launches first, T-682)
-    for (const mk of [() => X.consider(f, { many: true }), () => X.launch(f, { k: 'terra', w: 1, why: 'terra', txt: '', x: G.N / 2, y: G.N / 2 }, 'media', {})]) {
-      const ex = mk(); if (!ex) continue; e = e || ex;
-      live(20, () => !!freeOf(ex)); const q = freeOf(ex);
-      tried.push(`${f.name}: ${ex.name}${q ? '' : ' (ninguém de mãos livres no cais)'}`);
-      if (q) { e = ex; v = q; break; }
+  // generation 19, had lost both arms — her hands hold nothing, and the ore the test's hand gave her never came into them —;
+  // of a calm town, never one taken before)
+  const freeOf = ex => ex.crew.map(id => S.villagers.get(id)).filter(q => q && q.task && q.task.type === 'cais' && !q.aboard && !(S.avatar && S.avatar.id === q.id) && !used.has(q.id) && calm(q.set) && !(G.War.threat && G.War.threat(q.set))).find(q => !(q.carry && q.carry.n > 1e-6) && D.room('v:' + q.id, 'minerio') >= 1) || null;
+  // (the war at the door takes one from the case — the defence, 4,2, before any errand —: Alexios of Argos, called to the quay
+  // with the ore, went to the store and was called to defend the town four times in two minutes, the enemies of three peoples in
+  // its streets; the case is the load of who is called, and goes to another of the crew, up to three, T-960)
+  const fought = q => !!(q.task && (FIGHT[q.task.type] || GATHER[q.task.type] || q.task.type === 'fight'));
+  let info = '', fine = false;
+  for (let att = 0; att < 3 && !fine; att++) {
+    S.time = 0.25;
+    let e = null, v = null;
+    for (const f of [...S.factions.values()].filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
+      if (!X || v) break;
+      // (the people's own reasons first; then the god's word: a voyage toward the middle of the sea — the first of them with one
+      // of the crew on the quay's errand, hands free, within twenty seconds: a voyage «alone» whose one sailor comes with a load
+      // in the arms, or a crew still in bed — called in the morning, L-682 —, gives the turn to the next: the case is the load
+      // of who is called, not which voyage the world launches first, T-682)
+      for (const mk of [() => X.consider(f, { many: true }), () => X.launch(f, { k: 'terra', w: 1, why: 'terra', txt: '', x: G.N / 2, y: G.N / 2 }, 'media', {})]) {
+        const ex = mk(); if (!ex) continue; e = e || ex;
+        live(20, () => !!freeOf(ex)); const q = freeOf(ex);
+        tried.push(`${f.name}: ${ex.name}${q ? '' : ' (ninguém de mãos livres no cais, numa cidade calma)'}`);
+        if (q) { e = ex; v = q; break; }
+      }
+      if (!e) tried.push(f.name + ' (não)');
     }
-    if (!e) tried.push(f.name + ' (não)');
-  }
-  if (!e || !v) ok('m9 a tripulação guarda a carga antes do cais', false, e ? `nenhuma expedição com tripulante de mãos livres no cais (${tried.join('; ')})` : `nenhum povo do mar lançou uma expedição (${tried.join(', ') || 'nenhum com navegação'})`);
-  else {
+    if (!e || !v) { info = e ? `nenhuma expedição com tripulante de mãos livres no cais (${tried.join('; ')})` : `nenhum povo do mar lançou uma expedição (${tried.join(', ') || 'nenhum com navegação'})`; break; }
+    used.add(v.id);
     const made = D.make('v:' + v.id, 'minerio', 1, { code: 'teste' }).ok;
-    const n0 = lines.length; const seen = [];
-    const went = live(120, () => { const ty = v.task ? v.task.type : '-'; if (seen[seen.length - 1] !== ty) seen.push(ty); return outOf(v.id, n0).some(e2 => e2[5] === 'minerio') || v.aboard; });
+    const n0 = lines.length; const seen = []; let cut = '';
+    const went = live(120, () => { const ty = v.task ? v.task.type : '-'; if (seen[seen.length - 1] !== ty) seen.push(ty); if (fought(v) && !outOf(v.id, n0).some(e2 => e2[5] === 'minerio')) cut = ty; return !!cut || outOf(v.id, n0).some(e2 => e2[5] === 'minerio') || v.aboard; });
+    if (cut) { away.push(`${v.name} chamad${v.g === 'f' ? 'a' : 'o'} para ${cut}`); continue; }
     const out = outOf(v.id, n0).find(e2 => e2[5] === 'minerio');
-    ok('m9 a tripulação guarda a carga antes do cais', made && went && !!out && out[8] === 'entrega' && out[4] === store(v) && !look().length,
-      `${v.name}, da tripulação de ${e.name}, chamado(a) ao cais com 1 de minério nas mãos: ${made ? '' : 'o minério NÃO coube nas mãos; '}${out ? `${out[8]} ${out[6]} para ${out[4]}` : `NÃO guardou (${v.aboard ? 'embarcou com ele' : 'nas mãos: ' + hands(v)})`}; afazeres: ${seen.join(' → ')}`);
+    fine = made && went && !!out && out[8] === 'entrega' && out[4] === store(v);
+    info = `${v.name}, da tripulação de ${e.name}, chamado(a) ao cais com 1 de minério nas mãos: ${made ? '' : 'o minério NÃO coube nas mãos; '}${out ? `${out[8]} ${out[6]} para ${out[4]}` : `NÃO guardou (${v.aboard ? 'embarcou com ele' : 'nas mãos: ' + hands(v)})`}; afazeres: ${seen.join(' → ')}`;
+    break;
   }
+  if (!info) info = 'a guerra chamou os três tripulantes antes da entrega';
+  ok('m9 a tripulação guarda a carga antes do cais', fine && !look().length, info + (away.length ? ` (antes: ${away.join('; ')})` : ''));
 }
 // ---------------- m10: the checker sees a child's load standing still in the hands by day
 {
@@ -338,8 +360,18 @@ S.weather.storm = 0;
   S.time = 0.3;
   const mines = [...S.buildings.values()].filter(b => b.type === 'mina' && b.built && b.ore && (S.ores || []).some(o => o.id === b.ore && o.amt >= 3)).sort((a, b) => a.id - b.id);
   let info = mines.length ? 'nenhum adulto livre de uma cidade com mina que chegue à porta dela' : 'nenhuma mina com minério no mundo', fine = false;
+  // (the war at the door takes one from the case — the defence, 4,2, before any errand —: Dion, a farmer of the metropole, came up
+  // with the wood, set off to the store and was called to defend the town, then fled wounded, the load still in his arms; the
+  // case is the cave and the hands, and goes to another mine, up to three, T-960)
+  const fought = q => !!(q.task && (FIGHT[q.task.type] || GATHER[q.task.type] || q.task.type === 'fight'));
+  const away = []; let tries = 0, ran = false;
+  // (with no one free — the towns with a mine all stirred by the war —, the case waits a while for them to calm, three times at
+  // most, and looks again from the first mine)
+  for (let round = 0; round < 4 && !ran && tries < 3; round++) {
+  if (round) { live(40); S.time = 0.3; }
   for (const b of mines) {
-    if (!G.Caves || !G.Caves.mineShift) { info = 'o mundo não tem cavernas'; break; }
+    if (!G.Caves || !G.Caves.mineShift) { info = 'o mundo não tem cavernas'; ran = true; break; }
+    if (tries >= 3) break;
     const o = S.ores.find(q => q.id === b.ore); const door = G.Vg.door(b);
     const v = person(16, 60, q => q.set === b.set && G.W.reaches(q, door[0], door[1]));
     if (!v || !give(v, 'wood', 2)) continue;
@@ -352,20 +384,24 @@ S.weather.storm = 0;
     if (!G.Caves.mineShift(v, b, o)) { info = `${nm(v)}: a mina #${b.id} não deu um turno`; continue; }
     // (what she dug, read in the errand, and the vein at the step she came up: it gives her nothing — the mine's other miners
     // dig from it meanwhile, and their ore leaves the vein when they come out)
-    let up = false, held = '', dug = 0, before = o.amt, gave = 0;
+    let up = false, held = '', dug = 0, before = o.amt, gave = 0, cut = ''; tries++;
     const done = live(150, () => {
       if (!up && v.task && v.task.type === 'caverna' && v.task.carry) dug = v.task.carry.n;
       if (!up && !(v.task && v.task.type === 'caverna')) { up = true; held = hands(v); gave = r2(before - o.amt); }
       before = o.amt;
-      return up && outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'entrega');
+      if (up && fought(v) && !outOf(v.id, n0).some(e => e[5] === 'wood')) cut = v.task.type;
+      return !!cut || (up && outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'entrega'));
     });
+    if (cut) { away.push(`${v.name} chamad${v.g === 'f' ? 'a' : 'o'} para ${cut}, com ${held} nas mãos`); info = `a guerra chamou ${away.length} mineiro(s) antes da entrega`; continue; }
     const wood = outOf(v.id, n0).filter(e => e[5] === 'wood');
     const ore = lines.slice(n0).filter(e => e[8] === 'mina' && e[4] === 'v:' + v.id);
+    ran = true;
     fine = up && held === '2 de wood' && done && Math.abs(sum(wood) - 2) < 1e-6 && dug > 0 && !ore.length && gave <= 1e-6;
     info = `${nm(v)} desceu à mina #${b.id} com 2 de lenha nas mãos${dug ? ` e cavou ${dug} de minério` : ', e NÃO cavou'}: ${up ? `subiu com ${held}` : 'NÃO subiu'}; ${done ? `a lenha foi ao armazém (${wood.map(e => e[8] + ' ' + e[6]).join(', ')})` : `a lenha NÃO foi (no livro: ${wood.map(e => e[8] + ' ' + e[6]).join(', ') || 'nada'}; nas mãos: ${hands(v)})`}; ${!ore.length && gave <= 1e-6 ? `o minério ficou no veio (nenhuma linha 'mina' para as mãos dela; o veio perdeu ${gave} na saída)` : `o veio DEU ${sum(ore)} às mãos ('mina') e perdeu ${gave} na saída`} (no caso todo, o veio ${r2(o.amt - amt0)}, com os outros mineiros)`;
     break;
   }
-  ok('m11 a caverna não escreve por cima das mãos', fine && !look().length, info);
+  }
+  ok('m11 a caverna não escreve por cima das mãos', fine && !look().length, info + (away.length ? ` (antes: ${away.join('; ')})` : ''));
 }
 // ---------------- m12: the dead aboard leave their load as the drowned do (L-460): an arrow on the deck — the test's hand puts
 // one aboard with a purchase on its way home, and one with a plain load —: the purchase goes home and the plain load to the
@@ -465,6 +501,56 @@ const opened = () => { M.pronto('metropole'); S = G.S; M.viver(2); G.inSim = Mat
     info = `${nm(v)} cuidando dos pequenos com 2 de lenha, sem pensar: ${saw ? '«' + saw + '»' : 'o verificador NÃO viu'}; solto(a), ${went ? 'levou-a ao armazém' : `NÃO a levou (${v.task ? v.task.type : 'sem afazer'}, nas mãos: ${hands(v)})`}${calls.length ? ` (antes, o mundo chamou: ${calls.join(', ')})` : ''}`;
   }
   ok('m15 o verificador vê a carga parada nas mãos de quem cuida', fine && !look().length, info);
+}
+
+// ---------------- m16: the widowed, the first hours of grief at home by day (G.Lar.grief), with a plain load in the hands,
+// take it to the store first (L-728): as the one minding the little ones, the grieving have no working day to take it there.
+// Harald, a miner of Hedeby, 59, widowed that morning, came up the shaft with the wood he went down with and sat half a day
+// by his fire with it in his arms. The partner dies by the game's door (G.Village.kill), the other with 2 of wood in the
+// hands; the farewell at the grave, if the town holds one, goes first (1,1)
+const grieves = v => !!(v && v.task && v.task.type === 'lar' && v.task.what === 'luto');
+const pairOf = () => person(18, 58, o => { const p = o.partner && S.villagers.get(o.partner); const h = S.buildings.get(o.home); return !o.sleeping && !!p && !p.aboard && !p.captive && !p.jail && !p.ug && !(S.avatar && S.avatar.id === p.id) && !!h && G.Village.livable(h) && !(G.Lar && G.Lar.minder(o)); });
+{
+  opened(); S.time = 0.15;
+  const v = pairOf(); const p = v && S.villagers.get(v.partner);
+  if (!v || !give(v, 'wood', 2)) ok('m16 quem está de luto leva a carga antes', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'nenhum casal livre com casa e armazém ao alcance');
+  else {
+    const pn = nm(p); G.Village.kill(p, 'old'); v.think = 0;
+    const grief = !!(G.Lar && G.Lar.grief(v));
+    const n0 = lines.length, t0 = S.clock; const seen = []; let tw = null, saw = false, home = false;
+    const back = live(110, () => {
+      S.weather.storm = 0; S.weather.rain = 0; // (the sky held clear: a storm sends the grieving under the roof as it sends everyone, 1,05)
+      const ty = v.task ? v.task.type + (v.task.what ? '/' + v.task.what : '') : '-'; if (seen[seen.length - 1] !== ty) seen.push(ty);
+      if (l728.some(x => x.msg.includes('#' + v.id + ','))) saw = true;
+      if (grieves(v) && tw === null && v.carry && v.carry.n > 1e-6 && v.task.st === 2) home = true; // (at home, in grief, the load in the arms)
+      if (tw === null && outOf(v.id, n0).some(q => q[5] === 'wood' && q[8] === 'entrega')) tw = S.clock;
+      return tw !== null && grieves(v);
+    });
+    const e = outOf(v.id, n0).find(q => q[5] === 'wood');
+    ok('m16 quem está de luto leva a carga antes', grief && back && !!e && e[8] === 'entrega' && e[4] === store(v) && !home && !saw && !look().length,
+      `${nm(v)} perdeu ${pn} de manhã, com 2 de lenha nas mãos (de luto: ${grief}): ${e ? `${e[8]} ${e[6]} para ${e[4]}, em ${r2(tw - t0)} s` : `a lenha NÃO foi ao armazém (nas mãos: ${hands(v)})`}; ${back ? 'e em casa, de luto' : `e NÃO ficou de luto em casa (${v.task ? v.task.type + (v.task.what ? '/' + v.task.what : '') : 'sem afazer'})`}${home ? '; sentou de luto com a lenha nos braços' : ''}${saw ? '; o verificador viu a carga parada' : ''}; afazeres: ${seen.join(' → ')}`);
+  }
+}
+// ---------------- m17: the checker sees the load standing still in the arms of the grieving at home (the test's hand: in grief
+// at home and not stopping to think, as under the decide of before); let go, it goes to the store. A call of the world in the
+// middle takes them from the house: the case again with another, up to three
+{
+  let info = 'nenhum casal livre com casa e armazém ao alcance', fine = false; const calls = [];
+  opened();
+  for (let att = 0; att < 3 && !fine; att++) {
+    S.time = 0.15;
+    const v = pairOf(); const p = v && S.villagers.get(v.partner); if (!v || !give(v, 'wood', 2)) break;
+    G.Village.kill(p, 'old'); G.Lar.task(v, G.Vg.H, 'luto'); v.think = 1e9;
+    let saw = '', called = '';
+    live(60, () => { S.weather.storm = 0; S.weather.rain = 0; if (!v.task || v.task.type !== 'lar') { called = v.task ? v.task.type : 'sem afazer'; return true; } look(); const q = l728.find(x => x.msg.includes('#' + v.id + ',')); if (q) saw = q.msg; return !!saw; });
+    v.think = 0;
+    if (called && !saw) { calls.push(`${v.name}: ${called}`); continue; }
+    const n0 = lines.length;
+    const went = live(60, () => { S.weather.storm = 0; S.weather.rain = 0; return outOf(v.id, n0).some(q => q[5] === 'wood' && q[8] === 'entrega'); });
+    fine = !!saw && went;
+    info = `${nm(v)} de luto em casa com 2 de lenha, sem pensar: ${saw ? '«' + saw + '»' : 'o verificador NÃO viu'}; solto(a), ${went ? 'levou-a ao armazém' : `NÃO a levou (${v.task ? v.task.type : 'sem afazer'}, nas mãos: ${hands(v)})`}${calls.length ? ` (antes, o mundo chamou: ${calls.join(', ')})` : ''}`;
+  }
+  ok('m17 o verificador vê a carga parada nos braços de quem está de luto', fine && !look().length, info);
 }
 
 const e = M.erros();

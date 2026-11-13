@@ -110,9 +110,11 @@
       const kid = v.age >= 2 && v.age < 16;
       if (!day || c.k === 'water' || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.sleeping || (s.avatar && s.avatar.id === v.id)) continue;
       if ((t && (t.pri >= 1 || t.type === 'deliver' || t.type === 'carga')) || v._noStore > s.clock) continue;
-      if (!kid && !(G.Vg.plainLoad(v) && minding(v))) continue;
+      // (and of one in the first hours of grief at home by day, L-728: the day at home has no errand that takes it there)
+      const mourning = !kid && !!t && t.type === 'lar' && t.what === 'luto';
+      if (!kid && !(G.Vg.plainLoad(v) && (mourning || minding(v)))) continue;
       const p = kidMarkS === s && kidMark.get(v.id); const since = p && p.k === c.k ? p.since : s.clock; kidNow.set(v.id, { k: c.k, since });
-      if (s.clock - since > 30) add('act', 3, `${v.name} #${v.id}, ${Math.floor(v.age)} anos: ${r2(c.n)} de ${c.k} nas mãos há ${Math.round(s.clock - since)} s, de dia, ${t ? 'em ' + t.type : 'sem afazer'} — a carga não foi ao seu lugar (${kid ? 'L-186' : 'L-471: quem cuida dos pequenos em casa'})`);
+      if (s.clock - since > 30) add('act', 3, `${v.name} #${v.id}, ${Math.floor(v.age)} anos: ${r2(c.n)} de ${c.k} nas mãos há ${Math.round(s.clock - since)} s, de dia, ${t ? 'em ' + t.type : 'sem afazer'} — a carga não foi ao seu lugar (${kid ? 'L-186' : mourning ? 'L-728: quem está de luto em casa' : 'L-471: quem cuida dos pequenos em casa'})`);
     }
     kidMark = kidNow; kidMarkS = s;
     // ---- L-300: the water in the hands lives inside its errand (the house's jar, the bucket for a fire; a scene only lends
