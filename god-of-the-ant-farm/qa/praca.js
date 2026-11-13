@@ -13,7 +13,8 @@
 //      a2 quem quer mais — o velho, o moço, o sociável, o mercador junto do mercado; menos quem mora longe;
 //      a3 a sorte do dia — da pessoa e do dia (G.hash), espalhada por igual, a mesma o dia inteiro, outra no dia seguinte,
 //         sem tirar nada do acaso do mundo; a vontade pedida de fora do passo não muda o mundo;
-//      a4 onde — a praça mais perto de casa; o mercado só enquanto vende; o lugar de cada um fora da fonte, dentro da praça;
+//      a4 onde — a praça mais perto de casa (num mundo à parte, a festa da cidade em curso vivida até o fim: T-1044); o mercado
+//         só enquanto vende; o lugar de cada um fora da fonte, dentro da praça;
 //      a5 o que se larga pela praça antes do fim do dia — o machado, a enxada, a obra comum; nunca a carga, a perna de uma
 //         operação, a pedra, o posto, a obra grande da cidade;
 //   b  os dias vividos no mundo pronto (DIAS=3), sem a mão da prova em ninguém, na paz do deus: b1 a praça tem gente na
@@ -25,6 +26,8 @@
 //      cedo; f2 o foguista no posto não é levado por uma vontade, pela água de casa nem por um chamado de fora; f3 pela mão
 //      da prova: chamado do machado à fornalha antes de abrir; a refeição antes de abrir; a fome que não o tira do posto e a
 //      que tira; o chamado de fora que não o leva (Vg.busy) e o que leva depois do fogo alimentado; a água de casa com outro;
+//      f3d a lenha antes de abrir: o foguista que vai buscá-la ao armazém fica de posto a cada olhada até as portas abrirem —
+//      a caminho do armazém, de volta com ela nos braços e, posta a lenha, à espera junto da fornalha (L-772);
 //   q  o bairro: q1 cada entrada nos banhos conta uma vez em «banho» e nunca em «noite» (nos dias vividos); q2 doze dias
 //      saltados na paz: o bairro dos banhos mais cheios é «de banhos», e nenhum bairro sem taverna, teatro nem arena é
 //      «boêmio»; q3 a conta do dia atravessa um save; q4 o som: a família do banho é a do bairro («banho»);
@@ -32,7 +35,8 @@
 //      gente; e2 quem morre a caminho e quem morre na conversa; e3 a guerra à porta; e4 a chuva que começa; e5 o deus
 //      derruba a praça; e6 o escuro;
 //   t  o passeio antigo com a regra do tempo (T-919): quem vai aos banhos pelo passeio de quem está sem trabalho
-//      (G.City.leisureTask) só sai com tempo para o banho antes de fechar;
+//      (G.City.leisureTask) só sai com tempo para o banho antes de fechar (os banhos de quatro lugares ou mais procurados nos
+//      mundos prontos, o pedido primeiro: T-1045);
 //   h  o verificador (qa/praca-inv.js) pega a mentira — e nada sem ela.
 //   [ONLY=a,b,f3,…] [DIAS=n] node qa/praca.js [metropole|mega]
 'use strict';
@@ -158,23 +162,14 @@ function partA() {
       `${lots.length} adultos: ${(100 * under).toFixed(0)}% com a sorte abaixo de 0,5; a mesma às 0,55 e às ${t0.toFixed(2)}: ${same ? 'sim' : 'NÃO'}; outra no dia seguinte para ${(100 * changed).toFixed(0)}%; ${asked} pessoas perguntadas de fora do passo (pick, urge, wish, playAt, room, fair): o mundo ${s0 === s1 ? 'igual' : 'MUDOU'}`);
   }
   // ---------------------------------------------------------------- a4
+  // (one's place on the plaza, here; the plaza nearest home in a town with two, in a world of its own after a5 — a4h)
+  let spotA4 = null;
   if (on('a4')) god(() => {
-    // the plaza nearest home, in a town with two; the market only while it sells; one's place off the fountain, on the plaza
-    const two = [...S2.settlements.values()].filter(s => plazas(s.id).length >= 2).sort((a, c) => a.id - c.id)[0]; let near = 0, tried = 0; const how = [];
-    if (two) { fair0(two); S2.time = 0.62; const PP = plazas(two.id);
-      for (const v of adults(two.id).filter(x => x.age < 55 && homeOf(x) && !x.jail && !x.aboard && x.role !== 'foguista' && !(x.task && (x.task.pri || 0) >= 3) && !Vg.holdsBaby(x))) {
-        const byHome = PP.slice().sort((a, c) => farOf(v, a) - farOf(v, c)); if (farOf(v, byHome[1]) - farOf(v, byHome[0]) < 4 || Pr.lot(v) >= Pr.wish(v, byHome[1]) - 0.02) continue;
-        const s0 = { x: v.x, y: v.y, t: v.task, h: v.hunger, e: v.energy, c: v.carry, s: v.sick, f: v.fear, sl: v.sleeping, i: v.inside };
-        ready(v, byHome[1]); // (standing at the far one: the one of one's own streets all the same)
-        const got = Pr.pick(v); tried++; if (got === byHome[0]) near++; else how.push(`${v.name}: ${got ? '#' + got.id : 'nenhuma'}`);
-        v.x = s0.x; v.y = s0.y; v.hunger = s0.h; v.energy = s0.e; v.carry = s0.c; v.sick = s0.s; v.fear = s0.f; v.sleeping = s0.sl; v.inside = s0.i;
-        if (tried >= 12) break; } }
     // one's place: on the plaza, off its middle; the same all day
     const b0 = P2[0]; const spots = cs.slice(0, 40).map(v => Pr.spot(v, b0)); const [cx, cy] = mid(b0);
     const inP = spots.every(([x, y]) => x >= b0.x + 0.19 && x <= b0.x + b0.w - 0.19 && y >= b0.y + 0.19 && y <= b0.y + b0.h - 0.19); const offF = spots.every(([x, y]) => G.dist(x, y, cx, cy) >= 0.45 || (x === b0.x + 0.2 || y === b0.y + 0.2));
     const same = cs.slice(0, 40).every((v, i) => { const s = Pr.spot(v, b0); return s[0] === spots[i][0] && s[1] === spots[i][1]; });
-    ok('a4 onde: a praça mais perto de casa (numa cidade com duas); o lugar de cada um na praça, fora da fonte, o mesmo o dia inteiro', (!two || (tried >= 1 && near === tried)) && inP && offF && same,
-      `${two ? `${two.name}, duas praças: ${near} de ${tried} com a vontade nas duas escolhem a de casa${how.length ? ' (' + how.slice(0, 3).join('; ') + ')' : ''}` : 'nenhuma cidade com duas praças neste mundo'}; 40 lugares na praça #${b0.id}: dentro dela ${inP ? 'todos' : 'NÃO'}, fora da fonte ${offF ? 'todos' : 'NÃO'}, os mesmos se perguntados de novo ${same ? 'sim' : 'NÃO'}`);
+    spotA4 = { b0, inP, offF, same };
   });
   // ---------------------------------------------------------------- a5
   if (on('a5')) god(() => {
@@ -191,6 +186,28 @@ function partA() {
     ok('a5 o que se larga pela praça antes do fim do dia de trabalho: o machado, a enxada, a obra comum; nunca a pedra, o posto, a obra grande da cidade, a carga, um afazer de mais peso — e depois dele a praça é a caminho de casa', go.every(k => z[k] > 0) && stay.every(k => z[k] === 0) && Pr.CUT > 1 && Pr.PRI === 0.45 && z.over === Pr.OVER && z.machado === Pr.EARLY,
       `${q.name} #${q.id}, na sua hora (${Pr.hourOf(q).toFixed(3)}): ${Object.keys(z).map(k => `${k === 'over' ? 'no machado, logo depois do fim do dia' : k} ${z[k] > 0 ? 'larga/vai' : 'fica'}`).join(' · ')}`);
   });
+  // ---------------------------------------------------------------- a4h: the plaza nearest home, in a town with two (a world of its own)
+  // (the feast of the town shuts its plazas — Pr.fair, the case a1 —, and in the mega of the generation 20 Hedeby, the town with
+  // two, was at its own feast at 0,62: «Eir: nenhuma». The world lives until the feast under way ends, and the proof's hand gives
+  // the town a day with no other feast after it — as the escala e22 does, T-995 —; then the rule is asked, as before. T-1044)
+  if (on('a4')) {
+    M.pronto(WORLD); const S4 = G.S; S4.time = 0.62; M.viver(1);
+    const two = [...S4.settlements.values()].filter(s => plazas(s.id).length >= 2).sort((a, c) => a.id - c.id)[0]; let near = 0, tried = 0, waited = 0, feast = ''; const how = [];
+    if (two) { const fe0 = G.Fest && G.Fest.active ? G.Fest.active(two.id) : null; if (fe0) feast = `a festa de ${two.name} (${fe0.key}) vivida até o fim`;
+      for (; waited < 120 && G.Fest && G.Fest.active && G.Fest.active(two.id); waited++) { peace(); M.viver(1); }
+      two.festPlan = { day: S4.day, key: null, done: true }; if (feast) feast += ` em ${waited} s`; }
+    if (two) god(() => { fair0(two); S4.time = 0.62; const PP = plazas(two.id);
+      for (const v of adults(two.id).filter(x => x.age < 55 && homeOf(x) && !x.jail && !x.aboard && x.role !== 'foguista' && !(x.task && (x.task.pri || 0) >= 3) && !Vg.holdsBaby(x))) {
+        const byHome = PP.slice().sort((a, c) => farOf(v, a) - farOf(v, c)); if (farOf(v, byHome[1]) - farOf(v, byHome[0]) < 4 || Pr.lot(v) >= Pr.wish(v, byHome[1]) - 0.02) continue;
+        const s0 = { x: v.x, y: v.y, t: v.task, h: v.hunger, e: v.energy, c: v.carry, s: v.sick, f: v.fear, sl: v.sleeping, i: v.inside };
+        ready(v, byHome[1]); // (standing at the far one: the one of one's own streets all the same)
+        const got = Pr.pick(v); tried++; if (got === byHome[0]) near++; else how.push(`${v.name}: ${got ? '#' + got.id : 'nenhuma'}${PP.every(b => Pr.fair(b)) ? '' : ' (a praça fechada: ' + (G.Fest && G.Fest.active(two.id) ? 'a festa' : 'o tempo ou a guerra') + ')'}`);
+        v.x = s0.x; v.y = s0.y; v.hunger = s0.h; v.energy = s0.e; v.carry = s0.c; v.sick = s0.s; v.fear = s0.f; v.sleeping = s0.sl; v.inside = s0.i;
+        if (tried >= 12) break; } });
+    const sp = spotA4 || { inP: true, offF: true, same: true, b0: null };
+    ok('a4 onde: a praça mais perto de casa (numa cidade com duas); o lugar de cada um na praça, fora da fonte, o mesmo o dia inteiro', (!two || (tried >= 1 && near === tried)) && sp.inP && sp.offF && sp.same,
+      `${two ? `${two.name}, duas praças${feast ? ' (' + feast + ', e um dia sem outra pela mão da prova: T-1044)' : ''}: ${near} de ${tried} com a vontade nas duas escolhem a de casa${how.length ? ' (' + how.slice(0, 3).join('; ') + ')' : ''}` : 'nenhuma cidade com duas praças neste mundo'}; 40 lugares na praça #${sp.b0 ? sp.b0.id : '-'}: dentro dela ${sp.inP ? 'todos' : 'NÃO'}, fora da fonte ${sp.offF ? 'todos' : 'NÃO'}, os mesmos se perguntados de novo ${sp.same ? 'sim' : 'NÃO'}`);
+  }
   // ---------------------------------------------------------------- a4m: the market's door, only while it sells (a world of its own, lived to an hour with the stalls open)
   if (on('a4')) {
     M.pronto(WORLD); const S3 = G.S; let g = 0; let mk = null;
@@ -309,25 +326,86 @@ function partF3() {
   // (at a tree a few houses from the baths' door: where a walkable tile is, on the door's side)
   const dr = Vg.door(b); const near = W.randomNear ? god(() => { for (let r = 7; r >= 3; r--) for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [-1, 1]]) { const x = dr[0] + dx * r, y = dr[1] + dy * r; if (W.walkableXY(x, y) && !G.S.occ[W.idx(x, y)] && W.canWalk(x, y, dr[0], dr[1])) return [x, y]; } return dr; }) : dr;
   const far = G.dist(near[0], near[1], ...mid(b)); const ld = Te.EARLY + Math.min(Te.LEAD, far * Te.WALK / G.DAY_LEN);
-  S.day += 1; S.time = h.abre - ld - 0.012; wood(); fair0(set);
-  god(() => { Vg.endTask(k); k.hunger = 10; k.energy = 90; k.sick = 0; k.carry = null; k.sleeping = false; k.inside = 0; k.x = near[0]; k.y = near[1]; Vg.setTask(k, { type: 'chop', id: 0, pri: 1, st: 0, kind: 'work' }); });
+  // (0,02 of the day before the post: the walk to the tree, a tile or so in the second the case looks, lengthens the lead of the
+  // post by up to 0,0075 a tile — with 0,012 the post began in that second when the tree was the other way, T-1047)
+  S.day += 1; S.time = h.abre - ld - 0.02; wood(); fair0(set);
+  // (the axe at a tree by the spot, as the world gives it — grown, nobody's —, one no farther from the baths than the spot first.
+  // The errand of the hand had no tree, the id 0, and ended in the first step; the stoker took the chore his day gave, the axe
+  // in the metrópole, the hoe in the mega of the generation 20 — «em «farm»» —, T-1047)
+  const tree = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && !(t.stage === 'grow' && t.size < 0.7) && !t.claim && G.dist(t.x, t.y, near[0], near[1]) <= 12).sort((a, c) => (G.dist(a.x, a.y, ...mid(b)) > far) - (G.dist(c.x, c.y, ...mid(b)) > far) || G.dist(a.x, a.y, near[0], near[1]) - G.dist(c.x, c.y, near[0], near[1]) || a.id - c.id)[0] || null;
+  god(() => { Vg.endTask(k); k.hunger = 10; k.energy = 90; k.sick = 0; k.carry = null; k.sleeping = false; k.inside = 0; k.x = near[0]; k.y = near[1]; Vg.setTask(k, { type: 'chop', id: tree ? tree.id : 0, pri: 1, st: 0, kind: 'work' }); if (tree && k.task && k.task.type === 'chop') tree.claim = k.id; });
   z.antes = Te.onDuty(k) ? 1 : 0; M.viver(1); z.t0 = k.task ? k.task.type : '';
   S.time = h.abre - ld + 0.006; god(() => { k.x = near[0]; k.y = near[1]; }); M.viver(2); z.duty = Te.onDuty(k) ? 1 : 0; z.t1 = k.task ? k.task.type : ''; z.busy = Vg.busy(k, { type: 'celebrate', pri: 1.1 }) ? 1 : 0; z.hands = Vg.handsBusy(k) ? 1 : 0;
-  // (between two errands of the furnace — the errand ended by the proof's hand, nothing in his hands —: the post still holds,
-  // L-914; the day of the baths calls him back at its next look)
-  god(() => { Vg.endTask(k); }); z.gap = !k.task && !(k.carry && k.carry.n > EPS) && Te.onDuty(k) ? (Vg.busy(k, { type: 'justice', pri: 1.95 }) && Vg.handsBusy(k) ? 1 : 0) : -1;
-  M.viver(1.2); z.back = k.task ? k.task.type : '';
   // a call from outside does not take him; the house's water goes with another
   const gave = god(() => Vg.give(k, { type: 'celebrate', pri: 1.1, kind: 'celebrate' })); z.gave = gave && k.task && k.task.type === 'celebrate' ? 1 : 0;
-  // the hunger that does not take him from the post, and the one that does (asked of the choice: the world's own decide)
-  let lit = -1; const types = {};
-  for (let s = 0; s < 80 && lit < 0; s++) { k.hunger = Math.max(70, Math.min(k.hunger, 80)); M.viver(1); const t = k.task ? k.task.type : 'nada'; types[t] = (types[t] || 0) + 1; const op = Te.dia(b); if (op && op.data.calor > 0) lit = S.time; }
+  // the hunger that does not take him from the post, and the one that does (asked of the choice: the world's own decide) — to the
+  // doors opening, and on to the fire lit
+  let lit = -1; const types = {}; const hungry = () => { k.hunger = Math.max(70, Math.min(k.hunger, 80)); M.viver(1); const t = k.task ? k.task.type : 'nada'; types[t] = (types[t] || 0) + 1; };
+  for (let s = 0; s < 80 && !Te.dia(b); s++) hungry();
+  // (between two errands of the furnace, as the doors open: the wait by it ends then, and the day of the baths gives the next one
+  // at its next look — the second of nobody's of L-914. The errand is ended by the proof's hand at the first look with the doors
+  // open, nothing in his hands: the post still holds, and he is called back. The hand ended it half-way to the furnace before,
+  // long before the doors — a moment none of the game's: the wait ends only when they open —, and there the post held by the
+  // walk's lead alone, while he did not come nearer faster than Te.WALK: Yaretzi, in the metrópole, by a hair; Ivar, in the
+  // mega, came nearer faster, T-1047)
+  z.op = Te.dia(b) ? 1 : 0; z.tGap = S.time;
+  god(() => { Vg.endTask(k); }); z.gap = !k.task && !(k.carry && k.carry.n > EPS) && Te.onDuty(k) ? (Vg.busy(k, { type: 'justice', pri: 1.95 }) && Vg.handsBusy(k) ? 1 : 0) : -1;
+  M.viver(1.2); z.back = k.task ? k.task.type : '';
+  for (let s = 0; s < 40 && lit < 0; s++) { const op = Te.dia(b); if (op && op.data.calor > 0) { lit = S.time; break; } hungry(); }
   z.ate = Object.keys(types).filter(t => t === 'eat' || t === 'forage' || t === 'lar').reduce((n, t) => n + types[t], 0); const op = Te.dia(b); z.len = op ? op.data.lenha : -1; god(() => { k.hunger = 20; });
   // the fire fed to the closing: he is free — a call takes him now
   for (let s = 0; s < 40 && Te.onDuty(k); s++) M.viver(1);
   z.free = Te.onDuty(k) ? 0 : 1; z.busy2 = Vg.busy(k, { type: 'celebrate', pri: 1.1 }) && !(k.task && k.task.pri >= 1.1) ? 1 : 0;
-  ok('f3a o dia dos banhos chama o foguista do machado à fornalha antes de as portas abrirem; de posto, um chamado de fora não o leva (Vg.busy) nem a fome abaixo de 85; a fornalha acende logo; entre dois afazeres da fornalha o posto ainda segura (L-914); com o fogo alimentado até fechar, ele é livre', z.antes === 0 && z.t0 === 'chop' && z.duty === 1 && (z.t1 === 'fornalha' || z.t1 === 'lenhaTermas' || z.t1 === 'carga') && z.busy === 1 && z.hands === 1 && z.gap === 1 && (z.back === 'fornalha' || z.back === 'lenhaTermas' || z.back === 'carga') && z.gave === 0 && lit >= 0 && lit <= h.abre + 0.04 && z.ate === 0 && z.len >= 1 && z.free === 1 && z.busy2 === 0 && M.limpo(),
-    `${k.name} #${k.id}, foguista de ${set.name}, a ${far.toFixed(1)} casas dos banhos: às ${(h.abre - ld - 0.012).toFixed(3)} de posto ${z.antes ? 'SIM' : 'não'}, em «${z.t0}»; às ${(h.abre - ld + 0.006).toFixed(3)} de posto ${z.duty ? 'sim' : 'NÃO'}, em «${z.t1}»; a comemoração ${z.gave ? 'LEVOU-O' : 'não o leva'} (Vg.busy ${z.busy ? 'sim' : 'NÃO'}); entre dois afazeres da fornalha (o afazer acabado pela mão da prova) o cadafalso ${z.gap === 1 ? 'não o leva' : z.gap === 0 ? 'LEVA-O' : 'NÃO FOI PERGUNTADO (de mãos cheias ou fora do posto)'}, e um segundo depois está em «${z.back || 'nada'}»; com a fome entre 70 e 80 ${z.ate ? 'FOI COMER' : 'não sai para comer'}; a água quente às ${lit < 0 ? '— (NUNCA)' : lit.toFixed(3)} (as portas às ${h.abre}), ${z.len} de lenha; o que fez: ${Object.entries(types).map(([t, n]) => t + ' ' + n + ' s').join(', ')}; com o fogo até fechar: de posto ${z.free ? 'não' : 'AINDA'}, um chamado ${z.busy2 ? 'AINDA NÃO o leva' : 'já o leva'}`);
+  ok('f3a o dia dos banhos chama o foguista do machado à fornalha antes de as portas abrirem; de posto, um chamado de fora não o leva (Vg.busy) nem a fome abaixo de 85; a fornalha acende logo; entre dois afazeres da fornalha o posto ainda segura (L-914); com o fogo alimentado até fechar, ele é livre', z.antes === 0 && z.t0 === 'chop' && z.duty === 1 && (z.t1 === 'fornalha' || z.t1 === 'lenhaTermas' || z.t1 === 'carga') && z.busy === 1 && z.hands === 1 && z.op === 1 && z.gap === 1 && (z.back === 'fornalha' || z.back === 'lenhaTermas' || z.back === 'carga') && z.gave === 0 && lit >= 0 && lit <= h.abre + 0.04 && z.ate === 0 && z.len >= 1 && z.free === 1 && z.busy2 === 0 && M.limpo(),
+    `${k.name} #${k.id}, foguista de ${set.name}, a ${far.toFixed(1)} casas dos banhos: às ${(h.abre - ld - 0.02).toFixed(3)} de posto ${z.antes ? 'SIM' : 'não'}, em «${z.t0}»; às ${(h.abre - ld + 0.006).toFixed(3)} de posto ${z.duty ? 'sim' : 'NÃO'}, em «${z.t1}»; a comemoração ${z.gave ? 'LEVOU-O' : 'não o leva'} (Vg.busy ${z.busy ? 'sim' : 'NÃO'}); entre dois afazeres da fornalha (o afazer acabado pela mão da prova ${z.op ? 'com as portas abrindo' : 'COM AS PORTAS AINDA FECHADAS'}, às ${z.tGap.toFixed(3)}) o cadafalso ${z.gap === 1 ? 'não o leva' : z.gap === 0 ? 'LEVA-O' : 'NÃO FOI PERGUNTADO (de mãos cheias ou fora do posto)'}, e um segundo depois está em «${z.back || 'nada'}»; com a fome entre 70 e 80 ${z.ate ? 'FOI COMER' : 'não sai para comer'}; a água quente às ${lit < 0 ? '— (NUNCA)' : lit.toFixed(3)} (as portas às ${h.abre}), ${z.len} de lenha; o que fez: ${Object.entries(types).map(([t, n]) => t + ' ' + n + ' s').join(', ')}; com o fogo até fechar: de posto ${z.free ? 'não' : 'AINDA'}, um chamado ${z.busy2 ? 'AINDA NÃO o leva' : 'já o leva'}`);
+  // ---- f3d: the wood run before the doors (L-772): the post begun far from the furnace — the walk's lead at its most —, with no
+  // wood by it: the stoker fetches it from the store and carries it back, and at every look until the doors open he is at his
+  // post — not off it as he comes nearer faster than Te.WALK, nor when the wood is put down —: no meal short of starving,
+  // no chore of his day, no call from outside (Vg.busy); the fire lit once the wood is by it (the lead of the post is the walk
+  // to the furnace, not to the store: with the store far, the doors may open first — Tenochtitlan's, in the metrópole). The
+  // baths with the store nearest them first — where the run is short and he would come nearer faster —, and the first whose
+  // stoker goes for the wood: the case is the run, not whether the town gives it
+  let wr = null; const triedW = [];
+  const storeFar = x => { const s = V.nearestDropoff(x.x, x.y, x.set); return s ? G.dist(s.x, s.y, x.x, x.y) : 1e9; };
+  for (let n = 0; n < 4 && !wr; n++) {
+    M.pronto(WORLD); const S5 = G.S; const L = baths().filter(x => Te.keeperOf(x)).sort((a, c) => storeFar(a) - storeFar(c) || a.id - c.id); const b5 = L[n]; if (!b5) break;
+    const k5 = Te.keeperOf(b5), h5 = Te.horas(b5), f5 = G.Fac.get(setOf(b5).fac), m5 = mid(b5);
+    god(() => { for (const op of A.all()) if (op.def === 'termas' && op.at === b5.id && A.live(op)) Te.close(op, 'teste'); });
+    // (a spot eleven houses from the baths or a little more — the walk's lead at its most from there, Te.LEAD, and the run short
+    // enough for him to come back early: from much farther the doors are near when he does —, else eight to ten; inside the
+    // town — out of it, the walk back to it is an errand of its own, 'migrate', 1,5: Electra of Delfos, set at twelve houses in
+    // the fields, walked back to town all the morning —, and from where their door is reached; the clock at the moment his post
+    // begins there)
+    const set5 = setOf(b5); const lim = Math.max(16, (set5.radius || 0) + 4) - 2;
+    const spot = god(() => { for (const r of [11, 12, 13, 14, 15, 16, 17, 18, 10, 9, 8]) for (let a = 0; a < 16; a++) { const x = Math.round(m5[0] + Math.cos(a * Math.PI / 8) * r), y = Math.round(m5[1] + Math.sin(a * Math.PI / 8) * r); if (G.dist(x + 0.5, y + 0.5, set5.cx, set5.cy) > lim) continue; if (W.walkableXY(x, y) && !S5.occ[W.idx(x, y)] && W.canWalk(x, y, ...Vg.door(b5))) return [x + 0.5, y + 0.5]; } return null; });
+    if (!spot) { triedW.push(`${set5.name}: sem chão a oito casas ou mais dos banhos, dentro da cidade`); continue; }
+    const ld5 = Te.EARLY + Math.min(Te.LEAD, G.dist(...spot, ...m5) * Te.WALK / G.DAY_LEN);
+    S5.day += 1; S5.time = h5.abre - ld5 + 0.002; fair0(set5);
+    // (the baths' wood back in the people's store by the proof's hand — he has to fetch it —, the store with wood to spare; the
+    // stoker awake, rested and hungrier than Te.FED: off his post he would go for his meal, Te.mealFirst)
+    god(() => { const w0 = D.free('b:' + b5.id, 'wood'); if (w0 > 0) D.move('b:' + b5.id, 'f:' + f5.id, 'wood', w0, { code: 'teste' }); if (D.free('f:' + f5.id, 'wood') < 40) D.make('f:' + f5.id, 'wood', 60, { code: 'teste', part: true });
+      Vg.endTask(k5); k5.hunger = 40; k5.energy = 90; k5.sick = 0; k5.carry = null; k5.sleeping = false; k5.inside = 0; k5.x = spot[0]; k5.y = spot[1]; k5.path = null; });
+    const r = { k: k5, b: b5, h: h5, far: G.dist(...spot, ...m5), t0: S5.time, off: [], ate: 0, away: {}, free: 0, run: {}, looks: 0, lit: -1, len: -1 };
+    for (let s = 0; s < 200 && S5.time < h5.abre + 0.08 && (r.lit < 0 || S5.time < h5.abre); s++) {
+      fair0(setOf(b5)); M.viver(0.5); const t = k5.task; const ty = t ? t.type : 'nada';
+      const op = Te.dia(b5); if (op && op.data.calor > 0 && r.lit < 0) r.lit = S5.time;
+      if (S5.time >= h5.abre) continue; r.looks++;
+      if (ty === 'lenhaTermas' || ty === 'carga') r.run[ty] = (r.run[ty] || 0) + 1;
+      if (!Te.onDuty(k5)) r.off.push(`${S5.time.toFixed(3)} ${ty}`);
+      // (a chore of his day or anything that weighs — a call —, not of the post: what the lapse gave him, the hoe once the wood was
+      // put down. A free choice of a moment — the stroll of one who found nobody to court — is not it: the day of the baths calls
+      // him from it at its next look, callStoker; Electra of Delfos strolled the first second of the case, on duty)
+      if (t && t.kind === 'eat') r.ate++; else if (t && !['lenhaTermas', 'carga', 'fornalha'].includes(ty) && (t.kind === 'work' || (t.pri || 0) >= 1)) r.away[ty] = (r.away[ty] || 0) + 1;
+      if (!Vg.busy(k5, { type: 'celebrate', pri: 1.1 })) r.free++;
+    }
+    { const op = Te.dia(b5); r.len = op ? op.data.lenha : -1; }
+    if (!r.run.lenhaTermas && !r.run.carga) { triedW.push(`${setOf(b5).name}: o foguista não foi à lenha (${Object.keys(r.away).join(', ') || 'nada'})`); continue; }
+    wr = r;
+  }
+  if (!wr) ok('f3d a lenha antes de abrir', false, `em nenhuma cidade o foguista foi à lenha: ${triedW.join(' · ')}`);
+  else ok('f3d a lenha antes de abrir (L-772): o posto começado longe da fornalha, sem lenha junto dela — ele vai buscá-la ao armazém e a traz nos braços; a cada olhada até as portas abrirem, de posto (nem fora dele por chegar mais depressa que o Te.WALK, nem posta a lenha): nenhuma refeição antes de morrer de fome, nenhum afazer do dia, nenhum chamado de fora; a fornalha acesa quando a lenha chega',
+    !wr.off.length && !wr.ate && !Object.keys(wr.away).length && !wr.free && wr.lit >= 0 && wr.len >= 1 && M.limpo(),
+    `${wr.k.name} #${wr.k.id}, foguista de ${setOf(wr.b).name} (o armazém a ${storeFar(wr.b).toFixed(0)} casas dos banhos), a ${wr.far.toFixed(1)} casas dos banhos às ${wr.t0.toFixed(3)} (o posto começa ali), com a fome a 40 e a lenha deles no armazém: ${wr.looks} olhadas antes de as portas abrirem (às ${wr.h.abre}) — indo à lenha ${wr.run.lenhaTermas || 0}, com ela nos braços ${wr.run.carga || 0}; fora do posto ${wr.off.length}${wr.off.length ? ' (' + wr.off.slice(0, 4).join(', ') + ')' : ''}; a comer ${wr.ate}; noutro afazer ${JSON.stringify(wr.away)}; um chamado de fora o levaria ${wr.free} vez(es); a água quente às ${wr.lit < 0 ? '— (NUNCA)' : wr.lit.toFixed(3)}, ${wr.len} de lenha${triedW.length ? '; antes: ' + triedW.join(' · ') : ''}`);
   // ---- f3b: the meal before the doors; starving at the post (in the first town whose morning has no gathering: the vote of
   // a capital takes its people from the way to a meal, and the stoker with them — not on duty yet, as anyone)
   let y = null, k2 = null, h2 = null, secs = 0, did = {}, did2 = {}; const tried = [];
@@ -476,11 +554,17 @@ function partE() {
 
 // ================================================================ t: the old stroll with the time's rule (T-919)
 function partT() {
-  M.pronto(WORLD); const S = G.S; S.time = 0.45; M.viver(2); fair0(null);
   // (baths of four places in the water or more, the nearest eight first: with one place — Tenochtitlan's, Hedeby's — a single
-  // bather hides the time's rule; the more places, the more of the town the hand of the proof has to put on the way)
-  const b = baths().filter(x => Te.dia(x)).sort((a, c) => (Te.places(a) >= 4 ? 0 : 1) - (Te.places(c) >= 4 ? 0 : 1) || Math.abs(Te.places(a) - 8) - Math.abs(Te.places(c) - 8) || V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0];
-  if (!b) { ok('t o passeio com a regra do tempo', false, 'nenhuns banhos abertos às 0,45'); return; }
+  // bather hides the time's rule; the more places, the more of the town the hand of the proof has to put on the way. Looked for
+  // in the ready worlds, the one asked for first: in the mega of the generation 20 every baths is the temazcal or the sauna, of
+  // one place — «0 dentro, de 1 lugares; com que mais um pode contar: -1» —, and the metrópole has the eight of Delfos, T-1045)
+  let S = null, b = null, mundo = null; const MUNDOS = [WORLD, 'metropole', 'mundial', 'mega'].filter((m, k, L) => L.indexOf(m) === k);
+  for (const m of MUNDOS) {
+    M.pronto(m); S = G.S; S.time = 0.45; M.viver(2); fair0(null);
+    b = baths().filter(x => Te.dia(x) && Te.places(x) >= 4).sort((a, c) => Math.abs(Te.places(a) - 8) - Math.abs(Te.places(c) - 8) || V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0] || null;
+    if (b) { mundo = m; break; }
+  }
+  if (!b) { ok('t o passeio com a regra do tempo', false, `nenhuns banhos de quatro lugares ou mais abertos às 0,45 (${MUNDOS.join(', ')})`); return; }
   // (thirty of the town, their day's task ended by the proof's hand, standing by the baths' door: the walk is no matter here)
   const h = Te.horas(b); const set = setOf(b); const dr = Vg.door(b); const L = adults(set.id).filter(v => !v.jail && !v.aboard && !v.ug && !v.held && v.age < 55 && v.role !== 'foguista' && !(v.task && (v.task.pri || 0) > 1.05) && !(v.carry && v.carry.n > EPS) && !v.sleeping).slice(0, 30);
   god(() => { for (const v of L) { Vg.endTask(v); v.inside = 0; v.x = dr[0]; v.y = dr[1]; v.hunger = 20; v.energy = 70; } });
@@ -498,7 +582,7 @@ function partT() {
   // (near the closing, with places to count on: the time's rule alone turns the stroll back)
   const lateT = h.fecha - 0.02; M.viver(0.1); const late = tryAt(lateT); const roomL = late.room; const outT = L.filter(v => Te.inTime(v, b)).length;
   ok('t o passeio de quem está sem trabalho só leva aos banhos quem tem tempo para o banho antes de fechar e um lugar com que contar — quem vem a caminho conta (T-919): cedo leva, com os lugares tomados não, perto de fechar não', L.length >= 8 && inT === L.length && early.room >= 1 && early.sent >= 3 && way.length >= 1 && room0 < 1 && inside >= 0 && inside < Te.places(b) && fullT.sent === 0 && roomL >= 1 && outT === 0 && late.sent === 0 && M.limpo(),
-    `${set.name}, ${L.length} pessoas à porta dos banhos: às 0,45 ${inT} têm tempo, e o passeio manda aos banhos ${early.sent} vezes em ${early.calls} pedidos; com ${way.length} a caminho pela mão da prova (${inside} dentro, de ${Te.places(b)} lugares; com que mais um pode contar: ${room0}) manda ${fullT.sent} vezes em ${fullT.calls}; às ${lateT.toFixed(2)} (os banhos fecham às ${h.fecha}; ${roomL} lugares com que contar) ${outT} têm tempo, e manda ${late.sent} vezes em ${late.calls}`);
+    `${mundo}: ${set.name}, ${L.length} pessoas à porta dos banhos: às 0,45 ${inT} têm tempo, e o passeio manda aos banhos ${early.sent} vezes em ${early.calls} pedidos; com ${way.length} a caminho pela mão da prova (${inside} dentro, de ${Te.places(b)} lugares; com que mais um pode contar: ${room0}) manda ${fullT.sent} vezes em ${fullT.calls}; às ${lateT.toFixed(2)} (os banhos fecham às ${h.fecha}; ${roomL} lugares com que contar) ${outT} têm tempo, e manda ${late.sent} vezes em ${late.calls}`);
 }
 
 // ================================================================ h: the verifier catches the lie

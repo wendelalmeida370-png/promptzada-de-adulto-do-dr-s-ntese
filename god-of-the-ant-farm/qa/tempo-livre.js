@@ -8,7 +8,8 @@
 // t3 de duas tavernas abertas, o freguês vai à das suas ruas — a mais perto de onde ele está é a outra; sem o peso da casa
 //    (T.HOME = 0) iria à outra;
 // t4 quem voltou do mar hoje (qualquer que seja o ofício agora) bebe onde está: a taverna mais perto;
-// e nenhum erro.
+// e nenhum erro. A cidade de duas tavernas do t3 e do t4 é procurada nos mundos prontos, o pedido primeiro (MUNDOS: na metrópole
+// da geração 20 nenhuma cidade tem duas; na mega, Hedeby — T-1046).
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const WORLD = process.argv[2] || 'metropole';
@@ -19,8 +20,11 @@ const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | tempo-
 const Vg = G.Vg, U = G.Urban, T = G.Taverna, E = G.Eco, D = G.Depot, V = G.Village, W = G.W;
 const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 let S = M.pronto(WORLD);
-const base = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg));
+let base = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg));
 const novas = () => QA.check().filter(q => q.sev <= 2 && !base.has(q.sys + '|' + q.msg)).map(q => `[S${q.sev}] ${q.sys}: ${q.msg}`);
+// (another ready world, for a case whose premise the first has not: the verifier's base is that world's)
+const abre = w => { S = M.pronto(w); base = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg)); return S; };
+const MUNDOS = [WORLD, 'mega', 'mundial', 'cidade'].filter((m, k, L) => L.indexOf(m) === k);
 const fireOf = set => set && S.buildings.get(set.campfire);
 const free = v => v.age >= 18 && v.age < 60 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.air && !v.inside && v.hp > 60 && !(v.carry && v.carry.n > 1e-6) && !(v.task && (v.task.pri || 0) >= 1) && !(S.avatar && S.avatar.id === v.id) && !(G.Expe && G.Expe.memberOf(v.id));
 const homeOf = v => v.home && S.buildings.get(v.home);
@@ -75,9 +79,13 @@ if (on('t2')) {
 // ---------------------------------------------------------------- t3, t4
 if (on('t3') || on('t4')) {
   // a town with two taverns open in the evening; a resident who lives by one of them, set by the test's hand a little nearer
-  // the other
-  S.time = 0.64; let pick = null; const why = [];
-  for (const set of [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && E.byType(s.id, 'taverna').length >= 2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) {
+  // the other. (The town is looked for in the ready worlds, the one asked for first: the metrópole of the generation 20 has
+  // no town with two taverns — «sem o cenário» —, the mega has Hedeby with two, T-1046)
+  let pick = null; const why = [];
+  for (const mundo of MUNDOS) { if (mundo !== WORLD) abre(mundo); S.time = 0.64;
+  const towns2 = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && E.byType(s.id, 'taverna').length >= 2).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
+  if (!towns2.length) why.push(`${mundo}: nenhuma cidade com duas tavernas`);
+  for (const set of towns2) {
     for (let t = 0; t < 60 && E.byType(set.id, 'taverna').filter(b => T.aberta(b)).length < 2; t++) { M.viver(1); if (S.time > 0.7) S.time = 0.64; }
     const tv = E.byType(set.id, 'taverna').filter(b => T.aberta(b)).sort((a, b) => a.id - b.id); if (tv.length < 2) { why.push(`${set.name}: ${tv.length} taverna(s) aberta(s)`); continue; }
     let best = null;
@@ -91,23 +99,24 @@ if (on('t3') || on('t4')) {
     god(() => { Vg.endTask(v); v.inside = 0; v.x = p[0]; v.y = p[1]; v.path = null; v.sleeping = false; v.energy = Math.max(v.energy, 80); v.hunger = Math.min(v.hunger, 30); const h = E.homeOf(v); if ((h.coin || 0) < 5) D.make('h:' + h.id, 'moedas', 5, { code: 'teste' }); });
     const dA = G.dist(v.x, v.y, A.x, A.y), dB = G.dist(v.x, v.y, B.x, B.y);
     if (!(dA < dB - 0.5) || dA >= 30 || dB >= 30 || !W.reaches(v, ...Vg.door(A)) || !W.reaches(v, ...Vg.door(B))) { why.push(`${set.name}: o ponto entre as duas não serve (a ${dA.toFixed(0)} e a ${dB.toFixed(0)})`); continue; }
-    pick = { set, v, A, B, dA, dB, hA, hB }; break;
+    pick = { set, v, A, B, dA, dB, hA, hB, mundo }; break;
   }
-  if (!pick) { if (on('t3')) ok('t3 de duas tavernas abertas, o freguês vai à das suas ruas', false, `sem o cenário (${why.join('; ') || 'nenhuma cidade com duas tavernas'})`); if (on('t4')) ok('t4 o marinheiro que voltou do mar hoje bebe onde está', false, 'sem o cenário'); }
+  if (pick) break; }
+  if (!pick) { if (on('t3')) ok('t3 de duas tavernas abertas, o freguês vai à das suas ruas', false, `sem o cenário (${why.join('; ') || 'nenhuma cidade com duas tavernas'}; ${MUNDOS.join(', ')})`); if (on('t4')) ok('t4 o marinheiro que voltou do mar hoje bebe onde está', false, `sem o cenário (${MUNDOS.join(', ')})`); }
   else {
-    const { set, v, A, B, dA, dB, hA, hB } = pick; const choose = () => god(() => { Vg.endTask(v); const t = T.visitTask(v, Vg.H); const id = t ? t.id : 0; Vg.endTask(v); return id; });
+    const { set, v, A, B, dA, dB, hA, hB, mundo } = pick; const choose = () => god(() => { Vg.endTask(v); const t = T.visitTask(v, Vg.H); const id = t ? t.id : 0; Vg.endTask(v); return id; });
     const nmT = b => `a taverna #${b.id}`;
     if (on('t3')) {
       const got = choose(); const h0 = T.HOME; T.HOME = 0; const plain = choose(); T.HOME = h0; const nv = novas();
       ok('t3 de duas tavernas abertas, o freguês vai à das suas ruas', got === B.id && plain === A.id && !nv.length,
-        `${v.name}, de ${set.name}: está a ${dA.toFixed(0)} casas d${nmT(A)} e a ${dB.toFixed(0)} d${nmT(B)}; mora a ${hA.toFixed(0)} da primeira e a ${hB.toFixed(0)} da segunda — foi ${got === B.id ? 'à da sua rua' : got === A.id ? 'à MAIS PERTO' : 'a NENHUMA'}; sem o peso da casa iria ${plain === A.id ? 'à mais perto' : plain === B.id ? 'à da sua rua' : 'a nenhuma'}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
+        `${mundo}: ${v.name}, de ${set.name}: está a ${dA.toFixed(0)} casas d${nmT(A)} e a ${dB.toFixed(0)} d${nmT(B)}; mora a ${hA.toFixed(0)} da primeira e a ${hB.toFixed(0)} da segunda — foi ${got === B.id ? 'à da sua rua' : got === A.id ? 'à MAIS PERTO' : 'a NENHUMA'}; sem o peso da casa iria ${plain === A.id ? 'à mais perto' : plain === B.id ? 'à da sua rua' : 'a nenhuma'}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
     }
     if (on('t4')) {
       // (the test's hand makes this resident one of a crew home from the sea today: the field the homecoming writes —
       // marinheiros m2 —, whatever the trade: the leave is of who came home, not of the trade)
       const st0 = Object.assign({}, v.st); v.st.volta = S.day; const leave = G.Harbor.shoreLeave(v);
       const got = choose(); v.st.volta = S.day - 1; const next = choose(); v.st = st0;
-      ok('t4 quem voltou do mar hoje bebe onde está', leave && got === A.id && next === B.id, `${v.name} (${v.role || 'sem ofício'}) de volta do mar hoje: ${got === A.id ? 'a taverna mais perto' : 'a da sua rua'}; no dia seguinte: ${next === B.id ? 'a da sua rua, como todos' : 'a mais perto'}`);
+      ok('t4 quem voltou do mar hoje bebe onde está', leave && got === A.id && next === B.id, `${mundo}: ${v.name} (${v.role || 'sem ofício'}) de volta do mar hoje: ${got === A.id ? 'a taverna mais perto' : 'a da sua rua'}; no dia seguinte: ${next === B.id ? 'a da sua rua, como todos' : 'a mais perto'}`);
     }
   }
 }

@@ -139,9 +139,21 @@ if (on('b5')) {
 // ---------------------------------------------------------------- b6
 if (on('b6')) {
   // a prisoner in his cell, every step of the world: the hand of the proof sentences a free grown-up of a town with a jail
-  // and asks an errand of him — the game's own door (Cr.keeps) gives him the cell
+  // and asks an errand of him — the game's own door (Cr.keeps) gives him the cell. (In the god's peace, kept up while the case
+  // lasts, the alarms down, and the world lived — a minute at most — until nobody of the jail's town is at war: the game's own
+  // power, as the vida-bairro v1 does, T-993. A tumult takes a prisoner from his cell, and that is an escape, by the rule; with
+  // the history of the ten years a hair changed — the stoker's post, L-772 —, the war was at the gates of Tenochtitlan in the
+  // case's seconds: Tízoc and Itzel fled the enemy from the cell — «a tarefa da cela ACABOU E FOI DADA DE NOVO», «NÃO soltos» —,
+  // and, five seconds after the peace, Itzel fled him on the way to it, T-1048)
   const jail = [...S.buildings.values()].filter(b => b.type === 'cadeia' && b.built && S.settlements.get(b.set)).sort((a, b) => a.id - b.id)[0] || null;
-  const free = v => v.age >= 18 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !Cr.law(v) && !(S.avatar && S.avatar.id === v.id) && !(v.task && v.task.pri >= 3);
+  const keepPeace = () => { if (!(S.divinePeace > G.DAY_LEN * 0.5)) god(() => G.Politics.divinePeace()); };
+  const WAR = { fight: 1, combat: 1, band: 1, army: 1, siege: 1, defend: 1, raid: 1, muster: 1 };
+  const atWar = () => !!jail && ((G.War.threat && G.War.threat(jail.set)) || [...S.villagers.values()].some(v => v.set === jail.set && v.task && ((v.task.type === 'flee' && v.task.why === 'war') || WAR[v.task.type])));
+  keepPeace(); god(() => { for (const s of S.settlements.values()) if (s.alarmT > 0) s.alarmT = 0; });
+  for (let k = 0; k < 60 && atWar(); k++) { keepPeace(); M.viver(1); }
+  // (and whole, and not old: Itzel, an elder at 31 of life after the war at the gates, died in the cell before the sentence
+  // was served — «NÃO soltos»)
+  const free = v => v.age >= 18 && v.age < 55 && v.hp > 60 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !Cr.law(v) && !(S.avatar && S.avatar.id === v.id) && !(v.task && v.task.pri >= 3);
   const folk = jail ? [...S.villagers.values()].filter(v => v.set === jail.set && free(v)).sort((a, b) => a.id - b.id) : [];
   const held = v => !!(v.task && (v.task.type === 'cela' || v.task.type === 'levado'));
   const p = folk[0] || null, q = folk[1] || null, g = folk[2] || null;
@@ -152,13 +164,13 @@ if (on('b6')) {
     // (160 s of the world, a tenth at a time: the cell's task used to end at 70 s and at 140 s, and be given again at the
     // prisoner's next choice — a part of a step later, so the tenth of a second seldom saw him with none: the task of the
     // cell is the same one from the first step to the last)
-    for (let k = 0; k < 1600 && p.jail; k++) { M.viver(0.1); steps++; if (p.jail && !held(p)) gaps++; if (p.jail && p.task !== cell) { again++; cell = p.task; } }
+    for (let k = 0; k < 1600 && p.jail; k++) { if (k % 10 === 0) keepPeace(); M.viver(0.1); steps++; if (p.jail && !held(p)) gaps++; if (p.jail && p.task !== cell) { again++; cell = p.task; } }
     // the walk to the jail whose guard is called away: the one led is in the cell at the next step, and stays
     god(() => { q.jail = jail.id; q.jailUntil = S.day + 3; G.Vg.setTask(q, { type: 'levado', by: g.id, pri: 5.4, kind: 'levado' }); G.Vg.setTask(g, { type: 'levar', id: q.id, jail: jail.id, pri: 3.2, kind: 'levar', st: 0 }); });
     M.viver(1); walked = !!(q.task && q.task.type === 'levado'); god(() => G.Vg.endTask(g));
-    for (let k = 0; k < 30 && q.jail; k++) { M.viver(0.1); if (q.jail && !held(q)) walkGap++; }
+    keepPeace(); for (let k = 0; k < 30 && q.jail; k++) { M.viver(0.1); if (q.jail && !held(q)) walkGap++; }
     // the sentence served: out at the next step of the cell
-    god(() => { p.jailUntil = S.day; q.jailUntil = S.day; }); M.viver(1); out = !p.jail && !q.jail;
+    keepPeace(); god(() => { p.jailUntil = S.day; q.jailUntil = S.day; }); M.viver(1); out = !p.jail && !q.jail;
   }
   const nv = novas(base);
   ok('b6 o preso está na cela a cada passo do mundo: a tarefa da cela não acaba aos 70 s, o guarda chamado no caminho deixa o preso na cela, e a pena cumprida solta (L-723)',
