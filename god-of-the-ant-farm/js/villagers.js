@@ -830,6 +830,10 @@
     // (a meal at the store needs a store: a people with food in its stock and no store anywhere — a town just founded, its
     // fire not lit — looks for something to eat around it, L-165)
     if (((G.Army && G.Army.larder(v)) || G.Fac.stockV(v)).food >= 1 && !(v._noStore > S.clock) && G.Village.nearestDropoff(v.x, v.y, v.set)) return setTask(v, { type: 'eat', pri: v.hunger > 85 ? 2.5 : 1.2 });
+    // (no store to eat at, and something in the house's pantry: home to the supper there, as the meal at the store weighs, before a
+    // bush — a town whose fire and stores the lava took, Hedeby in the chaos of seed 13 of the generation 21: Ragnhild and Arne
+    // starved in the street with 6 at home; act-lar.js, L-774)
+    if (G.Lar && v.home && v.inside !== v.home) { const t = G.Lar.task(v, H, 'fome', true, v.hunger > 85 ? 2.5 : 1.2); if (t) return t; }
     const b = nearestBush(v, 20); if (b) return setTask(v, { type: 'forage', id: b.id, pri: 1.4 });
     emote(v, 'food', 2);
     return null;

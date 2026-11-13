@@ -20,6 +20,9 @@
 //       por mar — os três que escolhem o sítio de uma cidade perguntam
 //   f7  procurar mais longe (D-231): os degraus de 8 e 10 casas olham a 6, a 12 e a 20 casas além do raio; os de 6, a 6 e 12;
 //       nos mundos prontos, degraus de 8 e 10 que só acham lote no anel de 20
+//   f10 a rua que atravessa o campo e não volta pelo anel (L-776): a ponta dela no anel entre duas casas onde não se anda — como o
+//       campo de Mênfis, na metrópole da geração 21, colado à muralha diante de um portão —: a fundação não cabe ali, e a cidade o
+//       larga no olhar do dia («terra»), como a regra da fundação julga as ruas
 //   node qa/terra-guardada.js        (ONLY=f1,f3 só esses; VERB=1 conta mais)
 'use strict';
 process.chdir(__dirname);
@@ -244,6 +247,30 @@ run('f9', () => {
   M.saltar(1); pega(); const set2 = S.settlements.get(set.id); const r2 = set2 ? civ(set2) : null;
   ok('f9b o mar entra no campo: a cidade o larga', solto && !hoje && (!r2 || !sobre(r2, mx, my, 1)), `uma casa de mar em ${mx},${my}, no meio do campo de ${r.x},${r.y}: no olhar do dia o campo ${solto ? 'foi largado («terra»)' : 'NÃO foi largado'}; no mesmo dia a cidade ${hoje ? 'GUARDOU outro' : 'não guarda outro'}; um ano depois ${r2 ? `guarda um em ${r2.x},${r2.y}` : 'não achou outra terra'}`);
   const q = checa(); ok('f9c verificador', q.ok, q.txt);
+});
+
+// ------------------------------ f10: a rua que atravessa o campo e não volta pelo anel (L-776) ------------------------------
+run('f10', () => {
+  const c = caso(); if (!ok('f10a um campo guardado', !!c, c ? `${c.mundo}, ${c.set.name}: em ${c.r.x},${c.r.y}` : 'nenhuma capital guarda')) return;
+  const { set, r } = c; const t = V.civWork(set)[0]; const n = r.n;
+  // (a street across the field from one side of its ring to the other, its end on one side between two tiles one does not walk — the
+  // water, by the proof's hand, as the ground is changed: S.typeVer, W.invalidateLand —, as Mênfis's field met its wall at both sides
+  // of a gate. On the side and column where the tiles are free land, the town's own fields left as they are)
+  const free = (x, y) => { const i = y * N + x; return W.inb(x, y) && S.type[i] >= T.SAND && !S.occ[i] && !S.wall[i] && !S.objAt[i] && !S.fire[i]; };
+  let at = null;
+  for (const side of [-1, 1]) for (let gx = r.x + 1; gx < r.x + n - 1 && !at; gx++) {
+    const ey = side < 0 ? r.y - 1 : r.y + n, oy = side < 0 ? r.y + n : r.y - 1; let ok1 = free(gx - 1, ey) && free(gx, ey) && free(gx + 1, ey) && free(gx, oy);
+    for (let y = r.y; y < r.y + n && ok1; y++) if (!free(gx, y)) ok1 = false;
+    if (ok1) at = { gx, ey, oy };
+  }
+  if (!ok('f10b a rua pela mão da prova', !!at, at ? `a coluna ${at.gx}, da ponta ${at.gx},${at.ey} (água dos dois lados) à ${at.gx},${at.oy}` : 'nenhuma coluna livre de ponta a ponta no campo')) return;
+  for (const dx of [-1, 1]) S.type[at.ey * N + at.gx + dx] = T.SEA; S.typeVer = (S.typeVer || 0) + 1; if (W.invalidateLand) W.invalidateLand();
+  for (const y of [at.ey, at.oy]) S.road[y * N + at.gx] = 1; for (let y = r.y; y < r.y + n; y++) S.road[y * N + at.gx] = 1;
+  const p = quieto(set, () => V.resSite(set, t, 6));
+  olha(set); const solto = !civ(set) && !!set.urb.civGone && set.urb.civGone.why === 'terra';
+  ok('f10c a fundação não cabe ali, e a cidade larga o campo no olhar do dia', !p && solto,
+    `o lote de ${t}/6 no campo de ${r.x},${r.y}: ${p ? 'a busca o DÁ (a rua se religa?)' : 'a busca não o dá — a rua cortada não volta pelo anel'}; no olhar do dia o campo ${solto ? 'foi largado («terra»)' : 'CONTINUA guardado'}`);
+  const q = checa(); ok('f10d verificador', q.ok, q.txt);
 });
 
 console.log(fails.length ? `TERRA-GUARDADA: FALHOU (${fails.join(', ')})` : `TERRA-GUARDADA: ok (${ms()} ms)`);

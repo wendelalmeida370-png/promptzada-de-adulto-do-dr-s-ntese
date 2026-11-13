@@ -14,7 +14,8 @@
 //    mãos a pousam no chão (L-169); quem a levanta morre no meio e outro termina; um dia inteiro pelo salto sem ninguém
 //    morrer de fome
 // h5 a regra S1 do verificador: uma cidade cujo povo morre de fome com comida no estoque e nenhum armazém (a mão da prova tira,
-//    para a olhada, todo armazém do povo — também os das outras cidades dele, que a regra conta —, T-294)
+//    para a olhada, todo armazém do povo — também os das outras cidades dele, que a regra conta —, T-294); sem fogueira nenhuma,
+//    a cidade tem a vez do planejador para acender outra, e só a busca falhada hoje é a cidade que não vai comer (T-1076)
 // h6 a regra S2: alguém morrendo de fome com comida ao alcance, livre, numa cidade calma, preso a outra coisa ou sem afazer
 //    depois de escolher — e não quem vai comer, foge, luta, está entre dois afazeres, condenado ou cativo, nem quem está
 //    numa cidade atacada ou em fogo
@@ -43,7 +44,8 @@
 // h19 a cidade que um desastre deixa sem fogueira e sem armazém acende outra: no mesmo dia, mesmo com a busca do dia já falhada
 //    com um armazém de pé, e mais longe quando o chão no raio dela não tem lugar (L-650; achado pela regra S1 no caos da semente 13
 //    da geração 17: Hedeby, com o vulcão no coração dela, três dias sem armazém); e, com a cicatriz da lava em todo o chão até
-//    onde a cidade olha, na cinza, perto, onde as ruas chegam (h19c, L-770: o mesmo caos na geração 20, Hedeby cortada em duas)
+//    onde a cidade olha, na cinza, perto, onde as ruas chegam (h19c, L-770: o mesmo caos na geração 20, Hedeby cortada em duas);
+//    e, com as ruínas de um desastre ao lado de todo chão livre, ao lado delas (h19d, L-775: o mesmo caos na geração 21)
 // h20 a criança ferida, de cama em casa com a despensa vazia, levanta com a fome no máximo e come no armazém, como um adulto
 //    (L-659; achado pela regra S2 no caos da semente 7 da geração 18: Ahuízotl, 7 anos, de Tenochtitlan, morreu de fome na cama)
 // h21 o cadafalso não tira ninguém da refeição da fome: o carrasco e o arauto saem de entre os que comeram, nunca de quem tem a
@@ -52,6 +54,9 @@
 // h22 quem apaga o fogo com a fome acima de 85 larga a fila entre dois baldes, come e volta enquanto ele arde; e quem tem essa
 //    fome não é chamado ao fogo (L-725: o fogo pesa 4 e a refeição da fome 2,5 — quem combatia um fogo de uma noite ou de dias
 //    não comia)
+// h23 sem armazém nenhum onde comer, quem tem comida na despensa de casa vai para casa e come lá, antes de um arbusto (L-774;
+//    achado pela regra S2 no caos da semente 13 da geração 21: Arne e Ragnhild, de Hedeby, morreram de fome na rua com 7 e 16 na
+//    despensa de casa); h23b de noite, depois da ceia, a cama — o peso da refeição não fica na noite em casa
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -211,7 +216,7 @@ if (fset) {
 
 // ---------------- h5 the rule S1: a town dying of hunger with food in the stock and no store ----------------
 {
-  let got = [], none = [], lighting = [];
+  let got = [], none = [], lighting = [], turn = [], failed = [];
   if (fset) {
     const fire = fireOf(); const was = fire ? fire.id : 0;
     const ppl = people().filter(v => v.age >= 6).slice(0, 3); const keep = ppl.map(v => [v.hunger, v.hp]);
@@ -227,11 +232,21 @@ if (fset) {
     got = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
     for (const b of stores) b.born = S.day;
     lighting = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
+    // (and no fire at all — the lava took it, as Hedeby's in the chaos of seed 13 of the generation 21, 3 s before the look —: the
+    // town has its planner's turn, every 3,5 s, to light another — nothing —; its search for a fire failed today: a town that will
+    // not eat, S1 — T-1076. The fire out of the town for the look, put back at once)
+    const live1 = S.settlements.get(fset.id); // (the town of now: the h4 saved and loaded the world)
+    const fires = [...S.buildings.values()].filter(b => b.set === fset.id && b.type === 'campfire'); const ns = live1._noSite || (live1._noSite = {}); const asked = ns['campfire!'];
+    for (const b of fires) b.set = 0; delete ns['campfire!'];
+    turn = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
+    ns['campfire!'] = S.day;
+    failed = QA.check().filter(q => q.sys === 'fome' && q.sev === 1 && q.msg.startsWith(fset.name + ':'));
+    for (const b of fires) b.set = fset.id; if (asked === undefined) delete ns['campfire!']; else ns['campfire!'] = asked;
     stores.forEach((b, i) => { b.built = true; b.born = born[i]; });
     ppl.forEach((v, i) => { v.hunger = keep[i][0]; v.hp = keep[i][1]; });
     void was;
   }
-  ok('h5 o verificador (S1): uma cidade morrendo de fome com comida no estoque e nenhum armazém', !!fset && got.length === 1 && !none.length && !lighting.length, got.length ? `«${got[0].msg}» (a fogueira em obra há três dias); com a fogueira em obra desde hoje: ${lighting.length ? 'também (errado)' : 'nada'}; com a fogueira de pé: ${none.length ? 'também (errado)' : 'nada'}` : 'o verificador não viu');
+  ok('h5 o verificador (S1): uma cidade morrendo de fome com comida no estoque e nenhum armazém', !!fset && got.length === 1 && !none.length && !lighting.length && !turn.length && failed.length === 1, got.length ? `«${got[0].msg}» (a fogueira em obra há três dias); com a fogueira em obra desde hoje: ${lighting.length ? 'também (errado)' : 'nada'}; com a fogueira de pé: ${none.length ? 'também (errado)' : 'nada'}; sem fogueira nenhuma, na vez do planejador: ${turn.length ? 'também (errado, T-1076)' : 'nada'}; com a busca da fogueira falhada hoje: ${failed.length ? 'também' : 'NADA (errado)'}` : 'o verificador não viu');
 }
 
 // ---------------- h6 the rule S2: someone dying of hunger with food in reach ----------------
@@ -714,6 +729,31 @@ const calmOne = (skip, also) => {
   const dAsh = ash ? r2(G.dist(...V.center(ash), set.cx, set.cy)) : 0;
   ok('h19c a cicatriz da lava em todo o chão até onde a cidade olha e além: a fogueira nova na cinza, perto, onde as ruas chegam (L-770)', bare3 && !!ash && tAsh >= 0 && tAsh <= 10 && onAsh && dAsh <= R + 1 && W.townReaches(set, ...V.frontTile(ash)) && ash.built,
     `${set.name}: a lava de novo${bare3 ? '' : ' (NÃO levou tudo)'}, e a cicatriz dela em todo o chão até ${R3} casas do centro (o raio da cidade: ${R}) → ${ash ? `fogueira #${ash.id} fundada ${tAsh} s depois, a ${dAsh} casas do centro, ${onAsh ? 'na cinza' : 'FORA da cinza'}${W.townReaches(set, ...V.frontTile(ash)) ? ', onde as ruas chegam' : ', ONDE AS RUAS NÃO CHEGAM'}, ${ash.built ? 'acesa' : 'AINDA em obra'}` : 'NENHUMA fogueira nova em 300 s'}`);
+  // (d) the god's lava once more, and the rubble of a disaster on every side: no free tile as far as the town looks for a fire and
+  // beyond (R + 14) that is not a ruin or beside one — ruins stand three days —, as the volcano of the chaos of seed 13 of the
+  // generation 21 left Hedeby: every free tile its streets reached lay beside the ruins of its houses and stores, and the ring of a
+  // fire took no building at all, the ruins neither; its people starved with 48 of food in the stock. A fire's ring keeps a way round
+  // it, and rubble is walked over: the town that has nowhere else to eat lights its fire beside the ruins, the nearest ground first,
+  // where its streets reach (L-775)
+  if (ash) old.add(ash.id);
+  const bare4 = lava(); delete set._noSite.campfire; delete set._noSite['campfire!'];
+  const T = G.T, R4 = R + 14, rubble = [];
+  // (a tile the town may light a fire on, by the search's own rule — the lava's scar allowed, as in its last asking)
+  const free = (x, y) => { const i = W.idx(x, y); return S.type[i] >= T.SAND && !S.occ[i] && !S.objAt[i] && !(S.fire[i] > 0) && !S.wall[i] && !(S.road[i] >= 2) && !(S.road[i] && G.City && G.City.onStreet(set, i)); };
+  const ruinAt = (x, y) => { if (!W.inb(x, y)) return false; const o = S.buildings.get(S.occ[W.idx(x, y)]); return !!o && o.type === 'ruin'; };
+  const byRubble = (x, y) => { for (let ty = y - 1; ty <= y + 1; ty++) for (let tx = x - 1; tx <= x + 1; tx++) if ((tx !== x || ty !== y) && ruinAt(tx, ty)) return true; return false; };
+  const tiles = [];
+  for (let dy = -R4; dy <= R4; dy++) for (let dx = -R4; dx <= R4; dx++) { const x = Math.floor(set.cx) + dx, y = Math.floor(set.cy) + dy; if (W.inb(x, y) && G.dist(x + 0.5, y + 0.5, set.cx, set.cy) <= R4) tiles.push([x, y]); }
+  tiles.sort((a, b) => G.dist(a[0] + 0.5, a[1] + 0.5, set.cx, set.cy) - G.dist(b[0] + 0.5, b[1] + 0.5, set.cx, set.cy) || a[1] - b[1] || a[0] - b[0]);
+  // (a ruin — a well the god's lava takes as soon as it stands — on every free tile with none beside it yet, the nearest first)
+  for (const [x, y] of tiles) { if (!free(x, y) || byRubble(x, y)) continue; const w = V.addBuilding('well', x, y, set.id, true); V.destroyBuilding(w, 'lava'); if (S.buildings.get(w.id) === w && w.type === 'ruin') rubble.push(w); }
+  let open = 0; for (const [x, y] of tiles) if (free(x, y) && !byRubble(x, y)) open++;
+  let near = null, tNear = -1, byRuins = false; const t3 = S.clock;
+  live(300, () => { peace(); const n = newFire(old); if (n && !near) { near = n; tNear = r2(S.clock - t3); byRuins = byRubble(n.x, n.y); } return !!(near && near.built); });
+  for (const w of rubble) if (S.buildings.get(w.id) === w) V.removeBuilding(w); // (the rubble gone again, for the cases after)
+  const dNear = near ? r2(G.dist(...V.center(near), set.cx, set.cy)) : 0;
+  ok('h19d as ruínas de um desastre ao lado de todo chão livre até onde a cidade olha e além: a fogueira nova ao lado delas, perto, onde as ruas chegam (L-775)', bare4 && rubble.length > 0 && !open && !!near && tNear >= 0 && tNear <= 10 && byRuins && dNear <= R + 1 && W.townReaches(set, ...V.frontTile(near)) && near.built,
+    `${set.name}: a lava de novo${bare4 ? '' : ' (NÃO levou tudo)'}, e ${rubble.length} ruínas pela mão da prova até ${R4} casas do centro${open ? ` (${open} casas livres SEM ruína ao lado)` : ', nenhuma casa livre sem ruína ao lado'} → ${near ? `fogueira #${near.id} fundada ${tNear} s depois, a ${dNear} casas do centro, ${byRuins ? 'ao lado das ruínas' : 'LONGE das ruínas'}${W.townReaches(set, ...V.frontTile(near)) ? ', onde as ruas chegam' : ', ONDE AS RUAS NÃO CHEGAM'}, ${near.built ? 'acesa' : 'AINDA em obra'}` : 'NENHUMA fogueira nova em 300 s'}`);
 }
 // ---------------- h20 the hurt child in bed at home, the pantry empty, at the top of hunger, gets up to eat at the store (L-659) ----------------
 // (found by the rule S2 in the chaos of seed 7 of the generation 18: Ahuízotl, 7, of Tenochtitlan, hurt on his way to the store —
@@ -771,10 +811,18 @@ const calmOne = (skip, also) => {
     Vg.endTask(v); const set0x = G.Justice.sentence(f, [v], 'pelo teste', { set: set.id, soon: true, quiet: true });
     const e = (S.execs || []).find(q => q.ids.includes(v.id)); let exe = null, her = null, hx = -1, hh = -1;
     // (the hunger of need, held by the hand until the scaffold calls its two: a meal eaten meanwhile is undone)
-    if (e) for (let k = 0; k < 80 && e.phase === 'wait'; k++) { for (const q of hungry) if (S.villagers.has(q.id) && q.hunger < 90) q.hunger = 90; M.viver(0.1); }
+    // (and the errand each one had at the start of the step of the call: the meal of need is an 'eat'; one on an errand of the field —
+    // 'trade', a market seller's — eats his provisions within the step, as the field does, and the scaffold choosing after it sees
+    // him fed: Narmer, of Mênfis in the cidade of the generation 21, held at 90 by the hand and at 40 after every step, T-1077)
+    const prev = new Map();
+    if (e) for (let k = 0; k < 80 && e.phase === 'wait'; k++) { for (const q of hungry) if (S.villagers.has(q.id) && q.hunger < 90) q.hunger = 90; prev.clear(); for (const q of grown) prev.set(q.id, q.task ? q.task.type : '-'); M.viver(0.1); }
     if (e && e.phase !== 'wait') { exe = S.villagers.get(e.exe) || null; her = S.villagers.get(e.her) || null; hx = exe ? Math.round(exe.hunger) : -1; hh = her ? Math.round(her.hunger) : -1; }
-    good = !!e && fed.length === 2 && !!exe && !!her && fed.includes(exe) && fed.includes(her);
-    info = `${set.name}: ${v.name} condenado pela mão da prova, a hora «logo»; ${hungry.length} crescidos com a fome a 90 pela mão da prova, dois de fora (${fed.map(q => q.name).join(' e ')}, a fome a 10): ${!e ? (set0x ? 'A EXECUÇÃO SUMIU' : 'a sentença NÃO foi dada') : e.phase === 'wait' ? 'o cadafalso NÃO chamou em 8 s' : `o carrasco, ${exe ? `${exe.name} (fome ${hx})${fed.includes(exe) ? '' : ' — TIRADO DA REFEIÇÃO'}` : 'NENHUM'}; o arauto, ${her ? `${her.name} (fome ${hh})${fed.includes(her) ? '' : ' — TIRADO DA REFEIÇÃO'}` : 'NENHUM'}`}`;
+    // (the two called are the fed — or ones the step of the call fed by their own way, never starving nor on their way to the meal of
+    // need when the scaffold chose: the rule of L-913)
+    const fair = q => !!q && (fed.includes(q) || (q.hunger <= 85 && prev.get(q.id) !== 'eat'));
+    const says = q => fed.includes(q) ? '' : fair(q) ? ` — de fora dos dois, alimentado no passo do chamado (${prev.get(q.id) || '-'}), T-1077` : ' — TIRADO DA REFEIÇÃO';
+    good = !!e && fed.length === 2 && !!exe && !!her && fair(exe) && fair(her);
+    info = `${set.name}: ${v.name} condenado pela mão da prova, a hora «logo»; ${hungry.length} crescidos com a fome a 90 pela mão da prova, dois de fora (${fed.map(q => q.name).join(' e ')}, a fome a 10): ${!e ? (set0x ? 'A EXECUÇÃO SUMIU' : 'a sentença NÃO foi dada') : e.phase === 'wait' ? 'o cadafalso NÃO chamou em 8 s' : `o carrasco, ${exe ? `${exe.name} (fome ${hx})${says(exe)}` : 'NENHUM'}; o arauto, ${her ? `${her.name} (fome ${hh})${says(her)}` : 'NENHUM'}`}`;
     if (e) G.Justice.free(e, 'perdao'); else Vg.endTask(v);
     for (const q of hungry) if (S.villagers.has(q.id) && q.hunger >= 85) q.hunger = h0.get(q.id); // (the town's hunger given back)
     S.time = Math.max(S.time, t0);
@@ -832,6 +880,66 @@ const calmOne = (skip, also) => {
     M.viver(1.5); S.time = Math.max(S.time, t0);
   }
   ok('h22 quem apaga o fogo com fome larga a fila entre dois baldes, come e volta; o faminto não é chamado (L-725)', good, info);
+}
+// ---------------- h23 with no store to eat at, home to the supper in the pantry (L-774) ----------------
+// (found by the rule S2 in the chaos of seed 13 of the generation 21: a volcano took Hedeby's fire and stores, and while the town had
+// none to eat at Arne and Ragnhild starved in the street with 7 and 16 in their houses' pantries — the meal at home was asked only of
+// one already in, and with no store and no bush round the choice gave nothing: the starving went to work and to bed. The god's lava
+// takes every fire and store of a people, and keeps taking any it lights; a grown one of its biggest town, out of the house, at the
+// top of hunger, with 6 in the house's pantry: home, and the meal there — by the ledger, from the pantry, L-774)
+{
+  S.time = 0.35; G.Politics.divinePeace(); const peace = () => { S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); };
+  const set = [...S.settlements.values()].filter(s => builders(s) >= 2 && V.dropoffs(s.id).length).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0] || set0;
+  // (every store of the people: the meal at a store goes to the nearest of its people's, in any town of it — nearestDropoff)
+  const towns = G.Fac.settlementsOf(set.fac);
+  const stores = () => [...S.buildings.values()].filter(b => towns.some(q => q.id === b.set) && (b.type === 'campfire' || (G.BDEF[b.type] && G.BDEF[b.type].dropoff)));
+  const lava = () => { for (const b of stores()) V.damageBuilding(b, 9999, 'lava'); for (const q of towns) { const ns = q._noSite || (q._noSite = {}); ns.campfire = ns['campfire!'] = S.day; } return !stores().length; };
+  const bare = lava();
+  const homeOf = o => { const h = S.buildings.get(o.home); if (!h || !h.built || !V.livable(h)) return null; const ft = V.frontTile(h); return ft && W.reaches(o, ft[0], ft[1]) ? h : null; };
+  const dHome = o => { const ft = V.frontTile(S.buildings.get(o.home)); return G.dist(o.x, o.y, ft[0] + 0.5, ft[1] + 0.5); };
+  // (the nearest to the door of the house, more than three tiles from it: a walk home)
+  const v = [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 16 && o.age < 60 && o.home && !o.inside && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.k === 'food') && !(o.task && o.task.pri >= 2.5) && homeOf(o) && dHome(o) > 3)
+    .sort((a, b) => dHome(a) - dHome(b) || a.id - b.id)[0] || null;
+  const h = v ? homeOf(v) : null; let p0 = 0;
+  if (h) { const have = D.get('h:' + h.id, 'food'); if (have < 6) D.make('h:' + h.id, 'food', 6 - have, { code: 'h23-despensa', part: true }); p0 = D.get('h:' + h.id, 'food'); }
+  let lar = false, forage = false, ate = false, tAte = -1, what = '-', d0 = 0; const t0 = S.clock, L0 = S.ledgerN || 0;
+  const meals = () => D.ledger().filter(e => e[0] > L0 && e[3] === 'h:' + h.id && e[5] === 'food' && (e[8] === 'ceia' || e[8] === 'refeicao') && e[9] === v.id).length;
+  if (v && h && p0 >= 1) {
+    d0 = r2(dHome(v)); v.hunger = 95; Vg.endTask(v);
+    for (let k = 0; k < 900 && !ate; k++) {
+      peace(); lava(); M.viver(0.1); if (k % 50 === 49) watch();
+      if (!S.villagers.has(v.id)) break;
+      if (v.task && v.task.type === 'lar') { lar = true; what = v.task.what || what; } if (v.task && v.task.type === 'forage') forage = true;
+      if (meals() && v.hunger < 60) { ate = true; tAte = r2(S.clock - t0); }
+    }
+    watch();
+  }
+  const left = h ? r2(D.get('h:' + h.id, 'food')) : 0;
+  ok('h23 sem armazém onde comer, quem tem comida na despensa de casa vai para casa e come lá (L-774)', bare && !!v && p0 >= 1 && lar && ate && !forage && left < p0,
+    !bare ? `${set.name}: a lava NÃO levou todos os depósitos do povo (${stores().map(b => b.type + '#' + b.id).join(', ')})` : !v ? `${set.name}: nenhum adulto fora de casa, livre, com casa ao alcance` : !(p0 >= 1) ? `${v.name}: a despensa de casa não recebeu comida` :
+    `${set.name}: a lava levou todo depósito do ${G.Fac.get(set.fac).name} e leva os que ele acende; ${v.name} #${v.id}, a ${d0} casas da porta de casa, com a fome a 95 e ${r2(p0)} na despensa → ${lar ? `foi para casa (${what})` : 'NÃO FOI para casa'}${forage ? ', FOI CATAR num arbusto' : ''}; ${ate ? `comeu lá aos ${tAte} s (a despensa: ${r2(p0)} → ${left})` : `NÃO COMEU em 90 s (a fome ${Math.round(v.hunger)}, a despensa ${left})`}`);
+  // (b) at night: home, the meal, and then to bed — the meal's weight is the way's and the table's, never the evening's after it:
+  // with it held on the rest by the fire, the bed (1,5) would not take one from it (L-774)
+  const u = [...S.villagers.values()].filter(o => o !== v && o.set === set.id && o.age >= 16 && o.age < 60 && o.home && !o.inside && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.k === 'food') && !(o.task && o.task.pri >= 2.5) && homeOf(o) && dHome(o) > 3)
+    .sort((a, b) => dHome(a) - dHome(b) || a.id - b.id)[0] || null;
+  const hu = u ? homeOf(u) : null; let uLar = false, uAte = false, uBed = false, tBed = -1, tMeal = -1, after = -1, du = 0;
+  if (u && hu) {
+    const have = D.get('h:' + hu.id, 'food'); if (have < 3) D.make('h:' + hu.id, 'food', 3 - have, { code: 'h23-despensa', part: true });
+    du = r2(dHome(u)); S.time = 0.9; const L1 = S.ledgerN || 0, t1 = S.clock;
+    const ate1 = () => D.ledger().some(e => e[0] > L1 && e[3] === 'h:' + hu.id && e[5] === 'food' && (e[8] === 'ceia' || e[8] === 'refeicao') && e[9] === u.id);
+    u.hunger = 95; Vg.endTask(u);
+    for (let k = 0; k < 900 && !uBed; k++) {
+      peace(); lava(); M.viver(0.1); if (k % 50 === 49) watch();
+      if (!S.villagers.has(u.id)) break;
+      const t = u.task;
+      if (t && t.type === 'lar') { uLar = true; if (uAte && t.what !== 'ceia' && t.what !== 'cozinhar') after = Math.max(after, t.pri); }
+      if (!uAte && ate1() && u.hunger < 60) { uAte = true; tMeal = r2(S.clock - t1); }
+      if (uAte && (u.sleeping || (t && t.type === 'sleep'))) { uBed = true; tBed = r2(S.clock - t1); }
+    }
+    watch();
+  }
+  ok('h23b de noite: para casa, a ceia, e depois a cama — o peso da refeição é o do caminho e da mesa, não o da noite em casa (L-774)', !!u && !!hu && uLar && uAte && uBed && after < 1.5,
+    !u || !hu ? `${set.name}: nenhum outro adulto fora de casa, livre, com casa ao alcance` : `${u.name} #${u.id}, a ${du} casas da porta de casa, às 0,9 do dia, com a fome a 95 → ${uLar ? 'foi para casa' : 'NÃO FOI para casa'}; ${uAte ? `comeu lá aos ${tMeal} s` : 'NÃO COMEU em 90 s'}; ${uBed ? `deitou-se aos ${tBed} s` : 'NÃO SE DEITOU em 90 s'}${after >= 0 ? ` (a noite em casa depois da ceia pesou ${after}${after >= 1.5 ? ', ACIMA da cama' : ''})` : ''}`);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }

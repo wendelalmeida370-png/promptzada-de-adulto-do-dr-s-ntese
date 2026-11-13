@@ -744,7 +744,12 @@
         // in the chaos of seed 13, lost its fire to a volcano, its people to a plague and its berries to a winter in one day, and
         // lit the fire again before the next; a day with no fire rising is still a town that will not eat, T-225)
         const rising = () => { for (const b of s.buildings.values()) if (b.set === sid && b.type === 'campfire' && !b.built && s.day - (b.born || 0) <= 1) return true; return false; };
-        if (f && f.stock.food >= 1 && !G.Village.nearestDropoff(set.cx, set.cy, sid) && !rising()) add('fome', 1, `${set.name}: ${n} morrendo de fome com ${Math.floor(f.stock.food)} de comida no estoque de ${f.name} e nenhum armazém onde comer`);
+        // (and a town with no fire at all whose search for one has not failed today has its planner's turn — every 3,5 s — to
+        // light another: the lava of the chaos of seed 13 of the generation 21 took Hedeby's fire, its last store, 3 s before the
+        // look, and the planner founded a new one 0,3 s after it. The town that will not eat is the one whose search for a fire
+        // failed today — V.findSite's mark, 'campfire!' with no store standing —, T-1076)
+        const turn = () => { for (const b of s.buildings.values()) if (b.set === sid && b.type === 'campfire') return false; return !(set._noSite && set._noSite['campfire!'] === s.day); };
+        if (f && f.stock.food >= 1 && !G.Village.nearestDropoff(set.cx, set.cy, sid) && !rising() && !turn()) add('fome', 1, `${set.name}: ${n} morrendo de fome com ${Math.floor(f.stock.food)} de comida no estoque de ${f.name} e nenhum armazém onde comer`);
       }
       for (const v of s.villagers.values()) {
         if (!dying(v) || v.captive || v.jail || v.aboard || v.ug || v.held || v.air) continue;

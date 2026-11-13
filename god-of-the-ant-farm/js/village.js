@@ -732,7 +732,10 @@
         if (o) {
           const ob = S.buildings.get(o); if (ob && gone && gone.includes(ob.id)) continue;
           if (ob && block && ob.blocks && ob.built && ob.set === set.id && G.BDEF[ob.type].housing && may[ob.type]) { if (!gone) gone = []; gone.push(ob.id); cost += may[ob.type]; beds += G.BDEF[ob.type].housing; continue; }
-          if (ob && (renew ? ob.blocks : (def.blocks || ob.blocks))) { ok = false; break; } if (ob && field && ob.type !== 'farm') { ok = false; break; }
+          // (the last asking of a town with no store left to eat at: its fire's ring may touch what does not block — the rubble of
+          // the disaster, a field —, as one walks round it all the same: the ruins stand three days, and in the chaos of seed 13 of the
+          // generation 21 every free tile Hedeby's streets reached lay beside them, its people starving with 48 in the stock: L-775)
+          if (ob && (renew ? ob.blocks : ((def.blocks && !ashOK) || ob.blocks))) { ok = false; break; } if (ob && field && ob.type !== 'farm') { ok = false; break; }
         }
         if (def.blocks && S.type[i] < T.RIVER) { /* water side ok */ }
       }
@@ -1089,7 +1092,10 @@
       }
     }
     if (!podiumFits(x, y, n) || resOver(set, type, x, y, n, n, true)) return false;
-    if (streets && !keep && !relinks(set, x, y, n, null, kept)) return false;
+    // (the streets laid across a lot kept are judged at the day's look as at the founding — they must join again round it —, or the
+    // town kept for good a lot no work could be founded on: Mênfis of the metrópole of the generation 21 kept its civic field
+    // against the inner face of its wall, the street of a gate across it, and its palace never found a lot, L-776)
+    if (streets && !relinks(set, x, y, n, null, kept)) return false;
     return siteReached(set, x, y, { w: n, h: n });
   }
   // (the nearest lot of n that serves, as far as the town's radius and RES_REACH. → [x, y], or null)
@@ -1121,7 +1127,7 @@
       if (r.lost && S.day - r.lost >= V.RES_YEARS) return letGo(set, 'nivel', true);
       if (!cap) return letGo(set, 'capital', true);
       if (!civWork(set).length) return letGo(set, 'feito', true);
-      if (!resFits(set, 'civico', r.x, r.y, r.n, true)) return letGo(set, 'terra', true);
+      if (!resFits(set, 'civico', r.x, r.y, r.n, true, true)) return letGo(set, 'terra', true);
       return r;
     }
     if ((set.tier || 0) < V.RES_TIER || !cap) return null;
@@ -1145,7 +1151,7 @@
       const w = resWork(set);
       if (!fac || G.Fac.capitalOf(fac.id) !== set) return letGo(set, 'capital');
       if (!w || w.type !== r.type || !w.steps.some(st => st.id === r.esc && st.n === r.n)) return letGo(set, 'povo');
-      if (!resFits(set, r.type, r.x, r.y, r.n, true)) return letGo(set, 'terra');
+      if (!resFits(set, r.type, r.x, r.y, r.n, true, true)) return letGo(set, 'terra');
       return r;
     }
     if ((set.tier || 0) < V.RES_TIER || !fac || G.Fac.capitalOf(fac.id) !== set) return null;

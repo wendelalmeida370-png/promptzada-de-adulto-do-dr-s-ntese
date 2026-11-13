@@ -148,8 +148,9 @@
     const k = little(h); return k.length ? k : null;
   };
   // the task: what to do at home now, by the house and the hour — or null. why: 'acamado' (ill), 'fome' (hungry, already home:
-  // only the supper), 'tarde' (the evening's going home), 'noite' (awake after dark). only: just the supper (or cooking it)
-  L.task = function (v, H, why, only) {
+  // only the supper), 'tarde' (the evening's going home), 'noite' (awake after dark). only: just the supper (or cooking it). meal:
+  // the weight of a meal of need asked from out of the house — no store to eat at, villagers.js eatTask (L-774)
+  L.task = function (v, H, why, only, meal) {
     const S = G.S; const h = homeOf(v);
     if (!h || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || v.age < 3 || isBody(v)) return null;
     if (v.inside !== h.id && blocked(v)) return null;
@@ -166,7 +167,7 @@
       else if (only) return null;
       else what = idle(v, h, e);
     }
-    return give(v, H, h, what);
+    return give(v, H, h, what, meal);
   };
   // (awake at home with nothing to eat: the baby in one's arms rocked; one of the house out after dark waited for by the
   // fire; whoever else is awake, talked to; or a rest by the fire)
@@ -186,9 +187,11 @@
     for (const o of e.out) if ((o.id === v.partner || o.mother === v.id || o.father === v.id) && !o.sleeping && !o.aboard && !o.jail && !(o.task && FAR[o.task.type])) return o;
     return null;
   }
-  function give(v, H, h, what) {
+  function give(v, H, h, what, meal) {
     const inn = v.inside === h.id;
-    const t = H.setTask(v, { type: 'lar', what, home: h.id, pri: pri(what), st: 0, stay: h.id, kind: 'lar' });
+    // (a meal of need from out of the house weighs as the meal at the store would — on the way and at the table, never after:
+    // the evening at home that follows it weighs its own, or the bed would not take one from it, L-774)
+    const t = H.setTask(v, { type: 'lar', what, home: h.id, pri: Math.max(pri(what), meal || 0), meal: meal ? 1 : 0, st: 0, stay: h.id, kind: 'lar' });
     if (!t || v.task !== t) return null;
     if (inn) arrive(v, t, h);
     if (what === 'cozinhar') entry(h).cook = v.id;
@@ -196,6 +199,8 @@
   }
   // (in: the house's jar, if one came home with it, is already in the house — setTask, by G.Life.jarHome, L-300)
   function arrive(v, t, h) { v.inside = h.id; t.st = 2; v.actT = 0; v.moving = false; v.path = null; }
+  // (the meal of need over, or nothing left to eat: the evening at home weighs its own — L-774)
+  function mealDone(t) { if (t.meal) { t.meal = 0; t.pri = pri(t.what); } }
 
   // the task's steps: to the door, in, and the evening at home
   L.run = function (v, t, dt, H) { if (t.type === 'lar') { runLar(v, t, dt, H); return true; } return false; };
@@ -227,7 +232,7 @@
         // pantry gone empty)
         v.act = AN.cozinhar ? AN.cozinhar.act : '';
         if (L.cooked(h)) { t.what = 'ceia'; v.actT = 0; return; }
-        if (food(h) < 1) { t.what = idle(v, h, entry(h)); v.actT = 0; return; }
+        if (food(h) < 1) { t.what = idle(v, h, entry(h)); mealDone(t); v.actT = 0; return; }
         t.w = (t.w || 0) + dt; // (the pot takes its time, whoever stirs it: the body too)
         if (t.w >= L.COOK) { h.ceia = S.day; t.w = 0; t.what = 'ceia'; v.actT = 0; G.Vg.emote(v, 'food', 1.6); }
         return;
@@ -238,10 +243,10 @@
           const e = entry(h);
           if (e.cook && e.cook !== v.id && !L.cooked(h) && v.actT < 20) { v.act = AN.sentar ? AN.sentar.act : ''; return; }
           if (v.hunger > 15 && L.eat(v, h, L.cooked(h))) { t.ate = 1; v.actT = 0; v.act = AN.comer ? AN.comer.act : ''; return; }
-          t.what = idle(v, h, e); v.actT = 0; return;
+          t.what = idle(v, h, e); mealDone(t); v.actT = 0; return;
         }
         v.act = AN.comer ? AN.comer.act : '';
-        if (v.actT > 2.4) { t.what = idle(v, h, entry(h)); t.ate = 0; v.actT = 0; }
+        if (v.actT > 2.4) { t.what = idle(v, h, entry(h)); mealDone(t); t.ate = 0; v.actT = 0; }
         return;
       }
       case 'cuidar': {
