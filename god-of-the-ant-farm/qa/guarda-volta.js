@@ -8,7 +8,10 @@
 //   g3 no dia seguinte, com o ladrão na rua: o guarda volta a ele e o prende (o roubo sai de «aberto»);
 //   g4 com um save no meio (entre a desistência e o dia seguinte): a caça e a marca atravessam o save;
 //   g5 um roubo que ninguém resolveu em Cr.PRESC dias prescreve, e a caça acaba;
-//   g6 o verificador limpo (S0–S2), nenhum erro de módulo.
+//   g6 o verificador limpo (S0–S2), nenhum erro de módulo;
+//   g7 o ladrão de um crime que a cidade ainda conta não é esquecido pelo registro dos mortos (L-737): um furto antigo de
+//      alguém que morreu há mais de 80 anos, sem ninguém vivo que o chame de pai ou avô — o registro o guarda enquanto o crime
+//      está na lista, e o esquece quando o crime sai dela.
 // O esconderijo é a casa da cidade mais longe da casa do ladrão (onde o guarda procura), e o ladrão fica lá dentro, parado,
 // enquanto o caso dura; as testemunhas do roubo são as que contaram ao guarda (T-1004).
 const M = require('./nodemundo.js');
@@ -68,6 +71,23 @@ ok('g1 o ladrão escondido: o guarda procura e desiste por hoje, e a caça fica'
   Vg.endTask(g2); const t2 = g2.role === 'guerreiro' ? G.Eco.guardTask(g2, H) : G.Eco.jobTask(g2, H);
   ok('g5 um roubo sem solução em ' + G.Crime.PRESC + ' dias prescreve', old.st === 'prescrito' && g2.hunt === 0 && !(t2 && t2.type === 'prender'), `o roubo de ${G.Crime.PRESC + 1} dias atrás: «${old.st}»; a caça ${g2.hunt ? 'AINDA LÁ' : 'acabou'}`);
   S.crimes.splice(S.crimes.indexOf(old), 1);
+  // g7: a theft of long ago in the list, of one who died — the list keeps the last sixty thefts, however old; the registry of the
+  // dead forgets a stranger eighty years after the death (G.Village.forget): the test's hand writes the theft of a dead stranger
+  // — no one living calls him father or grandfather, no widow — and puts the death eighty-one years back, as the years would
+  { const S = G.S, V = G.Village;
+    const kept = id => { for (const o of S.villagers.values()) { if (o.widow === id || o.mother === id || o.father === id) return true; for (const q of [o.mother, o.father]) { const pp = q && G.person(q); if (pp && (pp.mother === id || pp.father === id)) return true; } } return false; };
+    const d = [...S.dead.values()].filter(r => !kept(r.id) && !V.remembered(r) && !(S.crimes || []).some(q => q.thief === r.id)).sort((a, b) => b.died - a.died || a.id - b.id)[0];
+    if (!d) ok('g7 o ladrão de um crime ainda contado fica no registro dos mortos', false, 'nenhum morto sem quem o lembre no registro');
+    else {
+      const died0 = d.died; d.died = S.day - 81;
+      const theft = { id: S.nextId++, kind: 'furto', day: d.died - 2, set: g2.set, thief: d.id, house: c.house, n: 1, x: c.x, y: c.y, seen: [], told: 0, found: d.died - 1, st: 'devolvido', how: 'teste' }; S.crimes.push(theft);
+      G.inSim++; try { V.forget(); } finally { G.inSim--; }
+      const kept1 = S.dead.has(d.id); const said1 = QA.check().filter(q => /ladrão \d+ não existe/.test(q.msg)).map(q => q.msg);
+      S.crimes.splice(S.crimes.indexOf(theft), 1);
+      G.inSim++; try { V.forget(); } finally { G.inSim--; }
+      const gone = !S.dead.has(d.id); if (!gone) d.died = died0;
+      ok('g7 o ladrão de um crime ainda contado fica no registro dos mortos', kept1 && !said1.length && gone, `${d.name} #${d.id}, morto há 81 anos, com um furto antigo na lista: o registro ${kept1 ? 'o guarda' : 'o ESQUECEU'}${said1.length ? ' — o verificador: ' + said1[0] : ''}; o furto fora da lista, o registro ${gone ? 'o esquece' : 'AINDA o guarda'}`);
+    } }
   const v = QA.check().filter(q => q.sev <= 2); const e = M.erros();
   ok('g6 verificador e erros de módulo', !v.length && M.limpo(), `${v.length} violações S0–S2${v.length ? ': ' + v[0].msg : ''}; erros de módulo ${JSON.stringify(e.mod)}`); }
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'TUDO PASSOU'); process.exit(fails.length ? 1 : 0);

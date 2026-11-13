@@ -17,6 +17,8 @@ const notable = [mk({ reigned: 1 }), mk({ hero: true }), mk({ ep: 'bravo' }), mk
 const recent = mk({ died: S.day - 10 });
 const before = new Set(S.dead.keys());
 const kin = new Set(); for (const v of S.villagers.values()) { if (v.widow) kin.add(v.widow); for (const id of [v.mother, v.father]) { if (!id) continue; kin.add(id); const p = G.person(id); if (p) { if (p.mother) kin.add(p.mother); if (p.father) kin.add(p.father); } } }
+// (and the thief of a theft the list still tells: the registry keeps him while his crime is there — L-737)
+const thieves = new Set(); for (const c of S.crimes || []) if (c && c.thief) { kin.add(c.thief); thieves.add(c.thief); }
 // (the same forgetting after a save and a load: the world that comes back forgets the same names)
 const saved = G.Save.serialize();
 const gone = V.forget();
@@ -27,7 +29,7 @@ if (!S.dead.has(recent.id)) bad('um morto de 10 anos foi esquecido');
 for (const id of before) if (!S.dead.has(id) && kin.has(id)) bad(`pai/mãe/avô de alguém vivo esquecido: #${id}`);
 let reasons = 0; for (const [id, d] of S.dead) if (S.day - d.died >= 80 && !kin.has(id) && !V.remembered(d)) reasons++;
 if (reasons) bad(`${reasons} registro(s) velhos sem motivo para ficar`);
-out.push(`esquecimento: ${before.size} registros → ${S.dead.size} (${gone} esquecidos; ficaram ${[...S.dead.values()].filter(d => kin.has(d.id)).length} parentes de vivos e ${[...S.dead.values()].filter(d => V.remembered(d)).length} notáveis)`);
+out.push(`esquecimento: ${before.size} registros → ${S.dead.size} (${gone} esquecidos; ficaram ${[...S.dead.values()].filter(d => kin.has(d.id) && !thieves.has(d.id)).length} parentes de vivos, ${[...S.dead.values()].filter(d => thieves.has(d.id)).length} ladrões de crimes ainda contados e ${[...S.dead.values()].filter(d => V.remembered(d)).length} notáveis)`);
 G.Save.apply(JSON.parse(saved)); V.forget();
 const keep2 = [...G.S.dead.keys()].sort((a, b) => a - b).join(',');
 if (keep1 !== keep2) bad('depois de salvar e carregar, outro conjunto foi esquecido');
