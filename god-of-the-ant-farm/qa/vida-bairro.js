@@ -18,8 +18,11 @@
 //     o dragão leva as moedas todo dia → «pobre», e o «rico» sai — no todo de uma cidade (D-153), cujo chão não se divide: as
 //     casas ricas de um bairro formam o seu bairro nobre, e o chão do caso ia e voltava entre eles (T-1005)
 //  v7 a peste esvazia o bairro: metade das casas sem ninguém → «vazio», e a história diz quem levou («a peste levou N»)
+//     (o v6 e o v7 vivem cada um numa cópia do mundo dos primeiros dias, e o mundo dos casos de antes volta para os seguintes:
+//     T-1005)
 //  v8 a cidade que acaba: todos mortos, a cidade deixada ao vento — os bairros dela ficam na memória do mundo
-//     (S.urbPast), o chão ainda responde de quem era (G.Urban.pastAt), e a memória atravessa o save
+//     (S.urbPast), o chão ainda responde de quem era (G.Urban.pastAt), e a memória atravessa o save; v8b: onde duas cidades
+//     acabaram, o chão responde pela última (L-738)
 //  v9 o salto e o passo: o mesmo save vivido um dia pelo salto e um dia pelo passo — nos dois ritmos cada nota é um
 //     acontecimento do livro-razão, contado uma vez (a pesca, a carga do cais, as vendas)
 //  e o verificador limpo a cada dia, e nenhum erro.
@@ -55,6 +58,8 @@ M.pronto(WORLD); M.viver(2);
 const S0day = G.S.day;
 // ---------------- the first days: the life fills, the profiles come ----------------
 days(U.YOUNG + U.PATIENCE + 1);
+// (the world after the first days, for the rich and the plague: they live their days each on a copy of it — T-1005, below)
+const fresh = on('v6') || on('v7') ? G.Save.serialize() : null;
 
 // ---------------- v1 the doors ----------------
 if (on('v1')) {
@@ -150,9 +155,15 @@ if (on('v3')) {
 }
 
 // ---------------- v6 the quarter that grows rich, and poor ----------------
-let Q6 = null, Q6v = null;
-if (on('v6') || on('v7')) {
-  const S = G.S;
+// (the case of the rich and the case of the plague live their days each on a copy of the world as it was after the first days,
+// and the world of the cases before them is given back after them, for the ones that follow: they armed their premise on the
+// world the cases before left — and the cases before cut the sea for up to sixty days (v3); in the generation 20 the metrópole
+// came to the rich one on its day 103 with its great cities half empty, Argos with 3 of 20 homes lived, Hedeby 4 of 26,
+// Tenochtitlan 16 of 36 —: no town nor quarter was left to grow rich, and the plague found its quarter «vazio» already, «vazio
+// em 1 dias». As the v1 lives its theft in a copy of the world, T-993. T-1005)
+let Q6 = null, Q6v = null; const before6 = fresh ? G.Save.serialize() : null;
+function pick6() {
+  const S = G.S; Q6 = null; Q6v = null;
   // a quarter of homes with people, in a people of coin, not rich yet — nor poor, nor on its way to it: the life of a quarter
   // is a slow mean, and one that was «pobre» before the rain was still «pobre» six days into it, with eight of its nine homes
   // rich; the dragon's first day then read «pobre em 1 dia», with no line of its own in the history (T-692)
@@ -179,6 +190,7 @@ if (on('v6') || on('v7')) {
   }
 }
 if (on('v6')) {
+  M.abrir(JSON.parse(fresh)); pick6();
   if (!Q6v) ok('v6 rico-e-pobre', false, 'nenhuma cidade nem bairro com quatro casas habitadas num povo de moeda, ainda não rico nem pobre');
   else {
     const S = G.S; const { set, d } = Q6v; const day0 = S.day;
@@ -201,6 +213,7 @@ if (on('v6')) {
 
 // ---------------- v7 the plague empties the quarter ----------------
 if (on('v7')) {
+  M.abrir(JSON.parse(fresh)); pick6();
   if (!Q6) ok('v7 a-peste', false, 'nenhum bairro com quatro casas habitadas');
   else {
     const S = G.S; const { set, d } = Q6; const day0 = S.day;
@@ -215,6 +228,8 @@ if (on('v7')) {
       `${nameOf(set, d)}: a peste levou ${dead}; ${empty >= 0 ? `«vazio» em ${empty} dias` : 'NÃO esvaziou em 12 dias (vazia ' + d.vida.vazia + ', casas ' + ((d._st || {}).homes) + ')'}; a história: «${t || '(nada)'}»`);
   }
 }
+
+if (before6) M.abrir(JSON.parse(before6)); // (the world the cases before left, for the ones that follow: T-1005)
 
 // ---------------- v8 the town that ends ----------------
 if (on('v8')) {
@@ -231,6 +246,17 @@ if (on('v8')) {
     M.salvarCarregar(); const at2 = U.pastAt(cx + 1, cy + 1); const mine2 = (G.S.urbPast || []).filter(p => p.set === id);
     ok('v8 a-cidade-que-acaba', gone && mine.length === nd + 1 && mine.some(p => p.whole && p.name === name) && !!at && at.town === name && (!live || live.set !== id) && !!at2 && at2.town === name && mine2.length === mine.length && mine.every(p => p.hist[p.hist.length - 1][1] === `${name} foi deixada ao vento.`),
       `${name}: ${gone ? 'deixada ao vento' : 'NÃO foi abandonada em 600 s'}; na memória do mundo ${mine.length} (o todo e ${nd} bairro(s); antes ${past0}); o chão dela ${at ? `responde «${at.name}, de ${at.town}» (acabou no ano ${at.ended})` : 'NÃO responde'}; depois do save ${at2 ? 'responde igual' : 'ESQUECEU'}`);
+    // v8b: the ground where two towns ended answers the one that ended last — the test's hand writes, before this town's memory,
+    // the memory of an older town that lived and ended on the same ground, a day of the index after (U.ver). The whole of a town
+    // took a patch of ground only where no memory had it: in the generation 20 the metrópole's ground of Abidos (of Tíbur, in
+    // another life) answered «Roma, de Roma (acabou no ano 74)» — L-738
+    const P = G.S.urbPast || []; const w = P.find(p => p.set === id && p.whole);
+    if (!w) ok('v8b o chão de duas cidades que acabaram responde pela última', false, `${name}: sem o todo na memória`);
+    else {
+      const old = Object.assign({}, w, { town: 'Antiga', name: 'Antiga', set: -1, ended: w.ended - 30, born: (w.born || 0) - 60, hist: [[w.ended - 30, 'Antiga foi deixada ao vento.']] });
+      P.unshift(old); U.ver++; const a3 = U.pastAt(cx + 1, cy + 1); P.splice(P.indexOf(old), 1); U.ver++; const a4 = U.pastAt(cx + 1, cy + 1);
+      ok('v8b o chão de duas cidades que acabaram responde pela última', !!a3 && a3.town === name && !!a4 && a4.town === name, `uma cidade mais velha, «Antiga», acabou no mesmo chão de ${name} 30 anos antes: o chão ${a3 ? `responde «${a3.name}, de ${a3.town}»` : 'NÃO responde'}; sem ela, ${a4 ? `«${a4.town}»` : 'nada'}`);
+    }
   }
 }
 
