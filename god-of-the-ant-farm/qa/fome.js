@@ -42,7 +42,8 @@
 //    Tezcatl, de guarda no portão de Tenochtitlan, morreu de fome no posto com o armazém cheio de novo)
 // h19 a cidade que um desastre deixa sem fogueira e sem armazém acende outra: no mesmo dia, mesmo com a busca do dia já falhada
 //    com um armazém de pé, e mais longe quando o chão no raio dela não tem lugar (L-650; achado pela regra S1 no caos da semente 13
-//    da geração 17: Hedeby, com o vulcão no coração dela, três dias sem armazém)
+//    da geração 17: Hedeby, com o vulcão no coração dela, três dias sem armazém); e, com a cicatriz da lava em todo o chão até
+//    onde a cidade olha, na cinza, perto, onde as ruas chegam (h19c, L-770: o mesmo caos na geração 20, Hedeby cortada em duas)
 // h20 a criança ferida, de cama em casa com a despensa vazia, levanta com a fome no máximo e come no armazém, como um adulto
 //    (L-659; achado pela regra S2 no caos da semente 7 da geração 18: Ahuízotl, 7 anos, de Tenochtitlan, morreu de fome na cama)
 // h21 o cadafalso não tira ninguém da refeição da fome: o carrasco e o arauto saem de entre os que comeram, nunca de quem tem a
@@ -697,6 +698,22 @@ const calmOne = (skip, also) => {
   const dFar = far ? r2(G.dist(...V.center(far), set.cx, set.cy)) : 0;
   ok('h19b sem chão no raio da cidade (as ruínas, a cicatriz da lava), a fogueira nova vai mais longe, onde as ruas da cidade chegam (L-650)', bare2 && !!far && tFar >= 0 && tFar <= 10 && dFar > R && dFar <= R + 12.5 && W.townReaches(set, ...V.frontTile(far)) && far.built,
     `${set.name}: a lava de novo${bare2 ? '' : ' (NÃO levou tudo)'}, e a cicatriz dela no chão até o raio da cidade (${R} casas) → ${far ? `fogueira #${far.id} fundada ${tFar} s depois, a ${dFar} casas do centro${W.townReaches(set, ...V.frontTile(far)) ? ', onde as ruas chegam' : ', ONDE AS RUAS NÃO CHEGAM'}, ${far.built ? 'acesa' : 'AINDA em obra'}` : 'NENHUMA fogueira nova em 300 s'}`);
+  // (c) the god's lava once more, and its scar on all the ground as far as the town looks for a fire and beyond (R + 13): no unscarred
+  // tile anywhere the town reaches, as the volcano of the chaos of seed 13 of the generation 20 left Hedeby — its side of the lava all
+  // houses, paved streets, the cone's slope and the scar, its people starving for days with 116 of food in the stock —: a fire pit
+  // fears no ash, and the town that has nowhere else to eat lights it on the scar, the nearest ground first, where its streets reach (L-770)
+  if (far) old.add(far.id);
+  const bare3 = lava(); delete set._noSite.campfire; delete set._noSite['campfire!'];
+  const scar3 = new Map(), R3 = R + 13;
+  for (let dy = -R3 - 1; dy <= R3 + 1; dy++) for (let dx = -R3 - 1; dx <= R3 + 1; dx++) { const x = Math.floor(set.cx) + dx, y = Math.floor(set.cy) + dy; if (!W.inb(x, y) || G.dist(x + 0.5, y + 0.5, set.cx, set.cy) > R3) continue; const i = W.idx(x, y); scar3.set(i, S.scar[i]); S.scar[i] = Math.max(S.scar[i], G.DAY_LEN * 3); }
+  let ash = null, tAsh = -1, onAsh = false; const t2 = S.clock;
+  // (on the ash: every tile of the fire still scarred past the ground's rule, read when it is founded)
+  const scarred = b => { for (let y = b.y; y < b.y + (b.h || 1); y++) for (let x = b.x; x < b.x + (b.w || 1); x++) if (!(S.scar[W.idx(x, y)] > G.DAY_LEN * 2)) return false; return true; };
+  live(300, () => { peace(); const n = newFire(old); if (n && !ash) { ash = n; tAsh = r2(S.clock - t2); onAsh = scarred(n); } return !!(ash && ash.built); });
+  for (const [i, s] of scar3) S.scar[i] = s; // (the scar gone again, for the cases after)
+  const dAsh = ash ? r2(G.dist(...V.center(ash), set.cx, set.cy)) : 0;
+  ok('h19c a cicatriz da lava em todo o chão até onde a cidade olha e além: a fogueira nova na cinza, perto, onde as ruas chegam (L-770)', bare3 && !!ash && tAsh >= 0 && tAsh <= 10 && onAsh && dAsh <= R + 1 && W.townReaches(set, ...V.frontTile(ash)) && ash.built,
+    `${set.name}: a lava de novo${bare3 ? '' : ' (NÃO levou tudo)'}, e a cicatriz dela em todo o chão até ${R3} casas do centro (o raio da cidade: ${R}) → ${ash ? `fogueira #${ash.id} fundada ${tAsh} s depois, a ${dAsh} casas do centro, ${onAsh ? 'na cinza' : 'FORA da cinza'}${W.townReaches(set, ...V.frontTile(ash)) ? ', onde as ruas chegam' : ', ONDE AS RUAS NÃO CHEGAM'}, ${ash.built ? 'acesa' : 'AINDA em obra'}` : 'NENHUMA fogueira nova em 300 s'}`);
 }
 // ---------------- h20 the hurt child in bed at home, the pantry empty, at the top of hunger, gets up to eat at the store (L-659) ----------------
 // (found by the rule S2 in the chaos of seed 7 of the generation 18: Ahuízotl, 7, of Tenochtitlan, hurt on his way to the store —
@@ -770,16 +787,20 @@ const calmOne = (skip, also) => {
 {
   const calm = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 20 && V.pop(s.id) >= 12).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
   let info = 'nenhuma cidade calma com comida', good = false; const N = G.N;
-  const set = calm[0]; let spot = -1;
-  if (set) {
-    // (a tile that burns, with nothing built in two tiles of it, 5 to 9 from the heart, that the town walks to)
-    for (let r = 5; r <= 9 && spot < 0; r++) for (let k = 0; k < 32 && spot < 0; k++) {
-      const x = Math.floor(set.cx + Math.cos(k / 32 * 6.283) * r), y = Math.floor(set.cy + Math.sin(k / 32 * 6.283) * r); if (!W.inb(x, y)) continue; const i = y * N + x;
-      if (!G.Nature.fuel(i) || S.occ[i] || !W.walkable(i) || !W.townReaches(set, x + 0.5, y + 0.5)) continue;
+  let set = null, spot = -1;
+  // (a tile that burns, with nothing built in two tiles of it, 5 to 9 from the heart, that the town walks to — in the first calm town
+  // that has one, the biggest first: a dense heart has none, as Hedeby of the cidade, its fire lit on the ash of h19c, L-770: T-999)
+  const spotIn = s => {
+    for (let r = 5; r <= 9; r++) for (let k = 0; k < 32; k++) {
+      const x = Math.floor(s.cx + Math.cos(k / 32 * 6.283) * r), y = Math.floor(s.cy + Math.sin(k / 32 * 6.283) * r); if (!W.inb(x, y)) continue; const i = y * N + x;
+      if (!G.Nature.fuel(i) || S.occ[i] || !W.walkable(i) || !W.townReaches(s, x + 0.5, y + 0.5)) continue;
       let free = true; for (let dy = -2; dy <= 2 && free; dy++) for (let dx = -2; dx <= 2; dx++) if (W.inb(x + dx, y + dy) && S.occ[(y + dy) * N + x + dx]) { free = false; break; }
-      if (free) spot = i;
+      if (free) return i;
     }
-  }
+    return -1;
+  };
+  for (const s of calm) { const i = spotIn(s); if (i >= 0) { set = s; spot = i; break; } }
+  if (!set && calm.length) info = `${calm.map(s => s.name).join(', ')}: nenhuma casa que arda, livre e alcançada, a 5 a 9 do centro`;
   if (set && spot >= 0) {
     const t0 = S.time; S.time = 0.3; const wet0 = S.wet[spot];
     const hold = () => { S.wet[spot] = 0; S.fire[spot] = Math.max(S.fire[spot], 0.5); G.Nature.fireSet.add(spot); for (const i of [...G.Nature.fireSet]) if (i !== spot) G.Nature.extinguish(i, 9); };
@@ -806,7 +827,7 @@ const calmOne = (skip, also) => {
     }
     for (const i of [...G.Nature.fireSet]) G.Nature.extinguish(i, 9); S.wet[spot] = wet0; for (const q of atFire()) Vg.endTask(q);
     M.viver(1.5); S.time = Math.max(S.time, t0);
-  } else if (set) info = `${set.name}: nenhuma casa que arda, livre e alcançada, a 5 a 9 do centro`;
+  }
   ok('h22 quem apaga o fogo com fome larga a fila entre dois baldes, come e volta; o faminto não é chamado (L-725)', good, info);
 }
 // ---------------- clean ----------------

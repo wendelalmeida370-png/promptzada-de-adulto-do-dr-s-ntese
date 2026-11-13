@@ -630,6 +630,11 @@
       if (!best && def.civic && def === def0) best = search(set, type, def, R + 6, field, counts, true);
     }
     if (bare) for (const e of [6, 12]) if (!best) best = search(set, type, def, R + e, field, counts, false, undefined, reach);
+    // (and, none there either, on the scorched ground: a fire pit fears no ash, and the town that has nowhere else to eat lights it on
+    // the fresh scar of the lava, the nearest ground first — the volcano of the chaos of seed 13 of the generation 20 cut Hedeby in two,
+    // and the side its streets reach was all houses, paved streets, the cone's slope and the scar; its people starved there for days
+    // with 116 of food in the stock, the free ground beyond the lava out of the streets' reach: L-770)
+    if (bare && !best) { ashOK = true; try { for (const e of [0, 6, 12]) if (!best) best = search(set, type, def, R + e, field, counts, false, undefined, reach); } finally { ashOK = false; } }
     if (!best) noSite[nk] = S.day;
     return best;
   };
@@ -670,6 +675,7 @@
     return search(set, 'quarteirao', def, G.Urban.radius(set, def, V.pop(set.id)), false, counts, true, G.Urban.DEAR.quarteirao, undefined, [x, y]);
   };
   let levelOK = false; // (the search's second asking, for a bigger step with no lot its podium covers: V.findSite alone sets it, and unsets it — D-217)
+  let ashOK = false; // (the last asking of a town with no store left to eat at: its fire on the fresh scar too — V.findSite alone sets it, and unsets it, L-770)
   function search(set, type, def, R, field, counts, renew, dear, reach, only) {
     const S = G.S; const block = renew && type === 'quarteirao'; const may = block ? RENEW_BLOCK : RENEW;
     const left = gone => { const n = {}; for (const id of gone) { const t = S.buildings.get(id).type; if (KEEP[t] && (counts[t] || 0) - (n[t] = (n[t] || 0) + 1) < KEEP[t]) return false; } return true; };
@@ -708,7 +714,7 @@
           // the stone for seven: L-602)
           if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 3) { ok = false; break; }
           if (S.road[i] || (G.City && G.City.onStreet(set, i))) streets = true;
-        } else if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || S.scar[i] > G.DAY_LEN * 2 || S.wall[i] || S.road[i] >= 2 || (S.road[i] && G.City && G.City.onStreet(set, i))) { ok = false; break; }
+        } else if (t < T.SAND || S.objAt[i] || S.fire[i] > 0 || (S.scar[i] > G.DAY_LEN * 2 && !ashOK) || S.wall[i] || S.road[i] >= 2 || (S.road[i] && G.City && G.City.onStreet(set, i))) { ok = false; break; }
         if (field && (t === T.SAND || t === T.ROCKY)) { ok = false; break; }
         // (never in the way of a gate: a blocking building on a tile beside one shuts it — two houses, one on each side of a gate of
         // Tenochtitlan's wall, left it a tile of nowhere, and a visitor whose host's door gave onto it was shut in there, L-348)
