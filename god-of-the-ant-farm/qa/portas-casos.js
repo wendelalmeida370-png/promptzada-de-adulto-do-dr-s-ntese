@@ -183,6 +183,41 @@ if (TURNS) {
   const p = In.plan(b);
   ok('a casa deixada', !!b.ip.ab && p.left && JSON.stringify(In.depotStores(b)) === L0 && Math.abs(D.room(H, 'food') - room0) < 1e-6, `#${b.id}: deixada no dia ${b.ip.ab}; os mesmos ${In.depotStores(b).length} móveis de guardar (cabem ${room0 === Infinity ? 'sem fim' : room0.toFixed(2)} de comida, antes e depois)`);
 }
+// ---- the gate the alarm shuts moves no door (L-777): a building whose door reaches the street only through the gate of a wall
+// before it, and whose other side opens onto a pocket the building itself shuts in — Hedeby's temple across the neck of a spit of
+// sand, its wall's gate before it, in the chaos of seed 13 of the generation 21: at the turn of a day of alarm the door went
+// onto the spit —: the turn judges the door the same with the gate shut as with it open, never onto the pocket. By the
+// scenario's hand: walls round it, the walk told (W.touchWalk); the gate shut and opened as the alarm does it, the walk not told
+// (siege.js gatesTick: the map of reach counts a gate open) ----
+if (TURNS) {
+  const N = G.N; const tile = p => W.idx(Math.floor(p[0]), Math.floor(p[1])); const OPP = { S: 'N', N: 'S', E: 'W', W: 'E' };
+  const free = j => j >= 0 && j < N * N && !G.S.occ[j] && !G.S.wall[j] && G.S.type[j] >= T.SAND && W.walkable(j);
+  const step = { S: N, N: -N, E: 1, W: -1 };
+  const planOut = h => { const sh = In.shellOf(h); const e = sh && sh.entrance; return e && e.out ? [h.x + e.out[0] / G.Space.TILE, h.y + e.out[1] / G.Space.TILE] : null; };
+  let made = null, tried = 0;
+  for (const h of doors()) {
+    if (made || tried >= 80) break; if (h.w > 3 || h.h > 3) continue; const po = planOut(h); if (!po) continue; tried++;
+    const A = h.ip.s, B = OPP[A]; const n = { S: h.w, N: h.w, E: h.h, W: h.h }; const ring = q => [...Array(n[q]).keys()].map(k => tile(outside(h, q, k)));
+    const gate = tile(po); if (!ring(A).includes(gate)) continue; const pocket = ring(B); const beyond = gate + step[A];
+    const walls = new Set([W.idx(h.x - 1, h.y - 1), W.idx(h.x + h.w, h.y - 1), W.idx(h.x - 1, h.y + h.h), W.idx(h.x + h.w, h.y + h.h)]);
+    for (const q of ['S', 'N', 'E', 'W']) if (q !== B) for (const j of ring(q)) if (j !== gate) walls.add(j);
+    for (const j of pocket) for (const q of [j - 1, j + 1, j - N, j + N]) if (!pocket.includes(q) && G.S.occ[q] !== h.id) walls.add(q);
+    if (walls.has(beyond) || !free(gate) || !pocket.every(free) || !W.walkable(beyond) || G.S.wall[beyond] || [...walls].some(j => W.walkable(j) && !free(j))) continue;
+    const put = []; sim(() => { for (const j of walls) if (free(j)) { G.S.wall[j] = 1; put.push(j); } G.S.wall[gate] = 2; W.touchWalk(); });
+    const L = sim(() => W.reachIds()); const sz = sizes(); const pr = L[pocket[0]], gr = L[gate];
+    if (pr >= 0 && gr >= 0 && pr !== gr && pocket.every(j => L[j] === pr) && sz(gr) > sz(pr)) { made = { h, A, B, gate, put, pocket, big: sz(gr) }; break; }
+    sim(() => { for (const j of put) G.S.wall[j] = 0; G.S.wall[gate] = 0; W.touchWalk(); });
+  }
+  if (!made) ok('o portão fechado pelo alarme não muda a porta (L-777)', false, `nenhum prédio pequeno com o anel livre para o cenário neste mundo (${tried} tentados)`);
+  else {
+    const { h, A, B, gate, put, pocket, big } = made; const s0 = h.ip.s;
+    const judge = shut => { G.S.wall[gate] = shut ? 4 : 2; turn(); return { s: h.ip.s, said: In.entrySaid(h) }; };
+    const open1 = judge(false), closed = judge(true), open2 = judge(false);
+    ok('o portão fechado pelo alarme não muda a porta (L-777)', closed.s === open1.s && open2.s === open1.s && open1.s !== B,
+      `#${h.id} ${h.type} (${h.w}×${h.h}), a porta no ${s0}: muros em volta (${put.length}), um portão diante da porta — o único caminho à rua, um chão de ${big} casas — e no ${B} um bolsão de ${pocket.length} casas que o prédio fecha. A virada com o portão aberto: a porta no ${open1.s} (dito ${open1.said}); com o portão fechado pelo alarme: no ${closed.s}${closed.s === B ? ' — NO BOLSÃO' : ''} (dito ${closed.said}); aberto de novo: no ${open2.s}`);
+    sim(() => { for (const j of put) G.S.wall[j] = 0; G.S.wall[gate] = 0; W.touchWalk(); }); turn();
+  }
+}
 qa('no fim');
 const e = M.erros(); ok('sem erros', M.limpo(), `módulos ${JSON.stringify(e.mod)}; console ${e.console.slice(0, 2).join(' | ') || 'limpo'}`);
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'PASSOU');

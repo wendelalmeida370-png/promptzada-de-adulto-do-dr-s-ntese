@@ -1283,7 +1283,8 @@ if (want('l17')) {
     const stayed = fam0.filter(id => id !== ownerId && kept(id)).length;
     const away = () => { const L = fam0.filter(id => id !== ownerId && kept(id) && S.villagers.get(id).home !== hh.id).map(id => S.villagers.get(id)); const w = L.filter(v => v.partner).length, n = L.length - w;
       return L.length ? ` (${[n ? `${n} solteiro(s) da casa cheia noutra casa da cidade, D-098` : '', w ? `${w} casado(s) nos dias do caso, na casa do par` : ''].filter(Boolean).join('; ')})` : ''; };
-    const backSaid = back ? `voltou a ${from}, de pé, com o registro dela, e ${stayed} seguem nela${away()}` : `NÃO voltou (${hh.type}${hh.built ? '' : ', em obra'}, registro ${hh.ip ? hh.ip.t : 'nenhum'}${builder ? '' : ', sem construtor na cidade'})`;
+    const agedSaid = () => { const n = fam0.filter(id => id !== ownerId && !S.villagers.has(id) && S.dead && S.dead.get(id) && S.dead.get(id).cause === 'old').length; return n ? ` (${n} morto(s) de velhice nos dias do caso, T-1079)` : ''; };
+    const backSaid = back ? `voltou a ${from}, de pé, com o registro dela, e ${stayed} seguem nela${away()}${agedSaid()}` : `NÃO voltou (${hh.type}${hh.built ? '' : ', em obra'}, registro ${hh.ip ? hh.ip.t : 'nenhum'}${builder ? '' : ', sem construtor na cidade'})`;
     // (raised again and finished — the materials in, the last stroke by the world's own door —: the family in the new house)
     let done = false, regEnd = null, inNew = 0;
     if (back) {
@@ -1294,7 +1295,10 @@ if (want('l17')) {
       inNew = fam0.filter(id => id !== ownerId && kept(id)).length;
     }
     const crowd17 = !!seen17 && seen17.n > seen17.cap && !!seen17.msg;
-    fine = n0 >= 3 && regMid === from && asleepIn.length >= Math.min(2, n0) && !outs.size && lar > 0 && afterIn.length === asleepIn.length && !lost.length && !!fetched && crowd17 && !!heir && heir.id !== ownerId && gaveUp && back && stayed >= n0 - 1 && done && inNew >= n0 - 1;
+    // (and the one the years took in the days of the case — Citlalin, 68, of Tenochtitlan in the cidade of the generation 21, died of
+    // old age on the day of the works —: no house put that one out; any other death still counts against it, T-1079)
+    const aged = fam0.filter(id => id !== ownerId && !S.villagers.has(id) && S.dead && S.dead.get(id) && S.dead.get(id).cause === 'old').length;
+    fine = n0 >= 3 && regMid === from && asleepIn.length >= Math.min(2, n0) && !outs.size && lar > 0 && afterIn.length === asleepIn.length && !lost.length && !!fetched && crowd17 && !!heir && heir.id !== ownerId && gaveUp && back && stayed >= n0 - 1 - aged && done && inNew >= n0 - 1 - aged;
     info = `${set.name}: ${from}#${h.id} ampliada a ${UP[from]} por cima de ${n0} moradores (a planta durante a obra: ${regMid === from ? `a da casa antiga, ${from}` : `${regMid || 'NENHUMA'}, NÃO A DA CASA ANTIGA`}) → à noite ${asleepIn.length} dormindo dentro${outs.size ? `, ${outs.size} AO RELENTO` : ', ninguém ao relento'}; ${lar} olhadas no lar, ${family} na noite em família; o save no meio da noite: ${afterIn.length} dentro depois${lost.length ? ' — MUDOU: ' + lost.slice(0, 3).join(' · ') : ', cada um como estava'}; a jarra vazia de madrugada ${fetched ? `cheia de novo às ${fmtT(fetched)}` : 'NÃO foi enchida'}; a casa em obra cheia ${seen17 ? `(${seen17.n} para as ${seen17.cap} camas da casa que ela será): ${crowd17 ? `o verificador viu «${seen17.msg}»` : 'o verificador NÃO viu o velho posto para fora antes do moço'}` : 'SEM GENTE para a prova do verificador'}; ${owner ? `${owner.name} (o dono) morreu: ${heir ? `a casa ficou com ${heir.name}` : 'a casa ficou SEM DONO'}` : 'SEM DONO para morrer'}; a obra deixada: ${backSaid}; ampliada de novo e pronta: ${!back ? '—' : done ? `${hh.type}, com o registro refeito na hora, ${inNew} morando nela${away()}` : `NÃO ficou pronta (${hh.type}, registro ${regEnd || 'nenhum'})`}`;
   }
   ok('l17 a casa em ampliação continua sendo a casa da família (L-371)', fine, info);
@@ -1416,7 +1420,13 @@ if (want('l19')) {
   // generation 18, L-660
   {
     if (!G.isNight()) S.time = 0.9;
-    const sto = S.saga && S.saga.stories.find(q => q.st === 'ativa');
+    let sto = S.saga && S.saga.stories.find(q => q.st === 'ativa'); let made = '';
+    // (a world with no story under way — the cidade of the generation 21 —: the test's hand promotes the seed the director weighs
+    // highest, as the developer's panel does (St._promote) and qa/protagonista.js, T-321 — T-1078)
+    if (!sto && S.saga && G.Stories && G.Stories._promote) {
+      const sd = S.saga.seeds.filter(q => S.villagers.has(q.protag) && !(q.ripe && S.clock < q.ripe)).sort((a, c) => (c.w || 0) - (a.w || 0) || c.score - a.score || (a.key < c.key ? -1 : a.key > c.key ? 1 : 0))[0];
+      if (sd) { G.inSim++; try { G.Stories._promote(sd); } finally { G.inSim--; } sto = S.saga.stories.find(q => q.st === 'ativa'); if (sto) made = ' (promovida pela mão da prova: nenhuma história ativa neste mundo, T-1078)'; }
+    }
     const tr = sto && [...S.villagers.values()].filter(o => adult(o) && !o.inside && !o.sleeping && !o.task && W.dryXY(o.x, o.y)).sort((a, c) => a.id - c.id)[0]
       || (sto && [...S.villagers.values()].filter(o => adult(o) && !o.inside && W.dryXY(o.x, o.y) && !(o.task && o.task.pri >= 2)).sort((a, c) => a.id - c.id)[0]);
     let eOk = false, eTxt = sto ? 'ninguém do mundo na rua para a viagem' : 'nenhuma história ativa no mundo';
@@ -1430,7 +1440,7 @@ if (want('l19')) {
       const kept = !!t2 && !!t2.task && t2.task.type === 'saga' && t2.task.j === 1 && t2.task.story === sto.id && t2.task.st === 4 && t2.sleeping && G.dist(t2.x, t2.y, at[0], at[1]) < 0.01;
       live(2); const still = !!t2 && t2.sleeping && !!t2.task && t2.task.type === 'saga' && G.isNight();
       eOk = camping && kept && still;
-      eTxt = `${nm(tr)} na jornada da história «${sto.type}» #${sto.id}, no acampamento${camping ? '' : ' (NÃO deitou)'}: depois do load ${t2 ? `${t2.task ? (t2.task.type === 'saga' ? `na jornada (passo ${t2.task.st})` : 'NA TAREFA ' + t2.task.type) : 'SEM TAREFA'}, ${t2.sleeping ? 'dormindo' : 'ACORDADO'}${G.dist(t2.x, t2.y, at[0], at[1]) < 0.01 ? ', no mesmo lugar' : ', NOUTRO LUGAR'}` : 'SUMIU'}; 2 s de noite depois: ${!G.isNight() ? 'JÁ DE DIA' : still ? 'dormindo na jornada' : 'ACORDADO'}`;
+      eTxt = `${nm(tr)} na jornada da história «${sto.type}» #${sto.id}${made}, no acampamento${camping ? '' : ' (NÃO deitou)'}: depois do load ${t2 ? `${t2.task ? (t2.task.type === 'saga' ? `na jornada (passo ${t2.task.st})` : 'NA TAREFA ' + t2.task.type) : 'SEM TAREFA'}, ${t2.sleeping ? 'dormindo' : 'ACORDADO'}${G.dist(t2.x, t2.y, at[0], at[1]) < 0.01 ? ', no mesmo lugar' : ', NOUTRO LUGAR'}` : 'SUMIU'}; 2 s de noite depois: ${!G.isNight() ? 'JÁ DE DIA' : still ? 'dormindo na jornada' : 'ACORDADO'}`;
     }
     say('(e) quem acampa na estrada de uma história', eOk, eTxt);
   }

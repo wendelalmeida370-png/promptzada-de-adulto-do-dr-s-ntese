@@ -83,7 +83,8 @@
     if (In.entrySaid && In.shellOf && G.W.reachIds) {
       if (pocketS !== s) { pocketS = s; pocketAt = new Map(); }
       const W = G.W, L = W.reachIds(true); let size = null;
-      const at = (x, y) => { if (!W.inb(x, y) || !W.walkableXY(x, y)) return -1; if (!size) { size = new Map(); for (let i = 0; i < L.length; i++) if (L[i] >= 0) size.set(L[i], (size.get(L[i]) || 0) + 1); } return size.get(L[W.idx(x, y)]) || 0; };
+      // (the ground as the map of reach has it, the gates open — as the step's door rule reads it: L-777)
+      const at = (x, y) => { if (!W.inb(x, y) || L[W.idx(x, y)] < 0) return -1; if (!size) { size = new Map(); for (let i = 0; i < L.length; i++) if (L[i] >= 0) size.set(L[i], (size.get(L[i]) || 0) + 1); } return size.get(L[W.idx(x, y)]) || 0; };
       const out = (b, q, k) => q === 'S' ? [b.x + k + 0.5, b.y + b.h + 0.4] : q === 'N' ? [b.x + b.w - 1 - k + 0.5, b.y - 0.4] : q === 'E' ? [b.x + b.w + 0.4, b.y + b.h - 1 - k + 0.5] : [b.x - 0.4, b.y + k + 0.5];
       const TL = G.Space ? G.Space.TILE : 4; const seen = new Set();
       for (const b of withIp) {

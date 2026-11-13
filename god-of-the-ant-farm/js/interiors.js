@@ -126,7 +126,11 @@
   let regN = null, regAt = -1;
   const regSize = (L, r) => { if (!regN || regAt !== G.W.reachBuilds) { regN = new Map(); regAt = G.W.reachBuilds; for (let i = 0; i < L.length; i++) { const k = L[i]; if (k >= 0) regN.set(k, (regN.get(k) || 0) + 1); } } return regN.get(r) || 0; };
   G.worldHooks.push(() => { regN = null; regAt = -1; });
-  const groundAt = (L, x, y) => (G.W.inb(x, y) && G.W.walkableXY(x, y) ? regSize(L, L[G.W.idx(x, y)]) : -1);
+  // (the ground before a side as the map of reach has it: with the gates open — a gate the alarm shuts opens again, and the map
+  // counts it open. Read from the walk of the moment, a shut gate closed the side behind it: at the turn of a day of alarm the door
+  // of Hedeby's temple, built across the neck of a spit of sand by its wall's gate, went off the street onto the spit the temple
+  // itself cuts off, a pocket of 63 tiles, and the gate opened again — L-777)
+  const groundAt = (L, x, y) => { if (!G.W.inb(x, y)) return -1; const r = L[G.W.idx(x, y)]; return r >= 0 ? regSize(L, r) : -1; };
   // (the biggest ground any side of a building opens onto: 0 where none is open)
   function bigGround(b, L) { let big = 0; for (const s of SIDES) { const n = s === 'S' || s === 'N' ? b.w : b.h; for (let k = 0; k < n; k++) { const p = outside(b, s, k); big = Math.max(big, groundAt(L, p[0], p[1])); } } return big; }
   const onStreet = (b, x, y, L, big) => { const g = groundAt(L, x, y); return g >= 0 && g >= big; };
