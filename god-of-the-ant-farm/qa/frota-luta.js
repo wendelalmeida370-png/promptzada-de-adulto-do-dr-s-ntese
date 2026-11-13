@@ -2,8 +2,9 @@
 // sozinho, dois navios numa escaramuça) atravessa o save como estava (L-443). O load punha a frota de volta no rumo de antes
 // e a luta se perdia; a ida e volta do qa/prontos.js pegou isso no «guerra mundial» da geração 9 (a patrulha 36747, aos
 // 38 s de uma luta com a frota 35272).
-//  l1 no mundo pronto (o «guerra mundial», por padrão): cada frota que o save guarda lutando sem batalha de registro continua
-//     lutando depois de carregar, e uma cuja batalha já fechou volta ao rumo (só informação, se o save não tiver nenhuma);
+//  l1 no mundo pronto (o «guerra mundial», por padrão): cada frota que o save guarda lutando continua lutando depois de
+//     carregar — sem batalha de registro, com a batalha aberta e com a batalha já fechada (essa a sua passada tira da luta,
+//     L-734) (só informação, se o save não tiver nenhuma);
 //  l2 a ida e volta do mundo inteiro (QA.roundTrip) sem diferença nas frotas;
 //  l3 uma frota viva posta a lutar como o engage a põe (o estado de antes guardado, sem batalha, o primeiro golpe agora)
 //     passa pelo save ainda lutando;
@@ -12,6 +13,9 @@
 //  l5 um navio de guerra livre com alguém a bordo (como a frota que acaba no seu passo deixa a tripulação) levado pelo
 //     conselho a uma frota nova: todo mundo a bordo no rol, e quem estava a bordo no rol ou em terra (L-639: o rol novo era
 //     escrito por cima de quem estava a bordo — «a bordo mas fora da tripulação»).
+//  l6 uma frota em luta com a batalha de registro já fechada (a outra frota acabou a luta e a fechou; esta sai na sua passada
+//     seguinte) passa pelo save como estava, e sai da luta no mundo como o mundo vivo sai (L-734: o load a punha de volta no
+//     rumo — a ida e volta dava «combate» → «navegar», e o mundo meio passo à frente, sem o resto do fim de uma luta).
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -67,7 +71,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
   if (r.err) { ok('l0 o caso', false, r.err); await browser.close(); process.exit(1); }
   const loose = r.l1.filter(x => !x.battle), closed = r.l1.filter(x => x.battle && !x.open), kept = r.l1.filter(x => x.battle && x.open);
   if (!r.l1.length) console.log(`INFO | frota-luta l1 | o save do «${WORLD}» não guarda nenhuma frota lutando`);
-  else ok('l1 a frota que o save guarda lutando sem batalha de registro continua lutando depois de carregar', loose.every(x => x.now === 'combate') && closed.every(x => x.now !== 'combate') && kept.every(x => x.now === 'combate'),
+  else ok('l1 a frota que o save guarda lutando continua lutando depois de carregar', loose.every(x => x.now === 'combate') && closed.every(x => x.now === 'combate') && kept.every(x => x.now === 'combate'),
     r.l1.map(x => `frota ${x.id}: ${x.battle ? `batalha ${x.battle} ${x.open ? 'aberta' : 'fechada'}` : 'sem batalha'}, depois de carregar «${x.now}»`).join('; '));
   ok('l2 a ida e volta do mundo sem diferença nas frotas', !r.fdiff.length, r.fdiff.join(' · ') || 'nenhuma');
   ok('l3 uma frota posta a lutar (sem batalha) passa pelo save ainda lutando', r.l3.after === 'combate', `frota ${r.l3.id}${r.l3.formed ? ' (formada pela prova, como o conselho da frota)' : ''} (antes «${r.l3.prev}»): depois do save «${r.l3.after}»`);
@@ -104,6 +108,39 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     if (!r5) ok('l5 o navio de guerra com alguém a bordo levado pela frota nova', false, 'nenhum povo em guerra com cais e navio de guerra livre');
     else ok('l5 o navio de guerra com alguém a bordo levado pela frota nova: todo mundo a bordo no rol', !!r5.fl && r5.on0 && !r5.off.length && (r5.still || r5.ashore) && !r5.qa0.length && !r5.qa1.length && !errs.length,
       `${r5.f}: ${r5.v} posto a bordo do guerra#${r5.s} (no rol: ${r5.on0}); a patrulha ${r5.fl || 'NÃO formada'}: ${r5.ab} a bordo, ${r5.off.length ? 'FORA DO ROL ' + r5.off.join(', ') : 'todos no rol'}; ${r5.v} ${r5.still ? 'a bordo' : r5.ashore ? 'em terra, no cais' : 'NEM A BORDO NEM EM TERRA'}; o verificador logo depois: ${r5.qa0.join(' | ') || 'calado'}; 10 s depois: ${r5.qa1.join(' | ') || 'limpo'}`);
+  }
+  // l6 a fleet in a fight whose battle of record is already closed — the other fleet ended the fight and closed it, and this one
+  // leaves at its next tick — goes through the save as it was (L-734). The load put it back on its course itself: the round
+  // trip gave «[id,"combate",…] → [id,"navegar",…]» (the mundos.js on the «guerra mundial» of the generation 20, 0,3 year after
+  // opening), and the world it gave back was half a tick ahead, without the rest of the end of a fight. On the world as it was
+  // saved: a live fleet out of a fight put into one as the engage puts it, with a record of the battle as the battleOf writes
+  // one, already closed as the closeBattle closes it; the round trip without a difference in the fleets; after the load still in
+  // the fight; within two seconds of the world it leaves the fight as the living world leaves it (the endFight: the course of
+  // before, the battle let go, the column, the rest before a new fight); the checker clean
+  {
+    const r6 = await page.evaluate(W => {
+      G.Save.apply(JSON.parse(G.Ready.data[W])); G.Main.mode = 'game'; G.UI.setSpeed(0);
+      const S = G.S, st = G.Wars.state();
+      const fl = S.fleets.filter(f => G.Fleets.live(f) && f.st !== 'combate' && f.ships.length).sort((a, b) => a.id - b.id)[0];
+      if (!fl) return { err: 'nenhuma frota viva fora de luta no mundo salvo' };
+      const foe = G.Fac.enemiesOf(fl.fac)[0]; const w = foe ? G.Wars.warOf(fl.fac, foe.id) : null;
+      const bt = { id: st.seq++, war: w ? w.id : 0, name: 'a Batalha da prova', base: 'a Batalha da prova', x: +fl.x.toFixed(1), y: +fl.y.toFixed(1), d: S.day, t0: S.clock - 20, t1: S.clock,
+        sides: { [fl.fac]: { n: 0, ships: fl.ships.length, gen: fl.cmd || 0, genName: fl.cmdName || '', dead: 0, wounded: 0, captured: 0, fled: 0, sunk: 0, taken: 0, army: fl.name, bands: [] } },
+        winner: fl.fac, bands: [], open: false, ids: [], naval: true, kind: 'naval', fleets: [fl.id], ships: {}, started: true, a: fl.fac, b: foe ? foe.id : 0 };
+      st.battles.push(bt); if (w) w.battles.push(bt.id);
+      const prev = fl.st; fl.prevSt = fl.st; fl.st = 'combate'; fl.t = 0; fl.foe = 0; fl.hitT = S.clock - 20; fl.form = 'linha'; fl.battle = bt.id; fl.battles.push(bt.id);
+      const trip = QA.roundTrip(); const fdiff = trip.diff.filter(d => /^fleets/.test(d));
+      const get = () => G.S.fleets.find(f => f.id === fl.id); const g0 = get(); const after = g0 ? g0.st : '-';
+      let left = -1; const c0 = G.S.clock;
+      for (let k = 0; k < 20; k++) { G.debug.step(0.1); const f = get(); if (left < 0 && (!f || f.st !== 'combate')) left = G.S.clock - c0; }
+      const f = get(); const want = prev === 'posto' ? 'navegar' : prev;
+      const ended = !!f && f.st === want && !f.battle && f.noFight > G.S.clock && (f.mission === 'invasao' || f.form === 'coluna');
+      return { id: fl.id, prev, fdiff, after, left: +left.toFixed(1), now: f ? { st: f.st, battle: f.battle, rest: f.noFight ? +(f.noFight - G.S.clock).toFixed(1) : 0, form: f.form } : null, ended,
+        bad: QA.check().filter(e => e.sev <= 2).map(e => e.msg).slice(0, 3) };
+    }, WORLD);
+    if (r6.err) ok('l6 a frota em luta com a batalha já fechada', false, r6.err);
+    else ok('l6 a frota em luta com a batalha já fechada passa pelo save como estava e sai da luta como o mundo vivo', !r6.fdiff.length && r6.after === 'combate' && r6.ended && !r6.bad.length && !errs.length,
+      `frota ${r6.id} (antes «${r6.prev}»): ida e volta ${r6.fdiff.join(' · ') || 'sem diferença nas frotas'}; depois de carregar «${r6.after}»; ${r6.left >= 0 ? `deixou a luta aos ${r6.left} s` : 'ainda lutando'} — agora ${r6.now ? `«${r6.now.st}», batalha ${r6.now.battle || 'nenhuma'}, descanso ${r6.now.rest} s, formação ${r6.now.form}` : 'sem frota'}${r6.ended ? '' : ' (não como o fim de uma luta)'}; ${r6.bad.join(' | ') || 'verificador limpo'}`);
   }
   // (no summary line: the sea's files are counted line by line, as the mar17.js cases — the exit code tells it all)
   console.log('erros', errs.length ? errs.slice(0, 6).join(' || ') : 'nenhum');
