@@ -80,8 +80,10 @@ const able = o => o.set === set.id && o.role === 'estivador' && !o.aboard && G.P
 // crates and the quay asked two. The world lives until no trade of the town changes for two passes of the board (9 s), a
 // minute at most: T-303)
 let called = ''; const tried = []; let cands = [];
+// (who the proof's hand made a docker stays one while the proof lasts: the town's board gives the trades back at its next pass)
+const held = new Set(); { const step0 = G.debug.step; G.debug.step = function () { for (const id of held) { const o = G.S.villagers.get(id); if (o && o.role !== 'estivador') o.role = 'estivador'; } return step0.apply(this, arguments); }; }
 for (const w of asked ? [asked] : ['metropole', 'mega', 'mundial']) {
-  M.pronto(w); M.viver(2); S = G.S; world = w;
+  held.clear(); M.pronto(w); M.viver(2); S = G.S; world = w;
   const towns = [...S.settlements.values()].filter(s => [...S.buildings.values()].some(b => b.set === s.id && b.type === 'doca' && b.built) && [...S.buildings.values()].some(b => b.set === s.id && b.type === 'armazem' && b.built)).map(s => ({ s, three: quayHands(s) >= 3 })).sort((a, b) => b.three - a.three || porters(b.s) - porters(a.s) || a.s.id - b.s.id).map(o => o.s);
   for (const s of towns) {
     set = null; dock = null;
@@ -101,9 +103,14 @@ for (const w of asked ? [asked] : ['metropole', 'mega', 'mundial']) {
     if ([...S.villagers.values()].filter(able).length < 3) {
       const trades = () => [...S.villagers.values()].filter(o => o.set === set.id).map(o => o.id + ':' + o.role).join(',');
       let wq = 0; for (let quiet = 0, r0 = trades(); wq < 60 && quiet < 9; wq++) { M.viver(1); const r1 = trades(); quiet = r1 === r0 ? quiet + 1 : 0; r0 = r1; }
-      const n0 = [...S.villagers.values()].filter(able).length; god(() => { S.time = 0.15; P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); });
-      let t = 0; for (; t < 30 && [...S.villagers.values()].filter(able).length < 3; t++) M.viver(1);
-      called = ` (o quadro dos ofícios quieto depois de ${wq} s; eram ${n0}: com um barco no cais a cidade chamou mais em ${t} s)`;
+      // (the dockers the case lacks are made by the proof's hand, and held: since the trade that stays — D-213 — the quay's
+      // asking of a few minutes is answered by the trade's memory of half a day, not at once, and «com um barco no cais a cidade
+      // chamou mais em 30 s» no longer happens in any ready world; the case is the crate between the body and two porters, not
+      // the dealing of the trades: T-857)
+      const n0 = [...S.villagers.values()].filter(able).length;
+      const pool = [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 18 && o.age < 55 && !o.captive && !o.jail && !o.aboard && !o.ug && o.role !== 'estivador' && ['coletor', 'lenhador', 'agricultor', 'cacador', 'pescador', 'construtor', 'mineiro'].includes(o.role) && G.Possess.can(o).ok && A.able(o) && W.reaches(o, sp0[0], sp0[1]) && !(G.Expe && G.Expe.memberOf(o.id))).sort((a, b) => a.id - b.id);
+      let made = 0; for (const o of pool) { if (n0 + made >= 3) break; o.role = 'estivador'; held.add(o.id); made++; }
+      called = ` (o quadro dos ofícios quieto depois de ${wq} s; eram ${n0}: ${made} feito(s) estivador(es) pela mão da prova, e segurado(s))`;
     }
     cands = [...S.villagers.values()].filter(able).sort((a, b) => loaded(a) - loaded(b) || a.id - b.id);
     if (cands.length >= 3) break;

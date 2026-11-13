@@ -221,7 +221,11 @@ G.Act.def('prova-levar', {});
     const s0 = f.stock.sal || 0;
     for (let k = 0; k < 60; k++) { holdE('porta'); frame(); }
     const refused = !!b1 && b1.id === 'porta' && !b1.ok && /destino/.test(b1.why) && (f.stock.sal || 0) === s0 && v.carry && v.carry.n === 2;
-    clearHands(v); god(() => G.Depot.make('v:' + v.id, 'sal', 2, { code: 'teste', to: 'f:' + fid })); const led0 = S.ledgerN || 0; const c2 = holdE('porta');
+    clearHands(v); god(() => G.Depot.make('v:' + v.id, 'sal', 2, { code: 'teste', to: 'f:' + fid })); const led0 = S.ledgerN || 0;
+    // (and the door is what «E» means again before the second press, as before the first: a child crossed between the body and
+    // the door at that very frame, «E» was hers — c2 was a person, not the door —, and the sack stayed in the hands: T-856)
+    for (let k = 0; k < 600 && !((G.Interact.best() || {}).id === 'porta'); k++) frame();
+    const c2 = holdE('porta');
     for (let k = 0; k < 300 && G.Avatar.busy(); k++) frame();
     const e = (S.ledger || []).filter(q => q[0] > led0).find(q => q[8] === 'entrega' && q[3] === 'v:' + v.id);
     const went = !v.carry && (f.stock.sal || 0) === s0 + 2 && !!e;

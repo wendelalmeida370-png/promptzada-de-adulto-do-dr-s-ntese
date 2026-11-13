@@ -290,7 +290,9 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
 // below 3,25 «once the fright is over» (L-367), and did so with the alarm still up; now the call waits for the refuge to end,
 // and then he goes back to the quay)
 {
-  fresh(); let e = null, home = null, cv = null; const tried = [];
+  fresh(); let e = null, home = null, cv = null, v0 = null; const tried = [];
+  // (one of the voyage's crew, of its town, not the leader, ashore, whose feet reach a mouth of the cave)
+  const reachOf = (x, t, c) => x.crew.map(id => S.villagers.get(id)).filter(q => q && q.id !== x.leader && !q.aboard && q.set === t.id && c.mouths.some(m => G.W.reaches(q, m.x + 0.5, m.y + 0.5))).sort((a, b) => a.id - b.id)[0];
   for (const f of G.Fac.all().filter(q => q.alive && G.Civ.has(q.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
     // (the sea weighed again, a dozen times at the most: a people that knows no land past its own waters — no tale, no beach seen,
     // nothing unknown — sets out for the horizon only now and then, at the draw of the world's own chance, X.consider candidates;
@@ -298,16 +300,20 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
     let x = null; for (let k = 0; k < 12 && !x; k++) x = G.Expe.consider(f, { scale: 'media', many: true });
     if (!x) { tried.push(`${f.name}: nenhuma viagem`); continue; }
     const t = S.settlements.get(x.from); const dOf = c => Math.min(...c.mouths.map(m => G.dist(m.x, m.y, t.cx, t.cy)));
-    const c = G.Caves.all().filter(q => q.mouths.length && !q.mine && q.known && q.known[t.fac]).sort((a, b) => dOf(a) - dOf(b) || a.id - b.id)[0];
-    if (c && dOf(c) < 45 && x.crew.length >= 2) { e = x; home = t; cv = c; break; }
-    tried.push(`${x.name}: ${c ? `caverna a ${Math.round(dOf(c))} casas` : 'sem caverna conhecida'}`);
+    const cs = G.Caves.all().filter(q => q.mouths.length && !q.mine && q.known && q.known[t.fac]).sort((a, b) => dOf(a) - dOf(b) || a.id - b.id); const c = cs[0];
+    // (the first voyage with a cave near AND a crewman who walks to it: the search took the first voyage with a cave near, and
+    // in the joined tree's metropole nobody of «A Viagem de Hipátia» reached the Lapa das Estrelas on foot — the case had no
+    // one to hide, with other peoples of the sea still to ask: T-858)
+    let hit = null; if (x.crew.length >= 2) for (const q of cs) { if (dOf(q) >= 45) break; const w = reachOf(x, t, q); if (w) { hit = [q, w]; break; } }
+    if (hit) { e = x; home = t; cv = hit[0]; v0 = hit[1]; break; }
+    tried.push(`${x.name}: ${c ? (dOf(c) < 45 ? `ninguém da tripulação chega a pé ${G.Caves.na ? G.Caves.na(c) : 'à caverna'}, a ${Math.round(dOf(c))} casas` : `caverna a ${Math.round(dOf(c))} casas`) : 'sem caverna conhecida'}`);
   }
   // (one who can walk to the cave — a mouth of it his feet reach, W.reaches —: the refuge sets out for the nearest such mouth, and
   // the case says it — in the metropole of the generation 17 the mouth of the Furna do Abismo nearest to Nebet, 24 tiles off,
   // was beyond his feet, the refuge given to it ended at its first step, and the voyage called him to the quay 0,7 s later, the
   // alarm still up, L-651)
-  const v = e && e.crew.map(id => S.villagers.get(id)).filter(q => q && q.id !== e.leader && !q.aboard && q.set === home.id && cv.mouths.some(m => G.W.reaches(q, m.x + 0.5, m.y + 0.5))).sort((a, b) => a.id - b.id)[0];
-  if (!e || !v) ok('m10 a tripulação escondida na caverna', false, `nenhuma viagem que saia de uma cidade com caverna perto, de um tripulante que chegue a ela a pé: ${tried.join(' · ') || (e ? `${e.name}: ninguém da tripulação chega a pé ${G.Caves.na ? G.Caves.na(cv) : 'à caverna'}` : 'nenhum povo do mar')}`);
+  const v = e && v0;
+  if (!e || !v) ok('m10 a tripulação escondida na caverna', false, `nenhuma viagem que saia de uma cidade com caverna perto, de um tripulante que chegue a ela a pé: ${tried.join(' · ') || 'nenhum povo do mar'}`);
   else {
     home.alarmT = 40; Vg.endTask(v);
     // (the beasts that come at people kept away by the god's hand round him, the cave and the quay while the case lasts — the
