@@ -117,6 +117,16 @@ const onFarm = b => [b.x + 1, b.y + 1];
 // of her first crop in her arms at 3 s, walking them to the store, and the wait for food in the hands at the farm work ran its
 // 60 s — the board made her a miner meanwhile —: «morreu com 0 de comida nas mãos», «a roça caiu com 0»)
 const harvestIn = v => !!(v.carry && v.carry.k === 'food' && v.carry.grain && v.carry.n > 1e-6) && !!v.task && (v.task.type === 'farm' || v.task.type === 'deliver');
+// (the farmer of a case kept at the farm work by the hand of the proof, as the hands of the c6 and the c9: when the day takes
+// her from it to something that weighs less than the work — the garden, the theatre at noon, the family at the door, nothing —
+// she is sent back, fed and rested; what weighs more (the house's water, a purchase, a meal, the bed) runs its course and ends
+// by itself — sent back from it, the house's water calls her again in the same step. A ripe bed of the farm beside, harvested
+// first by the world's own choice (farmTask), and its basket to the store, are farm work. In the metrópole of the generation
+// 21 Isetnofret, sent to the Arrozal #3348 at dawn, fetched the house's water, went to the garden and to the shop, harvested
+// two ripe beds of the farm beside and spent the afternoon at the theatre: «plantados 3 de 9»; and in the c2 and the c5 she
+// had no harvest in her hands in their minute — T-1083)
+const farmWork = w => { const t = w && w.task; return !!t && (t.type === 'farm' || ((t.type === 'deliver' || t.type === 'haul') && held(w).food > 0)); };
+const keepAt = (v, b, done) => { let n = 0; const f = () => { const w = S().villagers.get(v.id); if (!w || !fit(w) || done() || farmWork(w) || (w.task && (w.task.pri || 0) >= 1)) return; send(w, b, onFarm(b)); n++; }; f.n = () => n; f.say = () => (n ? ` (a mão mandada de volta à roça ${n} vez(es))` : ''); return f; };
 if (!FARM) console.log(`FALHOU | campo mundo | ${world}: nenhuma roça com dois agricultores na cidade`);
 else {
   const b0 = S().buildings.get(FARM); console.log(`${world}: a roça #${FARM} de ${S().settlements.get(b0.set).name} (${Es.grainOf(b0).name})`);
@@ -125,7 +135,7 @@ else {
     const P = farmSetup(() => ({ s: 0, g: 0, c: 0 })); const b = P.b; const v = P.farmers[0];
     const Hd = watchHands(P.farmers.map(x => x.id)); send(v, b, onFarm(b));
     const planted = () => b.crops.filter(c => c.s >= 1).length;
-    live(120, Hd.step, () => planted() >= 9);
+    const k1 = keepAt(v, b, () => planted() >= 9); live(240, () => { k1(); Hd.step(); }, () => planted() >= 9);
     const p1 = planted(); const sp = sOf(b);
     // the season passes: what was planted is ripe now (the growth of the farm: village.js updateFarms)
     for (const c of b.crops) if (c.s >= 1) c.g = 0.999;
@@ -136,13 +146,13 @@ else {
     live(30, Hd.step, () => !(held(v).food > 0)); // (and the last basket to the store)
     const left = b.crops.filter(c => c.s === 3).length; const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c1', p1 >= 9 && ripeN >= 9 && !left && Hd.born('food') > 0 && Hd.reached('food') && !lost.length && !bad.length,
-      `plantados ${p1} de 9 (${sp}); maduros ${ripeN}; colhidos todos: ${!left} (${sOf(b)}); ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `plantados ${p1} de 9 (${sp})${k1.say()}; maduros ${ripeN}; colhidos todos: ${!left} (${sOf(b)}); ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   // c2 the farmer dies with the harvest in the hands
   {
     const P = farmSetup(ripe); const b = P.b; const v = P.farmers[0]; const Hd = watchHands(P.farmers.map(x => x.id));
-    send(v, b, onFarm(b));
-    live(60, Hd.step, () => harvestIn(v));
+    send(v, b, onFarm(b)); const k2 = keepAt(v, b, () => harvestIn(v));
+    live(90, () => { k2(); Hd.step(); }, () => harvestIn(v));
     const n = held(v).food || 0; const mine = b.crops.findIndex(c => c.c === v.id); const L0 = seen.length; const way = v.task && v.task.type === 'deliver';
     // (room in the people's store for what is in his hands, made by the god at the moment he dies, as the r3 of the
     // rebanho.js keeps it (T-327): a full store takes at its door only what fits — the inheritance's rest lost with its line,
@@ -156,7 +166,7 @@ else {
     live(180, Hd.step, () => b.crops.every(c => c.s !== 3));
     const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c2', n > 0 && Math.abs(herd - n) < 0.01 && (mine < 0 || b.crops[mine].s !== 3) && b.crops.every(c => c.s !== 3) && !lost.length && Hd.reached('food') && !bad.length,
-      `${v.name} morreu com ${n} de comida nas mãos${n > 0 ? (way ? ' (a colheita a caminho do armazém)' : ' (na roça)') : ''}: ao armazém pelo livro ('herdado') ${herd}; o canteiro ${mine} que ele segurava ${mine < 0 ? '(nenhum)' : b.crops[mine].s !== 3 ? 'foi colhido por outro' : 'ficou maduro, preso'}; a roça ${sOf(b)}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `${v.name} morreu com ${n} de comida nas mãos${n > 0 ? (way ? ' (a colheita a caminho do armazém)' : ' (na roça)') : ''}${k2.say()}: ao armazém pelo livro ('herdado') ${herd}; o canteiro ${mine} que ele segurava ${mine < 0 ? '(nenhum)' : b.crops[mine].s !== 3 ? 'foi colhido por outro' : 'ficou maduro, preso'}; a roça ${sOf(b)}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   // c3 a save in the middle of the season
   {
@@ -198,12 +208,12 @@ else {
   // c5 the god brings the farm down with the harvest in the hands
   {
     const P = farmSetup(ripe); const b = P.b; const v = P.farmers[0]; const Hd = watchHands([v.id]);
-    send(v, b, onFarm(b)); live(60, Hd.step, () => harvestIn(v));
+    send(v, b, onFarm(b)); const k5 = keepAt(v, b, () => harvestIn(v)); live(90, () => { k5(); Hd.step(); }, () => harvestIn(v));
     const n = held(v).food || 0; const way = v.task && v.task.type === 'deliver'; V.destroyBuilding(b, 'meteor'); Hd.step();
     live(120, Hd.step, () => !(held(v).food > 0));
     const got = Hd.flow('food').toF; const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c5', n > 0 && !S().buildings.has(FARM) && !(held(v).food > 0) && got >= n - 0.01 && Hd.reached('food') && !lost.length && !bad.length,
-      `a roça caiu com ${n} de comida nas mãos de ${v.name}${n > 0 ? (way ? ' (a colheita a caminho do armazém)' : ' (na roça)') : ''}: a roça ${S().buildings.has(FARM) ? 'ainda lá' : 'sumiu'}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `a roça caiu com ${n} de comida nas mãos de ${v.name}${n > 0 ? (way ? ' (a colheita a caminho do armazém)' : ' (na roça)') : ''}${k5.say()}: a roça ${S().buildings.has(FARM) ? 'ainda lá' : 'sumiu'}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
 }
 
@@ -327,8 +337,13 @@ else {
     send(a, b, fieldAt(b)); live(60, () => { kh(); if (fit(a) && !at2(a)) send(a, b, fieldAt(b)); }, () => a.task && a.task.type === 'estate' && a.task.do === 'press' && a.task.st === 1);
     const was = !!(a.task && a.task.do === 'press'); const L0 = seen.length;
     const away = () => { if (!(a.task && a.task.type === 'rest')) { G.Vg.endTask(a); G.Vg.setTask(a, { type: 'rest', pri: 2.5 }); } };
+    // (and the other hand kept at the vat by the same rule as the farmer of the c1 — sent back from what weighs less than the work;
+    // what weighs more runs its course: in the metrópole of the generation 21 Miztli, sent to the vat, fetched the house's water
+    // for 40 s, fought in a brawl, came back to it, and the square took him at 0,56 — the square takes one from the day's common
+    // work (D-225) —: «a outra mão não prensou», T-1083)
+    const keepN = () => { if (!next) return; const w = S().villagers.get(next.id); if (!w || !fit(w) || at2(w) || (w.task && (w.task.pri || 0) >= 1)) return; send(w, b, fieldAt(b)); };
     away(); if (next) send(next, b, fieldAt(b));
-    live(90, () => { kh(); away(); }, () => pressedBy(L0, b).length > 0);
+    live(90, () => { kh(); away(); keepN(); }, () => pressedBy(L0, b).length > 0);
     const by = pressedBy(L0, b); good = good && was && (!next || by.includes(next.id));
     parts.push(`${a.name} chamado no meio da prensa (${was ? 'estava nela' : 'não chegou a ela'}): ${next ? (by.includes(next.id) ? 'a outra mão prensou' : by.length ? 'prensada por #' + by[0] : 'a outra mão não prensou') : 'sem outra mão nela'}`);
   }

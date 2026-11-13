@@ -190,7 +190,15 @@ if (on('k6')) {
 
 // ---------------------------------------------------------------- k7
 if (on('k7')) {
-  const c = house(2, kinIn), far = house(2, kinIn);
+  // (the family the banner is of, of a people at peace: one at war may lose its owner to a captivity in the day of the case, and
+  // the banner of one away with no roof of his own waits for him where it is, as the rule has it — Xiuhtonal of Tenochtitlan, at
+  // the fight when the case began, was taken in the day: «depois do dia da cidade SEGUE ali», the metrópole of the generation
+  // 21, T-1081)
+  // (and, with every people of the world at war by then — the metrópole goes to war on its second day —, a family none of whom
+  // is in the fight: no warrior, no one at a fight or mustered)
+  const peace = b => { const st = S.settlements.get(b.set); return !!st && !G.Fac.enemiesOf(st.fac).length; };
+  const inFight = l => l.some(w => w.role === 'guerreiro' || (!!w.task && (w.task.type === 'combat' || w.task.type === 'muster' || w.task.kind === 'combat' || w.task.kind === 'muster')));
+  const c = house(2, kinIn), far = house(2, (b, l, o) => kinIn(b, l, o) && peace(b)) || house(2, (b, l, o) => kinIn(b, l, o) && !inFight(l));
   if (!c || !far) none('k7 o verificador acusa a bandeira deixada nas paredes');
   else {
     // the banner of another family (far.o, who lives elsewhere), last seen five days ago, on the walls of this house
@@ -250,8 +258,10 @@ if (on('k9')) {
 if (on('k10')) {
   // (a banner of a save of before — no household written on it — on the house the family left standing, and the owner of both
   // houses dies before the day's first round: the houses pass to the heir at the death, act-casa.js, and the round writes the
-  // banner his and takes it to the house where he lives)
-  const c = house(2, (b, l, o) => !!empty(S.settlements.get(b.set), l.length) && l.some(v => v.id !== o.id && (v.id === o.partner || v.mother === o.id || v.father === o.id)));
+  // banner his and takes it to the house where he lives — an heir grown, the partner or a child of sixteen or more, as the
+  // house's heir is (act-casa.js heirOf): Irene of Argos, with three little ones, left the houses to nobody, the people's, and
+  // the banner no one of the family to go to, in the metrópole of the generation 21 — T-1081)
+  const c = house(2, (b, l, o) => !!empty(S.settlements.get(b.set), l.length) && l.some(v => v.id !== o.id && v.age >= 16 && !v.captive && (v.id === o.partner || v.mother === o.id || v.father === o.id)));
   if (!c) none('k10 a bandeira de um save de antes e o dono morto antes da primeira ronda');
   else {
     const { b, l, o, set } = c; const nh = empty(set, l.length); used.add(nh.id); const ids = l.filter(v => v.id !== o.id).map(v => v.id);
@@ -273,23 +283,26 @@ if (on('k11')) {
   // (who of the house inherits, by the relations of the door of every death — trade.js heirIn: the partner, a child, a brother or
   // sister, a parent, a grandchild —, of one or the other)
   const kinOf = (r, x) => x.id === r.partner || x.mother === r.id || x.father === r.id || r.mother === x.id || r.father === x.id || (!!r.mother && x.mother === r.mother) || (!!r.father && x.father === r.father) || (r.kids || []).includes(x.mother) || (r.kids || []).includes(x.father);
-  // a brother or sister of the owner, of the town, living elsewhere, single, no kin of the partner
-  const sibOf = (b, o, p) => [...S.villagers.values()].filter(v => v.id !== o.id && v.set === o.set && ((!!o.mother && v.mother === o.mother) || (!!o.father && v.father === o.father)) && !v.partner && !kinOf(p, v) && v.home && v.home !== b.id && !v.captive && !v.jail && !v.aboard && !(S.avatar && S.avatar.id === v.id)).sort((a, c2) => c2.age - a.age || a.id - c2.id)[0] || null;
+  // a brother or sister of the owner, of the town, single, no kin of the partner — living with them already, or elsewhere (the
+  // test's hand brings them). The metrópole of the generation 21 has two couples' houses with nobody of the partner's kin under
+  // them, and the one single brother of their owners in the town lived with the couple already: Axayácatl, with Tízoc and
+  // Nenetl at the sobrado#10877 of Texcoco — the case asked one living elsewhere, and found none (T-1081)
+  const sibOf = (b, o, p) => [...S.villagers.values()].filter(v => v.id !== o.id && v.set === o.set && ((!!o.mother && v.mother === o.mother) || (!!o.father && v.father === o.father)) && !v.partner && !kinOf(p, v) && v.home && !v.captive && !v.jail && !v.aboard && !(S.avatar && S.avatar.id === v.id)).sort((a, c2) => (c2.home === b.id) - (a.home === b.id) || c2.age - a.age || a.id - c2.id)[0] || null;
   // a house of a couple, the owner and the partner, with nobody of the partner's kin under it — and a brother or sister of the
   // owner in the town, whom the test's hand brings to live with them, as the town's housing does (in the generation 20 Thyra of
   // Hedeby lived with her husband Hakon and her three young brothers and sisters, all of them the ruler's)
   const c = house(2, (b, l, o) => { const p = l.find(v => v.id === o.partner && v.age >= 16); return !!p && !l.some(v => v !== o && v !== p && kinOf(p, v)) && !!sibOf(b, o, p); });
   if (!c) none('k11 o par que herdou morre também: a bandeira fica com a família de quem a ganhou');
   else {
-    const { b, o, set } = c; const p = P(o.partner); const sb = sibOf(b, o, p); const since = banner(b, o).since;
-    god(() => { const from = B(sb.home); sb.home = b.id; sb.hhType = b.type; if (sb.inside) sb.inside = 0; b.res = (b.res || 0) + 1; if (from) from.res = Math.max(0, (from.res || 0) - 1); });
+    const { b, o, set } = c; const p = P(o.partner); const sb = sibOf(b, o, p); const since = banner(b, o).since; const there = sb.home === b.id;
+    if (!there) god(() => { const from = B(sb.home); sb.home = b.id; sb.hhType = b.type; if (sb.inside) sb.inside = 0; b.res = (b.res || 0) + 1; if (from) from.res = Math.max(0, (from.res || 0) - 1); });
     // the owner dies — the partner has the banner —; and the partner dies too, before the day's round (a war, an arrow)
     god(() => G.Village.kill(o, 'teste')); const d1 = B(b.id).elite ? B(b.id).elite.dono : -1;
     god(() => G.Village.kill(p, 'teste')); const d2 = B(b.id).elite ? B(b.id).elite.dono : -1;
     day(1);
     const at = bannersOf(o.name, since), x = at[0] || null, e = x && x.elite, holder = e && P(e.dono); const nv = said(b.id).concat(x && x.id !== b.id ? said(x.id) : []);
     ok('k11 o par que herdou morre também: a bandeira fica com a família de quem a ganhou', d1 === p.id && d2 === sb.id && at.length === 1 && !!holder && holder.home === x.id && x.trade === 60 && !nv.length,
-      `${o.name}, de ${set.name}, com a bandeira na porta de ${b.type}#${b.id}, morava com ${p.name} (o par) e, pela mão da prova, ${sb.name} (${sb.age | 0}, ${sb.g === 'f' ? 'irmã' : 'irmão'} de ${o.name}): ${o.name} morre e a bandeira é de ${d1 === p.id ? p.name + ' (o par)' : P(d1) ? P(d1).name : d1 > 0 ? '#' + d1 : 'NINGUÉM'}; ${p.name} morre também e ela é de ${d2 === sb.id ? sb.name : P(d2) ? P(d2).name : d2 > 0 ? '#' + d2 : 'NINGUÉM'}; um dia depois ${at.length === 1 ? `está na porta de ${x.type}#${x.id}, onde mora ${holder ? holder.name : 'NINGUÉM da família'}` : at.length ? `está em ${at.length} PORTAS` : 'a bandeira DESCEU'}; verificador ${nv.join(' | ') || 'limpo'}`);
+      `${o.name}, de ${set.name}, com a bandeira na porta de ${b.type}#${b.id}, morava com ${p.name} (o par) e${there ? '' : ', pela mão da prova,'} ${sb.name} (${sb.age | 0}, ${sb.g === 'f' ? 'irmã' : 'irmão'} de ${o.name}): ${o.name} morre e a bandeira é de ${d1 === p.id ? p.name + ' (o par)' : P(d1) ? P(d1).name : d1 > 0 ? '#' + d1 : 'NINGUÉM'}; ${p.name} morre também e ela é de ${d2 === sb.id ? sb.name : P(d2) ? P(d2).name : d2 > 0 ? '#' + d2 : 'NINGUÉM'}; um dia depois ${at.length === 1 ? `está na porta de ${x.type}#${x.id}, onde mora ${holder ? holder.name : 'NINGUÉM da família'}, a conta do comércio ${x.trade}` : at.length ? `está em ${at.length} PORTAS` : 'a bandeira DESCEU'}; verificador ${nv.join(' | ') || 'limpo'}`);
   }
 }
 

@@ -226,9 +226,11 @@ if (on('v1', 'v2')) {
 
 // ================================================================ the small town with named fields (the vila of the ready world)
 if (on('v3')) {
-  open(WORLD);
-  const vila = [...S.settlements.values()].filter(s => (s.tier || 0) <= K.SMALL && U.districtsOf(s).length >= 1 && pop(s) >= 6).sort((a, b) => pop(b) - pop(a) || a.id - b.id)[0];
-  if (!vila) ok('v3 na vila todos sabem os campos e uns aos outros', false, `nenhuma vila com um bairro de nome em ${WORLD}`);
+  // (the biggest small town with a named quarter of the world asked — or, with none there, of the next ready world that has one: the
+  // metrópole of the generation 21 has none, its small towns grown or of no named field, T-1087)
+  const vilaOf = () => [...S.settlements.values()].filter(s => (s.tier || 0) <= K.SMALL && U.districtsOf(s).length >= 1 && pop(s) >= 6).sort((a, b) => pop(b) - pop(a) || a.id - b.id)[0];
+  let vila = null, vw = WORLD; for (const w of [WORLD, 'cidade', 'mundial', 'anos100', 'mega'].filter((x, i, l) => l.indexOf(x) === i)) { open(w); vila = vilaOf(); if (vila) { vw = w; break; } }
+  if (!vila) ok('v3 na vila todos sabem os campos e uns aos outros', false, `nenhuma vila com um bairro de nome em ${WORLD} nem nos outros mundos prontos`);
   else {
     const folk = people(v => v.set === vila.id && v.age >= 16 && !v.captive); const qs = U.districtsOf(vila); let badQ = 0, badP = 0, pairs = 0; const why = {};
     for (const a of folk) { for (const q of qs) if (!K.district(a, q)) badQ++; for (const b of folk) if (a !== b) { pairs++; const h = K.how(a, b); why[h.why] = (why[h.why] || 0) + 1; if (!h.n) badP++; } }
@@ -236,7 +238,7 @@ if (on('v3')) {
     const out = people(v => v.set !== vila.id && grown(v) && G.Fac.idOfV(v) === vila.fac && (S.settlements.get(v.set).tier || 0) >= 3)[0];
     const oq = out ? qs.filter(q => K.district(out, q)).length : -1, op = out ? folk.filter(b => K.person(out, b)).length : -1;
     ok('v3 na vila todos sabem os campos e uns aos outros', folk.length >= 4 && !badQ && !badP && (!out || (oq === 0 && op < folk.length)),
-      `${vila.name} (rank ${vila.tier || 0}, ${folk.length} adultos, ${qs.map(q => q.name).join(', ')}): ${badQ} que não sabem os campos, ${badP} de ${pairs} pares que não se conhecem ${JSON.stringify(why)}; ${out ? `${out.name}, de ${S.settlements.get(out.set).name} (mesmo povo): sabe ${oq} dos ${qs.length} campos e conhece ${op} dos ${folk.length}` : 'ninguém de uma cidade do mesmo povo'}`);
+      `${vila.name}${vw !== WORLD ? ' (de ' + vw + ')' : ''} (rank ${vila.tier || 0}, ${folk.length} adultos, ${qs.map(q => q.name).join(', ')}): ${badQ} que não sabem os campos, ${badP} de ${pairs} pares que não se conhecem ${JSON.stringify(why)}; ${out ? `${out.name}, de ${S.settlements.get(out.set).name} (mesmo povo): sabe ${oq} dos ${qs.length} campos e conhece ${op} dos ${folk.length}` : 'ninguém de uma cidade do mesmo povo'}`);
   }
 }
 

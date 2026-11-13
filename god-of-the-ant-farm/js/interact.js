@@ -75,8 +75,10 @@
     else if (meal && best !== meal && meal.t.o.ok !== false && best.p.id === 'atividade' && best.t.o && /^lar\.cozinhar:/.test(best.t.o.id || '') && G.Avatar.seated() && (G.Possess.useOf() || {}).use === 'comer') best = meal;
     // (and the body's own bed, faced, before the house's cooking: the fire by the bed's foot — nearer than the bed's middle, and
     // the offer's reach the longer — won it from the body turned to its bed: beside the couple's mat of the house of the
-    // metropole whose core D-196 laid by the beds, «Cozinhar a ceia da casa», and never lay down by E — L-892)
-    if (bed && best !== bed && best.p.id === 'atividade' && best.t.o && /^lar\.cozinhar:/.test(best.t.o.id || '')) { const a = aim(ctx, bed.t.X, bed.t.Z); if (a.ang <= I.FACE && a.ang < aim(ctx, best.t.X, best.t.Z).ang) best = bed; }
+    // metropole whose core D-196 laid by the beds, «Cozinhar a ceia da casa», and never lay down by E — L-892); and before the
+    // stairs, by the same rule: the foot of the ladder by the couple's mat of the sobrado#14091 of the generation-21 metropole —
+    // at 0.47 m and 60° round, the mat's middle at 1.33 m and straight ahead — won it, «Subir pela escada de mão» (L-778)
+    if (bed && best !== bed && (best.p.id === 'escada' || (best.p.id === 'atividade' && best.t.o && /^lar\.cozinhar:/.test(best.t.o.id || '')))) { const a = aim(ctx, bed.t.X, bed.t.Z); if (a.ang <= I.FACE && a.ang < aim(ctx, best.t.X, best.t.Z).ang) best = bed; }
     // (and standing at a table, its place faced before a bed or the house's cooking beside it — «Sentar à mesa», always, D-104 —:
     // the bench-bed by the table of the Norse house, its kind weighing more, won the body standing at its place and turned to it
     // — the place at 0° and 0.75 m, the bed at 33° and 1.13 m —: «Deitar na cama», at the sobrado#2924 of the generation-20
@@ -596,7 +598,10 @@
     // else as what it is: where the one who rules lives is the town's talk, D-208)
     { const lord = G.Casa && G.Casa.lordOf ? G.Casa.lordOf(b) : null;
       if (lord && lord.home === b.id) card.rows.push(['Casa de quem governa', K.person(me, lord) ? lord.name + (me && lord.id === me.id ? ' (você)' : '') : kt ? `quem governa ${set.name}` : 'quem governa aqui']); }
-    if (b.coin !== undefined && res.length && K.house(me, b)) card.rows.push(['Moedas da família', Math.round(b.coin)]);
+    // (the household's coins — the house's, and the seat's, which keeps as a house (V.bedsOf, D-205) —, read as the depot reads
+    // them: none put in yet is none. The palace of Ramsés in the metrópole of the generation 21 had never had a coin put in it,
+    // and its own household saw no line of coins in its card, as no house shows: L-788)
+    if (res.length && K.house(me, b) && (b.coin !== undefined || G.Village.bedsOf(b) > 0)) card.rows.push(['Moedas da família', Math.round(b.coin || 0)]);
     if (isStore(b) && b.built && K.stock(me, b)) { const f = G.Fac.get(G.Village.facOfSet(b.set)); if (f) card.rows.push(['No estoque do povo', ['food', 'wood', 'stone'].map(k => `${Math.floor(f.stock[k] || 0)} de ${G.Eco ? G.Eco.name(k) : k}`).join(', ')]); }
     const work = [...S.villagers.values()].filter(o => o.task && o.task.id === b.id && o.task.type !== 'avatar').slice(0, 6);
     if (work.length) card.rows.push(['Trabalhando aqui', work.map(o => K.name(me, o)).join(', ')]);

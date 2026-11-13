@@ -167,13 +167,17 @@ run('t4', () => {
   // family's house (D-264). Asked as one, the search and the opening: Tebas of the mundial of the generation 20, its temple of
   // 4 — no free flat lot; the opening took a hut down at 35,93; the levelling found the free lot at 34,92, 1,9 levels to move
   // —, «1 DIFERENTES», T-1058)
-  let iguais = 0, antes = 0; const mal = [], mal2 = [];
+  // (a type whose field the town keeps goes to that field first, flat or to be levelled — D-121, resSite; the field's own choice
+  // is the t6's: Tenochtitlan of the cidade of the generation 21 keeps the field of its colossal wonder, 13, at 56,41, to be
+  // levelled, and its wonder of 10 went into it with the levelling, «1 DIFERENTES: sem aplainar 45,33; com ele 57,42», T-1086)
+  let iguais = 0, antes = 0, guardados = 0; const mal = [], mal2 = [];
   const livre = (s, t, q) => quieto(s, () => V.findSite(s, t, undefined, q.n));
   const abreLugar = (s, t, q) => (V.opens(t, q) ? quieto(s, () => V.openSite(s, t, q)) : null);
   const relevo = (p, q) => (W.slope(p[0], p[1], q.n, q.n) * 1.5).toFixed(1) + ' m de relevo';
   for (const w of ['metropole', 'mega', 'mundial', 'cidade']) {
     abre(w);
     for (const s of capitais()) for (const t of TIPOS) for (const q of Es.choose(s, t).filter(x => x.n > Es.n0(t) && !x.familia)) {
+      if (s.urb && s.urb.res && s.urb.res.type === t) { guardados++; continue; }
       const A = semAplainar(() => livre(s, t, q));
       if (!A) {
         // (no free flat lot: the free lot the levelling finds, if any, is one to level and takes nothing down — before the
@@ -186,7 +190,7 @@ run('t4', () => {
       if (B && B[0] === A[0] && B[1] === A[1]) iguais++; else mal.push(`${w} ${s.name} ${t}/${q.n}: sem aplainar ${A[0]},${A[1]}; com ele ${B ? B[0] + ',' + B[1] + ' (' + relevo(B, q) + ')' : 'NADA'}`);
     }
   }
-  ok('t4d o plano primeiro, em toda capital', iguais >= 10 && !mal.length, `nos mundos prontos, ${iguais} buscas (capital × tipo × degrau) com lote livre que o pódio cobre: o mesmo lote com o aplainar e sem ele${mal.length ? `; ${mal.length} DIFERENTES: ${mal.slice(0, 3).join(' | ')}` : ''}`);
+  ok('t4d o plano primeiro, em toda capital', iguais >= 10 && !mal.length, `nos mundos prontos, ${iguais} buscas (capital × tipo × degrau) com lote livre que o pódio cobre: o mesmo lote com o aplainar e sem ele (${guardados} do tipo que a cidade guarda campo: no campo dele, t6)${mal.length ? `; ${mal.length} DIFERENTES: ${mal.slice(0, 3).join(' | ')}` : ''}`);
   ok('t4e o lote livre que se aplaina antes de abrir lugar sobre as casas (D-264)', !mal2.length, `${antes} degrau(s) sem lote livre plano que, sem o aplainar, abririam o seu lugar sobre as casas da cidade: com ele, um lote livre a aplainar, sem nada derrubado${mal2.length ? `; FALHAS: ${mal2.slice(0, 3).join(' | ')}` : ''}`);
 });
 
@@ -251,7 +255,11 @@ run('t6', () => {
       else if (B) { aplainados++; if (!(B.sl > V.PODIUM) || !(V.earthOf(B.x, B.y, B.n) > 0)) mal.push(`${w} ${set.name}: guarda ${B.n} em ${B.x},${B.y} que nem o pódio cobre nem se aplaina`); diz.push(`${w} ${set.name}: ${wk.type}, ${B.n} em ${B.x},${B.y}, ${(B.sl * 1.5).toFixed(1)} m de relevo`); }
     }
   }
-  ok('t6a o campo guardado: o plano primeiro', planos > 0 && aplainados + maiores > 0 && mantidos === planos + aplainados + maiores && !mal.length, `capitais que guardariam um campo para a sua maravilha nos mundos prontos: ${planos} num lote que o pódio cobre (o mesmo com o aplainar e sem ele), ${maiores} num degrau maior que só tem lote aplainado, ${aplainados} só num lote que se aplaina${diz.length ? ' (' + diz.join('; ') + ')' : ''}; guardado ainda no dia seguinte: ${mantidos}${mal.length ? '; FALHAS: ' + mal.slice(0, 3).join(' | ') : ''}`);
+  // (every capital that keeps a field compared — the flat lot it would keep, the same with the levelling —; a world of dense
+  // towns may have none with a flat lot for its wonder at all: no capital of the five ready worlds of the generation 21 has one,
+  // Roma of the mundial keeps hers on a lot to be levelled, and the case said «0 num lote que o pódio cobre». The flat-first is
+  // the comparison of each that has one (mal); one capital at least that keeps a field, T-1086)
+  ok('t6a o campo guardado: o plano primeiro', planos + aplainados + maiores > 0 && mantidos === planos + aplainados + maiores && !mal.length, `capitais que guardariam um campo para a sua maravilha nos mundos prontos: ${planos} num lote que o pódio cobre (o mesmo com o aplainar e sem ele), ${maiores} num degrau maior que só tem lote aplainado, ${aplainados} só num lote que se aplaina${diz.length ? ' (' + diz.join('; ') + ')' : ''}; guardado ainda no dia seguinte: ${mantidos}${mal.length ? '; FALHAS: ' + mal.slice(0, 3).join(' | ') : ''}`);
 });
 
 // ------------------------------ t7: o lote aberto ------------------------------

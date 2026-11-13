@@ -351,10 +351,14 @@ run('m8', () => {
   c = checa(); ok('m8f verificador', c.ok, c.txt);
 });
 
+// (a stranger of the capital for the seat, by the proof's hand: a grown one of none of the ruler's, with a home — the single and
+// of twenty or more first, as before; with none such, a younger one, or one with a partner (who stays where they are): the
+// capital of the m9 in the metrópole of the generation 21 had no single grown one at all, and the case broke on it — T-1085)
+const stranger = o => [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 16 && v.home && !v.captive && !K.ofCourt(v, o.r)).sort((a, c) => (!!a.partner - !!c.partner) || ((c.age >= 20) - (a.age >= 20)) || a.id - c.id)[0] || null;
 // ------------------------------ m9: a stranger in the seat; the empty seat is never offered ------------------------------
 run('m9', () => {
   const o = arma(true); if (!ok('m9a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
-  const b = o.b; const x = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 20 && !v.partner && v.home && !v.captive && !K.ofCourt(v, o.r)).sort((a, c) => a.id - c.id)[0];
+  const b = o.b; const x = stranger(o); if (!ok('m9b0 um estranho da capital', !!x, x ? `${x.name} (${x.age | 0})` : `${o.cap.name}: nenhum crescido de fora da casa de quem governa`)) return;
   const h0 = B(x.home); h0.res--; x.home = b.id; b.res++;
   M.viver(3);
   ok('m9b um estranho posto na sede sai', x.home !== b.id && (!x.home || G.BDEF[B(x.home).type].housing) && todosEm(K.court(o.r), b), `${x.name} agora em ${lado(B(x.home))}; na sede: ${nomes(moram(b))}`);
@@ -590,10 +594,13 @@ run('m15', () => {
   try {
     // (the seat with two beds, by the proof's hand: its grown single one is one too many)
     const ap = G.BDEF[b.type].aposentos; G.BDEF[b.type].aposentos = 2; const cedo7 = viu(/cheia demais/).length; M.viver(12); const p7 = cedo7 ? [] : viu(/cheia demais/); G.BDEF[b.type].aposentos = ap;
-    const x = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 20 && !v.partner && v.home && !v.captive && !K.ofCourt(v, o.r)).sort((a, c) => a.id - c.id)[0];
+    const x = stranger(o); if (!ok('m15b0 um estranho da capital', !!x, x ? `${x.name} (${x.age | 0})` : `${o.cap.name}: nenhum crescido de fora da casa de quem governa`)) return;
     const outro = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 25 && v.age < 60 && !v.captive && v.home && v !== x && !K.ofCourt(v, o.r)).sort((a, c) => a.id - c.id)[0];
     const hx = x.home; B(hx).res--; x.home = b.id; b.res++; b.dono = x.id;
-    const mer = [...S.buildings.values()].find(q => q.set === o.cap.id && q.built && !V.bedsOf(q) && q.type !== 'ruin' && q.blocks); const y = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 20 && v.home && v !== x && v !== outro && !K.ofCourt(v, o.r)).sort((a, c) => c.id - a.id)[0]; const hy = y.home; y.home = mer.id; const p1 = viu(/não é prédio de morar/); y.home = hy;
+    // (a home that is no home: one with a home put on a building of no beds — of the capital first; a capital of few grown ones,
+    // the stranger and the new ruler taken, has none left: then one of the world, T-1085)
+    const merOk = q => q.built && !V.bedsOf(q) && q.type !== 'ruin' && q.blocks; const yOk = v => !!v.home && v !== x && v !== outro && !v.captive && !K.ofCourt(v, o.r);
+    const mer = [...S.buildings.values()].find(q => q.set === o.cap.id && merOk(q)) || [...S.buildings.values()].find(merOk); const y = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 20 && yOk(v)).sort((a, c) => c.id - a.id)[0] || [...S.villagers.values()].filter(v => v.age >= 16 && yOk(v)).sort((a, c) => c.id - a.id)[0]; const hy = y.home; y.home = mer.id; const p1 = viu(/não é prédio de morar/); y.home = hy;
     sim(() => { Pl.endReign(o.f, 'mandato'); Pl.crown(o.f, outro, 'eleicao', true); });
     const cedo = viu(/sem ser da família|governa .* e não mora/).length; M.viver(12);
     const p2 = viu(/sem ser da família/), p3 = viu(/governa .* e não mora/), p5 = viu(/a sede com dono/);

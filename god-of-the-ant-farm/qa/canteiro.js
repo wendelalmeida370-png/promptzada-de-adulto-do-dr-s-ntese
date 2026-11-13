@@ -57,8 +57,24 @@ function arma(dist, o) {
   const caps = [...new Set(G.Fac.all().filter(f => f.alive).map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
   // (o.irma: the biggest capital whose people has another town of fifteen or more — a sister with builders of its own)
   const irmaDe = c => [...S.settlements.values()].filter(s => s.fac === c.fac && s !== c && V.pop(s.id) >= 15).sort((a, q) => V.pop(q.id) - V.pop(a.id) || a.id - q.id)[0] || null;
-  const set = o.irma ? caps.find(c => irmaDe(c)) : caps[0]; if (!set) return null;
-  const f = G.Fac.get(set.fac); const n = 6;
+  const n = 6;
+  // (the lot: the free dry ground the town walks to whose middle lies nearest the asked distance from its stores)
+  const lotOf = set => {
+    let best = null;
+    for (let y = 3; y + n <= N - 3; y++) for (let x = 3; x + n <= N - 3; x++) {
+      const d = aoArmazem(set, x + n / 2, y + n / 2); const e = Math.abs(d - dist); if ((dist > 0 ? d < dist - (o.tol || 4) || d > dist + 20 : e > (o.tol || 4)) || (best && e >= best[2])) continue; let livre = true;
+      for (let ty = y - 1; ty <= y + n && livre; ty++) for (let tx = x - 1; tx <= x + n; tx++) { const i = ty * N + tx; if (S.type[i] < G.T.SAND || S.type[i] === G.T.RIVER || S.occ[i] || S.wall[i] || S.road[i] >= 3 || S.cliff[i]) { livre = false; break; } }
+      if (livre && W.slope(x, y, n, n) <= V.PODIUM && W.reachesTownXY(x + n / 2, y - 0.5, set)) best = [x, y, e];
+    }
+    return best;
+  };
+  // (the biggest capital with such a lot — far, from the asked distance less the tolerance to twenty more, the nearest to it
+  // first: the mega of the generation 21, 160 tiles wide, is full of towns, and no capital had an 8×8 of free dry ground at 31
+  // to 39 tiles from its stores — Hedeby's nearest lay at 52 —: every case of the far work said «sem chão a 35 casas de um
+  // armazém», T-1084)
+  const set = (o.irma ? caps.filter(c => irmaDe(c)) : caps).find(c => lotOf(c)) || null;
+  if (!set) { if (VERB) console.log(`  (arma: nenhuma capital com chão livre a ${dist} ± ${o.tol || 4} casas de um armazém)`); return null; }
+  const f = G.Fac.get(set.fac);
   if (o.semRoda) { delete f.tech.known.roda; const ap = G.Civ.learn; G.Civ.learn = function (q, t) { return t === 'roda' && q && q.id === f.id ? false : ap.apply(this, arguments); }; } else if (!G.Civ.has(f.id, 'roda')) sim(() => G.Civ.learn(f, 'roda'));
   // (the town's own great works going up taken off by the god's hand first — an enlargement given up, V.ungrow; a work begun
   // taken from its lot, the site's goods home —: the planner marks the first that waits for stone, in the order they were
@@ -66,12 +82,7 @@ function arma(dist, o) {
   // of 8 going up with none of its 272 of stone: the 200 the carts took out of the store in the c1 went to it, and the case's
   // own work, founded after it, never had a cart — «0 entraram no canteiro», «nenhuma carroça saiu», T-1057)
   sim(() => { for (let gw, k = 0; k < 9 && (gw = V.greatWork(set, { siteTypes: { teatro: 1 } })); k++) { if (gw.amp) V.ungrow(gw); else { V.siteBack(gw, 'obra-derrubada'); V.removeBuilding(gw); } } });
-  let best = null;
-  for (let y = 3; y + n <= N - 3; y++) for (let x = 3; x + n <= N - 3; x++) {
-    const d = aoArmazem(set, x + n / 2, y + n / 2); const e = Math.abs(d - dist); if (e > (o.tol || 4) || (best && e >= best[2])) continue; let livre = true;
-    for (let ty = y - 1; ty <= y + n && livre; ty++) for (let tx = x - 1; tx <= x + n; tx++) { const i = ty * N + tx; if (S.type[i] < G.T.SAND || S.type[i] === G.T.RIVER || S.occ[i] || S.wall[i] || S.road[i] >= 3 || S.cliff[i]) { livre = false; break; } }
-    if (livre && W.slope(x, y, n, n) <= V.PODIUM && W.reachesTownXY(x + n / 2, y - 0.5, set)) best = [x, y, e];
-  }
+  const best = lotOf(set);
   if (!best) { if (VERB) console.log(`  (arma: nenhum chão livre a ${dist} ± 4 casas de um armazém de ${set.name})`); return null; }
   // (the rocks of the lot taken away by the god's hand: a rock of the lot is broken into the work — D-121 —, and would feed it)
   sim(() => { for (let ty = best[1] - 1; ty <= best[1] + n; ty++) for (let tx = best[0] - 1; tx <= best[0] + n; tx++) { const rk = S.rocks.get(S.objAt[ty * N + tx]); if (rk) G.Nature.removeRock(rk); } });

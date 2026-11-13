@@ -214,14 +214,24 @@ for (const world of WORLDS) {
       // the beast is held at the edge by the test's hand, and one killed before the town's look is not the case — another is
       // put there, three times at most. In the «cidade» of the sailors the rare rabbit took fright in the second second and
       // was dead, hunted, in the fifth, T-689)
-      let sd = null, k = 0, killed = 0;
-      for (let n = 0; n < 4 && !sd; n++) {
-        const a = G.Animals.spawn(kind, spot[0], spot[1], { morph: 'albino' });
+      // (the town's sight is its record of the sighting — the fact of the beast with the town, the observer's own; the seed comes
+      // of it when the town's eagerest has none of a rare beast yet: a person carries one of a kind — the stronger seed stays,
+      // stories.js plant. In the «cidade» of the generation 21 Roma saw the rabbit in the tenth second, and its hunter #1717 held
+      // the seed of another rare beast of the world's own, of the same weight: no seed, and the case said «a cidade NÃO viu» — T-1080)
+      let sd = null, seen = null, k = 0, killed = 0, aid = 0;
+      const sawIt = id => S.saga.facts.find(f => f.k === 'fera-rara' && f.beast === id && f.set === set.id) || null;
+      for (let n = 0; n < 4 && !seen; n++) {
+        const a = G.Animals.spawn(kind, spot[0], spot[1], { morph: 'albino' }); aid = a.id;
         const hold = () => { G.inSim++; try { if (S.animals.has(a.id) && !a.dead && !a.rareSeen) { a.x = spot[0]; a.y = spot[1]; a.tx = spot[0]; a.ty = spot[1]; a.state = 'idle'; a.t = 3; a.path = undefined; } } finally { G.inSim--; } };
-        for (k = 0; k < 30 && !sd && S.animals.has(a.id) && !a.dead; k++) { hold(); M.viver(1); sd = S.saga.seeds.find(x => x.type === 'fera-rara' && x.cast && x.cast.beast === a.id) || S.saga.stories.find(x => x.type === 'fera-rara' && x.cast.beast === a.id); }
-        if (!sd && (a.dead || !S.animals.has(a.id)) && !a.rareSeen) killed++; else break;
+        for (k = 0; k < 30 && !seen && S.animals.has(a.id) && !a.dead; k++) { hold(); M.viver(1); seen = sawIt(a.id); }
+        if (!seen && (a.dead || !S.animals.has(a.id)) && !a.rareSeen) killed++; else break;
       }
-      ok(`f6 ${world}`, !!sd, `${set.name} (raio ${set.radius.toFixed(0)}): ${kind} raro a ${d0.toFixed(1)} casas do centro, na borda — ${sd ? 'a cidade viu em ' + k + ' s e a semente nasceu' : 'a cidade NÃO viu em 30 s'}${killed ? ` (${killed} morto(s) pela caça antes de a cidade olhar)` : ''}`);
+      sd = S.saga.seeds.find(x => x.type === 'fera-rara' && x.cast && x.cast.beast === aid) || S.saga.stories.find(x => x.type === 'fera-rara' && x.cast.beast === aid) || null;
+      // (no seed: the town's people of a rare beast's chase already — a seed or a running story of one, the other beast's)
+      const ofTown = q => { const w = S.villagers.get(q.protag); return !!w && w.set === set.id && q.cast && q.cast.beast !== aid; };
+      const held = sd ? null : S.saga.seeds.find(q => q.type === 'fera-rara' && ofTown(q)) || S.saga.stories.find(q => q.type === 'fera-rara' && q.st === 'ativa' && ofTown(q)) || null;
+      const hn = held ? S.villagers.get(held.protag) : null;
+      ok(`f6 ${world}`, !!seen && (!!sd || !!held), `${set.name} (raio ${set.radius.toFixed(0)}): ${kind} raro a ${d0.toFixed(1)} casas do centro, na borda — ${seen ? `a cidade viu em ${k} s` + (sd ? ' e a semente nasceu' : held ? `; sem semente nova: ${hn ? hn.name + ' #' + hn.id : '#' + held.protag} já leva ${held.st ? 'a história' : 'a semente'} de outra fera rara (#${held.cast.beast}), e uma pessoa leva uma de cada tipo` : '; e a semente NÃO nasceu, sem outra fera rara na cidade') : 'a cidade NÃO viu em 30 s'}${killed ? ` (${killed} morto(s) pela caça antes de a cidade olhar)` : ''}`);
     }
   }
 }

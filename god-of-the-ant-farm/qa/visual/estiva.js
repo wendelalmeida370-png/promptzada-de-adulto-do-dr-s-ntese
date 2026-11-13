@@ -274,7 +274,7 @@ const snap = () => JSON.stringify([dock.crates, op, S.loose, v.carry, S.avatar.a
   ok('4. seguindo a pista pelo caminho do mundo, «E — Pegar a caixa» aparece ao chegar a uns 2,5 m das caixas desenhadas', !!L && first !== null && first <= 2.7 && first >= 1.5, `pista a ${L ? L.d.toFixed(0) : '?'} m; ${pth ? pth.length + ' passos do caminho' : 'sem caminho'}; «${b ? b.label : '-'}» ${first !== null ? 'a ' + first.toFixed(2) + ' m da caixa mais perto' : 'não apareceu'}`);
 }
 // ------------------------------ 4. the prompt, from every side of the pile ------------------------------
-let lastBest = null;
+let lastBest = null; const goods = []; // (every side the prompt came from: case 5 walks round to another when someone is in the way)
 { const dr = drawnOf(); const cx = dr.reduce((a, e) => a + e[0], 0) / dr.length, cz = dr.reduce((a, e) => a + e[2], 0) / dr.length;
   const nearest = (X, Z) => Math.min(...dr.map(e => Math.hypot(e[0] - X, e[2] - Z)));
   const at = (dir, m) => { let X = cx, Z = cz; for (let k = 0; k < 200 && nearest(X, Z) < m; k++) { X += Math.cos(dir) * 0.02; Z += Math.sin(dir) * 0.02; } return [X, Z]; };
@@ -284,7 +284,7 @@ let lastBest = null;
     if (!dry(x, y) || !W.canWalk(sp0[0], sp0[1], x, y, true) || !G.Avatar.place(x, y)) continue;
     still(4); faceTo(cx, cz); still(2); const b = I.best();
     const good = !!b && b.id === 'atividade' && /^Pegar /.test(b.label) && b.t.o.op === op.id;
-    if (good) { sides.push(k); lastBest = { b, x, y }; } else { const ctx = I.ctx(); const o = b && b.t && b.t.o && b.t.o.id ? S.villagers.get(b.t.o.id) : null; const sc = (X1, Z1) => { const dx = X1 - ctx.X, dz = Z1 - ctx.Z; const ang = Math.abs(Math.atan2(Math.sin(Math.atan2(dz, dx) - ctx.yaw), Math.cos(Math.atan2(dz, dx) - ctx.yaw))); return `${Math.hypot(dx, dz).toFixed(2)} m ${(ang * 57.3).toFixed(0)}°`; }; const near = P3.lyingOf(dock.id).reduce((m, e) => Math.min(m, Math.hypot(e[0] - ctx.X, e[2] - ctx.Z)), 9); miss.push(`${k}: ${b ? b.label : 'nada'}${o ? ' (' + sc(b.t.X, b.t.Z) + ', ' + (o.task ? o.task.type + '.' + o.task.st : '-') + ')' : ''} caixa a ${near.toFixed(2)}`); }
+    if (good) { sides.push(k); lastBest = { b, x, y }; goods.push(lastBest); } else { const ctx = I.ctx(); const o = b && b.t && b.t.o && b.t.o.id ? S.villagers.get(b.t.o.id) : null; const sc = (X1, Z1) => { const dx = X1 - ctx.X, dz = Z1 - ctx.Z; const ang = Math.abs(Math.atan2(Math.sin(Math.atan2(dz, dx) - ctx.yaw), Math.cos(Math.atan2(dz, dx) - ctx.yaw))); return `${Math.hypot(dx, dz).toFixed(2)} m ${(ang * 57.3).toFixed(0)}°`; }; const near = P3.lyingOf(dock.id).reduce((m, e) => Math.min(m, Math.hypot(e[0] - ctx.X, e[2] - ctx.Z)), 9); miss.push(`${k}: ${b ? b.label : 'nada'}${o ? ' (' + sc(b.t.X, b.t.Z) + ', ' + (o.task ? o.task.type + '.' + o.task.st : '-') + ')' : ''} caixa a ${near.toFixed(2)}`); }
     const [X2, Z2] = at(dir, 3.4); if (dry(X2 / TL, Z2 / TL) && G.Avatar.place(X2 / TL, Z2 / TL)) { still(4); faceTo(cx, cz); still(2); const b2 = I.best(); farN++; if (b2 && b2.id === 'atividade' && /^Pegar /.test(b2.label)) far++; }
   }
   back();
@@ -301,12 +301,20 @@ if (lastBest) {
   // (the crate drawn in the hands as the one lifted is: a crate of fish open, its fish showing; the cargo a ship brought shut
   // — people3d.js —: its mark read on the quay before the lift. By case 5 of the generation-12 metropole the porters had
   // taken the fish, and the crates left on the quay of Delfos were two ships' food: the one lifted was rightly drawn shut, T-379)
-  let b = null, hand = null, r = null, tries = 0, fishy = null; const all = [];
-  for (; tries < 3 && !(v.carry && v.carry.n > 0); tries++) { const e5 = freeDrawn()[0] || drawnOf()[0]; if (e5) { faceTo(e5[0], e5[2]); still(2); } b = I.best(); if (!(b && b.id === 'atividade' && /^Pegar /.test(b.label))) break; cid = b.t.o.cid; hand = b.t.hand; const cr = (dock.crates || []).find(q => q.id === cid); fishy = cr ? !!cr.fish : null; r = doIt(b); all.push(...said); }
+  // (and someone between the body and the crates — a little one following her mother about the quay: Meritamon, six, at 0.64 m
+  // and 7°, the crate at 2.32 m straight ahead, «Conversar com a menina», at the pile of the generation-21 metropole —: a player
+  // walks round the pile to another side the prompt came from, the last first — T-1082)
+  let b = null, hand = null, r = null, tries = 0, fishy = null; const all = [], inWay = [];
+  for (let g = goods.length - 1; g >= 0; g--) {
+    if (g < goods.length - 1) { G.Avatar.place(goods[g].x, goods[g].y); still(4); }
+    for (tries = 0; tries < 3 && !(v.carry && v.carry.n > 0); tries++) { const e5 = freeDrawn()[0] || drawnOf()[0]; if (e5) { faceTo(e5[0], e5[2]); still(2); } b = I.best(); if (!(b && b.id === 'atividade' && /^Pegar /.test(b.label))) break; cid = b.t.o.cid; hand = b.t.hand; const cr = (dock.crates || []).find(q => q.id === cid); fishy = cr ? !!cr.fish : null; r = doIt(b); all.push(...said); }
+    if ((v.carry && v.carry.n > 0) || !(b && b.id === 'pessoa')) break;
+    inWay.push(`«${b.label}» do lado ${goods.length - g}`);
+  }
   said.length = 0; said.push(...all);
   const H = P3.look(v).held;
   ok('5. a caixa oferecida vem às mãos no contato do estivador, e sai do cais e do desenho', !!r && r.ok && !!v.carry && v.carry.op === op.id && !opCrates().some(c => c.id === cid) && !P3.lyingOf(dock.id).some(e => e[4] === cid) && fishy !== null && !!H && H.form === (fishy ? 'caixaPeixe' : 'caixa') && !!v.carry.fish === fishy && !!hand,
-    `${b ? '«' + b.label + '»' : 'nada'}${said.length ? ' → «' + said.join(' / ') + '»' : ''}${tries > 1 ? ` (${tries} vezes E)` : ''}; nas mãos: ${v.carry ? `${v.carry.n} de ${E.name(v.carry.k)} (descarga #${v.carry.op})` : 'nada'}; desenhada nas mãos: ${H ? H.form : 'nada'} (${fishy === null ? 'a caixa não estava no cais' : fishy ? 'uma caixa de peixe' : 'a carga de um navio'}); a caixa #${cid} ${opCrates().some(c => c.id === cid) ? 'ainda no cais' : 'saiu do cais'}`);
+    `${inWay.length ? 'alguém no caminho: ' + inWay.join(', ') + '; ' : ''}${b ? '«' + b.label + '»' : 'nada'}${said.length ? ' → «' + said.join(' / ') + '»' : ''}${tries > 1 ? ` (${tries} vezes E)` : ''}; nas mãos: ${v.carry ? `${v.carry.n} de ${E.name(v.carry.k)} (descarga #${v.carry.op})` : 'nada'}; desenhada nas mãos: ${H ? H.form : 'nada'} (${fishy === null ? 'a caixa não estava no cais' : fishy ? 'uma caixa de peixe' : 'a carga de um navio'}); a caixa #${cid} ${opCrates().some(c => c.id === cid) ? 'ainda no cais' : 'saiu do cais'}`);
 } else ok('5. pegar a caixa', false, 'nenhum lado com o aviso');
 
 // ------------------------------ 6. the lead to the store ------------------------------

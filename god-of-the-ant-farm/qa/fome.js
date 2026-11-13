@@ -57,6 +57,8 @@
 // h23 sem armazém nenhum onde comer, quem tem comida na despensa de casa vai para casa e come lá, antes de um arbusto (L-774;
 //    achado pela regra S2 no caos da semente 13 da geração 21: Arne e Ragnhild, de Hedeby, morreram de fome na rua com 7 e 16 na
 //    despensa de casa); h23b de noite, depois da ceia, a cama — o peso da refeição não fica na noite em casa
+// h24 a caminho da refeição da fome (acima de 85), quem passa a duas casas de um fogo segue até o armazém: o fogo queima só quem
+//     está nele, e o caminho já desvia das casas que ardem; com fome abaixo de 85, a fuga de antes (L-779)
 // e o verificador limpo no meio de cada caso (o que ele vê no meio reprova o caso), sem erro de módulo nem aviso no console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -940,6 +942,63 @@ const calmOne = (skip, also) => {
   }
   ok('h23b de noite: para casa, a ceia, e depois a cama — o peso da refeição é o do caminho e da mesa, não o da noite em casa (L-774)', !!u && !!hu && uLar && uAte && uBed && after < 1.5,
     !u || !hu ? `${set.name}: nenhum outro adulto fora de casa, livre, com casa ao alcance` : `${u.name} #${u.id}, a ${du} casas da porta de casa, às 0,9 do dia, com a fome a 95 → ${uLar ? 'foi para casa' : 'NÃO FOI para casa'}; ${uAte ? `comeu lá aos ${tMeal} s` : 'NÃO COMEU em 90 s'}; ${uBed ? `deitou-se aos ${tBed} s` : 'NÃO SE DEITOU em 90 s'}${after >= 0 ? ` (a noite em casa depois da ceia pesou ${after}${after >= 1.5 ? ', ACIMA da cama' : ''})` : ''}`);
+}
+// ---------------- h24 the way to the meal of need goes on by a fire that is not under the feet (L-779) ----------------
+// (found by the rule S2 in the lived days of qa/praca.js on the mega of the generation 21: Xântipe, two, of Argos, astray in
+// Hedeby, her way to the store and home by the side of the great temple burning for days — the fire two tiles from her way —:
+// she fled at two tiles from it, came back to her way, fled again, eighty times in a day and a half, and starved with 1800 in the
+// store. The fire burns only who stands on its tile, and the way goes round the burning ones: the one on the way to the meal of
+// need goes on by it. A little one of a calm town with a store and food, two tiles from a fire held burning by the hand, at the
+// top of hunger: to the store, eating, without a flight from the fire; and, hungry under 85 with the same way to the store, the
+// flight as before — the precaution stays for who is not starving)
+{
+  const N = G.N; S.time = 0.35; const peace = () => { S.divinePeace = Math.max(S.divinePeace || 0, G.DAY_LEN); }; peace();
+  const calm = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 20 && V.pop(s.id) >= 12).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
+  // (a tile that burns, nothing built in two tiles of it, 5 to 9 from the heart, that the town walks to — and, two tiles from it,
+  // a tile of ground the town walks to: where the little one stands)
+  let set = null, spot = -1, at = null;
+  for (const s of calm) {
+    for (let r = 5; r <= 9 && !set; r++) for (let k = 0; k < 32 && !set; k++) {
+      const x = Math.floor(s.cx + Math.cos(k / 32 * 6.283) * r), y = Math.floor(s.cy + Math.sin(k / 32 * 6.283) * r); if (!W.inb(x, y)) continue; const i = y * N + x;
+      if (!G.Nature.fuel(i) || S.occ[i] || !W.walkable(i) || !W.townReaches(s, x + 0.5, y + 0.5)) continue;
+      let free = true; for (let dy = -2; dy <= 2 && free; dy++) for (let dx = -2; dx <= 2; dx++) if (W.inb(x + dx, y + dy) && S.occ[(y + dy) * N + x + dx]) { free = false; break; }
+      if (!free) continue;
+      for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2], [2, 1], [-2, -1], [1, 2], [-1, -2]]) { const ax = x + dx, ay = y + dy; if (W.inb(ax, ay) && W.walkable(ay * N + ax) && !G.Nature.fuel(ay * N + ax) && W.townReaches(s, ax + 0.5, ay + 0.5)) { set = s; spot = i; at = [ax + 0.5, ay + 0.5]; break; } }
+    }
+    if (set) break;
+  }
+  let info = calm.length ? `${calm.map(s => s.name).slice(0, 4).join(', ')}: nenhuma casa que arda, livre e alcançada, a 5 a 9 do centro, com chão a duas casas dela` : 'nenhuma cidade calma com armazém e comida', good = false;
+  if (set) {
+    const wet0 = S.wet[spot]; const fx = spot % N + 0.5, fy = ((spot / N) | 0) + 0.5;
+    const hold = () => { S.wet[spot] = 0; S.fire[spot] = Math.max(S.fire[spot], 0.6); G.Nature.fireSet.add(spot); for (const i of [...G.Nature.fireSet]) if (i !== spot) G.Nature.extinguish(i, 9); };
+    // (a little one of the town, out of the house, free, awake: of four to twelve, who never fights a fire)
+    const kid = [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 4 && o.age < 12 && !o.inside && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.n > 0) && !(o.task && (o.task.pri || 0) >= 3)).sort((a, b) => G.dist(a.x, a.y, ...at) - G.dist(b.x, b.y, ...at) || a.id - b.id)[0] || null;
+    if (!kid) info = `${set.name}: nenhuma criança fora de casa e livre`;
+    else {
+      // (the meal at the store: the hunger that falls — the store's food is still written by hand there, without its line, T-063)
+      const h0 = kid.hunger; const store = () => V.nearestDropoff(kid.x, kid.y, kid.set);
+      // (the case: put where she stands two tiles from the fire, the hunger set, her way to the store by the world's own choice)
+      const run = (hunger, sec) => {
+        hold(); kid.x = at[0]; kid.y = at[1]; kid.path = null; kid.hunger = hunger; kid.energy = 90; Vg.endTask(kid); kid.think = 0;
+        if (hunger <= 85) Vg.H.eatTask(kid); // (under 85 the meal is not of need: the way to the store given, as the world gives it at 60 or more)
+        let fled = 0, ate = false, first = kid.task ? kid.task.type : '-', last = null; // (the first task the world gives her)
+        for (let k = 0; k < sec * 10 && S.villagers.has(kid.id); k++) {
+          peace(); hold(); M.viver(0.1); if (k % 50 === 49) watch();
+          const t = kid.task; if (first === '-' && t) first = t.type; if (t && t !== last && t.type === 'flee' && t.why === 'fire') fled++; last = t;
+          if (kid.hunger < hunger - 30) { ate = true; break; }
+        }
+        return { fled, ate, first };
+      };
+      const need = run(95, 60); // (at the top of hunger: on to the store)
+      const d0 = r2(G.dist(at[0], at[1], fx, fy));
+      const calmK = run(70, 6); // (hungry, not starving: the flight as before)
+      good = need.first === 'eat' && need.ate && need.fled === 0 && calmK.fled > 0;
+      info = `${set.name}: um fogo seguro aceso pela mão da prova a ${r2(G.dist(fx, fy, set.cx, set.cy))} casas do centro; ${kid.name} #${kid.id} (${Math.floor(kid.age)} anos) a ${d0} casas dele, o armazém ${store() ? store().type + '#' + store().id : '-'}: com a fome a 95 → ${need.first}; ${need.fled ? 'FUGIU do fogo ' + need.fled + ' vez(es)' : 'nenhuma fuga'}; ${need.ate ? 'comeu no armazém' : 'NÃO COMEU em 60 s'}; com a fome a 70, a caminho do armazém: ${calmK.fled ? 'fugiu do fogo (a precaução de quem não está faminto)' : 'NÃO FUGIU'}`;
+      if (S.villagers.has(kid.id)) kid.hunger = Math.min(kid.hunger, h0);
+    }
+    for (const i of [...G.Nature.fireSet]) G.Nature.extinguish(i, 9); S.wet[spot] = wet0;
+  }
+  ok('h24 a caminho da refeição da fome, quem passa a duas casas de um fogo segue: o fogo queima só quem está nele (L-779)', good, info);
 }
 // ---------------- clean ----------------
 { const e = M.erros(); ok('limpo', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console'); }

@@ -554,6 +554,12 @@
     const canFight = !child && v.age < 62 && v.courage > 0.3 && v.hp > 40 && !(v.hunger > 85);
     if (fmax > 0.12) {
       if (canFight && (Vg.fireFighters.get(v.set) || 0) < 10) { setTask(v, { type: 'fire', pri: 4, st: 0 }); emote(v, 'fire', 2.5); return; }
+      // (and the one on the way to the meal of need — over 85, the meal weighs 2.5 — goes on by a fire that is not under the feet:
+      // the fire burns only who stands on its tile, and the way already goes round the burning ones (W.cost). Xântipe, two, of
+      // Argos, astray in Hedeby, her way to the store and home by the side of the great temple burning for days, fled at two tiles
+      // from it, came back to her way, fled again — eighty times in a day and a half — and starved with 1800 in the store, in the
+      // mega of the generation 21: L-779)
+      if (v.hunger > 85 && t && (t.type === 'eat' || t.type === 'forage' || (t.type === 'lar' && t.meal)) && !(S.fire[yi * N + xi] > 0.1)) return;
       fleeFrom(v, fx, fy, 6, 'fire'); emote(v, 'fear', 2.5); return;
     }
     // settlement alarm

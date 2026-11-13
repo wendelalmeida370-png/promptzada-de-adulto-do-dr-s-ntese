@@ -508,12 +508,18 @@
     if (god(v)) return 'deus'; if (!q) return '';
     const S = G.S; const set = S.settlements.get(q.set); if (!set) return '';
     if (q.whole) return K.town(v, set);
+    const at = id => { const b = id ? S.buildings.get(id) : null; return !!b && quarterOf(b) === q; };
     if (v.set === set.id) {
       if ((set.tier || 0) <= K.SMALL) return 'povoado';
-      const at = id => { const b = id ? S.buildings.get(id) : null; return !!b && quarterOf(b) === q; };
       if (at(v.home)) return 'mora'; if (at(v.job)) return 'trabalha';
       if (q.k === 'centro') return 'centro';
       for (const id of [v.mother, v.father, v.partner].concat(v.kids || [])) { const p = id ? S.villagers.get(id) : null; if (p && p.set === set.id && (at(p.home) || at(p.job))) return 'família'; }
+    } else {
+      // (a quarter of another town where one's own house, one's work or one's family's stands: two towns grown into each other —
+      // the metrópole of the generation 21: a house of Tenochtitlan in the Vila dos Oleiros, a quarter of Karnak —, and the one
+      // who lives in it did not know the quarter she lives in, nor her mother where her daughter lives: L-789)
+      if (at(v.home)) return 'mora'; if (at(v.job)) return 'trabalha';
+      for (const id of [v.mother, v.father, v.partner].concat(v.kids || [])) { const p = id ? S.villagers.get(id) : null; if (p && (at(p.home) || at(p.job))) return 'família'; }
     }
     const b = beenIn(v, q.id); return b === 2 ? 'contaram' : b === 1 ? 'esteve' : '';
   };
