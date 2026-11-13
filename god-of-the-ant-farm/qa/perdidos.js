@@ -17,10 +17,15 @@ const sim = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 const f2 = p => (p ? p.map(n => n.toFixed(2)).join(',') : '-');
 const day = () => sim(() => G.Village.onNewDay()); // (the turn of the day of the villages: the lost among them, the doors)
 M.pronto(KEY); G.Interiors.uncache();
-// (the world lives to its own morning before the case — the case wants two of the town out of doors, and a world saved at night
-// has them asleep in their houses: the «cidade» of the generation 19 is saved at night, and Mênfis had fewer than two out)
-for (let k = 0; k < 400 && !(G.S.time > 0.3 && G.S.time < 0.36); k++) M.viver(1);
 const S = () => G.S, N = G.N; const at = (x, y) => y * N + x;
+// (two of the town, grown, free: one asleep in the house, one shut in the pocket outside)
+const freeV = v => !v.jail && !v.aboard && !v.captive && !v.ug && !v.wrecked && !v.held && !v.air && v.age >= 16 && !v.inside && !(S().avatar && S().avatar.id === v.id) && !(G.Expe && G.Expe.memberOf(v.id));
+const outdoors = () => { const t = G.Village.mainSettlement(); return t ? [...S().villagers.values()].filter(v => freeV(v) && v.set === t.id).length : 0; };
+// (the world lives to its own morning before the case — the case wants two of the town out of doors, and a world saved at night
+// has them asleep in their houses: the «cidade» of the generation 19 is saved at night, and Mênfis had fewer than two out —,
+// and to a morning with two out of doors: a storm puts the whole town under a roof. In the «cidade» of the generation 20 a
+// storm held the morning of the day 14, and every grown one of Mênfis was sheltering or in the cave: the next morning, T-1035)
+for (let k = 0; k < 1200 && !(G.S.time > 0.3 && G.S.time < 0.36 && outdoors() >= 2); k++) M.viver(1);
 const size = p => { const L = W.reachIds(true); if (!p || !W.walkableXY(p[0], p[1])) return -1; const r = L[W.idx(p[0], p[1])]; let n = 0; for (let i = 0; i < L.length; i++) if (L[i] === r) n++; return n; };
 // (a lot of one tile by the main town, in its streets: the lot and two rings round it ground one walks with nothing on it)
 const town = G.Village.mainSettlement();
@@ -35,8 +40,6 @@ const b = sim(() => G.Village.addBuilding('house', x, y, town.id, true));
 const door = sim(() => G.Vg.door(b)); const south = [x + 0.5, y + 1.5];
 const ready = !!door && b.ip.s !== 'S' && size(door) > 100 && size(south) === 1;
 ok('a casa', ready, `house#${b.id} em ${x},${y} (${town.name}): o sul num bolsão de ${size(south)} casa, a porta em ${b.ip.s}/${b.ip.o}, ${f2(door)}, num chão de ${size(door)} casas`);
-// (two of the town, grown, free: one asleep in the house, one shut in the pocket outside)
-const freeV = v => !v.jail && !v.aboard && !v.captive && !v.ug && !v.wrecked && !v.held && !v.air && v.age >= 16 && !v.inside && !(S().avatar && S().avatar.id === v.id) && !(G.Expe && G.Expe.memberOf(v.id));
 const [v1, v2] = [...S().villagers.values()].filter(v => freeV(v) && v.set === town.id).slice(0, 2);
 if (!ready || !v1 || !v2) { ok('o cenário', false, `sem a casa ou sem duas pessoas livres em ${town.name}`); process.exit(1); }
 sim(() => {

@@ -71,10 +71,15 @@ if (on('j1')) {
     // (the hunger the world calls with: a meal is 1,2 over the 1,05 of the well)
     god(() => { a.hunger = 95; });
     let lost = false, tl = 0; for (; tl < 12 && !lost; tl += 0.25) { M.viver(0.25); hold(h); lost = !(a.task && a.task.type === 'water'); }
-    const freed = h.waterTry, dry = L.homeWater(h) < 0.35, now = a.task ? a.task.type : 'livre';
+    // (the try is free — or already taken again by the next of the house, sent within the same step: the house looks every
+    // second, and the step of the test is a quarter of one. In the «cidade» of the generation 20 the try was freed and Tenoch
+    // marked a new one 0.1 s before the look — he was in the line already —: the try of the lost fetch is the one that must
+    // not stay, T-1034)
+    const nxt = fetcher(h), retaken = !!nxt && nxt !== a && h.waterTry > try0;
+    const freed = h.waterTry && !retaken, dry = L.homeWater(h) < 0.35, now = a.task ? a.task.type : 'livre';
     const r = again(h, 20); const nv = novas();
     ok('j1 a busca perdida para a fome: outro da casa vai logo', try0 > 0 && lost && dry && !freed && r.went && r.full && !nv.length,
-      `${h.type}#${h.id} de ${S.settlements.get(h.set).name}, o poço a ${d.toFixed(0)} casas: ${a.name} ia buscar água (a tentativa marcada: ${try0 > 0}), a fome a tirou do caminho em ${tl.toFixed(1)} s (${now}); a jarra seca ${dry}, a tentativa da casa ${freed ? 'SEGUE MARCADA' : 'livre'}; ${r.went ? `${r.who || 'alguém'} saiu ${r.t.toFixed(1)} s depois` : 'NINGUÉM saiu em 20 s'}; a jarra ${r.full ? `cheia ${r.t2.toFixed(0)} s depois` : 'NÃO foi enchida'}; verificador ${nv.join(' | ') || 'limpo'}`);
+      `${h.type}#${h.id} de ${S.settlements.get(h.set).name}, o poço a ${d.toFixed(0)} casas: ${a.name} ia buscar água (a tentativa marcada: ${try0 > 0}), a fome a tirou do caminho em ${tl.toFixed(1)} s (${now}); a jarra seca ${dry}, a tentativa da casa ${freed ? 'SEGUE MARCADA' : retaken ? `livre, e já tomada de novo por ${nxt.name}, mandado no mesmo passo` : 'livre'}; ${r.went ? `${r.who || 'alguém'} saiu ${r.t.toFixed(1)} s depois` : 'NINGUÉM saiu em 20 s'}; a jarra ${r.full ? `cheia ${r.t2.toFixed(0)} s depois` : 'NÃO foi enchida'}; verificador ${nv.join(' | ') || 'limpo'}`);
   }
 }
 
