@@ -24,8 +24,10 @@ const FLY = { fly: 1, dive: 1, fishdive: 1, circle: 1, perch: 1, tree: 1, swing:
 const dentro = a => { const S = G.S, N = G.N; const sp = G.Animals.DEF[a.kind]; if (!sp || a.dead || a.held || a.caught || a.air || sp.cls === 'water' || a.kind === 'pombo' || FLY[a.state] || a.perch || a.nest || (a.z || 0) > 0.25) return null;
   if (!(a.x >= 0 && a.y >= 0 && a.x < N && a.y < N)) return null; const o = S.occ[(a.y | 0) * N + (a.x | 0)]; const b = o && S.buildings.get(o); return b && b.blocks ? b : null; };
 const WORLDS = (process.argv[2] || 'metropole,mundial').split(',');
+// (ONLY=b2: without the five minutes of the lived worlds — the cases of the hand, b2 to b9, and the checker, always)
+const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 // b1
-{ const said = [], bad = [];
+if (!ONLY || ONLY.includes('b1')) { const said = [], bad = [];
   for (const k of WORLDS) { M.pronto(k); const S = G.S; const seen = new Map();
     // (from the third second on: a world saved before the fix may open with a bird on the ground inside a building — a heron of
     // the mundial of the generation 19 in a mine —, and it walks out by itself)
@@ -92,6 +94,43 @@ const WORLDS = (process.argv[2] || 'metropole,mundial').split(',');
     ok('b8 o abutre que desce numa carcaça debaixo de um teto: pousa ao lado, nunca dentro', !in8 && !!landed && dd <= 2.5,
       `um cervo morto no meio do ${sh.type}#${sh.id}; o abutre: ${landed ? `pousou a ${dd.toFixed(1)} dele, em ${landed[0].toFixed(1)},${landed[1].toFixed(1)}` : 'NÃO pousou'}; ${in8 ? in8 + ' PASSOS DENTRO do armazém' : 'nunca dentro'}`);
     sim(() => { A.remove(vu); A.remove(dc); });
+  }
+  // b9: the beaver's last strides to the tree it gnaws (L-762): within three tiles of it the beaver went straight to the tree,
+  // written into its position (nests.js), through whatever stood between — in the mundial of the generation 20 a beaver went
+  // through a dock and another through a house. The hand of the proof finds a building of one tile with the beaver's ground on
+  // both sides (by the water), plants a young tree on one side and puts a beaver on the other, still in its idle, with a dam by
+  // it (the record the beaver itself makes, nests.js) and that tree its own to gnaw. A beaver flees people and its hunters (its
+  // fear, three tiles): the place is one with nobody out of doors near, and a beaver that fled in the middle leaves the case to
+  // the next place, up to six
+  {
+    const bv = { kind: 'beaver' }; const free9 = (x, y) => free(x, y) && !S.road[y * N + x];
+    const hunters = new Set(A.eatenBy.beaver || []);
+    const quiet = p => ![...S.villagers.values()].some(o => !o.inside && !o.aboard && !o.held && !o.air && G.dist(o.x, o.y, p[0], p[1]) < 4.5) && ![...S.animals.values()].some(o => !o.dead && hunters.has(o.kind) && G.dist(o.x, o.y, p[0], p[1]) < 6);
+    const places = [];
+    for (const b of [...S.buildings.values()].filter(q => q.built && q.blocks && q.w === 1 && q.h === 1).sort((p, q) => p.id - q.id)) {
+      for (const [dx, dy] of [[1, 0], [0, 1]]) {
+        const w1 = [b.x - dx, b.y - dy], e1 = [b.x + dx, b.y + dy]; if (!free9(...w1) || !free9(...e1)) continue;
+        const at = [w1[0] + 0.5, w1[1] + 0.5], spot = [e1[0] + 0.9, e1[1] + 0.8];
+        if (A.walkOK(bv, ...at) && A.walkOK(bv, ...spot)) { places.push({ b, e1, at }); break; }
+      }
+    }
+    let said = '', live9 = false, bad9 = false; const fled = [];
+    for (const c9 of places) {
+      if (live9 || bad9 || fled.length >= 6) break; if (!quiet(c9.at)) continue;
+      const { b, e1, at } = c9; const i9 = e1[1] * N + e1[0];
+      let kind = G.Biome.pickTree(G.Biome.of(i9)); if (!G.Biome.canGrow(kind, i9)) kind = 'oak';
+      const tr = sim(() => G.Nature.addTree(e1[0] + 0.5, e1[1] + 0.5, kind, 0.7)); if (!tr) continue;
+      const cb = sim(() => A.spawn('beaver', at[0], at[1], { grown: 1, age: 2, hunger: 0.1 }));
+      const dam = { id: S.nextId++, x: at[0], y: at[1], prog: 0, trees: 0 }; (S.dams || (S.dams = [])).push(dam);
+      cb.state = 'idle'; cb.t = 99; cb.dam = dam.id; cb.gnawTree = tr.id; cb.gnawT = 0;
+      const d0 = G.dist(cb.x, cb.y, tr.x + 0.4, tr.y + 0.3); let in9 = 0, kept = 0, gnaw = 0, ran = false;
+      for (let k = 0; k < 60; k++) { if (cb.state === 'idle') cb.t = 99; M.viver(0.1); if (dentro(cb)) in9++; if (cb.state === 'flee') ran = true; if (cb.gnawTree === tr.id) kept++; if (cb.gnawT > 0) gnaw++; }
+      const txt = `${b.type}#${b.id} em ${b.x},${b.y}; a árvore #${tr.id} de um lado, o castor do outro, a ${d0.toFixed(1)} dela: ${in9 ? in9 + ' PASSOS DENTRO do prédio' : 'nunca dentro'}; ${cb.gnawTree === tr.id ? (gnaw ? 'chegou e roeu' : 'ainda com a árvore, sem roer') : `largou a árvore (${(kept / 10).toFixed(1)} s com ela)`}; no fim em ${cb.x.toFixed(1)},${cb.y.toFixed(1)}`;
+      sim(() => { A.remove(cb); G.Nature.removeTree(tr); S.dams.splice(S.dams.indexOf(dam), 1); });
+      if (in9 || !(d0 > 0.5 && d0 <= 3)) { bad9 = true; said = txt; } else if (ran) fled.push(`${b.type}#${b.id}`); else { live9 = true; said = txt; }
+    }
+    ok('b9 o castor indo à árvore que rói, com um prédio no meio: nunca por dentro', live9 && !bad9,
+      (said || `nenhum lugar quieto onde o caso vivesse (${places.length} prédios de uma casa com o chão do castor dos dois lados)`) + (fled.length ? ` (antes, o castor fugiu em ${fled.join(', ')})` : ''));
   }
   const v = QA.check().filter(q => q.sev <= 2 || /no chão dentro de um prédio/.test(q.msg)); const e = M.erros();
   ok('b6 verificador e erros de módulo', !v.length && M.limpo(), `${v.length} violações${v.length ? ': ' + v[0].msg : ''}; erros de módulo ${JSON.stringify(e.mod)}`); }
