@@ -14,7 +14,7 @@
 //   c6. A paliçada de longe (L-800): os templos nórdicos de 4, 6 e 8 casas e o palácio nórdico de 6 — de longe, a cerca de tábuas
 //       e nenhuma ponta de estaca solta no ar, dentro do teto de 2 mil; de perto, as estacas e as pontas.
 //   c7. A linha da escada (L-801): no Templo Mayor de 10 e de 13 casas e no clássico, de 3, a faixa pintada em todo degrau — no
-//       piso e no espelho —, a um dedo do degrau.
+//       piso e no espelho —, a um dedo do degrau; e nada dela no ar diante do espelho, sobre o degrau de baixo (L-752).
 //   c8. O portal da Grande Pirâmide (D-180): as peças do portal atrás da linha do pé da face (a praça inteira da planta), a boca
 //       aberta para o corredor e o teto dele até a boca, os batentes de granito de frente para a rua, o remate de ouro de 1,5 m
 //       ou mais; o deus o pinta.
@@ -22,6 +22,10 @@
 //       — os teatros de 10 casas tinham 3,3 mil de longe.
 //   c10. A cávea de longe em declive (L-803): nos teatros grego e romano de 6, 8 e 10 casas e no Coliseu, a figura de longe
 //       desce com as fileiras — sobre a fileira de baixo, na altura dela; sobre a de cima, na dela — e não é um tambor chato.
+//   c11. O piso do recinto dos templos pela forma (L-750): nos seis povos, de 4, 6 e 8 casas, de cima, onde os pés andam no
+//       terreiro, o chão a um dedo do piso da planta — o templo asteca, risco com corpo, também.
+//   c12. O teto de dentro de um salão no meio do lote (L-751): no Valhala de 10 e de 13 casas, o lado de baixo do telhado que o
+//       dentro desenha fica dentro das paredes do salão e sob o telhado de escudos da forma, em todo ponto do salão.
 //   node qa/visual/monumentos-ajustes.js [c1,c2,…]   (as partes; todas sem nada)   VERB=1 os números de cada caso
 'use strict';
 const F = require('./fidelidade-lib.js');
@@ -190,14 +194,19 @@ if (want('c7')) {
   for (const [type, st, n] of [['maravilha', 'asteca', 10], ['maravilha', 'asteca', 13], ['maravilha', 'asteca', G.BDEF.maravilha.w]]) {
     const P = put(type, st, n), e = P.Fm.els.find(q => q.k === 'escada' && q.divisor); if (!e) { rows.push({ lab: `${type}/${st}/${n}`, why: ['sem escada com a linha'] }); F.drop(P.b); continue; }
     const tris = F.near(P.b).tris, d = e.divisor; const run = e.a[1] - e.b[1], rise = e.b[2] - e.a[2], m = Math.max(2, Math.ceil(rise / 0.26)); const u = e.a[0] + d.u;
-    const pal = (A.PAL || {})[st] || {}; const want3 = rgb(typeof pal[d.cor] === 'string' ? pal[d.cor] : d.cor); let tread = 0, riser = 0, high = 0;
+    const pal = (A.PAL || {})[st] || {}; const want3 = rgb(typeof pal[d.cor] === 'string' ? pal[d.cor] : d.cor); let tread = 0, riser = 0, high = 0, ledge = 0, ledgeAt = '';
     for (let k = 0; k < m; k++) { const yA = e.a[2] + rise * k / m, yT = e.a[2] + rise * (k + 1) / m, vF = e.a[1] - run * k / m, vN = k === m - 1 ? e.b[1] : e.a[1] - run * (k + 1) / m;
       // (down onto the tread's middle; from the front onto the riser's middle)
       const ht = shoot(tris, P.W(u, (vF + vN) / 2, yT + 1.0), [0, -1, 0]); if (ht && near3(ht.tri.col, want3, 26)) { tread++; if (ht.p[1] - (P.base + yT) > 0.011) high++; }
-      const hr = shoot(tris, P.W(u, vF + 1.0, (yA + yT) / 2), [0, 0, -1]); if (hr && near3(hr.tri.col, want3, 26) && Math.abs(hr.t - 1.0) < 0.02) riser++; }
+      const hr = shoot(tris, P.W(u, vF + 1.0, (yA + yT) / 2), [0, 0, -1]); if (hr && near3(hr.tri.col, want3, 26) && Math.abs(hr.t - 1.0) < 0.02) riser++;
+      // (and down 3 mm before the riser, over the tread below: that tread, where the feet are — the line's tread stood out a hair
+      // before its riser, in the air a riser over them: on the Templo Mayor of the mega of the generation 20, 25 cm over the floor
+      // of the plan at the middle of a cell 5 mm before a riser, L-752)
+      if (k) { const hl = shoot(tris, P.W(u, vF + 0.003, yT + 1.0), [0, -1, 0]); if (!hl || hl.p[1] - (P.base + yA) > 0.02) { ledge++; if (!ledgeAt) ledgeAt = ` (o ${k}º: ${hl ? (hl.p[1] - P.base - yA).toFixed(3) + ' m sobre o degrau de baixo' : 'nada'})`; } } }
     const why = []; if (tread !== m) why.push(`${tread} de ${m} pisos com a linha`); if (riser !== m) why.push(`${riser} de ${m} espelhos com a linha`); if (high) why.push(`${high} pisos com a linha a mais de 1 cm do degrau`);
+    if (ledge) why.push(`${ledge} espelhos com a linha no ar diante deles, um degrau acima dos pés${ledgeAt}`);
     rows.push({ lab: `${type}/${st}/${n}`, why, m }); F.drop(P.b); }
-  ok('c7. a linha pintada da escada (L-801): em todo degrau, no piso e no espelho, a um dedo dele', rows.every(r => !r.why.length), rows.map(r => `${r.lab}: ${r.m || 0} degraus${r.why.length ? ' — ' + r.why.join('; ') : ', todos com a linha'}`).join(' · '));
+  ok('c7. a linha pintada da escada (L-801): em todo degrau, no piso e no espelho, a um dedo dele — e nada dela no ar diante do espelho, sobre o degrau de baixo (L-752)', rows.every(r => !r.why.length), rows.map(r => `${r.lab}: ${r.m || 0} degraus${r.why.length ? ' — ' + r.why.join('; ') : ', todos com a linha'}`).join(' · '));
 }
 
 // ================ the Great Pyramid's gate (D-180) ================
@@ -250,6 +259,47 @@ if (want('c10')) {
     rows.push({ lab: `${type}/${st}/${n}`, pieces, good, worst, fall }); F.drop(P.b); }
   ok('c10. a cávea de longe em declive (L-803): a figura de longe desce com as fileiras, da de cima à de baixo', rows.every(r => r.pieces > 0 && r.good === r.pieces && r.fall > 2),
     rows.map(r => `${r.lab}: ${r.good} de ${r.pieces} partes da cávea no declive (o maior desvio ${Number.isFinite(r.worst) ? r.worst.toFixed(2) : '-'} m; as fileiras descem ${r.fall.toFixed(1)} m)`).join(' · '));
+}
+
+// ================ the paving of a temple's precinct (L-750) ================
+// (each people's temple of 4, 6 and 8 tiles by its form: from above, over its yard — the precinct, the court, the Aztec's
+// forecourt on the pyramid's top — where the feet walk, the floor drawn a finger over the plan's. The pavings a temple's risk
+// paints 5 cm thick the 3D lays a finger over the platform; the Aztec's, a risk with a body, by the body's way — 5 cm over the
+// feet, the temple#11167 of the metropole of the generation 20)
+if (want('c11')) {
+  const rows = [], In = G.Interiors;
+  for (const st of ['grego', 'romano', 'egipcio', 'nordico', 'asteca', 'classico']) for (const n of [4, 6, 8]) {
+    const P = put('temple', st, n), p = In.plan(P.b), lab = `${st}/${n}`; if (!p || !p.ok || !p.shell.yard) { rows.push({ lab, why: [p && p.ok ? 'sem terreiro na casca' : 'sem planta'] }); F.drop(P.b); continue; }
+    const tris = F.near(P.b).tris, Yr = p.shell.yard.r, ly = p.levels.find(l => l.lv === (p.shell.yard.lv || 0)), yy = ly ? ly.y : 0, R = p.shell.r;
+    const nearR = (x, z, r, m) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m; let k = 0, worst = 0, at = '';
+    for (let fx = 0.1; fx < 1; fx += 0.2) for (let fz = 0.1; fz < 1; fz += 0.2) { const x = Yr[0] + (Yr[2] - Yr[0]) * fx, z = Yr[1] + (Yr[3] - Yr[1]) * fz;
+      if (nearR(x, z, R, 0.7) || p.items.some(it => nearR(x, z, it.r, 0.15)) || !nearR(x, z, [Yr[0] + 0.35, Yr[1] + 0.35, Yr[2] - 0.35, Yr[3] - 0.35], 0) || !In.walk(P.b, ly ? ly.lv : 0, x, z)) continue;
+      k++; const h = shoot(tris, P.W(x, z, yy + 2.6), [0, -1, 0]); const d = h ? h.p[1] - (P.base + yy) : Infinity; if (Math.abs(d) > Math.abs(worst)) { worst = d; at = `${x.toFixed(2)},${z.toFixed(2)}`; } }
+    const why = []; if (!k) why.push('nenhum ponto do terreiro onde os pés andam'); if (Math.abs(worst) > 0.015) why.push(`o chão a ${Number.isFinite(worst) ? (worst * 100).toFixed(1) + ' cm' : 'nada'} do piso da planta (${yy} m) em ${at}`);
+    rows.push({ lab, why, k, worst }); F.drop(P.b); }
+  ok('c11. o piso do recinto dos templos pela forma (L-750): de cima, onde os pés andam no terreiro, a um dedo do piso da planta — o asteca pelo corpo também', rows.length === 18 && rows.every(r => !r.why.length),
+    rows.filter(r => r.why.length).map(r => `${r.lab}: ${r.why.join('; ')}`).join(' · ') || rows.map(r => `${r.lab} ${r.k} pontos, ${(r.worst * 100).toFixed(1)} cm`).join(' · '));
+}
+
+// ================ the ceiling of a hall in the middle of its lot (L-751) ================
+// (Valhalla of 10 and 13 tiles — its hall in the middle of a lot of 40 and 52 m, 13.5 m and more in from its corner —: the
+// underside of the roof the inside draws within the hall's walls, and under the form's roof of shields over each point of the
+// hall. The box of the storeys under the roof was begun at 9 m: the slopes began at 9 m, out through the hall's wall, too
+// shallow, and stood over the form's roof by its long walls — 9.18 m over the floor where the form's is at 6.55, L-751)
+if (want('c12')) {
+  const rows = [], In = G.Interiors; const trisOfGeo = g => { const out = [], A = g.p; for (let k = 0; k + 8 < A.length; k += 9) out.push({ v: [A[k], A[k + 1], A[k + 2], A[k + 3], A[k + 4], A[k + 5], A[k + 6], A[k + 7], A[k + 8]] }); return out; };
+  for (const n of [10, 13]) {
+    const P = put('maravilha', 'nordico', n), p = In.plan(P.b), lab = `Valhala de ${n}`; if (!p || !p.ok) { rows.push({ lab, why: ['sem planta'] }); F.drop(P.b); continue; }
+    const ins = B3.interior(p, P.b, { fine: true }), out = F.near(P.b).tris, R = p.shell.r, l0 = p.levels[0]; const [X0, , Z0] = ins.at; const inT = trisOfGeo(ins.roof);
+    let off = 0; for (let k = 0; k < ins.roof.p.length; k += 3) { const x = ins.roof.p[k] - X0, z = ins.roof.p[k + 2] - Z0; if (x < R[0] - 0.05 || x > R[2] + 0.05 || z < R[1] - 0.05 || z > R[3] + 0.05) off++; }
+    let k = 0, over = 0, ex = ''; const A = l0.area;
+    for (const fx of [0.1, 0.3, 0.5, 0.7, 0.9]) for (const fz of [0.03, 0.1, 0.25, 0.4, 0.6, 0.75, 0.9, 0.97]) { const x = A[0] + (A[2] - A[0]) * fx, z = A[1] + (A[3] - A[1]) * fz; k++;
+      const up = shoot(inT, P.W(x, z, l0.y + 0.3), [0, 1, 0]), down = shoot(out, P.W(x, z, 60), [0, -1, 0]);
+      if (!up || !down || up.p[1] > down.p[1] - 0.05) { over++; if (!ex) ex = ` (em ${x.toFixed(2)},${z.toFixed(2)}: o teto de dentro ${up ? (up.p[1] - P.base).toFixed(2) + ' m' : 'nenhum'}, o telhado da forma ${down ? (down.p[1] - P.base).toFixed(2) + ' m' : 'nenhum'})`; } }
+    const why = []; if (off) why.push(`${off} pontos do teto de dentro fora das paredes do salão`); if (over) why.push(`${over} de ${k} pontos com o teto de dentro sobre o telhado da forma, ou sem ele${ex}`);
+    rows.push({ lab, why, k }); F.drop(P.b); }
+  ok('c12. o teto de dentro de um salão no meio do lote (L-751): no Valhala de 10 e de 13 casas, dentro das paredes do salão e sob o telhado da forma', rows.length === 2 && rows.every(r => !r.why.length),
+    rows.map(r => `${r.lab}: ${r.why.length ? r.why.join('; ') : `${r.k} pontos, o teto de dentro sob o telhado da forma em todos`}`).join(' · '));
 }
 
 const e = M.erros(); ok('sem erro do jogo', M.limpo(), M.limpo() ? 'nenhum erro de módulo nem aviso no console' : JSON.stringify(e.mod) + ' ' + e.console.slice(0, 3).join(' | '));
