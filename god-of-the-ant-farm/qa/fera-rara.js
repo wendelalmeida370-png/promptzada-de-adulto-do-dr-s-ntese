@@ -152,14 +152,27 @@ for (const world of WORLDS) {
   }
   // ---------------- f4 the protagonist skins it himself: the pelt is his ----------------
   if (on('f4')) {
-    const c = arm();
+    // (early in the day, as in f3: the skinning must come before the turn of the year — the story's rule, L-655 —; and the
+    // protagonist as the story sends after the beast — fed and rested, St.lib.free: the test's hand gives him the meal and the
+    // sleep the world would give with time (his needs only) —; what is in his hands goes to its place by his own day of work
+    // before the hunt (skin waits for free hands). The case is his own skinning, not his tiredness nor the hour. In the
+    // «cidade» of the generation 20 the spear was Ahmose's, of Mênfis, at the middle of the day, exhausted (energy 21) and with
+    // six of tiger meat in his hands: he slept, sat the evening with his family and kept the night watch and an assembly with
+    // the meat — the bed, the evening, the watch and the assembly come before the store (villagers.js) —, the year turned and
+    // the story said the pelt was left behind; he skinned it 35 s later, T-1033)
+    for (let k = 0; k < 170 && G.S.time > 0.3; k++) M.viver(1);
+    const c = arm(); let was = '';
+    if (c) {
+      const p = G.S.villagers.get(story(c.sid).protag);
+      if (p && !G.Stories.lib.free(p)) { was = `${p.name} antes: fome ${Math.round(p.hunger)}, energia ${Math.round(p.energy)}${p.sleeping ? ', dormindo' : ''}`; G.inSim++; try { p.hunger = Math.min(p.hunger, 5); p.energy = 100; } finally { G.inSim--; } M.viver(0.1); }
+    }
     if (!c) ok(`f4 ${world}`, false, 'nenhuma história de fera rara armada');
     else if (!slay(c)) ok(`f4 ${world}`, false, `a história #${c.sid} não ouviu o abate`);
     else {
       const v = skinner(c, true); const s0 = story(c.sid);
       const r = skin(c, v);
       const good = r.at >= 0 && r.by === s0.protag && !r.bad.length && r.s.st === 'fim' && (!noPelt(r.s) || r.s.data.motive === 'sagrado');
-      ok(`f4 ${world}`, good, r.at < 0 ? `o corpo não foi esfolado em ${r.secs} s` : `esfolado por #${r.by}${r.by === s0.protag ? ' (o protagonista)' : ' (outra mão chegou antes)'} em ${r.secs} s; história ${r.s.st}${r.s.end ? ' (' + r.s.end.k + ')' : ''} — «${lastTxt(r.s).slice(0, 90)}»; verificador ${r.bad.length ? r.bad.join(' · ') : 'limpo'}`);
+      ok(`f4 ${world}`, good, (r.at < 0 ? `o corpo não foi esfolado em ${r.secs} s` : `esfolado por #${r.by}${r.by === s0.protag ? ' (o protagonista)' : r.by ? ' (outra mão chegou antes)' : ' (por ninguém: a pele ficou para trás)'} em ${r.secs} s; história ${r.s.st}${r.s.end ? ' (' + r.s.end.k + ')' : ''} — «${lastTxt(r.s).slice(0, 90)}»; verificador ${r.bad.length ? r.bad.join(' · ') : 'limpo'}`) + (was ? `; descansado e alimentado pela mão da prova (${was})` : ''));
     }
   }
   // ---------------- f5 the god kills the protagonist between the kill and the skinning ----------------

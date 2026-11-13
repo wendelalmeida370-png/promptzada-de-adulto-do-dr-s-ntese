@@ -151,18 +151,28 @@ if (on('b1', 'b2', 'b3', 'b4', 'b5', 'b6')) {
       }
       // ---------------- b5
       if (on('b5')) {
-        // (what is seen follows what happens: batches out of the kilns of q2, day after day, by the world's own door — the
-        // quarter earns its profile, and the line of someone who cannot name it says it)
-        const o5 = bodies(set).find(o => !K.district(o, q2)) || v; take(o5); put(o5, spotIn(q2)); const s0 = K.seen(q2, o5.x, o5.y); let days = 0;
-        for (; days < 14 && !U.is(q2, 'oficinas'); days++) {
-          god(() => { for (const c of q2.cells) { const [cx, cy] = U.cellXY(c); U.note(cx + 1, cy + 1, 'oficio', 3); } });
-          const d0 = S.day; S.time = 0.985; for (let k = 0; k < 400 && S.day === d0; k++) M.viver(0.5); M.viver(3);
+        // (what is seen follows what happens: batches out of the kilns of a quarter, day after day, by the world's own door —
+        // the quarter earns its profile, and the line of someone who cannot name it says it. The quarter is one that is not
+        // «de oficinas» yet, with ground for the body and two of the city who cannot name it, and none of the profiles said
+        // before the workshops in what is seen (the cargo, the fish, the stalls: two things are said) — q2 when it is such a
+        // one. The q2 of the metropolis of the generation 20, Rua dos Ferreiros, works its kilns: «de oficinas» before the
+        // first batch, T-1030)
+        const AHEAD = ['porto', 'pesqueiro', 'mercado'];
+        const fit5 = q => !q.whole && !U.is(q, 'oficinas') && !AHEAD.some(id => U.is(q, id)) && !!spotIn(q) && bodies(set).filter(o => !K.district(o, q)).length >= 2;
+        const q5 = [q2].concat(qs).find(fit5) || null;
+        if (!q5) ok('b5 o que se vê vem da vida do bairro', false, `em ${set.name}, nenhum bairro que ainda não é «de oficinas», com chão e dois da cidade que não sabem o nome dele (${qs.map(q => `${q.name}: ${U.profile(q) || 'nenhum'}`).join(' · ')})`);
+        else {
+          const o5 = bodies(set).find(o => !K.district(o, q5)); take(o5); put(o5, spotIn(q5)); const s0 = K.seen(q5, o5.x, o5.y); let days = 0;
+          for (; days < 14 && !U.is(q5, 'oficinas'); days++) {
+            god(() => { for (const c of q5.cells) { const [cx, cy] = U.cellXY(c); U.note(cx + 1, cy + 1, 'oficio', 3); } });
+            const d0 = S.day; S.time = 0.985; for (let k = 0; k < 400 && S.day === d0; k++) M.viver(0.5); M.viver(3);
+          }
+          // (a body that was not there on any of those days: someone else of the city who cannot name the quarter)
+          const o6 = bodies(set).find(o => o.id !== o5.id && !K.district(o, q5)); if (o6) { take(o6); put(o6, spotIn(q5)); }
+          const w5 = o6 ? K.where(o6) : null;
+          ok('b5 o que se vê vem da vida do bairro', U.is(q5, 'oficinas') && days > 0 && !!w5 && !w5.district && /cheiro de forno/.test(w5.txt) && !/cheiro de forno/.test(s0) && !w5.txt.includes(q5.name),
+            `${q5.name} [${q5.k}]${q5 === q2 ? '' : ` (${q2.name} [${q2.k}], o bairro do b1, já era «${U.profile(q2) || 'nenhum'}»)`}: antes «${s0}»; depois de ${days} dias de fornadas (perfil: ${U.profile(q5) || 'nenhum'}), para ${o6 ? o6.name : 'ninguém'}: «${w5 ? w5.txt : '-'}»`);
         }
-        // (a body that was not there on any of those days: someone else of the city who cannot name the quarter)
-        const o6 = bodies(set).find(o => o.id !== o5.id && !K.district(o, q2)); if (o6) { take(o6); put(o6, spotIn(q2)); }
-        const w5 = o6 ? K.where(o6) : null;
-        ok('b5 o que se vê vem da vida do bairro', U.is(q2, 'oficinas') && !!w5 && !w5.district && /cheiro de forno/.test(w5.txt) && !/cheiro de forno/.test(s0) && !w5.txt.includes(q2.name),
-          `${q2.name} [${q2.k}]: antes «${s0}»; depois de ${days} dias de fornadas (perfil: ${U.profile(q2) || 'nenhum'}), para ${o6 ? o6.name : 'ninguém'}: «${w5 ? w5.txt : '-'}»`);
       }
       // ---------------- b6
       if (on('b6')) {
@@ -248,10 +258,16 @@ if (on('p1', 'p2', 'p3', 'p4', 'p5', 'p6')) {
     if (on('p2')) {
       const told = I.personCard(st, v, true); const r = meet(st.id);
       const lbl1 = P.label({ v }, { o: st }), card1 = I.personCard(st, v), how = K.how(v, st), back = K.how(st, v);
-      const fam = [st.mother, st.father, st.partner].concat(st.kids || []).map(id => id && G.person(id)).filter(Boolean).filter(p => !K.person(v, p));
+      const kin = [st.mother, st.father, st.partner].concat(st.kids || []).map(id => id && G.person(id)).filter(Boolean);
+      const fam = kin.filter(p => !K.person(v, p)), knownKin = kin.filter(p => K.person(v, p));
+      // (the family the card says is counted — as many as the relatives the body knows —, and the name of one it does not know
+      // is looked for in the card only when no one the card says has it: Axayácatl of the metropolis of the generation 20 has
+      // two sons named Axayácatl, and his own name is the card's, T-1031)
+      const said = new Set([st.name].concat(knownKin.map(p => p.name)));
+      const famN = card1.parents.length + (card1.partner ? 1 : 0) + card1.kids.length, same = fam.filter(p => said.has(p.name)).length;
       ok('p2 depois da conversa, o nome; os dois se lembram; a ficha não conta a vida', !!r && r.first === true && how.n === 1 && how.why === 'encontro' && back.n === 1 && lbl1 === `Conversar com ${st.name}` && K.name(v, st) === st.name
-        && told.name.startsWith(st.name) && told.knows === 1 && !told.bio.length && !told.traits.length && !told.from && card1.why === 'de conversa' && fam.every(p => !JSON.stringify(card1).includes(p.name)) && v.ken.p.includes(st.id) && st.ken.p.includes(v.id),
-        `${v.name} e ${st.name}: «${lbl1}», ficha «${card1.name} · ${card1.sub}», «${card1.why}»; memórias na ficha ${told.bio.length}, parentes dela que ${v.name} não conhece e a ficha não diz: ${fam.length}; ${st.name} também o conhece (${back.why})`);
+        && told.name.startsWith(st.name) && told.knows === 1 && !told.bio.length && !told.traits.length && !told.from && card1.why === 'de conversa' && famN === knownKin.length && fam.filter(p => !said.has(p.name)).every(p => !JSON.stringify(card1).includes(p.name)) && v.ken.p.includes(st.id) && st.ken.p.includes(v.id),
+        `${v.name} e ${st.name}: «${lbl1}», ficha «${card1.name} · ${card1.sub}», «${card1.why}»; memórias na ficha ${told.bio.length}, parentes dela que ${v.name} não conhece e a ficha não diz: ${fam.length}${same ? ` (${same} com o nome de quem a ficha diz)` : ''}; a família na ficha: ${famN}, os parentes que ${v.name} conhece: ${knownKin.length}; ${st.name} também o conhece (${back.why})`);
     }
     // ---------------- p4
     if (on('p4')) {
@@ -487,8 +503,11 @@ if (on('x1')) {
     let threw = ''; const steps = [];
     try {
       god(() => { set.urb.d.splice(set.urb.d.indexOf(q), 1); U.ver++; }); M.viver(0.2); steps.push(`o bairro ${q.name} sumiu: «${K.where(v).txt}», e perguntado por ele: «${K.district(v, q)}»`);
-      // (the god takes the body's house away)
-      const h = homeOf(v); god(() => V.removeBuilding(h)); M.viver(0.5); steps.push(`a casa tirada: K.house ${K.house(v, h)}, «${K.where(v).txt}»`);
+      // (the god takes the body's house away: it falls, by the door every power that takes a building ends at — the lightning,
+      // the meteor, the quake: V.destroyBuilding —, which puts out who is inside. The bare V.removeBuilding the test took
+      // before is the game's only for a building already emptied, and in the metropolis of the generation 20 two of the family
+      // slept in the house: «lar: dentro de um prédio que não existe», T-1032)
+      const h = homeOf(v); god(() => V.destroyBuilding(h)); M.viver(0.5); steps.push(`a casa tirada: K.house ${K.house(v, h)}, «${K.where(v).txt}»`);
       // (the body dies)
       god(() => V.kill(v, 'sick')); M.viver(0.5); steps.push(`o corpo morreu: avatar ${S.avatar ? 'AINDA' : 'nenhum'}, a porta do deus responde ${K.person(null, loc || v)}`);
     } catch (e2) { threw = e2.message + ' ' + String(e2.stack).split('\n')[1]; }

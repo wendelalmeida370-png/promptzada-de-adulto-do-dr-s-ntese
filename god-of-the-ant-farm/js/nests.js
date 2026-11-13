@@ -151,6 +151,10 @@
       const t = S.trees.get(a.gnawTree); if (!t || t.stage !== 'grow') { a.gnawTree = 0; a.gnawT = 0; continue; }
       const dd = G.dist(a.x, a.y, t.x + 0.4, t.y + 0.3);
       if (dd > 3) continue;
+      // (the last strides to the tree on its own feet, over ground it stands on — the beast's own, A.lineOK —: the straight way,
+      // written into its position, took a beaver of the mundial through a dock and another through a house, L-762; with the way
+      // shut by what stands on it — a building, a cliff —, the tree is let go, and the gnawing with it, as one a woodcutter took)
+      if (dd > 0.5 && !A.lineOK(a, t.x + 0.4, t.y + 0.3)) { a.gnawTree = 0; a.gnawT = 0; continue; }
       if (dd > 0.5) { const f = Math.min(1, dt * 1.2 / dd); a.x += (t.x + 0.4 - a.x) * f; a.y += (t.y + 0.3 - a.y) * f; a.moving = true; G.faceTo(a, t.x - a.x, t.y - a.y); continue; }
       a.moving = false; a.state = 'idle'; a.t = Math.max(a.t || 0, 0.6); G.faceTo(a, t.x - a.x, t.y - a.y);
       a.gnawT = (a.gnawT || 0) + dt; if (G.VR() < dt * 3) G.FX && G.FX.chips(t.x, t.y, '#c9a26b');
