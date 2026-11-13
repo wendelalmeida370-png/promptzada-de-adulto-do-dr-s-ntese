@@ -476,11 +476,17 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   if (await need('e9')) {
   // ================================ e9: the bad cases, and the hands changing the world ================================
   const e9 = await E(() => {
-    const S = G.S; const out = {}; const s = __E.town();
+    const S = G.S; const out = {}; let s = __E.town();
     // (the cases here take the town's grown ones in turn, four of them up and about: the parts before leave the world at the
     // hour their time ended — after e3, in the «cidade» of the generation 7, at 0.75 of the day: of Roma's nine grown ones seven
     // asleep at home and two in the street. The god lets the night pass first, until the town is up, T-262)
     if (G.isNight() || __E.adults(s).length < 5) { G.UI.setSpeed(8); out.morning = __E.until(() => !G.isNight() && __E.adults(s).length >= 5, 3000, 100); G.UI.setSpeed(1); }
+    // (and, the morning come and the most peopled town still short of five up and about — with the day of each one now lasting to
+    // dusk, many are inside, at the bath, the table, the shop —, the next town that has them: in the «cidade» of the generation 20
+    // Mênfis came out of the wait with fewer, the parts took its last grown one before the war's call, and the case died on
+    // nobody, T-1054)
+    for (let k = 1; __E.adults(s).length < 5 && __E.town(k); k++) if (__E.adults(__E.town(k)).length >= 5) { s = __E.town(k); break; }
+    out.town = s.name + ' (' + __E.adults(s).length + ' de pé)';
     // captured by enemies (the war's own capture): the body is the captor's now
     { const v = __E.adults(s)[0]; __E.enter(v); const foe = __E.adults(null, o => o.set !== v.set)[0] || __E.adults(s)[1]; G.War.capture(v, foe, null); __E.until(() => G.Modes.state === 'GOD', 400); out.capture = { avatar: !!S.avatar, task: v.task && v.task.type, captive: !!v.captive, mode: G.Modes.state }; }
     // taken aboard a ship (Naval.board): the incarnation ends with it
@@ -516,7 +522,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       __E.leave();
     }
     // the war calls, a scene wants the body: asked, not taken
-    { const v = __E.adults(s, o => !o.inside)[2] || __E.adults(s)[0]; __E.enter(v);
+    { const v = __E.adults(s, o => !o.inside)[2] || __E.adults(s)[0] || __E.adults(null, o => !o.inside)[0]; if (!v) out.calls = { asks: [], kept: false, hud: 'nenhum adulto de pé no mundo' }; else { __E.enter(v);
       G.Vg.setTask(v, { type: 'muster', pri: 6 }); G.Vg.give(v, { type: 'fire', pri: 4 }); __E.f(4);
       const sc = G.Scene && G.Scene.list ? null : null; void sc;
       const asks = G.Possess.calls().map(q => q.type); const kept = v.task && v.task.type === 'avatar';
@@ -594,7 +600,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       if (G.Scene && G.Scene.H && G.Scene.H.take) R.scene = G.Scene.H.take({ id: -1, taken: new Map() }, v) === false;
       out.hands = R; out.deeds = Object.assign({}, S.avatar ? S.avatar.deeds : {});
       __E.leave(); out.bio = G.Life.bioList(v).slice(-1)[0].txt;
-    }
+    } }
     out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
     return out;
   });
@@ -604,7 +610,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   ok('e9 um prédio nasce em cima de um vau: não é água de nadar, o mundo tira o corpo de lá (L-150)', !e9.ford || (e9.ford.made && !e9.ford.before && !e9.ford.onIt && e9.ford.walk && !e9.ford.afloat && e9.ford.avatar), JSON.stringify(e9.ford));
   ok('e9 a terra afunda sob os pés: quem sabe nadar nada, encarnado (D-026); quem não sabe, a água leva e o deus volta', e9.sink.sank && e9.sink.alive && (e9.sink.swims ? e9.sink.avatar && e9.sink.afloat : !e9.sink.avatar && e9.sink.mode === 'GOD'), JSON.stringify(e9.sink));
   ok('e9 a guerra e o fogo chamam: viram chamados, o corpo fica', e9.calls.kept && e9.calls.asks.includes('muster') && e9.calls.asks.includes('fire') && /armas/.test(e9.calls.hud || ''), JSON.stringify(e9.calls));
-  const H = e9.hands;
+  const H = e9.hands || {}; // (no grown one up and about anywhere: every case of the hands fails on nothing, not on a crash — T-1054)
   ok('e9 mãos: a árvore cai pelo corte, a lenha vai para os braços', H.tree && H.tree.felled && /^wood:/.test(H.tree.carry || ''), JSON.stringify(H.tree));
   ok('e9 mãos: a lenha entra no estoque do povo', H.store && H.store.stock1 > H.store.stock0 && !H.store.carry, JSON.stringify(H.store));
   ok('e9 mãos: comer no armazém tira do estoque e mata a fome', H.meal && H.meal.ate && !!H.meal.took && H.meal.took[1] < H.meal.took[0], JSON.stringify(H.meal));
