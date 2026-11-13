@@ -466,13 +466,25 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   T-851 `atmosfera` a4, T-852 `roupa` r5, T-853 `morar-palacio` m2g, T-854 `lar` l17). O que o agente deixou sem causa
   achada **não se repete na árvore juntada**: `vida-bairro` 11 de 11 (o v3 passa), `oldsave` limpo. O `freguesia` b1 (Tebas
   sem banhistas no primeiro dia vivido) foi para a terceira rodada.
-- **Em curso (uma frente):** **o dia que dura até escurecer** (F, terceira rodada; a decisão do T-921, D-240: quem
-  descansa cansa menos do que quem trabalha — o cansaço do trabalho e os limiares do sono não mudam —, e o sol que se
-  demora numa cena segura também a fome e o cansaço, L-915).
+- **A 3ª rodada do F (D-240, L-915), juntada pelo líder sobre a `a634b1d`** (o agente parou por falta de crédito com a
+  rodada pronta e o bloco por montar; o líder fez o commit do último passo dele e montou o bloco com as partes que ele
+  deixou). Feito: o passo do dia numa porta só (a fome e o cansaço com o relógio quando o sol se demora) e o descanso que
+  cansa menos (`G.Vg.resting`, `REST` 0,2), com a `qa/dia.js`, as regras 62 e 63 do guard e o sistema «dia» do
+  verificador. Medido em oito histórias: às 0,66 dormem pelo cansaço 5% a 10% dos adultos (eram 22% a 42%); às 0,70, 13% a
+  33% (eram 23% a 55%). **Aberto, para decisão:** T-940 (o alvo pede 15 centésimos de descanso por dia e a gente descansa
+  6: a tarde em casa, a taverna até fechar, o banquete da festa) e T-946 (8% menos navios em dez anos de paz); L-916 (o
+  recém-casado da sede cheia, do `act-casa.js`). Respondido com rastro: o `freguesia` b1 e o `som` s5a eram tempestades
+  (T-943, T-945); a fornalha é do foguista de posto (T-944).
+- **A regressão de descoberta da fundação na `4538faf`** (a fase inteira, que as junções só rodavam em parte): quatro
+  defeitos do jogo consertados, cada um com o caso que o provoca — o navio que ficava à deriva no próprio cais quando a
+  rota fechava no embarque (L-727), quem enviúva levava a carga comum para o luto em casa (L-728), o bicho levado pela
+  corda posto dentro do prédio onde estava quem o levava (L-729), o abutre que pousava numa carcaça debaixo de um teto
+  (L-730) — e dezessete limites de prova com rastro (T-855 a T-867, T-868, T-869, T-959, T-960). Aberto: a noite em casa
+  da cidade (`casa-dentro` c5, 50,0% — já 43,3% antes da praça): a medir de novo com a 3ª rodada do F juntada.
 - **O diário do patch para o dono** (`qa/patch3/diario/`, publicado como artefato): o que entrou, o que está em obras e o
   que cada coisa muda no jogo, com capturas de verdade do Modo Encarnado (`qa/visual/fotos-diario.js`); atualizado a
   cada frente juntada.
 - **Aberto das frentes juntadas, dito no AUDIT:** a medida do quadro do Coliseu com a máquina livre (T-781); os 42 sons
   novos, que só o ouvido do dono julga; o aspecto da roupa e das janelas, que pede fotos antes de publicar.
-- **A seguir:** juntar as frentes X, H, F2 e M3; depois o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
+- **A seguir:** decidir o T-940 (a tarde de descanso); depois o paço municipal e o mercado coberto, se couberem; e o fecho (os mundos prontos da geração 20, a regressão inteira, a medida das
   seis sementes da terra, o relatório).

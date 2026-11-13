@@ -669,5 +669,43 @@ for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const
     const a = L.findIndex(l => st.test(l)); if (a < 0) { fails.push(`as portas que só leem: act-casa.js sem ${st} — a regra 84 não acha a porta`); continue; }
     let z = a + 1; while (z < L.length && !/^  \};?$/.test(L[z])) z++;
     for (let k = a; k < z; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); if (bad.test(c)) fails.push(`as portas que só leem: act-casa.js:${k + 1} escreve no mundo dentro de uma porta de leitura (D-236): ${L[k].trim().slice(0, 110)}`); } } }
+// 62. "o passo do dia tem uma porta só" (L-915, D-241): enquanto uma cena corre o sol se demora, e o que guarda o ritmo do dia
+// vai com ele. (a) só o G.dayPace (world.js) pergunta ao Scene.lingers; (b) o passo de cada passo do mundo (G.pace) só o tick
+// do main.js escreve — e o world.js, que o declara e o repõe a 1 num mundo novo ou num save aberto —, e só o tick chama o
+// G.dayPace: quem vive o passo lê o G.pace, uma conta por passo, não por pessoa; (c) o relógio do dia anda por ele (main.js) e
+// a fome e a energia do dia também (villagers.js needs: «dn»); a idade, a doença e o que se conta em segundos, não
+for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.lingers\s*\(/.test(c) && !(f === 'world.js' && /G\.dayPace = \(\) =>/.test(c))) fails.push(`o passo do dia: ${f}:${k + 1} pergunta ao Scene.lingers fora do G.dayPace (L-915): ${l.trim().slice(0, 110)}`);
+  if (/\bG\.pace\s*(=(?!=)|[-+*/]=|\+\+|--)/.test(c) && !(f === 'main.js' && c.trim() === 'G.pace = G.dayPace();') && !(f === 'world.js' && (c.trim() === 'G.pace = 1;' || c.trim() === 'G.worldHooks.push(() => { G.pace = 1; });'))) fails.push(`o passo do dia: ${f}:${k + 1} escreve o G.pace fora do tick (L-915): ${l.trim().slice(0, 110)}`);
+  if (/\bG\.dayPace\s*\(/.test(c) && !(f === 'main.js' && c.trim() === 'G.pace = G.dayPace();')) fails.push(`o passo do dia: ${f}:${k + 1} chama o G.dayPace fora do tick — quem vive o passo lê o G.pace (L-915): ${l.trim().slice(0, 110)}`); });
+{ const code = l => l.replace(/(^|\s)\/\/\s.*$/, ''); const Lm = (src['main.js'] || []).map(code), Lv = (src['villagers.js'] || []).map(code), Lw = (src['world.js'] || []).map(code);
+  const tk = Lm.filter(l => /\bS\.time\s*\+=/.test(l));
+  if (tk.length !== 1 || !/S\.time \+= dt \/ G\.DAY_LEN \* G\.pace;/.test(tk[0])) fails.push('o passo do dia: o relógio do dia (main.js tick, «S.time += …») não anda pelo G.pace, ou anda em mais de um lugar (L-915)');
+  const hg = Lv.filter(l => /^\s*v\.hunger = Math\.min\(100, v\.hunger \+ /.test(l)), en = Lv.filter(l => /^\s*if \(v\.age >= 2\) v\.energy = G\.clamp\(v\.energy \+ /.test(l));
+  if (hg.length !== 1 || !/v\.hunger \+ dn \* /.test(hg[0])) fails.push('o passo do dia: a fome do dia (villagers.js needs) não anda pelo passo do dia («dn») (L-915)');
+  if (en.length !== 1 || !/\(awake \? -dn \* /.test(en[0]) || !/ : dn \* \(100 \/ 22\)\)/.test(en[0])) fails.push('o passo do dia: a energia do dia (villagers.js needs) não anda pelo passo do dia («dn») (L-915)');
+  if (Lv.filter(l => /const dn = dd \* G\.pace;/.test(l)).length !== 1) fails.push('o passo do dia: villagers.js needs sem «const dn = dd * G.pace» (L-915)');
+  if (!Lv.some(l => /^\s*v\.age \+= dt \/ day;/.test(l))) fails.push('o passo do dia: a idade (villagers.js needs) deixou de andar em segundos («v.age += dt / day») (D-241)');
+  if (!Lw.some(l => /G\.worldHooks\.push\(\(\) => \{ G\.pace = 1; \}\);/.test(l))) fails.push('o passo do dia: world.js não repõe o G.pace num mundo novo ou num save aberto (L-915)'); }
+// 63. "o descanso tem uma tabela só, e o cansaço do dia é do needs" (D-240, D-242): (a) a parte do descanso (Vg.REST) e a porta
+// (Vg.resting) entram na conta da energia numa linha só — a do needs (villagers.js) —, e nenhum outro arquivo do jogo lê o
+// Vg.REST; (b) a porta e a tabela só leem: nenhuma escrita na pessoa, na tarefa ou no mundo e nenhum sorteio, do «Vg.REST =»
+// ao fim do «Vg.resting = function»; (c) nenhuma outra linha do jogo muda a energia de alguém por uma taxa do tempo (× dt,
+// dd, dn): o cansaço do dia é do needs — o nado, que cansa em segundos, é a exceção dita
+{ const code = l => l.replace(/(^|\s)\/\/\s.*$/, ''); const L = (src['villagers.js'] || []).map(code);
+  const a = L.findIndex(l => /^\s*Vg\.REST = /.test(l)), r = L.findIndex(l => /^\s*Vg\.resting = function \(v\) \{/.test(l));
+  if (a < 0 || r < a) fails.push('o descanso: villagers.js sem «Vg.REST =» seguido de «Vg.resting = function (v) {» — a regra 63 não acha a porta');
+  else { let z = r + 1; while (z < L.length && !/^  \};?$/.test(L[z])) z++;
+    for (let k = a + 1; k <= z; k++) { const c = L[k];
+      if (/\b(v|t|a|o|S|G\.S)\.[\w.]+\s*(=(?!=)|[-+*/]=|\+\+|--)/.test(c) || /\b(Vg\.setTask|Vg\.give|Vg\.endTask|setTask|end)\s*\(/.test(c)) fails.push(`o descanso: villagers.js:${k + 1} escreve dentro da porta do descanso (D-240): ${c.trim().slice(0, 110)}`);
+      if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\s*\(|Math\.random/.test(c)) fails.push(`o descanso: villagers.js:${k + 1} sorteia dentro da porta do descanso (D-240): ${c.trim().slice(0, 110)}`); } }
+  const use = []; for (const f of files) src[f].forEach((l, k) => { const c = code(l); if (/\bVg\.REST\b/.test(c) && !/^\s*Vg\.REST = /.test(c)) use.push([f, k + 1, c]); });
+  const en = use.filter(([f, , c]) => f === 'villagers.js' && /^\s*if \(v\.age >= 2\) v\.energy = G\.clamp\(v\.energy \+ /.test(c) && /\* \(Vg\.resting\(v\) \? Vg\.REST : 1\)/.test(c));
+  if (en.length !== 1) fails.push('o descanso: a linha da energia do needs (villagers.js) não tem «* (Vg.resting(v) ? Vg.REST : 1)» (D-240)');
+  for (const [f, k, c] of use) if (!en.some(e => e[0] === f && e[1] === k)) fails.push(`o descanso: ${f}:${k} lê o Vg.REST fora da linha da energia do needs (D-240): ${c.trim().slice(0, 110)}`);
+  const RATE_OK = [['villagers.js', 'v.energy -= dt * 3;']]; // (swimming for one's life: in seconds, with or without a scene)
+  for (const f of files) src[f].forEach((l, k) => { const c = code(l); const m = /\.energy\s*([-+*/]?=)(?!=)([^;]*)/.exec(c); if (!m || !/\b(dt|dd|dn|dt2|h)\b/.test(m[2])) return;
+    if (f === 'villagers.js' && /^\s*if \(v\.age >= 2\) v\.energy = G\.clamp\(v\.energy \+ \(awake \? -dn \* /.test(c)) return; if (ok(RATE_OK, f, l)) return;
+    fails.push(`o descanso: ${f}:${k + 1} muda a energia de alguém por uma taxa do tempo fora do needs (D-240): ${l.trim().slice(0, 110)}`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
