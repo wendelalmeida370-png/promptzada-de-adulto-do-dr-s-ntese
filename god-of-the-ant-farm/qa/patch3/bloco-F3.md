@@ -684,3 +684,9 @@ As provas na árvore juntada (`ea79802`): `node qa/guard.js` PASSOU (156 arquivo
 (o F) e 20 de 20 com as partes novas; `qa/som.js` 34 de 34; `qa/portao-guerra.js` 5 de 5; as vizinhas da guerra e dos muros
 (guerra10 nos quatro mundos, vira, cativos, volta, retirada, fundadores, muros) sem nenhuma falha; e as sabotagens desta
 rodada, no §7.
+
+**A régua das dez sementes** (`regua.js`, 90 anos, a árvore juntada contra a `8208230`): no ano 90, 3 106 pessoas contra
+3 774 — quase toda a diferença é a semente 77 (884 → 187: antes um império único desde o ano 61, em paz; agora quatro a
+cinco povos em guerra), e sem ela 2 890 → 2 919 —; as mortes de guerra +25% (o socorro e as campanhas do L-731); as obras
+grandes fundadas 42 contra 39, acabadas 37 e 37, de pé 35 e 36, caídas 2 (as duas nórdicas de madeira em Hedeby, pelo fogo:
+D-219); nenhum erro. A linha completa está no L-731.
