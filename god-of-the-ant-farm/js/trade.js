@@ -174,13 +174,21 @@
   // lives there. (Only a grown brother took it: the heir of a merchant house of Tenochtitlan starved, his eldest son, who had
   // it after him, fell in the war, and the four little brothers left in the house had a banner of nobody, to come down the
   // next morning with «ninguém da família mora mais ali» — L-713)
+  // (and, with none of the holder's own under it, the family of the partner who died before — the widower holds the banner his
+  // late wife earned, and her brothers and sisters, her children, her parents living with him are the family of the house still:
+  // the banner went from the merchant to the partner, the partner died too before the day's round — an arrow, in the war —, and
+  // it came down with «ninguém da família mora mais ali», three of the merchant's brothers and sisters in the house, L-736)
   function heirIn(h, v) {
     const S = G.S; const l = []; for (const o of S.villagers.values()) if (o.home === h.id && o.id !== v.id && !o.captive) l.push(o);
     l.sort((a, b) => b.age - a.age || a.id - b.id);
-    const kid = o => o.mother === v.id || o.father === v.id, sib = o => (!!v.mother && o.mother === v.mother) || (!!v.father && o.father === v.father);
-    const kids = v.kids || []; const grand = o => kids.includes(o.mother) || kids.includes(o.father);
-    const q = l.find(o => o.id === v.partner) || l.find(o => o.age >= 16 && kid(o)) || l.find(kid) || l.find(o => o.age >= 16 && sib(o)) || l.find(sib)
-      || l.find(o => o.id === v.mother || o.id === v.father) || l.find(grand);
+    const of = r => {
+      const kid = o => o.mother === r.id || o.father === r.id, sib = o => (!!r.mother && o.mother === r.mother) || (!!r.father && o.father === r.father);
+      const kids = r.kids || []; const grand = o => kids.includes(o.mother) || kids.includes(o.father);
+      return l.find(o => o.id === r.partner) || l.find(o => o.age >= 16 && kid(o)) || l.find(kid) || l.find(o => o.age >= 16 && sib(o)) || l.find(sib)
+        || l.find(o => o.id === r.mother || o.id === r.father) || l.find(grand);
+    };
+    const late = v.widow ? G.person(v.widow) : null;
+    const q = of(v) || (late ? of(late) : null);
     return q ? q.id : 0;
   }
   const kill0 = G.Village.kill;
