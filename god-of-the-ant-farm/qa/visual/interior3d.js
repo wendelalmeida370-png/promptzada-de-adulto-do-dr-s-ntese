@@ -16,8 +16,9 @@
 //      furniture and a flower bed of the form, the piece: T-284)
 //   5. the ceilings: over every cell where the grid lets one stand, a ceiling turned down to the room — the storey above's
 //      or the roof's — high enough for a body of 1.75 m (on a loft, for one on hands and knees), never the sky. The closed part
-//      of a ground open to the sky (D-131, the theater's skene): its ceiling at the foot of the form's roof over each room, and
-//      no wall of its rooms over it
+//      of a ground open to the sky (D-131, the theater's skene): its ceiling at the foot of what the form lays over each room
+//      (the roof, or a solid under it: the Acropolis's entablature, T-1111), no wall of its rooms over it, and one face over
+//      it — never the inside's ceiling in the plane of the form's own underside (L-795)
 //   6. the furniture: each piece with a size, within its own rectangle and on its floor, every kind of the catalogue drawn
 //      (the pieces a building's form draws — marked form, D-093: the square's — are the form's, outside)
 //   7. the doors' leaves: shut, in their opening; opened, into their first room. The lids: opened, up off their hole
@@ -285,8 +286,11 @@ for (const [b, plan, own] of jobs) {
       if (!st && !deg && plan.stairs.some(s => s.kind !== 'degraus' && s.lv0 === l.lv && x > s.r[0] - 0.02 && x < s.r[2] + 0.02 && z > s.r[1] - 0.02 && z < s.r[3] + 0.02) && Math.abs(Q.floorY(l.lv, x, z) - l.y) > 0.02) { edgeY++; continue; }
       const walk = Q.walk(l.lv, x, z); if ((st || deg) && !walk) continue; // (a flight by a wall: a window's frame may hang over its edge; the body walks its middle)
       // (the floor is seen where nothing stands on it: under a piece of furniture — a mat the grid has as floor — the piece is)
-      const over = plan.items.find(it => it.lv === l.lv && x > it.r[0] - 0.01 && x < it.r[2] + 0.01 && z > it.r[1] - 0.01 && z < it.r[3] + 0.01);
-      if (over && !(over.y > 0.5)) continue;
+      // (every piece over the point: one on the floor hides it, whatever hangs over it — the first one found was a basket hung on
+      // the wall at 1.5 m, its edge on the eating mat's, and the mat's top called 2.5 cm off the floor: the house#129596 of the
+      // 500 years of the generation 21, T-1112)
+      const overs = plan.items.filter(it => it.lv === l.lv && x > it.r[0] - 0.01 && x < it.r[2] + 0.01 && z > it.r[1] - 0.01 && z < it.r[3] + 0.01);
+      if (overs.some(it => !(it.y > 0.5))) continue;
       if (inBed(x, z)) continue; // (nor under a flower bed of the form: there its blooms — the monument's square's, at its corners)
       const fy = walk || st || deg ? Q.floorY(l.lv, x, z) : l.y; const up = st || deg ? 0.3 : 0.05;
       nFloor++; const hit = cast(c === CELL.HATCH ? TA : TA0, W3([x, fy + up, z]), [0, -1, 0], up + 0.6, cutAt);
@@ -300,7 +304,7 @@ for (const [b, plan, own] of jobs) {
       // (a loft is crawled, under the slopes down to the eaves: there a ceiling, however low; elsewhere one stands)
       const low = l.kind === 'jirau' || c === CELL.LOWROOF, from = low ? 0.06 : 0.3;
       if (covered && x > sh0.court[0] - 0.3 && x < sh0.court[2] + 0.3 && z > sh0.court[1] - 0.3 && z < sh0.court[3] + 0.3) continue; // (the plan's: counted apart)
-      if (over && over.y > 0.5) continue; // (under a piece hung on the wall — a shelf, the pegs, the keys —: the piece, not the ceiling)
+      if (overs.length) continue; // (under a piece hung on the wall — a shelf, the pegs, the keys —: the piece, not the ceiling)
       // (as high as a temple of 8 tiles goes: the Roman's ceiling 15.6 m over its nave, under its ridge — at 14 m it was the sky)
       nCeil++; const top = cast(TA, W3([x, fy + from, z]), [0, 1, 0], 30, cutAt);
       const need = low ? 0.1 : 1.75;
@@ -308,11 +312,25 @@ for (const [b, plan, own] of jobs) {
     }
   }
   // (5, the closed part of a ground open to the sky — D-131 —: the ceiling of each of its rooms, its storey's top, at the foot of
-  // the form's roof over it — one number, the plan's from the form's —; no wall a closed room stands against over it)
+  // what the form lays over it — one number, the plan's from the form's: the lowest of its solids over the room's middle, over
+  // its floor — the roof, the skene's; or a solid under the roof wider than the room, the entablature on a temple's cella and
+  // colonnade (T-1111); one no wider than the room is the head of the opening under it, the room's own: the lintel over the
+  // door of the skene's hall, the room 'entrada' the opening through its wall —;
+  // no wall a closed room stands against over it; and over it one face: where the form draws its own underside at the ceiling,
+  // the inside lays none there — two faces in one plane, the wood and the marble, fought over every room of the Acropolis of
+  // Argos of the mega of the generation 21, L-795)
   const overCeil = new Set();
+  const lotOf = q => { const a = G.Forma.toLot(fside, FMb.L, q.r[0], q.r[1]), c = G.Forma.toLot(fside, FMb.L, q.r[2], q.r[3]); return [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[0], c[0]), Math.max(a[1], c[1])]; };
   if (CPb) for (const m of CPb.rooms) { const l = lvOf(m.lv); if (!l) continue; const cx = (m.r[0] + m.r[2]) / 2, cz = (m.r[1] + m.r[3]) / 2;
-    const roof = FMb && G.Forma.mass(FMb).filter(q => q.k === 'telhado').map(q => { const a = G.Forma.toLot(fside, FMb.L, q.r[0], q.r[1]), c = G.Forma.toLot(fside, FMb.L, q.r[2], q.r[3]); return { r: [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[0], c[0]), Math.max(a[1], c[1])], y0: q.y0 }; }).find(q => cx > q.r[0] && cx < q.r[2] && cz > q.r[1] && cz < q.r[3]);
-    nCeil++; if (roof && Math.abs(l.y + l.h - roof.y0) > 0.015) bad.ceil.push(`${tag} ${m.fn} (piso ${m.lv}): o teto a ${(l.y + l.h).toFixed(2)} m, o pé do telhado da forma sobre ele a ${roof.y0.toFixed(2)} m`);
+    const wider = q => q.r[0] < m.r[0] - 0.05 || q.r[1] < m.r[1] - 0.05 || q.r[2] > m.r[2] + 0.05 || q.r[3] > m.r[3] + 0.05;
+    const lid = FMb && G.Forma.mass(FMb).filter(q => (q.k === 'telhado' || (q.k === 'box' && !q.ralo)) && q.y0 > l.y + 0.5).map(q => ({ r: lotOf(q), y0: q.y0, k: q.k })).filter(q => cx > q.r[0] && cx < q.r[2] && cz > q.r[1] && cz < q.r[3] && (q.k === 'telhado' || wider(q))).sort((p, q) => p.y0 - q.y0)[0];
+    nCeil++; if (lid && Math.abs(l.y + l.h - lid.y0) > 0.015) bad.ceil.push(`${tag} ${m.fn} (piso ${m.lv}): o teto a ${(l.y + l.h).toFixed(2)} m, o pé ${lid.k === 'telhado' ? 'do telhado' : 'do sólido'} da forma sobre ele a ${lid.y0.toFixed(2)} m`);
+    let two = 0, ex2 = '';
+    for (let x = m.r[0] + 0.25; x < m.r[2] - 0.1; x += 1) for (let z = m.r[1] + 0.25; z < m.r[3] - 0.1; z += 1) {
+      if (plan.items.some(it => it.lv === m.lv && x > it.r[0] - 0.15 && x < it.r[2] + 0.15 && z > it.r[1] - 0.15 && z < it.r[3] + 0.15)) continue;
+      const o = W3([x, l.y + 0.3, z]); const a = hits(T3, o, [0, 1, 0], 30).filter(h => h.front), c = hits(TX, o, [0, 1, 0], 30, cutAt).filter(h => h.front);
+      const hit = a.find(h => c.some(q => Math.abs(q.t - h.t) < 0.004)); if (hit) { two++; if (!ex2) ex2 = ` (em ${x.toFixed(2)},${z.toFixed(2)}, a ${(hit.t + l.y + 0.3).toFixed(2)} m)`; } }
+    nCeil++; if (two) bad.ceil.push(`${tag} ${m.fn} (piso ${m.lv}): o teto de dentro no plano de uma face de baixo da forma em ${two} pontos${ex2}`);
     for (const w of plan.walls) { if (w.lv !== m.lv || w.kind === 'borda' || w.h <= l.h + 0.01 || overCeil.has(w.id)) continue; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L;
       const against = [0.25, 0.5, 0.75].some(f => [1, -1].some(sg => { const x = w.a[0] + (w.b[0] - w.a[0]) * f + nx * sg * (w.t / 2 + 0.05), z = w.a[1] + (w.b[1] - w.a[1]) * f + nz * sg * (w.t / 2 + 0.05); return x > m.r[0] && x < m.r[2] && z > m.r[1] && z < m.r[3]; }));
       if (against) { overCeil.add(w.id); bad.ceil.push(`${tag} parede ${w.id} do ${m.fn} (piso ${m.lv}): ${w.h} m, acima do teto (${l.h} m)`); } } }
@@ -384,6 +402,9 @@ for (const [b, plan, own] of jobs) {
       // (its closed part — D-131, the theater's skene —, opened as a closed building: the inside drawn there alone — in its rooms,
       // and through their doors —, and where the body is in its rooms nothing of the outside but what the cut puts aside — over
       // its head, the ceiling's: 5)
+      // (the form's own pieces there and what stands on them — the columns of a colonnade's walk, Athena on her pedestal —: the
+      // outside's, as the inside does not draw them, D-093; the check knew only the skene, which has none, T-1111)
+      const formPiece = (lv, x, z) => !!FMb && plan.items.some(it => it.form && it.lv === lv && x > it.r[0] - 0.03 && x < it.r[2] + 0.03 && z > it.r[1] - 0.03 && z < it.r[3] + 0.03);
       if (CPb) { let far = 0, n0 = 0; const ex0 = []; const near = (m, x, z, d) => x > m.r[0] - d && x < m.r[2] + d && z > m.r[1] - d && z < m.r[3] + d;
         const doors = plan.holes.filter(h => { const d = h.door >= 0 && plan.doors.find(q => q.id === h.door); return d && (d.rooms || []).some(id => CPb.ids.has(id)); }).map(h => [plan.walls[h.wall], h]);
         const inDoor = (x, z) => doors.some(([w, h]) => { const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / L, tz = (w.b[1] - w.a[1]) / L; const s = (x - w.a[0]) * tx + (z - w.a[1]) * tz, o = (x - w.a[0]) * -tz + (z - w.a[1]) * tx; return Math.abs(s - h.at) < h.w / 2 + 0.03 && Math.abs(o) < w.t / 2 + 0.03; });
@@ -391,7 +412,7 @@ for (const [b, plan, own] of jobs) {
         if (far) bad.inside.push(`${tag}: ${far} pontos do dentro fora do pedaço fechado`);
         for (let k = 0; k + 8 < P.length; k += 9) { const pts = [[P[k], P[k + 1], P[k + 2]], [P[k + 3], P[k + 4], P[k + 5]], [P[k + 6], P[k + 7], P[k + 8]]]; pts.push([(pts[0][0] + pts[1][0] + pts[2][0]) / 3, (pts[0][1] + pts[1][1] + pts[2][1]) / 3, (pts[0][2] + pts[1][2] + pts[2][2]) / 3]);
           for (const q of pts) { const x = q[0] - X0, y = q[1] - Y0, z = q[2] - Z0; const m = CPb.rooms.find(m2 => near(m2, x, z, -0.02)); const l = m && lvOf(m.lv);
-            if (l && y > l.y + 0.03 && y < l.y + Math.min(l.h, In.BODY.h) && !cutAt(q)) { n0++; if (ex0.length < 2) ex0.push(`${m.fn} em ${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}`); break; } } }
+            if (l && y > l.y + 0.03 && y < l.y + Math.min(l.h, In.BODY.h) && !cutAt(q) && !formPiece(m.lv, x, z)) { n0++; if (ex0.length < 2) ex0.push(`${m.fn} em ${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}`); break; } } }
         nIn++; if (n0) bad.inside.push(`${tag}: ${n0} triângulos de fora dentro do pedaço fechado (${ex0.join('; ')})`); }
       // (its lanes, every half metre: a lattice of 4 × 4 fell all on the stalls of the feira#17584 of the mega of the generation
       // 11 — its four rows of stalls under the four lines of the lattice —, and no lane was asked, T-352)

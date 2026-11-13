@@ -170,6 +170,11 @@ function HELP(G) {
     if (!hf.set) return { town, why: `nenhuma cidade do povo ${civ} neste mundo` };
     if (!hf.b) return { town, why: `a mão do deus não fundou o templo ${stepId} em cidade nenhuma do povo ${civ} (a primeira: ${town})` };
     founded.add(hf.b.id); const b = hf.b, drop0 = H.drop(b.x, b.y, b.w), h0 = drop0 > 3 ? H.aplainar(b.x, b.y, b.w) : null;
+    // (the door was put at the foundation, on the ground as it was; the ground levelled, the register's turn of the day judges it on
+    // the ground as it is — as the world's own turn would —: the Egyptian's of 8 in the metropole of the generation 21, levelled,
+    // had cliffs on seven of the eight tiles before its front, its door kept there, no way in for anyone, and the body stood on the
+    // cliff before it — «o corpo no salão: false, a 19.16 m do ponto», T-1110)
+    if (h0 !== null) { G.inSim++; try { G.Interiors.onNewDay(); } finally { G.inSim--; } }
     return Object.assign({ b, set: hf.set, town, gone: hf.gone, drop0: +drop0.toFixed(1), h0 }, H.palaceOf(b));
   };
   H.palaceOf = function (b) {
@@ -519,7 +524,11 @@ function nodePart() {
     if (v2 && s2 && pe && pe.out) {
       G.inSim++; G.Vg.endTask(v2); v2.x = (px0 + pe.out[0]) / TL; v2.y = (pz0 + pe.out[1]) / TL; v2.path = null; G.inSim--;
       G.Possess.take(v2); G.Avatar.attach(v2, 0); G.Cam3D.attach(G.Avatar.pos(), 0); for (let k = 0; k < 6; k++) frame();
-      walkTo(...pat(pe.x, pe.z), 900); const inn = PZ.W(RK.L / 2, (RK.C[1] + RK.C[3]) / 2); walkTo(inn[0], inn[1], 900);
+      // (in by the gate as a player goes: up the steps on their own line — H.wayIn —: the palace founded in Roma of the metropole of
+      // the generation 21 stands 0.83 m over the street, the four treads before the foot of its stair a metre wide and 0.7 m to the
+      // side of the gate's middle, and the straight line went by them into the stair's first tread, 0.8 m up — «piso undefined»,
+      // T-1109)
+      for (const q of H.wayIn(pb, pp)) walkTo(q[0], q[1], 900); const inn = PZ.W(RK.L / 2, (RK.C[1] + RK.C[3]) / 2); walkTo(inn[0], inn[1], 900);
       const sr = pp.rooms.find(m => m.lv === s2.lv0 && s2.a[0] > m.r[0] && s2.a[0] < m.r[2] && s2.a[1] > m.r[1] && s2.a[1] < m.r[3]); const dr = sr && H.doorBetween(pp, PZ.court.id, sr.id);
       // (the room's door off the court opened by the hand, as the verb «Abrir a porta» does — Interiors.useDoor —, by day)
       if (dr) { G.inSim++; const od = In.useDoor(pb, dr.id, 'abrir', v2); G.inSim--; walk0 = od.ok ? 'aberta' : od.why; walkTo(...pat(dr.a[0], dr.a[1]), 900); walkTo(...pat(dr.b[0], dr.b[1]), 600); }
@@ -935,7 +944,7 @@ async function browserPart() {
     else {
       const walkIn = async stage => page.evaluate(s => { const H = window.__MON, P = window.__pz; const b = G.S.buildings.get(P.id); const T = G.Space.TILE; const v = G.Possess.body();
         if (s === 'fora') { G.inSim++; v.x = P.front[0] / T; v.y = P.front[1] / T; v.path = null; G.inSim--; G.Avatar.attach(v, P.into); return { d: 0 }; }
-        if (s === 'patio') { H.walk(P.gate[0], P.gate[1], 600); const d = H.walk(P.court[0], P.court[1], 600); return { d: +d.toFixed(2), lv: G.Possess.level() }; }
+        if (s === 'patio') { for (const q of H.wayIn(b, H.palaceOf(b).p)) H.walk(q[0], q[1], 600); const d = H.walk(P.court[0], P.court[1], 600); return { d: +d.toFixed(2), lv: G.Possess.level() }; } // (up the steps on their own line: H.wayIn, T-1109)
         // (the portal opened by the hand, as the verb does: Interiors.useDoor)
         G.S.time = 0.42; if (P.hallDoor >= 0) { G.inSim++; G.Interiors.useDoor(b, P.hallDoor, 'abrir', v); G.inSim--; }
         H.walk(P.side[0], P.side[1], 600); H.walk(P.door[0], P.door[1], 600); const d = H.walk(P.hall[0], P.hall[1], 600); return { d: +d.toFixed(2), lv: G.Possess.level() };

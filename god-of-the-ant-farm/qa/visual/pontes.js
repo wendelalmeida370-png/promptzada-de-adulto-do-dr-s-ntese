@@ -21,7 +21,8 @@
 //   p12. O mundo de mentira: a ponte comprida (três casas em linha) de cada povo — um vão por casa, o pilar entre eles, os
 //       encontros nas margens —, o arco pleno de Roma e o arco baixo de tijolo, as baias do Egito, o vão em degraus da Grécia, a
 //       calçada asteca, a madeira do norte sobre pedra seca, a ponte de madeira de uma rua de terra; a ponte em diagonal com o
-//       canto aberto; a assinatura do pedaço muda quando o povo ou os lados da ponte mudam.
+//       canto aberto; a assinatura do pedaço muda quando o povo ou os lados da ponte mudam; e o pilar do canto onde duas
+//       muretas se encontram, com um prédio do outro lado do canto, fica dentro da casa da ponte (L-794).
 //   node qa/visual/pontes.js [mundo,mundo…]   (padrão: metropole,mega,mundial)   ONLY=p3,p11   VERB=1
 'use strict';
 const path = require('path');
@@ -335,6 +336,15 @@ if (want('p12')) {
   { const tiles = long('romano', 3); void tiles; const s0 = R3.sigOf(1, 1).c; S.buildings.get(9001).style = 'egipcio'; const s1 = R3.sigOf(1, 1).c; S.buildings.get(9001).style = 'romano';
     const i = 19 * N + 20; S.type[i] = T.GRASS; const s2 = R3.sigOf(1, 1).c; S.type[i] = T.RIVER; const s3 = R3.sigOf(1, 1).c;
     ok('p12d: a assinatura do pedaço muda quando o povo ou um lado da ponte muda (o pedaço é desenhado de novo)', s0 !== s1 && s0 !== s2 && s3 === s0, `${s0} → outro povo ${s1} → a margem num lado ${s2} → de volta ${s3}`); }
+  // (the pier where two parapets meet at a corner, a building across the corner: inside the bridge's own tile, its cap too — a
+  // bridge of one tile over a pond, the water on two sides, a house across the corner; it stood a hand inside the market#13618 by
+  // a bridge of the mega of the generation 21, L-794)
+  for (const st of ['romano', 'classico', 'egipcio', 'grego', 'asteca']) {
+    blank(); for (const [x, y] of [[20, 19], [21, 20], [20, 20]]) { const i = y * N + x; S.type[i] = T.RIVER; S.wl[i] = 4; } S.typeVer = (S.typeVer || 0) + 1;
+    house(st, 21, 19); road([[19, 20], [20, 20], [20, 21]], 3); const tiles = [20 * N + 20], F = frameOf(tiles[0]);
+    if (JSON.stringify(F.pl.k) !== '[2,2,0,0]' || F.pl.c[0] !== 3 || !F.pl.e[0] || F.pl.e[0][1] !== 2) { ok(`p12e ${st}: o canto com prédio`, false, `armado como ${JSON.stringify(F.pl)}`); continue; }
+    const R = tileChecks(`p12e mundo chato, canto com prédio, ${st}`, tiles); void R;
+  }
   if (!M.limpo()) ok('p12: sem erro de módulo nem aviso', false, JSON.stringify(M.erros()).slice(0, 300));
 }
 console.log(fails.length ? `FALHOU: ${fails.length} — ${fails.join(' | ')}` : 'PASSOU: as pontes');

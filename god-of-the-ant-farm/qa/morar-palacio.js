@@ -237,8 +237,12 @@ run('m4', () => {
   // (the enlargement: the old palace of 3, lived in, becomes a work of 6 — the household out while it lasts, back when it stands)
   const pod = V.PODIUM; V.PODIUM = 4;
   try {
-    abre(); let got = null;
-    for (const q of povos(false)) { q.cap._noSite = {}; const pos = sim(() => V.findSite(q.cap, 'palacio', undefined, 6)); if (!pos) continue; const b = funda(q.cap, 'palacio', 'antigo', true, { x: pos[0] + 3, y: pos[1] + 3, R: 0 }); if (b) { got = Object.assign(q, { b }); break; } }
+    // (the metrópole first, and the next ready worlds: no capital of the metrópole of the generation 21 has a lot of 6 for a
+    // palace, «nenhuma capital com lugar», T-1107)
+    let got = null;
+    for (const m of MUNDOS) { abre(m);
+      for (const q of povos(false)) { q.cap._noSite = {}; const pos = sim(() => V.findSite(q.cap, 'palacio', undefined, 6)); if (!pos) continue; const b = funda(q.cap, 'palacio', 'antigo', true, { x: pos[0] + 3, y: pos[1] + 3, R: 0 }); if (b) { got = Object.assign(q, { b }); break; } }
+      if (got) break; }
     if (!ok('m4g o palácio de antes, com a família', !!got && todosEm(K.court(got.r), got.b), got ? `${got.cap.name}: ${lado(got.b)}, ${nomes(moram(got.b))}` : 'nenhuma capital com lugar')) return;
     fam = moram(got.b); coin = D.get('h:' + got.b.id, 'moedas'); L0 = S.ledgerN || 0;
     const P6 = G.Escala.steps('palacio').find(s => s.n === 6); const pos = V.growLot(got.cap, got.b, P6); const r = pos && sim(() => V.enlarge(got.b, P6, pos));
@@ -576,6 +580,25 @@ run('m14', () => {
   // then chose her sister, and the family stayed in the seat, as the rule has it. T-988)
   const outroDe = q => [...S.villagers.values()].filter(v => v.set === q.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !B(v.home).elite && !K.ofCourt(v, q.r)).sort((a, c) => a.id - c.id)[0];
   let o = null, onde = ''; for (const m of [MUNDO, 'cidade', 'mundial', 'mega']) { o = arma(true, q => mer(q) && !!outroDe(q), m); if (o) { onde = m; break; } }
+  // (in none — no merchant house rules in a ready world of the generation 21, «nenhum governante de casa de mercadores … em
+  // nenhum mundo pronto» —: the proof's hand elects the head of a merchant house of a capital with no seat, by the world's own
+  // election, the term begun that day as the world's begins it (T-1100); T-1107)
+  if (!o) for (const m of [MUNDO, 'cidade', 'mundial', 'mega']) {
+    abre(m); M.viver(1);
+    for (const f of G.Fac.all().filter(q => q.alive).sort((a, c) => a.id - c.id)) {
+      const cap = G.Fac.capitalOf(f.id); if (!cap || Co.seatOf(f)) continue;
+      const heads = [...S.buildings.values()].filter(h => h.set === cap.id && h.elite).map(h => S.villagers.get(h.elite.dono === undefined ? h.dono : h.elite.dono))
+        .filter(v => v && v.home === [...S.buildings.values()].find(h => h.elite && (h.elite.dono === undefined ? h.dono : h.elite.dono) === v.id).id && v.set === cap.id && v.age >= 25 && !v.captive && !v.jail && !v.aboard).sort((a, c) => a.id - c.id);
+      for (const v of heads) {
+        sim(() => { Pl.endReign(f, 'mandato'); Pl.crown(f, v, 'eleicao', true); f.term = S.day; });
+        const q = povos(false).find(p => p.f === f); if (!q || !mer(q) || !outroDe(q)) continue;
+        const fam = K.court(q.r), casa0 = B(q.r.home), L0 = S.ledgerN || 0; const b = funda(q.cap, 'palacio', 'palacio', true);
+        if (b) { o = Object.assign(q, { b, fam, casa0, L0 }); onde = `${m}, ${v.name} eleito pela mão da prova`; break; }
+      }
+      if (o) break;
+    }
+    if (o) break;
+  }
   if (!ok('m14a uma casa de mercadores que governa', !!o && todosEm(K.court(o.r), o.b), o ? `${onde}, ${o.cap.name}: ${nomes(moram(o.b))}, da casa de bandeira ${lado(o.casa0)}` : 'nenhum governante de casa de mercadores numa capital com lote e com outro para governar, em nenhum mundo pronto')) return;
   const b = o.b; sim(() => G.Trade.keepHouses(o.cap));
   ok('m14b a bandeira vai com a família para a sede', !!b.elite && !o.casa0.elite, `a sede com bandeira: ${!!b.elite} (de ${b.elite ? b.elite.fam : '-'}); a casa de antes: ${!!o.casa0.elite}`);

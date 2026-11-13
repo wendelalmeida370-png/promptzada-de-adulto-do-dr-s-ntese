@@ -47,9 +47,14 @@ const outer = q => { const t = S.settlements.get(q.set); return t ? G.dist(q.x +
 // the body and, turned past Interact.FACE from the door, the fish is what one means; the house#15649 of the generation-16
 // metropole, the farthest from its town's middle, an Aztec house on a canal, gave «Pescar com as mãos» with the door to the side)
 const wet = (X, Z) => { const i = W.idx(X / TL, Z / TL); const t = S.type[i]; return (t === G.T.RIVER || t <= G.T.SEA) && !S.road[i] && !(S.ice && S.ice[i]); };
+// (and its way in straight from the doorstep: the case walks in on the door's line — a door whose steps run along the wall, a
+// side flight, is gone up from the foot of the flight, beside the door, as the soleira's 4b goes up every flight of the world:
+// the house#12650 of the generation-21 metropole, Egyptian with a terrace, its landing 0.65 m over the street before the door
+// — «parou a 0.95 m da porta … fora», T-1108)
 let H = null;
 for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q) && (q.type === 'house' || q.type === 'sobrado') && In.planDoor(q)).sort((a, c) => outer(c) - outer(a) || a.id - c.id)) {
   const p = Sp.planNow(b); if (!p || !p.entrance || !p.entrance.out || wet(b.x * TL + p.entrance.out[0], b.y * TL + p.entrance.out[1])) continue;
+  if (Sp.entryFits(b, In.shellOf(b)).kind === 'lado') continue;
   const v = adults(o => o.home === b.id && !o.sleeping).sort((a, c) => a.id - c.id)[0]; if (v) { H = { b, p, v }; break; }
 }
 if (!H) { ok('uma casa com planta e morador', false, '-'); process.exit(1); }

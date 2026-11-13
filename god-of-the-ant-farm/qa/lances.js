@@ -55,6 +55,7 @@ const ready = () => [...G.S.buildings.values()].filter(b => b.built && b.type !=
 const entry = b => Sp.entryFits(b, In.shellOf(b));
 const recOf = b => ({ s: b.ip.s, o: b.ip.o, r: b.ip.r, f: b.ip.f });
 const sameRec = (a, b) => a.s === b.s && a.o === b.o && a.r === b.r && a.f === b.f;
+const doorOf = b => [b.ip.s, b.ip.o, b.ip.f].join('/');
 // (the god's hand on the ground: vertices set to a height, walls laid — and what was there before, to put back; the ground's
 // maps told, as the god's own powers tell them)
 const V1 = () => G.N + 1;
@@ -105,11 +106,14 @@ const landNote = () => (raised.length ? ` (no chão que o deus ergueu do mar em 
 // ---- 1. the world as it opens: after the turn of the day, every way in fits, or fits on no side open ----
 {
   const before = new Map(); let nNot = 0;
-  for (const b of ready()) { const e = entry(b); before.set(b.id, { k: In.keyOf(b), fit: e.ok, shut: shutNow(b) }); if (!e.ok && !shutNow(b)) nNot++; }
+  for (const b of ready()) { const e = entry(b); before.set(b.id, { k: doorOf(b), fit: e.ok, shut: shutNow(b) }); if (!e.ok && !shutNow(b)) nNot++; }
   turn();
   let moved = 0, kept = 0, same = 0; const wrong = [];
   for (const b of ready()) {
-    const a = before.get(b.id); if (!a || a.shut) continue; const changed = In.keyOf(b) !== a.k;
+    // (the door and the plan's family — the side, its opening, the family —, not the record's revision: the turn writes a family
+    // that came to live in a house into its record, and the revision goes up with it — in the anos100 of the generation 21 a family
+    // came that very turn to the house#2346, empty for four days: «cabia e mudou», its door where it was, T-1105)
+    const a = before.get(b.id); if (!a || a.shut) continue; const changed = doorOf(b) !== a.k;
     if (a.fit) { if (changed) wrong.push(`#${b.id} ${b.type}: cabia e mudou`); else same++; continue; }
     if (changed) { moved++; if (!entry(b).ok) wrong.push(`#${b.id} ${b.type}: mudou para ${b.ip.s} e não cabe lá`); }
     else { kept++; const to = In.fitSide(b); if (to) wrong.push(`#${b.id} ${b.type}: ficou onde não cabe, e cabe em ${to.s}`); }
@@ -588,12 +592,20 @@ qa('o bolsão');
     const under = new Set(); if (iso) for (const t of fl.treads) for (let a = t.a - t.wa / 2 - RIM; a < t.a + t.wa / 2 + RIM + 0.05; a += 0.1) for (let n = t.n - t.wn / 2 - RIM; n < t.n + t.wn / 2 + RIM + 0.05; n += 0.1) under.add(tileAt(b, fl, a, n));
     for (let n = n1 + 0.5; n > n1 - 1e-6; n -= 0.1) for (const a of [lo.a - RIM, lo.a + RIM]) { const j = tileAt(b, fl, a, n - RIM); if (j >= 0 && j !== j0 && !under.has(j) && !S.occ[j] && !S.wall[j] && W.walkable(j)) return { j, j0, iso }; }
     return null; };
-  const pick = () => { for (const iso of [true, false]) for (const c of ready().sort((p, q) => p.id - q.id)) { if (!c.blocks || !entry(c).ok) continue; for (const fl of flightsOf(c)) { const q = besideOf(c, fl, iso); if (!q) continue;
-      ground([], [q.j]); if (SIDES.some(s => s !== c.ip.s && (In.entryOn(c, s) || {}).ok)) return Object.assign({ c }, q); unwall([q.j]); } } return null; };
-  let P12 = pick(), made = '';
+  // (and the flight the same with the wall: a wall on a tile its treads run over in the street lays the flight anew — the
+  // storehouse#2201 of the anos100 of the generation 21, its three treads on into the street over the tile of the wall, came
+  // down to one, 1.28 m over the street: the way in no longer fit because the feet do not go up it, «a entrada não cabe, chão
+  // SIM», and the case asks the ground — T-1106)
+  const sig = c => JSON.stringify(flightsOf(c).map(fl => fl.treads.map(t => [t.a, t.n, t.wa, t.wn, t.y].map(v => +v.toFixed(3)))));
+  const pick = iso => { for (const c of ready().sort((p, q) => p.id - q.id)) { if (!c.blocks || !entry(c).ok) continue; const s0 = sig(c); for (const fl of flightsOf(c)) { const q = besideOf(c, fl, iso); if (!q) continue;
+      ground([], [q.j]); if (sig(c) === s0 && SIDES.some(s => s !== c.ip.s && (In.entryOn(c, s) || {}).ok)) return Object.assign({ c }, q); unwall([q.j]); } } return null; };
+  // (the wall beside the stride alone — away from the treads — first, in the world and then on the god's temple; and then one
+  // under a tread's rim too)
+  let P12 = pick(true), made = '';
   if (!P12) { const lot = freeLots(2, 1)[0]; const set = lot && G.S.settlements.get(lot.set);
     const t = set && sim(() => G.Village.handFound(set, 'temple', 2, { x: lot.x + 1, y: lot.y + 1, R: 0, built: true }));
-    if (t) { made = ` (a mão do deus fundou o templo#${t.id} em ${t.x},${t.y}: nenhum lance deste mundo com a borda noutra casa aberta)`; In.uncache(); P12 = pick(); } }
+    if (t) { made = ` (a mão do deus fundou o templo#${t.id} em ${t.x},${t.y}: nenhum lance deste mundo com a borda noutra casa aberta, longe dos degraus)`; In.uncache(); P12 = pick(true); } }
+  if (!P12) P12 = pick(false);
   if (!P12) ok('o chão a um passo do pé tem a largura do corpo', false, `nenhum lance com a borda do corpo noutra casa aberta da rua, e outro lado aberto${made}`);
   else {
     const { c, j, j0, iso } = P12; const r0 = recOf(c), e1 = entry(c);

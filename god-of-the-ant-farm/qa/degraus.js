@@ -170,12 +170,16 @@ run('g1p', () => {
   const { set, b } = r; const f = G.Fac.get(set.fac); semPedra(set); const vez = comVez(set);
   const hut = [...S.buildings.values()].some(q => q.set === set.id && q.type === 'hut' && q.built) || !!sim(() => V.handFound(set, 'hut', 1, { built: true, R: 40 }));
   const melhorias = () => [...S.buildings.values()].filter(q => q.set === set.id && q.upgradeFrom && !q.built).length;
-  const arma = () => sim(() => { for (const q of [...S.buildings.values()]) if (q.set === set.id && !q.built && q.type !== 'ruin' && q.id !== b.id && !q.upgradeFrom) V.completeBuilding(q); for (const m of ['stone', 'wood']) if ((f.stock[m] || 0) < 40) D.make('f:' + f.id, m, 40 - (f.stock[m] || 0), { code: 'teste' }); });
-  const olha = (n, para) => { let k = 0; for (; k < n; k++) { arma(); alimenta(set); sim(() => V.planNow(set)); if (para && para()) break; } return k; };
-  const m0 = melhorias(); olha(20); const com = melhorias() - m0, guarda = V.keeps(set);
+  // (every work of the town but the great one finished by the proof's hand before each look — the betterings under way too: the
+  // planner begins no second bettering of a kind while one is going up (c.siteTypes), and Roma of the metropole of the
+  // generation 21 had a hut and a house going up a step, which the hand left standing — «0 em 21 olhar(es)», T-1102 —; so a
+  // bettering under way after a look was begun by that look)
+  const arma = () => sim(() => { for (const q of [...S.buildings.values()]) if (q.set === set.id && !q.built && q.type !== 'ruin' && q.id !== b.id) V.completeBuilding(q); for (const m of ['stone', 'wood']) if ((f.stock[m] || 0) < 40) D.make('f:' + f.id, m, 40 - (f.stock[m] || 0), { code: 'teste' }); });
+  const olha = (n, para) => { let k = 0, up = 0; for (; k < n; k++) { arma(); alimenta(set); sim(() => V.planNow(set)); up += melhorias(); if (para && up > 0) break; } return { k, up }; };
+  const com = olha(20).up, guarda = V.keeps(set);
   // (all the work waits for, by the god's hand — its brick too: a bill short of brick takes stone in its place, swapBill)
   for (let k = 0; k < 4; k++) sim(() => { for (const m in b.need) { const n = b.need[m] || 0; if (n > 0) { D.make('f:' + f.id, m, n, { code: 'teste' }); D.move('f:' + f.id, 'o:' + b.id, m, n, { code: 'teste' }); } } });
-  const livre = V.keeps(set) === 0; const m1 = melhorias(); const olhares = olha(20, () => melhorias() > m1) + 1; const sem = melhorias() - m1;
+  const livre = V.keeps(set) === 0; const r2 = olha(20, true); const olhares = r2.k + 1; const sem = r2.up;
   ok('g1p2 nenhuma casa melhorada enquanto a obra grande espera pedra', vez && hut && guarda > 0 && com === 0 && livre && sem >= 1,
     `${set.name}, a vez ${set.vez}, uma cabana por refazer, 40 de pedra e de madeira no armazém, nenhuma outra obra no caminho: em 20 olhares do planejador com a obra esperando ${guarda.toFixed(0)} de pedra, casas postas em melhoria: ${com}; dado à obra o que ela esperava (guarda ${livre ? 0 : 'AINDA ' + V.keeps(set)}): ${sem} em ${olhares} olhar(es)`);
   const c = checa(); ok('g1p3 verificador', c.ok, c.txt);

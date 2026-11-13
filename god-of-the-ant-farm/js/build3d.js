@@ -3703,8 +3703,9 @@ float m3scale(float p) {
   // the closed part of a ground open to the sky (D-131: the theater's skene) — the plan's rooms that are not open, under a roof of
   // the form — or null (a fair has none; a passage through the cávea's stone is no building of its own): { rooms, ids, lvs (each
   // storey's), at(lv, x, z) — the closed room there }. The 3D opens it as a closed building (B3.interior: its floors, pieces,
-  // leaves, its ceiling at its storey's top — the plan's, the foot of the form's roof over it —; its walls are the form's, drawn
-  // outside), the rest of the ground the outside's
+  // leaves, its ceiling at its storey's top — the plan's, the foot of what the form lays over it: the roof, or a solid under it,
+  // whose own underside is the ceiling there, L-795 —; its walls are the form's, drawn outside), the rest of the ground the
+  // outside's
   const closedMemo = new WeakMap();
   function closedPart(plan, b) {
     if (!plan || !plan.shell || plan.shell.kind !== 'aberta') return null;
@@ -3717,6 +3718,15 @@ float m3scale(float p) {
     closedMemo.set(plan, c); return c;
   }
   B3.closedPart = closedPart; // (for the proofs)
+  // (the undersides a building's form draws at a height of the kit, in the lot's metres — as FORMK.bloco draws them: a block in
+  // the air, where it does not stand on another, or out of what it is over (sob) —: one lying on a closed room's ceiling is
+  // that ceiling, L-795)
+  function soffitsAt(b, plan, K, y) {
+    const F = formOf(b); if (!F) return []; const side = formSide(b, plan), lift = K.y0 - K.hi, out = [];
+    for (const e of F.els) { if (e.k !== 'bloco' || !(e.y0 > 0.05) || Math.abs(e.y0 - lift - y) > 0.01) continue;
+      for (const q of e.sob ? cutRect(e.r, e.sob) : standsOn(F, e) ? [] : [e.r]) { const a = G.Forma.toLot(side, F.L, q[0], q[1]), c = G.Forma.toLot(side, F.L, q[2], q[3]); out.push([Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[0], c[0]), Math.max(a[1], c[1])]); } }
+    return out;
+  }
   B3.interior = function (plan, b, o) {
     o = o || {}; if (!plan || !plan.levels || !plan.levels.length || !plan.shell) return null;
     const levels = plan.levels.slice().sort((p, q) => p.y - q.y); const fine = o.fine !== undefined ? !!o.fine : undefined; const fill = o.fill || null;
@@ -3758,8 +3768,11 @@ float m3scale(float p) {
     }
     { const g = R3.Geo(); const K = kit(g, b, undefined, undefined, fine); g.ao = null;
       // (the closed part of a ground open to the sky: over each of its rooms the ceiling at its storey's top — the plan's, the
-      // foot of the form's roof over it: D-131 —, turned down to the room)
-      if (CP) K.as('beam', () => { for (const m of CP.rooms) { const l = levels.find(q => q.lv === m.lv); if (l) flatQ(K, m.r, l.y + l.h, dim(IWOOD, 0.95), -1); } });
+      // foot of what the form lays over it: D-131 —, turned down to the room; but where the form draws its own underside there
+      // — the Acropolis's entablature, on the cella's walls and over the colonnade's walk —, that is the ceiling, and the inside
+      // lays none on it: two faces in one plane, the wood and the marble, fought over every room of it, L-795)
+      if (CP) K.as('beam', () => { for (const m of CP.rooms) { const l = levels.find(q => q.lv === m.lv); if (!l) continue; const y = l.y + l.h;
+        for (const r of cutRect(m.r, soffitsAt(b, plan, K, y))) flatQ(K, r, y, dim(IWOOD, 0.95), -1); } });
       else inRoof(K, plan);
       // (an annex's lean-to, its ceiling at its own height — the room on a terrace is the outside's, whole; a palace's porch, a
       // temple's peristyle and gallery, the form's entablature and skirt roofs over its columns)

@@ -8,7 +8,7 @@
 // (Estates.grainOf escreve b.grain) e o mundo sem ninguém olhando, o do povo de depois; antes de o Village.nameOf ler pelo
 // grainFor, o cartão e o letreiro faziam o mesmo. E, em toda fazenda do mundo, o grainFor dá o grão que o grainOf daria, sem
 // tirar do acaso do mundo e sem gravar nada na fazenda.
-//   node qa/grao.js [mundo]        (mundial, sem argumento)
+//   node qa/grao.js [mundo]        (sem argumento: o mundial, e o primeiro mundo pronto com o caso, T-1104)
 'use strict';
 const path = require('path');
 const T = require(path.join(__dirname, 'visual', 'tres-node.js'));
@@ -32,21 +32,28 @@ const S0 = G.S, W = G.W, N = G.N;
   }
   ok('o grainFor dá o grão que o grainOf daria, sem acaso e sem gravar', n > 0 && !bad.length && !draws && JSON.stringify(S0.rng) === rng0, `${n} fazendas${bad.length ? ': ' + bad.slice(0, 4).join(' · ') : ''}; sorteios do mundo ${draws}`); }
 // (the grain a people gives a farm on its ground: estates.js's rule, read here only to choose the case)
-const grainBy = (b, civ) => { const i = W.idx(b.x + 1, b.y + 1); const bio = S0.biome ? S0.biome[i] : 0;
-  let wet = 0; for (let dy = -2; dy <= 4; dy++) for (let dx = -2; dx <= 4; dx++) { const x = b.x + dx, y = b.y + dy; if (W.inb(x, y) && S0.type[y * N + x] === G.T.RIVER) wet++; }
+const grainBy = (b, civ) => { const S1 = G.S; const i = W.idx(b.x + 1, b.y + 1); const bio = S1.biome ? S1.biome[i] : 0;
+  let wet = 0; for (let dy = -2; dy <= 4; dy++) for (let dx = -2; dx <= 4; dx++) { const x = b.x + dx, y = b.y + dy; if (W.inb(x, y) && S1.type[y * N + x] === G.T.RIVER) wet++; }
   return civ === 'asteca' ? 'milho' : (bio === 3 || bio === 4) && wet ? 'arroz' : bio === 2 || bio === 1 || civ === 'nordico' ? 'cevada' : bio === 5 ? 'sorgo' : 'trigo'; };
-// the case: a built farm in a town, and a living people of another grain to take the town
-let pick = null;
-for (const b of S0.buildings.values()) {
-  if (b.type !== 'farm' || !b.built) continue; const set = S0.settlements.get(b.set); if (!set) continue; const fa = G.Fac.get(set.fac); if (!fa || !fa.alive) continue;
-  const g0 = grainBy(b, fa.civ);
-  const fb = G.Fac.all().find(f => f.alive && f.id !== fa.id && grainBy(b, f.civ) !== g0); if (!fb) continue;
-  pick = { id: b.id, set: set.id, fa: fa.id, fb: fb.id, g0, g1: grainBy(b, fb.civ) }; break;
+// the case: a built farm in a town, and a living people of another grain to take the town — in the first ready world that has
+// one: the peoples alive in the mundial of the generation 21 give the same grain on every farm of it, «nenhuma fazenda numa
+// cidade que um povo de outro grão possa tomar», T-1104
+const worlds = process.argv[2] ? [key] : [key].concat(['metropole', 'cidade', 'mega', 'anos100', 'anos500', 'anos1000'].filter(w => w !== key));
+let pick = null, wk = '';
+for (const w of worlds) {
+  if (w !== key) M.pronto(w); const S1 = G.S;
+  for (const b of S1.buildings.values()) {
+    if (b.type !== 'farm' || !b.built) continue; const set = S1.settlements.get(b.set); if (!set) continue; const fa = G.Fac.get(set.fac); if (!fa || !fa.alive) continue;
+    const g0 = grainBy(b, fa.civ);
+    const fb = G.Fac.all().find(f => f.alive && f.id !== fa.id && grainBy(b, f.civ) !== g0); if (!fb) continue;
+    pick = { id: b.id, set: set.id, fa: fa.id, fb: fb.id, g0, g1: grainBy(b, fb.civ) }; break;
+  }
+  if (pick) { wk = w; break; }
 }
-if (!pick) { ok('o caso', false, `no ${key}, nenhuma fazenda numa cidade que um povo de outro grão possa tomar`); process.exit(1); }
-console.log(`a fazenda #${pick.id} de ${S0.settlements.get(pick.set).name} (${G.Fac.get(pick.fa).civ}: ${pick.g0}), tomada por ${G.Fac.get(pick.fb).name} (${G.Fac.get(pick.fb).civ}: ${pick.g1})`);
+if (!pick) { ok('o caso', false, `nos mundos prontos (${worlds.join(', ')}), nenhuma fazenda numa cidade que um povo de outro grão possa tomar`); process.exit(1); }
+console.log(`${wk}: a fazenda #${pick.id} de ${G.S.settlements.get(pick.set).name} (${G.Fac.get(pick.fa).civ}: ${pick.g0}), tomada por ${G.Fac.get(pick.fb).name} (${G.Fac.get(pick.fb).civ}: ${pick.g1})`);
 // (its grain not yet worked out by the world — a farm of the first days)
-delete S0.buildings.get(pick.id).grain;
+delete G.S.buildings.get(pick.id).grain;
 const snap = G.Save.serialize();
 const B3 = G.Build3D, G3 = G.Ground3D;
 // one life: the town taken, a minute lived — drawn and looked at, or not — and then the world names the farm, as a story does

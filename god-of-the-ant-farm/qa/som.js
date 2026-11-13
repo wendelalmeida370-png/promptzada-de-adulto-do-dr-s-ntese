@@ -410,14 +410,23 @@ function s7() {
   if (sub('s7b')) {
     let best = null;
     skipTo(0.3); M.viver(2);
-    for (let k = 0; k < 60 && !best; k++) { M.viver(1); const c = scene(earAt(set.cx, set.cy), 's7'); for (const f of A.FAMS) if (c.fundo && c.fundo.maos[f] > 0 && c.fundo.h[f] > 0) { best = { f, c }; break; } }
+    // (the ear on each quarter of the town with a habit, at the middle of a patch of it — the quarter under the ear is the one
+    // heard —; the town's middle is its old town, drawn again most days (s7a), and Tenochtitlan of the cidade of the generation
+    // 21 had there no habit of anything — «nenhuma vida do bairro com hábito e mãos ao mesmo tempo», T-1103 —, while its
+    // fields, its market and its port had theirs)
+    const U = G.Urban; const C6 = U.cellXY(1)[0];
+    const ears = () => { const out = []; for (const d of U.districtsOf(set).slice().sort((a, b) => b.cells.length - a.cells.length || a.id - b.id)) {
+      const h = A.habito(d); if (!A.FAMS.some(f => h[f] > 0)) continue;
+      for (const cl of d.cells) { const [x, y] = U.cellXY(cl); const at = U.at(x + C6 / 2, y + C6 / 2); if (at && at.id === d.id) { out.push(earAt(x + C6 / 2, y + C6 / 2)); break; } } }
+      return out; };
+    for (let k = 0; k < 60 && !best; k++) { M.viver(1); for (const ear of ears()) { const c = scene(ear, 's7'); for (const f of A.FAMS) if (c.fundo && c.fundo.maos[f] > 0 && c.fundo.h[f] > 0) { best = { f, c, ear }; break; } if (best) break; } }
     if (!best) ok('s7b habito-vezes-maos', false, 'em 60 s do dia, nenhuma vida do bairro com hábito e mãos ao mesmo tempo');
     else {
       const { f, c } = best; const wantW = r3(c.fundo.h[f] * Math.min(1, c.fundo.maos[f] / A.HANDS) * (1 - 0.5 * c.chuva));
       // (the same instant in the rain: the far work is covered — the proof's hand on the weather, put back at once)
-      const w0 = S.weather.rain; S.weather.rain = 1; const wet = A.scene(earAt(set.cx, set.cy)).fundo.w[f]; S.weather.rain = w0;
+      const w0 = S.weather.rain; S.weather.rain = 1; const wet = A.scene(best.ear).fundo.w[f]; S.weather.rain = w0;
       const dayH = Object.assign({}, c.fundo.h);
-      skipTo(0.97); M.viver(2); const n = scene(earAt(set.cx, set.cy), 's7 noite');
+      skipTo(0.97); M.viver(2); const n = scene(best.ear, 's7 noite');
       const silent = A.FAMS.filter(x => !(n.fundo.maos[x] > 0)).every(x => n.fundo.w[x] === 0);
       // (the night has its own hands — the priests are up before the light, the watch walks —: the family of the day may have
       // some at this hour («fe», 2 at 0,97), and then its weight is the same count, the habit times them; what the night
@@ -425,7 +434,7 @@ function s7() {
       const nightW = r3(n.fundo.h[f] * Math.min(1, (n.fundo.maos[f] || 0) / A.HANDS) * (1 - 0.5 * n.chuva));
       const mute = A.FAMS.filter(x => n.fundo.h[x] > 0 && !(n.fundo.maos[x] > 0));
       ok('s7b habito-vezes-maos', c.fundo.w[f] === wantW && wantW > 0 && Math.abs(wet - r3(wantW * 0.5 / (1 - 0.5 * c.chuva))) < 0.002 && silent && n.fundo.h[f] === dayH[f] && n.fundo.w[f] === nightW && mute.length > 0,
-        `${set.name}, «${f}»: de dia, hábito ${c.fundo.h[f]} × ${c.fundo.maos[f]} par(es) de mãos → peso ${c.fundo.w[f]} (a conta: ${wantW}); com chuva forte ${wet}; de noite (hora ${S.time.toFixed(2)}), o mesmo hábito ${n.fundo.h[f]}, ${n.fundo.maos[f] || 0} mãos → peso ${n.fundo.w[f]} (a conta: ${nightW}); ${mute.length} vida(s) com hábito e sem mãos (${mute.join(', ') || 'NENHUMA'}) — ${silent ? 'sem mãos, nenhuma vida soa' : 'SOA SEM MÃOS'}`);
+        `${set.name}, o bairro «${c.fundo.nome}», «${f}»: de dia, hábito ${c.fundo.h[f]} × ${c.fundo.maos[f]} par(es) de mãos → peso ${c.fundo.w[f]} (a conta: ${wantW}); com chuva forte ${wet}; de noite (hora ${S.time.toFixed(2)}), o mesmo hábito ${n.fundo.h[f]}, ${n.fundo.maos[f] || 0} mãos → peso ${n.fundo.w[f]} (a conta: ${nightW}); ${mute.length} vida(s) com hábito e sem mãos (${mute.join(', ') || 'NENHUMA'}) — ${silent ? 'sem mãos, nenhuma vida soa' : 'SOA SEM MÃOS'}`);
     }
   }
   // ---------------- s7a the habit follows the life counted, slowly ----------------
