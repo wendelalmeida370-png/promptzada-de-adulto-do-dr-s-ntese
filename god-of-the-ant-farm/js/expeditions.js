@@ -50,6 +50,8 @@
   const LIVE = { prep: 1, reunir: 1, embarque: 1, partida: 1, viagem: 1, aproximacao: 1, desembarque: 1, exploracao: 1, contato: 1, reembarque: 1, volta: 1, chegada: 1, fundacao: 1 };
   X.live = e => !!LIVE[e.st];
   X.active = fid => exps().filter(e => X.live(e) && (!fid || e.fac === fid));
+  // (and its expeditions: nowhere to go back to — the end the expedition's own look gives, at once: L-733)
+  X.onExtinct = f => { for (const e of X.active(f.id)) finish(e, 'cancelada', 'Não há mais para onde voltar.'); };
   // "d" + a name: "da Aurora", "do barco Gaivota", "de Leif e o Mar"
   const ofN = n => (!n ? 'de um barco' : /^(a|o|as|os) /.test(n) ? n.replace(/^(a|o|as|os) /, (m, x) => 'd' + x + ' ') : /^(A|O|As|Os) /.test(n) ? n.replace(/^(A|O|As|Os) /, (m, x) => 'd' + x.toLowerCase() + ' ') : 'de ' + n);
   X.ofN = ofN;

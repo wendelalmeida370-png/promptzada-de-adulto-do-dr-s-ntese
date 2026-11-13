@@ -670,6 +670,8 @@
     f.alive = false; f.died = S.day; f.diedT = S.clock; f.fate = by ? 'conquistad' + G.Fac.oa(f) + ' por ' + by.name : 'desapareceu';
     for (const o of S.factions.values()) { const r = o.rel[f.id]; if (r) { r.st = 'paz'; r.envoy = 0; } }
     G.War && G.War.onExtinct(f);
+    // (its armies, fleets and expeditions end with it at once, as its bands do — not at their next look: L-733)
+    G.Wars && G.Wars.onExtinct(f); G.Fleets && G.Fleets.onExtinct(f); G.Expe && G.Expe.onExtinct(f);
     S.stats.fallen = (S.stats.fallen || 0) + 1;
     log(`${f.name} deixou de existir${by ? ', conquistad' + G.Fac.oa(f) + ' por ' + by.name : ''}.`, 'massacre');
     G.UI && G.UI.toast('Um povo caiu', `${f.name} desapareceu da história.`, 'massacre');

@@ -37,6 +37,8 @@
   Fl.get = id => fleets().find(f => f.id === id) || null;
   Fl.live = fl => fl && fl.st !== 'fim';
   Fl.of = fid => fleets().filter(f => Fl.live(f) && f.fac === fid);
+  // a people that ends takes its fleets with it at once — the end the fleet's own look gives, not half a second later (L-733)
+  Fl.onExtinct = f => { for (const fl of Fl.of(f.id)) { fl.st = 'fim'; fl.end = G.S.day; } };
   const ADM = { grego: ['navarco', 'navarca'], romano: ['prefeito da frota', 'prefeita da frota'], egipcio: ['comandante da frota do rei', 'comandante da frota do rei'], asteca: ['senhor das canoas', 'senhora das canoas'], nordico: ['jarl do mar', 'jarl do mar'], classico: ['almirante', 'almirante'] };
   Fl.admTitle = (fl, v) => (ADM[fl.civ] || ADM.classico)[v && v.g === 'f' ? 1 : 0];
   const MISSION = { patrulha: 'patrulhar as águas de casa', bloqueio: 'bloquear o porto inimigo', invasao: 'levar o exército pelo mar', caca: 'caçar os navios do inimigo', escolta: 'escoltar os transportes', socorro: 'levar socorro pelo mar', volta: 'voltar ao porto' };

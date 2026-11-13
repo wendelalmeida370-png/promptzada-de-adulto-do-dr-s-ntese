@@ -551,6 +551,8 @@
   // ended outside the treaty — a people fell — kept «mobilizar»: Tove, held by a scene that kept her call, was given it
   // back after the end and drilled at the rally point for twenty-five years, for an army no one looked at any more — L-641)
   function closeArmy(a) { a.done = true; if (a.phase !== 'retorno' && a.phase !== 'dispersado') a.phase = 'dispersado'; }
+  // a people that ends takes its armies with it at once — the end the army's own look gives, not at its next tick (L-733)
+  Wz.onExtinct = f => { for (const a of armies()) if (!a.done && a.fac === f.id) { a.done = true; a.phase = 'dispersado'; } };
   function armyTick(a, dt) {
     const S = G.S; const w = Wz.get(a.war); const f = F(a.fac);
     if (!f || !f.alive) { a.done = true; a.phase = 'dispersado'; return; }

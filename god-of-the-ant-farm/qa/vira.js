@@ -9,6 +9,9 @@
 // 5 a capital tomada com o governante dentro, por um povo que faz cidadãos dos vencidos — de um povo que tem fora dela quem a
 //   corte coroe (um adulto livre noutra cidade dele): ele é do vencedor agora, e o povo dele tem outro governante na hora
 //   (L-542);
+// 6 a conquista que deixa um povo só com cidades vazias: o povo acaba na hora (L-685);
+// 7 o povo que acaba leva na hora os exércitos, as frotas e as expedições dele — nada de um povo morto em campo ou no mar,
+//   nem meio segundo (L-733);
 // e o verificador fica limpo em todos.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
@@ -138,7 +141,27 @@ const ROOT = path.resolve(__dirname, '..');
     return { ok: n0 > 0 && (!X.alive || souls > 0) && !bad0.length && !bad.length, info: `${set.name}, a única cidade com gente de ${X.name} (${n0} almas; ${others.join(', ')} ${gone.length ? 'esvaziada' + (others.length > 1 ? 's' : '') + ' pela doença, ' + gone.length + ' mortos' : 'já vazia' + (others.length > 1 ? 's' : '')}), tomada por ${Y.name}: ${X.alive ? (souls ? 'o povo segue com ' + souls + ' cativos libertos' : 'VIVO SEM NINGUÉM') : 'o povo acabou na hora'}; ${[...bad0, ...bad].slice(0, 2).join(' | ') || 'verificador limpo na hora e um segundo depois'}` };
   });
   console.log(`${r6.ok ? 'PASSOU' : 'FALHOU'} | a conquista que deixa um povo só com cidades vazias: o povo acaba na hora | ${r6.info}`);
-  r.ok = r.ok && r2.ok && r3.ok && r4.ok && r5.ok && r6.ok;
+  // 7 the people that ends takes its armies, fleets and expeditions with it at once (L-733): an army, a fleet or an expedition of
+  // a people that had just ended lived on until its own look, half a second later or more — the checker caught «frota … povo extinto» in that half
+  // second (the case 6 on the «guerra mundial» of the generation 20, where the conquered people had a fleet out). On the
+  // world as it was saved (the cases above changed it), the people with a fleet and an expedition at sea and no captives in its
+  // towns loses its souls one by one: at the last death nothing of it is left in the field or at sea, in that same instant, and
+  // the checker is clean a moment later (an army of it, the Falange de Argos, was what the first run of this case caught)
+  const r7 = await page.evaluate(() => {
+    G.Save.apply(JSON.parse(G.Ready.data.mundial)); G.Main.mode = 'game'; G.UI.setSpeed(0); const S = G.S;
+    const holds = o => [...S.villagers.values()].some(v => v.captive && (S.settlements.get(v.set) || {}).fac === o.id);
+    const atSea = o => [...G.Wars.state().armies.filter(a => !a.done && a.fac === o.id).map(a => 'exército ' + a.name), ...G.Fleets.of(o.id).map(x => 'frota ' + x.name), ...G.Expe.active(o.id).map(x => 'expedição ' + x.name)];
+    const f = G.Fac.all().filter(o => o.alive && !holds(o) && G.Fleets.of(o.id).length && G.Expe.active(o.id).length).sort((a, b) => atSea(b).length - atSea(a).length || a.id - b.id)[0];
+    if (!f) return { ok: false, info: 'nenhum povo com frota e expedição no mar e sem cativos nas suas cidades' };
+    const was = atSea(f); const mine = [...S.villagers.values()].filter(v => !v.captive && G.Fac.idOfV(v) === f.id);
+    for (const v of mine) G.Village.kill(v, 'sick');
+    const left = atSea(f); const sea0 = QA.check().filter(e => e.sev <= 2 && / povo .*extinto$/.test(e.msg) && /^(exército|frota|expedição) /.test(e.msg)).map(e => e.msg);
+    for (let k = 0; k < 4; k++) G.debug.step(0.05);
+    const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
+    return { ok: !f.alive && !left.length && !sea0.length && !bad.length, info: `${f.name} (${mine.length} almas; em campo e no mar: ${was.join(', ')}): ${f.alive ? 'ainda vivo' : 'acabou'}; na mesma hora ${left.length ? 'ainda de pé: ' + left.join(', ') : 'nada dele em campo nem no mar'}${sea0.length ? ' — ' + sea0.slice(0, 2).join(' | ') : ''}; ${bad.slice(0, 3).join(' | ') || 'verificador limpo'}` };
+  });
+  console.log(`${r7.ok ? 'PASSOU' : 'FALHOU'} | o povo que acaba leva na hora os exércitos, as frotas e as expedições dele | ${r7.info}`);
+  r.ok = r.ok && r2.ok && r3.ok && r4.ok && r5.ok && r6.ok && r7.ok;
   console.log(`${errs.length ? 'FALHOU' : 'PASSOU'} | sem erros | ${errs.slice(0, 2).join(' | ') || 'nenhum'}`);
   await browser.close(); process.exit(r.ok && !errs.length ? 0 : 1);
 })();
