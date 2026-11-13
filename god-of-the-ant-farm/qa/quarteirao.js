@@ -101,7 +101,7 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
     // tile of the ring to the other (a street of stone, which no lot of a block could take before); the same street a highway; and
     // the street's end on the ring walled — the street cut with no way round
     const g = await page.evaluate(() => {
-      const S = G.S, V = G.Village, W = G.W, N = G.N, Q = __Q; const set = S.settlements.get(Q.set);
+      const S = G.S, V = G.Village, W = G.W, N = G.N, Q = __Q; let set = S.settlements.get(Q.set);
       const R0 = G.R, rng0 = S.rng; G.R = () => 0.5;
       const at = p => (p ? p[0] + ',' + p[1] : 'recusado');
       const road0 = new Map(); const paint = (tiles, r) => { for (const i of tiles) { if (!road0.has(i)) road0.set(i, S.road[i]); S.road[i] = r; } };
@@ -110,21 +110,31 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
       // the town has no look yet and a question from a screen makes none, L-760 —, and no lot of the heart is dear: T-847)
       G.inSim++;
       try {
-        set._noSite = {}; const A = V.blockSite(set); set._noSite = {}; if (!A) return { none: 'nenhum lote de quarteirão hoje' };
-        const judge = () => at(V.blockLot(set, A[0], A[1])); out.a = A[0] + ',' + A[1]; out.alone = judge();
-        const gone = A.demolish || [];
-        // (a street across the lot, from a tile of the ring to the other: a row or a column whose two ends are free tiles one walks,
-        // and that the ring joins again)
-        const ways = [];
-        for (const y of [A[1], A[1] + 1]) ways.push([y * N + A[0] - 1, y * N + A[0], y * N + A[0] + 1, y * N + A[0] + 2]);
-        for (const x of [A[0], A[0] + 1]) ways.push([(A[1] - 1) * N + x, A[1] * N + x, (A[1] + 1) * N + x, (A[1] + 2) * N + x]);
-        let way = null;
-        for (const t of ways) {
-          const [e1, , , e2] = t; if (S.occ[e1] || S.occ[e2] || !W.walkable(e1) || !W.walkable(e2) || S.road[e1] >= 3 || S.road[e2] >= 3) continue;
-          paint(t, 2); const ok = V.relinks(set, A[0], A[1], 2, gone); for (const i of t) S.road[i] = road0.get(i); road0.clear();
-          if (ok) { way = t; break; }
+        // (the town of the cases, else the next town of level 4 or 5 by people: the best lot of a town can have a building at both
+        // ends of every street across it — in the mega of the generation 21, Hedeby's lot 58,67 and Mênfis' 112,119 —, and then no
+        // street can be laid from ring to ring there: T-1073)
+        const towns = [set, ...[...S.settlements.values()].filter(s => s !== set && (s.tier || 0) >= 4).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)];
+        let A = null, gone = null, way = null; const tried = [];
+        for (const s of towns) {
+          s._noSite = {}; const a = V.blockSite(s); s._noSite = {}; if (!a) continue;
+          const gn = a.demolish || [];
+          // (a street across the lot, from a tile of the ring to the other: a row or a column whose two ends are free tiles one walks,
+          // and that the ring joins again)
+          const ways = [];
+          for (const y of [a[1], a[1] + 1]) ways.push([y * N + a[0] - 1, y * N + a[0], y * N + a[0] + 1, y * N + a[0] + 2]);
+          for (const x of [a[0], a[0] + 1]) ways.push([(a[1] - 1) * N + x, a[1] * N + x, (a[1] + 1) * N + x, (a[1] + 2) * N + x]);
+          let w = null;
+          for (const t of ways) {
+            const [e1, , , e2] = t; if (S.occ[e1] || S.occ[e2] || !W.walkable(e1) || !W.walkable(e2) || S.road[e1] >= 3 || S.road[e2] >= 3) continue;
+            paint(t, 2); const ok = V.relinks(s, a[0], a[1], 2, gn); for (const i of t) S.road[i] = road0.get(i); road0.clear();
+            if (ok) { w = t; break; }
+          }
+          if (!w) { tried.push(`${s.name} ${a[0]},${a[1]}`); continue; }
+          set = s; A = a; gone = gn; way = w; break;
         }
-        if (!way) return { none: `o lote ${out.a} não tem rua possível de anel a anel` };
+        if (!A) return { none: tried.length ? `nenhum lote com rua possível de anel a anel (${tried.join('; ')})` : 'nenhum lote de quarteirão hoje' };
+        const judge = () => at(V.blockLot(set, A[0], A[1])); out.a = A[0] + ',' + A[1]; out.alone = judge();
+        out.town = set.name; out.tried = tried;
         out.way = way.map(i => (i % N) + ',' + ((i / N) | 0)).join(' ');
         paint(way, 2); out.paved = judge();
         paint(way, 3); out.high = judge();
@@ -138,7 +148,7 @@ const KEYS = process.argv[2] ? [process.argv[2]] : ['mega', 'metropole', 'anos10
     });
     if (g.none) ok('7b de propósito: a rua calçada sim, a estrada e a rua sem volta não (L-602)', false, g.none);
     else ok('7b de propósito: a rua calçada sim, a estrada e a rua sem volta não (L-602)', g.alone === g.a && g.paved === g.a && g.high === 'recusado' && g.walled === 'recusado',
-      `o melhor lote ${g.a} (sozinho: ${g.alone}); com uma rua calçada de anel a anel (${g.way}): ${g.paved}; feita estrada: ${g.high}; com a ponta murada: ${g.walled}`);
+      `o melhor lote ${g.a} de ${g.town}${g.tried && g.tried.length ? ` (o das cidades antes dela sem rua possível de anel a anel: ${g.tried.join('; ')}; T-1073)` : ''} (sozinho: ${g.alone}); com uma rua calçada de anel a anel (${g.way}): ${g.paved}; feita estrada: ${g.high}; com a ponta murada: ${g.walled}`);
     // ---- the bad case on purpose: a family, with its savings, lives where the next block will stand
     // (a place wholly under a field has no ground for the house: that block goes up as it is; and a heart with no room
     // for a block today lives a blessed year more — at most twelve — until there is)

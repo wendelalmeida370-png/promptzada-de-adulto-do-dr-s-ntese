@@ -725,7 +725,13 @@ const key = process.argv[2] || 'cidade';
   }
   {
     const r = await page.evaluate(() => {
-      const H = __H; H.fresh(); const S = G.S; const W = G.W, T = G.T; const bad = []; const chk = () => { const e = H.qa(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); };
+      const H = __H; H.fresh(); const S = G.S; const W = G.W, T = G.T; const bad = [];
+      // (the god's own hand changes the land here — the crater of the meteor, the ground of the lair sunk into the sea —, and whoever
+      // it cuts off from home is a recent stray, S3, which the stray rule settles by the next day — set down where home is reached,
+      // or taken in by a town on that land (V.strays) —: in the cidade of the generation 21 Isetnofret of Mênfis, asleep at home.
+      // The stray is kept apart, and the test lives until the rule has settled it, which the checker must then see: T-1075)
+      const strays = new Map();
+      const chk = () => { for (const x of H.qa()) { if (x.sev === 3 && / não chega a pé \(recente\)/.test(x.msg)) { if (!strays.has(x.id)) strays.set(x.id, x.msg); continue; } if (bad.length < 3) bad.push(x.msg); } };
       // the god's own hand: a lightning bolt in flight, the impact of a meteor, a last bolt — it falls from the sky
       // (struck in its pass over dry ground, with dry ground ahead where it falls — it drops a couple of tiles along its way,
       // and one that falls into the water leaves no bones: dragon.js, slain —: in the cidade of the generation 17 the first
@@ -752,11 +758,13 @@ const key = process.argv[2] || 'cidade';
       let loaded = true; try { G.Save.apply(o); G.Main.mode = 'game'; G.UI.setSpeed(0); } catch (e) { loaded = false; }
       const kept = loaded ? G.S.dragons.map(q => q.id) : [];
       H.run(5); chk();
-      return { bolt, overLand, falling, godKill, bones: (S.dragonBones || []).length, moved, newLair, leaving, gone, loaded, kept: kept.length === 1 && kept[0] === c.id, bad, qa: H.qa() };
+      const still = () => H.qa().filter(x => strays.has(x.id));
+      const waited = strays.size ? H.until(() => !still().length, 2 * G.DAY_LEN + 50) : 0;
+      return { bolt, overLand, falling, godKill, bones: (S.dragonBones || []).length, moved, newLair, leaving, gone, loaded, kept: kept.length === 1 && kept[0] === c.id, bad, qa: H.qa(), strays: [...strays.values()], waited, unsettled: still().map(x => x.msg) };
     });
     ok('g4 a mão do deus: raio e meteoro derrubam o dragão em pleno voo', r.overLand && r.bolt >= 200 && r.falling && r.godKill && r.bones >= 1, `sobre terra ${r.overLand}; o raio tirou ${r.bolt} de vida; caindo ${r.falling}; crônica ${r.godKill}; ${r.bones} esqueleto(s)`);
     ok('g4 o covil afunda no mar: outro covil; depois parte levando o tesouro', r.moved && r.newLair && r.leaving && r.gone, `covil mudou ${r.moved}, novo covil em terra firme ${r.newLair}; partindo ${r.leaving}; sumiu com 25 moedas ${r.gone}`);
-    ok('g4 save danificado: o dragão quebrado fica de fora, o mundo carrega', r.loaded && r.kept && !r.bad.length && !r.qa.length, `carregou ${r.loaded}, ficou só o dragão bom ${r.kept}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}`);
+    ok('g4 save danificado: o dragão quebrado fica de fora, o mundo carrega', r.loaded && r.kept && !r.bad.length && !r.qa.length && !r.unsettled.length, `carregou ${r.loaded}, ficou só o dragão bom ${r.kept}; ${[...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'verificador limpo'}${r.strays.length ? `; isolados pela mão do deus: ${r.strays.join(' · ')} — ${r.unsettled.length ? 'AINDA ISOLADOS ' + r.unsettled.join(' · ') : 'acomodados pela regra em ' + r.waited + ' s'} (T-1075)` : ''}`);
   }
 
   // ------------------------------ Abrir o Mar ------------------------------
@@ -802,6 +810,12 @@ const key = process.argv[2] || 'cidade';
       const nearA = (a, b) => G.dist2(a.x, a.y, w0.a.x, w0.a.y) - G.dist2(b.x, b.y, w0.a.x, w0.a.y);
       let v = [...S.villagers.values()].filter(o => o.set === A.id && free(o) && !o.inside && !o.sleeping && W.canWalk(o.x, o.y, w0.a.x, w0.a.y) && !W.canWalk(o.x, o.y, w0.b.x, w0.b.y)).sort(nearA)[0]; let setDown = false;
       if (!v) { v = [...S.villagers.values()].filter(o => o.set === A.id && free(o)).sort((a, b) => (!!a.inside || !!a.sleeping) - (!!b.inside || !!b.sleeping) || nearA(a, b))[0]; setDown = !!v; }
+      // (and with every grown one of the town at a feast — the metrópole of the generation 21 is saved at midnight of day 60, the five
+      // grown of Jelling at the feast, which no one with a task of 3 leaves —, the nearest of the feast's folk, never its victim, is
+      // taken out of it by the test's hand and set down at the near end like the others: the feast enlists only the free, and the
+      // look at the sea (3) keeps him out of it: T-1074)
+      let feast = false;
+      if (!v) { v = [...S.villagers.values()].filter(o => o.set === A.id && o.age >= 16 && !o.aboard && !o.captive && !o.ug && o.task && o.task.type === 'fest' && o.task.role !== 'victim').sort(nearA)[0]; setDown = feast = !!v; }
       const roused = !!v && (!!v.inside || !!v.sleeping);
       const ok = G.Powers.cast('seapart', c.x, c.y); const p = S.parts[0];
       H.run(4);
@@ -816,12 +830,12 @@ const key = process.argv[2] || 'cidade';
       let down = 0, onBed = 0; const bad = [];
       // (across: at the far end, having walked the sea's floor)
       H.until(() => { down = Math.max(down, H.tasks('fundo').length); onBed = Math.max(onBed, [...S.villagers.values()].filter(o => set.has(W.idx(o.x, o.y))).length); if (v && S.villagers.has(v.id)) { if (set.has(W.idx(v.x, v.y))) onFloor = true; if (onFloor && G.dist(v.x, v.y, p.bx, p.by) < 2) across = true; } const e = H.qaSea(); if (e.length && bad.length < 3) bad.push(...e.map(x => x.msg)); return across && p.fished >= p.fish; }, 100);
-      return { c, linked0, ok, tiles: p.tiles.length, dry, linked, shipOn, walker, setDown, roused, across, down, onBed, fished: p.fished, fish: p.fish, log: S.history.some(e => /O mar se abriu/.test(e.txt)), bad, qa: H.qaSea() };
+      return { c, linked0, ok, tiles: p.tiles.length, dry, linked, shipOn, walker, setDown, roused, feast, across, down, onBed, fished: p.fished, fish: p.fish, log: S.history.some(e => /O mar se abriu/.test(e.txt)), bad, qa: H.qaSea() };
     });
     if (r.none) ok('p1 abrir o mar', false, 'nenhum estreito entre duas cidades nos mundos prontos');
     else {
       ok('p1 o mar se abre entre duas terras: o fundo vira caminho', r.ok && r.dry && !r.linked0 && r.linked && !r.shipOn && r.log, `${r.c.A} ↔ ${r.c.B}${r.c.real ? '' : ' (de uma ilhota à costa: as duas cidades já se alcançam por terra)'}: ${r.tiles} casas de fundo seco, pisáveis ${r.dry}; de uma margem se chega à outra a pé: antes ${r.linked0}, agora ${r.linked}; navio no fundo ${r.shipOn}`);
-      ok('p1 o povo desce para catar peixes e atravessa a pé', r.down >= 2 && r.fished >= 1 && r.across, `até ${r.down} descendo, ${r.onBed} no fundo ao mesmo tempo; ${r.fished} de ${r.fish} cestos de peixe; ${r.walker}${r.setDown ? (r.roused ? ' (tirada de casa pela mão da prova — o mundo salvo de noite, ninguém da cidade fora de casa — e levada à ponta de cá)' : ' (levada à ponta de cá: ninguém da cidade mora naquela terra)') : ''} atravessou pelo fundo ${r.across}`);
+      ok('p1 o povo desce para catar peixes e atravessa a pé', r.down >= 2 && r.fished >= 1 && r.across, `até ${r.down} descendo, ${r.onBed} no fundo ao mesmo tempo; ${r.fished} de ${r.fish} cestos de peixe; ${r.walker}${r.setDown ? (r.feast ? ' (tirado da festa pela mão da prova — toda a gente crescida da cidade na festa — e levado à ponta de cá, T-1074)' : r.roused ? ' (tirada de casa pela mão da prova — o mundo salvo de noite, ninguém da cidade fora de casa — e levada à ponta de cá)' : ' (levada à ponta de cá: ninguém da cidade mora naquela terra)') : ''} atravessou pelo fundo ${r.across}`);
       ok('p1 verificador', !r.bad.length && !r.qa.length, [...r.bad, ...r.qa.map(e => e.msg)].slice(0, 3).join(' | ') || 'limpo');
     }
   }
