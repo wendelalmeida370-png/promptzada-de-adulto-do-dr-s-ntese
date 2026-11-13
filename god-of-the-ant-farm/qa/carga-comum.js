@@ -444,24 +444,45 @@ const mindsNow = v => !!(v && v.task && v.task.type === 'lar' && v.task.what ===
 // 49, ten of the 540 are 55 or more, and two mind little ones at the opening, Nubet (70) and Sitamun (56); by m13 Nubet had
 // died of old age, on the day 50, and Sitamun, the m6's first try, was of a voyage's crew: «ninguém de 55 anos ou mais cuidando
 // dos pequenos de uma casa, livre». The world opened again, the first of them by id, as the case always took)
-const opened = () => { M.pronto('metropole'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); S.weather.storm = 0; used.clear(); };
+const opened = w => { M.pronto(w || 'metropole'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); S.weather.storm = 0; used.clear(); };
 {
-  opened(); S.time = 0.3;
-  const v = minder();
-  if (!v || !give(v, 'wood', 2)) ok('m13 quem cuida dos pequenos leva a carga antes', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, com armazém ao alcance');
-  else {
-    const sent = !!G.Lar.task(v, G.Vg.H, 'cuidar'); v.think = 0;
-    const n0 = lines.length, t0 = S.clock; const seen = []; let tw = null, saw = false;
-    const back = live(120, () => {
-      const ty = v.task ? v.task.type + (v.task.what ? '/' + v.task.what : '') : '-'; if (seen[seen.length - 1] !== ty) seen.push(ty);
-      if (l471.some(x => x.msg.includes('#' + v.id + ','))) saw = true;
-      if (tw === null && outOf(v.id, n0).some(q => q[5] === 'wood' && q[8] === 'entrega')) tw = S.clock;
-      return tw !== null && mindsNow(v);
-    });
-    const e = outOf(v.id, n0).find(q => q[5] === 'wood'); const di = seen.indexOf('deliver');
-    ok('m13 quem cuida dos pequenos leva a carga antes', sent && back && !!e && e[8] === 'entrega' && e[4] === store(v) && di >= 0 && di <= 2 && !saw && !look().length,
-      `${nm(v)}, que cuida dos pequenos da casa #${v.home}, ${sent ? 'mandado(a)' : 'NÃO mandado(a)'} a cuidar deles com 2 de lenha nas mãos: ${e ? `${e[8]} ${e[6]} para ${e[4]}, em ${r2(tw - t0)} s` : `a lenha NÃO foi ao armazém (nas mãos: ${hands(v)})`}; ${back ? 'e de volta a cuidar deles' : `e NÃO voltou a cuidar (${v.task ? v.task.type : 'sem afazer'})`}${saw ? '; o verificador viu a carga parada' : ''}; afazeres: ${seen.join(' → ')}`);
+  // (the one minding whose day the minding is: an old one — the decide's own rule: the minding below a working day of one in
+  // their fifties, above an old one's (act-lar.js, L.urge; villagers.js, elder) —, for the case wants her back at it after the
+  // store. In the metropole of the generation 20 the only one minding little ones at the opening is Pompeia, 55, a farmer with
+  // her working day whole: she took the wood to the store and went to her field, as the rule says, T-1036. The old one is
+  // looked for in the ready worlds, the metropole first — the molde MUNDOS of the qa/escala.js —, with little ones who stay
+  // little through the case; and a minding the world ends in the middle — the little ones gone from the house (the family
+  // moved to another), another of the house minding them, the evening — leaves the case to the next one, up to four: in the
+  // mega, Cuetlachtli's grandchild moved out with her family 20 s after the wood was in the store, T-1036)
+  const MUNDOS = ['metropole', 'mega', 'cidade', 'mundial', 'anos100', 'anos500', 'anos1000'];
+  const elder = () => person(62, 85, o => !o.sleeping && !!(G.Lar && G.Lar.minder(o)) && G.Lar.minder(o).some(c => c.age < 6.3));
+  let info = '', fine = false, tries = 0; const left = [];
+  for (const w of MUNDOS) {
+    if (info || tries >= 4) break; opened(w);
+    while (!info && tries < 4) {
+      S.time = 0.3; const v = elder(); if (!v) break; tries++;
+      if (!give(v, 'wood', 2)) { left.push(`${nm(v)} (${w}): não aguenta 2 de lenha`); continue; }
+      const sent = !!G.Lar.task(v, G.Vg.H, 'cuidar'); v.think = 0;
+      const n0 = lines.length, t0 = S.clock; const seen = []; let tw = null, saw = false, ended = '';
+      const back = live(120, () => {
+        const ty = v.task ? v.task.type + (v.task.what ? '/' + v.task.what : '') : '-'; if (seen[seen.length - 1] !== ty) seen.push(ty);
+        if (l471.some(x => x.msg.includes('#' + v.id + ','))) saw = true;
+        if (tw === null && outOf(v.id, n0).some(q => q[5] === 'wood' && q[8] === 'entrega')) tw = S.clock;
+        if (tw !== null && mindsNow(v)) return true;
+        // (the minding ended by the world before she was back at it: the case is not hers)
+        if (tw !== null && !G.Lar.minder(v)) { const h = S.buildings.get(v.home); const minds = h && [...S.villagers.values()].find(o => o.id !== v.id && o.home === h.id && mindsNow(o)); ended = minds ? `${minds.name}, da casa, cuida deles` : 'os pequenos deixaram a casa (ou cresceram)'; return true; }
+        if (tw !== null && (G.isEvening() || G.isNight())) { ended = 'a tarde chegou'; return true; }
+        return false;
+      });
+      const e = outOf(v.id, n0).find(q => q[5] === 'wood'); const di = seen.indexOf('deliver');
+      const txt = `${nm(v)}, ${w === 'metropole' ? '' : `da «${w}», `}que cuida dos pequenos da casa #${v.home}, ${sent ? 'mandado(a)' : 'NÃO mandado(a)'} a cuidar deles com 2 de lenha nas mãos: ${e ? `${e[8]} ${e[6]} para ${e[4]}, em ${r2(tw - t0)} s` : `a lenha NÃO foi ao armazém (nas mãos: ${hands(v)})`}; ${back && !ended ? 'e de volta a cuidar deles' : ended ? `e o cuidar acabou antes da volta: ${ended}` : `e NÃO voltou a cuidar (${v.task ? v.task.type : 'sem afazer'})`}${saw ? '; o verificador viu a carga parada' : ''}; afazeres: ${seen.join(' → ')}`;
+      // (the load is judged in every try: to the store first, never standing in the hands)
+      if (!(sent && !!e && e[8] === 'entrega' && e[4] === store(v) && di >= 0 && di <= 2 && !saw)) { info = txt; break; }
+      if (ended) { left.push(txt); continue; }
+      fine = back && !look().length; info = txt;
+    }
   }
+  ok('m13 quem cuida dos pequenos leva a carga antes', fine, (info || `ninguém de 62 anos ou mais cuidando dos pequenos de uma casa, livre, com armazém ao alcance, cujo cuidar durasse o caso, nos mundos prontos (${MUNDOS.join(', ')})`) + (left.length ? ` (antes: ${left.join(' · ')})` : ''));
 }
 // ---------------- m14: the same, saved and loaded in the middle of the minding — the test's hand holds her thinking until
 // the save, which finds her minding them at home with the load —: loaded, the load goes to the store
