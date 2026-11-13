@@ -130,8 +130,11 @@ function ready(key, name, dias) {
   let kept = 0, tot = 0, wk = 0, wt = 0; const moved = new Set(T.ch.map(c => c.id));
   for (const [id, r, h] of shown0) { const v = G.S.villagers.get(id); if (!v || !grown(v) || v.home !== h) continue; tot++; const same = v.role === r && !moved.has(id); if (same) kept++; if (r === 'lenhador') { wt++; if (same) wk++; } }
   ok(`${name} a casa guarda a cara`, tot > 0 && kept >= tot * 0.75, `dos ${tot} moradores com um ofício que a casa mostra (a lenha, a rede, o escudo…), ${kept} ficaram com ele os ${dias} dias inteiros (${Math.round(100 * kept / Math.max(1, tot))} %; o piso: 75 %; antes: ${FICA[key]}); os lenhadores: ${wk} de ${wt}`);
-  const teto = Math.round(VOLTA[key] * 0.6);
-  ok(`${name} o que há em volta das casas`, about / dias <= teto, `os ofícios que as casas mostram mudaram ${about} vezes em ${dias} dias (${(about / dias).toFixed(0)} por dia, em ${hit.size} casas; o teto: ${teto} por dia; antes: ${VOLTA[key]} por dia)`);
+  // (the ceiling by the residents whose trade the house shows: the «before» was measured with 88 of them in the mega and 133 in
+  // the metrópole, and the mega of the generation 21 has 336 — 67 changes a day, 0.20 a resident, against the 0.29 of the
+  // generation 20 and the 0.85 of before: «67 por dia … o teto: 45 por dia», T-1088)
+  const BASE = { metropole: 133, mega: 88 }[key]; const teto = VOLTA[key] * 0.6 / BASE, per = about / dias / Math.max(1, shown0.length);
+  ok(`${name} o que há em volta das casas`, per <= teto, `os ofícios que as casas mostram mudaram ${about} vezes em ${dias} dias (${(about / dias).toFixed(0)} por dia, em ${hit.size} casas, ${per.toFixed(2)} por morador que a casa mostra por dia, de ${shown0.length}; o teto: ${teto.toFixed(2)}; antes: ${(VOLTA[key] / BASE).toFixed(2)}, ${VOLTA[key]} por dia com ${BASE})`);
   const q = inv(); ok(`${name} o verificador e os erros`, !q.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + clean());
 }
 if (on('x1')) ready('metropole', 'x1 a metrópole:', 2);
@@ -248,9 +251,13 @@ if (on('x5')) {
     const L = T.log().filter(e => e.why === 'guerra'); const P = L.map(e => ({ e: { from: back5.get(e.id) || first5.get(e.id) || e.from }, v: G.S.villagers.get(e.id) })).filter(p => p.v && p.v.role === 'guerreiro');
     if (process.env.DBG) for (const p of P) if (p.v.roleBack !== p.e.from) console.log(`  #${p.v.id}: é ${p.v.role}, volta a ${p.v.roleBack}, esperado ${p.e.from} (antes ${back5.get(p.v.id)}) | ` + T.log().filter(e => e.id === p.v.id).map(e => `${e.from}→${e.to} ${e.why}`).join(' '));
     const w1 = adults(v => G.Fac.idOfV(v) === a.id && v.role === 'guerreiro').length;
-    // (the war calls the brave, not the newest hands — a town's newest hands are its young)
-    const called = stages.map(st => ({ st, ids: L.filter(e => e.set === st.s.id && e.from === st.q).map(e => e.id) })).filter(c => c.ids.length);
-    const say = c => `${c.st.s.name}, ${c.st.hs.length} mãos de ${c.st.q} (bravas #${c.st.x.id}, #${c.st.y.id}): chamou #${c.ids.join(', #')}`;
+    // (the war calls the brave, not the newest hands — a town's newest hands are its young; and before the brave, the hands in
+    // the trade by an emergency only: they go first wherever the next one calls, D-212 — the miners of Tenochtitlan in the
+    // metrópole of the generation 21 had one from the fields, #6441, pulled by the great work, called before the two brave
+    // ones with the courage of the others: «a primeira chamada foi #6441», T-1088. They are read apart: `pre`)
+    const L5 = T.log(); const pre = e => back5.has(e.id) || L5.slice(0, L5.indexOf(e)).some(o => o.id === e.id && (o.why === 'fome' || o.why === 'obra'));
+    const called = stages.map(st => { const all = L.filter(e => e.set === st.s.id && e.from === st.q); return { st, ids: all.filter(e => !pre(e)).map(e => e.id), pre: all.filter(pre).map(e => e.id) }; }).filter(c => c.ids.length);
+    const say = c => `${c.st.s.name}, ${c.st.hs.length} mãos de ${c.st.q} (bravas #${c.st.x.id}, #${c.st.y.id}): chamou ${c.pre.length ? `antes #${c.pre.join(', #')}, já fora do seu ofício (${c.pre.map(id => back5.get(id) || first5.get(id)).join(', ')}), e depois ` : ''}#${c.ids.join(', #')}`;
     ok('x5 a guerra chama os bravos', called.length >= 1 && called.every(c => c.ids.slice(0, 2).every(id => id === c.st.x.id || id === c.st.y.id)), stages.length ? `${stages.length} ofício(s) de três mãos ou mais nas cidades de ${a.name} (${stages.map(st => `${st.s.name}/${st.q}: ${st.hs.length} mãos, ${st.sur >= 1 ? Math.round(st.sur * 10) / 10 + ' de sobra' : 'sem sobra'}`).join('; ')}), em cada um duas mãos feitas bravas pela mão da prova; a guerra tirou gente de ${called.length}: ${called.map(say).join(' · ') || 'NENHUM'}` : `nenhum ofício de três mãos ou mais numa cidade de ${a.name}`);
     ok('x5 a leva: a sorte de cada um pesa', called.length >= 1 && called.every(c => c.ids[0] === c.st.x.id), called.length ? called.map(c => `${c.st.s.name}/${c.st.q}: das duas, a de sorte maior (#${c.st.x.id}: ${lot(c.st.x).toFixed(2)}) antes da um pouco mais brava (#${c.st.y.id}: ${lot(c.st.y).toFixed(2)}) — a primeira chamada foi #${c.ids[0]}`).join(' · ') : 'a guerra não tirou ninguém de um ofício armado');
     ok('x5 a guerra puxa na hora', L.length >= 3 && P.every(p => p.v.roleBack === p.e.from) && w1 > w0, `${a.name} declara guerra a ${b.name}: em 30 s ${L.length} mãos chamadas às armas pela guerra (os soldados de ${a.name}: ${w0} → ${w1}, de ${A} adultos); cada uma guarda o ofício de onde saiu: ${P.filter(p => p.v.roleBack === p.e.from).length} de ${P.length}`);
@@ -304,7 +311,11 @@ if (on('x6')) {
   // spare by the memory, and the need that lasts has nobody to take for a third of a day; only the post left empty asks at
   // once, of the trade the instant has a hand too many in. Without that rule three of the four posts were taken as fast in
   // the world as it stood: a trade with half a hand to spare by the memory happened to be there)
-  for (const c of cases) god(() => { const n = {}; for (const v of adults(o => o.set === c.set.id)) n[v.role] = (n[v.role] || 0) + 1; for (const r in c.set.ofm) c.set.ofm[r] = n[r] || 0; });
+  // (and its hands settled in their trades — none taken in the last V.TRADE_MIN days: out of an emergency a trade taken for good
+  // is kept that long, and the post waits for a hand it may take. Hedeby's one hand to spare in the metrópole of the generation
+  // 21 — Egil, gatherer, the instant asking no gatherer — had taken his trade a day before, and the tavern stood empty the day
+  // of the case, as the rule has it: «em 1 dias ninguém tomou o ofício», T-1088)
+  for (const c of cases) god(() => { const n = {}; for (const v of adults(o => o.set === c.set.id)) { n[v.role] = (n[v.role] || 0) + 1; if (V.tenure(v) < V.TRADE_MIN) v.roleDay = S.day - V.TRADE_MIN; } for (const r in c.set.ofm) c.set.ofm[r] = n[r] || 0; });
   const T = watch(); for (const c of cases) god(() => V.kill(c.v, 'sick'));
   let days = 0; const filled = c => adults(v => v.set === c.set.id && v.role === c.r && v.job === c.b)[0];
   while (days < 1 && !cases.every(filled)) { T.live(0.125 * DAY); days += 0.125; }
@@ -323,11 +334,14 @@ if (on('x6')) {
 
 // ---------------------------------------------------------------- x7: a new workshop
 if (on('x7')) {
-  M.pronto('metropole'); M.viver(0.25 * DAY); const S = G.S;
+  // (the metrópole first, then the other ready worlds: in the metrópole of the generation 21 no town of twenty grown ones was at
+  // peace, fed, with three hands in the woods and without one of the workshops, T-1088)
+  let S = null, onde = '';
   const has = (set, t) => [...S.buildings.values()].some(b => b.set === set.id && b.type === t);
   // (a workshop the town has none of — a pottery, a hall of scribes, a tavern, a fair —, in a town at peace, not hungry, with
   // hands in the woods to give)
   const NEW = [['olaria', 'oleiro'], ['administracao', 'escriba'], ['taverna', 'taverneiro'], ['feira', 'feirante']]; let c = null;
+  for (const w of ['metropole', 'cidade', 'mundial', 'mega']) { M.pronto(w); M.viver(0.25 * DAY); S = G.S; onde = w;
   for (const set of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
     const A = adults(v => v.set === set.id); const f = G.Fac.get(set.fac);
     if (A.length < 20 || !f || G.Fac.enemiesOf(f.id).length || f.stock.food < G.Fac.pop(f.id) * 4 || A.filter(v => v.role === 'coletor' || v.role === 'lenhador' || v.role === 'mineiro').length < 3) continue;
@@ -337,12 +351,13 @@ if (on('x7')) {
     }
     if (c) break;
   }
-  if (!c) ok('x7 a oficina nova', false, 'nenhuma cidade de vinte adultos em paz, sem fome, com mãos no mato, sem uma das oficinas e com chão para ela');
+  if (c) break; }
+  if (!c) ok('x7 a oficina nova', false, 'nenhuma cidade de vinte adultos em paz, sem fome, com mãos no mato, sem uma das oficinas e com chão para ela, em mundo pronto nenhum');
   else {
     const T = watch(); let days = 0; const at = () => adults(v => v.set === c.set.id && v.role === c.r && v.job === c.b.id);
     while (days < 1.25 && !at().length) { T.live(0.125 * DAY); days += 0.125; }
     const w = at(); const e = w.length && T.log().find(x => x.id === w[0].id && x.to === c.r);
-    ok('x7 a oficina nova ganha gente', w.length > 0 && !!e, `${c.set.name} ganhou ${V.buildName ? V.buildName(c.b) : c.t} (pela mão da prova): em ${days} dias ${w.length ? `${w.map(v => v.name).join(' e ')} ${w.length > 1 ? 'trabalham' : 'trabalha'} nela como ${G.ROLE[c.r][w[0].g === 'f' ? 1 : 0].toLowerCase()} (${e ? `«${e.why}», de ${e.from || 'nenhum ofício'}` : 'sem causa dita'})` : 'ninguém foi trabalhar nela'}`);
+    ok('x7 a oficina nova ganha gente', w.length > 0 && !!e, `${c.set.name}${onde !== 'metropole' ? ' (' + onde + ')' : ''} ganhou ${V.buildName ? V.buildName(c.b) : c.t} (pela mão da prova): em ${days} dias ${w.length ? `${w.map(v => v.name).join(' e ')} ${w.length > 1 ? 'trabalham' : 'trabalha'} nela como ${G.ROLE[c.r][w[0].g === 'f' ? 1 : 0].toLowerCase()} (${e ? `«${e.why}», de ${e.from || 'nenhum ofício'}` : 'sem causa dita'})` : 'ninguém foi trabalhar nela'}`);
     const un = T.unsaid(); const q = inv(); ok('x7 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
   }
 }

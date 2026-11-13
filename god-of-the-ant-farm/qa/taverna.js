@@ -224,6 +224,9 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); if (T.pick(v) !== b)
 // waited 45 s, left «sem serviço», and came back every night: in the metropole of the generation 19, two grown people of 375)
 {
   fresh(); const b = S().buildings.get(P.id); ready(b); const bad = []; seen.length = 0;
+  // (the keeper with a plain load in his hands as the evening begins — the meat of a hunt, as the world gave Xiuhtonal of
+  // Tenochtitlan in the metrópole of the generation 21, who woke with it —: it goes to its place first, and the counter after, L-793)
+  const k0 = T.keeperOf(b); let load0 = 0; if (k0) { if (!(k0.carry && k0.carry.n > 1e-6)) D.make('v:' + k0.id, 'food', 2, { code: 'teste', part: true }); load0 = k0.carry ? k0.carry.n : 0; }
   liveSec(30, () => !!T.dia(b), bad); const op = T.dia(b);
   let g = null, sat = false, held = 0, kept = 0, served = 0, left = false, coin0 = 0, paid = 0;
   if (op) {
@@ -250,7 +253,7 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); if (T.pick(v) !== b)
     }
   }
   ok('t9 sem-bracos', !!op && !!g && sat && served >= 1 && !held && !kept && left && (!T.withCoin(b) || paid > 0) && !bad.length,
-    op && g ? `${g.name} (força ${D.strength(g)}) ${sat ? 'sentou' : 'NÃO chegou à mesa'}; ${served} rodada(s) pela mão de quem serve (no livro, dela)${T.withCoin(b) ? `, a casa pagou ${paid}` : ''}; as mãos dela ${held ? 'SEGURARAM carga' : 'sem nada'}${kept ? '; o copo FICOU na mão do taverneiro' : ''}; ${left ? 'saiu depois' : 'AINDA à mesa aos 90 s'}; verificador ${bad.join(' | ') || 'limpo'}` : `${op ? 'nenhum freguês' : 'a taverna não abriu'}`);
+    op && g ? `${g.name} (força ${D.strength(g)}) ${sat ? 'sentou' : 'NÃO chegou à mesa'} (o taverneiro começou a noite com ${load0} de carga nas mãos: L-793); ${served} rodada(s) pela mão de quem serve (no livro, dela)${T.withCoin(b) ? `, a casa pagou ${paid}` : ''}; as mãos dela ${held ? 'SEGURARAM carga' : 'sem nada'}${kept ? '; o copo FICOU na mão do taverneiro' : ''}; ${left ? 'saiu depois' : 'AINDA à mesa aos 90 s'}; verificador ${bad.join(' | ') || 'limpo'}` : `${op ? 'nenhum freguês' : 'a taverna não abriu'}`);
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `TAVERNA: FALHOU (${fails.join(', ')})` : 'TAVERNA: ok');

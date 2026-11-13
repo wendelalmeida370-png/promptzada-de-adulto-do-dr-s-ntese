@@ -263,7 +263,8 @@ const LEDGER_OK27 = [
 // as mãos livres (o pickExecutioner e o pickHerald perguntam ao handsBusy); (5) o homem da ordem secreta pergunta ao Vg.busy
 // antes de seguir alguém (L-456); (6) a tripulação de uma viagem não leva mãos ocupadas (L-458); (7) nem tira ninguém do
 // refúgio da caverna (L-459); (8) nem as escolhas da guerra — a leva, o bando, as tripulações do ataque e da frota (L-461);
-// (9) nem o mercador de uma caravana, e a conversa não para quem está na perna de uma operação (L-508)
+// (9) nem o mercador de uma caravana, e a conversa não para quem está na perna de uma operação (L-508); (11) nem o grupo de uma
+// história leva um companheiro na estrada do meio de uma operação — o foguista de posto (L-791)
 { const RX = /G\.Vg\.setTask\(.*?type:\s*'(justice|assembly|funeral|celebrate|petition)'.*?pri:\s*([0-9.]+)/;
   for (const f of files) { if (f === 'villagers.js') continue; src[f].forEach((line, k) => { const m = line.match(RX); if (!m || +m[2] >= 3) return; const near = src[f].slice(Math.max(0, k - 8), k + 1).join('\n'); if (!/Vg\.(busy|handsBusy)\(/.test(near)) fails.push(`mãos ocupadas: ${f}:${k + 1} chama alguém para ${m[1]} (${m[2]}) por setTask sem perguntar ao Vg.busy (D-094): ${line.trim().slice(0, 100)}`); }); }
   const fe = src['festivals.js'] || []; const fr = fe.findIndex(l => /^\s*function free\(v\)/.test(l));
@@ -300,6 +301,12 @@ const LEDGER_OK27 = [
   ex.forEach((l, k) => { if (!/G\.Vg\.setTask\(.*type:\s*'adeus'/.test(l)) return; n++; const near = ex.slice(Math.max(0, k - 2), k + 1).join('\n');
     if (!/Vg\.busy\(/.test(near) || !/sleeping/.test(near)) fails.push(`mãos ocupadas: expeditions.js:${k + 1} o adeus da viagem chama sem perguntar ao Vg.busy e ao sono (L-661, L-678): ${l.trim().slice(0, 100)}`); });
   if (!n) fails.push('mãos ocupadas: expeditions.js sem o setTask do adeus — a regra 38 (10) não acha onde ele pergunta ao Vg.busy (L-678)'); }
+// 38 (11). o grupo de uma história (story-party.js, o bring da estrada, 2,04) não tira o companheiro do meio de uma operação —
+// o foguista de posto (L-791): a tarefa 'party' pergunta ao Vg.busy nas três linhas depois de feita, antes de ser dada
+{ const sp = src['story-party.js'] || []; let n = 0;
+  sp.forEach((l, k) => { if (/^\s*\/\//.test(l) || !/type:\s*'party'/.test(l)) return; n++; const after = sp.slice(k, k + 4).join('\n');
+    if (!/Vg\.busy\(/.test(after) || after.indexOf('Vg.busy(') > after.indexOf('setTask(')) fails.push(`mãos ocupadas: story-party.js:${k + 1} o grupo da história leva o companheiro sem perguntar ao Vg.busy (D-094, L-791): ${l.trim().slice(0, 100)}`); });
+  if (!n) fails.push("mãos ocupadas: story-party.js sem a tarefa 'party' — a regra 38 (11) não acha onde o grupo da história pergunta ao Vg.busy (L-791)"); }
 // 38 (8). as escolhas da guerra não levam mãos ocupadas (L-461): a leva (wars.js, o laço dos candidatos do mobilize), o bando
 // por terra (war.js, Wr.launch), a tripulação do ataque pelo mar (naval.js, pickCrew), a da frota e o almirante (fleets.js,
 // o pool do manShips e os candidatos do form) perguntam ao Vg.handsBusy — o chamado não espera, mas a escolha é feita antes

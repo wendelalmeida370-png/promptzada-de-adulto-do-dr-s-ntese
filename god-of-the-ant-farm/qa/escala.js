@@ -152,7 +152,11 @@ run('e2', () => {
 // ------------------------------ e3: abrir espaço, com as regras ------------------------------
 // (a cidade: a menor que justifica o templo de 4 — o primeiro degrau que ela escolhe —, por quem é e não pelo nome: na metrópole da
 // geração 14, Óstia, a de antes, tinha 16 pessoas e escolhia o santuário de 2, e o templo nunca abria espaço, T-477)
-const templo4 = () => [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && Es.choose(s, 'temple')[0].n === 4).sort((a, c) => V.pop(a.id) - V.pop(c.id) || a.id - c.id)[0] || null;
+// (one with a free lot of 4 first: the cases take the lots by the proof's hand, arm the one the temple opens, raise a sanctuary on
+// one — Delfos, the least peopled that justifies it in the metrópole of the generation 21, had none, and the temple went up as
+// the sanctuary of 2 with nothing pulled down: «derrubando 0», «um lote livre: nenhum», «o santuário: nada», T-1098)
+const templo4 = () => { const L = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && Es.choose(s, 'temple')[0].n === 4).sort((a, c) => V.pop(a.id) - V.pop(c.id) || a.id - c.id);
+  return L.find(s => { s._noSite = {}; const p = sim(() => V.findSite(s, 'temple', undefined, 4)); s._noSite = {}; return !!p && !p.demolish; }) || L[0] || null; };
 // (a velha quadra: casas baixas da cidade, de pé, em cada lote livre de 4 casas que o planejador acharia — até não sobrar nenhum:
 // na metrópole da geração 16, mais nova, Argos, de 51 pessoas, tinha 40 lotes livres de 4, e a quadra de antes parava em 16, T-564)
 const enche = (set, quadra) => {
@@ -850,10 +854,14 @@ run('e22', () => {
   if (env) sim(() => A.P.deliver(de, A.f, 'contato', env)); const emb = A.f.aud && A.f.aud.why;
   ok('e22j as três chamadas', pet === 'peticao' && cor === 'coroacao' && emb === 'embaixada', `a resposta à petição: ${pet || 'NADA'}; a coroação de ${novo ? novo.name : '-'}: ${cor}; o emissário ${env ? env.name : '-'} de ${de ? de.name : '-'}: ${emb || 'NADA'}`);
   // (sem palácio pronto com planta, a resposta à petição não chama ninguém — como antes da D-124)
-  const sem = G.Fac.all().map(f => G.Fac.capitalOf(f.id)).filter(c => c && !G.Court.audPalace(G.Fac.get(c.fac)))[0];
+  // (a capital with no palace ready: every capital of the metrópole of the generation 21 has one — «toda capital tem palácio
+  // pronto», T-1098 —, and then the god's hand pulls down the palaces of another people's capital, as the e22g does in the middle)
+  let sem = G.Fac.all().map(f => G.Fac.capitalOf(f.id)).filter(c => c && !G.Court.audPalace(G.Fac.get(c.fac)))[0], caiu = '';
+  if (!sem) { const o = G.Fac.all().map(f => G.Fac.capitalOf(f.id)).filter(c => c && c !== A.set).sort((a, c) => a.id - c.id)[0];
+    if (o) { const ps = [...S.buildings.values()].filter(b => b.set === o.id && G.Court.RANK[b.type]); sim(() => { for (const b of ps) V.destroyBuilding(b, 'meteor'); }); caiu = ` (o deus derrubou ${ps.length} palácio(s))`; if (!G.Court.audPalace(G.Fac.get(o.fac))) sem = o; } }
   const n0 = [...S.villagers.values()].filter(v => v.task && v.task.type === 'assembly').length; if (sem) sim(() => G.Polity.crowd(sem, 'audiencia'));
   const n1 = [...S.villagers.values()].filter(v => v.task && v.task.type === 'assembly').length;
-  ok('e22k sem palácio, nenhuma reunião', !!sem && n1 === n0 && !G.Fac.get(sem.fac).aud, sem ? `${sem.name}: ${n1 - n0} chamados, audiência ${G.Fac.get(sem.fac).aud ? 'CHAMADA' : 'nenhuma'}` : 'toda capital tem palácio pronto');
+  ok('e22k sem palácio, nenhuma reunião', !!sem && n1 === n0 && !G.Fac.get(sem.fac).aud, sem ? `${sem.name}${caiu}: ${n1 - n0} chamados, audiência ${G.Fac.get(sem.fac).aud ? 'CHAMADA' : 'nenhuma'}` : 'toda capital tem palácio pronto, e nenhum caiu pela mão do deus');
   const c3 = checa(); ok('e22l verificador', c3.ok, c3.txt);
 });
 

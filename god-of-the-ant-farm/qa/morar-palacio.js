@@ -333,7 +333,10 @@ run('m8', () => {
   if (!got) for (const m of ['mega', 'metropole', 'mundial']) { abre(m); M.viver(1);
     for (const f of G.Fac.all()) { const b = Co.seatOf(f); const r0 = Pl.ruler(f); if (!b || !r0 || r0.home !== b.id) continue; const cap = S.settlements.get(b.set);
       const cand = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && v.set !== b.set && v.age >= 25 && v.age < 55 && !v.captive && !v.jail && !v.aboard && v.home && !(S.avatar && S.avatar.id === v.id) && K.court(v).length >= 2 && K.court(v).every(q => G.W.reachesTown(q, cap) && G.Vg.canSend(q))).sort((a, c) => K.court(c).length - K.court(a).length || a.id - c.id)[0];
-      if (cand) { sim(() => { Pl.endReign(f, 'mandato'); Pl.crown(f, cand, 'eleicao', true); }); got = { f, r: cand, b, cap, old: S.settlements.get(cand.set) }; onde = m + ', eleito pela mão da prova'; break; } }
+      // (the term begun that day, as the world's election begins it — politics' f.term —: with the old term due, the world's own
+      // vote came in the minute of the case, and Hakon, ruler before the proof's election, was ruler again — «QUEM GOVERNA MUDOU
+      // no caso: Hakon no lugar de Astrid», the mega of the generation 21, T-1100)
+      if (cand) { sim(() => { Pl.endReign(f, 'mandato'); Pl.crown(f, cand, 'eleicao', true); f.term = S.day; }); got = { f, r: cand, b, cap, old: S.settlements.get(cand.set) }; onde = m + ', eleito pela mão da prova'; break; } }
     if (got) break; }
   if (!ok('m8a quem governa mora noutra cidade', !!got, got ? `${got.f.name} (${onde}): ${got.r.name} mora em ${got.old.name}; a sede: ${lado(got.b)} em ${got.cap.name}` : 'nenhum povo assim nos mundos prontos')) return;
   const fam = K.court(got.r); const casa0 = B(got.r.home); const dono0 = casa0 ? casa0.dono : 0;
@@ -345,7 +348,7 @@ run('m8', () => {
   // by the proof's election, was at an unloading on the quay, T-996 — a minute of the world at the most)
   fam[fam.length - 1].held = 0; M.viver(5); for (let k = 0; k < 60 && !sim(() => K.seatState(got.f)).home; k++) M.viver(1); st = sim(() => K.seatState(got.f));
   ok('m8d a família vem para a capital', st.home && fam.every(v => v.set === got.cap.id && v.home === got.b.id) && (!casa0 || casa0.dono === dono0),
-    `${nomes(moram(got.b))} agora de ${got.cap.name}, a casa deles a sede; a caminho: ${fam.filter(v => v.task && v.task.type === 'migrate').length} de ${fam.length}; a casa de antes em ${got.old.name} continua de #${casa0 ? casa0.dono : 0}${st.home ? '' : ` · a sede diz «${st.why}»; não podem partir: ${sim(() => fam.filter(v => !G.Vg.canSend(v)).map(v => `${v.name} (${v.task ? v.task.type : '-'})`).join(', ')) || 'ninguém'}`}`);
+    `${(() => { const r1 = Pl.ruler(got.f); return r1 && r1.id !== got.r.id ? `QUEM GOVERNA MUDOU no caso: ${r1.name} no lugar de ${got.r.name}; ` : ''; })()}${nomes(moram(got.b))} agora de ${got.cap.name}, a casa deles a sede; a caminho: ${fam.filter(v => v.task && v.task.type === 'migrate').length} de ${fam.length}; a casa de antes em ${got.old.name} continua de #${casa0 ? casa0.dono : 0}${st.home ? '' : ` · a sede diz «${st.why}»; não podem partir: ${sim(() => fam.filter(v => !G.Vg.canSend(v)).map(v => `${v.name} (${v.task ? v.task.type : '-'})`).join(', ')) || 'ninguém'}`}`);
   M.viver(240); const perto = fam.filter(v => S.villagers.has(v.id) && G.dist(v.x, v.y, got.cap.cx, got.cap.cy) < 30).length;
   ok('m8e chegam', perto >= Math.ceil(fam.length * 0.6) && K.seatState(got.f).home, `${perto} de ${fam.length} a menos de 30 casas do meio de ${got.cap.name} depois de 240 s`);
   c = checa(); ok('m8f verificador', c.ok, c.txt);

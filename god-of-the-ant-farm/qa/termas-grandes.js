@@ -623,7 +623,13 @@ function F1() {
   // (and with the stone for it — in store, by the proof's hand —: the thermae, by the town's own door; their bill the step's)
   let b = null; sim(() => { D.make('f:' + f.id, 'stone', 400, { code: 'teste', part: true }); set._noSite = {}; b = V.startProject(set, 'banhos'); });
   const can = V.affords(set, 'banhos', st); const bill = Es.bill('banhos', st);
-  const billOk = !!b && !b.built && (b.need.stone || 0) + (b.brick ? b.brick.n : 0) <= bill.cost.stone && (b.need.stone || 0) + (b.brick ? b.brick.n : 0) >= bill.cost.stone * 0.6 && V.workOf(b) === bill.work;
+  // (the work the step's, and the earth of its lot if the foundation levelled it — D-217 —; the stone the step's, less the brick
+  // in its place (D-075) and the stone of the rocks its lot had, broken into the work at once (D-121, on the site, «pedreira»):
+  // the thermae of Roma in the metrópole of the generation 21 rose on a lot with 64,6 of earth moved and 54 of stone in rocks —
+  // «285.2 de trabalho» for the step's 156, and 24 of stone and 52 of brick to come of 130, T-1097)
+  const rocks0 = b ? D.get('o:' + b.id, 'stone') || 0 : 0; const billSt = b ? (b.need.stone || 0) + (b.brick ? b.brick.n : 0) + rocks0 : 0;
+  const billOk = !!b && !b.built && billSt <= bill.cost.stone + 1e-6 && billSt >= bill.cost.stone * 0.6 && V.workOf(b) === bill.work + (b.terra || 0) * V.EARTH;
+  const need0 = b ? `${JSON.stringify(b.need)}${b.brick ? ` (${b.brick.n} de ${b.brick.k} no lugar de pedra)` : ''}${rocks0 ? ` e ${r2(rocks0)} de pedra das rochas do lote já na obra` : ''}` : '';
   const p = b ? In.plan(b) : null; const bad = qaS();
   // (the town's own builders at it: years of the world, until it stands — six at the most; then its day opens by the world)
   let years = 0, prog = b ? b.progress : 0; const id = b ? b.id : 0; const B = () => G.S.buildings.get(id);
@@ -632,7 +638,7 @@ function F1() {
   const days = up ? G.S.acts.filter(op => op.def === 'termas' && op.at === id).length : 0; const keeper = up && Te.keeperOf(B());
   ok('F1 a cidade ergue as termas sozinha (a metrópole, a maior cidade de um povo da terma): como o mundo a tem, a cidade abaixo da gente do degrau não o justifica; com a gente dele (a mão da prova, se falta), justifica; sem pedra nem renda, a porta da cidade funda os banhos clássicos; com a pedra, as termas — a conta e o trabalho do degrau, a família da forma —, e os pedreiros da cidade as levantam',
     c0 === want0 && (small ? cs === 'banhos' : pop0 < st.req.pop) && pop1 >= st.req.pop && c1 === 'termas > banhos' && cant && (!poor || (poor.w === 2 && poor.esc === 'banhos')) && can && !!b && b.w === 5 && b.esc === 'termas' && b.ip.f === FAM && billOk && !!p && p.ok && q0 === 0 && !bad.length && (up || prog1 > prog) && !bad1.length && M.limpo(),
-    `${set.name} (${G.Civ.idOfFac(set.fac)}): ${pop0} pessoas (o degrau pede ${st.req.pop}), escolhe «${c0}»${small ? `; ${small.name}, com ${V.pop(small.id)}, «${cs}»` : ''}; com ${pop1}, «${c1}»; sem pedra nem renda (pode pagar: ${cant ? 'não' : 'SIM'}): funda ${poorTxt}; com a pedra (pode pagar: ${can ? 'sim' : 'NÃO'}): ${b ? `${b.esc} de ${b.w} casas #${b.id}, a ${G.dist(b.x + b.w / 2, b.y + b.h / 2, set.cx, set.cy).toFixed(0)} casas do meio, a conta ${JSON.stringify(b.need)}${b.brick ? ` (${b.brick.n} de ${b.brick.k} no lugar de pedra)` : ''} de ${JSON.stringify(bill.cost)}, ${V.workOf(b)} de trabalho, a família ${b.ip.f}, a planta ${p && p.ok ? 'de pé' : 'NÃO'}` : 'NADA'}; os pedreiros: ${up ? `de pé em ${years} ano(s); ${days} dia(s) dos banhos abertos pelo mundo${keeper ? `, o foguista ${keeper.name} dado pela cidade` : ', ainda sem foguista'}` : `em ${years} anos a obra foi de ${(prog * 100).toFixed(0)}% a ${(prog1 * 100).toFixed(0)}% (falta trazer ${JSON.stringify(B() ? B().need : {})}${B() && B().unreach ? ', os pedreiros não a alcançam' : ''}) — não a vi acabar: T-821`}; o verificador S0–S2: ${q0} antes, ${bad.length} na fundação, ${bad1.length} depois${bad.concat(bad1).length ? ' (' + say(bad.concat(bad1)) + ')' : ''}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
+    `${set.name} (${G.Civ.idOfFac(set.fac)}): ${pop0} pessoas (o degrau pede ${st.req.pop}), escolhe «${c0}»${small ? `; ${small.name}, com ${V.pop(small.id)}, «${cs}»` : ''}; com ${pop1}, «${c1}»; sem pedra nem renda (pode pagar: ${cant ? 'não' : 'SIM'}): funda ${poorTxt}; com a pedra (pode pagar: ${can ? 'sim' : 'NÃO'}): ${b ? `${b.esc} de ${b.w} casas #${b.id}, a ${G.dist(b.x + b.w / 2, b.y + b.h / 2, set.cx, set.cy).toFixed(0)} casas do meio, a conta na fundação ${need0} de ${JSON.stringify(bill.cost)}, ${V.workOf(b)} de trabalho (o do degrau, ${bill.work}${b.terra ? `, e o da terra do lote aplainado, ${b.terra}` : ''}), a família ${b.ip.f}, a planta ${p && p.ok ? 'de pé' : 'NÃO'}` : 'NADA'}; os pedreiros: ${up ? `de pé em ${years} ano(s); ${days} dia(s) dos banhos abertos pelo mundo${keeper ? `, o foguista ${keeper.name} dado pela cidade` : ', ainda sem foguista'}` : `em ${years} anos a obra foi de ${(prog * 100).toFixed(0)}% a ${(prog1 * 100).toFixed(0)}% (falta trazer ${JSON.stringify(B() ? B().need : {})}${B() && B().unreach ? ', os pedreiros não a alcançam' : ''}) — não a vi acabar: T-821`}; o verificador S0–S2: ${q0} antes, ${bad.length} na fundação, ${bad1.length} depois${bad.concat(bad1).length ? ' (' + say(bad.concat(bad1)) + ')' : ''}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 function F2() {
   M.pronto('metropole'); const sets = [].concat(...TERMA.map(townsOf)).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id); const st = Es.steps('banhos').find(s => s.id === 'termas');
@@ -683,7 +689,7 @@ function G1() {
   // (a) the work of the great thermae saved in the middle, loaded and finished: its lot, its step, its bill, its plan
   { const set = townsOf(here[0])[0]; const b = found(set, 'grandes', false); if (!b) out.push('a obra das grandes termas sem lote');
     else { const id = b.id; const bill = Es.bill('banhos', Es.steps('banhos').find(s => s.id === 'grandes')); const need = (b.need.stone || 0) + (b.brick ? b.brick.n : 0);
-      if (need > bill.cost.stone || need < bill.cost.stone * 0.6 || V.workOf(b) !== bill.work) out.push(`a conta da obra: ${JSON.stringify(b.need)} e ${V.workOf(b)} de trabalho (o degrau: ${JSON.stringify(bill.cost)}, ${bill.work})`);
+      if (need > bill.cost.stone || need < bill.cost.stone * 0.6 || V.workOf(b) !== bill.work + (b.terra || 0) * V.EARTH) out.push(`a conta da obra: ${JSON.stringify(b.need)} e ${V.workOf(b)} de trabalho (o degrau: ${JSON.stringify(bill.cost)}, ${bill.work}${b.terra ? `; a terra aplainada: ${b.terra}` : ''})`);
       M.salvarCarregar(); const b1 = G.S.buildings.get(id); const q1 = qaS();
       if (!b1 || b1 === b || b1.built || b1.w !== 7 || b1.esc !== 'grandes') out.push(`a obra depois do save: ${b1 ? `${b1.w} casas, ${b1.esc}, ${b1.built ? 'pronta' : 'em obra'}` : 'sumiu'}`);
       else { sim(() => V.completeBuilding(b1)); const p = In.plan(b1); if (!p || !p.ok || b1.ip.f !== FAM || !In.table(b1)) out.push(`a obra acabada: ${b1.ip ? b1.ip.f : 'sem registro'}, ${p && p.ok ? 'planta ok' : 'planta NÃO: ' + (p ? p.errs.slice(0, 2).join('; ') : '-')}`); }
@@ -722,13 +728,16 @@ function G2() {
   for (const key of ['metropole', 'cidade', 'mega']) {
     let o; try { o = raw(key); } catch (e) { sum.push(`${key}: não há`); continue; }
     const olds = (o.buildings || []).filter(b => b.type === 'banhos' || (b.type === 'ruin' && b.origType === 'banhos')).map(b => ({ id: b.id, type: b.type, w: b.w, esc: b.esc, built: b.built, f: b.ip && b.ip.f, r: b.ip && b.ip.r, n: b.ip && b.ip.n, set: b.set }));
-    M.abrir(o); M.viver(2); let dif = 0, noPlan = 0; const big = [...G.S.buildings.values()].filter(b => b.type === 'banhos' && b.w !== 2).length;
+    // (the step the save had: a save of before the new steps has every bath of 2 tiles; the ready worlds of the generation 21 are
+    // saves of after them, and the mega's has thermae of 5 standing — «1 sem planta, 1 de outro tamanho», T-1097. A bath of the
+    // save keeps the lot it had; one bigger than 2 that the save did not have is one enlarged by the load)
+    M.abrir(o); M.viver(2); let dif = 0, noPlan = 0; const big = [...G.S.buildings.values()].filter(b => b.type === 'banhos' && b.w !== 2 && !olds.some(q => q.id === b.id)).length;
     for (const q of olds) { const b = G.S.buildings.get(q.id); if (!b || b.type !== q.type || b.w !== q.w || b.esc !== q.esc || !!b.built !== !!q.built || (b.ip && b.ip.f) !== q.f || (b.ip && b.ip.r) !== q.r) { dif++; if (out.length < 3) out.push(`${key} #${q.id}: ${JSON.stringify(q)} → ${b ? JSON.stringify({ type: b.type, w: b.w, esc: b.esc, built: b.built, f: b.ip && b.ip.f, r: b.ip && b.ip.r }) : 'sumiu'}`); }
-      else if (b.type === 'banhos' && b.built) { const p = In.plan(b); if (!p || !p.ok || Es.of(b).n !== 2) noPlan++; } }
+      else if (b.type === 'banhos' && b.built) { const p = In.plan(b); if (!p || !p.ok || Es.of(b).n !== q.w) noPlan++; } }
     const bad = qaS(); if (dif || noPlan || big || bad.length) out.push(`${key}: ${dif} banhos diferentes do save, ${noPlan} sem planta, ${big} de outro tamanho${bad.length ? '; o verificador: ' + say(bad) : ''}`);
-    sum.push(`${key}: ${olds.length} banhos, todos como no save`);
+    sum.push(`${key}: ${olds.length} banhos (${olds.filter(q => q.w !== 2).length} de mais de 2 casas), todos como no save`);
   }
-  ok('G2 um save de antes dos degraus novos (os mundos prontos) abre igual: cada banho com o seu lote de 2 casas, o seu degrau, a família e a versão do registro que o save tinha, a planta de pé; nenhum ampliado ao carregar; o verificador limpo', !out.length && sum.some(s => / [1-9]\d* banhos/.test(s)) && M.limpo(), out.length ? out.join(' / ') : sum.join(' · ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
+  ok('G2 um save abre igual (os mundos prontos): cada banho com o lote que o save tinha — de 2 casas num save de antes dos degraus novos —, o seu degrau, a família e a versão do registro que o save tinha, a planta de pé; nenhum ampliado ao carregar; o verificador limpo', !out.length && sum.some(s => / [1-9]\d* banhos/.test(s)) && M.limpo(), out.length ? out.join(' / ') : sum.join(' · ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
 }
 
 // ================================================================ H: the checker catches the lie

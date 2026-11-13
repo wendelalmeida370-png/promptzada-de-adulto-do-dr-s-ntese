@@ -656,7 +656,10 @@
   const PLAIN = { chop: 1, farm: 1, gather: 1, shell: 1, fish: 1, estate: 1, pave: 1, drill: 1, build: 1 };
   const plain = (v, t) => !!PLAIN[t.type] && t.kind === 'work' && t.pri <= 1 && !(t.type === 'build' && t.id === (S_().settlements.get(v.set) || {}).gw);
   const isTrader = v => !!TRADERS[v.role] || v.grp === 'mercadores';
-  const homeOf = v => { const h = v.home ? S_().buildings.get(v.home) : null; return h && h.built ? h : null; };
+  // (the house one lives in: standing, or under the works of its upgrade — the family lives there all the same, V.livable, L-371:
+  // with the house standing only, who lived in a sobrado rising had no plaza on the way home, nor the children one to play at —
+  // 46 of the 752 of the metrópole of the generation 21, L-790)
+  const homeOf = v => { const h = v.home ? S_().buildings.get(v.home) : null; return G.Village.livable(h) ? h : null; };
   const midOf = b => [b.x + b.w / 2, b.y + b.h / 2];
   // (a market sells in the stalls' hours — with stalls of its own, while one of the town is open and manned)
   const sells = b => !!(G.Biz && G.Biz.hours()) && (!G.Biz.hasStalls(b) || G.Biz.selling(b.set));

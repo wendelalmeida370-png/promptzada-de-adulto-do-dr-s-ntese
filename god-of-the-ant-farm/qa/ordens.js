@@ -13,7 +13,8 @@
 // da mesma caça no mesmo instante limpa a mesma marca no mesmo olhar e a ordem manda o mesmo homem atrás da mesma testemunha no
 // mesmo olhar; o4 a reunião da noite atravessa um save e um load (L-694: o load a encerrava e mandava todos embora): quem estava
 // no lugar segue no lugar, de manto, e ela acaba pela regra dela; o5 um load não dá um segundo dia a nenhum módulo (os relógios
-// do dia moram no mundo, S.mod); e o verificador limpo, e nenhum erro.
+// do dia moram no mundo, S.mod); o6 duas lojas da mesma ordem na mesma noite: a segunda não tira ninguém da reunião da primeira
+// (L-792); e o verificador limpo, e nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const WORLD = process.argv[2] || 'mega';
@@ -125,13 +126,15 @@ if (!H && tried.length) ok(`o2 ${WORLD}`, false, tried.join(' · '));
   let m = null, q = null;
   S.time = 0.805;
   for (const s of socs()) { if (s.gone) continue; for (const l of s.lodges) l.next = S.day; }
-  for (let k = 0; k < 60 && !m; k++) { M.viver(0.5); m = (S.secrets.meets || []).find(x => x.ids.length >= 2) || null; }
+  // (the meeting that comes to its rite with two of its own at the place — of all the night calls, not the first called: in
+  // the mega of the generation 21 the first went on empty, one of its two asleep, worn out, and the other called to a second
+  // lodge of the order the same night (L-792): «rite, 0 dos 2 nela», T-1096)
+  const atOf = x => x.ids.map(id => S.villagers.get(id)).filter(v => v && v.task && v.task.type === 'conclave' && v.task.m === x.id);
+  for (let k = 0; k < 1200 && !m; k++) { M.viver(0.1); m = (S.secrets.meets || []).find(x => x.phase === 'rite' && atOf(x).filter(v => v.task.st === 2).length >= 2) || null; }
   q = m && socs().find(x => x.id === m.soc);
-  if (!m) ok(`o4 ${WORLD}`, false, 'nenhuma ordem reuniu dois dos seus à noite');
+  if (!m) ok(`o4 ${WORLD}`, false, 'nenhuma reunião de uma ordem chegou ao rito com dois dos seus no lugar à noite');
   else {
-    // until the rite, with two of them at the place
-    const at = () => m.ids.map(id => S.villagers.get(id)).filter(v => v && v.task && v.task.type === 'conclave' && v.task.m === m.id);
-    for (let k = 0; k < 900 && S.secrets.meets.includes(m) && !(m.phase === 'rite' && at().filter(v => v.task.st === 2).length >= 2); k++) M.viver(0.1);
+    const at = () => atOf(m);
     const live0 = S.secrets.meets.includes(m) && m.phase === 'rite';
     const before = at().map(v => [v.id, v.task.st, !!v.robe, v.inside || 0, v.sleeping ? 1 : 0]).sort((a, b) => a[0] - b[0]); const mid = m.id, ph = m.phase, mt = m.t;
     M.salvarCarregar(); const S2 = G.S;
@@ -164,6 +167,30 @@ if (!H && tried.length) ok(`o2 ${WORLD}`, false, tried.join(' · '));
   const books = made === made2 || JSON.parse(made2).every(([id, m], i) => Object.keys(JSON.parse(made)[i][1] || {}).every(k => (m || {})[k] >= JSON.parse(made)[i][1][k] - 1e-6));
   ok(`o5 ${WORLD}`, kept && before.every((x, i) => x === after2[i]) && books,
     `os relógios dos módulos (${KEYS.length}): ${kept ? 'os mesmos depois do load' : 'MUDARAM: ' + JSON.stringify(before) + ' → ' + JSON.stringify(after)}; três passos depois ${before.every((x, i) => x === after2[i]) ? 'nenhum deu outro dia' : 'OUTRO DIA: ' + JSON.stringify(after2)}; os livros do dia de cada povo ${books ? 'como estavam' : 'ZERADOS pelo load'}`);
+}
+// ---------------- o6 two lodges of an order due the same night: the second takes nobody from the first (L-792) ----------------
+// (the meeting of the night called its members wherever they were below 3: two lodges of an order due the same night, the second
+// took the members of the first in the middle of its rite, and that one went on empty — the o4 of the mega of the generation 21.
+// The test's hand: an order with two lodges and members in reach of both; the first lodge's night, then the second's while the
+// first is on)
+{
+  M.pronto(WORLD); M.viver(2); const S = G.S; S.weather.storm = 0; S.weather.rain = 0;
+  let pick = null;
+  for (const q of socs()) { if (q.gone || q.lodges.length < 2) continue; const mem = G.Secrets.membersOf(q).filter(v => !v.captive && !v.aboard && !v.held);
+    // (in the reach of the meeting's call, 34 tiles: two of the order by each lodge, and one at least by both)
+    const near = l => mem.filter(v => G.dist(v.x, v.y, l.x, l.y) < 34);
+    for (const l1 of q.lodges) for (const l2 of q.lodges) { if (l1 === l2) continue; const n1 = near(l1), n2 = near(l2), both = n1.filter(v => n2.includes(v)); if (n1.length >= 2 && n2.length >= 2 && both.length >= 1 && (!pick || both.length > pick.both.length)) pick = { q, l1, l2, both }; } }
+  if (!pick) ok(`o6 ${WORLD}`, false, 'nenhuma ordem com duas lojas, dois membros ao alcance de cada uma e um das duas');
+  else {
+    S.time = 0.805; for (const s of socs()) for (const l of s.lodges) l.next = S.day + 9; pick.l1.next = S.day;
+    let m1 = null; for (let k = 0; k < 60 && !m1; k++) { M.viver(0.5); m1 = (S.secrets.meets || []).find(x => x.lodge === pick.l1.id) || null; }
+    let m2 = null, took = []; const d0 = S.day;
+    if (m1) { pick.l2.next = d0; for (let k = 0; k < 40 && S.secrets.meets.includes(m1); k++) { M.viver(0.5); m2 = m2 || (S.secrets.meets || []).find(x => x.lodge === pick.l2.id) || null;
+      for (const id of m1.ids) { const v = S.villagers.get(id); if (v && v.task && v.task.type === 'conclave' && v.task.m !== m1.id && !took.includes(id)) took.push(id); } } }
+    const at1 = m1 ? m1.ids.filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.type === 'conclave' && v.task.m === m1.id; }).length : 0;
+    ok(`o6 ${WORLD} duas lojas na mesma noite: a segunda não tira ninguém da primeira (L-792)`, !!m1 && m1.ids.length >= 2 && pick.l2.next !== d0 && !took.length,
+      `${pick.q.name}: a loja #${pick.l1.id} reuniu ${m1 ? m1.ids.length : 0} (${pick.both.length} membros ao alcance das duas lojas); com ela reunida, a loja #${pick.l2.id} ${m2 ? 'reuniu ' + m2.ids.length + ' (#' + m2.ids.join(', #') + ')' : pick.l2.next !== d0 ? 'não achou dois livres e ficou para outra noite' : 'NÃO FOI CHAMADA'}; da primeira, ${took.length ? 'TIRADOS PELA SEGUNDA: #' + took.join(', #') : 'ninguém tirado'}; na primeira ainda ${at1}`);
+  }
 }
 const e = M.erros(); const errs = e.console.filter(l => /error|warn/.test(l));
 ok('verificador e erros', !bad.length && !secret().length && !Object.keys(e.mod).length && !errs.length, `ordens: ${bad.length ? bad.slice(0, 2).join(' · ') : 'limpo'}; erros de módulo ${JSON.stringify(e.mod)}; console ${errs.length ? errs.slice(0, 3).join(' | ') : 'limpo'}`);

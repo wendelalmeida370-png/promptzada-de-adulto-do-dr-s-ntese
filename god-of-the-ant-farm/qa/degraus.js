@@ -532,9 +532,9 @@ run('g6', () => {
   const ids = new Set(S.buildings.keys()); let mar = null;
   // (the people's stone income as the ledger counts it — f.pedra —, held high by the proof at each look: only the wish is at stake)
   // (and its timber: the planner opens no new work with less than a third of its wood in store)
-  for (let k = 0; k < 40 && !mar; k++) { alimenta(set); rico(set, 150); if ((fac.stock.wood || 0) < 60) D.make('f:' + fac.id, 'wood', 90, { code: 'teste' }); civicasMenos(set, 'maravilha'); M.viver(4); mar = [...S.buildings.values()].find(o => o.set === set.id && o.type === 'maravilha' && !ids.has(o.id)) || null; }
+  for (let k = 0; k < 40 && !mar; k++) { alimenta(set); rico(set, 150); if ((fac.stock.wood || 0) < 60) D.make('f:' + fac.id, 'wood', 90, { code: 'teste' }); obrasMenos(set, 'maravilha'); M.viver(4); mar = [...S.buildings.values()].find(o => o.set === set.id && o.type === 'maravilha' && !ids.has(o.id)) || null; }
   if (VERB && !mar) {
-    const r = V.reserva(set); const N = G.N, T = G.T; const why = [];
+    const r = V.reserva(set) || r0; const N = G.N, T = G.T; const why = [];
     if (r) {
       let streets = 0;
       for (let ty = r.y - 1; ty <= r.y + r.n; ty++) for (let tx = r.x - 1; tx <= r.x + r.n; tx++) {
@@ -551,8 +551,11 @@ run('g6', () => {
   ok('g6b a maravilha primeiro, no campo guardado', !!mar && noLote && !antes.length && mar.w >= 10, mar ? `${set.name} fundou ${lado(mar)} ${noLote ? 'no campo guardado' : 'FORA do campo'}; obras cívicas que não são de viver começadas antes dela: ${antes.map(o => o.type).join(', ') || 'nenhuma'}` : `em 160 s ${set.name} não pediu a maravilha (as cívicas novas: ${[...S.buildings.values()].filter(o => !ids.has(o.id) && o.set === set.id && G.BDEF[o.type] && G.BDEF[o.type].civic).map(o => o.type).join(', ') || 'nenhuma'})`);
   const c = checa(); ok('g6c verificador', c.ok, c.txt);
 });
-// (the civic works of the town that are not the one awaited, finished by the god's hand: one great civic work at a time)
-function civicasMenos(set, menos) { sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && !o.built && o.type !== 'ruin' && o.type !== menos && pub(o.type)) V.completeBuilding(o); }); }
+// (the works of the town that are not the one awaited, finished by the god's hand: one great civic work at a time, and no more
+// works at once than the town's builders take — V.plan, maxSites: Roma of the mundial of the generation 21, 43 people, with a
+// mine, a weaving house, a forge and a house under way — four, its whole share —, planned nothing in 160 s, the wonder among
+// it, T-1101)
+function obrasMenos(set, menos) { sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && !o.built && o.type !== 'ruin' && o.type !== menos) V.completeBuilding(o); }); }
 
 // ------------------------------ g7: a guerra no meio ------------------------------
 run('g7', () => {

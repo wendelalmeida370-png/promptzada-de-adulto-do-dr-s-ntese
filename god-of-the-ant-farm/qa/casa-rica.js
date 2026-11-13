@@ -169,11 +169,14 @@ run('r6', () => {
   const a = arma(); if (!ok('r6a a cidade e a família', !!a, a ? `${a.set.name}: ${a.v.name}` : 'sem premissa')) return;
   const { set, v } = a; const st = K.richStep(set); const h0 = S.buildings.get(v.home); const fam = K.family(v);
   // (enough for the house and not to stay rich: its share of the pot one coin short of the price and the keep)
+  // (one coin short of the price at the lot and of the town's own reckoning too — K.rich reckons by the ground of the town's
+  // middle, the order by the lot's: in the metrópole of the generation 21 the dear lot of Mênfis cost more than the middle, and
+  // the family one coin short of the lot was still one the town would ask, «entre as famílias ricas da cidade: SIM», T-1095)
   const share = Math.min(1, fam.length / Math.max(1, h0.res || fam.length)); const pos = lote(set); const price = K.price(set, 'house', pos, st);
-  const quase = (price + K.RICH - 1) / share; const tem = moedas(h0.id);
+  const quase = (Math.min(price, K.price(set, 'house', null, st)) + K.RICH - 1) / share; const tem = moedas(h0.id);
   if (tem > quase) D.use('h:' + h0.id, 'moedas', tem - quase, { code: 'teste', mine: true }); else D.make('h:' + h0.id, 'moedas', quase - tem, { code: 'teste' });
   const r1 = sim(() => K.orderRich(v));
-  ok('r6b paga a casa mas não continuaria rica', !r1.ok && !K.rich(set).includes(v) && !K.waiting(v), `a parte da família no pote: ${(moedas(h0.id) * share).toFixed(1)}; a casa ali custa ${price}, e é preciso ficar com ${K.RICH}: «${r1.why}»`);
+  ok('r6b paga a casa mas não continuaria rica', !r1.ok && !K.rich(set).includes(v) && !K.waiting(v), `a parte da família no pote: ${(moedas(h0.id) * share).toFixed(1)}; a casa ali custa ${price}, e é preciso ficar com ${K.RICH}: «${r1.why}»; entre as famílias ricas da cidade: ${K.rich(set).includes(v) ? 'SIM' : 'não'}; à espera de uma casa: ${K.waiting(v) ? 'SIM (' + JSON.stringify(K.waiting(v)).slice(0, 80) + ')' : 'não'}`);
   enriquece(v, set);
   // (a village; a people without coin — the proof holds the town's rank and the people's coin for the question)
   const t0 = set.tier; set.tier = 1; const aldeia = !K.richStep(set) && !K.rich(set).length && !sim(() => K.orderRich(v)).ok; set.tier = t0;

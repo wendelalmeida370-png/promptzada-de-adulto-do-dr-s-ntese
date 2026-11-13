@@ -70,8 +70,12 @@ function zarpa(r, max) {
   for (const q of S.seaRoutes) q.t = 1e6;
   return S.ships.find(s => s.kind === 'mercante' && s.tr && !before.has(s.id)) || null;
 }
-// the route to try: open, between two peoples, whose first asked has sailors
-const rota = () => S.seaRoutes.filter(r => r.ok && sender(r) && sailorsOf(sender(r).set.id).length).sort((a, b) => sailorsOf(sender(b).set.id).length - sailorsOf(sender(a).set.id).length || a.id - b.id)[0] || null;
+// the route to try: open, between two peoples, whose first asked has sailors — ashore first: the ready world can open with a
+// town's only sailor at sea, on the ship it had coming home (the metrópole of the generation 21: Ramsés, the only one of
+// Mênfis, aboard #24788 the whole case — «nenhum navio saiu na rota 8512 em 90 s (Mênfis: 1 marinheiros)»; a sailor at sea
+// is still the town's, his trade is the sea, L-683 —, and with one each the routes were tied and the first id won. T-1089)
+const ashore = sid => sailorsOf(sid).filter(v => !v.aboard && !Nv.away(v)).length;
+const rota = () => S.seaRoutes.filter(r => r.ok && sender(r) && sailorsOf(sender(r).set.id).length).sort((a, b) => ashore(sender(b).set.id) - ashore(sender(a).set.id) || sailorsOf(sender(b).set.id).length - sailorsOf(sender(a).set.id).length || a.id - b.id)[0] || null;
 
 // ---------------------------------------------------------------- m1
 if (on('m1')) {

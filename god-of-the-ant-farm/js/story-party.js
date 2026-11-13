@@ -150,8 +150,13 @@
     Pt.gather(story, v);
     for (const c of Pt.of(story)) {
       if (c.captive || c.held || c.aboard || (c.task && (c.task.pri >= Math.max(3, (pri || 0) + 0.1) || c.task.type === 'party' || c.task.type === 'jail'))) continue;
+      // (the hands busy, D-094: the road does not take a companion from the middle of an operation — the stoker at the furnace
+      // of the baths before the doors open, a load on its way —; the company goes without them this time. Khufu, stoker of
+      // Mênfis, went with a story's company eleven looks of the morning, and the baths opened cold, L-791)
+      const T = { type: 'party', story: story.id, lead: v.id, pri: pri || 2.04, st: 0, kind: 'party', k: (story.party || []).indexOf(c.id) };
+      if (G.Vg.busy(c, T)) continue;
       G.Vg.endTask(c); c.sleeping = false;
-      G.Vg.setTask(c, { type: 'party', story: story.id, lead: v.id, pri: pri || 2.04, st: 0, kind: 'party', k: (story.party || []).indexOf(c.id) });
+      G.Vg.setTask(c, T);
     }
   }
   Pt.bring = bring;

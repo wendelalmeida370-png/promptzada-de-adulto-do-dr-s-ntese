@@ -206,7 +206,9 @@
   Sc.RETRY = RETRY; // (read by the proof, qa/ordens.js)
   function startMeet(q, l) {
     const S = G.S;
-    const go = Sc.membersOf(q).filter(v => G.dist(v.x, v.y, l.x, l.y) < 34 && !v.captive && !v.aboard && !v.held && !v.ug && !(v.task && v.task.pri >= 3) && !meal(v));
+    // (nor one already at a meeting of the night — of another lodge of the order: two lodges due the same night took the members
+    // of the first in the middle of its rite, and it went on empty, L-792)
+    const go = Sc.membersOf(q).filter(v => G.dist(v.x, v.y, l.x, l.y) < 34 && !v.captive && !v.aboard && !v.held && !v.ug && !(v.task && v.task.pri >= 3) && !(v.task && MEET[v.task.type]) && !meal(v));
     if (go.length < 2) { l.next = S.day + 2; return; }
     const m = { id: S.nextId++, soc: q.id, lodge: l.id, x: l.x, y: l.y, kind: l.kind, b: l.b || 0, t: 0, ids: go.map(v => v.id), seen: [], blood: 0, phase: 'gather' };
     st().meets.push(m);

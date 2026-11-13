@@ -542,7 +542,11 @@ if (part(7)) {
         for (const s of ['N', 'E', 'S', 'W']) { if (s === Y.ip.s) continue; const o = SIDE[s]; if ((cx - (Y.x + Y.w / 2) * TL) * o[0] + (cz - (Y.y + Y.h / 2) * TL) * o[1] <= 0) continue; const m = maskOf(Y, s); if (!m) continue;
           if (++tries > 600) break look;
           const r0 = { s: Y.ip.s, o: Y.ip.o, r: Y.ip.r }; god(() => { Y.ip.s = s; Y.ip.o = m; Y.ip.r++; });
-          const hit = ownFor(Y).some(fy => cross(footprint(Y, fy), pe));
+          // (and a case where giving way can be done: the steps of its lot alone, where the flight runs on into the street, off the
+          // elder's — the lot's own never give way, only the word and the turn of the day do, L-619: the sobrado#13327 of the
+          // metrópole of the generation 21 had its lot's steps in the way to the foot of the 11 of sobrado#12791, «1 lances
+          // cruzando os do mais velho» before the turn, none after it, T-1099)
+          const hit = ownFor(Y).some(fy => cross(footprint(Y, fy), pe) && !!(fy.lot && fy.lot.length) && !cross(footprint(Y, Object.assign({}, fy, { treads: fy.lot })), pe));
           if (hit) { C = { E, fe, he, Y, s, r0 }; break look; }
           god(() => { Y.ip.s = r0.s; Y.ip.o = r0.o; Y.ip.r = r0.r; }); } } }
     // (none in the world as it stands — two buildings so across a street are a town's chance: none in the metropoles of the
@@ -569,7 +573,7 @@ if (part(7)) {
           const f1 = freshOf(E, he); let found = null;
           if (Y.ip && f1 && sig(f1) === t0 && fitsFl(f1)) for (const s of ['N', 'E', 'S', 'W']) { if (s === Y.ip.s) continue; const o = SIDE[s]; if ((cx - (Y.x + Y.w / 2) * TL) * o[0] + (cz - (Y.y + Y.h / 2) * TL) * o[1] <= 0) continue; const m = maskOf(Y, s); if (!m) continue;
             const r0 = { s: Y.ip.s, o: Y.ip.o, r: Y.ip.r }; god(() => { Y.ip.s = s; Y.ip.o = m; Y.ip.r++; });
-            if (ownFor(Y).some(fy => cross(footprint(Y, fy), pe))) { found = { s, r0 }; break; }
+            if (ownFor(Y).some(fy => cross(footprint(Y, fy), pe) && !!(fy.lot && fy.lot.length) && !cross(footprint(Y, Object.assign({}, fy, { treads: fy.lot })), pe))) { found = { s, r0 }; break; }
             god(() => { Y.ip.s = r0.s; Y.ip.o = r0.o; Y.ip.r = r0.r; }); }
           if (found) { C = { E, fe, he, Y, s: found.s, r0: found.r0 }; made = Y; break look2; }
           god(() => G.Village.removeBuilding(Y)); } }

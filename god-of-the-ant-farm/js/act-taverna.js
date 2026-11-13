@@ -103,6 +103,11 @@
   function callKeeper(b, op) {
     const k = keeperOf(b); if (!k || !G.inSim || A.isBody(k) || !atHand(k)) return;
     const t = k.task; if (t && (OWN[t.type] || (t.pri || 0) > 1 || t.type === 'shelter')) return;
+    // (and his hands free: the call sends a plain load in them to its place first, as the work of his day would — the cup the
+    // armless are given passes through the server's hand, D-152 —, and the next look brings him to the counter. Xiuhtonal of
+    // Tenochtitlan, called to the counter with the meat of a hunt in his hands, kept it all the evening — no evening choice of
+    // a grown one takes a load to the store —, and the guest with no arms was served nothing, L-793)
+    if (G.Vg.plainLoad(k) && !(k._noStore > S_().clock)) { if (!t || t.type !== 'deliver') G.Vg.give(k, { type: 'deliver', pri: 1, kind: 'deliver' }); return; }
     G.Vg.give(k, { type: 'atender', id: b.id, op: op.id, pri: 1.05, st: 0 });
   }
   // where the takings go: the keeper's house (or his purse); a tavern with no keeper, the people's treasury

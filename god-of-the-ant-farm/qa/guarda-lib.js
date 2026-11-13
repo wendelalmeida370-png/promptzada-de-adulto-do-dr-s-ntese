@@ -54,7 +54,11 @@ function guarda(G, o) {
     }
     G.Relief.fixArea(x0 - 2, y0 - 2, x0 + w + 2, y0 + h + 2); S.typeVer = (S.typeVer || 0) + 1; G.W.invalidateLand(); G.W.touchWalk();
   };
-  if (!o.provoca) for (const set of caps) { if (V.reserva(set)) return { set: set.id, r: V.reserva(set), tier: set.tier || 0, provocado: 0 }; const g = ask(set); if (g) return Object.assign(g, { provocado: 0 }); }
+  // (a lot the town already keeps is judged by the game's own day before it is handed on — the day lets go of a lot that no
+  // longer serves: streets laid across it that do not join again, L-776. Argos of the metrópole of the generation 21 kept a
+  // field with 19 tiles of street over it; handed on as it was, the next day of the town let it go, and the proof waited 160 s
+  // for a wonder on a lot no longer kept, T-1101)
+  if (!o.provoca) for (const set of caps) { if (V.reserva(set) && sim(() => V.reservaDia(set)) && V.reserva(set)) return { set: set.id, r: V.reserva(set), tier: set.tier || 0, provocado: 0 }; const g = ask(set); if (g) return Object.assign(g, { provocado: 0 }); }
   // (the biggest step first, as the guard asks; where its ground is not to be had, the next)
   for (const set of caps) for (const st of V.resWork(set).steps.slice().reverse()) {
     const at = room(set, st.n, o.lotes || 1); if (!at) continue;
