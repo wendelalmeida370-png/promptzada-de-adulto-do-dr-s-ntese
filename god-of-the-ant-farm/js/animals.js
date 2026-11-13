@@ -1624,7 +1624,16 @@
       const eco = S.eco || (S.eco = { deaths: {}, born: {} }); eco.born[a.kind] = (eco.born[a.kind] || 0) + 1;
     }
   }
-  A.counts = function () { const c = {}; for (const a of G.S.animals.values()) if (!a.dead && !a.summoned && !a.raid && !a.dom) c[a.kind] = (c[a.kind] || 0) + 1; return c; };
+  // the census of the living wild — and of who is under a cave's roof: the bear asleep in its den, the beast out of the storm are
+  // out of the world's list, not out of the world (L-656). Uncounted, the bears asleep every night were bears gone: the land sent
+  // more from far away, more were born under the cap, and the dens bore cubs over it — eight bears for a cap of three on the
+  // continent of the seed 103, L-763. (One being let out of its cave is in both lists for a moment: counted once)
+  A.counts = function () {
+    const S = G.S; const c = {}; const add = a => { if (!a.dead && !a.summoned && !a.raid && !a.dom) c[a.kind] = (c[a.kind] || 0) + 1; };
+    for (const a of S.animals.values()) add(a);
+    if (G.Caves && G.Caves.all) for (const cv of G.Caves.all()) { for (const a of cv.sleepers || []) if (!S.animals.has(a.id)) add(a); for (const a of cv.sheltered || []) if (!S.animals.has(a.id)) add(a); }
+    return c;
+  };
   // species that vanished from a habitat that still exists come back, slowly, from beyond the map
   function immigrate() {
     const S = G.S; const count = A.counts();
