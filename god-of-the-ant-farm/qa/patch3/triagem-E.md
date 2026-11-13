@@ -62,4 +62,15 @@ fornalha num afazer só e dá a espera (L-772)».
 ## As provas rodadas
 
 Na pasta isolada, com os mundos prontos da geração 20 (a árvore `7dad23b` mais estes commits); «antes» é a `7dad23b` sem o
-conserto do jogo (uma cópia fora do repositório) com as provas novas. Ver o relatório do especialista para a lista.
+conserto do jogo (uma cópia fora do repositório) com as provas novas. Na árvore final:
+
+- `freguesia.js` inteira: 24 de 24 (9 min); `praca.js` inteira na metrópole e na mega: 31 de 31 cada (8,5 min cada);
+  `tempo-livre.js`: 6 de 6; `taverna.js`: ok; `ladrao-bairro.js`: 9 de 9 (com a T-1048); `termas-grandes.js` A a D: ok;
+  `termas-mao.js`: ok; `visual/termas-3d.js`: ok; `visual/termas-corpo.js`: ok; `guard.js`: passa; a vida curta
+  (`soak.js 103 continente 128 4 normal 5 1 1`): 0 violações, nenhum erro.
+- `dia.js` (`ONLY=a,s,b,h`): «a» e «s» «o verificador e os erros depois da mão da prova | limpo» falham — iguais na regressão
+  da `06bea43` (`fund_dia.txt`), antes de tudo isto; não são desta triagem e não as investiguei (a condição falha e a
+  linha diz «limpo»: o `QA.check` da condição e o da linha não dizem o mesmo).
+- A linha de base ganha a linha nova do f3d da `praca` (metrópole e mega): um NOVO esperado.
+- Antes e depois do L-772 (a árvore sem o conserto, com a prova nova): `praca` f3 na metrópole e na mega — antes, f3d falha
+  nos dois mundos (o f3a, com o intervalo das portas, passa); depois, f3a, f3b, f3c e f3d passam nos dois.
