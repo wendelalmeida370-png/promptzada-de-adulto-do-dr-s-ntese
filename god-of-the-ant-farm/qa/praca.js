@@ -27,7 +27,7 @@
 //      da prova: chamado do machado à fornalha antes de abrir; a refeição antes de abrir; a fome que não o tira do posto e a
 //      que tira; o chamado de fora que não o leva (Vg.busy) e o que leva depois do fogo alimentado; a água de casa com outro;
 //      f3d a lenha antes de abrir: o foguista que vai buscá-la ao armazém fica de posto a cada olhada até as portas abrirem —
-//      a caminho, com ela nos braços e entre a lenha e a espera junto da fornalha (L-772);
+//      a caminho do armazém, de volta com ela nos braços e, posta a lenha, à espera junto da fornalha (L-772);
 //   q  o bairro: q1 cada entrada nos banhos conta uma vez em «banho» e nunca em «noite» (nos dias vividos); q2 doze dias
 //      saltados na paz: o bairro dos banhos mais cheios é «de banhos», e nenhum bairro sem taverna, teatro nem arena é
 //      «boêmio»; q3 a conta do dia atravessa um save; q4 o som: a família do banho é a do bairro («banho»);
@@ -360,7 +360,7 @@ function partF3() {
     `${k.name} #${k.id}, foguista de ${set.name}, a ${far.toFixed(1)} casas dos banhos: às ${(h.abre - ld - 0.02).toFixed(3)} de posto ${z.antes ? 'SIM' : 'não'}, em «${z.t0}»; às ${(h.abre - ld + 0.006).toFixed(3)} de posto ${z.duty ? 'sim' : 'NÃO'}, em «${z.t1}»; a comemoração ${z.gave ? 'LEVOU-O' : 'não o leva'} (Vg.busy ${z.busy ? 'sim' : 'NÃO'}); entre dois afazeres da fornalha (o afazer acabado pela mão da prova ${z.op ? 'com as portas abrindo' : 'COM AS PORTAS AINDA FECHADAS'}, às ${z.tGap.toFixed(3)}) o cadafalso ${z.gap === 1 ? 'não o leva' : z.gap === 0 ? 'LEVA-O' : 'NÃO FOI PERGUNTADO (de mãos cheias ou fora do posto)'}, e um segundo depois está em «${z.back || 'nada'}»; com a fome entre 70 e 80 ${z.ate ? 'FOI COMER' : 'não sai para comer'}; a água quente às ${lit < 0 ? '— (NUNCA)' : lit.toFixed(3)} (as portas às ${h.abre}), ${z.len} de lenha; o que fez: ${Object.entries(types).map(([t, n]) => t + ' ' + n + ' s').join(', ')}; com o fogo até fechar: de posto ${z.free ? 'não' : 'AINDA'}, um chamado ${z.busy2 ? 'AINDA NÃO o leva' : 'já o leva'}`);
   // ---- f3d: the wood run before the doors (L-772): the post begun far from the furnace — the walk's lead at its most —, with no
   // wood by it: the stoker fetches it from the store and carries it back, and at every look until the doors open he is at his
-  // post — not off it as he comes nearer faster than Te.WALK, nor between the wood and the wait —: no meal short of starving,
+  // post — not off it as he comes nearer faster than Te.WALK, nor when the wood is put down —: no meal short of starving,
   // no chore of his day, no call from outside (Vg.busy); the fire lit once the wood is by it (the lead of the post is the walk
   // to the furnace, not to the store: with the store far, the doors may open first — Tenochtitlan's, in the metrópole). The
   // baths with the store nearest them first — where the run is short and he would come nearer faster —, and the first whose
@@ -403,7 +403,7 @@ function partF3() {
     wr = r;
   }
   if (!wr) ok('f3d a lenha antes de abrir', false, `em nenhuma cidade o foguista foi à lenha: ${triedW.join(' · ')}`);
-  else ok('f3d a lenha antes de abrir (L-772): o posto começado longe da fornalha, sem lenha junto dela — ele vai buscá-la ao armazém e a traz nos braços; a cada olhada até as portas abrirem, de posto (nem fora dele por chegar mais depressa que o Te.WALK, nem entre a lenha e a espera): nenhuma refeição antes de morrer de fome, nenhum afazer do dia, nenhum chamado de fora; a fornalha acesa quando a lenha chega',
+  else ok('f3d a lenha antes de abrir (L-772): o posto começado longe da fornalha, sem lenha junto dela — ele vai buscá-la ao armazém e a traz nos braços; a cada olhada até as portas abrirem, de posto (nem fora dele por chegar mais depressa que o Te.WALK, nem posta a lenha): nenhuma refeição antes de morrer de fome, nenhum afazer do dia, nenhum chamado de fora; a fornalha acesa quando a lenha chega',
     !wr.off.length && !wr.ate && !Object.keys(wr.away).length && !wr.free && wr.lit >= 0 && wr.len >= 1 && M.limpo(),
     `${wr.k.name} #${wr.k.id}, foguista de ${setOf(wr.b).name} (o armazém a ${storeFar(wr.b).toFixed(0)} casas dos banhos), a ${wr.far.toFixed(1)} casas dos banhos às ${wr.t0.toFixed(3)} (o posto começa ali), com a fome a 40 e a lenha deles no armazém: ${wr.looks} olhadas antes de as portas abrirem (às ${wr.h.abre}) — indo à lenha ${wr.run.lenhaTermas || 0}, com ela nos braços ${wr.run.carga || 0}; fora do posto ${wr.off.length}${wr.off.length ? ' (' + wr.off.slice(0, 4).join(', ') + ')' : ''}; a comer ${wr.ate}; noutro afazer ${JSON.stringify(wr.away)}; um chamado de fora o levaria ${wr.free} vez(es); a água quente às ${wr.lit < 0 ? '— (NUNCA)' : wr.lit.toFixed(3)}, ${wr.len} de lenha${triedW.length ? '; antes: ' + triedW.join(' · ') : ''}`);
   // ---- f3b: the meal before the doors; starving at the post (in the first town whose morning has no gathering: the vote of
