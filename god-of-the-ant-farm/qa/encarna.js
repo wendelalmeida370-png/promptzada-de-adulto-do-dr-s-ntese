@@ -1176,9 +1176,18 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     out.who = v ? v.name : null; if (!v) return out;
     // (where the docker comes from: the door of the warehouse, a stone's throw from the quay — or a point one walks to from there)
     const door0 = G.Vg.door(god(() => P.destOf({ at: dock.id, fac: fid, x: dock.x + 1, y: dock.y + 1, data: {} }))); const dd = G.dist(door0[0], door0[1], sp[0], sp[1]) * TL;
-    let start = dd > 8 && dd < 24 ? door0 : null; for (let r = 4; r <= 5 && !start; r += 0.5) for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2; const x = sp[0] + Math.cos(a) * r, y = sp[1] + Math.sin(a) * r; if (dry(x, y) && W.canWalk(sp[0], sp[1], x, y, false)) { start = [x, y]; break; } } // (a place one walks to from the crates: not beside it)
-    if (!start) return out;
-    out.inn = __E.enter(v); if (!out.inn) return out; G.Avatar.place(start[0], start[1]); __E.f(10);
+    const starts = dd > 8 && dd < 24 ? [door0] : []; for (let r = 4; r <= 5; r += 0.5) for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2; const x = sp[0] + Math.cos(a) * r, y = sp[1] + Math.sin(a) * r; if (dry(x, y) && W.canWalk(sp[0], sp[1], x, y, false)) starts.push([x, y]); } // (a place one walks to from the crates: not beside it)
+    if (!starts.length) return out;
+    // (a docker at home is taken out at his door by the test's hand first, as the e18 does: placing the body moves it, and the body
+    // still in a building goes back into it at the next step — Quinto, at home at 0,15 in the metrópole of the generation 20, was
+    // placed at the warehouse's door and was back by his house, 62 m off the crates, at the next frame: no lead, no mark, «a linha
+    // discreta da descarga … «»», T-1070)
+    out.home = v.inside || 0; if (v.inside) { const hb = S.buildings.get(v.inside); const hd = hb ? G.Vg.door(hb) : [v.x, v.y]; G.Vg.endTask(v); v.inside = 0; v.x = hd[0]; v.y = hd[1]; v.path = null; }
+    out.inn = __E.enter(v); if (!out.inn) return out;
+    // (the first of them the body stands on)
+    let start = null; for (const q of starts) if (G.Avatar.place(q[0], q[1])) { start = q; break; } out.start = start ? (start === door0 ? 'porta' : 'anel') : null; if (!start) return out;
+    const at = () => { const b = __E.body(), st = G.Avatar.state(); return b ? [+G.dist(b.x, b.y, sp[0], sp[1]).toFixed(1), +b.x.toFixed(2), +b.y.toFixed(2), st ? +(st.X / TL).toFixed(2) : null, st ? +(st.Z / TL).toFixed(2) : null, b.inside || 0] : null; };
+    out.pos = { door: [+door0[0].toFixed(2), +door0[1].toFixed(2), +(dd / TL).toFixed(1)], placed: at() }; __E.f(10); out.pos.f10 = at();
     // (with its back to the quay: the mark is an arrow on the edge of the picture, toward it)
     G.Cam3D.yaw = Math.atan2(start[1] - sp[1], start[0] - sp[0]); G.Avatar.state().yaw = G.Cam3D.yaw;
     const op = god(() => { P.landCatch(dock, 'food', 32, 'arenque', '#a8c0d0', 0); return P.opAt(dock); }); out.op = op ? op.id : null; if (!op) return out;
@@ -1189,16 +1198,17 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     out.crates = { world: dock.crates.filter(c => c.op === op.id).length, drawn: dr().length };
     out.call = (hud('.ih-calls') || {}).textContent || ''; out.want = `O cais precisa de braços: há caixas de peixe para levar ${G.Possess.toB(P.destOf(op))}.`;
     out.line = vis(hud('.ih-lead')) ? hud('.ih-lead').textContent : '';
+    out.pos.f40 = at();
     { const b = __E.body(); out.why = { st: op.st, live: A.live(op), workable: G.Possess.workable(op.id), night: G.isNight(), time: +S.time.toFixed(3), tiles: b ? +G.dist(b.x, b.y, sp[0], sp[1]).toFixed(1) : null, panel: G.Modes.panel(), hudOff: G.IncUI.hudOff() }; }
     out.back = G.IncUI.markAt ? Object.assign({}, G.IncUI.markAt) : null; out.backVis = vis(hud('.ih-mark')) && hud('.ih-mark').classList.contains('off');
     window.__e17 = { dock: dock.id, op: op.id, v: v.id, sp, fid }; out.fid = fid;
     return out;
   });
-  ok('e17 a metrópole tem um cais com armazém do porto e um estivador para viver', !!(e17a.dock && e17a.who && e17a.inn && e17a.op), JSON.stringify({ dock: e17a.dock, who: e17a.who, op: e17a.op, way: e17a.way }));
+  ok('e17 a metrópole tem um cais com armazém do porto e um estivador para viver', !!(e17a.dock && e17a.who && e17a.inn && e17a.op), JSON.stringify({ dock: e17a.dock, who: e17a.who, op: e17a.op, way: e17a.way, start: e17a.start, home: e17a.home }));
   if (e17a.op) {
     ok('e17 o barco descarrega: as caixas de verdade no cais, desenhadas uma a uma', e17a.crates.world >= 4 && e17a.crates.drawn === e17a.crates.world, JSON.stringify(e17a.crates));
     ok('e17 o estivador encarnado é chamado ao cais, na tela', e17a.call.includes(e17a.want), `«${e17a.call}»`);
-    ok('e17 a linha discreta da descarga, com a distância', /^Descarga no cais: caixas de peixe esperando · \d+ m$/.test(e17a.line.trim()), `«${e17a.line.trim()}»${e17a.line.trim() ? '' : ' ' + JSON.stringify(e17a.why)}`);
+    ok('e17 a linha discreta da descarga, com a distância', /^Descarga no cais: caixas de peixe esperando · \d+ m$/.test(e17a.line.trim()), `«${e17a.line.trim()}»${e17a.line.trim() ? '' : ' ' + JSON.stringify(e17a.why) + ' ' + JSON.stringify(e17a.pos)}`);
     ok('e17 de costas para o cais, o marcador é uma seta na borda da tela', e17a.backVis && !!e17a.back && e17a.back.off, JSON.stringify(e17a.back));
     // turned toward the quay: the mark over the pile, where the 3D draws the crates
     const e17b = await E(() => {
