@@ -390,15 +390,22 @@ function s7() {
       `de nada para um cais inteiro: em 1 s ${path2[0]}, em 4 s ${path2[1]}, em 30 s ${path2[2]} (a constante: ${A.TAU} s), sem passar do alvo; saindo do bairro, em 4 s cai para ${r3(back.cais)}`);
   }
   if (!sub('s7a') && !sub('s7b')) return;
-  M.pronto('cidade'); const S = G.S; M.viver(1);
-  const set = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+  // (the world of the case: the ready city and its largest town — in another history of it when shift > 0, the world's own
+  // chance drawn shift times —, two days first: the life of the quarter has what the town really did — a ready world of before
+  // the life has none)
+  let S = null, set = null;
   // a day of the town's quarters: what the proof's hand counts (fn), then the world lives, by the game's skip, until the
-  // quarter under the ear has closed one day more — exactly one (the day of the world and the day of a town's quarters do not
-  // turn at the same step: a count of whole days of the world gave days with no close and days with two)
-  const diasOf = () => { const qq = U.at(set.cx, set.cy); return qq ? qq.dias || 0 : -1; };
+  // town has closed one day more — exactly one (the day of the world and the day of a town's quarters do not turn at the same
+  // step: a count of whole days of the world gave days with no close and days with two). The day is counted by the town's
+  // whole, which every close of the town folds: the quarter under the ear can be another one the next day (T-964)
+  const diasOf = () => (set.urb && set.urb.w && set.urb.w.dias) || 0;
   const day = fn => { if (fn) stepIn(fn); const d0 = diasOf(); G.Skip.on = true; G.FX.off = true; G.W.pathGreed = 1.3; try { let n = 0; while (diasOf() === d0 && n++ < 600) G.Main.skipStep(1); } finally { G.Skip.on = false; G.FX.off = false; G.W.pathGreed = G.W.PATH_EXACT; } };
-  // (two days first: the life of the quarter has what the town really did — a ready world of before the life has none)
-  for (let k = 0; k < 2; k++) day();
+  const open = shift => {
+    M.pronto('cidade'); S = G.S; M.viver(1); for (let i = 0; i < shift; i++) G.R();
+    set = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+    for (let k = 0; k < 2; k++) day();
+  };
+  open(0);
   // ---------------- s7b the weight is the habit times the hands of now: a day's hour with hands at a work, and the night ----------------
   if (sub('s7b')) {
     let best = null;
@@ -423,24 +430,43 @@ function s7() {
   }
   // ---------------- s7a the habit follows the life counted, slowly ----------------
   if (sub('s7a')) {
-    // (four days more: the quarter's life is past its first days, when one day is the whole mean)
-    for (let k = 0; k < 4; k++) day();
-    const q = U.at(set.cx, set.cy); if (!q) return ok('s7a o-habito-segue-a-vida', false, 'o centro da cidade não é chão de bairro nenhum');
-    // (a day and a half of a lettered quarter's reading, every day, on the quarter's own ground — whatever its patches are that day)
-    const read = () => { const qq = U.at(set.cx, set.cy); const [x, y] = U.cellXY(qq.cells[0]); U.note(x + 1, y + 1, 'saber', U.mark(qq, 'letrado', false) * qq.cells.length * 1.5); };
-    // (the town grows while the days pass, and its quarters are drawn again: the one under the ear lost a patch of ground to a
-    // new one on the third day — 7 to 6, the Cidade do Templo born —, the mean of its life was another, and the habit went
-    // 0,54 → 0,433 with the reading counted every day. The slow rise is judged between two days the quarter kept its ground —
-    // most of them, or the case says nothing: T-855)
-    const sigOf = () => { const qq = U.at(set.cx, set.cy); return qq ? (qq.whole ? 'w' : 'd' + qq.id) + ':' + qq.cells.slice().sort((x, y) => x - y).join('.') : '-'; };
-    const h0 = A.habito(q).saber; const up = [h0]; const sg = [sigOf()];
-    for (let k = 0; k < 9; k++) { day(read); up.push(A.habito(U.at(set.cx, set.cy)).saber); sg.push(sigOf()); }
-    const q2 = U.at(set.cx, set.cy); const peak = up[up.length - 1]; const down = [peak]; const sd = [sigOf()];
-    for (let k = 0; k < 12; k++) { day(); down.push(A.habito(U.at(set.cx, set.cy)).saber); sd.push(sigOf()); }
-    const same = (g, k) => g[k] === g[k - 1]; const kept = sg.filter((x, k) => k > 0 && same(sg, k)).length, keptD = sd.filter((x, k) => k > 0 && same(sd, k)).length;
-    const rise = kept >= 6 && up.every((x, k) => k === 0 || !same(sg, k) || x >= up[k - 1]) && up.slice(1).every((x, k) => x - up[k] <= 0.36), fall = keptD >= 8 && down.every((x, k) => k === 0 || !same(sd, k) || x <= down[k - 1]) && down.slice(1).every((x, k) => down[k] - x <= 0.21);
-    ok('s7a o-habito-segue-a-vida', h0 === 0 && rise && fall && peak >= 0.99 && up[1] > 0.2 && up[1] < 0.4 && down[2] >= 0.6 * peak && down[down.length - 1] < 0.15,
-      `${set.name} (${q2.whole ? 'o todo' : q2.name}, ${q2.cells.length} chãos, ${q2.dias} dias de vida): uma vez e meia a leitura que faz um bairro letrado, contada todo dia → o hábito ${up.join(' → ')}; sem leitura → ${down.join(' → ')} — ${rise ? 'sobe devagar' : 'SOBE AOS SALTOS'}, ${fall ? 'desce devagar' : 'DESCE AOS SALTOS'} (o bairro guardou os chãos em ${kept} de 9 dias da subida e ${keptD} de 12 da descida)`);
+    // (the town grows while the days pass, and its quarters are drawn again: the slow rise is judged between two days the
+    // quarter kept its ground — most of them, T-855. The quarter is one of the town's quarters that is not its old town — the
+    // old town's patches are the hearth's and the oldest around it, a share of the town's ground by age, and they are drawn
+    // again most days (in a history of the code of the 3rd round of the F, the old town of Mênfis kept its ground in 4 of 9
+    // days: nothing to judge) —, followed by who it is, not by the patch under the ear; and the reading is counted on each of
+    // its patches, as a lettered quarter reads (on one patch, the reading went, the day the quarter was drawn again, to the
+    // quarter that took that patch). A history with the quarter drawn again on the days the case reads, or on most of them, has
+    // nothing to judge: the case starts again in another history of the same world, up to three, and says why; T-964)
+    const caseA = () => {
+      // (four days more: the quarter's life is past its first days, when one day is the whole mean)
+      for (let k = 0; k < 4; k++) day();
+      const ds = U.districtsOf(set).filter(d => d.k !== 'centro').sort((a, b) => b.cells.length - a.cells.length || a.id - b.id);
+      const q = ds[0] || U.wholeOf(set); if (!q || !q.cells.length) return { judged: true, pass: false, info: `${set.name} não tem bairro nem todo com chão` };
+      const now = () => q.whole ? U.wholeOf(set) : U.allDistrictsOf(set).find(d => d.id === q.id);
+      // (a day and a half of a lettered quarter's reading, every day, on each patch of the quarter's own ground that day)
+      const read = () => { const qq = now(); if (!qq) return; const m = U.mark(qq, 'letrado', false) * 1.5; for (const c of qq.cells) { const [x, y] = U.cellXY(c); U.note(x + 1, y + 1, 'saber', m); } };
+      const sigOf = () => { const qq = now(); return qq && qq.cells.length ? qq.cells.slice().sort((x, y) => x - y).join('.') : '-'; };
+      const hab = () => { const qq = now(); return qq ? A.habito(qq).saber : NaN; };
+      const h0 = hab(); const up = [h0]; const sg = [sigOf()];
+      for (let k = 0; k < 9; k++) { day(read); up.push(hab()); sg.push(sigOf()); }
+      const peak = up[up.length - 1]; const down = [peak]; const sd = [sigOf()];
+      for (let k = 0; k < 12; k++) { day(); down.push(hab()); sd.push(sigOf()); }
+      const q2 = now() || q;
+      const same = (g, k) => g[k] !== '-' && g[k] === g[k - 1]; const kept = sg.filter((x, k) => k > 0 && same(sg, k)).length, keptD = sd.filter((x, k) => k > 0 && same(sd, k)).length;
+      // (the days the single numbers are read on — the first of the reading, the first two without it — are days the quarter kept)
+      const judged = kept >= 6 && keptD >= 8 && same(sg, 1) && same(sd, 1) && same(sd, 2);
+      const rise = up.every((x, k) => k === 0 || !same(sg, k) || x >= up[k - 1]) && up.slice(1).every((x, k) => !same(sg, k + 1) || x - up[k] <= 0.36), fall = down.every((x, k) => k === 0 || !same(sd, k) || x <= down[k - 1]) && down.slice(1).every((x, k) => !same(sd, k + 1) || down[k] - x <= 0.21);
+      const pass = judged && h0 === 0 && rise && fall && peak >= 0.99 && up[1] > 0.2 && up[1] < 0.4 && down[2] >= 0.6 * peak && down[down.length - 1] < 0.15;
+      return { judged, pass, kept, keptD, info: `${set.name} (${q2.whole ? 'o todo' : q2.name}, ${q2.cells.length} chãos, ${q2.dias} dias de vida, dia ${S.day}): uma vez e meia a leitura que faz um bairro letrado, contada todo dia → o hábito ${up.join(' → ')}; sem leitura → ${down.join(' → ')} — ${rise ? 'sobe devagar' : 'SOBE AOS SALTOS'}, ${fall ? 'desce devagar' : 'DESCE AOS SALTOS'} (o bairro guardou os chãos em ${kept} de 9 dias da subida e ${keptD} de 12 da descida${judged ? '' : '; redesenhado no primeiro dia de um dos lados ou na maioria deles: nada a julgar nesta história'})` };
+    };
+    const before = []; let r = null;
+    for (let t = 0; t < 3; t++) {
+      if (t) open(7 * t);
+      r = caseA(); if (r.judged) break;
+      before.push(`história ${t + 1}: ${set.name} com o bairro redesenhado (guardou os chãos em ${r.kept} de 9 dias e ${r.keptD} de 12)`);
+    }
+    ok('s7a o-habito-segue-a-vida', r.pass, `${before.length ? `(${before.join(' · ')}) ` : ''}${r.info}`);
   }
 }
 
