@@ -498,10 +498,16 @@
       }
       return treads.every(t => { const r = Math.min(RIM, t.wa / 2); return !off(t.a, t.n) && !off(t.a - r, t.n) && !off(t.a + r, t.n); });
     })();
+    // (and the ground a stride before the foot is the body's, as wide as it is: from there to the lowest tread's edge, as it comes
+    // up to the steps, its middle and the rim it leads with — straight ahead, and r·√½ to either side, aslant ahead: Avatar's
+    // blocked — on ground it stands on by its own rule. A flight up the middle of a lot of two or four tiles runs on the line
+    // between two tiles of the street: the temple#7716 of the generation-20 metropole had a wall's tile beside the stride before
+    // its foot, the temple#19521 a hut's lot — the world said «ground», and the body stopped there, its rim in them: L-753)
+    const comes = !gp || (() => { const n1 = lo.n + lo.wn / 2; for (let n = n1 + 0.5; n > n1 - 1e-6; n -= 0.1) if (off(lo.a, n) || off(lo.a, n - BODY_R) || off(lo.a - RIM, n - RIM) || off(lo.a + RIM, n - RIM)) return false; return true; })();
     const fs = treads.length ? footStep() : 0, ru = riseUp();
     // (lot: the steps of the lot alone, where these ran on into the street — what an elder's may be, L-619 —; tiles: what they
     // are kept by; crossed: the elder whose steps these gave way to, or came down in the way of)
-    const f = { F, uc, P, top, w: wd, treads, cut, room, foot: fs, rise: ru, walks: !treads.length || walks(fs, ru, treads.length), ground, stand: stand && !crossed, lot: lot1, tiles, crossed };
+    const f = { F, uc, P, top, w: wd, treads, cut, room, foot: fs, rise: ru, walks: !treads.length || walks(fs, ru, treads.length), ground: ground && comes, stand: stand && !crossed, lot: lot1, tiles, crossed };
     if (!fresh) { if (flights.size > 2000) flights.clear(); flights.set(key, { k: k0, f, tiles, ts: tiles ? treesOn(tiles) : 0, recs, rs: recs ? recsOn(recs) : 0 });
       if (tiles) { const u = under.get(b.id) || []; for (const i of tiles) if (!u.includes(i)) u.push(i); under.set(b.id, u); }
       if (recs && recs.length) { const u = underR.get(b.id) || []; for (const i of recs) if (!u.includes(i)) u.push(i); underR.set(b.id, u); } }

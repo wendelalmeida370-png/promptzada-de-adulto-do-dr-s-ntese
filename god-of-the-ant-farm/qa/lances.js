@@ -564,6 +564,49 @@ let pocketDoor = null;
 }
 qa('o bolsão');
 
+// ---- 12. the ground a stride before a flight's foot is as wide as the body (L-753): a flight up the middle of a lot of two or
+// four tiles runs on the line between two tiles of the street — the temple#7716 and the temple#19521 of the generation-20
+// metropole, a wall's tile and a hut's lot beside the stride before their foot: the world said «ground», by the stride's middle,
+// and the body coming up to the steps stopped there, its rim in them (soleira 4b) —. A flight whose rim, as the body comes up to
+// it from that stride — straight ahead and r·√½ aslant ahead, Avatar's blocked —, falls on another tile of the street than the
+// stride's own: a wall on that tile by the god's hand, the stride's own tile open: the way in no longer fits — no ground there —;
+// the turn takes the door to a side where it fits; the wall gone, the door stays where it is (D-060). A world with no such
+// flight: the god's hand founds a temple of two tiles, its steps up the middle of its front ----
+{
+  const TL = Sp.TILE, RIM = 0.32 * Math.SQRT1_2, S = G.S;
+  const raisedOf = p => { const l0 = p.levels.filter(l => l.kind !== 'porao' && l.kind !== 'terraco' && l.kind !== 'jirau').sort((a, c) => a.y - c.y)[0] || p.levels[0]; return !!l0 && (l0.kind === 'elevado' || p.shell.base === 'esteios' || p.shell.base === 'macica'); };
+  // (the flights of a building as Space.entryFits takes them: its door's, and the feet of its outside flights)
+  const flightsOf = b => { const c = In.shellOf(b); if (!c) return []; const lot = { w: b.w * TL, d: b.h * TL }, out = []; const e = c.entrance; const h = e && c.holes.find(q => q.door === e.door && q.kind !== 'janela'); const w = h && c.walls[h.wall];
+    if (w) { const l = c.levels.find(q => q.lv === w.lv); out.push(Sp.doorFlight(b, c.shell, lot, w, h, l ? l.y : 0, raisedOf(c), undefined, undefined, true)); }
+    for (const st of (c.stairs || c.steps || [])) { if (st.kind !== 'degraus') continue; const fo = Sp.feet(st); out.push(Sp.doorFlight(b, c.shell, lot, fo.w, fo.h, 0, false, fo.F, fo.uc, true)); }
+    return out.filter(fl => fl && fl.treads.length); };
+  const tileAt = (b, fl, a, n) => { const p = fl.P(a, n); const x = b.x + p[0] / TL, z = b.y + p[1] / TL; return W.inb(x, z) ? W.idx(x, z) : -1; };
+  // (the tile of the street the rim comes into, open — walked, no wall, no building —, other than the stride's own; and the stride's.
+  // iso: never a tile under a tread, nor under the body's rim on one — the treads' own word, Space.doorFlight's stand (L-207),
+  // says no there already: the wall beside the stride alone, as the temple#7716's —; a world with none, any)
+  const besideOf = (b, fl, iso) => { const lo = fl.treads.reduce((q, t) => (t.y < q.y ? t : q)); const n1 = lo.n + lo.wn / 2, j0 = tileAt(b, fl, lo.a, n1 + 0.5); if (j0 < 0 || S.occ[j0] || !W.walkable(j0)) return null;
+    const under = new Set(); if (iso) for (const t of fl.treads) for (let a = t.a - t.wa / 2 - RIM; a < t.a + t.wa / 2 + RIM + 0.05; a += 0.1) for (let n = t.n - t.wn / 2 - RIM; n < t.n + t.wn / 2 + RIM + 0.05; n += 0.1) under.add(tileAt(b, fl, a, n));
+    for (let n = n1 + 0.5; n > n1 - 1e-6; n -= 0.1) for (const a of [lo.a - RIM, lo.a + RIM]) { const j = tileAt(b, fl, a, n - RIM); if (j >= 0 && j !== j0 && !under.has(j) && !S.occ[j] && !S.wall[j] && W.walkable(j)) return { j, j0, iso }; }
+    return null; };
+  const pick = () => { for (const iso of [true, false]) for (const c of ready().sort((p, q) => p.id - q.id)) { if (!c.blocks || !entry(c).ok) continue; for (const fl of flightsOf(c)) { const q = besideOf(c, fl, iso); if (!q) continue;
+      ground([], [q.j]); if (SIDES.some(s => s !== c.ip.s && (In.entryOn(c, s) || {}).ok)) return Object.assign({ c }, q); unwall([q.j]); } } return null; };
+  let P12 = pick(), made = '';
+  if (!P12) { const lot = freeLots(2, 1)[0]; const set = lot && G.S.settlements.get(lot.set);
+    const t = set && sim(() => G.Village.handFound(set, 'temple', 2, { x: lot.x + 1, y: lot.y + 1, R: 0, built: true }));
+    if (t) { made = ` (a mão do deus fundou o templo#${t.id} em ${t.x},${t.y}: nenhum lance deste mundo com a borda noutra casa aberta)`; In.uncache(); P12 = pick(); } }
+  if (!P12) ok('o chão a um passo do pé tem a largura do corpo', false, `nenhum lance com a borda do corpo noutra casa aberta da rua, e outro lado aberto${made}`);
+  else {
+    const { c, j, j0, iso } = P12; const r0 = recOf(c), e1 = entry(c);
+    ok('o chão a um passo do pé tem a largura do corpo', W.walkable(j0) && !S.wall[j0] && !e1.ok && e1.ground === false,
+      `${c.type}#${c.id} (${c.ip.f}, o lado ${r0.s}): um muro na casa ao lado do passo antes do pé (${j % G.N},${Math.floor(j / G.N)}${iso ? ', longe dos degraus' : ', também sob a borda de um degrau'}), a casa do passo aberta (${j0 % G.N},${Math.floor(j0 / G.N)}) — a entrada ${e1.ok ? 'AINDA CABE: o chão pelo meio do passo, a borda do corpo no muro' : `não cabe, chão ${e1.ground ? 'SIM: o chão pelo meio do passo, a borda do corpo no muro' : 'não'}`}${made}`);
+    turn(); const e2 = entry(c);
+    ok('a virada leva a porta aonde o corpo chega', !sameRec(recOf(c), r0) && e2.ok, `o lado ${r0.s}/${r0.o} → ${c.ip.s}/${c.ip.o}; a entrada ${e2.kind}, ${e2.ok ? 'cabe' : 'NÃO CABE'}`);
+    const r1 = recOf(c); unwall([j]); turn();
+    ok('sem o muro, a porta fica (D-060)', sameRec(recOf(c), r1) && entry(c).ok, `o lado ${c.ip.s}/${c.ip.o}`);
+  }
+}
+qa('o chão a um passo do pé');
+
 // ---- 10. save and load: the same sides and the same doors, and the next turn changes nothing ----
 {
   const snap = () => { const m = new Map(); for (const b of ready()) m.set(b.id, JSON.stringify([b.ip.s, b.ip.o, b.ip.r, b.blocks ? sim(() => G.Vg.door(b)) : null])); return m; };

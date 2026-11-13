@@ -161,11 +161,16 @@ function HELP(G) {
   // wonder looks for them, the first where the hand finds the lot; with none, the place opened by the game's doors): in the
   // metrópole of the generation 15 the hand found no lot of 8 by Roma, Mênfis nor Birka — T-515 —; never throwing down what the
   // proofs founded before it: the Egyptian's place opened by Mênfis was the Greek's temple of a moment before)
+  // (and its ground levelled by the god's hand where it rises more than 3 m under the lot and its ring — as the Colosseum's, only in
+  // the proof, T-431 —, before anything of it is read: the hand finds its lot on any ground, and the Greek's of 8, in the Argos of
+  // the metropole of the generation 20, stood on 18 m of fall, its way in fitting on no side, the street before its front 13 m
+  // under its platform: the body never went up its flight, T-1023)
   H.temple = function (civ, stepId, R) {
     const hf = handFor(G, civ, 'temple', stepId, R || 60, founded); const town = hf.set ? hf.set.name : '-';
     if (!hf.set) return { town, why: `nenhuma cidade do povo ${civ} neste mundo` };
     if (!hf.b) return { town, why: `a mão do deus não fundou o templo ${stepId} em cidade nenhuma do povo ${civ} (a primeira: ${town})` };
-    founded.add(hf.b.id); return Object.assign({ b: hf.b, set: hf.set, town, gone: hf.gone }, H.palaceOf(hf.b));
+    founded.add(hf.b.id); const b = hf.b, drop0 = H.drop(b.x, b.y, b.w), h0 = drop0 > 3 ? H.aplainar(b.x, b.y, b.w) : null;
+    return Object.assign({ b, set: hf.set, town, gone: hf.gone, drop0: +drop0.toFixed(1), h0 }, H.palaceOf(b));
   };
   H.palaceOf = function (b) {
     const T = G.Space.TILE, B3 = G.Build3D; const p = G.Space.planNow(b); const F = B3.formOf(b); const Rk = G.Interiors.riskOf(F);
@@ -378,7 +383,17 @@ function nodePart() {
     const look = (pitch, dist) => { eye(yawIn, pitch, dist); const t = ndc(...topFront()), h = ndc(st().X, st().Y + 1.7, st().Z); return { pitch, dist, cur: +G.Cam3D.cur.toFixed(2), top: +t.y.toFixed(2), head: +h.y.toFixed(2), alt: +(cam.position.y - st().Y).toFixed(2) }; };
     const L0 = look(0.26, 4.8), L1 = look(-1.05, 4.8), L2 = look(-1.05, 11);
     const inFrame = q => q.top <= 1 && q.head >= -1 && q.head <= 1;
-    ok2('3. de fora, olhando para cima: o topo da fachada e a cabeça no quadro, a câmera longe do corpo', took.ok && inFrame(L1) && inFrame(L2) && L1.cur >= 0.85 * 4.8 && L2.cur >= 4.4, `o corpo a ${(Math.hypot(c[0] - st().X, c[1] - st().Z) - face).toFixed(1)} m da fachada de ${nm.H.toFixed(0)} m; olhar normal: o topo em ${L0.top} (fora do quadro além de 1), cur ${L0.cur} m; para cima a 4,8 m: o topo em ${L1.top}, a cabeça em ${L1.head}, cur ${L1.cur} m, a câmera a ${L1.alt} m do chão; para cima a 11 m: o topo em ${L2.top}, a cabeça em ${L2.head}, cur ${L2.cur} m`);
+    ok2('3. de fora, olhando para cima: o topo da fachada e a cabeça no quadro, a câmera longe do corpo', took.ok && inFrame(L1) && inFrame(L2) && L1.cur >= 0.85 * 4.8 && L2.cur >= 4.4, `o corpo a ${(Math.hypot(c[0] - st().X, c[1] - st().Z) - face).toFixed(1)} m da fachada de ${nm.H.toFixed(0)} m; olhar normal: o topo em ${L0.top} (fora do quadro além de 1), cur ${L0.cur} m; para cima a 4,8 m: o topo em ${L1.top}, a cabeça em ${L1.head}, cur ${L1.cur} m, a câmera a ${L1.alt} m do chão; para cima a 11 m: o topo em ${L2.top}, a cabeça em ${L2.head}, cur ${L2.cur} m, a câmera a ${L2.alt} m do chão`);
+    // (3b. and with something behind the body before the orbit's end — a wall of three tiles across the way, 6 m behind it, by the
+    // god's hand —, looking up at 11 m: the eye held short of it comes down to a hand over the feet at the distance it has, and the
+    // top and the head are in the picture; a market 6 m behind the body before the colossal of the «cidade» of the generation 20 held
+    // it up the orbit of the 11 m asked, 0.95 m over the feet, the top out of the picture — L-755)
+    { const back = [st().X + o[0] * 6, st().Z + o[1] * 6], side = [-o[1], o[0]], put = []; G.inSim++;
+      for (const k of [-1, 0, 1]) { const x = (back[0] + side[0] * k * TL) / TL, y = (back[1] + side[1] * k * TL) / TL; if (!G.W.inb(x, y)) continue; const i = G.W.idx(x, y); if (S.occ[i] || S.wall[i] || !G.W.walkable(i)) continue; put.push([i, S.wall[i]]); S.wall[i] = 1; }
+      G.W.touchWalk(); G.inSim--;
+      const L3 = look(-1.05, 11); G.inSim++; for (const [i, w0] of put) S.wall[i] = w0; G.W.touchWalk(); G.inSim--;
+      ok2('3b. com um muro atrás do corpo (a 6 m, pela mão do deus), olhando para cima a 11 m: a câmera segura antes dele desce a um palmo dos pés, o topo da fachada e a cabeça no quadro (L-755)', took.ok && put.length > 0 && L3.cur < 10 && L3.alt <= 0.6 && inFrame(L3),
+        `${put.length} casas de muro a 6 m atrás do corpo; para cima a 11 m: cur ${L3.cur} m, a câmera a ${L3.alt} m do chão, o topo em ${L3.top}, a cabeça em ${L3.head}`); }
     G.Cam3D.OPT.follow = true; G.Cam3D.pitch = 0.26; G.Cam3D.dist = 4.8;
     // ---------------- 4. the camera inside, alone (a body's point given to it, as the 3D gives it the body's: the eye is the proof
     // here, not the walk) — in the arena's middle four ways and further, at its edge with the rows behind, on the podium; never in
@@ -571,7 +586,7 @@ function nodePart() {
       rows.push(Object.assign(t, { g2, P2: g2.near.solid.attributes.position.array, AP: g2.near.solid.attributes.aP.array, topN: g2.near.solid.boundingBox.max.y - t.base, topF: g2.far.boundingBox.max.y - t.base,
         massTop: Math.max(...G.Forma.mass(t.F).map(m => Math.max(...[m.y1, m.a && m.a[2], m.b && m.b[2], ...(m.p || []).map(q => q[2])].filter(Number.isFinite)))), cost2: B3.cost(t.b), fw: t.p.walls.filter(w => B3.formWall(t.b, t.p, w)).length }));
     }
-    console.log(`(os templos de 8 casas: ${rows.map(t => `${t.civ} #${t.b.id} em ${t.town} (${t.b.x},${t.b.y}), a família ${t.b.ip && t.b.ip.f}, o alto da forma ${t.F.top.toFixed(1)} m`).join('; ')})`);
+    console.log(`(os templos de 8 casas: ${rows.map(t => `${t.civ} #${t.b.id} em ${t.town} (${t.b.x},${t.b.y}), a família ${t.b.ip && t.b.ip.f}, o alto da forma ${t.F.top.toFixed(1)} m${t.h0 !== null ? `, o chão de ${t.drop0} m de desnível aplainado pela mão do deus` : ''}`).join('; ')})`);
     // Tp1. drawn by its form: near — the form's pieces round the cella's walls —, its top the form's; far — the form's masses
     ok('Tp1. os templos de 8 casas pela forma: perto e longe, do alto da forma', rows.length === 4 && rows.every(t => B3.byForm(t.b) && !!B3.riskForm(t.b) && t.cost2.solid <= 60000 && Math.abs(t.topN - t.F.top) <= 0.3 && Math.abs(t.topF - t.massTop) <= 0.5 && t.fw > 0),
       rows.map(t => `${t.civ}: pela forma ${B3.byForm(t.b)}, perto ${t.cost2.solid} triângulos, o alto ${t.topN.toFixed(2)} m (a forma ${t.F.top.toFixed(2)}), de longe ${t.topF.toFixed(1)} m (as massas ${t.massTop.toFixed(1)}); ${t.fw} paredes da planta que são da forma`).join(' · '));
@@ -633,7 +648,9 @@ function nodePart() {
     const homeIds = new Set([...S.villagers.values()].map(q => q.home).filter(Boolean));
     const homes = [...homeIds].map(id => S.buildings.get(id)).filter(h => tableOf(h)).sort((a2, b2) => a2.id - b2.id); const cands = [];
     for (const h of homes) { const w = [...S.villagers.values()].filter(q => q.home === h.id && q.age >= 18 && q.age < 60 && G.Possess.can(q).ok).sort((a2, b2) => a2.id - b2.id)[0]; if (w && cands.length < 6) cands.push(w); }
-    let M0 = null, tried = 0;
+    // (and in each other house with a table the body reaches, standing at its place and turned to it: «Sentar à mesa» — the
+    // bench-bed beside the table of the Norse house won it, and the fire under the feet at another's: L-754)
+    let M0 = null, tried = 0; const others = [];
     for (const w of cands) {
       const h = S.buildings.get(w.home), hp = tableOf(h); const hx = h.x * TL, hz = h.y * TL; const e = hp.entrance; tried++;
       G.inSim++; G.Vg.endTask(w); w.x = (hx + e.out[0]) / TL; w.y = (hz + e.out[1]) / TL; w.path = null; S.time = 0.42; In.useDoor(h, e.door, 'abrir', w); G.inSim--;
@@ -645,17 +662,19 @@ function nodePart() {
         if (Math.hypot(st().X - hx - sf[0], st().Z - hz - sf[1]) < 0.6) {
           const look = () => { const ya = Math.atan2(hz + pl.z - st().Z, hx + pl.x - st().X); IN.camYaw = ya; st().yaw = ya; frame(); return G.Interact.best(); };
           // (not hungry, the pantry as it is: at the table it sits)
-          G.inSim++; w.hunger = 5; G.inSim--; const b0 = look(); let seated = false;
-          if (b0 && b0.id === 'lugar') { G.Interact.run(b0); for (let k = 0; k < 150 && !(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); k++) frame(); seated = !!(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); }
-          // (seated: the meal of the house — without hunger, said why; with hunger, offered)
-          const b1 = G.Interact.best(); G.inSim++; w.hunger = 60; G.inSim--; const b2 = G.Interact.best();
-          const tx = b => (b ? `${b.id} «${b.label}»${b.ok ? '' : ' (' + b.why + ')'}` : 'nada');
-          M0 = { who: w.name, house: h.type + '#' + h.id, b0: tx(b0), seated, b1: tx(b1), b2: tx(b2), ok: !!b0 && b0.id === 'lugar' && b0.ok && seated && !!b2 && b2.id === 'atividade' && /comer|cear/i.test(b2.label) };
+          G.inSim++; w.hunger = 5; G.inSim--; const b0 = look(); const tx = b => (b ? `${b.id} «${b.label}»${b.ok ? '' : ' (' + b.why + ')'}` : 'nada');
+          if (M0) others.push({ who: w.name, house: h.type + '#' + h.id, b0: tx(b0), ok: !!b0 && b0.id === 'lugar' && b0.ok });
+          else { let seated = false;
+            if (b0 && b0.id === 'lugar') { G.Interact.run(b0); for (let k = 0; k < 150 && !(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); k++) frame(); seated = !!(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); }
+            // (seated: the meal of the house — without hunger, said why; with hunger, offered)
+            const b1 = G.Interact.best(); G.inSim++; w.hunger = 60; G.inSim--; const b2 = G.Interact.best();
+            M0 = { who: w.name, house: h.type + '#' + h.id, b0: tx(b0), seated, b1: tx(b1), b2: tx(b2), ok: !!b0 && b0.id === 'lugar' && b0.ok && seated && !!b2 && b2.id === 'atividade' && /comer|cear/i.test(b2.label) }; }
         }
       }
-      G.Possess.release('deus'); G.Avatar.detach(); for (let k = 0; k < 90; k++) frame(); if (M0) break; // (the world takes the person back in its step, as in the game)
+      G.Possess.release('deus'); G.Avatar.detach(); for (let k = 0; k < 90; k++) frame(); // (the world takes the person back in its step, as in the game)
     }
-    ok('M. o corpo à própria mesa (D-104): sem fome, senta; sentado, a refeição da casa', !!M0 && M0.ok, M0 ? `${M0.who} em casa (${M0.house}): de pé, sem fome — ${M0.b0}; sentado: ${M0.seated}; sentado, sem fome — ${M0.b1}; com fome — ${M0.b2}` : `nenhuma das ${tried} casas com mesa (de ${homes.length} no mundo) deixou o corpo chegar à mesa`); }
+    ok('M. o corpo à própria mesa (D-104): sem fome, senta; sentado, a refeição da casa — e em toda casa com mesa a que chega, de pé diante do lugar, «Sentar à mesa» (L-754)', !!M0 && M0.ok && others.every(o => o.ok),
+      M0 ? `${M0.who} em casa (${M0.house}): de pé, sem fome — ${M0.b0}; sentado: ${M0.seated}; sentado, sem fome — ${M0.b1}; com fome — ${M0.b2}${others.length ? `; nas outras casas, de pé diante do lugar: ${others.map(o => `${o.who} (${o.house}) ${o.b0}`).join(' · ')}` : ''}` : `nenhuma das ${tried} casas com mesa (de ${homes.length} no mundo) deixou o corpo chegar à mesa`); }
   // ---------------- 6. the verifier ----------------
   const vb = QA.check().filter(q => q.sev <= 2 && !bad0.has(q.sys + '|' + q.msg)); const er = M.erros();
   ok('6. o verificador limpo, sem erro de módulo', !vb.length && !Object.keys(er.mod).length && !er.console.length, `${vb.length ? vb.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo'}; módulos ${JSON.stringify(er.mod)}; console ${er.console.slice(0, 2).join(' | ') || 'limpo'}`);

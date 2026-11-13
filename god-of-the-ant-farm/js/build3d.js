@@ -1688,11 +1688,12 @@ float m3scale(float p) {
           K.bar([A[0], A[1] - 0.12, A[2]], [B[0], B[1] - 0.12, B[2]], [0, 0.42, 0], [X.across[0] * e.alfarda, 0, X.across[1] * e.alfarda], ac); } }); }
       // (the painted line down its middle: on each step's riser and tread, a hair over them — the feet walk on it. One slab from
       // the foot to the top lay along the risers' feet, inside the steps, and only its edge showed at each riser: a row of
-      // dashes where the god paints a line, L-801)
+      // dashes where the god paints a line, L-801). The tread's from the riser back: from the hair before it the line stood out
+      // over the step below, a riser over its tread — the Templo Mayor's, 25 cm over the feet at 5 mm from a riser, L-752
       if (e.divisor) { const d = e.divisor, ua = u + d.u - d.w / 2, ub = u + d.u + d.w / 2, dc = X.col(d.cor), fo = [X.front[0], 0, X.front[1]], h = 0.006;
         K.as('stucco', () => { for (let k = 0; k < n; k++) { const yA = e.a[2] + rise * k / n, yT = e.a[2] + rise * (k + 1) / n, vF = e.a[1] - run * k / n, vN = k === n - 1 ? e.b[1] : e.a[1] - run * (k + 1) / n;
           K.quad(X.pt(ua, vF + h, yA), X.pt(ub, vF + h, yA), X.pt(ub, vF + h, yT + h), X.pt(ua, vF + h, yT + h), dc, fo);
-          K.quad(X.pt(ua, vF + h, yT + h), X.pt(ub, vF + h, yT + h), X.pt(ub, vN, yT + h), X.pt(ua, vN, yT + h), dc, UP); } }); }
+          K.quad(X.pt(ua, vF, yT + h), X.pt(ub, vF, yT + h), X.pt(ub, vN, yT + h), X.pt(ua, vN, yT + h), dc, UP); } }); }
     },
     // the drum of arcades: one flat bay a segment round, each tier's arch in it — its piers, the sill under the arch (not on
     // the ground tier: its arches are the ways in), the wall over it, the corners round its round head, the reveals through
@@ -3344,8 +3345,10 @@ float m3scale(float p) {
       if (K.fine) K.as('beam', () => { for (let k = 0; k < 8; k++) { const a = TAU * k / 8; K.log(on(a, yk - 0.06), [sh.cx, yr - 0.08, sh.cz], 0.04, IDARK); } });
       return;
     }
-    // (under the roof: the widest of the storeys under it — the upper storeys' walls are thinner than the ground's)
-    const I = [9, 9, -9, -9]; for (const l of plan.levels) { if (l.kind === 'porao') continue; I[0] = Math.min(I[0], l.area[0]); I[1] = Math.min(I[1], l.area[1]); I[2] = Math.max(I[2], l.area[2]); I[3] = Math.max(I[3], l.area[3]); }
+    // (under the roof: the widest of the storeys under it — the upper storeys' walls are thinner than the ground's; from no
+    // box at all: one from 9 m held the slopes of Valhalla's hall, 13.6 m into its lot of 40, at 9 m — out through its wall,
+    // too shallow, over the form's roof of shields: L-751)
+    const I = [Infinity, Infinity, -Infinity, -Infinity]; for (const l of plan.levels) { if (l.kind === 'porao') continue; I[0] = Math.min(I[0], l.area[0]); I[1] = Math.min(I[1], l.area[1]); I[2] = Math.max(I[2], l.area[2]); I[3] = Math.max(I[3], l.area[3]); }
     // (a court: the sky over it, the roof all round it — the court's walls taken up to the roof's underside)
     const court = sh.court || R.court || null; const covered = court && courtCovered(plan, court);
     // (a palace by its risk: the ceiling flat at the eaves — the form's cornices and roofs stand over the walls' tops)
@@ -4057,7 +4060,10 @@ float m3scale(float p) {
     if (FB) { const kb = K.body, fw = FB.body.walls, fr = fw.r; const face = { frente: fr[3], fundo: fr[1], direita: fr[2], esquerda: fr[0] };
       // (a block from the walls' top up to the roof over them — the entablature —: its top only out of the walls, under the roof)
       const T = G.Forma.body(FB).telhado; const lid = q => q.k === 'bloco' && q.y0 >= fw.y1 - 0.01 && q.y1 <= T.y0 + 0.01 && q.r[0] <= fr[0] + 0.01 && q.r[1] <= fr[1] + 0.01 && q.r[2] >= fr[2] - 0.01 && q.r[3] >= fr[3] - 0.01;
-      top = Math.max(top, formInto(g, gw, K, FB, side, q => q === fw || q.k === 'porta' || (q.k === 'janelas' && face[q.na] !== undefined && Math.abs(q.em - face[q.na]) <= 0.3) || (lid(q) ? Object.assign({}, q, { topCut: fr }) : false), true) || 0); K.body = kb; }
+      // (a temple by its risk with a body — the Aztec's pyramid, its forecourt on the top —: its pavings a finger over the
+      // platform, as the risk's own (riskSkip) — the plan's floor is where the feet are; they stood 5 cm in the paving, L-750)
+      const pave = templeOf(FB);
+      top = Math.max(top, formInto(g, gw, K, FB, side, q => q === fw || q.k === 'porta' || (q.k === 'janelas' && face[q.na] !== undefined && Math.abs(q.em - face[q.na]) <= 0.3) || (lid(q) ? Object.assign({}, q, { topCut: fr }) : false) || (pave && q.piso ? Object.assign({}, q, { y1: q.y0 + 0.004 }) : false), true) || 0); K.body = kb; }
     return top;
   }
   // the yard before a shell's roofed part (B2d: the pottery's, the tavern's): its floor of beaten earth on the plinth's top —

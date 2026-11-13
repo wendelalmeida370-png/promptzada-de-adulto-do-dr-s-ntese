@@ -398,10 +398,12 @@ function b8() {
   M.pronto('metropole'); V = G.Village; S = G.S;
   const sum = o => Object.values(o || {}).reduce((a, x) => a + (x || 0), 0); const occ = b => { for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) if (S.occ[y * G.N + x] !== b.id) return false; return true; };
   const libOf = s => [...S.buildings.values()].find(b => b.set === s.id && b.type === T);
-  const heads = townsOf().filter(s => { let best = null, bn = -1; for (const o of G.Fac.settlementsOf(s.fac)) { const n = V.pop(o.id); if (n > bn) { bn = n; best = o; } } return best === s; }); // (the developer's door brings the families to the biggest town of a people)
+  const headsOf = () => townsOf().filter(s => { let best = null, bn = -1; for (const o of G.Fac.settlementsOf(s.fac)) { const n = V.pop(o.id); if (n > bn) { bn = n; best = o; } } return best === s; }); // (the developer's door brings the families to the biggest town of a people)
   const arrive = set => { G.Dev.fa = set.fac; let g = 0; while (V.pop(set.id) < st.req.pop && g++ < 60) G.Dev.act.fam(2); return V.pop(set.id); };
-  const bare = heads.find(s => !libOf(s) && (s.tier || 0) >= 2), withOld = heads.find(s => { const b = libOf(s); return b && b.built && b.w === 2 && (s.tier || 0) >= 2; });
-  if (!bare || !withOld) { ok('b8b as cidades da prova', false, `sem biblioteca: ${bare ? bare.name : 'nenhuma'}; com a clássica: ${withOld ? withOld.name : 'nenhuma'}`); return; }
+  // (the town that comes to justify it: no library, below the step's people — the metropolis of the generation 20's biggest with
+  // none, Tenochtitlan, has 122 already, T-1021)
+  const bare = headsOf().find(s => !libOf(s) && (s.tier || 0) >= 2 && V.pop(s.id) < st.req.pop);
+  if (!bare) { ok('b8b as cidades da prova', false, `nenhuma cidade sem biblioteca abaixo de ${st.req.pop} pessoas`); return; }
   const p0 = V.pop(bare.id), c0 = chooses(bare); const p1 = arrive(bare); const f = G.Fac.get(bare.fac);
   const before = c0 === `${T}/2`, after = Es.choose(bare, T)[0].id === 'grande' && Es.choose(bare, T).length === 2;
   // (the town that cannot pay: no stone in store and no income of stone — V.affords says no, and the step is not the one it raises)
@@ -417,28 +419,61 @@ function b8() {
     ok('b8d pronta: a planta da forma no chão que a cidade achou, a entrada na rua, os lugares do degrau; emprega três copistas', !!p && p.ok && made.ip.ok !== false && n('ler') >= LIB.ler && n('escrever') >= LIB.escribas && E.jobsOf(made).n === 3, `${p && p.ok ? 'planta ok' : 'planta NÃO: ' + (p ? p.errs[0] : '-')}, lado ${made.ip.s}; ${n('ler')} lugares de ler, ${n('escrever')} mesas de escriba; emprega ${E.jobsOf(made).n}`); }
   // ---- the planner enlarges in place the classic library the town had (V.grow: the other types held at their classic step by
   // the proof, so the library's turn is the one judged)
+  // (the town with the classic library: one of 2 tiles with room to grow in place — V.growLot: where it has none, V.grow raises the
+  // step anew elsewhere, D-175 —, done, or at work and finished by the proof's hand, as the world finishes it with time; looked for
+  // in the ready worlds, the metropolis first — the mold of qa/escala.js, T-996 —: in the generation 20 the metropolis's two, Mênfis's
+  // and Roma's, at work, and the mega's, done, have no room round them; the «cidade»'s Roma's, at work, has, T-1021)
+  const classic = (s, done) => { const b = libOf(s); return !!b && b.w === 2 && (b.built || !done) && (s.tier || 0) >= 2 && !!sim(() => V.growLot(s, b, st)); };
+  let withOld = null, wOld = 'metropole';
+  for (const w of ['metropole', 'mega', 'cidade', 'mundial']) { if (w !== 'metropole') { M.pronto(w); V = G.Village; S = G.S; wOld = w; }
+    const hs = headsOf(); withOld = hs.find(s => classic(s, true)) || hs.find(s => classic(s, false)); if (withOld) break; }
+  if (!withOld) { ok('b8e o planejador amplia no lugar a biblioteca que a cidade já tinha (V.grow)', false, 'nenhuma cidade dos mundos prontos com a biblioteca clássica e lugar para crescer no lugar'); return; }
+  const finished = !libOf(withOld).built; if (finished) sim(() => V.completeBuilding(libOf(withOld)));
   const q0 = V.pop(withOld.id); const g0 = sim(() => V.grow(withOld, G.Fac.get(withOld.fac), V.counts(withOld.id))); const q1 = arrive(withOld); const b = libOf(withOld);
   const ch0 = Es.choose; Es.choose = (s, t, c) => (t === T ? ch0(s, t, c) : [Es.classic(t)]); let r = null; const old = { id: b.id, x: b.x, y: b.y, name: V.buildName(b) }, facts0 = b.ip.h.length;
   try { withOld._noSite = {}; G.Fac.get(withOld.fac).pedra = [S.day, 0, 100]; sim(() => { for (const o of [...S.buildings.values()]) if (o.set === withOld.id && !o.built && o.type !== 'ruin' && G.BDEF[o.type].civic) V.completeBuilding(o); });
     G.Depot.make('f:' + withOld.fac, 'stone', 200, { code: 'teste' }); r = sim(() => V.grow(withOld, G.Fac.get(withOld.fac), V.counts(withOld.id))); } finally { Es.choose = ch0; }
   if (!ok('b8e o planejador amplia no lugar a biblioteca que a cidade já tinha (V.grow): o mesmo prédio, maior, em obra — e antes de justificar o degrau não a ampliava', (!g0 || g0.id !== old.id) && q0 < st.req.pop && q1 >= st.req.pop && !!r && r.id === old.id && r.w === N && r.esc === 'grande' && !r.built && !!r.amp && r.amp.de === 2 && r.ip.n === N && V.buildName(r) === old.name && r.x <= old.x && r.y <= old.y && r.x + N >= old.x + 2 && r.y + N >= old.y + 2 && occ(r),
-    r ? `${withOld.name} (${q0} → ${q1} pessoas): #${r.id} «${V.buildName(r)}» de ${r.amp ? r.amp.de : '?'} para ${r.w} casas (${r.esc}), o lote de antes dentro do novo; o registro da planta de ${r.ip.n} casas, a família ${r.ip.f}` : `não ampliou (${withOld.name}, ${q0} → ${q1} pessoas)`)) return;
+    (r ? `${withOld.name}${wOld !== 'metropole' ? ` (mundo ${wOld})` : ''} (${q0} → ${q1} pessoas): #${r.id} «${V.buildName(r)}» de ${r.amp ? r.amp.de : '?'} para ${r.w} casas (${r.esc}), o lote de antes dentro do novo; o registro da planta de ${r.ip.n} casas, a família ${r.ip.f}` : `não ampliou (${withOld.name}, ${q0} → ${q1} pessoas)`) + (finished ? ' (a clássica, em obra no mundo pronto, acabada pela mão da prova)' : ''))) return;
   const id = r.id; M.salvarCarregar(); S = G.S; V = G.Village; const r1 = S.buildings.get(id); sim(() => V.completeBuilding(r1)); const p = Sp.planNow(r1); const q = qaS();
   ok('b8f a ampliação salva no meio e acabada: a grande biblioteca pronta, a planta da forma, o verificador limpo', !!r1 && r1.built && r1.w === N && r1.ip.f === FAM && !!p && p.ok && r1.ip.h.length > facts0 && !q.length && M.limpo(), `${r1 ? `${r1.w} casas, ${r1.built ? 'pronta' : 'em obra'}, ${r1.ip.f}` : 'sumiu'}; ${p && p.ok ? 'planta ok' : 'planta NÃO'}; a história do prédio com ${r1 ? r1.ip.h.length : 0} fatos (antes ${facts0}); o verificador ${q.length ? said(q) : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 
 // ---------------------------------------------------------------- b9: a save of before
+// (a: the save of before — the world of reference of the monumental's 8, qa/visual/ref8/metropole-75a40e2.js: the metropolis the
+// leap of the 75a40e2 saved, before the grand library (92ce2e0), never made again nor edited by hand, opened by the game's door.
+// The ready worlds are saves of before no more: those of the generation 20 have Hedeby's grand library, the mega's #20216,
+// raised by its town — T-1022. b: the ready worlds of today, each library as its step: the classic as it was, the grand the
+// grand step's)
+const REF = 'qa/visual/ref8/metropole-75a40e2.js';
+function refSave() { const data = {}; const got = G.Ready.got; G.Ready.got = (k, s) => { data[k] = s; }; try { M.run(REF); } finally { G.Ready.got = got; }
+  if (!data.metropole) throw new Error('o save de antes não abriu: ' + REF); return M.abrir(JSON.parse(data.metropole)); }
+// (the libraries of the world open as each one's step says — the classic: 2 tiles, the plan of the form's hall with no stacks, one
+// copyist, the day of 8 and 6; the grand: 4 tiles, its plan with the stacks, three copyists, the day of 16 and 12 —; no town
+// below the step's people choosing it; the checker clean. → the libraries of each step)
+function libsAsTheirStep(w, out) {
+  const S = G.S; const libs = [...S.buildings.values()].filter(b => b.type === T); const n = { 2: 0, 4: 0 };
+  for (const b of libs) { const big = b.esc === 'grande', k = big ? 2 : 1; n[big ? 4 : 2]++; const p = b.built ? In.plan(b) : null;
+    if (b.w !== (big ? N : 2) || (b.esc && b.esc !== T && !big)) out.push(`${w} #${b.id}: ${b.w} casas (${b.esc})`);
+    if (b.built && (!p || !p.ok || b.ip.f !== FAM || p.rooms.some(m => m.fn === 'acervo') !== big)) out.push(`${w} #${b.id}: ${b.ip ? b.ip.f : 'sem registro'}, ${p && p.ok ? p.rooms.map(m => m.fn).join(',') : 'planta NÃO'}`);
+    if (b.built && (E.jobsOf(b).n !== (big ? 3 : 1) || Bi.maxOf(b) !== Bi.MAX * k || Bi.maxCopias(b) !== (Bi.MAX - 2) * k)) out.push(`${w} #${b.id}: emprega ${E.jobsOf(b).n}, o dia ${Bi.maxOf(b)} e ${Bi.maxCopias(b)}`); }
+  // (a town at the step's people may choose it — D-185 —: the question is the one below. The push sat in the comment of this
+  // line since the merge of the grand library, and asked nothing: T-1022)
+  const need = Es.steps(T).find(q => q.n === 4).req.pop; const up = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Village.pop(s.id) < need && Es.choose(s, T).some(q => q.n !== 2));
+  if (up.length) out.push(`${w}: ${up.map(s => `${s.name} (${G.Village.pop(s.id)})`).join(', ')} escolhe o degrau grande`);
+  const q = qaS(); if (q.length) out.push(`${w}: o verificador${said(q)}`);
+  return n;
+}
 function b9() {
-  const out = [], sum = [];
-  for (const w of ['metropole', 'mega']) { M.pronto(w); const S = G.S; const libs = [...S.buildings.values()].filter(b => b.type === T);
-    let n = 0; for (const b of libs) { n++; const p = b.built ? In.plan(b) : null;
-      if (b.w !== 2 || (b.esc && b.esc !== T)) out.push(`${w} #${b.id}: ${b.w} casas (${b.esc})`);
-      if (b.built && (!p || !p.ok || b.ip.f !== FAM || p.rooms.some(m => m.fn === 'acervo'))) out.push(`${w} #${b.id}: ${b.ip ? b.ip.f : 'sem registro'}, ${p && p.ok ? p.rooms.map(m => m.fn).join(',') : 'planta NÃO'}`);
-      if (b.built && (E.jobsOf(b).n !== 1 || Bi.maxOf(b) !== Bi.MAX || Bi.maxCopias(b) !== Bi.MAX - 2)) out.push(`${w} #${b.id}: emprega ${E.jobsOf(b).n}, o dia ${Bi.maxOf(b)}`); }
-    const need = Es.steps(T).find(q => q.n === 4).req.pop; const up = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Village.pop(s.id) < need && Es.choose(s, T).some(q => q.n !== 2)); // (a town at the step's people may choose it — D-185 —: the question is the one below) if (up.length) out.push(`${w}: ${up.map(s => `${s.name} (${G.Village.pop(s.id)})`).join(', ')} escolhe o degrau grande`);
-    const q = qaS(); if (q.length) out.push(`${w}: o verificador${said(q)}`);
-    sum.push(`${w}: ${n} bibliotecas clássicas, a maior cidade com ${Math.max(...[...S.settlements.values()].map(s => G.Village.pop(s.id)))} pessoas`); }
-  ok('b9a um save de antes (os mundos prontos): as bibliotecas clássicas como eram — 2 casas, a planta do salão da forma, um copista, o dia de 8 e 6 —, nenhuma cidade abaixo das pessoas do degrau escolhe o grande, o verificador limpo', !out.length && M.limpo(), out.length ? some(out).join(' / ') : sum.join('; '));
+  { const out = [], sum = []; let n = null;
+    try { refSave(); n = libsAsTheirStep('o save de antes', out); } catch (e) { out.push(String(e && e.message || e)); }
+    if (n && n[4]) out.push(`o save de antes: ${n[4]} grande(s) biblioteca(s) — não é de antes`);
+    if (n && !n[2]) out.push('o save de antes sem biblioteca clássica: não prova nada');
+    if (n) sum.push(`o save de antes (${REF.split('/').pop()}, ano ${G.S.day}): ${n[2]} bibliotecas clássicas, a maior cidade com ${Math.max(...[...G.S.settlements.values()].map(s => G.Village.pop(s.id)))} pessoas`);
+    ok('b9a um save de antes (o mundo de referência, de antes da grande biblioteca): as bibliotecas clássicas como eram — 2 casas, a planta do salão da forma, um copista, o dia de 8 e 6 —, nenhuma cidade abaixo das pessoas do degrau escolhe o grande, o verificador limpo', !out.length && M.limpo(), out.length ? some(out).join(' / ') : sum.join('; ')); }
+  { const out = [], sum = [];
+    for (const w of ['metropole', 'mega']) { M.pronto(w); const n = libsAsTheirStep(w, out); sum.push(`${w}: ${n[2]} clássicas, ${n[4]} grande(s), a maior cidade com ${Math.max(...[...G.S.settlements.values()].map(s => G.Village.pop(s.id)))} pessoas`); }
+    ok('b9b os mundos prontos de hoje: cada biblioteca como o seu degrau — a clássica como era, a grande (4 casas) com o acervo, três copistas, o dia de 16 e 12 —, nenhuma cidade abaixo das pessoas do degrau escolhe o grande, o verificador limpo', !out.length && M.limpo(), out.length ? some(out).join(' / ') : sum.join('; ')); }
 }
 
 const TESTS = { b1, b2, b3, b4, b5, b6, b7, b8, b9 };

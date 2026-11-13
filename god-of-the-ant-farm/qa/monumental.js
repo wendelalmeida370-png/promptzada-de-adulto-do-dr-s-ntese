@@ -577,9 +577,17 @@ function testeA() {
 // (who is given a place in a building of a people — In.places, freePlace, the body's «lugar» —: the table of its plan's places,
 // made once a record; in a process of its own with a deadline, so that a table that never ends fails the proof instead of
 // hanging it → { ok, dt — the process's own time making it: on a busy machine the clock's stretched the Colosseum's from 200 to
-// 787 ms —, wall, spots, free: { use: a place free } } | { err })
+// 787 ms —, wall, spots, free: { use: a place free }, dts — each time measured } | { err }). Past the target, measured again in a
+// process of its own, three times at most, and the least kept: the process's own time is stretched too by the machine's other
+// work — the ball court's of 10, some 300 ms with the machine busy, was 404 once in the regression, T-1020; a table made slower
+// is past it every time
 const stepOf = (type, n) => (G.Escala.steps(type).find(s => s.n === n) || {}).id;
 function placesOf(style, n, uses, type) {
+  let o = null; const dts = [];
+  for (let k = 0; k < 3 && (!o || (o.ok && o.dt > 400)); k++) { const q = placesOnce(style, n, uses, type); if (q.err) { if (!o) return q; break; } dts.push(q.dt); if (!o || q.dt < o.dt) o = q; }
+  return Object.assign(o, { dts });
+}
+function placesOnce(style, n, uses, type) {
   const path = require('path'), cp = require('child_process'); type = type || 'maravilha';
   const code = `const M = require(${JSON.stringify(path.join(__dirname, 'nodemundo.js'))}); const G = M.load({}); const In = G.Interiors; const ms = () => Number(process.hrtime.bigint()) / 1e6;
     G.S = { villagers: new Map(), buildings: new Map(), dead: new Map(), settlements: new Map(), clock: 100, day: 3, time: 0.4, avatar: null, nextId: 1000, history: [], fire: new Float32Array(G.N * G.N) };
@@ -1275,8 +1283,9 @@ function testeH() {
   {
     const out = [], said = [];
     for (const n of TSIZES) { const uses = ['assistir', 'atuar'], o = placesOf('asteca', n, uses, 'teatro'); if (o.err) { out.push(`n ${n}: ${o.err}`); continue; }
-      const none = uses.filter(u => !o.free[u]); if (!o.ok || none.length || o.dt > 400) out.push(`n ${n}: a tabela ${o.ok ? 'feita' : 'não feita'} em ${o.dt.toFixed(0)} ms${none.length ? `, sem lugar livre de ${none.join(', ')}` : ''}`);
-      said.push(`n ${n}: ${o.spots} lugares em ${o.dt.toFixed(0)} ms`); }
+      const none = uses.filter(u => !o.free[u]), all = o.dts.length > 1 ? ` (as medidas: ${o.dts.map(d => d.toFixed(0)).join(', ')})` : '';
+      if (!o.ok || none.length || o.dt > 400) out.push(`n ${n}: a tabela ${o.ok ? 'feita' : 'não feita'} em ${o.dt.toFixed(0)} ms${all}${none.length ? `, sem lugar livre de ${none.join(', ')}` : ''}`);
+      said.push(`n ${n}: ${o.spots} lugares em ${o.dt.toFixed(0)} ms${all}`); }
     ok('H6 os lugares do campo de bola (In.places, a tabela da planta): feita a tempo, um lugar livre de assistir e de jogar', !out.length, out.slice(0, 3).join(' · ') || said.join(' · '));
   }
 }
