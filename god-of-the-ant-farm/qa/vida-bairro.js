@@ -169,7 +169,14 @@ function pick6() {
   // rich; the dragon's first day then read «pobre em 1 dia», with no line of its own in the history (T-692)
   const homesOf = d => [...S.buildings.values()].filter(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && b.type !== 'barraco' && d.cells.includes(U.cellOf(b.x + b.w / 2, b.y + b.h / 2)) && b.set === d.set);
   const lived = b => [...S.villagers.values()].some(v => v.home === b.id && v.age >= 16 && !v.captive);
-  const cand = allQ().filter(([s, q]) => !q.whole && q.dias >= U.YOUNG && G.Eco.coinage(s.fac) && !U.is(q, 'nobre') && !(q.tp || {}).nobre && (q.vida.rica || 0) < 0.3 && !U.is(q, 'pobre') && !(q.tp || {}).pobre && homesOf(q).filter(lived).length >= 4)
+  // (and in a town that stays a city when the plague of v7 has taken the quarter's people — all but one home's —: a town's
+  // quarters are a city's, of the rank 3 and up (urban.js, clusters), and a city of under 30 falls a rank (city.js, Ci.tierOf).
+  // The quarter with the most homes lived in of the metrópole of the generation 20 was the Burgo Velho of Hedeby, a city of 51:
+  // the plague took 20, the town fell to a vila, and the next day its quarters had no ground — «(0 casas): NÃO esvaziou» —,
+  // the first day after the plague its homes nine in ten empty, T-1060)
+  const plague = q => { const hs = homesOf(q), keep = hs.filter(lived)[0]; const ids = new Set(hs.filter(b => b !== keep).map(b => b.id)); let n = 0; for (const v of S.villagers.values()) if (ids.has(v.home)) n++; return n; };
+  const holds = (s, q) => (s.tier || 0) >= 3 && G.Village.pop(s.id) - plague(q) >= 36;
+  const cand = allQ().filter(([s, q]) => !q.whole && q.dias >= U.YOUNG && G.Eco.coinage(s.fac) && !U.is(q, 'nobre') && !(q.tp || {}).nobre && (q.vida.rica || 0) < 0.3 && !U.is(q, 'pobre') && !(q.tp || {}).pobre && homesOf(q).filter(lived).length >= 4 && holds(s, q))
     .sort((a, b) => homesOf(b[1]).filter(lived).length - homesOf(a[1]).filter(lived).length)[0];
   if (cand) Q6 = { set: cand[0], d: cand[1], homes: () => homesOf(cand[1]), lived };
   // (the quarter of v6 is one whose ground holds while its homes grow rich: the whole of a town — a village is a quarter of its

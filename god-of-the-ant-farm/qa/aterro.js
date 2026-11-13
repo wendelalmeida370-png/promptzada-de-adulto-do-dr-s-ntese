@@ -9,7 +9,8 @@
 //       (b.terra) e no trabalho dela (V.workOf), a crônica, o mapa avisado
 //   t3  a obra pronta e o save: o chão e a marca atravessam o save; o verificador limpo
 //   t4  o pódio primeiro: onde há um lote que o pódio cobre, o planejador fica com ele — o mesmo que acharia sem o aplainar;
-//       e em toda capital, tipo e degrau dos mundos prontos (t4d)
+//       e em toda capital, tipo e degrau dos mundos prontos (t4d); sem lote livre plano, o lote livre que se aplaina vem antes
+//       de abrir lugar sobre as casas da cidade (t4e, D-264)
 //   t5  o deus interfere: um poço posto junto de um canto que mexeria — o lote deixa de se aplainar; a obra derrubada — o chão
 //       fica; a ampliação no lugar nunca num lote que se aplaina
 //   t6  o campo guardado (D-121): o lote que o pódio cobre mais perto; só sem nenhum, o que se aplaina
@@ -160,16 +161,33 @@ run('t4', () => {
   ok('t4b o planejador fica com ele', !!b && !!sem && b.x === sem[0] && b.y === sem[1] && !b.terra && !mudou && V.workOf(b) === Es.billOf(b).work, b ? `${lado(b)}: o mesmo lote que acharia sem o aplainar (${sem ? sem[0] + ',' + sem[1] : 'NENHUM'}); a terra ${b.terra || 0}; cantos mexidos ${mudou}` : 'não fundou');
   const q = checa(); ok('t4c verificador', q.ok, q.txt);
   // (and everywhere: every capital, type and step of the ready worlds whose search finds a lot its podium covers finds the
-  // same lot with the levelling — the flat lots of every ring are asked first, the ones to level last)
-  let iguais = 0; const mal = [];
+  // same lot with the levelling — the flat lots of every ring are asked first, the ones to level last. The search against the
+  // search: a step with no free lot opens its room over the town's own low houses and fields — V.openSite, the t7, where a lot
+  // to level comes after every flat one —, and a free lot to level comes before that opening, the work's earth before a
+  // family's house (D-264). Asked as one, the search and the opening: Tebas of the mundial of the generation 20, its temple of
+  // 4 — no free flat lot; the opening took a hut down at 35,93; the levelling found the free lot at 34,92, 1,9 levels to move
+  // —, «1 DIFERENTES», T-1058)
+  let iguais = 0, antes = 0; const mal = [], mal2 = [];
+  const livre = (s, t, q) => quieto(s, () => V.findSite(s, t, undefined, q.n));
+  const abreLugar = (s, t, q) => (V.opens(t, q) ? quieto(s, () => V.openSite(s, t, q)) : null);
+  const relevo = (p, q) => (W.slope(p[0], p[1], q.n, q.n) * 1.5).toFixed(1) + ' m de relevo';
   for (const w of ['metropole', 'mega', 'mundial', 'cidade']) {
     abre(w);
     for (const s of capitais()) for (const t of TIPOS) for (const q of Es.choose(s, t).filter(x => x.n > Es.n0(t) && !x.familia)) {
-      const A = semAplainar(() => acha(s, t, q)); if (!A) continue; const B = acha(s, t, q);
-      if (B && B[0] === A[0] && B[1] === A[1]) iguais++; else mal.push(`${w} ${s.name} ${t}/${q.n}: sem aplainar ${A[0]},${A[1]}; com ele ${B ? B[0] + ',' + B[1] + ' (' + (W.slope(B[0], B[1], q.n, q.n) * 1.5).toFixed(1) + ' m de relevo)' : 'NADA'}`);
+      const A = semAplainar(() => livre(s, t, q));
+      if (!A) {
+        // (no free flat lot: the free lot the levelling finds, if any, is one to level and takes nothing down — before the
+        // opening over the town's houses that the step would make without the levelling)
+        const B = livre(s, t, q); const Ab = B ? semAplainar(() => abreLugar(s, t, q)) : null;
+        if (B && Ab) { antes++; if (!(W.slope(B[0], B[1], q.n, q.n) > V.PODIUM) || (B.demolish && B.demolish.length)) mal2.push(`${w} ${s.name} ${t}/${q.n}: sem aplainar abriria ${Ab[0]},${Ab[1]}; com ele ${B[0]},${B[1]} (${relevo(B, q)}${B.demolish ? ', derrubando ' + B.demolish.length : ''})`); }
+        continue;
+      }
+      const B = livre(s, t, q);
+      if (B && B[0] === A[0] && B[1] === A[1]) iguais++; else mal.push(`${w} ${s.name} ${t}/${q.n}: sem aplainar ${A[0]},${A[1]}; com ele ${B ? B[0] + ',' + B[1] + ' (' + relevo(B, q) + ')' : 'NADA'}`);
     }
   }
-  ok('t4d o plano primeiro, em toda capital', iguais >= 10 && !mal.length, `nos mundos prontos, ${iguais} buscas (capital × tipo × degrau) com lote que o pódio cobre: o mesmo lote com o aplainar e sem ele${mal.length ? `; ${mal.length} DIFERENTES: ${mal.slice(0, 3).join(' | ')}` : ''}`);
+  ok('t4d o plano primeiro, em toda capital', iguais >= 10 && !mal.length, `nos mundos prontos, ${iguais} buscas (capital × tipo × degrau) com lote livre que o pódio cobre: o mesmo lote com o aplainar e sem ele${mal.length ? `; ${mal.length} DIFERENTES: ${mal.slice(0, 3).join(' | ')}` : ''}`);
+  ok('t4e o lote livre que se aplaina antes de abrir lugar sobre as casas (D-264)', !mal2.length, `${antes} degrau(s) sem lote livre plano que, sem o aplainar, abririam o seu lugar sobre as casas da cidade: com ele, um lote livre a aplainar, sem nada derrubado${mal2.length ? `; FALHAS: ${mal2.slice(0, 3).join(' | ')}` : ''}`);
 });
 
 // ------------------------------ t5: o deus interfere ------------------------------
@@ -192,9 +210,10 @@ run('t5', () => {
 // ------------------------------ t8: a porta que aplaina avisa o mapa ------------------------------
 // (V.levelLot asked by the proof on a free lot to be levelled where no cliff changes — nothing founded on it: the ground's
 // version and the walking map's go up by the door's own word; who stood there is on the new ground)
+// (in the first ready world that has one: the megalópole of the generation 20 has none near any of its capitals, «nenhum», T-1059)
 run('t8', () => {
-  abre('mega'); let lote = null; const CL = G.Relief.CLIFF;
-  busca: for (const set of capitais()) { const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
+  let lote = null; const CL = G.Relief.CLIFF;
+  busca: for (const w of ['mega', 'metropole', 'mundial', 'cidade']) for (const set of (abre(w), capitais())) { const cx = Math.floor(set.cx), cy = Math.floor(set.cy);
     for (let y = Math.max(6, cy - 30); y <= Math.min(N - 12, cy + 30); y++) for (let x = Math.max(6, cx - 30); x <= Math.min(N - 12, cx + 30); x++) {
       if (!(V.earthOf(x, y, 6) > 0)) continue; let livre = true;
       for (let ty = y - 3; ty < y + 9 && livre; ty++) for (let tx = x - 3; tx < x + 9; tx++) { const i = ty * N + tx; if (S.occ[i] || S.cliff[i] || S.type[i] < T.SAND) { livre = false; break; } }

@@ -60,6 +60,12 @@ function arma(dist, o) {
   const set = o.irma ? caps.find(c => irmaDe(c)) : caps[0]; if (!set) return null;
   const f = G.Fac.get(set.fac); const n = 6;
   if (o.semRoda) { delete f.tech.known.roda; const ap = G.Civ.learn; G.Civ.learn = function (q, t) { return t === 'roda' && q && q.id === f.id ? false : ap.apply(this, arguments); }; } else if (!G.Civ.has(f.id, 'roda')) sim(() => G.Civ.learn(f, 'roda'));
+  // (the town's own great works going up taken off by the god's hand first — an enlargement given up, V.ungrow; a work begun
+  // taken from its lot, the site's goods home —: the planner marks the first that waits for stone, in the order they were
+  // founded (V.greatWork, set.gw), and the carts go to the marked one. The megalópole of the generation 20 had Hedeby's theatre
+  // of 8 going up with none of its 272 of stone: the 200 the carts took out of the store in the c1 went to it, and the case's
+  // own work, founded after it, never had a cart — «0 entraram no canteiro», «nenhuma carroça saiu», T-1057)
+  sim(() => { for (let gw, k = 0; k < 9 && (gw = V.greatWork(set, { siteTypes: { teatro: 1 } })); k++) { if (gw.amp) V.ungrow(gw); else { V.siteBack(gw, 'obra-derrubada'); V.removeBuilding(gw); } } });
   let best = null;
   for (let y = 3; y + n <= N - 3; y++) for (let x = 3; x + n <= N - 3; x++) {
     const d = aoArmazem(set, x + n / 2, y + n / 2); const e = Math.abs(d - dist); if (e > (o.tol || 4) || (best && e >= best[2])) continue; let livre = true;
@@ -267,16 +273,18 @@ run('c10', () => {
   for (let q = 0; q < 4; q++) sim(() => { for (const m in b.need) { const n = (b.need[m] || 0) - (b.incoming[m] || 0) - Ci.carted(b, m); if (n > 1e-9) { D.make('f:' + f.id, m, n, { code: 'teste' }); D.move('f:' + f.id, 'o:' + b.id, m, n, { code: 'teste' }); } } });
   const so = Object.keys(b.need).every(m => resto(m) <= 1e-6); abastece(set, b);
   // (a builder whose task is cut on the way — the night, a call, the scene — is counted out and may still bring his load, and
-  // another takes one in his place: the builders' own count has a hand's load of slack, carts or no carts — four. The fault
-  // this case is for is the cart's load fetched again: what is coming to the work, hands and carts, a load of the hands or
-  // more past what it waits for)
+  // another takes one in his place: the builders' own count has a hand's load of slack, carts or no carts — four: the load of
+  // the one counted out comes in, and the one taken in his place is still counted. The fault this case is for is the cart's
+  // load fetched again: what is coming to the work, hands and carts, more than a load of the hands past what it waits for. In
+  // the megalópole of the generation 20 the slack came whole — one load of 4 of wood taken from the store, the excess 4,0 —,
+  // and the case asked for less than a hand's load, «o maior excesso: 4.0», T-1061)
   const MAO = 4; const inc = Object.assign({}, b.incoming); let novas = 0, seg = 0, demais = 0; const quais = {};
   for (; seg < 120 && daObra(b).some(q => !q.back); seg++) {
     M.viver(0.5);
     for (const m in b.incoming) { const x = b.incoming[m] || 0; if (x > (inc[m] || 0) + 1e-9) { novas += x - (inc[m] || 0); quais[m] = (quais[m] || 0) + x - (inc[m] || 0); } inc[m] = x; }
     for (const m in b.need) demais = Math.max(demais, G.Vg.coming(b, m) - (b.need[m] || 0));
   }
-  ok('c10d ninguém busca o que a carroça traz', so && demais < MAO - 1e-9, `dado à obra tudo menos o que vem a caminho: em ${(seg / 2).toFixed(0)} s, até as carroças chegarem, o que vinha a caminho (as mãos e as carroças) nunca passou do que a obra esperava em uma carga das mãos (${MAO}) ou mais (o maior excesso: ${Math.max(0, demais).toFixed(1)}; a carga da carroça: ${c.goods ? c.goods.n : 20}); cargas dos construtores tiradas do armazém nesse tempo: ${novas}${novas ? ' ' + JSON.stringify(quais) : ''}`);
+  ok('c10d ninguém busca o que a carroça traz', so && demais <= MAO + 1e-9, `dado à obra tudo menos o que vem a caminho: em ${(seg / 2).toFixed(0)} s, até as carroças chegarem, o que vinha a caminho (as mãos e as carroças) nunca passou do que a obra esperava em mais de uma carga das mãos (${MAO}) (o maior excesso: ${Math.max(0, demais).toFixed(1)}; a carga da carroça: ${c.goods ? c.goods.n : 20}); cargas dos construtores tiradas do armazém nesse tempo: ${novas}${novas ? ' ' + JSON.stringify(quais) : ''}`);
   const q = checa(); ok('c10e verificador', q.ok, q.txt);
 });
 

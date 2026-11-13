@@ -230,15 +230,21 @@ if (want('c5')) for (const world of (process.env.MUNDO || 'cidade').split(',')) 
   // (the hours the grown ones are home and still up — after dark, 0.73, and before the bed time of most —, an evening with no
   // feast in any town: every town keeps its feast of the year, and a day of the world is a year — the test's hand, as qa/lar.js)
   M.pronto(world); const S = G.S; const HOURS = [0.7, 0.72, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79, 0.8, 0.82];
-  S.time = 0.6; for (const st of S.settlements.values()) st.festPlan = { day: S.day, key: null, done: true };
+  // (the feast kept away once a day, as the day turns — each step, it fought the festivals' own plan of the next day, and the
+  // evening it measured was not the world's)
+  S.time = 0.6; let feastDay = S.day; const noFeast = () => { for (const st of S.settlements.values()) st.festPlan = { day: S.day, key: null, done: true }; feastDay = S.day; }; noFeast();
   const fam = [0, 0]; // (the houses with two or more awake inside, and of them the ones with someone sitting where the family eats: D-246)
   const acc = new Map(); const rowP = c => { let r = acc.get(c); if (!r) acc.set(c, r = { casas: 0, come: 0, juntos: 0, mesa: 0, fogo: 0, ambos: 0, nucleo: 0, chao: 0, gente: 0, sentada: 0 }); return r; };
   const doing = {}; // (what each one awake at home is doing — the task of the home, G.Lar —, and where)
   const housing = b => !!(b && b.built && b.type !== 'ruin' && G.BDEF[b.type] && G.BDEF[b.type].housing && b.ip && In.TYPES[b.ip.t]);
   const mid = []; const SEV = { lar: 3, act: 2, int: 2, nan: 2, pop: 2, fam: 2 };
   const watch = () => { for (const q of QA.check()) if (SEV[q.sys] !== undefined && q.sev <= SEV[q.sys]) { const k = `S${q.sev} ${q.sys}: ${q.msg}`; if (!mid.includes(k)) mid.push(k); } };
+  // (more evenings, up to three, while the houses with two or more awake are fewer than the ten the claim is judged on: the «cidade»
+  // of the generation 20, a young town of 33, had 7 such houses in the ten hours of one evening — all seven with someone at the
+  // table, and the case failed for the sample, T-1066)
+  for (let ev = 0; ev < 3 && (ev === 0 || fam[0] < 10); ev++)
   for (const h of HOURS) {
-    const sec = ((h - S.time) % 1 + 1) % 1 * G.DAY_LEN; const n = Math.round(sec * 10); for (let k = 0; k < n; k++) { S.weather.storm = 0; G.debug.step(0.1); if (k % 50 === 49) watch(); }
+    const sec = ((h - S.time) % 1 + 1) % 1 * G.DAY_LEN; const n = Math.round(sec * 10); for (let k = 0; k < n; k++) { S.weather.storm = 0; G.debug.step(0.1); if (S.day !== feastDay) noFeast(); if (k % 50 === 49) watch(); }
     const inside = new Map(); for (const v of S.villagers.values()) if (v.inside > 0) { let L = inside.get(v.inside); if (!L) inside.set(v.inside, L = []); L.push(v); }
     for (const [bid, L] of inside) {
       const b = S.buildings.get(bid); if (!housing(b)) continue; const awake = L.filter(v => !v.sleeping && v.age >= 3 && !(S.avatar && S.avatar.id === v.id)); if (!awake.length) continue;

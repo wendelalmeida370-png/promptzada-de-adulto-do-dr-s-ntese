@@ -83,9 +83,15 @@ run('r1', () => {
 run('r2', () => {
   const a = arma(); if (!ok('r2a a cidade e a família', !!a, a ? `${a.set.name}: ${a.v.name}` : 'sem premissa')) return;
   const { set, v } = a; enriquece(v, set, 400); // (the richest of the town: the first asked)
+  // (the paid works of the families in need raised by the god's hand between one day of the town and the next, as its builders
+  // would in the days between — two at a time, K.MAX_WORKS, and the rich house only after them: in the metrópole of the
+  // generation 20 Roma had two couples' houses under way, the days of the case were asked with no time between them, and the
+  // rich house never had its turn, «em 8 dias a cidade não pediu», T-1063)
+  const ergue = () => sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && o.encomenda && !o.encomenda.maos && o.encomenda.why !== 'rica' && !o.built) V.completeBuilding(o); });
   let b = null, dias = 0, servidas = 0;
-  for (; dias < 8 && !b; dias++) { const antes = [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why !== 'rica').length; sim(() => K.day(set)); servidas += [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why !== 'rica').length - antes; b = K.waiting(v); }
-  ok('r2b o dia da cidade pede por ela', !!b && b.w === 2 && b.encomenda.why === 'rica' && b.encomenda.by === v.id, b ? `em ${dias} olhar(es) do dia da cidade (${servidas} casas de quem precisava encomendadas antes): ${lado(b)} para ${v.name}` : `em ${dias} dias a cidade não pediu a casa rica de ${v.name}`);
+  for (; dias < 8 && !b; dias++) { if (dias) ergue(); const antes = [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why !== 'rica').length; sim(() => K.day(set)); servidas += [...S.buildings.values()].filter(o => o.encomenda && o.encomenda.why !== 'rica').length - antes; b = K.waiting(v); }
+  const obras = () => [...S.buildings.values()].filter(o => o.set === set.id && o.encomenda && !o.built).map(o => `${o.type}#${o.id} (${o.encomenda.why})`).join(', ') || 'nenhuma';
+  ok('r2b o dia da cidade pede por ela', !!b && b.w === 2 && b.encomenda.why === 'rica' && b.encomenda.by === v.id, b ? `em ${dias} olhar(es) do dia da cidade (${servidas} casas de quem precisava encomendadas antes): ${lado(b)} para ${v.name}` : `em ${dias} dias a cidade não pediu a casa rica de ${v.name} (obras pagas: ${obras()}; «${K.cannotRaise(set, 'house') || 'pode levantar'}»; entre as ricas: ${K.rich(set).includes(v) ? 'sim' : 'NÃO'})`);
   // (one rich house under way in a town at a time: a second rich family waits)
   const outra = familias(set).find(o => o.id !== v.id && !K.family(v).includes(o));
   // (with room for more paid works — the limit of them all, K.MAX_WORKS, lifted here: the rule proved is the rich houses' own)
@@ -225,7 +231,7 @@ run('r8', () => {
 // with the first one of the family in it: «#20136 espera duas casas encomendadas» (the checker's rule of the D-177, seen in
 // one of the ten-year lives of the agent F). The family waits for a house when any of it is in a commission.
 run('r9', () => {
-  abre(); const E = G.Eco, A = G.Act;
+  const E = G.Eco, A = G.Act;
   const kinOf = (a, b) => (!!a.mother && a.mother === b.mother) || (!!a.father && a.father === b.father) || a.mother === b.id || a.father === b.id || b.mother === a.id || b.father === a.id;
   const livre = v => v.age >= 18 && v.age < 50 && !v.partner && !v.captive && !v.jail && !v.aboard && !v.held && !!v.home && !(S.avatar && S.avatar.id === v.id);
   const deQuem = id => [...S.buildings.values()].filter(b => b.encomenda && !b.built && b.encomenda.fam.includes(id));
@@ -235,16 +241,22 @@ run('r9', () => {
   const par = (set, a) => [...S.villagers.values()].filter(q => q.set === set.id && q !== a && livre(q) && q.home !== a.home && q.g !== a.g && !kinOf(a, q) && (S.buildings.get(q.home) || {}).dono !== q.id).sort((x, y) => x.id - y.id)[0] || null;
   // (a) the house a family in need pays for: one alone in a full house that is not theirs, with coins for a new one, in a town
   // of coin with no empty house of the people's to buy — the work raised
-  let ca = null;
-  for (const set of [...S.settlements.values()].filter(st => G.Fac.get(st.fac) && E.coinage(st.fac)).sort((x, y) => V.pop(y.id) - V.pop(x.id) || x.id - y.id)) {
-    for (const [v, why] of K.queue(set)) {
-      if (!livre(v) || K.family(v).length !== 1 || K.waiting(v) || K.gaveUp(v)) continue; const q = par(set, v); if (!q) continue;
-      const plan = K.plan(v, null, set, null, why); if (plan.free || K.cannotRaise(set, plan.type)) continue;
-      ca = { set, v, q, why, plan }; break;
+  // (in the first ready world that has it, the case's own first: in the metrópole of the generation 20 the one alone with a house
+  // to raise had no single one of the other sex, of another house not their own, to marry — «sem premissa», T-1062)
+  let ca = null, mundo = MUNDO;
+  for (const w of [MUNDO].concat(['metropole', 'mega', 'mundial', 'cidade'].filter(x => x !== MUNDO))) {
+    M.pronto(w); pega(); mundo = w;
+    for (const set of [...S.settlements.values()].filter(st => G.Fac.get(st.fac) && E.coinage(st.fac)).sort((x, y) => V.pop(y.id) - V.pop(x.id) || x.id - y.id)) {
+      for (const [v, why] of K.queue(set)) {
+        if (!livre(v) || K.family(v).length !== 1 || K.waiting(v) || K.gaveUp(v)) continue; const q = par(set, v); if (!q) continue;
+        const plan = K.plan(v, null, set, null, why); if (plan.free || K.cannotRaise(set, plan.type)) continue;
+        ca = { set, v, q, why, plan }; break;
+      }
+      if (ca) break;
     }
     if (ca) break;
   }
-  if (ok('r9a a premissa: um só, precisando de casa, numa cidade de moeda sem casa vazia do povo', !!ca, ca ? `${ca.set.name}: ${ca.v.name} #${ca.v.id} (${ca.why}; a casa nova: ${ca.plan.type}, ${ca.plan.price} moedas) e ${ca.q.name} #${ca.q.id}, de outra casa` : 'sem premissa')) {
+  if (ok('r9a a premissa: um só, precisando de casa, numa cidade de moeda sem casa vazia do povo', !!ca, ca ? `${mundo}, ${ca.set.name}: ${ca.v.name} #${ca.v.id} (${ca.why}; a casa nova: ${ca.plan.type}, ${ca.plan.price} moedas) e ${ca.q.name} #${ca.q.id}, de outra casa` : 'sem premissa')) {
     const { set, v, q, plan } = ca; const pote = () => { const h = S.buildings.get(v.home); const t = moedas(h.id); const alvo = plan.price * 3 + 20; if (t < alvo) D.make('h:' + h.id, 'moedas', Math.ceil(alvo - t), { code: 'teste' }); };
     D.make('f:' + set.fac, 'wood', 80, { code: 'teste' }); D.make('f:' + set.fac, 'stone', 80, { code: 'teste' });
     pote(); const r1 = sim(() => K.order(v, { now: true }));

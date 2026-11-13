@@ -111,6 +111,13 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       // stops the feet on the way, as a player steers — a boulder, a pier, a stall —: a step aside and on again, farther and to
       // the other side the next time, as the estiva's proof walks (T-205, T-231, T-242). With stop — what the walk is for, a
       // prompt —, the walk ends the moment it is there (T-366)
+      // the yaw of the camera toward open ground from (x, y): the first of sixteen ways whose next three metres the feet walk
+      // (T-1056)
+      openYaw(x, y) {
+        const ok = a => { for (let r = 0.25; r <= 0.75; r += 0.125) if (!G.W.walkableXY(x + Math.cos(a) * r, y + Math.sin(a) * r)) return false; return true; };
+        for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8; if (ok(a)) return a; }
+        return 0;
+      },
       walkTo(x, y, max, run, stop) {
         const v = E.body(); const st = G.Avatar.state(); if (!v || !st) return { ok: false, why: 'sem corpo' };
         const p0 = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p0) return { ok: false, why: 'sem caminho' };
@@ -648,7 +655,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // the key I, in the god's view: someone near the middle of the screen
     G.UI.select(null); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'i' })); out.ikey = G.Modes.state !== 'GOD'; __E.until(() => G.Modes.state === 'INC', 300);
     // the fingers: a thumb on the left half pushed up walks the body forward; the on-screen buttons show
-    { const cv = G.Realm.canvas(); const b = G.Possess.body(); const x0 = b.x, y0 = b.y;
+    { const cv = G.Realm.canvas(); const b = G.Possess.body(); const x0 = b.x, y0 = b.y; G.Cam3D.yaw = __E.openYaw(x0, y0); // (the thumb walks the body ahead, as the camera looks: toward open ground — the way the part before left the camera may be shut, T-1056)
       const T = (id, x, y) => new Touch({ identifier: id, target: cv, clientX: x, clientY: y });
       cv.dispatchEvent(new TouchEvent('touchstart', { changedTouches: [T(1, 200, 450)], touches: [T(1, 200, 450)], cancelable: true, bubbles: true }));
       cv.dispatchEvent(new TouchEvent('touchmove', { changedTouches: [T(1, 200, 380)], touches: [T(1, 200, 380)], cancelable: true, bubbles: true }));
@@ -833,7 +840,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     }
     // sitting on the ground; walking gets the body up
     G.Avatar.place(p0[0], p0[1]); __E.f(4); out.sit = { ok: G.Avatar.sit() }; __E.f(20); out.sit.anim = st.anim;
-    G.Input3D.down.frente = true; __E.f(30); G.Input3D.down.frente = false; out.sit.after = st.anim; out.sit.moved = st.speed > 0.2 || st.anim === 'walk';
+    // (toward open ground: the camera kept the yaw of the case before — the wall's, 0 —, and from the body's place in the «cidade»
+    // of the generation 20 that way was shut: the body got up and stood. The hands may hold the gold of the case before: walking
+    // with a load is «carryWalk». T-1056)
+    G.Cam3D.yaw = __E.openYaw(p0[0], p0[1]); const xS = __E.body().x, yS = __E.body().y;
+    G.Input3D.down.frente = true; __E.f(30); G.Input3D.down.frente = false; out.sit.after = st.anim; out.sit.moved = st.speed > 0.2 || st.anim === 'walk' || st.anim === 'carryWalk'; out.sit.m = +(G.dist(xS, yS, __E.body().x, __E.body().y) * TL).toFixed(2);
     __E.f(10);
     // a wave: the body waves, those standing near wave back
     const p = G.Avatar.pos(); out.wave = { ok: G.Avatar.wave() }; __E.f(3); out.wave.anim = st.anim; out.wave.near = G.People3D.greet(p.X, p.Z); __E.f(50);
@@ -1044,6 +1055,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   // ================================ e16: the presentation never ahead of the world (the adendo's §5, in the 3D) ================================
   const e16 = await E(() => {
     __E.fresh('cidade'); const S = G.S, T = G.T, TL = G.Space.TILE; const out = {}; const P3 = G.People3D;
+    // (the saved town opens in the small hours, everyone asleep at home, and the body is one of the grown ones out of doors: the
+    // god lets the night pass first, until the town is up, as the e15. The «cidade» of the generation 20 opened with all of Mênfis
+    // in bed — no grown one to take, no body —, and the stroke of the part 2 asked the map for a body that was not there: «Cannot
+    // read properties of null (reading 'x')», and the proof stopped there, T-1064)
+    G.UI.setSpeed(4); out.morning = __E.until(() => S.time > 0.25 && S.time < 0.6 && [...S.villagers.values()].filter(q => !q.sleeping && !q.inside).length > S.villagers.size * 0.4, 3000); G.UI.setSpeed(1);
     const wet = (x, y) => { const i = G.W.idx(x, y); const t = S.type[i]; return (t === T.RIVER && !S.road[i] && !(S.ice && S.ice[i])) || (t <= T.SEA && !(S.dry && S.dry[i])); };
     const docks = [...S.buildings.values()].filter(b => b.type === 'doca' && b.built).sort((a, b) => a.id - b.id); for (const d of docks) G.Naval.dockInfo(d);
     const dock = docks.find(d => { const p = P3.crateSpot(d); return p && !wet(p[0], p[1]) && G.W.walkableXY(p[0], p[1]); });
@@ -1055,6 +1071,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     if ((dock.crates || []).length < 6) { G.inSim++; G.Porto.landCatch(dock, 'food', 4 * (6 - (dock.crates || []).length), 'arenque', '#a8c0d0', 0); G.inSim--; }
     const free = o => !(o.carry && o.carry.n > 0); // (hands holding nothing of the world's: what is carried is never thrown out by hand)
     const v = __E.adults(__E.town(), o => free(o) && G.W.reaches(o, sp[0], sp[1]))[0] || __E.adults(__E.town(), free)[0]; out.inn = __E.enter(v); if (!G.Avatar.place(sp[0] + 0.3, sp[1] + 0.3)) G.Avatar.place(sp[0], sp[1]); __E.f(20);
+    if (!__E.body()) { out.noBody = { who: v ? v.id : null, time: +S.time.toFixed(3) }; out.qa = __E.qa(); out.err = JSON.stringify(G.modErr); return out; }
     const ids = () => dock.crates.map(c => c.id).sort((a, b) => a - b).join(',');
     const drawnIds = () => P3.lying.filter(e => e[5] === dock.id).map(e => e[4]).sort((a, b) => a - b).join(',');
     out.drawn = { world: ids(), drawn: drawnIds() };
@@ -1121,7 +1138,8 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     return out;
   });
   ok('e16 há um cais com as caixas em terra seca', !!e16.dock, String(e16.dock));
-  if (e16.dock) {
+  if (e16.dock) ok('e16 um corpo encarnado ao pé do cais (a cidade acordada)', !e16.noBody, e16.noBody ? `SEM CORPO: ${JSON.stringify(e16.noBody)}` : `de manhã: ${JSON.stringify(e16.morning)}`);
+  if (e16.dock && !e16.noBody) {
     ok('e16 as caixas desenhadas no cais são as do mundo, uma a uma', e16.drawn.world === e16.drawn.drawn && e16.drawn.world.length > 0, JSON.stringify(e16.drawn));
     ok('e16 com o menu aberto o 3D desenha só lendo: o cais, o registro dele e o relógio como estavam', e16.still.quay && e16.still.clock && e16.still.drawn, JSON.stringify(e16.still));
     ok('e16 o golpe pedido com o menu aberto espera; com o mundo de volta, corta', !e16.stroke || (e16.stroke.ran && e16.stroke.during === 0 && e16.stroke.after > 0), JSON.stringify(e16.stroke));
@@ -1171,6 +1189,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     out.crates = { world: dock.crates.filter(c => c.op === op.id).length, drawn: dr().length };
     out.call = (hud('.ih-calls') || {}).textContent || ''; out.want = `O cais precisa de braços: há caixas de peixe para levar ${G.Possess.toB(P.destOf(op))}.`;
     out.line = vis(hud('.ih-lead')) ? hud('.ih-lead').textContent : '';
+    { const b = __E.body(); out.why = { st: op.st, live: A.live(op), workable: G.Possess.workable(op.id), night: G.isNight(), time: +S.time.toFixed(3), tiles: b ? +G.dist(b.x, b.y, sp[0], sp[1]).toFixed(1) : null, panel: G.Modes.panel(), hudOff: G.IncUI.hudOff() }; }
     out.back = G.IncUI.markAt ? Object.assign({}, G.IncUI.markAt) : null; out.backVis = vis(hud('.ih-mark')) && hud('.ih-mark').classList.contains('off');
     window.__e17 = { dock: dock.id, op: op.id, v: v.id, sp, fid }; out.fid = fid;
     return out;
@@ -1179,7 +1198,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
   if (e17a.op) {
     ok('e17 o barco descarrega: as caixas de verdade no cais, desenhadas uma a uma', e17a.crates.world >= 4 && e17a.crates.drawn === e17a.crates.world, JSON.stringify(e17a.crates));
     ok('e17 o estivador encarnado é chamado ao cais, na tela', e17a.call.includes(e17a.want), `«${e17a.call}»`);
-    ok('e17 a linha discreta da descarga, com a distância', /^Descarga no cais: caixas de peixe esperando · \d+ m$/.test(e17a.line.trim()), `«${e17a.line.trim()}»`);
+    ok('e17 a linha discreta da descarga, com a distância', /^Descarga no cais: caixas de peixe esperando · \d+ m$/.test(e17a.line.trim()), `«${e17a.line.trim()}»${e17a.line.trim() ? '' : ' ' + JSON.stringify(e17a.why)}`);
     ok('e17 de costas para o cais, o marcador é uma seta na borda da tela', e17a.backVis && !!e17a.back && e17a.back.off, JSON.stringify(e17a.back));
     // turned toward the quay: the mark over the pile, where the 3D draws the crates
     const e17b = await E(() => {

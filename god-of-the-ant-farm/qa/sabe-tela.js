@@ -91,7 +91,13 @@ const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const on = k
     IU.closeAll(); G.Modes.setPanel(null); T.f(4);
     // (the two have met, by the world's step; the word said — the body's arms busy with it — over, and facing them again:
     // the screen's own choice of what is before the body, and the name it writes over that head)
-    T.until(() => !G.Avatar.busy(), 300); G.Avatar.state().yaw = Math.atan2(st.y - v.y, st.x - v.x); G.Cam3D.yaw = G.Avatar.state().yaw; T.f(8);
+    // (and up to them again where they went: the word said, the other goes back to their day — Ameyali of Tenochtitlan, in the
+    // metrópole of the generation 20, walked off with the body facing where she had been, and the nearest thing before it was the
+    // fish in the water, «Pescar com as mãos», T-1068)
+    T.until(() => !G.Avatar.busy(), 300);
+    if (G.dist(v.x, v.y, st.x, st.y) > 0.6) { const pth = G.W.findPath(v.x, v.y, st.x, st.y, true, 30000); const e = pth && pth.length ? pth[pth.length - 1] : [v.x, v.y]; const d = Math.hypot(e[0] - st.x, e[1] - st.y) || 1;
+      for (const rr of [0.3, 0.4, 0.22, 0.5]) { const qx = st.x + (e[0] - st.x) / d * rr, qy = st.y + (e[1] - st.y) / d * rr; if (G.W.walkableXY(qx, qy)) { G.Avatar.place(qx, qy); T.f(6); break; } } }
+    G.Avatar.state().yaw = Math.atan2(st.y - v.y, st.x - v.x); G.Cam3D.yaw = G.Avatar.state().yaw; T.f(8);
     const b2 = IU.best(); const hi = G.People3D.highlight;
     Object.assign(out.k2, { knows: K.how(v, st), label1: T.shown('#inc-label') && hi === st.id ? T.txt('#inc-label') : `(o letreiro: ${T.shown('#inc-label') ? 'sobre #' + hi : 'escondido'})`, prompt1: b2 && b2.id === 'pessoa' && b2.t.o.id === st.id ? T.txt('#inc-hud .ih-prompt span') : `(o «E — »: ${b2 ? b2.id + ' ' + (b2.label || '') : 'nada'})` });
     // ---- k3: the cards as the screen writes them

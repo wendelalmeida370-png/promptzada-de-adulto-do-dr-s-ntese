@@ -761,7 +761,10 @@ const calmOne = (skip, also) => {
   const v = calmOne(); let info = 'ninguém numa cidade calma', good = false;
   if (v) {
     const set = S.settlements.get(v.set); const f = G.Fac.get(set.fac); const t0 = S.time; S.time = 0.3;
-    const grown = [...S.villagers.values()].filter(q => q.set === set.id && q.age >= 18 && q.id !== v.id && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air).sort((a, b) => a.id - b.id);
+    // (every grown one of the town the scaffold could call, the ones down a mine or in the god's hand too — they come back while the
+    // case waits: Liv of Hedeby, in the mine when the town was counted, came up at 67 of hunger, not one of the hungry nor of the
+    // fed, and was the executioner by the rule, «TIRADO DA REFEIÇÃO», T-1067)
+    const grown = [...S.villagers.values()].filter(q => q.set === set.id && q.age >= 18 && q.id !== v.id && !q.captive && !q.jail && !q.aboard).sort((a, b) => a.id - b.id);
     const fed = grown.filter(q => q.age >= 20 && q.age <= 60 && !q.inside && q.id !== f.leader && !(S.avatar && S.avatar.id === q.id) && !(q.sick > 0)).slice(0, 2);
     const h0 = new Map(grown.map(q => [q.id, q.hunger])); const hungry = grown.filter(q => !fed.includes(q));
     for (const q of fed) { Vg.endTask(q); q.sleeping = false; q.hunger = 10; q.energy = Math.max(q.energy, 80); if (q.carry && q.carry.n > 1e-6 && !q.carry.op && !q.carry.to) Vg.toStore(q, f.id, 'teste'); }

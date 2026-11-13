@@ -20,6 +20,7 @@
 //  l7b o corpo come em casa numa cabana: no lugar de comer da planta, que toda casa tem (D-196); e, com as peças escondidas pela
 //      mão da prova, no chão, onde está (a oferta do L-398, que ficou para uma planta sem peça nenhuma: T-890)
 //  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
+//  l12b a caravana não leva quem tem o dia em casa (L-773): a viúva da hora fica; a mesma pessoa, sem o luto, vai (o controle)
 //  l14 de dia, um dos velhos da casa cuida dos pequenos (3 a 6 anos) em casa, e os pequenos ficam com ele, sem entrar e sair sem
 //      parar — e esperam por ele quando sai por pouco, para comer ou descansar (L-235); um save no meio do dia; quem cuida
 //      morre no meio (outro velho assume, ou os pequenos voltam ao dia deles); o save e a morte no primeiro instante em que
@@ -573,6 +574,39 @@ if (want('l12')) {
     const rate = inBed >= 0 ? r2(((healed >= 0 ? 60 : w.hp) - hpBed) / Math.max(0.1, (healed >= 0 ? healed : S.clock) - inBed)) : 0;
     ok('l12 o ferido e o enlutado', inBed >= 0 && healed >= 0 && rate > 0.5 && grief > 5 && code === 'luto' && !dw.wrong.length,
       `${nm(w)} com ${hp0} de vida: ${inBed >= 0 ? `de cama em casa («${txt}»), sarando ${rate} por segundo (de pé: 0,3), ${healed >= 0 ? `levantou com ${Math.round(w.hp)}` : 'AINDA DE CAMA'}` : 'NÃO FOI PARA A CAMA'}; ${dead.name} morreu: ${p0.name} ${grief > 5 ? `de luto em casa ${r2(grief)} s («${griefTxt}», no cartão: ${code})` : 'NÃO FICOU DE LUTO EM CASA'}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}`);
+  }
+}
+
+// ======================= l12b: the caravan does not take one whose day is at home (L-773) =======================
+// (each people of the world in turn, by the caravan's own door — G.Trade.launch —: in its capital, one of the grown ones the
+// caravan would take — its own test — with a partner in the same house, made a merchant of the town by the test's hand (the
+// caravan takes a merchant first, trade.js), every other one held by a weightier errand of the hand (2: the caravan takes no one
+// under one); the partner dies, the test's hand, and the caravan is asked twice on the same world: with the widowed in the first
+// hours of grief, and — the control — with the grief over by the hand (mourn 0). In the «cidade» of the generation 20 the caravan
+// took Brynhild of Mênfis the morning after Arne died, from her rest by the fire, to sell pottery to another people: she was
+// never home to grieve, and the l12 failed, L-773)
+if (want('l12b', 'l12')) {
+  const cand = (cap, f) => [...S.villagers.values()].filter(v => v.set === cap.id && !v.captive && !v.sleeping && v.age >= 18 && v.age <= 58 && v.id !== f.leader && v.role !== 'guerreiro' && !v.carry && !(v.task && v.task.pri >= 2) && !G.Vg.handsBusy(v)).sort((a, c) => a.id - c.id);
+  const ask = (fid, grieve) => {
+    open(); S.time = 0.4; const f = G.Fac.get(fid), cap = G.Fac.capitalOf(fid); if (!f || !cap) return null;
+    const L0 = cand(cap, f); const w = L0.find(v => v.partner && S.villagers.get(v.partner) && S.villagers.get(v.partner).home === v.home && !isBody(v)); if (!w) return null;
+    const p = S.villagers.get(w.partner); V.kill(p, 'teste'); if (!grieve) w.mourn = 0;
+    w.merchant = w.merchant || 1;
+    for (const o of S.villagers.values()) if (o !== w && o.set === cap.id && !isBody(o)) G.Vg.setTask(o, { type: 'idle', wait: 30, pri: 2.5 });
+    const g = L.grief(w); G.Trade.launch(f);
+    const took = [...S.villagers.values()].find(o => o.task && o.task.type === 'trade' && o.task.from === f.id);
+    return { f, w, p, g, took };
+  };
+  let res = null;
+  for (const fid of G.Fac.all().filter(f => f.alive).map(f => f.id).sort((a, c) => a - c)) {
+    const ctl = ask(fid, false); if (!ctl || !ctl.took) continue; // (a people with a deal to make, and the caravan takes the one asked)
+    res = { ctl, gr: ask(fid, true) }; break;
+  }
+  if (!res || !res.gr) ok('l12b a caravana não leva quem tem o dia em casa (L-773)', false, 'nenhum povo do mundo com uma caravana a mandar e um casal na capital');
+  else {
+    const { ctl, gr } = res;
+    ok('l12b a caravana não leva quem tem o dia em casa (L-773)', ctl.took === ctl.w && !ctl.g && gr.g && gr.took !== gr.w && !(gr.w.task && gr.w.task.type === 'trade'),
+      `${ctl.f.name}: ${ctl.p.name} morreu; ${nm(ctl.w)} sem o luto (a mão da prova) → a caravana ${ctl.took === ctl.w ? 'a levou' : 'NÃO a levou'}; de luto («${gr.g ? 'De luto' : 'SEM LUTO'}») → ${gr.took === gr.w ? 'A CARAVANA A LEVOU' : gr.took ? `a caravana levou ${nm(gr.took)}` : 'ficou; nenhuma caravana saiu'}`);
   }
 }
 
@@ -1327,7 +1361,11 @@ if (want('l19')) {
   // (a) one of the world, in the street: as the sleep of who has no house, where it stands — out at the door first if it was in
   // (one the night lets sleep: not starving — the hunger wakes the starving, villagers.js hungerWakes —: the first one awake in the
   // street of the generation 16, Sitamun, was at 97 of hunger, and woke to eat before the save)
-  const w = grown.find(o => !o.inside && !o.sleeping && o.hunger < 70) || grown.find(o => o.hunger < 70) || grown[0];
+  // (and one whose night is not a duty: the town's night watch is up at night with a torch while not worn out — the round, 1,6, over
+  // the bed the hand lays down, 1,5 — and the smuggler is up when a theft waits for him (villagers.js decide): the first one awake
+  // in the street of the «cidade» of the generation 20, Ahmose, was the watch of Mênfis, and went on his round, T-1065)
+  const duty = o => (G.Vg.nightWatch && G.Vg.nightWatch.get(o.set) === o.id) || o.role === 'contrabandista';
+  const w = grown.find(o => !o.inside && !o.sleeping && o.hunger < 70 && !duty(o)) || grown.find(o => o.hunger < 70 && !duty(o)) || grown[0];
   G.Vg.endTask(w); G.Vg.setTask(w, { type: 'sleep', pri: 1.5, st: 2, home: 0, kind: 'sleep' }); w.sleeping = true; w.path = null; w.moving = false;
   live(0.5);
   // (b) the body, by the door of its house, in the street
