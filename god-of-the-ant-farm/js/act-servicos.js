@@ -335,13 +335,22 @@
   Te.FED = 30;
   const stokerOf = v => { if (v.role !== 'foguista' || !v.job) return null; const b = S_().buildings.get(v.job); return b && b.type === 'banhos' && b.built ? b : null; };
   const lead = (v, b) => Te.EARLY + Math.min(Te.LEAD, (v.inside === b.id ? 0 : G.dist(v.x, v.y, b.x + b.w / 2, b.y + b.h / 2)) * Te.WALK / G.DAY_LEN);
+  // (at the post before the doors open, by what he is at: an errand of it — the walk to the furnace and the wait by it, the
+  // wood for it, fetched from the store and carried back in his arms — or none, at the baths, between two of them)
+  const atPost = (v, b) => {
+    const t = v.task; if (!t) return v.inside === b.id || G.dist(v.x, v.y, b.x + b.w / 2, b.y + b.h / 2) <= Math.max(b.w, b.h) + 1.5;
+    return (t.type === 'fornalha' && t.id === b.id && !!t.pre) || (t.type === 'lenhaTermas' && t.id === b.id) || (t.type === 'carga' && t.to === 'b:' + b.id);
+  };
   Te.onDuty = function (v) {
     const b = stokerOf(v); if (!b) return false;
     const S = S_(); const h = Te.horas(b); const op = Te.dia(b);
     // (about to open — or the hour come and the day opening within the second: no gap for a meal to slip through. Once on
     // his way to the furnace he is on duty till the doors open: the walk's lead shrinks as he nears them, and the duty went
-    // with it — he reached the furnace early, was free again, and went for a meal as the doors opened)
-    if (!op) return S.time < h.fecha && !openedToday(b) && (S.time >= h.abre - lead(v, b) || (S.time >= h.abre - Te.EARLY - Te.LEAD && !!v.task && v.task.type === 'fornalha' && !!v.task.pre));
+    // with it — he reached the furnace early, was free again, and went for a meal as the doors opened. His way is every errand
+    // of the post — the wood too —, and the moment at the baths between the wood and the wait: with the furnace's errand
+    // alone, Ivar of Hedeby went for his meal with the wood in his arms, Tlalli of Texcoco left the walk to the store for his,
+    // and Xiuhtonal of Tenochtitlan went from the door of the baths with the wood still to put down — L-772)
+    if (!op) return S.time < h.fecha && !openedToday(b) && (S.time >= h.abre - lead(v, b) || (S.time >= h.abre - Te.EARLY - Te.LEAD && atPost(v, b)));
     if (op.st !== 'on' || !inHours(b)) return false;
     return op.data.calor < (h.fecha - S.time) * G.DAY_LEN;
   };
@@ -352,10 +361,11 @@
   // weighs more — a feast or a trial he was at when the post began, a meal, his bed — holds no leg: it keeps him to its end)
   A.hooks.leg.push(v => { const t = v.task; return (!t || (t.pri || 0) <= 1.05 + EPS) && Te.onDuty(v) ? 'fornalha' : null; });
   // (the stoker's meal fits his day: in the hours before his doors open, hungrier than Te.FED, he eats — decide asks —, and
-  // the shift finds him fed: from a meal to the hunger that calls, more than half a day)
+  // the shift finds him fed: from a meal to the hunger that calls, more than half a day. Before the post: once it has begun,
+  // only starving — L-772)
   Te.mealFirst = function (v) {
     const b = stokerOf(v); if (!b || !(v.hunger > Te.FED) || Te.dia(b) || openedToday(b)) return false;
-    const S = S_(); const h = Te.horas(b); return S.time >= h.abre - Te.MEAL && S.time < h.abre - lead(v, b);
+    const S = S_(); const h = Te.horas(b); return S.time >= h.abre - Te.MEAL && !Te.onDuty(v);
   };
   // how much this grown one wants a bath now (a choice of decide, among the others), or 0; one already on the way stays
   // for the bath — the work, a chat, the way home do not take one from it; hunger and sleep do —, and one inside, who has
