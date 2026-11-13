@@ -53,8 +53,9 @@ const quieto = (set, f) => { const k = set._noSite, r = S.rng; set._noSite = {};
 const sobre = (r, x, y, w) => x < r.x + r.n && x + w > r.x && y < r.y + r.n && y + w > r.y;
 const olha = set => sim(() => V.reservaDia(set)); // (the town's daily look, as its planner asks it)
 const civ = set => (set.urb && set.urb.civ) || null;
-// (the first ready world with a capital that keeps a civic field at its look — the ready worlds were made before the rule and
-// have none —: → { mundo, set, r }, the world left open)
+// (the first ready world with a capital that keeps a civic field at its look — the field it kept already, in the ready worlds of
+// the generation 20 and after, made with the rule; one it keeps at this look in a world made before it —: → { mundo, set, r },
+// the world left open)
 function caso(quer) {
   for (const w of MUNDOS) {
     abre(w);
@@ -78,23 +79,28 @@ function defeito(set, r) {
 }
 
 // ------------------------------ f1: a capital guarda o campo cívico ------------------------------
+// (um campo que o mundo já guardava — os mundos prontos da geração 20 nasceram com a regra (D-230): a capital o guardou num dia
+// da vida dela, e a crônica o disse nesse dia — o olhar de agora o mantém onde estava e não diz nada; o campo guardado neste
+// olhar, ou outro no lugar do que o olhar soltou, a crônica diz uma vez. A prova pedia a linha a todo campo, do tempo em que os
+// mundos prontos eram de antes da regra e nenhuma capital tinha campo: «mega Hedeby: 0 linhas na crônica», em 11 das 13. T-1017)
 run('f1', () => {
-  let guardam = 0, semTerra = 0, naoPrecisam = 0; const mal = [], diz = []; let primeiro = null;
+  let guardam = 0, semTerra = 0, naoPrecisam = 0, jaTinham = 0; const mal = [], diz = []; let primeiro = null;
   for (const w of MUNDOS) {
     abre(w);
     for (const set of capitais()) {
       if ((set.tier || 0) < V.RES_TIER) continue; const falta = V.civWork(set); if (!falta.length) { naoPrecisam++; continue; }
-      const hi = marca(); olha(set); const r = civ(set);
+      const r0 = civ(set) ? Object.assign({}, civ(set)) : null; const hi = marca(); olha(set); const r = civ(set);
       if (!r) { semTerra++; continue; } guardam++;
+      const novo = !r0 || r0.x !== r.x || r0.y !== r.y || r0.d !== r.d; if (!novo) jaTinham++;
       const q = defeito(set, r); if (q) mal.push(`${w} ${set.name}: ${q}`);
       if (r.type !== 'civico' || r.n !== 6 || r.chk !== S.day) mal.push(`${w} ${set.name}: o registro ${JSON.stringify(r)}`);
-      const L = linhas(hi, /guardou um campo de 24 metros .* para as suas grandes obras/); if (L.length !== 1) mal.push(`${w} ${set.name}: ${L.length} linhas na crônica`);
+      const L = linhas(hi, /guardou um campo de 24 metros .* para as suas grandes obras/); if (L.length !== (novo ? 1 : 0)) mal.push(`${w} ${set.name}: ${L.length} linhas na crônica (${novo ? 'guardado neste olhar' : 'o campo que já guardava'})`);
       const todos = V.reservas(set); if (!todos.some(o => o.type === 'civico' && o.x === r.x && o.y === r.y && o.n === 6)) mal.push(`${w} ${set.name}: V.reservas não o mostra (${JSON.stringify(todos)})`);
       const x0 = r.x, y0 = r.y; olha(set); const r2 = civ(set); if (!r2 || r2.x !== x0 || r2.y !== y0) mal.push(`${w} ${set.name}: ao segundo olhar ${r2 ? r2.x + ',' + r2.y : 'SOLTO'} (era ${x0},${y0})`);
-      diz.push(`${w} ${set.name} (falta ${falta.join(', ')}): em ${r.x},${r.y}, a ${Math.round(G.dist(r.x + 3, r.y + 3, set.cx, set.cy))} casas do meio, ${(W.slope(r.x, r.y, 6, 6) * 1.5).toFixed(1)} m de relevo`); if (!primeiro) primeiro = L[0] ? L[0].txt : '';
+      diz.push(`${w} ${set.name} (falta ${falta.join(', ')}): em ${r.x},${r.y}${novo ? '' : ' (já o guardava)'}, a ${Math.round(G.dist(r.x + 3, r.y + 3, set.cx, set.cy))} casas do meio, ${(W.slope(r.x, r.y, 6, 6) * 1.5).toFixed(1)} m de relevo`); if (!primeiro && L[0]) primeiro = L[0].txt;
     }
   }
-  ok('f1a a capital guarda um campo cívico', guardam >= 3 && !mal.length, `nos mundos prontos, capitais de nível 3 a que falta um dos três de 24 m: ${guardam} guardam um campo de 6 casas, ${semTerra} não acham terra; ${naoPrecisam} já têm os três${mal.length ? `; ${mal.length} FALHAS: ${mal.slice(0, 3).join(' | ')}` : ''}. ${diz.slice(0, 4).join('; ')}. «${primeiro}»`);
+  ok('f1a a capital guarda um campo cívico', guardam >= 3 && !mal.length, `nos mundos prontos, capitais de nível 3 a que falta um dos três de 24 m: ${guardam} guardam um campo de 6 casas (${jaTinham} já o guardavam, ${guardam - jaTinham} neste olhar), ${semTerra} não acham terra; ${naoPrecisam} já têm os três${mal.length ? `; ${mal.length} FALHAS: ${mal.slice(0, 3).join(' | ')}` : ''}. ${diz.slice(0, 4).join('; ')}.${primeiro ? ` «${primeiro}»` : ''}`);
 });
 
 // ------------------------------ f2: nele não se ergue nada ------------------------------
