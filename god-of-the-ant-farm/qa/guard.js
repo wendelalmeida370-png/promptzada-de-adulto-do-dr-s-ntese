@@ -707,5 +707,14 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   for (const f of files) src[f].forEach((l, k) => { const c = code(l); const m = /\.energy\s*([-+*/]?=)(?!=)([^;]*)/.exec(c); if (!m || !/\b(dt|dd|dn|dt2|h)\b/.test(m[2])) return;
     if (f === 'villagers.js' && /^\s*if \(v\.age >= 2\) v\.energy = G\.clamp\(v\.energy \+ \(awake \? -dn \* /.test(c)) return; if (ok(RATE_OK, f, l)) return;
     fails.push(`o descanso: ${f}:${k + 1} muda a energia de alguém por uma taxa do tempo fora do needs (D-240): ${l.trim().slice(0, 110)}`); }); }
+// 85. "há caminho? pergunta ao mapa de regiões" (L-731): a busca de caminho do instante (W.findPath) acha fechado o portão que o
+// alarme fechou e que reabre; o mapa de regiões (W.canWalk, W.townReaches, W.townsLinked) conta-o aberto, «para nunca dizer que
+// não há caminho onde há». Uma busca sem limite (N * N) que só responde sim ou não — num «!!», num «!», numa condição, num «&&» —
+// é a pergunta do mapa feita pela busca: a guerra não convocava exército contra a capital murada em alarme, nem socorro para a
+// cidade murada sitiada. Quem quer o caminho (a estrada, o desenho de uma rota) guarda-o («const p = W.findPath(…)»); quem quer
+// o instante de propósito (o cerco: o bando entra agora pelos portões?) também
+for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (!/\bfindPath\(/.test(c) || !/\bN \* N\b/.test(c)) return;
+  if (/(!!?|\bif \(|&&\s*|\|\|\s*|\?\s*)(G\.)?W\.findPath\(/.test(c)) fails.push(`há caminho?: ${f}:${k + 1} uma busca de caminho sem limite usada como sim ou não — pergunte ao mapa de regiões (W.canWalk, W.townReaches, W.townsLinked; L-731): ${l.trim().slice(0, 110)}`); });
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

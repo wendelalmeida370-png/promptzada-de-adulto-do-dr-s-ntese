@@ -76,7 +76,7 @@
   function landReach(a, b) {
     const k = a.id + '>' + b.id; const c = reachC.get(k); if (c && c.d === G.S.day) return c.ok;
     const ca = G.Fac.capitalOf(a.id), cb = G.Fac.capitalOf(b.id); let ok = false;
-    if (ca && cb) ok = W.sameLand ? W.sameLand(ca.cx, ca.cy, cb.cx, cb.cy) : !!W.findPath(ca.cx, ca.cy, cb.cx, cb.cy, true, N * N);
+    if (ca && cb) ok = W.sameLand(ca.cx, ca.cy, cb.cx, cb.cy); // (how many warships a people wants: the war over the water, by landmass)
     reachC.set(k, { d: G.S.day, ok }); return ok;
   }
   Fl.landReach = landReach;

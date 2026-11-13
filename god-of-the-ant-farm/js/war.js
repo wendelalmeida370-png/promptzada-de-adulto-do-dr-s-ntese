@@ -26,7 +26,6 @@
   Wr.armory = new Set();
   Wr.smith = new Set();
   G.worldHooks.push(() => { Wr.armory.clear(); Wr.smith.clear(); Wr.clock = 0; GRID.clear(); Wr.reset(); }); // (a new world, or a save loaded: it starts over)
-  const reach = new Map();
 
   // is there fighting at a town, or an army about to reach it? festivals, fairs and games wait for it to pass
   Wr.threat = function (setId) { return !!Wr.threatWhy(setId); };
@@ -44,7 +43,7 @@
     for (const bt of Wr.battles) { if (Wr.clock - bt.last > 20) continue; let n = 0; for (const k in bt.dead) n += bt.dead[k]; if (n >= 3 && G.dist(bt.x, bt.y, set.cx, set.cy) < R0 && S.type[W.idx(bt.x, bt.y)] > T.RIVER) return 'fight'; }
     return '';
   };
-  Wr.reset = function () { Wr.bands.clear(); Wr.battles.length = 0; reach.clear(); Wr.warFacs.clear(); Wr.fighters.length = 0; Wr.escapers.length = 0; pending.length = 0; };
+  Wr.reset = function () { Wr.bands.clear(); Wr.battles.length = 0; Wr.warFacs.clear(); Wr.fighters.length = 0; Wr.escapers.length = 0; pending.length = 0; };
   Wr.GOAL = { saque: 'para saquear', captura: 'para fazer cativos', conquista: 'para conquistar', massacre: 'sem intenção de deixar sobreviventes' };
 
   // ------------------------------ helpers ------------------------------
@@ -56,13 +55,9 @@
   // a duel (a vengeance face to face, staged or fought): nobody else steps in between the two
   const dueling = (o, v) => { const t = o.task; if (!t) return false; if (t.type === 'scene' && t.calm) return true; return !!t.duel && !(v && t.id === v.id); };
   Wr.dueling = dueling;
-  function reachable(a, b) {
-    const k = a.id + '>' + b.id; const c = reach.get(k);
-    if (c && c.day === G.S.day) return c.ok;
-    const ok = !!W.findPath(a.cx, a.cy, b.cx, b.cy, true, N * N);
-    reach.set(k, { day: G.S.day, ok });
-    return ok;
-  }
+  // (can a band walk from town a to town b: the map of regions, where a gate shut by an alarm counts as open — it opens again —,
+  // never the path of this instant: the raid against a walled town with its gates shut went by sea, or not at all, L-731)
+  function reachable(a, b) { return !!a && !!b && W.townsLinked(a, b); }
   function spotNear(x, y, r) { const p = W.randomNear(x, y, r); return p || W.nearestLand(x, y, r + 3); }
   Wr.penOf = function (setId) { for (const b of G.S.buildings.values()) if (b.type === 'cercado' && b.built && b.set === setId) return b; return null; };
   Wr.captivesOf = function (f) { let n = 0; for (const v of G.S.villagers.values()) if (v.captive && fid(v) === f) n++; return n; };

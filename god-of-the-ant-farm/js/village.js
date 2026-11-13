@@ -2152,7 +2152,9 @@
       // seafaring peoples (and anyone boxed in on an island) sail off to found colonies
       const fac = G.Fac.get(set.fac);
       const seaChance = Math.max(0.15, (G.Civ.t(set.fac, 'colonize') - 1) * 0.6);
-      const reachable = best && W.findPath(set.cx, set.cy, best[0], best[1], true, N * N);
+      // (whether the founders walk there: the map of regions — a gate of the town shut by an alarm opens again —, never the path
+      // of this instant, which found it shut and sent them by sea or nowhere, L-731)
+      const reachable = best && W.townReaches(set, best[0], best[1]);
       if ((!reachable || G.R() < seaChance) && G.Naval && fac && G.Naval.colonize(set, fac)) { set.fails = 0; return; }
       if (!reachable) { set.fails = 0; continue; }
       const name = V.newSettlementName(set.fac);

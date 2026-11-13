@@ -39,7 +39,7 @@
 // ============================================================
 (function (G) {
   const Wz = G.Wars = {};
-  let N = G.N; G.mapHooks.push(n => { N = n; reach.clear(); cache.t = -1; });
+  let N = G.N; G.mapHooks.push(n => { N = n; cache.t = -1; });
   const W = G.W, T = G.T;
   const log = (t, ic, x, y) => G.Village.log(t, ic, x, y);
   const DAY = () => G.DAY_LEN;
@@ -92,13 +92,13 @@
   const liveArmies = f => armies().filter(a => a.fac === f && !a.done);
   Wz.liveArmies = liveArmies;
   function nearestTo(list, x, y) { let best = null, bd = 1e9; for (const s of list) { const d = dist(s.cx, s.cy, x, y); if (d < bd) { bd = d; best = s; } } return best; }
-  const reach = new Map();
   function reachableAny(fId, tgt) { for (const s of G.Fac.settlementsOf(fId)) if (reachable(s, tgt)) return true; return false; }
-  function reachable(a, b) {
-    if (!a || !b) return false; const k = a.id + '>' + b.id; const c = reach.get(k);
-    if (c && c.day === G.S.day) return c.ok;
-    const ok = !!W.findPath(a.cx, a.cy, b.cx, b.cy, true, N * N); reach.set(k, { day: G.S.day, ok }); return ok;
-  }
+  // can an army walk from town a to town b: the map of regions (W.townsLinked), where a shut gate counts as open — it opens
+  // again, and a walled town is besieged at its gates (siege.js asks the path of the instant, at the walls) —, never the path of
+  // this instant: with the four gates of Mênfis shut by its alarm, the instant's path said «no way», and no army of the war was
+  // raised against it (the front of a levy), none came to relieve a walled town under siege, and the realm sailed against a
+  // town it could walk to (L-731)
+  function reachable(a, b) { return !!a && !!b && W.townsLinked(a, b); }
 
   // ------------------------------ names of places, battles and wars ------------------------------
   const FEM = /^(Lagoa|Cachoeira|Agulha|Garganta|Trilha|Escadaria|Subida|Portela|Queda|Gruta|Lapa|Furna|Toca|Caverna|Serra|Cordilheira|Pedra|Boca|Cova|Fenda|Ponta|Montanha|Colina|Cratera|Ilha|Praia|Baía|Enseada|Torre|Rocha)/;
@@ -1177,5 +1177,5 @@
       const fs = G.Fac.all(); for (let i = 0; i < fs.length; i++) for (let j = i + 1; j < fs.length; j++) if (G.Fac.atWar(fs[i].id, fs[j].id) && !warOf(fs[i].id, fs[j].id)) { const r = G.Fac.rel(fs[i].id, fs[j].id); const A = r && r.by === fs[j].id ? fs[j] : fs[i]; Wz.ensure(A, A === fs[i] ? fs[j] : fs[i]); }
     },
   });
-  Wz.reset = function () { reach.clear(); cache.t = -1; };
+  Wz.reset = function () { cache.t = -1; };
 })(window.G);
