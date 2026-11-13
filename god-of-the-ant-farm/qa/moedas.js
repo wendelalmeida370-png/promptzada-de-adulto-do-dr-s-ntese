@@ -22,6 +22,12 @@ const world = process.argv[2] || 'metropole';
 M.pronto(world); let S = G.S; M.viver(2); G.inSim++;
 const live = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (k % 100 === 99) watch(); if (until && until()) return true; } return false; };
 const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing && b.type !== 'ruin');
+// (who guards coins as a house — the 'h:' of the depot —: the house, or the seat where who rules lives (G.Village.bedsOf, D-205).
+// The count of the whole day asked BDEF.housing, and the seats were out of it, before and after: in the metrópole of the
+// generation 20 Bjorn lives in the palace of Hedeby, and the rulers of Argos and of Mênfis in their grand palaces, whose coins
+// moved in the day by the ledger — «h:17532: mudou 0, o livro diz 0.49» —; the cases of a house — the tax, the theft, the
+// house that falls — still ask a house. T-1002, as the T-989 of the smoke)
+const guards = b => !!b && b.type !== 'ruin' && V.bedsOf(b) > 0;
 const of = s => [...S.buildings.values()].filter(b => b.set === s.id && b.built);
 
 // ---------------- the instruments: every coin line of the ledger, by holder; and who writes coins outside the depot ----------------
@@ -37,7 +43,7 @@ function watchCoin(o, field, ref) {
 }
 function snap() {
   const m = new Map();
-  for (const b of S.buildings.values()) if (housing(b)) m.set('h:' + b.id, b.coin || 0);
+  for (const b of S.buildings.values()) if (guards(b)) m.set('h:' + b.id, b.coin || 0);
   for (const v of S.villagers.values()) { if (v.purse) m.set('p:' + v.id, v.purse); if (v.carry && v.carry.k === 'moedas' && v.carry.n > 0) m.set('v:' + v.id, v.carry.n); }
   for (const f of S.factions.values()) m.set('f:' + f.id, f.stock.moedas || 0);
   return m;
@@ -55,7 +61,7 @@ const fac = G.Fac.get(set.fac); const F = 'f:' + fac.id;
 console.log(`(${world}: ${set.name}, de ${fac.name}: ${V.pop(set.id)} habitantes; ${of(set).filter(housing).length} casas${byGod ? "; a coletoria posta pelo deus" : ""})`);
 const before = snap();
 for (const f of S.factions.values()) watchCoin(f.stock, 'moedas', 'tesouro');
-for (const b of S.buildings.values()) if (housing(b)) watchCoin(b, 'coin', 'casa');
+for (const b of S.buildings.values()) if (guards(b)) watchCoin(b, 'coin', 'casa');
 for (const v of S.villagers.values()) watchCoin(v, 'purse', 'bolso');
 const people = () => [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 18 && v.age < 60 && !v.captive && !v.jail && !v.aboard && !v.ug && !(S.avatar && S.avatar.id === v.id) && E.homeOf(v));
 const used = new Set(); const pick = pred => { const v = people().filter(o => !used.has(o.id) && (!pred || pred(o))).sort((a, b) => a.id - b.id)[0]; if (v) used.add(v.id); return v; };
