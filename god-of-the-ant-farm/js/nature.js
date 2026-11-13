@@ -133,7 +133,9 @@
         // with more — a monument's fire lasts as a big house's does. By its strength, a lot at a time and the flame low, a
         // theatre of 24 m lit at a corner burnt for two minutes and a half, a fire in the middle of the town all that while;
         // now half a minute: L-787)
-        if (b) G.Village.damageBuilding(b, fuel === 'pedra' ? G.Village.fireRoom(b) * f * dt / (Nat.STONE_SECS * b.w) : (b.built ? 5 : 9) * f * dt / Math.max(1, b.w * b.h) * 1.3, 'fire');
+        // (and a flame at its last, on soaked ground or in the rain, burns nothing: what is left of the step's fire after the wet
+        // was less than nothing, the damage negative, and the building gained it — L-726)
+        if (b && f > 0) G.Village.damageBuilding(b, fuel === 'pedra' ? G.Village.fireRoom(b) * f * dt / (Nat.STONE_SECS * b.w) : (b.built ? 5 : 9) * f * dt / Math.max(1, b.w * b.h) * 1.3, 'fire');
       }
       if (f <= 0.01) { S.fire[i] = 0; S.fireT[i] = 0; Nat.fireSet.delete(i); continue; }
       S.fire[i] = f;

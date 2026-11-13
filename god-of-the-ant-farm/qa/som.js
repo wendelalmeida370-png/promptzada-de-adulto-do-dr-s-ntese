@@ -195,7 +195,7 @@ function day() {
       const sitters = [...S.villagers.values()].filter(p => p.set === b.set && p.act === 'sit' && !p.sleeping && (p.task || {}).type !== 'termas' && A.gestoDe(p) === 'banhar').length;
       const c = scene(earAt(bx + 2, by + 0.5, { inside: b.id }), 's6'); const f = c.fontes.find(x => x.de.v === v.id); const fur = c.fontes.find(x => x.s === 'fornalha' && x.de.b === b.id);
       const empty = baths.filter(x => x !== b && !Object.keys(G.Termas.dia(x).data.banho).length).map(x => { const [x0, y0] = mid(x); const cc = scene(earAt(x0 + 2, y0 + 0.5, { inside: x.id }), 's6 vazia'); return { id: x.id, slosh: cc.fontes.filter(q => q.s === 'slosh' && q.de.b === x.id).length, fur: cc.fontes.filter(q => q.s === 'fornalha' && q.de.b === x.id).length, calor: G.Termas.dia(x).data.calor }; });
-      ok('s6a as-termas', !!f && f.g === 'banhar' && f.s === 'slosh' && f.de.b === b.id && f.de.op === op.id && f.fam === 'noite' && f.muf === 0 && !!fur === (op.data.calor > 0) && (!fur || fur.de.op === op.id) && dry === 0 && sitters === 0,
+      ok('s6a as-termas', !!f && f.g === 'banhar' && f.s === 'slosh' && f.de.b === b.id && f.de.op === op.id && f.fam === 'banho' && f.muf === 0 && !!fur === (op.data.calor > 0) && (!fur || fur.de.op === op.id) && dry === 0 && sitters === 0,
         `${townOf(b).name}, termas #${b.id}, hora ${S.time.toFixed(2)}: ${v.name} #${v.id} no banho → «${f ? f.g : '?'}» som «${f ? f.s : '?'}», da operação #${f ? f.de.op : '?'}; a fornalha ${op.data.calor > 0 ? 'acesa' : 'apagada'} (calor ${r3(op.data.calor)}) ${fur ? 'ronca' : 'não ronca'}; na cidade em volta, ${dry} som(ns) de água de quem não está no banho, ${sitters} sentado(s) fora das termas tomado(s) por banhista`);
       ok('s6b as-termas-vazias', empty.every(x => x.slosh === 0 && (x.fur > 0) === (x.calor > 0)), empty.length ? empty.map(x => `termas #${x.id}: ${x.slosh} som de água, fornalha ${x.calor > 0 ? 'acesa' : 'apagada'} ${x.fur ? 'ronca' : 'calada'}`).join('; ') : 'não há outras termas abertas sem banhista — a noite (s3b) diz o resto');
     }
@@ -208,7 +208,9 @@ function day() {
     // (the people of the town go for the evening, by the customer's own door: who would go, goes — the ones who would sing first)
     const sent = new Set();
     const send = () => stepIn(() => { for (const b of taverns()) { if (guests(b) >= 5) continue; let n = 0; const L = [...S.villagers.values()].filter(v => v.set === b.set && free(v) && !sent.has(v.id) && !(v.task && v.task.type === 'tavern')).sort((p, q) => (((q.traits || []).includes('Sociável') || q.id % 4 === 0) ? 1 : 0) - (((p.traits || []).includes('Sociável') || p.id % 4 === 0) ? 1 : 0) || p.id - q.id);
-      for (const v of L) { if (n >= 6) break; G.Vg.endTask(v); v.hunger = Math.min(v.hunger, 30); v.energy = Math.max(v.energy, 80); if (T.pick(v) && T.visitTask(v, G.Vg.H)) { sent.add(v.id); n++; } } } });
+      for (const v of L) { if (n >= 6) break; G.Vg.endTask(v); v.hunger = Math.min(v.hunger, 30); v.energy = Math.max(v.energy, 80); // (the visit held above the day's calls, as the bathers' of s6 are — T-281: given bare at this hour, the plaza on the way
+        // takes the walk, 0,45 over the tavern's 0,4, and no tavern had three at its tables — the case is the tavern's sound: T-855)
+        if (T.pick(v) && T.visitTask(v, G.Vg.H)) { if (v.task && v.task.type === 'tavern') v.task.pri = 2.9; sent.add(v.id); n++; } } } });
     send();
     const full = () => taverns().find(b => guests(b) >= 3);
     live(70, k => { if (k % 15 === 14) send(); return !!full(); });
@@ -405,8 +407,13 @@ function s7() {
       const dayH = Object.assign({}, c.fundo.h);
       skipTo(0.97); M.viver(2); const n = scene(earAt(set.cx, set.cy), 's7 noite');
       const silent = A.FAMS.filter(x => !(n.fundo.maos[x] > 0)).every(x => n.fundo.w[x] === 0);
-      ok('s7b habito-vezes-maos', c.fundo.w[f] === wantW && wantW > 0 && Math.abs(wet - r3(wantW * 0.5 / (1 - 0.5 * c.chuva))) < 0.002 && silent && n.fundo.h[f] === dayH[f] && !(n.fundo.maos[f] > 0) && n.fundo.w[f] === 0,
-        `${set.name}, «${f}»: de dia, hábito ${c.fundo.h[f]} × ${c.fundo.maos[f]} par(es) de mãos → peso ${c.fundo.w[f]} (a conta: ${wantW}); com chuva forte ${wet}; de noite (hora ${S.time.toFixed(2)}), o mesmo hábito ${n.fundo.h[f]}, ${n.fundo.maos[f] || 0} mãos → peso ${n.fundo.w[f]} — ${silent ? 'sem mãos, nenhuma vida soa' : 'SOA SEM MÃOS'}`);
+      // (the night has its own hands — the priests are up before the light, the watch walks —: the family of the day may have
+      // some at this hour («fe», 2 at 0,97), and then its weight is the same count, the habit times them; what the night
+      // shows is a life with its habit and no hands, silent: T-855)
+      const nightW = r3(n.fundo.h[f] * Math.min(1, (n.fundo.maos[f] || 0) / A.HANDS) * (1 - 0.5 * n.chuva));
+      const mute = A.FAMS.filter(x => n.fundo.h[x] > 0 && !(n.fundo.maos[x] > 0));
+      ok('s7b habito-vezes-maos', c.fundo.w[f] === wantW && wantW > 0 && Math.abs(wet - r3(wantW * 0.5 / (1 - 0.5 * c.chuva))) < 0.002 && silent && n.fundo.h[f] === dayH[f] && n.fundo.w[f] === nightW && mute.length > 0,
+        `${set.name}, «${f}»: de dia, hábito ${c.fundo.h[f]} × ${c.fundo.maos[f]} par(es) de mãos → peso ${c.fundo.w[f]} (a conta: ${wantW}); com chuva forte ${wet}; de noite (hora ${S.time.toFixed(2)}), o mesmo hábito ${n.fundo.h[f]}, ${n.fundo.maos[f] || 0} mãos → peso ${n.fundo.w[f]} (a conta: ${nightW}); ${mute.length} vida(s) com hábito e sem mãos (${mute.join(', ') || 'NENHUMA'}) — ${silent ? 'sem mãos, nenhuma vida soa' : 'SOA SEM MÃOS'}`);
     }
   }
   // ---------------- s7a the habit follows the life counted, slowly ----------------
@@ -416,13 +423,19 @@ function s7() {
     const q = U.at(set.cx, set.cy); if (!q) return ok('s7a o-habito-segue-a-vida', false, 'o centro da cidade não é chão de bairro nenhum');
     // (a day and a half of a lettered quarter's reading, every day, on the quarter's own ground — whatever its patches are that day)
     const read = () => { const qq = U.at(set.cx, set.cy); const [x, y] = U.cellXY(qq.cells[0]); U.note(x + 1, y + 1, 'saber', U.mark(qq, 'letrado', false) * qq.cells.length * 1.5); };
-    const h0 = A.habito(q).saber; const up = [h0];
-    for (let k = 0; k < 9; k++) { day(read); up.push(A.habito(U.at(set.cx, set.cy)).saber); }
-    const q2 = U.at(set.cx, set.cy); const peak = up[up.length - 1]; const down = [peak];
-    for (let k = 0; k < 12; k++) { day(); down.push(A.habito(U.at(set.cx, set.cy)).saber); }
-    const rise = up.every((x, k) => k === 0 || x >= up[k - 1]) && up.slice(1).every((x, k) => x - up[k] <= 0.36), fall = down.every((x, k) => k === 0 || x <= down[k - 1]) && down.slice(1).every((x, k) => down[k] - x <= 0.21);
+    // (the town grows while the days pass, and its quarters are drawn again: the one under the ear lost a patch of ground to a
+    // new one on the third day — 7 to 6, the Cidade do Templo born —, the mean of its life was another, and the habit went
+    // 0,54 → 0,433 with the reading counted every day. The slow rise is judged between two days the quarter kept its ground —
+    // most of them, or the case says nothing: T-855)
+    const sigOf = () => { const qq = U.at(set.cx, set.cy); return qq ? (qq.whole ? 'w' : 'd' + qq.id) + ':' + qq.cells.slice().sort((x, y) => x - y).join('.') : '-'; };
+    const h0 = A.habito(q).saber; const up = [h0]; const sg = [sigOf()];
+    for (let k = 0; k < 9; k++) { day(read); up.push(A.habito(U.at(set.cx, set.cy)).saber); sg.push(sigOf()); }
+    const q2 = U.at(set.cx, set.cy); const peak = up[up.length - 1]; const down = [peak]; const sd = [sigOf()];
+    for (let k = 0; k < 12; k++) { day(); down.push(A.habito(U.at(set.cx, set.cy)).saber); sd.push(sigOf()); }
+    const same = (g, k) => g[k] === g[k - 1]; const kept = sg.filter((x, k) => k > 0 && same(sg, k)).length, keptD = sd.filter((x, k) => k > 0 && same(sd, k)).length;
+    const rise = kept >= 6 && up.every((x, k) => k === 0 || !same(sg, k) || x >= up[k - 1]) && up.slice(1).every((x, k) => x - up[k] <= 0.36), fall = keptD >= 8 && down.every((x, k) => k === 0 || !same(sd, k) || x <= down[k - 1]) && down.slice(1).every((x, k) => down[k] - x <= 0.21);
     ok('s7a o-habito-segue-a-vida', h0 === 0 && rise && fall && peak >= 0.99 && up[1] > 0.2 && up[1] < 0.4 && down[2] >= 0.6 * peak && down[down.length - 1] < 0.15,
-      `${set.name} (${q2.whole ? 'o todo' : q2.name}, ${q2.cells.length} chãos, ${q2.dias} dias de vida): uma vez e meia a leitura que faz um bairro letrado, contada todo dia → o hábito ${up.join(' → ')}; sem leitura → ${down.join(' → ')} — ${rise ? 'sobe devagar' : 'SOBE AOS SALTOS'}, ${fall ? 'desce devagar' : 'DESCE AOS SALTOS'}`);
+      `${set.name} (${q2.whole ? 'o todo' : q2.name}, ${q2.cells.length} chãos, ${q2.dias} dias de vida): uma vez e meia a leitura que faz um bairro letrado, contada todo dia → o hábito ${up.join(' → ')}; sem leitura → ${down.join(' → ')} — ${rise ? 'sobe devagar' : 'SOBE AOS SALTOS'}, ${fall ? 'desce devagar' : 'DESCE AOS SALTOS'} (o bairro guardou os chãos em ${kept} de 9 dias da subida e ${keptD} de 12 da descida)`);
   }
 }
 

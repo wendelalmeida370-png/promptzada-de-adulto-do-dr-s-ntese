@@ -184,7 +184,9 @@ if (run('r4')) {
 // ------------------------------ r5: the drink ------------------------------
 if (run('r5')) {
   // two grown people standing in the street near one another; one of them drunk (the tavern's own mark: v.drunk)
-  const out = adults().filter(v => !v.inside && !v.sleeping && G.W.inb(v.x, v.y) && !(v.drunk > S.clock));
+  // (standing, or walking: with no gesture of a task — one in the middle of a stroke of work bends more than any drunk, and the
+  // sober one of the case was «0.00 e 0.68» of sway and lean: T-852)
+  const out = adults().filter(v => !v.inside && !v.sleeping && !v.act && G.W.inb(v.x, v.y) && !(v.drunk > S.clock));
   let a = null, b = null; for (const p of out) { const q = out.find(o => o !== p && G.dist(o.x, o.y, p.x, p.y) < 6); if (q) { a = p; b = q; break; } }
   if (!a) ok('r5 a bebedeira', false, 'ninguém de pé na rua perto de outro');
   else {

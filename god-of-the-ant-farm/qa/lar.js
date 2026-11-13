@@ -1203,7 +1203,10 @@ if (want('l17')) {
     const lost = [...before.keys()].filter(id => was(id) !== before.get(id)).map(id => `${(S.villagers.get(id) || {}).name || '#' + id}: ${before.get(id)} → ${was(id)}`);
     // (dawn: the jar emptied, filled again by one of the house)
     liveTo(0.08); hh.water = 0.1; hh.waterTry = undefined;
-    let fetched = 0; liveTo(0.45, () => { if (!fetched && G.Life.homeWater(hh) > 0.9) fetched = S.time; });
+    // (until the morning's own window for the jar is over — the game sends for water from 0,06 to 0,55 of the day, a try at a
+    // time, and the one sent may be called to a meal or to the town's assembly on the way —, and the walk back: by 0,45 the jar
+    // was full or not by the luck of who was free at each try, T-854)
+    let fetched = 0; const jar = () => { if (!fetched && G.Life.homeWater(hh) > 0.9) fetched = S.time; }; liveTo(0.45, jar); for (let k = 0; k < 19 && !fetched; k++) liveTo(S.time + 0.01, jar);
     // (the checker sees the house under the works too — by the beds of the house it is becoming, as the town counts them —: an
     // old one put out of it by the test's hand while a young single of it stays, D-098)
     let seen17 = null;

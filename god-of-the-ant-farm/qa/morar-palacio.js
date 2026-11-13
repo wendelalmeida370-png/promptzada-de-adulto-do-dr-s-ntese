@@ -148,8 +148,12 @@ run('m2', () => {
   // (the audience lasts thirty seconds from its call: the ruler set before the seat's door by the proof's hand, awake, free)
   const r = Pl.ruler(o.f); let thr = false, went = false; let tries = 0;
   while (r.sleeping && tries++ < 150) M.viver(2);
-  sim(() => { G.Vg.endTask(r); r.inside = 0; r.x = fr[0]; r.y = fr[1] + 0.5; went = !!Co.audiencia(o.f, 'teste'); });
-  for (let k = 0; k < 28 && !thr; k++) { M.viver(1); const pl = r.inside === b.id ? In.placeOf(r) : null; if (pl && pl.it && pl.it.kind === 'trono') thr = true; }
+  // (no fire in the world while the case lasts, by the proof's hand: a fire two tiles from the seat's door calls whoever stands
+  // there — the fire weighs 4, the audience 1.9 —, and in the joined tree's history one burnt beside the palace at that hour:
+  // the ruler beat the flames for the whole of the audience, «no trono: false» — T-853)
+  const semFogo = () => { for (const i of [...G.Nature.fireSet]) G.Nature.extinguish(i, 9); };
+  sim(() => { semFogo(); G.Vg.endTask(r); r.inside = 0; r.x = fr[0]; r.y = fr[1] + 0.5; went = !!Co.audiencia(o.f, 'teste'); });
+  for (let k = 0; k < 28 && !thr; k++) { sim(semFogo); M.viver(1); const pl = r.inside === b.id ? In.placeOf(r) : null; if (pl && pl.it && pl.it.kind === 'trono') thr = true; }
   M.viver(Co.AUD_DUR + 6);
   ok('m2g senta no trono na audiência, e ela acaba', went && thr && !o.f.aud, `a audiência começou: ${went}; ${r.name} no trono: ${thr}; acabou: ${!o.f.aud}`);
 });
