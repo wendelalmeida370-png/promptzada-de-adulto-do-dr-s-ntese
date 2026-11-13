@@ -15,7 +15,7 @@
 //   b  o corpo do deus: a mesma regra — de pé cansa como qualquer um, sentado num lugar de descanso da planta cansa REST;
 //   v  o dia vivido (DIAS=3 contados, depois do primeiro; na paz do deus, ninguém mandado; SHIFT=k: outra história):
 //      v1 às 0,66 e às 0,70, quem dorme ou vai dormir pela energia (os pisos tirados de quatro histórias de antes e de
-//      quatro de depois); v2 as horas de trabalho por adulto-dia não caíram; v3 ninguém cansa mais depressa do que o dia (a
+//      quatro de depois); v2 o dia de trabalho não encolheu (com tempo bom, a parte dos acordados no trabalho); v3 ninguém cansa mais depressa do que o dia (a
 //      regra do verificador, olhada de dois em dois segundos: nos dias vividos, com as cenas que houver, e em mais 30 s com
 //      o sol a demorar-se pela mão da prova); v4 o verificador limpo e nenhum erro; v5 o que se mede e não se afirma (a
 //      taverna de noite, as janelas, a energia na hora de deitar), dito na linha;
@@ -100,18 +100,23 @@ function partA() {
   }
   // ---- a4: the adult of the target — up at his hour, at work till the end of the afternoon, then at rest
   if (on('a4')) {
-    const v = L[5]; const c = Lr.clock(v); const tav = [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built).sort((a, c2) => a.id - c2.id)[0]; const fecha = tav && G.Taverna ? G.Taverna.horas(tav).fecha : 0.88;
+    // (the adult of the target: of the free ones, the one whose clock is nearest the common one — up at 0,03; a lazy one, up at
+    // 0,08, has five more of energy all day, and the mega's first was one)
+    const v = L.slice(5).filter(o => o.role !== 'taverneiro' && Lr.clock(o).wake < 0.3).sort((p, q) => Math.abs(Lr.clock(p).wake - 0.03) - Math.abs(Lr.clock(q).wake - 0.03) || p.id - q.id)[0];
+    const mate = L.find(o => o !== v); const c = Lr.clock(v); const tav = [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built).sort((a, c2) => a.id - c2.id)[0]; const fecha = tav && G.Taverna ? G.Taverna.horas(tav).fecha : 0.88;
     // (an errand of the day lasts seventy seconds at the most — villagers.js LONG —: the hand of the proof renews its hold every forty)
     let heldAt = -1e9; const keep = task => { if (S.clock - heldAt >= 40 || !v.task || v.task.type !== task.type) { hold(v, Object.assign({}, task)); heldAt = S.clock; } };
-    S.time = c.wake < 0.5 ? c.wake : 0.02; v.energy = 100; const UP = { type: 'idle', wait: 1e4 }, REST = { type: 'talk', id: L[6].id, wait: 1e4 };
+    S.time = c.wake; v.energy = 100; const UP = { type: 'idle', wait: 1e4 }, REST = { type: 'talk', id: mate.id, wait: 1e4 };
     let g = 0; while (S.time < 0.6 && g++ < 4000) { calm(); v.hunger = 10; keep(UP); M.viver(0.5); } const e60 = v.energy; // (on his feet, not at rest: the working day's tiredness)
     // (at rest by the hand — a talk: the door of rest is the same for the tavern's table; the tavern's own errand is the lived days' case)
     let eBed = -1, eShut = -1, rested = true; g = 0; heldAt = -1e9;
     while (S.time < fecha && S.time > 0.5 && g++ < 4000) { calm(); v.hunger = 10; keep(REST); const t0 = S.time; if (!Vg.resting(v)) rested = false; M.viver(0.5); if (eBed < 0 && t0 < c.bed && S.time >= c.bed) eBed = v.energy; }
     eShut = v.energy; god(() => Vg.endTask(v));
+    // (the person's own arithmetic: 100/80 a centésimo on one's feet, REST of it at rest)
+    const w60 = 100 - (0.6 - c.wake) * 100 * WORK, wBed = w60 - (c.bed - 0.6) * 100 * WORK * K(), wShut = w60 - (fecha - 0.6) * 100 * WORK * K();
     ok('a4 o adulto do alvo, pela mão: acorda à hora dele com 100, de pé e sem descanso até as 0,60, depois em descanso (uma conversa: a porta do descanso é a mesma da mesa da taverna) — chega à hora de deitar do relógio dele com a energia perto de 22 (de 19 a 28), e à hora de a taverna fechar ainda não foi mandado para a cama pelo cansaço (15)',
-      rested && e60 > 24 && e60 < 34 && eBed >= 19 && eBed <= 28 && eShut >= 15,
-      `${v.name} (acorda às ${c.wake.toFixed(3)}, deita às ${c.bed.toFixed(3)}; a taverna fecha às ${fecha}): às 0,60 com ${e60.toFixed(1)}; na hora de deitar dele ${eBed.toFixed(1)}; às ${fecha}, ${eShut.toFixed(1)} (REST ${K()})${rested ? '' : ' — SAIU DO DESCANSO DA PROVA no meio'}`);
+      rested && Math.abs(e60 - w60) < 1 && Math.abs(eBed - wBed) < 1 && Math.abs(eShut - wShut) < 1 && eBed >= 19 && eBed <= 28 && eShut >= 15,
+      `${v.name} (acorda às ${c.wake.toFixed(3)}, deita às ${c.bed.toFixed(3)}; a taverna fecha às ${fecha}): às 0,60 com ${e60.toFixed(1)} (a conta ${w60.toFixed(1)}); na hora de deitar dele ${eBed.toFixed(1)} (${wBed.toFixed(1)}); às ${fecha}, ${eShut.toFixed(1)} (${wShut.toFixed(1)}; REST ${K()})${rested ? '' : ' — SAIU DO DESCANSO DA PROVA no meio'}`);
   }
   ok('a o verificador e os erros depois da mão da prova', !novas().length && !mine().length && M.limpo(), novas().concat(mine().map(q => q.msg)).slice(0, 3).join(' | ') || (M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 200)));
 }
@@ -178,12 +183,14 @@ function partV() {
   const adult = v => v.age >= 16 && !v.captive && !v.aboard && !v.ug;
   let g = 0; const d0 = S.day; while (S.day === d0 && g++ < 4000) { peace(); M.viver(1); } // (the first day — the ready world's, begun at night — is lived and not counted)
   const d1 = S.day; const at = { 0.66: [], 0.7: [] }; const tav = { 0.75: [], 0.8: [], 0.85: [] }; const lit = { 0.74: [], 0.78: [], 0.82: [] }; const bedE = []; const bedSeen = new Set();
-  let adS = 0, workS = 0, restS = 0, secs = 0, lingerS = 0; const bad = []; const tired = []; let mid = null;
+  let adS = 0, workS = 0, restS = 0, secs = 0, lingerS = 0, fairA = 0, fairW = 0, stormS = 0, hourS = 0; const bad = []; const badSeen = new Map(); const tired = []; let mid = null;
   while (S.day < d1 + DIAS && g++ < 60000) {
     peace(); const t0 = S.time, dd = S.day; M.viver(1); if (S.day !== dd) continue; secs++; if (G.Scene.lingers()) lingerS++;
     const cross = m => t0 < m && S.time >= m; const cnt = {}; for (const m of [0.66, 0.7]) if (cross(m)) cnt[m] = [0, 0]; const tv = {}; for (const m of [0.75, 0.8, 0.85]) if (cross(m)) tv[m] = 0;
+    // (the working hours, and whether a storm is over the world — the game's own rule of the shelter: under it nobody works)
+    const stormy = S.weather.storm > 0 && S.weather.rain > 0.3, hours = S.time >= 0.05 && S.time < 0.6; if (hours) { hourS++; if (stormy) stormS++; }
     for (const v of S.villagers.values()) {
-      if (!adult(v)) continue; const t = v.task; adS++; if (!v.sleeping) { if (t && t.kind === 'work') workS++; if (Vg.resting(v)) restS++; }
+      if (!adult(v)) continue; const t = v.task; adS++; if (!v.sleeping) { if (t && t.kind === 'work') workS++; if (Vg.resting(v)) restS++; if (hours && !stormy) { fairA++; if (t && t.kind === 'work') fairW++; } }
       for (const m in cnt) { cnt[m][1]++; if ((v.sleeping || (t && t.type === 'sleep')) && !Lr.sleepy(v)) cnt[m][0]++; }
       for (const m in tv) if (t && t.type === 'tavern' && t.st >= 2) tv[m]++;
       const c = Lr.clock(v); const key = v.id + ':' + S.day; if (c.bed > 0.5 && t0 < c.bed && S.time >= c.bed && !bedSeen.has(key)) { bedSeen.add(key); if (!(v.sleeping || (t && t.type === 'sleep'))) bedE.push(v.energy); }
@@ -191,7 +198,7 @@ function partV() {
     for (const m in cnt) at[m].push(cnt[m]); for (const m in tv) tav[m].push(tv[m]);
     for (const m of [0.74, 0.78, 0.82]) if (cross(m)) { let n = 0, hs = 0; for (const b of S.buildings.values()) { if (!b.built || !(V.bedsOf(b) > 0)) continue; hs++; if (G.Atmos && G.Atmos.lit(b)) n++; } lit[m].push([n, hs]); }
     // (the verifier, looked at every two seconds: the tiredness against the day needs the looks near one another)
-    if (secs % 2 === 0) { for (const q of QA.check()) { if (q.sys === 'dia') { if (tired.length < 6) tired.push(`[S${q.sev}] ${q.msg.slice(0, 140)}`); } else if (q.sev <= 2 && !base.has(q.sys + '|' + q.msg) && bad.length < 6 && !bad.includes(q.msg)) bad.push(`[S${q.sev}] ${q.sys}: ${q.msg.slice(0, 120)}`); } }
+    if (secs % 2 === 0) { for (const q of QA.check()) { if (q.sys === 'dia') { if (tired.length < 6) tired.push(`[S${q.sev}] ${q.msg.slice(0, 140)}`); } else if (q.sev <= 2 && !base.has(q.sys + '|' + q.msg)) { const k = q.sys + '|' + q.msg; if (!badSeen.has(k)) { badSeen.set(k, [S.day, S.time, 0]); if (bad.length < 6) bad.push(k); } badSeen.get(k)[2]++; } } }
     if (!mid && S.day === d1 + 1 && S.time >= 0.85) mid = { save: G.Save.serialize(), t: S.time, day: S.day };
   }
   // (a history may have no scene in its days — the metropolis with one draw of the world's chance before it had none in four —:
@@ -205,9 +212,14 @@ function partV() {
   // to 10% after; at 0,70, 23% to 55% before and 13% to 33% after — the first has the teeth, the second is a belt)
   if (on('v1')) ok(`v1 em ${DIAS} dias vividos, sem ninguém mandado: às 0,66 não mais de 15% dos adultos dormem ou vão dormir pelo cansaço, e às 0,70 não mais de 40% (antes desta rodada, em quatro histórias: 22% a 42% e 23% a 55%; depois: 5% a 10% e 13% a 33%)`, at[0.66].length >= DIAS - 1 && share(0.66) <= 0.15 && share(0.7) <= 0.4,
     `a dormir ou a ir dormir pela energia (não pelo relógio de cada um): às 0,66 ${(100 * share(0.66)).toFixed(1)}% dos adultos (${at[0.66].map(r => r[0] + ' de ' + r[1]).join(', ')}); às 0,70 ${(100 * share(0.7)).toFixed(1)}% (${at[0.7].map(r => r[0] + ' de ' + r[1]).join(', ')})`);
-  if (on('v2')) ok('v2 o dia de trabalho não encolheu: 22 centésimos do dia ou mais no trabalho, por adulto-dia (em quatro histórias, antes desta rodada 25,4 a 29,7; depois 24,2 a 30,0)', workC >= 22, `por adulto-dia: ${workC.toFixed(1)} centésimos do dia no trabalho, ${restC.toFixed(1)} em descanso (G.Vg.resting)`);
+  // (the working day: of the grown ones awake in the working hours — 0,05 to 0,60 — with fair weather, the share at work. Not
+  // the centésimos a day alone: under a storm nobody works — the mega with a storm over a third of its working hours had 21
+  // centésimos of work a day for 30 without one, before this round or after it. In eight histories: 46% to 55% before, 51% to
+  // 55% after)
+  const fair = fairW / Math.max(1, fairA);
+  if (on('v2')) ok('v2 o dia de trabalho não encolheu: nas horas de trabalho (0,05 a 0,60) com tempo bom, 42% ou mais dos adultos acordados estão no trabalho (em oito histórias, antes desta rodada 46% a 55%; depois 51% a 55%)', fair >= 0.42 && fairA > 0, `${(100 * fair).toFixed(1)}% no trabalho; por adulto-dia: ${workC.toFixed(1)} centésimos do dia no trabalho, ${restC.toFixed(1)} em descanso (G.Vg.resting); a tempestade em ${(100 * stormS / Math.max(1, hourS)).toFixed(0)}% das horas de trabalho`);
   if (on('v3')) ok('v3 ninguém acordado cansa mais depressa do que o dia — a regra do verificador olhada de dois em dois segundos, nos dias vividos (com as cenas que houve) e em mais 30 s com o sol a demorar-se pela mão da prova', !tired.length && handS === 30, tired.length ? tired.slice(0, 3).join(' | ') : `nenhuma vez em ${secs} segundos dos dias vividos, uma cena a correr em ${lingerS} deles (${(100 * lingerS / Math.max(1, secs)).toFixed(1)}%), nem nos ${handS} s da mão`);
-  if (on('v4')) ok('v4 o verificador (S0 a S2) e os erros nos dias vividos', !bad.length && M.limpo(), bad.slice(0, 3).join(' | ') || (M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 300)));
+  if (on('v4')) ok('v4 o verificador (S0 a S2) e os erros nos dias vividos', !bad.length && M.limpo(), bad.slice(0, 3).map(k => { const r = badSeen.get(k); return `${k.replace('|', ': ').slice(0, 170)} (desde o dia ${r[0]} às ${r[1].toFixed(2)}, em ${r[2]} olhadas de dois em dois segundos)`; }).join(' | ') || (M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 300)));
   if (on('v5')) console.log(`MEDIDO | dia v5 o que se mede e não se afirma (uma história) | à mesa da taverna, no mundo: às 0,75 ${f1(mean(tav[0.75]))}, às 0,80 ${f1(mean(tav[0.8]))}, às 0,85 ${f1(mean(tav[0.85]))}; casas com a janela acesa: às 0,74 ${f1(mean(lit[0.74].map(r => r[0])))} de ${f1(mean(lit[0.74].map(r => r[1])))}, às 0,78 ${f1(mean(lit[0.78].map(r => r[0])))}, às 0,82 ${f1(mean(lit[0.82].map(r => r[0])))}; a energia de quem está acordado na hora de deitar do relógio dele: mediana ${f1(med(bedE))} (${bedE.length} adulto-dias; ${bedE.filter(x => x < 15).length} abaixo de 15)`);
   // ---------------------------------------------------------------- n: a save in the middle of the night, loaded twice
   if (on('n')) {
