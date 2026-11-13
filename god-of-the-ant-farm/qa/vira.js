@@ -151,14 +151,22 @@ const ROOT = path.resolve(__dirname, '..');
     G.Save.apply(JSON.parse(G.Ready.data.mundial)); G.Main.mode = 'game'; G.UI.setSpeed(0); const S = G.S;
     const holds = o => [...S.villagers.values()].some(v => v.captive && (S.settlements.get(v.set) || {}).fac === o.id);
     const atSea = o => [...G.Wars.state().armies.filter(a => !a.done && a.fac === o.id).map(a => 'exército ' + a.name), ...G.Fleets.of(o.id).map(x => 'frota ' + x.name), ...G.Expe.active(o.id).map(x => 'expedição ' + x.name)];
-    const f = G.Fac.all().filter(o => o.alive && !holds(o) && G.Fleets.of(o.id).length && G.Expe.active(o.id).length).sort((a, b) => atSea(b).length - atSea(a).length || a.id - b.id)[0];
+    let f = G.Fac.all().filter(o => o.alive && !holds(o) && G.Fleets.of(o.id).length && G.Expe.active(o.id).length).sort((a, b) => atSea(b).length - atSea(a).length || a.id - b.id)[0];
+    // (with no such people in this world — no expedition out at all in the «guerra mundial» of the generation 21, a continent
+    // with no other island for a colony —, the hand of the test has the first people with a fleet out and no captives weigh the
+    // sea by the game's door, as the lar and the maos do: G.Expe.consider, a dozen times at the most; T-1072)
+    let made = null;
+    if (!f) for (const o of G.Fac.all().filter(o => o.alive && !holds(o) && G.Fleets.of(o.id).length && G.Civ.has(o.id, 'navegacao')).sort((a, b) => a.id - b.id)) {
+      let x = null; for (let k = 0; k < 12 && !x; k++) x = G.Expe.consider(o, { scale: 'media', many: true });
+      if (x) { f = o; made = x.name; break; }
+    }
     if (!f) return { ok: false, info: 'nenhum povo com frota e expedição no mar e sem cativos nas suas cidades' };
     const was = atSea(f); const mine = [...S.villagers.values()].filter(v => !v.captive && G.Fac.idOfV(v) === f.id);
     for (const v of mine) G.Village.kill(v, 'sick');
     const left = atSea(f); const sea0 = QA.check().filter(e => e.sev <= 2 && / povo .*extinto$/.test(e.msg) && /^(exército|frota|expedição) /.test(e.msg)).map(e => e.msg);
     for (let k = 0; k < 4; k++) G.debug.step(0.05);
     const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
-    return { ok: !f.alive && !left.length && !sea0.length && !bad.length, info: `${f.name} (${mine.length} almas; em campo e no mar: ${was.join(', ')}): ${f.alive ? 'ainda vivo' : 'acabou'}; na mesma hora ${left.length ? 'ainda de pé: ' + left.join(', ') : 'nada dele em campo nem no mar'}${sea0.length ? ' — ' + sea0.slice(0, 2).join(' | ') : ''}; ${bad.slice(0, 3).join(' | ') || 'verificador limpo'}` };
+    return { ok: !f.alive && !left.length && !sea0.length && !bad.length, info: `${f.name}${made ? ` (a expedição «${made}» mandada pela mão da prova: nenhuma no mar neste mundo, T-1072)` : ''} (${mine.length} almas; em campo e no mar: ${was.join(', ')}): ${f.alive ? 'ainda vivo' : 'acabou'}; na mesma hora ${left.length ? 'ainda de pé: ' + left.join(', ') : 'nada dele em campo nem no mar'}${sea0.length ? ' — ' + sea0.slice(0, 2).join(' | ') : ''}; ${bad.slice(0, 3).join(' | ') || 'verificador limpo'}` };
   });
   console.log(`${r7.ok ? 'PASSOU' : 'FALHOU'} | o povo que acaba leva na hora os exércitos, as frotas e as expedições dele | ${r7.info}`);
   r.ok = r.ok && r2.ok && r3.ok && r4.ok && r5.ok && r6.ok && r7.ok;

@@ -89,17 +89,24 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       G.Save.apply(JSON.parse(G.Ready.data[W])); G.Main.mode = 'game'; G.UI.setSpeed(0);
       const S = G.S, Nv = G.Naval; let out = null; G.inSim++;
       try {
-        for (const f of G.Fac.all().filter(o => o.alive).sort((a, b) => a.id - b.id)) {
-          const ens = G.Fac.enemiesOf(f.id); if (!ens.length) continue;
-          const docks = Nv.docksOf(f.id).filter(d => Nv.dockInfo(d).moor); if (!docks.length) continue;
-          const s = Nv.shipsOf(f.id, 'guerra').filter(q => !q.fleet && !q.exp && q.st !== 'build' && q.hp > q.maxHp * 0.5 && !Nv.atSea(q) && !Nv.aboardOf(q).length).sort((a, b) => a.id - b.id)[0]; if (!s) continue;
+        // (with no free warship in the world — every one at sea, in a fleet or manned, as in the «guerra mundial» of the
+        // generation 21 —, the hand of the test has one built at the dock of the first people at war with a dock, by the
+        // game's door, the wood made by the ledger: T-1071)
+        const war = G.Fac.all().filter(o => o.alive).sort((a, b) => a.id - b.id).filter(f => G.Fac.enemiesOf(f.id).length && Nv.docksOf(f.id).some(d => Nv.dockInfo(d).moor));
+        const free = f => Nv.shipsOf(f.id, 'guerra').filter(q => !q.fleet && !q.exp && q.st !== 'build' && q.hp > q.maxHp * 0.5 && !Nv.atSea(q) && !Nv.aboardOf(q).length).sort((a, b) => a.id - b.id)[0];
+        let built = 0;
+        if (!war.some(f => free(f))) for (const f of war) { G.Depot.make('f:' + f.id, 'wood', 60, { code: 'l5-navio', part: true }); const q = Nv.spawn('guerra', f, Nv.docksOf(f.id).filter(d => Nv.dockInfo(d).moor)[0]); if (q) { built = q.id; break; } }
+        for (const f of war) {
+          const ens = G.Fac.enemiesOf(f.id);
+          const docks = Nv.docksOf(f.id).filter(d => Nv.dockInfo(d).moor);
+          const s = free(f); if (!s) continue;
           const v = [...S.villagers.values()].filter(o => G.Fac.idOfV(o) === f.id && !o.captive && !o.aboard && !o.jail && !o.ug && o.age >= 24 && o.age < 56 && o.id !== f.leader).sort((a, b) => a.id - b.id)[0]; if (!v) continue;
           Nv.board(v, s); const on0 = (s.crew || []).includes(v.id);
           const fl = G.Fleets.form(f, G.Wars.warOf(f.id, ens[0].id), 'patrulha', [s], { dock: docks[0].id });
           const ab = Nv.aboardOf(s); const off = ab.filter(o => !(s.crew || []).includes(o.id)).map(o => o.name);
           const vv = S.villagers.get(v.id); const still = !!vv && vv.aboard === s.id; const ashore = !!vv && !vv.aboard && G.W.walkableXY(vv.x, vv.y);
           const qa0 = QA.check().filter(e => /fora da tripulação/.test(e.msg)).map(e => e.msg);
-          out = { f: f.name, s: s.id, v: v.name, on0, fl: fl ? fl.id : 0, ab: ab.length, off, still, ashore, qa0 }; break;
+          out = { f: f.name, s: s.id, v: v.name, on0, fl: fl ? fl.id : 0, ab: ab.length, off, still, ashore, qa0, built: built === s.id }; break;
         }
       } finally { G.inSim--; }
       if (out) { for (let k = 0; k < 100; k++) G.debug.step(0.1); out.qa1 = QA.check().filter(e => e.sev <= 2).map(e => e.msg).slice(0, 3); }
@@ -107,7 +114,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     }, WORLD);
     if (!r5) ok('l5 o navio de guerra com alguém a bordo levado pela frota nova', false, 'nenhum povo em guerra com cais e navio de guerra livre');
     else ok('l5 o navio de guerra com alguém a bordo levado pela frota nova: todo mundo a bordo no rol', !!r5.fl && r5.on0 && !r5.off.length && (r5.still || r5.ashore) && !r5.qa0.length && !r5.qa1.length && !errs.length,
-      `${r5.f}: ${r5.v} posto a bordo do guerra#${r5.s} (no rol: ${r5.on0}); a patrulha ${r5.fl || 'NÃO formada'}: ${r5.ab} a bordo, ${r5.off.length ? 'FORA DO ROL ' + r5.off.join(', ') : 'todos no rol'}; ${r5.v} ${r5.still ? 'a bordo' : r5.ashore ? 'em terra, no cais' : 'NEM A BORDO NEM EM TERRA'}; o verificador logo depois: ${r5.qa0.join(' | ') || 'calado'}; 10 s depois: ${r5.qa1.join(' | ') || 'limpo'}`);
+      `${r5.f}: ${r5.v} posto a bordo do guerra#${r5.s}${r5.built ? ' (feito no cais pela mão da prova: nenhum livre no mundo, T-1071)' : ''} (no rol: ${r5.on0}); a patrulha ${r5.fl || 'NÃO formada'}: ${r5.ab} a bordo, ${r5.off.length ? 'FORA DO ROL ' + r5.off.join(', ') : 'todos no rol'}; ${r5.v} ${r5.still ? 'a bordo' : r5.ashore ? 'em terra, no cais' : 'NEM A BORDO NEM EM TERRA'}; o verificador logo depois: ${r5.qa0.join(' | ') || 'calado'}; 10 s depois: ${r5.qa1.join(' | ') || 'limpo'}`);
   }
   // l6 a fleet in a fight whose battle of record is already closed — the other fleet ended the fight and closed it, and this one
   // leaves at its next tick — goes through the save as it was (L-734). The load put it back on its course itself: the round
