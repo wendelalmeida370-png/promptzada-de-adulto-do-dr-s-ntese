@@ -444,8 +444,31 @@ os mundos prontos de novo, a regressão inteira e o relatório.
   T-846 (`oficio-fica` x5: a turma da obra grande antes da guerra). **A medida das dez sementes na árvore juntada**
   (T-838): aos 90 anos 3774 pessoas (a 3ª rodada do M sozinha: 3732; antes das obras: 3875), 36 degraus grandes de pé de 39
   fundados, nenhum caído (antes: 15 de pé, 10 caídos). D-199: o que os dois agentes deixaram para o líder decidir.
-- **Em curso (uma frente):** **a praça ao fim da tarde, o foguista no posto e o bairro dos banhos** (F, segunda rodada;
-  T-918, D-202).
+- **A praça ao fim da tarde, o foguista no posto, o bairro dos banhos** (agente F, segunda rodada; D-225 a D-229, L-911
+  a L-914, regras 79 e 80; fecha o T-918 e o T-919 e refaz a D-202): quem para na praça das suas ruas vai pela escolha do
+  dia, com causa (quem, quando, quanto, o que impede); as crianças das ruas da praça brincam nela à tarde; o foguista de
+  posto é chamado à fornalha, tem as mãos ocupadas para os chamados de fora e come antes de abrir (a fornalha acesa em 19
+  de 20 dias de banhos na metrópole, 9 de 9 com foguista na mega; antes 17 de 20 e 5 de 11); o banho tem a sua chave e o
+  seu perfil na vida do bairro («de banhos»), e os banhos sozinhos já não fazem um bairro «boêmio»; o passeio de quem está
+  sem trabalho vai aos banhos com tempo e com lugar; o cadafalso não chama da refeição quem morre de fome (L-913). 37 de 40
+  sabotagens acusadas (as três que passam são cinto e suspensório: T-928). **A leitura honesta do agente:** a praça passou de
+  vazia a ter gente (0,7 a 5 parados por hora das 0,60 às 0,70 nas cidades grandes; antes 0 a 0,8), não uma multidão — o
+  povo está exausto antes de escurecer (T-921).
+- **Na junção da 2ª rodada do F** (a árvore de integração sobre a 2ª do H e a 3ª do M): sem conflito; regras 79 e 80,
+  `praca-inv` no `qa.js` (26 arquivos), `praca` na regressão. **Uma regressão de descoberta das fases leves** (mar 26 de 26,
+  guerra 8 de 8, vidas longas, estado, tela, cidade, poderes) e as vizinhas na árvore juntada acharam: **três defeitos de
+  antes do patch, consertados** — L-725 (quem apagava um fogo não comia: o fogo pesa 4 e a refeição da fome 2,5; no caos 13
+  o único construtor de Hedeby combateu cinco dias com a fome no máximo enquanto a fogueira nova da cidade esperava por ele;
+  `fome` h22), L-726 (a chama que morria molhada devolvia vida ao prédio, e a marca do fogo de um monumento descia abaixo de
+  zero; `fogo-pedra` p9) e a regra P2 do verificador da sede com a família de antes da L-974 (T-849) —; **uma decisão**
+  — D-245: o frio do lugar não esvazia a praça, só o tempo (Hedeby tinha a praça fechada para sempre em todos os mundos
+  prontos) —; e **oito limites de prova**, cada um com rastro (T-847 `quarteirao` 7b, T-848 `vira` 5 e 6, T-850 `urb2` 5,
+  T-851 `atmosfera` a4, T-852 `roupa` r5, T-853 `morar-palacio` m2g, T-854 `lar` l17). O que o agente deixou sem causa
+  achada **não se repete na árvore juntada**: `vida-bairro` 11 de 11 (o v3 passa), `oldsave` limpo. O `freguesia` b1 (Tebas
+  sem banhistas no primeiro dia vivido) foi para a terceira rodada.
+- **Em curso (uma frente):** **o dia que dura até escurecer** (F, terceira rodada; a decisão do T-921, D-240: quem
+  descansa cansa menos do que quem trabalha — o cansaço do trabalho e os limiares do sono não mudam —, e o sol que se
+  demora numa cena segura também a fome e o cansaço, L-915).
 - **O diário do patch para o dono** (`qa/patch3/diario/`, publicado como artefato): o que entrou, o que está em obras e o
   que cada coisa muda no jogo, com capturas de verdade do Modo Encarnado (`qa/visual/fotos-diario.js`); atualizado a
   cada frente juntada.
