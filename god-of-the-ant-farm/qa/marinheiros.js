@@ -96,6 +96,11 @@ if (on('m2')) {
   const r = rota(); const s = r && zarpa(r, 90);
   if (!s) ok('m2 a viagem inteira', false, r ? `nenhum navio saiu na rota ${r.id} em 90 s (${sender(r).set.name}: ${sailorsOf(sender(r).set.id).length} marinheiros)` : 'nenhuma rota com marinheiros neste mundo');
   else {
+    // (o livro desta viagem, desde o chamado, e as linhas de quem é da tripulação dela: o mundo pronto pode abrir com um navio
+    // a voltar de uma viagem — na metrópole da geração 20, o de Roma, com a única marinheira da cidade a bordo —, que chega em
+    // casa na espera do zarpa e paga o soldo daquela; a mesma marinheira é chamada a este, e a prova contava dois soldos para
+    // uma cabeça («2 linha(s) «soldo» para 1 tripulante(s)»); e outro navio do mundo que volte no meio paga os seus. T-1014)
+    led.length = 0;
     const f = G.Fac.get(s.fac), dock = S.buildings.get(s.dock), set = S.settlements.get(dock.set), di = Nv.dockInfo(dock);
     const crew0 = s.crew.slice(); const viag0 = new Map(crew0.map(id => [id, (P(id).st && P(id).st.viagens) || 0]));
     const called = crew0.length > 0 && crew0.map(P).every(v => v && v.role === 'marinheiro' && v.set === dock.set && v.task && v.task.type === 'embark' && v.task.ship === s.id);
@@ -111,7 +116,7 @@ if (on('m2')) {
     const crew = crew0.map(P).filter(Boolean); const near = crew.map(v => G.dist(v.x, v.y, di.quay[0], di.quay[1]));
     ok('m2 foi ao porto de lá e voltou ao cais de casa', there && !!port && home && crew.length === crew0.length && crew.every(v => !v.aboard) && near.every(d => d < 4) && !notes.length,
       `chegou a ${port || 'NENHUM porto'}; de volta: ${home}; a tripulação no cais de ${set.name} (a ${near.map(d => d.toFixed(1)).join(' e ')} casas), ninguém a bordo: ${crew.every(v => !v.aboard)}${notes.length ? '; ' + notes.join('; ') : ''}`);
-    const pays = led.filter(e => e[8] === 'soldo'); const each = crew.map(v => pays.filter(e => e[9] === v.id));
+    const pays = led.filter(e => e[8] === 'soldo' && crew0.includes(e[9])); const each = crew.map(v => pays.filter(e => e[9] === v.id));
     const right = each.every((l, k) => l.length === 1 && l[0][5] === 'moedas' && Math.abs(l[0][6] - Hb.SOLDO) < 1e-6 && l[0][3] === 'f:' + f.id && l[0][4] === E.coinRef(crew[k]));
     ok('m2 um soldo por cabeça, do tesouro para a casa, no livro', E.coinage(f.id) && pays.length === crew.length && right,
       `${pays.length} linha(s) «soldo» para ${crew.length} tripulante(s): ${pays.map(e => `${e[3]}→${e[4]} ${e[6]} ${e[5]}`).join('; ') || 'nenhuma'}`);
@@ -128,15 +133,18 @@ if (on('m2')) {
 if (on('m3')) {
   mundo(0.86);
   const wood0 = new Map(G.Fac.all().map(f => [f.id, f.stock.wood])); const before = S.ships.length;
+  // (os navios da noite, os que saem com as rotas armadas — não os que o mundo tinha no mar ao abrir, a voltar para casa: a
+  // metrópole da geração 20 abre com dois, e a prova contava um deles como «1 navio(s) com tripulação» saído de noite. T-1014)
+  const ids0 = new Set(S.ships.map(q => q.id)); const out0 = tr().length;
   for (const r of S.seaRoutes) if (r.ok) r.t = 0;
   let abed = 0, all = 0; for (const s of towns()) for (const v of sailorsOf(s.id)) { all++; if (v.sleeping || G.Lar.sleepy(v)) abed++; }
   M.viver(20);
-  const hulls = tr().length; const waits = S.seaRoutes.filter(r => r.ok).every(r => r.t > 0);
+  const hulls = tr().filter(q => !ids0.has(q.id)).length; const waits = S.seaRoutes.filter(r => r.ok).every(r => r.t > 0);
   const spent = G.Fac.all().filter(f => wood0.get(f.id) - f.stock.wood >= Nv.SHIP.mercante.cost - 0.01).length;
   const woke = towns().some(s => sailorsOf(s.id).some(v => v.task && v.task.type === 'embark'));
   const nv = novas();
   ok('m3 de noite ninguém é tirado da cama: nenhum navio sai, a rota espera', G.isNight() && all > 0 && !hulls && !woke && waits && !spent && !nv.length,
-    `na hora 0,86 do dia, ${abed} de ${all} marinheiros na hora de dormir; em 20 s com as rotas armadas: ${hulls} navio(s) com tripulação, ${woke ? 'ALGUÉM chamado ao cais' : 'ninguém chamado'}, cascos feitos: ${spent}, as rotas esperam a vez seguinte: ${waits}; navios ${before}→${S.ships.length}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
+    `na hora 0,86 do dia, ${abed} de ${all} marinheiros na hora de dormir; em 20 s com as rotas armadas: ${hulls} navio(s) com tripulação${out0 ? ` (fora os ${out0} que o mundo tinha no mar ao abrir)` : ''}, ${woke ? 'ALGUÉM chamado ao cais' : 'ninguém chamado'}, cascos feitos: ${spent}, as rotas esperam a vez seguinte: ${waits}; navios ${before}→${S.ships.length}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
 }
 
 // ---------------------------------------------------------------- m4
@@ -191,8 +199,11 @@ if (on('m6')) {
   mundo();
   const r = rota(); const snd = r && sender(r);
   // (the body: the first sailor the game would call to this quay now — asked to the game's own door, which only reads)
-  let would = []; if (snd) live(() => { would = god(() => Nv.crewFor(snd.f, snd.dock)) || []; return would.length > 0; }, 40, 1);
-  if (!would.length) ok('m6 o corpo do deus nunca é chamado ao cais', false, snd ? `nenhum marinheiro livre em ${snd.set.name} em 40 s` : 'nenhuma rota com marinheiros');
+  // (esperado tanto quanto o zarpa espera o navio: a marinheira única de Roma, na metrópole da geração 20, está no mar ao abrir,
+  // no navio que o mundo tinha a voltar, chega exausta e dorme a viagem — livre só aos 40 e tantos segundos: «nenhum marinheiro
+  // livre em Roma em 40 s». T-1014)
+  let would = []; if (snd) live(() => { would = god(() => Nv.crewFor(snd.f, snd.dock)) || []; return would.length > 0; }, 90, 1);
+  if (!would.length) ok('m6 o corpo do deus nunca é chamado ao cais', false, snd ? `nenhum marinheiro livre em ${snd.set.name} em 90 s` : 'nenhuma rota com marinheiros');
   else {
     const me = would[0]; const took = G.Possess.take(me); const mine = !!(S.avatar && S.avatar.id === me.id);
     const after = god(() => Nv.crewFor(snd.f, snd.dock)) || [];
@@ -267,7 +278,10 @@ if (on('m9')) {
     const crew = () => e.crew.map(P).filter(v => v && !v.aboard);
     const onQuay0 = live(() => crew().some(v => v.task && v.task.type === 'cais'), 60, 1);
     // the night: sampled every five seconds from the evening to the morning, while the voyage is being made ready
-    let worst = 0, minE = 1e9, calls = 0, samples = 0, stN = ''; const d0 = S.day; let prev = e.st; const who = [];
+    // (a energia de quem está de pé: quem dorme está a recuperá-la, seja qual for a que trouxe — na metrópole da geração 20 o jol
+    // de Hedeby, em curso na noite em que o mundo foi guardado, deu à viagem de Torvald quatro dos oito com energia 0 antes de
+    // qualquer cais, e no fundo da noite eles dormiam: «a menor energia 0» media a festa, não o cais. T-1015)
+    let worst = 0, minE = 1e9, minSono = 1e9, calls = 0, samples = 0, stN = ''; const d0 = S.day; let prev = e.st; const who = [];
     while ((S.day === d0 || S.time < 0.12) && X.live(e)) {
       M.viver(5);
       if (e.st !== prev) { if (G.isNight() && e.st === 'reunir') stN = `«${e.st}» na hora ${S.time.toFixed(2)}`; prev = e.st; }
@@ -276,12 +290,12 @@ if (on('m9')) {
       // (each one by the clock of the house: the tavern's keeper goes to bed late; and the crate in the arms is set down first)
       samples++; const up = crew().filter(v => v.task && v.task.type === 'cais' && G.Lar.sleepy(v) && !(v.task.job === 'load' && v.task.st === 2)); worst = Math.max(worst, up.length); calls += up.length;
       for (const v of up) { const c = G.Lar.clock(v); const w = `${v.name} (${Math.floor(v.age)} anos, dorme das ${c.bed.toFixed(2)} às ${c.wake.toFixed(2)}) de pé na hora ${S.time.toFixed(2)}, «${v.task.job || ''}/${v.task.st}»`; if (who.length < 3) who.push(w); }
-      for (const v of crew()) minE = Math.min(minE, v.energy);
+      for (const v of crew()) { if (v.sleeping) minSono = Math.min(minSono, v.energy); else minE = Math.min(minE, v.energy); }
     }
     // (and in the morning the voyage goes on: the gathering is called with everyone up)
     const goes = live(() => e.st !== 'prep', 120, 1); const nv = novas();
     ok('m9 quem espera no cais durante a preparação dorme de noite (L-682)', onQuay0 && samples > 0 && worst === 0 && minE > 15 && !stN && goes && !nv.length,
-      `a viagem de ${e.leaderName} (${e.crew.length} na tripulação) preparada desde o fim da tarde, com gente no cais antes de dormir: ${onQuay0}; no fundo da noite (${samples} olhadas, da hora 0,86 ao amanhecer): no máximo ${worst} de pé no cais na sua hora de dormir${who.length ? ' — ' + who.join('; ') + ' —' : ''}, a menor energia ${minE === 1e9 ? '—' : minE.toFixed(0)}; reunião chamada de noite: ${stN || 'não'}; de manhã a viagem segue: ${goes} («${e.st}»); verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
+      `a viagem de ${e.leaderName} (${e.crew.length} na tripulação) preparada desde o fim da tarde, com gente no cais antes de dormir: ${onQuay0}; no fundo da noite (${samples} olhadas, da hora 0,86 ao amanhecer): no máximo ${worst} de pé no cais na sua hora de dormir${who.length ? ' — ' + who.join('; ') + ' —' : ''}, a menor energia de quem estava de pé ${minE === 1e9 ? '— (todos dormiam)' : minE.toFixed(0)}${minSono < 1e9 ? ` (de quem dormia, ${minSono.toFixed(0)})` : ''}; reunião chamada de noite: ${stN || 'não'}; de manhã a viagem segue: ${goes} («${e.st}»); verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
   }
 }
 
@@ -319,6 +333,9 @@ if (on('m11')) {
   const r = rota(); const s = r && zarpa(r, 90);
   if (!s) ok('m11 o soldo é só dos seus', false, r ? `nenhum navio saiu na rota ${r.id} em 90 s` : 'nenhuma rota com marinheiros neste mundo');
   else {
+    // (o livro desta viagem, desde o chamado — como no m2: o soldo da viagem que o mundo tinha no mar ao abrir, pago à mesma
+    // marinheira na espera do zarpa, contava como «soldos dele: 1». T-1014)
+    led.length = 0;
     const f = G.Fac.get(s.fac); const crew0 = s.crew.slice();
     const sailed = live(() => s.st === 'go', 90); const ab = Nv.aboardOf(s);
     // (the other people: one that knows no coin if the world has one, else the first other; one of its towns)
@@ -359,7 +376,11 @@ if (on('m12')) {
       S.seaRoutes = S.seaRoutes.filter(q => q !== r);
       // a minute, step by step: while the hull exists it is never at sea with nobody, never adrift; the wood of the step it goes
       let bad = '', gone = -1, wood = 0;
+      // (e as rotas que o jogo abre no minuto ficam seguras como as outras — o caso arma só a sua: tirada a rota da lista, o povo
+      // abre outra (updateSeaRoutes, com o relógio de 5 a 20 s), e a marinheira única de Roma, na metrópole da geração 20, embarcou
+      // 20 s depois num mercante novo dela — «a bordo: 1» —, uma viagem de verdade que não é o caso. T-1016)
       for (let k = 1; k <= 600; k++) {
+        for (const q of S.seaRoutes) if (q.t < 1e6) q.t = 1e6;
         const w0 = f.stock.wood; M.viver(0.1);
         if (S.ships.includes(s)) { if (s.ghost || s.st === 'deriva') bad = bad || `casco à deriva aos ${(k / 10).toFixed(1)} s`; else if (Nv.atSea(s) && !Nv.aboardOf(s).length) bad = bad || `no mar («${s.st}») sem ninguém a bordo aos ${(k / 10).toFixed(1)} s`; }
         else if (gone < 0) { gone = k / 10; wood = f.stock.wood - w0; }

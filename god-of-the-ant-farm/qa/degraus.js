@@ -86,15 +86,20 @@ function capitalGrande(type, stepId) {
   for (const w of MUNDOS) { abre(w); const r = capitalCom(type, stepId, s => V.pop(s.id) >= 60, 20); if (r && r.posta && r.longe <= 20) return Object.assign(r, { mundo: w }); }
   abre(); const r = capitalCom(type, stepId); return r ? Object.assign(r, { mundo: MUNDO }) : null;
 }
+// (a obra no lote do próprio planejador, pela porta do planejador — o V.startProject com o degrau, onde o povo dela sabe erguê-lo
+// —: a mão do deus, pedida com raio 0, lê o seu padrão de 40 (o.R || 40), e, com o lote do planejador encostado noutro prédio
+// (a regra dela quer o anel livre; a do planejador, não), tomava o lote mais perto da sua própria regra — na metrópole da
+// geração 20, Roma, um estábulo no anel: um lote a seis casas dali com três rochas, que pagaram 112 dos 140 de pedra do teatro
+// (D-121): a obra esperava 28, menos do que o armazém tinha, e a pedra que ela guarda deixava de ser o caso. T-1010)
 function capitalCom(type, stepId, quer, perto) {
-  const n = Es.steps(type).find(q => q.id === stepId || q.n === stepId).n; const cands = [];
+  const st = Es.steps(type).find(q => q.id === stepId || q.n === stepId), n = st.n; const cands = [];
   for (const set of capitais()) {
-    if ((quer && !quer(set)) || emObra(set).length || V.pop(set.id) < 30) continue;
+    if ((quer && !quer(set)) || emObra(set).length || V.pop(set.id) < 30 || !Es.can(type, G.Civ.idOfFac(set.fac) || 'classico', n)) continue;
     set._noSite = {}; const p = sim(() => V.findSite(set, type, undefined, n)); set._noSite = {};
     if (p && !p.demolish) cands.push([aoArmazem(set, p[0] + n / 2, p[1] + n / 2), set, p]);
   }
   cands.sort((a, c) => a[0] - c[0] || a[1].id - c[1].id);
-  for (const [d, set, p] of cands) { if (perto && d > perto) break; const b = sim(() => V.handFound(set, type, stepId, { x: p[0] + Math.floor(n / 2), y: p[1] + Math.floor(n / 2), R: 0 })); if (b) return { set, b, posta: 1, longe: Math.round(d) }; }
+  for (const [d, set, p] of cands) { if (perto && d > perto) break; const b = sim(() => V.startProject(set, type, [p[0], p[1]], st)); if (b) return { set, b, posta: 1, longe: Math.round(d) }; }
   if (perto) return null;
   for (const set of capitais()) { if ((quer && !quer(set)) || emObra(set).length) continue; const b = fundar(set, type, stepId); if (b) { const c = V.center(b); return { set, b, posta: 1, longe: Math.round(aoArmazem(set, c[0], c[1])) }; } }
   for (const set of capitais()) { if (quer && !quer(set)) continue; const b = emObra(set).find(o => (o.need.stone || 0) > 0); if (b) { const c = V.center(b); return { set, b, posta: 0, longe: Math.round(aoArmazem(set, c[0], c[1])) }; } }
@@ -190,17 +195,21 @@ run('g1h', () => {
   if (!ok('g1h2 uma cidade-irmã que ergue casas de pedra', !!q && vez && oficina && V.stoneKept(f.id) > 0, q ? `${q.name} (${V.pop(q.id)} pessoas, nível ${q.tier}), de ${f.name}; a vez de ${set.name} ${set.vez}, a obra guarda ${V.stoneKept(f.id).toFixed(0)} de ${(f.stock.stone || 0).toFixed(0)} de pedra do povo` : `nenhuma cidade-irmã de nível 2 de ${set.name}`)) return;
   // (every other work of the sister finished, the store with timber, and homes of it taken until its planner asks for one)
   const arma = () => sim(() => { for (const o of [...S.buildings.values()]) if (o.set === q.id && !o.built && o.type !== 'ruin' && !o.upgradeFrom) V.completeBuilding(o); if ((f.stock.wood || 0) < 60) D.make('f:' + f.id, 'wood', 60 - (f.stock.wood || 0), { code: 'teste' }); });
-  const pede = () => { const hi = V.housingInfo(q.id); return (hi.homeless > 0 || hi.cap - hi.pop < 2) && hi.cap < hi.pop + 3; };
+  // (a regra do próprio planejador: gente sem casa ou menos de duas camas de sobra, e as camas que há, com as das casas em obra,
+  // a menos de três além da gente — a casa em melhoria é uma casa em obra, e as camas dela vêm: a Óstia da metrópole da geração
+  // 20 tinha uma cabana sendo refeita em casa, 6 camas a caminho, e o planejador, com razão, não pedia casa nenhuma. T-1011)
+  const vem = () => { const c = V.counts(q.id); let n = 0; for (const k in c.siteTypes) n += (G.BDEF[k].housing || 0) * c.siteTypes[k]; return n; };
+  const pede = () => { const hi = V.housingInfo(q.id); return (hi.homeless > 0 || hi.cap - hi.pop < 2) && hi.cap + vem() < hi.pop + 3; };
   const tira = () => sim(() => { for (const h of [...S.buildings.values()].filter(o => o.set === q.id && CASAS[o.type] && o.built).sort((a, c) => c.id - a.id)) { if (pede()) break; V.damageBuilding(h, 99999, 'fire'); } });
   // (the planner's looks, the homes it founds heard at its own door: → the type of the first)
   const olha = n => { const sp0 = V.startProject; let tipo = null; V.startProject = function (s, type) { const nb = sp0.apply(this, arguments); if (nb && s === q && CASAS[type] && !tipo) tipo = type; return nb; };
     try { for (let k = 0; k < n && !tipo; k++) { arma(); alimenta(q); q._noSite = {}; sim(() => V.planNow(q)); } } finally { V.startProject = sp0; } return tipo; };
-  arma(); tira(); const hi = V.housingInfo(q.id);
+  arma(); tira(); const hi = V.housingInfo(q.id), hv = vem();
   // (what the whole store would pay for, asked of the door of the homes with the dice put back)
   const rng = S.rng; const cru = sim(() => G.City.homeType(q, f, oficina, f.stock)); S.rng = rng;
   const sobra = V.stoneSpare(f.id); const t1 = olha(12);
   ok('g1h3 com a pedra guardada, a casa nova é da sobra', pede() || !!t1 ? (cru !== 'hut' && sobra < 6 && t1 === 'hut') : false,
-    `${q.name}: ${hi.homeless} sem casa, ${hi.cap} camas para ${hi.pop}; o povo tem ${(f.stock.stone || 0).toFixed(0)} de pedra, a obra grande guarda ${V.stoneKept(f.id).toFixed(0)}, sobram ${sobra.toFixed(0)}: pelo estoque inteiro a casa seria «${cru}»; o planejador fundou «${t1 || 'nada'}»`);
+    `${q.name}: ${hi.homeless} sem casa, ${hi.cap} camas para ${hi.pop} (e ${hv} em obra); o povo tem ${(f.stock.stone || 0).toFixed(0)} de pedra, a obra grande guarda ${V.stoneKept(f.id).toFixed(0)}, sobram ${sobra.toFixed(0)}: pelo estoque inteiro a casa seria «${cru}»; o planejador fundou «${t1 || 'nada'}»`);
   // (the work given all it waits for, by the god's hand — its brick too —: nothing kept, and the same store pays a stone home)
   for (let k = 0; k < 4; k++) sim(() => { for (const m in b.need) { const n = b.need[m] || 0; if (n > 0) { D.make('f:' + f.id, m, n, { code: 'teste' }); D.move('f:' + f.id, 'o:' + b.id, m, n, { code: 'teste' }); } } });
   sim(() => { for (const o of [...S.buildings.values()]) if (o.set === q.id && CASAS[o.type] && !o.built && !o.upgradeFrom) V.damageBuilding(o, 99999, 'fire'); });
@@ -383,18 +392,28 @@ run('g5', () => {
   if (!ok('g5a o santuário sem espaço em volta', !!set, set ? `${set.name} (${V.pop(set.id)} pessoas, nível ${set.tier}) justifica ${Es.choose(set, 'temple').map(st => st.id + '/' + st.n).join(' > ')}; ${lado(b0)} com poços dos lados` : 'nenhuma capital justifica um templo maior com lote livre')) return;
   const fac = G.Fac.get(set.fac); civicas(set); rico(set, 120); pedra(set, 100);
   const cresce = Es.choose(set, 'temple').filter(st => st.n > b0.w).every(st => !V.growLot(set, b0, st));
-  const hi = marca(); const templos0 = [...S.buildings.values()].filter(o => o.set === set.id && o.type === 'temple').length;
+  let hi = marca(); const templos0 = [...S.buildings.values()].filter(o => o.set === set.id && o.type === 'temple').length;
   // (the town's other temples, standing, would be the ones to grow: the proof's is the biggest only if none is bigger — else it
   // takes them away, by the game's door)
   sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && o.type === 'temple' && o.id !== b0.id) V.removeBuilding(o); });
+  // (e as outras obras públicas da cidade que subiriam um degrau antes dele vão primeiro, como o jogo as tem: o V.grow olha os
+  // prédios na ordem em que foram fundados, uma obra grande de cada vez (D-175) — na metrópole da geração 20 a Pedra do Sol de
+  // 8 m de Tenochtitlan, mais velha que o santuário da prova e também sem espaço em volta, foi erguida de novo com 16 m antes do
+  // templo, e a prova julgava o monumento como se fosse o templo. Cada uma que o planejador ergue antes da da prova fica pronta
+  // pela mão do deus, e o degrau do templo é pedido de novo com o chão como ela o deixou. T-1012)
   // (the step asked again with the ground as the planner will find it: where a temple taken away stood, a lot the work levels
   // may hold a bigger step — D-217)
-  const antes = alvo; alvo = Es.choose(set, 'temple').filter(st => st.n > b0.w).find(st => acha(set, st)) || alvo;
-  if (alvo !== antes) console.log(`  (g5: sem os outros templos, o maior degrau com terra passou de ${antes.id}/${antes.n} a ${alvo.id}/${alvo.n})`);
-  const nb = sim(() => V.grow(set, fac, V.counts(set.id)));
+  const antes = alvo; let nb = null; const primeiro = [];
+  for (let k = 0; k < 8; k++) {
+    alvo = Es.choose(set, 'temple').filter(st => st.n > b0.w).find(st => acha(set, st)) || alvo;
+    hi = marca(); set._noSite = {}; const q = sim(() => V.grow(set, fac, V.counts(set.id)));
+    if (!q || q.type === 'temple') { nb = q; break; }
+    primeiro.push(lado(q)); sim(() => V.completeBuilding(q)); civicas(set);
+  }
+  if (alvo !== antes) console.log(`  (g5: sem os outros templos${primeiro.length ? ' e com as obras que vieram antes de pé' : ''}, o maior degrau com terra passou de ${antes.id}/${antes.n} a ${alvo.id}/${alvo.n})`);
   const velho = S.buildings.get(b0.id); const fora = nb && (nb.x + nb.w <= b0.x || nb.x >= b0.x + b0.w || nb.y + nb.h <= b0.y || nb.y >= b0.y + b0.h);
   ok('g5b erguido de novo, noutro lugar', cresce && !!nb && nb.id !== b0.id && nb.type === 'temple' && nb.w === alvo.n && !nb.built && fora && !!velho && velho.built && velho.w === 2 && !velho.amp,
-    `em volta ${cresce ? 'não há lote para crescer' : 'HAVIA lote'} (${templos0} templos antes); V.grow: ${lado(nb)}${nb ? ', em obra' : ''}; o antigo ${velho ? lado(velho) + (velho.built ? ', de pé' : ', EM OBRA') : 'SUMIU'}`);
+    `em volta ${cresce ? 'não há lote para crescer' : 'HAVIA lote'} (${templos0} templos antes)${primeiro.length ? `; antes dele, na ordem do jogo, ${primeiro.length === 1 ? 'a obra grande' : 'as obras grandes'} de ${set.name} que o planejador ergueu, de pé pela mão do deus: ${primeiro.join('; ')}` : ''}; V.grow: ${lado(nb)}${nb ? ', em obra' : ''}; o antigo ${velho ? lado(velho) + (velho.built ? ', de pé' : ', EM OBRA') : 'SUMIU'}`);
   if (!nb) return;
   const B = Es.bill('temple', alvo); const soma = o => Object.values(o || {}).reduce((a, x) => a + (x || 0), 0);
   // (the work of the step, and the earth its lot had to move, where the ground was levelled for it: D-217)
@@ -493,9 +512,15 @@ run('g5v', () => {
 // ------------------------------ g6: a maravilha do campo guardado primeiro ------------------------------
 run('g6', () => {
   // (a capital with its kept lot as the world has it; with none, one armed by the guard of the proofs — guarda-lib.js)
-  abre(); const { guarda } = require('./guarda-lib.js'); const g = guarda(G) || guarda(G, { provoca: 1 });
+  // (no primeiro mundo pronto que tenha uma (MUNDOS); sem nenhuma em nenhum, a armada pela guarda das provas no mundo da prova. Na
+  // metrópole da geração 20 Roma e Tenochtitlan têm a sua maravilha — de pé e em obra — e Argos, Mênfis e Hedeby largaram o
+  // campo pela terra: em volta delas não sobra o chão de 16 casas com o anel e a rampa, nem para o deus aplainar — «nenhuma
+  // capital guardou um campo»; a guerra mundial tem duas que guardam. T-1013)
+  const { guarda } = require('./guarda-lib.js'); let g = null;
+  for (const w of MUNDOS) { abre(w); g = guarda(G); if (g) { g.mundo = w; break; } }
+  if (!g) { abre(); g = guarda(G, { provoca: 1 }); if (g) g.mundo = MUNDO; }
   const set = g && S.settlements.get(g.set); const r0 = set && V.reserva(set);
-  if (!ok('g6a o campo guardado', !!r0, r0 ? `${set.name} guarda ${r0.n}×${r0.n} para ${r0.type} (${g.provocado ? 'o chão aplainado pela prova' : 'a terra como estava'})` : 'nenhuma capital guardou um campo')) return;
+  if (!ok('g6a o campo guardado', !!r0, r0 ? `${g.mundo}, ${set.name} guarda ${r0.n}×${r0.n} para ${r0.type} (${g.provocado ? 'o chão aplainado pela prova' : 'a terra como estava'})` : `nenhuma capital guardou um campo (${MUNDOS.join(', ')})`)) return;
   if (r0.type !== 'maravilha') { console.log(`  (g6: o campo é de ${r0.type}; a regra é da maravilha — sem caso neste mundo)`); return; }
   const fac = G.Fac.get(set.fac);
   // (what the planner asks of a capital to wish its wonder — city.js —: the arts, the people, the stone; and a town that still

@@ -6,39 +6,56 @@
 // encontram (os que a guerra já levantou nos seus primeiros segundos; só o que falta, pela porta do jogo). d1 a batalha acontece; d2 ninguém luta até o último homem (nenhum lado de 10 ou mais com 90% de mortos);
 // d3 quem perde foge, se rende ou deixa o campo; d4 os exércitos terminam (o que sobrou volta para casa) e o
 // verificador fica limpo do começo ao fim.
+// (a batalha de campo é a premissa do caso, e a guerra é uma trajetória — a T-093 já dizia: com o código do fecho dos Bairros
+// Vivos a semente 11 dá outra guerra: a guarda de Mênfis guarda o vau do rio a 5 casas do meio da cidade que a prova encheu, a
+// hoste de Lavínio começa o assalto no raio e três, a 26 casas, e o primeiro encontro dos dois é o Assalto a Mênfis, que a
+// conquista julga, aberto ainda no fim dos 2,5 dias — «os exércitos não se encontraram em 2,5 dias». A prova vive a semente
+// pedida e, sem batalha de campo nela, as duas seguintes, como já passava nas sementes 11, 7 e 13; a linha diz o que houve em
+// cada uma. T-1019)
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
-const seed = +(process.argv[2] || 11);
+const seed0 = +(process.argv[2] || 11);
 const fails = []; const mid = [];
 const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | derrota ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
 const watch = () => { for (const q of QA.check()) { const t = `[S${q.sev}] ${q.sys}: ${q.msg}`; if (q.sev <= 2 && !mid.includes(t)) mid.push(t); } };
 const live = (sec, until) => { for (let k = 1; k <= sec * 10; k++) { M.viver(0.1); if (k % 50 === 0) watch(); if (until && until()) { watch(); return true; } } watch(); return false; };
-let S = M.novo({ seed, type: 'continente', size: 170, tribes: 2, temper: 'pacifico', relevo: 'suave' });
-// two kingdoms of some hundreds, kept at peace while they grow (as the guerra10 medium case), with food and an armoury
-const dw = G.Politics.declareWar; G.Politics.declareWar = () => { };
-while (S.day < 6) M.viver(10);
-G.Politics.declareWar = dw;
-const [A, B] = G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).slice(0, 2);
-const grow = (f, want) => { const sets = G.Fac.settlementsOf(f.id); let k = 0; while (G.Fac.pop(f.id) < want && k++ < 9000) { const s = sets[k % sets.length]; const a = G.R() * 6.283, r = G.R() * (s.radius || 6); const p = G.W.nearestLand(s.cx + Math.cos(a) * r, s.cy + Math.sin(a) * r, 5); if (!p) continue; G.Vg.create({ set: s.id, x: p[0], y: p[1], age: 17 + G.R() * 38 }); } f.stock.food = Math.max(f.stock.food, want * 7); f.stock.armas = (f.stock.armas || 0) + Math.round(want * 0.15); };
-grow(A, 320); grow(B, 260); G.Fac.updateTerritory();
-G.Politics.declareWar(A, B, 'ambicao'); live(5);
-const Wz = G.Wars; const w = Wz.warOf(A.id, B.id);
-// (the armies the war raised, and by the game's door only what is missing: in its first five seconds the war may have called
-// A's campaign and B's guard already — in the generation 19 it had, and the hand's second campaign and second guard of Mênfis
-// took four of the first guard, called and fled back to work: «#5458 em dois exércitos (3 e 5)». The game raises one campaign
-// of a people at a time and one guard for a town)
-const raised = (f, role, t) => w && Wz.state().armies.find(a => !a.done && a.war === w.id && a.fac === f.id && a.role === role && (!t || a.target === t.id));
-const host0 = raised(A, 'campanha'); const tg = host0 ? G.S.settlements.get(host0.target) : G.Fac.capitalOf(B.id);
-const host = w && tg && (host0 || Wz.mobilize(w, G.Fac.get(A.id), 'campanha', tg, {}));
-const guard = w && tg && (raised(B, 'defesa', tg) || Wz.mobilize(w, G.Fac.get(B.id), 'defesa', tg, {}));
-console.log(`(${A.name} ${G.Fac.pop(A.id)} contra ${B.name} ${G.Fac.pop(B.id)}; exército ${host ? host.members.length : '-'} contra a guarda de ${tg ? tg.name : '-'} ${guard ? guard.members.length : '-'})`);
-if (!host || !guard) { ok('d1 a batalha', false, `precondição: ${!host ? A.name + ' não convocou' : B.name + ' não convocou a guarda'}`); process.exit(1); }
-// the field battle: a closed record out of the towns (an assault on a town is judged by the conquest) with both sides of ten or more
-const field = () => Wz.state().battles.filter(b => !b.naval && !b.town && !b.open && Object.keys(b.sides).length >= 2 && Object.values(b.sides).every(s => s.n >= 10) && Object.keys(b.sides).map(Number).includes(A.id) && Object.keys(b.sides).map(Number).includes(B.id));
-live(G.DAY_LEN * 2.5, () => field().length > 0);
-const bts = field(); const bt = bts[0];
+const Wz = G.Wars;
+// the provocation in the world of a seed: → { seed, A, B, tg, w, host, guard, bt } — bt the field battle, if the 2,5 days had one
+// — or { pre } when a people did not raise its army
+function provoca(seed) {
+  const S = M.novo({ seed, type: 'continente', size: 170, tribes: 2, temper: 'pacifico', relevo: 'suave' });
+  // two kingdoms of some hundreds, kept at peace while they grow (as the guerra10 medium case), with food and an armoury
+  const dw = G.Politics.declareWar; G.Politics.declareWar = () => { };
+  while (S.day < 6) M.viver(10);
+  G.Politics.declareWar = dw;
+  const [A, B] = G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).slice(0, 2);
+  const grow = (f, want) => { const sets = G.Fac.settlementsOf(f.id); let k = 0; while (G.Fac.pop(f.id) < want && k++ < 9000) { const s = sets[k % sets.length]; const a = G.R() * 6.283, r = G.R() * (s.radius || 6); const p = G.W.nearestLand(s.cx + Math.cos(a) * r, s.cy + Math.sin(a) * r, 5); if (!p) continue; G.Vg.create({ set: s.id, x: p[0], y: p[1], age: 17 + G.R() * 38 }); } f.stock.food = Math.max(f.stock.food, want * 7); f.stock.armas = (f.stock.armas || 0) + Math.round(want * 0.15); };
+  grow(A, 320); grow(B, 260); G.Fac.updateTerritory();
+  G.Politics.declareWar(A, B, 'ambicao'); live(5);
+  const w = Wz.warOf(A.id, B.id);
+  // (the armies the war raised, and by the game's door only what is missing: in its first five seconds the war may have called
+  // A's campaign and B's guard already — in the generation 19 it had, and the hand's second campaign and second guard of Mênfis
+  // took four of the first guard, called and fled back to work: «#5458 em dois exércitos (3 e 5)». The game raises one campaign
+  // of a people at a time and one guard for a town)
+  const raised = (f, role, t) => w && Wz.state().armies.find(a => !a.done && a.war === w.id && a.fac === f.id && a.role === role && (!t || a.target === t.id));
+  const host0 = raised(A, 'campanha'); const tg = host0 ? G.S.settlements.get(host0.target) : G.Fac.capitalOf(B.id);
+  const host = w && tg && (host0 || Wz.mobilize(w, G.Fac.get(A.id), 'campanha', tg, {}));
+  const guard = w && tg && (raised(B, 'defesa', tg) || Wz.mobilize(w, G.Fac.get(B.id), 'defesa', tg, {}));
+  console.log(`(semente ${seed}: ${A.name} ${G.Fac.pop(A.id)} contra ${B.name} ${G.Fac.pop(B.id)}; exército ${host ? host.members.length : '-'} contra a guarda de ${tg ? tg.name : '-'} ${guard ? guard.members.length : '-'})`);
+  if (!host || !guard) return { pre: `precondição: ${!host ? A.name + ' não convocou' : B.name + ' não convocou a guarda'}` };
+  // the field battle: a closed record out of the towns (an assault on a town is judged by the conquest) with both sides of ten or more
+  const field = () => Wz.state().battles.filter(b => !b.naval && !b.town && !b.open && Object.keys(b.sides).length >= 2 && Object.values(b.sides).every(s => s.n >= 10) && Object.keys(b.sides).map(Number).includes(A.id) && Object.keys(b.sides).map(Number).includes(B.id));
+  live(G.DAY_LEN * 2.5, () => field().length > 0);
+  return { seed, A, B, tg, w, host, guard, bt: field()[0] };
+}
+// (the first fight of the war of a seed with no field battle: what there was instead)
+const houve = r => { const L = (r.w ? r.w.battles : []).map(Wz.battle).filter(b => b && !b.naval); const t = L[0]; return t ? `${t.name}${t.town ? ' (a cidade: a conquista o julga)' : ''}${t.open ? ', aberto no fim' : ''}` : 'nenhum encontro'; };
+let r = null; const sem = [];
+for (let k = 0; k < 3; k++) { r = provoca(seed0 + k); if (r.pre || r.bt) break; sem.push(`semente ${r.seed}: ${houve(r)}`); }
+if (r.pre) { ok('d1 a batalha', false, r.pre); process.exit(1); }
+const { A, B, host, guard, bt } = r;
 const sides = bt ? Object.entries(bt.sides).map(([k, s]) => `${(G.Fac.get(+k) || {}).name}: ${s.n}, ${s.dead} mortos, ${s.captured} pegos, ${s.fled} fugiram`).join(' · ') : '';
-ok('d1 a batalha', !!bt, bt ? `${bt.name}, vencedor ${(G.Fac.get(bt.winner) || { name: 'ninguém' }).name} — ${sides}` : 'os exércitos não se encontraram em 2,5 dias');
+ok('d1 a batalha', !!bt, bt ? `${sem.length ? `(sem batalha de campo em 2,5 dias — ${sem.join('; ')}) semente ${r.seed}: ` : ''}${bt.name}, vencedor ${(G.Fac.get(bt.winner) || { name: 'ninguém' }).name} — ${sides}` : `os exércitos não se encontraram no campo em 2,5 dias — ${sem.join('; ')}`);
 if (bt) {
   const last = Object.values(bt.sides).filter(s => s.n >= 10 && s.dead >= s.n * 0.9);
   ok('d2 ninguém até o último homem', !last.length, last.length ? `${last.length} lado(s) com 90% de mortos` : 'nenhum lado lutou até o fim');
