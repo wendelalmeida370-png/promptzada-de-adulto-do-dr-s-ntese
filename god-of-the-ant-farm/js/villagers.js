@@ -443,7 +443,8 @@
   Vg.resting = function (v) {
     if (!v || v.sleeping || v.moving) return false;
     const a = G.S.avatar; if (a && a.id === v.id) return !!(a.use && REST_USE[a.use.use]);
-    const t = v.task; if (!t) return false;
+    // (the work of the day tires as work, whatever the gesture: the priest who leads the prayers is at his trade)
+    const t = v.task; if (!t || t.kind === 'work') return false;
     const f = REST_TASK[t.type]; return !!f && f(t);
   };
 

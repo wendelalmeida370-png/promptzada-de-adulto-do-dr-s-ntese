@@ -5,7 +5,9 @@
 //   1. da rua, pela escadaria, ao alto dela e para dentro da palestra: o mundo tem o corpo dentro, no piso do pódio
 //   2. sob a colunata e pelo portal, a um cabide do vestiário; dali à beira de cada piscina — de cada cômodo e da palestra —, e à
 //      fornalha: o caminho pelas portas dos cômodos (as mãos as abrem), o corpo chega a um passo do lugar, e o lugar na água
-//      está livre para as mãos dele (In.freeFor)
+//      está livre para as mãos dele (In.freeFor). O lugar da fornalha é do foguista enquanto ele está de posto (D-227: desde
+//      antes de abrir até o fogo dado até fechar; um lugar, uma pessoa — D-085): o corpo, que não é o foguista, chega a um
+//      passo e não o toma; com o fogo dado até fechar pela mão da prova o foguista sai, e o lugar fica livre para o corpo
 //   3. em todo quadro, os pés no chão da planta e o corpo só onde a planta deixa ficar — nunca dentro de uma piscina, de uma
 //      coluna, de uma parede
 //   4. um save com o corpo lá dentro: carregado, dentro ainda, no mesmo piso
@@ -120,9 +122,29 @@ function caso(c, step, n) {
   { const e = first('despir'); if (e) goals.push(['um cabide', e]); }
   const pools = [...new Set((t.byUse.get('banhar') || []).map(e => e.it.id))]; for (const id of pools) { const e = (t.byUse.get('banhar') || []).find(q => q.it.id === id && q.din < Infinity); const m = e && p.rooms.find(q => q.id === e.it.room); if (e) goals.push([`a piscina d${m && m.fn === 'palestra' ? 'a palestra' : 'o cômodo ' + (m ? m.fn : '-')}`, e]); }
   { const e = first('alimentar'); if (e) goals.push(['a fornalha', e]); }
-  let got = 0, far = 0; const miss = []; let saved = '';
+  let got = 0, far = 0; const miss = []; let saved = '', post = '';
   for (const [name, e] of goals) {
-    const pl = In.freeFor(b, e.it.id, e.q, here()[0], here()[1]); if (!pl) { miss.push(`${name}: o lugar não está livre para o corpo`); continue; }
+    let pl = In.freeFor(b, e.it.id, e.q, here()[0], here()[1]);
+    // (the furnace's place is the stoker's while he is at his post — from before the doors open until the fire is fed to their
+    // closing: D-227 —, and a place has one person (D-085): the body, which is not the stoker, comes within a step of it and
+    // does not take it. Then the fire is fed to the closing by the proof's hand: the post is over, the stoker leaves, and the
+    // place is free for the body's hands. The body that is the stoker has the place by the errand's own offer — the case of
+    // qa/termas-mao.js)
+    if (!pl && e.use === 'alimentar') {
+      const Te = G.Termas; const who = [...G.S.villagers.values()].find(o => { if (o.inside !== b.id) return false; const q = In.placeOf(o); return !!q && q.item === e.it.id && q.q === e.q; });
+      const his = !!who && who.role === 'foguista' && who.job === b.id; const duty = his && Te.onDuty(who);
+      const held = In.placeFor(b, e.it.id, e.q, here()[0], here()[1]); const to0 = held ? nearOf(b, held.at || [held.x, held.z]) : null; const pa0 = to0 && pathIn(b, p, 0, here(), to0);
+      if (!his || !pa0) { miss.push(`${name}: o lugar tomado ${who ? 'por ' + who.name + ' (' + who.role + '), que não é o foguista destes banhos' : 'por ninguém que o mundo tenha lá'}${pa0 ? '' : '; nenhum caminho até ele'}`); continue; }
+      follow(b, pa0); const d0 = Math.hypot(here()[0] - to0[0], here()[1] - to0[1]); const still = !In.freeFor(b, e.it.id, e.q, here()[0], here()[1]);
+      // (the fire fed to the closing: the day's own book, by the proof's hand — the doors open first, if they have not yet)
+      let w8 = 0; while (!Te.dia(b) && w8++ < 1800) frame();
+      // (two logs' worth at the most — what the furnace takes: the day's hours are as long)
+      sim(() => { const op = Te.dia(b); if (op && op.data) op.data.calor = Math.max(op.data.calor || 0, Math.min(2 * Te.BURN, (Te.horas(b).fecha - G.S.time) * G.DAY_LEN + 2)); });
+      const c0 = G.S.clock; let w9 = 0; while (!(pl = In.freeFor(b, e.it.id, e.q, here()[0], here()[1])) && w9++ < 1800) frame();
+      post = `a fornalha era de ${who.name}, o foguista ${duty ? 'de posto' : 'à fornalha'}: o corpo a ${d0.toFixed(2)} m dela, o lugar ${still ? 'não era para ele' : 'DADO AO CORPO COM O FOGUISTA NELE'}; com o fogo dado até fechar, ${pl ? `o foguista saiu em ${(G.S.clock - c0).toFixed(0)} s (de posto: ${Te.onDuty(who) ? 'AINDA' : 'não'}) e o lugar ficou livre` : 'O FOGUISTA NÃO SAIU'}`;
+      if (d0 > 1.2 || !still || !pl || Te.onDuty(who)) { miss.push(`${name}: ${post}`); continue; }
+    }
+    if (!pl) { miss.push(`${name}: o lugar não está livre para o corpo`); continue; }
     const to = nearOf(b, pl.at || [pl.x, pl.z]); const pa = pathIn(b, p, 0, here(), to); if (!pa) { miss.push(`${name}: nenhum caminho até (${to[0].toFixed(1)}, ${to[1].toFixed(1)})`); continue; }
     if (!follow(b, pa)) { miss.push(`${name}: ${followAt}`); continue; }
     const d = Math.hypot(here()[0] - to[0], here()[1] - to[1]); far = Math.max(far, d); if (d > 0.35 || v.inside !== b.id) { miss.push(`${name}: a ${d.toFixed(2)} m, dentro de ${v.inside}`); continue; } got++;
@@ -130,7 +152,7 @@ function caso(c, step, n) {
     if (!saved && e.use === 'banhar') { const lv0 = G.Possess.level(); M.salvarCarregar(); S = G.S; const w = G.Possess.body(); if (w) { G.Avatar.attach(w, 0); for (let k = 0; k < 6; k++) frame(); }
       b = G.S.buildings.get(b.id); p = Sp.planNow(b); const still = !!w && w.inside === b.id && G.Possess.level() === lv0; saved = still ? 'dentro ainda, no mesmo piso' : `FORA (dentro de ${w ? w.inside : '-'}, piso ${G.Possess.level()})`; }
   }
-  ok(`2. ${key}: sob a colunata e pelo portal a um cabide, à beira de cada piscina (${pools.length}) e à fornalha, pelas portas dos cômodos — o corpo chega a um passo de cada lugar, livre para as mãos dele`, got === goals.length && goals.length === pools.length + 2 && pools.length === R.pools.length, `${got} de ${goals.length} lugares alcançados (o mais longe do ponto: ${far.toFixed(2)} m)${miss.length ? '; ' + miss.slice(0, 3).join(' / ') : ''}`);
+  ok(`2. ${key}: sob a colunata e pelo portal a um cabide, à beira de cada piscina (${pools.length}) e à fornalha, pelas portas dos cômodos — o corpo chega a um passo de cada lugar, livre para as mãos dele (a fornalha, quando o foguista deixa o posto: D-227)`, got === goals.length && goals.length === pools.length + 2 && pools.length === R.pools.length, `${got} de ${goals.length} lugares alcançados (o mais longe do ponto: ${far.toFixed(2)} m)${post && !miss.length ? '; ' + post : ''}${miss.length ? '; ' + miss.slice(0, 3).join(' / ') : ''}`);
   ok(`3. ${key}: em todo quadro os pés no chão da planta, o corpo só onde ela deixa ficar`, !bad.length && frames > 300, bad.length ? `${bad.length} quadros fora: ${bad.slice(0, 3).join(' · ')}` : `${frames} quadros, cada um na planta`);
   ok(`4. ${key}: um save com o corpo à beira da piscina — carregado, dentro ainda`, saved === 'dentro ainda, no mesmo piso', saved || 'o corpo não chegou a uma piscina');
   // ------------------------------ 5. out
