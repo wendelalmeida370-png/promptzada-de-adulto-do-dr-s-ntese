@@ -10,8 +10,8 @@
 // aceitar a paz. r1 a hoste em contato quando recua (a premissa); r2 quem recua não procura briga nem responde a ela: no
 // meio minuto depois da ordem, ninguém do bando luta; r3 a retirada sai do campo: quem fica de pé e livre se afasta de onde
 // a ordem o achou (ou já chegou em casa), e a hoste não morre até o último homem; r4 e r5 o mesmo com o mundo salvo e
-// carregado logo depois da ordem (a volta que o load refaz, wars.js); o verificador limpo do começo ao fim, sem erro de
-// módulo.
+// carregado logo depois da ordem (a volta que o load refaz, wars.js) — a partir do mundo de antes da hoste do r1, guardado
+// num save e aberto de novo (T-867); o verificador limpo do começo ao fim, sem erro de módulo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const seed = +(process.argv[2] || 11);
@@ -24,11 +24,11 @@ let S = M.novo({ seed, type: 'continente', size: 170, tribes: 2, temper: 'pacifi
 const dw = G.Politics.declareWar; G.Politics.declareWar = () => { };
 while (S.day < 6) M.viver(10);
 G.Politics.declareWar = dw;
-const [A, B] = G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).slice(0, 2);
+let [A, B] = G.Fac.all().sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).slice(0, 2);
 const grow = (f, want) => { const sets = G.Fac.settlementsOf(f.id); let k = 0; while (G.Fac.pop(f.id) < want && k++ < 9000) { const s = sets[k % sets.length]; const a = G.R() * 6.283, r = G.R() * (s.radius || 6); const p = G.W.nearestLand(s.cx + Math.cos(a) * r, s.cy + Math.sin(a) * r, 5); if (!p) continue; G.Vg.create({ set: s.id, x: p[0], y: p[1], age: 17 + G.R() * 38 }); } f.stock.food = Math.max(f.stock.food, want * 7); f.stock.armas = (f.stock.armas || 0) + Math.round(want * 0.15); };
 grow(A, 320); grow(B, 260); G.Fac.updateTerritory();
 G.Politics.declareWar(A, B, 'ambicao'); live(5);
-const Wz = G.Wars; const tg = G.Fac.capitalOf(B.id);
+const Wz = G.Wars; let tg = G.Fac.capitalOf(B.id);
 console.log(`(${A.name} ${G.Fac.pop(A.id)} contra ${B.name} ${G.Fac.pop(B.id)}; a capital do B: ${tg ? tg.name : '-'})`);
 // enemies who fight, within r of someone; a soldier of a company that broke runs already, whatever the band does
 const foesNear = (v, fac, r) => { let n = 0; for (const o of G.War.fightersNear(v.x, v.y, r)) { if (o.captive || !G.Fac.atWar(fac, G.Fac.idOfV(o))) continue; if (G.dist2(o.x, o.y, v.x, v.y) < r * r) n++; } return n; };
@@ -86,6 +86,7 @@ function stage(save) {
   return { order, post, fights, maxF, samples, dead: order.ids.length - alive.length, caught: caught.length, free: free.length, away: away.length };
 }
 const txt = r => `${r.order.ids.length} na hoste, ${r.order.near} das companhias de pé a um passo do inimigo (${r.order.ph}; companhias quebradas ${r.order.rout})`;
+const snap = G.Save.serialize();
 const r1 = stage(false);
 ok('r1 a hoste em contato quando recua', !r1.pre, r1.pre ? `precondição: ${r1.pre}` : txt(r1));
 if (!r1.pre) {
@@ -93,7 +94,11 @@ if (!r1.pre) {
   ok('r3 a retirada sai do campo', r1.dead < r1.order.ids.length * 0.9 && r1.away >= r1.free * 0.6, `30 s depois: ${r1.dead} mortos, ${r1.caught} rendidos, ${r1.free} de pé e livres, ${r1.away} deles a seis casas ou mais de onde a ordem os achou`);
 }
 // the same with the world saved and loaded right after the order: the load makes the road home again (wars.js, walkHome)
-live(G.DAY_LEN * 0.5, () => ![...G.War.bands.values()].some(b => b.fac === A.id));
+// (from the world of before r1's host, saved at that hour and opened again: r4 is r1 with the save after the order, not a
+// second campaign of the same war. The realm the first campaign wore out — the war's own count of the dead and the days, a
+// quarter of the food — raises forty; forty burn the fields of the first village on the road, far from the walls, and whether
+// they meet the enemy there is the history's luck: three hosts in a row went home without it, T-867)
+S = M.abrir(JSON.parse(snap)); A = G.Fac.get(A.id); B = G.Fac.get(B.id); tg = G.Fac.capitalOf(B.id);
 const r4 = stage(true);
 ok('r4 a hoste em contato quando recua, e o save logo depois', !r4.pre, r4.pre ? `precondição: ${r4.pre}` : txt(r4));
 // (the load keeps the retreat: the army comes back «retirada», its band on the road home, no one called to arms again)
