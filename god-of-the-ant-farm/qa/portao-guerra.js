@@ -1,7 +1,7 @@
 // portao-guerra: a guerra pergunta ao mapa de regiões se o exército chega a pé (L-731) — provocado de propósito.
-//   [ONLY=p1,p3] node qa/portao-guerra.js [mundo]      (o mundo pronto «anos100»: Mênfis, murada pelo próprio mundo, o único muro
-//   dos mundos prontos que fecha a cidade de verdade com os portões fechados — os outros vazam por ruas sem portão e por hortas,
-//   pomares, currais e cemitérios na linha, L-732 —, e as outras cidades do povo ligadas a ela por terra)
+//   [ONLY=p1,p3] node qa/portao-guerra.js [mundo]      (sem mundo, o primeiro mundo pronto com uma capital murada que o muro fecha
+//   de verdade com os portões fechados — os outros vazam por ruas sem portão e por hortas, pomares, currais e cemitérios na linha,
+//   L-732 —, e outra cidade do povo ligada a ela por terra: na geração 19 a Mênfis do «anos100», na 20 as capitais da «mega», T-1052)
 // O portão que o alarme fecha reabre; a busca de caminho do instante (W.findPath) o acha fechado, e o planejador da guerra, que
 // perguntava a ela, dizia «não há caminho»: nenhum exército contra a capital murada em alarme, nenhum socorro para a cidade
 // murada sitiada, e o mar para o que se alcançava a pé. O mapa de regiões (W.townsLinked) conta o portão fechado como aberto
@@ -16,7 +16,11 @@
 // e o verificador (S0 a S2) limpo do começo ao fim, sem erros de módulo nem do console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
-const WORLD = process.argv[2] || 'anos100';
+// (the world of the cases: the first ready world with a wall that closes its town for real — the walls of most towns leak, by a
+// street that crosses the line, a garden, an orchard (L-732, open): in the generation 20 the Mênfis of the anos100, the only wall
+// that closed its town in the 19, leaks by a street, and only the mega's capitals close theirs. T-1052)
+const MUNDOS = process.argv[2] ? [process.argv[2]] : ['anos100', 'mega', 'anos500', 'anos1000', 'metropole', 'mundial'];
+let WORLD = null;
 const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k => !ONLY.length || ONLY.includes(k);
 const fails = []; const mid = [];
 const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | portao-guerra ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
@@ -24,18 +28,35 @@ const watch = () => { for (const q of QA.check()) { const t = `[S${q.sev}] ${q.s
 const live = (sec, until) => { for (let k = 1; k <= sec * 10; k++) { M.viver(0.1); if (k % 50 === 0) watch(); if (until && until()) { watch(); return true; } } watch(); return false; };
 const W = () => G.W; const N2 = () => G.N * G.N;
 
-// the world of every case: the ready world, two peoples of it at war by the test's hand — the attacker the largest people
-// whose capital is not walled, the defender a people whose walled capital has another town of its own linked to it by land
+// the world of every case: a ready world, two peoples of it at war by the test's hand — the defender a people whose walled capital
+// the wall closes for real and that has another town of its own linked to it by land; the attacker the largest people linked to
+// it by land, an unwalled capital first — a walled one keeps its gates open, no alarm at home: in the mega every capital is walled
 let A, B, tg, ca, w;
-const setup = () => {
-  M.pronto(WORLD); M.viver(1);
+// (with its gates shut by the alarm, does anyone walk out of the ring? a flood from the heart over the ground one walks now)
+const closes = s => {
+  const wl = G.Siege.wallOf(s.id), N = G.N, Wd = W(); if (!wl || !wl.done || !wl.tiles.length) return false;
+  const R = Math.max(...wl.tiles.map(i => G.dist((i % N) + 0.5, ((i / N) | 0) + 0.5, s.cx, s.cy)));
+  const c0 = Wd.idx(s.cx, s.cy), seen = new Set(), q = [];
+  for (const d of [0, 1, -1, N, -N, N + 1, N - 1, -N + 1, -N - 1]) { const j = c0 + d; if (Wd.walkable(j)) { seen.add(j); q.push(j); } }
+  for (let h = 0; h < q.length; h++) {
+    const a = q[h], ax = a % N, ay = (a / N) | 0; if (G.dist(ax + 0.5, ay + 0.5, s.cx, s.cy) > R + 2.5) return false;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = ax + dx, y = ay + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue; const j = y * N + x; if (seen.has(j) || !Wd.walkable(j)) continue; seen.add(j); q.push(j); }
+  }
+  return true;
+};
+const setupIn = world => {
+  M.pronto(world); M.viver(1);
   const walled = f => { const c = G.Fac.capitalOf(f.id); const wl = c && G.Siege.wallOf(c.id); return wl && wl.done && wl.fac === f.id && wl.gates.length ? wl : null; };
   const live0 = G.Fac.all().filter(f => f.alive && G.Fac.capitalOf(f.id));
-  B = live0.filter(f => walled(f) && G.Fac.settlementsOf(f.id).some(s => s !== G.Fac.capitalOf(f.id) && W().townsLinked(s, G.Fac.capitalOf(f.id)))).sort((p, q) => G.Fac.pop(q.id) - G.Fac.pop(p.id))[0];
-  if (!B) return 'nenhum povo com a capital murada e outra cidade ligada a ela por terra';
+  const cands = live0.filter(f => walled(f) && G.Fac.settlementsOf(f.id).some(s => s !== G.Fac.capitalOf(f.id) && W().townsLinked(s, G.Fac.capitalOf(f.id)))).sort((p, q) => G.Fac.pop(q.id) - G.Fac.pop(p.id));
+  // (the gates of every walled capital shut by the alarm for a moment, to see which wall closes its town; then open again)
+  for (const f of cands) G.Fac.capitalOf(f.id).alarmT = 600; live(1);
+  B = cands.find(f => closes(G.Fac.capitalOf(f.id))) || null;
+  for (const f of cands) G.Fac.capitalOf(f.id).alarmT = 0; live(1);
+  if (!B) return `nenhum povo com a capital murada que o muro fecha de verdade (L-732) e outra cidade ligada a ela por terra (as capitais muradas: ${cands.map(f => G.Fac.capitalOf(f.id).name).join(', ') || 'nenhuma'})`;
   tg = G.Fac.capitalOf(B.id);
-  A = live0.filter(f => f !== B && !walled(f) && W().townsLinked(G.Fac.capitalOf(f.id), tg)).sort((p, q) => G.Fac.pop(q.id) - G.Fac.pop(p.id))[0];
-  if (!A) return `nenhum povo de capital sem muro ligado por terra a ${tg.name}`;
+  A = live0.filter(f => f !== B && W().townsLinked(G.Fac.capitalOf(f.id), tg)).sort((p, q) => (walled(p) ? 1 : 0) - (walled(q) ? 1 : 0) || G.Fac.pop(q.id) - G.Fac.pop(p.id))[0];
+  if (!A) return `nenhum povo ligado por terra a ${tg.name}`;
   ca = G.Fac.capitalOf(A.id);
   // (the other wars of the world end: the case looks at one; the granary of the attacker filled, as a realm that means to march)
   for (const x of G.Fac.all()) for (const y of G.Fac.all()) if (x.id < y.id && G.Fac.atWar(x.id, y.id)) { const r = G.Fac.rel(x.id, y.id); r.st = 'tregua'; r.truce = G.DAY_LEN * 30; r.since = G.S.day; G.Wars.onPeace(x, y, 'sem vencedores', null); G.War.onPeace(x, y); }
@@ -43,6 +64,12 @@ const setup = () => {
   G.Politics.declareWar(A, B, 'ambicao'); live(2);
   w = G.Wars.warOf(A.id, B.id);
   return w ? null : `${A.name} e ${B.name}: a guerra declarada pela mão da prova não começou`;
+};
+// (the world found first is asked first again by the cases after)
+const setup = () => {
+  const tried = [];
+  for (const m of WORLD ? [WORLD].concat(MUNDOS.filter(x => x !== WORLD)) : MUNDOS) { const why = setupIn(m); if (!why) { if (WORLD !== m) console.log(`(o mundo dos casos: ${m} — ${tg.name}, de ${B.name}, murada e fechada de verdade; contra ela, ${A.name}, de ${ca.name})`); WORLD = m; return null; } tried.push(`${m}: ${why}`); }
+  return tried.join(' · ');
 };
 const wallOf = () => G.Siege.wallOf(tg.id);
 const shutNow = () => { const wl = wallOf(); return wl.gates.filter(i => G.S.wall[i] === 4).length; };
@@ -55,7 +82,7 @@ if (want('p1') || want('p2')) {
   const why = setup();
   if (why) { ok('p1 o exército contra a capital murada de portões fechados', false, 'precondição: ' + why); }
   else {
-    tg.alarmT = 600; live(1); // (the alarm of an enemy at the gates: the gates shut — siege.js, gatesTick)
+    tg.alarmT = 600; ca.alarmT = 0; live(1); // (the alarm of an enemy at the gates: the gates shut — siege.js, gatesTick; the attacker's own, if walled, open)
     const shut = shutNow(), gates = wallOf().gates.length, path = instant(), linked = W().townsLinked(ca, tg);
     snap = G.Save.serialize();
     if (want('p1')) {

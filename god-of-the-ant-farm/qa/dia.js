@@ -39,13 +39,20 @@ const qaAll = () => QA.check().filter(q => q.sev <= 2);
 let base = new Set(); const rebase = () => { base = new Set(qaAll().map(q => q.sys + '|' + q.msg)); };
 const novas = () => qaAll().filter(q => !base.has(q.sys + '|' + q.msg)).map(q => `[S${q.sev}] ${q.sys}: ${q.msg.slice(0, 120)}`);
 const mine = () => QA.check().filter(q => q.sys === 'dia');
+// (the checker read once, for the verdict and for the line alike: a second reading can differ — a rule that tells a thing once, a grace
+// that ran out between the two — and the line said «limpo» on a case that had failed: T-1050)
+const clean = () => { const nv = novas(), mn = mine().map(q => q.msg), lim = M.limpo(); return [!nv.length && !mn.length && lim, nv.concat(mn).slice(0, 3).join(' | ') || (lim ? 'limpo' : JSON.stringify(M.erros()).slice(0, 200))]; };
 const dayNow = () => G.S.day + G.S.time; // (the day's clock: the centésimos of the day gone by are its difference × 100)
 const K = () => Vg.REST; const WORK = 100 / 80; // (the tiredness of a centésimo of the day at work or on the way)
 // (grown ones of the most peopled town, free and well, by id — the hand of the proof takes them from here)
 const pool = () => { const S = G.S; const set = [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)[0];
   return [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 20 && v.age < 55 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.air && !(v.sick > 0) && v.hp > 60 && !(S.avatar && S.avatar.id === v.id)).sort((a, c) => a.id - c.id); };
 // (held by the hand: an errand of 3 that nothing of the day's choices takes; fed, so that no hunger ends it)
-const hold = (v, task) => god(() => { Vg.endTask(v); v.sleeping = false; v.inside = 0; v.hunger = 10; v.carry = null; return Vg.setTask(v, Object.assign({ pri: 3 }, task)); });
+// (the load in the hands put down by the game's own doors, in the ledger, before the hand of the proof takes the person: an
+// operation's load where they stand, for another hand — G.Act.letGo —, anything else on the ground; the hands emptied by hand,
+// a crate of the potter's on its way to the store vanished unwritten, and the checker said so: T-1051)
+const putDown = v => { const c = v.carry; if (c && c.n > 0) { if (c.op && G.Act.letGo) G.Act.letGo(v, 'teste'); if (v.carry && v.carry.n > 0) D.drop('v:' + v.id, v.carry.k, v.carry.n, v.x, v.y, { code: 'teste', by: v.id, fac: G.Fac.idOfV(v) }); } };
+const hold = (v, task) => god(() => { putDown(v); Vg.endTask(v); v.sleeping = false; v.inside = 0; v.hunger = 10; v.carry = null; return Vg.setTask(v, Object.assign({ pri: 3 }, task)); });
 const calm = () => { const w = G.S.weather; w.rain = 0; if (w.storm) w.storm = 0; peace(); for (const s of G.S.settlements.values()) { if (s.alarmT > 0) s.alarmT = 0; s.festPlan = { day: G.S.day, key: null, done: true }; } };
 
 // ================================================================ a: by the hand
@@ -109,16 +116,21 @@ function partA() {
     S.time = c.wake; v.energy = 100; const UP = { type: 'idle', wait: 1e4 }, REST = { type: 'talk', id: mate.id, wait: 1e4 };
     let g = 0; while (S.time < 0.6 && g++ < 4000) { calm(); v.hunger = 10; keep(UP); M.viver(0.5); } const e60 = v.energy; // (on his feet, not at rest: the working day's tiredness)
     // (at rest by the hand — a talk: the door of rest is the same for the tavern's table; the tavern's own errand is the lived days' case)
-    let eBed = -1, eShut = -1, rested = true; g = 0; heldAt = -1e9;
-    while (S.time < fecha && S.time > 0.5 && g++ < 4000) { calm(); v.hunger = 10; keep(REST); const t0 = S.time; if (!Vg.resting(v)) rested = false; M.viver(0.5); if (eBed < 0 && t0 < c.bed && S.time >= c.bed) eBed = v.energy; }
-    eShut = v.energy; god(() => Vg.endTask(v));
+    // (the partner of the talk held in it too, beside him and awake — fed and fresh by the hand —: free, he went to bed at his own
+    // hour, 13,7 tiles off, and the talk took the adult of the proof walking after him across the town at 0,854: T-1053)
+    let heldM = -1e9; const MATE = { type: 'talk', id: v.id, wait: 1e4 };
+    const keepM = () => { mate.hunger = 10; mate.energy = Math.max(mate.energy, 60); if (S.clock - heldM >= 40 || !mate.task || mate.task.type !== 'talk') { hold(mate, Object.assign({}, MATE)); heldM = S.clock; } };
+    god(() => { mate.x = v.x; mate.y = v.y; });
+    let eBed = -1, eShut = -1, rested = true, why = ''; g = 0; heldAt = -1e9;
+    while (S.time < fecha && S.time > 0.5 && g++ < 4000) { calm(); v.hunger = 10; keepM(); keep(REST); const t0 = S.time; if (!Vg.resting(v) && rested) { rested = false; why = ` (às ${S.time.toFixed(3)}: ${v.task ? v.task.type + (v.task.st != null ? ' st ' + v.task.st : '') : 'sem tarefa'}${v.moving ? ', andando' : ''}, o par a ${G.dist(v.x, v.y, mate.x, mate.y).toFixed(1)} casas, ${mate.task ? mate.task.type : 'sem tarefa'})`; } M.viver(0.5); if (eBed < 0 && t0 < c.bed && S.time >= c.bed) eBed = v.energy; }
+    eShut = v.energy; god(() => { Vg.endTask(v); Vg.endTask(mate); });
     // (the person's own arithmetic: 100/80 a centésimo on one's feet, REST of it at rest)
     const w60 = 100 - (0.6 - c.wake) * 100 * WORK, wBed = w60 - (c.bed - 0.6) * 100 * WORK * K(), wShut = w60 - (fecha - 0.6) * 100 * WORK * K();
     ok('a4 o adulto do alvo, pela mão: acorda à hora dele com 100, de pé e sem descanso até as 0,60, depois em descanso (uma conversa: a porta do descanso é a mesma da mesa da taverna) — chega à hora de deitar do relógio dele com a energia perto de 22 (de 19 a 28), e à hora de a taverna fechar ainda não foi mandado para a cama pelo cansaço (15)',
       rested && Math.abs(e60 - w60) < 1 && Math.abs(eBed - wBed) < 1 && Math.abs(eShut - wShut) < 1 && eBed >= 19 && eBed <= 28 && eShut >= 15,
-      `${v.name} (acorda às ${c.wake.toFixed(3)}, deita às ${c.bed.toFixed(3)}; a taverna fecha às ${fecha}): às 0,60 com ${e60.toFixed(1)} (a conta ${w60.toFixed(1)}); na hora de deitar dele ${eBed.toFixed(1)} (${wBed.toFixed(1)}); às ${fecha}, ${eShut.toFixed(1)} (${wShut.toFixed(1)}; REST ${K()})${rested ? '' : ' — SAIU DO DESCANSO DA PROVA no meio'}`);
+      `${v.name} (acorda às ${c.wake.toFixed(3)}, deita às ${c.bed.toFixed(3)}; a taverna fecha às ${fecha}): às 0,60 com ${e60.toFixed(1)} (a conta ${w60.toFixed(1)}); na hora de deitar dele ${eBed.toFixed(1)} (${wBed.toFixed(1)}); às ${fecha}, ${eShut.toFixed(1)} (${wShut.toFixed(1)}; REST ${K()})${rested ? '' : ' — SAIU DO DESCANSO DA PROVA no meio' + why}`);
   }
-  ok('a o verificador e os erros depois da mão da prova', !novas().length && !mine().length && M.limpo(), novas().concat(mine().map(q => q.msg)).slice(0, 3).join(' | ') || (M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 200)));
+  { const [c, info] = clean(); ok('a o verificador e os erros depois da mão da prova', c, info); }
 }
 
 // ================================================================ s: the lingering sun
@@ -145,7 +157,7 @@ function partS() {
     `sem a cena da prova: ${b.ds.toFixed(1)} s, ${b.dc.toFixed(2)} centésimos${b.real ? ` (uma cena do mundo correu em ${b.real} passos)` : ''}; ${x.name}: energia −${b.dx.toFixed(2)} (a conta ${(b.dc * WORK).toFixed(2)}), fome +${b.hx.toFixed(2)}; ${z.name}: −${b.dz.toFixed(2)}`);
   ok('s3 a porta do passo do dia é pedida uma vez por passo do mundo, não por pessoa', a.calls === a.steps && b.calls === b.steps,
     `${a.calls} perguntas ao G.Scene.lingers em ${a.steps} passos com a cena (${S.villagers.size} pessoas no mundo), ${b.calls} em ${b.steps} sem ela`);
-  ok('s o verificador e os erros depois da mão da prova', !novas().length && !mine().length && M.limpo(), novas().concat(mine().map(q => q.msg)).slice(0, 3).join(' | ') || (M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 200)));
+  { const [c, info] = clean(); ok('s o verificador e os erros depois da mão da prova', c, info); }
 }
 
 // ================================================================ b: the god's body
@@ -174,7 +186,7 @@ function partBody() {
     !up.rest && Math.abs(up.drop - up.dc * WORK) < 0.06 && held && still && dn.rest && Math.abs(dn.drop - dn.dc * WORK * K()) < 0.06,
     `${v.name} #${v.id}, vivido pelo deus, na casa #${b.id}: de pé, ${up.drop.toFixed(2)} em ${up.dc.toFixed(2)} centésimos (a conta ${(up.dc * WORK).toFixed(2)}); no lugar «${pl.use}» (${held && still ? 'nas mãos dele até o fim' : 'O LUGAR FOI LARGADO'}), ${dn.drop.toFixed(2)} em ${dn.dc.toFixed(2)} (a conta ${(dn.dc * WORK * K()).toFixed(2)})`);
   god(() => Po.release('teste')); M.viver(1); // (the will back with the person: the world's next step gives him his errand)
-  ok('b o verificador e os erros depois da mão da prova', !novas().length && !mine().length && M.limpo(), novas().concat(mine().map(q => q.msg)).slice(0, 3).join(' | ') || (M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 200)));
+  { const [c, info] = clean(); ok('b o verificador e os erros depois da mão da prova', c, info); }
 }
 
 // ================================================================ v, n: the lived days, and a save in the middle of the night
