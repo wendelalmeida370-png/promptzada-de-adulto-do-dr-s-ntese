@@ -195,6 +195,10 @@ if (run('r5')) {
     const focus = { X: a.x * TL, Y: 0, Z: a.y * TL }; let ma = 0, mb = 0, na = 0, off = 0, face = 0;
     const span = (id, f) => { let lo = 1e9, hi = -1e9; return { put() { const s = P3.visOf(id); if (!s) return; const x = f(s); lo = Math.min(lo, x); hi = Math.max(hi, x); }, get: () => hi - lo }; };
     const sa = span(a.id, s => s.pose.sway), sb = span(b.id, s => s.pose.sway), la = span(a.id, s => s.pose.lean), lb = span(b.id, s => s.pose.lean);
+    // (the 3D settles first, a second of frames: one picked in the middle of taking up a load blends into the carrying stance in
+    // its first frames, and the blend was measured as a weave — Neferu, a builder with a load in both arms, 0,22 of lean from the
+    // blend alone, the trunk going from −0,09 to −0,31 and staying there, T-961)
+    for (let k = 0; k < 30; k++) P3.update(1 / 30, focus);
     for (let k = 0; k < 200; k++) { P3.update(1 / 30, focus); sa.put(); sb.put(); la.put(); lb.put(); const s = P3.visOf(a.id); if (s) { na++; off = Math.max(off, Math.hypot(s.X - a.x * TL, s.Z - a.y * TL)); } }
     ma = sa.get(); mb = sb.get();
     const moved = [at(a), at(b)].filter((q, k) => q !== w0[k]).length;
