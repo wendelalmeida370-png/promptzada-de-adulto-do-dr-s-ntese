@@ -752,7 +752,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // night: the body carries a torch, and so do some who walk; its flame burns and lights round it
     const t0 = S.time; S.time = 0.86; G.Input3D.down.frente = true; __E.f(16); G.Input3D.down.frente = false; __E.f(4);
     out.night = { torch: !!(G.People3D.avatar && G.People3D.avatar.look.torch), flames: G.People3D.flames.length, drawn: G.FX3D.torches };
-    S.time = t0; __E.f(4); out.day = { torch: !!(G.People3D.avatar && G.People3D.avatar.look.torch) };
+    // (and by day — midday, not the hour the part began: the parts before can leave the world at night, and the «day» then was
+    // night, the torch rightly lit: T-1055)
+    S.time = 0.5; __E.f(4); out.day = { torch: !!(G.People3D.avatar && G.People3D.avatar.look.torch), at: S.time }; S.time = t0; __E.f(2);
     // the carts on the roads: the body taken beside one
     const c = (S.carts || [])[0]; out.cart = null;
     if (c) { const p = near((i, x, y) => G.W.walkable(i) && G.dist(x + 0.5, y + 0.5, c.x, c.y) < 5, 400); if (p) { G.Avatar.place(p[0], p[1]); __E.f(6); out.cart = { bed: G.Things3D.n.bed || 0, ox: G.Things3D.n.ox || 0, carts: S.carts.length }; } }
