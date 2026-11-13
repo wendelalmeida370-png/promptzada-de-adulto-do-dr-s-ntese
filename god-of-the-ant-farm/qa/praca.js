@@ -336,27 +336,28 @@ function partF3() {
   god(() => { Vg.endTask(k); k.hunger = 10; k.energy = 90; k.sick = 0; k.carry = null; k.sleeping = false; k.inside = 0; k.x = near[0]; k.y = near[1]; Vg.setTask(k, { type: 'chop', id: tree ? tree.id : 0, pri: 1, st: 0, kind: 'work' }); if (tree && k.task && k.task.type === 'chop') tree.claim = k.id; });
   z.antes = Te.onDuty(k) ? 1 : 0; M.viver(1); z.t0 = k.task ? k.task.type : '';
   S.time = h.abre - ld + 0.006; god(() => { k.x = near[0]; k.y = near[1]; }); M.viver(2); z.duty = Te.onDuty(k) ? 1 : 0; z.t1 = k.task ? k.task.type : ''; z.busy = Vg.busy(k, { type: 'celebrate', pri: 1.1 }) ? 1 : 0; z.hands = Vg.handsBusy(k) ? 1 : 0;
-  // (between two errands of the furnace, by it — nothing in his hands —: the post still holds, L-914; the day of the baths calls
-  // him back at its next look. The errand is ended by the proof's hand once he waits by the furnace for the doors: the moment
-  // between two errands the game has before they open is there, after the wood and before the wait (L-772). The hand ended it
-  // half-way there before — a moment none of the game's: the errand to the furnace ends only when the doors open —, and the post
-  // held there by the walk's lead alone, while he did not come nearer faster than Te.WALK: Yaretzi, in the metrópole, held by
-  // a hair; Ivar, in the mega, came nearer faster, T-1047)
-  for (let s = 0; s < 80 && !(k.task && k.task.type === 'fornalha' && k.task.st >= 1) && S.time < h.abre - 0.012; s++) M.viver(0.25);
-  z.atF = k.task && k.task.type === 'fornalha' && k.task.st >= 1 ? 1 : 0; z.tGap = S.time;
-  god(() => { Vg.endTask(k); }); z.gap = !k.task && !(k.carry && k.carry.n > EPS) && Te.onDuty(k) ? (Vg.busy(k, { type: 'justice', pri: 1.95 }) && Vg.handsBusy(k) ? 1 : 0) : -1;
-  M.viver(1.2); z.back = k.task ? k.task.type : '';
   // a call from outside does not take him; the house's water goes with another
   const gave = god(() => Vg.give(k, { type: 'celebrate', pri: 1.1, kind: 'celebrate' })); z.gave = gave && k.task && k.task.type === 'celebrate' ? 1 : 0;
-  // the hunger that does not take him from the post, and the one that does (asked of the choice: the world's own decide)
-  let lit = -1; const types = {};
-  for (let s = 0; s < 80 && lit < 0; s++) { k.hunger = Math.max(70, Math.min(k.hunger, 80)); M.viver(1); const t = k.task ? k.task.type : 'nada'; types[t] = (types[t] || 0) + 1; const op = Te.dia(b); if (op && op.data.calor > 0) lit = S.time; }
+  // the hunger that does not take him from the post, and the one that does (asked of the choice: the world's own decide) — to the
+  // doors opening, and on to the fire lit
+  let lit = -1; const types = {}; const hungry = () => { k.hunger = Math.max(70, Math.min(k.hunger, 80)); M.viver(1); const t = k.task ? k.task.type : 'nada'; types[t] = (types[t] || 0) + 1; };
+  for (let s = 0; s < 80 && !Te.dia(b); s++) hungry();
+  // (between two errands of the furnace, as the doors open: the wait by it ends then, and the day of the baths gives the next one
+  // at its next look — the second of nobody's of L-914. The errand is ended by the proof's hand at the first look with the doors
+  // open, nothing in his hands: the post still holds, and he is called back. The hand ended it half-way to the furnace before,
+  // long before the doors — a moment none of the game's: the wait ends only when they open —, and there the post held by the
+  // walk's lead alone, while he did not come nearer faster than Te.WALK: Yaretzi, in the metrópole, by a hair; Ivar, in the
+  // mega, came nearer faster, T-1047)
+  z.op = Te.dia(b) ? 1 : 0; z.tGap = S.time;
+  god(() => { Vg.endTask(k); }); z.gap = !k.task && !(k.carry && k.carry.n > EPS) && Te.onDuty(k) ? (Vg.busy(k, { type: 'justice', pri: 1.95 }) && Vg.handsBusy(k) ? 1 : 0) : -1;
+  M.viver(1.2); z.back = k.task ? k.task.type : '';
+  for (let s = 0; s < 40 && lit < 0; s++) { const op = Te.dia(b); if (op && op.data.calor > 0) { lit = S.time; break; } hungry(); }
   z.ate = Object.keys(types).filter(t => t === 'eat' || t === 'forage' || t === 'lar').reduce((n, t) => n + types[t], 0); const op = Te.dia(b); z.len = op ? op.data.lenha : -1; god(() => { k.hunger = 20; });
   // the fire fed to the closing: he is free — a call takes him now
   for (let s = 0; s < 40 && Te.onDuty(k); s++) M.viver(1);
   z.free = Te.onDuty(k) ? 0 : 1; z.busy2 = Vg.busy(k, { type: 'celebrate', pri: 1.1 }) && !(k.task && k.task.pri >= 1.1) ? 1 : 0;
-  ok('f3a o dia dos banhos chama o foguista do machado à fornalha antes de as portas abrirem; de posto, um chamado de fora não o leva (Vg.busy) nem a fome abaixo de 85; a fornalha acende logo; entre dois afazeres da fornalha o posto ainda segura (L-914); com o fogo alimentado até fechar, ele é livre', z.antes === 0 && z.t0 === 'chop' && z.duty === 1 && (z.t1 === 'fornalha' || z.t1 === 'lenhaTermas' || z.t1 === 'carga') && z.busy === 1 && z.hands === 1 && z.atF === 1 && z.gap === 1 && (z.back === 'fornalha' || z.back === 'lenhaTermas' || z.back === 'carga') && z.gave === 0 && lit >= 0 && lit <= h.abre + 0.04 && z.ate === 0 && z.len >= 1 && z.free === 1 && z.busy2 === 0 && M.limpo(),
-    `${k.name} #${k.id}, foguista de ${set.name}, a ${far.toFixed(1)} casas dos banhos: às ${(h.abre - ld - 0.02).toFixed(3)} de posto ${z.antes ? 'SIM' : 'não'}, em «${z.t0}»; às ${(h.abre - ld + 0.006).toFixed(3)} de posto ${z.duty ? 'sim' : 'NÃO'}, em «${z.t1}»; a comemoração ${z.gave ? 'LEVOU-O' : 'não o leva'} (Vg.busy ${z.busy ? 'sim' : 'NÃO'}); entre dois afazeres da fornalha (o afazer acabado pela mão da prova ${z.atF ? 'junto da fornalha' : 'SEM ELE TER CHEGADO À FORNALHA'}, às ${z.tGap.toFixed(3)}) o cadafalso ${z.gap === 1 ? 'não o leva' : z.gap === 0 ? 'LEVA-O' : 'NÃO FOI PERGUNTADO (de mãos cheias ou fora do posto)'}, e um segundo depois está em «${z.back || 'nada'}»; com a fome entre 70 e 80 ${z.ate ? 'FOI COMER' : 'não sai para comer'}; a água quente às ${lit < 0 ? '— (NUNCA)' : lit.toFixed(3)} (as portas às ${h.abre}), ${z.len} de lenha; o que fez: ${Object.entries(types).map(([t, n]) => t + ' ' + n + ' s').join(', ')}; com o fogo até fechar: de posto ${z.free ? 'não' : 'AINDA'}, um chamado ${z.busy2 ? 'AINDA NÃO o leva' : 'já o leva'}`);
+  ok('f3a o dia dos banhos chama o foguista do machado à fornalha antes de as portas abrirem; de posto, um chamado de fora não o leva (Vg.busy) nem a fome abaixo de 85; a fornalha acende logo; entre dois afazeres da fornalha o posto ainda segura (L-914); com o fogo alimentado até fechar, ele é livre', z.antes === 0 && z.t0 === 'chop' && z.duty === 1 && (z.t1 === 'fornalha' || z.t1 === 'lenhaTermas' || z.t1 === 'carga') && z.busy === 1 && z.hands === 1 && z.op === 1 && z.gap === 1 && (z.back === 'fornalha' || z.back === 'lenhaTermas' || z.back === 'carga') && z.gave === 0 && lit >= 0 && lit <= h.abre + 0.04 && z.ate === 0 && z.len >= 1 && z.free === 1 && z.busy2 === 0 && M.limpo(),
+    `${k.name} #${k.id}, foguista de ${set.name}, a ${far.toFixed(1)} casas dos banhos: às ${(h.abre - ld - 0.02).toFixed(3)} de posto ${z.antes ? 'SIM' : 'não'}, em «${z.t0}»; às ${(h.abre - ld + 0.006).toFixed(3)} de posto ${z.duty ? 'sim' : 'NÃO'}, em «${z.t1}»; a comemoração ${z.gave ? 'LEVOU-O' : 'não o leva'} (Vg.busy ${z.busy ? 'sim' : 'NÃO'}); entre dois afazeres da fornalha (o afazer acabado pela mão da prova ${z.op ? 'com as portas abrindo' : 'COM AS PORTAS AINDA FECHADAS'}, às ${z.tGap.toFixed(3)}) o cadafalso ${z.gap === 1 ? 'não o leva' : z.gap === 0 ? 'LEVA-O' : 'NÃO FOI PERGUNTADO (de mãos cheias ou fora do posto)'}, e um segundo depois está em «${z.back || 'nada'}»; com a fome entre 70 e 80 ${z.ate ? 'FOI COMER' : 'não sai para comer'}; a água quente às ${lit < 0 ? '— (NUNCA)' : lit.toFixed(3)} (as portas às ${h.abre}), ${z.len} de lenha; o que fez: ${Object.entries(types).map(([t, n]) => t + ' ' + n + ' s').join(', ')}; com o fogo até fechar: de posto ${z.free ? 'não' : 'AINDA'}, um chamado ${z.busy2 ? 'AINDA NÃO o leva' : 'já o leva'}`);
   // ---- f3d: the wood run before the doors (L-772): the post begun far from the furnace — the walk's lead at its most —, with no
   // wood by it: the stoker fetches it from the store and carries it back, and at every look until the doors open he is at his
   // post — not off it as he comes nearer faster than Te.WALK, nor between the wood and the wait —: no meal short of starving,

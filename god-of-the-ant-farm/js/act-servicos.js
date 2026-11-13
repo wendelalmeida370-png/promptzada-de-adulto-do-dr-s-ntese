@@ -335,21 +335,19 @@
   Te.FED = 30;
   const stokerOf = v => { if (v.role !== 'foguista' || !v.job) return null; const b = S_().buildings.get(v.job); return b && b.type === 'banhos' && b.built ? b : null; };
   const lead = (v, b) => Te.EARLY + Math.min(Te.LEAD, (v.inside === b.id ? 0 : G.dist(v.x, v.y, b.x + b.w / 2, b.y + b.h / 2)) * Te.WALK / G.DAY_LEN);
-  // (at the post before the doors open, by what he is at: an errand of it — the walk to the furnace and the wait by it, the
-  // wood for it, fetched from the store and carried back in his arms — or none, at the baths, between two of them)
-  const atPost = (v, b) => {
-    const t = v.task; if (!t) return v.inside === b.id || G.dist(v.x, v.y, b.x + b.w / 2, b.y + b.h / 2) <= Math.max(b.w, b.h) + 1.5;
-    return (t.type === 'fornalha' && t.id === b.id && !!t.pre) || (t.type === 'lenhaTermas' && t.id === b.id) || (t.type === 'carga' && t.to === 'b:' + b.id);
-  };
+  // (at the post before the doors open, by the errand he is at: one of the post's — the walk to the furnace and the wait by it,
+  // the wood for it, fetched from the store and carried back to it on the same errand (runLenha), which then gives the wait —,
+  // or the wood in his arms for it, a carry taken up again after a call that weighed more)
+  const atPost = (v, b) => { const t = v.task; return !!t && ((t.type === 'fornalha' && t.id === b.id && !!t.pre) || (t.type === 'lenhaTermas' && t.id === b.id) || (t.type === 'carga' && t.to === 'b:' + b.id)); };
   Te.onDuty = function (v) {
     const b = stokerOf(v); if (!b) return false;
     const S = S_(); const h = Te.horas(b); const op = Te.dia(b);
     // (about to open — or the hour come and the day opening within the second: no gap for a meal to slip through. Once on
     // his way to the furnace he is on duty till the doors open: the walk's lead shrinks as he nears them, and the duty went
     // with it — he reached the furnace early, was free again, and went for a meal as the doors opened. His way is every errand
-    // of the post — the wood too —, and the moment at the baths between the wood and the wait: with the furnace's errand
-    // alone, Ivar of Hedeby went for his meal with the wood in his arms, Tlalli of Texcoco left the walk to the store for his,
-    // and Xiuhtonal of Tenochtitlan went from the door of the baths with the wood still to put down — L-772)
+    // of the post — the wood too, to the furnace, on one errand: with the furnace's errand alone, Ivar of Hedeby went for his
+    // meal with the wood in his arms, Tlalli of Texcoco left the walk to the store for his, and Xiuhtonal of Tenochtitlan went
+    // from the door of the baths with the wood still to put down — L-772)
     if (!op) return S.time < h.fecha && !openedToday(b) && (S.time >= h.abre - lead(v, b) || (S.time >= h.abre - Te.EARLY - Te.LEAD && atPost(v, b)));
     if (op.st !== 'on' || !inHours(b)) return false;
     return op.data.calor < (h.fecha - S.time) * G.DAY_LEN;
@@ -503,17 +501,27 @@
     const S = S_(); const b = S.buildings.get(t.id); const f = G.Fac.ofV(v);
     if (!b || !b.built || b.type !== 'banhos' || !f) return H.end(v);
     if (t.st === 0) { const s = G.Village.nearestDropoff(v.x, v.y, v.set); if (!s) return H.end(v); const r = walkB(v, t, s, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
-    v.act = AN.levantar.act; if (v.actT < AN.levantar.contact) return;
     const ref = 'b:' + b.id;
-    // (what was held for him is his now: the hold ends, and that much goes into his hands — it was beyond what the store keeps
-    // for its works when he set out; with no hold, the wood beyond it, as before)
-    const lop = t.hold ? A.get(t.hold) : null; const F = 'f:' + f.id;
-    const held = lop && live(lop) ? (lop.rsv || []).reduce((s, r) => s + (r[0] === F && r[1] === 'wood' ? r[2] : 0), 0) : 0;
-    if (lop && live(lop)) A.end(lop, 'ok', 'na mão');
-    const n = Math.floor(Math.min(t.n, held > EPS ? Math.min(held, D.free(F, 'wood')) : D.free(F, 'wood') - SPARE, D.room('v:' + v.id, 'wood', { to: ref })) + EPS);
-    if (n < 1) return H.end(v);
-    const r = D.move(F, 'v:' + v.id, 'wood', n, { code: 'termas', by: v.id, to: ref }); if (!r.ok) return H.end(v);
-    return H.setTask(v, { type: 'carga', to: ref, pri: 1, st: 0 });
+    if (t.st === 1) {
+      v.act = AN.levantar.act; if (v.actT < AN.levantar.contact) return;
+      // (what was held for him is his now: the hold ends, and that much goes into his hands — it was beyond what the store keeps
+      // for its works when he set out; with no hold, the wood beyond it, as before)
+      const lop = t.hold ? A.get(t.hold) : null; const F = 'f:' + f.id;
+      const held = lop && live(lop) ? (lop.rsv || []).reduce((s, r) => s + (r[0] === F && r[1] === 'wood' ? r[2] : 0), 0) : 0;
+      if (lop && live(lop)) A.end(lop, 'ok', 'na mão');
+      const n = Math.floor(Math.min(t.n, held > EPS ? Math.min(held, D.free(F, 'wood')) : D.free(F, 'wood') - SPARE, D.room('v:' + v.id, 'wood', { to: ref })) + EPS);
+      if (n < 1) return H.end(v);
+      const r = D.move(F, 'v:' + v.id, 'wood', n, { code: 'termas', by: v.id, to: ref }); if (!r.ok) return H.end(v);
+      // (back to the furnace with it on this same errand — the post's, before the doors open (Te.onDuty). Handed to the plain
+      // carry, the moment it was put down left him with no errand, off his post when he had come back early, and the meal of
+      // before the doors came back: L-772)
+      t.st = 2; t.wk = null; v.actT = 0; return;
+    }
+    if (t.st === 2) { const r = walkB(v, t, b, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 3; v.actT = 0; } return; }
+    // by the furnace: the wood put down — and the stoker's next errand in the same step (before the doors, the wait by it)
+    v.act = AN.pousar.act; faceB(v, b); if (v.actT < AN.pousar.contact) return;
+    const c = v.carry; if (c && c.n > EPS && c.to === ref) { const r = D.move('v:' + v.id, ref, c.k, c.n, { code: 'entrega', by: v.id, part: true }); if (!r.ok) return H.end(v); }
+    return Te.task(v, b, f, H) || H.end(v);
   }
   // the hold of the stoker's wood: an operation of the world with no people of its own — the stoker on his way is its errand
   // (the task's hold) —, ended when the wood is in his hands, or the second his errand is not this one any more (a call, the
@@ -607,7 +615,7 @@
   };
   const oldText = E.taskText;
   E.taskText = function (v, t) {
-    if (t.type === 'lenhaTermas') return t.st < 1 ? 'Indo ao armazém buscar lenha para os banhos' : 'Pegando lenha para os banhos';
+    if (t.type === 'lenhaTermas') return t.st < 1 ? 'Indo ao armazém buscar lenha para os banhos' : t.st < 2 ? 'Pegando lenha para os banhos' : t.st < 3 ? 'Levando lenha para os banhos' : 'Pondo a lenha junto à fornalha';
     return oldText(v, t);
   };
   // the baths' panel: open or shut, the water, the day's book
