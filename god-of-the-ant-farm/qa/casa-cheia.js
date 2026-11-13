@@ -516,8 +516,19 @@ run('c15', () => {
   // given that same day, or its own hands with no more days to wait (G.Casa.road, read only) —, counted once a day; in a world that
   // never had one there is no road to walk, and it is said: the «cidade» of the generation 20 had no family over its house's beds
   // nor out of doors in six years, T-998)
-  let precisou = 0;
-  const olha = () => {
+  // (the road the town's day walks: the order takes it only for a family short of the price — one with it buys the people's
+  // empty house or pays for a new one (K.order) —, never for one that waits for its house already, let it go for now or has the
+  // god's body among its grown ones; and only on a day the jump lives: the look at the turn of the last day ends the jump, and no
+  // town has its day after it. The T-998 measured: its two family-days were both of day 20, the turn that ends the six years —
+  // and one, Halfdan's of Hedeby, had 10.40 coins for a hut of 5.47 —; lived one day more, the town's day gave the people's hut to
+  // Máximo's family in Roma and sold Halfdan the one of Hedeby. T-1003)
+  let precisou = 0, noFim = 0;
+  const aberta = v => {
+    const rd = K.road(v); if (!(rd.kind === 'cede' || (rd.kind === 'maos' && !rd.wait))) return false;
+    const fam = K.family(v); if (K.waiting(v) || K.gaveUp(v) || fam.some(m => m.age >= 16 && A.isBody(m))) return false;
+    return K.savings(v) + 1e-6 < K.plan(v, fam, S.settlements.get(v.set), null, K.need(v)).price + K.KEEP;
+  };
+  const olha = vive => {
     pega(); const res = new Map(); for (const v of S.villagers.values()) if (v.home && !v.captive) { const l = res.get(v.home); if (l) l.push(v); else res.set(v.home, [v]); }
     const agora = new Set();
     for (const b of S.buildings.values()) {
@@ -531,16 +542,16 @@ run('c15', () => {
     for (const id of [...desde.keys()]) if (!agora.has(id)) desde.delete(id);
     for (const v of S.villagers.values()) for (const m of v.moves || []) { const k = v.id + ':' + m[0] + ':' + m[1]; if (vistas.has(k)) continue; vistas.add(k); if (m[0] <= d0) continue; if (/recebeu do povo/.test(m[1])) cedidas++; if (/com as próprias mãos/.test(m[1])) maos++; }
     for (const q of QA.check()) if (q.sys === 'casa-cheia' && q.sev <= 3 && !/sem um crescido dela na cidade/.test(q.msg) && ruins.length < 6) ruins.push(`dia ${S.day} S${q.sev}: ${q.msg.slice(0, 200)}`);
-    { const fs = new Set(); for (const v of S.villagers.values()) { if (v.age < 16 || v.captive || fs.has(v.id)) continue; for (const m of K.family(v)) fs.add(m.id); const rd = K.road(v); if (rd.kind === 'cede' || (rd.kind === 'maos' && !rd.wait)) precisou++; } }
+    { const fs = new Set(); for (const v of S.villagers.values()) { if (v.age < 16 || v.captive || fs.has(v.id)) continue; for (const m of K.family(v)) fs.add(m.id); if (aberta(v)) { if (vive) precisou++; else noFim++; } } }
   };
-  olha(); let d = S.day;
+  olha(true); let d = S.day;
   G.Skip.on = true; G.FX.off = true; G.W.pathGreed = 1.3;
-  try { while (G.S.day - d0 < ANOS) { G.Main.skipStep(1); if (G.S.day !== d) { d = G.S.day; olha(); } } } finally { G.Skip.on = false; G.FX.off = false; G.W.pathGreed = G.W.PATH_EXACT; }
+  try { while (G.S.day - d0 < ANOS) { G.Main.skipStep(1); if (G.S.day !== d) { d = G.S.day; olha(G.S.day - d0 < ANOS); } } } finally { G.Skip.on = false; G.FX.off = false; G.W.pathGreed = G.W.PATH_EXACT; }
   pega();
   ok('c15a o verificador da casa cheia, a cada dia do salto', !ruins.length, ruins.length ? ruins.join(' · ') : `${ANOS} anos de salto em ${MUNDO} (dia ${d0} → ${S.day}, ${S.villagers.size} pessoas): nenhuma regra da casa cheia acusada em nenhum dia`);
   const LIM = K.HANDS_DAYS + 6;
   ok('c15b nenhuma casa de várias famílias fica com o dobro além da paciência e da vez', pior <= LIM, `casas-dia ${casasDia}, das quais ${dobroDia} de várias famílias com o dobro da lotação; a que mais durou assim: ${pior} dia(s)${piorQ ? ' (' + piorQ + ')' : ''} (o limite da prova: ${LIM}); casas dadas pelo povo: ${cedidas}; cabanas levantadas com as próprias mãos: ${maos}`);
-  ok('c15c as duas estradas foram andadas onde o mundo precisou delas', !precisou || cedidas + maos >= 1, `${cedidas} casa(s) do povo dada(s) e ${maos} cabana(s) das mãos de famílias nos ${ANOS} anos; famílias-dia com uma estrada aberta: ${precisou}${precisou ? '' : ' — o mundo não precisou delas (nenhuma família acima das camas nem ao relento com uma estrada aberta)'}`);
+  ok('c15c as duas estradas foram andadas onde o mundo precisou delas', !precisou || cedidas + maos >= 1, `${cedidas} casa(s) do povo dada(s) e ${maos} cabana(s) das mãos de famílias nos ${ANOS} anos; famílias-dia com uma estrada aberta: ${precisou}${precisou ? '' : ' — o mundo não precisou delas (nenhuma família acima das camas nem ao relento, sem o preço, com uma estrada aberta)'}${noFim ? `; e ${noFim} na virada do último dia, que o salto não vive` : ''}`);
   const c = checa(); ok('c15d verificador e erros', c.ok, c.txt);
   const k = salva(); const c2 = checa(); ok('c15e save e load no fim', c2.ok, `${k} caracteres; ${c2.txt}`);
 });

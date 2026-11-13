@@ -9,6 +9,8 @@
 //   g4 com um save no meio (entre a desistência e o dia seguinte): a caça e a marca atravessam o save;
 //   g5 um roubo que ninguém resolveu em Cr.PRESC dias prescreve, e a caça acaba;
 //   g6 o verificador limpo (S0–S2), nenhum erro de módulo.
+// O esconderijo é a casa da cidade mais longe da casa do ladrão (onde o guarda procura), e o ladrão fica lá dentro, parado,
+// enquanto o caso dura; as testemunhas do roubo são as que contaram ao guarda (T-1004).
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const fails = [];
@@ -23,7 +25,11 @@ for (const set of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
   const g = ppl.filter(v => LAW[v.role] && !v.hunt && !(v.task && v.task.pri >= 3)).sort((a, b) => (a.role === 'vigia' ? 0 : 1) - (b.role === 'vigia' ? 0 : 1) || a.id - b.id)[0];
   const h = [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && (b.coin || 0) >= 6).sort((a, b) => b.coin - a.coin || a.id - b.id)[0];
   const th = g && h && ppl.filter(v => v !== g && !LAW[v.role] && v.home && v.home !== h.id && S.buildings.get(v.home) && !(v.task && v.task.pri >= 3) && G.W.canWalk(v.x, v.y, ...Vg.door(h))).sort((a, b) => a.id - b.id)[0];
-  const hide = th && [...S.buildings.values()].filter(b => b.set === set.id && b.built && b.blocks && b.id !== th.home && b.id !== h.id && G.BDEF[b.type].housing).sort((a, b) => G.dist2(b.x, b.y, h.x, h.y) - G.dist2(a.x, a.y, h.x, h.y))[0];
+  // (the hiding place: the house of the town farthest from the thief's own — the guard looks there first, and around it —, not
+  // from the robbed one: in the metrópole of the generation 20 the farthest from the robbed house of Argos was hut#7335, two
+  // steps from the thief's hut#7387, on the guard's way to its door. T-1004)
+  const hd0 = th && Vg.door(S.buildings.get(th.home));
+  const hide = th && [...S.buildings.values()].filter(b => b.set === set.id && b.built && b.blocks && b.id !== th.home && b.id !== h.id && G.BDEF[b.type].housing).sort((a, b) => G.dist2(b.x, b.y, hd0[0], hd0[1]) - G.dist2(a.x, a.y, hd0[0], hd0[1]) || a.id - b.id)[0];
   if (g && h && th && hide) { pick = { set, g, h, th, hide }; break; }
 }
 if (!pick) { ok('g1 um roubo contado a um guarda', false, 'nenhuma cidade com um guarda livre, uma casa com moedas e um ladrão'); console.log('FALHOU: 1'); process.exit(1); }
@@ -35,8 +41,13 @@ let c = null; for (let k = 0; k < 600 && !c; k++) { M.viver(0.1); seenT.add(th.t
 if (!c) console.log('(tarefas do ladrão: ' + [...seenT].join(', ') + '; moedas da casa ' + h.coin + ')');
 if (!ok('g0 o roubo pela tarefa do jogo', !!c && c.st === 'aberto' && c.n > 0, c ? `${th.name} levou ${c.n} moedas de ${h.type}#${h.id} em ${set.name}` : 'o roubo não aconteceu')) { console.log('FALHOU: 1'); process.exit(1); }
 // told to the guard; the thief hidden by the proof's hand
-const hid = () => { th.inside = hide.id; th.sleeping = false; const d = Vg.door(hide); th.x = d[0]; th.y = d[1]; th.path = null; if (th.task && th.task.type !== 'idle') Vg.endTask(th); };
-for (const o of S.villagers.values()) if (o.hunt === c.id && o !== g) o.hunt = 0;
+// (hidden, he stays inside: still, over the call of his bed — at night the bed (1,5) took him out to walk home, in the street at
+// the door of the hiding place, where a guard who passes sees him —; and the crime told to the guard is told: the witnesses of the
+// theft are the ones who told him, their mark gone as the game takes it from a witness who tells (crime.js). In the generation 20
+// a witness crossed another soldier of Argos in the seconds of the case, and that one took the thief at the door of the hiding
+// place: «o roubo devolvido (não havia cela livre: só a devolução)», T-1004)
+const hid = () => { th.inside = hide.id; th.sleeping = false; const d = Vg.door(hide); th.x = d[0]; th.y = d[1]; th.path = null; if (!(th.task && th.task.type === 'idle')) { Vg.endTask(th); H.setTask(th, { type: 'idle', pri: 1.6, wait: 600, kind: 'idle' }); } };
+for (const o of S.villagers.values()) { if (o.hunt === c.id && o !== g) o.hunt = 0; if (o.saw && o.saw.crime === c.id) o.saw = null; }
 g.hunt = c.id; c.told = S.day; Vg.endTask(g); g.sleeping = false; g.inside = 0; g.energy = 95; g.hunger = 5; hid();
 H.setTask(g, { type: 'prender', crime: c.id, id: th.id, pri: 1.6, st: 0, look: 0 });
 let hunted = 0; for (let k = 0; k < 3000 && c.gave !== S.day && c.st === 'aberto' && S.day === day0; k++) { hid(); M.viver(0.1); if (g.task && g.task.type === 'prender') hunted++; }
