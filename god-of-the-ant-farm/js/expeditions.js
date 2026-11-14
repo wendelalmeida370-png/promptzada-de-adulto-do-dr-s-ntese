@@ -229,6 +229,11 @@
     // of an operation under way (G.Vg.handsBusy, D-094): the crew's call to the quay (3,25) does not wait for them, and the
     // load went aboard — a woman of Mênfis, on her way to the cave's refuge with a purchase in her hands, L-458)
     if (G.Vg.handsBusy(v)) return false;
+    // (nor one whose day is at home — the fever, a bad wound, the old one minding the little ones, the first half day of grief:
+    // G.Trade.homeBound, as the caravan and the farewell ask, L-773, L-799 —: the crew's call to the quay (3,25) stands above
+    // the bed (1,3), the minding (0,6) and the grief (0,95). The great voyage of Argos took Clio, widowed half a second before,
+    // and she went down to the quay from the grave, L-819)
+    if (G.Trade && G.Trade.homeBound(v)) return false;
     if (X.memberOf(v.id)) return false;
     if (v.expCD && G.S.day - v.expCD < 3) return false;
     return true;

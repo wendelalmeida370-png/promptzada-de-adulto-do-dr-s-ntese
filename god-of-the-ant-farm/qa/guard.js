@@ -333,6 +333,15 @@ const LEDGER_OK27 = [
     if (i < 0) { fails.push(`quem vai embora: ${f} sem a escolha ${what} (${rx.source}) — L-440`); continue; }
     if (!/G\.Vg\.canSend\(/.test(L.slice(i, i + 30).join('\n'))) fails.push(`quem vai embora: ${f}:${i + 1} a escolha ${what} não pergunta ao G.Vg.canSend (L-440)`);
   }
+  // (and the doors themselves ask the day at home — in bed with a fever or a bad wound, the old one minding the little ones, the
+  // widowed in the first half day of grief: G.Trade.homeBound —: the G.Vg.canSend of villagers.js and the free of a voyage's
+  // crew, expeditions.js, in their bodies. A great voyage of Argos took a widow of that morning to its crew, L-819)
+  for (const [f, rx, what] of [['villagers.js', /^\s*Vg\.canSend = function \(v\) \{/, 'o G.Vg.canSend'], ['expeditions.js', /^\s*function free\(v, f, o\) \{/, 'o free da tripulação de uma viagem']]) {
+    const L = src[f] || []; const i = L.findIndex(l => rx.test(l));
+    if (i < 0) { fails.push(`quem vai embora: ${f} sem ${what} (${rx.source}) — a regra 40 não acha a porta (L-819)`); continue; }
+    const end = L.findIndex((l, k) => k > i && /^\s{0,2}\};?\s*$/.test(l));
+    if (!/G\.Trade\.homeBound\(/.test(L.slice(i, end > i ? end + 1 : i + 25).join('\n'))) fails.push(`quem vai embora: ${f}:${i + 1} ${what} não pergunta ao G.Trade.homeBound — o doente de cama, o velho que cuida dos pequenos, o viúvo de luto (L-819)`);
+  }
 }
 // 41. "a reta de água é uma só" (L-075, L-477): se um navio vai reto a um ponto, quem diz que a reta é toda água é a caminhada
 // pela grade do naval.js (G.Naval.losWater: cada casa que a reta cruza) — pontos a cada tanto de casa pulam a quina da terra que

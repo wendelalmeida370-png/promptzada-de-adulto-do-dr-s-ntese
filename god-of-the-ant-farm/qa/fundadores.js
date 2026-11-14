@@ -20,6 +20,11 @@
 //     casada jovem da cidade é o corpo do deus: os fundadores vão, ela fica, do deus e na sua cidade; o preso fica na cela.
 //  f6 o casamento real de uma aliança (G.Politics.deliver): a filha do governante que iria morar com o outro povo é o corpo
 //     do deus — ela fica na sua cidade, do deus, sem casar pela mão do mundo.
+//  f7 quem tem o dia em casa (G.Trade.homeBound: de cama com febre ou ferida, o velho que cuida dos pequenos, o viúvo na
+//     primeira metade do dia de luto) não vai embora: no mundo pronto, numa cidade, um com febre e uma viúva da hora (e o velho
+//     que cuida, se a cidade tem um): a cidade não pode mandá-los (G.Vg.canSend), e nenhum vai fundar a vila nova em 200
+//     escolhas; curados, a cidade pode. f7b, nas ilhas do f3: a mãe de uma família com febre e uma viúva da hora ficam fora dos
+//     colonos, e a família da mãe com ela (L-819; a tripulação de uma viagem: o m16 do qa/carga-comum.js).
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
@@ -110,6 +115,34 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       r.picked ? `${r.town}, ${where} (${r.pop} almas): ${r.five.join(', ')} (tarefas ${JSON.stringify(r.t0)}); 200 escolhas de ${r.sizes[0]} a ${r.sizes[1]} fundadores, ${r.gone} com algum dos cinco` : 'sem G.Village.pickFounders: a escolha dos fundadores fica dentro do checkExpansion, sem filtro nenhum');
     ok('f2 os fundadores podem ir, e cada casal leva os seus pequenos', !!r.picked && !r.badSend.length && !r.broken.length, !r.picked ? '-' : `${r.badSend.length ? 'não podiam ir: ' + r.badSend.join(', ') : 'todos podiam ir'}; ${r.broken.length ? 'filhos deixados: ' + r.broken.join(', ') : 'nenhum filho pequeno deixado para trás'}`);
   }
+  // f7 — who has the day at home (G.Trade.homeBound) is not sent away: in a town of the ready world, the first two grown ones
+  // the town could send — one given a fever by the test's hand, the other widowed by the game's door (G.Village.kill) — and the
+  // old one minding the little ones, if the town has one: the door says no, and none of them goes to found the new village in
+  // 200 choices; well again, the door says yes. By day: the fever is of one awake (G.Lar.fever). A great voyage of Argos took a
+  // widow of that morning to its crew, and she went down to the quay from the grave, L-819
+  const r7 = await page.evaluate(() => {
+    const S = G.S; const pop = s => [...S.villagers.values()].filter(v => v.set === s.id).length; S.time = 0.4;
+    const towns = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Fac.get(s.fac).alive).sort((a, b) => pop(b) - pop(a) || a.id - b.id);
+    for (const set of towns) {
+      const can = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 18 && v.age < 45 && !v.sleeping && G.Vg.canSend(v)).sort((a, b) => a.id - b.id);
+      const sick = can[0]; const wid = sick && can.find(v => v !== sick && v.partner && v.partner !== sick.id && S.villagers.has(v.partner) && !(S.avatar && S.avatar.id === v.partner));
+      if (!sick || !wid) continue;
+      const minder = [...S.villagers.values()].filter(v => v.set === set.id && G.Lar.minder(v)).sort((a, b) => a.id - b.id)[0] || null;
+      sick.sick = G.DAY_LEN * 0.6; const pn = S.villagers.get(wid.partner).name; G.Village.kill(S.villagers.get(wid.partner), 'old');
+      const all = [sick, wid].concat(minder ? [minder] : []);
+      const out = { town: set.name, sick: `${sick.name}#${sick.id}`, fever: !!G.Lar.fever(sick), wid: `${wid.name}#${wid.id} (${wid.g === 'f' ? 'viúva' : 'viúvo'} de ${pn})`, grief: !!G.Lar.grief(wid), minder: minder ? `${minder.name}#${minder.id}` : '',
+        bound: all.map(v => !!G.Trade.homeBound(v)), send: all.map(v => G.Vg.canSend(v)) };
+      let gone = 0; for (let k = 0; k < 200; k++) if ([...G.Village.pickFounders(set, pop(set))].some(v => all.includes(v))) gone++;
+      out.gone = gone;
+      // (well again — the fever gone, the first half day of grief past —: the town can send them)
+      sick.sick = 0; wid.mourn = Math.min(wid.mourn, G.DAY_LEN * 0.5); out.after = [sick, wid].map(v => G.Vg.canSend(v));
+      return out;
+    }
+    return { err: 'nenhuma cidade com dois adultos acordados que a cidade possa mandar' };
+  });
+  if (r7.err) ok('f7 quem tem o dia em casa não vai embora: a febre, o luto, o velho que cuida', false, r7.err);
+  else ok('f7 quem tem o dia em casa não vai embora: a febre, o luto, o velho que cuida', r7.fever && r7.grief && r7.bound.every(Boolean) && !r7.send.some(Boolean) && r7.gone === 0 && r7.after.every(Boolean),
+    `${r7.town}: ${r7.sick} com febre (${r7.fever}), ${r7.wid} de luto (${r7.grief})${r7.minder ? `, ${r7.minder} cuidando dos pequenos` : ', ninguém cuidando dos pequenos na cidade'}: o dia em casa ${JSON.stringify(r7.bound)}, a cidade pode mandar ${JSON.stringify(r7.send)}; em 200 escolhas dos fundadores, ${r7.gone} com algum deles; curados, a cidade pode mandar ${JSON.stringify(r7.after)}`);
   // f3 — the colonists of a ship (G.Expe.colony, where the towns' colonizing by sea goes: Naval.colonize hands it over), on a
   // sea world of its own (a continent of the ready worlds has no free shore left), in a town with a quay and a jail: the five
   // stay — the god's body a child this time, and its parents with it (a family goes only whole)
@@ -133,13 +166,26 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     const own = K.at(set.cx, set.cy); const reg = K.regions().filter(q => K.big(q) && q !== own).sort((a, b) => b.cells - a.cells || a.key - b.key)[0];
     if (!reg) return { err: 'nenhuma outra ilha no mapa' };
     K.raise(f.id, reg, K.MAP, { via: 'teste' });
+    // (f7b: the mother of a family given a fever, and a wife widowed by the game's door — not the ruler's —, by day: they stay,
+    // and the mother's family with her: a family goes only whole, L-819)
+    S.time = 0.4;
+    // (the mother of a family the ship would take whole — both of 17 to 50 and well, neither the people's ruler, the little ones
+    // of two and up, none of them held by anything —: without the rule her family went aboard)
+    const kidsOf = m => [...S.villagers.values()].filter(k => k.set === set.id && k.age < 16 && (k.mother === m.id || k.father === m.partner));
+    const goes = v => v.age >= 17 && v.age <= 50 && v.hp >= 55 && !(v.preg > 0) && v.id !== f.leader && G.Vg.canSend(v);
+    const pairs = [...S.villagers.values()].filter(v => v.set === set.id && v.g === 'f' && v.partner && S.villagers.has(v.partner) && !c.ids.has(v.id) && !c.ids.has(v.partner) && v.id !== c.body.mother && v.partner !== c.body.father && G.Vg.canSend(v)).sort((a, b) => a.id - b.id);
+    const fev = pairs.find(m => goes(m) && goes(S.villagers.get(m.partner)) && kidsOf(m).every(k => k.age >= 2 && G.Vg.canSend(k))), wid = pairs.find(m => m !== fev && m.partner !== f.leader); let home = null;
+    if (fev && wid) { fev.sick = G.DAY_LEN * 0.6; G.Village.kill(S.villagers.get(wid.partner), 'old');
+      const kin = [fev, S.villagers.get(fev.partner)].concat([...S.villagers.values()].filter(k => k.mother === fev.id && k.age < 16));
+      home = { fev: `${fev.name}#${fev.id}`, wid: `${wid.name}#${wid.id}`, fever: !!G.Lar.fever(fev), grief: !!G.Lar.grief(wid), kin: kin.map(v => v.id), widId: wid.id }; }
     // (room for every family the town can send: the one of the god's body would go too, if it could)
     const e = G.Expe.colony(f, { r: reg, site: { x: reg.cx, y: reg.cy, sc: 8 }, motive: 'terra' }, 60, Nv.docksOf(f.id));
     if (!e) return { err: `nenhuma colônia saiu de ${set.name}`, t0 };
     const crew = e.crew.map(id => S.villagers.get(id)).filter(Boolean);
     const parents = [c.body.mother, c.body.father].filter(id => e.crew.includes(id)).map(id => S.villagers.get(id).name);
     const kids = []; for (const v of crew) if (v.g === 'f' && v.partner && e.crew.includes(v.partner)) { const p = S.villagers.get(v.partner); for (const k of S.villagers.values()) if (k.set === set.id && k.age < 16 && (k.mother === v.id || k.father === p.id) && !e.crew.includes(k.id)) kids.push(k.name + '#' + k.id + (k.age < 2 ? ' (bebê)' : '')); }
-    const out = { town: set.name, t0, n: crew.length, child: c.body.name + ' (' + Math.floor(c.body.age) + ' anos)', five: crew.filter(v => c.ids.has(v.id)).map(v => v.name), parents, bad: crew.filter(v => v.captive || v.jail || v.held || v.ug || v.air || (S.avatar && S.avatar.id === v.id)).map(v => v.name), kids };
+    if (home) { home.inKin = home.kin.filter(id => e.crew.includes(id)).map(id => S.villagers.get(id).name); home.inWid = e.crew.includes(home.widId); }
+    const out = { home7: home, town: set.name, t0, n: crew.length, child: c.body.name + ' (' + Math.floor(c.body.age) + ' anos)', five: crew.filter(v => c.ids.has(v.id)).map(v => v.name), parents, bad: crew.filter(v => v.captive || v.jail || v.held || v.ug || v.air || (S.avatar && S.avatar.id === v.id)).map(v => v.name), kids };
     G.Vg.endTask(c.merc);
     for (let k = 0; k < 100; k++) G.debug.step(0.1);
     out.after = __F.after(c); out.bad2 = __F.clean().slice(0, 4);
@@ -148,6 +194,9 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
   if (r3.err) ok('f3 os colonos de um navio: os cinco ficam (o corpo uma criança, e os pais com ela), as famílias inteiras', false, r3.err);
   else ok('f3 os colonos de um navio: os cinco ficam (o corpo uma criança, e os pais com ela), as famílias inteiras', r3.n >= 5 && !r3.five.length && !r3.parents.length && !r3.bad.length && !r3.kids.length && r3.t0.body === 'avatar' && /cela|levado/.test(r3.t0.pris),
     `${r3.town} (ilhas): ${r3.n} colonos; o corpo do deus: ${r3.child}; dos cinco no navio: ${r3.five.join(', ') || 'nenhum'}; pais do corpo no navio: ${r3.parents.join(', ') || 'nenhum'}; sem poder ir: ${r3.bad.join(', ') || 'nenhum'}; filhos deixados: ${r3.kids.join(', ') || 'nenhum'}`);
+  { const h = r3.home7; if (r3.err || !h) ok('f7b os colonos de um navio: a mãe com febre e a viúva da hora ficam, e a família da mãe com ela', false, r3.err || 'nenhuma família para o caso nas ilhas');
+    else ok('f7b os colonos de um navio: a mãe com febre e a viúva da hora ficam, e a família da mãe com ela', h.fever && h.grief && !h.inKin.length && !h.inWid,
+      `${r3.town} (ilhas), ${r3.n} colonos: ${h.fev} com febre (${h.fever}) — da família dela no navio: ${h.inKin.join(', ') || 'ninguém'}; ${h.wid} de luto (${h.grief}): ${h.inWid ? 'NO NAVIO' : 'ficou'}`); }
   const a1 = r.after || {}, a3 = r3.after || {};
   // f5 — the real thing: a capital grown past its size founds a village on the world's own new day (checkExpansion), and the
   // town's only young wife is the god's body (the other wives past 42, the age of the founders): the founders go, and she

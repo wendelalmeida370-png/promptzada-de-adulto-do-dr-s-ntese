@@ -229,6 +229,10 @@
     if (!v || v.captive || v.jail || v.aboard || v.held || v.air || v.ug || (G.S.avatar && G.S.avatar.id === v.id)) return false;
     if (v.task && ((v.task.pri || 0) >= 3 || (G.War && G.War.busyDiplomat(v)))) return false;
     if (G.Expe && G.Expe.memberOf(v.id)) return false;
+    // (nor one whose day is at home — in bed with a fever or a bad wound, the old one minding the little ones, the widowed in the
+    // first half day of grief —, as the caravan and a voyage's farewell ask (G.Trade.homeBound, L-773, L-799): the founders, the
+    // colonists, a merchant ship's crew and the court that moves are sent another day; and a voyage's crew asks the same, L-819)
+    if (G.Trade && G.Trade.homeBound(v)) return false;
     return !Vg.handsBusy(v);
   };
   // (hands busy with a load that has somewhere to go — an operation's crate, a purchase on its way home, goods for a stall:

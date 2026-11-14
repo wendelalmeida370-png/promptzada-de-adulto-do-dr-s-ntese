@@ -732,12 +732,17 @@ if (want('l13')) {
     for (const st of [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)) for (const o of people(st)) {
       if (o.age < 18 || o.age >= 60 || o.sleeping || isBody(o) || o.secret || o.inside === o.home || !G.Possess.can(o).ok) continue;
       const b = builtHome(o); if ([...S.villagers.values()].filter(q => q.home === b.id).length < 4 || !G.Space.planNow(b) || !G.Interiors.slots(b, 'deitar').length || !standIn(b, TABLE) || !standIn(b, FIRE)) continue;
+      // (and a house whose supper the body can still cook when it comes in: not cooked today, nobody of it at the fire, and no food
+      // in its pantry — nobody of it cooks while the body is away; the test's hand fills it when the body comes in. In the «cidade»
+      // of the generation 26 Hakon, of Tove's house in Hedeby, was cooking at 0,70 and the supper was ready at 0,735, 15 s into the
+      // body's time away: «cozinhou NÃO (A ceia de hoje já está pronta.)», T-1202)
+      if (L.cooked(b) || D.get('h:' + b.id, 'food') >= 1 || [...S.villagers.values()].some(q => q.home === b.id && q.task && q.task.type === 'lar' && q.task.what === 'cozinhar')) continue;
       set = st; v = o; h = b; return true;
     }
     return false;
   };
   if (!find13() && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.6; liveTo(0.7); find13(); }
-  if (!v) ok('l13 a casa contínua', false, 'nenhum adulto fora de uma casa de quatro com planta e cama');
+  if (!v) ok('l13 a casa contínua', false, 'nenhum adulto fora de uma casa de quatro com planta e cama, de ceia por fazer e despensa vazia');
   else {
     const ref = 'h:' + h.id; const famIds = [...S.villagers.values()].filter(o => o.home === h.id && o.id !== v.id).map(o => o.id);
     const fam = () => famIds.map(id => S.villagers.get(id)).filter(Boolean);

@@ -445,6 +445,8 @@ const mindsNow = v => !!(v && v.task && v.task.type === 'lar' && v.task.what ===
 // died of old age, on the day 50, and Sitamun, the m6's first try, was of a voyage's crew: «ninguém de 55 anos ou mais cuidando
 // dos pequenos de uma casa, livre». The world opened again, the first of them by id, as the case always took)
 const opened = w => { M.pronto(w || 'metropole'); S = G.S; M.viver(2); G.inSim = Math.max(G.inSim, 1); S.weather.storm = 0; used.clear(); };
+// (the ready worlds a minder case looks in, the metropole first — the molde MUNDOS of the qa/escala.js)
+const MUNDOS = ['metropole', 'mega', 'cidade', 'mundial', 'anos100', 'anos500', 'anos1000'];
 {
   // (the one minding whose day the minding is: an old one — the decide's own rule: the minding below a working day of one in
   // their fifties, above an old one's (act-lar.js, L.urge; villagers.js, elder) —, for the case wants her back at it after the
@@ -454,7 +456,6 @@ const opened = w => { M.pronto(w || 'metropole'); S = G.S; M.viver(2); G.inSim =
   // little through the case; and a minding the world ends in the middle — the little ones gone from the house (the family
   // moved to another), another of the house minding them, the evening — leaves the case to the next one, up to four: in the
   // mega, Cuetlachtli's grandchild moved out with her family 20 s after the wood was in the store, T-1036)
-  const MUNDOS = ['metropole', 'mega', 'cidade', 'mundial', 'anos100', 'anos500', 'anos1000'];
   const elder = () => person(62, 85, o => !o.sleeping && !!(G.Lar && G.Lar.minder(o)) && G.Lar.minder(o).some(c => c.age < 6.3));
   let info = '', fine = false, tries = 0; const left = [];
   for (const w of MUNDOS) {
@@ -487,13 +488,14 @@ const opened = w => { M.pronto(w || 'metropole'); S = G.S; M.viver(2); G.inSim =
 // ---------------- m14: the same, saved and loaded in the middle of the minding — the test's hand holds her thinking until
 // the save, which finds her minding them at home with the load —: loaded, the load goes to the store
 {
-  opened(); S.time = 0.3;
   // (one in a town with no feast under way, and the town's feast of the day kept for another day: the feast calls the whole town
   // — the one minding too, D-126 —, and in the metrópole of the generation 25 it took Sven to it before the save, «cuidando dos
-  // pequenos (fest.0)», T-1184)
-  const v = person(55, 85, o => !o.sleeping && !!(G.Lar && G.Lar.minder(o)) && !(G.Fest && G.Fest.active && G.Fest.active(o.set)));
+  // pequenos (fest.0)», T-1184. In the first ready world that has one, as the m13: in the metropole of the generation 26 nobody
+  // of 55 or more minds little ones at the opening, T-1201)
+  let v = null, wv = '';
+  for (const w of MUNDOS) { opened(w); S.time = 0.3; v = person(55, 85, o => !o.sleeping && !!(G.Lar && G.Lar.minder(o)) && !(G.Fest && G.Fest.active && G.Fest.active(o.set))); if (v) { wv = w; break; } }
   if (v) { const st0 = S.settlements.get(v.set); if (st0) st0.festPlan = { day: S.day, key: null, done: true }; }
-  if (!v || !give(v, 'wood', 2)) ok('m14 salvo e carregado no meio do cuidar', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, numa cidade sem festa');
+  if (!v || !give(v, 'wood', 2)) ok('m14 salvo e carregado no meio do cuidar', false, v ? `${nm(v)} não aguenta 2 de lenha` : `ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, numa cidade sem festa, nos mundos prontos (${MUNDOS.join(', ')})`);
   else {
     G.Lar.task(v, G.Vg.H, 'cuidar'); v.think = 1e9;
     live(60, () => mindsNow(v) && v.task.st === 2);
@@ -503,15 +505,16 @@ const opened = w => { M.pronto(w || 'metropole'); S = G.S; M.viver(2); G.inSim =
     const v2 = S.villagers.get(id); const held = v2 ? hands(v2) : 'ninguém'; const n0 = lines.length;
     const went = !!v2 && live(90, () => outOf(id, n0).some(q => q[5] === 'wood' && q[8] === 'entrega'));
     ok('m14 salvo e carregado no meio do cuidar', st === 'lar/cuidar.2' && held === '2 de wood' && went && !look().length,
-      `${nm(v)} salvo(a) cuidando dos pequenos (${st}) com 2 de lenha nas mãos; carregado(a), com ${held}: ${went ? 'levou-a ao armazém' : `NÃO a levou (${v2 && v2.task ? v2.task.type : 'sem afazer'}, nas mãos: ${hands(v2)})`}`);
+      `${nm(v)}${wv === 'metropole' ? '' : `, da «${wv}»,`} salvo(a) cuidando dos pequenos (${st}) com 2 de lenha nas mãos; carregado(a), com ${held}: ${went ? 'levou-a ao armazém' : `NÃO a levou (${v2 && v2.task ? v2.task.type : 'sem afazer'}, nas mãos: ${hands(v2)})`}`);
   }
 }
 // ---------------- m15: the checker sees the load standing still in the hands of the one minding (the test's hand: minding
 // them at home and not stopping to think — as under the decide of before, whose minding never took a load anywhere); let go,
 // it goes to the store. A call of the world in the middle takes her from the minding: the case again with another, up to three
 {
-  let info = 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, com armazém ao alcance', fine = false; const calls = [];
-  opened();
+  // (in the first ready world that has one, as the m13 and the m14: T-1201)
+  let info = `ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, com armazém ao alcance, nos mundos prontos (${MUNDOS.join(', ')})`, fine = false; const calls = [];
+  let wv = ''; for (const w of MUNDOS) { opened(w); S.time = 0.3; if (minder()) { wv = w; break; } }
   for (let att = 0; att < 3 && !fine; att++) {
     S.time = 0.3;
     const v = minder(); if (!v || !give(v, 'wood', 2)) break;
@@ -523,7 +526,7 @@ const opened = w => { M.pronto(w || 'metropole'); S = G.S; M.viver(2); G.inSim =
     const n0 = lines.length;
     const went = live(60, () => outOf(v.id, n0).some(q => q[5] === 'wood' && q[8] === 'entrega'));
     fine = !!saw && went;
-    info = `${nm(v)} cuidando dos pequenos com 2 de lenha, sem pensar: ${saw ? '«' + saw + '»' : 'o verificador NÃO viu'}; solto(a), ${went ? 'levou-a ao armazém' : `NÃO a levou (${v.task ? v.task.type : 'sem afazer'}, nas mãos: ${hands(v)})`}${calls.length ? ` (antes, o mundo chamou: ${calls.join(', ')})` : ''}`;
+    info = `${nm(v)}${wv === 'metropole' ? '' : `, da «${wv}»,`} cuidando dos pequenos com 2 de lenha, sem pensar: ${saw ? '«' + saw + '»' : 'o verificador NÃO viu'}; solto(a), ${went ? 'levou-a ao armazém' : `NÃO a levou (${v.task ? v.task.type : 'sem afazer'}, nas mãos: ${hands(v)})`}${calls.length ? ` (antes, o mundo chamou: ${calls.join(', ')})` : ''}`;
   }
   ok('m15 o verificador vê a carga parada nas mãos de quem cuida', fine && !look().length, info);
 }

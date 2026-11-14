@@ -299,12 +299,17 @@
     const S = G.S; if (!S || !ear) return null;
     const U = G.Urban; const q = U && U.at ? U.at(ear.x, ear.y) : null; const night = G.isNight ? G.isNight() : false;
     const all = []; const count = {}; const far = {}; let gente = 0;
+    // (whose quarter a pair of hands is: where it stands; on a patch of ground no town has, its work's — the building of its
+    // operation, where the work is noted (G.Urban.noteB). Lêda heaving a crate of the quay of Corinto, in the metropole of the
+    // generation 26, stood beside the quay a hand off the town's last patch, and the port's bed counted no hands while she
+    // worked: L-817)
+    const handsQ = v => { const at = U.at(v.x, v.y); if (at) return at; const op = opOf(v.task || NONE); const b = op && op.at ? S.buildings.get(op.at) : null; return b ? U.at(b.x + (b.w || 1) / 2, b.y + (b.h || 1) / 2) : null; };
     const push = (o, h, L) => { o.d = h.d; o.gain = r3(h.gain * L.v); o.pan = h.pan; o.muf = h.muf; if (o.gain >= A.MIN) all.push(o); return o.gain >= A.MIN; };
     // ---- the people: a gesture, an act
     for (const v of S.villagers.values()) {
       if (v.aboard || v.held || v.air || v.sleeping || !!v.ug !== !!ear.ug) continue;
       const r = v.act ? A.linhaDe(v) : null; const L = r && r.linha && r.linha.s ? r.linha : null;
-      const fam = A.famDe(v, r); const mine = !!(fam && q && U.at(v.x, v.y) === q);
+      const fam = A.famDe(v, r); const mine = !!(fam && q && handsQ(v) === q);
       if (mine) count[fam] = (count[fam] || 0) + 1;
       const dx = v.x - ear.x, dy = v.y - ear.y;
       if (!v.inside && dx * dx + dy * dy < ear.r * ear.r) gente++;
@@ -342,7 +347,9 @@
     const fighters = (G.War && G.War.fighters) || [];
     if (!ear.ug && fighters.length) {
       let best = null, bd = 1e9, n = 0;
-      for (const v of fighters) { const d = Math.hypot(v.x - ear.x, v.y - ear.y); if (d < ear.r * 1.3) { n++; if (d < bd) { bd = d; best = v; } } }
+      // (the war's list is made again every half second: who fell since is still in it, and no blow of the dead rings — the
+      // nearest fighter of a fight in the second world of the proof was one killed a moment before, L-818)
+      for (const v of fighters) { if (!S.villagers.has(v.id)) continue; const d = Math.hypot(v.x - ear.x, v.y - ear.y); if (d < ear.r * 1.3) { n++; if (d < bd) { bd = d; best = v; } } }
       if (best && n > 1) push({ k: 'luta', tipo: 'luta', s: 'clang', g: null, ato: 'fight', de: { v: best.id }, x: r3(best.x), y: r3(best.y), q: 'acaso', cada: G.clamp(4 / (n + 2), 0.2, 1.2), fase: 0, contato: 0, fam: null, n }, A.hear(ear, best.x, best.y, 0, 1.3), { v: 0.6 });
     }
     // (the loudest first, the same order for the same world; of the beasts, the ear keeps a few — a yard of hens is no choir)

@@ -186,6 +186,10 @@ run('m2', () => {
   const prova = (nome, mk) => {
     const g = mk(); if (!g) { casos.push(`${nome}: SEM LOTE`); return false; }
     const at2 = G.Polity.seat(o.f); const aqui = !!at2 && at2[0] === fr2[0] && at2[1] === fr2[1] + 1;
+    // (who rules free before the seat's door by the proof's hand, as for the m2g: the audience takes nobody from the middle of an
+    // operation — Sitamun, who rules Mênfis in the metrópole of the generation 26, was unloading at the quay: T-1194)
+    let zz = 0; while (r.sleeping && zz++ < 150) M.viver(2);
+    sim(() => { semFogo(); G.Vg.endTask(r); r.inside = 0; r.x = fr2[0]; r.y = fr2[1] + 0.5; });
     const foi = !!sim(() => Co.audiencia(o.f, 'teste')); const na = !!o.f.aud && o.f.aud.b === b.id; sim(() => Co.audEnd(o.f));
     casos.push(`${nome} (${lado(g)}${g.set === o.cap.id ? '' : ' em ' + S.settlements.get(g.set).name}): ${aqui ? 'recebe à porta da sede' : `recebe em ${at2 ? at2.join(', ') : '-'}, NÃO À PORTA DA SEDE`}, ${foi && na ? 'a audiência na sede' : foi ? 'a audiência NOUTRO PALÁCIO' : 'NENHUMA audiência'}`);
     sim(() => { if (!g.built) V.siteBack(g, 'teste'); V.removeBuilding(g); }); return aqui && foi && na; // (a work pulled down gives back what it got, in the ledger)
@@ -198,26 +202,37 @@ run('m2', () => {
   // (the world opens before dawn, the household asleep in the house it had: it ends that night where it lay — the home moved,
   // the people stay where they are —, and the proof counts from when the last of them is up)
   let wait = 0; while (wait < 120 && fam.some(v => v.sleeping && v.inside && v.inside !== b.id)) { M.viver(2); wait += 2; }
-  const st = new Map(fam.map(v => [v.id, { dorme: 0, cama: new Set(), fora: 0, acordou: 0, was: false }]));
+  const st = new Map(fam.map(v => [v.id, { dorme: 0, cama: new Set(), fora: 0, acordou: 0, was: false, mar: 0 }])); let ns = 0;
   const meals = () => livro(L0, e => e[3] === ref && e[5] === 'food' && (e[8] === 'refeicao' || e[8] === 'ceia'));
   const n = Math.round(1.25 * G.DAY_LEN / 5); let bad = ''; let days = 1.25; const fumo = new Map();
   // (a day and a quarter; and on, up to three days, until someone of the house has eaten at home)
   for (let k = 0; k < n || (k < Math.round(3 * G.DAY_LEN / 5) && !meals().length && (days = (k + 1) * 5 / G.DAY_LEN)); k++) {
     M.viver(5);
     for (const v of fam) {
-      if (!S.villagers.has(v.id)) continue; const e = st.get(v.id); const inn = v.inside === b.id;
+      if (!S.villagers.has(v.id)) continue; const e = st.get(v.id); const inn = v.inside === b.id; if (v.aboard) e.mar++;
       if (inn && v.sleeping) { e.dorme++; const pl = In.placeOf(v); e.cama.add(pl && pl.it ? pl.it.kind : pl ? pl.use : '?'); }
       else if (v.sleeping && v.inside && v.inside !== b.id && G.BDEF[(B(v.inside) || {}).type] && G.BDEF[B(v.inside).type].housing) e.fora++;
       if (e.was && !v.sleeping) e.acordou++; // (asleep in it five seconds ago, up now: woke in it)
       e.was = inn && v.sleeping;
     }
+    ns++;
     { const fo = G.Atmos && G.Atmos.fire(b); if (fo) fumo.set(fo.why, (fumo.get(fo.why) || 0) + 1); }
     if (k % 6 === 0) { const c = checa(); if (!c.ok && !bad) bad = c.txt; }
   }
-  const grown = fam.filter(v => S.villagers.has(v.id) && v.age >= 3); const slept = grown.filter(v => st.get(v.id).dorme >= 4);
+  // (and on, half a day at most, until whoever is asleep in it is up: waking is seen when the sleep ends — Amenhotep, a builder of
+  // the seat of Mênfis in the metrópole of the generation 26, worked the night at a fire and went to bed in it as the case ended:
+  // «1 de 3 acordaram dentro dela», T-1195)
+  for (let k = 0; k < Math.round(0.5 * G.DAY_LEN / 5) && fam.some(v => S.villagers.has(v.id) && st.get(v.id).was); k++) {
+    M.viver(5);
+    for (const v of fam) { if (!S.villagers.has(v.id)) continue; const e = st.get(v.id); const inn = v.inside === b.id; if (e.was && !v.sleeping) e.acordou++; e.was = inn && v.sleeping; }
+  }
+  // (who spent the case at sea sleeps aboard, not at home: Amenhotep, a sailor of the seat of Mênfis in the metrópole of the
+  // generation 26, was aboard the whole case — and his son died in it —, «1 de 2 dormiram nela», T-1195)
+  const mar = fam.filter(v => S.villagers.has(v.id) && st.get(v.id).mar * 2 > ns);
+  const grown = fam.filter(v => S.villagers.has(v.id) && v.age >= 3 && !mar.includes(v)); const slept = grown.filter(v => st.get(v.id).dorme >= 4);
   const beds = new Set(); for (const e of st.values()) for (const kd of e.cama) beds.add(kd);
-  ok('m2b dormem na sede, nas camas dela', slept.length >= Math.ceil(grown.length * 0.6) && [...st.values()].every(e => !e.fora) && [...beds].some(kd => /cama/.test(kd)),
-    `${slept.length} de ${grown.length} dormiram nela 20 s ou mais (${grown.map(v => `${v.name} ${st.get(v.id).dorme * 5} s`).join(', ')}); onde: ${[...beds].join(', ')}; noutra casa: ${[...st.values()].reduce((a, e) => a + e.fora, 0)}`);
+  ok('m2b dormem na sede, nas camas dela', grown.length > 0 && slept.length >= Math.ceil(grown.length * 0.6) && [...st.values()].every(e => !e.fora) && [...beds].some(kd => /cama/.test(kd)),
+    `${slept.length} de ${grown.length} dormiram nela 20 s ou mais (${grown.map(v => `${v.name} ${st.get(v.id).dorme * 5} s`).join(', ')}); onde: ${[...beds].join(', ')}; noutra casa: ${[...st.values()].reduce((a, e) => a + e.fora, 0)}${mar.length ? '; no mar o caso inteiro: ' + nomes(mar) : ''}`);
   // (the door itself, asked by the proof's hand: with the pantry eaten bare by the day's meals, a meal put there first — the
   // case proves that the door of the meal at home holds in the seat, not that the pantry outlasts the household: T-812)
   const ml = meals(); const r0 = Pl.ruler(o.f); const h0 = r0.hunger; r0.hunger = 60; const posta = D.get(ref, 'food') < 1; if (posta) D.make(ref, 'food', 1, { code: 'teste' });
@@ -225,7 +240,7 @@ run('m2', () => {
   ok('m2c comem da despensa dela', ml.length >= 1 && ate && line === 1, `${ml.length} refeição(ões) da casa pelo livro em ${days.toFixed(2)} dias (${ml.filter(e => e[8] === 'ceia').length} da ceia cozida); a porta da refeição em casa (G.Lar.eat) vale na sede: ${ate}, ${line} linha no livro; a despensa: ${D.get(ref, 'food')}${posta ? ' (vazia pelas refeições do dia: uma refeição posta pela mão da prova)' : ''}`);
   // (the seat's kitchen and hearth burn as a house's: the smoke over it has the household's fire under it — T-931)
   ok('m2c2 o fogo da casa na sede', (fumo.get('cozinha') || 0) + (fumo.get('lareira') || 0) > 0, `o fogo que a sede teve, de 5 em 5 s: ${[...fumo].map(e => e[0] + ' ' + e[1] * 5 + ' s').join(', ') || 'NENHUM'}`);
-  ok('m2d acordam nela', grown.filter(v => st.get(v.id).acordou > 0).length >= Math.ceil(grown.length * 0.6), `${grown.filter(v => st.get(v.id).acordou > 0).length} de ${grown.length} acordaram dentro dela`);
+  ok('m2d acordam nela', grown.length > 0 && grown.filter(v => st.get(v.id).acordou > 0).length >= Math.ceil(grown.length * 0.6), `${grown.filter(v => st.get(v.id).acordou > 0).length} de ${grown.length} acordaram dentro dela`);
   ok('m2e verificador pelo caminho', !bad, bad || 'limpo a cada 30 s');
 });
 
@@ -233,8 +248,11 @@ run('m2', () => {
 run('m3', () => {
   const o = arma(true, casaCabe); if (!ok('m3a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
   const b = o.b; const f = o.f; const antes = moram(b); const casa0 = o.casa0;
-  // (an election: another of the town, of no kin of the ruler, with a household of its own)
-  const outro = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !K.ofCourt(v, o.r) && !(S.avatar && S.avatar.id === v.id)).sort((a, c) => K.court(c).length - K.court(a).length || a.id - c.id)[0];
+  // (an election: another of the town, of no kin of the ruler, with a household of its own — and none of the household before of
+  // the court of the one elected: the court is wider one way than the other (the ruler's nephews live in the seat, the aunt does
+  // not), and Hatshepsut, elected in the metrópole of the generation 26, was the aunt of Sitamun, who ruled: her niece's household
+  // stayed in the seat by the rule, T-1196)
+  const outro = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !K.ofCourt(v, o.r) && !antes.some(m => K.ofCourt(m, v)) && !(S.avatar && S.avatar.id === v.id)).sort((a, c) => K.court(c).length - K.court(a).length || a.id - c.id)[0];
   if (!ok('m3b o outro', !!outro, outro ? `${outro.name} #${outro.id}, a casa dele: ${nomes(K.court(outro))}` : 'ninguém')) return;
   const nova = K.court(outro); const L0 = S.ledgerN || 0; const coin = D.get('h:' + b.id, 'moedas');
   sim(() => { Pl.endReign(f, 'mandato'); Pl.crown(f, outro, 'eleicao', true); });
@@ -291,7 +309,13 @@ run('m4', () => {
     // palace, «nenhuma capital com lugar», T-1107)
     let got = null;
     for (const m of MUNDOS) { abre(m);
-      for (const q of povos(false)) { q.cap._noSite = {}; const pos = sim(() => V.findSite(q.cap, 'palacio', undefined, 6)); if (!pos) continue; const b = funda(q.cap, 'palacio', 'antigo', true, { x: pos[0] + 3, y: pos[1] + 3, R: 0 }); if (b) { got = Object.assign(q, { b }); break; } }
+      // (and one that can grow there: the lot of 6 the search gave a new palace is not always the one the old palace grows into —
+      // Birka, in the metrópole of the generation 26, had the one and not the other, and the game raises the bigger step elsewhere
+      // then (D-176): «não ampliou (sem lote)», T-1197)
+      const P6g = G.Escala.steps('palacio').find(s => s.n === 6);
+      for (const q of povos(false)) { q.cap._noSite = {}; const pos = sim(() => V.findSite(q.cap, 'palacio', undefined, 6)); if (!pos) continue; const b = funda(q.cap, 'palacio', 'antigo', true, { x: pos[0] + 3, y: pos[1] + 3, R: 0 }); if (!b) continue;
+        if (sim(() => V.growLot(q.cap, b, P6g))) { got = Object.assign(q, { b }); break; }
+        sim(() => V.removeBuilding(b)); M.viver(1); }
       if (got) break; }
     if (!ok('m4g o palácio de antes, com a família', !!got && todosEm(K.court(got.r), got.b), got ? `${got.cap.name}: ${lado(got.b)}, ${nomes(moram(got.b))}` : 'nenhuma capital com lugar')) return;
     fam = moram(got.b); coin = D.get('h:' + got.b.id, 'moedas'); L0 = S.ledgerN || 0;
@@ -310,7 +334,7 @@ run('m4', () => {
 // (another of the capital, of none of the ruler's house, who can be elected: the m5 and the m6 crown one. The first people of
 // the guerra mundial of the generation 22 — the world the cases come to when the metrópole has no lot —, Saís, has a girl of
 // thirteen for its ruler and nobody else of the town but her house: «reading 'id'», T-1119)
-const eleivel = q => [...S.villagers.values()].some(v => v.set === q.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !K.ofCourt(v, q.r));
+const eleivel = q => [...S.villagers.values()].some(v => v.set === q.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !K.ofCourt(v, q.r) && !K.court(q.r).some(m => K.ofCourt(m, v))); // (either way: T-1196)
 run('m5', () => {
   let o = arma(true, eleivel); if (!ok('m5a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
   M.viver(4); const bid = o.b.id, fid = o.f.id; const a0 = assina();
@@ -321,7 +345,8 @@ run('m5', () => {
   ok('m5c o mesmo futuro duas vezes', f1 === f2, `90 s depois do load: ${hash(f1)} e ${hash(f2)}`);
   // (the save between the crowning and the move: the load decides nothing, the step moves the households)
   G.Save.apply(JSON.parse(save)); pega(); const f = G.Fac.get(fid); const r0 = Pl.ruler(f); const b = B(bid); const cap = G.Fac.capitalOf(fid);
-  const outro = [...S.villagers.values()].filter(v => v.set === cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !K.ofCourt(v, r0)).sort((a, c) => a.id - c.id)[0];
+  // (and none of the household before of the court of the one elected, as for the m3: T-1196)
+  const outro = [...S.villagers.values()].filter(v => v.set === cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !K.ofCourt(v, r0) && !K.court(r0).some(m => K.ofCourt(m, v))).sort((a, c) => a.id - c.id)[0];
   sim(() => { Pl.endReign(f, 'mandato'); Pl.crown(f, outro, 'eleicao', true); });
   const mid = G.Save.serialize(); const depois = () => { G.Save.apply(JSON.parse(mid)); pega(); const h0 = P(outro.id).home; M.viver(4); return [h0 !== bid, P(outro.id).home === bid && P(r0.id).home !== bid, assina()]; };
   const d1 = depois(), d2 = depois();
@@ -352,7 +377,8 @@ run('m6', () => {
   ok('m6e o deus sai: a família entra', todosEm(K.court(o.r), o.b), nomes(moram(o.b)));
   // (the body in the seat when the reign ends: its household stays where the player has it)
   const kid = moram(o.b).find(v => v.id !== o.r.id && v.age >= 12 && G.Possess.can(v).ok) || o.r; G.Possess.take(kid);
-  const outro = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 25 && v.age < 60 && !v.captive && v.home && !K.ofCourt(v, o.r)).sort((a, x) => a.id - x.id)[0];
+  // (and none of the household in the seat of the court of the one elected, as for the m3: T-1196)
+  const outro = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 25 && v.age < 60 && !v.captive && v.home && !K.ofCourt(v, o.r) && !moram(o.b).some(m => K.ofCourt(m, v))).sort((a, x) => a.id - x.id)[0];
   const dentro = moram(o.b); sim(() => { Pl.endReign(o.f, 'mandato'); Pl.crown(o.f, outro, 'eleicao', true); }); M.viver(6);
   ok('m6f o corpo na sede, o reinado acaba: a família do corpo fica', !!S.avatar && S.avatar.id === kid.id && dentro.every(v => v.home === o.b.id), `o corpo: ${kid.name}${S.avatar && S.avatar.id === kid.id ? '' : ' (NÃO ENCARNOU: ' + G.Possess.can(kid).why + ')'}; na sede: ${nomes(moram(o.b))}; governa ${outro.name}`);
   c = checa(); ok('m6g verificador', c.ok, c.txt);
@@ -653,7 +679,7 @@ run('m14', () => {
   // is, since L-974, also who is married to a grandchild or a nephew of the ruler: in Argos of the metrópole 25 of the 27 grown
   // ones of the town are of Helena's, the two others live under a banner, and the choice of the case was nobody — the people
   // then chose her sister, and the family stayed in the seat, as the rule has it. T-988)
-  const outroDe = q => [...S.villagers.values()].filter(v => v.set === q.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !B(v.home).elite && !K.ofCourt(v, q.r)).sort((a, c) => a.id - c.id)[0];
+  const outroDe = q => [...S.villagers.values()].filter(v => v.set === q.cap.id && v.age >= 25 && v.age < 60 && !v.captive && !v.jail && !v.aboard && v.home && !B(v.home).elite && !K.ofCourt(v, q.r) && !K.court(q.r).some(m => K.ofCourt(m, v))).sort((a, c) => a.id - c.id)[0]; // (either way: T-1196)
   let o = null, onde = ''; for (const m of [MUNDO, 'cidade', 'mundial', 'mega']) { o = arma(true, q => mer(q) && !!outroDe(q), m); if (o) { onde = m; break; } }
   // (in none — no merchant house rules in a ready world of the generation 21, «nenhum governante de casa de mercadores … em
   // nenhum mundo pronto» —: the proof's hand elects the head of a merchant house of a capital with no seat, by the world's own

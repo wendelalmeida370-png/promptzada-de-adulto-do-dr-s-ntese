@@ -138,7 +138,9 @@ function day() {
       // (the ear beside her and in her quarter: the bed of a quarter counts the hands in it, D-166 — two tiles east and one south
       // crossed the line of the cells into the next quarter, and its bed had «mãos no cais agora: 0» with her heaving two
       // tiles off, T-963)
-      const { op, v } = hit; const dock = S.buildings.get(op.at); const qv = G.Urban.at(v.x, v.y);
+      // (and her quarter is where she stands; beside the quay on a patch of ground no town has, the quay's — Lêda of the quay of
+      // Corinto in the metropole of the generation 26, a hand off the town's last patch: L-817)
+      const { op, v } = hit; const dock = S.buildings.get(op.at); const qOwn = G.Urban.at(v.x, v.y); const qv = qOwn || G.Urban.at(dock.x + (dock.w || 1) / 2, dock.y + (dock.h || 1) / 2);
       const spot = [[2, 1], [-2, 1], [2, -1], [-2, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [0.3, 0.3]].find(([dx, dy]) => G.Urban.at(v.x + dx, v.y + dy) === qv) || [2, 1];
       const ear = earAt(v.x + spot[0], v.y + spot[1]);
       const c = scene(ear, 's3'); const mine = c.fontes.find(f => f.de.v === v.id);
@@ -146,7 +148,7 @@ function day() {
       const all = quay.every(f => { const p = S.villagers.get(f.de.v); const o = f.de.op ? G.Act.get(f.de.op) : null; return p && f.x === r3(p.x) && f.y === r3(p.y) && (f.de.op ? !!(o && o.def === 'descarga' && o.roles[p.id]) : ['cais', 'conferir', 'descarga'].includes((p.task || {}).type)); });
       kept.quay = { ear, dock, op: op.id };
       ok('s3a o-cais-vivo', !!mine && mine.de.op === op.id && mine.fam === 'cais' && ['levantar', 'pousar'].includes(mine.g) && ['heave', 'thud'].includes(mine.s) && mine.x === r3(v.x) && mine.y === r3(v.y) && mine.gain > 0.1 && mine.muf === 0 && all && c.fundo && c.fundo.agora.cais > 0,
-        `${townOf(dock) ? townOf(dock).name : '?'}, cais #${dock.id}, hora ${S.time.toFixed(2)}: ${v.name} #${v.id} num «${mine ? mine.g : '?'}» da descarga #${op.id} → som «${mine ? mine.s : '?'}» em (${mine ? mine.x + ', ' + mine.y : '?'}), onde ela está (${r3(v.x)}, ${r3(v.y)}), ganho ${mine ? mine.gain : '?'}, pan ${mine ? mine.pan : '?'}; ${quay.length} fonte(s) do cais, ${all ? 'todas de gente da operação, cada uma no seu lugar' : 'ALGUMA SEM DONO'}; mãos no cais agora: ${c.fundo ? c.fundo.maos.cais || 0 : '?'}`);
+        `${townOf(dock) ? townOf(dock).name : '?'}, cais #${dock.id}, hora ${S.time.toFixed(2)}: ${v.name} #${v.id} num «${mine ? mine.g : '?'}» da descarga #${op.id} → som «${mine ? mine.s : '?'}» em (${mine ? mine.x + ', ' + mine.y : '?'}), onde ela está (${r3(v.x)}, ${r3(v.y)}), ganho ${mine ? mine.gain : '?'}, pan ${mine ? mine.pan : '?'}; ${quay.length} fonte(s) do cais, ${all ? 'todas de gente da operação, cada uma no seu lugar' : 'ALGUMA SEM DONO'}; mãos no cais agora: ${c.fundo ? c.fundo.maos.cais || 0 : '?'}${qOwn ? '' : ' (ela de pé fora de toda cidade, ao lado do cais: as mãos dela contam no bairro do cais)'}`);
     }
   }
   // ---------------- s4 the forge with its batch on the anvil ----------------

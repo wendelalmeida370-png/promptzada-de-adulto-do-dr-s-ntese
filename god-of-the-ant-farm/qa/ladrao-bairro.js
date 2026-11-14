@@ -149,7 +149,11 @@ if (on('b6')) {
   // the history of the ten years a hair changed — the stoker's post, L-772 —, the war was at the gates of Tenochtitlan in the
   // case's seconds: Tízoc and Itzel fled the enemy from the cell — «a tarefa da cela ACABOU E FOI DADA DE NOVO», «NÃO soltos» —,
   // and, five seconds after the peace, Itzel fled him on the way to it, T-1048)
-  const jail = [...S.buildings.values()].filter(b => b.type === 'cadeia' && b.built && S.settlements.get(b.set)).sort((a, b) => a.id - b.id)[0] || null;
+  // (a jail standing in the case's world, else in the next ready world that has one — the metrópole of the generation 26 has
+  // none, the mega two —, with the checker's baseline of that world, T-1198)
+  const jailIn = () => [...S.buildings.values()].filter(b => b.type === 'cadeia' && b.built && S.settlements.get(b.set)).sort((a, b) => a.id - b.id)[0] || null;
+  let jail = jailIn(), base6 = base, onde = WORLD;
+  for (const w of ['mega', 'metropole', 'mundial', 'cidade']) { if (jail) break; if (w === WORLD) continue; S = M.pronto(w); onde = w; base6 = new Set(QA.check().filter(q => q.sev <= 2).map(q => q.sys + '|' + q.msg)); jail = jailIn(); }
   const keepPeace = () => { if (!(S.divinePeace > G.DAY_LEN * 0.5)) god(() => G.Politics.divinePeace()); };
   const WAR = { fight: 1, combat: 1, band: 1, army: 1, siege: 1, defend: 1, raid: 1, muster: 1 };
   const atWar = () => !!jail && ((G.War.threat && G.War.threat(jail.set)) || [...S.villagers.values()].some(v => v.set === jail.set && v.task && ((v.task.type === 'flee' && v.task.why === 'war') || WAR[v.task.type])));
@@ -188,11 +192,11 @@ if (on('b6')) {
     // the sentence served: out at the next step of the cell
     keepPeace(); god(() => { p.jailUntil = S.day; q.jailUntil = S.day; }); M.viver(1); out = !p.jail && !q.jail;
   }
-  const nv = novas(base);
+  const nv = novas(base6);
   ok('b6 o preso está na cela a cada passo do mundo: a tarefa da cela não acaba aos 70 s, o guarda chamado no caminho deixa o preso na cela, e a pena cumprida solta (L-723)',
     !!p && !!q && !!g && inCell && steps >= 1600 && gaps === 0 && again === 0 && walked && walkGap === 0 && out && !nv.length,
-    !jail ? 'nenhuma cadeia de pé neste mundo' : !(p && q && g) ? `só ${folk.length} adultos livres em ${S.settlements.get(jail.set).name}` :
-    `${p.name}, de ${S.settlements.get(jail.set).name}: ${inCell ? 'na cela pela porta do jogo' : 'NÃO foi para a cela'}; em ${steps} passos (160 s), ${gaps} sem a tarefa da cela, e a tarefa da cela ${again ? `ACABOU E FOI DADA DE NOVO ${again} vez(es)` : 'a mesma do começo ao fim'}; ${q.name}, levado por ${g.name}: ${walked ? 'a caminho' : 'NÃO ficou a caminho'}, e com o guarda chamado, ${walkGap} passo(s) sem a cela; a pena cumprida: ${out ? 'os dois soltos' : 'NÃO soltos'}${nv.length ? ' · o verificador: ' + nv.slice(0, 2).join(' · ') : ''}`);
+    !jail ? 'nenhuma cadeia de pé em nenhum mundo pronto' : !(p && q && g) ? `só ${folk.length} adultos livres em ${S.settlements.get(jail.set).name}` :
+    `${onde === WORLD ? '' : '(em ' + onde + ', o primeiro mundo pronto com uma cadeia de pé) '}${p.name}, de ${S.settlements.get(jail.set).name}: ${inCell ? 'na cela pela porta do jogo' : 'NÃO foi para a cela'}; em ${steps} passos (160 s), ${gaps} sem a tarefa da cela, e a tarefa da cela ${again ? `ACABOU E FOI DADA DE NOVO ${again} vez(es)` : 'a mesma do começo ao fim'}; ${q.name}, levado por ${g.name}: ${walked ? 'a caminho' : 'NÃO ficou a caminho'}, e com o guarda chamado, ${walkGap} passo(s) sem a cela; a pena cumprida: ${out ? 'os dois soltos' : 'NÃO soltos'}${nv.length ? ' · o verificador: ' + nv.slice(0, 2).join(' · ') : ''}`);
 }
 
 ok('nenhum erro', M.limpo(), M.limpo() ? 'nenhum erro de módulo, nenhum aviso' : JSON.stringify(M.erros()).slice(0, 300));
