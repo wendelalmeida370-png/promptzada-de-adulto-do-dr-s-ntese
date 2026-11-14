@@ -1665,12 +1665,18 @@
     save(out) { out.exps = (G.S.exps || []).map(e => Object.assign({}, e, { berth: e.berth || {} })); out.castaways = G.S.castaways || []; out.colonies = G.S.colonies || []; },
     load(o) {
       const S = G.S; S.exps = o.exps || []; S.castaways = o.castaways || []; S.colonies = o.colonies || []; X.reset();
+      // (who the save found asleep is in bed, as in the step: the save wakes everyone at the door and the home's hook puts them
+      // back to bed (act-lar.js, D-073) — but only those with no errand yet, and this hook comes first. One asleep past the hour
+      // the clock wakes them — the bed keeps one till the strength is back — was no longer abed to the load and was called to the
+      // quay: Orm, of an exploring party of Hedeby being made ready in the mega of the generation 23, asleep in his house at 0,003
+      // in the world, on his way to the quay after the load, L-798)
+      const slept = new Set((Array.isArray(o.lar) ? o.lar : []).filter(q => Array.isArray(q) && q[4] === 1).map(q => q[0]));
       for (const e of S.exps) {
         if (!X.live(e)) continue;
         // the people ashore get back to what they were doing (the ones aboard are still aboard)
         for (const id of e.crew) {
           const v = P(id); if (!v || v.aboard) continue;
-          if (e.st === 'prep' || e.st === 'reunir' || e.st === 'embarque') { if (!(e.st === 'prep' && abed(v))) G.Vg.setTask(v, { type: 'cais', exp: e.id, k: e.crew.indexOf(id), job: 'wait', pri: 3.25, st: 0 }); }
+          if (e.st === 'prep' || e.st === 'reunir' || e.st === 'embarque') { if (!(e.st === 'prep' && (abed(v) || slept.has(v.id)))) G.Vg.setTask(v, { type: 'cais', exp: e.id, k: e.crew.indexOf(id), job: 'wait', pri: 3.25, st: 0 }); }
           else if (e.st === 'exploracao' || e.st === 'contato' || e.st === 'desembarque') G.Vg.setTask(v, { type: 'expl', exp: e.id, pri: 3.3, st: 'walk', n: 0 });
           else if (e.st === 'reembarque') G.Vg.setTask(v, { type: 'expl', exp: e.id, pri: 3.3, st: 'back', n: 0 });
         }

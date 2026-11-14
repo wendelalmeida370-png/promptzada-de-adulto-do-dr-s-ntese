@@ -22,6 +22,7 @@
 //    a mais no ofício, nunca dois no mesmo posto;
 // m9 quem espera no cais durante a preparação dorme de noite (L-682): à meia-noite ninguém está de pé no cais, e a reunião da
 //    partida só é chamada de dia;
+// m9b quem dorme na cama além da hora do relógio, com a viagem em preparação, continua nela depois do load (L-798);
 // m10 o chamado ao cais de uma razia atravessa o save (a regra do L-190, como a do navio mercante): quem descia ao cais desce
 //    de novo, e a razia zarpa — um load cancelava a razia (ninguém a bordo aos 45 s) ou a mandava só com quem já embarcara;
 // m11 o soldo é só dos seus (L-716): quem passou a outro povo com o navio no mar não é pago pelo povo que deixou;
@@ -330,6 +331,31 @@ if (on('m9')) {
     const goes = live(() => e.st !== 'prep', 120, 1); const nv = novas();
     ok('m9 quem espera no cais durante a preparação dorme de noite (L-682)', onQuay0 && samples > 0 && worst === 0 && minE > 15 && !stN && goes && !nv.length,
       `a viagem de ${e.leaderName} (${e.crew.length} na tripulação) preparada desde o fim da tarde, com gente no cais antes de dormir: ${onQuay0}; no fundo da noite (${samples} olhadas, da hora 0,86 ao amanhecer): no máximo ${worst} de pé no cais na sua hora de dormir${who.length ? ' — ' + who.join('; ') + ' —' : ''}, a menor energia de quem estava de pé no cais ${minE === 1e9 ? '— (todos dormiam)' : minE.toFixed(0)}${minSono < 1e9 ? ` (de quem dormia, ${minSono.toFixed(0)})` : ''}; reunião chamada de noite: ${stN || 'não'}; de manhã a viagem segue: ${goes} («${e.st}»); verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
+  }
+}
+
+// ---------------------------------------------------------------- m9b
+// (the save keeps who sleeps in bed: one of the crew of a voyage being made ready, asleep in his house past the hour his clock
+// wakes him — the bed keeps one till the strength is back —, is in bed again after the load, never called to the quay by it,
+// as the step lets him sleep (L-682). The save wakes everyone at the door, and the expedition's load came before the home's:
+// Orm, of an exploring party of Hedeby in the mega of the generation 23, asleep at 0,003, on his way to the quay after the
+// load — the generation's round trip saw it, L-798)
+if (on('m9b')) {
+  mundo(0.74);
+  let p = null;
+  for (const d of [...S.buildings.values()].filter(b => b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) { const di = Nv.dockInfo(d); const set = S.settlements.get(d.set); const f = set && G.Fac.get(set.fac); if (di.moor && f && V.pop(set.id) >= 14) { p = { d, di, set, f }; break; } }
+  const e = p && god(() => { give(p.f, 'wood', Nv.SHIP.explorador.cost + 30); return X.launch(p.f, { k: 'terra', w: 1, why: 'terra', txt: '', x: p.di.moor[0] + 12, y: p.di.moor[1] }, 'media', {}); });
+  const v = e && e.crew.map(P).find(o => o && !o.aboard && o.home && S.buildings.get(o.home) && S.buildings.get(o.home).built);
+  if (!e || !v) ok('m9b quem dorme na cama além da hora continua nela depois do load (L-798)', false, e ? 'ninguém da tripulação com casa' : 'nenhuma viagem saiu');
+  else {
+    // (the hour past his waking, the voyage still being made ready; and he asleep in his house, as the world leaves one whose
+    // strength is not back yet)
+    const c = G.Lar.clock(v); S.time = (c.wake + 0.02) % 1; const h = S.buildings.get(v.home);
+    god(() => { G.Vg.endTask(v); G.Vg.setTask(v, { type: 'sleep', pri: 1.5, st: 2, home: h.id, kind: 'sleep' }); const dr = G.Vg.door(h); v.x = dr[0]; v.y = dr[1]; v.inside = h.id; v.sleeping = true; v.act = 'sleep'; v.energy = 60; });
+    const st0 = e.st, sleepy0 = G.Lar.sleepy(v), id = v.id;
+    M.salvarCarregar(); S = G.S; const w = P(id); const nv = novas();
+    ok('m9b quem dorme na cama além da hora continua nela depois do load (L-798)', st0 === 'prep' && !sleepy0 && !!w && !!w.task && w.task.type === 'sleep' && w.sleeping && w.inside === h.id && !nv.length,
+      `${v.name}, da viagem de ${e.leaderName} («${st0}»), dormindo em casa às ${S.time.toFixed(3)} (a hora de acordar pelo relógio: ${c.wake.toFixed(2)}, ${sleepy0 ? 'AINDA NÃO' : 'já passou'}): depois do load, ${w ? (w.task ? '«' + w.task.type + '»' : 'sem tarefa') + (w.sleeping ? ', dormindo' : ', ACORDADO') + (w.inside === h.id ? ', em casa' : ', FORA DE CASA') : 'SUMIU'}${nv.length ? '; o verificador: ' + nv[0] : ''}`);
   }
 }
 
