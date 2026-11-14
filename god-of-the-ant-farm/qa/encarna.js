@@ -465,7 +465,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const o = JSON.parse(B); o.avatar = { id: 987654, kind: 'dragao', asks: 'x', deeds: { conversa: 'muitas' }, seen: [null, 3], met: ['a'] };
     let dmg = true; try { G.Save.apply(o); __E.f(4); } catch (e) { dmg = false; } out.dmg = { loaded: dmg, avatar: !!G.S.avatar, mode: G.Modes.state };
     const o2 = JSON.parse(B); o2.avatar.asks = [{ txt: 5 }, null, { type: 'muster', txt: 'ok' }]; o2.avatar.deeds = { lenha: 3, bogus: 9, entrega: NaN };
-    G.Save.apply(o2); __E.f(4); out.dmg2 = { avatar: G.S.avatar && G.S.avatar.id, asks: G.S.avatar && G.S.avatar.asks.length, deeds: G.S.avatar && JSON.stringify(G.S.avatar.deeds), mode: G.Modes.state };
+    // (the calls the load kept, read as it ends: in the four frames after it the world may call the body itself — a call of
+    // another kind is one more, by the rule — and in the reg25 the body had two, the kept one and one of the world: T-1203)
+    G.Save.apply(o2); const kept = G.S.avatar ? G.S.avatar.asks.map(q => q.type) : null; __E.f(4);
+    out.dmg2 = { avatar: G.S.avatar && G.S.avatar.id, asks: kept && kept.length, kept, later: G.S.avatar ? G.S.avatar.asks.map(q => q.type) : null, deeds: G.S.avatar && JSON.stringify(G.S.avatar.deeds), mode: G.Modes.state };
     __E.base = new Set(QA.check().filter(e => e.sev <= 3).map(__E.qk));
     __E.leave();
     out.qa = __E.qa();
@@ -713,7 +716,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     if (fs !== null) { const p0 = G.FX3D.particles || 0; const lit = G.Nature.ignite(fs, 0.9); __E.f(45); out.fire = { lit, before: p0, after: G.FX3D.particles, burning: S.fire[fs] > 0, check: G.FX3D.check() }; G.Nature.extinguish(fs, 9); }
     // a tree near the body felled by the world: drawn falling, then lying — and the falling picture gone
     const tr = [...S.trees.values()].filter(t => t.stage === 'grow' && t.size > 0.5).sort((p, q) => G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y))[0];
-    if (tr && G.dist(tr.x, tr.y, b.x, b.y) < 18) { G.Nature.fellTree(tr, 1); __E.f(3); const during = G.FX3D.fallingN(); const fr = __E.until(() => tr.stage !== 'fall', 300); __E.f(3); out.fall = { during, frames: fr, after: G.FX3D.fallingN(), stage: tr.stage, check: G.FX3D.check() }; }
+    // (its own picture, not every tree drawn falling round the eye: in the cidade of the generation 25 another tree, felled by a
+    // woodcutter, was falling when this one lay — the count was 1, the verifier clean, this one a log: T-1200)
+    if (tr && G.dist(tr.x, tr.y, b.x, b.y) < 18) { G.Nature.fellTree(tr, 1); __E.f(3); const during = G.FX3D.fallingOf(tr.id) ? 1 : 0, others = G.FX3D.fallingN() - during; const fr = __E.until(() => tr.stage !== 'fall', 300); __E.f(3);
+      const after = G.FX3D.fallingOf(tr.id) ? 1 : 0; out.fall = { during, frames: fr, after, others, othersAfter: G.FX3D.fallingN() - after, stage: tr.stage, check: G.FX3D.check() }; }
     // someone standing in front of the body turns their head to it
     // the head turned to the body: the rule (in front, near, idle or talking — not behind, not far, not bent over work)
     // and the living people round the body who stand in front of it
@@ -1347,13 +1353,24 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const s = p.stairs.find(q => q.kind === 'escada' && q.lv0 === lv0);
     if (!s || G.Possess.level() !== lv0) out.upWhy = !s ? `nenhuma escada sobe do piso ${lv0}, o da entrada` : `o corpo no piso ${G.Possess.level()} depois de entrar; a escada sobe do ${lv0}, o da entrada`;
     else { const n = p.grid.n, cs = p.grid.cs;
-      const cell = (x, z) => [Math.floor(x / cs), Math.floor(z / cs)]; const key = (x, z) => z * n + x;
       // (the shut doors of the storey, by their middle and their wall's normal: a cell by one is passed through it, once open)
       const shut = []; for (const dr of p.doors) { const ww = p.walls[dr.wall]; if (dr.kind === 'vao' || dr.id === e.door || !ww || ww.lv !== lv0 || In.doorState(b, dr.id).state === 'aberta') continue; const LL = Math.hypot(ww.b[0] - ww.a[0], ww.b[1] - ww.a[1]) || 1; const ux = (ww.b[0] - ww.a[0]) / LL, uz = (ww.b[1] - ww.a[1]) / LL; shut.push({ id: dr.id, x: ww.a[0] + ux * dr.at, z: ww.a[1] + uz * dr.at, nx: -uz, nz: ux }); }
       const atDoor = (x, z) => shut.find(o => Math.hypot(x - o.x, z - o.z) < 0.45);
-      const route = thru => { const [sx, sz] = cell(st.X - b.x * TL, st.Z - b.y * TL), [tx, tz] = cell(s.a[0], s.a[1]); const prev = new Map(); const q = [[sx, sz]]; prev.set(key(sx, sz), null);
-        for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break; for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Z = z + az; if (X < 0 || Z < 0 || X >= n || Z >= n || prev.has(key(X, Z))) continue; const cx = (X + 0.5) * cs, cz = (Z + 0.5) * cs; if (!(X === tx && Z === tz) && !fits(cx, cz) && !(thru && atDoor(cx, cz))) continue; prev.set(key(X, Z), [x, z]); q.push([X, Z]); } }
-        const out = []; if (prev.has(key(tx, tz))) { let cur = [tx, tz]; while (cur) { out.unshift([(cur[0] + 0.5) * cs, (cur[1] + 0.5) * cs]); cur = prev.get(key(cur[0], cur[1])); } } return out; };
+      // (the way to the foot on the plan's cells, the body's rim at each cell's middle; where that finds none, the body's own finer
+      // search, the qa/visual/pe-da-escada.js's: the flight barred by its cells in the plan (Avatar.flightBox, T-615), the rim
+      // round each point on cells of half a cell, brushing what is beside it, else on cells of 2.5 cm by the body's own step (the
+      // centre and the rim on the side it moves toward: Avatar's blocked), as it slides past two corners — the sobrado#3482 of the
+      // metropole of the generation 25 has the way from its rooms to its stair's foot a diagonal of 0,65 m between a wall's corner
+      // and the flight's: on the plan's cells, no way; the body walks it and goes up, T-1199)
+      const bars = fl.map(f => G.Avatar.flightBox(f.r)); const onFl = (X, Z, m) => bars.some(r => X > r[0] - m && X < r[2] + m && Z > r[1] - m && Z < r[3] + m);
+      const RIM = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]; const feet = (X, Z) => { const q = Sp.indoor(b.x * TL + X, b.y * TL + Z, lv0, b.id); return !!q && !!q.walk; };
+      const rimOK = (x, z) => RIM.every(([dx, dz]) => feet(x + dx * 0.26, z + dz * 0.26) && !onFl(x + dx * 0.26, z + dz * 0.26, 0.02));
+      const stepOK = (x, z, mx, mz) => RIM.every(([dx, dz]) => ((dx || dz) && dx * mx + dz * mz <= 0.05) || (feet(x + dx * 0.32, z + dz * 0.32) && !onFl(x + dx * 0.32, z + dz * 0.32, 0)));
+      const search = (thru, c0, ok) => { const N = Math.round(n * cs / c0); const at = (x, z) => [Math.floor(x / c0), Math.floor(z / c0)]; const K = (x, z) => z * N + x;
+        const [sx, sz] = at(st.X - b.x * TL, st.Z - b.y * TL), [tx, tz] = at(s.a[0], s.a[1]); const prev = new Map(); const q = [[sx, sz]]; prev.set(K(sx, sz), null);
+        for (let i = 0; i < q.length; i++) { const [x, z] = q[i]; if (x === tx && z === tz) break; for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + ax, Z = z + az; if (X < 0 || Z < 0 || X >= N || Z >= N || prev.has(K(X, Z))) continue; const cx = (X + 0.5) * c0, cz = (Z + 0.5) * c0; if (!(X === tx && Z === tz) && !ok(cx, cz, ax, az) && !(thru && atDoor(cx, cz))) continue; prev.set(K(X, Z), [x, z]); q.push([X, Z]); } }
+        const out = []; if (prev.has(K(tx, tz))) { let cur = [tx, tz]; while (cur) { out.unshift([(cur[0] + 0.5) * c0, (cur[1] + 0.5) * c0]); cur = prev.get(K(cur[0], cur[1])); } } return out; };
+      const route = thru => { for (const [c0, ok] of [[cs, (x, z) => fits(x, z)], [cs / 2, rimOK], [cs / 10, stepOK]]) { const r = search(thru, c0, ok); if (r.length) return r; } return []; };
       let path = route(false), doors = 0;
       // (a stair behind a shut door — in the back room of a sobrado of the metropole of the v37's last worlds, T-251 —: reached as a
       // player reaches it, the way to the door walked, the hands open it, and through it square to its wall; then the way on)

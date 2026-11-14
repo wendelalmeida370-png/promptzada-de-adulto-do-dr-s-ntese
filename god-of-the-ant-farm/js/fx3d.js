@@ -139,6 +139,8 @@
     return out;
   };
   F3.fallingN = () => falling.size;
+  // (and whether one tree is drawn falling: a felled tree's own picture, among the others the woodcutters fell round the eye, T-1200)
+  F3.fallingOf = id => falling.has(id);
   // how many puffs a second rise over a building's roof: none without a fire under it (G.Atmos.fire — a batch burning in the
   // kiln, the forge hot, the furnace of the baths, the tavern open, someone at the house's fire; the campfire's column is
   // its own); a kiln more than a kitchen, a kitchen more than a hearth one sits by, a hearth more at night and in the snow
