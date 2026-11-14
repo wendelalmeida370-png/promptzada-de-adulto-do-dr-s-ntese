@@ -78,13 +78,13 @@ function reload() { M.pronto('metropole'); S = G.S; M.viver(2); S.time = 0.15; S
 }
 // a couple in a full house that is not theirs (the parents'): the test's hand makes one if the town has none
 const taken = new Set();
-function couple(town) {
-  town = town || set;
-  for (const v of [...S.villagers.values()].filter(o => o.set === town.id).sort((a, b) => a.id - b.id)) { if (taken.has(v.id)) continue; const why = K.need(v); if (why === 'casal' && !K.waiting(v)) { taken.add(v.id); taken.add(v.partner); return v; } }
+function couple(town, avoid) {
+  town = town || set; avoid = avoid || (() => false);
+  for (const v of [...S.villagers.values()].filter(o => o.set === town.id).sort((a, b) => a.id - b.id)) { if (taken.has(v.id) || avoid(v) || avoid(S.villagers.get(v.partner))) continue; const why = K.need(v); if (why === 'casal' && !K.waiting(v)) { taken.add(v.id); taken.add(v.partner); return v; } }
   // (two grown people without partners, of two houses — the test's hand makes them a couple in his house, full, that is
   // not theirs)
   const sib = (a, b) => (!!a.mother && a.mother === b.mother) || (!!a.father && a.father === b.father) || a.mother === b.id || a.father === b.id || b.mother === a.id || b.father === a.id;
-  const free = [...S.villagers.values()].filter(v => v.set === town.id && v.age >= 18 && v.age < 50 && !v.partner && !v.captive && !v.jail && !v.aboard && v.home && !taken.has(v.id) && !(S.avatar && S.avatar.id === v.id)).sort((a, b) => a.id - b.id);
+  const free = [...S.villagers.values()].filter(v => v.set === town.id && v.age >= 18 && v.age < 50 && !v.partner && !v.captive && !v.jail && !v.aboard && v.home && !taken.has(v.id) && !avoid(v) && !(S.avatar && S.avatar.id === v.id)).sort((a, b) => a.id - b.id);
   for (const m of free.filter(v => v.g === 'm')) {
     const b = S.buildings.get(m.home); if (!b || !b.built || b.type === 'barraco' || b.dono === m.id) continue;
     const f = free.find(v => v.g === 'f' && v.id !== b.dono && !sib(v, m)); if (!f) continue;
@@ -280,11 +280,16 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
 // ---------------- h12: a rent — an empty house its owner left, rented; the rent of a day; what is owed; the owner gives up
 {
   // (the couple as h11's: in the cases' town, or in the next town of coin when that one has nobody left to make one of, T-129)
-  peace(); let v = couple(), t12 = set;
-  if (!v) for (const tw of [...S.settlements.values()].filter(s => s !== set && E.coinage(s.fac)).sort((a, b) => singles(b) - singles(a) || a.id - b.id)) { v = couple(tw); if (v) { t12 = tw; break; } }
-  let info = 'nenhum outro casal', fine12 = false;
+  // (and a town with someone to be the owner — of 30 or more, with a house standing, kin of none of the couple —: the couple of
+  // Kaupang, in the metrópole of the generation 24, had nobody there to let them a house, T-1158)
   const kinOf = (o, x) => !!x && (x.id === o.id || x.id === o.partner || x.mother === o.id || x.father === o.id || o.mother === x.id || o.father === x.id || (!!o.mother && x.mother === o.mother) || (!!o.father && x.father === o.father));
-  const owner = v && [...S.villagers.values()].filter(o => o.set === t12.id && o.age >= 30 && o.home && !taken.has(o.id) && S.buildings.get(o.home) && S.buildings.get(o.home).built && !kinOf(o, v) && !kinOf(o, S.villagers.get(v.partner))).sort((a, b) => a.id - b.id)[0];
+  // (the owner chosen first, and the couple of no kin of the owner's: in Kaupang every grown one who could let a house was kin of
+  // the couple the case made, T-1158)
+  const ownerIn = tw => [...S.villagers.values()].filter(o => o.set === tw.id && o.age >= 30 && o.home && !taken.has(o.id) && S.buildings.get(o.home) && S.buildings.get(o.home).built).sort((a, b) => a.id - b.id)[0];
+  peace(); let o12 = ownerIn(set), v = o12 ? couple(set, x => !!x && kinOf(o12, x)) : null, t12 = set;
+  if (!v) for (const tw of [...S.settlements.values()].filter(s => s !== set && E.coinage(s.fac) && ownerIn(s)).sort((a, b) => singles(b) - singles(a) || a.id - b.id)) { o12 = ownerIn(tw); v = couple(tw, x => !!x && kinOf(o12, x)); if (v) { t12 = tw; break; } }
+  let info = 'nenhum outro casal', fine12 = false;
+  const owner = v && o12 && !kinOf(o12, v) && !kinOf(o12, S.villagers.get(v.partner)) ? o12 : null;
   if (v && owner) {
     taken.add(owner.id);
     // (the test's hand: the owner bought it — with beds for the whole family —, and lives in his own)

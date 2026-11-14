@@ -304,7 +304,10 @@ if (on('m9')) {
   mundo(0.74);
   let p = null;
   for (const d of [...S.buildings.values()].filter(b => b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) { const di = Nv.dockInfo(d); const set = S.settlements.get(d.set); const f = set && G.Fac.get(set.fac); if (di.moor && f && V.pop(set.id) >= 14) { p = { d, di, set, f }; break; } }
-  const e = p && god(() => { give(p.f, 'wood', Nv.SHIP.explorador.cost + 30); return X.launch(p.f, { k: 'terra', w: 1, why: 'terra', txt: '', x: p.di.moor[0] + 12, y: p.di.moor[1] }, 'media', {}); });
+  // (the war that breaks out while the crates are loaded is the ruler's to decide once — the world's chance —: decided, by the proof's
+  // hand, for the voyage — in the metrópole of the generation 24 the people of Runa's voyage was at war, and it ended at once, «A
+  // guerra chegou primeiro», with no night of it to look at, T-1153)
+  const e = p && god(() => { give(p.f, 'wood', Nv.SHIP.explorador.cost + 30); const x = X.launch(p.f, { k: 'terra', w: 1, why: 'terra', txt: '', x: p.di.moor[0] + 12, y: p.di.moor[1] }, 'media', {}); if (x) x.warOk = 1; return x; });
   if (!e) ok('m9 quem espera no cais dorme de noite (L-682)', false, 'nenhuma viagem saiu');
   else {
     const crew = () => e.crew.map(P).filter(v => v && !v.aboard);

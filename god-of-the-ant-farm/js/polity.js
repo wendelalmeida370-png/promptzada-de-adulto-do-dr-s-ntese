@@ -433,11 +433,13 @@
     G.Stories && G.Stories.signal('petition', { fac: f.id, grp: k, lead: lead.id, dem: q.dem, x: at[0], y: at[1] });
     return true;
   }
-  // where the ruler receives: the palace, or the fire of the capital
+  // where the ruler receives: the palace, or the fire of the capital. The palace is the seat, where who rules lives (D-205): the
+  // people's grandest — a grander one in works, one of another town — sent the petitions to the square of a capital whose ruler
+  // lived in its palace, L-804
   Po.seat = function (f) {
     const S = G.S; const cap = G.Fac.capitalOf(f.id); if (!cap) return null;
-    const pal = G.Court && G.Court.bestPalace ? G.Court.bestPalace(f) : null;
-    if (pal && pal.built && pal.set === cap.id) { const fr = G.Village.frontTile(pal); return [fr[0], fr[1] + 1]; }
+    const pal = G.Court && G.Court.seatOf ? G.Court.seatOf(f) : null;
+    if (pal) { const fr = G.Village.frontTile(pal); return [fr[0], fr[1] + 1]; }
     for (const b of S.buildings.values()) if (b.set === cap.id && b.built && (b.type === 'praca' || b.type === 'palacio')) { const c = G.Village.center(b); return [c[0], c[1] + 1]; }
     const cf = S.buildings.get(cap.campfire); return cf ? [cf.x + 1.5, cf.y + 0.8] : [cap.cx, cap.cy];
   };

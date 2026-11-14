@@ -5,7 +5,8 @@
 //   m0   os mundos prontos: em cada um, as sedes de pé na capital e quem mora nelas depois de uns segundos de mundo
 //   m1   a sede pela mão do deus: em obra ninguém entra; pronta, a casa de quem governa entra na hora, com o que é seu pelo livro
 //   m2   a vida na sede por um dia e um quarto de mundo: dormem nas camas dela, comem da despensa dela, acordam nela; quem
-//        governa recebe onde recebia (Po.seat) e senta no trono na audiência
+//        governa recebe onde recebia (Po.seat) e senta no trono na audiência — com um palácio maior do povo em obra na capital ou
+//        de pé noutra cidade dele, a sede ainda recebe e dá a audiência (L-804)
 //   m3   a troca de governante: a eleição (a família de antes sai para a casa que tinha, a nova entra), a morte (quem herda
 //        ou é escolhido), a conquista da capital (a família do vencido sai)
 //   m4   a sede que queima, que o deus desfaz e que entra em obra de ampliação: a família sai antes, com o que é seu, e volta
@@ -159,7 +160,40 @@ run('m1', () => {
 // ------------------------------ m2: the life in the seat ------------------------------
 run('m2', () => {
   const o = arma(true); if (!ok('m2a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))} em ${lado(o.b)}` : 'sem povo ou sem lote')) return;
-  const b = o.b; const fam = moram(b); const L0 = S.ledgerN || 0; const ref = 'h:' + b.id;
+  const b = o.b;
+  // (first, with who rules at home — the case lives a day and a quarter after this, and in the mundial of the generation 24 the
+  // ruler of Delfos was at sea by then, and who is aboard holds no audience: T-1147)
+  // (who rules still receives where the game had it: before the seat's door; and sits on the throne at the audience)
+  const fr = V.frontTile(b); const at = G.Polity.seat(o.f);
+  ok('m2f recebe onde recebia', !!at && at[0] === fr[0] && at[1] === fr[1] + 1, `Po.seat: ${at ? at.join(', ') : '-'}; a frente da sede: ${fr[0]}, ${fr[1] + 1}`);
+  // (the audience lasts thirty seconds from its call: the ruler set before the seat's door by the proof's hand, awake, free)
+  const r = Pl.ruler(o.f); let thr = false, went = false; let tries = 0;
+  while (r.sleeping && tries++ < 150) M.viver(2);
+  // (no fire in the world while the case lasts, by the proof's hand: a fire two tiles from the seat's door calls whoever stands
+  // there — the fire weighs 4, the audience 1.9 —, and in the joined tree's history one burnt beside the palace at that hour:
+  // the ruler beat the flames for the whole of the audience, «no trono: false» — T-853)
+  const semFogo = () => { for (const i of [...G.Nature.fireSet]) G.Nature.extinguish(i, 9); };
+  sim(() => { semFogo(); G.Vg.endTask(r); r.inside = 0; r.x = fr[0]; r.y = fr[1] + 0.5; went = !!Co.audiencia(o.f, 'teste'); });
+  for (let k = 0; k < 28 && !thr; k++) { sim(semFogo); M.viver(1); const pl = r.inside === b.id ? In.placeOf(r) : null; if (pl && pl.it && pl.it.kind === 'trono') thr = true; }
+  M.viver(Co.AUD_DUR + 6);
+  ok('m2g senta no trono na audiência, e ela acaba', went && thr && !o.f.aud, `a audiência começou: ${went}; ${r.name} no trono: ${thr}; acabou: ${!o.f.aud}`);
+  // (L-804: a grander palace of the people in works in the capital, or one standing in another of its towns — the people's
+  // grandest, which the receiving and the audience asked for — takes neither from the seat where who rules lives: the ruler of
+  // Delfos, in the mundial of the generation 24, lived in its palace and received in the square, with no audience, while the
+  // palace of the Pólis stood in Argos. Each one raised by the god's hand, asked, and pulled down again)
+  const outra = G.Fac.settlementsOf(o.f.id).filter(s => s.id !== o.cap.id).sort((a, c) => a.id - c.id);
+  const casos = []; const fr2 = V.frontTile(b);
+  const prova = (nome, mk) => {
+    const g = mk(); if (!g) { casos.push(`${nome}: SEM LOTE`); return false; }
+    const at2 = G.Polity.seat(o.f); const aqui = !!at2 && at2[0] === fr2[0] && at2[1] === fr2[1] + 1;
+    const foi = !!sim(() => Co.audiencia(o.f, 'teste')); const na = !!o.f.aud && o.f.aud.b === b.id; sim(() => Co.audEnd(o.f));
+    casos.push(`${nome} (${lado(g)}${g.set === o.cap.id ? '' : ' em ' + S.settlements.get(g.set).name}): ${aqui ? 'recebe à porta da sede' : `recebe em ${at2 ? at2.join(', ') : '-'}, NÃO À PORTA DA SEDE`}, ${foi && na ? 'a audiência na sede' : foi ? 'a audiência NOUTRO PALÁCIO' : 'NENHUMA audiência'}`);
+    sim(() => { if (!g.built) V.siteBack(g, 'teste'); V.removeBuilding(g); }); return aqui && foi && na; // (a work pulled down gives back what it got, in the ledger)
+  };
+  const r1 = prova('um grande palácio em obra na capital', () => funda(o.cap, 'grande_palacio', 'grande_palacio', false));
+  const r2b = outra.length ? prova('um grande palácio de pé noutra cidade do povo', () => { for (const s of outra) { const g = funda(s, 'grande_palacio', 'grande_palacio', true); if (g) return g; } return null; }) : true;
+  ok('m2h a sede recebe, com um palácio maior em obra ou noutra cidade (L-804)', r1 && r2b && casos.length >= 1, `${casos.join('; ')}${outra.length ? '' : '; o povo não tem outra cidade'}`);
+  const fam = moram(b); const L0 = S.ledgerN || 0; const ref = 'h:' + b.id;
   if (D.get(ref, 'food') < 8) D.make(ref, 'food', 8, { code: 'teste' });
   // (the world opens before dawn, the household asleep in the house it had: it ends that night where it lay — the home moved,
   // the people stay where they are —, and the proof counts from when the last of them is up)
@@ -193,20 +227,6 @@ run('m2', () => {
   ok('m2c2 o fogo da casa na sede', (fumo.get('cozinha') || 0) + (fumo.get('lareira') || 0) > 0, `o fogo que a sede teve, de 5 em 5 s: ${[...fumo].map(e => e[0] + ' ' + e[1] * 5 + ' s').join(', ') || 'NENHUM'}`);
   ok('m2d acordam nela', grown.filter(v => st.get(v.id).acordou > 0).length >= Math.ceil(grown.length * 0.6), `${grown.filter(v => st.get(v.id).acordou > 0).length} de ${grown.length} acordaram dentro dela`);
   ok('m2e verificador pelo caminho', !bad, bad || 'limpo a cada 30 s');
-  // (who rules still receives where the game had it: before the seat's door; and sits on the throne at the audience)
-  const fr = V.frontTile(b); const at = G.Polity.seat(o.f);
-  ok('m2f recebe onde recebia', !!at && at[0] === fr[0] && at[1] === fr[1] + 1, `Po.seat: ${at ? at.join(', ') : '-'}; a frente da sede: ${fr[0]}, ${fr[1] + 1}`);
-  // (the audience lasts thirty seconds from its call: the ruler set before the seat's door by the proof's hand, awake, free)
-  const r = Pl.ruler(o.f); let thr = false, went = false; let tries = 0;
-  while (r.sleeping && tries++ < 150) M.viver(2);
-  // (no fire in the world while the case lasts, by the proof's hand: a fire two tiles from the seat's door calls whoever stands
-  // there — the fire weighs 4, the audience 1.9 —, and in the joined tree's history one burnt beside the palace at that hour:
-  // the ruler beat the flames for the whole of the audience, «no trono: false» — T-853)
-  const semFogo = () => { for (const i of [...G.Nature.fireSet]) G.Nature.extinguish(i, 9); };
-  sim(() => { semFogo(); G.Vg.endTask(r); r.inside = 0; r.x = fr[0]; r.y = fr[1] + 0.5; went = !!Co.audiencia(o.f, 'teste'); });
-  for (let k = 0; k < 28 && !thr; k++) { sim(semFogo); M.viver(1); const pl = r.inside === b.id ? In.placeOf(r) : null; if (pl && pl.it && pl.it.kind === 'trono') thr = true; }
-  M.viver(Co.AUD_DUR + 6);
-  ok('m2g senta no trono na audiência, e ela acaba', went && thr && !o.f.aud, `a audiência começou: ${went}; ${r.name} no trono: ${thr}; acabou: ${!o.f.aud}`);
 });
 
 // ------------------------------ m3: a change of ruler ------------------------------
@@ -224,8 +244,13 @@ run('m3', () => {
   const tomada = !!casa0 && moram(casa0).some(v => !antes.includes(v));
   ok('m3c a eleição: a família de antes sai para a casa que tinha, a nova entra', antes.every(v => v.home !== b.id) && todosEm(nova, b) && foram.every(h => h && G.BDEF[h.type].housing && h.built) && (volta || tomada || !casa0),
     `os de antes: ${antes.map(v => `${v.name} em ${lado(B(v.home))}`).join(', ')}${volta ? ' (a casa que tinham)' : ''}; agora na sede: ${nomes(moram(b))}`);
-  const saiu = livro(L0, e => e[8] === 'mudança' && e[3] === 'h:' + b.id && e[5] === 'moedas').reduce((a, e) => a + e[6], 0);
-  ok('m3d as moedas de cada família com ela, pelo livro', Math.abs(saiu - coin) < 0.02, `a sede tinha ${coin} moedas da família de antes: ${r2(saiu)} saíram com ela («mudança»); a sede tem agora ${D.get('h:' + b.id, 'moedas')} (as da nova)`);
+  const mud3 = livro(L0, e => e[8] === 'mudança' && e[3] === 'h:' + b.id && e[5] === 'moedas'); const saiu = mud3.reduce((a, e) => a + e[6], 0);
+  // (and what came into the seat, or went out of it, for the family before it left: the rent of the house it had, let to another
+  // family while it lived in the seat — 0,51 of Khufu's in the metrópole of the generation 24, paid in the seconds of the case —
+  // is the family's, and leaves with it, T-1146)
+  const at3 = mud3.length ? mud3[0][0] : Infinity; const antes3 = livro(L0, e => e[0] < at3 && e[5] === 'moedas' && e[8] !== 'mudança' && (e[3] === 'h:' + b.id || e[4] === 'h:' + b.id));
+  const veio = antes3.reduce((a, e) => a + (e[4] === 'h:' + b.id ? e[6] : -e[6]), 0);
+  ok('m3d as moedas de cada família com ela, pelo livro', Math.abs(saiu - (coin + veio)) < 0.02, `a sede tinha ${coin} moedas da família de antes${antes3.length ? ` e ${veio >= 0 ? 'recebeu' : 'gastou'} ${r2(Math.abs(veio))} antes da mudança (${[...new Set(antes3.map(e => e[8]))].join(', ')})` : ''}: ${r2(saiu)} saíram com ela («mudança»); a sede tem agora ${D.get('h:' + b.id, 'moedas')} (as da nova)`);
   let c = checa(); ok('m3e verificador', c.ok, c.txt);
   // (the ruler dies: who the people has next — an heir, or the chosen one — lives in the seat, whoever it is)
   sim(() => G.Vg.damage(outro, 9999, 'age'));
@@ -668,8 +693,9 @@ run('m15', () => {
   // (the door shut by the proof's hand: a stranger in the seat, another ruler crowned, a seat with an owner, a home that is no home)
   K.reign = () => { };
   try {
-    // (the seat with two beds, by the proof's hand: its grown single one is one too many)
-    const ap = G.BDEF[b.type].aposentos; G.BDEF[b.type].aposentos = 2; const cedo7 = viu(/cheia demais/).length; M.viver(12); const p7 = cedo7 ? [] : viu(/cheia demais/); G.BDEF[b.type].aposentos = ap;
+    // (the seat with a bed fewer than who lives in it, by the proof's hand: its grown single one is one too many. Two beds were the
+    // household of three of before; Creonte's of the metrópole of the generation 24 is him and Nikos, and two beds held them, T-1147)
+    const ap = G.BDEF[b.type].aposentos; G.BDEF[b.type].aposentos = Math.max(1, moram(b).length - 1); const cedo7 = viu(/cheia demais/).length; M.viver(12); const p7 = cedo7 ? [] : viu(/cheia demais/); G.BDEF[b.type].aposentos = ap;
     const x = stranger(o); if (!ok('m15b0 um estranho da capital', !!x, x ? `${x.name} (${x.age | 0})` : `${o.cap.name}: nenhum crescido de fora da casa de quem governa`)) return;
     const outro = [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 25 && v.age < 60 && !v.captive && v.home && v !== x && !K.ofCourt(v, o.r)).sort((a, c) => a.id - c.id)[0];
     const hx = x.home; B(hx).res--; x.home = b.id; b.res++; b.dono = x.id;

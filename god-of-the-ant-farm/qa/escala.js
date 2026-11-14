@@ -1020,6 +1020,32 @@ run('e25', () => {
   ok('e25 o palácio do governante vem antes do teatro, dos banhos e da maravilha', seen > 0 && !bad, `${seen} capitais com o palácio e um rival na fila — ${out.join(' · ')}`);
 });
 
+// ------------------------------ e25b: a capital sem palácio pede o seu, com o do povo noutra cidade (L-804) ------------------------------
+// (the capital's planner weighs the palace the capital has of its own, standing or in works — never the people's grandest
+// anywhere: a capital that moved, its palace left in the town that was the capital, or a people with the palace of a town taken in
+// war, never asked for one, and its ruler had no seat (D-205): Delfos, in the mundial of the generation 24, with the palace of the
+// Pólis in Argos. A people with another town and no palace in its capital, an old palace raised by the god's hand in the other
+// town, and the capital's planner asked, as e25 asks it — a ruler of little vanity, 0,2: the plain chief's house)
+run('e25b', () => {
+  const P = G.Politics, Co = G.Court; const out = []; let seen = 0, bad = 0;
+  for (const w of ['metropole', 'mundial', 'mega']) {
+    abre(w);
+    for (const f of [...S.factions.values()].filter(q => q.alive !== false && q.gov !== 'tribo' && P.ruler(q)).sort((a, c) => a.id - c.id)) {
+      const cap = G.Fac.capitalOf(f.id); if (!cap || (cap.tier || 0) < 2 || V.pop(cap.id) < 20) continue;
+      if ([...S.buildings.values()].some(b => b.set === cap.id && Co.RANK[b.type])) continue;
+      let pal = null; for (const s of G.Fac.settlementsOf(f.id).filter(q => q.id !== cap.id).sort((a, c) => a.id - c.id)) { pal = sim(() => V.handFound(s, 'palacio', 'antigo', { built: true, R: 40 })); if (pal) break; }
+      if (!pal) { out.push(`${f.name}: nenhum lote para um palácio noutra cidade`); continue; }
+      P.persona(P.ruler(f)).vai = 0.2; f.rulerSince = S.day - 5; rico(cap, 100); pedra(cap, 200); civicas(cap);
+      const want = []; sim(() => G.City.plan(cap, f, V.counts(cap.id), want, V.pop(cap.id)));
+      const pede = want.filter(t => Co.RANK[t]); seen++; if (!pede.length) bad++;
+      out.push(`${f.name}, capital ${cap.name} (${V.pop(cap.id)} pessoas, nível ${cap.tier}), o palácio do povo em ${S.settlements.get(pal.set).name}: ${pede.length ? 'a capital pede ' + pede.join(', ') : 'a capital NÃO PEDE o seu'} (a fila: ${want.join(', ') || 'nada'})`);
+      break;
+    }
+    if (seen) break;
+  }
+  ok('e25b a capital sem palácio pede o seu, com o do povo noutra cidade (L-804)', seen > 0 && !bad, out.join(' · ') || 'nenhum povo com outra cidade e a capital sem palácio');
+});
+
 // ------------------------------ e20: cada capital que não ergue a obra grande diz por quê ------------------------------
 run('e20', () => {
   for (const w of ['metropole', 'mundial', 'mega']) {

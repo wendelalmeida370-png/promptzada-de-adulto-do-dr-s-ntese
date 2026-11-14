@@ -151,13 +151,15 @@
   function shacks(set) {
     const S = G.S; const t = set.tier || 0;
     const mine = []; for (const b of S.buildings.values()) if (b.set === set.id && b.type === 'barraco') mine.push(b);
-    const res = new Map(); for (const v of S.villagers.values()) if (v.set === set.id && v.home) { const l = res.get(v.home); if (l) l.push(v); else res.set(v.home, [v]); }
+    const res = new Map(), inn = new Set(); for (const v of S.villagers.values()) { if (v.inside) inn.add(v.inside); if (v.set === set.id && v.home) { const l = res.get(v.home); if (l) l.push(v); else res.set(v.home, [v]); } }
     // a family that can, leaves: for a real house with room, or it builds walls of its own
     const space = new Map(); for (const b of S.buildings.values()) if (b.set === set.id && b.built && G.BDEF[b.type].housing && b.type !== 'barraco') space.set(b.id, G.BDEF[b.type].housing - (res.get(b.id) || []).length);
     for (const b of mine) {
       const l = res.get(b.id) || [];
-      // (what was left in a shack that falls — a family gone, dead or taken — goes to the people's store, in the ledger)
-      if (!l.length) { b.empty = (b.empty || 0) + 1; if (b.empty >= 2) { for (const [k, n] of Object.entries(G.Depot.list('h:' + b.id))) if (n > 1e-6) G.Depot.store('h:' + b.id, G.Village.facOfSet(set.id), k, n, { code: 'ruína' }); G.Village.removeBuilding(b); } continue; }
+      // (what was left in a shack that falls — a family gone, dead or taken — goes to the people's store, in the ledger. A day
+      // with someone in it is no day of an empty shack: the family that moved to a house at the day's turn sleeps the night out
+      // where it lay, and the shack pulled down over the sleepers left them inside walls that were no more — L-805)
+      if (!l.length) { if (inn.has(b.id)) continue; b.empty = (b.empty || 0) + 1; if (b.empty >= 2) { for (const [k, n] of Object.entries(G.Depot.list('h:' + b.id))) if (n > 1e-6) G.Depot.store('h:' + b.id, G.Village.facOfSet(set.id), k, n, { code: 'ruína' }); G.Village.removeBuilding(b); } continue; }
       b.empty = 0;
       let to = null; for (const [id, n] of space) if (n >= l.length) { to = id; break; }
       // (the family's things go with it to the house with room: the shack's coins and goods, in the ledger — all of them, on

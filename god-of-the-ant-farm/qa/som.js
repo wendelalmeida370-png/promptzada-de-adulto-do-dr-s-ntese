@@ -336,17 +336,27 @@ function s9() {
     const out = { plays: 0, scenes: 0, srcs: 0, lost: [], afterLoad: null };
     if (sound) { A.mute = false; A.sfxOn = true; A.ambOn = true; A.musicOn = true; A.gravar = true; A.tocou.length = 0; out.made0 = FakeAC.last.made; }
     const set = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+    // (the bed of a quarter rings where the quarter has its habit and hands at it now: the second ear stands at the middle of a
+    // patch of the town's quarter whose bed weighs most — asked of the scene itself, every three seconds. At the town's middle,
+    // in the cidade of the generation 24, the bed never rose over what rings it: no far voice in the whole life, T-1145)
+    let bedEar = null;
+    const bedAt = set2 => { const U = G.Urban; const C6 = U.cellXY(1)[0]; let best = null, bw = 0;
+      for (const d of U.districtsOf(set2)) for (const cl of d.cells) { const [x, y] = U.cellXY(cl); const e = earAt(x + C6 / 2, y + C6 / 2, { r: 25 }); const c = A.scene(e); const w = c && c.fundo ? Math.max(0, ...A.FAMS.map(f => c.fundo.w[f] || 0)) : 0; if (w > bw) { bw = w; best = e; } }
+      return best; };
     for (let k = 0; k < STEPS; k++) {
-      if (k === STEPS / 2) { M.salvarCarregar(); if (sound) { out.afterLoad = A.cena; A.mute = false; A.sfxOn = true; A.musicOn = true; } }
+      if (k === STEPS / 2) { M.salvarCarregar(); bedEar = null; if (sound) { out.afterLoad = A.cena; A.mute = false; A.sfxOn = true; A.musicOn = true; } }
       M.viver(0.1);
       if (!sound) continue;
       inSound++;
       try {
         const S2 = G.S; const people = [...S2.villagers.values()]; const p = people[k % people.length]; const set2 = S2.settlements.get(set.id) || [...S2.settlements.values()][0];
-        const ears = [A.earOf({ x: p.x, y: p.y, yaw: k * 0.3, inside: p.inside }), earAt(set2.cx, set2.cy, { r: 25 }), A.earOf({ x: set2.cx, y: set2.cy, rx: 1, ry: -1, r: 45, k: 0.8, modo: 'deus' })];
+        if (k % 30 === 0 || !bedEar) bedEar = bedAt(set2) || earAt(set2.cx, set2.cy, { r: 25 });
+        const ears = [A.earOf({ x: p.x, y: p.y, yaw: k * 0.3, inside: p.inside }), bedEar, A.earOf({ x: set2.cx, y: set2.cy, rx: 1, ry: -1, r: 45, k: 0.8, modo: 'deus' })];
         for (const e of ears) { const c = scene(e, 's9'); out.scenes++; out.srcs += c.fontes.length; }
-        // (the ear stays where it is through the next step: the world's own blows — G.Audio.at — are heard by it)
-        A.ouvido = ears[k % 3]; FakeAC.last.currentTime += 0.1; out.plays += FakeAC.last.made - (out.m0 || FakeAC.last.made);
+        // (the ear stays where it is through the next steps: the world's own blows — G.Audio.at — are heard by it. Each ear for a look
+        // of the player — the scene is asked once a look, a quarter of a second: three steps —: changed every step, the look fell
+        // on the same one of the three every time, T-1145)
+        A.ouvido = ears[Math.floor(k / 3) % 3]; FakeAC.last.currentTime += 0.1; out.plays += FakeAC.last.made - (out.m0 || FakeAC.last.made);
         // (the world of the proof stands at speed 0 and is stepped by hand: for the player it moves — a paused world's gestures do not ring)
         const sp0 = G.speed; G.speed = 1; A.update(0.1); G.speed = sp0; if (k % 8 === 0) A.batida();
         out.m0 = FakeAC.last.made;
@@ -458,24 +468,35 @@ function s7() {
       // read on its own ground: in the cidade of the generation 22 the greatest of Roma, the Bairro do Porto of four patches, was
       // drawn again on a first day or most days in three histories, the rise and the fall what the rule says in each, T-1124;
       // every quarter that kept its ground is judged, and all of them must pass)
-      const qs = U.districtsOf(set).filter(d => d.k !== 'centro' && d.cells.length && A.habito(d).saber === 0).sort((a, b) => b.cells.length - a.cells.length || a.id - b.id);
+      // (and past its first days: a quarter born in the four days before has one day of life, when a day is half the mean — the
+      // rule of the quarter just born, urban.js fold —, and the habit of Campos do Leste Novo, of Roma in the cidade of the
+      // generation 24, went 0 → 0,75 on the first day of the reading, T-1144)
+      const qs = U.districtsOf(set).filter(d => d.k !== 'centro' && d.cells.length && (d.dias || 0) >= 4 && A.habito(d).saber === 0).sort((a, b) => b.cells.length - a.cells.length || a.id - b.id);
       if (!qs.length) { const w = U.wholeOf(set); if (w && w.cells.length && A.habito(w).saber === 0) qs.push(w); }
       if (!qs.length) return { judged: true, pass: false, info: `${set.name} não tem bairro nem todo com chão e sem leitura` };
       const T = qs.map(q => ({ q, now: () => q.whole ? U.wholeOf(set) : U.allDistrictsOf(set).find(d => d.id === q.id) }));
-      // (a day and a half of a lettered quarter's reading, every day, on each patch of the quarter's own ground that day)
-      const read = () => { for (const t of T) { const qq = t.now(); if (!qq) continue; const m = U.mark(qq, 'letrado', false) * 1.5; for (const c of qq.cells) { const [x, y] = U.cellXY(c); U.note(x + 1, y + 1, 'saber', m); } } };
+      // (a day and a half of a lettered quarter's reading, every day, on each patch of the quarter's own ground that day — and the
+      // world's own reading heard apart: a quarter where the world reads in the days of the case is not judged — the reading is
+      // the proof's hand alone —, as the Mercado Velho of Roma, in the cidade of the generation 24, whose habit never came down, T-1144)
+      const doMundo = new Map(); let mao = false; const note0 = U.note;
+      U.note = function (x, y, k, n) { if (k === 'saber' && !mao) { const c = U.cellOf(x, y); doMundo.set(c, (doMundo.get(c) || 0) + (n === undefined ? 1 : n)); } return note0.apply(this, arguments); };
+      const read = () => { mao = true; try { for (const t of T) { const qq = t.now(); if (!qq) continue; const m = U.mark(qq, 'letrado', false) * 1.5; for (const c of qq.cells) { const [x, y] = U.cellXY(c); U.note(x + 1, y + 1, 'saber', m); } } } finally { mao = false; } };
       const sigOf = t => { const qq = t.now(); return qq && qq.cells.length ? qq.cells.slice().sort((x, y) => x - y).join('.') : '-'; };
       const hab = t => { const qq = t.now(); return qq ? A.habito(qq).saber : NaN; };
-      for (const t of T) { t.up = [hab(t)]; t.sg = [sigOf(t)]; }
-      for (let k = 0; k < 9; k++) { day(read); for (const t of T) { t.up.push(hab(t)); t.sg.push(sigOf(t)); } }
+      for (const t of T) { t.up = [hab(t)]; t.sg = [sigOf(t)]; t.chao = new Set(); }
+      const anotaChao = () => { for (const t of T) { const qq = t.now(); if (qq) for (const c of qq.cells) t.chao.add(c); } };
+      try {
+      for (let k = 0; k < 9; k++) { day(read); anotaChao(); for (const t of T) { t.up.push(hab(t)); t.sg.push(sigOf(t)); } }
       for (const t of T) { t.down = [t.up[t.up.length - 1]]; t.sd = [sigOf(t)]; }
-      for (let k = 0; k < 12; k++) { day(); for (const t of T) { t.down.push(hab(t)); t.sd.push(sigOf(t)); } }
+      for (let k = 0; k < 12; k++) { day(); anotaChao(); for (const t of T) { t.down.push(hab(t)); t.sd.push(sigOf(t)); } }
+      } finally { U.note = note0; }
       const same = (g, k) => g[k] !== '-' && g[k] === g[k - 1];
       for (const t of T) {
         const { up, sg, down, sd } = t; const h0 = up[0], peak = up[up.length - 1];
         t.kept = sg.filter((x, k) => k > 0 && same(sg, k)).length; t.keptD = sd.filter((x, k) => k > 0 && same(sd, k)).length;
         // (the days the single numbers are read on — the first of the reading, the first two without it — are days the quarter kept)
-        t.judged = t.kept >= 6 && t.keptD >= 8 && same(sg, 1) && same(sd, 1) && same(sd, 2);
+        t.lido = [...t.chao].reduce((a, c) => a + (doMundo.get(c) || 0), 0);
+        t.judged = t.kept >= 6 && t.keptD >= 8 && same(sg, 1) && same(sd, 1) && same(sd, 2) && !t.lido;
         t.rise = up.every((x, k) => k === 0 || !same(sg, k) || x >= up[k - 1]) && up.slice(1).every((x, k) => !same(sg, k + 1) || x - up[k] <= 0.36);
         t.fall = down.every((x, k) => k === 0 || !same(sd, k) || x <= down[k - 1]) && down.slice(1).every((x, k) => !same(sd, k + 1) || down[k] - x <= 0.21);
         t.pass = t.judged && h0 === 0 && t.rise && t.fall && peak >= 0.99 && up[1] > 0.2 && up[1] < 0.4 && down[2] >= 0.6 * peak && down[down.length - 1] < 0.15;

@@ -12,6 +12,8 @@
 //      cama, ninguém acordado para eles; um de pé, ele vai
 //  l6  o deus interfere: o fogo numa casa à noite (quem dormia acorda e sai pela porta) e a casa derrubada com gente dentro
 //      (ninguém fica dentro do que caiu)
+//  l6b o barraco que a cidade deixa cair não cai sobre quem dorme nele (L-805): sem morador e com gente dormindo dentro, fica
+//      de pé na virada do dia; levantados e saídos, cai numa das viradas seguintes, sem ninguém dentro
 //  l2  a vigia: um adulto sai para vigiar a vila de noite e quem mora com ele o espera em casa ('esperar'); ele volta
 //      andando, entra pela porta, e a espera acaba
 //  l3  o doente (L-227): fica de cama em casa enquanto dura a febre, come da despensa pelo livro-razão, sara e sai
@@ -374,6 +376,62 @@ if (want('l6')) {
     const inRuin = [...S.villagers.values()].filter(v => v.inside === h2.id);
     ok('l6 o fogo e a casa derrubada', lit && !stay1.length && !stay2.length && !inRuin.length && !dw.wrong.length,
       `o fogo na ${h1.type}#${h1.id} (${in1.length} dentro, ${z1} dormindo): ${stay1.length ? `${stay1.length} FICARAM DENTRO` : `todos fora em ${r2(out1 - c0)} s, pela porta`}${!lit ? ' (O FOGO NÃO PEGOU)' : ''}; a ${h2.origType || h2.type}#${h2.id} derrubada com ${in2.length} dentro (${z2} dormindo): ${stay2.length || inRuin.length ? 'ALGUÉM FICOU DENTRO' : 'ninguém ficou dentro'}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}`);
+  }
+}
+
+// ======================= l6b: the shack the town lets fall does not fall on who sleeps in it (L-805) =======================
+// (the town's day lets a shack fall when nobody has lived in it two days running (social.js, shacks) — and pulled it down over a
+// family asleep in it: the family moved to a house at the day's turn, sleeping the night out where it lay, and in the metrópole of
+// the generation 24 the barraco#23313 of Roma came down at 0h00 over Messalina, Quinto and their little ones, left inside walls
+// that were no more. The shack raised by the test's hand at the edge of the town, two of a house of the town living in it a
+// night — asleep in it —, and at midnight their home given back to the house, as the day's turn does, the shack's first empty day
+// counted: the next turn must leave it standing over the sleepers; up and gone, it falls two turns later, with nobody in it)
+if (want('l6b')) {
+  // (the ready world opens at night, its people asleep: the morning lived first — they get up —, then the evening by the hand)
+  open(); set = town(); liveTo(0.3); S.time = 0.8;
+  const T = G.T; const N = G.N;
+  const free = i => S.type[i] >= T.SAND && !S.occ[i] && !S.objAt[i] && !S.treeAt[i] && !S.road[i] && !S.wall[i] && !(S.fire[i] > 0) && W.walkable(i) && !(G.City && G.City.onStreet(set, i));
+  let spot = null;
+  for (let r = 3; r < 16 && !spot; r++) for (let dy = -r; dy <= r && !spot; dy++) for (let dx = -r; dx <= r && !spot; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = Math.floor(set.cx) + dx, y = Math.floor(set.cy) + dy;
+    if (x < 3 || y < 3 || x >= N - 3 || y >= N - 3 || !free(y * N + x) || W.slope(x, y, 1, 1) > 1.2) continue;
+    let ring = 0; for (let ey = -1; ey <= 1; ey++) for (let ex = -1; ex <= 1; ex++) if ((ex || ey) && free((y + ey) * N + x + ex)) ring++;
+    if (ring >= 7) spot = [x, y];
+  }
+  // (three of a house of the town, awake, of no errand of weight — the shack's three beds full: a shack with a bed to spare is one
+  // the town's housing gives a family to in the night, and the five of Marco's moved into it, in the cidade of the generation 24)
+  const awake = spot ? people(set).filter(v => !v.sleeping && !isBody(v) && !(v.task && v.task.pri >= 2) && !G.Trade.homeBound(v)) : [];
+  const byHome = new Map(); for (const v of awake) { const l = byHome.get(v.home) || []; l.push(v); byHome.set(v.home, l); }
+  const fam = ([...byHome.values()].find(l => l.length >= G.BDEF.barraco.housing) || [...byHome.values()].sort((a, c) => c.length - a.length || a[0].id - c[0].id)[0] || []).slice(0, G.BDEF.barraco.housing);
+  if (!fam.length) ok('l6b o barraco não cai sobre quem dorme nele', false, spot ? `ninguém crescido e acordado em ${set.name} às ${fmtT(S.time)}` : `nenhum chão livre para o barraco perto de ${set.name}`);
+  else {
+    const sh = V.addBuilding('barraco', spot[0], spot[1], set.id, true); W.touchWalk(); const h0 = fam[0].home; const of0 = new Set([...S.villagers.values()].filter(v => v.home === h0).map(v => v.id));
+    for (const v of fam) { v.home = sh.id; v.hhType = 'barraco'; v.energy = Math.min(v.energy, 30); }
+    // (to bed in it, by their own feet: the night of the shack's people — one asleep in it is the case; the other may be the
+    // night's watch, out with the torch, as Ocelotl of the cidade of the generation 21 was)
+    liveTo(0.97, () => fam.some(v => v.inside === sh.id && v.sleeping));
+    const zz = fam.filter(v => v.inside === sh.id && v.sleeping); const slept = zz.length;
+    // (a long night ahead, by the test's hand — a sleeper whose strength is back gets up at any hour —; home again in the house,
+    // as the town's day does, the shack's first empty day counted; and the town's day of the shacks at once, its round by the
+    // test's hand: a shack left with no family for a step is one the town's housing gives to another — the five of Marco's,
+    // in the cidade of the generation 24 —, and the round found it lived in)
+    for (const v of zz) v.energy = 15;
+    // (and whoever of their house the town's housing sent after them, to keep the family together — the rest of Túlia's, in the
+    // cidade of the generation 24)
+    for (const v of S.villagers.values()) if (v.home === sh.id && (fam.includes(v) || of0.has(v.id))) { v.home = h0; v.hhType = S.buildings.get(h0).type; } sh.empty = 1;
+    const idx = [...S.settlements.values()].sort((a, b) => a.id - b.id).indexOf(set);
+    const none = [...S.villagers.values()].filter(v => v.home === sh.id).length === 0;
+    G.mod('social.day', S.day); G.mod('social.cur', idx); G.Social.update(0);
+    const stood = S.buildings.has(sh.id); const lost = [...S.villagers.values()].filter(v => v.inside > 0 && !S.buildings.has(v.inside)).map(nm);
+    const still = zz.filter(v => v.inside === sh.id && v.sleeping).length; const seen = bad().filter(q => /não existe/.test(q.msg)).map(q => q.msg);
+    // (up and gone at their hour: three turns of the day more — the shack falls with nobody in it, or the town's housing gave it to
+    // a family and it is a home again —, and nobody ever inside walls that are no more)
+    let gone = -1; const d1 = S.day; let lost2 = [];
+    for (let k = 0; k < 3 && gone < 0; k++) { live(G.DAY_LEN * 1.05, () => { const l = [...S.villagers.values()].filter(v => v.inside > 0 && !S.buildings.has(v.inside)); if (l.length) lost2 = l.map(nm); return !S.buildings.has(sh.id); }); if (!S.buildings.has(sh.id)) gone = S.day - d1; }
+    const home2 = S.buildings.has(sh.id) ? [...S.villagers.values()].filter(v => v.home === sh.id).length : 0;
+    const inGone = [...S.villagers.values()].filter(v => v.inside === sh.id && !S.buildings.has(sh.id)).map(nm);
+    ok('l6b o barraco não cai sobre quem dorme nele', slept > 0 && none && stood && still === slept && !lost.length && !seen.length && (gone >= 1 || home2 > 0) && !inGone.length && !lost2.length,
+      `barraco#${sh.id} em ${spot.join(',')}, de ${set.name}: ${fam.map(nm).join(' e ')} morando nele, ${slept ? zz.map(nm).join(' e ') + ' dormindo nele' : 'NINGUÉM dormindo nele'} às ${fmtT(S.time)}; a casa deles de novo #${h0}, o primeiro dia vazio contado e o dia da cidade${none ? '' : ' (COM MORADOR NO BARRACO: nada a provar)'}: ${stood ? `o barraco de pé com ${still} dormindo dentro` : `o barraco CAIU com ${still} dormindo dentro`}${lost.length ? ' — DENTRO DO QUE NÃO EXISTE: ' + lost.slice(0, 3).join(', ') : ''}${seen.length ? ' — o verificador: ' + seen.slice(0, 2).join(' · ') : ''}; depois de levantados, ${gone >= 0 ? `caiu ${gone} dia(s) depois` : home2 ? `de pé, com ${home2} morando nele (a cidade o deu a uma família)` : 'NÃO CAIU em três dias, sem ninguém morando nele'}${inGone.length || lost2.length ? ' — DENTRO DO QUE NÃO EXISTE: ' + inGone.concat(lost2).slice(0, 3).join(', ') : ', sem ninguém dentro'}`);
   }
 }
 
@@ -1309,6 +1367,10 @@ if (want('l17')) {
       // minder —, whom the checker rightly leaves out of those who could go first: Atzi, of 61, the first single of
       // Tenochtitlan by the id, became the minder of the house's child of three, and the checker had no young single to name, T-696)
       const singles = pool.filter(v => !v.partner && v.age < 55);
+      // (a town with no young single grown one free — Tenochtitlan, in the cidade of the generation 24, with no one of 10 to 17 either —
+      // gets one by the proof's hand: the eldest of its children with no partner, of a house of the town, at 18 — a premise the world
+      // gives in time, given now, T-1155)
+      if (!singles.length) { const k = [...S.villagers.values()].filter(v => v.set === set.id && v.home && v.home !== hh.id && v.age >= 5 && v.age < 18 && !v.partner && free(v)).sort((a, c) => c.age - a.age || a.id - c.id)[0]; if (k) { k.age = 18.2; singles.push(k); if (!pool.includes(k)) pool.push(k); } }
       const Yn = singles[0] || null, O = pool.find(v => v !== Yn) || null;
       const other = O && [...S.buildings.values()].find(b => b.set === set.id && b.id !== hh.id && b.id !== O.home && b.built && housing(b) && G.BDEF[b.type].housing > res(b).length);
       if (O && Yn && other) {

@@ -358,7 +358,9 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
     const dOf = cv => Math.min(...cv.mouths.map(m => G.dist(m.x, m.y, s.cx, s.cy)));
     const cv = G.Caves.all().filter(q => q.mouths.length && !q.mine).sort((a, b) => dOf(a) - dOf(b) || a.id - b.id)[0];
     const hall = cv && cv.halls && cv.halls[0]; const cell = hall ? Math.floor(hall.y) * G.N + Math.floor(hall.x) : -1;
-    if (cv) for (const v of kidsOf(s)) { Vg.endTask(v); if (G.Caves.give(v, 'refuge', cv, cell, { pri: 2.7, stay: 1e9, force: 1, urge: 1 }) && v.task && v.task.type === 'caverna') hid.push(v); }
+    // (three of them, not the whole town's: a family goes only whole (L-440), and with every child of 3 to 13 in the cave no family
+    // with children was free to go — the colony of five grown did not sail from any town of the cidade of the generation 24, T-1154)
+    if (cv) for (const v of kidsOf(s).slice(0, 3)) { Vg.endTask(v); if (G.Caves.give(v, 'refuge', cv, cell, { pri: 2.7, stay: 1e9, force: 1, urge: 1 }) && v.task && v.task.type === 'caverna') hid.push(v); }
     for (const r of G.Know.regions()) { const site = G.Expe.siteFor(r, f.id); if (site) { best = { r, site, motive: 'expansao' }; break; } }
     if (!best) { tried.push(`${s.name}: nenhuma região com lugar para a colônia`); continue; }
     f.stock.food = Math.max(f.stock.food, 2000); f.stock.wood = Math.max(f.stock.wood, 200); e = G.Expe.colony(f, best, 26, [dock]);

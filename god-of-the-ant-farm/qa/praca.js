@@ -23,8 +23,8 @@
 //      carga, com as mãos numa operação, sendo o corpo do deus, com a sorte fora da vontade; b3 ninguém na conversa depois de
 //      escurecer nem debaixo de chuva; b4 o que já vivia continua a viver nesses dias (a taverna, o teatro, os banhos, a
 //      ceia: as contas ditas); b5 o verificador (com as regras novas) e nenhum erro;
-//   f  o foguista: f1 nos mesmos dias vividos, com foguista e lenha no povo, a fornalha acesa em todo dia de banhos, e
-//      cedo; f2 o foguista no posto não é levado por uma vontade, pela água de casa nem por um chamado de fora; f3 pela mão
+//   f  o foguista: f1 nos mesmos dias vividos, com foguista de pé (não de cama com febre, T-1160) e lenha no povo, a
+//      fornalha acesa em todo dia de banhos, e cedo; f2 o foguista no posto não é levado por uma vontade, pela água de casa nem por um chamado de fora; f3 pela mão
 //      da prova: chamado do machado à fornalha antes de abrir; a refeição antes de abrir; a fome que não o tira do posto e a
 //      que tira; o chamado de fora que não o leva (Vg.busy) — nem o grupo de uma história na estrada (L-791) — e o que leva
 //      depois do fogo alimentado; a água de casa com outro;
@@ -112,8 +112,11 @@ function partA() {
     // (the cold of the place does not empty the plaza — who lives in it is dressed for it —: only the weather does, D-245)
     let frio = 0;
     { const [cx, cy] = mid(b); const i = W.idx(cx, cy); const t0 = S.temp[i]; S.temp[i] = 5; frio = Pr.pick(p) === b ? 1 : 0; S.temp[i] = t0;
-      const w0 = S.winters; tryIt('o inverno do deus', () => { S.winters = [{ x: cx, y: cy, r: 6, t: 30 }]; }, () => { S.winters = w0; });
-      tryIt('o pânico', () => { S.panic = [{ x: cx, y: cy, r: 4, t: 3, why: 'panic' }]; }, () => { S.panic = []; }); }
+      // (the winter and the panic over the plaza shut that plaza: another of the town's places, out of their reach, may still be
+      // chosen — Mênfis, in the mega of the generation 24, has a second one near Tutmés —, and the impediment is this plaza's, T-1150)
+      const tryB = (name, put, undo) => { put(); z[name] = Pr.pick(p) === b ? 1 : 0; undo(); };
+      const w0 = S.winters; tryB('o inverno do deus', () => { S.winters = [{ x: cx, y: cy, r: 6, t: 30 }]; }, () => { S.winters = w0; });
+      tryB('o pânico', () => { S.panic = [{ x: cx, y: cy, r: 4, t: 3, why: 'panic' }]; }, () => { S.panic = []; }); }
     tryIt('a guerra à porta', () => { set.alarmT = 20; }, () => { set.alarmT = 0; });
     // (nor the house one lives in under the works of its upgrade — the family lives there all the same, V.livable —: with the
     // house standing only, 46 of the 752 of the metrópole of the generation 21 had no plaza while a sobrado rose, L-790)
@@ -134,10 +137,11 @@ function partA() {
   // ---------------------------------------------------------------- a1b: the plaza full, the distance, the lot, the stoker
   if (on('a1')) god(() => {
     S2.time = 0.62; G.inSim--; const [q, qb] = goer(set2, cs, null); G.inSim++; const z = { livre: q && Pr.pick(q) ? 1 : 0 };
-    // the plaza full: who is on the way counts (asked from outside the step, counted afresh)
+    // the plaza full: who is on the way counts (asked from outside the step, counted afresh) — the full plaza shut to him; another of
+    // the town's places may not be, and is no matter of this one's (T-1150)
     const others = cs.filter(v => v !== q).slice(0, Pr.holds(qb)); const keep = others.map(v => v.task);
-    others.forEach(v => { v.task = { type: 'praca', id: qb.id, pri: Pr.PRI, st: 0, x: qb.x + 0.5, y: qb.y + 0.5 }; }); G.inSim--; z['a praça cheia'] = Pr.pick(q) ? 1 : 0; z.cabem = Pr.room(qb); G.inSim++; others.forEach((v, i) => { v.task = keep[i]; });
-    { const x0 = q.x; q.x = mid(qb)[0] + Pr.REACH + 3; z['longe demais daqui'] = Pr.pick(q) ? 1 : 0; q.x = x0; }
+    others.forEach(v => { v.task = { type: 'praca', id: qb.id, pri: Pr.PRI, st: 0, x: qb.x + 0.5, y: qb.y + 0.5 }; }); G.inSim--; z['a praça cheia'] = Pr.pick(q) === qb ? 1 : 0; z.cabem = Pr.room(qb); G.inSim++; others.forEach((v, i) => { v.task = keep[i]; });
+    { const x0 = q.x; q.x = mid(qb)[0] + Pr.REACH + 3; z['longe demais daqui'] = Pr.pick(q) === qb ? 1 : 0; q.x = x0; }
     { const r0 = q.role, j0 = q.job; const bb = baths().filter(x => x.set === q.set)[0]; const op = bb && Te.dia(bb); if (op) { const c0 = op.data.calor; S2.time = 0.58; q.role = 'foguista'; q.job = bb.id; op.data.calor = 0; z.posto2 = Te.onDuty(q) ? 1 : 0; z['o foguista no posto'] = Pr.pick(q) ? 1 : 0; q.role = r0; q.job = j0; op.data.calor = c0; S2.time = 0.62; } }
     // the lot: one whose lot of today is over the wish does not go, with everything else in order
     let no = null, nb = null; for (const v of cs) { const c = P2.slice().sort((a, d) => farOf(v, a) - farOf(v, d))[0]; if (v !== q && farOf(v, c) <= Pr.NEAR && Pr.lot(v) > Pr.wish(v, c) + 0.02) { no = v; nb = c; break; } }
@@ -287,7 +291,10 @@ function watch() {
     for (const b of baths()) {
       const h = Te.horas(b); if (S.time < h.abre || S.time > h.fecha) continue; const op = Te.dia(b); const k = S.day + ':' + b.id; let r = w.fire.get(k);
       if (!r) w.fire.set(k, r = { day: S.day, b, len: 0, first: -1, keeper: 0, n: 0, hot: 0, wood: 0, ent: 0 });
-      r.n++; const kp = Te.keeperOf(b); if (kp) r.keeper++; if (op) { r.len = Math.max(r.len, op.data.lenha || 0); r.ent = Math.max(r.ent, op.data.entradas || 0); if (op.data.calor > 0) { r.hot++; if (r.first < 0) r.first = S.time; } }
+      // (a stoker on his feet: one in bed with a fever or a bad wound by day (G.Lar.bedrest — L-227: the ill in bed, a call that
+      // weighs more than the post, D-227) is no stoker for the day. In the mega of the generation 24 Neferu of Mênfis lay with a
+      // fever from the opening to past the middle of the day, and the day counted as one with a stoker, «FRIA», T-1160)
+      r.n++; const kp = Te.keeperOf(b); if (kp && !(G.Lar && G.Lar.bedrest(kp))) r.keeper++; if (op) { r.len = Math.max(r.len, op.data.lenha || 0); r.ent = Math.max(r.ent, op.data.entradas || 0); if (op.data.calor > 0) { r.hot++; if (r.first < 0) r.first = S.time; } }
       const f = G.Fac.get(V.facOfSet(b.set)); r.wood = Math.max(r.wood, (f ? D.free('f:' + f.id, 'wood') : 0) + D.free('b:' + b.id, 'wood'));
     }
   };
@@ -309,7 +316,10 @@ function partB() {
   // (the floor of the world's stops a day is half the least seen in four histories of these three days — the branch before
   // the leader's tip was joined and the joined tree, SHIFT 0 and 1: 24,3 · 16,0 · 13,0 · 25,3 —; the first floor, 15, was
   // taken from one history and fell inside the dice: T-923c)
-  if (on('b1')) ok(`b1 em ${days} dias vividos, sem ninguém mandado, a praça tem gente na conversa — 8 paradas por dia no mundo, uma por dia ou mais em toda cidade de 110 pessoas ou mais, dois ou mais juntos nalguma — e crianças a brincar à tarde (as cidades de 50 ou mais, ditas uma a uma)`, per.length >= 2 && per.filter(r => V.pop(r.s.id) >= 110).length >= 1 && per.filter(r => V.pop(r.s.id) >= 110).every(r => r.visits >= days) && visits >= days * 8 && Math.max(...per.map(r => r.peak)) >= 2 && w.kids.size >= days * 20,
+  // (the towns of 110 or more — or the biggest, in a world with none so big: the biggest town of the metrópole of the generation
+  // 24 was Tenochtitlan, of 93, T-1151)
+  const big110 = per.filter(r => V.pop(r.s.id) >= 110); const judged = big110.length ? big110 : per.slice().sort((a, c) => V.pop(c.s.id) - V.pop(a.s.id) || a.s.id - c.s.id).slice(0, 1);
+  if (on('b1')) ok(`b1 em ${days} dias vividos, sem ninguém mandado, a praça tem gente na conversa — 8 paradas por dia no mundo, uma por dia ou mais em toda cidade de 110 pessoas ou mais (ou na maior), dois ou mais juntos nalguma — e crianças a brincar à tarde (as cidades de 50 ou mais, ditas uma a uma)`, per.length >= 2 && judged.length >= 1 && judged.every(r => r.visits >= days) && visits >= days * 8 && Math.max(...per.map(r => r.peak)) >= 2 && w.kids.size >= days * 20,
     `${visits} paradas na praça (${(visits / days).toFixed(1)} por dia no mundo), ${w.kids.size} tardes de criança a brincar na praça; ${per.map(r => `${r.s.name} (${V.pop(r.s.id)}): ${(r.visits / days).toFixed(1)} por dia, ${r.peak} de uma vez, das 0,60 às 0,675 em média ${r.mean.toFixed(1)} na conversa e ${r.kids.toFixed(1)} crianças`).join(' · ')}`);
   // ---- b2
   const g2 = w.go; const asleep = g2.filter(p => p.sleeping), load = g2.filter(p => p.carry), hands = g2.filter(p => p.hands), body = g2.filter(p => p.body), luck = g2.filter(p => !(p.lot < p.wish)), kid = g2.filter(p => p.age < 16), duty = g2.filter(p => p.duty), heavy = g2.filter(p => p.pri > 1 + EPS), wet = g2.filter(p => p.rain > 0.3), hungry = g2.filter(p => p.hunger > Pr.HUNGRY), late = g2.filter(p => p.t >= Pr.SHUT || p.t < Pr.OPEN);
@@ -356,8 +366,13 @@ function partF3() {
   const fit = t => G.Nature.isChoppable(t) && !(t.stage === 'grow' && t.size < 0.7) && !t.claim;
   // (with none by the spot — the heart of a city: Hedeby's baths in the mega of the generation 21, the errand of id 0 ended in
   // the first second, «em «social»» —, the nearest one he walks to, standing beside it, T-1092)
-  const besideOk = t => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => W.walkableXY(t.x + dx, t.y + dy) && W.canWalk(near[0], near[1], t.x + dx, t.y + dy));
-  const tree = [...S.trees.values()].filter(t => fit(t) && G.dist(t.x, t.y, near[0], near[1]) <= 12).sort((a, c) => (G.dist(a.x, a.y, ...mid(b)) > far) - (G.dist(c.x, c.y, ...mid(b)) > far) || G.dist(a.x, a.y, near[0], near[1]) - G.dist(c.x, c.y, near[0], near[1]) || a.id - c.id)[0]
+  // (and a way there the feet find — the errand's own search, as the axe's approach asks it (villagers.js approach: the point at
+  // the tree's foot on his side, or beside the tree), not only the map of regions: in the metrópole of the generation 24 the tree
+  // 12,7 houses from Nubet was of his region and of no way he could find in the heart of Mênfis, and the axe ended in the first
+  // second, «em «wander»», T-1152)
+  const reach = t => { const ex = near[0] - t.x, ey = near[1] - t.y; const d = Math.hypot(ex, ey) || 1; const tx = t.x + ex / d * 0.42, ty = t.y + ey / d * 0.42; return (W.walkableXY(tx, ty) && !!W.findPath(near[0], near[1], tx, ty, false)) || !!W.findPath(near[0], near[1], t.x, t.y, true); };
+  const besideOk = t => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => W.walkableXY(t.x + dx, t.y + dy) && W.canWalk(near[0], near[1], t.x + dx, t.y + dy)) && reach(t);
+  const tree = [...S.trees.values()].filter(t => fit(t) && G.dist(t.x, t.y, near[0], near[1]) <= 12 && besideOk(t)).sort((a, c) => (G.dist(a.x, a.y, ...mid(b)) > far) - (G.dist(c.x, c.y, ...mid(b)) > far) || G.dist(a.x, a.y, near[0], near[1]) - G.dist(c.x, c.y, near[0], near[1]) || a.id - c.id)[0]
     || [...S.trees.values()].filter(t => fit(t) && G.dist(t.x, t.y, near[0], near[1]) <= 40).sort((a, c) => G.dist(a.x, a.y, near[0], near[1]) - G.dist(c.x, c.y, near[0], near[1]) || a.id - c.id).find(besideOk) || null;
   // (and the house's jar full, and two logs by the furnace: with the jar low the house sends one of its own to the well, and
   // with less than two logs at the baths his trade sends the stoker for wood (Te.task) — both 1,05, over the axe: Signy,

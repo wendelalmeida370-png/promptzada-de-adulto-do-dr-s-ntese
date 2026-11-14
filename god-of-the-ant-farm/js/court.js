@@ -99,6 +99,10 @@
   }
   function bestPalace(f) { let best = null; for (const b of G.S.buildings.values()) if (Co.RANK[b.type] && G.Village.facOfSet(b.set) === f.id && (!best || Co.RANK[b.type] > Co.RANK[best.type])) best = b; return best; }
   Co.bestPalace = bestPalace;
+  // (the palace a capital has of its own, standing or in works: what its planner weighs. The people's grandest anywhere — the
+  // palace left in the town that was the capital, one of a town taken in war — gave a capital that moved no palace ever, and
+  // its ruler no seat: Delfos of the mundial of the generation 24, the palace of the Pólis in Argos, L-804)
+  const capPalace = set => { let best = null; for (const b of G.S.buildings.values()) if (Co.RANK[b.type] && b.set === set.id && (!best || Co.RANK[b.type] > Co.RANK[best.type])) best = b; return best; };
   const oldPlan = G.City.plan;
   G.City.plan = function (set, fac, c, want, pop) {
     oldPlan(set, fac, c, want, pop);
@@ -110,7 +114,7 @@
     const wish = t => { const k = want.findIndex(x => x === 'teatro' || x === 'banhos' || x === 'maravilha'); if (k < 0) want.push(t); else want.splice(k, 0, t); };
     const isCap = G.Fac.capitalOf(fac.id) === set; if (!isCap || fac.gov === 'tribo' || (set.tier || 0) < 2 || G.City.saving(set, fac)) return;
     for (const k in c.siteTypes) if (Co.RANK[k] || (G.BDEF[k] && G.BDEF[k].civic && k !== 'paco')) return;
-    const cur = bestPalace(fac); const want0 = desired(fac, set);
+    const cur = capPalace(set); const want0 = desired(fac, set);
     const r = P.ruler(fac);
     if (cur && Co.RANK[cur.type] >= Co.RANK[want0]) return;
     // a new ruler gets settled first; a palace is only replaced by a far grander one
@@ -254,8 +258,9 @@
     const route = homes.slice(0, 5).map(h => h.id);
     for (const id of route) S.buildings.get(id).taxT = S.clock + DAY() * 0.6;
     // (where the tribute goes: the chief's house when it stands near, else the people's store — chosen now, and written on
-    // the sacks: the load knows where it goes, after a save or a lost way)
-    const pal = bestPalace(f); const d = pal && pal.built && G.dist(pal.x, pal.y, v.x, v.y) < 30 ? pal : G.Village.nearestDropoff(v.x, v.y, v.set);
+    // the sacks: the load knows where it goes, after a save or a lost way. The chief's house is the seat, where who rules lives
+    // (D-205) — never a grander palace in works, nor one of another town: L-804)
+    const pal = Co.seatOf(f); const d = pal && G.dist(pal.x, pal.y, v.x, v.y) < 30 ? pal : G.Village.nearestDropoff(v.x, v.y, v.set);
     const dest = d ? (Co.RANK[d.type] ? 'h:' + d.id : 'f:' + f.id) : 'f:' + f.id; // (the seat keeps as a house does: D-205)
     return H.setTask(v, { type: 'tribute', id: b.id, route, k: 0, bag: 0, goods: {}, dest, pri: 1.05 });
   }
@@ -375,7 +380,9 @@
   // place inside the allotter's by the palace's rule; the first in line before the throne. f.aud keeps it, in the save, until the
   // answer (Co.AUD_DUR seconds of the world), the ruler's death, flight or arrest, or the palace's fall
   Co.AUD_DUR = 30; Co.AUD_USES = ['audiencia', 'sentar'];
-  Co.audPalace = f => { const b = f && bestPalace(f); const cap = f && G.Fac.capitalOf(f.id); return b && b.built && b.type !== 'ruin' && b.ip && cap && b.set === cap.id ? b : null; };
+  // (the audience is in the seat, where who rules lives (Co.seatOf, D-205): the people's grandest palace — a grander one in works,
+  // one of another town — held none, all the years of a great palace's works, with the ruler living in the old one: L-804)
+  Co.audPalace = f => { const b = f && Co.seatOf(f); return b && b.ip ? b : null; };
   const In_ = () => G.Interiors;
   // (the places of the audience as the plan's table has them — the pieces' and the marks', M2's standing places before the throne
   // being marks, which In.slots does not see —; the throne's seat the ruler's)

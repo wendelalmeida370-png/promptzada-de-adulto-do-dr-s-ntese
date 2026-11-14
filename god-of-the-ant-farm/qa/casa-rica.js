@@ -109,9 +109,12 @@ run('r3', () => {
   const r = sim(() => K.orderRich(v)); if (!ok('r3b pedida', r.ok, r.ok ? lado(r.b) : r.why)) return;
   const id = r.b.id, price = r.price; const f = G.Fac.get(set.fac);
   D.make('f:' + f.id, 'wood', 60, { code: 'teste' }); D.make('f:' + f.id, 'stone', 60, { code: 'teste' });
-  M.viver(60); const meio = S.buildings.get(id); const foto = x => (x ? JSON.stringify([x.x, x.y, x.w, x.esc, x.dono, x.encomenda, x.need]) : 'sumiu'); const f0 = foto(meio);
+  // (the save in the middle of the works: lived until the builders have it begun, a minute at most — in the metrópole of the
+  // generation 24 Birka's builders raised the whole house within the minute, and the «middle» came after it was done, T-1156)
+  let t3 = 0; for (; t3 < 60 && !(((S.buildings.get(id) || {}).progress || 0) > 0.05); t3++) M.viver(1);
+  const meio = S.buildings.get(id); const foto = x => (x ? JSON.stringify([x.x, x.y, x.w, x.esc, x.dono, x.encomenda, x.need]) : 'sumiu'); const f0 = foto(meio);
   salva(); const dep = S.buildings.get(id);
-  ok('r3c o save no meio da obra', foto(dep) === f0 && !!dep.encomenda && dep.encomenda.why === 'rica', `${dep ? Math.round(dep.progress * 100) + '% depois de 60 s; a mesma obra e a mesma encomenda depois do save' : 'SUMIU'}`);
+  ok('r3c o save no meio da obra', foto(dep) === f0 && !!dep.encomenda && dep.encomenda.why === 'rica' && !dep.built, `${dep ? Math.round(dep.progress * 100) + `% depois de ${t3} s; ${foto(dep) === f0 ? 'a mesma obra e a mesma encomenda' : 'OUTRA OBRA OU OUTRA ENCOMENDA'} depois do save` : 'SUMIU'}`);
   const n0 = S.ledgerN || 0; const set2 = S.settlements.get(set.id);
   // (a mudança é julgada na hora em que a casa fica pronta: o salto vai de ano em ano, e no resto do ano a guerra pode levar
   //  os pais — a casa fica então de ninguém, que órfão de menos de 16 não herda: T-811)
