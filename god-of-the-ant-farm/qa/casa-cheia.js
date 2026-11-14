@@ -432,7 +432,10 @@ run('c11', () => {
   const outros = fam.filter(m => m.age >= 16 && m.id !== corpo.id); let corpoMandado = false;
   const t = b ? vive(1000, () => dePe(b), () => { if (corpo.task && corpo.task.type === 'build') corpoMandado = true; }) : -1;
   ok('c11f os outros crescidos levantam; o corpo não é mandado', !!b && !corpoMandado && (outros.length ? dePe(b) : true), b ? `${outros.length} outro(s) crescido(s) na família: ${dePe(b) ? 'a cabana ficou de pé em ' + t + ' s' : 'a obra em ' + Math.round((b.progress || 0) * 100) + '%'}; o corpo ${corpoMandado ? 'FOI MANDADO à obra' : 'ficou nas mãos do jogador'}` : 'sem obra');
-  G.Possess.release('deus');
+  // (a body let go inside the house is a step without an errand — «dentro sem motivo» —: the next errand takes it out by the
+  // door, and the proof lives a second before it looks, as the c18 does (T-947) — in the cidade of the generation 25 Tochtli
+  // was let go at home, T-1164)
+  G.Possess.release('deus'); M.viver(1);
   const c = checa(); ok('c11g verificador', c.ok, c.txt);
 });
 

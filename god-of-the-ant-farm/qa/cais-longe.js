@@ -15,7 +15,8 @@
 //     numa cena de despedida é esperado pelo próprio embarque, e não conta (T-358)
 //  k7 a volta com dois navios: a gente desce de dois em dois, e o navio que fica vazio volta na hora ao trabalho do porto —
 //     nenhum navega sem ninguém a bordo enquanto o outro desembarca (L-679)
-//  e o verificador limpo (S0–S3 novos), sem erro de módulo.
+//  e o verificador limpo (S0–S3 novos), sem erro de módulo. As viagens médias dos casos saem com a guerra já decidida pela mão
+//  da prova (a guerra que estoura na carga é do governante, uma vez; o acaso do mundo as cancelava no primeiro passo, T-1163).
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const fails = [];
@@ -41,7 +42,11 @@ const goal = p => ({ k: 'terra', w: 1, why: 'terra', txt: '', x: p.di.moor[0] + 
 // (a medium voyage of more than five builds an explorer when none lies idle at the quay — 22 of wood, and 4 kept —: in the
 // metropole of 28/10 Hedeby had 17, and the voyage put the wood aside and did not sail. The case is who walks to the quay,
 // not the timber: the test's hand gives the people the wood for the hull, through the depot, T-217)
-const media = p => { const need = Nv.SHIP.explorador.cost + 6 - (p.f.stock.wood || 0); if (need > 0) G.Depot.make('f:' + p.f.id, 'wood', need, { code: 'teste', part: true }); return X.launch(p.f, goal(p), 'media', {}); };
+// (and the war that breaks out while the crates are loaded is the ruler's to decide once — the world's chance, 35 in 100 for a
+// medium voyage —: decided by the test's hand for the voyage, as the marinheiros m9 does (T-1153) — in the metropole of the
+// generations 24 and 25 Hedeby's people was at war, and the voyages of k5 and k6, with no hand before the first step, ended at
+// once, «A guerra chegou primeiro», T-1163)
+const media = p => { const need = Nv.SHIP.explorador.cost + 6 - (p.f.stock.wood || 0); if (need > 0) G.Depot.make('f:' + p.f.id, 'wood', need, { code: 'teste', part: true }); const e = X.launch(p.f, goal(p), 'media', {}); if (e) e.warOk = 1; return e; };
 const reachAll = e => e.crew.map(id => G.S.villagers.get(id)).filter(Boolean).every(v => v.aboard || W.reaches(v, e.port[0], e.port[1]));
 let p = findPick();
 if (!p) ok('k1 a mais aventureira, numa ilhota perto do cais: a viagem sai sem ela', false, 'nenhuma doca com uma ilhota perto do cais neste mundo');
@@ -80,7 +85,9 @@ else {
     const e = media(p); const lead = e && S.villagers.get(e.leader);
     if (!e || !lead) ok('k3 a líder levada a uma ilhota: a viagem não sai', false, 'a viagem «média» não saiu');
     else { toIslet(lead, p.isl); for (let k = 0; k < 30 && e.st !== 'fim'; k++) G.debug.step(0.1);
-      ok('k3 a líder levada a uma ilhota: a viagem não sai', e.st === 'fim' && e.status === 'cancelada', `${lead.name}, à frente de ${e.name}, numa ilhota: ${e.st === 'fim' ? 'a viagem ' + e.status : 'a viagem segue em «' + e.st + '»'}`); }
+      // (cancelled for her, and not for another cause of the world: the book's last line says why, T-1163)
+      const why = e.st === 'fim' && e.log.length ? e.log[e.log.length - 1].txt : '';
+      ok('k3 a líder levada a uma ilhota: a viagem não sai', e.st === 'fim' && e.status === 'cancelada' && /não chega a pé ao cais/.test(why), `${lead.name}, à frente de ${e.name}, numa ilhota: ${e.st === 'fim' ? 'a viagem ' + e.status + ' («' + why + '»)' : 'a viagem segue em «' + e.st + '»'}`); }
   }
   // k4 — the same as k2, saved and loaded in the middle
   {
