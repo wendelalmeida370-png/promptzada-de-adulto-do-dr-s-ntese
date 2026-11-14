@@ -40,23 +40,33 @@ function rest(v) {
 }
 
 // the biggest town of quarters with a fire
-const town = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && U.districtsOf(s).length >= 2 && fireOf(s)).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)[0] || null;
+const townsQ = () => [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && U.districtsOf(s).length >= 2 && fireOf(s)).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
+let town = townsQ()[0] || null;
 S.time = 0.62;
 
 // ---------------------------------------------------------------- t1
 if (on('t1')) {
-  const cf = fireOf(town); let done = false; const tried = [];
-  for (const v of town ? [...S.villagers.values()].filter(o => o.set === town.id && free(o) && homeOf(o) && G.dist(homeOf(o).x, homeOf(o).y, cf.x, cf.y) > Vg.REST_FAR + 4 && W.reaches(o, ...Vg.door(homeOf(o)))).sort((a, b) => a.id - b.id).slice(0, 6) : []) {
-    S.time = 0.62; const hm = homeOf(v); const t = rest(v); if (!t) { tried.push(`${v.name}: ${v.task ? v.task.type : 'sem tarefa'}`); continue; }
-    const dr = Vg.door(hm); const dd = G.dist(v.x, v.y, dr[0], dr[1]), df = G.dist(v.x, v.y, cf.x + 0.5, cf.y + 0.5); const txt = Vg.taskText(v);
-    // (facing the street: the point looked at is farther from the house than the person is)
-    const out = G.dist(t.cx, t.cy, hm.x + 0.5, hm.y + 0.5) > G.dist(v.x, v.y, hm.x + 0.5, hm.y + 0.5);
-    const q = U.at(hm.x, hm.y);
-    ok('t1 quem mora longe da fogueira descansa à porta de casa', v.act === 'sit' && dd <= 2.6 && df > Vg.REST_FAR && t.door === hm.id && out && /porta de casa/.test(txt),
-      `${v.name}, de ${town.name} (${U.districtsOf(town).length} bairros), casa em ${q && !q.whole ? q.name : 'a cidade'} a ${G.dist(hm.x, hm.y, cf.x, cf.y).toFixed(0)} casas da fogueira: sentad${v.g === 'f' ? 'a' : 'o'} a ${dd.toFixed(1)} da porta (a ${df.toFixed(0)} da fogueira), ${out ? 'virado para a rua' : 'virado para a CASA'}; «${txt}»`);
-    done = true; break;
+  // (the towns of quarters with a fire, the biggest first, and the other ready worlds after, the asked one first: the biggest
+  // town of quarters of the metrópole of the generation 23 has no free resident living far from its fire, T-1131)
+  let done = false; const tried = []; let moved = false;
+  for (const mundo of MUNDOS) { if (mundo !== WORLD) { abre(mundo); moved = true; } S.time = 0.62;
+    for (const tw of townsQ()) { const cf = fireOf(tw);
+      for (const v of [...S.villagers.values()].filter(o => o.set === tw.id && free(o) && homeOf(o) && G.dist(homeOf(o).x, homeOf(o).y, cf.x, cf.y) > Vg.REST_FAR + 4 && W.reaches(o, ...Vg.door(homeOf(o)))).sort((a, b) => a.id - b.id).slice(0, 6)) {
+        S.time = 0.62; const hm = homeOf(v); const t = rest(v); if (!t) { tried.push(`${mundo !== WORLD ? mundo + ', ' : ''}${tw.name}, ${v.name}: ${v.task ? v.task.type : 'sem tarefa'}`); continue; }
+        const dr = Vg.door(hm); const dd = G.dist(v.x, v.y, dr[0], dr[1]), df = G.dist(v.x, v.y, cf.x + 0.5, cf.y + 0.5); const txt = Vg.taskText(v);
+        // (facing the street: the point looked at is farther from the house than the person is)
+        const out = G.dist(t.cx, t.cy, hm.x + 0.5, hm.y + 0.5) > G.dist(v.x, v.y, hm.x + 0.5, hm.y + 0.5);
+        const q = U.at(hm.x, hm.y);
+        ok('t1 quem mora longe da fogueira descansa à porta de casa', v.act === 'sit' && dd <= 2.6 && df > Vg.REST_FAR && t.door === hm.id && out && /porta de casa/.test(txt),
+          `${mundo !== WORLD ? `(${mundo}) ` : ''}${v.name}, de ${tw.name} (${U.districtsOf(tw).length} bairros), casa em ${q && !q.whole ? q.name : 'a cidade'} a ${G.dist(hm.x, hm.y, cf.x, cf.y).toFixed(0)} casas da fogueira: sentad${v.g === 'f' ? 'a' : 'o'} a ${dd.toFixed(1)} da porta (a ${df.toFixed(0)} da fogueira), ${out ? 'virado para a rua' : 'virado para a CASA'}; «${txt}»`);
+        done = true; break;
+      }
+      if (done) break; tried.push(`${mundo !== WORLD ? mundo + ', ' : ''}${tw.name}: nenhum morador livre longe da fogueira`);
+    }
+    if (done) break;
   }
-  if (!done) ok('t1 quem mora longe da fogueira descansa à porta de casa', false, town ? `ninguém chegou a sentar (${tried.join('; ') || 'nenhum morador livre longe da fogueira'})` : 'nenhuma cidade de bairros com fogueira');
+  if (!done) ok('t1 quem mora longe da fogueira descansa à porta de casa', false, `ninguém chegou a sentar (${tried.slice(0, 6).join('; ') || 'nenhuma cidade de bairros com fogueira'})`);
+  if (moved) { abre(WORLD); town = townsQ()[0] || null; }
 }
 
 // ---------------------------------------------------------------- t2
@@ -94,8 +104,17 @@ if (on('t3') || on('t4')) {
     }
     if (!best || best.gap < 8) { why.push(`${set.name}: ninguém mora bem mais perto de uma das duas`); continue; }
     // (a point between the two, nearer A, where the way to B and half of B's way home is still the shorter)
-    const { v, A, B, hA, hB } = best; const L = G.dist(A.x, A.y, B.x, B.y); const f = Math.min(0.46, Math.max(0.2, 0.5 + (hB - hA) / (4 * L) + 0.06));
-    const p = W.nearestLand(A.x + (B.x - A.x) * f, A.y + (B.y - A.y) * f, 4); if (!p) { why.push(`${set.name}: sem chão entre as duas`); continue; }
+    // (and B the choice by the game's own weights — the way there and half the way home after, T.pick — by a margin, A the nearer:
+    // in the mega of the generation 23 the one point fell where both came to 19,5, and the first of the town's list won the tie,
+    // T-1131)
+    const { v, A, B, hA, hB } = best; const L = G.dist(A.x, A.y, B.x, B.y); const f0 = Math.min(0.46, Math.max(0.2, 0.5 + (hB - hA) / (4 * L) + 0.06));
+    let p = null;
+    for (const f of [f0, f0 - 0.03, f0 + 0.03, f0 - 0.06, f0 + 0.06, f0 - 0.1, f0 + 0.1, f0 - 0.15].filter(x => x >= 0.1 && x <= 0.48)) {
+      const q = W.nearestLand(A.x + (B.x - A.x) * f, A.y + (B.y - A.y) * f, 4); if (!q) continue;
+      const qa = G.dist(q[0], q[1], A.x, A.y), qb = G.dist(q[0], q[1], B.x, B.y);
+      if (qa < qb - 0.5 && qb + T.HOME * hB < qa + T.HOME * hA - 1) { p = q; break; }
+    }
+    if (!p) { why.push(`${set.name}: sem chão entre as duas onde a das ruas ganhe por margem`); continue; }
     god(() => { Vg.endTask(v); v.inside = 0; v.x = p[0]; v.y = p[1]; v.path = null; v.sleeping = false; v.energy = Math.max(v.energy, 80); v.hunger = Math.min(v.hunger, 30); const h = E.homeOf(v); if ((h.coin || 0) < 5) D.make('h:' + h.id, 'moedas', 5, { code: 'teste' }); });
     const dA = G.dist(v.x, v.y, A.x, A.y), dB = G.dist(v.x, v.y, B.x, B.y);
     if (!(dA < dB - 0.5) || dA >= 30 || dB >= 30 || !W.reaches(v, ...Vg.door(A)) || !W.reaches(v, ...Vg.door(B))) { why.push(`${set.name}: o ponto entre as duas não serve (a ${dA.toFixed(0)} e a ${dB.toFixed(0)})`); continue; }

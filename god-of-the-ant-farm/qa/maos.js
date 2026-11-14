@@ -473,8 +473,13 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
   const v = P && [...S.villagers.values()].filter(o => o.age >= 18 && o.age < 55 && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !o.inside && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.n > 1e-6) && !(G.Expe && G.Expe.memberOf(o.id)) && doorOf(o) && reachXY(P.x, P.y, ...doorOf(o))).sort((a, b) => a.id - b.id)[0];
   if (!P || !v) ok('m13 a caverna pela boca que os pés alcançam', false, !P ? `${cut}nenhuma caverna com duas bocas em chãos que os pés não juntam (um lugar mais perto de uma, fora do alcance dela, e ao alcance da outra)` : `${cut}ninguém livre com a casa ao alcance do lugar diante d${G.Caves.a ? G.Caves.a(P.cv) : 'a caverna'}`);
   else {
+    // (and no feast in the towns while the case lasts, by the test's hand — the day's plan of a feast given as done, and a feast
+    // under way lived out first —: a feast calls everyone on an errand under 3 — festivals.js, free —, the errand below weighs
+    // 2,5, and on the worlds of the generation 21 one began as Egil set out for the cave: «NÃO entrou (fest.0)», T-1142)
+    const semFesta = () => { for (const st of S.settlements.values()) if (!(G.Fest && G.Fest.active && G.Fest.active(st.id)) && !(st.festPlan && st.festPlan.day === S.day && st.festPlan.done)) st.festPlan = { day: S.day, key: null, done: true }; };
+    semFesta(); for (let k = 0; k < 120 && G.Fest && G.Fest.active && G.Fest.active(v.set); k++) fine(1);
     Vg.endTask(v); v.x = P.x; v.y = P.y; v.path = null; v.hunger = Math.min(v.hunger, 20); v.energy = Math.max(v.energy, 80);
-    const calm13 = () => calmBeasts([v.x, v.y], ...P.cv.mouths.map(m => [m.x + 0.5, m.y + 0.5])); calm13();
+    const calm13 = () => { semFesta(); calmBeasts([v.x, v.y], ...P.cv.mouths.map(m => [m.x + 0.5, m.y + 0.5])); }; calm13();
     const hall = P.cv.halls.slice().sort((a, b) => G.dist2(a.x, a.y, P.A.x, P.A.y) - G.dist2(b.x, b.y, P.A.x, P.A.y))[0];
     const cell = Math.floor(hall.y) * G.N + Math.floor(hall.x);
     const given = !!G.Caves.give(v, 'explore', P.cv, cell, { pri: 2.5, stay: 6, force: 1, urge: 1 });

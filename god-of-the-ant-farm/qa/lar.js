@@ -21,6 +21,8 @@
 //      mão da prova, no chão, onde está (a oferta do L-398, que ficou para uma planta sem peça nenhuma: T-890)
 //  l12 o ferido fica de cama em casa e sara mais depressa; quem perde o companheiro passa as primeiras horas de luto em casa
 //  l12b a caravana não leva quem tem o dia em casa (L-773): a viúva da hora fica; a mesma pessoa, sem o luto, vai (o controle)
+//  l12c o adeus de uma viagem não leva quem tem o dia em casa (L-799): quem está de febre e a viúva da hora ficam; os mesmos,
+//      sem a febre e sem o luto, descem ao cais (o controle)
 //  l14 de dia, um dos velhos da casa cuida dos pequenos (3 a 6 anos) em casa, e os pequenos ficam com ele, sem entrar e sair sem
 //      parar — e esperam por ele quando sai por pouco, para comer ou descansar (L-235); um save no meio do dia; quem cuida
 //      morre no meio (outro velho assume, ou os pequenos voltam ao dia deles); o save e a morte no primeiro instante em que
@@ -169,6 +171,9 @@ console.log(`(${WORLD}: ${set.name}, ${V.pop(set.id)} habitantes, ${people(set).
 // the evening cases fell on Roma's, its grown ones at the feast instead of at home or in bed. The test's hand sets the town's
 // plan of the year as held for the day; the cases about a feast start their own, l10. T-274)
 const noFeast = st => { if (st) st.festPlan = { day: S.day, key: null, done: true }; };
+// (and no election in the people's capital the night of a case: the vote of a term that ends calls the town to the square
+// just after midnight — polity.js, Po.crowd —, the watch of the case too; the term starts today by the test's hand: T-1133)
+const noVote = st => { const f = st && G.Fac.get(st.fac); if (f) f.term = S.day; };
 // (the night of l1 — the town at 0.86 —, for the cases that go on in it when l1 is not run)
 let nightReady = false;
 function night() { if (nightReady) return; open(); set = town(); S.time = 0.62; noFeast(set); liveTo(0.86); nightReady = true; }
@@ -374,7 +379,7 @@ if (want('l6')) {
 
 // ======================= l2: the night watch, and the house that waits =======================
 if (want('l2')) {
-  open(); set = town(); S.time = 0.62; noFeast(set);
+  open(); set = town(); S.time = 0.62; noFeast(set); noVote(set);
   liveTo(0.734);
   // (a grown one awake at home in the evening at home, whose bed time is still a while away, and one of the house awake to
   // go out on the watch — in this world or, when it has none, in the metropolis: in the «cidade» of the generation 7, most
@@ -397,7 +402,7 @@ if (want('l2')) {
     return null;
   };
   let pair = findPair();
-  if (!pair && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); set = town(); S.time = 0.62; noFeast(set); liveTo(0.734); pair = findPair(); }
+  if (!pair && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); set = town(); S.time = 0.62; noFeast(set); noVote(set); liveTo(0.734); pair = findPair(); }
   if (!pair) ok('l2 a vigia e a casa que espera', false, `ninguém acordado em casa às ${fmtT(S.time)} com alguém da casa para sair de vigia`);
   else {
     const [a, b] = pair; const h = S.buildings.get(b.home); const dw = doorWatch();
@@ -608,6 +613,51 @@ if (want('l12b', 'l12')) {
     ok('l12b a caravana não leva quem tem o dia em casa (L-773)', ctl.took === ctl.w && !ctl.g && gr.g && gr.took !== gr.w && !(gr.w.task && gr.w.task.type === 'trade'),
       `${ctl.f.name}: ${ctl.p.name} morreu; ${nm(ctl.w)} sem o luto (a mão da prova) → a caravana ${ctl.took === ctl.w ? 'a levou' : 'NÃO a levou'}; de luto («${gr.g ? 'De luto' : 'SEM LUTO'}») → ${gr.took === gr.w ? 'A CARAVANA A LEVOU' : gr.took ? `a caravana levou ${nm(gr.took)}` : 'ficou; nenhuma caravana saiu'}`);
   }
+}
+
+// ======================= l12c: the farewell of a voyage does not take one whose day is at home (L-799) =======================
+// (a voyage made ready by the test's hand by day — the first people of the sea that has one, in this world or the metrópole, as
+// l4b —, and two grown kin of its crew near the quay, everyone else near it held by a weightier errand of the hand (2,5: the
+// farewell takes no one with one of 2,4 or more), the crew aside: one in a fever, by the test's hand, and one whose partner
+// dies, the test's hand — the first hours of grief —; the gathering: neither comes down. The control: the fever and the grief
+// over by the hand, a second gathering, and both come down. In the «cidade» of the generation 23 the farewell took a builder
+// from her bed in a fever, and an old one from the little ones she minded at home: the l3 and the l14 failed, L-799)
+if (want('l12c')) {
+  let fine = false, info = 'nenhuma viagem com dois parentes crescidos da tripulação perto do cais, nem na metrópole';
+  // (grown, awake, hands free, near the quay, of no voyage; under fifty-five, whole and with no grief of their own: the day at
+  // home is the test's hand's — the old one who minds the little ones, the wounded in bed, are the same door, G.Trade.homeBound)
+  const grown = (e, k) => !k.captive && !k.aboard && !k.sleeping && !G.Vg.handsBusy(k) && k.age >= 18 && k.age < 55 && k.hp >= 60 && !(k.sick > 0) && !k.widow && !(k.mourn > 0) && !isBody(k) && !G.Expe.memberOf(k.id) && G.dist(k.x, k.y, e.port[0], e.port[1]) < 45;
+  const pick = e => {
+    const K = []; for (const id of e.crew) { const v = S.villagers.get(id); if (v) for (const k of G.Stories.kin(v)) if (!e.crew.includes(k.id) && !K.includes(k) && grown(e, k)) K.push(k); }
+    K.sort((x, y) => x.id - y.id);
+    for (const b of K) { const p = b.partner && S.villagers.get(b.partner); if (!p || e.crew.includes(p.id) || G.Expe.memberOf(p.id) || isBody(p)) continue; const a = K.find(k => k !== b && k !== p); if (a) return { a, b, p }; }
+    return null;
+  };
+  // (each people of the sea in turn, the world opened again for each — in this world, then the metrópole —, until a voyage made
+  // ready has the two)
+  const day = w => { M.pronto(w); S = G.S; if (!simIn) { G.inSim++; simIn = true; } S.weather.storm = 0; S.weather.rain = 0; S.time = 0.4; for (let k = 0; k < 20; k++) G.debug.step(0.1); };
+  let e = null, pr = null;
+  for (const w of WORLD === 'metropole' ? [WORLD] : [WORLD, 'metropole']) {
+    day(w); const sea = G.Fac.all().filter(o => o.alive && G.Civ.has(o.id, 'navegacao')).map(o => o.id).sort((x, y) => x - y);
+    for (const fid of sea) { day(w); const q = G.Fac.get(fid); let x = null; for (let k = 0; k < 12 && !x; k++) x = G.Expe.consider(q, { scale: 'media', many: true }); if (x && (pr = pick(x))) { e = x; break; } }
+    if (pr) break;
+  }
+  if (pr) {
+    const { a, b, p } = pr;
+    const hold = () => { for (const o of S.villagers.values()) if (o !== a && o !== b && !e.crew.includes(o.id) && !G.Expe.memberOf(o.id) && !isBody(o) && G.dist(o.x, o.y, e.port[0], e.port[1]) < 60 && !(o.task && o.task.type === 'idle' && o.task.pri === 2.5)) G.Vg.setTask(o, { type: 'idle', wait: 30, pri: 2.5 }); };
+    const gather = () => { e.st = 'reunir'; e.bye = 0; e.t = 0; for (let i = 0; i < 30 && !e.bye; i++) { hold(); G.debug.step(0.1); } return !!e.bye; };
+    const bye = k => !!(k.task && k.task.type === 'adeus' && k.task.exp === e.id);
+    // the day at home, by the test's hand: a fever, and the partner's death
+    G.Vg.endTask(a); G.Vg.endTask(b); a.sick = G.DAY_LEN * 0.6; a.energy = Math.max(a.energy, 80); V.kill(p, 'teste');
+    const fa = L.fever(a), gb = L.grief(b), hb = G.Trade.homeBound(a) && G.Trade.homeBound(b);
+    const g1 = gather(); const a1 = bye(a), b1 = bye(b);
+    // the control: the fever and the grief over, by the hand; free hands; a second gathering
+    a.sick = 0; b.mourn = 0; G.Vg.endTask(a); G.Vg.endTask(b);
+    const g2 = gather(); const a2 = bye(a), b2 = bye(b);
+    fine = fa && gb && hb && g1 && !a1 && !b1 && g2 && a2 && b2;
+    info = `${e.name} (de ${e.fromName}), de dia (${fmtT(S.time)}): ${nm(a)} com febre (${fa ? 'de cama' : 'SEM FEBRE'}) ${a1 ? 'DESCEU PARA O ADEUS' : 'ficou'}; ${nm(b)}, com ${p.name} morto (${gb ? 'de luto' : 'SEM LUTO'}), ${b1 ? 'DESCEU PARA O ADEUS' : 'ficou'}${g1 ? '' : ' (a reunião NÃO veio)'}; sem a febre e sem o luto (o controle): ${nm(a)} ${a2 ? 'desceu' : 'NÃO DESCEU'}, ${nm(b)} ${b2 ? 'desceu' : 'NÃO DESCEU'}${g2 ? '' : ' (a segunda reunião NÃO veio)'}`;
+  }
+  ok('l12c o adeus de uma viagem não leva quem tem o dia em casa (L-799)', fine, info);
 }
 
 // ======================= l13: the continuity of a house (the request's 8.4): far, near, in, out, time, back, save =======================
@@ -829,7 +879,10 @@ if (want('l15')) {
   open();
   const ROUGHT = { band: 1, fight: 1, patrol: 1, drill: 1, guard: 1, hunt: 1 };
   const fit = o => !!o && o.age >= 16 && o.age < 70 && !(o.fury > 0) && o.role !== 'guerreiro' && !o.captive && !o.aboard && !o.ug && !isBody(o) && !(o.task && ROUGHT[o.task.type]);
-  const babies = () => [...S.villagers.values()].filter(b => b.age < 2 && !b.ug && !b.captive && b.carrier && b.carrier === b.mother).sort((a, c) => a.id - c.id);
+  // (a baby with some months before its second year: at two it walks on its own, out of every arm — in the «cidade» of the
+  // generation 23 Tutmés turned two in the 2 s of (c), and «the baby left alone» was the child at play, T-1134)
+  const BABY = 1.9;
+  const babies = () => [...S.villagers.values()].filter(b => b.age < BABY && !b.ug && !b.captive && b.carrier && b.carrier === b.mother).sort((a, c) => a.id - c.id);
   const near3 = (b, o) => !o.inside && G.dist(o.x, o.y, b.x, b.y) <= 3;
   const others = (b, m) => [...S.villagers.values()].filter(o => o.id !== m.id && o.id !== b.id && o.age >= 14 && near3(b, o));
   const who = id => { const o = S.villagers.get(id); return o ? o.name : id ? '#' + id : 'ninguém'; };
@@ -849,7 +902,7 @@ if (want('l15')) {
   // (none in its mother's arms in such a house: one whose mother is home with it and another of the house, put in her arms by the
   // world's own door — G.Vg.handBaby, the test's hand: in the generation 16 Senusret, of a year, slept at home in the arms of one of
   // another house, his mother asleep by him)
-  const findA = () => babies().find(homeA) || [...S.villagers.values()].filter(b => b.age < 2 && !b.ug && !b.captive && b.mother).sort((a, c) => a.id - c.id).find(b => homeA(b) && G.Vg.handBaby(b, S.villagers.get(b.mother)));
+  const findA = () => babies().find(homeA) || [...S.villagers.values()].filter(b => b.age < BABY && !b.ug && !b.captive && b.mother).sort((a, c) => a.id - c.id).find(b => homeA(b) && G.Vg.handBaby(b, S.villagers.get(b.mother)));
   let A = findA();
   // (no such house in this world tonight — the «cidade» of the sailors has four babies, none at home with the mother and another
   // of the house —: the metropolis, as l16 does, T-687)
@@ -881,7 +934,10 @@ if (want('l15')) {
   // (b) by day in the street, someone near: the mother in a fury — the baby goes to arms within reach, no jump. Looked for from
   // the morning on, the first moment it happens, or in the metropolis: in the «cidade» of the generation 7, at 7h12 only two
   // babies of the world were in their mothers' arms in the street, nobody within three tiles of either, T-278
-  const findB = () => babies().find(b => { const m = S.villagers.get(b.mother); return !!m && !m.inside && !b.inside && fit(m) && others(b, m).some(fit); });
+  // (someone near of the baby's own town: a baby changes arms in its town, never to one of another — in the «cidade» of the
+  // generation 23 the mother was on a caravan by Mênfis, the only one near was of Mênfis, and the baby went, by the world's rule,
+  // to a woman of its village 36 houses off, T-1134)
+  const findB = () => babies().find(b => { const m = S.villagers.get(b.mother); return !!m && !m.inside && !b.inside && fit(m) && others(b, m).some(o => fit(o) && o.set === b.set); });
   open(); liveTo(0.3);
   let B = findB(); if (!B) live(60, () => !!(B = findB()));
   if (!B && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); liveTo(0.3); B = findB(); if (!B) live(60, () => !!(B = findB())); }

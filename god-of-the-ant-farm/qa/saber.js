@@ -323,9 +323,13 @@ function b7() {
     const lie = QA.check().filter(q => q.sys === 'saber'); k.quem = q0_; const after = QA.check().filter(q => q.sys === 'saber');
     ok('b7f o verificador inteiro (QA.check) acusa o livro que mente na grande biblioteca de pé, e nada sem a mentira', lie.some(q => q.sev <= 2 && /lendo e a planta só tem/.test(q.msg)) && !after.length, `${lie.length ? `S${lie[0].sev} ${lie[0].msg.slice(0, 90)}` : 'NADA'} · sem a mentira: ${after.length ? after[0].msg.slice(0, 80) : 'limpo'}`); }
   // ---- the readers by the game's own door, walking for real: more than eight seated at once, each at a place of reading
-  const r0 = res.slice().sort((a, c) => V.pop(c.set.id) - V.pop(a.set.id))[0]; const lib = r0.b; S.time = 0.33;
-  const dr = G.Vg.door(lib); const far = v => G.dist2(v.x, v.y, dr[0], dr[1]); const rs = [];
-  for (const v of [...S.villagers.values()].filter(v => v.set === lib.set).sort((a, c) => far(a) - far(c) || a.id - c.id)) { if (rs.length >= 14) break; if (v.age < 16 || v.captive || v.jail || v.aboard || v.sleeping || v.inside || v.merchant || (v.carry && v.carry.n > 1e-6) || (v.task && (v.task.pri || 0) >= 1)) continue;
+  // (the morning lived six seconds, so the town is up — the ready world is saved past midnight, and with the hour set and no step
+  // lived 46 of Mênfis's 101 still slept —, and the day's common work left by the test's hand: only what weighs 2 or more, or
+  // a load, or a leg of an operation, keeps one — Vg.busy —; in the metrópole of the generation 23 the six free of the day's
+  // work were all the case had, T-1140)
+  const r0 = res.slice().sort((a, c) => V.pop(c.set.id) - V.pop(a.set.id))[0]; const lib = r0.b; S.time = 0.33; for (let k = 0; k < 60; k++) G.debug.step(0.1);
+  const dr = G.Vg.door(lib); const far = v => G.dist2(v.x, v.y, dr[0], dr[1]); const rs = []; const LER = { type: 'ler', pri: 2 };
+  for (const v of [...S.villagers.values()].filter(v => v.set === lib.set).sort((a, c) => far(a) - far(c) || a.id - c.id)) { if (rs.length >= 14) break; if (v.age < 16 || v.captive || v.jail || v.aboard || v.sleeping || v.inside || v.merchant || (v.carry && v.carry.n > 1e-6) || G.Vg.busy(v, LER)) continue;
     const t = Bi.visit(v, lib); if (t) { v.energy = Math.max(v.energy, 70); v.hunger = Math.min(v.hunger, 30); t.kind = 'work'; t.leisure = true; t.pri = 2.9; rs.push(v); } }
   let most = 0, mostKeys = 0, wrong = 0; const bad = [];
   const look = () => { const ids = Object.keys(Bi.book(lib).quem).map(Number); const pl = ids.map(id => In.placeOf(S.villagers.get(id))); const keys = new Set(pl.map(q => (q ? q.item + ':' + q.q : '-'))); if (pl.some(q => !q || q.use !== 'ler')) wrong++; if (ids.length > most) { most = ids.length; mostKeys = keys.size; } return ids; };
@@ -345,7 +349,11 @@ function b7() {
   // free place of reading by it (Possess.use, the place the share-out then gives the body and nobody else), it reads by the
   // act of the offers, lets the place go and, given back, the person leaves by the door
   { const Po = G.Possess; const lib2 = S.buildings.get(lib.id); const out = []; S.time = 0.4; const dr2 = G.Vg.door(lib2);
-    const cand = [...S.villagers.values()].filter(v => v.set === lib2.set && v.age >= 16 && !v.captive && !v.jail && !v.aboard && !v.sleeping && !v.inside && !v.merchant && !(v.carry && v.carry.n > 1e-6) && !(v.task && (v.task.pri || 0) >= 1) && Po.can(v).ok)
+    // (the day's common work left by the test's hand, as for the readers above — Vg.busy, 2 —, in the street or at work in a
+    // building, and the first who has not read today: who read in b7b reads no more today — a scroll a day, D-201 —, and in the
+    // metrópole of the generation 23, at the morning after the load, 43 of Mênfis's 58 grown ones were at work indoors and the
+    // nine of the street had read, T-1140)
+    const cand = [...S.villagers.values()].filter(v => v.set === lib2.set && v.age >= 16 && !v.captive && !v.jail && !v.aboard && !v.sleeping && v.inside !== lib2.id && !v.merchant && !(v.carry && v.carry.n > 1e-6) && !G.Vg.busy(v, { type: 'ler', pri: 2 }) && v.readDay !== S.day && Po.can(v).ok)
       .sort((a, c) => G.dist2(a.x, a.y, dr2[0], dr2[1]) - G.dist2(c.x, c.y, dr2[0], dr2[1]) || a.id - c.id);
     let me = null; for (const v of cand.slice(0, 4)) { const t = Bi.visit(v, lib2); if (t) { t.kind = 'work'; t.leisure = true; t.pri = 2.9; v.energy = Math.max(v.energy, 70); v.hunger = Math.min(v.hunger, 30); me = v; break; } }
     let seated = false; if (me) for (let k = 0; k < 1500 && !seated; k++) { G.debug.step(0.1); if (S.time > 0.6) S.time = 0.4; const pl = me.inside === lib2.id ? In.placeOf(me) : null; seated = !!pl && pl.use === 'ler' && Bi.book(lib2).quem[me.id] !== undefined; if (!seated && !(me.task && me.task.type === 'ler')) break; }
@@ -428,14 +436,22 @@ function b8() {
   let withOld = null, wOld = 'metropole';
   for (const w of ['metropole', 'mega', 'cidade', 'mundial']) { if (w !== 'metropole') { M.pronto(w); V = G.Village; S = G.S; wOld = w; }
     const hs = headsOf(); withOld = hs.find(s => classic(s, true)) || hs.find(s => classic(s, false)); if (withOld) break; }
-  if (!withOld) { ok('b8e o planejador amplia no lugar a biblioteca que a cidade já tinha (V.grow)', false, 'nenhuma cidade dos mundos prontos com a biblioteca clássica e lugar para crescer no lugar'); return; }
+  // (none in the ready worlds — in the generation 23 no head of a people has a classic library with room round it —: the classic
+  // library founded by the god's hand, done, in a head of a people with room to grow it in place, the metropolis first, as the
+  // town would have it, T-1140)
+  let byHand = false;
+  if (!withOld) for (const w of ['metropole', 'mega', 'cidade', 'mundial']) { M.pronto(w); V = G.Village; S = G.S; wOld = w;
+    for (const s of headsOf().filter(s => !libOf(s) && (s.tier || 0) >= 2)) { const b = sim(() => V.handFound(s, T, Es.n0(T), { built: true, R: 40 })); if (!b) continue;
+      if (classic(s, true)) { withOld = s; byHand = true; break; } sim(() => V.removeBuilding(b)); }
+    if (withOld) break; }
+  if (!withOld) { ok('b8e o planejador amplia no lugar a biblioteca que a cidade já tinha (V.grow)', false, 'nenhuma cidade dos mundos prontos com a biblioteca clássica e lugar para crescer no lugar, nem onde a mão do deus a erguesse'); return; }
   const finished = !libOf(withOld).built; if (finished) sim(() => V.completeBuilding(libOf(withOld)));
   const q0 = V.pop(withOld.id); const g0 = sim(() => V.grow(withOld, G.Fac.get(withOld.fac), V.counts(withOld.id))); const q1 = arrive(withOld); const b = libOf(withOld);
   const ch0 = Es.choose; Es.choose = (s, t, c) => (t === T ? ch0(s, t, c) : [Es.classic(t)]); let r = null; const old = { id: b.id, x: b.x, y: b.y, name: V.buildName(b) }, facts0 = b.ip.h.length;
   try { withOld._noSite = {}; G.Fac.get(withOld.fac).pedra = [S.day, 0, 100]; sim(() => { for (const o of [...S.buildings.values()]) if (o.set === withOld.id && !o.built && o.type !== 'ruin' && G.BDEF[o.type].civic) V.completeBuilding(o); });
     G.Depot.make('f:' + withOld.fac, 'stone', 200, { code: 'teste' }); r = sim(() => V.grow(withOld, G.Fac.get(withOld.fac), V.counts(withOld.id))); } finally { Es.choose = ch0; }
   if (!ok('b8e o planejador amplia no lugar a biblioteca que a cidade já tinha (V.grow): o mesmo prédio, maior, em obra — e antes de justificar o degrau não a ampliava', (!g0 || g0.id !== old.id) && q0 < st.req.pop && q1 >= st.req.pop && !!r && r.id === old.id && r.w === N && r.esc === 'grande' && !r.built && !!r.amp && r.amp.de === 2 && r.ip.n === N && V.buildName(r) === old.name && r.x <= old.x && r.y <= old.y && r.x + N >= old.x + 2 && r.y + N >= old.y + 2 && occ(r),
-    (r ? `${withOld.name}${wOld !== 'metropole' ? ` (mundo ${wOld})` : ''} (${q0} → ${q1} pessoas): #${r.id} «${V.buildName(r)}» de ${r.amp ? r.amp.de : '?'} para ${r.w} casas (${r.esc}), o lote de antes dentro do novo; o registro da planta de ${r.ip.n} casas, a família ${r.ip.f}` : `não ampliou (${withOld.name}, ${q0} → ${q1} pessoas)`) + (finished ? ' (a clássica, em obra no mundo pronto, acabada pela mão da prova)' : ''))) return;
+    (r ? `${withOld.name}${wOld !== 'metropole' ? ` (mundo ${wOld})` : ''} (${q0} → ${q1} pessoas): #${r.id} «${V.buildName(r)}» de ${r.amp ? r.amp.de : '?'} para ${r.w} casas (${r.esc}), o lote de antes dentro do novo; o registro da planta de ${r.ip.n} casas, a família ${r.ip.f}` : `não ampliou (${withOld.name}, ${q0} → ${q1} pessoas)`) + (finished ? ' (a clássica, em obra no mundo pronto, acabada pela mão da prova)' : '') + (byHand ? ' (a clássica erguida pela mão do deus: nenhuma nos mundos prontos com lugar em volta)' : ''))) return;
   // ---- who read in it when its works began leaves its book: two of the town at its tables the instant the enlargement began,
   // their errands then taken by another door — as the world took the two readers of Mênfis, in the metrópole of the generation
   // 21, to the mine and to the watch —, gone from the book at its next look, the library under works or not (L-797)

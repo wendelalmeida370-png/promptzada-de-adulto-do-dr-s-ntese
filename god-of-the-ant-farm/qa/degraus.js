@@ -285,11 +285,19 @@ run('g2', () => {
   for (let k = 0; k < 8 && V.cap(f2.id) * 0.95 <= G.Fac.pop(f2.id) * 7.5; k++) if (!sim(() => V.handFound(cap, 'storehouse', Es.n0('storehouse'), { built: true, R: 50 }))) break;
   // (the people's granaries full, as the rule asks — the repartidor's own «fed» —; the most at the quarry in a minute of looks)
   let m = 0, cheio = true; const farto = () => (f2.stock.food || 0) > Math.max(50, G.Fac.pop(f2.id) * 7);
-  const quebram = new Set();
-  for (let k = 0; k < 44; k++) { alimenta(cap); if (k % 3 === 0) semMaterial(cap); cheio = cheio && farto(); M.viver(5); m = Math.max(m, oficio(s2, 'construtor')); for (const v of S.villagers.values()) if (v.set === s2.id && v.role === 'construtor' && v.task && (v.task.type === 'mine' || v.task.type === 'quarry')) quebram.add(v.id); }
+  // (a builder of the gang breaks stone half of the days — by the day and the hash of each, no chance drawn —: two builders can
+  // both be out of the half for a day and the next — in the mega of the generation 23 Tiye and Kamose of Karnak, 0,91 and 0,60,
+  // then 0,70 and 0,50 —, the one laying a house and the other paving: the looks go on up to three days and a third, until
+  // someone breaks stone, T-1138. And in the gods' peace, renewed before it lapses: on the third day an enemy fell on Karnak —
+  // the muster, the fight, Tiye dead, Kamose in flight and then in bed —, the very day both were of the half)
+  const quebram = new Set(); let vivo = 0; const paz = () => { if (!(S.divinePeace > G.DAY_LEN * 0.25)) sim(() => G.Politics.divinePeace()); };
+  // (nor before the gang is whole: the repartidor reaches it by its memory of what the trade asks, half a day's mean — D-210 —,
+  // and in the gods' peace Luxor, of the generation 21, had two of its three at 220 s)
+  const turmaQ = () => Math.ceil(adultos(s2) * V.GANG_Q);
+  for (let k = 0; k < 132 && !(k >= 44 && quebram.size >= 1 && m >= turmaQ()); k++) { paz(); alimenta(cap); if (k % 3 === 0) semMaterial(cap); cheio = cheio && farto(); M.viver(5); vivo += 5; m = Math.max(m, oficio(s2, 'construtor')); for (const v of S.villagers.values()) if (v.set === s2.id && v.role === 'construtor' && v.task && (v.task.type === 'mine' || v.task.type === 'quarry')) quebram.add(v.id); }
   const A2 = adultos(s2), g = Math.ceil(A2 * V.GANG_Q);
   if (!cheio) console.log(`  (g2e: os celeiros do povo não enchem neste mundo — ${Math.round(f2.stock.food || 0)} de comida para ${G.Fac.pop(f2.id)} pessoas, o armazém cabe ${Math.round(V.cap(f2.id))} —: a pedreira do povo só se junta com fartura; sem caso)`);
-  else ok('g2e a pedreira do povo', V.stoneKept(f2.id) > 0 && V.quarries(s2) && m >= g && quebram.size >= 1, `${mundo}: ${s2.name}, do povo de ${cap.name}, ${A2} adultos: até ${m} construtores (a turma de 1/12: ${g}), ${quebram.size} deles quebraram pedra em 220 s, enquanto a obra de ${cap.name} guarda ${V.stoneKept(f2.id).toFixed(0)} de pedra`);
+  else ok('g2e a pedreira do povo', V.stoneKept(f2.id) > 0 && V.quarries(s2) && m >= g && quebram.size >= 1, `${mundo}: ${s2.name}, do povo de ${cap.name}, ${A2} adultos: até ${m} construtores (a turma de 1/12: ${g}), ${quebram.size} deles quebraram pedra em ${vivo} s, enquanto a obra de ${cap.name} guarda ${V.stoneKept(f2.id).toFixed(0)} de pedra`);
   const c3 = checa(); ok('g2g verificador', c3.ok, c3.txt);
 });
 
@@ -532,11 +540,15 @@ run('g6', () => {
   sim(() => { for (const t of ['alvenaria', 'engenharia']) if (!G.Civ.has(fac.id, t)) G.Civ.learn(fac, t); fac._wonder = 0; });
   sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && (o.type === 'banhos' || o.type === 'maravilha')) V.removeBuilding(o); });
   sim(() => { for (const o of [...S.buildings.values()]) if (o.type === 'maravilha' && V.facOfSet(o.set) === fac.id) V.removeBuilding(o); });
-  civicas(set); rico(set, 150); pedra(set, 200); comVez(set);
+  // (the buildings there were before the town is made ready: the planner may ask the wonder in the seconds the proof's hand
+  // feeds and houses the town — in the metrópole of the generation 23 Tenochtitlan founded it then, and the case, counting
+  // from after, saw no new wonder, T-1139)
   const ids = new Set(S.buildings.keys()); let mar = null;
+  const nova = () => [...S.buildings.values()].find(o => o.set === set.id && o.type === 'maravilha' && !ids.has(o.id)) || null;
+  civicas(set); rico(set, 150); pedra(set, 200); comVez(set); mar = nova();
   // (the people's stone income as the ledger counts it — f.pedra —, held high by the proof at each look: only the wish is at stake)
   // (and its timber: the planner opens no new work with less than a third of its wood in store)
-  for (let k = 0; k < 40 && !mar; k++) { alimenta(set); rico(set, 150); if ((fac.stock.wood || 0) < 60) D.make('f:' + fac.id, 'wood', 90, { code: 'teste' }); obrasMenos(set, 'maravilha'); M.viver(4); mar = [...S.buildings.values()].find(o => o.set === set.id && o.type === 'maravilha' && !ids.has(o.id)) || null; }
+  for (let k = 0; k < 40 && !mar; k++) { alimenta(set); rico(set, 150); if ((fac.stock.wood || 0) < 60) D.make('f:' + fac.id, 'wood', 90, { code: 'teste' }); obrasMenos(set, 'maravilha'); M.viver(4); mar = nova(); }
   if (VERB && !mar) {
     const r = V.reserva(set) || r0; const N = G.N, T = G.T; const why = [];
     if (r) {

@@ -39,6 +39,13 @@ const hr = process.hrtime.bigint(); const ms = () => Number((process.hrtime.bigi
 const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | morar-palacio ${name} | ${info}`); if (!c) fails.push(name); return c; };
 const sim = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
+// (the proof lives its seconds in the gods' peace, renewed before it lapses, and with no vote of the world — every people's term
+// begun the day it lives; the proof's own changes of ruler are by its hand —: the cases are of the household in the seat, and in
+// the metrópole of the generation 23 Alba Longa was at war — Décimo, of the ruler's household, went with a band and died in the
+// case's first night, and Pompeia was called to the fight at the audience —, and in Hedeby the law-speaker's term ran out in the
+// case: Hakon elected, Arne's household back in its house, and the case counting the nights of a household no longer the seat's:
+// T-1141)
+{ const viver0 = M.viver; M.viver = function () { const S0 = G.S; if (S0) { if (!(S0.divinePeace > G.DAY_LEN * 0.25)) sim(() => G.Politics.divinePeace()); for (const f of G.Fac.all()) if (f.alive && f.term !== undefined) f.term = S0.day; } return viver0.apply(this, arguments); }; }
 function run(id, fn) { if (ONLY && !ONLY.includes(id)) return; try { fn(); } catch (e) { ok(id, false, 'exceção: ' + (e && e.stack ? e.stack.split('\n').slice(0, 4).join(' / ') : e)); } }
 let S, V, D, K, Co, Pl, In;
 const pega = () => { S = G.S; V = G.Village; D = G.Depot; K = G.Casa; Co = G.Court; Pl = G.Politics; In = G.Interiors; return S; };
@@ -63,14 +70,32 @@ const funda = (set, type, step, built, o) => sim(() => V.handFound(set, type, st
 // case's premise in the ready worlds as the game forms them: the metrópole first, and the next worlds when it has none — the
 // metrópole of the generation 20 has no ruler at home with a grown single child, T-996, as escala.js does since the T-627)
 const MUNDOS = [MUNDO, 'mundial', 'mega', 'cidade'].filter((m, k, L) => L.indexOf(m) === k);
+// (and the palace in its town: where the god's hand finds no lot of six in a town of a few houses, it raises the palace where it
+// finds one, and in the metrópole of the generation 23 that was 60 houses from Alba Longa — seven people, four houses —: the
+// household walked an hour of the night to its beds and slept past the morning. The next people, then, the world opened again)
 function arma(built, pick, mundo) {
   if (!mundo) { for (const m of MUNDOS) { const o = arma(built, pick, m); if (o) return o; } return null; }
-  abre(mundo); M.viver(1); const L = povos(false); const o = pick ? L.find(pick) : L[0]; if (!o) return null;
-  const fam = K.court(o.r); const casa0 = B(o.r.home); const L0 = S.ledgerN || 0;
-  const b = funda(o.cap, 'palacio', 'palacio', built); if (!b) return null;
-  return Object.assign(o, { b, fam, casa0, L0 });
+  abre(mundo); M.viver(1); const ids = povos(false).filter(q => !pick || pick(q)).map(q => q.f.id);
+  for (let i = 0; i < ids.length; i++) {
+    if (i) { abre(mundo); M.viver(1); }
+    const o = povos(false).find(q => q.f.id === ids[i]); if (!o || (pick && !pick(o))) continue;
+    const fam = K.court(o.r); const casa0 = B(o.r.home); const L0 = S.ledgerN || 0;
+    const b = funda(o.cap, 'palacio', 'palacio', built); if (!b) continue;
+    if (G.dist(b.x + b.w / 2, b.y + b.h / 2, o.cap.cx, o.cap.cy) > Math.max(16, (o.cap.radius || 0) + 6)) continue; // (T-1141)
+    return Object.assign(o, { b, fam, casa0, L0 });
+  }
+  return null;
 }
 const todosEm = (fam, b) => fam.every(v => v.home === b.id);
+// (or, where no people with no seat has a lot for one in its town — in the ready worlds of the generation 23 every people grown up
+// has its seat, and the one with none, Alba Longa, has no lot in it —, a seat the world raised, with who rules living in it: for
+// the cases of a seat lived in, not of the move into it, T-1141)
+function sedeDe(pick) {
+  for (const m of MUNDOS) { abre(m); M.viver(1);
+    for (const f of G.Fac.all().filter(x => x.alive).sort((a, c) => a.id - c.id)) { const r = Pl.ruler(f), b = Co.seatOf(f); if (!r || !b || !b.built || r.captive || r.home !== b.id) continue;
+      const o = { f, r, cap: S.settlements.get(b.set), b, fam: K.court(r), casa0: null, L0: S.ledgerN || 0 }; if (!pick || pick(o)) return o; } }
+  return null;
+}
 // (a household its own house holds — the house is the family's and the ones who live in it now fit in it —: the one the cases of the
 // family that leaves the seat for the house it had ask for. In the metrópole of the generation 20 the first people's, Tenoch's, was
 // seven in a house of four: back from the seat, by the rule of the seat (D-206: the house it had, if it fits; an empty house of the
@@ -354,9 +379,14 @@ run('m8', () => {
   let c = checa(); ok('m8c verificador', c.ok, c.txt);
   // (released: the family is called once all of it can be sent — one of it at an errand of weight finishes it first: Thyra, ruler
   // by the proof's election, was at an unloading on the quay, T-996 — a minute of the world at the most)
+  // (who comes is who the seat's rule brings at the call — K.comes: who has to live with the ruler, and the grown single ones only to
+  // a bed free then, the eldest first; the others stay in the house the family has, D-206 —: in the mega of the generation 23 the
+  // chief's house of Hedeby, of six beds, had the household of the ruler's brother in it at the call, and Arne, eighteen, stayed in
+  // Uppsala; the brother's household left the seat too full after, and the bed it freed calls nobody back: T-1141)
+  const vem = sim(() => K.comes(got.b, got.r));
   fam[fam.length - 1].held = 0; M.viver(5); for (let k = 0; k < 60 && !sim(() => K.seatState(got.f)).home; k++) M.viver(1); st = sim(() => K.seatState(got.f));
-  ok('m8d a família vem para a capital', st.home && fam.every(v => v.set === got.cap.id && v.home === got.b.id) && (!casa0 || casa0.dono === dono0),
-    `${(() => { const r1 = Pl.ruler(got.f); return r1 && r1.id !== got.r.id ? `QUEM GOVERNA MUDOU no caso: ${r1.name} no lugar de ${got.r.name}; ` : ''; })()}${nomes(moram(got.b))} agora de ${got.cap.name}, a casa deles a sede; a caminho: ${fam.filter(v => v.task && v.task.type === 'migrate').length} de ${fam.length}; a casa de antes em ${got.old.name} continua de #${casa0 ? casa0.dono : 0}${st.home ? '' : ` · a sede diz «${st.why}»; não podem partir: ${sim(() => fam.filter(v => !G.Vg.canSend(v)).map(v => `${v.name} (${v.task ? v.task.type : '-'})`).join(', ')) || 'ninguém'}`}`);
+  ok('m8d a família vem para a capital', st.home && vem.every(v => v.set === got.cap.id && v.home === got.b.id) && fam.filter(v => !vem.includes(v)).every(v => v.home !== got.b.id) && (!casa0 || casa0.dono === dono0),
+    `${(() => { const r1 = Pl.ruler(got.f); return r1 && r1.id !== got.r.id ? `QUEM GOVERNA MUDOU no caso: ${r1.name} no lugar de ${got.r.name}; ` : ''; })()}${nomes(moram(got.b))} agora de ${got.cap.name}, a casa deles a sede (${V.bedsOf(got.b)} camas; vêm ${vem.length} de ${fam.length}${vem.length < fam.length ? `, ficam ${nomes(fam.filter(v => !vem.includes(v)))}` : ''}); a caminho: ${fam.filter(v => v.task && v.task.type === 'migrate').length} de ${fam.length}; a casa de antes em ${got.old.name} continua de #${casa0 ? casa0.dono : 0}${st.home ? '' : ` · a sede diz «${st.why}»; não podem partir: ${sim(() => fam.filter(v => !G.Vg.canSend(v)).map(v => `${v.name} (${v.task ? v.task.type : '-'})`).join(', ')) || 'ninguém'}`}`);
   M.viver(240); const perto = fam.filter(v => S.villagers.has(v.id) && G.dist(v.x, v.y, got.cap.cx, got.cap.cy) < 30).length;
   ok('m8e chegam', perto >= Math.ceil(fam.length * 0.6) && K.seatState(got.f).home, `${perto} de ${fam.length} a menos de 30 casas do meio de ${got.cap.name} depois de 240 s`);
   c = checa(); ok('m8f verificador', c.ok, c.txt);
@@ -366,19 +396,26 @@ run('m8', () => {
 // of twenty or more first, as before; with none such, a younger one, or one with a partner (who stays where they are): the
 // capital of the m9 in the metrópole of the generation 21 had no single grown one at all, and the case broke on it — T-1085)
 const stranger = o => [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 16 && v.home && !v.captive && !K.ofCourt(v, o.r)).sort((a, c) => (!!a.partner - !!c.partner) || ((c.age >= 20) - (a.age >= 20)) || a.id - c.id)[0] || null;
+// (a chief's house raised by the god's hand in a town that is not a capital — the biggest of eight people or more where the hand
+// finds a lot: in the world the m9 and the m13 take in the generation 23, the biggest had none, and the case stopped there, T-1141)
+// (and a world with such a town: the «cidade» is all capitals)
+const temVila = () => [...S.settlements.values()].some(s => G.Fac.get(s.fac) && G.Fac.capitalOf(s.fac) !== s && V.pop(s.id) >= 8);
+function pacoNaVila() {
+  for (const vila of [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Fac.capitalOf(s.fac) !== s && V.pop(s.id) >= 8).sort((a, q) => V.pop(q.id) - V.pop(a.id) || a.id - q.id)) { const p2 = funda(vila, 'paco', 'paco', true); if (p2) return { vila, p2 }; }
+  return { vila: null, p2: null };
+}
 // ------------------------------ m9: a stranger in the seat; the empty seat is never offered ------------------------------
 run('m9', () => {
   // (a capital with a stranger in it: the first people's of the metrópole of the generation 22, Saís, had none — every grown one
   // there of the ruler's house —, T-1119)
-  const o = arma(true, q => !!stranger(q)); if (!ok('m9a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
+  const o = arma(true, q => !!stranger(q) && temVila()) || sedeDe(q => !!stranger(q) && temVila()); if (!ok('m9a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
   const b = o.b; const x = stranger(o); if (!ok('m9b0 um estranho da capital', !!x, x ? `${x.name} (${x.age | 0})` : `${o.cap.name}: nenhum crescido de fora da casa de quem governa`)) return;
   const h0 = B(x.home); h0.res--; x.home = b.id; b.res++;
   M.viver(3);
   ok('m9b um estranho posto na sede sai', x.home !== b.id && (!x.home || G.BDEF[B(x.home).type].housing) && todosEm(K.court(o.r), b), `${x.name} agora em ${lado(B(x.home))}; na sede: ${nomes(moram(b))}`);
   let c = checa(); ok('m9c verificador', c.ok, c.txt);
   // (a seat that is nobody's — a palace in a town that is not a capital —: never a house for who needs one)
-  const vila = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Fac.capitalOf(s.fac) !== s && V.pop(s.id) >= 8).sort((a, q) => V.pop(q.id) - V.pop(a.id))[0];
-  const p2 = vila && funda(vila, 'paco', 'paco', true);
+  const { vila, p2 } = pacoNaVila();
   if (!ok('m9d uma sede de ninguém', !!p2 && !K.lordOf(p2), p2 ? `${lado(p2)} em ${vila.name}, que não é capital` : 'sem vila ou sem lote')) return;
   const sem = [...S.villagers.values()].filter(v => v.set === vila.id && v.age >= 18 && v.home && !v.captive).sort((a, q) => a.id - q.id).slice(0, 4);
   for (const v of sem) { B(v.home).res--; v.home = 0; }
@@ -568,14 +605,13 @@ run('m17', () => {
 
 // ------------------------------ m13: the seat keeps as a house does ------------------------------
 run('m13', () => {
-  const o = arma(true); if (!ok('m13a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
+  const o = arma(true, temVila) || sedeDe(temVila); if (!ok('m13a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
   const b = o.b; const ref = 'h:' + b.id; const E = G.Eco;
   const inv0 = b.inv, p0 = b.pantry; b.inv = {}; b.pantry = 0; const lista = G.Compras.list(b); b.inv = inv0; b.pantry = p0;
   ok('m13b as moedas, a casa e as compras de quem mora na sede são as dela', E.coinRef(o.r) === ref && E.homeOf(o.r) === b && E.purse(o.r) === (b.coin || 0) && lista.length >= 1,
     `o cofre de ${o.r.name}: ${E.coinRef(o.r)} (${E.purse(o.r)} moedas); a casa dela para o mercado: ${lado(E.homeOf(o.r))}; com a sede vazia de tudo, a lista de compras: ${lista.map(q => q.k).join(', ') || 'nada'}`);
   // (the court's larder is the seat's pantry: lived in, only its people eat of it; with nobody in it, the court does)
-  const vila = [...S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Fac.capitalOf(s.fac) !== s && V.pop(s.id) >= 8).sort((a, q) => V.pop(q.id) - V.pop(a.id))[0];
-  const p2 = vila && funda(vila, 'paco', 'paco', true); if (!ok('m13c uma sede sem ninguém', !!p2 && !moram(p2).length, p2 ? `${lado(p2)} em ${vila.name}` : 'sem vila ou sem lote')) return;
+  const { vila, p2 } = pacoNaVila(); if (!ok('m13c uma sede sem ninguém', !!p2 && !moram(p2).length, p2 ? `${lado(p2)} em ${vila.name}` : 'sem vila ou sem lote')) return;
   D.make('h:' + p2.id, 'food', 40, { code: 'teste', floor: true }); const tem = D.get(ref, 'food'); if (tem < 12) D.make(ref, 'food', 12 - tem, { code: 'teste', floor: true });
   const L0 = S.ledgerN || 0; M.viver(70);
   const corte = r0 => livro(L0, e => e[3] === r0 && e[5] === 'food' && e[8] === 'corte'); const vazia = corte('h:' + p2.id), cheia = corte(ref);

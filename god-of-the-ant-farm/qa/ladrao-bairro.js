@@ -9,7 +9,7 @@
 // b1 a ronda vai aonde há crime: o bairro perigoso é o primeiro cruzamento da ronda, três noites seguidas (a ronda que o
 //    vigia recebe ao escurecer é essa);
 // b2 o ladrão pesa a ronda desta noite: a casa ao pé de um cruzamento é mais vigiada que a de longe de todos; com as bolsas
-//    iguais, em quarenta escolhas o ladrão quase nunca vai à casa ao pé da ronda (sem ronda nenhuma, ia);
+//    iguais, em quarenta escolhas do meio dessas casas o ladrão quase nunca vai a uma delas (sem ronda nenhuma, ia);
 // b3 a rua acordada de noite tem olhos, o bairro vazio não: a mesma casa, com a vida do bairro dela mudada pela porta do
 //    jogo, fica mais vigiada com a noite movimentada e menos com o bairro vazio;
 // b4 a noite do roubo é do mundo (L-704): o sorteio da noite não se repete depois de um load — o relógio vai no save, e
@@ -86,11 +86,15 @@ if (on('b2')) {
     const wA = Cr.watched(A[0], round), wB = Cr.watched(B[0], round);
     const q0 = U.at(A[0].x, A[0].y), q1 = U.at(B[0].x, B[0].y);
     ok('b2 a casa ao pé de um cruzamento da ronda é mais vigiada que a de longe de todos', wA - wB >= 1.5 - 1e-9 - Math.min(1, ((q1 && q1.vida && q1.vida.noite) || 0) * 2) && Cr.watched(A[0], null) < wA, `casa #${A[0].id} a ${near(A[0], pts).toFixed(1)} da ronda: ${wA.toFixed(2)} (sem ronda: ${Cr.watched(A[0], null).toFixed(2)}); casa #${B[0].id} a ${near(B[0], pts).toFixed(1)}: ${wB.toFixed(2)}${q0 ? `; bairros: ${q0.whole ? 'o todo' : q0.name} e ${q1 ? (q1.whole ? 'o todo' : q1.name) : '—'}` : ''}`);
-    // forty choices from the middle of the town, with the round and with nobody on it
+    // forty choices from the middle of the houses at the foot of the round — where, with nobody on it, they are the nearer and
+    // the thief goes to them —, with the round and with nobody on it (from the middle of the town, the houses at the foot of
+    // the round may all lie far off: the round of Mênfis, in the metrópole of the generation 23, goes by its edges, and with
+    // nobody on it the thief went to them 2 times in 40 — a proof that could see nothing, T-1132)
     const count = () => { let n = 0; for (let k = 0; k < 40; k++) { const h = god(() => Cr.victimFor(thief)); if (h && near(h, pts) < Cr.NEAR) n++; } return n; };
-    thief.x = set.cx; thief.y = set.cy;
+    const mx = A.reduce((t, h) => t + h.x + 0.5, 0) / A.length, my = A.reduce((t, h) => t + h.y + 0.5, 0) / A.length;
+    const at = G.W.nearestLand(mx, my, 4) || [mx, my]; thief.x = at[0]; thief.y = at[1];
     const withR = count(); const task = g.task; g.task = null; const without = count(); g.task = task;
-    ok('b2 com as bolsas iguais, o ladrão quase nunca vai à casa ao pé da ronda', without >= 6 && withR * 3 <= without, `${A.length} casas ao pé da ronda e ${B.length} longe, de ${hs.length} com 12 moedas; em 40 escolhas de ${thief.name}, do meio da cidade: ${withR} ao pé da ronda (sem ninguém na ronda: ${without})`);
+    ok('b2 com as bolsas iguais, o ladrão quase nunca vai à casa ao pé da ronda', without >= 6 && withR * 3 <= without, `${A.length} casas ao pé da ronda e ${B.length} longe, de ${hs.length} com 12 moedas; em 40 escolhas de ${thief.name}, do meio das casas ao pé da ronda (${at.map(x => x.toFixed(1)).join(',')}): ${withR} ao pé da ronda (sem ninguém na ronda: ${without})`);
   }
 }
 
@@ -154,9 +158,21 @@ if (on('b6')) {
   // (and whole, and not old: Itzel, an elder at 31 of life after the war at the gates, died in the cell before the sentence
   // was served — «NÃO soltos»)
   const free = v => v.age >= 18 && v.age < 55 && v.hp > 60 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !Cr.law(v) && !(S.avatar && S.avatar.id === v.id) && !(v.task && v.task.pri >= 3);
-  const folk = jail ? [...S.villagers.values()].filter(v => v.set === jail.set && free(v)).sort((a, b) => a.id - b.id) : [];
+  const folkOf = () => jail ? [...S.villagers.values()].filter(v => v.set === jail.set && free(v)).sort((a, b) => a.id - b.id) : [];
+  // (and no feast while the case lasts — the day's plan given as done, by the test's hand, and a feast under way lived out —, and
+  // three free of the town at the least: a feast weighs 3,2 and takes the town — in the generation 23, after the cases before,
+  // only two of Tenochtitlan were free, T-1143)
+  const semFesta = () => { for (const st of S.settlements.values()) if (!(G.Fest && G.Fest.active && G.Fest.active(st.id)) && !(st.festPlan && st.festPlan.day === S.day && st.festPlan.done)) st.festPlan = { day: S.day, key: null, done: true }; };
+  semFesta(); for (let k = 0; k < 120 && jail && ((G.Fest && G.Fest.active && G.Fest.active(jail.set)) || folkOf().length < 3); k++) { keepPeace(); semFesta(); M.viver(1); }
+  const folk = folkOf();
   const held = v => !!(v.task && (v.task.type === 'cela' || v.task.type === 'levado'));
-  const p = folk[0] || null, q = folk[1] || null, g = folk[2] || null;
+  // (the one who leads the second to the cell: the free one nearest him, and not of the sea — a fisherman's boat calls him aboard
+  // at any instant, 9: on the worlds of the generation 21, after the cases before, Henut, a fisherman 87 houses off, was called
+  // to his boat at the first step, and Imhotep, with nobody leading him, was in the cell at the next — the game's rule —, never
+  // on the way, T-1143)
+  const p = folk[0] || null, q = folk[1] || null;
+  const SEA = { pescador: 1, marinheiro: 1 };
+  const g = q ? folk.filter(v => v !== p && v !== q && !SEA[v.role]).sort((a, b) => G.dist2(a.x, a.y, q.x, q.y) - G.dist2(b.x, b.y, q.x, q.y) || a.id - b.id)[0] || null : null;
   let gaps = 0, steps = 0, inCell = false, walkGap = 0, walked = false, out = false, again = 0;
   if (p && q && g) {
     god(() => { p.jail = jail.id; p.jailUntil = S.day + 3; G.Vg.setTask(p, { type: 'wander', pri: 0 }); });
@@ -164,7 +180,7 @@ if (on('b6')) {
     // (160 s of the world, a tenth at a time: the cell's task used to end at 70 s and at 140 s, and be given again at the
     // prisoner's next choice — a part of a step later, so the tenth of a second seldom saw him with none: the task of the
     // cell is the same one from the first step to the last)
-    for (let k = 0; k < 1600 && p.jail; k++) { if (k % 10 === 0) keepPeace(); M.viver(0.1); steps++; if (p.jail && !held(p)) gaps++; if (p.jail && p.task !== cell) { again++; cell = p.task; } }
+    for (let k = 0; k < 1600 && p.jail; k++) { if (k % 10 === 0) { keepPeace(); semFesta(); } M.viver(0.1); steps++; if (p.jail && !held(p)) gaps++; if (p.jail && p.task !== cell) { again++; cell = p.task; } }
     // the walk to the jail whose guard is called away: the one led is in the cell at the next step, and stays
     god(() => { q.jail = jail.id; q.jailUntil = S.day + 3; G.Vg.setTask(q, { type: 'levado', by: g.id, pri: 5.4, kind: 'levado' }); G.Vg.setTask(g, { type: 'levar', id: q.id, jail: jail.id, pri: 3.2, kind: 'levar', st: 0 }); });
     M.viver(1); walked = !!(q.task && q.task.type === 'levado'); god(() => G.Vg.endTask(g));

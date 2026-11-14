@@ -534,6 +534,9 @@ function toEvening(hour) {
 function partE() {
   const x = toEvening(0.615); const S = x.S;
   if (!x.b || x.n < 1) { ok('e os casos ruins da praça', false, `em cinco dias, nenhuma tarde com quatro na conversa (${talking(null).length} a caminho)`); return; }
+  // (an evening with no feast, by the test's hand, as the cases of the market's door have it: a feast shuts the plaza and calls
+  // the town — in the mega of the generation 23 one began in the two seconds after the load and took six of the talk, T-1136)
+  for (const st of S.settlements.values()) if (!(G.Fest && G.Fest.active && G.Fest.active(st.id))) st.festPlan = { day: S.day, key: null, done: true };
   const save = G.Save.serialize(); const who = talking(null).map(v => v.id); const tSave = S.time;
   // (who talks at a market's door goes when the stalls shut, save or no save: the two seconds after the load count who was at a plaza)
   const whoP = talking(null).filter(v => (S.buildings.get(v.task.id) || {}).type === 'praca').map(v => v.id);
@@ -598,14 +601,20 @@ function partT() {
   // in the ready worlds, the one asked for first: in the mega of the generation 20 every baths is the temazcal or the sauna, of
   // one place — «0 dentro, de 1 lugares; com que mais um pode contar: -1» —, and the metrópole has the eight of Delfos, T-1045)
   let S = null, b = null, mundo = null; const MUNDOS = [WORLD, 'metropole', 'mundial', 'mega'].filter((m, k, L) => L.indexOf(m) === k);
+  // (and a town with people enough to fill its places by the hand of the proof, besides the eight at the door at the least:
+  // in the mega of the generation 23 the baths of Mênfis are of 35 places, the thirty at the door left the town 29 to put on
+  // the way, and the stroll still had seven places to count on — «com que mais um pode contar: 7», T-1137)
+  const free = sid => [...G.S.villagers.values()].filter(v => v.set === sid && v.age >= 6 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.sleeping && v.role !== 'foguista' && !(v.carry && v.carry.n > EPS)).length;
   for (const m of MUNDOS) {
     M.pronto(m); S = G.S; S.time = 0.45; M.viver(2); fair0(null);
-    b = baths().filter(x => Te.dia(x) && Te.places(x) >= 4).sort((a, c) => Math.abs(Te.places(a) - 8) - Math.abs(Te.places(c) - 8) || V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0] || null;
+    b = baths().filter(x => Te.dia(x) && Te.places(x) >= 4 && free(x.set) >= 8 + Te.places(x) + 6).sort((a, c) => Math.abs(Te.places(a) - 8) - Math.abs(Te.places(c) - 8) || V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0] || null;
     if (b) { mundo = m; break; }
   }
-  if (!b) { ok('t o passeio com a regra do tempo', false, `nenhuns banhos de quatro lugares ou mais abertos às 0,45 (${MUNDOS.join(', ')})`); return; }
+  if (!b) { ok('t o passeio com a regra do tempo', false, `nenhuns banhos de quatro lugares ou mais abertos às 0,45 numa cidade com gente para enchê-los (${MUNDOS.join(', ')})`); return; }
   // (thirty of the town, their day's task ended by the proof's hand, standing by the baths' door: the walk is no matter here)
-  const h = Te.horas(b); const set = setOf(b); const dr = Vg.door(b); const L = adults(set.id).filter(v => !v.jail && !v.aboard && !v.ug && !v.held && v.age < 55 && v.role !== 'foguista' && !(v.task && (v.task.pri || 0) > 1.05) && !(v.carry && v.carry.n > EPS) && !v.sleeping).slice(0, 30);
+  // (thirty at the door, or fewer where the town needs its people to fill the places: T-1137)
+  const nL = Math.min(30, free(setOf(b).id) - Te.places(b) - 6);
+  const h = Te.horas(b); const set = setOf(b); const dr = Vg.door(b); const L = adults(set.id).filter(v => !v.jail && !v.aboard && !v.ug && !v.held && v.age < 55 && v.role !== 'foguista' && !(v.task && (v.task.pri || 0) > 1.05) && !(v.carry && v.carry.n > EPS) && !v.sleeping).slice(0, nL);
   // (their bath of the day taken, by the proof's hand, between the looks: each look asks with it cleared, below — at the door,
   // fed and rested, four of the thirty went in by their own wish between the looks in the mega of the generation 21, and the
   // eight places were full at the closing: «0 lugares com que contar», T-1093)
@@ -619,7 +628,9 @@ function partT() {
   S.time = 0.45; const far = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 6 && !v.captive && !L.includes(v) && !v.jail && !v.aboard && !v.ug && !v.held && !v.sleeping && v.role !== 'foguista' && !(v.carry && v.carry.n > EPS)).sort((a, c) => a.id - c.id);
   // (the count of who is on the way is kept for the step it was asked in — T-923a —: asked from outside the step before the
   // hand sends, and a step lived after it and after the way is given back)
-  const need = Te.room(b) + 2; const way = []; god(() => { for (const v of far) { if (way.length >= need) break; const bd = v.bathDay; v.bathDay = 0; Vg.endTask(v); const r = Te.visit(v, b, Vg.H); v.bathDay = bd; if (r) way.push(v); } });
+  // (the entry paid by the hand of the proof for a house with no coin for it — the baths take nobody who cannot pay: a child's
+  // house, a poor one; the town's people are the count here, not its purses: T-1137)
+  const need = Te.room(b) + 2; const way = []; god(() => { for (const v of far) { if (way.length >= need) break; const bd = v.bathDay; v.bathDay = 0; Vg.endTask(v); const hm = Te.withCoin(b) && G.Eco.homeOf(v); if (hm && G.Eco.purse(v) < Te.FEE + EPS) D.make('h:' + hm.id, 'moedas', 1, { code: 'teste' }); const r = Te.visit(v, b, Vg.H); v.bathDay = bd; if (r) way.push(v); } });
   M.viver(0.1); S.time = 0.45; const opT = Te.dia(b); const inside = opT ? Object.keys(opT.data.banho).length : -1; const fullT = tryAt(0.45); const room0 = fullT.room; god(() => { for (const v of way) Vg.endTask(v); });
   // (near the closing, with places to count on: the time's rule alone turns the stroll back)
   const lateT = h.fecha - 0.02; M.viver(0.1); const late = tryAt(lateT); const roomL = late.room; const outT = L.filter(v => Te.inTime(v, b)).length;

@@ -302,7 +302,9 @@ if (on('p1', 'p2', 'p3', 'p4', 'p5', 'p6')) {
         S.time = 0.2; M.viver(15);
         for (const q of G.Biz.all().filter(q => G.Biz.manned(q)).sort(byId)) {
           const ow = S.villagers.get(q.owner); const sp = G.Biz.spots(q); if (!ow || !sp) continue;
-          const c = people(o => o.set === q.set && grown(o) && homeOf(o) && o.id !== ow.id && !K.person(o, ow) && Po.can(o).ok)[0];
+          // (and empty hands: the stall sells to no one with a load in them — act-negocio.js —; in the metrópole of the generation
+          // 23 the one picked had one, and every offer said «Suas mãos já estão cheias», T-1135)
+          const c = people(o => o.set === q.set && grown(o) && homeOf(o) && o.id !== ow.id && !K.person(o, ow) && Po.can(o).ok && !(o.carry && o.carry.n > 1e-6))[0];
           if (c) { z = q; m = ow; b3 = c; break; } why = `a banca de ${ow.name} não tem um estranho que possa comprar`;
         }
       }
