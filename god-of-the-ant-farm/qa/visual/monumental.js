@@ -397,12 +397,21 @@ function nodePart() {
     // god's hand —, looking up at 11 m: the eye held short of it comes down to a hand over the feet at the distance it has, and the
     // top and the head are in the picture; a market 6 m behind the body before the colossal of the «cidade» of the generation 20 held
     // it up the orbit of the 11 m asked, 0.95 m over the feet, the top out of the picture — L-755)
-    { const back = [st().X + o[0] * 6, st().Z + o[1] * 6], side = [-o[1], o[0]], put = []; G.inSim++;
-      for (const k of [-1, 0, 1]) { const x = (back[0] + side[0] * k * TL) / TL, y = (back[1] + side[1] * k * TL) / TL; if (!G.W.inb(x, y)) continue; const i = G.W.idx(x, y); if (S.occ[i] || S.wall[i] || !G.W.walkable(i)) continue; put.push([i, S.wall[i]]); S.wall[i] = 1; }
-      G.W.touchWalk(); G.inSim--;
+    // (the three tiles free — no building, no wall, ground one walks —, and where they are not the body a tile or more aside along
+    // the façade, still facing it, and back where it stood after: an orchard stood on two of them behind the body before the C13 of
+    // the «cidade» of the generation 27, the wall went up on the one beside the eye's line, and the eye went over the orchard —
+    // «1 casas de muro … cur 11 m», T-1213)
+    { const side = [-o[1], o[0]], put = []; const freeT = i => !S.occ[i] && !S.wall[i] && G.W.walkable(i); const at0 = [v.x, v.y]; let sh = null, ts = null;
+      for (const k0 of [0, 1, -1, 2, -2, 3, -3]) { const bx = st().X + side[0] * k0 * TL, bz = st().Z + side[1] * k0 * TL; if (k0 && !(G.W.inb(bx / TL, bz / TL) && freeT(G.W.idx(bx / TL, bz / TL)))) continue;
+        const back = [bx + o[0] * 6, bz + o[1] * 6]; const L = []; for (const k of [-1, 0, 1]) { const x = (back[0] + side[0] * k * TL) / TL, y = (back[1] + side[1] * k * TL) / TL; if (G.W.inb(x, y) && freeT(G.W.idx(x, y))) L.push(G.W.idx(x, y)); }
+        if (L.length === 3) { sh = k0; ts = L; break; } }
+      const moveTo = (x, y) => { G.inSim++; v.x = x; v.y = y; v.path = null; G.inSim--; G.Avatar.attach(v, yawIn); G.Cam3D.attach(G.Avatar.pos(), yawIn); for (let k = 0; k < 6; k++) frame(); };
+      if (sh) moveTo((st().X + side[0] * sh * TL) / TL, (st().Z + side[1] * sh * TL) / TL);
+      G.inSim++; for (const i of ts || []) { put.push([i, S.wall[i]]); S.wall[i] = 1; } G.W.touchWalk(); G.inSim--;
       const L3 = look(-1.05, 11); G.inSim++; for (const [i, w0] of put) S.wall[i] = w0; G.W.touchWalk(); G.inSim--;
-      ok2('3b. com um muro atrás do corpo (a 6 m, pela mão do deus), olhando para cima a 11 m: a câmera segura antes dele desce a um palmo dos pés, o topo da fachada e a cabeça no quadro (L-755)', took.ok && put.length > 0 && L3.cur < 10 && L3.alt <= 0.6 && inFrame(L3),
-        `${put.length} casas de muro a 6 m atrás do corpo; para cima a 11 m: cur ${L3.cur} m, a câmera a ${L3.alt} m do chão, o topo em ${L3.top}, a cabeça em ${L3.head}`); }
+      if (sh) moveTo(at0[0], at0[1]);
+      ok2('3b. com um muro atrás do corpo (a 6 m, pela mão do deus), olhando para cima a 11 m: a câmera segura antes dele desce a um palmo dos pés, o topo da fachada e a cabeça no quadro (L-755)', took.ok && put.length === 3 && L3.cur < 10 && L3.alt <= 0.6 && inFrame(L3),
+        `${put.length} casas de muro a 6 m atrás do corpo${sh ? ` (o corpo ${Math.abs(sh)} casa(s) ao lado, ao longo da fachada: onde estava, atrás dele não havia três casas livres)` : ''}${ts ? '' : ' (NENHUM lugar com três casas livres a 6 m atrás do corpo, nem a três casas ao lado)'}; para cima a 11 m: cur ${L3.cur} m, a câmera a ${L3.alt} m do chão, o topo em ${L3.top}, a cabeça em ${L3.head}`); }
     G.Cam3D.OPT.follow = true; G.Cam3D.pitch = 0.26; G.Cam3D.dist = 4.8;
     // ---------------- 4. the camera inside, alone (a body's point given to it, as the 3D gives it the body's: the eye is the proof
     // here, not the walk) — in the arena's middle four ways and further, at its edge with the rows behind, on the podium; never in
@@ -579,7 +588,11 @@ function nodePart() {
   // ================ Tp. the temples of the bigger steps by their form (M2's risks — T-439, T-410, L-558): the Greek's, the Roman's,
   // the Egyptian's and the Norse's of 8 tiles, founded whole by the god's hand in a town of each people — by the game's rule, never
   // a town by its name: T-515 ================
+  // (each one read again once the four are founded: the hand levels each lot and its ring, and the ring of a later one may lie on the
+  // edge of an earlier one — the Norse's, in the metrópole of the generation 27, raised the edge of the Roman's beside it, and its
+  // plinth stood 1,1 m over the base the proof had read: «o alto 19.77 m (a forma 18.64)», T-1212)
   { const Tz = []; for (const civ of ['grego', 'romano', 'egipcio', 'nordico']) Tz.push(Object.assign({ civ }, H.temple(civ, 'monumental', 60)));
+    for (const t of Tz) if (t.b) Object.assign(t, H.palaceOf(t.b));
     const mesh1 = g => { const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); m.updateMatrixWorld(); return m; };
     const insOf = (p2, b2) => { const ig = B3.interior(p2, b2); const gr = new THREE.Group(); for (const k in ig.lv) if (!ig.lv[k].empty) gr.add(new THREE.Mesh(ig.lv[k].build(), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })));
       if (!ig.roof.empty) gr.add(new THREE.Mesh(ig.roof.build(), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }))); gr.updateMatrixWorld(true); return { ig, gr }; };

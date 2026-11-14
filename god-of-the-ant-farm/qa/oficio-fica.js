@@ -209,7 +209,20 @@ if (on('x4')) {
   const EMERG = { fome: 1, guerra: 1, obra: 1 };
   const went = [...home.values()]; const backN = went.filter(h => h.ok !== undefined).length, backOk = went.filter(h => h.ok).length, called = went.filter(h => h.other && EMERG[h.other]).length, astray = went.filter(h => h.other && !EMERG[h.other]).length;
   const waiting = [...own.keys()].filter(id => !home.has(id) && G.S.villagers.get(id) && grown(G.S.villagers.get(id))); const early = went.filter(h => h.early).length;
-  ok('x4 e devolve', backN >= 3 && backN >= (backN + waiting.length + astray) * 0.7 && backOk === backN, `com o armazém cheio, em ${days} dias ${backN} das ${own.size} mãos puxadas voltaram ao ofício delas («volta»${early ? `; ${early} já na fome mesma, antes de o armazém encher` : ''}), com os dias que tinham nele (${backOk}); ${called} foram chamadas antes por outra emergência (${[...new Set(went.filter(h => h.other && EMERG[h.other]).map(h => h.other))].join(', ') || '—'}); mandadas a um terceiro ofício pela necessidade: ${astray}; ainda fora do ofício delas: ${waiting.length}${waiting.length ? ' (' + waiting.slice(0, 4).map(id => `#${id} ${own.get(id).keep} → ${G.S.villagers.get(id).role}`).join(', ') + ')' : ''}`);
+  // (one still out of his trade waits by the rule, or is stuck: the hands an emergency pulled go home by the instant, as they
+  // came — the trade one is in with a hand too many now, the one he left short of one now (D-211) —, and by the town's last
+  // dealing (V.tradeAsked, the hands counted as the dealer counts them) the instant holds him where he is or calls him back.
+  // The share of 0,7 counted the ones the instant holds as not given back: in the metrópole of the generation 27, with the code
+  // of the L-820 to L-822, 8 of the 13 were back, 2 sent on to a third trade by the need and 2 waiting — a builder and a
+  // butcher in the fields, held by the instant, the same two as with the code of before, when 9 were back and 1 sent on —:
+  // «8 das 13». The share stays, over the ones given back and the ones sent on instead of home — with the way back taken
+  // out of the dealer, a copy of the game sent 4 on and gave 6 back —, and the ones held wait where the rule keeps them, T-1227)
+  const asked = V.tradeAsked(set.id) || {};
+  const handsIn = r => [...G.S.villagers.values()].filter(o => o.set === set.id && !o.captive && o.age >= 16 && o.age < 62 && o.role === r && !(o.role !== 'marinheiro' && G.Eco && G.Eco.isJobRole(o.role) && G.Naval && G.Naval.away(o))).length;
+  const shortOf = r => (asked[r] || 0) - handsIn(r);
+  const held = waiting.map(id => { const v = G.S.villagers.get(id), k = own.get(id).keep; return { id, k, r: v.role, sr: shortOf(v.role), sk: shortOf(k) }; });
+  const stuck = held.filter(h => h.sr <= -1 && h.sk >= 1);
+  ok('x4 e devolve', backN >= 3 && backN >= (backN + astray) * 0.7 && backOk === backN && !stuck.length, `com o armazém cheio, em ${days} dias ${backN} das ${own.size} mãos puxadas voltaram ao ofício delas («volta»${early ? `; ${early} já na fome mesma, antes de o armazém encher` : ''}), com os dias que tinham nele (${backOk}); ${called} foram chamadas antes por outra emergência (${[...new Set(went.filter(h => h.other && EMERG[h.other]).map(h => h.other))].join(', ') || '—'}); mandadas a um terceiro ofício pela necessidade: ${astray} (de volta ${backN} de ${backN + astray}, ${Math.round(100 * backN / Math.max(1, backN + astray))}%: pede 70%); ainda fora do ofício delas: ${waiting.length}${waiting.length ? ' (' + held.slice(0, 4).map(h => `#${h.id} ${h.k} → ${h.r}: ${h.r} ${h.sr <= -1 ? `com ${-h.sr} a mais` : 'sem mão de sobra'}, ${h.k} ${h.sk >= 1 ? `com falta de ${h.sk}` : 'sem falta'} — ${h.sr <= -1 && h.sk >= 1 ? 'o instante o CHAMA DE VOLTA e ele NÃO VOLTOU' : 'o instante o segura'}`).join('; ') + ')' : ''}`);
   const un = T.unsaid(); const q = inv(); ok('x4 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
 }
 
@@ -403,7 +416,9 @@ if (on('x8')) {
 
 // ---------------------------------------------------------------- x9: the god's body, the prisoner, who is at sea
 if (on('x9')) {
-  M.pronto('metropole'); M.viver(0.25 * DAY); const S = G.S;
+  // (the metrópole, and the next ready world when it has no town for the case: the metrópole of the generation 27 has no jail,
+  // the megalópole has two — T-1218)
+  let S = null, W9 = '', setA = null, setB = null;
   const builtIn = (set, t) => [...S.buildings.values()].find(b => b.set === set.id && b.type === t && b.built);
   const anyIn = (set, t) => [...S.buildings.values()].some(b => b.set === set.id && b.type === t);
   // (a trade the town does not ask: a workplace's with no such workplace in the town — a goldsmith with no goldsmith's —; a
@@ -412,9 +427,11 @@ if (on('x9')) {
   const FIELD = { lenhador: 1, coletor: 1, agricultor: 1, mineiro: 1, cacador: 1, construtor: 1 };
   const pool = set => { const f = G.Fac.get(set.fac); return adults(v => v.set === set.id && FIELD[v.role] && v.age >= 20 && v.age < 50 && !v.aboard && !v.ug && !v.jail && !v.held && !v.roleBack && !(f && f.leader === v.id) && G.Possess.can(v).ok); };
   const peace = s => !G.Fac.enemiesOf(s.fac).length;
-  const setA = biggest(s => peace(s) && !!builtIn(s, 'cadeia') && !!ghost(s) && pool(s).length >= 4);
-  const setB = biggest(s => peace(s) && !anyIn(s, 'doca') && pool(s).length >= (setA && s.id === setA.id ? 6 : 2));
-  if (!setA || !setB) ok('x9 o corpo, o preso, quem está no mar', false, `faltou cidade em paz: com cadeia, um ofício sem oficina e quatro mãos do campo (${setA ? setA.name : 'nenhuma'}); sem cais e com duas (${setB ? setB.name : 'nenhuma'})`);
+  for (const w of ['metropole', 'mega', 'mundial', 'cidade']) { M.pronto(w); M.viver(0.25 * DAY); S = G.S; W9 = w;
+  setA = biggest(s => peace(s) && !!builtIn(s, 'cadeia') && !!ghost(s) && pool(s).length >= 4);
+  setB = biggest(s => peace(s) && !anyIn(s, 'doca') && pool(s).length >= (setA && s.id === setA.id ? 6 : 2));
+  if (setA && setB) break; }
+  if (!setA || !setB) ok('x9 o corpo, o preso, quem está no mar', false, `faltou cidade em paz, em nenhum mundo pronto: com cadeia, um ofício sem oficina e quatro mãos do campo (${setA ? setA.name : 'nenhuma'}); sem cais e com duas (${setB ? setB.name : 'nenhuma'})`);
   else {
     const r1 = ghost(setA); const pa = pool(setA); const [body, pris, c1, c2] = pa; const [sailor, c3] = pool(setB).filter(v => !pa.slice(0, 4).includes(v));
     const jail = builtIn(setA, 'cadeia');
@@ -428,7 +445,7 @@ if (on('x9')) {
     const T = watch(); const odd = v => v.role === r1 || v.role === 'marinheiro'; const nm = r => G.ROLE[r][0].toLowerCase();
     let days = 0; while (days < 1 && [c1, c2, c3].some(odd)) { T.live(0.125 * DAY); days += 0.125; }
     const ctl = [c1, c2, c3].filter(v => !odd(v)).length; const kept = [body, pris, sailor].filter(odd);
-    ok('x9 o repartidor tira a mão ao lado', took.ok && ctl === 3, `seis mãos num ofício que a cidade não pede (${nm(r1)} em ${setA.name}, sem a oficina; marinheiro em ${setB.name}, sem cais): em ${days} dias ${ctl} das 3 que podiam trocar trocaram (${[c1, c2, c3].map(v => v.role).join(', ')})`);
+    ok('x9 o repartidor tira a mão ao lado', took.ok && ctl === 3, `${W9 !== 'metropole' ? `(no mundo pronto «${W9}», o primeiro com a cidade do caso) ` : ''}seis mãos num ofício que a cidade não pede (${nm(r1)} em ${setA.name}, sem a oficina; marinheiro em ${setB.name}, sem cais): em ${days} dias ${ctl} das 3 que podiam trocar trocaram (${[c1, c2, c3].map(v => v.role).join(', ')})`);
     ok('x9 o corpo do deus, o preso e quem está no mar ficam', took.ok && kept.length === 3 && !!pris.jail, `o corpo do deus (${body.name}: ${body.role}), ${pris.jail ? 'o preso' : 'o preso (JÁ SOLTO)'} (${pris.name}: ${pris.role}) e quem está no mar (${sailor.name}: ${sailor.role}) ${kept.length === 3 ? 'ficaram com o ofício' : 'TIVERAM o ofício trocado'}`);
     // (set free, they are dealt like anyone)
     G.Possess.release('deus'); G.Naval.away = away0; god(() => { pris.jail = 0; pris.jailUntil = 0; G.Vg.endTask(pris); });
@@ -504,13 +521,15 @@ if (on('x12')) {
 
 // ---------------------------------------------------------------- x13: the great work with its turn pulls
 if (on('x13')) {
-  M.pronto('metropole'); M.viver(0.25 * DAY); const S = G.S;
   // a work that waits for stone in a town at peace with no great work keeping its stone yet: the test's hand gives it the
   // turn (set.vez, set.gw — the planner's own marks, held each step: the planner writes them again each time it plans)
-  let c = null;
+  // (in the metrópole, and in the next ready world when it has no such town: in the metrópole of the generation 27 the two towns
+  // at peace with thirty grown ones, Mênfis and Tenochtitlan, keep their stone for a wonder already, T-1219)
+  let c = null, S = null, W13 = '';
   // (the work of the town that waits for the most stone: a house's few stones come in the seconds of the case)
   const wait = x => (x.need ? x.need.stone || 0 : 0) - ((x.incoming && x.incoming.stone) || 0);
   const fit = set => adults(v => v.set === set.id).length >= 30 && !G.Fac.enemiesOf(set.fac).length && !(V.keeps(set) > 0);
+  for (const w of ['metropole', 'mega', 'mundial', 'cidade']) { M.pronto(w); M.viver(0.25 * DAY); S = G.S; W13 = w;
   for (const set of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
     if (!fit(set)) continue; const A = adults(v => v.set === set.id).length;
     const b = [...S.buildings.values()].filter(x => x.set === set.id && !x.built && x.type !== 'ruin' && wait(x) > 2).sort((x, y) => wait(y) - wait(x) || x.id - y.id)[0];
@@ -525,7 +544,8 @@ if (on('x13')) {
       const b = god(() => { const x = V.addBuilding(t, pos[0], pos[1], set.id, false); G.W.touchWalk(); return x; }); if (b && wait(b) > 2) { c = { set, b, A: adults(v => v.set === set.id).length, w: wait(b), hand: true }; break; } }
     if (c) break;
   }
-  if (!c) ok('x13 a obra grande puxa', false, 'nenhuma cidade em paz de trinta adultos com uma obra à espera de pedra e sem obra grande com a vez');
+  if (c) break; }
+  if (!c) ok('x13 a obra grande puxa', false, 'nenhuma cidade em paz de trinta adultos com uma obra à espera de pedra e sem obra grande com a vez, em nenhum mundo pronto');
   else {
     // (the town as it was before the turn came: one builder, the others foragers — the test's hand, the memory with them)
     const gang = Math.ceil(c.A * V.GANG); const bs = adults(v => v.set === c.set.id && v.role === 'construtor' && !(S.avatar && S.avatar.id === v.id)).slice(1);
@@ -534,7 +554,7 @@ if (on('x13')) {
     let keeps = 0; const T = watch(); T.live(45, () => god(() => { c.set.vez = 1; c.set.gw = c.b.id; keeps = Math.max(keeps, V.keeps(c.set)); }));
     const n1 = adults(v => v.set === c.set.id && v.role === 'construtor').length; const L = T.log().filter(e => e.why === 'obra' && e.set === c.set.id);
     const kept = L.filter(e => { const v = G.S.villagers.get(e.id); return v && (v.role !== 'construtor' || v.roleBack === e.from); }).length;
-    ok('x13 a obra grande com a vez puxa na hora', keeps > 0 && n1 >= gang - 1 && L.length >= Math.min(3, gang - 2) && kept === L.length, `${c.set.name} (${c.A} adultos): ${V.buildName ? V.buildName(c.b) : c.b.type}${c.hand ? ' (fundado pela mão da prova)' : ''} ganha a vez e guarda ${Math.round(keeps)} de pedra; a turma é de ${gang} construtores: ${n0} → ${n1} em 45 s, ${L.length} chamados pela obra (cada um guarda o ofício de onde saiu: ${kept})`);
+    ok('x13 a obra grande com a vez puxa na hora', keeps > 0 && n1 >= gang - 1 && L.length >= Math.min(3, gang - 2) && kept === L.length, `${W13 !== 'metropole' ? `(no mundo pronto «${W13}») ` : ''}${c.set.name} (${c.A} adultos): ${V.buildName ? V.buildName(c.b) : c.b.type}${c.hand ? ' (fundado pela mão da prova)' : ''} ganha a vez e guarda ${Math.round(keeps)} de pedra; a turma é de ${gang} construtores: ${n0} → ${n1} em 45 s, ${L.length} chamados pela obra (cada um guarda o ofício de onde saiu: ${kept})`);
     const un = T.unsaid(); const q = inv(); ok('x13 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
   }
 }

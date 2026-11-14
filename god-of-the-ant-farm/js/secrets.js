@@ -313,7 +313,7 @@
         // (nor one on the way to a meal or at the top of hunger with the life going — the meeting's rule, L-397 —: the witnesses
         // waiting their turn took the same man from one to the next with no meal between, and he starved following them, L-476)
         const t = { type: 'stalk', target: v.id, soc: q.id, pri: 2.6, st: 0, kind: 'stalk', w: w.id };
-        if (G.Vg.busy(hunter, t) || meal(hunter)) continue;
+        if (G.Vg.busy(hunter, t) || meal(hunter) || worn(hunter) || hunter.sleeping) continue;
         w.hunter = hunter.id; G.Vg.endTask(hunter); G.Vg.setTask(hunter, t);
         continue;
       }
@@ -461,7 +461,7 @@
     if (i.hunter) {
       const h = person(i.hunter); const t = q && { type: 'stalk', target: inv.id, soc: q.id, pri: 2.6, st: 0, kind: 'stalk', inq: i.id };
       if (!h || h.captive || !t) i.hunter = 0;
-      else if (!G.Vg.busy(h, t) && !meal(h)) { i.hunter = 0; G.Vg.endTask(h); G.Vg.setTask(h, t); }
+      else if (!G.Vg.busy(h, t) && !meal(h) && !worn(h) && !h.sleeping) { i.hunter = 0; G.Vg.endTask(h); G.Vg.setTask(h, t); }
     }
     // found: a meeting in the act, with the investigator watching
     if (q && !i.found && !(i.hold && G.S.clock < i.hold)) for (const m of s.meets) {
@@ -550,6 +550,17 @@
     const e = H.eatTask(v); if (!e) return false;
     v.robe = null; v.unmask = false; e.kind = 'eat'; return true;
   }
+  // (and one who follows, worn out — under the bed of the exhausted, villagers.js: 8 —, leaves the hunt for that bed, and the
+  // order sends none worn out: the hunt weighs 2,6, over that bed's 2,5, and the order's man followed the one he hunted a day
+  // and a quarter awake, the energy at 0 — Antônia, who ruled Roma in the metrópole of the generation 27, never in her bed in
+  // the seat nor at her audience, L-822. The witness waits for the order again, RETRY. Nor one asleep: a call from outside never
+  // takes one from the bed (Vg.give, L-661), and the hunt outweighs every bed — with the worn out alone left out, the order took
+  // Antônia from hers as soon as she had slept past the mark, at 9, and she was back on the hunt for the few seconds to it)
+  const worn = v => v.energy < 8;
+  function leavesToSleep(v, H) {
+    if (!worn(v) || (G.S.avatar && G.S.avatar.id === v.id)) return false;
+    v.robe = null; v.unmask = false; H.end(v); return true;
+  }
   Sc.run = function (v, t, dt, H) {
     const S = G.S;
     if (t.type === 'conclave') {
@@ -584,6 +595,7 @@
     }
     if (t.type === 'stalk') {
       if (leavesToEat(v, H)) return true; // (the one who follows leaves to eat as the meeting's own: L-476)
+      if (leavesToSleep(v, H)) return true; // (and, worn out, for the bed: L-822)
       const o = person(t.target); const q = soc(t.soc);
       if (!o || !q || t.age > DAY() * 1.6) { if (!o && q && t.w) { const w = (q.wit || []).find(x => x.id === t.target); if (w) w.done = 1; } H.end(v); return true; }
       // only when nobody else is near, and best at night

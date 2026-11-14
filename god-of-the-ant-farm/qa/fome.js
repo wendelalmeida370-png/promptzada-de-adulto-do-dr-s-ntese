@@ -429,8 +429,11 @@ const calmOne = (skip, also) => {
   const onQuay = q => q && q.task && q.task.type === 'cais' && !q.aboard && !q.captive && !(S.avatar && S.avatar.id === q.id);
   let v = [...S.villagers.values()].filter(onQuay).sort((a, b) => a.id - b.id)[0] || null; const tried = [];
   // (no crew on a quay in this world: the people's own reasons for a voyage first, or the god's word — toward the middle of
-  // the sea)
-  if (!v) {
+  // the sea; and, with no people of it able to put out — a voyage leaves from a quay on the open sea, and in the «cidade» of the
+  // generation 27 no quay is: «Casa de Amon (não), Altepetl de Tenoch (não)…» —, the next ready world, this world kept and
+  // opened again after the case, as the lances' case 12 does, T-1224)
+  let back13 = null, w13 = world;
+  const launch13 = () => {
     S.time = 0.25; const X = G.Expe; let e = null;
     // (the call to the quay asks the hands first, D-094: a crew whose people are all in the middle of something comes to the
     // quay as each one finishes — in the metropole of the Bairros Vivos nobody of the Clã de Hrafn's crew was on the quay at
@@ -445,7 +448,10 @@ const calmOne = (skip, also) => {
       v = first(); if (!v) live(40, () => !!(v = first()) || ex.st === 'fim');
       tried.push(f.name + (v ? '' : ex.st === 'fim' ? ` (a viagem acabou antes de alguém chegar ao cais: ${ex.status || 'fim'})` : ' (ninguém no cais em 40 s)'));
     }
-  }
+  };
+  if (!v) launch13();
+  if (!v) { G.inSim--; back13 = G.Save.serialize(); G.inSim++;
+    for (const w of ['metropole', 'mega', 'mundial'].filter(x => x !== world)) { G.inSim--; M.pronto(w); G.inSim++; S = G.S; w13 = w; tried.push(`— no mundo pronto «${w}»:`); launch13(); if (v) break; } }
   let ate = false, h0 = 0, where = '-', food = 0, t0 = S.clock, left = '';
   if (v) {
     const st = G.Fac.stockV(v); food = st ? Math.floor(st.food) : 0;
@@ -455,7 +461,9 @@ const calmOne = (skip, also) => {
     live(10, () => { if (v.hunger < h0 - 30) { ate = true; where = v.task ? v.task.type : '-'; } if (!onQuay(v) && !left) left = `${v.task ? v.task.type : 'sem tarefa'} em ${Math.round(S.clock - t0)} s`; return ate || !S.villagers.has(v.id) || !!left; });
   }
   ok('h13 a tripulação esperando no cais da viagem come, como quem está em campo', !!v && ate && where === 'cais',
-    v ? `${v.name} (${S.settlements.get(v.set) ? S.settlements.get(v.set).name : '?'}), no cais esperando a viagem, com a fome ${Math.round(h0)} e ${food} de comida no estoque do povo: ${ate && where === 'cais' ? `comeu das provisões sem sair do cais, em ${Math.round(S.clock - t0)} s (fome ${Math.round(h0)} → ${Math.round(v.hunger)})` : `NÃO comeu no cais (fome ${Math.round(v.hunger)}, vida ${Math.round(v.hp)}${left ? '; saiu dele: ' + left : `; ${Math.round(S.clock - t0)} s ainda no cais`}${ate ? ', e comeu fora' : ''})`}` : `ninguém no cais de uma viagem (${tried.join(', ') || 'nenhum povo com navegação'})`);
+    v ? `${w13 !== world ? `(no mundo pronto «${w13}»: neste, nenhum povo com cais no mar aberto) ` : ''}${v.name} (${S.settlements.get(v.set) ? S.settlements.get(v.set).name : '?'}), no cais esperando a viagem, com a fome ${Math.round(h0)} e ${food} de comida no estoque do povo: ${ate && where === 'cais' ? `comeu das provisões sem sair do cais, em ${Math.round(S.clock - t0)} s (fome ${Math.round(h0)} → ${Math.round(v.hunger)})` : `NÃO comeu no cais (fome ${Math.round(v.hunger)}, vida ${Math.round(v.hp)}${left ? '; saiu dele: ' + left : `; ${Math.round(S.clock - t0)} s ainda no cais`}${ate ? ', e comeu fora' : ''})`}` : `ninguém no cais de uma viagem (${tried.join(', ') || 'nenhum povo com navegação'})`);
+  // (the world of the proof back for the cases after this one)
+  if (back13) { G.inSim--; M.abrir(JSON.parse(back13)); G.inSim++; S = G.S; set0 = S.settlements.get(set0.id); f0 = G.Fac.get(f0.id); }
 }
 // ---------------- h14 a town the water cut off from all its stores lights a fire on its streets' side (L-368) ----------------
 // (found by the rule S2 in the chaos of seed 13: Tenochtitlan, cut in two, kept its fire and its quay on the far side of its
@@ -966,23 +974,36 @@ const calmOne = (skip, also) => {
   const calm = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 20 && V.pop(s.id) >= 12).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
   // (a tile that burns, nothing built in two tiles of it, 5 to 9 from the heart, that the town walks to — and, two tiles from it,
   // a tile of ground the town walks to: where the little one stands)
-  let set = null, spot = -1, at = null;
+  // (a little one of the town, out of the house, free, awake: of four to twelve, who never fights a fire; where none is out of
+  // doors at that hour, one at home brought out by the proof's hand — the case puts her where she stands anyway —; and a town with
+  // neither, the next calm one: at 0,35 of the day no little one of Tenochtitlan was out of doors and free, in the metrópole of
+  // the generation 27 with the code of the L-820 to L-822, and the case stopped at the first town with a tile to burn — «nenhuma
+  // criança fora de casa e livre», T-1230)
+  const kidOk = (o, s) => o.set === s.id && o.age >= 4 && o.age < 12 && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.n > 0) && !(o.task && (o.task.pri || 0) >= 3);
+  const kidIn = (s, p) => {
+    const by = (a, b) => G.dist(a.x, a.y, ...p) - G.dist(b.x, b.y, ...p) || a.id - b.id;
+    const out = [...S.villagers.values()].filter(o => kidOk(o, s) && !o.inside).sort(by)[0]; if (out) return { kid: out, brought: '' };
+    const home = [...S.villagers.values()].filter(o => kidOk(o, s) && o.inside).sort(by)[0]; return home ? { kid: home, brought: ' (de casa, pela mão da prova)' } : null;
+  };
+  let set = null, spot = -1, at = null, found = null; const noKid = [];
   for (const s of calm) {
-    for (let r = 5; r <= 9 && !set; r++) for (let k = 0; k < 32 && !set; k++) {
+    let sp = -1, pt = null;
+    for (let r = 5; r <= 9 && !pt; r++) for (let k = 0; k < 32 && !pt; k++) {
       const x = Math.floor(s.cx + Math.cos(k / 32 * 6.283) * r), y = Math.floor(s.cy + Math.sin(k / 32 * 6.283) * r); if (!W.inb(x, y)) continue; const i = y * N + x;
       if (!G.Nature.fuel(i) || S.occ[i] || !W.walkable(i) || !W.townReaches(s, x + 0.5, y + 0.5)) continue;
       let free = true; for (let dy = -2; dy <= 2 && free; dy++) for (let dx = -2; dx <= 2; dx++) if (W.inb(x + dx, y + dy) && S.occ[(y + dy) * N + x + dx]) { free = false; break; }
       if (!free) continue;
-      for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2], [2, 1], [-2, -1], [1, 2], [-1, -2]]) { const ax = x + dx, ay = y + dy; if (W.inb(ax, ay) && W.walkable(ay * N + ax) && !G.Nature.fuel(ay * N + ax) && W.townReaches(s, ax + 0.5, ay + 0.5)) { set = s; spot = i; at = [ax + 0.5, ay + 0.5]; break; } }
+      for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2], [2, 1], [-2, -1], [1, 2], [-1, -2]]) { const ax = x + dx, ay = y + dy; if (W.inb(ax, ay) && W.walkable(ay * N + ax) && !G.Nature.fuel(ay * N + ax) && W.townReaches(s, ax + 0.5, ay + 0.5)) { sp = i; pt = [ax + 0.5, ay + 0.5]; break; } }
     }
-    if (set) break;
+    if (!pt) continue;
+    const f = kidIn(s, pt); if (!f) { noKid.push(s.name); continue; }
+    set = s; spot = sp; at = pt; found = f; break;
   }
-  let info = calm.length ? `${calm.map(s => s.name).slice(0, 4).join(', ')}: nenhuma casa que arda, livre e alcançada, a 5 a 9 do centro, com chão a duas casas dela` : 'nenhuma cidade calma com armazém e comida', good = false;
+  let info = !calm.length ? 'nenhuma cidade calma com armazém e comida' : noKid.length ? `${noKid.join(', ')}: nenhuma criança fora de casa e livre (nem acordada em casa)${calm.length > noKid.length ? '; nas outras, nenhuma casa que arda, livre e alcançada, a 5 a 9 do centro, com chão a duas casas dela' : ''}` : `${calm.map(s => s.name).slice(0, 4).join(', ')}: nenhuma casa que arda, livre e alcançada, a 5 a 9 do centro, com chão a duas casas dela`, good = false;
   if (set) {
     const wet0 = S.wet[spot]; const fx = spot % N + 0.5, fy = ((spot / N) | 0) + 0.5;
     const hold = () => { S.wet[spot] = 0; S.fire[spot] = Math.max(S.fire[spot], 0.6); G.Nature.fireSet.add(spot); for (const i of [...G.Nature.fireSet]) if (i !== spot) G.Nature.extinguish(i, 9); };
-    // (a little one of the town, out of the house, free, awake: of four to twelve, who never fights a fire)
-    const kid = [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 4 && o.age < 12 && !o.inside && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.n > 0) && !(o.task && (o.task.pri || 0) >= 3)).sort((a, b) => G.dist(a.x, a.y, ...at) - G.dist(b.x, b.y, ...at) || a.id - b.id)[0] || null;
+    const kid = found.kid, brought = found.brought; if (brought) { G.inSim++; try { kid.inside = 0; } finally { G.inSim--; } }
     if (!kid) info = `${set.name}: nenhuma criança fora de casa e livre`;
     else {
       // (the meal at the store: the hunger that falls — the store's food is still written by hand there, without its line, T-063)
@@ -1007,7 +1028,7 @@ const calmOne = (skip, also) => {
       const d0 = r2(G.dist(at[0], at[1], fx, fy));
       const calmK = run(70, 6); // (hungry, not starving: the flight as before)
       good = need.first === 'eat' && need.ate && need.fled === 0 && calmK.fled > 0;
-      info = `${set.name}: um fogo seguro aceso pela mão da prova a ${r2(G.dist(fx, fy, set.cx, set.cy))} casas do centro; ${kid.name} #${kid.id} (${Math.floor(kid.age)} anos) a ${d0} casas dele, o armazém ${store() ? store().type + '#' + store().id : '-'}: com a fome a 95 → ${need.first}; ${need.fled ? 'FUGIU do fogo ' + need.fled + ' vez(es)' : 'nenhuma fuga'}; ${need.ate ? 'comeu no armazém' : 'NÃO COMEU em 60 s'}; com a fome a 70, a caminho do armazém: ${calmK.fled ? 'fugiu do fogo (a precaução de quem não está faminto)' : 'NÃO FUGIU'}`;
+      info = `${set.name}: um fogo seguro aceso pela mão da prova a ${r2(G.dist(fx, fy, set.cx, set.cy))} casas do centro; ${kid.name} #${kid.id} (${Math.floor(kid.age)} anos${brought}) a ${d0} casas dele, o armazém ${store() ? store().type + '#' + store().id : '-'}: com a fome a 95 → ${need.first}; ${need.fled ? 'FUGIU do fogo ' + need.fled + ' vez(es)' : 'nenhuma fuga'}; ${need.ate ? 'comeu no armazém' : 'NÃO COMEU em 60 s'}; com a fome a 70, a caminho do armazém: ${calmK.fled ? 'fugiu do fogo (a precaução de quem não está faminto)' : 'NÃO FUGIU'}`;
       if (S.villagers.has(kid.id)) kid.hunger = Math.min(kid.hunger, h0);
     }
     for (const i of [...G.Nature.fireSet]) G.Nature.extinguish(i, 9); S.wet[spot] = wet0;

@@ -14,6 +14,9 @@
 //  k6 quem não levanta carga (L-620): o menos devoto da cidade perde os dois braços, e o mundo toma os dois seguintes para o
 //     mercado; feito contrabandista assim mesmo, a noite dele não tem roubo — nenhuma ida ao armazém, nada levado, ninguém
 //     acordado por isso (E.prowls)
+//  k7 o contrabandista de luto (L-821): com a carga roubada nas mãos, na hora de deitar e com a energia a 70, o roubo em andamento
+//     segue até a prateleira pelo caminho do roubo ('contrabando') — o que pesa no trabalho do dia (os anos, o luto, o medo, o fim
+//     da tarde) não pesa no posto da noite —, e a cama nunca o corta
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console. (A segunda batida, que fecha o mercado com a
 //  prateleira de volta ao armazém, é do qa/guardados.js, L-377.)
 // Num mundo sem mercado clandestino, a prova o abre pela porta do mundo (economy.js, G.Eco.openBlackMarket): um beco da cidade, dois
@@ -233,6 +236,24 @@ function stealNow(P, v) {
     ok('k6', skipped && !sent && !up && !took && !bad.length,
       `${A.name} #${A.id}, o menos devoto de ${T.name}, sem os dois braços (força ${G.Depot.strength(A)}): o mundo toma ${then.map(o => o.name).join(' e ') || 'ninguém'}${then.includes(A) ? ' — E ELE' : ', não ele'}; feito contrabandista assim mesmo, numa noite de 60 s: ${sent} ida(s) ao armazém para roubar, ${r2(up / 10)} s acordado pelo roubo (E.prowls), ${took} linha(s) de contrabando${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
+}
+// k7 the smuggler in mourning (L-821): what weighs the day's work down does not weigh the night's errand — with the loot in his
+// hands, past his bed time, in grief, rested enough to be up (energy 70: the bed weighs 1,07, his errand 1,4; the grief took it
+// to 0,98), the theft under way goes on to the shelf by its own way ('contrabando'), and the bed never cuts it. In the metrópole
+// of the generation 27 Xântipe of Argos, the last of her grief on her, was taken to bed half way to the market, and the loot went
+// on later by its mark ('entrega'): «das mãos à prateleira 0»
+{
+  const P = setup(0.75); const v = P.crew[1] || P.crew[0]; const { t, got } = stealNow(P, v);
+  const c = G.Lar.clock(v); const t1 = S().time; let late = false;
+  // (the grief, the tiredness and the hour by the hand, the loot in his hands: the bed time come — or already)
+  if (got) { v.mourn = 40; v.energy = 70; if (!G.Lar.sleepy(v)) { S().time = c.bed + 0.001; late = true; } }
+  const asleep = G.Lar.sleepy(v); let bed = 0, looks = 0;
+  live(120, () => { looks++; if (v.task && (v.task.type === 'sleep' || v.task.kind === 'sleep')) bed++; }, () => !stolenIn(v));
+  const out = sum(lines(P, e => e[8] === 'contrabando' && e[3] === 'f:' + P.f.id && e[4] === 'v:' + v.id));
+  const shelf = sum(lines(P, e => e[8] === 'contrabando' && e[3] === 'v:' + v.id && e[4] === 'b:' + P.b.id));
+  const bad = newBad(P.base);
+  ok('k7', !!t && t.type === 'steal' && got && asleep && out > 0 && Math.abs(out - shelf) < 0.01 && !bed && !stolenIn(v) && !bad.length,
+    `${v.name}, de luto (40) e com a energia a 70, com ${out} roubado nas mãos às ${t1.toFixed(3)}${late ? ` e o relógio na hora de deitar ${v.g === 'f' ? 'dela' : 'dele'} pela mão (${c.bed.toFixed(3)})` : ''} (com sono: ${asleep ? 'sim' : 'NÃO'}): ${looks} olhadas, ${bed ? `NA CAMA ${bed} vez(es)` : 'nunca na cama'}; das mãos à prateleira ${shelf} pelo caminho do roubo${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
 const er = M.erros();
 ok('erros', !Object.keys(er.mod).length && !er.console.length, `módulos: ${JSON.stringify(er.mod)}; console: ${er.console.slice(0, 2).join(' | ') || 'nada'}`);

@@ -10,14 +10,16 @@
 //  v2 o fechamento: no dia de uma cidade, o que o chão dela contou entra na vida do bairro pela conta exata (a média lenta),
 //     no todo da cidade também, e a contagem do chão é zerada; o último dia de cada atividade fica guardado
 //  v3 o cais que para: um bairro «porto movimentado»; a mão corta as rotas do mar; a carga some, o perfil sai depois da
-//     paciência, a história diz «O cais parou: nenhuma carga há N anos»; as rotas voltam, o perfil volta («O cais encheu»)
+//     paciência, a história diz «O cais parou: nenhuma carga há N anos»; as rotas voltam, o perfil volta («O cais encheu») — os
+//     dias do caso na paz do deus (T-1231)
 //  v4 o save no meio do dia: as contagens, a vida, os perfis e a paciência iguais depois do load; e o dia seguinte conta
 //     um dia em cada bairro — nem dois, nem nenhum (L-694)
 //  v5 o save de antes (sem vida, sem contagens, sem relógios): carrega sem erro e a vida se enche no primeiro dia
 //  v6 o bairro que enriquece e empobrece: a chuva de moedas nas casas → «rico», com «Enriqueceu: N das M casas são ricas»;
 //     o dragão leva as moedas todo dia → «pobre», e o «rico» sai — no todo de uma cidade (D-153), cujo chão não se divide: as
 //     casas ricas de um bairro formam o seu bairro nobre, e o chão do caso ia e voltava entre eles (T-1005)
-//  v7 a peste esvazia o bairro: metade das casas sem ninguém → «vazio», e a história diz quem levou («a peste levou N»)
+//  v7 a peste esvazia o bairro: metade das casas sem ninguém → «vazio», e a história diz quem levou («a peste levou N»); o bairro
+//     é o dele — casas habitadas, ainda não vazio, numa cidade que segue cidade com a peste duas vezes (T-1226)
 //     (o v6 e o v7 vivem cada um numa cópia do mundo dos primeiros dias, e o mundo dos casos de antes volta para os seguintes:
 //     T-1005)
 //  v8 a cidade que acaba: todos mortos, a cidade deixada ao vento — os bairros dela ficam na memória do mundo
@@ -135,11 +137,18 @@ if (on('v4')) {
 // ---------------- v3 the quay that stops ----------------
 if (on('v3')) {
   const S = G.S;
+  // (the case's days in the god's peace, as the freguesia lives its days (T-910): in the metrópole of the generation 27, with the
+  // code of the L-820 to L-822, Hedeby lost a war at sea in the days of the cut — 43 people to 30, 32 ships to 12 —, fell from
+  // city to vila, whose quarters are one, and the case read the frozen life of a quarter that was no more: «o perfil NÃO saiu em
+  // 34 dias (cais 4.274)», the same 4.274 thirty days later, T-1231)
+  const calm = () => { if (!(G.S.divinePeace > G.DAY_LEN * 0.5)) { G.inSim++; try { G.Politics.divinePeace(); } finally { G.inSim--; } } };
+  calm();
   const port = allQ().filter(([, q]) => !q.whole && U.is(q, 'porto')).sort((a, b) => (b[1].vida.cais || 0) - (a[1].vida.cais || 0))[0];
   if (!port) ok('v3 o-cais-que-para', false, `nenhum bairro «porto movimentado» em ${WORLD} depois de ${G.S.day - S0day} dias (${allQ().filter(([, q]) => !q.whole && q.k === 'porto').map(([s, q]) => `${nameOf(s, q)} cais ${q.vida.cais}`).join('; ') || 'nenhum bairro de porto'})`);
   else {
     const [set, d] = port; const c0 = d.vida.cais, day0 = S.day; let gone = -1, still = -1;
-    for (let k = 0; k < 34 && gone < 0; k++) { dayCut(); check(`ano ${S.day} (rotas cortadas)`); if (!U.is(d, 'porto')) gone = S.day - day0; }
+    for (let k = 0; k < 34 && gone < 0; k++) { calm(); dayCut(); check(`ano ${S.day} (rotas cortadas)`); if (!U.is(d, 'porto')) gone = S.day - day0; }
+    const lost = U.districtsOf(set).includes(d) ? '' : ` (o bairro NÃO É MAIS da cidade: ${set.name} de nível ${set.tier || 0})`;
     if (U.is(d, 'parado')) still = S.day - day0;
     const h1 = histOf(d, day0); const told = h1.find(t => /^O cais parou: /.test(t)); const cMid = d.vida.cais; const mid = S.day;
     // the routes back: the cargo comes again, and the profile after its patience
@@ -149,11 +158,11 @@ if (on('v3')) {
     // 7,4 of cargo a day while the proof read the 0,482 of a quarter that was no longer the town's, T-869)
     const quay = () => { if (U.districtsOf(set).includes(d)) return d; for (const b of [...S.buildings.values()].filter(q => q.set === set.id && q.type === 'doca' && q.built).sort((a, b) => a.id - b.id)) { const q = U.districtAt(b.x + b.w / 2, b.y + b.h / 2); if (q) return q; } return d; };
     openSea(); let back = -1;
-    for (let k = 0; k < 30 && back < 0 && gone >= 0; k++) { M.saltar(1); check(`ano ${S.day} (rotas de volta)`); if (U.is(quay(), 'porto')) back = S.day - mid; }
+    for (let k = 0; k < 30 && back < 0 && gone >= 0; k++) { calm(); M.saltar(1); check(`ano ${S.day} (rotas de volta)`); if (U.is(quay(), 'porto')) back = S.day - mid; }
     const d2 = quay(); const other = d2 !== d ? ` (o bairro de antes perdeu o chão nos anos sem carga; no chão do cais, agora, ${nameOf(set, d2)}, nascido no ano ${d2.born})` : '';
     const h2 = histOf(d2, mid); const told2 = h2.find(t => /^O cais encheu/.test(t));
     ok('v3 o-cais-que-para', gone >= U.PATIENCE && !!told && /nenhuma carga há \d+ anos|cada vez menos carga/.test(told) && back >= U.PATIENCE && !!told2,
-      `${nameOf(set, d)}: cais ${c0} por chão por dia; rotas cortadas → ${gone >= 0 ? `o perfil saiu em ${gone} dias (cais ${cMid})` : 'o perfil NÃO saiu em 34 dias (cais ' + d.vida.cais + ')'}; a história: «${told || '(nada)'}»${still >= 0 ? `; «parado» aos ${still} dias` : ''}; rotas de volta → ${back >= 0 ? `o perfil voltou em ${back} dias: «${told2 || '(nada)'}»` : 'o perfil NÃO voltou em 30 dias (cais ' + d2.vida.cais + ')'}${other}`);
+      `${nameOf(set, d)}: cais ${c0} por chão por dia; rotas cortadas → ${gone >= 0 ? `o perfil saiu em ${gone} dias (cais ${cMid})` : 'o perfil NÃO saiu em 34 dias (cais ' + d.vida.cais + ')' + lost}; a história: «${told || '(nada)'}»${still >= 0 ? `; «parado» aos ${still} dias` : ''}; rotas de volta → ${back >= 0 ? `o perfil voltou em ${back} dias: «${told2 || '(nada)'}»` : 'o perfil NÃO voltou em 30 dias (cais ' + d2.vida.cais + ')'}${other}`);
   }
   openSea();
 }
@@ -224,15 +233,29 @@ if (on('v6')) {
 
 // ---------------- v7 the plague empties the quarter ----------------
 if (on('v7')) {
-  M.abrir(JSON.parse(fresh)); pick6();
-  if (!Q6) ok('v7 a-peste', false, 'nenhum bairro com quatro casas habitadas');
+  M.abrir(JSON.parse(fresh));
+  // (the quarter of the plague is its own: what the case asks is the emptying, not the purse — the quarter of v6, not rich nor
+  // poor in a people of coin, was v7's too —, of homes lived in, not «vazio» yet, of a town that stays a city when the plague has
+  // taken them twice over: who comes to the empty homes is taken too, and as many may come as lived there. In the metrópole of
+  // the generation 27 the quarter of v6 was the Tianguis of Tenochtitlan, a town of 63 with 36 to spare: the plague took 27 of
+  // it and 7 more who came to the empty homes, the town of 29 fell to a vila, and the quarter had no ground — «NÃO esvaziou em 12
+  // dias (vazia 0.657, casas 0)» —; with the code of the L-820 to L-822, no quarter was left at all, «nenhum bairro com quatro
+  // casas habitadas», T-1226)
+  const S7 = G.S;
+  const homesOf = d => [...S7.buildings.values()].filter(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && b.type !== 'barraco' && d.cells.includes(U.cellOf(b.x + b.w / 2, b.y + b.h / 2)) && b.set === d.set);
+  const lived = b => [...S7.villagers.values()].some(v => v.home === b.id && v.age >= 16 && !v.captive);
+  const plague = q => { const hs = homesOf(q), keep = hs.filter(lived)[0]; const ids = new Set(hs.filter(b => b !== keep).map(b => b.id)); let n = 0; for (const v of S7.villagers.values()) if (ids.has(v.home)) n++; return n; };
+  const c7 = allQ().filter(([s, q]) => !q.whole && q.dias >= U.YOUNG && !U.is(q, 'vazio') && !(q.tp || {}).vazio && homesOf(q).filter(lived).length >= 4 && (s.tier || 0) >= 3 && G.Village.pop(s.id) - 2 * plague(q) >= 36)
+    .sort((a, b) => homesOf(b[1]).filter(lived).length - homesOf(a[1]).filter(lived).length)[0];
+  const Q7 = c7 ? { set: c7[0], d: c7[1], homes: () => homesOf(c7[1]), lived } : null;
+  if (!Q7) ok('v7 a-peste', false, 'nenhum bairro com quatro casas habitadas, ainda não vazio, numa cidade que segue cidade com a peste duas vezes');
   else {
-    const S = G.S; const { set, d } = Q6; const day0 = S.day;
+    const S = G.S; const { set, d } = Q7; const day0 = S.day;
     // the plague takes everyone of the homes of the quarter but one home's people (by the door of every death)
-    const homes = Q6.homes().filter(Q6.lived); const spare = homes[0]; let dead = 0;
+    const homes = Q7.homes().filter(Q7.lived); const spare = homes[0]; let dead = 0;
     G.inSim++; try { for (const v of [...S.villagers.values()]) if (v.home && v.home !== spare.id && homes.some(b => b.id === v.home) && !(S.avatar && S.avatar.id === v.id)) { G.Village.kill(v, 'sick'); dead++; } } finally { G.inSim--; }
     // (and nobody moves in while the case lasts: who comes to an empty home of the quarter is taken by the plague too)
-    const again = () => { G.inSim++; try { for (const v of [...S.villagers.values()]) if (v.home && v.home !== spare.id && Q6.homes().some(b => b.id === v.home)) { G.Village.kill(v, 'sick'); dead++; } } finally { G.inSim--; } };
+    const again = () => { G.inSim++; try { for (const v of [...S.villagers.values()]) if (v.home && v.home !== spare.id && Q7.homes().some(b => b.id === v.home)) { G.Village.kill(v, 'sick'); dead++; } } finally { G.inSim--; } };
     let empty = -1; for (let k = 0; k < 10 && empty < 0; k++) { M.saltar(1); if (k < 6) again(); check(`ano ${S.day} (peste)`); if (U.is(d, 'vazio')) empty = S.day - day0; }
     const t = histOf(d, day0).find(x => /^Esvaziou: \d+ das \d+ casas estão sem ninguém/.test(x));
     ok('v7 a-peste', dead >= 3 && empty >= U.PATIENCE && !!t && /a peste levou \d+ dos que moravam aqui/.test(t) && (d.luto || {}).peste > 0,

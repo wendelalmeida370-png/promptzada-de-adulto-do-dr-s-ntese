@@ -623,18 +623,22 @@ if (want('l12')) {
   if ((!w || !p0) && WORLD !== 'metropole') { M.pronto('metropole'); S = G.S; S.weather.storm = 0; S.weather.rain = 0; for (let k = 0; k < 10; k++) G.debug.step(0.1); S.time = 0.28; if (!both()) live(20, () => both()); }
   if (!w || !p0) ok('l12 o ferido e o enlutado', false, `${w ? '' : 'nenhum adulto para ferir; '}${p0 ? '' : 'nenhum casal na mesma casa'}`);
   else {
-    const dw = doorWatch(); const hw = builtHome(w); const hp0 = 30; w.hp = hp0; // (the test's hand: a bad wound — a fall, a beast)
+    // (the test's hand: a bad wound — a fall, a beast —, and fed: from 75 of hunger nobody heals, and with the house's pantry
+    // empty the one in bed waits there for the hunger that calls, 85 — in the «cidade» of the generation 27 Sneferu of Mênfis
+    // was wounded at 61 of hunger with nothing at home, healed to 56, lay a minute hungry with the wound still open and got up
+    // for his meal: «sarando 0.46 por segundo», T-1210)
+    const dw = doorWatch(); const hw = builtHome(w); const hp0 = 30; w.hp = hp0; w.hunger = Math.min(w.hunger, 25);
     const dead = S.villagers.get(p0.partner); V.kill(dead, 'teste');
-    let inBed = -1, hpBed = 0, healed = -1, txt = '', grief = 0, griefTxt = '', code = '';
+    let inBed = -1, hpBed = 0, healed = -1, hpUp = 0, txt = '', grief = 0, griefTxt = '', code = '';
     live(90, () => {
       dw.step(); const t = w.task;
       const a = t && t.type === 'lar' && t.what === 'acamado' && t.st === 2 && w.inside === hw.id;
       if (a && inBed < 0) { inBed = S.clock; hpBed = w.hp; txt = L.taskText(w, t); }
-      if (inBed >= 0 && healed < 0 && !a) healed = S.clock;
+      if (inBed >= 0 && healed < 0 && !a) { healed = S.clock; hpUp = w.hp; }
       const tg = p0.task; if (tg && tg.type === 'lar' && tg.what === 'luto' && tg.st === 2 && p0.inside === p0.home) { grief += 0.1; if (!griefTxt) { griefTxt = L.taskText(p0, tg); code = L.why(p0).code; } }
       return healed >= 0 && grief > 5;
     });
-    const rate = inBed >= 0 ? r2(((healed >= 0 ? 60 : w.hp) - hpBed) / Math.max(0.1, (healed >= 0 ? healed : S.clock) - inBed)) : 0;
+    const rate = inBed >= 0 ? r2(((healed >= 0 ? hpUp : w.hp) - hpBed) / Math.max(0.1, (healed >= 0 ? healed : S.clock) - inBed)) : 0;
     ok('l12 o ferido e o enlutado', inBed >= 0 && healed >= 0 && rate > 0.5 && grief > 5 && code === 'luto' && !dw.wrong.length,
       `${nm(w)} com ${hp0} de vida: ${inBed >= 0 ? `de cama em casa («${txt}»), sarando ${rate} por segundo (de pé: 0,3), ${healed >= 0 ? `levantou com ${Math.round(w.hp)}` : 'AINDA DE CAMA'}` : 'NÃO FOI PARA A CAMA'}; ${dead.name} morreu: ${p0.name} ${grief > 5 ? `de luto em casa ${r2(grief)} s («${griefTxt}», no cartão: ${code})` : 'NÃO FICOU DE LUTO EM CASA'}${dw.wrong.length ? ' — ' + dw.wrong.slice(0, 2).join(' · ') : ''}`);
   }
@@ -1705,6 +1709,14 @@ if (want('l10c')) {
     const feed = v => D.make('f:' + G.Fac.idOfV(v), 'food', 40, { code: 'teste', part: true });
     const hungry = (v, eat) => { v.hunger = 100; v.hp = 30; v._noStore = 0; v._hungerT = 0; if (eat) { G.Vg.endTask(v); v.sleeping = false; G.Vg.setTask(v, { type: 'eat', pri: 2.5 }); } };
     const H = go.filter(v => v.age >= 18 && v.age < 60 && store(v) < Infinity).sort((a, c) => store(c) - store(a) || a.id - c.id)[0];
+    // (still on the way when the meeting is called — the world calls it at its look every three seconds —: the farthest of them
+    // at six houses or more from the store, else set there by the proof's hand, within the lodge's reach and on ground that
+    // reaches the store's door. In the «cidade» of the generation 27 the farthest of the Ordem do Olho Velado was Cláudia, of
+    // Roma, at 2,4 houses: she had eaten and was free when the meeting was called, and it took her, rightly, T-1211)
+    let moved = '';
+    if (store(H) < 6) { const d = V.nearestDropoff(H.x, H.y, H.set); const ft = d ? V.frontTile(d) : null; let spot = null;
+      if (ft) for (const r of [8, 9, 10, 11, 12, 7, 6]) { for (let a = 0; a < 16 && !spot; a++) { const x = Math.round(ft[0] + Math.cos(a * Math.PI / 8) * r), y = Math.round(ft[1] + Math.sin(a * Math.PI / 8) * r); if (G.dist(x + 0.5, y + 0.5, l.x, l.y) < 30 && W.walkableXY(x, y) && !S.occ[W.idx(x, y)] && W.canWalk(x, y, ft[0], ft[1])) spot = [x + 0.5, y + 0.5]; } if (spot) break; }
+      if (spot) { G.Vg.endTask(H); H.x = spot[0]; H.y = spot[1]; H.path = null; H.inside = 0; moved = ` — posto a ${r2(store(H))} casas dele pela mão da prova`; } }
     feed(H); hungry(H, true); const way = r2(store(H));
     // (the meeting's hour: the world calls it, at its look every three seconds; on the way to eat is in the step before the
     // meeting was called — the call is in the same step as the meeting)
@@ -1723,7 +1735,7 @@ if (want('l10c')) {
       live(40, () => (ateB = !!S.villagers.get(B.id) && B.hunger < 60));
     }
     ok(name, !!m && onWay && !taken && others >= 2 && ateH && !!B && left && rest >= 1 && ateB,
-      !m ? `${Sc.lodgeName(l)}: a reunião NÃO COMEÇOU` : `${q.name}, ${Sc.lodgeName(l)} (${go.length} ao alcance): (a) ${nm(H)} (fome 100, vida 30, ${way} casas do armazém) ${onWay ? 'indo comer' : 'JÁ NÃO IA COMER'} quando a reunião foi chamada — ${taken ? 'LEVADO PARA A REUNIÃO' : 'não foi chamado'}, ${others} dos outros foram; ${ateH ? 'comeu' : 'NÃO COMEU em 40 s'} · (b) ${!B ? 'NINGUÉM CHEGOU À REUNIÃO' : `${nm(B)} na reunião, com fome 100 e vida 30: ${left ? how : 'FICOU NA REUNIÃO'}, ${rest} seguiram nela; ${ateB ? 'comeu' : 'NÃO COMEU em 40 s'}`}`);
+      !m ? `${Sc.lodgeName(l)}: a reunião NÃO COMEÇOU` : `${q.name}, ${Sc.lodgeName(l)} (${go.length} ao alcance): (a) ${nm(H)} (fome 100, vida 30, ${way} casas do armazém${moved}) ${onWay ? 'indo comer' : 'JÁ NÃO IA COMER'} quando a reunião foi chamada — ${taken ? 'LEVADO PARA A REUNIÃO' : 'não foi chamado'}, ${others} dos outros foram; ${ateH ? 'comeu' : 'NÃO COMEU em 40 s'} · (b) ${!B ? 'NINGUÉM CHEGOU À REUNIÃO' : `${nm(B)} na reunião, com fome 100 e vida 30: ${left ? how : 'FICOU NA REUNIÃO'}, ${rest} seguiram nela; ${ateB ? 'comeu' : 'NÃO COMEU em 40 s'}`}`);
   }
 }
 

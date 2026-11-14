@@ -49,6 +49,9 @@ const linhas = (n0, rx) => G.S.history.filter(e => e.n > n0 && rx.test(e.txt));
 const salva = () => { const k = M.salvarCarregar(); pega(); return k; };
 const civicas = set => sim(() => { for (const o of [...S.buildings.values()]) if (o.set === set.id && !o.built && o.type !== 'ruin' && pub(o.type)) V.completeBuilding(o); });
 const adultos = set => { let n = 0; for (const v of S.villagers.values()) if (v.set === set.id && !v.captive && v.age >= 16 && v.age < 62) n++; return n; };
+// (the grown hands as the repartidor counts them at its pass — village.js assignJobs: the roles of the ages it gave, and not who
+// holds a trade away on a voyage)
+const maos = set => { let n = 0; for (const v of S.villagers.values()) if (v.set === set.id && !v.captive && v.age >= 16 && v.age < 62 && v.role !== 'crianca' && v.role !== 'bebe' && v.role !== 'anciao' && !(v.role && v.role !== 'marinheiro' && G.Eco.isJobRole(v.role) && G.Naval.away(v))) n++; return n; };
 const oficio = (set, r) => { let n = 0; for (const v of S.villagers.values()) if (v.set === set.id && v.role === r) n++; return n; };
 function checa() {
   const out = [];
@@ -279,7 +282,11 @@ run('g2', () => {
   comVez(set); let pior = 1e9, olhares = 0, obras2 = 0, turma2 = 0, tem = 0;
   for (let k = 0; k < 9; k++) {
     alimenta(set); semMaterial(set); M.viver(5); if (k < 2) continue;
-    const A2 = adultos(set), n2 = [...S.buildings.values()].filter(o => o.set === set.id && !o.built && o.type !== 'ruin').length, t2 = Math.min(Math.ceil(A2 * V.GANG), Math.max(1, Math.floor(A2 * 0.2)));
+    // (the hands the repartidor dealt at its last pass: one who turned sixteen since keeps the child's role till its next pass,
+    // four seconds on — in the metrópole of the generation 27 a boy of Roma came of age between two passes, the proof counted
+    // 27 grown and a gang of 5 against the 4 of the 26 the town had dealt, and the next look found the five, T-1208 —, and who
+    // holds a trade away on a voyage is not one of them, L-683)
+    const A2 = maos(set), n2 = [...S.buildings.values()].filter(o => o.set === set.id && !o.built && o.type !== 'ruin').length, t2 = Math.min(Math.ceil(A2 * V.GANG), Math.max(1, Math.floor(A2 * 0.2)));
     if (!(V.keeps(set) > 0) || Math.ceil(n2 * 1.4) + 1 >= t2) continue; // (a look with the work waiting and few works: the gang's own)
     const n = oficio(set, 'construtor'); olhares++; if (n - t2 < pior) { pior = n - t2; obras2 = n2; turma2 = t2; tem = n; }
   }

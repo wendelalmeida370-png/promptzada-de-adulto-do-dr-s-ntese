@@ -239,7 +239,14 @@ run('m2', () => {
   const L1 = S.ledgerN || 0; const ate = sim(() => G.Lar.eat(r0, b, false)); const line = livro(L1, e => e[3] === ref && e[8] === 'refeicao').length; r0.hunger = h0;
   ok('m2c comem da despensa dela', ml.length >= 1 && ate && line === 1, `${ml.length} refeição(ões) da casa pelo livro em ${days.toFixed(2)} dias (${ml.filter(e => e[8] === 'ceia').length} da ceia cozida); a porta da refeição em casa (G.Lar.eat) vale na sede: ${ate}, ${line} linha no livro; a despensa: ${D.get(ref, 'food')}${posta ? ' (vazia pelas refeições do dia: uma refeição posta pela mão da prova)' : ''}`);
   // (the seat's kitchen and hearth burn as a house's: the smoke over it has the household's fire under it — T-931)
-  ok('m2c2 o fogo da casa na sede', (fumo.get('cozinha') || 0) + (fumo.get('lareira') || 0) > 0, `o fogo que a sede teve, de 5 em 5 s: ${[...fumo].map(e => e[0] + ' ' + e[1] * 5 + ' s').join(', ') || 'NENHUM'}`);
+  // (a household with no evening at home in the days lived — in the metrópole of the generation 27 the only grown one of the seat
+  // of Roma, Antônia, who rules it, was the man of a secret order on a hunt, and then worn out in her bed, and the other an
+  // eight-year-old —: the rule asked by the proof's hand, one of them awake by the seat's fire, as a house's — T-1217)
+  let mao = '';
+  if (!fumo.size) { const g = fam.filter(v => S.villagers.has(v.id) && v.age >= 14 && !v.aboard && !v.jail).sort((a, c) => a.id - c.id)[0];
+    if (g) { sim(() => { G.Vg.endTask(g); g.sleeping = false; g.inside = b.id; G.Vg.setTask(g, { type: 'lar', what: 'conversar', st: 2, home: b.id, pri: 0.5 }); });
+      const fo = G.Atmos && G.Atmos.fire(b); if (fo) fumo.set(fo.why, 1); mao = ` (nos dias vividos, nenhum — ninguém crescido da casa acordado em casa à noite: pela mão da prova, ${g.name} junto ao fogo da sede, ${fo ? fo.why : 'NENHUM'})`; sim(() => G.Vg.endTask(g)); } }
+  ok('m2c2 o fogo da casa na sede', (fumo.get('cozinha') || 0) + (fumo.get('lareira') || 0) > 0, `o fogo que a sede teve, de 5 em 5 s: ${[...fumo].map(e => e[0] + ' ' + e[1] * 5 + ' s').join(', ') || 'NENHUM'}${mao}`);
   ok('m2d acordam nela', grown.length > 0 && grown.filter(v => st.get(v.id).acordou > 0).length >= Math.ceil(grown.length * 0.6), `${grown.filter(v => st.get(v.id).acordou > 0).length} de ${grown.length} acordaram dentro dela`);
   ok('m2e verificador pelo caminho', !bad, bad || 'limpo a cada 30 s');
 });
@@ -446,7 +453,10 @@ run('m8', () => {
 // (a stranger of the capital for the seat, by the proof's hand: a grown one of none of the ruler's, with a home — the single and
 // of twenty or more first, as before; with none such, a younger one, or one with a partner (who stays where they are): the
 // capital of the m9 in the metrópole of the generation 21 had no single grown one at all, and the case broke on it — T-1085)
-const stranger = o => [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 16 && v.home && !v.captive && !K.ofCourt(v, o.r)).sort((a, c) => (!!a.partner - !!c.partner) || ((c.age >= 20) - (a.age >= 20)) || a.id - c.id)[0] || null;
+// (and one under sixty before the old: the stranger of Roma in the metrópole of the generation 27, with the code of the L-820 to
+// L-822, was Kiya, 66, who died of her years a second after the proof's hand put her in the seat — «Kiya agora em palacio#43308»,
+// a dead one's home —, T-1228)
+const stranger = o => [...S.villagers.values()].filter(v => v.set === o.cap.id && v.age >= 16 && v.home && !v.captive && !K.ofCourt(v, o.r)).sort((a, c) => (!!a.partner - !!c.partner) || ((a.age >= 60) - (c.age >= 60)) || ((c.age >= 20) - (a.age >= 20)) || a.id - c.id)[0] || null;
 // (a chief's house raised by the god's hand in a town that is not a capital — the biggest of eight people or more where the hand
 // finds a lot: in the world the m9 and the m13 take in the generation 23, the biggest had none, and the case stopped there, T-1141)
 // (and a world with such a town: the «cidade» is all capitals)
@@ -460,10 +470,16 @@ run('m9', () => {
   // (a capital with a stranger in it: the first people's of the metrópole of the generation 22, Saís, had none — every grown one
   // there of the ruler's house —, T-1119)
   const o = arma(true, q => !!stranger(q) && temVila()) || sedeDe(q => !!stranger(q) && temVila()); if (!ok('m9a a casa na sede', !!o && todosEm(K.court(o.r), o.b), o ? `${o.cap.name}: ${nomes(moram(o.b))}` : 'sem povo ou sem lote')) return;
-  const b = o.b; const x = stranger(o); if (!ok('m9b0 um estranho da capital', !!x, x ? `${x.name} (${x.age | 0})` : `${o.cap.name}: nenhum crescido de fora da casa de quem governa`)) return;
-  const h0 = B(x.home); h0.res--; x.home = b.id; b.res++;
-  M.viver(3);
-  ok('m9b um estranho posto na sede sai', x.home !== b.id && (!x.home || G.BDEF[B(x.home).type].housing) && todosEm(K.court(o.r), b), `${x.name} agora em ${lado(B(x.home))}; na sede: ${nomes(moram(b))}`);
+  const b = o.b; let x = stranger(o); if (!ok('m9b0 um estranho da capital', !!x, x ? `${x.name} (${x.age | 0})` : `${o.cap.name}: nenhum crescido de fora da casa de quem governa`)) return;
+  // (one who dies in the seconds of the case shows nothing: the next stranger, twice at most — T-1228)
+  const died = [];
+  for (let k = 0; ; k++) {
+    const h0 = B(x.home); h0.res--; x.home = b.id; b.res++;
+    M.viver(3);
+    if (S.villagers.has(x.id) || k >= 2) break;
+    died.push(`${x.name} (${x.age | 0})`); const y = stranger(o); if (!y) break; x = y;
+  }
+  ok('m9b um estranho posto na sede sai', S.villagers.has(x.id) && x.home !== b.id && (!x.home || G.BDEF[B(x.home).type].housing) && todosEm(K.court(o.r), b), `${died.length ? `(morreu no caso: ${died.join(', ')}) ` : ''}${x.name}${S.villagers.has(x.id) ? '' : ' (MORREU NO CASO)'} agora em ${lado(B(x.home))}; na sede: ${nomes(moram(b))}`);
   let c = checa(); ok('m9c verificador', c.ok, c.txt);
   // (a seat that is nobody's — a palace in a town that is not a capital —: never a house for who needs one)
   const { vila, p2 } = pacoNaVila();

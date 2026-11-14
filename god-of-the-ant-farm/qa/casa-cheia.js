@@ -839,8 +839,12 @@ run('c21', () => {
   const rd = K.road(v); const d0 = S.day; const n0 = S.ledgerN || 0;
   ok('c21b a estrada: a casa vazia do povo, hoje', rd.kind === 'cede' && rd.b === vazia && rd.out === true && /o povo tem uma casa vazia e a dá a quem ficou sem teto/.test(diario(v)), `a estrada «${rd.kind || '-'}» ${lado(rd.b)}; no diário: «${diario(v)}»`);
   sim(() => K.day(set)); const pg = livro(n0, e => e[5] === 'moedas' && e[8] === 'compra-casa');
-  ok('c21c dada no mesmo dia, pelo que a família traz além do que guarda', fam.every(m => m.home === vazia.id) && [v.id, par.id].includes(vazia.dono) && S.day === d0 && pg.length === 1 && Math.abs(pg[0][6] - 3) < 0.011 && pg[0][4] === 'f:' + set.fac && !K.need(v),
-    `${fam.filter(m => m.home === vazia.id).length} de ${fam.length} moram na ${lado(vazia)}, dono ${vazia.dono ? nome(vazia.dono) : 'o povo'}; ${pg.length} linha(s) «compra-casa»${pg.length ? ': ' + pg[0][6] + ' de ' + pg[0][3] : ''} (a família trazia 5 no bolso de ${par.name}, guarda ${K.KEEP})`);
+  // (under a roof the same day: whoever is at the street does not wait — and a family bigger than the only empty house has a
+  // roof all the same, the house above its beds, «lotada», the road of a crowded house from then on: in the cidade of the
+  // generation 27 the family of Sitamun of Mênfis is eight, and the house the proof's hand puts up has six beds, T-1207)
+  const camas = G.Village.bedsOf(vazia), nd = K.need(v);
+  ok('c21c dada no mesmo dia, pelo que a família traz além do que guarda', fam.every(m => m.home === vazia.id) && [v.id, par.id].includes(vazia.dono) && S.day === d0 && pg.length === 1 && Math.abs(pg[0][6] - 3) < 0.011 && pg[0][4] === 'f:' + set.fac && (!nd || (nd === 'lotada' && fam.length > camas)),
+    `${fam.filter(m => m.home === vazia.id).length} de ${fam.length} moram na ${lado(vazia)} (${camas} camas${nd ? `; agora «${nd}»` : ''}), dono ${vazia.dono ? nome(vazia.dono) : 'o povo'}; ${pg.length} linha(s) «compra-casa»${pg.length ? ': ' + pg[0][6] + ' de ' + pg[0][3] + ' para ' + pg[0][4] : ''} (a família trazia 5 no bolso de ${par.name}, guarda ${K.KEEP})`);
   let c = checa(); ok('c21d verificador', c.ok, c.txt);
   // (no empty house, no bed in any house: a hut of the family's own hands at once — and no shack beside it, though it has
   // slept in the street the two nights the shack waits for)

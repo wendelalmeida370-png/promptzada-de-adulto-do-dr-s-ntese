@@ -659,10 +659,16 @@
     // of the kind 'work', goes on — the bed of the night cut it at the first look: L-386)
     const prowl = night && !watch && v.role === 'contrabandista' && v.energy > 45 && !!(G.Eco && G.Eco.prowls && G.Eco.prowls(v));
     let wU = night ? (watch || prowl ? 1.4 : 0.05) : 0.55 * v.work;
-    if (elder) wU *= 0.55;
-    if (v.mourn > 0) wU *= 0.7;
-    if (v.fear > 60) wU *= 0.8;
-    if (eve) wU *= 0.7;
+    // (what weighs the day's work down — the years, the grief, the fear, the evening — does not weigh the night's duty: it comes
+    // before the bed while one is not worn out. In mourning it fell under the bed — 0,98 against 0,95 and up —, and the bed
+    // cut the theft under way, of priority 1,2, with the loot in the hands: Xântipe of Argos, the last hour of her grief
+    // still on her, L-821)
+    if (!(watch || prowl)) {
+      if (elder) wU *= 0.55;
+      if (v.mourn > 0) wU *= 0.7;
+      if (v.fear > 60) wU *= 0.8;
+      if (eve) wU *= 0.7;
+    }
     // (the night's little work of one awake with nothing to do never over an evening at the tavern table: of priority 1, it
     // took everyone at the tables at the fall of night, long before the closing and their bed — the tavern keeps its own
     // until it shuts. The watch's torch and the smuggler's errand still call: L-591)

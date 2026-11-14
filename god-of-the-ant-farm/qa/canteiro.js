@@ -219,9 +219,12 @@ run('c6', () => {
   const { set, f, b } = a; const c = ateCarroca(set, b); if (!ok('c6b uma carroça a caminho', !!c, c ? `a carroça #${c.id} com ${c.goods.n} de ${c.goods.k}` : 'nenhuma carroça saiu em 200 s')) return;
   const outro = G.Fac.all().filter(q => q.alive && q.id !== f.id).sort((x, y) => G.Fac.pop(y.id) - G.Fac.pop(x.id) || x.id - y.id)[0];
   const k = c.goods.k, n = c.goods.n, meu = f.stock[k] || 0, dele = outro.stock[k] || 0; const E = escuta(b);
-  sim(() => G.War.conquer(set, { fac: outro.id, loot: { food: 0, wood: 0, stone: 0 }, members: [], captives: [], campaign: null })); M.viver(2); E.fim();
-  const volta = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'f:' + f.id), aoVencedor = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'f:' + outro.id), perdida = soma(E.L, e => e[3] === 'c:' + c.id && e[8] === 'carroca-perdida');
-  ok('c6c a carga volta a quem a mandou', set.fac === outro.id && !daObra(b).length && aoVencedor === 0 && Math.abs(volta + perdida - n) < 1e-6, `${set.name} tomada por ${outro.name}: a carroça #${c.id} saiu da estrada; ${volta} de ${k} ao armazém de ${f.name}${perdida ? `, ${perdida} perdidos com o povo (sem armazém)` : ''}; ao do vencedor, ${aoVencedor}`);
+  // (home by the store's door, D.store: what its room holds goes in, the rest is lost with its cause, 'sem-lugar' — the town
+  // taken may have been where its people's room was: in the metrópole of the generation 27 Hedeby held 814 of the room of
+  // the Clã de Hrafn for wood, and Birka none, T-1205)
+  sim(() => G.War.conquer(set, { fac: outro.id, loot: { food: 0, wood: 0, stone: 0 }, members: [], captives: [], campaign: null })); const lugar = D.exists('f:' + f.id) ? D.room('f:' + f.id, k) : 0; M.viver(2); E.fim();
+  const volta = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'f:' + f.id), aoVencedor = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'f:' + outro.id), perdida = soma(E.L, e => e[3] === 'c:' + c.id && e[8] === 'carroca-perdida'), semLugar = soma(E.L, e => e[3] === 'c:' + c.id && e[8] === 'sem-lugar');
+  ok('c6c a carga volta a quem a mandou', set.fac === outro.id && !daObra(b).length && aoVencedor === 0 && Math.abs(volta + perdida + semLugar - n) < 1e-6 && (semLugar < 1e-6 || lugar < n - 1e-6), `${set.name} tomada por ${outro.name}: a carroça #${c.id} saiu da estrada; ${volta} de ${k} ao armazém de ${f.name}${semLugar ? `, ${semLugar} perdidos por falta de lugar nele (o lugar para ${k} que o povo tinha depois de perder ${set.name}: ${Math.round(lugar)})` : ''}${perdida ? `, ${perdida} perdidos com o povo (sem armazém)` : ''}; ao do vencedor, ${aoVencedor}`);
   for (let y = 0; y < 4; y++) { alimenta(set); M.viver(50); }
   const novas = daObra(b).filter(q => q.fac !== set.fac);
   ok('c6d um ano depois', !novas.length, `carroças do povo de antes para a obra que perdeu: ${novas.length}; da cidade agora: ${daObra(b).length}`);
@@ -338,7 +341,11 @@ run('c11', () => {
   const vive = (semRegra, T) => {
     const m = monta({ semRoda: true, irma: true }); if (!m || !m.casas.length || !m.irma) return null; const { set, f, b } = m; const f0 = V.stoneFor, l0 = V.lastStone;
     if (semRegra) { V.stoneFor = w => G.Fac.free(w.set, 'stone'); }
-    m.falta(5); m.so(0);
+    // (a cart's load still to come to it — the most the last stones are, V.LAST —: its gang breaks stone for it too (V.quarries,
+    // D-174), and in the metrópole of the generation 27 the two builders of Hedeby's theatre brought the five it waited for from
+    // the rock in thirteen seconds — nothing of the store was ever its, and the control without the rule had nothing to show,
+    // T-1206)
+    m.falta(V.LAST); m.so(0);
     // (a quarter of a minute with no stone at all in the store: the sister town gives its houses their builders)
     for (let t = 0; t < 15; t++) { sim(() => { const s = G.Fac.get(f.id).stock.stone || 0; if (s > 0) D.use('f:' + f.id, 'stone', s, { code: 'teste', mine: true }); }); M.viver(1); alimenta(S.settlements.get(set.id)); }
     let quebras = 0, dasCasas = 0, daObraN = 0, salvo = -1; const ini = V.delivered(S.buildings.get(b.id)).stone || 0;
@@ -362,8 +369,8 @@ run('c11', () => {
     } finally { V.stoneFor = f0; const k = D.onMove.indexOf(fn); if (k >= 0) D.onMove.splice(k, 1); }
   };
   const T = +(process.env.C11_T || 700); const com = vive(false, T);
-  if (!ok('c11e vivido, sem a roda: as casas não tocam nas últimas pedras e a obra as recebe', !!com && com.quebras === 0 && com.falta < 1e-6 && com.chegou >= 5 - 1e-6 && com.q.ok,
-    com ? `a pedra do povo chegando uma a uma (nunca mais de 5 no armazém), a obra de ${com.nome} à espera de 5, as casas em obra de uma cidade-irmã à espera de 12: em ${com.t} s a obra recebeu ${com.chegou} (nas mãos dos construtores dela: ${com.daObraN}), falta ${com.falta}${com.pronta ? ', e ficou pronta' : ''}; as casas levaram ${com.dasCasas} sem nunca deixar o armazém abaixo do que é da obra (${com.quebras} quebras); o save aos ${com.salvo} s; ${com.q.txt}` : 'sem chão ou sem a vez')) return;
+  if (!ok('c11e vivido, sem a roda: as casas não tocam nas últimas pedras e a obra as recebe — também das mãos dos construtores dela, do armazém', !!com && com.quebras === 0 && com.falta < 1e-6 && com.chegou >= V.LAST - 1e-6 && com.daObraN > 0 && com.q.ok,
+    com ? `a pedra do povo chegando uma a uma (nunca mais de 5 no armazém), a obra de ${com.nome} à espera de ${V.LAST}, as casas em obra de uma cidade-irmã à espera de 12: em ${com.t} s a obra recebeu ${com.chegou} (nas mãos dos construtores dela: ${com.daObraN}), falta ${com.falta}${com.pronta ? ', e ficou pronta' : ''}; as casas levaram ${com.dasCasas} sem nunca deixar o armazém abaixo do que é da obra (${com.quebras} quebras); o save aos ${com.salvo} s; ${com.q.txt}` : 'sem chão ou sem a vez')) return;
   const sem = vive(true, Math.max(T, com.t + 60));
   ok('c11f o mesmo sem a regra (o controle): as casas levam a pedra da obra', !!sem && sem.quebras > 0, sem ? `em ${sem.t} s: ${sem.quebras} vez(es) uma casa levou a pedra que era da obra (${sem.dasCasas} de pedra para as casas antes de a obra ter as suas); a obra recebeu ${sem.chegou}, falta ${sem.falta}` : 'sem chão');
   // (the work that loses its turn keeps nothing: read off the world, nothing stored)

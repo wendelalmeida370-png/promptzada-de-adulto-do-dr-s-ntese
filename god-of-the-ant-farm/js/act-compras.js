@@ -63,6 +63,8 @@
     if (G.inSim) h.shopOut = 0;
     return null;
   };
+  // (the stoker at his post: the day of the baths keeps him at the furnace — G.Termas.onDuty, D-227)
+  const posted = v => !!(G.Termas && G.Termas.onDuty && G.Termas.onDuty(v));
   // how much this person wants to go shopping for the house now (0: not at all) — a choice among the others of decide():
   // in the market's hours, the house lacking something, able to pay, nobody of it already out, not too soon after the last
   // (the one already out for it keeps the same wish, so that the errand is not dropped for the next chore)
@@ -76,6 +78,10 @@
     // turned her back and marked the house as having tried — its wait never grew, nobody else of it went, and the house did
     // not shop, L-710)
     if (D.strength(v) <= 0) return 0;
+    // (nor the stoker at his post — the fire of his baths not yet fed to their closing, G.Termas.onDuty —: the day of the
+    // baths calls him back to the furnace at its next look, and the errand's door had already marked the house as having
+    // sent someone — half a day with nobody of it sent, as for the one with no hands. Another of the house goes: L-820)
+    if (posted(v)) return 0;
     const h = E.homeOf(v); if (!h || !h.res) return 0;
     const out = C.outOf(h); if (out && out.id !== v.id) return 0;
     const L = C.list(h); if (!L.length) return 0;
@@ -124,7 +130,7 @@
   // or the market's shelf — marked with the house; tried or not, the house waits a while before the next one
   C.task = function (v, H) {
     const S = G.S; const h = E.homeOf(v); if (!h) return null;
-    if (D.strength(v) <= 0) return null; // (turned back at the door, the house's try unspent: L-710)
+    if (D.strength(v) <= 0 || posted(v)) return null; // (turned back at the door, the house's try unspent: L-710, L-820)
     h.shopT = S.clock;
     const L = C.list(h); if (!L.length || !C.canPay(h)) return null;
     const need = L.map(q => q.k);
