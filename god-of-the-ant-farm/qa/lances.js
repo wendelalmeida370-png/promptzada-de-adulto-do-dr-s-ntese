@@ -568,6 +568,7 @@ let pocketDoor = null;
 }
 qa('o bolsão');
 
+let back12 = null; // (the world of the cases, kept while the case 12 looks in another ready world)
 // ---- 12. the ground a stride before a flight's foot is as wide as the body (L-753): a flight up the middle of a lot of two or
 // four tiles runs on the line between two tiles of the street — the temple#7716 and the temple#19521 of the generation-20
 // metropole, a wall's tile and a hut's lot beside the stride before their foot: the world said «ground», by the stride's middle,
@@ -601,11 +602,23 @@ qa('o bolsão');
       ground([], [q.j]); if (sig(c) === s0 && SIDES.some(s => s !== c.ip.s && (In.entryOn(c, s) || {}).ok)) return Object.assign({ c }, q); unwall([q.j]); } } return null; };
   // (the wall beside the stride alone — away from the treads — first, in the world and then on the god's temple; and then one
   // under a tread's rim too)
-  let P12 = pick(true), made = '';
-  if (!P12) { const lot = freeLots(2, 1)[0]; const set = lot && G.S.settlements.get(lot.set);
-    const t = set && sim(() => G.Village.handFound(set, 'temple', 2, { x: lot.x + 1, y: lot.y + 1, R: 0, built: true }));
-    if (t) { made = ` (a mão do deus fundou o templo#${t.id} em ${t.x},${t.y}: nenhum lance deste mundo com a borda noutra casa aberta, longe dos degraus)`; In.uncache(); P12 = pick(true); } }
+  // (on the free lots nearest the main town, one after the other, up to six: a temple whose front gives on no such tile — its
+  // flight's rim on its own stride's tile, the lot's street walled or built — is taken down and the next lot tried. In the
+  // «cidade» of the generation 27 the first, the temple#5636 at 47,33, had none, T-1204)
+  let P12 = pick(true), made = ''; back12 = null;
+  if (!P12) { const tried = [];
+    for (const lot of freeLots(2, 6)) { const set = lot && G.S.settlements.get(lot.set);
+      const t = set && sim(() => G.Village.handFound(set, 'temple', 2, { x: lot.x + 1, y: lot.y + 1, R: 0, built: true })); if (!t) continue;
+      In.uncache(); P12 = pick(true); if (P12) { made = ` (a mão do deus fundou o templo#${t.id} em ${t.x},${t.y}${tried.length ? `, depois de ${tried.join(', ')}` : ''}: nenhum lance deste mundo com a borda noutra casa aberta, longe dos degraus)`; break; }
+      tried.push(`o templo#${t.id} em ${t.x},${t.y}`); sim(() => G.Village.removeBuilding(t)); In.uncache(); }
+    if (!P12 && tried.length) made = ` (a mão do deus fundou ${tried.join(', ')}, e nenhum deu um lance com a borda noutra casa aberta, longe dos degraus)`; }
   if (!P12) P12 = pick(false);
+  // (and none in this world: the first other ready world that has one — the world of the case saved before and opened again
+  // after, for the cases after this one read the buildings of the cases before. In the «cidade» of the generation 27 no
+  // building has one, and the god's temples — nordic, aztec, egyptian, their flights up the middle of the front, 1,3 to 1,6 m
+  // wide — have the tiles beside the stride under a tread's rim, and a wall there lays the flight anew, T-1204)
+  if (!P12) { back12 = G.Save.serialize();
+    for (const w of ['metropole', 'mega', 'mundial', 'anos100', 'anos500', 'anos1000', 'cidade'].filter(w => w !== KEY)) { M.pronto(w); In.uncache(); P12 = pick(true) || pick(false); if (P12) { made += ` (no mundo pronto «${w}», o primeiro com um)`; break; } } }
   if (!P12) ok('o chão a um passo do pé tem a largura do corpo', false, `nenhum lance com a borda do corpo noutra casa aberta da rua, e outro lado aberto${made}`);
   else {
     const { c, j, j0, iso } = P12; const r0 = recOf(c), e1 = entry(c);
@@ -618,6 +631,7 @@ qa('o bolsão');
   }
 }
 qa('o chão a um passo do pé');
+if (back12) { M.abrir(JSON.parse(back12)); In.uncache(); back12 = null; } // (the world of the case back, for the cases after: T-1204)
 
 // ---- 10. save and load: the same sides and the same doors, and the next turn changes nothing ----
 {
