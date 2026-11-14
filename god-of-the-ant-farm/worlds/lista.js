@@ -3,43 +3,43 @@
 G.Ready.list({
  "cidade": {
   "day": 14,
-  "pop": 120,
+  "pop": 119,
   "peoples": 4,
   "towns": 4,
   "N": 128,
   "map": "continente",
   "seed": 3101,
   "city": {
-   "name": "Tenochtitlan",
+   "name": "Mênfis",
    "tier": 3,
-   "pop": 32
+   "pop": 31
   },
   "wars": 0,
   "ww": null,
   "world": "Neria",
-  "bytes": 982401
+  "bytes": 983832
  },
  "metropole": {
-  "day": 60,
-  "pop": 752,
-  "peoples": 5,
-  "towns": 19,
+  "day": 57,
+  "pop": 612,
+  "peoples": 6,
+  "towns": 18,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
-   "name": "Mênfis",
+   "name": "Argos",
    "tier": 4,
-   "pop": 112
+   "pop": 61
   },
-  "wars": 0,
+  "wars": 1,
   "ww": null,
   "world": "Selia",
-  "bytes": 3455622
+  "bytes": 3205219
  },
  "mega": {
-  "day": 88,
-  "pop": 1233,
+  "day": 74,
+  "pop": 828,
   "peoples": 4,
   "towns": 19,
   "N": 160,
@@ -48,83 +48,83 @@ G.Ready.list({
   "city": {
    "name": "Hedeby",
    "tier": 5,
-   "pop": 288
+   "pop": 193
   },
   "wars": 0,
   "ww": null,
   "world": "Orion",
-  "bytes": 4892118
+  "bytes": 3951205
  },
  "mundial": {
-  "day": 47,
-  "pop": 397,
-  "peoples": 5,
-  "towns": 15,
+  "day": 56,
+  "pop": 344,
+  "peoples": 6,
+  "towns": 20,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
    "name": "Tenochtitlan",
-   "tier": 4,
-   "pop": 44
+   "tier": 3,
+   "pop": 111
   },
-  "wars": 2,
+  "wars": 4,
   "ww": "a Grande Coalizão",
   "world": "Auros",
-  "bytes": 2813896
+  "bytes": 3007310
  },
  "anos100": {
   "day": 101,
-  "pop": 623,
-  "peoples": 2,
-  "towns": 12,
+  "pop": 253,
+  "peoples": 4,
+  "towns": 13,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Texcoco",
+   "name": "Argos",
    "tier": 4,
-   "pop": 153
+   "pop": 71
+  },
+  "wars": 1,
+  "ww": null,
+  "world": "Thalmar",
+  "bytes": 2586270
+ },
+ "anos500": {
+  "day": 501,
+  "pop": 1082,
+  "peoples": 3,
+  "towns": 14,
+  "N": 128,
+  "map": "continente",
+  "seed": 3404,
+  "city": {
+   "name": "Argos",
+   "tier": 4,
+   "pop": 186
   },
   "wars": 0,
   "ww": null,
   "world": "Thalmar",
-  "bytes": 2978544
+  "bytes": 6463348
  },
- "anos500": {
-  "day": 501,
-  "pop": 1045,
+ "anos1000": {
+  "day": 1001,
+  "pop": 1014,
   "peoples": 2,
   "towns": 13,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Tenochtitlan",
+   "name": "Argos",
    "tier": 5,
-   "pop": 361
+   "pop": 354
   },
   "wars": 0,
   "ww": null,
   "world": "Thalmar",
-  "bytes": 5744948
- },
- "anos1000": {
-  "day": 1001,
-  "pop": 984,
-  "peoples": 1,
-  "towns": 6,
-  "N": 128,
-  "map": "continente",
-  "seed": 3404,
-  "city": {
-   "name": "Texcoco",
-   "tier": 4,
-   "pop": 268
-  },
-  "wars": 0,
-  "ww": null,
-  "world": "Thalmar",
-  "bytes": 5783001
+  "bytes": 6792290
  }
 });
