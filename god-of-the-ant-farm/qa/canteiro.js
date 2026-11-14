@@ -26,7 +26,10 @@
 process.chdir(__dirname);
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['qa/degraus-inv.js', 'qa/canteiro-inv.js', 'qa/aterro-inv.js'] });
-const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const VERB = !!process.env.VERB; const MUNDO = process.argv[2] || process.env.MUNDO || 'mega';
+const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const VERB = !!process.env.VERB; const MUNDO = process.argv[2] || process.env.MUNDO || '';
+// (the ready worlds a case's work is looked for in, the mega first: the mega of the generation 25 has no free dry block of 6 and its
+// ring anywhere — 60 % of it water, the land taken by its towns —, and every case said «sem chão», T-1191)
+const MUNDOS = MUNDO ? [MUNDO] : ['mega', 'metropole', 'mundial', 'cidade'];
 const hr = process.hrtime.bigint(); const ms = () => Number((process.hrtime.bigint() - hr) / 1000000n);
 const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | canteiro ${name} | ${info}`); if (!c) fails.push(name); return c; };
@@ -52,8 +55,9 @@ function comVez(set) {
 // (the biggest capital of the world, its people knowing the wheel — by the game's own door of the arts where it does not yet —,
 // and a great work of it founded by the god's hand the asked distance from its stores: the free dry ground the town walks to
 // whose middle lies nearest that distance)
-function arma(dist, o) {
-  M.pronto(MUNDO); pega(); o = o || {};
+function arma(dist, o) { for (const w of MUNDOS) { const a = armaEm(w, dist, o); if (a) return a; } return null; }
+function armaEm(mundo, dist, o) {
+  M.pronto(mundo); pega(); o = o || {};
   const caps = [...new Set(G.Fac.all().filter(f => f.alive).map(f => G.Fac.capitalOf(f.id)).filter(Boolean))].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id);
   // (o.irma: the biggest capital whose people has another town of fifteen or more — a sister with builders of its own)
   const irmaDe = c => [...S.settlements.values()].filter(s => s.fac === c.fac && s !== c && V.pop(s.id) >= 15).sort((a, q) => V.pop(q.id) - V.pop(a.id) || a.id - q.id)[0] || null;
@@ -88,7 +92,7 @@ function arma(dist, o) {
   sim(() => { for (let ty = best[1] - 1; ty <= best[1] + n; ty++) for (let tx = best[0] - 1; tx <= best[0] + n; tx++) { const rk = S.rocks.get(S.objAt[ty * N + tx]); if (rk) G.Nature.removeRock(rk); } });
   const b = sim(() => V.handFound(set, 'teatro', 6, { x: best[0] + 3, y: best[1] + 3, R: 0 })); if (!b) { if (VERB) console.log(`  (arma: a mão do deus não fundou em ${best})`); return null; }
   const [fx, fy] = V.frontTile(b); const vez = comVez(set); abastece(set, b);
-  return { set, f, b, vez, longe: Math.round(aoArmazem(set, fx, fy)), irma: o.irma ? irmaDe(set) : null };
+  return { set, f, b, vez, longe: Math.round(aoArmazem(set, fx, fy)), irma: o.irma ? irmaDe(set) : null, mundo };
 }
 // (the ledger's lines of the road and of the work, heard as they are written)
 function escuta(b) { const L = []; const fn = e => { if (/^c:/.test(String(e[3])) || /^c:/.test(String(e[4])) || e[4] === 'o:' + b.id || e[3] === 'o:' + b.id) L.push(e.slice()); }; D.onMove.push(fn); return { L, fim: () => { const k = D.onMove.indexOf(fn); if (k >= 0) D.onMove.splice(k, 1); } }; }
@@ -106,9 +110,9 @@ function ateCarroca(set, b) { for (let k = 0; k < 400; k++) { if (k % 20 === 0) 
 // ------------------------------ c1: a obra longe recebe pela carroça ------------------------------
 run('c1', () => {
   // (the control first: the same world, the same work, no cart — the rule's distance out of reach)
-  M.pronto(MUNDO); pega(); const far0 = Ci.WORK_FAR; Ci.WORK_FAR = 1e9; let a = null, sem = 0, semCarro = 0;
+  M.pronto(MUNDOS[0]); pega(); const far0 = Ci.WORK_FAR; Ci.WORK_FAR = 1e9; let a = null, sem = 0, semCarro = 0;
   try {
-    a = arma(35); if (!ok('c1a a obra longe', !!a && a.vez && a.longe >= 28, a ? `${MUNDO}, ${a.set.name} (${V.pop(a.set.id)} pessoas), a roda sabida: ${lado(a.b)} a ${a.longe} casas de um armazém, a vez ${a.set.vez}; a conta ${JSON.stringify(V.bill(a.b))}` : 'sem chão a 35 casas de um armazém')) return;
+    a = arma(35); if (!ok('c1a a obra longe', !!a && a.vez && a.longe >= 28, a ? `${a.mundo}, ${a.set.name} (${V.pop(a.set.id)} pessoas), a roda sabida: ${lado(a.b)} a ${a.longe} casas de um armazém, a vez ${a.set.vez}; a conta ${JSON.stringify(V.bill(a.b))}` : 'sem chão a 35 casas de um armazém')) return;
     const E = escuta(a.b); estacoes(a.set, a.b, 8, () => { semCarro = Math.max(semCarro, daObra(a.b).length); }); E.fim(); sem = soma(E.L, e => e[4] === 'o:' + a.b.id);
   } finally { Ci.WORK_FAR = far0; }
   a = arma(35); const { set, f, b } = a; const E = escuta(b); const estrada0 = naEstrada(b); let maxCam = 0, maxCarga = 0, viu = 0;
@@ -130,7 +134,7 @@ run('c1', () => {
 run('c2', () => {
   // (the free ground nearest the stores — where the town has none within the rule's distance, the rule's distance is the proof's
   // to move just past it, and back: what is proved is that the work within it gets no cart, and the same work past it does)
-  M.pronto(MUNDO); pega(); const far0 = Ci.WORK_FAR; let a = null, viu = 0, com = 0, regra = far0;
+  M.pronto(MUNDOS[0]); pega(); const far0 = Ci.WORK_FAR; let a = null, viu = 0, com = 0, regra = far0;
   try {
     Ci.WORK_FAR = 1e9; a = arma(0, { tol: 99 }); if (!ok('c2a a obra perto', !!a && a.vez, a ? `${lado(a.b)} a ${a.longe} casas de um armazém de ${a.set.name}, o chão livre mais perto` : 'sem chão')) return;
     regra = Math.max(far0, a.longe + 1); Ci.WORK_FAR = regra; estacoes(a.set, a.b, 4, () => { viu = Math.max(viu, daObra(a.b).length); });
@@ -229,7 +233,7 @@ run('c6', () => {
 // cart leaves in it a well's and a house's worth of stone — WORK_FLOOR —; the timber has no floor. And the work's cart has no
 // road of its own: a road of the people that dies takes its own carts off, never the work's)
 run('c8', () => {
-  M.pronto(MUNDO); pega(); const far0 = Ci.WORK_FAR; let a = null;
+  M.pronto(MUNDOS[0]); pega(); const far0 = Ci.WORK_FAR; let a = null;
   try { Ci.WORK_FAR = 1e9; a = arma(35); } finally { Ci.WORK_FAR = far0; }
   if (!ok('c8a a obra longe, nenhuma carroça ainda', !!a && a.vez && !daObra(a.b).length && (a.b.need.stone || 0) >= 30, a ? `${lado(a.b)} a ${a.longe} casas, a vez ${a.set.vez}; espera ${JSON.stringify(a.b.need)}` : 'sem chão')) return;
   const { set, f, b } = a; const FL = Ci.WORK_FLOOR;

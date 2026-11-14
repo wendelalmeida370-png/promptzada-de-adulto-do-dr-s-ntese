@@ -188,7 +188,11 @@ function stealNow(P, v) {
   const P = setup(0.75); const id = P.crew[0].id; const { got } = stealNow(P, P.crew[0]); const n = got ? r2(P.crew[0].carry.n) : 0;
   M.salvarCarregar(); G.inSim = Math.max(G.inSim, 1); const L1 = seen.length;
   const v = S().villagers.get(id); const kept = stolenIn(v) && v.carry.to === 'b:' + MK.id;
-  live(150, null, () => !stolenIn(v));
+  // (and the town's watch kept from the case by the hand of the proof — its posts and its round —: the catch is the k3's, and on the
+  // code of the reg25 a soldier caught Izel with the pottery after the load and the goods went to the store by the watch's line,
+  // 'apreendido': «à prateleira 0, ao armazém comum 3», T-1190. What goes to the store by any line is still the fault)
+  const away = () => { for (const o of S().villagers.values()) if (v && o.set === v.set && o.task && (o.task.type === 'guard' || o.task.type === 'ronda')) G.Vg.endTask(o); };
+  live(150, away, () => !stolenIn(v));
   const shelf = sum(seen.slice(L1).filter(e => e[3] === 'v:' + id && e[4] === 'b:' + MK.id));
   const store = sum(seen.slice(L1).filter(e => e[3] === 'v:' + id && String(e[4]).startsWith('f:')));
   const bad = newBad(P.base);

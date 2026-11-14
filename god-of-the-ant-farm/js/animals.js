@@ -355,6 +355,10 @@
     return true;
   }
   A.walkOK = (a, x, y) => !!SP[a.kind] && walkOK(a, x, y);
+  // where a gull may sit down at the end of a flight (its perch is the ground or the water under it, at the height 0): never inside
+  // a building one does not stand in, nor on a wall — the gulls of the mega sat on the floor of a dock and of a market, and the
+  // checker took the perch for a roof (L-809)
+  function sitOK(i) { const S = G.S; return !W.blocked(i) && S.wall[i] !== 1 && S.wall[i] !== 4; }
   // can it walk straight there? (no cliff, wall, house or deep water on the way)
   function lineOK(a, x1, y1, x0, y0, ground) {
     if (x0 === undefined) { x0 = a.x; y0 = a.y; }
@@ -373,7 +377,9 @@
   A.aside = function (a, r, reach) {
     // (a bird in the air is not moved; one on the ground under a new building steps out as any beast — L-631)
     const sp = SP[a.kind]; if (!sp || sp.cls === 'water' || a.held || a.air) return false;
-    if (sp.cls === 'air' && ((a.z || 0) > 0.25 || a.state === 'fly' || a.state === 'perch' || a.nest)) return false;
+    if (sp.cls === 'air' && ((a.z || 0) > 0.25 || a.state === 'fly' || a.nest)) return false;
+    // (a gull sitting where a building now rises takes off — L-809)
+    if (sp.cls === 'air' && a.state === 'perch') { if (sitOK(W.idx(a.x, a.y))) return false; a.state = 'fly'; a.t = 0; return true; }
     distances(); // (the shore's distances the amphibians' ground is read by: maybe not built yet, at a load)
     if (walkOK(a, a.x, a.y)) return false;
     const can = (x, y) => walkOK(a, x, y);
@@ -1448,7 +1454,7 @@
       // perch on a tree now and then (parrots, ravens) or pick a new patrol point
       if ((a.kind === 'parrot' || a.kind === 'raven' || a.kind === 'gull' || sp.nests === 'tree' || sp.diet === 'browse') && G.R() < (a.hunger > 0.4 ? 0.7 : 0.35)) {
         const i = W.idx(a.x, a.y); const tr = S.treeAt[i] && S.trees.get(S.treeAt[i]);
-        if (tr || a.kind === 'gull') { a.state = 'perch'; a.perchZ = tr ? 22 * tr.size : 0; a.t = G.rr(4, 12); return; }
+        if (tr || (a.kind === 'gull' && sitOK(i))) { a.state = 'perch'; a.perchZ = tr ? 22 * tr.size : 0; a.t = G.rr(4, 12); return; }
       }
       const L = a.leader && S.animals.get(a.leader);
       let p = null;

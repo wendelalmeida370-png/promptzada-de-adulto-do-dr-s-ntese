@@ -66,8 +66,12 @@ function caso(quer) {
   }
   return null;
 }
-// (what makes a lot of six serve, counted again by the proof: → the first thing wrong with it, or '')
-function defeito(set, r) {
+// (what makes a lot of six serve, counted again by the proof: → the first thing wrong with it, or ''. How far from the middle it may
+// be is the choice's rule (resLot: the town's radius and twelve): a field kept from before is judged by what stays — the land, as
+// the game's daily look judges it (civDia, resFits keep), and the work founded on it wherever it is (resSite) —, never by the radius
+// of today: the town that kept it may have shrunk since. Argos of the mega of the generation 25 kept its field at 31 tiles from
+// the middle when it was bigger, and its radius and twelve are 30 now: «a 31.1 casas do meio (o raio e doze: 30)», T-1189)
+function defeito(set, r, kept) {
   if (!(r.x >= 2 && r.y >= 2 && r.x + r.n <= N - 2 && r.y + r.n <= N - 2)) return 'fora do mapa';
   for (let ty = r.y - 1; ty <= r.y + r.n; ty++) for (let tx = r.x - 1; tx <= r.x + r.n; tx++) {
     const i = ty * N + tx; const dentro = tx >= r.x && tx < r.x + r.n && ty >= r.y && ty < r.y + r.n; const o = S.occ[i] ? S.buildings.get(S.occ[i]) : null;
@@ -76,7 +80,7 @@ function defeito(set, r) {
   }
   if (!V.podiumFits(r.x, r.y, r.n)) return 'relevo que nem o pódio cobre nem se aplaina';
   const R = Math.round(G.Urban.radius(set, { w: r.n }, V.pop(set.id))) + V.CIVIC_REACH; const d = G.dist(r.x + r.n / 2, r.y + r.n / 2, set.cx, set.cy);
-  if (d > R + 1e-6) return `a ${d.toFixed(1)} casas do meio (o raio e doze: ${R})`;
+  if (!kept && d > R + 1e-6) return `a ${d.toFixed(1)} casas do meio (o raio e doze: ${R})`;
   const w = set.urb.res; if (w && sobre(w, r.x, r.y, r.n)) return 'em cima do campo da maravilha';
   return '';
 }
@@ -95,7 +99,7 @@ run('f1', () => {
       const r0 = civ(set) ? Object.assign({}, civ(set)) : null; const hi = marca(); olha(set); const r = civ(set);
       if (!r) { semTerra++; continue; } guardam++;
       const novo = !r0 || r0.x !== r.x || r0.y !== r.y || r0.d !== r.d; if (!novo) jaTinham++;
-      const q = defeito(set, r); if (q) mal.push(`${w} ${set.name}: ${q}`);
+      const q = defeito(set, r, !novo); if (q) mal.push(`${w} ${set.name}: ${q}`);
       if (r.type !== 'civico' || r.n !== 6 || r.chk !== S.day) mal.push(`${w} ${set.name}: o registro ${JSON.stringify(r)}`);
       const L = linhas(hi, /guardou um campo de 24 metros .* para as suas grandes obras/); if (L.length !== (novo ? 1 : 0)) mal.push(`${w} ${set.name}: ${L.length} linhas na crônica (${novo ? 'guardado neste olhar' : 'o campo que já guardava'})`);
       const todos = V.reservas(set); if (!todos.some(o => o.type === 'civico' && o.x === r.x && o.y === r.y && o.n === 6)) mal.push(`${w} ${set.name}: V.reservas não o mostra (${JSON.stringify(todos)})`);

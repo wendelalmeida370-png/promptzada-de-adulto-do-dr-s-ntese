@@ -4,13 +4,14 @@
 //  o1 as moedas caem, o povo corre e cata; toda moeda que caiu na rua está contada (catada, no chão, achada, perdida)
 //  o2 um save no meio da chuva, carregado duas vezes: o mesmo futuro (e a chuva continua de onde parou)
 //  o3 quem corria para o ouro morre no meio, o raio cai num monte, o chão de outro afunda no mar: nada se perde nem quebra;
-//     o3b o chão afunda sob os pés de quem corre (em três momentos): nada logo, sem caminhos falhos antes
+//     o3b o chão afunda sob os pés de quem corre (em três momentos): nada logo, sem caminhos falhos antes (de dia: um mundo
+//         pronto que abre de noite vive até a manhã, T-1166)
 //  o4 um povo sem moeda: o ouro vai para o armazém, não para as casas
 // Vinho nos Poços
 //  v1 os poços dão vinho: o povo bebe, dança e fica bêbado — só nos poços da própria cidade
 //  v2 um save no meio da festa, carregado duas vezes: o mesmo futuro
 //  v3 quem bebia morre no poço, e o deus derruba o último poço: o vinho acaba, ninguém fica indo beber
-//  v4 o dia seguinte: ressaca de quem bebeu demais
+//  v4 o dia seguinte: ressaca de quem bebeu demais (o verificador olha a cada segundo, como na vida curta: T-1165)
 // Ressurreição, Fantasmas (r1–r3, f1–f2: ver abaixo)
 // Amor Divino
 //  a1 dois da mesma cidade correm um para o outro e viram um casal
@@ -28,6 +29,7 @@
 //  i3 o deus ergue terra debaixo do gelo; no degelo, quem está no gelo cai na água gelada e sai na margem
 // Dragão
 //  g1 o dragão faz o covil e ataca a maior cidade: rasantes de fogo, o povo foge, arqueiros acertam; o ouro que leva é o que a cidade perde
+//     (de dia: de noite os armados dormem em casa e não atiram, T-1166)
 //  g2 um save no meio do rasante carregado duas vezes: o mesmo futuro
 //  g3 enquanto dorme, os bravos sobem ao covil; um morre no meio da luta; o dragão morre: o Matador de Dragões, os ossos, o tesouro no chão
 //  g4 raio e meteoro em pleno voo; o covil afunda no mar (outro covil); ele parte levando o tesouro; um save com um dragão quebrado
@@ -64,6 +66,10 @@ const key = process.argv[2] || 'cidade';
       qkey: e => e.id + '|' + e.msg.replace(/\s*\([^)]*\)\s*$/, ''),
       run(sec, each) { const S = G.S; const n = Math.round(sec / 0.05); for (let k = 0; k < n; k++) { G.debug.step(0.05); if (each) each(k); } return S.clock; },
       qa() { return QA.check().filter(e => e.sev <= 3 && !(__H.base && __H.base.has(__H.qkey(e)))); },
+      // (a ready world may open at night — the cidade of the generation 25, at 0,007 —: its people asleep at home, and a case
+      // about the day lives until the morning first: nobody runs for the gold from bed, and the armed who shoot at a dragon sleep
+      // indoors, the game's rule, T-1166)
+      toDay() { const S = G.S; while (!(S.time > 0.12 && S.time < 0.5)) __H.run(2); },
       // (the world-war world lives a steady trickle of newcomers who cannot walk home yet — S3 "recente", the same with or
       // without these powers, settled by the stray rule the next morning: in a battle there, what counts is S0–S2 and the
       // war's and the duel's own S3)
@@ -146,7 +152,7 @@ const key = process.argv[2] || 'cidade';
     const r = await page.evaluate(() => {
       const H = __H; const W = G.W; const out = [];
       for (const off of [0, 7, 14]) {
-        H.fresh(); const S = G.S;
+        H.fresh(); H.toDay(); const S = G.S;
         const set = H.town(); const f = G.Fac.get(set.fac); if (!G.Eco.coinage(f.id)) G.Civ.learn(f, 'moeda', 'teste');
         G.Powers.cast('goldrain', set.cx, set.cy); H.run(3 + off * 0.05);
         const v = H.tasks('ouro').filter(o => !o.inside && !o.air && W.isLand(W.idx(o.x, o.y))).sort((a, b) => a.id - b.id)[0]; if (!v) continue;
@@ -243,11 +249,15 @@ const key = process.argv[2] || 'cidade';
       const set = H.town(s => H.wells(s.id).length); if (!set) return null;
       const dev0 = [...S.villagers.values()].filter(v => v.set === set.id).reduce((a, v) => a + v.devotion, 0);
       G.Powers.cast('winewell', set.cx, set.cy);
-      const day = S.day; H.run(G.DAY_LEN * 0.5 + 5);
+      // (the checker looks every second, as the soak does: «out at night with nothing to do» is a rule of two looks in a row —
+      // with only the look at the load (everyone without an errand, at night) and the last one, 202 s later, Sitamun, a step
+      // without an errand at each, read as 202 s idle outside, T-1165)
+      const look = k => { if (k % 20 === 0) H.qa(); };
+      const day = S.day; H.run(G.DAY_LEN * 0.5 + 5, look);
       const heavy = [...S.villagers.values()].filter(v => v.set === set.id && v.drinks >= 3 && v.drinkDay === S.day).map(v => v.id);
       const wineOn = (S.gifts.wine || []).length;
-      while (S.day === day) H.run(5);
-      H.run(2);
+      while (S.day === day) H.run(5, look);
+      H.run(2, look);
       const hung = heavy.map(id => S.villagers.get(id)).filter(v => v && v.hang === S.day).length;
       const dev1 = [...S.villagers.values()].filter(v => v.set === set.id).reduce((a, v) => a + v.devotion, 0);
       return { heavy: heavy.length, hung, wineOn, dev0, dev1, sameDay: day, qa: H.qa() };
@@ -412,7 +422,6 @@ const key = process.argv[2] || 'cidade';
   await page.evaluate(() => {
     // someone free, in the biggest town, with a choice of suitors (of their people, and — if wanted — of another)
     // (a world of married people: the god first frees a few hearts — the partners of some die — in two peoples)
-    __H.toDay = () => { const S = G.S; while (!(S.time > 0.12 && S.time < 0.5)) __H.run(2); };
     __H.freeHearts = () => { __H.toDay(); const S = G.S; const F = G.Fac.all().filter(f => f.alive).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id)).slice(0, 2); for (const f of F) { let n = 0; for (const v of [...S.villagers.values()].sort((a, b) => a.id - b.id)) { if (n >= 6 || !S.villagers.has(v.id) || G.Fac.idOfV(v) !== f.id || !v.partner || v.age < 18 || v.age > 45 || v.captive || v.inside) continue; /* (one killed a moment ago as another's partner still names the living one as partner: skipped, or the widow went too — T-968) */ const p = S.villagers.get(v.partner); if (p) { G.Village.kill(p, 'sick'); v.mourn = 0; n++; } } } __H.run(1); };
     __H.lover = foreign => { const S = G.S; for (const v of [...S.villagers.values()].sort((a, b) => a.id - b.id)) { if (v.partner || v.age < 18 || v.age > 45 || v.captive || v.inside || v.aboard || v.jail) continue; const o = G.Powers.options('love', v.x, v.y) || []; const pick = o.find(q => /De outro povo/.test(q.desc) === !!foreign); if (pick && G.Powers.targetAt(v.x, v.y, 1.3) === v) return { v, k: pick.k }; } return null; };
     __H.until = (fn, max) => { let t = 0; while (t < max && !fn()) { __H.run(1); t += 1; } return t; };
@@ -666,7 +675,7 @@ const key = process.argv[2] || 'cidade';
   });
   {
     const r = await page.evaluate(() => {
-      const H = __H; H.fresh(); const S = G.S; const { ok, d, set, f } = H.dragon();
+      const H = __H; H.fresh(); H.toDay(); const S = G.S; const { ok, d, set, f } = H.dragon();
       const li = G.W.idx(d.lx, d.ly); const lairOk = G.W.walkable(li) && S.type[li] >= G.T.SAND && S.type[li] !== G.T.RIVER;
       // (the town it robs is the one it last flew over: the one the god pointed at)
       const sum = () => { const t = S.settlements.get(d.set); const ff = t && G.Fac.get(t.fac); let n = ff ? ff.stock.moedas || 0 : 0; for (const b of S.buildings.values()) if (t && b.set === t.id && G.BDEF[b.type].housing) n += b.coin || 0; return n; };

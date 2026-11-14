@@ -488,8 +488,12 @@ const opened = w => { M.pronto(w || 'metropole'); S = G.S; M.viver(2); G.inSim =
 // the save, which finds her minding them at home with the load —: loaded, the load goes to the store
 {
   opened(); S.time = 0.3;
-  const v = minder();
-  if (!v || !give(v, 'wood', 2)) ok('m14 salvo e carregado no meio do cuidar', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre');
+  // (one in a town with no feast under way, and the town's feast of the day kept for another day: the feast calls the whole town
+  // — the one minding too, D-126 —, and in the metrópole of the generation 25 it took Sven to it before the save, «cuidando dos
+  // pequenos (fest.0)», T-1184)
+  const v = person(55, 85, o => !o.sleeping && !!(G.Lar && G.Lar.minder(o)) && !(G.Fest && G.Fest.active && G.Fest.active(o.set)));
+  if (v) { const st0 = S.settlements.get(v.set); if (st0) st0.festPlan = { day: S.day, key: null, done: true }; }
+  if (!v || !give(v, 'wood', 2)) ok('m14 salvo e carregado no meio do cuidar', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, numa cidade sem festa');
   else {
     G.Lar.task(v, G.Vg.H, 'cuidar'); v.think = 1e9;
     live(60, () => mindsNow(v) && v.task.st === 2);

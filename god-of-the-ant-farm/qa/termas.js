@@ -52,12 +52,16 @@ const watch = bad => rule((sys, sev, msg) => { if (sys === 'oficio' && sev <= 2 
 const liveSec = (sec, until, bad, each) => { for (let k = 0; k < sec; k++) { if (keeping) keeping(); holdT(); M.viver(1); if (each) each(); if (bad && k % 5 === 4) watch(bad); if (until && until()) return true; } return false; };
 const seen = []; D.onMove.push(e => { seen.push(e); });
 G.inSim++;
-// the baths of the tests: with their stoker at hand, in the most peopled town of coin (else of any)
+// the baths of the tests: with their stoker at hand, in the town of coin (else of any) with the most grown people at home — not
+// the most peopled: in the metropole of the generation 25 the Sacred Lake of Mênfis was the most peopled town's, with 20 of its
+// 77 at sea in «A Grande Expedição ao Noroeste» and 9 at a feast, and at the opening the e1 found nobody free to send: «0
+// entradas», T-1167. Who is away (G.Naval.away: the crew of a voyage, aboard at sea) does not come to the baths
+const home = sid => { let n = 0; for (const v of S().villagers.values()) if (v.set === sid && v.age >= 16 && v.age <= 60 && !v.captive && !v.jail && !v.aboard && !G.Naval.away(v)) n++; return n; };
 function pick() {
   let best = null;
   for (const b of S().buildings.values()) {
     if (b.type !== 'banhos' || !b.built || !atHand(b)) continue;
-    const sc = (Te.withCoin(b) ? 1e6 : 0) + V.pop(b.set);
+    const sc = (Te.withCoin(b) ? 1e6 : 0) + home(b.set);
     if (!best || sc > best.sc) best = { b, sc };
   }
   return best && best.b;

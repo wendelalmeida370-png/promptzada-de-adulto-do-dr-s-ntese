@@ -11,6 +11,10 @@
 //     para uma história fora da lista
 //  b3 cada cena que lê a sua história, começada sem ela (com gente de verdade, e uma sentença na justiça para mostrar), volta
 //     sem quebrar
+//  b4 a batida que volta numa história (L-811): a história não escreve de novo um texto que já escreveu enquanto a batida tem
+//     outro a dizer — o dia em que ninguém veio, cinco vezes; o levante, quatro — e a reunião da insurreição sem ninguém ainda tem
+//     frase sem buraco («Aulo e  se encontraram de novo no escuro»: a insurreição dos Os da Noite, na metrópole da geração 25,
+//     escreveu três capítulos iguais e duas reuniões com o nome de ninguém)
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const fails = [];
@@ -63,6 +67,26 @@ const St = G.Stories; const Sn = G.Scene;
     }
   } finally { J.list = jl; }
   ok('b3 cada cena sem a sua história volta sem quebrar', seen.length > 20 && !bad.length, `${seen.length} cenas leem a história; ${bad.length ? 'quebram ou seguem: ' + bad.join(' · ') : 'todas voltam «sem»'}`);
+}
+
+// b4 — an insurrection of the proof's own (never in the saga's list: its words are asked to the beat, one by one, and written as
+// its chapters, as St.beat writes them), on a grown person of the world
+{
+  const v = [...S.villagers.values()].filter(q => q.age >= 20 && !q.captive).sort((a, b) => a.id - b.id)[0]; const set = v && S.settlements.get(v.set);
+  if (!set) ok('b4 a batida que volta não repete o que a história já escreveu', false, 'ninguém crescido numa cidade');
+  else {
+    const vic = [...S.dead.values()].sort((a, b) => a.id - b.id)[0];
+    const mk = k => ({ id: 990000 + k, type: 'insurreicao', st: 'ativa', protag: v.id, born: S.day, cast: { victim: vic ? vic.id : 0 }, data: { fac: set.fac, set: set.id, rulerName: 'o Rei', town: set.name, how: 'executado' }, chapters: [], party: [], facts: [] });
+    const tell = (s, key, n, vars) => { const out = []; for (let k = 1; k <= n; k++) { const t = St.say(s, key, Object.assign({ TOWN: set.name, RULER: 'o Rei', V: vic ? vic.name : 'Fulano', N: 4 + k, MEET: k }, vars || {})); out.push(t); s.chapters.push({ d: S.day, txt: t, k: key }); } return out; };
+    const s1 = mk(1); const vazio = tell(s1, 'in-vazio', 5), lev = tell(s1, 'in-levante', 4, { N: 9 });
+    const s2 = mk(2); const lone = tell(s2, 'in-reuniao', 4, { PARTY: '' }), comp = tell(s2, 'in-reuniao', 3, { PARTY: 'Caio e Lívia' });
+    // (a hole: a name that is not there — two spaces, a space before the stop —; alone, no words that need company)
+    const hole = t => !t || /\S {2,}\S| [,.;:!?]/.test(t), crowd = t => /Cada vez são mais|reuniu|se encontraram/.test(t);
+    const dup = l => l.length - new Set(l).size;
+    const bad = [...lone.filter(t => hole(t) || crowd(t)), ...comp.filter(hole)];
+    ok('b4 a batida que volta não repete o que a história já escreveu, e a reunião sem ninguém tem frase sem buraco (L-811)', !dup(vazio) && !dup(lev) && !dup(lone) && !dup(comp) && !bad.length,
+      `o dia em que ninguém veio, 5 vezes: ${5 - dup(vazio)} textos diferentes; o levante (sempre ${9} pessoas), 4 vezes: ${4 - dup(lev)}; a reunião sem ninguém, 4: ${4 - dup(lone)}, com companhia, 3: ${3 - dup(comp)}${bad.length ? ' — COM BURACO: «' + bad.slice(0, 2).join('» · «') + '»' : ''}; a 1ª sem ninguém: «${lone[0]}»`);
+  }
 }
 
 const e = M.erros(); const mods = Object.keys(e.mod);

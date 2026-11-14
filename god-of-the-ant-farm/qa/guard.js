@@ -726,14 +726,15 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (!/\bfindPath\(/.test(c) || !/\bN \* N\b/.test(c)) return;
   if (/(!!?|\bif \(|&&\s*|\|\|\s*|\?\s*)(G\.)?W\.findPath\(/.test(c)) fails.push(`há caminho?: ${f}:${k + 1} uma busca de caminho sem limite usada como sim ou não — pergunte ao mapa de regiões (W.canWalk, W.townReaches, W.townsLinked; L-731): ${l.trim().slice(0, 110)}`); });
 // 86. "o povo que acaba leva na hora o que é dele" (L-733): a extinção de um povo (P.extinct, no politics.js) avisa na mesma
-// hora os bandos (G.War), os exércitos (G.Wars), as frotas (G.Fleets) e as expedições (G.Expe) dele, e cada módulo termina os
+// hora os bandos (G.War), os exércitos (G.Wars), as frotas (G.Fleets), as expedições (G.Expe) e os navios nos cais (G.Naval,
+// L-808) dele, e cada módulo termina os
 // seus como a sua própria passada terminaria — sem meio segundo de um exército, uma frota ou uma expedição de um povo morto
 // (o verificador acusa: «… povo extinto»). Cada módulo tem a sua porta (Wz.onExtinct, Fl.onExtinct, X.onExtinct); quem
 // tirar uma delas da extinção deixa o povo morto de pé até a próxima passada (qa/vira.js caso 7)
 { const pol = src['politics.js'] || []; const i = pol.findIndex(l => /P\.extinct = function/.test(l));
   if (i < 0) fails.push('o povo que acaba: o P.extinct não está no politics.js (L-733)');
   else { const body = pol.slice(i, i + 16).join('\n');
-    for (const d of ['G.War.onExtinct(f)', 'G.Wars.onExtinct(f)', 'G.Fleets.onExtinct(f)', 'G.Expe.onExtinct(f)']) if (!body.includes(d)) fails.push(`o povo que acaba: o P.extinct (politics.js) não chama ${d} — o que é do povo morto fica de pé até a próxima passada (L-733)`); }
-  for (const [f, d] of [['wars.js', 'Wz.onExtinct ='], ['fleets.js', 'Fl.onExtinct ='], ['expeditions.js', 'X.onExtinct =']]) if (!(src[f] || []).some(l => l.includes(d))) fails.push(`o povo que acaba: ${f} sem a porta ${d.slice(0, -2)} (L-733)`); }
+    for (const d of ['G.War.onExtinct(f)', 'G.Wars.onExtinct(f)', 'G.Fleets.onExtinct(f)', 'G.Expe.onExtinct(f)', 'G.Naval.onExtinct(f)']) if (!body.includes(d)) fails.push(`o povo que acaba: o P.extinct (politics.js) não chama ${d} — o que é do povo morto fica de pé até a próxima passada (L-733)`); }
+  for (const [f, d] of [['wars.js', 'Wz.onExtinct ='], ['fleets.js', 'Fl.onExtinct ='], ['expeditions.js', 'X.onExtinct ='], ['naval.js', 'Nv.onExtinct =']]) if (!(src[f] || []).some(l => l.includes(d))) fails.push(`o povo que acaba: ${f} sem a porta ${d.slice(0, -2)} (L-733)`); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

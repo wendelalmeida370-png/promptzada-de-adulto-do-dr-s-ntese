@@ -399,7 +399,16 @@ const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim ||
 // ---------------- p12: a quay cut off in the middle (a wall with no gate between it and the store): no one stuck trying,
 // nothing lost; the next ship's cargo goes up by the way there is; with the way open again, the crates come up
 {
+  // (on a quay away from the walls: a quay under its town's wall is no quay a ring can cut off — the town cuts a gate in its
+  // own wall for it at once, as it does for any building of its a wall shuts (siege.js keepWays, L-382). Mênfis's quay, in the
+  // metropole of the generation 25, lies right under the town's wall; the town cut two gates in it the half second after the
+  // ring went up, and the porters came through them — «a descarga NÃO parou», T-1175. The quay of the case is the town's own if
+  // it is clear of walls, else the first such quay of a town with a harbour store and porters; the case after it goes back)
+  const ids0 = Object.assign({}, ids);
+  const clear = d => { for (let y = d.y - 3; y <= d.y + d.h + 2; y++) for (let x = d.x - 3; x <= d.x + d.w + 2; x++) if (G.W.inb(x, y) && S.wall[G.W.idx(x + 0.5, y + 0.5)]) return false; return true; };
+  if (!clear(dock)) for (const t of towns) { if (!porters(t)) continue; const d = [...S.buildings.values()].filter(b => b.set === t.id && b.type === 'doca' && b.built).sort((a, b) => a.id - b.id).find(clear); if (d) { ids.set = t.id; ids.dock = d.id; ids.fac = t.fac; break; } }
   fresh();
+  const at12 = ids.dock !== ids0.dock ? ` (no cais de ${set.name}: o de ${S.settlements.get(ids0.set).name} fica junto ao muro da cidade)` : '';
   const op12 = land('sal', 8); fac.stock.sal = Math.min(fac.stock.sal, 20);
   // (the cut: walls all round the quay, two steps out, as a town wall with no gate would — then the map of regions knows)
   const ring = [];
@@ -435,7 +444,8 @@ const fresh = () => { M.pronto(world); M.viver(2); G.inSim = Math.max(G.inSim ||
   const done = work(op12, 400, () => watch() || !A.live(op12));
   if (!done || op12.st !== 'ok') tell('p12', op12);
   ok('p12 o cais sem caminho', cut && paused && !later && n1 === n0 && straight >= 6 - 1e-6 && Math.abs(kept - 14) < 1e-6 && done && op12.st === 'ok' && op12.done.sal === 14 && !bad().length,
-    `${cut ? 'o caminho do cais ao armazém foi cortado' : 'o caminho NÃO foi cortado'}; a descarga ${paused ? 'parou (sem caminho)' : 'NÃO parou (' + A.STATES[op12.st] + (op12.wait ? ' ' + op12.wait : '') + ')'}; ${later ? later + ' tentativa(s) de ir às caixas depois de parada' : 'ninguém ficou tentando chegar lá'}; o navio seguinte: ${n1 === n0 ? 'nenhuma caixa no cais isolado' : (n1 - n0) + ' caixa(s) no cais isolado'}, ${straight} de 6 direto ao armazém; nada sumiu (${kept} de 14); aberto o caminho: ${A.STATES[op12.st]}, chegou ${op12.done.sal} de 14`);
+    `${cut ? 'o caminho do cais ao armazém foi cortado' : 'o caminho NÃO foi cortado'}${at12}; a descarga ${paused ? 'parou (sem caminho)' : 'NÃO parou (' + A.STATES[op12.st] + (op12.wait ? ' ' + op12.wait : '') + ')'}; ${later ? later + ' tentativa(s) de ir às caixas depois de parada' : 'ninguém ficou tentando chegar lá'}; o navio seguinte: ${n1 === n0 ? 'nenhuma caixa no cais isolado' : (n1 - n0) + ' caixa(s) no cais isolado'}, ${straight} de 6 direto ao armazém; nada sumiu (${kept} de 14); aberto o caminho: ${A.STATES[op12.st]}, chegou ${op12.done.sal} de 14`);
+  Object.assign(ids, ids0); // (the cases after it: the town of the proof again — their fresh() reads it)
 }
 // ---------------- p10: fire on the quay: what burns is lost, with its cause; the books close
 {

@@ -1087,8 +1087,10 @@
       return ['Destroços', `${cap1(w.title)}${w.fac && F(w.fac) ? ', de ' + F(w.fac).name : ''}, ${w.shallow ? 'com o mastro ainda de fora d’água' : 'no fundo, visível na água clara'}. Tiraram tábuas boas para remendar o casco.`, 'wave'];
     } },
     { id: 'fantasma', w: c => (c.ghost ? 3 : 0), run(e, c) {
-      const o = c.ghost; o.ghost = 0; const lostE = o.exp0 && X.get(o.exp0);
-      if (o.fac === e.fac || !F(o.fac)) { o.exp = e.id; o.fac = e.fac; o.st = 'out'; o.dock = e.dock; e.ships.push(o.id); return ['O barco vazio', `${cap1(Nv.title(o))} boiava sozinho, sem ninguém a bordo${lostE ? ` — era d${lostE.name.startsWith('A') ? 'a ' + lostE.name.slice(2) : 'a expedição de ' + lostE.leaderName}` : ''}. Amarraram e levaram junto.`, 'eye', true]; }
+      // (the mark of the empty hull goes only with the hull taken: left adrift, it drifts on — cleared before the choice, the hull of
+      // another people «nobody would board» stayed adrift without it, and nothing moved it again: L-807)
+      const o = c.ghost; const lostE = o.exp0 && X.get(o.exp0);
+      if (o.fac === e.fac || !F(o.fac)) { o.ghost = 0; o.exp = e.id; o.fac = e.fac; o.st = 'out'; o.dock = e.dock; e.ships.push(o.id); return ['O barco vazio', `${cap1(Nv.title(o))} boiava sozinho, sem ninguém a bordo${lostE ? ` — era d${lostE.name.startsWith('A') ? 'a ' + lostE.name.slice(2) : 'a expedição de ' + lostE.leaderName}` : ''}. Amarraram e levaram junto.`, 'eye', true]; }
       return ['O barco vazio', `${cap1(Nv.title(o))}, de ${F(o.fac).name}, à deriva e vazio. Ninguém quis subir a bordo.`, 'eye'];
     } },
     { id: 'monstro', w: c => (c.night && (c.whales || c.orcas) ? 1.4 : c.night && c.deep ? 0.2 : 0), run(e, c) { K.rumor({ kind: 'monstro', key: null, x: c.flag.x, y: c.flag.y, fac: 0, conf: 0.6, claim: `um monstro do tamanho de uma ilha nas águas ${DIRS[e.dirw] ? 'do ' + e.dirw : 'longe'}`, truth: { ok: false, what: c.whales ? 'baleia' : 'orca' }, origin: { who: c.lead ? c.lead.id : 0, what: 'expedição', fac: e.fac }, quiet: true }); for (const v of c.ab) K.note(v, { k: 'rm', id: (G.S.rumors || []).slice(-1)[0].id, conf: 0.6 }); return ['O monstro', 'De noite, uma coisa enorme passou debaixo do casco, soprando como um fole. De manhã, metade da tripulação jurava ter visto olhos do tamanho de escudos.', 'paw']; } },
@@ -1139,7 +1141,9 @@
   const fishRun = Nv.RUN.pesca || Nv.RUN0.pesca; Nv.RUN.pesca = (s, dt) => (s.exp || s.ghost ? shipRun(s, dt) : fishRun(s, dt));
   const trRun = Nv.RUN.transporte || Nv.RUN0.transporte; Nv.RUN.transporte = (s, dt) => (s.exp || s.ghost ? shipRun(s, dt) : trRun(s, dt));
   const merRun = Nv.RUN.mercante || Nv.RUN0.mercante; Nv.RUN.mercante = (s, dt) => (s.exp || s.ghost ? shipRun(s, dt) : merRun(s, dt));
-  const warRun = Nv.RUN.guerra || Nv.RUN0.guerra; Nv.RUN.guerra = (s, dt) => (s.exp ? shipRun(s, dt) : warRun(s, dt));
+  // (and the empty warship adrift too, as every hull: a warship left with nobody aboard drifted nowhere and never broke —
+  // two of them, of peoples gone, adrift from the year 71 of the anos100 to the year 1001 of the anos1000, L-807)
+  const warRun = Nv.RUN.guerra || Nv.RUN0.guerra; Nv.RUN.guerra = (s, dt) => (s.exp || s.ghost ? shipRun(s, dt) : warRun(s, dt));
   // the news a whole expedition holds goes into every head (whoever comes home tells it)
   function noteAll(e, it) { for (const v of alive(e)) K.note(v, Object.assign({}, it)); }
   // an explorer stumbles on a vein (called by G.Know)

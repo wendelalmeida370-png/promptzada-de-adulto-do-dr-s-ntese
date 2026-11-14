@@ -247,6 +247,10 @@ if (on('c9')) {
     const mid = G.dist(v.x, v.y, a.x, a.y);
     // the nine tiles round the body — nobody on them
     const tiles = []; for (let ay = -1; ay <= 1; ay++) for (let ax = -1; ax <= 1; ax++) tiles.push(W.idx(bk.gx + ax, bk.gy + ay));
+    // (one who happens to be on them — a woman of Tenochtitlan on the bank, in the metropole of the generation 25: «COM 1
+    // pessoa(s) em cima» — is set by the hand on the ground beyond them: the case is the hunter's, not the flood's on a
+    // passer-by, T-1178)
+    god(() => { for (const o of S.villagers.values()) { if (o === v || o.inside || o.aboard || !tiles.includes(W.idx(o.x, o.y))) continue; const q = W.nearestLand(o.x, o.y, 6, (x, y) => !tiles.includes(W.idx(x, y)) && W.walkableXY(x, y)); if (q) { o.x = q[0]; o.y = q[1]; o.path = null; } } });
     const onThem = [...S.villagers.values()].filter(o => tiles.includes(W.idx(o.x, o.y)));
     const was = tiles.map(i => S.type[i]);
     god(() => { for (const i of tiles) if (S.type[i] > T.SEA) S.type[i] = T.SEA; S.typeVer++; W.invalidateLand(); });

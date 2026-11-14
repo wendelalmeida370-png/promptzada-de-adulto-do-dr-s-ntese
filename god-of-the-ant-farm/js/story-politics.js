@@ -239,22 +239,31 @@
     c => `"Hoje foi ${c.V}. Amanhã é qualquer um." ${c.P} disse isso alto, na porta de casa, e não se arrependeu.`,
   ] });
   K('in-reuniao', { h: 'A reunião', text: [
-    c => `À noite, longe das casas, ${c.P} reuniu ${c.PARTY}. Falaram baixo, com uma vela só.`,
-    c => `${c.MEET}ª reunião: ${c.P}${c.PARTY ? ', ' + c.PARTY : ''} e o silêncio da noite. Cada vez são mais.`,
-    c => `${c.P} e ${c.PARTY} se encontraram de novo no escuro. Contaram quantas lanças há na cidade, e quantas portas.`,
+    c => c.PARTY && `À noite, longe das casas, ${c.P} reuniu ${c.PARTY}. Falaram baixo, com uma vela só.`,
+    c => c.PARTY && `${c.MEET}ª reunião, no silêncio da noite: ${c.P}, ${c.PARTY}. Cada vez são mais.`,
+    c => c.PARTY && `${c.P} e ${c.PARTY} se encontraram de novo no escuro. Contaram quantas lanças há na cidade, e quantas portas.`,
+    // (nobody yet: the company of an insurrection is the ones who join at the meetings — «Aulo e  se encontraram», L-811)
+    c => !c.PARTY && `${c.MEET}ª noite de ${c.P} no escuro, atrás das últimas casas, com uma vela só. Ainda ninguém veio.`,
+    c => !c.PARTY && `${c.P} esperou sozinh${c.o} no escuro, contando quantas lanças há na cidade, e quantas portas.`,
   ] });
   K('in-novo', { h: 'Mais um', text: [c => `${c.NEW} apareceu na reunião — trazid${c.oN} por alguém de confiança. Agora são ${c.N}.`] });
   K('in-traicao', { h: 'A traição', text: [
     c => `Alguém falou. Antes do amanhecer, os guardas bateram na porta de ${c.P}. ${c.TRAITOR} sumiu de casa naquele mesmo dia.`,
     c => `${c.TRAITOR} teve medo e contou tudo a ${c.RULER}. Os guardas vieram buscar ${c.P}${c.PARTY ? ' e ' + c.PARTY : ''}.`,
   ] });
+  // (the day they rise and the day nobody comes may come back four or five times in one story: words enough for each, L-811)
   K('in-levante', { h: 'O levante', text: [
     c => `No dia marcado, ${c.P} acendeu a primeira tocha na praça. ${c.N} pessoas vieram atrás.`,
-    c => `"Agora!" — e a praça de ${c.TOWN} se encheu de tochas, com ${c.P} na frente.`,
+    c => c.TOWN && `"Agora!" — e a praça de ${c.TOWN} se encheu de tochas, com ${c.P} na frente.`,
+    c => c.V && `${c.P} gritou o nome de ${c.V} no meio da praça, e ${c.N} vozes gritaram com ${c.ele}.`,
+    c => c.TOWN && `As tochas subiram pelas ruas de ${c.TOWN}: ${c.N} pessoas atrás de ${c.P}, sem esconder o rosto.`,
   ] });
   K('in-vazio', { h: 'Ninguém veio', text: [
     c => `${c.P} acendeu a tocha na praça e esperou. Pouca gente veio; o medo ainda é maior. Vão tentar outro dia.`,
     c => `O dia chegou, mas a cidade não se mexeu. ${c.P} apagou a tocha antes que os guardas vissem.`,
+    c => c.TOWN && `A praça de ${c.TOWN} ficou vazia. ${c.P} voltou para casa pelos becos, com a tocha escondida debaixo da roupa.`,
+    c => `Os poucos que vieram foram embora antes de a tocha acabar. ${c.P} jurou que da próxima vez vão ser mais.`,
+    c => `Mais uma vez a cidade olhou e ficou em casa. ${c.P} guardou a tocha para outro dia.`,
   ] });
   K('in-revolucao', { h: 'A revolução', text: [c => `O motim não se apagou: virou revolução. ${c.P} está no meio dela.`, c => `${c.P} não queria só um motim. Agora é guerra contra o trono.`] });
   K('in-cedeu', { h: 'A vitória', text: [

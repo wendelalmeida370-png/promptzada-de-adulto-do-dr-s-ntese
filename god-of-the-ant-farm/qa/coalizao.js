@@ -25,8 +25,12 @@ const setup = () => {
   const others = big().filter(f => f !== top);
   return { S, top, small, others };
 };
-// (a bond of a people with the empire, by the test's hand: an alliance, or a vassal's oath)
-const bind = (f, top, st) => { const r = G.Fac.rel(f.id, top.id); if (!r) return false; if (r.st === 'guerra' && G.War) G.War.onPeace(f, top); r.st = st; r.op = 60; if (st === 'vassalo') r.over = top.id; else delete r.over; return true; };
+// (a bond of a people with the empire, by the test's hand: an alliance, or a vassal's oath — a people at war with it makes peace
+// first by the treaty's door, as politics.js does (G.Wars.onPeace, then G.War.onPeace): with the bands' door alone the war's
+// record stayed open with no pair at war in it until the war's next half second — in the metrópole of the generation 25 the
+// empire was at war with a great people at the opening, «[S2] war: guerra a Guerra do atum: ativa sem nenhum par em guerra»,
+// T-1181)
+const bind = (f, top, st) => { const r = G.Fac.rel(f.id, top.id); if (!r) return false; if (r.st === 'guerra') { G.Wars && G.Wars.onPeace(f, top, 'sem vencedores', null); G.War && G.War.onPeace(f, top); } r.st = st; r.op = 60; if (st === 'vassalo') r.over = top.id; else delete r.over; return true; };
 let base = null;
 const fresh = () => QA.check().filter(q => q.sev <= 2 && !base.has(q.sys + '|' + q.msg)).map(q => `[S${q.sev}] ${q.sys}: ${q.msg}`);
 const sides = w => w ? w.blocs.map(b => b.map(nm).join(', ')).join(' contra ') : 'nenhuma';

@@ -101,7 +101,12 @@ function ready(key, name, dias) {
   const shown0 = []; for (const v of S.villagers.values()) if (grown(v) && SHOWN.includes(v.role) && housing(S.buildings.get(v.home))) shown0.push([v.id, v.role, v.home]);
   const sigs = () => { G.Atmos.flush(); const m = new Map(); for (const b of G.S.buildings.values()) if (housing(b)) m.set(b.id, G.Atmos.about(b).sig); return m; };
   let sg = sigs(), about = 0; const hit = new Set();
-  T.live(dias * DAY, k => { if (k % 40 === 39) { const n = sigs(); for (const [id, x] of n) { const o = sg.get(id); if (o !== undefined && Math.floor(o / 64) !== Math.floor(x / 64)) { about++; hit.add(id); } } sg = n; } });
+  // (the days of peace, by the god's own power — G.Politics.divinePeace, kept up while they last —: a war's levy empties the
+  // posts it takes from, and each post left empty asks a hand at once — a need of the war, not the dealing's churn; the mega
+  // of the generation 25, at war in the 1.5 days of the case, dealt 74 trades by need, 0,125 a grown one a day, 47 hands called
+  // to arms, and in peace 45, 0,069. The war's trades are the x5's and the x15's, T-1170)
+  const peace = () => { if (!(S.divinePeace > DAY * 0.5)) god(() => G.Politics.divinePeace()); };
+  peace(); T.live(dias * DAY, k => { peace(); if (k % 40 === 39) { const n = sigs(); for (const [id, x] of n) { const o = sg.get(id); if (o !== undefined && Math.floor(o / 64) !== Math.floor(x / 64)) { about++; hit.add(id); } } sg = n; } });
   const L = T.log(); const R = rate(L, dias); const bad = twice(L); const un = T.unsaid();
   // (… the dealing's own change — to the trade it says —, seen on a captive: one dealt and taken captive a blink after is not it)
   const capt = L.filter(e => T.ch.some(c => c.id === e.id && c.captive && c.to === e.to && Math.abs(c.t - e.t) < 0.35));
@@ -192,14 +197,19 @@ if (on('x4')) {
   // (the store full again: they go back to their own — but for the ones another emergency calls meanwhile, or the dead)
   god(() => { f.stock.food = Math.max(food0, pop * 12); });
   const home = new Map(); let seen = LOG.length, days = 0;
+  // (one the hunger itself already gave back to his own trade within its seconds — a fisher pulled to the gathering and sent back
+  // to the nets by the same hunger, a builder called to the war, pulled by the hunger and given back to his work —: home before
+  // the store is full again, with his days; the look below hears only what comes after the store is full, and counted him still
+  // out — in the metrópole of the generation 25, two of the three «ainda fora do ofício delas» were back in it, T-1186)
+  for (const [id, o] of own) { const v = G.S.villagers.get(id); if (v && v.role === o.keep && !v.roleBack) home.set(id, { ok: sentOn.has(id) || v.roleDay === day0.get(id), early: 1 }); }
   const look = () => { for (; seen < LOG.length; seen++) { const e = LOG[seen]; const o = own.get(e.id); if (!o || home.has(e.id)) continue; const v = G.S.villagers.get(e.id); if (e.why === 'volta' && e.to === o.keep) home.set(e.id, { ok: !!v && !v.roleBack && (sentOn.has(e.id) || v.roleDay === day0.get(e.id)) }); else if (e.why !== 'volta') home.set(e.id, { other: e.why }); } };
   while (days < 2 && home.size < own.size) { T.live(0.125 * DAY, look); days += 0.125; }
   // (another emergency may call one before he is back — the great work, a war —; one sent to a third trade by the need
   // that lasted was not given back)
   const EMERG = { fome: 1, guerra: 1, obra: 1 };
   const went = [...home.values()]; const backN = went.filter(h => h.ok !== undefined).length, backOk = went.filter(h => h.ok).length, called = went.filter(h => h.other && EMERG[h.other]).length, astray = went.filter(h => h.other && !EMERG[h.other]).length;
-  const waiting = [...own.keys()].filter(id => !home.has(id) && G.S.villagers.get(id) && grown(G.S.villagers.get(id)));
-  ok('x4 e devolve', backN >= 3 && backN >= (backN + waiting.length + astray) * 0.7 && backOk === backN, `com o armazém cheio, em ${days} dias ${backN} das ${own.size} mãos puxadas voltaram ao ofício delas («volta»), com os dias que tinham nele (${backOk}); ${called} foram chamadas antes por outra emergência (${[...new Set(went.filter(h => h.other && EMERG[h.other]).map(h => h.other))].join(', ') || '—'}); mandadas a um terceiro ofício pela necessidade: ${astray}; ainda fora do ofício delas: ${waiting.length}${waiting.length ? ' (' + waiting.slice(0, 4).map(id => `#${id} ${own.get(id).keep} → ${G.S.villagers.get(id).role}`).join(', ') + ')' : ''}`);
+  const waiting = [...own.keys()].filter(id => !home.has(id) && G.S.villagers.get(id) && grown(G.S.villagers.get(id))); const early = went.filter(h => h.early).length;
+  ok('x4 e devolve', backN >= 3 && backN >= (backN + waiting.length + astray) * 0.7 && backOk === backN, `com o armazém cheio, em ${days} dias ${backN} das ${own.size} mãos puxadas voltaram ao ofício delas («volta»${early ? `; ${early} já na fome mesma, antes de o armazém encher` : ''}), com os dias que tinham nele (${backOk}); ${called} foram chamadas antes por outra emergência (${[...new Set(went.filter(h => h.other && EMERG[h.other]).map(h => h.other))].join(', ') || '—'}); mandadas a um terceiro ofício pela necessidade: ${astray}; ainda fora do ofício delas: ${waiting.length}${waiting.length ? ' (' + waiting.slice(0, 4).map(id => `#${id} ${own.get(id).keep} → ${G.S.villagers.get(id).role}`).join(', ') + ')' : ''}`);
   const un = T.unsaid(); const q = inv(); ok('x4 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
 }
 
@@ -223,9 +233,18 @@ if (on('x5')) {
   // work keeping its stone and with a trade to stage: a great work's gang takes hands by its own rule, the newest, before the
   // war asks — in the tree joined with the third round of the great works Argos has one from the first quarter of a day, its
   // miners and two of the staged farmers went to the gang, and the war found none of the staged in their trade. T-846)
-  const F = G.Fac.all().filter(f => f.alive !== false).sort((a, b) => a.id - b.id); let pair = null;
-  const pairs = []; for (const a of F) { if (G.Fac.enemiesOf(a.id).length) continue; for (const b of F) { if (b === a || G.Fac.enemiesOf(b.id).length) continue; const r = a.rel && a.rel[b.id] || b.rel && b.rel[a.id]; if (r && r.met && r.st !== 'guerra' && adults(v => G.Fac.idOfV(v) === a.id).length >= 20) { pairs.push([a, b]); break; } } }
-  pair = pairs.filter(p => !(V.stoneKept(p[0].id) > 0) && spare(p[0])).sort((p, q) => spare(q[0]) - spare(p[0]))[0] || pairs.filter(p => spare(p[0])).sort((p, q) => spare(q[0]) - spare(p[0]))[0] || pairs.find(p => stagesOf(p[0]).length) || pairs[0] || null;
+  // (the metrópole first, then the other ready worlds, for a people with a trade to stage that has a hand to spare: in the
+  // metrópole of the generation 25 Pólis de Argos had two trades to stage, its farmers and its builders, with no hand to spare
+  // by the instant, and the war took none of the staged — «a guerra tirou gente de 0», T-1174; as the x7 looks, T-1088)
+  let pair = null;
+  for (const w of ['metropole', 'mega', 'mundial', 'cidade']) {
+    if (w !== 'metropole') { M.pronto(w); M.viver(0.25 * DAY); }
+    const F = G.Fac.all().filter(f => f.alive !== false).sort((a, b) => a.id - b.id);
+    const pairs = []; for (const a of F) { if (G.Fac.enemiesOf(a.id).length) continue; for (const b of F) { if (b === a || G.Fac.enemiesOf(b.id).length) continue; const r = a.rel && a.rel[b.id] || b.rel && b.rel[a.id]; if (r && r.met && r.st !== 'guerra' && adults(v => G.Fac.idOfV(v) === a.id).length >= 20) { pairs.push([a, b]); break; } } }
+    const best = pairs.filter(p => !(V.stoneKept(p[0].id) > 0) && spare(p[0])).sort((p, q) => spare(q[0]) - spare(p[0]))[0] || pairs.filter(p => spare(p[0])).sort((p, q) => spare(q[0]) - spare(p[0]))[0];
+    if (best) { pair = best; break; }
+    if (w === 'cidade') { M.pronto('metropole'); M.viver(0.25 * DAY); const F2 = G.Fac.all().filter(f => f.alive !== false).sort((a, b) => a.id - b.id); const ps = []; for (const a of F2) { if (G.Fac.enemiesOf(a.id).length) continue; for (const b of F2) { if (b === a || G.Fac.enemiesOf(b.id).length) continue; const r = a.rel && a.rel[b.id] || b.rel && b.rel[a.id]; if (r && r.met && r.st !== 'guerra' && adults(v => G.Fac.idOfV(v) === a.id).length >= 20) { ps.push([a, b]); break; } } } pair = ps.find(p => stagesOf(p[0]).length) || ps[0] || null; }
+  }
   if (!pair) ok('x5 a guerra puxa', false, 'nenhum par de povos em paz que já se encontraram');
   else {
     const [a, b] = pair; const w0 = adults(v => G.Fac.idOfV(v) === a.id && v.role === 'guerreiro').length; const A = adults(v => G.Fac.idOfV(v) === a.id).length;
@@ -303,7 +322,11 @@ if (on('x6')) {
     const A = adults(v => v.set === set.id); if (A.length < 15 || !set.ofm || G.Fac.enemiesOf(set.fac).length) continue; const by = {};
     if (A.filter(v => v.role === 'coletor' || v.role === 'lenhador' || v.role === 'mineiro').length < 2) continue;
     for (const v of A) if (v.job && STEADY.includes(v.role)) (by[v.role] = by[v.role] || []).push(v);
-    for (const r of STEADY) { if (!by[r] || by[r].length !== 1 || !(set.ofm[r] >= 0.9)) continue; const v = by[r][0]; if (S.avatar && S.avatar.id === v.id) continue; const f = G.Fac.get(set.fac); if (f && f.leader === v.id) continue; cases.push({ set, r, v, b: v.job }); break; }
+    // (the only hand of the trade: of all the town's, with a post or without one, and of who keeps it to come back to — Henut,
+    // the taverner of Mênfis in the metropole of the generation 25, was not: Khufu was a taverner with no post, took hers when
+    // she died, and no trade was dealt — «sem causa dita», T-1171)
+    const hands = r => A.filter(v => v.role === r || v.roleBack === r).length;
+    for (const r of STEADY) { if (!by[r] || by[r].length !== 1 || hands(r) !== 1 || !(set.ofm[r] >= 0.9)) continue; const v = by[r][0]; if (S.avatar && S.avatar.id === v.id) continue; const f = G.Fac.get(set.fac); if (f && f.leader === v.id) continue; cases.push({ set, r, v, b: v.job }); break; }
     if (cases.length >= 4) break;
   }
   if (cases.length < 2) ok('x6 a vaga', false, `só ${cases.length} cidade(s) com um ofício de oficina de uma mão só e mãos para dar`);
@@ -422,8 +445,12 @@ if (on('x10')) {
   const mem = () => [...G.S.settlements.values()].filter(s => s.ofm).length;
   // (two hands in a trade their town does not ask — the test's hand, right before the save: the next dealing would move them
   // at once, and the load must not be that dealing)
-  { const anyIn = (set, t) => [...G.S.buildings.values()].some(b => b.set === set.id && b.type === t); const set = biggest(s => !anyIn(s, 'ourives') && !G.Fac.enemiesOf(s.fac).length);
-    const two = set ? adults(v => v.set === set.id && (v.role === 'coletor' || v.role === 'lenhador' || v.role === 'agricultor') && !v.roleBack && !v.jail && !v.aboard).slice(0, 2) : [];
+  // (in a town that has the two: Corinto of the metropole of the generation 25, the biggest at peace with no goldsmith's, had one
+  // gatherer free to make a goldsmith of, «Talia, de Corinto», T-1172)
+  { const anyIn = (set, t) => [...G.S.buildings.values()].some(b => b.set === set.id && b.type === t);
+    const free2 = s => adults(v => v.set === s.id && (v.role === 'coletor' || v.role === 'lenhador' || v.role === 'agricultor') && !v.roleBack && !v.jail && !v.aboard);
+    const set = biggest(s => !anyIn(s, 'ourives') && !G.Fac.enemiesOf(s.fac).length && free2(s).length >= 2);
+    const two = set ? free2(set).slice(0, 2) : [];
     god(() => { for (const v of two) { v.role = 'ourives'; v.job = 0; v.roleDay = G.S.day - 5; } }); ok('x10 duas mãos por trocar na hora do save', two.length === 2, set ? `${two.map(v => v.name).join(' e ')}, de ${set.name}, ourives sem ourivesaria` : 'nenhuma cidade em paz sem ourivesaria'); }
   const c0 = canon(); const save = G.Save.serialize(); const l0 = LOG.length;
   G.Save.apply(JSON.parse(save)); G.Main.mode = 'game'; const c1 = canon(); const atLoad = LOG.length - l0;
@@ -481,12 +508,22 @@ if (on('x13')) {
   // a work that waits for stone in a town at peace with no great work keeping its stone yet: the test's hand gives it the
   // turn (set.vez, set.gw — the planner's own marks, held each step: the planner writes them again each time it plans)
   let c = null;
+  // (the work of the town that waits for the most stone: a house's few stones come in the seconds of the case)
+  const wait = x => (x.need ? x.need.stone || 0 : 0) - ((x.incoming && x.incoming.stone) || 0);
+  const fit = set => adults(v => v.set === set.id).length >= 30 && !G.Fac.enemiesOf(set.fac).length && !(V.keeps(set) > 0);
   for (const set of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
-    const A = adults(v => v.set === set.id).length; if (A < 30 || G.Fac.enemiesOf(set.fac).length || V.keeps(set) > 0) continue;
-    // (the work of the town that waits for the most stone: a house's few stones come in the seconds of the case)
-    const wait = x => (x.need ? x.need.stone || 0 : 0) - ((x.incoming && x.incoming.stone) || 0);
+    if (!fit(set)) continue; const A = adults(v => v.set === set.id).length;
     const b = [...S.buildings.values()].filter(x => x.set === set.id && !x.built && x.type !== 'ruin' && wait(x) > 2).sort((x, y) => wait(y) - wait(x) || x.id - y.id)[0];
     if (b && (!c || wait(b) > c.w)) c = { set, b, A, w: wait(b) };
+  }
+  // (and where the world has the town but not the work, the work by the test's hand: a temple of stone founded, unbuilt, as
+  // the town's planner founds one — Mênfis of the metropole of the generation 25, 41 grown ones at peace, had for works only two
+  // brick houses, and no town had the case, T-1173)
+  if (!c) for (const set of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
+    if (!fit(set)) continue;
+    for (const t of ['temple', 'torre']) { const pos = god(() => V.findSite(set, t)); if (!pos || pos.demolish) continue;
+      const b = god(() => { const x = V.addBuilding(t, pos[0], pos[1], set.id, false); G.W.touchWalk(); return x; }); if (b && wait(b) > 2) { c = { set, b, A: adults(v => v.set === set.id).length, w: wait(b), hand: true }; break; } }
+    if (c) break;
   }
   if (!c) ok('x13 a obra grande puxa', false, 'nenhuma cidade em paz de trinta adultos com uma obra à espera de pedra e sem obra grande com a vez');
   else {
@@ -497,7 +534,7 @@ if (on('x13')) {
     let keeps = 0; const T = watch(); T.live(45, () => god(() => { c.set.vez = 1; c.set.gw = c.b.id; keeps = Math.max(keeps, V.keeps(c.set)); }));
     const n1 = adults(v => v.set === c.set.id && v.role === 'construtor').length; const L = T.log().filter(e => e.why === 'obra' && e.set === c.set.id);
     const kept = L.filter(e => { const v = G.S.villagers.get(e.id); return v && (v.role !== 'construtor' || v.roleBack === e.from); }).length;
-    ok('x13 a obra grande com a vez puxa na hora', keeps > 0 && n1 >= gang - 1 && L.length >= Math.min(3, gang - 2) && kept === L.length, `${c.set.name} (${c.A} adultos): ${V.buildName ? V.buildName(c.b) : c.b.type} ganha a vez e guarda ${Math.round(keeps)} de pedra; a turma é de ${gang} construtores: ${n0} → ${n1} em 45 s, ${L.length} chamados pela obra (cada um guarda o ofício de onde saiu: ${kept})`);
+    ok('x13 a obra grande com a vez puxa na hora', keeps > 0 && n1 >= gang - 1 && L.length >= Math.min(3, gang - 2) && kept === L.length, `${c.set.name} (${c.A} adultos): ${V.buildName ? V.buildName(c.b) : c.b.type}${c.hand ? ' (fundado pela mão da prova)' : ''} ganha a vez e guarda ${Math.round(keeps)} de pedra; a turma é de ${gang} construtores: ${n0} → ${n1} em 45 s, ${L.length} chamados pela obra (cada um guarda o ofício de onde saiu: ${kept})`);
     const un = T.unsaid(); const q = inv(); ok('x13 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
   }
 }

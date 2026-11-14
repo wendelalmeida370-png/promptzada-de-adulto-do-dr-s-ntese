@@ -269,6 +269,15 @@
       const f = G.Fac.get(s.fac); if (!(f && f.alive)) removeShip(s);
     }
   }
+  // (the people that ends takes its ships with it at once, as it takes its armies, fleets and voyages — the ships' own pass, run
+  // at the hour of the end, not at its next look: a warship of the República de Texcoco, ended on the last day of the mundial
+  // of the generation 25, lay at its quay of a people gone and sailed out on patrol before the next look gave it to the town's
+  // new people, L-808. At sea, each keeps its own way: it is given at its quay; an empty hull adrift is the sea's)
+  Nv.onExtinct = () => reconcileOwners();
+  // (who dies leaves the ships' rosters at the hour: Izel, a hunter called to a warship of the metropole of the generation 25 as a
+  // hand, was killed by an arrow on the way to the quay and stayed on the roster until the next look — the year's save kept a dead
+  // hand on it, L-810)
+  Nv.onGone = function (v) { for (const s of G.S.ships) if (s.crew && s.crew.includes(v.id)) s.crew = s.crew.filter(id => id !== v.id); };
   Nv.sink = function (s, by, why) {
     const S = G.S; const f = G.Fac.get(s.fac);
     if (s.sunk) return; s.sunk = true;
@@ -1196,6 +1205,9 @@
         s.path = null;
         if (s.st === 'sail' && s.water) sailTo(s, s.water[0], s.water[1]);
         else if (s.st === 'return' || s.st === 'back' || s.st === 'back2') { const h = home(s); if (h && h.moor) sailTo(s, h.moor[0], h.moor[1]); }
+        // (a hull adrift without the mark of the empty hull — a save of before L-807: the voyage that met it and left it cleared the
+        // mark — drifts again; with nobody aboard and no voyage or fleet, it is the empty hull it was)
+        if (s.st === 'deriva' && !s.ghost && !s.exp && !s.fleet && !(s.crew || []).some(id => { const v = S.villagers.get(id); return v && v.aboard === s.id; })) { s.ghost = 1; if (s.driftT === undefined) s.driftT = G.DAY_LEN * 0.5; }
         // (a ship of a voyage or a fleet is put back on course by its expedition or its admiral)
         else if (((s.st === 'out' && s.kind !== 'pesca') || s.st === 'go' || s.st === 'patrol') && !s.exp && !s.fleet) { s.st = 'idle'; }
         // (a ship waiting at the quay for its crew: who was on the way down when the game was saved is on the way down

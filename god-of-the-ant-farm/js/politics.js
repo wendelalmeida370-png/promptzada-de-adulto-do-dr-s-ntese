@@ -672,6 +672,7 @@
     G.War && G.War.onExtinct(f);
     // (its armies, fleets and expeditions end with it at once, as its bands do — not at their next look: L-733)
     G.Wars && G.Wars.onExtinct(f); G.Fleets && G.Fleets.onExtinct(f); G.Expe && G.Expe.onExtinct(f);
+    G.Naval && G.Naval.onExtinct(f); // (and its ships at the quays, L-808)
     S.stats.fallen = (S.stats.fallen || 0) + 1;
     log(`${f.name} deixou de existir${by ? ', conquistad' + G.Fac.oa(f) + ' por ' + by.name : ''}.`, 'massacre');
     G.UI && G.UI.toast('Um povo caiu', `${f.name} desapareceu da história.`, 'massacre');

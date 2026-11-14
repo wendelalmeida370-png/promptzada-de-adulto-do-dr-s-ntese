@@ -38,6 +38,10 @@ const ALTAR_ROOM = 0.85; let nAltar = 0, nAltarBad = 0; const altarEx = [];
 // (L-584: a piece hung over the floor never in the head of whoever climbs a flight under it — the body's height over the
 // highest step under the piece, on a flight that comes up to its storey or goes up from it)
 let nHung = 0, nHungBad = 0; const hungEx = [];
+// (L-814: a piece stays under the floor of a storey over it — a loft, a gallery, the storey above —: its top under the boards'
+// underside wherever that floor covers it. The Norse eaves at 2,2 m put the loft at 1,95, its boards' underside at 1,8, and the
+// ground floor's hung baskets, 1,5 to 2 m on the wall, came up 6 cm through the loft's floor)
+let nUnder = 0, nUnderBad = 0; const underEx = [];
 const headOf = (p, it) => { const L = p.levels.find(q => q.lv === it.lv); if (!L) return Infinity; const bot = L.y + it.y; let m = Infinity;
   for (const st of p.stairs) { if (st.kind === 'degraus' || (st.lv0 !== it.lv && st.lv1 !== it.lv)) continue; const r = it.r, q = st.r;
     const I = [Math.max(r[0], q[0]), Math.max(r[1], q[1]), Math.min(r[2], q[2]), Math.min(r[3], q[3])]; if (I[2] - I[0] < 1e-6 || I[3] - I[1] < 1e-6) continue;
@@ -100,6 +104,9 @@ for (const type of Object.keys(In.TYPES)) {
           }
         }
         for (const it of p.items) { if (!(it.y > 0)) continue; const hr = headOf(p, it); if (hr === Infinity) continue; nHung++; if (hr < In.BODY.h - 0.01) { nHungBad++; if (hungEx.length < 4 || process.env.VERB) hungEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${it.kind} a ${hr.toFixed(2)} m sobre os degraus`); } }
+        for (const it of p.items) { const l0 = p.levels.find(q => q.lv === it.lv); if (!l0) continue; const top = l0.y + (it.y || 0) + it.h;
+          for (const l of p.levels) { const A = l.area; if (!(l.lv > it.lv) || !A || !(it.r[0] < A[2] && A[0] < it.r[2] && it.r[1] < A[3] && A[1] < it.r[3])) continue;
+            nUnder++; const under = l.y - (l.slab || 0); if (top > under + 0.005) { nUnderBad++; if (underEx.length < 4 || process.env.VERB) underEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${it.kind} (piso ${it.lv}) até ${top.toFixed(2)} m, sob o piso ${l.lv} (${l.kind}) a ${under.toFixed(2)} m`); } } }
         if (type === 'temple') for (const it of p.items) { if (it.kind !== 'altar') continue; nAltar++; const d = altarRoom(p, it); if (d < ALTAR_ROOM) { nAltarBad++; if (altarEx.length < 4 || process.env.VERB) altarEx.push(`${type}/${c}/${JSON.stringify(ctx)}/${s} ${f} #${id}: ${d.toFixed(3)} m`); } }
         seen.add(p.sig); fine.add(hash(JSON.stringify([p.shell, p.rooms.map(m => m.r), p.items.map(i => [i.kind, i.x, i.z, i.ry]), p.holes.map(h => [h.wall, h.at])])));
         // the same input, the same plan (a second build outside the cache)
@@ -136,6 +143,7 @@ ok('o chão fora das escadas', nFloorBad === 0, `${nCells} células de chão for
 if (nAltar) ok('o lugar de ofertar diante do altar (L-502)', nAltarBad === 0, `${nAltar} altares de templo: ${nAltarBad} com menos de ${ALTAR_ROOM} m de chão livre diante dele`);
 for (const e of altarEx) console.log('   ✗ ' + e);
 ok('a peça pendurada fora da cabeça de quem sobe (L-584)', nHungBad === 0, `${nHung} peças penduradas sobre um lance: ${nHungBad} a menos de ${In.BODY.h} m sobre os degraus sob elas`);
+ok('a peça debaixo do piso de cima (L-814)', nUnderBad === 0, `${nUnder} peças debaixo de um piso de cima: ${nUnderBad} atravessam as tábuas dele${underEx.length ? ' — ' + underEx.join(' · ') : ''}`);
 for (const e of hungEx) console.log('   ✗ ' + e);
 for (const e of floorEx) console.log('   ✗ ' + e);
 ok('poucas caídas', nFell <= nPlans * 0.1, `${nFell} de ${nPlans} plantas (${(100 * nFell / Math.max(1, nPlans)).toFixed(1)}%) caíram da família do registro para a próxima que o catálogo oferece ali`);

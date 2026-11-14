@@ -149,7 +149,13 @@ function islet(set) {
   fresh(); said = []; const B = base();
   // (the town with ground for an islet nearest its middle — a big city leaves little bare ground near it —, the most people first)
   const towns = [...S.settlements.values()].filter(s => V.dropoffs(s.id).length && G.Fac.get(s.fac)).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
-  let set = null, at = null; for (const s of towns) { const p = islet(s); if (p) { set = s; at = p; break; } }
+  // (and the islet where the town's people pass: whoever goes to work with empty hands picks up a load within Vg.PICK_R (30) of
+  // him — in the cidade of the generation 25 Roma's nearest bare ground for an islet lay where none of its people passed within
+  // that, and the wood lay there the whole case, «apanhada 0 de 3», T-1193 —: an islet within half of it from the town's middle,
+  // the next town else)
+  let set = null, at = null, far = null;
+  for (const s of towns) { const p = islet(s); if (!p) continue; if (G.dist(p[0] + 0.5, p[1] + 0.5, s.cx, s.cy) <= Vg.PICK_R / 2) { set = s; at = p; break; } if (!far) far = [s, p]; }
+  if (!set && far) [set, at] = far;
   const f = set && G.Fac.get(set.fac); let pass = false, info = '';
   const u = at && [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 18 && !v.captive && !v.aboard && !(v.carry && v.carry.n > 1e-6)).sort((a, b) => a.id - b.id)[0];
   if (!at || !u) info = !set ? 'nenhuma cidade' : 'nenhum chão de ilhota perto da cidade';
@@ -166,7 +172,7 @@ function islet(set) {
     live(300, () => !gOf(r.g), k => { if (t1 < 0 && picked(L1, r.g).length) t1 = S.clock - t0; if (k % 50 === 49) seeChao(); });
     const up = sum(picked(L1, r.g)); const bad = newBad(B);
     pass = cut && Math.abs(up - r.n) < 0.01 && !gOf(r.g) && !bad.length && !said.length;
-    info = `${set.name}: ${r.n} de lenha numa ilhota em ${at[0]},${at[1]}, a água em volta: em 90 s ${cut ? 'ninguém foi, ninguém apanhou, o verificador calado' : `${went ? 'ALGUÉM FOI' : ''}${picked(L0, r.g).length ? ' APANHADA' : ''}${said.length ? ' o verificador: «' + said[0] + '»' : ''}`}; a água foi embora: apanhada ${up} de ${r.n}${t1 >= 0 ? ' aos ' + Math.round(t1) + ' s' : ''}${bad.length ? ' — ' + bad.join(' · ') : ''}`;
+    info = `${set.name}: ${r.n} de lenha numa ilhota em ${at[0]},${at[1]} (a ${Math.round(G.dist(at[0] + 0.5, at[1] + 0.5, set.cx, set.cy))} casas do meio), a água em volta: em 90 s ${cut ? 'ninguém foi, ninguém apanhou, o verificador calado' : `${went ? 'ALGUÉM FOI' : ''}${picked(L0, r.g).length ? ' APANHADA' : ''}${said.length ? ' o verificador: «' + said[0] + '»' : ''}`}; a água foi embora: apanhada ${up} de ${r.n}${t1 >= 0 ? ' aos ' + Math.round(t1) + ' s' : ''}${bad.length ? ' — ' + bad.join(' · ') : ''}`;
   }
   ok('a5 o mapa muda: a ilhota, e a água que vai embora', pass, info);
 }

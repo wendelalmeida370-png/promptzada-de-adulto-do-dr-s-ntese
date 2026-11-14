@@ -201,10 +201,12 @@ const fair = stockFair(set);
 // ---------------- c12: the god's body is not sent; the house's need is a goal in its diary
 {
   const h = houseLacking(set, 2, 30);
-  const v = adults(h)[0]; const tk = G.Possess.take(v); M.viver(0.2);
+  // (one of the house the body may take — not one down in a cave, at sea or in a cell: Alexios, the first grown one of the house in
+  // the metrópole of the generation 25, was in a cave, «dentro de uma caverna — as cavernas em 3D ainda não existem», T-1192)
+  const v = adults(h).find(o => G.Possess.can(o).ok) || adults(h)[0]; const tk = G.Possess.take(v); M.viver(0.2);
   const u = C.urge(v); const g = (G.Act.diary(v).goals || []).find(q => q.src === 'casa');
   G.Possess.release('deus'); M.viver(0.2);
-  ok('c12 o corpo e a casa', tk.ok && u === 0 && !!g, `${v.name} pelo deus: vontade de comprar ${u}; no diário: ${g ? '«' + g.txt + '»' : 'NADA'}`);
+  ok('c12 o corpo e a casa', tk.ok && u === 0 && !!g, `${v.name} pelo deus${tk.ok ? '' : ' (NÃO TOMADO: ' + tk.why + ')'}: vontade de comprar ${u}; no diário: ${g ? '«' + g.txt + '»' : 'NADA'}`);
 }
 // ---------------- c13: hands with a purchase on the way home take no errand from outside (a cave, a feast, a theft would put
 // their own things in them over it); an urgent call does take the person — and the purchase stays in the hands

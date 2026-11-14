@@ -107,6 +107,17 @@
     return ew ? free(i - N) && free(i + N) : ns ? free(i - 1) && free(i + 1) : (free(i - N) && free(i + N)) || (free(i - 1) && free(i + 1));
   };
   const lineOf = tiles => { const S = G.S; const on = new Set(tiles); return j => on.has(j) || S.wall[j] === 1 || S.wall[j] === 2 || S.wall[j] === 4; };
+  // (the tile before a gate of another town's wall, standing or planned — across its line, the way through it: a wall laid
+  // against an older town's wall put a tile of its line there and shut the gate from outside — Hedeby's east gate behind Delfos's
+  // west wall in the mega of the generation 25, Tenochtitlan's north gate behind Birka's in its metrópole, Mênfis's behind its
+  // neighbour's in the anos500 and anos1000, Kaupang's behind a gate of Texcoco's in the anos100 of the generation 21 —, and the
+  // gate let nobody through, L-806. Never a wall there: the tile stays open, and the older gate is the way between the two towns.
+  // Pure: the walls' plans and the map)
+  const frontOfGate = Sg.frontOfGate = function (i, sid) {
+    const S = G.S; const x = i % N, y = (i / N) | 0; if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) return false;
+    for (const d of [1, -1, N, -N]) { const j = i + d; for (const q of S.walls || []) if (q.set !== sid && q.gates.includes(j) && !q.tiles.includes(i)) return true; }
+    return false;
+  };
   // (the ground inside another town's walls is walled already — an older wall, standing or still going up —: a wall of the
   // town next door run inside it shuts a pocket between the two with no gate of either — Corinto's east wall inside Argos's,
   // in the metropole of 28/10: three houses of Argos in a strip of 4 by 10, their people with no way home, L-342)
@@ -286,6 +297,7 @@
       const wet = S.type[i] < T.SAND && !(S.type[i] === T.RIVER && (!S.deep[i] || S.road[i]));
       if (wet || S.wall[i] === 3 || Sg.walledIn(i, { set: s.id, id: Infinity })) continue;
       if (takenAt(i) || keptAt(i)) continue;
+      if (frontOfGate(i, s.id)) continue; // (nor before another town's gate: L-806)
       tiles.push(i);
     }
     if (tiles.length < 12) return null;
@@ -331,7 +343,7 @@
     if (mat) w.mat = mat;
     S.walls.push(w);
     const up = new Set();
-    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || takenAt(i) || keptAt(i) || Sg.walledIn(i, w)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; up.add(i); }
+    if (instant) for (const i of w.tiles) { const gate = w.gates.includes(i); if ((S.wall[i] && !(gate && S.wall[i] === 1)) || takenAt(i) || keptAt(i) || Sg.walledIn(i, w) || frontOfGate(i, w.set)) continue; S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; up.add(i); }
     if (instant) { w.built = w.tiles.length; w.done = true; G.W.touchWalk(); if (up.size) unbury(up, w); }
     return w;
   };
@@ -369,7 +381,9 @@
       const gate = w.gates.includes(i);
       // (and never inside another town's walls: a plan saved before L-342 still has those tiles)
       // (a tile kept since the plan — a lot guarded after it, D-121 — stays open, as at the plan)
-      if (i !== undefined && !Sg.walledIn(i, w) && (gate && S.wall[i] === 1 || !S.wall[i] && !takenAt(i) && !keptAt(i))) {
+      // (and one before another town's gate stays open too — the gate planned after this plan, or a plan of before L-806: the
+      // builders of the two walls raise in turn, and a gate of the other wall planned there later was shut at its raising)
+      if (i !== undefined && !Sg.walledIn(i, w) && !frontOfGate(i, w.set) && (gate && S.wall[i] === 1 || !S.wall[i] && !takenAt(i) && !keptAt(i))) {
         f.stock[k] -= 2;
         S.wall[i] = gate ? 2 : 1; S.wallFac[i] = f.id; S.wallHp[i] = WALLHP[w.mat][gate ? 1 : 0]; G.W.touchWalk();
         const x = (i % N) + 0.5, y = ((i / N) | 0) + 0.5;
@@ -792,11 +806,13 @@
       // (a save from before L-342: what was raised inside another town's walls comes down — the pocket opens; the tile map is
       // back already, city.js loads before. And one from before L-466: what was raised on the lot of an open ground with a plan
       // — the square, the fair — comes down, as no wall is raised there now: the world walks across it, its plan has its floor.
-      // And one from before L-606: what was raised on a fenced ground — its fence the wall there again)
+      // And one from before L-606: what was raised on a fenced ground — its fence the wall there again. And one from before
+      // L-806: what was raised before another town's gate — the gate lets through again)
       let down = 0;
       for (const w of S.walls) for (const i of w.tiles) {
         if (!S.wall[i] || S.wall[i] === 3) continue; const o = S.occ[i], ob = o && S.buildings.get(o); const onOpen = !!ob && !ob.blocks && takenAt(i);
-        if (!onOpen && (!Sg.walledIn(i, w) || S.walls.some(q => q !== w && q.tiles.includes(i) && !Sg.walledIn(i, q)))) continue; // (a tile of a wall that may stand there)
+        const front = frontOfGate(i, w.set);
+        if (!onOpen && !front && (!Sg.walledIn(i, w) || S.walls.some(q => q !== w && q.tiles.includes(i) && !Sg.walledIn(i, q)))) continue; // (a tile of a wall that may stand there)
         S.wall[i] = 0; S.wallFac[i] = 0; delete S.wallHp[i]; down++;
       }
       // (and a building of the town its own wall shuts off gets its gate — cut at once where the wall already stands, L-344)

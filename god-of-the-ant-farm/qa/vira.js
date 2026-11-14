@@ -11,7 +11,7 @@
 //   (L-542);
 // 6 a conquista que deixa um povo só com cidades vazias: o povo acaba na hora (L-685);
 // 7 o povo que acaba leva na hora os exércitos, as frotas e as expedições dele — nada de um povo morto em campo ou no mar,
-//   nem meio segundo (L-733);
+//   nem meio segundo (L-733) —, e os navios dele nos cais (L-808);
 // e o verificador fica limpo em todos.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
@@ -161,12 +161,14 @@ const ROOT = path.resolve(__dirname, '..');
       if (x) { f = o; made = x.name; break; }
     }
     if (!f) return { ok: false, info: 'nenhum povo com frota e expedição no mar e sem cativos nas suas cidades' };
+    // (and its ships at the quays: given to the town's people or out of the world at once, the ships' own pass — L-808)
+    const docked = () => S.ships.filter(s => s.fac === f.id && !G.Naval.atSea(s)).map(s => `${s.kind}#${s.id}`); const quay0 = docked().length;
     const was = atSea(f); const mine = [...S.villagers.values()].filter(v => !v.captive && G.Fac.idOfV(v) === f.id);
     for (const v of mine) G.Village.kill(v, 'sick');
-    const left = atSea(f); const sea0 = QA.check().filter(e => e.sev <= 2 && / povo .*extinto$/.test(e.msg) && /^(exército|frota|expedição) /.test(e.msg)).map(e => e.msg);
+    const left = atSea(f); const quay = docked(); const sea0 = QA.check().filter(e => e.sev <= 2 && / povo .*extinto$/.test(e.msg) && /^(exército|frota|expedição) /.test(e.msg)).map(e => e.msg);
     for (let k = 0; k < 4; k++) G.debug.step(0.05);
     const bad = QA.check().filter(e => e.sev <= 2).map(e => e.msg);
-    return { ok: !f.alive && !left.length && !sea0.length && !bad.length, info: `${f.name}${made ? ` (a expedição «${made}» mandada pela mão da prova: nenhuma no mar neste mundo, T-1072)` : ''} (${mine.length} almas; em campo e no mar: ${was.join(', ')}): ${f.alive ? 'ainda vivo' : 'acabou'}; na mesma hora ${left.length ? 'ainda de pé: ' + left.join(', ') : 'nada dele em campo nem no mar'}${sea0.length ? ' — ' + sea0.slice(0, 2).join(' | ') : ''}; ${bad.slice(0, 3).join(' | ') || 'verificador limpo'}` };
+    return { ok: !f.alive && !left.length && !quay.length && !sea0.length && !bad.length, info: `${f.name}${made ? ` (a expedição «${made}» mandada pela mão da prova: nenhuma no mar neste mundo, T-1072)` : ''} (${mine.length} almas; em campo e no mar: ${was.join(', ')}): ${f.alive ? 'ainda vivo' : 'acabou'}; na mesma hora ${left.length ? 'ainda de pé: ' + left.join(', ') : 'nada dele em campo nem no mar'}; dos ${quay0} navios dele nos cais, ${quay.length ? 'AINDA DELE: ' + quay.slice(0, 3).join(', ') : 'nenhum ainda dele'}${sea0.length ? ' — ' + sea0.slice(0, 2).join(' | ') : ''}; ${bad.slice(0, 3).join(' | ') || 'verificador limpo'}` };
   });
   console.log(`${r7.ok ? 'PASSOU' : 'FALHOU'} | o povo que acaba leva na hora os exércitos, as frotas e as expedições dele | ${r7.info}`);
   r.ok = r.ok && r2.ok && r3.ok && r4.ok && r5.ok && r6.ok && r7.ok;

@@ -28,6 +28,8 @@
 // m11 o soldo é só dos seus (L-716): quem passou a outro povo com o navio no mar não é pago pelo povo que deixou;
 // m12 a rota que fecha com o navio ainda no cais, chamando a tripulação (L-727): a viagem não há — o chamado acaba, a carga
 //    volta ao cais pelo livro, a madeira do casco volta, e o casco não fica à deriva no próprio cais;
+// m13 quem morre chamado ao navio sai da lista dele na hora (L-810): o que morre a caminho do cais e o que morre a bordo, com o
+//    navio no cais à espera — a lista do navio guardava o morto até o olhar seguinte, e o save do ano o gravou;
 // e nenhum erro.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js'] });
@@ -459,6 +461,28 @@ if (on('m12')) {
   }
 }
 
+if (on('m13')) {
+  // the call to the quay of a new merchant, with the sailors of its town at their doors (as in the m12)
+  const call = () => { mundo(); const r = rota(); const snd = r && sender(r); if (!r) return { why: 'nenhuma rota com marinheiros neste mundo' };
+    god(() => { for (const v of sailorsOf(snd.set.id)) { const h = S.buildings.get(v.home); const q = h && G.W.nearestLand(h.x + h.w / 2, h.y + h.h + 0.6, 3); if (q && G.W.reaches(v, q[0] + 0.5, q[1] + 0.5)) { G.Vg.endTask(v); v.sleeping = false; v.x = q[0] + 0.5; v.y = q[1] + 0.5; v.path = null; } } });
+    const before = new Set(S.ships.map(q => q.id)); r.t = 0; let s = null;
+    for (let k = 0; k < 900 && !s; k++) { M.viver(0.1); s = S.ships.find(q => q.kind === 'mercante' && q.tr && !before.has(q.id)) || null; }
+    for (const q of S.seaRoutes) q.t = 1e6;
+    return s ? { s, snd } : { why: `nenhum navio saiu na rota ${r.id} em 90 s` }; };
+  const dead = id => QA.check().some(q => q.msg.includes(`tripulante ${id} morto`));
+  // the one on the way to the quay
+  let c = call(); const walk = c.s && c.s.st === 'embark' ? c.s.crew.map(P).find(v => v && !v.aboard && v.task && v.task.type === 'embark' && v.task.ship === c.s.id) : null;
+  let said1 = c.why || (walk ? '' : `o navio em «${c.s.st}», ninguém a caminho do cais`), ok1 = false;
+  if (walk) { const n0 = c.s.crew.length; god(() => V.kill(walk, 'god', true)); const kept = c.s.crew.includes(walk.id), seen = dead(walk.id); ok1 = !kept && !seen;
+    said1 = `o mercante #${c.s.id} de ${c.snd.set.name} chamando ${n0} ao cais; ${walk.name}, a caminho, morre: ${kept ? 'FICA NA LISTA' : 'sai da lista'}${seen ? ' (o verificador VÊ o morto na lista)' : ''}`; }
+  // the one aboard: the case lives until a hand of the roster is aboard
+  c = call(); let ab = null;
+  if (c.s) for (let k = 0; k < 900 && !ab && S.ships.includes(c.s); k++) { for (const q of S.seaRoutes) if (q.t < 1e6) q.t = 1e6; M.viver(0.1); ab = Nv.aboardOf(c.s)[0] || null; }
+  let said2 = c.why || (ab ? '' : 'ninguém chegou a bordo em 90 s'), ok2 = false;
+  if (ab) { const at = Nv.atSea(c.s) ? 'no mar' : 'no cais'; god(() => V.kill(ab, 'god', true)); const kept = c.s.crew.includes(ab.id), seen = dead(ab.id); ok2 = !kept && !seen;
+    said2 = `${ab.name}, a bordo do mercante #${c.s.id} ${at}, morre: ${kept ? 'FICA NA LISTA' : 'sai da lista'}${seen ? ' (o verificador VÊ o morto na lista)' : ''}`; }
+  ok('m13 quem morre chamado ao navio sai da lista dele na hora: a caminho do cais e a bordo (L-810)', ok1 && ok2, `${said1}; ${said2}`);
+}
 const er = M.erros();
 ok('nenhum erro', M.limpo(), M.limpo() ? 'nenhum erro de módulo, nenhum aviso' : JSON.stringify(er).slice(0, 300));
 console.log(fails.length ? `MARINHEIROS: FALHOU (${fails.length})` : 'MARINHEIROS: PASSOU');

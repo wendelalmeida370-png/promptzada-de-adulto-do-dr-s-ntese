@@ -572,7 +572,12 @@ function realDay(key, world, c, step, nb) {
   // and the clock held at the opening hour meanwhile: the lot of the god's hand may be far from the store, 51 tiles in Argos)
   const t1 = G.S.time; live(200, () => O().data.lenha >= 1 || !A.live(O()), () => sim(() => { if (D.free('f:' + fid, 'wood') < 30) D.make('f:' + fid, 'wood', 40, { code: 'teste', part: true }); if (G.S.time > t1) G.S.time = t1; }));
   const lit = A.live(O()) && O().data.lenha >= 1;
-  const ids = sim(() => bathersFor(B(), nb, 2.9)); const tw = G.S.time;
+  // (the bathers of the day: the town's grown folk free at the opening and, while there are fewer than four, the ones who come
+  // free in the next seconds, the clock held at the opening — Roma of the metropole of the generation 25 has 31 people, and at
+  // the opening three were free, two asleep and the rest at their errands: «3 chamados», T-1168)
+  const ids = sim(() => bathersFor(B(), nb, 2.9)); const t2 = G.S.time;
+  for (let k = 0; k < 40 && ids.length < Math.min(nb, 4); k++) { live(1); sim(() => { G.S.time = t2; for (const id of bathersFor(B(), nb - ids.length, 2.9)) ids.push(id); }); }
+  const tw = G.S.time;
   let most = 0, off = 0, twice = 0, strangers = 0, over = 0, mid = null, midN = 0; const pools = new Set(), fns = new Set(); const who = new Set();
   const each = () => { const o = O(); if (!A.live(o)) return; const b = B(); const inW = []; for (const id of ids) { const v = G.S.villagers.get(id); if (v && v.task && v.task.type === 'termas' && v.task.st === 2 && v.inside === bid) inW.push(v); }
     most = Math.max(most, inW.length); if (inW.length > places) over++; const keys = [];

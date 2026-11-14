@@ -782,7 +782,8 @@
     Nv._move(s, dt);
   }
   const prevWar = Nv.RUN.guerra || Nv.RUN0.guerra;
-  Nv.RUN.guerra = (s, dt) => (s.fleet ? shipRun(s, dt) : s.exp ? prevWar(s, dt) : (s.crew && Nv.aboardOf(s).length ? prevWar(s, dt) : null));
+  // (the empty hull adrift goes on to the voyage's run, where every empty hull drifts and breaks: L-807)
+  Nv.RUN.guerra = (s, dt) => (s.fleet ? shipRun(s, dt) : s.exp || s.ghost ? prevWar(s, dt) : (s.crew && Nv.aboardOf(s).length ? prevWar(s, dt) : null));
   const prevTr = Nv.RUN.transporte || Nv.RUN0.transporte;
   Nv.RUN.transporte = (s, dt) => (s.fleet ? shipRun(s, dt) : prevTr(s, dt));
 

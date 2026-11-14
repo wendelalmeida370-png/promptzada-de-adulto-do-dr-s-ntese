@@ -23,7 +23,7 @@
   const In = G.Interiors = {};
   const TILE = 4;
   const CS = In.CS = 0.25; // (a cell of the inner grid, in metres)
-  In.VERSION = 3; // (the grammar's version: a newer grammar makes new plans of the same records — 2: the body's places fitted, D-088; 3: the house's core — where the household eats together, by the fire — before its other beds, D-196)
+  In.VERSION = 5; // (the grammar's version: a newer grammar makes new plans of the same records — 2: the body's places fitted, D-088; 3: the house's core — where the household eats together, by the fire — before its other beds, D-196; 4: what hangs on a wall stays under the floor above it, L-814; 5: the walk starts at the cells nearest the door and a flight's end, L-816)
   const REC_V = In.REC_V = 4; // (the record's version: an older one has its door judged on loading — 4: the grammar of In.VERSION 2. A world saved under an older grammar has all its records judged so: the save keeps the grammar its plans were made by, intG — D-196)
   In.TRIES = 12; // (how many times a recipe is laid out, each with its own dice, before its family gives way)
   In.STEP = 0.3; // (along a wall, the places tried every so many metres — besides the corners and right beside each piece)
@@ -340,6 +340,10 @@
   const KIT = {
     level(lv, y, h, kind, area) { const o = { lv, y, h, kind, area: area.slice(), slab: SLABS[kind] || 0 }; this.levels.push(o); this.levels.sort((a, b) => a.lv - b.lv); return o; },
     lvl(lv) { return this.levels.find(l => l.lv === lv); },
+    // the height over a level's floor of the lowest floor above it that covers r — its boards' underside —, Infinity with none:
+    // what hangs on a wall stays under it (the Norse loft at 1,95 m, its boards from 1,8, and the ground floor's baskets hung from
+    // 1,5 to 2 m came up through its floor: L-814)
+    headOver(lv, r) { const me = this.lvl(lv); const y0 = me ? me.y : 0; let h = Infinity; for (const l of this.levels) if (l.lv > lv && l.area && ov(r, l.area)) h = Math.min(h, l.y - (l.slab || 0) - y0); return h; },
     room(lv, fn, r, open, circ) { const id = this.rooms.length; this.rooms.push({ id, lv, fn, r: r.slice(), open: open ? 1 : 0, circ: circ ? circ.slice() : null }); return id; },
     wall(lv, a, b, t, h, outer, kind, mat) { const id = this.walls.length; this.walls.push({ id, lv, a: a.slice(), b: b.slice(), t, h, outer: outer ? 1 : 0, kind: kind || 'parede', mat: mat || (this.shell && this.shell.mat) || '', shell: this.phase === 'casca' ? 1 : 0 }); return id; },
     // the turn from the shell to the inside: the shell is written down as it stands (the inside may not change it) and the
@@ -793,6 +797,7 @@
           const half = Math.abs(a) + W / 2; if (half >= rad - 0.1) continue; const ex = Math.sqrt(rad * rad - half * half) - 0.03; // (its outer corners on the ring)
           const rr = fv ? [cu + a - W / 2, fv > 0 ? cv - ex : cv + ex - dep, cu + a + W / 2, fv > 0 ? cv - ex + dep : cv + ex] : [fu > 0 ? cu - ex : cu + ex - dep, cv + a - W / 2, fu > 0 ? cu - ex + dep : cu + ex, cv + a + W / 2];
           if (e && Math.hypot((rr[0] + rr[2]) / 2 - e.u, (rr[1] + rr[3]) / 2 - e.v) < W / 2 + 0.75) continue;
+          if ((D.y || 1) + D.h > this.headOver(lv, rr) + 0.005) continue; // (under the floor above: L-814)
           if (F.items.some(it => it.niche && ov(rr, it.r, -0.3))) continue;
           if (F.solid.some(it => (it.h || 0) >= (D.y || 1.4) - 0.1 && ov(rr, it.r, -0.02))) continue;
           const sps = this.spotsAll({ r: rr, face: [fu, fv], kind, w: W, d: dep, h: D.h });
@@ -816,6 +821,7 @@
           const ind = hung ? dep : 0, out = hung ? 0 : dep; // (into the wall, or out of it into the room)
           if (s === 'fundo') { rr = [a0, r[1] - out, a0 + W, r[1] + ind]; fu = 0; fv = 1; } else if (s === 'frente') { rr = [a0, r[3] - ind, a0 + W, r[3] + out]; fu = 0; fv = -1; }
           else if (s === 'esquerda') { rr = [r[0] - out, a0, r[0] + ind, a0 + W]; fu = 1; fv = 0; } else { rr = [r[2] - ind, a0, r[2] + out, a0 + W]; fu = -1; fv = 0; }
+          if (hung && (D.y || 1) + D.h > this.headOver(lv, rr) + 0.005) continue; // (under the floor above: L-814)
           if (F.items.some(it => it.niche && ov(rr, it.r, -0.3))) continue;
           if (hung && F.solid.some(it => (it.h || 0) >= (D.y || 1.4) - 0.1 && ov(rr, it.r, -0.02))) continue;
           const sps = this.spotsAll({ r: rr, face: [fu, fv], kind, w: W, d: dep, h: D.h });
@@ -1420,17 +1426,28 @@
     // (and the cells the walk starts from — inside the door, at a flight's end — at the storey's floor, a step at most over it)
     const q = []; const push = (lv, x, z, from) => { if (!seen[lv] || !passable(plan, lv, x, z) || seen[lv][z * n + x]) return; if (from !== undefined ? !stepOK(HG[lv], from, z * n + x) : !floorStep(HG[lv], z * n + x)) return; seen[lv][z * n + x] = 1; q.push([lv, x, z]); };
     if (!plan.entrance) return seen;
-    // (just inside the door: the first passable cells within 1.2 m of it, on the entrance's storey)
-    const e = plan.entrance; const [ex, ez] = cellAt(plan, [e.x, e.z]); const lv0 = e.lv || 0;
-    for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) { const x = ex + dx, z = ez + dz; if (Math.hypot(dx, dz) * CS <= 1.25) push(lv0, x, z); }
-    const links = plan.stairs.map(s => ({ s, f: cellAt(plan, s.a), t: cellAt(plan, s.b) }));
+    // (where the walk starts — just inside the door, at a flight's end: of the passable cells round the cell c, within win cells
+    // and max metres of it, the nearest ring only, a cell and a half deep — one farther may lie beyond a squeeze the walk does not
+    // pass, and what was «reached» from it was not. The Norse house#19493 of the metropole: its door into a corner the eating bench
+    // and the brazier closed, 0.5 m between them, and the cell beyond them, 1.25 m from the door, started the walk — the rest of
+    // the house, its partition's door and its ladder, «reached», and neither the body nor a step of the walk came there from the
+    // door; and off a flight, the two cells each way of its end landed beside the flight, past the corner the walk does not turn:
+    // L-816)
+    const startAt = (lv, c, win, max) => {
+      const fs = []; let near = Infinity;
+      for (let dz = -win; dz <= win; dz++) for (let dx = -win; dx <= win; dx++) { const x = c[0] + dx, z = c[1] + dz, d = Math.hypot(dx, dz) * CS; if (d <= max && seen[lv] && passable(plan, lv, x, z) && floorStep(HG[lv], z * n + x)) { fs.push([x, z, d]); near = Math.min(near, d); } }
+      for (const [x, z, d] of fs) if (d <= near + CS * 1.5) push(lv, x, z);
+    };
+    const e = plan.entrance; startAt(e.lv || 0, cellAt(plan, [e.x, e.z]), 5, 1.25); // (the door: within 1.25 m, on the entrance's storey)
+    // (a flight's ends: two cells each way of them; the landing the same whichever cell near the end took the flight — once a walk)
+    const links = plan.stairs.map(s => ({ s, f: cellAt(plan, s.a), t: cellAt(plan, s.b), up: 0, down: 0 }));
     for (let k = 0; k < q.length; k++) {
       const [lv, x, z] = q[k]; const k0 = z * n + x;
       push(lv, x + 1, z, k0); push(lv, x - 1, z, k0); push(lv, x, z + 1, k0); push(lv, x, z - 1, k0);
       for (const L of links) {
         if (L.s.kind === 'degraus') continue;
-        if (lv === L.s.lv0 && Math.abs(x - L.f[0]) <= 2 && Math.abs(z - L.f[1]) <= 2 && footCell(L.s, x, z)) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) push(L.s.lv1, L.t[0] + dx, L.t[1] + dz);
-        if (lv === L.s.lv1 && Math.abs(x - L.t[0]) <= 2 && Math.abs(z - L.t[1]) <= 2) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) push(L.s.lv0, L.f[0] + dx, L.f[1] + dz);
+        if (!L.up && lv === L.s.lv0 && Math.abs(x - L.f[0]) <= 2 && Math.abs(z - L.f[1]) <= 2 && footCell(L.s, x, z)) { L.up = 1; startAt(L.s.lv1, L.t, 2, Infinity); }
+        if (!L.down && lv === L.s.lv1 && Math.abs(x - L.t[0]) <= 2 && Math.abs(z - L.t[1]) <= 2) { L.down = 1; startAt(L.s.lv0, L.f, 2, Infinity); }
       }
     }
     return seen;

@@ -83,8 +83,10 @@
     // the bench-bed by the table of the Norse house, its kind weighing more, won the body standing at its place and turned to it
     // — the place at 0° and 0.75 m, the bed at 33° and 1.13 m —: «Deitar na cama», at the sobrado#2924 of the generation-20
     // metropole, and it never sat; at the hut#11026 the fire under its feet, at 93°: «Cozinhar a ceia da casa». By the rule of
-    // L-892 the other way round: of the two, the one the body faces, and faces more — L-754)
-    if (seat && seat.t.pl.use === 'comer' && best !== seat && !G.Avatar.seated() && (best.p.id === 'cama' || (best.p.id === 'atividade' && best.t.o && /^lar\.cozinhar:/.test(best.t.o.id || '')))) { const a = aim(ctx, seat.t.X, seat.t.Z); if (a.ang <= I.FACE && a.ang < aim(ctx, best.t.X, best.t.Z).ang) best = seat; }
+    // L-892 the other way round: of the two, the one the body faces, and faces more — L-754); and before the stairs, as the bed
+    // is (L-778): the foot of the ladder by the table of the house#10778 of the generation-25 metropole won it from Thyra
+    // standing at her place and turned to it, «Subir pela escada de mão» (L-815)
+    if (seat && seat.t.pl.use === 'comer' && best !== seat && !G.Avatar.seated() && (best.p.id === 'cama' || best.p.id === 'escada' || (best.p.id === 'atividade' && best.t.o && /^lar\.cozinhar:/.test(best.t.o.id || '')))) { const a = aim(ctx, seat.t.X, seat.t.Z); if (a.ang <= I.FACE && a.ang < aim(ctx, best.t.X, best.t.Z).ang) best = seat; }
     // (an offer of the world with no place of its own, where the body stands — the meal on the floor of a house with no table,
     // seat nor hearth —: what the body faces in reach is meant before it. Its point was the body's own, its bearing the noise of
     // two positions a hair apart: by the mat of the house#35280 of the metrópole of the generation 11 the body facing its bed

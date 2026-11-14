@@ -2,7 +2,8 @@
 // Reproduzido na metrópole e na guerra mundial vividas 700 s: as aves de água rasa (garça, cegonha, flamingo, ganso) atravessavam
 // os prédios a pé — o andar de uma ave não perguntava o que estava no caminho — e pousavam dentro deles; o cavalo de carga de uma
 // caravana ficava em cima da fogueira onde foi deixado (o «curral» dele é o depósito do mercador, 550 s); a ave no chão não saía
-// de baixo de um prédio novo. Ficam, de propósito: o pombo da cidade no telhado da casa dele, a gaivota no poleiro, a ave em voo.
+// de baixo de um prédio novo. Ficam, de propósito: o pombo da cidade no telhado da casa dele, a ave em voo, a ave na árvore. A
+// gaivota no poleiro, não: o poleiro dela é o chão ou a água onde o voo acaba, na altura 0 (L-809).
 //   b1 os mundos vividos 300 s cada um: a cada segundo, nenhum bicho no chão dentro de um prédio que bloqueia;
 //   b2 de propósito, a garça andando com uma casa no caminho: não passa por dentro;
 //   b3 a garça que pousa onde um prédio ficou: desce ao lado;
@@ -13,14 +14,19 @@
 //      (L-729: o peru da festa de Tenochtitlan foi posto onde estava quem o levava — dentro do armazém — e ficou lá 19 s).
 //   b8 o abutre que desce numa carcaça debaixo de um teto: pousa ao lado dela, no chão onde fica — nunca na carcaça, dentro do
 //      prédio (L-730: um abutre do mundial pousou na carcaça dentro de um mercado);
-//      (o b7 e o b8 rodam antes da linha do b6, que olha o verificador depois deles)
+//   b10 a gaivota que acaba o voo sobre um prédio que bloqueia: não se senta dentro dele — senta-se, sim, no chão aberto ao lado
+//      (L-809: as gaivotas da mega sentavam no chão de uma doca e de um mercado, na altura 0, e o verificador tomava o poleiro
+//      por um telhado; um save mostrou uma dentro da doca);
+//   b11 um prédio posto debaixo de uma gaivota sentada no chão: ela levanta voo (L-809);
+//      (o b7 a b11 rodam antes da linha do b6, que olha o verificador depois deles)
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | bicho-dentro ${name} | ${info}`); if (!c) fails.push(name); };
 const sim = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 // (the proof's own reading: on the ground, not in flight nor on its roof, on a tile of a building that blocks)
-const FLY = { fly: 1, dive: 1, fishdive: 1, circle: 1, perch: 1, tree: 1, swing: 1 };
+// (the gull's perch is the ground where it is, at the height 0 — no roof: L-809)
+const FLY = { fly: 1, dive: 1, fishdive: 1, circle: 1, tree: 1, swing: 1 };
 const dentro = a => { const S = G.S, N = G.N; const sp = G.Animals.DEF[a.kind]; if (!sp || a.dead || a.held || a.caught || a.air || sp.cls === 'water' || a.kind === 'pombo' || FLY[a.state] || a.perch || a.nest || (a.z || 0) > 0.25) return null;
   if (!(a.x >= 0 && a.y >= 0 && a.x < N && a.y < N)) return null; const o = S.occ[(a.y | 0) * N + (a.x | 0)]; const b = o && S.buildings.get(o); return b && b.blocks ? b : null; };
 const WORLDS = (process.argv[2] || 'metropole,mundial').split(',');
@@ -131,6 +137,33 @@ if (!ONLY || ONLY.includes('b1')) { const said = [], bad = [];
     }
     ok('b9 o castor indo à árvore que rói, com um prédio no meio: nunca por dentro', live9 && !bad9,
       (said || `nenhum lugar quieto onde o caso vivesse (${places.length} prédios de uma casa com o chão do castor dos dois lados)`) + (fled.length ? ` (antes, o castor fugiu em ${fled.join(', ')})` : ''));
+  }
+  // b10: thirty gulls at the end of a flight over the storehouse, each over a tile of it, and thirty over the open ground beside
+  // it (L-809). At the end of a flight a gull sits down now and then where it is (its perch, at the height 0): over the
+  // storehouse never, over the open ground some of them. b11: a house put down under a gull sitting on the ground (L-809)
+  const open10 = []; if (sh) for (let r = 2; r <= 14 && open10.length < 2; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || open10.length >= 2) continue; const x = sh.x + dx, y = sh.y + dy;
+    if (free(x, y) && !S.road[y * N + x] && !open10.some(q => Math.abs(q[0] - x) + Math.abs(q[1] - y) < 4)) open10.push([x, y]); }
+  if (!sh || open10.length < 2) ok('b10 a gaivota que acaba o voo sobre um prédio: não se senta dentro dele', false, `armazém ${sh ? sh.id : 'nenhum'}; chão aberto ao lado: ${open10.length}`);
+  else {
+    const flock = (at, n) => { const l = []; for (let k = 0; k < n; k++) { const x = at(k)[0], y = at(k)[1]; const g = sim(() => A.spawn('gull', x, y, { grown: 1, age: 3, hunger: 0.1 }));
+      g.state = 'fly'; g.z = 6; g.tx = x; g.ty = y; g.t = 0; g.leader = 0; l.push({ g, x, y, sat: false, inn: 0, went: false }); } return l; };
+    const over = flock(k => [sh.x + ((k % 6) + 0.5) * sh.w / 6, sh.y + (((k / 6) | 0) + 0.5) * sh.h / 5], 30);
+    const side = flock(k => [open10[0][0] + 0.15 + (k % 6) * 0.14, open10[0][1] + 0.15 + ((k / 6) | 0) * 0.17], 30);
+    for (let t = 0; t < 15; t++) { M.viver(0.1); for (const q of over.concat(side)) { const g = q.g; if (g.state === 'perch') { q.sat = true; if (S.occ[W.idx(g.x, g.y)] === sh.id) q.satIn = true; } if (dentro(g)) q.inn++; if (g.tx !== q.x || g.ty !== q.y) q.went = true; } }
+    const inn = over.filter(q => q.inn).length, satO = over.filter(q => q.satIn).length, wentO = over.filter(q => q.went).length;
+    const satS = side.filter(q => q.sat).length, innS = side.filter(q => q.inn).length;
+    sim(() => { for (const q of over.concat(side)) A.remove(q.g); });
+    ok('b10 a gaivota que acaba o voo sobre um prédio que bloqueia: não se senta dentro dele, e no chão aberto ao lado, sim', !inn && !satO && wentO >= 25 && satS > 0 && !innS,
+      `${sh.type}#${sh.id} (${sh.x},${sh.y} ${sh.w}x${sh.h}): das 30 gaivotas sobre ele, ${satO ? satO + ' SENTARAM NELE' : 'nenhuma sentou nele'}, ${inn ? inn + ' DENTRO DO PRÉDIO' : 'nenhuma no chão dentro'}, ${wentO} voaram adiante (${over.filter(q => q.sat).length} sentaram depois, fora); no chão aberto em ${open10[0][0]},${open10[0][1]}, ${satS} de 30 sentaram${innS ? ', ' + innS + ' DENTRO' : ''}`);
+    // b11
+    const p11 = open10[1]; const g = sim(() => A.spawn('gull', p11[0] + 0.5, p11[1] + 0.5, { grown: 1, age: 3, hunger: 0.1 }));
+    g.state = 'perch'; g.perchZ = 0; g.z = 0; g.t = 60; g.tx = g.x; g.ty = g.y; g.leader = 0;
+    const nb = sim(() => V.addBuilding('house', p11[0], p11[1], sh.set, true)); const in11 = !!dentro(g), st11 = g.state; let in11b = 0;
+    for (let t = 0; t < 10; t++) { M.viver(0.1); if (dentro(g)) in11b++; }
+    ok('b11 um prédio posto debaixo de uma gaivota sentada no chão: ela levanta voo', !!nb && !in11 && !in11b && st11 === 'fly',
+      nb ? `house#${nb.id} em ${p11[0]},${p11[1]}; a gaivota: ${st11 === 'fly' ? 'levantou voo' : 'FICOU (' + st11 + ')'}${in11 || in11b ? ', DENTRO da casa ' + (in11b + (in11 ? 1 : 0)) + ' vezes' : ', nunca dentro'}` : 'a casa não foi posta');
+    sim(() => A.remove(g));
   }
   const v = QA.check().filter(q => q.sev <= 2 || /no chão dentro de um prédio/.test(q.msg)); const e = M.erros();
   ok('b6 verificador e erros de módulo', !v.length && M.limpo(), `${v.length} violações${v.length ? ': ' + v[0].msg : ''}; erros de módulo ${JSON.stringify(e.mod)}`); }

@@ -17,6 +17,7 @@
 
   // ---------------- invariants ----------------
   let wallTurn = 0; // (which standing wall this round asks whether it shuts a building of its town off: one a round, L-344)
+  let drift0 = new Map(), drift0S = null; // (since when each empty hull has been adrift, in this world: L-807)
   QA.check = function (opts) {
     opts = opts || {};
     const s = S(); const out = []; const N = G.N;
@@ -448,11 +449,18 @@
       if ((s.dragonBones || []).length > 6) add('dragao', 3, `${s.dragonBones.length} esqueletos de dragão (máximo 6)`);
     }
     // ---- ships
+    if (drift0S !== s) { drift0S = s; drift0 = new Map(); } const drifting = new Map();
     for (const sh of s.ships) {
       const nm = `${sh.kind}#${sh.id}`;
       if (!fin(sh.x) || !fin(sh.y)) { add('sea', 0, `${nm}: posição inválida`); continue; }
       if (sh.sunk) add('sea', 1, `${nm}: afundado mas ainda na lista`);
-      if (!G.Fac.get(sh.fac) || !G.Fac.get(sh.fac).alive) add('sea', 3, `${nm}: povo ${sh.fac} extinto`);
+      // (an empty hull adrift is the sea's: it breaks on a coast or sinks within its drift time — a day and a half at most —, its
+      // people gone or not; one still adrift after that, or adrift without the mark that moves it, is one nothing moves: two
+      // warships of peoples gone stayed adrift from the year 71 to the year 1001 of the long worlds, L-807)
+      const adrift = sh.ghost && sh.st === 'deriva';
+      if (!adrift && (!G.Fac.get(sh.fac) || !G.Fac.get(sh.fac).alive)) add('sea', 3, `${nm}: povo ${sh.fac} extinto`);
+      if (sh.st === 'deriva' && !sh.ghost) add('sea', 3, `${nm}: à deriva sem a marca de casco vazio (nada o move nem o afunda)`);
+      if (adrift) { const since = drift0.has(sh.id) ? drift0.get(sh.id) : s.clock; drifting.set(sh.id, since); if (s.clock - since > G.DAY_LEN * 1.6) add('sea', 3, `${nm}: à deriva há ${Math.round(s.clock - since)} s, além de um dia e meio (nada o afunda)`); }
       const crew = sh.crew || []; const dup = crew.length - new Set(crew).size; if (dup) add('sea', 2, `${nm}: ${dup} tripulante(s) repetido(s)`);
       for (const id of crew) { const v = P(id); if (!v && sh.kind !== 'pesca') add('sea', 3, `${nm}: tripulante ${id} morto ainda na lista`); else if (v && v.aboard && v.aboard !== sh.id) add('sea', 2, `${nm}: tripulante ${v.name} está a bordo de outro navio ${v.aboard}`); }
       const i = G.W.idx(sh.x, sh.y); const moving = !{ idle: 1, build: 1, board: 1, dock: 1, prep: 1, unload: 1, embark: 1, wait: 1, land: 1 }[sh.st];
@@ -468,6 +476,7 @@
     // who is aboard comes from v.aboard alone; the index of who is on which ship must not miss anyone (someone put aboard without Naval.board)
     if (G.Naval && G.Naval.aboardIndex && !opts.noReach) { const ix = G.Naval.aboardIndex(true); let miss = 0, ex = ''; for (const v of s.villagers.values()) if (v.aboard && !(ix.get(v.aboard) || []).includes(v)) { if (!miss) ex = `${v.name} #${v.id}`; miss++; } if (miss) add('sea', 1, `índice de quem está a bordo desatualizado: ${miss} pessoa(s) (${ex}) embarcaram sem passar por Naval.board`); }
     if (G.Naval && G.Naval.repairs) add('sea', 3, `tripulações reconciliadas ${G.Naval.repairs}× (alguém a bordo fora da lista do navio)`);
+    drift0 = drifting;
     // ---- expeditions & fleets
     if (G.Expe) for (const e of G.Expe.list()) {
       if (!G.Expe.live(e)) continue;
@@ -522,9 +531,10 @@
     // ---- animals
     let an = 0; for (const a of s.animals.values()) { if (!fin(a.x) || !fin(a.y)) add('fauna', 1, `animal ${a.kind}#${a.id}: posição inválida`); if (!a.dead) an++; if (a.hp !== undefined && !fin(a.hp)) add('fauna', 1, `animal ${a.kind}#${a.id}: hp ${a.hp}`); }
     // a town's beast (a dog, a cat, a hen, a pigeon) lives with the people, never in a pen (L-637)
-    // a beast on the ground inside a building one does not stand in (L-631): none but the birds that live on the roofs (the town's
-    // pigeon on its house, the gull on its perch), those in flight — a dive, a circle, a take-off — and the one in a hold or in the air
-    { const FLY = { fly: 1, dive: 1, fishdive: 1, circle: 1, perch: 1, tree: 1, swing: 1 }; const l = [];
+    // a beast on the ground inside a building one does not stand in (L-631): none but the bird that lives on the roofs (the town's
+    // pigeon on its house), those in flight — a dive, a circle, a take-off —, up a tree, and the one in a hold or in the air. The
+    // gull's perch is no roof: it sits on the ground or the water where it is, at the height 0 (L-809)
+    { const FLY = { fly: 1, dive: 1, fishdive: 1, circle: 1, tree: 1, swing: 1 }; const l = [];
       for (const a of s.animals.values()) { const sp = G.Animals.DEF[a.kind]; if (!sp || a.dead || a.held || a.caught || a.air || sp.cls === 'water' || a.kind === 'pombo' || FLY[a.state] || a.perch || a.nest || (a.z || 0) > 0.25) continue;
         if (!(a.x >= 0 && a.y >= 0 && a.x < N && a.y < N)) continue; const o = s.occ[(a.y | 0) * N + (a.x | 0)]; const b = o && s.buildings.get(o); if (b && b.blocks) l.push(`${a.kind}#${a.id} (${a.state}) em ${b.type}#${b.id}`); }
       if (l.length) add('fauna', 3, `${l.length} bicho(s) no chão dentro de um prédio que bloqueia: ${l.slice(0, 3).join(', ')}`); }

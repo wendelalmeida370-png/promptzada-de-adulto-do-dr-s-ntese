@@ -52,6 +52,10 @@ const snapLife = () => JSON.stringify([G.S.urbAcc, allQ().map(([s, q]) => [nameO
 // the sea routes cut by the hand of the proof, as a long blockade does (and what they were, to give back)
 let cut = null;
 const cutSea = () => { const S = G.S; if (!cut) cut = S.seaRoutes.slice(); S.seaRoutes.length = 0; for (const s of S.ships.slice()) if ((s.kind === 'mercante' || s.route) && G.Naval.removeShip && !G.Naval.aboardOf(s).length) { /* (the ships at sea finish their way: their cargo is theirs) */ } };
+// (a day of the skip with the sea held cut at every step: the peoples open a route again every 20 s — naval.js updateSeaRoutes —,
+// and a cut once a day left the Bairro do Porto of Roma, in the metropole of the generation 25, trading at 0,698 a ground a day
+// all the 34 days of the cut, T-1169)
+const dayCut = () => { const S = G.S, W = G.W; const d0 = S.day; G.Skip.on = true; G.FX.off = true; W.pathGreed = 1.3; try { while (G.S.day === d0) { cutSea(); G.Main.skipStep(1); } } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; } };
 const openSea = () => { const S = G.S; if (cut) { for (const r of cut) if (!S.seaRoutes.includes(r) && S.buildings.has(r.a) && S.buildings.has(r.b)) S.seaRoutes.push(r); cut = null; } };
 
 M.pronto(WORLD); M.viver(2);
@@ -135,7 +139,7 @@ if (on('v3')) {
   if (!port) ok('v3 o-cais-que-para', false, `nenhum bairro «porto movimentado» em ${WORLD} depois de ${G.S.day - S0day} dias (${allQ().filter(([, q]) => !q.whole && q.k === 'porto').map(([s, q]) => `${nameOf(s, q)} cais ${q.vida.cais}`).join('; ') || 'nenhum bairro de porto'})`);
   else {
     const [set, d] = port; const c0 = d.vida.cais, day0 = S.day; let gone = -1, still = -1;
-    for (let k = 0; k < 34 && gone < 0; k++) { cutSea(); M.saltar(1); check(`ano ${S.day} (rotas cortadas)`); if (!U.is(d, 'porto')) gone = S.day - day0; }
+    for (let k = 0; k < 34 && gone < 0; k++) { dayCut(); check(`ano ${S.day} (rotas cortadas)`); if (!U.is(d, 'porto')) gone = S.day - day0; }
     if (U.is(d, 'parado')) still = S.day - day0;
     const h1 = histOf(d, day0); const told = h1.find(t => /^O cais parou: /.test(t)); const cMid = d.vida.cais; const mid = S.day;
     // the routes back: the cargo comes again, and the profile after its patience

@@ -1242,7 +1242,9 @@ vec3 gxGrade( vec3 c ) {
         // (a corner's pier, where the tile across the corner is a building, a wall or a cliff: inside the bridge's own tile, its cap
         // too — out past both sides it stood a hand inside the market#13618 by a bridge of the mega of the generation 21, L-794)
         const cap = B.gap === 3 ? 0.03 : 0.035, out0 = B.gap === 2 ? 0.16 : 0.06, out = q === 2 && pl.c[s] === 3 ? Math.min(out0, 1.995 - BF - cap) : out0;
-        const w = B.gap === 4 ? 0.44 : B.gap === 2 ? 0.6 : 0.52, a0 = q === 2 ? BF + out - w : sg > 0 ? a - 0.025 : a - w + 0.025, d0 = BF + out - w, hp = top + (B.gap === 2 ? 0.1 : 0.2);
+        // (and cut on its outer side, never moved in: its inner faces stay where the walk passes by them — moved in, Egypt's broad
+        // pier stood on the walk of a bridge at a corner by a building, 1,09 m over the feet, L-812)
+        const w = (B.gap === 4 ? 0.44 : B.gap === 2 ? 0.6 : 0.52) - (out0 - out), a0 = q === 2 ? BF + out - w : sg > 0 ? a - 0.025 : a - w + 0.025, d0 = BF + out - w, hp = top + (B.gap === 2 ? 0.1 : 0.2);
         if (B.gap === 3) {
           // (the Aztec's ends in steps: two blocks, each a hand higher, each under its cap)
           for (let k = 0; k < 2; k++) { const b0 = q === 2 ? a0 : a0 + sg * k * 0.46, yk = top + (k ? 0.16 : 0.4); if (q === 2 && k) break;

@@ -97,6 +97,11 @@ function nextBuilder(b) {
   const [cx, cy] = V.center(b); const far = v => G.dist(v.x, v.y, cx, cy); const full = v => (v.carry && v.carry.n > 1e-6 ? 1 : 0);
   const o = [...S.villagers.values()].filter(v => v.set === set0.id && v.role === 'construtor' && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && v.hp > 50).sort((p, q) => full(p) - full(q) || far(p) - far(q) || p.id - q.id)[0];
   const at = beside(b); if (!o || !at) return { o, why: !o ? 'nenhum construtor' : 'nenhum chão ao lado da obra' };
+  // (and the town's feast of the day kept for another day, a feast under way let end first, as the h3's keep3 keeps it: the feast
+  // calls the whole town, the builder too (D-126) — in the metrópole of the generation 25 the games of Roma called Décimo to the
+  // arena as soon as the h2's save was loaded, and the hut stayed at 0,99917 the whole case, T-1182)
+  for (let k = 0; k < 900 && G.Fest && G.Fest.active && G.Fest.active(set0.id); k++) M.viver(0.1);
+  set0.festPlan = { day: S.day, key: null, done: true };
   if (G.isNight() || S.time > 0.6) S.time = 0.3;
   Vg.endTask(o); o.sleeping = false; o.inside = 0; o.energy = Math.max(o.energy, 90); o.hunger = Math.min(o.hunger, 20);
   o.x = at[0]; o.y = at[1]; o.path = null;
@@ -810,6 +815,10 @@ const calmOne = (skip, also) => {
     const fed = grown.filter(q => q.age >= 20 && q.age <= 60 && !q.inside && q.id !== f.leader && !(S.avatar && S.avatar.id === q.id) && !(q.sick > 0)).slice(0, 2);
     const h0 = new Map(grown.map(q => [q.id, q.hunger])); const hungry = grown.filter(q => !fed.includes(q));
     for (const q of fed) { Vg.endTask(q); q.sleeping = false; q.hunger = 10; q.energy = Math.max(q.energy, 80); if (q.carry && q.carry.n > 1e-6 && !q.carry.op && !q.carry.to) Vg.toStore(q, f.id, 'teste'); }
+    // (and the two held free until the call, as the m10 of the carga-comum.js holds one: at nothing, the thinking held — the world gave
+    // Neferu, of the two, a crate of food to deliver while the scaffold waited, and her hands were full when it chose, «o arauto,
+    // NENHUM», in the metrópole of the generation 25, T-1185)
+    for (const q of fed) { Vg.setTask(q, { type: 'idle', pri: 0.2, wait: 60, kind: 'play' }); q.think = 1e9; }
     Vg.endTask(v); const set0x = G.Justice.sentence(f, [v], 'pelo teste', { set: set.id, soon: true, quiet: true });
     const e = (S.execs || []).find(q => q.ids.includes(v.id)); let exe = null, her = null, hx = -1, hh = -1;
     // (the hunger of need, held by the hand until the scaffold calls its two: a meal eaten meanwhile is undone)
@@ -825,6 +834,7 @@ const calmOne = (skip, also) => {
     const says = q => fed.includes(q) ? '' : fair(q) ? ` — de fora dos dois, alimentado no passo do chamado (${prev.get(q.id) || '-'}), T-1077` : ' — TIRADO DA REFEIÇÃO';
     good = !!e && fed.length === 2 && !!exe && !!her && fair(exe) && fair(her);
     info = `${set.name}: ${v.name} condenado pela mão da prova, a hora «logo»; ${hungry.length} crescidos com a fome a 90 pela mão da prova, dois de fora (${fed.map(q => q.name).join(' e ')}, a fome a 10): ${!e ? (set0x ? 'A EXECUÇÃO SUMIU' : 'a sentença NÃO foi dada') : e.phase === 'wait' ? 'o cadafalso NÃO chamou em 8 s' : `o carrasco, ${exe ? `${exe.name} (fome ${hx})${says(exe)}` : 'NENHUM'}; o arauto, ${her ? `${her.name} (fome ${hh})${says(her)}` : 'NENHUM'}`}`;
+    for (const q of fed) if (S.villagers.has(q.id)) q.think = 0;
     if (e) G.Justice.free(e, 'perdao'); else Vg.endTask(v);
     for (const q of hungry) if (S.villagers.has(q.id) && q.hunger >= 85) q.hunger = h0.get(q.id); // (the town's hunger given back)
     S.time = Math.max(S.time, t0);
@@ -980,6 +990,10 @@ const calmOne = (skip, also) => {
       // (the case: put where she stands two tiles from the fire, the hunger set, her way to the store by the world's own choice)
       const run = (hunger, sec) => {
         hold(); kid.x = at[0]; kid.y = at[1]; kid.path = null; kid.hunger = hunger; kid.energy = 90; Vg.endTask(kid); kid.think = 0;
+        // (and her choice before her next look round: the case is the way to the meal, not the moment between two errands — one with
+        // no errand yet looks at the fire before she chooses (the step's scan before its decide) and steps away from it once, as
+        // anyone does; in the metrópole of the generation 25 Itzcóatl's look came first, «com a fome a 95 → flee», T-1183)
+        kid.scan = 0.5;
         if (hunger <= 85) Vg.H.eatTask(kid); // (under 85 the meal is not of need: the way to the store given, as the world gives it at 60 or more)
         let fled = 0, ate = false, first = kid.task ? kid.task.type : '-', last = null; // (the first task the world gives her)
         for (let k = 0; k < sec * 10 && S.villagers.has(kid.id); k++) {

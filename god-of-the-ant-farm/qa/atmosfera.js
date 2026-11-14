@@ -98,10 +98,24 @@ if (run('a1')) {
   const d0 = S.day; let steps = 0;
   while (S.day - d0 < 1 && steps < 60) { lookAll(); M.viver(4); steps++; }
   lookAll();
+  // (a day with no forge worked — the smiths at other errands —: the hand of the proof gives one forge a batch, with its smith
+  // free and the ore and the wood in the store, and the looks go on until it burns: in the metropole of the generation 25 the
+  // three smiths of the world worked none in the day, and the forges were never seen hot, «não vistos dos dois jeitos: forja»,
+  // T-1177. The case is that the smoke has its cause, not who works the forge that day)
+  let byHand = '';
+  if (!seenHot.forja && built().some(b => b.type === 'forja')) {
+    const smithOf = b => [...S.villagers.values()].filter(v => v.job === b.id && v.role === 'ferreiro' && !v.aboard && !v.jail && !v.captive && !G.Naval.away(v) && !(S.avatar && S.avatar.id === v.id)).sort((x, y) => x.id - y.id)[0];
+    const fb = built().filter(b => b.type === 'forja' && smithOf(b) && !opsAt(b, 'oficio').length)[0];
+    if (fb) { const sm = smithOf(fb); const fid = G.Village.facOfSet(fb.set); G.inSim++;
+      // (at the hour of work: the day looked at ends at dawn, with the smiths still abed)
+      try { for (const [k, n] of [['minerio', 6], ['wood', 3]]) if (G.Depot.free('f:' + fid, k) < n) G.Depot.make('f:' + fid, k, n, { code: 'teste', part: true }); if (S.time < 0.3 || S.time > 0.6) S.time = 0.3; sm.sleeping = false; G.Vg.endTask(sm); G.Oficio.start(fb, 'ferramentas', sm); } finally { G.inSim--; }
+      for (let k = 0; k < 40 && !seenHot.forja; k++) { M.viver(3); lookAll(); }
+      byHand = ` (a forja#${fb.id}, com ${sm.name}, pela mão da prova: ${seenHot.forja ? 'quente' : 'NUNCA QUENTE'})`; }
+  }
   const need = ['casa', 'taverna'].concat(built().some(b => b.type === 'banhos') ? ['banhos'] : []).concat(built().some(b => b.type === 'forja') ? ['forja'] : []);
   const both = need.filter(k => seenHot[k] && seenCold[k]);
   ok('a1 a fumaça: um dia inteiro olhado — todo telhado fuma com fogo de verdade embaixo e só então, no 3D e na vista do deus; a janela acesa só com gente acordada dentro', !wrong.length && both.length === need.length && looks >= 40,
-    `${looks} olhadas, ${checked} prédios conferidos, ${wrong.length} em desacordo${wrong.length ? ': ' + wrong.slice(0, 3).join(' · ') : ''} · com fogo ${JSON.stringify(seenHot)} · sem fogo ${JSON.stringify(Object.fromEntries(need.concat(['olaria', 'ourives', 'workshop', 'tecelagem']).filter(k => seenCold[k]).map(k => [k, seenCold[k]])))}${both.length < need.length ? ' · não vistos dos dois jeitos: ' + need.filter(k => !both.includes(k)).join(', ') : ''}`);
+    `${looks} olhadas${byHand}, ${checked} prédios conferidos, ${wrong.length} em desacordo${wrong.length ? ': ' + wrong.slice(0, 3).join(' · ') : ''} · com fogo ${JSON.stringify(seenHot)} · sem fogo ${JSON.stringify(Object.fromEntries(need.concat(['olaria', 'ourives', 'workshop', 'tecelagem']).filter(k => seenCold[k]).map(k => [k, seenCold[k]])))}${both.length < need.length ? ' · não vistos dos dois jeitos: ' + need.filter(k => !both.includes(k)).join(', ') : ''}`);
 }
 
 // ------------------------------ a2: the cause taken away and given back ------------------------------

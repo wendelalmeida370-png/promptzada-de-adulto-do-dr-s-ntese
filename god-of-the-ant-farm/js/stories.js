@@ -380,8 +380,11 @@
     const pool = b.civ && civ && b.civ[civ] ? b.civ[civ].concat(b.civ[civ], b.text) : b.text;
     const ok = []; pool.forEach((fn, i) => { let t = null; try { t = fn(ctx); } catch { t = null; } if (t) ok.push([i, t]); });
     if (!ok.length) return null;
-    const said = st().recent || (st().recent = {}); const r = said[key] || (said[key] = []); const fresh = ok.filter(o => !r.includes(o[0]));
-    const o = hashPick(fresh.length ? fresh : ok, story.id * 31 + story.chapters.length * 7 + key.length);
+    // (a text this story already wrote is the last choice: the recent words are the saga's, and a long insurrection of the metropole
+    // wrote three of its beats twice word for word with other words of those beats never said, L-811)
+    const own = new Set((story.chapters || []).map(c => c.txt)); const unsaid = ok.filter(o => !own.has(o[1])); const base = unsaid.length ? unsaid : ok;
+    const said = st().recent || (st().recent = {}); const r = said[key] || (said[key] = []); const fresh = base.filter(o => !r.includes(o[0]));
+    const o = hashPick(fresh.length ? fresh : base, story.id * 31 + story.chapters.length * 7 + key.length);
     r.push(o[0]); if (r.length > Math.max(1, Math.floor(b.text.length / 2))) r.shift();
     return o[1];
   }

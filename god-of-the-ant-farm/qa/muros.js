@@ -69,6 +69,16 @@
 //          cow is set down beside the wall, where it can stand and from where it reaches its pen
 //      11c a wall of before standing on a fenced ground, in a save: the checker sees it; loaded, it comes down there, and the
 //          rest of the wall stands
+//   13. no wall before another town's gate (L-806: a wall laid against an older town's wall put a tile of its line before the
+//      older gate and shut it from outside — Hedeby's east gate behind Delfos's west wall in the mega of the generation 25,
+//      Tenochtitlan's north gate behind Birka's in its metrópole, Mênfis's behind its neighbour's in the anos500 and anos1000):
+//      13a every plan of the ready worlds — every town, with its own wall record set aside — keeps off the tile before another
+//          town's gate, standing or planned
+//      13b the bad case on purpose: a gate of another town's wall put by hand before a straight run of a plan's line — planned
+//          again, that tile left open and the rest of the line the same; raised at once, the other gate lets through
+//      13c the other town's gate comes after the plan: the builders raise the wall tile by tile, and leave that tile open
+//      13d a plan of before L-806 raised whole in a save, the tile before the other gate walled: the checker sees the gate shut;
+//          loaded, the tile comes down and the gate lets through
 //   5. the checker clean, no module error
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -648,6 +658,67 @@ for (const instant of [false, true]) {
   else { const N = G.N, at = i => `(${i % N},${(i / N) | 0})`;
     ok(nm, got.wayA.length > 0 && !got.before && got.openB && !got.badB.length && got.shutC && got.openC && !got.badC.length,
       `${got.k}: ${got.name}, lado ${got.sd}; seis casas de ${got.other} em volta de ${at(got.P)}. (a) no plano: ${got.wayA.length ? 'um caminho em ' + got.wayA.map(at).join(' ') : 'NENHUM CAMINHO'}; (b) o muro de pé (sem caminho ali: ${got.before ? 'NÃO' : 'sim'}), as casas prontas depois: ${got.openB ? 'o caminho aberto em ' + got.wayB.map(at).join(' ') : 'FECHADO'}${got.badB.length ? '; VERIFICADOR: ' + got.badB[0] : ''}; (c) o save de antes (${got.shutC ? 'o bolsão fechado' : 'O BOLSÃO NÃO FECHOU'}), carregado: ${got.openC ? 'aberto' : 'FECHADO'}${got.badC.length ? '; VERIFICADOR: ' + got.badC[0] : ', verificador limpo'}`); }
+}
+// 13. no wall before another town's gate (L-806): 13a in every plan of the ready worlds; 13b–13d by hand — a straight run of the
+//     line of a town with no wall, free ground before it, and there a gate of another town's wall (three tiles along the line,
+//     the gate in the middle): planned again, raised by the builders after it, and in a save of before
+{
+  let plans = 0; const bad = [];
+  for (const k of WORLDS) { M.pronto(k); const S = G.S, N = G.N;
+    for (const s of [...S.settlements.values()].filter(q => G.Fac.get(q.fac)).sort((a, b) => a.id - b.id)) { const w = plan(s); if (!w) continue; plans++;
+      for (const i of w.tiles) if (G.Siege.frontOfGate(i, s.id) && bad.length < 4) bad.push(`${k}: ${s.name} (${i % N},${(i / N) | 0})`); } }
+  ok('13a nenhum plano diante do portão de outra cidade (L-806)', plans > 0 && !bad.length, `${plans} planos nos mundos prontos (${WORLDS.join(', ')}); casas diante do portão de outra cidade: ${bad.length ? bad.join(', ') : 'nenhuma'}`);
+}
+{
+  const at = i => `(${i % G.N},${(i / G.N) | 0})`;
+  // (in a fresh world: a town with no wall and a straight run t of its plan, far from its gates, with free ground before it)
+  const gateCase = () => {
+    for (const k of ['metropole', 'cidade', 'mega']) {
+      M.pronto(k); const S = G.S, N = G.N, W = G.W;
+      for (const s of [...S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac)).sort((a, b) => a.id - b.id)) {
+        const other = [...S.settlements.values()].find(q => q.id !== s.id && q.fac !== s.fac); const w0 = other && plan(s); if (!w0) continue; const on = new Set(w0.tiles);
+        const free = j => j >= 0 && j < N * N && !S.occ[j] && !S.wall[j] && !on.has(j) && S.type[j] >= G.T.SAND && !S.treeAt[j] && !S.objAt[j] && W.ground(j);
+        const OUT = { N: -N, S: N, O: -1, L: 1 }, PERP = { N: 1, S: 1, O: N, L: N };
+        const t = w0.tiles.find(i => { const sd = sideOf(w0, i); const x = i % N, y = (i / N) | 0; if (sd.length !== 1 || x < 5 || y < 5 || x > N - 6 || y > N - 6 || w0.gates.some(q => dist(q, i) < 6)) return false;
+          const o = OUT[sd[0]], p = PERP[sd[0]]; return [i - p, i + p, i - 2 * p, i + 2 * p].every(j => on.has(j)) && [i + o, i + o - p, i + o + p, i + 2 * o].every(free); });
+        if (t === undefined) continue;
+        const sd = sideOf(w0, t)[0];
+        return { k, s, other, w0, t, sd, g: t + OUT[sd], p: PERP[sd] };
+      }
+    }
+    return null;
+  };
+  // (the other town's wall, by hand: three tiles along the line before t, its gate in the middle, standing)
+  const fakeGate = c => { const S = G.S, N = G.N; const tiles = [c.g - c.p, c.g, c.g + c.p]; const xs = tiles.map(i => i % N), ys = tiles.map(i => (i / N) | 0);
+    const w = { id: S.nextId++, set: c.other.id, fac: c.other.fac, mat: 'pedra', tiles, gates: [c.g], built: 3, done: true, style: 'classico', box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], v: 2 };
+    S.walls.push(w); for (const i of tiles) { S.wall[i] = i === c.g ? 2 : 1; S.wallFac[i] = c.other.fac; } G.W.touchWalk(); return w; };
+  const shutOf = c => QA.check().filter(q => /não deixa passar|fechado por prédios/.test(q.msg) && q.msg.includes(at(c.g))).map(q => q.msg);
+  const s2 = () => QA.check().filter(q => q.sev <= 2).map(q => `S${q.sev} ${q.sys}: ${q.msg}`);
+  // 13b — planned again with the gate there: the tile before it left open, the rest of the line the same; raised, it lets through
+  { const nm = '13b o portão de outra cidade diante de um trecho reto da linha: a casa diante dele fica aberta, o resto igual';
+    const c = gateCase();
+    if (!c) ok(nm, false, 'em nenhum mundo pronto um trecho reto de plano, longe dos portões, com chão livre diante dele');
+    else { const S = G.S; fakeGate(c); const w1 = plan(c.s); const left = !!w1 && !w1.tiles.includes(c.t);
+      const rest = !!w1 && w1.tiles.filter(i => i !== c.t).join() === c.w0.tiles.filter(i => i !== c.t).join();
+      const w = sim(() => G.Siege.raiseWalls(c.s, 'pedra', true)); const up = !!w && !!S.wall[c.t]; const shut = shutOf(c), bad = s2();
+      ok(nm, left && rest && !!w && !up && !shut.length && !bad.length, `${c.k}: ${c.s.name}, lado ${c.sd} — um portão de ${c.other.name} em ${at(c.g)}, diante de ${at(c.t)}: planejado de novo, ${left ? 'a casa fica aberta' : 'O PLANO PÕE MURO NELA'}, ${rest ? 'o resto da linha igual' : 'A LINHA MUDOU'}; erguido de uma vez: ${up ? 'MURO ALI' : 'aberta'}; o portão de fora ${shut.length ? 'NÃO DEIXA PASSAR — ' + shut[0] : 'deixa passar'}${bad.length ? '; ' + bad[0] : ''}`); } }
+  // 13c — the other gate after the plan: the builders, tile by tile, leave the tile open
+  { const nm = '13c o portão de outra cidade vem depois do plano: os construtores deixam aberta a casa diante dele';
+    const c = gateCase();
+    if (!c) ok(nm, false, 'em nenhum mundo pronto um trecho reto de plano, longe dos portões, com chão livre diante dele');
+    else { const S = G.S; const w = sim(() => G.Siege.raiseWalls(c.s, 'pedra', false)); const had = !!w && w.tiles.includes(c.t); fakeGate(c);
+      const f = G.Fac.get(c.s.fac); if (w) G.Depot.make('f:' + f.id, w.mat === 'pedra' ? 'stone' : 'wood', 400, { code: 'teste' });
+      let n = 0; while (w && !w.done && n++ < 6000) G.debug.step(0.1);
+      const up = !!S.wall[c.t], raised = w ? w.tiles.filter(i => i !== c.t && S.wall[i]).length : 0; const shut = shutOf(c);
+      ok(nm, had && !!w && w.done && !up && raised > 10 && !shut.length, `${c.k}: ${c.s.name}, lado ${c.sd} — o plano com ${at(c.t)} (${had ? 'sim' : 'NÃO'}), e depois um portão de ${c.other.name} em ${at(c.g)}: ${w && w.done ? 'erguido em ' + (n / 10).toFixed(1) + ' s' : 'NÃO TERMINOU'}, ${raised} casas de muro de pé; ${at(c.t)} ${up ? 'MURADA' : 'aberta'}; o portão de fora ${shut.length ? 'NÃO DEIXA PASSAR — ' + shut[0] : 'deixa passar'}`); } }
+  // 13d — the old save: the tile walled before the other gate; loaded, it comes down
+  { const nm = '13d um muro de antes do L-806 de pé num save, a casa diante do portão de outra cidade murada: carregado, ela desce';
+    const c = gateCase();
+    if (!c) ok(nm, false, 'em nenhum mundo pronto um trecho reto de plano, longe dos portões, com chão livre diante dele');
+    else { let S = G.S; const sid = c.s.id; const w = sim(() => G.Siege.raiseWalls(c.s, 'pedra', true)); const walled = !!w && S.wall[c.t] === 1; fakeGate(c);
+      const before = shutOf(c); M.salvarCarregar(); S = G.S; M.viver(0.3);
+      const w2 = G.Siege.wallOf(sid); const after = shutOf(c), bad = s2(); const stands = w2 ? w2.tiles.filter(i => i !== c.t && S.wall[i]).length : 0;
+      ok(nm, walled && before.length > 0 && !S.wall[c.t] && stands > 10 && !after.length && !bad.length, `${c.k}: ${c.s.name}, lado ${c.sd} — o muro inteiro com ${at(c.t)} ${walled ? 'murada' : 'NÃO MURADA'}, um portão de ${c.other.name} em ${at(c.g)}: antes do load o verificador ${before.length ? 'acusa — ' + before[0] : 'NÃO ACUSA'}; carregado: ${at(c.t)} ${S.wall[c.t] ? 'AINDA MURADA' : 'aberta'}, ${stands} casas do muro de pé, o portão ${after.length ? 'NÃO DEIXA PASSAR' : 'deixa passar'}${bad.length ? '; ' + bad[0] : ''}`); } }
 }
 { const bad = QA.check().filter(q => q.sev <= 2); const e = M.erros(); ok('5 verificador e erros de módulo', !bad.length && !Object.keys(e.mod).length, bad.length ? bad.slice(0, 3).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : `limpo; erros de módulo: ${JSON.stringify(e.mod)}`); }
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');

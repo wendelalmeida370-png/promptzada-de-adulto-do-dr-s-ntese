@@ -376,7 +376,11 @@ function nodePart() {
     const p = nm.p, e = p.entrance, bx = b.x * TL, bz = b.y * TL, at = (x, z) => [bx + x, bz + z], c = nm.C, base = nm.base;
     const out = [e.out[0] - e.x, e.out[1] - e.z]; const ol = Math.hypot(out[0], out[1]) || 1; const o = [out[0] / ol, out[1] / ol]; // (out of the way in, to the street)
     const face = H.reach(nm.face, c, o); // (the facade before the way in: how far from the middle)
-    const v = [...S.villagers.values()].filter(q => q.set === f.set.id && q.age >= 18 && q.age < 55 && !q.inside && G.Possess.can(q).ok).sort((a2, b2) => a2.id - b2.id)[0];
+    // (a grown-up of the town the body may take — one out of doors first; with every one of them indoors at the hour — at the games
+    // in the Colosseum itself, in Roma of the generation-25 metropole, the C13's town: «Cannot read properties of undefined» —, the
+    // first indoors, the errand's end letting one out at the door, as the M's: T-1187)
+    const v = [...S.villagers.values()].filter(q => q.set === f.set.id && q.age >= 18 && q.age < 55 && G.Possess.can(q).ok).sort((a2, b2) => (a2.inside ? 1 : 0) - (b2.inside ? 1 : 0) || a2.id - b2.id)[0];
+    if (!v) { ok2('3. de fora, olhando para cima: o topo da fachada e a cabeça no quadro, a câmera longe do corpo', false, `nenhum crescido de ${f.set.name} que o corpo possa tomar`); return; }
     const stand = [c[0] + o[0] * (face + 8.8), c[1] + o[1] * (face + 8.8)];
     G.inSim++; G.Vg.endTask(v); v.x = stand[0] / TL; v.y = stand[1] / TL; v.path = null; G.inSim--;
     const yawIn = Math.atan2(-o[1], -o[0]); // (facing the façade)

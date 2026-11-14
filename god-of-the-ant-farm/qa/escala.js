@@ -45,6 +45,17 @@ const lado = b => (b ? `${b.type}#${b.id} ${b.w}×${b.h} em ${b.x},${b.y} (${b.e
 const ocupa = b => { for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) if (S.occ[y * G.N + x] !== b.id) return false; return true; };
 const pedra = (set, n) => D.make('f:' + set.fac, 'stone', n, { code: 'teste' });
 // (a renda de pedra do povo, como o livro a conta — f.pedra, D-120 —: a prova a põe alta onde só a terra e a escolha estão em jogo)
+// (as mãos livres de quem a prova traz: o que traziam vai aonde ia antes, pela regra da carga que não segue (A.holdCarry,
+// Village.kill) — a de um trabalho no chão onde estavam, para outra mão; a de um lugar ao seu lugar (a casa leva tudo o que é
+// seu, D-059); a sem destino ao armazém do povo; a água derramada —, no livro, com o motivo da prova. O Vg.endTask tira a tarefa,
+// não a carga: com uma compra a caminho de casa nas mãos, quem a prova traz tem as mãos ocupadas (D-094) e não é chamado — a
+// Cornélia dos jogos do e19, a Tonantzin da audiência do e22, T-1179)
+function maosLivres(v) { const D = G.Depot; const c = v.carry; if (!c || !(c.n > 1e-6)) return; const fid = G.Fac.idOfV(v), op = c.op ? G.Act.get(c.op) : null;
+  if (op && G.Act.live(op)) D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op.id, code: 'pousou', by: v.id, fac: fid });
+  else if (c.k === 'water') D.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true });
+  else if (c.to && D.exists(c.to)) D.move('v:' + v.id, c.to, c.k, c.n, { code: 'teste', by: v.id, part: true, floor: c.to[0] === 'h' });
+  if (v.carry && v.carry.n > 1e-6 && D.exists('f:' + fid)) D.move('v:' + v.id, 'f:' + fid, v.carry.k, v.carry.n, { code: 'teste', by: v.id, part: true });
+  if (v.carry && v.carry.n > 1e-6) D.drop('v:' + v.id, v.carry.k, v.carry.n, v.x, v.y, { code: 'pousou', by: v.id, fac: fid }); }
 const rico = (set, n) => { G.Fac.get(set.fac).pedra = [S.day, 0, n === undefined ? 100 : n]; };
 // (o save e a carga fazem um G.S novo: a prova passa a olhar o de agora; a crônica tem teto — as linhas novas, pelo número delas)
 const salva = () => { const k = M.salvarCarregar(); S = G.S; return k; };
@@ -556,8 +567,11 @@ run('e19', () => {
   // 14ª rodada, entre os oito primeiros estavam quem governa, uma mercadora numa caravana e três que a fome e o sono levaram do
   // palco — a peça das 0,60 sem ninguém nele, e o espetáculo acabou «sem atores», T-533)
   const rei0 = G.Politics.ruler(G.Fac.get(set.fac));
-  const sobra = v => v.set === set.id && v.age >= 18 && v.age <= 55 && !v.captive && !v.jail && !v.aboard && v.role !== 'guerreiro' && v !== rei0 && Tt.boxOf(v, b) !== 'corte' && !(v.carry && v.carry.n > 1e-6) && !(v.task && (v.task.pri || 0) > 1);
-  let n = 0; for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (n >= luta) break; if (!sobra(v) || v.role === 'ator') continue; v.role = 'ator'; v.job = 0; sim(() => G.Vg.endTask(v)); v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); n++; }
+  // (and one asleep is one of them too, woken by the hand with the rest: the day of the games after a year or two of the world
+  // starts at midnight, 0,004 — the metrópole of the generation 25 jumped to such a day —, and the town asleep gave none,
+  // «0 lutadores com o posto no Coliseu», T-1176)
+  const sobra = v => v.set === set.id && v.age >= 18 && v.age <= 55 && !v.captive && !v.jail && !v.aboard && v.role !== 'guerreiro' && v !== rei0 && Tt.boxOf(v, b) !== 'corte' && !(v.carry && v.carry.n > 1e-6) && (v.sleeping || !(v.task && (v.task.pri || 0) > 1));
+  let n = 0; for (const v of [...S.villagers.values()].sort((a, c) => a.id - c.id)) { if (n >= luta) break; if (!sobra(v) || v.role === 'ator') continue; v.role = 'ator'; v.job = 0; v.sleeping = false; sim(() => G.Vg.endTask(v)); v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); n++; }
   sim(() => E.place(set)); const cast = Tt.actorsOf(b);
   if (VERB) console.log(`  lutadores: ${n} postos à mão, ${cast.length} com o posto no Coliseu — hora ${S.time.toFixed(3)}, dia ${S.day}; os atores de ${set.name}: ${[...S.villagers.values()].filter(v => v.role === 'ator' && v.set === set.id).map(v => `${v.name} #${v.id} (${v.job ? (S.buildings.get(v.job) || {}).type + '#' + v.job : 'sem posto'})`).join(', ') || 'nenhum'}`);
   // (o camarote — D-125 —: quem governa e até cinco da corte de Roma — a família de quem governa, depois os nobres do povo (o
@@ -570,12 +584,6 @@ run('e19', () => {
   // estavam, para outra mão; a de um lugar ao seu lugar (a casa leva tudo o que é seu, D-059); a sem destino ao armazém do povo;
   // a água derramada —, no livro, com o motivo da prova. Com carga nos braços, Cornélia, que governa Roma de outra cidade, não
   // foi mandada aos jogos (o Tt.visit pede as mãos livres, D-094), e o camarote nunca teve o seu trono, na reg16 e na ponta)
-  const maosLivres = v => { const c = v.carry; if (!c || !(c.n > 1e-6)) return; const fid = G.Fac.idOfV(v), op = c.op ? G.Act.get(c.op) : null;
-    if (op && G.Act.live(op)) D.drop('v:' + v.id, c.k, c.n, v.x, v.y, { op: op.id, code: 'pousou', by: v.id, fac: fid });
-    else if (c.k === 'water') D.use('v:' + v.id, 'water', c.n, { code: 'agua', by: v.id, mine: true });
-    else if (c.to && D.exists(c.to)) D.move('v:' + v.id, c.to, c.k, c.n, { code: 'teste', by: v.id, part: true, floor: c.to[0] === 'h' });
-    if (v.carry && v.carry.n > 1e-6 && D.exists('f:' + fid)) D.move('v:' + v.id, 'f:' + fid, v.carry.k, v.carry.n, { code: 'teste', by: v.id, part: true });
-    if (v.carry && v.carry.n > 1e-6) D.drop('v:' + v.id, v.carry.k, v.carry.n, v.x, v.y, { code: 'pousou', by: v.id, fac: fid }); };
   const porta = G.Vg.door(b); for (const v of [rei, ...corte]) { sim(() => { G.Vg.endTask(v); maosLivres(v); }); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); v.x = porta[0] + 1 + (v.id % 3); v.y = porta[1] + 1; v.path = null; D.make(E.coinRef(v), 'moedas', 5, { code: 'teste' }); }
   let caixa = null, caixaSalvo = null; const lugar = v => { const p = In.placeOf(v); return p ? { use: p.use, kind: p.it ? p.it.kind : '-', st: p.st, pose: p.pose, quadril: Math.round((p.y + In.SIT_H) * 100) / 100 } : null; };
   // (toda a corte lá dentro, da lista da prova ou não — quem mais da corte vem aos jogos disputa o banco pela mesma regra: na
@@ -782,7 +790,7 @@ function audiencia(chama) {
     for (const s of towns) s.festPlan = { day: S.day, key: null, done: true }; }
   const b = seis(f) || sim(() => V.handFound(set, 'palacio', 'palacio', { R: 60, built: true })); const r = P.ruler(f);
   if (!b || !r || Co.audPalace(f) !== b) return { set, f, b, r };
-  for (const v of [r, ...[...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive).sort((a, c) => a.id - c.id).slice(0, 40)]) { sim(() => G.Vg.endTask(v)); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); }
+  for (const v of [r, ...[...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive).sort((a, c) => a.id - c.id).slice(0, 40)]) { sim(() => { G.Vg.endTask(v); maosLivres(v); }); v.inside = 0; v.sleeping = false; v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 85); }
   const dr = G.Vg.door(b); r.x = dr[0] + 1; r.y = dr[1] + 1;
   for (const v of [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 14 && !o.captive && o !== r).sort((a, c) => a.id - c.id).slice(0, 24)) { v.x = dr[0] + 2 + (v.id % 5); v.y = dr[1] + 2 + (v.id % 3); v.path = null; }
   const vigia = [...S.villagers.values()].filter(o => o.set === set.id && o.age >= 16 && !o.captive && o !== r).sort((a, c) => c.id - a.id)[0];
@@ -908,7 +916,11 @@ run('e23', () => {
     `abertos ${JSON.stringify(sv)}; pedem ${JSON.stringify(pede)}, teto 1 — com a comida garantida ${JSON.stringify(deu)}; em risco ${JSON.stringify(antes)}`);
   const w1 = { taverneiro: 1, ator: 2, oleiro: 1 }; const n1 = E.cut(w1, 3, { taverneiro: 1, ator: 1 });
   ok('e23b o corte do resto deixa os serviços guardados', n1 === 2 && w1.taverneiro === 1 && w1.ator === 1 && w1.oleiro === 0, `corta 3 de ${JSON.stringify({ taverneiro: 1, ator: 2, oleiro: 1 })} guardando um taverneiro e um ator: ${n1} cortados, ${JSON.stringify(w1)}`);
-  const t0 = papel('taverneiro'), a0 = papel('ator'); for (let k = 0; k < 80; k++) { farto(f.id); M.viver(5); } const c1 = checa();
+  // (the two days in the god's peace, as the freguesia's (T-910): the metropole of the generation 25 was at war from the start, and
+  // Runa, the one tavern keeper of Birka, went with a raiding band and died in it at the end of the second day — the town fills
+  // the post in days, not seconds (e23e) —: «taverneiros 1 → 0», T-1188)
+  const paz = () => { if (!(S.divinePeace > G.DAY_LEN * 0.5)) sim(() => G.Politics.divinePeace()); };
+  const t0 = papel('taverneiro'), a0 = papel('ator'); for (let k = 0; k < 80; k++) { farto(f.id); paz(); M.viver(5); } const c1 = checa();
   ok('e23c na vida, a taverna e o teatro abertos', papel('taverneiro') >= 1 && papel('ator') >= 1 && V.foodSafe(f.id) && c1.ok, `${set.name}: taverneiros ${t0} → ${papel('taverneiro')}, atores ${a0} → ${papel('ator')} em dois dias; ${c1.txt}`);
   // (saved where no turn of age waits for the dealing: the load gives the role of an age turned in the four seconds before the
   // save — 2, 16, 62 —, the captive's and a trade to a grown one with none at once, and the world at its next dealing; the

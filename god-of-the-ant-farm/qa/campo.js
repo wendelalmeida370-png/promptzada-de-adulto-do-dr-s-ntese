@@ -127,6 +127,13 @@ const harvestIn = v => !!(v.carry && v.carry.k === 'food' && v.carry.grain && v.
 // had no harvest in her hands in their minute — T-1083)
 const farmWork = w => { const t = w && w.task; return !!t && (t.type === 'farm' || ((t.type === 'deliver' || t.type === 'haul') && held(w).food > 0)); };
 const keepAt = (v, b, done) => { let n = 0; const f = () => { const w = S().villagers.get(v.id); if (!w || !fit(w) || done() || farmWork(w) || (w.task && (w.task.pri || 0) >= 1)) return; send(w, b, onFarm(b)); n++; }; f.n = () => n; f.say = () => (n ? ` (a mão mandada de volta à roça ${n} vez(es))` : ''); return f; };
+// (and the hands of a harvest kept at it the same way — the two of the c1, the two who take the dead man's crops in the c2, the
+// two of the c3 after the load —, the harvest of the c1 begun in a morning: in the metrópole of the generation 25 the planting
+// of the Milharal #3298 took Coatlicue the whole day, and the harvest begun at dusk lost its hands to the house, the tavern, the
+// feast, the night and the next day's war (the muster, 3,15): «colhidos todos: false (003300330)»; in the c2 Ocelotl and
+// Metztli went from the town's assembly to the square at the end of the afternoon, home and to the feast, «a roça 000000300»;
+// in the c3, «a colheita seguiu: 300300300» — T-1180)
+const keepAll = (L, b, done) => { const K = L.map(v => keepAt(v, b, done)); const f = () => { for (const k of K) k(); }; f.say = () => { const n = K.reduce((s, k) => s + k.n(), 0); return n ? ` (as mãos mandadas de volta à colheita ${n} vez(es))` : ''; }; return f; };
 if (!FARM) console.log(`FALHOU | campo mundo | ${world}: nenhuma roça com dois agricultores na cidade`);
 else {
   const b0 = S().buildings.get(FARM); console.log(`${world}: a roça #${FARM} de ${S().settlements.get(b0.set).name} (${Es.grainOf(b0).name})`);
@@ -137,16 +144,16 @@ else {
     const planted = () => b.crops.filter(c => c.s >= 1).length;
     const k1 = keepAt(v, b, () => planted() >= 9); live(240, () => { k1(); Hd.step(); }, () => planted() >= 9);
     const p1 = planted(); const sp = sOf(b);
-    // the season passes: what was planted is ripe now (the growth of the farm: village.js updateFarms)
+    // the season passes: what was planted is ripe now (the growth of the farm: village.js updateFarms), and it is morning
     for (const c of b.crops) if (c.s >= 1) c.g = 0.999;
-    live(4, Hd.step);
-    const ripeN = b.crops.filter(c => c.s === 3).length;
+    morning(); live(4, Hd.step);
+    const ripeN = b.crops.filter(c => c.s === 3).length; const bare = () => b.crops.every(c => c.s !== 3);
     for (const x of P.farmers.slice(0, 2)) if (!x.task || x.task.type !== 'farm') send(x, b, onFarm(b));
-    live(240, Hd.step, () => b.crops.every(c => c.s !== 3));
+    const kh = keepAll(P.farmers.slice(0, 2), b, bare); live(240, () => { kh(); Hd.step(); }, bare);
     live(30, Hd.step, () => !(held(v).food > 0)); // (and the last basket to the store)
     const left = b.crops.filter(c => c.s === 3).length; const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c1', p1 >= 9 && ripeN >= 9 && !left && Hd.born('food') > 0 && Hd.reached('food') && !lost.length && !bad.length,
-      `plantados ${p1} de 9 (${sp})${k1.say()}; maduros ${ripeN}; colhidos todos: ${!left} (${sOf(b)}); ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `plantados ${p1} de 9 (${sp})${k1.say()}; maduros ${ripeN}; colhidos todos: ${!left} (${sOf(b)})${kh.say()}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   // c2 the farmer dies with the harvest in the hands
   {
@@ -163,10 +170,10 @@ else {
     const herd = r2(seen.slice(L0).filter(e => e[3] === 'v:' + v.id && e[5] === 'food' && e[8] === 'herdado').reduce((s, e) => s + e[6], 0));
     // another farmer takes the crop he held, and the rest
     for (const x of P.farmers.slice(1, 3)) send(x, b, onFarm(b));
-    live(180, Hd.step, () => b.crops.every(c => c.s !== 3));
+    const bare = () => b.crops.every(c => c.s !== 3); const kh = keepAll(P.farmers.slice(1, 3), b, bare); live(180, () => { kh(); Hd.step(); }, bare);
     const lost = Hd.lost(); const bad = newBad(P.base);
     ok('c2', n > 0 && Math.abs(herd - n) < 0.01 && (mine < 0 || b.crops[mine].s !== 3) && b.crops.every(c => c.s !== 3) && !lost.length && Hd.reached('food') && !bad.length,
-      `${v.name} morreu com ${n} de comida nas mãos${n > 0 ? (way ? ' (a colheita a caminho do armazém)' : ' (na roça)') : ''}${k2.say()}: ao armazém pelo livro ('herdado') ${herd}; o canteiro ${mine} que ele segurava ${mine < 0 ? '(nenhum)' : b.crops[mine].s !== 3 ? 'foi colhido por outro' : 'ficou maduro, preso'}; a roça ${sOf(b)}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `${v.name} morreu com ${n} de comida nas mãos${n > 0 ? (way ? ' (a colheita a caminho do armazém)' : ' (na roça)') : ''}${k2.say()}: ao armazém pelo livro ('herdado') ${herd}; o canteiro ${mine} que ele segurava ${mine < 0 ? '(nenhum)' : b.crops[mine].s !== 3 ? 'foi colhido por outro' : 'ficou maduro, preso'}; a roça ${sOf(b)}${kh.say()}; ${Hd.say('food')}; sumiu das mãos sem linha: ${lost.join(', ') || 'nada'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   // c3 a save in the middle of the season
   {
@@ -178,10 +185,10 @@ else {
     const b2 = S().buildings.get(FARM); const after = b2.crops.map(c => [c.s, r2(c.g)]); const held1 = b2.crops.filter(c => c.c).length;
     const same = JSON.stringify(before) === JSON.stringify(after);
     const fs = P.farmers.map(x => S().villagers.get(x.id)).filter(Boolean); for (const x of fs.slice(0, 2)) send(x, b2, onFarm(b2));
-    live(180, null, () => b2.crops.every(c => c.s !== 3));
+    const bare = () => b2.crops.every(c => c.s !== 3); const kh = keepAll(fs.slice(0, 2), b2, bare); live(180, kh, bare);
     const bad = newBad(P.base);
     ok('c3', held0 > 0 && same && !held1 && b2.crops.every(c => c.s !== 3) && !bad.length,
-      `antes do save ${JSON.stringify(before)} (${held0} seguro(s)); depois ${same ? 'igual' : JSON.stringify(after)}, ${held1} seguro(s); a colheita seguiu: ${sOf(b2)}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+      `antes do save ${JSON.stringify(before)} (${held0} seguro(s)); depois ${same ? 'igual' : JSON.stringify(after)}, ${held1} seguro(s); a colheita seguiu: ${sOf(b2)}${kh.say()}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
   // c4 fire in the ripe farm
   {

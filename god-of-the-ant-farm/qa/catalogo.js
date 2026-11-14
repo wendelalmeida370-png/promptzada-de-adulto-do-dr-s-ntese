@@ -4,6 +4,7 @@
 //   node qa/catalogo.js                       todas as chaves de base (terra não quente, sem riqueza) de todos os tipos
 //   node qa/catalogo.js gera tudo [tipos]     as seis chaves de cada tipo e povo (quente ou não × riqueza 0, 1, 2)
 //   node qa/catalogo.js parte <saída.json> <base|tudo> [tipos]   só calcula (para rodar em paralelo) e grava o pedaço
+//                                            (CIVS=nordico,grego: só as chaves desses povos — as casas, de um tipo só, em paralelo)
 //   node qa/catalogo.js junta <a.json> [b.json…]                 junta pedaços no arquivo do jogo
 //   node qa/catalogo.js confere [n]          recalcula n chaves do arquivo e diz se ele está em dia com a gramática
 const fs = require('fs'); const path = require('path');
@@ -19,7 +20,8 @@ const keyOf = (t, c, hot, wb, y, n) => [t, c, hot, wb].join('|') + (y ? '|' + y 
 const keysOf = (mode, types) => {
   const out = [];
   // (a home's keys twice: out of the centre, its yard about it — 'y' —, and in it — 'c': D-082)
-  for (const t of types) for (const c of Object.keys(In.TRAD)) for (const n of sizesOf(t, c)) for (const hot of mode === 'tudo' ? [0, 1] : [0]) for (const wb of mode === 'tudo' ? [0, 1, 2] : [0]) for (const y of In.GODSZ && In.GODSZ[t] ? ['y', 'c'] : ['']) out.push([t, c, hot, wb, y, n]);
+  const civs = process.env.CIVS ? process.env.CIVS.split(',') : null;
+  for (const t of types) for (const c of Object.keys(In.TRAD).filter(q => !civs || civs.includes(q))) for (const n of sizesOf(t, c)) for (const hot of mode === 'tudo' ? [0, 1] : [0]) for (const wb of mode === 'tudo' ? [0, 1, 2] : [0]) for (const y of In.GODSZ && In.GODSZ[t] ? ['y', 'c'] : ['']) out.push([t, c, hot, wb, y, n]);
   return out;
 };
 // (a key back to its parts: the size its last, when it has one)

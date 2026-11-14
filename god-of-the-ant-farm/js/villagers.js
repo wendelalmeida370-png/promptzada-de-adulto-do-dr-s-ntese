@@ -1439,6 +1439,10 @@
         if (!a || a.held) return end(v);
         if (a.dead) {
           if (t.type === 'fight') { emote(v, 'happy', 2); if (G.Riches && G.Riches.spoils(v, a, t)) return; return end(v); }
+          // (the kill down, the hunter takes it up before the house's chores, as a porter finishes the trip with a crate: the
+          // hunt's own 1 let the jar of water of the house — 1,05 — take a hunter of Hedeby from the capybara he had killed at the
+          // water's edge, and the meat lay there with nobody's claim, L-813)
+          if ((t.pri || 0) < 1.1) t.pri = 1.1;
           // collect the meat
           // (a beast that fell where feet don't go — an anaconda in the shallows, a goat under a ledge —: the hunter stands on
           // the ground beside it nearest to the body and takes it from there, at the reach that killed it; a body out of that
