@@ -1,0 +1,275 @@
+// moedas: as moedas da casa e do bolso só mexem pelo livro-razão (C1, a pedido do líder) — um dia de cidade com imposto,
+// roubo, rodada de taverna, compra e salário, provocados de propósito, no mundo pronto «metropole» (ou: node qa/moedas.js X).
+// m1 o imposto: o coletor bate às portas — as moedas da casa às mãos dele, marcadas para o tesouro, e ao tesouro
+// m2 o roubo: as moedas da casa ao bolso do ladrão
+// m3 a taverna: a refeição e a rodada, da casa de quem bebe à do taverneiro (ou ao tesouro)
+// m4 a compra da família: a moeda da casa de quem compra à de quem vende (ou ao tesouro)
+// m5 o salário: do tesouro à casa de quem trabalha
+// m6 a casa que cai leva as suas moedas com uma linha no livro; quem morre deixa o bolso à casa
+// m7 o dia inteiro da cidade: casa por casa, bolso por bolso e mãos por mãos, o que mudou é exatamente o que o livro diz,
+//    e ninguém escreveu nelas fora do depósito; a soma das casas, dos bolsos, das mãos e dos tesouros contra o livro — o que
+//    o tesouro mudou fora dele é o T-063 (o tesouro escrito à mão), e cada lugar que fez isso é nomeado
+// e o verificador limpo, sem erro de módulo nem aviso no console.
+const M = require('./nodemundo.js');
+const G = M.load({ qa: true });
+const fails = []; const mid = [];
+const ok = (name, c, info) => { const m = mid.splice(0); const pass = c && !m.length; console.log(`${pass ? 'PASSOU' : 'FALHOU'} | moedas ${name} | ${info}${m.length ? ' — o verificador, no meio do caso: ' + m.slice(0, 2).join(' · ') : ''}`); if (!pass) fails.push(name); };
+const bad = () => QA.check().filter(q => q.sev <= 2 && (q.sys === 'act' || q.sys === 'nan'));
+const watch = () => { const bb = bad(); if (bb.length) { for (const q of bb) if (!mid.includes(q.msg)) mid.push(q.msg); return true; } return false; };
+const D = G.Depot, E = G.Eco, V = G.Village, Vg = G.Vg;
+const r2 = x => Math.round(x * 100) / 100;
+const world = process.argv[2] || 'metropole';
+M.pronto(world); let S = G.S; M.viver(2); G.inSim++;
+const live = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (k % 100 === 99) watch(); if (until && until()) return true; } return false; };
+const housing = b => !!(b && G.BDEF[b.type] && G.BDEF[b.type].housing && b.type !== 'ruin');
+// (who guards coins as a house — the 'h:' of the depot —: the house, or the seat where who rules lives (G.Village.bedsOf, D-205).
+// The count of the whole day asked BDEF.housing, and the seats were out of it, before and after: in the metrópole of the
+// generation 20 Bjorn lives in the palace of Hedeby, and the rulers of Argos and of Mênfis in their grand palaces, whose coins
+// moved in the day by the ledger — «h:17532: mudou 0, o livro diz 0.49» —; the cases of a house — the tax, the theft, the
+// house that falls — still ask a house. T-1002, as the T-989 of the smoke)
+const guards = b => !!b && b.type !== 'ruin' && V.bedsOf(b) > 0;
+const of = s => [...S.buildings.values()].filter(b => b.set === s.id && b.built);
+
+// ---------------- the instruments: every coin line of the ledger, by holder; and who writes coins outside the depot ----------------
+const flow = new Map(); const lines = [];
+D.onMove.push(e => { if (e[5] !== 'moedas') return; flow.set(e[3], (flow.get(e[3]) || 0) - e[6]); flow.set(e[4], (flow.get(e[4]) || 0) + e[6]); lines.push(e); });
+let depth = 0; for (const k of Object.keys(D)) if (typeof D[k] === 'function') { const f0 = D[k]; D[k] = function () { depth++; try { return f0.apply(this, arguments); } finally { depth--; } }; }
+const outside = new Map(); // (where — file:line — a coin was written outside the depot, and how much)
+const where = () => { const st = new Error().stack.split('\n').slice(2).map(l => l.trim()); const fr = st.find(l => /\/js\//.test(l)) || st[0] || '?'; const m = fr.match(/\/js\/([^:]+:\d+)/); return m ? m[1] : fr.slice(0, 60); };
+function watchCoin(o, field, ref) {
+  if (!o || Object.getOwnPropertyDescriptor(o, field)?.get) return;
+  let val = o[field];
+  Object.defineProperty(o, field, { configurable: true, enumerable: true, get() { return val; }, set(x) { if (!depth && G.inSim && typeof x === 'number' && Math.abs((x || 0) - (val || 0)) > 1e-9) { const k = ref + ' ← ' + where(); const r = outside.get(k) || { n: 0, sum: 0 }; r.n++; r.sum += (x || 0) - (val || 0); outside.set(k, r); } val = x; } });
+}
+function snap() {
+  const m = new Map();
+  for (const b of S.buildings.values()) if (guards(b)) m.set('h:' + b.id, b.coin || 0);
+  for (const v of S.villagers.values()) { if (v.purse) m.set('p:' + v.id, v.purse); if (v.carry && v.carry.k === 'moedas' && v.carry.n > 0) m.set('v:' + v.id, v.carry.n); }
+  for (const f of S.factions.values()) m.set('f:' + f.id, f.stock.moedas || 0);
+  return m;
+}
+
+// ---------------- the town: a people with coin, its tax office, its tavern, houses with coins ----------------
+const coinTowns = [...S.settlements.values()].filter(s => E.coinage(s.fac) && of(s).some(b => b.type === 'coletoria') && of(s).some(b => b.type === 'taverna')).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
+let set = coinTowns[0], byGod = false;
+// (none with a tax office — the metropole of the generation 16 is a younger world, its first metropolis of the year 41, and no
+// town has raised one —: the god's hand puts one where the town's own planner would, in the biggest town of coin with a
+// tavern, as the market of negocio's exchange (T-184); the tax round of m1 is given by hand, as before)
+if (!set) for (const s of [...S.settlements.values()].filter(o => E.coinage(o.fac) && of(o).some(b => b.type === 'taverna')).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)) { const pos = V.findSite(s, 'coletoria'); if (!pos || pos.demolish) continue; V.addBuilding('coletoria', pos[0], pos[1], s.id, true); set = s; byGod = true; break; }
+if (!set) { console.log(`FALHOU | moedas | nenhuma cidade com moeda, coletoria e taverna em ${world}, nem lugar para a mão do deus pôr uma coletoria`); process.exit(1); }
+const fac = G.Fac.get(set.fac); const F = 'f:' + fac.id;
+console.log(`(${world}: ${set.name}, de ${fac.name}: ${V.pop(set.id)} habitantes; ${of(set).filter(housing).length} casas${byGod ? "; a coletoria posta pelo deus" : ""})`);
+const before = snap();
+for (const f of S.factions.values()) watchCoin(f.stock, 'moedas', 'tesouro');
+for (const b of S.buildings.values()) if (guards(b)) watchCoin(b, 'coin', 'casa');
+for (const v of S.villagers.values()) watchCoin(v, 'purse', 'bolso');
+const people = () => [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 18 && v.age < 60 && !v.captive && !v.jail && !v.aboard && !v.ug && !(S.avatar && S.avatar.id === v.id) && E.homeOf(v));
+const used = new Set(); const pick = pred => { const v = people().filter(o => !used.has(o.id) && (!pred || pred(o))).sort((a, b) => a.id - b.id)[0]; if (v) used.add(v.id); return v; };
+const linesOf = (code, test) => lines.filter(e => e[8] === code && (!test || test(e)));
+S.time = 0.2; // (a morning: the markets and the doors open)
+// (and the town up from its beds: the clock set to the morning wakes nobody, the world's own morning does — the metropole of
+// the generation 15 was saved past midnight, at 0,003, with the town asleep, and the thief of m2, one awake out of doors as the
+// world's thief is, was nobody: «sem ladrão», T-519)
+live(30, () => people().filter(o => o.sleeping).length * 4 <= people().length);
+// (the keeper of the town's tavern kept out of the day's cases: the m3's evening needs him rested. In the metropole of the
+// generation 19 the first grown one of Tenochtitlan, Moctezuma, was its keeper and the collector of m1: the round of 4 kept him
+// at it all day, and at the tavern's hour he had 0 of energy and 100 of hunger: he ate, slept until 0,80 and opened the tavern
+// at 0,815, a little before it shuts at 0,88)
+{ const tv = of(set).find(o => o.type === 'taverna'); if (tv) for (const v of S.villagers.values()) if (v.job === tv.id && v.role === 'taverneiro') used.add(v.id); }
+
+// m1 the tax round: the houses with coins near the tax office, by the economy's own errand
+let tax = null, taxRoute = [];
+{
+  const b = of(set).find(o => o.type === 'coletoria'); tax = pick();
+  const homes = of(set).filter(h => housing(h) && (h.coin || 0) >= 2 && !(tax && h.id === tax.home)).sort((a, c) => G.dist2(a.x, a.y, b.x, b.y) - G.dist2(c.x, c.y, b.x, b.y)).slice(0, 4);
+  taxRoute = homes.map(h => h.id);
+  if (tax && homes.length) { if (tax.carry) D.use('v:' + tax.id, tax.carry.k, tax.carry.n, { code: 'teste', mine: true, part: true }); Vg.setTask(tax, { type: 'taxes', id: b.id, route: taxRoute, k: 0, bag: 0, pri: 4 }); }
+}
+// m2 the theft: a thief at the door of a house with coins
+let thief = null, robbed = null;
+{
+  robbed = of(set).filter(h => housing(h) && (h.coin || 0) >= 3 && !taxRoute.includes(h.id)).sort((a, c) => c.coin - a.coin || a.id - c.id)[0];
+  // (the thief as the world has one: awake, out of doors, free — no task of 1.6 or more —, the nearest who reaches the door: the
+  // world's thief picks a house not too far, victimFor. In the metropole of the v37's last worlds the first adult of the town,
+  // Tízoc, 38 houses from the door and on a hunt, never got to it — the long way failed at once —, and nothing was taken: T-257)
+  const door = robbed && G.Vg.door(robbed);
+  thief = robbed ? people().filter(o => !used.has(o.id) && o.home !== robbed.id && !o.sleeping && !o.inside && !(o.task && o.task.pri >= 1.6) && G.W.reaches(o, door[0], door[1])).sort((a, b) => G.dist(a.x, a.y, door[0], door[1]) - G.dist(b.x, b.y, door[0], door[1]) || a.id - b.id)[0] || null : null;
+  if (thief) used.add(thief.id);
+  if (thief && robbed) Vg.setTask(thief, { type: 'furto', house: robbed.id, pri: 4, st: 0, kind: 'furto' });
+}
+// m3 the tavern: a drinker with coins at home — sent in the evening, after the day's cases (below): the tavern opens at the
+// evening's hour (act-taverna.js, T.horas — 0,55 in a city), and in the morning of the other cases nobody is served there (T-272)
+let drinker = null, tv0 = null, why3 = '';
+{
+  const tv = tv0 = of(set).find(o => o.type === 'taverna');
+  if (tv && !((tv.inv || {}).food >= 2)) D.make('b:' + tv.id, 'food', 6, { code: 'teste', part: true }); // (a meal on the tavern's shelf)
+  // (and hands that can take the cup — D.strength —: in the metropole of the generation 19 the first, Izel of Tenochtitlan, 57, has
+  // lost both arms; seated at the table, the keeper's serving put nothing in them, and she waited the 45 s and left, three times)
+  drinker = pick(o => (E.homeOf(o).coin || 0) >= 3 && tv && G.dist(o.x, o.y, tv.x, tv.y) < 25 && D.strength(o) > 0);
+}
+// m4 the family's errand of shopping: one of a house that lacks something and has coins
+let shopper = null, shopWhy = '', shopZ = null, shopK = null, shopTries = 0, holdM = null, reopened = 0; const skip4 = [];
+// (the test's hand on a stall: at least n of k on its counter — room made by sending its biggest other goods back to the
+// people's store, in the ledger, as negocio's roomOn —: the case is the coin of the deal, not the stock)
+function stocked(z, k, n) {
+  for (let g = 0; g < 20 && D.room('z:' + z.id, k) < n - (z.inv[k] || 0); g++) { const q = Object.keys(z.inv).filter(x => x !== k && x !== 'moedas' && z.inv[x] > 1e-6).sort((a, b) => z.inv[b] - z.inv[a] || (a < b ? -1 : 1))[0]; if (!q) break; D.move('z:' + z.id, 'f:' + z.fac, q, Math.min(z.inv[q], n), { code: 'teste', part: true }); }
+  const have = z.inv[k] || 0; if (have < n) D.make('z:' + z.id, k, n - have, { code: 'teste', part: true });
+}
+{
+  // (a purchase at a merchant's stall — the family's errand goes there first —: an open, manned stall of a people with coin,
+  // anywhere in the world, a good on it a little cheaper today, and one of that town with coins at home who reaches it)
+  const B = G.Biz;
+  // (a merchant of a people with coin at the market he works at: his stall — opened as his own morning would open it —, a
+  // good on it, and a turn at it)
+  const mkOf = o => { const b = S.buildings.get(o.job); return b && b.type === 'mercado' && b.built ? b : null; };
+  // (never one another case took: in the metropole of 28/10 the first merchant was Miztli, the drinker of m3, and his turn at
+  // the stall took him out of the tavern before he paid, T-182)
+  // (one who can keep the counter now — rested and fed first; one whose stall the world does not man in 40 s gives the turn
+  // to the next, up to three: in the metropole of the generation 6 the first, Yaretzi of Tenochtitlan, had 5 of energy, went
+  // to bed instead of to her stall — the body's own need, over an errand of 2 —, and no stall was manned, T-228)
+  const fit = o => o.energy > 45 && o.hunger < 55 && !o.sleeping;
+  const mers = B ? [...S.villagers.values()].filter(o => o.role === 'mercador' && !used.has(o.id) && !o.captive && !o.jail && !o.aboard && !o.ug && mkOf(o) && E.coinage(G.Village.facOfSet(mkOf(o).set)) && !(S.avatar && S.avatar.id === o.id)).sort((a, b) => fit(b) - fit(a) || a.id - b.id) : [];
+  let mer = null, z = null;
+  for (const m of mers.slice(0, 3)) {
+    used.add(m.id); const zz = B.of(m) || B.open(m, mkOf(m));
+    if (zz && !Object.keys(zz.inv || {}).some(k => k !== 'moedas' && zz.inv[k] >= 1)) D.make('z:' + zz.id, 'tecido', 3, { code: 'teste', part: true });
+    if (zz && !B.manned(zz)) { Vg.endTask(m); Vg.setTask(m, { type: 'banca', biz: zz.id, pri: 2, st: 0, dur: 200, id: zz.b }); live(40, () => B.manned(zz)); }
+    if (zz && B.manned(zz)) { mer = m; z = zz; break; }
+    skip4.push(`${m.name}: ${m.task ? m.task.type : 'sem tarefa'}`);
+  }
+  if (z && B.manned(z)) {
+    const mb = S.buildings.get(z.b); const k = Object.keys(z.inv).filter(q => q !== 'moedas' && z.inv[q] >= 1).sort()[0]; z.margin = z.margin || {}; z.margin[k] = -0.1;
+    // (and enough of it on the counter: the good a little cheaper today brings the town to it — in the metropole of the final
+    // worlds the one cerâmica on Xiuhtonal's stall went to the first buyer while Tlalli stood at a line of one place, and she
+    // found none left the two times she went again, T-196. The test's hand keeps it on the counter while the case runs)
+    stocked(z, k, 4);
+    const sp = B.spots(z);
+    shopper = [...S.villagers.values()].filter(o => o.set === mb.set && o.age >= 18 && o.age < 60 && !o.captive && !o.jail && !o.aboard && !o.ug && E.homeOf(o) && o.role !== 'mercador' && o.id !== z.owner && !used.has(o.id) && !(o.carry && o.carry.n > 0) && G.W.reaches(o, sp.buyer[0], sp.buyer[1]) && !(S.avatar && S.avatar.id === o.id)).sort((a, b) => a.id - b.id)[0] || null;
+    if (shopper) {
+      used.add(shopper.id); const hh = E.homeOf(shopper); if ((hh.coin || 0) < 5) D.make('h:' + hh.id, 'moedas', 10, { code: 'teste' });
+      shopper.hunger = Math.min(shopper.hunger, 30); shopper.energy = Math.max(shopper.energy, 70); Vg.endTask(shopper);
+      Vg.setTask(shopper, { type: 'compra', biz: z.id, k, pri: 4, st: 0 }); shopWhy = `${E.name(k)} na banca #${z.id}`; shopZ = z; shopK = k;
+      holdM = { mer, mb };
+    }
+  }
+}
+// m5 the wage: the state pays a worker for what was brought in
+let worker = null, wage = 0;
+{ worker = pick(); if (worker && (fac.stock.moedas || 0) > 5) wage = E.pay(worker, 'wood', 4); }
+
+// (the stall's line full when the shopper gets there — the good a little cheaper today brings the town to it —: she goes off, as
+// anyone would; the case is the coin of the deal, not the line, so she goes again once the line has room, up to five times:
+// Yaretzi, in the metropole of 28/10, found it full, T-186; and a stall whose line has one place — the ground around it —
+// sends her off whenever another buyer is at it: in the final worlds Tlalli bought at her third time again, T-196)
+const TRIES = 5;
+const shopDone = () => lines.some(e => shopper && e[3] === 'h:' + shopper.home && e[5] === 'moedas' && (e[8] === 'compra' || e[8] === 'venda' || e[8] === 'compra-em-casa'));
+// (and the merchant of m4 held in his trade while the case lasts, his stall opened again if the world closed it — the board
+// deals the trades out every few seconds, and in the metropole of the generation 16, a younger world, it made Tenoch, of
+// Tenochtitlan, a farmer 3 s into the case: the stall closed, «o dono mudou de ofício», and Tonantzin had nowhere to buy)
+function keepStall() {
+  if (!holdM || shopDone() || !S.villagers.has(holdM.mer.id)) return;
+  const { mer, mb } = holdM; if (mer.role !== 'mercador' || mer.job !== mb.id) { mer.role = 'mercador'; mer.job = mb.id; }
+  if (shopZ && shopZ.st === 'on') return;
+  const zz = G.Biz.of(mer) || G.Biz.open(mer, mb); if (!zz) return;
+  shopZ = zz; zz.margin = zz.margin || {}; zz.margin[shopK] = -0.1; stocked(zz, shopK, 4); reopened++;
+  Vg.endTask(mer); Vg.setTask(mer, { type: 'banca', biz: zz.id, pri: 2, st: 0, dur: 200, id: zz.b });
+}
+live(150, () => {
+  keepStall();
+  if (shopper && shopZ && !shopDone() && (shopZ.inv[shopK] || 0) < 1) stocked(shopZ, shopK, 2);
+  if (shopper && shopZ && !shopDone() && !(shopper.task && shopper.task.type === 'compra') && shopTries < TRIES && G.Biz.manned(shopZ) && !G.Life.queueFull('biz:' + shopZ.id)) { shopTries++; Vg.setTask(shopper, { type: 'compra', biz: shopZ.id, k: shopK, pri: 4, st: 0 }); }
+  const done1 = !tax || !(tax.task && tax.task.type === 'taxes');
+  const done2 = !thief || !(thief.task && thief.task.type === 'furto');
+  const done3 = !drinker || !(drinker.task && drinker.task.type === 'tavern');
+  const done4 = !shopper || shopDone() || (shopTries >= TRIES && !(shopper.task && (shopper.task.casa || shopper.task.type === 'compra' || shopper.task.type === 'shop')));
+  return done1 && done2 && done3 && done4;
+});
+// (the evening of m3: the clock to the tavern's opening, and the drinker sent by the tavern's own door — again while the keeper
+// opens the day, and while he is not served yet)
+{
+  const paid3 = () => lines.some(e => (e[8] === 'taverna' || e[8] === 'rodada') && drinker && e[3] === 'h:' + drinker.home);
+  if (drinker && tv0) {
+    // (and its keeper: the tavern of the generation-13 metropole's Mênfis has none — the trades' ceiling gives a town of 58 none
+    // (D-090, D-101), and its day never opens: «Ahmose: nada pago», T-393 —: one of the town takes the trade by the god's hand,
+    // and is held in it while the case lasts — the board would move him off at its next pass —, as the urb2.js does (T-382))
+    let keeper = [...S.villagers.values()].find(v => v.job === tv0.id && v.role === 'taverneiro');
+    if (!keeper) { keeper = pick(o => o.role !== 'guerreiro' && o !== drinker); if (keeper) { keeper.role = 'taverneiro'; keeper.job = tv0.id; Vg.endTask(keeper); } }
+    const keep = () => { if (keeper && (keeper.role !== 'taverneiro' || keeper.job !== tv0.id)) { keeper.role = 'taverneiro'; keeper.job = tv0.id; } };
+    const h = G.Taverna && G.Taverna.horas ? G.Taverna.horas(tv0) : { abre: 0.55 }; if (S.time < h.abre) S.time = h.abre + 0.005;
+    // (and the town's feast of the day kept for another day by the god's hand while the evening lasts — festivals.js, the plan of the
+    // day —: the feast calls the whole town, 3,2, the keeper too, as it should (the taverna.js's t8, T-622). In the metropole of the
+    // generation 19 the feast of Tenochtitlan began at 0,75 and took Moctezuma from the counter until 0,85, with the guests left at
+    // the tables)
+    const noFeast = () => { if (!set.festPlan || set.festPlan.day !== S.day || set.festPlan.key || !set.festPlan.done) set.festPlan = { day: S.day, key: null, done: true }; };
+    noFeast(); const tired3 = keeper ? `energia ${Math.round(keeper.energy)}, fome ${Math.round(keeper.hunger)}${keeper.sleeping ? ', dormindo' : ''}` : '';
+    let open3 = null, most3 = 0, fest3 = !!(G.Fest && G.Fest.active(set.id));
+    // (sent when the tavern's errand can take him — ashore, awake, at nothing above it —, and a send counted when it took: the
+    // world's boat may have him at the evening's hour — in the metropole of the generation 15 Ptahhotep, a fisherman, was
+    // aboard, the five sends went in five steps, each cut at once by the boat's own errand, and he came ashore and went home:
+    // «nada pago», T-520)
+    const free3 = () => !drinker.aboard && !drinker.sleeping && !(drinker.task && (drinker.task.pri || 0) > 4);
+    // (and brought to the tavern's door before each send, hands free and out of the caves — the deal is the subject, not the
+    // walk, as negocio's buyers: in the metropole of the generation 16 Horemheb was at a work across the street with wood in
+    // his arms when the tavern opened, the errand given from where he stood ended at its first step, five times in five steps,
+    // and he went down a cave for the rest of the evening)
+    const toDoor = () => { Vg.endTask(drinker); if (drinker.ug && G.Caves) G.Caves.exitNow(drinker); drinker.inside = 0; if (drinker.carry && drinker.carry.n > 1e-6 && drinker.carry.k !== 'water') Vg.toStore(drinker, G.Fac.idOfV(drinker), 'teste'); const [fx, fy] = V.frontTile(tv0); drinker.x = fx + 0.5; drinker.y = fy + 0.5; drinker.path = null; };
+    let sent = 0;
+    live(150, () => { keep(); noFeast(); if (G.Fest && G.Fest.active(set.id)) fest3 = true; const dia3 = G.Taverna && G.Taverna.dia(tv0); if (dia3) { if (open3 === null) open3 = S.time; most3 = Math.max(most3, dia3.data.servidos); } if (!paid3() && !(drinker.task && drinker.task.type === 'tavern') && sent < 5 && free3()) { toDoor(); const t = E.tavernTask(drinker, Vg.H); if (t && drinker.task === t) { t.pri = 4; sent++; } } return paid3() && !(drinker.task && drinker.task.type === 'tavern'); });
+    // (what the evening was, told when nothing was paid: the keeper, the day of the tavern, the sends, the drinker)
+    { const tk = v => (v ? `${v.name} (${v.task ? v.task.type + '/' + v.task.st : 'sem afazer'}${v.aboard ? ', a bordo' : ''}${G.Expe && G.Expe.memberOf(v.id) ? ', da tripulação de uma viagem' : ''}${v.sleeping ? ', dormindo' : ''}${D.strength(v) > 0 ? '' : ', sem força nas mãos'})` : 'ninguém'); why3 = `o taverneiro ${tk(keeper)}, à hora da taverna com ${tired3}; o dia da taverna ${open3 !== null ? 'abriu às ' + r2(open3) + ', ' + most3 + ' servidos' : 'não abriu'}${fest3 ? '; uma festa da cidade no meio da noite' : ''}; ${sent} envio(s); quem bebe: ${tk(drinker)}`; }
+  }
+}
+{
+  const inn = linesOf('imposto', e => taxRoute.includes(+String(e[3]).slice(2)) && e[3][0] === 'h'); const outT = linesOf('imposto', e => e[4] === F);
+  ok('m1 o imposto: da casa às mãos do coletor e ao tesouro, pelo livro', !!tax && inn.length > 0 && outT.length > 0, tax ? `${tax.name}: ${inn.length} porta(s) pagaram ${r2(inn.reduce((s, e) => s + e[6], 0))} moedas (${inn.map(e => e[3] + '→' + e[4]).slice(0, 3).join(', ')}); ao tesouro ${r2(outT.reduce((s, e) => s + e[6], 0))}` : 'ninguém para cobrar');
+}
+{
+  const st = linesOf('roubo', e => robbed && e[3] === 'h:' + robbed.id);
+  ok('m2 o roubo: da casa ao bolso do ladrão, pelo livro', !!thief && st.length > 0, thief ? `${thief.name} na porta da casa #${robbed.id}: ${st.length ? r2(st[0][6]) + ' moedas para ' + st[0][4] : 'nada levado'}` : 'sem ladrão ou sem casa');
+}
+{
+  const tv = lines.filter(e => (e[8] === 'taverna' || e[8] === 'rodada') && drinker && e[3] === 'h:' + drinker.home);
+  ok('m3 a taverna: a refeição e as rodadas, da casa de quem bebe, pelo livro', !!drinker && tv.length > 0, drinker ? `${drinker.name}: ${tv.map(e => e[8] + ' ' + r2(e[6]) + ' → ' + e[4]).slice(0, 4).join(', ') || `nada pago (${why3})`}` : 'ninguém na taverna');
+}
+{
+  const cp = lines.filter(e => shopper && e[3] === 'h:' + shopper.home && e[5] === 'moedas' && (e[8] === 'compra' || e[8] === 'venda' || e[8] === 'compra-em-casa'));
+  ok('m4 a compra da família: a moeda da casa a quem vende, pelo livro', !!shopper && cp.length > 0, shopper ? `${shopper.name} (${shopWhy}${shopTries ? ', mandada de novo ' + shopTries + ' vez(es): a fila cheia, ou nada na banca' : ''}${reopened ? ', a banca aberta de novo ' + reopened + ' vez(es): o mercador segurado no ofício' : ''}): ${cp.map(e => e[8] + ' ' + r2(e[6]) + ' → ' + e[4]).slice(0, 3).join(', ') || 'nada comprado (agora ' + (shopper.task ? shopper.task.type : 'sem tarefa') + ')'}${skip4.length ? ` (antes, a banca sem ninguém: ${skip4.join('; ')})` : ''}` : `ninguém com compras a fazer que ache onde comprar${skip4.length ? ` (bancas sem ninguém: ${skip4.join('; ')})` : ''}`);
+}
+{
+  const sl = linesOf('salario', e => worker && e[4] === 'h:' + worker.home);
+  ok('m5 o salário: do tesouro à casa de quem trabalha, pelo livro', !!worker && wage > 0 && sl.length > 0, worker ? `${worker.name}: ${r2(wage)} moedas (${sl.map(e => e[3] + '→' + e[4]).join(', ')})` : 'ninguém');
+}
+// m6 a house that falls; a death with a purse
+{
+  const h = of(set).filter(o => housing(o) && (o.coin || 0) >= 1 && o.id !== (tax && tax.home) && o.id !== (thief && thief.home)).sort((a, b) => a.id - b.id)[0];
+  const c0 = h ? h.coin : 0; if (h) V.destroyBuilding(h, 'deus');
+  const ru = linesOf('ruina', e => h && e[3] === 'h:' + h.id);
+  const d = pick(); let dp = 0, inh = [];
+  if (d) { D.make('p:' + d.id, 'moedas', 5, { code: 'teste' }); dp = d.purse; const home = d.home; V.kill(d, 'god', true); inh = linesOf('herdado', e => e[3] === 'p:' + d.id && e[4] === 'h:' + home); }
+  ok('m6 a casa que cai leva as moedas com a sua linha; o bolso de quem morre fica para a casa', !!h && ru.length === 1 && Math.abs(ru[0][6] - c0) < 1e-6 && !!d && inh.length === 1 && Math.abs(inh[0][6] - dp) < 1e-6,
+    `${h ? `a casa #${h.id} com ${r2(c0)}: ${ru.length ? 'ruína, ' + r2(ru[0][6]) + ' moedas perdidas no livro' : 'nada no livro'}` : 'nenhuma casa com moedas'}; ${d ? `${d.name} morreu com ${r2(dp)} no bolso: ${inh.length ? r2(inh[0][6]) + ' para a casa' : 'nada no livro'}` : 'ninguém'}`);
+}
+// m7 the whole day of the town
+live(200);
+{
+  const after = snap(); const keys = new Set([...before.keys(), ...after.keys(), ...flow.keys()]);
+  const wrong = []; let sumIn = 0, sumOut = 0, made = 0, usedC = 0;
+  for (const k of keys) {
+    if (k[0] === '@') { if (k === '@mundo') made = -(flow.get(k) || 0); else usedC = flow.get(k) || 0; continue; }
+    const d = (after.get(k) || 0) - (before.get(k) || 0); const f = flow.get(k) || 0;
+    if (k[0] === 'f') { sumIn += d; sumOut += f; continue; }
+    // (houses, purses, hands: one by one; the other holders of coins — a ship's holds, a stall — are the sum's)
+    if (k[0] !== 'h' && k[0] !== 'p' && k[0] !== 'v') continue;
+    if (Math.abs(d - f) > 1e-3) wrong.push(`${k}: mudou ${r2(d)}, o livro diz ${r2(f)}`);
+  }
+  const hand = [...outside.entries()].filter(([k]) => !k.startsWith('tesouro'));
+  ok('m7 o dia inteiro: casa por casa, bolso por bolso e mãos por mãos, só o que o livro diz; ninguém escreve nelas fora do depósito', !wrong.length && !hand.length,
+    `${keys.size} donos de moedas olhados, ${lines.length} linhas de moedas no livro (feitas ${r2(made)}, gastas ${r2(usedC)})${wrong.length ? '; DIFERENÇAS: ' + wrong.slice(0, 4).join(' · ') : ''}${hand.length ? '; FORA DO DEPÓSITO: ' + hand.slice(0, 4).map(([k, r]) => `${k} (${r.n}×, ${r2(r.sum)})`).join(' · ') : ''}`);
+  const tre = [...outside.entries()].filter(([k]) => k.startsWith('tesouro'));
+  const treOut = tre.reduce((s, [, r]) => s + r.sum, 0);
+  const closes = Math.abs(sumIn - (sumOut + treOut)) < 1e-2;
+  ok('m7 os tesouros: o livro e o que se escreveu à mão (T-063) fecham a conta', closes, `os tesouros mudaram ${r2(sumIn)}: pelo livro ${r2(sumOut)}, à mão ${r2(treOut)}${tre.length ? ' — ' + tre.map(([k, r]) => `${k.replace('tesouro ← ', '')} (${r.n}×, ${r2(r.sum)})`).join(' · ') : ''}`);
+}
+{ const e = M.erros(); ok('limpo', M.limpo() && !watch(), Object.keys(e.mod).length ? JSON.stringify(e.mod) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'sem erro de módulo nem aviso no console; o verificador limpo'); }
+console.log(`MOEDAS: ${fails.length ? 'FALHOU (' + fails.join(', ') + ')' : 'ok'}`);
+process.exit(fails.length ? 1 : 0);

@@ -1,0 +1,758 @@
+<title>Diário dos Bairros Vivos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* layout: a site diary of the patch. One wide column; each entry is a real picture of the game with its note
+   beside it; a ledger of the works at the end. One look by choice: the city at night under torchlight. */
+:root {
+  color-scheme: dark;
+  --noite: #10141f;      /* the night sky of the game */
+  --muro: #19202f;       /* a wall in shadow: cards, bands */
+  --linha: #2b3449;      /* joints between stones */
+  --cal: #ece6d8;        /* whitewash: main text */
+  --po: #a7a59c;         /* dust: secondary text */
+  --tocha: #f2a541;      /* the torch: works in progress, emphasis */
+  --turquesa: #2bbba9;   /* the teal band of the houses: done, in the game */
+  --cinabrio: #dc5a48;   /* the red band: old bugs */
+  --display: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --texto: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --t-s: 0.8125rem; --t-m: 1rem; --t-l: 1.1875rem; --t-xl: 1.625rem; --t-xxl: clamp(2.4rem, 7vw, 4.4rem);
+}
+body { background: var(--noite); color: var(--cal); font-family: var(--texto); font-size: var(--t-m); line-height: 1.6; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.15; margin: 0; text-wrap: balance; letter-spacing: 0.01em; }
+h1 { font-size: var(--t-xxl); color: var(--cal); }
+h2 { font-size: var(--t-xl); }
+h3 { font-size: var(--t-l); font-weight: 500; }
+p { margin: 0; max-width: 66ch; }
+a { color: var(--tocha); }
+a:focus-visible { outline: 2px solid var(--tocha); outline-offset: 3px; }
+.eyebrow { font-size: var(--t-s); letter-spacing: 0.14em; text-transform: uppercase; color: var(--po); }
+.muted { color: var(--po); }
+
+/* the head */
+.head { display: flex; flex-direction: column; gap: 14px; }
+.head .lead { font-size: var(--t-l); color: var(--cal); max-width: 58ch; }
+.tally { display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: var(--t-s); color: var(--po); font-variant-numeric: tabular-nums; }
+.tally b { color: var(--cal); font-weight: 600; }
+.hero { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.hero img { width: 100%; height: auto; display: block; border-radius: 6px; }
+figcaption { font-size: var(--t-s); color: var(--po); max-width: 80ch; }
+
+/* state marks: a dot and a word, the same three everywhere */
+.estado { display: inline-flex; align-items: center; gap: 8px; font-size: var(--t-s); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
+.estado::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.estado.feito { color: var(--turquesa); }
+.estado.obra { color: var(--tocha); }
+.estado.fila { color: var(--po); }
+.legenda { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 14px 0; border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
+.legenda span.txt { color: var(--po); font-size: var(--t-s); text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+/* an entry: picture and note */
+.secao { display: flex; flex-direction: column; gap: 36px; }
+.secao > header { display: flex; flex-direction: column; gap: 8px; }
+.entrada { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 28px; align-items: start; }
+.entrada.inv { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+.entrada.inv .fotos { order: 2; }
+.entrada .nota { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.entrada .fotos { display: flex; flex-direction: column; gap: 12px; min-width: 0; margin: 0; }
+.fotos img { width: 100%; height: auto; display: block; border-radius: 6px; }
+.fotos .par { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fotos .par figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.fotos .par .rot { font-size: var(--t-s); color: var(--po); letter-spacing: 0.08em; text-transform: uppercase; }
+.muda { border-left: 3px solid var(--tocha); padding: 2px 0 2px 14px; color: var(--cal); }
+.muda strong { font-family: var(--display); font-weight: 500; letter-spacing: 0.03em; color: var(--tocha); display: block; font-size: var(--t-s); text-transform: uppercase; margin-bottom: 4px; }
+.nota ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 62ch; }
+.nota li::marker { color: var(--turquesa); }
+.perfis { display: flex; flex-wrap: wrap; gap: 6px; }
+.perfis span { font-size: var(--t-s); padding: 3px 9px; border: 1px solid var(--linha); border-radius: 999px; color: var(--cal); }
+
+/* the works in progress */
+.obras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.obra-c { background: var(--muro); border-top: 3px solid var(--tocha); padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.obra-c p { font-size: 0.9375rem; }
+.obra-c .fase { font-size: var(--t-s); color: var(--tocha); }
+
+/* the road to release: a real sequence */
+.caminho { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: passo; }
+.caminho li { counter-increment: passo; border-top: 1px solid var(--linha); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.caminho li::before { content: counter(passo); font-family: var(--display); font-size: var(--t-xl); color: var(--po); line-height: 1; }
+.caminho li.agora::before { color: var(--tocha); }
+.caminho b { font-weight: 600; }
+.caminho span { font-size: 0.9375rem; color: var(--po); }
+
+/* numbers */
+.numeros { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; padding: 22px 0; border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
+.numeros div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.numeros b { font-family: var(--display); font-size: var(--t-xl); font-variant-numeric: tabular-nums; }
+.numeros span { font-size: var(--t-s); color: var(--po); }
+
+/* old bugs */
+.mortos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px; margin: 0; padding: 0; list-style: none; }
+.mortos li { border-left: 3px solid var(--cinabrio); padding-left: 14px; font-size: 0.9375rem; }
+.mortos b { display: block; font-weight: 600; }
+
+footer { color: var(--po); font-size: var(--t-s); border-top: 1px solid var(--linha); padding-top: 18px; }
+
+/* the score of the great works: before and now */
+.placar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 760px; }
+.placar > div { background: var(--muro); border-top: 3px solid var(--linha); padding: 14px 16px 16px; display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 2px; align-items: baseline; }
+.placar > div.depois { border-top-color: var(--turquesa); }
+.placar .rot { grid-column: 1 / -1; font-size: var(--t-s); letter-spacing: 0.1em; text-transform: uppercase; color: var(--po); margin-bottom: 4px; }
+.placar b { font-family: var(--display); font-size: var(--t-xl); font-variant-numeric: tabular-nums; }
+.placar .depois b { color: var(--turquesa); }
+.placar span { font-size: 0.9375rem; color: var(--po); }
+/* a question for the owner */
+.pede { background: var(--muro); border-left: 3px solid var(--tocha); padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.pede b { color: var(--tocha); font-weight: 600; }
+.obra-c.fila-c { border-top-color: var(--linha); }
+figcaption .ad { color: var(--cinabrio); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+figcaption .ad.depois { color: var(--turquesa); }
+.obra-c.fila-c .fase { color: var(--po); }
+
+@media (max-width: 820px) {
+  .placar { grid-template-columns: minmax(0, 1fr); }
+  .entrada, .entrada.inv { grid-template-columns: minmax(0, 1fr); }
+  .entrada.inv .fotos { order: 0; }
+  .obras { grid-template-columns: minmax(0, 1fr); }
+  .caminho { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mortos { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+
+<div class="wrap">
+
+<header class="head">
+  <div class="eyebrow">God of the Ant Farm · diário do patch</div>
+  <h1>Bairros Vivos</h1>
+  <p class="lead">Um bairro deixa de ser um nome no mapa e passa a ser o que acontece nele. Aqui está o que já entrou no jogo, o que está em obras e o que cada coisa muda quando você joga.</p>
+  <div class="tally"><span><b>22</b> frentes já no jogo</span><span><b>0</b> em obras agora</span><span>atualizado em <b>13 de novembro de 2026</b></span></div>
+</header>
+
+<figure class="hero">
+  <img src="img/templo.jpg" alt="Rua de Mênfis diante do templo egípcio: pilones, obelisco, palmeiras, gente de saiote branco passando e um curral ao fundo" width="1600" height="900">
+  <figcaption>Mênfis, diante do templo, numa manhã comum. Todas as imagens grandes desta página são capturas de verdade do jogo em desenvolvimento, no Modo Encarnado, sem retoque.</figcaption>
+</figure>
+
+<div class="legenda">
+  <span class="estado feito">No jogo <span class="txt">— juntado ao ramo principal, com prova automática passando</span></span>
+  <span class="estado obra">Em obras <span class="txt">— um agente trabalhando agora</span></span>
+  <span class="estado fila">Na fila <span class="txt">— só depois que o resto estiver junto</span></span>
+</div>
+
+<section class="secao" id="novo">
+  <header>
+    <span class="estado feito">No jogo · novidade</span>
+    <h2>O que entrou desde a última vez</h2>
+    <p class="muted">A caçada às falhas que a bateria inteira de provas achou nos mundos novos, e os sete mundos prontos vividos mais uma vez com os consertos.</p>
+  </header>
+
+  <article class="entrada inv" id="cacada">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>A caçada às falhas: todas as provas sobre os mundos novos</h3>
+      <p>Com os mundos prontos nascidos de novo, rodei a bateria inteira de provas do jogo sobre eles — umas sete horas. Perto de 170 linhas que antes passavam passaram a falhar. Reparti as falhas entre cinco especialistas, cada um na sua cópia do jogo (as casas e o crime; as obras, a guerra e o mar; o 3D e as plantas; a tela do corpo e os bichos; os banhos e a praça), e fiquei com o resto. Cada falha foi reproduzida e explicada: ou era um defeito do jogo, e foi consertado com a sua prova, ou era uma prova que dependia do mundo antigo, e foi ajustada sem afrouxar o que ela afirma.</p>
+      <p><b>Dezoito defeitos de verdade</b> apareceram, e os dezoito estão consertados. Os que você pode ver jogando:</p>
+      <ul>
+        <li><b>A viúva não sai com a caravana.</b> Nas primeiras horas de luto, logo depois da morte do marido, a caravana do comércio levava a viúva para a estrada. Agora quem está de luto, doente de cama ou cuidando dos pequenos fica em casa — a caravana escolhe outro.</li>
+        <li><b>O povo que acaba leva tudo o que é dele na hora.</b> Quando um povo desaparece, os seus exércitos, frotas e expedições saem do mundo no mesmo instante; antes, ainda andavam um pouco em campo, de um povo que já não existia.</li>
+        <li><b>A cidade cortada pelo vulcão não morre de fome com comida no armazém.</b> Sem armazém de pé onde comer, ela acende a fogueira mesmo no chão queimado.</li>
+        <li><b>O foguista que vai buscar lenha continua no posto.</b> Antes de os banhos abrirem, na ida ao armazém ele parava para comer com a lenha nos braços, e um chamado de fora podia levá-lo. Agora a ida à lenha é parte do posto: ele a traz até a fornalha e volta a esperar ali.</li>
+        <li><b>A frota que lutava volta do save lutando</b>, e não navegando com a luta pela metade.</li>
+        <li><b>O castor não atravessa mais as coisas:</b> com um prédio ou um penhasco no caminho até a árvore, ele a larga e escolhe outra; o censo dos bichos conta quem dorme na toca (antes, toda noite os ursos «sumiam» e a terra mandava mais); e a manada que chega de longe só vem se a terra tiver lugar para ela.</li>
+        <li><b>A bandeira da casa mercante não desce</b> com a família ainda morando na casa; e o crime não aponta como ladrão alguém que o registro dos mortos já esqueceu.</li>
+        <li><b>No 3D:</b> o alto da pirâmide asteca, o teto do Valhala, a linha da escada, as portas, a tecla «E» que, diante da própria mesa, oferecia a cama ao lado, e a câmera que, olhando para cima diante de uma fachada alta, deixava o topo dela fora do quadro.</li>
+      </ul>
+      <p>Um conserto destes muda a história do mundo (a caravana leva outra pessoa, e daí em diante tudo anda diferente). Por isso os sete mundos prontos foram vividos mais uma vez, com o código final.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Um luto respeitado, guerras que terminam de verdade quando um povo some, e um 3D com menos tropeços — no alto da pirâmide, nas portas e na escada.</p>
+    </div>
+  </article>
+
+  <article class="entrada" id="mundos-g21">
+    <figure class="fotos">
+      <img src="img/g21-menfis-maravilha.jpg" alt="Mênfis na megalópole nova: uma grande pirâmide clara de blocos com a porta vermelha no pé, atrás de um muro baixo; à frente um canal de água azul com um homem de saiote branco e chapéu de palha com a água pelos tornozelos, um moinho de pedra, árvores e um curral; à direita a muralha de pedra da cidade" width="1600" height="900">
+      <figcaption>Mênfis, na megalópole nova: a pirâmide é a maravilha que a cidade ergueu sozinha. Foto do jogo, no Modo Encarnado.</figcaption>
+      <div class="par">
+        <figure><img src="img/g21-argos-maravilha.jpg" alt="Uma rua de Argos ao pé da maravilha: casas brancas de janelas e portas azuis e telhado vermelho entre árvores, gente andando na grama, uma mulher de roxo carregando um cesto de frutas vermelhas, um laguinho de pedras e, atrás de uma cerca, lápides brancas" width="1600" height="900"><span class="rot">Argos, ao pé da maravilha</span></figure>
+        <figure><img src="img/g21-hedeby-teatro.jpg" alt="Hedeby na neve: um longo salão de madeira de telhado de grama com escudos coloridos na parede, sobre um pódio de pedra; gado marrom andando na neve, uma pessoa de capa verde e casas de enxaimel à direita" width="1600" height="900"><span class="rot">Hedeby: o teatro grande, na neve</span></figure>
+      </div>
+      <figcaption>Duas cidades da mesma megalópole. Em Argos, a vida da rua ao pé da maravilha. Em Hedeby, o teatro grande do povo nórdico — um salão de 32 metros sobre o pódio de pedra — com o gado passando na neve.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>Os mundos prontos, mais uma vez</h3>
+      <p>Os consertos da caçada mudam a história dos mundos, então os sete foram vividos de novo, do zero, pelo próprio jogo, com o código final. São os mundos que você abre no menu.</p>
+      <div class="placar">
+        <div><span class="rot">A megalópole</span><b>Hedeby</b><span>nível 5, ano 88</span><b>1233</b><span>almas no mundo</span></div>
+        <div class="depois"><span class="rot">A metrópole</span><b>Mênfis</b><span>nível 4, ano 60</span><b>752</b><span>almas no mundo</span></div>
+      </div>
+      <ul>
+        <li><b>A megalópole demorou mais e cresceu mais.</b> A mesma semente chegou ao nível 5 no ano 88 (na versão anterior, no 60), com o dobro de gente no mundo — 1233 almas, 288 só em Hedeby. Três cidades dela ergueram a sua maravilha sozinhas: Hedeby, Mênfis e Argos.</li>
+        <li><b>A metrópole agora tem Mênfis à frente</b> (antes era Roma).</li>
+        <li><b>A guerra mundial</b> continua começando com a Grande Coalizão em armas, e Tenochtitlan é a maior cidade.</li>
+        <li><b>Os mundos de 100, 500 e 1000 anos</b> foram vividos de novo, século a século. No de 500 anos, Tenochtitlan é uma megalópole (nível 5, 361 almas); no de 1000, resta um povo só, com Texcoco à frente.</li>
+        <li><b>Nada foi posto à mão.</b> Em cada mundo o verificador não achou nada de errado, o mundo guardado volta igual ao ser aberto, e todos abrem pelo menu do jogo, como você abriria.</li>
+      </ul>
+      <p class="muda"><strong>O que muda quando você joga</strong>Uma megalópole mais cheia, com três maravilhas de pé, e mundos que já nascem com os consertos da caçada.</p>
+    </div>
+  </article>
+</section>
+
+<section class="secao" id="no-jogo">
+  <header>
+    <span class="estado feito">No jogo</span>
+    <h2>O que já estava no jogo</h2>
+  </header>
+
+  <article class="entrada inv" id="mundos-novos">
+    <figure class="fotos">
+      <img src="img/g20-hedeby-maravilha.jpg" alt="Hedeby, a megalópole: o grande salão nórdico de telhado dourado e escudos pintados na parede, sobre um pódio de pedra; à frente uma casa branca, um campo alagado e um hipopótamo passeando; gente carregando lenha à esquerda" width="1600" height="900">
+      <figcaption>Hedeby, a megalópole nova, no ano 60: o grande salão de telhado dourado é a maravilha que a cidade ergueu sozinha, sobre o pódio de pedra.</figcaption>
+      <img src="img/g20-hedeby-praca.jpg" alt="A praça de Hedeby no fim da tarde: um círculo de pedras erguidas num gramado, casas nórdicas de enxaimel com cabeças de dragão no telhado, um guarda de lança e gente passando; ao fundo a muralha e um monumento em degraus" width="1600" height="900">
+      <figcaption>A praça de Hedeby às 0,665 do dia: o mundo viveu até essa hora antes da foto. Quem terminou o trabalho passa por ela a caminho de casa.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>Os mundos prontos nasceram de novo</h3>
+      <p>Cada mundo pronto é um mundo vivido pelo próprio jogo, sozinho, por décadas ou séculos, e guardado. Como o patch mudou o jogo inteiro, os sete foram vividos de novo, do zero, com o código final: os bairros já nascem com a sua fama, as cidades com as obras grandes que ergueram sozinhas, os banhos e as praças com gente.</p>
+      <div class="placar">
+        <div><span class="rot">A megalópole</span><b>Hedeby</b><span>nível 5 no ano 60, 179 almas na cidade</span><b>621</b><span>almas no mundo, 4 povos, 18 povoados</span></div>
+        <div class="depois"><span class="rot">A metrópole</span><b>Roma</b><span>a maior cidade, no ano 57</span><b>661</b><span>almas no mundo, 5 povos, 19 povoados</span></div>
+      </div>
+      <ul>
+        <li><b>A megalópole mudou de cidade.</b> A semente de antes, com o código final, ficou no nível 4 até o ano 130: com a guerra agora alcançando as cidades muradas, aquele mundo andou de outro jeito. Troquei pela semente vizinha, que chegou ao nível 5 no ano 60 — e a maior cidade dela é Hedeby, do povo nórdico, com o grande salão, o grande palácio, um templo, um teatro e um segundo teatro, maior, em obra.</li>
+        <li><b>A guerra mundial</b> começa com a Grande Coalizão em armas, e a maior cidade agora é Tenochtitlan, com o palácio de 24 metros.</li>
+        <li><b>Os mundos de 100, 500 e 1000 anos</b> foram vividos de novo, século a século.</li>
+        <li><b>Nada foi posto à mão.</b> Cada mundo é só o que o jogo fez sozinho; em cada um, o verificador do mundo não achou nada de errado, e o mundo guardado volta igual ao ser aberto.</li>
+      </ul>
+      <p class="muda"><strong>O que muda quando você joga</strong>Abrir a megalópole e cair numa cidade nórdica com a sua maravilha de pé e outra obra grande subindo; abrir a metrópole e encontrar Roma à frente. Os bairros já chegam com a vida que tiveram.</p>
+    </div>
+  </article>
+
+
+  <article class="entrada inv" id="ate-escurecer">
+    <figure class="fotos">
+      <img src="img/f3-praca-entardecer.jpg" alt="A praça do mercado de Tenochtitlan ao entardecer: gente parada conversando entre as bancas de toldo vermelho, uma mulher de chapéu de palha no calçamento, casas de faixa turquesa e vermelha" width="1600" height="900">
+      <figcaption>Tenochtitlan às 0,665 do dia: o mundo viveu até essa hora antes da foto, e a praça tem gente que ficou depois do trabalho.</figcaption>
+      <img src="img/f3-taverna-noite.jpg" alt="Noite em Tenochtitlan: uma pessoa de manto azul e cocar de penas com uma tocha acesa diante da taverna, de porta aberta; ao fundo o canal e as casas sob as estrelas" width="1600" height="900">
+      <figcaption>A mesma cidade às 0,765, diante da taverna. Quem bebeu à mesa descansou de verdade e ainda não foi dormir.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>O dia que dura até escurecer</h3>
+      <p>Quando você vive alguém, o sol do fim da tarde se demora para você ver a cidade. Mas a fome e o cansaço continuavam contando em segundos, como se o dia corresse: num fim de tarde longo a cidade inteira ia para a cama antes de escurecer. E ninguém descansava de verdade — sentar à mesa da taverna cansava tanto quanto carregar pedra.</p>
+      <div class="placar">
+        <div><span class="rot">Antes</span><b>22–42%</b><span>dormindo de cansaço às 0,66</span><b>17,5</b><span>copos por dia na taverna</span></div>
+        <div class="depois"><span class="rot">Agora</span><b>5–10%</b><span>às 0,66, em quatro histórias</span><b>44,5</b><span>copos por dia na taverna</span></div>
+      </div>
+      <ul>
+        <li><b>A praça ao fim da tarde.</b> Quem termina o trabalho pode parar na praça das suas ruas a caminho de casa, e as crianças brincam nela à tarde. Às 0,675 do dia, em Tenochtitlan, de 1,8 pessoas paradas na praça para 4,3; em Roma da megalópole, de 2,2 para 6,9.</li>
+        <li><b>O sol que se demora segura também a fome e o cansaço.</b> Uma porta só diz o passo do dia; o corpo, a fome e o sono andam por ela.</li>
+        <li><b>Quem descansa cansa menos.</b> Conversar, sentar à mesa, ficar à porta de casa: um quinto do cansaço do trabalho. Quem trabalha continua trabalhando o mesmo — na metrópole, até mais (de 46% para 53% dos acordados no trabalho nas horas de trabalho).</li>
+        <li><b>Mais janelas acesas ao anoitecer:</b> às 0,74, 34 casas de 210 em vez de 21.</li>
+      </ul>
+      <p>A ressalva honesta: a taverna ainda esvazia cedo. A visita dura uns sete segundos e só se escolhe até 0,73; alongar a noite é uma decisão de desenho que ficou anotada para depois.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Viver alguém ao entardecer e encontrar a cidade acordada: a praça com gente, a taverna com quem bebe, as janelas acendendo. E a pessoa que você vive chega à noite cansada, mas de pé.</p>
+    </div>
+  </article>
+
+  <article class="entrada" id="banhos-posto">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>O foguista no posto, e o bairro dos banhos</h3>
+      <p>Os banhos já tinham freguesia, mas a água ainda ficava fria em um dia de cada sete: antes de as portas abrirem o foguista saía para cortar lenha como qualquer um, e na fornalha qualquer chamado o levava embora (o adeus de um navio, um julgamento, a jarra de água de casa).</p>
+      <div class="placar">
+        <div><span class="rot">Antes</span><b>17 de 20</b><span>dias de banhos com a fornalha acesa na metrópole</span><b>5 de 11</b><span>na cidade grande dos mil anos</span></div>
+        <div class="depois"><span class="rot">Agora</span><b>19 de 20</b><span>na metrópole, com a água quente desde a abertura</span><b>9 de 9</b><span>onde a cidade tem foguista</span></div>
+      </div>
+      <ul>
+        <li><b>O posto segura.</b> O foguista chega antes de abrir, come antes de abrir e não é levado por chamados de fora. A água de casa vai com outro da família.</li>
+        <li><b>Bairro «de banhos».</b> Os banhos contavam como «noite» na vida do bairro, e um bairro só com banhos virava «boêmio» na crônica. Agora o banho tem a sua própria conta e o seu nome: «de banhos».</li>
+        <li><b>O passeio com tempo e com lugar.</b> Quem estava sem trabalho ia aos banhos a qualquer hora: chegava perto de fechar, pagava e era tirado da água; ou chegava com a casa cheia. Agora só vai quem tem tempo para o banho e lugar com que contar.</li>
+      </ul>
+      <p>As ressalvas: uma cidade pequena pode ficar sem foguista (o repartidor de ofícios não dá um a Hedeby), e as crianças ainda não vão aos banhos com os pais. O agente desfez as regras de 40 maneiras em cópias do jogo: a prova acusou 37, e as outras três são regras repetidas que outra já cobre.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Entrar nos banhos de manhã e achar a água quente. Ler na crônica «bairro de banhos» onde antes se lia «a noite pegou».</p>
+    </div>
+  </article>
+  <article class="entrada inv" id="achados-juncao">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>O que as provas acharam ao juntar tudo</h3>
+      <p>Com todas as frentes na mesma árvore, rodei as provas do mar, da guerra, da cidade e dos poderes do deus, que ainda não tinham rodado neste patch. Apareceram três defeitos antigos, de antes dos Bairros Vivos, que as regras novas tornaram visíveis. Os três estão consertados, cada um com a sua prova.</p>
+      <ul>
+        <li><b>Quem apagava um fogo não comia.</b> Apagar fogo «pesa» mais do que comer, e ninguém olhava a fome de quem estava na fila dos baldes. Num mundo de teste, o único construtor de uma cidade combateu fogos por cinco dias com a fome no máximo, enquanto a fogueira nova da cidade (o único lugar onde ela come) esperava por ele. Agora quem tem fome de morrer larga a fila entre dois baldes, come e volta: na prova, sai em 8 segundos, come e está de volta em 30.</li>
+        <li><b>A chuva «curava» prédios em chamas.</b> Uma chama no fim, em chão encharcado, fazia uma conta negativa: em vez de tirar vida do prédio, devolvia um pouco. Ninguém via, até a marca do fogo de um teatro aparecer abaixo de zero. Agora uma chama que acabou não queima nem devolve nada.</li>
+        <li><b>A praça de Hedeby estava fechada para sempre.</b> A praça fechava «no frio forte», lendo a temperatura da terra, que nunca muda. A capital nórdica de todos os mundos prontos nunca teria ninguém na praça. Agora só o tempo esvazia a praça: chuva, tempestade, o inverno que o deus manda. Quem mora no frio se veste para ele.</li>
+      </ul>
+      <p>As outras falhas eram das próprias provas (oito casos que passavam ou falhavam conforme a história do mundo), e cada uma foi ajustada com o rastro do que aconteceu, sem afrouxar o que o caso afirma.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Ver, num incêndio longo, a fila dos baldes se revezar para comer. E ver gente na praça de uma cidade da neve.</p>
+    </div>
+  </article>
+
+  <article class="entrada" id="guerra-portoes">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>A guerra enxerga as cidades muradas — e mais quatro defeitos antigos</h3>
+      <p>Uma prova da guerra falhou ao juntar tudo: um povo com 363 adultos prontos e comida no celeiro não convocava ninguém. O motivo: a capital inimiga era murada e estava com os quatro portões fechados (o alarme fecha os portões quando há inimigo por perto). O planejador da guerra perguntava «dá para ir a pé?» à busca de caminho daquele instante, que acha o portão fechado — e concluía que não havia caminho.</p>
+      <ul>
+        <li><b>Nenhum exército contra a capital murada em alarme.</b> Agora a guerra pergunta ao mapa de regiões, que conta o portão fechado como aberto (ele reabre, e a cidade murada é cercada nos portões). Na prova: sem o conserto, «a convocação: nenhuma»; com ele, a hoste sai.</li>
+        <li><b>Nenhum socorro para a cidade murada sitiada.</b> O cerco fecha os portões, e as outras cidades do povo «não alcançavam» a cidade sitiada. Na prova, Mênfis cercada: antes, nenhum socorro; agora, «o Exército de Socorro de Kaupang, 117 convocados».</li>
+        <li><b>O mesmo erro em mais dois lugares</b>, consertados juntos: os fundadores de uma vila nova e a escolha do lugar do cais. Uma regra nova do guarda do código impede a volta desse erro.</li>
+        <li><b>O navio à deriva no próprio cais</b> (a viagem cancelada com a tripulação ainda sendo chamada), <b>a viúva que levava a carga para casa</b> em vez de deixá-la no armazém, <b>o peru que atravessava a parede do armazém</b> levado pela corda e <b>o abutre que pousava dentro do mercado</b>.</li>
+      </ul>
+      <p>E um achado que fica registrado para uma rodada própria: os muros das cidades têm buracos. A linha do muro pula as casas onde há uma horta, um curral ou um pomar, e as ruas que a cruzam ficam sem portão. Dos 22 muros dos mundos prontos, só o de Mênfis fecha a cidade de verdade.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>As guerras chegam às cidades muradas, e quem é cercado recebe socorro. Os cercos passam a acontecer como deviam.</p>
+    </div>
+  </article>
+
+
+  <article class="entrada">
+    <figure class="fotos">
+      <img src="img/ponte-antes.jpg" alt="Antes: em Tenochtitlan, três lajes cinzentas lisas sobre o canal, com muretas atravessadas no caminho e pessoas cortadas na canela pela laje" width="1600" height="900">
+      <figcaption><b class="ad">Antes.</b> Um canto de Tenochtitlan: três blocos cinzentos, a mureta no meio do caminho e gente afundada até a canela na laje.</figcaption>
+      <img src="img/ponte-depois.jpg" alt="Depois: o mesmo lugar, com um tabuleiro de lajes de pedra, muretas de pedra vulcânica vermelha com capa clara só do lado da água e as pessoas de pé sobre a ponte" width="1600" height="900">
+      <figcaption><b class="ad depois">Depois.</b> O mesmo lugar, a mesma câmera, a mesma hora: calçamento de pedra, mureta de pedra vulcânica só do lado da água, e todo mundo pisando onde deve.</figcaption>
+      <div class="par">
+        <figure><img src="img/ponte-romana.jpg" alt="Ponte romana em Alba Longa: arco pleno de pedras talhadas com o vão escuro sobre a água, capeamento e pilares nas pontas, casas de enxaimel ao fundo" width="1600" height="900"><span class="rot">Romana, em Alba Longa</span></figure>
+        <figure><img src="img/ponte-egipcia.jpg" alt="Ponte egípcia em Mênfis vista da margem: mureta de arenito com cornija, filete turquesa e pilones nas pontas, gente de saiote branco atravessando o canal" width="1600" height="900"><span class="rot">Egípcia, em Mênfis</span></figure>
+      </div>
+    </figure>
+    <div class="nota">
+      <h3>Pontes de pedra, uma para cada povo</h3>
+      <p>Foi tirando fotos para este diário que o defeito apareceu: toda ponte de rua era a mesma laje cinza lisa. Agora cada ponte é feita na pedra e à maneira do povo que a ergueu:</p>
+      <ul>
+        <li><b>Romana</b>: pedra talhada, arco pleno com a pedra do meio saliente.</li>
+        <li><b>Egípcia</b>: arenito, laje sobre pilares, cornija e pilones nas pontas.</li>
+        <li><b>Asteca</b>: pedra vulcânica avermelhada com capa de estuque e filetes vermelho e turquesa.</li>
+        <li><b>Grega</b>: mármore claro, vão em degraus. <b>Clássica</b>: tijolo, arco baixo.</li>
+        <li><b>Nórdica</b>: madeira, tábuas atravessadas, corrimão e escoras em X.</li>
+      </ul>
+      <p>Numa cidade conquistada a ponte continua sendo de quem a construiu. E três defeitos antigos morreram junto: o tabuleiro era desenhado 15 cm acima de onde os pés pisam, os outros atravessavam com os pés na água, e a mureta ficava atravessada no caminho em 11 das 17 pontes dos mundos prontos.</p>
+      <p>Você me deixou decidir sobre a ponte alta, e a resposta é: neste patch, não. As pontes ficam baixas, a um palmo da água, como pontes de canal, com o arco cortado na lateral. Quase todas cruzam canais de 4 a 8 metros, onde um dorso alto não cabe sem invadir as portas das casas da margem. O arco aberto de verdade pede um rio com leito mais fundo que as margens, e isso é assunto para um patch só do rio.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Tenochtitlan, cheia de canais, deixa de ter blocos cinzentos em toda vista. Dá para saber de que povo é um bairro só pela ponte. E de longe a rua não acaba mais na água: a ponte aparece.</p>
+    </div>
+  </article>
+
+  <article class="entrada inv" id="termas">
+    <figure class="fotos">
+      <img src="img/foto-t-lavinio.jpg" alt="As termas de Lavínio no alto de uma colina de areia: colunata clara, telhado vermelho e a cúpula da sala quente entre árvores, com a cidade de telhados vermelhos ao fundo, veados na encosta e uma mulher de vestido vermelho subindo" width="1600" height="900">
+      <figcaption>As termas de 20 metros acima de Lavínio, vistas por quem sobe a colina: a colunata da palestra e a cúpula da sala quente. Foto do jogo.</figcaption>
+      <div class="par">
+        <figure><img src="img/foto-tg-roma-escada.jpg" alt="Um soldado romano de capa branca ao pé da escadaria das grandes termas de Roma, na neve: degraus de pedra, o pódio de cantaria e as bases das colunas brancas com a porta vermelha no alto" width="1600" height="900"><span class="rot">Roma: ao pé da escadaria</span></figure>
+        <figure><img src="img/termas-alto.jpg" alt="As grandes termas romanas vistas do alto: colunata na frente com duas piscinas, telhados vermelhos, a grande sala com janelas altas e a cúpula ao fundo" width="1200" height="750"><span class="rot">O prédio inteiro, em desenho</span></figure>
+      </div>
+      <figcaption>As grandes termas, de 28 metros. À esquerda, foto do jogo ao pé da escadaria, em Roma. À direita, o prédio inteiro num desenho de bancada: a palestra com as piscinas, a grande sala de janelas altas e a cúpula.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>As termas e as grandes termas</h3>
+      <p>Os banhos ganharam dois tamanhos novos, com desenho próprio, para os povos da terma (romano, grego e clássico):</p>
+      <ul>
+        <li><b>As termas</b>, de 20 metros: vestiário, piscina fria, sala morna, sala quente com cúpula e fornalha, e a palestra de colunas na frente.</li>
+        <li><b>As grandes termas</b>, de 28 metros: uma grande sala com clerestório, nove piscinas, 120 lugares na água.</li>
+      </ul>
+      <p>Cada banhista entra na piscina mais vazia; o foguista busca a lenha no armazém do povo e a água só fica quente enquanto a fornalha arde. Uma cidade passa a erguer as termas com 80 pessoas, e as grandes, numa cidade grande, com 160. Eu baixei esses números: como estavam, nenhuma cidade dos seus mundos chegava lá.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Roma e Argos ganham um prédio que se vê de longe, com cúpula e colunata. Vivendo uma pessoa, você entra, paga a entrada, deixa a roupa no vestiário e escolhe a piscina.</p>
+    </div>
+  </article>
+
+  <article class="entrada" id="biblioteca">
+    <figure class="fotos">
+      <img src="img/foto-b-roma.jpg" alt="A grande biblioteca romana na neve: pórtico de colunas brancas com frontão e telhado vermelho sobre um pódio de pedra, um soldado de capa branca diante da escadaria e o mar ao fundo" width="1600" height="900">
+      <figcaption>A grande biblioteca de Roma: o pórtico de seis colunas com frontão, sobre o pódio. Foto do jogo.</figcaption>
+      <div class="par">
+        <figure><img src="img/foto-b-argos.jpg" alt="A grande biblioteca grega de Argos no alto de uma escadaria: stoa de colunas brancas com painéis azuis e vermelhos ao fundo, telhado vermelho, um campo de trigo e uma torre branca na frente" width="1600" height="900"><span class="rot">Grega, em Argos</span></figure>
+        <figure><img src="img/foto-b-hedeby.jpg" alt="O salão do escaldo nórdico em Hedeby: um salão de madeira de telhado alto em pirâmide dentro de uma paliçada, sobre a neve, à beira do mar" width="1600" height="900"><span class="rot">Nórdica, em Hedeby</span></figure>
+      </div>
+      <img src="img/biblioteca-corte.jpg" alt="A Casa da Vida egípcia cortada à altura do peito: pátio com tanque de lótus, pórtico de colunas, o acervo com estantes cheias, o escritório com mesas de escriba e a sala de leitura com mesas, estantes e uma imagem dourada ao fundo" width="1000" height="640">
+      <figcaption>Por dentro, a Casa da Vida egípcia aberta por cima: o pátio do tanque, o pórtico, o acervo, as mesas dos escribas e a sala de leitura com a imagem ao fundo. Desenho de bancada.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>A grande biblioteca dos seis povos</h3>
+      <p>A biblioteca ganhou o tamanho grande, de 16 metros, e cada povo tem a sua:</p>
+      <ul>
+        <li><b>Romana</b>: pórtico de seis colunas com frontão e a sala de leitura atravessada.</li>
+        <li><b>Grega</b>: a stoa de oito colunas com mesas à sombra e o pátio das oliveiras.</li>
+        <li><b>Egípcia</b>: a Casa da Vida, com o pátio do tanque de lótus e a sala de quatro colunas.</li>
+        <li><b>Asteca</b>: o amoxcalli no alto da plataforma, com o pátio dos braseiros.</li>
+        <li><b>Nórdica</b>: o salão do escaldo, com as pedras de runas e o fogo no meio.</li>
+        <li><b>Clássica</b>: a casa das tábuas, com o pátio murado e o cipreste.</li>
+      </ul>
+      <p>É a mesma biblioteca, para mais gente: 16 lugares de ler, três copistas cada um na sua mesa, o dobro de leituras e de cópias por dia. Uma cidade a ergue com 120 pessoas.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>O bairro letrado ganha um prédio à altura da fama. Vivendo um leitor, você sobe a escadaria, senta a uma mesa e lê. O paço municipal, que vinha junto, ficou para a próxima leva.</p>
+    </div>
+  </article>
+
+  <article class="entrada inv" id="quintal">
+    <figure class="fotos">
+      <img src="img/quintal-ad.jpg" alt="A casa de um lenhador antes e depois: à esquerda a parede nua ao lado da porta; à direita a mesma parede com uma pilha de lenha encostada e um machado pendurado" width="1608" height="520">
+      <figcaption>A casa de um lenhador da metrópole, antes e depois: a pilha de lenha encostada na parede e o machado pendurado. Desenho de bancada.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>A lenha, os barris e os potes à porta</h3>
+      <p>A regra já existia: em volta de uma casa só aparece o que ela tem. Mas as casas das cidades ocupam o lote inteiro, e de umas 200 casas da metrópole só uma ou duas mostravam alguma coisa. Agora cada coisa tem lugar, sempre dentro do lote, onde ninguém anda:</p>
+      <ul>
+        <li>a pilha de lenha do lenhador, a rede e o remo do pescador, o couro do caçador;</li>
+        <li>o escudo e a lança do guerreiro, o forcado e o cesto do lavrador;</li>
+        <li>o barril e as botijas de quem guarda bebida, os potes secando na olaria, o varal rente à parede.</li>
+      </ul>
+      <p>Casa vazia não mostra nada. E nada fica na rua: o seu corpo nunca tropeça em enfeite.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Dá para saber quem mora numa casa olhando para a parede dela. Uma rua de pescadores não parece mais uma rua de soldados.</p>
+    </div>
+  </article>
+
+  <article class="entrada" id="casa">
+    <figure class="fotos">
+      <img src="img/casa-antes.jpg" alt="Planta de uma casa romana antes: térreo com o fogo num canto, camas e a escada, e nenhum lugar de comer; no alto, em vermelho, «onde comer: não tem»" width="700" height="424">
+      <figcaption><b class="ad">Antes.</b> Uma casa romana vista de cima: fogo, camas, escada, e nenhum lugar para comer.</figcaption>
+      <img src="img/casa-depois.jpg" alt="Planta da mesma casa romana depois: no térreo, a mesa de quatro lugares em verde junto à parede, o fogo em laranja no canto, as camas e a escada; no andar de cima, mais camas" width="700" height="424">
+      <figcaption><b class="ad depois">Depois.</b> A mesma casa: a mesa de quatro lugares (verde) e o fogo (laranja) no térreo, as camas em volta e no andar de cima. Desenho da planta, feito pelo próprio jogo.</figcaption>
+      <div class="par">
+        <figure><img src="img/casa-mesa.jpg" alt="Uma casa grega vista de cima, sem o telhado: a escada junto à parede, a mesa com um jarro e uma tigela e o banco ao lado, o fogão de parede com a chaminé no canto, uma arca e outro banco perto da porta" width="900" height="750"><span class="rot">A mesa, numa casa grega</span></figure>
+        <figure><img src="img/casa-esteira.jpg" alt="Uma casa egípcia vista de cima, sem o telhado: a escada junto à parede, três jarros de barro, a esteira de dormir com o apoio de cabeça, e a esteira de comer com a tigela e os copos ao pé da escada" width="900" height="750"><span class="rot">A esteira de comer, numa egípcia</span></figure>
+      </div>
+      <figcaption>Duas casas da metrópole como o 3D as constrói por dentro, abertas por cima. Desenho de bancada: sem texturas, sem sombras e sem as pessoas.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>A casa por dentro: fogo e mesa em toda casa</h3>
+      <p>Medi antes de mexer: em mais de três mil plantas de casa, de todos os povos, todas tinham fogo e <b>nenhuma</b> tinha onde a família comesse junta, sentada. A planta só punha a mesa no chão que sobrava depois das camas, e nunca sobrava. Agora o coração da casa vem antes das camas:</p>
+      <ul>
+        <li><b>Romano, grego, nórdico e clássico</b> comem à mesa, nos bancos dela. Onde a mesa não cabe, num banco de comer para dois.</li>
+        <li><b>Egípcio e asteca</b> comem no chão, em volta da esteira.</li>
+        <li><b>Na cabana redonda</b>, em volta do fogo de chão.</li>
+      </ul>
+      <p>Nos mundos prontos, à noite, havia gente sentada para comer em nenhuma casa acordada; agora, em mais da metade. As casas em que todos ficavam de pé ou no chão caíram de 230 para 27 na metrópole. A ressalva honesta: nas casas pequenas, de 4 metros, o que cabe quase sempre é o banco de dois lugares; a mesa de verdade aparece em menos de uma em cada cinco.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Entrar numa casa à noite e achar a família em volta do fogo e da comida, em vez de cada um num canto. E, vivendo uma pessoa, sentar para a ceia no lugar de comer da sua casa.</p>
+    </div>
+  </article>
+
+  <article class="entrada inv" id="palacio">
+    <figure class="fotos">
+      <img src="img/palacio-aposentos.jpg" alt="O palácio nórdico de Hedeby visto de cima, sem o telhado: a sala do trono com o trono vermelho entre dois candelabros e a lareira no meio; à esquerda, os aposentos, com a cama de casal e uma cama de solteiro; à direita, as mesas dos escribas" width="1400" height="620">
+      <figcaption>O palácio de Hedeby (24 metros) aberto por cima: a sala do trono, e à esquerda os aposentos onde Ulf, Astrid e Snorri passam a dormir. Desenho de bancada: sem texturas, sem sombras e sem as pessoas.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>Quem governa mora no palácio</h3>
+      <p>Os palácios tinham sala do trono, corte e guardas, e quem governava dormia numa casa comum. Em dois mundos prontos, o governante nem morava na capital. E o paço, que a descrição do jogo chama de «a casa de quem governa», não tinha uma cama em nenhum povo. Agora:</p>
+      <ul>
+        <li><b>A família entra</b> quando a sede fica pronta ou quando alguém é coroado: quem governa, o par, os filhos solteiros e os pequenos. Dormem nos aposentos, comem da despensa do palácio, acordam lá.</li>
+        <li><b>A família sai</b> quando outro governa, quando o palácio cai, queima ou entra em obras. Leva o que é seu e volta para a casa que tinha, que continuou dela.</li>
+        <li><b>Quem é eleito noutra cidade</b> do povo muda para a capital com a família.</li>
+        <li><b>O palácio guarda as camas que tem:</b> parente casado e filho crescido só ficam havendo cama. Sem essa regra, um paço de 6 camas chegou a 13 moradores em oito anos.</li>
+      </ul>
+      <p>Nos mundos de hoje, ao abrir: Ulf, Astrid e Snorri no palácio de Hedeby; Ariadne e a família, vindos de Delfos, no grande palácio de Roma; Mutemwia na Casa do Nomarca de Mênfis.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>O palácio deixa de ser um prédio vazio: tem gente dormindo, comendo e acordando nele, e janela acesa à noite. Clicando nele, o painel diz quem mora ali, ou por que ainda não mora ninguém.</p>
+    </div>
+  </article>
+
+  <article class="entrada" id="freguesia">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>Os banhos e a biblioteca têm freguesia</h3>
+      <p>Foi medindo para este diário que o defeito apareceu: as termas novas estavam lindas e vazias. Em cinco dias, nas quatro cidades com banhos da metrópole (309 pessoas), o mundo mandou uma pessoa ao banho, e ela desistiu no caminho. A fornalha ardia para ninguém. A medida, antes e depois, sem ninguém mandado pela prova:</p>
+      <div class="placar">
+        <div><span class="rot">Antes</span><b>0</b><span>banhos em cinco dias, na metrópole</span><b>0</b><span>leituras nas bibliotecas</span></div>
+        <div class="depois"><span class="rot">Agora</span><b>85</b><span>banhos nos mesmos cinco dias; em Mênfis, até 11 pessoas na água de uma vez</span><b>1 a 4</b><span>leituras por dia em cada biblioteca</span></div>
+      </div>
+      <p>Cada pessoa ganhou a vontade do banho e a da leitura, sempre por uma causa:</p>
+      <ul>
+        <li><b>Quem vai mais:</b> quem tem ofício sujo, o nobre e o mercador, quem está cansado. O doente que ainda anda vai todo dia. Nos povos da terma (romano, grego e clássico) o hábito é mais forte.</li>
+        <li><b>Quem vai menos:</b> quem mora longe. E água fria vale a metade: sem lenha na fornalha, os banhos esvaziam.</li>
+        <li><b>O que impede:</b> a moeda da entrada, a casa cheia, a fome, as mãos ocupadas, os pequenos para cuidar.</li>
+        <li><b>A biblioteca:</b> o curioso, o sacerdote, o escriba, o nobre e o mercador. Povo sem escrita não lê.</li>
+        <li><b>O foguista fica no posto:</b> com a fornalha por alimentar, não sai para o teatro nem para a taverna.</li>
+      </ul>
+      <p>O preço, medido em dez anos de paz na metrópole: 3,7% menos comida e 2,6% menos gente, nenhuma morte de fome. As ressalvas honestas: vai aos banhos cerca de um adulto em cada dez por dia, e as grandes termas, com 120 lugares, não enchem (20 banhistas num dia, numa cidade de 260). A praça ao fim da tarde, que vinha junto, ficou para depois.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Entrar nos banhos e achar gente na água. Ver o bairro dos banhos ganhar vida ao fim do dia. E, vivendo uma pessoa, ter companhia na piscina e na mesa de leitura.</p>
+    </div>
+  </article>
+
+  <article class="entrada" id="sozinhas">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>As cidades começaram a erguer obras grandes sozinhas</h3>
+      <p>Era a maior falta da Arquitetura Monumental: os prédios grandes existiam, mas quase nenhuma cidade os erguia. A medida honesta, em dois mundos novos vividos por 90 anos cada:</p>
+      <div class="placar">
+        <div><span class="rot">Antes</span><b>3</b><span>obras grandes começadas</span><b>1</b><span>acabada</span></div>
+        <div class="depois"><span class="rot">Agora</span><b>5</b><span>obras grandes começadas</span><b>4</b><span>acabadas: dois templos de 16 m, um palácio de 24 m e um teatro de 24 m</span></div>
+      </div>
+      <ul>
+        <li><b>A pedra da obra grande fica guardada.</b> A capital marca a obra, separa uma turma de construtores e para de gastar pedra em calçada e reforma enquanto ela espera.</li>
+        <li><b>Sem espaço, constrói de novo noutro lugar.</b> O templo antigo fica; o grande nasce onde há terra.</li>
+        <li><b>A casa rica.</b> A família rica que mora em terra cara manda erguer a sua casa grande e paga por ela.</li>
+        <li><b>O povo se junta na praça.</b> O voto e a distribuição de pão passam a ser na praça mais antiga da cidade.</li>
+      </ul>
+      <p class="muda"><strong>O que ainda faltava</strong>As obras muito longe dos armazéns quase não andavam, e as capitais velhas não achavam terreno grande. As duas coisas entraram agora: é a entrada logo abaixo.</p>
+    </div>
+  </article>
+
+  <article class="entrada" id="obra-anda">
+    <figure class="fotos">
+      <img src="img/palacio-menfis.jpg" alt="O Palácio do Faraó de Mênfis visto da água: dois pilones de arenito ladeando o portão, alas de dois andares com frisos turquesa e vermelho sobre um pódio de pedra com escadaria; palmeiras à esquerda, o cais e um barco à direita, um obelisco ao fundo e gente na praia" width="1600" height="900">
+      <figcaption>O Palácio do Faraó de Mênfis, 24 metros de frente, no ano 81 de um mundo novo em que o deus não tocou em nada. A cidade o ergueu sozinha. Foto do jogo.</figcaption>
+      <img src="img/palacio-argos.jpg" alt="O Palácio de Argos num dia de neve: pórtico de seis colunas com frontão e bandeira vermelha entre duas alas de dois andares, escadaria de pedra na frente; à esquerda pinheiros nevados e uma prensa de pedra, no meio um barracão de madeira com caixas, à direita o andaime de uma obra e casas de telhado vermelho" width="1600" height="900">
+      <figcaption>Outro mundo, outro povo: o Palácio de Argos, também de 24 metros, de pé no ano 91. Ao lado, o andaime de uma obra da cidade.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>A obra grande anda e acha terreno</h3>
+      <p>As cidades já começavam obras grandes sozinhas, mas duas coisas as seguravam. A obra longe do armazém quase não recebia pedra: cada construtor leva quatro de cada vez, nas mãos, e a 35 casas de distância isso dava menos de uma viagem por dia. E as capitais não achavam chão plano do tamanho de um palácio. A medida, antes e depois:</p>
+      <div class="placar">
+        <div><span class="rot">Antes</span><b>71</b><span>pedras em dois anos, numa obra a 37 casas do armazém</span><b>5</b><span>obras grandes acabadas em quatro mundos de 90 anos</span></div>
+        <div class="depois"><span class="rot">Agora</span><b>203</b><span>pedras nos mesmos dois anos, pela carroça</span><b>9</b><span>acabadas nos mesmos quatro mundos: cinco templos de 16 m, dois teatros e dois palácios de 24 m</span></div>
+      </div>
+      <ul>
+        <li><b>A carroça da obra.</b> O povo que conhece a roda manda carros de boi do armazém ao canteiro, vinte pedras de cada vez. Um teatro que parava em 75% depois de três anos fica pronto em dois.</li>
+        <li><b>O lote aplainado.</b> Se o terreno é irregular demais, a obra corta e aterra antes de fundar (até 4,5 metros), e esse trabalho entra na conta. A crônica avisa: «Mênfis aplainou o chão para o Palácio Colossal: o lote tinha 7,2 m de relevo.» Na megalópole pronta, as capitais sem nenhum lote grande caíram de duas para nenhuma.</li>
+        <li><b>A pedra não escapa mais.</b> De 150 pedras dadas ao povo de Roma, o teatro recebia 8 ou 9; o resto virava sobrado nas cidades vizinhas. Agora recebe 85, e as casas novas das vizinhas saem de madeira enquanto a obra espera.</li>
+        <li><b>Prédio grande aguenta mais.</b> Um teatro de 24 metros tinha a resistência de um de 12. Agora a resistência acompanha o tamanho.</li>
+      </ul>
+      <p class="muda"><strong>O que muda quando você joga</strong>Deixar um mundo correr e, décadas depois, achar um palácio ou um teatro grande que ninguém mandou construir. Ver os carros de boi indo do armazém ao canteiro. E ler na crônica quando uma cidade aplaina o chão para a sua obra.</p>
+    </div>
+    <div class="nota" style="grid-column: 1 / -1">
+      <p>Na cópia do agente, antes de juntar com as outras frentes, a conta foi ainda melhor: 12 acabadas, e pela primeira vez uma maravilha de 40 metros erguida por uma cidade sozinha (Tenochtitlan, 86 pessoas, 15 anos de obra). Juntando tudo, os mesmos quatro mundos vivem outra história: a maravilha não se repetiu, e num deles nenhuma cidade ergueu nada, porque os povos racharam e a pedra parou de entrar. Por isso a medida está sendo refeita em dez mundos.</p>
+      <p>O palácio da foto teve o fim que o jogo quis. Vários governantes eleitos moraram nele com a família. No ano 86 a multidão foi à porta com pedras e tochas, o governante cedeu e o palácio ardeu; dois anos depois veio abaixo. Noutro mundo, um grande salão nórdico de 32 metros, ainda em obras, foi levado por um incêndio da cidade. Ninguém escreveu essas histórias: saíram das regras.</p>
+      <p>Na junção, as provas acharam um defeito antigo: uma casa que a família já tinha pago ficava quatro anos parada em 92%, à espera de 3 tijolos que estavam na prateleira da olaria e nunca saíam de lá. Consertado: a obra que não recebe tijolo em dois dias termina em pedra.</p>
+      <p>As ressalvas honestas: o fogo ainda leva um monumento com facilidade demais; a terra livre em volta das capitais acaba entre os 60 e os 100 anos; e ainda não dá para dizer se a obra grande custa gente à cidade (em quatro mundos, dois cresceram e dois encolheram). As três coisas estão com o agente dos monumentos agora.</p>
+    </div>
+  </article>
+
+  <article class="entrada" id="casa-cheia">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>A casa cheia ganhou saída</h3>
+      <p>Foi fotografando as casas por dentro que o defeito apareceu: 22 pessoas numa casa de 6, ao lado de casas vazias. A medida mostrou duas coisas. A primeira é que essas famílias são pobres de verdade: nenhuma moeda some do mundo, mas uma casa ganha perto de uma moeda por dia e uma casa nova custa de 10 a 19. A segunda era um defeito: a família de sete nunca tomava a casa de seis vazia ao lado, porque o plano só enxergava casa com cama para todos. A medida, em dez anos da megalópole:</p>
+      <div class="placar">
+        <div><span class="rot">Antes</span><b>7</b><span>de cada 100 pessoas moravam numa casa com o dobro da lotação</span><b>9</b><span>dias seguidos, no pior caso, com a casa no dobro</span></div>
+        <div class="depois"><span class="rot">Agora</span><b>3</b><span>de cada 100, nos mesmos dez anos</span><b>2 a 3</b><span>dias seguidos, no pior caso</span></div>
+      </div>
+      <ul>
+        <li><b>A casa vazia do povo, dada.</b> A família que não cabe e não tem o preço fica com a casa vazia no mesmo dia. Paga o que tiver além de duas moedas que guarda, e a casa é dela.</li>
+        <li><b>A cabana das próprias mãos.</b> Sem casa vazia, depois de dois dias sem juntar o preço, a família levanta a sua cabana. Só os adultos dela trabalham, com a madeira que sobra no armazém do povo, na parte barata da cidade. É assim que o bairro pobre nasce na beira, pela causa certa.</li>
+        <li><b>O jogo diz por quê.</b> O diário da pessoa conta o caminho («não juntamos o preço: vamos levantar a nossa cabana com as nossas mãos»), e a ficha da casa diz por que ela está cheia e o que segura a família hoje.</li>
+        <li><b>Vivendo uma pessoa, nada é automático.</b> O jogo oferece o caminho e você decide.</li>
+      </ul>
+      <p>O agente desfez cada parte da regra, uma por vez, em cópias do jogo: as 28 sabotagens foram acusadas pela prova. E a junção achou dois defeitos antigos, já consertados. Um construtor chamado para uma cena no meio do caminho largava a carga sem avisar a obra, que ficava para sempre esperando a madeira. E a família de mercadores perdia a bandeira se o dono morresse no dia da mudança. A ressalva honesta: isto resolve a casa dividida por várias famílias. A família sozinha que cresceu mais que a própria casa (oito numa cabana de quatro) continua apertada. É a segunda rodada, logo abaixo: os filhos crescidos levantam a sua cabana.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Ver uma família erguendo a própria cabana na beira da cidade. Entrar numa casa à noite e achar gente que cabe nela. E parar de ver casa vazia ao lado de casa lotada.</p>
+    </div>
+  </article>
+  <article class="entrada inv" id="oficio">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>O ofício que fica</h3>
+      <p>Medindo de onde vinha a lenha à porta das casas, apareceu um defeito de fundo: em dois dias, 206 dos 399 adultos da metrópole trocavam de ofício, vinte deles seis vezes ou mais. A cidade contava a cada quatro segundos o que faltava naquele instante e empurrava gente de um ofício para outro. O lenhador de hoje era o mineiro de amanhã. Agora o ofício é da pessoa:</p>
+      <div class="placar">
+        <div><span class="rot">Antes</span><b>0,69</b><span>troca de ofício por adulto por dia, na metrópole</span><b>62%</b><span>dos moradores tinham o ofício que a casa mostrava</span></div>
+        <div class="depois"><span class="rot">Agora</span><b>0,10</b><span>nos mesmos dois dias, com uma guerra começando no meio</span><b>80%</b><span>têm o ofício que a casa mostra</span></div>
+      </div>
+      <ul>
+        <li><b>A cidade tem memória.</b> O que cada ofício pede é a média de meio dia, não o instante. Uma pessoa só troca quando a memória e o instante concordam.</li>
+        <li><b>Quem troca é o mais novo no ofício.</b> Quem tem anos de forja fica; quem entrou ontem vai. E um ofício tomado dura ao menos três dias.</li>
+        <li><b>A emergência chama na hora, e devolve.</b> A fome, a guerra e a obra grande puxam braços no mesmo instante. Quem é chamado guarda o ofício que deixou e volta a ele quando a causa acaba: com a paz, o exército está em casa em segundos.</li>
+        <li><b>Toda troca tem motivo.</b> O jogo guarda a causa de cada troca, e a biografia da pessoa conta quando ela foi chamada e quando voltou.</li>
+        <li><b>A lenha fica à porta.</b> O lenhador chamado à guerra continua sendo o lenhador da casa: a pilha de lenha espera por ele.</li>
+      </ul>
+      <p>A dúvida era se segurar o ofício deixaria a cidade passar fome. Dez mundos de quarenta anos, com a regra velha e com a nova, deram a mesma gente e os mesmos mortos de fome e de guerra, dentro do acaso de cada mundo. Foi essa conta que achou um defeito na primeira versão da regra, que a soma da gente escondia: o exército não voltava para casa depois da guerra. Consertado antes de entrar. O agente desfez a regra de 36 maneiras em cópias do jogo, e a prova acusou todas.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Acompanhar uma pessoa e achá-la no mesmo ofício amanhã: o oleiro na olaria, o pescador no barco. Ver a casa do lenhador continuar sendo a casa do lenhador. E, vivendo uma pessoa, ter um ofício que é seu.</p>
+    </div>
+  </article>
+  <article class="entrada" id="monumentos-duram">
+    <figure class="fotos">
+      <img src="img/piramide-sozinha.jpg" alt="Uma grande pirâmide de pedra clara sobre uma base de pedra, vista da outra margem de um lago; à esquerda um pinheiro e uma rocha, à direita árvores; na margem, de costas, uma egípcia de chapéu de palha olha para ela" width="1280" height="720">
+      <figcaption>A maravilha de Tenochtitlan, 40 metros de lado, no ano 91 de um mundo novo em que o deus não tocou em nada. A cidade tinha 36 pessoas quando a começou e levou dezessete anos para erguê-la. Foto do jogo.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>Monumentos que duram</h3>
+      <p>As cidades já erguiam obras grandes sozinhas, mas perdiam quase metade delas. Em dez mundos de noventa anos, dez monumentos foram ao chão, todos pelo fogo: um palácio de treze anos de obra queimava como uma cabana quatro anos depois, e os baldes dos moradores nem sempre chegam a tempo. Pedra não queima como palha. A medida, nos mesmos dez mundos:</p>
+      <div class="placar">
+        <div><span class="rot">Antes</span><b>15</b><span>obras grandes de pé aos 90 anos, de 39 começadas</span><b>10</b><span>caídas, todas pelo fogo</span></div>
+        <div class="depois"><span class="rot">Agora</span><b>36</b><span>de pé aos 90 anos, de 39 começadas, com todas as frentes juntas</span><b>0</b><span>caídas</span></div>
+      </div>
+      <ul>
+        <li><b>O fogo fere, não derruba.</b> Num monumento de pedra pronto, o fogo leva o que é de madeira (o telhado, o que há dentro) e apaga. O prédio fica de pé, ferido. Uma obra ainda em construção perde a madeira do canteiro e continua. O motim, com tochas e pedras, também só fere.</li>
+        <li><b>O deus e a guerra ainda derrubam.</b> Raio, meteoro, terremoto e cerco levam um monumento ao chão como antes. E as casas continuam a queimar: o incêndio de uma cidade não saiu do jogo.</li>
+        <li><b>Terra guardada cedo.</b> A capital reserva um terreno para a próxima obra grande antes que a cidade o tape, e nenhuma vila nova do povo nasce a menos de vinte casas dele. Aos 60 anos, as capitais sem terreno nenhum eram 3 de 9; agora, nenhuma de 7.</li>
+        <li><b>A última pedra.</b> Um palácio ficou seis anos parado em 98%, esperando cinco pedras que as outras obras levavam antes. Agora a última carga é da obra grande: chega em um minuto.</li>
+      </ul>
+      <p>Sobrava uma dúvida séria: erguer monumento custa gente à cidade? O mesmo jogo, com e sem obras grandes, em seis mundos: com elas há mais gente, menos mortos de fome e menos mortos de guerra. A obra grande não custa a cidade. E com todas as frentes juntas, os dez mundos têm a mesma gente de antes (3774 pessoas aos 90 anos; eram 3875). O agente desfez a regra de 33 maneiras em cópias do jogo, e a prova acusou todas. As ressalvas: ninguém conserta ainda um prédio ferido, o monumento chamuscado não aparece diferente no 3D, e aos 100 anos a terra ainda acaba para a maioria das capitais (ali, o que falta é o que sobrou por erguer).</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Ver uma capital de noventa anos com o teatro, o palácio e o templo grande de pé, e não as ruínas deles. Ver um incêndio passar por um templo e o templo continuar lá. E mandar um raio, se quiser a ruína.</p>
+    </div>
+  </article>
+  <article class="entrada inv" id="quem-sai">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>Quem sai do palácio, e a família antes do solteiro</h3>
+      <p>A segunda rodada da casa cheia foi atrás de três coisas que se viam nas crônicas dos mundos novos. A mais gritante: «Narmer deixou o Palácio» escrito 121 vezes em três dias. Era o marido de uma sobrinha de quem governa: a cidade o mandava morar com a mulher, a porta do palácio o punha para fora, e assim a cada poucos segundos.</p>
+      <div class="placar">
+        <div><span class="rot">Antes</span><b>128</b><span>linhas de «deixou o palácio» na crônica, em vinte anos de um mundo</span><b>8 dias</b><span>uma família com 53 moedas no bolso sem conseguir poupar para uma casa de 19</span></div>
+        <div class="depois"><span class="rot">Agora</span><b>7</b><span>linhas, nos mesmos vinte anos</span><b>2 a 3 dias</b><span>para a família que sai do palácio pagar a sua casa</span></div>
+      </div>
+      <ul>
+        <li><b>O bolso vira poupança.</b> As moedas que a família levava ao sair do palácio ficavam para sempre no bolso do chefe, sem contar para nada. Agora, quando a família tem teto, o bolso vai para o pote da casa.</li>
+        <li><b>A família antes do solteiro.</b> A casa vazia do povo é dada primeiro à família que não cabe onde está. Antes, o rapaz de dezoito anos chegava primeiro e ficava dono de uma casa inteira, com a família de sete apertada ao lado.</li>
+        <li><b>Quem está na rua não espera.</b> A família sem teto recebe a casa vazia no mesmo dia, ou levanta a sua cabana na hora, sem os dois dias de paciência e sem erguer um barraco ao lado.</li>
+        <li><b>Os filhos crescidos levantam a sua cabana.</b> Dois ou mais irmãos adultos de uma casa lotada saem juntos e erguem a deles.</li>
+      </ul>
+      <p>A ressalva honesta: essa última regra está feita e provada, mas quase não muda o número de casas lotadas. A medida mostrou por quê: a casa cheia de uma família só é, quase sempre, de pais com filhos pequenos, e ali não há quem saia. Essas famílias ficam apertadas até os filhos crescerem ou o preço de uma casa maior juntar, e o jogo diz isso na ficha da casa. As 47 sabotagens das duas rodadas foram acusadas pela prova.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Ler a crônica de uma capital sem a mesma frase repetida cem vezes. Ver o governante que perde o posto comprar a casa dele em poucos dias. E ver a casa vazia ir para a família que precisa dela.</p>
+    </div>
+  </article>
+
+
+  <article class="entrada">
+    <figure class="fotos">
+      <img src="img/praca-tarde.jpg" alt="Banca do mercado de Tenochtitlan ao fim da tarde, com frutas sobre a mesa, canais de água e casas de faixa turquesa e vermelha" width="1600" height="900">
+      <figcaption>O mercado de Tenochtitlan ao fim da tarde. Cada troca feita aqui conta para a fama do bairro.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>Cada bairro tem a vida que acontece nele</h3>
+      <p>O jogo agora anota o que as pessoas fazem em cada bairro, todo dia: cargas descidas no cais, peixe pescado, trocas no mercado, ofícios, minério, lavoura, treino de armas, reza, estudo, noites na taverna, crimes e mortes. Disso sai a fama do bairro, um destes dezesseis perfis:</p>
+      <div class="perfis"><span>porto movimentado</span><span>pesqueiro</span><span>de comércio vivo</span><span>de oficinas</span><span>mineiro</span><span>de lavoura</span><span>de soldados</span><span>sagrado</span><span>letrado</span><span>boêmio</span><span>perigoso</span><span>rico</span><span>pobre</span><span>vazio</span><span>parado</span><span>em decadência</span></div>
+      <p>A fama não muda num dia ruim: precisa de quatro dias seguidos, e a crônica do mundo conta a causa. Uma aldeia é um bairro só. Uma cidade que acaba deixa a memória do que foi.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Duas cidades do mesmo povo deixam de ser iguais. O bairro do porto que perde os navios vai ficando parado e a história diz por quê. Se você, como deus, queima a taverna do bairro boêmio, em poucos dias ele deixa de ser boêmio.</p>
+    </div>
+  </article>
+
+  <article class="entrada inv">
+    <figure class="fotos">
+      <img src="img/porto.jpg" alt="Porto de Mênfis de dia: navios de vela amarela no cais, campos alagados, gente andando pela margem" width="1600" height="900">
+      <figcaption>O porto de Mênfis. Estes navios agora só saem com marinheiros da própria cidade a bordo.</figcaption>
+      <img src="img/taverna-noite.jpg" alt="Noite junto ao cais de Mênfis: uma pessoa com uma tocha acesa, um navio parado e o céu estrelado" width="1600" height="900">
+      <figcaption>A mesma cidade à noite, a caminho da taverna.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>O mundo passa a decidir pelo bairro</h3>
+      <ul>
+        <li><b>Marinheiros de verdade.</b> Marinheiro virou ofício da cidade. Um navio mercante só sai com gente a bordo; sem ninguém livre, a carga espera. Na volta a tripulação pisa o cais, recebe o soldo e passa a primeira noite na taverna. A viagem entra na vida de cada um.</li>
+        <li><b>Ladrão e vigia.</b> A ronda vai primeiro ao bairro perigoso, e o ladrão pesa o quanto a casa está vigiada naquela noite.</li>
+        <li><b>Tempo livre perto de casa.</b> Quem mora longe da fogueira descansa à porta de casa, e o freguês vai à taverna das suas ruas.</li>
+        <li><b>A casa mercante é da família.</b> A bandeira na porta acompanha a família quando ela muda de casa e passa de pai para filho, irmão ou viúva.</li>
+        <li><b>Aluguel.</b> Quem mora na casa de um dono que vive noutro lugar paga aluguel a ele, a não ser que seja parente. A família rica compra a casa da terra cara, e quem vendeu vai morar de aluguel na casa que ela deixou.</li>
+      </ul>
+      <p class="muda"><strong>O que muda quando você joga</strong>Viver um marinheiro é embarcar, voltar e gastar o soldo. Viver um ladrão é escolher a rua pela ronda. E a cidade tem famílias ricas que você reconhece pela bandeira, geração após geração.</p>
+    </div>
+  </article>
+
+  <article class="entrada">
+    <figure class="fotos">
+      <img src="img/praca-noite.jpg" alt="Praça do mercado de Tenochtitlan à noite, iluminada por uma tocha na mão de uma pessoa, com as bancas vazias e estrelas no céu" width="1600" height="900">
+      <figcaption>A praça à noite. A luz e a fumaça agora só aparecem onde há fogo e gente de verdade.</figcaption>
+      <img src="img/rua-dia.jpg" alt="Rua calçada de Tenochtitlan de dia: duas pessoas vistas de costas, uma de vestido claro e outra de manto e chapéu de palha, com as bancas do mercado ao fundo" width="1600" height="900">
+      <figcaption>Duas vizinhas a caminho do mercado. A roupa de cada pessoa diz o grupo dela e o que o povo sabe tecer.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>O que se vê tem causa</h3>
+      <p>A vista do deus e o 3D passaram a perguntar a mesma coisa ao mundo antes de desenhar:</p>
+      <ul>
+        <li><b>Fumaça</b> só sai de telhado com fogo embaixo: a fornada ardendo, a forja com alguém nela, a fornalha dos banhos, a taverna aberta, a casa com gente acordada junto ao fogo.</li>
+        <li><b>Janela acesa</b> só com gente acordada dentro.</li>
+        <li><b>Roupa</b> pelo grupo da pessoa (nobre, mercadora, artesã, do povo), pelo que o povo sabe fazer (tear, seda, bronze, ferro), pelo frio da rua e pela bebida. Bêbado cambaleia.</li>
+        <li><b>Desgaste</b> das paredes pelos anos, pela água e pelo cuidado do bairro.</li>
+      </ul>
+      <p class="muda"><strong>O que muda quando você joga</strong>Dá para ler a cidade só de olhar. Bairro de janelas apagadas cedo é bairro de quem acorda cedo. Chaminé fumando é oficina trabalhando. Seda na rua é cidade rica.</p>
+    </div>
+  </article>
+
+  <article class="entrada inv">
+    <figure class="fotos">
+      <img src="img/sabe-conhecido.jpg" alt="Tela do Modo Encarnado: Coatlicue, fruticultora, junto ao mercado; no canto de cima a linha do lugar diz «Cidade Velha, Tenochtitlan»" width="1200" height="675">
+      <figcaption>Coatlicue mora aqui: no canto de cima, a tela diz o nome do bairro dela, «Cidade Velha, Tenochtitlan».</figcaption>
+      <img src="img/sabe-bairro.jpg" alt="Tela do Modo Encarnado: um agricultor visto de costas e, no canto, a linha do lugar dizendo «Um quartel e seus muros, bancas — Tenochtitlan»" width="1000" height="640">
+      <figcaption>Cuetlachtli nunca esteve neste outro bairro. Em vez do nome, a tela descreve o que ele vê: «Um quartel e seus muros, bancas».</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>A tela só diz o que o personagem sabe</h3>
+      <p>Vivendo uma pessoa, você deixa de saber tudo. Quem ela nunca viu é «um ferreiro», não um nome. O bairro onde ela nunca pisou é descrito pelo que se enxerga. As moedas e os guardados de uma casa só aparecem para quem é de lá. O que ela conheceu de frente fica guardado e vai no save.</p>
+      <p>A tecla <b>H</b> esconde a tela inteira, para andar pela cidade só olhando.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>Chegar a uma cidade estranha passa a ser chegar a uma cidade estranha. E voltar para a sua rua, onde você sabe o nome de todo mundo, tem outro gosto.</p>
+    </div>
+  </article>
+
+  <article class="entrada">
+    <figure class="fotos">
+      <img src="img/mercado-dia.jpg" alt="Mercado de Tenochtitlan de dia, com bancas de toldo vermelho, turquesa e amarelo, celeiros em cone e a muralha ao fundo" width="1600" height="533">
+      <figcaption>Num minuto de gravação na metrópole tocaram 46 sons de lugar, e todos tinham dono: cães, velas de navio, cantos, foices, fogo, vozes.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>O que se ouve tem dono</h3>
+      <p>Todo som de lugar agora sai de alguém ou de alguma coisa que existe: a pessoa num gesto, o prédio com o trabalho vivo, o navio que anda, o bicho. O som vem do lado certo, enfraquece com a distância e fica abafado atrás de parede.</p>
+      <p>O fundo de um bairro é o costume dele vezes as mãos que estão trabalhando naquele momento. Porto vazio não soa a porto. A música tira a escala e o timbre do povo do chão e da época das artes dele.</p>
+      <p class="muda"><strong>O que muda quando você joga</strong>De olhos fechados dá para saber onde você está. São 42 sons de lugar novos. Estes só o seu ouvido julga: quando publicar, me diga os que soarem errado.</p>
+    </div>
+  </article>
+
+  <article class="entrada inv" id="monumentos">
+    <figure class="fotos">
+      <img src="img/piramide.jpg" alt="A Grande Pirâmide de Mênfis vista de perto: a face de pedra clara, o portal de granito avermelhado com um disco dourado, um espelho d'água e gente passando" width="1600" height="900">
+      <figcaption>A Grande Pirâmide de Mênfis, no mundo pronto da megalópole, com o portal novo de granito e o disco do sol.</figcaption>
+      <div class="par">
+        <figure><img src="img/coliseu-fora.jpg" alt="O Coliseu visto de fora, do pé da fachada: três ordens de arcos de pedra clara, escudos dourados no ático e as tiras vermelhas e creme do velário no alto" width="1000" height="620"><span class="rot">O Coliseu, de fora</span></figure>
+        <figure><img src="img/coliseu-arena.jpg" alt="O Coliseu visto da arena: as fileiras e os arcos com a sombra listrada do velário caindo sobre a pedra" width="1000" height="620"><span class="rot">Da arena, sob o velário</span></figure>
+      </div>
+      <figcaption>O Coliseu de 40 metros com o velário novo: as tiras de toldo no alto e a sombra delas nas fileiras. Aqui ele foi fundado pela mão do deus, em Roma, para a prova; nenhuma cidade ergueu um sozinha ainda — é a frente em obras mais abaixo.</figcaption>
+      <img src="img/palacio.jpg" alt="O grande palácio de Roma no mundo da megalópole: colunata branca, cúpula e telhados vermelhos, com um cidadão de toga verde no caminho de tábuas" width="1600" height="900">
+      <figcaption>O grande palácio de Roma, no mundo pronto da megalópole. Este a cidade ergueu por conta própria.</figcaption>
+    </figure>
+    <div class="nota">
+      <h3>Monumentos mais bonitos de perto e de longe</h3>
+      <ul>
+        <li><b>Coliseu</b> com o velário, o toldo de tiras creme e vermelhas sobre as fileiras, e escudos dourados no alto. De perto tem 17% menos triângulos para desenhar.</li>
+        <li><b>Grande Pirâmide</b> com portal de granito no lugar da caixa crua da entrada.</li>
+        <li><b>Templo egípcio</b> com cornija nas torres, bandeiras e o sol na verga.</li>
+        <li><b>Templo Mayor</b> com a linha da escada em todo degrau.</li>
+        <li><b>Teatros</b> que de longe parecem uma bacia de fileiras, não um tambor chato. <b>Paliçada</b> que de longe vira cerca de tábuas, sem pontas soltas no ar.</li>
+      </ul>
+      <p class="muda"><strong>O que muda quando você joga</strong>O que já era grande agora também é bonito. E as cidades começaram a erguer obras grandes sozinhas: veja o placar mais acima.</p>
+    </div>
+  </article>
+
+  <article class="entrada">
+    <div class="nota" style="grid-column: 1 / -1">
+      <h3>Fauna em equilíbrio e defeitos antigos mortos no caminho</h3>
+      <p>Você notou rãs e coelhos demais depois de muitos anos. Era verdade: rã, coelho, lebre e lagarto cresciam sem freio. Agora ficam com densidade perto da dos outros bichos, século após século, e há uma prova que mede isso.</p>
+      <ul class="mortos">
+        <li><b>A casa que pegava fogo custava uma perna.</b> Quem perdia a casa num incêndio trabalhava a 85% para sempre e aparecia «Sem uma perna». E quem tinha perdido um braço de verdade o ganhava de volta.</li>
+        <li><b>O corpo posto na rua.</b> Tomar o corpo de alguém dentro de casa punha a pessoa do lado de fora da porta. Agora ela fica onde estava.</li>
+        <li><b>A bandeira que morria com o dono.</b> A casa mercante não passava ao irmão pequeno; a família perdia tudo numa morte.</li>
+        <li><b>O relógio duplo.</b> Carregar um save dava a alguns sistemas um segundo «dia» no mesmo dia.</li>
+      </ul>
+      <p class="muted">Ao todo, 115 defeitos consertados neste patch — 93 achados nele e 22 que já estavam no registro —, cada um com a causa e a correção escritas, quase todos com uma prova que falhava antes e passa agora.</p>
+    </div>
+  </article>
+</section>
+
+<section class="secao" id="em-obras">
+  <header>
+    <span class="estado obra">Em obras</span>
+    <h2>O que está sendo feito agora</h2>
+    <p class="muted">Nenhum agente trabalhando: todas as frentes entraram. Agora é o fecho, comigo.</p>
+  </header>
+  <div class="obras">
+    <div class="obra-c">
+      <h3>A regressão completa final</h3>
+      <p>A mesma bateria de provas, agora sobre os mundos finais, com todos os consertos da caçada: o mar, a guerra, a vida, o save, a tela, a cidade, os poderes, a fundação e o Modo Encarnado, umas sete horas. Toda linha que mudar desde a última versão publicada precisa de explicação — defeito novo é consertado antes de publicar. Depois, o desempenho medido com a máquina sozinha, o relatório final e o jogo publicado.</p>
+      <span class="fase">Em curso</span>
+    </div>
+    <div class="obra-c fila-c">
+      <h3>Na fila</h3>
+      <p>Os muros sem buracos (a rua que cruza a linha vira portão). O paço municipal, a sala do conselho de cada povo. O mercado coberto. A noite da taverna mais longa. E, para um patch próprio do rio, a ponte alta.</p>
+      <span class="fase">Para um próximo patch</span>
+    </div>
+  </div>
+</section>
+
+<section class="secao" id="caminho">
+  <header>
+    <span class="estado fila">Na fila</span>
+    <h2>O caminho até você poder jogar</h2>
+  </header>
+  <ol class="caminho">
+    <li><b>Juntar a última frente em obras</b><span>Feito: o dia que dura até escurecer entrou, com as provas passando.</span></li>
+    <li><b>Gerar de novo os sete mundos prontos</b><span>Feito: os sete vividos de novo pelo próprio jogo, com o verificador limpo em cada um.</span></li>
+    <li><b>A caçada às falhas</b><span>Feito: todas as provas sobre os mundos novos; 18 defeitos consertados e as provas do mundo antigo ajustadas.</span></li>
+    <li><b>Os mundos prontos, mais uma vez</b><span>Feito: os sete vividos de novo com os consertos, o verificador limpo em cada um.</span></li>
+    <li class="agora"><b>A regressão completa final</b><span>Cerca de sete horas de provas sobre os mundos finais. Toda linha nova precisa de explicação.</span></li>
+    <li><b>Relatório final e publicação</b><span>O jogo novo no artefato de sempre.</span></li>
+  </ol>
+</section>
+
+<section class="numeros" aria-label="O patch em números">
+  <div><b>270</b><span>versões gravadas no ramo</span></div>
+  <div><b>64</b><span>arquivos de prova novos</span></div>
+  <div><b>115</b><span>defeitos consertados</span></div>
+  <div><b>96</b><span>decisões de design escritas</span></div>
+  <div><b>39</b><span>regras novas do guarda do código</span></div>
+</section>
+
+<footer>
+  <p>Este diário é atualizado a cada passo do patch. As capturas das entradas mais novas são dos mundos prontos desta versão, vividos pelo próprio jogo com o código final; as das entradas mais antigas, dos mundos de antes, e as termas e as grandes bibliotecas daquelas fotos foram postas de pé pela mão do deus, numa cópia de teste, para a foto.</p>
+</footer>
+
+</div>

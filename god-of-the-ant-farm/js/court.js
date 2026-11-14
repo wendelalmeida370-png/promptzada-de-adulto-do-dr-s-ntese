@@ -1,0 +1,630 @@
+'use strict';
+// ============================================================
+//  The court, the taxman and the tavern.
+//  Every ruler has a vanity of their own: a modest chief lives
+//  in a house a little bigger than the others; a proud king
+//  raises a palace; a vain one a great palace with wings and
+//  gardens; and the vainest of all — a king who wants the
+//  greatest palace in the world — pulls half the town's
+//  builders off every other work, raises the taxes and leaves
+//  the fields waiting, until the golden thing stands outside
+//  the town with its fountains and its avenue of statues.
+//  Before coin there is tribute: collectors knock door to door
+//  and carry sacks of what the houses have to the chief.
+//  The tavern opens early; at night there is wine and music,
+//  drunks weaving home, and now and then a fight.
+// ============================================================
+(function (G) {
+  let N = G.N; const T = G.T, W = G.W;
+  G.mapHooks.push(n => { N = n; });
+  const Co = G.Court = {};
+  const E = G.Eco, P = G.Politics;
+  const TAU = Math.PI * 2;
+  const DAY = () => G.DAY_LEN;
+  const log = (t, ic, x, y) => G.Village.log(t, ic, x, y);
+
+  // ------------------------------ vanity ------------------------------
+  Co.vanity = function (v) {
+    if (!v) return 0.4; const pe = P.persona(v);
+    if (pe.vai === undefined) {
+      const tr = v.traits || [];
+      let x = 0.05 + G.hash(v.id * 977 + 11) * 0.7 + (pe.amb - 0.5) * 0.45;
+      if (tr.includes('Glutão')) x += 0.1; if (tr.includes('Devoto')) x -= 0.08; if (tr.includes('Trabalhador')) x -= 0.06;
+      pe.vai = Math.round(G.clamp(x, 0, 1) * 100) / 100;
+    }
+    return pe.vai;
+  };
+  const oldWords = P.personaWords;
+  P.personaWords = function (v) {
+    const w = oldWords(v); const x = Co.vanity(v); const f = v.g === 'f';
+    if (x > 0.8) w.push(f ? 'ostentadora' : 'ostentador'); else if (x < 0.18) w.push(f ? 'modesta' : 'modesto');
+    return w;
+  };
+
+  // ------------------------------ the seats of power ------------------------------
+  Object.assign(G.BDEF, {
+    paco: { name: 'Casa do Chefe', w: 2, h: 2, cost: { wood: 30, stone: 28 }, work: 46, blocks: true, hp: 240, civic: 1 },
+    grande_palacio: { name: 'Grande Palácio', w: 4, h: 4, cost: { wood: 90, stone: 240 }, work: 260, blocks: true, hp: 700, civic: 1 },
+    palacio_colossal: { name: 'Palácio Colossal', w: 5, h: 5, cost: { wood: 170, stone: 560 }, work: 720, blocks: true, hp: 1100, civic: 1 },
+  });
+  Object.assign(G.BDESC, {
+    paco: 'A casa de quem governa: um pouco maior que as outras, com um estandarte na porta.',
+    grande_palacio: 'Alas, pátio com fonte e jardins. Exige muitos construtores e muita pedra.',
+    palacio_colossal: 'O sonho de um governante vaidoso: o maior palácio do mundo. Tira metade dos construtores de tudo o mais, aumenta os impostos e leva anos — mas quando fica pronto, ninguém esquece.',
+  });
+  Co.RANK = { paco: 1, palacio: 2, grande_palacio: 3, palacio_colossal: 4 };
+  Co.isPalace = type => !!Co.RANK[type];
+  // The seat is the house of who rules (D-205): its chambers lodge the ruler's household — BDEF.aposentos, the beds of a seat,
+  // read by G.Village.bedsOf alone: a household lives there as in a house (the one rule of living, V.livable; its pantry, its
+  // coins and its goods a house's, 'h:'), and no door of the town's housing ever sees it (those read BDEF.housing). Who lives
+  // there is act-casa.js's to say (G.Casa.reign)
+  Co.APOSENTOS = { paco: 6, palacio: 10, grande_palacio: 14, palacio_colossal: 18 };
+  for (const t in Co.APOSENTOS) if (G.BDEF[t]) G.BDEF[t].aposentos = Co.APOSENTOS[t];
+  // the seat where who rules a people lives: the best palace standing in its capital (the lowest id among equals) — or null.
+  // Reads only
+  Co.seatOf = function (f) {
+    const cap = f && G.Fac.capitalOf(f.id); if (!cap) return null; let best = null;
+    for (const b of G.S.buildings.values()) if (Co.RANK[b.type] && b.set === cap.id && b.built && (!best || Co.RANK[b.type] > Co.RANK[best.type] || (Co.RANK[b.type] === Co.RANK[best.type] && b.id < best.id))) best = b;
+    return best;
+  };
+  if (G.City) Object.assign(G.City.IDEAL, { paco: 2.6, grande_palacio: 6, palacio_colossal: 10 });
+  const NAMES = {
+    paco: { grego: 'Casa do Basileu', romano: 'Domus do Magistrado', egipcio: 'Casa do Nomarca', asteca: 'Casa do Tlatoani', nordico: 'Salão do Chefe', classico: 'Casa do Chefe' },
+    grande_palacio: { grego: 'Grande Palácio', romano: 'Palácio Imperial', egipcio: 'Grande Casa do Faraó', asteca: 'Grande Palácio do Tlatoani', nordico: 'Grande Salão do Rei', classico: 'Grande Palácio' },
+    palacio_colossal: { grego: 'Palácio Dourado', romano: 'Domus Áurea', egipcio: 'Palácio de Milhões de Anos', asteca: 'Palácio dos Mil Jardins', nordico: 'Salão Dourado', classico: 'Palácio do Sol' },
+  };
+  const oldNameOf = G.Village.nameOf;
+  G.Village.nameOf = function (type, b) {
+    if (NAMES[type]) {
+      const st = (b && b.style) || 'classico'; const base = NAMES[type][st] || NAMES[type].classico;
+      if (b && b.patron && type !== 'paco') return `${base} de ${b.patron}`;
+      return base;
+    }
+    if (type === 'coletoria' && b && b.set !== undefined) { const f = G.Fac.get(G.Village.facOfSet(b.set)); if (f && !E.coinage(f.id)) return 'Casa do Tributo'; }
+    return oldNameOf(type, b);
+  };
+  // the metropolis counts a great palace as a palace
+  const oldTier = G.City.tierOf;
+  G.City.tierOf = function (set, c, pop) { c = c || {}; if (c.grande_palacio || c.palacio_colossal) c = Object.assign({}, c, { palacio: (c.palacio || 0) + (c.grande_palacio || 0) + (c.palacio_colossal || 0) }); return oldTier(set, c, pop); };
+
+  // which palace this ruler wants
+  function desired(f, set) {
+    const r = P.ruler(f); const x = Co.vanity(r); const t = set.tier || 0; const pop = G.Village.pop(set.id);
+    const big = ['reino', 'imperio', 'tirania', 'teocracia'].includes(f.gov);
+    const all = G.Fac.pop(f.id);
+    if (t < 2 || x < 0.25) return 'paco';
+    if (x < 0.6) return t >= 3 || pop >= 45 ? 'palacio' : 'paco';
+    if (x < 0.84 || !big || all < 40) return all >= 32 ? 'grande_palacio' : 'paco';
+    return 'palacio_colossal';
+  }
+  function bestPalace(f) { let best = null; for (const b of G.S.buildings.values()) if (Co.RANK[b.type] && G.Village.facOfSet(b.set) === f.id && (!best || Co.RANK[b.type] > Co.RANK[best.type])) best = b; return best; }
+  Co.bestPalace = bestPalace;
+  // (the palace a capital has of its own, standing or in works: what its planner weighs. The people's grandest anywhere — the
+  // palace left in the town that was the capital, one of a town taken in war — gave a capital that moved no palace ever, and
+  // its ruler no seat: Delfos of the mundial of the generation 24, the palace of the Pólis in Argos, L-804)
+  const capPalace = set => { let best = null; for (const b of G.S.buildings.values()) if (Co.RANK[b.type] && b.set === set.id && (!best || Co.RANK[b.type] > Co.RANK[best.type])) best = b; return best; };
+  const oldPlan = G.City.plan;
+  G.City.plan = function (set, fac, c, want, pop) {
+    oldPlan(set, fac, c, want, pop);
+    // the city planner's plain palace is replaced by what the ruler wants — in the palace's place among the town's wishes, before
+    // the theatre, the baths and the wonder, as the planner has it (put at their end, with one great civic work at a time, it
+    // waited behind every square, market, library, theatre and bath a growing town wished, and no capital of the test worlds
+    // raised one: L-541)
+    for (let k = want.length - 1; k >= 0; k--) if (want[k] === 'palacio') want.splice(k, 1);
+    const wish = t => { const k = want.findIndex(x => x === 'teatro' || x === 'banhos' || x === 'maravilha'); if (k < 0) want.push(t); else want.splice(k, 0, t); };
+    const isCap = G.Fac.capitalOf(fac.id) === set; if (!isCap || fac.gov === 'tribo' || (set.tier || 0) < 2 || G.City.saving(set, fac)) return;
+    for (const k in c.siteTypes) if (Co.RANK[k] || (G.BDEF[k] && G.BDEF[k].civic && k !== 'paco')) return;
+    const cur = capPalace(set); const want0 = desired(fac, set);
+    const r = P.ruler(fac);
+    if (cur && Co.RANK[cur.type] >= Co.RANK[want0]) return;
+    // a new ruler gets settled first; a palace is only replaced by a far grander one
+    if (cur && (!r || Co.vanity(r) < 0.62 || G.S.day - (fac.rulerSince || 0) < 2 || Co.RANK[want0] - Co.RANK[cur.type] < 1)) return;
+    // (the stone: a palace of its type's own size asks for it in store, one of a bigger step for the people's stone income to pay
+    // for it — G.Village.stoneGate, D-120)
+    if ((want0 !== 'paco' && (set.tier || 0) < 3) || !G.Village.stoneGate(set, want0, want0 === 'paco' ? 30 : 60) || pop < (want0 === 'paco' ? 20 : 26)) return;
+    wish(want0); fac._palaceWish = { type: want0, by: r ? r.id : 0, day: G.S.day };
+  };
+  // the vainest palaces go up outside the town, on open ground — at the size of the step of the ladder tried (n, G.Escala:
+  // V.startProject tries them from the biggest the town justifies, and V.findSite asks here for each — D-106); a step of
+  // another size than the type's own stands on its podium (the ground's relief under it up to V.PODIUM, D-115). → the lot,
+  // null (none), or undefined (not a palace the court puts outside)
+  Co.site = function (set, type, n) {
+    if (type !== 'palacio_colossal' && type !== 'grande_palacio') return undefined;
+    const S = G.S; const def = G.BDEF[type]; const w = n || def.w; const R = Math.round((set.radius || 8) + (type === 'palacio_colossal' ? 12 : 8));
+    const maxSl = w === def.w ? 1.3 : G.Village.PODIUM;
+    let best = null, bs = -1e9;
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const x = Math.floor(set.cx) + dx - Math.floor(w / 2), y = Math.floor(set.cy) + dy - Math.floor(w / 2);
+      if (x < 3 || y < 3 || x + w > N - 3 || y + w > N - 3) continue;
+      const d = G.dist(x + w / 2, y + w / 2, set.cx, set.cy); if (d > R) continue;
+      if (G.Village.resOver && G.Village.resOver(set, type, x, y, w, w, true)) continue; // (a lot kept for another great work: D-121)
+      let ok = true, trees = 0;
+      for (let ty = y - 1; ty <= y + w && ok; ty++) for (let tx = x - 1; tx <= x + w; tx++) {
+        const i = ty * N + tx; const inside = tx >= x && ty >= y && tx < x + w && ty < y + w;
+        if (S.occ[i]) { const o = S.buildings.get(S.occ[i]); if (inside || (o && o.blocks)) { ok = false; break; } }
+        if (!inside) { if (w !== def.w && S.type[i] >= T.SAND && S.cliff[i]) { ok = false; break; } continue; } // (a podium's ring is where one walks)
+        const tt = S.type[i]; if (tt < T.SAND || tt === T.RIVER || S.objAt[i] || S.wall[i] || S.road[i] >= 2 || S.fire[i] > 0) { ok = false; break; }
+        if (S.treeAt[i]) trees++;
+      }
+      if (!ok) continue;
+      const sl = W.slope(x, y, w, w); if (sl > maxSl) continue;
+      const ideal = (set.radius || 8) + (type === 'palacio_colossal' ? 5 : 2);
+      const sc = -Math.abs(d - ideal) * 1.1 - trees * 0.4 - sl * 2 + G.R() * 0.6;
+      // (only where the town's streets reach the work, the builders' rule — asked of the best so far, after the draw: L-465 —, at
+      // every step, the type's own size too: the vain palace of the classic step went wherever its open ground was, and a lot the
+      // town does not reach is a work given up after its tries and asked again — L-349, L-465 —, L-544)
+      if (sc > bs && !G.Village.siteReached(set, x, y, { w, h: w })) continue;
+      if (sc > bs) { bs = sc; best = [x, y]; }
+    }
+    return best;
+  };
+  const oldSite = E.findSite;
+  E.findSite = function (set, type) { const p = Co.site(set, type); return p === undefined ? oldSite(set, type) : p || oldSite(set, type); };
+  const oldPlaced = E.onPlaced;
+  E.onPlaced = function (b) {
+    oldPlaced(b);
+    if (!Co.RANK[b.type]) return;
+    const f = G.Fac.get(G.Village.facOfSet(b.set)); const r = f && P.ruler(f); const set = G.S.settlements.get(b.set);
+    if (r) { b.patron = r.name; b.patronId = r.id; }
+    if (!f || !set) return;
+    const [x, y] = G.Village.center(b);
+    if (b.type === 'palacio_colossal') {
+      log(`${r ? r.name : 'O governante'}, ${r && r.g === 'f' ? 'rainha' : 'rei'} de ${f.name}, não se contenta com pouco: mandou erguer, fora de ${set.name}, o maior palácio que o mundo já viu. Metade dos construtores vai carregar pedra para ele.`, 'crown', x, y);
+      G.Stories && G.Stories.signal('palace', { who: r ? r.id : 0, fac: f.id, type: b.type, b: b.id, x, y });
+    } else if (b.type === 'grande_palacio') G.Stories && G.Stories.signal('palace', { who: r ? r.id : 0, fac: f.id, type: b.type, b: b.id, x, y }), log(`${r ? r.name : 'O governante'} de ${f.name} quer um palácio à sua altura: começaram as obras ${G.gen(G.Village.buildName(b)) === 'a' ? 'da' : 'do'} ${G.Village.buildName(b)}, com alas e jardins.`, 'crown', x, y);
+    else if (b.type === 'paco' && r && Co.vanity(r) < 0.18) log(`${r.name}, de ${f.name}, não quis palácio: mandou fazer uma casa só um pouco maior que as dos vizinhos.`, 'crown', x, y);
+  };
+  // builders: a great palace takes the town's hands
+  Co.builders = function (set, fac, want, A) {
+    let mx = 0;
+    for (const b of G.S.buildings.values()) { if (b.built || b.set !== set.id) continue; if (b.type === 'palacio_colossal') mx = Math.max(mx, 0.5); else if (b.type === 'grande_palacio') mx = Math.max(mx, 0.3); }
+    if (mx) want.construtor = Math.max(want.construtor, Math.floor(A * mx));
+  };
+  function buildingPalace(f) { for (const b of G.S.buildings.values()) if (!b.built && (b.type === 'palacio_colossal' || b.type === 'grande_palacio') && G.Village.facOfSet(b.set) === f.id) return b; return null; }
+  Co.buildingPalace = buildingPalace;
+  // and the treasury: taxes rise while the great work goes on, and the people mind
+  const oldTax = E.taxRate;
+  E.taxRate = function (f) { const r = oldTax(f); if (r <= 0) return r; const b = buildingPalace(f); return b ? Math.min(0.5, r + (b.type === 'palacio_colossal' ? 0.1 : 0.05)) : r; };
+  const oldLoy = E.loyaltyMod;
+  E.loyaltyMod = function (s, f) { let m = oldLoy(s, f); const b = buildingPalace(f); if (b) m -= b.type === 'palacio_colossal' ? 7 : 3; const done = bestPalace(f); if (done && done.built && done.type === 'palacio_colossal' && G.Fac.capitalOf(f.id) === s) m += 3; return m; };
+  // finished
+  const oldComplete = G.City.onComplete;
+  G.City.onComplete = function (b, set) {
+    if (!Co.RANK[b.type]) return oldComplete(b, set);
+    const f = set && G.Fac.get(set.fac); if (!f) return true;
+    const nm = G.Village.buildName(b); const [cx, cy] = G.Village.center(b);
+    if (b.type === 'paco') log(`${f.name} tem agora ${G.gen(nm) === 'a' ? 'a sua' : 'o seu'} ${nm}, em ${set.name}.`, 'crown', cx, cy);
+    else if (b.type === 'grande_palacio') { log(`Ficou pronto ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: alas, um pátio com fonte, jardins. ${f.name} recebe ali os enviados dos outros povos.`, 'crown', cx, cy); f.legit = Math.min(100, (f.legit ?? 50) + 16); G.Stories && G.Stories.signal('palaceDone', { fac: f.id, b: b.id, x: cx, y: cy }); }
+    else {
+      const yrs = Math.max(1, G.S.day - (b.born || G.S.day));
+      log(`Depois de ${yrs} ${yrs > 1 ? 'anos' : 'ano'}, ficou pronto ${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}: telhados de ouro, fontes, uma avenida de estátuas e jardins até onde a vista alcança. Não há no mundo coisa igual.`, 'wonder', cx, cy);
+      G.UI && G.UI.toast(nm, `${f.name} ergueu o maior palácio do mundo.`, 'crown');
+      G.Village.milestone('colossal' + f.id, 'O maior palácio do mundo', `${nm} · ${set.name}.`, 'crown');
+      G.FX && G.FX.ring(cx, cy, 0.5, 10, 2.6, 'rgba(255,225,140,0.95)', 3, true);
+      f.legit = Math.min(100, (f.legit ?? 50) + 28); f.prestige = (f.prestige || 0) + 30;
+      for (const o of G.Fac.all()) if (o.id !== f.id && G.Fac.rel(o.id, f.id)) { const r = G.Fac.rel(o.id, f.id); r.op = Math.min(100, (r.op || 0) + 4); }
+      G.Lore && G.Lore.note('wonder', { set: set.id, fac: f.id, name: nm });
+      G.Stories && G.Stories.signal('palaceDone', { fac: f.id, b: b.id, x: cx, y: cy });
+    }
+    if (b.patronId) { const v = G.person(b.patronId); if (v) v.palace = b.id; }
+    G.Lore && G.Lore.note('build', { set: set.id, fac: f.id, type: b.type, name: nm });
+    return true;
+  };
+  // while the great work goes on, the chronicle hears the grumbling
+  function palaceNews() {
+    const S = G.S;
+    for (const f of G.Fac.all()) {
+      const b = buildingPalace(f); if (!b || b.type !== 'palacio_colossal') continue;
+      if (S.day - (b._news || b.born || 0) < 3) continue; b._news = S.day;
+      const set = S.settlements.get(b.set); const p = Math.round(b.progress * 100); const [x, y] = G.Village.center(b);
+      const hungry = f.stock.food < G.Fac.pop(f.id) * 2;
+      const lines = [
+        `${p}% do palácio de ${b.patron || f.name} está de pé. Em ${set ? set.name : f.name}, ${hungry ? 'os celeiros esvaziam: quem devia colher está carregando pedra' : 'os outros trabalhos esperam: as pedreiras não param'}.`,
+        `Os construtores de ${f.name} voltam à noite com as costas em pedaço. O palácio de ${b.patron || 'seu governante'} vai em ${p}%.`,
+        `Nas tavernas de ${set ? set.name : f.name} se resmunga: impostos mais altos, e tudo para o palácio de ${b.patron || 'quem manda'} (${p}%).`,
+      ];
+      log(G.pick(lines), 'crown', x, y);
+    }
+  }
+
+  // ------------------------------ tribute before coin ------------------------------
+  const TRIB = { chefia: 0.15, reino: 0.2, imperio: 0.25, teocracia: 0.2, tirania: 0.35, conselho: 0.1, livre: 0.05, parlamento: 0.16, feudal: 0.24, republica: 0.12, democracia: 0.1, oligarquia: 0.08, ditadura: 0.28, comuna: 0, anarquia: 0 };
+  Co.tributeRate = f => (f && !E.coinage(f.id) ? (TRIB[f.gov] || 0) + (buildingPalace(f) ? 0.08 : 0) : 0);
+  const oldEPlan = E.plan;
+  E.plan = function (set, fac, c, want, pop) {
+    oldEPlan(set, fac, c, want, pop);
+    const t = set.tier || 0; const n = k => (c[k] || 0); const site = k => !!c.siteTypes[k];
+    // the tavern opens as soon as there is a village to drink in
+    if (t >= 3 && pop >= 18 && !n('taverna') && !site('taverna')) want.push('taverna');
+    // a chief takes tribute long before there is coin
+    if (t >= 2 && pop >= 24 && !G.City.saving(set, fac, 60) && !E.coinage(fac.id) && Co.tributeRate(fac) > 0 && !n('coletoria') && !site('coletoria')) want.push('coletoria');
+  };
+  const oldJob = E.jobTask;
+  E.jobTask = function (v, H) {
+    const S = G.S;
+    if (v.role === 'cobrador') {
+      const f = G.Fac.ofV(v); const b = v.job && S.buildings.get(v.job);
+      if (f && b && b.built && !E.coinage(f.id)) return tributeTask(v, b, f, H);
+    }
+    return oldJob(v, H);
+  };
+  function tributeTask(v, b, f, H) {
+    const S = G.S; const rate = Co.tributeRate(f);
+    if (rate <= 0) return H.setTask(v, { type: 'desk', id: b.id, pri: 1, dur: 12 });
+    const homes = [];
+    for (const h of S.buildings.values()) if (h.set === v.set && h.built && G.BDEF[h.type].housing && !(h.taxT > S.clock)) homes.push(h);
+    if (!homes.length) return H.setTask(v, { type: 'desk', id: b.id, pri: 1, dur: 12 });
+    homes.sort((a, c) => G.dist2(a.x, a.y, b.x, b.y) - G.dist2(c.x, c.y, b.x, b.y));
+    const route = homes.slice(0, 5).map(h => h.id);
+    for (const id of route) S.buildings.get(id).taxT = S.clock + DAY() * 0.6;
+    // (where the tribute goes: the chief's house when it stands near, else the people's store — chosen now, and written on
+    // the sacks: the load knows where it goes, after a save or a lost way. The chief's house is the seat, where who rules lives
+    // (D-205) — never a grander palace in works, nor one of another town: L-804)
+    const pal = Co.seatOf(f); const d = pal && G.dist(pal.x, pal.y, v.x, v.y) < 30 ? pal : G.Village.nearestDropoff(v.x, v.y, v.set);
+    const dest = d ? (Co.RANK[d.type] ? 'h:' + d.id : 'f:' + f.id) : 'f:' + f.id; // (the seat keeps as a house does: D-205)
+    return H.setTask(v, { type: 'tribute', id: b.id, route, k: 0, bag: 0, goods: {}, dest, pri: 1.05 });
+  }
+  // door to door: the share of the house's pantry into the collector's sacks — in the ledger, marked for where the tribute
+  // goes —, and a share of what else the house keeps sent there at once (one good in the hands at a time); then the sacks to
+  // the chief or the store. A house's pantry and goods only move by the depot (T-130: the pantry was written by hand here)
+  function runTribute(v, t, dt, H) {
+    const S = G.S; const b = S.buildings.get(t.id); if (!b || !b.built) return H.end(v);
+    const f = G.Fac.ofV(v); if (!f) return H.end(v);
+    const D = G.Depot; const dest = t.dest && D.exists(t.dest) ? t.dest : 'f:' + f.id;
+    if (t.k < t.route.length) {
+      const h = S.buildings.get(t.route[t.k]);
+      if (!h || !h.built) { t.k++; t.st = 0; t.gob = 0; return; }
+      if (!t.st) { if (!t.gob) { t.gob = 1; if (!G.Vg.gotoB(v, h, 0.25)) { t.k++; t.gob = 0; return; } } if (H.move(v, dt)) { t.gob = 0; t.st = 1; v.actT = 0; } return; }
+      v.act = 'knock'; const [cx, cy] = G.Village.center(h); G.faceTo(v, cx - v.x, cy - v.y);
+      if (v.actT < 1.8) return;
+      const rate = Co.tributeRate(f); const ref = 'h:' + h.id;
+      const n = Math.floor(D.get(ref, 'food') * rate * 10) / 10;
+      if (n > 0) {
+        // (into the sacks; what the hands cannot take goes straight where the tribute goes, as the coin tax does)
+        const r = D.move(ref, 'v:' + v.id, 'food', n, { code: 'tributo', by: v.id, to: dest, part: true });
+        const got = r.ok ? r.n : 0; const rest = Math.round((n - got) * 100) / 100;
+        const r2 = rest > 0 ? D.move(ref, dest, 'food', rest, { code: 'tributo', by: v.id, part: true }) : null;
+        t.bag += got + (r2 && r2.ok ? r2.n : 0);
+      }
+      // a share of what the house made or bought, too
+      const I = h.inv || {}; const k = Object.keys(I).sort().find(q => q !== 'food' && (I[q] || 0) >= 2 && G.R() < rate * 2);
+      if (k) { const r = D.move(ref, dest, k, 1, { code: 'tributo', by: v.id }); if (r.ok) t.goods[k] = (t.goods[k] || 0) + 1; }
+      if (rate > 0.22) { for (const o of S.villagers.values()) if (o.home === h.id && !o.inside && G.dist2(o.x, o.y, v.x, v.y) < 9 && G.R() < 0.5) G.Vg.emote(o, 'angry', 2); }
+      else if (n > 0 && G.R() < 0.3) G.Vg.emote(v, 'chat', 1);
+      t.k++; t.st = 0; return;
+    }
+    // the round done: what it brought counted, and the sacks to the chief's house (or the common store)
+    f.eco.tax = (f.eco.tax || 0) + t.bag;
+    if (!f._tribute && (t.bag > 0 || Object.keys(t.goods).length)) { const pl = A_place(dest); f._tribute = S.day; log(`Os primeiros coletores de tributo de ${f.name} bateram de porta em porta e levaram sacos de grão e um pouco de tudo para ${pl && Co.RANK[pl.type] ? G.Village.buildName(pl) : 'o armazém do chefe'}.`, 'trade', pl ? pl.x : v.x, pl ? pl.y : v.y); }
+    if (v.carry && v.carry.to === dest && v.carry.n > 0) return H.setTask(v, { type: 'carga', to: dest, pri: 1, st: 0 });
+    H.end(v);
+  }
+  const A_place = ref => (G.Act && G.Act.placeOf ? G.Act.placeOf(ref) : null);
+  // the court lives off what is brought in: its meals counted out of its larder a whole unit at a time, what it does not eat
+  // to the people's store — in the ledger ('corte')
+  function courtTick(dt) {
+    const S = G.S; const D = G.Depot;
+    for (const b of S.buildings.values()) {
+      if (!Co.RANK[b.type] || !b.built || (!b.inv && !(b.pantry > 0))) continue;
+      const f = G.Fac.get(G.Village.facOfSet(b.set)); if (!f) continue;
+      // (the seat's larder is its pantry — a house's holder, D-205. With the ruler's household living in it, its meals are its
+      // people's own, at its table (act-lar.js), and its goods theirs: only what the pantry has too much of goes to the store)
+      const ref = 'h:' + b.id; const lived = (b.res || 0) > 0;
+      if (!lived) {
+        const eat = dt / DAY() * (2 + Co.RANK[b.type] * 2);
+        const acc = (b.eatAcc || 0) + Math.min(eat, D.get(ref, 'food')); const n = Math.floor(acc + 1e-9);
+        if (n >= 1) { const r = D.use(ref, 'food', n, { code: 'corte', mine: true, part: true }); b.eatAcc = Math.max(0, acc - (r.ok ? r.n : 0)); } else b.eatAcc = acc;
+      }
+      if (D.get(ref, 'food') > 30) D.store(ref, f.id, 'food', D.get(ref, 'food') - 20, { code: 'corte' });
+      if (!lived) for (const k of Object.keys(b.inv || {}).sort()) if (k !== 'food' && D.get(ref, k) >= 4) D.store(ref, f.id, k, D.get(ref, k) - 2, { code: 'corte' });
+    }
+  }
+
+  // ------------------------------ the tribute's errand ------------------------------
+  // (the tavern's evening — the round, the song, the fight — is act-taverna.js's: G.Taverna)
+  const oldRun = E.run;
+  E.run = function (v, t, dt, H) {
+    if (t.type === 'tribute') return runTribute(v, t, dt, H), true;
+    return oldRun(v, t, dt, H);
+  };
+  // the drunk weave home
+  Co.sway = v => (v.drunk > G.S.clock ? Math.sin(G.S.clock * 2.3 + v.id) * 0.22 : 0);
+  // a warm light and a sign at the tavern door at night — while it is open (only read: the tavern's day, G.Taverna)
+  G.renderHooks = G.renderHooks || { ground: [], ents: [] };
+  const lampEnt = new WeakMap();
+  G.renderHooks.ents.push(function (add, view, zoom) {
+    const S = G.S; if (!S || zoom < 0.8 || !(G.isNight() || G.isEvening())) return;
+    for (const b of S.buildings.values()) { if (b.type !== 'taverna' || !b.built || (G.Taverna && !G.Taverna.aberta(b))) continue; let e = lampEnt.get(b); if (!e) lampEnt.set(b, e = { b, fn: drawLamp }); const [dx, dy] = G.Vg.door(b); add(dx + dy + 0.2, e, dx + 0.35, dy); }
+  });
+  function drawLamp(c, e, sx, sy, t, nightF) {
+    const f = 0.7 + Math.sin(t * 7 + e.b.id) * 0.15 + Math.sin(t * 13) * 0.08;
+    c.strokeStyle = '#3a2a1a'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(sx, sy - 13); c.lineTo(sx, sy - 9.5); c.stroke();
+    c.fillStyle = `rgba(255,200,110,${0.25 * f * (nightF || 1)})`; c.beginPath(); c.arc(sx, sy - 8.6, 6, 0, TAU); c.fill();
+    c.fillStyle = `rgba(255,220,140,${0.9 * f})`; c.fillRect(sx - 0.9, sy - 9.6, 1.8, 2);
+  }
+
+  // ------------------------------ update and save ------------------------------
+  let tC = 0, tN = 0;
+  G.worldHooks.push(() => { tC = 0; tN = 0; }); // (a new world, or a save loaded: it starts over)
+  Co.update = function (dt) {
+    const S = G.S; if (!S) return;
+    tC += dt; tN += dt;
+    if (tC >= 3) { courtTick(tC); tC = 0; }
+    if (tN >= 10) { tN = 0; palaceNews(); for (const f of G.Fac.all()) { const r = P.ruler(f); if (r && f._rulerId !== r.id) { f._rulerId = r.id; f.rulerSince = S.day; } } }
+  };
+  const oldText = E.taskText;
+  E.taskText = function (v, t) {
+    if (t.type === 'tribute') return t.k < t.route.length ? 'Cobrando o tributo de porta em porta' : 'Levando o tributo ao chefe';
+    return oldText(v, t);
+  };
+  const oldHTML = E.buildingHTML;
+  E.buildingHTML = function (b, plink, esc) {
+    let h = oldHTML(b, plink, esc);
+    if (Co.RANK[b.type]) {
+      const v = b.patronId && G.person(b.patronId);
+      if (b.patron) h += `<div class="doing">Mandado construir por ${v ? plink(v.id) : esc(b.patron)}${v && !G.S.villagers.has(v.id) ? ' (já morto)' : ''}.${!b.built ? ` Obra em <b>${Math.round(b.progress * 100)}%</b>.` : ''}</div>`;
+      if ((b.pantry || 0) >= 1) h += `<div class="doing">A despensa ${b.type === 'paco' ? 'da casa' : 'do palácio'} tem ${Math.floor(b.pantry)} de comida.</div>`;
+      // (who lives in it — the ruler's household, each one where and why, as a house's card says its people — or why nobody does)
+      if (b.built && G.Casa && G.Casa.seatSays) h += G.Casa.seatSays(b, plink, esc);
+    }
+    return h;
+  };
+  // (rulerSince and the palace wish live on the faction, saved with it)
+
+  // ------------------------------ the audience at the palace (D-124) ------------------------------
+  // a third meeting, beside the vote and the bread in the square: with the seat of power a ready palace of the capital, with its
+  // plan, the ruler sits on the throne and the town comes in — at the answer to a petition (polity.js, Po.crowd 'audiencia'), a
+  // coronation and an envoy's arrival. Who: the town's own, near, not captive, of 14 or more, with free hands (Vg.give, D-094),
+  // never the watch on its round (D-103); how many: the plan's free places of the audience — 'audiencia', then the visitors'
+  // 'sentar' (Co.AUD_USES) —, no other ceiling. Each one to the gate (the errand 'assembly', kind 'audiencia'), in by it, the
+  // place inside the allotter's by the palace's rule; the first in line before the throne. f.aud keeps it, in the save, until the
+  // answer (Co.AUD_DUR seconds of the world), the ruler's death, flight or arrest, or the palace's fall
+  Co.AUD_DUR = 30; Co.AUD_USES = ['audiencia', 'sentar'];
+  // (the audience is in the seat, where who rules lives (Co.seatOf, D-205): the people's grandest palace — a grander one in works,
+  // one of another town — held none, all the years of a great palace's works, with the ruler living in the old one: L-804)
+  Co.audPalace = f => { const b = f && Co.seatOf(f); return b && b.ip ? b : null; };
+  const In_ = () => G.Interiors;
+  // (the places of the audience as the plan's table has them — the pieces' and the marks', M2's standing places before the throne
+  // being marks, which In.slots does not see —; the throne's seat the ruler's)
+  const tableOf = b => { const In = In_(); return In && In.table ? In.table(b) : null; };
+  const throneOf = b => { const t = tableOf(b); return t ? t.items.find(it => it.kind === 'trono') || null : null; };
+  const audRoom = b => { const t = tableOf(b); if (!t) return 0; let n = 0; for (const u of Co.AUD_USES) n += (t.byUse.get(u) || []).length; return n - 1; };
+  Co.audRoom = audRoom; // (for the proofs)
+  Co.audiencia = function (f, why) {
+    const S = G.S; if (!G.inSim || !f || f.aud) return false;
+    const b = Co.audPalace(f); const r = P.ruler(f); if (!b || !r || r.jail || r.captive || r.aboard) return false;
+    const cap = G.Fac.capitalOf(f.id); const dr = G.Vg.door(b);
+    if (!G.Vg.give(r, { type: 'assembly', kind: 'audiencia', b: b.id, fid: f.id, x: dr[0], y: dr[1], throne: 1, pri: 1.9, st: 0 })) return false;
+    const aud = f.aud = { b: b.id, ruler: r.id, why: why || '', t0: S.clock, until: S.clock + Co.AUD_DUR, who: [] };
+    let room = audRoom(b); for (const v of S.villagers.values()) if (v.inside === b.id && v !== r) room--;
+    for (const o of S.villagers.values()) {
+      if (room <= 0) break;
+      // (who works at the palace serves the audience at its post: never called to it)
+      if (o === r || o.set !== cap.id || o.age < 14 || o.captive || o.jail || o.job === b.id || G.dist(o.x, o.y, dr[0], dr[1]) > 22 || (o.task && o.task.type === 'ronda')) continue;
+      if (G.Vg.give(o, { type: 'assembly', kind: 'audiencia', b: b.id, fid: f.id, x: dr[0], y: dr[1], pri: 1.7, st: 0 })) { aud.who.push(o.id); room--; }
+    }
+    return true;
+  };
+  // (the end of an audience: everyone in it back to their day)
+  function audEnd(f) { const S = G.S; const a = f.aud; if (!a) return; f.aud = null; for (const v of S.villagers.values()) if (v.task && v.task.type === 'assembly' && v.task.kind === 'audiencia' && v.task.fid === f.id) G.Vg.endTask(v); }
+  Co.audEnd = f => (G.inSim ? audEnd(f) : null);
+  // (it ends with the answer — its time —, with the ruler dead, changed, fled aboard, taken or in the cell, and with its palace no
+  // more the seat of the capital: fallen, in works, the town lost; the fall itself ends it at once, Co.audGone)
+  function audTick() {
+    const S = G.S;
+    for (const f of G.Fac.all()) {
+      const a = f.aud; if (!a) continue; const b = S.buildings.get(a.b); const r = S.villagers.get(a.ruler);
+      if (!b || Co.audPalace(f) !== b || !r || P.ruler(f) !== r || r.jail || r.captive || r.aboard || S.clock >= a.until) audEnd(f);
+    }
+  }
+  Co.audGone = b => { for (const f of G.Fac.all()) if (f.aud && f.aud.b === b.id) audEnd(f); }; // (village.js, as it falls or goes)
+  // (the errand: to the gate, in by it, at the allotter's place — the ruler on the throne —, until the audience ends)
+  function runAud(v, t, dt, H) {
+    const S = G.S; const f = G.Fac.get(t.fid); const a = f && f.aud; const b = S.buildings.get(t.b);
+    if (!a || a.b !== t.b || !b || !b.built || b.type === 'ruin') { if (v.inside === t.b) v.inside = 0; return H.end(v); }
+    if (t.st === 0) {
+      if (!t.wk) { if (!G.Vg.gotoB(v, b, 0.2)) return H.end(v); t.wk = 1; }
+      if (H.move(v, dt)) { const dr = G.Vg.door(b); v.x = dr[0]; v.y = dr[1]; v.inside = b.id; t.st = 1; t.at = S.clock; v.actT = 0; }
+      else if (t.age > 60) return H.end(v);
+      return;
+    }
+    v.act = t.throne ? 'sit' : '';
+  }
+  const oldWarRun = G.War.run;
+  G.War.run = function (v, t, dt, H) { if (t.type === 'assembly' && t.kind === 'audiencia') { runAud(v, t, dt, H); return true; } return oldWarRun.apply(this, arguments); };
+  const oldWarText = G.War.taskText;
+  if (oldWarText) G.War.taskText = function (v, t) { if (t.type === 'assembly' && t.kind === 'audiencia') return t.throne ? 'No trono, recebendo a cidade' : t.st ? 'Na audiência do palácio' : 'Indo à audiência do palácio'; return oldWarText.apply(this, arguments); };
+  // (the palace's rule for the allotter: the ruler on the throne; who came to the audience at 'audiencia' — the first in line,
+  // before the throne — then at the visitors' seats. Registered with each world, as the tavern's: interiors.js loads after this)
+  const audPlace = (b, v) => {
+    const t = v.task; if (!t || t.kind !== 'audiencia' || t.b !== b.id) return null;
+    if (t.throne) { const th = throneOf(b); return { use: ['sentar'], item: th ? th.id : null, st: 'sit', pri: 4 }; }
+    return { use: Co.AUD_USES, item: null, st: 'idle', pri: 3 + Math.min(0.9, Math.max(0, G.S.clock - (t.at || G.S.clock)) / 1e4) }; // (the longer in, the nearer the throne)
+  };
+  // (and who lives in the seat, at home in it — asleep in a bed of its chambers, the household's own share-out (In.bedOf); at
+  // supper at its table, cooking at its fire, by the hearth: the house's rule, G.Lar.want — D-205)
+  const homePlace = (b, v) => {
+    const w = G.Lar && G.Lar.want ? G.Lar.want(v, b) : null; if (!w || !w.use || w.item || w.use[0] !== 'deitar' || v.home !== b.id) return w;
+    const own = In_().bedOf ? In_().bedOf(v) : null; return own && own.item ? Object.assign({}, w, { item: own.item.id }) : w;
+  };
+  const seatPlace = (b, v) => audPlace(b, v) || homePlace(b, v);
+  G.worldHooks.push(() => { if (In_() && In_().placeRule) for (const u of ['palacio', 'paco']) In_().placeRule(u, seatPlace); }); // (the chief's hall has its seat too)
+  // (who came: at the coronation and at an envoy's arrival — the answer to a petition asks Po.crowd, polity.js)
+  const oldCrown = P.crown;
+  P.crown = function (f) { const r = oldCrown.apply(this, arguments); if (G.inSim && f && !f.aud) Co.audiencia(f, 'coroacao'); return r; };
+  const oldDeliver = P.deliver;
+  // (an envoy who arrived and lives: the one put to death at the gate is heard by nobody)
+  P.deliver = function (from, to, msg, envoy) { const r = oldDeliver.apply(this, arguments); if (G.inSim && envoy && G.S.villagers.has(envoy.id) && to && to.alive !== false && !to.aud) Co.audiencia(to, 'embaixada'); return r; };
+  // (the save: f.aud goes with the faction; who was in it — on the way or inside — comes back by setTask, as the mutiny, L-190)
+  (G.saveHooks = G.saveHooks || []).push({
+    save(out) { const L = []; for (const v of G.S.villagers.values()) { const t = v.task; if (t && t.type === 'assembly' && t.kind === 'audiencia') L.push([v.id, t.fid, t.b, t.st, t.throne ? 1 : 0, v.inside === t.b ? 1 : 0, t.at || 0]); } out.audiencia = L; },
+    load(o) {
+      const S = G.S; const L = o && Array.isArray(o.audiencia) ? o.audiencia : [];
+      // (a seat of a save of before D-205 kept the tribute on a building's shelf — 'b:', its food and its coins in b.inv —: the
+      // same things, where a house keeps them now)
+      for (const b of S.buildings.values()) if (Co.RANK[b.type] && b.inv) for (const [k, to] of [['food', 'pantry'], ['moedas', 'coin']]) if (b.inv[k] !== undefined) { if (b.inv[k] > 0) b[to] = Math.round(((b[to] || 0) + b.inv[k]) * 1e4) / 1e4; delete b.inv[k]; }
+      for (const [id, fid, bid, st, th, inn, at] of L) {
+        const v = S.villagers.get(id); const f = G.Fac.get(fid); const b = S.buildings.get(bid); if (!v || !f || !f.aud || f.aud.b !== bid || !b) continue;
+        const dr = G.Vg.door(b); G.Vg.setTask(v, { type: 'assembly', kind: 'audiencia', b: bid, fid, x: dr[0], y: dr[1], throne: th ? 1 : 0, pri: th ? 1.9 : 1.7, st, at });
+        if (v.task && v.task.kind === 'audiencia' && inn) v.inside = bid;
+      }
+    },
+  });
+  const oldUpd = Co.update;
+  Co.update = function (dt) { oldUpd(dt); if (G.S && G.inSim !== 0) audTick(); };
+})(window.G);
+
+// ------------------------------ the palaces, drawn ------------------------------
+(function (G) {
+  if (!G.Arch || !G.Arch.EXT) return;
+  const K = G.Arch.kit(); const TAU = Math.PI * 2;
+  const { P, poly, ln, walls, top, box, onL, door, shade, roof, colonnade, flag, palm, statue, dome, basin, band, plinth, winsL, winsR, longhouse, stepPyr, treads } = K;
+  const GOLD = ['#f2c14e', '#d8a63a', '#b8862a'];
+  const at = (c, dx, dy, fn) => { const q = P(dx, dy, 0); c.save(); c.translate(q[0], q[1]); fn(); c.restore(); };
+  // a wing of the palace: floors of windows, a cornice, the roof of the culture
+  function block(c, m, p, st, x0, y0, x1, y1, z0, H, floors, o) {
+    o = o || {};
+    walls(c, x0, y0, x1, y1, z0, H, p.wl, p.wr, st === 'egipcio' ? 0.03 : 0);
+    const fh = (H - z0) / floors;
+    for (let f = 0; f < floors; f++) { const z = z0 + fh * f + fh * 0.3; const h = Math.min(3.4, fh * 0.48); winsL(c, m, p, y1, x0, x1, z, h, Math.max(1, Math.round((x1 - x0) * 2.4))); winsR(c, m, p, x1, y0, y1, z, h, Math.max(1, Math.round((y1 - y0) * 2.4))); }
+    band(c, x0, y0, x1, y1, H - 1.3, H - 0.4, o.trim || p.trim);
+    if (o.door !== undefined) door(c, y1, o.door - 0.12, o.door + 0.12, z0, z0 + Math.min(9, fh * 0.8), o.gold ? '#b8862a' : p.door); // (a door in the middle is at 0: L-264)
+    if (st === 'egipcio' || st === 'asteca') return roof(c, m, p, x0, y0, x1, y1, H, { kind: 'flat', par: 1.4 });
+    if (st === 'nordico') return roof(c, m, p, x0, y0, x1, y1, H, { kind: 'turf', rh: o.rh });
+    return roof(c, m, p, x0, y0, x1, y1, H, { kind: st === 'grego' ? 'gable' : 'hip', rh: o.rh, colors: o.gold ? GOLD : undefined });
+  }
+  const hedge = (c, x0, y0, x1, y1) => box(c, x0, y0, x1, y1, 0.3, 2.4, '#3f6a2a', '#2f5a22', '#4f7a34');
+  function cypress(c, x, y, h) { const q = P(x, y, 0); c.fillStyle = '#2f5a2a'; c.beginPath(); c.ellipse(q[0], q[1] - h * 0.5, 1.7, h * 0.55, 0, 0, TAU); c.fill(); c.fillStyle = '#3f6a32'; c.beginPath(); c.ellipse(q[0] - 0.5, q[1] - h * 0.58, 0.8, h * 0.42, 0, 0, TAU); c.fill(); }
+  function fountain(c, x, y, r, big) {
+    basin(c, x, y, r, 0.6, '#5aaed0'); const q = P(x, y, 0.6);
+    c.fillStyle = '#e0d8c8'; c.fillRect(q[0] - 0.9, q[1] - 6, 1.8, 6); if (big) { c.fillStyle = '#f2c14e'; c.beginPath(); c.arc(q[0], q[1] - 7, 1.4, 0, TAU); c.fill(); }
+    c.strokeStyle = 'rgba(225,242,255,0.9)'; c.lineWidth = 0.6;
+    for (const s of [-1, -0.5, 0.5, 1]) { c.beginPath(); c.moveTo(q[0], q[1] - 6.5); c.quadraticCurveTo(q[0] + s * 3.4 * r * 3, q[1] - 11, q[0] + s * 5.6 * r * 3, q[1] - 0.5); c.stroke(); }
+    c.beginPath(); c.moveTo(q[0], q[1] - 6.5); c.lineTo(q[0], q[1] - (big ? 15 : 11)); c.stroke();
+  }
+  function fence(c, x0, x1, y, gold, gap) {
+    const col = gold ? '#d8a63a' : '#4a4a50';
+    const seg = (a, b) => { const n = Math.max(2, Math.round((b - a) * 6)); for (let k = 0; k <= n; k++) { const x = a + (b - a) * k / n; ln(c, P(x, y, 0), P(x, y, 4.2), col, 0.55); } ln(c, P(a, y, 4.2), P(b, y, 4.2), gold ? '#f2c14e' : col, 0.8); ln(c, P(a, y, 1.6), P(b, y, 1.6), col, 0.5); };
+    if (gap) { seg(x0, -gap); seg(gap, x1); for (const x of [-gap, gap]) { box(c, x - 0.08, y - 0.08, x + 0.08, y + 0.08, 0, 8, '#e0d8c8', '#c0b8a8', '#ece4d4'); if (gold) { const q = P(x, y, 8); c.fillStyle = '#f2c14e'; c.beginPath(); c.arc(q[0], q[1] - 0.8, 1, 0, TAU); c.fill(); } } }
+    else seg(x0, x1);
+  }
+  function flowers(c, x0, y0, x1, y1, n, seed) { for (let k = 0; k < n; k++) { const x = x0 + G.hash(seed + k) * (x1 - x0), y = y0 + G.hash(seed * 3 + k) * (y1 - y0); const q = P(x, y, 0.4); c.fillStyle = ['#e84a6a', '#f2c14e', '#ffffff', '#b06ae8', '#ff8a3a'][k % 5]; c.fillRect(q[0] - 0.6, q[1] - 0.8, 1.2, 1.2); } }
+  function obelisk(c, x, y, h) { const q = P(x, y, 0); c.fillStyle = '#d8c494'; c.beginPath(); c.moveTo(q[0] - 1.6, q[1]); c.lineTo(q[0] + 1.6, q[1]); c.lineTo(q[0] + 1, q[1] - h); c.lineTo(q[0], q[1] - h - 2.2); c.lineTo(q[0] - 1, q[1] - h); c.closePath(); c.fill(); c.fillStyle = 'rgba(0,0,0,0.15)'; c.beginPath(); c.moveTo(q[0], q[1]); c.lineTo(q[0] + 1.6, q[1]); c.lineTo(q[0] + 1, q[1] - h); c.lineTo(q[0], q[1] - h - 2.2); c.fill(); c.fillStyle = '#f2c14e'; c.beginPath(); c.moveTo(q[0] - 1, q[1] - h); c.lineTo(q[0], q[1] - h - 2.2); c.lineTo(q[0] + 1, q[1] - h); c.fill(); }
+  function pylon(c, p, x0, x1, y0, y1, H) {
+    const b = 0.06; walls(c, x0, y0, x1, y1, 0, H, p.wl, p.wr, b);
+    top(c, x0 + b, y0 + b, x1 - b, y1 - b, H, p.top); band(c, x0 + b, y0 + b, x1 - b, y1 - b, H - 2, H - 0.8, p.trim); band(c, x0 + b, y0 + b, x1 - b, y1 - b, H - 3.2, H - 2.2, p.trim2 || p.acc);
+    c.fillStyle = 'rgba(60,40,20,0.25)'; const q = P((x0 + x1) / 2, y1, H * 0.55); c.fillRect(q[0] - 2, q[1] - 3, 4, 6);
+  }
+
+  // ---------------- the chief's house ----------------
+  G.Arch.EXT.paco = {
+    maxz: 54, draw(c, m, p, st) {
+      if (st === 'nordico') { longhouse(c, m, p, 0.85, 0.55, 11, 15, true, 0.12); treads(c, p, -0.15, 0.15, 0.665, 1.2, 2); m.fires.length = 0; // (its door of 0.96 m — a body's —, the tread before it: as its form)
+        at(c, 0.7, 0.75, () => flag(c, 0, 0, '#a23c2a', 24)); return 30; }
+      if (st === 'asteca') {
+        // (the platform, the flight cut into its front from the street at 0.98 — its treads the feet take —, as its form)
+        box(c, -0.95, -0.95, 0.95, 0.6175, 0, 4, p.base[0], p.base[1], p.base[2]); box(c, -0.95, 0.6175, -0.25, 0.95, 0, 4, p.base[0], p.base[1], p.base[2]);
+        for (let j = 4; j >= 0; j--) box(c, -0.25, 0.98 - 0.0725 * (j + 1), 0.25, 0.98 - 0.0725 * j, 0, 4 * (j + 1) / 6, p.base[0], p.base[1], shade(p.base[2], 1.05));
+        box(c, 0.25, 0.6175, 0.95, 0.95, 0, 4, p.base[0], p.base[1], p.base[2]);
+        const z = block(c, m, p, st, -0.75, -0.75, 0.6, 0.45, 4, 14, 1, { door: 0 });
+        for (const x of [-0.5, 0, 0.5]) { const q = P(x, 0.45, z); c.fillStyle = p.acc; c.fillRect(q[0] - 0.6, q[1] - 3, 1.2, 3); }
+        at(c, 0.72, 0.8, () => flag(c, 0, 0, p.acc2 || '#b33a2a', 22)); return 26; // (at 0.72: its pennant over the lot, as its form's)
+      }
+      if (st === 'egipcio') {
+        block(c, m, p, st, -0.9, -0.9, 0.55, 0.2, 0, 13, 1, { door: -0.2 });
+        pylon(c, p, -0.7, -0.35, 0.35, 0.65, 15); pylon(c, p, 0.05, 0.4, 0.35, 0.65, 15);
+        at(c, 0.75, 0.75, () => palm(c, 0, 0, 1)); return 24;
+      }
+      plinth(c, p, -0.92, -0.92, 0.92, 0.6, 1.5); treads(c, p, -0.6, 0.35, 0.725, 1.5, 2); // (the tread before the porch: as its form)
+      const z = block(c, m, p, st, -0.85, -0.85, 0.6, 0.35, 1.5, 17, 2, { door: -0.12, rh: 8 });
+      colonnade(c, p, -0.55, 0.35, 0.3, 0.55, 1.5, 9, 4, 0.04, 'L');
+      box(c, -0.6, 0.33, 0.35, 0.6, 9, 10.5, p.col[0], p.col[1], p.col[0]);
+      at(c, 0.72, 0.75, () => flag(c, 0, 0, p.acc2 || '#c83a2a', 24)); // (at 0.72: its pennant over the lot, as its form's)
+      return z + 4;
+    },
+  };
+
+  // ---------------- the great palace and the colossal one ----------------
+  function palace(c, m, p, st, e, lvl) {
+    const gold = lvl >= 2;
+    const ground = st === 'egipcio' ? '#dccb9c' : st === 'asteca' ? '#d8cfb4' : st === 'nordico' ? '#86a84e' : '#86b05a';
+    top(c, -e, -e, e, e, 0.2, ground);
+    if (st === 'asteca') return aztec(c, m, p, e, lvl);
+    if (st === 'nordico') return norse(c, m, p, e, lvl);
+    if (st === 'egipcio') return egypt(c, m, p, e, lvl);
+    // a classical palace: the main block, two wings round a court of honour, gardens and a gate
+    const back = -e + 0.15, mid = gold ? -0.9 : -0.55, wingFront = gold ? 1.0 : 0.85, wx = gold ? 0.8 : 0.75;
+    const H = gold ? 26 : 22, Hw = gold ? 21 : 17;
+    // the court of honour, paved
+    top(c, -e + wx, mid, e - wx, wingFront + 0.4, 0.35, st === 'romano' ? '#d8cbb0' : '#e4dccb');
+    // gardens in front: parterres of hedges and flowers
+    for (const s of [-1, 1]) { const x0 = s < 0 ? -e + 0.15 : 0.35, x1 = s < 0 ? -0.35 : e - 0.15; const y0 = wingFront + 0.5, y1 = e - 0.3; if (y1 - y0 > 0.25) { hedge(c, x0, y0, x1, y0 + 0.08); hedge(c, x0, y1 - 0.08, x1, y1); hedge(c, x0, y0, x0 + 0.08, y1); flowers(c, x0 + 0.1, y0 + 0.1, x1 - 0.1, y1 - 0.1, gold ? 26 : 12, s > 0 ? 7 : 3); } }
+    // main block (the corps de logis), with a central pavilion
+    block(c, m, p, st, -e + 0.15, back, e - 0.15, mid, 0, H, gold ? 3 : 2, { door: 0, gold, rh: gold ? 12 : 10 });
+    const cz = H + (gold ? 6 : 4);
+    block(c, m, p, st, -0.45, back + 0.1, 0.45, mid + 0.12, 0, cz, gold ? 3 : 2, { door: 0, gold, rh: gold ? 6 : 8 });
+    if (gold || st === 'romano') { const d = P(0, (back + mid) / 2, cz + (gold ? 6 : 8)); const tip = dome(c, d[0], d[1], gold ? 13 : 10, gold ? 16 : 12, gold ? '#f2d070' : '#d8c8a8', gold ? '#c8962a' : '#a8987a', '#f2c14e'); m.glow.push(tip); }
+    colonnade(c, p, -0.4, mid + 0.12, 0.4, mid + 0.3, 0, H - 4, 6, 0.05, 'L');
+    // the wings reaching forward
+    block(c, m, p, st, -e + 0.15, mid, -e + 0.15 + wx, wingFront, 0, Hw, 2, { gold, rh: 8 });
+    // the fountain in the court, statues along it
+    fountain(c, 0, (mid + wingFront) / 2 + 0.2, gold ? 0.38 : 0.28, gold);
+    if (gold) for (const y of [mid + 0.5, wingFront - 0.1]) for (const x of [-0.6, 0.6]) statue(c, x, y, 0.4, '#e8e0d0', 10);
+    block(c, m, p, st, e - 0.15 - wx, mid, e - 0.15, wingFront, 0, Hw, 2, { gold, rh: 8 });
+    if (gold) { // end pavilions with domes
+      for (const x of [-e + 0.15 + wx / 2, e - 0.15 - wx / 2]) { box(c, x - 0.38, wingFront - 0.45, x + 0.38, wingFront + 0.05, 0, Hw + 5, p.wl, p.wr, p.top || p.wl); const d = P(x, wingFront - 0.2, Hw + 5); dome(c, d[0], d[1], 6, 7, '#f2d070', '#c8962a', '#f2c14e'); }
+    }
+    // cypresses and the gilded gate
+    for (const x of [-e + 0.3, e - 0.3]) cypress(c, x, e - 0.25, gold ? 16 : 12);
+    fence(c, -e + 0.1, e - 0.1, e - 0.08, gold, 0.3);
+    // banners on the roof
+    for (const x of gold ? [-e + 0.4, 0, e - 0.4] : [0]) { const q = P(x, back + 0.2, H + (x === 0 ? (gold ? 34 : 14) : 4)); flag(c, q[0], q[1], p.acc2 || '#c83a2a', 10); }
+    return cz + (gold ? 34 : 22);
+  }
+  function egypt(c, m, p, e, lvl) {
+    const gold = lvl >= 2;
+    // a pool with palms, the halls behind, colossi and obelisks at the great pylons
+    top(c, -e + 0.6, -0.2, e - 0.6, 0.9, 0.35, '#e8dcb4');
+    block(c, m, p, 'egipcio', -e + 0.15, -e + 0.15, e - 0.15, -0.3, 0, gold ? 24 : 19, 2, { door: 0 });
+    colonnade(c, p, -e + 0.3, -0.3, e - 0.3, -0.1, 0, gold ? 20 : 16, gold ? 10 : 8, 0.07, 'L', true);
+    top(c, -e + 0.25, -0.35, e - 0.25, -0.05, gold ? 20 : 16, p.top);
+    basin(c, 0, 0.35, gold ? 0.5 : 0.36, 0.5, '#4aa0c8');
+    for (const x of [-e + 0.45, e - 0.45]) for (const y of [0, 0.7]) at(c, x, y, () => palm(c, 0, 0, gold ? 1.2 : 1));
+    for (const x of [-0.55, 0.55]) statue(c, x, 1.15, 0.4, gold ? '#e8c24a' : '#d8c494', gold ? 16 : 11);
+    pylon(c, p, -e + 0.25, -0.35, 1.3, e - 0.15, gold ? 28 : 22); pylon(c, p, 0.35, e - 0.25, 1.3, e - 0.15, gold ? 28 : 22);
+    for (const x of [-0.25, 0.25]) obelisk(c, x, e - 0.1, gold ? 26 : 18);
+    for (const x of [-e + 0.4, e - 0.4]) { const q = P(x, e - 0.1, gold ? 28 : 22); flag(c, q[0], q[1], '#e8b83a', 12); }
+    return gold ? 60 : 48;
+  }
+  function aztec(c, m, p, e, lvl) {
+    const gold = lvl >= 2;
+    // a great stepped platform with the halls on top and the gardens below
+    flowers(c, -e + 0.1, -e + 0.1, e - 0.1, e - 0.1, gold ? 40 : 20, 11);
+    stepPyr(c, p, e - 0.3, e - 0.75, gold ? 4 : 3, 3.2, p.base[0], p.base[1], p.base[2], 0.35);
+    const z = (gold ? 4 : 3) * 3.2; const q = e - 0.85;
+    c.save(); const off = P(0, 0, z); c.translate(0, off[1]);
+    const zz = block(c, m, p, 'asteca', -q, -q, q, -0.05, 0, gold ? 16 : 13, 1, { door: 0 });
+    block(c, m, p, 'asteca', -q, 0.15, -0.3, q, 0, gold ? 12 : 10, 1, {});
+    block(c, m, p, 'asteca', 0.3, 0.15, q, q, 0, gold ? 12 : 10, 1, {});
+    for (let k = -2; k <= 2; k++) { const r = P(k * 0.3, -0.05, zz); c.fillStyle = gold ? '#f2c14e' : p.acc; c.fillRect(r[0] - 0.7, r[1] - 3.6, 1.4, 3.6); c.fillStyle = '#2fae8f'; c.beginPath(); c.ellipse(r[0], r[1] - 5, 0.8, 2.2, k * 0.2, 0, TAU); c.fill(); }
+    c.restore();
+    for (const x of [-e + 0.25, e - 0.25]) at(c, x, e - 0.25, () => palm(c, 0, 0, 1.1));
+    const fq = P(0.9, e - 0.15, 0); flag(c, fq[0], fq[1], '#2fae8f', z + 22);
+    return z + (gold ? 30 : 24);
+  }
+  function norse(c, m, p, e, lvl) {
+    const gold = lvl >= 2;
+    // the king's hall, side halls, a carved gate in the palisade
+    at(c, 0, -e * 0.42, () => longhouse(c, m, p, e * 0.78, e * 0.32, gold ? 14 : 12, gold ? 22 : 18, true));
+    if (gold) { const a = P(-e * 0.78, -e * 0.42, 36), b = P(e * 0.78, -e * 0.42, 36); ln(c, a, b, '#f2c14e', 1.4); }
+    at(c, -e * 0.55, e * 0.35, () => longhouse(c, m, p, e * 0.3, e * 0.22, 9, 12, false));
+    at(c, e * 0.55, e * 0.35, () => longhouse(c, m, p, e * 0.3, e * 0.22, 9, 12, false));
+    for (let k = 0; k <= Math.round(e * 8); k++) { const x = -e + 0.1 + (2 * e - 0.2) * k / Math.round(e * 8); if (Math.abs(x) < 0.3) continue; const q = P(x, e - 0.1, 0); c.fillStyle = '#6a4a2c'; c.fillRect(q[0] - 0.8, q[1] - 7, 1.6, 7); c.beginPath(); c.moveTo(q[0] - 0.8, q[1] - 7); c.lineTo(q[0], q[1] - 8.6); c.lineTo(q[0] + 0.8, q[1] - 7); c.fill(); }
+    for (const x of [-0.3, 0.3]) { const q = P(x, e - 0.1, 0); c.fillStyle = '#5a3a22'; c.fillRect(q[0] - 1, q[1] - 12, 2, 12); c.strokeStyle = gold ? '#f2c14e' : '#3a2616'; c.lineWidth = 0.9; c.beginPath(); c.moveTo(q[0], q[1] - 12); c.quadraticCurveTo(q[0] + (x > 0 ? 2 : -2), q[1] - 15, q[0] + (x > 0 ? 3.4 : -3.4), q[1] - 14); c.stroke(); }
+    const fq = P(0, -e * 0.42, 0); flag(c, fq[0], fq[1] - (gold ? 36 : 30), '#a23c2a', 10);
+    m.fires.length = 0; // (no fire glowing on the roofs by day)
+    return gold ? 56 : 46;
+  }
+  G.Arch.EXT.grande_palacio = { maxz: 78, draw(c, m, p, st) { return palace(c, m, p, st, 1.95, 1); } };
+  G.Arch.EXT.palacio_colossal = { maxz: 104, draw(c, m, p, st) { return palace(c, m, p, st, 2.45, 2); } };
+})(window.G);
