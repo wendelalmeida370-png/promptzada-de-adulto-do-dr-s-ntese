@@ -67,8 +67,35 @@ function ready(v, b) {
   const dr = Vg.door(b); const p = W.nearestLand(dr[0], dr[1] + 2, 4) || dr;
   Vg.endTask(v); v.inside = 0; v.x = p[0]; v.y = p[1]; v.path = null; v.sleeping = false; v.hunger = 20; v.energy = 80; v.carry = null; v.sick = 0; v.bathDay = 0; v.readDay = 0;
 }
+// (the premises of a case, where the world has them not, founded by the god's hand before the case — as a town of the size
+// founds them with time —, and nobody is sent:
+//  · the plain baths in the most populous town of popMin people or more without baths, whose people's baths hold min places
+//    in the water or more: no ready world of the generation 20 had a town of fifty with baths of two places (the temazcal and
+//    the sauna hold one), T-1042; the metrópole of the generation 22 has no baths of four, and e5 looked for them in vain, T-1125;
+//  · the classic library in the greatest town of tier 3 of a people with writing, where no library of a people with writing
+//    stands: the metrópole of the generation 22 had none — the stone of its peoples gone to their wonders, theatres and
+//    palaces, the one library under way at 19% in Birka, standing only at the end of the days lived —, T-1120.
+// → the building founded, or null)
+function bathsFor(min, popMin) {
+  const S = G.S; const P = popMin === undefined ? 50 : popMin;
+  if (baths().some(q => V.pop(q.set) >= P && Te.places(q) >= min)) return null;
+  return god(() => { for (const s of [...S.settlements.values()].filter(q => G.Fac.get(q.fac) && V.pop(q.id) >= P && !E.byType(q.id, 'banhos').length).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)) {
+    const nb = V.handFound(s, 'banhos', 'banhos', { built: true, R: 40 }); if (!nb) continue; if (Te.places(nb) >= min) return nb; V.removeBuilding(nb); } return null; });
+}
+function libFor() {
+  const S = G.S; if (libs().some(lit)) return null;
+  const litSet = q => { const f = G.Fac.get(q.fac); return !!(f && f.tech && f.tech.known && f.tech.known.escrita); };
+  const town = [...S.settlements.values()].filter(q => (q.tier || 0) >= 3 && litSet(q)).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)[0];
+  return town ? god(() => V.handFound(town, 'biblioteca', 'biblioteca', { built: true, R: 60 })) : null;
+}
+const libLine = lb => (lb ? `; a biblioteca de ${G.S.settlements.get(lb.set).name} fundada pela mão do deus antes (${WORLD}: nenhuma de pé de um povo com a escrita, T-1120)` : '');
+
 function partA() {
   M.pronto(WORLD); const S = G.S; rebase();
+  // (the library of a3 and a4: the world's own, or the hand's, founded before the two seconds lived — the town's list of its
+  // buildings by type is the world's step's, and a library founded in the middle of a case is in it from the next step on)
+  const libHand = libFor();
+  const libSays = () => libLine(libHand);
   // the baths with the most places in the water, in a town with people
   S.time = 0.42; M.viver(2);
   const b = baths().filter(q => Te.dia(q)).sort((a, c) => Te.places(c) - Te.places(a) || a.id - c.id)[0];
@@ -174,12 +201,12 @@ function partA() {
     const canon1 = JSON.stringify([S.acts.length, [...S.villagers.values()].map(v => [v.id, v.task ? v.task.type : '', v.bathDay, v.readDay]), baths().map(q => JSON.stringify((Te.dia(q) || {}).data || 0)), libs().map(q => JSON.stringify(q.livros || 0))]);
     ok('a3 o dia de cada um: a sorte do dia espalhada por igual, outra a cada dia, a mesma o dia inteiro — e a vontade não tira do acaso do mundo nem muda o mundo, pedida de dentro ou de fora do passo',
       Math.abs(low / n - 0.3) < 0.03 && Math.abs(sum / n - 0.5) < 0.03 && Math.abs(both / all.length - 0.09) < 0.05 && same && Math.abs(llow / Math.max(1, ln) - 0.3) < 0.04 && S.rng === rng0 && canon1 === canon0 && asked > 50,
-      `${all.length} adultos das cidades com banhos × 30 dias: ${pct(low, n)} com a sorte abaixo de 0,30 (a média ${(sum / n).toFixed(3)}); ${pct(both, all.length)} abaixo de 0,30 dois dias seguidos (o acaso daria 9%); a mesma pedida duas vezes: ${same ? 'sim' : 'NÃO'}; a da leitura: ${pct(llow, ln)}; ${asked} pessoas perguntadas no passo e ${out} fora dele: o acaso do mundo ${S.rng === rng0 ? 'no mesmo ponto' : 'ANDOU'}, o mundo ${canon1 === canon0 ? 'igual' : 'MUDOU'}`);
+      `${all.length} adultos das cidades com banhos × 30 dias: ${pct(low, n)} com a sorte abaixo de 0,30 (a média ${(sum / n).toFixed(3)}); ${pct(both, all.length)} abaixo de 0,30 dois dias seguidos (o acaso daria 9%); a mesma pedida duas vezes: ${same ? 'sim' : 'NÃO'}; a da leitura: ${pct(llow, ln)}${libSays()}; ${asked} pessoas perguntadas no passo e ${out} fora dele: o acaso do mundo ${S.rng === rng0 ? 'no mesmo ponto' : 'ANDOU'}, o mundo ${canon1 === canon0 ? 'igual' : 'MUDOU'}`);
   });
   // ---------------------------------------------------------------- a4
   if (on('a4')) god(() => {
     S.time = 0.4; const lb = libs().filter(q => lit(q) && Bi.aberta(q)).sort((a, c) => V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0];
-    if (!lb) { ok('a4 a biblioteca', false, `${WORLD}: nenhuma biblioteca aberta de um povo com a escrita`); return; }
+    if (!lb) { ok('a4 a biblioteca', false, `${WORLD}: nenhuma biblioteca aberta de um povo com a escrita${!libs().some(lit) ? ', nem lugar para a da mão do deus' : ''}`); return; }
     const ls = setOf(lb); const lf = G.Fac.get(facOf(lb));
     const p = adults(ls.id).filter(v => v.age >= 20 && v.age < 55 && homeOf(v) && !v.jail && !v.aboard && !(G.Expe && G.Expe.memberOf(v.id)))[0];
     const s0 = snap(p); const t0 = p.task; const role0 = p.role, grp0 = p.grp, tr0 = p.traits, home0 = p.home; ready(p, lb);
@@ -211,7 +238,7 @@ function partA() {
     p.role = role0; p.grp = grp0; p.traits = tr0; p.home = home0; Object.assign(p, s0); p.task = t0;
     const badZ = Object.keys(z).filter(k => z[k] !== 0);
     ok('a4 a biblioteca: lê o curioso, o sacerdote, o escriba, o nobre e o mercador — o lavrador comum não; quem mora longe, menos; cada impedimento zera a vontade', plain === 0 && cur > 0 && priest > 0 && scribe > 0 && noble > 0 && merch > 0 && both > cur && farW < both && u0 >= 0.6 && !badZ.length && stay === 1 && seated === Bi.IN && !!known,
-      `${ls.name} (${civOfSet(ls)}): a parte dos dias com leitura — lavrador ${plain} · curioso ${cur} · sacerdote ${priest} · escriba ${scribe} · nobre ${noble} · mercador ${merch} · nobre curioso ${both}, morando a ${G.dist(homes[homes.length - 1].x, homes[homes.length - 1].y, lb.x, lb.y).toFixed(0)} casas ${farW}; no dia dele a vontade ${u0}; ${Object.keys(z).length} impedimentos → ${badZ.length ? 'NÃO ZEROU: ' + badZ.map(k => `${k} ${z[k]}`).join(', ') : '0'} (${Object.keys(z).join(', ')}); já a caminho ${stay}, já à mesa ${seated}`);
+      `${ls.name} (${civOfSet(ls)}): a parte dos dias com leitura — lavrador ${plain} · curioso ${cur} · sacerdote ${priest} · escriba ${scribe} · nobre ${noble} · mercador ${merch} · nobre curioso ${both}, morando a ${G.dist(homes[homes.length - 1].x, homes[homes.length - 1].y, lb.x, lb.y).toFixed(0)} casas ${farW}; no dia dele a vontade ${u0}; ${Object.keys(z).length} impedimentos → ${badZ.length ? 'NÃO ZEROU: ' + badZ.map(k => `${k} ${z[k]}`).join(', ') : '0'} (${Object.keys(z).join(', ')}); já a caminho ${stay}, já à mesa ${seated}${libSays()}`);
   });
   ok('a o verificador e os erros depois da mão da prova', !novas().length && !mine().length && M.limpo(), novas().concat(mine().map(q => q.msg)).slice(0, 3).join(' | ') || (M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 200)));
 }
@@ -290,12 +317,7 @@ function partB() {
   // the plain step in the most populous town of fifty or more without baths whose people's baths hold two or more — Roma, of
   // seventy-five, in the metrópole —, as a town of that size founds them with time; their stoker comes by the town's own
   // allotter of trades, as any post's, and nobody is sent. T-1042)
-  let founded = null;
-  if (!baths().some(q => V.pop(q.set) >= 50 && Te.places(q) >= 2)) {
-    founded = god(() => { for (const s of [...S.settlements.values()].filter(q => G.Fac.get(q.fac) && V.pop(q.id) >= 50 && !E.byType(q.id, 'banhos').length).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)) {
-      const nb = V.handFound(s, 'banhos', 'banhos', { built: true, R: 40 }); if (!nb) continue; if (Te.places(nb) >= 2) return nb; V.removeBuilding(nb); } return null; });
-    rebase();
-  }
+  const founded = bathsFor(2); const libB = libFor(); if (founded || libB) rebase();
   keepPeace(); const w = watch();
   const who = new Map(); // (the grown ones of the towns with baths, at each day's bath hour: for the rates)
   let mark = -1; const arms = new Map(); // (set:day → [looks in arms, looks] in the baths' hours: a town fighting has no day of baths)
@@ -316,12 +338,14 @@ function partB() {
   // ---------------------------------------------------------------- b1
   if (on('b1')) {
     // (the claim is of a town of fifty people or more, with two places in the water or more, not in arms; the small towns
-    // and the baths of one place are told, and must have had someone in the days lived)
+    // and the baths of one place are told, and must have had someone in the days lived — of those with a day of peace lit)
     const lines = []; let lit0 = 0, empty = 0, total = 0, warDays = 0, stormDays = 0, stormEnt = 0, small = 0, smallNone = 0;
     const inStorm = r => { const q = storm.get(r.at + ':' + r.day); return !!q && q[1] > 0 && q[0] / q[1] >= 0.4; };
     const inArms = r => { const q = arms.get(r.set + ':' + r.day); return !!q && q[1] > 0 && q[0] / q[1] >= 0.15; };
     for (const b of baths()) { const L = ops.filter(r => r.at === b.id).sort((a, c) => a.day - c.day); if (!L.length) continue; const e = L.reduce((s, r) => s + r.ent, 0); total += e; const calm = L.filter(r => !inArms(r));
-      const big = V.pop(b.set) >= 50 && Te.places(b) >= 2; if (!big) { small++; if (!e) smallNone++; }
+      // (a small one is judged by its days of peace with the furnace lit: Texcoco of the metrópole of the generation 21 had no
+      // baths when the days began, and its new ones opened on the last day, cold — no stoker yet, no wood —, nobody in them, T-1128)
+      const big = V.pop(b.set) >= 50 && Te.places(b) >= 2; const litCalm = L.filter(r => r.len >= 1 && !inArms(r) && !inStorm(r)).length; if (!big) { small++; if (litCalm && !e) smallNone++; }
       for (const r of L) { if (inArms(r)) { warDays++; continue; } if (inStorm(r)) { stormDays++; stormEnt += r.ent; continue; } if (big && r.len >= 1) { lit0++; if (r.ent < 1) empty++; } }
       lines.push(`${setOf(b).name} (${V.pop(b.set)} pessoas, ${Te.places(b)} ${Te.places(b) > 1 ? 'lugares' : 'lugar'} na água): ${L.map(r => `${r.ent}${r.len >= 1 ? '' : '·fria'}${inArms(r) ? '·armas' : ''}${inStorm(r) ? '·tempestade' : ''}`).join(', ')} → ${calm.length ? (calm.reduce((s, r) => s + r.ent, 0) / calm.length).toFixed(1) : '—'} por dia de paz, até ${Math.max(...L.map(r => r.max))} na água de uma vez, ${(L.reduce((s, r) => s + r.len, 0) / L.length).toFixed(1)} de lenha por dia`); }
     ok(`b1 cada dia de banhos com a fornalha acesa tem banhistas, numa cidade de 50 pessoas ou mais em paz e sem a tempestade a levar o dia (${WORLD}, ${DIAS} dias vividos${peace ? ' na paz do deus' : ''}, ninguém mandado pela prova)`, lit0 >= 3 && !empty && total - stormEnt >= lit0 * 3 && !smallNone && ops.every(r => !r.over),
@@ -376,7 +400,7 @@ function partB() {
       lines.push(`${setOf(b).name} (${V.pop(b.set)} pessoas, ${el} que leem, ${Bi.tables(b)} lugares${lit(b) ? '' : ', SEM A ESCRITA'}): ${L.map(r => r.lidos).join(', ') || '—'} leituras por dia, até ${Math.max(0, ...L.map(r => r.max))} à mesa`); }
     const g = w.goLib; const badG = g.filter(p => p.sleeping || p.carry || p.hands || p.body || p.pri >= Bi.PRI || !(p.lot < p.wish) || !(p.wish > 0));
     ok('b6 a biblioteca tem leitores sem a mão da prova: quem lê vai por vontade sua, no dia dele, cada um num lugar de ler; o povo sem a escrita não lê', withLit >= 1 && read >= withLit && !badG.length && !wrong && g.length >= 1,
-      `${lines.join(' · ')}; ${g.length} idas pela vontade (${badG.length} de quem não podia ou não lê); olhares com alguém fora de um lugar de ler: ${wrong}`);
+      `${lines.join(' · ')}; ${g.length} idas pela vontade (${badG.length} de quem não podia ou não lê); olhares com alguém fora de um lugar de ler: ${wrong}${libLine(libB)}`);
   }
   // ---------------------------------------------------------------- b7
   if (on('b7')) {
@@ -395,7 +419,9 @@ function partB() {
 // (the world's own time skip, G.Main.skipStep — as M.saltar —, a look at each second of it: the baths have their bathers there
 // too, by the same wish; each entry is one line of the ledger and one note of the quarter's life; nobody twice a day)
 function partI() {
-  M.pronto(WORLD); const S = G.S; rebase(); const d0 = S.day; const anos = +(process.env.ANOS || 4);
+  // (the premises of b, the same: in the metrópole of the generation 22, the baths of one place only and no library standing —
+  // seven baths in eight days of baths, no reading —, T-1120, T-1042)
+  M.pronto(WORLD); const S = G.S; const bI = bathsFor(2), lI = libFor(); rebase(); const d0 = S.day; const anos = +(process.env.ANOS || 4);
   god(() => G.Politics.divinePeace()); const w = watch(); let k = 0;
   G.Skip.on = true; G.FX.off = true; W.pathGreed = 1.3;
   try { while (S.day - d0 < anos) { if (!(S.divinePeace > G.DAY_LEN * 0.5)) god(() => G.Politics.divinePeace()); G.Main.skipStep(1); w.look(); if (++k % 40 === 0) w.qa(); } } finally { G.Skip.on = false; G.FX.off = false; W.pathGreed = W.PATH_EXACT; }
@@ -408,7 +434,7 @@ function partI() {
   const reads = [...w.lib.values()].filter(r => r.day >= d0 && r.day < d0 + anos).reduce((s, r) => s + r.lidos, 0); const all = w.entries(); // (the watch's own entries: T-1043)
   ok(`i a mesma causa no salto (${anos} anos saltados, na paz do deus): os banhos têm banhistas pela mesma vontade, cada entrada é uma linha do livro e uma nota na vida do bairro, ninguém duas vezes no dia, ninguém chamado com as mãos ocupadas; a biblioteca tem leitores`,
     ent >= ops.length && ops.length >= anos * 2 && !bad.length && !w.again.length && !badG.length && Math.abs(w.notes.banho - all) <= 1 && reads >= 1 && !w.bad.length && M.limpo(),
-    `${ops.length} dias de banhos no salto, ${ent} banhos (${(ent / Math.max(1, ops.length)).toFixed(1)} por dia e por prédio): ${Object.entries(per).map(([n, l]) => `${n} ${l}`).join(' · ')}; o livro e o caixa ${bad.length ? 'NÃO BATEM: ' + bad.slice(0, 2).join('; ') : 'batem'}; ${w.again.length} entradas de quem já se tinha banhado no dia; ${g.length} idas pela vontade, ${badG.length} de quem não podia; ${w.notes.banho} notas «banho» para ${all} entradas; ${reads} leituras; o verificador ${w.bad.length ? w.bad.slice(0, 2).join(' | ') : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
+    `${bI ? `os banhos de ${setOf(bI).name} fundados pela mão do deus antes do salto (T-1042); ` : ''}${ops.length} dias de banhos no salto, ${ent} banhos (${(ent / Math.max(1, ops.length)).toFixed(1)} por dia e por prédio): ${Object.entries(per).map(([n, l]) => `${n} ${l}`).join(' · ')}; o livro e o caixa ${bad.length ? 'NÃO BATEM: ' + bad.slice(0, 2).join('; ') : 'batem'}; ${w.again.length} entradas de quem já se tinha banhado no dia; ${g.length} idas pela vontade, ${badG.length} de quem não podia; ${w.notes.banho} notas «banho» para ${all} entradas; ${reads} leituras${libLine(lI)}; o verificador ${w.bad.length ? w.bad.slice(0, 2).join(' | ') : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 
 // ================================================================ c, d, e1, e2: the thermae and the grand library by the god's hand
@@ -518,12 +544,21 @@ function partE2() {
   if (!onWay || !inW) { w.close(); ok('e2 quem morre a caminho e quem morre na água', false, `não achei ${onWay ? 'ninguém na água' : 'ninguém a caminho'}`); return; }
   const b1 = S.buildings.get(onWay.task.id), b2 = S.buildings.get(inW.task.id); const op2 = A.get(inW.task.op); const room0 = Te.room(b1), ent0 = op2.data.entradas, rec0 = op2.data.receita;
   const n1 = onWay.name, n2 = inW.name, id1 = onWay.id, id2 = inW.id;
+  // (who counts in the room of b1: on the way to it, and in its book of the day)
+  const counted = () => { const op = Te.dia(b1); return [...S.villagers.values()].filter(v => v.task && v.task.type === 'termas' && v.task.st === 0 && v.task.id === b1.id).map(v => v.id).concat(op ? Object.keys(op.data.banho).map(Number) : []); };
+  const c0 = counted();
   god(() => { V.kill(onWay, 'sick'); V.kill(inW, 'sick'); });
   const gone = !S.villagers.has(id1) && !S.villagers.has(id2); const out = !op2.data.banho[id2]; const room1 = Te.room(b1);
+  // (and who else the death itself takes from the baths: a mourner called to the funeral at once — in the great thermae of
+  // Argos of the metrópole of the generation 22, Níobe, on her way, left for the funeral of Jasão, and the room grew by three
+  // with two dead, T-1126); anyone else who left would be a lie of the count
+  const c1 = counted(); const others = c0.filter(i => !c1.includes(i) && i !== id1 && i !== id2);
+  const mourners = others.filter(i => { const v = S.villagers.get(i); return !!v && ((v.task && v.task.type === 'funeral') || v.mourn > 0); });
+  const deadHere = (c0.includes(id1) ? 1 : 0) + (c0.includes(id2) ? 1 : 0);
   for (let k = 0; k < 30; k++) { M.viver(1); w.look(); } w.close(); w.qa();
   const op2b = A.get(op2.id);
-  ok('e2 quem morre a caminho dos banhos e quem morre na água: sai da conta de quem vem e do livro do dia, o caixa fica como estava, e o dia segue', gone && out && room1 === room0 + (b1 === b2 ? 2 : 1) && op2b.data.receita >= rec0 - 1e-6 && op2b.data.entradas >= ent0 && !w.bad.length && M.limpo(),
-    `${n1} a caminho e ${n2} na água morrem: ${gone ? 'fora do mundo' : 'AINDA NO MUNDO'}, ${out ? 'fora do livro do dia' : 'AINDA NO LIVRO'}; os lugares com que mais um pode contar: ${room0} → ${room1}; o caixa ${rec0} → ${op2b.data.receita}, as entradas ${ent0} → ${op2b.data.entradas} em 30 s; o verificador ${w.bad.length ? w.bad.slice(0, 2).join(' | ') : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
+  ok('e2 quem morre a caminho dos banhos e quem morre na água: sai da conta de quem vem e do livro do dia, o caixa fica como estava, e o dia segue', gone && out && room1 === room0 + deadHere + others.length && mourners.length === others.length && op2b.data.receita >= rec0 - 1e-6 && op2b.data.entradas >= ent0 && !w.bad.length && M.limpo(),
+    `${n1} a caminho e ${n2} na água morrem: ${gone ? 'fora do mundo' : 'AINDA NO MUNDO'}, ${out ? 'fora do livro do dia' : 'AINDA NO LIVRO'}; os lugares com que mais um pode contar: ${room0} → ${room1}${others.length ? ` (${others.length} mais saiu da conta na morte: ${others.map(i => { const v = S.villagers.get(i); return v ? `${v.name}, ${v.task && v.task.type === 'funeral' ? 'chamado ao funeral' : v.mourn > 0 ? 'de luto' : 'SEM CAUSA'}` : '#' + i; }).join(', ')})` : ''}; o caixa ${rec0} → ${op2b.data.receita}, as entradas ${ent0} → ${op2b.data.entradas} em 30 s; o verificador ${w.bad.length ? w.bad.slice(0, 2).join(' | ') : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 
 // ================================================================ e3: the town at war
@@ -562,8 +597,10 @@ function partE4() {
 
 // ================================================================ e5: the god pulls the baths down, people inside and on the way
 function partE5() {
-  M.pronto(WORLD); const S = G.S; rebase();
-  const b = baths().filter(q => Te.places(q) >= 4).sort((a, c) => V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0]; const set = setOf(b); const w = watch(); S.time = 0.40;
+  M.pronto(WORLD); const S = G.S; const hand = bathsFor(4, 0); rebase();
+  const b = baths().filter(q => Te.places(q) >= 4).sort((a, c) => V.pop(c.set) - V.pop(a.set) || a.id - c.id)[0];
+  if (!b) { ok('e5 o deus fecha o dia e derruba os banhos com gente dentro e a caminho', false, `${WORLD}: nenhuns banhos de quatro lugares na água ou mais, nem cidade sem banhos de um povo cujos banhos os têm`); return; }
+  const set = setOf(b); const w = watch(); S.time = 0.40;
   let seen = false; const cnt = () => { let way = 0, inn = 0; for (const v of S.villagers.values()) { const t = v.task; if (t && t.type === 'termas' && t.id === b.id) { if (t.st === 0) way++; else inn++; } } return [way, inn]; };
   live(160, w, () => { god(() => { const f = 'f:' + facOf(b); if (D.free(f, 'wood') < 30) D.make(f, 'wood', 40, { code: 'teste', part: true }); }); if (S.time > 0.56) S.time = 0.46; const [way, inn] = cnt(); seen = way >= 1 && inn >= 1; return seen; });
   const [way, inn] = cnt(); const ids = [...S.villagers.values()].filter(v => v.task && v.task.type === 'termas' && v.task.id === b.id).map(v => v.id); const bid = b.id; const nm = V.buildName(b);
@@ -575,7 +612,7 @@ function partE5() {
   const urges = god(() => adults(set.id).filter(v => baths().every(q => q.set !== set.id) && Te.urge(v, null) > 0).length);
   live(20, w); w.close(); w.qa();
   ok('e5 o deus fecha o dia e derruba os banhos com gente dentro e a caminho: as idas acabam na hora, ninguém fica dentro, ninguém mais quer ir, e o mundo segue limpo', seen && !now && !left && !inside && !urges && !w.bad.length && M.limpo(),
-    `${nm} de ${set.name} com ${inn} lá dentro e ${way} a caminho: o dia fechado e o prédio derrubado; na hora ${now} ainda com a ida; 3 s depois ${left}, ${inside} ainda dentro; ${urges} com vontade de um banho que não existe; o verificador ${w.bad.length ? w.bad.slice(0, 2).join(' | ') : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
+    `${hand ? `(os banhos fundados pela mão do deus antes do caso: ${WORLD} sem banhos de quatro lugares, T-1125) ` : ''}${nm} de ${set.name} com ${inn} lá dentro e ${way} a caminho: o dia fechado e o prédio derrubado; na hora ${now} ainda com a ida; 3 s depois ${left}, ${inside} ainda dentro; ${urges} com vontade de um banho que não existe; o verificador ${w.bad.length ? w.bad.slice(0, 2).join(' | ') : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 
 // ================================================================ h: the checker catches the lie

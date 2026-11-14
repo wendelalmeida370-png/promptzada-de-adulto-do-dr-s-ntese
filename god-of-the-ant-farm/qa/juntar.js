@@ -87,7 +87,9 @@ run('j4', () => {
   // (the watch on its round stays there: D-103)
   const guarda = [...S.villagers.values()].find(v => v.set === set.id && !v.captive && v.age >= 16 && G.dist(v.x, v.y, forum[0], forum[1]) < 20 && !(v.task && v.task.type === 'assembly'));
   if (guarda) {
-    sim(() => { G.Vg.endTask(guarda); guarda.task = null; G.Vg.setTask(guarda, { type: 'ronda', pri: 1 }); });
+    // (the round as the game gives it, its crossings with it — G.Crime.rondaPoints, crime.js —: a 'ronda' without them,
+    // accepted where the world of before refused it, broke the Villagers module on the round's first step, T-1113)
+    sim(() => { G.Vg.endTask(guarda); guarda.task = null; G.Vg.setTask(guarda, { type: 'ronda', pts: G.Crime.rondaPoints(set), k: 0, pri: 1, st: 0, kind: 'work' }); });
     const era = guarda.task && guarda.task.type; sim(() => Po.crowd(set, 'voto'));
     ok('j4c a ronda fica no posto', era !== 'ronda' || guarda.task.type === 'ronda', `${guarda.name}, em ${era === 'ronda' ? 'ronda' : 'outra tarefa (' + era + ': a ronda não se armou)'}: depois do chamado ao voto, ${guarda.task ? guarda.task.type : 'sem tarefa'}`);
   }
@@ -104,8 +106,11 @@ run('j5', () => {
   livres(set, forum); sim(() => Po.crowd(set, 'voto')); const n = chamados(set, 'voto').length;
   // (the god takes the square away with the people on their way: they end where they were going, nobody stuck, no error)
   sim(() => V.destroyBuilding(velha, 'meteor')); M.viver(40);
-  const ainda = chamados(set, 'voto').length; const depois = Po.forum(set); const c2 = nova ? V.center(nova) : null;
-  ok('j5c o deus tira a praça no meio', n >= 1 && ainda === 0 && (!c2 || (Math.abs(depois[0] - c2[0]) < 1e-9 && Math.abs(depois[1] - c2[1]) < 1e-9)), `${n} a caminho do voto; 40 s depois de a praça cair, ainda chamados: ${ainda}; o próximo ajuntamento: na praça #${nova ? nova.id : '—'}`);
+  // (the next gathering at the oldest square that stands — the new one, or one older than it: Tenochtitlan of the metrópole of
+  // the generation 21 had two squares before the hand founded the third, #4530 and #23474, and with #4530 gone the people
+  // gather at #23474, as the rule says, T-1127)
+  const ainda = chamados(set, 'voto').length; const depois = Po.forum(set); const fica = pracas(set)[0]; const c2 = fica ? V.center(fica) : null;
+  ok('j5c o deus tira a praça no meio', n >= 1 && ainda === 0 && (!nova || pracas(set).includes(nova)) && (!c2 || (Math.abs(depois[0] - c2[0]) < 1e-9 && Math.abs(depois[1] - c2[1]) < 1e-9)), `${n} a caminho do voto; 40 s depois de a praça cair, ainda chamados: ${ainda}; o próximo ajuntamento: na praça #${fica ? fica.id : '—'}, a mais antiga das que ficam${fica && nova && fica !== nova ? ` (a nova, #${nova.id}, também de pé)` : ''}`);
   const k = checa(); ok('j5d verificador', k.ok, k.txt);
   sim(() => Po.crowd(set, 'pao')); M.viver(3); M.salvarCarregar(); pega(); M.viver(10);
   const k2 = checa(); ok('j5e o save no meio de um ajuntamento', k2.ok, k2.txt);

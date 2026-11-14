@@ -205,17 +205,20 @@ run('c2', () => {
   const { set, v, fam, h, hB } = a;
   semVazias(v, set, hB);
   calaFila(set, v);
-  // (the pot of the full house: 9 coins, everyone's — the family's share of it past the little it keeps is what it pays)
-  poe('h:' + h.id, 9); const todos = mora(h).length; const parte = r2(9 * fam.length / todos); const preco = K.plan(v, null, set, null, a.why).price;
+  // (the pot of the full house: 9 coins, everyone's — the family's share of it past the little it keeps is what it pays —, or
+  // a hair below the price where the house is cheaper than that: the people's empty house of the metrópole of the generation 21
+  // is a hut of 4,7, and the nine paid it whole, as c2g has it — the family had the price, T-1129)
+  const preco = K.plan(v, null, set, null, a.why).price; const pote = preco > 9 ? 9 : r2(Math.max(0, preco - 0.01));
+  poe('h:' + h.id, pote); const todos = mora(h).length; const parte = r2(pote * fam.length / todos);
   const deve = r2(Math.min(preco, Math.max(0, parte - K.KEEP)));
   const rd = K.road(v); const tes0 = moedas('f:' + set.fac); const n0 = S.ledgerN || 0; const d0 = S.day;
-  ok('c2b a estrada', rd.kind === 'cede' && rd.b === hB && Math.abs(rd.pays - deve) < 0.011 && preco > 9, `a casa custa ${preco} e a casa cheia tem 9 moedas (a parte da família, ${parte}): a estrada diz «${rd.kind}» ${lado(rd.b)} por ${rd.pays} (o que passa das ${K.KEEP} que guarda: ${deve}); no diário: «${diario(v)}»`);
+  ok('c2b a estrada', rd.kind === 'cede' && rd.b === hB && Math.abs(rd.pays - deve) < 0.011 && preco > pote, `a casa custa ${preco} e a casa cheia tem ${pote} moedas (a parte da família, ${parte}): a estrada diz «${rd.kind}» ${lado(rd.b)} por ${rd.pays} (o que passa das ${K.KEEP} que guarda: ${deve}); no diário: «${diario(v)}»`);
   sim(() => K.day(set));
   const pg = livro(n0, e => e[5] === 'moedas' && e[8] === 'compra-casa'); const mud = livro(n0, e => e[8] === 'mudança' && e[3] === 'h:' + h.id && e[4] === 'h:' + hB.id);
   // (a family with more people than the beds of the house it was given is alone in a house of its own now: no road by hand)
   const resto = K.need(v); const quieta = !resto || (fam.length > camas(hB) && resto === 'lotada' && K.road(v).why === 'so');
   ok('c2c dada no mesmo dia, e a família é a dona', fam.every(m => m.home === hB.id) && hB.dono === v.id && S.day === d0 && quieta && mora(h).length === todos - fam.length, `${fam.filter(m => m.home === hB.id).length} de ${fam.length} da família moram na ${lado(hB)}; dono: ${P(hB.dono) ? P(hB.dono).name : 'o povo'}; a casa cheia ficou com ${mora(h).length} para ${camas(h)}; ${v.name} ${!resto ? 'já não precisa de casa' : quieta ? 'tem a família sozinha numa casa sua, pequena para ela (' + fam.length + ' para ' + camas(hB) + '): não levanta outra com as mãos' : 'AINDA precisa de casa (' + resto + '), e a estrada diz ' + JSON.stringify(K.road(v))}`);
-  ok('c2d pelo livro, com o pouco que guarda', pg.length === (deve > 0 ? 1 : 0) && (!pg.length || (pg[0][3] === 'h:' + h.id && pg[0][4] === 'f:' + set.fac && Math.abs(pg[0][6] - deve) < 0.011)) && Math.abs((hB.custo || 0) - deve) < 0.011 && mud.length >= 1 && Math.abs(moedas('h:' + hB.id) + moedas('h:' + h.id) - (9 - deve)) < 0.011,
+  ok('c2d pelo livro, com o pouco que guarda', pg.length === (deve > 0 ? 1 : 0) && (!pg.length || (pg[0][3] === 'h:' + h.id && pg[0][4] === 'f:' + set.fac && Math.abs(pg[0][6] - deve) < 0.011)) && Math.abs((hB.custo || 0) - deve) < 0.011 && mud.length >= 1 && Math.abs(moedas('h:' + hB.id) + moedas('h:' + h.id) - (pote - deve)) < 0.011,
     `${pg.length} linha(s) «compra-casa»${pg.length ? ': ' + pg[0][6] + ' de ' + pg[0][3] + ' para ' + pg[0][4] : ''}; o tesouro ${tes0.toFixed(2)} → ${moedas('f:' + set.fac).toFixed(2)}; a casa custou à família ${hB.custo}; a mudança no livro: ${mud.map(e => e[6] + ' ' + e[5]).join(', ') || 'NADA'}; a família levou ${moedas('h:' + hB.id).toFixed(2)} moedas, a casa cheia ficou com ${moedas('h:' + h.id).toFixed(2)}`);
   ok('c2e a vida diz', (v.moves || []).some(m => /recebeu do povo/.test(m[1])) && (v.diary || []).some(e => /o povo nos deu/.test(e.txt)), `os passos de ${v.name}: «${(v.moves || []).map(m => m[1]).slice(-1)}»; no diário: «${((v.diary || []).filter(e => /povo nos deu/.test(e.txt)).slice(-1)[0] || { txt: 'NADA' }).txt}»`);
   const c = checa(); ok('c2f verificador', c.ok, c.txt);

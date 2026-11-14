@@ -573,11 +573,14 @@
   const reading = (v, b) => !!(v && v.task && v.task.type === 'ler' && v.task.id === b.id && v.task.st >= 1);
   // once a second: whoever left the reading by another door — an elder's bed before the library shuts, the family at the
   // door, an errand that weighs more — is no longer at its tables. The book kept them for ever: a library with no plan full
-  // of nobody, and the load sat them down to read again, out of their beds (L-435)
+  // of nobody, and the load sat them down to read again, out of their beds (L-435). Every library with a book, standing or
+  // under works: a library growing into the grand one is a work (not built), out of the town's list of buildings by type, and
+  // the two who read in the library of Mênfis of the metrópole of the generation 21 when its works began — sent to the mine
+  // and to the watch at that instant — stayed in its book for the whole day of the works (L-797)
   A.hooks.tick.push(function () {
     const S = S_();
-    for (const set of S.settlements.values()) for (const b of E.byType(set.id, 'biblioteca')) {
-      const q = b.livros && b.livros.quem; if (!q) continue;
+    for (const b of S.buildings.values()) {
+      if (b.type !== 'biblioteca') continue; const q = b.livros && b.livros.quem; if (!q) continue;
       for (const id of Object.keys(q)) if (!reading(S.villagers.get(+id), b)) delete q[id];
     }
   });

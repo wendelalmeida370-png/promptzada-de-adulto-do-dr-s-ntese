@@ -27,7 +27,8 @@
 //      menor só o clássico — e lá não há mais lote de 4 casas (T-870, dito com a medida); no mundo da metrópole, a cidade passa
 //      a justificá-lo com as famílias que chegam (a porta do modo desenvolvedor), sem pedra não o pode pagar, e com pedra
 //      ergue-o sozinha (V.startProject: o lote de 4, a conta e o trabalho do degrau, o registro da planta de 4 casas) e amplia
-//      no lugar a biblioteca que já tinha (V.grow: o mesmo prédio, salvo no meio e acabado); pronta, a planta da forma
+//      no lugar a biblioteca que já tinha (V.grow: o mesmo prédio, salvo no meio e acabado); pronta, a planta da forma; quem lia
+//      nela quando a obra começou sai do livro (L-797)
 //   b9 um save de antes: as bibliotecas clássicas de um mundo pronto como eram (2 casas, a planta, um copista, o dia de 8), e
 //      nenhuma cidade abaixo do degrau o escolhe
 //   node qa/saber.js [b1,b2,…]      (ou ONLY=b1,b2) · VERB=1: cada caso que falha · SALT=n: as plantas noutros dados (T-436)
@@ -435,6 +436,13 @@ function b8() {
     G.Depot.make('f:' + withOld.fac, 'stone', 200, { code: 'teste' }); r = sim(() => V.grow(withOld, G.Fac.get(withOld.fac), V.counts(withOld.id))); } finally { Es.choose = ch0; }
   if (!ok('b8e o planejador amplia no lugar a biblioteca que a cidade já tinha (V.grow): o mesmo prédio, maior, em obra — e antes de justificar o degrau não a ampliava', (!g0 || g0.id !== old.id) && q0 < st.req.pop && q1 >= st.req.pop && !!r && r.id === old.id && r.w === N && r.esc === 'grande' && !r.built && !!r.amp && r.amp.de === 2 && r.ip.n === N && V.buildName(r) === old.name && r.x <= old.x && r.y <= old.y && r.x + N >= old.x + 2 && r.y + N >= old.y + 2 && occ(r),
     (r ? `${withOld.name}${wOld !== 'metropole' ? ` (mundo ${wOld})` : ''} (${q0} → ${q1} pessoas): #${r.id} «${V.buildName(r)}» de ${r.amp ? r.amp.de : '?'} para ${r.w} casas (${r.esc}), o lote de antes dentro do novo; o registro da planta de ${r.ip.n} casas, a família ${r.ip.f}` : `não ampliou (${withOld.name}, ${q0} → ${q1} pessoas)`) + (finished ? ' (a clássica, em obra no mundo pronto, acabada pela mão da prova)' : ''))) return;
+  // ---- who read in it when its works began leaves its book: two of the town at its tables the instant the enlargement began,
+  // their errands then taken by another door — as the world took the two readers of Mênfis, in the metrópole of the generation
+  // 21, to the mine and to the watch —, gone from the book at its next look, the library under works or not (L-797)
+  { const two = [...S.villagers.values()].filter(v => v.set === withOld.id && v.age >= 18 && !v.captive && !v.jail && !v.aboard && !(S.avatar && S.avatar.id === v.id)).sort((a, c) => a.id - c.id).slice(0, 2);
+    sim(() => { const k = r.livros && typeof r.livros === 'object' ? r.livros : (r.livros = { day: S.day, lidos: 0, copias: 0, pts: 0, quem: {} }); if (k.day !== S.day) Object.assign(k, { day: S.day, lidos: 0, copias: 0, pts: 0, quem: {} }); for (const v of two) { k.quem[v.id] = { t: S.clock, dur: 30 }; G.Vg.endTask(v); } });
+    M.viver(2); const left = Object.keys((r.livros && r.livros.quem) || {}).filter(i => two.some(v => v.id === +i)); const L435 = qaS().filter(q => /sem a tarefa daquele lugar/.test(q.msg));
+    ok('b8g quem lia quando a obra começou sai do livro (L-797)', two.length === 2 && !r.built && !left.length && !L435.length, `${two.map(v => v.name).join(' e ')} no livro da biblioteca em obra (${r.built ? 'PRONTA' : 'em obra'}), levados por outra porta: 2 s depois, ${left.length ? left.length + ' AINDA no livro' : 'fora do livro'}; o verificador: ${L435.length ? L435[0].msg.slice(0, 120) : 'limpo'}`); }
   const id = r.id; M.salvarCarregar(); S = G.S; V = G.Village; const r1 = S.buildings.get(id); sim(() => V.completeBuilding(r1)); const p = Sp.planNow(r1); const q = qaS();
   ok('b8f a ampliação salva no meio e acabada: a grande biblioteca pronta, a planta da forma, o verificador limpo', !!r1 && r1.built && r1.w === N && r1.ip.f === FAM && !!p && p.ok && r1.ip.h.length > facts0 && !q.length && M.limpo(), `${r1 ? `${r1.w} casas, ${r1.built ? 'pronta' : 'em obra'}, ${r1.ip.f}` : 'sumiu'}; ${p && p.ok ? 'planta ok' : 'planta NÃO'}; a história do prédio com ${r1 ? r1.ip.h.length : 0} fatos (antes ${facts0}); o verificador ${q.length ? said(q) : 'limpo'}${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
 }

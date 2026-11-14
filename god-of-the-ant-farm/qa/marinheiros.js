@@ -53,8 +53,8 @@ const sender = r => { for (const f of G.Fac.all()) { if (!G.Civ.has(f.id, 'naveg
 
 // a world of its own for each case: timber, food and coin for the peoples of the routes; the trades dealt as the world deals
 // them, until the towns of the routes have their sailors; the routes' clocks held (the case arms the one it wants)
-function mundo(hour) {
-  S = M.pronto(WORLD); led.length = 0;
+function mundo(hour, w) {
+  S = M.pronto(w || WORLD); led.length = 0;
   for (const r of S.seaRoutes) r.t = 1e6;
   S.time = hour === undefined ? 0.3 : hour; S.weather.storm = 0;
   god(() => { for (const s of towns()) { const f = G.Fac.get(s.fac); give(f, 'wood', 90); give(f, 'food', 320); if (E.coinage(f.id)) give(f, 'moedas', 20); } });
@@ -166,7 +166,9 @@ if (on('m4')) {
       M.viver(6); M.salvarCarregar(); S = G.S; s = S.ships.find(q => q.id === sid); led.length = 0;
       const ab = s ? Nv.aboardOf(s).length : 0; const notes = [];
       const home = s && live(() => { const t = tripOk(); if (t && !notes.includes(t)) notes.push(t); return !S.ships.includes(s); }, 1800, 1);
-      const crew = crew0.map(P).filter(Boolean); const pays = led.filter(e => e[8] === 'soldo'); const nv = novas();
+      // (the wages of this ship's crew: another ship of the world that comes home on the way pays its own — the m2's rule, T-1014;
+      // the metropole of the generation 22 had two more back while this one sailed, «soldos: 3 para 1», T-1115)
+      const crew = crew0.map(P).filter(Boolean); const pays = led.filter(e => e[8] === 'soldo' && crew0.includes(e[9])); const nv = novas();
       ok('m4 save e load no meio do mar: a viagem acaba, um soldo só por cabeça', !!s && ab === crew0.length && home && crew.every(v => !v.aboard && pays.filter(e => e[9] === v.id).length === 1) && pays.length === crew.length && !notes.length && !nv.length,
         `depois do load ${ab} a bordo; em casa: ${home}; soldos: ${pays.length} para ${crew.length}; ${notes.join('; ') || 'ninguém faltou a bordo'}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
     }
@@ -181,7 +183,7 @@ if (on('m5')) {
   else {
     M.viver(8); const crew0 = Nv.aboardOf(s).map(v => v.id); led.length = 0;
     god(() => Nv.sink(s, null, 'storm')); M.viver(30);
-    const alive = crew0.map(P).filter(Boolean); const pays = led.filter(e => e[8] === 'soldo').length; const nv = novas();
+    const alive = crew0.map(P).filter(Boolean); const pays = led.filter(e => e[8] === 'soldo' && crew0.includes(e[9])).length; const nv = novas(); // (this crew's: T-1115)
     // (who swam may be taken aboard a boat that passes — the game's own rescue —: never left aboard the hull that went down)
     ok('m5 o deus afunda o navio: ninguém pago, ninguém a bordo do casco que afundou', !S.ships.includes(s) && alive.every(v => v.aboard !== s.id && (!v.aboard || S.ships.some(q => q.id === v.aboard))) && !pays && !nv.length, `${crew0.length} a bordo; ${crew0.length - alive.length} afogado(s), ${alive.length} a nado ou em terra${alive.some(v => v.aboard) ? ' — ' + alive.filter(v => v.aboard).map(v => `${v.name} recolhid${v.g === 'f' ? 'a' : 'o'} por outro barco`).join(', ') + ' —' : ''}; o navio ${S.ships.includes(s) ? 'AINDA na lista' : 'saiu da lista'}; soldos: ${pays}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
   }
@@ -194,7 +196,7 @@ if (on('m5')) {
     const adrift = !!s.ghost && s.st === 'deriva' && !s.route; const nv1 = novas();
     // (the hull drifts until it breaks or is found; and the route is free for another ship of the towns)
     live(() => !S.ships.includes(s), 300, 2); const free = !S.ships.some(q => q.route === rid); const nv2 = novas();
-    ok('m5 a tripulação morre a bordo: o casco fica à deriva, a rota fica livre', adrift && free && !led.filter(e => e[8] === 'soldo').length && !nv1.length && !nv2.length, `${crew0.length} mortos a bordo; o casco: ${adrift ? 'à deriva' : `«${s.st}»`}${S.ships.includes(s) ? ', ainda no mar' : ', levado pelo mar'}; a rota livre: ${free}; verificador: ${nv1.concat(nv2).length ? nv1.concat(nv2).slice(0, 2).join(' | ') : 'limpo'}`);
+    ok('m5 a tripulação morre a bordo: o casco fica à deriva, a rota fica livre', adrift && free && !led.filter(e => e[8] === 'soldo' && crew0.some(v => v.id === e[9])).length && !nv1.length && !nv2.length, `${crew0.length} mortos a bordo; o casco: ${adrift ? 'à deriva' : `«${s.st}»`}${S.ships.includes(s) ? ', ainda no mar' : ', levado pelo mar'}; a rota livre: ${free}; verificador: ${nv1.concat(nv2).length ? nv1.concat(nv2).slice(0, 2).join(' | ') : 'limpo'}`);
   }
 }
 
@@ -229,7 +231,7 @@ if (on('m7')) {
     S.seaRoutes = S.seaRoutes.filter(q => q !== r);
     const home = live(() => !S.ships.includes(s), 900, 0.5);
     const landed = led.filter(e => e[8] === 'desembarque' && e[3] === 's:' + s.id && e[5] === g.k).reduce((a, e) => a + e[6], 0);
-    const crew = crew0.map(P).filter(Boolean); const pays = led.filter(e => e[8] === 'soldo').length; const nv = novas();
+    const crew = crew0.map(P).filter(Boolean); const pays = led.filter(e => e[8] === 'soldo' && crew0.includes(e[9])).length; const nv = novas(); // (this crew's: T-1115)
     ok('m7 a rota fecha com o navio no mar: a carga que não entregou desce no cais de casa (L-702)', home && Math.abs(landed - g.n) < 0.01 && crew.every(v => !v.aboard) && !pays && crew.every((v, k) => ((v.st && v.st.viagens) || 0) === viag0[k]) && !nv.length,
       `o porão levava ${g.n} de ${g.k}; de volta: ${home}; desceu no cais de casa: ${landed} (pelo livro); a tripulação em terra: ${crew.every(v => !v.aboard)}; soldos por uma viagem que não houve: ${pays}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
   }
@@ -237,38 +239,63 @@ if (on('m7')) {
 
 // ---------------------------------------------------------------- m8
 if (on('m8')) {
-  mundo();
   // a worker of a workplace with one post, in a town with a quay, fit for a voyage; made the most adventurous of the people
   // (as the cais-longe does), the voyage «alone» is theirs
+  // (the post the traveller leaves is dealt again when its trade is asked for, from the trade the instant has a hand to spare,
+  // if the memory does not ask more of it than it has — the dealer's rule for a post left empty, village.js —: the apiary of
+  // Mênfis of the metropole of the generation 22, the first such post, its honey not asked for, stayed empty by the rule. So
+  // each candidate in a world of its own: the first whose post is covered is the case; one left empty while its trade was asked
+  // and the dealer had a hand to spare, by its own numbers — what the instant asked at its last dealing, the town's memory —,
+  // is what L-683 was, and the case; any other, the next candidate, T-1117)
   const fit = (v, f) => v && !v.captive && !v.aboard && !v.held && !v.air && !v.ug && v.hp >= 55 && !(v.preg > 0) && !v.rebel && v.age >= 20 && v.age <= 50 && G.Fac.idOfV(v) === f.id && v.id !== f.leader && !X.memberOf(v.id);
-  let pick = null;
-  for (const d of [...S.buildings.values()].filter(b => b.type === 'doca' && b.built).sort((a, b) => a.id - b.id)) {
-    const di = Nv.dockInfo(d); if (!di.moor) continue; const set = S.settlements.get(d.set); const f = set && G.Fac.get(set.fac); if (!f) continue;
-    for (const v of [...S.villagers.values()].sort((a, b) => a.id - b.id)) {
-      if (v.set !== set.id || !fit(v, f) || v.role === 'marinheiro' || !E.isJobRole(v.role) || !v.job) continue;
-      const b = S.buildings.get(v.job); const j = b && E.jobsOf(b); if (!j || j.n !== 1 || j.role !== v.role) continue;
-      if (G.dist(v.x, v.y, di.moor[0], di.moor[1]) > 50) continue;
-      pick = { d, di, set, f, v, b }; break;
-    }
-    if (pick) break;
-  }
-  if (!pick) ok('m8 o posto de quem viaja (L-683)', false, 'nenhum prédio de um posto só com quem possa viajar, numa cidade com cais');
-  else {
-    const { di, set, f, v, b } = pick; const role = v.role; const postOf = () => [...S.villagers.values()].filter(o => o.job === b.id && o.role === role && !o.captive);
+  const cands = () => { const out = [];
+    for (const d of [...S.buildings.values()].filter(q => q.type === 'doca' && q.built).sort((p, q) => p.id - q.id)) {
+      const di = Nv.dockInfo(d); if (!di.moor) continue; const set = S.settlements.get(d.set); const f = set && G.Fac.get(set.fac); if (!f) continue;
+      for (const v of [...S.villagers.values()].sort((p, q) => p.id - q.id)) {
+        if (v.set !== set.id || !fit(v, f) || v.role === 'marinheiro' || !E.isJobRole(v.role) || !v.job) continue;
+        const b = S.buildings.get(v.job); const j = b && E.jobsOf(b); if (!j || j.n !== 1 || j.role !== v.role) continue;
+        if (G.dist(v.x, v.y, di.moor[0], di.moor[1]) > 50) continue;
+        out.push({ did: d.id, vid: v.id, bid: b.id }); if (out.length >= 8) return out;
+      } }
+    return out; };
+  // (the dealer's own numbers for an empty post: the trade left asked — the instant a whole hand past the hands it has, the memory
+  // all but one (a post the town does not ask for is not dealt again: the apiary of Mênfis, its honey not asked for, the instant
+  // 0, the memory 0,26) —, and a trade with a hand to spare — have one, the instant a whole hand past what it asks, the memory no
+  // more than it has —; the hands counted as the dealer counts them, not a traveller in a trade of posts)
+  const dealt = (set, role) => { const want = V.tradeAsked(set.id) || {}, mem = set.ofm || {}, have = {};
+    for (const o of S.villagers.values()) if (o.set === set.id && !o.captive && want[o.role] !== undefined && !(o.role !== 'marinheiro' && E.isJobRole(o.role) && Nv.away(o))) have[o.role] = (have[o.role] || 0) + 1;
+    const ask = q => (mem[q] !== undefined ? mem[q] : want[q]), h = q => have[q] || 0;
+    const asked = want[role] - h(role) >= 1 && ask(role) - h(role) >= 0.95;
+    // (and a hand of it the dealer can move — at home, not in the cell, not the god's body, and three days at least in the trade
+    // (V.TRADE_MIN) unless it goes back to the trade: pickHand —: the trades with hands to spare of Argos of the mega were all of
+    // travellers but one hand of two days)
+    const can = (q, o) => o.set === set.id && o.role === q && !o.captive && !o.jail && !Nv.away(o) && !(S.avatar && S.avatar.id === o.id) && (V.tenure(o) >= V.TRADE_MIN || o.roleBack === role);
+    const spare = Object.keys(want).filter(q => h(q) >= 1 && want[q] - h(q) <= -1 && ask(q) - h(q) <= 0 && [...S.villagers.values()].some(o => can(q, o)));
+    return { asked, spare, txt: `o instante pede ${want[role] || 0}, a memória ${(+ask(role) || 0).toFixed(2)}; com mão sobrando: ${spare.join(', ') || 'nenhum'}` }; };
+  // (the world asked first; then the other ready worlds, as the proofs of the premises do: in the metropole of the generation 22
+  // no candidate's trade was asked for)
+  const MUNDOS = [WORLD, 'mega', 'mundial', 'cidade'].filter((m, k, L) => L.indexOf(m) === k);
+  const list = []; for (const w of MUNDOS) { mundo(undefined, w); for (const c of cands()) list.push(Object.assign({ w }, c)); }
+  const tried = []; let done = false;
+  for (const c of list) {
+    mundo(undefined, c.w); const d = S.buildings.get(c.did), v = P(c.vid), b = S.buildings.get(c.bid); if (!d || !v || !b) continue;
+    const di = Nv.dockInfo(d), set = S.settlements.get(d.set), f = G.Fac.get(set.fac); const role = v.role; const postOf = () => [...S.villagers.values()].filter(o => o.job === b.id && o.role === role && !o.captive);
     v.traits = ['Curioso', 'Corajoso']; v.courage = 1; v.voyages = 6; S.time = 0.3;
     const e = god(() => X.launch(f, { k: 'terra', w: 1, why: 'terra', txt: '', x: di.moor[0] + 12, y: di.moor[1] }, 'so', {}));
-    if (!e || !e.crew.includes(v.id)) ok('m8 o posto de quem viaja (L-683)', false, e ? `a viagem saiu sem ${v.name}` : 'nenhuma viagem saiu');
-    else {
-      for (let k = 0; k < 6; k++) { god(() => V.forceUpdate()); M.viver(2); }
-      const now = postOf(); const cover = now.filter(o => o.id !== v.id);
+    if (!e || !e.crew.includes(v.id)) { tried.push(`${c.w}, ${v.name} (${set.name}): ${e ? 'a viagem saiu sem ele' : 'nenhuma viagem saiu'}`); continue; }
+    for (let k = 0; k < 6; k++) { god(() => V.forceUpdate()); M.viver(2); }
+    const now = postOf(); const cover = now.filter(o => o.id !== v.id);
+    if (cover.length !== 1) { const dl = dealt(set, role); if (!dl.asked || !dl.spare.length) { tried.push(`${c.w}, ${v.name}, ${role} em ${set.name}: ${dl.txt}`); continue; } }
+    done = true; if (tried.length) console.log(`  (m8: antes, ${tried.join('; ')})`);
       ok('m8 quem viaja deixa o posto, e outro o cobre (L-683)', X.live(e) && Nv.away(v) && v.role === role && !v.job && cover.length === 1, `${v.name}, ${role} de ${G.BDEF[b.type].name || b.type} em ${set.name}, na viagem «só»: ofício ${v.role}, posto ${v.job || 'nenhum'}; no posto: ${cover.map(o => o.name).join(', ') || 'NINGUÉM'}`);
-      // (the voyage is called off — as the game ends one —, and the town counts its traveller again)
-      e.st = 'fim'; e.status = 'cancelada'; M.viver(3);
-      for (let k = 0; k < 6; k++) { god(() => V.forceUpdate()); M.viver(2); }
-      const after = postOf(); const both = [v].concat(cover).map(o => P(o.id)).filter(Boolean); const nv = novas();
+    // (the voyage is called off — as the game ends one —, and the town counts its traveller again)
+    e.st = 'fim'; e.status = 'cancelada'; M.viver(3);
+    for (let k = 0; k < 6; k++) { god(() => V.forceUpdate()); M.viver(2); }
+    const after = postOf(); const both = [v].concat(cover).map(o => P(o.id)).filter(Boolean); const nv = novas();
       ok('m8 na volta, nunca dois no mesmo posto, e ninguém sem ofício', !Nv.away(v) && after.length === 1 && both.every(o => !!o.role) && !nv.length, `de volta: no posto ${after.map(o => o.name).join(', ') || 'NINGUÉM'}; ${both.map(o => `${o.name}: ${o.role}`).join('; ')}; verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
-    }
+    break;
   }
+  if (!done) ok('m8 o posto de quem viaja (L-683)', false, list.length ? `nenhum caso com o posto pedido e uma mão sobrando: ${tried.join('; ')}` : 'nenhum prédio de um posto só com quem possa viajar, numa cidade com cais');
 }
 
 // ---------------------------------------------------------------- m9
@@ -294,12 +321,15 @@ if (on('m9')) {
       // (each one by the clock of the house: the tavern's keeper goes to bed late; and the crate in the arms is set down first)
       samples++; const up = crew().filter(v => v.task && v.task.type === 'cais' && G.Lar.sleepy(v) && !(v.task.job === 'load' && v.task.st === 2)); worst = Math.max(worst, up.length); calls += up.length;
       for (const v of up) { const c = G.Lar.clock(v); const w = `${v.name} (${Math.floor(v.age)} anos, dorme das ${c.bed.toFixed(2)} às ${c.wake.toFixed(2)}) de pé na hora ${S.time.toFixed(2)}, «${v.task.job || ''}/${v.task.st}»`; if (who.length < 3) who.push(w); }
-      for (const v of crew()) { if (v.sleeping) minSono = Math.min(minSono, v.energy); else minE = Math.min(minE, v.energy); }
+      // (the energy of who is up on the quay — the call's: one of the crew walking home to his bed late, by the rule of the sleep
+      // (energy under 15, villagers.js), is not the quay's — Sven, hunter of Hedeby, at 12 at the hour 0,99 in the metropole of the
+      // generation 22, with nobody up on the quay, T-1116)
+      for (const v of crew()) { if (v.sleeping) minSono = Math.min(minSono, v.energy); else if (v.task && v.task.type === 'cais') minE = Math.min(minE, v.energy); }
     }
     // (and in the morning the voyage goes on: the gathering is called with everyone up)
     const goes = live(() => e.st !== 'prep', 120, 1); const nv = novas();
     ok('m9 quem espera no cais durante a preparação dorme de noite (L-682)', onQuay0 && samples > 0 && worst === 0 && minE > 15 && !stN && goes && !nv.length,
-      `a viagem de ${e.leaderName} (${e.crew.length} na tripulação) preparada desde o fim da tarde, com gente no cais antes de dormir: ${onQuay0}; no fundo da noite (${samples} olhadas, da hora 0,86 ao amanhecer): no máximo ${worst} de pé no cais na sua hora de dormir${who.length ? ' — ' + who.join('; ') + ' —' : ''}, a menor energia de quem estava de pé ${minE === 1e9 ? '— (todos dormiam)' : minE.toFixed(0)}${minSono < 1e9 ? ` (de quem dormia, ${minSono.toFixed(0)})` : ''}; reunião chamada de noite: ${stN || 'não'}; de manhã a viagem segue: ${goes} («${e.st}»); verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
+      `a viagem de ${e.leaderName} (${e.crew.length} na tripulação) preparada desde o fim da tarde, com gente no cais antes de dormir: ${onQuay0}; no fundo da noite (${samples} olhadas, da hora 0,86 ao amanhecer): no máximo ${worst} de pé no cais na sua hora de dormir${who.length ? ' — ' + who.join('; ') + ' —' : ''}, a menor energia de quem estava de pé no cais ${minE === 1e9 ? '— (todos dormiam)' : minE.toFixed(0)}${minSono < 1e9 ? ` (de quem dormia, ${minSono.toFixed(0)})` : ''}; reunião chamada de noite: ${stN || 'não'}; de manhã a viagem segue: ${goes} («${e.st}»); verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
   }
 }
 
@@ -391,7 +421,7 @@ if (on('m12')) {
         if (k % 20 === 0) for (const q of novas()) if (/mercante|navegando|a bordo/.test(q)) bad = bad || q.slice(0, 120);
       }
       const landed = led.filter(e => e[8] === 'desembarque' && e[3] === 's:' + s.id && e[5] === g.k).reduce((a, e) => a + e[6], 0);
-      const crew = crew0.map(P).filter(Boolean); const pays = led.filter(e => e[8] === 'soldo').length; const nv = novas();
+      const crew = crew0.map(P).filter(Boolean); const pays = led.filter(e => e[8] === 'soldo' && crew0.includes(e[9])).length; const nv = novas(); // (this crew's: T-1115)
       const called = crew.filter(v => v.task && v.task.type === 'embark' && v.task.ship === s.id).length;
       ok('m12 a rota fecha com o navio ainda no cais: a viagem não há, a carga volta ao cais e o casco não fica à deriva (L-727)',
         walking0 > 0 && gone >= 0 && gone <= 1 && !bad && Math.abs(landed - g.n) < 0.01 && wood >= Nv.SHIP.mercante.cost - 1 && crew.every(v => !v.aboard) && !called && !pays && crew.every((v, k) => ((v.st && v.st.viagens) || 0) === viag0[k]) && !nv.length,

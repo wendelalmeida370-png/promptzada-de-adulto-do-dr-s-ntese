@@ -769,12 +769,15 @@
   const headFirst = (L, h) => [h].concat(L.filter(m => m !== h));
   const theName = b => { const nm = G.Village.buildName(b); return (G.gen(nm) === 'a' ? 'a ' : 'o ') + nm; };
   // (where a household that leaves the seat goes, in its town: [house, how] or null)
+  // (of the family's own houses, the emptiest first — the house it lived in, left empty while it lived in the seat, before the one
+  // it lets to another family: Citlalin of Tlacopan, out of the seat at an election in the metrópole of the generation 22, went to
+  // her sobrado with its tenants, the first of her houses by its number — nine in it —, her own house empty beside it, L-796)
   function rehouse(fam, set, kin) {
-    const S = G.S; const occ = occupancy(); const ids = new Set(fam.map(m => m.id).concat(kin || [])); let own = null, free = null, best = null, bs = 0;
+    const S = G.S; const occ = occupancy(); const ids = new Set(fam.map(m => m.id).concat(kin || [])); let own = null, ownN = 0, free = null, best = null, bs = 0;
     for (const b of S.buildings.values()) {
       if (b.set !== set.id || !built(b) || b.type === 'barraco') continue;
       const n = occ.get(b.id) || 0; const room = G.BDEF[b.type].housing - n; if (room < fam.length) continue;
-      if (ids.has(b.dono)) { if (!own || b.id < own.id) own = b; }
+      if (ids.has(b.dono)) { if (!own || n < ownN || (n === ownN && b.id < own.id)) { own = b; ownN = n; } }
       else if (!b.dono && !n) { if (!free || b.id < free.id) free = b; }
       else if (!best || room > bs || (room === bs && b.id < best.id)) { best = b; bs = room; }
     }

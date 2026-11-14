@@ -527,7 +527,10 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
 // (the town's day of houses first, as the world runs it each day: it gives the houses of an older world their owners — the
 // ready worlds are older than G.Casa, and two seconds of the world give only the first town its day)
 function dearPair() {
-  const cities = [...S.settlements.values()].filter(s => (s.tier || 0) >= 3 && E.coinage(s.fac)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id) || a.id - b.id);
+  // (a people whose houses keep their own coins: in a communal one every house's coins are made the same at the turn of the
+  // day — polity.js —, and the rich family of Roma of the metrópole of the generation 21, given forty, had 16,3 when its
+  // town's day came, the plain one too: no rich one to buy, no plain one to sell, T-1130)
+  const cities = [...S.settlements.values()].filter(s => (s.tier || 0) >= 3 && E.coinage(s.fac) && G.Polity.econOf(G.Fac.get(s.fac)) !== 'comunal').sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id) || a.id - b.id);
   const tried = [];
   for (const city of cities) {
     const sn = G.Urban && G.Urban.peek ? G.Urban.peek(city.id) : null; if (!sn) continue;
@@ -550,6 +553,20 @@ function dearPair() {
   }
   return { why: tried.join(' · ') || 'nenhuma cidade grande de moeda' };
 }
+// (the dear land's pair in the first ready world that has one, the metrópole first — the world found once, then reopened
+// each time —: the metrópole of the generation 22 has none, its dear houses its elite's and its nobles', or let, or too
+// small for the family of a cheap one, T-1130)
+let dearW = null;
+function dearStage() {
+  const tried = [];
+  for (const w of dearW ? [dearW] : ['metropole', 'mega', 'mundial', 'cidade']) {
+    M.pronto(w); S = G.S; M.viver(2); S.time = 0.15; S.weather.storm = 0; set = S.settlements.get(set0); taken.clear();
+    const pr = dearPair(); if (!pr.why) { dearW = w; pr.world = w; pr.tried = tried.concat(pr.tried || []); return pr; }
+    tried.push(`${w}: ${pr.why}`);
+  }
+  return { why: tried.join(' · ') };
+}
+const dearOf = pr => (pr.world && pr.world !== 'metropole' ? `(${pr.world}) ` : '');
 // (the sales of a house between two families from ledger line L0 on — the dear land's: the price from the house sold to the
 // seller's new one —, each with what the house sold had cost its family as the price was paid: cAt, filled by onSale)
 const isH = r => typeof r === 'string' && r[0] === 'h' && r[1] === ':';
@@ -561,9 +578,8 @@ const saleWatch = () => { const cAt = new Map(), gAt = new Map(), tAt = new Map(
 const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least the house's cost, and twelve — social.js)
 // ---------------- h14: the dear land (social.js): a rich family buys the house of a plain family in the heart, each with its own, in the ledger
 {
-  reload();
   // (the big towns of coin, the most people first: the first with a pair the dear land's own rules would trade — T-133)
-  const pr = dearPair(); let info = pr.why || '', fine14 = false;
+  const pr = dearStage(); let info = pr.why || '', fine14 = false;
   if (!pr.why) {
     const { city, cheap, dear, tried } = pr;
     // (the test's hand: a rich family on cheap ground — with what the house it buys cost its family, L-236 —, a plain one on dear)
@@ -585,7 +601,7 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
     // (the price: the house's cost to the family that had it as it was paid, and never less than twelve — L-236)
     const want = price ? fairPrice(sw.cAt.get(price[0]) || 0) : 0;
     fine14 = !!price && Math.abs(price[6] - want) < 1e-6 && moves.length >= 2 && (!ours || (Math.abs(before + net14 - after) < 0.02 && dear.b.dono && cheap.b.dono));
-    info = (tried.length ? tried.join(' · ') + ' · ' : '') + `${city.name}: ` + (price ? `${ours ? 'a família rica da casa #' + cheap.b.id + ' (terra a ' + Math.round(cheap.val) + ') comprou a casa #' + dear.b.id + ' (terra a ' + Math.round(dear.val) + ')' : 'outra troca da terra cara aconteceu'}: o preço, ${price[6]} moedas (o justo: ${want}), pelo livro (${price[0]}); ${moves.length} mudanças no livro (${moves.slice(0, 4).map(e => `${e[6]} ${e[5]}`).join(', ')}); as moedas das duas casas ${ours ? `${r2(before)} → ${r2(after)} (pelo livro ${r2(before + net14)})` : '—'}; donos: ${ours ? `${(S.villagers.get(dear.b.dono) || {}).name} e ${(S.villagers.get(cheap.b.dono) || {}).name}` : '—'}` : `NENHUMA troca no dia (a casa #${cheap.b.id}, terra a ${Math.round(cheap.val)}, e a #${dear.b.id}, terra a ${Math.round(dear.val)})`);
+    info = (tried.length ? tried.join(' · ') + ' · ' : '') + `${dearOf(pr)}${city.name}: ` + (price ? `${ours ? 'a família rica da casa #' + cheap.b.id + ' (terra a ' + Math.round(cheap.val) + ') comprou a casa #' + dear.b.id + ' (terra a ' + Math.round(dear.val) + ')' : 'outra troca da terra cara aconteceu'}: o preço, ${price[6]} moedas (o justo: ${want}), pelo livro (${price[0]}); ${moves.length} mudanças no livro (${moves.slice(0, 4).map(e => `${e[6]} ${e[5]}`).join(', ')}); as moedas das duas casas ${ours ? `${r2(before)} → ${r2(after)} (pelo livro ${r2(before + net14)})` : '—'}; donos: ${ours ? `${(S.villagers.get(dear.b.dono) || {}).name} e ${(S.villagers.get(cheap.b.dono) || {}).name}` : '—'}` : `NENHUMA troca no dia (a casa #${cheap.b.id}, terra a ${Math.round(cheap.val)}, e a #${dear.b.id}, terra a ${Math.round(dear.val)})`);
   }
   ok('h14 a terra cara', fine14 && !bad().length, info);
 }
@@ -598,7 +614,7 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
   // family on dear ground has just paid for its house — what G.Casa keeps of a house bought or raised, its materials and its
   // ground: what a house of its kind costs there, never less than 32 coins —; the rich family on cheap ground has coin(paid))
   const part = (coin, hand) => {
-    reload(); const pr = dearPair(); if (pr.why) return { why: pr.why };
+    const pr = dearStage(); if (pr.why) return { why: pr.why };
     const { city, cheap, dear } = pr; const paid = r2(Math.max(32, K.price(city, dear.b.type, [dear.b.x, dear.b.y])));
     dear.b.custo = paid; setCoins('h:' + cheap.b.id, r2(coin(paid))); setCoins('h:' + dear.b.id, 5);
     const x = hand ? hand(pr) : {};
@@ -679,7 +695,7 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
   const kinOf = (o, v) => o.id === v.id || o.id === v.partner || o.mother === v.id || o.father === v.id || v.mother === o.id || v.father === o.id || (!!o.mother && v.mother === o.mother) || (!!o.father && v.father === o.father);
   const B = ref => S.buildings.get(+ref.slice(2));
   // (the town as h14 has it: a rich family on cheap ground, a plain one that owns its house on dear ground; and a day)
-  const stage = () => { reload(); const pr = dearPair(); if (pr.why) return pr; setCoins('h:' + pr.cheap.b.id, Math.max(40, fairPrice(costOf(pr.dear.b)) + 28)); setCoins('h:' + pr.dear.b.id, 5); return pr; };
+  const stage = () => { const pr = dearStage(); if (pr.why) return pr; setCoins('h:' + pr.cheap.b.id, Math.max(40, fairPrice(costOf(pr.dear.b)) + 28)); setCoins('h:' + pr.dear.b.id, 5); return pr; };
   // (a trade of the day, as the day ends: who owns what, what it cost, and how the sellers live in the house the buyers left)
   const judge = (sale, sw) => {
     const hs = B(sale[3]), hl = B(sale[4]); const buyers = residents(hs), sellers = residents(hl); const o = S.villagers.get(hl.dono);

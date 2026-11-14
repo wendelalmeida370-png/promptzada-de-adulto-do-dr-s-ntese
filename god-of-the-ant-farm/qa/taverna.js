@@ -185,8 +185,11 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); if (T.pick(v) !== b)
   // and none under way: the feast calls the whole town, 3,2, over the keeper's errand, as it should. The clock the case puts at 0,63
   // fell in the hour of the feast of Mênfis of the generation 18, which took Hatshepsut at the first step — «0 s a caminho» —; and
   // the rounds counted from the case's start: each case opens the same snapshot, and its day has the number of the others', T-622)
+  // (and a feast already under way waited out first: the metropole of the generation 22 was kept in the middle of the Wepet of
+  // Mênfis — the keeper's town —, and the day's plan kept for another day does not end the feast that is on, T-1114)
   fresh(); const b = S().buildings.get(P.id); ready(b); const bad = []; seen.length = 0;
   town().festPlan = { day: S().day, key: null, done: true };
+  liveSec(90, () => !(G.Fest && G.Fest.active(b.set)), bad);
   liveSec(30, () => !!T.dia(b), bad); const op = T.dia(b); const k = T.keeperOf(b);
   let feast = !!(G.Fest && G.Fest.active(b.set)); // (and none on the way: a feast that began while he walked is seen too)
   let far = 0, went = [], self = 0, waited = [], walk = 0; const c0 = S().clock;

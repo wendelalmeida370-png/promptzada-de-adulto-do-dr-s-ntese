@@ -118,9 +118,12 @@ run('r3', () => {
   const daFam = () => fam.map(i => S.villagers.get(i)).filter(m => m && !m.captive && m.set === set.id);
   let pronta = null; const c0 = G.Village.completeBuilding;
   G.Village.completeBuilding = function (x) { const q = c0.apply(this, arguments); if (x && x.id === id && !pronta) { const L = daFam(); pronta = { n: L.length, moram: L.filter(m => m.home === id).length, enc: !!x.encomenda, dono: x.dono, daCasa: L.some(m => m.id === x.dono), custo: x.custo || 0 }; } return q; };
-  try { for (let y = 0; y < 3 && !(S.buildings.get(id) || {}).built; y++) { D.make('f:' + set2.fac, 'wood', 40, { code: 'teste' }); D.make('f:' + set2.fac, 'stone', 40, { code: 'teste' }); M.saltar(1); } } finally { G.Village.completeBuilding = c0; }
+  // (six years at most: the house waits its turn for the people's stone behind the great work that has it — D-174 —, and in the
+  // metrópole of the generation 22 the six adobe that never came went back to stone at the end (L-720) while the stone was the
+  // temple's: 90% in three years, standing in the fourth. Three years were the window of the world that had it sooner, T-1122)
+  let anos = 0; try { for (; anos < 6 && !(S.buildings.get(id) || {}).built; anos++) { D.make('f:' + set2.fac, 'wood', 40, { code: 'teste' }); D.make('f:' + set2.fac, 'stone', 40, { code: 'teste' }); M.saltar(1); } } finally { G.Village.completeBuilding = c0; }
   const b = S.buildings.get(id); const vv = S.villagers.get(v.id); const vivos = daFam();
-  if (!ok('r3d a casa de pé, pelos construtores', !!b && b.built, b ? `${lado(b)}: ${b.built ? 'pronta' : Math.round(b.progress * 100) + '% em 3 anos'}` : 'a obra SUMIU')) return;
+  if (!ok('r3d a casa de pé, pelos construtores', !!b && b.built, b ? `${lado(b)}: ${b.built ? `pronta em ${anos} ano(s)` : Math.round(b.progress * 100) + `% em ${anos} anos`}` : 'a obra SUMIU')) return;
   ok('r3e a mudança', !!pronta && pronta.n > 0 && pronta.moram === pronta.n && !pronta.enc && pronta.daCasa && Math.abs(pronta.custo - price) < 0.01,
     pronta ? `na hora em que a casa ficou pronta: ${pronta.moram} dos ${pronta.n} vivos da família de ${fam.length} moram nela; o dono #${pronta.dono}${pronta.daCasa ? ', da família' : ', DE FORA'}; o que a casa custou à família: ${pronta.custo}` : 'a casa ficou pronta SEM passar pela porta da cidade');
   // (no fim do salto: quem está vivo mora nela; o dono é da família — ou ninguém, sem herdeiro crescido — e o custo vai com o dono)
@@ -241,7 +244,10 @@ run('r9', () => {
   const duas = () => QA.check().filter(q => /espera duas casas/.test(q.msg)).map(q => q.msg.slice(0, 120));
   // (the proof's hand: the partner comes to live in the house of the one who ordered — a marriage, as the world makes them)
   const casa = (a, q) => sim(() => { const hq = S.buildings.get(q.home), ha = S.buildings.get(a.home); a.partner = q.id; q.partner = a.id; if (hq) hq.res = Math.max(0, (hq.res || 0) - 1); q.home = ha.id; q.hhType = ha.type; if (q.inside === (hq && hq.id)) q.inside = 0; ha.res = (ha.res || 0) + 1; });
-  const par = (set, a) => [...S.villagers.values()].filter(q => q.set === set.id && q !== a && livre(q) && q.home !== a.home && q.g !== a.g && !kinOf(a, q) && (S.buildings.get(q.home) || {}).dono !== q.id).sort((x, y) => x.id - y.id)[0] || null;
+  // (one who rents marries one who will rent too — not the landlord's own kin, who lives in a house of the family for nothing
+  // (D-159) and whose family «has where to live» when asked: in the metrópole of the generation 22 the first one free for
+  // Amenhotep was Nefertiti, the sister of the owner of the hut he rents, and the gate of the house under way was never asked, T-1121)
+  const par = (set, a) => { const ha = S.buildings.get(a.home); return [...S.villagers.values()].filter(q => q.set === set.id && q !== a && livre(q) && q.home !== a.home && q.g !== a.g && !kinOf(a, q) && (S.buildings.get(q.home) || {}).dono !== q.id && (!K.tenant(a, ha) || !!K.tenant(q, ha))).sort((x, y) => x.id - y.id)[0] || null; };
   // (a) the house a family in need pays for: one alone in a full house that is not theirs, with coins for a new one, in a town
   // of coin with no empty house of the people's to buy — the work raised
   // (in the first ready world that has it, the case's own first: in the metrópole of the generation 20 the one alone with a house

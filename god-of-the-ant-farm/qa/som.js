@@ -186,11 +186,15 @@ function day() {
     let hit = null;
     // (the bathers go by the door of the city's leisure, G.Termas.visit — their errand held above the day's calls, as
     // qa/termas.js holds it: given bare, the morning's work takes every bather on the way, T-281)
+    // (who is in the water counts, sent or not: the baths of Tenochtitlan of the metrópole of the generation 22 have one place in
+    // the water, and one of the town held it by their own wish from 0,46 to 0,56 — the four sent found the baths full at the
+    // door and went their way, as D-200 has it, and the case heard nobody in the water, T-1123)
+    const inWater = b => { for (const v of S.villagers.values()) if (v.task && v.task.type === 'termas' && v.task.id === b.id && v.task.st === 2 && v.act === 'sit' && v.inside === b.id) return v; return null; };
     for (const b of baths) {
       const went = []; stepIn(() => { for (const v of S.villagers.values()) { if (went.length >= 4) break; if (v.set !== b.set || !free(v)) continue; G.Vg.endTask(v); v.hunger = Math.min(v.hunger, 10); v.energy = Math.max(v.energy, 90); const t = G.Termas.visit(v, b); if (t) { t.kind = 'work'; t.leisure = true; t.pri = 2.9; went.push(v); } } });
-      if (!went.length) continue;
-      const got = live(110, () => went.some(v => v.task && v.task.type === 'termas' && v.task.st === 2 && v.act === 'sit' && v.inside === b.id));
-      if (got) { hit = { b, v: went.find(v => v.task && v.task.type === 'termas' && v.task.st === 2 && v.act === 'sit') }; break; }
+      if (!went.length && !inWater(b)) continue;
+      const got = live(110, () => !!inWater(b));
+      if (got) { hit = { b, v: inWater(b) }; break; }
     }
     if (!hit) ok('s6a as-termas', false, `ninguém no banho (${baths.length} termas abertas)`);
     else {
@@ -450,30 +454,42 @@ function s7() {
     const caseA = () => {
       // (four days more: the quarter's life is past its first days, when one day is the whole mean)
       for (let k = 0; k < 4; k++) day();
-      const ds = U.districtsOf(set).filter(d => d.k !== 'centro').sort((a, b) => b.cells.length - a.cells.length || a.id - b.id);
-      const q = ds[0] || U.wholeOf(set); if (!q || !q.cells.length) return { judged: true, pass: false, info: `${set.name} não tem bairro nem todo com chão` };
-      const now = () => q.whole ? U.wholeOf(set) : U.allDistrictsOf(set).find(d => d.id === q.id);
+      // (every quarter of the town that is not its old town and reads nothing yet, followed at once — each by who it is —, each
+      // read on its own ground: in the cidade of the generation 22 the greatest of Roma, the Bairro do Porto of four patches, was
+      // drawn again on a first day or most days in three histories, the rise and the fall what the rule says in each, T-1124;
+      // every quarter that kept its ground is judged, and all of them must pass)
+      const qs = U.districtsOf(set).filter(d => d.k !== 'centro' && d.cells.length && A.habito(d).saber === 0).sort((a, b) => b.cells.length - a.cells.length || a.id - b.id);
+      if (!qs.length) { const w = U.wholeOf(set); if (w && w.cells.length && A.habito(w).saber === 0) qs.push(w); }
+      if (!qs.length) return { judged: true, pass: false, info: `${set.name} não tem bairro nem todo com chão e sem leitura` };
+      const T = qs.map(q => ({ q, now: () => q.whole ? U.wholeOf(set) : U.allDistrictsOf(set).find(d => d.id === q.id) }));
       // (a day and a half of a lettered quarter's reading, every day, on each patch of the quarter's own ground that day)
-      const read = () => { const qq = now(); if (!qq) return; const m = U.mark(qq, 'letrado', false) * 1.5; for (const c of qq.cells) { const [x, y] = U.cellXY(c); U.note(x + 1, y + 1, 'saber', m); } };
-      const sigOf = () => { const qq = now(); return qq && qq.cells.length ? qq.cells.slice().sort((x, y) => x - y).join('.') : '-'; };
-      const hab = () => { const qq = now(); return qq ? A.habito(qq).saber : NaN; };
-      const h0 = hab(); const up = [h0]; const sg = [sigOf()];
-      for (let k = 0; k < 9; k++) { day(read); up.push(hab()); sg.push(sigOf()); }
-      const peak = up[up.length - 1]; const down = [peak]; const sd = [sigOf()];
-      for (let k = 0; k < 12; k++) { day(); down.push(hab()); sd.push(sigOf()); }
-      const q2 = now() || q;
-      const same = (g, k) => g[k] !== '-' && g[k] === g[k - 1]; const kept = sg.filter((x, k) => k > 0 && same(sg, k)).length, keptD = sd.filter((x, k) => k > 0 && same(sd, k)).length;
-      // (the days the single numbers are read on — the first of the reading, the first two without it — are days the quarter kept)
-      const judged = kept >= 6 && keptD >= 8 && same(sg, 1) && same(sd, 1) && same(sd, 2);
-      const rise = up.every((x, k) => k === 0 || !same(sg, k) || x >= up[k - 1]) && up.slice(1).every((x, k) => !same(sg, k + 1) || x - up[k] <= 0.36), fall = down.every((x, k) => k === 0 || !same(sd, k) || x <= down[k - 1]) && down.slice(1).every((x, k) => !same(sd, k + 1) || down[k] - x <= 0.21);
-      const pass = judged && h0 === 0 && rise && fall && peak >= 0.99 && up[1] > 0.2 && up[1] < 0.4 && down[2] >= 0.6 * peak && down[down.length - 1] < 0.15;
-      return { judged, pass, kept, keptD, info: `${set.name} (${q2.whole ? 'o todo' : q2.name}, ${q2.cells.length} chãos, ${q2.dias} dias de vida, dia ${S.day}): uma vez e meia a leitura que faz um bairro letrado, contada todo dia → o hábito ${up.join(' → ')}; sem leitura → ${down.join(' → ')} — ${rise ? 'sobe devagar' : 'SOBE AOS SALTOS'}, ${fall ? 'desce devagar' : 'DESCE AOS SALTOS'} (o bairro guardou os chãos em ${kept} de 9 dias da subida e ${keptD} de 12 da descida${judged ? '' : '; redesenhado no primeiro dia de um dos lados ou na maioria deles: nada a julgar nesta história'})` };
+      const read = () => { for (const t of T) { const qq = t.now(); if (!qq) continue; const m = U.mark(qq, 'letrado', false) * 1.5; for (const c of qq.cells) { const [x, y] = U.cellXY(c); U.note(x + 1, y + 1, 'saber', m); } } };
+      const sigOf = t => { const qq = t.now(); return qq && qq.cells.length ? qq.cells.slice().sort((x, y) => x - y).join('.') : '-'; };
+      const hab = t => { const qq = t.now(); return qq ? A.habito(qq).saber : NaN; };
+      for (const t of T) { t.up = [hab(t)]; t.sg = [sigOf(t)]; }
+      for (let k = 0; k < 9; k++) { day(read); for (const t of T) { t.up.push(hab(t)); t.sg.push(sigOf(t)); } }
+      for (const t of T) { t.down = [t.up[t.up.length - 1]]; t.sd = [sigOf(t)]; }
+      for (let k = 0; k < 12; k++) { day(); for (const t of T) { t.down.push(hab(t)); t.sd.push(sigOf(t)); } }
+      const same = (g, k) => g[k] !== '-' && g[k] === g[k - 1];
+      for (const t of T) {
+        const { up, sg, down, sd } = t; const h0 = up[0], peak = up[up.length - 1];
+        t.kept = sg.filter((x, k) => k > 0 && same(sg, k)).length; t.keptD = sd.filter((x, k) => k > 0 && same(sd, k)).length;
+        // (the days the single numbers are read on — the first of the reading, the first two without it — are days the quarter kept)
+        t.judged = t.kept >= 6 && t.keptD >= 8 && same(sg, 1) && same(sd, 1) && same(sd, 2);
+        t.rise = up.every((x, k) => k === 0 || !same(sg, k) || x >= up[k - 1]) && up.slice(1).every((x, k) => !same(sg, k + 1) || x - up[k] <= 0.36);
+        t.fall = down.every((x, k) => k === 0 || !same(sd, k) || x <= down[k - 1]) && down.slice(1).every((x, k) => !same(sd, k + 1) || down[k] - x <= 0.21);
+        t.pass = t.judged && h0 === 0 && t.rise && t.fall && peak >= 0.99 && up[1] > 0.2 && up[1] < 0.4 && down[2] >= 0.6 * peak && down[down.length - 1] < 0.15;
+      }
+      const J = T.filter(t => t.judged); const show = J.find(t => !t.pass) || J[0] || T[0]; const q2 = show.now() || show.q;
+      const best = T.slice().sort((a, b) => (b.kept + b.keptD) - (a.kept + a.keptD))[0];
+      return { judged: J.length > 0, pass: J.length > 0 && J.every(t => t.pass), kept: best.kept, keptD: best.keptD,
+        info: `${set.name}: ${T.length} bairro(s) sem leitura seguidos, ${J.length} julgado(s) (guardaram o chão), ${J.filter(t => t.pass).length} como a regra diz; ${q2.whole ? 'o todo' : q2.name} (${q2.cells.length} chãos, ${q2.dias} dias de vida, dia ${S.day}): uma vez e meia a leitura que faz um bairro letrado, contada todo dia → o hábito ${show.up.join(' → ')}; sem leitura → ${show.down.join(' → ')} — ${show.rise ? 'sobe devagar' : 'SOBE AOS SALTOS'}, ${show.fall ? 'desce devagar' : 'DESCE AOS SALTOS'} (o bairro guardou os chãos em ${show.kept} de 9 dias da subida e ${show.keptD} de 12 da descida${show.judged ? '' : '; redesenhado no primeiro dia de um dos lados ou na maioria deles: nada a julgar nesta história'})` };
     };
     const before = []; let r = null;
     for (let t = 0; t < 3; t++) {
       if (t) open(7 * t);
       r = caseA(); if (r.judged) break;
-      before.push(`história ${t + 1}: ${set.name} com o bairro redesenhado (guardou os chãos em ${r.kept} de 9 dias e ${r.keptD} de 12)`);
+      before.push(`história ${t + 1}: ${set.name} com os bairros redesenhados (o que mais guardou os chãos: ${r.kept} de 9 dias e ${r.keptD} de 12)`);
     }
     ok('s7a o-habito-segue-a-vida', r.pass, `${before.length ? `(${before.join(' · ')}) ` : ''}${r.info}`);
   }
