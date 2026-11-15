@@ -50,17 +50,19 @@
 
   // ------------------------------ who is who ------------------------------
   // how fast each kind grows thirsty in a day (0: it drinks where it lives, or lives on the water of its food)
+  // (about one drink a day for the grazers of the open land: the walk to the water is time not grazing — a quarter of the day of
+  // a zebra went to it, and the herds starved: L-1018)
   const THIRST = {
-    elephant: 1.6, hippo: 1.2, buffalo: 1.6, gnu: 1.5, zebra: 1.5, rhino: 1.3, giraffe: 0.8, bison: 1.3, deer: 1.1, moose: 1.2, reindeer: 0.7, muskox: 0.5, tapir: 1.3,
-    capybara: 1.4, boar: 1.3, monkey: 0.5, camel: 0.25, gazelle: 0.5, ostrich: 0.45, ibex: 0.7, lion: 1.0, leopard: 0.7, tiger: 1.1, jaguar: 1.1, snowleopard: 0.5,
-    wolf: 0.95, hyena: 0.95, fox: 0.55, arcticfox: 0.4, fennec: 0.12, bear: 0.9, polarbear: 0, rabbit: 0.25, hare: 0.25, otter: 1, beaver: 1, croc: 0.6,
-    anaconda: 0.4, python: 0.3, viper: 0.15, lizard: 0.1, sloth: 0.1,
+    elephant: 0.55, hippo: 0.4, buffalo: 0.55, gnu: 0.5, zebra: 0.5, rhino: 0.45, giraffe: 0.25, bison: 0.45, deer: 0.4, moose: 0.4, reindeer: 0.2, muskox: 0.15, tapir: 0.45,
+    capybara: 0.45, boar: 0.45, monkey: 0.1, camel: 0.1, gazelle: 0.2, ostrich: 0.15, ibex: 0.2, lion: 0.35, leopard: 0.25, tiger: 0.4, jaguar: 0.4, snowleopard: 0.15,
+    wolf: 0.3, hyena: 0.3, fox: 0.2, arcticfox: 0.12, fennec: 0.05, bear: 0.3, polarbear: 0, rabbit: 0.08, hare: 0.08, otter: 0.4, beaver: 0.4, croc: 0.2,
+    anaconda: 0.15, python: 0.1, viper: 0.05, lizard: 0.03, sloth: 0.03,
   };
   // seconds to drink from thirsty to full
   const SIP = { elephant: 11, hippo: 8, buffalo: 9, rhino: 9, giraffe: 7, camel: 10, bison: 8, moose: 8 };
   // how much of the heat and of the cold a kind feels (its coat, its size, its land)
   const HEAT = { camel: 0.3, fennec: 0.4, gazelle: 0.6, ostrich: 0.6, lizard: 0.3, viper: 0.3, muskox: 1.8, polarbear: 1.8, reindeer: 1.5, arcticfox: 1.5, hare: 1.4, snowleopard: 1.5, bison: 1.3, wolf: 1.2, bear: 1.3, moose: 1.4, elephant: 1.2, rhino: 1.2, hippo: 1.6, buffalo: 1.2 };
-  const COLD = { muskox: 0.25, polarbear: 0.2, reindeer: 0.3, arcticfox: 0.3, hare: 0.35, snowleopard: 0.3, wolf: 0.45, bison: 0.45, ibex: 0.45, moose: 0.5, bear: 0.55, penguin: 0.2, seal: 0.2, walrus: 0.2,
+  const COLD = { otter: 0.4, beaver: 0.45, rabbit: 0.7, fox: 0.7, muskox: 0.25, polarbear: 0.2, reindeer: 0.3, arcticfox: 0.3, hare: 0.35, snowleopard: 0.3, wolf: 0.45, bison: 0.45, ibex: 0.45, moose: 0.5, bear: 0.55, penguin: 0.2, seal: 0.2, walrus: 0.2,
     hippo: 1.4, elephant: 1.2, giraffe: 1.2, monkey: 1.3, capybara: 1.3, tapir: 1.3, jaguar: 1.2, croc: 1.6, python: 1.5, anaconda: 1.5, frog: 1.3, lizard: 1.6, viper: 1.5, sloth: 1.4, gazelle: 1.2, zebra: 1.1, gnu: 1.1, lion: 1.1, camel: 0.8 };
   const REPTILE = set(['croc', 'lizard', 'python', 'viper', 'anaconda']);
   // who sees in the dark (the night costs them nothing)
@@ -82,7 +84,7 @@
     sentinel: set(['zebra', 'gnu', 'gazelle', 'ibex', 'deer', 'reindeer', 'elephant', 'monkey', 'ostrich', 'buffalo', 'giraffe']),
     browse: set(['giraffe', 'elephant', 'moose', 'camel', 'ibex', 'tapir', 'deer', 'rhino']),
     fruit: set(['=bear', 'boar', 'elephant', 'monkey']),
-    raid: set(['elephant', 'boar', 'deer', 'monkey', 'buffalo', 'bison', 'moose', 'reindeer', 'rabbit', 'hare', 'capybara', 'tapir', '=bear', 'zebra', 'gnu']),
+    raid: set(['elephant', 'boar', 'deer', 'monkey', 'buffalo', 'bison', 'moose', 'tapir', '=bear']),
     scav: set(['fox', 'arcticfox', 'hyena', 'wolf', 'bear']),
     curious: set(['deer', 'gazelle', 'zebra', 'giraffe', 'elephant', 'camel', 'monkey', 'ibex', 'capybara', 'tapir', 'reindeer', 'muskox', 'ostrich', 'fox', 'bear', 'moose', 'bison', 'gnu']),
     vult: set(['hyena', 'lion', 'leopard', 'tiger', 'jaguar', 'wolf', 'bear']),
@@ -159,7 +161,7 @@
   // changes (S.typeVer): the god who dries a river or raises a mountain changes them; the ice of a sudden winter is read where
   // the beast drinks.
   let dF = null, dL = null, fS = null, fV = -1, fN = 0, Q = null;
-  const FMAX = 60;
+  const FMAX = 60, REACH = 20; // (the field reaches sixty steps; water more than twenty away is not in a beast's reach)
   function fields() {
     const S = G.S; const v = S.typeVer || 0;
     if (dF && fS === S && fV === v && fN === N) return;
@@ -201,7 +203,7 @@
   function drinkSpot(a) {
     fields(); const S = G.S; const m = meioOf(a); const D = field(); let b = -1;
     if (m.wx >= 0) { const wi = m.wy * N + m.wx; if (freshAt(wi) && G.dist(a.x, a.y, m.wx + 0.5, m.wy + 0.5) < 30) { for (const [dx, dy] of D8) { const x = m.wx + dx, y = m.wy + dy; if (x < 0 || y < 0 || x >= N || y >= N) continue; const j = y * N + x; if (D[j] === 1 && A.walkOK(a, x + 0.5, y + 0.5)) { b = j; break; } } } else { m.wx = -1; m.wy = -1; } }
-    if (b < 0) b = bankFrom(W.idx(a.x, a.y), D);
+    if (b < 0) { const i0 = W.idx(a.x, a.y); if (D[i0] > REACH) return null; b = bankFrom(i0, D); }
     if (b < 0) return null;
     if (D[b] === 1) { const alt = []; const x = b % N, y = (b / N) | 0; for (const [dx, dy] of D8) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (D[j] === 1 && !S.occ[j] && A.walkOK(a, nx + 0.5, ny + 0.5)) alt.push(j); } if (alt.length && G.hash(a.id) < 0.6) b = alt[a.id % alt.length]; }
     const w = waterBy(b); if (w < 0) return null;
@@ -219,7 +221,7 @@
     let c = 0; const tr = S.treeAt[i];
     if (tr) { const q = S.trees.get(tr); if (q && q.stage === 'grow') c = q.size >= 0.6 ? 0.8 : 0.45; }
     const o = S.objAt[i]; if (o && c < 0.5 && S.bushes.has(o)) c = 0.55;
-    if (c < 0.5 && (t === T.GRASS || t === T.MEADOW) && S.veg && !S.occ[i]) { const cap = A.vegCap(i); if (cap > 0.45 && S.veg[i] > cap * 0.92) c = Math.max(c, COVERB[S.biome ? S.biome[i] : 0]); }
+    if (c < 0.5 && (t === T.GRASS || t === T.MEADOW) && S.veg && S.veg[i] > 0.95 && !S.occ[i]) c = Math.max(c, COVERB[S.biome ? S.biome[i] : 0]); // (only a rich land's grass grows so high)
     if (c < 0.6 && S.biome && S.biome[i] === 3 && dF && dF[i] <= 1) c = 0.65; // (the reeds)
     return c;
   }
@@ -240,11 +242,12 @@
     ENV.rain = w.rain || 0; ENV.storm = (w.storm || 0) > 0 && ENV.rain > 0.3; ENV.dry = (w.drought || 0) > 0;
     const wa = w.windA || 0; ENV.wx = Math.cos(wa); ENV.wy = Math.sin(wa); ENV.ws = Math.max(0.35, Math.min(1.4, (w.windS || 0.3) * 2));
   }
-  // the scent carried by the wind from o to a — a (downwind of o) smells it from much farther; upwind it does not reach. Rain
-  // washes the air; a storm's wind carries it far, and its rain takes it again
+  // the scent carried by the wind from o to a — a (downwind of o) smells it from farther; upwind it does not reach. Even round
+  // the compass (a hunter coming from anywhere is smelt on the whole as before): the hunter that comes from downwind gains
+  // what the one from upwind loses. Rain washes the air; a storm's wind carries it far, and its rain takes it again
   function scent(a, o) {
     const dx = a.x - o.x, dy = a.y - o.y; const d = Math.hypot(dx, dy); if (d < 0.05) return 1;
-    const al = (dx * ENV.wx + dy * ENV.wy) / d; let k = al > 0 ? 1 + 1.0 * al * ENV.ws : 1 + 0.45 * al * ENV.ws;
+    const al = (dx * ENV.wx + dy * ENV.wy) / d; let k = 1 + 0.6 * al * ENV.ws;
     if (o.kind === undefined) k = 1 + (k - 1) * 1.15; // (people smell strong)
     return 1 + (k - 1) * (1 - 0.6 * ENV.rain);
   }
@@ -289,7 +292,7 @@
     if (NOSE.has(a.kind)) k *= scent(a, o);
     // the cover the other keeps still in (a stalker in the tall grass, a fawn lying hidden); running, it is seen
     const io = W.idx(o.x, o.y), ia = W.idx(a.x, a.y);
-    if (o.state !== 'chase' && o.state !== 'flee' && o.state !== 'strike' && !(o.moving && o.state === 'wander')) {
+    if ((o.crouch || !o.moving) && o.state !== 'chase' && o.state !== 'flee' && o.state !== 'strike') {
       const c = coverAt(io); if (c > 0) k *= 1 - 0.5 * c;
       if (o.crouch || o.gest === 'hide') k *= 0.8;
     }
@@ -299,13 +302,13 @@
     // the head down at the water (the giraffe splayed, worst of all); a look from a hill; an alarm heard; many eyes about
     if (a.gest === 'drink') k *= a.kind === 'giraffe' ? 0.45 : 0.6;
     else if (a.state === 'graze') k *= 0.88;
-    const dh = S.th[ia] - S.th[io]; if (dh > 1) k *= dh > 2.5 ? 1.35 : 1.2;
-    if (a.state === 'vigia') k *= 1.35;
-    const m = a.meio; if (m && m.al > 0) k *= 1.4;
-    const ey = EYES.get(a.id); if (ey) k *= 1 + 0.05 * ey;
+    const dh = S.th[ia] - S.th[io]; if (dh > 1) k *= dh > 2.5 ? 1.2 : 1.1;
+    if (a.state === 'vigia') k *= 1.25;
+    const m = a.meio; if (m && m.al > 0) k *= 1.25;
+    const ey = EYES.get(a.id); if (ey) k *= 1 + 0.03 * ey;
     // people: where they hunted, sooner; where they never did, later; a torch at night, from far
-    if (person(o)) { cells(); const j = cellOf(a.x, a.y); const f = Math.min(1, PF[j] + TF[j] / 255); k *= f < 0.04 ? 0.8 : 1 + 0.9 * f; if (fireGuard(o)) k *= 1.5; if (m && m.th > 0.8) k *= 1 - (m.th - 0.8) * 1.5; } // (the thirsty dare more)
-    return k < 0.1 ? 0.1 : k > 2 ? 2 : k; // (the wind, the hill and an alarm together: twice as far at the most)
+    if (person(o)) { cells(); const j = cellOf(a.x, a.y); const f = Math.min(1, PF[j] + 0.45 * TF[j] / 255); k *= f < 0.04 ? 0.8 : 1 + 0.9 * f; if (fireGuard(o)) k *= 1.5; if (m && m.th > 0.8) k *= 1 - (m.th - 0.8) * 1.5; } // (the thirsty dare more)
+    return k < 0.1 ? 0.1 : k > 1.8 ? 1.8 : k; // (the wind, the hill and an alarm together: not twice as far)
   }
   Mi.sense = sense;
 
@@ -315,8 +318,8 @@
   function speed(a) {
     const sp = SP[a.kind]; if (!sp || !land(sp)) return 1;
     const S = G.S; let k = 1;
-    const dx = a.tx - a.x, dy = a.ty - a.y; const l = Math.abs(dx) + Math.abs(dy);
-    if (l > 0.05) { const h = Math.hypot(dx, dy); const x1 = a.x + dx / h * 0.8, y1 = a.y + dy / h * 0.8; if (x1 >= 0 && y1 >= 0 && x1 < N && y1 < N) { const d = S.th[W.idx(x1, y1)] - S.th[W.idx(a.x, a.y)]; if (d > 0.05) k /= 1 + d * (CLIMBER.has(a.kind) ? 0.06 : 0.4); else if (d < -0.05) k *= 1 + Math.min(0.12, -d * 0.05); } }
+    const dx = a.tx - a.x, dy = a.ty - a.y; const l = Math.abs(dx) + Math.abs(dy); const i0 = W.idx(a.x, a.y);
+    if (l > 0.05 && S.slope[i0] > 0.25) { /* (flat ground: no hill to climb) */ const h = Math.hypot(dx, dy); const x1 = a.x + dx / h * 0.8, y1 = a.y + dy / h * 0.8; if (x1 >= 0 && y1 >= 0 && x1 < N && y1 < N) { const d = S.th[W.idx(x1, y1)] - S.th[i0]; if (d > 0.05) k /= 1 + d * (CLIMBER.has(a.kind) ? 0.06 : 0.4); else if (d < -0.05) k *= 1 + Math.min(0.12, -d * 0.05); } }
     const m = a.meio; if (!m) return k;
     if (m.cold > 0.6 && !SNOWOK.has(a.kind) && snowAt(a.x, a.y)) k *= 0.75;
     if (m.hot > 0.85) k *= 0.88; if (m.th >= 0.95) k *= 0.85;
@@ -345,9 +348,9 @@
     if (rate) {
       if (water && (sp.cls === 'amph' || a.swim || a.state === 'banho' || a.state === 'rio')) m.th = 0; // (it lives in it, or stands in it)
       else {
-        fields(); const D = field(); const far = D[i] === 255;
+        fields(); const D = field(); const far = D[i] > REACH;
         const cap = far ? (ENV.dry ? 0.9 : 0.6) : 1; // (no water in reach: it lives on the wet of its food — the drought makes it suffer)
-        if (m.th < cap) m.th = r3(Math.min(cap, m.th + dayF * rate * (1 + 0.8 * m.hot) * (ENV.dry ? 1.6 : 1)));
+        if (m.th < cap) m.th = r3(Math.min(cap, m.th + dayF * rate * (1 + 0.4 * m.hot) * (ENV.dry ? 1.6 : 1)));
         if (m.th >= 1) { a.hp -= dt * sp.hp / (DAY() * 2.2); if (a.hp <= 0) { thirstDeath(a); return false; } }
         // (the drought takes the weak first: the young and the old)
         else if (ENV.dry && m.th > 0.8 && (a.grown < 0.5 || a.age > sp.life * a.lifeMul * 0.9)) { a.hp -= dt * sp.hp / (DAY() * 3); if (a.hp <= 0) { thirstDeath(a); return false; } }
@@ -356,23 +359,23 @@
     // ---- the heat (the sun on the tile, the land's warmth; the shade, the water and the mud cool) and the cold
     const tp = S.temp ? S.temp[i] / 255 : 0.5; const hk = HEAT[a.kind] || 1, ck = COLD[a.kind] || 1;
     let he = c01((tp - 0.45) * 2.2) * ENV.sun * (ENV.rain > 0.3 ? 0.35 : 1) * (ENV.dry ? 1.25 : 1);
-    if (water || a.swim) he = 0; else { if (shadeAt(i)) he *= 0.35; he *= 1 - 0.5 * m.mud; if (a.state === 'chase' || a.state === 'flee') he += 0.25 * ENV.sun; }
+    if (water || a.swim) he = 0; else { if (he > 0.05 && shadeAt(i)) he *= 0.35; he *= 1 - 0.5 * m.mud; if (a.state === 'chase' || a.state === 'flee') he += 0.25 * ENV.sun; }
     m.hot = r3(c01(m.hot + (c01(he * hk) - m.hot) * Math.min(1, dt / 35)));
     let ce = c01((0.42 - tp) * 2.4) + (ENV.night ? 0.18 : 0) + ENV.rain * 0.2 + (ENV.storm ? 0.15 : 0) + ENV.ws * 0.05 + m.wet * 0.15;
     if (S.winters && S.winters.length) for (const q of S.winters) if (q.t > 2 && G.dist(a.x, a.y, q.x, q.y) <= q.r) { ce += 0.7; break; }
     if (REPTILE.has(a.kind) && ENV.sun > 0.15 && !(ENV.rain > 0.3)) ce -= 0.35 * ENV.sun * (a.state === 'sol' ? 2.2 : 1);
     ce *= ck; const st = a.state;
-    if (st === 'toca') ce *= 0.2; else if (st === 'aconchego') ce *= 0.5; else if (st === 'enrolar' || st === 'abrigo') ce *= 0.65; else if (coverAt(i) >= 0.7) ce *= 0.85;
+    if (st === 'toca') ce *= 0.2; else if (st === 'aconchego') ce *= 0.5; else if (st === 'enrolar' || st === 'abrigo') ce *= 0.65; else if (ce > 0.3 && coverAt(i) >= 0.7) ce *= 0.85;
     m.cold = r3(c01(m.cold + (c01(ce) - m.cold) * Math.min(1, dt / 40)));
-    if (m.cold > 0.45 && !REPTILE.has(a.kind)) a.hunger = Math.min(1, a.hunger + dayF * 0.25 * m.cold); // (the cold burns the body's fat)
+    if (m.cold > 0.45 && !REPTILE.has(a.kind)) a.hunger = Math.min(1, a.hunger + dayF * 0.12 * m.cold); // (the cold burns the body's fat)
     // ---- a flight just begun: to the refuge the ground gives, and the call that warns the others
     if (st === 'flee') { const f = FLED.get(a.id); if (f === undefined || S.clock - f > 3) { FLED.set(a.id, S.clock); fled(a, sp); } }
     else if (st === 'idle' && FLED.has(a.id)) { FLED.delete(a.id); const rf = REFUGE.get(a.id); if (rf) { REFUGE.delete(a.id); refugeArrived(a, sp, rf); } }
     // ---- the thirst that cannot wait: the migrant on its way (the brain is not asked while it travels), the beast the brain left
     // to the old ways — near the end of its thirst, it goes down to the water whatever it was doing at leisure
-    if (rate && m.th > 0.78 && !r && (st === 'idle' || st === 'wander' || st === 'graze') && !(URGE.get(a.id) > S.clock - 6)) { URGE.set(a.id, S.clock); if (DRINK.start(a, sp, S)) count('urge'); }
+    if (rate && m.th > 0.78 && !r && !a.shelter && (st === 'idle' || st === 'wander' || st === 'graze') && !(URGE.get(a.id) > S.clock - 6)) { URGE.set(a.id, S.clock); if (DRINK.start(a, sp, S)) count('urge'); }
     // ---- the storm stops a herd on its way: backs to the wind, heads down, together
-    else if (ENV.storm && a.mig && st === 'wander' && (MIGR(a.kind) || K.huddle.has(a.kind)) && !(URGE.get(a.id) > S.clock - 6)) { URGE.set(a.id, S.clock); HUDDLE.start(a, sp, S); }
+    else if (ENV.storm && a.mig && !a.shelter && st === 'wander' && (MIGR(a.kind) || K.huddle.has(a.kind)) && !(URGE.get(a.id) > S.clock - 6)) { URGE.set(a.id, S.clock); HUDDLE.start(a, sp, S); }
     // ---- the migrating herd at a river (D-302)
     else if (a.mig && st === 'wander' && MIGR(a.kind)) toRiver(a, sp);
     // ---- the slow part: the wet, the mud and the dust on the coat, the shake, the shiver and the pant, the eyes about
@@ -441,7 +444,7 @@
   }
   function refugeArrived(a, sp, rf) {
     if (G.dist(a.x, a.y, rf[0], rf[1]) > 1.2) return;
-    if (rf[2] === 'toca' && MINE.toca) startToca(a, sp, 25);
+    if (rf[2] === 'toca' && MINE.toca) startToca(a, sp, 8 + G.hash(a.id + (G.S.clock | 0)) * 6);
     else if (rf[2] === 'agua') { gest(a, 'dive'); if (a.kind === 'hippo') { const r = runStart(a, 'rio'); r.p = 1; r.k = 1; } else if (K.soak.has(a.kind) || a.kind === 'capybara') { const r = runStart(a, 'banho'); r.p = 1; r.gx = a.x; r.gy = a.y; r.b = 12; } }
     else if (rf[2] === 'alto') gest(a, 'stare', 3);
   }
@@ -543,8 +546,14 @@
   const FAIL = new Map(); G.worldHooks.push(() => FAIL.clear()); let optN = 0;
   function opt(name, def, kinds) {
     MINE[name] = 1; const code = ++optN;
-    const who0 = def.who; def.who = (a, sp) => (!kinds || kinds.has(a.kind)) && wild(a, sp) && land(sp) && (!who0 || who0(a, sp)) && !(FAIL.get(a.id * 64 + code) > G.S.clock - 15);
+    const who0 = def.who; def.who = (a, sp) => (!kinds || kinds.has(a.kind)) && !a.shelter && wild(a, sp) && land(sp) && (!who0 || who0(a, sp)) && !(FAIL.get(a.id * 64 + code) > G.S.clock - 15); // (on its way to a cave's roof, it is the cave's: caves.js)
     const start0 = def.start; def.start = (a, sp, S) => { if (start0(a, sp, S) === false) { FAIL.set(a.id * 64 + code, G.S.clock); return false; } return true; };
+    // (a rest — the shade, the burrow, the huddle, the look-out — gives way to hunger: from where the old ways go to graze (0,25)
+    // it weighs less and less, and at 0,45 it is gone; one resting that grows hungry gets up at 0,5. The time to graze is the
+    // life of the herd: the births wait on a belly below 0,45 — rests that held the grazers above it emptied the land, L-1019)
+    if (def.rest) { const score0 = def.score, step0 = def.step;
+      def.score = (a, sp, S) => { const v = score0(a, sp, S); return a.hunger > 0.25 ? v * Math.max(0, 1 - (a.hunger - 0.25) * 5) : v; };
+      def.step = (a, dt, sp, S) => (a.hunger > 0.5 && !(def.storm && ENV.storm) ? quit(a) : step0(a, dt, sp, S)); }
     if (Me && Me.option) Me.option(name, def);
     else A.behave(name, def.step, def);
     return def;
@@ -554,7 +563,7 @@
   // ---- to the water, to drink (D-300)
   const DRINK = opt('beber', {
     who: a => !!THIRST[a.kind],
-    score(a) { const m = a.meio; if (!m || m.th < 0.45) return 0; return Math.min(0.97, 0.18 + (m.th - 0.45) * 1.45); },
+    score(a, sp, S) { const m = a.meio; if (!m || m.th < 0.45) return 0; const dw = dF ? field()[W.idx(a.x, a.y)] : 0; return -0.012 * (dw > REACH ? REACH : dw) + Math.min(0.97, 0.18 + (m.th - 0.45) * 1.45) - (m.th < 0.8 ? 0.5 * Math.max(0, a.hunger - 0.35) : 0); }, // (hungry, it grazes first — until the thirst is near its end)
     start(a, sp, S) {
       const b = drinkSpot(a); if (!b) return false;
       const r = runStart(a, 'beber'); r.gx = b.x; r.gy = b.y; r.wi = b.w;
@@ -642,7 +651,7 @@
     },
   }, K.ambush);
   // ---- to the shade at midday (D-301)
-  opt('sombra', {
+  opt('sombra', { rest: true,
     score(a) { const m = a.meio; if (!m || m.hot < 0.5 || !ENV.day) return 0; return Math.min(0.75, (m.hot - 0.42) * 1.5); },
     start(a, sp, S) {
       const t = A.treeNear(a.x, a.y, 9, q => q.kind !== 'cactus'); if (!t) return false;
@@ -667,7 +676,7 @@
     return null;
   }
   // ---- the mud wallow (D-301): the heat and the flies, and a coat of mud against both
-  opt('lama', {
+  opt('lama', { rest: true,
     score(a, sp, S) { const m = a.meio; if (!m || m.mud > 0.5 || !ENV.day) return 0; const i = W.idx(a.x, a.y); if (!(dF && dF[i] <= 10) && !(S.wet[i] > 0.3)) return 0; const base = a.kind === 'rhino' || a.kind === 'buffalo' || a.kind === 'boar' ? 0.3 : 0.38; if (m.hot < base) return 0; return Math.min(0.72, (m.hot - base) * 1.25 + 0.27); },
     start(a) { const p = mudSpot(a); if (!p) return false; const r = runStart(a, 'lama'); r.gx = p[0]; r.gy = p[1]; return true; },
     step(a, dt, sp, S) {
@@ -681,7 +690,7 @@
     },
   }, K.wallow);
   // ---- the dust bath on dry ground (D-301)
-  opt('poeira', {
+  opt('poeira', { rest: true,
     score(a, sp, S) { const m = a.meio; if (!m || m.dust > 0.4 || !ENV.day || m.hot < 0.35) return 0; const i = W.idx(a.x, a.y); if (S.wet[i] > 0.15 || S.type[i] < T.SAND || (dF && dF[i] <= 3)) return 0; return 0.27 + 0.15 * m.hot; },
     start(a) { const r = runStart(a, 'poeira'); r.gx = a.x; r.gy = a.y; return true; },
     step(a, dt) { const r = RUN.get(a.id); if (!r) { a.state = 'idle'; return true; } r.q += dt; a.moving = false; gest(a, 'dustbath', undefined, 0, 0, true); if (r.q > 5) { const m = meioOf(a); m.dust = 1; m.hot = r3(m.hot * 0.8); count('dust'); return quit(a, Ge.can(a.kind, 'shake') ? 'shake' : null); } return false; },
@@ -689,7 +698,7 @@
   // the shallow water near (a tile one stands in): down the field to the bank, and the water beside it
   function shallow(a) { const S = G.S; fields(); const i = W.idx(a.x, a.y); if (dF[i] > 12) return null; const b = bankFrom(i, dF); const w = b >= 0 ? waterBy(b) : -1; if (w < 0) return null; const x = (w % N) + 0.5, y = ((w / N) | 0) + 0.5; if ((S.deep[w] && !SP[a.kind].swims && SP[a.kind].cls !== 'amph') || !A.walkOK(a, x, y)) return null; return [x, y]; }
   // ---- into the water to cool off (D-301): the tiger, the buffalo, the moose and the elephants soak
-  opt('banho', {
+  opt('banho', { rest: true,
     score(a) { const m = a.meio; if (!m || m.hot < 0.5 || !ENV.day) return 0; return Math.min(0.74, (m.hot - 0.4) * 1.3); },
     start(a) { const p = shallow(a); if (!p) return false; const r = runStart(a, 'banho'); r.gx = p[0]; r.gy = p[1]; return true; },
     step(a, dt, sp, S) {
@@ -702,7 +711,7 @@
     },
   }, K.soak);
   // ---- the hippos: in the water by day, out to graze at night (D-301)
-  opt('rio', {
+  opt('rio', { rest: true,
     score(a, sp, S) { if (!ENV.day || ENV.t > 0.68) return 0; return a.hunger > 0.75 ? 0.2 : 0.72; }, // (a starving hippo grazes by day too)
     start(a, sp, S) {
       fields(); const i = W.idx(a.x, a.y); let g = null;
@@ -721,7 +730,7 @@
     },
   }, set(['hippo']));
   // ---- the reptiles warm up in the morning sun on the bank (D-301): the crocodile's gape at midday
-  opt('sol', {
+  opt('sol', { rest: true,
     score(a) { const m = a.meio; if (!m || !ENV.day || ENV.sun < 0.2 || ENV.rain > 0.3 || m.cold < 0.22 || m.hot > 0.55) return 0; return Math.min(0.7, 0.3 + m.cold * 0.5); },
     start(a, sp, S) {
       let g = [a.x, a.y]; fields();
@@ -740,8 +749,8 @@
   function coverSpot(a, R) { const S = G.S; let best = null, bc = 0.45; for (let k = 0; k < 16; k++) { const ang = k / 16 * 6.283 + G.hash(a.id), d = 1 + (k % 4) * (R / 4); const x = a.x + Math.cos(ang) * d, y = a.y + Math.sin(ang) * d; if (!W.inb(x, y) || !A.walkOK(a, x, y)) continue; const c = coverAt(W.idx(x, y)); if (c > bc) { bc = c; best = [x, y]; } } void S; return best; }
   const stormy = () => ENV.storm;
   // ---- shelter from the storm and the bitter cold (D-301): the wood, where the caves did not take it (caves.js)
-  opt('abrigo', {
-    who: a => !K.burrow.has(a.kind),
+  opt('abrigo', { rest: true, storm: true,
+    who: (a, sp) => !K.burrow.has(a.kind) && !sp.sea, // (the seal, the walrus, the penguin stay by their sea)
     score(a) { if (a.shelter) return 0; const m = a.meio; if (stormy()) return 0.62; if (m && m.cold > 0.72) return Math.min(0.7, (m.cold - 0.6) * 1.5 + 0.3); return 0; },
     start(a) { const p = coverSpot(a, 8) || [a.x, a.y]; const r = runStart(a, 'abrigo'); r.gx = p[0]; r.gy = p[1]; return true; },
     step(a, dt, sp, S) {
@@ -753,7 +762,7 @@
     },
   });
   // ---- together against the cold and the storm (D-301): the musk oxen in a ring, the wolves in a heap, the herd bunched
-  const HUDDLE = opt('aconchego', {
+  const HUDDLE = opt('aconchego', { rest: true, storm: true,
     score(a) { const m = a.meio; if (stormy()) return 0.66; if (!m || m.cold < 0.55) return 0; return Math.min(0.72, (m.cold - 0.45) * 1.4); }, // (in the storm the herd bunches, heads down)
     start(a, sp, S) {
       const L = a.leader && S.animals.get(a.leader); const cx = L && !L.dead && L !== a ? L.x : a.x, cy = L && !L.dead && L !== a ? L.y : a.y;
@@ -769,7 +778,7 @@
     },
   }, K.huddle);
   // ---- curled up against the cold, the tail over the nose (D-301)
-  opt('enrolar', {
+  opt('enrolar', { rest: true,
     score(a) { const m = a.meio; if (!m || m.cold < 0.5 || a.hunger > 0.6) return 0; return Math.min(0.66, (m.cold - 0.35) * 1.4); },
     start(a) { const p = coverSpot(a, 3) || [a.x, a.y]; const r = runStart(a, 'enrolar'); r.gx = p[0]; r.gy = p[1]; return true; },
     step(a, dt, sp, S) {
@@ -792,15 +801,15 @@
   function startToca(a, sp, dur) { const p = burrowOf(a); if (!p) return false; const r = runStart(a, 'toca'); r.gx = p[0]; r.gy = p[1]; r.b = dur; if (G.dist(a.x, a.y, p[0], p[1]) < 1.2) { r.p = 1; r.q = 0; gest(a, 'burrow', undefined, 0, 0, true); } return true; }
   // the young of a mother in a den: with her (the wolves and foxes with cubs)
   const withYoung = a => { let y = false; A.near(a.x, a.y, 5, o => { if (!o.dead && o.kind === a.kind && o.grown < 0.6 && o.leader === a.id) y = true; }); return y; };
-  opt('toca', {
+  opt('toca', { rest: true,
     score(a, sp) {
-      const m = a.meio; if (stormy() || (m && m.cold > 0.62)) return 0.6;
+      const m = a.meio; if (stormy() || (m && m.cold > 0.75)) return 0.6;
       const nightly = NIGHT.has(a.kind); const rest = nightly ? ENV.day && ENV.t > 0.12 && ENV.t < 0.6 : ENV.night;
       if (rest && !hungry(a, 0.5)) return 0.34;
       if ((a.kind === 'fox' || a.kind === 'arcticfox' || a.kind === 'wolf') && a.grown >= 1 && withYoung(a)) return 0.4;
       return 0;
     },
-    start(a, sp) { return startToca(a, sp, 60 + G.hash(a.id + G.S.day) * 90); },
+    start(a, sp) { return startToca(a, sp, 20 + G.hash(a.id + G.S.day) * 25); },
     step(a, dt, sp, S) {
       const r = RUN.get(a.id); if (!r) { a.state = 'idle'; return true; } r.q += dt; const m = meioOf(a);
       if (r.p === 0) { if (r.q > 30) return quit(a); if (watch(a, r, dt)) return false; const w = walk(a, r, dt, sp.sp * 1.1, 1.2); if (w === null) return true; if (w) { r.p = 1; r.q = 0; gest(a, 'burrow', undefined, 0, 0, true); count('burrow'); } return true; }
@@ -808,14 +817,14 @@
       if (r.p === 1) { if (r.q > 1.2) { r.p = 2; r.q = 0; } return true; }
       gest(a, Ge.can(a.kind, 'toca') ? 'toca' : 'lie', 0, 0, 0, true);
       // out when the time is up and nothing waits outside (an ear to the ground every few seconds)
-      const nightly = NIGHT.has(a.kind); const rest = stormy() || m.cold > 0.55 || (nightly ? ENV.day && ENV.t > 0.12 && ENV.t < 0.6 : ENV.night);
+      const nightly = NIGHT.has(a.kind); const rest = stormy() || m.cold > 0.7 || (nightly ? ENV.day && ENV.t > 0.12 && ENV.t < 0.6 : ENV.night);
       // (a hunter waiting outside keeps it in a while more — never past the hunger, nor a minute over its time)
-      if (r.q > r.b && (!rest || a.hunger > 0.75 || r.q > r.b + 90)) { let near = false; if (a.hunger < 0.85 && r.q < r.b + 60) A.near(a.x, a.y, 7, o => { if (!o.dead && A.eatenBy[a.kind] && A.eatenBy[a.kind].includes(o.kind)) near = true; }); if (!near) return quit(a, Ge.can(a.kind, 'listen') ? 'listen' : 'alert'); }
+      if (r.q > r.b && (!rest || a.hunger > 0.6 || r.q > r.b + 40)) { let near = false; if (a.hunger < 0.7 && r.q < r.b + 15) A.near(a.x, a.y, 7, o => { if (!o.dead && A.eatenBy[a.kind] && A.eatenBy[a.kind].includes(o.kind)) near = true; }); if (!near) return quit(a, Ge.can(a.kind, 'listen') ? 'listen' : 'alert'); }
       return true; // (down the burrow: no scan, nothing to flee)
     },
   }, K.burrow);
   // ---- the young lie hidden in the cover while the mother grazes (D-301): the fawn in the tall grass
-  opt('esconder', {
+  opt('esconder', { rest: true,
     who: a => a.grown < 0.55,
     score(a, sp, S) { if (a.hunger > 0.5) return 0; const L = a.leader && S.animals.get(a.leader); if (!L || L.dead || L.state !== 'graze') return 0; return coverAt(W.idx(a.x, a.y)) >= 0.4 ? 0.4 : 0.3; },
     start(a) { const p = coverSpot(a, 3) || [a.x, a.y]; const r = runStart(a, 'esconder'); r.gx = p[0]; r.gy = p[1]; return true; },
@@ -829,7 +838,7 @@
     },
   }, K.hideYoung);
   // ---- a sentinel on the hill (D-303): one of the herd stands high and looks while the rest graze
-  opt('vigia', {
+  opt('vigia', { rest: true,
     who: (a, sp) => sp.herd && sp.herd[1] >= 3 && a.grown >= 1,
     score(a, sp, S) {
       if (!ENV.day || hungry(a, 0.45) || (a.meio && (a.meio.th > 0.5 || a.meio.hot > 0.55))) return 0;
@@ -968,7 +977,7 @@
   // ---- a curious look at a calm person, where people never hunted (D-305)
   let LONE = new Map(); G.worldHooks.push(() => { LONE = new Map(); });
   function lonePerson(a, R) { let best = null, bd = R * R; const cx = (a.x / 8) | 0, cy = (a.y / 8) | 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const l = LONE.get((cx + dx) + (cy + dy) * 4096); if (l) for (const v of l) { const d = G.dist2(a.x, a.y, v.x, v.y); if (d < bd) { bd = d; best = v; } } } return best; }
-  opt('curioso', {
+  opt('curioso', { rest: true,
     who: (a) => a.grown >= 0.6,
     score(a, sp, S) { if (!ENV.day || hungry(a, 0.4) || !calm(a) || (a.meio && (a.meio.th > 0.5 || a.meio.hot > 0.6))) return 0; if (fearAt(a.x, a.y) >= 0.08) return 0; if (G.hash(a.id + S.day * 3) > 0.5) return 0; const v = lonePerson(a, 12); return v ? 0.36 : 0; },
     start(a, sp, S) { const v = lonePerson(a, 12); if (!v) return false; const r = runStart(a, 'curioso'); r.id = v.id; r.b = 5 + G.hash(a.id) * 6; return true; },
@@ -1054,15 +1063,17 @@
         if (h) { const dx = a.x - h.x, dy = a.y - h.y, d = Math.hypot(dx, dy) || 1; a.state = 'fly'; a.tx = G.clamp(a.x + dx / d * 8, 1, N - 1); a.ty = G.clamp(a.y + dy / d * 8, 1, N - 1); a.t = 4; a.z = Math.max(a.z || 0, 2); count('flush'); alarmAt(a, h); continue; }
       }
       if (a.kind === 'raven' && a.state === 'fly' && a.hunger > 0.3 && WO.length) { let w = null, bd = 25 * 25; for (const o of WO) { const d = G.dist2(a.x, a.y, o.x, o.y); if (d < bd) { bd = d; w = o; } } if (w) { a.tx = G.clamp(w.x + (G.hash(a.id) - 0.5) * 3, 1, N - 1); a.ty = G.clamp(w.y + (G.hash(a.id + 1) - 0.5) * 3, 1, N - 1); a.t = Math.max(a.t, 2.5); if (!RAVEN.has(a.id)) { RAVEN.add(a.id); count('ravens'); } continue; } }
+      if (a.gest === 'brood' && a.state !== 'perch') A.gestEnd(a, 'brood');
+      if (a.nest && night && a.state === 'fly' && G.Nests && G.Nests.get) { const ne = G.Nests.get(a.nest); if (ne && (ne.st === 'eggs' || ne.st === 'chicks' || ne.st === 'build')) { const tr = ne.type === 'tree' ? S.trees.get(ne.host) : null; if (G.dist(a.x, a.y, ne.x, ne.y) < 0.8) { a.state = 'perch'; a.perchZ = tr ? 22 * tr.size : ne.type === 'roof' ? (a.z || 0) : 0; a.x = ne.x; a.y = ne.y; a.t = Math.max(4, ((ENV.t > 0.5 ? 1.02 - ENV.t : 0.02 - ENV.t) * DAY()) + 2); if (gest(a, 'brood', 0)) count('brood'); } else { a.tx = ne.x; a.ty = ne.y; a.t = Math.max(a.t, 3); } continue; } }
       const rest = a.kind === 'owl' ? ENV.day && ENV.t > 0.1 && ENV.t < 0.62 : (night || ENV.storm);
       if (rest && (K.roost.has(a.kind) || a.kind === 'owl') && a.state === 'fly' && a.hunger < 0.65) {
-        const t = A.treeNear(a.x, a.y, 10, q => q.kind !== 'cactus'); if (!t) continue;
+        let t = S.trees.get(ROOST.get(a.id)); if (!t || t.stage !== 'grow') { t = A.treeNear(a.x, a.y, 7, q => q.kind !== 'cactus'); if (!t) { ROOST.set(a.id, 0); continue; } ROOST.set(a.id, t.id); }
         if (G.dist(a.x, a.y, t.x, t.y) < 0.8) { a.state = 'perch'; a.perchZ = 22 * t.size; a.x = t.x; a.y = t.y; a.t = ENV.storm ? Math.max(20, (S.weather.storm || 0) + 2) : a.kind === 'owl' ? (0.62 - ENV.t) * DAY() + 2 : ((ENV.t > 0.5 ? 1.02 - ENV.t : 0.02 - ENV.t) * DAY()) + 2; a.t = Math.max(4, a.t); count('roost'); }
         else { a.tx = t.x; a.ty = t.y; a.t = Math.max(a.t, 3); }
       }
     }
   }
-  const RAVEN = new Set(); G.worldHooks.push(() => RAVEN.clear());
+  const RAVEN = new Set(), ROOST = new Map(); G.worldHooks.push(() => { RAVEN.clear(); ROOST.clear(); });
   // a bird's alarm: the grazers around lift their heads (the bird is not on the ground: the alarm is heard from its place)
   function alarmAt(b, h) {
     const kinds = {}; let n = 0;

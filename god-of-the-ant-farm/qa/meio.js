@@ -122,14 +122,14 @@ if (on('m4')) { world(); calmSky(); day();
   const p = spot((x, y, i) => land(x, y) && S().biome[i] === 5 && Mi.cover(x, y) === 0 && Mi.cover(x + 3, y) === 0 && Mi.cover(x + 6, y) === 0 && A.walkOK({ kind: 'lion' }, x + 3, y) && A.walkOK({ kind: 'lion' }, x + 9, y) && Mi.waterDist(x, y) > 4);
   if (!p) ok('m4 o vento', false, 'nenhum chão aberto de savana');
   else {
-    const [x, y] = p; clearAround(x, y, 24); const z = spawn('zebra', x, y, { hunger: 0 }); const l = spawn('lion', x + 3, y, { hunger: 0.2 }); l.state = 'stalk'; l.crouch = 1; l.target = z.id;
-    const W0 = S().weather; const at = a => { W0.windA = a; M.viver(0.3); l.x = x + 3; l.y = y; l.state = 'stalk'; l.crouch = 1; z.x = x; z.y = y; return { k: A.senseMul(z, l), seen: A.fearOf(z) === l }; };
+    const [x, y] = p; clearAround(x, y, 24); const z = spawn('zebra', x, y, { hunger: 0 }); const l = spawn('lion', x + 2.5, y, { hunger: 0.2 }); l.state = 'stalk'; l.crouch = 1; l.target = z.id;
+    const W0 = S().weather; const at = a => { W0.windA = a; M.viver(0.3); l.x = x + 2.5; l.y = y; l.state = 'stalk'; l.crouch = 1; z.x = x; z.y = y; return { k: A.senseMul(z, l), seen: A.fearOf(z) === l }; };
     const up = at(Math.PI), down = at(0); // (the wind from the lion to the zebra — the lion upwind; and from the zebra to the lion)
     // the whole hunt, twice: the lion creeping in from nine tiles, the wind from it and to it — where the zebra breaks
     const hunt = (wa) => { clearAround(x, y, 24); const z2 = spawn('zebra', x, y, { hunger: 0 }); const l2 = spawn('lion', x + 12, y, { hunger: 0 }); W0.windA = wa; W0.windS = 0.3; let dd = -1;
       until(30, () => { W0.windA = wa; if (l2.state !== 'wander' && dd < 0) { l2.state = 'wander'; l2.tx = z2.x; l2.ty = z2.y; l2.t = 9; } if (dd < 0 && A.fearOf(z2) === l2) dd = G.dist(z2.x, z2.y, l2.x, l2.y); return dd >= 0 || z2.dead || G.dist(z2.x, z2.y, l2.x, l2.y) < 1; }, 0.1); return dd; };
     const hu = hunt(Math.PI), hd = hunt(0); const c = clean();
-    ok('m4 o vento muda a caçada', up.k > down.k * 1.8 && up.seen && !down.seen && hu > 0 && (hd < 0 || hu > hd * 1.5) && !c.n, `o leão a 3 casas, espreitando: contra o vento ×${up.k.toFixed(2)} (${up.seen ? 'sentido' : 'não sentido'}), a favor ×${down.k.toFixed(2)} (${down.seen ? 'SENTIDO' : 'não sentido'}); o leão vindo a pé de 12 casas: a zebra fugiu com ele a ${hu < 0 ? 'NUNCA' : hu.toFixed(1) + ' casas'} contra o vento e a ${hd < 0 ? 'nunca (o leão chegou)' : hd.toFixed(1) + ' casas'} a favor; verificador ${c.n}`);
+    ok('m4 o vento muda a caçada', up.k > down.k * 1.8 && up.seen && !down.seen && hu > 0 && (hd < 0 || hu > hd * 1.5) && !c.n, `o leão a 2,5 casas, espreitando: contra o vento ×${up.k.toFixed(2)} (${up.seen ? 'sentido' : 'não sentido'}), a favor ×${down.k.toFixed(2)} (${down.seen ? 'SENTIDO' : 'não sentido'}); o leão vindo a pé de 12 casas: a zebra fugiu com ele a ${hu < 0 ? 'NUNCA' : hu.toFixed(1) + ' casas'} contra o vento e a ${hd < 0 ? 'nunca (o leão chegou)' : hd.toFixed(1) + ' casas'} a favor; verificador ${c.n}`);
   } }
 
 // ---------------------------------------------------------------- m5 cover and light
