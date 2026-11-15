@@ -47,7 +47,10 @@
     return R;
   }
   FA.R = () => R;
-  // gaits: the offset of each leg in the stride (left fore, right fore, left hind, right hind), how long a foot stays down,
+  // (the bone frames of a pose in the beast's own frame, the frame of the form — for the gesture's layers, js/fauna-gesto3d.js:
+  // where the mouth is now, how low the skin goes)
+  function chainI(J) { return chain(I4, J); }
+  // gaits:the offset of each leg in the stride (left fore, right fore, left hind, right hind), how long a foot stays down,
   // how far the body goes in one stride (× the leg's length), how far a leg folds as it swings, how high the foot is lifted
   const GAITS = {
     walk: { off: [0.25, 0.75, 0.0, 0.5], duty: 0.62, stride: 1.25, fold: 0.8, lift: 0.1 },
@@ -150,13 +153,22 @@
   // the pose of a beast on four legs. st: { v (m/s), ph (the stride's phase, in strides), t (the view's clock), graze (0..1),
   // look (-1..1), id, ears (0 up, 1 back), tail (0 down, 1 up), jaw (0 shut, 1 open), sit, young (0 grown .. 1 newborn), fy (the
   // ground under each foot — left fore, right fore, left hind, right hind — over the frame's plane, in the beast's measure) }
+  // (each leg's last target, as the stride or the stance set it: the gesture's layers blend from it — FaunaAnim.Gest)
+  const LT = new Float32Array(20);
+  function put(k, L, Cp, Tz, Ty, kap, ft, s, plant) {
+    const o = k * 5; LT[o] = Tz; LT[o + 1] = Ty; LT[o + 2] = kap; LT[o + 3] = ft; LT[o + 4] = plant ? 1 : 0;
+    return plant ? legToP(J0, L, Cp, Tz, Ty, ft, s) : legTo(J0, L, Cp, Tz, Ty, kap, ft, s);
+  }
+  let J0 = null; // (the joints of the form being posed, for put)
   FA.quad = function (three, m, form, sp, st) {
     if (!THREE) start(three);
-    const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
+    const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1); J0 = J;
     const legF = J[B.flL0 * 3 + 1], legH = J[B.hlL0 * 3 + 1], LL = (legF + legH) * 0.5;
     const pillar = !!form.meta.pillar, dig = !!form.meta.dig;
-    const gait = st.v < 0.04 ? null : form.meta.hop ? 'hop' : FA.gaitOf(st.v, LL, pillar); const G0 = gait ? GAITS[gait] : null;
-    const go = gait ? Math.min(1, st.v / 0.25) : 0; // (from standing into the stride: the legs begin to swing)
+    // (the gesture: its layers read now — js/fauna-gesto3d.js; a body down on the ground does not walk)
+    const GX = st.gx && FA.Gest ? FA.Gest : null; const vv = GX ? st.v * GX.begin('quad', form, sp, st, LL) : st.v;
+    const gait = vv < 0.04 ? null : form.meta.hop ? 'hop' : FA.gaitOf(vv, LL, pillar); const G0 = gait ? GAITS[gait] : null;
+    const go = gait ? Math.min(1, vv / 0.25) : 0; // (from standing into the stride: the legs begin to swing)
     const ph = st.ph, t = st.t, id = st.id || 0;
     // the young: the head bigger, the legs longer below the elbow and the stifle (the hoofed most: a foal is all legs), the body
     // raised by as much
@@ -165,7 +177,8 @@
     if (yg) { SC[B.head] = 1 + yg * (hoofed ? 0.26 : 0.34); SC[B.trunk0] = (1 - yg * 0.3) / SC[B.head]; for (const L of LEGS) SC[B[L + '1']] = sL; OFF[1] += (sL - 1) * (J[B.flL1 * 3 + 1] + J[B.hlL1 * 3 + 1]) * 0.5; } // (a calf's trunk is short)
     const lg = legsOf(form), fy = st.fy || null; // (fy: the ground under each foot, over or under the frame's plane)
     if (fy) OFF[1] += Math.min(0, fy[0], fy[1], fy[2], fy[3]) * (pillar ? 0.8 : 0.5); // (settling over a dip: the straight legs of a pillar most)
-    E[B.spine * 3] += Math.sin(t * 1.7 + id) * 0.008; E[B.chest * 3] -= Math.sin(t * 1.7 + id) * 0.006; // (the breath)
+    if (GX) GX.body(J, form, st, LL, sL, fy); // (the body as the gesture holds it: lowered, lying, reared, rolled — before the legs, which reach from it)
+    else { E[B.spine * 3] += Math.sin(t * 1.7 + id) * 0.008; E[B.chest * 3] -= Math.sin(t * 1.7 + id) * 0.006; } // (the breath)
     if (G0) {
       // (the body: a little rise and fall twice a stride in the walk and the trot, lower as the legs reach further; in the
       // gallop it rocks, nose up and down, and a cat's back bends and stretches)
@@ -183,7 +196,7 @@
       for (let k = 0; k < 4; k++) {
         const L = LEGS[k], front = k < 2, g = lg[k]; let f = ph + G0.off[k]; f -= Math.floor(f);
         const Cp = legTop(J, L), y3 = g.y3 * sL + (fy ? fy[k] : 0), rf = g.rf * sL;
-        if (f < G0.duty) { const u = f / G0.duty; const q = downAt(J, L, g.z + half * (1 - 2 * u), y3, rf, sL); if (g.plant) legToP(J, L, Cp, q[0], q[1], q[2], sL); else legTo(J, L, Cp, q[0], q[1], 0, q[2], sL); }
+        if (f < G0.duty) { const u = f / G0.duty; const q = downAt(J, L, g.z + half * (1 - 2 * u), y3, rf, sL); put(k, L, Cp, q[0], q[1], 0, q[2], sL, g.plant); }
         else {
           const u = (f - G0.duty) / (1 - G0.duty), w = sstep(u), sn = Math.sin(Math.PI * u);
           const q0 = downAt(J, L, g.z - half, y3, rf, sL); const z0 = q0[0], y0 = q0[1], t0 = q0[2];
@@ -196,12 +209,12 @@
           // (the foot as it turns keeps its toe and its heel off the ground; the knee or the hock too, folded)
           let yy = y0 + (y1 - y0) * w + sn * LL * G0.lift * go;
           yy = Math.max(yy, -Math.min(ry(rf, -y3, foot), ry(-rf, -y3, foot)) + (fy ? fy[k] : 0) + y3 * 0.04 + sn * LL * G0.lift * go * 0.6);
-          if (g.plant) { const yh = Math.max(yy, y3 + sn * LL * 0.12 * go); legToP(J, L, Cp, zz, yh, foot * 0.7, sL); } // (a plantigrade lifts its heel and swings the whole sole)
+          if (g.plant) { const yh = Math.max(yy, y3 + sn * LL * 0.12 * go); put(k, L, Cp, zz, yh, 0, foot * 0.7, sL, true); } // (a plantigrade lifts its heel and swings the whole sole)
           else {
-            legTo(J, L, Cp, zz, yy, kap, foot, sL);
+            put(k, L, Cp, zz, yy, kap, foot, sL, false);
             for (let it = 0; it < 4; it++) { // (the knee or the hock kept off the ground — the point of the hock sticks out behind and below its joint)
               const lo2 = lowJoint(J, L, Cp, sL) - (fy ? fy[k] : 0) - g.y3 * sL * (front ? 1.5 : 2.4); if (lo2 >= -1e-4) break;
-              yy -= lo2 * 1.3; legTo(J, L, Cp, zz, yy, kap, foot, sL);
+              yy -= lo2 * 1.3; put(k, L, Cp, zz, yy, kap, foot, sL, false);
             }
           }
         }
@@ -213,9 +226,11 @@
       // standing: the weight shifts now and then from foot to foot — the body sways over the feet, which stay where they are
       OFF[2] += Math.sin(t * 0.31 + id) * form.meta.L * 0.012; OFF[1] -= (0.5 + 0.5 * Math.sin(t * 0.62 + id * 2)) * LL * 0.006;
       if (form.meta.hop && st.graze > 0.001) { E[B.root * 3] += 0.2 * st.graze; OFF[1] -= LL * 0.14 * st.graze; } // (a hare grazes crouched, its front down — not bowing a neck it hardly has)
-      for (let k = 0; k < 4; k++) { const L = LEGS[k], g = lg[k]; const Cp = legTop(J, L); if (g.plant) legToP(J, L, Cp, g.z, g.y3 * sL + (fy ? fy[k] : 0), 0, sL); else legTo(J, L, Cp, g.z, g.y3 * sL + (fy ? fy[k] : 0), 0, 0, sL); }
+      for (let k = 0; k < 4; k++) { const L = LEGS[k], g = lg[k]; const Cp = legTop(J, L); put(k, L, Cp, g.z, g.y3 * sL + (fy ? fy[k] : 0), 0, 0, sL, g.plant); }
     }
-    if (st.sit) sit(form, J, st.sit, sL, fy);
+    if (GX) GX.legs(J, form, st, LL, sL, fy, lg, LT); // (the legs the gesture takes: folded under, kicking, striking, thrashing)
+    const sitK = GX ? Math.max(st.sit || 0, GX.sitK()) : st.sit;
+    if (sitK) sit(form, J, sitK, sL, fy);
     // grazing: the neck bows until the muzzle is at the grass (as far as the neck reaches); the jaw chews
     if (st.graze > 0.001 && !(st.sit > 0.5)) {
       const n0 = B.neck0 * 3, nose = form.meta.nose; const yr = nose[1] - J[n0 + 1], zr = nose[2] - J[n0 + 2];
@@ -226,25 +241,30 @@
     }
     // looking about: the neck and the head turn together
     const look = st.look || 0; E[B.neck0 * 3 + 1] += look * 0.35; E[B.neck1 * 3 + 1] += look * 0.25; E[B.head * 3 + 1] += look * 0.3;
+    if (GX) GX.head(J, form, st, LL); // (the neck, the head and the mouth of the gesture)
     // the jaw (a predator's open mouth), the ears (up and flicking, or laid back), the tail (swishing, raised in the gallop)
     if (st.jaw) E[B.jaw * 3] = Math.max(E[B.jaw * 3], st.jaw * 0.45);
     const flick = (k) => { const q = Math.sin(t * 0.9 + id * 1.7 + k * 2.1); return q > 0.93 ? (q - 0.93) * 8 : 0; };
     const back = st.ears || 0;
     E[B.earL * 3] = back * 0.9 + flick(0) * 0.25; E[B.earL * 3 + 2] = -back * 0.3 + flick(1) * 0.3;
     E[B.earR * 3] = back * 0.9 + flick(2) * 0.25; E[B.earR * 3 + 2] = back * 0.3 - flick(3) * 0.3;
+    if (GX) GX.ears(st);
     const sw = (gait ? 0.12 : 0.3) * (sp.swish === undefined ? 1 : sp.swish) * (1 - 0.7 * (st.sit || 0));
     for (let k = 0; k < 4; k++) {
       const b = B['tail' + k] * 3; E[b + 1] += Math.sin(t * 1.6 - k * 0.55 + id) * sw * (0.5 + k * 0.25);
       E[b] += -(st.tail || 0) * (k === 0 ? 0.55 : 0.2) + (gait ? Math.sin(ph * TAU * 2 - k * 0.5) * 0.06 * (1 + k * 0.3) : 0);
     }
+    if (GX) GX.tail(st);
     tailOver(J, Math.max(form.meta.H * 0.03, (form.meta.tailR || form.meta.H * 0.05) * 0.95) + (fy ? Math.max(0, (fy[2] + fy[3]) * 0.5) : 0)); // (a long tail never drags through the ground)
     if (form.meta.trunk) {
       for (let k = 0; k < 3; k++) { E[B['trunk' + k] * 3] = Math.sin(t * 0.8 + id - k * 0.6) * 0.12 + st.graze * 0.25; E[B['trunk' + k] * 3 + 1] = Math.sin(t * 0.53 + id * 2 - k * 0.5) * 0.15; }
+      if (GX) GX.trunk(st);
       // (the trunk's end kept off the ground: curled forward when the head's nod or the step would put it in)
       const nz = form.meta.nose, t2 = B.trunk2 * 3, clear = form.meta.H * 0.02 + (fy ? Math.max(fy[0], fy[1]) : 0);
       for (let it = 0; it < 3; it++) { chain(I4, J); const e = R[B.trunk2].elements; const y = e[1] * (nz[0] - J[t2]) + e[5] * (nz[1] - J[t2 + 1]) + e[9] * (nz[2] - J[t2 + 2]) + e[13];
         if (y >= clear) break; const d = Math.min(0.6, (clear - y) / Math.max(0.05, form.meta.H * 0.15)); E[t2] -= d; E[B.trunk1 * 3] -= d * 0.5; }
     }
+    if (GX) GX.end(J, form, st); // (the reach to the other — the throat, the nape, the carcass —, the body settled on the ground)
     return chain(m, J);
   };
   // sitting down (a dog, a cat, a wolf, a lion at rest), blended in by k: the rump on the ground, the back raised until the
@@ -301,6 +321,7 @@
     if (!THREE) start(three);
     const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1); if (st.young) SC[B.head] = 1 + st.young * 0.35; // (a chick: all head)
     const t = st.t, id = st.id || 0, ph = st.ph;
+    const GX = st.gx && FA.Gest ? FA.Gest : null; if (GX) GX.begin('bird', form, sp, st, J[B.hlL0 * 3 + 1]); // (the gesture's layers: js/fauna-gesto3d.js)
     if (form.meta.fly) {
       const big = form.meta.H > 0.6, f = big ? 2.2 : 4.5; const flap = st.glide ? 0 : 1;
       const w = t * f * TAU + id; const a = Math.sin(w) * 0.62 * flap + (st.glide ? 0.12 : 0.05);
@@ -310,6 +331,7 @@
         E[B['hl' + s + '0'] * 3] = 1.1; E[B['hl' + s + '1'] * 3] = 0.9; E[B['hl' + s + '2'] * 3] = -0.6; E[B['hl' + s + '3'] * 3] = 1.2; }
       OFF[1] = -Math.sin(w) * form.meta.H * 0.03 * flap; E[B.root * 3] = (st.pitch || 0) * 0.5; E[B.root * 3 + 2] = -(st.bank || 0) * 0.6;
       E[B.neck0 * 3] = -0.25; E[B.head * 3] = 0.25 + (st.pitch || 0) * -0.3; E[B.tail1 * 3 + 1] = (st.bank || 0) * 0.3;
+      if (GX) { GX.bird(J, form, st, true); GX.end(J, form, st); }
       return chain(m, J);
     }
     const walk = st.v > 0.03 ? Math.min(1, st.v / 0.15) : 0;
@@ -352,6 +374,7 @@
     const sh = Math.max(0, Math.sin(t * 0.7 + id * 1.9) - 0.96) * 12; for (const s of 'LR') E[B['fl' + s + '0'] * 3 + 2] = (s === 'L' ? 1 : -1) * sh * 0.25;
     E[B.tail1 * 3] = Math.sin(t * 1.2 + id) * 0.05 - walk * Math.sin(ph * TAU * 2) * 0.05;
     E[B.jaw * 3] = st.jaw ? 0.3 : 0;
+    if (GX) { GX.bird(J, form, st, false); GX.end(J, form, st); }
     return chain(m, J);
   };
   // (how far a bird goes in one stride: most of its leg's length, thigh, shank and foot — read once a form)
@@ -362,8 +385,9 @@
   FA.snake = function (three, m, form, sp, st) {
     if (!THREE) start(three);
     const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
+    const GX = st.gx && FA.Gest ? FA.Gest : null; const vv = GX ? st.v * GX.begin('snake', form, sp, st, form.meta.H) : st.v; // (the gesture's layers: js/fauna-gesto3d.js)
     const order = ['tail3', 'tail2', 'tail1', 'tail0', 'root', 'spine', 'chest', 'neck0', 'neck1', 'neck2', 'head'];
-    const go = Math.min(1, st.v / 0.1); const A = 0.32 * (0.35 + 0.65 * go);
+    const go = Math.min(1, vv / 0.1); const A = 0.32 * (0.35 + 0.65 * go);
     for (let k = 0; k < order.length; k++) {
       const b = B[order[k]] * 3, u = k / (order.length - 1); const w = Math.sin((st.ph - u * 1.6) * TAU) * A * (0.4 + 0.6 * Math.sin(Math.PI * Math.min(1, u * 1.1)));
       // (the chain grows both ways from the root: the head's side turns as it is, the tail's the other way)
@@ -371,6 +395,7 @@
     }
     E[B.head * 3 + 1] = -E[B.neck2 * 3 + 1] * 0.8; E[B.neck2 * 3] = -0.12 * (1 - go * 0.5); E[B.head * 3] = 0.1;
     E[B.jaw * 3] = st.jaw ? 0.5 : 0;
+    if (GX) { GX.snake(J, form, st, order); GX.end(J, form, st); }
     return chain(m, J);
   };
   // the sprawling (the crocodile, the lizard): the legs out to the side swing forward and back in diagonal pairs, lifted at
@@ -378,7 +403,8 @@
   FA.sprawl = function (three, m, form, sp, st) {
     if (!THREE) start(three);
     const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
-    const go = Math.min(1, st.v / 0.12), ph = st.ph;
+    const GX = st.gx && FA.Gest ? FA.Gest : null; const vv = GX ? st.v * GX.begin('sprawl', form, sp, st, form.meta.H * 0.6) : st.v; // (the gesture's layers: js/fauna-gesto3d.js)
+    const go = Math.min(1, vv / 0.12), ph = st.ph;
     const off = { flL: 0, hlR: 0, flR: 0.5, hlL: 0.5 };
     for (const L of ['flL', 'flR', 'hlL', 'hlR']) {
       const sd = L[2] === 'L' ? 1 : -1; let f = ph + off[L]; f -= Math.floor(f); const duty = 0.55;
@@ -388,28 +414,33 @@
     const bend = Math.sin(ph * TAU) * 0.16 * go; E[B.spine * 3 + 1] = bend; E[B.chest * 3 + 1] = -bend * 0.6; E[B.root * 3 + 1] = -bend * 0.5;
     for (let k = 0; k < 4; k++) E[B['tail' + k] * 3 + 1] = Math.sin(ph * TAU - 0.9 - k * 0.7) * 0.18 * go + Math.sin(st.t * 0.4 + st.id + k) * 0.05;
     E[B.head * 3 + 1] = (st.look || 0) * 0.3 - bend * 0.5; E[B.jaw * 3] = st.jaw ? 0.6 : Math.max(0, Math.sin(st.t * 0.13 + st.id) - 0.9) * 4 * 0.5; // (the gape in the sun)
+    if (GX) { GX.sprawl(J, form, st); GX.end(J, form, st); }
     return chain(m, J);
   };
   // the frog: sitting, its throat pulsing; going, it hops — the hind legs straighten, the body flies forward and lands
   FA.frog = function (three, m, form, sp, st) {
     if (!THREE) start(three);
     const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
-    if (st.v > 0.02) {
+    const GX = st.gx && FA.Gest ? FA.Gest : null; const vv = GX ? st.v * GX.begin('frog', form, sp, st, form.meta.H) : st.v; // (the gesture's layers: js/fauna-gesto3d.js)
+    if (vv > 0.02) {
       let f = st.ph; f -= Math.floor(f); const air = f < 0.55 ? Math.sin(Math.PI * f / 0.55) : 0, push = f < 0.25 ? Math.sin(Math.PI * f / 0.25) : 0;
       OFF[1] = air * form.meta.L * 0.5; E[B.root * 3] = -0.35 * air;
       for (const s of 'LR') { E[B['hl' + s + '0'] * 3] = -1.0 * (push + air * 0.6); E[B['hl' + s + '1'] * 3] = 1.4 * (push + air * 0.7); E[B['hl' + s + '2'] * 3] = -1.0 * (push + air * 0.5); E[B['fl' + s + '0'] * 3] = -0.6 * air; }
     }
     E[B.jaw * 3] = Math.max(0, Math.sin(st.t * 5 + st.id)) * 0.04;
+    if (GX) { GX.frog(J, form, st); GX.end(J, form, st); }
     return chain(m, J);
   };
   // the seal: on land it humps along — the body arching and stretching, the fore flippers pushing; at rest it lifts its head
   FA.seal = function (three, m, form, sp, st) {
     if (!THREE) start(three);
     const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
-    const go = Math.min(1, st.v / 0.15), w = st.ph * TAU;
+    const GX = st.gx && FA.Gest ? FA.Gest : null; const vv = GX ? st.v * GX.begin('seal', form, sp, st, form.meta.H) : st.v; // (the gesture's layers: js/fauna-gesto3d.js)
+    const go = Math.min(1, vv / 0.15), w = st.ph * TAU;
     E[B.spine * 3] = Math.sin(w) * 0.18 * go; E[B.chest * 3] = -Math.sin(w) * 0.14 * go; E[B.root * 3] = -Math.sin(w + 0.8) * 0.1 * go; OFF[1] = Math.max(0, Math.sin(w)) * form.meta.H * 0.12 * go;
     for (const s of 'LR') { const sd = s === 'L' ? 1 : -1; E[B['fl' + s + '0'] * 3] = Math.sin(w) * 0.5 * go; E[B['hl' + s + '1'] * 3] = -0.2 - Math.sin(w) * 0.15 * go; E[B['hl' + s + '1'] * 3 + 2] = sd * 0.1; }
     E[B.neck0 * 3] = -0.15 + Math.sin(w) * 0.1 * go; E[B.head * 3 + 1] = (st.look || 0) * 0.5; E[B.neck1 * 3 + 1] = (st.look || 0) * 0.3;
+    if (GX) { GX.seal(J, form, st); GX.end(J, form, st); }
     return chain(m, J);
   };
   // the swimmers of the sea (D-267): the wave runs back down the body to the tail — up and down for the dolphin, the orca and
@@ -611,6 +642,10 @@
     return out;
   };
 
+  // (the kernel the gesture's layers pose with — js/fauna-gesto3d.js: the turns, the root's shift, the sizes, the bones, the
+  // legs reached by their feet, the frames)
+  FA.K = { E, OFF, SC, B, NB, LEGS, P0w, chainI, chain, legTop, legTo, legToP, legToB, reachOf, lowJoint, legsOf, tailOver, rz, ry, clamp, sstep, R };
+  FA.ready3 = three => { if (!THREE) start(three); };
   // ------------------------------ the coat ------------------------------
   // (each kind's paint over the colours the god's view gives it — col, bel (the belly), dk (the pattern's dark, a bird's wing
   // tips), pat (0 plain · 1 the giraffe · 2 the zebra · 3 the tiger · 4 rosettes · 5 spots · 6 patches · 7 the tabby · 8 scutes ·
