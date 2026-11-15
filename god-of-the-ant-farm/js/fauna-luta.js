@@ -531,7 +531,7 @@
   const TELL = { [THROAT]: 'a sufocou pela garganta', [MUZZLE]: 'a sufocou apertando-lhe o focinho', [NAPE]: 'a matou com uma mordida na nuca', [SKULL]: 'a matou com uma única mordida no crânio', [PIN]: 'a prendeu no chão com as patas', [CROC]: 'a arrastou para o fundo e girou com ela até afogá-la', [COIL]: 'a enrolou até ela parar de respirar', [PULL]: 'a derrubou', [HARASS]: 'a cansou e a derrubou', [VENOM]: 'a picou e a seguiu até ela cair' };
   function chronicle(a, p, k, S) {
     const sz = SP[p.kind].size; const big = sz >= 1.25 || (sz >= 1 && (CAT.has(a.kind) || PACK.has(a.kind)) && G.R() < 0.25);
-    if (!big && !a.named && k !== SKULL && k !== COIL) return;
+    if (!big && !a.named && !((k === SKULL || k === COIL) && sz >= 0.9)) return;
     const n = L.nm(a), q = L.nm(p); const at = L.where(p.x, p.y);
     let tell = TELL[k] || 'a matou'; if (q.g !== 'f') tell = tell.replace(/\ba\b/g, 'o').replace(/\bela\b/g, 'ele').replace(/afogá-la/, 'afogá-lo');
     const nn = helpersAt(a, p);
@@ -614,6 +614,8 @@
     const turns = hunter ? (prey ? mine > theirs * 2 : mine >= theirs * 0.9) : (sp.defend || sp.bold > 0 || a.kind === 'boar' || DEFEND.has(a.kind)) && mine * 1.6 > theirs;
     if (turns && a.hp > a.maxHp * 0.3) { a.angry = 10; a.target = by.id; a.state = 'chase'; Me.gesto(a, 'charge', 0, by.id); return true; }
     if (hunter && prey && a.state === 'hold') return true;
+    // (the prey fought back and hurt it: the test failed — this one is let be for a while, and the hunter rests)
+    if (hunter && prey) { a.noPrey = { id: by.id, until: G.S.clock + 45 }; a.rest = Math.max(a.rest || 0, G.rr(10, 20)); L.count('desiste-ferido'); }
     if (A.flee(a, by.x, by.y, 6)) a.t = 3;
     return true;
   };
@@ -624,6 +626,7 @@
     let theirs = strength(th); A.near(th.x, th.y, 6, o => { if (o !== th && !o.dead && o.kind === th.kind && o.grown >= 1 && Me.kin(o, th)) theirs += strength(o) * 0.8; });
     return mine / Math.max(0.05, theirs);
   }
+  function youngNear(a) { let y = false; A.near(a.x, a.y, 5, o => { if (!y && o !== a && !o.dead && o.kind === a.kind && o.grown < 0.7 && Me.kin(o, a)) y = true; }); return y; }
   // the middle of its herd, for a young one of a ring (the grown ones turn out round it)
   function middle(a) { let x = 0, y = 0, n = 0; A.near(a.x, a.y, 6, o => { if (o !== a && !o.dead && o.kind === a.kind && o.grown >= 1 && Me.kin(o, a)) { x += o.x; y += o.y; n++; } }); if (n < 2) return null; x /= n; y /= n; return A.walkOK(a, x, y) ? [x, y] : null; }
   const ALARM = { gazelle: ['stot', 'snort'], ibex: ['stot', 'snort'], deer: ['stot', 'snort'], reindeer: ['stot', 'snort'], gnu: ['snort', 'stot'], zebra: ['snort', 'call'], elephant: ['trumpet'], monkey: ['call'], buffalo: ['snort', 'bellow'], hippo: ['snort'] };
@@ -634,7 +637,11 @@
     const beast = !!(th.kind && SP[th.kind]); const was = a.state;
     // (a hunter asleep, lying, eating, its belly full, is watched, not run from — the zebras by the lions that have eaten —, unless
     // it is right there)
-    if (beast && GIANT.has(a.kind) && a.grown >= 0.7 && A.predator(th.kind) && !(th.target && (G.S.animals.get(th.target) || {}).kind === a.kind)) { if (!a.gest) Me.gesto1(a, ['stare', 'threat', 'display'], undefined, th.id); return true; }
+    // (the giants grown are no prey: the hunter is watched — and, near their young, driven off: the elephants at the lions)
+    if (beast && GIANT.has(a.kind) && a.grown >= 0.7 && A.predator(th.kind) && !(th.target && (G.S.animals.get(th.target) || {}).kind === a.kind)) {
+      if (!heard && G.dist(a.x, a.y, th.x, th.y) < 4 && youngNear(a)) { L.charge(a, th); L.count('gigante-expulsa'); return true; }
+      if (!a.gest) Me.gesto1(a, ['stare', 'threat', 'display'], undefined, th.id); return true;
+    }
     if (beast && !heard && L.calm(th) && G.dist(a.x, a.y, th.x, th.y) > 2.6) { if (!a.gest) Me.gesto1(a, ['stare', 'alert'], undefined, th.id); L.count('vigia'); return true; }
     if (!heard) Me.fright(a, 0.6);
     // (the zebra and the giraffe stand only against a hunter smaller than they are: a hyena, a wolf — from a lion, they run)
@@ -645,7 +652,7 @@
     if (sp.arbor && !(a.z > 3) && !(beast && SP[th.kind].climb === 'tree')) { const up = A.treeNear(a.x, a.y, 3.5); if (up) { A.startClimb(a, up, true); return true; } }
     const small = a.kind === 'rabbit' || a.kind === 'hare' || a.kind === 'frog' || a.kind === 'lizard';
     if (!A.flee(a, th.x, th.y, small ? 4 : 6)) return false;
-    if (!heard && was !== 'flee') { Me.gesto1(a, ALARM[a.kind] || ['startle']); if (beast || (th.id && !th.kind)) Me.alarm(a.x, a.y, a.kind, 0.6, th.id ? th : null); }
+    if (!heard && was !== 'flee') { Me.gesto1(a, ALARM[a.kind] || ['startle']); if (beast || (th.id && !th.kind)) Me.alarm(a.x, a.y, a.kind, 0.5 + 0.4 * Math.max(0, 1 - G.dist(a.x, a.y, th.x, th.y) / 8), th.id ? th : null); }
     return true;
   };
   const CALM = { sleep: 1, rest: 1, eat: 1, digest: 1, groom: 1, social: 1, wait: 1, nurse: 1, heat: 1, suckle: 1, watch: 1, tree: 1, play: 1 };

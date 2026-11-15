@@ -1058,6 +1058,7 @@
           // packs share their leader's quarry (the one it chases or already holds)
           const L = a.leader && S.animals.get(a.leader);
           let p = L && !L.dead && (L.state === 'chase' || L.state === 'hold') && L.target && !L.carc ? S.animals.get(L.target) : null;
+          if (p && a.noPrey && a.noPrey.id === p.id && S.clock < a.noPrey.until) p = null; // (the one that hurt it: let be)
           // the pride closes in: while the leader creeps, the others take places on the far side of the prey
           if ((!p || p.dead) && L && !L.dead && L.state === 'stalk' && L.target && (sp.pack || sp.pride)) {
             const q = S.animals.get(L.target);
@@ -1744,7 +1745,7 @@
     }
   }
   // (half of the grown are mothers, and some heats find no male: a heat comes this much more often than a birth used to)
-  const HEAT_X = 7;
+  const HEAT_X = 10;
   // a young born at its mother's side (where she stands, or beside her; a mother off her ground — inside a building — gives no
   // birth there: a wolf's cub was born in a theatre of the metrópole, its mother inside it, L-681, L-631)
   function birth(a, sp, count) {
@@ -1768,11 +1769,15 @@
   // species that vanished from a habitat that still exists come back, slowly, from beyond the map
   function immigrate() {
     const S = G.S; const count = A.counts();
-    const ks = A.ids.filter(k => A.capacity(k) >= 2 && (count[k] || 0) < Math.max(2, A.capacity(k) * 0.3));
+    // (and a kind left with grown ones of one sex only, which the land still has room for: one of the other comes — D-293)
+    const one = G.Mente ? G.Mente.oneSex() : null;
+    const ks = A.ids.filter(k => A.capacity(k) >= 2 && ((count[k] || 0) < Math.max(2, A.capacity(k) * 0.3) || (one && one.has(k) && (count[k] || 0) < A.capacity(k))));
     if (!ks.length) return;
-    const k = G.pick(ks); const sp = SP[k];
+    // (the kinds left with one sex only come first: a few grown ones that cannot breed would wait long in the draw)
+    const lone = one ? ks.filter(k => one.has(k) && (count[k] || 0) >= 2) : [];
+    const k = G.pick(lone.length ? lone : ks); const sp = SP[k];
     const spot = A.wildSpot(12, sp); if (!spot) return;
-    const n = G.ri(sp.herd[0], sp.herd[1]);
+    const n = one && one.has(k) && (count[k] || 0) >= 2 ? 1 : G.ri(sp.herd[0], sp.herd[1]);
     const L = A.spawn(k, spot[0], spot[1], { grown: 1 }); const g = [L];
     for (let j = 1; j < n; j++) { const q = pickNear(L, 1.5, true); if (q) g.push(A.spawn(k, q[0], q[1], { leader: L.id, grown: 1 })); }
     // (a lone newcomer: a male where there are only females left, or the other way round; a herd: both sexes in it)

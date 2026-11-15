@@ -227,6 +227,7 @@
     if (l.length >= 3) { let o = 0; for (let i = 1; i < l.length; i++) if (l[i][2] < l[o][2]) o = i; l.splice(o, 1); }
     l.push([k, id, d]);
   };
+  Me.recall1 = function (a, k) { const m = a.mind; if (!m || !m.pl) return null; let b = null; for (const p of m.pl) if (p[0] === k && (!b || p[3] > b[3])) b = p; return b; };
   Me.knows = function (a, id, k) { const m = a.mind; if (!m || !m.ki) return 0; for (const p of m.ki) if (p[1] === id && (!k || p[0] === k)) return p[0]; return 0; };
   // a place it remembers as danger, near (x, y)
   Me.danger = function (a, x, y) { const m = a.mind; if (!m || !m.pl) return false; for (const p of m.pl) if (p[0] === 3 && G.dist(p[1], p[2], x, y) < 4) return true; return false; };
@@ -252,7 +253,7 @@
       // (is it its danger too? its own kind's alarm says so; for another kind, if the danger eats it too — or a person, for one
       // that fears people)
       const prey = sk ? Me.eats(sk, b.kind) : person ? sp.fear > 0 : true;
-      let l = lv * (b.kind === kind ? 1 : prey ? 0.65 : 0.25) * (1 - d / (r * 1.3)); if (l < 0.08) return;
+      let l = lv * (b.kind === kind ? 1 : prey ? 0.75 : 0.25) * (1 - d / (r * 1.6)); if (l < 0.08) return;
       Me.fright(b, l);
       if (l >= 0.3 && prey) { if (G.Luta && G.Luta.react(b, src || { x, y }, l, true)) n++; }
       else Me.gesto1(b, ['alert', 'listen', 'stare'], undefined, src && src.id ? src.id : 0);
@@ -300,7 +301,7 @@
         // (the heat over, and her male alive and within reach: they met where nobody saw — in the canopy, under the water, in the
         // night —; the young is his. A heat with no male of her kind near passes: D-293)
         const s = m.pa && S.animals.get(m.pa);
-        if (s && !s.dead && G.dist(a.x, a.y, s.x, s.y) < 30) { m.pg = Me.gest_s(a.kind); if (s.mind && s.mind.wo === a.id) s.mind.wo = 0; Me.count('acasala'); Me.count('acasala:' + a.kind); Me.count('acasala-longe'); }
+        if (s && !s.dead && s.mind && (!s.mind.wo || s.mind.wo === a.id)) { m.pg = Me.gest_s(a.kind); if (s.mind.wo === a.id) s.mind.wo = 0; Me.count('acasala'); Me.count('acasala:' + a.kind); Me.count('acasala-longe'); }
         else { m.pa = 0; Me.count('cio-perdido'); Me.count('cio-perdido:' + a.kind); }
       }
     }
@@ -316,7 +317,20 @@
     const st = a.state; let k = st === 'sleep' ? 0.45 : st === 'watch' ? 1.6 : RESTFUL[st] ? 0.85 : 1;
     const m = a.mind; if (m) { if (m.f > 0.35) k *= 1.2; k *= m.vg; }
     if (o && o.state === 'hide') k *= 0.35;
+    if (m && m.ki && o && o.id && Me.knows(a, o.id, 1)) k *= 1.4; // (the one that hurt it, or its own: it knows that one)
     return k;
+  });
+  // ---- a hunter with nothing near goes back to where it killed before (the crossing, the waterhole)
+  Me.option('range', {
+    who: (a, sp) => brain(a, sp) && A.predator(a.kind) && sp.diet !== 'scav' && a.grown >= 1 && !a.mig && !!a.mind && !!a.mind.pl,
+    score(a, sp) { if (!hungry(a, sp) || a.rest > 0) return 0; const p = Me.recall1(a, 2); if (!p) return 0; const d = G.dist(a.x, a.y, p[1], p[2]); return d > 6 && d < 30 ? 0.3 + 0.2 * a.hunger : 0; },
+    start(a) { const p = Me.recall1(a, 2); if (!p || !A.walkOK(a, p[1], p[2])) return false; a.tx = p[1]; a.ty = p[2]; a.state = 'wander'; a.seek = true; Me.gesto1(a, ['scent', 'sniff']); Me.count('volta-ao-lugar'); return true; },
+  });
+  // ---- a beast where one of its own died to a hunter not long ago moves off, uneasy
+  Me.option('shun', {
+    who: (a, sp) => brain(a, sp) && !A.predator(a.kind) && !!a.mind && !!a.mind.pl,
+    score(a) { const p = Me.recall1(a, 3); if (!p || G.dist(a.x, a.y, p[1], p[2]) > 4) return 0; return 0.28 + 0.2 * Me.trait(a, 'v'); },
+    start(a) { const p = Me.recall1(a, 3); if (!p) return false; const q = A.fleeTarget(a, p[1], p[2], 6); if (!q) return false; a.tx = q[0]; a.ty = q[1]; a.state = 'wander'; Me.gesto1(a, ['alert', 'scent', 'listen']); Me.count('evita-o-lugar'); return true; },
   });
 
   // ------------------------------ the social round ------------------------------
@@ -326,7 +340,7 @@
   function social(a, sp, S, m) {
     forget(m);
     // the mother: still in the world? (an orphan forgets her)
-    if (m.mom && !Me.mother(a) && !A.find(m.mom)) m.mom = 0;
+    if (m.mom) { const mo = A.find(m.mom); if (!mo || mo.dead) { m.mom = 0; Me.count('orfao'); } }
     if (m.wo && !S.animals.get(m.wo)) m.wo = 0;
     if (m.cw && !S.animals.get(m.cw)) m.cw = 0;
     // a male a female waits for, in the canopy, under the water, about its round: he goes to her (the idle choice would come to a
@@ -414,17 +428,21 @@
     start(a, sp, S) {
       const L = a.leader && S.animals.get(a.leader);
       if (L && !L.dead && G.dist(a.x, a.y, L.x, L.y) > 4.5 && !a.mig) return false; // (to its own first: the old ways follow the leader)
+      // (a hunter without a herd goes back to the place it slept before — its den — if it is not far)
+      if (!L && A.predator(a.kind) && !a.mig) { const den = Me.recall1(a, 1); if (den && G.dist(a.x, a.y, den[1], den[2]) > 3 && G.dist(a.x, a.y, den[1], den[2]) < 16 && A.walkOK(a, den[1], den[2])) { a.tx = den[1]; a.ty = den[2]; a.state = 'wander'; a.seek = true; return true; } }
       const c = Me.ctx(a);
-      if (c.kinS >= 2 && sp.herd[1] >= 4 && sentinel(a, S)) { a.state = 'watch'; a.t = G.rr(8, 14); Me.gesto1(a, ['alert', 'listen', 'scent']); Me.count('sentinela'); return true; }
+      if (c.kinS >= 2 && sp.herd[1] >= 4 && sentinel(a, S)) { a.state = 'watch'; a.t = G.rr(8, 14); a.bt = S.clock; Me.gesto1(a, ['alert', 'listen', 'scent']); Me.count('sentinela'); return true; }
       a.state = 'sleep'; a.t = G.rr(10, 22); Me.gesto(a, 'sleep', 0);
+      if (A.predator(a.kind) && !a.leader) Me.place(a, 1, a.x, a.y);
       return true;
     },
   });
-  // the sentinel of a herd asleep: of its kin around, the one whose turn it is (the turn goes round every 25 s, by the ids)
+  // the sentinel of a herd asleep: the one that lies down when none of its own keeps watch — not the one that just did (the
+  // watch goes round)
   function sentinel(a, S) {
-    const slot = Math.floor(S.clock / 25); const H = head(a); let best = a, bv = G.hash(a.id * 31 + slot);
-    A.near(a.x, a.y, 8, o => { if (o === a || o.dead || o.kind !== a.kind || head(o) !== H || o.grown < 1) return; const v = G.hash(o.id * 31 + slot); if (v > bv) { bv = v; best = o; } });
-    return best === a;
+    if (a.grown < 1 || (a.state === 'watch') || S.clock - (a.bt || -99) < 30 && a.bq === 9) return false;
+    const H = head(a); let w = false; A.near(a.x, a.y, 8, o => { if (!w && o !== a && !o.dead && o.kind === a.kind && head(o) === H && o.state === 'watch') w = true; });
+    if (w) return false; a.bq = 9; return true;
   }
   Me.option('watch', { passive: true, who: () => false, score: () => 0, start: () => false });
   // ---- lying down: the cats spend their days so; the ruminants chew the cud; the tired after a run get their breath back
@@ -493,7 +511,7 @@
       if (HIDERS.has(a.kind) && a.grown < 0.4 && d < 7 && (mo.state === 'graze' || mo.state === 'idle')) return 0;
       return Math.min(0.95, 0.45 + d * 0.06);
     },
-    start(a) { const mo = Me.mother(a); if (!mo) return false; a.state = 'young'; a.target = mo.id; a.t = 6; return true; },
+    start(a) { const mo = Me.mother(a); if (!mo) return false; a.state = 'young'; a.target = mo.id; a.t = 6; a.cg = G.dist(a.x, a.y, mo.x, mo.y); a.cgT = 0; return true; },
     step(a, dt, sp, S) {
       const mo = S.animals.get(a.target); a.t -= dt;
       if (!mo || mo.dead || a.t <= 0) { a.state = 'idle'; a.t = 0.3; a.target = 0; return true; }
@@ -501,6 +519,8 @@
       let tx = mo.x - fx * 0.45 - fy * side, ty = mo.y - fy * 0.45 + fx * side; if (!A.walkOK(a, tx, ty)) { tx = mo.x; ty = mo.y; }
       a.tx = tx; a.ty = ty; const d = G.dist(a.x, a.y, tx, ty);
       if (d < 0.45) { a.state = 'idle'; a.t = G.rr(0.5, 1.5); a.moving = false; a.target = 0; return true; }
+      // (no nearer in five seconds — she is across water, up a tree: it waits, and calls)
+      a.cgT += dt; if (a.cgT >= 5) { if (a.cg - d < 0.5) { a.state = 'idle'; a.t = G.rr(3, 6); a.target = 0; a.moving = false; Me.call(a); return true; } a.cg = d; a.cgT = 0; }
       A.moveTo(a, dt, Math.max(sp.sp, mo.moving ? SP[mo.kind].sp * 1.2 : sp.sp) * (d > 4 ? 1.7 : 1.1));
       return true;
     },
@@ -763,7 +783,7 @@
     const home = !win.leader && G.dist(win.x, win.y, win.hx, win.hy) <= (TERR[win.kind] || 10) + 4 && !win.mig;
     if (home) { const p = range(lose, 14, 22); if (p) { lose.hx = p[0]; lose.hy = p[1]; lose.mig = true; } Me.count('territorio:expulso'); return; }
     // the nomad beat the head of the ground: if a group followed the loser, it is the winner's now
-    const g = A.packOf(lose); if (!g.length || lose.leader) { const p = range(lose, 10, 18); if (p) { lose.hx = p[0]; lose.hy = p[1]; } return; }
+    const g = A.packOf(lose); if (!g.length || lose.leader || SP[win.kind].herd[1] < 2) { const p = range(lose, 10, 18); if (p) { lose.hx = p[0]; lose.hy = p[1]; } return; }
     const L = win.leader ? S.animals.get(win.leader) || win : win; // (a coalition: its head takes the pride)
     const hx = lose.hx, hy = lose.hy;
     for (const q of g) if (q !== L) q.leader = L.id;
@@ -787,6 +807,11 @@
     for (const o of G.S.animals.values()) if (o !== a && !o.dead && o.kind === a.kind && o.grown >= 1) { if (Me.sex(o)) mm++; else ff++; }
     const m = Me.m(a); if (!mm && ff) m.sx = 1; else if (!ff && mm) m.sx = 0;
   };
+  // the kinds whose grown ones are all of one sex (the immigration brings one of the other: animals.js)
+  Me.oneSex = function () {
+    const f = {}, m = {}; for (const a of G.S.animals.values()) { if (a.dead || a.grown < 1 || !Me.has(a, SP[a.kind]) || a.legend || a.tamed) continue; if (Me.sex(a)) m[a.kind] = 1; else f[a.kind] = 1; }
+    const out = new Set(); for (const k in f) if (!m[k]) out.add(k); for (const k in m) if (!f[k]) out.add(k); return out;
+  };
   // the first beasts of a world: every kind with both sexes among its grown ones
   // (and a group that arrives together — a herd from far lands, the beasts the god calls —: half and half, the leader a male)
   Me.balance = function (list) {
@@ -801,7 +826,8 @@
 
   // ------------------------------ the inspector ------------------------------
   // what the beast is doing, and why — read only: the god's panel asks
-  const SAYS = { sleep: 'Dormindo', watch: 'De sentinela, enquanto os outros dormem', rest: 'Descansando', groom: 'Cuidando de si', social: 'Junto dos seus', young: 'Seguindo a mãe', suckle: 'Mamando', nurse: 'Amamentando o filhote', play: 'Brincando', hide: 'Escondido no capim', heat: 'No cio', court: 'Cortejando uma fêmea', contest: 'Numa disputa', patrol: 'Patrulhando o território' };
+  const SAYS = { sleep: 'Dormindo', watch: 'De sentinela, enquanto os outros dormem', rest: 'Descansando', groom: 'Cuidando de si', social: 'Junto dos seus', young: 'Seguindo a mãe', suckle: 'Mamando', nurse: 'Amamentando o filhote', play: 'Brincando', hide: 'Escondido no capim', heat: 'No cio', court: 'Cortejando uma fêmea', contest: 'Numa disputa', patrol: 'Patrulhando o território',
+    hold: 'Segurando a presa', stand: 'Encarando um predador', trail: 'Seguindo o rastro da presa que picou', digest: 'Digerindo', wait: 'Esperando a vez na carcaça', fish: 'Pescando', stalk: 'Espreitando a presa', flank: 'Cercando a presa', pounce: 'Saltando sobre a presa' };
   Me.says = a => SAYS[a.state] || null;
   Me.why = function (a) {
     const m = a.mind; if (!m || a.dead) return '';

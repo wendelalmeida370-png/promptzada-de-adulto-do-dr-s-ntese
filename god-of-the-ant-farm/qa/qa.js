@@ -2706,7 +2706,7 @@
   const fin = x => typeof x === 'number' && isFinite(x);
   let since = new Map(), orphan = new Map(), pS = null, pC = -1;
   // (the longest a beast stays in each state of the brain and the fight, in seconds of the clock, with room)
-  const LIMIT = { hold: 110, contest: 70, court: 80, stand: 40, trail: 100, patrol: 70, play: 40, young: 30, digest: 200, wait: 40 };
+  const LIMIT = { hold: 110, contest: 70, court: 80, stand: 40, trail: 100, patrol: 70, play: 40, digest: 200, wait: 40 };
   const TARGET = { chase: 1, stalk: 1, flank: 1, pounce: 1, hold: 1, strike: 1, trail: 1, stand: 1, contest: 1, court: 1, play: 1, young: 1, suckle: 1 };
   const rule = function (add, s) {
     const A = G.Animals; if (!A || !G.Mente || !G.Luta) return;
@@ -2728,7 +2728,8 @@
           if (D && E && far > (D.size + E.size) * 0.6 + 0.6) add('luta', 2, `${nm} seguro por ${h.kind}#${h.id} a ${far.toFixed(2)} dele (os dois corpos de uma pegada ficam juntos)`, a.id);
         }
       } else if (a.wnd && a.wnd.h && !a.dead) add('luta', 2, `${nm} com a marca de presa segura (#${a.wnd.h[0]}) e ninguém a segurando`, a.id);
-      if (a.state === 'hold' && !a.dead && !a.held) { const p = s.animals.get(a.target); if (!p || p.caught !== a.id) add('luta', 2, `${nm} em «hold» sem presa segura (alvo ${a.target})`, a.id); holders.set(a.target, (holders.get(a.target) || 0) + 1); }
+      // (a prey dead this very step is the holder's meal at its next: not a hold gone wrong)
+      if (a.state === 'hold' && !a.dead && !a.held) { const p = s.animals.get(a.target); if (!p || (p.caught !== a.id && !p.dead)) add('luta', 2, `${nm} em «hold» sem presa segura (alvo ${a.target})`, a.id); holders.set(a.target, (holders.get(a.target) || 0) + 1); }
       // ---- the mind
       const m = a.mind;
       if (m) {

@@ -30,9 +30,9 @@ const vsay = v => (v.length ? v.slice(0, 3).map(q => `[S${q.sev}] ${q.sys}: ${q.
 const used = [];
 function arena(kind, avoid) {
   const P = { kind };
-  for (let k = 0; k < 4000; k++) {
-    const px = 6 + ((k * 7919) % (G.N - 12)) + 0.5, py = 6 + ((k * 104729) % (G.N - 12)) + 0.5;
-    if ((avoid || used).some(p => G.dist(p[0], p[1], px, py) < 30)) continue;
+  for (let k = 0; k < 20000; k++) {
+    const px = 6 + ((k * 7919) % (G.N - 12)) + 0.5, py = 6 + (((k * 104729) >> 3) % (G.N - 12)) + 0.5;
+    if (k < 12000 && (avoid || used).slice(-3).some(p => G.dist(p[0], p[1], px, py) < 20)) continue;
     let far = true; for (const s of S.settlements.values()) if (G.dist(px, py, s.cx, s.cy) < 22) { far = false; break; } if (!far) continue;
     let good = true; for (let dy = -2; dy <= 2 && good; dy++) for (let dx = -2; dx <= 2; dx++) if (!A.walkOK(P, px + dx, py + dy) || S.type[W.idx(px + dx, py + dy)] <= T.RIVER) { good = false; break; }
     if (!good || A.waterD(W.idx(px, py)) < 4) continue;
@@ -108,11 +108,14 @@ if (on('m4')) {
     // (the heat brought by the proof's hand, by the brain's own door: the same call a heat of the breeding round makes)
     god(() => { for (const d of ds) if (Me.sex(d) === 0) Me.heat(d, A.counts()); });
     const kids = new Map(); const bad2 = []; let suckled = 0, followed = 0;
+    // (where each young is born, seen at its birth: the brain's door wrapped by the proof)
+    const born0 = Me.born; const at = new Map(); Me.born = (kid, mo) => { at.set(kid.id, G.dist(kid.x, kid.y, mo.x, mo.y)); return born0(kid, mo); };
     const v = live(200, 2, () => {
       for (const d of ds) d.hunger = Math.min(d.hunger, 0.3);
-      for (const a of S.animals.values()) if (a.kind === 'deer' && a.mind && a.mind.mom && ds.some(d => d.id === a.mind.mom) && !kids.has(a.id)) { const mo = S.animals.get(a.mind.mom); kids.set(a.id, a); if (!mo || Me.sex(mo) !== 0) bad2.push(`#${a.id}: a mãe #${a.mind.mom} ${mo ? 'é macho' : 'não existe'}`); else if (G.dist(a.x, a.y, mo.x, mo.y) > 2) bad2.push(`#${a.id} nasceu a ${G.dist(a.x, a.y, mo.x, mo.y).toFixed(1)} da mãe`); }
+      for (const a of S.animals.values()) if (a.kind === 'deer' && a.mind && a.mind.mom && ds.some(d => d.id === a.mind.mom) && !kids.has(a.id)) { const mo = S.animals.get(a.mind.mom); kids.set(a.id, a); if (!mo || Me.sex(mo) !== 0) bad2.push(`#${a.id}: a mãe #${a.mind.mom} ${mo ? 'é macho' : 'não existe'}`); else if ((at.get(a.id) || 0) > 1.8) bad2.push(`#${a.id} nasceu a ${at.get(a.id).toFixed(1)} da mãe`); }
       for (const k of kids.values()) { if (k.state === 'suckle') suckled++; if (k.state === 'young') followed++; }
     });
+    Me.born = born0;
     // the mother dies: the link goes
     let cleared = 'sem filhote';
     const k1 = [...kids.values()].find(k => !k.dead); if (k1) { const mo = S.animals.get(k1.mind.mom); if (mo) god(() => A.kill(mo, null, 'old')); live(32); cleared = k1.dead ? 'o filhote morreu' : k1.mind.mom ? 'NÃO desfeito' : 'desfeito'; }
@@ -128,7 +131,9 @@ if (on('m5')) {
     clear(p[0], p[1], 26);
     const zs = []; for (let i = 0; i < 7; i++) zs.push(put('zebra', p[0] + (i % 4) * 1.1, p[1] + ((i / 4) | 0) * 1.1)); for (const z of zs.slice(1)) z.leader = zs[0].id;
     const gs = []; for (let i = 0; i < 4; i++) gs.push(put('gnu', p[0] + 3 + i * 0.8, p[1] + 3.5)); for (const g of gs.slice(1)) g.leader = gs[0].id;
-    const ln = put('lion', p[0] - 4, p[1], { hunger: 0.8 }); ln.state = 'chase'; ln.target = zs[0].id; ln.carc = false;
+    const ln = put('lion', p[0] - 14, p[1], { hunger: 0.05 }); ln.state = 'sleep'; ln.t = 30;
+    M.viver(0.5); // (the beasts in the world's grid: it is rebuilt four times a second)
+    god(() => { ln.x = p[0] - 4; ln.state = 'chase'; ln.target = zs[0].id; ln.carc = false; ln.hunger = 0.8; for (const a of zs.concat(gs)) { a.state = 'idle'; a.t = 5; } });
     // one zebra sees it (the fear scan's answer, by the fight's door)
     god(() => L.react(zs[0], ln, 1, false));
     const zf = zs.filter(z => z.state === 'flee').length, gf = gs.filter(g => g.state === 'flee').length;

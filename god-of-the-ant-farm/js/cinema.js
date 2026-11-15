@@ -535,15 +535,18 @@
   // wild animals: a hunt, a herd
   function beasts(out) {
     const all = [...S().animals.values()]; if (!all.length) return;
-    let hunt = null, herd = null;
+    let hunt = null, herd = null, drama = null, dv = null;
     for (let k = 0; k < Math.min(90, all.length); k++) {
       const a = all[(G.VR() * all.length) | 0];
       if (a.dead || a.dom || a.held) continue;
       const d = G.Animals.DEF[a.kind]; if (!d) continue;
+      // (the fight's own reading of the moment: a hold, a leap, a stand, a charge, a contest, a theft — D-299)
+      const m = G.Luta && G.Luta.drama(a); if (m && (!dv || m.score > dv.score)) { drama = a; dv = m; }
       if (!hunt && a.state === 'chase' && a.target) hunt = a;
       else if (!herd && d.size >= 1 && d.cls !== 'air') herd = a;
-      if (hunt && herd) break;
+      if (hunt && herd && dv && dv.score >= 70) break;
     }
+    if (drama && dv && dv.score > 56) { out.push({ key: 'a:' + drama.id, kind: 'wild', score: dv.score, zoom: 2.6, dur: 10, mark: 1, pos: aAt(drama.id), alive: () => !!S().animals.get(drama.id), kick: place(drama.x, drama.y), title: dv.title, sub: dv.sub }); hunt = null; }
     if (hunt) {
       const d = G.Animals.DEF[hunt.kind]; const prey = S().animals.get(hunt.target) || S().villagers.get(hunt.target);
       const pn = prey ? (prey.kind ? (G.Animals.DEF[prey.kind] || {}).name : prey.name) : null;
