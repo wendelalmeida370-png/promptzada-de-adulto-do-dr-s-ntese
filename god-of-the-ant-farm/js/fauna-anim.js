@@ -196,7 +196,10 @@
       for (let k = 0; k < 4; k++) {
         const L = LEGS[k], front = k < 2, g = lg[k]; let f = ph + G0.off[k]; f -= Math.floor(f);
         const Cp = legTop(J, L), y3 = g.y3 * sL + (fy ? fy[k] : 0), rf = g.rf * sL;
-        if (f < G0.duty) { const u = f / G0.duty; const q = downAt(J, L, g.z + half * (1 - 2 * u), y3, rf, sL); put(k, L, Cp, q[0], q[1], 0, q[2], sL, g.plant); }
+        if (f < G0.duty) { const u = f / G0.duty; const q = downAt(J, L, g.z + half * (1 - 2 * u), y3, rf, sL);
+          // (lame, a.wnd.l: the hurt leg barely set down, the weight off it — the head jerks up as it lands)
+          const lame = st.limp > 0.05 && k === (st.limpLeg || 2) ? st.limp * Math.sin(Math.PI * u) : 0; if (lame) { q[1] += lame * LL * 0.09; E[B.neck0 * 3] -= lame * 0.16; OFF[1] -= lame * LL * 0.03; }
+          put(k, L, Cp, q[0], q[1], 0, q[2], sL, g.plant); }
         else {
           const u = (f - G0.duty) / (1 - G0.duty), w = sstep(u), sn = Math.sin(Math.PI * u);
           const q0 = downAt(J, L, g.z - half, y3, rf, sL); const z0 = q0[0], y0 = q0[1], t0 = q0[2];

@@ -325,10 +325,11 @@
   // ------------------------------ the end: the reach to the other, the body on the ground ------------------------------
   const AIMB = [B.chest, B.neck0, B.neck1, B.neck2, B.head], AIMW = [0.12, 0.42, 0.32, 0.26, 0.32], AIMBS = [B.neck0, B.neck1, B.neck2, B.head], AIMWS = [0.45, 0.35, 0.3, 0.3]; // (the sprawlers and the birds reach with the neck alone: a crocodile does not stand up on its chest)
   const T3 = new Float32Array(3), Pm = new Float32Array(3);
+  // (the reach: five passes of the chain for a hold, two for a look)
   FG.end = function (J0, form, st) {
     J = J0; FORM = form;
     const aw = clamp(P[I.AIM], 0, 1);
-    if (aw > 0.01 && st.aim) { const R0 = st.gx && st.gx.gn ? REC[st.gx.gn] : null; if (R0 && R0.eff === 'brow') browOf(form, Pm); else mouthOf(form, Pm); const nk = C.fam === 'sprawl' || C.fam === 'bird'; reach(J0, B.head, Pm, st.aim, aw, nk ? AIMBS : AIMB, nk ? AIMWS : AIMW, 6); if (C.fam === 'sprawl') for (const bi of AIMBS) { E[bi * 3] = clamp(E[bi * 3], -0.6, 0.5); E[bi * 3 + 1] = clamp(E[bi * 3 + 1], -0.7, 0.7); } }
+    if (aw > 0.01 && st.aim) { const R0 = st.gx && st.gx.gn ? REC[st.gx.gn] : null; if (R0 && R0.eff === 'brow') browOf(form, Pm); else mouthOf(form, Pm); const nk = C.fam === 'sprawl' || C.fam === 'bird'; reach(J0, B.head, Pm, st.aim, aw, nk ? AIMBS : AIMB, nk ? AIMWS : AIMW, aw > 0.5 ? 5 : 2); if (C.fam === 'sprawl') for (const bi of AIMBS) { E[bi * 3] = clamp(E[bi * 3], -0.6, 0.5); E[bi * 3 + 1] = clamp(E[bi * 3 + 1], -0.7, 0.7); } }
     const gk = clamp(P[I.GROUND], 0, 1); if (gk > 0.01 && form.hull && !st.hang && !st.tree) settle(J0, form, gk, st.fy);
     // (no gesture puts the body into the ground: a body turned, lowered, rolled, kicking is lifted until its skin is out of it —
     // the poses that go under on purpose, the burrow, the dive, the swim, the coils, the death roll in the water, excepted)

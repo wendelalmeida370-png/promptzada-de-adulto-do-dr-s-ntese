@@ -1748,16 +1748,16 @@
   }
   // where a point of the other is in the world: by the frames its last pose left in the view's memory, or — not drawn yet — by
   // where the world has it and the way it faces
-  const KP = new Float32Array(3);
+  const KP = new Float32Array(3), SIDES = [1, -1], ONE = [1];
   function keyPoint(o, s2, which, fromX, fromZ, out) {
     const F3 = G.Fauna3D; const form = s2 && s2.kf ? s2.kf : F3.form(o.kind); if (!form) return null;
-    let side = 1;
-    if (s2 && s2.kb) { // (the side of the flank that faces the one coming at it)
-      const sp = KB.indexOf('spine') * 16, e = s2.kb; const dx = fromX - e[sp + 12], dz = fromZ - e[sp + 14]; side = dx * e[sp] + dz * e[sp + 2] >= 0 ? 1 : -1;
-    }
-    kpBind(form, which, side, KP);
-    if (s2 && s2.kb) { const bi = KPB[which] * 16, e = s2.kb, J = form.J, b = G.FaunaAnim.B[KB[KPB[which]]]; const x = KP[0] - J[b * 3], y = KP[1] - J[b * 3 + 1], z = KP[2] - J[b * 3 + 2];
-      out[0] = e[bi] * x + e[bi + 4] * y + e[bi + 8] * z + e[bi + 12]; out[1] = e[bi + 1] * x + e[bi + 5] * y + e[bi + 9] * z + e[bi + 13]; out[2] = e[bi + 2] * x + e[bi + 6] * y + e[bi + 10] * z + e[bi + 14]; return out; }
+    if (s2 && s2.kb) { // (by the frames the last pose left: of a flank or a haunch, the side nearer the one coming at it)
+      const bi = KPB[which] * 16, e = s2.kb, J = form.J, b = G.FaunaAnim.B[KB[KPB[which]]]; let best = 1e9;
+      for (const side of (which === 'flank' || which === 'haunch' ? SIDES : ONE)) { kpBind(form, which, side, KP); const x = KP[0] - J[b * 3], y = KP[1] - J[b * 3 + 1], z = KP[2] - J[b * 3 + 2];
+        const X = e[bi] * x + e[bi + 4] * y + e[bi + 8] * z + e[bi + 12], Y = e[bi + 1] * x + e[bi + 5] * y + e[bi + 9] * z + e[bi + 13], Z = e[bi + 2] * x + e[bi + 6] * y + e[bi + 10] * z + e[bi + 14];
+        const d = (X - fromX) * (X - fromX) + (Z - fromZ) * (Z - fromZ); if (d < best) { best = d; out[0] = X; out[1] = Y; out[2] = Z; } }
+      return out; }
+    kpBind(form, which, 1, KP);
     const TL = G.Space.TILE, yaw = s2 ? s2.yaw : 0, sc = s2 && s2.ksc ? s2.ksc : F3.scaleOf(o.kind); const c = Math.cos(yaw), n = Math.sin(yaw);
     // (the frame: +Z of the form along the facing; X the form's left)
     out[0] = o.x * TL + (KP[2] * c + KP[0] * n) * sc; out[2] = o.y * TL + (KP[2] * n - KP[0] * c) * sc; out[1] = (s2 && s2.Y !== null && s2.Y !== undefined ? s2.Y : 0) + KP[1] * sc;
@@ -1824,6 +1824,7 @@
     st.sit = s.sit; st.glide = glide; st.pitch = s.fp || 0; st.bank = s.fb || 0; st.young = a.age !== undefined && a.age < 1 ? G.clamp(1 - a.age, 0, 1) : 0; st.fy = null;
     // (the gesture: the view's clock of it, the mind, the breath, death, the one that holds it, the side it falls to; the reach)
     st.gx = s; st.kind = a.kind; st.mood = moodOf(a, s); st.exert = s.ex; st.dead = s.dk || 0; st.dt = dt; st.crouch = a.dead ? 0 : (a.crouch || (a.state === 'stalk' ? 1 : 0)); st.pounce = a.dead ? 0 : (a.pounce > 0 ? Math.min(1, a.pounce) : 0);
+    const wd = a.wnd; st.limp = wd && wd.l > 0 ? Math.min(1, wd.l) : 0; st.limpLeg = wd && wd.z && (wd.z[2] || 0) > (wd.z[4] || 0) ? (a.id & 1) : 2 + (a.id & 1); // (lame: the leg of the worse quarters)
     st.held = ctx.held; st.side = ctx.side; st.down = a.down || 0; st.rollWith = ctx.rollWith || 0; st.tree = ctx.tree; st.ground = ctx.ground; st.hang = ctx.hang; st.coilR = ctx.coilR; st.coilY = ctx.coilY; st.rollA = undefined; st.aim = null;
     FMR.m.copy(m); FMR.r.makeRotationY(Math.PI / 2); FMR.m.multiply(FMR.r); FMR.r.makeScale(sc, sc, sc); FMR.m.multiply(FMR.r);
     if (ctx.aim) { FMR.inv.copy(FMR.m).invert(); FMR.v.set(ctx.aim[0], ctx.aim[1], ctx.aim[2]).applyMatrix4(FMR.inv); AIMV[0] = FMR.v.x; AIMV[1] = FMR.v.y; AIMV[2] = FMR.v.z; st.aim = AIMV; }
