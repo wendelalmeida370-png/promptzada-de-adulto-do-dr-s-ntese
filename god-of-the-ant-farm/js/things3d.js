@@ -153,30 +153,101 @@
   }
   const TL = () => G.Space.TILE;
 
-  // ---- the beasts of the sea: where the world has them, at the water's face or just under it
+  // ---- the beasts of the sea: where the world has them, at the water's face or just under it — each as one skin (Fauna3D,
+  // posed by FaunaAnim.swim and .turtle: D-267) in the rows People3D leaves this frame, the nearest first; as the pieces of old
+  // where it cannot (Fauna3D not started or refused, no mesh for the kind, no row left)
   const SEA = { dolphin: { L: 2.4, col: '#7a8a9a', bel: '#dfe4e8', leap: 1 }, orca: { L: 6.5, col: '#18181c', bel: '#f0f0f0', leap: 0.6 }, whale: { L: 14, col: '#4a5866', bel: '#9aa4ac', blow: 1 }, shark: { L: 3.8, col: '#6a7480', bel: '#d8dce0', fin: 1 }, turtle: { L: 1.1, col: '#5a6a3a', bel: '#c8b88a', shell: 1 } };
   function seaBeasts(S, f, dt, t, R) {
-    const TLm = TL(), HM = G.Space.HM;
+    const TLm = TL(), HM = G.Space.HM, F3 = G.Fauna3D;
+    const skin = !!(F3 && F3.live && !F3.broken(R3.renderer && R3.renderer()));
+    const cam = R3.camera ? R3.camera() : null; const ex = cam ? cam.position.x : f.X, ez = cam ? cam.position.z : f.Z;
+    const near = [];
     for (const a of S.animals.values()) {
       const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls !== 'water' || a.dead) continue;
       const X = a.x * TLm, Z = a.y * TLm; if (!near2(X, Z, f, R)) continue;
-      const D = SEA[a.kind]; if (!D) continue; const s = memo('a' + a.id, X, Z, dt, 0); const yaw = s.yaw;
-      const sea = W.inb(a.x, a.y) ? W.waterH(a.x, a.y) * HM : G.SEA * HM; const L = D.L * (a.big || 1);
-      // (a dolphin leaps and dives in arcs; a whale lies along the surface, its back rising now and then; a shark is a fin)
-      let y = sea - L * 0.12, pitch = 0;
-      if (D.leap) { const ph = (t * 0.45 + a.id * 0.37) % 1; if (ph < 0.3) { const u = ph / 0.3; y = sea - 0.4 + Math.sin(u * Math.PI) * L * 0.55; pitch = Math.cos(u * Math.PI) * 0.9; if (u > 0.9 && G.VR() < 0.4) splash(X, sea, Z); } else y = sea - L * 0.3; }
-      if (D.blow) { const ph = (t * 0.07 + a.id * 0.13) % 1; y = sea - L * 0.12 + (ph < 0.25 ? Math.sin(ph / 0.25 * Math.PI) * L * 0.07 : 0); if (ph > 0.05 && ph < 0.09 && G.FX3D) { const b = at(X, sea, Z, yaw, L * 0.3, 0, 0); for (let k = 0; k < 3; k++) G.FX3D.spawn({ x: b[0], y: sea + 0.3, z: b[2], vx: G.vrr(-0.5, 0.5), vy: G.vrr(5, 7), vz: G.vrr(-0.5, 0.5), life: 1.4, s0: 0.5, s1: 2.4, c: [0.9, 0.94, 0.97], a: 0.5, grav: 4, drag: 0.4, fade: 1 }); } }
-      if (D.fin) y = sea - 0.45;
-      if (D.shell) y = sea - 0.12;
-      const B = at(X, y, Z, yaw, 0, 0, 0);
-      put('sea', B[0], B[1], B[2], yaw, L, L * (D.shell ? 0.3 : 0.26), L * (D.shell ? 0.8 : 0.28), D.shell ? '#6a5a3a' : D.col, pitch);
-      if (D.bel && !D.shell) { const b = at(X, y - L * 0.06, Z, yaw, L * 0.05, 0, 0); put('sea', b[0], b[1], b[2], yaw, L * 0.82, L * 0.16, L * 0.22, D.bel, pitch); }
-      // (the dorsal fin, the flukes of the tail, the flippers)
-      const fin = at(X, y + L * 0.1, Z, yaw, -L * 0.05, 0, 0); if (!D.shell) put('fin', fin[0], fin[1], fin[2], yaw, L * (D.fin ? 0.22 : 0.13), L * (D.fin ? 0.3 : 0.14), L * 0.13, D.col, pitch * 0.5);
-      const tl = at(X, y, Z, yaw, -L * 0.5, 0, 0); const fl = Math.sin(t * 3 + a.id) * 0.3;
-      if (!D.shell) put('fin', tl[0], tl[1], tl[2], yaw, L * 0.3, L * 0.06, L * 0.22, D.col, Math.PI / 2 + pitch + fl, 0);
-      for (const sd of [-1, 1]) { const p = at(X, y - L * 0.04, Z, yaw, L * (D.shell ? 0.2 : 0.18), 0, sd * L * (D.shell ? 0.35 : 0.14)); put('fin', p[0], p[1], p[2], yaw + sd * 0.6, L * 0.14, L * (D.shell ? 0.2 : 0.12), L * 0.05, D.shell ? D.col : D.col, 0, sd * (1.2 + Math.sin(t * 2 + a.id) * 0.3)); }
+      near.push([(X - ex) ** 2 + (Z - ez) ** 2, a]);
     }
+    near.sort((p, q) => p[0] - q[0]); let rows = 0;
+    for (const [d2, a] of near) {
+      const X = a.x * TLm, Z = a.y * TLm; const s = memo('a' + a.id, X, Z, dt, 0);
+      const sea = W.inb(a.x, a.y) ? W.waterH(a.x, a.y) * HM : G.SEA * HM;
+      const row = skin && F3.has(a.kind) ? F3.take() : -1;
+      if (row >= 0) { seaSkin(a, s, X, Z, sea, row, Math.sqrt(d2), dt); rows++; continue; }
+      if (SEA[a.kind]) seaPieces(a, SEA[a.kind], s, X, Z, sea, t);
+    }
+    if (rows) F3.end();
+    T3.seaSkins = rows;
+  }
+  // (one beast of the sea as the pieces of old: a dolphin leaps and dives in arcs, a whale lies along the surface, its back
+  // rising now and then, a shark is a fin, a turtle its shell)
+  function seaPieces(a, D, s, X, Z, sea, t) {
+    const yaw = s.yaw; const L = D.L * (a.big || 1);
+    let y = sea - L * 0.12, pitch = 0;
+    if (D.leap) { const ph = (t * 0.45 + a.id * 0.37) % 1; if (ph < 0.3) { const u = ph / 0.3; y = sea - 0.4 + Math.sin(u * Math.PI) * L * 0.55; pitch = Math.cos(u * Math.PI) * 0.9; if (u > 0.9 && G.VR() < 0.4) splash(X, sea, Z); } else y = sea - L * 0.3; }
+    if (D.blow) { const ph = (t * 0.07 + a.id * 0.13) % 1; y = sea - L * 0.12 + (ph < 0.25 ? Math.sin(ph / 0.25 * Math.PI) * L * 0.07 : 0); if (ph > 0.05 && ph < 0.09 && G.FX3D) { const b = at(X, sea, Z, yaw, L * 0.3, 0, 0); for (let k = 0; k < 3; k++) G.FX3D.spawn({ x: b[0], y: sea + 0.3, z: b[2], vx: G.vrr(-0.5, 0.5), vy: G.vrr(5, 7), vz: G.vrr(-0.5, 0.5), life: 1.4, s0: 0.5, s1: 2.4, c: [0.9, 0.94, 0.97], a: 0.5, grav: 4, drag: 0.4, fade: 1 }); } }
+    if (D.fin) y = sea - 0.45;
+    if (D.shell) y = sea - 0.12;
+    const B = at(X, y, Z, yaw, 0, 0, 0);
+    put('sea', B[0], B[1], B[2], yaw, L, L * (D.shell ? 0.3 : 0.26), L * (D.shell ? 0.8 : 0.28), D.shell ? '#6a5a3a' : D.col, pitch);
+    if (D.bel && !D.shell) { const b = at(X, y - L * 0.06, Z, yaw, L * 0.05, 0, 0); put('sea', b[0], b[1], b[2], yaw, L * 0.82, L * 0.16, L * 0.22, D.bel, pitch); }
+    // (the dorsal fin, the flukes of the tail, the flippers)
+    const fin = at(X, y + L * 0.1, Z, yaw, -L * 0.05, 0, 0); if (!D.shell) put('fin', fin[0], fin[1], fin[2], yaw, L * (D.fin ? 0.22 : 0.13), L * (D.fin ? 0.3 : 0.14), L * 0.13, D.col, pitch * 0.5);
+    const tl = at(X, y, Z, yaw, -L * 0.5, 0, 0); const fl = Math.sin(t * 3 + a.id) * 0.3;
+    if (!D.shell) put('fin', tl[0], tl[1], tl[2], yaw, L * 0.3, L * 0.06, L * 0.22, D.col, Math.PI / 2 + pitch + fl, 0);
+    for (const sd of [-1, 1]) { const p = at(X, y - L * 0.04, Z, yaw, L * (D.shell ? 0.2 : 0.18), 0, sd * L * (D.shell ? 0.35 : 0.14)); put('fin', p[0], p[1], p[2], yaw + sd * 0.6, L * 0.14, L * (D.shell ? 0.2 : 0.12), L * 0.05, D.shell ? D.col : D.col, 0, sd * (1.2 + Math.sin(t * 2 + a.id) * 0.3)); }
+  }
+  // (one beast of the sea as a skin. Where it lies in the water: at the face — the back awash, the shark's fin cutting it, the
+  // turtle's shell —, a little under between its breaths, in the air of a leap. The leap is the world's (a.leap: the view
+  // gives it the arc a body that size has), so is the whale's blow (a.spout: it comes up to blow, and after some blows it goes
+  // down showing its flukes); the dolphin and the orca roll up to breathe now and then, the turtle lifts its head. What the
+  // view remembers of it — the beat, the turn, the leap, the breath, the dive — is in its memo s, never in the beast)
+  const SEAB = { dolphin: { breathe: 7, beat: 0.9 }, orca: { breathe: 10, beat: 1 }, whale: { beat: 1.1 }, shark: { beat: 0.85 }, turtle: { breathe: 15, beat: 1.4 } };
+  const SKM = { m: null, r: null };
+  function seaSkin(a, s, X, Z, sea, row, dist, dt) {
+    if (!SKM.m) { SKM.m = new THREE.Matrix4(); SKM.r = new THREE.Matrix4(); }
+    const F3 = G.Fauna3D, FA = G.FaunaAnim; const form = F3.form(a.kind); const meta = form.meta, sw = meta.swim || {}, cfg = SEAB[a.kind] || {};
+    const sc = F3.scaleOf(a.kind) * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.55 + 0.45 * Math.max(0, a.age) : 1);
+    const L = meta.L * sc, Rr = (sw.R || 0.2) * sc, turtle = meta.fam === 'turtle', v = s.sp, e = k => 1 - Math.exp(-k * dt);
+    s.ft = (s.ft || 0) + dt; const ft = s.ft + (a.id % 17) * 0.7;
+    // (the beat: faster as it goes, a stroke about a body's length; the turn: how fast its heading changes, + to its left)
+    s.fph = (s.fph === undefined ? (a.id % 7) / 7 : s.fph) + dt * ((turtle ? 0.25 : 0.2) + v / Math.max(0.5, L * (cfg.beat || 1)));
+    let dyw = s.yaw - (s.py === undefined ? s.yaw : s.py); s.py = s.yaw; while (dyw > Math.PI) dyw -= TAU; while (dyw < -Math.PI) dyw += TAU;
+    s.turn = (s.turn || 0) + (G.clamp(-dyw / Math.max(dt, 1e-3) * 0.6, -1, 1) - (s.turn || 0)) * e(3);
+    // (the jaw: open on the chase as the prey comes near)
+    let jw = 0; if (a.state === 'chase' && a.target) { const tg = G.S.animals.get(a.target) || G.S.villagers.get(a.target); if (tg) jw = G.clamp(1.4 - Math.hypot(tg.x - a.x, tg.y - a.y), 0, 1); }
+    s.jaw = (s.jaw || 0) + (jw - (s.jaw || 0)) * e(6);
+    const idle = v < 0.25; let up, pitch = 0, arch = 0, lift = 0; // (up: where the top of its back is, from the water's face)
+    if (turtle) { // floating with the shell awash, swimming a hand under; up to breathe now and then, the head lifted
+      const q = ((ft / cfg.breathe) % 1 + 1) % 1; const br = q < 0.22 ? Math.sin(q / 0.22 * Math.PI) : 0;
+      up = idle ? 0.03 : -0.22 + br * 0.24; lift = Math.max(br, idle ? 0.35 : 0); pitch = br * 0.12;
+    } else if (sw.beat === 'h') { // the shark: its fin out of the water, rising at the prey
+      up = 0.3 - ((sw.fin ? sw.fin[1] : sw.top) - sw.top) * sc + s.jaw * Rr * 0.6; pitch = s.jaw * 0.2;
+    } else if (a.kind === 'whale') { // up to blow when the world blows; after some blows, down with its flukes in the air
+      if (a.spout > 0 && !s.spw) { s.bt = 0; s.nb = (s.nb || 0) + 1; s.dive = G.hash(a.id * 13 + s.nb) > 0.4; } s.spw = a.spout > 0;
+      s.bt = (s.bt === undefined ? 20 : s.bt) + dt; const bt = s.bt;
+      if (bt < 1.2 && G.FX3D && sw.blow) { const c = Math.cos(s.yaw), n = Math.sin(s.yaw), f = sw.blow[2] * sc; for (let k = 0; k < 2; k++) G.FX3D.spawn({ x: X + c * f, y: sea + 0.3, z: Z + n * f, vx: G.vrr(-0.5, 0.5), vy: G.vrr(5, 7.5), vz: G.vrr(-0.5, 0.5), life: 1.6, s0: 0.5, s1: 2.8, c: [0.9, 0.94, 0.97], a: 0.5, grav: 4, drag: 0.4, fade: 1 }); }
+      if (bt < 9) { const u = G.clamp((bt - 1.5) / 6, 0, 1); up = 0.08; pitch = -Math.sin(u * Math.PI) * 0.06; arch = Math.sin(u * Math.PI) * 0.3; }
+      else if (s.dive && bt < 17) { const u = Math.min(1, (bt - 9) / 6); pitch = -Math.sin(Math.min(1, u * 1.3) * Math.PI / 2) * 0.72 * (bt > 15 ? 1 - (bt - 15) / 2 * 0.6 : 1); arch = Math.sin(Math.min(1, u * 1.2) * Math.PI) * 0.7; up = -Rr * (0.3 + u * 1.5); }
+      else up = s.dive ? -Rr * 1.5 : -0.25;
+    } else { // the dolphin, the orca: at the face lying still; going, a little under, rolling up to breathe — more often fast
+      const P = (cfg.breathe || 8) * (v > L * 1.2 ? 0.35 : 1); const q = ((ft / P) % 1 + 1) % 1; const br = q < 0.24 ? Math.sin(q / 0.24 * Math.PI) : 0;
+      up = idle ? 0.06 : -Rr * 0.75 + br * (Rr * 0.85); pitch = q < 0.24 && !idle ? Math.cos(q / 0.24 * Math.PI) * 0.16 : 0; arch = idle ? 0 : br * 0.3;
+    }
+    s.up = s.up === undefined ? up : s.up + (up - s.up) * e(1.6); s.pt = (s.pt || 0) + (pitch - (s.pt || 0)) * e(2.5); s.ar = (s.ar || 0) + (arch - (s.ar || 0)) * e(2.5);
+    let top = sea + s.up, pt = s.pt, ar = s.ar;
+    // (the leap: the world says it leaps; the view gives it the arc of a body that size — out, over, in, a splash each way)
+    if (a.leap > 0 && !s.lw) s.lt = 0; s.lw = a.leap > 0;
+    if (s.lt >= 0) { const T = 0.9 + L * 0.12, H = 0.45 + L * 0.5; s.lt += dt; const u = s.lt / T;
+      if (u >= 1) { s.lt = -1; splash(X, sea, Z); }
+      else { const lp = Math.sin(u * Math.PI); top = sea - Rr * 0.6 + lp * H + Rr * 2 * lp; pt = Math.atan(Math.PI * H * Math.cos(u * Math.PI) / T / Math.max(v, 3)) * 0.95; ar = lp * 0.45;
+        if (u > 0.03 && u - dt / T <= 0.03) splash(X, sea, Z); } }
+    // (never into the sea's bed: in water shallower than it is, its back rises out of it)
+    const bed = W.hAt(a.x, a.y) * G.Space.HM - (G.Space.bedDrop ? G.Space.bedDrop(a.x, a.y) : 0); const Yb = Math.max(top - sw.top * sc, bed + 0.1);
+    SKM.m.makeTranslation(X, Yb, Z); SKM.r.makeRotationY(Math.PI / 2 - s.yaw); SKM.m.multiply(SKM.r); SKM.r.makeScale(sc, sc, sc); SKM.m.multiply(SKM.r);
+    const look = idle && turtle ? Math.sin(ft * 0.23) * 0.6 : 0;
+    const st = { v: v / sc, ph: s.fph, t: ft, id: a.id, pitch: pt, bank: -s.turn * 0.3, arch: ar, turn: s.turn, jaw: s.jaw, lift, look };
+    const R = (FA[meta.fam] || FA.swim)(THREE, SKM.m, form, {}, st);
+    F3.put(row, R, a.kind, FA.coat(THREE, a), dist > Math.max(24, L * 5) ? 1 : 0, X, sea, Z);
   }
   function splash(X, Y, Z) { if (!G.FX3D) return; for (let k = 0; k < 4; k++) G.FX3D.spawn({ x: X + G.vrr(-0.5, 0.5), y: Y, z: Z + G.vrr(-0.5, 0.5), vx: G.vrr(-1, 1), vy: G.vrr(2, 3.5), vz: G.vrr(-1, 1), life: 0.8, s0: 0.15, s1: 0.06, c: [0.86, 0.93, 0.97], a: 0.8, sh: 1, grav: 9 }); }
 

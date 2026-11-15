@@ -594,3 +594,340 @@ def seal(b, R=0.25, headR=0.5, tusks=False, whisk=0.0, **kw):
     b.j('tail0', (0, Rb * 0.35, -L * 0.46))
     b.meta['family'] = 'seal'; b.meta['p'] = dict(headL=0.4)
     return b
+
+
+# ------------------------------ the swimmers of the sea (D-267) ------------------------------
+# The dolphin, the orca, the whale and the shark: one spindle of a body along +Z, the snout at +L/2, the tail at -L/2, its
+# belly at y = 0. The bones run down it as a chain from the head to the flukes — head, neck2..0 (the front of the body, to
+# bend it), chest, spine, root (the middle: the body turns about it), tail0..3 (the stock and the flukes) —; the pectoral
+# fins are the forelegs (fl*), the shark's pelvic fins the hind legs (hl*); the jaw opens. Measures as fractions of L.
+SWIM_S = {'head': 0.15, 'neck2': 0.2, 'neck1': 0.25, 'neck0': 0.3, 'chest': 0.36, 'spine': 0.44, 'root': 0.52,
+          'tail0': 0.62, 'tail1': 0.71, 'tail2': 0.8, 'tail3': 0.88}
+LEGS = np.array([b_[:2] in ('fl', 'hl') for b_ in BONES]); TAILS3 = np.array([b_ == 'tail3' for b_ in BONES])
+
+
+def fin(b, pts, radii, bone, flat_axis, thick, k=0.0, tau=None, op='u'):
+    """A fin: flat round cones through the points (the chord at each its radius), its thickness a part of the chord — never
+    thinner than the clay's grid can hold."""
+    h = b.meta.get('h', 0.01)
+    for q in range(len(pts) - 1):
+        ra, rb = radii[q], radii[q + 1]; f = max(thick, 1.25 * h / max(min(ra, rb), 1e-4))
+        b.add(RoundCone(pts[q], pts[q + 1], ra, rb, flat=(flat_axis, min(1.0, f))), bone[q] if isinstance(bone, list) else bone, k=k, tau=tau, op=op)
+
+
+def swim(b, R=0.1, Wr=0.9, maxAt=0.36, nose=0.4, p1=0.7, p2=1.6, ped=0.1, pedW=0.42, headW=1.0, belly=0.08,
+         head='beak', beakL=0.06, beakR=0.2, melon=1.0, eyeR=0.01, eyeAt=0.13, eyeUp=0.12, mouth=True, jaw=False, teeth=0, blow=1,
+         dorsal=None, dorsal2=None, anal=None, pect=None, pelvic=None, flukes=None, caudal=None, keel=0.0, knobs=0, gills=0,
+         pattern='plain', pectTip=0.1, droop=0.0, **kw):
+    """A swimmer: its body's radius along it (rising from the snout to the widest at maxAt, falling to the stock), squeezed
+    sideways (Wr; the stock thin as a blade, pedW; the shark's head broad, headW), its belly rounder than its back; the
+    head — a beak before a melon (the dolphin), blunt (the orca), the whale's long flat rostrum, the shark's cone with
+    the mouth under it —; the fins (dorsal, its second and the anal; the pectorals; the pelvics), the flukes or the shark's
+    tail, the eyes, the blowhole, the mouth's line. Fin tuples: dorsal (at, height, base, rake back), pect (at, length,
+    chord, down°, back°), pelvic (at, length, chord), flukes (span, chord, sweep), caudal (upper, lower, their angles°)."""
+    L = b.L; Rm = R * L; yc = Rm * (1.0 + belly * 0.5)
+    b.meta.setdefault('h', float(np.clip(Rm * 2 * 0.0105, 0.0025, 0.03)))
+    zs = lambda s: L / 2 - s * L
+    def prof(s):
+        if s < maxAt: return nose + (1 - nose) * np.sin(np.pi / 2 * s / maxAt) ** p1
+        u = min(1.0, (s - maxAt) / (0.95 - maxAt)); return ped + (1 - ped) * max(0.0, np.cos(np.pi / 2 * u)) ** p2
+    def wid(s):  # (the breadth over the depth: the stock a blade, the shark's head broad)
+        w = Wr + (pedW - Wr) * float(np.clip((s - 0.55) / 0.35, 0, 1)) ** 1.2
+        return w + (headW - w) * float(np.clip((0.22 - s) / 0.18, 0, 1))
+    def ax(s):  # (the body's middle, a little low where the belly bulges; the whale's head sloping down to its snout, droop)
+        return v3(0, yc - Rm * belly * prof(s) * np.sin(np.pi * np.clip((s - 0.1) / 0.6, 0, 1)) - Rm * droop * np.clip((0.3 - s) / 0.3, 0, 1) ** 1.5, zs(s))
+    b.meta['swim'] = dict(R=round(Rm, 4), yc=round(yc, 4), top=round(yc + Rm * 0.95, 4), beat='h' if caudal else 'v')
+    b.meta['pattern'] = pattern
+    for bn, s in SWIM_S.items(): b.j(bn, ax(s))
+    names = list(SWIM_S.keys()); ss = list(SWIM_S.values())
+    def owner(s):
+        for q in range(len(ss) - 1):
+            if s < (ss[q] + ss[q + 1]) / 2: return names[q]
+        return names[-1]
+    s0 = beakL if head == 'beak' else 0.07 if head == 'shark' else 0.0   # (where the spindle begins: behind the beak, behind the shark's snout)
+    S = sorted(set([s for s in [s0, s0 + 0.03, 0.08, 0.13, 0.19, 0.26, 0.34, 0.43, 0.52, 0.62, 0.71, 0.8, 0.87, 0.92] if s >= s0]))
+    tau = max(0.012, Rm * 0.25)
+    for q in range(len(S) - 1):
+        a, c = S[q], S[q + 1]; ra, rc = prof(a) * Rm, prof(c) * Rm
+        b.add(RoundCone(ax(a), ax(c), ra, rc, flat=((1, 0, 0), (wid(a) + wid(c)) / 2)), owner((a + c) / 2), k=Rm * 0.06, tau=tau)
+    # --- the head
+    if head == 'beak':  # (the melon over the forehead, the beak before it, the lower jaw a little longer)
+        rm = prof(s0 + 0.03) * Rm; mel = ax(s0 + 0.045) + v3(0, rm * 0.2 * melon, 0)
+        b.add(Ellipsoid(mel, (rm * 0.8 * wid(0.05), rm * 0.82, beakL * L * 0.62)), 'head', k=Rm * 0.2, tau=tau)
+        tip = v3(0, yc - Rm * 0.22, L / 2); base = ax(s0 + 0.01) + v3(0, -Rm * 0.2, 0)
+        b.add(RoundCone(base, tip, beakR * Rm * 1.0, beakR * Rm * 0.5, flat=((1, 0, 0), 0.82)), 'head', k=Rm * 0.08, tau=tau)
+        b.add(RoundCone(base + v3(0, -beakR * Rm * 0.4, -beakL * L * 0.1), tip + v3(0, -beakR * Rm * 0.36, beakR * Rm * 0.18), beakR * Rm * 0.85, beakR * Rm * 0.42, flat=((1, 0, 0), 0.82)), 'head', k=Rm * 0.06, tau=tau)
+        nose_p = tip + v3(0, 0, beakR * Rm * 0.5)
+    elif head == 'whale':  # (the long flat rostrum, the lower jaw bowed under it and a little beyond)
+        top = ax(0.02) + v3(0, Rm * 0.18, 0); bk = ax(0.24) + v3(0, Rm * 0.45, 0)
+        b.add(ell_between(top + v3(0, 0, L * 0.015), bk, Rm * 0.55, Rm * 0.32), 'head', k=Rm * 0.35, tau=tau)
+        jb = ax(0.03) + v3(0, -Rm * 0.25, L * 0.01); jk = ax(0.26) + v3(0, -Rm * 0.35, 0)
+        b.add(ell_between(jb, jk, Rm * 0.62, Rm * 0.5, extra=1.05), 'jaw' if jaw else 'head', k=Rm * 0.3, tau=tau)
+        nose_p = v3(0, yc, L / 2)
+    elif head == 'shark':  # (the cone of the snout, a little flat; the jaws under it)
+        sn = v3(0, yc + Rm * 0.08, L / 2 - L * 0.004)
+        b.add(RoundCone(ax(0.13) + v3(0, Rm * 0.05, 0), sn, prof(0.13) * Rm * 0.9, Rm * 0.09, flat=((0, 1, 0), 0.78)), 'head', k=Rm * 0.25, tau=tau)
+        jb = ax(0.08) + v3(0, -Rm * 0.42, 0); jk = ax(0.15) + v3(0, -Rm * 0.48, 0)
+        b.add(ell_between(jb, jk, Rm * 0.5 * headW, Rm * 0.28, extra=1.25), 'jaw' if jaw else 'head', k=Rm * 0.2, tau=tau * 0.6)
+        nose_p = sn + v3(0, 0, Rm * 0.1)
+    else:  # blunt (the orca): a round cone of a head, a little melon over it
+        sn = v3(0, yc - Rm * 0.1, L / 2)
+        b.add(RoundCone(ax(0.08), sn, prof(0.08) * Rm, Rm * 0.32, flat=((1, 0, 0), wid(0.05))), 'head', k=Rm * 0.25, tau=tau)
+        b.add(Ellipsoid(ax(0.05) + v3(0, Rm * 0.12 * melon, 0), (Rm * 0.48 * wid(0.05), Rm * 0.5, L * 0.06)), 'head', k=Rm * 0.25, tau=tau)
+        if jaw: b.add(ell_between(ax(0.02) + v3(0, -Rm * 0.32, 0), ax(0.13) + v3(0, -Rm * 0.45, 0), Rm * 0.45, Rm * 0.28), 'jaw', k=Rm * 0.15, tau=tau * 0.6)
+        nose_p = sn + v3(0, 0, Rm * 0.3)
+    b.meta['nose'] = list(nose_p)
+    b.j('jaw', ax(eyeAt + 0.02) + v3(0, -Rm * 0.35, 0))
+    # the mouth's line: a slit from the snout back to the gape, rising at its end (the dolphin's smile); the shark's crescent under
+    if mouth:
+        g = ax(eyeAt + 0.015) + v3(0, -Rm * (0.3 if head != 'shark' else 0.55), 0)
+        for sd in (1, -1):
+            if head == 'shark':
+                pts = [v3(0, yc - Rm * 0.62, zs(0.06)), v3(sd * Rm * 0.38 * headW, yc - Rm * 0.6, zs(0.09)), g + v3(sd * Rm * 0.62 * headW, 0, 0)]
+            elif head == 'beak':
+                tip = v3(0, yc - Rm * 0.18, L / 2)
+                pts = [tip + v3(sd * beakR * Rm * 0.15, -beakR * Rm * 0.42, -beakR * Rm * 0.1), ax(s0) + v3(sd * beakR * Rm * 0.95, -Rm * 0.34, 0), g + v3(sd * prof(eyeAt) * Rm * wid(eyeAt) * 0.8, Rm * 0.12, 0)]
+            else:
+                lo = 0.78 if head == 'whale' else 0.65
+                pts = [nose_p + v3(sd * Rm * 0.05, -Rm * 0.36, -Rm * 0.25), ax(0.06) + v3(sd * Rm * lo * 0.8, -Rm * 0.36, 0), g + v3(sd * prof(eyeAt) * Rm * wid(eyeAt) * 0.82, Rm * 0.05, 0)]
+            for q in range(len(pts) - 1):
+                b.cut(RoundCone(pts[q], pts[q + 1], max(Rm * 0.035, b.meta['h'] * 1.6), max(Rm * 0.03, b.meta['h'] * 1.4), flat=((0, 1, 0), 0.4)), k=Rm * 0.02)
+    # the eyes, a little above the mouth's corner; the blowhole on top behind the forehead
+    ez = eyeAt; er = eyeR * L; ep = ax(ez); rr = prof(ez) * Rm
+    ex = rr * wid(ez) * 0.94; ey = ep[1] + rr * eyeUp
+    b.add(Sphere((ex * 0.9, ey, ep[2]), er * 1.5), 'head', k=er * 1.2, tau=tau)   # (the socket's bulge)
+    b.add(Sphere((-ex * 0.9, ey, ep[2]), er * 1.5), 'head', k=er * 1.2, tau=tau)
+    eyes(b, v3(ex * 0.9 + er * 0.75, ey, ep[2]), er)
+    b.meta['eye'] = [float(ex), float(ey), float(ep[2])]
+    if blow:
+        bz = (0.17 if head == 'beak' else 0.12 if head == 'blunt' else 0.22); bp = ax(bz) + v3(0, prof(bz) * Rm * 0.98, 0)
+        for sd in ((0,) if blow == 1 else (1, -1)):
+            b.cut(Ellipsoid(bp + v3(sd * Rm * 0.06, 0, 0), (Rm * (0.07 if blow == 1 else 0.035), Rm * 0.05, Rm * (0.025 if blow == 1 else 0.06))), k=Rm * 0.02)
+        if blow == 2: b.add(Ellipsoid(bp + v3(0, Rm * 0.01, Rm * 0.12), (Rm * 0.12, Rm * 0.05, Rm * 0.06)), 'head', k=Rm * 0.05, tau=tau)
+        b.meta['swim']['blow'] = [0.0, float(bp[1]), float(bp[2])]
+    if knobs:  # (the humpback's knobs on its rostrum and its jaw)
+        for k in range(knobs):
+            s = 0.025 + k * 0.17 / knobs
+            for sd in ((0,) if k % 2 == 0 else (1, -1)):
+                b.add(Sphere(ax(s) + v3(sd * Rm * 0.22, Rm * (0.42 + 0.1 * s / 0.2), 0), Rm * 0.05), 'head', k=Rm * 0.04, tau=tau)
+            for sd in (1, -1):
+                b.add(Sphere(ax(s + 0.01) + v3(sd * Rm * 0.48, -Rm * 0.38, 0), Rm * 0.045), 'jaw' if jaw else 'head', k=Rm * 0.04, tau=tau)
+    # --- the dorsal fin (and the shark's second, its anal): rising from the back, swept back, its trailing edge hollow
+    def back_fin(spec, up=1):
+        at, ht, base, rake = spec; ht *= L; base *= L
+        p0 = ax(at) + v3(0, up * prof(at) * Rm * 0.82, 0)
+        P = [p0, p0 + v3(0, up * ht * 0.4, -ht * rake * 0.18), p0 + v3(0, up * ht * 0.75, -ht * rake * 0.58), p0 + v3(0, up * ht, -ht * rake)]
+        fin(b, P, [base * 0.5, base * 0.36, base * 0.2, base * 0.06], owner(at), (1, 0, 0), 0.16, k=Rm * 0.08, tau=tau * 0.6)
+        return P[-1]
+    if dorsal: b.meta['swim']['fin'] = [float(x) for x in back_fin(dorsal)]
+    if dorsal2: back_fin(dorsal2)
+    if anal: back_fin(anal, up=-1)
+    # --- the pectoral fins: from low on the flank, out, down and back — a flat paddle (the whale's long, its edge knobbed)
+    if pect:
+        at, ln, chd, dn, bk = pect; ln *= L; chd *= L; dn, bk = np.radians(dn), np.radians(bk)
+        for sd, s in ((1, 'L'), (-1, 'R')):
+            rr = prof(at) * Rm; p0 = ax(at) + v3(sd * rr * wid(at) * 0.6, -rr * 0.5, 0)
+            d = nrm(v3(sd * np.cos(dn) * np.cos(bk), -np.sin(dn), -np.cos(dn) * np.sin(bk)))
+            n = nrm(np.cross(d, v3(0, 0, 1))); n = n if n[1] > 0 else -n
+            P = [p0, p0 + d * ln * 0.3, p0 + d * ln * 0.68 + v3(0, 0, -ln * 0.06), p0 + d * ln + v3(0, 0, -ln * 0.12)]
+            for q, bn in enumerate(('fl%s0' % s, 'fl%s1' % s, 'fl%s2' % s, 'fl%s3' % s)): b.j(bn, P[q])
+            fin(b, P, [chd * 0.42, chd * 0.5, chd * (0.36 + pectTip * 0.6), chd * pectTip], ['fl%s0' % s, 'fl%s1' % s, 'fl%s2' % s], n, 0.2, k=Rm * 0.06, tau=tau * 0.5)
+            fw = nrm(np.cross(n, d)); fw = fw if fw[2] > 0 else -fw
+            for k in range(knobs // 2):  # (the bumps of its leading edge)
+                t = 0.15 + 0.8 * k / max(1, knobs // 2 - 1); qq = lerp(P[0], P[3], t)
+                b.add(Sphere(qq + fw * chd * (0.44 - 0.32 * t), chd * 0.075), 'fl%s2' % s if t > 0.6 else 'fl%s1' % s, k=chd * 0.06, tau=tau * 0.5)
+    if pelvic:
+        at, ln, chd = pelvic; ln *= L; chd *= L
+        for sd, s in ((1, 'L'), (-1, 'R')):
+            rr = prof(at) * Rm; p0 = ax(at) + v3(sd * rr * wid(at) * 0.45, -rr * 0.72, 0)
+            d = nrm(v3(sd * 0.55, -0.45, -1)); P = [p0, p0 + d * ln * 0.55, p0 + d * ln]
+            for q, bn in enumerate(('hl%s0' % s, 'hl%s1' % s, 'hl%s2' % s, 'hl%s3' % s)): b.j(bn, P[min(q, 2)])
+            fin(b, P, [chd * 0.45, chd * 0.3, chd * 0.06], ['hl%s0' % s, 'hl%s1' % s], v3(0, 1, 0.3), 0.2, k=Rm * 0.05, tau=tau * 0.5)
+    # --- the tail: the flukes (the cetaceans, flat and swept back, notched in the middle) or the shark's (upright, the upper
+    # lobe longer: the backbone runs into it), the keels of the stock
+    t3 = ax(0.92)
+    if flukes:
+        span, chd, sweep = flukes; span *= L; chd *= L
+        for sd in (1, -1):
+            P = [t3 + v3(0, 0, chd * 0.1), t3 + v3(sd * span * 0.2, 0, -sweep * span * 0.12), t3 + v3(sd * span * 0.38, 0, -sweep * span * 0.3), t3 + v3(sd * span * 0.5, 0, -sweep * span * 0.55)]
+            fin(b, P, [chd * 0.42, chd * 0.48, chd * 0.32, chd * 0.06], 'tail3', (0, 1, 0), 0.15, k=Rm * 0.05, tau=tau * 0.6)
+        b.cut(Ellipsoid(t3 + v3(0, 0, -chd * 0.62), (span * 0.035, chd * 0.2, chd * 0.14)), k=chd * 0.05)   # (the notch)
+        b.meta['swim']['tail'] = [0.0, float(t3[1]), float(t3[2] - sweep * span * 0.55)]
+    if caudal:
+        up, lo, au, al = caudal; up *= L; lo *= L; au, al = np.radians(au), np.radians(al)
+        t3s = ax(0.86); du = nrm(v3(0, np.sin(au), -np.cos(au))); dl = nrm(v3(0, -np.sin(al), -np.cos(al)))
+        cu = Rm * 0.44
+        b.add(Ellipsoid(t3s + v3(0, 0, -up * 0.16), (Rm * 0.05, Rm * 0.62, up * 0.2), rot_x(-0.15)), 'tail3', k=Rm * 0.06, tau=tau * 0.6)   # (the web between the lobes)
+        Pu = [t3s, t3s + du * up * 0.35 + v3(0, 0, -up * 0.04), t3s + du * up * 0.72 + v3(0, 0, -up * 0.1), t3s + du * up + v3(0, 0, -up * 0.12)]
+        fin(b, Pu, [cu, cu * 0.75, cu * 0.45, cu * 0.1], 'tail3', (1, 0, 0), 0.14, k=Rm * 0.05, tau=tau * 0.6)
+        Pl = [t3s, t3s + dl * lo * 0.45, t3s + dl * lo * 0.8 + v3(0, 0, -lo * 0.06), t3s + dl * lo + v3(0, 0, -lo * 0.08)]
+        fin(b, Pl, [cu * 0.9, cu * 0.7, cu * 0.4, cu * 0.1], 'tail3', (1, 0, 0), 0.14, k=Rm * 0.05, tau=tau * 0.6)
+        b.meta['swim']['tail'] = [0.0, float(Pu[-1][1]), float(Pu[-1][2])]
+    if keel:  # (the keels along the stock's sides)
+        for sd in (1, -1): b.add(ell_between(ax(0.8) + v3(sd * prof(0.84) * Rm * pedW * 0.9, 0, 0), ax(0.89) + v3(sd * prof(0.88) * Rm * pedW * 0.9, 0, 0), Rm * 0.06 * keel, Rm * 0.025), 'tail3', k=Rm * 0.04, tau=tau * 0.5)
+    # the teeth: a row along each jaw, seen when the mouth opens
+    if teeth:
+        pr = []
+        for sd in (1, -1):
+            for k in range(teeth):
+                t = (k + 0.5) / teeth
+                if head == 'shark':
+                    up_ = lerp(v3(sd * Rm * 0.08, yc - Rm * 0.56, zs(0.065)), v3(sd * Rm * 0.6 * headW, yc - Rm * 0.5, zs(eyeAt + 0.01)), t)
+                    lo_ = lerp(v3(sd * Rm * 0.1, yc - Rm * 0.7, zs(0.075)), v3(sd * Rm * 0.58 * headW, yc - Rm * 0.62, zs(eyeAt + 0.01)), t)
+                else:
+                    up_ = lerp(nose_p + v3(sd * Rm * 0.12, -Rm * 0.36, -Rm * 0.3), ax(eyeAt) + v3(sd * prof(eyeAt) * Rm * 0.72, -Rm * 0.3, 0), t)
+                    lo_ = up_ + v3(0, -Rm * 0.08, -Rm * 0.04)
+                th = Rm * (0.07 if head == 'shark' else 0.05) * (1.1 - 0.4 * t)
+                pr.append((RoundCone(up_ + v3(0, th * 0.4, 0), up_ + v3(0, -th, 0), th * 0.45, th * 0.06), 'head'))
+                pr.append((RoundCone(lo_ + v3(0, -th * 0.4, 0), lo_ + v3(0, th * 0.9, 0), th * 0.4, th * 0.06), 'jaw' if jaw else 'head'))
+        b.piece('dentes', 'marfim', pr, 90, far=0, h=max(0.002, Rm * 0.012))
+    b.meta['gills'] = gills; b.meta['eyeAt'] = eyeAt
+    b.meta['family'] = 'swim'; b.meta['p'] = dict(headL=0.18 * L / max(b.H, 1e-3))
+    b.meta['paint'] = swim_paint
+    for s in ('L', 'R'):  # (what a swimmer lacks keeps its bone where its parent is: the hind legs at the root)
+        for k in range(4):
+            if 'hl%s%d' % (s, k) not in b.J: b.j('hl%s%d' % (s, k), b.J['root'])
+    return b
+
+
+def swim_paint(b, V, N, W, r1, r2):
+    """What the sea's coat reads of each point (the shader's f3sea): reg.x the belly's side of the line (0.5 on it — a
+    signed distance, so the line stays where it is drawn whatever the triangles), reg.y how far out along a pectoral fin,
+    reg.w the orca's grey saddle, reg2.y the stripes' place (the shark's gill slits, the whale's throat grooves) and reg2.w
+    where they are, reg2.z the dark cape down the back; reg.z (the snout) and reg2.x (along the tail) as the land's."""
+    L = b.L; sw = b.meta['swim']; Rm = sw['R']; yc = sw['yc']; kind = b.meta.get('pattern', 'plain')
+    s = (L / 2 - V[:, 2]) / L                                    # (along the body: 0 the snout, 1 the tail's end)
+    y = V[:, 1] - yc; x = V[:, 0]
+    phi = np.arctan2(np.abs(x), -y)                             # (round the body from the keel: 0 under, π on top)
+    rad = np.maximum(np.hypot(x, y), Rm * 0.05)
+    finw = np.clip(W[:, LEGS].sum(1), 0, 1)
+    def band(lo, hi, u): return np.clip((u - lo) / max(hi - lo, 1e-6), 0, 1)
+    def bump(c, w, u): return np.exp(-((u - c) / w) ** 2)
+    # the line's height round the body (radians from the keel), by where along it
+    if kind == 'orca':  # (the white chin and throat, narrow between the fins, the belly, the flank's lobe up behind the fin)
+        th = 1.25 * band(0.0, 0.03, s) * (1 - band(0.1, 0.2, s)) + 0.5 * band(0.12, 0.2, s) * (1 - band(0.8, 0.86, s)) \
+            + 1.15 * bump(0.66, 0.08, s) * band(0.5, 0.62, s) - 0.25 * bump(0.33, 0.05, s)
+    elif kind == 'shark':  # (high and ragged down the flank, lower toward the tail)
+        th = 1.45 + 0.12 * np.sin(s * 47.0 + 1.0) + 0.07 * np.sin(s * 113.0) - 0.35 * band(0.6, 0.9, s) - 0.5 * band(0.0, 0.08, 0.08 - s)
+    elif kind == 'whale':  # (the pale belly, its edge mottled, gone toward the tail)
+        th = 1.05 + 0.18 * np.sin(s * 31.0) * band(0.2, 0.7, s) + 0.08 * np.sin(s * 87.0) - 0.6 * band(0.62, 0.85, s)
+    else:  # (the dolphin: the pale belly up the flanks, a little higher by the head)
+        th = 1.2 + 0.2 * band(0.0, 0.2, 0.25 - s) - 0.45 * band(0.65, 0.9, s)
+    d = (th - phi) * rad                                          # (metres along the skin, + on the belly's side)
+    if kind == 'orca':  # (the white over its eye: an oval above and behind it, rising toward the back)
+        e = np.array(b.meta['eye']); c = e + np.array([0, Rm * 0.22, -L * 0.065])
+        u = V[:, 2] - c[2]; vv = (V[:, 1] - c[1]) + u * 0.28; ww = np.abs(V[:, 0]) - c[0]
+        de = (1 - np.sqrt((u / (L * 0.066)) ** 2 + (vv / (Rm * 0.25)) ** 2 + (np.minimum(ww, 0) / (Rm * 0.6)) ** 2)) * Rm * 0.25
+        d = np.maximum(d, np.where(finw < 0.3, de, -Rm))
+    # (the fins: the pectorals' top as the back, their underside as the belly — the whale's all pale, the orca's all dark; the
+    # flukes' underside pale for the whale and the orca)
+    sgn = np.where(N[:, 1] < 0, 1.0, -1.0)
+    under_fin = sgn * Rm * 0.3
+    if kind == 'whale': under_fin = np.full(len(V), Rm * 0.3)
+    if kind == 'orca': under_fin = np.full(len(V), -Rm * 0.3)
+    d = np.where(finw > 0.55, under_fin, d)
+    fl = (W[:, TAILS3].sum(1) > 0.6) & (s > 0.9)
+    d = np.where(fl, (sgn if kind in ('whale', 'orca') else -1.0) * Rm * 0.3, d)
+    wq = 2.0 * Rm                                                 # (the scale of the signed distance: half of it either side)
+    r1[:, 0] = np.clip(np.round((0.5 + d / (2 * wq)) * 255), 0, 255).astype(np.uint8)
+    # how far out along a pectoral fin (its tip painted)
+    J = b.bones_filled(); out = np.zeros(len(V))
+    for sd, sname in ((1, 'L'), (-1, 'R')):
+        a = J['fl%s0' % sname]; t = J['fl%s3' % sname]; ab = t - a; ln = max(float(np.linalg.norm(ab)), 1e-6)
+        u = np.clip((V - a) @ ab / (ln * ln), 0, 1); out = np.where((np.sign(V[:, 0]) == sd) & (finw > 0.3), np.maximum(out, u), out)
+    r1[:, 1] = np.clip(np.round(out * 255), 0, 255).astype(np.uint8)
+    # the orca's saddle: grey over the back behind the fin
+    sad = bump(0.56, 0.05, s) * band(2.2, 2.7, phi) * (finw < 0.3) if kind == 'orca' else np.zeros(len(V))
+    r1[:, 3] = np.clip(np.round(sad * 255), 0, 255).astype(np.uint8)
+    # the stripes: the shark's five slits before the pectorals; the whale's grooves under its throat and chest
+    st = np.zeros(len(V)); sm_ = np.zeros(len(V))
+    if b.meta.get('gills'):
+        ea = b.meta['eyeAt']; g0, g1 = ea + 0.06, ea + 0.15
+        st = np.clip(((s - g0) / (g1 - g0) * 4 + 1) / 25.5, 0, 1)   # (slits at the whole numbers 1..5 of st × 25.5)
+        sm_ = band(g0 - 0.012, g0, s) * (1 - band(g1, g1 + 0.012, s)) * bump(1.55, 0.42, phi) * (finw < 0.3)
+    if kind == 'whale':
+        st = np.clip(phi * 18 / 25.5, 0, 1); sm_ = band(0.02, 0.06, s) * (1 - band(0.42, 0.5, s)) * (1 - band(0.85, 1.0, phi)) * (finw < 0.3)
+    r2[:, 1] = np.clip(np.round(st * 255), 0, 255).astype(np.uint8); r2[:, 3] = np.clip(np.round(sm_ * 255), 0, 255).astype(np.uint8)
+    # the cape: darker down the back from the forehead past the fin (the dolphin's; the others' a breath of it)
+    cape = band(2.0, 2.75, phi) * band(0.08, 0.16, s) * (1 - band(0.55, 0.72, s)) * (finw < 0.3)
+    r2[:, 2] = np.clip(np.round(cape * 255), 0, 255).astype(np.uint8)
+    return r1, r2
+
+
+# ------------------------------ the sea turtle (D-267) ------------------------------
+def turtle(b, shellL=0.74, shellW=0.6, domeH=0.17, plastH=0.06, headL=0.15, neckL=0.1, flipL=0.5, flipC=0.2, hindL=0.18, **kw):
+    """The sea turtle: the shell (a piece of its own, zone 'casca': the domed carapace, narrowing behind, over the flat
+    plastron; its scutes painted by where each point is on it), the head with its horny beak and big eyes on a short
+    neck, the long front flippers swept back like wings, the small round hind ones, the stub of the tail. The body's bones
+    hold still under the shell; the neck's and the flippers' move. Measures as fractions of L (beak to tail)."""
+    L = b.L; Ls = shellL * L; Wd = shellW * L; Hd = domeH * L; Hp = plastH * L
+    yr = Hp * 1.15 + 0.01; zc = -L * 0.06                     # (the shell's rim: its height and its middle along the body)
+    b.meta.setdefault('h', float(np.clip(Ls * 0.0075, 0.0025, 0.02)))
+    root = b.j('root', (0, yr, zc - Ls * 0.18)); b.j('spine', (0, yr, zc)); b.j('chest', (0, yr, zc + Ls * 0.22))
+    # the shell: one solid, the dome over the rim and the flatter plastron under it, narrowing toward the tail, a ridge down
+    # the middle of the back
+    def shell(P):
+        x, y, z = P[:, 0], P[:, 1] - yr, P[:, 2] - zc
+        zn = np.clip(z / (Ls / 2), -1.3, 1.3)
+        w = Wd / 2 * (1 - 0.3 * np.clip(-zn, 0, 1) ** 1.6) * (1 - 0.08 * np.clip(zn, 0, 1) ** 2)
+        ht = np.where(y > 0, Hd * (1 - 0.18 * np.clip(-zn, 0, 1)) * (1 + 0.06 * np.exp(-(x / (Wd * 0.08)) ** 2)), Hp)
+        q = np.stack([x / w, y / ht, z / (Ls / 2)], 1); k0 = np.linalg.norm(q, axis=1)
+        return (k0 - 1) * np.minimum(np.minimum(w, ht), Ls / 2) * 0.92
+    from corpo_sdf import Custom
+    sh = Custom(shell, ((-Wd / 2 - 0.02, yr - Hp - 0.02, zc - Ls / 2 - 0.02), (Wd / 2 + 0.02, yr + Hd * 1.1 + 0.02, zc + Ls / 2 + 0.02)))
+    b.piece('casca', 'casca', [(sh, 'spine')], 300, far=60, h=b.meta['h'] * 1.1)
+    b.pieces[-1]['paint'] = lambda V, N: shell_paint(V, N, yr, zc, Ls, Wd)
+    b.meta['shell'] = dict(yr=yr, zc=zc, L=Ls, W=Wd, H=Hd)
+    # (what the shell hides: a core the limbs and the neck grow from)
+    tau = max(0.01, Ls * 0.05)
+    b.add(Ellipsoid((0, yr + Hd * 0.25, zc), (Wd * 0.33, Hd * 0.5, Ls * 0.38)), 'spine', k=Ls * 0.05, tau=tau)
+    # the neck and the head: out of the shell's front, the head a little down, the beak a piece of horn, the eyes big
+    n0 = b.j('neck0', (0, yr + Hd * 0.1, zc + Ls * 0.4)); n1 = b.j('neck1', (0, yr + Hd * 0.12, zc + Ls * 0.4 + neckL * L * 0.4))
+    n2 = b.j('neck2', (0, yr + Hd * 0.13, zc + Ls * 0.4 + neckL * L * 0.75)); hd = b.j('head', (0, yr + Hd * 0.14, zc + Ls * 0.4 + neckL * L))
+    hl = headL * L; nr = hl * 0.36
+    b.add(RoundCone(n0 - v3(0, 0, Ls * 0.06), n1, nr * 1.25, nr * 1.08, flat=((0, 1, 0), 0.8)), 'neck0', k=nr * 0.4, tau=tau)
+    b.add(RoundCone(n1, n2, nr * 1.08, nr, flat=((0, 1, 0), 0.82)), 'neck1', k=nr * 0.3, tau=tau)
+    b.add(RoundCone(n2, hd, nr, nr * 0.95, flat=((0, 1, 0), 0.85)), 'neck2', k=nr * 0.3, tau=tau)
+    hc = hd + v3(0, hl * 0.06, hl * 0.42)
+    b.add(Ellipsoid(hc, (hl * 0.36, hl * 0.3, hl * 0.48)), 'head', k=hl * 0.15, tau=tau)
+    b.add(Ellipsoid(hc + v3(0, hl * 0.1, -hl * 0.05), (hl * 0.32, hl * 0.25, hl * 0.4)), 'head', k=hl * 0.12, tau=tau)   # (the crown)
+    bk = hc + v3(0, -hl * 0.1, hl * 0.4)
+    b.j('jaw', hc + v3(0, -hl * 0.12, -hl * 0.1))
+    b.add(Ellipsoid(hc + v3(0, -hl * 0.14, hl * 0.12), (hl * 0.3, hl * 0.14, hl * 0.36)), 'jaw', k=hl * 0.08, tau=tau * 0.5)  # (the lower jaw)
+    b.piece('bico', 'bico', [(RoundCone(bk + v3(0, hl * 0.06, -hl * 0.12), bk + v3(0, -hl * 0.06, hl * 0.1), hl * 0.2, hl * 0.07, flat=((1, 0, 0), 0.9)), 'head'),
+                             (RoundCone(bk + v3(0, -hl * 0.14, -hl * 0.14), bk + v3(0, -hl * 0.12, hl * 0.04), hl * 0.15, hl * 0.06, flat=((1, 0, 0), 0.9)), 'jaw')], 50, far=10, h=max(0.002, hl * 0.02))
+    b.meta['nose'] = list(bk + v3(0, -hl * 0.03, hl * 0.12))
+    ec = hc + v3(hl * 0.27, hl * 0.08, hl * 0.18); er = hl * 0.085
+    for sd in (1, -1): b.add(Sphere(ec * v3(sd, 1, 1), er * 1.4), 'head', k=er, tau=tau)
+    eyes(b, ec + v3(er * 0.55, 0, er * 0.15), er)
+    b.meta['eye'] = list(ec)
+    # the front flippers: the arm out of the shell, the long blade swept back, flat; the hind ones short and round
+    for sd, s in ((1, 'L'), (-1, 'R')):
+        sh0 = b.j('fl%s0' % s, (sd * Wd * 0.26, yr - Hp * 0.1, zc + Ls * 0.3)); el = b.j('fl%s1' % s, (sd * Wd * 0.5, yr - Hp * 0.25, zc + Ls * 0.33))
+        wr = b.j('fl%s2' % s, (sd * (Wd * 0.5 + flipL * L * 0.3), yr - Hp * 0.35, zc + Ls * 0.27)); tip = b.j('fl%s3' % s, (sd * (Wd * 0.5 + flipL * L * 0.85), yr - Hp * 0.5, zc + Ls * 0.02))
+        c = flipC * L
+        b.add(RoundCone(sh0, el, c * 0.42, c * 0.36, flat=((0, 1, 0), 0.6)), 'fl%s0' % s, k=c * 0.2, tau=tau)
+        fin(b, [el, wr, lerp(wr, tip, 0.55), tip], [c * 0.34, c * 0.5, c * 0.36, c * 0.08], ['fl%s1' % s, 'fl%s2' % s, 'fl%s2' % s], (0, 1, 0), 0.18, k=c * 0.15, tau=tau * 0.6)
+        hp = b.j('hl%s0' % s, (sd * Wd * 0.2, yr - Hp * 0.2, zc - Ls * 0.32)); kn = b.j('hl%s1' % s, (sd * Wd * 0.32, yr - Hp * 0.3, zc - Ls * 0.46))
+        an = b.j('hl%s2' % s, (sd * (Wd * 0.32 + hindL * L * 0.4), yr - Hp * 0.35, zc - Ls * 0.5 - hindL * L * 0.35)); b.j('hl%s3' % s, an)
+        hc_ = hindL * L
+        b.add(RoundCone(hp, kn, hc_ * 0.3, hc_ * 0.26, flat=((0, 1, 0), 0.6)), 'hl%s0' % s, k=hc_ * 0.15, tau=tau)
+        fin(b, [kn, lerp(kn, an, 0.5), an], [hc_ * 0.28, hc_ * 0.42, hc_ * 0.2], ['hl%s1' % s, 'hl%s2' % s], (0, 1, 0), 0.22, k=hc_ * 0.12, tau=tau * 0.6)
+    t0 = b.j('tail0', (0, yr - Hp * 0.1, zc - Ls * 0.44)); t1 = b.j('tail1', t0 + v3(0, -Hp * 0.1, -L * 0.07))
+    b.j('tail2', t1); b.j('tail3', t1)
+    b.add(RoundCone(t0, t1, L * 0.035, L * 0.012), 'tail0', k=L * 0.01, tau=tau * 0.5)
+    b.meta['family'] = 'turtle'; b.meta['p'] = dict(headL=hl / max(b.H, 1e-3))
+    b.meta['swim'] = dict(R=round((Hd + Hp) / 2, 4), yc=round(yr, 4), top=round(yr + Hd, 4), beat='f')
+    return b
+
+
+def shell_paint(V, N, yr, zc, Ls, Wd):
+    """Where each point is on the shell, for its scutes (the shader's f3shell): reg.x across it (0.5 the middle), reg.y
+    along it (0 the tail's end, 1 the head's), reg.z the plastron under it, reg.w how near the rim."""
+    x, y, z = V[:, 0], V[:, 1] - yr, V[:, 2] - zc
+    zn = np.clip(z / (Ls / 2), -1, 1)
+    w = Wd / 2 * (1 - 0.3 * np.clip(-zn, 0, 1) ** 1.6) * (1 - 0.08 * np.clip(zn, 0, 1) ** 2)
+    u = np.clip(x / w, -1, 1); rim = np.clip(np.sqrt(u ** 2 + zn ** 2), 0, 1)
+    under = np.clip((-N[:, 1] - 0.2) / 0.5, 0, 1) * (y < Ls * 0.02)
+    q = lambda a: np.clip(np.round(np.asarray(a) * 255), 0, 255).astype(np.uint8)
+    return np.stack([q(u * 0.5 + 0.5), q(zn * 0.5 + 0.5), q(under), q(rim)], 1), np.zeros((len(V), 4), np.uint8)

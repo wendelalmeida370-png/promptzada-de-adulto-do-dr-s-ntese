@@ -134,7 +134,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 | Ponta de empena recortada (cavalo: 252 · voluta: 524) | ≤ 600 | ≤ 20 |
 | Árvore | ≤ 1,2 mil | ≤ 40 |
 | Pessoa | ≤ 3 mil (corpo 2 mil + roupa e cabelo) | média ≤ 800 |
-| Bicho (`faunamesh.js`, D-265) | ≤ 1,5 mil (corpo ~760 + peças) | ≤ 300 (~160) |
+| Bicho (`faunamesh.js`, D-265) | ≤ 1,5 mil (corpo ~760 + peças; os do mar ~1,1 a 1,4 mil, D-267) | ≤ 300 (~160; a baleia, 320) |
 
 - Um pedaço do mundo perto (64 × 64 m) tem **uma geometria por material** (sólido, flora, folhas, plantas, água, vidro):
   coisa nova entra na geometria do pedaço (`Geo.put`), não ganha malha própria nem chamada de desenho própria.
@@ -144,7 +144,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
   ≤ 200 KB de WebP (o número que o `texturas.py` imprime; no base64, × 4/3); os chãos e a turfa vistos de perto podem ir a 300 KB (o peso deles é o capim e a folha que se vê: `turf`,
   `forest`, `grass`, `needles` passam de 200 — baixar a qualidade só tira 12% e borra o que importa); tecido e couro em
   256 px (o fio nunca chega à tela). O limite que manda é o total.
-- Os bichos (`js/faunamesh.js`, feito pelo `arte/fauna.py`): 2,6 MB para 67 espécies e 11 malhas de voo, perto e longe — uma categoria como a das pessoas (`bodymesh.js`, 1,75 MB), fora da conta das peças abaixo (D-266).
+- Os bichos (`js/faunamesh.js`, feito pelo `arte/fauna.py`): 2,8 MB para 72 espécies — as 67 da terra, da beira d'água e do ar e as 5 do mar (D-267: 205 KB, ≤ 50 KB cada, perto e longe) — e 11 malhas de voo, perto e longe — uma categoria como a das pessoas (`bodymesh.js`, 1,75 MB), fora da conta das peças abaixo (D-266).
 - Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB; a pedra rúnica: 36,7 KB; o portal: 34,3 KB; a maior, a banca:
   40,4 KB); todas juntas ≤ 1 MB (hoje sete, 203 KB — a conta do `qa/visual/malhas.js`).
 - Decoração só com `G.Realm.Q().detail`; densidade lida dos campos do preset, nunca fixa.

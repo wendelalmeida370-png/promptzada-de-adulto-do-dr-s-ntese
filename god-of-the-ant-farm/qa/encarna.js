@@ -777,7 +777,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     if (shore) {
       G.Avatar.place(shore[0], shore[1]); __E.f(4);
       const w = near((i, x, y) => S.type[i] <= T.SEA && G.dist(x, y, shore[0], shore[1]) > 3, 30);
-      if (w) { const a = G.Animals.spawn ? G.Animals.spawn('dolphin', w[0], w[1]) : null; __E.f(6); out.sea = { spawned: !!a, drawn: G.Things3D.n.sea || 0 }; }
+      if (w) { const a = G.Animals.spawn ? G.Animals.spawn('dolphin', w[0], w[1]) : null; __E.f(6); out.sea = { spawned: !!a, drawn: (G.Things3D.n.sea || 0) + (G.Things3D.seaSkins || 0) }; } // (as a skin — D-267 — or as the pieces of old)
     }
     // the god's gifts over the town: gold falling and heaped, wine leaping from a well
     const set = __E.town(); const tp = near((i, x, y) => G.W.walkable(i) && G.dist(x + 0.5, y + 0.5, set.cx, set.cy) < 6, 400); if (tp) G.Avatar.place(tp[0], tp[1]); __E.f(2);

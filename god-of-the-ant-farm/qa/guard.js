@@ -789,5 +789,10 @@ for (const f of ['fauna3d.js', 'fauna-anim.js']) { if (!src[f]) { fails.push(`bi
 { const p3 = src['people3d.js'] || []; const i = p3.findIndex(l => /function beastSkin\(a, sp, s, m,/.test(l));
   if (i < 0) fails.push('bicho de uma pele: o people3d.js sem a função beastSkin — a regra 91 não acha quem põe os bichos na pele');
   else { const j = p3.findIndex((l, k) => k > i && /^  \}$/.test(l)); p3.slice(i, j).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\ba\.[A-Za-z_]+\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`bicho de uma pele: people3d.js:${i + k + 1} o beastSkin escreve no bicho (a memória do desenho é o bvis): ${l.trim().slice(0, 110)}`); }); } }
+// (os bichos do mar, D-267: o seaSkin do things3d.js guarda o que a vista lembra de cada um — o nado, o salto, o fôlego, o
+// mergulho — na memória de desenho dele (o memo s), nunca no bicho; o salto e o sopro são os do mundo, só lidos)
+{ const t3 = src['things3d.js'] || []; const i = t3.findIndex(l => /function seaSkin\(a, s,/.test(l));
+  if (i < 0) fails.push('bicho de uma pele: o things3d.js sem a função seaSkin — a regra 91 não acha quem põe os bichos do mar na pele (D-267)');
+  else { const j = t3.findIndex((l, k) => k > i && /^  \}$/.test(l)); t3.slice(i, j).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\ba\.[A-Za-z_]+\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`bicho de uma pele: things3d.js:${i + k + 1} o seaSkin escreve no bicho (a memória do desenho é o memo s): ${l.trim().slice(0, 110)}`); }); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
