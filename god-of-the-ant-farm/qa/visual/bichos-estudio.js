@@ -8,7 +8,7 @@
 // PASTA_DO_JOGO: this game, or an old worktree for the 'antes'. Each frame is drawn by the game's own renderer.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
-const ROOT = process.argv[2]; const OUT = process.argv[3];
+const ROOT = path.resolve(process.argv[2] || '.'); const OUT = process.argv[3];
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 (async () => {
   const VW = +process.env.VW || 300, VH = +process.env.VH || 240;

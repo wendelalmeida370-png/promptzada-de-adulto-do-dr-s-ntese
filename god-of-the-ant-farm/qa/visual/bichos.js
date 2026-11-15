@@ -8,7 +8,7 @@
 // world has it, a row is drawn twice (People3D.check / Fauna3D.check); a page error, a console warning, a module error.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path');
-const ROOT = process.argv[2] || path.join(__dirname, '..', '..');
+const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')); // (a relative folder — '.' — made a bad file:// URL)
 (async () => {
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 640, height: 400 } });

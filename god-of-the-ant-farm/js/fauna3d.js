@@ -20,20 +20,21 @@
   const F3 = G.Fauna3D = { ready: false, failed: null, rows: 0, calls: 0, tris: 0, lod: true };
   let THREE = null, scene = null;
   const MAXR = 64; // (rows: People3D's MAXA — the beasts drawn)
+  const MAXD = 4, ROWS = MAXR + MAXD; // (and after them, rows kept for the dragons — G.Dragon3D puts its own after the beasts')
   let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null, TU = null;
   const NP = 18; // texels of coat a row
-  F3.MAXR = MAXR; F3.rim = (G.Body3D && G.Body3D.rim) || { value: 0.2 };
+  F3.MAXR = MAXR; F3.rim = (G.Body3D && G.Body3D.rim) || { value: 0.2 }; F3.frame = 0;
   const MESH = {}; // name → { mesh, geo, rows, ra, n, tris }
   const FORM = {}; // mesh name → { J: Float32Array(NB*3) the bind joints, box, meta }
 
   // ------------------------------ the data ------------------------------
   function bytes(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
-  // a mesh unpacked: format 2 (arte/fauna.py encode — octahedral normals, three weights, zone and occlusion in a byte, the
-  // regions in 4 bits, the corners in variable-length bytes) or the first, plain one
+  // a mesh unpacked: format 3 (arte/fauna.py encode — octahedral normals, three weights, zone and occlusion in a byte, seven
+  // regions in 4 bits and the one along the body whole, the corners in variable-length bytes) or the first, plain one
   function unpack(m) {
     const n = m.n; const q = new Uint16Array(bytes(m.pos).buffer); const pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) pos[i * 3 + k] = m.lo[k] + q[i * 3 + k] * m.sc[k];
-    if (m.f !== 2) return { n, pos, nor: new Int8Array(bytes(m.nor).buffer), bi: bytes(m.bi), bw: bytes(m.bw), zone: bytes(m.zone), ao: bytes(m.ao), reg: bytes(m.reg), reg2: bytes(m.reg2), idx: new Uint16Array(bytes(m.idx).buffer) };
+    if (m.f !== 3) return { n, pos, nor: new Int8Array(bytes(m.nor).buffer), bi: bytes(m.bi), bw: bytes(m.bw), zone: bytes(m.zone), ao: bytes(m.ao), reg: bytes(m.reg), reg2: bytes(m.reg2), idx: new Uint16Array(bytes(m.idx).buffer) };
     const oc = new Int8Array(bytes(m.oct).buffer), nor = new Int8Array(n * 3);
     for (let i = 0; i < n; i++) {
       let x = oc[i * 2] / 127, y = oc[i * 2 + 1] / 127; let z = 1 - Math.abs(x) - Math.abs(y);
@@ -42,7 +43,9 @@
     }
     const w3 = bytes(m.bw3), bw = new Uint8Array(n * 4); for (let i = 0; i < n; i++) { const a = w3[i * 3], b = w3[i * 3 + 1], c = w3[i * 3 + 2]; bw[i * 4] = a; bw[i * 4 + 1] = b; bw[i * 4 + 2] = c; bw[i * 4 + 3] = 255 - a - b - c; }
     const za = bytes(m.za), zone = new Uint8Array(n), ao = new Uint8Array(n); for (let i = 0; i < n; i++) { zone[i] = za[i] >> 4; ao[i] = (za[i] & 15) * 17; }
-    const rg = bytes(m.rg), reg = new Uint8Array(n * 4), reg2 = new Uint8Array(n * 4); for (let i = 0; i < n * 4; i++) { reg[i] = (rg[i] >> 4) * 17; reg2[i] = (rg[i] & 15) * 17; }
+    const rg = bytes(m.rg), tx = bytes(m.tx), reg = new Uint8Array(n * 4), reg2 = new Uint8Array(n * 4);
+    for (let i = 0; i < n; i++) { const o = i * 4; reg[o] = (rg[o] >> 4) * 17; reg[o + 1] = (rg[o] & 15) * 17; reg[o + 2] = (rg[o + 1] >> 4) * 17; reg[o + 3] = (rg[o + 1] & 15) * 17;
+      reg2[o] = tx[i]; reg2[o + 1] = (rg[o + 2] >> 4) * 17; reg2[o + 2] = (rg[o + 2] & 15) * 17; reg2[o + 3] = (rg[o + 3] >> 4) * 17; }
     const ix = bytes(m.ix), idx = new Uint16Array(m.tris * 3); let hw = 0, p = 0;
     for (let k = 0; k < idx.length; k++) { let c = 0, sh = 0, b; do { b = ix[p++]; c |= (b & 127) << sh; sh += 7; } while (b & 128); idx[k] = c === 0 ? hw++ : hw - c; }
     return { n, pos, nor, bi: bytes(m.bi), bw, zone, ao, reg, reg2, idx };
@@ -59,7 +62,7 @@
     g.setAttribute('aReg', new THREE.BufferAttribute(u.reg, 4, true));
     g.setAttribute('aReg2', new THREE.BufferAttribute(u.reg2, 4, true));
     g.setIndex(new THREE.BufferAttribute(u.idx, 1));
-    const rows = new Float32Array(MAXR); const ra = new THREE.InstancedBufferAttribute(rows, 1); ra.setUsage(THREE.DynamicDrawUsage);
+    const rows = new Float32Array(ROWS); const ra = new THREE.InstancedBufferAttribute(rows, 1); ra.setUsage(THREE.DynamicDrawUsage);
     g.setAttribute('aRow', ra); g.instanceCount = 0;
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
     return { g, rows, ra, tris: m.tris, u };
@@ -83,6 +86,10 @@ void f3skin(in vec3 p, in vec3 n, out vec3 P, out vec3 N) {
   // 1 slit 2 bar) · 10 ear tips (rgb, amount) · 11 the back's line (rgb, amount) · 12 throat and breast (rgb, amount) ·
   // 13 (the pattern's contrast, its seed, the fur's grain, the eyes forward) · 14 the face's mask (rgb, amount) · 15 wings
   // (rgb, the wing's bars) · 16 (young, the size in metres, wet, -) · 17 comb and wattle, the inside of the ear (rgb, -)
+  // The dragon (G.FaunaAnim.dragonCoat) uses three of the w's no other kind uses — 7.w the eyes' own light, 8 the breath's
+  // colour (rgb) and how much the sun shows through the wings (w), 17.w the mouth's glow (its rgb the inside of the mouth) —,
+  // the pupil 3 (the eye shut: the lid) and the pattern 15 (its scales, and the plates down its belly by reg2.x, how far
+  // along the body)
   const PAINT = `
 vec4 f3T(int k) { return texelFetch(uFauna, ivec2(PB + k, vRowI), 0); }
 float f3h(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -97,15 +104,19 @@ vec2 f3cell(vec3 x, out vec3 id) { vec3 i = floor(x), f = fract(x); float d1 = 8
   return vec2(sqrt(d1), sqrt(d2)); }
 float f3aa(float d) { float w = fwidth(d) * 0.9 + 1e-4; return clamp(0.5 - d / w, 0.0, 1.0); }
 float f3gl = 0.0; // (the eye's glint, a light of its own)
+vec3 f3em = vec3(0.0); float f3bl = 0.0; // (a light of its own — the dragon's eyes, its mouth breathing —; the sun through a wing)
 vec3 f3eye() {
   vec4 ir = f3T(9), X = f3T(13); vec3 d = normalize(vBindN); float sd = vZoneI == 1 ? 1.0 : -1.0;
   vec3 g = normalize(vec3(sd * (1.0 - X.w), 0.05, X.w * 1.6)); float a = dot(d, g); float aw = fwidth(a) * 1.5 + 0.004;
+  vec3 t1 = normalize(cross(g, vec3(0.0, 1.0, 0.0))), t2 = cross(t1, g); vec3 q = d - g * a; float u = dot(q, t1), v = dot(q, t2);
+  if (ir.w > 2.5) return mix(f3T(0).rgb * 0.7, vec3(0.03, 0.025, 0.02), smoothstep(0.07, 0.03, abs(v)) * step(0.25, a)); // (shut: the lid and its line)
   vec3 c = mix(ir.rgb * 0.45, ir.rgb * 1.15, smoothstep(0.55, 0.9, a)); // (the iris fills the eye that shows, darker at its rim)
   // (the pupil: round, a slit up and down — the cats —, a bar across — the goats, the sheep, the horses)
-  vec3 t1 = normalize(cross(g, vec3(0.0, 1.0, 0.0))), t2 = cross(t1, g); vec3 q = d - g * a; float u = dot(q, t1), v = dot(q, t2);
   float pr = ir.w < 0.5 ? length(vec2(u, v)) / 0.32 : ir.w < 1.5 ? length(vec2(u / 0.1, v / 0.42)) : length(vec2(u / 0.42, v / 0.13));
-  c = mix(c, vec3(0.015, 0.012, 0.01), smoothstep(1.0 + aw * 6.0, 1.0 - aw * 6.0, pr) * step(0.0, a));
-  c = mix(vec3(0.025, 0.02, 0.018), c, smoothstep(0.3, 0.45, a)); // (the dark round it)
+  float pm = smoothstep(1.0 + aw * 6.0, 1.0 - aw * 6.0, pr) * step(0.0, a), im = smoothstep(0.3, 0.45, a);
+  c = mix(c, vec3(0.015, 0.012, 0.01), pm);
+  c = mix(vec3(0.025, 0.02, 0.018), c, im); // (the dark round it)
+  f3em = ir.rgb * f3T(7).w * im * (1.0 - pm); // (eyes that burn: the dragon's)
   float hl = dot(d, normalize(g + vec3(-0.25 * sd, 0.45, 0.2))); f3gl = smoothstep(0.965, 0.98, hl);
   return mix(c, vec3(1.0), f3gl * 0.8);
 }
@@ -146,6 +157,10 @@ vec3 f3pattern(vec3 c, vec3 p, float kind, vec3 dk, float sc, float con, float s
     float e = smoothstep(sc - 0.08, sc + 0.08, p.z + f3n(p * 9.0) * 0.08); return mix(c, dk, e * con); }
   if (kind < 14.5) { // a wrinkled hide: fine creases, more on the legs
     float n = f3n(q * vec3(2.0, 9.0, 2.0)) * 0.6 + f3n(q * 7.0) * 0.4; float k = 1.0 - smoothstep(0.0, 0.03, fwidth(q.y) * 9.0); return c * (1.0 - con * 0.22 * smoothstep(0.45, 0.75, n) * k); }
+  if (kind < 15.5) { // the dragon's scales: each its own shade, lit at its middle and dark at its rim
+    vec3 id; vec2 r = f3cell(q * vec3(1.0, 1.3, 0.8), id); float e = r.y - r.x;
+    vec3 s = c * (0.9 + 0.2 * f3h(id)) * mix(1.12, 0.8, smoothstep(0.05, 0.6, r.x));
+    return mix(s, dk, f3aa(e - 0.07) * con); }
   return c;
 }
 vec3 f3coat() {
@@ -156,6 +171,8 @@ vec3 f3coat() {
   vec4 Bk = f3T(11); c = mix(c, Bk.rgb, vReg2.z * Bk.w);                                  // (the back's line)
   vec4 Th = f3T(12); c = mix(c, Th.rgb, smoothstep(0.15, 0.85, vReg2.w) * Th.w);           // (the throat and breast)
   c = mix(c, Be.rgb, smoothstep(0.12, 0.8, vReg.x) * Be.w);                               // (the belly, lighter)
+  if (C.w > 14.5 && C.w < 15.5) { float pl = fract(vReg2.x * 64.0); float bw = smoothstep(0.12, 0.8, vReg.x) * Be.w;   // (the dragon's belly: plates across it, a seam between each two)
+    c = mix(c, c * (0.84 + 0.26 * pl), bw); c = mix(c, Dk.rgb * 0.9, f3aa(min(pl, 1.0 - pl) * 2.0 - 0.1) * bw * 0.85); }
   c = mix(c, Dk.rgb, smoothstep(0.1, 0.32, vReg.x) * smoothstep(0.62, 0.36, vReg.x) * Ey.z); // (the flank's dark band, where the belly begins)
   c = mix(c, So.rgb, smoothstep(0.25, 0.85, vReg.y) * So.w);                              // (the socks)
   vec4 Mk = f3T(14); c = mix(c, Mk.rgb, smoothstep(0.3, 0.9, vReg.w) * (1.0 - vReg.z) * Mk.w); // (the face)
@@ -179,10 +196,10 @@ vec3 f3paint() {
   if (z == 6) { vec4 m = f3T(5); float k = 1.0 - smoothstep(0.0, 0.03, fwidth(vBind.x) * 60.0); return m.rgb * (0.85 + 0.3 * k * f3n(vBind * vec3(240.0, 40.0, 240.0))); } // mane, tuft
   if (z == 7) return vec3(0.9, 0.86, 0.76);                                                            // ivory
   if (z == 8) return f3T(8).rgb;                                                                       // beak, bare legs
-  if (z == 9) return f3T(17).rgb;                                                                      // comb, wattle
+  if (z == 9) { f3em = f3T(8).rgb * f3T(17).w; return f3T(17).rgb; }                                // comb, wattle; the dragon's mouth (its glow)
   if (z == 10) return f3T(6).rgb * (0.8 + 0.3 * f3n(vBind * 70.0));                                    // antler
   if (z == 11 || z == 12) { vec4 w = f3T(15); vec3 c = z == 11 ? w.rgb : f3T(5).rgb; vec3 q = vBind / max(f3T(16).y, 0.05);
-    if (z == 11) c = mix(c, f3T(2).rgb, smoothstep(0.62, 0.92, vReg2.x) * f3T(10).w);                  // (the wing's tips, darker)
+    if (z == 11) { c = mix(c, f3T(2).rgb, smoothstep(0.62, 0.92, vReg2.x) * f3T(10).w); f3bl = f3T(8).w; } // (the wing's tips, darker; a membrane the sun shows through)
     float bar = w.w > 0.5 ? step(0.5, fract(q.z * 6.0 + q.x * 2.0)) * 0.18 : 0.0;
     float k = 1.0 - smoothstep(0.0, 0.02, fwidth(vBind.x) * 60.0);
     return c * (1.0 - bar) * (0.9 + 0.15 * k * f3n(vBind * vec3(60.0, 30.0, 160.0))); }
@@ -205,9 +222,13 @@ vec3 f3paint() {
         .replace('#include <begin_vertex>', 'vec3 transformed = f3P;');
       sh.fragmentShader = pb + 'uniform highp sampler2D uFauna; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = f3paint(); diffuseColor.rgb *= mix(1.0, vAO, 0.7);')
-        .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim + vec3(0.92, 0.94, 1.0) * f3gl * 0.4;\n#include <opaque_fragment>');
+        .replace('#include <opaque_fragment>', `outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim + vec3(0.92, 0.94, 1.0) * f3gl * 0.4 + f3em;
+          #if NUM_DIR_LIGHTS > 0
+          if (f3bl > 0.0) { float bl = max(0.0, dot(-normalize(vViewPosition), directionalLights[0].direction)); outgoingLight += diffuseColor.rgb * vec3(1.0, 0.62, 0.42) * directionalLights[0].color * bl * bl * f3bl; }
+          #endif
+          #include <opaque_fragment>`);
     };
-    mat.customProgramCacheKey = () => 'fauna3d-v2';
+    mat.customProgramCacheKey = () => 'fauna3d-v3';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = sh => {
       sh.uniforms.uFauna = F3.U;
@@ -223,8 +244,8 @@ vec3 f3paint() {
       D = G.FAUNAMESH; if (!D || !D.meshes || !D.species) throw new Error('sem malhas (js/faunamesh.js)');
       if (!G.FaunaAnim || G.FaunaAnim.BONES.join() !== D.bones.join()) throw new Error('o esqueleto do FaunaAnim e o das malhas discordam');
       NB = D.bones.length; PB = NB * 3; TW = PB + NP;
-      buf = new Float32Array(TW * MAXR * 4);
-      tex = new THREE.DataTexture(buf, TW, MAXR, THREE.RGBAFormat, THREE.FloatType);
+      buf = new Float32Array(TW * ROWS * 4);
+      tex = new THREE.DataTexture(buf, TW, ROWS, THREE.RGBAFormat, THREE.FloatType);
       tex.minFilter = tex.magFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true;
       F3.U = { value: tex };
       shaders();
@@ -247,6 +268,10 @@ vec3 f3paint() {
       if (!e || !MESH[e.mesh] || !FORM[e.mesh]) { out.push(`bicho ${kind}: sem malha`); continue; }
       if (sp.cls === 'air' && (!e.fly || !MESH[e.fly] || !FORM[e.fly])) out.push(`bicho ${kind}: ave do ar sem a malha do voo`);
       if (!G.FaunaAnim.paint(kind)) out.push(`bicho ${kind}: sem pelagem (FaunaAnim PAINT)`); }
+    // (the dragon of the god's power — not a kind of Animals.DEF —: its mesh on the ground and its mesh in the air, its pose)
+    { const e = D.species.dragon; if (!e || !MESH[e.mesh] || !FORM[e.mesh] || !e.fly || !MESH[e.fly] || !FORM[e.fly]) out.push('dragão: sem a malha do chão e a do voo');
+      else if (!G.FaunaAnim.dragon || !G.FaunaAnim.dragonCoat) out.push('dragão: sem a pose (FaunaAnim.dragon)');
+      else for (const n of [e.fly, e.fly + '_1']) { const m = D.meshes[n]; if (m && !(MESH[n] && MESH[n].u ? MESH[n].u : unpack(m)).zone.includes(D.zones.asa)) out.push(`dragão: a malha ${n} sem as asas`); } }
     for (const name in D.meshes) { const m = D.meshes[name]; const u = MESH[name] ? MESH[name].u : unpack(m); const idx = u.idx, bi = u.bi, bw = u.bw, zn = u.zone;
       for (let i = 0; i < idx.length; i++) if (idx[i] >= m.n) { out.push(`malha ${name}: índice ${idx[i]} além dos ${m.n} pontos`); break; }
       for (let i = 0; i < m.n; i++) { if (bw[i * 4] + bw[i * 4 + 1] + bw[i * 4 + 2] + bw[i * 4 + 3] !== 255) { out.push(`malha ${name}: ponto ${i} com pesos que não somam 1`); break; }
@@ -270,7 +295,11 @@ vec3 f3paint() {
 
   // ------------------------------ a frame ------------------------------
   const AT = []; // (where each row's beast stands, for the verifier: X, Y, Z, size, root X, Y, Z)
-  F3.begin = function () { for (const k in MESH) MESH[k].n = 0; F3.rows = 0; };
+  F3.begin = function () { for (const k in MESH) MESH[k].n = 0; F3.rows = 0; F3.frame++; };
+  // (a drawer after People3D's beasts in the same frame — the dragons, G.Dragon3D — takes the next free row, puts its beast there
+  // and ends the frame again: the beasts' rows are People3D's MAXR, the dragons' the MAXD after them; -1 when none is left.
+  // F3.frame counts the frames People3D began: one that did not begin a frame here — it fell back to its pieces — has no rows)
+  F3.extra = () => (F3.ready && F3.rows < ROWS ? F3.rows : -1);
   // a beast in row `row`: R its bones' frames in the world (G.FaunaAnim), its kind, its coat (G.FaunaAnim.coat), its level of
   // detail (0 near, 1 far)
   F3.put = function (row, R, kind, coat, lod, X, Y, Z, fly) {
@@ -286,7 +315,7 @@ vec3 f3paint() {
     for (let k = 0; k < NP; k++) { const c = C[k]; const j = p + k * 4; buf[j] = c[0]; buf[j + 1] = c[1]; buf[j + 2] = c[2]; buf[j + 3] = c[3]; }
     const e0 = R[0].elements; AT[row] = [X, Y, Z, F3.sizeOf(kind), e0[12], e0[13], e0[14]];
     const name = F3.lod && lod > 0 && MESH[mn + '_1'] ? mn + '_1' : mn;
-    const M = MESH[name]; if (M && M.n < MAXR) M.rows[M.n++] = row;
+    const M = MESH[name]; if (M && M.n < ROWS) M.rows[M.n++] = row;
     if (row + 1 > F3.rows) F3.rows = row + 1;
   };
   F3.end = function () {

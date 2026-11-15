@@ -79,6 +79,7 @@ def body_of(b, h, tris, fine=None):
     if len(T) > 1.3 * tris: V, T = decimate(V0, Q, tris, split=True)
     N = normals_of(b.P, V); W = weights(b.P, V, b.H); bi, bw = pack(W)
     r1, r2 = regions(b, V, N, W)
+    if b.meta.get('regions'): r1, r2 = b.meta['regions'](b, V, N, W, r1, r2)  # (a family's own paint regions: the dragon's plates)
     return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=np.zeros(len(V), np.uint8), r1=r1, r2=r2), fine
 
 
@@ -91,15 +92,19 @@ def piece_of(b, pc, h, tris):
         V0, Q = mesh_of(pc['P'], h, maxstep=1.5 * h)
         if len(V0) < 4: return None
         sym = V0[:, 0].min() < -1e-4 and V0[:, 0].max() > 1e-4  # (a piece on one side only: no mirror for the decimator to keep)
-        V, T = decimate(V0, Q, max(8, tris), sym)
+        V, T = decimate(V0, Q, max(8, tris), sym, split=bool(pc.get('split')))  # (split: parts that cross — the dragon's folded fingers)
         N = normals_of(pc['P'], V)
     W = weights(pc['P'], V, b.H) if 'eye' not in pc else np.eye(len(BONES))[[BI['head']] * len(V)]
+    if 'wfun' in pc: W = pc['wfun'](V)  # (weights of its own: a membrane that stretches between its bones — the dragon's wings)
     bi, bw = pack(W)
     z = np.full(len(V), ZONE[pc['zone']], np.uint8)
-    r2 = np.zeros((len(V), 4), np.uint8)
+    r1 = np.zeros((len(V), 4), np.uint8); r2 = np.zeros((len(V), 4), np.uint8)
+    if pc.get('reg'):  # (a piece of the coat painted as the body is: the dragon's lower jaw, its plates under the chin)
+        r1, r2 = regions(b, V, N, W)
+        if b.meta.get('regions'): r1, r2 = b.meta['regions'](b, V, N, W, r1, r2)
     if 'wing' in pc:  # (a wing: how far out along it each point is — its tip painted darker where the kind's are)
         sh, span = pc['wing']; r2[:, 0] = np.clip(np.round(np.linalg.norm(V - np.array(sh), axis=1) / max(span, 1e-3) * 255), 0, 255).astype(np.uint8)
-    return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=z, r1=np.zeros((len(V), 4), np.uint8), r2=r2)
+    return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=z, r1=r1, r2=r2)
 
 
 def merge(parts):
@@ -138,9 +143,9 @@ def beast_meshes(b, near=760, far=160):
 
 
 def encode(m):
-    """A mesh, packed (format 2): the points reordered by their first use; positions in 16 bits over the mesh's box; the
+    """A mesh, packed (format 3): the points reordered by their first use; positions in 16 bits over the mesh's box; the
     normal in two bytes (octahedral); four bones and three weights (the fourth is what is left of 255); the zone and the
-    occlusion in one byte (4 bits each); the eight paint regions in 4 bits each; the triangles' corners as how far back
+    occlusion in one byte (4 bits each); seven paint regions in 4 bits each and the one along the body whole (tx); the triangles' corners as how far back
     from the next new point each one is (0: the next new point), in variable-length bytes. js/fauna3d.js unpacks it."""
     V, N, T = m['V'], m['N'], m['T']; n = len(V)
     seen = -np.ones(n, np.int64); order = []
@@ -158,7 +163,9 @@ def encode(m):
     bw = m['bw'][order]; bi = m['bi'][order]
     za = ((m['zone'][order].astype(np.uint8) & 15) << 4) | np.clip(np.round(m['ao'][order] * 15), 0, 15).astype(np.uint8)
     n1 = np.clip(np.round(m['r1'][order] / 255.0 * 15), 0, 15).astype(np.uint8); n2 = np.clip(np.round(m['r2'][order] / 255.0 * 15), 0, 15).astype(np.uint8)
-    rg = (n1 << 4) | n2
+    # (seven regions in 4 bits; the eighth — along the tail, out along a wing, down the dragon's body for its plates — whole)
+    rg = np.stack([(n1[:, 0] << 4) | n1[:, 1], (n1[:, 2] << 4) | n1[:, 3], (n2[:, 1] << 4) | n2[:, 2], n2[:, 3] << 4], 1).astype(np.uint8)
+    tx = np.ascontiguousarray(m['r2'][order][:, 0]).astype(np.uint8)
     ix = bytearray(); hw = 0
     for i in T.reshape(-1):
         if i == hw: c = 0; hw += 1
@@ -167,8 +174,8 @@ def encode(m):
             b7 = c & 127; c >>= 7
             if c: ix.append(b7 | 128)
             else: ix.append(b7); break
-    return {'f': 2, 'n': int(n), 'tris': int(len(T)), 'lo': [round(float(x), 6) for x in lo], 'sc': [float('%.9g' % x) for x in sc],
-            'pos': b64(q), 'oct': b64(oct_), 'bi': b64(bi), 'bw3': b64(np.ascontiguousarray(bw[:, :3])), 'za': b64(za), 'rg': b64(rg),
+    return {'f': 3, 'n': int(n), 'tris': int(len(T)), 'lo': [round(float(x), 6) for x in lo], 'sc': [float('%.9g' % x) for x in sc],
+            'pos': b64(q), 'oct': b64(oct_), 'bi': b64(bi), 'bw3': b64(np.ascontiguousarray(bw[:, :3])), 'za': b64(za), 'rg': b64(rg), 'tx': b64(tx),
             'ix': b64(np.frombuffer(bytes(ix), np.uint8))}
 
 
