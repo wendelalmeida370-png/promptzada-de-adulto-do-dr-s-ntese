@@ -970,6 +970,9 @@
     return out;
   }
   A.packOf = packOf;
+  // (the world around the beasts, D-300: a state of another module walks with the stride of every state here, fences, ways
+  // round and the stride's hooks included, and looks round with the world's own fear scan)
+  A.moveTo = moveTo; A.fearOf = fearCheck;
   // deep water a little way from the shore, for the drowning
   function deepSpot(a) {
     const S = G.S; let best = null, bd = -1;

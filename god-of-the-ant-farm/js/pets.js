@@ -69,7 +69,7 @@
       a.pose = '';
       if (a.bark <= 0) { a.bark = 0.9; G.Audio && G.Audio.at(a.x, a.y, 'bark'); }
       if (G.dist(a.x, a.y, foe.x, foe.y) > 0.8) step(a, foe.x, foe.y, 3, dt);
-      else { a.moving = false; const dx = foe.x - a.x, dy = foe.y - a.y, d = Math.hypot(dx, dy) || 1; foe.state = 'flee'; foe.target = 0; foe.tx = foe.x + dx / d * 6; foe.ty = foe.y + dy / d * 6; foe.t = 5; foe.flee = 4; }
+      else { a.moving = false; const dx = foe.x - a.x, dy = foe.y - a.y, d = Math.hypot(dx, dy) || 1; foe.state = 'flee'; foe.target = 0; foe.tx = foe.x + dx / d * 6; foe.ty = foe.y + dy / d * 6; foe.t = 5; foe.flee = 4; if (G.Meio && G.Meio.scared) G.Meio.scared(foe, a.x, a.y); } // (the beast learns the town's ground: D-305)
       return;
     }
     const home = S.buildings.get(a.home);

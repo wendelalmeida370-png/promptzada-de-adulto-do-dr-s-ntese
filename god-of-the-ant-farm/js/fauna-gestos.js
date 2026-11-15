@@ -144,7 +144,7 @@
     throes: { nome: 'agonizando', d: 3, p: 1, who: ['land'] },
     // ---------------- the escape ----------------
     jink: { nome: 'desviando de lado', d: 0.5, p: 1, who: ['gazelle', 'rabbit', 'hare', 'deer', 'zebra', 'gnu', 'ostrich', 'reindeer', 'ibex', 'cabra', 'capybara', 'monkey'] },
-    hide: { nome: 'escondido', d: 0, loop: true, p: 2, who: ['rabbit', 'hare', 'deer', 'gazelle', 'frog', 'lizard', 'cat', 'snake'] },
+    hide: { nome: 'escondido', d: 0, loop: true, p: 2, who: ['rabbit', 'hare', 'deer', 'gazelle', 'frog', 'lizard', 'cat', 'snake', 'reindeer', 'ibex', 'zebra', 'gnu', 'tapir', 'giraffe'] }, // (the young of the herds lie hidden too: widened by the meio, D-300)
     burrow: { nome: 'entrando na toca', d: 1.2, p: 2, who: ['rabbit', 'hare', 'fox', 'arcticfox', 'fennec', 'beaver', 'otter', 'lizard', 'snake', 'frog', 'bear'] },
     dive: { nome: 'mergulhando na água', d: 1, p: 2, who: ['frog', 'otter', 'beaver', 'capybara', 'hippo', 'croc', 'pinniped', 'penguin', 'tapir', 'moose', 'anaconda'] },
     // ---------------- the weather and the water ----------------
@@ -159,6 +159,12 @@
     brood: { nome: 'chocando', d: 0, loop: true, p: 2, who: ['bird'] },
     // ---------------- before people ----------------
     curious: { nome: 'curioso', d: 0, p: 2, who: ['land'] },
+    // ---- o meio (D-300) ----
+    // (the head down in a field of the people; resting in the water against the heat; down the burrow or the den — the body
+    // out of sight, the head at the mouth now and then)
+    forage: { nome: 'comendo a plantação', d: 0, loop: true, p: 2, who: ['hoofed', 'elephant', 'monkey', 'rabbit', 'hare', 'bear', 'capybara'] },
+    soak: { nome: 'de molho na água', d: 0, loop: true, p: 2, who: ['hippo', 'buffalo', 'elephant', 'capybara', 'tapir', 'moose', 'tiger', 'jaguar', 'bear', 'croc', 'rhino'] },
+    toca: { nome: 'na toca', d: 0, loop: true, p: 2, who: ['rabbit', 'hare', 'fox', 'arcticfox', 'fennec', 'beaver', 'otter', 'lizard', 'snake', 'wolf'] },
   };
   // (each gesture's kinds, as a set: the groups opened, the kinds as they are)
   const open = w => { const out = new Set(); for (const k of w) { if (GR[k]) for (const x of GR[k]) out.add(x); else out.add(k); } return out; };
