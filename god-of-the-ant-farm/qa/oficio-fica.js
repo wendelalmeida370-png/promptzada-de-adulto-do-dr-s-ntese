@@ -600,6 +600,13 @@ if (on('x15')) {
     // pulled were home: the noise of a dozen. All the armies, 49 → 37 with the peace asking 23: T-1273)
     const soldAll = () => adults(v => v.role === 'guerreiro').length;
     const askedAll = () => { let n = 0; for (const s of G.S.settlements.values()) n += (V.tradeAsked(s.id) || {}).guerreiro || 0; return n; };
+    // (the rule itself, D-211: one pulled goes home by the instant as soon as the trade he is in has a hand too many now and the
+    // one he left is short of one now — three a pass. Who is still in arms at the end of the eighth with his own trade short and
+    // the army over what it asks, in a town: more than a pass's three is a way home that did not happen. The hands busy wait,
+    // L-832. The share that went home — four tenths of the armies' excess — was the dice of how many of their posts the town
+    // had filled during the war: in the metrópole of the generation 29, 35 → 28 with the peace asking 16, 37 %, T-1278)
+    const dealt = s => [...G.S.villagers.values()].filter(v => v.set === s.id && !v.captive && v.age >= 16 && v.age < 62 && !(v.role && v.role !== 'marinheiro' && G.Eco.isJobRole(v.role) && G.Naval.away(v)));
+    const stuckNow = () => { const out = []; for (const s of [...G.S.settlements.values()].sort((x, y) => x.id - y.id)) { const want = V.tradeAsked(s.id); if (!want) continue; const A = dealt(s); const have = r => A.filter(v => v.role === r).length; if (have('guerreiro') - (want.guerreiro || 0) < 1) continue; for (const v of A) if (v.role === 'guerreiro' && v.roleBack && (want[v.roleBack] || 0) - have(v.roleBack) >= 1 && !G.Vg.handsBusy(v)) out.push({ v, s }); } return out; };
     const s0 = sold(), sa0 = soldAll(); const l1 = LOG.length; god(() => { G.Politics.divinePeace(); });
     // (an eighth of a day of peace: the hands the war pulled are back in the trade they left, with the days they had in it —
     // the ones whose trade is short of a hand now; by the memory of the two trades the same eighth of a day gave back one in
@@ -612,12 +619,13 @@ if (on('x15')) {
     const home = alive.filter(p => { const v = G.S.villagers.get(p.id); return v.role === p.back && !v.roleBack; });
     const days = home.filter(p => sentOn.has(p.id) || G.S.villagers.get(p.id).roleDay === p.day);
     const s1 = sold(), q1 = asked(), sa1 = soldAll(), qa1 = askedAll(); const L = LOG.slice(l1);
+    const stuck = stuckNow(); const byTown = {}; for (const x of stuck) byTown[x.s.name] = (byTown[x.s.name] || 0) + 1; const worst = Math.max(0, ...Object.values(byTown));
     // (and the memory of the trade one goes back to follows him: a trade that has just got its hand back is not one with a
     // hand to spare — nobody is taken from it for the need of a third, in the same town, while the peace is an eighth old)
     const got = new Set(); let raided = 0;
     for (const e of L) { if (e.why === 'volta') got.add(e.set + ':' + e.to); else if (e.why === 'falta' && got.has(e.set + ':' + e.from)) raided++; }
     ok('x15 quem voltou não é levado adiante', raided === 0, `mãos tiradas pela necessidade de um ofício que acabava de receber a dele de volta, na mesma cidade, no oitavo de dia: ${raided}`);
-    ok('x15 a paz feita, os soldados voltam para casa', home.length >= 3 && home.length >= alive.length * 0.35 && days.length === home.length && sa0 - sa1 >= (sa0 - qa1) * 0.4, `${a.name} declara guerra a ${b.name} e o deus faz a paz: num oitavo de dia, das ${alive.length} mãos que a guerra tinha puxado (de todos os povos) ${home.length} estão de volta no ofício delas, com os dias que tinham nele (${days.length}); os soldados de todos os povos: ${sa0} → ${sa1} (a paz pede ${qa1}); os de ${a.name}: ${s0} → ${s1} (a paz pede ${q1}); as trocas desde a paz: ${whys(L)} (pela memória dos dois ofícios, medido: 7 de 43 de volta no oitavo de dia, e os soldados 19 → 16)`);
+    ok('x15 a paz feita, os soldados voltam para casa', home.length >= 3 && days.length === home.length && worst <= 3, `${a.name} declara guerra a ${b.name} e o deus faz a paz: num oitavo de dia, das ${alive.length} mãos que a guerra tinha puxado (de todos os povos) ${home.length} estão de volta no ofício delas, com os dias que tinham nele (${days.length}); ainda em armas com o ofício de antes em falta agora e o exército com mãos a mais: ${stuck.length ? Object.entries(byTown).map(([n, k]) => `${n} ${k}`).join(', ') : 'nenhum'} (uma passada leva três); os soldados de todos os povos: ${sa0} → ${sa1} (a paz pede ${qa1}); os de ${a.name}: ${s0} → ${s1} (a paz pede ${q1}); as trocas desde a paz: ${whys(L)} (pela memória dos dois ofícios, medido: 7 de 43 de volta no oitavo de dia, e os soldados 19 → 16)`);
     const un = T.unsaid(); const q = inv(); ok('x15 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
   }
 }

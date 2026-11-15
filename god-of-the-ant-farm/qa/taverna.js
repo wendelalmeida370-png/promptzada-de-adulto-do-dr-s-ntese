@@ -240,18 +240,23 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); if (T.pick(v) !== b)
   // Tenochtitlan in the metrópole of the generation 21, who woke with it —: it goes to its place first, and the counter after, L-793)
   const k0 = T.keeperOf(b); let load0 = 0; if (k0) { if (!(k0.carry && k0.carry.n > 1e-6)) D.make('v:' + k0.id, 'food', 2, { code: 'teste', part: true }); load0 = k0.carry ? k0.carry.n : 0; }
   liveSec(30, () => !!T.dia(b), bad); const op = T.dia(b);
-  let g = null, sat = false, held = 0, kept = 0, served = 0, left = false, coin0 = 0, paid = 0;
+  let g = null, sat = false, held = 0, kept = 0, served = 0, left = false, coin0 = 0, paid = 0, homes9 = new Set();
   if (op) {
     // (the test's hand takes the arms of one of the evening's guests — what a wound of war does, carnage.js — and nothing else)
     const went0 = guests(b, 3); g = went0[0];
     if (g) {
       g.lost = { armL: true, armR: true }; const h = S().buildings.get(g.home); coin0 = h ? h.coin : 0;
+      // (and every house she lives in through the case: the house the family ordered may be finished in the evening, and the
+      // family moves in — in the metrópole of the generation 29 Atzi's moved from #5783 to #20880 at 0,659 of the day, and the
+      // round was paid from the new one: «a casa pagou 0», T-1281)
+      homes9 = new Set(g.home ? [g.home] : []);
       const went = send(b, went0); const k = T.keeperOf(b);
       // (her evening held above the day's work by the test's hand, as the termas' bathers are, T-301: the case runs in the
       // afternoon, and Tiye, a vine-dresser in the metropole of the sailors, was called to her vines — a work of 1 over an
       // errand of 0,5 — one second after she set out, and «never reached the table», T-685)
       if (g.task && g.task.type === 'tavern') g.task.pri = 1.45;
       liveSec(90, () => !A.live(op) || (sat && !(g.task && g.task.type === 'tavern')), bad, () => {
+        if (g.home) homes9.add(g.home);
         if (op.data.mesa[g.id]) sat = true;
         if (g.carry && g.carry.n > 1e-6 && g.task && g.task.type === 'tavern') held++; // (on the errand: what she takes up after it is another matter)
         if (k && k.carry && k.carry.op === op.id && k.carry.n > 1e-6) kept++;
@@ -260,12 +265,12 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); if (T.pick(v) !== b)
       // (what the house paid for the rounds, by the ledger's own lines — the coins out of her house in this evening's
       // operation —: the difference of the pot counted the wage the vineyard paid her family in the same minute, and the
       // house that paid 0,10 read as «paid −0,52», T-685)
-      paid = h ? r2(seen.filter(e => e[7] === op.id && e[5] === 'moedas' && e[8] === 'taverna' && e[3] === 'h:' + h.id).reduce((n, e) => n + e[6], 0)) : 0; left = !(g.task && g.task.type === 'tavern');
+      paid = h ? r2(seen.filter(e => e[7] === op.id && e[5] === 'moedas' && e[8] === 'taverna' && [...homes9].some(id => e[3] === 'h:' + id)).reduce((n, e) => n + e[6], 0)) : 0; left = !(g.task && g.task.type === 'tavern');
       void went;
     }
   }
   ok('t9 sem-bracos', !!op && !!g && sat && served >= 1 && !held && !kept && left && (!T.withCoin(b) || paid > 0) && !bad.length,
-    op && g ? `${g.name} (força ${D.strength(g)}) ${sat ? 'sentou' : 'NÃO chegou à mesa'} (o taverneiro começou a noite com ${load0} de carga nas mãos: L-793); ${served} rodada(s) pela mão de quem serve (no livro, dela)${T.withCoin(b) ? `, a casa pagou ${paid}` : ''}; as mãos dela ${held ? 'SEGURARAM carga' : 'sem nada'}${kept ? '; o copo FICOU na mão do taverneiro' : ''}; ${left ? 'saiu depois' : 'AINDA à mesa aos 90 s'}; verificador ${bad.join(' | ') || 'limpo'}` : `${op ? 'nenhum freguês' : 'a taverna não abriu'}`);
+    op && g ? `${g.name} (força ${D.strength(g)}) ${sat ? 'sentou' : 'NÃO chegou à mesa'} (o taverneiro começou a noite com ${load0} de carga nas mãos: L-793); ${served} rodada(s) pela mão de quem serve (no livro, dela)${T.withCoin(b) ? `, a casa pagou ${paid}` : ''}${homes9.size > 1 ? ` (a família mudou-se no caso: ${[...homes9].map(id => '#' + id).join(' → ')})` : ''}; as mãos dela ${held ? 'SEGURARAM carga' : 'sem nada'}${kept ? '; o copo FICOU na mão do taverneiro' : ''}; ${left ? 'saiu depois' : 'AINDA à mesa aos 90 s'}; verificador ${bad.join(' | ') || 'limpo'}` : `${op ? 'nenhum freguês' : 'a taverna não abriu'}`);
 }
 const err = M.erros(); ok('erros', !Object.keys(err.mod || {}).length && !err.console.length, JSON.stringify(err.mod) + ' ' + err.console.slice(0, 3).join(' | '));
 console.log(fails.length ? `TAVERNA: FALHOU (${fails.join(', ')})` : 'TAVERNA: ok');

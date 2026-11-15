@@ -19,9 +19,11 @@
 //     o dragão leva as moedas todo dia → «pobre», e o «rico» sai — no todo de uma cidade (D-153), cujo chão não se divide: as
 //     casas ricas de um bairro formam o seu bairro nobre, e o chão do caso ia e voltava entre eles (T-1005)
 //  v7 a peste esvazia o bairro: metade das casas sem ninguém → «vazio», e a história diz quem levou («a peste levou N»); o bairro
-//     é o dele — casas habitadas, ainda não vazio, numa cidade que segue cidade com a peste duas vezes (T-1226)
+//     é o dele — o todo de uma cidade, casas habitadas, ainda não vazio: o chão de um bairro de cidade é desenhado de novo todo
+//     dia pelo que vive nele, e a peste muda o que vive (T-1226, T-1269, T-1280)
 //     (o v6 e o v7 vivem cada um numa cópia do mundo dos primeiros dias, e o mundo dos casos de antes volta para os seguintes:
-//     T-1005)
+//     T-1005; onde esse mundo não tem o caso, o mesmo mundo pronto com os primeiros dias na paz do deus, e depois os mundos
+//     prontos seguintes: T-1269, T-1279)
 //  v8 a cidade que acaba: todos mortos, a cidade deixada ao vento — os bairros dela ficam na memória do mundo
 //     (S.urbPast), o chão ainda responde de quem era (G.Urban.pastAt), e a memória atravessa o save; v8b: onde duas cidades
 //     acabaram, o chão responde pela última (L-738)
@@ -221,74 +223,84 @@ function pick6() {
     Q6v = w6 ? { set: w6[0], d: w6[1], homes: () => homesOf(w6[1]), lived } : Q6;
   }
 }
+// (the worlds of the cases that live on a copy of the world of the first days — v6, v7 —, in order: that world; the same
+// ready world with its first days in the god's peace; the next ready worlds, the same way. The war of the metrópole, from its
+// second day, decides how many each town keeps, and it goes another way with every change of the world: in the metrópole of
+// the generation 29 Argos was 110 after the first days and Mênfis 41 — 138 and 113 in the god's peace —, and no town nor
+// quarter of a people of coin had four homes lived in, three in four of its homes, and was not rich nor poor yet: «nenhuma
+// cidade nem bairro com quatro casas habitadas», T-1279. Each copy made once.)
+const calm = () => { if (!(G.S.divinePeace > G.DAY_LEN * 0.5)) { G.inSim++; try { G.Politics.divinePeace(); } finally { G.inSim--; } } };
+const CASE_WORLDS = [[WORLD, false], [WORLD, true]].concat(['mundial', 'cidade', 'mega'].filter(w => w !== WORLD).map(w => [w, true]));
+const calmCopies = new Map();
+const openCase = ([w, c]) => {
+  if (!c) { M.abrir(JSON.parse(fresh)); return fresh; }
+  if (!calmCopies.has(w)) { M.pronto(w); M.viver(2); days(U.YOUNG + U.PATIENCE + 1, calm); calmCopies.set(w, G.Save.serialize()); }
+  M.abrir(JSON.parse(calmCopies.get(w))); return calmCopies.get(w);
+};
+const caseName = ([w, c]) => (!c ? w : w === WORLD ? `${w}, com os primeiros dias na paz do deus` : `no mundo pronto «${w}», com os primeiros dias na paz do deus`);
 if (on('v6')) {
-  M.abrir(JSON.parse(fresh)); pick6();
-  if (!Q6v) ok('v6 rico-e-pobre', false, 'nenhuma cidade nem bairro com quatro casas habitadas num povo de moeda, ainda não rico nem pobre');
+  let at6 = null; for (const cw of CASE_WORLDS) { openCase(cw); pick6(); if (Q6v) { at6 = cw; break; } }
+  if (!Q6v) ok('v6 rico-e-pobre', false, `nenhuma cidade nem bairro com quatro casas habitadas num povo de moeda, ainda não rico nem pobre (${CASE_WORLDS.map(caseName).join('; ')})`);
   else {
     const S = G.S; const { set, d } = Q6v; const day0 = S.day;
     // the rain of coins on every home (the god's door), every day while it lasts
     const rain = () => { G.inSim++; try { for (const b of Q6v.homes()) if ((b.coin || 0) < 60) D.make('h:' + b.id, 'moedas', 60 - (b.coin || 0), { code: 'chuva-de-moedas', part: true }); } finally { G.inSim--; } };
-    let rich = -1; for (let k = 0; k < 12 && rich < 0; k++) { rain(); M.saltar(1); check(`ano ${S.day} (chuva)`); if (U.is(d, 'nobre')) rich = S.day - day0; }
+    // (the case's days in the god's peace, as the v7's: T-1279)
+    let rich = -1; for (let k = 0; k < 12 && rich < 0; k++) { calm(); rain(); M.saltar(1); check(`ano ${S.day} (chuva)`); if (U.is(d, 'nobre')) rich = S.day - day0; }
     const t1 = histOf(d, day0).find(t => /^Enriqueceu: \d+ das \d+ casas são ricas\.$/.test(t)); const mid = S.day;
     // the dragon takes the coins of every home, every day — the household's: the pot, and the purses of who lives there, which the
     // town's day pours into the pot (L-973): with the pots alone, the purses filled them again before the day's look, and the
     // whole of Tenochtitlan had half its homes with next to nothing, «pobre 0.392» on the tenth day, short of the patience (T-1005)
     const dragon = () => { G.inSim++; try { const hs = Q6v.homes(), ids = new Set(hs.map(b => b.id)); for (const b of hs) if ((b.coin || 0) > 0) D.use('h:' + b.id, 'moedas', b.coin, { code: 'dragao', mine: true }); for (const v of S.villagers.values()) if (ids.has(v.home) && (v.purse || 0) > 0) D.use('p:' + v.id, 'moedas', v.purse, { code: 'dragao', mine: true }); } finally { G.inSim--; } };
-    const top = d.vida.rica; let poor = -1; for (let k = 0; k < 16 && poor < 0; k++) { dragon(); M.saltar(1); dragon(); check(`ano ${S.day} (dragão)`); if (U.is(d, 'pobre')) poor = S.day - mid; }
+    const top = d.vida.rica; let poor = -1; for (let k = 0; k < 16 && poor < 0; k++) { calm(); dragon(); M.saltar(1); dragon(); check(`ano ${S.day} (dragão)`); if (U.is(d, 'pobre')) poor = S.day - mid; }
     const h2 = histOf(d, mid); const t2 = h2.find(t => /^Empobreceu: /.test(t)); const t3 = h2.find(t => /^Deixou de ser rico: /.test(t)); const notRich = U.is(d, 'nobre') ? -1 : S.day - mid;
     // (the homes of the nobles stay rich by their standing, with no coin in the pot: the share of rich homes falls, and the
     // profile goes only where it falls below its mark)
     ok('v6 rico-e-pobre', rich >= U.PATIENCE && !!t1 && poor >= U.PATIENCE && !!t2 && d.vida.rica < top - 0.1,
-      `${nameOf(set, d)}${d.whole ? ' (o todo da cidade)' : ''} (${Q6v.homes().length} casas): a chuva de moedas → ${rich >= 0 ? `«rico» em ${rich} dias: «${t1 || '(nada)'}»` : 'NÃO ficou rico em 12 dias (rica ' + d.vida.rica + ')'}; o dragão → ${poor >= 0 ? `«pobre» em ${poor} dias: «${t2 || '(nada)'}»` : 'NÃO ficou pobre em 16 dias (pobre ' + d.vida.pobre + ')'}; as casas ricas ${top} → ${d.vida.rica} do bairro${notRich >= 0 ? `, e o «rico» saiu: «${t3 || '(sem linha ainda)'}»` : ' (as dos nobres seguem ricas pelo título: o «rico» fica)'}`);
+      `${at6 !== CASE_WORLDS[0] ? `(${caseName(at6)}: ${WORLD} não tem o bairro depois dos primeiros dias) ` : ''}${nameOf(set, d)}${d.whole ? ' (o todo da cidade)' : ''} (${Q6v.homes().length} casas): a chuva de moedas → ${rich >= 0 ? `«rico» em ${rich} dias: «${t1 || '(nada)'}»` : 'NÃO ficou rico em 12 dias (rica ' + d.vida.rica + ')'}; o dragão → ${poor >= 0 ? `«pobre» em ${poor} dias: «${t2 || '(nada)'}»` : 'NÃO ficou pobre em 16 dias (pobre ' + d.vida.pobre + ')'}; as casas ricas ${top} → ${d.vida.rica} do bairro${notRich >= 0 ? `, e o «rico» saiu: «${t3 || '(sem linha ainda)'}»` : ' (as dos nobres seguem ricas pelo título: o «rico» fica)'}`);
   }
 }
 
 // ---------------- v7 the plague empties the quarter ----------------
 if (on('v7')) {
-  M.abrir(JSON.parse(fresh));
-  // (the quarter of the plague is its own: what the case asks is the emptying, not the purse — the quarter of v6, not rich nor
-  // poor in a people of coin, was v7's too —, of homes lived in, not «vazio» yet, of a town that stays a city when the plague has
-  // taken them twice over: who comes to the empty homes is taken too, and as many may come as lived there. In the metrópole of
-  // the generation 27 the quarter of v6 was the Tianguis of Tenochtitlan, a town of 63 with 36 to spare: the plague took 27 of
-  // it and 7 more who came to the empty homes, the town of 29 fell to a vila, and the quarter had no ground — «NÃO esvaziou em 12
-  // dias (vazia 0.657, casas 0)» —; with the code of the L-820 to L-822, no quarter was left at all, «nenhum bairro com quatro
-  // casas habitadas», T-1226)
+  // (the quarter of the plague is its own: what the case asks is the emptying, not the purse; and it is the whole of a town —
+  // whose ground is the town's and never splits, as the v6's —, of homes lived in, three in four of its homes, not «vazio» yet;
+  // the most peopled first. A city's quarter is drawn again every day from what stands and lives in its cells, and the plague
+  // changes what lives there: in the metrópole of the generation 27 the Tianguis of Tenochtitlan had no ground once its town fell
+  // to a vila (T-1226); in the mega of the generation 28 Mênfis's Cidade Velha took in two cells of its neighbours on the first
+  // day (T-1269); in the metrópole of the generation 29 the Bairro dos Pipiltin of Tenochtitlan, three cells of rich homes, was the
+  // Cidade Velha's the day after the plague — a noble quarter is its rich homes, and an empty home weighs to the people's (urban.js,
+  // HOUSEW): «NÃO esvaziou em 12 dias (vazia 0.15, casas 0)» —, and with the first days in the god's peace the Cidade Velha of
+  // Argos took in five homes lived in of its neighbours while its own were emptied, 6 → 11: «vazia 0.408», T-1280)
   const homesOf = d => [...G.S.buildings.values()].filter(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && b.type !== 'barraco' && d.cells.includes(U.cellOf(b.x + b.w / 2, b.y + b.h / 2)) && b.set === d.set);
   const lived = b => [...G.S.villagers.values()].some(v => v.home === b.id && v.age >= 16 && !v.captive);
-  const plague = q => { const hs = homesOf(q), keep = hs.filter(lived)[0]; const ids = new Set(hs.filter(b => b !== keep).map(b => b.id)); let n = 0; for (const v of G.S.villagers.values()) if (ids.has(v.home)) n++; return n; };
-  const pick7 = () => allQ().filter(([s, q]) => !q.whole && q.dias >= U.YOUNG && !U.is(q, 'vazio') && !(q.tp || {}).vazio && homesOf(q).filter(lived).length >= 4 && (s.tier || 0) >= 3 && G.Village.pop(s.id) - 2 * plague(q) >= 36)
-    .sort((a, b) => homesOf(b[1]).filter(lived).length - homesOf(a[1]).filter(lived).length)[0];
-  // (and where the metrópole has none after its first days, the next ready worlds after the same first days: the war of the
-  // metrópole, from its second day, decides how many each town keeps, and it goes another way with every change of the world —
-  // with the code of the L-823 to L-831 Mênfis was 65 after those days, not 82: 55 dead in the war and 12 by arrows, against 43
-  // and 7, and no town could lose a quarter's people twice over and stay a city, T-1269)
-  // (the case's days in the god's peace, as the v3's (T-1231): what it proves is the plague, and the war takes the town's
-  // people too — in the mega of the generation 28 the town of the case lost 13, 11 and 4 to the war on its second to fourth
-  // days, and was a vila of 16 on the seventh, T-1269)
-  const calm7 = () => { if (!(G.S.divinePeace > G.DAY_LEN * 0.5)) { G.inSim++; try { G.Politics.divinePeace(); } finally { G.inSim--; } } };
-  let c7 = pick7(), w7 = WORLD;
-  for (const w of ['mundial', 'cidade', 'mega']) { if (c7 || w === WORLD) continue; M.pronto(w); M.viver(2); days(U.YOUNG + U.PATIENCE + 1, calm7); c7 = pick7(); w7 = w; }
-  const Q7 = c7 ? { set: c7[0], d: c7[1], homes: () => homesOf(c7[1]), lived } : null;
-  if (!Q7) ok('v7 a-peste', false, `nenhum bairro com quatro casas habitadas, ainda não vazio, numa cidade que segue cidade com a peste duas vezes (${[WORLD, 'mundial', 'cidade', 'mega'].filter((w, i, a) => a.indexOf(w) === i).join(', ')})`);
+  const share = q => { const h = homesOf(q); return h.length ? h.filter(lived).length / h.length : 0; };
+  const pick7 = () => towns().filter(s => s.urb && s.urb.w).map(s => [s, s.urb.w])
+    .filter(([s, q]) => q.dias >= U.YOUNG && !U.is(q, 'vazio') && !(q.tp || {}).vazio && homesOf(q).filter(lived).length >= 4 && share(q) >= 0.75)
+    .sort((a, b) => homesOf(b[1]).filter(lived).length - homesOf(a[1]).filter(lived).length || a[0].id - b[0].id)[0];
+  // (and where the world of the first days has none, the worlds of CASE_WORLDS: T-1269, T-1279)
+  let c7 = null, at7 = null; for (const cw of CASE_WORLDS) { openCase(cw); c7 = pick7(); if (c7) { at7 = cw; break; } }
+  if (!c7) ok('v7 a-peste', false, `nenhuma cidade com quatro casas habitadas, três em quatro das suas casas, ainda não vazia (${CASE_WORLDS.map(caseName).join('; ')})`);
   else {
-    const S = G.S; const { set, d } = Q7; const day0 = S.day;
-    // the plague takes everyone of the homes of the quarter but one home's people (by the door of every death)
-    const homes = Q7.homes().filter(Q7.lived); const spare = homes[0]; let dead = 0;
-    G.inSim++; try { for (const v of [...S.villagers.values()]) if (v.home && v.home !== spare.id && homes.some(b => b.id === v.home) && !(S.avatar && S.avatar.id === v.id)) { G.Village.kill(v, 'sick'); dead++; } } finally { G.inSim--; }
-    // (and nobody moves into the homes it emptied while the case lasts: who comes to one is taken by the plague too — the homes of
-    // the quarter when the plague came, not the ones the quarter takes in when the town's day draws it again: in the mega of the
-    // generation 28 Mênfis's Cidade Velha took in two cells of its neighbours on the first day, 12 of the 14 the hand killed that
-    // day had lived in them, and the town of 88 was a vila of 20 on the third — «NÃO esvaziou em 12 dias (vazia 0.477, casas
-    // 0)», T-1269)
-    const sick = new Set(Q7.homes().filter(b => b !== spare).map(b => b.id));
+    const S = G.S; const [set, d] = c7; const day0 = S.day;
+    // the plague takes everyone of the town's homes but a third of its homes lived in, which keep their people — the town goes
+    // on — (by the door of every death); and nobody moves into the others while the case lasts: who comes to one is taken by the
+    // plague too — the homes of the town when the plague came, the ones that were empty then too. (With the homes it emptied
+    // alone, and for six days, Argos's were 19 of 25 empty on the first day and 13 of 24 on the tenth — the families of the kept
+    // homes and the homeless moved into the empty ones —, and «vazio» came on the last day of the case, T-1280)
+    const homes = homesOf(d).filter(lived); const keep = new Set(homes.slice(0, Math.ceil(homes.length / 3)).map(b => b.id)); const H0 = homesOf(d).length;
+    const sick = new Set(homesOf(d).filter(b => !keep.has(b.id)).map(b => b.id)); let dead = 0;
     const again = () => { G.inSim++; try { for (const v of [...S.villagers.values()]) if (v.home && sick.has(v.home) && !(S.avatar && S.avatar.id === v.id)) { G.Village.kill(v, 'sick'); dead++; } } finally { G.inSim--; } };
-    let empty = -1; for (let k = 0; k < 10 && empty < 0; k++) { calm7(); M.saltar(1); if (k < 6) again(); check(`ano ${S.day} (peste)`); if (U.is(d, 'vazio')) empty = S.day - day0; }
+    again();
+    // (the case's days in the god's peace, as the v3's (T-1231): what it proves is the plague, and the war takes the town's
+    // people too — in the mega of the generation 28 the town of the case lost 13, 11 and 4 to the war on its second to fourth
+    // days, T-1269)
+    let empty = -1; for (let k = 0; k < 10 && empty < 0; k++) { calm(); M.saltar(1); again(); check(`ano ${S.day} (peste)`); if (U.is(d, 'vazio')) empty = S.day - day0; }
     const t = histOf(d, day0).find(x => /^Esvaziou: \d+ das \d+ casas estão sem ninguém/.test(x));
     ok('v7 a-peste', dead >= 3 && empty >= U.PATIENCE && !!t && /a peste levou \d+ dos que moravam aqui/.test(t) && (d.luto || {}).peste > 0,
-      `${w7 !== WORLD ? `(no mundo pronto «${w7}»: ${WORLD} não tem o bairro depois dos primeiros dias) ` : ''}${nameOf(set, d)}: a peste levou ${dead}; ${empty >= 0 ? `«vazio» em ${empty} dias` : 'NÃO esvaziou em 12 dias (vazia ' + d.vida.vazia + ', casas ' + ((d._st || {}).homes) + ')'}; a história: «${t || '(nada)'}»`);
+      `${at7 !== CASE_WORLDS[0] ? `(${caseName(at7)}: ${WORLD} não tem a cidade depois dos primeiros dias) ` : ''}${nameOf(set, d)} (o todo da cidade; ${homes.length} casas habitadas de ${H0}: a peste deixa ${keep.size} com a sua gente): a peste levou ${dead}; ${empty >= 0 ? `«vazio» em ${empty} dias` : 'NÃO esvaziou em 10 dias (vazia ' + d.vida.vazia + ', casas ' + ((d._st || {}).homes) + ')'}; a história: «${t || '(nada)'}»`);
   }
 }
-
 if (before6) M.abrir(JSON.parse(before6)); // (the world the cases before left, for the ones that follow: T-1005)
 
 // ---------------- v8 the town that ends ----------------

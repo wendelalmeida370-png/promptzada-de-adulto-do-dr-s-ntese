@@ -327,6 +327,11 @@ function watch() {
 function partB() {
   M.pronto(WORLD); const S = G.S; for (let i = 0; i < SHIFT; i++) G.R(); rebase(); const w = watch(); const d0 = S.day; let g = 0; const t00 = S.time;
   while (S.day < d0 + DIAS && g++ < 40000) { peace(); M.viver(1); w.look(); if (g % 25 === 24) w.qa(); }
+  // (and on, up to three days more, until the furnace has four days to be judged by — a stoker on his feet and wood beyond what
+  // the store keeps: the metrópole of the generation 29 has the baths of Mênfis and of Uppsala, and Uppsala's stood two of its
+  // three days with no stoker or no wood — three days to judge, «3 com foguista e lenha», T-1275)
+  const fireDays = () => [...w.fire.values()].filter(r => r.day < S.day && (r.day > d0 || t00 < Te.horas(r.b).abre) && r.keeper > r.n * 0.5 && r.wood > 10 + 2 && r.free > 0).length;
+  if (on('f1')) while (fireDays() < 4 && S.day < d0 + DIAS + 3 && g++ < 80000) { peace(); M.viver(1); w.look(); if (g % 25 === 24) w.qa(); }
   w.close(); w.qa(); const days = S.day - d0;
   const name = id => (S.settlements.get(id) || {}).name || '?';
   // ---- b1

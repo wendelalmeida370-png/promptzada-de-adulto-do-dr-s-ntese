@@ -158,9 +158,15 @@ run('c3', () => {
   const a = arma(35); if (!ok('c3a a obra longe', !!a && a.vez, a ? `${lado(a.b)} a ${a.longe} casas` : 'sem chão')) return;
   const { set, f, b } = a; const c = ateCarroca(set, b); if (!ok('c3b uma carroça a caminho', !!c, c ? `a carroça #${c.id} com ${c.goods.n} de ${c.goods.k}, no ponto ${c.k} de ${c.pts.length} do caminho; a caminho da obra pelas carroças: ${Ci.carted(b, c.goods.k)}` : 'nenhuma carroça saiu em 200 s')) return;
   const k = c.goods.k, n = c.goods.n, antes = f.stock[k] || 0; const E = escuta(b);
-  sim(() => V.completeBuilding(b)); M.viver(2); E.fim();
+  // (and every other line of the people's store in those two seconds: the store is the whole people's, and in the metrópole of
+  // the generation 29 the town took 4 of wood from it while the cart came back — «258 → 274» with the 20 back —: what the case
+  // asks is that the store moves by the book, T-1282)
+  const SL = []; const fs = e => { if ((e[3] === 'f:' + f.id || e[4] === 'f:' + f.id) && e[5] === k) SL.push(e.slice()); }; D.onMove.push(fs);
+  try { sim(() => V.completeBuilding(b)); M.viver(2); } finally { E.fim(); const i = D.onMove.indexOf(fs); if (i >= 0) D.onMove.splice(i, 1); }
   const volta = soma(E.L, e => e[3] === 'c:' + c.id && e[4] === 'f:' + f.id && e[8] === 'carroca-volta');
-  ok('c3c a carga volta ao povo, pelo livro', b.built && !daObra(b).length && Math.abs(volta - n) < 1e-6 && (f.stock[k] || 0) >= antes + n - 1e-6, `a obra pronta pela mão da prova: a carroça #${c.id} saiu da estrada, ${volta} de ${k} de volta ao armazém («carroca-volta»): ${antes.toFixed(0)} → ${(f.stock[k] || 0).toFixed(0)}`);
+  const mine = e => e[3] === 'c:' + c.id && e[8] === 'carroca-volta';
+  const outros = soma(SL, e => e[4] === 'f:' + f.id && !mine(e)) - soma(SL, e => e[3] === 'f:' + f.id);
+  ok('c3c a carga volta ao povo, pelo livro', b.built && !daObra(b).length && Math.abs(volta - n) < 1e-6 && Math.abs((f.stock[k] || 0) - (antes + volta + outros)) < 1e-6, `a obra pronta pela mão da prova: a carroça #${c.id} saiu da estrada, ${volta} de ${k} de volta ao armazém («carroca-volta»): ${antes.toFixed(0)} → ${(f.stock[k] || 0).toFixed(0)}${Math.abs(outros) > 1e-6 ? ` (com ${outros > 0 ? '+' : ''}${+outros.toFixed(2)} das outras linhas do armazém nesses 2 s)` : ''}`);
   const q = checa(); ok('c3d verificador', q.ok, q.txt);
 });
 
