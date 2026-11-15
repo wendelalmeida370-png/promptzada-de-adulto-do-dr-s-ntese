@@ -303,7 +303,7 @@
       // held gesture, sk the next social round, bp / bt / bq the phase, the clock and the side of a courting or a contest, ch / cg /
       // cgT the seconds, the gap and the clock of a chase, turnT a hunter thrown off by a jink, jk the prey's next jink, kc the next
       // claim at a carcass, hk / hn / hd the helpers' clock, their count and the kind of a hold, dfn / dfnK the young defended)
-      gestS: '', sk: 0, bp: 0, bt: 0, bq: 0, ch: 0, cg: 0, cgT: 0, turnT: 0, jk: 0, kc: 0, hk: 0, hn: 0, hd: 0, dfn: 0, dfnK: '', dnT: -99,
+      gestS: '', sk: 0, bp: 0, bt: 0, bq: 0, ch: 0, cg: 0, cgT: 0, turnT: 0, jk: 0, kc: 0, kq: 0, hk: 0, hn: 0, hd: 0, dfn: 0, dfnK: '', dnT: -99,
     }, extra || {});
     // (the mind and the wounds of a save, or of a cave's guest, back whole — a damaged one is dropped; L-699)
     if (a.mind && G.Mente) G.Mente.unpack(a);
@@ -1043,7 +1043,8 @@
     a.scan -= dt;
     const hungry = a.hunger > (sp.diet === 'carn' || sp.diet === 'scav' ? 0.42 : 0.3);
     if (a.scan <= 0) {
-      a.scan = 0.45 + G.R() * 0.3;
+      // (asleep or lying down, it looks round half as often: it notices later, and the world spends less on it — D-295)
+      a.scan = (0.45 + G.R() * 0.3) * (PASSIVE[a.state] ? 2 : 1);
       if (!HUNTING[a.state] && !a.tamed && !a.legend) {
         const th = fearCheck(a);
         // (it stands, it rings its young, it climbs, it runs — and calls the alarm: the fight's reaction, D-297)
@@ -1721,6 +1722,10 @@
       for (const a of S.animals.values()) { if (cut <= 0) break; if (a.kind !== k || a.dead || a.legend || a.tamed || a.held || a.nest || a.named || G.R() > 0.3) continue; A.remove(a); count[k]--; cut--; }
     }
     const Me = G.Mente;
+    // (the grown ones of each kind and the females among them: the land's brake is on the whole kind, as it was — where there
+    // are few females, each comes into heat the more often, D-293)
+    const grownN = {}, femN = {};
+    if (Me) for (const a of S.animals.values()) { if (a.dead || a.grown < 1 || a.summoned || a.raid || a.tamed || a.legend || !Me.has(a, SP[a.kind] || {})) continue; grownN[a.kind] = (grownN[a.kind] || 0) + 1; if (Me.sex(a) === 0) femN[a.kind] = (femN[a.kind] || 0) + 1; }
     for (const a of [...S.animals.values()]) {
       if (a.dead || a.summoned || a.raid || a.grown < 1 || a.held || a.air || a.tamed || a.legend) continue;
       const sp = SP[a.kind]; if (!sp) continue;
@@ -1738,7 +1743,8 @@
       if (n >= cap || n < 2) { if (mind) Me.count('gate:teto:' + a.kind); continue; }
       if (mind) Me.count('gate:ok:' + a.kind);
       const mul = G.Nature.zoneMul(a.x, a.y, 'fertility');
-      const p = dt / DAY() * sp.breed * (mind ? HEAT_X : 1) * (1 - Math.pow(n / cap, 3)) * mul;
+      const share = mind ? Math.max(1, Math.min(3, (grownN[a.kind] || 2) / (2 * (femN[a.kind] || 1)))) : 1;
+      const p = dt / DAY() * sp.breed * (mind ? HEAT_X * share : 1) * (1 - Math.pow(n / cap, 3)) * mul;
       if (G.R() >= p) continue;
       if (mind) { Me.heat(a, count); continue; }
       birth(a, sp, count);
@@ -1769,15 +1775,19 @@
   // species that vanished from a habitat that still exists come back, slowly, from beyond the map
   function immigrate() {
     const S = G.S; const count = A.counts();
-    // (and a kind left with grown ones of one sex only, which the land still has room for: one of the other comes — D-293)
+    // the kinds that dwindled away (as before), one of them, now and then; and — the brain's: a kind left with grown ones of one
+    // sex only, that the land still has room for — one of the other comes too, in a draw of its own (each kind waiting in its own
+    // line: the lone sexes do not take the places of the vanished, D-293)
+    const ks = A.ids.filter(k => A.capacity(k) >= 2 && (count[k] || 0) < Math.max(2, A.capacity(k) * 0.3));
+    if (ks.length) arrive(G.pick(ks), count, false);
     const one = G.Mente ? G.Mente.oneSex() : null;
-    const ks = A.ids.filter(k => A.capacity(k) >= 2 && ((count[k] || 0) < Math.max(2, A.capacity(k) * 0.3) || (one && one.has(k) && (count[k] || 0) < A.capacity(k))));
-    if (!ks.length) return;
-    // (the kinds left with one sex only come first: a few grown ones that cannot breed would wait long in the draw)
-    const lone = one ? ks.filter(k => one.has(k) && (count[k] || 0) >= 2) : [];
-    const k = G.pick(lone.length ? lone : ks); const sp = SP[k];
+    const lone = one ? A.ids.filter(k => one.has(k) && (count[k] || 0) >= Math.max(2, A.capacity(k) * 0.3) && (count[k] || 0) < A.capacity(k)) : [];
+    if (lone.length) arrive(G.pick(lone), count, true);
+  }
+  function arrive(k, count, mate) {
+    const sp = SP[k];
     const spot = A.wildSpot(12, sp); if (!spot) return;
-    const n = one && one.has(k) && (count[k] || 0) >= 2 ? 1 : G.ri(sp.herd[0], sp.herd[1]);
+    const n = mate ? 1 : G.ri(sp.herd[0], sp.herd[1]);
     const L = A.spawn(k, spot[0], spot[1], { grown: 1 }); const g = [L];
     for (let j = 1; j < n; j++) { const q = pickNear(L, 1.5, true); if (q) g.push(A.spawn(k, q[0], q[1], { leader: L.id, grown: 1 })); }
     // (a lone newcomer: a male where there are only females left, or the other way round; a herd: both sexes in it)

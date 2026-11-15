@@ -204,6 +204,7 @@
   L.begin = function (a, p) {
     if (!p || !p.kind) return; L.count('caca'); L.count('caca:' + a.kind);
     a.ch = 0; a.cg = G.dist(a.x, a.y, p.x, p.y); a.cgT = 0;
+    if (BEAR.has(a.kind) && a.state === 'chase') Me.gesto(a, 'charge', 0, p.id); // (the bear's rush: head low, at full tilt)
     if (p.grown < 0.8) L.cry(p, a);
   };
   // the young one hunted: its mother (and, in a herd that defends its young, the grown ones by it) comes at the hunter
@@ -644,6 +645,9 @@
     }
     if (beast && !heard && L.calm(th) && G.dist(a.x, a.y, th.x, th.y) > 2.6) { if (!a.gest) Me.gesto1(a, ['stare', 'alert'], undefined, th.id); L.count('vigia'); return true; }
     if (!heard) Me.fright(a, 0.6);
+    // (a defender watches a hunter that is not hunting and not close: it stands only when it comes on — the musk oxen do not spend
+    // their day in a ring round a bear that only passes)
+    if (beast && DEFEND.has(a.kind) && a.grown >= 1 && !A.isHunting(th.state) && th.state !== 'stalk' && G.dist(a.x, a.y, th.x, th.y) > 4) { if (!a.gest) Me.gesto1(a, ['stare', 'alert'], undefined, th.id); return true; }
     // (the zebra and the giraffe stand only against a hunter smaller than they are: a hyena, a wolf — from a lion, they run)
     if (beast && DEFEND.has(a.kind) && a.grown >= 1 && a.hp > a.maxHp * 0.45 && A.predator(th.kind) && !(SMALLER.has(a.kind) && (SP[th.kind].size >= SP[a.kind].size || Me.sex(a) !== 1)) && standRatio(a, th) >= 0.9) {
       stand(a, th); if (!heard && was !== 'stand') Me.alarm(a.x, a.y, a.kind, 0.35, th); return true;
@@ -705,14 +709,14 @@
   // at a carcass others are eating: if it and its own are much stronger, it drives them off; about even, a scuffle; much weaker,
   // it waits at a distance (true: go on to eat)
   L.claim = function (a, c) {
-    const S = G.S; let theirs = 0, top = null, tk = null;
+    const S = G.S; if (S.clock < (a.kc || 0)) return a.kq === 1; // (the last look holds a moment: no scan each step)
+    let theirs = 0, top = null, tk = null;
     A.near(c.x, c.y, 2.2, o => { if (o === a || o.dead || o.state !== 'eat' || o.target !== c.id || Me.kin(o, a) || SP[o.kind].cls === 'air') return; const s = strength(o) * (o.kind === 'hyena' ? 1.25 : 1); theirs += s; if (!top || s > strength(top)) top = o; tk = o.kind; });
-    if (!theirs) return true;
+    if (!theirs) { a.kc = S.clock + 0.6; a.kq = 1; return true; }
     let mine = strength(a) * (a.kind === 'hyena' ? 1.25 : 1);
     A.near(a.x, a.y, 5, o => { if (o !== a && !o.dead && o.kind === a.kind && Me.kin(o, a) && (o.target === c.id || o.state === 'eat')) mine += strength(o) * (a.kind === 'hyena' ? 1.25 : 1); });
     const ratio = mine / theirs;
-    if (S.clock < (a.kc || 0)) return ratio > 1.35;
-    a.kc = S.clock + 1.5;
+    a.kc = S.clock + 1.5; a.kq = ratio > 1.35 ? 1 : 0;
     if (ratio > 1.35) {
       Me.gesto1(a, a.kind === 'hyena' ? ['mob', 'threat'] : ['threat', 'charge', 'display'], undefined, top.id);
       A.near(c.x, c.y, 2.2, o => { if (o === a || o.dead || o.state !== 'eat' || o.target !== c.id || Me.kin(o, a) || SP[o.kind].cls === 'air') return; Me.gesto(o, 'threat', undefined, a.id); if (A.flee(o, a.x, a.y, 4)) { o.rest = Math.max(o.rest || 0, 10); o.noPrey = { id: c.id, until: S.clock + 30 }; } });
@@ -755,13 +759,13 @@
     const tn = tg ? (tg.kind ? L.nm(tg) : null) : null; const tw = tn ? `${tn.art} ${tn.n}` : tg && tg.name ? tg.name : '';
     if (a.state === 'hold' && tg) { const r = tg.wnd && tg.wnd.h; const k = r ? r[1] : 0; return { score: 72, title: `${art} ${n.n} ${k === RUMP ? 'agarra' : k === CROC ? 'arrasta' : k === COIL ? 'enrola' : 'estrangula'} ${tw}`, sub: k === RUMP ? 'pendurad' + (n.g === 'f' ? 'a' : 'o') + ' no lombo da presa' : k === CROC ? 'para o fundo do rio' : k === COIL ? 'apertando a cada respiração' : 'a presa ainda se debate' }; }
     if (a.state === 'pounce') return { score: 68, title: `${art} ${n.n} salta`, sub: tw ? `sobre ${tw}` : 'o bote' };
-    if (a.state === 'stand' && tg) return { score: 58, title: `${art} ${n.n} enfrenta ${tw}`, sub: 'os chifres baixos, sem recuar' };
+    if (a.state === 'stand' && tg) return { score: 58, title: `${art} ${n.n} enfrenta ${tw}`, sub: HORN.has(a.kind) ? 'os chifres baixos, sem recuar' : 'sem recuar um passo' };
     if (a.angry > 0 && tg && tg.kind) return { score: 60, title: `${art} ${n.n} investe`, sub: `contra ${tw}` };
     if (a.state === 'chase' && tg && !a.carc) return { score: 56, title: `${art} ${n.n} caça`, sub: tw ? `atrás de ${tw}` : 'a vida selvagem longe das cidades' };
     if (a.state === 'stalk' || a.state === 'flank') return { score: 50, title: `${art} ${n.n} espreita`, sub: tw ? `${tw}, sem saber` : 'rente ao capim' };
     if (a.state === 'contest' && tg) return { score: 46, title: `${art} ${n.n} disputa`, sub: a.bq === 2 || tg.bq === 2 ? 'uma fêmea' : a.bq === 3 || tg.bq === 3 ? 'o território' : 'o posto no grupo' };
     if (a.state === 'wait' && tg) return { score: 40, title: `${art} ${n.n} espera`, sub: 'a vez de chegar à carcaça' };
-    if (a.state === 'eat' && a.carc && tg && sp.diet !== 'scav') return { score: 34, title: `${art} ${n.n} come`, sub: tw ? `${tw} que abateu` : 'a presa' };
+    if (a.state === 'eat' && a.carc && tg && sp.diet !== 'scav') return { score: 34, title: `${art} ${n.n} come`, sub: tw ? tw.replace(/^uma? /, 'a carcaça de ') : 'a presa' };
     return null;
   };
 
@@ -776,7 +780,7 @@
       for (const p of S.animals.values()) {
         const r = p.wnd && p.wnd.h; if (!r) continue; const h = S.animals.get(r[0]);
         if (!h || h.dead || p.dead || h.held || G.dist(h.x, h.y, p.x, p.y) > 3 || h.state === 'hold') { p.wnd.h = null; p.caught = 0; continue; }
-        h.state = 'hold'; h.target = p.id; h.t = 60; h.cd = 0.8; h.hk = 0; if (r[1] === CROC) h.dz = A.deepSpot(h);
+        h.state = 'hold'; h.target = p.id; h.t = 60; h.cd = 0.8; h.hk = 0; h.hd = r[1]; if (r[1] === CROC) h.dz = A.deepSpot(h);
         p.caught = h.id; p.down = 0;
       }
     },

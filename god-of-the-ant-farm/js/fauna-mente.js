@@ -375,8 +375,8 @@
     Me.count('sucessao'); Me.count('sucessao:' + a.kind);
     if (left.length >= 3 && G.Luta) {
       const n = G.Luta.nm(top);
-      if (a.kind === 'elephant') G.Luta.say('matriarca', `A velha matriarca de uma manada de elefantes morreu${G.Luta.where(top.x, top.y)}. Agora é outra fêmea, ${n.g === 'f' ? 'a' : 'o'} mais forte das que ficaram, quem conduz as outras ${left.length - 1} até a água.`, top.x, top.y, 'deer');
-      else if (a.kind === 'lion' || a.kind === 'wolf') G.Luta.say('sucessao:' + a.kind, `${a.kind === 'lion' ? 'O bando de leões' : 'A alcateia'}${G.Luta.where(top.x, top.y)} perdeu quem a guiava. ${G.cap(n.art)} ${n.n} tomou o lugar de líder.`, top.x, top.y);
+      if (a.kind === 'elephant') G.Luta.say('matriarca', `A velha matriarca de uma manada de elefantes morreu${G.Luta.where(top.x, top.y)}. Agora é outra fêmea, a mais forte das que ficaram, quem conduz as outras ${left.length - 1} até a água.`, top.x, top.y, 'deer');
+      else if (a.kind === 'lion' || a.kind === 'wolf') G.Luta.say('sucessao:' + a.kind, `${a.kind === 'lion' ? 'O bando de leões' : 'A alcateia'}${G.Luta.where(top.x, top.y)} perdeu quem ${a.kind === 'lion' ? 'o' : 'a'} guiava. ${G.cap(n.art)} ${n.n} tomou o lugar de líder.`, top.x, top.y);
     }
   }
   // the leader's round: who is above whom among its own (the rank), and the one who will dispute its place
