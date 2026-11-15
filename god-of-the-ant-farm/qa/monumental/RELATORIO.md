@@ -1,0 +1,485 @@
+# A Arquitetura Monumental — relatório de entrega
+
+> Escrito para quem não programa. **Provado** quer dizer que há uma prova que roda de verdade e que o resultado está
+> anotado aqui. **Parcial** quer dizer que funciona em parte, e o texto diz qual parte. O que não foi feito está dito.
+> O pedido está em `qa/monumental/PEDIDO.md` (o §18 pede estes 13 itens, nesta ordem). O diagnóstico está em
+> `DIAGNOSTICO.md`, o plano em `PLANO.md` e o briefing da equipe em `EQUIPE.md`, na mesma pasta. Cada defeito, limite
+> de teste e decisão está em `qa/AUDIT.md`, seção 17.
+> A página com as fotos é o artefato do relatório (o link está no fim).
+
+O dono pediu, em 4/11, que os prédios públicos e monumentais tivessem a escala da sua função, por fora e por dentro e nas
+duas vistas, com consequência na simulação: o Coliseu, os palácios, as pirâmides, os templos, os teatros e a taverna.
+Também pediu que a casa pequena continuasse pequena: «escala arquitetônica coerente, diversidade, identidade e
+monumentalidade», sem «gigantismo indiscriminado». Este patch veio antes dos Bairros Vivos (D-105), porque o tamanho dos
+prédios muda o desenho das cidades que os bairros leem.
+
+**456 commits do pedido (`1cd85d3`) até a linha de base final (`c2d68e1`).** Cinco especialistas trabalharam em paralelo, cada um no seu ramo, e o líder
+juntou, conferiu e publicou.
+
+## 1. O diagnóstico original
+
+Antes de mexer em qualquer coisa, o líder mediu o jogo como ele estava (`DIAGNOSTICO.md`, no código do fechamento do
+Patch 2 e nos mundos da geração 13). Os prédios tinham sido desenhados na **escala do ícone da visão do deus**: cada tipo
+ocupava de 1 a 5 casas do mapa, e cada casa tem 4 m. As pessoas, as portas, os móveis e os degraus já estavam em escala
+real, com o corpo de 1,75 m. Por isso uma pessoa diante do «Coliseu» estava diante de um prédio de 11,6 m com uma arena de
+4 m.
+
+| Prédio | Como era | O maior espaço de dentro |
+|---|---|---|
+| Coliseu (a maravilha romana) | 12 × 12 m, 13,8 m de alto | a arena: 4 m de diâmetro |
+| Grande Pirâmide | 12 × 12 m e 24,3 m de alto: 78° de inclinação, uma agulha (a de Gizé tem 52°) | uma esplanada de 12 × 1,2 m |
+| Palácio | 12 × 12 m | o trono: 9,7 × 3,8 m |
+| Templos | 8 × 8 m | naves de 3 × 3 a 5,5 × 4 m; de 0 a 6 lugares de rezar |
+| Teatro grego | 12 × 12 m, 3 m de alto | 87 espectadores |
+| Taverna | 8 × 8 m | um salão de 6 × 3,7 m: uma mesa e meia |
+| Cabana, casa, sobrado | 4 × 4 m | cômodos de 3,4 × 3,4 m |
+
+Nenhum espaço passava de 6,5 m de pé-direito e quase não havia corredores. Nada ligava o tamanho do prédio ao tamanho da
+cidade, a não ser a escada dos três palácios. E havia terra: Mênfis, a maior cidade da megalópole, com 322 pessoas, cobria
+só 12% da sua área com prédios.
+
+## 2. As causas técnicas
+
+1. **A pegada era uma tabela fixa por tipo** (`G.BDEF`). Todo templo tinha 8 m e todo teatro 12 m, tanto no povoado de 15
+   pessoas quanto na capital de 322.
+2. **A forma era uma só por tipo e povo** (`G.Forma.of(type, style)`, guardada por `tipo:povo`). Não existia «templo
+   pequeno» e «templo grande» do mesmo povo: a arquitetura não sabia o que era tamanho.
+3. **As formas nasceram do desenho do deus** (`arch.js`). As medidas vinham de um ícone feito para ser lido em 2 ou 3 casas
+   do mapa; daí a arena de 4 m e a pirâmide-agulha.
+4. **O lote é sempre quadrado** (todos os 56 tipos). Esse limite ficou e foi respeitado: o oval, o comprido e as alas cabem
+   no quadrado, com pátio, praça ou recinto em volta.
+5. **O planejador não pedia terreno grande** (`V.findSite`), e nada guardava terra para um monumento.
+6. **A lotação vem dos lugares da planta** (`In.places`, D-085). Isso estava certo e ficou; só que as plantas pequenas
+   davam poucos lugares.
+
+## 3. Os sistemas e os arquivos modificados
+
+Do pedido até a linha de base final (`c2d68e1`): **456 commits, 179 arquivos do jogo e das provas (fora as fotos), 20.071
+linhas acrescentadas e 2.063 tiradas.**
+
+**Os arquivos novos do jogo:**
+- `js/escala.js` (`G.Escala`, D-106): a escada de tamanhos de cada tipo, o que a cidade precisa ter para cada degrau,
+  quanto custa e quanto demora. É pura: não escreve no mundo nem tira do acaso.
+- `js/forma-espetaculo.js` (M1): as formas grandes do espetáculo e das maravilhas. São o Coliseu (D-107), a Grande Pirâmide
+  (D-108), os teatros de cada povo (D-109), o campo de bola, Valhala, a Acrópole, o zigurate, o Templo Mayor e o grande
+  monumento.
+- `js/forma-poder.js` (M2): as formas grandes do poder e da fé. São os palácios de pátios (D-110, D-111) e os templos de
+  cada povo (D-112, D-123).
+
+**Os arquivos que mais mudaram:**
+- `village.js`: a cidade escolhe o degrau, acha a terra ou abre espaço, guarda o lote, amplia e paga a obra (D-115, D-116,
+  D-117, D-120, D-121).
+- `build3d.js`: o 3D desenha pela forma em qualquer tamanho (D-118).
+- `arch.js` e `render.js`: o deus pinta o prédio pela forma, na ordem certa entre as pessoas (D-113, D-114).
+- As plantas de dentro: `interiors.js`, `int-catalogo.js`, `int-monumentos.js`, `int-palacio.js` e `int-familias.js`.
+- `space.js`: a porta e a entrada dos prédios grandes.
+- `court.js`: os palácios e a audiência (D-124).
+- `cam3d.js`: a câmera nos espaços grandes (D-119).
+- `act-lazer.js` e `festivals.js`: o espetáculo enche a plateia (D-122, D-130).
+- `forma.js`: a forma sabe o tamanho.
+
+**As provas novas:**
+- `monumental.js`: os testes de aceitação A a H do pedido.
+- `monumental-poder.js` e `visual/monumental.js`: o I, o 3D, a câmera, o corpo, o desempenho e as fotos.
+- `visual/forma-deus.js` e `forma-deus-fotos.js`: o deus pela forma.
+- `escala.js`: o cenário da escala, com os casos ruins.
+- `lote-bolsao.js`, `retirada.js` e `fera-rara.js`.
+- Três verificadores novos, ligados ao `qa.js` pelo `junta-inv.js`: `escala-inv` (o lote, a forma e a planta do mesmo
+  tamanho; o degrau é um da escada), `monumental-inv` e `poder-inv`.
+
+**As regras novas da vigia do código** (`qa/guard.js`):
+- 42: o degrau e o lote (`b.esc`, `b.w = b.h = n`) só o `village.js` escreve.
+- 43: a escala é pura.
+- 44: o deus desenha o prédio do tamanho dele.
+- 45: todo arquivo do jogo se lê, sem erro de sintaxe.
+- 46: as marcas do quadro numa pessoa são do desenho (L-589).
+- 47: a retirada de um bando tem uma porta só, `G.War.retreat` (L-647).
+
+## 4. A arquitetura da solução
+
+Antes de os especialistas começarem, o líder fixou um contrato no código, sem mudar nada que se visse (D-106, commit
+`f422ac3`). Com ele, cada um trabalhou sem precisar ler o código dos outros:
+
+1. **A escala** (`G.Escala`). Cada tipo tem uma escada de degraus: o lado do lote, o que a cidade precisa ter (nível, gente,
+   técnica) e quanto custa e demora (`Es.billOf`, `V.workOf`). A mesma cidade escolhe sempre o mesmo degrau.
+2. **O prédio guarda o seu degrau** (`b.esc`) e o seu lote. Um prédio de um save antigo fica do tamanho que tinha: nada se
+   refaz ao carregar.
+3. **A cidade experimenta os degraus** (`V.startProject`), do maior que ela justifica e pode pagar para o menor, e o
+   primeiro que acha terra fica. A capital apertada ergue um templo menor que a folgada: a escala sai do mundo, não de uma
+   tabela (D-140).
+4. **A forma sabe o tamanho** (`G.Forma.of(type, style, n)`). As formas antigas são o degrau clássico; os degraus novos têm
+   formas próprias, registradas por `Fo.def` nos arquivos novos. **Registrar a forma de um tamanho é o que liga o
+   degrau**: a cidade só oferece um degrau que o povo sabe erguer (`Es.can`).
+5. **Uma definição para as duas vistas.** O deus pinta o prédio a partir da mesma forma que o 3D constrói e que a planta lê
+   (D-113): o que o deus vê, o corpo pisa.
+6. **A planta lê a forma no tamanho do prédio** (`In.formType`, `rec.n`). Os assentos, os lugares de rezar e as mesas são
+   lugares da planta, e a lotação cresce sozinha com o prédio.
+7. **A ampliação no lugar** (D-116). A cidade que cresceu amplia o seu monumento: o mesmo prédio, o mesmo nome e um fato
+   novo no registro e na crônica.
+8. **A terra** (D-115, D-120, D-121, D-127). O desnível do lote vira pódio de pedra (até 3 m pela regra da cidade; a forma
+   cobre até 4,5 m). A cidade abre espaço para a obra grande: muda campos de lugar e realoja famílias de casas baixas. Nunca
+   toca em prédio público nem nas duas últimas fazendas, e sempre traz mais camas do que tira. A capital que vai precisar
+   de uma obra grande guarda o lote, desenhado com estacas e corda.
+9. **As regras do corpo valem em qualquer tamanho** (`In.BODY`, D-088): degrau de no máximo 30 cm, porta de pelo menos
+   2,2 m, parapeito onde a queda passa de 1 m, assento de 40 a 45 cm. Crescer o prédio nunca cresce o degrau nem a porta de
+   gente.
+
+As três decisões que o dono deixou ao líder (D-102 a D-104) foram feitas neste patch:
+- o teto dos ofícios guarda uma pessoa para cada serviço aberto;
+- a ronda da noite fica no posto durante a assembleia;
+- o corpo senta à própria mesa sem precisar ter fome.
+
+## 5. Os agentes e a justificativa da quantidade
+
+Cinco especialistas, cada um na sua cópia do projeto (um worktree no seu ramo) e dono dos seus arquivos (`PLANO.md` §4,
+`EQUIPE.md`). O líder juntava os ramos, escrevia o AUDIT, o README e a regressão, mediava os pedidos entre donos e decidia.
+
+| Quem | O que fez | Rodadas |
+|---|---|---|
+| M1 · espetáculo | o Coliseu (D-107, D-125), a Grande Pirâmide (D-108), os teatros de cada povo (D-109, D-122, D-131), o campo de bola, Valhala, a Acrópole, o zigurate, o grande monumento: forma e planta; a festa e a peça (D-130) | 18 |
+| M2 · poder e fé | os palácios (D-110, D-111), os templos do santuário ao monumental (D-112, D-123), a taverna e a hospedaria, a casa rica: forma e planta | 10 |
+| V · visão do deus | o pintor da forma na vista do deus (D-113), a ordem de desenho dos prédios grandes (D-114), a reserva desenhada, a fidelidade entre as vistas | 12 |
+| C · a cidade | a escolha do degrau, a terra, o pódio, abrir espaço, a reserva, a ampliação, o custo (D-115 a D-117, D-120, D-121, D-127, D-132, D-140), os ofícios (D-102, D-144), os portões dos muros, a retirada (L-647) | 18 |
+| E · 3D e corpo | o 3D dos prédios grandes (D-118), a câmera (D-119), o corpo nas escadarias e nos assentos, sentar à mesa (D-104), as células do corpo (D-146), o desempenho (D-134, D-137), as fotos | 9 |
+
+**Por que não menos.** A forma e a planta de uma família de prédios andam juntas, então cada família tem um dono só. Mas as
+famílias são muitas: seis povos vezes os tipos grandes. Dividir em espetáculo e poder cortou o tempo pela metade sem dois
+mexerem no mesmo arquivo. O desenho do deus, a cidade e o 3D são domínios inteiros e independentes.
+
+**Por que não mais.** A câmera, o corpo e o desempenho moram nos mesmos arquivos, e a máquina tem 4 núcleos: mais agentes
+rodando provas ao mesmo tempo deixariam todos mais lentos.
+
+As rodadas contam cada volta de trabalho e entrega. A partir da rodada final, as rodadas foram a triagem das regressões
+15 a 19: cada falha ia ao dono do arquivo, e um defeito fora do domínio de alguém ia a quem tinha folga.
+
+O registro de defeitos e decisões (`qa/AUDIT.md`, seção 17) ganhou **467 linhas** nesta versão:
+- 164 defeitos: 143 consertados e 21 abertos, deixados para os Bairros Vivos (§12; sete deles com o conserto já testado
+  e guardado em `qa/patch3/consertos/`);
+- 259 limites de prova: 252 resolvidos ou registrados e 7 abertos (§12);
+- 44 decisões.
+
+## 6. A estratégia de contexto e de tokens
+
+- **O contrato antes da equipe.** Cada especialista trabalhou contra uma interface fixa (D-106), sem ler o código dos outros.
+- **Um arquivo, um dono.** Um pedido a outro dono ia escrito no relatório da rodada, e o líder repassava. Os arquivos
+  comuns (AUDIT, CLAUDE.md, README, regressão, linha de base, vigia) eram só do líder, que recebia os blocos de texto
+  prontos.
+- **Uma lista de leitura para cada um**, com a regra «procure e leia trechos»: os arquivos grandes (o `build3d.js` tem
+  336 KB) só nas partes que cada um mexe.
+- **Os números do AUDIT reservados por faixa** para cada especialista, sem disputa por número.
+- **Os mesmos agentes, rodada após rodada.** O líder retomava cada especialista com a memória dele, mandando só o que mudou
+  e as linhas exatas das provas que falharam.
+- **As provas falam em linhas.** Cada caso é uma linha «PASSOU» ou «FALHOU» com os números, e o líder lê só as que
+  falharam. O resumo da regressão é comparado com a linha de base, e só as diferenças (`NOVO:`) pedem explicação.
+- **O trabalho pesado fora da conversa.** A geração dos mundos, a regressão e o catálogo das plantas rodam em segundo
+  plano, e o líder lê só o resumo.
+- **A junção numa cópia separada** (um worktree de integração). Assim o líder juntava ramos enquanto a regressão rodava no
+  ramo principal.
+
+## 7. As categorias arquitetônicas atualizadas
+
+**A escada de tamanhos (D-106).** Antes, cada tipo de prédio tinha um tamanho só. Agora cada tipo tem uma escada de
+degraus (`js/escala.js`). A cidade pede o maior degrau que a população e o nível dela justificam e que ela pode pagar; se
+não acha terra para ele, desce para o menor. O prédio guarda o degrau em que foi erguido, e a obra custa e demora o do
+degrau. Um degrau só é oferecido a um povo que sabe erguê-lo: que tem a forma ou a planta daquele tamanho. A lista abaixo
+sai do jogo (`G.Escala`), não deste texto.
+
+| Tipo | Os degraus (o lado do lote) | O que a cidade precisa para o maior | Quem sabe erguer |
+|---|---|---|---|
+| Maravilha | antiga 12 m (de antes) · **40 m** · colossal **52 m** | a colossal: nível 5 e 250 pessoas | os 5 povos, cada um a sua (o Coliseu, a Grande Pirâmide, o Templo Mayor, Valhala, a Acrópole) |
+| Teatro | antigo 12 m (de antes) · **24 m** · grande **32 m** · monumental **40 m** | o monumental: nível 4 e 220 pessoas | os 5 povos |
+| Palácio | antigo 12 m (de antes) · **24 m** | — | os 5 povos |
+| Grande palácio | antigo 16 m (de antes) · **32 m** | — | os 5 povos |
+| Palácio colossal | antigo 20 m (de antes) · **40 m** | — | os 5 povos |
+| Templo | santuário 8 m · templo **16 m** · grande **24 m** · santuário monumental **32 m** | o monumental: nível 4 e 180 pessoas | os 5 povos |
+| Taverna | taberna 8 m · taverna **12 m** · hospedaria **16 m** | a hospedaria: 120 pessoas | os 5 povos |
+| Monumento | 8 m · grande **16 m** | 120 pessoas | os 5 povos |
+| Casa | casa 4 m · casa rica **8 m** (um degrau da família, não da cidade) | — (nenhuma família a pede ainda: T-447, §12) | os 5 povos (a forma e a planta existem) |
+| Banhos | 8 m · termas 20 m · grandes termas 28 m | — | nenhum povo ainda acima de 8 m (§12) |
+| Biblioteca, mercado, administração | 8 m · 16 m (grande biblioteca, mercado coberto, paço municipal) | — | nenhum povo ainda acima de 8 m (§12) |
+| Casa do chefe | 8 m · paço 12 m | — | nenhum povo ainda acima de 8 m (§12) |
+
+Os degraus «de antes» (12, 16 e 20 m) são o tamanho que esses prédios tinham. Eles continuam no jogo só para os saves
+antigos e para o povo que não tem outro: uma cidade nova ergue o degrau novo.
+
+**As doze categorias.** Cada tipo de prédio está numa das 12 categorias da matriz por prédio (`qa/MATRIZ-PREDIOS.md`,
+D-089). O estado de cada categoria é calculado do código e das provas desta regressão, nunca escrito à mão: **validada**
+quer dizer que as atividades essenciais estão feitas e as provas delas passaram; **funcional**, que estão
+feitas, mas alguma prova delas falha; **parcial**, que falta uma atividade essencial.
+
+| Categoria | Tipos | Estado | Atividades essenciais feitas | Falhas na geometria das plantas |
+|---|---|---|---|---|
+| Moradias | 6 | **validada** | 6 de 6 | 0 |
+| Religião e memória | 2 | **validada** | 3 de 3 | 0 |
+| Armazéns e celeiros | 3 | **validada** | 3 de 3 | 0 |
+| Comércio | 3 | **validada** | 3 de 3 | 0 |
+| Ofícios | 9 | **validada** | 1 de 1 | 0 |
+| Serviços e convívio | 2 | **validada** | 2 de 2 | 0 |
+| Campo e criação | 10 | **funcional** | 3 de 3 | 0 |
+| Extração e pesca | 2 | **validada** | 3 de 3 | 0 |
+| Governo, justiça e guarda | 5 | **validada** | 3 de 3 | 0 |
+| Palácios | 4 | **parcial** | 0 de 1 | 0 |
+| Cultura e espetáculo | 5 | **validada** | 4 de 4 | 0 |
+| Obras abertas da cidade | 5 | **parcial** | 3 de 4 | 0 |
+
+Na soma: 9 categorias validadas, 1 funcional e 2 parciais.
+
+O que este patch mudou nas categorias: os **palácios** ganharam salões, pátio, escadaria e a sala do trono no tamanho de
+um palácio (§8 e §9); a **cultura e espetáculo** ganhou o Coliseu, o teatro de três degraus e as maravilhas de cada povo,
+com a plateia, o palco e a arena por dentro; a **religião** ganhou o templo de quatro degraus; os **serviços e convívio**
+ganharam a taverna de três degraus; as **moradias** ganharam a forma e a planta da casa rica, e a casa pequena continuou
+pequena (4 × 4 m).
+
+**O que ainda não está completo, dito com clareza** (o pedido manda não declarar concluída uma categoria só pela
+fachada):
+- **Palácios — parcial.** O palácio por fora e por dentro está no tamanho certo, e a audiência acontece: quem governa
+  senta no trono e a cidade entra pelos lugares da planta (D-124). O que falta é o «morar»: o palácio pronto fica marcado
+  como o de quem o mandou erguer, mas nenhuma família o tem como casa: o governante e os seus continuam morando na casa
+  deles. (A prova da audiência fica no arquivo da `escala`, que acusa o L-690 noutro caso, §11.)
+- **Campo e criação — funcional.** As atividades essenciais estão feitas, mas a prova do rebanho acusa o L-692, um defeito
+  que fica para os Bairros Vivos (§11).
+- **Obras abertas da cidade — parcial**, por uma atividade de antes deste patch: o povo ainda não se junta na praça para
+  conversar e ouvir quem fala.
+- **Os prédios de serviço** (banhos, biblioteca, mercado, administração, paço) continuam no tamanho de antes: a escada
+  deles está escrita, mas nenhum povo sabe erguer os degraus maiores (§12).
+
+## 8. As melhorias de escala externa
+
+| Prédio | Antes | Agora |
+|---|---|---|
+| Coliseu (D-107) | 12 m de lado, 13,8 m de alto | 40 m de lado e 25,6 m de alto (o colossal: 52 m e 30,4 m); oval de quatro centros; fachada de 21 m em 3 andares de arcos e o ático; 4 entradas |
+| Grande Pirâmide (D-108) | agulha de 78° | lisa a 51,85°, base de 36 m e 22,9 m de alto (colossal: 38 m e 24,2 m); a entrada, o corredor, a galeria e a câmara |
+| Templo Mayor | 12 m | 40 m: terraços, a escada dupla, os dois santuários no alto, a praça cerimonial |
+| Valhala, Acrópole, zigurate | 12 m | 40 e 52 m: o salão nórdico de 34 × 13 m, a Acrópole com a grande escada, o zigurate com o terraço |
+| Teatros (D-109) | 12 m, 87 lugares | 24, 32 e 40 m; a cávea, a orquestra, o palco e os bastidores; o romano em meio círculo com a *scaenae frons* |
+| Palácios (D-110, D-111) | 12 a 20 m | 24, 32 e 40 m pela forma, de 16 a 23 m de alto. Pódio, escadaria, pátios abertos ao céu, alas e o telhado de cada povo: o grego e o romano com colunata (o romano com cúpula), o egípcio de pilone, o nórdico de tábua sob turfa |
+| Templos (D-112, D-123) | 8 m | 16, 24 e 32 m: o grego no crepidoma, o romano no pódio, o egípcio de pilone, o asteca sobre a pirâmide, o hof nórdico |
+| Taverna | 8 m | 8, 12 e 16 m (a hospedaria com dois pisos e pátio) |
+| Casa rica | não existia | 8 × 8 m com átrio, só para a família rica (mas ninguém a ergue ainda: T-447) |
+| Cabana e casa | 4 × 4 m | 4 × 4 m: continuam pequenas (teste G) |
+| Grande monumento | não existia | 16 m: o obelisco, a coluna do triunfo, a Pedra do Sol, o deus de ouro, o navio de pedras |
+
+A pegada, a altura e a silhueta de longe saem da mesma forma. O deus vê o prédio do tamanho dele (D-113, L-525), e quem
+está ao lado de um prédio grande é desenhado na frente dele, não atrás (D-114, L-526). Na visão do deus, a capital que
+guarda terra mostra o lote reservado com estacas, corda e o rótulo (D-121).
+
+## 9. As melhorias de escala interna
+
+| Espaço | Antes | Agora |
+|---|---|---|
+| A arena do Coliseu | 4 m | 20,2 × 13,2 m, a 2,4 m abaixo do pódio, com o subsolo |
+| Os assentos do Coliseu | não havia | 742 (1.406 no colossal), todos alcançados a pé de uma porta; o camarote do imperador com o trono e a corte (D-125) |
+| A sala do trono | 9,7 × 3,8 m | 14 × 9,4 m e 9,4 m de pé-direito; 50 lugares de audiência virados para o trono (D-124) |
+| A nave do santuário monumental | 3 × 3 a 5,5 × 4 m | de 12 × 16 a 28,6 × 10,4 m, com 9,6 a 11,8 m de altura; pelo menos 40 lugares de rezar |
+| O salão da hospedaria | 6 × 3,7 m | 10,7 × 10,8 m, 15 mesas e 88 fregueses sentados; cozinha, depósito, balcão e quartos em cima |
+| Os teatros | 87 lugares | de 304 a 913 lugares (o salão do hidromel nórdico senta de 19 a 37, D-122); palco, bastidores e camarins (a skene com teto, D-131) |
+| O palácio contra a casa do povo | não se comparava | o lote e o chão dos cômodos mais de 30 vezes os da casa (teste B) |
+
+Cada assento, banco, esteira, mesa e lugar em pé é um lugar da planta (D-085). Uma pessoa do mundo o ocupa, e o corpo
+encarnado também pode ocupá-lo. A tabela dos lugares do Coliseu levava 96 s; agora leva décimos de segundo e é feita aos
+poucos, sem parar o mundo (L-495, L-511, T-432).
+
+## 10. As melhorias de navegação e funcionalidade
+
+- **O corpo anda pelos prédios grandes.** No Coliseu, vai da rua pelos arcos até a areia e as arquibancadas, subindo os
+  corredores das fileiras até o camarote. Nas pirâmides, vai pela entrada até a câmara; nos palácios, pelo pátio até o
+  trono; nos templos, pela escadaria até a nave. Antes, o corpo era tirado da arena em até 1 s (L-550).
+- **O corpo senta para assistir, levanta e segue.** Toma um assento livre e fica contra o parapeito, sem cair (L-551).
+- **A câmera nos espaços grandes** (D-119, L-553). Olhando para cima diante de uma fachada de 21 m, o topo e a cabeça
+  aparecem. Na arena, no pátio e no salão do trono, a câmera nunca entra na pedra.
+- **O corpo e as pessoas do mundo são barrados pelas mesmas células da planta** (D-146, L-645). O desenho pode passar delas
+  no máximo meia célula.
+- **As pessoas do mundo enchem os prédios.** O espetáculo leva a plateia e os atores (D-122), e o teatro não abre peça no
+  dia da festa da cidade (D-130). A audiência do palácio chama quem está de folga (D-124), sem tirar a ronda do posto
+  (D-103). A taverna e o teatro das cidades pequenas têm gente (D-102).
+- **A cidade constrói o monumento de verdade.** Ela escolhe o tamanho, acha ou abre a terra, junta a pedra durante anos e
+  amplia quando cresce. Somando os sete mundos prontos da geração 19 (a última), isto é o que as cidades ergueram
+  sozinhas, sem a mão do deus:
+  - **dois monumentos de 40 m:** a Grande Pirâmide de Mênfis, de pé (megalópole: Mênfis chega ao nível 5 no ano 50), e a
+    de Tebas, em obra (guerra mundial, ano 63);
+  - **o grande palácio de 32 m** de Roma, de pé (megalópole);
+  - **palácios de 24 m:** um de pé (Hedeby, na guerra mundial) e três em obra (Tenochtitlan na metrópole e na guerra
+    mundial, Argos na megalópole);
+  - **teatros de 24 m:** doze, dois deles ainda em obra;
+  - **templos de 16 m:** onze;
+  - **tavernas de 12 m:** onze (uma em obra).
+
+  A geração 19 é mais nova que a 18 (a megalópole tem 50 anos, não 99), e nela não apareceu nenhum grande monumento de
+  16 m nem hospedaria de 16 m.
+
+  Os degraus maiores (o teatro de 32 e 40 m, o templo de 24 e 32 m, o palácio colossal de 40 m, os colossais de 52 m) ainda
+  não aparecem em nenhum mundo pronto. São provados pela mão do deus (`handFound`) e pelas regras da escala (§12).
+
+## 11. Os resultados dos testes
+
+**Os testes de aceitação do pedido (§16, A a I).** Cada teste é um conjunto de provas que rodam de verdade, no jogo, nos
+mundos prontos da geração 19 ou em mundos montados pela própria prova. A contagem abaixo vem das saídas da regressão
+final (`qa/monumental/` não guarda número escrito à mão: o líder contou as linhas «PASSOU» e «FALHOU» de cada arquivo).
+
+| Teste | O que verifica | As provas | Resultado |
+|---|---|---|---|
+| **A — Coliseu** | o lado e a altura, os andares, a arena, a lotação das arquibancadas, a circulação e o acesso, o de dentro igual ao de fora, a vista do corpo | `monumental`, `visual/monumental`, `monumentos`, `visual/forma-deus-fotos` | 53 de 53 ✓ |
+| **B — Palácio** | a diferença clara entre a casa comum e o palácio: os volumes, os salões, o pátio, a escadaria, as medidas | `monumental-poder`, `visual/monumental`, `palacios` | 47 de 47 ✓ |
+| **C — Pirâmides** | a egípcia e a mesoamericana: as duas monumentais e cada uma com a sua identidade | `monumental`, `visual/monumental` | 8 de 8 ✓ |
+| **D — Templo** | o santuário pequeno contra o grande complexo religioso: a diferença de escala | `monumental-poder`, `visual/monumental`, `templo` | 30 de 30 ✓ |
+| **E — Teatro** | o palco, a plateia, as galerias, os bastidores, a circulação e a lotação | `monumental` | 13 de 13 ✓ |
+| **F — Taverna** | o salão amplo da casa grande, o serviço, as mesas, os fregueses e a circulação | `monumental-poder`, `taverna` | 22 de 22 ✓ |
+| **G — Habitações** | a casa pequena continua pequena; a casa rica pode ser maior | `monumental-poder` | 7 de 7 ✓ |
+| **H — Diversidade** | a solução em pelo menos três culturas: aqui, nos cinco povos | `monumental`, `monumentos` | 24 de 24 ✓ |
+| **I — Experiência real** | entrar nos prédios com o corpo, em terceira pessoa, e sentir o tamanho: não só as medidas no código | `visual/monumental`, `encarna` | 166 de 166 ✓ |
+
+Os nove testes passam: 370 linhas de 370.
+
+O G prova a casa pequena com 4 × 4 m e a casa rica de 8 × 8 m em todo povo, de pé pela mão do deus num mundo pronto e
+num mundo novo; no mundo vivido, nenhuma família pede ainda o degrau dela (T-447, §12). O I é a experiência com o corpo:
+o Coliseu, os palácios, os templos e o colossal vistos e andados em 3D (`visual/monumental`), e a prova inteira do Modo
+Encarnado (`encarna`), que entra, sobe, senta e vive nos prédios.
+
+**A regressão completa** (a prova de tudo, antes de publicar; `qa/regress.sh`, na geração 19 dos mundos prontos):
+
+| Fase | Passaram | Falharam |
+|---|---:|---:|
+| O vigia do código (as regras que se leem no código) | 1 | 0 |
+| O mar: navios, frotas, colônias, o navio que não passa por cima da terra | 26 | 0 |
+| A guerra, a virada e os cativos | 23 | 0 |
+| Vidas longas com o verificador | 2 | 0 |
+| Saves danificados, alcance, a bordo, isolados, determinismo, o salto | 15 | 0 |
+| O que se vê: o macaco no teclado, a planta no Modo Deus | 2 | 0 |
+| A cidade: bairros, quarteirões, fundadores, a memória dos mortos, os mundos prontos | 39 | 1 |
+| Os poderes do deus e o deus caótico | 60 | 0 |
+| A fundação: atividades, economia, interiores, portas, muros, o corpo, os prédios e as provas deste patch | 1699 | 16 |
+| O Modo Encarnado (o 3D de verdade), os balões, o Diário de Vida, o deus do degrau grande | 175 | 0 |
+| O desempenho, sozinho na máquina | 4 | 0 |
+| Erros de página ou de módulo em qualquer arquivo | 0 | 0 |
+| **Total** | **2046** | **17** |
+
+Na soma, 2.046 linhas passaram e 17 falharam: as 17 são as falhas conhecidas abaixo. Nenhum erro de página, aviso no
+console ou erro de módulo em arquivo nenhum. O desempenho foi medido sozinho na máquina, no fim: o quadro inteiro do Modo
+Encarnado na metrópole (a simulação e o 3D, sem placa de vídeo) fica em 10,8 ms de mediana (p95 13,5 ms); com o Coliseu
+à vista, em 8,0 ms (o orçamento é 13 ms); o mar com 38 barcos a mais passou. Em CPU, o Coliseu de perto custa +14% sobre
+a figura dele de longe, perto do limite de +15% (D-134, D-150; §12).
+
+**As falhas conhecidas que ficam para os Bairros Vivos.** São defeitos do jogo achados nesta regressão cujo conserto muda
+o passo do mundo: consertar agora obrigaria a gerar de novo os mundos prontos e a rodar outra regressão inteira. A
+decisão foi guardar os consertos já testados (`qa/patch3/consertos/`) e aplicá-los no começo dos Bairros Vivos, que vão
+mexer nas mesmas cidades; os dois sem conserto guardado (L-686, L-689) entram lá com o trabalho da terra e dos portões. As provas continuam acusando a falha, e a linha de base aponta para a entrada do AUDIT:
+
+| A prova que falha | O defeito do jogo | O conserto |
+|---|---|---|
+| `lote-bolsao` q3 | **L-686**: o fogo nos campos do lote guardado para um monumento deixa ruínas em cima do lote até o dia seguinte | a decidir nos Bairros Vivos (D-149) |
+| `maos-ocupadas` m13 | **L-688**: quem sai da caverna de refúgio procura o chão da cidade, não a própria casa | guardado (`L-688-caverna.patch`) |
+| o verificador da `agua-solta`, da `cais-longe`, do `caminho-longo` e da `represa` | **L-689**: a muralha de uma cidade planejada por cima de outra fecha parte da outra num bolsão (Kaupang, na metrópole) | a decidir nos Bairros Vivos, com o L-491 e o L-658 |
+| `escala` e3h | **L-690**: o espaço aberto para uma obra muda de lugar o quintal da casa que ela derruba | guardado (`L-690-quintal.patch`) |
+| `muros` 7a | **L-691**: o plano do muro fecha um prédio cujo caminho corre ao longo da linha | guardado (`L-691-muro-caminho.patch`) |
+| `rebanho` r12 | **L-692**: o balanço do bicho de árvore desfaz o afastamento do lote novo | guardado (`L-692-bicho-arvore.patch`) |
+
+As da fundação também acusam «não saiu limpo» (a prova termina com falha), uma linha a mais cada: são as 17 linhas. Os outros consertos guardados (`L-687-leva.patch`, `L-696-aluguel.patch`, `L-698-fera.patch`) são de defeitos que
+as provas desta regressão não acusam como falha (o L-696 e o L-698 trazem a prova nova junto do conserto).
+
+## 12. As limitações que ainda persistem
+
+**O que o patch não cobriu:**
+- **Os prédios de serviço continuam no tamanho de antes:** os banhos, a biblioteca, o mercado, a administração, o paço,
+  o quartel e as oficinas. A escada dos quatro primeiros e a do paço já estão escritas no `escala.js` (as termas de 20 e
+  28 m, a biblioteca, o mercado coberto e o paço municipal de 16 m). Mas nenhum povo sabe erguê-los ainda, porque falta a
+  forma ou a planta desses tamanhos, e a cidade não oferece um degrau que o povo não sabe erguer. O caminho fica aberto.
+- **O lote é sempre quadrado.** Funciona, com praça, recinto ou pátio em volta, mas é um limite.
+- **Os degraus maiores ainda não nascem sozinhos nos mundos prontos.** Nenhuma Roma dos mundos prontos chegou a erguer o
+  Coliseu de 40 m. Isso é a escala funcionando como foi decidida: a cidade experimenta do maior para o menor, e o primeiro
+  que acha terra e pedra fica (D-140). Mas o Coliseu, os teatros de 32 e 40 m, os templos de 24 e 32 m e os palácios
+  colossais só aparecem pela mão do deus. Os Bairros Vivos vão medir a terra das capitais (D-128, D-132).
+- **A casa rica ninguém ergue** (T-447): ela é escolha da família, e a família rica ainda não pede o degrau dela.
+- **O povo clássico não tem cidade em nenhum mundo pronto** (T-401): o zigurate e o teatro clássico só são provados no
+  mundo em branco e pelas regras da escala.
+
+**O que funciona com ressalva:**
+- **O 3D dos templos novos não desenha tudo** (T-410). Faltam as torres do pilone egípcio e a torre com a flecha do hof
+  nórdico, e o telhado do hof sai de turfa; o deus desenha tudo.
+- **As plantas dependem dos dados** (T-436, T-403, T-446). Elas passam em todos os prédios dos mundos de hoje e no catálogo
+  inteiro, mas uma rodada de robustez da gramática das plantas, com outras sementes, fica para depois.
+- **O desenho de perto do Coliseu pesa, e está perto do limite.** No desenho por software das provas, o Coliseu de perto
+  custa +14% sobre a figura dele de longe na regressão final (de +10% a +14% nas medidas do E), e o limite é +15%
+  (D-134). A prova mede sempre no mesmo mundo de referência (T-671) e com 12 turnos por vista (D-150); se a mediana passar
+  do limite, alivia-se o detalhe. A medida fina do tempo de quadro só vale numa placa de vídeo (D-137).
+- **Sentar à própria mesa em casa quase nunca aparece:** a planta da casa só põe a mesa no chão que sobra depois das camas.
+
+**Os defeitos achados no fim e deixados para os Bairros Vivos.** Consertar qualquer um deles muda o passo do mundo e
+obrigaria a gerar os mundos prontos outra vez; cada um está descrito no AUDIT, com a causa:
+- L-631, em parte: um bicho ainda pode acabar dentro de um prédio por escritas de posição que não perguntam onde ele fica
+  (os nascimentos já estão consertados, L-654).
+- L-636: o passeio de compras de quem tem moeda no bolso não pergunta se as mãos estão livres.
+- L-646: o guarda que não acha o ladrão esquece o crime para sempre.
+- L-652: as partículas do vulcão e de outros efeitos que só se veem sorteiam do acaso do mundo.
+- L-656: a fera que dorme na toca ou migra sai do mundo, e uma história que a tinha no elenco a perderia (latente).
+- L-657: a receita «um animal raro perto de gente» do painel do desenvolvedor não dá a fera nas cidades grandes.
+- L-658: os muros param no vau dos rios, e com os portões fechados a cidade não fica fechada.
+- L-682: quem espera no cais enquanto uma viagem se prepara nunca dorme (o chamado ao cais fica acima do sono). Em terra
+  isso não fere ninguém, mas é gente acordada sem precisar.
+- L-683: o posto de trabalho fica com quem está no cais ou a bordo: os banhos de Mênfis ficaram sem foguista a viagem
+  inteira. Quem cobre o posto e quando a pessoa volta a ele é assunto dos marinheiros de verdade dos Bairros Vivos.
+- L-685: a conquista que deixa um povo só com cidades vazias não o acaba na hora. Ele fica «vivo sem ninguém» por até
+  10 segundos de jogo, até a política olhar de novo. Pela morte da última alma o povo acaba junto (L-090); pela conquista,
+  ainda não.
+- L-686: quando um fogo queima as plantações que ficam no terreno guardado para uma obra grande, as ruínas ficam em cima dele
+  até a cidade olhar de novo, no dia seguinte. O conserto já está escolhido (D-149: a ruína de um campo da própria cidade
+  passa, como o fogo no trigo). Até lá, o caso que o pegou (a `lote-bolsao` q3) fica como falha conhecida.
+- L-687: quem foge de um chamado à guerra fica alguns segundos ainda na lista do exército; um segundo chamado do mesmo povo
+  nessa janela pode pô-lo em dois exércitos ao mesmo tempo, até o primeiro se formar. O conserto já está testado e guardado
+  (`qa/patch3/consertos/L-687-leva.patch`).
+- L-688: quem mora fora do bairro principal da sua cidade pode sair da caverna pela boca errada, de onde os pés não o levam
+  para casa. O conserto também está testado e guardado (`qa/patch3/consertos/L-688-caverna.patch`).
+- L-689: na metrópole pronta, a muralha de Birka foi erguida por cima da borda de Kaupang, e o portão dela ficou encostado na
+  fogueira da vizinha: uma faixa de Kaupang com 6 casas e 23 moradores ficou presa entre a muralha e a água, sem saída a pé.
+  É da família dos portões que não deixam passar (L-491), o primeiro item dos Bairros Vivos, e entra com ele.
+- L-690: a obra que derruba uma casa para abrir espaço muda o quintal dela de lugar, como se fosse um campo. Conserto pronto.
+- L-691: o plano do muro ainda fecha um prédio cujo caminho corre por mais de duas casas ao longo da linha (o mercado
+  clandestino de Roma). Conserto pronto; entra com o L-491.
+- L-692: o bicho-preguiça afastado do lote de uma obra volta para dentro dela no balanço entre as árvores. Conserto pronto.
+- L-693: quem perdeu os dois braços senta à mesa da taverna toda noite e nunca é servido (as portas que dão coisa às mãos
+  não perguntam a força delas).
+- L-694: o load ainda limpa as reuniões da ordem secreta (o conclave não vai no save) e zera os relógios de outros
+  módulos. É o mesmo princípio do «o load não decide nada» (L-419, D-148): o que o mundo vivo continuaria precisa ir no save.
+- L-696: a família que aluga uma casa deixa a marca de «juntando para a casa nova» na casa de onde saiu. O mundo vive igual,
+  mas a marca vai no save e o verificador pode acusar depois. Conserto pronto, com a prova dele.
+- L-698: quando a pessoa que o deus está vivendo é devorada por uma fera com nome, a crônica conta a morte duas vezes (uma
+  com o nome da fera, outra com «uma fera»). O mundo vive igual. O conserto é do corpo encarnado e está pronto, com a prova
+  dele (`consertos/L-698-fera.patch`); fica guardado para não mexer no corpo depois da rodada inteira do Modo Encarnado
+  desta regressão.
+
+Os consertos já testados de vários desses defeitos estão guardados em `qa/patch3/consertos/`, prontos para aplicar no
+começo dos Bairros Vivos. Os testes que pegaram cada um continuam falhando com razão até lá, como falhas conhecidas na linha
+de base.
+
+**Os buracos antigos que também ficam para os Bairros Vivos:**
+- o governante morar no palácio (a lacuna «palácio/morar» da matriz);
+- o povo se juntar na praça («cidade/juntar»);
+- a fogueira das ruas da vila mínima (D-135);
+- a agenda de quem governa (D-138);
+- quem herda o quê do cativo (D-145);
+- o ofício que precisa das mãos (D-144);
+- uma cidade que põe prédios no coração de outra (D-128).
+- os portões de muro que não deixam passar (L-491, aberto desde o Patch 2 e primeiro item dos Bairros Vivos; neste patch o C
+  consertou dois casos dele: o portão entre dois prédios, L-603, e o prédio fechado pelo plano do muro, L-604).
+
+## 13. As evidências visuais
+
+Fotos tiradas pelo próprio jogo, nas provas (`qa/visual/monumental.js`, `qa/visual/forma-deus-fotos.js`), com o corpo
+encarnado e na visão do deus. Estão em `qa/monumental/fotos/`; a imagem de antes é a que o dono mandou
+(`qa/monumental/antes.png`). São das rodadas do patch (de 4 a 10 de novembro); a regressão final tirou todas de novo,
+com o código final, e a prova delas passou (52 de 52).
+
+| Foto | O que mostra |
+|---|---|
+| `1-fora.jpg` | o Coliseu de Roma visto da rua pelo corpo encarnado: 40 m de lado, três andares de arcos e o ático |
+| `2-arena.jpg` | dentro do Coliseu: a arena de 20 × 13 m e o pódio de pedra em volta |
+| `3-anel.jpg` | as fileiras da cávea e os corredores que o corpo sobe até o alto |
+| `14-camarote.jpg`, `15-camarote-perto.jpg` | o camarote do imperador, onde quem governa assiste aos jogos |
+| `16-coliseu13-fora.jpg`, `17-coliseu13-arena.jpg` | o degrau colossal: 52 m de lado, a fachada maior que o quadro |
+| `deus-coliseu.jpg`, `deus-coliseu-obra.jpg` | o mesmo Coliseu na visão do deus, pronto e em obra: o desenho sai da forma do 3D |
+| `deus-reserva.jpg` | a capital guarda o lote do monumento: estacas, corda e o rótulo «Reservado para o Templo Mayor» |
+| `4-palacio-fora.jpg`, `5-palacio-patio.jpg`, `6-palacio-trono.jpg` | o palácio romano: pódio e escadaria, o pátio aberto ao céu, a sala do trono de 14 × 9,4 m |
+| `11-palacio-grego.jpg`, `12-palacio-egipcio.jpg`, `13-palacio-nordico.jpg` | o palácio de três outros povos: o grego de dois pisos com a colunata, o egípcio de telhado plano, o nórdico de tábua sob turfa com a paliçada |
+| `7-templo-grego.jpg`, `8-templo-egipcio.jpg`, `9-templo-nordico.jpg`, `10-templo-egipcio-salao.jpg` | os templos: o grego no crepidoma, o egípcio com o pilone e o salão, o hof nórdico |
+
+A página do relatório com as fotos: https://claude.ai/artifact/Qy9pYXjJCE9uH1EZ4jYHfo. O jogo com esta versão:
+https://claude.ai/artifact/FRcF3GmtiP1aMhyqU7cKUe.

@@ -1,0 +1,271 @@
+// ordens: a caça da ordem secreta (L-662, D-148) — provocada de propósito.   node qa/ordens.js [mundo]
+// A ordem marcava o seu homem para calar uma testemunha uma vez e não olhava mais: se a caça parava sem matar (o prazo, o sono,
+// a festa, o lar, um bando), a testemunha ficava no limbo — nem calada nem falando —, e só um load mandava caçar de novo (os
+// mundos prontos da geração 18 guardavam homens marcados para três e quatro testemunhas). Agora a caça vale enquanto o homem
+// está nela, a testemunha cuja caça parou espera a ordem um intervalo (G.Secrets.RETRY) e é caçada de novo, e o save guarda as
+// caças como estão. o1 o save de antes (o mundo pronto, sem as caças e os relógios da ordem que um mundo feito depois do L-662
+// guarda): as marcas sem caça por trás saem e cada testemunha espera a ordem — o
+// load não manda caçar ninguém; o2 a caça cortada (a mão da prova tira o homem dela, como a festa, o sono ou o lar tiram): no
+// olhar seguinte a testemunha fica sem caçador e esperando, nenhuma caça nela antes da hora, e caça nova quando a hora chega
+// (as outras caças da ordem nesse meio-tempo cortadas também, para o homem estar livre; se ela vai por outro caminho — a ordem
+// a deixa falar, ela morre —, o caso se arma noutra caça, até três vezes); o3 a mesma vida com e sem um save/load
+// no meio: o load devolve as caças como estavam (a marca, a espera, quem segue quem e há quanto tempo), e nas duas vidas o corte
+// da mesma caça no mesmo instante limpa a mesma marca no mesmo olhar e a ordem manda o mesmo homem atrás da mesma testemunha no
+// mesmo olhar; o4 a reunião da noite atravessa um save e um load (L-694: o load a encerrava e mandava todos embora): quem estava
+// no lugar segue no lugar, de manto, e ela acaba pela regra dela; o5 um load não dá um segundo dia a nenhum módulo (os relógios
+// do dia moram no mundo, S.mod); o6 duas lojas da mesma ordem na mesma noite: a segunda não tira ninguém da reunião da primeira
+// (L-792); o7 o homem da ordem esgotado larga a caça pela cama, a testemunha espera, e a ordem não manda quem está esgotado nem o
+// tira da cama — descansado e de pé, manda (L-822); e o verificador limpo, e nenhum erro.
+const M = require('./nodemundo.js');
+const G = M.load({ qa: true });
+const WORLD = process.argv[2] || 'mega';
+const fails = [];
+const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | ordens ${name} | ${info}`); if (!c) fails.push(name); };
+const socs = () => (G.S.secrets && G.S.secrets.socs) || [];
+const pending = () => { const out = []; for (const q of socs()) for (const w of q.wit || []) if (w.fate === 'calar' && !w.done) out.push({ q, w }); return out; };
+const stalks = () => [...G.S.villagers.values()].filter(v => v.task && v.task.type === 'stalk');
+const secret = () => QA.check().filter(x => x.sys === 'secret').map(x => `[S${x.sev}] ${x.msg}`);
+// the hunts as the save must keep them: each witness's mark and wait, who follows whom and for how long
+const snap = () => JSON.stringify({
+  wit: pending().map(({ q, w }) => [q.id, w.id, w.hunter || 0, w.next || 0]).sort((a, b) => a[1] - b[1]),
+  st: stalks().map(v => [v.id, v.task.target, v.task.soc, v.task.w || 0, v.task.inq || 0, v.task.st || 0, v.task.age || 0]).sort((a, b) => a[0] - b[0]),
+});
+const RETRY = () => G.Secrets.RETRY();
+// (the man the order would send — its most cruel, as the order chooses —, and what holds him: for the message)
+const man = q => { const v = G.Secrets.membersOf(q).filter(o => o.id !== q.master && !o.captive && !o.held && !o.aboard && o.age < 60).sort((a, b) => (G.Politics.persona(b).cru + G.Politics.persona(b).agg) - (G.Politics.persona(a).cru + G.Politics.persona(a).agg))[0]; return v ? `#${v.id}${v.jail ? ' preso' : ''}, ${v.task ? v.task.type + ' ' + (v.task.pri || 0) : 'sem afazer'}, fome ${Math.round(v.hunger)}` : 'nenhum'; };
+// (the ready world's own save, read before any load touches it: what it kept)
+const raw = (() => { const data = {}; const got = G.Ready.got; G.Ready.got = (k, s) => { data[k] = s; }; try { M.run('worlds/' + WORLD + '.js'); } finally { G.Ready.got = got; } return JSON.parse(data[WORLD]); })();
+const rawMarks = []; if (raw.secrets) for (const q of raw.secrets.socs) for (const w of q.wit || []) if (w.fate === 'calar' && !w.done && w.hunter) rawMarks.push(w.id);
+// (a ready world whose orders have no witness to silence left — every witness of the mega of the generation 28 done: the cases
+// had no hunt to cut, save nor watch —: the save of before is armed by the test's hand as the game of before L-662 saved it, three
+// witnesses to silence near the order's lodge with the order's man marked on them and no hunt behind the marks — the three of
+// L-662 on one man —: one for the o2 and the o3, the others for the o7, the first silenced by then; T-1262)
+let armed = '';
+if (!rawMarks.length && raw.secrets && Array.isArray(raw.secrets.socs)) {
+  const byId = new Map(raw.villagers.map(v => [v.id, v]));
+  const q = raw.secrets.socs.filter(o => !o.gone && (o.members || []).length >= 3 && (o.lodges || []).length).sort((a, b) => b.members.length - a.members.length || a.id - b.id)[0];
+  const man0 = q && q.members.map(m => byId.get(m.id)).find(v => v && v.id !== q.master && !v.captive && !v.jail && !v.aboard && v.age >= 18 && v.age < 60);
+  const l = q && q.lodges[0];
+  const wvs = man0 ? raw.villagers.filter(v => !v.secret && !v.captive && !v.jail && !v.aboard && v.set && v.age >= 18 && v.age < 55).sort((a, b) => ((a.x - l.x) ** 2 + (a.y - l.y) ** 2) - ((b.x - l.x) ** 2 + (b.y - l.y) ** 2) || a.id - b.id).slice(0, 3) : [];
+  if (wvs.length) { const ids = new Set(wvs.map(v => v.id)); q.wit = (q.wit || []).filter(w => !ids.has(w.id)).slice(-(12 - wvs.length));
+    for (const wv of wvs) { q.wit.push({ id: wv.id, soc: q.id, day: raw.day - 1, lodge: l.id, fate: 'calar', at: raw.day - 0.5, done: 0, hunter: man0.id }); rawMarks.push(wv.id); }
+    armed = ` (armado pela mão da prova: ${wvs.map(v => `${v.name} #${v.id}`).join(', ')}, testemunhas de ${q.name}, com ${man0.name} #${man0.id} marcado nelas)`; }
+}
+const bad = [];
+const live = (secs, each) => { for (let k = 0; k < Math.round(secs * 10); k++) { M.viver(0.1); if (each && each(k) === true) return true; if (k % 100 === 0) { const w = secret(); if (w.length) bad.push(w[0]); } } return false; };
+
+// ---------------- o1 the save of before: its marks have no hunt behind them; they go, and the load sends nobody hunting ----------------
+// (a ready world made after the L-662 keeps its hunts and the order's clocks — secretsStalk, secretsT —, and its load gives the
+// hunts back as they were, D-148: the mega of the generation 19 kept one, and the load sent it on — «1 caça(s) mandada(s) pelo
+// load». The save of before is that same save without them, as the game saved it then: the test's hand takes them out)
+const after = Array.isArray(raw.secretsStalk) || Array.isArray(raw.secretsT);
+{ const old = Object.assign({}, raw); delete old.secretsStalk; delete old.secretsT; M.abrir(old); }
+const t0 = G.S.clock; const p0 = pending();
+{
+  // (the witnesses the save kept marked: none marked now, each waiting for the order; one the save kept unmarked is the step's)
+  const was = new Set(rawMarks); const kept = p0.filter(x => was.has(x.w.id));
+  const marked = p0.filter(x => x.w.hunter).length, waiting = kept.filter(x => Math.abs(x.w.next - (t0 + RETRY())) < 1e-6).length, sent = stalks().filter(v => v.task.w).length;
+  // (and no hunt on them in the first looks of the order: the wait is the step's rule, not a hunt the load decided)
+  let early = 0; live(9, () => { early = Math.max(early, stalks().filter(v => was.has(v.task.w)).length); });
+  ok(`o1 ${WORLD}`, rawMarks.length > 0 && marked === 0 && waiting === kept.length && kept.length === rawMarks.length && sent === 0 && early === 0 && !secret().length,
+    `o save do mundo pronto${after ? ' (de depois do L-662, sem as caças e os relógios da ordem, como um save de antes)' : ''}${armed} guardava ${rawMarks.length} testemunha(s) a calar com caçador marcado, sem caça nenhuma (a tarefa não ia no save); depois do load: ${marked} marcada(s), ${waiting} de ${kept.length} esperando a ordem até ${Math.round(t0 + RETRY())} s (agora ${Math.round(t0)}), ${sent} caça(s) mandada(s) pelo load, ${early} nelas nos primeiros 9 s`);
+}
+
+// ---------------- o2 a hunt cut: the next look leaves the witness waiting; a new hunt only when the time comes ----------------
+// (a witness may go another way meanwhile — she talks when the order has no man for her, she dies —: the case is armed again on
+// another hunt, up to three times; the order's man held by something weightier — a feast, a band — waits, the rule of L-456)
+let H = null, W = null, Q = null; const tried = [], seen = new Set();
+for (let at = 0; at < 3; at++) {
+  H = null; live(RETRY() + 120, () => { const v = stalks().find(x => x.task.w && !seen.has(x.task.w)); if (v) { H = v; W = v.task.w; Q = socs().find(q => q.id === v.task.soc); return true; } });
+  if (!H) { tried.push(`nenhuma caça nova em ${Math.round(RETRY() + 120)} s (testemunhas a calar: ${pending().length})`); break; }
+  seen.add(W);
+  const wOf = () => (Q.wit || []).find(x => x.id === W);
+  const c0 = G.S.clock; const h0 = H.id; G.Vg.endTask(H); // (the test's hand takes the man from the hunt, as the feast, the bed or the home take him)
+  let c1 = null, next = null, retried = null, early = null; const others = [];
+  live(4, () => { const w = wOf(); if (w && !w.hunter) { c1 = G.S.clock; next = w.next; return true; } });
+  if (c1 !== null) {
+    // (until the wait is over and beyond: no hunt on her before it; the order's other hunts cut too, its man free)
+    live(next - G.S.clock + RETRY(), () => {
+      for (const v of stalks()) {
+        if (v.task.soc !== Q.id) continue;
+        if (v.task.w === W) { if (G.S.clock < next - 1e-6) early = G.S.clock; else { retried = { c: G.S.clock, h: v.id }; return true; } }
+        else { others.push(v.task.w); G.Vg.endTask(v); }
+      }
+      const w = wOf(); if (!w || w.done || w.fate !== 'calar') return true;
+    });
+  }
+  // (another way: she talked, she died — or the order has no man of its own to send but its master, busy: it waits on him)
+  const w = wOf(); const noMan = man(Q) === 'nenhum'; const away = !retried && (!w || w.done || w.fate !== 'calar' || noMan);
+  const look = c1 !== null && Math.abs(next - (c1 + RETRY())) < 1e-6 && c1 - c0 <= 3.11;
+  const txt = `${Q.name}: #${h0} atrás da testemunha #${W}, cortado em ${c0.toFixed(1)} s; ${c1 === null ? 'NENHUM OLHAR LIMPOU A MARCA (o limbo)' : `o olhar de ${c1.toFixed(1)} s a deixou sem caçador, esperando até ${next.toFixed(1)} s (${(next - c1).toFixed(0)} s)`}; ${early !== null ? `CAÇA NOVA ANTES DA HORA (${early.toFixed(1)} s)` : 'nenhuma caça nela antes da hora'}; ${retried ? `caça nova em ${retried.c.toFixed(1)} s por #${retried.h}, ${(retried.c - next).toFixed(1)} s depois da hora` : away ? `ela foi por outro caminho (${!w ? 'saiu da lista' : w.done ? 'resolvida' : w.fate !== 'calar' ? 'a ordem a deixou falar' : 'a ordem sem outro homem que o mestre para mandar'})` : `NENHUMA CAÇA NOVA em ${Math.round(RETRY())} s depois da hora (o homem da ordem: ${man(Q)})`}${others.length ? ` (cortadas também ${others.length} caça(s) da ordem nesse meio-tempo: #${others.join(', #')})` : ''}`;
+  tried.push(txt);
+  if (!look || early !== null || !away) { ok(`o2 ${WORLD}`, look && early === null && !!retried, tried.join(' · ')); break; }
+  if (at === 2) ok(`o2 ${WORLD}`, false, tried.join(' · ') + ' — três testemunhas por outro caminho');
+}
+if (!H && tried.length) ok(`o2 ${WORLD}`, false, tried.join(' · '));
+
+// ---------------- o3 the same life with and without a save and a load in the middle: the same hunts ----------------
+{
+  const hunting = stalks().find(v => v.task.w && (!Q || v.task.soc === Q.id)) || stalks().find(v => v.task.w);
+  if (!hunting) ok(`o3 ${WORLD}`, false, 'nenhuma caça em andamento para salvar no meio');
+  else {
+    const hid = hunting.id, wid = hunting.task.w, sid = hunting.task.soc;
+    const str = G.Save.serialize(); const A0 = snap(); const T = G.S.clock;
+    // one life: 5 s on, the hunt cut by the test's hand, and until the order sends a man after a witness again (or 60 s)
+    const run = () => {
+      live(5); const h = G.S.villagers.get(hid); const cut = G.S.clock; if (h) G.Vg.endTask(h);
+      const q = socs().find(x => x.id === sid); let clear = null, nxt = null, sent = null;
+      // (the man kept free by the proof's hand while the order looks: his chore of the day is not in the save — a build in the
+      // megalópole of the generation 27 ended six seconds apart in the two lives, and the order, which waits for his hands, sent
+      // him after the next witness six seconds apart: «… em 13576.0 s · … em 13570.0 s», T-1220)
+      live(60, () => {
+        { const hh = G.S.villagers.get(hid); if (hh && clear !== null && !(hh.task && hh.task.type === 'stalk') && G.Vg.busy(hh, { type: 'stalk', pri: 2.6, kind: 'stalk' })) G.Vg.endTask(hh); }
+        const w = (q.wit || []).find(x => x.id === wid);
+        if (clear === null && w && !w.hunter) { clear = G.S.clock; nxt = w.next; }
+        const v = clear !== null && stalks().find(x => x.task.soc === sid && x.task.w);
+        if (v) { sent = { c: G.S.clock, h: v.id, w: v.task.w }; return true; }
+      });
+      return { cut, clear, nxt, sent, end: snap() };
+    };
+    const A = run();
+    G.Save.apply(JSON.parse(str)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0);
+    const B0 = snap(); const B = run();
+    const same = (x, y) => x === y || (Number.isFinite(x) && Number.isFinite(y) && Math.abs(x - y) < 1e-6);
+    const sameSent = (!A.sent && !B.sent) || (A.sent && B.sent && A.sent.h === B.sent.h && A.sent.w === B.sent.w && same(A.sent.c, B.sent.c));
+    const n1 = x => (Number.isFinite(x) ? x.toFixed(1) : '-');
+    const say = r => `marca limpa em ${r.clear === null ? 'NUNCA' : n1(r.clear) + ' s'}, espera até ${n1(r.nxt)}; ${r.sent ? `#${r.sent.h} atrás de #${r.sent.w} em ${n1(r.sent.c)} s` : 'nenhuma caça nova em 60 s'}`;
+    ok(`o3 ${WORLD}`, B0 === A0 && same(A.clear, B.clear) && same(A.nxt, B.nxt) && sameSent,
+      `salvo em ${T.toFixed(1)} s com #${hid} atrás de #${wid}; o load devolveu as caças ${B0 === A0 ? 'como estavam' : 'DIFERENTES: ' + A0.slice(0, 160) + ' ≠ ' + B0.slice(0, 160)}; sem save: ${say(A)} · com save: ${say(B)}`);
+  }
+}
+// ---------------- o4 the night's meeting goes on over a save and a load (L-694) ----------------
+// (the load ended every meeting — «the conclave is not in the save» — and sent the members home awake. The meeting is the
+// game's own: the test's hand sets the hour of the meetings and the lodge's day; the order calls its people by its rule)
+{
+  M.pronto(WORLD); M.viver(2); const S = G.S; S.weather.storm = 0; S.weather.rain = 0;
+  let m = null, q = null;
+  S.time = 0.805;
+  for (const s of socs()) { if (s.gone) continue; for (const l of s.lodges) l.next = S.day; }
+  // (the meeting that comes to its rite with two of its own at the place — of all the night calls, not the first called: in
+  // the mega of the generation 21 the first went on empty, one of its two asleep, worn out, and the other called to a second
+  // lodge of the order the same night (L-792): «rite, 0 dos 2 nela», T-1096)
+  const atOf = x => x.ids.map(id => S.villagers.get(id)).filter(v => v && v.task && v.task.type === 'conclave' && v.task.m === x.id);
+  for (let k = 0; k < 1200 && !m; k++) { M.viver(0.1); m = (S.secrets.meets || []).find(x => x.phase === 'rite' && atOf(x).filter(v => v.task.st === 2).length >= 2) || null; }
+  q = m && socs().find(x => x.id === m.soc);
+  if (!m) ok(`o4 ${WORLD}`, false, 'nenhuma reunião de uma ordem chegou ao rito com dois dos seus no lugar à noite');
+  else {
+    const at = () => atOf(m);
+    const live0 = S.secrets.meets.includes(m) && m.phase === 'rite';
+    const before = at().map(v => [v.id, v.task.st, !!v.robe, v.inside || 0, v.sleeping ? 1 : 0]).sort((a, b) => a[0] - b[0]); const mid = m.id, ph = m.phase, mt = m.t;
+    M.salvarCarregar(); const S2 = G.S;
+    const m2 = (S2.secrets.meets || []).find(x => x.id === mid) || null;
+    const ph2 = m2 ? m2.phase : '', t2 = m2 ? m2.t : -1; // (as it came from the load)
+    const after = m2 ? m2.ids.map(id => S2.villagers.get(id)).filter(v => v && v.task && v.task.type === 'conclave' && v.task.m === mid).map(v => [v.id, v.task.st, !!v.robe, v.inside || 0, v.sleeping ? 1 : 0]).sort((a, b) => a[0] - b[0]) : [];
+    // (who was at the place is at the place, robed, inside the front's house if there is one; who was walking walks again)
+    const same = before.length === after.length && before.every((x, i) => x[0] === after[i][0] && (x[1] === 2 ? after[i][1] === 2 && after[i][2] === x[2] && after[i][3] === x[3] : after[i][1] < 2));
+    const w0 = secret();
+    // and it ends by its own rule: the rite's time, everyone let go, no robe left on
+    let ended = -1; for (let k = 0; k < 1300 && ended < 0; k++) { M.viver(0.1); if (!(S2.secrets.meets || []).some(x => x.id === mid)) ended = k / 10; if (k % 100 === 0) { const w = secret(); if (w.length) bad.push(w[0]); } }
+    // (let go of this one: none of it on its errand, no robe left on — one already called to another lodge's meeting of the
+    // night, its own errand, robed at its place, is not this one's: in the mega of the generation 27 the order had all its
+    // lodges due that night, and four of the meeting went on to the next one, «4 AINDA nela ou de manto», T-1221)
+    const other = v => !!(v.task && v.task.type === 'conclave' && v.task.m !== mid);
+    const left = m2 ? m2.ids.map(id => S2.villagers.get(id)).filter(v => v && ((v.task && v.task.type === 'conclave' && v.task.m === mid) || (v.robe && !other(v)))).length : -1;
+    ok(`o4 ${WORLD}`, live0 && before.length >= 2 && !!m2 && ph2 === ph && Math.abs(t2 - mt) < 0.2 && same && !w0.length && ended >= 0 && left === 0,
+      `reunião #${mid} ${q ? 'de ' + q.name : ''} (${ph}, ${before.length} dos ${m.ids.length} nela, ${before.filter(x => x[1] === 2).length} no lugar): depois do load ${m2 ? 'segue (' + ph2 + ' há ' + t2.toFixed(1) + ' s, como no save: ' + mt.toFixed(1) + ' s; ' + after.length + ' nela, ' + after.filter(x => x[1] === 2).length + ' no lugar' + (same ? ', cada um como estava' : ', MUDADOS: ' + JSON.stringify(before) + ' → ' + JSON.stringify(after)) + ')' : 'ACABOU'}; verificador ${w0[0] || 'limpo'}; ${ended >= 0 ? 'acabou pela regra dela ' + ended + ' s depois, ' + (left === 0 ? 'todos soltos e sem manto' : left + ' AINDA nela ou de manto') : 'NÃO acabou em 130 s'}`);
+  }
+}
+// ---------------- o5 a load gives no module a second day (L-694) ----------------
+// (the day a daily routine last ran, and the place of its round among the towns, were a variable of the module, zeroed by the
+// load: every town had its day of rent, of street life, the books closed, the morning after, twice on a day with a load. They
+// are the world's now — S.mod, in the save)
+{
+  M.pronto(WORLD); M.viver(2); const S = G.S; S.time = 0.3; M.viver(40); // (well into the day: every town had its round)
+  const KEYS = ['casa.day', 'casa.cur', 'social.day', 'social.cur', 'caves.day', 'eco.day', 'polity.day', 'tavern.day', 'ww.day'];
+  const before = KEYS.map(k => G.mod(k)); const made = JSON.stringify([...G.Fac.all()].map(f => [f.id, f.eco && f.eco.made]));
+  M.salvarCarregar();
+  const after = KEYS.map(k => G.mod(k)); const kept = before.every((x, i) => x === after[i]) && before.every(x => Number.isFinite(x));
+  M.viver(0.3);
+  const after2 = KEYS.map(k => G.mod(k)); const made2 = JSON.stringify([...G.Fac.all()].map(f => [f.id, f.eco && f.eco.made]));
+  // (the day's books of each people as they were: a second closing emptied them)
+  const books = made === made2 || JSON.parse(made2).every(([id, m], i) => Object.keys(JSON.parse(made)[i][1] || {}).every(k => (m || {})[k] >= JSON.parse(made)[i][1][k] - 1e-6));
+  ok(`o5 ${WORLD}`, kept && before.every((x, i) => x === after2[i]) && books,
+    `os relógios dos módulos (${KEYS.length}): ${kept ? 'os mesmos depois do load' : 'MUDARAM: ' + JSON.stringify(before) + ' → ' + JSON.stringify(after)}; três passos depois ${before.every((x, i) => x === after2[i]) ? 'nenhum deu outro dia' : 'OUTRO DIA: ' + JSON.stringify(after2)}; os livros do dia de cada povo ${books ? 'como estavam' : 'ZERADOS pelo load'}`);
+}
+// ---------------- o6 two lodges of an order due the same night: the second takes nobody from the first (L-792) ----------------
+// (the meeting of the night called its members wherever they were below 3: two lodges of an order due the same night, the second
+// took the members of the first in the middle of its rite, and that one went on empty — the o4 of the mega of the generation 21.
+// The test's hand: an order with two lodges and members in reach of both; the first lodge's night, then the second's while the
+// first is on)
+{
+  M.pronto(WORLD); M.viver(2); const S = G.S; S.weather.storm = 0; S.weather.rain = 0;
+  let pick = null, waited = 0;
+  // (where the members are is the world's moment: a minute of the world, looked every two seconds, for an order with them so —
+  // in the mega of the generation 27, with the world's first seconds as the L-822 leaves them, none was so at the second the case
+  // looked, T-1222)
+  const find6 = () => {
+  for (const q of socs()) { if (q.gone || q.lodges.length < 2) continue; const mem = G.Secrets.membersOf(q).filter(v => !v.captive && !v.aboard && !v.held);
+    // (in the reach of the meeting's call, 34 tiles: two of the order by each lodge, and one at least by both)
+    const near = l => mem.filter(v => G.dist(v.x, v.y, l.x, l.y) < 34);
+    for (const l1 of q.lodges) for (const l2 of q.lodges) { if (l1 === l2) continue; const n1 = near(l1), n2 = near(l2), both = n1.filter(v => n2.includes(v)); if (n1.length >= 2 && n2.length >= 2 && both.length >= 1 && (!pick || both.length > pick.both.length)) pick = { q, l1, l2, both }; } }
+  };
+  for (; waited < 30 && (find6(), !pick); waited++) M.viver(2);
+  if (!pick) ok(`o6 ${WORLD}`, false, 'nenhuma ordem com duas lojas, dois membros ao alcance de cada uma e um das duas');
+  else {
+    S.time = 0.805; for (const s of socs()) for (const l of s.lodges) l.next = S.day + 9; pick.l1.next = S.day;
+    let m1 = null; for (let k = 0; k < 60 && !m1; k++) { M.viver(0.5); m1 = (S.secrets.meets || []).find(x => x.lodge === pick.l1.id) || null; }
+    let m2 = null, took = []; const d0 = S.day;
+    if (m1) { pick.l2.next = d0; for (let k = 0; k < 40 && S.secrets.meets.includes(m1); k++) { M.viver(0.5); m2 = m2 || (S.secrets.meets || []).find(x => x.lodge === pick.l2.id) || null;
+      for (const id of m1.ids) { const v = S.villagers.get(id); if (v && v.task && v.task.type === 'conclave' && v.task.m !== m1.id && !took.includes(id)) took.push(id); } } }
+    const at1 = m1 ? m1.ids.filter(id => { const v = S.villagers.get(id); return v && v.task && v.task.type === 'conclave' && v.task.m === m1.id; }).length : 0;
+    ok(`o6 ${WORLD} duas lojas na mesma noite: a segunda não tira ninguém da primeira (L-792)`, !!m1 && m1.ids.length >= 2 && pick.l2.next !== d0 && !took.length,
+      `${pick.q.name}: a loja #${pick.l1.id} reuniu ${m1 ? m1.ids.length : 0} (${pick.both.length} membros ao alcance das duas lojas); com ela reunida, a loja #${pick.l2.id} ${m2 ? 'reuniu ' + m2.ids.length + ' (#' + m2.ids.join(', #') + ')' : pick.l2.next !== d0 ? 'não achou dois livres e ficou para outra noite' : 'NÃO FOI CHAMADA'}; da primeira, ${took.length ? 'TIRADOS PELA SEGUNDA: #' + took.join(', #') : 'ninguém tirado'}; na primeira ainda ${at1}`);
+  }
+}
+// ---------------- o7 the order's man, worn out, leaves the hunt for his bed; and the order sends none worn out (L-822) ----------------
+// (the hunt weighs 2,6, over the bed of the exhausted, 2,5: in the metrópole of the generation 27 the order's man — Antônia, who
+// rules Roma — followed the one she hunted a day and a quarter awake, the energy at 0. Rested enough to be up, the hunt holds;
+// worn out, the man leaves it for his bed, and the witness waits for the order again; the wait over by the proof's hand, the man
+// worn out and awake at a plain errand is not sent, nor, rested enough to be up, in his bed — rested and up, he is)
+{
+  // (the o4 opened the ready world again, and the mega of the generation 28 has no witness to silence left in it — the armed
+  // save of the o1 was the o1's to the o3 —: with none, the o7's witnesses are armed by the test's hand in the live world, as the
+  // step arms one — entries of the order's own list, «calar», due now, no man marked —, two, near the lodge of the order with
+  // the most members, and the order sends its man by its rule; T-1262)
+  let armed7 = '';
+  if (!pending().length) {
+    const q = socs().filter(o => !o.gone && G.Secrets.membersOf(o).length >= 3 && (o.lodges || []).length).sort((a, b) => G.Secrets.membersOf(b).length - G.Secrets.membersOf(a).length || a.id - b.id)[0];
+    const l = q && q.lodges[0];
+    const wvs = l ? [...G.S.villagers.values()].filter(v => !v.secret && !v.captive && !v.jail && !v.aboard && v.set && v.age >= 18 && v.age < 55).sort((a, b) => ((a.x - l.x) ** 2 + (a.y - l.y) ** 2) - ((b.x - l.x) ** 2 + (b.y - l.y) ** 2) || a.id - b.id).slice(0, 2) : [];
+    for (const wv of wvs) { q.wit = (q.wit || []).filter(w => w.id !== wv.id); q.wit.push({ id: wv.id, soc: q.id, day: G.S.day, lodge: l.id, fate: 'calar', at: G.S.day }); if (q.wit.length > 12) q.wit.shift(); }
+    if (wvs.length) armed7 = ` (armadas pela mão da prova: ${wvs.map(v => `${v.name} #${v.id}`).join(', ')}, testemunhas de ${q.name})`;
+  }
+  let h7 = null, w7 = null, q7 = null; const T7 = RETRY() + 120;
+  live(T7, () => { const v = stalks().find(x => x.task.w && !x.task.inq); if (v) { h7 = v; w7 = v.task.w; q7 = socs().find(q => q.id === v.task.soc); return true; } });
+  if (!h7 || !q7) ok(`o7 ${WORLD}`, false, `nenhuma caça a uma testemunha em ${Math.round(T7)} s${armed7} (testemunhas a calar: ${pending().length})`);
+  else {
+    const wOf = () => (q7.wit || []).find(x => x.id === w7); const onIt = () => !!(h7.task && h7.task.type === 'stalk' && h7.task.w === w7);
+    h7.energy = 30; h7.hunger = Math.min(h7.hunger, 30); let held = true; live(3, () => { if (!onIt()) { held = false; return true; } });
+    const w0 = wOf(); const still = !!w0 && !w0.done && w0.fate === 'calar';
+    h7.energy = 5; let left = false, after = '-', next = null; const cl = G.S.clock;
+    live(5, () => { if (!left && !onIt()) { left = true; after = h7.task ? h7.task.type : 'nada'; } const w = wOf(); if (left && w && !w.hunter) { next = w.next; return true; } });
+    let sentWorn = 0, sentAsleep = 0, sentRested = false; const w = wOf();
+    if (w && next !== null && !w.done && w.fate === 'calar') {
+      w.next = G.S.clock; // (the wait over, by the proof's hand)
+      live(4, () => { h7.energy = 5; h7.sleeping = false; if (onIt()) { sentWorn++; G.Vg.endTask(h7); } else if (h7.task && h7.task.type === 'sleep') G.Vg.endTask(h7); });
+      // (rested enough to be up, in his bed: a call from outside never takes one from it — Vg.give, L-661 —, and the hunt
+      // outweighs every bed)
+      const toBed = () => { G.Vg.endTask(h7); G.Vg.setTask(h7, { type: 'sleep', pri: 1.5, st: 2, kind: 'sleep' }); h7.sleeping = true; };
+      h7.energy = 50; toBed();
+      live(4, () => { h7.energy = 50; if (onIt()) { sentAsleep++; toBed(); } else if (!(h7.task && h7.task.type === 'sleep' && h7.sleeping)) toBed(); });
+      // (rested, and up)
+      h7.energy = 90; live(8, () => { if (h7.task && h7.task.type === 'sleep') { G.Vg.endTask(h7); h7.sleeping = false; } if (onIt()) { sentRested = true; return true; } });
+    }
+    ok(`o7 ${WORLD} o homem da ordem esgotado larga a caça pela cama, e a ordem não manda quem está esgotado (L-822)`, held && still && left && next !== null && !sentWorn && !sentAsleep && sentRested,
+      `${q7.name}${armed7}: ${h7.name} #${h7.id} atrás da testemunha #${w7}; com a energia a 30 ${held ? 'segue na caça' : 'LARGOU A CAÇA'} 3 s; com a energia a 5 ${left ? `larga a caça (agora «${after}»)` : 'SEGUE NA CAÇA'} e a testemunha ${next !== null ? `fica esperando a ordem até ${next.toFixed(1)} s (${(next - cl).toFixed(0)} s)` : 'NÃO FICOU ESPERANDO'}; a espera acabada pela mão da prova: esgotado e acordado, ${sentWorn ? `MANDADO ${sentWorn} vez(es)` : 'não é mandado'}; na cama, com a energia a 50, ${sentAsleep ? `TIRADO DELA ${sentAsleep} vez(es)` : 'não é tirado dela'}; descansado e de pé, ${sentRested ? 'é mandado' : 'NÃO É MANDADO'}`);
+  }
+}
+const e = M.erros(); const errs = e.console.filter(l => /error|warn/.test(l));
+ok('verificador e erros', !bad.length && !secret().length && !Object.keys(e.mod).length && !errs.length, `ordens: ${bad.length ? bad.slice(0, 2).join(' · ') : 'limpo'}; erros de módulo ${JSON.stringify(e.mod)}; console ${errs.length ? errs.slice(0, 3).join(' | ') : 'limpo'}`);
+console.log(fails.length ? `ORDENS: ${fails.length} FALHOU (${fails.join(', ')})` : 'ORDENS: ok');
+process.exit(fails.length ? 1 : 0);
