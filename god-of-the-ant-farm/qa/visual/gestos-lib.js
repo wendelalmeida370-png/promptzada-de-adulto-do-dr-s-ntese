@@ -35,11 +35,11 @@ const spx = { browse: false, swish: 1 };
 function pose(o) {
   const e = D.species[o.kind]; const name = o.fly && e.fly ? e.fly : e.mesh; const form = forms[name]; const fam = form.meta.fam;
   const def = o.g ? Ge.DEF[o.g] : null; const d = o.d !== undefined ? o.d : def ? def.d : 0;
-  const gx = o.g ? { gn: o.g, gt: o.u || 0, gw: 1, gd: d, gv: o.gv || 0, pn: null, pw: 0 } : (o.gx || null);
+  const gx = o.g ? { gn: o.g, gt: o.u || 0, gk: 1, gd: d, gv: o.gv || 0, pn: null, pk: 0 } : (o.gx || null);
   const st = { v: o.v || 0, ph: o.ph || 0, t: o.t !== undefined ? o.t : (o.u || 0) + 3, graze: o.graze || 0, look: 0, id: o.id || 1, ears: 0, tail: 0, jaw: 0, sit: o.sit || 0, glide: false, pitch: o.pitch || 0, bank: 0,
     young: o.young || 0, kind: o.kind, gx: gx || {}, aim: o.aim || null, mood: o.mood || null, dead: o.dead || 0, held: o.held || null, holdK: o.holdK || 0, dt: 1 / 30, exert: o.exert || 0, crouch: o.crouch || 0, pounce: o.pounce || 0, tree: !!o.tree, fy: o.fy || null, side: o.side || 0,
     ground: !!o.ground, coilR: o.coilR, coilY: o.coilY, rollA: o.rollA, rollWith: o.rollWith || 0, down: o.down || 0 };
-  if (!gx) st.gx = { gn: null, gw: 0, pn: null, pw: 0 };
+  if (!gx) st.gx = { gn: null, gk: 0, pn: null, pk: 0 };
   const m = new THREE.Matrix4().makeRotationY(o.yaw || 0).setPosition(o.x || 0, o.y || 0, o.z || 0);
   const R = FA[fam](THREE, m, form, Object.assign({}, spx, o.sp || {}), st);
   const Rc = R.map(r => r.clone());

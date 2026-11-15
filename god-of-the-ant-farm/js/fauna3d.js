@@ -22,7 +22,8 @@
   const MAXR = 64; // (rows: People3D's MAXA — the beasts drawn)
   const MAXS = 16, MAXD = 4, ROWS = MAXR + MAXS + MAXD; // (and after them, rows kept for the sea's beasts — Things3D, D-267 — and for the dragons — G.Dragon3D, D-270)
   let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null, TU = null;
-  const NP = 18; // texels of coat a row
+  const NP = 22; // texels of coat a row (18 of the coat of the kind, 4 of the marks of the beast: D-283)
+  const NC = 18; // (the coat's own)
   F3.MAXR = MAXR; F3.MAXS = MAXS; F3.MAXD = MAXD; F3.ROWS = ROWS; F3.rim = (G.Body3D && G.Body3D.rim) || { value: 0.2 }; F3.frame = 0;
   const MESH = {}; // name → { mesh, geo, rows, ra, n, tris }
   const FORM = {}; // mesh name → { J: Float32Array(NB*3) the bind joints, box, meta }
@@ -79,7 +80,19 @@ void f3skin(in vec3 p, in vec3 n, out vec3 P, out vec3 N) {
   vec4 q = vec4(p, 1.0); P = vec3(dot(r0, q), dot(r1, q), dot(r2, q)); N = vec3(dot(r0.xyz, n), dot(r1.xyz, n), dot(r2.xyz, n));
 }
 `;
-  const VARY = 'varying vec3 vBind; varying vec3 vBindN; varying float vAO; varying vec4 vReg; varying vec4 vReg2; flat varying int vRowI; flat varying int vZoneI;\n';
+  // (the body's zones, by the bones that move each point — the wounds of the fight are told by zone, a.wnd.z: 0 the head, 1 the
+  // neck and the throat, 2 the forequarters, 3 the flank and the belly, 4 the rump, 5 the legs; and how much of a point is leg,
+  // how much trunk — the mud, the carcass torn open)
+  const ZONES = `
+int f3zone(int b) { if (b >= 30 || (b >= 6 && b <= 9)) return 0; if (b >= 3 && b <= 5) return 1; if (b == 2 || b == 14 || b == 15 || b == 18 || b == 19) return 2; if (b == 1) return 3;
+  if (b == 0 || b == 10 || b == 11 || b == 22 || b == 23 || b == 26 || b == 27) return 4; return 5; }
+void f3marksV() { int row = int(aRow + 0.5); vec4 w0 = texelFetch(uFauna, ivec2(PB + 19, row), 0), w1 = texelFetch(uFauna, ivec2(PB + 20, row), 0);
+  float z[6]; z[0] = w0.x; z[1] = w0.y; z[2] = w0.z; z[3] = w0.w; z[4] = w1.x; z[5] = w1.y; vWnd = 0.0; vLeg = 0.0; vTrunk = 0.0;
+  for (int i = 0; i < 4; i++) { float w = aWt[i]; if (w > 0.0) { int b = int(aBone[i] + 0.5); int zi = f3zone(b); vWnd += w * z[zi];
+    if (zi == 5) vLeg += w; else if (b == 15 || b == 19 || b == 23 || b == 27) vLeg += w * 0.5; if (b <= 2) vTrunk += w; } }
+}
+`;
+  const VARY = 'varying vec3 vBind; varying vec3 vBindN; varying float vAO; varying vec4 vReg; varying vec4 vReg2; flat varying int vRowI; flat varying int vZoneI; varying float vWnd; varying float vLeg; varying float vTrunk;\n';
   // the coat. The row's texels after the bones: 0 coat (rgb, pattern) · 1 belly (rgb, amount) · 2 the pattern's dark (rgb,
   // its scale) · 3 socks (rgb, amount) · 4 muzzle (rgb, amount) · 5 mane and the tail's tip (rgb, tip amount) · 6 horn (rgb,
   // the nose's leather amount) · 7 hoof and claws (rgb, -) · 8 beak and bare legs (rgb, -) · 9 iris (rgb, pupil: 0 round
@@ -107,7 +120,9 @@ float f3aa(float d) { float w = fwidth(d) * 0.9 + 1e-4; return clamp(0.5 - d / w
 float f3gl = 0.0; // (the eye's glint, a light of its own)
 vec3 f3em = vec3(0.0); float f3bl = 0.0; // (a light of its own — the dragon's eyes, its mouth breathing —; the sun through a wing)
 vec3 f3eye() {
-  vec4 ir = f3T(9), X = f3T(13); vec3 d = normalize(vBindN); float sd = vZoneI == 1 ? 1.0 : -1.0;
+  vec4 ir = f3T(9), X = f3T(13), MK = f3T(18); vec3 d = normalize(vBindN); float sd = vZoneI == 1 ? 1.0 : -1.0;
+  if (MK.w > 1.5) { f3gl = 0.0; return mix(ir.rgb * 0.18, vec3(0.04, 0.035, 0.03), 0.7); } // (dead: the eye dull, no light in it)
+  if (MK.w > 0.5) ir.w = 3.0; // (shut: asleep, a blink)
   vec3 g = normalize(vec3(sd * (1.0 - X.w), 0.05, X.w * 1.6)); float a = dot(d, g); float aw = fwidth(a) * 1.5 + 0.004;
   vec3 t1 = normalize(cross(g, vec3(0.0, 1.0, 0.0))), t2 = cross(t1, g); vec3 q = d - g * a; float u = dot(q, t1), v = dot(q, t2);
   if (ir.w > 2.5) return mix(f3T(0).rgb * 0.7, vec3(0.03, 0.025, 0.02), smoothstep(0.07, 0.03, abs(v)) * step(0.25, a)); // (shut: the lid and its line)
@@ -239,6 +254,32 @@ vec3 f3coat() {
   c *= 1.0 + (f3n(vBind * vec3(60.0, 160.0, 25.0) / max(Ey.y, 0.2)) - 0.5) * 0.16 * X.z * fk;
   return c;
 }
+// the marks of what happened to this beast (D-283; the texels after the coat: 18 the blood on the muzzle, what is eaten of a
+// carcass, its bones, the eyes — 19, 20 the wounds by zone, the wet, the mud — 21 the dust, the frost): the wounds dark gashes
+// with the blood run down from them, the muzzle red from the kill, the carcass opened on its flank and belly — the ribs showing
+// as it is eaten, the bones at the end —, the coat darker wet, the mud on the legs and the belly, the dust paler over all
+float f3wet = 0.0;
+vec3 f3marks(vec3 c) {
+  vec4 M0 = f3T(18), M2 = f3T(20), M3 = f3T(21); float H = max(f3T(16).y, 0.05); vec3 q = vBind / H;
+  vec3 blood = vec3(0.36, 0.035, 0.04), fresh = vec3(0.55, 0.06, 0.06);
+  if (vWnd > 0.01) { float n = f3n(q * 26.0 + 3.1), st = f3n(vec3(q.x * 30.0, q.y * 3.0, q.z * 30.0));
+    float gash = smoothstep(0.72 - 0.3 * vWnd, 0.76 - 0.3 * vWnd, n); float run = smoothstep(0.55, 0.7, st) * smoothstep(0.35, 0.9, vWnd) * 0.7;
+    c = mix(c, fresh, clamp(run + vWnd * 0.25, 0.0, 0.8)); c = mix(c, blood * 0.6, gash); }
+  if (M0.x > 0.01) { float mz = smoothstep(0.08, 0.6, vReg.z) + float(vZoneI == 5) + smoothstep(0.3, 0.9, vReg2.w) * smoothstep(0.4, 0.9, M0.x) * smoothstep(0.5, 0.7, f3n(vec3(q.x * 40.0, q.y * 5.0, q.z * 40.0)));
+    c = mix(c, mix(fresh, blood, 0.4), clamp(mz, 0.0, 1.0) * M0.x * 0.9); }
+  if (M0.y > 0.01 && vZoneI == 0) { float side = smoothstep(0.15, 0.85, vReg.x) + 0.6 * (1.0 - smoothstep(0.1, 0.6, abs(normalize(vBindN).y))); float mask = clamp(side, 0.0, 1.0) * smoothstep(0.2, 0.7, vTrunk);
+    float torn = smoothstep(0.35, 0.65, f3n(q * 9.0) + M0.y * 0.6 - 0.3); vec3 meat = mix(blood, fresh * 1.25, smoothstep(0.4, 0.8, f3n(q * 22.0)));
+    float rib = smoothstep(0.1, 0.03, abs(fract(q.z * 7.0) - 0.5) - 0.32) * smoothstep(0.45, 0.8, M0.y);
+    c = mix(c, mix(meat, vec3(0.88, 0.83, 0.74), rib), mask * torn * clamp(M0.y * 1.6, 0.0, 1.0)); }
+  if (M0.z > 0.5) { float rib = smoothstep(0.1, 0.03, abs(fract(q.z * 7.0) - 0.5) - 0.3); vec3 bone = vec3(0.86, 0.81, 0.72) * (0.85 + 0.25 * f3n(q * 40.0));
+    c = mix(mix(bone, vec3(0.22, 0.12, 0.08), (1.0 - rib) * smoothstep(0.2, 0.8, vTrunk) * 0.75), c, 0.12); }
+  if (M2.z > 0.01) { c *= 1.0 - 0.38 * M2.z; f3wet = M2.z; }
+  if (M2.w > 0.01) { float low = 1.0 - smoothstep(0.05, 0.5, q.y); float mk = clamp(vLeg * 1.2 + smoothstep(0.1, 0.8, vReg.x) * 0.7 + low * 0.8, 0.0, 1.0) * (0.55 + 0.45 * f3n(q * 14.0));
+    c = mix(c, vec3(0.2, 0.15, 0.1), clamp(mk * M2.w * 1.2, 0.0, 0.92)); }
+  if (M3.x > 0.01) c = mix(c, vec3(0.62, 0.54, 0.4), M3.x * 0.5 * (0.7 + 0.3 * f3n(q * 11.0)));
+  if (M3.y > 0.01) c = mix(c, vec3(0.86, 0.9, 0.95), M3.y * 0.35 * smoothstep(0.3, 0.9, normalize(vBindN).y));
+  return c;
+}
 vec3 f3paint() {
   int z = vZoneI;
   if (z == 1 || z == 2) return f3eye();
@@ -265,23 +306,23 @@ vec3 f3paint() {
     mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     mat.onBeforeCompile = sh => {
       sh.uniforms.uFauna = F3.U; sh.uniforms.uRim = F3.rim;
-      sh.vertexShader = pb + SKIN + VARY + sh.vertexShader
+      sh.vertexShader = pb + SKIN + VARY + ZONES + sh.vertexShader
         .replace('#include <beginnormal_vertex>', `vec3 f3P, f3N; f3skin(position, normal, f3P, f3N);
           vec3 objectNormal = f3N;
           #ifdef USE_TANGENT
           vec3 objectTangent = vec3( tangent.xyz );
           #endif
-          vBind = position; vBindN = normal; vAO = aAO; vReg = aReg; vReg2 = aReg2; vRowI = int(aRow + 0.5); vZoneI = int(aZone + 0.5);`)
+          vBind = position; vBindN = normal; vAO = aAO; vReg = aReg; vReg2 = aReg2; vRowI = int(aRow + 0.5); vZoneI = int(aZone + 0.5); f3marksV();`)
         .replace('#include <begin_vertex>', 'vec3 transformed = f3P;');
       sh.fragmentShader = pb + 'uniform highp sampler2D uFauna; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader
-        .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = f3paint(); diffuseColor.rgb *= mix(1.0, vAO, 0.7);')
-        .replace('#include <opaque_fragment>', `outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim + vec3(0.92, 0.94, 1.0) * f3gl * 0.4 + f3em;
+        .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = vZoneI == 1 || vZoneI == 2 ? f3paint() : f3marks(f3paint()); diffuseColor.rgb *= mix(1.0, vAO, 0.7);')
+        .replace('#include <opaque_fragment>', `outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim * (1.0 + 2.5 * f3wet) + vec3(0.92, 0.94, 1.0) * f3gl * 0.4 + f3em;
           #if NUM_DIR_LIGHTS > 0
           if (f3bl > 0.0) { float bl = max(0.0, dot(-normalize(vViewPosition), directionalLights[0].direction)); outgoingLight += diffuseColor.rgb * vec3(1.0, 0.62, 0.42) * directionalLights[0].color * bl * bl * f3bl; }
           #endif
           #include <opaque_fragment>`);
     };
-    mat.customProgramCacheKey = () => 'fauna3d-v4';
+    mat.customProgramCacheKey = () => 'fauna3d-v5';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = sh => {
       sh.uniforms.uFauna = F3.U;
@@ -308,6 +349,8 @@ vec3 f3paint() {
         scene.add(m); MESH[name] = { mesh: m, geo: o.g, rows: o.rows, ra: o.ra, n: 0, tris: o.tris, u: o.u };
       }
       for (const name in D.forms) { const f = D.forms[name]; FORM[name] = { J: new Float32Array(f.bind), box: f.box, meta: f.meta }; }
+      // (the support points of each bone's skin, for the gestures that set the body on the ground — FaunaAnim.Gest, D-280)
+      const FG = G.FaunaAnim.Gest; if (FG && FG.hullOf) for (const name in FORM) if (MESH[name] && MESH[name].u) FORM[name].hull = FG.hullOf(MESH[name].u);
       F3.dataErr = selfCheck(); for (const k in MESH) MESH[k].u = null;
       F3.ready = true; return true;
     } catch (e) { F3.failed = String((e && e.message) || e); F3.ready = false; return false; }
@@ -360,7 +403,9 @@ vec3 f3paint() {
   F3.extra = () => (F3.ready && F3.rows < ROWS ? F3.rows : -1);
   // a beast in row `row`: R its bones' frames in the world (G.FaunaAnim), its kind, its coat (G.FaunaAnim.coat), its level of
   // detail (0 near, 1 far)
-  F3.put = function (row, R, kind, coat, lod, X, Y, Z, fly) {
+  // mk: the marks of this beast (16 numbers — People3D's marksOf: the blood on the muzzle, what is eaten of it, its bones, the eyes,
+  // the six wounds, the wet, the mud, the dust, the frost); none: no marks
+  F3.put = function (row, R, kind, coat, lod, X, Y, Z, fly, mk) {
     const s = D.species[kind]; const mn = fly && s.fly ? s.fly : s.mesh; const f = FORM[mn]; const J = f.J; const o = row * TW * 4;
     for (let b = 0; b < NB; b++) {
       const e = R[b].elements; const j = o + b * 12; const x = J[b * 3], y = J[b * 3 + 1], z = J[b * 3 + 2];
@@ -370,7 +415,8 @@ vec3 f3paint() {
       buf[j + 8] = e[2]; buf[j + 9] = e[6]; buf[j + 10] = e[10]; buf[j + 11] = e[14] - (e[2] * x + e[6] * y + e[10] * z);
     }
     const p = o + PB * 4; const C = coat;
-    for (let k = 0; k < NP; k++) { const c = C[k]; const j = p + k * 4; buf[j] = c[0]; buf[j + 1] = c[1]; buf[j + 2] = c[2]; buf[j + 3] = c[3]; }
+    for (let k = 0; k < NC; k++) { const c = C[k]; const j = p + k * 4; buf[j] = c[0]; buf[j + 1] = c[1]; buf[j + 2] = c[2]; buf[j + 3] = c[3]; }
+    for (let k = 0; k < 16; k++) buf[p + NC * 4 + k] = mk ? mk[k] : 0;
     const e0 = R[0].elements; AT[row] = [X, Y, Z, F3.sizeOf(kind), e0[12], e0[13], e0[14]];
     const name = F3.lod && lod > 0 && MESH[mn + '_1'] ? mn + '_1' : mn;
     const M = MESH[name]; if (M && M.n < ROWS) M.rows[M.n++] = row;

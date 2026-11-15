@@ -88,17 +88,17 @@
     const n = a.gest || impl || null;
     const wt = a.gest ? a.gestT || 0 : 0;
     if (n !== s.gn || (a.gest && wt < (s.gT || 0) - 0.15)) {
-      if (s.gn && s.gw > 0.04) { s.pn = s.gn; s.pt = s.gt; s.pw = s.gw; s.pd = s.gd; s.pv = s.gv; } else { s.pn = null; s.pw = 0; }
-      s.gn = n; s.gt = a.gest ? wt : 0; s.gw = 0;
+      if (s.gn && s.gk > 0.04) { s.pn = s.gn; s.pt = s.gt; s.pk = s.gk; s.pd = s.gd; s.pv = s.gv; } else { s.pn = null; s.pk = 0; }
+      s.gn = n; s.gt = a.gest ? wt : 0; s.gk = 0;
     }
     s.gT = wt;
     const R0 = n ? REC[n] : null;
     s.gd = a.gest ? (a.gestD || 0) : (R0 && R0.d0) || 0; s.gv = a.gest ? a.gestV || 0 : 0; s.go = a.gest ? a.gestO || 0 : 0;
     if (n) {
       s.gt += dt; if (a.gest && Math.abs(s.gt - wt) > 0.6) s.gt += (wt - s.gt) * 0.5; // (kept near the world's clock: a load, a coarse step)
-      const tin = R0 ? R0.in : 0.3; s.gw = Math.min(1, s.gw + dt / Math.max(0.05, tin));
+      const tin = R0 ? R0.in : 0.3; s.gk = Math.min(1, s.gk + dt / Math.max(0.05, tin));
     }
-    if (s.pn) { s.pt += dt; const R1 = REC[s.pn]; s.pw -= dt / Math.max(0.05, R1 ? R1.out : 0.35); if (s.pw <= 0) { s.pn = null; s.pw = 0; } }
+    if (s.pn) { s.pt += dt; const R1 = REC[s.pn]; s.pk -= dt / Math.max(0.05, R1 ? R1.out : 0.35); if (s.pk <= 0) { s.pn = null; s.pk = 0; } }
     return n;
   };
   // (the weight of a gesture at u seconds of its d: in by its clock, out before its end)
@@ -118,14 +118,27 @@
     C.aimSide = st.aim ? (st.aim[0] >= 0 ? 1 : -1) : 0;
     // the gestures: the one now and the one fading
     if (gx) {
-      if (gx.pn && gx.pw > 0) run(gx.pn, fam, wOf(REC[gx.pn], gx.pw, gx.pt, gx.pd), gx.pt, gx.pd, gx.pv);
-      if (gx.gn && gx.gw > 0) run(gx.gn, fam, wOf(REC[gx.gn], gx.gw, gx.gt, gx.gd), gx.gt, gx.gd, gx.gv);
+      if (gx.pn && gx.pk > 0) run(gx.pn, fam, wOf(REC[gx.pn], gx.pk, gx.pt, gx.pd), gx.pt, gx.pd, gx.pv);
+      if (gx.gn && gx.gk > 0) run(gx.gn, fam, wOf(REC[gx.gn], gx.gk, gx.gt, gx.gd), gx.gt, gx.gd, gx.gv);
     }
     // the states of old that speak without a gesture of the world (the stalk, the leap)
     if (st.crouch > 0) { kk = st.crouch; stalk(fam); }
     if (st.pounce > 0) { kk = 1; leap(fam, st.pounce); }
     // dead: lying on its side, limp — entered from the last pose (st.dead eases from 0 to 1)
     if (C.dead > 0) { kk = C.dead; const f = DEAD[fam]; if (f) f(st); }
+    else if (st.hang) { kk = 1; const f = DEAD[fam]; if (f) f(st); P[I.EYE] *= 0.3; } // (alive and carried: limp in the jaws)
+    // (the body follows the reach: lowered to a point below the mouth, reared to one above it — the throat of a prey still on
+    // its feet, a moose's rump; the head does the rest)
+    if (fam === 'quad' && st.aim && gx && gx.gn && REC[gx.gn] && REC[gx.gn].body && gx.gk > 0) {
+      const w = sst(gx.gk) * clamp(P[I.AIM], 0, 1); mouthOf(form, Pm); const dy = (st.aim[1] - Pm[1]) / C.H, s = C.s;
+      if (dy > 0.04 && (s.cat || s.canid || s.bear || s.equid || s.monkey)) { kk = w; add(I.REAR, clamp(dy * 1.5, 0, 0.9)); add(I.DROP, -P[I.DROP] * clamp(dy * 3, 0, 1) / Math.max(kk, 1e-3)); }
+      else if (dy < -0.04) { kk = w; add(I.DROP, clamp(-dy * 1.1, 0, 0.9)); add(I.NDOWN, clamp(-dy * 0.9, 0, 0.8)); }
+      const dz = (st.aim[2] - Pm[2]) / C.L; kk = w; add(I.FWD, clamp(dz * 0.6, -0.12, 0.12)); // (a step nearer, or back)
+    } else if (fam === 'sprawl' && st.aim && gx && gx.gn && REC[gx.gn] && REC[gx.gn].body && gx.gk > 0) { // (the crocodile up on its legs, the head raised, to the throat it holds)
+      const w = sst(gx.gk); mouthOf(form, Pm); const dy = (st.aim[1] - Pm[1]) / C.H, dz = (st.aim[2] - Pm[2]) / C.L; kk = w;
+      if (dy > 0.05) { add(I.HIGH, clamp(dy * 1.5, 0, 1)); add(I.PITCH, -clamp(dy * 0.35, 0, 0.45)); }
+      add(I.FWD, clamp(dz * 0.7, -0.15, 0.15));
+    }
     kk = 1; mood(fam, st);
     return 1 - clamp(P[I.STILL], 0, 1);
   };
@@ -230,7 +243,7 @@
   // (the height of the belly as modelled: the lowest of the trunk's skin — the chest down on it when lying)
   function bellyOf(form) {
     if (form._belly !== undefined) return form._belly; let lo = 1e9; const h = form.hull;
-    if (h) for (const bn of ['root', 'spine', 'chest']) { const b = B[bn]; if (!h.has[b]) continue; for (let j = 0; j < 14; j++) lo = Math.min(lo, h.p[(b * 14 + j) * 3 + 1]); }
+    if (h) for (const bn of ['root', 'spine', 'chest']) { const b = B[bn]; if (!h.has[b]) continue; for (let j = 0; j < 14; j++) lo = Math.min(lo, h.p[(b * h.nd + j) * 3 + 1]); }
     if (lo > 1e8) lo = form.J[B.flL1 * 3 + 1] * 1.05;
     return (form._belly = lo);
   }
@@ -270,7 +283,7 @@
   // the neck and the head: down to the ground, up, stretched forward, turned; the mouth open, chewing, the snap of a bite
   FG.head = function (J0, form, st, LL) {
     const t = C.t, n0 = B.neck0 * 3, n1 = B.neck1 * 3, n2 = B.neck2 * 3, h = B.head * 3;
-    const nd = clamp(P[I.NDOWN], 0, 1.3) - (st.graze || 0) * 0.9;
+    const nd = (clamp(P[I.NDOWN], 0, 1.3) - (st.graze || 0) * 0.9) * (form.meta.trunk ? 0.3 : 1); // (an elephant reaches the ground with its trunk)
     if (nd > 0.001) {
       const nose = form.meta.nose; const yr = nose[1] - J0[n0 + 1], zr = nose[2] - J0[n0 + 2]; const Rr = Math.hypot(yr, zr), p0 = Math.atan2(yr, zr);
       const want = (0.04 - J0[n0 + 1] - OFF[1]) / Rr; const th = (p0 - Math.asin(clamp(want, -1, 1))) * (form.meta.hop ? 0.5 : 1) * Math.min(1, nd) + Math.max(0, nd - 1) * 0.6;
@@ -295,7 +308,7 @@
     E[l + 1] += sw * 0.6 + eo * 0.4; E[r + 1] += -sw * 0.6 - eo * 0.4;
   };
   FG.tail = function (st) {
-    const tu = P[I.TUP], tt = P[I.TTUCK], tl = P[I.TLASH], tw = P[I.TWAG], tc = P[I.TCURL], t = C.t;
+    const tu = P[I.TUP] + P[I.REAR] * 0.7, tt = P[I.TTUCK], tl = P[I.TLASH], tw = P[I.TWAG], tc = P[I.TCURL], t = C.t; // (reared, the tail held up off the ground)
     if (!(tu || tt || tl || tw || tc || P[I.TSIDE])) return;
     for (let k = 0; k < 4; k++) {
       const b = B['tail' + k] * 3;
@@ -314,12 +327,21 @@
   FG.end = function (J0, form, st) {
     J = J0; FORM = form;
     const aw = clamp(P[I.AIM], 0, 1);
-    if (aw > 0.01 && st.aim) { mouthOf(form, Pm); reach(J0, B.head, Pm, st.aim, aw, AIMB, AIMW, 5); }
-    const gw = clamp(P[I.GROUND], 0, 1); if (gw > 0.01 && form.hull) settle(J0, form, gw, st.fy);
+    if (aw > 0.01 && st.aim) { const R0 = st.gx && st.gx.gn ? REC[st.gx.gn] : null; if (R0 && R0.eff === 'brow') browOf(form, Pm); else mouthOf(form, Pm); reach(J0, B.head, Pm, st.aim, aw, AIMB, AIMW, 6); }
+    const gk = clamp(P[I.GROUND], 0, 1); if (gk > 0.01 && form.hull && !st.hang && !st.tree) settle(J0, form, gk, st.fy);
+    // (no gesture puts the body into the ground: a body turned, lowered, rolled, kicking is lifted until its skin is out of it —
+    // the poses that go under on purpose, the burrow, the dive, the swim, the coils, the death roll in the water, excepted)
+    if (form.hull && !st.hang && !st.tree && !(C.fam === 'bird' && form.meta.fly && !st.ground) && P[I.LIFT] >= -0.01 && !(P[I.SWIM] > 0) && !(P[I.DROLL] > 0) && !(P[I.COIL] > 0) &&
+      ((C.fam !== 'quad' && st.gx && st.gx.gn) || P[I.ROLL] || P[I.LIE] || P[I.DROP] > 0.2 || P[I.KICKP] || P[I.BOW] || P[I.LIMP] || P[I.THRASH] || P[I.ARCH] || P[I.SIT] || P[I.WDROOP] || P[I.HIGH] || P[I.GROUND] || P[I.RAISE] || P[I.WRITHE] || P[I.STRIKE] || P[I.PILE] || C.dead)) {
+      const g = st.fy ? Math.min(st.fy[0], st.fy[1], st.fy[2], st.fy[3]) : 0; const lo = lowest(J0, form); if (lo < g) OFF[1] += g - lo + FORM.meta.H * 0.006; // (a hair over: the support points miss a little of the skin)
+    }
   };
   // (the point a beast bites with: most of the way from the hinge of its jaw to the tip of its nose — on the head's bone)
   function mouthOf(form, out) { const J0 = form.J, jw = B.jaw * 3, n = form.meta.nose; out[0] = 0; out[1] = J0[jw + 1] + (n[1] - J0[jw + 1]) * 0.75; out[2] = J0[jw + 2] + (n[2] - J0[jw + 2]) * 0.75; return out; }
   FG.mouthOf = mouthOf;
+  // (the brow: over the eyes, a little forward of them — where two rivals meet head to head; the horns and the antlers are above it)
+  function browOf(form, out) { const e = form.meta.eye, n = form.meta.nose; out[0] = 0; out[1] = e[1] + (e[1] - n[1]) * 0.25; out[2] = e[2] + (n[2] - e[2]) * 0.1; return out; }
+  FG.browOf = browOf;
   // bring the point p (as modelled, on the bone eb) to T (the beast's own frame) by turning the bones of the chain — each by its
   // share, from the tip back, a few times over: the yaw about the parent's up, the pitch about its side
   function reach(J0, eb, p, T, w, bones, share, iters) {
@@ -348,27 +370,35 @@
   // (how low the skin goes now: the lowest of each bone's support points — the extremes of its skin as modelled — moved as the
   // bone is; the body set down so that it touches the ground, by w)
   function lowest(J0, form) {
-    K.chainI(J0); const h = form.hull; let lo = 1e9;
-    for (let b = 0; b < NB; b++) { if (!h.has[b]) continue; const e = R[b].elements, jx = J0[b * 3], jy = J0[b * 3 + 1], jz = J0[b * 3 + 2];
-      for (let j = 0; j < 14; j++) { const o = (b * 14 + j) * 3; const y = e[1] * (h.p[o] - jx) + e[5] * (h.p[o + 1] - jy) + e[9] * (h.p[o + 2] - jz) + e[13]; if (y < lo) lo = y; } }
+    K.chainI(J0); const h = form.hull; let lo = 1e9; const n = h.qn, q = h.q, qi = h.qi, qw = h.qw;
+    for (let i = 0; i < n; i++) { const o = i * 3, x = q[o], y0 = q[o + 1], z = q[o + 2]; let y = 0;
+      for (let k = 0; k < 4; k++) { const w = qw[i * 4 + k]; if (!w) continue; const b = qi[i * 4 + k], e = R[b].elements; y += w * (e[1] * (x - J0[b * 3]) + e[5] * (y0 - J0[b * 3 + 1]) + e[9] * (z - J0[b * 3 + 2]) + e[13]); }
+      if (y < lo) lo = y; }
     return lo;
   }
   FG.lowest = lowest;
   function settle(J0, form, w, fy) {
     const g = fy ? (fy[0] + fy[1] + fy[2] + fy[3]) * 0.25 : 0;
-    for (let it = 0; it < 2; it++) { const lo = lowest(J0, form); const d = (g - lo) * w; if (Math.abs(d) < 1e-4) break; OFF[1] += d; }
+    for (let it = 0; it < 2; it++) { const lo = lowest(J0, form); const d = (g + FORM.meta.H * 0.006 - lo) * w; if (Math.abs(d) < 1e-4) break; OFF[1] += d; }
   }
   // the support points of each bone's skin, from the mesh (once a form): the farthest point of the skin each bone moves most,
-  // along 14 directions
+  // along many directions — the 14 first by name (±x, ±y, ±z, the corners: where a throat, a nape, a back is), then 64 spread
+  // over the sphere —, each kept once and skinned as the shader skins it (its four bones and weights): the lowest of them is,
+  // within a hair, the lowest of the skin whatever the pose
   const DIRS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]; for (const a of [1, -1]) for (const b of [1, -1]) for (const c of [1, -1]) DIRS.push([a * 0.577, b * 0.577, c * 0.577]);
+  const NDN = DIRS.length; for (let i = 0; i < 64; i++) { const y = 1 - (i + 0.5) / 32, r = Math.sqrt(Math.max(0, 1 - y * y)), a = i * 2.39996; DIRS.push([Math.cos(a) * r, y, Math.sin(a) * r]); }
   FG.hullOf = function (u) {
-    const p = new Float32Array(NB * 14 * 3), has = new Uint8Array(NB), best = new Float32Array(NB * 14).fill(-1e9);
+    const ND = DIRS.length, n = NB * ND, best = new Float32Array(n).fill(-1e9), idx = new Int32Array(n).fill(-1), p = new Float32Array(NB * NDN * 3), has = new Uint8Array(NB);
     for (let i = 0; i < u.n; i++) {
-      let b = u.bi[i * 4], bw = u.bw[i * 4]; for (let k = 1; k < 4; k++) if (u.bw[i * 4 + k] > bw) { bw = u.bw[i * 4 + k]; b = u.bi[i * 4 + k]; }
+      let b = u.bi[i * 4], w0 = u.bw[i * 4]; for (let k = 1; k < 4; k++) if (u.bw[i * 4 + k] > w0) { w0 = u.bw[i * 4 + k]; b = u.bi[i * 4 + k]; }
       const x = u.pos[i * 3], y = u.pos[i * 3 + 1], z = u.pos[i * 3 + 2]; has[b] = 1;
-      for (let j = 0; j < 14; j++) { const d = DIRS[j]; const s = x * d[0] + y * d[1] + z * d[2]; if (s > best[b * 14 + j]) { best[b * 14 + j] = s; const o = (b * 14 + j) * 3; p[o] = x; p[o + 1] = y; p[o + 2] = z; } }
+      for (let j = 0; j < ND; j++) { const d = DIRS[j]; const s = x * d[0] + y * d[1] + z * d[2]; const q = b * ND + j; if (s > best[q]) { best[q] = s; idx[q] = i; } }
     }
-    return { p, has };
+    const seen = new Set(); for (let b = 0; b < NB; b++) for (let j = 0; j < ND; j++) { const i = idx[b * ND + j]; if (i < 0) continue; seen.add(i);
+      if (j < NDN) { const o = (b * NDN + j) * 3; p[o] = u.pos[i * 3]; p[o + 1] = u.pos[i * 3 + 1]; p[o + 2] = u.pos[i * 3 + 2]; } }
+    const list = [...seen].sort((a, b) => a - b), qn = list.length, q = new Float32Array(qn * 3), qi = new Uint8Array(qn * 4), qw = new Float32Array(qn * 4);
+    list.forEach((i, k) => { q[k * 3] = u.pos[i * 3]; q[k * 3 + 1] = u.pos[i * 3 + 1]; q[k * 3 + 2] = u.pos[i * 3 + 2]; for (let m = 0; m < 4; m++) { qi[k * 4 + m] = u.bi[i * 4 + m]; qw[k * 4 + m] = u.bw[i * 4 + m] / 255; } });
+    return { p, has, nd: NDN, q, qi, qw, qn };
   };
 
   // ------------------------------ the birds ------------------------------
@@ -412,7 +442,7 @@
       if (wk > 0) { E[f0] *= 1 - wk; E[f0 + 1] *= 1 - wk; E[f0 + 2] *= 1 - wk; E[f1 + 2] *= 1 - wk; E[f2 + 2] *= 1 - wk;
         E[f0 + 1] -= sd * 1.05 * wk; E[f0 + 2] -= sd * 0.25 * wk; E[f1 + 1] += sd * 0.9 * wk; E[f2 + 1] -= sd * 0.9 * wk; }
       if (!fly) { E[f0 + 2] += sd * (wo * 1.0 + wf * (0.55 + 0.55 * beat) + wl * 0.7); E[f1 + 1] -= sd * wo * 0.5; E[f2 + 1] += sd * wo * 0.6; E[f0] -= wl * 0.4; }
-      else { E[f0 + 2] += sd * (wf * 0.6 * beat - wd * 0.75 + wl * 0.5); E[f0 + 1] += sd * wd * 0.35; E[f2 + 2] -= sd * wd * 0.35; }
+      else { E[f0 + 2] += sd * (wf * 0.6 * beat - wd * 0.5 + wl * 0.5); E[f0 + 1] += sd * wd * 0.3; E[f2 + 2] -= sd * wd * 0.25; }
     }
     // (the legs in the air: thrown forward with the talons open, or hanging to grip what is carried)
     if (fly && !ground && P[I.LEGF] > 0) { const k = P[I.LEGF]; for (const s of 'LR') { const a0 = B['hl' + s + '0'] * 3, a1 = B['hl' + s + '1'] * 3, a2 = B['hl' + s + '2'] * 3, a3 = B['hl' + s + '3'] * 3;
@@ -427,7 +457,7 @@
   // ------------------------------ the snakes ------------------------------
   // the front raised in an S (the threat, the strike drawn back), the strike's lunge, the coiled pile (asleep, against the
   // cold), the coils round a prey (a loop round its body, the head at its head), the writhing (held, dying); the jaws
-  const SN = ['tail3', 'tail2', 'tail1', 'tail0', 'root', 'spine', 'chest', 'neck0', 'neck1', 'neck2', 'head'];
+  const SN = ['tail3', 'tail2', 'tail1', 'tail0', 'root', 'spine', 'chest', 'neck0', 'neck1', 'neck2', 'head'], LOOP = ['tail2', 'tail1', 'tail0', 'root', 'spine', 'chest', 'neck0'];
   FG.snake = function (J0, form, st) {
     J = J0; FORM = form; const t = C.t, H = form.meta.H;
     const pl = clamp(P[I.PILE], 0, 1), co = clamp(P[I.COIL], 0, 1), rs = P[I.RAISE], sk = P[I.STRIKE], wr = P[I.WRITHE];
@@ -438,16 +468,24 @@
     }
     if (co > 0) { // (the loop round the prey's body: each bone turned about the snake's side axis, a little along it; the neck out of the coils, to the prey's head)
       const R0 = st.coilR || H * 1.4, l = Math.abs(J0[B.spine * 3 + 2] - J0[B.root * 3 + 2]) || 0.3, d = 2 * Math.asin(clamp(l / (2 * (R0 + H * 0.5)), 0.05, 0.95)), e = 0.13;
-      for (const n of ['spine', 'chest', 'neck0']) { const b = B[n] * 3; E[b] += d * co; E[b + 1] += e * co; }
-      for (const n of ['tail0', 'tail1', 'tail2', 'tail3']) { const b = B[n] * 3; E[b] -= d * co; E[b + 1] -= e * co; }
-      E[B.neck1 * 3] -= d * 0.8 * co; E[B.neck2 * 3] -= 0.3 * co; E[B.head * 3] += 0.4 * co;
+      // (the root's two sides leave its joint in one line — no joint can turn there —: the spine and the first of the tail take half a turn more each, and the loop closes round one centre)
+      for (const n of ['spine', 'chest', 'neck0']) { const b = B[n] * 3, k = n === 'spine' ? 1.5 : 1; E[b] += d * k * co; E[b + 1] += e * co; }
+      for (const n of ['tail0', 'tail1', 'tail2', 'tail3']) { const b = B[n] * 3, k = n === 'tail0' ? 1.5 : 1; E[b] -= d * k * co; E[b + 1] -= e * co; }
+      E[B.neck1 * 3] -= 1.9 * co; E[B.neck1 * 3 + 1] += 1.1 * co * C.side; E[B.neck2 * 3] -= 0.5 * co; E[B.head * 3] += 0.55 * co; // (out of the loop, along the prey toward its head)
       const Rl = l / (2 * Math.sin(d / 2)); OFF[1] += ((st.coilY !== undefined ? st.coilY : Rl) + Rl - J0[B.root * 3 + 1]) * co; // (the root at the top of the loop, the loop round the prey's middle)
       const sq = 0.5 + 0.5 * Math.sin(t * hz(0.35)); SC[B.chest] = 1 + 0.04 * sq * co; // (the squeeze, breath by breath)
+      // (the loop's middle at the prey's middle: the snake's root above where the prey's body is, at the prey's height)
+      K.chainI(J0); const a1 = R[B.spine].elements, a2 = R[B.chest].elements, a3 = R[B.neck0].elements; // (the circle through three joints of the loop: its centre)
+      const ay = a1[13], az = a1[14], by = a2[13], bz = a2[14], cy0 = a3[13], cz0 = a3[14], dd = 2 * (ay * (bz - cz0) + by * (cz0 - az) + cy0 * (az - bz)) || 1e-6;
+      const s1 = ay * ay + az * az, s2 = by * by + bz * bz, s3 = cy0 * cy0 + cz0 * cz0;
+      let cy = (s1 * (bz - cz0) + s2 * (cz0 - az) + s3 * (az - bz)) / dd, cz = (s1 * (cy0 - by) + s2 * (ay - cy0) + s3 * (by - ay)) / dd;
+      if (!(Math.abs(dd) > 1e-5) || Math.hypot(cy - by, cz - bz) > Rl * 3) { cy = (ay + by + cy0) / 3 - Rl * 0.5; cz = (az + bz + cz0) / 3; } // (a straight run: no centre — about where it would be)
+      OFF[1] += ((st.coilY !== undefined ? st.coilY : Rl) - cy) * co; OFF[2] += (J0[B.root * 3 + 2] - cz) * co;
     }
     if (rs > 0) { E[B.chest * 3] -= 0.35 * rs; E[B.neck0 * 3] -= 0.55 * rs; E[B.neck1 * 3] += 0.35 * rs; E[B.neck2 * 3] += 0.45 * rs; E[B.head * 3] += 0.15 * rs;
       E[B.neck0 * 3 + 1] += 0.5 * rs; E[B.neck1 * 3 + 1] -= 0.9 * rs; E[B.neck2 * 3 + 1] += 0.6 * rs; } // (the S drawn back, the head level)
     if (sk > 0) { E[B.neck0 * 3 + 1] -= 0.5 * sk; E[B.neck1 * 3 + 1] += 0.9 * sk; E[B.neck2 * 3 + 1] -= 0.6 * sk; E[B.neck1 * 3] -= 0.35 * sk; E[B.neck2 * 3] -= 0.45 * sk; OFF[2] += sk * form.meta.L * 0.12; } // (the S thrown straight at the prey)
-    if (wr > 0) for (let k = 0; k < SN.length; k++) { const b = B[SN[k]] * 3; E[b + 1] += Math.sin(t * hz(1.8) - k * 0.7) * 0.4 * wr * (k < 4 ? -1 : 1); E[b + 2] += Math.sin(t * hz(1.1) - k * 0.5) * 0.3 * wr; }
+    if (wr > 0) for (let k = 0; k < SN.length; k++) { const b = B[SN[k]] * 3; E[b + 1] += Math.sin(t * hz(1.8) - k * 0.7) * 0.45 * wr * (k < 4 ? -1 : 1); E[b + 2] += Math.sin(t * hz(1.1) - k * 0.5) * 0.08 * wr; E[b] -= Math.max(0, Math.sin(t * hz(1.3) - k * 0.9)) * 0.12 * wr; } // (the body thrown about, arching off the ground)
     E[B.root * 3 + 2] += P[I.ROLL]; OFF[1] += P[I.LIFT] * H; OFF[2] += P[I.FWD] * form.meta.L;
     neckLayers();
   };
@@ -510,7 +548,7 @@
   // front and the hind quarters hanging)
   const DEAD = {};
   DEAD.quad = st => {
-    if (st.tree) { add(I.STILL, 1); add(I.EYE, 1); add(I.ARCH, 1.3); add(I.NDOWN, 1.3); add(I.JAW, 0.25); add(I.TTUCK, 0.8); P[I.DEAD] = 1;
+    if (st.tree || st.hang) { add(I.STILL, 1); add(I.EYE, 1); add(I.ARCH, 1.3); add(I.NDOWN, 1.3); add(I.JAW, 0.25); add(I.TTUCK, 0.8); P[I.DEAD] = 1;
       for (let k = 0; k < 4; k++) leg(k, k < 2 ? -0.2 : 0.2, -0.6, 0.2, 0.3); return; }
     sideDown(1, C.sideDef || FG.sideOf(C.id)); add(I.JAW, 0.22); add(I.EYE, 1); add(I.TTUCK, 0.3); add(I.NDOWN, 0.2); add(I.EARD, 1); P[I.DEAD] = 1;
   };

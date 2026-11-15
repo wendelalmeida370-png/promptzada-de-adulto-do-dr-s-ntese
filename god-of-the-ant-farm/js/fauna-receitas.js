@@ -80,7 +80,7 @@
   } });
   def('pant', { in: 0.5, out: 0.6, quad() { A(I.PANT, 1); A(I.JAW, S().hunter ? 0.75 : 0.3); A(I.NDOWN, 0.1); A(I.EARD, 0.3); } });
   // ---------------- the senses ----------------
-  def('sniff', { in: 0.4, out: 0.4, quad(u) { A(I.NDOWN, 1.0); A(I.HYAW, osc(u, 0.8) * 0.25); A(I.EARF, 0.3); A(I.HPITCH, 0.1); A(I.TRDN, 0.6); A(I.TRCURL, 0.2 * osc(u, 1.3)); } });
+  def('sniff', { in: 0.4, out: 0.4, quad(u) { A(I.NDOWN, 1.0); A(I.HYAW, osc(u, 0.8) * 0.25); A(I.EARF, 0.3); A(I.HPITCH, 0.1); A(I.TRDN, 0.3); A(I.TRCURL, 0.2 * osc(u, 1.3)); } });
   def('scent', { in: 0.4, out: 0.4, still: 0.6, quad(u) { A(I.NUP, 0.6); A(I.HPITCH, -0.4); A(I.HYAW, osc(u, 0.5) * 0.18); A(I.EARF, 0.6); A(I.JAW, (S().equid || S().cat) ? 0.12 : 0); A(I.TRUP, S().eleph ? 0.9 : 0); A(I.TRCURL, S().eleph ? 0.4 : 0); } });
   def('alert', { in: 0.2, out: 0.6, still: 0.8, quad(u) { const s = S(); A(I.NUP, 0.5); A(I.EARF, 1); A(I.AIM, 0.3); A(I.TUP, s.rumin || s.antler ? 0.6 : 0); A(I.EARO, s.eleph ? 0.9 : 0); A(I.TRUP, s.eleph ? 0.5 : 0); A(I.DROP, s.hunter ? 0.1 : 0); } });
   def('listen', { in: 0.3, out: 0.4, still: 0.7, quad(u) { A(I.NUP, 0.3); A(I.EARY, 1); A(I.EARF, 0.4); A(I.HROLL, osc(u, 0.3) * 0.15); } });
@@ -139,9 +139,9 @@
     A(I.NDOWN, 1.08); A(I.HPITCH, 0.05 * Math.sin(u * hz(0.9))); A(I.EARY, 0.3);
   } });
   def('chew', { in: 0.3, out: 0.3, any() { A(I.CHEW, 1); A(I.NUP, 0.1); } });
-  def('tear', { in: 0.3, out: 0.4, still: 0.85, quad(u) {
+  def('tear', { in: 0.3, out: 0.4, still: 0.85, body: 1, quad(u) {
     const s = S(), c = (u * 0.85 + G.hash(C.id) ) % 1, pull = bell(c, 0.1, 0.38, 0.72), shk = Math.sin(u * hz(1.15));
-    A(I.DROP, 0.4); A(I.NDOWN, 1.0 - 0.45 * pull); A(I.AIM, 0.75 * (1 - pull * 0.6)); A(I.FWD, -0.07 * pull); A(I.NUP, 0.35 * pull); A(I.HYAW, C.side * 0.35 * shk * pull);
+    A(I.DROP, 0.15); A(I.NDOWN, 0.5 - 0.3 * pull); A(I.AIM, 0.85 * (1 - pull * 0.5)); A(I.FWD, -0.07 * pull); A(I.NUP, 0.35 * pull); A(I.HYAW, C.side * 0.35 * shk * pull);
     A(I.JAW, 0.25 + 0.45 * (1 - pull)); A(I.EARB, 0.35); A(I.TLASH, 0.3);
     for (const k of FRONT) Lg(k, 0.22, 0, 0, 0); for (const k of HIND) Lg(k, -0.2, 0, 0, 0); // (braced: the forefeet forward, the hind ones back)
     if (s.bear || s.cat) with_(0.8, () => Lg(sideLeg(true, C.side), 0.55, 0.06, 0.5, 0.1)); // (a forepaw holding the carcass down)
@@ -162,11 +162,11 @@
     with_(cl, () => Lg(sideLeg(true, C.side), 0.45, 0.5, 1.6, 0)); A(I.AIM, 0.4);
   } });
   def('carry', { in: 0.3, out: 0.4, quad() { A(I.NUP, 0.15); A(I.JAW, 0.3); A(I.HPITCH, 0.1); A(I.TUP, 0.1); } });
-  def('drag', { in: 0.4, out: 0.5, quad(u) { const j = Math.max(0, Math.sin(u * hz(0.9))); A(I.DROP, 0.4); A(I.NDOWN, 0.55); A(I.JAW, 0.3); A(I.FWD, -0.05 - 0.03 * j); A(I.NUP, 0.2 * j); A(I.EARB, 0.3); A(I.AIM, 0.5); for (const k of HIND) Lg(k, -0.15, 0, 0, 0); } });
+  def('drag', { in: 0.4, out: 0.5, body: 1, quad(u) { const j = Math.max(0, Math.sin(u * hz(0.9))); A(I.DROP, 0.4); A(I.NDOWN, 0.55); A(I.JAW, 0.3); A(I.FWD, -0.05 - 0.03 * j); A(I.NUP, 0.2 * j); A(I.EARB, 0.3); A(I.AIM, 0.5); for (const k of HIND) Lg(k, -0.15, 0, 0, 0); } });
   def('cache', { in: 0.3, out: 0.4, still: 1, quad(u, d) { const f = fr(u, d, 4); with_(1 - ramp(f, 0.5, 0.6), () => REC_.dig.quad(u)); with_(ramp(f, 0.5, 0.6), () => { A(I.NDOWN, 1.1); A(I.FWD, 0.04 * Math.max(0, Math.sin(u * hz(1.6)))); }); } });
   // ---------------- among their own ----------------
-  def('nuzzle', { in: 0.5, out: 0.5, still: 0.8, quad(u) { A(I.AIM, 0.75); A(I.NFWD, 0.3); A(I.EARD, 0.4); A(I.EYE, 0.35); A(I.HROLL, 0.2 * C.side); A(I.TRFWD, S().eleph ? 0.7 : 0); } });
-  def('allogroom', { in: 0.5, out: 0.5, still: 1, quad(u) { A(I.AIM, 0.85); A(I.JAW, 0.12 + Math.max(0, Math.sin(u * hz(2))) * 0.18); A(I.EYE, 0.45); A(I.EARD, 0.3); A(I.TRFWD, S().eleph ? 0.7 : 0); } });
+  def('nuzzle', { in: 0.5, out: 0.5, still: 0.8, body: 1, quad(u) { A(I.AIM, 0.75); A(I.NFWD, 0.3); A(I.EARD, 0.4); A(I.EYE, 0.35); A(I.HROLL, 0.2 * C.side); A(I.TRFWD, S().eleph ? 0.7 : 0); } });
+  def('allogroom', { in: 0.5, out: 0.5, still: 1, body: 1, quad(u) { A(I.AIM, 0.85); A(I.JAW, 0.12 + Math.max(0, Math.sin(u * hz(2))) * 0.18); A(I.EYE, 0.45); A(I.EARD, 0.3); A(I.TRFWD, S().eleph ? 0.7 : 0); } });
   def('play', { in: 0.25, out: 0.4, still: 0.3, quad(u) {
     const s = S(), c = ((u + G.hash(C.id) * 7) % 2.4) / 2.4, ph = Math.floor((u + G.hash(C.id) * 7) / 2.4 + C.id) % 3;
     if (s.eleph) { A(I.TRUP, 0.6 + 0.5 * osc(u, 0.7)); A(I.EARO, 0.6 + 0.4 * osc(u, 1.1)); A(I.HYAW, osc(u, 0.5) * 0.3); A(I.LIFT, 0.04 * Math.abs(osc(u, 1.2))); return; }
@@ -175,7 +175,7 @@
     if (s.hoof || s.equid) { M.hindKick(c, true, C.side); A(I.LIFT, 0.2 * bell(c, 0, 0.2, 0.4)); return; } // (a kick of the heels)
     A(I.ROLL, C.side * 1.2 * bell(c, 0.1, 0.4, 0.8)); A(I.GROUND, bell(c, 0.1, 0.4, 0.8)); A(I.THRASH, 0.4 * bell(c, 0.1, 0.4, 0.8)); A(I.JAW, 0.5); // (a roll, the paws batting)
   } });
-  def('suckle', { in: 0.6, out: 0.5, still: 1, quad(u) {
+  def('suckle', { in: 0.6, out: 0.5, still: 1, body: 1, quad(u) {
     const s = S(); A(I.AIM, 0.9); A(I.TWAG, s.hoof ? 0.9 : 0.3); A(I.FWD, 0.015 * Math.sin(u * hz(1.3))); A(I.EYE, 0.3); A(I.EARD, 0.3);
     if (!s.hoof && !s.equid && !s.pachy) { M.lieDown(1); A(I.NDOWN, 0.2); } else { A(I.NUP, 0.2); A(I.DROP, 0.12); for (const k of FRONT) Lg(k, 0.12, 0, 0, 0); }
   } });
@@ -256,7 +256,7 @@
     A(I.NDOWN, 0.45); A(I.JAW, s.swine ? 0.4 : 0.1); A(I.EARF, 0.8); A(I.HYAW, osc(u, 0.5) * 0.15);
   } });
   def('charge', { in: 0.2, out: 0.5, quad() { const s = S(); A(I.NDOWN, s.eleph ? 0.15 : 0.55); A(I.NFWD, 0.4); A(I.EARB, s.eleph ? 0 : 0.8); A(I.EARO, s.eleph ? 1.1 : 0); A(I.TRCURL, s.eleph ? 1 : 0); A(I.TUP, 0.75); A(I.JAW, s.bear ? 0.5 : 0); } });
-  def('clash', { in: 0.15, out: 0.4, still: 0.6, quad(u, d) {
+  def('clash', { in: 0.15, out: 0.4, still: 0.6, body: 1, eff: 'brow', quad(u, d) {
     const s = S(), f = fr(u, d, 2.2), j = bell(f, 0.1, 0.17, 0.35);
     const up = (C.kind === 'ibex' || C.kind === 'cabra' || C.kind === 'ovelha') ? bell(f, 0, 0.1, 0.2) : 0; // (the goats rear and drop onto it)
     A(I.REAR, up * 0.9); A(I.NDOWN, 0.55 * (1 - up)); A(I.HPITCH, 0.4); A(I.FWD, 0.07 - 0.07 * j + 0.02 * Math.sin(u * hz(1.3))); A(I.DROP, 0.25); A(I.AIM, 0.55 * (1 - up)); A(I.EARB, 0.6); A(I.TUP, 0.3);
@@ -273,20 +273,20 @@
       else if (s.canid) Lg(k, 0.62, 0.52, 1.2, 0.3);
       else Lg(k, 0.4 + 0.28 * Math.sin(p), 0.9 + 0.1 * Math.cos(p), 0.8, 0.2); }
   } });
-  def('bite', { in: 0.06, out: 0.25, quad(u, d) {
+  def('bite', { in: 0.06, out: 0.25, body: 1, quad(u, d) {
     const f = fr(u, d, 0.5), lunge = bell(f, 0, 0.45, 1); A(I.JAW, 1.0 * bell(f, 0, 0.3, 0.5)); A(I.FWD, 0.08 * lunge); A(I.NFWD, 0.55 * lunge); A(I.AIM, 0.9 * lunge); A(I.EARB, 1); A(I.DROP, 0.15 * lunge);
   } });
-  def('grip', { in: 0.15, out: 0.4, still: 0.6, quad(u) {
-    const pull = 0.5 + 0.5 * Math.sin(u * hz(0.9)); A(I.JAW, 0.35); A(I.AIM, 1); A(I.DROP, 0.3); A(I.FWD, -0.06 * pull); A(I.HYAW, Math.sin(u * hz(1.7)) * 0.2); A(I.EARB, 1); A(I.TLASH, 0.6);
+  def('grip', { in: 0.15, out: 0.4, still: 0.6, body: 1, quad(u) {
+    const pull = 0.5 + 0.5 * Math.sin(u * hz(0.9)); A(I.JAW, 0.35); A(I.AIM, 1); A(I.DROP, 0.1); A(I.FWD, -0.06 * pull); A(I.HYAW, Math.sin(u * hz(1.7)) * 0.2); A(I.EARB, 1); A(I.TLASH, 0.6);
     for (const k of HIND) Lg(k, -0.25, 0, 0, 0); for (const k of FRONT) Lg(k, 0.22, 0, 0, 0);
   } });
-  def('throat', { in: 0.25, out: 0.5, still: 1, quad(u) {
-    const sd = C.aimSide || C.side; A(I.AIM, 1); A(I.JAW, 0.4); A(I.DROP, 0.5); A(I.EARB, 0.8); A(I.TLASH, 0.45); A(I.BREATH, 1.2); A(I.NYAW, 0.04 * Math.sin(u * hz(0.3)));
+  def('throat', { in: 0.25, out: 0.5, still: 1, body: 1, quad(u) {
+    const sd = C.aimSide || C.side; A(I.AIM, 1); A(I.JAW, 0.4); A(I.DROP, 0.15); A(I.EARB, 0.8); A(I.TLASH, 0.45); A(I.BREATH, 1.2); A(I.NYAW, 0.04 * Math.sin(u * hz(0.3)));
     with_(1, () => { Lg(sideLeg(true, sd), 0.6, 0.38, 1.4, 0.3); Lg(sideLeg(true, -sd), 0.4, 0, 0, 0); }); // (a foreleg over the prey's shoulder, the other braced)
     for (const k of HIND) { Lg(k, -0.22, 0, 0, 0); Ab(k, 0.14); }
   } });
-  def('nape', { in: 0.25, out: 0.5, still: 1, quad(u) {
-    A(I.AIM, 1); A(I.JAW, 0.4); A(I.FWD, 0.12); A(I.REAR, 0.28); A(I.EARB, 1); A(I.TLASH, 0.5); A(I.BREATH, 1);
+  def('nape', { in: 0.25, out: 0.5, still: 1, body: 1, quad(u) {
+    A(I.AIM, 1); A(I.JAW, 0.4); A(I.FWD, 0.12); A(I.EARB, 1); A(I.TLASH, 0.5); A(I.BREATH, 1);
     for (const k of FRONT) { Lg(k, 0.65, 0.28, 1.6, 0.4); Ab(k, 0.25); } for (const k of HIND) Lg(k, -0.1, 0, 0, 0); // (the forelegs clasped round the prey, the hind ones planted)
   } });
   def('shakekill', { in: 0.1, out: 0.35, still: 1, quad(u, d) {
@@ -299,7 +299,7 @@
     with_(Math.max(r, s), () => { Lg(k, 0.35 + 0.6 * s, 0.55 * r + 0.32 * s, 1.6 * r + 0.2 * s, -0.4); Ab(k, 0.3 * s); });
     A(I.REAR, 0.22 * r); A(I.NYAW, -C.side * 0.2 * s); A(I.JAW, 0.7); A(I.EARB, 1); A(I.FWD, 0.05 * s); A(I.AIM, 0.3);
   } });
-  def('maul', { in: 0.2, out: 0.5, still: 1, quad(u) {
+  def('maul', { in: 0.2, out: 0.5, still: 1, body: 1, quad(u) {
     const q = u * hz(1.2); A(I.REAR, 0.3 * (0.5 + 0.5 * Math.sin(q))); A(I.AIM, 0.7); A(I.JAW, 0.7 * Math.abs(Math.sin(u * hz(1.5)))); A(I.NDOWN, 0.4); A(I.EARB, 1); A(I.PITCH, 0.05 * Math.sin(q));
     for (const k of FRONT) Lg(k, 0.55, 0.32 * Math.max(0, Math.sin(q + k * Math.PI)) + 0.06, 1.2, 0.3);
   } });
@@ -327,8 +327,8 @@
     const c = (u * 1.7) % 1, kq = bell(c, 0.15, 0.45, 0.85); A(I.KICKP, kq); A(I.LIFT, 0.25 * bell(c, 0, 0.25, 0.55)); A(I.NDOWN, 0.6); A(I.ARCH, 0.25); A(I.EARB, 1); A(I.TUP, 0.8);
     with_(kq, () => { for (const k of HIND) Lg(k, -0.8, 0.5, -0.3, 0.8); });
   } });
-  def('pin', { in: 0.25, out: 0.5, still: 1, quad(u) {
-    A(I.DROP, 0.6); A(I.FWD, 0.1); A(I.AIM, 1); A(I.JAW, 0.4); A(I.EARB, 1); A(I.TLASH, 0.5);
+  def('pin', { in: 0.25, out: 0.5, still: 1, body: 1, quad(u) {
+    A(I.DROP, 0.3); A(I.FWD, 0.1); A(I.AIM, 1); A(I.JAW, 0.4); A(I.EARB, 1); A(I.TLASH, 0.5);
     for (const k of FRONT) { Lg(k, 0.72, 0.22, 1.0, 0.4); Ab(k, 0.15); } // (the forepaws pressing it down)
   } });
   // (held: reading the one that holds it — on its side under a nape bite, a pin, the talons, the death roll, the coils; on its
@@ -338,7 +338,7 @@
     const s = S(), sd = C.side, down = C.down > 0 || DOWNHOLD[C.held] || (Math.abs(C.var) | 0) === 1;
     A(I.EARB, 1); A(I.JAW, 0.35 + 0.3 * Math.abs(Math.sin(u * hz(1.3)))); A(I.BRATE, 2); A(I.TUP, 0.4);
     if (C.held === 'coil') { M.sideDown(1, sd); A(I.THRASH, 0.25); A(I.SHIV, 1); A(I.NUP, 0.3 * Math.abs(Math.sin(u * hz(0.4)))); return; } // (crushed: only the head and a shiver)
-    if (C.held === 'deathroll') { A(I.ROLL, C.rollWith); A(I.GROUND, 0.4); A(I.LIMP, 0.5); A(I.THRASH, 0.9); return; }
+    if (C.held === 'deathroll') { M.sideDown(1, sd); A(I.ROLL, C.rollWith * 0.6); A(I.THRASH, 0.9); return; } // (dragged over and rolled with the crocodile)
     if (down) { M.sideDown(1, sd); A(I.THRASH, 1); A(I.NUP, 0.45 * Math.abs(Math.sin(u * hz(0.8)))); A(I.NYAW, sd * 0.4 * Math.sin(u * hz(0.6))); return; }
     A(I.DROP, 0.2); A(I.ROLL, 0.14 * Math.sin(u * hz(1.3))); A(I.HYAW, 0.5 * Math.sin(u * hz(1.1))); A(I.NUP, 0.35 * Math.abs(Math.sin(u * hz(0.9)))); A(I.LAT, -C.aimSide * 0.25);
     for (let k = 0; k < 4; k++) { const q = Math.max(0, Math.sin(u * hz(2.3) + k * 1.7)); Lg(k, 0.05 * Math.sin(u * hz(2.3) + k), 0.16 * q, k < 2 ? 1.1 * q : -0.9 * q, 0); } // (stamping, kicking out)
@@ -471,7 +471,7 @@
   def('call', { snake(u, d) { const f = fr(u, d, 1.8), o = bell(f, 0, 0.2, 0.9); A(I.RAISE, 0.5 * o); A(I.JAW, 0.6 * o); } }); // (the hiss)
   def('drink', { snake(u) { A(I.NDOWN, 0.8); A(I.JAW, 0.08 * Math.max(0, Math.sin(u * hz(2)))); } });
   def('chew', { snake(u) { A(I.JAW, 0.3 + 0.2 * Math.abs(Math.sin(u * hz(0.8)))); } });
-  def('swallow', { snake(u) { const p = Math.abs(Math.sin(u * hz(0.4))); A(I.JAW, 1.2); A(I.NFWD, 0.3 * p); A(I.HPITCH, -0.2 * p); SC_(B_().neck2, 1 + 0.35 * p); SC_(B_().neck1, 1 + 0.25 * (1 - p)); } }); // (the jaws walked over the prey, the neck swelling)
+  def('swallow', { snake(u) { const p = Math.abs(Math.sin(u * hz(0.4))); A(I.JAW, 1.2); A(I.NUP, 0.3 + 0.2 * p); A(I.HPITCH, -0.25 * p); SC_(B_().neck2, 1 + 0.35 * p); SC_(B_().neck1, 1 + 0.25 * (1 - p)); } }); // (the jaws walked over the prey, the neck swelling)
   def('mate', { snake(u) { A(I.WRITHE, 0.35); A(I.RAISE, 0.2); } });
   def('display', { snake(u, d) { const f = fr(u, d, 3), o = d > 0 ? bell(f, 0, 0.2, 0.9) : 1; A(I.RAISE, 1.1 * o); A(I.JAW, 0.7 * o); A(I.AIM, 0.25 * o); } });
   def('threat', { snake(u) { A(I.RAISE, 1); A(I.JAW, 0.45 + 0.2 * Math.abs(Math.sin(u * hz(0.8)))); A(I.AIM, 0.3); } });
@@ -502,7 +502,7 @@
   def('startle', { sprawl(u, d) { const f = fr(u, d, 0.7); A(I.HIGH, 0.9 * bell(f, 0, 0.15, 0.7)); A(I.LIFT, 0.3 * bell(f, 0, 0.1, 0.35)); A(I.TCURL, 0.6 * bell(f, 0, 0.2, 0.8)); } });
   def('roar', { sprawl(u, d) { const f = fr(u, d, 3), o = bell(f, 0.05, 0.25, 0.9); A(I.ARCH, -0.9 * o); A(I.HPITCH, -0.45 * o); A(I.JAW, 0.35 * o); A(I.SHIV, 1.5 * o); A(I.TUP, 0.6 * o); } }); // (the bellow: the head and the tail up, the back sunk, the water dancing on it)
   def('call', { sprawl(u, d) { const f = fr(u, d, 1.8), o = bell(f, 0, 0.2, 0.9); A(I.HPITCH, -0.35 * o); A(I.JAW, 0.5 * o); A(I.ARCH, -0.3 * o); } });
-  def('drink', { sprawl(u) { A(I.NDOWN, 1); A(I.JAW, 0.12 * Math.max(0, Math.sin(u * hz(0.8)))); } });
+  def('drink', { sprawl(u) { A(I.NDOWN, 0.35); A(I.LIE, 0.6); A(I.JAW, 0.12 * Math.max(0, Math.sin(u * hz(0.8)))); } });
   def('chew', { sprawl(u) { A(I.JAW, 0.2 + 0.25 * Math.abs(Math.sin(u * hz(0.9)))); A(I.HPITCH, -0.15 * Math.abs(Math.sin(u * hz(0.9)))); } });
   def('tear', { sprawl(u) { const c = (u * 0.7) % 1, rip = bell(c, 0.2, 0.45, 0.8); A(I.JAW, 0.35); A(I.AIM, 0.7 * (1 - rip)); A(I.HYAW, C.side * 0.7 * rip); A(I.YAW, C.side * 0.5 * rip); A(I.ROLL, C.side * 0.35 * rip); A(I.HIGH, 0.3); } }); // (the jaws clamped, the head and the body thrown aside to rip a piece off)
   def('drag', { sprawl(u) { A(I.JAW, 0.35); A(I.AIM, 0.6); A(I.FWD, -0.08); A(I.HPITCH, 0.2); A(I.HIGH, 0.25); A(I.TCURL, 0.3 * Math.sin(u * hz(0.8))); } });
@@ -516,7 +516,7 @@
   def('grip', { sprawl(u) { A(I.JAW, 0.35); A(I.AIM, 1); A(I.FWD, -0.05); A(I.HIGH, 0.3); A(I.HYAW, 0.15 * Math.sin(u * hz(1.4))); } });
   def('shakekill', { sprawl(u, d) { const f = fr(u, d, 1.6), a = bell(f, 0, 0.1, 1); A(I.HYAW, Math.sin(u * hz(4)) * 0.6 * a); A(I.YAW, Math.sin(u * hz(4) - 0.5) * 0.5 * a); A(I.JAW, 0.3); A(I.HPITCH, -0.25); } });
   def('strike', { sprawl(u, d) { const f = fr(u, d, 0.5), l = bell(f, 0, 0.35, 0.9); A(I.FWD, 0.35 * l); A(I.LIFT, 0.35 * bell(f, 0.05, 0.3, 0.6)); A(I.JAW, 1.3 * bell(f, 0, 0.3, 0.55)); A(I.HPITCH, -0.3 * l); A(I.AIM, 0.6 * l); A(I.HIGH, 0.5 * l); } }); // (the lunge from the water, the jaws wide, snapping shut)
-  def('deathroll', { in: 0.2, out: 0.5, still: 1, sprawl(u) { A(I.DROLL, 1); A(I.JAW, 0.35); A(I.AIM, 0.6); A(I.TCURL, 0.6); } });
+  def('deathroll', { in: 0.2, out: 0.5, still: 1, body: 1, sprawl(u) { A(I.DROLL, 1); A(I.JAW, 0.35); A(I.AIM, 1); A(I.TCURL, 0.6); } });
   def('struggle', { sprawl(u) { A(I.THRASH, 1); A(I.ROLL, C.side * 0.6 * Math.sin(u * hz(0.9))); A(I.JAW, 0.8); A(I.YAW, 0.4 * Math.sin(u * hz(1.3))); A(I.TCURL, 0.6 * Math.sin(u * hz(1.1))); } });
   def('stagger', { sprawl(u, d) { const f = fr(u, d, 0.8), s = bell(f, 0, 0.25, 0.9); A(I.ROLL, C.side * 0.5 * s); A(I.YAW, -C.side * 0.3 * s); A(I.JAW, 0.4 * s); } });
   def('fall', { keep: 1, sprawl(u, d) { const g = ramp(fr(u, d, 0.9), 0.1, 0.85); A(I.ROLL, C.side * Math.PI * 0.9 * g); A(I.GROUND, g); A(I.THRASH, 0.5 * (1 - g)); } }); // (thrown onto its back)
