@@ -427,7 +427,9 @@
     },
     start(a, sp, S) {
       const L = a.leader && S.animals.get(a.leader);
-      if (L && !L.dead && G.dist(a.x, a.y, L.x, L.y) > 4.5 && !a.mig) return false; // (to its own first: the old ways follow the leader)
+      // (to its own first: a herd sleeps by its leader — the old ways follow it only now and then, and the two zebras of a herd
+      // whose lead had passed to another stood awake all night twelve steps from it, L-1007)
+      if (L && !L.dead && G.dist(a.x, a.y, L.x, L.y) > 4.5 && !a.mig) { const q = A.pickNear({ x: L.x, y: L.y, kind: a.kind }, 2.5); if (!q) return false; a.tx = q[0]; a.ty = q[1]; a.state = 'wander'; a.seek = true; return true; }
       // (a hunter without a herd goes back to the place it slept before — its den — if it is not far)
       if (!L && A.predator(a.kind) && !a.mig) { const den = Me.recall1(a, 1); if (den && G.dist(a.x, a.y, den[1], den[2]) > 3 && G.dist(a.x, a.y, den[1], den[2]) < 16 && A.walkOK(a, den[1], den[2])) { a.tx = den[1]; a.ty = den[2]; a.state = 'wander'; a.seek = true; return true; } }
       const c = Me.ctx(a);
@@ -541,7 +543,7 @@
   // ---- play: two young ones round and round each other, a tumble, a mock bite
   Me.option('play', {
     who: (a, sp) => brain(a, sp) && a.grown < 0.8 && G.Gestos.can(a.kind, 'play'),
-    score(a) { const m = Me.m(a); if (m.f > 0.15 || a.hunger > 0.5 || m.en < 0.35) return 0; const c = Me.ctx(a); if (!c.peer || !Me.free(c.peer)) return 0; return 0.28 + 0.3 * Me.trait(a, 'c'); },
+    score(a) { const m = Me.m(a); if (m.f > 0.15 || a.hunger > 0.5 || m.en < 0.35 || m.st < 0.7) return 0; const c = Me.ctx(a); if (!c.peer || !Me.free(c.peer)) return 0; return 0.28 + 0.3 * Me.trait(a, 'c'); },
     start(a) {
       const o = Me.ctx(a).peer; if (!o) return false; a.state = 'play'; a.target = o.id; a.t = G.rr(4, 9); Me.gesto(a, 'play', 0, o.id);
       if (Me.free(o) && o.state !== 'sleep') { o.state = 'play'; o.target = a.id; o.t = a.t; Me.gesto(o, 'play', 0, a.id); }
@@ -549,7 +551,10 @@
     },
     step(a, dt, sp, S) {
       const o = S.animals.get(a.target); a.t -= dt;
-      if (!o || o.dead || a.t <= 0 || o.caught) { a.state = 'idle'; a.t = 1; a.target = 0; return true; }
+      // (play comes in bursts: it takes the breath, and the young one flops down until it has it back — two young hippos went
+      // round each other for minutes on end, L-1007)
+      const m = Me.m(a); m.st = Math.max(0, m.st - dt / 14);
+      if (!o || o.dead || a.t <= 0 || o.caught || m.st < 0.35) { a.state = 'idle'; a.t = 1; a.target = 0; return true; }
       const ang = S.clock * 2.2 + (a.id & 1 ? 0 : Math.PI); const x = o.x + Math.cos(ang) * 0.7, y = o.y + Math.sin(ang) * 0.7;
       a.tx = A.walkOK(a, x, y) ? x : o.x; a.ty = A.walkOK(a, x, y) ? y : o.y; A.moveTo(a, dt, sp.sp * 1.4);
       return true;
@@ -797,7 +802,7 @@
       if (q.grown >= 0.45 || q.dead || (q.mind && q.mind.fa === L.id) || G.R() > 0.55) continue;
       Me.gesto1(L, ['shakekill', 'bite'], undefined, q.id); Me.gesto(q, 'throes', undefined, L.id); A.kill(q, L, 'infanticide'); killed++; Me.count('infanticidio');
     }
-    if (G.Luta) { const n = G.Luta.nm(L), o = G.Luta.nm(lose); G.Luta.say('tomada:' + win.kind, `${G.cap(n.art)} ${n.n} nômade venceu ${o.art.replace(/^uma?/, o.g === 'f' ? 'a' : 'o')} ${o.n} que guardava o bando${G.Luta.where(L.x, L.y)} e tomou o seu lugar.${killed ? ` ${killed > 1 ? `Os ${killed} filhotes do antigo macho não sobreviveram` : 'Um filhote do antigo macho não sobreviveu'} à chegada dele.` : ''}`, L.x, L.y, 'wolf', true); }
+    if (G.Luta) { const n = G.Luta.nm(L), o = G.Luta.nm(lose); G.Luta.say('tomada:' + win.kind, `${G.cap(n.art)} ${n.n} nômade venceu ${o.art.replace(/^uma?/, o.g === 'f' ? 'a' : 'o')} ${o.n} que guardava o bando${G.Luta.where(L.x, L.y)} e tomou o seu lugar.${killed ? ` ${killed > 1 ? `Os ${killed} filhotes do antigo macho não sobreviveram` : 'Um filhote do antigo macho não sobreviveu'} à chegada dele.` : ''}`, L.x, L.y, 'wolf', win.kind === 'lion'); }
   }
 
   // ------------------------------ the sexes of a kind ------------------------------

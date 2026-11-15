@@ -35,6 +35,7 @@
   const DEFEND = set(['buffalo', 'muskox', 'elephant', 'rhino', 'hippo', 'bison', 'moose', 'boar', 'walrus', 'giraffe', 'zebra']);
   const RING = set(['muskox', 'elephant', 'buffalo', 'bison']);
   const SMALLER = set(['zebra', 'giraffe', 'boar']);
+  const ARMED = k => ['charge', 'kick', 'gore', 'stomp', 'swipe', 'bite'].some(g => G.Gestos.can(k, g)) && SP[k].size >= 0.85;
   const GIANT = set(['hippo', 'rhino', 'elephant', 'walrus']);
   const SWALLOW = set(['python', 'anaconda', 'viper']);
   const r2 = x => Math.round(x * 100) / 100;
@@ -210,7 +211,8 @@
   // the young one hunted: its mother (and, in a herd that defends its young, the grown ones by it) comes at the hunter
   L.cry = function (p, pred) {
     const S = G.S; const mo = Me.mother(p); let came = 0;
-    const defends = o => !o.dead && !o.caught && !o.held && o.grown >= 1 && !A.isBusy(o.state) && G.dist(o.x, o.y, p.x, p.y) < 10;
+    // (a mother that has something to fight with: the hooves, the horns, the teeth, the paw — the rabbit and the hare only run)
+    const defends = o => !o.dead && !o.caught && !o.held && o.grown >= 1 && !A.isBusy(o.state) && G.dist(o.x, o.y, p.x, p.y) < 10 && ARMED(o.kind);
     if (mo && defends(mo) && strength(mo) * (0.6 + 0.8 * Me.trait(mo, 'b')) >= strength(pred) * 0.55) { L.charge(mo, pred); came++; }
     if (RING.has(p.kind) || p.kind === 'zebra' || p.kind === 'gnu') A.near(p.x, p.y, 8, o => { if (came >= 4 || o === mo || o.kind !== p.kind || !Me.kin(o, p) || !defends(o)) return; if (G.R() < 0.35 + 0.5 * Me.trait(o, 'b')) { L.charge(o, pred); came++; } });
     if (came) { L.count('defende-cria'); L.count('defende-cria:' + p.kind); pred.dfn = S.clock; pred.dfnK = p.kind; }
@@ -414,7 +416,7 @@
     if (a.caught) { a.caught = 0; } if (a.wnd) a.wnd.h = null;
     A.near(a.x, a.y, 4, p => { if (p !== a && p.caught === a.id) L.release(p, 'livre', a); });
     if (by && by.kind) { L.count('morte:' + a.kind + ':' + by.kind); }
-    if (cause === 'hunger' && A.predator(a.kind) && SP[a.kind].diet !== 'scav') { L.count('fome-predador'); L.count('fome-predador:' + a.kind); if (a.wnd && a.wnd.j > 0.3) { L.count('fome-mandibula'); const n = L.nm(a); L.say('fome:' + a.kind, `${G.cap(n.art)} ${n.n} de mandíbula quebrada, que já não conseguia caçar, morreu de fome${L.where(a.x, a.y)}.`, a.x, a.y, 'skull', true); } }
+    if (cause === 'hunger' && A.predator(a.kind) && SP[a.kind].diet !== 'scav' && !SP[a.kind].town && !SP[a.kind].dom) { L.count('fome-predador'); L.count('fome-predador:' + a.kind); if (a.wnd && a.wnd.j > 0.3) { L.count('fome-mandibula'); const n = L.nm(a); L.say('fome:' + a.kind, `${G.cap(n.art)} ${n.n} de mandíbula quebrada, que já não conseguia caçar, morreu de fome${L.where(a.x, a.y)}.`, a.x, a.y, 'skull', true); } }
     // its own remember the place where one of them died to a hunter (and the hunter)
     if (by && by.kind && by !== a) A.near(a.x, a.y, 10, o => { if (o !== a && !o.dead && o.kind === a.kind && Me.kin(o, a)) { Me.place(o, 3, a.x, a.y); Me.meet(o, 1, by.id); } });
   };
