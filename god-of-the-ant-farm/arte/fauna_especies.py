@@ -15,132 +15,132 @@ def sp(kind, fam, H, L, **kw):
 
 # ------------------------------ the hoofed ------------------------------
 sp('deer', 'quad', 1.12, 1.5, D=0.46, Wr=0.7, legR=0.066, canR=0.03, foot='cloven', neckA=56, neckL=0.56, neckR0=0.38, neckR1=0.2,
-   headA=58, headL=0.33, headH=0.42, headW=0.42, muzR=0.36, earL=0.18, earW=0.055, earA=(40, 20), tail='flag', tailL=0.14, tailR=0.04, eyeR=0.024,
-   antler='deer')
+   headA=58, headL=0.35, headH=0.42, headW=0.42, muzR=0.36, earL=0.18, earW=0.055, earA=(40, 20), tail='flag', tailL=0.14, tailR=0.04, eyeR=0.028,
+   antler='deer', earTip=0.35)
 sp('reindeer', 'quad', 1.05, 1.45, D=0.52, Wr=0.76, legR=0.072, canR=0.036, foot='cloven', neckA=40, neckL=0.5, neckR0=0.48, neckR1=0.27,
-   headA=52, headL=0.36, headH=0.42, headW=0.42, muzR=0.46, muzFlat=1.1, earL=0.11, earW=0.045, earA=(55, 20), tail='flag', tailL=0.12, tailR=0.05, eyeR=0.022,
-   antler='reindeer', withers=0.28)
+   headA=52, headL=0.36, headH=0.42, headW=0.42, muzR=0.46, muzFlat=1.1, earL=0.11, earW=0.045, earA=(55, 20), tail='flag', tailL=0.12, tailR=0.05, eyeR=0.025,
+   antler='reindeer', withers=0.28, earTip=0.5)
 sp('moose', 'quad', 1.85, 2.15, D=0.47, Wr=0.7, legR=0.06, canR=0.03, foot='cloven', neckA=24, neckL=0.4, neckR0=0.56, neckR1=0.36, withers=0.38, rump=0.92,
-   headA=58, headL=0.42, headH=0.4, headW=0.38, muzR=0.62, muzDrop=0.35, earL=0.12, earW=0.05, earA=(65, 20), tail='short', tailL=0.08, tailR=0.04, eyeR=0.018,
+   headA=58, headL=0.42, headH=0.4, headW=0.38, muzR=0.62, muzDrop=0.35, earL=0.12, earW=0.05, earA=(65, 20), tail='short', tailL=0.08, tailR=0.04, eyeR=0.02,
    antler='moose', bell=1)
 sp('muskox', 'quad', 1.3, 1.9, D=0.58, Wr=0.9, legR=0.072, canR=0.04, foot='cloven', neckA=8, neckL=0.28, neckR0=0.62, neckR1=0.46, withers=0.4,
    headA=62, headL=0.36, headH=0.48, headW=0.46, muzR=0.5, earL=0.04, earW=0.03, earA=(70, 20), tail='short', tailL=0.06, tailR=0.04, eyeR=0.016,
-   horns='muskox', shag=0.6)
+   horns='muskox', shag=0.6, earTip=0.6)
 sp('bison', 'quad', 1.75, 2.5, D=0.6, Wr=0.84, rump=0.76, hump=0.55, humpZ=0.2, legR=0.075, canR=0.036, foot='cloven', neckA=-6, neckL=0.3, neckR0=0.72, neckR1=0.52,
    headA=72, headL=0.33, headH=0.56, headW=0.6, muzR=0.46, earL=0.05, earW=0.035, earA=(80, 20), tail='tuft', tailL=0.32, tailR=0.02, eyeR=0.016,
-   horns='short', mane='bison')
+   horns='short', mane='bison', earTip=0.6)
 sp('ibex', 'quad', 0.85, 1.15, D=0.5, Wr=0.72, legR=0.075, canR=0.036, foot='cloven', neckA=46, neckL=0.45, neckR0=0.48, neckR1=0.3,
-   headA=56, headL=0.3, headH=0.44, headW=0.42, muzR=0.4, earL=0.1, earW=0.04, earA=(65, 20), tail='short', tailL=0.08, tailR=0.04, eyeR=0.024,
+   headA=56, headL=0.3, headH=0.44, headW=0.42, muzR=0.4, earL=0.1, earW=0.04, earA=(65, 20), tail='short', tailL=0.08, tailR=0.04, eyeR=0.027,
    horns='ibex', beard=1)
 sp('boar', 'quad', 0.85, 1.3, D=0.64, Wr=0.74, rump=0.9, withers=0.38, legR=0.068, canR=0.034, foot='cloven', neckA=0, neckL=0.2, neckR0=0.76, neckR1=0.62,
    headA=32, headL=0.48, headH=0.62, headW=0.52, muzR=0.32, snout=0.35, earL=0.11, earW=0.05, earA=(30, 25), tail='thin', tailL=0.25, tailR=0.02, eyeR=0.016,
    tusks='boar', mane='boar')
 sp('capybara', 'quad', 0.55, 1.0, D=0.74, Wr=0.82, rump=1.08, legR=0.085, canR=0.05, foot='paw', dig=True, neckA=14, neckL=0.24, neckR0=0.62, neckR1=0.52,
-   headA=14, headL=0.5, headH=0.62, headW=0.5, muzR=0.62, muzPos=0.85, earL=0.05, earW=0.04, earA=(40, 10), tail=None, eyeR=0.022)
+   headA=14, headL=0.5, headH=0.62, headW=0.5, muzR=0.62, muzPos=0.85, earL=0.05, earW=0.04, earA=(40, 10), tail=None, eyeR=0.026, earTip=1.0)
 sp('tapir', 'quad', 1.0, 1.85, D=0.6, Wr=0.75, rump=1.05, legR=0.075, canR=0.04, foot='pad', neckA=20, neckL=0.3, neckR0=0.6, neckR1=0.46,
    headA=42, headL=0.42, headH=0.5, headW=0.44, muzR=0.42, earL=0.08, earW=0.05, earA=(40, 20), tail='short', tailL=0.06, tailR=0.04, eyeR=0.016,
-   trunk='tapir')
+   trunk='tapir', earTip=0.9)
 sp('zebra', 'quad', 1.35, 1.75, D=0.5, Wr=0.76, legR=0.066, canR=0.032, foot='hoof', neckA=48, neckL=0.56, neckR0=0.5, neckR1=0.28, crest=0.6,
-   headA=56, headL=0.4, headH=0.38, headW=0.36, muzR=0.44, earL=0.14, earW=0.05, earA=(18, 10), tail='tuft', tailL=0.5, tailR=0.022, eyeR=0.022,
-   mane='zebra')
+   headA=56, headL=0.4, headH=0.38, headW=0.36, muzR=0.44, earL=0.14, earW=0.05, earA=(18, 10), tail='tuft', tailL=0.5, tailR=0.022, eyeR=0.025,
+   mane='zebra', earTip=0.32)
 sp('gazelle', 'quad', 0.75, 0.95, D=0.44, Wr=0.62, legR=0.052, canR=0.022, foot='cloven', neckA=56, neckL=0.58, neckR0=0.36, neckR1=0.2,
-   headA=56, headL=0.32, headH=0.42, headW=0.4, muzR=0.35, earL=0.17, earW=0.05, earA=(45, 15), tail='flag', tailL=0.14, tailR=0.03, eyeR=0.028,
+   headA=56, headL=0.34, headH=0.42, headW=0.4, muzR=0.35, earL=0.17, earW=0.05, earA=(45, 15), tail='flag', tailL=0.14, tailR=0.03, eyeR=0.032,
    horns='gazelle')
 sp('gnu', 'quad', 1.35, 1.85, D=0.56, Wr=0.74, rump=0.84, withers=0.36, legR=0.06, canR=0.03, foot='cloven', neckA=30, neckL=0.42, neckR0=0.55, neckR1=0.32,
    headA=66, headL=0.4, headH=0.42, headW=0.4, muzR=0.56, muzFlat=1.25, earL=0.09, earW=0.04, earA=(70, 15), tail='hang', tailL=0.22, tailR=0.03, tailHair=0.45, eyeR=0.018,
    horns='gnu', mane='gnu', beard=1)
 sp('giraffe', 'quad', 3.0, 1.95, D=0.36, Wr=0.66, rump=0.66, withers=0.3, legR=0.042, canR=0.021, foot='cloven', neckA=62, neckL=0.62, neckR0=0.42, neckR1=0.17,
-   headA=62, headL=0.2, headH=0.44, headW=0.4, muzR=0.38, earL=0.06, earW=0.022, earA=(75, 10), tail='tuft', tailL=0.32, tailR=0.012, eyeR=0.012,
-   ossicones=1, mane='giraffe')
+   headA=62, headL=0.2, headH=0.44, headW=0.4, muzR=0.38, earL=0.06, earW=0.022, earA=(75, 10), tail='tuft', tailL=0.32, tailR=0.012, eyeR=0.014,
+   ossicones=1, mane='giraffe', earTip=0.35)
 sp('elephant', 'quad', 3.0, 2.9, D=0.56, Wr=0.86, rump=0.93, dip=0.05, pillar=True, legR=0.1, canR=0.076, foot='pillar', neckA=12, neckL=0.12, neckR0=0.72, neckR1=0.68,
-   headA=24, headL=0.34, headH=0.72, headW=0.7, muzR=0.5, muzPos=0.62, forehead=0.8, earL=0.34, earW=0.17, earT=0.012, earA=(118, 30), earFace='side', earCup=0,
-   tail='thin', tailL=0.36, tailR=0.012, eyeR=0.01, trunk='elephant', tusks='elephant', tris=900)
+   headA=24, headL=0.34, headH=0.72, headW=0.7, muzR=0.5, muzPos=0.62, forehead=0.8, earL=0.42, earW=0.23, earT=0.012, earA=(118, 30), earFace='side', earCup=0,
+   tail='thin', tailL=0.36, tailR=0.012, eyeR=0.01, trunk='elephant', tusks='elephant', tris=900, earTip=1.0)
 sp('rhino', 'quad', 1.7, 2.9, D=0.62, Wr=0.86, pillar=True, legR=0.09, canR=0.062, foot='pillar', neckA=8, neckL=0.2, neckR0=0.66, neckR1=0.56, withers=0.32,
-   headA=40, headL=0.46, headH=0.55, headW=0.5, muzR=0.56, earL=0.1, earW=0.04, earA=(30, 20), tail='thin', tailL=0.3, tailR=0.015, eyeR=0.01,
-   horns='rhino', folds=1)
+   headA=48, headL=0.5, headH=0.55, headW=0.5, muzR=0.56, earL=0.1, earW=0.04, earA=(30, 20), tail='thin', tailL=0.3, tailR=0.015, eyeR=0.01,
+   horns='rhino', folds=1, earTip=0.45)
 sp('hippo', 'quad', 1.45, 3.0, D=0.7, Wr=1.0, belly=0.3, pillar=True, legR=0.11, canR=0.085, foot='pillar', neckA=4, neckL=0.16, neckR0=0.8, neckR1=0.74,
-   headA=16, headL=0.56, headH=0.5, headW=0.72, muzR=0.62, muzFlat=1.45, muzPos=0.84, earL=0.04, earW=0.025, earA=(30, 10), tail='flat', tailL=0.18, tailR=0.04, eyeR=0.014,
-   eyesHigh=1)
+   headA=16, headL=0.6, headH=0.46, headW=0.62, muzR=0.62, muzFlat=1.45, muzPos=0.86, earL=0.045, earW=0.025, earA=(30, 10), tail='flat', tailL=0.18, tailR=0.04, eyeR=0.016,
+   eyesHigh=1, earTip=1.0, face='hippo')
 sp('buffalo', 'quad', 1.55, 2.45, D=0.6, Wr=0.86, legR=0.075, canR=0.04, foot='cloven', neckA=10, neckL=0.3, neckR0=0.66, neckR1=0.48, withers=0.32,
    headA=56, headL=0.36, headH=0.44, headW=0.46, muzR=0.52, muzFlat=1.15, earL=0.11, earW=0.05, earA=(100, 10), tail='tuft', tailL=0.5, tailR=0.022, eyeR=0.016,
    horns='buffalo')
-sp('camel', 'quad', 1.9, 2.15, D=0.42, Wr=0.68, hump=0.72, humpZ=-0.04, legR=0.058, canR=0.032, foot='pad', neckA=26, neckL=0.6, neckR0=0.5, neckR1=0.3, neckUp=1.0,
-   headA=18, headL=0.27, headH=0.46, headW=0.42, muzR=0.46, muzDrop=0.15, earL=0.05, earW=0.03, earA=(40, 25), tail='tuft', tailL=0.28, tailR=0.02, eyeR=0.016, brow=1)
+sp('camel', 'quad', 1.9, 2.15, D=0.42, Wr=0.68, hump=0.72, humpZ=-0.04, legR=0.058, canR=0.032, foot='pad', neckA=28, neckL=0.74, neckR0=0.5, neckR1=0.3, neckUp=0.0,
+   headA=30, headL=0.27, headH=0.46, headW=0.42, muzR=0.46, muzDrop=0.15, earL=0.05, earW=0.03, earA=(40, 25), tail='tuft', tailL=0.28, tailR=0.02, eyeR=0.016, brow=1, earTip=0.7, neckS=1.0)
 sp('vaca', 'quad', 1.35, 1.8, D=0.58, Wr=0.86, belly=0.32, legR=0.078, canR=0.038, Dh=0.92, haunch=1.15, foot='cloven', neckA=18, neckL=0.42, neckR0=0.5, neckR1=0.3,
    headA=50, headL=0.38, headH=0.42, headW=0.44, muzR=0.5, muzFlat=1.15, earL=0.1, earW=0.05, earA=(80, 10), tail='tuft', tailL=0.62, tailR=0.022,
-   eyeR=0.022, horns='cow', withers=0.2, dewlap=0.6, udder=1.0)
+   eyeR=0.025, horns='cow', withers=0.2, dewlap=0.6, udder=1.0, earTip=0.45)
 sp('ovelha', 'quad', 0.75, 1.05, D=0.62, Wr=0.95, legR=0.052, canR=0.026, foot='cloven', neckA=30, neckL=0.3, neckR0=0.6, neckR1=0.44, rump=1.02,
-   headA=56, headL=0.36, headH=0.45, headW=0.42, muzR=0.4, earL=0.08, earW=0.035, earA=(95, 10), tail='short', tailL=0.1, tailR=0.05, eyeR=0.024, wool=1)
+   headA=56, headL=0.36, headH=0.45, headW=0.42, muzR=0.4, earL=0.08, earW=0.035, earA=(95, 10), tail='short', tailL=0.1, tailR=0.05, eyeR=0.028, wool=1, earTip=0.45)
 sp('cabra', 'quad', 0.75, 1.0, D=0.5, Wr=0.72, legR=0.056, canR=0.028, foot='cloven', neckA=46, neckL=0.42, neckR0=0.42, neckR1=0.3,
-   headA=56, headL=0.34, headH=0.44, headW=0.42, muzR=0.38, earL=0.12, earW=0.045, earA=(72, 20), tail='up', tailL=0.12, tailR=0.03, eyeR=0.024,
+   headA=56, headL=0.34, headH=0.44, headW=0.42, muzR=0.38, earL=0.12, earW=0.045, earA=(72, 20), tail='up', tailL=0.12, tailR=0.03, eyeR=0.027,
    horns='goat', beard=1)
 sp('porco', 'quad', 0.75, 1.22, D=0.64, Wr=0.86, belly=0.25, legR=0.06, canR=0.034, foot='cloven', neckA=0, neckL=0.18, neckR0=0.76, neckR1=0.66,
-   headA=24, headL=0.42, headH=0.62, headW=0.56, muzR=0.36, snout=0.42, earL=0.12, earW=0.07, earA=(40, -25), earFold=0.5, tail='curl', tailL=0.2, tailR=0.02, eyeR=0.016)
+   headA=24, headL=0.42, headH=0.62, headW=0.56, muzR=0.36, snout=0.42, earL=0.12, earW=0.07, earA=(40, -25), earFold=0.5, tail='curl', tailL=0.2, tailR=0.02, eyeR=0.02, earTip=0.3)
 sp('cavalo', 'quad', 1.55, 1.8, D=0.48, Wr=0.76, legR=0.066, canR=0.032, foot='hoof', neckA=50, neckL=0.6, neckR0=0.48, neckR1=0.26, crest=0.6,
-   headA=58, headL=0.4, headH=0.38, headW=0.36, muzR=0.44, earL=0.1, earW=0.038, earA=(12, 8), tail='hang', tailL=0.3, tailR=0.04, tailHair=0.62, eyeR=0.022,
-   mane='horse')
+   headA=58, headL=0.4, headH=0.38, headW=0.36, muzR=0.44, earL=0.1, earW=0.038, earA=(12, 8), tail='hang', tailL=0.3, tailR=0.04, tailHair=0.62, eyeR=0.024,
+   mane='horse', earTip=0.25)
 
 # ------------------------------ the clawed ------------------------------
 sp('fox', 'quad', 0.38, 0.6, D=0.46, Wr=0.6, legR=0.06, canR=0.038, foot='paw', dig=True, neckA=36, neckL=0.4, neckR0=0.5, neckR1=0.34,
-   headA=8, headL=0.38, headH=0.42, headW=0.56, muzR=0.26, muzPos=0.98, stop=0.6, earL=0.2, earW=0.075, earA=(16, 10), jaw=True, tail='bushy', tailL=0.95, tailR=0.08,
-   eyeR=0.02, flex=True)
+   headA=8, headL=0.38, headH=0.42, headW=0.56, muzR=0.3, muzPos=0.98, stop=0.6, earL=0.2, earW=0.075, earA=(16, 10), jaw=True, tail='bushy', tailL=0.95, tailR=0.08,
+   eyeR=0.02, flex=True, face='canid', earTip=0.15, eyeFwd=0.3)
 sp('arcticfox', 'quad', 0.3, 0.52, D=0.5, Wr=0.66, legR=0.064, canR=0.042, foot='paw', dig=True, neckA=34, neckL=0.36, neckR0=0.56, neckR1=0.4,
-   headA=8, headL=0.38, headH=0.48, headW=0.6, muzR=0.28, muzPos=0.92, stop=0.6, earL=0.13, earW=0.065, earA=(20, 10), jaw=True, tail='bushy', tailL=0.95, tailR=0.1,
-   eyeR=0.022, flex=True)
+   headA=8, headL=0.38, headH=0.48, headW=0.6, muzR=0.32, muzPos=0.92, stop=0.6, earL=0.13, earW=0.065, earA=(20, 10), jaw=True, tail='bushy', tailL=0.95, tailR=0.1,
+   eyeR=0.022, flex=True, face='canid', earTip=0.45, eyeFwd=0.3)
 sp('fennec', 'quad', 0.2, 0.36, D=0.5, Wr=0.66, legR=0.06, canR=0.04, foot='paw', dig=True, neckA=40, neckL=0.36, neckR0=0.52, neckR1=0.38,
    headA=8, headL=0.42, headH=0.5, headW=0.62, muzR=0.26, muzPos=0.95, stop=0.7, earL=0.42, earW=0.16, earA=(22, 10), jaw=True, tail='bushy', tailL=0.95, tailR=0.08,
-   eyeR=0.034, flex=True, tris=560)
-sp('wolf', 'quad', 0.8, 1.0, D=0.5, Wr=0.62, legR=0.068, canR=0.038, foot='paw', dig=True, neckA=36, neckL=0.36, neckR0=0.52, neckR1=0.34,
-   headA=10, headL=0.36, headH=0.44, headW=0.52, muzR=0.3, muzPos=0.95, stop=0.8, earL=0.13, earW=0.05, earA=(16, 12), jaw=True, tail='bushy', tailL=0.6, tailR=0.055,
-   eyeR=0.016, cheek=0.9, withers=0.2, claws=True, flex=True)
+   eyeR=0.034, flex=True, tris=560, face='canid', earTip=0.3, eyeFwd=0.3)
+sp('wolf', 'quad', 0.85, 1.05, D=0.5, Wr=0.56, legR=0.064, canR=0.038, foot='paw', dig=True, neckA=36, neckL=0.36, neckR0=0.58, neckR1=0.34,
+   headA=10, headL=0.42, headH=0.5, headW=0.56, muzR=0.36, muzPos=0.94, stop=0.8, earL=0.13, earW=0.05, earA=(16, 12), jaw=True, tail='bushy', tailL=0.6, tailR=0.055,
+   eyeR=0.016, cheek=0.9, withers=0.2, claws=True, flex=True, face='canid', earTip=0.2, eyeFwd=0.3, ruff=0.8)
 sp('hyena', 'quad', 0.8, 1.2, D=0.56, Wr=0.66, rump=0.78, withers=0.32, legR=0.075, canR=0.042, foot='paw', dig=True, neckA=30, neckL=0.42, neckR0=0.66, neckR1=0.56,
    headA=14, headL=0.4, headH=0.6, headW=0.66, muzR=0.4, muzPos=0.9, stop=0.4, earL=0.1, earW=0.06, earA=(25, 15), jaw=True, tail='tuft', tailL=0.32, tailR=0.03,
-   eyeR=0.016, mane='hyena')
+   eyeR=0.016, mane='hyena', face='canid', earTip=0.75, muzFlat=1.1)
 sp('bear', 'quad', 1.05, 1.85, D=0.62, Wr=0.86, plant=True, plantF=True, legR=0.11, canR=0.075, foot='bearpaw', claws=True, withers=0.42, neckA=14, neckL=0.3, neckR0=0.66, neckR1=0.5,
-   headA=18, headL=0.38, headH=0.6, headW=0.66, muzR=0.32, muzPos=0.96, stop=0.4, earL=0.07, earW=0.045, earA=(30, 10), jaw=True, tail='short', tailL=0.06, tailR=0.05, eyeR=0.012)
+   headA=18, headL=0.38, headH=0.6, headW=0.66, muzR=0.32, muzPos=0.96, stop=0.4, earL=0.07, earW=0.045, earA=(30, 10), jaw=True, tail='short', tailL=0.06, tailR=0.05, eyeR=0.012, face='bear', earTip=1.0)
 sp('polarbear', 'quad', 1.3, 2.2, D=0.6, Wr=0.8, plant=True, plantF=True, legR=0.1, canR=0.072, foot='bearpaw', claws=True, withers=0.32, neckA=18, neckL=0.46, neckR0=0.56, neckR1=0.42,
-   headA=14, headL=0.36, headH=0.48, headW=0.56, muzR=0.32, muzPos=0.98, stop=0.2, earL=0.05, earW=0.04, earA=(40, 10), jaw=True, tail='short', tailL=0.05, tailR=0.04, eyeR=0.01)
+   headA=14, headL=0.36, headH=0.48, headW=0.56, muzR=0.32, muzPos=0.98, stop=0.2, earL=0.05, earW=0.04, earA=(40, 10), jaw=True, tail='short', tailL=0.05, tailR=0.04, eyeR=0.01, face='bear', earTip=1.0)
 sp('lion', 'quad', 1.1, 1.8, D=0.52, Wr=0.66, legR=0.078, canR=0.05, foot='paw', dig=True, neckA=30, neckL=0.36, neckR0=0.56, neckR1=0.44,
-   headA=8, headL=0.34, headH=0.62, headW=0.72, muzR=0.45, muzPos=0.86, stop=0.4, earL=0.06, earW=0.045, earA=(30, 10), jaw=True, tail='tuft', tailL=0.85, tailR=0.03,
-   eyeR=0.014, mane='lion', flex=True)
+   headA=8, headL=0.4, headH=0.62, headW=0.78, muzR=0.46, muzPos=0.72, stop=0.4, earL=0.06, earW=0.045, earA=(30, 10), jaw=True, tail='tuft', tailL=0.85, tailR=0.03,
+   eyeR=0.017, mane='lion', flex=True, face='felid', eyeFwd=0.6, earTip=1.0, cheek=1.15, brow=0.5)
 sp('tiger', 'quad', 1.0, 1.9, D=0.52, Wr=0.68, legR=0.08, canR=0.052, foot='paw', dig=True, neckA=26, neckL=0.36, neckR0=0.62, neckR1=0.52,
-   headA=8, headL=0.38, headH=0.68, headW=0.82, muzR=0.44, muzPos=0.86, stop=0.4, earL=0.06, earW=0.045, earA=(30, 10), jaw=True, tail='long', tailL=0.9, tailR=0.035,
-   eyeR=0.015, cheek=1.3, flex=True)
+   headA=8, headL=0.38, headH=0.68, headW=0.82, muzR=0.44, muzPos=0.74, stop=0.4, earL=0.06, earW=0.045, earA=(30, 10), jaw=True, tail='long', tailL=0.9, tailR=0.035,
+   eyeR=0.018, cheek=1.3, flex=True, face='felid', eyeFwd=0.6, earTip=0.95)
 sp('jaguar', 'quad', 0.7, 1.32, D=0.54, Wr=0.7, legR=0.085, canR=0.056, foot='paw', dig=True, neckA=26, neckL=0.36, neckR0=0.6, neckR1=0.48,
-   headA=8, headL=0.38, headH=0.68, headW=0.8, muzR=0.44, muzPos=0.85, stop=0.4, earL=0.06, earW=0.05, earA=(32, 10), jaw=True, tail='long', tailL=0.85, tailR=0.04,
-   eyeR=0.02, cheek=1.15, flex=True)
+   headA=8, headL=0.38, headH=0.68, headW=0.8, muzR=0.44, muzPos=0.74, stop=0.4, earL=0.06, earW=0.05, earA=(32, 10), jaw=True, tail='long', tailL=0.85, tailR=0.04,
+   eyeR=0.022, cheek=1.15, flex=True, face='felid', eyeFwd=0.6, earTip=0.9)
 sp('leopard', 'quad', 0.65, 1.28, D=0.5, Wr=0.64, legR=0.074, canR=0.048, foot='paw', dig=True, neckA=28, neckL=0.38, neckR0=0.55, neckR1=0.44,
-   headA=8, headL=0.36, headH=0.64, headW=0.76, muzR=0.42, muzPos=0.85, stop=0.4, earL=0.07, earW=0.05, earA=(30, 10), jaw=True, tail='long', tailL=1.2, tailR=0.035,
-   eyeR=0.02, flex=True)
+   headA=8, headL=0.36, headH=0.64, headW=0.76, muzR=0.42, muzPos=0.74, stop=0.4, earL=0.07, earW=0.05, earA=(30, 10), jaw=True, tail='long', tailL=1.2, tailR=0.035,
+   eyeR=0.022, flex=True, face='felid', eyeFwd=0.6, earTip=0.85)
 sp('snowleopard', 'quad', 0.6, 1.18, D=0.54, Wr=0.68, legR=0.08, canR=0.055, foot='paw', dig=True, neckA=26, neckL=0.36, neckR0=0.58, neckR1=0.46,
-   headA=8, headL=0.36, headH=0.66, headW=0.78, muzR=0.4, muzPos=0.84, stop=0.4, earL=0.06, earW=0.05, earA=(40, 10), jaw=True, tail='long', tailL=1.45, tailR=0.06,
-   eyeR=0.022, flex=True)
-sp('cao', 'quad', 0.52, 0.76, D=0.54, Wr=0.66, legR=0.07, canR=0.044, foot='paw', dig=True, neckA=40, neckL=0.4, neckR0=0.62, neckR1=0.5,
-   headA=10, headL=0.42, headH=0.56, headW=0.64, muzR=0.36, muzPos=0.9, stop=1.0, earL=0.15, earW=0.075, earA=(40, 10), earFold=0.75, jaw=True, tail='up', tailL=0.55, tailR=0.04,
-   eyeR=0.022, flex=True)
-sp('gato', 'quad', 0.26, 0.38, D=0.52, Wr=0.72, legR=0.066, canR=0.044, foot='paw', dig=True, neckA=40, neckL=0.3, neckR0=0.56, neckR1=0.44,
-   headA=6, headL=0.46, headH=0.66, headW=0.84, muzR=0.32, muzPos=0.74, stop=0.6, earL=0.16, earW=0.08, earA=(22, 6), jaw=True, tail='long', tailL=1.0, tailR=0.055,
-   eyeR=0.03, cheek=1.1, withers=0.18, flex=True, tris=560)
+   headA=8, headL=0.36, headH=0.66, headW=0.78, muzR=0.4, muzPos=0.72, stop=0.4, earL=0.06, earW=0.05, earA=(40, 10), jaw=True, tail='long', tailL=1.45, tailR=0.06,
+   eyeR=0.024, flex=True, face='felid', eyeFwd=0.6, earTip=0.9)
+sp('cao', 'quad', 0.52, 0.66, D=0.54, Wr=0.66, legR=0.07, canR=0.044, foot='paw', dig=True, neckA=40, neckL=0.4, neckR0=0.62, neckR1=0.5,
+   headA=10, headL=0.44, headH=0.56, headW=0.64, muzR=0.46, muzPos=0.9, stop=1.0, earL=0.18, earW=0.08, earA=(40, 10), earFold=0.75, jaw=True, tail='up', tailL=0.55, tailR=0.04,
+   eyeR=0.026, flex=True, face='canid', earTip=0.5, eyeFwd=0.35)
+sp('gato', 'quad', 0.26, 0.32, D=0.52, Wr=0.72, legR=0.066, canR=0.044, foot='paw', dig=True, neckA=40, neckL=0.3, neckR0=0.56, neckR1=0.44,
+   headA=6, headL=0.54, headH=0.66, headW=0.84, muzR=0.32, muzPos=0.66, stop=0.6, earL=0.17, earW=0.085, earA=(22, 6), jaw=True, tail='long', tailL=1.0, tailR=0.055,
+   eyeR=0.038, cheek=1.1, withers=0.18, flex=True, tris=560, face='felid', eyeFwd=0.7, earTip=0.12)
 
 # ------------------------------ the others on four legs ------------------------------
 sp('rabbit', 'quad', 0.2, 0.34, D=0.72, Wr=0.86, rump=1.3, Dh=1.05, haunch=1.3, legR=0.08, canR=0.05, foot='paw', dig=True, plant=True, neckA=40, neckL=0.2, neckR0=0.62, neckR1=0.52,
-   headA=24, headL=0.42, headH=0.7, headW=0.7, muzR=0.5, muzPos=0.76, earL=0.42, earW=0.1, earA=(8, 28), tail='puff', tailL=0.2, tailR=0.14, eyeR=0.05, hop=1, tris=560)
-sp('hare', 'quad', 0.26, 0.46, D=0.66, Wr=0.8, rump=1.25, Dh=1.0, haunch=1.25, legR=0.075, canR=0.046, foot='paw', dig=True, plant=True, neckA=42, neckL=0.22, neckR0=0.6, neckR1=0.5,
-   headA=24, headL=0.42, headH=0.68, headW=0.66, muzR=0.48, muzPos=0.78, earL=0.42, earW=0.09, earA=(8, 28), tail='puff', tailL=0.18, tailR=0.12, eyeR=0.045, hop=1, tris=560)
+   headA=24, headL=0.42, headH=0.7, headW=0.7, muzR=0.5, muzPos=0.76, earL=0.42, earW=0.1, earA=(8, 28), tail='puff', tailL=0.2, tailR=0.14, eyeR=0.05, hop=1, tris=560, earTip=0.55)
+sp('hare', 'quad', 0.3, 0.44, D=0.56, Wr=0.66, rump=1.2, Dh=1.0, haunch=1.25, legR=0.07, canR=0.042, foot='paw', dig=True, plant=True, neckA=42, neckL=0.22, neckR0=0.6, neckR1=0.5,
+   headA=24, headL=0.42, headH=0.68, headW=0.66, muzR=0.48, muzPos=0.78, earL=0.46, earW=0.085, earA=(8, 28), tail='puff', tailL=0.18, tailR=0.12, eyeR=0.045, hop=1, tris=560, earTip=0.5)
 sp('beaver', 'quad', 0.32, 0.72, D=0.76, Wr=0.86, rump=1.2, Dh=1.05, legR=0.08, canR=0.05, foot='paw', dig=True, plant=True, neckA=10, neckL=0.15, neckR0=0.72, neckR1=0.62,
-   headA=14, headL=0.42, headH=0.6, headW=0.6, muzR=0.5, muzPos=0.85, earL=0.05, earW=0.04, earA=(40, 10), tail='flat', tailL=0.95, tailR=0.08, eyeR=0.024, incisors=1)
+   headA=14, headL=0.42, headH=0.6, headW=0.6, muzR=0.5, muzPos=0.85, earL=0.05, earW=0.04, earA=(40, 10), tail='flat', tailL=0.95, tailR=0.08, eyeR=0.024, incisors=1, earTip=1.0)
 sp('otter', 'quad', 0.26, 0.72, D=0.62, Wr=0.76, legR=0.07, canR=0.05, foot='paw', dig=True, plant=True, neckA=18, neckL=0.36, neckR0=0.72, neckR1=0.56,
-   headA=8, headL=0.42, headH=0.56, headW=0.66, muzR=0.5, muzPos=0.86, earL=0.04, earW=0.03, earA=(50, 10), tail='croc', tailL=1.25, tailR=0.1, eyeR=0.026, flex=True)
+   headA=8, headL=0.42, headH=0.56, headW=0.66, muzR=0.5, muzPos=0.86, earL=0.04, earW=0.03, earA=(50, 10), tail='croc', tailL=1.25, tailR=0.1, eyeR=0.026, flex=True, earTip=1.0)
 sp('monkey', 'quad', 0.42, 0.48, D=0.52, Wr=0.72, legR=0.07, canR=0.046, foot='paw', plant=True, plantF=True, neckA=40, neckL=0.24, neckR0=0.55, neckR1=0.45,
-   headA=0, headL=0.38, headH=0.86, headW=0.82, muzR=0.46, muzPos=0.66, earL=0.08, earW=0.06, earA=(85, 0), earCup=0.4, jaw=True, tail='long', tailL=1.3, tailR=0.04, eyeR=0.028)
+   headA=0, headL=0.38, headH=0.86, headW=0.82, muzR=0.34, muzPos=0.56, earL=0.08, earW=0.06, earA=(85, 0), earCup=0.4, jaw=True, tail='long', tailL=1.3, tailR=0.04, eyeR=0.034, face='primate', earTip=1.0, eyeFwd=0.9)
 sp('sloth', 'quad', 0.32, 0.6, D=0.64, Wr=0.82, legR=0.07, canR=0.05, foot='paw', plant=True, plantF=True, claws=True, legSplay=1.3, neckA=30, neckL=0.32, neckR0=0.6, neckR1=0.5,
-   headA=10, headL=0.36, headH=0.75, headW=0.82, muzR=0.5, muzPos=0.7, earL=0.02, earW=0.02, earA=(60, 0), tail=None, eyeR=0.022)
+   headA=10, headL=0.36, headH=0.75, headW=0.82, muzR=0.36, muzPos=0.56, earL=0.02, earW=0.02, earA=(60, 0), tail=None, eyeR=0.022, face='primate', earTip=1.0, eyeFwd=0.7, clawH=0.35)
 
 
 # ------------------------------ the scaled, the frog, the seals ------------------------------
-sp('python', 'snake', 0.22, 4.0, R=0.11, headW=1.5, headL=0.035)
-sp('viper', 'snake', 0.09, 0.9, R=0.045, headW=2.1, headL=0.065, tris=560)
-sp('anaconda', 'snake', 0.3, 5.5, R=0.15, headW=1.4, headL=0.03)
+sp('python', 'snake', 0.22, 4.0, R=0.11, headW=1.8, headL=0.035)
+sp('viper', 'snake', 0.09, 0.9, R=0.045, headW=2.6, headL=0.065, tris=560)
+sp('anaconda', 'snake', 0.3, 5.5, R=0.15, headW=1.7, headL=0.03)
 sp('croc', 'sprawl', 0.42, 1.6, W=0.42, tailL=1.35, headL=0.42, snout=0.8, legR=0.045, scutes=True, teeth=True, eyeR=0.02, headW=0.45, tris=900)
 sp('lizard', 'sprawl', 0.09, 0.3, W=0.42, tailL=1.4, headL=0.3, snout=1.3, legR=0.04, scutes=False, eyeR=0.008, headW=0.62, tris=560)
 sp('frog', 'frog', 0.06, 0.14, tris=560)
@@ -150,10 +150,10 @@ sp('walrus', 'seal', 0.9, 3.0, R=0.26, headR=0.5, tusks=True, whisk=1.0)
 # ------------------------------ the birds (fly: a second mesh, the wings spread) ------------------------------
 sp('gull', 'bird', 0.38, 0.6, fly=1, bodyL=0.32, bw=0.07, bh=0.075, legH=0.12, legR=0.005, neckL=0.08, neckR=0.025, neckA=75, headR=0.032, beak='cone', beakL=0.05, beakR=0.009,
    tailL=0.1, tailW=0.06, span=1.3, chord=0.2, eyeR=0.006, flipper=True)
-sp('eagle', 'bird', 0.75, 0.85, fly=1, bodyL=0.5, bw=0.12, bh=0.13, legH=0.16, legR=0.012, legThick=1.8, neckL=0.1, neckR=0.042, neckA=60, headR=0.046, beak='hook', beakL=0.06, beakR=0.018,
-   tailL=0.25, tailW=0.12, span=2.0, chord=0.42, fingers=5, eyeR=0.009, tilt=0.55)
+sp('eagle', 'bird', 0.75, 0.85, fly=1, bodyL=0.5, bw=0.12, bh=0.13, legH=0.16, legR=0.012, legThick=1.8, neckL=0.1, neckR=0.042, neckA=60, headR=0.046, beak='hook', beakL=0.07, beakR=0.022,
+   tailL=0.25, tailW=0.12, span=2.0, chord=0.42, fingers=5, eyeR=0.009, tilt=0.82, brow=1, trousers=0.55)
 sp('vulture', 'bird', 0.85, 1.0, fly=1, bodyL=0.55, bw=0.14, bh=0.14, legH=0.15, legR=0.012, neckL=0.18, neckR=0.026, neckA=50, headR=0.04, beak='hook', beakL=0.07, beakR=0.018,
-   tailL=0.2, tailW=0.12, span=2.4, chord=0.5, fingers=6, eyeR=0.008, ruff=1, tilt=0.45)
+   tailL=0.2, tailW=0.12, span=2.4, chord=0.5, fingers=6, eyeR=0.008, ruff=1, tilt=0.45, brow=1)
 sp('raven', 'bird', 0.4, 0.6, fly=1, bodyL=0.34, bw=0.07, bh=0.075, legH=0.1, legR=0.006, neckL=0.06, neckR=0.03, neckA=60, headR=0.036, beak='cone', beakL=0.065, beakR=0.013,
    tailL=0.16, tailW=0.07, span=1.2, chord=0.25, fingers=5, eyeR=0.006, tilt=0.3, tris=560)
 sp('parrot', 'bird', 0.5, 0.85, fly=1, bodyL=0.3, bw=0.07, bh=0.08, legH=0.06, legR=0.008, neckL=0.06, neckR=0.036, neckA=75, headR=0.046, beak='hook', beakL=0.06, beakR=0.022,
@@ -169,7 +169,7 @@ sp('goose', 'bird', 0.7, 0.8, fly=1, bodyL=0.5, bw=0.14, bh=0.13, legH=0.12, leg
 sp('toucan', 'bird', 0.4, 0.6, fly=1, bodyL=0.25, bw=0.07, bh=0.08, legH=0.06, legR=0.008, neckL=0.05, neckR=0.036, neckA=75, headR=0.042, beak='toucan', beakL=0.18, beakR=0.04,
    tailL=0.18, tailW=0.06, span=0.6, chord=0.16, toes=2, eyeR=0.008, tilt=0.5, tris=560)
 sp('owl', 'bird', 0.5, 0.55, fly=1, bodyL=0.3, bw=0.12, bh=0.15, legH=0.08, legR=0.012, legThick=2.0, neckL=0.03, neckR=0.06, neckA=85, headR=0.08, disc=1, beak='hook', beakL=0.03, beakR=0.012,
-   tailL=0.12, tailW=0.09, span=1.3, chord=0.35, fingers=5, eyeR=0.018, tilt=1.0)
+   tailL=0.12, tailW=0.09, span=1.3, chord=0.35, fingers=5, eyeR=0.02, tilt=1.0, trousers=0.8)
 sp('ostrich', 'bird', 2.4, 2.0, bodyL=1.0, bw=0.3, bh=0.3, legH=1.0, legR=0.03, legThick=2.0, neckL=0.85, neckR=0.04, neckA=82, headR=0.07, beak='flat', beakL=0.08, beakR=0.04,
    tailL=0.25, tailW=0.3, toes=2, span=1.0, chord=0.45, eyeR=0.018)
 sp('galinha', 'bird', 0.45, 0.4, bodyL=0.35, bw=0.11, bh=0.12, legH=0.14, legR=0.009, neckL=0.1, neckR=0.036, neckA=70, headR=0.036, beak='cone', beakL=0.025, beakR=0.01,
@@ -179,7 +179,7 @@ sp('peru', 'bird', 0.9, 1.0, bodyL=0.6, bw=0.2, bh=0.22, legH=0.3, legR=0.014, n
 sp('pombo', 'bird', 0.28, 0.32, bodyL=0.25, bw=0.06, bh=0.065, legH=0.06, legR=0.005, neckL=0.05, neckR=0.025, neckA=70, headR=0.026, beak='cone', beakL=0.016, beakR=0.005,
    tailL=0.1, tailW=0.05, span=0.65, chord=0.15, eyeR=0.005, tris=560)
 sp('penguin', 'bird', 0.9, 0.4, upright=True, bw=0.17, bh=0.33, legH=0.05, legR=0.015, neckL=0.08, neckR=0.07, headR=0.075, beak='spear', beakL=0.1, beakR=0.016,
-   tailL=0.08, tailW=0.06, flipper=True, eyeR=0.01, span=0.5, chord=0.12)
+   tailL=0.08, tailW=0.06, flipper=True, eyeR=0.012, span=0.5, chord=0.12)
 
 
 def kinds(): return list(SPECIES.keys())
@@ -208,7 +208,8 @@ def meta_of(b):
     J = b.bones_filled(); p = b.meta.get('p', {})
     return {'fam': b.meta.get('family', 'quad'), 'H': b.H, 'L': b.L, 'eye': [round(x, 4) for x in b.meta.get('eye', [0, 0, 0])],
             'nose': [round(x, 4) for x in b.meta.get('nose', [0, 0, 0])], 'dig': bool(p.get('dig')), 'pillar': bool(p.get('pillar')),
-            'flex': bool(b.meta.get('flex')), 'hop': bool(b.meta.get('hop')), 'trunk': bool(b.meta.get('trunk')), 'fly': bool(b.meta.get('fly')), 'upright': bool(b.meta.get('upright'))}
+            'flex': bool(b.meta.get('flex')), 'hop': bool(b.meta.get('hop')), 'trunk': bool(b.meta.get('trunk')), 'fly': bool(b.meta.get('fly')), 'upright': bool(b.meta.get('upright')),
+            **({'rump': b.meta['rump'], 'foot': b.meta['foot'], 'tailR': b.meta.get('tailR', 0.0)} if 'rump' in b.meta else {})}
 
 
 def species_entry(kind):
@@ -305,12 +306,12 @@ def horns(b, kind):
             prims += tube(pts, [0.02 * H, 0.017 * H, 0.012 * H, 0.004 * H], 'head')
             for k in range(1, 8):
                 t = k / 8.0; kk = min(2, int(t * 3)); q = lerp(pts[kk], pts[kk + 1], t * 3 - kk); prims.append((Sphere(q, (0.021 - 0.012 * t) * H), 'head'))
-    if kind == 'rhino':
-        nose = np.array(b.meta['nose'])
-        h1 = nose - d * hL * 0.12 + up * hH * 0.32
-        prims = [(RoundCone(h1, h1 + up * 0.22 * H + d * 0.08 * H, 0.06 * H, 0.008 * H), 'head')]
-        h2 = h1 - d * hL * 0.28 + up * hH * 0.05
-        prims.append((RoundCone(h2, h2 + up * 0.1 * H - d * 0.01 * H, 0.04 * H, 0.008 * H), 'head'))
+    if kind == 'rhino':  # (the front horn long, broad at its root and curving back to the tip; the second behind it, short)
+        nose = np.array(b.meta['nose']); hv = nrm(v3(0, 1, 0) * 0.8 + up * 0.2); bk = nrm(v3(0, 0, -1) - hv * hv[2])  # (up the world's way, the head held low)
+        h1 = nose - d * hL * 0.15 + up * hH * 0.28
+        prims = tube([h1, h1 + hv * 0.12 * H - bk * 0.02 * H, h1 + hv * 0.23 * H + bk * 0.01 * H, h1 + hv * 0.3 * H + bk * 0.07 * H], [0.075 * H, 0.052 * H, 0.03 * H, 0.006 * H], 'head')
+        h2 = h1 - d * hL * 0.3 + up * hH * 0.1
+        prims += tube([h2, h2 + hv * 0.07 * H, h2 + hv * 0.12 * H + bk * 0.02 * H], [0.05 * H, 0.032 * H, 0.006 * H], 'head')
     b.piece('chifres', zone, prims, 110 if kind in ('ibex', 'gazelle') else 90, far=24, h=H * 0.005)
 
 
@@ -337,13 +338,20 @@ def mane(b, kind):
             prims.append((ell_between(hd + up * hH * 0.4, hd + up * hH * 0.2 + d * hL * 0.3, hW * 0.18, hH * 0.12), 'head'))
         b.piece('crina', 'crina', prims, 140, far=30)
     elif kind == 'lion':
-        poll, sk, d, up, hL, hH, hW = head_frame(b)
-        c = hd + d * hL * 0.05 - up * hH * 0.15
-        c = hd - d * hL * 0.1 - up * hH * 0.22
-        prims = [(K(Ellipsoid(c, (hW * 1.0, hH * 1.12, hL * 0.42)), 0), 'head'),
-                 (K(ell_between(n0 + v3(0, -r0 * 0.3, -r0 * 0.2), hd - d * hL * 0.1 - up * hH * 0.3, r0 * 1.35, r0 * 1.5), hW * 0.35), 'neck1'),
-                 (K(Ellipsoid(n0 + v3(0, -r0 * 0.9, r0 * 0.3), (r0 * 1.0, r0 * 1.2, r0 * 0.9)), hW * 0.3), 'neck0')]
-        b.piece('juba', 'crina', prims, 240, far=60)
+        # (the mane frames the face — a ruff round it behind the cheeks and the brow, the face in front of it — and falls over the
+        # neck to the withers and down the throat to the chest; locks round its edge break the outline: no helmet)
+        poll, sk, d, up, hL, hH, hW = head_frame(b); X = v3(1, 0, 0)
+        rc = poll - d * hL * 0.12 - up * hH * 0.16
+        prims = [(K(Ellipsoid(rc, (hW * 0.95, hL * 0.3, hH * 1.0), orient(rc - d, rc + d, up)), 0), 'head'),
+                 (K(ell_between(hd + up * hH * 0.25 - d * hL * 0.15, n0 + v3(0, r0 * 0.75, -r0 * 0.5), r0 * 1.3, r0 * 1.25), hW * 0.3), 'neck1'),
+                 (K(ell_between(hd - up * hH * 0.45, n0 + v3(0, -r0 * 1.05, r0 * 0.55), r0 * 1.15, r0 * 1.05), hW * 0.3), 'neck0')]
+        for k in range(9):  # (round the frame, from under one cheek over the brow to under the other)
+            ang = -np.pi * 0.86 + k * np.pi * 1.72 / 8; dv = nrm(X * np.sin(ang) + up * np.cos(ang))
+            q0 = rc + dv * hH * 0.7 - d * hL * 0.05; q1 = rc + dv * hH * (1.22 if abs(ang) < 2.4 else 1.4) - d * hL * 0.18
+            prims.append((K(RoundCone(q0, q1, hH * 0.3, hH * 0.06), hH * 0.12), 'head'))
+        for sd in (1, -1):  # (the long locks down the chest)
+            q0 = n0 + v3(sd * r0 * 0.45, -r0 * 1.2, r0 * 0.6); prims.append((K(RoundCone(q0, q0 + v3(sd * r0 * 0.1, -r0 * 0.75, r0 * 0.15), r0 * 0.45, r0 * 0.12), r0 * 0.2), 'neck0'))
+        b.piece('juba', 'crina', prims, 320, far=66)
     elif kind == 'boar':
         prims = [(ell_between(n1 + v3(0, r1 * 0.95, 0), J['spine'] + v3(0, Dc * 0.42, 0.0), r1 * 0.14, r1 * 0.35), 'chest')]
         b.piece('crina', 'crina', prims, 60, far=12)
@@ -391,13 +399,14 @@ def trunk(b, kind):
     poll, sk, d, up, hL, hH, hW = head_frame(b); H = b.H
     nose = np.array(b.meta['nose'])
     if kind == 'elephant':
-        t0 = nose - d * hL * 0.1; r0 = hH * 0.26
-        p1 = t0 + v3(0, -H * 0.22, H * 0.06); p2 = p1 + v3(0, -H * 0.24, H * 0.02); p3 = p2 + v3(0, -H * 0.2, H * 0.06); tip = p3 + v3(0, -H * 0.06, H * 0.05)
+        t0 = nose - d * hL * 0.12; r0 = hH * 0.31
+        p1 = t0 + v3(0, -H * 0.2, H * 0.07); p2 = p1 + v3(0, -H * 0.23, H * 0.015); p3 = p2 + v3(0, -H * 0.19, H * 0.04); tip = p3 + v3(0, -H * 0.05, H * 0.07)
         b.j('trunk0', t0); b.j('trunk1', p1); b.j('trunk2', p2)
-        b.add(RoundCone(t0, p1, r0, r0 * 0.75), 'trunk0', k=r0 * 0.5)
-        b.add(RoundCone(p1, p2, r0 * 0.75, r0 * 0.55), 'trunk1', k=r0 * 0.2)
-        b.add(RoundCone(p2, p3, r0 * 0.55, r0 * 0.4), 'trunk2', k=r0 * 0.2)
-        b.add(RoundCone(p3, tip, r0 * 0.4, r0 * 0.38), 'trunk2', k=r0 * 0.1)
+        b.add(RoundCone(t0, p1, r0, r0 * 0.68), 'trunk0', k=r0 * 0.5)
+        b.add(RoundCone(p1, p2, r0 * 0.68, r0 * 0.48), 'trunk1', k=r0 * 0.2)
+        b.add(RoundCone(p2, p3, r0 * 0.48, r0 * 0.34), 'trunk2', k=r0 * 0.2)
+        b.add(RoundCone(p3, tip, r0 * 0.34, r0 * 0.3), 'trunk2', k=r0 * 0.1)
+        b.add(Ellipsoid(tip + v3(0, -r0 * 0.05, r0 * 0.12), (r0 * 0.34, r0 * 0.22, r0 * 0.3)), 'trunk2', k=r0 * 0.1)   # (the tip's lip)
         b.meta['nose'] = list(tip); b.meta['trunk'] = True
     else:
         t0 = nose - d * hL * 0.05; r0 = hH * 0.17

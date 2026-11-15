@@ -1,10 +1,12 @@
 // bichos-estudio: every animal of the land filmed in a studio — one at a time, on open flat ground, beside a person (the
 // body of the god, 1.75 m) for scale; a contact sheet of them all, and what they cost to draw.
 //   node qa/visual/bichos-estudio.js PASTA_DO_JOGO saida.png
-//   env: KINDS (a,b,c — all the land, the amphibious and the birds by default), VIEW=side|front|three|back|top (three),
-//        MODE=idle|walk|run|fly (idle), N quadros por bicho (1; more: a strip of the stride), K passos entre eles (2),
+//   env: KINDS (a,b,c — all the land, the amphibious and the birds by default), VIEW=side|front|three|back|top (three; several: side,three,front — each frame from each),
+//        MODE=idle|walk|run|fly|sit|graze (idle; sit: those that sit, sitting), N quadros por bicho (1; more: a strip of the stride), K passos entre eles (2),
 //        AGE=young (the young), MORPH (albino|melanico), Q (media), VW/VH (each frame, 300×240), COLS (8), HOUR (11),
-//        NOPERSON=1 (no person beside), D (the camera's distance, × the beast's size)
+//        NOPERSON=1 (no person beside), D (the camera's distance, × the beast's size), WORLD (cidade), TOWN (the open ground
+//        near this town, by name; the biggest by default), BIOME (only ground of the biome whose name has this: Savana,
+//        Tropical — the summer, the jungle)
 // PASTA_DO_JOGO: this game, or an old worktree for the 'antes'. Each frame is drawn by the game's own renderer.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
@@ -21,21 +23,24 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
   await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
   await page.waitForFunction(() => !(window.G && G.Ground3D && G.Ground3D.texReady) || G.Ground3D.texReady(), null, { timeout: 120000 });
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', (process.env.WORLD || 'cidade') + '.js') });
-  const env = { Q: process.env.Q || 'media', WORLD: process.env.WORLD || 'cidade', HOUR: +process.env.HOUR || 11, KINDS: process.env.KINDS || '', NOPERSON: !!process.env.NOPERSON };
+  const env = { Q: process.env.Q || 'media', WORLD: process.env.WORLD || 'cidade', HOUR: +process.env.HOUR || 11, KINDS: process.env.KINDS || '', NOPERSON: !!process.env.NOPERSON, TOWN: process.env.TOWN || '', BIOME: process.env.BIOME || '' };
   const info = await page.evaluate(env => {
     G.Realm.setQuality(env.Q); G.Save.apply(JSON.parse(G.Ready.data[env.WORLD])); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden'); G.UI.showHUD(true); G.UI.setSpeed(1); if (G.Audio) G.Audio.mute = true;
     const S = G.S, W = G.W, N = G.N;
-    const s = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+    const s = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id)).find(t => !env.TOWN || t.name === env.TOWN);
+    if (!s) return { err: 'sem a cidade ' + env.TOWN };
     const v = [...S.villagers.values()].filter(o => o.set === s.id && o.age >= 18 && o.age < 55 && !o.inside && G.Possess.can(o).ok).sort((a, b) => a.id - b.id)[0];
     // (open ground: a square of 7 × 7 tiles of land, nothing built, no water nor road, no tree in the middle — the most level
     // of them, the nearer the town the better)
     const bad = new Set(); for (const b of S.buildings.values()) for (let y = b.y - 1; y < b.y + b.h + 1; y++) for (let x = b.x - 1; x < b.x + b.w + 1; x++) bad.add(y * N + x);
     let best = null, bs = 1e9;
     for (let cy = 4; cy < N - 4; cy++) for (let cx = 4; cx < N - 4; cx++) {
+      if (env.BIOME && !G.BIOMES[S.biome[cy * N + cx]].name.includes(env.BIOME)) continue;
       let ok = true, lo = 1e9, hi = -1e9;
-      for (let y = cy - 3; y <= cy + 3 && ok; y++) for (let x = cx - 3; x <= cx + 3 && ok; x++) {
+      const rd = env.BIOME ? 1 : 3; // (a biome's open ground comes in small pieces: 3 × 3 there, and the trees round it)
+      for (let y = cy - rd; y <= cy + rd && ok; y++) for (let x = cx - rd; x <= cx + rd && ok; x++) {
         const i = y * N + x;
-        if (bad.has(i) || S.type[i] <= G.T.RIVER || !W.walkable(i) || (S.treeAt && S.treeAt[i] && Math.abs(x - cx) < 3 && Math.abs(y - cy) < 3) || (S.road && S.road[i])) { ok = false; break; }
+        if (bad.has(i) || S.type[i] <= G.T.RIVER || !W.walkable(i) || (S.treeAt && S.treeAt[i] && Math.abs(x - cx) < rd && Math.abs(y - cy) < rd) || (S.road && S.road[i])) { ok = false; break; }
         const h = W.groundH(x + 0.5, y + 0.5); lo = Math.min(lo, h); hi = Math.max(hi, h);
       }
       const sc = (hi - lo) * 40 + Math.hypot(cx - s.cx, cy - s.cy) * 0.15;
@@ -53,7 +58,7 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
     return { kinds, spot: best, who: v.id, fauna: G.Fauna3D ? { ready: G.Fauna3D.ready, failed: G.Fauna3D.failed } : 'n/a' };
   }, env);
   console.log(JSON.stringify(info)); if (info.err) { await browser.close(); return; }
-  const VIEW = process.env.VIEW || 'three', MODE = process.env.MODE || 'idle', NF = +process.env.N || 1, K = +process.env.K || 2;
+  const VIEWS = (process.env.VIEW || 'three').split(','), MODE = process.env.MODE || 'idle', NF = +process.env.N || 1, K = +process.env.K || 2;
   const cells = [], stats = [];
   for (const kind of info.kinds) {
     // a fresh beast of the kind, the others gone; held where it stands (or walked along a line) frame by frame
@@ -67,17 +72,25 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
       window.__size = size;
       const hold = () => {
         const a = window.__a; const sp2 = (o.mode === 'walk' ? 1.1 : o.mode === 'run' ? 4.2 : 0) * Math.max(0.6, Math.min(2.2, size)) / 4; // (tiles a second)
-        window.__t += 0.033; a.x = x + 0.35 + (sp2 ? ((window.__t * sp2) % 2.4) - 1.2 : 0); a.y = y; a.tx = a.x + 1; a.ty = a.y; a.face = 1; a.state = o.mode === 'fly' ? 'fly' : 'idle'; a.t = 1e6; a.moving = !!sp2;
+        window.__t += 0.033; a.x = x + 0.35 + (sp2 ? ((window.__t * sp2) % 2.4) - 1.2 : 0); a.y = y; a.tx = sp2 ? a.x + 1 : a.x; a.ty = a.y; // (held still: no target ahead for the beast to walk to — it walked in place between the holds)
+        a.face = 1; a.state = o.mode === 'fly' ? 'fly' : sp.cls === 'air' ? 'perch' : 'idle'; a.t = 1e6; a.moving = !!sp2;
         if (o.mode === 'fly') a.z = 20; else { a.z = 0; a.air = false; a.perch = 0; }
       };
       window.__hold = hold;
       window.__step = n => { for (let k = 0; k < n; k++) { hold(); G.Main.frameFor(33); } hold(); };
       window.__step(12);
+      // (sitting, grazing: the view's clock of the beast set where it sits down — the dogs, the cats, the wolf, the foxes, the big
+      // cats — or lowers its head to the grass, and held there until it has)
+      const bv = G.People3D.beastVis && G.People3D.beastVis(a.id);
+      if (bv && (o.mode === 'sit' || o.mode === 'graze')) {
+        const T = 2 * Math.PI, w = o.mode === 'sit' ? 0.045 : 0.35, p0 = o.mode === 'sit' ? a.id * 2.3 : a.id; let t = (Math.PI / 2 - p0) / w; while (t < bv.t + 1) t += T / w;
+        bv.t = t; window.__step(o.mode === 'sit' ? 70 : 50);
+      }
       return { size, name: sp.name };
     }, { kind, young: process.env.AGE === 'young', morph: process.env.MORPH || '', mode: MODE });
-    for (let fr = 0; fr < NF; fr++) {
+    for (let fr = 0; fr < NF; fr++) for (let vi = 0; vi < VIEWS.length; vi++) {
       const r = await page.evaluate(o => {
-        window.__step(o.k);
+        if (o.step) window.__step(o.k);
         const a = window.__a; const TL = G.Space.TILE; const X = a.x * TL, Z = a.y * TL; const Y = G.People3D && G.People3D.groundAt ? G.People3D.groundAt(a.x, a.y) : G.W.groundH(a.x, a.y) * G.Space.HM;
         const size = window.__size; const D = Math.max(2.6, size * 2.3) * (o.d || 1);
         const yaw = 0; // (the beast faces +x)
@@ -87,9 +100,10 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
         cam.position.set(X + Math.cos(yaw + ang) * D, Y + hy + up, Z - Math.sin(yaw + ang) * D * (o.view === 'side' ? 1 : 1)); cam.lookAt(X, Y + hy * (o.view === 'top' ? 0.4 : 0.85), Z); cam.fov = 40; cam.updateProjectionMatrix();
         G.Realm.renderer().render(G.Realm.scene(), cam);
         const i = G.Realm.renderer().info.render; return { calls: i.calls, tris: i.triangles };
-      }, { k: K, view: VIEW, d: +process.env.D || 1 });
-      const file = OUT.replace(/\.png$/, '') + '-' + kind + (NF > 1 ? '-' + fr : '') + '.png';
-      await page.screenshot({ path: file, timeout: 240000 }); cells.push([kind + (NF > 1 ? ' ' + fr : ''), file]); stats.push(Object.assign({ kind }, r));
+      }, { k: K, view: VIEWS[vi], d: +process.env.D || 1, step: vi === 0 });
+      const tag = (NF > 1 ? ' ' + fr : '') + (VIEWS.length > 1 ? ' ' + VIEWS[vi] : '');
+      const file = OUT.replace(/\.png$/, '') + '-' + kind + tag.replace(/ /g, '-') + '.png';
+      await page.screenshot({ path: file, timeout: 240000 }); cells.push([kind + tag, file]); stats.push(Object.assign({ kind }, r));
     }
   }
   const chk = await page.evaluate(() => ({ check: G.People3D.check ? G.People3D.check() : [], err: JSON.stringify(G.modErr), beasts: G.People3D.beasts, fauna: G.Fauna3D && G.Fauna3D.check ? G.Fauna3D.check() : null }));

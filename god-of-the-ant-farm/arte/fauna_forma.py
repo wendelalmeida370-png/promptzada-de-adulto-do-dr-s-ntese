@@ -93,10 +93,12 @@ DEF = dict(D=0.46, Wr=0.72, rump=1.0, dip=0.03, belly=0.08, Dh=0.86, legR=0.07, 
            earL=0.16, earW=0.06, earA=(25, 30), earT=0.012, earCup=0.6, tail='hang', tailL=0.5, tailR=0.03,
            eyeR=0.022, brow=0.0, cheek=1.0, jaw=False, neckFlat=0.72, withers=0.25, shoulder=1.0, haunch=1.0,
            dig=False, plant=False, pillar=False, hindPost=0.0, legSplay=1.0, chestFwd=0.0, hump=0.0, humpZ=0.12, crest=0.0,
-           muzDrop=0.0, muzFlat=1.0, earFold=0.0, headRot=0.0, snout=0.0, forehead=0.0, neckUp=0.0, muzPos=0.88, stop=0.0, tailHair=0.0, plantF=False, earFace='fwd', flex=False, shag=0.0, udder=0.0)
+           muzDrop=0.0, muzFlat=1.0, earFold=0.0, headRot=0.0, snout=0.0, forehead=0.0, neckUp=0.0, muzPos=0.88, stop=0.0, tailHair=0.0, plantF=False, earFace='fwd', flex=False, shag=0.0, udder=0.0,
+           face='graze', eyeFwd=0.0, earTip=0.32, ruff=0.0, neckS=0.0)
 
 
 NECK = 0.55
+LEGK, CANK = 1.12, 1.18  # (the legs a little sturdier than the measures: the stylized look is chunky, not spindly)
 
 
 def quad(b, **kw):
@@ -139,7 +141,7 @@ def quad(b, **kw):
         else:
             kn = b.j('fl%s2' % s, (X, H * 0.31, L * 0.315)); fe = b.j('fl%s3' % s, (X, H * 0.075, L * 0.32))
         hp = b.j('hl%s0' % s, (X * 1.05, Hc - Dh * 0.3, -L * 0.30))
-        st = b.j('hl%s1' % s, (X * 1.15, H - Dc * 0.9 + p['hindPost'] * H * 0.1, -L * (0.17 + p['hindPost'] * 0.04)))
+        st = b.j('hl%s1' % s, (X * 1.15, min(H - Dc * 0.9, hp[1] - Dh * 0.3) + p['hindPost'] * H * 0.1, -L * (0.17 + p['hindPost'] * 0.04)))  # (under the hip: a low rump — the giraffe's — brings the stifle down with it)
         if p['pillar']:
             hk = b.j('hl%s2' % s, (X * 1.05, H * 0.30, -L * 0.30)); hf = b.j('hl%s3' % s, (X * 1.05, H * 0.06, -L * 0.29))
         elif p['plant']:
@@ -148,7 +150,7 @@ def quad(b, **kw):
             hk = b.j('hl%s2' % s, (X, H * 0.27, -L * 0.46)); hf = b.j('hl%s3' % s, (X, H * 0.04, -L * 0.38))
         else:
             hk = b.j('hl%s2' % s, (X, H * 0.31, -L * 0.43)); hf = b.j('hl%s3' % s, (X, H * 0.075, -L * 0.38))
-        R = p['legR'] * H; C = p['canR'] * H
+        R = p['legR'] * H * LEGK; C = p['canR'] * H * CANK
         # the shoulder (scapula and upper arm in one muscle), the forearm, the cannon, the pastern
         b.add(ell_between(sh + v3(0, Dc * 0.42, -L * 0.08), el, Wd * 0.17 * p['shoulder'], R * 1.9 * p['shoulder']), 'fl%s0' % s, k=Dc * 0.18, tau=tau)
         b.add(RoundCone(el + v3(0, Dc * 0.06, 0), kn, R * 1.05, C * 1.15), 'fl%s1' % s, k=R * 0.6, tau=tau * 0.7)
@@ -159,23 +161,61 @@ def quad(b, **kw):
         b.add(ell_between(st + v3(0, Dc * 0.02, -L * 0.03), lerp(st, hk, 0.55), R * 1.25, R * 1.7), 'hl%s1' % s, k=R * 0.8, tau=tau * 0.7)   # the gaskin
         b.add(RoundCone(st, hk, R * 1.15, C * 1.0), 'hl%s1' % s, k=R * 0.7, tau=tau * 0.7)
         b.add(RoundCone(hk, hf, C * 1.0, C * 0.95), 'hl%s2' % s, k=C * 0.5, tau=tau * 0.5)
+        joints(b, p, s, el, kn, fe, st, hk, hf, R, C, tau)
         foot(b, p, s, 'fl', fe, X, C)
         foot(b, p, s, 'hl', hf, X, C)
     # --- the neck: from the front of the withers, forward and up
     a = np.radians(p['neckA']); nd = v3(0, np.sin(a), np.cos(a)); nL = p['neckL'] * H
-    n0 = b.j('neck0', (0, H - Dc * 0.3, L * 0.38)); n1 = b.j('neck1', n0 + nd * nL * 0.36 + v3(0, nL * p['neckUp'] * 0.05, 0))
-    n2 = b.j('neck2', n0 + nd * nL * 0.7 + v3(0, nL * p['neckUp'] * 0.08, 0)); poll = b.j('head', n0 + nd * nL)
+    n0 = b.j('neck0', (0, H - Dc * 0.3, L * 0.38))
+    if p['neckS']:  # (in an S: forward and down from the withers, then up in a curve to the head held high)
+        sa = lambda deg: v3(0, np.sin(np.radians(deg)), np.cos(np.radians(deg)))
+        n1 = b.j('neck1', n0 + sa(p['neckA'] - 34 * p['neckS']) * nL * 0.38); n2 = b.j('neck2', n1 + sa(p['neckA'] + 12 * p['neckS']) * nL * 0.33)
+        poll = b.j('head', n2 + sa(p['neckA'] + 62 * p['neckS']) * nL * 0.31)
+    else:
+        n1 = b.j('neck1', n0 + nd * nL * 0.36 + v3(0, nL * p['neckUp'] * 0.05, 0))
+        n2 = b.j('neck2', n0 + nd * nL * 0.7 + v3(0, nL * p['neckUp'] * 0.08, 0)); poll = b.j('head', n0 + nd * nL)
     r0 = p['neckR0'] * Dc * NECK; r1 = p['neckR1'] * Dc * NECK  # (neckR: the neck's depth over the chest's, at its base and at the head)
     fl = ((1, 0, 0), p['neckFlat'])
     b.add(RoundCone(n0 - nd * r0 * 0.4 + v3(0, -r0 * 0.15, 0), n1, r0, lerp(r0, r1, 0.45), flat=fl), 'neck0', k=r0 * 0.6, tau=tau)
     b.add(RoundCone(n1, n2, lerp(r0, r1, 0.45), lerp(r0, r1, 0.8), flat=fl), 'neck1', k=r1 * 0.5, tau=tau)
     b.add(RoundCone(n2, poll, lerp(r0, r1, 0.8), r1, flat=fl), 'neck2', k=r1 * 0.5, tau=tau)
+    if p['ruff']:  # (a collar of long fur round the neck, down the throat: the wolf's)
+        b.add(ell_between(n0 + v3(0, -r0 * 0.15, -r0 * 0.35), lerp(n1, n2, 0.55), r0 * (1.0 + 0.45 * p['ruff']), r0 * (1.05 + 0.55 * p['ruff'])), 'neck0', k=r0 * 0.5, tau=tau)
     if p['crest']:  # (a crest along the neck's top: the stallion's, the bull's)
         b.add(ell_between(n0 + v3(0, r0 * 0.7, 0), poll + v3(0, r1 * 0.6, 0), r1 * 0.55, r0 * p['crest']), 'neck1', k=r1 * 0.6, tau=tau)
     head(b, p, poll, Dc)
     tail(b, p, Hc, Dh, L)
+    ground(b)
     b.meta['family'] = 'quad'; b.meta['flex'] = bool(p['flex'])
+    b.meta['rump'] = round(float(Dh * 0.58), 4); b.meta['foot'] = p['foot']; b.meta.setdefault('tailR', 0.0)  # (for the 3D: how low the rump sits, what the feet are)
     return b
+
+
+def ground(b):
+    """The sole: nothing of the body under the ground — a paw, a pillar's foot, a pastern rest flat on it (they sank into it,
+    the elephant's 0.2 m: the round ends of the clay reach below the joints they are drawn from)."""
+    pr = Plane((0, 0, 0), (0, -1, 0), ((-9, -1, -9), (9, 0.0, 9))); pr.set('i', 0.0, None, b.H * 0.04); b.P.append(pr)
+
+
+def joints(b, p, s, el, kn, fe, st, hk, hf, R, C, tau):
+    """The joints that show under the skin and make a leg read as a leg: the point of the elbow behind the forearm, the knee
+    (the carpus) a little broader than the cannon below it, the point of the hock sticking back (the hamstring's lever), the
+    fetlock's knob above the hoof; the stifle's round in front of the thigh. A pillar's legs show none but the knee."""
+    f = 'fl%s' % s; h = 'hl%s' % s
+    if p['pillar']:
+        b.add(Ellipsoid(kn + v3(0, 0, C * 0.1), (C * 1.12, C * 1.05, C * 1.15)), f + '2', k=C * 0.5, tau=tau * 0.5)
+        return
+    hoofed = p['foot'] in ('hoof', 'cloven', 'pad')
+    b.add(Ellipsoid(el + v3(0, -R * 0.15, -R * 0.75), (R * 0.85, R * 1.0, R * 0.8)), f + '1', k=R * 0.5, tau=tau * 0.6)              # the elbow's point
+    if not p['plantF']:
+        b.add(Ellipsoid(kn + v3(0, C * 0.1, C * 0.12), (C * 1.22, C * 1.25, C * 1.22)), f + '2', k=C * 0.55, tau=tau * 0.5)        # the knee
+    if not p['plant']:
+        b.add(Ellipsoid(hk + v3(0, C * 0.55, -C * 0.85), (C * 0.8, C * 1.5, C * 0.75)), h + '2', k=C * 0.55, tau=tau * 0.5)       # the point of the hock
+        b.add(ell_between(hk + v3(0, C * 0.8, -C * 0.7), lerp(st, hk, 0.35) + v3(0, 0, -R * 0.6), C * 0.55, C * 0.6), h + '1', k=C * 0.6, tau=tau * 0.6)  # the hamstring
+    if hoofed:
+        for q, bn in ((fe, f + '3'), (hf, h + '3')):
+            b.add(Ellipsoid(q + v3(0, C * 0.15, -C * 0.25), (C * 1.12, C * 1.05, C * 1.2)), bn, k=C * 0.45, tau=tau * 0.45)        # the fetlock
+    b.add(Ellipsoid(st + v3(0, R * 0.2, R * 0.55), (R * 0.95, R * 1.0, R * 0.8)), h + '0', k=R * 0.7, tau=tau * 0.7)                # the stifle
 
 
 def foot(b, p, s, leg, fe, X, C):
@@ -202,11 +242,13 @@ def foot(b, p, s, leg, fe, X, C):
     else:  # a paw: the toes forward, the pads under them (painted), claws for the clawed
         big = 1.0 if f == 'paw' else 1.05
         b.add(Ellipsoid((fe[0], C * 0.85, fe[2] + C * 0.9), (C * 1.15 * big, C * 0.85, C * 1.5 * big)), bone, k=C * 0.8)
+        for dx in (-0.62, -0.2, 0.2, 0.62):  # (the toes: four knuckles round the front of the paw)
+            b.add(Ellipsoid((fe[0] + dx * C * big, C * 0.5, fe[2] + C * 2.0 * big - abs(dx) * C * 0.5), (C * 0.36, C * 0.45, C * 0.45)), bone, k=C * 0.25)
         if f == 'bearpaw':
             b.add(Ellipsoid((fe[0], C * 0.7, fe[2] - C * 0.2), (C * 1.0, C * 0.7, C * 1.6)), bone, k=C * 0.6)
         if p.get('claws'):
             prims = [(RoundCone((fe[0] + dx * C, C * 0.9, fe[2] + C * 2.1), (fe[0] + dx * C * 1.1, C * 0.15, fe[2] + C * 2.9), C * 0.16, C * 0.05), bone) for dx in (-0.6, -0.2, 0.2, 0.6)]
-            b.piece('unha' + leg + s, 'unha', prims, 32, far=0)
+            b.piece('unha' + leg + s, 'unha', prims, 32, far=0, h=C * p.get('clawH', 0.2))  # (a coarse step: four small cones on a fine one would not come down to 32)
 
 
 def head(b, p, poll, Dc):
@@ -215,6 +257,10 @@ def head(b, p, poll, Dc):
     a = np.radians(p['headA']); d = v3(0, -np.sin(a), np.cos(a)); up = v3(0, np.cos(a), np.sin(a))
     tau = max(0.01, H * 0.035)
     sk = poll + d * hL * 0.2 + up * hH * 0.05
+    face = p['face']
+    if face in ('felid', 'canid', 'bear', 'primate', 'hippo'):
+        mz, mr, ec = head_hunter(b, p, poll, sk, d, up, hL, hH, hW, tau)
+        return head_rest(b, p, sk, d, up, hL, hH, hW, tau, mr, ec)
     b.add(Ellipsoid(sk, (hW * 0.5, hH * 0.5, hL * 0.26), orient(sk - d, sk + d, up)), 'head', k=hH * 0.3, tau=tau)                 # the skull
     if p['stop']: b.add(Ellipsoid(sk + up * hH * 0.2 + d * hL * 0.16, (hW * 0.3, hH * 0.32 * p['stop'], hL * 0.16)), 'head', k=hH * 0.25, tau=tau)
     if p['forehead']: b.add(Ellipsoid(sk + up * hH * 0.25 + d * hL * 0.05, (hW * 0.4, hH * 0.3 * p['forehead'], hL * 0.2)), 'head', k=hH * 0.3, tau=tau)
@@ -234,15 +280,83 @@ def head(b, p, poll, Dc):
     for sd in (1, -1):
         b.add(Ellipsoid(jc + v3(sd * hW * 0.18, 0, 0), (hW * 0.28 * p['cheek'], hH * 0.33 * p['cheek'], hL * 0.22)), jw if p['jaw'] else 'head', k=hH * 0.3, tau=tau)
     b.add(RoundCone(jc - d * hL * 0.05, mz - up * mr * 0.55 - d * mr * 0.2, hH * 0.22, mr * 0.55), jw, k=hH * 0.2, tau=tau)        # the lower jaw
-    # nostrils, and the eye's socket under a brow
-    nose = np.array(b.meta['nose'])
-    for sd in (1, -1):
-        b.cut(Sphere(nose + v3(sd * mr * 0.38, mr * 0.08, -mr * 0.05), mr * 0.16), k=mr * 0.08)
     ec = sk + d * hL * 0.1 + up * hH * 0.12 + v3(hW * 0.43, 0, 0)
+    head_rest(b, p, sk, d, up, hL, hH, hW, tau, mr, ec)
+
+
+def head_hunter(b, p, poll, sk, d, up, hL, hH, hW, tau):
+    """The head of a hunter or a monkey — the cats', the dogs', the bears', the monkeys': a round braincase and the face built on
+    its front: a cat's short muzzle (the bridge of the nose, two whisker pads, the nose's leather, the chin) under big eyes set
+    to the front; a dog's long one (a rounded box after the stop, the lower jaw under it, the nose's leather at its end); a
+    monkey's flat face with its brow ridge and small muzzle."""
+    face = p['face']; X = v3(1, 0, 0); jw = 'jaw' if p['jaw'] else 'head'
+    O = lambda c: orient(c - d, c + d, up)
+    mz = poll + d * hL * p['muzPos'] - up * hH * (0.1 + p['muzDrop'] * 0.2); mr = p['muzR'] * hH
+    b.j('jaw', poll + d * hL * 0.12 - up * hH * 0.15)
+    if face == 'hippo':
+        # (the hippo's: a muzzle broader than the skull and flat at its end, the jowls under it; the eyes, the ears and the
+        # nostrils up on top, where they stay out of the water)
+        b.add(Ellipsoid(sk, (hW * 0.44, hL * 0.3, hH * 0.44), O(sk)), 'head', k=hH * 0.2, tau=tau)                                  # the skull
+        a0 = sk + d * hL * 0.16 - up * hH * 0.06; a1 = mz + d * mr * 0.4; mc = (a0 + a1) / 2; ml = np.linalg.norm(a1 - a0) / 2; rr = hH * 0.17
+        b.add(RBox(mc, (hW * 0.5 - rr, ml - rr, hH * 0.3 - rr), rr, O(mc)), 'head', k=hH * 0.15, tau=tau)                           # the muzzle
+        jc = mc - up * hH * 0.26 - d * ml * 0.1
+        b.add(RBox(jc, (hW * 0.44 - rr, ml * 0.85 - rr, hH * 0.2 - rr), rr, O(jc)), jw, k=hH * 0.15, tau=tau)                       # the jowls
+        for sd in (1, -1):
+            b.add(Sphere(sk + up * hH * 0.4 + X * sd * hW * 0.3 + d * hL * 0.02, p['eyeR'] * b.H * 1.9), 'head', k=hH * 0.08, tau=tau)  # the eyes' turrets
+            b.add(Sphere(a1 + up * hH * 0.27 + X * sd * hW * 0.2 - d * rr * 0.4, hH * 0.075), 'head', k=hH * 0.05, tau=tau)            # the nostrils' knobs
+        ec = sk + up * hH * 0.46 + X * hW * 0.33 + d * hL * 0.04
+        nose = a1 + up * hH * 0.3 - d * rr * 0.3
+    elif face == 'primate':
+        b.add(Ellipsoid(sk, (hW * 0.5, hL * 0.4, hH * 0.5), O(sk)), 'head', k=hH * 0.2, tau=tau)                                    # the braincase
+        fc = sk + d * hL * 0.24 - up * hH * 0.1
+        b.add(Ellipsoid(fc, (hW * 0.38, hL * 0.17, hH * 0.38), O(fc)), 'head', k=hH * 0.12, tau=tau)                                # the face
+        b.add(Ellipsoid(fc + up * hH * 0.2 + d * hL * 0.09, (hW * 0.36, hL * 0.07, hH * 0.075), O(fc)), 'head', k=hH * 0.06, tau=tau)  # the brow ridge
+        mz = fc + d * hL * 0.17 - up * hH * 0.17
+        b.add(Ellipsoid(mz, (mr * 0.8, mr * 0.7, mr * 0.62), O(mz)), 'head', k=mr * 0.3, tau=tau)                                   # the muzzle
+        b.add(Ellipsoid(mz - up * mr * 0.55 - d * mr * 0.12, (mr * 0.6, mr * 0.5, mr * 0.42), O(mz)), jw, k=mr * 0.3, tau=tau)      # the chin
+        ec = fc + d * hL * 0.14 + up * hH * 0.08 + X * hW * 0.15
+        nose = mz + d * mr * 0.66 + up * mr * 0.12
+    elif face == 'felid':
+        b.add(Ellipsoid(sk, (hW * 0.5, hL * 0.32, hH * 0.5), O(sk)), 'head', k=hH * 0.25, tau=tau)                                  # the braincase
+        for sd in (1, -1):
+            c = sk + d * hL * 0.1 - up * hH * 0.2 + X * sd * hW * 0.26
+            b.add(Ellipsoid(c, (hW * 0.27 * p['cheek'], hL * 0.22, hH * 0.3 * p['cheek']), O(c)), 'head', k=hH * 0.25, tau=tau)  # the cheeks
+        b.add(RoundCone(sk + d * hL * 0.18 + up * hH * 0.14, mz + up * mr * 0.35, hH * 0.24, mr * 0.45, flat=((1, 0, 0), 0.9)), 'head', k=hH * 0.15, tau=tau)  # the bridge
+        for sd in (1, -1): b.add(Ellipsoid(mz + X * sd * mr * 0.42 - up * mr * 0.12, (mr * 0.56, mr * 0.55, mr * 0.5), O(mz)), 'head', k=mr * 0.3, tau=tau)  # whisker pads
+        b.add(Ellipsoid(mz - up * mr * 0.62 - d * mr * 0.1, (mr * 0.42, mr * 0.38, mr * 0.3), O(mz)), jw, k=mr * 0.25, tau=tau)     # the chin
+        nose = mz + d * mr * 0.5 + up * mr * 0.3
+        b.add(Ellipsoid(nose - d * mr * 0.12, (mr * 0.3, mr * 0.18, mr * 0.2), O(nose)), 'head', k=mr * 0.1, tau=tau)              # the leather
+        ec = sk + d * hL * (0.2 + p['eyeFwd'] * 0.06) + up * hH * 0.12 + X * hW * 0.29
+    else:  # the dogs, the wolf, the foxes, the hyena, the bears
+        b.add(Ellipsoid(sk, (hW * 0.48, hL * 0.3, hH * 0.48), O(sk)), 'head', k=hH * 0.25, tau=tau)                                 # the braincase
+        st = sk + d * hL * 0.22 + up * hH * 0.06
+        b.add(Ellipsoid(st, (hW * 0.28, hL * 0.13, hH * 0.26 * max(p['stop'], 0.3)), O(st)), 'head', k=hH * 0.2, tau=tau)         # the stop, the brow
+        for sd in (1, -1):
+            c = sk + d * hL * 0.1 - up * hH * 0.22 + X * sd * hW * 0.22
+            b.add(Ellipsoid(c, (hW * 0.24 * p['cheek'], hL * 0.2, hH * 0.26 * p['cheek']), O(c)), 'head', k=hH * 0.25, tau=tau)   # the cheeks
+        a0 = sk + d * hL * 0.24 - up * hH * 0.1; a1 = mz + d * mr * 0.55; mc = (a0 + a1) / 2; ml = np.linalg.norm(a1 - a0) / 2; rr = mr * 0.42
+        b.add(RBox(mc, (mr * 0.78 * p['muzFlat'] - rr, ml - rr, mr * 0.62 - rr), rr, O(mc)), 'head', k=mr * 0.45, tau=tau)        # the muzzle
+        b.add(RoundCone(sk + d * hL * 0.12 - up * hH * 0.3, a1 - up * mr * 0.62 - d * mr * 0.35, hH * 0.2, mr * 0.42, flat=((1, 0, 0), 0.85)), jw, k=hH * 0.15, tau=tau)  # the lower jaw
+        nose = a1 + up * mr * 0.16
+        b.add(Ellipsoid(nose - d * mr * 0.16, (mr * 0.45, mr * 0.25, mr * 0.3), O(nose)), 'head', k=mr * 0.15, tau=tau)            # the leather
+        ec = sk + d * hL * (0.2 + p['eyeFwd'] * 0.05) + up * hH * 0.16 + X * hW * (0.36 - p['eyeFwd'] * 0.04)
+    b.meta['nose'] = list(nose)
+    return mz, mr, ec
+
+
+def head_rest(b, p, sk, d, up, hL, hH, hW, tau, mr, ec):
+    """What every head has after its face: the nostrils, the eyes (under a brow, for some), the ears."""
+    H = b.H; face = p['face']
+    nose = np.array(b.meta['nose'])
+    ns = {'felid': 0.14, 'canid': 0.24, 'bear': 0.26, 'primate': 0.2, 'hippo': 0.0}.get(face, 0.38); nr = {'felid': 0.08, 'primate': 0.1}.get(face, 0.16)
+    if face == 'hippo': ns = b.meta['p']['headW'] * b.meta['p']['headL'] * b.H * 0.2 / max(mr, 1e-4)
+    for sd in (1, -1):
+        b.cut(Sphere(nose + v3(sd * mr * ns, mr * 0.08, -mr * 0.05), mr * nr), k=mr * nr * 0.5)
     er = p['eyeR'] * H
     if p['brow']:
         for sd in (1, -1): b.add(Ellipsoid(ec * v3(sd, 1, 1) + up * er * 1.1 - d * er * 0.2, (er * 1.4, er * 0.7 * p['brow'], er * 1.6)), 'head', k=er, tau=tau)
-    eyes(b, ec + v3(-er * 0.35, 0, 0), er)
+    fw = min(0.85, p['eyeFwd'] * 0.75)  # (the eye sunk into the head along its own face: sideways for the grazers, forward for the hunters)
+    eyes(b, ec - (v3(1, 0, 0) * (1 - fw) + d * fw) * er * 0.35, er)
     b.meta['eye'] = list(ec)
     # the ears: from the skull's top, up and out and back; cupped in front; folded down for a drooping ear
     eL = p['earL'] * H; eW = p['earW'] * H; eT = max(p['earT'] * H, 0.004)
@@ -253,8 +367,18 @@ def head(b, p, poll, Dc):
         ej = b.j('ear%s' % s, base)
         c = base + ed * eL * 0.5
         R = frame_from(ed, d if p['earFace'] == 'fwd' else v3(sd, 0, 0.35))
-        b.add(Ellipsoid(c, (eW, eL * 0.52, eT * 1.6), R), 'ear%s' % s, k=eT * 1.5, tau=max(0.006, eL * 0.25))
-        if p['earCup'] and p['earFace'] == 'fwd': b.cut(Ellipsoid(c + R[:, 2] * eT * 1.2 + ed * eL * 0.05, (eW * 0.72, eL * 0.42, eT * 1.1), R), k=eT * 0.4)
+        tip = p['earTip']
+        if eL - eW * tip - eW * 0.3 < (1 - tip) * eW * 1.15: tip = 1.0  # (too short an ear for a leaf: a round one)
+        if tip >= 0.95:  # (a round ear: the bear's, the monkey's, the elephant's)
+            b.add(Ellipsoid(c, (eW, eL * 0.52, eT * 1.6), R), 'ear%s' % s, k=eT * 1.5, tau=max(0.006, eL * 0.25))
+            if p['earCup'] and p['earFace'] == 'fwd': b.cut(Ellipsoid(c + R[:, 2] * eT * 1.2 + ed * eL * 0.05, (eW * 0.72, eL * 0.42, eT * 1.1), R), k=eT * 0.4)
+        else:  # (a leaf: broad at its root, narrowing to the tip — pointed for the cats and the foxes, rounder for the hare)
+            n = R[:, 2]; fl = (n, float(np.clip(eT * 1.6 / eW, 0.05, 1.0)))
+            b.add(RoundCone(base + ed * eW * 0.3, base + ed * (eL - eW * tip), eW, eW * tip, flat=fl), 'ear%s' % s, k=eT * 1.5, tau=max(0.006, eL * 0.25))
+            if p['earCup'] and p['earFace'] == 'fwd':
+                if eL * 0.9 - eW * tip - eW * 0.7 > (0.7 - 0.55 * tip) * eW * 1.15:
+                    b.cut(RoundCone(base + ed * eW * 0.7 + n * eT * 1.3, base + ed * (eL * 0.9 - eW * tip) + n * eT * 1.3, eW * 0.7, eW * tip * 0.55, flat=fl), k=eT * 0.4)
+                else: b.cut(Ellipsoid(c + n * eT * 1.2 + ed * eL * 0.05, (eW * 0.62, eL * 0.4, eT * 1.1), R), k=eT * 0.4)  # (a short ear's cup)
         b.meta.setdefault('ears', []).append([list(base), list(base + ed * eL)])
 
 
@@ -281,9 +405,11 @@ def tail(b, p, Hc, Dh, L):
     if t in ('puff', 'short', 'flag'):
         c = t0 + nrm(dirs[0]) * tl * 0.3
         b.add(Ellipsoid(c, (tr * 1.1, tr * 1.3, tl * 0.42)), 'tail3', k=tr * 1.2)
+        b.meta['tailR'] = round(float(tr * 1.3), 4)
         return
     radii = {'hang': [1, 0.8, 0.6, 0.45, 0.4], 'tuft': [1, 0.7, 0.5, 0.4, 0.35], 'thin': [1, 0.75, 0.55, 0.45, 0.35], 'bushy': [1.0, 1.6, 1.9, 1.7, 0.8],
              'long': [1, 0.85, 0.75, 0.7, 0.6], 'up': [1, 0.85, 0.7, 0.6, 0.5], 'curl': [1, 0.8, 0.6, 0.5, 0.4], 'flat': [0.9, 1.0, 1.0, 1.0, 0.8], 'croc': [1, 0.72, 0.5, 0.3, 0.12]}[t]
+    b.meta['tailR'] = round(float(tr * max(radii) * (2.2 if t == 'flat' else 1.0)), 4)
     for k in range(4):
         a, c = pts[k], pts[k + 1]
         if t == 'flat':
@@ -302,14 +428,27 @@ def tail(b, p, Hc, Dh, L):
 # ------------------------------ the birds ------------------------------
 BDEF = dict(bodyL=0.42, bw=0.11, bh=0.12, legH=0.25, legR=0.012, neckL=0.12, neckR=0.035, neckS=0.0, neckA=70, headR=0.045,
             beak='cone', beakL=0.04, beakR=0.012, tailL=0.14, tailW=0.08, span=0.6, chord=0.16, fingers=0, wingFold=1.0,
-            upright=False, toes=3, comb=0.0, wattle=0.0, crest=0.0, ruff=0.0, flipper=False, legThick=1.0, eyeR=0.009, disc=0.0, plumes=0.0)
+            upright=False, toes=3, comb=0.0, wattle=0.0, crest=0.0, ruff=0.0, flipper=False, legThick=1.0, eyeR=0.009, disc=0.0, plumes=0.0,
+            brow=0.0, trousers=0.0)
 
 
-def tilt_bird(b, a, P):
+def tilt_bird(b, a, P, only=None):
     """Turn what is built of a bird so far (its body, neck, head, tail, wings) up by a about the point P, about X — an eagle,
-    an owl, a parrot sit upright on their perch."""
+    an owl, a parrot sit upright on their perch. only: just what hangs from these bones (the head, its beak, its eyes)."""
     Rm = rot_x(-a)
     T = lambda q: P + Rm @ (np.asarray(q, float) - P)
+    if only:
+        for pr in b.P:
+            if pr.bone in only: tp1(pr, T, Rm)
+        for pc in b.pieces:
+            if all(pr.bone in only for pr in pc['P']) or 'eye' in pc:
+                for pr in pc['P']: tp1(pr, T, Rm)
+                if 'eye' in pc: pc['eye'] = (T(pc['eye'][0]), pc['eye'][1])
+        for k in ('nose', 'eye'):
+            if k in b.meta: b.meta[k] = list(T(b.meta[k]))
+        for k in only:
+            if k in b.J: b.J[k] = T(b.J[k])
+        return
     def tp(pr):
         if hasattr(pr, 'a') and hasattr(pr, 'ra'):
             pr.a = T(pr.a); pr.b = T(pr.b)
@@ -325,6 +464,15 @@ def tilt_bird(b, a, P):
     for k in list(b.J): b.J[k] = T(b.J[k])
     for k in ('nose', 'eye'):
         if k in b.meta: b.meta[k] = list(T(b.meta[k]))
+
+
+def tp1(pr, T, Rm):
+    if hasattr(pr, 'a') and hasattr(pr, 'ra'):
+        pr.a = T(pr.a); pr.b = T(pr.b)
+        if pr.flat is not None: pr.flat = (Rm @ np.asarray(pr.flat[0], float), pr.flat[1])
+    elif hasattr(pr, 'c'):
+        pr.c = T(pr.c)
+        if hasattr(pr, 'R'): pr.R = Rm if pr.R is None else Rm @ pr.R
 
 
 def bird(b, fly=False, **kw):
@@ -363,10 +511,14 @@ def bird(b, fly=False, **kw):
     # the head and the beak
     hr = p['headR']; hc = hd + v3(0, hr * 0.3, hr * 0.2)
     b.add(Ellipsoid(hc, (hr * 0.92, hr, hr * 1.1)), 'head', k=hr * 0.4)
-    if p['disc']: b.add(Ellipsoid(hc + v3(0, 0, hr * 0.5), (hr * 1.15, hr * 1.05, hr * 0.5)), 'head', k=hr * 0.3)  # (the owl's face)
+    if p['disc']:  # (the owl's face: a flat disc of feathers, a dish round each eye, the eyes to the front)
+        b.add(Ellipsoid(hc + v3(0, -hr * 0.02, hr * 0.5), (hr * 1.18, hr * 1.08, hr * 0.42)), 'head', k=hr * 0.25)
+        for sd in (1, -1): b.cut(Sphere(hc + v3(sd * hr * 0.43, hr * 0.12, hr * 1.42), hr * 0.62), k=hr * 0.12)
+    if p['brow']:  # (a hunter's brow over the eye: the eagle's frown)
+        for sd in (1, -1): b.add(Ellipsoid(hc + v3(sd * hr * 0.52, hr * 0.42, hr * 0.42), (hr * 0.34, hr * 0.16, hr * 0.42)), 'head', k=hr * 0.15)
     bk0 = hc + v3(0, -hr * 0.1, hr * 0.85); BL, BR = p['beakL'], p['beakR']; kind = p['beak']
-    if kind == 'hook':
-        pts = [bk0, bk0 + v3(0, -BL * 0.05, BL * 0.6), bk0 + v3(0, -BL * 0.45, BL * 0.95)]; rr = [BR, BR * 0.6, BR * 0.15]
+    if kind == 'hook':  # (deep at its root, the tip curled down over the lower bill)
+        pts = [bk0, bk0 + v3(0, -BL * 0.02, BL * 0.55), bk0 + v3(0, -BL * 0.22, BL * 0.9), bk0 + v3(0, -BL * 0.58, BL * 0.98)]; rr = [BR, BR * 0.72, BR * 0.38, BR * 0.1]
     elif kind == 'spear':
         pts = [bk0, bk0 + v3(0, -BL * 0.05, BL * 0.5), bk0 + v3(0, -BL * 0.1, BL)]; rr = [BR, BR * 0.55, BR * 0.08]
     elif kind == 'flat':
@@ -377,10 +529,10 @@ def bird(b, fly=False, **kw):
         pts = [bk0, bk0 + v3(0, -BL * 0.05, BL * 0.55), bk0 + v3(0, -BL * 0.18, BL)]; rr = [BR, BR * 0.75, BR * 0.2]
     else:
         pts = [bk0, bk0 + v3(0, -BL * 0.1, BL * 0.6), bk0 + v3(0, -BL * 0.25, BL)]; rr = [BR, BR * 0.55, BR * 0.12]
-    bprim = [(RoundCone(pts[k], pts[k + 1], rr[k], rr[k + 1], flat=((1, 0, 0), 0.8 if kind not in ('flat',) else 1.3)), 'head') for k in range(2)]
+    bprim = [(RoundCone(pts[k], pts[k + 1], rr[k], rr[k + 1], flat=((1, 0, 0), 0.8 if kind not in ('flat',) else 1.3)), 'head') for k in range(len(pts) - 1)]
     b.piece('bico', 'bico', bprim, 40 if kind != 'toucan' else 70, far=8, h=max(0.0015, BR * 0.35))
     b.meta['nose'] = list(pts[-1]); b.j('jaw', bk0)
-    eyes(b, hc + v3(hr * 0.68, hr * 0.2, hr * 0.42 + (hr * 0.35 if p['disc'] else 0)) - v3(0, 0, 0), p['eyeR'])
+    eyes(b, hc + (v3(hr * 0.42, hr * 0.12, hr * 0.74) if p['disc'] else v3(hr * 0.68, hr * 0.2, hr * 0.42)), p['eyeR'])
     b.meta['eye'] = list(hc)
     if p['comb']:  # (the rooster's comb, the wattles under the beak)
         b.piece('crista', 'crista', [(Ellipsoid(hc + v3(0, hr * 1.05, hr * 0.2), (hr * 0.2, hr * 0.6 * p['comb'], hr * 0.85)), 'head'),
@@ -399,7 +551,8 @@ def bird(b, fly=False, **kw):
     for sd, s in ((1, 'L'), (-1, 'R')):
         if up:  # flippers
             sh = b.j('fl%s0' % s, (sd * bw * 0.85, yb + bh * 0.45, 0)); el = b.j('fl%s1' % s, sh + v3(sd * 0.02, -bh * 0.4, 0)); wr = b.j('fl%s2' % s, sh + v3(sd * 0.04, -bh * 0.8, -0.01)); b.j('fl%s3' % s, sh + v3(sd * 0.05, -bh * 1.1, -0.02))
-            b.piece('asa' + s, 'asa', [(ell_between(sh, sh + v3(sd * 0.05, -bh * 1.15, -0.02), bw * 0.32, 0.012), 'fl%s1' % s)], 40, far=8, h=0.003)
+            # (a flipper: a flat paddle held a little out from the body, broad at its middle, narrowing to the tip)
+            b.piece('asa' + s, 'asa', [(K(ell_between(sh + v3(-sd * bw * 0.05, bh * 0.05, 0), sh + v3(sd * bh * 0.32, -bh * 1.08, -bw * 0.12), bw * 0.34, bw * 0.06), 0), 'fl%s1' % s)], 48, far=8, h=0.003)
             continue
         sh = b.j('fl%s0' % s, (sd * bw * 0.7, yb + bh * 0.35, bL * 0.22))
         if not fly:
@@ -425,7 +578,9 @@ def bird(b, fly=False, **kw):
                 prims.append((K(ell_between(wr + v3(0, 0, -ch * 0.3), tip, ch * 0.42, th), th * 2), 'fl%s2' % s))
             b.piece('asa' + s, 'asa', prims, 150, far=24, h=max(0.0025, th * 0.45))
         b.pieces[-1]['wing'] = (list(sh), sp if fly else sp * 0.8)
-    if p.get('tilt') and not up and not fly: tilt_bird(b, p['tilt'], v3(0, yb - bh * 0.25, -bL * 0.05))
+    if p.get('tilt') and not up and not fly:
+        tilt_bird(b, p['tilt'], v3(0, yb - bh * 0.25, -bL * 0.05))
+        tilt_bird(b, -p['tilt'] * 0.8, np.array(b.J['head']), only=('head', 'jaw'))  # (the head kept level on the upright body)
     # the legs
     lr = p['legR']
     for sd, s in ((1, 'L'), (-1, 'R')):
@@ -437,7 +592,9 @@ def bird(b, fly=False, **kw):
             hp = b.j('hl%s0' % s, (X, yb - bh * 0.25, -bL * 0.02)); kn = b.j('hl%s1' % s, (X * 1.05, yb - bh * (0.7 - 0.35 * tl), bL * 0.08 - bL * 0.1 * tl))
             hl = b.j('hl%s2' % s, (X * 1.05, legH * 0.55, -bL * 0.06)); ft = b.j('hl%s3' % s, (X * 1.05, 0.012, 0.0))
         b.add(RoundCone(kn, hl, lr * 2.4 * p['legThick'], lr * 1.1), 'hl%s1' % s, k=lr * 2)                                          # the drumstick
-        leg = [(RoundCone(hl + v3(0, lr, 0), ft, lr * p['legThick'], lr * 0.9 * p['legThick']), 'hl%s2' % s)]
+        if p['trousers']:  # (feathered down to the foot: the eagle's, the owl's)
+            b.add(RoundCone(kn + v3(0, 0, -lr), lerp(hl, ft, p['trousers']), lr * 2.9 * p['legThick'], lr * 1.7 * p['legThick']), 'hl%s1' % s, k=lr * 1.5)
+        leg = [(RoundCone(hl + v3(0, lr, 0), ft + v3(0, lr * 0.75 * p['legThick'], 0), lr * p['legThick'], lr * 0.9 * p['legThick']), 'hl%s2' % s)]  # (its round end over the toes, not under them)
         toeL = max(legH * 0.28, bw * 0.4) if not up else bw * 0.35
         for k, ang in enumerate((-0.45, 0.0, 0.45) if p['toes'] == 3 else (-0.15, 0.25)):
             tip = ft + v3(sd * np.sin(ang) * toeL + 0 * sd, -0.008, np.cos(ang) * toeL)
@@ -470,10 +627,14 @@ def snake(b, R=0.05, headW=1.6, headL=0.055, **kw):
         b.add(RoundCone(pts[k], pts[k + 1], prof(SNAKE_S[k]), prof(SNAKE_S[k + 1]), flat=((0, 1, 0), 0.82)), SNAKE_J[k + 1] if k >= 3 else SNAKE_J[k], k=R * 0.06)
     hd = pts[-1]; hw = R * headW; hl = headL * L
     hc = hd + v3(0, R * 0.05, hl * 0.4)
-    b.add(Ellipsoid(hc, (hw * 0.5, R * 0.62, hl * 0.6)), 'head', k=R * 0.7)
+    b.add(Ellipsoid(hc, (hw * 0.5, R * 0.5, hl * 0.6)), 'head', k=R * 0.5)
     b.add(Ellipsoid(hc + v3(0, -R * 0.08, hl * 0.4), (hw * 0.32, R * 0.48, hl * 0.4)), 'head', k=R * 0.3)
+    for sd in (1, -1):
+        b.add(Ellipsoid(hc + v3(sd * hw * 0.27, -R * 0.12, -hl * 0.18), (hw * 0.25, R * 0.44, hl * 0.34)), 'head', k=R * 0.25)   # the jaw's corner
+        b.add(Ellipsoid(hc + v3(sd * hw * 0.34, R * 0.4, hl * 0.12), (hw * 0.15, R * 0.13, hl * 0.2)), 'head', k=R * 0.1)       # the scale over the eye
+    b.add(Ellipsoid(hc + v3(0, R * 0.32, hl * 0.05), (hw * 0.34, R * 0.2, hl * 0.48)), 'head', k=R * 0.2)                       # the flat crown
     b.j('jaw', hc); b.meta['nose'] = list(hc + v3(0, 0, hl * 0.8))
-    eyes(b, hc + v3(hw * 0.42, R * 0.25, hl * 0.15), R * 0.18)
+    eyes(b, hc + v3(hw * 0.4, R * 0.24, hl * 0.18), R * 0.21)
     b.meta['eye'] = list(hc)
     for s in ('L', 'R'):
         for k in range(4): b.j('fl%s%d' % (s, k), b.J['chest']); b.j('hl%s%d' % (s, k), b.J['root'])

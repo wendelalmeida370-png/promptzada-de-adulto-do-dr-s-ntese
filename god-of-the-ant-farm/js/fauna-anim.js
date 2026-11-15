@@ -31,15 +31,16 @@
   const sstep = u => u * u * (3 - 2 * u);
 
   // ------------------------------ the pose ------------------------------
-  let THREE = null; const R = []; let Mb = null, Eu = null, Tm = null;
+  let THREE = null; const R = []; let Mb = null, Eu = null, Tm = null, Vs = null, I4 = null;
   const E = new Float32Array(NB * 3); // (each bone's turn about its joint: x pitch — + bows a forward-pointing bone down, swings a hanging one back —, y yaw, z roll)
   const OFF = new Float32Array(3);    // (the root's shift: the body's rise and fall)
-  function start(three) { THREE = three; for (let b = 0; b < NB; b++) R.push(new THREE.Matrix4()); Mb = new THREE.Matrix4(); Eu = new THREE.Euler(0, 0, 0, 'YXZ'); Tm = new THREE.Matrix4(); }
+  const SC = new Float32Array(NB).fill(1); // (each bone's size, its children growing with it: the young's bigger head, longer legs)
+  function start(three) { THREE = three; for (let b = 0; b < NB; b++) R.push(new THREE.Matrix4()); Mb = new THREE.Matrix4(); Eu = new THREE.Euler(0, 0, 0, 'YXZ'); Tm = new THREE.Matrix4(); Vs = new THREE.Vector3(); I4 = new THREE.Matrix4(); }
   // the bones' frames in the world: m the beast's own frame (where it stands, which way it faces — its +Z forward —, its
   // size), J its joints as modelled
   function chain(m, J) {
     for (let b = 0; b < NB; b++) {
-      const p = FA.PARENT[b]; Eu.set(E[b * 3], E[b * 3 + 1], E[b * 3 + 2], 'YXZ'); Mb.makeRotationFromEuler(Eu);
+      const p = FA.PARENT[b]; Eu.set(E[b * 3], E[b * 3 + 1], E[b * 3 + 2], 'YXZ'); Mb.makeRotationFromEuler(Eu); if (SC[b] !== 1) Mb.scale(Vs.set(SC[b], SC[b], SC[b]));
       if (p < 0) { Mb.setPosition(J[0] + OFF[0], J[1] + OFF[1], J[2] + OFF[2]); R[b].multiplyMatrices(m, Mb); }
       else { Mb.setPosition(J[b * 3] - J[p * 3], J[b * 3 + 1] - J[p * 3 + 1], J[b * 3 + 2] - J[p * 3 + 2]); R[b].multiplyMatrices(R[p], Mb); }
     }
@@ -47,61 +48,179 @@
   }
   FA.R = () => R;
   // gaits: the offset of each leg in the stride (left fore, right fore, left hind, right hind), how long a foot stays down,
-  // how far the body goes in one stride (× the leg's length), how far a leg folds as it swings
+  // how far the body goes in one stride (× the leg's length), how far a leg folds as it swings, how high the foot is lifted
   const GAITS = {
-    walk: { off: [0.25, 0.75, 0.0, 0.5], duty: 0.62, stride: 1.25, fold: 0.8 },
-    trot: { off: [0.0, 0.5, 0.5, 0.0], duty: 0.46, stride: 1.9, fold: 1.0 },
-    gallop: { off: [0.55, 0.45, 0.0, 0.1], duty: 0.34, stride: 3.0, fold: 1.25 },
-    hop: { off: [0.5, 0.55, 0.0, 0.04], duty: 0.36, stride: 2.6, fold: 1.1 },
+    walk: { off: [0.25, 0.75, 0.0, 0.5], duty: 0.62, stride: 1.25, fold: 0.8, lift: 0.1 },
+    trot: { off: [0.0, 0.5, 0.5, 0.0], duty: 0.46, stride: 1.9, fold: 1.0, lift: 0.15 },
+    gallop: { off: [0.55, 0.45, 0.0, 0.1], duty: 0.34, stride: 3.0, fold: 1.25, lift: 0.2 },
+    hop: { off: [0.5, 0.55, 0.0, 0.04], duty: 0.36, stride: 2.6, fold: 1.1, lift: 0.18 },
   };
   FA.gaitOf = (v, legLen, pillar, hop) => hop ? 'hop' : FA.gaitOf0(v, legLen, pillar);
   FA.gaitOf0 = (v, legLen, pillar) => { const fr = v / Math.sqrt(9.8 * Math.max(0.05, legLen)); return fr < 0.42 || (pillar && fr < 1.6) ? 'walk' : fr < 1.25 || pillar ? 'trot' : 'gallop'; };
   FA.strideOf = (gait, legLen) => GAITS[gait].stride * Math.max(0.05, legLen);
+  // ------------------------------ the legs: set by where the foot goes ------------------------------
+  // (in the beast's side plane a point is (z forward, y up); a pitch t turns it as the bones turn — + takes forward to down)
+  const rz = (z, y, t) => y * Math.sin(t) + z * Math.cos(t), ry = (z, y, t) => y * Math.cos(t) - z * Math.sin(t);
+  const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+  const LEGS = ['flL', 'flR', 'hlL', 'hlR'];
+  // where the top of a leg is now (P0w), and how far its parent has turned — the hind legs hang from the root, the fore from
+  // the chest
+  const P0w = [0, 0];
+  function legTop(J, L) {
+    const i0 = B[L + '0'] * 3, C0 = E[0];
+    let z = J[2] + OFF[2], y = J[1] + OFF[1];
+    if (L[0] === 'h') { const dz = J[i0 + 2] - J[2], dy = J[i0 + 1] - J[1]; P0w[0] = z + rz(dz, dy, C0); P0w[1] = y + ry(dz, dy, C0); return C0; }
+    const sp = B.spine * 3, ch = B.chest * 3; let dz = J[sp + 2] - J[2], dy = J[sp + 1] - J[1]; z += rz(dz, dy, C0); y += ry(dz, dy, C0);
+    const C1 = C0 + E[sp]; dz = J[ch + 2] - J[sp + 2]; dy = J[ch + 1] - J[sp + 1]; z += rz(dz, dy, C1); y += ry(dz, dy, C1);
+    const C2 = C1 + E[ch]; dz = J[i0 + 2] - J[ch + 2]; dy = J[i0 + 1] - J[ch + 1]; P0w[0] = z + rz(dz, dy, C2); P0w[1] = y + ry(dz, dy, C2); return C2;
+  }
+  // a leg brought to its target: the joint of its foot (the fetlock, the ankle) to (Tz, Ty) by the upper two bones, the lower
+  // joint (the knee, the hock) bent by kap, the foot lying at the turn ft (0: flat, as it stands); s the size of the leg below the
+  // elbow or the stifle (the young's). Returns whether the foot reached.
+  function legTo(J, L, Cp, Tz, Ty, kap, ft, s) {
+    const i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3, i2 = B[L + '2'] * 3, i3 = B[L + '3'] * 3;
+    const a1z = J[i1 + 2] - J[i0 + 2], a1y = J[i1 + 1] - J[i0 + 1], a2z = J[i2 + 2] - J[i1 + 2], a2y = J[i2 + 1] - J[i1 + 1], a3z = J[i3 + 2] - J[i2 + 2], a3y = J[i3 + 1] - J[i2 + 1];
+    const cz = (a2z + rz(a3z, a3y, kap)) * s, cy = (a2y + ry(a3z, a3y, kap)) * s; // (below the middle joint, as one piece)
+    const l1 = Math.hypot(a1z, a1y), l2 = Math.hypot(cz, cy), b1 = Math.atan2(a1y, a1z), b2 = Math.atan2(cy, cz);
+    const dz = Tz - P0w[0], dy = Ty - P0w[1], al = Math.atan2(dy, dz); let d = Math.hypot(dz, dy); const dmax = (l1 + l2) * 0.999; const reach = d <= dmax;
+    d = clamp(d, Math.abs(l1 - l2) * 1.001 + 1e-5, dmax);
+    const sg = a1z * (a1y + a2y + a3y) - a1y * (a1z + a2z + a3z) >= 0 ? -1 : 1; // (the middle joint bends the way it is modelled)
+    const p1 = al + sg * Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+    const ez = P0w[0] + l1 * Math.cos(p1), ey = P0w[1] + l1 * Math.sin(p1); const p2 = Math.atan2(P0w[1] + d * Math.sin(al) - ey, P0w[0] + d * Math.cos(al) - ez);
+    const t0 = b1 - p1 - Cp, t1 = b2 - p2 - Cp - t0;
+    E[i0] = t0; E[i1] = t1; E[i2] = kap; E[i3] = ft - (Cp + t0 + t1 + kap);
+    return reach;
+  }
+  // a bird's leg: it steps with the knee and the heel, the thigh kept still against the body — the foot's joint to (Tz, Ty) by
+  // the drumstick and the shank, the foot at the turn ft
+  function legToB(J, L, Cp, Tz, Ty, ft) {
+    const i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3, i2 = B[L + '2'] * 3, i3 = B[L + '3'] * 3;
+    const a2z = J[i2 + 2] - J[i1 + 2], a2y = J[i2 + 1] - J[i1 + 1], a3z = J[i3 + 2] - J[i2 + 2], a3y = J[i3 + 1] - J[i2 + 1];
+    const kz = P0w[0] + rz(J[i1 + 2] - J[i0 + 2], J[i1 + 1] - J[i0 + 1], Cp), ky = P0w[1] + ry(J[i1 + 2] - J[i0 + 2], J[i1 + 1] - J[i0 + 1], Cp);
+    const l1 = Math.hypot(a2z, a2y), l2 = Math.hypot(a3z, a3y), b1 = Math.atan2(a2y, a2z), b2 = Math.atan2(a3y, a3z);
+    const dz = Tz - kz, dy = Ty - ky, al = Math.atan2(dy, dz); const d = clamp(Math.hypot(dz, dy), Math.abs(l1 - l2) * 1.001 + 1e-5, (l1 + l2) * 0.999);
+    const sg = a2z * (a2y + a3y) - a2y * (a2z + a3z) >= 0 ? -1 : 1;
+    const p1 = al + sg * Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+    const ez = kz + l1 * Math.cos(p1), ey = ky + l1 * Math.sin(p1); const p2 = Math.atan2(ky + d * Math.sin(al) - ey, kz + d * Math.cos(al) - ez);
+    E[i0] = 0; E[i1] = b1 - p1 - Cp; E[i2] = b2 - p2 - Cp - E[i1]; E[i3] = ft - (Cp + E[i1] + E[i2]);
+  }
+  // a plantigrade leg (the bear's, the hare's hind one): its whole sole, heel to toes, lies on the ground — the hock brought where
+  // the sole puts it by the two bones above, the sole turned by ft (0: flat, as it stands)
+  function legToP(J, L, Cp, Tz, Ty, ft, s) {
+    const i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3, i2 = B[L + '2'] * 3, i3 = B[L + '3'] * 3;
+    const a1z = J[i1 + 2] - J[i0 + 2], a1y = J[i1 + 1] - J[i0 + 1], a2z = (J[i2 + 2] - J[i1 + 2]) * s, a2y = (J[i2 + 1] - J[i1 + 1]) * s;
+    const hz = Tz + rz((J[i2 + 2] - J[i3 + 2]) * s, (J[i2 + 1] - J[i3 + 1]) * s, ft), hy = Ty + ry((J[i2 + 2] - J[i3 + 2]) * s, (J[i2 + 1] - J[i3 + 1]) * s, ft);
+    const l1 = Math.hypot(a1z, a1y), l2 = Math.hypot(a2z, a2y), b1 = Math.atan2(a1y, a1z), b2 = Math.atan2(a2y, a2z);
+    const dz = hz - P0w[0], dy = hy - P0w[1], al = Math.atan2(dy, dz); const d = clamp(Math.hypot(dz, dy), Math.abs(l1 - l2) * 1.001 + 1e-5, (l1 + l2) * 0.999);
+    const sg = a1z * (a1y + a2y) - a1y * (a1z + a2z) >= 0 ? -1 : 1;
+    const p1 = al + sg * Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+    const ez = P0w[0] + l1 * Math.cos(p1), ey = P0w[1] + l1 * Math.sin(p1); const p2 = Math.atan2(P0w[1] + d * Math.sin(al) - ey, P0w[0] + d * Math.cos(al) - ez);
+    E[i0] = b1 - p1 - Cp; E[i1] = b2 - p2 - Cp - E[i0]; E[i2] = ft - (Cp + E[i0] + E[i1]); E[i3] = 0;
+  }
+  // (how far a leg reaches from its top to its foot's joint, the lower joint bent by kap)
+  function reachOf(J, L, kap, s) {
+    const i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3, i2 = B[L + '2'] * 3, i3 = B[L + '3'] * 3;
+    const a3z = J[i3 + 2] - J[i2 + 2], a3y = J[i3 + 1] - J[i2 + 1];
+    return (Math.hypot(J[i1 + 2] - J[i0 + 2], J[i1 + 1] - J[i0 + 1]) + Math.hypot(J[i2 + 2] - J[i1 + 2] + rz(a3z, a3y, kap), J[i2 + 1] - J[i1 + 1] + ry(a3z, a3y, kap)) * s) * 0.999;
+  }
+  // (how high the lower joint of a leg — the knee, the hock — is, as legTo left it)
+  function lowJoint(J, L, Cp, s) {
+    const i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3, i2 = B[L + '2'] * 3; const C0 = Cp + E[i0], C1 = C0 + E[i1];
+    return P0w[1] + ry(J[i1 + 2] - J[i0 + 2], J[i1 + 1] - J[i0 + 1], C0) + ry(J[i2 + 2] - J[i1 + 2], J[i2 + 1] - J[i1 + 1], C1) * s;
+  }
+  // a foot that is down at z: flat on the ground — or, where the leg cannot reach it so (the ends of the stride), rolled up on its
+  // toe (behind) or its heel (in front), as a hoof is. Gives where its joint goes and its turn.
+  const ST = [0, 0, 0];
+  function downAt(J, L, z, y3, rf, s) {
+    ST[0] = z; ST[1] = y3; ST[2] = 0;
+    const R2 = reachOf(J, L, 0, s); if (Math.hypot(z - P0w[0], y3 - P0w[1]) <= R2) return ST;
+    const back = z < P0w[0], pz = z + (back ? rf : -rf), vz = back ? -rf : rf; let lo = 0, hi = 1.1;
+    for (let k = 0; k < 10; k++) { const mid = (lo + hi) * 0.5, tt = back ? mid : -mid; if (Math.hypot(pz + rz(vz, y3, tt) - P0w[0], ry(vz, y3, tt) - P0w[1]) <= R2) hi = mid; else lo = mid; }
+    const tt = back ? hi : -hi; ST[0] = pz + rz(vz, y3, tt); ST[1] = ry(vz, y3, tt); ST[2] = tt; return ST;
+  }
+  // (each kind's feet as modelled: the foot joint's height, where it stands, the foot's half length — read once a form)
+  function legsOf(form) {
+    if (form._legs) return form._legs; const J = form.J, H = form.meta.H;
+    const ft = form.meta.foot || (form.meta.dig ? 'paw' : 'hoof'), k = ft === 'bearpaw' ? 6.0 : ft === 'paw' ? 2.9 : ft === 'pad' ? 1.6 : ft === 'pillar' ? 2.0 : 0.9; // (a paw's toes reach far ahead of its joint; a hoof is short)
+    form._legs = LEGS.map(L => { const i2 = B[L + '2'] * 3, i3 = B[L + '3'] * 3; const y3 = J[i3 + 1];
+      const plant = Math.abs(J[i3 + 2] - J[i2 + 2]) > 0.8 * Math.abs(J[i2 + 1] - J[i3 + 1]); // (the sole from the hock or the wrist runs more forward than down)
+      return { z: J[i3 + 2], y3, rf: y3 * k + H * 0.01, plant }; });
+    return form._legs;
+  }
   // the pose of a beast on four legs. st: { v (m/s), ph (the stride's phase, in strides), t (the view's clock), graze (0..1),
-  // look (-1..1), id, ears (0 up, 1 back), tail (0 down, 1 up), jaw (0 shut, 1 open), sit, crouch }
+  // look (-1..1), id, ears (0 up, 1 back), tail (0 down, 1 up), jaw (0 shut, 1 open), sit, young (0 grown .. 1 newborn), fy (the
+  // ground under each foot — left fore, right fore, left hind, right hind — over the frame's plane, in the beast's measure) }
   FA.quad = function (three, m, form, sp, st) {
     if (!THREE) start(three);
-    const J = form.J; E.fill(0); OFF.fill(0);
+    const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
     const legF = J[B.flL0 * 3 + 1], legH = J[B.hlL0 * 3 + 1], LL = (legF + legH) * 0.5;
     const pillar = !!form.meta.pillar, dig = !!form.meta.dig;
     const gait = st.v < 0.04 ? null : form.meta.hop ? 'hop' : FA.gaitOf(st.v, LL, pillar); const G0 = gait ? GAITS[gait] : null;
     const go = gait ? Math.min(1, st.v / 0.25) : 0; // (from standing into the stride: the legs begin to swing)
     const ph = st.ph, t = st.t, id = st.id || 0;
+    // the young: the head bigger, the legs longer below the elbow and the stifle (the hoofed most: a foal is all legs), the body
+    // raised by as much
+    const yg = st.young || 0, hoofed = form.meta.foot ? /hoof|cloven|pad/.test(form.meta.foot) : !dig && !pillar;
+    const sL = 1 + yg * (hoofed ? 0.24 : 0.06);
+    if (yg) { SC[B.head] = 1 + yg * (hoofed ? 0.26 : 0.34); SC[B.trunk0] = (1 - yg * 0.3) / SC[B.head]; for (const L of LEGS) SC[B[L + '1']] = sL; OFF[1] += (sL - 1) * (J[B.flL1 * 3 + 1] + J[B.hlL1 * 3 + 1]) * 0.5; } // (a calf's trunk is short)
+    const lg = legsOf(form), fy = st.fy || null; // (fy: the ground under each foot, over or under the frame's plane)
+    if (fy) OFF[1] += Math.min(0, fy[0], fy[1], fy[2], fy[3]) * (pillar ? 0.8 : 0.5); // (settling over a dip: the straight legs of a pillar most)
+    E[B.spine * 3] += Math.sin(t * 1.7 + id) * 0.008; E[B.chest * 3] -= Math.sin(t * 1.7 + id) * 0.006; // (the breath)
     if (G0) {
-      const S = FA.strideOf(gait, LL); const A = Math.asin(Math.min(0.72, S * G0.duty * 0.5 / Math.max(0.05, LL))) * go; const fk = G0.fold * go;
+      // (the body: a little rise and fall twice a stride in the walk and the trot, lower as the legs reach further; in the
+      // gallop it rocks, nose up and down, and a cat's back bends and stretches)
+      const S = FA.strideOf(gait, LL) * go, half = S * G0.duty * 0.5;
+      OFF[1] -= 0.45 * (LL - Math.sqrt(Math.max(LL * LL - half * half, LL * LL * 0.3)));
+      if (gait === 'hop') { // (the body flies between the feet: after the hind feet push off, and after the forefeet leave — down while they are on the ground)
+        const fl = (a, b, h) => { let q = ph - a; q -= Math.floor(q); const w = b - a; return q < w ? Math.sin(Math.PI * q / w) * h : 0; };
+        OFF[1] += (fl(0.34, 0.52, 0.3) + fl(0.84, 1.02, 0.14)) * LL * go; E[B.root * 3] += (Math.sin(ph * TAU + 2.2) * 0.16) * go;
+      }
+      else if (gait === 'gallop') { E[B.root * 3] += Math.sin(ph * TAU + 1.0) * 0.07; OFF[1] += Math.sin(ph * TAU) * LL * 0.05; if (form.meta.flex) { E[B.spine * 3] += Math.sin(ph * TAU) * 0.12; E[B.chest * 3] -= Math.sin(ph * TAU) * 0.1; } }
+      else OFF[1] -= Math.abs(Math.sin(ph * TAU * 2)) * LL * (gait === 'trot' ? 0.03 : 0.012) * go;
+      // each leg: a foot that is down stays where it was set while the body goes over it (rolling up on its toe at the end);
+      // a foot that swings is lifted, the knee and the hock folding, and brought forward to where it will be set
+      const fk = G0.fold * go;
       for (let k = 0; k < 4; k++) {
-        const front = k < 2, s = k % 2 ? 'R' : 'L'; let f = ph + G0.off[k]; f -= Math.floor(f);
-        let ang, flex;
-        if (f < G0.duty) { const u = f / G0.duty; ang = A * (1 - 2 * u); flex = 0.06 * Math.sin(Math.PI * u); }
-        else { const u = (f - G0.duty) / (1 - G0.duty); ang = -A + 2 * A * sstep(u); flex = Math.sin(Math.PI * Math.min(1, u * 1.15)); }
-        const L = (front ? 'fl' : 'hl') + s;
-        if (front) {
-          E[B[L + '0'] * 3] = -ang - flex * 0.25 * fk; E[B[L + '1'] * 3] = -flex * 0.35 * fk;
-          E[B[L + '2'] * 3] = flex * (pillar ? 0.5 : dig ? 1.1 : 1.6) * fk; E[B[L + '3'] * 3] = flex * (pillar ? 0.1 : 0.7) * fk;
-        } else {
-          E[B[L + '0'] * 3] = -ang - flex * 0.2 * fk; E[B[L + '1'] * 3] = flex * (pillar ? 0.25 : 0.75) * fk;
-          E[B[L + '2'] * 3] = -flex * (pillar ? 0.3 : 1.15) * fk; E[B[L + '3'] * 3] = flex * (pillar ? 0.1 : 0.6) * fk;
+        const L = LEGS[k], front = k < 2, g = lg[k]; let f = ph + G0.off[k]; f -= Math.floor(f);
+        const Cp = legTop(J, L), y3 = g.y3 * sL + (fy ? fy[k] : 0), rf = g.rf * sL;
+        if (f < G0.duty) { const u = f / G0.duty; const q = downAt(J, L, g.z + half * (1 - 2 * u), y3, rf, sL); if (g.plant) legToP(J, L, Cp, q[0], q[1], q[2], sL); else legTo(J, L, Cp, q[0], q[1], 0, q[2], sL); }
+        else {
+          const u = (f - G0.duty) / (1 - G0.duty), w = sstep(u), sn = Math.sin(Math.PI * u);
+          const q0 = downAt(J, L, g.z - half, y3, rf, sL); const z0 = q0[0], y0 = q0[1], t0 = q0[2];
+          const q1 = downAt(J, L, g.z + half, y3, rf, sL); const z1 = q1[0], y1 = q1[1], t1 = q1[2];
+          const kap = sn * fk * (front ? (pillar ? 0.5 : dig ? 1.1 : 1.6) : -(pillar ? 0.3 : 1.15));
+          const foot = t0 + (t1 - t0) * w + sn * fk * (front ? (pillar ? 0.1 : 0.7) : (pillar ? 0.1 : 0.6));
+          // (the foot leaves the ground going back as fast as it went while down, and comes down so: no skate at either end)
+          const mv = -2 * half / G0.duty * (1 - G0.duty), u2 = u * u, u3 = u2 * u;
+          const zz = (2 * u3 - 3 * u2 + 1) * z0 + (u3 - 2 * u2 + u) * mv + (3 * u2 - 2 * u3) * z1 + (u3 - u2) * mv;
+          // (the foot as it turns keeps its toe and its heel off the ground; the knee or the hock too, folded)
+          let yy = y0 + (y1 - y0) * w + sn * LL * G0.lift * go;
+          yy = Math.max(yy, -Math.min(ry(rf, -y3, foot), ry(-rf, -y3, foot)) + (fy ? fy[k] : 0) + y3 * 0.04 + sn * LL * G0.lift * go * 0.6);
+          if (g.plant) { const yh = Math.max(yy, y3 + sn * LL * 0.12 * go); legToP(J, L, Cp, zz, yh, foot * 0.7, sL); } // (a plantigrade lifts its heel and swings the whole sole)
+          else {
+            legTo(J, L, Cp, zz, yy, kap, foot, sL);
+            for (let it = 0; it < 4; it++) { // (the knee or the hock kept off the ground — the point of the hock sticks out behind and below its joint)
+              const lo2 = lowJoint(J, L, Cp, sL) - (fy ? fy[k] : 0) - g.y3 * sL * (front ? 1.5 : 2.4); if (lo2 >= -1e-4) break;
+              yy -= lo2 * 1.3; legTo(J, L, Cp, zz, yy, kap, foot, sL);
+            }
+          }
         }
       }
-      // (the body: a little rise and fall twice a stride in the walk and the trot; in the gallop it rocks, nose up and down,
-      // and a cat's back bends and stretches)
-      if (gait === 'hop') { OFF[1] = Math.max(0, Math.sin(ph * TAU + 0.6)) * LL * 0.35; E[B.root * 3] = Math.sin(ph * TAU + 1.4) * 0.22; }
-      else if (gait === 'gallop') { E[B.root * 3] = Math.sin(ph * TAU + 1.0) * 0.07; OFF[1] = Math.sin(ph * TAU) * LL * 0.05; if (form.meta.flex) { E[B.spine * 3] = Math.sin(ph * TAU) * 0.12; E[B.chest * 3] = -Math.sin(ph * TAU) * 0.1; } }
-      else OFF[1] = -Math.abs(Math.sin(ph * TAU * 2)) * LL * (gait === 'trot' ? 0.03 : 0.012) * go;
       // (the head nods with the steps: twice a stride in the walk, with the forelegs in the gallop)
-      const nod = gait === 'gallop' ? Math.sin(ph * TAU + 0.6) * 0.14 : Math.sin(ph * TAU * 2 + 0.4) * (gait === 'walk' ? 0.05 : 0.03);
+      const nod = gait === 'gallop' ? Math.sin(ph * TAU + 0.6) * 0.14 : Math.sin(ph * TAU * 2 + 0.4) * (gait === 'walk' ? 0.06 : 0.03);
       E[B.neck0 * 3] += nod * go; E[B.head * 3] -= nod * 0.5 * go;
     } else {
-      // standing: the weight shifts now and then from foot to foot
-      const w = Math.sin(t * 0.31 + id) * 0.02; E[B.flL0 * 3] = w; E[B.flR0 * 3] = -w; E[B.hlL0 * 3] = -w; E[B.hlR0 * 3] = w;
+      // standing: the weight shifts now and then from foot to foot — the body sways over the feet, which stay where they are
+      OFF[2] += Math.sin(t * 0.31 + id) * form.meta.L * 0.012; OFF[1] -= (0.5 + 0.5 * Math.sin(t * 0.62 + id * 2)) * LL * 0.006;
+      if (form.meta.hop && st.graze > 0.001) { E[B.root * 3] += 0.2 * st.graze; OFF[1] -= LL * 0.14 * st.graze; } // (a hare grazes crouched, its front down — not bowing a neck it hardly has)
+      for (let k = 0; k < 4; k++) { const L = LEGS[k], g = lg[k]; const Cp = legTop(J, L); if (g.plant) legToP(J, L, Cp, g.z, g.y3 * sL + (fy ? fy[k] : 0), 0, sL); else legTo(J, L, Cp, g.z, g.y3 * sL + (fy ? fy[k] : 0), 0, 0, sL); }
     }
-    // (the breath)
-    E[B.spine * 3] += Math.sin(t * 1.7 + id) * 0.008; E[B.chest * 3] -= Math.sin(t * 1.7 + id) * 0.006;
+    if (st.sit) sit(form, J, st.sit, sL, fy);
     // grazing: the neck bows until the muzzle is at the grass (as far as the neck reaches); the jaw chews
-    if (st.graze > 0.001) {
+    if (st.graze > 0.001 && !(st.sit > 0.5)) {
       const n0 = B.neck0 * 3, nose = form.meta.nose; const yr = nose[1] - J[n0 + 1], zr = nose[2] - J[n0 + 2];
-      const Rr = Math.hypot(yr, zr), p0 = Math.atan2(yr, zr); const want = (0.04 - J[n0 + 1]) / Rr;
-      const th = (p0 - Math.asin(Math.max(-1, Math.min(1, want)))) * (sp.browse ? 0.45 : 1) * st.graze;
+      const Rr = Math.hypot(yr, zr), p0 = Math.atan2(yr, zr); const want = (0.04 - J[n0 + 1] - OFF[1]) / Rr;
+      const th = (p0 - Math.asin(Math.max(-1, Math.min(1, want)))) * (sp.browse ? 0.45 : 1) * (form.meta.hop ? 0.5 : 1) * st.graze;
       E[n0] += th * 0.62; E[B.neck1 * 3] += th * 0.24; E[B.neck2 * 3] += th * 0.14; E[B.head * 3] -= th * 0.12;
       E[B.jaw * 3] = Math.max(0, Math.sin(t * 5.5 + id)) * 0.07 * st.graze;
     }
@@ -113,22 +232,66 @@
     const back = st.ears || 0;
     E[B.earL * 3] = back * 0.9 + flick(0) * 0.25; E[B.earL * 3 + 2] = -back * 0.3 + flick(1) * 0.3;
     E[B.earR * 3] = back * 0.9 + flick(2) * 0.25; E[B.earR * 3 + 2] = back * 0.3 - flick(3) * 0.3;
-    const sw = (gait ? 0.12 : 0.3) * (sp.swish === undefined ? 1 : sp.swish);
+    const sw = (gait ? 0.12 : 0.3) * (sp.swish === undefined ? 1 : sp.swish) * (1 - 0.7 * (st.sit || 0));
     for (let k = 0; k < 4; k++) {
-      const b = B['tail' + k] * 3; E[b + 1] = Math.sin(t * 1.6 - k * 0.55 + id) * sw * (0.5 + k * 0.25);
-      E[b] = -(st.tail || 0) * (k === 0 ? 0.55 : 0.2) + (gait ? Math.sin(ph * TAU * 2 - k * 0.5) * 0.06 : 0);
+      const b = B['tail' + k] * 3; E[b + 1] += Math.sin(t * 1.6 - k * 0.55 + id) * sw * (0.5 + k * 0.25);
+      E[b] += -(st.tail || 0) * (k === 0 ? 0.55 : 0.2) + (gait ? Math.sin(ph * TAU * 2 - k * 0.5) * 0.06 * (1 + k * 0.3) : 0);
     }
-    if (form.meta.trunk) { for (let k = 0; k < 3; k++) { E[B['trunk' + k] * 3] = Math.sin(t * 0.8 + id - k * 0.6) * 0.12 + st.graze * 0.25; E[B['trunk' + k] * 3 + 1] = Math.sin(t * 0.53 + id * 2 - k * 0.5) * 0.15; } }
-    if (st.sit) sit(form, st.sit);
+    tailOver(J, Math.max(form.meta.H * 0.03, (form.meta.tailR || form.meta.H * 0.05) * 0.95) + (fy ? Math.max(0, (fy[2] + fy[3]) * 0.5) : 0)); // (a long tail never drags through the ground)
+    if (form.meta.trunk) {
+      for (let k = 0; k < 3; k++) { E[B['trunk' + k] * 3] = Math.sin(t * 0.8 + id - k * 0.6) * 0.12 + st.graze * 0.25; E[B['trunk' + k] * 3 + 1] = Math.sin(t * 0.53 + id * 2 - k * 0.5) * 0.15; }
+      // (the trunk's end kept off the ground: curled forward when the head's nod or the step would put it in)
+      const nz = form.meta.nose, t2 = B.trunk2 * 3, clear = form.meta.H * 0.02 + (fy ? Math.max(fy[0], fy[1]) : 0);
+      for (let it = 0; it < 3; it++) { chain(I4, J); const e = R[B.trunk2].elements; const y = e[1] * (nz[0] - J[t2]) + e[5] * (nz[1] - J[t2 + 1]) + e[9] * (nz[2] - J[t2 + 2]) + e[13];
+        if (y >= clear) break; const d = Math.min(0.6, (clear - y) / Math.max(0.05, form.meta.H * 0.15)); E[t2] -= d; E[B.trunk1 * 3] -= d * 0.5; }
+    }
     return chain(m, J);
   };
-  // sitting down (a dog, a cat at rest): the hind legs folded under, the body raised in front
-  function sit(form, k) {
-    E[B.root * 3] -= 0.6 * k; E[B.spine * 3] -= 0.08 * k; E[B.neck0 * 3] += 0.45 * k; E[B.head * 3] += 0.18 * k;
-    for (const s of 'LR') { E[B['hl' + s + '0'] * 3] += -0.25 * k; E[B['hl' + s + '1'] * 3] += 1.55 * k; E[B['hl' + s + '2'] * 3] += -1.5 * k; E[B['hl' + s + '3'] * 3] += 0.55 * k;
-      E[B['fl' + s + '0'] * 3] += 0.66 * k; }
-    for (let b = 0; b < 4; b++) E[B['tail' + b] * 3] += 0.3 * k;
-    const legH = form.J[B.hlL0 * 3 + 1]; OFF[1] -= legH * 0.36 * k; OFF[2] -= legH * 0.12 * k;
+  // sitting down (a dog, a cat, a wolf, a lion at rest), blended in by k: the rump on the ground, the back raised until the
+  // forelegs stand straight under the chest — the forefeet staying where they were —, the hind legs folded under the body
+  // (the thigh forward, the hock on the ground behind, the foot flat), the head kept level, the tail lying behind
+  const SE = new Float32Array(NB * 3), SO = new Float32Array(3), KE = new Float32Array(NB * 3), KO = new Float32Array(3);
+  // (the tail kept over the ground: each of its bones, from the root out, raised just enough that its end stays at clear —
+  // the tail then lies along the ground behind)
+  function tailOver(J, clear) {
+    let C = E[0], z = J[2] + OFF[2], y = J[1] + OFF[1]; const t0 = B.tail0 * 3; let dz = J[t0 + 2] - J[2], dy = J[t0 + 1] - J[1]; z += rz(dz, dy, C); y += ry(dz, dy, C);
+    for (let k = 0; k < 4; k++) {
+      const b = B['tail' + k] * 3, n = k < 3 ? B['tail' + (k + 1)] * 3 : b, p = k < 3 ? b : B.tail2 * 3; C += E[b];
+      dz = (J[n + 2] - J[p + 2]) * (k < 3 ? 1 : 0.9); dy = (J[n + 1] - J[p + 1]) * (k < 3 ? 1 : 0.9); if (k === 3) { dz = (J[b + 2] - J[p + 2]) * 0.9; dy = (J[b + 1] - J[p + 1]) * 0.9; }
+      const l = Math.hypot(dz, dy); if (l < 1e-5) continue;
+      let ey = y + ry(dz, dy, C);
+      if (ey < clear) { const want = Math.PI - Math.asin(clamp((clear - y) / l, -1, 1)); let c2 = Math.atan2(dy, dz) - want; while (c2 - C > Math.PI) c2 -= TAU; while (c2 - C < -Math.PI) c2 += TAU; E[b] += c2 - C; C = c2; ey = y + ry(dz, dy, C); }
+      z += rz(dz, dy, C); y = ey;
+    }
+  }
+  function sit(form, J, k, sL, fy) {
+    KE.set(E); KO.set(OFF); const lg = legsOf(form); const r = B.root * 3, sp = B.spine * 3, ch = B.chest * 3;
+    const rump = form.meta.rump ? form.meta.rump * 1.15 : J[r + 1] * 0.36; OFF[0] = KO[0]; OFF[1] = rump - J[r + 1]; OFF[2] = 0;
+    const g = lg[0], y3 = g.y3 * sL, Rf = reachOf(J, 'flL', 0, sL) * 0.965, dF = J[B.flL0 * 3 + 1] * 0.08;
+    // (how far the back is raised: until the forelegs, straight, just reach the ground under the shoulder)
+    const pose = a => { E[r] = KE[r] - 0.52 * a; E[sp] = KE[sp] - 0.3 * a; E[ch] = KE[ch] - 0.18 * a; return legTop(J, 'flL'); };
+    let lo = 0, hi = 1.35;
+    for (let n = 0; n < 14; n++) { const a = (lo + hi) * 0.5; pose(a); if (P0w[1] - y3 < Math.sqrt(Math.max(0, Rf * Rf - dF * dF))) lo = a; else hi = a; }
+    const a = lo; pose(a);
+    OFF[2] = g.z - (P0w[0] + dF); // (the forefeet stay where they stood)
+    for (let q = 0; q < 2; q++) { const L = LEGS[q]; const Cp = legTop(J, L); legTo(J, L, Cp, P0w[0] + dF, y3 + (fy ? fy[q] : 0), 0, 0, sL); }
+    for (let q = 2; q < 4; q++) { // (the hind legs: the hock to the ground behind the hip, the cannon forward along it, the foot flat)
+      const L = LEGS[q], i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3, i2 = B[L + '2'] * 3, i3 = B[L + '3'] * 3; const Cp = legTop(J, L), yh = lg[q].y3 * sL * 1.5 + (fy ? fy[q] : 0);
+      const a1z = J[i1 + 2] - J[i0 + 2], a1y = J[i1 + 1] - J[i0 + 1], a2z = (J[i2 + 2] - J[i1 + 2]) * sL, a2y = (J[i2 + 1] - J[i1 + 1]) * sL;
+      const l1 = Math.hypot(a1z, a1y), l2 = Math.hypot(a2z, a2y), b1 = Math.atan2(a1y, a1z), b2 = Math.atan2(a2y, a2z), b3 = Math.atan2(J[i3 + 1] - J[i2 + 1], J[i3 + 2] - J[i2 + 2]);
+      const Tz = P0w[0] - l2 * 0.32, dz = Tz - P0w[0], dy = yh - P0w[1], al = Math.atan2(dy, dz); const d = clamp(Math.hypot(dz, dy), Math.abs(l1 - l2) * 1.02 + 1e-4, (l1 + l2) * 0.999);
+      const sg = a1z * (a1y + a2y) - a1y * (a1z + a2z) >= 0 ? -1 : 1;
+      const p1 = al + sg * Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+      const ez = P0w[0] + l1 * Math.cos(p1), ey = P0w[1] + l1 * Math.sin(p1); const p2 = Math.atan2(P0w[1] + d * Math.sin(al) - ey, P0w[0] + d * Math.cos(al) - ez);
+      E[i0] = b1 - p1 - Cp; E[i1] = b2 - p2 - Cp - E[i0]; E[i2] = b3 - Cp - E[i0] - E[i1]; E[i3] = -b3;
+    }
+    // (the head kept level and up; the tail lifted off the ground behind, its end lying back along it)
+    E[B.neck0 * 3] += 0.5 * a; E[B.neck1 * 3] += 0.12 * a; E[B.head * 3] += 0.32 * a;
+    E[B.tail0 * 3] += 0.72 * a - 0.35; E[B.tail1 * 3] += 0.3; E[B.tail2 * 3] += 0.25; E[B.tail3 * 3] += 0.2;
+    tailOver(J, Math.max(form.meta.H * 0.03, (form.meta.tailR || form.meta.H * 0.05) * 0.95));
+    SE.set(E); SO.set(OFF);
+    for (let i = 0; i < NB * 3; i++) E[i] = KE[i] + (SE[i] - KE[i]) * k;
+    for (let i = 0; i < 3; i++) OFF[i] = KO[i] + (SO[i] - KO[i]) * k;
   }
 
   // ------------------------------ the other families ------------------------------
@@ -136,7 +299,7 @@
   // the wings beating — slow and deep for the big ones, fast for the small —, gliding with the tips up, the legs tucked)
   FA.bird = function (three, m, form, sp, st) {
     if (!THREE) start(three);
-    const J = form.J; E.fill(0); OFF.fill(0);
+    const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1); if (st.young) SC[B.head] = 1 + st.young * 0.35; // (a chick: all head)
     const t = st.t, id = st.id || 0, ph = st.ph;
     if (form.meta.fly) {
       const big = form.meta.H > 0.6, f = big ? 2.2 : 4.5; const flap = st.glide ? 0 : 1;
@@ -150,27 +313,55 @@
       return chain(m, J);
     }
     const walk = st.v > 0.03 ? Math.min(1, st.v / 0.15) : 0;
+    // (the peck: the body tipped forward over the feet, which stay, and the neck bowed the rest of the way, until the tip of the
+    // beak is at the ground — as low as the neck reaches)
+    const peck = st.graze > 0.01 ? Math.max(0, Math.sin(t * 2.6 + id)) * st.graze : 0; let pth = 0;
+    if (peck) {
+      const r = 0, n0 = B.neck0 * 3, nose = form.meta.nose, ch = B.chest * 3, tilted = J[ch + 1] - J[r + 1] > 0.6 * Math.abs(J[ch + 2] - J[r + 2]); // (a perching bird sits upright: it tips further)
+      const bp = (tilted ? 1.2 : 0.8) * peck * (form.meta.upright ? 0.3 : 1); E[B.root * 3] += bp;
+      OFF[1] -= peck * J[B.hlL0 * 3 + 1] * (form.meta.upright ? 0.05 : 0.22); // (and crouched on its legs)
+      const qz = J[n0 + 2] - J[r + 2], qy = J[n0 + 1] - J[r + 1], nz = nose[2] - J[r + 2], ny = nose[1] - J[r + 1];
+      const n0z = rz(qz, qy, bp), n0y = J[r + 1] + OFF[1] + ry(qz, qy, bp), tz = rz(nz, ny, bp), ty = J[r + 1] + OFF[1] + ry(nz, ny, bp);
+      const Rr = Math.hypot(ty - n0y, tz - n0z); pth = Math.max(0, Math.atan2(ty - n0y, tz - n0z) - Math.asin(clamp((0.01 - n0y) / Rr, -1, 1))) * peck / Math.max(peck, 1e-3);
+    }
+    // (each foot set down and left where it is while the body goes on over it — a stride as long as the leg, as the 3D counts
+    // it —; lifted, the heel folding and the toes curling, and brought forward to where it will be set)
+    const hipY = J[B.hlL0 * 3 + 1], half = FA.birdStride(form) * walk * 0.6 * 0.5, duty = 0.6;
     for (const s of 'LR') {
-      const sd = s === 'L' ? 0 : 0.5; let f = ph + sd; f -= Math.floor(f); const duty = 0.6;
-      let ang, flex; if (f < duty) { const u = f / duty; ang = 0.42 * (1 - 2 * u); flex = 0; } else { const u = (f - duty) / (1 - duty); ang = -0.42 + 0.84 * sstep(u); flex = Math.sin(Math.PI * u); }
-      ang *= walk; flex *= walk;
-      E[B['hl' + s + '1'] * 3] = -ang * 0.6; E[B['hl' + s + '2'] * 3] = -ang * 0.5 + flex * 0.6; E[B['hl' + s + '3'] * 3] = flex * 0.9 - (form.meta.upright ? 0 : 0.05);
+      const L = 'hl' + s, i3 = B[L + '3'] * 3, z3 = J[i3 + 2], y3 = J[i3 + 1]; let f = ph + (s === 'L' ? 0 : 0.5); f -= Math.floor(f);
+      const Cp = legTop(J, L);
+      if (f < duty) { const u = f / duty; legToB(J, L, Cp, z3 + half * (1 - 2 * u), y3, 0); }
+      else {
+        const u = (f - duty) / (1 - duty), u2 = u * u, u3 = u2 * u, sn = Math.sin(Math.PI * u), mv = -2 * half / duty * (1 - duty);
+        const zz = (2 * u3 - 3 * u2 + 1) * (z3 - half) + (u3 - 2 * u2 + u) * mv + (3 * u2 - 2 * u3) * (z3 + half) + (u3 - u2) * mv;
+        const ft = sn * 0.55 * walk, rf = hipY * 0.32; // (the toes curled as the foot swings, kept well off the ground)
+        legToB(J, L, Cp, zz, Math.max(y3 + sn * hipY * 0.24 * walk, -Math.min(ry(rf, -y3, ft), ry(-rf * 0.5, -y3, ft)) + y3 + sn * hipY * 0.1 * walk), ft);
+      }
     }
     if (form.meta.upright) { E[B.root * 3 + 2] = Math.sin(ph * TAU) * 0.12 * walk; E[B.spine * 3 + 2] = -Math.sin(ph * TAU) * 0.04 * walk; } // (the penguin's waddle)
     // (the head: thrust at each step, a peck at the ground now and then, turning to look; a shuffle of the wings)
     const nod = Math.sin(ph * TAU * 2) * 0.12 * walk;
-    const peck = st.graze > 0.01 ? Math.max(0, Math.sin(t * 2.6 + id)) * st.graze : 0;
-    E[B.neck0 * 3] += nod + peck * 0.9; E[B.neck1 * 3] += peck * 0.5; E[B.neck2 * 3] -= nod * 0.6 + peck * 0.2; E[B.head * 3] -= nod * 0.4 - peck * 0.3;
+    E[B.neck0 * 3] += nod + pth * 0.62; E[B.neck1 * 3] += pth * 0.28; E[B.neck2 * 3] += -nod * 0.6 + pth * 0.1; E[B.head * 3] -= nod * 0.4;
+    if (peck > 0.01) { // (the neck's bones turn about their own joints: a few steps more until the beak is where it should be)
+      const nz = form.meta.nose, jh = B.head * 3, want = 0.01, k0 = 1, bp0 = E[B.root * 3];
+      for (let it = 0; it < 4; it++) { chain(I4, J); const e = R[B.head].elements; const y = e[1] * (nz[0] - J[jh]) + e[5] * (nz[1] - J[jh + 1]) + e[9] * (nz[2] - J[jh + 2]) + e[13];
+        const dth = (y - want) / Math.max(0.05, Math.hypot(nz[1] - J[B.neck0 * 3 + 1], nz[2] - J[B.neck0 * 3 + 2])) * k0; if (Math.abs(dth) < 0.005) break;
+        const d = Math.min(dth, Math.max(0, 2.5 - pth - Math.min(bp0, 0.8))); pth += d; E[B.neck0 * 3] += d * 0.62; E[B.neck1 * 3] += d * 0.28; E[B.neck2 * 3] += d * 0.1; } // (never bowed past straight down)
+    }
     const look = st.look || 0; E[B.neck1 * 3 + 1] = look * 0.4; E[B.head * 3 + 1] = look * 0.6;
     const sh = Math.max(0, Math.sin(t * 0.7 + id * 1.9) - 0.96) * 12; for (const s of 'LR') E[B['fl' + s + '0'] * 3 + 2] = (s === 'L' ? 1 : -1) * sh * 0.25;
     E[B.tail1 * 3] = Math.sin(t * 1.2 + id) * 0.05 - walk * Math.sin(ph * TAU * 2) * 0.05;
     E[B.jaw * 3] = st.jaw ? 0.3 : 0;
     return chain(m, J);
   };
+  // (how far a bird goes in one stride: most of its leg's length, thigh, shank and foot — read once a form)
+  FA.birdStride = form => { if (form._bs) return form._bs; const J = form.J; let l = 0;
+    for (let k = 0; k < 3; k++) { const a = B['hlL' + k] * 3, b = B['hlL' + (k + 1)] * 3; l += Math.hypot(J[b] - J[a], J[b + 1] - J[a + 1], J[b + 2] - J[a + 2]); }
+    form._bs = Math.max(0.03, l * 0.7); return form._bs; };
   // a snake: the wave running back along its bones as it goes; at rest it lies in a lazy curve, the head raised a little
   FA.snake = function (three, m, form, sp, st) {
     if (!THREE) start(three);
-    const J = form.J; E.fill(0); OFF.fill(0);
+    const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
     const order = ['tail3', 'tail2', 'tail1', 'tail0', 'root', 'spine', 'chest', 'neck0', 'neck1', 'neck2', 'head'];
     const go = Math.min(1, st.v / 0.1); const A = 0.32 * (0.35 + 0.65 * go);
     for (let k = 0; k < order.length; k++) {
@@ -186,7 +377,7 @@
   // the elbow; the body bends from side to side with them and the tail sweeps
   FA.sprawl = function (three, m, form, sp, st) {
     if (!THREE) start(three);
-    const J = form.J; E.fill(0); OFF.fill(0);
+    const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
     const go = Math.min(1, st.v / 0.12), ph = st.ph;
     const off = { flL: 0, hlR: 0, flR: 0.5, hlL: 0.5 };
     for (const L of ['flL', 'flR', 'hlL', 'hlR']) {
@@ -202,7 +393,7 @@
   // the frog: sitting, its throat pulsing; going, it hops — the hind legs straighten, the body flies forward and lands
   FA.frog = function (three, m, form, sp, st) {
     if (!THREE) start(three);
-    const J = form.J; E.fill(0); OFF.fill(0);
+    const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
     if (st.v > 0.02) {
       let f = st.ph; f -= Math.floor(f); const air = f < 0.55 ? Math.sin(Math.PI * f / 0.55) : 0, push = f < 0.25 ? Math.sin(Math.PI * f / 0.25) : 0;
       OFF[1] = air * form.meta.L * 0.5; E[B.root * 3] = -0.35 * air;
@@ -214,7 +405,7 @@
   // the seal: on land it humps along — the body arching and stretching, the fore flippers pushing; at rest it lifts its head
   FA.seal = function (three, m, form, sp, st) {
     if (!THREE) start(three);
-    const J = form.J; E.fill(0); OFF.fill(0);
+    const J = form.J; E.fill(0); OFF.fill(0); SC.fill(1);
     const go = Math.min(1, st.v / 0.15), w = st.ph * TAU;
     E[B.spine * 3] = Math.sin(w) * 0.18 * go; E[B.chest * 3] = -Math.sin(w) * 0.14 * go; E[B.root * 3] = -Math.sin(w + 0.8) * 0.1 * go; OFF[1] = Math.max(0, Math.sin(w)) * form.meta.H * 0.12 * go;
     for (const s of 'LR') { const sd = s === 'L' ? 1 : -1; E[B['fl' + s + '0'] * 3] = Math.sin(w) * 0.5 * go; E[B['hl' + s + '1'] * 3] = -0.2 - Math.sin(w) * 0.15 * go; E[B['hl' + s + '1'] * 3 + 2] = sd * 0.1; }
@@ -262,7 +453,7 @@
     bear: { mz: '#a07a58', mzA: 0.5, nose: 1, grain: 1.4, iris: '#2a1a10', fwd: 0.6 },
     polarbear: { nose: 1, mz: '#e8e4d8', mzA: 0.3, iris: '#2a1a10', fwd: 0.6 },
     lion: { belA: 0.7, mane: '#8a5a2a', tipA: 1, mz: '#f0e0c0', mzA: 0.4, th: '#f0dcb8', thA: 0.5, nose: 0.6, ear: '#3a2a1e', earA: 0.6, iris: '#c8962e', fwd: 0.75 },
-    tiger: { pat: 3, sc: 3.6, con: 1, belA: 1, th: '#f6ecda', thA: 1, mz: '#f6ecda', mzA: 0.7, ear: '#1e1a18', earA: 0.6, iris: '#d8a83a', fwd: 0.75, nose: 0.5, mane: '#1e1a18', tipA: 0.6 },
+    tiger: { pat: 3, sc: 4.8, con: 1, belA: 1, th: '#f6ecda', thA: 1, mz: '#f6ecda', mzA: 0.7, ear: '#1e1a18', earA: 0.6, iris: '#d8a83a', fwd: 0.75, nose: 0.5, mane: '#1e1a18', tipA: 0.6 },
     jaguar: { pat: 4, sc: 5, belA: 1, th: '#f2dcae', thA: 0.6, iris: '#c8a040', fwd: 0.75, nose: 0.5 },
     leopard: { pat: 4, sc: 5.5, belA: 1, th: '#f2e2b8', thA: 0.6, iris: '#c8a040', fwd: 0.75, nose: 0.5 },
     snowleopard: { pat: 4, sc: 4.2, belA: 1, iris: '#8ab0a0', fwd: 0.75, nose: 0.5 },
