@@ -1671,6 +1671,7 @@
     formCache.set(kind, F); return F;
   }
   const bvis = new Map(); G.worldHooks.push(() => bvis.clear());
+  let bframe = 0; P3.bdrawn = []; // (the frames of the beasts' drawing, and the ids drawn in the last one — for the proofs)
   // (a part of a beast: in the frame m, at (x, y, z), turned by (rx, ry, rz) about its own base, sized (sx, sy, sz))
   function bput(name, idx, m, x, y, z, sx, sy, sz, col, rx, ry, rz) {
     M.a.copy(m); M.b.makeTranslation(x, y, z); M.a.multiply(M.b);
@@ -1738,18 +1739,30 @@
     const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0, frow = 0; mats(); P3.bculled = 0;
     if (fauna && G.Fauna3D.broken(R3.renderer && R3.renderer())) { fauna = false; G.Fauna3D.clear(); }
     if (fauna) G.Fauna3D.begin();
-    const list = [];
-    for (const a of S.animals.values()) { if (a.dead || a.held) continue; const X = a.x * TL, Z = a.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 < R2 * 0.7) list.push([d2, a]); }
+    // (who is drawn: the nearest first — but one drawn last frame keeps its place against a newcomer only a little nearer, and
+    // keeps being looked for a little past the edge of the sight: with more beasts in sight than rows, the farthest no longer
+    // take each other's place every frame — they blinked, L-988)
+    const list = []; const bf = ++bframe;
+    for (const a of S.animals.values()) {
+      if (a.dead || a.held) continue; const X = a.x * TL, Z = a.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2;
+      const s0 = bvis.get(a.id); const was = !!s0 && s0.f === bf - 1;
+      if (d2 < R2 * (was ? 0.77 : 0.7)) list.push([was ? d2 * 0.72 : d2, a, d2]);
+    }
     list.sort((p, q) => p[0] - q[0]);
     let nNear = 0; // (the beasts near enough to the eye for their eyes and hooves: the nearest first, so the first rows)
-    for (const [d2, a] of list) {
-      if (idx >= MAXA || frow >= MAXA) break;
+    const drawn = P3.bdrawn; drawn.length = 0;
+    for (const [, a, d2] of list) {
+      if (idx >= MAXA && frow >= MAXA) break;
       const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls === 'water') continue;
-      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: null, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
+      const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: null, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0, f: 0, u: 0 }; bvis.set(a.id, s); }
+      s.u = bf; // (in sight's reach this frame: its memory is kept)
       const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz); if (dist > 0.002 && dist < 6) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-8 * dt)); }
       const v = dt > 0 && dist < 6 ? dist / dt : 0; s.v += (v - s.v) * (1 - Math.exp(-6 * dt)); s.t += dt; s.X = X; s.Z = Z;
       const F = formOf(sp, a.kind); const air = sp.cls === 'air' && (a.z || 0) > 0.3;
-      const fz = fauna && G.Fauna3D.has(a.kind) && (!air || G.Fauna3D.hasFly(a.kind)); // (drawn as one skin: G.Fauna3D, posed by G.FaunaAnim)
+      // (drawn as one skin: G.Fauna3D, posed by G.FaunaAnim — while there are rows; past them, the farthest in sight as the pieces,
+      // not left out: L-988)
+      const fz = fauna && frow < MAXA && G.Fauna3D.has(a.kind) && (!air || G.Fauna3D.hasFly(a.kind));
+      if (!fz && idx >= MAXA) continue;
       const u = (0.5 + (sp.size || 1) * 0.9) / 4 * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.6 : 1); // (metres to the god's unit)
       const run = G.clamp(s.v / 3, 0, 1.4); s.ph += dt * (F.biped ? (s.v * 6 / Math.max(0.4, F.leg * u * 2) + 0.4) : (s.v * 0.55 / Math.max(0.4, F.leg * u * 2) + 0.06)); // (four legs: strides; two: radians)
       const col = F.col, dark = darker(col, 0.78), bel = F.belly || darker(col, 1.12);
@@ -1761,6 +1774,7 @@
       const fsc = fz ? G.Fauna3D.scaleOf(a.kind) * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.55 + 0.45 * Math.max(0, a.age) : 1) : 1;
       const fsize = fz ? G.Fauna3D.sizeOf(a.kind) * fsc / G.Fauna3D.scaleOf(a.kind) : 0;
       if (!inField(X, Y, Z, Math.max(0.6, fz ? fsize * 0.6 : F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
+      s.f = bf; drawn.push(a.id);
       if (d2 < 576 && !fz) nNear = idx + 1;
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
       // (on a slope a beast of four legs lies along it: pitched by the ground under its fore and hind feet, rolled by the ground
@@ -1850,6 +1864,8 @@
     beastMesh.forEach((m, k) => { m.count = BFAR.has(BP[k][0]) ? Math.min(nNear, idx) : idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
     if (fauna) G.Fauna3D.end();
     P3.beasts = idx + frow; P3.beastSkins = frow;
-    if (bvis.size > 400) bvis.clear();
+    // (the view's memory of the beasts out of sight's reach for a while is let go — not all of it at once: the standing beasts lost
+    // which way they faced and turned all together to the east, L-989)
+    if (bvis.size > 400) { for (const [id, s] of bvis) if (bf - (s.u || 0) > 90) bvis.delete(id); if (bvis.size > 1200) bvis.clear(); }
   }
 })(window.G);
