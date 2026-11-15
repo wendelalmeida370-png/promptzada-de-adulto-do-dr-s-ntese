@@ -1730,7 +1730,10 @@
   // the holds that place the holder's body (its facing, how near it stands): the mouth at the point, the feet on the back, the coils round the body
   const HOLDGEO = { throat: 1, nape: 1, grip: 1, pin: 1, maul: 0.8, tear: 0.7, talons: 1, mantle: 0.8, coil: 1, deathroll: 1, suckle: 1, allogroom: 0.6, nuzzle: 0.6, mate: 1, clash: 1, spar: 0.7, mourn: 0.5, drag: 0.8, shakekill: 0.6, bite: 0.5 };
   // the small held one carried in the jaws (or under the feet in the air): drawn where the holder holds it
-  const SNAP = { carry: 1, carryyoung: 1, shakekill: 1, swallow: 1, drag: 1, talons: 1 };
+  const SNAP = { carry: 1, carryyoung: 1, shakekill: 1, swallow: 1, drag: 1, talons: 0.8 };
+  // (small enough to be carried: to the jaws a part of the holder's size; to an eagle's talons more — its size is the bird standing,
+  // not its wings)
+  const snaps = (a, h, gn) => !!SNAP[gn] && G.Fauna3D.sizeOf(a.kind) < G.Fauna3D.sizeOf(h.kind) * (SNAP[gn] < 1 ? SNAP[gn] : 0.7);
   // (the bones whose frames a beast leaves in the view's memory, for the others to reach: the throat, the nape, the head, the
   // rump, the back, the withers, the hock)
   const KB = ['neck1', 'neck2', 'head', 'root', 'spine', 'chest', 'hlL2'];
@@ -1866,7 +1869,7 @@
     if (h) { const hs = bvis.get(h.id); ctx.held = hs && hs.gn ? hs.gn : (h.state === 'roll' ? 'deathroll' : h.grip > 0 ? 'coil' : null); ctx.rollWith = hs && hs.rollA ? hs.rollA : 0;
       const yaw = s.yaw, dx = h.x - a.x, dz = h.y - a.y; ctx.side = (dz * Math.cos(yaw) - dx * Math.sin(yaw)) > 0 ? 1 : -1; if (!s.alive || a.dead) s.side = ctx.side;
       // (small, in the jaws or the talons: drawn where it is held, hanging)
-      if (hs && hs.kb && SNAP[hs.gn] && G.Fauna3D.sizeOf(a.kind) < G.Fauna3D.sizeOf(h.kind) * 0.7 && (hs.gn !== 'talons' || (h.z || 0) > 0.3)) {
+      if (hs && hs.kb && snaps(a, h, hs.gn) && (hs.gn !== 'talons' || (h.z || 0) > 0.3)) {
         const ho = hs.gn === 'talons' ? 'feet' : 'mouth'; const hf = hs.kf; const J = hf.J, B = G.FaunaAnim.B;
         let bi, px, py, pz; if (ho === 'mouth') { GX.mouthOf(hf, AIMW); bi = 2; px = AIMW[0]; py = AIMW[1]; pz = AIMW[2]; } else { bi = 3; px = 0; py = J[B.hlL3 * 3 + 1]; pz = J[B.hlL3 * 3 + 2]; }
         const b = B[KB[bi]], e = hs.kb, o = bi * 16; const x = px - J[b * 3], y = py - J[b * 3 + 1], z = pz - J[b * 3 + 2];
@@ -1885,7 +1888,7 @@
         if (hg > 0) holdBody(a, s, o, s2, n, hg, dt, X, Z);
       }
     }
-    if (!(ctx.aim && HOLDGEO[n])) { s.hx = (s.hx || 0) * Math.exp(-3 * dt); s.hz = (s.hz || 0) * Math.exp(-3 * dt); } // (the body back where the world has it)
+    if (!(ctx.aim && HOLDGEO[n])) { s.hx = (s.hx || 0) * Math.exp(-3 * dt); s.hz = (s.hz || 0) * Math.exp(-3 * dt); s.hon = 0; } // (the body back where the world has it)
     ctx.ground = !!(air === false && G.Animals.DEF[a.kind].cls === 'air' && n && GX.REC[n] && GX.REC[n].wing);
     return ctx;
   }
@@ -1901,7 +1904,10 @@
     } else if (n === 'talons' || n === 'mantle') { HB[0] = AIMW[0]; HB[1] = AIMW[1]; HB[2] = AIMW[2]; wantYaw = Math.atan2(HB[2] - Z, HB[0] - X); reach = 0; }
     else { HB[0] = AIMW[0]; HB[1] = AIMW[1]; HB[2] = AIMW[2]; wantYaw = Math.atan2(HB[2] - Z, HB[0] - X); const G0 = G.FaunaAnim.Gest; G0.mouthOf(form, KP); reach = KP[2] * sc * (n === 'nape' || n === 'pin' || n === 'maul' ? 0.55 : 0.82); }
     if (Math.hypot(HB[0] - X, HB[2] - Z) < 1e-3 && n !== 'coil') return;
-    let da = wantYaw - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-6 * dt)) * hg;
+    // (the hold turns the body on its own clock: the way the world drags the holder along does not turn it back each frame)
+    if (!s.hon) s.hy = s.yaw; s.hon = 1;
+    let da = wantYaw - s.hy; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.hy += da * (1 - Math.exp(-6 * dt));
+    da = s.hy - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * hg;
     const c = Math.cos(s.yaw), sn = Math.sin(s.yaw); let wx = HB[0] - c * reach - X, wz = HB[2] - sn * reach - Z;
     const lim = F3.sizeOf(a.kind) * sc * 0.6, l = Math.hypot(wx, wz); if (l > lim) { wx *= lim / l; wz *= lim / l; }
     const e = 1 - Math.exp(-4 * dt); s.hx = (s.hx || 0) + (wx * hg - (s.hx || 0)) * e; s.hz = (s.hz || 0) + (wz * hg - (s.hz || 0)) * e;
@@ -1913,15 +1919,16 @@
   const BHOLDS = { throat: 1, nape: 1, grip: 1, pin: 1, maul: 1, talons: 1, mantle: 1, coil: 1, deathroll: 1, drag: 1, carry: 1, carryyoung: 1, shakekill: 1, swallow: 1 };
   const HELD = new Map(), TAILB = [], HOLDR = new Set();
   function heldMap(list) {
-    HELD.clear(); const S = G.S;
+    HELD.clear(); HOLDR.clear(); const S = G.S;
+    // (every holder is ranked after the held — a pack on one prey: each wolf reaches for the moose as drawn this frame, L-996)
     for (let i = 0; i < list.length; i++) { const a = list[i][1];
-      if (a.caught) { const h = S.animals.get(a.caught); if (h) HELD.set(a.id, h); }
-      if (a.gest && a.gestO && BHOLDS[a.gest]) HELD.set(a.gestO, a);
-      else if (!a.gest && a.target && (a.state === 'roll' || a.state === 'drown' || a.grip > 0)) HELD.set(a.target, a); }
+      if (a.caught) { const h = S.animals.get(a.caught); if (h) { HELD.set(a.id, h); HOLDR.add(h.id); } }
+      if (a.gest && a.gestO && BHOLDS[a.gest]) { HELD.set(a.gestO, a); HOLDR.add(a.id); }
+      else if (!a.gest && a.target && (a.state === 'roll' || a.state === 'drown' || a.grip > 0)) { HELD.set(a.target, a); HOLDR.add(a.id); } }
     // (the order: the held first — their pose is there for the holder to reach this very frame; then the holders; last the small ones
     // carried in the jaws, drawn where the holder's mouth now is)
-    if (HELD.size) { HOLDR.clear(); for (const h of HELD.values()) HOLDR.add(h.id);
-      const rank = a => { const h = HELD.get(a.id); if (h && SNAP[h.gest] && G.Fauna3D.sizeOf(a.kind) < G.Fauna3D.sizeOf(h.kind) * 0.7) return 3; return HOLDR.has(a.id) ? 2 : h ? 1 : 0; };
+    if (HELD.size) {
+      const rank = a => { const h = HELD.get(a.id); if (h && snaps(a, h, h.gest)) return 3; return HOLDR.has(a.id) ? 2 : h ? 1 : 0; };
       TAILB.length = 0; for (let g = 1; g <= 3; g++) for (let i = 0; i < list.length; i++) if (rank(list[i][1]) === g) TAILB.push(list[i]);
       let w = 0; for (let i = 0; i < list.length; i++) if (rank(list[i][1]) === 0) list[w++] = list[i]; for (let i = 0; i < TAILB.length; i++) list[w++] = TAILB[i]; }
     return HELD;
