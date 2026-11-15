@@ -1672,6 +1672,7 @@
   }
   const bvis = new Map(); G.worldHooks.push(() => bvis.clear());
   let bframe = 0; P3.bdrawn = []; // (the frames of the beasts' drawing, and the ids drawn in the last one — for the proofs)
+  P3.memSize = () => bvis.size; // (how many beasts the view remembers — for the proofs)
   // (a part of a beast: in the frame m, at (x, y, z), turned by (rx, ry, rz) about its own base, sized (sx, sy, sz))
   function bput(name, idx, m, x, y, z, sx, sy, sz, col, rx, ry, rz) {
     M.a.copy(m); M.b.makeTranslation(x, y, z); M.a.multiply(M.b);

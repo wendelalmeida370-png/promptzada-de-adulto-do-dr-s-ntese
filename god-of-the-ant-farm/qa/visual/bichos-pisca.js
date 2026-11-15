@@ -66,14 +66,18 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
     for (let k = 0; k < 40; k++) G.Main.frameFor(33);
     hold(); for (let k = 0; k < 10; k++) { hold(); G.Main.frameFor(33); }
     const yaw0 = still.map(a => P3.beastVis(a.id) ? P3.beastVis(a.id).yaw : null);
-    // a crowd passing through the memory: 450 rabbits in a ring round the body, then gone
-    const crowd = []; for (let k = 0; k < 450; k++) { const ang = k / 450 * Math.PI * 2, rr = 8 + (k % 9) * 2.5; const p = G.W.nearestLand(bx + Math.cos(ang) * rr, by + Math.sin(ang) * rr, 6); if (p) crowd.push(A.spawn('rabbit', p[0], p[1], { state: 'idle', t: 1e6 })); }
+    // a crowd passing through the memory: 450 rabbits behind the camera, in sight's reach but out of the eye's field (cheap: none
+    // drawn), the world paused so they stay where they are; then gone, and the frames go on until the memory lets them go
+    G.UI.setSpeed(0); const cp = cam.position, fw = new THREE.Vector3(); cam.getWorldDirection(fw); fw.y = 0; fw.normalize();
+    const crowd = []; for (let k = 0; k < 450; k++) { const d = 10 + (k % 15) * 2.4, sd = ((k * 7) % 31) / 31 - 0.5; const X = cp.x - fw.x * d - fw.z * sd * d * 0.8, Z = cp.z - fw.z * d + fw.x * sd * d * 0.8; const p = G.W.nearestLand(X / TL, Z / TL, 4); if (p) crowd.push(A.spawn('rabbit', p[0], p[1], { state: 'idle', t: 1e6 })); }
     console.log('@@ p2: coelhos', crowd.length);
-    for (let k = 0; k < 30; k++) { hold(); G.Cam3D.yaw = (G.Cam3D.yaw || 0) + 0.21; G.Main.frameFor(33); }
+    for (let k = 0; k < 6; k++) { hold(); G.Main.frameFor(33); }
+    const mem = P3.memSize ? P3.memSize() : null;
     for (const a of crowd) if (S.animals.has(a.id)) A.remove(a);
-    for (let k = 0; k < 140; k++) { hold(); G.Main.frameFor(33); }
+    for (let k = 0; k < 110; k++) { hold(); G.Main.frameFor(33); }
+    G.UI.setSpeed(1);
     const yaw1 = still.map(a => P3.beastVis(a.id) ? P3.beastVis(a.id).yaw : null);
-    out.notes.push(`p2: ${crowd.length} coelhos passaram pela memória; ${still.length} bicho(s) parado(s): virados ${yaw0.map(y => y === null ? '—' : y.toFixed(2)).join(', ')} → ${yaw1.map(y => y === null ? '—' : y.toFixed(2)).join(', ')}`);
+    out.notes.push(`p2: ${crowd.length} coelhos passaram pela memória (${mem === null ? '?' : mem} bichos nela); ${still.length} bicho(s) parado(s): virados ${yaw0.map(y => y === null ? '—' : y.toFixed(2)).join(', ')} → ${yaw1.map(y => y === null ? '—' : y.toFixed(2)).join(', ')}`);
     if (!still.length) fail('p2: nenhum bicho parado perto do corpo para olhar');
     still.forEach((a, k) => { if (yaw0[k] === null || yaw1[k] === null) fail(`p2: ${a.kind}#${a.id} sem memória do desenho`); else if (Math.abs(yaw1[k] - yaw0[k]) > 0.05) fail(`p2: ${a.kind}#${a.id} parado virou de ${yaw0[k].toFixed(2)} para ${yaw1[k].toFixed(2)} — a memória do desenho se apagou`); });
     for (const e of P3.check ? P3.check() : []) fail('verificador: ' + e);
