@@ -1,5 +1,5 @@
 # bichos-folha: the contact sheet of bichos-estudio.js — every frame with its name under it, in a grid.
-#   python3 qa/visual/bichos-folha.py SAIDA.png [colunas]   (reads SAIDA.png.json: [[nome, arquivo], ...])
+#   python3 qa/visual/bichos-folha.py SAIDA.png [colunas]   (reads SAIDA.png.json: [[nome, arquivo], ...]; KEEP=1 keeps the frames)
 import sys, json, os
 from PIL import Image, ImageDraw, ImageFont
 out = sys.argv[1]; cols = int(sys.argv[2]) if len(sys.argv) > 2 else 8
@@ -14,7 +14,7 @@ for k, (n, im) in enumerate(ims):
     x = (k % cols) * w; y = (k // cols) * (h + lab)
     sheet.paste(im, (x, y)); d.text((x + 4, y + h + 2), n, fill=(230, 220, 200), font=font)
 sheet.save(out)
-for _, f in cells:
+for _, f in cells if not os.environ.get('KEEP') else []:  # (KEEP=1: the frames kept, for an antes/depois sheet)
     try: os.remove(f)
     except Exception: pass
 print('folha:', out, len(ims), 'quadros')

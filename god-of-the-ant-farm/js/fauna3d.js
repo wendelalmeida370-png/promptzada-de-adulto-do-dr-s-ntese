@@ -130,8 +130,10 @@ vec3 f3pattern(vec3 c, vec3 p, float kind, vec3 dk, float sc, float con, float s
   if (kind < 2.5) { // the zebra: stripes round the body, bending down the legs and the neck
     float w = q.z * 1.0 + q.y * 0.35 + sin(q.y * 2.2 + q.z * 0.6) * 0.35 + f3n(q * 1.5) * 0.4; float s = abs(fract(w) - 0.5) - 0.24;
     return mix(c, dk, f3aa(s) * con); }
-  if (kind < 3.5) { // the tiger: broken stripes down the flanks
-    float w = q.z * 1.1 + f3n(q * vec3(0.8, 2.5, 0.8)) * 1.2; float s = abs(fract(w) - 0.5) - 0.12 - 0.1 * f3n(q * 3.0) + smoothstep(0.2, 0.6, f3n(q * 1.7 + 5.0)) * 0.2;
+  if (kind < 3.5) { // the tiger: bold stripes down the flanks, a little slanted, tapering, now and then forked; round the legs
+    float w = q.z * 1.1 + q.y * 0.35 + f3n(q * vec3(0.8, 2.2, 0.8)) * 0.9; float e = abs(fract(w) - 0.5);
+    float s = e - 0.17 - 0.07 * f3n(q * 3.0) + smoothstep(0.42, 0.78, f3n(q * 1.7 + 5.0)) * 0.13;
+    s = max(s, 0.035 - e - (1.0 - smoothstep(0.55, 0.8, f3n(q * 2.3 + 9.0)))); // (the fork: a pale split down some of them)
     return mix(c, dk, f3aa(s) * con); }
   if (kind < 4.5) { // rosettes: dark rings round a darker middle
     vec3 id; vec2 r = f3cell(q, id); float ring = abs(r.x - 0.26 - 0.05 * f3n(q * 6.0)) - 0.07; float mid = r.x - 0.16;

@@ -1696,16 +1696,19 @@
   const BFAR = new Set(['eye0', 'eye1', 'hoof0', 'hoof1', 'hoof2', 'hoof3']); // (the parts a far beast goes without)
   // a beast as one skin: its frame (its +Z forward, its size), its pose from how fast it goes and what it does, its coat
   const FMR = { m: null, r: null };
-  const SITTERS = { cao: 1, gato: 1, wolf: 0.4, fox: 0.5, arcticfox: 0.5, fennec: 0.5, lion: 0.5, hyena: 0.3 };
+  const SITTERS = { cao: 1, gato: 1, wolf: 0.4, fox: 0.5, arcticfox: 0.5, fennec: 0.5, lion: 0.5, hyena: 0.3, tiger: 0.4, jaguar: 0.4, leopard: 0.45, snowleopard: 0.45 };
+  P3.beastVis = id => bvis.get(id); P3.SITTERS = SITTERS; // (for the studio: the view's memory of a beast, read — and who sits)
   const OPENJAW = { chase: 0.5, lunge: 1, strike: 1, pounce: 1, stalk: 0.15 };
+  let FEET = null; // (the feet's bones: left fore, right fore, left hind, right hind)
   function beastSkin(a, sp, s, m, sc, d2, dt, row, X, Y, Z, air) {
     if (!FMR.m) { FMR.m = new THREE.Matrix4(); FMR.r = new THREE.Matrix4(); }
     const FA = G.FaunaAnim, fly = !!air; const form = fly ? G.Fauna3D.formFly(a.kind) : G.Fauna3D.form(a.kind); const J = form.J; const B = FA.B; const fam = form.meta.fam;
+    if (!FEET) FEET = [B.flL3, B.flR3, B.hlL3, B.hlR3];
     const LL = (J[B.flL0 * 3 + 1] + J[B.hlL0 * 3 + 1]) * 0.5 * sc;
     // (the cycle: the phase goes as far as the body went, a stride's length a cycle — so a planted foot does not slide)
     let cyc;
     if (fam === 'quad') cyc = FA.strideOf(s.v < 0.04 ? 'walk' : FA.gaitOf(s.v, LL, form.meta.pillar, form.meta.hop), LL);
-    else if (fam === 'bird') cyc = Math.max(0.05, J[B.hlL0 * 3 + 1] * 1.3 * sc);
+    else if (fam === 'bird') cyc = FA.birdStride(form) * sc;
     else if (fam === 'frog') cyc = form.meta.L * 2.2 * sc;
     else cyc = Math.max(0.1, form.meta.L * 0.5 * sc);
     s.fph = (s.fph === undefined ? (a.id % 7) / 7 : s.fph) + dt * s.v / cyc;
@@ -1718,8 +1721,15 @@
     if (fly) { const dz = (a.z || 0) - (s.pz === undefined ? (a.z || 0) : s.pz); s.pz = a.z || 0; const pitch = G.clamp(dz / Math.max(dt, 1e-3) * 0.08, -0.5, 0.5); s.fp = (s.fp || 0) + (pitch - (s.fp || 0)) * (1 - Math.exp(-3 * dt));
       const dy = s.yaw - (s.py === undefined ? s.yaw : s.py); s.py = s.yaw; const bank = G.clamp(dy / Math.max(dt, 1e-3) * 0.25, -0.7, 0.7); s.fb = (s.fb || 0) + (bank - (s.fb || 0)) * (1 - Math.exp(-3 * dt)); }
     const glide = fly && form.meta.H > 0.6 && Math.sin(s.t * 0.4 + a.id) > -0.2 && (s.fp || 0) < 0.15;
-    const st = { v: s.v / sc, ph: s.fph, t: s.t, graze: s.graze, look: s.look, id: a.id, ears: s.ears, tail: flee ? 0.6 : 0, jaw: OPENJAW[a.state] || 0, sit: s.sit, glide, pitch: s.fp || 0, bank: s.fb || 0 };
+    const st = { v: s.v / sc, ph: s.fph, t: s.t, graze: s.graze, look: s.look, id: a.id, ears: s.ears, tail: flee ? 0.6 : 0, jaw: OPENJAW[a.state] || 0, sit: s.sit, glide, pitch: s.fp || 0, bank: s.fb || 0, young: a.age !== undefined && a.age < 1 ? G.clamp(1 - a.age, 0, 1) : 0 };
     FMR.m.copy(m); FMR.r.makeRotationY(Math.PI / 2); FMR.m.multiply(FMR.r); FMR.r.makeScale(sc, sc, sc); FMR.m.multiply(FMR.r);
+    // (each foot on the ground under it: the frame lies along the slope's plane; how far the real ground under each foot is from
+    // that plane, in the beast's measure — the legs reach for it. Not for a beast in the water)
+    if (fam === 'quad' && !air && !a.swim && Y > groundY(a.x, a.y) - 0.05) {
+      const fy = FMR.fy || (FMR.fy = new Float32Array(4)), e = FMR.m.elements, TL = G.Space.TILE, lim = LL / sc * 0.3; st.fy = fy;
+      for (let k = 0; k < 4; k++) { const b = FEET[k] * 3, x = J[b], z = J[b + 2]; const fX = e[0] * x + e[8] * z + e[12], fY = e[1] * x + e[9] * z + e[13], fZ = e[2] * x + e[10] * z + e[14];
+        fy[k] = G.clamp((Math.max(groundY(fX / TL, fZ / TL), G.Space.stoneTop(fX, fZ)) - fY) / sc, -lim, lim); }
+    }
     const spx = { browse: sp.diet === 'browse', swish: sp.diet === 'herb' || sp.diet === 'browse' ? 1 : 0.6 };
     const R = (FA[fam] || FA.quad)(THREE, FMR.m, form, spx, st);
     G.Fauna3D.put(row, R, a.kind, FA.coat(THREE, a), d2 > 576 ? 1 : 0, X, Y, Z, fly);

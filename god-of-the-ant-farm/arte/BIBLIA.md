@@ -297,11 +297,11 @@ aparecendo em recorte, sem a mancha; o verde calmo do norte levado à selva.
 
 **Pessoas e bichos (A4).** *Cumpre:* o corpo contínuo com a roupa de cada povo — o huipil solto de barra bordada e a saia
 longa asteca, o vestido de alça nórdico, a tanga —, tranças e cabelos, olhos do tamanho de olho, os tecidos da pilha.
-*Depois (D-265):* **os bichos** são uma pele contínua cada, com anatomia de família (casco, garra, pilar, ave, cobra, réptil, foca), a pelagem e o padrão da espécie pintados no shader e o passo medido pela perna (`arte/fauna.py`, `js/fauna3d.js`, `js/fauna-anim.js`). *Antes:* os bichos — cão, lhama, cervo, aves — eram brinquedos facetados de pernas de palito (um cão cinza visto
+*Depois (D-265):* **os bichos** são uma pele contínua cada, com anatomia de família (casco, garra, pilar, ave, cobra, réptil, foca), a pelagem e o padrão da espécie pintados no shader e o passo medido pela perna (`arte/fauna.py`, `js/fauna3d.js`, `js/fauna-anim.js`). *Depois do refino (D-273 a D-275):* pernas robustas com as juntas à mostra (cotovelo, joelho, jarrete, boleto) e dedos nas patas, a sola no chão (os pés afundavam até 0,2 m: L-984), orelhas em folha, a cabeça de cada família de caçadores (o gato de almofadas e olhos grandes, o cão de focinho em caixa, o macaco de cara chata, o hipopótamo de focinho largo e olhos em torres), a juba do leão que emoldura a cara, o lobo de gola, o camelo de pescoço em S, a águia empoleirada de pé e a coruja de disco; e o movimento pelo pé — o casco que pousa fica (patinava: L-985), o sentar de verdade (L-986), cada pé no chão que tem debaixo dele, os filhotes de cabeça grande e pernas longas. *Antes:* os bichos — cão, lhama, cervo, aves — eram brinquedos facetados de pernas de palito (um cão cinza visto
 de trás, em Mênfis, lê como formiga gigante); o corpo atravessa a saia (duas manchas brancas nas coxas, de frente); as mangas de linho
 e os braços leem como manequim cinza de juntas (à noite, boneco de madeira); a pele pálida e acinzentada, que na sombra
-da mata faz o rosto parecer caveira. *Próximo:* os bichos com a passagem que as pessoas tiveram (corpo contínuo, pelagem,
-pata de verdade); a saia sem o corpo passando; pele mais quente e manga com dobra.
+da mata faz o rosto parecer caveira. *Próximo:* os bichos do mar e o dragão na mesma pele (T-1283); o nado e o voo com prova de pose (T-1297);
+a saia sem o corpo passando; pele mais quente e manga com dobra.
 
 **Luz, água e céu (A5).** *Cumpre:* a noite de verdade (estrelas, a poça quente da tocha, janela acesa, as tábuas lidas no
 escuro); o dia sem preto esmagado nem branco estourado, de sombra macia; a água com fundo e a beira acompanhando o chão;
