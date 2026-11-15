@@ -49,7 +49,7 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
     if (!best) return { err: 'sem chão aberto' };
     v.x = best[0] - 0.55; v.y = best[1]; v.tx = v.x; v.ty = v.y;
     const f = n => { for (let k = 0; k < n; k++) G.Main.frameFor(33); }; const until = (c, m) => { for (let k = 0; k < m; k++) { if (c()) return k; G.Main.frameFor(33); } return -1; };
-    G.Modes.enter(v); until(() => G.Modes.state === 'INC', 300); f(6); S.time = env.HOUR;
+    G.Modes.enter(v); until(() => G.Modes.state === 'INC', 300); f(6); S.time = env.HOUR / 24; // (the world's clock is a fraction of the day: the hour 11 written as it was fell off the end of the day, every photo in one dusk light)
     document.querySelectorAll('#inc-hud, #hud, #inc-root, #inc-label, #inc-compass, #inc-news, .toast').forEach(e => e.style.visibility = 'hidden');
     G.Cam3D.OPT.follow = false;
     const DEF = G.Animals.DEF;
