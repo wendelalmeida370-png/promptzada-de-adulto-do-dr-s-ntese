@@ -1768,7 +1768,7 @@
   function aimWhich(n, a, o, s2) {
     let w = AIMAT[n]; if (w !== 'auto') return w;
     const yaw = s2 ? s2.yaw : 0; const dx = a.x - o.x, dz = a.y - o.y; const f = (dx * Math.cos(yaw) + dz * Math.sin(yaw)) / (Math.hypot(dx, dz) || 1);
-    const big = G.Fauna3D.sizeOf(o.kind) > G.Fauna3D.sizeOf(a.kind) * 1.6;
+    const fo = G.Fauna3D.form(o.kind), fa = G.Fauna3D.form(a.kind); const big = !!(fo && fa && fo.meta.H > fa.meta.H * 1.5); // (much taller: a wolf at a moose)
     return f > 0.5 ? (big ? 'flank' : 'throat') : f < -0.4 ? (big ? 'hock' : 'rump') : 'flank'; // (a wolf on a moose: the hamstring)
   }
   // the marks of a beast's body on its coat — the blood on the muzzle, the wounds by zone, what is eaten of a carcass and its bones,
@@ -1910,14 +1910,19 @@
   // (who holds whom this frame — the world's a.caught, the holds of the gestures, the old states' prey — and the held put after
   // their holders in the list, so the holder's pose is there to be reached)
   const BHOLDS = { throat: 1, nape: 1, grip: 1, pin: 1, maul: 1, talons: 1, mantle: 1, coil: 1, deathroll: 1, drag: 1, carry: 1, carryyoung: 1, shakekill: 1, swallow: 1 };
-  const HELD = new Map(), TAILB = [];
+  const HELD = new Map(), TAILB = [], HOLDR = new Set();
   function heldMap(list) {
     HELD.clear(); const S = G.S;
     for (let i = 0; i < list.length; i++) { const a = list[i][1];
       if (a.caught) { const h = S.animals.get(a.caught); if (h) HELD.set(a.id, h); }
       if (a.gest && a.gestO && BHOLDS[a.gest]) HELD.set(a.gestO, a);
       else if (!a.gest && a.target && (a.state === 'roll' || a.state === 'drown' || a.grip > 0)) HELD.set(a.target, a); }
-    if (HELD.size) { let w = 0; TAILB.length = 0; for (let i = 0; i < list.length; i++) { if (HELD.has(list[i][1].id)) TAILB.push(list[i]); else list[w++] = list[i]; } for (let i = 0; i < TAILB.length; i++) list[w++] = TAILB[i]; }
+    // (the order: the held first — their pose is there for the holder to reach this very frame; then the holders; last the small ones
+    // carried in the jaws, drawn where the holder's mouth now is)
+    if (HELD.size) { HOLDR.clear(); for (const h of HELD.values()) HOLDR.add(h.id);
+      const rank = a => { const h = HELD.get(a.id); if (h && SNAP[h.gest] && G.Fauna3D.sizeOf(a.kind) < G.Fauna3D.sizeOf(h.kind) * 0.7) return 3; return HOLDR.has(a.id) ? 2 : h ? 1 : 0; };
+      TAILB.length = 0; for (let g = 1; g <= 3; g++) for (let i = 0; i < list.length; i++) if (rank(list[i][1]) === g) TAILB.push(list[i]);
+      let w = 0; for (let i = 0; i < list.length; i++) if (rank(list[i][1]) === 0) list[w++] = list[i]; for (let i = 0; i < TAILB.length; i++) list[w++] = TAILB[i]; }
     return HELD;
   }
   // (where a beast's frame stands: moved for a hold; the small held one with its middle where it is held, across the jaws)

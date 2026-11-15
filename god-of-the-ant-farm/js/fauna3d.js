@@ -262,9 +262,12 @@ float f3wet = 0.0;
 vec3 f3marks(vec3 c) {
   vec4 M0 = f3T(18), M2 = f3T(20), M3 = f3T(21); float H = max(f3T(16).y, 0.05); vec3 q = vBind / H;
   vec3 blood = vec3(0.36, 0.035, 0.04), fresh = vec3(0.55, 0.06, 0.06);
-  if (vWnd > 0.01) { float n = f3n(q * 26.0 + 3.1), st = f3n(vec3(q.x * 30.0, q.y * 3.0, q.z * 30.0));
-    float gash = smoothstep(0.72 - 0.3 * vWnd, 0.76 - 0.3 * vWnd, n); float run = smoothstep(0.55, 0.7, st) * smoothstep(0.35, 0.9, vWnd) * 0.7;
-    c = mix(c, fresh, clamp(run + vWnd * 0.25, 0.0, 0.8)); c = mix(c, blood * 0.6, gash); }
+  if (vWnd > 0.01) { // (a few torn places in the zone — as big as the wound is bad —, raked by parallel gashes, the blood run down below them)
+    float sd = f3T(13).y; float blob = smoothstep(0.66 - 0.28 * vWnd, 0.72 - 0.28 * vWnd, f3n(q * 3.2 + sd));
+    float above = smoothstep(0.62 - 0.3 * vWnd, 0.7 - 0.3 * vWnd, f3n((q + vec3(0.0, 0.22, 0.0)) * 3.2 + sd));
+    float gash = smoothstep(0.1, 0.0, abs(fract((q.z * 1.0 + q.y * 1.7 + q.x * 0.5) * 7.0) - 0.5) - 0.36) * blob;
+    float run = above * (1.0 - blob) * smoothstep(0.5, 0.68, f3n(vec3(q.x * 34.0, q.y * 2.5, q.z * 34.0))) * smoothstep(0.3, 0.8, vWnd);
+    c = mix(c, mix(fresh, blood, 0.35), blob * 0.75); c = mix(c, blood * 0.45, gash); c = mix(c, fresh * 0.9, run * 0.85); }
   if (M0.x > 0.01) { float mz = smoothstep(0.08, 0.6, vReg.z) + float(vZoneI == 5) + smoothstep(0.3, 0.9, vReg2.w) * smoothstep(0.4, 0.9, M0.x) * smoothstep(0.5, 0.7, f3n(vec3(q.x * 40.0, q.y * 5.0, q.z * 40.0)));
     c = mix(c, mix(fresh, blood, 0.4), clamp(mz, 0.0, 1.0) * M0.x * 0.9); }
   if (M0.y > 0.01 && vZoneI == 0) { float side = smoothstep(0.15, 0.85, vReg.x) + 0.6 * (1.0 - smoothstep(0.1, 0.6, abs(normalize(vBindN).y))); float mask = clamp(side, 0.0, 1.0) * smoothstep(0.2, 0.7, vTrunk);

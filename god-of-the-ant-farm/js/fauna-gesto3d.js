@@ -134,7 +134,7 @@
       if (dy > 0.04 && (s.cat || s.canid || s.bear || s.equid || s.monkey)) { kk = w; add(I.REAR, clamp(dy * 1.5, 0, 0.9)); add(I.DROP, -P[I.DROP] * clamp(dy * 3, 0, 1) / Math.max(kk, 1e-3)); }
       else if (dy < -0.04) { kk = w; add(I.DROP, clamp(-dy * 1.1, 0, 0.9)); add(I.NDOWN, clamp(-dy * 0.9, 0, 0.8)); }
       const dz = (st.aim[2] - Pm[2]) / C.L; kk = w; add(I.FWD, clamp(dz * 0.6, -0.12, 0.12)); // (a step nearer, or back)
-    } else if (fam === 'sprawl' && st.aim && gx && gx.gn && REC[gx.gn] && REC[gx.gn].body && gx.gk > 0) { // (the crocodile up on its legs, the head raised, to the throat it holds)
+    } else if (fam === 'sprawl' && st.aim && gx && gx.gn && REC[gx.gn] && REC[gx.gn].body && gx.gk > 0 && !(P[I.DROLL] > 0)) { // (the crocodile up on its legs, the head raised, to the throat it holds — not in the roll: it turns about its own length, the jaws where they are)
       const w = sst(gx.gk); mouthOf(form, Pm); const dy = (st.aim[1] - Pm[1]) / C.H, dz = (st.aim[2] - Pm[2]) / C.L; kk = w;
       if (dy > 0.05) { add(I.HIGH, clamp(dy * 1.5, 0, 1)); add(I.PITCH, -clamp(dy * 0.35, 0, 0.45)); }
       add(I.FWD, clamp(dz * 0.7, -0.15, 0.15));
@@ -322,12 +322,12 @@
     for (let k = 0; k < 3; k++) { const b = B['trunk' + k] * 3; E[b] += -up * (0.55 + k * 0.25) + dn * (0.35 - k * 0.05) - fw * (0.45 - k * 0.2) - cu * (k === 2 ? 1.1 : 0.5); }
   };
   // ------------------------------ the end: the reach to the other, the body on the ground ------------------------------
-  const AIMB = [B.chest, B.neck0, B.neck1, B.neck2, B.head], AIMW = [0.12, 0.42, 0.32, 0.26, 0.32];
+  const AIMB = [B.chest, B.neck0, B.neck1, B.neck2, B.head], AIMW = [0.12, 0.42, 0.32, 0.26, 0.32], AIMBS = [B.neck0, B.neck1, B.neck2, B.head], AIMWS = [0.45, 0.35, 0.3, 0.3]; // (the sprawlers and the birds reach with the neck alone: a crocodile does not stand up on its chest)
   const T3 = new Float32Array(3), Pm = new Float32Array(3);
   FG.end = function (J0, form, st) {
     J = J0; FORM = form;
     const aw = clamp(P[I.AIM], 0, 1);
-    if (aw > 0.01 && st.aim) { const R0 = st.gx && st.gx.gn ? REC[st.gx.gn] : null; if (R0 && R0.eff === 'brow') browOf(form, Pm); else mouthOf(form, Pm); reach(J0, B.head, Pm, st.aim, aw, AIMB, AIMW, 6); }
+    if (aw > 0.01 && st.aim) { const R0 = st.gx && st.gx.gn ? REC[st.gx.gn] : null; if (R0 && R0.eff === 'brow') browOf(form, Pm); else mouthOf(form, Pm); const nk = C.fam === 'sprawl' || C.fam === 'bird'; reach(J0, B.head, Pm, st.aim, aw, nk ? AIMBS : AIMB, nk ? AIMWS : AIMW, 6); if (C.fam === 'sprawl') for (const bi of AIMBS) { E[bi * 3] = clamp(E[bi * 3], -0.6, 0.5); E[bi * 3 + 1] = clamp(E[bi * 3 + 1], -0.7, 0.7); } }
     const gk = clamp(P[I.GROUND], 0, 1); if (gk > 0.01 && form.hull && !st.hang && !st.tree) settle(J0, form, gk, st.fy);
     // (no gesture puts the body into the ground: a body turned, lowered, rolled, kicking is lifted until its skin is out of it —
     // the poses that go under on purpose, the burrow, the dive, the swim, the coils, the death roll in the water, excepted)
@@ -497,7 +497,7 @@
   FG.sprawl = function (J0, form, st) {
     J = J0; FORM = form; const t = C.t, H = form.meta.H, r = B.root * 3;
     const hi = P[I.HIGH], fl = clamp(P[I.LIE] + P[I.DROP] * 0.5, 0, 1), sw = clamp(P[I.SWIM], 0, 1), dr = P[I.DROLL];
-    const tuck = Math.max(sw, clamp(dr, 0, 1)); if (fl > 0 || dr > 0) P[I.GROUND] = Math.max(P[I.GROUND], fl, clamp(dr, 0, 1) * 0.5); // (flat on its belly; rolling, half held up by the water)
+    const tuck = Math.max(sw, clamp(dr, 0, 1)); if (fl > 0 && !(dr > 0)) P[I.GROUND] = Math.max(P[I.GROUND], fl); // (flat on its belly — rolling, it turns about its own length where it is: no settling, or it would bob)
     for (const L of SPL) { const sd = L[2] === 'L' ? 1 : -1, i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3;
       if (hi > 0) { E[i0 + 2] -= sd * 0.55 * hi; E[i1 + 2] += sd * 0.35 * hi; }
       if (fl > 0) { E[i0 + 2] += sd * 0.25 * fl; E[i0 + 1] += (L[0] === 'f' ? -sd : sd) * 0.3 * fl; }

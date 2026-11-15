@@ -338,7 +338,7 @@
     const s = S(), sd = C.side, down = C.down > 0 || DOWNHOLD[C.held] || (Math.abs(C.var) | 0) === 1;
     A(I.EARB, 1); A(I.JAW, 0.35 + 0.3 * Math.abs(Math.sin(u * hz(1.3)))); A(I.BRATE, 2); A(I.TUP, 0.4);
     if (C.held === 'coil') { M.sideDown(1, sd); A(I.THRASH, 0.25); A(I.SHIV, 1); A(I.NUP, 0.3 * Math.abs(Math.sin(u * hz(0.4)))); return; } // (crushed: only the head and a shiver)
-    if (C.held === 'deathroll') { M.sideDown(1, sd); A(I.ROLL, C.rollWith * 0.6); A(I.THRASH, 0.9); return; } // (dragged over and rolled with the crocodile)
+    if (C.held === 'deathroll') { M.sideDown(1, sd); A(I.ROLL, Math.sin(C.rollWith) * 0.7); A(I.THRASH, 0.9); return; } // (dragged over on its side, rocked over and back as the crocodile turns)
     if (down) { M.sideDown(1, sd); A(I.THRASH, 1); A(I.NUP, 0.45 * Math.abs(Math.sin(u * hz(0.8)))); A(I.NYAW, sd * 0.4 * Math.sin(u * hz(0.6))); return; }
     A(I.DROP, 0.2); A(I.ROLL, 0.14 * Math.sin(u * hz(1.3))); A(I.HYAW, 0.5 * Math.sin(u * hz(1.1))); A(I.NUP, 0.35 * Math.abs(Math.sin(u * hz(0.9)))); A(I.LAT, -C.aimSide * 0.25);
     for (let k = 0; k < 4; k++) { const q = Math.max(0, Math.sin(u * hz(2.3) + k * 1.7)); Lg(k, 0.05 * Math.sin(u * hz(2.3) + k), 0.16 * q, k < 2 ? 1.1 * q : -0.9 * q, 0); } // (stamping, kicking out)
@@ -516,7 +516,7 @@
   def('grip', { sprawl(u) { A(I.JAW, 0.35); A(I.AIM, 1); A(I.FWD, -0.05); A(I.HIGH, 0.3); A(I.HYAW, 0.15 * Math.sin(u * hz(1.4))); } });
   def('shakekill', { sprawl(u, d) { const f = fr(u, d, 1.6), a = bell(f, 0, 0.1, 1); A(I.HYAW, Math.sin(u * hz(4)) * 0.6 * a); A(I.YAW, Math.sin(u * hz(4) - 0.5) * 0.5 * a); A(I.JAW, 0.3); A(I.HPITCH, -0.25); } });
   def('strike', { sprawl(u, d) { const f = fr(u, d, 0.5), l = bell(f, 0, 0.35, 0.9); A(I.FWD, 0.35 * l); A(I.LIFT, 0.35 * bell(f, 0.05, 0.3, 0.6)); A(I.JAW, 1.3 * bell(f, 0, 0.3, 0.55)); A(I.HPITCH, -0.3 * l); A(I.AIM, 0.6 * l); A(I.HIGH, 0.5 * l); } }); // (the lunge from the water, the jaws wide, snapping shut)
-  def('deathroll', { in: 0.2, out: 0.5, still: 1, body: 1, sprawl(u) { A(I.DROLL, 1); A(I.JAW, 0.35); A(I.AIM, 1); A(I.TCURL, 0.6); } });
+  def('deathroll', { in: 0.2, out: 0.5, still: 1, body: 1, sprawl(u) { A(I.DROLL, 1); A(I.JAW, 0.35); A(I.AIM, 1); A(I.TCURL, 0.2); } });
   def('struggle', { sprawl(u) { A(I.THRASH, 1); A(I.ROLL, C.side * 0.6 * Math.sin(u * hz(0.9))); A(I.JAW, 0.8); A(I.YAW, 0.4 * Math.sin(u * hz(1.3))); A(I.TCURL, 0.6 * Math.sin(u * hz(1.1))); } });
   def('stagger', { sprawl(u, d) { const f = fr(u, d, 0.8), s = bell(f, 0, 0.25, 0.9); A(I.ROLL, C.side * 0.5 * s); A(I.YAW, -C.side * 0.3 * s); A(I.JAW, 0.4 * s); } });
   def('fall', { keep: 1, sprawl(u, d) { const g = ramp(fr(u, d, 0.9), 0.1, 0.85); A(I.ROLL, C.side * Math.PI * 0.9 * g); A(I.GROUND, g); A(I.THRASH, 0.5 * (1 - g)); } }); // (thrown onto its back)

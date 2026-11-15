@@ -145,6 +145,42 @@ if (mode === 'folha') {
   return;
 }
 
+if (mode === 'deus') {
+  // the god's view (js/fauna-art.js): each kind drawn in the gestures of the list, as the god sees them from above, on a canvas of
+  // the page — a sheet; the drawing must not throw, and no gesture may be drawn as nothing
+  const OUT = path.resolve(process.argv[3] || 'saida-gestos-deus'); fs.mkdirSync(OUT, { recursive: true });
+  const ROOT = path.resolve(process.argv[4] || path.join(__dirname, '..', '..'));
+  const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
+  const KINDS = (process.env.KINDS || 'lion,zebra,wolf,deer,elephant,giraffe,croc,python,eagle,bear,buffalo,cavalo').split(',');
+  const GS = (process.env.GESTOS || 'sleep,lie,drink,alert,roar,rear,kick,throat,struggle,tear,deathroll,coil,fall,throes,clash,display,spread,stoop,mate,nurse,howl,threat').split(',');
+  (async () => {
+    const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader'] });
+    const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
+    const errs = []; page.on('pageerror', e => errs.push(e.message));
+    await page.addInitScript(() => { window.requestAnimationFrame = () => 0; try { localStorage.clear(); } catch (e) { } });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+    await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
+    await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'cidade.js') });
+    const r = await page.evaluate(o => {
+      G.Save.apply(JSON.parse(G.Ready.data.cidade)); document.querySelector('#menu').classList.add('hidden');
+      const cv = document.createElement('canvas'); cv.width = 64 * (o.GS.length + 1); cv.height = 64 * o.KINDS.length + 20; cv.id = 'deus'; cv.style.cssText = 'position:fixed;left:0;top:0;z-index:9999;background:#b8c890'; document.body.appendChild(cv);
+      const c = cv.getContext('2d'); c.fillStyle = '#b8c890'; c.fillRect(0, 0, cv.width, cv.height); c.font = '9px sans-serif'; const out = { drawn: 0, err: [] };
+      o.GS.forEach((g, j) => { c.fillStyle = '#223'; c.fillText(g, 64 * (j + 1) + 4, 10); });
+      o.KINDS.forEach((k, i) => { c.fillStyle = '#223'; c.fillText(k, 4, 20 + 64 * i + 34);
+        o.GS.forEach((g, j) => { const sp = G.Animals.DEF[k]; if (!sp) return; const can = G.Gestos.can(k, g);
+          const a = { id: 40 + i * 7 + j, kind: k, x: 60, y: 60, face: 1, grown: 1, age: 5, moving: false, walkPh: 0, hp: 10, state: 'idle', z: g === 'stoop' ? 6 : 0, meat: sp.meat, dead: false, gest: can ? g : null, gestT: G.Gestos.DEF[g].d > 0 ? G.Gestos.DEF[g].d * 0.42 : 0.9, gestD: G.Gestos.DEF[g].d, gestO: 0, gestV: g === 'struggle' ? 1 : 0, blood: g === 'tear' ? 1 : 0, eating: 0, hurt: 0, bite: 0, roll: 0, grip: 0, down: 0 };
+          c.save(); c.translate(64 * (j + 1) + 32, 20 + 64 * i + 50); c.scale(3, 3); try { G.Art.animal(c, a, 0, 0, 2.3, false); out.drawn++; } catch (e) { out.err.push(k + '/' + g + ': ' + e.message); } c.restore();
+          if (!can) { c.fillStyle = 'rgba(40,40,60,0.35)'; c.fillRect(64 * (j + 1), 20 + 64 * i, 64, 64); } }); });
+      return out;
+    }, { KINDS, GS });
+    const el = await page.$('#deus'); await el.screenshot({ path: path.join(OUT, 'deus-gestos.png') });
+    await browser.close();
+    console.log(`${r.drawn} desenhos; erros: ${r.err.length ? r.err.slice(0, 5).join(' · ') : 'nenhum'}; página: ${errs.slice(0, 3).join(' · ') || 'nenhum'}`);
+    console.log('folha: ' + path.join(OUT, 'deus-gestos.png'));
+    if (r.err.length || errs.length) { console.log('FALHOU'); process.exit(1); } console.log('PASSOU');
+  })();
+}
+
 if (mode === 'jogo') {
   // the sheets by the game's renderer, in a browser (the scenes in the list SHOTS: one beast in a gesture, or two in a hold)
   const OUT = path.resolve(process.argv[3] || 'saida-gestos-jogo'); fs.mkdirSync(OUT, { recursive: true });
@@ -173,11 +209,12 @@ if (mode === 'jogo') {
         for (let y = cy - 3; y <= cy + 3 && okk; y++) for (let x = cx - 3; x <= cx + 3 && okk; x++) { const i = y * N + x; if (bad.has(i) || S.type[i] <= G.T.RIVER || !W.walkable(i) || (S.treeAt && S.treeAt[i]) || (S.road && S.road[i])) { okk = false; break; } const h = W.groundH(x + 0.5, y + 0.5); lo = Math.min(lo, h); hi = Math.max(hi, h); }
         const sc = (hi - lo) * 40 + Math.hypot(cx - s.cx, cy - s.cy) * 0.15; if (okk && sc < bs) { bs = sc; best = [cx + 0.5, cy + 0.5]; } }
       if (!best) return { err: 'sem chão aberto' };
-      v.x = best[0] - 3; v.y = best[1] - 3; v.tx = v.x; v.ty = v.y;
+      v.x = best[0] - 2.2; v.y = best[1] + 2.2; v.tx = v.x; v.ty = v.y; // (the body near enough for the beasts to be drawn as skins, behind the scene)
       const until = (c, m) => { for (let k = 0; k < m; k++) { if (c()) return k; G.Main.frameFor(33); } return -1; };
       G.Modes.enter(v); until(() => G.Modes.state === 'INC', 300); for (let k = 0; k < 6; k++) G.Main.frameFor(33); S.time = 11 / 24;
       document.querySelectorAll('#inc-hud, #hud, #inc-root, #inc-label, #inc-compass, #inc-news, .toast').forEach(e => e.style.visibility = 'hidden');
-      G.Cam3D.OPT.follow = false; window.__spot = best; return { spot: best, fauna: G.Fauna3D.ready };
+      G.Cam3D.OPT.follow = false; G.Cam3D.update = function () { }; // (the camera is the scene's: held where each shot puts it, not behind the body)
+      window.__spot = best; return { spot: best, fauna: G.Fauna3D.ready };
     }, {});
     console.log(JSON.stringify(info)); if (info.err) { await browser.close(); process.exit(1); }
     const cells = []; const meas = [];
@@ -195,28 +232,31 @@ if (mode === 'jogo') {
         for (let k = 0; k < 3; k++) G.Main.frameFor(33);
         const hold = () => { for (const L of live) { const a = L.a; a.x = L.x; a.y = L.y; a.tx = a.x; a.ty = a.y; if (!a.dead) { a.state = L.b.state || (A.DEF[a.kind].cls === 'air' ? (a.z > 0.3 ? 'fly' : 'perch') : 'idle'); a.t = 1e6; a.moving = false; a.z = L.b.z || 0; if (L.b.z) a.air = true; } } };
         for (const L of live) { if (L.b.g && !L.a.dead) { const o = L.b.to !== undefined ? live[L.b.to].a.id : 0; if (!A.gesture(L.a, L.b.g, L.b.d, o, L.b.v || 0)) return { err: `gesto ${L.b.g} recusado para ${L.a.kind}: ${A.gestErr.slice(-1)}` }; } }
-        const steps = Math.round((sh.u || 1.2) / 0.033); for (let k = 0; k < steps; k++) { hold(); for (const L of live) if (L.b.g && !L.a.dead && L.a.gest !== L.b.g) A.gesture(L.a, L.b.g, L.b.d, L.b.to !== undefined ? live[L.b.to].a.id : 0, L.b.v || 0); G.Main.frameFor(33); }
+        // (the camera on the scene — from its side, three quarters, at its size — set before the frames: the eye's field decides who is drawn)
+        const a0 = live[0].a, X = live[0].x * TL, Z = live[0].y * TL; const Y = G.People3D.groundAt ? G.People3D.groundAt(live[0].x, live[0].y) : G.W.groundH(live[0].x, live[0].y) * G.Space.HM;
+        const size = Math.max(...live.map(L => G.Fauna3D.sizeOf(L.a.kind))) / (sh.zoom || 1); const D0 = Math.max(1.0, size * 2.4); const ang = sh.view === 'side' ? Math.PI / 2 : sh.view === 'front' ? 0 : sh.view === 'back' ? Math.PI : sh.view === 'top' ? 0.6 : 0.75;
+        const cx = X + (sh.cx || 0), cz = Z + (sh.cz || 0), hy = Math.max(0.15, size * 0.38) + (sh.cy || 0); const cam = G.Realm.camera();
+        const camSet = () => { cam.position.set(cx + Math.cos(ang) * D0, Y + hy + (sh.view === 'top' ? D0 * 0.9 : hy * 0.55), cz - Math.sin(ang) * D0); cam.lookAt(cx, Y + hy * 0.6, cz); cam.fov = 40; cam.updateProjectionMatrix(); };
+        camSet();
+        const steps = Math.max(1, Math.round((sh.u || 1.2) / 0.1)); for (let k = 0; k < steps; k++) { hold(); camSet(); for (const L of live) if (L.b.g && !L.a.dead && L.a.gest !== L.b.g) A.gesture(L.a, L.b.g, L.b.d, L.b.to !== undefined ? live[L.b.to].a.id : 0, L.b.v || 0); G.Main.frameFor(100); }
         hold();
         // (the measure: the holder's mouth against the point it reaches)
         let m = null; const P3 = G.People3D, FG = G.FaunaAnim.Gest;
         if (sh.measure) { const h = live[sh.measure[0]].a, o = live[sh.measure[1]].a; const hs = P3.beastVis(h.id); const which = sh.measure[2];
           if (hs && hs.kb && hs.kf) { const mo = FG.mouthOf(hs.kf, new Float32Array(3)), J = hs.kf.J, B = G.FaunaAnim.B, e = hs.kb, bi = 2 * 16, b = B.head; const xx = mo[0] - J[b * 3], yy = mo[1] - J[b * 3 + 1], zz = mo[2] - J[b * 3 + 2];
             const M = [e[bi] * xx + e[bi + 4] * yy + e[bi + 8] * zz + e[bi + 12], e[bi + 1] * xx + e[bi + 5] * yy + e[bi + 9] * zz + e[bi + 13], e[bi + 2] * xx + e[bi + 6] * yy + e[bi + 10] * zz + e[bi + 14]];
-            const T = P3.keyPoint(o, which, M[0], M[2]); m = { d: Math.hypot(M[0] - T[0], M[1] - T[1], M[2] - T[2]), size: G.Fauna3D.sizeOf(h.kind) }; } }
-        // (the camera on the scene: from its side, three quarters, at its size)
-        const a0 = live[0].a; const X = a0.x * TL, Z = a0.y * TL; const Y = G.People3D.groundAt ? G.People3D.groundAt(a0.x, a0.y) : G.W.groundH(a0.x, a0.y) * G.Space.HM;
-        const size = Math.max(...live.map(L => G.Fauna3D.sizeOf(L.a.kind))) * (sh.zoom || 1); const D0 = Math.max(2.2, size * 2.4); const ang = sh.view === 'side' ? Math.PI / 2 : sh.view === 'front' ? 0 : sh.view === 'back' ? Math.PI : sh.view === 'top' ? 0.6 : 0.75;
-        const cx = X + (sh.cx || 0), cz = Z + (sh.cz || 0), hy = Math.max(0.4, size * 0.38) + (sh.cy || 0); const cam = G.Realm.camera();
-        cam.position.set(cx + Math.cos(ang) * D0, Y + hy + (sh.view === 'top' ? D0 * 0.9 : hy * 0.55), cz - Math.sin(ang) * D0); cam.lookAt(cx, Y + hy * 0.6, cz); cam.fov = 40; cam.updateProjectionMatrix();
-        G.Realm.renderer().render(G.Realm.scene(), cam);
+            const T = P3.keyPoint(o, which, M[0], M[2]); m = { d: Math.hypot(M[0] - T[0], M[1] - T[1], M[2] - T[2]), size: G.Fauna3D.sizeOf(h.kind), dbg: { gn: hs.gn, gk: +(hs.gk || 0).toFixed(2), hx: +(hs.hx || 0).toFixed(2), hz: +(hs.hz || 0).toFixed(2), yaw: +hs.yaw.toFixed(2), M: M.map(v => +v.toFixed(2)), T: Array.from(T).map(v => +v.toFixed(2)), at: [+(h.x * G.Space.TILE).toFixed(2), +(h.y * G.Space.TILE).toFixed(2)], gest: h.gest, o: h.gestO === o.id } }; } }
+        G.Main.frameFor(33); camSet(); G.Realm.renderer().render(G.Realm.scene(), cam);
         const chk = G.People3D.check ? G.People3D.check() : [];
-        return { m, chk, skins: G.People3D.beastSkins, n: live.length, gest: live.map(L => L.a.gest || (L.a.dead ? 'morto' : '-')) };
+        const av = G.Avatar && G.Avatar.state ? G.Avatar.state() : null;
+        return { m, chk, skins: G.People3D.beastSkins, n: live.length, bv: live.map(L => { const q = G.People3D.beastVis(L.a.id); return q ? [L.a.kind, q.gn, q.side, +(q.gk || 0).toFixed(2)] : null; }), gest: live.map(L => L.a.gest || (L.a.dead ? 'morto' : '-')), dbg: { anim: S.animals.size, mode: G.Modes.state, has: live.map(L => S.animals.has(L.a.id)), beasts: G.People3D.beasts, av: av ? [av.X / TL, av.Z / TL] : null, at: [a0.x, a0.y], err: JSON.stringify(G.modErr).slice(0, 300), fauna: G.Fauna3D.ready, rows: G.Fauna3D.rows } };
       }, sh);
       if (r.err) { console.log('FALHOU | ' + sh.tag + ' | ' + r.err); fails.push(sh.tag); continue; }
       const file = path.join(OUT, sh.tag + '.png'); await page.screenshot({ path: file }); cells.push([sh.tag + (r.m ? ` (${r.m.d.toFixed(2)} m)` : ''), file, sh.sheet || 'outros']);
       if (r.chk.length) { console.log('FALHOU | verificador | ' + sh.tag + ': ' + r.chk.slice(0, 3).join(' · ')); fails.push(sh.tag + ' verificador'); }
-      if (r.skins < r.n) { console.log(`FALHOU | ${sh.tag} | ${r.skins} de ${r.n} bichos desenhados como pele`); fails.push(sh.tag + ' pele'); }
-      if (r.m) { meas.push([sh.tag, r.m.d]); const tol = sh.tol || Math.max(0.12, r.m.size * 0.12); if (r.m.d > tol) { console.log(`FALHOU | ${sh.tag} | a boca a ${r.m.d.toFixed(3)} m do ponto (tolerância ${tol.toFixed(2)})`); fails.push(sh.tag + ' alcance'); } }
+      if (r.skins < r.n) { console.log(`FALHOU | ${sh.tag} | ${r.skins} de ${r.n} bichos desenhados como pele ` + JSON.stringify(r.dbg)); fails.push(sh.tag + ' pele'); }
+      if (process.env.DBG) console.log(sh.tag, JSON.stringify(r.bv));
+      if (r.m) { meas.push([sh.tag, r.m.d]); const tol = sh.tol || Math.max(0.15, r.m.size * 0.2); // (the point moves — the prey kicks, the roll turns —: the exact reach is the node proof's) if (r.m.d > tol) { console.log(`FALHOU | ${sh.tag} | a boca a ${r.m.d.toFixed(3)} m do ponto (tolerância ${tol.toFixed(2)}) ` + JSON.stringify(r.m.dbg)); fails.push(sh.tag + ' alcance'); } }
     }
     const chk = await page.evaluate(() => ({ err: JSON.stringify(G.modErr), gestErr: G.Animals.gestErr.slice(0, 5) }));
     await browser.close();
