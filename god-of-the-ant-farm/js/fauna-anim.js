@@ -287,6 +287,30 @@
       z += rz(dz, dy, C); y = ey;
     }
   }
+  // (a hind leg folded under the body: the hock to the ground behind the hip — at yh —, the cannon forward along the ground, the
+  // foot flat; whatever the hip's height — sitting, lying)
+  function hindFold(J, L, yh, sL) {
+    const i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3, i2 = B[L + '2'] * 3, i3 = B[L + '3'] * 3; const Cp = legTop(J, L);
+    const a1z = J[i1 + 2] - J[i0 + 2], a1y = J[i1 + 1] - J[i0 + 1], a2z = (J[i2 + 2] - J[i1 + 2]) * sL, a2y = (J[i2 + 1] - J[i1 + 1]) * sL;
+    const l1 = Math.hypot(a1z, a1y), l2 = Math.hypot(a2z, a2y), b1 = Math.atan2(a1y, a1z), b2 = Math.atan2(a2y, a2z), b3 = Math.atan2(J[i3 + 1] - J[i2 + 1], J[i3 + 2] - J[i2 + 2]);
+    const Tz = P0w[0] - l2 * 0.32, dz = Tz - P0w[0], dy = yh - P0w[1], al = Math.atan2(dy, dz); const d = clamp(Math.hypot(dz, dy), Math.abs(l1 - l2) * 1.02 + 1e-4, (l1 + l2) * 0.999);
+    const sg = a1z * (a1y + a2y) - a1y * (a1z + a2z) >= 0 ? -1 : 1;
+    const p1 = al + sg * Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+    const ez = P0w[0] + l1 * Math.cos(p1), ey = P0w[1] + l1 * Math.sin(p1); const p2 = Math.atan2(P0w[1] + d * Math.sin(al) - ey, P0w[0] + d * Math.cos(al) - ez);
+    E[i0] = b1 - p1 - Cp; E[i1] = b2 - p2 - Cp - E[i0]; E[i2] = b3 - Cp - E[i0] - E[i1]; E[i3] = -b3;
+  }
+  // (a foreleg folded under the chest, as the hoofed lie: the forearm along the ground forward from the elbow, the knee — at yk
+  // — in front, the cannon folded back under it)
+  function foreFold(J, L, yk, sL) {
+    const i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3, i2 = B[L + '2'] * 3, i3 = B[L + '3'] * 3; const Cp = legTop(J, L);
+    const a1z = J[i1 + 2] - J[i0 + 2], a1y = J[i1 + 1] - J[i0 + 1], a2z = (J[i2 + 2] - J[i1 + 2]) * sL, a2y = (J[i2 + 1] - J[i1 + 1]) * sL;
+    const l1 = Math.hypot(a1z, a1y), l2 = Math.hypot(a2z, a2y), b1 = Math.atan2(a1y, a1z), b2 = Math.atan2(a2y, a2z), b3 = Math.atan2(J[i3 + 1] - J[i2 + 1], J[i3 + 2] - J[i2 + 2]);
+    const Tz = P0w[0] + l2 * 0.55, dz = Tz - P0w[0], dy = yk - P0w[1], al = Math.atan2(dy, dz); const d = clamp(Math.hypot(dz, dy), Math.abs(l1 - l2) * 1.02 + 1e-4, (l1 + l2) * 0.999);
+    const sg = a1z * (a1y + a2y) - a1y * (a1z + a2z) >= 0 ? -1 : 1;
+    const p1 = al + sg * Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+    const ez = P0w[0] + l1 * Math.cos(p1), ey = P0w[1] + l1 * Math.sin(p1); const p2 = Math.atan2(P0w[1] + d * Math.sin(al) - ey, P0w[0] + d * Math.cos(al) - ez);
+    E[i0] = b1 - p1 - Cp; E[i1] = b2 - p2 - Cp - E[i0]; E[i2] = b3 - Cp - E[i0] - E[i1] - Math.PI * 0.94; E[i3] = 1.1;
+  }
   function sit(form, J, k, sL, fy) {
     KE.set(E); KO.set(OFF); const lg = legsOf(form); const r = B.root * 3, sp = B.spine * 3, ch = B.chest * 3;
     const rump = form.meta.rump ? form.meta.rump * 1.15 : J[r + 1] * 0.36; OFF[0] = KO[0]; OFF[1] = rump - J[r + 1]; OFF[2] = 0;
@@ -298,16 +322,7 @@
     const a = lo; pose(a);
     OFF[2] = g.z - (P0w[0] + dF); // (the forefeet stay where they stood)
     for (let q = 0; q < 2; q++) { const L = LEGS[q]; const Cp = legTop(J, L); legTo(J, L, Cp, P0w[0] + dF, y3 + (fy ? fy[q] : 0), 0, 0, sL); }
-    for (let q = 2; q < 4; q++) { // (the hind legs: the hock to the ground behind the hip, the cannon forward along it, the foot flat)
-      const L = LEGS[q], i0 = B[L + '0'] * 3, i1 = B[L + '1'] * 3, i2 = B[L + '2'] * 3, i3 = B[L + '3'] * 3; const Cp = legTop(J, L), yh = lg[q].y3 * sL * 1.5 + (fy ? fy[q] : 0);
-      const a1z = J[i1 + 2] - J[i0 + 2], a1y = J[i1 + 1] - J[i0 + 1], a2z = (J[i2 + 2] - J[i1 + 2]) * sL, a2y = (J[i2 + 1] - J[i1 + 1]) * sL;
-      const l1 = Math.hypot(a1z, a1y), l2 = Math.hypot(a2z, a2y), b1 = Math.atan2(a1y, a1z), b2 = Math.atan2(a2y, a2z), b3 = Math.atan2(J[i3 + 1] - J[i2 + 1], J[i3 + 2] - J[i2 + 2]);
-      const Tz = P0w[0] - l2 * 0.32, dz = Tz - P0w[0], dy = yh - P0w[1], al = Math.atan2(dy, dz); const d = clamp(Math.hypot(dz, dy), Math.abs(l1 - l2) * 1.02 + 1e-4, (l1 + l2) * 0.999);
-      const sg = a1z * (a1y + a2y) - a1y * (a1z + a2z) >= 0 ? -1 : 1;
-      const p1 = al + sg * Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
-      const ez = P0w[0] + l1 * Math.cos(p1), ey = P0w[1] + l1 * Math.sin(p1); const p2 = Math.atan2(P0w[1] + d * Math.sin(al) - ey, P0w[0] + d * Math.cos(al) - ez);
-      E[i0] = b1 - p1 - Cp; E[i1] = b2 - p2 - Cp - E[i0]; E[i2] = b3 - Cp - E[i0] - E[i1]; E[i3] = -b3;
-    }
+    for (let q = 2; q < 4; q++) hindFold(J, LEGS[q], lg[q].y3 * sL * 1.5 + (fy ? fy[q] : 0), sL);
     // (the head kept level and up; the tail lifted off the ground behind, its end lying back along it)
     E[B.neck0 * 3] += 0.5 * a; E[B.neck1 * 3] += 0.12 * a; E[B.head * 3] += 0.32 * a;
     E[B.tail0 * 3] += 0.72 * a - 0.35; E[B.tail1 * 3] += 0.3; E[B.tail2 * 3] += 0.25; E[B.tail3 * 3] += 0.2;
@@ -647,7 +662,7 @@
 
   // (the kernel the gesture's layers pose with — js/fauna-gesto3d.js: the turns, the root's shift, the sizes, the bones, the
   // legs reached by their feet, the frames)
-  FA.K = { E, OFF, SC, B, NB, LEGS, P0w, chainI, chain, legTop, legTo, legToP, legToB, reachOf, lowJoint, legsOf, tailOver, rz, ry, clamp, sstep, R };
+  FA.K = { E, OFF, SC, B, NB, LEGS, P0w, chainI, chain, legTop, legTo, legToP, legToB, reachOf, lowJoint, legsOf, tailOver, hindFold, foreFold, rz, ry, clamp, sstep, R };
   FA.ready3 = three => { if (!THREE) start(three); };
   // ------------------------------ the coat ------------------------------
   // (each kind's paint over the colours the god's view gives it — col, bel (the belly), dk (the pattern's dark, a bird's wing

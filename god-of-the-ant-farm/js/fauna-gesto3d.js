@@ -52,6 +52,7 @@
   FG.I = I; FG.P = P; FG.NAMES = NAMES;
   // (the legs a gesture takes: each its target — the foot's joint, from where it stands, in leg lengths —, the bend of its
   // lower joint, the turn of its foot, how much it is taken, and how far it is swung out)
+  const FE = new Float32Array(12); // (a leg's turns, kept while another way of setting it is tried)
   const LW = new Float32Array(4), LZ = new Float32Array(4), LY = new Float32Array(4), LK = new Float32Array(4), LF = new Float32Array(4), LAB = new Float32Array(4);
   let kk = 1; // (the weight of the recipe adding now)
   const add = (i, v) => { P[i] += v * kk; };
@@ -261,6 +262,11 @@
         const Cp = K.legTop(J0, L);
         if (LT[o + 4] && Ty < gy + LL * 0.05) K.legToP(J0, L, Cp, Tz, Ty, Ft, sL); else K.legTo(J0, L, Cp, Tz, Ty, Kp, Ft, sL);
       }
+      // (lying, a hind leg folds under whatever the hip's height: the hock on the ground behind it, the cannon forward — a target
+      // the leg cannot reach would prop the body up off the ground: a pig's short leg)
+      const lw = clamp(P[I.LIE], 0, 1); if (lw > 0.01 && !LT[k * 5 + 4] && (k >= 2 || (C.s.fold && !C.s.eleph))) { const o3 = B[L + '0'] * 3; for (let j = 0; j < 12; j++) FE[j] = E[o3 + j];
+        if (k >= 2) K.hindFold(J0, L, lg[k].y3 * sL * 1.3 + (fy ? fy[k] : 0), sL); else K.foreFold(J0, L, lg[k].y3 * sL * 1.4 + (fy ? fy[k] : 0), sL);
+        for (let j = 0; j < 12; j++) E[o3 + j] = FE[j] + (E[o3 + j] - FE[j]) * lw; }
       if (LAB[k]) E[B[L + '0'] * 3 + 2] += sd * LAB[k];
     }
     // (limp: each joint let go, hanging a little bent; thrashing: the legs kick and paddle, each its own beat)
@@ -309,8 +315,8 @@
     E[l + 1] += sw * 0.6 + eo * 0.4; E[r + 1] += -sw * 0.6 - eo * 0.4;
   };
   FG.tail = function (st) {
-    const tu = P[I.TUP] + P[I.REAR] * 0.7, tt = P[I.TTUCK], tl = P[I.TLASH], tw = P[I.TWAG], tc = P[I.TCURL], t = C.t; // (reared, the tail held up off the ground)
-    if (!(tu || tt || tl || tw || tc || P[I.TSIDE])) return;
+    const tu = P[I.TUP] + P[I.REAR] * 0.7 + clamp(P[I.LIE], 0, 1) * 0.9, tt = P[I.TTUCK], tl = P[I.TLASH], tw = P[I.TWAG], tc = P[I.TCURL], t = C.t; // (reared, the tail held up off the ground)
+    if (!(tu || tt || tl || tw || tc || P[I.TSIDE])) return; // (lying, the tail laid out behind along the ground, not hanging into it)
     for (let k = 0; k < 4; k++) {
       const b = B['tail' + k] * 3;
       E[b] += -tu * (k === 0 ? 0.85 : 0.18) + tt * (k === 0 ? 0.6 : 0.3) - tc * 0.45;
@@ -396,7 +402,7 @@
       const x = u.pos[i * 3], y = u.pos[i * 3 + 1], z = u.pos[i * 3 + 2]; has[b] = 1;
       for (let j = 0; j < ND; j++) { const d = DIRS[j]; const s = x * d[0] + y * d[1] + z * d[2]; const q = b * ND + j; if (s > best[q]) { best[q] = s; idx[q] = i; } }
     }
-    const seen = new Set(); for (let b = 0; b < NB; b++) for (let j = 0; j < ND; j++) { const i = idx[b * ND + j]; if (i < 0) continue; seen.add(i);
+    const seen = new Set(); for (let b = 0; b < NB; b++) for (let j = 0; j < ND; j++) { const i = idx[b * ND + j]; if (i < 0) continue; if (!(b >= B.tail0 && b <= B.tail2 && u.zone && u.zone[i] === 6)) seen.add(i); // (the hair of a tail lies where it falls: a horse's long tail does not prop the body up)
       if (j < NDN) { const o = (b * NDN + j) * 3; p[o] = u.pos[i * 3]; p[o + 1] = u.pos[i * 3 + 1]; p[o + 2] = u.pos[i * 3 + 2]; } }
     const list = [...seen].sort((a, b) => a - b), qn = list.length, q = new Float32Array(qn * 3), qi = new Uint8Array(qn * 4), qw = new Float32Array(qn * 4);
     list.forEach((i, k) => { q[k * 3] = u.pos[i * 3]; q[k * 3 + 1] = u.pos[i * 3 + 1]; q[k * 3 + 2] = u.pos[i * 3 + 2]; for (let m = 0; m < 4; m++) { qi[k * 4 + m] = u.bi[i * 4 + m]; qw[k * 4 + m] = u.bw[i * 4 + m] / 255; } });

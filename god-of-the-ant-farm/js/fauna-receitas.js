@@ -249,7 +249,7 @@
   def('threat', { in: 0.2, out: 0.5, still: 0.7, quad(u) {
     const s = S(); A(I.AIM, 0.3);
     if (s.canid) { A(I.DROP, 0.3); A(I.NFWD, 0.7); A(I.NUP, -0.12); A(I.JAW, 0.62); A(I.EARB, 0.7); A(I.ARCH, 0.13); A(I.TUP, 0.6); return; } // (the snarl: the head low and out, the hackles up)
-    if (s.cat) { A(I.DROP, 0.55); A(I.JAW, 0.95); A(I.EARB, 1); A(I.NFWD, 0.4); A(I.TLASH, 1); with_(0.45, () => Lg(sideLeg(true, C.side), 0.25, 0.22, 1.3, 0)); return; } // (the hiss, a paw ready)
+    if (s.cat) { A(I.DROP, 0.55); A(I.JAW, 0.95); A(I.EARB, 1); A(I.NFWD, 0.4); A(I.TLASH, 1); A(I.TUP, 0.35); with_(0.45, () => Lg(sideLeg(true, C.side), 0.25, 0.22, 1.3, 0)); return; } // (the hiss, a paw ready)
     if (s.bear) { A(I.NDOWN, 0.35); A(I.JAW, 0.55 + 0.25 * Math.max(0, Math.sin(u * hz(1.8)))); A(I.HYAW, osc(u, 0.6) * 0.3); A(I.EARB, 1); A(I.DROP, 0.1); return; }
     if (s.hippo) { A(I.JAW, 1.3); A(I.NUP, 0.85); return; }
     if (s.monkey) { A(I.JAW, 0.95); A(I.NUP, 0.2); A(I.HPITCH, 0.2 * Math.sin(u * hz(2))); A(I.EARB, 0.8); A(I.REAR, 0.15); return; }

@@ -249,13 +249,13 @@ if (mode === 'jogo') {
         G.Main.frameFor(33); camSet(); G.Realm.renderer().render(G.Realm.scene(), cam);
         const chk = G.People3D.check ? G.People3D.check() : [];
         const av = G.Avatar && G.Avatar.state ? G.Avatar.state() : null;
-        return { m, chk, skins: G.People3D.beastSkins, n: live.length, bv: live.map(L => { const q = G.People3D.beastVis(L.a.id); return q ? [L.a.kind, q.gn, q.side, +(q.gk || 0).toFixed(2)] : null; }), gest: live.map(L => L.a.gest || (L.a.dead ? 'morto' : '-')), dbg: { anim: S.animals.size, mode: G.Modes.state, has: live.map(L => S.animals.has(L.a.id)), beasts: G.People3D.beasts, av: av ? [av.X / TL, av.Z / TL] : null, at: [a0.x, a0.y], err: JSON.stringify(G.modErr).slice(0, 300), fauna: G.Fauna3D.ready, rows: G.Fauna3D.rows } };
+        return { m, chk, skins: G.People3D.beastSkins, n: live.length, lastP: (() => { const FG = G.FaunaAnim.Gest; return FG.NAMES.map((n, i) => FG.P[i] ? n + "=" + FG.P[i].toFixed(2) : "").filter(Boolean).join(" "); })(), off: Array.from(G.FaunaAnim.K.OFF).map(v => +v.toFixed(3)), bv: live.map(L => { const q = G.People3D.beastVis(L.a.id); return q ? [L.a.kind, q.gn, q.side, +(q.gk || 0).toFixed(2)] : null; }), gest: live.map(L => L.a.gest || (L.a.dead ? 'morto' : '-')), dbg: { anim: S.animals.size, mode: G.Modes.state, has: live.map(L => S.animals.has(L.a.id)), beasts: G.People3D.beasts, av: av ? [av.X / TL, av.Z / TL] : null, at: [a0.x, a0.y], err: JSON.stringify(G.modErr).slice(0, 300), fauna: G.Fauna3D.ready, rows: G.Fauna3D.rows } };
       }, sh);
       if (r.err) { console.log('FALHOU | ' + sh.tag + ' | ' + r.err); fails.push(sh.tag); continue; }
       const file = path.join(OUT, sh.tag + '.png'); await page.screenshot({ path: file, timeout: 240000 }); cells.push([sh.tag + (r.m ? ` (${r.m.d.toFixed(2)} m)` : ''), file, sh.sheet || 'outros']);
       if (r.chk.length) { console.log('FALHOU | verificador | ' + sh.tag + ': ' + r.chk.slice(0, 3).join(' · ')); fails.push(sh.tag + ' verificador'); }
       if (r.skins < r.n) { console.log(`FALHOU | ${sh.tag} | ${r.skins} de ${r.n} bichos desenhados como pele ` + JSON.stringify(r.dbg)); fails.push(sh.tag + ' pele'); }
-      if (process.env.DBG) console.log(sh.tag, JSON.stringify(r.bv));
+      if (process.env.DBG) console.log(sh.tag, JSON.stringify(r.bv), r.lastP, JSON.stringify(r.off));
       // (the point moves — the prey kicks, the roll turns —: the exact reach is the node proof's; here a fifth of the holder's size)
       if (r.m) { meas.push([sh.tag, r.m.d]); const tol = sh.tol || Math.max(0.15, r.m.size * 0.2); if (r.m.d > tol) { console.log(`FALHOU | ${sh.tag} | a boca a ${r.m.d.toFixed(3)} m do ponto (tolerância ${tol.toFixed(2)}) ` + JSON.stringify(r.m.dbg)); fails.push(sh.tag + ' alcance'); } }
     }
