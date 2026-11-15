@@ -209,6 +209,8 @@
   };
 
   // ------------------------------ fear, anger and memory ------------------------------
+  // a spent effort (a chase that failed): the energy it cost
+  Me.tire = function (a, x) { const m = a.mind; if (m) m.en = Math.max(0, m.en - x); };
   Me.fright = function (a, lv) { if (!Me.has(a, SP[a.kind])) return; const m = Me.m(a); if (lv > m.f) m.f = clamp01(lv); };
   Me.anger = function (a, lv, by) { if (!Me.has(a, SP[a.kind])) return; const m = Me.m(a); if (lv > m.g) m.g = clamp01(lv); if (by && by.id) Me.meet(a, 1, by.id); };
   // a place to remember (k: 1 a place to rest, 2 a kill, 3 danger): the old one near it moves there, else the oldest goes
@@ -292,7 +294,16 @@
     if (m.f > 0) m.f = Math.max(0, m.f - dt * 0.035);
     if (m.g > 0) m.g = Math.max(0, m.g - dt * 0.025);
     // the heat passes; a pregnancy goes to its term (the birth itself is the breeding round's, animals.js)
-    if (m.es > 0) { heatAdd(a); m.es = Math.max(0, m.es - dt); if (m.es === 0 && m.pg === 0) { m.pa = 0; Me.count('cio-perdido'); Me.count('cio-perdido:' + a.kind); } }
+    if (m.es > 0) {
+      heatAdd(a); m.es = Math.max(0, m.es - dt);
+      if (m.es === 0 && m.pg === 0) {
+        // (the heat over, and her male alive and within reach: they met where nobody saw — in the canopy, under the water, in the
+        // night —; the young is his. A heat with no male of her kind near passes: D-293)
+        const s = m.pa && S.animals.get(m.pa);
+        if (s && !s.dead && G.dist(a.x, a.y, s.x, s.y) < 30) { m.pg = Me.gest_s(a.kind); if (s.mind && s.mind.wo === a.id) s.mind.wo = 0; Me.count('acasala'); Me.count('acasala:' + a.kind); Me.count('acasala-longe'); }
+        else { m.pa = 0; Me.count('cio-perdido'); Me.count('cio-perdido:' + a.kind); }
+      }
+    }
     if (m.pg > 0) m.pg = Math.max(0, m.pg - dt);
     // the milk: a young at its mother's side drinks, she gives
     if (st === 'suckle') { const mo = Me.mother(a); if (mo && G.dist(a.x, a.y, mo.x, mo.y) < 1.9) { a.hunger = Math.max(0, a.hunger - dt * 0.06); mo.hunger = Math.min(1, mo.hunger + dt * 0.012); } }
@@ -603,14 +614,18 @@
   Me.option('court', {
     who: (a, sp) => brain(a, sp) && a.grown >= 1 && !!a.mind && a.mind.sx === 1 && (a.mind.wo > 0 || (HEATS.get(a.kind) || NONE).size > 0),
     score(a, sp) { let f = wooed(a); if (!f) { a.mind.wo = 0; f = find(a); } if (!f) return 0; return 0.66 + 0.15 * Me.trait(a, 'g') - (hungry(a, sp) ? 0.25 : 0); },
-    start(a) { const f = wooed(a); if (!f) return false; a.state = 'court'; a.target = f.id; a.t = 45; a.bp = 0; a.bt = 0; a.sub = 0; if (a.z > 3 && !(a.perch && f.perch)) { a.z = 0; a.perch = 0; } return true; },
+    start(a) { const f = wooed(a); if (!f) return false; a.state = 'court'; a.target = f.id; a.t = 45; a.bp = 0; a.bt = 0; a.sub = 0; a.cg = G.dist(a.x, a.y, f.x, f.y); a.cgT = 0; if (a.z > 3 && !(a.perch && f.perch)) { a.z = 0; a.perch = 0; } return true; },
     step(a, dt, sp, S) {
       const f = S.animals.get(a.target); const m = Me.m(a); a.t -= dt;
       if (!f || f.dead || !f.mind || !(f.mind.es > 0) || a.t <= 0) { m.wo = 0; a.state = 'idle'; a.t = 1; a.target = 0; return true; }
       const d = G.dist(a.x, a.y, f.x, f.y);
       // the rut: another grown male of its kind beside her — they settle it
       if (a.bp === 0 && d < 4) { const rv = rival(a, f); if (rv && Me.free(rv)) { Me.contest(a, rv, 2); return true; } }
-      if (d > 1.1) { a.tx = f.x; a.ty = f.y; A.moveTo(a, dt, sp.sp * 1.1); if (a.bp > 0) a.bp = 0; return true; }
+      if (d > 1.1) {
+        // (no nearer after a few seconds — a river, a cliff, a town between them: he gives her up, and she calls another)
+        a.cgT += dt; if (a.cgT >= 5) { if (a.cg - d < 0.6) { m.wo = 0; f.mind.pa = 0; a.state = 'idle'; a.t = 1; a.target = 0; Me.count('corte-longe'); return true; } a.cg = d; a.cgT = 0; }
+        a.tx = f.x; a.ty = f.y; A.moveTo(a, dt, sp.sp * (d > 6 ? 1.5 : 1.1)); if (a.bp > 0) a.bp = 0; return true;
+      }
       a.moving = false; G.faceTo(a, f.x - a.x, f.y - a.y); a.bt += dt;
       if (a.bp === 0) {
         a.bp = 1; a.bt = 0; Me.gesto1(a, ['court', 'sniff', 'nuzzle'], 0, f.id);

@@ -605,6 +605,7 @@
     const sp = SP[a.kind];
     // (by another beast: the fight's rule — the much stronger it runs from, a defender turns on it, in jaws nothing: D-297)
     if (by && by.kind && G.Luta && G.Luta.hurtBy(a, by)) return;
+    if (by && a.state === 'hold' && G.Luta) G.Luta.drop(a); // (a person's spear: what it held is let go, L-1003)
     if (by && (sp.defend || sp.bold > 0 || a.kind === 'boar') && a.hp > a.maxHp * 0.25) { a.angry = 14; a.target = by.id; a.state = 'chase'; }
     else if (a.kind === 'wolf' && (a.raid || a.summoned)) { if (by && by.id && G.S.villagers.has(by.id)) a.target = by.id; if (a.hp < a.maxHp * 0.35) a.state = 'leave'; }
     else if (by) { const p = fleeTarget(a, by.x, by.y, 6); if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 3; } }
@@ -634,6 +635,7 @@
   // ------------------------------ behaviours ------------------------------
   const PREYSET = {}; for (const k in SP) PREYSET[k] = new Set(SP[k].prey || []);
   const EATERS = {}; for (const k in A.eatenBy) EATERS[k] = new Set(A.eatenBy[k]);
+  const SNAKE = { python: 1, viper: 1, anaconda: 1 };
   // (a hunter of the air or the ground notices its prey by its senses — the old radius times A.senseMul: the wind, the cover, the
   // dark, the hidden fawn —, looked for up to HUNT_SENSE times as far; and takes only what its party can bring down, D-297)
   const HUNT_SENSE = 1.5;
@@ -688,7 +690,8 @@
   }
   function eatMeat(a, prey, dt) {
     const sp = SP[a.kind];
-    const bite = Math.min(prey.meat, dt * 3 * sp.size);
+    // (a meal on a carcass takes its time — the pride shares it, the hyenas come for it, the vultures wait: D-299)
+    const bite = Math.min(prey.meat, dt * (sp.cls === 'air' ? 3 : 1) * sp.size);
     prey.meat -= bite; a.hunger = Math.max(0, a.hunger - bite / Math.max(1, sp.app * 5));
     a.moving = false; a.eating = 0.4;
     if (prey.meat <= 0.05) { prey.meat = 0; return true; }
@@ -717,7 +720,8 @@
         if (p.z > 25 && p.state !== 'dive') continue;
         if (a.z > 3 && SP[p.kind].cls !== 'air' && SP[p.kind].climb !== 'tree') continue;
         const dx = a.x - p.x, dy = a.y - p.y; let d = dx * dx + dy * dy;
-        if (p.state === 'stalk' || p.state === 'flank') d *= 7; else if (p.sub > 0) d *= 9;
+        if (p.state === 'stalk' || p.state === 'flank' || p.state === 'lunge') d *= 7; else if (p.sub > 0) d *= 9; // (and the snake creeping in the grass)
+        else if (!p.moving && SNAKE[p.kind]) d *= 5; // (a snake lying still is a stick in the grass)
         if (sense) { const k = A.senseMul(a, p); d /= k * k; }
         if (d < td) { td = d; th = p; }
       }
@@ -892,7 +896,7 @@
       const d = G.dist(a.x, a.y, tg.x, tg.y);
       if (d < 0.9) {
         a.bite = 0.3; G.Audio && G.Audio.at(a.x, a.y, 'bite'); G.FX && G.FX.splash(a.x, a.y, 1);
-        if (tg.kind) { if (!G.Luta.hold(a, tg, G.Luta.K.CROC)) { a.state = 'idle'; a.target = 0; a.t = 1; } }
+        if (tg.kind) { if (!G.Luta.hold(a, tg, G.Luta.K.CROC)) { A.damage(tg, 14, a); a.state = tg.dead ? 'eat' : 'idle'; a.t = tg.dead ? 20 : 1; a.carc = !!tg.dead; if (!tg.dead) a.target = 0; } } // (a kept beast: a bite, no hold)
         else { tg.lastBeast = a.kind; tg.lastBeastId = a.id; tg.downT = S.clock + 2.2; G.Vg.damage(tg, 22, 'beast', false); G.FX && G.FX.blood(tg.x, tg.y); if (!S.villagers.has(tg.id)) afterManKill(a, tg, sp); else { G.Vg.emote(tg, 'fear', 3); a.state = 'roll'; a.roll = 1.6; a.t = 1.6; } }
         return true;
       }
@@ -919,7 +923,7 @@
         else { G.Vg.damage(tg, 14, 'beast', false); if (!S.villagers.has(tg.id)) { a.roll = 0; afterManKill(a, tg, sp); return true; } }
       }
       if (G.Carnage && G.Carnage.decal && G.R() < dt * 2) G.Carnage.decal(a.x + G.rr(-0.4, 0.4), a.y + G.rr(-0.4, 0.4), 0.2, 'splat');
-      if (a.roll <= 0) { a.roll = 0; if (tg && tg.dead && tg.kind) { a.state = 'eat'; a.t = 25; a.carc = true; } else { a.state = 'idle'; a.t = 2; if (tg && tg.kind) tg.caught = 0; } }
+      if (a.roll <= 0) { a.roll = 0; if (tg && tg.dead && tg.kind) { a.state = 'eat'; a.t = 25; a.carc = true; } else { a.state = 'idle'; a.t = 2; } }
       return true;
     },
     // the elephants come back to the body of one of their own, and stand there, touching it with their trunks
@@ -1727,10 +1731,11 @@
       if (mind) {
         if (Me.sex(a) !== 0 || a.caught) continue;
         if (Me.due(a)) { let born = 0; for (let j = Me.litter(a.kind); j > 0 && (count[a.kind] || 0) < cap; j--) if (birth(a, sp, count)) born++; if (!born) Me.lose(a); continue; }
-        if (!Me.fertile(a)) continue;
+        if (!Me.fertile(a)) { Me.count('gate:fertil:' + a.kind); continue; }
       }
-      if (a.hunger > (A.predator(a.kind) ? 0.65 : 0.45)) continue;
-      if (n >= cap || n < 2) continue;
+      if (a.hunger > (A.predator(a.kind) ? 0.65 : 0.45)) { if (mind) Me.count('gate:fome:' + a.kind); continue; }
+      if (n >= cap || n < 2) { if (mind) Me.count('gate:teto:' + a.kind); continue; }
+      if (mind) Me.count('gate:ok:' + a.kind);
       const mul = G.Nature.zoneMul(a.x, a.y, 'fertility');
       const p = dt / DAY() * sp.breed * (mind ? HEAT_X : 1) * (1 - Math.pow(n / cap, 3)) * mul;
       if (G.R() >= p) continue;
@@ -1739,7 +1744,7 @@
     }
   }
   // (half of the grown are mothers, and some heats find no male: a heat comes this much more often than a birth used to)
-  const HEAT_X = 3;
+  const HEAT_X = 7;
   // a young born at its mother's side (where she stands, or beside her; a mother off her ground — inside a building — gives no
   // birth there: a wolf's cub was born in a theatre of the metrópole, its mother inside it, L-681, L-631)
   function birth(a, sp, count) {

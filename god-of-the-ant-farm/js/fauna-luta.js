@@ -63,7 +63,7 @@
   prof(['jaguar'], { e: 6, r: 30, b: 1.3, ag: 0.6 }); prof(['snowleopard'], { e: 9, r: 28, b: 1.3, ag: 0.78 });
   prof(['wolf'], { e: 60, r: 40, b: 1.06, ag: 0.55 }); prof(['hyena'], { e: 50, r: 40, b: 1.05, ag: 0.45 });
   prof(['fox', 'arcticfox', 'fennec'], { e: 15, r: 20, b: 1.12, ag: 0.85 }); prof(['bear'], { e: 10, r: 35, b: 1.15, ag: 0.3 }); prof(['polarbear'], { e: 8, r: 35, b: 1.15, ag: 0.3 });
-  prof(['croc'], { e: 3, r: 30, b: 1, ag: 0.3 }); prof(['python', 'anaconda', 'viper'], { e: 2.5, r: 30, b: 1, ag: 0.4 });
+  prof(['croc'], { e: 3, r: 30, b: 1, ag: 0.3 }); prof(['python', 'anaconda', 'viper'], { e: 2.5, r: 30, b: 2.2, ag: 0.4 }); // (the snake's strike: a lash, over in a moment)
   prof(['gazelle'], { e: 22, r: 22, b: 1, ag: 0.95, jink: 1 }); prof(['rabbit', 'hare'], { e: 12, r: 18, b: 1, ag: 1, jink: 2 }); prof(['ostrich'], { e: 30, r: 25, ag: 0.7, jink: 1 });
   prof(['zebra'], { e: 30, r: 25, ag: 0.55 }); prof(['gnu'], { e: 35, r: 25, ag: 0.5 }); prof(['deer'], { e: 22, r: 22, ag: 0.75, jink: 1 }); prof(['reindeer'], { e: 40, r: 25, ag: 0.5 });
   prof(['moose'], { e: 25, r: 30, ag: 0.35 }); prof(['giraffe'], { e: 20, r: 30, ag: 0.25 }); prof(['buffalo'], { e: 15, r: 30, ag: 0.3 }); prof(['bison'], { e: 30, r: 30, ag: 0.35 });
@@ -117,7 +117,9 @@
     if (GIANT.has(p.kind) && p.grown >= 0.7) return false; // (the hippo, the rhino, the elephant: only their young are prey)
     const ps = sp.size * (p.grown < 1 ? 0.35 + 0.65 * p.grown : 1) * (p.wnd && p.wnd.l > 0.4 ? 0.85 : 1);
     const as = sa.size * (a.grown || 1) * (1 - 0.3 * Math.min(1, (a.wnd && a.wnd.j) || 0));
-    return ps <= as * (1.05 + 0.4 * ((party || 1) - 1));
+    // (the snake swallows what is bigger than it, the venom fells what it could never hold; the crocodile drowns what it could
+    // not throw down on land)
+    return ps <= as * (SWALLOW.has(a.kind) ? 1.6 : a.kind === 'croc' ? 1.3 : 1.05 + 0.4 * ((party || 1) - 1));
   };
   // how much a hunter is drawn to this one rather than another: the wounded, the old, the spent (and the young, in findPrey)
   L.weak = function (p) {
@@ -215,7 +217,7 @@
   };
 
   // ------------------------------ the chase ------------------------------
-  const maxChase = a => (PACK.has(a.kind) ? 70 : CAT.has(a.kind) ? 14 : BEAR.has(a.kind) ? 14 : 18);
+  const maxChase = a => (PACK.has(a.kind) ? 70 : CAT.has(a.kind) ? 14 : BEAR.has(a.kind) ? 14 : SWALLOW.has(a.kind) ? 4 : 18);
   // the chase of a live beast, a step: the breath that fails, the herd test, the jink and the overrun, the contact (true: done)
   L.chase = function (a, p, dt, sp) {
     const S = G.S; const d = G.dist(a.x, a.y, p.x, p.y);
@@ -239,7 +241,7 @@
   function giveUp(a, p, S) {
     a.state = 'idle'; a.target = 0; a.onPerson = false; a.crouch = 0;
     const m = a.mind; a.rest = Math.max(a.rest || 0, 6 + 12 * (m ? 1 - m.st : 0.5)); a.t = G.rr(1, 3);
-    if (m) m.en = Math.max(0, m.en - 0.04);
+    Me.tire(a, 0.04);
     a.noPrey = { id: p.id, until: S.clock + 25 };
     Me.gesto1(a, ['pant', 'stare']); L.count('falha'); L.count('falha:' + a.kind);
   }
@@ -290,7 +292,7 @@
         if (k === PIN && SP[p.kind].size > sa.size * 0.9 && p.hp > p.maxHp * 0.5) { swipe(a, p, jaw); return; }
         if (k === COIL) Me.gesto(a, 'strike', undefined, p.id, NECK + 1);
         if (k === PIN) swipe(a, p, jaw);
-        if (!p.dead) L.hold(a, p, k);
+        if (!p.dead && !L.hold(a, p, k)) { hit(p, (6 + sa.hp * 0.15) * a.grown * jaw, a); if (p.dead) killed(a, p, BITE); }
         return;
       case SHAKE: {
         Me.gesto1(a, a.kind === 'fox' || a.kind === 'arcticfox' || a.kind === 'fennec' ? ['pounce', 'bite'] : ['bite'], undefined, p.id, NECK + 1);
@@ -335,14 +337,16 @@
     const sa = SP[a.kind]; sound(a, 'bite', 0.8); a.bite = 0.3; a.blood = Math.max(a.blood || 0, 0.5);
     hit(p, (5 + sa.hp * 0.06) * a.grown, a); L.wound(p, G.R() < 0.5 ? FLANK : RUMPZ, 0.18, a);
     if (p.dead) { killed(a, p, method(a, p)); return; }
-    L.count('salto'); L.hold(a, p, method(a, p) === RUMP ? RUMP : method(a, p));
+    L.count('salto'); if (!L.hold(a, p, method(a, p))) { hit(p, (8 + sa.hp * 0.12) * a.grown, a); if (p.dead) killed(a, p, BITE); }
   };
 
   // ------------------------------ the hold ------------------------------
   // the grip by its kind: how well it holds (a jaw kicked in holds worse)
   const GRIPQ = { [RUMP]: 0.55, [THROAT]: 0.82, [MUZZLE]: 0.86, [NAPE]: 0.85, [SKULL]: 0.95, [PIN]: 0.75, [CROC]: 0.86, [COIL]: 0.9, [PULL]: 0.6 };
   L.hold = function (a, p, k) {
-    if (p.dead || p.held || p.air || (p.caught && p.caught !== a.id)) return false;
+    // (a kept beast — the herd's cow, the town's hen — lives by another hand, the herds' and the town's, which never ask if it is
+    // held: no hold on it, the bite is enough; L-1003)
+    if (p.dead || p.held || p.air || (p.caught && p.caught !== a.id) || p.dom || SP[p.kind].dom || SP[p.kind].town) return false;
     const q = clamp01((GRIPQ[k] || 0.6) * (1 - 0.5 * Math.min(1, (a.wnd && a.wnd.j) || 0)) * (0.6 + 0.4 * (a.grown || 1)));
     const w = wnd(p); w.h = [a.id, k, 0, r2(q), 1];
     p.caught = a.id; p.down = 0; p.moving = false;
@@ -385,7 +389,10 @@
   L.held = function (p, dt) {
     if (p.caught) {
       const h = G.S.animals.get(p.caught); const r = p.wnd && p.wnd.h;
-      if (!h || h.dead || h.held || h.air || h.state !== 'hold' || h.target !== p.id || !r || r[0] !== h.id) { L.release(p, 'perdeu'); return true; }
+      if (!h || h.dead || h.held || h.air || h.state !== 'hold' || h.target !== p.id || !r || r[0] !== h.id) {
+        L.release(p, 'perdeu'); if (h && h.state === 'hold' && h.target === p.id) endHold(h); // (the god's hand took the holder up: it holds nothing)
+        return true;
+      }
       p.hurt = 0.1; if (r[1] !== RUMP) { p.moving = false; p.walkPh += dt * 14; }
       return true;
     }
@@ -403,7 +410,7 @@
   L.onDeath = function (a, by, cause) {
     const S = G.S;
     if (a.caught) { a.caught = 0; } if (a.wnd) a.wnd.h = null;
-    if (a.state === 'hold') { const p = S.animals.get(a.target); if (p && p.caught === a.id) L.release(p, 'livre', a); }
+    A.near(a.x, a.y, 4, p => { if (p !== a && p.caught === a.id) L.release(p, 'livre', a); });
     if (by && by.kind) { L.count('morte:' + a.kind + ':' + by.kind); }
     if (cause === 'hunger' && A.predator(a.kind) && SP[a.kind].diet !== 'scav') { L.count('fome-predador'); L.count('fome-predador:' + a.kind); if (a.wnd && a.wnd.j > 0.3) { L.count('fome-mandibula'); const n = L.nm(a); L.say('fome:' + a.kind, `${G.cap(n.art)} ${n.n} de mandíbula quebrada, que já não conseguia caçar, morreu de fome${L.where(a.x, a.y)}.`, a.x, a.y, 'skull', true); } }
     // its own remember the place where one of them died to a hunter (and the hunter)
@@ -417,6 +424,7 @@
     if (!p || !r || r[0] !== a.id || p.caught !== a.id) { endHold(a); return true; }
     if (p.held || p.air) { L.release(p, 'perdeu'); endHold(a); return true; }
     r[2] += dt; a.t -= dt; a.moving = false;
+    if (a.t <= 0) { L.release(p, 'perdeu'); endHold(a); return true; } // (a hold that will not end: let go)
     const k = r[1]; const sz = SP[p.kind].size;
     a.hk -= dt; if (a.hk <= 0) { a.hk = 0.8; a.hn = helpers(a, p); }
     const n = a.hn || 0; const P = strength(a) * (1 + 0.55 * n), R = resist(p); const ratio = R / Math.max(0.05, P);
@@ -476,6 +484,8 @@
     holdGest(a, p, k, 0); L.place(a, p);
     return true;
   }
+  // a holder that turns to something else lets go first (a person's spear, an order of another module): the prey is free
+  L.drop = function (a) { if (a.state !== 'hold') return; const p = G.S.animals.get(a.target); if (p && p.caught === a.id) L.release(p, 'livre', a); endHold(a); };
   function endHold(a) { if (a.state === 'hold') a.state = 'idle'; a.target = 0; a.t = G.rr(1, 2); a.grip = 0; a.roll = 0; a.hd = 0; a.rest = Math.max(a.rest || 0, 6); }
   A.behave('hold', holdStep, { busy: true, hunting: true });
 
