@@ -789,5 +789,16 @@ for (const f of ['fauna3d.js', 'fauna-anim.js']) { if (!src[f]) { fails.push(`bi
 { const p3 = src['people3d.js'] || []; const i = p3.findIndex(l => /function beastSkin\(a, sp, s, m,/.test(l));
   if (i < 0) fails.push('bicho de uma pele: o people3d.js sem a função beastSkin — a regra 91 não acha quem põe os bichos na pele');
   else { const j = p3.findIndex((l, k) => k > i && /^  \}$/.test(l)); p3.slice(i, j).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\ba\.[A-Za-z_]+\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`bicho de uma pele: people3d.js:${i + k + 1} o beastSkin escreve no bicho (a memória do desenho é o bvis): ${l.trim().slice(0, 110)}`); }); } }
+// 91, o dragão (D-270): o dragão de pele só desenha, como os bichos — o skinPlace do dragon3d.js (a pose, o pouso, a boca que
+// arde) não tira de acaso nenhum (o bater das asas, o piscar e o fogo da boca saem do relógio da vista e do id do dragão: o
+// mesmo dragão é sempre o mesmo dragão) nem escreve no dragão do mundo (d. seguido de uma atribuição; a memória do desenho é o
+// vis); a linha dele no Fauna3D é a que o Fauna3D.extra dá depois dos bichos do People3D, e só o dragon3d.js põe o dragão nela
+{ const d3 = src['dragon3d.js'] || []; const i = d3.findIndex(l => /function skinPlace\(d, C, t, dt, row, focus\)/.test(l));
+  if (i < 0) fails.push('dragão de pele: o dragon3d.js sem a função skinPlace — a regra 91 não acha quem põe o dragão na pele');
+  else { const j = d3.findIndex((l, k) => k > i && /^  \}$/.test(l)); d3.slice(i, j).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random/.test(c)) fails.push(`dragão de pele: dragon3d.js:${i + k + 1} tira de um acaso (o mesmo dragão tem de ser sempre o mesmo): ${l.trim().slice(0, 110)}`);
+    if (/\bd\.[A-Za-z_]+(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`dragão de pele: dragon3d.js:${i + k + 1} escreve no dragão do mundo (o desenho só lê): ${l.trim().slice(0, 110)}`); }); }
+  if (!d3.some(l => /\.extra\(\)/.test(l.replace(/(^|\s)\/\/\s.*$/, '')))) fails.push('dragão de pele: o dragon3d.js não pede a sua linha ao Fauna3D.extra (a linha depois dos bichos do People3D)');
+  for (const f of files) if (f !== 'dragon3d.js' && src[f]) src[f].forEach((l, k) => { if (/\.put\([^)]*'dragon'/.test(l.replace(/(^|\s)\/\/\s.*$/, ''))) fails.push(`dragão de pele: ${f}:${k + 1} põe o dragão no Fauna3D — só o dragon3d.js o desenha, na linha do Fauna3D.extra`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

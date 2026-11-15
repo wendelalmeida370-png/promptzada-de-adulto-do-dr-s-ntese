@@ -79,6 +79,7 @@ def body_of(b, h, tris, fine=None):
     if len(T) > 1.3 * tris: V, T = decimate(V0, Q, tris, split=True)
     N = normals_of(b.P, V); W = weights(b.P, V, b.H); bi, bw = pack(W)
     r1, r2 = regions(b, V, N, W)
+    if b.meta.get('regions'): r1, r2 = b.meta['regions'](b, V, N, W, r1, r2)  # (a family's own paint regions: the dragon's plates)
     return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=np.zeros(len(V), np.uint8), r1=r1, r2=r2), fine
 
 
@@ -91,15 +92,19 @@ def piece_of(b, pc, h, tris):
         V0, Q = mesh_of(pc['P'], h, maxstep=1.5 * h)
         if len(V0) < 4: return None
         sym = V0[:, 0].min() < -1e-4 and V0[:, 0].max() > 1e-4  # (a piece on one side only: no mirror for the decimator to keep)
-        V, T = decimate(V0, Q, max(8, tris), sym)
+        V, T = decimate(V0, Q, max(8, tris), sym, split=bool(pc.get('split')))  # (split: parts that cross — the dragon's folded fingers)
         N = normals_of(pc['P'], V)
     W = weights(pc['P'], V, b.H) if 'eye' not in pc else np.eye(len(BONES))[[BI['head']] * len(V)]
+    if 'wfun' in pc: W = pc['wfun'](V)  # (weights of its own: a membrane that stretches between its bones — the dragon's wings)
     bi, bw = pack(W)
     z = np.full(len(V), ZONE[pc['zone']], np.uint8)
-    r2 = np.zeros((len(V), 4), np.uint8)
+    r1 = np.zeros((len(V), 4), np.uint8); r2 = np.zeros((len(V), 4), np.uint8)
+    if pc.get('reg'):  # (a piece of the coat painted as the body is: the dragon's lower jaw, its plates under the chin)
+        r1, r2 = regions(b, V, N, W)
+        if b.meta.get('regions'): r1, r2 = b.meta['regions'](b, V, N, W, r1, r2)
     if 'wing' in pc:  # (a wing: how far out along it each point is — its tip painted darker where the kind's are)
         sh, span = pc['wing']; r2[:, 0] = np.clip(np.round(np.linalg.norm(V - np.array(sh), axis=1) / max(span, 1e-3) * 255), 0, 255).astype(np.uint8)
-    return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=z, r1=np.zeros((len(V), 4), np.uint8), r2=r2)
+    return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=z, r1=r1, r2=r2)
 
 
 def merge(parts):

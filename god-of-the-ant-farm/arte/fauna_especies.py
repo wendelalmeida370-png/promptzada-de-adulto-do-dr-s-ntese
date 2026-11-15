@@ -181,6 +181,10 @@ sp('pombo', 'bird', 0.28, 0.32, bodyL=0.25, bw=0.06, bh=0.065, legH=0.06, legR=0
 sp('penguin', 'bird', 0.9, 0.4, upright=True, bw=0.17, bh=0.33, legH=0.05, legR=0.015, neckL=0.08, neckR=0.07, headR=0.075, beak='spear', beakL=0.1, beakR=0.016,
    tailL=0.08, tailW=0.06, flipper=True, eyeR=0.01, span=0.5, chord=0.12)
 
+# ------------------------------ the dragon (not of Animals.DEF: the god's power, js/dragon.js — drawn by js/dragon3d.js) ------------------------------
+# (on the ground, the wings folded; fly: the second mesh, the wings spread — as a bird of the air. H: the shoulder's height)
+sp('dragon', 'dragon', 3.4, 18.0, fly=1, tris=2100, far=440)
+
 
 def kinds(): return list(SPECIES.keys())
 
@@ -197,6 +201,7 @@ def build(kind, fly=False):
     elif fam == 'sprawl': FF.sprawl(b, **s)
     elif fam == 'frog': FF.frog(b, **s)
     elif fam == 'seal': FF.seal(b, **s)
+    elif fam == 'dragon': FF.dragon(b, fly=fly, **s)
     b.meta['hop'] = bool(extras.get('hop'))
     for k, f in (('antler', antlers), ('horns', horns), ('mane', mane), ('dewlap', dewlap), ('beard', beard), ('trunk', trunk), ('tusks', tusks),
                  ('ossicones', ossicones), ('folds', folds), ('bell', bell), ('incisors', teeth)):
@@ -208,7 +213,8 @@ def meta_of(b):
     J = b.bones_filled(); p = b.meta.get('p', {})
     return {'fam': b.meta.get('family', 'quad'), 'H': b.H, 'L': b.L, 'eye': [round(x, 4) for x in b.meta.get('eye', [0, 0, 0])],
             'nose': [round(x, 4) for x in b.meta.get('nose', [0, 0, 0])], 'dig': bool(p.get('dig')), 'pillar': bool(p.get('pillar')),
-            'flex': bool(b.meta.get('flex')), 'hop': bool(b.meta.get('hop')), 'trunk': bool(b.meta.get('trunk')), 'fly': bool(b.meta.get('fly')), 'upright': bool(b.meta.get('upright'))}
+            'flex': bool(b.meta.get('flex')), 'hop': bool(b.meta.get('hop')), 'trunk': bool(b.meta.get('trunk')), 'fly': bool(b.meta.get('fly')), 'upright': bool(b.meta.get('upright'))} | \
+           ({'wing3': b.meta['wing3'], 'chin': b.meta['chin']} if 'wing3' in b.meta else {})  # (the dragon: the axis its fingers bend about, the left wing's; the chin)
 
 
 def species_entry(kind):

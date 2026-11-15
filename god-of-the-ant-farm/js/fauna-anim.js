@@ -222,6 +222,152 @@
     return chain(m, J);
   };
 
+  // ------------------------------ the dragon (D-270) ------------------------------
+  // the dragon of the god's power (js/dragon3d.js poses it from what the world's dragon does: st.pose). In the air (the mesh
+  // with the wings spread): the deep slow strokes of a great wing — the downstroke quicker than the upstroke, the arm and the
+  // hand half folding on the way up, the fingers' tips lagging, the body rising as the wings come down —; the glide on still
+  // wings; the run over a town on wings half swept back, the neck stretched down to breathe; the stoop on wings folded back,
+  // the claws thrown forward at the bottom; the flare to land and the strokes to take off, the legs reaching for the ground;
+  // the fight reared up on its feet, the wings raised; the fall. On the ground (the wings folded): asleep, curled round on its
+  // hoard, breathing slowly. Dead: lying on its spread wings. st: { pose ('voo', 'planeio', 'rasante', 'mergulho', 'pouso',
+  // 'decola', 'luta', 'queda', 'dorme', 'morto'), ph (the wingbeat, in strokes), t (the view's clock), id, jaw (0 shut, 1
+  // wide), k (how far into a landing, a takeoff, the grab at a dive's bottom, the fall: 0..1), look (-1..1), tum (the fall's
+  // turning), ground and sc (the ground's height and the scale: the poses on its feet stand on it) }
+  const DQ = { q: null, e: null, v: null };
+  function hinge(bone, ax, ang, sd) { // (the fingers bend about the line of their knuckles — an axis of the bind, mirrored on the right)
+    if (!DQ.q) { DQ.q = new THREE.Quaternion(); DQ.e = new THREE.Euler(); DQ.v = new THREE.Vector3(); }
+    DQ.q.setFromAxisAngle(DQ.v.set(ax[0] * sd, ax[1], ax[2]).normalize(), ang * sd); DQ.e.setFromQuaternion(DQ.q, 'YXZ');
+    E[bone * 3] = DQ.e.x; E[bone * 3 + 1] = DQ.e.y; E[bone * 3 + 2] = DQ.e.z;
+  }
+  // (a stroke: w the phase — 0 the wings up —, A how deep, fold how far the arm and the hand are drawn in, sw how far swept back)
+  function stroke(w, A, fold, sw, ax) {
+    const f = w + 0.38 * Math.sin(w), c = Math.cos(f), sn = Math.sin(f), up = Math.max(0, -sn);
+    for (const s of 'LR') {
+      const sd = s === 'L' ? 1 : -1; const f0 = B['fl' + s + '0'] * 3, f1 = B['fl' + s + '1'] * 3, f2 = B['fl' + s + '2'] * 3;
+      E[f0 + 2] = sd * (A * c + 0.1); E[f0 + 1] = sd * (sw - 0.16 * sn * A); E[f0] = 0.14 * sn * A;
+      E[f1 + 1] = sd * (fold + 0.34 * up * A); E[f2 + 1] = sd * (fold * 1.15 + 0.42 * up * A); E[f2 + 2] = sd * 0.22 * A * Math.cos(f - 0.7);
+      hinge(B['fl' + s + '3'], ax, 0.26 * A * Math.cos(f - 1.4) + 0.04, sd);
+    }
+    return c;
+  }
+  function legs(tuck, reach) { // (in the air the legs drawn back under the tail; reaching forward and down to land, to grab, to stand)
+    for (const s of 'LR') {
+      E[B['hl' + s + '0'] * 3] += 2.0 * tuck + 0.3 * reach; E[B['hl' + s + '1'] * 3] += -1.2 * tuck - 0.1 * reach;
+      E[B['hl' + s + '2'] * 3] += 1.0 * tuck + 0.2 * reach; E[B['hl' + s + '3'] * 3] += 0.8 * tuck - 0.3 * reach;
+    }
+  }
+  function lash(t, id, a, side) { // (the tail: a slow wave down it; side: curled to one side)
+    for (let k = 0; k < 4; k++) { const b = B['tail' + k] * 3; E[b + 1] += Math.sin(t * 0.9 + id - k * 0.8) * a * (0.5 + k * 0.3) + (side || 0); E[b] += Math.sin(t * 0.67 + id * 1.3 - k * 0.6) * a * 0.35; }
+  }
+  FA.dragon = function (three, m, form, sp, st) {
+    if (!THREE) start(three);
+    const J = form.J; E.fill(0); OFF.fill(0);
+    const t = st.t, id = st.id || 0, w = (st.ph || 0) * TAU, ax = form.meta.wing3 || [0, 0, -1], k = st.k || 0, pose = st.pose;
+    if (pose === 'dorme') {
+      // asleep: the body down on its folded legs, the neck round to its flank and the head on the ground, the tail round the
+      // other way to meet it, the wings close along it; the slow breath
+      const br = Math.sin(t * 1.25 + id);
+      OFF[1] = -1.5 + br * 0.035; E[B.spine * 3] = br * 0.014; E[B.chest * 3] = -0.05 - br * 0.012;
+      for (const s of 'LR') {
+        const sd = s === 'L' ? 1 : -1;
+        E[B['hl' + s + '0'] * 3] = -0.8; E[B['hl' + s + '1'] * 3] = 0.9; E[B['hl' + s + '2'] * 3] = -0.55; E[B['hl' + s + '3'] * 3] = 0.45; E[B['hl' + s + '0'] * 3 + 2] = sd * 0.1;
+        E[B['fl' + s + '0'] * 3 + 2] = sd * 0.12; E[B['fl' + s + '0'] * 3] = 0.5; E[B['fl' + s + '1'] * 3] = -0.7; E[B['fl' + s + '2'] * 3] = 0.2;
+      }
+      E[B.neck0 * 3] = 1.25; E[B.neck1 * 3] = 0.25; E[B.neck2 * 3] = -0.3; E[B.head * 3] = -1.4;
+      E[B.neck0 * 3 + 1] = 0.45; E[B.neck1 * 3 + 1] = 0.55; E[B.neck2 * 3 + 1] = 0.5; E[B.head * 3 + 1] = 0.35; E[B.head * 3 + 2] = -0.12;
+      lash(t * 0.3, id, 0.015, -0.42); E[B.tail0 * 3] += -0.06; E[B.tail1 * 3] += 0.38; E[B.tail2 * 3] += -0.02; E[B.tail3 * 3] += -0.16;
+      for (const s of 'LR') E[B['ear' + s] * 3] = 0.35;
+      // (just landed, k from 0 to 1: it lies down from where it stood, the wings folded)
+      const kd = st.k === undefined ? 1 : st.k; if (kd < 1) { for (let i = 0; i < E.length; i++) E[i] *= kd; OFF[1] *= kd; }
+      return chain(m, J);
+    }
+    if (pose === 'morto') {
+      // dead: down on its belly on its spread wings, their tips on the ground, the neck stretched out and the head on its side
+      OFF[1] = -1.4; E[B.root * 3 + 2] = 0.12;
+      for (const s of 'LR') { const sd = s === 'L' ? 1 : -1; E[B['fl' + s + '0'] * 3 + 2] = -sd * 0.16; E[B['fl' + s + '1'] * 3 + 1] = sd * 0.12; E[B['fl' + s + '2'] * 3 + 2] = -sd * 0.12; hinge(B['fl' + s + '3'], ax, -0.12, sd);
+        E[B['hl' + s + '0'] * 3] = -0.8; E[B['hl' + s + '0'] * 3 + 2] = sd * 0.3; E[B['hl' + s + '1'] * 3] = 0.9; E[B['hl' + s + '2'] * 3] = -0.55; E[B['hl' + s + '3'] * 3] = 0.6; E[B['ear' + s] * 3] = 0.5; }
+      E[B.neck0 * 3] = 0.62; E[B.neck1 * 3] = 0.22; E[B.neck1 * 3 + 1] = 0.3; E[B.neck2 * 3 + 1] = 0.35; E[B.head * 3 + 1] = 0.2; E[B.head * 3 + 2] = 1.0;
+      lash(0, id, 0, 0.16); E[B.tail0 * 3] = -0.3; E[B.tail1 * 3] += 0.22; E[B.tail2 * 3] += 0.06; E[B.jaw * 3] = 0.3;
+      return chain(m, J);
+    }
+    if (pose === 'luta') {
+      // the fight at its lair: reared on its feet, the wings raised and spread, beating slowly to threaten, the neck bent down to
+      // the climbers and the jaws snapping, the tail lashing
+      const c = stroke(w, 0.3, 0.25, 0.1, ax);
+      for (const s of 'LR') { const sd = s === 'L' ? 1 : -1; E[B['fl' + s + '0'] * 3 + 2] += sd * 0.45; }
+      E[B.root * 3] = -0.5; E[B.spine * 3] = -0.05 + c * 0.02;
+      for (const s of 'LR') { E[B['hl' + s + '0'] * 3] = 0.5; E[B['hl' + s + '0'] * 3 + 2] = (s === 'L' ? 1 : -1) * 0.08; } // (the legs straight under it, as it rears on the hips)
+      E[B.neck0 * 3] = 0.25; E[B.neck1 * 3] = 0.4; E[B.neck2 * 3] = 0.3; E[B.head * 3] = 0.05;
+      const look = st.look || 0; E[B.neck1 * 3 + 1] = look * 0.3 + Math.sin(t * 0.8 + id) * 0.12; E[B.head * 3 + 1] = look * 0.3;
+      lash(t * 2.4, id, 0.14, 0); E[B.tail0 * 3] += 0.42; E[B.tail1 * 3] += 0.1;
+      for (const s of 'LR') E[B['ear' + s] * 3] = -0.2 + Math.sin(t * 3 + (s === 'L' ? 0 : 1)) * 0.1;
+    } else if (pose === 'queda') {
+      // the fall: the wings thrown about, the neck and the tail whipping
+      stroke(w * 1.7, 0.55, 0.3, 0.2, ax);
+      for (const s of 'LR') { const sd = s === 'L' ? 1 : -1; E[B['fl' + s + '1'] * 3 + 1] += sd * Math.sin(t * 5.1 + (sd > 0 ? 0 : 2)) * 0.35; }
+      E[B.neck0 * 3] = Math.sin(t * 3.3) * 0.35; E[B.neck1 * 3 + 1] = Math.sin(t * 2.7) * 0.4; E[B.head * 3 + 2] = Math.sin(t * 2.1) * 0.5;
+      lash(t * 4, id, 0.3, 0); legs(0.3, 0.4); E[B.jaw * 3] = 0.35;
+    } else {
+      // in the air: the strokes (and the glide between them), the stoop, the run, the flare to land and the climb to take off
+      let A = st.amp === undefined ? 0.74 : st.amp, fold = 0, sw = 0, tuck = 1, reach = 0; // (amp: how deep, eased by the drawer between strokes and glide)
+      if (pose === 'planeio') { A = 0.06; sw = 0.05; }
+      else if (pose === 'rasante') { A = 0.12; sw = 0.18; fold = 0.08; }
+      else if (pose === 'mergulho') { A = 0.08 + 0.6 * k; sw = 0.55 * (1 - k); fold = 0.85 * (1 - k); tuck = 1 - k; reach = k; }
+      else if (pose === 'pouso') { A = 0.85; sw = -0.3; tuck = 0; reach = 1; }
+      else if (pose === 'decola') { A = 0.9; sw = -0.15; tuck = k; reach = 1 - k; }
+      const c = stroke(w, A, fold, sw, ax);
+      if (pose === 'mergulho') for (const s of 'LR') { const sd = s === 'L' ? 1 : -1; E[B['fl' + s + '0'] * 3 + 2] += sd * 0.28 * (1 - k); }
+      OFF[1] = -c * 0.32 * A; E[B.spine * 3] = c * 0.03 * A; E[B.neck0 * 3] = c * 0.05 * A - 0.05; E[B.head * 3] = -c * 0.04 * A + 0.05;
+      if (pose === 'rasante') { E[B.neck0 * 3] += 0.22; E[B.neck1 * 3] += 0.16; E[B.neck2 * 3] += 0.1; E[B.head * 3] += 0.1; }
+      if (pose === 'pouso' || pose === 'decola') { const f = pose === 'pouso' ? 1 : 1 - k; E[B.root * 3] = -0.55 * f; E[B.neck0 * 3] -= 0.25 * f; E[B.neck1 * 3] += 0.2 * f; E[B.tail0 * 3] += 0.42 * f; E[B.tail1 * 3] += 0.12 * f; }
+      legs(tuck, reach);
+      if (pose === 'mergulho') for (const s of 'LR') E[B['hl' + s + '0'] * 3] -= 0.8 * k; // (the claws thrown forward at the bottom)
+      const look = st.look || 0; E[B.neck1 * 3 + 1] = look * 0.25; E[B.neck2 * 3 + 1] = look * 0.2; E[B.head * 3 + 1] = look * 0.25;
+      lash(t, id, pose === 'mergulho' ? 0.02 : 0.07, 0);
+      for (const s of 'LR') E[B['ear' + s] * 3] = (pose === 'mergulho' ? 0.5 : 0.15) + Math.sin(t * 7 + (s === 'L' ? 0 : 1.3)) * 0.06;
+    }
+    E[B.jaw * 3] = Math.max(E[B.jaw * 3], (st.jaw || 0) * 0.62);
+    let R = chain(m, J);
+    if (st.plant) { // (its feet on the ground: the body shifted until the lower foot stands on it)
+      const sc = st.sc || 1; const low = Math.min(R[B.hlL3].elements[13], R[B.hlR3].elements[13]);
+      OFF[1] += (st.ground + J[B.hlL3 * 3 + 1] * sc - low) / sc; R = chain(m, J);
+    }
+    return R;
+  };
+  // (a point of the beast as it was modelled, where its bone has it now — the dragon's mouth, for its breath)
+  FA.point = function (R, form, bone, p, out) {
+    const b = B[bone], e = R[b].elements, J = form.J; const x = p[0] - J[b * 3], y = p[1] - J[b * 3 + 1], z = p[2] - J[b * 3 + 2];
+    out[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; out[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; out[2] = e[2] * x + e[6] * y + e[10] * z + e[14];
+    return out;
+  };
+  // the dragon's coat, of its hue (dragon.js HUES: the body, the dark, the wings, the belly, the eyes; the breath, fire or
+  // frost): the scales of its body darker at their rims, the plates down its belly, the darker line of its back and its
+  // spines, the horns of old bone, the black claws, the membrane of its wings — the sun shows through it —, the eyes of fire
+  // with their slit (shut: the lid), the mouth red and glowing when it breathes. o: { shut, eye (the eyes' light), mouth
+  // (the mouth's glow) }; out: the coat to fill (the dragon's own: it changes as it breathes)
+  const DHORN = { Rubro: '#e6d6b4', Verde: '#d6cfa4', Negro: '#4a4250', Branco: '#a8b4c4', Dourado: '#f4e6b8' };
+  const dcoat = new Map(); G.worldHooks.push(() => dcoat.clear());
+  FA.dragonCoat = function (three, look, o, out) {
+    if (!Cc) Cc = new three.Color();
+    const key = look.n + ':' + look.body; let C = dcoat.get(key);
+    if (!C) {
+      const frost = look.breath === 'gelo', H = G.Fauna3D && G.Fauna3D.form('dragon') ? G.Fauna3D.form('dragon').meta.H : 3.4;
+      C = [
+        [...lin(look.body), 15], [...lin(look.belly), 0.9], [...lin(mixHex(look.body, look.dark, 0.6)), 10],
+        [...lin(mixHex(look.body, look.dark, 0.45)), 0.45], [...lin(mixHex(look.body, look.dark, 0.2)), 0.3],
+        [...lin(look.dark), 0], [...lin(DHORN[look.n] || '#e6d6b4'), 0], [...lin(frost ? '#2a3440' : '#1a1512'), 0],
+        [...lin(frost ? '#b4e6ff' : '#ff9a38'), 0.55], [...lin(look.eye), 1], [...lin(look.dark), 0.45], [...lin(look.dark), 0.5],
+        [...lin(look.belly), 0], [0.55, (look.n.charCodeAt(0) * 7) % 40, 0, 0.32], [...lin(look.dark), 0], [...lin(look.wing), 0],
+        [0, H, 0, 1], [...lin(frost ? '#284a66' : '#5a1810'), 0],
+      ];
+      dcoat.set(key, C);
+    }
+    if (!out) out = C.map(c => c.slice());
+    for (let k = 0; k < C.length; k++) { const a = C[k], b = out[k]; b[0] = a[0]; b[1] = a[1]; b[2] = a[2]; b[3] = a[3]; }
+    out[9][3] = o && o.shut ? 3 : 1; out[7][3] = o && !o.shut ? (o.eye === undefined ? 0.6 : o.eye) : 0; out[17][3] = (o && o.mouth) || 0;
+    return out;
+  };
+
   // ------------------------------ the coat ------------------------------
   // (each kind's paint over the colours the god's view gives it — col, bel (the belly), dk (the pattern's dark, a bird's wing
   // tips), pat (0 plain · 1 the giraffe · 2 the zebra · 3 the tiger · 4 rosettes · 5 spots · 6 patches · 7 the tabby · 8 scutes ·

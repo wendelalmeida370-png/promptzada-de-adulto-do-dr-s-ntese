@@ -594,3 +594,298 @@ def seal(b, R=0.25, headR=0.5, tusks=False, whisk=0.0, **kw):
     b.j('tail0', (0, Rb * 0.35, -L * 0.46))
     b.meta['family'] = 'seal'; b.meta['p'] = dict(headL=0.4)
     return b
+
+
+
+# ------------------------------ the dragon (the god's power: js/dragon.js, drawn by js/dragon3d.js) ------------------------------
+# A wyvern: its wings are its forelimbs, on the fl bones as a bird's (the arm, the forearm, the hand, the fingers), and on the
+# ground it walks on its wrists and its hind feet — four claws on the ground, as the god's picture draws it —, so the one
+# skeleton of the beasts carries it. Two meshes, as a bird of the air has: on the ground (the wings folded along its flanks
+# like a cloak, the neck raised in an S, the tail on the ground) and in the air (the wings spread, the neck and the tail out
+# straight). Some 18 m from the nose to the tail's tip, 21 m of wings; metres, standing on the ground, facing +Z.
+from corpo_sdf import Prim, field_at
+
+
+def poly2(p, V):
+    """The signed distance in a plane from the points p (n, 2) to the polygon V (m, 2), negative inside (Inigo Quilez's)."""
+    V = np.asarray(V, float); d = np.sum((p - V[0]) ** 2, 1); s = np.ones(len(p))
+    for i in range(len(V)):
+        e = V[i - 1] - V[i]; w = p - V[i]
+        q = w - np.outer(np.clip((w @ e) / (e @ e), 0, 1), e); d = np.minimum(d, np.einsum('ij,ij->i', q, q))
+        c1 = p[:, 1] >= V[i][1]; c2 = p[:, 1] < V[i - 1][1]; c3 = e[0] * w[:, 1] > e[1] * w[:, 0]
+        s[(c1 & c2 & c3) | (~c1 & ~c2 & ~c3)] *= -1
+    return s * np.sqrt(d)
+
+
+class Sheet(Prim):
+    """A membrane: a thin sheet (half thickness th) over a polygon in the plane of two axes, at the height hf(u, v) along the
+    third (ax = (u, v, n)) — the skin of a wing between its fingers."""
+    def __init__(self, poly, ax, hf, th):
+        self.poly = np.asarray(poly, float); self.ax = ax; self.hf = hf; self.th = float(th)
+        lo = self.poly.min(0); hi = self.poly.max(0)
+        g = np.stack(np.meshgrid(np.linspace(lo[0], hi[0], 40), np.linspace(lo[1], hi[1], 40)), -1).reshape(-1, 2); hv = hf(g[:, 0], g[:, 1])
+        b0 = np.zeros(3); b1 = np.zeros(3); b0[ax[0]], b1[ax[0]] = lo[0], hi[0]; b0[ax[1]], b1[ax[1]] = lo[1], hi[1]
+        b0[ax[2]], b1[ax[2]] = hv.min() - th - 0.05, hv.max() + th + 0.05; self.box = (b0, b1)
+    def bbox(self): return self.box
+    def sdf(self, P):
+        u, v, n = self.ax
+        return np.maximum(np.abs(P[:, n] - self.hf(P[:, u], P[:, v])) - self.th, poly2(P[:, [u, v]], self.poly))
+
+
+def seg_dist(P, a, b):
+    ab = b - a; t = np.clip((P - a) @ ab / max(ab @ ab, 1e-12), 0, 1)
+    return np.linalg.norm(P - (a + np.outer(t, ab)), axis=1), t
+
+
+def line_weights(lines, tau):
+    """The weights of a wing's skin by its bone lines — lines: [(a, b, [(t, bone), ...])]: a point near a line goes with it,
+    with the bone of how far along it is (a finger's root with the hand, its end with the fingers, blended between); a point
+    between two lines with both, by how near each is — smooth, so the membrane stretches as the wing beats and folds."""
+    def f(V):
+        D = []; Bw = []
+        for a, b, along in lines:
+            d, t = seg_dist(V, np.asarray(a, float), np.asarray(b, float)); D.append((d / tau) ** 2)
+            w = np.zeros((len(V), len(BONES)))
+            if len(along) == 1: w[:, BI[along[0][1]]] = 1
+            else:
+                for k in range(len(along) - 1):
+                    t0, b0 = along[k]; t1, b1 = along[k + 1]
+                    m = (t <= t1) if k == 0 else (t > along[k][0]) & (t <= t1)
+                    if k == len(along) - 2: m |= t > t1
+                    u = np.clip((t[m] - t0) / max(t1 - t0, 1e-9), 0, 1); u = u * u * (3 - 2 * u)
+                    w[m, BI[b0]] += 1 - u; w[m, BI[b1]] += u
+            Bw.append(w)
+        D = np.stack(D, 1); E = np.exp(-(D - D.min(1, keepdims=True)))
+        W = sum(E[:, k:k + 1] * Bw[k] for k in range(len(lines)))
+        return W / np.maximum(W.sum(1, keepdims=True), 1e-12)
+    return f
+
+
+def surf_along(P, c, n, r0=0.0, r1=3.0):
+    """Where the clay's surface is from c along n (the first crossing, by halving): for a spine on the back, an eye in its head."""
+    lo, hi = r0, r1
+    for _ in range(26):
+        m = (lo + hi) / 2
+        if field_at(P, (c + n * m)[None, :])[0] < 0: lo = m
+        else: hi = m
+    return c + n * lo
+
+
+def dsm(a, b, x): t = np.clip((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t)
+
+
+LEGB = np.array([bn[:2] in ('fl', 'hl') for bn in BONES])
+
+
+def dragon(b, fly=False, **kw):
+    """The dragon: a deep chest for the wings' muscles, the hips and the hind legs of a great bird, the neck in three and the
+    head (the skull, the long snout, the brows, the horns swept back, the frills behind the jaw, the jaw that opens to breathe,
+    the teeth, the tongue), the tail in four to a spade, a row of spines from the head to the tail; the wings (the arm and the
+    forearm in the body's skin, the fingers and the membrane between them pieces of their own)."""
+    H = b.H; p = dict(headL=1.85 / H); b.meta['p'] = p; b.meta['h'] = kw.get('h', 0.045)
+    # --- the trunk (the same in both meshes)
+    root = b.j('root', (0, 2.75, -2.3)); spine = b.j('spine', (0, 3.05, -0.5)); chest = b.j('chest', (0, 3.2, 1.3))
+    b.add(Ellipsoid((0, 2.85, 0.85), (0.95, 1.08, 1.75), rot_x(0.08)), 'chest', tau=0.6)                    # the ribcage
+    b.add(Ellipsoid((0, 2.42, 1.85), (0.72, 0.92, 0.9)), 'chest', k=0.35, tau=0.6)                          # the keel of the breast
+    for sd in (1, -1): b.add(Ellipsoid((sd * 0.52, 3.38, 1.2), (0.55, 0.48, 0.95)), 'chest', k=0.4, tau=0.6)  # the wings' muscles
+    b.add(Ellipsoid((0, 2.72, -0.8), (0.8, 0.84, 1.55)), 'spine', k=0.5, tau=0.8)                            # the belly
+    b.add(Ellipsoid((0, 2.82, -2.15), (0.84, 0.8, 1.15)), 'root', k=0.5, tau=0.7)                            # the hips
+    # --- the neck, the head
+    if fly: n0, n1, n2, hd, ha = v3(0, 3.5, 2.55), v3(0, 3.86, 3.8), v3(0, 4.12, 5.0), v3(0, 4.26, 6.1), 9
+    else: n0, n1, n2, hd, ha = v3(0, 3.55, 2.5), v3(0, 4.5, 3.45), v3(0, 5.25, 4.25), v3(0, 5.62, 4.95), 26
+    b.j('neck0', n0); b.j('neck1', n1); b.j('neck2', n2); b.j('head', hd)
+    nk = [v3(0, 3.0, 1.75), n0, n1, n2, hd]; nr = [0.8, 0.68, 0.55, 0.46, 0.4]
+    for k, bn in enumerate(['chest', 'neck0', 'neck1', 'neck2']):
+        b.add(RoundCone(nk[k], nk[k + 1], nr[k], nr[k + 1], flat=((1, 0, 0), 0.86)), bn, k=0.25, tau=0.5)
+    b.add(Ellipsoid(n0 + v3(0, -0.34, 0.12), (0.52, 0.5, 0.78)), 'neck0', k=0.3, tau=0.5)                   # the throat
+    a = np.radians(ha); d = v3(0, -np.sin(a), np.cos(a)); up = v3(0, np.cos(a), np.sin(a)); X = v3(1, 0, 0)
+    th = 0.3
+    sk = hd + d * 0.28 + up * 0.08
+    b.add(Ellipsoid(sk, (0.47, 0.56, 0.42), orient(sk - d, sk + d, up)), 'head', k=0.2, tau=th)              # the skull
+    s0, s1 = hd + d * 0.75 + up * 0.02, hd + d * 1.72 - up * 0.05
+    b.add(RoundCone(s0, s1, 0.34, 0.2, flat=(up, 0.78)), 'head', k=0.22, tau=th)                             # the snout
+    nose = hd + d * 1.8 - up * 0.02
+    b.add(Ellipsoid(nose - d * 0.06, (0.19, 0.15, 0.16)), 'head', k=0.1, tau=th)
+    for sd in (1, -1):
+        b.add(Ellipsoid(hd + d * 0.25 - up * 0.1 + X * sd * 0.3, (0.2, 0.3, 0.38)), 'head', k=0.2, tau=th)  # the jaw's muscles
+        b.cut(Sphere(nose + X * sd * 0.1 + up * 0.07 + d * 0.06, 0.055), k=0.03)                           # the nostrils
+    b.meta['nose'] = list(nose + d * 0.12)
+    # (the eyes in their sockets under a heavy brow, a little forward: on the clay's surface, out from the face's middle)
+    c = hd + d * 0.6 + up * 0.17; ec = surf_along(b.P, c, X, 0.0, 0.8) - X * 0.035
+    er = 0.088
+    for sd in (1, -1): b.add(Ellipsoid(ec * v3(sd, 1, 1) + up * 0.09 - d * 0.03, (0.13, 0.26, 0.07), orient(ec - d, ec + d, up)), 'head', k=0.07, tau=th)
+    eyes(b, ec, er); b.meta['eye'] = list(ec)
+    b.j('jaw', hd + d * 0.15 - up * 0.2)
+    for sd, s in ((1, 'L'), (-1, 'R')): b.j('ear%s' % s, hd - d * 0.08 + up * 0.05 + X * sd * 0.38)
+    # --- the tail, to the spade
+    tl = [v3(0, 2.85, -3.5), v3(0, 2.8, -5.5), v3(0, 2.77, -7.5), v3(0, 2.75, -9.3), v3(0, 2.75, -11.3)] if fly else \
+         [v3(0, 2.7, -3.5), v3(0, 2.05, -5.4), v3(0, 1.25, -7.25), v3(0, 0.62, -9.05), v3(0, 0.32, -11.0)]
+    for k in range(4): b.j('tail%d' % k, tl[k])
+    b.add(RoundCone(v3(0, 2.78, -2.6), tl[0], 0.78, 0.62), 'root', k=0.4, tau=0.7)
+    tr = [0.62, 0.45, 0.31, 0.19, 0.05]
+    for k in range(4): b.add(RoundCone(tl[k], tl[k + 1], tr[k], tr[k + 1], flat=((1, 0, 0), 0.9)), 'tail%d' % k, k=0.15, tau=0.8)
+    # --- the hind legs: the thigh of a great bird, the shin, the long foot, three toes forward and one back, the claws
+    claws = []
+    for sd, s in ((1, 'L'), (-1, 'R')):
+        Xs = v3(sd, 1, 1)
+        hp = b.j('hl%s0' % s, v3(0.72, 2.55, -2.2) * Xs); kn = b.j('hl%s1' % s, v3(0.98, 1.55, -1.25) * Xs)
+        an = b.j('hl%s2' % s, v3(0.92, 0.72, -2.35) * Xs); ft = b.j('hl%s3' % s, v3(0.92, 0.16, -1.85) * Xs)
+        b.add(ell_between(hp + v3(0, 0.35, -0.15), kn + v3(0, 0.05, -0.05), 0.5, 0.64), 'hl%s0' % s, k=0.35, tau=0.5)   # the thigh
+        b.add(RoundCone(kn, an, 0.34, 0.2), 'hl%s1' % s, k=0.15, tau=0.35)
+        b.add(ell_between(kn + v3(0, -0.05, -0.12), lerp(kn, an, 0.55), 0.3, 0.38), 'hl%s1' % s, k=0.15, tau=0.35)      # the calf
+        b.add(RoundCone(an, ft, 0.2, 0.17), 'hl%s2' % s, k=0.1, tau=0.3)
+        b.add(Ellipsoid(ft + v3(0, -0.04, 0.22), (0.3, 0.14, 0.42)), 'hl%s3' % s, k=0.12, tau=0.3)
+        for dx in (-0.2, 0.0, 0.2):
+            tip = v3(ft[0] + sd * dx * 1.9 + sd * 0.02, 0.08, ft[2] + 0.92 - abs(dx) * 0.6)
+            b.add(RoundCone(ft + v3(sd * dx * 0.5, -0.04, 0.3), tip, 0.11, 0.075), 'hl%s3' % s, k=0.08, tau=0.25)
+            claws.append((RoundCone(tip + v3(0, 0.01, 0.02), tip + v3(sd * dx * 0.15, -0.075, 0.24), 0.075, 0.012), 'hl%s3' % s))
+        bk = v3(ft[0] + sd * 0.05, 0.12, ft[2] - 0.42)
+        b.add(RoundCone(ft + v3(0, 0, -0.1), bk, 0.1, 0.07), 'hl%s3' % s, k=0.06, tau=0.25)
+        claws.append((RoundCone(bk, bk + v3(0, -0.07, -0.2), 0.065, 0.012), 'hl%s3' % s))
+    # --- the wings: the arm in the body's skin, the fingers and the membrane pieces of their own
+    sh = v3(0.8, 3.45, 1.45)
+    if fly:
+        el, wr = v3(2.95, 3.7, 0.75), v3(5.55, 3.8, 1.5)
+        tips = [v3(10.6, 3.55, -0.45), v3(9.35, 3.45, -3.35), v3(7.0, 3.35, -5.0), v3(4.25, 3.3, -4.55)]
+        thumb = v3(5.88, 3.75, 2.18); flank = v3(0.75, 2.95, -2.55)
+    else:
+        el, wr = v3(1.42, 2.2, 0.0), v3(1.55, 0.42, 2.05)
+        tips = [v3(1.22, 4.2, -1.35), v3(1.35, 3.88, -1.85), v3(1.48, 3.42, -2.15), v3(1.58, 2.9, -1.95)]
+        thumb = v3(1.7, 0.05, 2.55); flank = v3(0.85, 2.7, -2.4)
+    q = [wr + (t - wr) * 0.45 for t in tips]; kn3 = np.mean(q, 0); axis = nrm(q[3] - q[0])
+    b.meta['wing3'] = [round(float(x), 4) for x in axis]
+    for sd, s in ((1, 'L'), (-1, 'R')):
+        Xs = v3(sd, 1, 1); S = lambda v, Xs=Xs: np.asarray(v, float) * Xs
+        f0, f1, f2, f3 = 'fl%s0' % s, 'fl%s1' % s, 'fl%s2' % s, 'fl%s3' % s
+        b.j(f0, S(sh)); b.j(f1, S(el)); b.j(f2, S(wr)); b.j(f3, S(kn3))
+        b.add(RoundCone(S(sh), S(el), 0.36, 0.22), f0, k=0.25, tau=0.35)
+        b.add(ell_between(S(lerp(sh, el, 0.12)), S(lerp(sh, el, 0.75)), 0.3, 0.37), f0, k=0.2, tau=0.35)      # the arm's muscle
+        b.add(RoundCone(S(el), S(wr), 0.22, 0.15), f1, k=0.12, tau=0.3)
+        b.add(ell_between(S(lerp(el, wr, 0.04)), S(lerp(el, wr, 0.5)), 0.19, 0.24), f1, k=0.12, tau=0.3)
+        b.add(Sphere(S(wr), 0.2), f2, k=0.1, tau=0.25)
+        # the fingers: four long ones fanned from the wrist (bent at their knuckles, the fl3's hinge), the thumb and its claw
+        fing = []; lines = []
+        for t in tips:
+            m = lerp(wr, t, 0.45)
+            fing += [(RoundCone(S(wr), S(m), 0.115, 0.08), f2), (RoundCone(S(m), S(t), 0.08, 0.028), f3)]
+            lines.append((S(wr), S(t), [(0.0, f2), (0.38, f2), (0.52, f3)]))
+        fing.append((RoundCone(S(wr), S(thumb), 0.12, 0.065), f2))
+        b.piece('dedos' + s, 'pelo', fing, 170, far=0, h=0.022); b.pieces[-1]['split'] = True
+        b.pieces[-1]['wfun'] = line_weights(lines + [(S(wr), S(thumb), [(0.0, f2)])], 0.12)
+        tdir = nrm(thumb - wr)
+        claws.append((RoundCone(S(thumb), S(thumb + tdir * 0.26 - v3(0, 0.08, 0)), 0.07, 0.012), f2))
+        # the membrane: from the arm and the flank out to the fingers' tips, its trailing edge in scallops between them
+        lines = lines + [(S(sh), S(el), [(0.0, f0), (0.8, f0), (1.0, f1)]), (S(el), S(wr), [(0.0, f1), (0.85, f1), (1.0, f2)]),
+                         (S(sh), S(flank), [(0.0, 'chest'), (0.5, 'spine'), (1.0, 'root')])]
+        def scal(A, B, C0, k=0.3, n=4):
+            Cc = (A + B) / 2 + (C0 - (A + B) / 2) * k
+            return [(1 - u) ** 2 * A + 2 * u * (1 - u) * Cc + u * u * B for u in np.linspace(0, 1, n + 2)[1:-1]]
+        edge = [tips[0]]
+        for k in range(3): edge += scal(tips[k], tips[k + 1], wr) + [tips[k + 1]]
+        edge += scal(tips[3], flank, el, 0.35)
+        if fly:
+            out = [sh, (sh + wr) / 2 + v3(0, 0, 0.12), wr, wr + (tips[0] - wr) * 0.5 + v3(0, 0, 0.18)] + edge + [flank]
+            poly = np.array([[pt[0], pt[2]] for pt in out]); ax = (0, 2, 1)
+        else:
+            out = [wr, lerp(wr, sh, 0.5) + v3(0, 0, 0.18), sh + v3(0, 0.15, 0)] + edge + [flank, el]
+            poly = np.array([[pt[2], pt[1]] for pt in out]); ax = (2, 1, 0)
+        bl = [(sh, el), (el, wr)] + [(wr, t) for t in tips] + [(sh, flank)]
+        def hf(u, v, bl=bl, ax=ax, fly=fly, wr=wr):
+            """(the sheet's height: what the bones nearest have, eased between them; billowing up in the air, folded in pleats
+            on the ground)"""
+            P2 = np.stack([u, v], 1); num = 0; den = 0; dmin = np.full(len(u), 9.0)
+            for A, B in bl:
+                A2 = np.array([A[ax[0]], A[ax[1]]]); B2 = np.array([B[ax[0]], B[ax[1]]]); dd, t = seg_dist(P2, A2, B2)
+                hh = A[ax[2]] + (B[ax[2]] - A[ax[2]]) * t; w = 1.0 / (dd * dd + 0.04); num = num + w * hh; den = den + w; dmin = np.minimum(dmin, dd)
+            base = num / den
+            if fly: return base + 0.2 * np.clip(dmin / 1.6, 0, 1) ** 0.8
+            ang = np.arctan2(v - wr[1], u - wr[2]); return base + 0.07 * np.sin(ang * 16) * np.clip(dmin / 0.5, 0, 1)
+        if sd < 0:
+            if fly: poly = poly * np.array([-1, 1]); hfs = lambda u, v, hf0=hf: hf0(-u, v)
+            else: hfs = lambda u, v, hf0=hf: -hf0(u, v)
+        else: hfs = hf
+        mem = Sheet(poly, ax, hfs, 0.065)
+        b.piece('asa' + s, 'asa', [(mem, f1)], 600, far=130, h=0.032)
+        b.pieces[-1]['split'] = True  # (the far mesh keeps the wings — they read from afar: the decimator stops short on the sheet's rim unless split)
+        b.pieces[-1]['wfun'] = line_weights(lines, 0.8); b.pieces[-1]['wing'] = (list(S(sh)), float(np.linalg.norm(tips[0] - sh)))
+    b.piece('garras', 'unha', claws, 120, far=0, h=0.016)
+    # --- the head's own pieces: the lower jaw (it opens), the tongue and the palate, the teeth, the horns, the frills
+    h0, chin = hd + d * 0.2 - up * 0.3, hd + d * 1.66 - up * 0.33
+    b.meta['chin'] = [round(float(x), 4) for x in chin]
+    b.piece('mandibula', 'pelo', [(RoundCone(h0, chin, 0.27, 0.15, flat=(up, 0.62)), 'jaw'), (Ellipsoid(h0 - d * 0.05 + up * 0.04, (0.3, 0.2, 0.3)), 'jaw')], 260, far=60, h=0.03)
+    b.pieces[-1]['reg'] = True
+    b.piece('lingua', 'crista', [(Ellipsoid(lerp(h0, chin, 0.45) + up * 0.12, (0.15, 0.6, 0.06), orient(h0, chin, up)), 'jaw')], 40, far=0, h=0.025)
+    b.piece('palato', 'crista', [(Ellipsoid(lerp(s0, s1, 0.4) - up * 0.17, (0.2, 0.62, 0.05), orient(s0, s1, up)), 'head')], 30, far=0, h=0.025)
+    b.pieces[-1]['split'] = True
+    up_t, lo_t = [], []
+    for sd in (1, -1):
+        for k in range(6):
+            t = k / 5.0
+            a0 = lerp(hd + d * 0.62, hd + d * 1.66, t) - up * 0.19 + X * sd * (0.28 - 0.13 * t)
+            up_t.append((RoundCone(a0, a0 - up * (0.15 - 0.05 * t) + d * 0.02, 0.045, 0.008), 'head'))
+            a1 = lerp(h0 + d * 0.5, chin - d * 0.05, t) + up * 0.12 + X * sd * (0.22 - 0.1 * t)
+            lo_t.append((RoundCone(a1, a1 + up * (0.12 - 0.03 * t) + d * 0.02, 0.04, 0.008), 'jaw'))
+    b.piece('dentes', 'marfim', up_t, 120, far=0, h=0.012); b.piece('dentesb', 'marfim', lo_t, 90, far=0, h=0.012)
+    hp = []
+    for sd in (1, -1):
+        Xs = X * sd; base = hd + up * 0.3 - d * 0.02 + Xs * 0.24
+        pts = [base, base - d * 0.5 + up * 0.1 + Xs * 0.12, base - d * 1.0 + up * 0.08 + Xs * 0.2, base - d * 1.5 - up * 0.06 + Xs * 0.22]
+        hp += [(RoundCone(pts[k], pts[k + 1], [0.14, 0.1, 0.065][k], [0.1, 0.065, 0.018][k]), 'head') for k in range(3)]
+        b2 = hd - up * 0.06 + Xs * 0.36 + d * 0.02
+        pts = [b2, b2 - d * 0.38 - up * 0.04 + Xs * 0.14, b2 - d * 0.72 - up * 0.12 + Xs * 0.2]
+        hp += [(RoundCone(pts[k], pts[k + 1], [0.075, 0.045][k], [0.045, 0.012][k]), 'head') for k in range(2)]
+        bb = ec * v3(sd, 1, 1) + up * 0.14 - d * 0.12
+        hp.append((RoundCone(bb, bb + up * 0.16 - d * 0.18 + Xs * 0.06, 0.045, 0.01), 'head'))
+    nh = nose + up * 0.12 - d * 0.18
+    hp.append((RoundCone(nh, nh + up * 0.17 + d * 0.06, 0.06, 0.012), 'head'))
+    b.piece('chifres', 'chifre', hp, 170, far=30, h=0.016)
+    for sd, s in ((1, 'L'), (-1, 'R')):
+        e0 = b.J['ear%s' % s]; f0_ = e0 - d * 0.05 + X * sd * 0.02 - up * 0.1; f1_ = e0 - d * 0.85 + X * sd * 0.3 - up * 0.18
+        on = nrm(X * sd - (f1_ - f0_) * (np.dot(X * sd, f1_ - f0_) / np.dot(f1_ - f0_, f1_ - f0_)))
+        fins = []
+        for a_, b_, wd in ((f0_, f1_, 0.17), (f0_ + up * 0.12, f0_ - d * 0.6 + X * sd * 0.22 + up * 0.22, 0.1)):
+            oz = nrm(b_ - a_); ox = nrm(on - oz * np.dot(on, oz)); oy = np.cross(oz, ox)
+            fins.append((Ellipsoid((a_ + b_) / 2, (0.045, wd, np.linalg.norm(b_ - a_) * 0.55), np.stack([ox, oy, oz], 1)), 'ear%s' % s))
+        b.piece('folho' + s, 'asa', fins, 60, far=0, h=0.02)
+        b.meta.setdefault('ears', []).append([list(e0), list(e0 - d * 0.7)])
+    # --- the spines: from behind the horns down the neck, the back and the tail, highest over the shoulders; the spade
+    chainP = [hd, n2, n1, n0, v3(*chest), v3(*spine), v3(*root)] + tl
+    chainB = ['neck2', 'neck1', 'neck0', 'chest', 'spine', 'root', 'root', 'tail0', 'tail1', 'tail2', 'tail3']
+    seg = [np.linalg.norm(chainP[k + 1] - chainP[k]) for k in range(len(chainP) - 1)]; tot = sum(seg); cum = np.concatenate([[0], np.cumsum(seg)])
+    spn = []
+    for s_ in np.arange(0.35, tot - 0.9, 0.52):
+        k = min(int(np.searchsorted(cum, s_, side='right') - 1), len(seg) - 1); u = (s_ - cum[k]) / seg[k]
+        c = lerp(chainP[k], chainP[k + 1], u); tdir = nrm(chainP[k + 1] - chainP[k]); nu = nrm(v3(0, tdir[2], -tdir[1]))
+        if nu[1] < 0: nu = -nu
+        f = s_ / tot; hgt = 0.16 + 0.3 * np.exp(-((f - 0.3) / 0.16) ** 2) + 0.12 * np.exp(-((f - 0.12) / 0.1) ** 2) - 0.08 * f
+        bs = surf_along(b.P, c, nu, 0.0, 1.6) - nu * 0.06
+        spn.append((RoundCone(bs, bs + nu * hgt + tdir * hgt * 0.55, 0.11 * (0.55 + hgt), 0.012, flat=((1, 0, 0), 0.32)), chainB[k]))
+    tip = tl[4]; td = nrm(tl[4] - tl[3])
+    spn += [(Ellipsoid(tip + td * 0.05, (0.5, 0.06, 0.55)), 'tail3'), (RoundCone(tip + td * 0.3, tip + td * 1.0, 0.24, 0.015, flat=((0, 1, 0), 0.25)), 'tail3')]
+    for sd in (1, -1): spn.append((RoundCone(tip + td * 0.1 + v3(sd * 0.3, 0, 0), tip + td * 0.55 + v3(sd * 0.62, 0, 0), 0.16, 0.012, flat=((0, 1, 0), 0.3)), 'tail3'))
+    b.piece('espinhos', 'crina', spn, 360, far=60, h=0.022)
+    b.meta['chain'] = [[float(x) for x in q_] for q_ in [np.array(b.meta['nose'])] + chainP + [tl[4] + td * 1.0]]
+    b.meta['regions'] = dragon_regions
+    b.meta['family'] = 'dragon'; b.meta['fly'] = bool(fly)
+    return b
+
+
+def dragon_regions(b, V, N, W, r1, r2):
+    """The dragon's paint by where each point is on it: the belly plates under its whole length (the throat, the chest, the
+    tail), the line of the back where the spines stand darker, and how far along the body (the tail's tip 0, the nose 1) —
+    the plates are counted by it."""
+    C = np.array(b.meta['chain'])[::-1]  # (from the tail's tip to the nose)
+    best = np.full(len(V), 1e9); along = np.zeros(len(V)); dn = np.zeros((len(V), 3))
+    seg = np.linalg.norm(np.diff(C, axis=0), axis=1); cum = np.concatenate([[0], np.cumsum(seg)])
+    for k in range(len(C) - 1):
+        dd, t = seg_dist(V, C[k], C[k + 1]); m = dd < best; best[m] = dd[m]; along[m] = (cum[k] + t[m] * seg[k]) / cum[-1]
+        tdir = nrm(C[k + 1] - C[k]); down = nrm(v3(0, tdir[2], -tdir[1])) if abs(tdir[0]) < 0.999 else v3(0, -1, 0)
+        if down[1] > 0: down = -down
+        dn[m] = down
+    nd = np.einsum('ij,ij->i', N, dn)
+    legw = W[:, LEGB].sum(1)
+    belly = dsm(0.3, 0.75, nd) * np.clip(1 - legw * 1.4, 0, 1)
+    back = dsm(0.55, 0.92, -nd) * np.clip(1 - legw * 1.4, 0, 1)
+    q = lambda a: np.clip(np.round(np.asarray(a) * 255), 0, 255).astype(np.uint8)
+    r1 = r1.copy(); r2 = r2.copy(); r1[:, 0] = q(belly); r2[:, 0] = q(along); r2[:, 2] = q(back); r2[:, 3] = 0
+    return r1, r2

@@ -12,6 +12,12 @@
 //  its nose when it dives; its wings beat slow and heavy, glide
 //  in a run, fold along its back on the ground and glow where
 //  the sun shines through them.
+//  Drawn as one skin (D-270): the dragon of arte/fauna_forma.py
+//  (a wyvern: its wings are its forelimbs) through G.Fauna3D,
+//  posed by G.FaunaAnim.dragon — its mesh with the wings spread
+//  in the air, the one with them folded asleep — in the rows
+//  after People3D's beasts; where that cannot be drawn (no data,
+//  a shader refused, no row left) the old tube and fans below.
 //  Only seen: nothing here is saved, nothing touches the world;
 //  what flickers draws from the view's own chance (G.VR).
 // ============================================================
@@ -27,7 +33,7 @@
   const vis = new Map(); // d.id → the view's memory of it: its heading and height a frame ago, its bank, its pitch
   let arrows = null, coins = null, light = null, blob = null, MAT = null, M = null;
   const boneG = new Map(); // a skeleton on the ground → its group
-  G.worldHooks.push(() => { vis.clear(); for (const g of boneG.values()) dropGroup(g); boneG.clear(); for (const r of rigs) r.root.visible = false; });
+  G.worldHooks.push(() => { vis.clear(); drawnL = []; for (const g of boneG.values()) dropGroup(g); boneG.clear(); for (const r of rigs) r.root.visible = false; });
   function dropGroup(g) { g.traverse(o => { if (o.geometry && o.geometry.userData.own) o.geometry.dispose(); }); if (g.parent) g.parent.remove(g); }
 
   D3.init = function (three, realm) {
@@ -247,6 +253,82 @@
     return r;
   }
 
+  // ------------------------------ the dragon as one skin (G.Fauna3D) ------------------------------
+  const STAND = 3.05; // (the body's middle over its feet, standing — the spine's joint in the meshes: a body in the air never lower)
+  const SKIN = { m: null, b: null, p: [0, 0, 0], q: [0, 0, 0] };
+  let seenF3 = 0; // (the frame of People3D's beasts this one's rows follow: a new one each frame, or People3D drew no skins)
+  let drawnL = []; // (what was drawn this frame, for the tests and the checker)
+  function skinReady() { const F3 = G.Fauna3D, FA = G.FaunaAnim; return !!(F3 && F3.ready && F3.has('dragon') && F3.hasFly('dragon') && FA && FA.dragon && FA.dragonCoat && FA.point); }
+  // what the dragon does, as a pose: the world's state, how high, how it moves; the landing eased down (only seen)
+  function skinPlace(d, C, t, dt, row, focus) {
+    const S = G.S, TL = G.Space.TILE, HM = G.Space.HM, F3 = G.Fauna3D, FA = G.FaunaAnim;
+    if (!SKIN.m) { SKIN.m = new THREE.Matrix4(); SKIN.b = new THREE.Matrix4(); }
+    const landed = d.st === 'dorme' || d.st === 'luta'; const dead = d.st === 'morre' && d.fallen;
+    const mode = dead ? 'dead' : d.st === 'luta' ? 'fight' : landed ? 'sleep' : 'fly';
+    let s = vis.get(d.id); if (!s) { s = { hd: d.hd, h: d.h, bank: 0, pitch: 0, tum: 0 }; vis.set(d.id, s); }
+    let dh = d.hd - s.hd; while (dh > Math.PI) dh -= TAU; while (dh < -Math.PI) dh += TAU;
+    const turn = dt > 0 ? dh / dt : 0, vy = dt > 0 ? (d.h - s.h) * HM / dt : 0; s.hd = d.hd; s.h = d.h;
+    const kk = 1 - Math.exp(-3 * dt);
+    s.bank += ((mode === 'fly' ? G.clamp(turn * 0.55, -0.75, 0.75) : 0) - s.bank) * kk;
+    s.pitch += ((mode === 'fly' ? G.clamp(vy * 0.035, -0.55, 0.4) : 0) - s.pitch) * kk;
+    if (d.st === 'morre' && !d.fallen) s.tum += dt * 1.6; else if (mode !== 'fly') s.tum = 0;
+    const X = d.x * TL, Z = d.y * TL; const gY = (W.inb(d.x, d.y) ? W.groundH(d.x, d.y) : G.SEA) * HM;
+    // (where its body is: in the air at the world's height, but never lower than standing; a jump of the world — a load, a
+    // place set by hand — is taken at once; from the air down to its lair at the same spot, it comes down in a flare)
+    const sc = 1, standY = gY + STAND * sc; const wy = mode === 'fly' ? d.h * HM : gY;
+    const jump = s.X === undefined || Math.hypot(X - s.X, Z - s.Z) > 8;
+    if (jump) s.land = 0;
+    else if (mode === 'sleep' && s.mode === 'fly' && s.vy > standY + 1) s.land = 1;
+    if (mode !== 'sleep') s.land = 0;
+    if (s.land) { s.vy = standY + Math.max(0, (s.vy - standY) * Math.exp(-1.4 * dt) - 1.2 * dt); if (s.vy <= standY + 0.05) s.land = 0; }
+    else s.vy = mode === 'fly' ? Math.max(wy, standY) : wy;
+    s.X = X; s.Z = Z; s.mode = mode;
+    // the pose
+    const alt = s.vy - standY; let pose, k = 0, jaw = 0, amp;
+    const breathing = (mode === 'fly' && !!d.breath) || (mode === 'fight' && S.clock - (d.ft || -9) < 0.8);
+    // (just landed it lies down in a second and a half; found asleep — a load, a place set by hand — it lies there already)
+    s.settle = mode !== 'sleep' || s.land ? 0 : jump || s.settle === undefined ? 1 : Math.min(1, s.settle + dt / 1.6);
+    if (s.land) { pose = 'pouso'; k = 1; }
+    else if (mode === 'sleep') { pose = 'dorme'; k = s.settle * s.settle * (3 - 2 * s.settle); }
+    else if (mode === 'dead') pose = 'morto';
+    else if (mode === 'fight') { pose = 'luta'; jaw = breathing ? 1 : 0.18 + Math.max(0, Math.sin(t * 4.3 + d.id)) * 0.3; }
+    else if (d.st === 'morre') pose = 'queda';
+    else if (d.st === 'passe') { pose = 'rasante'; jaw = d.breath ? 1 : 0.1; }
+    else if (d.st === 'rouba') { pose = 'mergulho'; k = G.clamp((9 - alt) / 6, 0, 1); }
+    else if (alt < 5 && d.st !== 'chega') { pose = 'decola'; k = G.clamp(alt / 5, 0, 1); }
+    else {
+      // (the strokes, and between them the glide on still wings — never while it climbs; coming down out of the sky it glides)
+      pose = 'voo'; const glide = d.st === 'chega' || (Math.sin(t * 0.23 + d.id * 1.7) > 0.3 && vy < 1.5 && d.st !== 'parte');
+      s.amp = (s.amp === undefined ? 0.74 : s.amp) + ((glide ? 0.06 : 0.74) - (s.amp === undefined ? 0.74 : s.amp)) * (1 - Math.exp(-1.6 * dt)); amp = s.amp;
+    }
+    // (the wingbeat: slow and deep, a stroke in 1.6 s; quicker to land and to take off; the run on half-held wings)
+    const f = pose === 'pouso' || pose === 'decola' ? 0.95 : pose === 'luta' ? 0.45 : pose === 'queda' ? 1.3 : pose === 'rasante' ? 0.5 : 0.62;
+    s.ph = (s.ph || (d.id % 7) / 7) + dt * f;
+    s.jaw = (s.jaw || 0) + (jaw - (s.jaw || 0)) * (1 - Math.exp(-10 * dt));
+    const fly = pose !== 'dorme'; const form = fly ? F3.formFly('dragon') : F3.form('dragon');
+    // its frame: where it is, which way it heads (its +Z forward), banked into its turns and pitched as it climbs or dives —
+    // about its body's middle — in the air; on the ground standing on it
+    const m = SKIN.m.makeTranslation(X, mode === 'fly' || s.land ? s.vy : gY, Z);
+    m.multiply(SKIN.b.makeRotationY(Math.PI / 2 - d.hd));
+    if (mode === 'fly' || s.land) {
+      const J = form.J, B = G.FaunaAnim.B;
+      m.multiply(SKIN.b.makeRotationZ(s.bank + s.tum)); m.multiply(SKIN.b.makeRotationX(-s.pitch * (pose === 'mergulho' ? 1.4 : 1)));
+      m.multiply(SKIN.b.makeScale(sc, sc, sc)); m.multiply(SKIN.b.makeTranslation(0, -J[B.spine * 3 + 1], -J[B.spine * 3 + 2]));
+    } else m.multiply(SKIN.b.makeScale(sc, sc, sc));
+    const st = { pose, ph: s.ph, t, id: d.id, jaw: s.jaw, k, amp, look: Math.sin(t * 0.17 + d.id) * 0.5, plant: pose === 'luta', ground: gY, sc };
+    const R = FA.dragon(THREE, m, form, null, st);
+    const blink = ((t * 0.21 + d.id * 0.37) % 1) < 0.025;
+    const shut = pose === 'dorme' || pose === 'morto' || pose === 'queda' && s.tum > 3 || blink;
+    s.coat = FA.dragonCoat(THREE, C, { shut, eye: breathing || pose === 'luta' ? 1.0 : 0.55, mouth: breathing ? 1.3 * (0.85 + 0.15 * Math.sin(t * 23 + d.id)) : 0 }, s.coat);
+    const far = Math.hypot(X - focus.X, Z - focus.Z) > 90 ? 1 : 0;
+    F3.put(row, R, 'dragon', s.coat, far, X, mode === 'fly' || s.land ? s.vy : gY, Z, fly);
+    // (its mouth in the world, between its jaws: the breath and the smoke of its sleep come from there)
+    FA.point(R, form, 'head', form.meta.nose, SKIN.p); FA.point(R, form, 'jaw', form.meta.chin || form.meta.nose, SKIN.q);
+    return { X, Y: mode === 'fly' || s.land ? s.vy : gY, Z, mode: s.land ? 'fly' : mode, breathing, pose: pose === 'voo' && amp < 0.3 ? 'planeio' : pose, jaw: s.jaw, skin: true,
+      lift: mode === 'fly' && !s.land ? s.vy - wy : 0, mouth: [(SKIN.p[0] + SKIN.q[0]) / 2, (SKIN.p[1] + SKIN.q[1]) / 2, (SKIN.p[2] + SKIN.q[2]) / 2] };
+  }
+  D3.POSES = ['voo', 'planeio', 'rasante', 'mergulho', 'pouso', 'decola', 'luta', 'queda', 'dorme', 'morto'];
+
   // ------------------------------ the frame ------------------------------
   const emitT = new Map(); G.worldHooks.push(() => emitT.clear());
   function every(key, rate, dt) { let t = (emitT.get(key) || 0) + dt * rate; let n = 0; while (t >= 1) { t -= 1; n++; } emitT.set(key, t); return n; }
@@ -257,11 +339,20 @@
     const R = q.view + 120; let n = 0, lightK = 0, lx = 0, ly = 0, lz = 0, ice = false;
     const F3 = G.FX3D;
     let blobDone = false;
+    // (as one skin: in the rows after People3D's beasts, in a frame People3D began with them — else in the old pieces)
+    const FS = G.Fauna3D; let skinOn = false, skins = 0; const list = [];
+    if (skinReady() && FS.frame !== seenF3) { seenF3 = FS.frame; skinOn = true; }
     for (const d of L) {
       const X = d.x * TL, Z = d.y * TL; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R * R) continue;
-      if (!rigs[n]) rigs[n] = rig();
-      const r = place(rigs[n], d, P.dragonLook(d), t, dt); n++;
       const C = P.dragonLook(d); ice = C.breath === 'gelo';
+      const row = skinOn ? FS.extra() : -1; let r;
+      if (row >= 0) { r = skinPlace(d, C, t, dt, row, focus); skins++; }
+      else {
+        if (!rigs[n]) rigs[n] = rig();
+        const g = place(rigs[n], d, C, t, dt); n++;
+        r = { X: g.root.position.x, Y: g.root.position.y, Z: g.root.position.z, mode: g.mode, breathing: !!g.breathing, mouth: g.mouth, skin: false };
+      }
+      list.push(r);
       // the breath: a cone of fire (or frost) from the jaws to the ground ahead, and the light of it
       if (r.breathing && F3) {
         const ahead = r.mode === 'fight' ? 2.4 : 1.8; const tx = (d.x + Math.cos(d.hd) * ahead) * TL, tz = (d.y + Math.sin(d.hd) * ahead) * TL; const ty = (W.inb(tx / TL, tz / TL) ? W.groundH(tx / TL, tz / TL) : G.SEA) * HM;
@@ -279,8 +370,9 @@
       if (!q.shadows && !blobDone && r.mode === 'fly') { const g = (W.inb(d.x, d.y) ? W.groundH(d.x, d.y) : G.SEA) * HM; const alt = d.h * HM - g; blob.position.set(X, g + 0.08, Z); const s = (7 + Math.min(alt, 60) * 0.1); blob.scale.set(s, 1, s * 0.6); blob.rotation.y = -d.hd; blob.material.opacity = G.clamp(0.42 - alt * 0.006, 0.08, 0.42); blob.visible = true; blobDone = true; }
     }
     for (let k = n; k < rigs.length; k++) rigs[k].root.visible = false;
+    if (skins) FS.end(); // (the frame's beasts ended again, with the dragons' rows)
     if (!blobDone) blob.visible = false;
-    D3.drawn = n;
+    D3.drawn = list.length; D3.skins = skins; drawnL = list;
     // the fires it left on the ground burn a moment; the arrows fly up at it
     const shots = P.dragonShots ? P.dragonShots() : []; let na = 0;
     for (const s of shots) {
@@ -344,9 +436,18 @@
       const p = r.root.position; if (!Number.isFinite(p.x + p.y + p.z)) out.push('o dragão do 3D está num lugar inválido');
       const a = r.bodyG.attributes.position.array; for (let k = 0; k < a.length; k += 7) if (!Number.isFinite(a[k])) { out.push('o corpo do dragão do 3D tem um ponto inválido'); break; }
     }
+    // (the skins: a place and a mouth of numbers, the body never under its standing height in the air — its bones and its
+    // row are Fauna3D.check's, in People3D.check)
+    for (const o of drawnL) {
+      if (!o.skin) continue;
+      if (![o.X, o.Y, o.Z, ...o.mouth].every(Number.isFinite)) { out.push('o dragão de pele está num lugar inválido'); break; }
+      if (o.lift < -0.01 || o.lift > 4.5) { out.push(`o corpo do dragão de pele a ${o.lift.toFixed(2)} m de onde o mundo o tem`); break; }
+    }
     return out;
   };
   // (for the tests: where each drawn dragon is, its pose and whether it breathes)
-  D3.drawnList = () => rigs.filter(r => r.root.visible).map(r => ({ X: r.root.position.x, Y: r.root.position.y, Z: r.root.position.z, mode: r.mode, breathing: !!r.breathing, mouth: r.mouth }));
-  D3.clear = function () { for (const r of rigs) r.root.visible = false; if (arrows) arrows.count = 0; if (coins) coins.count = 0; if (light) light.intensity = 0; if (blob) blob.visible = false; };
+  // (skin: drawn as one skin; pose: its pose of FaunaAnim.dragon; jaw: how open; lift: how far its body is held over where the
+  // world has it — never lower than standing —; Y in a landing: its body coming down over its lair)
+  D3.drawnList = () => drawnL.map(o => Object.assign({}, o));
+  D3.clear = function () { drawnL = []; D3.skins = 0; for (const r of rigs) r.root.visible = false; if (arrows) arrows.count = 0; if (coins) coins.count = 0; if (light) light.intensity = 0; if (blob) blob.visible = false; };
 })(window.G);

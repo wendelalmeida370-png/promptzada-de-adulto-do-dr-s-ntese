@@ -135,6 +135,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 | Árvore | ≤ 1,2 mil | ≤ 40 |
 | Pessoa | ≤ 3 mil (corpo 2 mil + roupa e cabelo) | média ≤ 800 |
 | Bicho (`faunamesh.js`, D-265) | ≤ 1,5 mil (corpo ~760 + peças) | ≤ 300 (~160) |
+| Dragão, o herói (`faunamesh.js` `dragon` e `dragon_voo`, D-270) | ≤ 5,5 mil (corpo 2,1 mil + asas 2 × 600 + dedos, cabeça, dentes, chifres, espinhos, garras) | ≤ 900 (com as asas: de longe é o que se lê) |
 
 - Um pedaço do mundo perto (64 × 64 m) tem **uma geometria por material** (sólido, flora, folhas, plantas, água, vidro):
   coisa nova entra na geometria do pedaço (`Geo.put`), não ganha malha própria nem chamada de desenho própria.
@@ -144,7 +145,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
   ≤ 200 KB de WebP (o número que o `texturas.py` imprime; no base64, × 4/3); os chãos e a turfa vistos de perto podem ir a 300 KB (o peso deles é o capim e a folha que se vê: `turf`,
   `forest`, `grass`, `needles` passam de 200 — baixar a qualidade só tira 12% e borra o que importa); tecido e couro em
   256 px (o fio nunca chega à tela). O limite que manda é o total.
-- Os bichos (`js/faunamesh.js`, feito pelo `arte/fauna.py`): 2,6 MB para 67 espécies e 11 malhas de voo, perto e longe — uma categoria como a das pessoas (`bodymesh.js`, 1,75 MB), fora da conta das peças abaixo (D-266).
+- Os bichos (`js/faunamesh.js`, feito pelo `arte/fauna.py`): 2,6 MB para 67 espécies e 11 malhas de voo, perto e longe — uma categoria como a das pessoas (`bodymesh.js`, 1,75 MB), fora da conta das peças abaixo (D-266). O dragão (D-270) soma ~0,4 MB: as suas duas malhas, perto e longe.
 - Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB; a pedra rúnica: 36,7 KB; o portal: 34,3 KB; a maior, a banca:
   40,4 KB); todas juntas ≤ 1 MB (hoje sete, 203 KB — a conta do `qa/visual/malhas.js`).
 - Decoração só com `G.Realm.Q().detail`; densidade lida dos campos do preset, nunca fixa.
@@ -235,6 +236,7 @@ K.g.put(G.Mesh3D.part('dragao', 'olho'), R3.mat(K.x0 + p[0], K.y0 + p[1], K.z0 +
 | `empena` (cavalo 252 · voluta 524 tri) | as pontas recortadas na prancha da empena: uma cabeça de cavalo com crina e olho furado, e uma voluta que enrola para dentro (as outras duas formas do `bargeEnd`, ao lado do dragão) | `cavalo` + `olho`, ou `voluta` (uma por ponta) | as pontas das tábuas de empena além da cumeeira: o plano da prancha é o da empena, a frente vai para o `out`; para o lado oposto, espelhe em x |
 | `banca` (1.174 tri) | banca de feira do tamanho da do `stalls()`: balcão de tábuas, postes, toldo de lona listrado com a barra recortada, três cestos com montes de fruta, sacos e um caixote | `madeira`, `lona` + `lona2` (as listras), `vime`, `fruta`, `saco` | o mercado e a feira, no lugar da caixa com as três bolas; a fruta na cor do que se vende, as listras nas cores do povo |
 | `casco` (868 tri) | casco de navio trincado, borda subindo nas pontas, roda e cadaste em voluta — **no quadro unitário do fx3d** (proa em +x) | `casco` | os navios do `fx3d.js` (A5), no lugar do casco facetado |
+| `dragon` · `dragon_voo` (~5,1 mil · ~620 tri cada; **não é do `arte/blender/`**: o barro do `arte/fauna_forma.py` `dragon`, a entrada do `fauna_especies.py`, gravado no `js/faunamesh.js` pelo `arte/fauna.py dragon`, D-270) | o dragão do poder do deus, herói: um serpe (as asas são os braços, nos ossos `fl` do esqueleto dos bichos; anda nos pulsos e nos pés), ~19 m do focinho à ponta da cauda e 21 m de asas; peito fundo, coxas de ave grande, pescoço em três, cabeça de focinho longo com sobrancelha pesada, chifres para trás, babados atrás da mandíbula, a mandíbula que abre, dentes, língua; cauda em quatro até a pá; espinhos da cabeça à cauda; asas de membrana com quatro dedos e o polegar com a garra. Duas malhas: no chão as asas dobradas como capa; no ar abertas | as zonas da pele dos bichos: o couro de escamas e as placas da barriga (padrão 15), `asa` (a membrana, o sol passa por ela), `chifre`, `crina` (os espinhos, a pá), `unha`, `marfim`, `crista` (a boca, que arde ao soprar), os olhos | o `dragon3d.js`, pelo `G.Fauna3D`, posado pelo `G.FaunaAnim.dragon`, nas cinco cores do `dragon.js` (`FaunaAnim.dragonCoat`) |
 
 ## 9. A interface do corpo (HUD — `js/incui.js`, `css/style.css`)
 
