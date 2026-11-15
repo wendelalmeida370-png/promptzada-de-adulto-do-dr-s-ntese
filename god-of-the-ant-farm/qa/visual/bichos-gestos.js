@@ -98,7 +98,7 @@ if (mode === 'prova') {
   const scenes = [
     { name: 'leão na garganta da zebra', kind: 'lion', g: 'throat', prey: 'zebra', from: Math.PI / 2, point: p => sup(p, 'neck2', 3) },
     { name: 'tigre na nuca do cervo', kind: 'tiger', g: 'nape', prey: 'deer', down: 1, from: Math.PI / 2, point: p => sup(p, 'neck1', 2), reach: 0.55 },
-    { name: 'lobo agarrado ao jarrete do alce', kind: 'wolf', g: 'grip', prey: 'moose', from: 0, point: p => L.joint(p, 'hlL2') },
+    { name: 'lobo agarrado à anca do alce', kind: 'wolf', g: 'grip', prey: 'moose', from: 0, point: p => sup(p, 'root', 9) },
     { name: 'crocodilo rolando com o gnu', kind: 'croc', g: 'deathroll', prey: 'gnu', from: -Math.PI / 2, point: p => sup(p, 'neck2', 3), u: 0.4, extra: { rollA: 0.0001 } }, // (the jaws on the throat as the roll begins)
     { name: 'leopardo puxando a carcaça', kind: 'leopard', g: 'tear', prey: 'gazelle', pg: null, preyExtra: { dead: 1 }, from: Math.PI / 2, point: p => sup(p, 'spine', 0), tol: 0.11 },
     { name: 'veado batendo cabeça com outro', kind: 'deer', g: 'clash', prey: 'deer', pg: 'clash', from: Math.PI, point: p => L.at(p, 'head', FG.browOf(p.form, [0, 0, 0])), tip: ps => L.at(ps, 'head', FG.browOf(ps.form, [0, 0, 0])), reach: 0.95, u: 1.0 },
@@ -252,11 +252,12 @@ if (mode === 'jogo') {
         return { m, chk, skins: G.People3D.beastSkins, n: live.length, bv: live.map(L => { const q = G.People3D.beastVis(L.a.id); return q ? [L.a.kind, q.gn, q.side, +(q.gk || 0).toFixed(2)] : null; }), gest: live.map(L => L.a.gest || (L.a.dead ? 'morto' : '-')), dbg: { anim: S.animals.size, mode: G.Modes.state, has: live.map(L => S.animals.has(L.a.id)), beasts: G.People3D.beasts, av: av ? [av.X / TL, av.Z / TL] : null, at: [a0.x, a0.y], err: JSON.stringify(G.modErr).slice(0, 300), fauna: G.Fauna3D.ready, rows: G.Fauna3D.rows } };
       }, sh);
       if (r.err) { console.log('FALHOU | ' + sh.tag + ' | ' + r.err); fails.push(sh.tag); continue; }
-      const file = path.join(OUT, sh.tag + '.png'); await page.screenshot({ path: file }); cells.push([sh.tag + (r.m ? ` (${r.m.d.toFixed(2)} m)` : ''), file, sh.sheet || 'outros']);
+      const file = path.join(OUT, sh.tag + '.png'); await page.screenshot({ path: file, timeout: 240000 }); cells.push([sh.tag + (r.m ? ` (${r.m.d.toFixed(2)} m)` : ''), file, sh.sheet || 'outros']);
       if (r.chk.length) { console.log('FALHOU | verificador | ' + sh.tag + ': ' + r.chk.slice(0, 3).join(' · ')); fails.push(sh.tag + ' verificador'); }
       if (r.skins < r.n) { console.log(`FALHOU | ${sh.tag} | ${r.skins} de ${r.n} bichos desenhados como pele ` + JSON.stringify(r.dbg)); fails.push(sh.tag + ' pele'); }
       if (process.env.DBG) console.log(sh.tag, JSON.stringify(r.bv));
-      if (r.m) { meas.push([sh.tag, r.m.d]); const tol = sh.tol || Math.max(0.15, r.m.size * 0.2); // (the point moves — the prey kicks, the roll turns —: the exact reach is the node proof's) if (r.m.d > tol) { console.log(`FALHOU | ${sh.tag} | a boca a ${r.m.d.toFixed(3)} m do ponto (tolerância ${tol.toFixed(2)}) ` + JSON.stringify(r.m.dbg)); fails.push(sh.tag + ' alcance'); } }
+      // (the point moves — the prey kicks, the roll turns —: the exact reach is the node proof's; here a fifth of the holder's size)
+      if (r.m) { meas.push([sh.tag, r.m.d]); const tol = sh.tol || Math.max(0.15, r.m.size * 0.2); if (r.m.d > tol) { console.log(`FALHOU | ${sh.tag} | a boca a ${r.m.d.toFixed(3)} m do ponto (tolerância ${tol.toFixed(2)}) ` + JSON.stringify(r.m.dbg)); fails.push(sh.tag + ' alcance'); } }
     }
     const chk = await page.evaluate(() => ({ err: JSON.stringify(G.modErr), gestErr: G.Animals.gestErr.slice(0, 5) }));
     await browser.close();

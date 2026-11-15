@@ -259,7 +259,7 @@
   def('clash', { in: 0.15, out: 0.4, still: 0.6, body: 1, eff: 'brow', quad(u, d) {
     const s = S(), f = fr(u, d, 2.2), j = bell(f, 0.1, 0.17, 0.35);
     const up = (C.kind === 'ibex' || C.kind === 'cabra' || C.kind === 'ovelha') ? bell(f, 0, 0.1, 0.2) : 0; // (the goats rear and drop onto it)
-    A(I.REAR, up * 0.9); A(I.NDOWN, 0.55 * (1 - up)); A(I.HPITCH, 0.4); A(I.FWD, 0.07 - 0.07 * j + 0.02 * Math.sin(u * hz(1.3))); A(I.DROP, 0.25); A(I.AIM, 0.55 * (1 - up)); A(I.EARB, 0.6); A(I.TUP, 0.3);
+    A(I.REAR, up * 0.9); A(I.NDOWN, 0.55 * (1 - up)); A(I.HPITCH, 0.4); A(I.FWD, -0.07 * j + 0.02 * Math.sin(u * hz(1.3))); A(I.DROP, 0.25); A(I.AIM, 0.55 * (1 - up)); A(I.EARB, 0.6); A(I.TUP, 0.3);
     for (const k of HIND) Lg(k, -0.3, 0, 0, 0); for (const k of FRONT) Lg(k, 0.12, 0, 0, 0);
     if (s.eleph) { A(I.TRCURL, 0.8); A(I.EARO, 0.6); }
   } });

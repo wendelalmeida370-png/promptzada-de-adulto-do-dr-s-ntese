@@ -1734,14 +1734,14 @@
   // (the bones whose frames a beast leaves in the view's memory, for the others to reach: the throat, the nape, the head, the
   // rump, the back, the withers, the hock)
   const KB = ['neck1', 'neck2', 'head', 'root', 'spine', 'chest', 'hlL2'];
-  const KPB = { throat: 1, nape: 0, head: 2, brow: 2, rump: 3, udder: 3, body: 4, flank: 4, back: 5, hock: 6 };
-  const KPD = { throat: 3, nape: 2, brow: 2, rump: 2, udder: 3, back: 2, flank: 0 }; // (the support direction of the skin there: −y, +y, +x)
+  const KPB = { throat: 1, nape: 0, head: 2, brow: 2, rump: 3, haunch: 3, udder: 3, body: 4, flank: 4, back: 5, hock: 6 };
+  const KPD = { throat: 3, nape: 2, brow: 2, rump: 2, udder: 3, back: 2, flank: 0, haunch: 9 }; // (the support direction of the skin there: −y, +y, +x; the haunch the low back corner of the rump, on the side of the one at it)
   const KQ = { m: null, v: null, w: null, inv: null };
   // a point of a beast as modelled (its form's joints and skin) — which: one of KPB; side: the flank's side (+ its left)
   function kpBind(form, which, side, out) {
     const B = G.FaunaAnim.B, J = form.J, b = B[KB[KPB[which]]]; const h = form.hull, dir = KPD[which];
     out[0] = J[b * 3]; out[1] = J[b * 3 + 1]; out[2] = J[b * 3 + 2];
-    if (h && dir !== undefined && h.has[b]) { const o = (b * h.nd + (which === 'flank' && side < 0 ? 1 : dir)) * 3; out[0] = h.p[o]; out[1] = h.p[o + 1]; out[2] = which === 'flank' ? J[b * 3 + 2] : h.p[o + 2]; }
+    if (h && dir !== undefined && h.has[b]) { const o = (b * h.nd + (which === 'flank' && side < 0 ? 1 : which === 'haunch' && side < 0 ? 13 : dir)) * 3; out[0] = h.p[o]; out[1] = h.p[o + 1]; out[2] = which === 'flank' ? J[b * 3 + 2] : h.p[o + 2]; }
     if (which === 'udder') out[2] = J[b * 3 + 2] + Math.abs(J[B.spine * 3 + 2] - J[b * 3 + 2]) * 0.35;
     if (which === 'brow') G.FaunaAnim.Gest.browOf(form, out); // (over the eyes — not the tips of the horns)
     return out;
@@ -1769,7 +1769,7 @@
     let w = AIMAT[n]; if (w !== 'auto') return w;
     const yaw = s2 ? s2.yaw : 0; const dx = a.x - o.x, dz = a.y - o.y; const f = (dx * Math.cos(yaw) + dz * Math.sin(yaw)) / (Math.hypot(dx, dz) || 1);
     const fo = G.Fauna3D.form(o.kind), fa = G.Fauna3D.form(a.kind); const big = !!(fo && fa && fo.meta.H > fa.meta.H * 1.5); // (much taller: a wolf at a moose)
-    return f > 0.5 ? (big ? 'flank' : 'throat') : f < -0.4 ? (big ? 'hock' : 'rump') : 'flank'; // (a wolf on a moose: the hamstring)
+    return f > 0.5 ? (big ? 'flank' : 'throat') : f < -0.4 ? (big ? 'haunch' : 'rump') : 'flank'; // (a wolf on a moose: hanging from the haunch)
   }
   // the marks of a beast's body on its coat — the blood on the muzzle, the wounds by zone, what is eaten of a carcass and its bones,
   // the eyes shut, the water, the mud and the dust on it (Fauna3D's texels after the coat, D-283)

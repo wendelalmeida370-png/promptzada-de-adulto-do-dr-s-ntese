@@ -131,9 +131,10 @@
     // its feet, a moose's rump; the head does the rest)
     if (fam === 'quad' && st.aim && gx && gx.gn && REC[gx.gn] && REC[gx.gn].body && gx.gk > 0) {
       const w = sst(gx.gk) * clamp(P[I.AIM], 0, 1); mouthOf(form, Pm); const dy = (st.aim[1] - Pm[1]) / C.H, s = C.s;
-      if (dy > 0.04 && (s.cat || s.canid || s.bear || s.equid || s.monkey)) { kk = w; add(I.REAR, clamp(dy * 1.5, 0, 0.9)); add(I.DROP, -P[I.DROP] * clamp(dy * 3, 0, 1) / Math.max(kk, 1e-3)); }
+      if (dy > 0.04 && (s.cat || s.canid || s.bear || s.equid || s.monkey)) { kk = w; add(I.REAR, clamp(dy * 1.7, 0, 0.95)); add(I.DROP, -P[I.DROP] * clamp(dy * 3, 0, 1) / Math.max(kk, 1e-3)); }
       else if (dy < -0.04) { kk = w; add(I.DROP, clamp(-dy * 1.1, 0, 0.9)); add(I.NDOWN, clamp(-dy * 0.9, 0, 0.8)); }
-      const dz = (st.aim[2] - Pm[2]) / C.L; kk = w; add(I.FWD, clamp(dz * 0.6, -0.12, 0.12)); // (a step nearer, or back)
+      const ra = P[I.REAR] * rearAng(), rz0 = form.J[B.root * 3 + 2]; const mz = rz0 + (Pm[2] - rz0) * Math.cos(ra); // (reared, the mouth comes back over the hips)
+      const dz = (st.aim[2] - mz) / C.L; kk = w; add(I.FWD, clamp(dz * 0.8, -0.15, 0.3)); // (a step nearer, or back)
     } else if (fam === 'sprawl' && st.aim && gx && gx.gn && REC[gx.gn] && REC[gx.gn].body && gx.gk > 0 && !(P[I.DROLL] > 0)) { // (the crocodile up on its legs, the head raised, to the throat it holds — not in the roll: it turns about its own length, the jaws where they are)
       const w = sst(gx.gk); mouthOf(form, Pm); const dy = (st.aim[1] - Pm[1]) / C.H, dz = (st.aim[2] - Pm[2]) / C.L; kk = w;
       if (dy > 0.05) { add(I.HIGH, clamp(dy * 1.5, 0, 1)); add(I.PITCH, -clamp(dy * 0.35, 0, 0.45)); }

@@ -16,6 +16,8 @@ global.window = global; global.G = { worldHooks: [] }; window.G = G;
 const run = f => vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f });
 run('js/lib/three.min.js'); global.THREE = THREE;
 run('js/faunamesh.js'); run('js/fauna-anim.js'); run('js/fauna3d.js'); // (its unpacker: the meshes are packed — format 3, D-266)
+{ const u = fs.readFileSync(path.join(ROOT, 'js/util.js'), 'utf8'); vm.runInThisContext(u.match(/G\.hash = \(i\) => \{[\s\S]*?\n {2}\};/)[0]); } // (the gestures, D-280: the vocabulary, the layers, the recipes)
+run('js/fauna-gestos.js'); run('js/fauna-gesto3d.js'); run('js/fauna-receitas.js');
 const FA = G.FaunaAnim, D = G.FAUNAMESH, B = FA.B, NB = FA.BONES.length;
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | bichos-pose ${name} | ${info}`); if (!c) fails.push(name); };
 // (who grazes or pecks at the ground, as the 3D has it: the plant eaters, and the insect eaters of the towns and the farms)
@@ -127,5 +129,19 @@ const f3 = x => x.toFixed(3);
   ok('filhote', !bad.length, `${report.young.length} espécies; os pés no chão (pior ${f3(Math.max(...report.young.map(r => r[1])))} m)` + (bad.length ? '; fora: ' + bad.map(r => `${r[0]} ${f3(r[1])}/${f3(r[2])}`).join(', ') : '')); }
 { const pk = report.bird.filter(r => GRAZES[r[0]]); const bad = pk.filter(r => Math.abs(r[3]) > Math.max(0.02, r[4] * 0.08)); ok('a bicada', pk.length > 0 && !bad.length, `${pk.length} aves que bicam o chão (${pk.map(r => r[0]).join(', ')}); a ponta do bico no chão no fundo da bicada (pior a ${f3(Math.max(...pk.map(r => Math.abs(r[3]))))} m)` + (bad.length ? '; fora: ' + bad.map(r => `${r[0]} ${f3(r[3])}`).join(', ') : '')); }
 { const bad = report.bird.filter(r => r[1] > 0.25 || r[2] < 0.25); ok('o passo das aves', report.bird.length > 0 && !bad.length, `${report.bird.length} aves a pé; escorrega no pior ${(Math.max(...report.bird.map(r => r[1])) * 100).toFixed(0)}%` + (bad.length ? '; fora: ' + bad.map(r => `${r[0]} (escorrega ${(r[1] * 100).toFixed(0)}%, no chão ${(r[2] * 100).toFixed(0)}%)`).join(', ') : '')); }
+// the gestures against the ground (D-280; the whole of them in bichos-gestos.js): every gesture of the four-legged at its middle —
+// numbers in every matrix, nothing under the ground beyond the kind's own standing pose and 3.5% of its height (the poses that go
+// under on purpose excepted), the lying ones on it; the dead on their side, settled on it
+{ const FG = FA.Gest, Ge = G.Gestos, UNDER = { burrow: 1, dive: 1, swim: 1, hide: 1 }; const bad = [], badD = []; let n = 0;
+  for (const kind in D.species) { const e = D.species[kind]; if (e.fam !== 'quad' || forms[e.mesh].meta.fam !== 'quad') continue;
+    const f = forms[e.mesh]; const H = f.meta.H, tol = Math.max(0.012, H * 0.035); const mesh = decode(D.meshes[e.mesh]); if (!f.hull) f.hull = FG.hullOf(G.Fauna3D.unpack(D.meshes[e.mesh]));
+    const base = Math.min(0, minY(bend(mesh, f.J, FA.quad(THREE, I4, f, sp0, st0({ kind, gx: { gn: null, gk: 0, pn: null, pk: 0 } })))));
+    for (const g of Ge.of(kind)) { if (UNDER[g]) continue; const d = Ge.DEF[g].d; n++;
+      const R = FA.quad(THREE, I4, f, sp0, st0({ kind, id: 3, t: 4, dt: 1 / 30, gx: { gn: g, gt: d > 0 ? d * 0.45 : 1.3, gk: 1, gd: d, gv: 0, pn: null, pk: 0 } }));
+      if (!R.every(m => m.elements.every(Number.isFinite))) { bad.push(kind + '/' + g + ' NaN'); continue; }
+      if (FG.P[FG.I.LIFT] < -0.05) continue; const lo = minY(bend(mesh, f.J, R)); if (lo < base - tol) bad.push(`${kind}/${g} ${lo.toFixed(3)}`); }
+    const Rd = FA.quad(THREE, I4, f, sp0, st0({ kind, id: 3, t: 4, dead: 1, gx: { gn: null, gk: 0, pn: null, pk: 0 } })); const ld = minY(bend(mesh, f.J, Rd)); if (Math.abs(ld) > tol) badD.push(`${kind} ${ld.toFixed(3)}`); }
+  ok('os gestos no chão', !bad.length, `${n} gestos dos de quatro patas no meio deles; nada debaixo do chão além da pose de pé e de 3,5% da altura` + (bad.length ? '; fora: ' + bad.slice(0, 12).join(', ') : ''));
+  ok('os mortos no chão', !badD.length, 'os de quatro patas mortos, de lado, assentados no chão' + (badD.length ? '; fora: ' + badD.join(', ') : '')); }
 if (fails.length) { console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log('PASSOU');
