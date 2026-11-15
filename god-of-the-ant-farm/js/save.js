@@ -70,6 +70,10 @@
     const o = { id: a.id, kind: a.kind, x: Sv.posR(a.x), y: Sv.posR(a.y), z: r(a.z || 0, 0), age: r(a.age || 0, 2), grown: r(a.grown === undefined ? 1 : a.grown, 2), hunger: r(a.hunger || 0, 2), named: a.named, kills: a.kills, sink: a.sink, hp: r(a.hp, 1), maxHp: a.maxHp, dead: a.dead, meat: r(a.meat, 1), rot: r(a.rot, 0), leader: a.leader, leaveT: r(a.leaveT, 0), summoned: a.summoned, raid: a.raid, sated: r(a.sated || 0, 0), angry: 0, hx: r(a.hx, 1), hy: r(a.hy, 1), lifeMul: r(a.lifeMul || 1, 2), tamed: a.tamed || 0, guardSet: a.guardSet || 0, legend: a.legend || false, big: a.big || 1, epithet: a.epithet || null, mig: a.mig || false, morph: a.morph || null, seen: a.seen || 0, perch: a.perch || 0, dom: a.dom || 0, pen: a.pen || 0, wool: r(a.wool || 0, 2), milk: r(a.milk || 0, 2), eggs: r(a.eggs || 0, 2), shorn: r(a.shorn || 0, 0), tended: a.tended || 0 };
     if (a.rareSeen) o.rareSeen = a.rareSeen;
     if (a.skinned) { o.skinned = true; o.flay = 1; }
+    // (the three pillars, D-276: the gesture as it is, the brain's mind, the world as the beast feels it, the wounds — each a
+    // module's own object of numbers, kept whole)
+    if (a.gest) { o.gest = a.gest; o.gestT = r(a.gestT, 2); o.gestD = a.gestD; o.gestO = a.gestO; o.gestV = a.gestV; }
+    if (a.mind) o.mind = a.mind; if (a.meio) o.meio = a.meio; if (a.wnd) o.wnd = a.wnd;
     return o;
   };
   Sv.serialize = function () {

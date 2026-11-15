@@ -296,6 +296,9 @@
       path: undefined, pi: undefined, pfT: undefined, blk: undefined, blkSeen: undefined, stk: undefined, stkD: undefined, stkGX: undefined, stkGY: undefined, stkT: undefined,
       noGo: undefined, noPrey: undefined, fx: undefined, fy: undefined, sx: undefined, sy: undefined, home: undefined, set: undefined, owner: undefined, ride: undefined, rideCD: undefined,
       shelter: undefined, migFrom: undefined, dam: undefined, coat: undefined, flay: undefined, skinned: undefined, rareSeen: undefined, rooster: undefined, gnawT: undefined, gnawTree: undefined, _denDay: undefined,
+      // (the three pillars, D-276: the gesture the body makes now — only through A.gesture —, the brain's mind (G.Mente), the
+      // world around it as the beast feels it (G.Meio), its wounds (the fight) — each module's own object, in the save whole)
+      gest: null, gestT: 0, gestD: 0, gestO: 0, gestV: 0, mind: null, meio: null, wnd: null,
     }, extra || {});
     if (a.morph === null && !(extra && 'morph' in extra)) a.morph = rollMorph(d);
     if (a.hx === undefined) { a.hx = a.x; a.hy = a.y; }
@@ -316,6 +319,34 @@
   // the one door out of the world for an animal that is not a body rotting away. A living one that goes for good (it walked off
   // the map, the sea took it, a flock or a pack dissolved it) tells the stories at once: no cast keeps what is nowhere (L-656)
   A.remove = a => { G.S.animals.delete(a.id); if (!a.dead && G.Stories && G.Stories.left) G.Stories.left(a.id); };
+  // ------------------------------ the gesture: one door (D-276) ------------------------------
+  // what the body does now, from the vocabulary of js/fauna-gestos.js: the brain, the fight and the world around the beasts
+  // ask here, and only here a.gest changes (the guard counts, rule 92). A gesture the kind cannot make, or one nobody knows, is
+  // refused and counted (A.gestErr: the verifier reports it) — the views would have no pose for it. dur 0: held until another
+  // (or until A.gestEnd); other: the one it is made to (an id); v: a variant the world chose
+  A.gestErr = [];
+  G.worldHooks.push(() => { A.gestErr.length = 0; });
+  A.gesture = function (a, n, dur, other, v) {
+    const Ge = G.Gestos; const d = Ge && Ge.DEF[n];
+    if (!d || !d.kinds.has(a.kind)) { if (A.gestErr.length < 40) A.gestErr.push(`${a.kind}#${a.id}: gesto ${n}${d ? ' que a espécie não faz' : ' desconhecido'}`); return false; }
+    if (a.gest === n && d.loop && (other || 0) === a.gestO) { a.gestD = dur === undefined ? d.d : dur; return true; } // (held on: the loop goes on, not begun again)
+    a.gest = n; a.gestT = 0; a.gestD = dur === undefined ? d.d : dur; a.gestO = other || 0; a.gestV = v || 0;
+    return true;
+  };
+  // the gesture ends (only that one, when named: a later one stays)
+  A.gestEnd = function (a, n) { if (!a.gest || (n && a.gest !== n)) return; a.gest = null; a.gestT = 0; a.gestD = 0; a.gestO = 0; a.gestV = 0; };
+  // ------------------------------ the doors of the pillars (D-276) ------------------------------
+  // each module registers here what it adds to every beast's life, senses and stride — never by editing the loop of another:
+  //  A.lifeHooks: f(a, sp, dt, S) twice a second for each living beast (false: it is gone);
+  //  A.senseHooks: f(a, o) → a factor on how far a looks for the other, o, to be noticed (>1 sooner, <1 later: the wind, the
+  //    cover, the dark, a mind on guard);
+  //  A.speedHooks: f(a) → a factor on its speed (a wound, the mud, the snow, a tired body);
+  //  A.behave(name, fn, opts): a state of its own (fn(a, dt, sp, S) → true while it is in it), with opts.busy (no new prey, no
+  //    new fear), opts.hunting (taken up with a prey), opts.up (off the ground: in a tree)
+  A.lifeHooks = []; A.senseHooks = []; A.speedHooks = [];
+  const SENSE_MAX = A.SENSE_MAX = 2.5; // (the farthest the senses reach, × the old radius: a factor above it is cut there)
+  A.senseMul = function (a, o) { let k = 1; for (let i = 0; i < A.senseHooks.length; i++) k *= A.senseHooks[i](a, o); return k > SENSE_MAX ? SENSE_MAX : k; };
+  A.speedMul = function (a) { let k = 1; for (let i = 0; i < A.speedHooks.length; i++) k *= A.speedHooks[i](a); return k; };
   // the animal wherever it lives: in the open, or under a cave's roof (asleep in a den, out of the storm — L-656)
   A.find = id => G.S.animals.get(id) || ((G.Caves && G.Caves.guest && G.Caves.guest(id)) || {}).a || null;
   A.sp = a => SP[a.kind] || SP.rabbit;
@@ -485,6 +516,7 @@
   // a coarse step (the time skip's) walks in pieces: one jump of several tiles would hop a river or a cliff
   // (the screen's steps never get there: a cheetah at full run covers half a tile in one)
   function moveTo(a, dt, sp) {
+    if (A.speedHooks.length) sp *= A.speedMul(a);
     if (sp * dt <= 0.9) return moveStep(a, dt, sp);
     const n = Math.ceil(sp * dt * 1.4 / 0.9), h = dt / n;
     for (let k = 0; k < n; k++) if (moveStep(a, h, sp)) return true;
@@ -648,12 +680,16 @@
   // prey reaction: flee people, predators and fire
   function fearCheck(a) {
     const S = G.S; const sp = SP[a.kind];
+    // (the senses of the pillars, D-276: how far the other is noticed is the old radius times A.senseMul — the wind, the cover,
+    // the dark, a mind on guard —; looked for up to SENSE_MAX times as far)
+    const sense = A.senseHooks.length > 0;
     if (sp.fear > 0 && !(a.angry > 0)) {
-      const v = nearestVillager(a, sp.fear * (sp.defend && a.grown >= 1 ? 0.55 : 1));
+      const r0 = sp.fear * (sp.defend && a.grown >= 1 ? 0.55 : 1);
+      const v = sense ? nearestVillager(a, r0 * SENSE_MAX, q => { const k = r0 * A.senseMul(a, q); return G.dist2(a.x, a.y, q.x, q.y) < k * k; }) : nearestVillager(a, r0);
       if (v) return v;
     }
     const eaters = EATERS[a.kind]; if (!eaters) return null;
-    const r = (sp.fear || 3) + 1.5; const r2 = r * r;
+    const r = ((sp.fear || 3) + 1.5) * (sense ? SENSE_MAX : 1); const r2 = sense ? r * r / (SENSE_MAX * SENSE_MAX) : r * r;
     let th = null, td = r2;
     const x0 = ((a.x - r) / CELL) | 0, x1 = ((a.x + r) / CELL) | 0, y0 = ((a.y - r) / CELL) | 0, y1 = ((a.y + r) / CELL) | 0;
     for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
@@ -664,6 +700,7 @@
         if (a.z > 3 && SP[p.kind].cls !== 'air' && SP[p.kind].climb !== 'tree') continue;
         const dx = a.x - p.x, dy = a.y - p.y; let d = dx * dx + dy * dy;
         if (p.state === 'stalk' || p.state === 'flank') d *= 7; else if (p.sub > 0) d *= 9;
+        if (sense) { const k = A.senseMul(a, p); d /= k * k; }
         if (d < td) { td = d; th = p; }
       }
     }
@@ -922,12 +959,17 @@
       return true;
     },
   };
+  // (a state of another module's — the brain's, the fight's, the world's around: D-276 — joins the table here, with its flags)
+  A.BEHAVE = BEHAVE;
+  A.behave = function (name, fn, o) { BEHAVE[name] = fn; o = o || {}; if (o.busy) BUSY[name] = 1; if (o.hunting) HUNTING[name] = 1; if (o.up) UP[name] = 1; };
+  A.isBusy = st => !!BUSY[st]; A.isHunting = st => !!HUNTING[st];
   // the others of the same pack, pride or clan
   function packOf(a) {
     const out = []; const L = a.leader || a.id;
     each(grid, a.x, a.y, 14, o => { if (o !== a && !o.dead && o.kind === a.kind && (o.leader === L || o.id === L)) out.push(o); });
     return out;
   }
+  A.packOf = packOf;
   // deep water a little way from the shore, for the drowning
   function deepSpot(a) {
     const S = G.S; let best = null, bd = -1;
@@ -1052,6 +1094,9 @@
       if (a.mig && dh < 3) a.mig = false;
       else if (dh > (a.mig ? 2.5 : a.tamed ? 5 : 9)) { const h = homeward(a, a.mig ? 7 : 5); if (h) { a.tx = h[0]; a.ty = h[1]; a.state = 'wander'; a.seek = a.mig; return; } }
     }
+    // the brain (G.Mente, D-276): the best of the options the modules registered, by their scores — none above the floor, the
+    // old ways below
+    if (G.Mente && G.Mente.decide(a, dt, sp, S)) return;
     if (hungry && (sp.diet === 'herb' || sp.diet === 'browse' || (sp.diet === 'omni' && a.hunger < 0.6))) {
       if (graze(a, dt)) { a.state = 'graze'; a.t = G.rr(3, 7); return; }
       if (sp.diet === 'omni') { const b = nearBush(a); if (b) { b.berries = Math.max(0, b.berries - 1); a.hunger = Math.max(0, a.hunger - 0.3); a.t = 3; return; } }
@@ -1524,6 +1569,7 @@
         if (!BUSY[a.state] && ((a.id + lodTick) & 1)) { lodAcc.set(a.id, (lodAcc.get(a.id) || 0) + dt0); continue; }
         const w = lodAcc.get(a.id); if (w) { dt += w; lodAcc.delete(a.id); }
       }
+      if (a.gest) { a.gestT += dt; if (a.gestD > 0 && a.gestT >= a.gestD) A.gestEnd(a); } // (the gesture's clock: one that has its time ends)
       if (a.hurt > 0) a.hurt -= dt;
       if (a.bite > 0) a.bite -= dt;
       if (a.eating > 0) a.eating -= dt;
@@ -1597,6 +1643,7 @@
     if (S.fire[i] > 0.1 && a.z < 6) { a.hp -= S.fire[i] * 40 * dt; if (a.hp <= 0) { A.kill(a, null, 'fire'); return false; } }
     if (sp.cls === 'land' && (t <= T.SEA || (S.deep[i] && !sp.swims)) && a.state !== 'leave') { const n = W.nearestLand(a.x, a.y, 8); if (n) { a.x = n[0]; a.y = n[1]; } else { dead.push(a); return false; } }
     if (sp.cls === 'water' && !seaWater(i)) { const n = seaNear(a.x, a.y); if (n) { a.x = n[0]; a.y = n[1]; } else { A.kill(a, null, 'stranded'); return false; } }
+    for (let k = 0; k < A.lifeHooks.length; k++) if (A.lifeHooks[k](a, sp, dt, S) === false || a.dead) return false;
     return true;
   }
   const dead = [];

@@ -530,6 +530,10 @@
     { let lastN = -1, lastD = -1; for (const h of s.history) { if (h.n !== undefined) { if (h.n <= lastN) add('chron', 2, `crônica: número fora de ordem (${h.n} ≤ ${lastN})`); lastN = h.n; } if (h.d < lastD) add('chron', 2, `crônica: data fora de ordem (${h.d} < ${lastD}): ${h.txt.slice(0, 60)}`); lastD = h.d; } }
     // ---- animals
     let an = 0; for (const a of s.animals.values()) { if (!fin(a.x) || !fin(a.y)) add('fauna', 1, `animal ${a.kind}#${a.id}: posição inválida`); if (!a.dead) an++; if (a.hp !== undefined && !fin(a.hp)) add('fauna', 1, `animal ${a.kind}#${a.id}: hp ${a.hp}`); }
+    // the gesture of a beast (D-276): only one the vocabulary knows and the kind makes (the door refuses the others and counts
+    // them: G.Animals.gestErr), its clock a number, never past its own time
+    if (G.Animals.gestErr && G.Animals.gestErr.length) add('fauna', 2, `gesto recusado pela porta: ${G.Animals.gestErr.slice(0, 3).join('; ')}${G.Animals.gestErr.length > 3 ? ` (+${G.Animals.gestErr.length - 3})` : ''}`);
+    if (G.Gestos) { const l = []; for (const a of s.animals.values()) { if (!a.gest || a.dead) continue; if (!G.Gestos.can(a.kind, a.gest) || !fin(a.gestT) || !fin(a.gestD) || a.gestT < 0 || (a.gestD > 0 && a.gestT > a.gestD + 1)) l.push(`${a.kind}#${a.id} ${a.gest} (${a.gestT}/${a.gestD})`); } if (l.length) add('fauna', 2, `${l.length} bicho(s) com um gesto que não vale: ${l.slice(0, 3).join(', ')}`); }
     // a town's beast (a dog, a cat, a hen, a pigeon) lives with the people, never in a pen (L-637)
     // a beast on the ground inside a building one does not stand in (L-631): none but the bird that lives on the roofs (the town's
     // pigeon on its house), those in flight — a dive, a circle, a take-off —, up a tree, and the one in a hold or in the air. The

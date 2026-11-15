@@ -805,5 +805,15 @@ for (const f of ['fauna3d.js', 'fauna-anim.js']) { if (!src[f]) { fails.push(`bi
 { const t3 = src['things3d.js'] || []; const i = t3.findIndex(l => /function seaSkin\(a, s,/.test(l));
   if (i < 0) fails.push('bicho de uma pele: o things3d.js sem a função seaSkin — a regra 91 não acha quem põe os bichos do mar na pele (D-267)');
   else { const j = t3.findIndex((l, k) => k > i && /^  \}$/.test(l)); t3.slice(i, j).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\ba\.[A-Za-z_]+\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`bicho de uma pele: things3d.js:${i + k + 1} o seaSkin escreve no bicho (a memória do desenho é o memo s): ${l.trim().slice(0, 110)}`); }); } }
+// 92. "o gesto de um bicho só pela porta" (D-276): o que o corpo de um bicho faz agora (a.gest, a.gestT, a.gestD, a.gestO,
+// a.gestV) só o animals.js escreve — pelo A.gesture / A.gestEnd e pelo relógio do gesto no passo —; o cérebro (fauna-mente.js), a
+// luta (fauna-luta.js), o meio (fauna-meio.js) e quem mais der um gesto a um bicho pedem à porta, que recusa e conta (A.gestErr)
+// o gesto que ninguém conhece ou que a espécie não faz — as vistas não teriam pose para ele. O save devolve o gesto como estava
+// (save.js); o vocabulário é um só (js/fauna-gestos.js), puro: sem o mundo, sem acaso
+for (const f of files) { if (f === 'animals.js' || f === 'save.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.gest[TDOV]?\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o gesto pela porta: ${f}:${k + 1} escreve o gesto de um bicho (a.gest…), que só o A.gesture / A.gestEnd do animals.js escreve (D-276): ${l.trim().slice(0, 110)}`); }); }
+{ const an = src['animals.js'] || []; const i = an.findIndex(l => /A\.gesture = function \(a, n, dur, other, v\)/.test(l));
+  if (i < 0 || !an.slice(i, i + 4).some(l => /d\.kinds\.has\(a\.kind\)/.test(l) && /A\.gestErr\.push/.test(l))) fails.push('o gesto pela porta: o A.gesture (animals.js) não recusa e conta o gesto desconhecido ou que a espécie não faz (A.gestErr) — D-276'); }
+{ const ge = src['fauna-gestos.js'] || []; if (!ge.length) fails.push('o gesto pela porta: js/fauna-gestos.js não existe — o vocabulário dos gestos (D-276)');
+  ge.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bG\.S\b/.test(c)) fails.push(`o gesto pela porta: fauna-gestos.js:${k + 1} lê o mundo ou tira de um acaso (o vocabulário é puro): ${l.trim().slice(0, 110)}`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
