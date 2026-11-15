@@ -144,7 +144,7 @@ if (on('m5')) { world(); calmSky(); day();
     const hy = spawn('hyena', x + 1, y + 1, { hunger: 0 }); const kHd = A.senseMul(hy, d);
     S().time = 0.85; M.viver(0.05); lp.x = x - 2; lp.y = y; lp.state = 'stalk'; hy.x = x + 1; hy.y = y + 1; d.x = x; d.y = y; const kn = A.senseMul(d, lp); const kOwl = A.senseMul(hy, d) / kHd;
     S().time = 0.36; const c = clean();
-    ok('m5 a cobertura e a luz', kc < ko * 0.7 && kn < ko * 0.8 && !c.n, `o leopardo espreitando a 2 casas do cervo: no mato (cobertura ${cov.toFixed(2)}) ×${kc.toFixed(2)}, no aberto (${open.toFixed(2)}) ×${ko.toFixed(2)}, no aberto à noite ×${kn.toFixed(2)} (a hiena, que vê no escuro, de noite ×${kOwl.toFixed(2)} do dia); verificador ${c.n}`);
+    ok('m5 a cobertura e a luz', kc < ko * 0.8 && kn < ko * 0.9 && !c.n, `o leopardo espreitando a 2 casas do cervo: no mato (cobertura ${cov.toFixed(2)}) ×${kc.toFixed(2)}, no aberto (${open.toFixed(2)}) ×${ko.toFixed(2)}, no aberto à noite ×${kn.toFixed(2)} (a hiena, que vê no escuro, de noite ×${kOwl.toFixed(2)} do dia); verificador ${c.n}`);
   } }
 
 // ---------------------------------------------------------------- m6 heat
@@ -184,7 +184,7 @@ if (on('m8')) { world(); calmSky(); S().time = 0.8;
   else {
     const [x, y] = p; clearAround(x, y, 12); const L = spawn('deer', x, y, { hunger: 0.1 }); const herd = [L, spawn('deer', x + 0.8, y, { leader: L.id, hunger: 0.1 }), spawn('deer', x, y + 0.8, { leader: L.id, hunger: 0.1 })]; const fox = spawn('fox', x + 3, y + 2, { hunger: 0.1 });
     sim(() => G.Powers.winter(x, y)); let cold = 0; const st = {};
-    until(60, () => { for (const a of herd.concat([fox])) { if (a.dead) continue; cold = Math.max(cold, a.meio ? a.meio.cold : 0); if (G.Meio.MINE[a.state] || a.gest === 'shiver') st[a.kind + ':' + (a.gest === 'shiver' ? 'shiver' : a.state)] = 1; } return false; });
+    until(90, () => { for (const a of herd.concat([fox])) { if (a.dead) continue; cold = Math.max(cold, a.meio ? a.meio.cold : 0); if (G.Meio.MINE[a.state] || a.gest === 'shiver') st[a.kind + ':' + (a.gest === 'shiver' ? 'shiver' : a.state)] = 1; } return false; });
     // the storm: the herd bunches, heads down
     S().winters = []; sim(() => G.Events.storm()); S().weather.rain = 0.8; const st2 = {};
     const gn = spot((x2, y2, i) => land(x2, y2) && S().biome[i] === 5 && A.walkOK({ kind: 'gnu' }, x2, y2));
