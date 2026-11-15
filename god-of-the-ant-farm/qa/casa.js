@@ -317,9 +317,12 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       const moved12 = lets && H12 !== 'h:' + lord.home ? `, que se mudou no mesmo dia para a casa #${lord.home}` : '';
       const need = K.need(v);
       // (then nothing to pay with, for days: owed; too much owed and the owner sells the house to the people)
-      let gaveUp = false, owed = 0, sold = null, took12 = false;
+      let gaveUp = false, owed = 0, sold = null, took12 = false, rent2 = rent, type2 = b ? b.type : '';
       if (lets) {
-        setCoins('h:' + b.id, 0); if (b.aluga) b.aluga.pago = S.day - 2; townDay(t12); owed = b.aluga ? b.aluga.deve : -1;
+        // (the rent owed is the rent of the house as it stands that day — the town may better it the day before, and the rent
+        // follows: Freydis's house of Hedeby, in the metrópole of the generation 28 with the code of the L-823 to L-829, was made a
+        // sobrado in the town's day that paid her, and two days owed were two of 0,72, not of 0,56, T-1264)
+        setCoins('h:' + b.id, 0); if (b.aluga) b.aluga.pago = S.day - 2; townDay(t12); owed = b.aluga ? b.aluga.deve : -1; rent2 = K.rentOf(t12, b.type); type2 = b.type;
         const L1 = S.ledgerN; if (b.aluga) { b.aluga.pago = S.day - K.OWE_DAYS; townDay(t12); }
         // (the owner gave up: no rent, the house sold to the people by the ledger, his no more. The same day of the town
         // then asks its families in need, the most urgent first, and the family living in the people's house may take it for
@@ -333,13 +336,13 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
       const net12 = r2(own12.reduce((a, e) => a + (e[4] === H12 ? e[6] : 0) - (e[3] === H12 ? e[6] : 0), 0));
       const kept12 = !!H12 && Math.abs(coins(H12) - (o0 + net12)) < 0.02;
       // (the house the people bought costs the family living in it nothing: L-236)
-      fine12 = lets && !kinLord.length && !!paid && Math.abs(paid[6] - rent) < 0.01 && kept12 && need === 'aluga' && Math.abs(owed - rent * 2) < 0.01 && gaveUp && v.home === b.id && !costOf(b);
+      fine12 = lets && !kinLord.length && !!paid && Math.abs(paid[6] - rent) < 0.01 && kept12 && need === 'aluga' && Math.abs(owed - rent2 * 2) < 0.01 && gaveUp && v.home === b.id && !costOf(b);
       if (!fine12 && lets) console.log(`   (h12: as moedas da casa do dono ${r2(o0)} → ${r2(coins(H12))}, pelo livro ${r2(o0 + net12)}: ${own12.map(e => `${e[8]} ${e[6]} ${e[3]}→${e[4]}`).slice(0, 8).join(' · ')})`);
       // (and where the day's rent went when not to the owner's house: the game pays an owner with no house — taken captive, in the
       // street — into his purse, T-529)
       const elsewhere = !paid && lets ? book(e => e[0] > L0 && e[8] === 'aluguel' && e[3] === 'h:' + b.id) : [];
       const whyNot = elsewhere.length ? `o aluguel do dia foi a ${elsewhere.map(e => e[4]).join(', ')}, não à casa de ${lord.name} (${lord.captive ? 'cativo' : lord.home ? 'casa #' + lord.home : 'sem casa'})` : 'NENHUM aluguel no livro';
-      info = `${v.name} ${lets ? `alugou a casa #${b.id} de ${lord.name} (${rent} moedas ao ano)${kinLord.length ? ` — PARENTE de ${kinLord.join(', ')}` : ''}` : 'NÃO alugou: ' + (r.why || JSON.stringify(r))}; ${paid ? `o aluguel do dia foi à casa de ${lord.name} (livro ${paid[0]}, ${paid[6]})${moved12}` : whyNot}; no diário, a família de aluguel quer casa: ${need || 'NÃO'}; sem moeda dois dias: deve ${owed}; ${gaveUp ? `devendo demais, ${lord.name} vendeu a casa ao povo${sold ? ` por ${sold[6]} moedas` : ''}; a família continua nela${took12 ? ' e, a primeira da fila do dia, ficou com a casa do povo sem custo' : ''}` : 'o dono NÃO desistiu'}`;
+      info = `${v.name} ${lets ? `alugou a casa #${b.id} de ${lord.name} (${rent} moedas ao ano)${kinLord.length ? ` — PARENTE de ${kinLord.join(', ')}` : ''}` : 'NÃO alugou: ' + (r.why || JSON.stringify(r))}; ${paid ? `o aluguel do dia foi à casa de ${lord.name} (livro ${paid[0]}, ${paid[6]})${moved12}` : whyNot}; no diário, a família de aluguel quer casa: ${need || 'NÃO'}; sem moeda dois dias: deve ${owed}${rent2 !== rent ? ` (dois dias de ${rent2}: a casa é agora ${type2})` : ''}; ${gaveUp ? `devendo demais, ${lord.name} vendeu a casa ao povo${sold ? ` por ${sold[6]} moedas` : ''}; a família continua nela${took12 ? ' e, a primeira da fila do dia, ficou com a casa do povo sem custo' : ''}` : 'o dono NÃO desistiu'}`;
     } else info = 'a cidade não tem lugar para uma casa vazia';
   }
   if (v && t12 !== set) info = `(em ${t12.name}: ${set.name} não tem mais com quem fazer um casal) ` + info;
@@ -347,7 +350,11 @@ set = S.settlements.get(set0) || set; // (h2 to h4 in another town, when the cas
 }
 // ---------------- h5: inheritance — the partner; the eldest child wherever he lives; nobody: the people
 {
-  peace(); const b = [...S.buildings.values()].filter(q => q.set === set.id && housing(q) && q.built && q.dono && S.villagers.has(q.dono) && S.villagers.get(q.dono).partner && S.villagers.get(S.villagers.get(q.dono).partner) && S.villagers.get(S.villagers.get(q.dono).partner).home === q.id && !taken.has(q.dono)).sort((a, c) => a.id - c.id)[0];
+  // (in the town of the cases, or, with none there, in another town of coin, the first by id: the town with the most singles of
+  // the metrópole of the generation 28 had no house whose owner lives in it with a partner — «nenhuma casa com dono casado»,
+  // T-1236)
+  const wed = q => housing(q) && q.built && q.dono && S.villagers.has(q.dono) && S.villagers.get(q.dono).partner && S.villagers.get(S.villagers.get(q.dono).partner) && S.villagers.get(S.villagers.get(q.dono).partner).home === q.id && !taken.has(q.dono);
+  peace(); const b = [...S.buildings.values()].filter(q => q.set === set.id && wed(q)).sort((a, c) => a.id - c.id)[0] || [...S.buildings.values()].filter(q => q.set !== set.id && E.coinage(G.Village.facOfSet(q.set)) && wed(q)).sort((a, c) => a.id - c.id)[0];
   let info = 'nenhuma casa com dono casado', fine5 = false;
   if (b) {
     const o = S.villagers.get(b.dono), p = S.villagers.get(o.partner);
@@ -861,7 +868,11 @@ const fairPrice = c => Math.max(12, r2(c)); // (what the trade pays: at least th
   let t18 = null, head = null, body = null, why18 = '';
   for (const tw of [...S.settlements.values()].filter(s => E.coinage(s.fac)).sort((a, b) => a.id - b.id)) {
     const q = K.queue(tw);
-    for (const [h, w] of q) { const p = S.villagers.get(h.partner); if (h.home && p && p.home === h.home && !K.waiting(h) && !K.gaveUp(h) && q.filter(e => e[0].home === h.home).length === 1 && G.Possess.can(p).ok) { t18 = tw; head = h; body = p; why18 = w; break; } }
+    // (and a house of that family alone: the pot of a house is of all who live in it, and another family under the same roof —
+    // the owner's, rich, in the Argos of the generation 28 — orders its own house with it on the same day: 25 coins of the pot
+    // went to the rich owner's work, «as moedas da casa mexidas», a decision of that family, not of the body's, T-1235)
+    const alone = h => { const fam = new Set(K.family(h).map(o => o.id)); return [...S.villagers.values()].every(o => o.home !== h.home || fam.has(o.id)); };
+    for (const [h, w] of q) { const p = S.villagers.get(h.partner); if (h.home && p && p.home === h.home && !K.waiting(h) && !K.gaveUp(h) && q.filter(e => e[0].home === h.home).length === 1 && alone(h) && G.Possess.can(p).ok) { t18 = tw; head = h; body = p; why18 = w; break; } }
     if (t18) break;
   }
   let info = 'nenhuma família da fila do dia com o par em casa para viver', fine18 = false;

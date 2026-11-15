@@ -1262,7 +1262,10 @@
       for (let ty = y - 1; ty <= y + n; ty++) for (let tx = x - 1; tx <= x + n; tx++) if ((ty < y || ty >= y + n || tx < x || tx >= x + n) && S.cliff[ty * N + tx]) return false;
       return true;
     };
-    for (const pass of [flat, null]) for (let r = 0; r <= (o && o.R || 40); r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    // (R: how far from the point the hand looks — 0, the point itself: «o.R || 40» read the 0 as no radius given, and the hand
+    // that asked for the old palace on its free lot, in the escala e8, put it 21 tiles off, by the water, L-829)
+    const RR = o && o.R !== undefined ? o.R : 40;
+    for (const pass of [flat, null]) for (let r = 0; r <= RR; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
       if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const x = ox + dx - Math.floor(n / 2), y = oy + dy - Math.floor(n / 2);
       if (!free(x, y) || (pass && !pass(x, y))) continue;
       const b = V.startProject(set, type, [x, y], step); if (b && o && o.built && !b.built) V.completeBuilding(b);
@@ -1468,11 +1471,16 @@
   };
   // (the people's stone the work b may be brought: all that is free for a great work with its turn — less the last stones of
   // another of its people's —; for any other work, what is left past the last stones its people's great works keep)
+  const keptFrom = b => { const set = G.S.settlements.get(b.set); if (!set) return 0; let kept = 0; for (const s of G.S.settlements.values()) if (s.fac === set.fac && s.vez && s.gw && s.gw !== b.id) kept += V.lastStone(s); return kept; };
   V.stoneFor = function (b) {
-    const free = G.Fac.free(b.set, 'stone'); const set = G.S.settlements.get(b.set); if (!set) return free;
-    let kept = 0; for (const s of G.S.settlements.values()) if (s.fac === set.fac && s.vez && s.gw && s.gw !== b.id) kept += V.lastStone(s);
+    const free = G.Fac.free(b.set, 'stone'); const kept = keptFrom(b);
     return kept > 0 ? Math.max(0, free - kept) : free;
   };
+  // (and the stone in a builder's hands is the people's, as the store's: of n in the hands, the work b takes what the last stones
+  // kept from it leave, counted with the store's. Taken from the store for a great work, the stone of a builder whose errand was
+  // cut — the sleep, an alarm, an execution in the square — went into the next work he took up, a house of a sister town, and the
+  // great work waited for its last stones for days: L-826)
+  V.handStone = function (b, n) { const kept = keptFrom(b); return kept > 0 ? Math.max(0, Math.min(n, G.Fac.free(b.set, 'stone') + n - kept)) : n; };
   // (the hands of a great work — D-174: a tenth and a half of the town's grown hands are its builders while it waits for stone
   // with its turn, a twelfth of those of its people's other towns that are fed and have rock, and a builder of them with nothing
   // to lay breaks its stone, villagers.js: V.quarries)
@@ -2043,6 +2051,14 @@
       if (v.skill && v.skill === r) s += 2.5; if (v.skill && v.skill === v.role) s -= 2; // and the ones who learned it as children
       if (s > bs || (s === bs && (v.born > best.born || (v.born === best.born && v.id < best.id)))) { bs = s; best = v; }
     }
+    // (out of an emergency the change waits for the hands the hand it takes has busy — the door every call from outside asks
+    // first, G.Vg.handsBusy (D-094): the crate kept for one, the material fetched for a work — and for the post of an open
+    // service it holds, the whole of its turn: the stoker from before the doors open to the fire that lasts to the closing
+    // (G.Termas.onDuty, D-227), at a meal or a nap of it too. The same hand goes, when they are free: the change had no hurry,
+    // and in the metrópole of the generation 28 the stoker of Mênfis, the newest hand of her trade, was taken from the furnace
+    // as the doors opened, the post went to the other stoker of the town — at a feast, then asleep —, and the baths were cold
+    // all day: L-832)
+    if (calm && best && ((G.Vg && G.Vg.handsBusy && G.Vg.handsBusy(best)) || (G.Termas && G.Termas.onDuty && G.Termas.onDuty(best)))) return null;
     return best;
   }
 
@@ -2111,16 +2127,20 @@
     const chosen = new Set();
     const couples = members.filter(v => v.g === 'f' && v.partner && !v.captive && v.age < 42 && S.villagers.get(v.partner));
     G.shuffle(couples);
+    // (a family goes whole, G.Vg.familyOf: a couple with all its little ones, or it stays; and the grown without a partner with
+    // all of theirs — a widowed mother went to found the village alone, her children left behind, L-823)
     for (const m of couples) {
       if (chosen.size >= target) break;
-      const f = S.villagers.get(m.partner); if (f.set !== set.id) continue;
-      const kids = members.filter(k => (k.mother === m.id || k.father === f.id) && k.age < 16);
-      if (!G.Vg.canSend(m) || !G.Vg.canSend(f) || !kids.every(k => G.Vg.canSend(k))) continue;
+      const f = S.villagers.get(m.partner); if (f.set !== set.id || chosen.has(m) || chosen.has(f)) continue;
+      if (!G.Vg.canSend(m) || !G.Vg.canSend(f)) continue;
+      const kids = G.Vg.familyOf([m, f], set.id, k => G.Vg.canSend(k)); if (!kids) continue;
       chosen.add(m); chosen.add(f);
       for (const k of kids) chosen.add(k);
     }
     for (const v of G.shuffle(members.filter(v => !v.partner && !v.captive && v.age >= 17 && v.age < 32))) {
-      if (chosen.size >= target) break; if (G.Vg.canSend(v)) chosen.add(v);
+      if (chosen.size >= target) break; if (chosen.has(v) || !G.Vg.canSend(v)) continue;
+      const kids = G.Vg.familyOf([v], set.id, k => G.Vg.canSend(k)); if (!kids) continue;
+      chosen.add(v); for (const k of kids) chosen.add(k);
     }
     return chosen;
   };

@@ -74,7 +74,9 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
       },
       tasks: c => ({ body: c.body.task && c.body.task.type, pris: c.pris.task && c.pris.task.type, env: c.env.task && c.env.task.type, sold: c.sold.task && c.sold.task.type, merc: c.merc.task && c.merc.task.type }),
       after: c => { const S = G.S; return { avatar: !!(S.avatar && S.avatar.id === c.body.id && c.body.task && c.body.task.type === 'avatar'), home: c.body.set === c.set.id, pris: !!(c.pris.jail && c.pris.task && (c.pris.task.type === 'cela' || c.pris.task.type === 'levado')), env: c.env.task ? c.env.task.type : '-', sold: G.War.bands.has(c.band.id) && c.band.members.includes(c.sold.id) && !!c.sold.task && c.sold.task.type === 'band' }; },
-      broken(set, list) { const S = G.S; const L = new Set(list.map(v => v.id)); const bad = []; for (const v of list) if (v.g === 'f' && v.partner && L.has(v.partner)) { const p = S.villagers.get(v.partner); for (const k of S.villagers.values()) if (k.set === set.id && k.age < 16 && (k.mother === v.id || k.father === p.id) && !L.has(k.id)) bad.push(k.name + '#' + k.id); } return bad; },
+      // (a little one of anyone who goes, couple or not — the widowed father went to the colony alone, his children left in the
+      // cave's refuge: L-823)
+      broken(set, list) { const S = G.S; const L = new Set(list.map(v => v.id)); const bad = []; for (const k of S.villagers.values()) if (k.set === set.id && k.age < 16 && !L.has(k.id) && (L.has(k.mother) || L.has(k.father))) bad.push(k.name + '#' + k.id + (k.age < 2 ? ' (bebê)' : '')); return bad; },
       clean: () => QA.check().filter(e => e.sev <= 2).map(e => e.msg),
     };
   });
@@ -154,6 +156,9 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     // (families as the sea's proofs grow them, qa/mar17.js — each with a child here, the parents old enough for it)
     for (let k = 0; k < 16; k++) { const p0 = G.W.nearestLand(set.cx + G.rr(-6, 6), set.cy + G.rr(-6, 6), 5); if (!p0) continue; const a = G.Vg.create({ set: set.id, x: p0[0], y: p0[1], age: 27 + G.R() * 12, g: 'm' }); const b = G.Vg.create({ set: set.id, x: p0[0] + 0.5, y: p0[1], age: 27 + G.R() * 12, g: 'f' }); a.partner = b.id; b.partner = a.id; const ch = G.Vg.create({ set: set.id, x: p0[0], y: p0[1] + 0.5, age: 7 + G.R() * 6, mother: b.id, father: a.id }); a.kids.push(ch.id); b.kids.push(ch.id); }
     for (let k = 0; k < 6; k++) { const p0 = G.W.nearestLand(set.cx + G.rr(-6, 6), set.cy + G.rr(-6, 6), 5); if (p0) G.Vg.create({ set: set.id, x: p0[0], y: p0[1], age: 18 + G.R() * 10, g: k % 2 ? 'm' : 'f' }); }
+    // (and the widowed: two with two children each, who go with them or not at all, and one with a baby under two and a child of
+    // eight, who stays with them — the colony took a widowed father alone and left his children, L-823)
+    for (let k = 0; k < 3; k++) { const p0 = G.W.nearestLand(set.cx + G.rr(-6, 6), set.cy + G.rr(-6, 6), 5); if (!p0) continue; const a = G.Vg.create({ set: set.id, x: p0[0], y: p0[1], age: 26 + G.R() * 10, g: k % 2 ? 'f' : 'm' }); for (const age of k < 2 ? [6 + G.R() * 3, 9 + G.R() * 3] : [0.6, 8]) { const ch = G.Vg.create({ set: set.id, x: p0[0], y: p0[1] + 0.5, age, mother: a.g === 'f' ? a.id : 0, father: a.g === 'm' ? a.id : 0 }); a.kids.push(ch.id); } }
     // (and three with a baby under two: the ship took the parents and left the babies, L-442)
     for (let k = 0; k < 3; k++) { const p0 = G.W.nearestLand(set.cx + G.rr(-6, 6), set.cy + G.rr(-6, 6), 5); if (!p0) continue; const a = G.Vg.create({ set: set.id, x: p0[0], y: p0[1], age: 24 + G.R() * 8, g: 'm' }); const b = G.Vg.create({ set: set.id, x: p0[0] + 0.5, y: p0[1], age: 22 + G.R() * 8, g: 'f' }); a.partner = b.id; b.partner = a.id; const ch = G.Vg.create({ set: set.id, x: p0[0], y: p0[1] + 0.5, age: 0.6, mother: b.id, father: a.id }); a.kids.push(ch.id); b.kids.push(ch.id); }
     let dock = null; const r0 = set.radius; for (const R of [8, 14, 20, 28, 36]) { set.radius = R; const site = G.City.dockSite(set); if (site) { dock = G.Village.addBuilding('doca', site[0], site[1], set.id, true); break; } } set.radius = r0;
@@ -183,7 +188,7 @@ const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 
     if (!e) return { err: `nenhuma colônia saiu de ${set.name}`, t0 };
     const crew = e.crew.map(id => S.villagers.get(id)).filter(Boolean);
     const parents = [c.body.mother, c.body.father].filter(id => e.crew.includes(id)).map(id => S.villagers.get(id).name);
-    const kids = []; for (const v of crew) if (v.g === 'f' && v.partner && e.crew.includes(v.partner)) { const p = S.villagers.get(v.partner); for (const k of S.villagers.values()) if (k.set === set.id && k.age < 16 && (k.mother === v.id || k.father === p.id) && !e.crew.includes(k.id)) kids.push(k.name + '#' + k.id + (k.age < 2 ? ' (bebê)' : '')); }
+    const kids = __F.broken(set, crew);
     if (home) { home.inKin = home.kin.filter(id => e.crew.includes(id)).map(id => S.villagers.get(id).name); home.inWid = e.crew.includes(home.widId); }
     const out = { home7: home, town: set.name, t0, n: crew.length, child: c.body.name + ' (' + Math.floor(c.body.age) + ' anos)', five: crew.filter(v => c.ids.has(v.id)).map(v => v.name), parents, bad: crew.filter(v => v.captive || v.jail || v.held || v.ug || v.air || (S.avatar && S.avatar.id === v.id)).map(v => v.name), kids };
     G.Vg.endTask(c.merc);

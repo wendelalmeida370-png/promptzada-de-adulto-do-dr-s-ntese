@@ -36,6 +36,21 @@ const man = q => { const v = G.Secrets.membersOf(q).filter(o => o.id !== q.maste
 // (the ready world's own save, read before any load touches it: what it kept)
 const raw = (() => { const data = {}; const got = G.Ready.got; G.Ready.got = (k, s) => { data[k] = s; }; try { M.run('worlds/' + WORLD + '.js'); } finally { G.Ready.got = got; } return JSON.parse(data[WORLD]); })();
 const rawMarks = []; if (raw.secrets) for (const q of raw.secrets.socs) for (const w of q.wit || []) if (w.fate === 'calar' && !w.done && w.hunter) rawMarks.push(w.id);
+// (a ready world whose orders have no witness to silence left — every witness of the mega of the generation 28 done: the cases
+// had no hunt to cut, save nor watch —: the save of before is armed by the test's hand as the game of before L-662 saved it, three
+// witnesses to silence near the order's lodge with the order's man marked on them and no hunt behind the marks — the three of
+// L-662 on one man —: one for the o2 and the o3, the others for the o7, the first silenced by then; T-1262)
+let armed = '';
+if (!rawMarks.length && raw.secrets && Array.isArray(raw.secrets.socs)) {
+  const byId = new Map(raw.villagers.map(v => [v.id, v]));
+  const q = raw.secrets.socs.filter(o => !o.gone && (o.members || []).length >= 3 && (o.lodges || []).length).sort((a, b) => b.members.length - a.members.length || a.id - b.id)[0];
+  const man0 = q && q.members.map(m => byId.get(m.id)).find(v => v && v.id !== q.master && !v.captive && !v.jail && !v.aboard && v.age >= 18 && v.age < 60);
+  const l = q && q.lodges[0];
+  const wvs = man0 ? raw.villagers.filter(v => !v.secret && !v.captive && !v.jail && !v.aboard && v.set && v.age >= 18 && v.age < 55).sort((a, b) => ((a.x - l.x) ** 2 + (a.y - l.y) ** 2) - ((b.x - l.x) ** 2 + (b.y - l.y) ** 2) || a.id - b.id).slice(0, 3) : [];
+  if (wvs.length) { const ids = new Set(wvs.map(v => v.id)); q.wit = (q.wit || []).filter(w => !ids.has(w.id)).slice(-(12 - wvs.length));
+    for (const wv of wvs) { q.wit.push({ id: wv.id, soc: q.id, day: raw.day - 1, lodge: l.id, fate: 'calar', at: raw.day - 0.5, done: 0, hunter: man0.id }); rawMarks.push(wv.id); }
+    armed = ` (armado pela mão da prova: ${wvs.map(v => `${v.name} #${v.id}`).join(', ')}, testemunhas de ${q.name}, com ${man0.name} #${man0.id} marcado nelas)`; }
+}
 const bad = [];
 const live = (secs, each) => { for (let k = 0; k < Math.round(secs * 10); k++) { M.viver(0.1); if (each && each(k) === true) return true; if (k % 100 === 0) { const w = secret(); if (w.length) bad.push(w[0]); } } return false; };
 
@@ -53,7 +68,7 @@ const t0 = G.S.clock; const p0 = pending();
   // (and no hunt on them in the first looks of the order: the wait is the step's rule, not a hunt the load decided)
   let early = 0; live(9, () => { early = Math.max(early, stalks().filter(v => was.has(v.task.w)).length); });
   ok(`o1 ${WORLD}`, rawMarks.length > 0 && marked === 0 && waiting === kept.length && kept.length === rawMarks.length && sent === 0 && early === 0 && !secret().length,
-    `o save do mundo pronto${after ? ' (de depois do L-662, sem as caças e os relógios da ordem, como um save de antes)' : ''} guardava ${rawMarks.length} testemunha(s) a calar com caçador marcado, sem caça nenhuma (a tarefa não ia no save); depois do load: ${marked} marcada(s), ${waiting} de ${kept.length} esperando a ordem até ${Math.round(t0 + RETRY())} s (agora ${Math.round(t0)}), ${sent} caça(s) mandada(s) pelo load, ${early} nelas nos primeiros 9 s`);
+    `o save do mundo pronto${after ? ' (de depois do L-662, sem as caças e os relógios da ordem, como um save de antes)' : ''}${armed} guardava ${rawMarks.length} testemunha(s) a calar com caçador marcado, sem caça nenhuma (a tarefa não ia no save); depois do load: ${marked} marcada(s), ${waiting} de ${kept.length} esperando a ordem até ${Math.round(t0 + RETRY())} s (agora ${Math.round(t0)}), ${sent} caça(s) mandada(s) pelo load, ${early} nelas nos primeiros 9 s`);
 }
 
 // ---------------- o2 a hunt cut: the next look leaves the witness waiting; a new hunt only when the time comes ----------------
@@ -213,9 +228,21 @@ if (!H && tried.length) ok(`o2 ${WORLD}`, false, tried.join(' · '));
 // worn out, the man leaves it for his bed, and the witness waits for the order again; the wait over by the proof's hand, the man
 // worn out and awake at a plain errand is not sent, nor, rested enough to be up, in his bed — rested and up, he is)
 {
+  // (the o4 opened the ready world again, and the mega of the generation 28 has no witness to silence left in it — the armed
+  // save of the o1 was the o1's to the o3 —: with none, the o7's witnesses are armed by the test's hand in the live world, as the
+  // step arms one — entries of the order's own list, «calar», due now, no man marked —, two, near the lodge of the order with
+  // the most members, and the order sends its man by its rule; T-1262)
+  let armed7 = '';
+  if (!pending().length) {
+    const q = socs().filter(o => !o.gone && G.Secrets.membersOf(o).length >= 3 && (o.lodges || []).length).sort((a, b) => G.Secrets.membersOf(b).length - G.Secrets.membersOf(a).length || a.id - b.id)[0];
+    const l = q && q.lodges[0];
+    const wvs = l ? [...G.S.villagers.values()].filter(v => !v.secret && !v.captive && !v.jail && !v.aboard && v.set && v.age >= 18 && v.age < 55).sort((a, b) => ((a.x - l.x) ** 2 + (a.y - l.y) ** 2) - ((b.x - l.x) ** 2 + (b.y - l.y) ** 2) || a.id - b.id).slice(0, 2) : [];
+    for (const wv of wvs) { q.wit = (q.wit || []).filter(w => w.id !== wv.id); q.wit.push({ id: wv.id, soc: q.id, day: G.S.day, lodge: l.id, fate: 'calar', at: G.S.day }); if (q.wit.length > 12) q.wit.shift(); }
+    if (wvs.length) armed7 = ` (armadas pela mão da prova: ${wvs.map(v => `${v.name} #${v.id}`).join(', ')}, testemunhas de ${q.name})`;
+  }
   let h7 = null, w7 = null, q7 = null; const T7 = RETRY() + 120;
   live(T7, () => { const v = stalks().find(x => x.task.w && !x.task.inq); if (v) { h7 = v; w7 = v.task.w; q7 = socs().find(q => q.id === v.task.soc); return true; } });
-  if (!h7 || !q7) ok(`o7 ${WORLD}`, false, `nenhuma caça a uma testemunha em ${Math.round(T7)} s`);
+  if (!h7 || !q7) ok(`o7 ${WORLD}`, false, `nenhuma caça a uma testemunha em ${Math.round(T7)} s${armed7} (testemunhas a calar: ${pending().length})`);
   else {
     const wOf = () => (q7.wit || []).find(x => x.id === w7); const onIt = () => !!(h7.task && h7.task.type === 'stalk' && h7.task.w === w7);
     h7.energy = 30; h7.hunger = Math.min(h7.hunger, 30); let held = true; live(3, () => { if (!onIt()) { held = false; return true; } });
@@ -235,7 +262,7 @@ if (!H && tried.length) ok(`o2 ${WORLD}`, false, tried.join(' · '));
       h7.energy = 90; live(8, () => { if (h7.task && h7.task.type === 'sleep') { G.Vg.endTask(h7); h7.sleeping = false; } if (onIt()) { sentRested = true; return true; } });
     }
     ok(`o7 ${WORLD} o homem da ordem esgotado larga a caça pela cama, e a ordem não manda quem está esgotado (L-822)`, held && still && left && next !== null && !sentWorn && !sentAsleep && sentRested,
-      `${q7.name}: ${h7.name} #${h7.id} atrás da testemunha #${w7}; com a energia a 30 ${held ? 'segue na caça' : 'LARGOU A CAÇA'} 3 s; com a energia a 5 ${left ? `larga a caça (agora «${after}»)` : 'SEGUE NA CAÇA'} e a testemunha ${next !== null ? `fica esperando a ordem até ${next.toFixed(1)} s (${(next - cl).toFixed(0)} s)` : 'NÃO FICOU ESPERANDO'}; a espera acabada pela mão da prova: esgotado e acordado, ${sentWorn ? `MANDADO ${sentWorn} vez(es)` : 'não é mandado'}; na cama, com a energia a 50, ${sentAsleep ? `TIRADO DELA ${sentAsleep} vez(es)` : 'não é tirado dela'}; descansado e de pé, ${sentRested ? 'é mandado' : 'NÃO É MANDADO'}`);
+      `${q7.name}${armed7}: ${h7.name} #${h7.id} atrás da testemunha #${w7}; com a energia a 30 ${held ? 'segue na caça' : 'LARGOU A CAÇA'} 3 s; com a energia a 5 ${left ? `larga a caça (agora «${after}»)` : 'SEGUE NA CAÇA'} e a testemunha ${next !== null ? `fica esperando a ordem até ${next.toFixed(1)} s (${(next - cl).toFixed(0)} s)` : 'NÃO FICOU ESPERANDO'}; a espera acabada pela mão da prova: esgotado e acordado, ${sentWorn ? `MANDADO ${sentWorn} vez(es)` : 'não é mandado'}; na cama, com a energia a 50, ${sentAsleep ? `TIRADO DELA ${sentAsleep} vez(es)` : 'não é tirado dela'}; descansado e de pé, ${sentRested ? 'é mandado' : 'NÃO É MANDADO'}`);
   }
 }
 const e = M.erros(); const errs = e.console.filter(l => /error|warn/.test(l));

@@ -1290,7 +1290,7 @@
 // of the place, L-435), the brick of the works (D-075) — and the busy hands (D-094), what a ruin keeps (L-377), the builders
 // on the side of the works (L-389) and a plain load left on the ground (L-408). Loaded after qa/qa.js (QA.more); copied into
 // qa.js by qa/junta-inv.js. It reads the world's fields directly: a fault in the trades' own code is not hidden by the code it
-// checks. Each rule has its name (QA.oficio, QA.maos, QA.ruina, QA.obras, QA.chao): a proof asks for the one it watches by it,
+// checks. Each rule has its name (QA.oficio, QA.maos, QA.ruina, QA.obras, QA.chao, QA.veio): a proof asks for the one it watches by it,
 // not by its place in QA.more
 (function () {
   if (!window.QA || !QA.more) return;
@@ -1590,6 +1590,23 @@
     chao0 = now;
   });
   if (G.worldHooks) G.worldHooks.push(() => { chao0 = new Map(); chao0S = null; });
+  // (a post at a mine with its vein worked out, or with none: the shift went down a shaft with nothing in it and ended where it
+  // began, step after step — Moctezuma, a miner of Tenochtitlan in the metrópole of the generation 28, stood a third of a day at
+  // his door, as tired as at work: L-827. The town's dealing lets the post go — every 4 s of the world, 8 in the skip —: kept 20 s
+  // past the vein's end, the post lies. Since when each one has kept it, from look to look)
+  let veio0 = new Map(), veio0S = null;
+  QA.more.push(QA.veio = function (add, s) {
+    if (veio0S !== s) { veio0S = s; veio0 = new Map(); }
+    const now = new Map(); const ores = new Map((s.ores || []).map(o => [o.id, o]));
+    for (const v of s.villagers.values()) {
+      const b = v.job && s.buildings.get(v.job); if (!b || b.type !== 'mina' || !b.built) continue;
+      const o = ores.get(b.ore); if (o && o.amt > 0) continue;
+      const since = veio0.has(v.id) ? veio0.get(v.id) : s.clock; now.set(v.id, since);
+      if (s.clock - since > 20) add('oficio', 3, `${v.name}#${v.id}: posto na mina#${b.id} sem veio (${o ? 'esgotado' : 'sem jazida'}) há ${Math.round(s.clock - since)} s — o turno acaba onde começa (L-827)`, v.id);
+    }
+    veio0 = now;
+  });
+  if (G.worldHooks) G.worldHooks.push(() => { veio0 = new Map(); veio0S = null; });
 })();
   // ---- qa/escala-inv.js ----
 // escala-inv: as regras do verificador para a escala de cada prédio (D-106, a Arquitetura Monumental) — carregado depois do

@@ -17,6 +17,8 @@
 //  k7 o contrabandista de luto (L-821): com a carga roubada nas mãos, na hora de deitar e com a energia a 70, o roubo em andamento
 //     segue até a prateleira pelo caminho do roubo ('contrabando') — o que pesa no trabalho do dia (os anos, o luto, o medo, o fim
 //     da tarde) não pesa no posto da noite —, e a cama nunca o corta
+//  k8 o roubo que atravessa a madrugada (L-830): a noite acaba às 0,02 (G.isNight) com a carga roubada ainda nas mãos e o
+//     contrabandista de luto e com sono; o roubo em andamento segue até a prateleira, e a cama nunca o corta
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console. (A segunda batida, que fecha o mercado com a
 //  prateleira de volta ao armazém, é do qa/guardados.js, L-377.)
 // Num mundo sem mercado clandestino, a prova o abre pela porta do mundo (economy.js, G.Eco.openBlackMarket): um beco da cidade, dois
@@ -120,7 +122,9 @@ function stealNow(P, v) {
   const seller = [...S().villagers.values()].find(o => o.job === P.b.id); const sh = seller && seller.home && S().buildings.get(seller.home);
   // (and with free hands: what the arms hold has somewhere to go first, and the purchase does not fit them — in the Argos of
   // the generation 15 Dion came to the counter with 4 of wood for a work in his arms, and went back to the work without it, T-523)
-  const buyer = [...S().villagers.values()].filter(o => o.set === P.b.set && fit(o) && o.home && !(o.carry && o.carry.n > 1e-6) && !P.crew.some(c => c.home === o.home) && !P.crew.includes(o) && D.get('h:' + o.home, 'moedas') >= 5 && D.room('h:' + o.home, k) >= 1).sort((a, c) => G.dist2(a.x, a.y, P.b.x, P.b.y) - G.dist2(c.x, c.y, P.b.x, P.b.y))[0];
+  // (nor one of a voyage's crew: the call to the quay (3,25) is over the errand's 2,9 — in the metrópole of the generation 28
+  // Filipe, the nearest, was of one: the call took him to the quay at the first second, and he sailed, T-1242)
+  const buyer = [...S().villagers.values()].filter(o => o.set === P.b.set && fit(o) && o.home && !(o.carry && o.carry.n > 1e-6) && !P.crew.some(c => c.home === o.home) && !P.crew.includes(o) && !(G.Expe && G.Expe.memberOf(o.id)) && D.get('h:' + o.home, 'moedas') >= 5 && D.room('h:' + o.home, k) >= 1).sort((a, c) => G.dist2(a.x, a.y, P.b.x, P.b.y) - G.dist2(c.x, c.y, P.b.x, P.b.y))[0];
   const coin = E.coinage(P.f.id);
   // (the errand to the black market as the shop gives it, held above the calls from outside below 3 — the line of the D-094 —:
   // the test is the deal at the counter, not whether someone stops him on the way — at 0,35 a word in the street takes it, and
@@ -254,6 +258,24 @@ function stealNow(P, v) {
   const bad = newBad(P.base);
   ok('k7', !!t && t.type === 'steal' && got && asleep && out > 0 && Math.abs(out - shelf) < 0.01 && !bed && !stolenIn(v) && !bad.length,
     `${v.name}, de luto (40) e com a energia a 70, com ${out} roubado nas mãos às ${t1.toFixed(3)}${late ? ` e o relógio na hora de deitar ${v.g === 'f' ? 'dela' : 'dele'} pela mão (${c.bed.toFixed(3)})` : ''} (com sono: ${asleep ? 'sim' : 'NÃO'}): ${looks} olhadas, ${bed ? `NA CAMA ${bed} vez(es)` : 'nunca na cama'}; das mãos à prateleira ${shelf} pelo caminho do roubo${bad.length ? '; ' + bad.join(' · ') : ''}`);
+}
+// k8 the theft across the dawn (L-830): the night ends at 0,02 (G.isNight), and at that look a theft under way was the day's
+// errand — the bed of one still sleepy cut it, the loot in his hands, and it lay there while he slept: Itzcóatl of Tenochtitlan,
+// in the metrópole of the generation 28. The loot in his hands and the hour by the hand at the day's last moment: the night ends
+// with the theft under way — the walk back to the market is longer than the four seconds to the dawn —, and it goes on
+{
+  const P = setup(0.75); const v = P.crew[0]; const { t, got } = stealNow(P, v);
+  // (in mourning, as Itzcóatl was. Whether the bed takes him depends on the other choices of his morning — one of a lower
+  // priority than the theft's keeps it whatever the night says —: the door of the theft itself is asked at the dawn's look,
+  // E.prowls, the night's errand still his with the loot in his hands)
+  if (got) { S().time = 0.9995; v.energy = 70; v.mourn = 40; }
+  let dawn = null, bed = 0, looks = 0;
+  live(120, () => { looks++; if (!dawn && !G.isNight() && S().time < 0.5) dawn = { loot: stolenIn(v), sleepy: G.Lar.sleepy(v), at: S().time, prowls: G.Eco.prowls(v) }; if (v.task && (v.task.type === 'sleep' || v.task.kind === 'sleep')) bed++; }, () => !stolenIn(v));
+  const out = sum(lines(P, e => e[8] === 'contrabando' && e[3] === 'f:' + P.f.id && e[4] === 'v:' + v.id));
+  const shelf = sum(lines(P, e => e[8] === 'contrabando' && e[3] === 'v:' + v.id && e[4] === 'b:' + P.b.id));
+  const bad = newBad(P.base);
+  ok('k8 o roubo que atravessa a madrugada (L-830)', !!t && t.type === 'steal' && got && !!dawn && dawn.loot && dawn.sleepy && dawn.prowls && out > 0 && Math.abs(out - shelf) < 0.01 && !bed && !stolenIn(v) && !bad.length,
+    `${v.name}, de luto (40) e com a energia a 70, com ${out} roubado nas mãos e o relógio no fim do dia pela mão: ${dawn ? `a noite acabou às ${dawn.at.toFixed(3)} com ${dawn.loot ? 'a carga roubada nas mãos' : 'a carga JÁ NA PRATELEIRA (o caso não atravessou a madrugada)'}${dawn.sleepy ? ', com sono' : ', SEM SONO'} — e o roubo em andamento ${dawn.prowls ? 'ainda é o posto da noite dele (E.prowls)' : 'DEIXOU DE SER o posto da noite (E.prowls não), e a cama pode cortá-lo'}` : 'a noite NÃO ACABOU no caso'}; ${looks} olhadas, ${bed ? `NA CAMA ${bed} vez(es)` : 'nunca na cama'}; das mãos à prateleira ${shelf} pelo caminho do roubo${bad.length ? '; ' + bad.join(' · ') : ''}`);
 }
 const er = M.erros();
 ok('erros', !Object.keys(er.mod).length && !er.console.length, `módulos: ${JSON.stringify(er.mod)}; console: ${er.console.slice(0, 2).join(' | ') || 'nada'}`);

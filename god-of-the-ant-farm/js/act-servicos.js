@@ -481,8 +481,15 @@
     return { ok: true, n: r.n };
   }
   Te.feed = (op, v) => (G.inSim && op && live(op) ? feed(op, v) : { ok: false, why: '' });
+  // (the errands of the furnace are the stoker's own: one whose trade the town changed puts the errand down at the next look,
+  // and the furnace waits for the stoker the town names — the war took Ankhesen of Mênfis from her furnace to the warriors, and
+  // she fed it as a warrior with her errand of before, the post empty, in the metrópole of the generation 28: L-831. The wood
+  // already in the arms goes on by its mark, to the baths' store, as any load with a place to go)
+  const ownPost = (v, b) => !!b && v.role === 'foguista' && v.job === b.id;
+  Te.ownPost = ownPost;
   function runFornalha(v, t, dt, H) {
     const S = S_(); const b = S.buildings.get(t.id); const op = t.op ? A.get(t.op) : null;
+    if (!ownPost(v, b)) return H.end(v);
     // (before the doors open: to the furnace, and there until the day opens — the next look feeds it)
     if (t.pre) {
       if (!b || !b.built || Te.dia(b) || !Te.onDuty(v)) return H.end(v);
@@ -499,7 +506,7 @@
   }
   function runLenha(v, t, dt, H) {
     const S = S_(); const b = S.buildings.get(t.id); const f = G.Fac.ofV(v);
-    if (!b || !b.built || b.type !== 'banhos' || !f) return H.end(v);
+    if (!b || !b.built || b.type !== 'banhos' || !f || !ownPost(v, b)) return H.end(v);
     if (t.st === 0) { const s = G.Village.nearestDropoff(v.x, v.y, v.set); if (!s) return H.end(v); const r = walkB(v, t, s, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
     const ref = 'b:' + b.id;
     if (t.st === 1) {

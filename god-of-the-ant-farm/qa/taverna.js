@@ -38,16 +38,19 @@ G.inSim++;
 // of its 73 grown people — the others had the one of the middle —, and nobody came to it the whole night: T-511
 const near = new Map();
 for (const v of S().villagers.values()) { if (v.age < 16) continue; let nb = null, bd = 900; for (const b of E.byType(v.set, 'taverna')) { if (!b.built) continue; const d = G.dist2(v.x, v.y, b.x, b.y); if (d < bd) { bd = d; nb = b; } } if (nb) near.set(nb.id, (near.get(nb.id) || 0) + 1); }
-function pick() {
+function pick(also) {
   let best = null;
   for (const b of S().buildings.values()) {
-    if (b.type !== 'taverna' || !b.built || !T.keeperOf(b)) continue;
+    if (b.type !== 'taverna' || !b.built || !T.keeperOf(b) || (also && !also(b))) continue;
     const sc = (T.withCoin(b) ? 1e9 : 0) + (near.get(b.id) || 0) * 1e4 + V.pop(b.set);
     if (!best || sc > best.sc) best = { b, sc };
   }
   return best && best.b;
 }
 const P = pick();
+// (the t9's: one whose keeper has hands — with none, he puts no cup in anybody's mouth: Horemheb, the keeper of Mênfis in the
+// metrópole of the generation 28, lost both arms in a war, and the work of who lost them is as it always was, D-152; T-1257)
+const P9 = P && D.strength(T.keeperOf(P)) > 0 ? P : pick(b => D.strength(T.keeperOf(b)) > 0) || P;
 if (!P) { console.log(`FALHOU | taverna mundo | ${world}: nenhuma taverna com taverneiro`); process.exit(1); }
 const town = () => S().settlements.get(P.set);
 console.log(`${world}: ${V.buildName(P)} #${P.id} de ${town().name} (${(G.Fac.get(V.facOfSet(P.set)) || {}).civ}, ${V.pop(P.set)} habitantes, ${T.withCoin(P) ? 'de moeda' : 'sem moeda'}; a mais perto de ${near.get(P.id) || 0} adultos da cidade); abre ${T.horas(P).abre}, fecha ${T.horas(P).fecha}`);
@@ -195,11 +198,17 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); if (T.pick(v) !== b)
   let far = 0, went = [], self = 0, waited = [], walk = 0; const c0 = S().clock;
   if (op && k) {
     S().time = 0.63;
+    // (his errand ended first, out of where he is: an errand ended inside a building puts one out at its door — Horemheb, the
+    // keeper of Mênfis in the metrópole of the generation 28, in bed at home, was sent 34 tiles off by the test's hand and put
+    // back at his house's door, 7.65 from the counter, by the errand's end that came after. And fed and rested by it: hungry,
+    // he goes to eat on the way — the meal weighs more than the counter —, as Horemheb did, his hunger at 79, three seconds
+    // after he set out; T-1256)
+    G.Vg.endTask(k); k.inside = 0; k.path = null; k.sleeping = false; k.hunger = Math.min(k.hunger, 15); k.energy = Math.max(k.energy, 85);
     const [tx, ty] = V.frontTile(b); let at = null;
     for (const o of [...S().buildings.values()].filter(q => q.set === b.set && q.built && q.id !== b.id).sort((p, q) => G.dist2(q.x, q.y, tx, ty) - G.dist2(p.x, p.y, tx, ty) || p.id - q.id)) {
       const [fx, fy] = V.frontTile(o); const x0 = k.x, y0 = k.y; k.x = fx + 0.5; k.y = fy + 0.5;
       if (G.W.walkableXY(k.x, k.y) && G.W.reaches(k, tx, ty)) { at = [fx, fy]; break; } k.x = x0; k.y = y0; }
-    if (at) { G.Vg.endTask(k); k.inside = 0; k.path = null; far = r2(G.dist(k.x, k.y, tx, ty)); G.Vg.setTask(k, { type: 'atender', id: b.id, op: op.id, pri: 1.05, st: 0 }); }
+    if (at) { far = r2(G.dist(k.x, k.y, tx, ty)); G.Vg.setTask(k, { type: 'atender', id: b.id, op: op.id, pri: 1.05, st: 0 }); }
     // (and held on his way by the test's hand until a guest has served himself — the guests walk from the town too: in the metropole of
     // the generation 19 Khufu walked his 25 tiles in 17 s, the three sat down a few seconds before him, and the while of twelve at the
     // table had not gone by, «0 rodada(s)»; let go, he walks on to the counter, as the obra-longe o2 holds its builder)
@@ -226,7 +235,7 @@ const send = (b, who) => who.filter(v => { G.Vg.endTask(v); if (T.pick(v) !== b)
 // (the cup never fitted the hands — the store's rule: no strength in the arms, no load —, the round was not served, the guest
 // waited 45 s, left «sem serviço», and came back every night: in the metropole of the generation 19, two grown people of 375)
 {
-  fresh(); const b = S().buildings.get(P.id); ready(b); const bad = []; seen.length = 0;
+  fresh(); const b = S().buildings.get(P9.id); ready(b); const bad = []; seen.length = 0;
   // (the keeper with a plain load in his hands as the evening begins — the meat of a hunt, as the world gave Xiuhtonal of
   // Tenochtitlan in the metrópole of the generation 21, who woke with it —: it goes to its place first, and the counter after, L-793)
   const k0 = T.keeperOf(b); let load0 = 0; if (k0) { if (!(k0.carry && k0.carry.n > 1e-6)) D.make('v:' + k0.id, 'food', 2, { code: 'teste', part: true }); load0 = k0.carry ? k0.carry.n : 0; }

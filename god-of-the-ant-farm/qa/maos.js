@@ -173,7 +173,11 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
     const first = car.filter(v => v.task && v.task.type === 'justice').map(v => v.name); const called0 = e.called || 0;
     // the test's hand: the first one's purchase is home (out of the hands); and the second dies with his in the arms
     const [c0, c1, c2] = car; const L1 = S.ledgerN;
-    drop(c0); c0.hunger = Math.min(c0.hunger, 20); c0.energy = Math.max(c0.energy, 80);
+    // (and her breath between two chores, as one who has just put a purchase down at home — the next choice of her day is not the
+    // case's question: in the metrópole of the generation 28 the choice after the drop gave Pompeia, of Alba Longa, the unloading
+    // of the quay's crates, an operation that holds her from the step she sets out (D-094), and the calls of the 5 s left her
+    // there: «NÃO chamado em 5 s», T-1234)
+    drop(c0); c0.hunger = Math.min(c0.hunger, 20); c0.energy = Math.max(c0.energy, 80); Vg.setTask(c0, { type: 'idle', pri: 0.1, wait: 8, kind: 'play' });
     const n1 = c1.carry ? c1.carry.n : 0; G.Village.kill(c1, 'teste');
     let late = null; const t0 = S.clock;
     fine(5, () => { see(); if (c0.task && c0.task.type === 'justice' && c0.task.j === e.id && late === null) late = Math.round((S.clock - t0) * 10) / 10; return late !== null; });
@@ -351,20 +355,32 @@ const calmBeasts = (...at) => { for (const a of [...S.animals.values()]) { if (a
   // aboard and 13 at the quay, for an exploration of 38 out of Luxor, and four it could send — the colony did not sail there)
   const order = G.Fac.all().filter(q => q.alive && G.Civ.has(q.id, 'navegacao') && docksOf(q).length).map(q => ({ fid: q.id, dock: docksOf(q)[0].id, s: S.settlements.get(docksOf(q)[0].set) })).filter(o => o.s).sort((a, b) => kidsOf(b.s).length - kidsOf(a.s).length || a.fid - b.fid);
   let c = null, e = null, hid = [];
+  // (the children of one family hidden — the families by their children of 3 to 13, the most first, up to four tried in each
+  // town —: a family goes only whole, the hidden child's too (L-823: the colony took a widowed father alone and left his two in
+  // the refuge), and with the children of three families in the cave, or of the one family whose father was of the five grown,
+  // no colony sailed from any town of the metrópole of the generation 28, T-1233)
+  const famOf = k => (k.mother || k.father ? `${k.mother || 0}:${k.father || 0}` : 'k' + k.id);
   for (const o of order) {
-    fresh(); const f = G.Fac.get(o.fid), dock = S.buildings.get(o.dock), s = dock && S.settlements.get(dock.set); if (!f || !s) continue;
-    c = { f, dock, s }; hid = []; let best = null;
-    s.alarmT = 40;
-    const dOf = cv => Math.min(...cv.mouths.map(m => G.dist(m.x, m.y, s.cx, s.cy)));
-    const cv = G.Caves.all().filter(q => q.mouths.length && !q.mine).sort((a, b) => dOf(a) - dOf(b) || a.id - b.id)[0];
-    const hall = cv && cv.halls && cv.halls[0]; const cell = hall ? Math.floor(hall.y) * G.N + Math.floor(hall.x) : -1;
-    // (three of them, not the whole town's: a family goes only whole (L-440), and with every child of 3 to 13 in the cave no family
-    // with children was free to go — the colony of five grown did not sail from any town of the cidade of the generation 24, T-1154)
-    if (cv) for (const v of kidsOf(s).slice(0, 3)) { Vg.endTask(v); if (G.Caves.give(v, 'refuge', cv, cell, { pri: 2.7, stay: 1e9, force: 1, urge: 1 }) && v.task && v.task.type === 'caverna') hid.push(v); }
-    for (const r of G.Know.regions()) { const site = G.Expe.siteFor(r, f.id); if (site) { best = { r, site, motive: 'expansao' }; break; } }
-    if (!best) { tried.push(`${s.name}: nenhuma região com lugar para a colônia`); continue; }
-    f.stock.food = Math.max(f.stock.food, 2000); f.stock.wood = Math.max(f.stock.wood, 200); e = G.Expe.colony(f, best, 26, [dock]);
-    if (e) break; tried.push(`${s.name}: a colônia não saiu (${hid.length} criança(s) no refúgio)`);
+    fresh(); const d0 = S.buildings.get(o.dock), s0 = d0 && S.settlements.get(d0.set); if (!s0) continue;
+    const byFam = new Map(); for (const k of kidsOf(s0)) { const key = famOf(k); if (!byFam.has(key)) byFam.set(key, []); byFam.get(key).push(k.id); }
+    const fams = [...byFam.values()].sort((a, b) => b.length - a.length || a[0] - b[0]).slice(0, 4);
+    if (!fams.length) { tried.push(`${s0.name}: nenhuma criança de 3 a 13 anos`); continue; }
+    for (const ids of fams) {
+      fresh(); const f = G.Fac.get(o.fid), dock = S.buildings.get(o.dock), s = dock && S.settlements.get(dock.set); if (!f || !s) break;
+      c = { f, dock, s }; hid = []; let best = null;
+      s.alarmT = 40;
+      const dOf = cv => Math.min(...cv.mouths.map(m => G.dist(m.x, m.y, s.cx, s.cy)));
+      const cv = G.Caves.all().filter(q => q.mouths.length && !q.mine).sort((a, b) => dOf(a) - dOf(b) || a.id - b.id)[0];
+      const hall = cv && cv.halls && cv.halls[0]; const cell = hall ? Math.floor(hall.y) * G.N + Math.floor(hall.x) : -1;
+      if (!cv) { tried.push(`${s.name}: nenhuma caverna`); break; }
+      for (const id of ids.slice(0, 3)) { const v = S.villagers.get(id); if (!v) continue; Vg.endTask(v); if (G.Caves.give(v, 'refuge', cv, cell, { pri: 2.7, stay: 1e9, force: 1, urge: 1 }) && v.task && v.task.type === 'caverna') hid.push(v); }
+      if (!hid.length) { tried.push(`${s.name}: nenhuma criança no refúgio`); continue; }
+      for (const r of G.Know.regions()) { const site = G.Expe.siteFor(r, f.id); if (site) { best = { r, site, motive: 'expansao' }; break; } }
+      if (!best) { tried.push(`${s.name}: nenhuma região com lugar para a colônia`); break; }
+      f.stock.food = Math.max(f.stock.food, 2000); f.stock.wood = Math.max(f.stock.wood, 200); e = G.Expe.colony(f, best, 26, [dock]);
+      if (e) break; tried.push(`${s.name}: a colônia não saiu (${hid.length} criança(s) de uma família no refúgio)`);
+    }
+    if (e) break;
   }
   if (!order.length) tried.push('nenhum povo do mar com doca');
   if (!e) ok('m11 as crianças escondidas e a colônia', false, `sem o caso: ${tried.join(' · ')}`);

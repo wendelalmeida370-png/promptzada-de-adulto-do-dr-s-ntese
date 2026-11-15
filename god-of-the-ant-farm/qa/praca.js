@@ -295,11 +295,26 @@ function watch() {
     for (const [id, r] of w.towns) { const n = now.get(id) || 0; if (n > r.peak) r.peak = n; if (eveWin) { r.sum += n; r.n++; r.kidSum += r.kidNow || 0; } r.kidNow = 0; }
     for (const b of baths()) {
       const h = Te.horas(b); if (S.time < h.abre || S.time > h.fecha) continue; const op = Te.dia(b); const k = S.day + ':' + b.id; let r = w.fire.get(k);
-      if (!r) w.fire.set(k, r = { day: S.day, b, len: 0, first: -1, keeper: 0, n: 0, hot: 0, wood: 0, ent: 0 });
+      if (!r) w.fire.set(k, r = { day: S.day, b, len: 0, first: -1, keeper: 0, free: 0, held: {}, n: 0, hot: 0, wood: 0, ent: 0 });
       // (a stoker on his feet: one in bed with a fever or a bad wound by day (G.Lar.bedrest — L-227: the ill in bed, a call that
       // weighs more than the post, D-227) is no stoker for the day. In the mega of the generation 24 Neferu of Mênfis lay with a
       // fever from the opening to past the middle of the day, and the day counted as one with a stoker, «FRIA», T-1160)
-      r.n++; const kp = Te.keeperOf(b); if (kp && !(G.Lar && G.Lar.bedrest(kp))) r.keeper++; if (op) { r.len = Math.max(r.len, op.data.lenha || 0); r.ent = Math.max(r.ent, op.data.entradas || 0); if (op.data.calor > 0) { r.hot++; if (r.first < 0) r.first = S.time; } }
+      // (and one who never had a free moment in the hours — asleep, or at something that weighs more than the post: one already
+      // at it when the post began holds no leg, D-227, and the weariness of it takes him to his bed — is no stoker for the day
+      // either. In the metrópole of the generation 28, with the code of the L-832, Miztli of Tenochtitlan, the stoker and the
+      // hand of a secret order, set out after a witness before his post began, followed him the morning through (2,6), and
+      // slept the afternoon away worn out (2,5): «FRIA em Tenochtitlan dia 56», T-1270. A day with the stoker free for a single
+      // look is one with a stoker: the stoker of Mênfis at the furnace as the doors opened, whose post the dealing gave to one at
+      // a feast, made a cold day that was a fault of the world, L-832)
+      // (free: awake, at an errand that weighs no more than the post — the post's own among them —, with the time the game gives
+      // him before the doors open still left before they close: the walk to the furnace and the wood by it, Te.EARLY and up to
+      // Te.LEAD more by his distance. The second between two errands is no free moment — the hunt ended, and the bed came in the
+      // next look —, nor Miztli's waking to the furnace at 0,692, with the doors closing at 0,70)
+      const kp = Te.keeperOf(b); const tk = kp && kp.task;
+      const lead = kp ? Te.EARLY + Math.min(Te.LEAD, (kp.inside === b.id ? 0 : G.dist(kp.x, kp.y, b.x + b.w / 2, b.y + b.h / 2)) * Te.WALK / G.DAY_LEN) : 0;
+      const awake = !!kp && !!tk && !(G.Lar && G.Lar.bedrest(kp)) && !kp.sleeping && !((tk.pri || 0) > 1.05 + EPS); const free = awake && S.time <= h.fecha - lead;
+      if (free) r.free++; else if (kp) { const why = awake ? 'tarde demais' : kp.sleeping ? 'dormindo' : tk ? tk.type : 'entre afazeres'; r.held[why] = (r.held[why] || 0) + 1; }
+      r.n++; if (kp && !(G.Lar && G.Lar.bedrest(kp))) r.keeper++; if (op) { r.len = Math.max(r.len, op.data.lenha || 0); r.ent = Math.max(r.ent, op.data.entradas || 0); if (op.data.calor > 0) { r.hot++; if (r.first < 0) r.first = S.time; } }
       const f = G.Fac.get(V.facOfSet(b.set)); r.wood = Math.max(r.wood, (f ? D.free('f:' + f.id, 'wood') : 0) + D.free('b:' + b.id, 'wood'));
     }
   };
@@ -344,9 +359,9 @@ function partB() {
   if (on('b5')) ok('b5 o verificador (com as regras da praça) e nenhum erro nos dias vividos', !w.qaBad.length && M.limpo(), w.qaBad.length ? w.qaBad.slice(0, 3).join(' | ') : `limpo${M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)}`);
   // ---- f1: the furnace of each day of baths (a whole day: the first, begun at the world's hour, counts if it began before the opening)
   const fd = [...w.fire.values()].filter(r => r.day < d0 + days && (r.day > d0 || t00 < Te.horas(r.b).abre)).sort((a, c) => a.b.id - c.b.id || a.day - c.day);
-  const could = fd.filter(r => r.keeper > r.n * 0.5 && r.wood > 10 + 2); const cold = could.filter(r => !(r.len > 0)); const lateF = could.filter(r => r.len > 0 && r.first > Te.horas(r.b).abre + 0.15);
+  const held = fd.filter(r => r.keeper > r.n * 0.5 && r.wood > 10 + 2 && !r.free); const could = fd.filter(r => r.keeper > r.n * 0.5 && r.wood > 10 + 2 && r.free > 0); const cold = could.filter(r => !(r.len > 0)); const lateF = could.filter(r => r.len > 0 && r.first > Te.horas(r.b).abre + 0.15);
   if (on('f1')) ok('f1 com foguista e lenha no povo, a fornalha acesa em todo dia de banhos — e cedo (tarde, mais de 0,15 depois de abrir, num dia em quatro no máximo: o foguista já num chamado da cidade quando as portas abrem)', could.length >= 4 && !cold.length && lateF.length <= could.length * 0.25,
-    `${fd.length} dias de banhos (${could.length} com foguista e lenha além da que o armazém guarda): ${could.length - cold.length} com a fornalha acesa${cold.length ? '; FRIA em ' + cold.map(r => `${name(r.b.set)} dia ${r.day}`).join(', ') : ''}; a água quente desde: ${could.map(r => `${name(r.b.set)} d${r.day} ${r.first < 0 ? '—' : r.first.toFixed(2)}`).join(', ')}; ${lateF.length} tarde (mais de 0,15 depois de abrir); sem foguista ou sem lenha: ${fd.filter(r => !could.includes(r)).map(r => `${name(r.b.set)} d${r.day}`).join(', ') || 'nenhum'}`);
+    `${fd.length} dias de banhos (${could.length} com foguista e lenha além da que o armazém guarda): ${could.length - cold.length} com a fornalha acesa${cold.length ? '; FRIA em ' + cold.map(r => `${name(r.b.set)} dia ${r.day}`).join(', ') : ''}; a água quente desde: ${could.map(r => `${name(r.b.set)} d${r.day} ${r.first < 0 ? '—' : r.first.toFixed(2)}`).join(', ')}; ${lateF.length} tarde (mais de 0,15 depois de abrir)${held.length ? `; o foguista sem um momento livre nas horas (dormindo, ou em algo de mais peso que o posto): ${held.map(r => `${name(r.b.set)} d${r.day} (${Object.entries(r.held).map(([k, n]) => k + ' ' + n).join(', ')})`).join(', ')}` : ''}; sem foguista ou sem lenha: ${fd.filter(r => !could.includes(r) && !held.includes(r)).map(r => `${name(r.b.set)} d${r.day}`).join(', ') || 'nenhum'}`);
   // ---- f2
   if (on('f2')) ok('f2 o foguista no posto não é levado por uma vontade (o banho, o rolo, o teatro, a taverna, a praça, o passeio) nem pela água de casa, nem da fornalha por um chamado de fora (a festa, a comemoração, o adeus, o julgamento)', !w.post.length, w.post.length ? w.post.slice(0, 3).join(' | ') : `nenhuma vez, em ${fd.length} dias de banhos`);
   // ---- q1
@@ -364,7 +379,13 @@ function partF3() {
   // a new day, before the doors: the stoker fed and at a tree far from the furnace
   god(() => { for (const op of A.all()) if (op.def === 'termas' && op.at === b.id && A.live(op)) Te.close(op, 'teste'); });
   // (at a tree a few houses from the baths' door: where a walkable tile is, on the door's side)
-  const dr = Vg.door(b); const near = W.randomNear ? god(() => { for (let r = 7; r >= 3; r--) for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [-1, 1]]) { const x = dr[0] + dx * r, y = dr[1] + dy * r; if (W.walkableXY(x, y) && !G.S.occ[W.idx(x, y)] && W.canWalk(x, y, dr[0], dr[1])) return [x, y]; } return dr; }) : dr;
+  // (and with a way to the door the feet walk as the post's lead counts it — the straight line, the streets going round, Te.WALK:
+  // in the metrópole of the generation 28 the first spot, seven houses from the door of Mênfis's baths, was behind their block,
+  // the way to the door 35 houses round it, and the fire was lit at 0,327 with the doors at 0,25 — the post began by the lead of
+  // the straight line, as the game counts it, and the walk took 30 s of it, T-1263)
+  const dr = Vg.door(b);
+  const wayLen = (x, y) => { const p = W.findPath(x, y, dr[0], dr[1], false); if (!p) return Infinity; let n = 0, px = x, py = y; for (const q of p) { n += G.dist(px, py, q[0], q[1]); px = q[0]; py = q[1]; } return n; };
+  const near = W.randomNear ? god(() => { for (let r = 7; r >= 3; r--) for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [-1, 1]]) { const x = dr[0] + dx * r, y = dr[1] + dy * r; if (W.walkableXY(x, y) && !G.S.occ[W.idx(x, y)] && W.canWalk(x, y, dr[0], dr[1]) && wayLen(x, y) <= 1.5 * G.dist(x, y, dr[0], dr[1]) + 2) return [x, y]; } return dr; }) : dr;
   const far = G.dist(near[0], near[1], ...mid(b)); const ld = Te.EARLY + Math.min(Te.LEAD, far * Te.WALK / G.DAY_LEN);
   // (0,02 of the day before the post: the walk to the tree, a tile or so in the second the case looks, lengthens the lead of the
   // post by up to 0,0075 a tile — with 0,012 the post began in that second when the tree was the other way, T-1047)

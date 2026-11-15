@@ -713,8 +713,13 @@ if (want('l12c')) {
     G.Vg.endTask(a); G.Vg.endTask(b); a.sick = G.DAY_LEN * 0.6; a.energy = Math.max(a.energy, 80); V.kill(p, 'teste');
     const fa = L.fever(a), gb = L.grief(b), hb = G.Trade.homeBound(a) && G.Trade.homeBound(b);
     const g1 = gather(); const a1 = bye(a), b1 = bye(b);
-    // the control: the fever and the grief over, by the hand; free hands; a second gathering
-    a.sick = 0; b.mourn = 0; G.Vg.endTask(a); G.Vg.endTask(b);
+    // the control: the fever and the grief over, by the hand; free hands, and fed — the meal of need (2,5) is over the farewell's
+    // 2,4: in the metrópole of the generation 28 Tiye, the widow, had 89 of hunger at the control and went to eat, «NÃO DESCEU»,
+    // T-1250 —; a second gathering
+    // — and the breath between two chores of one let go (the next choice of the day took her to the quay's crates, an operation that
+    // holds her from the step she sets out, D-094, as the maos m4's Pompeia, T-1234)
+    a.sick = 0; b.mourn = 0; a.hunger = Math.min(a.hunger, 30); b.hunger = Math.min(b.hunger, 30); G.Vg.endTask(a); G.Vg.endTask(b);
+    G.Vg.setTask(a, { type: 'idle', pri: 0.1, wait: 8, kind: 'play' }); G.Vg.setTask(b, { type: 'idle', pri: 0.1, wait: 8, kind: 'play' });
     const g2 = gather(); const a2 = bye(a), b2 = bye(b);
     fine = fa && gb && hb && g1 && !a1 && !b1 && g2 && a2 && b2;
     info = `${e.name} (de ${e.fromName}), de dia (${fmtT(S.time)}): ${nm(a)} com febre (${fa ? 'de cama' : 'SEM FEBRE'}) ${a1 ? 'DESCEU PARA O ADEUS' : 'ficou'}; ${nm(b)}, com ${p.name} morto (${gb ? 'de luto' : 'SEM LUTO'}), ${b1 ? 'DESCEU PARA O ADEUS' : 'ficou'}${g1 ? '' : ' (a reunião NÃO veio)'}; sem a febre e sem o luto (o controle): ${nm(a)} ${a2 ? 'desceu' : 'NÃO DESCEU'}, ${nm(b)} ${b2 ? 'desceu' : 'NÃO DESCEU'}${g2 ? '' : ' (a segunda reunião NÃO veio)'}`;
@@ -1270,9 +1275,12 @@ if (want('l16', 'l16b')) {
         const q = K.queue(S.settlements.get(sid)).filter(e => e[0].home === h2.id);
         const own = S.villagers.get(h2.dono);
         const fam = e => Math.max(e[0].age, ...K.family(e[0]).filter(m => m.age >= 16).map(m => m.age));
-        // (the youngest family of the house in need, by the rule — a young single of it would come before the young couple)
+        // (the youngest family of the house in need, by the rule — the families that share the house before its grown single ones,
+        // D-236: in the Argos of the generation 28 the sobrado had a single of 18 in need too, and the case, reading the single
+        // first as the rule of before did, took the right answer — Nikos, the couple of 19 — for a wrong one, T-1249)
         const all = [...S.villagers.values()].filter(v => v.home === h2.id && v.age >= 18).map(v => [v, K.need(v)]).filter(e => e[1] === 'lotada' || e[1] === 'casal');
-        const youngest = all.sort((a, c) => fam(a) - fam(c) || a[0].id - c[0].id)[0];
+        const fams = all.filter(e => K.family(e[0]).length >= 2);
+        const youngest = (fams.length ? fams : all).sort((a, c) => fam(a) - fam(c) || a[0].id - c[0].id)[0];
         okb = q.length === 1 && !oldC.includes(q[0][0]) && !!youngest && fam(q[0]) === fam(youngest) && K.need(own) === null;
         info = `${h2.type}#${h2.id} de ${S.settlements.get(sid).name} (${h2.res} para ${cap(h2)} camas, dono ${own.name}): o casal de ${Math.floor(eld(oldC))} anos (${oldC[0].name} e ${oldC[1].name}) e o de ${Math.floor(eld(youngC))} (${youngC[0].name} e ${youngC[1].name}); o dia da cidade pergunta a ${q.length ? `${q[0][0].name} (${q[0][1]}, a família de ${Math.floor(fam(q[0]))} anos)` : 'NINGUÉM'}${q.length > 1 ? ` e a mais ${q.length - 1} da mesma casa` : ''}; o dono ${K.need(own) === null ? 'fica (a família dele cabe)' : 'PRECISA SAIR'}`;
         return true;

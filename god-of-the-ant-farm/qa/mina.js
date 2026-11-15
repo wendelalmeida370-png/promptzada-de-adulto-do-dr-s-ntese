@@ -13,6 +13,9 @@
 //     dela), e ninguém mais desce
 //  m7 o deus derruba a galeria com o mineiro na face: ele morre com ela, e nada do que não saiu é contado; a mina segue, por
 //     uma galeria nova
+//  m8 o veio acaba com o mineiro no posto (pela mão da prova): o dia da cidade larga o posto (em 4 s, 8 no salto), e o mineiro
+//     vai a outra coisa — nenhum turno numa mina sem veio, nunca parado num afazer que acaba onde começa (L-827); no passo, no
+//     salto e num save de antes com o posto ainda nela; e o verificador acusa o posto que fica (QA.veio)
 //  e o verificador (S0–S2) sem nada novo, nenhum erro de módulo nem aviso no console. Os mineiros dos casos não são de uma
 // viagem (o chamado ao cais os tira do turno no primeiro segundo).
 // O corpo do deus não minera (o interact.js não tem o verbo): o terceiro nível é o salto (m2).
@@ -81,7 +84,8 @@ const P0 = pick();
 // (and the world's own miners of the case held the same way: the board deals its surplus out at each pass, one under the hill
 // too — in the metropole of the generation 15 it made Tales a builder on his way to the face of m4, before the save, and his
 // next shift, after the load, never came: T-522)
-if (P0) { const viver0 = M.viver; M.viver = s => { const r = viver0(s); for (const id of P0.ms) { const v = S().villagers.get(id); if (v && (v.role !== 'mineiro' || v.job !== P0.b.id)) { v.role = 'mineiro'; v.job = P0.b.id; } } return r; }; }
+let hold = true; // (m8 lets go of them: the world's own dealing is the case)
+if (P0) { const viver0 = M.viver; M.viver = s => { const r = viver0(s); if (hold) for (const id of P0.ms) { const v = S().villagers.get(id); if (v && (v.role !== 'mineiro' || v.job !== P0.b.id)) { v.role = 'mineiro'; v.job = P0.b.id; } } return r; }; }
 if (!P0) { console.log(`FALHOU | mina mundo | ${world}: nenhuma mina com veio, galeria possível e mineiro`); process.exit(1); }
 const town = S().settlements.get(P0.b.set); const F0 = G.Fac.get(V.facOfSet(P0.b.set));
 console.log(`${world}: a mina #${P0.b.id} de ${town.name} (${F0.civ}${E.coinage(F0.id) ? ', de moeda' : ''}), veio de ${P0.o.kind} com ${r2(P0.o.amt)}, ${P0.ms.length} mineiro(s)${handMade.length ? ' (o ofício dado pela mão do deus)' : ''}`);
@@ -226,6 +230,48 @@ const say = (P, B) => `o veio deu ${B.out}, o povo contou ${B.sum} em ${B.n} tur
     ok('m7', gone && dead >= 1 && o1.counted === 0 && o1.pay === 0 && o1.mina === 0 && B0.out === B0.sum && !!(cv2 && !cv2.gone && cv2.id !== cv.id) && (!next || got) && B.out === B.sum && !B.unbacked && !bad.length,
       `a galeria caiu com ${v.name} na face (${n} de ${P.k} na tarefa; ${dead} morto(s)): contado ${o1.counted}, pago ${o1.pay}; ${say(P, B0)}; a mina segue numa galeria nova (${cv2 ? '#' + cv2.id : 'nenhuma'})${next ? `, e o turno de ${next.name} ${got ? 'chegou ao armazém' : 'não saiu'}` : ' (sem outro mineiro nela)'}${bad.length ? '; ' + bad.join(' · ') : ''}`);
   }
+}
+// ------------------------------ m8: the vein worked out, the post let go ------------------------------
+// (a miner posted at a mine whose vein is worked out does not stand at its door: the town's dealing lets the post go — every 4 s
+// of the world, 8 in the skip —, and the day's work sends him down no shaft with nothing in it in the meantime. Moctezuma, a
+// miner of Tenochtitlan in the metrópole of the generation 28, kept his post at a spent gold mine and stood a third of a day at
+// his door, as tired as at work: each step the shift was given and ended where it began, L-827. The miners are not held by the
+// proof's hand here — the world's own dealing is the case —; in the step, in the skip, and in a save of before with the post
+// still kept)
+{
+  // (30 s of the world: when the post was let go, the shifts down the spent mine given after it, the looks with no errand at all)
+  const watch8 = (P, v, secs, skip) => {
+    let let_ = -1, shafts = 0, blank = 0, n = 0; const kinds = new Map(); const t0 = S().clock;
+    // (the shifts down it: what the day's work gives him, counted where it is given — given and ended in one step, the look
+    // between two steps never sees one)
+    const j0 = E.jobTask; E.jobTask = function (w) { const t = j0.apply(this, arguments); if (w === v && t && t.type === 'minejob' && t.id === P.b.id) shafts++; return t; };
+    const look = () => { n++; const t = v.task; if (!t) blank++; else if (v.job !== P.b.id) kinds.set(t.type, (kinds.get(t.type) || 0) + 1);
+      if (let_ < 0 && v.job !== P.b.id) let_ = S().clock - t0; };
+    try {
+      if (skip) { G.Skip.on = true; G.FX.off = true; try { for (let k = 0; k < secs && S().villagers.has(v.id); k++) { G.Main.skipStep(1); look(); } } finally { G.Skip.on = false; G.FX.off = false; } }
+      else for (let k = 0; k < secs * 10 && S().villagers.has(v.id); k++) { M.viver(0.1); look(); }
+    } finally { E.jobTask = j0; }
+    return { let_, shafts, blank, n, kinds: [...kinds].sort((a, b) => b[1] - a[1]).slice(0, 4).map(e => e[0] + ' ' + e[1]).join(', ') || 'nenhum' };
+  };
+  const say8 = (v, w) => `o posto ${w.let_ >= 0 ? `largado em ${r2(w.let_)} s` : 'NUNCA LARGADO'}; turnos na mina sem veio: ${w.shafts}; olhares sem afazer: ${w.blank} de ${w.n}; o que fez depois: ${w.kinds}`;
+  hold = false;
+  try {
+    const P = setup(); const v = P.ms[0]; G.Vg.endTask(v); v.energy = 95; v.hunger = 10; P.o.amt = 0; // (the vein worked out, by the proof's hand)
+    const a = watch8(P, v, 30, false); const bad = newBad(P);
+    ok('m8 o veio acaba: o posto é largado e o mineiro vai a outra coisa', a.let_ >= 0 && a.let_ <= 8 && a.shafts === 0 && a.blank * 10 <= a.n && !bad.length, `${v.name}, posto na mina #${P.b.id} com o veio em 0: ${say8(v, a)}${bad.length ? '; ' + bad.join(' · ') : ''}`);
+    const P2 = setup(); const v2 = P2.ms[0]; G.Vg.endTask(v2); v2.energy = 95; v2.hunger = 10; P2.o.amt = 0;
+    const b2 = watch8(P2, v2, 30, true);
+    ok('m8b no salto', b2.let_ >= 0 && b2.let_ <= 16 && b2.shafts === 0 && !newBad(P2).length, `${v2.name}: ${say8(v2, b2)}`);
+    // (a save of before: the vein worked out and the post still kept in it — loaded, the post goes at the load or the first dealing)
+    const P3 = setup(); const v3 = P3.ms[0]; G.Vg.endTask(v3); P3.o.amt = 0; const id3 = v3.id; const o = JSON.parse(G.Save.serialize());
+    G.Save.apply(o); G.Main.mode = 'game'; const w3 = S().villagers.get(id3); const P3b = { b: S().buildings.get(P3.b.id), base: P3.base };
+    const c3 = watch8(P3b, w3, 12, false);
+    ok('m8c um save com o posto numa mina sem veio', c3.let_ >= 0 && c3.let_ <= 8 && c3.shafts === 0 && !newBad(P3b).length, `carregado: ${say8(w3, c3)}`);
+    // (and the checker sees a post kept past the dealing: the rule QA.veio, the post put back by the proof's hand for 25 s)
+    const P4 = setup(); const v4 = P4.ms[0]; P4.o.amt = 0; let said4 = false;
+    for (let k = 0; k < 250 && !said4; k++) { M.viver(0.1); v4.job = P4.b.id; said4 = QA.check().some(q => q.sys === 'oficio' && /sem veio/.test(q.msg) && q.msg.includes('#' + v4.id)); }
+    ok('m8d o verificador acusa o posto que fica', said4, `o posto posto de volta pela mão da prova a cada passo: ${said4 ? 'acusado' : 'NÃO ACUSADO'} (QA.veio, 20 s de graça)`);
+  } finally { hold = true; }
 }
 const er = M.erros();
 ok('erros', !Object.keys(er.mod).length && !er.console.length, `módulos: ${JSON.stringify(er.mod)}; console: ${er.console.slice(0, 2).join(' | ') || 'nada'}`);

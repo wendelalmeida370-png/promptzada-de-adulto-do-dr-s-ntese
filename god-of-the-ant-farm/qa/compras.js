@@ -35,10 +35,18 @@ const none = why => { console.log(`FALHOU | compras | ${why}`); process.exit(1);
 // the houses of a town with a few grown people in them (by id, past the ones taken)
 const taken = new Set();
 const homesOf = (set, min, pred) => [...S.buildings.values()].filter(b => b.set === set.id && b.built && G.BDEF[b.type].housing && (b.res || 0) >= 2 && !taken.has(b.id) && adults(b).length >= (min || 2) && (!pred || pred(b))).sort((a, b) => a.id - b.id);
+// (in the town asked or — the cases before having taken its last such house — the first other town of coin with a fair that has
+// one, the oldest first, its fair stocked as the cases' own: the errand and the purchase are the same in any town of coin, as
+// the c1, the c7 and the c18 already look. In the metrópole of the generation 28 with the code of the L-823 to L-831 the four
+// cases before the c8 took the last house of Argos with two grown ones: «Argos não tem mais uma casa com 2 adulto(s)», T-1268)
 function houseIn(set, min, pred, what) {
-  const h = homesOf(set, min, pred)[0];
-  if (!h) none(`${set.name} não tem mais uma casa com ${min || 2} adulto(s)${what ? ' ' + what : ''} para o caso (${taken.size} já tomadas pelos casos)`);
-  taken.add(h.id); return h;
+  const towns = [set].concat([...S.settlements.values()].filter(s => s !== set && E.coinage(s.fac) && hasB(s, 'feira')).sort((a, b) => (a.founded || 0) - (b.founded || 0) || a.id - b.id));
+  for (const t of towns) {
+    const h = homesOf(t, min, pred)[0]; if (!h) continue;
+    if (t !== set) { stockFair(t); console.log(`   (a casa do caso em ${t.name}: ${set.name} não tem mais uma casa com ${min || 2} adulto(s)${what ? ' ' + what : ''} — ${taken.size} já tomadas pelos casos)`); }
+    taken.add(h.id); return h;
+  }
+  none(`nenhuma cidade de moeda com feira tem mais uma casa com ${min || 2} adulto(s)${what ? ' ' + what : ''} para o caso (${taken.size} já tomadas pelos casos)`);
 }
 // (a house that can send one of its own by the game's rule: a grown one with no trade, and no hard worker — the wish to shop
 // outweighs the work only for such a one, until the house's wait grows past its gap (L-331, fixed in the Patch 2: before it a
@@ -138,12 +146,18 @@ S.time = 0.15;
 const fair = stockFair(set);
 // ---------------- c1/c2/c5: a house that lacks sends one of its people; the purchase is paid by the house and gets home
 {
-  const h = houseLacking(set, 2, 30, q => canSend(q) && unbound(q), 'que possa mandar alguém (um adulto sem ofício e não trabalhador), sem ninguém de uma viagem nem mercador das caravanas');
+  // (in the town of the cases or, with no house there that can send one of its own, the first town of coin with a fair that has
+  // one — as the c7 and the c18 —: in the metrópole of the generation 28 every grown one of Argos with no trade was a hard worker or
+  // of a voyage, «Argos não tem mais uma casa … que possa mandar alguém», T-1241)
+  const sends = q => canSend(q) && unbound(q);
+  const t1 = [set].concat([...S.settlements.values()].filter(s => s !== set && E.coinage(s.fac) && hasB(s, 'feira')).sort((a, b) => (a.founded || 0) - (b.founded || 0) || a.id - b.id)).find(s => homesOf(s, 2, sends).length) || set;
+  if (t1 !== set) stockFair(t1);
+  const h = houseLacking(t1, 2, 30, sends, 'que possa mandar alguém (um adulto sem ofício e não trabalhador), sem ninguém de uma viagem nem mercador das caravanas');
   const L0 = S.ledgerN; const list = C.list(h).map(q => q.k);
   let most = 0; let errand = null;
   const sent = fine(90, () => { const v = errandOf(h); if (v) errand = errand || { v, k: v.task.k, type: v.task.type, n: v.task.n }; let c = 0; for (const o of S.villagers.values()) if (o.task && o.task.casa === h.id) c++; most = Math.max(most, c); return !!errand || watch(); });
   ok('c1 a casa manda um dos seus', sent && errand && errand.v.home === h.id && list.includes(errand.k),
-    errand ? `a casa #${h.id} (${h.res} pessoas) sem ${list.slice(0, 3).map(k => E.name(k)).join(', ')}: ${errand.v.name} foi comprar ${errand.n} de ${E.name(errand.k)} (${errand.type === 'compra' ? 'numa banca' : 'na ' + ((S.buildings.get(errand.v.task.id) || {}).type || '?')})` : `ninguém saiu em 90 s (lista: ${list.join(', ')})`);
+    errand ? `${t1 !== set ? `(em ${t1.name}: ${set.name} não tem uma casa que possa mandar alguém) ` : ''}a casa #${h.id} (${h.res} pessoas) sem ${list.slice(0, 3).map(k => E.name(k)).join(', ')}: ${errand.v.name} foi comprar ${errand.n} de ${E.name(errand.k)} (${errand.type === 'compra' ? 'numa banca' : 'na ' + ((S.buildings.get(errand.v.task.id) || {}).type || '?')})` : `ninguém saiu em 90 s (lista: ${list.join(', ')})`);
   // (the purchase — by whoever of the house went: the goods into the hands and the coins out of the house, in the same
   // instant; then home)
   const mine = id => (S.villagers.get(id) || {}).home === h.id;

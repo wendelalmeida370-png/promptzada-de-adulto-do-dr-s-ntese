@@ -98,24 +98,36 @@ if (on('v1')) {
 // ---------------- v2 the close: the exact fold ----------------
 if (on('v2')) {
   const S = G.S; M.saltar(1); // (a fresh day: every town had its close)
-  // a quarter with a name and its town; the hand counts three sales on its first patch of ground — by the door
-  const pick = allQ().find(([s, q]) => !q.whole && q.cells.length >= 2 && q.dias >= 3);
-  if (!pick) ok('v2 o-fechamento', false, 'nenhum bairro com nome e três dias de vida');
-  else {
+  // a quarter with a name and its town, of the most ground: the close that draws the quarters again may give all of a
+  // quarter's ground to its neighbours, and a quarter with no ground left has no day — its patches' counts go where they are
+  // now, L-825. In the metrópole of the generation 28, with the code of the L-832, the first quarter of two patches the case
+  // took, the Cidade Velha do Sul of Argos, lost its ground in its close: «(0 chãos, 36 dias) … (a conta: NaN)». One that loses
+  // it all the same is said, and another is taken, up to three: T-1271. The hand counts three sales on its first patch of
+  // ground — by the door
+  const pickOf = skip => allQ().filter(([s, q]) => !q.whole && q.cells.length >= 2 && q.dias >= 3 && !skip.includes(q)).sort((a, b) => b[1].cells.length - a[1].cells.length || a[0].id - b[0].id)[0];
+  const lost = []; let res = null;
+  for (let k = 0; k < 3 && !res; k++) {
+    const pick = pickOf(lost.map(x => x.d)); if (!pick) break;
     const [set, d] = pick; const w = set.urb.w; const [cx, cy] = U.cellXY(d.cells[0]);
-    const v0 = d.vida.troca || 0, w0 = w.vida.troca || 0, dias0 = d.dias, wd0 = w.dias;
+    const v0 = d.vida.troca || 0, w0 = w.vida.troca || 0, dias0 = d.dias, wd0 = w.dias, n0 = d.cells.length;
     // (what the ground already counted today, the world's own: it closes with the hand's three)
     const own = q => q.cells.reduce((n, c) => n + (((S.urbAcc || {})[c] || {}).troca || 0), 0);
     G.inSim++; try { U.note(cx + 1, cy + 1, 'troca', 3); } finally { G.inSim--; }
     // until the town's next close (the day turns, then one town a step)
     let lived = 0; const dsum = [], wsum = [];
-    for (; lived < 4000 && d.dias === dias0; lived++) { dsum.push(own(d)); wsum.push(own(w)); M.viver(0.1); }
-    const cd = dsum[dsum.length - 1], cw = wsum[wsum.length - 1];
+    for (; lived < 4000 && d.dias === dias0 && w.dias === wd0; lived++) { dsum.push(own(d)); wsum.push(own(w)); M.viver(0.1); }
+    if (!d.cells.length) { lost.push({ d, name: `${nameOf(set, d)} (${n0} chãos, ${dias0} dias)` }); continue; }
+    res = { set, d, w, v0, w0, dias0, wd0, cd: dsum[dsum.length - 1], cw: wsum[wsum.length - 1] };
+  }
+  const gone = lost.length ? ` (antes, ${lost.map(x => x.name).join(', ')}: o fechamento deu todo o chão do bairro aos vizinhos)` : '';
+  if (!res) ok('v2 o-fechamento', false, `nenhum bairro com nome, dois chãos e três dias de vida que passasse pelo fechamento do dia com chão${gone}`);
+  else {
+    const { set, d, w, v0, w0, dias0, wd0, cd, cw } = res;
     const a = Math.max(0.2, 1 / (dias0 + 1)), aw = Math.max(0.2, 1 / (wd0 + 1));
     const want = r3(v0 * (1 - a) + cd / d.cells.length * a), wantW = r3(w0 * (1 - aw) + cw / w.cells.length * aw);
     const left = d.cells.reduce((n, c) => n + (((S.urbAcc || {})[c] || {}).troca || 0), 0);
     ok('v2 o-fechamento', d.dias === dias0 + 1 && Math.abs(d.vida.troca - want) < 0.0011 && Math.abs(w.vida.troca - wantW) < 0.0011 && d.ult.troca === S.day && cd >= 3 && left <= 1,
-      `${nameOf(set, d)} (${d.cells.length} chãos, ${dias0} dias): ${cd} vendas contadas no dia (3 pela mão) → vida.troca ${v0} → ${d.vida.troca} (a conta: ${want}); o todo de ${set.name} ${w0} → ${w.vida.troca} (a conta: ${wantW}); último dia de troca ${d.ult.troca} (hoje ${S.day}); no chão ficou ${left}`);
+      `${nameOf(set, d)} (${d.cells.length} chãos, ${dias0} dias): ${cd} vendas contadas no dia (3 pela mão) → vida.troca ${v0} → ${d.vida.troca} (a conta: ${want}); o todo de ${set.name} ${w0} → ${w.vida.troca} (a conta: ${wantW}); último dia de troca ${d.ult.troca} (hoje ${S.day}); no chão ficou ${left}${gone}`);
   }
 }
 
@@ -241,25 +253,39 @@ if (on('v7')) {
   // it and 7 more who came to the empty homes, the town of 29 fell to a vila, and the quarter had no ground — «NÃO esvaziou em 12
   // dias (vazia 0.657, casas 0)» —; with the code of the L-820 to L-822, no quarter was left at all, «nenhum bairro com quatro
   // casas habitadas», T-1226)
-  const S7 = G.S;
-  const homesOf = d => [...S7.buildings.values()].filter(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && b.type !== 'barraco' && d.cells.includes(U.cellOf(b.x + b.w / 2, b.y + b.h / 2)) && b.set === d.set);
-  const lived = b => [...S7.villagers.values()].some(v => v.home === b.id && v.age >= 16 && !v.captive);
-  const plague = q => { const hs = homesOf(q), keep = hs.filter(lived)[0]; const ids = new Set(hs.filter(b => b !== keep).map(b => b.id)); let n = 0; for (const v of S7.villagers.values()) if (ids.has(v.home)) n++; return n; };
-  const c7 = allQ().filter(([s, q]) => !q.whole && q.dias >= U.YOUNG && !U.is(q, 'vazio') && !(q.tp || {}).vazio && homesOf(q).filter(lived).length >= 4 && (s.tier || 0) >= 3 && G.Village.pop(s.id) - 2 * plague(q) >= 36)
+  const homesOf = d => [...G.S.buildings.values()].filter(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && b.type !== 'barraco' && d.cells.includes(U.cellOf(b.x + b.w / 2, b.y + b.h / 2)) && b.set === d.set);
+  const lived = b => [...G.S.villagers.values()].some(v => v.home === b.id && v.age >= 16 && !v.captive);
+  const plague = q => { const hs = homesOf(q), keep = hs.filter(lived)[0]; const ids = new Set(hs.filter(b => b !== keep).map(b => b.id)); let n = 0; for (const v of G.S.villagers.values()) if (ids.has(v.home)) n++; return n; };
+  const pick7 = () => allQ().filter(([s, q]) => !q.whole && q.dias >= U.YOUNG && !U.is(q, 'vazio') && !(q.tp || {}).vazio && homesOf(q).filter(lived).length >= 4 && (s.tier || 0) >= 3 && G.Village.pop(s.id) - 2 * plague(q) >= 36)
     .sort((a, b) => homesOf(b[1]).filter(lived).length - homesOf(a[1]).filter(lived).length)[0];
+  // (and where the metrópole has none after its first days, the next ready worlds after the same first days: the war of the
+  // metrópole, from its second day, decides how many each town keeps, and it goes another way with every change of the world —
+  // with the code of the L-823 to L-831 Mênfis was 65 after those days, not 82: 55 dead in the war and 12 by arrows, against 43
+  // and 7, and no town could lose a quarter's people twice over and stay a city, T-1269)
+  // (the case's days in the god's peace, as the v3's (T-1231): what it proves is the plague, and the war takes the town's
+  // people too — in the mega of the generation 28 the town of the case lost 13, 11 and 4 to the war on its second to fourth
+  // days, and was a vila of 16 on the seventh, T-1269)
+  const calm7 = () => { if (!(G.S.divinePeace > G.DAY_LEN * 0.5)) { G.inSim++; try { G.Politics.divinePeace(); } finally { G.inSim--; } } };
+  let c7 = pick7(), w7 = WORLD;
+  for (const w of ['mundial', 'cidade', 'mega']) { if (c7 || w === WORLD) continue; M.pronto(w); M.viver(2); days(U.YOUNG + U.PATIENCE + 1, calm7); c7 = pick7(); w7 = w; }
   const Q7 = c7 ? { set: c7[0], d: c7[1], homes: () => homesOf(c7[1]), lived } : null;
-  if (!Q7) ok('v7 a-peste', false, 'nenhum bairro com quatro casas habitadas, ainda não vazio, numa cidade que segue cidade com a peste duas vezes');
+  if (!Q7) ok('v7 a-peste', false, `nenhum bairro com quatro casas habitadas, ainda não vazio, numa cidade que segue cidade com a peste duas vezes (${[WORLD, 'mundial', 'cidade', 'mega'].filter((w, i, a) => a.indexOf(w) === i).join(', ')})`);
   else {
     const S = G.S; const { set, d } = Q7; const day0 = S.day;
     // the plague takes everyone of the homes of the quarter but one home's people (by the door of every death)
     const homes = Q7.homes().filter(Q7.lived); const spare = homes[0]; let dead = 0;
     G.inSim++; try { for (const v of [...S.villagers.values()]) if (v.home && v.home !== spare.id && homes.some(b => b.id === v.home) && !(S.avatar && S.avatar.id === v.id)) { G.Village.kill(v, 'sick'); dead++; } } finally { G.inSim--; }
-    // (and nobody moves in while the case lasts: who comes to an empty home of the quarter is taken by the plague too)
-    const again = () => { G.inSim++; try { for (const v of [...S.villagers.values()]) if (v.home && v.home !== spare.id && Q7.homes().some(b => b.id === v.home)) { G.Village.kill(v, 'sick'); dead++; } } finally { G.inSim--; } };
-    let empty = -1; for (let k = 0; k < 10 && empty < 0; k++) { M.saltar(1); if (k < 6) again(); check(`ano ${S.day} (peste)`); if (U.is(d, 'vazio')) empty = S.day - day0; }
+    // (and nobody moves into the homes it emptied while the case lasts: who comes to one is taken by the plague too — the homes of
+    // the quarter when the plague came, not the ones the quarter takes in when the town's day draws it again: in the mega of the
+    // generation 28 Mênfis's Cidade Velha took in two cells of its neighbours on the first day, 12 of the 14 the hand killed that
+    // day had lived in them, and the town of 88 was a vila of 20 on the third — «NÃO esvaziou em 12 dias (vazia 0.477, casas
+    // 0)», T-1269)
+    const sick = new Set(Q7.homes().filter(b => b !== spare).map(b => b.id));
+    const again = () => { G.inSim++; try { for (const v of [...S.villagers.values()]) if (v.home && sick.has(v.home) && !(S.avatar && S.avatar.id === v.id)) { G.Village.kill(v, 'sick'); dead++; } } finally { G.inSim--; } };
+    let empty = -1; for (let k = 0; k < 10 && empty < 0; k++) { calm7(); M.saltar(1); if (k < 6) again(); check(`ano ${S.day} (peste)`); if (U.is(d, 'vazio')) empty = S.day - day0; }
     const t = histOf(d, day0).find(x => /^Esvaziou: \d+ das \d+ casas estão sem ninguém/.test(x));
     ok('v7 a-peste', dead >= 3 && empty >= U.PATIENCE && !!t && /a peste levou \d+ dos que moravam aqui/.test(t) && (d.luto || {}).peste > 0,
-      `${nameOf(set, d)}: a peste levou ${dead}; ${empty >= 0 ? `«vazio» em ${empty} dias` : 'NÃO esvaziou em 12 dias (vazia ' + d.vida.vazia + ', casas ' + ((d._st || {}).homes) + ')'}; a história: «${t || '(nada)'}»`);
+      `${w7 !== WORLD ? `(no mundo pronto «${w7}»: ${WORLD} não tem o bairro depois dos primeiros dias) ` : ''}${nameOf(set, d)}: a peste levou ${dead}; ${empty >= 0 ? `«vazio» em ${empty} dias` : 'NÃO esvaziou em 12 dias (vazia ' + d.vida.vazia + ', casas ' + ((d._st || {}).homes) + ')'}; a história: «${t || '(nada)'}»`);
   }
 }
 

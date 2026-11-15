@@ -146,12 +146,14 @@ run('e1', () => {
 
 // ------------------------------ e2: sem terra, o degrau de baixo ------------------------------
 run('e2', () => {
-  abre();
   // (com a pedra para o degrau grande, a busca dele sem nada hoje — o lote livre e o espaço aberto, como a cidade os guarda de um dia
   // para o outro, set._noSite —: o degrau de baixo; com a D-120 toda capital da metrópole que justifica o templo de 4 acha lote)
   const cabe2 = s => { s._noSite = {}; const p = sim(() => V.findSite(s, 'temple', undefined, 2)); s._noSite = {}; return !!p; };
-  const set = [...S.settlements.values()].filter(s => Es.choose(s, 'temple')[0].n === 4).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id).find(cabe2);
-  if (!ok('e2a uma cidade que justifica o templo de 4', !!set, set ? `${set.name} (${V.pop(set.id)} pessoas), com lote para o santuário` : 'nenhuma')) return;
+  // (the metrópole first, and the next worlds when it has none: with the town's street plan read whole — L-828 — none of the three
+  // towns of the metrópole of the generation 28 that justify the temple of 4 had a lot for the santuário, T-1258)
+  const got = acha(() => { const q = [...S.settlements.values()].filter(s => Es.choose(s, 'temple')[0].n === 4).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id).find(cabe2); return q ? { set: q } : null; });
+  const set = got ? got.set : null;
+  if (!ok('e2a uma cidade que justifica o templo de 4', !!set, set ? `${got.mundo}: ${set.name} (${V.pop(set.id)} pessoas), com lote para o santuário` : `nenhuma (${MUNDOS.join(', ')})`)) return;
   set._noSite = { 'temple:4': S.day, 'temple:4:abre': S.day };
   rico(set); const b = sim(() => V.startProject(set, 'temple'));
   ok('e2b o degrau de baixo', !!b && b.w === 2 && b.esc === 'santuario', `${set.name} ergue ${lado(b)}`);
@@ -268,8 +270,11 @@ run('e3x', () => {
 
 // ------------------------------ e4 e e5: o save no meio da obra grande, e o deus que derruba ------------------------------
 run('e4', () => {
-  abre(); const set = doPovo('romano'); const b = set && sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60 })); // (a capital romana: o Coliseu do M1)
-  if (!ok('e4a a obra grande', !!b && b.w === 10 && !b.built, `${set ? set.name : 'nenhuma capital do povo romano'}: ${lado(b)}, a conta ${b ? JSON.stringify(V.bill(b)) : '?'}, o trabalho ${b ? V.workOf(b) : '?'}`)) return;
+  // (a capital romana: o Coliseu do M1 — the metrópole first, and the next worlds when it has no lot for it: Alba Longa, the Roman
+  // capital of the metrópole of the generation 28, had none within 60 tiles, T-1260)
+  const got = acha(() => { const q = doPovo('romano'); const w = q && sim(() => V.handFound(q, 'maravilha', 'maravilha', { R: 60 })); return w ? { set: q, b: w } : null; });
+  const set = got ? got.set : null, b = got ? got.b : null;
+  if (!ok('e4a a obra grande', !!b && b.w === 10 && !b.built, `${set ? got.mundo + ': ' + set.name : `nenhuma capital do povo romano com lote para o Coliseu (${MUNDOS.join(', ')})`}: ${lado(b)}, a conta ${b ? JSON.stringify(V.bill(b)) : '?'}, o trabalho ${b ? V.workOf(b) : '?'}`)) return;
   pedra(set, 200); M.saltar(2);
   const o = S.buildings.get(b.id); const foto = x => JSON.stringify([x.x, x.y, x.w, x.h, x.esc, x.built, +x.progress.toFixed(6), x.need, x.brick, x.troca, x.ip && x.ip.n, x.ip && x.ip.h.length]);
   const f0 = foto(o); const p0 = o.progress; salva(); const o2 = S.buildings.get(b.id);
@@ -339,7 +344,9 @@ run('e8', () => {
   try {
     const got = acha(() => {
       for (const s of [...S.settlements.values()].filter(o => (o.tier || 0) >= 2).sort((a, c) => V.pop(c.id) - V.pop(a.id))) {
-        s._noSite = {}; const P = sim(() => V.findSite(s, 'palacio', undefined, 6)); if (!P) continue;
+        // (a lot that is free and that its podium covers as it stands: a lot to be cleared, or one the work would level first — D-217 —,
+        // is no lot for a palace enlarged where it stands — Mênfis's and Uppsala's in the metrópole of the generation 28, T-1259)
+        s._noSite = {}; const P = sim(() => V.findSite(s, 'palacio', undefined, 6)); if (!P || P.demolish || G.W.slope(P[0], P[1], 6, 6) > V.PODIUM) continue;
         const b = sim(() => V.handFound(s, 'palacio', 'antigo', { x: P[0] + 3, y: P[1] + 3, R: 0, built: true })); if (b) return { set: s, b0: b };
       }
       return null;
@@ -540,14 +547,18 @@ run('e18', () => {
 // degrau tem; os lutadores, um posto para cada lugar de luta; um dia de jogos: os lutadores na areia, o público nas fileiras,
 // tantos quantos vêm, e no fim ninguém lá dentro)
 run('e19', () => {
-  abre(); const set = doPovo('romano'); const In = G.Interiors, Tt = G.Teatro, E = G.Eco; // (a capital romana: o Coliseu do M1)
+  const In = G.Interiors, Tt = G.Teatro, E = G.Eco; // (a capital romana: o Coliseu do M1)
   // (the Coliseum of Rome: the town's own when it has one standing, else the god's hand raises it — the Roma of the metrópole of
   // the generation 20 has its Coliseum of 10 standing, and the one the proof raised beside it was never the games': the people's
   // own hand, E.place, gave the fighters the posts of the old one, «0 lutadores com o posto no Coliseu», T-994, as the palace the
   // proof raised beside Rome's own in the e22 of the generation 14, T-477)
-  const own = set && [...S.buildings.values()].filter(q => q.set === set.id && q.type === 'maravilha' && q.built && q.w === 10 && E.jobsOf(q)).sort((a, c) => a.id - c.id)[0];
-  let b = own || (set && sim(() => V.handFound(set, 'maravilha', 'maravilha', { R: 60, built: true })));
-  if (!ok('e19a o Coliseu de pé', !!b && b.w === 10 && b.built && G.Interiors.plan(b).ok, set ? `${set.name}: ${lado(b)}` : 'nenhuma capital do povo romano')) return;
+  // (the metrópole first, and the next worlds when its Roman capital has neither a Coliseum nor the lot for one: Alba Longa, of the
+  // metrópole of the generation 28, had no lot of 10 within 60 tiles, T-1260)
+  const got = acha(() => { const q = doPovo('romano'); if (!q) return null;
+    const own = [...S.buildings.values()].filter(o => o.set === q.id && o.type === 'maravilha' && o.built && o.w === 10 && E.jobsOf(o)).sort((a, c) => a.id - c.id)[0];
+    const w = own || sim(() => V.handFound(q, 'maravilha', 'maravilha', { R: 60, built: true })); return w ? { set: q, b: w } : null; });
+  const set = got ? got.set : null; let b = got ? got.b : null;
+  if (!ok('e19a o Coliseu de pé', !!b && b.w === 10 && b.built && G.Interiors.plan(b).ok, set ? `${got.mundo}: ${set.name}: ${lado(b)}` : `nenhuma capital do povo romano com o Coliseu ou lote para ele (${MUNDOS.join(', ')})`)) return;
   const T = In.table(b); const of = u => (T && T.byUse.get(u)) || []; const assentos = of('assistir').filter(e => e.it.kind === 'fileira').length, emPe = of('assistir').filter(e => e.it.kind === 'marca').length;
   const ver = of('assistir').length, luta = of('lutar').length, jb = E.jobsOf(b);
   ok('e19b os lugares da planta', assentos >= 700 && emPe >= 50 && luta === 8 && !!jb && jb.n === luta && jb.role === 'ator', `${assentos} assentos nas fileiras e ${emPe} em pé no pódio (${ver} para ver), ${luta} na areia; os postos: ${jb ? jb.n + ' de ' + jb.role : 'nenhum'}`);

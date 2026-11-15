@@ -203,7 +203,7 @@
     const def = Nv.SHIP[kind];
     if (fac.stock.wood < def.cost + (kind === 'pesca' ? 0 : 6)) return null;
     fac.stock.wood -= def.cost;
-    const s = Object.assign({ id: G.S.nextId++, kind, fac: fac.id, civ: fac.civ || null, dock: dock.id, x: d.moor[0], y: d.moor[1], path: null, pi: 0, st: 'idle', t: 0, hp: def.hp, maxHp: def.hp, face: 1, crew: [], cd: 0, born: G.S.day, sail: 100, mast: 1, flood: 0 }, o || {});
+    const s = Object.assign({ id: G.S.nextId++, kind, fac: fac.id, civ: fac.civ || null, dock: dock.id, x: d.moor[0], y: d.moor[1], path: null, pi: 0, st: 'idle', t: 0, hp: def.hp, maxHp: def.hp, face: 1, crew: [], hands: null, cd: 0, born: G.S.day, sail: 100, mast: 1, flood: 0 }, o || {});
     // a ship is built before it sails: the hull goes up on the slip, plank by plank
     if (o && o.build && def.build && G.Fishers) { s.st = 'build'; s.prog = 0; s.need = def.build; }
     Nv.baptize(s);
@@ -672,6 +672,9 @@
       if ((walking || !n) && s.t <= 45) return;
       ashoreAgain(s);
       if (!n) { const f = G.Fac.get(s.fac); homeAgain(s, hb); if (f) f.stock.wood += Nv.SHIP.mercante.cost; return removeShip(s); }
+      // (who sails the voyage: the crew aboard as she leaves her quay — the pay and the voyage at home are theirs (harbor.js); a
+      // castaway a passing ship pulls from the water comes home aboard her and is no hand of hers, L-824)
+      s.hands = s.crew.slice();
       s.st = 'idle'; return;
     }
     if (threat(s, 5) && s.st === 'go') { const h = home(s); if (h && sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; }
@@ -1203,6 +1206,8 @@
       // ships reloaded mid-voyage recompute their course
       for (const s of S.ships) {
         s.path = null;
+        // (a merchant of a save of before has no list of who sailed her voyage: it is who is aboard, as the game was saved — L-824)
+        if (s.kind === 'mercante' && !Array.isArray(s.hands)) s.hands = s.tr ? (s.crew || []).filter(id => { const v = S.villagers.get(id); return v && v.aboard === s.id; }) : null;
         if (s.st === 'sail' && s.water) sailTo(s, s.water[0], s.water[1]);
         else if (s.st === 'return' || s.st === 'back' || s.st === 'back2') { const h = home(s); if (h && h.moor) sailTo(s, h.moor[0], h.moor[1]); }
         // (a hull adrift without the mark of the empty hull — a save of before L-807: the voyage that met it and left it cleared the

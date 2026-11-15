@@ -112,7 +112,14 @@
     G.Naval.clearCrew(s);
     if (!port) return;
     if (f) E.ensure(f);
+    // (the voyage is of who sailed it from the home quay — the crew aboard as she left, s.hands (naval.js) —: a castaway pulled
+    // from the water on the way, the sailor of a ship that went down, steps ashore with them and is paid nothing, his own ship
+    // never came home. In the metropole of the generation 28 the god sank a merchant 8 s out, a merchant of the same people on
+    // her way home pulled her one sailor from the water, and on the quay he had a wage and a first voyage «até» a port he never
+    // saw, L-824. A ship of a save of before has no list: all aboard, as then)
+    const hands = Array.isArray(s.hands) ? new Set(s.hands) : null;
     for (const v of crew) {
+      if (hands && !hands.has(v.id)) continue;
       if (!v.st) v.st = {};
       v.st.viagens = (v.st.viagens || 0) + 1; v.st.volta = S.day;
       // (the pay is the ship's people's to its own: a sailor whose town went over to another people while he was at sea — a

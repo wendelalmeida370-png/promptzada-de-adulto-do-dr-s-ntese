@@ -940,7 +940,10 @@ const calmOne = (skip, also) => {
     `${set.name}: a lava levou todo depósito do ${G.Fac.get(set.fac).name} e leva os que ele acende; ${v.name} #${v.id}, a ${d0} casas da porta de casa, com a fome a 95 e ${r2(p0)} na despensa → ${lar ? `foi para casa (${what})` : 'NÃO FOI para casa'}${forage ? ', FOI CATAR num arbusto' : ''}; ${ate ? `comeu lá aos ${tAte} s (a despensa: ${r2(p0)} → ${left})` : `NÃO COMEU em 90 s (a fome ${Math.round(v.hunger)}, a despensa ${left})`}`);
   // (b) at night: home, the meal, and then to bed — the meal's weight is the way's and the table's, never the evening's after it:
   // with it held on the rest by the fire, the bed (1,5) would not take one from it (L-774)
-  const u = [...S.villagers.values()].filter(o => o !== v && o.set === set.id && o.age >= 16 && o.age < 60 && o.home && !o.inside && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.k === 'food') && !(o.task && o.task.pri >= 2.5) && homeOf(o) && dHome(o) > 3)
+  // (nor one of the night's watch — the hunter of the watch (Vg.nightWatch), the soldier of the round (crime.js) —: the round of the
+  // night (1,6) is over the bed (1,5), as the world has it. In the metrópole of the generation 28 the nearest was Amenhotep, a hunter
+  // of the watch: from the supper to the round, and the night went by on it, «NÃO SE DEITOU em 90 s», T-1246)
+  const u = [...S.villagers.values()].filter(o => o !== v && o.set === set.id && o.age >= 16 && o.age < 60 && o.home && !o.inside && !o.captive && !o.jail && !o.aboard && !o.ug && !o.held && !o.air && !o.sleeping && !(S.avatar && S.avatar.id === o.id) && !(o.carry && o.carry.k === 'food') && !(o.task && o.task.pri >= 2.5) && o.role !== 'cacador' && o.role !== 'guerreiro' && homeOf(o) && dHome(o) > 3)
     .sort((a, b) => dHome(a) - dHome(b) || a.id - b.id)[0] || null;
   const hu = u ? homeOf(u) : null; let uLar = false, uAte = false, uBed = false, tBed = -1, tMeal = -1, after = -1, du = 0;
   if (u && hu) {

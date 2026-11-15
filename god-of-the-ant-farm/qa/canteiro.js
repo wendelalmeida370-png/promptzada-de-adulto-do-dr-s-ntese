@@ -351,8 +351,19 @@ run('c11', () => {
     let quebras = 0, dasCasas = 0, daObraN = 0, salvo = -1; const ini = V.delivered(S.buildings.get(b.id)).stone || 0;
     // (the people's stone comes in a trickle, as it did to Tenochtitlan: a stone every three seconds, never more than five in
     // the store — what its quarrymen bring past that is taken away by the proof's hand)
-    const goteja = t => sim(() => { const s = G.Fac.get(f.id).stock.stone || 0; if (s > 5 + 1e-9) D.use('f:' + f.id, 'stone', s - 5, { code: 'teste', mine: true }); else if (s < 5 && t % 3 === 0) D.make('f:' + f.id, 'stone', 1, { code: 'teste' }); });
+    // (what the hands give back to the store — a builder's errand cut, the stone taken for the work returned: it is the store's
+    // own — stays: the trim is of the stone that comes in, not of the work's. With the stone in the hands under the rule of the last
+    // stones (L-826), the gang of the theatre of Mênfis, in the metrópole of the generation 28, gave back to the store what an
+    // alarm or a corpse took them from, and the trim threw it away: «a obra recebeu 0», T-1238)
+    let back = 0;
+    const goteja = t => sim(() => { const s = G.Fac.get(f.id).stock.stone || 0; if (s > 5 + back + 1e-9) D.use('f:' + f.id, 'stone', s - 5 - back, { code: 'teste', mine: true }); else if (s < 5 && t % 3 === 0) D.make('f:' + f.id, 'stone', 1, { code: 'teste' }); });
+    // (and the god's peace while the case lives: the case is the road of the last stones, not the war at the door — the metrópole of
+    // the generation 28 is at war from its second day, and the gang of the theatre went from the alarm to the corpses of the street
+    // and back, T-1238)
+    const calm = () => { if (!(S.divinePeace > G.DAY_LEN * 0.25)) sim(() => G.Politics.divinePeace()); };
     const fn = e => {
+      if (e[5] === 'stone' && String(e[3]).startsWith('v:') && e[4] === 'f:' + f.id) back += e[6];
+      else if (e[5] === 'stone' && e[3] === 'f:' + f.id && String(e[4]).startsWith('v:')) back = Math.max(0, back - e[6]);
       if (e[5] !== 'stone' || e[8] !== 'obra' || e[3] !== 'f:' + f.id) return; const v = S.villagers.get(+String(e[4]).slice(2)); const w = v && v.task && v.task.type === 'build' ? v.task.id : 0;
       if (w === b.id) { daObraN += e[6]; return; } dasCasas += e[6];
       if ((G.Fac.get(f.id).stock.stone || 0) < l0(S.settlements.get(set.id)) - 1e-6) quebras++;
@@ -360,7 +371,7 @@ run('c11', () => {
     D.onMove.push(fn);
     try {
       let t = 0; for (; t < T; t++) {
-        goteja(t); M.viver(1); alimenta(S.settlements.get(set.id));
+        calm(); goteja(t); M.viver(1); alimenta(S.settlements.get(set.id));
         if (!semRegra && salvo < 0 && t === 40) { D.onMove.splice(D.onMove.indexOf(fn), 1); M.salvarCarregar(); pega(); D.onMove.push(fn); salvo = t; }
         const w = S.buildings.get(b.id); if (!w || w.built || !((w.need.stone || 0) > 1e-6)) break;
       }
@@ -377,6 +388,25 @@ run('c11', () => {
   a = monta(); if (a) { const { set, b } = a; a.falta(5); a.so(9); const h = a.casas[0]; const tinha = [V.lastStone(set), V.stoneFor(h)]; set.vez = 0; const sv = [V.lastStone(set), V.stoneFor(h)]; set.vez = 1;
     sim(() => V.damageBuilding(b, 99999, 'meteor')); const caiu = [V.lastStone(set), V.stoneFor(h)];
     ok('c11g a obra que perde a vez, ou cai, não guarda nada', tinha[0] === 5 && tinha[1] === 4 && sv[0] === 0 && sv[1] === 9 && caiu[0] === 0 && caiu[1] === 9, `com a vez: ${tinha[0]} guardadas, a casa pode levar ${tinha[1]} das 9; sem a vez: ${sv[0]} e ${sv[1]}; a obra derrubada pelo deus: ${caiu[0]} e ${caiu[1]}`); }
+  // (the stone in a builder's hands is the people's, as the store's — L-826: a builder of the town with 4 of stone taken from the
+  // store, the great work waiting for its last 5 and the store empty, is given a house in work by the god's hand, as the next work
+  // the builders' choice gives one whose errand was cut — the sleep, an alarm, the execution in the square —: the house takes none
+  // of it, and it goes back to the store, where the great work's are kept. In the metrópole of the generation 28 eight of the
+  // twelve stones the theatre of Mênfis's gang took for it went into a house this way, and the theatre waited days for its last)
+  a = monta(); if (a) { const { set, f, b } = a; const h = a.casas.find(q => !q.built && (q.need.stone || 0) >= 4 && q.set === set.id) || null;
+    const v = h && [...S.villagers.values()].filter(o => o.set === set.id && o.role === 'construtor' && !o.captive && !o.jail && !o.aboard && !o.sleeping && !(o.carry && o.carry.n > 1e-6)).sort((p, q) => p.id - q.id)[0];
+    if (!h || !v) ok('c11h a pedra nas mãos é do povo: a casa não leva as últimas pedras da obra grande', false, !h ? 'nenhuma casa em obra na cidade da obra grande' : 'nenhum construtor livre');
+    else {
+      a.falta(5); a.so(0); const L = []; const fn = e => { if (e[5] === 'stone' && (e[3] === 'v:' + v.id || e[4] === 'v:' + v.id)) L.push(e.slice()); }; D.onMove.push(fn);
+      try {
+        sim(() => { G.Vg.endTask(v); D.make('f:' + f.id, 'stone', 4, { code: 'teste' }); D.move('f:' + f.id, 'v:' + v.id, 'stone', 4, { code: 'obra', by: v.id, pack: true, part: true }); G.Vg.setTask(v, { type: 'build', id: h.id, pri: 1, st: 0 }); });
+        const guard = V.lastStone(set); for (let k = 0; k < 90 && v.carry && v.carry.n > 1e-6; k++) M.viver(1);
+        const naCasa = soma(L, e => e[3] === 'v:' + v.id && e[4] === 'o:' + h.id), aoArmazem = soma(L, e => e[3] === 'v:' + v.id && e[4] === 'f:' + f.id), aObra = soma(L, e => e[3] === 'v:' + v.id && e[4] === 'o:' + b.id);
+        ok('c11h a pedra nas mãos é do povo: a casa não leva as últimas pedras da obra grande', guard === 5 && naCasa === 0 && aoArmazem + aObra >= 4 - 1e-6,
+          `${v.name} #${v.id} com 4 de pedra tirados do armazém, a obra à espera das últimas ${guard}, o armazém vazio, mandado à casa #${h.id} (à espera de ${h.need.stone}): na casa ${naCasa}, de volta ao armazém ${aoArmazem}, à obra grande ${aObra}${v.carry && v.carry.n > 1e-6 ? `; AINDA nas mãos ${v.carry.n}` : ''}`);
+      } finally { const k = D.onMove.indexOf(fn); if (k >= 0) D.onMove.splice(k, 1); }
+    }
+  }
 });
 
 console.log(fails.length ? `CANTEIRO: FALHOU (${fails.join(', ')})` : `CANTEIRO: ok (${ms()} ms)`);

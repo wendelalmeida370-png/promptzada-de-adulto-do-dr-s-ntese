@@ -316,10 +316,16 @@
   // (the posts of a workplace: its type's — G.BDEF jobs and role —, or a building's own, as a module says it: the Colosseum of a
   // capital, a wonder with the sand of its games, the fighters of its arena — act-lazer.js). → { n, role }, or null
   E.jobsOf = b => { const d = G.BDEF[b.type]; return d && d.jobs ? { n: d.jobs, role: d.role } : null; };
+  // (a mine with its vein worked out — or with none — has no post and no shift: its miner kept the post, and the day's work sent
+  // him down a shaft with nothing in it, the shift ending where it began, in the step it was given, step after step — Moctezuma,
+  // a miner of Tenochtitlan in the metrópole of the generation 28, kept his post at a spent gold mine and stood a third of a day
+  // at his door, as tired as at work, L-827. With no post he is a miner of the hills — the stone and the wood, villagers.js —
+  // until the trade's memory lets him go: E.demand asks no miner of a spent vein)
+  const spent = E.spent = b => b.type === 'mina' && !(((G.S.ores || []).find(q => q.id === b.ore) || {}).amt > 0);
   // every worker of a workplace role gets a concrete workplace (and keeps it)
   E.place = function (set) {
     const S = G.S; const slots = new Map();
-    for (const b of S.buildings.values()) { if (b.set !== set.id || !b.built) continue; const j = E.jobsOf(b); if (j && j.n > 0) slots.set(b.id, { b, left: j.n, role: j.role }); }
+    for (const b of S.buildings.values()) { if (b.set !== set.id || !b.built || spent(b)) continue; const j = E.jobsOf(b); if (j && j.n > 0) slots.set(b.id, { b, left: j.n, role: j.role }); }
     const workers = [];
     for (const v of S.villagers.values()) {
       if (v.set !== set.id || v.captive) continue;
@@ -424,7 +430,7 @@
     switch (v.role) {
       case 'pastor': case 'cavalarico': return pastorTask(v, b, f, H);
       case 'acougueiro': return butcherTask(v, b, f, H);
-      case 'mineiro': return H.setTask(v, { type: 'minejob', id: b.id, pri: 1 });
+      case 'mineiro': return E.spent(b) ? null : H.setTask(v, { type: 'minejob', id: b.id, pri: 1 }); // (no shift down a spent vein: L-827)
       case 'mercador': return G.Biz && b.type === 'mercado' ? G.Biz.task(v, b, f, H) : merchantTask(v, b, f, H); // (a stall of one's own: act-negocio.js)
       case 'feirante': return fairTask(v, b, f, H);
       case 'taverneiro': return G.Taverna ? G.Taverna.task(v, b, f, H) : null; // (the keeper's day: act-taverna.js)
@@ -556,10 +562,14 @@
   // the smuggler's night, asked by the decide of villagers.js: one of a black market with a theft for tonight — or on his way
   // back to the market with what he stole — is up at night like the night watch, above the bed and till he is tired. The bed
   // took him at the night's first look, and the theft never came (L-386). A question: it writes nothing and draws no chance
+  // (the loot in his hands goes on to the shelf whatever the hour: the night ends at 0,02, and a theft still under way at that
+  // look was the day's errand — the bed of one still sleepy cut it, the stolen cloth in his hands, and it lay there while he
+  // slept: Itzcóatl of Tenochtitlan, in the metrópole of the generation 28, L-830. A new theft is the night's only)
   E.prowls = function (v) {
-    if (!v || v.role !== 'contrabandista' || v.captive || v.jail || v.aboard || !G.isNight()) return false;
+    if (!v || v.role !== 'contrabandista' || v.captive || v.jail || v.aboard) return false;
     const b = v.job && G.S.buildings.get(v.job); if (!b || !b.built || b.type !== 'mercado_negro') return false;
     const c = v.carry; if (c && c.stolen && c.n > 1e-6 && c.to === 'b:' + b.id) return true;
+    if (!G.isNight()) return false;
     const f = G.Fac.ofV(v); return !!(f && nightTheft(v, b, f));
   };
 

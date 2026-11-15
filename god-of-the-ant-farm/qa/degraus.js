@@ -132,7 +132,10 @@ const irmaGrande = s => [...S.settlements.values()].some(o => o.fac === s.fac &&
 const capitalComIrma = (type, step) => { for (const w of [MUNDO].concat(MUNDOS.filter(m => m !== MUNDO))) { abre(w); const r = capitalCom(type, step, irmaGrande); if (r) return r; } abre(); return capitalCom(type, step); };
 run('g1', () => {
   const r = capitalComIrma('teatro', 6); if (!ok('g1a a obra grande', !!r && grande(r.b) && !r.b.built, r ? `${r.set.name} (${V.pop(r.set.id)} pessoas, nível ${r.set.tier}): ${lado(r.b)}${r.posta ? ', fundada pela prova' : ', como o mundo a tem'}, a ${r.longe} casas de um armazém, a conta ${JSON.stringify(V.bill(r.b))}` : 'nenhuma capital com lote de 6 nem obra grande em curso')) return;
-  const { set, b } = r; const f = G.Fac.get(set.fac); semPedra(set); pedra(set, 60);
+  // (the people's stone: 60, or what the work still waits for if that is less — all of it kept, nothing to spare. In the metrópole
+  // of the generation 28 the theatre of the capital waited for 48: 12 to spare, and the cases of a year with the stone all kept
+  // read «sobram 12», T-1243)
+  const { set, b } = r; const f = G.Fac.get(set.fac); semPedra(set); pedra(set, Math.min(60, Math.floor((b.need.stone || 0) - ((b.incoming && b.incoming.stone) || 0))));
   const vez = comVez(set); const falta = (b.need.stone || 0) - ((b.incoming && b.incoming.stone) || 0);
   ok('g1b a marca do planejador', vez && set.gw === b.id && Math.abs(V.keeps(set) - falta) < 1e-6 && falta > 0, `a vez ${set.vez}, set.gw ${set.gw} (a obra #${b.id}); V.keeps ${V.keeps(set)} = o que a obra ainda espera de pedra (${falta})`);
   // (the great work's turn with the builders — V.workPri —: as if it stood at the town's middle on three days in four of each
@@ -143,7 +146,13 @@ run('g1', () => {
   const kept = V.stoneKept(f.id), sobra = V.stoneSpare(f.id), tem = f.stock.stone || 0;
   ok('g1c o que sobra', kept >= falta - 1e-6 && Math.abs(sobra - Math.max(0, tem - kept)) < 1e-6 && sobra === 0, `o povo tem ${tem.toFixed(0)} de pedra, as obras grandes guardam ${kept.toFixed(0)}: sobram ${sobra.toFixed(0)} para o calçamento e as carroças`);
   // (a year lived: no paving stone, no stone out on a cart, no house that stands bettered — and the work's stone only by the ledger)
+  // (the stone kept is never spent: the paving and the carts take only the spare of the moment — the store less what the great
+  // works still wait for —, and the stone the quarry brings to the store in the year is spare. With the stone in the hands the
+  // great work's (L-826), in the metrópole of the generation 28 a paving stone was laid in the year from the stone that came in,
+  // and the count of every paving stone read «no calçamento e nas carroças: 1», T-1266. Each line is heard with the store and
+  // what was kept when it was written: what it took beyond the spare is the kept stone spent)
   const E1 = escuta(); const ups0 = new Set([...S.buildings.values()].filter(o => o.set === set.id && o.upgradeFrom && !o.built).map(o => o.id));
+  const gasto = []; const hearK = e => { if (e[5] === 'stone' && e[3] === 'f:' + f.id && ['calcamento', 'carroca', 'carroca-troca'].includes(e[8])) { const kept = V.stoneKept(f.id), loja = D.free('f:' + f.id, 'stone'); gasto.push({ n: e[6], code: e[8], kept, loja, alem: Math.max(0, e[6] - Math.max(0, loja + e[6] - kept)) }); } }; D.onMove.push(hearK);
   // (and the people's other towns, L-714: the store is one — what their planners are given to better a house with, and each
   // stone extra they begin, heard at the planner's own doors; the spare read at each season)
   const irmas = [...S.settlements.values()].filter(q => q.fac === f.id && q.id !== set.id); const pedem = [], comecam = []; let sobraMax = 0;
@@ -152,9 +161,9 @@ run('g1', () => {
   V.startProject = function (q, type) { const d = G.BDEF[type]; const n = (d && d.cost && d.cost.stone) || 0; if (irma(q) && d && !d.housing && !V.ESSENTIAL[type] && !V.DEFENCE[type] && n >= 8) comecam.push({ town: q.name, type, n, kept: V.stoneKept(f.id), spare: V.stoneSpare(f.id) }); return sp0.apply(this, arguments); };
   const upsI0 = new Set([...S.buildings.values()].filter(o => irmas.some(q => q.id === o.set) && o.upgradeFrom && !o.built).map(o => o.id));
   try { for (let k = 0; k < 4; k++) { alimenta(set); M.viver(50); sobraMax = Math.max(sobraMax, V.stoneSpare(f.id)); } } finally { G.City.upgradeHomes = up0; V.startProject = sp0; }
-  E1.fim(); const fora = E1.linhas.filter(e => e[3] === 'f:' + f.id && ['calcamento', 'carroca', 'carroca-troca'].includes(e[8])).reduce((a, e) => a + e[6], 0); const ups = [...S.buildings.values()].filter(o => o.set === set.id && o.upgradeFrom && !o.built && !ups0.has(o.id));
+  E1.fim(); D.onMove.splice(D.onMove.indexOf(hearK), 1); const fora = Math.round(gasto.reduce((a, x) => a + x.alem, 0) * 1e6) / 1e6, daSobra = Math.round(gasto.reduce((a, x) => a + x.n - x.alem, 0) * 1e6) / 1e6; const ups = [...S.buildings.values()].filter(o => o.set === set.id && o.upgradeFrom && !o.built && !ups0.has(o.id));
   const o = S.buildings.get(b.id);
-  ok('g1d um ano vivido', !!o && fora === 0 && !ups.length, `pedra do povo no calçamento e nas carroças: ${fora}; casas de pé postas em obra de melhoria: ${ups.length}; a obra ${o ? (o.built ? 'pronta' : 'espera ' + Math.round(o.need.stone || 0) + ' de pedra') : 'SUMIU'}, a vez ${set.vez}`);
+  ok('g1d um ano vivido', !!o && fora === 0 && !ups.length, `pedra guardada do povo no calçamento e nas carroças: ${fora}${daSobra ? ` (da sobra do momento — a pedra que entrou no armazém no ano —: ${daSobra}, ${gasto.map(x => `${x.code} ${x.n} com ${Math.round(x.loja + x.n)} no armazém e ${Math.round(x.kept)} guardadas`).join(' · ')})` : ''}${fora ? ` — ${gasto.filter(x => x.alem > 0).map(x => `${x.code} ${x.n} com ${Math.round(x.loja + x.n)} no armazém e ${Math.round(x.kept)} guardadas`).join(' · ')}` : ''}; casas de pé postas em obra de melhoria: ${ups.length}; a obra ${o ? (o.built ? 'pronta' : 'espera ' + Math.round(o.need.stone || 0) + ' de pedra') : 'SUMIU'}, a vez ${set.vez}`);
   { const guardando = pedem.filter(q => q.kept > 0), mal = guardando.filter(q => q.dada > q.spare + 1e-6), extras = comecam.filter(q => q.kept > 0 && q.n > q.spare + 1e-6);
     const upsI = [...S.buildings.values()].filter(o => irmas.some(q => q.id === o.set) && o.upgradeFrom && !o.built && !upsI0.has(o.id));
     ok('g1d2 as cidades-irmãs só gastam a sobra (L-714)', irmas.length > 0 && guardando.length > 0 && !mal.length && !extras.length && (sobraMax >= 10 || !upsI.length),
@@ -201,7 +210,8 @@ run('g1p', () => {
 // to Rome's store went into the sobrados and ínsulas of Lavínio, Cápua, Óstia and Tíbur in two years; its theatre got 8)
 run('g1h', () => {
   const r = capitalComIrma('teatro', 6); if (!ok('g1h a obra grande', !!r && grande(r.b) && !r.b.built, r ? `${r.set.name} (${V.pop(r.set.id)} pessoas): ${lado(r.b)}` : 'nenhuma capital com lote de 6 nem obra grande em curso')) return;
-  const { set, b } = r; const f = G.Fac.get(set.fac); semPedra(set); pedra(set, 60); const vez = comVez(set);
+  // (60 of stone, or what the work still waits for if that is less: all of it kept by the work — T-1243)
+  const { set, b } = r; const f = G.Fac.get(set.fac); semPedra(set); pedra(set, Math.min(60, Math.floor((b.need.stone || 0) - ((b.incoming && b.incoming.stone) || 0)))); const vez = comVez(set);
   const CASAS = { hut: 1, house: 1, sobrado: 1, insula: 1, quarteirao: 1 }; const oficina = G.Fac.has(f.id, 'workshop');
   const q = [...S.settlements.values()].filter(o => o.fac === f.id && o.id !== set.id && (o.tier || 0) >= 2 && V.pop(o.id) >= 8).sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)[0];
   if (!ok('g1h2 uma cidade-irmã que ergue casas de pedra', !!q && vez && oficina && V.stoneKept(f.id) > 0, q ? `${q.name} (${V.pop(q.id)} pessoas, nível ${q.tier}), de ${f.name}; a vez de ${set.name} ${set.vez}, a obra guarda ${V.stoneKept(f.id).toFixed(0)} de ${(f.stock.stone || 0).toFixed(0)} de pedra do povo` : `nenhuma cidade-irmã de nível 2 de ${set.name}`)) return;
@@ -247,7 +257,11 @@ run('g2', () => {
   // (two minutes, and on up to four while none of what they broke has reached a work: the stone broken late is on its way when the
   // two minutes end — in the metrópole of the generation 24 a town's assembly held the builders a fifth of the window, and Mazatl and
   // Tlacaélel walked to the theatre with four of stone each at its last look, T-1148)
-  const chegou = () => E2.linhas.some(e => e[8] === 'obra' && quem.has(e[9]) && String(e[4]).startsWith('o:')); let vistos = 0;
+  // (reached: one of them gave the works more than his hands took from the store — the stone of the rock, not a load of the store
+  // he also carried: in the metrópole of the generation 28 a builder who had broken stone took four from the store between two
+  // sweeps of the proof's hand and laid them, the look ended at 120 s, and the stone broken was still on the way, T-1244)
+  const netOf = id => E2.linhas.filter(e => e[8] === 'obra' && e[9] === id).reduce((a, e) => a + (String(e[4]).startsWith('o:') ? e[6] : 0) - (e[3] === 'f:' + f.id ? e[6] : 0), 0);
+  const chegou = () => [...quem].some(id => netOf(id) > 1e-6); let vistos = 0;
   for (let k = 0; k < 60 || (k < 120 && !chegou()); k++, vistos++) {
     // (the store with no stone, and what the works have got already laid — by the proof's hand: the builders with nothing to lay)
     if (k % 6 === 0) { alimenta(set); semMaterial(set); sim(() => { for (const o of S.buildings.values()) if (o.set === set.id && !o.built && o.type !== 'ruin') { const al = G.Vg.allowedProgress(o); if (al < 1 && o.progress < al) o.progress = al; } }); livres(f); }

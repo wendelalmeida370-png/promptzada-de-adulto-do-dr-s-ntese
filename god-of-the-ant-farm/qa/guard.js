@@ -745,5 +745,35 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   else { const body = pol.slice(i, i + 16).join('\n');
     for (const d of ['G.War.onExtinct(f)', 'G.Wars.onExtinct(f)', 'G.Fleets.onExtinct(f)', 'G.Expe.onExtinct(f)', 'G.Naval.onExtinct(f)']) if (!body.includes(d)) fails.push(`o povo que acaba: o P.extinct (politics.js) não chama ${d} — o que é do povo morto fica de pé até a próxima passada (L-733)`); }
   for (const [f, d] of [['wars.js', 'Wz.onExtinct ='], ['fleets.js', 'Fl.onExtinct ='], ['expeditions.js', 'X.onExtinct ='], ['naval.js', 'Nv.onExtinct =']]) if (!(src[f] || []).some(l => l.includes(d))) fails.push(`o povo que acaba: ${f} sem a porta ${d.slice(0, -2)} (L-733)`); }
+// 87. "a viagem é de quem zarpou" (L-824): a lista de quem zarpou com um navio mercante do cais de casa (s.hands) só o naval.js
+// escreve — na partida, depois da reunião da tripulação, e no load de um save de antes —, e o crewHome (harbor.js) paga o soldo e
+// conta a viagem só a quem está nela: o náufrago que outro navio do povo tira da água no caminho de casa pisa o cais com a
+// tripulação, mas a viagem não é dele (qa/marinheiros.js m5b)
+for (const f of files) { if (f === 'naval.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.hands\s*=(?!=)(?!\s*function\b)/.test(c)) fails.push(`a viagem é de quem zarpou: ${f}:${k + 1} escreve a lista de quem zarpou (s.hands), que só o naval.js escreve (L-824): ${l.trim().slice(0, 110)}`); }); }
+{ const hb = src['harbor.js'] || []; const i = hb.findIndex(l => /G\.Naval\.crewHome = function/.test(l));
+  if (i < 0 || !hb.slice(i, i + 16).some(l => /hands && !hands\.has\(v\.id\)/.test(l))) fails.push('a viagem é de quem zarpou: o crewHome (harbor.js) não pergunta à lista de quem zarpou (s.hands) — o náufrago recolhido recebe o soldo da viagem de quem o salvou (L-824)'); }
+// 88. "o dia de um bairro é o das fronteiras em que aconteceu" (L-825): no fechamento do dia de uma cidade (urban.js), as
+// contas do dia (S.urbAcc: a atividade e as mortes, por pedaço de chão) vão para os bairros como eram enquanto o dia aconteceu —
+// as fronteiras são guardadas antes de o redesenho do mesmo fechamento (updateDistricts) mudar pedaços de mão, e o closeLife as
+// recebe. Na ordem de antes, a peste de um bairro de Mênfis levou 19, o redesenho deu quatro dos sete pedaços dele a outros
+// bairros, e 13 dos mortos foram com eles: a história contou «a guerra levou 4» (qa/vida-bairro.js v7)
+{ const ub = src['urban.js'] || []; const iw = ub.findIndex(l => /const was = new Map\(\); for \(const d of \(set\.urb && set\.urb\.d\)/.test(l));
+  const iu = ub.findIndex((l, k) => k > iw && /updateDistricts\(set, sn\);/.test(l)), ic = ub.findIndex((l, k) => k > iw && /closeLife\(set, sn, was\);/.test(l));
+  if (iw < 0 || iu < 0 || ic < 0 || !(iw < iu && iu < ic)) fails.push('o dia de um bairro: o fechamento do dia (urban.js) não guarda as fronteiras do dia antes do redesenho (const was … updateDistricts … closeLife(set, sn, was)) — as contas vão para os bairros redesenhados (L-825)');
+  if (!ub.some(l => /if \(was\) for \(const \[c, d\] of was\) if \(day\.has\(d\)\) own\.set\(c, d\);/.test(l))) fails.push('o dia de um bairro: o closeLife (urban.js) não reparte as contas pelas fronteiras do dia (was) — L-825'); }
+// 89. "o plano de ruas é lido inteiro" (L-828): o plano de ruas de uma cidade (set._plan, um cache que não vai no save) só o
+// city.js lê e escreve; quem pergunta se uma casa é de rua planejada pergunta ao G.City.onStreet / onAvenue, que fazem o plano
+// que falta antes de responder (planOf). Sem isso, a primeira busca de lote depois de um load tomava as ruas de terra planejadas
+// por chão livre até que, no meio dela, o retrato da cidade fizesse o plano: o lote do santuário de Argos achado numa busca e
+// recusado na seguinte (qa/escala.js e2)
+for (const f of files) { if (f === 'city.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\._plan\b/.test(c)) fails.push(`o plano de ruas: ${f}:${k + 1} lê o plano de ruas (set._plan), que só o city.js lê — pergunte ao G.City.onStreet / onAvenue (L-828): ${l.trim().slice(0, 120)}`); }); }
+{ const cy = src['city.js'] || []; for (const d of ['Ci.onStreet = (set, i) => { const p = planOf(set);', 'Ci.onAvenue = (set, i) => { const p = planOf(set);']) if (!cy.some(l => l.includes(d))) fails.push(`o plano de ruas: o city.js sem «${d.slice(0, 44)}…» — a pergunta responde sem o plano que falta (L-828)`);
+  if (!cy.some(l => /const planOf = set => \(!set \? null : set\._plan \|\| \(G\.inSim \? \(Ci\.streetPlan\(set\)/.test(l))) fails.push('o plano de ruas: o planOf (city.js) não faz o plano que falta no passo do mundo (L-828)'); }
+// 90. "a mina sem veio não dá posto nem turno" (L-827): o dia da cidade (E.place, economy.js) não dá posto numa mina sem veio, e
+// o dia de trabalho (E.jobTask) não manda o mineiro descer nela — com o posto e o turno, o turno acabava onde começava, a cada
+// passo, e o mineiro ficava parado à porta, cansando como no trabalho (qa/mina.js m8)
+{ const ec = src['economy.js'] || []; const ip = ec.findIndex(l => /E\.place = function/.test(l));
+  if (ip < 0 || !ec.slice(ip, ip + 4).some(l => /spent\(b\)\) continue;/.test(l))) fails.push('a mina sem veio: o E.place (economy.js) dá posto numa mina sem veio (spent) — L-827');
+  if (!ec.some(l => /case 'mineiro': return E\.spent\(b\) \? null :/.test(l))) fails.push('a mina sem veio: o E.jobTask (economy.js) manda o mineiro descer numa mina sem veio (E.spent) — L-827'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

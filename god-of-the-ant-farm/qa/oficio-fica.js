@@ -32,6 +32,9 @@
 //    nasce não tem memória: a repartição dela é a do instante);
 // x15 a paz devolve: a guerra acabada, as mãos que ela puxou voltam ao ofício delas pelo instante, como vieram — não pela
 //    memória dos dois ofícios, que as devolvia ao longo de um dia e meio;
+// x16 a troca sem pressa espera as mãos soltas (L-832): a foguista no posto, a mão mais nova do ofício, desde antes de as portas
+//    abrirem até fechar, e a cidade com um posto vazio noutro ofício — a troca espera o fim do turno, e vai a mesma mão; o posto
+//    dos banhos passa ao outro foguista;
 // e nenhum erro, e o verificador limpo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/oficio-fica-inv.js'] });
@@ -449,8 +452,13 @@ if (on('x9')) {
     ok('x9 o corpo do deus, o preso e quem está no mar ficam', took.ok && kept.length === 3 && !!pris.jail, `o corpo do deus (${body.name}: ${body.role}), ${pris.jail ? 'o preso' : 'o preso (JÁ SOLTO)'} (${pris.name}: ${pris.role}) e quem está no mar (${sailor.name}: ${sailor.role}) ${kept.length === 3 ? 'ficaram com o ofício' : 'TIVERAM o ofício trocado'}`);
     // (set free, they are dealt like anyone)
     G.Possess.release('deus'); G.Naval.away = away0; god(() => { pris.jail = 0; pris.jailUntil = 0; G.Vg.endTask(pris); });
-    let d2 = 0; while (d2 < 1 && [body, pris, sailor].some(odd)) { T.live(0.125 * DAY); d2 += 0.125; }
-    ok('x9 e soltos, trocam', ![body, pris, sailor].some(odd), `soltos, em ${d2} dias: ${[body, pris, sailor].map(v => `${v.name} ${v.role}`).join(', ')}`);
+    // (a day each — the sailor's a day ashore: set free, the world may take him to sea for real, and at sea his trade is not
+    // touched. Alexios, of Argos in the metrópole of the generation 28, went with an expedition's crew the moment he was free,
+    // was at sea half a day, and was a stallholder half a day after he stepped ashore; T-1253)
+    let d2 = 0, sea = 0;
+    while (d2 < 4) { const bp = [body, pris].some(odd), sl = odd(sailor); if (!bp && !sl || bp && d2 >= 1 || !bp && d2 - sea >= 1) break;
+      const was = G.Naval.away(sailor); T.live(0.125 * DAY); d2 += 0.125; if (was || G.Naval.away(sailor)) sea += 0.125; }
+    ok('x9 e soltos, trocam', ![body, pris, sailor].some(odd), `soltos, em ${d2} dias${sea ? ` (${sailor.name} ${sea} deles no mar de verdade: o mundo levou-o numa viagem)` : ''}: ${[body, pris, sailor].map(v => `${v.name} ${v.role}`).join(', ')}`);
     const un = T.unsaid(); const q = inv(); ok('x9 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
   }
 }
@@ -488,7 +496,10 @@ if (on('x11')) {
   // a town with a temple: it asks one priest, or two, whatever the hour — its memory of the priests, wiped by the test's hand,
   // comes back to that at the memory's own pace
   const temple = s => [...G.S.buildings.values()].some(b => b.set === s.id && b.type === 'temple' && b.built);
-  const set0 = biggest(s => temple(s) && s.ofm && s.ofm.sacerdote >= 0.99); void S0;
+  // (and none of its hands pulled from the priests by an emergency: on her way back the trade remembers the hands it has with
+  // her, D-211 — Nebet, a priestess of Mênfis in the fields, in the metrópole of the generation 28, took its memory from 0.54
+  // to 2 in a blink, and the pace was not what was measured; T-1252)
+  const set0 = biggest(s => temple(s) && s.ofm && s.ofm.sacerdote >= 0.99 && !adults(v => v.set === s.id && v.roleBack === 'sacerdote').length); void S0;
   if (!set0) ok('x11 o salto e o passo', false, 'nenhuma cidade com templo e a memória de um sacerdote');
   else {
     const id = set0.id; const want = Math.round(set0.ofm.sacerdote); const save = G.Save.serialize(); const SEG = 100;
@@ -583,7 +594,13 @@ if (on('x15')) {
     const P = adults(v => v.role === 'guerreiro' && v.roleBack).map(v => ({ id: v.id, back: v.roleBack, day: v.roleDay }));
     const sold = () => adults(v => G.Fac.idOfV(v) === a.id && v.role === 'guerreiro').length;
     const asked = () => { let n = 0; for (const s of G.S.settlements.values()) if (s.fac === a.id) n += (V.tradeAsked(s.id) || {}).guerreiro || 0; return n; };
-    const s0 = sold(); const l1 = LOG.length; god(() => { G.Politics.divinePeace(); });
+    // (and the armies of every people at war: the god's peace ends every war, and the army of the people that declared it is a
+    // dozen or so soldiers — in the metrópole of the generation 28, with the code of the L-832, Argos's went 14 → 10 with the
+    // peace asking 3, the 4 that went home under the 4,4 of four tenths of its 11 too many, while 12 of the 25 hands the war had
+    // pulled were home: the noise of a dozen. All the armies, 49 → 37 with the peace asking 23: T-1273)
+    const soldAll = () => adults(v => v.role === 'guerreiro').length;
+    const askedAll = () => { let n = 0; for (const s of G.S.settlements.values()) n += (V.tradeAsked(s.id) || {}).guerreiro || 0; return n; };
+    const s0 = sold(), sa0 = soldAll(); const l1 = LOG.length; god(() => { G.Politics.divinePeace(); });
     // (an eighth of a day of peace: the hands the war pulled are back in the trade they left, with the days they had in it —
     // the ones whose trade is short of a hand now; by the memory of the two trades the same eighth of a day gave back one in
     // six, and the army of the people that declared the war stood a day and a half over what the peace asks)
@@ -594,14 +611,68 @@ if (on('x15')) {
     const sentOn = new Set(LOG.slice(l1).filter(e => e.why === 'falta').map(e => e.id));
     const home = alive.filter(p => { const v = G.S.villagers.get(p.id); return v.role === p.back && !v.roleBack; });
     const days = home.filter(p => sentOn.has(p.id) || G.S.villagers.get(p.id).roleDay === p.day);
-    const s1 = sold(), q1 = asked(); const L = LOG.slice(l1);
+    const s1 = sold(), q1 = asked(), sa1 = soldAll(), qa1 = askedAll(); const L = LOG.slice(l1);
     // (and the memory of the trade one goes back to follows him: a trade that has just got its hand back is not one with a
     // hand to spare — nobody is taken from it for the need of a third, in the same town, while the peace is an eighth old)
     const got = new Set(); let raided = 0;
     for (const e of L) { if (e.why === 'volta') got.add(e.set + ':' + e.to); else if (e.why === 'falta' && got.has(e.set + ':' + e.from)) raided++; }
     ok('x15 quem voltou não é levado adiante', raided === 0, `mãos tiradas pela necessidade de um ofício que acabava de receber a dele de volta, na mesma cidade, no oitavo de dia: ${raided}`);
-    ok('x15 a paz feita, os soldados voltam para casa', home.length >= 3 && home.length >= alive.length * 0.35 && days.length === home.length && s0 - s1 >= (s0 - q1) * 0.4, `${a.name} declara guerra a ${b.name} e o deus faz a paz: num oitavo de dia, das ${alive.length} mãos que a guerra tinha puxado (de todos os povos) ${home.length} estão de volta no ofício delas, com os dias que tinham nele (${days.length}); os soldados de ${a.name}: ${s0} → ${s1} (a paz pede ${q1}); as trocas desde a paz: ${whys(L)} (pela memória dos dois ofícios, medido: 7 de 43 de volta no oitavo de dia, e os soldados 19 → 16)`);
+    ok('x15 a paz feita, os soldados voltam para casa', home.length >= 3 && home.length >= alive.length * 0.35 && days.length === home.length && sa0 - sa1 >= (sa0 - qa1) * 0.4, `${a.name} declara guerra a ${b.name} e o deus faz a paz: num oitavo de dia, das ${alive.length} mãos que a guerra tinha puxado (de todos os povos) ${home.length} estão de volta no ofício delas, com os dias que tinham nele (${days.length}); os soldados de todos os povos: ${sa0} → ${sa1} (a paz pede ${qa1}); os de ${a.name}: ${s0} → ${s1} (a paz pede ${q1}); as trocas desde a paz: ${whys(L)} (pela memória dos dois ofícios, medido: 7 de 43 de volta no oitavo de dia, e os soldados 19 → 16)`);
     const un = T.unsaid(); const q = inv(); ok('x15 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
+  }
+}
+
+// ---------------------------------------------------------------- x16: the change with no hurry waits for the hands
+if (on('x16')) {
+  // (a change out of an emergency waits while the hand it takes has its hands busy — G.Vg.handsBusy, the door every call from
+  // outside asks first: the stoker at her post from before the doors open to the fire that lasts to the closing. The same hand
+  // goes when they are free — the newest of the trade, D-212 —, and the baths' post to the other stoker. In the metrópole of
+  // the generation 28 the newest stoker of Mênfis was taken from the furnace as the doors opened, the post went to the other —
+  // at a feast, then asleep —, and the baths were cold all day: L-832)
+  const Te = G.Termas; let S = null, W16 = '', c = null;
+  const FIELD = { lenhador: 1, coletor: 1, agricultor: 1, mineiro: 1, cacador: 1 };
+  const STEADY = ['taverneiro', 'ator', 'copista', 'carcereiro', 'oleiro', 'mercador', 'feirante', 'escriba', 'cobrador'];
+  for (const w of ['metropole', 'mega', 'mundial', 'cidade']) {
+    M.pronto(w); M.viver(0.25 * DAY); S = G.S; W16 = w;
+    for (const set of [...S.settlements.values()].sort((a, b) => a.id - b.id)) {
+      const f = G.Fac.get(set.fac); if (!f || !set.ofm || G.Fac.enemiesOf(set.fac).length || set.gw || !(f.stock.food > G.Fac.pop(f.id) * 3) || !(G.Depot.free('f:' + f.id, 'wood') > 20)) continue;
+      const free = v => !v.roleBack && !v.aboard && !v.ug && !v.jail && !v.held && f.leader !== v.id && !(S.avatar && S.avatar.id === v.id);
+      const b = [...S.buildings.values()].sort((x, y) => x.id - y.id).find(x => x.set === set.id && x.type === 'banhos' && x.built && Te.keeperOf(x)); if (!b) continue;
+      const k = Te.keeperOf(b); if (!free(k) || adults(v => v.set === set.id && (v.role === 'foguista' || v.roleBack === 'foguista')).length !== 1) continue;
+      const vet = adults(v => v.set === set.id && FIELD[v.role] && free(v) && v.age >= 20 && v.age < 50)[0]; if (!vet) continue;
+      // (the post the town will ask for at once: the only hand of a workshop's trade — x6 —, who dies when the stoker is at hers)
+      const by = {}; for (const v of adults(o => o.set === set.id)) if (v.job && STEADY.includes(v.role)) (by[v.role] = by[v.role] || []).push(v);
+      const r = STEADY.find(q => by[q] && by[q].length === 1 && adults(v => v.set === set.id && (v.role === q || v.roleBack === q)).length === 1 && free(by[q][0]) && set.ofm[q] >= 0.9); if (!r) continue;
+      c = { set, b, k, vet, f, r, dies: by[r][0] }; break;
+    }
+    if (c) break;
+  }
+  if (!c) ok('x16 a troca sem pressa espera as mãos soltas', false, 'nenhuma cidade em paz, sem obra grande com a vez, com banhos de foguista único, lenha e um ofício de oficina de uma mão só, em nenhum mundo pronto');
+  else {
+    const { set, b, k, vet, r } = c; const T = watch(); let waited = 0; const h = Te.horas(b);
+    // (to the stoker's post, the doors open: from her day's own turn)
+    while (!(Te.dia(b) && Te.dia(b).st === 'on' && Te.inHours(b) && Te.onDuty(k)) && waited < 1.2 * DAY) { T.live(1); waited += 1; }
+    const counts = () => { const n = {}; for (const v of adults(o => o.set === set.id)) n[v.role] = (n[v.role] || 0) + 1; return n; };
+    // (the test's hand: the town's memory — every trade remembers a hand more than it has, none to spare; the stoker's two,
+    // the two it has; the post left empty its whole hand —, so that the only hand the dealing can take is a stoker, by the post
+    // left empty that asks at once of the trade the instant has a hand too many in — the newest stoker, the one at the post;
+    // and the fire that never lasts to the closing: the stoker is on duty the whole of the turn, Te.onDuty)
+    const hold = () => god(() => { const n = counts(); for (const q in set.ofm) set.ofm[q] = (n[q] || 0) + 1; set.ofm.foguista = 2; set.ofm[r] = 1;
+      const op = Te.dia(b); if (op && op.st === 'on') op.data.calor = Math.min(op.data.calor, Math.max(0, (h.fecha - S.time) * DAY * 0.5)); });
+    const onDuty0 = Te.onDuty(k);
+    god(() => { vet.role = 'foguista'; vet.job = 0; vet.roleDay = S.day - 20; vet.roleBack = null; k.roleDay = S.day - 4; });
+    hold(); god(() => V.kill(c.dies, 'sick'));
+    let duty = 0, stayed = true, lit = false; const l0 = LOG.length, t0 = S.time;
+    while (S.time < h.fecha - 0.005 && duty < 1.2 * DAY) { T.live(1, hold); duty += 1; if (!(k.role === 'foguista' && k.job === b.id)) stayed = false; const op = Te.dia(b); if (op && op.data.calor > 0) lit = true; if (!stayed) break; }
+    const during = LOG.slice(l0).filter(e => e.set === set.id && e.from === 'foguista');
+    let after = 0; while (k.role === 'foguista' && after < 0.25 * DAY) { T.live(1, hold); after += 1; }
+    const e = LOG.slice(l0).find(x => x.id === k.id && x.from === 'foguista');
+    const where = W16 !== 'metropole' ? `(no mundo pronto «${W16}», o primeiro com a cidade do caso) ` : '';
+    ok('x16 a troca sem pressa espera as mãos soltas: a foguista no posto fica até fechar', onDuty0 && stayed && duty >= 30 && !during.length && lit,
+      `${where}${set.name}: ${k.name}, a foguista dos banhos e a mão mais nova do ofício (${vet.name}, foguista sem posto, 20 dias nele), de posto com as portas abertas ${onDuty0 ? `às ${t0.toFixed(2)}` : '(NÃO estava de posto)'}; ${c.dies.name}, a única mão de ${G.ROLE[r][0].toLowerCase()}, morre: ${stayed ? `${k.name} ficou no posto os ${duty} s do turno, até fechar` : `${k.name} SAIU DO POSTO aos ${duty} s do turno`}${lit ? ', a fornalha acesa' : ', a fornalha FRIA'}${during.length ? `; trocas do ofício no turno: ${during.map(x => `${x.id === k.id ? k.name : x.id} → ${x.to} («${x.why}»)`).join(', ')}` : ''}`);
+    ok('x16 e depois vai a mesma mão, e o posto passa ao outro foguista', !!e && e.why === 'falta' && k.role !== 'foguista' && vet.role === 'foguista' && vet.job === b.id,
+      e ? `${after} s depois de fechar, ${k.name} foi para ${G.ROLE[k.role] ? G.ROLE[k.role][0].toLowerCase() : k.role} («${e.why}»); o posto dos banhos: ${vet.job === b.id ? vet.name : 'NÃO passou ao outro foguista'}` : `em ${after} s depois de fechar, ${k.name} NÃO trocou (${k.role}); ${vet.name}: ${vet.role}, posto ${vet.job === b.id ? 'dos banhos' : vet.job || 'nenhum'}`);
+    const un = T.unsaid().filter(x => x.id !== vet.id); const q = inv(); ok('x16 o verificador e os erros', !q.length && !un.length && M.limpo(), (q.length ? q.slice(0, 3).join(' · ') : 'o verificador limpo') + `; trocas sem causa dita: ${un.length}` + clean());
   }
 }
 

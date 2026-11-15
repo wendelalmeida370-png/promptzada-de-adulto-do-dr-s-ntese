@@ -329,7 +329,7 @@ function partB() {
     keepPeace();
     if (k % 4 === 0) for (const b of baths()) { const h = Te.horas(b); if (S.time < h.abre || S.time > h.fecha) continue; const key = b.id + ':' + S.day; const r = storm.get(key) || [0, 0]; storm.set(key, r); r[1]++; if (stormy()) r[0]++; }
     if (k % 4 === 0 && S.time > 0.3 && S.time < 0.66) for (const b of baths()) { const key = b.set + ':' + S.day; const r = arms.get(key) || [0, 0]; arms.set(key, r); for (const v of adults(b.set)) { r[1]++; const t = v.task; if (t && WARLIKE[t.type]) r[0]++; } }
-    if (S.day !== mark && S.time > 0.3) { mark = S.day; for (const b of baths()) for (const v of adults(b.set)) who.set(S.day + ':' + v.id, { set: b.set, far: farOf(v, b), dirty: !!Te.DIRTY[v.role], sick: v.sick > 0, habit: ['romano', 'grego', 'classico'].includes(civOfSet(setOf(b))) }); }
+    if (S.day !== mark && S.time > 0.3) { mark = S.day; for (const b of baths()) for (const v of adults(b.set)) who.set(S.day + ':' + v.id, { set: b.set, day: S.day, far: farOf(v, b), dirty: !!Te.DIRTY[v.role], sick: v.sick > 0, habit: ['romano', 'grego', 'classico'].includes(civOfSet(setOf(b))), wish: Te.wish(v, b), plain: !(v.sick > 0) && !Te.DIRTY[v.role] && v.grp !== 'nobreza' && v.grp !== 'mercadores' && !(v.energy < Te.TIRED), lucky: Te.lot(v) < Te.wish(v, b) }); }
     return S.day >= d0 + DIAS && S.time > 0.74;
   });
   w.close(); w.qa();
@@ -389,8 +389,30 @@ function partB() {
     const fars = [...who.values()].map(p => p.far).sort((a, c) => a - c); const med = fars[fars.length >> 1] || 0;
     const near = rate(p => p.far <= med), far = rate(p => p.far > med), dirty = rate(p => p.dirty), clean = rate(p => !p.dirty && !p.sick), sick = rate(p => p.sick), habit = rate(p => p.habit), other = rate(p => !p.habit);
     const f = ([k, n]) => `${k} de ${n} (${pct(k, n)})`;
-    ok('b5 quem mora longe vai menos (as contas dos dias vividos, por pessoa e por dia)', near[1] >= 20 && far[1] >= 20 && near[0] / near[1] > far[0] / far[1],
-      `banhos por pessoa-dia: quem mora a até ${med.toFixed(0)} casas ${f(near)}, mais longe ${f(far)}; o ofício sujo ${f(dirty)}, os outros sãos ${f(clean)}; o doente ${f(sick)}; num povo da terma ${f(habit)}, nos outros ${f(other)}`);
+    // (what the distance decides: the person-days with the day's lot under the wish — the bath is for today, Te.pick — of who
+    // lives nearer and farther than the median of the town's own people, town by town: the baths taken are the day's order at
+    // the hour where the water is full — the baths of one place of the Norse and the Aztec peoples, four of the five towns of the
+    // metrópole of the generation 28, bathed who came first: 1 or 2 a day —, and the 13 of 122 and 12 of 108 of Mênfis, with its
+    // 35 places, are within the dice of five days. They are told, not judged; T-1261)
+    const lucky = { near: [0, 0], far: [0, 0] }; const towns = new Map(); for (const p of who.values()) { const L = towns.get(p.set) || []; towns.set(p.set, L); L.push(p.far); }
+    const tmed = new Map([...towns].map(([sid, L]) => { L.sort((a, c) => a - c); return [sid, L[L.length >> 1]]; }));
+    for (const p of who.values()) { const r = p.far <= tmed.get(p.set) ? lucky.near : lucky.far; r[1]++; if (p.lucky) r[0]++; }
+    const full = [...towns.keys()].filter(sid => baths().some(b => b.set === sid && Te.places(b) <= 1)).map(sid => S.settlements.get(sid).name);
+    // (and the wish itself, the claim: of the plain ones — not ill, no dirty trade, no noble's or merchant's house, not tired —
+    // the day's wish is the town's base, the water's warmth and the distance only, so in a town on a day the one who lives
+    // farther never wishes more, and one beyond Te.NEAR wishes less than one within it. The shares of the lucky days above are
+    // the dice of a lot over some six hundred person-days — 32 % near and 33 % far in the metrópole of the generation 28 with the
+    // code of the L-832, the noise of a lot well over the difference —: told, the wish judged, T-1272)
+    const grp = new Map(); for (const p of who.values()) { if (!p.plain) continue; const k = p.set + ':' + p.day; const L = grp.get(k) || []; grp.set(k, L); L.push(p); }
+    let worse = null, less = 0, beyond = 0;
+    for (const L of grp.values()) {
+      L.sort((a, c) => a.far - c.far);
+      for (let i = 1; i < L.length; i++) if (L[i].wish > L[i - 1].wish + 1e-9 && L[i].far > L[i - 1].far) worse = worse || `${S.settlements.get(L[i].set).name} d${L[i].day}: a ${L[i].far.toFixed(0)} casas ${L[i].wish.toFixed(3)}, a ${L[i - 1].far.toFixed(0)} ${L[i - 1].wish.toFixed(3)}`;
+      const nearW = L.filter(p => p.far <= Te.NEAR).map(p => p.wish); const top = nearW.length ? Math.max(...nearW) : null;
+      if (top !== null) for (const p of L) if (p.far > Te.NEAR) { beyond++; if (p.wish < top - 1e-9) less++; }
+    }
+    ok('b5 quem mora longe vai menos: a vontade do dia de banho de quem mora longe é menor, pessoa por pessoa e dia por dia, em cada cidade (e as contas dos banhos, ditas)', !worse && beyond >= 20 && less === beyond,
+      `a vontade dos simples (sem doença, ofício sujo, casa rica nem cansaço), por cidade e dia: ${worse ? `MAIOR LONGE — ${worse}` : 'quem mora mais longe nunca quer mais'}; ${less} de ${beyond} pessoa-dias além de ${Te.NEAR} casas, nas cidades e dias com alguém dentro delas, querem menos que quem mora dentro · dias com a sorte abaixo da vontade (pela mediana de cada cidade): quem mora mais perto ${f(lucky.near)}, mais longe ${f(lucky.far)} · banhos tomados por pessoa-dia: quem mora a até ${med.toFixed(0)} casas ${f(near)}, mais longe ${f(far)}${full.length ? ` (banhos de um lugar, o primeiro da hora toma o banho: ${full.join(', ')})` : ''}; o ofício sujo ${f(dirty)}, os outros sãos ${f(clean)}; o doente ${f(sick)}; num povo da terma ${f(habit)}, nos outros ${f(other)}`);
   }
   // ---------------------------------------------------------------- b6
   if (on('b6')) {

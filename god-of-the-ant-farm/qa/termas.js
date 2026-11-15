@@ -7,6 +7,8 @@
 //  e2 sem lenha nenhuma: a água fria, o banho frio (vale menos) — nada queima do nada; e com lenha no armazém de novo, o
 //     foguista a traz e acende a fornalha
 //  e3 o foguista morre com o fogo aceso: o fogo arde até apagar, ninguém alimenta a fornalha — até outro foguista
+//  e3b a foguista que muda de ofício no meio do afazer da fornalha (L-831): larga o afazer no olhar seguinte, e ninguém que não
+//     seja o foguista põe lenha na fornalha
 //  e4 um save no meio do dia, carregado duas vezes, vive o mesmo futuro
 //  e5 o deus derruba os banhos com gente na água: o dia acaba ali, todos saem, a prateleira sai pelo livro ('ruina')
 //  e nenhum erro de módulo nem aviso no console.
@@ -190,7 +192,15 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
     if (!k || k.sleeping || !A.able(k) || (k.carry && k.carry.n > 1e-6) || G.Vg.handsBusy(k) || (t && ((t.pri || 0) >= 1 || t.kind === 'eat' || t.kind === 'sleep'))) return;
     G.Vg.endTask(k); E.jobTask(k, G.Vg.H);
   };
-  if (op && A.live(op)) { D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true }); const kp = keep(f); keeping = () => { kp(); toTrade(); }; }
+  // (and the stoker's own day held with the hour: the clock stands at the hour the wood came back, and the hand holds what the
+  // hour holds — his tiredness as it was then, and no fever caught in the 90 s from a bather of the day (the sick come to the
+  // baths to be healed, the e1's Mutemwia). In the metropole of the generation 28 the cold part ended at 0,385 with Khufu, the
+  // stoker, 28 casas away on his way to the cold furnace with energy 44: the standing hour took 20 of it in the 33 s he walked
+  // and waited there, a bather passed him a fever by the furnace, and he went to bed: «a fornalha apagada», T-1232)
+  const k0 = op && A.live(op) ? Te.keeperOf(b) : null; const e0 = k0 ? k0.energy : 0;
+  if (k0) k0.immune = Math.max(k0.immune || 0, G.DAY_LEN);
+  const rested = () => { if (k0 && S().villagers.has(k0.id) && k0.energy < e0) k0.energy = e0; };
+  if (op && A.live(op)) { D.make('f:' + f.id, 'wood', 40, { code: 'teste', part: true }); const kp = keep(f); keeping = () => { kp(); rested(); toTrade(); }; }
   // (the stoker ends what he does — an idle look at the cold furnace lasts up to 16 s —, walks to the store and back, and feeds
   // it: 90 s, inside the day — the clock held at the hour the wood came back, the test's hand, as the counters' cases hold it:
   // in the metropole of the generation 16 the cold part ended at 0,40, the capital's trade had taken Sitamun, the stoker, who
@@ -211,6 +221,23 @@ const digest = op => JSON.stringify([op.st, op.data.entradas, op.data.receita, o
   if (op) liveSec(Math.ceil(2 * Te.BURN) + 5, () => !A.live(op) || (other = Te.keeperOf(b)) && other.id !== kid, bad, () => { if (!A.live(op)) return; if (op.data.calor > last + 1e-6 && !(Te.keeperOf(b) && Te.keeperOf(b).id !== kid)) rose++; last = op.data.calor; });
   const byDead = seen.slice(L0).filter(e => e[8] === 'fornalha' && e[9] === kid).length;
   ok('e3 o-foguista-morre', !!op && !!kid && !rose && !byDead && !bad.length, op && kid ? `${k.name} morreu com ${lenha0} de lenha queimada: ${other && other.id !== kid ? `outro foguista assumiu (${other.name})` : `o fogo ardeu até ${op.data.calor} s`}, sem lenha nova de ninguém; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'não abriram com foguista');
+}
+// ---------------- e3b the stoker taken from her post in the middle of the furnace's errand (L-831) ----------------
+// (the town changes the stoker's trade — the war took Ankhesen of Mênfis to the warriors, in the metrópole of the generation 28 —
+// with her errand of the furnace under way: she puts it down at the next look, and nobody but the stoker feeds the furnace. The
+// trade held by the test's hand while the case lasts — the repartidor gives the post back at its next pass, T-850)
+{
+  fresh(); const b = S().buildings.get(P.id); keeping = keep(ready(b)); const bad = []; seen.length = 0;
+  liveSec(30, () => !!Te.dia(b), bad); const op = Te.dia(b); const k = Te.keeperOf(b); const kid = k ? k.id : 0;
+  const errand = () => !!(k && k.task && (k.task.type === 'fornalha' || k.task.type === 'lenhaTermas') && k.task.id === b.id);
+  if (op && k) liveSec(40, () => errand() || !A.live(op), bad);
+  const on0 = k && k.task ? k.task.type : '-'; const L0 = seen.length; let still = 0, looks = 0;
+  const hold = () => { if (k) { k.role = 'guerreiro'; k.job = 0; } };
+  if (k && op && A.live(op) && errand()) { hold(); liveSec(Math.ceil(Te.BURN) + 5, () => !A.live(op), bad, () => { hold(); looks++; if (errand()) still++; }); }
+  keeping = null;
+  const fedBy = seen.slice(L0).filter(e => e[8] === 'fornalha' && e[9] === kid).length;
+  ok('e3b a-foguista-que-muda-de-oficio (L-831)', !!op && !!k && (on0 === 'fornalha' || on0 === 'lenhaTermas') && looks > 0 && still <= 1 && !fedBy && !bad.length,
+    op && k ? `${k.name}, foguista, no afazer «${on0}» dos banhos, feita guerreira pela mão da prova: o afazer ${still <= 1 ? `largado no olhar seguinte (${still} olhar com ele de ${looks})` : `SEGUIU ${still} olhares de ${looks}`}; ${fedBy ? `PÔS LENHA NA FORNALHA ${fedBy} vez(es) sem ser foguista` : 'nenhuma lenha posta por ela'}; ${bad.slice(0, 2).join(' | ') || 'verificador limpo'}` : 'não abriram com foguista');
 }
 // ---------------- e4 a save in the middle of the day, loaded twice ----------------
 {

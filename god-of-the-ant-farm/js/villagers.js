@@ -235,6 +235,20 @@
     if (G.Trade && G.Trade.homeBound(v)) return false;
     return !Vg.handsBusy(v);
   };
+  // a family goes whole (L-440, L-823): the little ones (under 16) of who goes — of any of them — go with them, and a little one
+  // goes only with every parent of it alive in the town; null when one of them cannot go (can: the door of who may), so who goes
+  // goes with all of theirs or stays. The colony took a widowed father alone and left his children in the cave's refuge, and a
+  // couple's last children stayed on the quay when the ship was full (L-823)
+  Vg.familyOf = function (adults, setId, can) {
+    const S = G.S; const ids = new Set(adults.map(v => v.id)); const kids = [];
+    for (const k of S.villagers.values()) {
+      if (k.set !== setId || k.age >= 16 || !(ids.has(k.mother) || ids.has(k.father)) || ids.has(k.id)) continue;
+      if (!can(k)) return null;
+      for (const pid of [k.mother, k.father]) { if (!pid || ids.has(pid)) continue; const o = S.villagers.get(pid); if (o && o.set === setId && !o.captive) return null; }
+      kids.push(k);
+    }
+    return kids;
+  };
   // (hands busy with a load that has somewhere to go — an operation's crate, a purchase on its way home, goods for a stall:
   // an errand from outside waits until it is there, unless it is about that load or cannot wait; an errand that takes the
   // hands — a cave, a whale, a theft — would put its own things in them over it, and the load would be gone unwritten)
@@ -657,8 +671,9 @@
     // and something worth taking from it — or when he goes back to the market with what he took: G.Eco.prowls, the
     // conditions of his errand. His work, as the watch's, comes before his bed while he is not worn out; a theft under way,
     // of the kind 'work', goes on — the bed of the night cut it at the first look: L-386)
-    const prowl = night && !watch && v.role === 'contrabandista' && v.energy > 45 && !!(G.Eco && G.Eco.prowls && G.Eco.prowls(v));
-    let wU = night ? (watch || prowl ? 1.4 : 0.05) : 0.55 * v.work;
+    // (by day only the loot already in his hands: the theft under way goes on to the shelf past the night's end, L-830)
+    const prowl = !watch && v.role === 'contrabandista' && v.energy > 45 && !!(G.Eco && G.Eco.prowls && G.Eco.prowls(v));
+    let wU = night ? (watch || prowl ? 1.4 : 0.05) : prowl ? 1.4 : 0.55 * v.work;
     // (what weighs the day's work down — the years, the grief, the fear, the evening — does not weigh the night's duty: it comes
     // before the bed while one is not worn out. In mourning it fell under the bed — 0,98 against 0,95 and up —, and the bed
     // cut the theft under way, of priority 1,2, with the loot in the hands: Xântipe of Argos, the last hour of her grief
@@ -1797,7 +1812,8 @@
     if (t.st === 0) {
       // (only a plain load goes into a work: an operation's crate, a purchase for a house, are not the builder's to use)
       if (v.carry && Vg.plainLoad(v) && b.need[v.carry.k] !== undefined && v.carry.k !== 'food') {
-        if (b.need[v.carry.k] > 0) {
+        // (the stone in the hands is the people's: a work takes of it what the last stones of a great work leave — L-826)
+        if (b.need[v.carry.k] > 0 && (v.carry.k !== 'stone' || G.Village.handStone(b, v.carry.n) > 1e-9)) {
           t.mat = v.carry.k;
           if (!t.counted) { t.cn = v.carry.n; b.incoming[t.mat] = (b.incoming[t.mat] || 0) + t.cn; t.counted = true; }
           if (!gotoB(v, b)) { b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - t.cn); t.counted = false; end(v); return deliverTask(v); }
@@ -1834,7 +1850,7 @@
         const k = v.carry.k;
         if (t.counted) { b.incoming[t.mat] = Math.max(0, (b.incoming[t.mat] || 0) - (t.cn || 0)); t.counted = false; }
         // (the load into the work, and what it no longer needs back to the store at once, as it always went — in the ledger)
-        const used = Math.min(v.carry.n, Math.max(0, b.need[k] || 0));
+        const used = Math.min(v.carry.n, Math.max(0, b.need[k] || 0), k === 'stone' ? G.Village.handStone(b, v.carry.n) : Infinity);
         if (used > 0 && Vg.plainLoad(v)) G.Depot.move('v:' + v.id, 'o:' + b.id, k, used, { code: 'obra', by: v.id });
         if (v.carry && Vg.plainLoad(v)) Vg.toStore(v, G.Village.facOfSet(b.set), 'sobra-obra');
         G.FX && G.FX.chips((b.x + b.w / 2), (b.y + b.h / 2), k === 'wood' ? '#a67c4e' : '#9a9a9a');

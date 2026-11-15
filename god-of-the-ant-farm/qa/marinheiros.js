@@ -15,6 +15,8 @@
 //    soldo só por cabeça);
 // m5 o mar leva: o deus afunda o navio (ninguém pago, ninguém a bordo do casco que afundou, verificador limpo) e a tripulação morre a bordo
 //    (o casco fica à deriva, a rota fica livre);
+// m5b o náufrago recolhido por um navio do seu povo na volta pisa o cais de casa sem soldo nem viagem — a viagem é de quem zarpou
+//    com o navio (L-824) —, e assim depois de um save no mar;
 // m6 o corpo do deus nunca é chamado ao cais: era o primeiro da chamada, e com o deus nele a chamada é dos outros;
 // m7 a rota que fecha com o navio no mar: ele volta e a carga que não entregou desce no cais de casa (L-702); ninguém é pago
 //    por uma viagem que não houve;
@@ -200,6 +202,37 @@ if (on('m5')) {
     // (the hull drifts until it breaks or is found; and the route is free for another ship of the towns)
     live(() => !S.ships.includes(s), 300, 2); const free = !S.ships.some(q => q.route === rid); const nv2 = novas();
     ok('m5 a tripulação morre a bordo: o casco fica à deriva, a rota fica livre', adrift && free && !led.filter(e => e[8] === 'soldo' && crew0.some(v => v.id === e[9])).length && !nv1.length && !nv2.length, `${crew0.length} mortos a bordo; o casco: ${adrift ? 'à deriva' : `«${s.st}»`}${S.ships.includes(s) ? ', ainda no mar' : ', levado pelo mar'}; a rota livre: ${free}; verificador: ${nv1.concat(nv2).length ? nv1.concat(nv2).slice(0, 2).join(' | ') : 'limpo'}`);
+  }
+}
+
+// ---------------------------------------------------------------- m5b
+// o náufrago recolhido (L-824): quem um navio do seu povo tira da água no caminho de casa — pela porta do próprio resgate, a do
+// Fl.onSink: Nv.board, a marca de quem nada apagada — volta a bordo e pisa o cais de casa sem a viagem de quem o salvou: nem o
+// soldo, nem a viagem na vida; a tripulação que zarpou com o navio recebe o seu, um por cabeça — e assim depois de um save no
+// meio do mar (a lista de quem zarpou vai no save com o navio)
+if (on('m5b')) {
+  mundo();
+  const r = rota(); let s = r && zarpa(r, 90);
+  if (!s || !live(() => s.st === 'go', 90)) ok('m5b o náufrago recolhido', false, 'nenhum navio saiu');
+  else {
+    const sid = s.id, crew0 = Nv.aboardOf(s).map(v => v.id); const dock = S.buildings.get(s.dock), di = Nv.dockInfo(dock);
+    const there = live(() => s.st === 'back' || !S.ships.includes(s), 900, 1) && S.ships.includes(s) && !!s.port;
+    // (the castaway: one of the town, ashore and free, the lowest id — the hand of the case is only where he was pulled from)
+    const w = there ? [...S.villagers.values()].filter(v => v.set === dock.set && v.age >= 16 && v.age < 60 && !v.aboard && !v.captive && !v.jail && !crew0.includes(v.id) && !(S.avatar && S.avatar.id === v.id) && G.Vg.canSend(v)).sort((a, b) => a.id - b.id)[0] : null;
+    if (!w) ok('m5b o náufrago recolhido', false, there ? 'ninguém da cidade para o caso' : 'o navio não chegou ao porto de lá');
+    else {
+      const wid = w.id, v0 = (w.st && w.st.viagens) || 0, port = s.port;
+      god(() => { Nv.board(w, s); w.wrecked = null; });
+      M.viver(4); M.salvarCarregar(); S = G.S; s = S.ships.find(q => q.id === sid); led.length = 0;
+      const ab = s ? Nv.aboardOf(s).map(v => v.id) : [];
+      const home = !!s && live(() => !S.ships.includes(s), 1800, 1);
+      const wc = P(wid), crew = crew0.map(P).filter(Boolean);
+      const paysW = led.filter(e => e[8] === 'soldo' && e[9] === wid).length, paysC = crew.map(v => led.filter(e => e[8] === 'soldo' && e[9] === v.id).length);
+      const nearW = wc ? G.dist(wc.x, wc.y, di.quay[0], di.quay[1]) : -1, vW = wc ? (wc.st && wc.st.viagens) || 0 : -1; const nv = novas();
+      ok('m5b o náufrago recolhido: pisa o cais de casa sem soldo nem viagem; a tripulação, um soldo cada (e depois de um save no mar)',
+        ab.includes(wid) && home && !!wc && !wc.aboard && nearW >= 0 && nearW < 4 && !paysW && vW === v0 && crew.length > 0 && paysC.every(n => n === 1) && !nv.length,
+        `${wc ? wc.name : wid} recolhid${w.g === 'f' ? 'a' : 'o'} na volta de ${port} (a bordo depois do load: ${ab.includes(wid)}); em casa: ${home}; ${wc ? `no cais a ${nearW.toFixed(1)} casas, ${wc.aboard ? 'AINDA a bordo' : 'em terra'}` : 'morreu'}; soldos d${w.g === 'f' ? 'ela' : 'ele'}: ${paysW}, viagens ${v0} → ${vW}; a tripulação (${crew.length}): ${paysC.join(', ')} soldo(s); verificador: ${nv.length ? nv.slice(0, 2).join(' | ') : 'limpo'}`);
+    }
   }
 }
 

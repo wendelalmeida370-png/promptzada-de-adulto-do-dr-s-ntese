@@ -136,9 +136,14 @@ S.weather.storm = 0;
       `${nm(v)} com 2 de lenha nas mãos, mandado(a) colher: o arbusto ${lo >= b0 ? `não perdeu nenhuma das suas ${b0} frutas${grew > 0 ? ` (e cresceu ${grew} sozinho, até ${b.berries} de ${b.max})` : ''}` : `PERDEU ${r2(b0 - lo)}`}; ${went ? 'a lenha foi ao armazém' : `a lenha NÃO foi (nas mãos: ${hands(v)})`}${food.length ? `; comida das mãos: ${sum(food)}` : ''}; o verificador: ${saw ? '«' + saw + '»' : 'NÃO viu a colheita com as mãos ocupadas'}`);
   }
 }
+// (the god's peace for the cases of the hands: the metrópole is at war from its second day, and the war's calls — the flight
+// from an army, the fight, the cave's refuge — take every grown one the cases pick, three times over, as they would anyone:
+// in the metrópole of the generation 28 with the code of the L-823 to L-831, «Axayácatl chamado para flee; Leif chamado para
+// fight; Filipe chamado para flee», T-1267)
+const godPeace = () => { if (!(S.divinePeace > G.DAY_LEN * 0.25)) G.Politics.divinePeace(); };
 // ---------------- m5: the fruit and the honey, the same
 {
-  S.time = 0.3;
+  godPeace(); S.time = 0.3;
   // (a tree with fruit anywhere in the world, and a grown-up of a people who walks to it — brought beside it by the test's
   // hand: the case is the hands, not the walk)
   const trees = Fl ? [...S.trees.values()].filter(q => Fl.KIND[q.kind] && q.stage === 'grow' && q.fruit >= 1 && !(q.claim && S.villagers.has(q.claim))).sort((a, b) => a.id - b.id) : [];
@@ -235,12 +240,15 @@ S.weather.storm = 0;
     const went = live(120, () => {
       if (v.task && v.task.type === 'mariscar' && v.task.got) caught = v.task.got;
       if (!caught && v.task && v.task.type !== 'mariscar' && v.task.type !== 'deliver' && (v.task.pri || 0) > 1) cut = v.task.type;
-      return !!cut || outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'entrega');
+      // (to the store, or — a builder's plain load — into a work that waits for it: a place of the people's wood as much as the
+      // store. In the metrópole of the generation 28 Heráclito, a builder of 56, caught his shellfish and took the two of wood
+      // into a work, «obra», and the case, asking the store only, said «a lenha NÃO foi», T-1239)
+      return !!cut || outOf(v.id, n0).some(e => e[5] === 'wood' && (e[8] === 'entrega' || (e[8] === 'obra' && String(e[4]).startsWith('o:'))));
     });
     if (cut) { away.push(`${nm(v)} chamad${v.g === 'f' ? 'a' : 'o'} para ${cut}`); continue; }
     const food = outOf(v.id, n0).filter(e => e[5] === 'food');
     fine = went && caught > 0 && !food.length;
-    info = `${nm(v)} com 2 de lenha nas mãos, na maré baixa: ${caught ? `achou ${caught} de mariscos, que ficaram na água` : 'NÃO achou mariscos'}; ${went ? 'a lenha foi ao armazém' : `a lenha NÃO foi (nas mãos: ${hands(v)})`}${food.length ? `; comida das mãos: ${sum(food)}` : ''}`;
+    info = `${nm(v)} com 2 de lenha nas mãos, na maré baixa: ${caught ? `achou ${caught} de mariscos, que ficaram na água` : 'NÃO achou mariscos'}; ${went ? (outOf(v.id, n0).some(e => e[5] === 'wood' && e[8] === 'obra') ? 'a lenha foi para uma obra' : 'a lenha foi ao armazém') : `a lenha NÃO foi (nas mãos: ${hands(v)})`}${food.length ? `; comida das mãos: ${sum(food)}` : ''}`;
   }
   if (!info) info = 'ninguém ficou na praia até achar mariscos';
   if (away.length) info += ` (antes: ${away.join('; ')} antes de achar)`;
@@ -514,7 +522,10 @@ const MUNDOS = ['metropole', 'mega', 'cidade', 'mundial', 'anos100', 'anos500', 
 {
   // (in the first ready world that has one, as the m13 and the m14: T-1201)
   let info = `ninguém de 55 anos ou mais cuidando dos pequenos de uma casa, livre, com armazém ao alcance, nos mundos prontos (${MUNDOS.join(', ')})`, fine = false; const calls = [];
-  let wv = ''; for (const w of MUNDOS) { opened(w); S.time = 0.3; if (minder()) { wv = w; break; } }
+  // (the look for the world does not take the minder it finds: the finder marks who it gives as taken, and with one minder in the
+  // world — the mega of the generation 28 had Solveig only — the case's own call to it found nobody: «ninguém de 55 anos ou mais
+  // cuidando», T-1240)
+  let wv = ''; for (const w of MUNDOS) { opened(w); S.time = 0.3; if (minder()) { wv = w; used.clear(); break; } }
   for (let att = 0; att < 3 && !fine; att++) {
     S.time = 0.3;
     const v = minder(); if (!v || !give(v, 'wood', 2)) break;
@@ -537,9 +548,13 @@ const MUNDOS = ['metropole', 'mega', 'cidade', 'mundial', 'anos100', 'anos500', 
 // by his fire with it in his arms. The partner dies by the game's door (G.Village.kill), the other with 2 of wood in the
 // hands; the farewell at the grave, if the town holds one, goes first (1,1)
 const grieves = v => !!(v && v.task && v.task.type === 'lar' && v.task.what === 'luto');
-const pairOf = () => person(18, 58, o => { const p = o.partner && S.villagers.get(o.partner); const h = S.buildings.get(o.home); return !o.sleeping && !!p && !p.aboard && !p.captive && !p.jail && !p.ug && !(S.avatar && S.avatar.id === p.id) && !!h && G.Village.livable(h) && !(G.Lar && G.Lar.minder(o)); });
+// (and the one left not the town's oracle: the oracle goes up to her cave every morning, of 1,6 — her own post, caves.js —, over
+// the grief at home as over any morning's task; Melina, oracle of her cave, in the metrópole of the generation 28 with the code
+// of the L-823 to L-831, delivered the wood and went up to prophesy: «NÃO ficou de luto em casa (caverna)», T-1267)
+const oracle = o => !!(G.Caves && G.Caves.all && G.Caves.all().some(cv => cv.oracle && cv.oracle.id === o.id));
+const pairOf = () => person(18, 58, o => { const p = o.partner && S.villagers.get(o.partner); const h = S.buildings.get(o.home); return !o.sleeping && !!p && !p.aboard && !p.captive && !p.jail && !p.ug && !oracle(o) && !(S.avatar && S.avatar.id === p.id) && !!h && G.Village.livable(h) && !(G.Lar && G.Lar.minder(o)); });
 {
-  opened(); S.time = 0.15;
+  opened(); godPeace(); S.time = 0.15;
   const v = pairOf(); const p = v && S.villagers.get(v.partner);
   if (!v || !give(v, 'wood', 2)) ok('m16 quem está de luto leva a carga antes', false, v ? `${nm(v)} não aguenta 2 de lenha` : 'nenhum casal livre com casa e armazém ao alcance');
   else {

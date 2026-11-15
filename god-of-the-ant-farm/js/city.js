@@ -412,8 +412,13 @@
     Object.defineProperty(set, '_plan', { value: { nb, day: S.day, tiles, av }, writable: true, configurable: true, enumerable: false });
     return tiles;
   };
-  Ci.onStreet = (set, i) => { const p = set && set._plan; return !!(p && p.tiles instanceof Set && p.tiles.has(i)); };
-  Ci.onAvenue = (set, i) => { const p = set && set._plan; return !!(p && p.av instanceof Set && p.av.has(i)); };
+  // (the plan, a cache of the simulation not in the save, is made at its first reading in the world's step, before the answer:
+  // with none — after a load, the town's look not yet made that day —, every planned dirt street read as free ground until the
+  // look made the plan, halfway through a search, and from that tile on the same streets were refused: the first lot of a temple
+  // searched in Argos after a load, in the metrópole of the generation 28, stood on a street the next search refused, L-828)
+  const planOf = set => (!set ? null : set._plan || (G.inSim ? (Ci.streetPlan(set), set._plan || null) : null));
+  Ci.onStreet = (set, i) => { const p = planOf(set); return !!(p && p.tiles instanceof Set && p.tiles.has(i)); };
+  Ci.onAvenue = (set, i) => { const p = planOf(set); return !!(p && p.av instanceof Set && p.av.has(i)); };
   // ------------------------------ bridges inside the town ------------------------------
   // every step taken through shallow water is counted; where a town keeps wading the same stream or pond,
   // once it has grown into a town it throws a stone bridge across, bank to bank

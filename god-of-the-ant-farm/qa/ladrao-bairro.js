@@ -74,27 +74,48 @@ if (on('b1')) {
 if (on('b2')) {
   // tonight's round, on a watcher of the town (as the dusk gives it), and the purses of the town's houses made equal by the
   // test's hand: the choice left to the walk, the watch and the chance
-  let g = [...S.villagers.values()].find(v => v.set === set.id && v.task && v.task.type === 'ronda') || null;
-  const pts = g ? g.task.pts : god(() => Cr.rondaPoints(set));
-  if (!g) { g = [...S.villagers.values()].filter(v => v.set === set.id && (v.role === 'vigia' || v.role === 'guerreiro') && !v.captive && !v.aboard).sort((a, b) => a.id - b.id)[0] || null; if (g) god(() => { G.Vg.endTask(g); G.Vg.setTask(g, { type: 'ronda', pts, k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' }); }); }
-  const hs = houses(set); god(() => { for (const h of hs) { const c = h.coin || 0; if (c < 12) D.make('h:' + h.id, 'moedas', 12 - c, { code: 'teste' }); else if (c > 12) D.use('h:' + h.id, 'moedas', c - 12, { code: 'teste' }); h.robbed = 0; } });
+  // (in the town of the cases or, when its round leaves no house far from every crossing of it, another town with a watch — the
+  // most peopled first —: in the metrópole of the generation 28, after the ten years of the case, every house of Tenochtitlan was
+  // within 14 of a crossing of its round, «casas longe 0», T-1247)
+  const watchIn = s => [...S.villagers.values()].some(v => v.set === s.id && (v.role === 'vigia' || v.role === 'guerreiro') && !v.captive && !v.aboard);
+  const split = s => { const g0 = [...S.villagers.values()].find(v => v.set === s.id && v.task && v.task.type === 'ronda') || null; const p = g0 ? g0.task.pts : god(() => Cr.rondaPoints(s)); if (!p || !p.length) return null; const hs0 = houses(s); return hs0.some(h => near(h, p) < Cr.NEAR) && hs0.some(h => near(h, p) > Cr.FAR); };
+  const t2 = [set].concat([...S.settlements.values()].filter(s => s !== set && G.Fac.get(s.fac)).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id)).find(s => watchIn(s) && split(s)) || set;
+  let g = [...S.villagers.values()].find(v => v.set === t2.id && v.task && v.task.type === 'ronda') || null;
+  let pts = g ? g.task.pts : god(() => Cr.rondaPoints(t2));
+  // (and with no town whose round leaves a house far from every crossing — in the metrópole of the generation 28 none had one —,
+  // tonight's round by one crossing only, by the god's hand: the case is the thief weighing the round he sees tonight, near a
+  // crossing or far from it
+  // — the crossing with houses near it and far from it whose near houses are the least watched with nobody on the round: at the
+  // crossing of the bad quarter the houses are watched by its night already, and from their middle the thief went elsewhere with
+  // the round and without it, 1 in 40)
+  const hs0 = houses(t2); const at0 = (p, h) => G.dist(p[0], p[1], h.x, h.y);
+  const score = p => { const A0 = hs0.filter(h => at0(p, h) < Cr.NEAR); if (!A0.length || !hs0.some(h => at0(p, h) > Cr.FAR)) return -1e9; return A0.length - 4 * A0.reduce((t, h) => t + Cr.watched(h, null), 0) / A0.length; };
+  const pBest = pts.map((p, k) => [score(p), k, p]).sort((a, b) => b[0] - a[0] || a[1] - b[1])[0][2];
+  const one = !split(t2); if (one) pts = [pBest];
+  if (!g || one) { g = g || [...S.villagers.values()].filter(v => v.set === t2.id && (v.role === 'vigia' || v.role === 'guerreiro') && !v.captive && !v.aboard).sort((a, b) => a.id - b.id)[0] || null; if (g) god(() => { G.Vg.endTask(g); G.Vg.setTask(g, { type: 'ronda', pts, k: 0, pri: 1.6, st: 0, loop: 1, kind: 'ronda' }); }); }
+  const hs = houses(t2); god(() => { for (const h of hs) { const c = h.coin || 0; if (c < 12) D.make('h:' + h.id, 'moedas', 12 - c, { code: 'teste' }); else if (c > 12) D.use('h:' + h.id, 'moedas', c - 12, { code: 'teste' }); h.robbed = 0; } });
   const A = hs.filter(h => near(h, pts) < Cr.NEAR), B = hs.filter(h => near(h, pts) > Cr.FAR);
-  const thief = [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 18 && v.age < 60 && !v.captive && !v.aboard && v.role !== 'vigia' && v.role !== 'guerreiro').sort((a, b) => a.id - b.id)[0];
-  const round = Cr.roundOf(set.id);
-  if (!g || !round || !A.length || !B.length || !thief) ok('b2 o ladrão pesa a ronda desta noite', false, `sem o cenário: vigia ${!!g}, ronda ${!!round}, casas ao pé da ronda ${A.length}, casas longe ${B.length}`);
+  const thief = [...S.villagers.values()].filter(v => v.set === t2.id && v.age >= 18 && v.age < 60 && !v.captive && !v.aboard && v.role !== 'vigia' && v.role !== 'guerreiro').sort((a, b) => a.id - b.id)[0];
+  const round = Cr.roundOf(t2.id);
+  if (!g || !round || !A.length || !B.length || !thief) ok('b2 o ladrão pesa a ronda desta noite', false, `sem o cenário (${t2.name}): vigia ${!!g}, ronda ${!!round}, casas ao pé da ronda ${A.length}, casas longe ${B.length}`);
   else {
     const wA = Cr.watched(A[0], round), wB = Cr.watched(B[0], round);
     const q0 = U.at(A[0].x, A[0].y), q1 = U.at(B[0].x, B[0].y);
-    ok('b2 a casa ao pé de um cruzamento da ronda é mais vigiada que a de longe de todos', wA - wB >= 1.5 - 1e-9 - Math.min(1, ((q1 && q1.vida && q1.vida.noite) || 0) * 2) && Cr.watched(A[0], null) < wA, `casa #${A[0].id} a ${near(A[0], pts).toFixed(1)} da ronda: ${wA.toFixed(2)} (sem ronda: ${Cr.watched(A[0], null).toFixed(2)}); casa #${B[0].id} a ${near(B[0], pts).toFixed(1)}: ${wB.toFixed(2)}${q0 ? `; bairros: ${q0.whole ? 'o todo' : q0.name} e ${q1 ? (q1.whole ? 'o todo' : q1.name) : '—'}` : ''}`);
+    ok('b2 a casa ao pé de um cruzamento da ronda é mais vigiada que a de longe de todos', wA - wB >= 1.5 - 1e-9 - Math.min(1, ((q1 && q1.vida && q1.vida.noite) || 0) * 2) && Cr.watched(A[0], null) < wA, `${t2 !== set ? `(em ${t2.name}: ${set.name} não tem casa longe da ronda) ` : ''}${one ? '(a ronda desta noite por um cruzamento só, pela mão do deus: nenhuma cidade com casa longe da ronda inteira) ' : ''}casa #${A[0].id} a ${near(A[0], pts).toFixed(1)} da ronda: ${wA.toFixed(2)} (sem ronda: ${Cr.watched(A[0], null).toFixed(2)}); casa #${B[0].id} a ${near(B[0], pts).toFixed(1)}: ${wB.toFixed(2)}${q0 ? `; bairros: ${q0.whole ? 'o todo' : q0.name} e ${q1 ? (q1.whole ? 'o todo' : q1.name) : '—'}` : ''}`);
     // forty choices from the middle of the houses at the foot of the round — where, with nobody on it, they are the nearer and
     // the thief goes to them —, with the round and with nobody on it (from the middle of the town, the houses at the foot of
     // the round may all lie far off: the round of Mênfis, in the metrópole of the generation 23, goes by its edges, and with
     // nobody on it the thief went to them 2 times in 40 — a proof that could see nothing, T-1132)
-    const count = () => { let n = 0; for (let k = 0; k < 40; k++) { const h = god(() => Cr.victimFor(thief)); if (h && near(h, pts) < Cr.NEAR) n++; } return n; };
-    const mx = A.reduce((t, h) => t + h.x + 0.5, 0) / A.length, my = A.reduce((t, h) => t + h.y + 0.5, 0) / A.length;
+    // (from the middle of the houses at the foot of one crossing of the round — the one whose houses are the least watched with
+    // nobody on it: the houses at the foot of the round of the bad quarter of Mênfis, in the metrópole of the generation 28, are
+    // watched by its night already, and from their middle the thief went elsewhere with the round and without it, «sem ninguém na
+    // ronda: 1» of 40, T-1247)
+    const Ap = hs.filter(h => near(h, [pBest]) < Cr.NEAR);
+    const count = () => { let n = 0; for (let k = 0; k < 40; k++) { const h = god(() => Cr.victimFor(thief)); if (h && near(h, [pBest]) < Cr.NEAR) n++; } return n; };
+    const mx = Ap.reduce((t, h) => t + h.x + 0.5, 0) / Ap.length, my = Ap.reduce((t, h) => t + h.y + 0.5, 0) / Ap.length;
     const at = G.W.nearestLand(mx, my, 4) || [mx, my]; thief.x = at[0]; thief.y = at[1];
     const withR = count(); const task = g.task; g.task = null; const without = count(); g.task = task;
-    ok('b2 com as bolsas iguais, o ladrão quase nunca vai à casa ao pé da ronda', without >= 6 && withR * 3 <= without, `${A.length} casas ao pé da ronda e ${B.length} longe, de ${hs.length} com 12 moedas; em 40 escolhas de ${thief.name}, do meio das casas ao pé da ronda (${at.map(x => x.toFixed(1)).join(',')}): ${withR} ao pé da ronda (sem ninguém na ronda: ${without})`);
+    ok('b2 com as bolsas iguais, o ladrão quase nunca vai à casa ao pé da ronda', without >= 6 && withR * 3 <= without, `${A.length} casas ao pé da ronda e ${B.length} longe, de ${hs.length} com 12 moedas; em 40 escolhas de ${thief.name}, do meio das ${Ap.length} casas ao pé do cruzamento ${pBest.map(x => x.toFixed(0)).join(',')} (${at.map(x => x.toFixed(1)).join(',')}): ${withR} ao pé dele (sem ninguém na ronda: ${without})`);
   }
 }
 

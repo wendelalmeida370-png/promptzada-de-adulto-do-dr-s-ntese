@@ -1489,16 +1489,22 @@
     // the alarm still up, and their families with them, L-459)
     const members = [...S.villagers.values()].filter(v => v.set === from.id && (free(v, f, { minAge: 2, maxAge: 50 }) || (v.age < 16 && v.age >= 2 && !hiding(v))) && G.Vg.canSend(v));
     const crew = [];
-    // families first: couples with their small children
+    // families first: couples with their small children — all of them, or the couple stays (G.Vg.familyOf: a little one under two
+    // does not board, and its parents do not leave it — the ship took them and left six babies behind, L-442; and a full ship
+    // took a couple and left their last children on the quay, L-823)
+    const mine = k => members.includes(k);
     for (const m of G.shuffle(members.filter(v => v.g === 'f' && v.partner && v.age >= 17))) {
       if (crew.length >= n) break; const p = P(m.partner); if (!p || !members.includes(p) || crew.includes(p)) continue;
-      const kids = members.filter(k => (k.mother === m.id || k.father === p.id) && k.age < 16);
-      // (a little one under two does not board — and its parents do not leave it: the ship took them and left six babies
-      // behind, L-442)
-      if ([...S.villagers.values()].some(k => k.set === from.id && (k.mother === m.id || k.father === p.id) && k.age < 16 && !kids.includes(k))) continue;
-      crew.push(m, p); for (const k of kids) if (crew.length < n + 4) crew.push(k);
+      const kids = G.Vg.familyOf([m, p], from.id, mine); if (!kids || crew.length + 2 + kids.length > n + 4) continue;
+      crew.push(m, p, ...kids.filter(k => !crew.includes(k)));
     }
-    for (const v of members.filter(v => !v.partner && v.age >= 17 && v.age < 40)) { if (crew.length >= n) break; if (!crew.includes(v)) crew.push(v); }
+    // (and the grown without a partner — with their little ones, or not at all: the colony took a widowed father alone and left
+    // his two children in the cave's refuge, L-823)
+    for (const v of members.filter(v => !v.partner && v.age >= 17 && v.age < 40)) {
+      if (crew.length >= n) break; if (crew.includes(v)) continue;
+      const kids = G.Vg.familyOf([v], from.id, mine); if (!kids || crew.length + 1 + kids.length > n + 4) continue;
+      crew.push(v, ...kids.filter(k => !crew.includes(k)));
+    }
     if (crew.filter(v => v.age >= 16).length < 5) return null;
     // (the leader, the boldest of the grown — of 22 and up, else of the young who go, as a voyage takes its new leader from
     // whoever is left: five of sixteen and up and none of twenty-two, and the colony had no leader and broke the step, L-490)

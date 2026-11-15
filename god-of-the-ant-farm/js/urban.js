@@ -713,7 +713,7 @@
     const a = S.urbAcc || (S.urbAcc = {}); const c = U.cellOf(h.x + h.w / 2, h.y + h.h / 2);
     const o = a[c] || (a[c] = { d: S.day }); o['m:' + g] = (o['m:' + g] || 0) + 1;
   };
-  function closeLife(set, sn) {
+  function closeLife(set, sn, was) {
     const S = G.S; const u = set.urb || (set.urb = { d: [], names: [] }); const acc = S.urbAcc || (S.urbAcc = {});
     // the town's whole: every patch of its ground (a village is one quarter; a city has its own profile over its quarters')
     const w = u.w || (u.w = { set: set.id, whole: 1, born: S.day, hist: [] });
@@ -721,6 +721,9 @@
     const units = [w].concat(u.d.filter(d => d.cells.length));
     const own = new Map(); for (const d of u.d) for (const c of d.cells) own.set(c, d);
     const day = new Map(); for (const q of units) day.set(q, {});
+    // (a patch the reshaping gave to another quarter: the day there was of the quarter it belonged to, where that quarter still
+    // has ground — L-825)
+    if (was) for (const [c, d] of was) if (day.has(d)) own.set(c, d);
     for (const c of w.cells) {
       const a = acc[c]; if (!a) continue; const d = own.get(c);
       for (const k in a) { if (!KEY[k] && !(k[0] === 'm' && k[1] === ':')) continue; day.get(w)[k] = (day.get(w)[k] || 0) + a[k]; if (d) day.get(d)[k] = (day.get(d)[k] || 0) + a[k]; }
@@ -897,8 +900,12 @@
       const set = sets[cur]; G.mod('urb.cur', cur + 1);
       const sn = look(set);
       gardens(set, sn, townBuildings(set.id));
+      // (the day's counts are of the quarters as they were while it happened: the borders of before today's reshaping. The
+      // plague of a quarter of Mênfis took 19, the reshaping of the same close gave four of its seven patches to other quarters,
+      // and 13 of its dead went with them — its history told «a guerra levou 4 dos que moravam aqui»: L-825)
+      const was = new Map(); for (const d of (set.urb && set.urb.d) || []) for (const c of d.cells) was.set(c, d);
       if ((set.tier || 0) >= 2 || (set.urb && set.urb.d.length)) updateDistricts(set, sn);
-      closeLife(set, sn);
+      closeLife(set, sn, was);
       U.ver++;
     }
     for (const id of [...snap.keys()]) if (!S.settlements.has(id)) snap.delete(id);

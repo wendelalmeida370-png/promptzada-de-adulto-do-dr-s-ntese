@@ -298,6 +298,10 @@ if (on('k10')) {
     const { b, l, o, set } = c; const nh = empty(set, l.length); used.add(nh.id); const ids = l.filter(v => v.id !== o.id).map(v => v.id);
     god(() => { b.trade = 60; b.elite = { k: 'tecido', since: S.day - 9, fam: o.name }; b.dono = o.id; for (const v of l) { v.home = nh.id; v.hhType = nh.type; if (v.inside === b.id) v.inside = 0; } nh.dono = o.id; nh.res = l.length; b.res = 0; });
     const since = b.elite.since;
+    // (the day of the case in the god's peace: the heir of a people at war may fall in the day — in the metrópole of the generation
+    // 28 the heir of Ameyali, Mazatl, 18, was of Tenochtitlan's host: he had the houses at the death and fell in battle in the day,
+    // the houses went to the people with nobody of sixteen left, «as casas passam a NINGUÉM», and the banner went down, T-1248)
+    if (!(S.divinePeace > G.DAY_LEN * 0.25)) god(() => G.Politics.divinePeace());
     god(() => G.Village.kill(o, 'teste'));
     const e0 = B(b.id).elite; const now = e0 ? e0.dono : -1;
     day(1); if (lag(o.name, since)) day(1);
@@ -357,13 +361,21 @@ if (on('k11')) {
   else {
     const { b, o, set } = c; const p = P(o.partner); const sb = sibOf(b, o, p); const since = banner(b, o).since; const there = sb.home === b.id;
     if (!there) god(() => { const from = B(sb.home); sb.home = b.id; sb.hhType = b.type; if (sb.inside) sb.inside = 0; b.res = (b.res || 0) + 1; if (from) from.res = Math.max(0, (from.res || 0) - 1); });
-    // the owner dies — the partner has the banner —; and the partner dies too, before the day's round (a war, an arrow)
+    // the owner dies — the partner has the banner —; and the partner dies too, before the day's round (a war, an arrow) — the day
+    // in the god's peace, as the k10's (T-1248)
+    if (!(S.divinePeace > G.DAY_LEN * 0.25)) god(() => G.Politics.divinePeace());
     god(() => G.Village.kill(o, 'teste')); const d1 = B(b.id).elite ? B(b.id).elite.dono : -1;
     god(() => G.Village.kill(p, 'teste')); const d2 = B(b.id).elite ? B(b.id).elite.dono : -1;
-    day(1);
+    // (and the account kept as the k1 keeps it: the round only keeps it, and it grows by the family's own trade in the day lived —
+    // a caravan of the house that sells, its commission in the ledger, «comissao»; where the people has no coin the sale leaves no
+    // line, and there the account only may not fall. Seti's of Karnak, in the metrópole of the generation 28 with the code of the
+    // L-823 to L-829, read 80.7 a day after, T-1265)
+    let sold = 0; const hear = q => { const m = P(q[9]); if (q[8] === 'comissao' && (q[4] === 'h:' + b.id || (!!m && m.home === b.id))) sold++; }; G.Depot.onMove.push(hear);
+    try { day(1); } finally { G.Depot.onMove.splice(G.Depot.onMove.indexOf(hear), 1); }
     const at = bannersOf(o.name, since), x = at[0] || null, e = x && x.elite, holder = e && P(e.dono); const nv = said(b.id).concat(x && x.id !== b.id ? said(x.id) : []);
-    ok('k11 o par que herdou morre também: a bandeira fica com a família de quem a ganhou', d1 === p.id && d2 === sb.id && at.length === 1 && !!holder && holder.home === x.id && x.trade === 60 && !nv.length,
-      `${o.name}, de ${set.name}, com a bandeira na porta de ${b.type}#${b.id}, morava com ${p.name} (o par${c.wed ? ', o casal feito pela mão da prova' : ''}) e${there ? '' : ', pela mão da prova,'} ${sb.name} (${sb.age | 0}, ${sb.g === 'f' ? 'irmã' : 'irmão'} de ${o.name}): ${o.name} morre e a bandeira é de ${d1 === p.id ? p.name + ' (o par)' : P(d1) ? P(d1).name : d1 > 0 ? '#' + d1 : 'NINGUÉM'}; ${p.name} morre também e ela é de ${d2 === sb.id ? sb.name : P(d2) ? P(d2).name : d2 > 0 ? '#' + d2 : 'NINGUÉM'}; um dia depois ${at.length === 1 ? `está na porta de ${x.type}#${x.id}, onde mora ${holder ? holder.name : 'NINGUÉM da família'}, a conta do comércio ${x.trade}` : at.length ? `está em ${at.length} PORTAS` : 'a bandeira DESCEU'}; verificador ${nv.join(' | ') || 'limpo'}`);
+    const coin = G.Eco.coinage(set.fac); const kept = !!x && (sold || !coin ? x.trade >= 60 : x.trade === 60);
+    ok('k11 o par que herdou morre também: a bandeira fica com a família de quem a ganhou', d1 === p.id && d2 === sb.id && at.length === 1 && !!holder && holder.home === x.id && kept && !nv.length,
+      `${o.name}, de ${set.name}, com a bandeira na porta de ${b.type}#${b.id}, morava com ${p.name} (o par${c.wed ? ', o casal feito pela mão da prova' : ''}) e${there ? '' : ', pela mão da prova,'} ${sb.name} (${sb.age | 0}, ${sb.g === 'f' ? 'irmã' : 'irmão'} de ${o.name}): ${o.name} morre e a bandeira é de ${d1 === p.id ? p.name + ' (o par)' : P(d1) ? P(d1).name : d1 > 0 ? '#' + d1 : 'NINGUÉM'}; ${p.name} morre também e ela é de ${d2 === sb.id ? sb.name : P(d2) ? P(d2).name : d2 > 0 ? '#' + d2 : 'NINGUÉM'}; um dia depois ${at.length === 1 ? `está na porta de ${x.type}#${x.id}, onde mora ${holder ? holder.name : 'NINGUÉM da família'}, a conta do comércio ${x.trade}${sold ? ` (60 e as ${sold} venda(s) das caravanas da casa nesse dia)` : coin ? '' : ' (um povo sem moeda: a venda não deixa linha no livro)'}` : at.length ? `está em ${at.length} PORTAS` : 'a bandeira DESCEU'}; verificador ${nv.join(' | ') || 'limpo'}`);
   }
 }
 

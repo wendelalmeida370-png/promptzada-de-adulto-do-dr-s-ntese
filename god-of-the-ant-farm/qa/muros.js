@@ -628,7 +628,9 @@ for (const instant of [false, true]) {
     M.pronto(k); let S = G.S; const N = G.N, V = G.Village, W = G.W;
     for (const s of [...S.settlements.values()].filter(q => !G.Siege.wallOf(q.id) && G.Fac.get(q.fac)).sort((a, b) => a.id - b.id)) {
       const other = [...S.settlements.values()].find(q => q.id !== s.id && q.fac !== s.fac) || [...S.settlements.values()].find(q => q.id !== s.id); const w0 = other && plan(s); if (!w0) continue; const on = new Set(w0.tiles);
-      const free = j => j >= 0 && j < N * N && !S.occ[j] && !S.wall[j] && !on.has(j) && S.type[j] >= G.T.SAND && !S.treeAt[j] && !S.objAt[j] && W.ground(j);
+      // (never before a gate of a wall standing there: the world's finder never puts a house there — muros 8 —, and the test's
+      //  house glued to Uppsala's gate shut it, in the metrópole of the generation 28; T-1251)
+      const free = j => j >= 0 && j < N * N && !S.occ[j] && !S.wall[j] && !on.has(j) && S.type[j] >= G.T.SAND && !S.treeAt[j] && !S.objAt[j] && W.ground(j) && !G.Siege.frontOfGate(j, -1);
       const OUT = { N: -N, S: N, O: -1, L: 1 }, PERP = { N: 1, S: 1, O: N, L: N };
       const g = w0.tiles.find(i => { const sd = sideOf(w0, i); const x = i % N, y = (i / N) | 0; if (sd.length !== 1 || x < 4 || y < 4 || x > N - 5 || y > N - 5 || w0.gates.some(q => dist(q, i) < 5)) return false; const o = OUT[sd[0]], p = PERP[sd[0]];
         if (!on.has(i - p) || !on.has(i + p) || !on.has(i - 2 * p) || !on.has(i + 2 * p)) return false;

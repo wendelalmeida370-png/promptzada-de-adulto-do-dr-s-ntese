@@ -327,9 +327,18 @@ function b7() {
   // lived 46 of Mênfis's 101 still slept —, and the day's common work left by the test's hand: only what weighs 2 or more, or
   // a load, or a leg of an operation, keeps one — Vg.busy —; in the metrópole of the generation 23 the six free of the day's
   // work were all the case had, T-1140)
-  const r0 = res.slice().sort((a, c) => V.pop(c.set.id) - V.pop(a.set.id))[0]; const lib = r0.b; S.time = 0.33; for (let k = 0; k < 60; k++) G.debug.step(0.1);
-  const dr = G.Vg.door(lib); const far = v => G.dist2(v.x, v.y, dr[0], dr[1]); const rs = []; const LER = { type: 'ler', pri: 2 };
-  for (const v of [...S.villagers.values()].filter(v => v.set === lib.set).sort((a, c) => far(a) - far(c) || a.id - c.id)) { if (rs.length >= 14) break; if (v.age < 16 || v.captive || v.jail || v.aboard || v.sleeping || v.inside || v.merchant || (v.carry && v.carry.n > 1e-6) || G.Vg.busy(v, LER)) continue;
+  // (the most peopled capital whose grand library the god's hand raised within reach of its people — a lot of 4 is found as far as
+  // the hand's 60 tiles, and in the metrópole of the generation 28 Mênfis's stood 66 tiles from its middle: the fourteen sent walked
+  // half a morning, their errands gave out on the road, and one sat — «1 sentados ao mesmo tempo», T-1245)
+  // (the readers: the free of the town within 35 tiles of the door, nearest first — the capital with the most of them, of those
+  // whose library stands within reach)
+  S.time = 0.33; for (let k = 0; k < 60; k++) G.debug.step(0.1);
+  const LER = { type: 'ler', pri: 2 };
+  const freeR = v => !(v.age < 16 || v.captive || v.jail || v.aboard || v.sleeping || v.inside || v.merchant || (v.carry && v.carry.n > 1e-6) || G.Vg.busy(v, LER));
+  const nearOf = r => { const d = G.Vg.door(r.b); return [...S.villagers.values()].filter(v => v.set === r.b.set && freeR(v) && G.dist2(v.x, v.y, d[0], d[1]) <= 35 * 35).length; };
+  const r0 = res.map(r => [r, nearOf(r)]).sort((a, c) => c[1] - a[1] || V.pop(c[0].set.id) - V.pop(a[0].set.id))[0][0]; const lib = r0.b;
+  const dr = G.Vg.door(lib); const far = v => G.dist2(v.x, v.y, dr[0], dr[1]); const rs = [];
+  for (const v of [...S.villagers.values()].filter(v => v.set === lib.set).sort((a, c) => far(a) - far(c) || a.id - c.id)) { if (rs.length >= 14) break; if (!freeR(v)) continue;
     const t = Bi.visit(v, lib); if (t) { v.energy = Math.max(v.energy, 70); v.hunger = Math.min(v.hunger, 30); t.kind = 'work'; t.leisure = true; t.pri = 2.9; rs.push(v); } }
   let most = 0, mostKeys = 0, wrong = 0; const bad = [];
   const look = () => { const ids = Object.keys(Bi.book(lib).quem).map(Number); const pl = ids.map(id => In.placeOf(S.villagers.get(id))); const keys = new Set(pl.map(q => (q ? q.item + ':' + q.q : '-'))); if (pl.some(q => !q || q.use !== 'ler')) wrong++; if (ids.length > most) { most = ids.length; mostKeys = keys.size; } return ids; };
@@ -411,7 +420,11 @@ function b8() {
   const arrive = set => { G.Dev.fa = set.fac; let g = 0; while (V.pop(set.id) < st.req.pop && g++ < 60) G.Dev.act.fam(2); return V.pop(set.id); };
   // (the town that comes to justify it: no library, below the step's people — the metropolis of the generation 20's biggest with
   // none, Tenochtitlan, has 122 already, T-1021)
-  const bare = headsOf().find(s => !libOf(s) && (s.tier || 0) >= 2 && V.pop(s.id) < st.req.pop);
+  // (and a town with a lot of 4 tiles to raise it on — the step's land (T-870): in the metrópole of the generation 28 Mênfis had
+  // none, and its own door raised the classic one, «biblioteca 2×2», the fall the rule asks for; the town with land first)
+  const lotFor = s => { s._noSite = {}; const r = !!sim(() => V.findSite(s, T, undefined, N)); s._noSite = {}; return r; };
+  const cands = headsOf().filter(s => !libOf(s) && (s.tier || 0) >= 2 && V.pop(s.id) < st.req.pop);
+  const bare = cands.find(lotFor) || cands[0];
   if (!bare) { ok('b8b as cidades da prova', false, `nenhuma cidade sem biblioteca abaixo de ${st.req.pop} pessoas`); return; }
   const p0 = V.pop(bare.id), c0 = chooses(bare); const p1 = arrive(bare); const f = G.Fac.get(bare.fac);
   const before = c0 === `${T}/2`, after = Es.choose(bare, T)[0].id === 'grande' && Es.choose(bare, T).length === 2;

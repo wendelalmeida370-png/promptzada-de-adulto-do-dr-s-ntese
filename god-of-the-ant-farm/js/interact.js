@@ -275,7 +275,7 @@
     if (o.fear > 60) return { ok: false, label, why: `${Who(me, o)} está assustad${oa(o)} demais.` };
     if (o.task && o.task.pri > 1) return { ok: false, label, why: `${Who(me, o)} está ocupad${oa(o)} com algo que não pode esperar.` };
     if (G.dist(me.x, me.y, o.x, o.y) * L() > 3.8) return { ok: false, label, why: 'Longe demais.' };
-    if (G.Avatar.swimming()) return { ok: false, label, why: 'Agora não dá.' };
+    if (G.Avatar && G.Avatar.swimming()) return { ok: false, label, why: 'Agora não dá.' }; // (a question of the screen, asked in Node too — qa/sabe.js —, where the 3D body is not loaded: T-1237)
     return { ok: true, label, kin: k, grief };
   };
   I.hug = function (o) {
