@@ -37,7 +37,7 @@
   let mesh = null; // InstancedMesh per part
   let beastMesh = null, crowd = null, crowdHead = null, crowdHair = null, crowdLegs = null;
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
-  P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); for (const sp of emoPool) sp.visible = false; if (held) for (const k in held) for (const m of [held[k].a, held[k].t]) if (m) { m.count = 0; m.visible = false; } if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
+  P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); if (G.Fauna3D && G.Fauna3D.clear) G.Fauna3D.clear(); for (const sp of emoPool) sp.visible = false; if (held) for (const k in held) for (const m of [held[k].a, held[k].t]) if (m) { m.count = 0; m.visible = false; } if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   let avFeet = null;
   G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; cLod.clear(); });
 
@@ -88,6 +88,8 @@
     // (the body as one skin, if it starts; the pieces of old stay for the props — and for everything, if it does not)
     skin = !!(G.Body3D && G.Body3D.init(THREE, R3));
     if (skin) PARTS.forEach((p, k) => { if (!PROPS.has(p[0])) mesh[k].visible = false; });
+    // (the beasts as one skin each, if it starts; a kind without its mesh — and every kind, if it does not — in the pieces of old)
+    fauna = !!(G.Fauna3D && G.Fauna3D.init(THREE, R3));
   };
   // ------------------------------ what the hands hold ------------------------------
   // Each kind a geometry of its own, made once — the grip at the origin, along +Y the way its head points (People3D.rig's
@@ -1353,7 +1355,7 @@
   // (standing, walking, talking, turning: a shaft can be carried upright — not lying, swimming, sitting, crouching)
   function upright(pose) { return !(pose.lie > 0.05) && !(pose.crouch > 0.25); }
   // the body as one skin: the rig's bones and the look to Body3D; the things held and the marker as before
-  let skin = false;
+  let skin = false, fauna = false;
   function bodySkin(idx, X, Y, Z, yaw, pose, L, marker) {
     const R = P3.rig(X, Y, Z, yaw, pose, L);
     L.face = faceOf(pose, L);
@@ -1589,6 +1591,7 @@
   P3.check = function () {
     const out = []; const scan = (list, n, what) => { for (const m of list || []) { const a = m.instanceMatrix.array; for (let k = 0; k < Math.min(n, m.count) * 16; k++) if (!Number.isFinite(a[k])) { out.push(`${what}: matriz inválida no desenho`); return; } } };
     scan(mesh, P3.count, 'pessoas'); scan(beastMesh, P3.beasts, 'bichos');
+    if (fauna) for (const e of G.Fauna3D.check()) out.push(e);
     if (skin) {
       for (const e of G.Body3D.check()) out.push(e);
       // (the lighter bodies only far from the eye: nobody inside a level's edge, less its margin, drawn lighter)
@@ -1691,19 +1694,52 @@
   // offset in the stride, and how far it swings
   const GAIT = { walk: [0, 0.5, 0.75, 0.25], trot: [0, 0.5, 0.5, 0], gallop: [0, 0.08, 0.55, 0.62] };
   const BFAR = new Set(['eye0', 'eye1', 'hoof0', 'hoof1', 'hoof2', 'hoof3']); // (the parts a far beast goes without)
+  // a beast as one skin: its frame (its +Z forward, its size), its pose from how fast it goes and what it does, its coat
+  const FMR = { m: null, r: null };
+  const SITTERS = { cao: 1, gato: 1, wolf: 0.4, fox: 0.5, arcticfox: 0.5, fennec: 0.5, lion: 0.5, hyena: 0.3 };
+  const OPENJAW = { chase: 0.5, lunge: 1, strike: 1, pounce: 1, stalk: 0.15 };
+  function beastSkin(a, sp, s, m, sc, d2, dt, row, X, Y, Z, air) {
+    if (!FMR.m) { FMR.m = new THREE.Matrix4(); FMR.r = new THREE.Matrix4(); }
+    const FA = G.FaunaAnim, fly = !!air; const form = fly ? G.Fauna3D.formFly(a.kind) : G.Fauna3D.form(a.kind); const J = form.J; const B = FA.B; const fam = form.meta.fam;
+    const LL = (J[B.flL0 * 3 + 1] + J[B.hlL0 * 3 + 1]) * 0.5 * sc;
+    // (the cycle: the phase goes as far as the body went, a stride's length a cycle — so a planted foot does not slide)
+    let cyc;
+    if (fam === 'quad') cyc = FA.strideOf(s.v < 0.04 ? 'walk' : FA.gaitOf(s.v, LL, form.meta.pillar, form.meta.hop), LL);
+    else if (fam === 'bird') cyc = Math.max(0.05, J[B.hlL0 * 3 + 1] * 1.3 * sc);
+    else if (fam === 'frog') cyc = form.meta.L * 2.2 * sc;
+    else cyc = Math.max(0.1, form.meta.L * 0.5 * sc);
+    s.fph = (s.fph === undefined ? (a.id % 7) / 7 : s.fph) + dt * s.v / cyc;
+    const idle = s.v < 0.08;
+    // (looking about while it stands; sitting down now and then, the dogs and the cats; the ears back and the tail up in flight)
+    const lookT = idle ? Math.sin(s.t * 0.21 + a.id * 1.3) * 0.7 + Math.sin(s.t * 0.53 + a.id) * 0.25 : 0; s.look = (s.look || 0) + (lookT - (s.look || 0)) * (1 - Math.exp(-1.5 * dt));
+    const sitW = SITTERS[a.kind] && idle && !s.graze && Math.sin(s.t * 0.045 + a.id * 2.3) > 1 - SITTERS[a.kind] * 0.9 ? 1 : 0; s.sit = (s.sit || 0) + (sitW - (s.sit || 0)) * (1 - Math.exp(-2.2 * dt));
+    const flee = a.state === 'flee' || s.v > LL * 3.2; s.ears = (s.ears || 0) + ((flee ? 1 : 0) - (s.ears || 0)) * (1 - Math.exp(-4 * dt));
+    // (in the air: the climb and the bank from how the bird moves; a big bird glides between its strokes)
+    if (fly) { const dz = (a.z || 0) - (s.pz === undefined ? (a.z || 0) : s.pz); s.pz = a.z || 0; const pitch = G.clamp(dz / Math.max(dt, 1e-3) * 0.08, -0.5, 0.5); s.fp = (s.fp || 0) + (pitch - (s.fp || 0)) * (1 - Math.exp(-3 * dt));
+      const dy = s.yaw - (s.py === undefined ? s.yaw : s.py); s.py = s.yaw; const bank = G.clamp(dy / Math.max(dt, 1e-3) * 0.25, -0.7, 0.7); s.fb = (s.fb || 0) + (bank - (s.fb || 0)) * (1 - Math.exp(-3 * dt)); }
+    const glide = fly && form.meta.H > 0.6 && Math.sin(s.t * 0.4 + a.id) > -0.2 && (s.fp || 0) < 0.15;
+    const st = { v: s.v / sc, ph: s.fph, t: s.t, graze: s.graze, look: s.look, id: a.id, ears: s.ears, tail: flee ? 0.6 : 0, jaw: OPENJAW[a.state] || 0, sit: s.sit, glide, pitch: s.fp || 0, bank: s.fb || 0 };
+    FMR.m.copy(m); FMR.r.makeRotationY(Math.PI / 2); FMR.m.multiply(FMR.r); FMR.r.makeScale(sc, sc, sc); FMR.m.multiply(FMR.r);
+    const spx = { browse: sp.diet === 'browse', swish: sp.diet === 'herb' || sp.diet === 'browse' ? 1 : 0.6 };
+    const R = (FA[fam] || FA.quad)(THREE, FMR.m, form, spx, st);
+    G.Fauna3D.put(row, R, a.kind, FA.coat(THREE, a), d2 > 576 ? 1 : 0, X, Y, Z, fly);
+  }
   function beasts(focus, R2, dt) {
-    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0; mats(); P3.bculled = 0;
+    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0, frow = 0; mats(); P3.bculled = 0;
+    if (fauna && G.Fauna3D.broken(R3.renderer && R3.renderer())) { fauna = false; G.Fauna3D.clear(); }
+    if (fauna) G.Fauna3D.begin();
     const list = [];
     for (const a of S.animals.values()) { if (a.dead || a.held) continue; const X = a.x * TL, Z = a.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 < R2 * 0.7) list.push([d2, a]); }
     list.sort((p, q) => p[0] - q[0]);
     let nNear = 0; // (the beasts near enough to the eye for their eyes and hooves: the nearest first, so the first rows)
     for (const [d2, a] of list) {
-      if (idx >= MAXA) break;
+      if (idx >= MAXA || frow >= MAXA) break;
       const sp = G.Animals.DEF[a.kind]; if (!sp || sp.cls === 'water') continue;
       const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: null, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0 }; bvis.set(a.id, s); }
       const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz); if (dist > 0.002 && dist < 6) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-8 * dt)); }
       const v = dt > 0 && dist < 6 ? dist / dt : 0; s.v += (v - s.v) * (1 - Math.exp(-6 * dt)); s.t += dt; s.X = X; s.Z = Z;
       const F = formOf(sp, a.kind); const air = sp.cls === 'air' && (a.z || 0) > 0.3;
+      const fz = fauna && G.Fauna3D.has(a.kind) && (!air || G.Fauna3D.hasFly(a.kind)); // (drawn as one skin: G.Fauna3D, posed by G.FaunaAnim)
       const u = (0.5 + (sp.size || 1) * 0.9) / 4 * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.6 : 1); // (metres to the god's unit)
       const run = G.clamp(s.v / 3, 0, 1.4); s.ph += dt * (F.biped ? (s.v * 6 / Math.max(0.4, F.leg * u * 2) + 0.4) : (s.v * 0.55 / Math.max(0.4, F.leg * u * 2) + 0.06)); // (four legs: strides; two: radians)
       const col = F.col, dark = darker(col, 0.78), bel = F.belly || darker(col, 1.12);
@@ -1712,20 +1748,23 @@
       // (a beast first seen stands where the ground is — not rising to it from the height 0, out of the ground, as before)
       s.Y = s.Y === null || Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
-      if (!inField(X, Y, Z, Math.max(0.6, F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
-      if (d2 < 576) nNear = idx + 1;
+      const fsc = fz ? G.Fauna3D.scaleOf(a.kind) * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.55 + 0.45 * Math.max(0, a.age) : 1) : 1;
+      const fsize = fz ? G.Fauna3D.sizeOf(a.kind) * fsc / G.Fauna3D.scaleOf(a.kind) : 0;
+      if (!inField(X, Y, Z, Math.max(0.6, fz ? fsize * 0.6 : F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
+      if (d2 < 576 && !fz) nNear = idx + 1;
       const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
       // (on a slope a beast of four legs lies along it: pitched by the ground under its fore and hind feet, rolled by the ground
       // at its sides — its feet neither in the air nor in the ground; eased, so it never snaps)
-      if (!air && !a.swim && !F.biped) {
-        const hl = F.len * u * 0.42, hw = hl * 0.45, c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = 1 / TL;
+      if (!air && !a.swim && (fz ? G.Fauna3D.form(a.kind).meta.fam !== 'bird' : !F.biped)) {
+        const hl = (fz ? fsize * 0.4 : F.len * u * 0.42), hw = hl * 0.45, c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = 1 / TL;
         const gf = groundY(a.x + c * hl * k, a.y + n * hl * k), gb = groundY(a.x - c * hl * k, a.y - n * hl * k), gl = groundY(a.x - n * hw * k, a.y + c * hw * k), gr = groundY(a.x + n * hw * k, a.y - c * hw * k);
         const wp = G.clamp(Math.atan2(gf - gb, 2 * hl), -0.5, 0.5), wr = G.clamp(Math.atan2(gl - gr, 2 * hw), -0.4, 0.4), e = 1 - Math.exp(-8 * dt);
         s.tp = s.tp === undefined || dt <= 0 ? wp : s.tp + (wp - s.tp) * e; s.tr = s.tr === undefined || dt <= 0 ? wr : s.tr + (wr - s.tr) * e;
         M.c.makeRotationZ(s.tp); m.multiply(M.c); M.c.makeRotationX(-s.tr); m.multiply(M.c);
       }
       // (grazing: a beast that eats grass lowers its head now and then while it stands)
-      const grazer = sp.diet === 'herb' || sp.diet === 'browse'; const wantG = grazer && s.v < 0.15 && Math.sin(s.t * 0.35 + a.id) > 0.1 ? 1 : 0; s.graze += (wantG - s.graze) * (1 - Math.exp(-2 * dt));
+      const grazer = sp.diet === 'herb' || sp.diet === 'browse' || (sp.diet === 'insect' && (sp.town || sp.dom)); const wantG = grazer && s.v < 0.15 && Math.sin(s.t * 0.35 + a.id) > 0.1 ? 1 : 0; s.graze += (wantG - s.graze) * (1 - Math.exp(-2 * dt));
+      if (fz) { beastSkin(a, sp, s, m, fsc, d2, dt, frow, X, Y, Z, air); frow++; continue; }
       for (const n of BP) bhide(n[0], idx);
       if (F.bird && air) {
         // a bird in the air: a body, wings beating (slower while it glides), a tail
@@ -1799,7 +1838,8 @@
     }
     // (beyond 24 m the eyes and the hooves are a pixel: not drawn — a sixth of a beast's triangles)
     beastMesh.forEach((m, k) => { m.count = BFAR.has(BP[k][0]) ? Math.min(nNear, idx) : idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
-    P3.beasts = idx;
+    if (fauna) G.Fauna3D.end();
+    P3.beasts = idx + frow; P3.beastSkins = frow;
     if (bvis.size > 400) bvis.clear();
   }
 })(window.G);

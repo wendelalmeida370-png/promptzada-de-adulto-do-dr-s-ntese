@@ -134,7 +134,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 | Ponta de empena recortada (cavalo: 252 · voluta: 524) | ≤ 600 | ≤ 20 |
 | Árvore | ≤ 1,2 mil | ≤ 40 |
 | Pessoa | ≤ 3 mil (corpo 2 mil + roupa e cabelo) | média ≤ 800 |
-| Bicho | ≤ 1,5 mil | ≤ 300 |
+| Bicho (`faunamesh.js`, D-265) | ≤ 1,5 mil (corpo ~760 + peças) | ≤ 300 (~160) |
 
 - Um pedaço do mundo perto (64 × 64 m) tem **uma geometria por material** (sólido, flora, folhas, plantas, água, vidro):
   coisa nova entra na geometria do pedaço (`Geo.put`), não ganha malha própria nem chamada de desenho própria.
@@ -144,6 +144,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
   ≤ 200 KB de WebP (o número que o `texturas.py` imprime; no base64, × 4/3); os chãos e a turfa vistos de perto podem ir a 300 KB (o peso deles é o capim e a folha que se vê: `turf`,
   `forest`, `grass`, `needles` passam de 200 — baixar a qualidade só tira 12% e borra o que importa); tecido e couro em
   256 px (o fio nunca chega à tela). O limite que manda é o total.
+- Os bichos (`js/faunamesh.js`, feito pelo `arte/fauna.py`): 2,6 MB para 67 espécies e 11 malhas de voo, perto e longe — uma categoria como a das pessoas (`bodymesh.js`, 1,75 MB), fora da conta das peças abaixo (D-266).
 - Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB; a pedra rúnica: 36,7 KB; o portal: 34,3 KB; a maior, a banca:
   40,4 KB); todas juntas ≤ 1 MB (hoje sete, 203 KB — a conta do `qa/visual/malhas.js`).
 - Decoração só com `G.Realm.Q().detail`; densidade lida dos campos do preset, nunca fixa.
@@ -294,7 +295,7 @@ aparecendo em recorte, sem a mancha; o verde calmo do norte levado à selva.
 
 **Pessoas e bichos (A4).** *Cumpre:* o corpo contínuo com a roupa de cada povo — o huipil solto de barra bordada e a saia
 longa asteca, o vestido de alça nórdico, a tanga —, tranças e cabelos, olhos do tamanho de olho, os tecidos da pilha.
-*Abaixo:* **os bichos** — cão, lhama, cervo, aves — ainda são brinquedos facetados de pernas de palito (um cão cinza visto
+*Depois (D-265):* **os bichos** são uma pele contínua cada, com anatomia de família (casco, garra, pilar, ave, cobra, réptil, foca), a pelagem e o padrão da espécie pintados no shader e o passo medido pela perna (`arte/fauna.py`, `js/fauna3d.js`, `js/fauna-anim.js`). *Antes:* os bichos — cão, lhama, cervo, aves — eram brinquedos facetados de pernas de palito (um cão cinza visto
 de trás, em Mênfis, lê como formiga gigante); o corpo atravessa a saia (duas manchas brancas nas coxas, de frente); as mangas de linho
 e os braços leem como manequim cinza de juntas (à noite, boneco de madeira); a pele pálida e acinzentada, que na sombra
 da mata faz o rosto parecer caveira. *Próximo:* os bichos com a passagem que as pessoas tiveram (corpo contínuo, pelagem,

@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'post3d.js', 'int-planta.js', 'atmos.js']; // (the 3D view of the Modo Encarnado: only seen)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js']; // (the 3D view of the Modo Encarnado: only seen)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -408,7 +408,7 @@ for (const f of files) if (!['animals.js', 'caves.js', 'save.js'].includes(f)) s
 // do passo do mundo: o que só se vê ou se ouve (a lista LOOK da regra 3) e o 3D nunca as chamam, e ninguém fora do urban.js
 // escreve as contagens do dia (S.urbAcc), a vida (d.vida), os perfis (d.tags, d.tp) nem a memória (S.urbPast). Quem só lê
 // pergunta por G.Urban.at, G.Urban.profile, G.Urban.is, G.Urban.wholeOf, G.Urban.pastAt
-const LIFE_3D = ['realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'cam3d.js', 'incui.js', 'input3d.js', 'modes.js', 'props3d.js'];
+const LIFE_3D = ['realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'cam3d.js', 'incui.js', 'input3d.js', 'modes.js', 'props3d.js', 'fauna3d.js', 'fauna-anim.js'];
 for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if ((LOOK.includes(f) || LIFE_3D.includes(f)) && /Urban\.(note|noteB|mourn|remember)\s*\(/.test(c)) fails.push(`vida do bairro: ${f}:${k + 1} o que só se vê ou se ouve abre a porta da vida do bairro (G.Urban.note): ${l.trim().slice(0, 110)}`);
   if (f !== 'urban.js' && (/\.urbAcc\b(?!\s*(\|\||&&|\)|;|,|$))/.test(c) && /\.urbAcc\s*(\[[^\]]*\])?(\.[a-zA-Z_]+)?\s*(=(?!=)|\+=|-=)/.test(c))) fails.push(`vida do bairro: ${f}:${k + 1} escreve as contagens do dia fora do urban.js: ${l.trim().slice(0, 110)}`);
@@ -775,5 +775,19 @@ for (const f of files) { if (f === 'city.js') continue; src[f].forEach((l, k) =>
 { const ec = src['economy.js'] || []; const ip = ec.findIndex(l => /E\.place = function/.test(l));
   if (ip < 0 || !ec.slice(ip, ip + 4).some(l => /spent\(b\)\) continue;/.test(l))) fails.push('a mina sem veio: o E.place (economy.js) dá posto numa mina sem veio (spent) — L-827');
   if (!ec.some(l => /case 'mineiro': return E\.spent\(b\) \? null :/.test(l))) fails.push('a mina sem veio: o E.jobTask (economy.js) manda o mineiro descer numa mina sem veio (E.spent) — L-827'); }
+// 91. "o bicho de uma pele só desenha" (D-265): o 3D dos bichos — js/fauna3d.js (a pele, a pintura) e js/fauna-anim.js (o
+// esqueleto, os passos, a pelagem de cada espécie) — só lê o mundo. Fora dos comentários: não tira de acaso nenhum (nem o do
+// mundo nem o do que só se vê: o passo, o olhar, a orelha que espanta a mosca e a pelagem saem do relógio da vista, do id do
+// bicho e do G.hash — o mesmo bicho é sempre o mesmo bicho); não escreve campo nenhum de bicho, pessoa, prédio ou do estado
+// (a., v., b., S., G.S. seguidos de uma atribuição); e não abre porta nenhuma que muda o mundo. O people3d.js guarda o que a
+// vista lembra de cada bicho (o passo, o ouvido, o sentar) na sua memória de desenho (bvis), nunca no bicho
+for (const f of ['fauna3d.js', 'fauna-anim.js']) { if (!src[f]) { fails.push(`bicho de uma pele: js/${f} não existe — a regra 91 não acha o 3D dos bichos`); continue; }
+  src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random/.test(c)) fails.push(`bicho de uma pele: ${f}:${k + 1} tira de um acaso (o mesmo bicho tem de ser sempre o mesmo): ${l.trim().slice(0, 110)}`);
+    if (/\b(a|v|b|S|G\.S)\.[A-Za-z_]+(\[[^\]]*\])?(\.[A-Za-z_]+)*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`bicho de uma pele: ${f}:${k + 1} escreve no mundo (o 3D dos bichos só lê): ${l.trim().slice(0, 110)}`);
+    if (WORLD_WRITE.test(c) || /\b(setTask|Vg\.give|Urban\.(note|noteB|mourn|remember)|Animals\.(remove|spawn)|touchWalk)\s*\(/.test(c)) fails.push(`bicho de uma pele: ${f}:${k + 1} abre uma porta que muda o mundo: ${l.trim().slice(0, 110)}`); }); }
+{ const p3 = src['people3d.js'] || []; const i = p3.findIndex(l => /function beastSkin\(a, sp, s, m,/.test(l));
+  if (i < 0) fails.push('bicho de uma pele: o people3d.js sem a função beastSkin — a regra 91 não acha quem põe os bichos na pele');
+  else { const j = p3.findIndex((l, k) => k > i && /^  \}$/.test(l)); p3.slice(i, j).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\ba\.[A-Za-z_]+\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`bicho de uma pele: people3d.js:${i + k + 1} o beastSkin escreve no bicho (a memória do desenho é o bvis): ${l.trim().slice(0, 110)}`); }); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
