@@ -13,7 +13,7 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
   const errs = []; page.on('pageerror', e => errs.push(e.message));
-  page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts|GL Driver|GroupMarker|software WebGL/.test(t)) errs.push('console: ' + t.slice(0, 400)); });
+  page.on('console', m => { const t = m.text(); if (/^@@/.test(t)) { console.log(t); return; } if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts|GL Driver|GroupMarker|software WebGL/.test(t)) errs.push('console: ' + t.slice(0, 400)); });
   await page.addInitScript(() => { window.requestAnimationFrame = () => 0; try { localStorage.clear(); } catch (e) { } });
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
@@ -35,6 +35,7 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
     let put = null; if (!P3.bdrawn) { const F3 = G.Fauna3D, put0 = F3.put; put = new Set(); let fm = -1; const byX = new Map();
       F3.put = function (row, R, kind, coat, lod, X, Y, Z) { if (fm !== F3.frame) { fm = F3.frame; put.clear(); byX.clear(); for (const a of S.animals.values()) byX.set(a.x * TL + ',' + a.y * TL, a.id); } const id = byX.get(X + ',' + Z); if (id) put.add(id); return put0.apply(this, arguments); }; }
     const drawnNow = () => new Set(put || P3.bdrawn);
+    console.log('@@ no corpo; alcance', Math.round(reach), 'm');
     // ---- p1: no blink
     const hist = new Map(); let rowsMax = 0, many = 0;
     for (let f = 0; f < env.FR; f++) {
@@ -55,6 +56,7 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
     out.notes.push(`p1: ${hist.size} bichos ao alcance da vista (${Math.round(reach)} m), ${many} de ${env.FR} quadros com as 64 linhas da pele cheias, ${blinks} piscadas`);
     if (!many) out.notes.push('p1: (a vista não encheu as linhas da pele: a prova vale menos — tente WORLD=cidade Q=alta)');
     if (blinks) fail(`p1: ${blinks} piscada(s) — bicho no campo do olho desenhado, apagado, desenhado: ${ex.join(' | ')}`);
+    console.log('@@ p1 feita');
     // ---- p2: the view's memory let go a little at a time
     const foc = G.Avatar.state(); const bx = foc.X / TL, by = foc.Z / TL;
     const still = [...S.animals.values()].filter(a => !a.dead && !a.held && A.DEF[a.kind].cls === 'land' && P3.beastVis(a.id) && Math.hypot(a.x - bx, a.y - by) * TL < 25).slice(0, 3);
@@ -66,6 +68,7 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
     const yaw0 = still.map(a => P3.beastVis(a.id) ? P3.beastVis(a.id).yaw : null);
     // a crowd passing through the memory: 450 rabbits in a ring round the body, then gone
     const crowd = []; for (let k = 0; k < 450; k++) { const ang = k / 450 * Math.PI * 2, rr = 8 + (k % 9) * 2.5; const p = G.W.nearestLand(bx + Math.cos(ang) * rr, by + Math.sin(ang) * rr, 6); if (p) crowd.push(A.spawn('rabbit', p[0], p[1], { state: 'idle', t: 1e6 })); }
+    console.log('@@ p2: coelhos', crowd.length);
     for (let k = 0; k < 30; k++) { hold(); G.Cam3D.yaw = (G.Cam3D.yaw || 0) + 0.21; G.Main.frameFor(33); }
     for (const a of crowd) if (S.animals.has(a.id)) A.remove(a);
     for (let k = 0; k < 140; k++) { hold(); G.Main.frameFor(33); }
