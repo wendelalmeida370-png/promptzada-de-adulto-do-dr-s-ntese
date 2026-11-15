@@ -2,7 +2,8 @@
 // the browser with real frames: every kind of the land, the water's edge and the air around the body of the god — standing,
 // walking, trotting, galloping, the birds afoot and in the air, the young, the rare coats —, a save and a load in the middle,
 // and the verifier every few frames.
-//   node qa/visual/bichos.js [PASTA_DO_JOGO]       (≈ 1 min)   env: WORLD (cidade), Q (media), FRAMES (90)
+//   node qa/visual/bichos.js [PASTA_DO_JOGO]       (≈ 1 min)   env: WORLD (cidade), Q (media), FRAMES (90), ONLY=mar (só o mar)
+// And the sea (D-267): the five beasts of the sea in the open water nearest the body, drawn by Things3D in the rows left.
 // Fails when: Fauna3D does not start (or falls back to the pieces); a kind lacks its mesh, its flight, its coat (F3.dataErr);
 // a kind near the body is never drawn as a skin; a matrix or a coat is not a number, a beast's hips are far from where the
 // world has it, a row is drawn twice (People3D.check / Fauna3D.check); a page error, a console warning, a module error.
@@ -33,7 +34,7 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')); 
     // every kind of the land, the water's edge and the air, in a ring round the body; each held on a circle of its own at its own
     // speed (standing, a walk, a trot, a gallop), the birds of the air half afoot, half flying; a young one and a rare coat too
     for (const a of [...S.animals.values()]) A.remove(a);
-    const kinds = Object.keys(A.DEF).filter(k => A.DEF[k].cls !== 'water');
+    const kinds = Object.keys(A.DEF).filter(k => A.DEF[k].cls !== 'water' && env.ONLY !== 'mar');
     const B = G.Avatar.state(); const cx = B.X / G.Space.TILE, cy = B.Z / G.Space.TILE; const live = [];
     kinds.forEach((kind, k) => {
       const ang = k / kinds.length * Math.PI * 2, r = 2.2 + (k % 3) * 0.9; let x = cx + Math.cos(ang) * r, y = cy + Math.sin(ang) * r;
@@ -50,18 +51,62 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')); 
     };
     // (the camera turns round the body, a full turn every 36 frames: every beast of the ring comes into the eye's field)
     const run = n => { for (let k = 0; k < n; k++) { hold(0.033); G.Cam3D.yaw = (G.Cam3D.yaw || 0) + Math.PI * 2 / 36; G.Main.frameFor(33); frames++; if (k % 3 === 0) look(); } };
-    run(env.FRAMES);
+    run(env.ONLY === 'mar' ? 0 : env.FRAMES);
     // a save and a load in the middle: the beasts come back as they were, and are drawn as one skin again
     const data = G.Save.serialize(); G.UI.select(null); G.Save.apply(JSON.parse(data));
     for (const L of live) { const a = S.animals.get(L.a.id); if (a) L.a = a; }
     if (G.Modes.state !== 'INC') { G.Modes.enter(S.villagers.get(v.id)); until(() => G.Modes.state === 'INC', 300); }
-    run(Math.round(env.FRAMES / 2));
+    run(env.ONLY === 'mar' ? 0 : Math.round(env.FRAMES / 2));
     for (const L of live) { const kind = L.a.kind; if (!S.animals.has(L.a.id) || L.a.dead) { out.notes.push(`(${kind} saiu do mundo durante a prova)`); continue; } const mesh = F3.meshOf(kind); if (!drawn.has(mesh)) fail(`bicho ${kind}: nunca desenhado como uma pele perto do corpo`); }
-    if (!P3.beastSkins) fail('nenhum bicho desenhado como pele no último quadro');
+    if (env.ONLY !== 'mar' && !P3.beastSkins) fail('nenhum bicho desenhado como pele no último quadro');
+    // the sea (D-267): the beasts of the sea in the open water nearest the body — swimming and lying at the face, the dolphin
+    // leaping (the world's a.leap), the whale blowing (a.spout), the shark on the chase —, drawn by Things3D as skins in the
+    // rows People3D leaves; a save and a load in the middle; a kind with no mesh, and more beasts than rows: the pieces of old
+    const T3 = G.Things3D, D3 = G.FAUNAMESH, HM = G.Space.HM, T = G.T;
+    for (const a of [...G.S.animals.values()]) A.remove(a);
+    const seaOK = (x, y) => G.W.inb(x, y) && G.S.type[G.W.idx(x, y)] <= T.SEA && (G.SEA - G.W.hAt(x, y)) * HM > 1.6;
+    let spot = null, sd = 1e9;  // (within the reach of Things3D's drawing: the nearest open water to the body, 38 tiles at most)
+    for (let y = Math.floor(cy) - 38; y <= cy + 38; y++) for (let x = Math.floor(cx) - 38; x <= cx + 38; x++) {
+      const d = Math.hypot(x - cx, y - cy); if (d >= sd) continue; let ok = true;
+      for (let j = -3; j <= 3 && ok; j++) for (let i = -3; i <= 3 && ok; i++) if (!seaOK(x + i + 0.5, y + j + 0.5)) ok = false;
+      if (ok) { sd = d; spot = [x + 0.5, y + 0.5]; } }
+    if (!spot) fail('o mar: nenhum mar aberto a 38 casas do corpo — a prova do mar não roda neste mundo');
+    else {
+      const seaKinds = Object.keys(A.DEF).filter(k => A.DEF[k].cls === 'water'); const sea = [];
+      seaKinds.forEach((kind, k) => { for (let n = 0; n < 2; n++) { const ang = (k * 2 + n) / (seaKinds.length * 2) * Math.PI * 2;
+        const a = A.spawn(kind, spot[0] + Math.cos(ang) * 2, spot[1] + Math.sin(ang) * 2, { age: A.DEF[kind].life * 0.5 }); sea.push({ a, x: a.x, y: a.y, ang, sp: n ? 0.9 : 0 }); } });
+      const prey = sea.find(L => L.a.kind === 'turtle'), hunter = sea.find(L => L.a.kind === 'shark');
+      let fr = 0, maxUp = -9; const seen = new Set();
+      const holdSea = dt => { fr++; for (const L of sea) { const a = L.a; if (!G.S.animals.has(a.id)) continue; L.ang += dt * L.sp / 1.5;
+        a.x = L.x + Math.cos(L.ang) * (L.sp ? 0.8 : 0); a.y = L.y + Math.sin(L.ang) * (L.sp ? 0.8 : 0); a.tx = a.x; a.ty = a.y; a.t = 1e6; a.hunger = 0; a.target = 0; a.state = 'idle'; a.moving = !!L.sp;
+        if (a.kind === 'dolphin' && fr % 45 === 1) a.leap = 1; if (a.kind === 'whale' && fr % 60 === 2) a.spout = 1.6; }
+        if (hunter && prey) { const h = hunter.a; h.state = 'chase'; h.target = prey.a.id; prey.a.x = h.x + 0.9; prey.a.y = h.y; prey.a.hp = 1e6; } };
+      const lookSea = () => { for (const m of F3.meshes()) if (m.n > 0) seen.add(m.name.replace(/_1$/, ''));
+        for (let r = 0; r < F3.rows; r++) { const q = F3.at(r); if (q) maxUp = Math.max(maxUp, q[5] - q[1]); }
+        for (const e of P3.check()) fail('o mar, verificador: ' + e); for (const e of T3.check()) fail('o mar, as coisas: ' + e); };
+      const runSea = n => { for (let k = 0; k < n; k++) { holdSea(0.033); G.Cam3D.yaw = (G.Cam3D.yaw || 0) + Math.PI * 2 / 36; G.Main.frameFor(33); if (k % 3 === 0) lookSea(); } };
+      runSea(70);
+      const data2 = G.Save.serialize(); G.UI.select(null); G.Save.apply(JSON.parse(data2));
+      for (const L of sea) { const a = G.S.animals.get(L.a.id); if (a) L.a = a; }  // (the load makes the world anew: the same beasts, new records)
+      if (G.Modes.state !== 'INC') { G.Modes.enter(G.S.villagers.get(v.id)); until(() => G.Modes.state === 'INC', 300); }
+      runSea(50);
+      for (const kind of seaKinds) { if (!seen.has(F3.meshOf(kind))) fail(`o mar: ${kind} nunca desenhado como uma pele`); }
+      if (!(T3.seaSkins > 0)) fail('o mar: nenhum bicho do mar desenhado como pele no último quadro');
+      if (maxUp < 1.0) fail(`o mar: o golfinho não saltou (o quadril subiu no máximo ${maxUp.toFixed(2)} m sobre o mar)`);
+      // (a kind with no mesh: the pieces of old draw it, and nothing else breaks)
+      const keep = D3.species.turtle; delete D3.species.turtle; runSea(6); const pieces = T3.n.sea; D3.species.turtle = keep;
+      if (!(pieces > 0)) fail('o mar: a tartaruga sem malha não foi desenhada pelas peças de antes');
+      // (more beasts than rows: the nearest as skins, the rest as pieces, no row past the last)
+      const crowd = []; for (let k = 0; k < F3.MAXR + F3.MAXS + 6; k++) { const a = A.spawn('dolphin', spot[0] + (k % 9 - 4) * 0.6, spot[1] + (Math.floor(k / 9) - 5) * 0.6, { age: 10 }); crowd.push({ a, x: a.x, y: a.y, ang: 0, sp: 0 }); }
+      sea.push(...crowd); runSea(6);
+      if (F3.rows > F3.MAXR + F3.MAXS) fail(`o mar: ${F3.rows} linhas desenhadas, além das ${F3.MAXR + F3.MAXS} da terra e do mar`);
+      if (!(T3.n.sea > 0)) fail('o mar: com as linhas cheias, os que sobram não foram desenhados pelas peças de antes');
+      out.notes.push(`o mar: ${seaKinds.length} espécies vistas como pele (${[...seen].filter(n => seaKinds.includes(n)).length}), o golfinho saltou ${maxUp.toFixed(1)} m, ${F3.rows} linhas com a multidão`);
+    }
     if (G.modErr && Object.keys(G.modErr).length) fail('erro de módulo: ' + JSON.stringify(G.modErr));
-    out.notes.push(`${kinds.length} espécies, ${frames} quadros (${((performance.now() - t0) / frames).toFixed(0)} ms cada), ${drawn.size} malhas vistas, ${F3.calls} chamadas e ${F3.tris} triângulos de bichos no último`);
+    if (env.ONLY !== 'mar') out.notes.push(`${kinds.length} espécies, ${frames} quadros (${((performance.now() - t0) / (frames || 1)).toFixed(0)} ms cada), ${drawn.size} malhas vistas, ${F3.calls} chamadas e ${F3.tris} triângulos de bichos no último`);
     return out;
-  }, { Q: process.env.Q || 'media', WORLD, FRAMES: +process.env.FRAMES || 90 });
+  }, { Q: process.env.Q || 'media', WORLD, FRAMES: +process.env.FRAMES || 90, ONLY: process.env.ONLY || '' });
   await browser.close();
   for (const n of r.notes) console.log(n);
   const fails = r.fails.concat(errs.map(e => 'página: ' + e));

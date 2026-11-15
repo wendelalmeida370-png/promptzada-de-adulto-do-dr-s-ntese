@@ -17,13 +17,13 @@
 //  keeps drawing its old pieces.
 // ============================================================
 (function (G) {
-  const F3 = G.Fauna3D = { ready: false, failed: null, rows: 0, calls: 0, tris: 0, lod: true };
+  const F3 = G.Fauna3D = { ready: false, failed: null, rows: 0, calls: 0, tris: 0, lod: true, live: false };
   let THREE = null, scene = null;
   const MAXR = 64; // (rows: People3D's MAXA — the beasts drawn)
-  const MAXD = 4, ROWS = MAXR + MAXD; // (and after them, rows kept for the dragons — G.Dragon3D puts its own after the beasts')
+  const MAXS = 16, MAXD = 4, ROWS = MAXR + MAXS + MAXD; // (and after them, rows kept for the sea's beasts — Things3D, D-267 — and for the dragons — G.Dragon3D, D-270)
   let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null, TU = null;
   const NP = 18; // texels of coat a row
-  F3.MAXR = MAXR; F3.rim = (G.Body3D && G.Body3D.rim) || { value: 0.2 }; F3.frame = 0;
+  F3.MAXR = MAXR; F3.MAXS = MAXS; F3.MAXD = MAXD; F3.ROWS = ROWS; F3.rim = (G.Body3D && G.Body3D.rim) || { value: 0.2 }; F3.frame = 0;
   const MESH = {}; // name → { mesh, geo, rows, ra, n, tris }
   const FORM = {}; // mesh name → { J: Float32Array(NB*3) the bind joints, box, meta }
 
@@ -89,7 +89,8 @@ void f3skin(in vec3 p, in vec3 n, out vec3 P, out vec3 N) {
   // The dragon (G.FaunaAnim.dragonCoat) uses three of the w's no other kind uses — 7.w the eyes' own light, 8 the breath's
   // colour (rgb) and how much the sun shows through the wings (w), 17.w the mouth's glow (its rgb the inside of the mouth) —,
   // the pupil 3 (the eye shut: the lid) and the pattern 15 (its scales, and the plates down its belly by reg2.x, how far
-  // along the body)
+  // along the body). The sea's coat (pattern 16 the swimmers, 17 the sea turtle's skin: f3sea, f3shell) reads some of them
+  // its own way — said where it does (D-267)
   const PAINT = `
 vec4 f3T(int k) { return texelFetch(uFauna, ivec2(PB + k, vRowI), 0); }
 float f3h(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -163,8 +164,57 @@ vec3 f3pattern(vec3 c, vec3 p, float kind, vec3 dk, float sc, float con, float s
     return mix(s, dk, f3aa(e - 0.07) * con); }
   return c;
 }
+// the sea's coat (D-267; the coat's pattern 16 the swimmers, 17 the sea turtle's skin). The back's colour over the belly's,
+// parted by a line drawn from a signed distance (reg.x: 0.5 on the line, written by fauna_forma.swim_paint) — crisp whatever
+// the triangles, or as soft as Be.w; ragged and flecked by a mottle (Dk, its scale; X.x its strength: the whale's blotches);
+// the dark cape down the back (reg2.z, the back's texel 11); the orca's grey saddle (reg.w, the mask's texel 14); the
+// stripes (reg2.y where reg2.w: the shark's gill slits, the whale's throat grooves — the ear's texel 10); the fins' tips
+// (reg.y, the socks' 3), the flukes' (reg2.x, the mane's 5). The turtle's skin: scales parted by pale lines (the belly's)
+vec3 f3sea(vec4 C) {
+  vec4 Be = f3T(1), Dk = f3T(2), So = f3T(3), Mz = f3T(4), Mn = f3T(5), Er = f3T(10), Bk = f3T(11), X = f3T(13), Mk = f3T(14), Ey = f3T(16);
+  vec3 p = vBind / max(Ey.y, 0.05); vec3 c = C.rgb;
+  if (C.w > 16.5) {
+    vec3 id; vec2 r = f3cell(p * Dk.w + X.y, id); float e = r.y - r.x;
+    c = mix(c * (0.84 + 0.26 * f3h(id)), mix(c, Be.rgb, 0.38), f3aa(e - 0.035));
+    return mix(c, Be.rgb, smoothstep(0.12, 0.8, vReg.x) * Be.w);
+  }
+  c = mix(c, Bk.rgb, smoothstep(0.1, 0.9, vReg2.z) * Bk.w);
+  c = mix(c, Mk.rgb, smoothstep(0.2, 0.7, vReg.w) * Mk.w);
+  float n = f3n(p * Dk.w + X.y) * 0.65 + f3n(p * Dk.w * 2.7 + X.y) * 0.35;
+  float d = vReg.x - 0.5 + (n - 0.5) * X.x * 0.03; float w = fwidth(d) * 0.75 + Be.w * 0.2 + 1e-4;
+  float bel = smoothstep(-w, w, d);
+  c = mix(c, Be.rgb, bel);
+  c = mix(c, Dk.rgb, smoothstep(0.6, 0.66, n) * X.x * bel * smoothstep(0.62, 0.5, vReg.x));
+  c = mix(c, Mz.rgb, smoothstep(0.3, 0.8, vReg.z) * Mz.w);
+  float sg = abs(fract(vReg2.y * 25.5 + 0.5) - 0.5); c = mix(c, Er.rgb, f3aa(sg - 0.09) * smoothstep(0.2, 0.6, vReg2.w) * Er.w);
+  c = mix(c, So.rgb, smoothstep(0.72, 0.92, vReg.y) * So.w);
+  c = mix(c, Mn.rgb, smoothstep(Ey.w, min(Ey.w + 0.08, 1.0), vReg2.x) * Mn.w);
+  return c;
+}
+// the sea turtle's shell (zone 13, the coat's pattern 17): its scutes — five down the middle, four each side, the ring of the
+// rim — parted by fine seams, each streaked out from its growing corner (the tortoiseshell), in the shell's colour (the
+// wings' texel 15) with the dark of its streaks (Dk) and an amber light; the plastron under it (the belly's colour), in plates.
+// Where each point is on the shell is in its regions (fauna_forma.shell_paint: across, along, under, the rim)
+float f3band(float v, vec4 b, out float id) { float m = 9.0; id = 0.0;
+  for (int k = 0; k < 4; k++) { float e = abs(v - b[k]); if (e < m) m = e; if (v < b[k]) id = float(k) + 1.0; } return m; }
+vec3 f3shell() {
+  vec4 Sh = f3T(15), Dk = f3T(2), Be = f3T(1);
+  float u = vReg.x * 2.0 - 1.0, v = vReg.y * 2.0 - 1.0, au = abs(u), rim = vReg.w;
+  float vw = 0.26 + 0.06 * (1.0 - v * v); float sd, id; vec2 g;
+  if (rim > 0.82) { float an = atan(au, v) * 11.0 / 3.14159; sd = min(abs(fract(an + 0.5) - 0.5) * 0.25, rim - 0.82); id = 20.0 + floor(an) + step(0.0, u) * 11.0; g = vec2(0.0, rim - 0.98); }
+  else if (au < vw) { sd = min(f3band(v, vec4(0.6, 0.24, -0.12, -0.46), id), vw - au); g = vec2(u * 2.0, fract(v * 2.6 + 0.3) - 0.85); }
+  else { float vs = v + (au - vw) * 0.45; sd = min(min(f3band(vs, vec4(0.44, 0.06, -0.32, -9.0), id), au - vw), 0.82 - rim); id += 5.0 + step(0.0, u) * 5.0; g = vec2((au - vw) * 2.0 - 0.9, fract(vs * 2.6 + 0.15) - 0.9); }
+  float a = atan(g.y, g.x); float rr = length(g);
+  float st = f3n(vec3(a * 4.5, rr * 1.5, id * 3.7)) * 0.7 + f3n(vec3(a * 11.0, rr * 4.0, id)) * 0.3;
+  vec3 c = mix(Sh.rgb * 1.45 + vec3(0.06, 0.03, 0.0), Sh.rgb, smoothstep(0.2, 0.5, st));
+  c = mix(c, mix(Sh.rgb, Dk.rgb, 0.7), smoothstep(0.6, 0.75, st));
+  c = mix(c, Dk.rgb, f3aa(sd - 0.008) * 0.75);
+  vec3 pl = Be.rgb * (0.92 + 0.08 * f3n(vec3(u * 9.0, v * 9.0, 1.0))); pl = mix(pl, Be.rgb * 0.7, f3aa(min(abs(u), abs(fract(v * 2.5) - 0.5) * 0.4) - 0.01));
+  return mix(c, pl, smoothstep(0.3, 0.7, vReg.z));
+}
 vec3 f3coat() {
   vec4 C = f3T(0), Be = f3T(1), Dk = f3T(2), So = f3T(3), Mz = f3T(4), Mn = f3T(5), X = f3T(13), Ey = f3T(16);
+  if (C.w > 15.5) return f3sea(C);
   vec3 p = vBind / max(Ey.y, 0.05);
   vec3 c = C.rgb;
   c = f3pattern(c, p, C.w, Dk.rgb, Dk.w, X.x, X.y);
@@ -203,6 +253,7 @@ vec3 f3paint() {
     float bar = w.w > 0.5 ? step(0.5, fract(q.z * 6.0 + q.x * 2.0)) * 0.18 : 0.0;
     float k = 1.0 - smoothstep(0.0, 0.02, fwidth(vBind.x) * 60.0);
     return c * (1.0 - bar) * (0.9 + 0.15 * k * f3n(vBind * vec3(60.0, 30.0, 160.0))); }
+  if (z == 13 && f3T(0).w > 15.5) return f3shell();                                                   // the sea turtle's shell
   if (z == 13) { vec4 C = f3T(0); return f3pattern(C.rgb * 0.8, vBind / max(f3T(16).y, 0.05), 8.0, f3T(2).rgb, 4.0, 0.7, 0.0); } // shell
   return f3T(0).rgb;
 }
@@ -228,7 +279,7 @@ vec3 f3paint() {
           #endif
           #include <opaque_fragment>`);
     };
-    mat.customProgramCacheKey = () => 'fauna3d-v3';
+    mat.customProgramCacheKey = () => 'fauna3d-v4';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = sh => {
       sh.uniforms.uFauna = F3.U;
@@ -259,14 +310,17 @@ vec3 f3paint() {
       F3.ready = true; return true;
     } catch (e) { F3.failed = String((e && e.message) || e); F3.ready = false; return false; }
   };
-  // (the data, once at the start: every kind of the land, the water's edge and the air has its mesh, its form and its coat — a
-  // bird of the air its mesh in flight —; every mesh's indices, bones, weights and zones are sound; every form's joints are
-  // where a beast's are)
+  // (the data, once at the start: every kind of the land, the water's edge, the air and the sea has its mesh, its form and its
+  // coat — a bird of the air its mesh in flight, a beast of the sea a swimmer's form —; every mesh's indices, bones, weights and
+  // zones are sound; every form's joints are where a beast's are)
   function selfCheck() {
     const out = []; const ZN = new Set(Object.values(D.zones || {}));
-    for (const kind in G.Animals.DEF) { const sp = G.Animals.DEF[kind]; if (sp.cls === 'water') continue; const e = D.species[kind];
+    for (const kind in G.Animals.DEF) { const sp = G.Animals.DEF[kind]; const e = D.species[kind];
       if (!e || !MESH[e.mesh] || !FORM[e.mesh]) { out.push(`bicho ${kind}: sem malha`); continue; }
       if (sp.cls === 'air' && (!e.fly || !MESH[e.fly] || !FORM[e.fly])) out.push(`bicho ${kind}: ave do ar sem a malha do voo`);
+      if (sp.cls === 'water') { const sw = FORM[e.mesh].meta.swim; if (!sw || !(sw.R > 0)) out.push(`bicho ${kind}: do mar sem a forma de nadador (D-267)`);
+        else if (Math.abs(FORM[e.mesh].J[G.FaunaAnim.B.root * 3 + 1] - sw.yc) > sw.R * 0.35) out.push(`bicho ${kind}: o quadril do nadador longe do meio do corpo`);
+        if (!G.FaunaAnim[FORM[e.mesh].meta.fam]) out.push(`bicho ${kind}: sem o nado da família ${FORM[e.mesh].meta.fam} (FaunaAnim)`); }
       if (!G.FaunaAnim.paint(kind)) out.push(`bicho ${kind}: sem pelagem (FaunaAnim PAINT)`); }
     // (the dragon of the god's power — not a kind of Animals.DEF —: its mesh on the ground and its mesh in the air, its pose)
     { const e = D.species.dragon; if (!e || !MESH[e.mesh] || !FORM[e.mesh] || !e.fly || !MESH[e.fly] || !FORM[e.fly]) out.push('dragão: sem a malha do chão e a do voo');
@@ -295,10 +349,12 @@ vec3 f3paint() {
 
   // ------------------------------ a frame ------------------------------
   const AT = []; // (where each row's beast stands, for the verifier: X, Y, Z, size, root X, Y, Z)
-  F3.begin = function () { for (const k in MESH) MESH[k].n = 0; F3.rows = 0; F3.frame++; };
-  // (a drawer after People3D's beasts in the same frame — the dragons, G.Dragon3D — takes the next free row, puts its beast there
-  // and ends the frame again: the beasts' rows are People3D's MAXR, the dragons' the MAXD after them; -1 when none is left.
-  // F3.frame counts the frames People3D began: one that did not begin a frame here — it fell back to its pieces — has no rows)
+  F3.begin = function () { for (const k in MESH) MESH[k].n = 0; F3.rows = 0; F3.frame++; F3.live = true; };
+  // (a drawer after People3D's beasts in the same frame takes the next free row, puts its beast there and ends the frame again:
+  // the beasts' rows are People3D's MAXR; the sea's — Things3D, F3.take — the MAXS after them; the dragons' — G.Dragon3D,
+  // F3.extra — whatever is left, the MAXD last ones always theirs; -1 when none is left or the frame was not opened. F3.frame
+  // counts the frames People3D began: one that did not begin a frame here — it fell back to its pieces — has no rows)
+  F3.take = () => (F3.ready && F3.live && F3.rows < MAXR + MAXS ? F3.rows : -1);
   F3.extra = () => (F3.ready && F3.rows < ROWS ? F3.rows : -1);
   // a beast in row `row`: R its bones' frames in the world (G.FaunaAnim), its kind, its coat (G.FaunaAnim.coat), its level of
   // detail (0 near, 1 far)
@@ -324,7 +380,7 @@ vec3 f3paint() {
     if (F3.rows) tex.needsUpdate = true;
     F3.calls = calls; F3.tris = tris;
   };
-  F3.clear = function () { for (const k in MESH) { MESH[k].n = 0; MESH[k].geo.instanceCount = 0; MESH[k].mesh.visible = false; } F3.rows = 0; };
+  F3.clear = function () { for (const k in MESH) { MESH[k].n = 0; MESH[k].geo.instanceCount = 0; MESH[k].mesh.visible = false; } F3.rows = 0; F3.live = false; };
   // (for the verifier: every number of every row drawn is a number; every mesh's rows are rows that were written; each row
   // drawn once; no beast's hips far from where the world has it)
   F3.check = function () {

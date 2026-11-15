@@ -184,6 +184,22 @@ sp('penguin', 'bird', 0.9, 0.4, upright=True, bw=0.17, bh=0.33, legH=0.05, legR=
 # ------------------------------ the dragon (not of Animals.DEF: the god's power, js/dragon.js — drawn by js/dragon3d.js) ------------------------------
 # (on the ground, the wings folded; fly: the second mesh, the wings spread — as a bird of the air. H: the shoulder's height)
 sp('dragon', 'dragon', 3.4, 18.0, fly=1, tris=2100, far=440)
+# ------------------------------ the sea (D-267: the swimmers and the turtle; drawn by Things3D) ------------------------------
+# (H the body's depth, L its length — the sizes of the old drawing: the dolphin 2.4 m, the orca 6.5, the whale 14, the shark
+# 3.6, the turtle 1.25 from the beak to the tail)
+sp('dolphin', 'swim', 0.48, 2.4, R=0.1, Wr=0.86, maxAt=0.38, nose=0.34, p1=0.75, p2=1.7, ped=0.09, pedW=0.4, belly=0.08, head='beak', beakL=0.075, beakR=0.2,
+   eyeR=0.0085, eyeAt=0.14, eyeUp=0.05, blow=1, dorsal=(0.5, 0.1, 0.13, 0.85), pect=(0.27, 0.14, 0.065, 38, 35), flukes=(0.26, 0.075, 0.55),
+   pattern='dolphin', tris=1000, far=180)
+sp('orca', 'swim', 1.5, 6.5, R=0.115, Wr=0.95, maxAt=0.38, nose=0.45, p1=0.6, p2=1.5, ped=0.1, pedW=0.42, belly=0.06, head='blunt',
+   eyeR=0.0055, eyeAt=0.12, eyeUp=0.08, jaw=True, teeth=10, blow=1, dorsal=(0.47, 0.17, 0.13, 0.15), pect=(0.25, 0.13, 0.085, 40, 25), pectTip=0.42, flukes=(0.25, 0.08, 0.5),
+   pattern='orca', tris=1100, far=260)
+sp('whale', 'swim', 3.4, 14.0, R=0.12, Wr=1.0, maxAt=0.34, nose=0.3, p1=0.6, p2=1.4, ped=0.08, pedW=0.42, headW=0.86, belly=0.12, droop=0.4, head='whale',
+   eyeR=0.003, eyeAt=0.26, eyeUp=-0.1, blow=2, knobs=8, dorsal=(0.66, 0.035, 0.07, 0.6), pect=(0.3, 0.31, 0.06, 30, 30), flukes=(0.34, 0.09, 0.35),
+   pattern='whale', tris=1200, far=320)
+sp('shark', 'swim', 0.76, 3.6, R=0.105, Wr=0.9, maxAt=0.36, nose=0.25, p1=0.75, p2=1.3, ped=0.13, pedW=0.85, headW=1.15, belly=0.04, head='shark',
+   eyeR=0.007, eyeAt=0.11, eyeUp=0.18, jaw=True, teeth=9, gills=5, blow=0, dorsal=(0.42, 0.11, 0.13, 0.45), dorsal2=(0.79, 0.022, 0.03, 0.4), anal=(0.8, 0.02, 0.03, 0.4),
+   pect=(0.27, 0.19, 0.075, 28, 40), pelvic=(0.6, 0.06, 0.035), caudal=(0.24, 0.17, 42, 52), keel=1.0, pattern='shark', tris=1100, far=190)
+sp('turtle', 'turtle', 0.4, 1.25, tris=900, far=180)
 
 
 def kinds(): return list(SPECIES.keys())
@@ -202,6 +218,8 @@ def build(kind, fly=False):
     elif fam == 'frog': FF.frog(b, **s)
     elif fam == 'seal': FF.seal(b, **s)
     elif fam == 'dragon': FF.dragon(b, fly=fly, **s)
+    elif fam == 'swim': FF.swim(b, **s)
+    elif fam == 'turtle': FF.turtle(b, **s)
     b.meta['hop'] = bool(extras.get('hop'))
     for k, f in (('antler', antlers), ('horns', horns), ('mane', mane), ('dewlap', dewlap), ('beard', beard), ('trunk', trunk), ('tusks', tusks),
                  ('ossicones', ossicones), ('folds', folds), ('bell', bell), ('incisors', teeth)):
@@ -211,10 +229,12 @@ def build(kind, fly=False):
 
 def meta_of(b):
     J = b.bones_filled(); p = b.meta.get('p', {})
-    return {'fam': b.meta.get('family', 'quad'), 'H': b.H, 'L': b.L, 'eye': [round(x, 4) for x in b.meta.get('eye', [0, 0, 0])],
-            'nose': [round(x, 4) for x in b.meta.get('nose', [0, 0, 0])], 'dig': bool(p.get('dig')), 'pillar': bool(p.get('pillar')),
-            'flex': bool(b.meta.get('flex')), 'hop': bool(b.meta.get('hop')), 'trunk': bool(b.meta.get('trunk')), 'fly': bool(b.meta.get('fly')), 'upright': bool(b.meta.get('upright'))} | \
-           ({'wing3': b.meta['wing3'], 'chin': b.meta['chin']} if 'wing3' in b.meta else {})  # (the dragon: the axis its fingers bend about, the left wing's; the chin)
+    m = {'fam': b.meta.get('family', 'quad'), 'H': b.H, 'L': b.L, 'eye': [round(x, 4) for x in b.meta.get('eye', [0, 0, 0])],
+         'nose': [round(x, 4) for x in b.meta.get('nose', [0, 0, 0])], 'dig': bool(p.get('dig')), 'pillar': bool(p.get('pillar')),
+         'flex': bool(b.meta.get('flex')), 'hop': bool(b.meta.get('hop')), 'trunk': bool(b.meta.get('trunk')), 'fly': bool(b.meta.get('fly')), 'upright': bool(b.meta.get('upright'))}
+    if 'wing3' in b.meta: m['wing3'] = b.meta['wing3']; m['chin'] = b.meta['chin']  # (the dragon: the axis its fingers bend about, the left wing's; the chin)
+    if 'swim' in b.meta: m['swim'] = {k: (round(v, 4) if isinstance(v, float) else [round(x, 4) for x in v] if isinstance(v, list) else v) for k, v in b.meta['swim'].items()}  # (a swimmer: its girth, where its back, blowhole, fin and tail are, how it beats — D-267)
+    return m
 
 
 def species_entry(kind):

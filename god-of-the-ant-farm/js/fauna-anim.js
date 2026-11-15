@@ -221,6 +221,58 @@
     E[B.neck0 * 3] = -0.15 + Math.sin(w) * 0.1 * go; E[B.head * 3 + 1] = (st.look || 0) * 0.5; E[B.neck1 * 3 + 1] = (st.look || 0) * 0.3;
     return chain(m, J);
   };
+  // the swimmers of the sea (D-267): the wave runs back down the body to the tail — up and down for the dolphin, the orca and
+  // the whale (the flukes beat, the stock bends most, the head rides a little against it, the body heaves), from side to side
+  // for the shark (its head swinging against its tail) —, faster and deeper the faster it goes, a slow sway as it lies at the
+  // surface; it bends into its turns, the inner fin dipping; the whole body pitched and rolled about its middle (the leap's
+  // arc, the whale's dive — st.arch bows its back as it goes over —, a bank in a turn); the jaw open on the chase. st: { v
+  // (m/s), ph (the beats, counted), t, id, pitch (+ nose up), bank, arch (0..1), turn (-1..1, + to its left), jaw (0..1) }
+  FA.swim = function (three, m, form, sp, st) {
+    if (!THREE) start(three);
+    const J = form.J; E.fill(0); OFF.fill(0);
+    const sw = form.meta.swim || {}; const t = st.t, id = st.id || 0, w = st.ph * TAU;
+    const go = Math.min(1, st.v / Math.max(0.3, form.meta.L * 0.4)); const amp = 0.05 + 0.13 * go, arch = st.arch || 0, turn = st.turn || 0;
+    const TL = [B.tail0, B.tail1, B.tail2, B.tail3], FR = [B.spine, B.chest, B.neck0, B.neck1, B.neck2, B.head];
+    if (sw.beat === 'h') {
+      for (let k = 0; k < 4; k++) E[TL[k] * 3 + 1] = Math.sin(w - (k + 1) * 0.7) * amp * (0.5 + k * 0.35);
+      E[B.root * 3 + 1] = Math.sin(w) * amp * 0.25; E[B.chest * 3 + 1] = -Math.sin(w + 0.5) * amp * 0.25; E[B.head * 3 + 1] = -Math.sin(w + 0.9) * amp * 0.3;
+    } else {
+      for (let k = 0; k < 4; k++) E[TL[k] * 3] = Math.sin(w - k * 0.75) * amp * (0.3 + k * 0.32);
+      E[B.chest * 3] = -Math.sin(w + 0.6) * amp * 0.12; E[B.head * 3] = Math.sin(w + 1.1) * amp * 0.1;
+      OFF[1] = Math.sin(w + 1.6) * (sw.R || 0.2) * 0.07 * go;
+    }
+    // (the turn: the body curves into it, head and tail toward its inside)
+    for (let k = 0; k < 4; k++) E[TL[k] * 3 + 1] -= turn * 0.09; for (let k = 0; k < 4; k++) E[FR[k] * 3 + 1] += turn * 0.06;
+    // (the back bowed over — the leap's top, the whale going down: the head and the flukes lower than the middle)
+    for (let k = 0; k < 4; k++) E[TL[k] * 3] -= arch * 0.14; E[B.chest * 3] += arch * 0.12; E[B.neck0 * 3] += arch * 0.1;
+    E[B.root * 3] -= st.pitch || 0; E[B.root * 3 + 2] += st.bank || 0;
+    // (the pectoral fins: held out a little, tilting with the beat and the bank, the inner one down in a turn; the shark's stiff)
+    const stiff = sw.beat === 'h' ? 0.35 : 1;
+    for (const s of 'LR') { const sd = s === 'L' ? 1 : -1;
+      E[B['fl' + s + '0'] * 3 + 2] = sd * (Math.sin(t * 0.7 + id + sd) * 0.08 - Math.sin(w) * 0.06 * go) * stiff + turn * 0.25 * stiff;
+      E[B['fl' + s + '0'] * 3] = (Math.sin(t * 0.5 + id * 1.3) * 0.08 - (st.pitch || 0) * 0.2) * stiff; E[B['fl' + s + '2'] * 3 + 2] = sd * Math.sin(t * 0.7 + id + sd - 0.6) * 0.05 * stiff;
+      E[B['hl' + s + '0'] * 3 + 2] = sd * Math.sin(t * 0.6 + id) * 0.05; }
+    if (st.jaw) { E[B.jaw * 3] = st.jaw * 0.42; E[B.head * 3] -= st.jaw * 0.12; }
+    return chain(m, J);
+  };
+  // the sea turtle: the long front flippers fly — down and back with the blade turned, up and forward edge first, the tip
+  // lagging —, the hind ones steer; floating at the surface it paddles slowly; the head lifts to breathe (st.lift) and looks
+  FA.turtle = function (three, m, form, sp, st) {
+    if (!THREE) start(three);
+    const J = form.J; E.fill(0); OFF.fill(0);
+    const t = st.t, id = st.id || 0, w = st.ph * TAU; const go = 0.3 + 0.7 * Math.min(1, st.v / Math.max(0.2, form.meta.L * 0.5));
+    for (const s of 'LR') { const sd = s === 'L' ? 1 : -1;
+      E[B['fl' + s + '0'] * 3 + 2] = sd * (Math.cos(w) * 0.55 * go + 0.05); E[B['fl' + s + '0'] * 3 + 1] = sd * (-Math.cos(w - 0.6) * 0.32 * go + 0.1);
+      E[B['fl' + s + '1'] * 3] = Math.sin(w) * 0.45 * go; E[B['fl' + s + '2'] * 3 + 2] = sd * Math.cos(w - 0.7) * 0.28 * go;
+      E[B['hl' + s + '0'] * 3 + 1] = sd * (Math.sin(t * 0.8 + id + sd) * 0.15 + (st.turn || 0) * 0.3 * sd); E[B['hl' + s + '1'] * 3 + 2] = sd * Math.sin(w + 1.2) * 0.12 * go; }
+    OFF[1] = -Math.cos(w) * (form.meta.H || 0.4) * 0.04 * go;
+    const lift = st.lift || 0; E[B.neck0 * 3] = -0.15 - lift * 0.35 + Math.sin(w) * 0.04 * go; E[B.neck1 * 3] = -lift * 0.15; E[B.head * 3] = 0.1 + lift * 0.2;
+    E[B.neck1 * 3 + 1] = (st.look || 0) * 0.35; E[B.head * 3 + 1] = (st.look || 0) * 0.3;
+    E[B.jaw * 3] = Math.max(0, Math.sin(t * 0.37 + id) - 0.96) * 6;
+    E[B.tail0 * 3 + 1] = Math.sin(t * 0.9 + id) * 0.2;
+    E[B.root * 3] -= st.pitch || 0; E[B.root * 3 + 2] += st.bank || 0;
+    return chain(m, J);
+  };
 
   // ------------------------------ the dragon (D-270) ------------------------------
   // the dragon of the god's power (js/dragon3d.js poses it from what the world's dragon does: st.pose). In the air (the mesh
@@ -444,6 +496,14 @@
     galinha: { inner: '#d23a2a', beak: '#e8b83a', hoof: '#e8b83a', grain: 0, pat: 11, sc: 9, con: 0.2 },
     peru: { col: '#4a3a2e', wing: '#5a4a3a', dk: '#2a2018', pat: 11, sc: 6, con: 0.5, mask: '#a8c0d8', maskA: 1, inner: '#c8303a', beak: '#c8b08a', hoof: '#c8a08a', mane: '#5a4a3a', bars: 1, grain: 0 },
     pombo: { th: '#6a9a8a', thA: 0.6, bars: 1, beak: '#3a3a3a', hoof: '#c86a6a', dk: '#3a3a40', earA: 0.7, grain: 0 },
+    // the sea (D-267; pat 15: the swimmers' coat, f3sea — belA how soft the belly's line, back the cape, mask the orca's saddle,
+    // ear the stripes (gill slits, throat grooves), sock the fins' tips, dk and con the mottle; pat 16: the turtle's skin in scales
+    // parted by its belly's pale, wing its shell's colour, dk its shell's streaks — the colours the god's view gives them)
+    dolphin: { pat: 16, col: '#76889a', bel: '#e6eaec', belA: 0.22, back: '#4f5d6c', backA: 0.85, dk: '#5a6a7a', sc: 4, con: 0.15, mz: '#647585', mzA: 0.4, iris: '#2a1e18', fwd: 0.1, grain: 0, tailFrom: 0.95 },
+    orca: { pat: 16, col: '#131317', bel: '#f2f2ee', belA: 0, back: '#131317', backA: 0, mask: '#8a9096', maskA: 0.9, dk: '#131317', sc: 3, con: 0, iris: '#2a1e18', fwd: 0.08, grain: 0, tailFrom: 0.95 },
+    whale: { pat: 16, col: '#38424f', bel: '#e0e3e2', belA: 0.04, back: '#2e3743', backA: 0.4, dk: '#2a323c', sc: 5, con: 0.9, ear: '#8e979e', earA: 0.7, iris: '#1a1410', fwd: 0.05, grain: 0, tailFrom: 0.95 },
+    shark: { pat: 16, col: '#6c7884', bel: '#eef0ec', belA: 0.02, back: '#56626e', backA: 0.5, dk: '#58636f', sc: 6, con: 0.35, ear: '#262c34', earA: 0.85, sock: '#1c2026', sockA: 0.85, iris: '#0b0b0d', fwd: 0.18, grain: 0, tailFrom: 0.95 },
+    turtle: { pat: 17, col: '#5a6246', bel: '#d2c896', belA: 0.85, dk: '#3a2a16', sc: 12, wing: '#7c6638', beak: '#b4a474', hoof: '#3a3428', iris: '#1a1410', fwd: 0.15, grain: 0 },
   };
   const DOG = [['#8a5a34', '#c8a070'], ['#2a2420', '#5a4a40'], ['#e8e0d0', '#8a6a4a'], ['#c89a4a', '#e8c890'], ['#6a6a70', '#b8b8c0']];
   const CAT = [['#d8843a', '#f0b878'], ['#6a6a72', '#9a9aa2'], ['#1e1c20', '#3a3640'], ['#f0ece4', '#d8c8b0'], ['#8a6a4a', '#c8a878']];

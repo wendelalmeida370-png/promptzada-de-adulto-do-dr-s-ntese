@@ -80,6 +80,7 @@ def body_of(b, h, tris, fine=None):
     N = normals_of(b.P, V); W = weights(b.P, V, b.H); bi, bw = pack(W)
     r1, r2 = regions(b, V, N, W)
     if b.meta.get('regions'): r1, r2 = b.meta['regions'](b, V, N, W, r1, r2)  # (a family's own paint regions: the dragon's plates)
+    if b.meta.get('paint'): r1, r2 = b.meta['paint'](b, V, N, W, r1, r2)  # (a family that paints by regions of its own: the sea's, D-267)
     return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=np.zeros(len(V), np.uint8), r1=r1, r2=r2), fine
 
 
@@ -104,6 +105,7 @@ def piece_of(b, pc, h, tris):
         if b.meta.get('regions'): r1, r2 = b.meta['regions'](b, V, N, W, r1, r2)
     if 'wing' in pc:  # (a wing: how far out along it each point is — its tip painted darker where the kind's are)
         sh, span = pc['wing']; r2[:, 0] = np.clip(np.round(np.linalg.norm(V - np.array(sh), axis=1) / max(span, 1e-3) * 255), 0, 255).astype(np.uint8)
+    if 'paint' in pc: r1, r2 = pc['paint'](V, N)  # (a piece painted by where each point is on it: the turtle's shell, D-267)
     return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=z, r1=r1, r2=r2)
 
 
