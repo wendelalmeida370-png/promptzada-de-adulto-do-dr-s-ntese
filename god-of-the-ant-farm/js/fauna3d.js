@@ -28,23 +28,41 @@
 
   // ------------------------------ the data ------------------------------
   function bytes(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
-  function geometryOf(m) {
-    const g = new THREE.InstancedBufferGeometry(); const n = m.n;
-    const q = new Uint16Array(bytes(m.pos).buffer); const pos = new Float32Array(n * 3);
+  // a mesh unpacked: format 2 (arte/fauna.py encode — octahedral normals, three weights, zone and occlusion in a byte, the
+  // regions in 4 bits, the corners in variable-length bytes) or the first, plain one
+  function unpack(m) {
+    const n = m.n; const q = new Uint16Array(bytes(m.pos).buffer); const pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) for (let k = 0; k < 3; k++) pos[i * 3 + k] = m.lo[k] + q[i * 3 + k] * m.sc[k];
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('normal', new THREE.BufferAttribute(new Int8Array(bytes(m.nor).buffer), 3, true));
-    g.setAttribute('aBone', new THREE.BufferAttribute(bytes(m.bi), 4, false));
-    g.setAttribute('aWt', new THREE.BufferAttribute(bytes(m.bw), 4, true));
-    g.setAttribute('aZone', new THREE.BufferAttribute(bytes(m.zone), 1, false));
-    g.setAttribute('aAO', new THREE.BufferAttribute(bytes(m.ao), 1, true));
-    g.setAttribute('aReg', new THREE.BufferAttribute(bytes(m.reg), 4, true));
-    g.setAttribute('aReg2', new THREE.BufferAttribute(bytes(m.reg2), 4, true));
-    g.setIndex(new THREE.BufferAttribute(new Uint16Array(bytes(m.idx).buffer), 1));
+    if (m.f !== 2) return { n, pos, nor: new Int8Array(bytes(m.nor).buffer), bi: bytes(m.bi), bw: bytes(m.bw), zone: bytes(m.zone), ao: bytes(m.ao), reg: bytes(m.reg), reg2: bytes(m.reg2), idx: new Uint16Array(bytes(m.idx).buffer) };
+    const oc = new Int8Array(bytes(m.oct).buffer), nor = new Int8Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      let x = oc[i * 2] / 127, y = oc[i * 2 + 1] / 127; let z = 1 - Math.abs(x) - Math.abs(y);
+      if (z < 0) { const ax = Math.abs(x), ay = Math.abs(y); x = (1 - ay) * (x >= 0 ? 1 : -1); y = (1 - ax) * (y >= 0 ? 1 : -1); }
+      const l = Math.hypot(x, y, z) || 1; nor[i * 3] = Math.round(x / l * 127); nor[i * 3 + 1] = Math.round(y / l * 127); nor[i * 3 + 2] = Math.round(z / l * 127);
+    }
+    const w3 = bytes(m.bw3), bw = new Uint8Array(n * 4); for (let i = 0; i < n; i++) { const a = w3[i * 3], b = w3[i * 3 + 1], c = w3[i * 3 + 2]; bw[i * 4] = a; bw[i * 4 + 1] = b; bw[i * 4 + 2] = c; bw[i * 4 + 3] = 255 - a - b - c; }
+    const za = bytes(m.za), zone = new Uint8Array(n), ao = new Uint8Array(n); for (let i = 0; i < n; i++) { zone[i] = za[i] >> 4; ao[i] = (za[i] & 15) * 17; }
+    const rg = bytes(m.rg), reg = new Uint8Array(n * 4), reg2 = new Uint8Array(n * 4); for (let i = 0; i < n * 4; i++) { reg[i] = (rg[i] >> 4) * 17; reg2[i] = (rg[i] & 15) * 17; }
+    const ix = bytes(m.ix), idx = new Uint16Array(m.tris * 3); let hw = 0, p = 0;
+    for (let k = 0; k < idx.length; k++) { let c = 0, sh = 0, b; do { b = ix[p++]; c |= (b & 127) << sh; sh += 7; } while (b & 128); idx[k] = c === 0 ? hw++ : hw - c; }
+    return { n, pos, nor, bi: bytes(m.bi), bw, zone, ao, reg, reg2, idx };
+  }
+  F3.unpack = unpack; // (for the tests)
+  function geometryOf(m) {
+    const g = new THREE.InstancedBufferGeometry(); const u = unpack(m);
+    g.setAttribute('position', new THREE.BufferAttribute(u.pos, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(u.nor, 3, true));
+    g.setAttribute('aBone', new THREE.BufferAttribute(u.bi, 4, false));
+    g.setAttribute('aWt', new THREE.BufferAttribute(u.bw, 4, true));
+    g.setAttribute('aZone', new THREE.BufferAttribute(u.zone, 1, false));
+    g.setAttribute('aAO', new THREE.BufferAttribute(u.ao, 1, true));
+    g.setAttribute('aReg', new THREE.BufferAttribute(u.reg, 4, true));
+    g.setAttribute('aReg2', new THREE.BufferAttribute(u.reg2, 4, true));
+    g.setIndex(new THREE.BufferAttribute(u.idx, 1));
     const rows = new Float32Array(MAXR); const ra = new THREE.InstancedBufferAttribute(rows, 1); ra.setUsage(THREE.DynamicDrawUsage);
     g.setAttribute('aRow', ra); g.instanceCount = 0;
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
-    return { g, rows, ra, tris: m.tris };
+    return { g, rows, ra, tris: m.tris, u };
   }
 
   // ------------------------------ the shaders ------------------------------
@@ -213,10 +231,10 @@ vec3 f3paint() {
       for (const name in D.meshes) {
         const o = geometryOf(D.meshes[name]);
         const m = new THREE.Mesh(o.g, mat); m.frustumCulled = false; m.castShadow = true; m.receiveShadow = false; m.customDepthMaterial = depth; m.matrixAutoUpdate = false; m.visible = false;
-        scene.add(m); MESH[name] = { mesh: m, geo: o.g, rows: o.rows, ra: o.ra, n: 0, tris: o.tris };
+        scene.add(m); MESH[name] = { mesh: m, geo: o.g, rows: o.rows, ra: o.ra, n: 0, tris: o.tris, u: o.u };
       }
       for (const name in D.forms) { const f = D.forms[name]; FORM[name] = { J: new Float32Array(f.bind), box: f.box, meta: f.meta }; }
-      F3.dataErr = selfCheck();
+      F3.dataErr = selfCheck(); for (const k in MESH) MESH[k].u = null;
       F3.ready = true; return true;
     } catch (e) { F3.failed = String((e && e.message) || e); F3.ready = false; return false; }
   };
@@ -229,7 +247,7 @@ vec3 f3paint() {
       if (!e || !MESH[e.mesh] || !FORM[e.mesh]) { out.push(`bicho ${kind}: sem malha`); continue; }
       if (sp.cls === 'air' && (!e.fly || !MESH[e.fly] || !FORM[e.fly])) out.push(`bicho ${kind}: ave do ar sem a malha do voo`);
       if (!G.FaunaAnim.paint(kind)) out.push(`bicho ${kind}: sem pelagem (FaunaAnim PAINT)`); }
-    for (const name in D.meshes) { const m = D.meshes[name]; const idx = new Uint16Array(bytes(m.idx).buffer), bi = bytes(m.bi), bw = bytes(m.bw), zn = bytes(m.zone);
+    for (const name in D.meshes) { const m = D.meshes[name]; const u = MESH[name] ? MESH[name].u : unpack(m); const idx = u.idx, bi = u.bi, bw = u.bw, zn = u.zone;
       for (let i = 0; i < idx.length; i++) if (idx[i] >= m.n) { out.push(`malha ${name}: índice ${idx[i]} além dos ${m.n} pontos`); break; }
       for (let i = 0; i < m.n; i++) { if (bw[i * 4] + bw[i * 4 + 1] + bw[i * 4 + 2] + bw[i * 4 + 3] !== 255) { out.push(`malha ${name}: ponto ${i} com pesos que não somam 1`); break; }
         if (bi[i * 4] >= NB || bi[i * 4 + 1] >= NB || bi[i * 4 + 2] >= NB || bi[i * 4 + 3] >= NB) { out.push(`malha ${name}: ponto ${i} num osso que não existe`); break; }

@@ -138,13 +138,38 @@ def beast_meshes(b, near=760, far=160):
 
 
 def encode(m):
-    V = m['V']; lo = V.min(0); hi = V.max(0); sc = np.maximum(hi - lo, 1e-6) / 65535.0
+    """A mesh, packed (format 2): the points reordered by their first use; positions in 16 bits over the mesh's box; the
+    normal in two bytes (octahedral); four bones and three weights (the fourth is what is left of 255); the zone and the
+    occlusion in one byte (4 bits each); the eight paint regions in 4 bits each; the triangles' corners as how far back
+    from the next new point each one is (0: the next new point), in variable-length bytes. js/fauna3d.js unpacks it."""
+    V, N, T = m['V'], m['N'], m['T']; n = len(V)
+    seen = -np.ones(n, np.int64); order = []
+    for i in T.reshape(-1):
+        if seen[i] < 0: seen[i] = len(order); order.append(i)
+    for i in range(n):
+        if seen[i] < 0: seen[i] = len(order); order.append(i)
+    order = np.array(order, np.int64); T = seen[T]
+    V = V[order]; N = N[order]
+    lo = V.min(0); hi = V.max(0); sc = np.maximum(hi - lo, 1e-6) / 65535.0
     q = np.clip(np.round((V - lo) / sc), 0, 65535).astype(np.uint16)
-    n = np.clip(np.round(m['N'] * 127), -127, 127).astype(np.int8)
-    T = m['T'].astype(np.uint16)
-    return {'n': int(len(V)), 'tris': int(len(T)), 'lo': [round(float(x), 6) for x in lo], 'sc': [float('%.9g' % x) for x in sc],
-            'pos': b64(q), 'nor': b64(n), 'bi': b64(m['bi']), 'bw': b64(m['bw']), 'zone': b64(m['zone'].astype(np.uint8)),
-            'ao': b64(np.clip(np.round(m['ao'] * 255), 0, 255).astype(np.uint8)), 'reg': b64(m['r1']), 'reg2': b64(m['r2']), 'idx': b64(T)}
+    Nn = N / np.maximum(np.abs(N).sum(1, keepdims=True), 1e-9); sx = np.where(Nn[:, 0] >= 0, 1.0, -1.0); sy = np.where(Nn[:, 1] >= 0, 1.0, -1.0)
+    ox = np.where(Nn[:, 2] >= 0, Nn[:, 0], (1 - np.abs(Nn[:, 1])) * sx); oy = np.where(Nn[:, 2] >= 0, Nn[:, 1], (1 - np.abs(Nn[:, 0])) * sy)
+    oct_ = np.clip(np.round(np.stack([ox, oy], 1) * 127), -127, 127).astype(np.int8)
+    bw = m['bw'][order]; bi = m['bi'][order]
+    za = ((m['zone'][order].astype(np.uint8) & 15) << 4) | np.clip(np.round(m['ao'][order] * 15), 0, 15).astype(np.uint8)
+    n1 = np.clip(np.round(m['r1'][order] / 255.0 * 15), 0, 15).astype(np.uint8); n2 = np.clip(np.round(m['r2'][order] / 255.0 * 15), 0, 15).astype(np.uint8)
+    rg = (n1 << 4) | n2
+    ix = bytearray(); hw = 0
+    for i in T.reshape(-1):
+        if i == hw: c = 0; hw += 1
+        else: c = hw - int(i)
+        while True:
+            b7 = c & 127; c >>= 7
+            if c: ix.append(b7 | 128)
+            else: ix.append(b7); break
+    return {'f': 2, 'n': int(n), 'tris': int(len(T)), 'lo': [round(float(x), 6) for x in lo], 'sc': [float('%.9g' % x) for x in sc],
+            'pos': b64(q), 'oct': b64(oct_), 'bi': b64(bi), 'bw3': b64(np.ascontiguousarray(bw[:, :3])), 'za': b64(za), 'rg': b64(rg),
+            'ix': b64(np.frombuffer(bytes(ix), np.uint8))}
 
 
 def load_old():
