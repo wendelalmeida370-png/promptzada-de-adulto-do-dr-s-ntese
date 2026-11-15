@@ -355,6 +355,7 @@
     p.angry = 0;
     if (k === CROC) a.dz = A.deepSpot(a);
     if (k === THROAT || k === MUZZLE) L.wound(p, NECK, 0.35, a); else if (k === NAPE || k === SKULL) L.wound(p, k === SKULL ? HEAD : NECK, 0.45, a);
+    else if (k === CROC) { hit(p, (6 + SP[a.kind].hp * 0.06) * (a.grown || 1), a); if (!p.dead) L.wound(p, SP[p.kind].size > 1 ? HEAD : LEGS, 0.3, a); } // (the jaws close on a muzzle, a leg)
     holdGest(a, p, k, 0);
     L.place(a, p);
     L.count('agarra'); L.count('agarra:' + a.kind + ':' + KN[k]);
