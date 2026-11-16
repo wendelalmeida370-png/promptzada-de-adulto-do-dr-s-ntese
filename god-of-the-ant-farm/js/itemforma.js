@@ -196,7 +196,6 @@
     for (let i = n - 1; i >= 1; i--) { const x = -1 + 2 * i / n; o.push([-prof(x), x * w, rib && i * 2 === n ? 's' : '']); }
     return o;
   }
-  const lineY = (y0, y1, n, f) => { const o = []; for (let k = 0; k <= n; k++) { const t = k / n; const y = lerp(y0, y1, t); o.push(f ? f(t, y) : [0, y, 0]); } return o; };
   const bez = (p0, p1, p2, p3, n) => { const o = []; for (let k = 0; k <= n; k++) { const t = k / n, s = 1 - t; o.push([0, 1, 2].map(i => s * s * s * p0[i] + 3 * s * s * t * p1[i] + 3 * s * t * t * p2[i] + t * t * t * p3[i])); } return o; };
   // lathe: a profile [[r, y], …] (r may be [rx, rz]) turned round Y (or round o.at / o.axis): ends closed with o.cap0 / cap1
   function lathe(M, prof, n, m, o = {}) {
@@ -388,7 +387,7 @@
       if (q < 2) collar(M, 0.085, 0.018, 0.0165, me);
       part(M, 'cabeca');
       // (the blade: its back on the outside of the curve, the honed edge on the inside, toward the curve's middle)
-      loft(M, path, (k, t) => { const w = wOf(t); const s = blade(w, mat === 'bronze' ? 0.0035 : 0.0026, seg(M, 4, 2, 1), false, true, mat === 'bronze' && q === 0 ? 0.25 : 0); return s.map(([u, v, f]) => [u, v + w * 0.5 * 0, f]); },
+      loft(M, path, (k, t) => { const w = wOf(t); const s = blade(w, mat === 'bronze' ? 0.0035 : 0.0026, seg(M, 4, 2, 1), false, true, mat === 'bronze' && q === 0 ? 0.25 : 0); return s; },
         me, { ax: [1, 0, 0], cap0: true, cap1: [0, arc[na][1] - 0.002, arc[na][2] - 0.004], f: (k, t, j, u, v) => ({ e: v > 0.0 ? sstep(0, 0.6, v / Math.max(1e-4, wOf(t))) : 0 }) });
     }
     M.marks.ponta = arc[na]; M.marks.centro = [0, C[1] + 0.08, C[2]];
@@ -435,8 +434,8 @@
   // the fishing rod: a cane of nodes, long and whippy, the line along it from the winder at the butt to the tip
   R.vara = (M) => {
     const q = M.q; part(M, 'cabo');
-    const y0 = -0.3, y1 = 2.3; const ys = q === 0 ? [] : null; const rad = y => lerp(0.0165, 0.0032, Math.pow((y - y0) / (y1 - y0), 0.85));
-    const pts = []; const n = seg(M, 26, 9, 2); for (let k = 0; k <= n; k++) { const t = k / n; const y = lerp(y0, y1, t); pts.push([0, y, 0.035 * t * t]); } void ys;
+    const y0 = -0.3, y1 = 2.3; const rad = y => lerp(0.0165, 0.0032, Math.pow((y - y0) / (y1 - y0), 0.85));
+    const pts = []; const n = seg(M, 26, 9, 2); for (let k = 0; k <= n; k++) { const t = k / n; const y = lerp(y0, y1, t); pts.push([0, y, 0.035 * t * t]); }
     const nodes = [0.25, 0.62, 1.0, 1.38, 1.76];
     const cane = pp => loft(M, pp, (k, t) => { const y = pp[k][1]; let r = rad(y); if (q === 0) for (const nd of nodes) r *= 1 + 0.18 * Math.exp(-Math.pow((y - nd) / 0.018, 2)); return circ(r, seg(M, 8, 5, 4)); }, PAL.clara, { cap0: true, cap1: true,
       f: (k, t, j, u, v, p) => { let nd = 0; for (const z of nodes) nd = Math.max(nd, Math.exp(-Math.pow((p[1] - z) / 0.02, 2))); return { ao: 1 - 0.3 * nd, gl: 1.5 }; } });
@@ -639,9 +638,9 @@
     lathe(M, [[0.0035, -0.008], [0.0048, 0.0], [0.0043, 0.03], [0.0042, y1]], seg(M, 6, 5, 3), PAL.madeira, { cap0: [0, -0.01, 0], cap1: true, f: (k, t, j, u, v, p) => ({ ao: p[1] < 0.006 ? 0.55 : 1 }) });
     if (q < 2) { part(M, 'amarra');
       for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + Math.PI / 2; const d = [Math.cos(a), 0, Math.sin(a)]; const ys = q === 0 ? [0.03, 0.06, 0.1, 0.14, 0.165] : [0.03, 0.165]; const hOf = y => 0.012 * Math.sin(Math.PI * clamp((y - 0.03) / 0.135, 0, 1) * 0.85 + 0.15);
-        const v0 = M.P.length / 3, i0 = M.I.length; const mm = i === 0 ? PAL.penaT : PAL.pena;
+        const mm = i === 0 ? PAL.penaT : PAL.pena;
         loft(M, ys.map(y => [0, y, 0]), (k) => { const y = ys[k], h = hOf(y); return [[0.0045, -0.0005, ''], [0.0045 + h, -0.0003, 's'], [0.0045 + h, 0.0003, 's'], [0.0045, 0.0005, '']]; }, mm, { axis: [0, 1, 0], ax: d, cap0: true, cap1: true });
-        void v0; void i0; } }
+      } }
     part(M, 'cabeca'); const me = mat === 'pedra' ? PAL.pedra : metal(mat);
     if (mat !== 'pedra' && q < 2) collar(M, y1 - 0.004, 0.022, 0.0052, me);
     if (mat === 'pedra' && q < 2) wrap(M, y1 - 0.025, y1 + 0.004, 0.0046, PAL.cru, { turns: 3 });
@@ -675,8 +674,6 @@
     part(M, 'cabeca');
     const zf = r => 0.03 + dish * (1 - (r / Rr) * (r / Rr)); // (the face: dished forward)
     const nu = seg(M, 28, 14, 8), nr = seg(M, br ? 7 : 7, 3, 1); const hole = 0.07;
-    const ring = (r, z, k) => (s) => [Math.cos(s * TAU) * r, Math.sin(s * TAU) * r, z];
-    void ring;
     const plank = x => { const f = ((x + Rr) / 0.12) % 1; return Math.min(f, 1 - f); };
     if (!br) {
       // (four quarters, each its own patch so the paint stops on a line: two painted, two the bare planks)

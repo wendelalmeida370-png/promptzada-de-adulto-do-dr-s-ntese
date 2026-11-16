@@ -61,6 +61,11 @@
     g.userData = { key: k, lod: L, tris: b.idx.length / 3, parts: b.parts, marks: b.marks, tint: b.tint };
     geos.set(id, g); return g;
   };
+  // (a shape is made the first time it is asked — a few milliseconds, the cuirass some tens: a drawer that would rather not pay
+  // that in the frame a thing first appears makes them ahead, n shapes a call, while it idles; true when all are made)
+  let warmQ = null;
+  IA.warm = function (n) { if (!T3() || !FO()) return false; if (!warmQ) { warmQ = []; for (const k of IA.keys()) for (let l = 0; l < 3; l++) warmQ.push([k, l]); }
+    for (let i = 0; i < (n || 1) && warmQ.length; i++) { const [k, l] = warmQ.shift(); IA.geo(k, l); } return !warmQ.length; };
   // where the hands take it, in its frame: main (the origin) and, for a thing of two hands, off — the other hand's place
   // (the spear's rear hand, the spade's T, the bow's string where the drawing hand nocks)
   IA.grip = key => { const b = raw(key, 0); return { main: [0, 0, 0], off: b && b.off ? b.off.slice() : null }; };
@@ -103,7 +108,7 @@
       if (kind === 'funda') return { bone: 'pel', at: [0.13, 0.07, 0.1], y: [1, 0, 0], z: [0, -1, 0] };
       // (the axe, the hammer, the sickle, the club: hung by the head through the belt at the right hip, the handle down)
       const hy = inf.head; const [Y, Z] = ortho([-0.08, 1, 0], [0, 0, -1]);
-      return { bone: 'pel', at: [-0.2 - 0.08 * hy * 0, 0.06 - hy, -0.04], y: Y, z: Z };
+      return { bone: 'pel', at: [-0.2, 0.06 - hy, -0.04], y: Y, z: Z };
     },
   };
   const stows = new Map();

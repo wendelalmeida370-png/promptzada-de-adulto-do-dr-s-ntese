@@ -334,7 +334,9 @@ uma chave desconhecida dão `null` em tudo.
   Atributos: `position`, `normal`, `color` (luz linear: o veio, a sombra dos encaixes, o fio afiado já nela — lê bem com qualquer
   material Lambert de cor por vértice), `shine` (3 por ponto: metal, polimento, tinta). `userData`: `{ key, lod, tris, parts, marks,
   tint }` — `parts` são corridas do índice (`cabo`, `cabeca`, `amarra`, `corda`, `enfeite`), `tint` 1 quando a forma tem tinta do povo.
-  **Uma malha instanciada por chave e nível** é o uso pensado (as pessoas seguram coisas às dúzias).
+  **Uma malha instanciada por chave e nível** é o uso pensado (as pessoas seguram coisas às dúzias). A forma é feita na primeira vez
+  que se pede (~4 ms; a couraça de bronze, ~30 ms, medido com a máquina ocupada; as 141 juntas, ~0,5 s e ~1,9 MB): quem desenha pode
+  fazê-las de antemão, aos poucos, com `G.ItemArt.warm(n)` (n formas por chamada; verdade quando acabou).
 - **O quadro de cada coisa** (D-337, medido no rig do jogo: com o punho neutro, o +Y do quadro `tool` do `people3d.js` é o eixo do
   punho e o +Z é o rumo do antebraço, do cotovelo para os dedos): a origem no punho da mão principal; +Y ao longo do cabo para a
   parte que trabalha; +Z a frente dela (o fio do machado, da foice, da picareta, da enxada; a face do martelo; os dois fios da espada,
