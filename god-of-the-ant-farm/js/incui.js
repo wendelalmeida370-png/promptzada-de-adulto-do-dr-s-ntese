@@ -67,11 +67,12 @@
         <div class="ih-prompt hidden"><kbd>E</kbd><span></span></div>
         <div class="ih-hotbar"></div>
         <div class="ih-reticle"></div>
+        <div class="ih-lockmark hidden"><i></i></div>
         <div class="ih-hint panel"></div>
         <div class="ih-corner"><button class="ih-diary" title="Diário de Vida">${(G.ICON && G.ICON.book) || ''}<span>Diário</span></button><button class="ih-god" title="Voltar ao Modo Deus">${(G.ICON && G.ICON.eye) || ''}<span>Modo Deus</span></button></div>
         <div class="ih-toasts"></div>
         <div class="ih-sleep hidden">Dormindo… <small>o tempo passa depressa · <kbd>E</kbd> para acordar</small></div>
-        <div class="ih-touch hidden"><div class="ih-stick"><i></i></div><button data-k="pular">Pular</button><button data-k="correr">Correr</button><button data-k="interagir">E</button><button data-k="menu">☰</button></div>
+        <div class="ih-touch hidden"><div class="ih-stick"><i></i></div><div class="ih-tb"></div></div>
       </div>
       <div id="inc-label" class="hidden"></div>
       <div id="inc-card" class="panel hidden"></div>
@@ -86,17 +87,60 @@
     root.classList.toggle('hud-off', hudOff);
     $('.ih-god', hud).onclick = () => G.Modes.leave('deus');
     $('.ih-diary', hud).onclick = () => G.Input3D.press('diario'); // (the same as its key)
-    for (const b of hud.querySelectorAll('.ih-touch button')) {
-      const k = b.dataset.k;
-      b.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); if (k === 'correr') G.Input3D.press(k, !G.Input3D.down.correr); else G.Input3D.press(k); }, { passive: false });
-    }
+    touchBuild();
     card.addEventListener('click', onCardClick); menu.addEventListener('click', onMenuClick); menu.addEventListener('input', onMenuInput);
     // (the cards and the menu are the mouse's: a click there is not a look-around)
     for (const el of [card, menu]) el.addEventListener('mousedown', e => e.stopPropagation());
   };
   IU.show = function (on) { if (!root) return; hud.classList.toggle('hidden', !on); if (on) { hintT = 14; } if (!on) { label.classList.add('hidden'); } };
   IU.touchOn = () => { if (root) hud.querySelector('.ih-touch').classList.remove('hidden'); };
-  IU.stick = function (s) { if (!stickEl) return; stickEl.classList.toggle('on', !!s); if (s) { stickEl.style.left = (s.ox - 60) + 'px'; stickEl.style.top = (s.oy - 60) + 'px'; stickEl.firstChild.style.transform = `translate(${s.x * 40}px, ${s.y * 40}px)`; } };
+  // (the thumb's knob where the thumb is, to the ring's edge; past the ring — the sprint — the ring glows)
+  IU.stick = function (s) { if (!stickEl) return; stickEl.classList.toggle('on', !!s); if (s) { stickEl.style.left = (s.ox - 60) + 'px'; stickEl.style.top = (s.oy - 60) + 'px'; stickEl.firstChild.style.transform = `translate(${(s.vx !== undefined ? s.vx : s.x) * 40}px, ${(s.vy !== undefined ? s.vy : s.y) * 40}px)`; stickEl.classList.toggle('run', !!s.run); } };
+  // ------------------------------ the fingers' buttons (20b, D-355) ------------------------------
+  // built from Input3D's registry of buttons (each action brings its own: the jump, the hands, the sprint, the dodge, the crouch,
+  // the target; the second wave the blow and the guard), shown when their moment is — asked a few times a second —, laid round
+  // the right thumb in the order they come; the menu in the corner. A held one is pressed and let go with the finger; a toggle
+  // shows whether it is on
+  let tbVer = -1, tbT = 0; const tbEls = new Map();
+  const ARC = [[22, 110], [98, 146], [94, 64], [166, 100], [170, 22], [22, 192], [100, 226], [176, 178]];
+  function touchBuild() {
+    const In = G.Input3D, box = root && $('.ih-tb', hud); if (!box || tbVer === In.btnVer) return; tbVer = In.btnVer;
+    box.innerHTML = ''; tbEls.clear();
+    for (const d of In.BUTTONS) {
+      const el = document.createElement('button'); el.dataset.k = d.a; el.className = 'ih-tbtn' + (d.slot === 'canto' ? ' canto' : '') + (d.a === 'pular' ? ' main' : '');
+      el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); if (G.Audio && G.Audio.init) G.Audio.init();
+        if (d.a === 'correr') In.touchRun(); else if (d.hold) In.press(d.a, true); else In.press(d.a); tbT = 0; }, { passive: false });
+      el.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); if (d.hold) In.press(d.a, false); }, { passive: false });
+      el.addEventListener('touchcancel', () => { if (d.hold) In.press(d.a, false); });
+      box.appendChild(el); tbEls.set(d.a, { el, d, vis: null, lab: null, on: null });
+    }
+    tbT = 0;
+  }
+  function touchFrame(rdt) {
+    if (!root || !G.Input3D.touch) return; touchBuild(); tbT -= rdt; if (tbT > 0) return; tbT = 0.25;
+    let k = 0;
+    for (const [, q] of tbEls) {
+      const d = q.d; const vis = !d.when || !!d.when();
+      if (vis !== q.vis) { q.vis = vis; q.el.classList.toggle('hidden', !vis); }
+      if (!vis) continue;
+      const lab = typeof d.label === 'function' ? d.label() : d.label; if (lab !== q.lab) { q.lab = lab; q.el.textContent = lab; }
+      const on = d.toggle && d.on ? !!d.on() : false; if (on !== q.on) { q.on = on; q.el.classList.toggle('on', on); }
+      if (d.slot !== 'canto') { const p = ARC[Math.min(k, ARC.length - 1)]; k++; const st = `${p[0]}px|${p[1]}px`; if (q.el._at !== st) { q.el._at = st; q.el.style.right = p[0] + 'px'; q.el.style.bottom = `calc(${p[1]}px + env(safe-area-inset-bottom, 0px))`; } }
+    }
+  }
+  IU.touchButtons = () => [...tbEls.values()].filter(q => q.vis).map(q => q.d.a); // (for the proofs: the buttons shown now)
+  // (the target held, marked where the 3D draws it — a diamond over it —, and the reticle of the aim: only the eye's, D-369)
+  let lockEl = null; IU.lockAt = null;
+  function lockFrame() {
+    if (!hud) return; if (!lockEl) lockEl = $('.ih-lockmark', hud);
+    hud.classList.toggle('aiming', !!(G.Modes.inc() && G.Cam3D.aiming && G.Cam3D.aiming()));
+    const t = G.Modes.inc() && G.Cam3D.locked ? G.Cam3D.locked() : null; const cam = t && G.Realm.camera && G.Realm.camera();
+    if (!t || !cam || !window.THREE) { if (!lockEl.classList.contains('hidden')) lockEl.classList.add('hidden'); IU.lockAt = null; return; }
+    const q = IU._lv || (IU._lv = new window.THREE.Vector3()); q.set(t.X, t.Y + 0.35, t.Z); q.project(cam);
+    if (q.z > 1) { lockEl.classList.add('hidden'); IU.lockAt = null; return; }
+    const x = (q.x * 0.5 + 0.5) * window.innerWidth, y = (-q.y * 0.5 + 0.5) * window.innerHeight;
+    lockEl.classList.remove('hidden'); lockEl.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`; IU.lockAt = { x, y };
+  }
 
   // ------------------------------ words of the moment ------------------------------
   IU.toast = function (txt, dur) {
@@ -199,7 +243,7 @@
     // fades, banners, toasts, news
     if (fade) { fade.t += rdt; const k = Math.min(1, fade.t / fade.d); fadeEl.style.opacity = G.lerp(fade.a, fade.b, k); if (k >= 1) { const d = fade.done; fade = null; d && d(); } }
     if (bannerT > 0) { bannerT -= rdt; if (bannerT <= 0) { banner.classList.add('hidden'); root.classList.remove('ib-on'); } }
-    hurtFrame(rdt);
+    hurtFrame(rdt); touchFrame(rdt); lockFrame();
     for (let k = toasts.length - 1; k >= 0; k--) { const o = toasts[k]; o.t -= rdt; if (o.t <= 0) { o.el.remove(); toasts.splice(k, 1); } else fadeOut(o.el, o.t, 0.5); }
     let nd = false; for (let k = news.length - 1; k >= 0; k--) { news[k].t -= rdt; if (news[k].t <= 0) { news.splice(k, 1); nd = true; } } if (nd) renderNews();
     { const els = $('.ih-news', hud).children; for (let k = 0; k < news.length && k < els.length; k++) fadeOut(els[k], news[k].t, 0.8); }
@@ -266,7 +310,7 @@
     $('.ih-sleep', hud).classList.toggle('hidden', !v.sleeping);
     hud.classList.toggle('asleep', !!v.sleeping);
     const h = $('.ih-hint', hud); h.classList.toggle('hidden', hintT <= 0);
-    if (hintT > 0) h.innerHTML = [['frente', 'andar'], ['correr', 'correr'], ['pular', 'pular'], ['interagir', 'interagir'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? 'WASD' : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + '<span><kbd>Mouse</kbd> olhar</span>';
+    if (hintT > 0) h.innerHTML = [['frente', 'trotar'], ['correr', 'disparar'], ['andar', 'andar devagar'], ['pular', 'pular'], ['esquivar', 'esquivar'], ['agachar', 'agachar'], ['interagir', 'interagir'], ['travar', 'travar a mira'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? (G.Input3D.device === 'pad' ? 'Bastão' : 'WASD') : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + `<span><kbd>${G.Input3D.device === 'pad' ? 'Bastão direito' : 'Mouse'}</kbd> olhar</span>`;
   };
   // the words over the heads and the little texts of the world: what the god's view draws over it, over the body's eyes too —
   // the words said (G.Talk: a bubble over the one who speaks, typed out by the world's clock; the same bubble by the same hand,
@@ -375,7 +419,7 @@
 
   // ------------------------------ cards ------------------------------
   IU.card = function (c, said) {
-    if (!root) return; G.Modes.setPanel('card'); G.Input3D.unlock(); G.Input3D.clear(); card.classList.remove('diario');
+    if (!root) return; G.Modes.setPanel('card'); G.Input3D.free(); card.classList.remove('diario');
     let h = `<button class="x" data-c="close">×</button>`;
     if (c.kind === 'person') {
       const o = G.S.villagers.get(c.id);
@@ -412,7 +456,7 @@
   IU.selfCard = function () {
     const c = G.Possess.context(); if (!c) return;
     const v = G.Possess.body(); const pc = G.Interact.personCard(v, null);
-    G.Modes.setPanel('self'); G.Input3D.unlock(); G.Input3D.clear(); card.classList.remove('diario');
+    G.Modes.setPanel('self'); G.Input3D.free(); card.classList.remove('diario');
     const caps = c.caps; const kind = (G.Possess.KINDS[c.kind] || {}).label || c.kind;
     let h = `<button class="x" data-c="close">×</button><div class="ic-head"><div><h3>${esc(pc.name)}</h3><div class="sub">${esc(pc.sub)} · ${esc(kind)}</div></div></div>`;
     const rows = [];
@@ -435,7 +479,7 @@
   let diaryLines = [], diaryT = 0, diaryH = '';
   IU.diary = function () {
     if (!root || !G.DiarioUI || !G.Possess.body()) return;
-    G.Modes.setPanel('diario'); G.Input3D.unlock(); G.Input3D.clear();
+    G.Modes.setPanel('diario'); G.Input3D.free();
     card.classList.add('diario'); diaryT = 1; renderDiary(true); card.scrollTop = 0; card.classList.remove('hidden'); // (opened: from its top)
   };
   IU.diaryLines = () => diaryLines; // (for the tests: the lines of the page as it was drawn, in the order of their data-i)
@@ -472,6 +516,8 @@
       if (a === 'diario') { e.preventDefault(); if (G.Modes.panelIs('diario')) { IU.closeAll(); G.Modes.setPanel(null); } else IU.diary(); return true; }
       if (a === 'ficha' && G.Modes.panelIs('diario')) { e.preventDefault(); IU.selfCard(); return true; }
       if (a === 'interagir' || a === 'menu' || (a === 'ficha' && G.Modes.panel())) { e.preventDefault(); IU.closeAll(); G.Modes.setPanel(null); return true; }
+      // (the feet's keys pressed over a card go on to the hands' table — held, they walk once it shuts: L-1142)
+      if (a === 'frente' || a === 'tras' || a === 'esquerda' || a === 'direita' || a === 'correr') return false;
       return a !== null;
     }
     return false;
@@ -495,11 +541,18 @@
         <div class="im-row"><label><input type="checkbox" data-h="tela" ${hudOff ? '' : 'checked'}> Mostrar a tela — nome, lugar, hora, avisos <kbd>${esc(G.Input3D.label('tela'))}</kbd></label></div>
         <div class="im-note">Enquanto você vive esta vida, o mundo segue no mesmo relógio — só que no passo de uma pessoa (o tempo corre a 0,35× da velocidade normal do Modo Deus).</div>`;
     } else if (tab === 'controles') {
-      h += `<div class="im-title">Controles</div><table class="im-keys">${G.Input3D.ACTIONS.map(([a, t]) => `<tr><td>${esc(t)}</td><td><button data-m="bind" data-a="${a}">${esc(G.Input3D.label(a))}</button></td></tr>`).join('')}</table>
+      // (20b: each action with its keys and mouse buttons and its controller button — a click on either and the next key, button
+      // of the mouse or of the controller is it —; the eye's choices for the mouse, the controller and the fingers)
+      const In = G.Input3D;
+      h += `<div class="im-title">Controles</div><table class="im-keys"><tr><th></th><th>Teclado e mouse</th><th>Controle</th></tr>${In.ACTIONS.map(([a, t]) => `<tr><td>${esc(t)}</td><td><button data-m="bind" data-a="${a}">${esc(In.keyLabel(a) || '—')}</button></td><td><button data-m="bind" data-pad="1" data-a="${a}">${esc(In.padLabel(a) || '—')}</button></td></tr>`).join('')}</table>
+        <div class="im-note">W A S D trotam; ${esc(In.keyLabel('correr'))} dispara (o fôlego acaba e volta); ${esc(In.keyLabel('andar'))} anda devagar, ao passo das pessoas; ${esc(In.keyLabel('esquivar'))} esquiva. No controle e no toque, o quanto se empurra o bastão é a velocidade.</div>
         <div class="im-row"><label>Sensibilidade do mouse <input type="range" min="0.3" max="2.5" step="0.05" value="${O.sens}" data-o="sens"></label></div>
+        <div class="im-row"><label>Sensibilidade do controle <input type="range" min="0.3" max="2.5" step="0.05" value="${O.padSens}" data-o="padSens"></label></div>
+        <div class="im-row"><label>Sensibilidade do toque <input type="range" min="0.3" max="2.5" step="0.05" value="${O.touchSens}" data-o="touchSens"></label></div>
         <div class="im-row"><label>Campo de visão <input type="range" min="45" max="80" step="1" value="${O.fov}" data-o="fov"></label></div>
         <div class="im-row"><label><input type="checkbox" data-o="invertY" ${O.invertY ? 'checked' : ''}> Inverter o eixo vertical</label></div>
-        <div class="im-row"><label><input type="checkbox" data-o="follow" ${O.follow ? 'checked' : ''}> Câmera volta para trás das costas ao andar</label></div>
+        <div class="im-row"><label><input type="checkbox" data-o="follow" ${O.follow ? 'checked' : ''}> A câmera vai devagar para trás das costas quando você anda reto para a frente</label></div>
+        <div class="im-row"><label><input type="checkbox" data-o="side" ${O.side < 0 ? 'checked' : ''}> Câmera sobre o ombro esquerdo <kbd>${esc(In.keyLabel('ombro'))}</kbd></label></div>
         <div class="im-col"><button data-m="resetkeys">Restaurar teclas</button></div>`;
     } else {
       const Q = G.Realm.Q();
@@ -522,14 +575,14 @@
     else if (m === 'resume') G.Modes.menu(false);
     else if (m === 'god') { G.Modes.menu(false); G.Modes.leave('deus'); }
     else if (m === 'save') { G.Save.save(); IU.toast('Jogo salvo — no corpo de ' + (G.Possess.body() || {}).name + '.'); }
-    else if (m === 'bind') { b.textContent = 'Aperte uma tecla…'; G.Input3D.listen(b.dataset.a, () => renderMenu()); }
+    else if (m === 'bind') { b.textContent = b.dataset.pad ? 'Aperte um botão do controle…' : 'Aperte uma tecla ou um botão do mouse…'; G.Input3D.listen(b.dataset.a, () => renderMenu()); }
     else if (m === 'resetkeys') { G.Input3D.resetBinds(); renderMenu(); }
     else if (m === 'q') { G.Realm.setQuality(b.dataset.q); renderMenu(); }
   }
   function onMenuInput(e) {
     const t = e.target; const O = G.Cam3D.OPT;
     if (t.dataset.h === 'tela') IU.setHud(t.checked, true);
-    if (t.dataset.o) { const k = t.dataset.o; O[k] = t.type === 'checkbox' ? t.checked : +t.value; G.Cam3D.saveOpt(); }
+    if (t.dataset.o) { const k = t.dataset.o; O[k] = k === 'side' ? (t.checked ? -1 : 1) : t.type === 'checkbox' ? t.checked : +t.value; G.Cam3D.saveOpt(); }
     // (a box turned back on returns to what the preset itself has — the Ultra's shadows are 4096, not 1024; a preset that
     // has none, the Leve, gets the middle size)
     if (t.dataset.g) { const k = t.dataset.g; const P = (G.Realm.QUAL || {})[G.Realm.q] || {}; G.Realm.setOver(k, t.type === 'checkbox' ? (t.checked ? (P[k] || (k === 'shadows' ? 1024 : 1)) : 0) : +t.value); }

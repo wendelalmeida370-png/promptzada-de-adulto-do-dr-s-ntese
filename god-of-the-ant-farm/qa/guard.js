@@ -963,6 +963,36 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 //  sua marca, para que as junções não se cruzem)
 // === 20a: a animação ===
 // === 20b: o movimento ===
+// 120. "o rumo do corpo gira, não estala" (D-358): no avatar.js o rumo do corpo (b.yaw) só muda pelo giro (steer, a velocidade de giro
+// do corpo), pela virada do ato e do nado (suaves), pelo assento que se alisa — e salta só onde o corpo inteiro salta (deitado na cama
+// pelo mundo, um save aberto sentado). Ao subir uma borda, tomar um lance, ser derrubado: turnTo, nunca b.yaw = …
+{ const YAW_OK = ['b.yaw += b.yawV * h', 'b.yaw += da * (1 - Math.exp(-8 * h))', 'b.yaw += da * (1 - Math.exp(-TUNE.turn * 0.45 * h))', 'b.yaw = s.yaw0 + da * e', 'b.yaw = Math.PI / 2 - sp.ry', 'b.yaw = yaw1'];
+  (src['avatar.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bb\.yaw\s*(=(?!=)|\+=|-=)/.test(c) && !YAW_OK.some(p => c.includes(p))) fails.push(`o rumo gira (D-358): avatar.js:${k + 1} muda o rumo do corpo de uma vez — use turnTo/steer: ${l.trim().slice(0, 110)}`); }); }
+// 121. "as teclas são ações" (D-339, D-355): os arquivos do corpo não leem uma tecla pela letra — perguntam ao Input3D pela ação
+// (actionOf, on, down); só as teclas F da bancada (F2, F5, F12) são lidas direto
+for (const f of ['avatar.js', 'modes.js', 'incui.js', 'cam3d.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\b(e|ev|event)\.(key|code)\s*[!=]==?\s*['"](?!F\d)/.test(c)) fails.push(`as teclas são ações (D-339): ${f}:${k + 1} lê uma tecla pela letra — pergunte ao Input3D.actionOf: ${l.trim().slice(0, 110)}`); });
+// 122. "o painel não solta as mãos de vez" (L-1142): só o modes.js solta o mouse (Input3D.unlock) e esquece as teclas seguradas
+// (Input3D.clear / release) — ao sair do corpo, na morte, num mundo novo; um painel pede Input3D.free() e o mouse volta quando ele
+// fecha (Modes.setPanel), com as teclas ainda seguradas
+for (const f of files) { if (f === 'modes.js' || f === 'input3d.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/Input3D\.(unlock|clear|release)\(/.test(c)) fails.push(`o painel não solta as mãos (L-1142): ${f}:${k + 1} solta o mouse ou esquece as teclas — um painel usa G.Input3D.free(): ${l.trim().slice(0, 110)}`); }); }
+// 123. "os botões do toque pelo registro" (D-355): a tela do corpo não escreve um botão de ação à mão no toque (data-k): cada ação
+// traz o seu pelo G.Input3D.button, e a tela os monta e os mostra conforme o momento
+(src['incui.js'] || []).forEach((l, k) => { if (/<button[^>]*data-k=/.test(l)) fails.push(`os botões do toque (D-355): incui.js:${k + 1} escreve um botão de ação à mão — registre-o com G.Input3D.button: ${l.trim().slice(0, 110)}`); });
+// 124. "a câmera não briga" (D-368): a inclinação é do jogador — o cam3d.js só a muda pelo mouse e pelo bastão, ao entrar no corpo e
+// na mira travada —, e a câmera só vai para as costas de quem anda para a frente (inFwd): nada de andar em círculo segurando A ou D
+{ const cam = src['cam3d.js'] || []; const PITCH_OK = ['C3.pitch = 0.26', 'G.clamp(C3.pitch + dy', 'G.clamp(C3.pitch + y', '(pw - C3.pitch)'];
+  cam.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/C3\.pitch\s*(=(?!=)|\+=|-=)/.test(c) && !PITCH_OK.some(p => c.includes(p))) fails.push(`a câmera não briga (D-368): cam3d.js:${k + 1} muda a inclinação do jogador: ${l.trim().slice(0, 110)}`); });
+  const fol = cam.filter(l => /OPT\.follow\s*&&/.test(l)); if (!fol.length || fol.some(l => !/inFwd/.test(l))) fails.push('a câmera não briga (D-368): o seguir as costas do cam3d.js não pergunta se o corpo anda para a frente (inFwd)'); }
+// 125. "a borda só quando se pede" (D-360): o corpo sobe uma borda com as mãos só depois do pulo do jogador — junto dela (tryClimb do
+// salto) ou no ar, logo depois de pular (b.jumpT) —, e para sair da água (a braçada ou o empurrão na margem); nunca por encostar
+(src['avatar.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\btryClimb\(/.test(c) && !/function tryClimb\(/.test(c) && !/tryClimb\(fx, fz, 0\.95\)|b\.jumpT < 0\.8|b\.stroke > 0/.test(c)) fails.push(`a borda só quando se pede (D-360): avatar.js:${k + 1} sobe uma borda sem o pulo: ${l.trim().slice(0, 110)}`); });
+// 126. "as vontades das mãos têm uma porta" (D-355): só o input3d.js e o modes.js escrevem o que o jogador quer do corpo
+// (G.Avatar.input: o empurrão, a corrida, o pulo, a esquiva, o agachar, a mira) — um módulo que queira pedir algo ao corpo pede por
+// uma ação (Input3D.press / fire) ou pela porta do controle (Avatar.crouch, Avatar.act)
+for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'avatar.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/Avatar\.input\.\w+\s*=(?!=)/.test(c)) fails.push(`as vontades das mãos (D-355): ${f}:${k + 1} escreve G.Avatar.input — peça por uma ação do Input3D: ${l.trim().slice(0, 110)}`); }); }
 // === 20c: o inventário ===
 // === 20d: a arte dos itens ===
 // === 20e: a interação ===

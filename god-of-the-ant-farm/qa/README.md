@@ -287,6 +287,8 @@ Cada parte acrescenta as suas linhas logo abaixo da sua marca (a tabela acima co
 |---|---|---|
 | (20a: a animação — as linhas novas aqui) | | |
 | (20b: o movimento — as linhas novas aqui) | | |
+| `movimento.js` | `node qa/movimento.js [mundo]` (`ONLY=m1,m4`; ≈ 4 min) | O controle do corpo em Node (20b): a resposta do aperto (m1), os três passos e o bastão analógico (m2), o fôlego sem piscar (m3), o rumo sem estalo a 60/144/30 quadros, no pivô, derrubado, sentando, na borda (m4), o degrau alisado (m5), a volta pelas ruas sem parar numa quina (m6), o tronco no caminho (m7), a borda só com o pulo (m8), a esquiva e os casos ruins — o mundo leva o corpo, o save, a morte no meio (m9), a mira travada (m10), a câmera sem círculo e com a inclinação do jogador (m11), as ações com movimento — drive, moveScale, cancelAt (m12), o controle de jogo e o bastão do toque pela conta (m13), o verificador (m14) |
+| `movimento-tela.js` | `bash qa/navegador.sh node qa/movimento-tela.js PASTA` (`ONLY=t1,t5`) | O movimento no navegador (20b): as teclas (W no quadro do aperto, Shift, Caps Lock, C, Q), o foco perdido, um painel com W segurado, os botões do mouse (o do meio trava), o controle de jogo de mentira (`navigator.getGamepads`), o toque (o bastão, os botões do registro), a câmera junto de uma parede e a marca da mira, o corpo desenhado a 144 quadros; fotos em PASTA |
 | (20c: o inventário — as linhas novas aqui) | | |
 | (20d: a arte dos itens — as linhas novas aqui) | | |
 | (20e: a interação — as linhas novas aqui) | | |

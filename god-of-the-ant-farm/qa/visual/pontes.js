@@ -185,7 +185,7 @@ function crossAll(tag) {
     for (let k = 0; k < 8; k++) frame();
     let bad = null, far2 = 0;
     for (const p of w.via.concat([w.to])) {
-      let still = 0, last = [st().X, st().Z], k = 0;
+      let still = 0, last = [st().X, st().Z], k = 0, waited = 0;
       for (; k < 400 && !bad; k++) {
         const s = st(), dx = p[0] - s.X, dz = p[1] - s.Z; if (Math.hypot(dx, dz) < 0.18) break;
         const I = IN(); I.camYaw = Math.atan2(dz, dx); I.mz = 1; I.mx = 0; I.run = false; frame(); frames++;
@@ -198,7 +198,9 @@ function crossAll(tag) {
           if (!h) { if (Math.max(cx, cz) > 0.2 && !(S.road[j] < 2 || R3.bridgeOf(j).st === 'nordico')) bad = `sem tabuleiro debaixo dos pés em ${(b.X / TL).toFixed(2)},${(b.Z / TL).toFixed(2)}`; }
           else if (h.p[1] - b.Y > 0.12) bad = `uma peça da ponte (${h.tri.part}) ${(h.p[1] - b.Y).toFixed(2)} m sobre os pés em ${(b.X / TL).toFixed(2)},${(b.Z / TL).toFixed(2)}`;
           else if (h.p[1] - b.Y < -0.03) bad = `o tabuleiro ${(b.Y - h.p[1]).toFixed(2)} m abaixo dos pés em ${(b.X / TL).toFixed(2)},${(b.Z / TL).toFixed(2)}`; }
-        if (Math.hypot(b.X - last[0], b.Z - last[1]) < 0.004) { if (++still > 30) break; } else still = 0; last = [b.X, b.Z];
+        // (a beast standing in the way on the bridge — hard to the body, D-330 —: waited for, as a player waits, up to 8 s of the
+        // body; the jog brought the body to the bridge of 58,126 of the mundial while a beast stood on it — T-1382)
+        if (Math.hypot(b.X - last[0], b.Z - last[1]) < 0.004) { if (b.block === 'beast' && waited < 240) { waited++; still = 0; I.mz = 0; frame(); frames++; } else if (++still > 30) break; } else still = 0; last = [b.X, b.Z];
       }
       far2 = Math.hypot(p[0] - st().X, p[1] - st().Z); if (far2 > 0.4 && !bad) bad = `parou a ${far2.toFixed(2)} m de ${(p[0] / TL).toFixed(2)},${(p[1] / TL).toFixed(2)}${st().block ? ' (' + st().block + ')' : ''}`;
       if (bad) break;

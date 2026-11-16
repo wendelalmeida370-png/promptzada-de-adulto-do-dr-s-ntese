@@ -31,7 +31,9 @@
   M3.god = () => M3.state === 'GOD';
   M3.inc = () => M3.state === 'INC';
   M3.panel = () => !!(panel || menuOpen);
-  M3.setPanel = p => { panel = p || null; };
+  // (a panel shut — none open after it, nor the menu —: the mouse is taken back where it was held, without another click where the
+  // browser lets it, and the keys still held go on walking: D-355)
+  M3.setPanel = p => { const was = panel; panel = p || null; if (was && !panel && !menuOpen && M3.state === 'INC') G.Input3D.regain(); };
   M3.panelIs = p => panel === p; // (which one: 'card', 'self', 'diario')
   // ------------------------------ can it be done ------------------------------
   // (asked of the browser without making anything: the god's view never holds a 3D context of its own — the real one is
@@ -199,7 +201,7 @@
 
   // ------------------------------ the frame ------------------------------
   M3.cover = () => M3.state === 'INC' || M3.state === 'DYING' || (M3.state === 'TO_INC' && M3.t >= TIN[1]) || (M3.state === 'TO_GOD' && M3.t < TOUT[0]);
-  M3.menu = function (on) { if (M3.state !== 'INC') return; menuOpen = on; if (on) { G.Input3D.unlock(); G.Input3D.clear(); } G.IncUI.menu(on); };
+  M3.menu = function (on) { if (M3.state !== 'INC') return; menuOpen = on; if (on) G.Input3D.free(); G.IncUI.menu(on); if (!on && !panel) G.Input3D.regain(); };
   M3.menuOpen = () => menuOpen;
   // the world's pace, for the main loop: the god's speed, the body's pace (D-015), or a night that passes quickly
   M3.timeScale = function (godSp) {
@@ -217,13 +219,17 @@
   function pollWake() { if (G.S && G.S.avatar && G.Main.mode === 'game' && !(G.Skip && G.Skip.on) && !G.Main.modalOpen) M3.wake(); }
   M3.frame = function (rdt) {
     if (M3.state === 'GOD') { pollWake(); return; }
-    M3.t += rdt;
+    M3.t += rdt; cClock += rdt;
     const R3 = G.Realm, cam = R3.camera(), IN = G.Avatar.input;
     // the hands: only in the body, with no panel open
-    if (M3.state === 'INC' && !M3.panel()) { const a = G.Input3D.axes(); IN.mx = a.mx; IN.mz = a.mz; IN.run = a.run; IN.sneak = a.sneak; IN.camYaw = G.Cam3D.yaw; }
-    else { IN.mx = IN.mz = 0; IN.run = IN.sneak = false; IN.jump = false; IN.camYaw = G.Cam3D.yaw; }
+    // (the controller is asked each frame: its sticks and buttons — D-355)
+    G.Input3D.poll(rdt);
+    // (the target held and the aim, as the eye has them: the body strafes round the one, faces the other — D-364)
+    IN.lock = M3.state === 'INC' && G.Cam3D.locked ? G.Cam3D.locked() : null; IN.aim = M3.state === 'INC' && !!(G.Cam3D.aiming && G.Cam3D.aiming());
+    if (M3.state === 'INC' && !M3.panel()) { const a = G.Input3D.axes(); IN.mx = a.mx; IN.mz = a.mz; IN.run = a.run; IN.walk = a.walk; IN.camYaw = G.Cam3D.yaw; }
+    else { IN.mx = IN.mz = 0; IN.run = false; IN.jump = false; IN.dodge = false; IN.crouch = false; IN.camYaw = G.Cam3D.yaw; }
     // (the menu open, the world stands still — and the body with it: no fall, no swim, no breath spent while nobody plays)
-    if (!menuOpen) G.Avatar.frame(rdt);
+    if (!menuOpen) { G.Avatar.frame(rdt); G.Avatar.present && G.Avatar.present(); }
     let focus = null;
     const body = G.Avatar.pos();
     if (M3.state === 'TO_INC') {
@@ -347,6 +353,13 @@
     // (the screen put away, and back: the place has to say what it is by itself — D-173)
     if (a === 'tela') { G.IncUI.setHud(G.IncUI.hudOff()); return; }
     if (a === 'sentar') { G.Avatar.sit(); return; }
+    // (the movement's, 20b: the dodge and the crouch for the controller's step; the walk kept to; the target held — the nearest
+    // one ahead, or the eye back behind the body when there is none —; the other shoulder)
+    if (a === 'esquivar') { G.Avatar.input.dodge = true; return; }
+    if (a === 'agachar') { G.Avatar.crouch(); return; }
+    if (a === 'andar') { G.Input3D.walk = !G.Input3D.walk; G.IncUI.toast(G.Input3D.walk ? 'Andando devagar.' : 'Trotando.', 1.4); return; }
+    if (a === 'travar') { if (G.Cam3D.locked()) G.Cam3D.unlock(); else { const t = M3.lockCandidate(true); if (t) G.Cam3D.lockOn(t); else { const p = G.Avatar.pos(); if (p) G.Cam3D.recenter(p.yaw); } } return; }
+    if (a === 'ombro') { G.Cam3D.swap(); return; }
     // (a wave of the hand: those standing near turn to it and wave back — the hello of the people, only seen)
     // (a dance: whoever is free and merry near the body joins in — the world's people, stopping a while to dance with it)
     // (what the world does about it — the deed counted, the people joining — the world does in its step: Possess.apply)
@@ -357,6 +370,19 @@
       const v = G.Possess.body(); if (v && v.sleeping) { G.Possess.apply(w => { G.Possess.wake(w); return { ok: true }; }); return; }
       G.IncUI.use();
     }
+  };
+  // the one the lock-on's key would hold (D-369 — until the second wave chooses its own: Input3D.on('travar')): the nearest person
+  // or beast ahead of the eye, within 18 m and 55° of the middle of the picture, out of doors; asked a few times a second (the
+  // fingers' button shows when there is one), at once when the key is pressed. Only read
+  let candT = -1, cand = null, cClock = 0;
+  M3.lockCandidate = function (now) {
+    if (M3.state !== 'INC') return null; if (!now && cClock - candT < 0.25 && candT >= 0) return cand; candT = cClock;
+    const p = G.Avatar.pos(), me = G.Possess.body(); if (!p || !me || !G.Animals || !G.Animals.near) return (cand = null);
+    const L = G.Space.TILE, x = p.X / L, y = p.Z / L, yaw = G.Cam3D.yaw; let best = null, bs = 1e9;
+    const consider = o => { const dx = o.x * L - p.X, dz = o.y * L - p.Z, d = Math.hypot(dx, dz); if (d > 18 || d < 0.3) return; let an = Math.atan2(dz, dx) - yaw; while (an > Math.PI) an -= Math.PI * 2; while (an < -Math.PI) an += Math.PI * 2; if (Math.abs(an) > 0.96) return; const sc = d * (1 + Math.abs(an)); if (sc < bs) { bs = sc; best = o; } };
+    G.Animals.near(x, y, 4.6, a => consider(a));
+    if (G.Animals.nearMan) G.Animals.nearMan(x, y, 4.6, o => { if (o.id !== me.id && !o.inside && !o.aboard && !o.held && !o.air) consider(o); });
+    return (cand = best);
   };
   // a key in the god's view: I — live someone near the middle of the screen (the quick way; the panel's button is the main one)
   M3.quick = function () {
