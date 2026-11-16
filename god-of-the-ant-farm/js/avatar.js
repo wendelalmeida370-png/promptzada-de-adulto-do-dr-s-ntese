@@ -810,17 +810,21 @@
     // (a gesture of the hands while the feet go on: on the top of the body, over the stride)
     if (a && !a.lock && b.speed > 0.22 && A3.CLIPS && A3.CLIPS[a.anim]) { I.over = a.anim; I.overK = a.dur > 0 && a.dur < 1e8 ? G.clamp(a.t / a.dur, 0, 1) : undefined; }
     I.drunk = L.drunk || 0; I.tired = b.caps && b.caps.stamina > 0 ? G.clamp(1 - b.stamina / (b.caps.stamina * 0.35), 0, 1) * 0.6 : 0; I.id = v.id;
+    // (what the layers' end needs of the body, read now: the feed is whole in itself — drawn after the body is gone, it is the
+    // last frame's, never a read of a body that is no more, L-1112)
+    const st2 = b.anim, wet = st2 === 'swim' || st2 === 'tread' || st2 === 'drown';
+    let ly = 0; if (st2 === 'idle' || st2 === 'walk' || st2 === 'carry') { let la = IN.camYaw - b.yaw; while (la > Math.PI) la -= TAU; while (la < -Math.PI) la += TAU; ly = Math.abs(la) < 1.9 ? -G.clamp(la, -1, 1) * 0.55 : 0; }
+    I.ly = ly; I.fl = b.hitT > 0 && st2 !== 'knocked' && st2 !== 'sleep' && !wet ? b.hitK * G.smooth(0, 0.2, b.hitT) : 0;
+    { const c = Math.cos(b.yaw), sn = Math.sin(b.yaw); I.fw = (b.hitX || 0) * c + (b.hitZ || 0) * sn; I.sd = -(b.hitX || 0) * sn + (b.hitZ || 0) * c; }
     I.post = post;
     return I;
   }
   // (after the layers: the look after the camera's eye, standing and walking; and a blow's flinch over what the body does —
   // thrown the way the blow pushes it, the arms up before the face, the head back)
-  function post(out, dt) {
-    const st = b.anim, wet = st === 'swim' || st === 'tread' || st === 'drown';
-    let ly = 0; if (st === 'idle' || st === 'walk' || st === 'carry') { let la = IN.camYaw - b.yaw; while (la > Math.PI) la -= TAU; while (la < -Math.PI) la += TAU; ly = Math.abs(la) < 1.9 ? -G.clamp(la, -1, 1) * 0.55 : 0; }
-    out.lookY = (out.lookY || 0) + (ly - (out.lookY || 0)) * (1 - Math.exp(-5 * dt));
-    const fl = b.hitT > 0 && st !== 'knocked' && st !== 'sleep' && !wet ? b.hitK * G.smooth(0, 0.2, b.hitT) : 0;
-    if (fl > 0) { const c = Math.cos(b.yaw), sn = Math.sin(b.yaw); const fw = b.hitX * c + b.hitZ * sn, sd = -b.hitX * sn + b.hitZ * c;
+  function post(out, dt, I) {
+    out.lookY = (out.lookY || 0) + (I.ly - (out.lookY || 0)) * (1 - Math.exp(-5 * dt));
+    const fl = I.fl;
+    if (fl > 0) { const fw = I.fw, sd = I.sd;
       const mix = (j, x) => { out[j] = G.lerp(out[j] || 0, x, fl); }; const add = (j, x) => { out[j] = (out[j] || 0) + x * fl; };
       add('lean', fw * 0.55); add('sway', sd * 0.32); add('twist', -sd * 0.25); add('neck', -0.35); add('crouch', 0.12); add('knL', 0.3); add('knR', 0.25);
       mix('shLp', -1.85); mix('shRp', -1.7); mix('shLr', 0.35); mix('shRr', -0.35); mix('elL', 1.75); mix('elR', 1.6); }

@@ -78,7 +78,7 @@
     if (mode !== 'plant') { for (const ft of P) ft.step = null; return; }
     // (a step under way: on to its end, then the foot stands where it went)
     for (let k = 0; k < 2; k++) { const ft = P[k]; if (!ft.step) continue; ft.step.t += dt / ft.step.dur;
-      if (ft.step.t >= 1) { const q = ft.step; ft.step = null; ft.on = 1; ft.off = 0; ft.x = q.x; ft.z = q.z; ft.dx = q.dx; ft.dz = q.dz; ft.y = q.y; ft.pmin = -9; a.stepWait = 0.06; } }
+      if (ft.step.t >= 1) { const q = ft.step; ft.step = null; ft.on = 1; ft.off = 0; ft.x = q.x; ft.z = q.z; ft.dx = q.dx; ft.dz = q.dz; ft.y = q.y; ft.pmin = -9; ft.gp = q.gp || 0; a.stepWait = 0.06; } }
     if (P[0].step || P[1].step) return;
     if ((a.stepWait -= dt) > 0) return;
     // (the foot most off its place steps — from where it stands, or from where it hangs if it is in the air)
@@ -94,7 +94,9 @@
     const ax = ft.cx !== undefined ? ft.cx : RO.x, ay = ft.cy !== undefined ? ft.cy : (I.ground || 0) + 0.044 * s, az = ft.cz !== undefined ? ft.cz : RO.z;
     const gy = L.gnd ? L.gnd(RO.x, RO.z) : undefined; const y = Number.isFinite(gy) ? gy : I.ground || 0;
     const dist = Math.hypot(RO.x - ax, RO.z - az);
-    ft.step = { t: 0, dur: clamp(0.24 + dist * 0.35, 0.26, 0.42), ax, ay, az, adx: ft.on ? ft.dx : ft.cdx || RO.dx, adz: ft.on ? ft.dz : ft.cdz || RO.dz, x: RO.x, z: RO.z, dx: RO.dx, dz: RO.dz, y, h: clamp(0.03 + dist * 0.12, 0.035, 0.08) };
+    // (and the ground's slope along it, where it stands)
+    const gb = L.gnd ? L.gnd(RO.x + RO.dx * 0.184 * s, RO.z + RO.dz * 0.184 * s) : undefined, gp = Number.isFinite(gb) ? Math.atan2(y - gb, 0.184 * s) : 0;
+    ft.step = { t: 0, dur: clamp(0.24 + dist * 0.35, 0.26, 0.42), ax, ay, az, adx: ft.on ? ft.dx : ft.cdx || RO.dx, adz: ft.on ? ft.dz : ft.cdz || RO.dz, x: RO.x, z: RO.z, dx: RO.dx, dz: RO.dz, y, gp: Math.abs(gp) < 0.6 ? gp : 0, h: clamp(0.03 + dist * 0.12, 0.035, 0.08) };
     ft.on = 0; ft.off = 0;
   }
   Anim.restOf = restOf;
@@ -124,7 +126,10 @@
     if (base === 'move') {
       const goal = I.run ? true : I.walk ? false : Ga.mode(a.run, sp, s); a.run = goal;
       a.rw += ((goal ? 1 : 0) - a.rw) * (1 - Math.exp(-dt / 0.12)); if (Math.abs(a.rw - (goal ? 1 : 0)) < 1e-3) a.rw = goal ? 1 : 0;
-      const v = a.stop > 0 ? Math.max(0.25, a.lastSp * Math.exp(-a.stop * 6)) : sp; a.sp = v; if (!a.stop) a.lastSp = sp;
+      // (the speed the stride is made for: the body's, eased — a speed that jumps (a road's edge, a sprint let go) is a stride that
+      // grows or shortens over a step, never in a frame)
+      const tv = a.stop > 0 ? Math.max(0.25, a.lastSp * Math.exp(-a.stop * 6)) : sp; if (was !== 'move') a.vs = tv;
+      a.vs = clamp(tv, (a.vs || 0) - 7 * dt, (a.vs || 0) + 6 * dt); const v = a.vs; a.sp = v; if (!a.stop) a.lastSp = sp;
       if (was !== 'move') {
         // (a start: the foot behind leads — the one further back along the way the body goes; the stride's phase where that
         // foot's swing begins)
@@ -179,59 +184,72 @@
   // caught up), a stop eased out (slowing to where the way ends, never past it), a change of place inside a building walked.
   // Never more than ~0.6 m from the world's place; a jump of the world (a teleport, a load) is drawn as a jump. Writes the
   // view's memory s: X, Z, vx, vz, sp, yaw, yawV, acc
-  const HN = 24;
+  const HN = 64;
   Anim.track = function (s, v, X, Z, inside, dt, TL) {
-    const tr = s.tr || (s.tr = { hx: new Float32Array(HN), hz: new Float32Array(HN), n: 0, lag: 0, vd: 0, wx: X, wz: Z, ws: 0, inT: 0 });
     dt = Math.max(1e-4, Math.min(dt, 0.1));
-    const jump = Math.hypot(X - tr.wx, Z - tr.wz);
-    // (the world moved them far in one frame — a teleport, a load, a change of storey —: drawn there)
-    if (jump > (inside ? 6 : 4) || s.snap) { s.snap = 0; tr.n = 0; tr.lag = 0; tr.vd = 0; s.X = X; s.Z = Z; s.vx = s.vz = 0; tr.wx = X; tr.wz = Z; tr.ws = 0; s.sp = 0; return s; }
-    const ws = jump / dt; tr.ws = inside ? Math.min(ws, 1.4) : ws; tr.wx = X; tr.wz = Z;
-    // (the world's way so far: where they were, a point every few centimetres — the drawn place is on it, a lag behind)
-    if (!tr.n || Math.hypot(X - tr.hx[(tr.n - 1) % HN], Z - tr.hz[(tr.n - 1) % HN]) > 0.04) { tr.hx[tr.n % HN] = X; tr.hz[tr.n % HN] = Z; tr.n++; }
+    let tr = s.tr;
+    // (the first frame, or the world moved them far in one — a teleport, a load, a change of storey —: drawn where the world has
+    // them, the way begun again from there)
+    const jump = tr ? Math.hypot(X - tr.wx, Z - tr.wz) : 0;
+    if (!tr || jump > (inside ? 6 : 4) || s.snap) {
+      s.snap = 0; tr = s.tr = tr || { hx: new Float32Array(HN), hz: new Float32Array(HN), hd: new Float64Array(HN), n: 0, dw: 0, dd: 0, vd: 0, wx: X, wz: Z, ws: 0 };
+      tr.n = 1; tr.hx[0] = X; tr.hz[0] = Z; tr.hd[0] = 0; tr.dw = tr.dd = 0; tr.vd = 0; tr.wx = X; tr.wz = Z; tr.ws = 0; s.X = X; s.Z = Z; s.vx = s.vz = 0; s.sp = 0; s.acc = 0; return s;
+    }
+    // (the world's way so far: where they were, with how far along it each point is — the drawn place goes along it, behind)
+    // (the world's speed, smoothed: the world loses a bit of a step at each point of a way — the drawing keeps the pace)
+    tr.dw += jump; tr.wx = X; tr.wz = Z; tr.ws = (tr.ws === undefined ? jump / dt : tr.ws + (jump / dt - tr.ws) * (1 - Math.exp(-dt / 0.12))); const ws = tr.ws;
+    const li = (tr.n - 1) % HN; if (Math.hypot(X - tr.hx[li], Z - tr.hz[li]) > 0.02) { const i = tr.n % HN; tr.hx[i] = X; tr.hz[i] = Z; tr.hd[i] = tr.dw; tr.n++; }
     // (how far the world's way still goes: where it ends they stop — the drawing slows to it in time)
     let rem = Infinity; const TLs = TL || 4;
     if (!inside && v.path && v.pi < v.path.length) { rem = 0; let px = X / TLs, py = Z / TLs; for (let i = v.pi; i < v.path.length && rem < 4; i++) { const q = v.path[i]; rem += Math.hypot(q[0] - px, q[1] - py) * TLs; px = q[0]; py = q[1]; } }
-    else if (!v.moving && !inside) rem = 0;
-    // (the drawn speed: the world's, catching up the lag, never faster than a stop allows, never a jump in speed)
-    const A_UP = 3.2, A_DN = 4.5, MAXL = 0.6;
-    let want = tr.ws + 2.2 * tr.lag;
-    if (rem < Infinity) want = Math.min(want, Math.sqrt(2 * A_DN * Math.max(0, rem + tr.lag)));
+    else if (!inside && (!v.moving || (v.path && v.path.length && Math.hypot(v.path[v.path.length - 1][0] * TLs - X, v.path[v.path.length - 1][1] * TLs - Z) < 0.05))) rem = 0; // (stopped, or on the last point of a way gone through)
+    // (the drawn speed: the world's, catching up what it is behind, never faster than a stop allows, never a jump in speed; a
+    // change of place inside a building at a walk)
+    const A_UP = 3.2, A_DN = 4.5, lag = tr.dw - tr.dd;
+    let want = ws + 2.4 * (lag - Math.min(0.06, 0.03 * ws)); // (a few centimetres behind, always: the world's little stops are not drawn)
+    // (to the way's end: braking at half what a stop allows, and the last hand's breadth eased in — a speed that falls with the
+    // distance left, never braking harder than a stop can: the body never arrives still moving and halts in a frame, L-1113)
+    if (rem < Infinity) { const dE = Math.max(0, rem + lag); want = Math.min(want, Math.sqrt(A_DN * dE), 6 * dE); }
     if (inside) want = Math.min(want, 1.35);
-    const vd = clamp(want, tr.vd - A_DN * dt, tr.vd + A_UP * dt);
-    tr.lag += (tr.ws - vd) * dt; tr.vd = vd;
-    if (tr.lag < 0) { tr.vd += tr.lag / dt; tr.lag = 0; }
-    if (tr.lag > (inside ? 6 : MAXL)) { tr.lag = inside ? 6 : MAXL; }
-    // (the drawn place: back along the world's way by the lag)
-    let px = X, pz = Z, left = tr.lag;
-    for (let i = tr.n - 1, j = 0; left > 1e-4 && j < HN - 1 && i > 0; i--, j++) {
-      const ax = tr.hx[i % HN], az = tr.hz[i % HN], bx = tr.hx[(i - 1) % HN], bz = tr.hz[(i - 1) % HN];
-      const sx = j === 0 ? px : ax, sz = j === 0 ? pz : az; const l = Math.hypot(bx - sx, bz - sz);
-      if (l >= left) { px = sx + (bx - sx) * left / l; pz = sz + (bz - sz) * left / l; left = 0; break; }
-      left -= l; px = bx; pz = bz;
+    let vd = clamp(want, tr.vd - A_DN * dt, tr.vd + A_UP * dt); vd = Math.max(0, vd);
+    tr.dd = Math.min(tr.dw, tr.dd + vd * dt);
+    // (never more than ~0.6 m behind out of doors: caught up at once beyond — the world's place is the truth)
+    const MAXL = inside ? 6 : 0.6; if (tr.dw - tr.dd > MAXL) tr.dd = tr.dw - MAXL;
+    tr.vd = vd;
+    // (the drawn place: on the world's way, as far along it as the drawn has come)
+    let px = X, pz = Z; const oldest = Math.max(0, tr.n - HN);
+    if (tr.dd < tr.dw - 1e-5) {
+      // (the points of the way, oldest to newest, and the world's place now after them: the segment the drawn distance falls in)
+      if (tr.dd <= tr.hd[oldest % HN]) { px = tr.hx[oldest % HN]; pz = tr.hz[oldest % HN]; tr.dd = tr.hd[oldest % HN]; }
+      else {
+        let j = tr.n - 1; while (j > oldest && tr.hd[j % HN] > tr.dd) j--;
+        const a = j % HN, last = j === tr.n - 1; const d0 = tr.hd[a], d1 = last ? tr.dw : tr.hd[(j + 1) % HN];
+        const bx = last ? X : tr.hx[(j + 1) % HN], bz = last ? Z : tr.hz[(j + 1) % HN]; const f = d1 > d0 ? clamp((tr.dd - d0) / (d1 - d0), 0, 1) : 1;
+        px = tr.hx[a] + (bx - tr.hx[a]) * f; pz = tr.hz[a] + (bz - tr.hz[a]) * f;
+      }
     }
     // (a corner of the way rounded: within a stride of a corner of their path, the drawn place is on a curve from before it to
     // after it — the body turning into it ahead, as people do)
-    if (!inside && v.path && v.path.length > 1) { const r = roundCorner(v, px / TLs, pz / TLs, TLs); if (r) { px = r[0] * TLs; pz = r[1] * TLs; } }
+    if (!inside && v.path && v.path.length > 1) { const o = Math.max(0, tr.n - HN) % HN; RA[0] = tr.hx[o] / TLs; RA[1] = tr.hz[o] / TLs; const r = roundCorner(v, px / TLs, pz / TLs, TLs, RA); if (r) { px = r[0] * TLs; pz = r[1] * TLs; } }
     // (the drawn velocity, speed, turn: what the legs and the lean must show)
-    const ox = s.X === undefined ? px : s.X, oz = s.Z === undefined ? pz : s.Z;
-    const vx = (px - ox) / dt, vz = (pz - oz) / dt, sp = Math.hypot(vx, vz);
+    const vx = (px - s.X) / dt, vz = (pz - s.Z) / dt, sp = Math.hypot(vx, vz);
     s.acc = (sp - (s.sp || 0)) / dt; s.X = px; s.Z = pz; s.vx = vx; s.vz = vz; s.sp = sp;
     return s;
   };
   // (the corner of a path near a point (tiles): its rounded place, or null. The corners are the path's own points; r a stride)
-  const RC = [0, 0];
-  function roundCorner(v, x, y, TL) {
+  const RC = [0, 0], RA = [0, 0];
+  function roundCorner(v, x, y, TL, A0) {
     const P = v.path; const r = 0.75 / TL; let best = null, bd = r;
-    for (let i = Math.max(1, v.pi - 2); i <= Math.min(P.length - 2, v.pi + 1); i++) {
-      const C = P[i], A = P[i - 1], B = P[i + 1];
+    for (let i = Math.max(0, v.pi - 2); i <= Math.min(P.length - 2, v.pi + 1); i++) {
+      const C = P[i], A = i > 0 ? P[i - 1] : A0, B = P[i + 1]; // (the way's first corner: the way in is the one they came by)
       const ax = C[0] - A[0], ay = C[1] - A[1], la = Math.hypot(ax, ay), bx = B[0] - C[0], by = B[1] - C[1], lb = Math.hypot(bx, by);
       if (la < 1e-4 || lb < 1e-4) continue;
-      const rr = Math.min(r, la * 0.45, lb * 0.45); const d = Math.hypot(x - C[0], y - C[1]); if (d > rr || d > bd) continue;
+      const rr = Math.min(r, i > 0 ? la * 0.45 : r, lb * 0.45); // (the way in they came by: only its direction counts)
+      const d = Math.hypot(x - C[0], y - C[1]); if (d > rr || d > bd) continue;
       const ux = ax / la, uy = ay / la, wx = bx / lb, wy = by / lb; if (ux * wx + uy * wy > 0.995) continue; // (straight on: no corner)
       // (which side of the corner the point is on: before it along the way in, or after it along the way out)
       const din = (C[0] - x) * ux + (C[1] - y) * uy, dout = (x - C[0]) * wx + (y - C[1]) * wy;
-      let t; if (din >= 0 && (dout <= 0 || din > dout)) t = (rr - Math.min(din, rr)) / (2 * rr); else t = 0.5 + Math.min(dout, rr) / (2 * rr);
+      const t = (rr - clamp(din, 0, rr) + clamp(dout, 0, rr)) / (2 * rr); // (continuous through the corner itself)
       const Ex = C[0] - ux * rr, Ey = C[1] - uy * rr, Xx = C[0] + wx * rr, Xy = C[1] + wy * rr, q = 1 - t;
       const qx = q * q * Ex + 2 * t * q * C[0] + t * t * Xx, qy = q * q * Ey + 2 * t * q * C[1] + t * t * Xy;
       if (!G.W.walkableXY || G.W.walkableXY(qx, qy)) { RC[0] = qx; RC[1] = qy; best = RC; bd = d; }

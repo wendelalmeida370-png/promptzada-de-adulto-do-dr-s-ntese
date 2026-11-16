@@ -52,9 +52,12 @@
   const K = {
     walk: {
       hip: [[0, -27], [0.15, -20], [0.3, -7], [0.45, 7], [0.58, 15], [0.66, 10], [0.78, -12], [0.87, -29], [0.94, -30.5], [1, -27]],
-      knee: [[0, 4], [0.12, 16], [0.27, 9], [0.42, 5], [0.52, 10], [0.62, 34], [0.71, 60], [0.79, 55], [0.87, 28], [0.94, 9], [1, 4]],
-      foot: [[0, -16], [0.06, -4], [0.12, 0], [0.4, 0], [0.5, 14], [0.58, 40], [0.63, 52], [0.68, 30], [0.76, 4], [0.86, -6], [0.95, -14], [1, -16]],
+      knee: [[0, 6], [0.12, 17], [0.27, 9], [0.42, 5], [0.52, 10], [0.62, 34], [0.71, 60], [0.79, 55], [0.87, 28], [0.94, 10], [1, 6]],
+      foot: [[0, -16], [0.06, -4], [0.12, 0], [0.4, 0], [0.5, 14], [0.58, 40], [0.63, 52], [0.7, 36], [0.78, 13], [0.86, -4], [0.95, -14], [1, -16]],
       toe: 0.62,
+      // (a slow stride's knee, late in its swing: it straightens later — the short step has the hips high over a straight leg, and
+      // the heel would meet the ground early)
+      kneeSlow: [[0, 6], [0.12, 17], [0.27, 9], [0.42, 5], [0.52, 10], [0.62, 34], [0.71, 60], [0.79, 60], [0.9, 40], [0.96, 16], [1, 6]],
     },
     run: {
       hip: [[0, -30], [0.12, -15], [0.26, 4], [0.38, 19], [0.5, 10], [0.66, -26], [0.82, -44], [0.93, -36], [1, -30]],
@@ -66,7 +69,7 @@
   Ga.KEYS = K;
   // (each curve sampled round its cycle, radians — a periodic Catmull-Rom through its keys)
   const N = 256, T = {};
-  for (const g in K) { T[g] = {}; for (const c of ['hip', 'knee', 'foot']) { const k = K[g][c]; const out = new Float32Array(N + 1);
+  for (const g in K) { T[g] = {}; for (const c of ['hip', 'knee', 'foot', 'kneeSlow']) { const k = K[g][c]; if (!k) continue; const out = new Float32Array(N + 1);
     for (let i = 0; i <= N; i++) { const u = i / N; let j = 0; while (j < k.length - 2 && k[j + 1][0] <= u) j++;
       const P = q => k[(q + k.length - 1) % (k.length - 1)]; const p0 = P(j - 1), p1 = k[j], p2 = k[j + 1], p3 = P(j + 2);
       const t = (u - p1[0]) / Math.max(1e-6, p2[0] - p1[0]), t2 = t * t, t3 = t2 * t;
@@ -107,7 +110,7 @@
   // (the knee's swing folds more as the speed grows; the run's knee on the ground stays a spring of ~40°, whatever the speed)
   const kneeSw = (g, n) => (g === 'run' ? clamp(66 + 10 * n, 84, 118) / 104 : clamp(48 + 7 * n, 52, 66) / 60);
   const kneeScale = (g, n, q) => { const a = kneeSw(g, n); if (g !== 'run' || q === undefined) return a; const t = sstep(K.run.toe - 0.06, K.run.toe + 0.08, q); return lerp(clamp(0.92 + 0.03 * n, 0.95, 1.05), a, t); };
-  const footScale = (g, A) => (g === 'run' ? clamp(0.7 + 0.3 * A, 0.7, 1.15) : clamp(0.55 + 0.45 * A, 0.55, 1.2));
+  const footScale = (g, A) => (g === 'run' ? clamp(0.7 + 0.3 * A, 0.7, 1.15) : clamp(0.25 + 0.65 * A, 0.45, 1.2)); // (a slow step lands flatter)
   function travel(g, A, n) {
     const C = T[g], ks = kneeScale(g, n), toe = K[g].toe, pp = pelPitch(n, g === 'run' ? 1 : 0);
     const at = (u, heel) => { const hp = cur(C.hip, u) * A, kn = cur(C.knee, u) * kneeScale(g, n, u), pit = cur(C.foot, u) * footScale(g, A); fk(hp, kn, pit - hp - kn - pp, pp); return heel ? FK.hz : FK.bz; };
@@ -190,7 +193,8 @@
   const LG = { hp: 0, kn: 0, pit: 0, st: 0, sw: 0 };
   function leg(g, u, n, A, duty) {
     const C = T[g], q = warp(u, duty, K[g].toe); u -= Math.floor(u);
-    LG.hp = cur(C.hip, q) * hipScale(g, A, q); LG.kn = cur(C.knee, q) * kneeScale(g, n, q); LG.pit = cur(C.foot, q) * footScale(g, A);
+    const slow = C.kneeSlow ? clamp((1.25 - n) / 0.65, 0, 1) : 0;
+    LG.hp = cur(C.hip, q) * hipScale(g, A, q); LG.kn = (slow ? lerp(cur(C.knee, q), cur(C.kneeSlow, q), slow) : cur(C.knee, q)) * kneeScale(g, n, q); LG.pit = cur(C.foot, q) * footScale(g, A);
     LG.st = u < duty ? 1 : 0; LG.sw = u < duty ? -1 : (u - duty) / (1 - duty);
     return LG;
   }
@@ -207,19 +211,20 @@
     out.pelR = lerp(0.035 + 0.02 * Math.min(n, 2), 0.04, w) * Math.sin(TAU * (u + 0.1));
     out.shift = lerp(clamp(0.032 - 0.007 * n, 0.012, 0.03), 0.012, w) * s1;
     out.pelP = pelPitch(n, w); out.rel = lerp(0.33, 0.5, w); // (the share of the swing in which the foot leaves its push-off's place)
-    out.esw = w > 0.5 ? 0.93 : 0.8; // (how late in its swing a heel that meets the ground is a strike: a walk's, near its end; a run strikes on its stance)
+    out.esw = w > 0.5 ? 0.93 : lerp(0.74, 0.9, clamp((n - 0.6) / 0.6, 0, 1)); // (how late in its swing a heel that meets the ground is a strike: a walk's near its end — a slow one's earlier, its short swing down sooner —; a run strikes on its stance)
     const pp = out.pelP, width = lerp(0.045, 0.026, w);
     for (let k = 0; k < 2; k++) {
       const uk = u + k * 0.5; let hp = 0, kn = 0, pit = 0;
-      if (w < 1) { const L = leg('walk', uk, n, AW, w > 0 ? duty : dW); hp = L.hp; kn = L.kn; pit = L.pit; }
-      if (w > 0) { const L = leg('run', uk, n, AR, w < 1 ? duty : dR); hp = lerp(hp, L.hp, w); kn = lerp(kn, L.kn, w); pit = lerp(pit, L.pit, w); }
+      // (each gait on its own duty — their curves blended, phase to phase: a walk becoming a run never jumps its legs)
+      if (w < 1) { const L = leg('walk', uk, n, AW, dW); hp = L.hp; kn = L.kn; pit = L.pit; }
+      if (w > 0) { const L = leg('run', uk, n, AR, dR); hp = lerp(hp, L.hp, w); kn = lerp(kn, L.kn, w); pit = lerp(pit, L.pit, w); }
       const uu = uk - Math.floor(uk), st = uu < duty ? 1 : 0, sw = st ? -1 : (uu - duty) / (1 - duty);
       // (the swinging foot clears the ground: the knee folds a little more where the curve would drag the heel or the toes — a
       // slow stride's short swing — and lets it come down only at the strike)
       if (!st && w < 1) {
         // (a slow stride's short swing folds the knee a little more through its middle — smoothly, by the speed — and the heel
         // comes down to its strike late in it, meeting the ground as a strike)
-        const lo = clamp((1.3 - n) / 0.7, 0, 1); if (lo > 0) kn += 28 * D2R * lo * (1 - w) * Math.pow(Math.sin(Math.PI * clamp((sw - 0.08) / 0.9, 0, 1)), 2);
+        const lo = clamp((1.3 - n) / 0.7, 0, 1); if (lo > 0) kn += 28 * D2R * lo * (1 - w) * Math.pow(Math.sin(Math.PI * clamp((sw - 0.05) / 0.8, 0, 1)), 2);
       }
       // (the feet a little toed out, and set in toward the line the body walks on: the steps 9 cm apart walking, 5 running — the
       // hips are 19 cm apart; the leg turned in at the hip by what the hips' own shift and drop do not already do, the swing

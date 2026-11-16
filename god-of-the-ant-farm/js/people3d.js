@@ -39,7 +39,8 @@
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
   P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); if (G.Fauna3D && G.Fauna3D.clear) G.Fauna3D.clear(); for (const sp of emoPool) sp.visible = false; if (held) for (const k in held) for (const m of [held[k].a, held[k].t]) if (m) { m.count = 0; m.visible = false; } if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   let avFeet = null;
-  G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; cLod.clear(); });
+  // (a new world draws no body of the last one: the controller's feed goes with its world, L-1112)
+  G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; cLod.clear(); P3.avatar = null; });
 
   P3.init = function (three, realm) {
     THREE = three; R3 = realm; scene = realm.scene();
@@ -1062,14 +1063,21 @@
   function strike(ft, e, L) {
     ft.on = 1; ft.x = e[12] - (e[4] * LEG.sole + e[8] * LEG.heel); ft.z = e[14] - (e[6] * LEG.sole + e[10] * LEG.heel); const l = Math.hypot(e[8], e[10]) || 1; ft.dx = e[8] / l; ft.dz = e[10] / l; ft.off = 0;
     ft.y = groundOf(L, ft.x, ft.z); ft.pmin = -9; // (a new stance: its heel down again)
+    // (the ground's own slope along the foot, where each foot has its own ground: on a ladder of a hill the sole lies on it)
+    const bx = ft.x + ft.dx * (LEG.heel + LEG.ball), bz = ft.z + ft.dz * (LEG.heel + LEG.ball), gb = L.gnd ? groundOf(L, bx, bz) : ft.y;
+    ft.gp = Math.atan2(ft.y - gb, LEG.heel + LEG.ball);
+    // (over the edge of a step — the heel and the ball on two levels —: the foot on the higher, as a foot on a stair's tread, its heel
+    // over the edge; no slope)
+    if (Math.abs(ft.y - gb) > 0.05) { ft.y = Math.max(ft.y, gb); ft.gp = 0; } else if (!(Math.abs(ft.gp) < 0.6)) ft.gp = 0;
   }
   P3.strike = strike; // (for the animator: a foot set down where it stands)
   // (the ankle of a foot standing on its spot, rolled to pitch p: on its heel while the toes are up, on its ball as the heel rises)
   function rollTo(T, ft, p, s) {
-    const c = Math.cos(p), sn = Math.sin(p); let px = ft.x, pz = ft.z, oy, oz;
-    if (p <= 0) { oy = LEG.sole * c - LEG.heel * sn; oz = LEG.sole * sn + LEG.heel * c; }
-    else { const bl = (LEG.heel + LEG.ball) * s; px += ft.dx * bl; pz += ft.dz * bl; oy = LEG.sole * c + LEG.ball * sn; oz = LEG.sole * sn - LEG.ball * c; }
-    return T.set(px + ft.dx * oz * s, ft.y + oy * s, pz + ft.dz * oz * s);
+    // (on its heel while the toes are above the ground's own line under the foot, on its ball after: the pitch counted from it)
+    const g = ft.gp || 0, c = Math.cos(p), sn = Math.sin(p); let px = ft.x, pz = ft.z, py = ft.y, oy, oz;
+    if (p <= g) { oy = LEG.sole * c - LEG.heel * sn; oz = LEG.sole * sn + LEG.heel * c; }
+    else { const bl = (LEG.heel + LEG.ball) * s; px += ft.dx * bl * Math.cos(g); pz += ft.dz * bl * Math.cos(g); py -= bl * Math.sin(g); oy = LEG.sole * c + LEG.ball * sn; oz = LEG.sole * sn - LEG.ball * c; }
+    return T.set(px + ft.dx * oz * s, py + oy * s, pz + ft.dz * oz * s);
   }
   const DIR = [0, 0];
   function footWant(R, pose, L, k, s) {
@@ -1086,7 +1094,7 @@
       DIR[0] = Math.cos(a0 + da * w); DIR[1] = Math.sin(a0 + da * w); ft.on = 0; ft.off = 0;
       return { T, p: 0.32 * Math.sin(Math.PI * Math.min(1, t * 1.25)), w: 1, dir: DIR, stepping: 1 };
     }
-    const stw = ft.mode === 'plant' && ft.on ? 1 : (k ? pose.stR : pose.stL) || 0; const p = ft.mode === 'plant' && !(k ? pose.stR : pose.stL) ? 0 : (k ? pose.pitR : pose.pitL) || 0;
+    const stw = ft.mode === 'plant' && ft.on ? 1 : (k ? pose.stR : pose.stL) || 0; const p = (ft.mode === 'plant' && !(k ? pose.stR : pose.stL) ? 0 : (k ? pose.pitR : pose.pitL) || 0) + (ft.on ? ft.gp || 0 : 0);
     if (ft.on) {
       if (stw > 0.5) ft.early = 0;
       // (the push-off: the stride's stance is over — unless the strike came early, before it began)
@@ -1108,7 +1116,7 @@
         if (stw <= 0.5 || ft.mode === 'plant') break;
         M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k); const hx = M.v.x - (k ? -0.095 : 0.095), hy = M.v.y + 0.04, hz = M.v.z;
         if (hz > 0 || hx * hx + hy * hy + hz * hz <= REACH * REACH || p2 >= 1.0) break;
-        p2 = Math.max(p2, 0) + 0.07;
+        p2 = Math.max(p2, ft.gp || 0) + 0.07;
       }
       if (p2 > p) ft.pmin = p2; const pUse = p2;
       // (the body went too far from it — a turn on the spot, a push of the world: the foot lifts where it is)
@@ -1342,7 +1350,7 @@
       let drop = 0;
       // (a foot the hips would have to sink far for — left behind by a stride, a push — lifts instead: the hips sink for the ground,
       // not for a foot in the wrong place)
-      for (let k = 0; k < 2; k++) { want[k] = footWant(R, pose, L, k, s); if (want[k] && !want[k].leaving && !want[k].stepping) { const d = dropFor(R, want[k].T, k); if (d < 0 || d > (L.plant[k].mode === 'gait' || !L.plant[k].mode ? 0.16 : 0.42)) { L.plant[k].on = 0; want[k] = null; } else drop = Math.max(drop, d); } }
+      for (let k = 0; k < 2; k++) { want[k] = footWant(R, pose, L, k, s); if (want[k] && !want[k].leaving && !want[k].stepping) { const d = dropFor(R, want[k].T, k); if (d < 0 || d > (L.plant[k].mode === 'gait' || !L.plant[k].mode ? 0.16 : 0.42) + Math.max(0, (L.ground || 0) - (L.plant[k].y === undefined ? L.ground || 0 : L.plant[k].y)) / s) { L.plant[k].on = 0; want[k] = null; } else drop = Math.max(drop, d); } }
       // (as low as a foot on the ground needs them — a slope, a step, a long stride —, never by a fixed cap: L-1101)
       if (drop > 0) { hipY -= Math.min(0.4, drop); pelvis(); L.drop = drop; } else L.drop = 0;
     }
@@ -1602,7 +1610,7 @@
       // (the body's pose, made in this frame by the same animator as everyone's, from the motion its controller gives — the
       // frame's own time, interpolated: smooth at 60, 120 or 144 frames a second, 20a; a pose given whole — the fall of a death —
       // is drawn as it is)
-      if (av.drive) { const I = av.drive; I.X = av.X; I.Z = av.Z; I.ground = av.look.ground; I.s = av.look.s; Anim.drive(avFeet.an, I, av.pose, av.look, dt); if (I.post) I.post(av.pose, dt); }
+      if (av.drive) { const I = av.drive; I.X = av.X; I.Z = av.Z; I.ground = av.look.ground; I.s = av.look.s; Anim.drive(avFeet.an, I, av.pose, av.look, dt); if (I.post) I.post(av.pose, dt, I); }
       avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = easeMood(avFeet, av.look.mood, dt);
       av.look.lod = 0;
       P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
