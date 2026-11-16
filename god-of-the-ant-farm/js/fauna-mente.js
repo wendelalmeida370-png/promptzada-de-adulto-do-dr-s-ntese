@@ -64,7 +64,7 @@
   // (the females in heat now, an index the males look in: refilled from the minds within half a second of a load)
   const HEATS = new Map(), NONE = new Set();
   const heatAdd = a => { let l = HEATS.get(a.kind); if (!l) HEATS.set(a.kind, l = new Set()); l.add(a.id); };
-  G.worldHooks.push(() => { Me.tally = {}; cA = null; cT = -1; HEATS.clear(); });
+  G.worldHooks.push(() => { Me.tally = {}; cA = null; cT = -1; HEATS.clear(); RUNG.length = 0; });
 
   // ------------------------------ the mind ------------------------------
   // who has a mind: the wild beasts of the ground and of the shore (the kept, the town's, the sky's and the sea's have none)
@@ -76,15 +76,16 @@
   // f fear 0..1, g anger 0..1, rk rank in its group 0..1 (1 the top), sx sex (0 female, 1 male), mom the mother's id (0 none);
   // the brain's own: wn the wins less the losses of its contests (−6..6), so the want of its own (0..1), es the seconds of heat
   // left, pg the seconds of the pregnancy left, pa the male (her suitor in heat, the father once pregnant), wo the female a male
-  // courts, cw the one it means to challenge, fa its father, mk the clock of its last mark on the territory, pl the places it
+  // courts, cw the one it means to challenge, fa its father, mk the clock of its last mark on the territory, mh the times people
+  // hurt it (0..5: it keeps away from them, D-297b), pl the places it
   // remembers ([kind 1 rest/den, 2 a kill, 3 danger; x; y; the day]), ki the ones it remembers ([kind 1 enemy, 2 the one that beat
   // it, 3 its mate; id; the day]); lo the option it took last (in this life only: not saved)
   function fresh(a) {
-    return { st: 1, en: r2(0.6 + 0.4 * G.hash(a.id * 5 + 1)), f: 0, g: 0, rk: 0.5, sx: sx0(a), mom: 0, wn: 0, so: 0, es: 0, pg: 0, pa: 0, wo: 0, cw: 0, fa: 0, mk: 0, pl: null, ki: null, lo: 0, vg: 0.85 + 0.3 * Me.trait(a, 'v') };
+    return { st: 1, en: r2(0.6 + 0.4 * G.hash(a.id * 5 + 1)), f: 0, g: 0, rk: 0.5, sx: sx0(a), mom: 0, wn: 0, so: 0, es: 0, pg: 0, pa: 0, wo: 0, cw: 0, fa: 0, mk: 0, mh: 0, pl: null, ki: null, lo: 0, vg: 0.85 + 0.3 * Me.trait(a, 'v') };
   }
   Me.m = a => a.mind || (a.mind = fresh(a));
   // the mind as the save keeps it: what is not its default, rounded (thousands of beasts are saved)
-  const DEF0 = { st: 1, en: 1, f: 0, g: 0, rk: 0.5, mom: 0, wn: 0, so: 0, es: 0, pg: 0, pa: 0, wo: 0, cw: 0, fa: 0, mk: 0 };
+  const DEF0 = { st: 1, en: 1, f: 0, g: 0, rk: 0.5, mom: 0, wn: 0, so: 0, es: 0, pg: 0, pa: 0, wo: 0, cw: 0, fa: 0, mk: 0, mh: 0 };
   const IDS = { mom: 1, pa: 1, wo: 1, cw: 1, fa: 1 }, SECS = { es: 1, pg: 1, mk: 1 };
   Me.pack = function (a) {
     const m = a.mind; if (!m) return undefined; const o = {};
@@ -102,7 +103,7 @@
     const m = fresh(a); m.en = 1;
     for (const k in DEF0) if (Number.isFinite(p[k])) m[k] = p[k];
     for (const k of ['st', 'en', 'f', 'g', 'rk', 'so']) m[k] = clamp01(m[k]);
-    m.wn = Math.max(-6, Math.min(6, Math.round(m.wn))); for (const k of ['es', 'pg', 'mk']) m[k] = Math.max(0, m[k]);
+    m.wn = Math.max(-6, Math.min(6, Math.round(m.wn))); m.mh = Math.max(0, Math.min(5, Math.round(m.mh))); for (const k of ['es', 'pg', 'mk']) m[k] = Math.max(0, m[k]);
     if (p.sx === 0 || p.sx === 1) m.sx = p.sx;
     m.pl = Array.isArray(p.pl) ? p.pl.filter(okPlace).slice(0, 3) : null; if (m.pl && !m.pl.length) m.pl = null;
     m.ki = Array.isArray(p.ki) ? p.ki.filter(okKin).slice(0, 3) : null; if (m.ki && !m.ki.length) m.ki = null;
@@ -213,6 +214,13 @@
   Me.tire = function (a, x) { const m = a.mind; if (m) m.en = Math.max(0, m.en - x); };
   Me.fright = function (a, lv) { if (!Me.has(a, SP[a.kind])) return; const m = Me.m(a); if (lv > m.f) m.f = clamp01(lv); };
   Me.anger = function (a, lv, by) { if (!Me.has(a, SP[a.kind])) return; const m = Me.m(a); if (lv > m.g) m.g = clamp01(lv); if (by && by.id) Me.meet(a, 1, by.id); };
+  // hurt by a person: it knows that one from now on, it keeps the place, and it has learned what people do (D-297b) — once a
+  // blow of the same fight
+  Me.manHurt = function (a, v) {
+    if (!Me.has(a, SP[a.kind])) return; const m = Me.m(a);
+    if (!Me.knows(a, v.id, 1)) m.mh = Math.min(5, (m.mh || 0) + 1);
+    Me.meet(a, 1, v.id); Me.place(a, 3, a.x, a.y); Me.fright(a, 0.5);
+  };
   // a place to remember (k: 1 a place to rest, 2 a kill, 3 danger): the old one near it moves there, else the oldest goes
   Me.place = function (a, k, x, y) {
     if (!Me.has(a, SP[a.kind])) return; const m = Me.m(a); const l = m.pl || (m.pl = []); const d = today();
@@ -243,8 +251,14 @@
   // another that the same danger eats a little less, the rest only lift their heads) runs, stands or looks: the door the world
   // around calls too (G.Meio: a bird's alarm, the scent on the wind). src: the danger (a beast, a person), or null: from (x, y).
   // Who runs here does not call the alarm again (heard): one ring, no chain across the map. Gives how many ran
+  // (the alarms just rung: a herd that bolts rings it once — the next of its own to bolt, a few steps off, a moment later, is
+  // heard by the same ears that are already running: not rung again. Kept a second and a half; new with each world)
+  const RUNG = []; const RING_T = 1.5;
   Me.alarm = function (x, y, kind, lv, src) {
     if (!(lv > 0)) return 0; lv = Math.min(1, lv); const r = 4 + 8 * lv; let n = 0;
+    const now = G.S.clock; while (RUNG.length && (now - RUNG[0][3] > RING_T || now < RUNG[0][3])) RUNG.shift();
+    for (let i = 0; i < RUNG.length; i++) { const q = RUNG[i]; if (q[2] === kind && q[4] >= lv && G.dist2(q[0], q[1], x, y) < 9) return 0; }
+    RUNG.push([x, y, kind, now, lv]); if (RUNG.length > 24) RUNG.shift();
     const sk = src && src.kind; const person = !!src && !sk;
     A.near(x, y, r, b => {
       if (b === src || b.dead || b.held || b.air || b.caught || b.tamed || b.legend) return;
@@ -313,13 +327,16 @@
   });
   // the senses of the mind: the asleep notice late, the sentinel early, the frightened sooner; the hidden fawn is hard to see;
   // and each by its own vigilance
-  A.senseHooks.push(function (a, o) {
-    const st = a.state; let k = st === 'sleep' ? 0.45 : st === 'watch' ? 1.6 : RESTFUL[st] ? 0.85 : 1;
-    const m = a.mind; if (m) { if (m.f > 0.35) k *= 1.2; k *= m.vg; }
+  const senseOwn = a => { const st = a.state; let k = st === 'sleep' ? 0.45 : st === 'watch' ? 1.6 : RESTFUL[st] ? 0.85 : 1; const m = a.mind; if (m) { if (m.f > 0.35) k *= 1.2; k *= m.vg; } return k; };
+  const senses = function (a, o) {
+    let k = senseOwn(a); const m = a.mind;
     if (o && o.state === 'hide') k *= 0.35;
     if (m && m.ki && o && o.id && Me.knows(a, o.id, 1)) k *= 1.4; // (the one that hurt it, or its own: it knows that one)
     return k;
-  });
+  };
+  // (the most it stretches for this one, whoever the other: the scans of the fear and the hunt look no farther, A.senseBound)
+  senses.self = a => senseOwn(a) * (a.mind && a.mind.ki ? 1.4 : 1);
+  A.senseHooks.push(senses);
   // ---- a hunter with nothing near goes back to where it killed before (the crossing, the waterhole)
   Me.option('range', {
     who: (a, sp) => brain(a, sp) && A.predator(a.kind) && sp.diet !== 'scav' && a.grown >= 1 && !a.mig && !!a.mind && !!a.mind.pl,
@@ -832,8 +849,11 @@
   // ------------------------------ the inspector ------------------------------
   // what the beast is doing, and why — read only: the god's panel asks
   const SAYS = { sleep: 'Dormindo', watch: 'De sentinela, enquanto os outros dormem', rest: 'Descansando', groom: 'Cuidando de si', social: 'Junto dos seus', young: 'Seguindo a mãe', suckle: 'Mamando', nurse: 'Amamentando o filhote', play: 'Brincando', hide: 'Escondido no capim', heat: 'No cio', court: 'Cortejando uma fêmea', contest: 'Numa disputa', patrol: 'Patrulhando o território',
-    hold: 'Segurando a presa', stand: 'Encarando um predador', trail: 'Seguindo o rastro da presa que picou', digest: 'Digerindo', wait: 'Esperando a vez na carcaça', fish: 'Pescando', stalk: 'Espreitando a presa', flank: 'Cercando a presa', pounce: 'Saltando sobre a presa' };
-  Me.says = a => SAYS[a.state] || null;
+    hold: 'Segurando a presa', stand: 'Encarando um predador', trail: 'Seguindo o rastro da presa que picou', digest: 'Digerindo', wait: 'Esperando a vez na carcaça', fish: 'Pescando', stalk: 'Espreitando a presa', flank: 'Cercando a presa', pounce: 'Saltando sobre a presa',
+    eye: 'De olho em uma pessoa', shy: 'Afastando-se das pessoas' };
+  // (on a person: the hunt says so — D-297b)
+  const SAYS_MAN = { stalk: 'Espreitando uma pessoa', pounce: 'Saltando sobre uma pessoa', chase: 'Correndo atrás de uma pessoa' };
+  Me.says = a => (a.onPerson && SAYS_MAN[a.state]) || SAYS[a.state] || null;
   Me.why = function (a) {
     const m = a.mind; if (!m || a.dead) return '';
     const out = []; const st = a.state;
@@ -842,6 +862,7 @@
     if (m.f > 0.5) out.push('com medo'); if (m.g > 0.5) out.push('irritad' + (m.sx === 0 ? 'a' : 'o'));
     if (m.st < 0.25) out.push('sem fôlego'); else if (m.en < 0.2 && st !== 'sleep') out.push('exaust' + (m.sx === 0 ? 'a' : 'o'));
     if (m.es > 0) out.push('no cio'); if (m.pg > 0 || Me.due(a)) out.push('prenhe');
+    if ((a.kills || 0) > 0) out.push('já matou gente'); else if ((m.mh || 0) > 0) out.push('aprendeu a temer as pessoas');
     const w = a.wnd; if (w) { if ((w.j || 0) > 0.4) out.push('a mandíbula ferida'); if (w.l > 0.35) out.push('mancando'); if (w.b > 0.15) out.push('sangrando'); }
     if (a.leader === 0 && m.rk >= 1 && SP[a.kind].herd && SP[a.kind].herd[1] >= 2 && groupOf(a)) out.push(MATRI.has(a.kind) && m.sx === 0 ? 'a matriarca' : 'quem guia o grupo');
     const tr = []; if (Me.trait(a, 'b') > 0.85) tr.push('ousad'); if (Me.trait(a, 'v') > 0.9) tr.push('arisc'); if (Me.trait(a, 'c') > 0.85) tr.push('curios'); if (Me.trait(a, 'g') > 0.85) tr.push('brigã');

@@ -17,6 +17,11 @@
 //   b3 a manada inteira morta no meio da caçada: o caçador não fica preso a nada;
 //   b4 o deus ergue o caçador (a mão) no meio da pegada: a presa solta; o deus ergue a presa: a pegada acaba;
 //   b5 o chão muda debaixo de uma pegada (a mão alaga o chão): nada fica inválido;
+//   o caçador e a pessoa (D-297b) — p1 o tigre com fome e o lenhador sozinho na beira do mato: a espreita, o bote; p2 cinco
+//      pessoas juntas: o tigre não ataca, vigia e se afasta; p3 de noite, a tocha afasta o tigre, e sem ela, a caça; p4 o leão
+//      velho e manco vira devorador de gente, o leão são com a mesma fome não; p5 o leão saciado não fica deitado ao lado de uma
+//      pessoa como se ela não estivesse ali; b6 save e load no meio da espreita de uma pessoa; b7 a mão do deus ergue a pessoa
+//      espreitada, e a pessoa que entra em casa: a caça acaba na hora;
 // e em todos o verificador calado nos sistemas da luta e da mente, nenhum gesto recusado pela porta, nenhum erro de módulo.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['qa/mente-inv.js'] });
@@ -188,6 +193,135 @@ if (on('l9')) {
   }
   ok('l9 o leopardo leva a presa para a árvore', up > 0 && !viol.length, `${info.join('; ')} — ${vsay(viol)}`);
 }
+// ---------------- p: the wild hunter and the person (D-297b) ----------------
+// (people of the world taken out to the wild by the proof's hand: grown, free, not the god's body; each case its own)
+const takenP = new Set();
+function people(n, need) {
+  const out = [];
+  for (const v of [...S.villagers.values()].sort((p, q) => p.id - q.id)) {
+    if (out.length >= n) break;
+    if (takenP.has(v.id) || v.dead || v.captive || v.jail || v.aboard || v.held || v.age < 18 || v.age > 50 || v.hp < 80 || L.armed(v) || (S.avatar && S.avatar === v.id) || (need && !need(v))) continue;
+    takenP.add(v.id); out.push(v);
+  }
+  return out;
+}
+function place(v, x, y) { god(() => { G.Vg.endTask(v); if (v.ug && G.Caves) G.Caves.exitNow(v); v.sleeping = false; v.inside = 0; v.x = x; v.y = y; v.path = null; v.hunger = Math.min(v.hunger, 20); v.energy = Math.max(v.energy, 80); v.carry = null; }); }
+// (a tree to cut at the edge of a wood: the woodcutter at work, standing at it)
+function chop(v) { const tr = A.treeNear(v.x, v.y, 4); if (tr) god(() => { tr.claim = v.id; G.Vg.setTask(v, { type: 'chop', id: tr.id, pri: 1 }); }); return !!tr; }
+// (a wood's edge far from the towns, where a tiger walks: a tree within four steps of an open spot)
+function edge(kind) {
+  for (let k = 0; k < 20000; k++) {
+    const p = arena(kind, false, used); if (!p) return null; used.push(p);
+    if (A.treeNear(p[0], p[1], 4)) return p;
+  }
+  return null;
+}
+// what the hunter did to the person over the case: the hunt seen (stalk, pounce, chase on them), the hurt, the reactions
+function watchMan(hs, vs) {
+  const ids = new Set(vs.map(v => v.id)); const hp0 = new Map(vs.map(v => [v.id, v.hp]));
+  const o = { hunt: 0, stalk: 0, pounce: 0, eye: 0, shy: 0, warn: 0, states: new Set() };
+  o.tick = () => { for (const h of hs) { if (h.dead) continue; o.states.add(h.state); const on = ids.has(h.target);
+    if (on && h.onPerson && (h.state === 'stalk' || h.state === 'pounce' || h.state === 'chase')) { o.hunt++; if (h.state === 'stalk') o.stalk++; if (h.state === 'pounce') o.pounce++; }
+    if (h.state === 'eye') o.eye++; if (h.state === 'shy' || h.state === 'flee') o.shy++; if (h.angry > 0 && on) o.warn++; } };
+  o.hurt = () => vs.filter(v => !S.villagers.has(v.id) || v.dead || v.hp < hp0.get(v.id) - 1).length;
+  return o;
+}
+// (the person kept at their place by the proof's hand while they do not run — at their work, awake in the night; a woodcutter
+// back at the tree)
+const keepAt = (v, c, work) => god(() => { if (!S.villagers.has(v.id) || v.dead || (v.task && (v.task.type === 'flee' || v.task.type === 'fight'))) return; if (G.isNight()) { v.sleeping = false; v.energy = Math.max(v.energy, 90); }
+  if (G.dist(v.x, v.y, c[0], c[1]) > (work ? 1.6 : 0.6)) { G.Vg.endTask(v); v.inside = 0; v.x = c[0]; v.y = c[1]; v.path = null; if (work) chop(v); } });
+const liveMan = (sec, w, each, done) => { const seen = []; for (let t = 0; t < sec * 4; t++) { M.viver(0.25); w.tick(); if (each) each(t); if (t % 8 === 7) for (const q of bad()) if (seen.length < 6 && !seen.some(s => s.msg === q.msg)) seen.push(q); if (done && done()) break; } return seen; };
+const tsay = w => `estados ${[...w.states].join('/')}`;
+// p1 a lone woodcutter at the edge of a wood, a hungry tiger eight steps off: the stalk from cover, the rush, the takedown
+if (on('p1')) {
+  let msg = 'sem lugar', good = false;
+  const p = edge('tiger'); const [v] = people(1);
+  if (p && v) {
+    clear(p[0], p[1], 26); S.time = 0.35;
+    // (at the tree itself: the woodcutter stands at it to cut)
+    const tr = A.treeNear(p[0], p[1], 4); const at = tr ? (W.nearestLand(tr.x + 0.5, tr.y + 0.5, 2, (x, y) => W.walkableXY(x, y) && !S.treeAt[W.idx(x, y)]) || p) : p;
+    place(v, at[0], at[1]); const cut = chop(v);
+    const tg = put('tiger', at[0] - 8, at[1] + 1, { hunger: 0.95, age: 6 }); G.faceTo(tg, 1, 0);
+    const w = watchMan([tg], [v]); const t0 = T0();
+    const viol = liveMan(60, w, () => keepAt(v, at, true), () => w.hurt() > 0 && !(tg.state === 'stalk' || tg.state === 'pounce'));
+    const hurt = w.hurt();
+    good = w.stalk > 0 && (hurt > 0 || w.pounce > 0 || (v.task && v.task.type === 'flee')) && !viol.length;
+    msg = `${v.name} ${cut ? 'cortando lenha' : 'parado'} na beira do mato, o tigre (fome 0,95) a 8 passos: espreita ${w.stalk > 0 ? 'sim' : 'NÃO'}, salto ${w.pounce > 0 ? 'sim' : 'não'}, a pessoa ${!S.villagers.has(v.id) || v.dead ? 'morta' : hurt ? `ferida (vida ${Math.round(v.hp)})` : v.task && v.task.type === 'flee' ? 'fugindo' : 'ilesa'}; caças de gente ${diff(t0, 'caca-gente:tiger')}; ${tsay(w)} — ${vsay(viol)}`;
+  }
+  ok('p1 o tigre com fome e o lenhador sozinho na beira do mato: a espreita, o bote', good, msg);
+}
+// p2 five people together, the same hungry tiger: no hunt — it watches them, and gives way
+if (on('p2')) {
+  let msg = 'sem lugar', good = false;
+  const p = edge('tiger'); const vs = people(5);
+  if (p && vs.length === 5) {
+    clear(p[0], p[1], 26); S.time = 0.35;
+    const spot = vs.map((v, i) => [p[0] + Math.cos(i * 1.256) * 0.9, p[1] + Math.sin(i * 1.256) * 0.9]);
+    vs.forEach((v, i) => place(v, spot[i][0], spot[i][1]));
+    const tg = put('tiger', p[0] - 7, p[1] + 1, { hunger: 0.95, age: 6 });
+    const w = watchMan([tg], vs); const t0 = T0();
+    // (a group at its work together: the proof's hand keeps them in their places, whatever each would do alone)
+    const viol = liveMan(40, w, () => god(() => vs.forEach((v, i) => { if (S.villagers.has(v.id) && !v.dead && G.dist(v.x, v.y, spot[i][0], spot[i][1]) > 0.6) { v.x = spot[i][0]; v.y = spot[i][1]; v.path = null; } })));
+    good = w.hunt === 0 && w.hurt() === 0 && (w.eye + w.shy) > 0 && !viol.length;
+    msg = `cinco juntos, o tigre (fome 0,95) a 7 passos: caça ${w.hunt ? 'SIM (' + w.hunt + ')' : 'nenhuma'}, feridos ${w.hurt()}, de olho ${(w.eye / 4).toFixed(1)} s, recuando ${(w.shy / 4).toFixed(1)} s; vigia ${diff(t0, 'gente:vigia:tiger')}, recua ${diff(t0, 'gente:recua:tiger') + diff(t0, 'gente:foge:tiger')}; ${tsay(w)} — ${vsay(viol)}`;
+  }
+  ok('p2 cinco pessoas juntas: o tigre não ataca — vigia e se afasta', good, msg);
+}
+// p3 a lone person at night with a torch, a hungry tiger: kept off by the fire; the torch put out, the hunt
+if (on('p3')) {
+  let msg = 'sem lugar', good = false;
+  const p = edge('tiger'); const [v] = people(1, q => q.id % 3 !== 0);
+  if (p && v) {
+    clear(p[0], p[1], 26); S.time = 0.75;
+    place(v, p[0], p[1]); v.holdTorch = true;
+    const tg = put('tiger', p[0] - 8, p[1] + 1, { hunger: 0.95, age: 6 });
+    const w = watchMan([tg], [v]);
+    const v1 = liveMan(25, w, () => { if (S.time < 0.74 && S.time > 0.5) S.time = 0.75; keepAt(v, p); });
+    const lit = { hunt: w.hunt, hurt: w.hurt(), react: w.eye + w.shy };
+    v.holdTorch = false; const w2 = watchMan([tg], [v]);
+    // (the fire out: the tiger brought back where it began, hungry still)
+    god(() => { tg.x = p[0] - 8; tg.y = p[1] + 1; tg.state = 'idle'; tg.t = 0; tg.target = 0; tg.hunger = 0.95; tg.rest = 0; });
+    const v2 = liveMan(40, w2, () => { if (S.time < 0.74 && S.time > 0.5) S.time = 0.75; keepAt(v, p); }, () => w2.hunt > 0);
+    good = lit.hunt === 0 && lit.hurt === 0 && lit.react > 0 && w2.hunt > 0 && !v1.length && !v2.length;
+    msg = `de noite, sozinho: com a tocha, caça ${lit.hunt ? 'SIM' : 'nenhuma'}, ${lit.hurt ? 'FERIDO' : 'ileso'}, o tigre ${lit.react ? 'vigiou e recuou' : 'NÃO REAGIU'} (${tsay(w)}); a tocha apagada: caça ${w2.hunt > 0 ? 'sim' : 'NÃO'} — ${vsay(v1.concat(v2))}`;
+  }
+  ok('p3 a tocha de noite afasta o tigre; sem ela, a caça', good, msg);
+}
+// p4 the old lion with a lame leg turns man-eater: hunger that a sound lion bears, and it hunts a lone person; the sound lion,
+// as hungry, does not
+if (on('p4')) {
+  let msg = 'sem lugar', good = false;
+  const p = arena('lion', false, used); if (p) used.push(p); const q = arena('lion', false, used); if (q) used.push(q);
+  const [v1, v2] = people(2);
+  if (p && q && v1 && v2) {
+    clear(p[0], p[1], 26); clear(q[0], q[1], 26); S.time = 0.35;
+    place(v1, p[0], p[1]); place(v2, q[0], q[1]);
+    const old = put('lion', p[0] - 8, p[1], { hunger: 0.7, age: A.DEF.lion.life * 0.88, lifeMul: 1 }); god(() => { L.wound(old, 5, 0.55, null); old.wnd.b = 0; Me.m(old).sx = 1; });
+    const young = put('lion', q[0] - 8, q[1], { hunger: 0.7, age: A.DEF.lion.life * 0.3, lifeMul: 1 }); god(() => { Me.m(young).sx = 1; });
+    const wo = watchMan([old], [v1]), wy = watchMan([young], [v2]); const both = { tick() { wo.tick(); wy.tick(); } };
+    const keep = () => god(() => { for (const [v, c] of [[v1, p], [v2, q]]) if (S.villagers.has(v.id) && !v.dead && !(v.task && v.task.type === 'flee') && G.dist(v.x, v.y, c[0], c[1]) > 0.6) { v.x = c[0]; v.y = c[1]; v.path = null; } for (const l of [old, young]) l.hunger = 0.7; });
+    const viol = liveMan(45, both, keep, () => wo.hunt > 0 && wy.states.size > 1);
+    good = wo.hunt > 0 && wy.hunt === 0 && !viol.length;
+    msg = `o leão velho e manco (fome 0,7): caça ${wo.hunt > 0 ? 'sim' : 'NÃO'} (${tsay(wo)}); o leão moço e são, a mesma fome: caça ${wy.hunt ? 'SIM' : 'nenhuma'} (${tsay(wy)}) — ${vsay(viol)}`;
+  }
+  ok('p4 o leão velho e ferido vira devorador de gente; o são, com a mesma fome, não', good, msg);
+}
+// p5 a lion with a full belly and a person coming by at three steps: it does not lie on as if nobody were there
+if (on('p5')) {
+  let msg = 'sem lugar', good = false;
+  const p = arena('lion', false, used); if (p) used.push(p); const [v] = people(1);
+  if (p && v) {
+    clear(p[0], p[1], 26); S.time = 0.35;
+    const lion = put('lion', p[0], p[1], { hunger: 0.05 }); god(() => { lion.state = 'rest'; lion.t = 20; });
+    place(v, p[0] + 3, p[1]);
+    const w = watchMan([lion], [v]);
+    const viol = liveMan(15, w, () => god(() => { if (S.villagers.has(v.id) && !(v.task && v.task.type === 'flee') && G.dist(v.x, v.y, p[0] + 3, p[1]) > 0.6) { v.x = p[0] + 3; v.y = p[1]; v.path = null; } }));
+    const near = G.dist(lion.x, lion.y, v.x, v.y);
+    good = (w.eye + w.shy + w.warn) > 0 && w.hunt === 0 && w.hurt() === 0 && !viol.length;
+    msg = `o leão de barriga cheia deitado, ${v.name} a 3 passos: ${w.shy ? 'afastou-se' : w.warn ? 'ameaçou' : w.eye ? 'ficou de olho' : 'NÃO REAGIU'} (${tsay(w)}); agora a ${near.toFixed(1)} passos; caça ${w.hunt ? 'SIM' : 'nenhuma'} — ${vsay(viol)}`;
+  }
+  ok('p5 o leão saciado não fica deitado ao lado de uma pessoa como se ela não estivesse ali', good, msg);
+}
 // ---------------- the bad cases ----------------
 // a hold staged by the proof's hand: a holder and its prey, side by side, the hold of a kind
 function staged(hk, pk, k) {
@@ -244,6 +378,34 @@ if (on('b5')) {
     good = !v.length && Number.isFinite(c.prey.x) && Number.isFinite(c.h.x); msg = `o chão da presa virou rio: a pegada ${c.prey.dead ? 'acabou com a presa morta' : c.h.state === 'hold' ? 'continua' : 'acabou'} — ${vsay(v)}`;
   }
   ok('b5 o chão muda debaixo de uma pegada', good, msg);
+}
+// b6 save and load while a tiger stalks a person: it goes on (or the stalk is let go), nothing left pointing at nobody; b7 the god
+// lifts the stalked one, and another goes indoors: the hunt is over at once
+const stalking = () => {
+  const p = edge('tiger'); const [v] = people(1); if (!p || !v) return null;
+  clear(p[0], p[1], 26); S.time = 0.35; place(v, p[0], p[1]);
+  const tg = put('tiger', p[0] - 7, p[1], { hunger: 0.95, age: 6 });
+  god(() => { tg.target = v.id; tg.onPerson = true; tg.carc = false; tg.state = 'stalk'; tg.t = 18; });
+  return { p, v, tg };
+};
+if (on('b6')) {
+  let msg = 'sem lugar', good = false; const c = stalking();
+  if (c) {
+    M.viver(1); const st0 = c.tg.state, id = c.tg.id, vid = c.v.id;
+    M.salvarCarregar(); S = G.S; const tg = S.animals.get(id), v = S.villagers.get(vid);
+    const viol = bad(); const after = tg ? tg.state : 'sumiu';
+    viol.push(...live(20));
+    const dangling = !!tg && tg.onPerson && !S.villagers.has(tg.target);
+    good = !!tg && !!v && !viol.length && !dangling;
+    msg = `antes do save «${st0}», depois do load «${after}» (alvo ${tg && tg.target === vid ? 'a mesma pessoa' : tg && tg.target ? 'outro' : 'nenhum'}), 20 s depois «${tg ? tg.state : '-'}»${dangling ? ', CAÇANDO NINGUÉM' : ''} — ${vsay(viol)}`;
+  }
+  ok('b6 save e load no meio da espreita de uma pessoa', good, msg);
+}
+if (on('b7')) {
+  const out = []; let good = true;
+  { const c = stalking(); if (c) { M.viver(1); god(() => { c.v.held = true; }); const v = live(2); const over = !(c.tg.target === c.v.id && c.tg.onPerson && (c.tg.state === 'stalk' || c.tg.state === 'pounce' || c.tg.state === 'chase')); good = good && over && !v.length; out.push(`o deus ergue a pessoa: o tigre ${over ? 'larga' : 'AINDA ESPREITA'} (${c.tg.state}) — ${vsay(v)}`); god(() => { c.v.held = false; }); } else good = false; }
+  { const c = stalking(); if (c) { M.viver(1); const b = [...S.buildings.values()].find(q => q.built && G.BDEF[q.type] && G.BDEF[q.type].housing); god(() => { c.v.inside = b ? b.id : 1; }); const v = live(2); const over = !(c.tg.target === c.v.id && c.tg.onPerson && (c.tg.state === 'stalk' || c.tg.state === 'pounce' || c.tg.state === 'chase')); good = good && over && !v.length; out.push(`a pessoa entra numa casa: o tigre ${over ? 'larga' : 'AINDA ESPREITA'} (${c.tg.state}) — ${vsay(v)}`); god(() => { G.Vg.endTask(c.v); c.v.inside = 0; }); } else good = false; }
+  ok('b7 a mão do deus ergue a pessoa espreitada; a pessoa entra em casa', good && out.length === 2, out.join('; '));
 }
 // ---------------- the whole ----------------
 { const e = M.erros(); const ge = A.gestErr.slice(0, 4);

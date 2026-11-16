@@ -2699,20 +2699,25 @@
 //   · a mãe de um filhote existe — ou o laço é desfeito no giro social (no máximo 30 s de relógio depois, S3);
 //   · ninguém num estado de caça, de luta ou de corte sem um alvo que existe, nem preso nele além do tempo dele (S2);
 //   · o gesto do cérebro e da luta é um que a espécie faz (o qa.js já confere; aqui, o gesto segurado de um estado que acabou).
+//   · o caçador selvagem e a pessoa (D-297b): nenhum leão, tigre, urso, lobo… à vontade a um braço de uma pessoa por mais de
+//     oito segundos (S3) — ele a vê e reage: vigia, recua, ameaça ou caça; e as vezes que gente o feriu (mente.mh) de 0 a 5 (S2).
 // O que guarda entre duas olhadas (desde quando cada um está num estado, desde quando o laço da mãe aponta para ninguém) fica
 // aqui, nunca no mundo, e recomeça com um mundo novo, um save aberto ou um relógio que voltou atrás.
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = x => typeof x === 'number' && isFinite(x);
-  let since = new Map(), orphan = new Map(), pS = null, pC = -1;
+  let since = new Map(), orphan = new Map(), ease = new Map(), pS = null, pC = -1;
   // (the longest a beast stays in each state of the brain and the fight, in seconds of the clock, with room)
-  const LIMIT = { hold: 110, contest: 70, court: 80, stand: 40, trail: 100, patrol: 70, play: 40, digest: 200, wait: 40 };
-  const TARGET = { chase: 1, stalk: 1, flank: 1, pounce: 1, hold: 1, strike: 1, trail: 1, stand: 1, contest: 1, court: 1, play: 1, young: 1, suckle: 1 };
+  const LIMIT = { hold: 110, contest: 70, court: 80, stand: 40, trail: 100, patrol: 70, play: 40, digest: 200, wait: 40, eye: 30, shy: 20 };
+  const TARGET = { chase: 1, stalk: 1, flank: 1, pounce: 1, hold: 1, strike: 1, trail: 1, stand: 1, contest: 1, court: 1, play: 1, young: 1, suckle: 1, eye: 1 };
+  // (the states of a beast at its ease: a wild hunter in one of them with a person at arm's length, for seconds on end, is the
+  // old walk beside people as if nobody were there — D-297b)
+  const EASE = { idle: 1, wander: 1, graze: 1, rest: 1, sleep: 1, groom: 1, social: 1, play: 1, seek: 1, range: 1, shun: 1, patrol: 1, mark: 1, heat: 1, court: 1, nurse: 1, suckle: 1, hide: 1, watch: 1, digest: 1 };
   const rule = function (add, s) {
     const A = G.Animals; if (!A || !G.Mente || !G.Luta) return;
-    if (s !== pS || s.clock < pC) { since = new Map(); orphan = new Map(); }
-    if (s.clock - pC > 15) since = new Map(); // (how long in a state is judged only between looks close together: T-1310)
-    const now = new Map(), orph = new Map(); const holders = new Map();
+    if (s !== pS || s.clock < pC) { since = new Map(); orphan = new Map(); ease = new Map(); }
+    if (s.clock - pC > 15) { since = new Map(); ease = new Map(); } // (how long in a state is judged only between looks close together: T-1310)
+    const now = new Map(), orph = new Map(), easeNow = new Map(); const holders = new Map();
     for (const a of s.animals.values()) {
       const nm = `${a.kind}#${a.id}`;
       // ---- the hold, from the held one's side
@@ -2736,6 +2741,7 @@
         for (const k of ['st', 'en', 'f', 'g', 'rk', 'so']) { const v = m[k]; if (!fin(v)) add('mente', 1, `${nm}: a mente.${k} = ${v}`, a.id); else if (v < -1e-6 || v > 1 + 1e-6) add('mente', 2, `${nm}: a mente.${k} = ${v} fora de 0 a 1`, a.id); }
         if (m.sx !== 0 && m.sx !== 1) add('mente', 2, `${nm}: o sexo ${m.sx}`, a.id);
         for (const k of ['es', 'pg', 'mk', 'wn']) if (!fin(m[k])) add('mente', 1, `${nm}: a mente.${k} = ${m[k]}`, a.id);
+        if (m.mh !== undefined && (!fin(m.mh) || m.mh < 0 || m.mh > 5)) add('mente', 2, `${nm}: a mente.mh = ${m.mh} (as vezes que gente o feriu, de 0 a 5)`, a.id);
         if (m.es > 0 && m.pg > 0) add('mente', 2, `${nm}: no cio e prenhe ao mesmo tempo`, a.id);
         if (m.pg > 0 && !m.pa) add('mente', 2, `${nm}: prenhe sem pai`, a.id);
         if (m.pg > 0 && m.sx !== 0) add('mente', 2, `${nm}: um macho prenhe`, a.id);
@@ -2756,7 +2762,16 @@
       }
     }
     for (const [id, n] of holders) if (n > 1) add('luta', 1, `#${id} seguro por ${n} ao mesmo tempo`, id);
-    since = now; orphan = orph; pS = s; pC = s.clock;
+    // ---- the wild hunter and the person: never at its ease beside one (D-297b)
+    if (A.MAN && A.nearMan) for (const a of s.animals.values()) {
+      if (a.dead || !A.MAN.has(a.kind) || !EASE[a.state] || a.tamed || a.dom || a.summoned || a.raid || a.legend || a.caught || a.held || a.mig || a.z > 3 || a.grown < 0.6 || a.angry > 0) continue;
+      if (a.kind === 'croc' && s.type[G.W.idx(a.x, a.y)] <= G.T.RIVER) continue; // (the croc in the water: its lurk is its watch)
+      let v = null; A.nearMan(a.x, a.y, 2.5, q => { if (!v && !q.dead && !q.inside && !q.aboard && !q.held && !q.air && G.dist2(q.x, q.y, a.x, a.y) < 6.25) v = q; });
+      if (!v) continue;
+      const p = ease.get(a.id); const t = p && p.v === v.id ? p.t : s.clock; easeNow.set(a.id, { v: v.id, t });
+      if (s.clock - t > 8) add('mente', 3, `${a.kind}#${a.id} em «${a.state}» a ${G.dist(a.x, a.y, v.x, v.y).toFixed(1)} de ${v.name || 'uma pessoa'} há ${Math.round(s.clock - t)} s, como se ninguém estivesse ali`, a.id);
+    }
+    since = now; orphan = orph; ease = easeNow; pS = s; pC = s.clock;
   };
   QA.more.push(rule); QA.mente = rule;
 })();
