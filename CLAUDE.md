@@ -121,6 +121,11 @@ Três famílias inteiras de bugs foram eliminadas reconstruindo a base. Código 
 - O estilo do código: comentários curtos que dizem o porquê, nomes como os vizinhos, uma linha por ideia.
 - Um nome, uma função: duas declarações `function` com o mesmo nome no mesmo arquivo não quebram nada à vista — a última toma o lugar da primeira, em silêncio (as batidas das histórias, L-320; o `guard.js` cobra, regra 30).
 
+## Para quem é o jogo
+
+- **O alvo principal é o PC** (teclado, mouse, placa de vídeo de computador): a qualidade — polígonos, texturas, efeitos, animações — é pensada para ele, e nada se corta pensando no celular.
+- **O celular continua funcionando**: os controles de toque ficam, e a tela se adapta (o dono testa pelo celular); se o aparelho tiver potência, roda — mas o celular não põe teto em nada.
+
 ## Versões, commits e publicação
 
 - Desenvolva no branch indicado pela sessão; commit e push só depois do protocolo acima.
