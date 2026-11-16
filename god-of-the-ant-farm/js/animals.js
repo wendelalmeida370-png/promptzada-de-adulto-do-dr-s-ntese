@@ -395,8 +395,13 @@
     if (sp.cls === 'amph') {
       if (t <= T.SEA) return dLand[i] <= 3;
       if (W.blocked(i) || S.cliff[i]) return false;
-      if (sp.near === 'water' && dWater[i] > 3) return false;
-      if (sp.near === 'sea' && dSea[i] > 3) return false;
+      // (its band is the water's edge; out of it — set down by the god's hand far inland, the pool dried up — every step that
+      // takes it at most two tiles farther from the water than it stands, the way round a bank it cannot climb (the distance is
+      // the crow's): the anaconda the hand left by a village had not one tile round it to step on, and stood there for good, and
+      // the hippo on a bank four tiles over the river, with no step nearer, stood on it, L-1062)
+      const far = (D, j) => { if (D[j] <= 3) return false; if (a.x === undefined) return true; const c = D[W.idx(a.x, a.y)]; return !(c > 3 && D[j] <= c + 2); };
+      if (sp.near === 'water' && far(dWater, i)) return false;
+      if (sp.near === 'sea' && far(dSea, i)) return false;
       return true;
     }
     if (t <= T.SEA) return false;
@@ -1018,6 +1023,7 @@
   A.startClimb = (a, t, fast) => startClimb(a, t, fast);
   A.deepSpot = a => deepSpot(a);
   A.waterD = i => (dWater ? dWater[i] : 99);
+  A.seaD = i => (dSea ? dSea[i] : 99); // (how far from the sea — the band of the seal, the walrus, the penguin)
   A.riverNear = i => riverNear(i);
   // run from (x, y): the herd that runs runs together (the leader's way, when it runs too), up from a branch first
   A.flee = function (a, x, y, dist) {
@@ -1882,7 +1888,10 @@
   const EDGE_MIN = 5, EDGE_LOW = 3;
   A.wildSpot = function (minD, sp, edge, kind) {
     const S = G.S; distances();
-    const fit = i => { if (W.blocked(i)) return false; if (sp) return A.habitat(sp, i) && (sp.cls === 'water' || sp.cls === 'air' || S.type[i] > T.SEA); return !(S.type[i] < T.SAND || S.type[i] === T.RIVER); };
+    // (and, for a kind of the ground, a tile it can stand on: the habitat does not ask for the cliff — a viper of the first day
+    // stood on a cliff over the sea, with cliff and sea all round, and never took a step, L-1063)
+    const stand = i => !kind || sp.cls === 'water' || sp.cls === 'air' || walkOK({ kind }, (i % N) + 0.5, ((i / N) | 0) + 0.5);
+    const fit = i => { if (W.blocked(i)) return false; if (sp) return A.habitat(sp, i) && (sp.cls === 'water' || sp.cls === 'air' || S.type[i] > T.SEA) && stand(i); return !(S.type[i] < T.SAND || S.type[i] === T.RIVER); };
     const gap = (x, y) => { let e = Infinity; for (const s of S.settlements.values()) { const d = G.dist(x, y, s.cx, s.cy) - (s.radius || 8); if (d < e) e = d; } return e; };
     if (edge) {
       // (the whole map looked over, tile by tile: in a land the towns have filled, the few tiles of a kind's ground still far
@@ -1942,7 +1951,7 @@
       let want = Math.round(cap * (sp.apex ? 0.7 : 0.75));
       let guard = 0;
       while (want > 0 && guard++ < 60) {
-        const spot = A.wildSpot(sp.cls === 'water' || sp.cls === 'air' ? 4 : 9, sp); if (!spot) break;
+        const spot = A.wildSpot(sp.cls === 'water' || sp.cls === 'air' ? 4 : 9, sp, false, k); if (!spot) break;
         const n = Math.min(want, G.ri(sp.herd[0], sp.herd[1]));
         const L = A.spawn(k, spot[0], spot[1]);
         for (let j = 1; j < n; j++) { const q = pickNear(L, 1.5, true); if (q) A.spawn(k, q[0], q[1], { leader: L.id }); }

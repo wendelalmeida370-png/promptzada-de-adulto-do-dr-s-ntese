@@ -2739,7 +2739,10 @@
 //   · nas horas dele, o bicho arisco que a cidade afasta (G.Meio.shunned: a fera e o gigante de dia, os outros da manhã ao meio da
 //     tarde, a cobra e o crocodilo a qualquer hora; sem a fome de quem caça gente ou rebanho, sem raiva) não ficam à toa dentro
 //     de uma cidade: o mesmo bicho visto lá dentro, parado, andando ou num afazer do meio (nem saindo, nem
-//     caçando, nem fugindo, nem comendo), em duas olhadas a doze segundos ou mais, é a cidade que não o afastou (S3; D-305).
+//     caçando, nem fugindo, nem comendo), em duas olhadas a doze segundos ou mais, é a cidade que não o afastou (S3; D-305);
+//   · nenhum bicho vivo do chão (da terra ou anfíbio), solto — fora da mão do deus, do ar, de uma pegada, da caverna, do curral,
+//     de cima de uma árvore —, sem uma casa em volta onde pisar (A.walkOK nas oito direções, a meia casa e a uma): sem ela, nada o
+//     tira dali (a sucuri que a mão deixou longe da água, L-1062; S3).
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = Number.isFinite;
@@ -2789,7 +2792,16 @@
       for (const id of [...inTown.keys()]) if (!seen.has(id)) inTown.delete(id);
     }
   };
-  QA.more.push(rule); QA.meio = rule;
+  // (the beast with no tile round it to step on: nothing moves it, ever — L-1062)
+  const stuck = function (add, s) {
+    const A = G.Animals; if (!A || !A.walkOK) return; const D = A.DEF; let n = 0;
+    for (const a of s.animals.values()) {
+      const sp = D[a.kind]; if (!sp || a.dead || a.held || a.air || a.caught || a.shelter || a.pen || a.dom || a.tamed || a.z > 3 || sp.cls === 'water' || sp.cls === 'air') continue;
+      let ok = false; for (let k = 0; k < 8 && !ok; k++) { const c = Math.cos(k * 0.785), d = Math.sin(k * 0.785); ok = A.walkOK(a, a.x + c * 0.5, a.y + d * 0.5) || A.walkOK(a, a.x + c, a.y + d); }
+      if (!ok && n++ < 3) add('meio', 3, `${a.kind}#${a.id} em ${a.x.toFixed(1)},${a.y.toFixed(1)} (${a.state}) sem uma casa em volta onde pisar: nada o tira dali`, a.id);
+    }
+  };
+  QA.more.push(rule); QA.meio = rule; QA.more.push(stuck);
 })();
   // ---- qa/mente-inv.js ----
 // mente-inv: as regras do verificador para o cérebro e a luta dos bichos (D-290 a D-299) — carregado depois do qa/qa.js

@@ -22,8 +22,12 @@
 //      nunca no chão do povo (o anel e cinco casas além); antes, doze do meio dela, e as cidades crescidas têm raio de
 //      vinte: os recém-chegados caíam dentro delas e a turma armada os matava;
 //   f8 o sexo que falta chega também com a terra cheia (L-1035): três ursas num chão de três ursos — vem um urso de fora;
+//   f9 o anfíbio longe da água volta a ela (L-1062): a sucuri que a mão do deus solta junto de uma vila, longe da água, tem onde
+//      pisar (antes, nenhuma das dezesseis casas em volta) e o verificador não a acusa; no mato, a sucuri, o crocodilo e o
+//      hipopótamo postos a seis a nove casas da água voltam à beira dela sozinhos em quatro minutos (o hipopótamo dorme a sua hora
+//      no caminho), com um save no meio do caminho;
 // e o verificador limpo (S0–S2), sem erro de módulo.   [ONLY=f5,f6] node qa/fauna.js (só os casos pedidos: f1, f2 — com o f3 e
-// o f4 —, f5, f6, f7, f8)
+// o f4 —, f5, f6, f7, f8, f9)
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const fails = [];
@@ -94,4 +98,27 @@ if (on('f8')) { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4 });
     let came = 0, tries = 0; for (; tries < 40 && !came; tries++) { G.inSim++; try { A.immigrateNow(); } finally { G.inSim--; } came = bears().filter(a => a.grown >= 1 && Me.sex(a) === 1).length; }
     ok('f8 o sexo que falta chega com a terra cheia', came > 0, `${made} ursas num chão de ${cap} ursos: ${came ? `um urso chegou depois de ${tries} rodada(s) de chegadas` : `NENHUM urso em ${tries} rodadas`} (agora ${bears().length} ursos)`);
   } }
+// f9
+if (on('f9')) { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4 }); M.viver(2); const A = G.Animals, W = G.W, S = () => G.S;
+  const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
+  const steps = a => { let n = 0; for (let k = 0; k < 16; k++) if (A.walkOK(a, a.x + Math.cos(k / 16 * 6.283), a.y + Math.sin(k / 16 * 6.283))) n++; return n; };
+  const said = (msg) => QA.check().some(q => q.id === msg || String(q.msg).includes(msg));
+  // (1) the god's hand: the anaconda let go by a village, six tiles or more from the water, out of the air as main.js lets it go
+  const set = [...S().settlements.values()][0]; let p = null;
+  for (let r = 4; r < 20 && !p; r++) for (let k = 0; k < 24 && !p; k++) { const x = set.cx + Math.cos(k / 24 * 6.283) * r, y = set.cy + Math.sin(k / 24 * 6.283) * r; const i = W.idx(x, y); if (W.inb(x, y) && W.walkable(i) && !W.blocked(i) && A.waterD(i) >= 6) p = [x, y]; }
+  const a = god(() => A.spawn('anaconda', p[0], p[1], { grown: 1 })); god(() => { a.z = 40; a.air = true; a.vx = 0; a.vy = 0; a.vz = 30; }); M.viver(1);
+  const n0 = steps(a), d0 = A.waterD(W.idx(a.x, a.y)), acc = said(`anaconda#${a.id} em`); A.remove(a);
+  // (2) in the wild: each set down six to nine tiles from the water, away from the towns; a save on the way back
+  const away = (x, y) => { for (const s of S().settlements.values()) if (G.dist(x, y, s.cx, s.cy) < (s.radius || 8) + 14) return false; return true; };
+  const back = [];
+  for (const kind of ['anaconda', 'croc', 'hippo']) {
+    let q = null; for (let k = 0; k < 40000 && !q; k++) { const x = 6 + (k * 7919) % (G.N - 12) + 0.5, y = 6 + ((k * 104729) >> 3) % (G.N - 12) + 0.5; const i = W.idx(x, y); if (!away(x, y) || W.blocked(i) || S().type[i] <= G.T.SEA || S().type[i] === G.T.RIVER || S().cliff[i]) continue; const d = A.waterD(i); if (d >= 6 && d <= 9) q = [x, y]; }
+    if (!q) { back.push(`${kind}: sem lugar`); continue; }
+    for (const o of [...S().animals.values()]) if (G.dist(o.x, o.y, q[0], q[1]) < 14) A.remove(o);
+    let b = god(() => A.spawn(kind, q[0], q[1], { grown: 1, hunger: 0.2 })); const id = b.id; let t = -1, saved = false;
+    for (let k = 0; k < 480; k++) { M.viver(0.5); if (k === 20) { M.salvarCarregar(); saved = true; b = S().animals.get(id); } if (!b || b.dead) break; if (A.walkOK({ kind }, b.x, b.y)) { t = k / 2; break; } }
+    back.push(`${kind} a ${A.waterD(W.idx(q[0], q[1]))} casas: ${t < 0 ? 'NÃO VOLTOU' : `na beira em ${t} s`}${saved && t > 10 ? ' (com um save no caminho)' : ''}`);
+  }
+  const c = QA.check().filter(q => q.sev <= 3 && q.sys === 'meio');
+  ok('f9 o anfíbio longe da água volta a ela', n0 > 0 && !acc && back.every(s => / em /.test(s)) && !c.length, `a sucuri solta pela mão junto de ${set.name}, a ${d0} casas da água: ${n0} de 16 casas em volta onde pisar, o verificador ${acc ? 'A ACUSA' : 'calado'}; no mato: ${back.join('; ')}; verificador do meio ${c.length ? c.slice(0, 2).map(q => q.msg).join('; ') : 'limpo'}`); }
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'TUDO PASSOU'); process.exit(fails.length ? 1 : 0);
