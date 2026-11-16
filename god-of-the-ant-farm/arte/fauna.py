@@ -84,15 +84,43 @@ def body_of(b, h, tris, fine=None):
     return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=np.zeros(len(V), np.uint8), r1=r1, r2=r2), fine
 
 
-def piece_of(b, pc, h, tris):
+# (the three levels of the families whose face is on the skin, D-322: near — the body NEAR_K times the kind's triangles, its
+# pieces PIECE_K times theirs, the eyes round —; middle — the kind's own counts, as the one level near was —; far — the far
+# counts, and the eyes still: a beast without eyes at forty metres stared blank, L-1041. The dragon and the sea keep two.)
+NEAR_K, PIECE_K = 4.0, 2.5
+EYE_RES = ((16, 12), (10, 7), (6, 4))
+HORNS = ('chifre', 'galhada', 'marfim')
+
+
+def along(pc, V):
+    """How far out along a horn, an antler, a tusk each point is (0 at its root, 1 at its tip — the rings, the darker or paler
+    tip, D-323): the distance from the root on its own side over the farthest."""
+    roots = {}
+    for pr in pc['P']:
+        a = getattr(pr, 'a', getattr(pr, 'c', None))
+        if a is None: continue
+        sd = 1 if a[0] >= 0 else -1
+        if sd not in roots: roots[sd] = np.asarray(a, float)
+    if not roots: return np.zeros(len(V))
+    out = np.zeros(len(V))
+    for sd, a in roots.items():
+        m = (V[:, 0] >= 0) if sd > 0 else (V[:, 0] < 0)
+        if len(roots) == 1: m = np.ones(len(V), bool)
+        d = np.linalg.norm(V[m] - a, axis=1); out[m] = d / max(d.max(), 1e-6)
+    return out
+
+
+def piece_of(b, pc, h, tris, lv=0):
     """A piece: its own mesh, zone and bones (rigid where it has one bone), no paint regions."""
     if 'eye' in pc:
-        c, r = pc['eye']; nu, nv = (7, 5)
-        V, T, N = uvsphere(np.array(c), r, nu, nv); V, T, keep = weld(V, T); N = N[keep]
+        c, r = pc['eye']; nu, nv = EYE_RES[lv] if b.meta.get('face') else (7, 5); c = np.array(c, float)
+        if b.meta.get('face') and lv:  # (the lighter the level, the coarser its head: the eye out along its axis, a little bigger — a coarse brow swallowed it, L-1041)
+            ax = np.array(b.meta['face']['ax'][:3]) * np.array([1 if c[0] >= 0 else -1, 1, 1]); c = c + ax * r * (0.0, 0.25, 0.6)[lv]; r = r * (1.0, 1.05, 1.25)[lv]
+        V, T, N = uvsphere(c, r, nu, nv); V, T, keep = weld(V, T); N = N[keep]
     else:
         V0, Q = mesh_of(pc['P'], h, maxstep=1.5 * h)
         if len(V0) < 4: return None
-        sym = V0[:, 0].min() < -1e-4 and V0[:, 0].max() > 1e-4  # (a piece on one side only: no mirror for the decimator to keep)
+        sym = bool(V0[:, 0].min() < -1e-4 and V0[:, 0].max() > 1e-4)  # (a piece on one side only: no mirror for the decimator to keep)
         V, T = decimate(V0, Q, max(8, tris), sym, split=bool(pc.get('split')))  # (split: parts that cross — the dragon's folded fingers)
         N = normals_of(pc['P'], V)
     W = weights(pc['P'], V, b.H) if 'eye' not in pc else np.eye(len(BONES))[[BI['head']] * len(V)]
@@ -106,6 +134,7 @@ def piece_of(b, pc, h, tris):
     if 'wing' in pc:  # (a wing: how far out along it each point is — its tip painted darker where the kind's are)
         sh, span = pc['wing']; r2[:, 0] = np.clip(np.round(np.linalg.norm(V - np.array(sh), axis=1) / max(span, 1e-3) * 255), 0, 255).astype(np.uint8)
     if 'paint' in pc: r1, r2 = pc['paint'](V, N)  # (a piece painted by where each point is on it: the turtle's shell, D-267)
+    if pc['zone'] in HORNS and b.meta.get('face'): r2[:, 0] = np.clip(np.round(along(pc, V) * 255), 0, 255).astype(np.uint8)
     return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=z, r1=r1, r2=r2)
 
 
@@ -118,30 +147,76 @@ def merge(parts):
     return {k: np.concatenate(v, 0) if k != 'T' else np.concatenate(v, 0).astype(np.int64) for k, v in out.items()}
 
 
+def face_keep(b):
+    """Where the decimator keeps more of the near body (D-322): the head, more round the eyes, the mouth and the nose — what the
+    eye reads first; a weight under 1 costs more to collapse."""
+    J = b.bones_filled(); fc = b.meta['face']; ce = np.array(fc['eye'][:3]); r = fc['eye'][3]
+    nose = np.array(b.meta.get('nose', J['head'])); hc = (np.array(J['head']) + nose) / 2; hl = max(np.linalg.norm(nose - np.array(J['head'])), b.H * 0.08)
+    def w(co):
+        k = 0.55 * np.exp(-(np.linalg.norm(co - hc, axis=1) / (hl * 0.9)) ** 2)
+        for sd in (1, -1): k = np.maximum(k, 0.9 * np.exp(-(np.linalg.norm(co - ce * np.array([sd, 1, 1]), axis=1) / (r * 3.0)) ** 2))
+        k = np.maximum(k, 0.7 * np.exp(-(np.linalg.norm(co - nose, axis=1) / (hl * 0.35)) ** 2))
+        return 1.0 - k
+    return (w, 1.0)
+
+
+def body_keep(b, V0, Q, tris, keep, coarse=None):
+    from corpo import decimate as dec
+    V, T = dec(V0, Q, tris, keep=keep)
+    if len(T) > 1.3 * tris: V, T = dec(V0, Q, tris, split=True, keep=keep)
+    if len(T) > 1.3 * tris and coarse is not None:  # (stuck on the fine clay — the dog's folded ear against its head held the far body at 517 of 160, L-1045: from the clay of the old step)
+        V1, Q1 = coarse(); V, T = dec(V1, Q1, tris)
+        if len(T) > 1.3 * tris: V, T = dec(V1, Q1, tris, split=True)
+    N = normals_of(b.P, V); W = weights(b.P, V, b.H); bi, bw = pack(W)
+    r1, r2 = regions(b, V, N, W)
+    if b.meta.get('regions'): r1, r2 = b.meta['regions'](b, V, N, W, r1, r2)
+    if b.meta.get('paint'): r1, r2 = b.meta['paint'](b, V, N, W, r1, r2)
+    return dict(V=V, N=N, T=T, bi=bi, bw=bw, zone=np.zeros(len(V), np.uint8), r1=r1, r2=r2)
+
+
 def beast_meshes(b, near=760, far=160):
-    """The near mesh (the body and every piece) and the far one (a lighter body, the pieces that read from afar)."""
-    t0 = time.time(); H = b.H
-    h = b.meta.get('h') or float(np.clip(H * 0.0105, 0.0025, 0.03))
-    body, fine = body_of(b, h, near)
-    parts = [body]; farp = []
-    for pc in b.pieces:
-        m = piece_of(b, pc, pc.get('h') or h * 0.7, pc['tris'])
-        if m is None: continue
-        parts.append(m)
-        if pc['far'] and pc['far'] > 0 and 'eye' not in pc:
-            mf = piece_of(b, pc, (pc.get('h') or h * 0.7) * 1.4, pc['far'])
-            if mf is not None and len(mf['T']) <= max(pc['far'] * 1.6, 24): farp.append(mf)
-    nearM = merge(parts)
-    bf, _ = body_of(b, h, far, fine)
-    farM = merge([bf] + farp)
-    allV = nearM['V']
+    """The near mesh (the body and every piece) and the far one (a lighter body, the pieces that read from afar) — and, for a
+    face on the skin (D-322), a third: near (finer), middle (as near was), far (with its eyes)."""
+    t0 = time.time(); H = b.H; three = bool(b.meta.get('face'))
+    if not three:
+        h = b.meta.get('h') or float(np.clip(H * 0.0105, 0.0025, 0.03))
+        body, fine = body_of(b, h, near)
+        parts = [body]; farp = []
+        for pc in b.pieces:
+            m = piece_of(b, pc, pc.get('h') or h * 0.7, pc['tris'])
+            if m is None: continue
+            parts.append(m)
+            if pc['far'] and pc['far'] > 0 and 'eye' not in pc:
+                mf = piece_of(b, pc, (pc.get('h') or h * 0.7) * 1.4, pc['far'])
+                if mf is not None and len(mf['T']) <= max(pc['far'] * 1.6, 24): farp.append(mf)
+        levels = [merge(parts), merge([body_of(b, h, far, fine)[0]] + farp)]
+    else:
+        h = b.meta.get('h') or float(np.clip(max(H * 0.0072, b.meta['face']['eye'][3] * 0.28), 0.0018, 0.013))  # (a finer clay: the lids, the nostrils, the mouth's corner — no finer than the eye needs: the long and low ones, the crocodile, the snakes)
+        V0, Q = mesh_of(b.P, h, maxstep=1.5 * h)
+        hc = float(np.clip(H * 0.0105, 0.0025, 0.03)); cc = {}
+        coarse = lambda: cc['m'] if 'm' in cc else cc.setdefault('m', mesh_of(b.P, hc, maxstep=1.5 * hc))
+        levels = []
+        for lv, (bt, pk) in enumerate(((int(near * NEAR_K), PIECE_K), (near, 1.0), (far, 0.0))):
+            parts = [body_keep(b, V0, Q, bt, face_keep(b) if lv == 0 else None, coarse if lv else None)]
+            for pc in b.pieces:
+                ph = pc.get('h') or h * 0.95
+                if 'eye' in pc: m = piece_of(b, pc, ph, 0, lv)
+                elif lv == 0: m = piece_of(b, pc, ph * 0.8, int(pc['tris'] * pk))
+                elif lv == 1: m = piece_of(b, pc, ph, pc['tris'])
+                elif pc['far'] and pc['far'] > 0:
+                    m = piece_of(b, pc, ph * 1.4, pc['far'])
+                    if m is not None and len(m['T']) > max(pc['far'] * 1.6, 24): m = None
+                else: m = None
+                if m is not None: parts.append(m)
+            levels.append(merge(parts))
     occ = lambda M: occlusion(M['V'], M['T'], M['N'], dist=max(0.03, H * 0.18), n=28)
-    nearM['ao'] = occ(nearM); farM['ao'] = occ(farM)
-    eye = nearM['zone'] == ZONE['olhoL']; eye |= nearM['zone'] == ZONE['olhoR']; nearM['ao'][eye] = 0.9
-    print('  %s: %d/%d triangles, %.1f s' % (b.name, len(nearM['T']), len(farM['T']), time.time() - t0)); sys.stdout.flush()
+    for M in levels:
+        M['ao'] = occ(M); eye = (M['zone'] == ZONE['olhoL']) | (M['zone'] == ZONE['olhoR']); M['ao'][eye] = 0.9
+    allV = levels[0]['V']
+    print('  %s: %s triangles, %.1f s' % (b.name, '/'.join(str(len(M['T'])) for M in levels), time.time() - t0)); sys.stdout.flush()
     J = b.bones_filled()
     box = [list(np.round(allV.min(0), 4)), list(np.round(allV.max(0), 4))]
-    return nearM, farM, J, box
+    return levels, J, box
 
 
 def encode(m):
@@ -256,21 +331,15 @@ def main(argv):
     for kind in kinds:
         if only and kind not in only: continue
         spec = FE.SPECIES[kind]; mname = spec.get('mesh', kind)
-        if mname in built: nearM, farM, J, box = built[mname]
-        else:
-            print(kind); sys.stdout.flush()
-            b = FE.build(kind); nearM, farM, J, box = beast_meshes(b, spec.get('tris', 760), spec.get('far', 160)); built[mname] = (nearM, farM, J, box)
-            meshes[mname] = encode(nearM); meshes[mname + '_1'] = encode(farM)
-            forms[mname] = {'bind': [round(float(x), 5) for bn in BONES for x in J[bn]], 'box': box, 'meta': FE.meta_of(b)}
-        items.append((kind, nearM, farM))
-        if spec.get('fly'):
-            fname = mname + '_voo'
-            if fname not in built:
-                print(kind, '(voo)'); sys.stdout.flush()
-                b = FE.build(kind, fly=True); nM, fM, J2, box2 = beast_meshes(b, spec.get('tris', 760), spec.get('far', 160)); built[fname] = (nM, fM, J2, box2)
-                meshes[fname] = encode(nM); meshes[fname + '_1'] = encode(fM)
-                forms[fname] = {'bind': [round(float(x), 5) for bn in BONES for x in J2[bn]], 'box': box2, 'meta': FE.meta_of(b)}
-            items.append((kind + ' voo', built[fname][0], built[fname][1]))
+        for fly, mn in ((False, mname), (True, mname + '_voo')):
+            if fly and not spec.get('fly'): continue
+            if mn not in built:
+                print(kind, '(voo)' if fly else ''); sys.stdout.flush()
+                b = FE.build(kind, fly=fly); lv, J, box = beast_meshes(b, spec.get('tris', 760), spec.get('far', 160)); built[mn] = lv
+                for k in [n for n in meshes if n == mn or n.startswith(mn + '_') and n[len(mn) + 1:].isdigit()]: del meshes[k]  # (its old levels)
+                for i, M in enumerate(lv): meshes[mn if i == 0 else '%s_%d' % (mn, i)] = encode(M)
+                forms[mn] = {'bind': [round(float(x), 5) for bn in BONES for x in J[bn]], 'box': box, 'meta': FE.meta_of(b)}
+            items.append((kind + (' voo' if fly else ''), built[mn][0], built[mn][-1]))
     if prev_out: prev(items, prev_out); return
     species = {k: FE.species_entry(k) for k in kinds}
     data = {'v': 1, 'bones': BONES, 'parent': [BONES.index(FF.PARENT[b]) if FF.PARENT[b] else -1 for b in BONES], 'zones': ZONE,

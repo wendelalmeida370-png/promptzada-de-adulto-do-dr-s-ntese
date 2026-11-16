@@ -892,5 +892,19 @@ for (const f of BEASTS) { if (!src[f]) continue; src[f].forEach((l, k) => { cons
 for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (/\b(A|G\.Animals)\.gesture\(/.test(c) && !/Me\.gesto = function/.test(c)) fails.push(`o gesto do cérebro: ${f}:${k + 1} dá um gesto sem a Mente.gesto (que pergunta se a espécie o faz): ${l.trim().slice(0, 110)}`);
   if (/G\.Village\.log\(/.test(c) && !/L\.count\('cronica'\)/.test(c)) fails.push(`a crônica dos bichos: ${f}:${k + 1} escreve na crônica sem a L.say (D-299): ${l.trim().slice(0, 110)}`); });
+// 104. "o olho na pele" (D-320, L-1040): o olho de um bicho não é posto à mão dentro da cabeça — 18 espécies tinham o olho
+// inteiro dentro dela, e nada dele se via. Em arte/fauna_forma.py, toda família de rosto dito (FACE_FAMS) diz para onde os olhos
+// olham (eyes(…, look=…)), e o fauna_especies.build acha a pele por último (FF.seat_face(b), depois dos ornamentos e antes do
+// return): o olho vai por onde olha até sair do barro da cabeça inteira. A prova bichos-olhos.js mede o que se vê dele
+{ const rd = f => { try { return fs.readFileSync(path.join(dir, '..', 'arte', f), 'utf8').split('\n'); } catch (e) { return null; } };
+  const fo = rd('fauna_forma.py'), fe = rd('fauna_especies.py');
+  if (!fo || !fe) fails.push('o olho na pele: arte/fauna_forma.py ou arte/fauna_especies.py não existe (D-320)');
+  else {
+    const fams = ((fo.find(l => /^FACE_FAMS = /.test(l)) || '').match(/'(\w+)'/g) || []).map(s => s.slice(1, -1)); if (!fams.length) fails.push('o olho na pele: o fauna_forma.py sem FACE_FAMS (D-320)');
+    let fam = null; fo.forEach((l, k) => { const d = l.match(/^def (\w+)\(b\b/); if (d) fam = d[1] === 'head_rest' || d[1] === 'head' || d[1] === 'head_hunter' ? 'quad' : d[1];
+      if (/^\s+eyes\(b,/.test(l) && fams.includes(fam) && !/\blook=/.test(l)) fails.push(`o olho na pele: arte/fauna_forma.py:${k + 1} põe os olhos da família ${fam} sem dizer para onde olham (look=; D-320): ${l.trim().slice(0, 100)}`); });
+    const b0 = fe.findIndex(l => /^def build\(kind, fly=False\):/.test(l)), b1 = b0 < 0 ? -1 : fe.findIndex((l, k) => k > b0 && /^\s+return b\s*$/.test(l));
+    const sf = b0 < 0 ? -1 : fe.findIndex((l, k) => k > b0 && /^\s+FF\.seat_face\(b\)/.test(l)), orn = b0 < 0 ? -1 : fe.findIndex((l, k) => k > b0 && /if k in extras: f\(b, extras\[k\]\)/.test(l));
+    if (b0 < 0 || b1 < 0 || sf < 0 || sf > b1 || sf < orn) fails.push('o olho na pele: o build do fauna_especies.py não acha a pele por último (FF.seat_face(b) depois dos ornamentos, antes do return — D-320)'); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

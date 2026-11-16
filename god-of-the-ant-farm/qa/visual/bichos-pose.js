@@ -134,7 +134,7 @@ const f3 = x => x.toFixed(3);
 // under on purpose excepted), the lying ones on it; the dead on their side, settled on it
 { const FG = FA.Gest, Ge = G.Gestos, UNDER = { burrow: 1, dive: 1, swim: 1, hide: 1 }; const bad = [], badD = []; let n = 0;
   for (const kind in D.species) { const e = D.species[kind]; if (e.fam !== 'quad' || forms[e.mesh].meta.fam !== 'quad') continue;
-    const f = forms[e.mesh]; const H = f.meta.H, tol = Math.max(0.012, H * 0.035); const mesh = decode(D.meshes[e.mesh]); if (!f.hull) f.hull = FG.hullOf(G.Fauna3D.unpack(D.meshes[e.mesh]));
+    const f = forms[e.mesh]; const H = f.meta.H, tol = Math.max(0.012, H * 0.035); const mesh = decode(D.meshes[e.mesh]); if (!f.hull) f.hull = G.Fauna3D.hullOf(e.mesh, n => G.Fauna3D.unpack(D.meshes[n])); // (the game's: the ground from the near level, the contacts from the middle — L-1047)
     const base = Math.min(0, minY(bend(mesh, f.J, FA.quad(THREE, I4, f, sp0, st0({ kind, gx: { gn: null, gk: 0, pn: null, pk: 0 } })))));
     for (const g of Ge.of(kind)) { if (UNDER[g]) continue; const d = Ge.DEF[g].d; n++;
       const R = FA.quad(THREE, I4, f, sp0, st0({ kind, id: 3, t: 4, dt: 1 / 30, gx: { gn: g, gt: d > 0 ? d * 0.45 : 1.3, gk: 1, gd: d, gv: 0, pn: null, pk: 0 } }));

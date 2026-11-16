@@ -134,7 +134,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 | Ponta de empena recortada (cavalo: 252 · voluta: 524) | ≤ 600 | ≤ 20 |
 | Árvore | ≤ 1,2 mil | ≤ 40 |
 | Pessoa | ≤ 3 mil (corpo 2 mil + roupa e cabelo) | média ≤ 800 |
-| Bicho (`faunamesh.js`, D-265) | ≤ 1,5 mil (corpo ~760 + peças; os do mar ~1,1 a 1,4 mil, D-267) | ≤ 300 (~160; a baleia, 320) |
+| Bicho (`faunamesh.js`, D-265, D-322: três níveis — o alvo é o computador) | perto ≤ 6 mil (corpo 4 × a espécie, ~3 mil, + peças + os olhos); meio ≤ 2 mil (corpo ~760 + peças; os do mar ~1,1 a 1,4 mil, D-267, em dois níveis) | ≤ 420 (~230 a 370, com os olhos; a baleia, 320) |
 | Dragão, o herói (`faunamesh.js` `dragon` e `dragon_voo`, D-270) | ≤ 5,5 mil (corpo 2,1 mil + asas 2 × 600 + dedos, cabeça, dentes, chifres, espinhos, garras) | ≤ 900 (com as asas: de longe é o que se lê) |
 
 - Um pedaço do mundo perto (64 × 64 m) tem **uma geometria por material** (sólido, flora, folhas, plantas, água, vidro):

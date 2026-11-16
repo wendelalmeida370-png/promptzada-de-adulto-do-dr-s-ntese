@@ -1592,6 +1592,11 @@
     const out = []; const scan = (list, n, what) => { for (const m of list || []) { const a = m.instanceMatrix.array; for (let k = 0; k < Math.min(n, m.count) * 16; k++) if (!Number.isFinite(a[k])) { out.push(`${what}: matriz inválida no desenho`); return; } } };
     scan(mesh, P3.count, 'pessoas'); scan(beastMesh, P3.beasts, 'bichos');
     if (fauna) for (const e of G.Fauna3D.check()) out.push(e);
+    // (each beast drawn as a skin at the level its distance from the eye and its size give it — D-322: none of the near level far
+    // off, none of the far level close by; a metre of margin each side, as the edges have)
+    if (fauna) for (const id of P3.bdrawn) { const s = bvis.get(id), a = G.S.animals.get(id); if (!s || !a || s.fl === undefined || s.f !== bframe || !G.Fauna3D.has(a.kind)) continue;
+      const F3 = G.Fauna3D, size = F3.sizeOf(a.kind) * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.55 + 0.45 * Math.max(0, a.age) : 1); const d2 = (s.X - seenAt[0]) ** 2 + (s.Z - seenAt[1]) ** 2;
+      if (s.fl !== beastLod(0, d2, size) && s.fl !== beastLod(1, d2, size) && s.fl !== beastLod(2, d2, size)) { out.push(`bicho ${id}: desenhado no nível ${s.fl} a ${Math.sqrt(d2).toFixed(1)} m do olho (D-322)`); break; } }
     if (skin) {
       for (const e of G.Body3D.check()) out.push(e);
       // (the lighter bodies only far from the eye: nobody inside a level's edge, less its margin, drawn lighter)
@@ -1787,6 +1792,7 @@
     const w = a.wnd; if (w && w.z) for (let k = 0; k < 6; k++) mk[4 + k] = G.clamp(w.z[k] || 0, 0, 1);
     const me = a.meio; if (me) { mk[10] = G.clamp(me.wet || 0, 0, 1); mk[11] = G.clamp(me.mud || 0, 0, 1); mk[12] = G.clamp(me.dust || 0, 0, 1); mk[13] = G.clamp(me.cold || 0, 0, 1); }
     if (a.swim || a.sub > 0) mk[10] = Math.max(mk[10], 0.85);
+    mk[14] = G.hash(a.id * 7919 + 11); // (its own: the pattern and the shade of this beast, not of its kind — D-324)
     return mk;
   }
   // the mind's numbers the body reads (a.mind of G.Mente; none yet: calm and fresh, the sex by the hash — the contract's rule)
@@ -1847,8 +1853,17 @@
     const kb = s.kb || (s.kb = new Float32Array(KB.length * 16)); for (let k = 0; k < KB.length; k++) kb.set(R[B[KB[k]]].elements, k * 16);
     s.kf = form; s.ksc = sc; s.kfr = G.Fauna3D.frame;
     const GX = FA.Gest; const eye = GX ? GX.P[GX.I.EYE] : 0;
-    G.Fauna3D.put(row, R, a.kind, FA.coat(THREE, a), d2 > 576 ? 1 : 0, X, Y, Z, fly, marksOf(a, sp, s, G.clamp(eye, 0, 1)));
+    s.fl = beastLod(s.fl || 0, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2, G.Fauna3D.sizeOf(a.kind) * sc / G.Fauna3D.scaleOf(a.kind));
+    G.Fauna3D.put(row, R, a.kind, FA.coat(THREE, a), s.fl, X, Y, Z, fly, marksOf(a, sp, s, G.clamp(eye, 0, 1)));
   }
+  // (a beast's level of detail, D-322: the people's edges from the eye — LODD — as far again as the beast is bigger than a person, a
+  // metre either side so nothing standing on an edge flickers; the small ones never fine past a few metres; the lightest preset sooner)
+  function beastLod(prev, d2, size) {
+    const k = Math.max(0.42, size / 1.75) * (G.Realm && G.Realm.Q && G.Realm.Q().lod < 0.7 ? 0.6 : 1); let l = 0;
+    for (let i = 0; i < LODD.length; i++) { const e = LODD[i] * k + (prev > i ? -1 : 1); if (d2 > e * e) l = i + 1; }
+    return l;
+  }
+  P3.beastLod = beastLod; // (for the tests)
   const SPX = { browse: false, swish: 1 };
   // the gesture of a beast before it is drawn (D-280): the view's clock of it (FaunaAnim.Gest.track — in the view's memory s, never
   // in the beast), death eased in from the last pose, the other it is made to and the point of it it goes for, the holder's body
