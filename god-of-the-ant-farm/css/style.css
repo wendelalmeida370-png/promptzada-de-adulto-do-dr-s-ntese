@@ -1312,6 +1312,100 @@ canvas#game3d { touch-action: none; transition: none; }
 /* === 20b: o movimento (os controles de toque, a câmera) === */
 
 /* === 20c: o inventário e o equipamento === */
+/* the bag and the body (js/inv-ui.js, D-377): the cards' glass and gold, wider — the body with its six places, the bag as a grid,
+   the card of the thing under the pointer; the bottom of the screen left to the bar of quick things */
+#inc-root #inv-panel { background: rgba(15, 13, 19, .97); }
+#inv-panel { pointer-events: auto; position: absolute; left: 50%; top: calc(54px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(1040px, calc(100vw - 32px)); max-height: calc(100vh - 140px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow: auto; padding: 14px 16px 12px; animation: ihIn .22s ease both; font-size: 13px; line-height: 1.4; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+#inv-panel .x { position: absolute; right: 8px; top: 6px; width: 28px; height: 28px; border-radius: 7px; background: transparent; border: 0; font-size: 20px; line-height: 1; color: var(--ih-mute); }
+#inv-panel .x:hover { background: rgba(255, 255, 255, .08); color: var(--ih-text); }
+#inv-panel h3 { margin: 0; font-family: 'Cinzel', Georgia, serif; color: var(--ih-gold-2); font-size: 19px; line-height: 1.2; letter-spacing: .02em; padding-right: 26px; }
+#inv-panel .sub { color: var(--ih-mute); font-size: 12px; font-weight: 700; margin-top: 3px; }
+#inv-panel .ic { display: block; width: 40px; height: 40px; pointer-events: auto; }
+#inv-panel .ic svg, #inv-panel .ic img, #inc-hud .iv-q .ic svg, #inc-hud .iv-q .ic img, .iv-ghost svg, .iv-ghost img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .55)); -webkit-user-drag: none; }
+.iv-body { display: grid; grid-template-columns: 232px minmax(0, 1fr) 260px; gap: 14px 18px; margin-top: 12px; align-items: start; }
+/* the body: a figure, and the six places round it */
+.iv-doll { position: relative; height: 300px; border-radius: 12px; background: radial-gradient(70% 60% at 50% 42%, rgba(240, 198, 110, .07), transparent 70%); }
+.iv-fig { position: absolute; left: 50%; top: 8px; height: 284px; transform: translateX(-50%); }
+.iv-slot { position: absolute; width: 56px; height: 56px; transform: translateX(-50%); border-radius: 11px; border: 1px solid rgba(255, 236, 200, .16); background: linear-gradient(180deg, #2a2530, #17141b); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 2px 6px rgba(0, 0, 0, .28); display: flex; align-items: center; justify-content: center; transition: border-color .12s, box-shadow .12s, background .12s; }
+.iv-slot label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 2px; font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--ih-mute); white-space: nowrap; text-shadow: var(--ih-ts); pointer-events: none; }
+.iv-slot.full { border-color: rgba(240, 198, 110, .42); }
+.iv-slot .ic { width: 44px; height: 44px; cursor: grab; }
+.iv-slot .ic.ghost { opacity: .28; pointer-events: none; cursor: default; }
+.iv-slot.two { border-style: dashed; }
+.iv-slot.busy { background: repeating-linear-gradient(135deg, rgba(255, 120, 100, .08) 0 6px, transparent 6px 12px); }
+.iv-slot.can { border-color: var(--ih-gold); box-shadow: 0 0 0 2px rgba(240, 198, 110, .25), 0 0 14px rgba(240, 198, 110, .3); }
+.iv-slot.over, .iv-zone.over, #inc-hud .iv-q.over { border-color: var(--ih-gold-2) !important; background: rgba(240, 198, 110, .2) !important; }
+/* the bag: the weight against the limit, the grid, where things can go */
+.iv-wt { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--ih-mute); }
+.iv-wt i { flex: 1; display: block; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .09); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .28); }
+.iv-wt b { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #c99538, #edc26a); transition: width .25s; }
+.iv-wt span:last-child { letter-spacing: .02em; text-transform: none; font-size: 11.5px; color: var(--ih-text); white-space: nowrap; }
+.iv-wt.over b { background: linear-gradient(90deg, #d4564a, #f08462); } .iv-wt.over span:last-child { color: #ff9a8a; }
+.iv-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 9px; }
+.iv-cell { position: relative; aspect-ratio: 1; min-width: 0; border-radius: 9px; border: 1px solid rgba(255, 236, 200, .1); background: rgba(255, 255, 255, .035); display: flex; align-items: center; justify-content: center; }
+.iv-cell.empty { background: rgba(255, 255, 255, .015); border-color: rgba(255, 236, 200, .05); }
+.iv-cell .ic { width: 66%; height: 66%; cursor: grab; }
+.iv-cell:hover:not(.empty) { border-color: rgba(240, 198, 110, .4); background: rgba(240, 198, 110, .07); }
+.iv-cell.sel { border-color: var(--ih-gold); box-shadow: 0 0 0 2px rgba(240, 198, 110, .25); }
+.iv-cell.worn .ic { opacity: .45; }
+.iv-cell b { position: absolute; right: 4px; bottom: 2px; font-size: 11px; font-weight: 900; color: var(--ih-text); text-shadow: 0 1px 2px #000; pointer-events: none; }
+.iv-cell i { position: absolute; right: 5px; top: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--ih-gold); box-shadow: 0 0 0 1.5px rgba(13, 11, 16, .6); pointer-events: none; }
+.iv-cell small { position: absolute; left: 3px; right: 3px; bottom: 1px; font-size: 8.5px; font-weight: 800; color: var(--ih-mute); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0; transition: opacity .12s; }
+.iv-cell:hover small, .iv-cell.sel small { opacity: 1; }
+.iv-drops { display: flex; gap: 8px; margin-top: 9px; }
+.iv-zone { flex: 1; text-align: center; padding: 8px 6px; border-radius: 9px; border: 1px dashed rgba(255, 236, 200, .2); color: var(--ih-mute); font-size: 11px; font-weight: 800; transition: border-color .12s, background .12s; }
+#inv-panel.dragging .iv-zone, #inc-hud .ih-hotbar.choosing .iv-q, #inv-panel.choosing .iv-zone { border-color: rgba(240, 198, 110, .5); color: var(--ih-gold-2); }
+/* the card of a thing */
+.iv-card { padding: 2px 0 0 16px; border-left: 1px solid rgba(255, 236, 200, .08); min-height: 74px; }
+/* (a narrower screen: the card under the body and the bag) */
+@media (max-width: 1060px) { .iv-body { grid-template-columns: 232px minmax(0, 1fr); } .iv-card { grid-column: 1 / -1; padding: 11px 0 0; border-left: 0; border-top: 1px solid rgba(255, 236, 200, .08); } }
+.iv-none { color: var(--ih-mute); font-size: 12px; padding: 6px 0; }
+.iv-ch { display: flex; align-items: center; gap: 11px; }
+.iv-ch .ic.big { width: 52px; height: 52px; flex: none; }
+.iv-ch h4 { margin: 0; font-family: 'Cinzel', Georgia, serif; color: var(--ih-gold-2); font-size: 15.5px; letter-spacing: .02em; }
+.iv-desc { font-size: 12.5px; color: var(--ih-text); margin: 7px 0 0; opacity: .9; }
+#inv-panel .btns { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+#inv-panel .btns button, .iv-take button { border: 1px solid var(--ih-edge); background: rgba(255, 255, 255, .07); border-radius: 9px; padding: 6px 11px; font-weight: 800; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--ih-text); font-family: inherit; }
+#inv-panel .btns button:hover, .iv-take button:hover:not([disabled]) { background: rgba(255, 255, 255, .13); }
+#inv-panel .btns kbd { font-size: 10px; font-weight: 800; }
+.iv-qs { display: inline-flex; gap: 3px; margin-left: auto; }
+#inv-panel .iv-qs button { width: 28px; height: 28px; padding: 0; justify-content: center; border-radius: 7px; font-weight: 900; }
+#inv-panel .iv-qs button.on { border-color: var(--ih-gold); color: var(--ih-gold-2); background: rgba(240, 198, 110, .16); }
+/* the store of one's people, what lies within reach */
+.iv-store { margin-top: 11px; padding-top: 9px; border-top: 1px solid rgba(255, 236, 200, .08); }
+.iv-store label { display: block; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ih-gold); font-weight: 900; margin-bottom: 6px; }
+.iv-take { display: flex; flex-wrap: wrap; gap: 5px; }
+.iv-take button { padding: 3px 9px 3px 4px; font-size: 11.5px; }
+.iv-take button svg, .iv-take button img { width: 26px; height: 26px; }
+.iv-take button[disabled] { opacity: .4; cursor: not-allowed; }
+.iv-hint { margin-top: 10px; font-size: 11px; color: var(--ih-mute); font-weight: 700; }
+.iv-ghost { position: fixed; z-index: 40; width: 54px; height: 54px; margin: -27px 0 0 -27px; pointer-events: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .5)); }
+/* the bar of quick things, at the bottom of the screen (the keys 1 to 5, and the bag) — while the keys' hint of the first seconds of
+   a life shows there, the bar waits, and comes in as the hint goes */
+#inc-hud .ih-hotbar { transition: opacity .6s ease; }
+#inc-hud .ih-hotbar.later { opacity: 0; pointer-events: none; }
+#inc-hud .iv-hot { display: flex; gap: 5px; padding: 4px; border-radius: 12px; background: rgba(13, 11, 16, .42); border: 1px solid var(--ih-edge); box-shadow: var(--ih-drop); }
+#inc-hud .iv-q { position: relative; width: 46px; height: 46px; padding: 3px; border-radius: 9px; border: 1px solid rgba(255, 236, 200, .14); background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(0, 0, 0, .25)); color: var(--ih-text); display: flex; align-items: center; justify-content: center; }
+#inc-hud .iv-q .ic { display: block; width: 34px; height: 34px; pointer-events: none; }
+#inc-hud .iv-q svg { width: 32px; height: 32px; pointer-events: none; }
+#inc-hud .iv-q kbd { position: absolute; left: 2px; top: 1px; font-size: 9px; padding: 0 3px; border-width: 1px; line-height: 1.25; pointer-events: none; }
+#inc-hud .iv-q b { position: absolute; right: 3px; bottom: 1px; font-size: 10.5px; font-weight: 900; text-shadow: 0 1px 2px #000; pointer-events: none; }
+#inc-hud .iv-q.empty { opacity: .55; }
+#inc-hud .iv-q.on { border-color: var(--ih-gold); box-shadow: 0 0 0 1px rgba(240, 198, 110, .35), 0 0 12px rgba(240, 198, 110, .28); background: linear-gradient(180deg, rgba(240, 198, 110, .2), rgba(0, 0, 0, .2)); }
+#inc-hud .iv-q:hover { border-color: rgba(240, 198, 110, .5); }
+#inc-hud .iv-bagbtn { margin-left: 4px; }
+/* (the screen put away, D-173: the bar goes with it — on a phone the fingers keep it, as they keep their buttons) */
+#inc-root.hud-off .ih-hotbar:not(.touch) { display: none !important; }
+@media (max-width: 640px) {
+  #inv-panel { top: calc(8px + env(safe-area-inset-top, 0px)); width: calc(100vw - 16px); max-height: calc(100vh - 86px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); padding: 12px 12px 10px; }
+  .iv-body { grid-template-columns: 1fr; }
+  .iv-doll { height: 262px; max-width: 250px; width: 100%; margin: 0 auto; }
+  .iv-fig { height: 246px; }
+  .iv-grid { grid-template-columns: repeat(5, 1fr); }
+  #inc-hud .iv-q { width: 42px; height: 42px; }
+  #inc-hud .iv-q .ic { width: 30px; height: 30px; }
+  .iv-qs { margin-left: 0; }
+}
 
 /* === 20d: a arte dos itens === */
 

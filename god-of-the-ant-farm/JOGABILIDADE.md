@@ -310,6 +310,23 @@ chave tem figura); uma folha de fotos (todas as coisas, de dois lados, e as figu
 - `G.Itens.parse(chave)` → `[tipo, material]`; `G.Itens.key(tipo, material)`; `G.Itens.isThing(chave)`; `G.Itens.nome(chave, n)`;
   `G.Itens.has(chave, tag)`; `G.Itens.withTag(tag)`; `G.Itens.fits(chave, lugar)`.
 - A 20c completa (pode acrescentar campos e funções; não renomeia nem tira os de cima).
+- **O que a 20c acrescentou** (D-370 a D-372): **a grafia canônica** — `G.Itens.canon(chave)`: um tipo de mais de um material
+  sempre diz o material (`machado` → `machado.pedra`), um de um material só nunca diz (`vara.madeira` → `vara`); um bem fica como é;
+  o que não é nem uma coisa nem um bem → `null`. As mochilas só guardam chaves canônicas, e o `id` do `def` é a canônica.
+  `G.Itens.keyOf(tipo, material)` (a canônica, sem montar texto), `G.Itens.THINGS` (o conjunto de todas as chaves de coisa: «é uma
+  coisa?» de uma vez só). **O que um povo sabe fazer**, perguntado com as artes dele (`f.tech.known`; o catálogo nunca lê o povo):
+  `can(tipo, artes)`, `bestMat(tipo, artes)`, `best(tipo, artes)` (a chave no melhor material que o povo sabe, ou `null`),
+  `knows(chave, artes)`. **As coisas e os bens do armazém** (D-371): `bemOf(chave)` → `{ k: o bem, n: quanto }` (o `bem`/`vale` do
+  tipo, ou o `feito` — o cajado é meia madeira —; um bem é ele mesmo), `fromBem(bem)` (os tipos que um bem vira), `valor(chave)`
+  (em moedas, pelo preço da economia), `peso(chave, n)` (quilos). **Para a tela e o corpo**: `usos(chave)` (o que as `tags` dizem,
+  em português), `guarda(chave)` (onde a coisa vai quando a mão a larga: `costas` ou `cinto`, ou `null`), `mao(chave)` (a mão em que
+  se segura: `mao`, ou `outra` para o escudo, o arco, a tocha, o cesto), `veste(chave)` (`cabeca`, `corpo`), `TIPO_NOME`, `TAG_NOME`.
+  **Campos novos do `def`** (primeiras medidas, que nada do mundo lê ainda — a onda 2 as afina): `desc` (a linha da ficha), `ritmo`
+  (segundos de um golpe), `trabalho` (quanto um golpe de trabalho rende contra o de uma ferramenta de bronze), `bloqueio` (a parte de
+  um golpe que o escudo apara), `protecao` (a parte que o elmo ou a couraça seguram), `feito` (do que é feita a coisa que não é bem
+  do armazém), `ord` (o material: 0 o mais simples, 1 bronze, 2 ferro), `cor` (a cor do material, para o sinal da tela), e os
+  lugares `guarda`, `maoSlot`, `veste`. Cada material tem `ord`, `cor`, `trabalho`, `bloqueio`, `protecao`. **A tabela nasce
+  congelada** (`Object.freeze`: uma escrita num arquivo do jogo quebra na hora; regra 130).
 
 ### 4.2 O que a pessoa leva e segura — `G.Inv` (`js/inventario.js`, do mundo, regra 111)
 - `G.Inv.held(v)` → `{ mao, outra, costas, cinto, cabeca, corpo, real }` (chaves ou `null`): as coisas da pessoa quando ela tem alguma,
@@ -319,6 +336,29 @@ chave tem figura); uma folha de fotos (todas as coisas, de dois lados, e as figu
 - A 20c acrescenta (e documenta aqui): a mochila (`bag`, `cap`, `room`…), equipar e guardar, dar, tirar, largar, pegar, as conversões
   dos bens, os atalhos — as que mudam o mundo só no passo do mundo (o corpo pede pelo `Possess.apply`).
 - Os dados: `v.mochila` `{ chave: n }`; `v.equip` `{ mao, outra, costas, cinto, cabeca, corpo, atalhos: [5] }` — no `SHAPE`.
+- **As portas que a 20c fez** (D-370 a D-378). *Só leem* (qualquer um, a qualquer hora, de dentro ou de fora do passo):
+  `held(v)` (como acima: as coisas da pessoa nos lugares delas; **para quem as coisas do ofício nunca viraram de verdade, o kit
+  preenche os lugares que as dela deixam vazios**; a ferramenta do ato na mão enquanto ele dura — uma da mochila do mesmo tipo, se
+  houver —; uma carga ou o `v.gear` nos braços esvaziam as mãos), `kit(v)`, `trade(v)` (o kit só pelo ofício, de mãos livres: o que é
+  da pessoa por ofício), `real(v)`, `bag(v)` (uma cópia), `count(v, chave)`, `find(v, tag)`, `list(v)` (`[{ k, n, d, on }]`, na
+  ordem do catálogo), `equipOf(v)` (uma cópia: os seis lugares, `atalhos`, `kit`), `weight(v)` e `cap(v)` (quilos; `capPeak(v)`, o
+  maior limite que a pessoa já teve), `room(v, chave)`, `near(v, r)` (o que está no chão ao alcance), `storeNear(v)` (o armazém do
+  povo ao alcance), `artsOf(v)`, `outside()` (quantas portas do mundo foram pedidas de fora do passo — recusadas). *Mudam o mundo*,
+  só dentro do passo (`G.inSim`; de fora → `{ ok: false }` e contadas): `equip(v, chave, lugar?)`, `unequip(v, lugar)`,
+  `stow(v, mão?)` (guardar: para as costas ou o cinto, ou a mochila), `draw(v)` (sacar: a arma primeiro, e o escudo das costas para a
+  outra mão), `toggle(v)` (guardar ou sacar — a tecla `guardar` da onda 2), `quick(v, i)` (o atalho `i`: na mão / guardado / vestido /
+  tirado), `shortcut(v, i, chave|null)`, `give(v, o, chave, n)`, `take(v, lugar, chave, n)` (do armazém → `make`; do chão →
+  `pick`; da casa, de uma prateleira, pela regra do `D.may`), `put(v, lugar, chave, n)` (na casa vai para o chão dela se os móveis
+  estão cheios, D-059; no armazém conta como o bem), `drop(v, chave, n)` (no chão onde se está, sem a marca do povo), `pick(v, g, n)`,
+  `make(v, tipo, material?, n?)` (no armazém do próprio povo, ao alcance: o bem sai, a coisa entra, código `coisa`), `unmake(v, chave)`,
+  `realize(v)` (as coisas do ofício viram de verdade, código `kit`, uma vez na vida — o `G.Act.hooks.possess` a chama quando o deus
+  toma um corpo), `onDeath(v, causa)`. Todas devolvem `{ ok, why, … }`, com a razão em português. O corpo pede por
+  `G.Possess.apply(w => G.Inv.equip(w, …))` (regra 129).
+- **O depósito, alargado pelo inventário** (no `js/inventario.js`): o lugar `'m:<id>'` (`room` pelo peso, `all` para o `D.total`);
+  `D.may` para a mochila (a dona; as mãos de uma operação, pela regra do depósito); **`D.move` para um armazém de povo (`'f:'`) com uma
+  coisa a conta como o seu bem** (D-371: uma porta só para toda coisa que chega a um armazém — a mão, o carregador que a achou no
+  chão, a casa esvaziada); `D.weight` de uma coisa nos braços (quilos ÷ 6), `G.Eco.name` de uma coisa (o nome do catálogo); e um
+  ouvinte do livro (`D.onMove`) que esvazia as mãos quando uma carga chega a elas pelo depósito (D-378).
 
 ### 4.3 A forma de cada coisa — `G.ItemArt` (`js/itemarte.js`, só se vê)
 - `G.ItemArt.ready`; `G.ItemArt.geo(chave, nível)` → `THREE.BufferGeometry` (com as cores) no quadro do D-337, ou `null`;
@@ -351,6 +391,12 @@ clipe numa foto ou numa tira, e um exemplo completo)
 - `G.IncUI.hud()`, `G.IncUI.root()`; o lugar da barra de atalhos `.ih-hotbar` (da 20c); `G.IncUI.closers` (cada painel novo põe o seu
   fecho; `closeAll` os chama); `G.Modes.setPanel(nome)` marca um painel aberto (o corpo para de andar; o menu, só ele, pausa o
   mundo — D-036).
+- **A tela da mochila (20c, D-377)**: `G.InvUI.open()`, `close()`, `toggle()`, `isOpen()`, `frame(rdt)`, `sign(chave)` (a figura da
+  arte, `G.ItemArt.icon`, ou o sinal de reserva). O painel é `#inv-panel` (dentro do `G.IncUI.root()`), a marca `'mochila'`; a barra
+  de atalhos enche o `.ih-hotbar` (cinco atalhos e o botão da mochila; com a tela guardada, H, ela some — no toque, fica). **O quadro
+  da tela da mochila é o da tela do corpo**: o `inv-ui.js` encadeia o `G.IncUI.frame` (a mesma batida, a mesma pausa — e as provas do
+  navegador, que desligam o `requestAnimationFrame` e dirigem os quadros à mão, a veem). Quem abre outro painel por cima (o diário, a
+  ficha) a fecha: a mochila só fica aberta com a marca dela.
 
 ## 5. Os donos de cada arquivo e as marcas
 
