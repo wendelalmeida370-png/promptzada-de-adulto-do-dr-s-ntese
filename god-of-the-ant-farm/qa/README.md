@@ -279,4 +279,18 @@ O mundo tem o seu próprio acaso, semeado pela semente do mundo e guardado no sa
 | `visual/salvo-dentro.js` | `node visual/salvo-dentro.js [mundo] [tipos]` | O corpo salvo dentro de um prédio onde a planta de agora não deixa ficar (L-422, Patch 2, P4), em Node, sem navegador: o save guarda o ponto do corpo, e ao abrir o controle volta nele ali — numa parede, numa peça ou na pegada de um lance no piso de onde ele sobe (um save de antes de uma planta refeita), em um prédio de cada um de 12 tipos com lance: de pé num chão da planta que a porta alcança, fora dos lances, ou posto fora pelo mundo; salvo no meio da subida de um lance: de pé ao lado dele, volta ao pé e sobe; o verificador limpo. |
 | `junta-inv.js` | `node junta-inv.js [confere]` | Copia as invariantes dos sistemas em construção (`atividades-inv.js`, `interiores-inv.js`, `visual/corpo-qa.js`) para dentro do `qa.js`, para que a soak e a regressão as confiram (o `guard.js` cobra, regra 21). |
 
+### A base do corpo (JOGABILIDADE.md): as provas de cada parte
+
+Cada parte acrescenta as suas linhas logo abaixo da sua marca (a tabela acima continua a das provas de antes).
+
+| Prova | Como rodar | O que confere |
+|---|---|---|
+| (20a: a animação — as linhas novas aqui) | | |
+| (20b: o movimento — as linhas novas aqui) | | |
+| (20c: o inventário — as linhas novas aqui) | | |
+| (20d: a arte dos itens — as linhas novas aqui) | | |
+| (20e: a interação — as linhas novas aqui) | | |
+| (20f: o combate — as linhas novas aqui) | | |
+| (20g: os ofícios — as linhas novas aqui) | | |
+
 Qualquer erro de página, aviso no console ou erro capturado por um módulo (`G.modErr`) conta como falha.

@@ -1304,6 +1304,23 @@ canvas#game3d { touch-action: none; transition: none; }
 /* (a phone: no room between the two panels — the compass goes under the clock, on the right) */
 @media (max-width: 640px) { .ih-who { width: 46vw; padding: 8px 10px; } .ih-compass { left: auto; right: calc(14px + env(safe-area-inset-right, 0px)); transform: none; top: calc(72px + env(safe-area-inset-top, 0px)); } #inc-root { --ih-cw: 150px; } .ih-hint { display: none; } }
 
+/* ================= a base do corpo (JOGABILIDADE.md): cada parte escreve só abaixo da sua marca ================= */
+/* the hotbar's place on the body's screen (the inventory fills it, 20c) */
+#inc-hud .ih-hotbar { position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); pointer-events: auto; }
+/* === 20a: a animação === */
+
+/* === 20b: o movimento (os controles de toque, a câmera) === */
+
+/* === 20c: o inventário e o equipamento === */
+
+/* === 20d: a arte dos itens === */
+
+/* === 20e: a interação === */
+
+/* === 20f: o combate === */
+
+/* === 20g: os ofícios === */
+
 /* ================= the letters, inside the game ================= */
 /* Nunito — Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
    Cinzel — Copyright 2020 The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel)

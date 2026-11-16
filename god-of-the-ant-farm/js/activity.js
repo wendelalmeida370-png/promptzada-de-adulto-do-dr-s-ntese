@@ -912,6 +912,8 @@
       if (heir && (v.purse || 0) > EPS) D.move('p:' + v.id, heir, 'moedas', v.purse, { code: 'herdado', by: v.id, part: true });
       const cc = v.carry; if (heir && cc && cc.k === 'moedas' && cc.n > EPS && !cc.op && !cc.to && !cc.cid) D.move('v:' + v.id, heir, 'moedas', cc.n, { code: 'herdado', by: v.id, part: true });
     }
+    // (the bag and the equipment of the dead go where their things go — the inventory's door, D-336)
+    if (v && G.S.villagers.has(v.id) && G.Inv && G.Inv.onDeath) G.Inv.onDeath(v, cause);
     // (death is the one door out of the world: the dead leave every operation, and what they ran, at once)
     if (v && G.S.villagers.has(v.id)) { for (const op of ops()) if (live(op) && op.roles && op.roles[v.id]) A.leave(op, v, 'morte'); for (const f of A.hooks.gone) f(v, 'morte'); }
     return kill0.apply(this, arguments);

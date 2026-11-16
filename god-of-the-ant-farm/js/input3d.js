@@ -17,14 +17,33 @@
     ['frente', 'Andar para a frente', ['w', 'arrowup']], ['tras', 'Andar para trás', ['s', 'arrowdown']], ['esquerda', 'Andar para a esquerda', ['a', 'arrowleft']], ['direita', 'Andar para a direita', ['d', 'arrowright']],
     ['correr', 'Correr (segurar)', ['shift']], ['pular', 'Pular', [' ']], ['interagir', 'Interagir', ['e']], ['agachar', 'Andar agachado (segurar)', ['c']], ['sentar', 'Sentar no chão / levantar', ['x']], ['acenar', 'Acenar', ['v']], ['dancar', 'Dançar / parar', ['b']],
     ['ficha', 'Quem sou eu', ['tab']], ['diario', 'Diário de Vida', ['j']], ['tela', 'Mostrar / esconder a tela', ['h']], ['deus', 'Voltar ao Modo Deus', ['g']], ['menu', 'Menu / pausa', ['escape']],
+    // (the gameplay base, D-339: the bag and the quick things — JOGABILIDADE.md; the fight's and the hands' actions come with
+    // their modules, by In.def)
+    ['inventario', 'Inventário e equipamento', ['i']], ['rapido1', 'Atalho 1', ['1']], ['rapido2', 'Atalho 2', ['2']], ['rapido3', 'Atalho 3', ['3']], ['rapido4', 'Atalho 4', ['4']], ['rapido5', 'Atalho 5', ['5']],
   ];
   const DEF = {}; for (const [a, , k] of ACTIONS) DEF[a] = k.slice();
-  let binds = JSON.parse(JSON.stringify(DEF)); const kept = new Set();
-  try { const o = JSON.parse(localStorage.getItem('gotaf-keys') || 'null'); if (o && typeof o === 'object') for (const a in DEF) if (Array.isArray(o[a]) && o[a].every(k => typeof k === 'string')) { binds[a] = o[a].slice(0, 3); kept.add(a); } } catch (e) { }
+  let binds = JSON.parse(JSON.stringify(DEF)); const kept = new Set(); let saved = null;
+  try { const o = JSON.parse(localStorage.getItem('gotaf-keys') || 'null'); if (o && typeof o === 'object') { saved = o; for (const a in DEF) if (Array.isArray(o[a]) && o[a].every(k => typeof k === 'string')) { binds[a] = o[a].slice(0, 3); kept.add(a); } } } catch (e) { }
   // (a key does one thing: an action that came after the keys were kept — the kept table has none for it — gives up a key
   // the player had already given to another)
   for (const a in DEF) if (!kept.has(a)) binds[a] = binds[a].filter(k => !Object.keys(binds).some(b => b !== a && binds[b].includes(k)));
   In.binds = () => binds;
+  // an action a module brings (the fight, the hands — D-339): its keys as kept in this browser, or its own defaults less those
+  // another action already has; nothing if it exists
+  In.def = function (a, label, keys) {
+    if (DEF[a]) return false;
+    ACTIONS.push([a, label, keys.slice()]); DEF[a] = keys.slice();
+    const k = saved && Array.isArray(saved[a]) && saved[a].every(q => typeof q === 'string') ? saved[a].slice(0, 3) : null;
+    binds[a] = k || keys.filter(q => !Object.keys(binds).some(b => binds[b].includes(q)));
+    return true;
+  };
+  // who listens to an action (D-339): on(a, f) for the press — f(a) returning true takes it from the default handling —, onUp(a,
+  // f) for the letting go; the press reaches them only while the body is lived and the menu shut (modes.js), the letting go always
+  const subs = {}, subsUp = {};
+  In.on = (a, f) => { (subs[a] || (subs[a] = [])).push(f); };
+  In.onUp = (a, f) => { (subsUp[a] || (subsUp[a] = [])).push(f); };
+  In.fire = function (a) { const L = subs[a]; let took = false; if (L) for (const f of L) if (f(a)) took = true; return took; };
+  const fireUp = a => { const L = subsUp[a]; if (L) for (const f of L) f(a); };
   In.keyName = k => ({ ' ': 'Espaço', shift: 'Shift', control: 'Ctrl', alt: 'Alt', tab: 'Tab', escape: 'Esc', enter: 'Enter', arrowup: '↑', arrowdown: '↓', arrowleft: '←', arrowright: '→', backspace: '⌫' })[k] || k.toUpperCase();
   In.label = a => (binds[a] || []).map(In.keyName).join(' / ');
   In.rebind = function (a, k) {
@@ -52,6 +71,7 @@
     if (!a) return false;
     const was = !!In.down[a]; In.down[a] = isDown;
     if (isDown && !was && In.onAction) In.onAction(a);
+    if (!isDown && was) fireUp(a);
     if (isDown && a === 'pular' && !was) G.Avatar.input.jump = true;
     return true;
   };
@@ -111,6 +131,7 @@
   // (an on-screen button: the same action as its key)
   In.press = function (a, on) {
     if (on === undefined) { if (In.onAction) In.onAction(a); if (a === 'pular') G.Avatar.input.jump = true; return; }
-    In.down[a] = on; if (on && a === 'pular') G.Avatar.input.jump = true;
+    const was = !!In.down[a]; In.down[a] = on; if (on && a === 'pular') G.Avatar.input.jump = true;
+    if (!on && was) fireUp(a);
   };
 })(window.G);

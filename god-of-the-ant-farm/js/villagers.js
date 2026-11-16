@@ -60,6 +60,9 @@
     // (the trade that stays — D-210: the day the person took the trade they have, and the trade an emergency pulled them from,
     // to go back to — only the dealing of the trades writes them, village.js)
     'roleDay', 'roleBack',
+    // (the gameplay base, D-336: the bag — { key: n }, the Depot's holder 'm:' — and the equipment — where the bag's things sit
+    // on the body —; only inventario.js writes them, guard rule 111)
+    'mochila', 'equip',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {

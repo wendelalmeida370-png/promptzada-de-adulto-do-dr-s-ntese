@@ -339,6 +339,8 @@
     if (M3.state !== 'INC') return;
     if (a === 'menu') { if (panel) { G.IncUI.closeAll(); panel = null; } else M3.menu(!menuOpen); return; }
     if (menuOpen) return;
+    // (the actions a module listens to — the bag, the quick things, the fight, the hands: D-339 — before the default handling)
+    if (G.Input3D.fire(a)) return;
     if (a === 'deus') { M3.leave('deus'); return; }
     if (a === 'ficha') { if (panel === 'self') { G.IncUI.closeAll(); panel = null; } else { G.IncUI.selfCard(); } return; }
     if (a === 'diario') { if (panel === 'diario') { G.IncUI.closeAll(); panel = null; } else { G.IncUI.diary(); } return; }

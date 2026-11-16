@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js']; // (the 3D view of the Modo Encarnado: only seen)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', 'inv-ui.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -944,5 +944,29 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
   const mn = (src['main.js'] || []).join('\n');
   if (!/document\.addEventListener\('touchmove', e => \{ if \(e\.touches\.length > 1\) e\.preventDefault\(\); \}, \{ passive: false \}\)/.test(mn)) fails.push('a página não amplia: o main.js sem a pinça de dois dedos segura fora do mapa (L-1065)');
   if (!/document\.addEventListener\('gesturestart', e => e\.preventDefault\(\)\)/.test(mn)) fails.push('a página não amplia: o main.js sem os gestos do Safari segurados (L-1065)'); }
+// ============================== a base do corpo (JOGABILIDADE.md) ==============================
+// 111. "a mochila e o equipamento são do inventario.js" (D-336): o que uma pessoa leva (v.mochila, o lugar 'm:' do G.Depot) e
+// onde as coisas dela ficam no corpo (v.equip) só o js/inventario.js escreve — o 3D, a tela, o combate e os ofícios perguntam
+// ao G.Inv (held, kit) e pedem as mudanças pelas portas dele, no passo do mundo
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (f !== 'inventario.js' && /\.(mochila|equip)\b\s*(\[[^\]]*\]\s*|\.\w+\s*)?(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`a mochila do inventário: ${f}:${k + 1} escreve a mochila ou o equipamento de alguém fora do inventario.js (D-336; pergunte e peça ao G.Inv): ${l.trim().slice(0, 110)}`);
+    if (f !== 'inventario.js' && /\.(mochila|equip)\b\s*\.\s*(push|splice|pop|shift|unshift)\(|delete\s+\w+\.(mochila|equip)\b/.test(c)) fails.push(`a mochila do inventário: ${f}:${k + 1} mexe na mochila ou no equipamento fora do inventario.js (D-336): ${l.trim().slice(0, 110)}`); });
+  if (!(src['inventario.js'] || []).length) fails.push('a mochila do inventário: js/inventario.js não existe (D-336)'); }
+// 112. "o catálogo dos itens é puro" (D-337): o js/itens.js é uma tabela e as funções que a leem — o mesmo para todo mundo:
+// não lê o mundo (G.S), não tira de acaso nenhum, não desenha
+{ const it = src['itens.js'] || []; if (!it.length) fails.push('o catálogo puro: js/itens.js não existe (D-337)');
+  it.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.S\b|\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\b|\bTHREE\b|\bG\.Render\b|\bdocument\b/.test(c)) fails.push(`o catálogo puro: itens.js:${k + 1} lê o mundo, tira de um acaso ou desenha (D-337): ${l.trim().slice(0, 110)}`); }); }
+// (as regras de cada parte da base do corpo, nas faixas de cada uma — JOGABILIDADE.md, «Os números»:
+//  113–119 a animação (20a) · 120–126 o movimento (20b) · 127–134 o inventário (20c) · 135–137 a arte dos itens (20d) ·
+//  138–144 a interação (20e) · 145–151 o combate (20f) · 152–158 os ofícios (20g); cada parte escreve as suas logo abaixo da
+//  sua marca, para que as junções não se cruzem)
+// === 20a: a animação ===
+// === 20b: o movimento ===
+// === 20c: o inventário ===
+// === 20d: a arte dos itens ===
+// === 20e: a interação ===
+// === 20f: o combate ===
+// === 20g: os ofícios ===
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

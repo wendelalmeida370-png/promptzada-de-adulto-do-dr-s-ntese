@@ -65,6 +65,7 @@
         <div class="ih-lead hidden"><i></i><span></span></div>
         <div class="ih-mark hidden"><i></i><u></u><b></b></div>
         <div class="ih-prompt hidden"><kbd>E</kbd><span></span></div>
+        <div class="ih-hotbar"></div>
         <div class="ih-reticle"></div>
         <div class="ih-hint panel"></div>
         <div class="ih-corner"><button class="ih-diary" title="Diário de Vida">${(G.ICON && G.ICON.book) || ''}<span>Diário</span></button><button class="ih-god" title="Voltar ao Modo Deus">${(G.ICON && G.ICON.eye) || ''}<span>Modo Deus</span></button></div>
@@ -457,7 +458,11 @@
     // (lying down where one stands: the world lays the body down in its step, and it is said once it has)
     else if (c === 'sleep') { IU.closeAll(); G.Modes.setPanel(null); IU.when(G.Possess.apply(w => { if (!G.Possess.sleep(w)) return { ok: false, why: '' }; G.Possess.deed('sono'); return { ok: true }; }), () => IU.toast('Você se deita no chão e dorme.')); }
   }
-  IU.closeAll = function () { if (!root) return; card.classList.add('hidden'); menu.classList.add('hidden'); };
+  // (the panels a module opens — the bag: D-336 — close with the cards: each module puts its closer here)
+  IU.closers = [];
+  IU.closeAll = function () { if (!root) return; card.classList.add('hidden'); menu.classList.add('hidden'); for (const f of IU.closers) f(); };
+  // (the screen's places, for the modules that draw on it: the HUD, the root)
+  IU.hud = () => hud; IU.root = () => root;
   // (keys while a card or the menu is open: E and Esc close it)
   IU.keyCapture = function (e, down) {
     if (!root || !down) return false;
