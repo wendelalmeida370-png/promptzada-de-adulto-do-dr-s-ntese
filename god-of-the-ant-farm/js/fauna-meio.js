@@ -101,6 +101,8 @@
   };
   const MIGR = k => SP[k] && (SP[k].migr === 'herd' || (SP[k].herd && SP[k].herd[1] >= 6));
   // (the beasts a town keeps out by day: the big hunters and the giants that kill — not the fox at the scraps, nor the deer)
+  // (who hunts, by kind: asked thousands of times a second, answered once — A.predator reads the kind's definition)
+  const PRED = {}; for (const k of A.ids) PRED[k] = A.predator(k);
   const DANGER = new Set(A.ids.filter(k => { const d = SP[k]; return d.cls !== 'air' && d.cls !== 'water' && !d.dom && !d.town && ((A.predator(k) && d.size >= 0.9 && d.diet !== 'scav') || ['elephant', 'rhino', 'hippo', 'buffalo', 'hyena'].includes(k)); }));
   // (how wary of the towns each wild kind is, as in life: 2 the big dangerous ones, out of the town's ground the whole day; 1 the
   // others, out of it from the morning to the late afternoon — at dusk the deer and the hare come to the edge of the fields; 0
@@ -134,7 +136,7 @@
 
   // ------------------------------ what a beast is doing here (not saved) ------------------------------
   const RUN = new Map(), SLOW = new Map(), FLED = new Map(), SEED = new Map(), URGE = new Map(), CALL = new Map(), PUSH = new Map();
-  G.worldHooks.push(() => { TOWN = null; tw = 0; townT = -1; RUN.clear(); SLOW.clear(); FLED.clear(); SEED.clear(); XS.clear(); URGE.clear(); CALL.clear(); PUSH.clear(); });
+  G.worldHooks.push(() => { TOWN = null; tw = 0; townT = -1; NOOUT.clear(); RUN.clear(); SLOW.clear(); FLED.clear(); SEED.clear(); XS.clear(); URGE.clear(); CALL.clear(); PUSH.clear(); });
   const MINE = {};
   function runStart(a, name) {
     const r = { o: name, p: 0, q: 0, t0: G.S.clock, gx: a.x, gy: a.y, fx: 0, fy: 0, wi: -1, id: 0, sc: 0, n: 0, k: 0, b: 0, re: 0, gn: null, fast: 0 };
@@ -286,8 +288,8 @@
   // fire in a person's hand or beside them at night: the beasts keep off
   function fireGuard(v) {
     if (!ENV.night) return false; if (v.holdTorch || v.lantern) return true;
-    const S = G.S; const x = v.x | 0, y = v.y | 0;
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const b = S.occ[ny * N + nx]; if (b) { const B = S.buildings.get(b); if (B && B.type === 'campfire' && B.built) return true; } }
+    // (the towns' fires, listed with the town's ground every ten seconds: two tiles and a half from one)
+    for (let k = 0; k < FIRES.length; k += 2) if (Math.abs(FIRES[k] - v.x) < 2.5 && Math.abs(FIRES[k + 1] - v.y) < 2.5) return true;
     return false;
   }
   Mi.fireGuard = fireGuard;
@@ -297,21 +299,24 @@
   // the ground of a town, by cells of two tiles: the settlement whose radius (and two tiles of fields and outskirts) covers it —
   // made again in the world's step on every tenth second of the clock and when the towns change (a town is founded, falls); a
   // question from outside the step reads the grid as it is (L-760's rule: the checker must not make the world's grid)
-  const TC = 2; let tw = 0, TOWN = null, townT = -1, townN = -1; const TOWNS = [], FIRES = [];
+  // (and its core: the radius itself and the houses past it, not the ring of fields and pens — the shy grazers keep out of the
+  // core only, and graze the outskirts and come to the fields at dusk)
+  const TC = 2; let tw = 0, TOWN = null, CORE = null, townT = -1, townN = -1; const TOWNS = [], FIRES = [];
   function townGrid() {
     const S = G.S; const c = Math.ceil(N / TC); const ep = Math.floor(S.clock / 10);
     if (TOWN && tw === c && townN === S.settlements.size && ep === townT) return;
-    tw = c; if (!TOWN || TOWN.length !== c * c) TOWN = new Uint16Array(c * c); else TOWN.fill(0); townT = ep; townN = S.settlements.size; TOWNS.length = 0; FIRES.length = 0;
+    tw = c; if (!TOWN || TOWN.length !== c * c) { TOWN = new Uint16Array(c * c); CORE = new Uint8Array(c * c); } else { TOWN.fill(0); CORE.fill(0); } townT = ep; townN = S.settlements.size; TOWNS.length = 0; FIRES.length = 0; NOOUT.clear();
     for (const st of S.settlements.values()) {
       const R = (st.radius || 8) + 2; TOWNS.push(st); const k = TOWNS.length; if (k > 65000) break;
       const x0 = Math.max(0, ((st.cx - R) / TC) | 0), x1 = Math.min(c - 1, ((st.cx + R) / TC) | 0), y0 = Math.max(0, ((st.cy - R) / TC) | 0), y1 = Math.min(c - 1, ((st.cy + R) / TC) | 0);
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (G.dist(x * TC + 1, y * TC + 1, st.cx, st.cy) < R && !TOWN[y * c + x]) TOWN[y * c + x] = k;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const d = G.dist(x * TC + 1, y * TC + 1, st.cx, st.cy); if (d < R && !TOWN[y * c + x]) TOWN[y * c + x] = k; if (d < R - 1) CORE[y * c + x] = 1; }
     }
     // (and the built ground past the ring: the farm out in the fields, the house at the far end of the road)
     const K = new Map(TOWNS.map((st, i) => [st.id, i + 1]));
     for (const b of S.buildings.values()) {
       const k = K.get(b.set); if (!k || b.type === 'ruin' || b.type === 'cemetery') continue; if (b.type === 'campfire' && b.built) FIRES.push(b.x + 0.5, b.y + 0.5);
-      for (let y = Math.max(0, (b.y / TC) | 0); y <= Math.min(c - 1, ((b.y + (b.h || 1) - 1) / TC) | 0); y++) for (let x = Math.max(0, (b.x / TC) | 0); x <= Math.min(c - 1, ((b.x + (b.w || 1) - 1) / TC) | 0); x++) if (!TOWN[y * c + x]) TOWN[y * c + x] = k;
+      const field = b.type === 'farm' || b.type === 'curral' || b.type === 'estabulo';
+      for (let y = Math.max(0, (b.y / TC) | 0); y <= Math.min(c - 1, ((b.y + (b.h || 1) - 1) / TC) | 0); y++) for (let x = Math.max(0, (b.x / TC) | 0); x <= Math.min(c - 1, ((b.x + (b.w || 1) - 1) / TC) | 0); x++) { if (!TOWN[y * c + x]) TOWN[y * c + x] = k; if (!field) CORE[y * c + x] = 1; }
     }
   }
   // the night's fire of a town near a point (four tiles): the beasts that the day keeps out keep off it by night
@@ -320,22 +325,24 @@
   // a place off the road, a few tiles from it (the side chosen by the beast's own number, no chance)
   function offRoad(a, x, y) {
     const k0 = Math.floor(G.hash(a.id * 13 + 5) * 8);
-    for (let d = 2; d <= 5; d++) for (let k = 0; k < 8; k++) { const an = (k0 + k) * Math.PI / 4; const px = x + Math.cos(an) * d, py = y + Math.sin(an) * d; if (W.inb(px, py) && !roadAt(px, py) && !townAt(px, py) && A.walkOK(a, px, py)) return [px, py]; }
+    for (let d = 2; d <= 5; d++) for (let k = 0; k < 8; k++) { const an = (k0 + k) * Math.PI / 4; const px = x + Math.cos(an) * d, py = y + Math.sin(an) * d; if (W.inb(px, py) && !roadAt(px, py) && !kept(a, px, py) && A.walkOK(a, px, py)) return [px, py]; }
     return null;
   }
-  const townAt = (x, y) => { if (!TOWN || x < 0 || y < 0 || x >= N || y >= N) return null; const k = TOWN[((y / TC) | 0) * tw + ((x / TC) | 0)]; return k ? TOWNS[k - 1] : null; };
+  const townAt = (x, y, core) => { if (!TOWN || x < 0 || y < 0 || x >= N || y >= N) return null; const j = ((y / TC) | 0) * tw + ((x / TC) | 0); const k = TOWN[j]; return k && (!core || CORE[j]) ? TOWNS[k - 1] : null; };
   Mi.townAt = townAt;
+  // the ground a kind keeps out of: the whole town for the big dangerous ones, the snakes and the crocodile; its core for the others
+  const kept = (a, x, y) => townAt(x, y, WARY[a.kind] === 1);
   // a dangerous beast the town keeps out now — by day, and not one the town cannot keep out: the one that guards its own (angry);
   // the hunt on a person (the man-eater, D-276) or on the herd of a pen (the raid); the starving, wounded or old hunter after
   // whatever it found (a cold-blooded hunter is not driven by hunger into the houses). Idle, even those walk out.
   const HUNT = { chase: 1, stalk: 1, flank: 1, lunge: 1, pounce: 1, strike: 1 };
-  const desperate = (a, sp) => A.predator(a.kind) && !REPTILE.has(a.kind) && (a.hunger > 0.85 || a.hp < a.maxHp * 0.4 || a.age > sp.life * a.lifeMul * 0.88);
+  const desperate = (a, sp) => PRED[a.kind] && !REPTILE.has(a.kind) && (a.hunger > 0.85 || a.hp < a.maxHp * 0.4 || a.age > sp.life * a.lifeMul * 0.88);
   function shunned(a, sp) {
     const w = WARY[a.kind]; if (!w || Mi.off.town || a.angry > 0) return false;
     if (SNAKE.has(a.kind)) { if (a.hunger > 0.55) return false; } // (the cold-blooded keep off at any hour, till hunger brings them)
     else if (!ENV.day || ENV.t > (w === 2 ? 0.7 : 0.6) || (w === 1 && ENV.t < 0.08)) return false;
     // (wariness yields to hunger: the hungry grazer and the hungry giant come to the fields and the gardens by day too)
-    if (!A.predator(a.kind) && a.hunger > (w === 2 ? 0.65 : 0.5)) return false;
+    if (!PRED[a.kind] && a.hunger > (w === 2 ? 0.6 : 0.45)) return false;
     if (HUNT[a.state] && a.target && !a.carc && (a.onPerson || (G.S.animals.get(a.target) || {}).dom || desperate(a, sp))) return false;
     return true;
   }
@@ -345,22 +352,25 @@
     const a0 = Math.atan2(a.y - st.cy, a.x - st.cx);
     for (const R of [(st.radius || 8) + 5, (st.radius || 8) + 10]) for (let k = 0; k < 16; k++) {
       const an = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.39; const x = st.cx + Math.cos(an) * R, y = st.cy + Math.sin(an) * R;
-      if (W.inb(x, y) && A.walkOK(a, x, y) && !townAt(x, y) && W.canWalk(a.x, a.y, x, y, true)) return [x, y];
+      if (W.inb(x, y) && !kept(a, x, y) && A.walkOK(a, x, y) && W.canWalk(a.x, a.y, x, y, true)) return [x, y];
     }
     return null;
   }
+  // (the beast with no way out found is not asked again for ten seconds: the town on a spit of land, the pocket among walls)
+  const NOOUT = new Map();
   // out of the town: not among the houses, the nearest way to the open (and the home range with it, when the town grew over it)
   function leaveStep(a, dt, sp, S) {
     const r = RUN.get(a.id); if (!r || r.o !== 'sair') { a.state = 'idle'; return true; } r.q += dt;
-    if (r.q > 45 || !townAt(a.x, a.y)) { if (townAt(a.hx, a.hy)) { a.hx = r.gx; a.hy = r.gy; } return quit(a, null, 1); }
+    if (r.q > 45 || !kept(a, a.x, a.y)) { if (kept(a, a.hx, a.hy)) { a.hx = r.gx; a.hy = r.gy; } return quit(a, null, 1); }
     // (on its way out it minds the hunters that eat it, not the people it is already walking away from)
-    r.sc -= dt; if (r.sc <= 0) { r.sc = 0.5; const th = A.fearOf(a); if (th && th.kind) { quit(a, null, 0); a.scan = 0; return false; } }
+    r.sc -= dt; if (r.sc <= 0) { r.sc = 1; const th = A.fearOf(a); if (th && th.kind) { quit(a, null, 0); a.scan = 0; return false; } }
     const w = walk(a, r, dt, r.fast ? sp.run * 0.85 : sp.sp * 1.25, 2.5); if (w === null) return true;
-    if (w) { const st = townAt(a.x, a.y); const g = st && wayOut(a, st); if (!g || ++r.re > 3) return quit(a); r.gx = g[0]; r.gy = g[1]; }
+    if (w) { const st = kept(a, a.x, a.y); const g = st && wayOut(a, st); if (!g || ++r.re > 3) return quit(a); r.gx = g[0]; r.gy = g[1]; }
     return true;
   }
   function leaveTown(a, sp, st, fast) {
-    const g = wayOut(a, st); if (!g) return false;
+    if (NOOUT.get(a.id) > G.S.clock - 10) return false;
+    const g = wayOut(a, st); if (!g) { NOOUT.set(a.id, G.S.clock); return false; }
     const r = runStart(a, 'sair'); r.gx = g[0]; r.gy = g[1]; r.fast = fast ? 1 : 0; if (!fast) gest(a, Ge.can(a.kind, 'alert') ? 'alert' : 'stare', undefined, 0, 0, true); count(fast ? 'boltedOut' : 'leftTown');
     return true;
   }
@@ -434,13 +444,13 @@
     const st = a.state;
     // ---- the town by day (D-305): the shunned one inside walks out; its wander into a town is turned back; a chase of a wild
     // prey into the houses is given up
-    if (WARY[a.kind] && st !== 'sair' && shunned(a, sp)) {
-      const tin = townAt(a.x, a.y);
+    const tin = WARY[a.kind] && st !== 'sair' ? kept(a, a.x, a.y) : null;
+    if (WARY[a.kind] && st !== 'sair' && (tin || st === 'wander' || HUNT[st]) && shunned(a, sp)) {
       if (tin && (st === 'idle' || st === 'wander' || st === 'graze' || st === 'lurk' || (MINE[st] && st !== 'beber'))) { if (leaveTown(a, sp, tin)) return true; }
       // (startled among the houses, it bolts for the open, not deeper in away from whoever startled it)
       else if (tin && st === 'flee') { if (leaveTown(a, sp, tin, true)) return true; }
-      else if (!tin && st === 'wander') { const to = townAt(a.tx, a.ty); const g = to ? wayOut({ x: a.tx, y: a.ty, kind: a.kind }, to) : roadAt(a.tx, a.ty) ? offRoad(a, a.tx, a.ty) : null; if (g) { a.tx = g[0]; a.ty = g[1]; a.path = null; count('turnedBack'); if (to && townAt(a.hx, a.hy)) { a.hx = g[0]; a.hy = g[1]; } } }
-      else if ((st === 'chase' || st === 'stalk' || st === 'flank' || st === 'lunge') && a.target) { const p = S.animals.get(a.target); if (p && (a.carc || !p.dom) && townAt(p.x, p.y)) { a.state = 'idle'; a.target = 0; a.crouch = 0; a.rest = Math.max(a.rest || 0, 8); a.t = 1; count('chaseOff'); } }
+      else if (!tin && st === 'wander') { const to = kept(a, a.tx, a.ty); const g = to ? wayOut({ x: a.tx, y: a.ty, kind: a.kind }, to) : roadAt(a.tx, a.ty) ? offRoad(a, a.tx, a.ty) : null; if (g) { a.tx = g[0]; a.ty = g[1]; a.path = null; count('turnedBack'); if (to && kept(a, a.hx, a.hy)) { a.hx = g[0]; a.hy = g[1]; } } }
+      else if ((st === 'chase' || st === 'stalk' || st === 'flank' || st === 'lunge') && a.target) { const p = S.animals.get(a.target); if (p && (a.carc || !p.dom) && kept(a, p.x, p.y)) { a.state = 'idle'; a.target = 0; a.crouch = 0; a.rest = Math.max(a.rest || 0, 8); a.t = 1; count('chaseOff'); } }
     }
     // ---- the fire of a town at night: the wander that would end beside it turns away (D-305)
     else if (WARY[a.kind] && ENV.night && st === 'wander' && !Mi.off.town && FIRES.length && !(a.hunger > 0.85)) {
@@ -509,7 +519,7 @@
     else if (m.cold > 0.62 && still && st !== 'aconchego' && st !== 'enrolar' && st !== 'toca') gest(a, 'shiver', 5);
     else if (m.hot > 0.66 && still) gest(a, 'pant', 5);
     // many eyes: the grazers of any kind around (a mixed herd keeps watch for all)
-    if (!A.predator(a.kind) && (st === 'idle' || st === 'graze' || st === 'beber' || st === 'wander')) { let n = 0; A.near(a.x, a.y, 3.5, o => { if (o !== a && !o.dead && !A.predator(o.kind) && SP[o.kind] && land(SP[o.kind])) n++; }); if (n) EYES.set(a.id, Math.min(6, n)); else EYES.delete(a.id); }
+    if (!PRED[a.kind] && (st === 'idle' || st === 'graze' || st === 'beber' || st === 'wander')) { let n = 0; A.near(a.x, a.y, 3.5, o => { if (o !== a && !o.dead && !PRED[o.kind] && SP[o.kind] && land(SP[o.kind])) n++; }); if (n) EYES.set(a.id, Math.min(6, n)); else EYES.delete(a.id); }
     else EYES.delete(a.id);
     // the seed in the belly of a fruit eater, dropped where it rests (D-304)
     const sd = SEED.get(a.id); if (sd && S.clock - sd.t > 50 && (st === 'idle' || st === 'sombra' || st === 'graze')) { SEED.delete(a.id); if (G.R() < 0.35) plant(a, sd.k); }
@@ -573,7 +583,7 @@
     CALL.set(a.id, S.clock); gest(a, g, undefined, 0, 0); count('alarm');
     const R = a.kind === 'monkey' || a.kind === 'elephant' ? 11 : 8; const kinds = {};
     A.near(a.x, a.y, R, o => {
-      if (o === a || o.dead || o.held || A.predator(o.kind)) return; const so = SP[o.kind]; if (!so || !land(so) || !wild(o, so)) return;
+      if (o === a || o.dead || o.held || PRED[o.kind]) return; const so = SP[o.kind]; if (!so || !land(so) || !wild(o, so)) return;
       if (G.dist2(a.x, a.y, o.x, o.y) > R * R) return;
       const m = meioOf(o); m.al = Math.max(m.al, lvl > 1 ? 25 : 12);
       if (o.state === 'idle' || o.state === 'graze' || o.state === 'beber' || MINE[o.state]) { G.faceTo(o, a.x - o.x, a.y - o.y); gest(o, 'alert', undefined, a.id, 0); }
@@ -662,7 +672,7 @@
     const start0 = def.start; def.start = (a, sp, S) => {
       if (start0(a, sp, S) === false) { FAIL.set(a.id * 64 + code, G.S.clock); return false; }
       // (the town keeps the shunned out by day: no goal of theirs among the houses — but the last water of a drought, D-305)
-      const r = RUN.get(a.id); if (r && WARY[a.kind] && !(name === 'beber' && (ENV.dry || meioOf(a).th > 0.8)) && shunned(a, sp) && (townAt(r.gx, r.gy) || (def.rest && roadAt(r.gx, r.gy)))) { endRun(a, r); a.state = 'idle'; a.t = 1; FAIL.set(a.id * 64 + code, G.S.clock); return false; }
+      const r = RUN.get(a.id); if (r && WARY[a.kind] && !(name === 'beber' && (ENV.dry || meioOf(a).th > 0.8)) && shunned(a, sp) && (kept(a, r.gx, r.gy) || (def.rest && roadAt(r.gx, r.gy)))) { endRun(a, r); a.state = 'idle'; a.t = 1; FAIL.set(a.id * 64 + code, G.S.clock); return false; }
       return true; };
     // (a rest — the shade, the burrow, the huddle, the look-out — gives way to hunger: from where the old ways go to graze (0,25)
     // it weighs less and less, and at 0,45 it is gone; one resting that grows hungry gets up at 0,5. The time to graze is the
@@ -717,11 +727,11 @@
     },
   });
   // a drinking bout: the prey sip and look up, the predators and the giants drink long
-  function bout(a) { const m = a.meio; const base = A.predator(a.kind) || a.kind === 'elephant' || a.kind === 'hippo' || a.kind === 'rhino' ? 6.5 : 2.6; return (m && m.al > 0 ? base * 0.55 : base) * (0.8 + G.hash(a.id * 13 + (RUN.get(a.id) || {}).n) * 0.5); }
+  function bout(a) { const m = a.meio; const base = PRED[a.kind] || a.kind === 'elephant' || a.kind === 'hippo' || a.kind === 'rhino' ? 6.5 : 2.6; return (m && m.al > 0 ? base * 0.55 : base) * (0.8 + G.hash(a.id * 13 + (RUN.get(a.id) || {}).n) * 0.5); }
   // the giants take the water: an elephant come to drink moves the others off the bank
   function jostle(a) {
     if (a.kind !== 'elephant' && a.kind !== 'hippo' && a.kind !== 'rhino') return;
-    A.near(a.x, a.y, 2.4, o => { if (o === a || o.dead || o.kind === a.kind || o.state !== 'beber' || PUSH.get(o.id) > G.S.clock - 20) return; PUSH.set(o.id, G.S.clock); const so = SP[o.kind]; if (A.predator(o.kind) && so.apex) return; const r = RUN.get(o.id); if (!r || r.p === 0) return; quit(o, 'startle', 4); const dx = o.x - a.x, dy = o.y - a.y, d = Math.hypot(dx, dy) || 1; const x = o.x + dx / d * 3, y = o.y + dy / d * 3; if (A.walkOK(o, x, y)) { o.tx = x; o.ty = y; o.state = 'wander'; o.t = 3; } count('compet'); });
+    A.near(a.x, a.y, 2.4, o => { if (o === a || o.dead || o.kind === a.kind || o.state !== 'beber' || PUSH.get(o.id) > G.S.clock - 20) return; PUSH.set(o.id, G.S.clock); const so = SP[o.kind]; if (PRED[o.kind] && so.apex) return; const r = RUN.get(o.id); if (!r || r.p === 0) return; quit(o, 'startle', 4); const dx = o.x - a.x, dy = o.y - a.y, d = Math.hypot(dx, dy) || 1; const x = o.x + dx / d * 3, y = o.y + dy / d * 3; if (A.walkOK(o, x, y)) { o.tx = x; o.ty = y; o.state = 'wander'; o.t = 3; } count('compet'); });
   }
   // a drink counted where it was drunk: the predators learn the place (G.Meio.waterWait), the drought's last water shows
   function drank(a, wi) {
@@ -1084,7 +1094,7 @@
     step(a, dt, sp, S) {
       const r = RUN.get(a.id); if (!r) { a.state = 'idle'; return true; } r.q += dt;
       if (r.p === 0) { if (r.q > 60) return quit(a); if (watch(a, r, dt)) return false; const w = walk(a, r, dt, sp.sp * 0.9, 1.4); if (w === null) return true; if (w) { r.p = 1; r.q = 0; count('scav'); scavTold(a, r.id); } return true; }
-      a.moving = false; gest(a, r.q < 2.5 ? 'sniff' : A.predator(a.kind) && Ge.can(a.kind, 'gnaw') ? 'gnaw' : 'chew', r.q < 2.5 ? undefined : 0, 0, 0, true);
+      a.moving = false; gest(a, r.q < 2.5 ? 'sniff' : PRED[a.kind] && Ge.can(a.kind, 'gnaw') ? 'gnaw' : 'chew', r.q < 2.5 ? undefined : 0, 0, 0, true);
       if (r.q > 2.5) a.hunger = Math.max(0, a.hunger - dt * 0.03);
       if (r.q > 14 || a.hunger < 0.1 || !ENV.night) return quit(a);
       return false; // (the dogs, the people — the world's fear scan sends it off)
@@ -1194,7 +1204,7 @@
   // a bird's alarm: the grazers around lift their heads (the bird is not on the ground: the alarm is heard from its place)
   function alarmAt(b, h) {
     const kinds = {}; let n = 0;
-    A.near(b.x, b.y, 10, o => { if (o.dead || o.held || A.predator(o.kind)) return; const so = SP[o.kind]; if (!so || !land(so) || !wild(o, so)) return; const m = meioOf(o); m.al = Math.max(m.al, 20); n++; if (o.state === 'idle' || o.state === 'graze' || MINE[o.state]) { G.faceTo(o, h.x - o.x, h.y - o.y); gest(o, 'alert', undefined, b.id, 0); } if (!kinds[o.kind]) { kinds[o.kind] = 1; count('alarmX'); } });
+    A.near(b.x, b.y, 10, o => { if (o.dead || o.held || PRED[o.kind]) return; const so = SP[o.kind]; if (!so || !land(so) || !wild(o, so)) return; const m = meioOf(o); m.al = Math.max(m.al, 20); n++; if (o.state === 'idle' || o.state === 'graze' || MINE[o.state]) { G.faceTo(o, h.x - o.x, h.y - o.y); gest(o, 'alert', undefined, b.id, 0); } if (!kinds[o.kind]) { kinds[o.kind] = 1; count('alarmX'); } });
     if (n && G.Mente && G.Mente.alarm) G.Mente.alarm(b.x, b.y, b.kind, 2);
   }
   // the fields with a crop worth the raid (and whether people are about them now)

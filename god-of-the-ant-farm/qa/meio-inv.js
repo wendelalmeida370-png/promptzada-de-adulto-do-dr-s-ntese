@@ -57,7 +57,7 @@
       if (inWorld !== s) { inWorld = s; inTown.clear(); } let late = 0; const seen = new Set();
       for (const a of s.animals.values()) {
         const calm = a.state === 'idle' || a.state === 'wander' || a.state === 'graze' || a.state === 'lurk' || (Mi.MINE[a.state] && a.state !== 'beber' && a.state !== 'sair');
-        if (a.dead || !calm || !Mi.shunned(a)) continue; const st = Mi.townAt(a.x, a.y); if (!st || Math.hypot(a.x - st.cx, a.y - st.cy) >= (st.radius || 8)) continue;
+        if (a.dead || !calm || !Mi.shunned(a)) continue; const st = Mi.townAt(a.x, a.y, Mi.WARY && Mi.WARY[a.kind] === 1); if (!st || Math.hypot(a.x - st.cx, a.y - st.cy) >= (st.radius || 8)) continue;
         seen.add(a.id); const t0 = inTown.get(a.id); if (t0 === undefined || t0 > s.clock) { inTown.set(a.id, s.clock); continue; }
         if (s.clock - t0 >= 12 && late++ < 3) add('meio', 3, `${a.kind}#${a.id} afastado e à toa dentro de ${st.name || 'uma cidade'} há ${(s.clock - t0).toFixed(0)} s, ${a.state}, sem sair`, a.id);
       }
