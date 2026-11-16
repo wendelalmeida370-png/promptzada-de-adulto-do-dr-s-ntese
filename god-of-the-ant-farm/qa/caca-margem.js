@@ -70,7 +70,10 @@ function stage(role, clear) {
   for (const bk of banks()) { if (clear && !bk.clear) continue; const v = person(bk, role); if (v) { used.add(bk.gx + ',' + bk.gy); used.add('v' + v.id); return { bk, v }; } }
   return null;
 }
-function put(v, x, y) { god(() => { Vg.endTask(v); v.sleeping = false; v.x = x; v.y = y; v.path = null; v.hunger = Math.min(v.hunger, 20); v.energy = Math.max(v.energy, 80); v.carry = null; }); }
+// (and the stage cleared of the beasts people dread round the bank — the polar bear inside Hedeby of the ready world: since the
+// fear of the beasts, D-310, D-311, whoever is at the bank flees it, and the case is the body where the feet do not go, not the
+// fear; T-1330)
+function put(v, x, y) { god(() => { for (const a of [...S.animals.values()]) if (G.Vg.DREAD && G.Vg.DREAD[a.kind] && !a.dead && G.dist(a.x, a.y, x, y) < 30) A.remove(a); Vg.endTask(v); v.sleeping = false; v.x = x; v.y = y; v.path = null; v.hunger = Math.min(v.hunger, 20); v.energy = Math.max(v.energy, 80); v.carry = null; }); }
 // the beast dead at (x, y) by this person's hand, and the task the game gives: the defender's fight (4) or the hunter's (1)
 function slain(v, kind, x, y, hunt) {
   return god(() => { const a = A.spawn(kind, x, y, { morph: null }); A.kill(a, v); if (hunt) a.claim = v.id; Vg.setTask(v, hunt ? { type: 'hunt', id: a.id, pri: 1, rt: 0 } : { type: 'fight', id: a.id, pri: 4, rt: 0 }); return a; });

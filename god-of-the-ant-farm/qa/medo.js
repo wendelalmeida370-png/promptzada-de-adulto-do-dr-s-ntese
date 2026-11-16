@@ -175,9 +175,10 @@ if (on('m10')) {
   two.forEach((v, k) => { v.courage = 0.95; v.hp = 100; Vg.endTask(v); const q = [p[0] + (k ? -3 : 3), p[1]]; if (open(q[0], q[1])) { v.x = q[0]; v.y = q[1]; } });
   const kid = [...S.villagers.values()].find(v => v.age >= 4 && v.age < 12 && !v.inside && !v.aboard && !v.ug);
   if (kid) { Vg.endTask(kid); const q = [p[0], p[1] + 2.5]; if (open(q[0], q[1])) { kid.x = q[0]; kid.y = q[1]; } }
-  live(1.5); hold = null;
-  const fights = [...S.villagers.values()].filter(v => v.task && v.task.type === 'fight' && v.task.id === viper.id).length;
-  const kt = kid && kid.task; live(20);
+  // (who went to kill it, over the whole case — a stick swung in the second and a half, or later)
+  const went = new Set(); const watch = n => { for (let k = 0; k < n; k++) { G.debug.step(0.1); for (const v of S.villagers.values()) if (v.task && v.task.type === 'fight' && v.task.id === viper.id) went.add(v.id); } };
+  watch(15); hold = null;
+  const kt = kid && kid.task; watch(200); const fights = went.size;
   ok('m10', fights >= 1 && viper.dead && (!kid || (kt && kt.type === 'flee')), `a víbora dentro de ${s.name}: ${fights} foram matá-la; ${viper.dead ? 'morta' : 'viva'}; a criança ${kid ? (kt ? kt.type + (kt.why ? '/' + kt.why : '') : 'sem tarefa') : '—'}`);
   if (S.animals.has(viper.id)) A.remove(viper);
 }
