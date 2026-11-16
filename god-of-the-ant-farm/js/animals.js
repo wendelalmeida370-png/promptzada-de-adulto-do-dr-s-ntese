@@ -1837,7 +1837,7 @@
   }
   function arrive(k, count, mate) {
     const sp = SP[k];
-    const spot = A.wildSpot(12, sp, true); if (!spot) return;
+    const spot = A.wildSpot(12, sp, true, k); if (!spot) return;
     // (a herd from far away no bigger than the room the land has left for its kind: ten buffalo came to a land that holds five,
     // L-1008)
     const n = mate ? 1 : Math.max(1, Math.min(G.ri(sp.herd[0], sp.herd[1]), A.capacity(k) - (count[k] || 0)));
@@ -1871,27 +1871,37 @@
   // twenty-three tiles, and 288 of 307 spots for a lion fell inside one or by it, L-1034. minD past every ring when the land has
   // it; in a land the towns have filled, the place of its ground farthest from them — never inside the people's own ground, the
   // ring and EDGE_MIN past it, where the armed go out against a beast)
-  const EDGE_MIN = 5;
-  A.wildSpot = function (minD, sp, edge) {
-    const S = G.S; distances(); let best = null, bd = EDGE_MIN;
+  const EDGE_MIN = 5, EDGE_LOW = 3;
+  A.wildSpot = function (minD, sp, edge, kind) {
+    const S = G.S; distances();
+    const fit = i => { if (W.blocked(i)) return false; if (sp) return A.habitat(sp, i) && (sp.cls === 'water' || sp.cls === 'air' || S.type[i] > T.SEA); return !(S.type[i] < T.SAND || S.type[i] === T.RIVER); };
+    const gap = (x, y) => { let e = Infinity; for (const s of S.settlements.values()) { const d = G.dist(x, y, s.cx, s.cy) - (s.radius || 8); if (d < e) e = d; } return e; };
+    if (edge) {
+      // (the whole map looked over, tile by tile: in a land the towns have filled, the few tiles of a kind's ground still far
+      // from them are found — a hundred and twenty draws found the thirteen tiles of savanna the lions had left one time in
+      // thirty, and the kinds that dwindled away never came back, L-1061. Past minD, any of them; else the farthest, at least
+      // the low edge past every ring: EDGE_MIN for a beast that hunts people — the armed go out against it up to four tiles past
+      // a ring, L-1031 —, EDGE_LOW for the rest, out of the ground the wild keep off, G.Meio.townAt)
+      const lo = kind && G.Vg && G.Vg.DREAD_HUNTS && !G.Vg.DREAD_HUNTS[kind] ? EDGE_LOW : EDGE_MIN;
+      const far = []; let best = null, bd = lo;
+      for (let y = 3; y < N - 3; y++) for (let x = 3; x < N - 3; x++) {
+        const i = y * N + x; if (!fit(i)) continue; const e = gap(x + 0.5, y + 0.5); if (e < lo) continue;
+        if (G.Meio && G.Meio.townAt && G.Meio.townAt(x + 0.5, y + 0.5)) continue;
+        if (e >= minD) far.push(i); else if (e >= bd) { bd = e; best = i; }
+      }
+      const i = far.length ? far[G.ri(0, far.length - 1)] : best; if (i === null || i === undefined) return null;
+      return [(i % N) + G.rr(0.2, 0.8), ((i / N) | 0) + G.rr(0.2, 0.8)];
+    }
     for (let k = 0; k < 120; k++) {
       const x = G.rr(3, N - 3), y = G.rr(3, N - 3); const i = W.idx(x, y);
-      if (sp) { if (!A.habitat(sp, i)) continue; if (sp.cls !== 'water' && sp.cls !== 'air' && S.type[i] <= T.SEA) continue; }
-      else if (S.type[i] < T.SAND || S.type[i] === T.RIVER || W.blocked(i)) continue;
-      if (W.blocked(i)) continue;
-      if (edge) {
-        let e = Infinity; for (const s of S.settlements.values()) { const d = G.dist(x, y, s.cx, s.cy) - (s.radius || 8); if (d < e) e = d; }
-        if (e >= minD) return [x, y];
-        if (e >= bd) { bd = e; best = [x, y]; }
-        continue;
-      }
+      if (!fit(i)) continue;
       let ok = true;
       for (const s of S.settlements.values()) if (G.dist(x, y, s.cx, s.cy) < minD) { ok = false; break; }
       if (ok) return [x, y];
     }
-    return best;
+    return null;
   };
-  A.EDGE_MIN = EDGE_MIN;
+  A.EDGE_MIN = EDGE_MIN; A.EDGE_LOW = EDGE_LOW;
   A.spawnPack = function (x, y, n, summoned) {
     let leader = null;
     // (each wolf where a wolf stands — its own ground, no house nor wall —, else at the pack's spot, itself where one stands: the
