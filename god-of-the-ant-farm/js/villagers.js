@@ -514,6 +514,58 @@
   // more that the hunger cannot outweigh: a soldier of Mênfis, hungry when the guard took him, starved in the square with the
   // store in reach, L-455
   const FIELD = { praia: 1, reembarque: 1, expl: 1, naufrago: 1, saga: 1, scene: 1, band: 1, muster: 1, refugio: 1, combat: 1, envoy: 1, trade: 1, escort: 1, hide: 1, assembly: 1, migrate: 1, aboard: 1, embark: 1, boardBack: 1, pave: 1, cais: 1, riot: 1, riotguard: 1 };
+  // ------------------------------ the beasts people dread (D-310) ------------------------------
+  // what a person knows of a beast: how far its kind is a danger to people (0 none .. 1 a lion, a tiger, a bear). A beast coming
+  // for someone right now (Animals.threat) is dreaded whatever its kind; a cub half as much; a crocodile under the water is not
+  // seen. The ones that hunt people (HUNTS) are fled and gone out against by the armed; the giants (the hippo, the elephant, the
+  // rhino, the buffalo) are given room. Before, people looked only at a beast coming for someone that moment: a lion walking
+  // through a town went between the houses beside the villagers, and nobody so much as stepped aside (the owner saw it)
+  const DREAD = Vg.DREAD = { lion: 1, tiger: 1, leopard: 0.9, jaguar: 0.9, bear: 0.9, polarbear: 1, snowleopard: 0.6, croc: 0.9, anaconda: 0.6, wolf: 0.7, hyena: 0.7, hippo: 0.8, rhino: 0.7, buffalo: 0.6, elephant: 0.6, viper: 0.4, python: 0.4, boar: 0.35, moose: 0.4, bison: 0.4 };
+  const HUNTS = Vg.DREAD_HUNTS = { lion: 1, tiger: 1, leopard: 1, jaguar: 1, bear: 1, polarbear: 1, snowleopard: 1, croc: 1, anaconda: 1, wolf: 1, hyena: 1 };
+  Vg.dread = function (a) {
+    if (!a || a.dead || a.tamed || a.dom || a.pen || a.held || a.air) return 0;
+    if (G.Animals.threat(a)) return 1;
+    const k = DREAD[a.kind]; if (!k || a.sub > 0) return 0;
+    if (!HUNTS[a.kind] && a.state === 'flee') return 0; // (a giant running off is no danger; a hunter of people may turn)
+    return a.grown < 1 ? k * 0.5 : k;
+  };
+  // (who has to be thought of as a danger — the kinds of DREAD and whoever is coming for someone —, by cells of 8 tiles, made
+  // again every half second of the world's time: a cache of the world, never in the save)
+  const DC = 8; const dreadG = new Map(); let dreadT = -1;
+  G.worldHooks.push(() => { dreadG.clear(); dreadT = -1; });
+  function dreadGrid() {
+    const S = G.S; if (dreadT >= 0 && S.clock >= dreadT && S.clock - dreadT < 0.5) return dreadG;
+    dreadT = S.clock; dreadG.clear();
+    for (const a of S.animals.values()) {
+      if (!DREAD[a.kind] && !(a.summoned || a.raid || a.legend || a.angry > 0 || a.state === 'chase' || a.state === 'lunge')) continue;
+      if (Vg.dread(a) <= 0) continue;
+      const k = ((a.x / DC) | 0) + ((a.y / DC) | 0) * 4096; let l = dreadG.get(k); if (!l) dreadG.set(k, l = []); l.push(a);
+      if (HUNTS[a.kind] && !a.raid && !a.summoned) beastInTown(a);
+    }
+    return dreadG;
+  }
+  // a hunter of people inside a town: the chronicle says it, once a day for each kind in each town (the world's clock, G.mod)
+  function beastInTown(a) {
+    const S = G.S;
+    for (const s of S.settlements.values()) {
+      const r = (s.radius || 8); if (G.dist2(a.x, a.y, s.cx, s.cy) > r * r) continue;
+      const key = 'fera.' + s.id + '.' + a.kind; if (G.mod(key) === S.day) return;
+      G.mod(key, S.day); const sp = G.Animals.DEF[a.kind];
+      G.Village.log(`${sp.nameA.replace(/^u/, 'U')} entrou em ${s.name}! O povo fugiu para longe d${sp.g === 'f' ? 'ela' : 'ele'}${G.isNight() ? ' na escuridão' : ''}, e quem tinha armas foi juntar os outros.`, 'wolf', a.x, a.y);
+      return;
+    }
+  }
+  function eachDread(x, y, r, fn) {
+    const g = dreadGrid(); const x0 = ((x - r) / DC) | 0, x1 = ((x + r) / DC) | 0, y0 = ((y - r) / DC) | 0, y1 = ((y + r) / DC) | 0;
+    // (a beast that left the world since the cells were made — eaten, gone into a cave, taken by the god's hand — is not fled)
+    const A = G.S.animals; for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) { const l = g.get(cx + cy * 4096); if (l) for (let k = 0; k < l.length; k++) if (A.get(l[k].id) === l[k]) fn(l[k]); }
+  }
+  // how far a person keeps from a beast it dreads (in tiles): a lion is fled at nine, a hippo stepped round at five — less in the
+  // dark, when it is seen later
+  Vg.dreadReach = (k, night) => (2.5 + 6.5 * k) * (night ? 0.7 : 1);
+  // can this one go out against a beast? (a fighter or a hunter, or a brave grown body — never a child, an elder, the wounded)
+  const armedFor = v => v.age >= 16 && v.age < 62 && v.hp > 45 && (v.role === 'guerreiro' || v.role === 'arqueiro' || v.role === 'cacador' || !!v.unit || v.courage > 0.62);
+  Vg.armedFor = armedFor;
   // ------------------------------ emergencies ------------------------------
   Vg.alarms = new Map(); // settlement id -> [tile indices]
   Vg.fireFighters = new Map();
@@ -541,18 +593,33 @@
     const inScene = !!(t && t.type === 'scene');
     if (inScene && t.calm) return; // (a scene that needs them steady: the one who lit the fire does not run from it)
     if (v.inside || v.sleeping && !t) return;
-    // predators (only the ones that mean harm right now)
-    const beasts = []; G.Animals.nearThreat(v.x, v.y, 6, a => { if (G.Animals.threat(a)) beasts.push(a); });
-    for (const a of beasts) {
-      const d2 = G.dist2(v.x, v.y, a.x, a.y);
-      if (d2 > 30) continue;
-      if (t && ((t.type === 'fight' && t.id) || t.type === 'combat' || t.type === 'band')) return;
-      const brave = !child && v.age < 62 && v.hp > 45 && (v.role === 'cacador' || v.courage > 0.62);
-      if (brave) {
-        let fighters = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'fight' && o.task.id === a.id) fighters++;
-        if (fighters < 3) { setTask(v, { type: 'fight', id: a.id, pri: 4, rt: 0 }); emote(v, 'angry', 2); return; }
+    // the beasts (D-310): one coming for someone, and one whose kind is a danger to people, in sight. Who can fight it, with others
+    // to fight beside, goes out against a hunter of people (never alone against a lion: the armed near enough, or the ones already
+    // at it); everyone else gives it room — a hunter of people fled, a giant stepped round
+    if (!(t && ((t.type === 'fight' && t.id) || t.type === 'combat' || t.type === 'band'))) {
+      const night = G.isNight(); let worst = null, wk = 0, wd = 0;
+      // (not the beast one is out hunting or fighting; not the wolves at the herd for its shepherd and its groom, who drive them off
+      // below)
+      const herder = !child && v.hp > 45 && (v.role === 'pastor' || v.role === 'cavalarico');
+      eachDread(v.x, v.y, 10, a => {
+        if (t && t.id === a.id && (t.type === 'hunt' || t.type === 'fight')) return; if (herder && G.Animals.raider(a)) return;
+        const k = Vg.dread(a); if (k <= 0) return; const r = Vg.dreadReach(k, night), d = G.dist(v.x, v.y, a.x, a.y); if (d > r) return;
+        const w = k * (1.2 - d / r); if (w > wk) { wk = w; worst = a; wd = d; }
+      });
+      if (worst) {
+        const a = worst, k = Vg.dread(a), now = G.Animals.threat(a), hunter = !!HUNTS[a.kind] || now;
+        if (hunter && !child && armedFor(v)) {
+          let fighters = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'fight' && o.task.id === a.id) fighters++;
+          // (a beast at someone now is answered at once, as before; one only seen waits for the party: two more of the armed near it)
+          let mates = fighters;
+          if (!mates && !now) for (const o of S.villagers.values()) { if (o === v || o.inside || o.age < 16 || !armedFor(o) || (S.avatar && S.avatar.id === o.id) || (o.task && o.task.pri >= 4)) continue; if (G.dist2(o.x, o.y, a.x, a.y) < 144 && ++mates >= 2) break; }
+          if (fighters < (now ? 3 : 4) && (now || fighters > 0 || mates >= 2)) { setTask(v, { type: 'fight', id: a.id, pri: 4, rt: 0 }); emote(v, 'angry', 2); return; }
+        }
+        // (who is starving and at the meal goes on with it while the beast is not upon them: the meal of need weighs 2.5, and a
+        // lion lying by the store would starve the town — L-725, L-779)
+        if (v.hunger > 85 && t && (t.type === 'eat' || t.type === 'forage' || (t.type === 'lar' && t.meal)) && wd > 2.5 && !G.Animals.threat(a)) return;
+        if (hunter || wd < 2 + 3 * k) { fleeFrom(v, a.x, a.y, hunter ? Vg.dreadReach(k, night) + 2 - wd : 4, hunter ? 'wolf' : 'bicho'); emote(v, 'fear', 2.5); return; }
       }
-      if (d2 < 20) { fleeFrom(v, a.x, a.y, 7, 'wolf'); emote(v, 'fear', 2.5); return; }
     }
     // wolves at the herd: shepherds, soldiers and hunters run to drive them off
     if (!child && !inScene && (v.role === 'pastor' || v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'cavalarico') && v.hp > 45 && !(t && (t.type === 'fight' || t.type === 'combat' || t.type === 'band' || t.type === 'army'))) {
@@ -2355,7 +2422,7 @@
       }
       case 'eat': return t.st < 2 ? 'Indo comer' : 'Comendo';
       case 'sleep': return v.sleeping ? (v.inside ? 'Dormindo em casa' : 'Dormindo ao relento') : 'Indo dormir';
-      case 'flee': return t.why === 'play' ? 'Correndo do eco da caverna, rindo' : t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'war' ? 'Fugindo dos invasores!' : t.why === 'ghost' ? 'Fugindo de um fantasma!' : t.why === 'dragon' ? 'Fugindo do dragão!' : 'Correndo em pânico!';
+      case 'flee': return t.why === 'play' ? 'Correndo do eco da caverna, rindo' : t.why === 'meteor' ? 'Fugindo do céu em chamas!' : t.why === 'fire' ? 'Fugindo do incêndio!' : t.why === 'wolf' ? 'Fugindo de uma fera!' : t.why === 'bicho' ? 'Afastando-se de um bicho perigoso' : t.why === 'war' ? 'Fugindo dos invasores!' : t.why === 'ghost' ? 'Fugindo de um fantasma!' : t.why === 'dragon' ? 'Fugindo do dragão!' : 'Correndo em pânico!';
       case 'fire': return t.st === 2 ? 'Enchendo o balde' : t.beat ? 'Abafando as chamas' : 'Combatendo o incêndio!';
       case 'social': return `Conversando com ${pname(t.id)}`;
       case 'talk': return t.hug ? `Abraçando ${pname(t.id)}` : t.dance ? `Dançando com ${pname(t.id)}` : t.court ? `Flertando com ${pname(t.id)}` : `Conversando com ${pname(t.id)}`;
