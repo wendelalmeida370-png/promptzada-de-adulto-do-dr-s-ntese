@@ -630,7 +630,7 @@
     let theirs = strength(th); A.near(th.x, th.y, 6, o => { if (o !== th && !o.dead && o.kind === th.kind && o.grown >= 1 && Me.kin(o, th)) theirs += strength(o) * 0.8; });
     return mine / Math.max(0.05, theirs);
   }
-  function youngNear(a) { let y = false; A.near(a.x, a.y, 5, o => { if (!y && o !== a && !o.dead && o.kind === a.kind && o.grown < 0.7 && Me.kin(o, a)) y = true; }); return y; }
+  function youngNear(a) { let y = false; A.near(a.x, a.y, 5, o => { if (!y && o !== a && !o.dead && o.kind === a.kind && o.grown < 0.7 && (Me.kin(o, a) || (o.mind && o.mind.mom === a.id))) y = true; }); return y; }
   // the middle of its herd, for a young one of a ring (the grown ones turn out round it)
   function middle(a) { let x = 0, y = 0, n = 0; A.near(a.x, a.y, 6, o => { if (o !== a && !o.dead && o.kind === a.kind && o.grown >= 1 && Me.kin(o, a)) { x += o.x; y += o.y; n++; } }); if (n < 2) return null; x /= n; y /= n; return A.walkOK(a, x, y) ? [x, y] : null; }
   const ALARM = { gazelle: ['stot', 'snort'], ibex: ['stot', 'snort'], deer: ['stot', 'snort'], reindeer: ['stot', 'snort'], gnu: ['snort', 'stot'], zebra: ['snort', 'call'], elephant: ['trumpet'], monkey: ['call'], buffalo: ['snort', 'bellow'], hippo: ['snort'] };
@@ -802,7 +802,7 @@
     if (inEye) return null;
     const t = TEMPER[a.kind]; const far = t === 'hunt' || t === 'giant' || t === 'boar';
     if (G.S.clock >= a.ey && (d < near || (far && coming(v, a)))) return v;
-    if (!a.gest && G.R() < 0.12) Me.gesto1(a, ['alert', 'listen', 'stare'], undefined, v.id);
+    if (!a.gest && t !== 'freeze' && G.R() < 0.12) Me.gesto1(a, ['alert', 'listen'], undefined, v.id);
     return null;
   }
   // armed: the soldier, the archer, the hunter, one of an army's band, one coming to fight it
@@ -911,7 +911,7 @@
   const cover = a => { const i = W.idx(a.x, a.y); return !!G.S.treeAt[i] || (G.S.veg ? G.S.veg[i] > 0.55 : false) || !!A.treeNear(a.x, a.y, 1.6); };
   L.eye = function (a, v) {
     const t = TEMPER[a.kind];
-    a.state = 'eye'; a.target = v.id; a.onPerson = false; a.t = t === 'hunt' || t === 'giant' ? G.rr(4, 8) : G.rr(2, 4); a.moving = false; a.crouch = 0; G.faceTo(a, v.x - a.x, v.y - a.y);
+    a.state = 'eye'; a.target = v.id; a.onPerson = false; a.t = t === 'hunt' || t === 'giant' ? G.rr(4, 8) : t === 'freeze' ? G.rr(8, 12) : G.rr(2, 4); a.moving = false; a.crouch = 0; G.faceTo(a, v.x - a.x, v.y - a.y);
     if (t === 'freeze') { if (!Me.gesto(a, 'hide', 0, v.id)) Me.gesto1(a, ['alert', 'stare'], undefined, v.id); }
     else if (t === 'giant') Me.gesto1(a, ['display', 'threat', 'alert', 'stare'], undefined, v.id);
     else if (t !== 'hunt') Me.gesto1(a, ['alert', 'stare', 'listen'], undefined, v.id);
@@ -927,7 +927,8 @@
       a.crouch = 0;
       a.ey = S.clock + (TEMPER[a.kind] === 'hunt' ? G.rr(10, 15) : G.rr(20, 30));
       const dv = G.dist(a.x, a.y, v.x, v.y);
-      if (TEMPER[a.kind] === 'giant' && dv < WARN_D[a.kind] * 0.6) chargeMan(a, v);
+      if (TEMPER[a.kind] === 'giant' && dv < WARN_D[a.kind] * (youngNear(a) ? 1 : 0.6)) chargeMan(a, v);
+      else if (TEMPER[a.kind] === 'freeze' && dv < nearOf(a, sp)) L.react(a, v, 1, false); // (still there, and near: the bolt)
       else if (dv < nearOf(a, sp)) shy(a, v, false); else { a.state = 'idle'; a.target = 0; a.t = 1; }
     }
     return true;

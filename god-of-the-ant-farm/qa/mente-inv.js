@@ -21,7 +21,7 @@
   const fin = x => typeof x === 'number' && isFinite(x);
   let since = new Map(), orphan = new Map(), ease = new Map(), pS = null, pC = -1;
   // (the longest a beast stays in each state of the brain and the fight, in seconds of the clock, with room)
-  const LIMIT = { hold: 110, contest: 70, court: 80, stand: 40, trail: 100, patrol: 70, play: 40, digest: 200, wait: 40, eye: 30, shy: 20, bluff: 10 };
+  const LIMIT = { hold: 110, contest: 70, court: 80, stand: 40, trail: 100, patrol: 70, play: 40, digest: 200, wait: 40, eye: 30, bluff: 10 }; // (not the walk off: wolves that hover at the edge of a person's ground back off again and again)
   const TARGET = { chase: 1, stalk: 1, flank: 1, pounce: 1, hold: 1, strike: 1, trail: 1, stand: 1, contest: 1, court: 1, play: 1, young: 1, suckle: 1, eye: 1, bluff: 1 };
   // (the states of a beast at its ease: a wild hunter in one of them with a person at arm's length, for seconds on end, is the
   // old walk beside people as if nobody were there — D-297b)
