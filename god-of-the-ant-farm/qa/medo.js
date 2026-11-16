@@ -21,6 +21,8 @@
 // m11 ninguém anda na direção de um bicho: quem é mandado de um lado ao outro de um hipopótamo dá a volta, nunca dentro do anel;
 // m12 três armados no mato, longe das cidades, diante de um urso: ninguém vai caçá-lo — dão-lhe distância, como todos (L-1031: uma
 //    turma de construtores e mineiros acabava com os ursos do mundo onde quer que os visse);
+// m13 um hipopótamo investindo contra alguém junto da cidade, com três armados perto: ninguém vai lancear o gigante — todos lhe dão
+//    distância (L-1033: os valentes lanceavam os gigantes que só avisavam, e as espécies minguavam);
 // e o verificador (o S3 novo «medo») calado, nenhum S0–S2 novo, nenhum erro de módulo nem de console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -206,6 +208,23 @@ if (on('m12')) {
     ok('m12', brave.length === 3 && went.size === 0 && gave >= 2, `três armados a 4 casas de um urso no mato, a mais de 14 casas de toda cidade: ${went.size} foram caçá-lo; ${gave} deram-lhe distância (${brave.map(v => (v.task ? v.task.type + (v.task.why ? '/' + v.task.why : '') : '—') + ' a ' + G.dist(v.x, v.y, p[0], p[1]).toFixed(1)).join(', ')})`);
     hold = null; if (S.animals.has(bear.id)) A.remove(bear); live(0.6);
   }
+}
+if (on('m13')) {
+  // a hippo charging someone by the town, three of the armed about: the giant that charges is run from, never speared
+  const s = town(); const p = spotNear(s.cx, s.cy, 10); clear(p[0], p[1]);
+  const ring = [[3, 0], [-1.5, 2.6], [-1.5, -2.6], [0, 1.5]].map(([dx, dy]) => [p[0] + dx, p[1] + dy]);
+  const hippo = beast('hippo', p[0], p[1]);
+  const four = [...S.villagers.values()].filter(v => v.age >= 20 && v.age < 50 && !v.inside && !v.aboard && !v.ug && !(S.avatar && S.avatar.id === v.id) && !v.captive && !v.jail).sort((a, b) => G.dist(a.x, a.y, p[0], p[1]) - G.dist(b.x, b.y, p[0], p[1])).slice(0, 4);
+  four.forEach((v, k) => { v.courage = 0.95; v.hp = 100; Vg.endTask(v); if (open(ring[k][0], ring[k][1])) { v.x = ring[k][0]; v.y = ring[k][1]; } });
+  const victim = four[3];
+  // (the proof's hand keeps the hippo where it is, charging the fourth — angry at that one, as the brain leaves a giant that warns)
+  hold = () => { if (!S.animals.has(hippo.id) || hippo.dead) return; hippo.x = p[0]; hippo.y = p[1]; hippo.state = 'chase'; hippo.target = victim.id; hippo.angry = 10; hippo.onPerson = true; hippo.hunger = 0; };
+  const went = new Set();
+  for (let k = 0; k < 30; k++) { G.debug.step(0.1); for (const v of S.villagers.values()) if (v.task && v.task.type === 'fight' && v.task.id === hippo.id) went.add(v.id); }
+  hold = null;
+  const gave = four.slice(0, 3).filter(v => (v.task && v.task.type === 'flee') || G.dist(v.x, v.y, p[0], p[1]) > 4.5).length;
+  ok('m13', four.length === 4 && G.Animals.threat(hippo) && went.size === 0 && gave >= 2, `um hipopótamo investindo contra ${victim ? victim.name : '—'} a ${G.dist(p[0], p[1], s.cx, s.cy).toFixed(1)} casas do meio de ${s.name}, três armados a 3 casas: ${went.size} foram lanceá-lo; ${gave} deram-lhe distância (${four.slice(0, 3).map(v => (v.task ? v.task.type + (v.task.why ? '/' + v.task.why : '') : '—') + ' a ' + G.dist(v.x, v.y, p[0], p[1]).toFixed(1)).join(', ')})`);
+  if (S.animals.has(hippo.id)) A.remove(hippo); live(0.6);
 }
 if (on('m11')) {
   // nobody walks up to a beast: one sent straight past a hippo goes round it, never within its ring; and nobody heads at it

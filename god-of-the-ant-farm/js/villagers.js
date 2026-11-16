@@ -644,14 +644,18 @@
           let at = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'fight' && o.task.id === a.id) at++;
           if (at < 2) { setTask(v, { type: 'fight', id: a.id, pri: 4, rt: 0 }); emote(v, 'angry', 2); return; }
         }
-        if (hunter && !child && armedFor(v)) {
+        // (who is gone out against: a hunter of people, or a beast set on the town — the god's, a raid, a legend. A giant that charges
+        // someone, a bear's bluff, is run from, never speared: nobody stands against a charging hippo with a stick, and the brave of
+        // the town who did speared the giants that only warned — the beasts provoked by the people's own coming, L-1033)
+        const foe = !!HUNTS[a.kind] || !!(a.summoned || a.raid || a.legend), atk = now && a.state !== 'bluff';
+        if (foe && !child && armedFor(v)) {
           let fighters = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'fight' && o.task.id === a.id) fighters++;
           // (a beast at someone now is answered at once, as before; one only seen waits for the party: two more of the armed near it)
           let mates = fighters;
-          if (!mates && !now) for (const o of S.villagers.values()) { if (o === v || o.inside || o.age < 16 || !armedFor(o) || (S.avatar && S.avatar.id === o.id) || (o.task && o.task.pri >= 4)) continue; if (G.dist2(o.x, o.y, a.x, a.y) < 144 && ++mates >= 2) break; }
+          if (!mates && !atk) for (const o of S.villagers.values()) { if (o === v || o.inside || o.age < 16 || !armedFor(o) || (S.avatar && S.avatar.id === o.id) || (o.task && o.task.pri >= 4)) continue; if (G.dist2(o.x, o.y, a.x, a.y) < 144 && ++mates >= 2) break; }
           // (and only at the people's own ground: a bear in the woods, a lion out on the plain, is given room by the armed as by
           // everyone — a party does not go hunting a lion it only saw, it drives off the one that came to the houses; L-1031)
-          if (fighters < (now ? 3 : 4) && (now || fighters > 0 || (mates >= 2 && inVillage(a, 4)))) { setTask(v, { type: 'fight', id: a.id, pri: 4, rt: 0 }); emote(v, 'angry', 2); return; }
+          if (fighters < (atk ? 3 : 4) && (atk || fighters > 0 || (mates >= 2 && inVillage(a, 4)))) { setTask(v, { type: 'fight', id: a.id, pri: 4, rt: 0 }); emote(v, 'angry', 2); return; }
         }
         // (who is starving and at the meal goes on with it while the beast is not upon them: the meal of need weighs 2.5, and a
         // lion lying by the store would starve the town — L-725, L-779)

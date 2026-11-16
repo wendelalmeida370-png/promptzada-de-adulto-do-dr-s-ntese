@@ -61,6 +61,11 @@
     wolf: 0.3, hyena: 0.3, fox: 0.2, arcticfox: 0.12, fennec: 0.05, bear: 0.3, polarbear: 0, rabbit: 0.08, hare: 0.08, otter: 0.4, beaver: 0.4, croc: 0.2,
     anaconda: 0.15, python: 0.1, viper: 0.05, lizard: 0.03, sloth: 0.03,
   };
+  // (and the day of the game is short for a walk to the water: with the three pillars together — the brain's watch, the senses,
+  // the person read — one drink a day still left the herds too thin to breed, and the land emptied: the species alive in the
+  // sixtieth year of the continent fell from 59 to 48 of 62, and with the thirst off they stayed at 62 (T-1333). A drink in two
+  // days of the game keeps the water's scenes — the herds at the bank, the crocodile's wait, the drought — and gives the grass back)
+  for (const k in THIRST) THIRST[k] *= 0.5;
   // seconds to drink from thirsty to full
   const SIP = { elephant: 11, hippo: 8, buffalo: 9, rhino: 9, giraffe: 7, camel: 10, bison: 8, moose: 8 };
   // how much of the heat and of the cold a kind feels (its coat, its size, its land)
