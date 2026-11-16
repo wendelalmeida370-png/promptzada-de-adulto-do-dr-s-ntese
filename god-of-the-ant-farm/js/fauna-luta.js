@@ -660,6 +660,9 @@
     // (a defender watches a hunter that is not hunting and not close: it stands only when it comes on — the musk oxen do not spend
     // their day in a ring round a bear that only passes)
     if (beast && DEFEND.has(a.kind) && a.grown >= 1 && !A.isHunting(th.state) && th.state !== 'stalk' && G.dist(a.x, a.y, th.x, th.y) > 4) { if (!a.gest) Me.gesto1(a, ['stare', 'alert'], undefined, th.id); return true; }
+    // (nor is one faced that could not take it — a lone lion by a grown buffalo, D-299b —, unless it is at its young or on the hunt:
+    // faced at every look, the buffalo of the l10 stood 41 s by a lion that only stood there, L-1007f)
+    if (beast && DEFEND.has(a.kind) && a.grown >= 1 && A.predator(th.kind) && !A.isHunting(th.state) && th.state !== 'stalk' && !youngNear(a) && !L.canTake(th, a, L.party(th))) { if (!a.gest) Me.gesto1(a, ['stare', 'alert'], undefined, th.id); return true; }
     // (the zebra and the giraffe stand only against a hunter smaller than they are: a hyena, a wolf — from a lion, they run)
     if (beast && DEFEND.has(a.kind) && a.grown >= 1 && a.hp > a.maxHp * 0.45 && A.predator(th.kind) && !(SMALLER.has(a.kind) && (SP[th.kind].size >= SP[a.kind].size || Me.sex(a) !== 1)) && standRatio(a, th) >= 0.9) {
       stand(a, th); if (!heard && was !== 'stand') Me.alarm(a.x, a.y, a.kind, 0.35, th); return true;
@@ -1006,11 +1009,11 @@
         const on = d < wd * 0.4 || (coming(v, a) && (young || ((water || cornered) && d < wd * 0.6)));
         const go = t === 'boar' ? (cornered || young) && on : press && on && G.R() < 0.1 + 0.3 * Me.trait(a, 'g') + (young ? 0.3 : 0) + (water ? 0.15 : 0) + (cornered ? 0.3 : 0) + (d < wd * 0.4 ? 0.3 : 0);
         if (go && a.grown >= 0.8) { // (the calf runs to its mother: the grown charge)
-          // (a giant with a way out and nothing to guard mostly takes it — the hippo on land runs to its water, the bull goes off at
-          // a run —: the charge is for its calf, the water it stands in, the corner. Charging all who came near, the hippos of the
-          // rivers the towns fish were speared by the dozen, L-1007f)
+          // (a giant with a way out and nothing to guard, the person not yet on it, mostly takes it — the hippo on land runs to its
+          // water, the bull goes off at a run —: the charge is for its calf, the water it stands in, the corner, the one right on
+          // it. Charging all who came near, the hippos of the rivers the towns fish were speared by the dozen, L-1007f)
           const wet = a.kind === 'hippo' && G.S.type[W.idx(a.x, a.y)] <= T.RIVER;
-          if (t !== 'boar' && !young && !cornered && !wet && G.R() < 0.65) {
+          if (t !== 'boar' && !young && !cornered && !wet && d >= wd * 0.4 && G.R() < 0.65) {
             const p = a.kind === 'hippo' ? A.deepSpot(a) : null;
             if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 3; a.target = 0; L.count('gente:foge'); L.count('gente:foge:' + a.kind); return true; }
             if (shy(a, v, true)) return true;

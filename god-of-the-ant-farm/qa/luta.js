@@ -210,21 +210,25 @@ if (on('l10')) {
     used.push(p); clear(p[0], p[1], 26); S.time = 0.35;
     const lion = put('lion', p[0] - 4, p[1], { hunger: 0.6 }); const bu = put('buffalo', p[0], p[1]); const hp = put('hippo', p[0], p[1] + 2.5);
     // (the look asked at a reach the senses of the moment cannot cut short: the case is the choice, not the eyes)
-    const look = (a, r) => { M.viver(0.3); god(() => { for (const b of [lion, bu, hp]) if (S.animals.has(b.id)) { b.state = 'idle'; b.t = 5; } }); const q = A.findPrey(a, r || 16); return q ? q.kind + (q.grown < 0.8 ? '(cria)' : q.hp < q.maxHp * 0.6 ? '(ferido)' : '') : 'nada'; };
+    // (each look after a moment of life — the hunters resting through it, not off after the calf —, everyone put back where they
+    // stood, calm and idle: in that moment the buffalo may have turned on the lion, and a lion hurt by a prey lets that one be)
+    const spot = new Map(); const pin = (...bs) => { for (const b of bs) spot.set(b, [b.x, b.y]); }; pin(lion, bu, hp);
+    const look = (a, r) => { god(() => { for (const b of spot.keys()) b.rest = 5; }); M.viver(0.3); god(() => { for (const [b, c] of spot) if (S.animals.has(b.id) && !b.dead) { b.x = c[0]; b.y = c[1]; b.state = 'idle'; b.t = 5; b.target = 0; b.angry = 0; b.noPrey = null; } }); const q = A.findPrey(a, r || 16); return q ? q.kind + (q.grown < 0.8 ? '(cria)' : q.hp < q.maxHp * 0.6 ? '(ferido)' : '') : 'nada'; };
     const r1 = look(lion);
-    const calf = put('buffalo', p[0] + 0.8, p[1] - 0.6, { grown: 0.45 }); const r2 = look(lion); god(() => A.remove(calf));
-    const tg = put('tiger', p[0] - 4, p[1] + 3, { hunger: 0.6 }); const r1t = look(tg);
-    god(() => { bu.hp = bu.maxHp * 0.45; }); const r3 = look(tg); god(() => { bu.hp = bu.maxHp; A.remove(tg); });
-    const two = [put('lion', p[0] - 4.5, p[1] + 1, { hunger: 0.85 }), put('lion', p[0] - 4.5, p[1] - 1, { hunger: 0.85 })]; god(() => { lion.hunger = 0.85; for (const o of two) o.leader = lion.id; lion.leader = 0; });
+    const calf = put('buffalo', p[0] + 0.8, p[1] - 0.6, { grown: 0.45 }); pin(calf); const r2 = look(lion); god(() => A.remove(calf)); spot.delete(calf);
+    const tg = put('tiger', p[0] - 4, p[1] + 3, { hunger: 0.6 }); pin(tg); const r1t = look(tg);
+    god(() => { bu.hp = bu.maxHp * 0.45; }); const r3 = look(tg); god(() => { bu.hp = bu.maxHp; A.remove(tg); }); spot.delete(tg);
+    const two = [put('lion', p[0] - 4.5, p[1] + 1, { hunger: 0.85 }), put('lion', p[0] - 4.5, p[1] - 1, { hunger: 0.85 })]; pin(...two); god(() => { lion.hunger = 0.85; for (const o of two) o.leader = lion.id; lion.leader = 0; });
     const r4 = look(lion); god(() => { for (const o of two) A.remove(o); lion.hunger = 0.6; });
     // (the lone wolf and the musk ox; and the wolves, three and starving)
     const q = arena('muskox', false, used); let r5 = '—', r6 = '—';
     if (q) {
       used.push(q); clear(q[0], q[1], 26);
       const mo = put('muskox', q[0], q[1]); const wf = put('wolf', q[0] - 4, q[1], { hunger: 0.6 });
-      const lk = (a) => { M.viver(0.3); god(() => { for (const b of [mo, wf]) if (S.animals.has(b.id)) { b.state = 'idle'; b.t = 5; } }); const x = A.findPrey(a, 16); return x ? x.kind : 'nada'; };
+      const sp2 = new Map(); for (const b of [mo, wf]) sp2.set(b, [b.x, b.y]);
+      const lk = (a) => { god(() => { for (const b of sp2.keys()) b.rest = 5; }); M.viver(0.3); god(() => { for (const [b, c] of sp2) if (S.animals.has(b.id) && !b.dead) { b.x = c[0]; b.y = c[1]; b.state = 'idle'; b.t = 5; b.target = 0; b.angry = 0; b.noPrey = null; } }); const x = A.findPrey(a, 16); return x ? x.kind : 'nada'; };
       r5 = lk(wf);
-      const pk = [put('wolf', q[0] - 4.5, q[1] + 1, { hunger: 0.85 }), put('wolf', q[0] - 4.5, q[1] - 1, { hunger: 0.85 })]; god(() => { wf.hunger = 0.85; for (const o of pk) o.leader = wf.id; wf.leader = 0; });
+      const pk = [put('wolf', q[0] - 4.5, q[1] + 1, { hunger: 0.85 }), put('wolf', q[0] - 4.5, q[1] - 1, { hunger: 0.85 })]; for (const b of pk) sp2.set(b, [b.x, b.y]); god(() => { wf.hunger = 0.85; for (const o of pk) o.leader = wf.id; wf.leader = 0; });
       r6 = lk(wf);
     }
     good = r1 === 'nada' && r1t === 'nada' && r2 === 'buffalo(cria)' && r3 === 'buffalo(ferido)' && r4 === 'buffalo' && r5 === 'nada' && r6 === 'muskox';
@@ -281,7 +285,9 @@ const tsay = w => `estados ${[...w.states].join('/')}`;
 // hunt: the proof's hand sends back the timid ones, by the door, until one comes that is not)
 const putBold = (kind, x, y, o, minB) => { for (let k = 0; k < 30; k++) { const a = put(kind, x, y, o); if (Me.trait(a, 'b') >= (minB || 0.45) || k === 29) return a; god(() => A.remove(a)); } };
 // (the proof's hand keeps these awake: one asleep notices late, rightly — and the case is the beast awake that sees them come)
-const awake = hs => god(() => { for (const h of hs) if (!h.dead && (h.state === 'sleep' || h.state === 'rest' || h.state === 'watch')) { h.state = 'idle'; h.t = 0; } });
+// (and the sleep's gesture ended by the door with it, and the beast rested: left sleepy, the brain laid it down again between two
+// looks of the proof, and it noticed the person with the senses of one asleep — the deer of the p6 ran at two steps)
+const awake = hs => god(() => { for (const h of hs) if (!h.dead) { if (h.state === 'sleep' || h.state === 'rest' || h.state === 'watch') { h.state = 'idle'; h.t = 0; A.gestEnd(h); } Me.m(h).en = Math.max(Me.m(h).en, 0.95); } });
 // p0 every wild kind of the ground has its temper toward people (the sloth only, slow in its tree, does not run from anybody)
 if (on('p0')) {
   const miss = A.ids.filter(k => { const d = A.DEF[k]; return (d.cls === 'land' || d.cls === 'amph') && !d.dom && !d.town && !L.TEMPER[k] && k !== 'sloth'; });
@@ -410,7 +416,6 @@ if (on('p6')) {
       awake(ds.concat([hare])); god(() => { ds.forEach((d, i) => { if (!d.dead && !runAt && d.state !== 'eye' && d.state !== 'flee') { d.x = p[0] + (i % 2) * 0.9; d.y = p[1] + ((i / 2) | 0) * 0.9; } }); if (!boltAt && hare.state !== 'eye' && hare.state !== 'flee') { hare.x = q[0]; hare.y = q[1]; } });
       if (!runAt) walkTo(v, p[0], p[1], 0.25); if (!boltAt) walkTo(u, q[0], q[1], 0.25);
       if (!runAt && diff(t0, 'gente:foge:deer') > 0) runAt = Math.min(...ds.filter(d => !d.dead).map(d => G.dist(v.x, v.y, d.x, d.y))); // (the run from the person, not from anything else)
-      if (process.env.DBG6) { const t = G.Luta.tally || {}; console.log('DBG6', S.clock.toFixed(1), 'time', S.time.toFixed(2), 'foge', t['gente:foge:deer'] || 0, ds.map(d => `${d.state}/${d.t.toFixed(1)}/ey${(d.ey - S.clock).toFixed(0)}/d${G.dist(v.x, v.y, d.x, d.y).toFixed(1)}/g${d.gest || '-'}`).join(' '), 'v', v.task ? v.task.type : '-', v.moving ? 'mov' : 'stop', 'hare', hare.state, G.dist(u.x, u.y, hare.x, hare.y).toFixed(1)); }
       if (hare.state === 'eye' && hare.gest === 'hide') hideSeen++;
       if (!boltAt && hare.state === 'flee') boltAt = G.dist(u.x, u.y, hare.x, hare.y) || 0.01;
     }, () => runAt && boltAt);
