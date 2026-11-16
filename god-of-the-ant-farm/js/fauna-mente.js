@@ -202,10 +202,13 @@
   };
   Me.decide = function (a, dt, sp, S) {
     const m = Me.has(a, sp) ? Me.m(a) : a.mind; const was = a.state;
-    let best = null, bs = Math.max(Me.FLOOR, Me.eatScore(a, sp)), bi = -1;
+    // (an option that is a meal itself — the field, the high leaves, the fruit, the milk, the scraps — is weighed as one: the
+    // belly's floor is for the others. Held under it, the hungry elephant and the boars at a field by night went on grazing the
+    // grass outside it, L-1037)
+    const eat = Me.eatScore(a, sp); let best = null, bs = Me.FLOOR, bi = -1;
     for (let i = 0; i < Me.list.length; i++) {
       const o = Me.list[i]; if (o.who && !o.who(a, sp)) continue;
-      let s = o.score(a, sp, S); if (!(s > 0)) continue;
+      let s = o.score(a, sp, S); if (!(s > 0)) continue; if (!o.food && s <= eat) continue;
       if (m && m.lo === i + 1) s += Me.KEEP; // (what it was doing it goes on doing, unless something else wants it more)
       if (s > bs) { bs = s; best = o; bi = i; }
     }
@@ -342,7 +345,7 @@
   senses.self = a => senseOwn(a) * (a.mind && a.mind.ki ? 1.4 : 1);
   A.senseHooks.push(senses);
   // ---- a hunter with nothing near goes back to where it killed before (the crossing, the waterhole)
-  Me.option('range', {
+  Me.option('range', { food: true,
     who: (a, sp) => brain(a, sp) && A.predator(a.kind) && sp.diet !== 'scav' && a.grown >= 1 && !a.mig && !!a.mind && !!a.mind.pl,
     score(a, sp) { if (!hungry(a, sp) || a.rest > 0) return 0; const p = Me.recall1(a, 2); if (!p) return 0; const d = G.dist(a.x, a.y, p[1], p[2]); return d > 6 && d < 30 ? 0.3 + 0.2 * a.hunger : 0; },
     start(a) { const p = Me.recall1(a, 2); if (!p || !A.walkOK(a, p[1], p[2])) return false; a.tx = p[1]; a.ty = p[2]; a.state = 'wander'; a.seek = true; Me.gesto1(a, ['scent', 'sniff']); Me.count('volta-ao-lugar'); return true; },
@@ -550,7 +553,7 @@
   });
   // ---- the milk: the young at its mother's flank, she lets it drink
   const canNurse = mo => Me.sex(mo) === 0 && mo.grown >= 1 && !A.isBusy(mo.state) && !mo.caught && !(mo.angry > 0) && mo.state !== 'flee';
-  Me.option('suckle', {
+  Me.option('suckle', { food: true,
     passive: true, who: (a, sp) => youngOf(a, sp) && a.grown < 0.5 && MAMMAL.has(a.kind),
     score(a) { if (a.hunger < 0.18) return 0; const mo = Me.mother(a); if (!mo || G.dist(a.x, a.y, mo.x, mo.y) > 1.8 || !canNurse(mo)) return 0; return 0.5 + a.hunger * 0.45; },
     start(a) {

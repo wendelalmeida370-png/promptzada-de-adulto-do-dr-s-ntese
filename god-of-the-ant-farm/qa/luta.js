@@ -297,6 +297,10 @@ if (on('p0')) {
   const miss = A.ids.filter(k => { const d = A.DEF[k]; return (d.cls === 'land' || d.cls === 'amph') && !d.dom && !d.town && !L.TEMPER[k] && k !== 'sloth'; });
   ok('p0 todo bicho selvagem do chão tem o seu jeito diante de uma pessoa', !miss.length, miss.length ? `SEM JEITO: ${miss.join(', ')}` : `${Object.keys(L.TEMPER).length} espécies: ${['hunt', 'flight', 'freeze', 'snake', 'giant', 'boar', 'curious'].map(t => `${t} ${Object.values(L.TEMPER).filter(x => x === t).length}`).join(', ')}`);
 }
+// (the person of a case of the beast's reading does not see the beast: the fear of the beasts (D-310, D-311) would have her run
+// before the meeting — the case is the beast's answer to a person who comes on unaware, as on a path in the grass at dusk; the
+// people's fear has its own proofs, qa/medo.js. Given back at the case's end, T-1334)
+const unseen = hs => { const ids = new Set(hs.map(h => h.id)); const d0 = G.Vg.dread; if (!d0) return () => {}; G.Vg.dread = a => (a && ids.has(a.id) ? 0 : d0(a)); return () => { G.Vg.dread = d0; }; };
 // p1 a lone woodcutter at the edge of a wood, a hungry tiger eight steps off: the stalk from cover, the rush, the takedown
 if (on('p1')) {
   let msg = 'sem lugar', good = false;
@@ -306,14 +310,18 @@ if (on('p1')) {
     // (at the tree itself: the woodcutter stands at it to cut)
     const tr = A.treeNear(p[0], p[1], 4); const at = tr ? (W.nearestLand(tr.x + 0.5, tr.y + 0.5, 2, (x, y) => W.walkableXY(x, y) && !S.treeAt[W.idx(x, y)]) || p) : p;
     place(v, at[0], at[1]); const cut = chop(v);
-    const tg = putBold('tiger', at[0] - 8, at[1] + 1, { hunger: 0.95, age: 6 }); G.faceTo(tg, 1, 0);
+    // (five steps into the wood, on ground it walks to the woodcutter from: with the meio's senses a tiger eight steps off in the
+    // trees may not know the woodcutter standing at his tree is there, T-1334)
+    const tp = (() => { for (let k = 0; k < 16; k++) { const an = Math.PI + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.39, x = at[0] + Math.cos(an) * 5, y = at[1] + Math.sin(an) * 5; if (W.inb(x, y) && W.walkableXY(x, y) && W.canWalk(x, y, at[0], at[1])) return [x, y]; } return [at[0] - 5, at[1] + 1]; })();
+    const tg = putBold('tiger', tp[0], tp[1], { hunger: 0.95, age: 6 }); G.faceTo(tg, at[0] - tp[0], at[1] - tp[1]); const back = unseen([tg]); // (the woodcutter at his tree does not see the tiger in the wood: the case is the stalk, T-1334)
     const w = watchMan([tg], [v]); const t0 = T0();
     // (the tiger kept hungry, rested and awake by the proof's hand: by day a cat sleeps — the case is the woodcutter, not its nap)
     const viol = liveMan(60, w, () => { keepAt(v, at, true); god(() => { if (tg.state === 'sleep' || tg.state === 'rest') { tg.state = 'idle'; tg.t = 0; } tg.hunger = Math.max(tg.hunger, 0.95); Me.m(tg).en = 1; }); }, () => w.hurt() > 0 && !(tg.state === 'stalk' || tg.state === 'pounce'));
     const hurt = w.hurt();
     // (the hunt: from far, the stalk; from near, the rush — then the person hurt, leapt on, or running for their life)
     good = w.hunt > 0 && (hurt > 0 || w.pounce > 0 || w.fled > 0) && !viol.length;
-    msg = `${v.name} ${cut ? 'cortando lenha' : 'parado'} na beira do mato, o tigre (fome 0,95) a 8 passos: espreita ${w.stalk > 0 ? 'sim' : w.hunt ? 'não (visto antes: a corrida)' : 'NÃO'}, salto ${w.pounce > 0 ? 'sim' : 'não'}, a pessoa ${!S.villagers.has(v.id) || v.dead ? 'morta' : hurt ? `ferida (vida ${Math.round(v.hp)})` : w.fled ? 'fugiu dele' : 'ilesa'}; caças de gente ${diff(t0, 'caca-gente:tiger')}; ${tsay(w)}${w.hunt ? '' : (r => ` (a leitura no fim: quer ${r.want.toFixed(2)}, perigo ${r.danger.toFixed(2)}, outros ${r.others}, armados ${r.arm}, tochas ${r.fire}, ousadia ${Me.trait(tg, 'b').toFixed(2)}, a ${G.dist(tg.x, tg.y, v.x, v.y).toFixed(1)} passos, caminho ${W.canWalk(tg.x, tg.y, v.x, v.y)})`)(L.readMan(tg, v))} — ${vsay(viol)}`;
+    msg = `${v.name} ${cut ? 'cortando lenha' : 'parado'} na beira do mato, o tigre (fome 0,95) a 5 passos: espreita ${w.stalk > 0 ? 'sim' : w.hunt ? 'não (visto antes: a corrida)' : 'NÃO'}, salto ${w.pounce > 0 ? 'sim' : 'não'}, a pessoa ${!S.villagers.has(v.id) || v.dead ? 'morta' : hurt ? `ferida (vida ${Math.round(v.hp)})` : w.fled ? 'fugiu dele' : 'ilesa'}; caças de gente ${diff(t0, 'caca-gente:tiger')}; ${tsay(w)}${w.hunt ? '' : (r => ` (a leitura no fim: quer ${r.want.toFixed(2)}, perigo ${r.danger.toFixed(2)}, outros ${r.others}, armados ${r.arm}, tochas ${r.fire}, ousadia ${Me.trait(tg, 'b').toFixed(2)}, a ${G.dist(tg.x, tg.y, v.x, v.y).toFixed(1)} passos, caminho ${W.canWalk(tg.x, tg.y, v.x, v.y)})`)(L.readMan(tg, v))} — ${vsay(viol)}`;
+    back();
   }
   ok('p1 o tigre com fome e o lenhador sozinho na beira do mato: a espreita, o bote', good, msg);
 }
@@ -334,10 +342,6 @@ if (on('p2')) {
   }
   ok('p2 cinco pessoas juntas: o tigre não ataca — vigia e se afasta', good, msg);
 }
-// (the person of a case of the beast's reading does not see the beast: the fear of the beasts (D-310, D-311) would have her run
-// before the meeting — the case is the beast's answer to a person who comes on unaware, as on a path in the grass at dusk; the
-// people's fear has its own proofs, qa/medo.js. Given back at the case's end, T-1334)
-const unseen = hs => { const ids = new Set(hs.map(h => h.id)); const d0 = G.Vg.dread; if (!d0) return () => {}; G.Vg.dread = a => (a && ids.has(a.id) ? 0 : d0(a)); return () => { G.Vg.dread = d0; }; };
 // p3 a lone person at night with a torch, a hungry tiger: kept off by the fire; the torch put out, the hunt
 if (on('p3')) {
   let msg = 'sem lugar', good = false;

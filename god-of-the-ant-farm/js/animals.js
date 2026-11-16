@@ -1116,7 +1116,7 @@
         }
       }
       // (nothing better came of this look: the person it saw, it watches)
-      if (man && !HUNTING[a.state] && !BUSY[a.state] && !(a.angry > 0) && a.state !== 'eye' && a.state !== 'shy') G.Luta.eye(a, man);
+      if (man && !HUNTING[a.state] && !BUSY[a.state] && !(a.angry > 0) && a.state !== 'eye' && a.state !== 'shy' && a.state !== 'curioso') G.Luta.eye(a, man); // (the curious one gone to look at a person is already looking — the watch took it back from its look, L-1038)
     }
     // (the brain's own states with a step: after the look round for danger and a meal, which may have changed the state)
     if (MINDFUL[a.state] && BEHAVE[a.state](a, dt, sp, S)) return;
@@ -1778,7 +1778,10 @@
         if (Me.due(a)) { let born = 0; for (let j = Me.litter(a.kind); j > 0 && (count[a.kind] || 0) < cap; j--) if (birth(a, sp, count)) born++; if (!born) Me.lose(a); continue; }
         if (!Me.fertile(a)) { Me.count('gate:fertil:' + a.kind); continue; }
       }
-      if (a.hunger > (A.predator(a.kind) ? 0.65 : 0.45)) { if (mind) Me.count('gate:fome:' + a.kind); continue; }
+      // (a beast with a mind lives a fuller day than the old grazer did — the water, the watch, the flight from a hunter, the
+      // shelter —, and its belly sits higher: the heat asks a body in fair condition, not a full one. At 0,45 the gnus of a land
+      // of forty years were turned back by hunger ten times for every heat let through, and bore too few to last, D-313)
+      if (a.hunger > (A.predator(a.kind) ? 0.65 : mind ? 0.6 : 0.45)) { if (mind) Me.count('gate:fome:' + a.kind); continue; }
       if (n >= cap || n < 2) { if (mind) Me.count('gate:teto:' + a.kind); continue; }
       if (mind) Me.count('gate:ok:' + a.kind);
       const mul = G.Nature.zoneMul(a.x, a.y, 'fertility');

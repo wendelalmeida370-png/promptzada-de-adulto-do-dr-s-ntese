@@ -164,7 +164,7 @@
     return true;
   }
   // the fear scan of a beast on its way (the world's own fearCheck): out of the option, and the world's scan flees
-  function watch(a, r, dt) { r.sc -= dt; if (r.sc > 0) return false; r.sc = 0.5; if (A.fearOf && A.fearOf(a)) { quit(a, null, 0); a.scan = 0; return true; } return false; }
+  function watch(a, r, dt) { r.sc -= dt; if (r.sc > 0) return false; r.sc = 0.5; const th = A.fearOf && A.fearOf(a); if (th && (!G.Luta || !G.Luta.threatens || G.Luta.threatens(a, th))) { quit(a, null, 0); a.scan = 0; return true; } return false; } // (the hunter it would only watch does not take it from the water, the shade, the way: L-1036)
   // walking to the option's goal: true on arrival (false while on the way; a beast that gave up is out)
   function walk(a, r, dt, speed, near) {
     a.tx = r.gx; a.ty = r.gy;
@@ -994,7 +994,7 @@
     },
   }, K.sentinel);
   // ---- the leaves up high (D-304): the giraffe at the acacia, the elephants — who may push the tree down
-  opt('ramos', {
+  opt('ramos', { food: true,
     score(a, sp, S) { if (!hungry(a, 0.35)) return 0; if ((a.kind === 'deer' || a.kind === 'rhino' || a.kind === 'ibex' || a.kind === 'tapir') && G.hash(a.id + S.day) > 0.4) return 0; return Math.min(0.6, 0.27 + (a.hunger - 0.35) * 0.6); },
     start(a, sp, S) {
       const t = A.treeNear(a.x, a.y, 7, q => q.kind !== 'cactus' && q.size >= 0.5 && (a.kind !== 'giraffe' || q.kind === 'acacia' || q.kind === 'baobab' || G.hash(q.id) < 0.5)); if (!t) return false;
@@ -1025,7 +1025,7 @@
     log(`Um elefante encostou a cabeça numa árvore${where(t.x, t.y).at} e a empurrou até cair, para comer as folhas do alto. O tronco ficou no chão para quem quiser a lenha.`, 'deer', t.x, t.y);
   }
   // ---- the fruit trees (D-304): the bear standing up at the branch, the boar under it, the seeds carried off in the belly
-  opt('fruta', {
+  opt('fruta', { food: true,
     score(a, sp, S) { if (!hungry(a, 0.4)) return 0; return 0.33 + 0.3 * (a.hunger - 0.4); },
     start(a, sp, S) {
       if (!G.Flora) return false; const t = A.treeNear(a.x, a.y, 10, q => G.Flora.isFruit(q.kind) && q.fruit > 0.5); if (!t) return false;
@@ -1055,7 +1055,7 @@
   // ---- the fields of the people (D-305): the elephants, the boars and the deer come at night and eat the crop
   let FARMS = [], farmT = 0, PC = null, pcw = 0;
   function farmCrop(b) { let best = -1, bg = 0.35; for (let k = 0; k < 9; k++) { const c = b.crops[k]; if (c.s >= 2 && c.g > bg) { bg = c.g; best = k; } } return best; }
-  opt('lavoura', {
+  opt('lavoura', { food: true,
     score(a, sp, S) {
       if (!hungry(a, 0.4) || !FARMS.length) return 0; let f = null, fd = 16 * 16;
       for (const q of FARMS) { const d = G.dist2(a.x, a.y, q.x, q.y); if (d < fd) { fd = d; f = q; } } if (!f || (f.watched && ENV.day)) return 0;
@@ -1094,7 +1094,7 @@
   const RAIDS = new Map(); G.worldHooks.push(() => { RAIDS.clear(); FARMS = []; farmT = 0; PC = null; });
   // ---- the scraps at a town's edge at night (D-305): the hyenas, the foxes and the bears at the people's refuse
   function townNear(a, R) { const S = G.S; let best = null, bd = R * R; for (const s of S.settlements.values()) { const d = G.dist2(a.x, a.y, s.cx, s.cy); if (d < bd) { bd = d; best = s; } } return best; }
-  opt('restos', {
+  opt('restos', { food: true,
     score(a, sp, S) { if (!ENV.night || !hungry(a, 0.5) || a.rest > 0) return 0; const s = townNear(a, 24); if (!s) return 0; return 0.27 + 0.2 * (a.hunger - 0.5) - 0.3 * Math.max(0, fearAt(a.x, a.y) - 0.3); },
     start(a, sp, S) {
       const s = townNear(a, 24); if (!s) return false; const R = (s.radius || 8) + 1.5; const dx = a.x - s.cx, dy = a.y - s.cy, d = Math.hypot(dx, dy) || 1;
@@ -1139,7 +1139,7 @@
   function curiousTold(a, v) { const S = G.S; const lg = st0().lg; if (lg.cu === S.day || !G.Life || !G.Life.bio) return; lg.cu = S.day; G.Life.bio(v, 'note', `${G.cap(SP[a.kind].nameA)} se aproximou, curios${SP[a.kind].g === 'f' ? 'a' : 'o'}, e ficou olhando de perto`); }
   // ---- look up: where the vultures circle, there is meat (D-306)
   let VU = [], WO = [], PR = []; const VUM = new Map(); G.worldHooks.push(() => VUM.clear());
-  opt('abutres', {
+  opt('abutres', { food: true,
     score(a, sp, S) { if (!hungry(a, 0.4) || !VU.length || a.rest > 0) return 0; const v = vultureSign(a); return v ? 0.45 + 0.3 * (a.hunger - 0.4) : 0; },
     start(a, sp, S) { const v = vultureSign(a); if (!v) return false; const r = runStart(a, 'abutres'); r.id = v.c; r.k = v.v; r.gx = v.x; r.gy = v.y; return true; },
     step(a, dt, sp, S) {

@@ -51,6 +51,9 @@ function spot(test, minTown) {
 }
 function clearAround(x, y, r, keep) { for (const a of [...S().animals.values()]) { if (keep && keep.has(a.id)) continue; if (G.dist(a.x, a.y, x, y) < r) A.remove(a); } }
 function spawn(k, x, y, o) { return sim(() => { const a = A.spawn(k, x, y, Object.assign({ grown: 1, hunger: 0.1, t: 0, scan: 0, age: A.DEF[k].life * 0.3 }, o || {})); a.hx = x; a.hy = y; return a; }); }
+// (a beast kept awake by the proof's hand: the brain gives each kind its hours of sleep — the deer lie down at noon — and a case
+// of the meio is the coat, the wind, the water, not the nap; T-1335)
+const awake = (...as) => sim(() => { for (const a of as) { if (!a || a.dead) continue; if (a.state === 'sleep' || a.state === 'rest' || a.state === 'watch') { a.state = 'idle'; a.t = 0; } if (a.mind) a.mind.en = 1; } });
 const until = (sec, f, step) => { const n = Math.ceil(sec / (step || 0.5)); for (let k = 0; k < n; k++) { M.viver(step || 0.5); if (f()) return k * (step || 0.5); } return -1; };
 const land = (x, y) => W.inb(x, y) && S().type[W.idx(x, y)] >= T.SAND && !S().cliff[W.idx(x, y)] && !S().occ[W.idx(x, y)];
 const day = () => { S().time = 0.36; };
@@ -178,9 +181,9 @@ if (on('m7')) { world(); calmSky(); day();
   else {
     const [x, y] = p; clearAround(x, y, 26); const d = spawn('deer', x, y, { hunger: 0 });
     // (the god's rain where the deer is, again as it walks off)
-    let wet = 0, rains = 0; until(25, () => { if (!S().clouds.some(q => G.dist(q.x, q.y, d.x, d.y) < 3)) { sim(() => G.Powers.rain(d.x, d.y)); rains++; } wet = Math.max(wet, d.meio ? d.meio.wet : 0); return false; });
+    let wet = 0, rains = 0; until(25, () => { awake(d); if (!S().clouds.some(q => G.dist(q.x, q.y, d.x, d.y) < 3)) { sim(() => G.Powers.rain(d.x, d.y)); rains++; } wet = Math.max(wet, d.meio ? d.meio.wet : 0); return false; });
     S().clouds.length = 0; S().weather.rain = 0; let shook = false; const w0 = d.meio.wet;
-    const t = until(25, () => { if (d.gest === 'shake') shook = true; return shook; }); const c = clean();
+    const t = until(25, () => { awake(d); if (d.gest === 'shake') shook = true; return shook; }); const c = clean();
     ok('m7 a chuva do deus molha e o bicho se sacode', wet > 0.5 && shook && !c.n, `a chuva do deus sobre o cervo (${rains} nuvens): o pelo ${wet.toFixed(2)} molhado; a chuva passou (${w0.toFixed(2)}): ${shook ? `sacudiu-se em ${t.toFixed(1)} s, o pelo a ${d.meio.wet.toFixed(2)}` : 'NÃO se sacudiu'}; verificador ${c.n}`);
   } }
 
@@ -209,11 +212,14 @@ if (on('m9')) { world(); calmSky(); day();
   else {
     const [x, y] = p; clearAround(x, y, 14); S().weather.windA = Math.PI / 2;
     const put = () => { v.x = x; v.y = y; v.task = null; v.inside = 0; };
-    put(); const d = spawn('deer', x + 6, y, { hunger: 0 }); M.viver(0.3); put(); d.x = x + 6; d.y = y;
-    const k0 = A.senseMul(d, v), f0 = !!A.fearOf(d);
+    // (whether it runs is its own reading of the person, G.Luta.man — the kinds with a temper read people there, not in the fear
+    // scan, D-297c —, asked once with the deer awake and idle where it stands; T-1335)
+    const runs = () => sim(() => { awake(d); d.state = 'idle'; d.t = 0; d.x = x + 6; d.y = y; G.Luta.man(d, A.DEF.deer); return d.state === 'flee'; });
+    put(); const d = spawn('deer', x + 6, y, { hunger: 0 }); awake(d); M.viver(0.3); put(); d.x = x + 6; d.y = y; awake(d);
+    const k0 = A.senseMul(d, v), f0 = runs();
     // three deer killed by people here
     for (let k = 0; k < 3; k++) { const o = spawn('deer', x + 5, y + 1); sim(() => A.kill(o, v)); }
-    put(); d.x = x + 6; d.y = y; M.viver(0.3); put(); d.x = x + 6; d.y = y; const k1 = A.senseMul(d, v), f1 = !!A.fearOf(d); const fear = Mi.fearAt(x + 6, y);
+    put(); d.x = x + 6; d.y = y; awake(d); M.viver(0.3); put(); d.x = x + 6; d.y = y; awake(d); const k1 = A.senseMul(d, v), f1 = runs(); const fear = Mi.fearAt(x + 6, y);
     // the curious ones where nobody ever hunted
     const q = spot((x2, y2, i) => land(x2, y2) && A.walkOK({ kind: 'deer' }, x2, y2) && Mi.fearAt(x2, y2) === 0 && Mi.fearAt(x2 + 9, y2) === 0 && A.walkOK({ kind: 'deer' }, x2 + 9, y2) && G.dist(x2, y2, x, y) > 30 && Mi.cover(x2, y2) === 0, 12);
     let cur = 0, gst = false, dmin = 99, info = 'nenhum ermo para a curiosidade';

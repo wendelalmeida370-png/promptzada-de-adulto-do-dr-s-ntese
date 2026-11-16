@@ -656,6 +656,11 @@
       if (!a.gest) Me.gesto1(a, ['stare', 'threat', 'display'], undefined, th.id); return true;
     }
     if (beast && !heard && L.calm(th) && G.dist(a.x, a.y, th.x, th.y) > 2.6) { if (!a.gest) Me.gesto1(a, ['stare', 'alert'], undefined, th.id); L.count('vigia'); return true; }
+    // (nor one that is not on the hunt — walking its way, lying, at its own business — until it comes inside the prey's flight
+    // distance, or comes at it: run from at every look of every hunter in sight, the grazers of a land of forty years spent half
+    // to four fifths of their time running from wolves and lions ten tiles off, starved, and bore no young — the land emptied,
+    // L-1036)
+    if (beast && !heard && !L.threatens(a, th)) { if (!a.gest) Me.gesto1(a, ['alert', 'stare'], undefined, th.id); L.count('vigia-longe'); return true; }
     if (!heard) Me.fright(a, 0.6);
     // (a defender watches a hunter that is not hunting and not close: it stands only when it comes on — the musk oxen do not spend
     // their day in a ring round a bear that only passes)
@@ -673,6 +678,23 @@
     if (!A.flee(a, th.x, th.y, small ? 4 : 6)) return false;
     if (!heard && was !== 'flee') { Me.gesto1(a, ALARM[a.kind] || ['startle']); if (beast || (th.id && !th.kind)) Me.alarm(a.x, a.y, a.kind, 0.5 + 0.4 * Math.max(0, 1 - G.dist(a.x, a.y, th.x, th.y) / 8), th.id ? th : null); }
     return true;
+  };
+  // a hunter (or anything that eats it) worth running from now: on the hunt (after it or any prey — a chase is a chase), angry,
+  // coming straight at it, or inside its flight distance — the prey's fear distance (six tenths of it for one that only walks its
+  // way). The rest is watched (L-1036). Asked by the reaction and by the meio's options (a beast at the water does not leave it
+  // for a wolf lying ten tiles off)
+  const ON_HUNT = { chase: 1, stalk: 1, pounce: 1, flank: 1, lunge: 1, strike: 1, hold: 1, lurk: 1, aguada: 1, trail: 1 }; // (the ambush too: the crocodile under the surface, the cat lying in wait by the water)
+  L.comingAt = function (o, a) { if (!o.moving) return false; const ux = (o.tx || o.x) - o.x, uy = (o.ty || o.y) - o.y, wx = a.x - o.x, wy = a.y - o.y; const l = Math.hypot(ux, uy) * Math.hypot(wx, wy); return l > 1e-6 && (ux * wx + uy * wy) / l > 0.8; };
+  L.threatens = function (a, th) {
+    if (!th || !th.kind || !SP[th.kind] || th.dead) return true; // (a person, a point: the old ways decide)
+    if (th.summoned || th.raid || th.legend) return true;
+    const sp = SP[a.kind]; const d = G.dist(a.x, a.y, th.x, th.y); const fear = sp.fear || 3;
+    // (after it: run, at whatever distance it is noticed; after one of its herd: the herd breaks, a little past its distance;
+    // after another prey, or angry at something: only near — a wolf pack running a hare down ten tiles off sent every deer of
+    // the valley running, all day long)
+    if (ON_HUNT[th.state] && th.target === a.id) return true;
+    if (ON_HUNT[th.state] || th.angry > 0) { const p = th.target && G.S.animals.get(th.target); const herd = !!p && p.kind === a.kind && (p.leader || p.id) === (a.leader || a.id); return d < fear * (herd ? 1.6 : 1); }
+    return d < fear * (L.comingAt(th, a) ? 1 : 0.6);
   };
   const CALM = { sleep: 1, rest: 1, eat: 1, digest: 1, groom: 1, social: 1, wait: 1, nurse: 1, heat: 1, suckle: 1, watch: 1, tree: 1, play: 1 };
   L.calm = th => !!CALM[th.state] || (th.hunger < 0.2 && !A.isHunting(th.state) && th.state !== 'stalk' && !(th.angry > 0));
@@ -754,7 +776,7 @@
 
   // ------------------------------ the bear at the river, the polar bear at the ice's edge ------------------------------
   // a hungry bear at the water stands in the shallows and swats out the fish; a polar bear waits still at the edge for a seal
-  Me.option('fish', {
+  Me.option('fish', { food: true,
     who: (a, sp) => (a.kind === 'bear' || a.kind === 'polarbear') && Me.has(a, sp) && a.grown >= 1,
     score(a, sp) { if (a.hunger < 0.35) return 0; const i = W.idx(a.x, a.y); if (A.waterD(i) > 1) return 0; return 0.35 + a.hunger * 0.3; },
     start(a) { a.state = 'fish'; a.t = G.rr(10, 20); a.bt = 0; Me.gesto(a, 'fish', 0); return true; },
@@ -981,7 +1003,11 @@
   function other(a, sp, v, d, inEye) {
     const t = TEMPER[a.kind]; const fear = (sp.fear || 3) * A.senseMul(a, v);
     if (t === 'flight') {
-      if (d < fear) { if (L.react(a, v, 1, false)) { L.count('gente:foge:' + a.kind); return true; } return null; }
+      // (one at their work some way off, unarmed and not coming its way, is watched: the grazers by a grown town ran from every
+      // person in the fields at eight tiles, and starved — L-1036; the hunter, the soldier, one coming at it, at the whole distance)
+      // (and where people hunted, the still one is run from too: the beast learnt what people do there — G.Meio, D-305)
+      const near = fear * (coming(v, a) || L.armed(v) ? 1 : 0.6 + 0.4 * Math.min(1, G.Meio && G.Meio.learnt ? G.Meio.learnt(a.x, a.y) : 0));
+      if (d < near) { if (L.react(a, v, 1, false)) { L.count('gente:foge:' + a.kind); return true; } return null; }
       return watch(a, v, d, inEye, fear * 1.3);
     }
     if (t === 'freeze') {
