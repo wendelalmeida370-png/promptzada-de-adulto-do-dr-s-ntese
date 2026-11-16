@@ -203,6 +203,10 @@ if (on('l9')) {
 // else in reach, chooses neither, nor does a lone tiger; the buffalo's calf the lion does, the buffalo hurt the tiger does (the lone
 // lion is too small for it even so); three lions starving take the grown one; a lone wolf and a musk ox the same. Asked of the
 // hunters' own look, A.findPrey, the beasts awake where the proof puts them)
+// (the choice of a case is among the case's beasts: a town's herd by the arena — a cow within the look — is out of it for the
+// look, held for that instant by the proof's hand and given back as it was; in the world of the three pillars the arena of the
+// buffalo fell by a town's cows, and the lion's choice of a cow said nothing of the buffalo, T-1334)
+const caseOnly = (f, spot) => { const off = []; for (const b of S.animals.values()) if (!spot.has(b) && !b.held && A.DEF[b.kind] && A.DEF[b.kind].dom) { off.push(b); b.held = true; } try { return f(); } finally { for (const b of off) b.held = false; } };
 if (on('l10')) {
   let msg = 'sem lugar', good = false;
   const p = arena('buffalo', true, used);
@@ -213,7 +217,7 @@ if (on('l10')) {
     // (each look after a moment of life — the hunters resting through it, not off after the calf —, everyone put back where they
     // stood, calm and idle: in that moment the buffalo may have turned on the lion, and a lion hurt by a prey lets that one be)
     const spot = new Map(); const pin = (...bs) => { for (const b of bs) spot.set(b, [b.x, b.y]); }; pin(lion, bu, hp);
-    const look = (a, r) => { god(() => { for (const b of spot.keys()) b.rest = 5; }); M.viver(0.3); god(() => { for (const [b, c] of spot) if (S.animals.has(b.id) && !b.dead) { b.x = c[0]; b.y = c[1]; b.state = 'idle'; b.t = 5; b.target = 0; b.angry = 0; b.noPrey = null; } }); const q = A.findPrey(a, r || 16); return q ? q.kind + (q.grown < 0.8 ? '(cria)' : q.hp < q.maxHp * 0.6 ? '(ferido)' : '') : 'nada'; };
+    const look = (a, r) => { god(() => { for (const b of spot.keys()) b.rest = 5; }); M.viver(0.3); god(() => { for (const [b, c] of spot) if (S.animals.has(b.id) && !b.dead) { b.x = c[0]; b.y = c[1]; b.state = 'idle'; b.t = 5; b.target = 0; b.angry = 0; b.noPrey = null; } }); const q = caseOnly(() => A.findPrey(a, r || 16), spot); return q ? q.kind + (q.grown < 0.8 ? '(cria)' : q.hp < q.maxHp * 0.6 ? '(ferido)' : '') : 'nada'; };
     const r1 = look(lion);
     const calf = put('buffalo', p[0] + 0.8, p[1] - 0.6, { grown: 0.45 }); pin(calf); const r2 = look(lion); god(() => A.remove(calf)); spot.delete(calf);
     const tg = put('tiger', p[0] - 4, p[1] + 3, { hunger: 0.6 }); pin(tg); const r1t = look(tg);
@@ -226,7 +230,7 @@ if (on('l10')) {
       used.push(q); clear(q[0], q[1], 26);
       const mo = put('muskox', q[0], q[1]); const wf = put('wolf', q[0] - 4, q[1], { hunger: 0.6 });
       const sp2 = new Map(); for (const b of [mo, wf]) sp2.set(b, [b.x, b.y]);
-      const lk = (a) => { god(() => { for (const b of sp2.keys()) b.rest = 5; }); M.viver(0.3); god(() => { for (const [b, c] of sp2) if (S.animals.has(b.id) && !b.dead) { b.x = c[0]; b.y = c[1]; b.state = 'idle'; b.t = 5; b.target = 0; b.angry = 0; b.noPrey = null; } }); const x = A.findPrey(a, 16); return x ? x.kind : 'nada'; };
+      const lk = (a) => { god(() => { for (const b of sp2.keys()) b.rest = 5; }); M.viver(0.3); god(() => { for (const [b, c] of sp2) if (S.animals.has(b.id) && !b.dead) { b.x = c[0]; b.y = c[1]; b.state = 'idle'; b.t = 5; b.target = 0; b.angry = 0; b.noPrey = null; } }); const x = caseOnly(() => A.findPrey(a, 16), sp2); return x ? x.kind : 'nada'; };
       r5 = lk(wf);
       const pk = [put('wolf', q[0] - 4.5, q[1] + 1, { hunger: 0.85 }), put('wolf', q[0] - 4.5, q[1] - 1, { hunger: 0.85 })]; for (const b of pk) sp2.set(b, [b.x, b.y]); god(() => { wf.hunger = 0.85; for (const o of pk) o.leader = wf.id; wf.leader = 0; });
       r6 = lk(wf);
@@ -330,6 +334,10 @@ if (on('p2')) {
   }
   ok('p2 cinco pessoas juntas: o tigre não ataca — vigia e se afasta', good, msg);
 }
+// (the person of a case of the beast's reading does not see the beast: the fear of the beasts (D-310, D-311) would have her run
+// before the meeting — the case is the beast's answer to a person who comes on unaware, as on a path in the grass at dusk; the
+// people's fear has its own proofs, qa/medo.js. Given back at the case's end, T-1334)
+const unseen = hs => { const ids = new Set(hs.map(h => h.id)); const d0 = G.Vg.dread; if (!d0) return () => {}; G.Vg.dread = a => (a && ids.has(a.id) ? 0 : d0(a)); return () => { G.Vg.dread = d0; }; };
 // p3 a lone person at night with a torch, a hungry tiger: kept off by the fire; the torch put out, the hunt
 if (on('p3')) {
   let msg = 'sem lugar', good = false;
@@ -340,9 +348,9 @@ if (on('p3')) {
     clear(p[0], p[1], 26); S.time = 0.75;
     const pace = v => god(() => { const t = v.task; if (!S.villagers.has(v.id) || (t && (t.type === 'flee' || t.type === 'fight'))) return; v.sleeping = false; v.energy = Math.max(v.energy, 90);
       // (turned before the end of each leg: one who walks on, never stopping — the torch is carried walking)
-      if (!t || t.type !== 'olhar' || t.st === 2 || G.dist(v.x, v.y, t.x, t.y) < 1.2) { const e = t && t.type === 'olhar' && t.x > p[0] ? -3 : 3; G.Vg.setTask(v, { type: 'olhar', x: p[0] + e, y: p[1], fx: p[0] - 8, fy: p[1] + 1, until: S.clock + 30, st: 0, pri: 1.2 }); } });
+      if (!t || t.type !== 'olhar' || t.st === 2 || G.dist(v.x, v.y, t.x, t.y) < 1.2) { const e = t && t.type === 'olhar' && t.x > p[0] ? -3 : 3; G.Vg.setTask(v, { type: 'olhar', x: p[0] + e, y: p[1], fx: p[0] - 8, fy: p[1] + 1, until: S.clock + 30, st: 0, pri: 1.2, torch: v === vt }); } }); // (the torch in the hand of the one who carries it, walking or at the turn: lit only while moving, it was out half the case in the full run, T-1334)
     const night = () => { if (S.time < 0.74 && S.time > 0.5) S.time = 0.75; };
-    const tg = putBold('tiger', p[0] - 8, p[1] + 1, { hunger: 0.95, age: 6 });
+    const tg = putBold('tiger', p[0] - 8, p[1] + 1, { hunger: 0.95, age: 6 }); const back = unseen([tg]);
     const keepT = () => god(() => { if (tg.state === 'sleep' || tg.state === 'rest') { tg.state = 'idle'; tg.t = 0; } tg.hunger = Math.max(tg.hunger, 0.95); Me.m(tg).en = 1; });
     place(vt, p[0] - 3, p[1]); place(vn, p[0] + 30, p[1]); // (the one without it still far off)
     const w = watchMan([tg], [vt]); let lit0 = 0;
@@ -355,6 +363,7 @@ if (on('p3')) {
     const v2 = liveMan(40, w2, () => { night(); pace(vn); keepT(); }, () => w2.hunt > 0);
     good = lit.hunt === 0 && lit.hurt === 0 && lit.react > 0 && lit.fire > 0 && w2.hunt > 0 && !v1.length && !v2.length;
     msg = `de noite, andando sozinho: ${vt.name} com a tocha (${(lit.fire / 4).toFixed(1)} s com ela acesa): caça ${lit.hunt ? 'SIM' : 'nenhuma'}, ${lit.hurt ? 'FERIDO' : 'ileso'}, o tigre ${lit.react ? 'vigiou e recuou' : 'NÃO REAGIU'} (${tsay(w)}); ${vn.name} sem tocha: caça ${w2.hunt > 0 ? 'sim' : 'NÃO'} — ${vsay(v1.concat(v2))}`;
+    back();
   }
   ok('p3 a tocha de noite afasta o tigre; sem ela, a caça', good, msg);
 }
@@ -367,13 +376,19 @@ if (on('p4')) {
   if (p && q && v1 && v2) {
     clear(p[0], p[1], 26); clear(q[0], q[1], 26); S.time = 0.35;
     place(v1, p[0], p[1]); place(v2, q[0], q[1]);
-    const old = put('lion', p[0] - 8, p[1], { hunger: 0.7, age: A.DEF.lion.life * 0.88, lifeMul: 1 }); god(() => { L.wound(old, 5, 0.55, null); old.wnd.b = 0; Me.m(old).sx = 1; });
-    const young = put('lion', q[0] - 8, q[1], { hunger: 0.7, age: A.DEF.lion.life * 0.3, lifeMul: 1 }); god(() => { Me.m(young).sx = 1; });
+    // (five steps off, not eight: with the senses of the meio — the wind, the cover — a lion eight steps off may not know the
+    // builder is there at all, and the case is the reading of one it sees, T-1334)
+    // (and on ground the lion walks to the person from: a spot across a ditch or inside a lot was a lion that could not come, T-1334)
+    const reach = c => { for (let k = 0; k < 16; k++) { const an = k * 0.39, x = c[0] - Math.cos(an) * 5, y = c[1] + Math.sin(an) * 5; if (W.inb(x, y) && W.walkableXY(x, y) && W.canWalk(x, y, c[0], c[1])) return [x, y]; } return [c[0] - 5, c[1]]; };
+    const po = reach(p), qo = reach(q);
+    const old = put('lion', po[0], po[1], { hunger: 0.7, age: A.DEF.lion.life * 0.88, lifeMul: 1 }); god(() => { L.wound(old, 5, 0.55, null); old.wnd.b = 0; Me.m(old).sx = 1; });
+    const young = put('lion', qo[0], qo[1], { hunger: 0.7, age: A.DEF.lion.life * 0.3, lifeMul: 1 }); god(() => { Me.m(young).sx = 1; }); const back = unseen([old, young]);
     const wo = watchMan([old], [v1]), wy = watchMan([young], [v2]); const both = { hs: [old, young], tick() { wo.tick(); wy.tick(); } };
     const keep = () => god(() => { for (const [v, c] of [[v1, p], [v2, q]]) if (S.villagers.has(v.id) && !v.dead && !(v.task && v.task.type === 'flee') && G.dist(v.x, v.y, c[0], c[1]) > 0.6) { v.x = c[0]; v.y = c[1]; v.path = null; } for (const l of [old, young]) l.hunger = 0.7; });
     const viol = liveMan(45, both, keep, () => wo.hunt > 0 && wy.states.size > 1);
     good = wo.hunt > 0 && wy.hunt === 0 && !viol.length;
     msg = `o leão velho e manco (fome 0,7): caça ${wo.hunt > 0 ? 'sim' : 'NÃO'} (${tsay(wo)}); o leão moço e são, a mesma fome: caça ${wy.hunt ? 'SIM' : 'nenhuma'} (${tsay(wy)}) — ${vsay(viol)}`;
+    back();
   }
   ok('p4 o leão velho e ferido vira devorador de gente; o são, com a mesma fome, não', good, msg);
 }
@@ -432,12 +447,13 @@ if (on('p7')) {
   const p = arena('viper', false, used); if (p) used.push(p); const q = arena('python', false, used); if (q) used.push(q); const [v1, v2] = people(2);
   if (p && q && v1 && v2) {
     clear(p[0], p[1], 20); clear(q[0], q[1], 20); S.time = 0.35;
-    const vp = put('viper', p[0], p[1], { hunger: 0.2 }); const py = put('python', q[0], q[1], { hunger: 0.2 });
+    const vp = put('viper', p[0], p[1], { hunger: 0.2 }); const py = put('python', q[0], q[1], { hunger: 0.2 }); const back = unseen([vp, py]);
     place(v1, p[0] - 3, p[1]); place(v2, q[0] - 2.5, q[1]);
     const hp1 = v1.hp; const w = watchMan([vp, py], [v1, v2]); let bit = 0, slipP = 0;
     const viol = liveMan(30, w, () => { awake([vp, py]); if (!bit) walkTo(v1, vp.x, vp.y, 0.25); god(() => { if (S.villagers.has(v2.id) && G.dist(v2.x, v2.y, q[0] - 2.5, q[1]) > 0.6) { v2.x = q[0] - 2.5; v2.y = q[1]; v2.path = null; } }); if (py.state === 'shy') slipP++; if (v1.hp < hp1 - 1) bit = 1; });
     good = bit && slipP > 0 && !viol.length;
     msg = `${v1.name} andando para a víbora: ${bit ? `picado (vida ${Math.round(v1.hp)})` : `NÃO picado (a ${G.dist(v1.x, v1.y, vp.x, vp.y).toFixed(1)} dela, ${v1.task ? v1.task.type : 'sem tarefa'}, a víbora em «${vp.state}»)`}; a píton com ${v2.name} a 2,5 passos: ${slipP ? 'foi embora' : 'FICOU'} (${tsay(w)}) — ${vsay(viol)}`;
+    back();
   }
   ok('p7 a víbora pica o pé que chega nela; a píton vai embora', good, msg);
 }
@@ -448,12 +464,13 @@ if (on('p8')) {
   if (p && q && v1 && v2) {
     clear(p[0], p[1], 20); clear(q[0], q[1], 20); S.time = 0.35;
     const hp = put('hippo', p[0], p[1], { hunger: 0.05 });
-    const el = put('elephant', q[0], q[1], { hunger: 0.05 }); const calf = put('elephant', q[0] + 0.8, q[1] + 0.5, { hunger: 0.1, grown: 0.4 }); god(() => { Me.m(el).sx = 0; Me.m(calf).mom = el.id; calf.leader = el.id; });
+    const el = put('elephant', q[0], q[1], { hunger: 0.05 }); const calf = put('elephant', q[0] + 0.8, q[1] + 0.5, { hunger: 0.1, grown: 0.4 }); god(() => { Me.m(el).sx = 0; Me.m(calf).mom = el.id; calf.leader = el.id; }); const back = unseen([hp, el, calf]);
     place(v1, p[0] - 7, p[1]); place(v2, q[0] - 9, q[1]);
     const w = watchMan([hp, el], [v1, v2]); let shownH = 0, shownE = 0, chH = 0, chE = 0;
     const viol = liveMan(30, w, () => { awake([hp, el]); god(() => { el.leader = 0; calf.leader = el.id; if (!calf.dead && G.dist(calf.x, calf.y, el.x, el.y) > 1.5) { calf.x = el.x + 0.8; calf.y = el.y + 0.5; } }); walkTo(v1, hp.x, hp.y, 0.35); walkTo(v2, el.x, el.y, 0.35); if (hp.state === 'eye') shownH++; if (el.state === 'eye') shownE++; if (hp.angry > 0 && hp.target === v1.id) chH++; if (el.angry > 0 && el.target === v2.id) chE++; }, () => chH > 0 && chE > 0);
     good = chH > 0 && chE > 0 && !viol.length;
     msg = `o hipopótamo junto da água: ${shownH ? 'ameaçou' : 'não ameaçou'}, ${chH ? 'investiu' : 'NÃO INVESTIU'} contra ${v1.name}; a elefanta com o filhote: ${shownE ? 'ameaçou' : 'não ameaçou'}, ${chE ? 'investiu' : `NÃO INVESTIU (a ${G.dist(v2.x, v2.y, el.x, el.y).toFixed(1)} dela, ${v2.task ? v2.task.type : 'sem tarefa'}, ela em «${el.state}», o filhote a ${G.dist(calf.x, calf.y, el.x, el.y).toFixed(1)})`} (${tsay(w)}) — ${vsay(viol)}`;
+    back();
   }
   ok('p8 o hipopótamo junto da água e a elefanta com o filhote avisam e investem', good, msg);
 }
@@ -464,7 +481,7 @@ if (on('p9')) {
   if (p && q && v1 && v2) {
     clear(p[0], p[1], 20); clear(q[0], q[1], 20); S.time = 0.35;
     const b1 = put('bear', p[0], p[1], { hunger: 0.1 }); god(() => { Me.m(b1).sx = 1; });
-    const b2 = put('bear', q[0], q[1], { hunger: 0.1 }); const cub = put('bear', q[0] + 0.7, q[1] + 0.4, { grown: 0.35, hunger: 0.1 }); god(() => { Me.m(b2).sx = 0; Me.m(cub).mom = b2.id; cub.leader = b2.id; });
+    const b2 = put('bear', q[0], q[1], { hunger: 0.1 }); const cub = put('bear', q[0] + 0.7, q[1] + 0.4, { grown: 0.35, hunger: 0.1 }); god(() => { Me.m(b2).sx = 0; Me.m(cub).mom = b2.id; cub.leader = b2.id; }); const back = unseen([b1, b2, cub]);
     place(v1, p[0] - 2.8, p[1]); place(v2, q[0] - 3, q[1]);
     const w1 = watchMan([b1], [v1]), w2 = watchMan([b2], [v2]); let bl = 0, ch = 0;
     const both = { hs: [b1, b2, cub], tick() { w1.tick(); w2.tick(); if (b1.state === 'bluff') bl++; if (b2.angry > 0 && b2.target === v2.id) ch++; } };
@@ -475,6 +492,7 @@ if (on('p9')) {
     const viol = liveMan(15, both, keep, () => bl > 0 && ch > 0);
     good = bl > 0 && ch > 0 && !viol.length;
     msg = `o urso sozinho a 2,8 passos: ${bl ? 'o blefe (correu e parou)' : 'SEM BLEFE'} (${tsay(w1)}); a ursa com o filhote a 3 passos: ${ch ? 'investiu de verdade' : 'NÃO INVESTIU'} (${tsay(w2)}) — ${vsay(viol)}`;
+    back();
   }
   ok('p9 o urso blefa; a ursa com o filhote investe', good, msg);
 }
