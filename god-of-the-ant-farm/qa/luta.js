@@ -36,7 +36,7 @@ const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 // sleep of the beasts and the people about as the cases before left them, and failed in the whole round while it passed alone —
 // the tiger's torch, the old lion, the she-bear, T-1319b. ONE_WORLD=1: all of them in one world, as before)
 let first = true;
-const on = k => { if (ONLY && !ONLY.includes(k)) return false; if (!first && !process.env.ONE_WORLD) world(); first = false; return true; };
+const on = k => { if (ONLY && !ONLY.includes(k)) return false; if (!first && !process.env.ONE_WORLD) { world(); used.length = 0; takenP.clear(); } first = false; return true; }; // (and the places and the people a case before took: none)
 const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | luta ${name} | ${info}`); if (!c) fails.push(name); };
 const A = G.Animals, W = G.W, T = G.T, L = G.Luta, Me = G.Mente;
@@ -73,7 +73,7 @@ function live(sec, done) {
   return seen;
 }
 const vsay = v => (v.length ? v.slice(0, 3).map(q => `[S${q.sev}] ${q.sys}: ${q.msg}`).join(' · ') : 'verificador limpo');
-const used = [];
+const used = []; const takenP = new Set(); // (the people a case took, not taken again by the next in the same world)
 
 // ---------------- l1 a pride and a zebra herd ----------------
 if (on('l1')) {
@@ -246,7 +246,6 @@ if (on('l10')) {
 }
 // ---------------- p: the wild hunter and the person (D-297b) ----------------
 // (people of the world taken out to the wild by the proof's hand: grown, free, not the god's body; each case its own)
-const takenP = new Set();
 // (the ones not yet taken first; a small world runs out of them by the last cases, and then a case takes one again)
 function people(n, need) {
   const out = []; const all = [...S.villagers.values()].sort((p, q) => p.id - q.id);
@@ -340,7 +339,9 @@ if (on('p2')) {
     const tg = put('tiger', p[0] - 7, p[1] + 1, { hunger: 0.95, age: 6 });
     const w = watchMan([tg], vs); const t0 = T0();
     // (a group at its work together: the proof's hand keeps them in their places, whatever each would do alone)
-    const viol = liveMan(40, w, () => god(() => vs.forEach((v, i) => { if (S.villagers.has(v.id) && !v.dead && G.dist(v.x, v.y, spot[i][0], spot[i][1]) > 0.6) { v.x = spot[i][0]; v.y = spot[i][1]; v.path = null; } })));
+    // (and the tiger kept awake: hungry, in its own world it lay down at its hour of sleep and never saw them; the wind across:
+    // downwind of them the tiger's senses reached half as far, four and a half paces — T-1319b, T-1338)
+    const viol = liveMan(40, w, () => { awake([tg]); S.weather.windA = Math.PI / 2; god(() => vs.forEach((v, i) => { if (S.villagers.has(v.id) && !v.dead && G.dist(v.x, v.y, spot[i][0], spot[i][1]) > 0.6) { v.x = spot[i][0]; v.y = spot[i][1]; v.path = null; } })); });
     good = w.hunt === 0 && w.hurt() === 0 && (w.eye + w.shy) > 0 && !viol.length;
     msg = `cinco juntos, o tigre (fome 0,95) a 7 passos: caça ${w.hunt ? 'SIM (' + w.hunt + ')' : 'nenhuma'}, feridos ${w.hurt()}, de olho ${(w.eye / 4).toFixed(1)} s, recuando ${(w.shy / 4).toFixed(1)} s; vigia ${diff(t0, 'gente:vigia:tiger')}, recua ${diff(t0, 'gente:recua:tiger') + diff(t0, 'gente:foge:tiger')}; ${tsay(w)} — ${vsay(viol)}`;
   }
@@ -516,7 +517,7 @@ if (on('p10')) {
     const ws = []; for (let i = 0; i < 3; i++) ws.push(put('wolf', p[0] - 8 - i * 0.7, p[1] + i * 0.6, { hunger: 0.95 })); for (const o of ws.slice(1)) o.leader = ws[0].id;
     place(v1, p[0], p[1]);
     const w = watchMan(ws, [v1]);
-    const viol = liveMan(30, w, () => { keepAt(v1, p); for (const o of ws) o.hunger = Math.max(o.hunger, 0.9); });
+    const viol = liveMan(30, w, () => { keepAt(v1, p); awake(ws); S.weather.windA = Math.PI / 2; for (const o of ws) o.hunger = Math.max(o.hunger, 0.9); }); // (awake, the wind across: the wolves' hour of sleep and the scent are not the case, T-1319b, T-1338)
     good = w.hunt === 0 && w.hurt() === 0 && (w.eye + w.shy) > 0 && !viol.length;
     msg = `três lobos com fome, de dia, e ${v1.name} sozinho: caça ${w.hunt ? 'SIM' : 'nenhuma'}, de olho ${(w.eye / 4).toFixed(1)} s, recuando ${(w.shy / 4).toFixed(1)} s (${tsay(w)}) — ${vsay(viol)}`;
   }
