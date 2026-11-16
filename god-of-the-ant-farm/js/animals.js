@@ -296,7 +296,7 @@
       tamed: 0, guardSet: 0, gt: false, gscan: 0, legend: false, big: 1, epithet: null, mig: false,
       dom: 0, pen: 0, herder: 0, ledBy: 0, wool: 0, milk: 0, eggs: 0, shorn: 0, hold: 0, tended: 0, flee: 0,
       morph: null, seen: 0, prey2: 0, gore: 0, blood: 0, perch: 0, nest: 0, swing: 0, sub: 0, roll: 0, grip: 0, drag: 0, mourn: 0, crouch: 0, flank: null, pounce: 0,
-      down: 0, caught: 0, tree: 0, corpse: 0, dragT: 0, dragTo: null, mt: 0, ft: 0, rd: 0, dz: null, cached: false, slow: 0, sw0: null, sw1: null, px: 0, py: 0, fast: false,
+      down: 0, caught: 0, tree: 0, corpse: 0, dragT: 0, dragTo: null, mt: 0, ft: 0, rd: 0, ey: 0, dz: null, cached: false, slow: 0, sw0: null, sw1: null, px: 0, py: 0, fast: false,
       // (and those that come later in a life — a way round, being stuck, a den, a rider, a skin — held empty from the start)
       path: undefined, pi: undefined, pfT: undefined, blk: undefined, blkSeen: undefined, stk: undefined, stkD: undefined, stkGX: undefined, stkGY: undefined, stkT: undefined,
       noGo: undefined, noPrey: undefined, fx: undefined, fy: undefined, sx: undefined, sy: undefined, home: undefined, set: undefined, owner: undefined, ride: undefined, rideCD: undefined,
