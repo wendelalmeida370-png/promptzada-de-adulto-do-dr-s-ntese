@@ -9,6 +9,9 @@
 //   node qa/visual/itens-arte.js            → PASSOU / FALHOU, a line a proof, and the cost (sizes, triangles)
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.resolve(__dirname, '..', '..');
+// (part 10 in a process of its own, with the real game loaded: the inventory is a module of the world now — 20c — and does not run
+// in this file's bare numbers; T-1422)
+if (process.argv[2] === 'verificador') { verifier(); return; }
 global.window = global; global.G = {};
 global.atob = s => Buffer.from(s, 'base64').toString('binary');
 const run = f => vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f });
@@ -142,9 +145,27 @@ const bindY = n => BM.bind[n][1];
 { const c = IA.check(); ok('check', !c.length, c.length ? c.slice(0, 6).join('; ') : 'G.ItemArt.check() vazio'); }
 
 // ---------------- 10. the verifier's rule (qa/itens-arte-inv.js) on a small world: quiet, then caught by each sabotage ----------------
-{ run('js/inventario.js'); const more = []; window.QA = { more }; run('qa/itens-arte-inv.js'); window.QA = undefined;
+// (in its own process, with the game's own modules — qa/nodemundo.js —: the real G.Inv.held of those people, the real catalog)
+{ let out = ''; try { out = require('child_process').execFileSync(process.execPath, [__filename, 'verificador'], { cwd: ROOT, maxBuffer: 1 << 24 }).toString(); } catch (e) { out = String(e.stdout || '') + String(e.stderr || e.message); }
+  const line = out.split('\n').find(l => / \| itens-arte verificador \| /.test(l));
+  if (line) { console.log(line); if (!line.startsWith('PASSOU')) nf++; } else ok('verificador', false, 'o processo da prova não respondeu: ' + out.slice(-400).replace(/\s+/g, ' ')); }
+
+// ---------------- the cost ----------------
+{ const sz = f => fs.statSync(path.join(ROOT, f)).size / 1024; const T = [[], [], []]; for (const k of KEYS) for (let l = 0; l < 3; l++) T[l].push(IA.raw(k, l).idx.length / 3);
+  const st = a => `${Math.min(...a)}–${Math.max(...a)} (média ${Math.round(a.reduce((s, x) => s + x, 0) / a.length)})`;
+  console.log(`info | itens-arte custo | itemforma.js ${sz('js/itemforma.js').toFixed(0)} KB, itemarte.js ${sz('js/itemarte.js').toFixed(0)} KB, itemicons.js ${sz('js/itemicons.js').toFixed(0)} KB · triângulos perto ${st(T[0])}, meio ${st(T[1])}, longe ${st(T[2])}`); }
+console.log(nf ? `FALHOU: ${nf}` : 'PASSOU');
+process.exit(nf ? 1 : 0);
+
+// ---------------- part 10's process: the game loaded as the proofs in Node load it, the rule alone on people of its own ----------------
+function verifier() {
+  const M = require('../nodemundo.js'); M.load({ extra: ['js/itemforma.js', 'js/itemarte.js', 'js/itemicons.js'] });
+  M.novo({ seed: 7, type: 'ilha', size: 48, tribes: 1 }); // (a world for the kit to ask: its people and their arts — none for these people of the proof's own)
+  const IA = G.ItemArt, F = G.ItemForma; let nf = 0; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | itens-arte ${name} | ${info}`); if (!c) nf++; };
+    const more = []; window.QA = { more }; M.run('qa/itens-arte-inv.js'); window.QA = undefined;
   const ppl = [{ id: 1, name: 'Ari', age: 30, role: 'lenhador', act: 'chop' }, { id: 2, name: 'Bea', age: 25, role: 'guerreiro', act: null }, { id: 3, name: 'Caio', age: 70, role: 'anciao', act: null },
-    { id: 4, name: 'Dina', age: 30, role: 'guerreiro', act: null, carry: { k: 'wood', n: 3 } }, { id: 5, name: 'Eli', age: 28, role: 'soldado', equip: { mao: 'espada.ferro', outra: 'escudo.bronze', costas: 'arco', cinto: 'faca.bronze', cabeca: 'elmo.bronze', corpo: 'couraca.ferro' } }];
+    { id: 4, name: 'Dina', age: 30, role: 'guerreiro', act: null, carry: { k: 'wood', n: 3 } }, { id: 5, name: 'Eli', age: 28, role: 'soldado', equip: { mao: 'espada.ferro', outra: 'escudo.bronze', costas: 'arco', cinto: 'faca.bronze', cabeca: 'elmo.bronze', corpo: 'couraca.ferro' },
+      mochila: { 'espada.ferro': 1, 'escudo.bronze': 1, arco: 1, 'faca.bronze': 1, 'elmo.bronze': 1, 'couraca.ferro': 1 } }]; // (what is equipped is in the bag: D-336)
   const world = { villagers: new Map(ppl.map(v => [v.id, v])) };
   const check = () => { const out = []; for (const f of more) f((rule, sev, msg) => out.push(`${rule} S${sev}: ${msg}`), world); return out; };
   const bad = []; const clean = check(); if (!more.length) bad.push('a regra não se inscreveu no QA.more'); if (clean.length) bad.push('acusa um mundo são: ' + clean.join('; '));
@@ -153,11 +174,7 @@ const bindY = n => BM.bind[n][1];
   const R0 = F.R.machado; const s1 = sab('o machado sem receita', () => { F.R.machado = undefined; IA.raw = ((r) => (k, l) => (k.startsWith('machado') ? null : r(k, l)))(IA.raw); }, () => { F.R.machado = R0; });
   const ic = G.ITEMICONS.img['lanca.pedra']; const s2 = sab('a lança sem figura', () => { delete G.ITEMICONS.img['lanca.pedra']; }, () => { G.ITEMICONS.img['lanca.pedra'] = ic; });
   const st = IA.stow; const s3 = sab('o arco sem lugar nas costas', () => { IA.stow = (k, p) => (k.startsWith('arco') ? null : st(k, p)); }, () => { IA.stow = st; });
-  ok('verificador', !bad.length, bad.length ? bad.join('; ') : `${ppl.length} pessoas (o kit do ofício e as coisas de verdade) sem acusação; as sabotagens acusam — «${s1}», «${s2}», «${s3}»`); }
-
-// ---------------- the cost ----------------
-{ const sz = f => fs.statSync(path.join(ROOT, f)).size / 1024; const T = [[], [], []]; for (const k of KEYS) for (let l = 0; l < 3; l++) T[l].push(IA.raw(k, l).idx.length / 3);
-  const st = a => `${Math.min(...a)}–${Math.max(...a)} (média ${Math.round(a.reduce((s, x) => s + x, 0) / a.length)})`;
-  console.log(`info | itens-arte custo | itemforma.js ${sz('js/itemforma.js').toFixed(0)} KB, itemarte.js ${sz('js/itemarte.js').toFixed(0)} KB, itemicons.js ${sz('js/itemicons.js').toFixed(0)} KB · triângulos perto ${st(T[0])}, meio ${st(T[1])}, longe ${st(T[2])}`); }
-console.log(nf ? `FALHOU: ${nf}` : 'PASSOU');
-process.exit(nf ? 1 : 0);
+  ok('verificador', !bad.length, bad.length ? bad.join('; ') : `${ppl.length} pessoas (o kit do ofício e as coisas de verdade) sem acusação; as sabotagens acusam — «${s1}», «${s2}», «${s3}»`);
+  const e = M.erros(); if (Object.keys(e.mod).length || e.console.length) console.log(`FALHOU | itens-arte verificador | erros do jogo: ${JSON.stringify(e).slice(0, 300)}`);
+  process.exit(nf ? 1 : 0);
+}

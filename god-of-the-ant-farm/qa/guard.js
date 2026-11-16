@@ -964,6 +964,49 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 // === 20a: a animação ===
 // === 20b: o movimento ===
 // === 20c: o inventário ===
+// 127. "a mochila é um lugar do depósito, de um dono só" (D-336): o lugar 'm:' do G.Depot só o js/inventario.js registra
+// (D.addKind('m', …)) — o adaptador dele é a única escrita da mochila que o depósito faz
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (f !== 'inventario.js' && /\baddKind\(\s*'m'/.test(c)) fails.push(`a mochila do depósito: ${f}:${k + 1} registra o lugar 'm:' fora do inventario.js (D-336): ${l.trim().slice(0, 110)}`); });
+  if (!(src['inventario.js'] || []).some(l => /\bD\.addKind\(\s*'m'/.test(l))) fails.push('a mochila do depósito: o inventario.js não registra o lugar \'m:\' (D-336)'); }
+// 128. "quem pergunta pelas coisas de alguém pergunta ao G.Inv" (D-336): só o js/inventario.js lê o v.mochila e o v.equip de uma
+// pessoa — o 3D, a tela, o combate e os ofícios perguntam ao G.Inv (held, kit, bag, count, list, equipOf), que dizem o
+// equipamento já feito verdade (a carga nas mãos, as duas mãos, o kit do ofício)
+{ for (const f of files) if (f !== 'inventario.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/(?<!\bInv)\.(mochila|equip)\b(?!\s*[:(])/.test(c) && !/['"`](mochila|equip)['"`]/.test(c)) fails.push(`as coisas de alguém: ${f}:${k + 1} lê a mochila ou o equipamento de uma pessoa fora do inventario.js (D-336; pergunte ao G.Inv): ${l.trim().slice(0, 110)}`); }); }
+// 129. "a tela da mochila pede pelas mãos do corpo" (D-336, L-139): no js/inv-ui.js, toda porta do G.Inv que muda o mundo (equipar,
+// guardar, sacar, um atalho, dar, pegar, guardar, largar, trocar no armazém) é pedida dentro de um G.Possess.apply( — na mesma
+// linha ou numa das duas antes —: o passo do mundo a faz, e a tela só conta a resposta
+{ const ui = src['inv-ui.js'] || []; const DOOR = /\bInv\.(equip|unequip|stow|draw|toggle|quick|shortcut|give|take|put|drop|pick|make|unmake|realize|settle|repair)\(/;
+  ui.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (!DOOR.test(c)) return;
+    let inApply = false; for (let j = k; j >= Math.max(0, k - 2); j--) if (/\bPossess\.apply\(/.test(ui[j])) inApply = true;
+    if (!inApply) fails.push(`a tela da mochila: inv-ui.js:${k + 1} pede uma porta do inventário fora das mãos do corpo (G.Possess.apply; D-336): ${l.trim().slice(0, 110)}`); }); }
+// 130. "o catálogo é lido, nunca escrito" (D-337, D-370): ninguém escreve na tabela dos itens (G.Itens.KINDS, MATS, SLOTS) — ela
+// nasce congelada no js/itens.js, e uma escrita num arquivo do jogo quebra na hora
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bItens\.(KINDS|MATS|SLOTS|SLOT_NOME|TAG_NOME|TIPO_NOME)\b[^=;]*?(\.\w+|\[[^\]]*\])\s*(=(?!=)|\+=|-=|\+\+|--)|\bItens\.(KINDS|MATS|SLOTS)\s*=(?!=)/.test(c)) fails.push(`o catálogo: ${f}:${k + 1} escreve na tabela dos itens (D-337): ${l.trim().slice(0, 110)}`); });
+  const it = (src['itens.js'] || []).join('\n'); if (!/Object\.freeze\(K\)/.test(it) || !/Object\.freeze\(M\)/.test(it)) fails.push('o catálogo: o js/itens.js não congela a tabela (Object.freeze(K), Object.freeze(M); D-370)'); }
+// 131. "o inventário não sorteia" (D-372): o que alguém leva e segura é do ofício, do ato, do povo e das portas — nem o acaso do mundo
+// nem o do que só se vê: o js/inventario.js e o js/inv-ui.js não tiram de acaso nenhum (a escolha por pessoa, quando houver, é
+// pelo G.hash do id)
+{ const CH = /\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random/;
+  for (const f of ['inventario.js', 'inv-ui.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (CH.test(c)) fails.push(`o inventário sem acaso: ${f}:${k + 1} tira de um acaso (D-372): ${l.trim().slice(0, 110)}`); }); }
+// 132. "toda mudança das coisas vai ao livro com a causa" (D-336, regra 12): no js/inventario.js, cada movimento do depósito
+// (D.move, D.make, D.use, D.drop) diz o código da causa na mesma linha — o livro-razão diz por que cada coisa mudou de lugar
+{ (src['inventario.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bD\.(move|make|use|drop)\(/.test(c) && !/\bcode\b/.test(c)) fails.push(`o livro do inventário: inventario.js:${k + 1} move uma coisa sem dizer a causa (code; D-336): ${l.trim().slice(0, 110)}`); }); }
+// 133. "as coisas do ofício viram coisas uma vez só" (D-374): o código 'kit' do livro — as coisas do ofício que nascem na mochila
+// de quem o deus vive — só o G.Inv.realize escreve, num lugar só do js/inventario.js, e a porta pergunta antes pela marca da
+// pessoa (equip.kit): nunca duas vezes na mesma vida
+{ let n = 0; for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/code:\s*'kit'/.test(c)) { if (f !== 'inventario.js') fails.push(`o kit do ofício: ${f}:${k + 1} faz coisas com o código 'kit' fora do inventario.js (D-374): ${l.trim().slice(0, 110)}`); else n++; } });
+  const inv = (src['inventario.js'] || []).join('\n'); const rz = inv.slice(inv.indexOf('Inv.realize = function'), inv.indexOf('Inv.realize = function') + 400);
+  if (n !== 1 || !/equip\.kit\)\s*return/.test(rz)) fails.push(`o kit do ofício: o código 'kit' ${n} vez(es) no inventario.js, ou o Inv.realize sem a pergunta pela marca equip.kit (D-374)`); }
+// 134. "a tela da mochila entra pelas portas da tela do corpo" (D-339): o js/inv-ui.js põe o seu fecho em G.IncUI.closers, marca o seu
+// painel por G.Modes.setPanel('mochila'), desenha a barra de atalhos só no lugar dela ('.ih-hotbar') e escuta as teclas pelas ações
+// (G.Input3D.on('inventario' / 'rapidoN')) — e nenhum outro arquivo escuta essas ações
+{ const ui = (src['inv-ui.js'] || []).join('\n');
+  for (const [re, what] of [[/IncUI\.closers\.push\(/, 'o fecho em G.IncUI.closers'], [/Modes\.setPanel\('mochila'\)/, "o painel G.Modes.setPanel('mochila')"], [/'\.ih-hotbar'/, "a barra no lugar '.ih-hotbar'"], [/Input3D\.on\('inventario'/, "a tecla G.Input3D.on('inventario')"], [/Input3D\.on\('rapido'/, "os atalhos G.Input3D.on('rapido' + n)"]])
+    if (!re.test(ui)) fails.push(`a tela da mochila: o inv-ui.js sem ${what} (D-339)`);
+  for (const f of files) if (f !== 'inv-ui.js') src[f].forEach((l, k) => { if (/Input3D\.on\(\s*'(inventario|rapido)/.test(l)) fails.push(`a tela da mochila: ${f}:${k + 1} escuta a mochila ou um atalho fora do inv-ui.js (D-339): ${l.trim().slice(0, 110)}`); }); }
 // === 20d: a arte dos itens ===
 // 135. "a forma de uma coisa é pura" (D-385): a forma e a figura de cada coisa (js/itemforma.js, as receitas; js/itemarte.js, a
 // porta) não leem o mundo (G.S), não tiram de acaso nenhum — o do mundo nem o do que só se vê —, não leem o relógio: a mesma
