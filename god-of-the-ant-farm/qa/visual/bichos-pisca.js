@@ -60,12 +60,17 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
     // ---- p2: the view's memory let go a little at a time
     const foc = G.Avatar.state(); const bx = foc.X / TL, by = foc.Z / TL;
     const still = [...S.animals.values()].filter(a => !a.dead && !a.held && A.DEF[a.kind].cls === 'land' && P3.beastVis(a.id) && Math.hypot(a.x - bx, a.y - by) * TL < 25).slice(0, 3);
-    const hold = () => { for (const a of still) { a.state = 'idle'; a.t = 1e6; a.tx = a.x; a.ty = a.y; a.target = 0; a.angry = 0; a.flee = 0; a.hunger = 0; } };
+    // (held: the world's facing too — a beast standing turns as the world has it face, D-330 —, pinned where the step left it)
+    let face = null; const hold = () => { still.forEach((a, k) => { a.state = 'idle'; a.t = 1e6; a.tx = a.x; a.ty = a.y; a.target = 0; a.angry = 0; a.flee = 0; a.hunger = 0; if (face) { a.fx = face[k][0]; a.fy = face[k][1]; } }); };
     // (they turned somewhere first: a step to the north-east, then held)
     for (const a of still) { a.tx = a.x + 0.6; a.ty = a.y + 0.6; }
     for (let k = 0; k < 40; k++) G.Main.frameFor(33);
+    face = still.map(a => [a.fx, a.fy]);
     hold(); for (let k = 0; k < 10; k++) { hold(); G.Main.frameFor(33); }
-    const yaw0 = still.map(a => P3.beastVis(a.id) ? P3.beastVis(a.id).yaw : null);
+    // (the world paused, the view's turn let finish before the yaw is read: it turns the standing beast smoothly toward the facing,
+    // and a yaw read mid-turn went on turning while the memory was being let go — T-1342)
+    G.UI.setSpeed(0); for (let k = 0, last = null; k < 200; k++) { hold(); G.Main.frameFor(33); const y = still.map(a => P3.beastVis(a.id) ? P3.beastVis(a.id).yaw : 0); if (last && y.every((v, i) => Math.abs(v - last[i]) < 0.002)) break; last = y; }
+    const yaw0 = still.map(a => P3.beastVis(a.id) ? P3.beastVis(a.id).yaw : null), mem0 = still.map(a => P3.beastVis(a.id));
     // a crowd passing through the memory: 450 rabbits behind the camera, in sight's reach but out of the eye's field (cheap: none
     // drawn), the world paused so they stay where they are; then gone, and the frames go on until the memory lets them go
     G.UI.setSpeed(0); const cp = cam.position, fw = new THREE.Vector3(); cam.getWorldDirection(fw); fw.y = 0; fw.normalize();
@@ -79,6 +84,7 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
     const yaw1 = still.map(a => P3.beastVis(a.id) ? P3.beastVis(a.id).yaw : null);
     out.notes.push(`p2: ${crowd.length} coelhos passaram pela memória (${mem === null ? '?' : mem} bichos nela); ${still.length} bicho(s) parado(s): virados ${yaw0.map(y => y === null ? '—' : y.toFixed(2)).join(', ')} → ${yaw1.map(y => y === null ? '—' : y.toFixed(2)).join(', ')}`);
     if (!still.length) fail('p2: nenhum bicho parado perto do corpo para olhar');
+    still.forEach((a, k) => { if (P3.beastVis(a.id) !== mem0[k]) fail(`p2: ${a.kind}#${a.id} parado perdeu a memória do desenho (outra no lugar)`); });
     still.forEach((a, k) => { if (yaw0[k] === null || yaw1[k] === null) fail(`p2: ${a.kind}#${a.id} sem memória do desenho`); else if (Math.abs(yaw1[k] - yaw0[k]) > 0.05) fail(`p2: ${a.kind}#${a.id} parado virou de ${yaw0[k].toFixed(2)} para ${yaw1[k].toFixed(2)} — a memória do desenho se apagou`); });
     for (const e of P3.check ? P3.check() : []) fail('verificador: ' + e);
     if (G.modErr && Object.keys(G.modErr).length) fail('erro de módulo: ' + JSON.stringify(G.modErr));

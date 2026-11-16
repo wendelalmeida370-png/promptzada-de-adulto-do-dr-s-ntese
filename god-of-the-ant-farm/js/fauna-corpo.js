@@ -38,30 +38,30 @@
   // width at the height of a person (hw); the height (h). Measured once with qa/visual/gestos-lib.js — the proof (qa/corpo-fera.js
   // f3) measures them again and says when a mesh has changed
   const DIM = Co.DIM = {
-    anaconda: [-0.99, 2.56, 0.15, 0.26], arcticfox: [-0.28, 0.4, 0.06, 0.37], bear: [-0.96, 1.38, 0.35, 1.18], beaver: [-0.37, 0.47, 0.12, 0.39],
-    bison: [-1.3, 1.77, 0.5, 2.35], boar: [-0.68, 1.07, 0.23, 0.94], buffalo: [-1.28, 1.74, 0.5, 1.65], cabra: [-0.52, 0.75, 0.16, 0.99],
-    camel: [-1.11, 2.15, 0.35, 2.49], cao: [-0.35, 0.64, 0.12, 0.66], capybara: [-0.52, 0.83, 0.19, 0.6], cavalo: [-0.94, 1.63, 0.35, 2.15],
-    croc: [-0.82, 1.81, 0.69, 0.46], deer: [-0.78, 1.19, 0.23, 2.2], eagle: [-0.27, 0.17, 0.13, 0.63], elephant: [-1.58, 2.98, 0.89, 3.26],
-    fennec: [-0.18, 0.28, 0.05, 0.3], flamingo: [-0.24, 0.38, 0.11, 1.5], fox: [-0.31, 0.5, 0.07, 0.5], frog: [-0.06, 0.07, 0.05, 0.07],
-    galinha: [-0.21, 0.22, 0.12, 0.48], gato: [-0.17, 0.29, 0.06, 0.34], gazelle: [-0.49, 0.74, 0.13, 1.26], giraffe: [-0.99, 1.9, 0.43, 4.41],
-    gnu: [-0.96, 1.48, 0.33, 1.57], goose: [-0.3, 0.37, 0.15, 0.63], gull: [-0.19, 0.21, 0.07, 0.35], hare: [-0.21, 0.34, 0.07, 0.44],
-    heron: [-0.24, 0.36, 0.1, 1.13], hippo: [-1.56, 2.19, 0.6, 1.63], hyena: [-0.62, 1.07, 0.19, 1], ibex: [-0.6, 0.85, 0.19, 1.33],
-    jaguar: [-0.68, 0.94, 0.17, 0.8], leopard: [-0.65, 0.91, 0.14, 0.76], lion: [-0.93, 1.4, 0.29, 1.38], lizard: [-0.16, 0.31, 0.13, 0.1],
-    monkey: [-0.25, 0.38, 0.1, 0.5], moose: [-1.1, 1.95, 0.39, 2.21], muskox: [-1, 1.34, 0.44, 1.44], ostrich: [-0.54, 0.64, 0.34, 2.37],
-    otter: [-0.37, 0.48, 0.07, 0.29], ovelha: [-0.55, 0.75, 0.25, 0.82], owl: [-0.2, 0.12, 0.13, 0.47], parrot: [-0.16, 0.1, 0.07, 0.36],
-    penguin: [-0.16, 0.17, 0.22, 0.87], peru: [-0.36, 0.37, 0.21, 0.94], polarbear: [-1.15, 1.87, 0.39, 1.4], pombo: [-0.15, 0.15, 0.06, 0.24],
-    porco: [-0.63, 0.95, 0.23, 0.81], python: [-0.72, 1.89, 0.11, 0.19], rabbit: [-0.18, 0.24, 0.08, 0.28], raven: [-0.21, 0.2, 0.08, 0.36],
-    reindeer: [-0.76, 1.23, 0.26, 2.24], rhino: [-1.51, 2.21, 0.53, 1.84], seal: [-1.08, 1.1, 0.37, 0.66], sloth: [-0.31, 0.4, 0.11, 0.36],
-    snowleopard: [-0.6, 0.82, 0.14, 0.68], stork: [-0.27, 0.4, 0.13, 1.01], tapir: [-0.95, 1.34, 0.27, 1.08], tiger: [-0.97, 1.37, 0.23, 1.15],
-    toucan: [-0.16, 0.24, 0.08, 0.33], vaca: [-0.92, 1.57, 0.41, 1.46], viper: [-0.16, 0.46, 0.06, 0.08], vulture: [-0.33, 0.27, 0.15, 0.67],
-    walrus: [-1.91, 2.05, 0.85, 1.49], wolf: [-0.55, 1, 0.16, 1.02], zebra: [-0.91, 1.49, 0.3, 1.88],
+    anaconda: [-0.5, 2.56, 0.14, 0.25], arcticfox: [-0.26, 0.4, 0.05, 0.37], bear: [-0.93, 1.41, 0.33, 1.15], beaver: [-0.36, 0.47, 0.11, 0.39],
+    bison: [-1.25, 1.77, 0.48, 2.31], boar: [-0.64, 1.09, 0.22, 0.93], buffalo: [-1.24, 1.77, 0.46, 1.64], cabra: [-0.49, 0.76, 0.15, 0.98],
+    camel: [-1.07, 2.18, 0.35, 2.47], cao: [-0.34, 0.65, 0.11, 0.66], capybara: [-0.51, 0.84, 0.18, 0.59], cavalo: [-0.87, 1.66, 0.33, 2.15],
+    croc: [-0.82, 1.82, 0.65, 0.45], deer: [-0.71, 1.16, 0.21, 2.2], eagle: [-0.26, 0.16, 0.12, 0.63], elephant: [-1.62, 2.9, 0.91, 3.26],
+    fennec: [-0.18, 0.28, 0.04, 0.3], flamingo: [-0.23, 0.38, 0.1, 1.5], fox: [-0.3, 0.5, 0.06, 0.5], frog: [-0.05, 0.07, 0.04, 0.07],
+    galinha: [-0.21, 0.22, 0.11, 0.48], gato: [-0.17, 0.29, 0.06, 0.33], gazelle: [-0.44, 0.76, 0.11, 1.27], giraffe: [-0.97, 1.94, 0.44, 4.41],
+    gnu: [-0.91, 1.5, 0.31, 1.56], goose: [-0.29, 0.37, 0.14, 0.64], gull: [-0.18, 0.2, 0.07, 0.35], hare: [-0.2, 0.34, 0.06, 0.44],
+    heron: [-0.23, 0.33, 0.09, 1.12], hippo: [-1.54, 2.2, 0.59, 1.62], hyena: [-0.61, 1.07, 0.17, 0.99], ibex: [-0.55, 0.86, 0.17, 1.33],
+    jaguar: [-0.68, 0.97, 0.16, 0.81], leopard: [-0.64, 0.91, 0.12, 0.76], lion: [-0.92, 1.4, 0.28, 1.4], lizard: [-0.14, 0.31, 0.11, 0.1],
+    monkey: [-0.23, 0.39, 0.08, 0.5], moose: [-1.03, 2, 0.35, 2.19], muskox: [-0.97, 1.37, 0.42, 1.41], ostrich: [-0.54, 0.64, 0.34, 2.39],
+    otter: [-0.35, 0.48, 0.07, 0.29], ovelha: [-0.52, 0.77, 0.23, 0.83], owl: [-0.19, 0.1, 0.12, 0.48], parrot: [-0.16, 0.1, 0.07, 0.36],
+    penguin: [-0.15, 0.16, 0.18, 0.87], peru: [-0.35, 0.37, 0.2, 0.93], polarbear: [-1.11, 1.89, 0.37, 1.42], pombo: [-0.15, 0.15, 0.06, 0.24],
+    porco: [-0.61, 0.97, 0.22, 0.82], python: [-0.4, 1.89, 0.1, 0.18], rabbit: [-0.17, 0.24, 0.07, 0.27], raven: [-0.21, 0.2, 0.07, 0.36],
+    reindeer: [-0.7, 1.22, 0.26, 2.18], rhino: [-1.45, 2.19, 0.52, 1.82], seal: [-1.02, 1.11, 0.32, 0.66], sloth: [-0.3, 0.4, 0.1, 0.36],
+    snowleopard: [-0.6, 0.82, 0.13, 0.69], stork: [-0.26, 0.42, 0.12, 1.03], tapir: [-0.93, 1.36, 0.25, 1.07], tiger: [-0.97, 1.38, 0.21, 1.16],
+    toucan: [-0.15, 0.23, 0.07, 0.33], vaca: [-0.9, 1.61, 0.38, 1.44], viper: [-0.08, 0.46, 0.06, 0.07], vulture: [-0.32, 0.27, 0.14, 0.68],
+    walrus: [-1.86, 2.06, 0.75, 1.51], wolf: [-0.54, 1.01, 0.15, 1.05], zebra: [-0.84, 1.51, 0.28, 1.84],
   };
   // (the person's body, a circle on the ground — the plans' one rule, In.BODY —; how far a blow reaches past touching it; how much
   // farther a blow already given still lands — the lunge of the jaws, the swing of the paw)
   const BODY_R = Co.BODY_R = 0.32, REACH = Co.REACH = 0.35, LUNGE = Co.LUNGE = 0.45;
   // (the smallest that stands in the way: a dog does, a fox or a hen is stepped round; a bird only as tall as an ostrich; a
-  // sprawler as long as a crocodile; a carcass lying as high as a cow's)
-  const STAND = 0.55, BIRD_H = 2, SPRAWL_L = 1.5, CARCASS = 0.8;
+  // sprawler as long as a crocodile; a carcass lying as high as a cow's — 0,76 m in the finer meshes of 19e, L-1064)
+  const STAND = 0.55, BIRD_H = 2, SPRAWL_L = 1.5, CARCASS = 0.72;
   const TILE = Co.TILE = 4; const tile = () => TILE; // (metres a tile: the world's own, the one the 3D draws it by — G.Space.TILE; the proof checks they are one)
   let GR = null; const groups = () => GR || (GR = { snake: new Set(G.Gestos.GROUPS.snake), bird: new Set(G.Gestos.GROUPS.bird), sprawl: new Set(G.Gestos.GROUPS.sprawl), cat: new Set(G.Gestos.GROUPS.cat), bear: new Set(G.Gestos.GROUPS.bear), horned: new Set(G.Gestos.GROUPS.horned), kicker: new Set(G.Gestos.GROUPS.kicker), canid: new Set(G.Gestos.GROUPS.canid) });
   // the scale of a beast as the 3D draws it (People3D's fsc: the young smaller, a legend bigger)

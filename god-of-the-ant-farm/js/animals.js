@@ -411,7 +411,8 @@
     if (t === T.RIVER && sp.near !== 'water' && a.kind === 'rabbit') return false;
     return true;
   }
-  A.walkOK = (a, x, y) => !!SP[a.kind] && walkOK(a, x, y);
+  // (the door asks for the water's distances itself: the verifier asks right after a load, before any beast took a step — L-1064)
+  A.walkOK = (a, x, y) => { if (!SP[a.kind]) return false; distances(); return walkOK(a, x, y); };
   // where a gull may sit down at the end of a flight (its perch is the ground or the water under it, at the height 0): never inside
   // a building one does not stand in, nor on a wall — the gulls of the mega sat on the floor of a dock and of a market, and the
   // checker took the perch for a roof (L-809)
