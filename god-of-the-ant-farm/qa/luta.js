@@ -32,16 +32,20 @@ const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['qa/mente-inv.js'] });
 const SEED = +(process.argv[2] || 103);
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
-const on = k => !ONLY || ONLY.includes(k);
+// (each case in a world of its own, the same seed lived the same two seconds: a case lived after the others found the hour, the
+// sleep of the beasts and the people about as the cases before left them, and failed in the whole round while it passed alone —
+// the tiger's torch, the old lion, the she-bear, T-1319b. ONE_WORLD=1: all of them in one world, as before)
+let first = true;
+const on = k => { if (ONLY && !ONLY.includes(k)) return false; if (!first && !process.env.ONE_WORLD) world(); first = false; return true; };
 const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | luta ${name} | ${info}`); if (!c) fails.push(name); };
 const A = G.Animals, W = G.W, T = G.T, L = G.Luta, Me = G.Mente;
 const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 // (the sky held clear by the proof's hand: a storm sends the beasts into the caves, and the case is the fight, not the weather)
 const step0 = G.debug.step; G.debug.step = dt => { const w = G.S && G.S.weather; if (w) { w.storm = 0; w.rain = 0; } return step0(dt); };
-M.novo({ seed: SEED, type: 'continente', size: 128, tribes: 2 });
-M.viver(2);
-let S = G.S;
+let S = null;
+function world() { M.novo({ seed: SEED, type: 'continente', size: 128, tribes: 2 }); M.viver(2); S = G.S; }
+world();
 const bad = () => QA.check().filter(q => q.sev <= 2 && (q.sys === 'luta' || q.sys === 'mente' || q.sys === 'fauna'));
 const T0 = () => JSON.parse(JSON.stringify(L.tally));
 const diff = (t0, k) => (L.tally[k] || 0) - (t0[k] || 0);
