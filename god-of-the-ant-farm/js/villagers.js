@@ -520,8 +520,11 @@
   // seen. The ones that hunt people (HUNTS) are fled and gone out against by the armed; the giants (the hippo, the elephant, the
   // rhino, the buffalo) are given room. Before, people looked only at a beast coming for someone that moment: a lion walking
   // through a town went between the houses beside the villagers, and nobody so much as stepped aside (the owner saw it)
-  const DREAD = Vg.DREAD = { lion: 1, tiger: 1, leopard: 0.9, jaguar: 0.9, bear: 0.9, polarbear: 1, snowleopard: 0.6, croc: 0.9, anaconda: 0.6, wolf: 0.7, hyena: 0.7, hippo: 0.8, rhino: 0.7, buffalo: 0.6, elephant: 0.6, viper: 0.4, python: 0.4, boar: 0.35, moose: 0.4, bison: 0.4 };
+  const DREAD = Vg.DREAD = { lion: 1, tiger: 1, leopard: 0.9, jaguar: 0.9, bear: 0.9, polarbear: 1, snowleopard: 0.6, croc: 0.9, anaconda: 0.6, wolf: 0.7, hyena: 0.7, hippo: 0.8, rhino: 0.7, buffalo: 0.6, elephant: 0.6, viper: 0.6, python: 0.5, boar: 0.35, moose: 0.4, bison: 0.4 };
   const HUNTS = Vg.DREAD_HUNTS = { lion: 1, tiger: 1, leopard: 1, jaguar: 1, bear: 1, polarbear: 1, snowleopard: 1, croc: 1, anaconda: 1, wolf: 1, hyena: 1 };
+  // (the snakes: nobody walks up to one; inside a village the armed kill it with a stick, as people do — out in the wild it is
+  // only left alone, D-311)
+  const SNAKE = Vg.DREAD_SNAKE = { viper: 1, python: 1 };
   Vg.dread = function (a) {
     if (!a || a.dead || a.tamed || a.dom || a.pen || a.held || a.air) return 0;
     if (G.Animals.threat(a)) return 1;
@@ -532,18 +535,33 @@
   // (who has to be thought of as a danger — the kinds of DREAD and whoever is coming for someone —, by cells of 8 tiles, made
   // again every half second of the world's time: a cache of the world, never in the save)
   const DC = 8; const dreadG = new Map(); let dreadT = -1;
-  G.worldHooks.push(() => { dreadG.clear(); dreadT = -1; });
+  G.worldHooks.push(() => { dreadG.clear(); dreadT = -1; if (W.danger) W.danger.fill(0); });
+  // the field of the fear on the ground (W.danger, read by the walkers' ways in W.cost): round each beast people dread, a tile
+  // costs more the nearer it is — a lion's ring of seven tiles, up to six times a tile's going at its feet —, so a way is
+  // made about it as about a fire, and nobody walks up to it on the way somewhere (D-311). Made again with the cells
+  function dreadField(list) {
+    const S = G.S, NN = S.type.length; if (!W.danger || W.danger.length !== NN) W.danger = new Float32Array(NN); const D = W.danger; D.fill(0);
+    for (const a of list) {
+      const k = Vg.dread(a); if (k < 0.35) continue; const r = Vg.dreadReach(k, false) * 0.8, r2 = r * r, top = 6 * k;
+      const x0 = Math.max(0, Math.floor(a.x - r)), x1 = Math.min(N - 1, Math.ceil(a.x + r)), y0 = Math.max(0, Math.floor(a.y - r)), y1 = Math.min(N - 1, Math.ceil(a.y + r));
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const dx = x + 0.5 - a.x, dy = y + 0.5 - a.y, d2 = dx * dx + dy * dy; if (d2 >= r2) continue; const c = top * (1 - Math.sqrt(d2) / r), i = y * N + x; if (c > D[i]) D[i] = c; }
+    }
+  }
+  const fieldList = [];
   function dreadGrid() {
     const S = G.S; if (dreadT >= 0 && S.clock >= dreadT && S.clock - dreadT < 0.5) return dreadG;
-    dreadT = S.clock; dreadG.clear();
+    dreadT = S.clock; dreadG.clear(); fieldList.length = 0;
     for (const a of S.animals.values()) {
       if (!DREAD[a.kind] && !(a.summoned || a.raid || a.legend || a.angry > 0 || a.state === 'chase' || a.state === 'lunge')) continue;
       if (Vg.dread(a) <= 0) continue;
-      const k = ((a.x / DC) | 0) + ((a.y / DC) | 0) * 4096; let l = dreadG.get(k); if (!l) dreadG.set(k, l = []); l.push(a);
+      const k = ((a.x / DC) | 0) + ((a.y / DC) | 0) * 4096; let l = dreadG.get(k); if (!l) dreadG.set(k, l = []); l.push(a); fieldList.push(a);
       if (HUNTS[a.kind] && !a.raid && !a.summoned) beastInTown(a);
     }
+    dreadField(fieldList);
     return dreadG;
   }
+  // (the field is made with the cells: a walker's way asked before anyone looked this half second asks for them first)
+  Vg.dreadNow = () => { dreadGrid(); };
   // a hunter of people inside a town: the chronicle says it, once a day for each kind in each town (the world's clock, G.mod)
   function beastInTown(a) {
     const S = G.S;
@@ -555,6 +573,8 @@
       return;
     }
   }
+  // (inside a town's ring: where the armed kill a snake)
+  function inVillage(a) { for (const s of G.S.settlements.values()) { const r = (s.radius || 8); if (G.dist2(a.x, a.y, s.cx, s.cy) <= r * r) return true; } return false; }
   function eachDread(x, y, r, fn) {
     const g = dreadGrid(); const x0 = ((x - r) / DC) | 0, x1 = ((x + r) / DC) | 0, y0 = ((y - r) / DC) | 0, y1 = ((y + r) / DC) | 0;
     // (a beast that left the world since the cells were made — eaten, gone into a cave, taken by the god's hand — is not fled)
@@ -601,13 +621,26 @@
       // (not the beast one is out hunting or fighting; not the wolves at the herd for its shepherd and its groom, who drive them off
       // below)
       const herder = !child && v.hp > 45 && (v.role === 'pastor' || v.role === 'cavalarico');
-      eachDread(v.x, v.y, 10, a => {
+      // (where the walker is heading: one walking up to a beast stops further off than one it only comes upon — nobody walks
+      // towards a lion, a crocodile, a snake, D-311)
+      // (the leg of the way it walks now: it heads at a beast when that leg passes nearer it than six tenths of the ring — a way
+      // made round the ring, along its edge, does not: the walker goes on round)
+      const pp = v.moving && v.path && v.pi < v.path.length ? v.path[v.pi] : null; const hx = pp ? pp[0] - v.x : 0, hy = pp ? pp[1] - v.y : 0, hl = hx * hx + hy * hy;
+      let wTo = false;
+      eachDread(v.x, v.y, 14, a => {
         if (t && t.id === a.id && (t.type === 'hunt' || t.type === 'fight')) return; if (herder && G.Animals.raider(a)) return;
-        const k = Vg.dread(a); if (k <= 0) return; const r = Vg.dreadReach(k, night), d = G.dist(v.x, v.y, a.x, a.y); if (d > r) return;
-        const w = k * (1.2 - d / r); if (w > wk) { wk = w; worst = a; wd = d; }
+        const k = Vg.dread(a); if (k <= 0) return; const d = G.dist(v.x, v.y, a.x, a.y); const r0 = Vg.dreadReach(k, night);
+        let to = false; if (hl > 0.01) { const u = ((a.x - v.x) * hx + (a.y - v.y) * hy) / hl; if (u > 0) { const q = Math.min(1, u); to = G.dist(v.x + hx * q, v.y + hy * q, a.x, a.y) < r0 * 0.6; } }
+        const r = r0 * (to ? 1.4 : 1); if (d > r) return;
+        const w = k * (1.2 - d / r); if (w > wk) { wk = w; worst = a; wd = d; wTo = to; }
       });
       if (worst) {
         const a = worst, k = Vg.dread(a), now = G.Animals.threat(a), hunter = !!HUNTS[a.kind] || now;
+        // (a snake inside a village: the armed kill it with a stick, as people do; out in the wild it is left alone, D-311)
+        if (SNAKE[a.kind] && !child && armedFor(v) && !now && inVillage(a)) {
+          let at = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'fight' && o.task.id === a.id) at++;
+          if (at < 2) { setTask(v, { type: 'fight', id: a.id, pri: 4, rt: 0 }); emote(v, 'angry', 2); return; }
+        }
         if (hunter && !child && armedFor(v)) {
           let fighters = 0; for (const o of S.villagers.values()) if (o.task && o.task.type === 'fight' && o.task.id === a.id) fighters++;
           // (a beast at someone now is answered at once, as before; one only seen waits for the party: two more of the armed near it)
@@ -618,7 +651,8 @@
         // (who is starving and at the meal goes on with it while the beast is not upon them: the meal of need weighs 2.5, and a
         // lion lying by the store would starve the town — L-725, L-779)
         if (v.hunger > 85 && t && (t.type === 'eat' || t.type === 'forage' || (t.type === 'lar' && t.meal)) && wd > 2.5 && !G.Animals.threat(a)) return;
-        if (hunter || wd < 2 + 3 * k) { fleeFrom(v, a.x, a.y, hunter ? Vg.dreadReach(k, night) + 2 - wd : 4, hunter ? 'wolf' : 'bicho'); emote(v, 'fear', 2.5); return; }
+        // (a hunter of people is fled; a giant, a snake, is given room when near — or when the way goes straight at it)
+        if (hunter || wd < 2 + 3 * k || wTo) { fleeFrom(v, a.x, a.y, hunter ? Vg.dreadReach(k, night) + 2 - wd : 4, hunter ? 'wolf' : 'bicho'); emote(v, 'fear', 2.5); return; }
       }
     }
     // wolves at the herd: shepherds, soldiers and hunters run to drive them off

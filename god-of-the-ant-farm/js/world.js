@@ -712,14 +712,17 @@
   W.cost = function (i) {
     const S = G.S; const t = S.type[i];
     const rd = S.road[i];
-    if (rd) return (rd >= 3 ? 0.5 : 0.58) + (S.fire[i] > 0.02 ? 30 : 0); // streets, highways and bridges
+    if (rd) return (rd >= 3 ? 0.5 : 0.58) + (S.fire[i] > 0.02 ? 30 : 0) + (W.danger && W.danger.length === S.type.length ? W.danger[i] : 0); // streets, highways and bridges
     let c = t === T.RIVER ? 3.2 : t === T.SAND ? 1.08 : t === T.ROCKY ? 1.25 : 1;
     if (t >= T.SAND) c *= 1 + S.slope[i] * 0.22; // slopes are hard going
     if (S.biome) c *= G.BIOMES[S.biome[i]].cost;
     const w = S.wear[i]; if (w > 8) c *= 1 - 0.38 * Math.min(1, w / G.WEAR_MAX);
     if (S.fire[i] > 0.02) c += 30;
+    // (round a beast people dread, as round a fire: the way goes about it — the field of the people's fear, D-311)
+    const D = W.danger; if (D && D.length === S.type.length) c += D[i];
     return c;
   };
+  W.danger = null; // (filled by the people's fear of the beasts, villagers.js: what a tile near one costs a walker more)
   // how hard the search leans towards the goal: 0.62 keeps it exact even along roads (they cost less than 1);
   // while years are skipped it leans harder (a slightly longer walk nobody sees, a much shorter search)
   W.PATH_EXACT = 0.62; W.PATH_GREEDY = 1.3; W.pathGreed = W.PATH_EXACT;
@@ -775,9 +778,12 @@
   // itself — never samples along it: one every 0.3 of a tile let a smoothed path cut the corner of a building between two of
   // them, the walker inside the building for an instant, L-354 —; where it passes over the corner of four tiles, the two beside
   // the corner as well, as the search asks of a diagonal step. Onto a river only when it starts or ends on one; never fire)
-  function losClear(ax, ay, bx, by) {
+  function losClear(ax, ay, bx, by, fear) {
     const S = G.S; const riverOK = S.type[W.idx(ax, ay)] === T.RIVER || S.type[W.idx(bx, by)] === T.RIVER;
-    const bad = (x, y) => { if (x < 0 || y < 0 || x >= N || y >= N) return true; const i = y * N + x; return !W.walkable(i) || (!riverOK && S.type[i] === T.RIVER) || S.fire[i] > 0.02; };
+    // (a walker's way, pulled straight: nor through the heart of the ring round a beast people dread, which the search went
+    // about — a walk out of the ring, from inside it, still goes. Only for the ways (fear): a line of sight is not a walk; D-311)
+    const D = fear && W.danger && W.danger.length === S.type.length ? W.danger : null; const dEnd = D ? Math.max(D[W.idx(ax, ay)], D[W.idx(bx, by)]) + 1 : 0;
+    const bad = (x, y) => { if (x < 0 || y < 0 || x >= N || y >= N) return true; const i = y * N + x; return !W.walkable(i) || (!riverOK && S.type[i] === T.RIVER) || S.fire[i] > 0.02 || (D !== null && D[i] > dEnd); };
     const dx = bx - ax, dy = by - ay; const len = Math.hypot(dx, dy); if (len < 1e-9) return true;
     const sx = dx > 0 ? 1 : dx < 0 ? -1 : 0, sy = dy > 0 ? 1 : dy < 0 ? -1 : 0;
     // (the tile the walk is in a hair after a — a start on a tile's edge is in the tile it goes into —, and b's own tile)
@@ -799,7 +805,7 @@
     let a = 0;
     while (a < pts.length - 1) {
       let b = pts.length - 1;
-      while (b > a + 1 && !losClear(pts[a][0], pts[a][1], pts[b][0], pts[b][1])) b--;
+      while (b > a + 1 && !losClear(pts[a][0], pts[a][1], pts[b][0], pts[b][1], true)) b--;
       out.push(pts[b]); a = b;
     }
     return out;

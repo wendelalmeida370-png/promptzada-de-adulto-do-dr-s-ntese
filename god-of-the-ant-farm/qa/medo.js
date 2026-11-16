@@ -15,6 +15,10 @@
 // m6 save e load com as pessoas a fugir do leão: depois do load, em três segundos, fogem de novo; ninguém parado ao lado;
 // m7 o leão morre no meio da fuga: ninguém mais foge dele;
 // m8 quem come com a fome acima de 85 continua a comer com o leão a quatro casas (L-725);
+// m9 o caminho que passaria pelo lugar de um leão dá a volta nele, como no fogo (D-311): o campo do medo (W.danger) no custo
+//    das casas e no puxão reto do caminho;
+// m10 uma víbora dentro da aldeia: os armados a matam com o pau; a criança perto dela dá lugar;
+// m11 ninguém anda na direção de um bicho: quem é mandado de um lado ao outro de um hipopótamo dá a volta, nunca dentro do anel;
 // e o verificador (o S3 novo «medo») calado, nenhum S0–S2 novo, nenhum erro de módulo nem de console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -136,6 +140,59 @@ if (on('m8')) {
     live(1);
     const t = v.task; ok('m8', !(t && t.type === 'flee'), `${v.name}, com fome ${Math.round(v.hunger)}, a ${G.dist(v.x, v.y, q[0], q[1]).toFixed(1)} casas do leão: ${t ? t.type + (t.why ? '/' + t.why : '') : 'sem tarefa'}`);
     hold = null; A.remove(lion);
+  }
+}
+// an open stretch of ground round (x, y): every tile within R walkable and dry (no house, no water, no fire)
+// (ground one walks on, a tree or a bush allowed — the way goes about them — but no house, no water, no fire)
+const walkOn = (x, y) => W.inb(x, y) && W.walkableXY(x, y) && S.type[W.idx(x, y)] >= G.T.SAND && !(S.fire[W.idx(x, y)] > 0);
+const clearRound = (x, y, R) => { for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { if (dx * dx + dy * dy > R * R) continue; if (!walkOn(x + dx, y + dy)) return false; } return walkOn(x - 10, y) && walkOn(x + 10, y) && walkOn(x - 9, y) && walkOn(x + 9, y); };
+// (the open ground nearest a town of the people: the whole map looked at, every third tile)
+function openStretch(R) {
+  const s = town(); let best = null, bd = 1e9; const NN = G.N;
+  for (let y = R + 1; y < NN - R - 1; y += 3) for (let x = R + 1; x < NN - R - 1; x += 3) { const d = G.dist2(x, y, s.cx, s.cy); if (d >= bd || !clearRound(x + 0.5, y + 0.5, R)) continue; bd = d; best = [x + 0.5, y + 0.5]; }
+  return best;
+}
+// the nearest a way (a list of points after the start) comes to (px, py)
+const nearest = (sx, sy, path, px, py) => { let best = 1e9, ax = sx, ay = sy; for (const [bx, by] of path) { const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy; const u = l > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)) : 0; best = Math.min(best, G.dist(ax + dx * u, ay + dy * u, px, py)); ax = bx; ay = by; } return best; };
+if (on('m9')) {
+  // the way past a lion goes round it, as round a fire — the straight pull of the way does not cut through its ring again
+  const p = openStretch(7);
+  if (!p) ok('m9', false, 'sem chão aberto de 7 casas em volta');
+  else {
+    clear(p[0], p[1]); live(0.6); const A0 = [p[0] - 10, p[1]], B0 = [p[0] + 10, p[1]];
+    const w0 = W.findPath(A0[0], A0[1], B0[0], B0[1]) || []; const n0 = nearest(A0[0], A0[1], w0, p[0], p[1]);
+    const lion = beast('lion', p[0], p[1]); hold = pin(lion, p[0], p[1]); live(0.6);
+    const w1 = W.findPath(A0[0], A0[1], B0[0], B0[1]) || []; const n1 = nearest(A0[0], A0[1], w1, p[0], p[1]);
+    ok('m9', w1.length > 0 && n1 >= 4 && n1 > n0 + 2, `o caminho de 20 casas passando pelo lugar do leão: sem ele a ${n0.toFixed(1)} casas; com ele a ${n1.toFixed(1)} casas (${w1.length} pontos)`);
+    hold = null; A.remove(lion); live(0.6);
+  }
+}
+if (on('m10')) {
+  // a viper inside a village: the armed kill it with a stick; a child near it gives it room
+  const s = town(); const p = spotNear(s.cx, s.cy, 8); clear(p[0], p[1]);
+  const viper = beast('viper', p[0], p[1]); hold = pin(viper, p[0], p[1]);
+  const two = [...S.villagers.values()].filter(v => v.age >= 20 && v.age < 50 && !v.inside && !v.aboard && !v.ug && !(S.avatar && S.avatar.id === v.id) && !v.captive && !v.jail).sort((a, b) => G.dist(a.x, a.y, p[0], p[1]) - G.dist(b.x, b.y, p[0], p[1])).slice(0, 2);
+  two.forEach((v, k) => { v.courage = 0.95; v.hp = 100; Vg.endTask(v); const q = [p[0] + (k ? -3 : 3), p[1]]; if (open(q[0], q[1])) { v.x = q[0]; v.y = q[1]; } });
+  const kid = [...S.villagers.values()].find(v => v.age >= 4 && v.age < 12 && !v.inside && !v.aboard && !v.ug);
+  if (kid) { Vg.endTask(kid); const q = [p[0], p[1] + 2.5]; if (open(q[0], q[1])) { kid.x = q[0]; kid.y = q[1]; } }
+  live(1.5); hold = null;
+  const fights = [...S.villagers.values()].filter(v => v.task && v.task.type === 'fight' && v.task.id === viper.id).length;
+  const kt = kid && kid.task; live(20);
+  ok('m10', fights >= 1 && viper.dead && (!kid || (kt && kt.type === 'flee')), `a víbora dentro de ${s.name}: ${fights} foram matá-la; ${viper.dead ? 'morta' : 'viva'}; a criança ${kid ? (kt ? kt.type + (kt.why ? '/' + kt.why : '') : 'sem tarefa') : '—'}`);
+  if (S.animals.has(viper.id)) A.remove(viper);
+}
+if (on('m11')) {
+  // nobody walks up to a beast: one sent straight past a hippo goes round it, never within its ring; and nobody heads at it
+  const p = openStretch(7);
+  if (!p) ok('m11', false, 'sem chão aberto');
+  else {
+    clear(p[0], p[1]); const hippo = beast('hippo', p[0], p[1]); hold = pin(hippo, p[0], p[1]); live(0.6);
+    const v = [...S.villagers.values()].filter(o => o.age >= 18 && o.age < 55 && !o.inside && !o.aboard && !o.ug && !(S.avatar && S.avatar.id === o.id) && !o.captive && !o.jail && !(o.age >= 16 && armedFor(o))).sort((a, b) => G.dist(a.x, a.y, p[0], p[1]) - G.dist(b.x, b.y, p[0], p[1]))[0];
+    Vg.endTask(v); v.hunger = 0; v.energy = 100; v.x = p[0] - 9; v.y = p[1];
+    G.inSim++; try { Vg.setTask(v, { type: 'wander', pri: 1, kind: 'wander', wait: 30 }); Vg.goto(v, p[0] + 9, p[1], false); } finally { G.inSim--; }
+    let minD = 1e9; for (let k = 0; k < 120; k++) { G.debug.step(0.1); minD = Math.min(minD, G.dist(v.x, v.y, p[0], p[1])); }
+    ok('m11', minD >= 2 + 3 * Vg.DREAD.hippo, `${v.name} mandado de um lado ao outro do hipopótamo: o mais perto que chegou ${minD.toFixed(1)} casas (o anel ${(2 + 3 * Vg.DREAD.hippo).toFixed(1)}); agora ${v.task ? v.task.type : 'sem tarefa'} a ${G.dist(v.x, v.y, p[0] + 9, p[1]).toFixed(1)} do destino`);
+    hold = null; A.remove(hippo);
   }
 }
 const nv = novas(); const e = M.erros();
