@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', 'inv-ui.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -965,6 +965,31 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 // === 20b: o movimento ===
 // === 20c: o inventário ===
 // === 20d: a arte dos itens ===
+// 135. "a forma de uma coisa é pura" (D-385): a forma e a figura de cada coisa (js/itemforma.js, as receitas; js/itemarte.js, a
+// porta) não leem o mundo (G.S), não tiram de acaso nenhum — o do mundo nem o do que só se vê —, não leem o relógio: a mesma
+// chave é a mesma forma em toda máquina e em todo mundo (as figuras são feitas dela e dizem a assinatura dela)
+{ for (const f of ['itemforma.js', 'itemarte.js']) { if (!(src[f] || []).length) { fails.push(`a forma pura: js/${f} não existe (D-385)`); continue; }
+    src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+      if (/\bG\.S\b|\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\.|performance\.now/.test(c)) fails.push(`a forma pura: ${f}:${k + 1} lê o mundo, tira de um acaso ou lê o relógio (D-385): ${l.trim().slice(0, 110)}`); }); } }
+// 136. "a figura é embutida e tem uma porta só" (D-390): as figuras (js/itemicons.js, gerado pelo qa/visual/itens-figuras.js) são só
+// imagens embutidas (data:image/…;base64) — nada buscado em tempo de jogo —, e só o itemarte.js lê o arquivo delas (G.ITEMICONS) e
+// as receitas (G.ItemForma): quem desenha ou mostra uma coisa pergunta ao G.ItemArt (geo, icon, grip, stow, marks)
+{ const ic = (src['itemicons.js'] || []).join('\n'); const m = ic.match(/G\.ITEMICONS = (\{[\s\S]*\});\s*$/);
+  if (!m) fails.push('a figura embutida: js/itemicons.js não tem o G.ITEMICONS (gere: qa/visual/itens-figuras.js; D-390)');
+  else { let d = null; try { d = JSON.parse(m[1]); } catch (e) { fails.push('a figura embutida: o G.ITEMICONS do js/itemicons.js não é um objeto de dados (D-390)'); }
+    if (d) for (const k in d.img || {}) if (!/^data:image\/(webp|png);base64,[A-Za-z0-9+/=]+$/.test(d.img[k])) fails.push(`a figura embutida: a figura de ${k} não é uma imagem embutida (D-390)`); }
+  for (const f of files) if (f !== 'itemarte.js' && f !== 'itemicons.js' && f !== 'itemforma.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(ITEMICONS|ItemForma)\b/.test(c)) fails.push(`a figura embutida: ${f}:${k + 1} lê as figuras ou as receitas das coisas fora do itemarte.js (pergunte ao G.ItemArt; D-390): ${l.trim().slice(0, 110)}`); }); }
+// 137. "toda coisa do catálogo tem a sua receita" (D-388): cada tipo do G.Itens.KINDS tem a sua receita no js/itemforma.js (R.<tipo>)
+// e cada material do G.Itens.MATS o seu lugar na tabela dos materiais (F.MATS) — um tipo ou um material novo no catálogo chega com a
+// sua forma (e a sua figura: o qa/visual/itens-arte.js cobra)
+{ const it = src['itens.js'] || [], fo = (src['itemforma.js'] || []).join('\n');
+  const kinds = []; const mats = []; let where = null;
+  for (const l of it) { if (/It\.KINDS = \{/.test(l)) where = 'k'; else if (/It\.MATS = \{/.test(l)) where = 'm'; else if (/^\s*\};/.test(l)) where = null;
+    const e = l.match(/^\s+(\w+): \{ nome:/); if (e && where === 'k') kinds.push(e[1]); if (e && where === 'm') mats.push(e[1]); }
+  if (!kinds.length || !mats.length) fails.push('a receita de cada coisa: não achei os tipos ou os materiais no js/itens.js (a tabela mudou de forma? D-388)');
+  for (const k of kinds) if (!new RegExp(`\\bR\\.${k} = \\(`).test(fo)) fails.push(`a receita de cada coisa: o tipo ${k} do catálogo não tem receita no js/itemforma.js (R.${k}; D-388)`);
+  const fm = (fo.match(/F\.MATS = \{([^}]*)\}/) || [])[1] || ''; for (const m of mats) if (!new RegExp(`\\b${m}:`).test(fm)) fails.push(`a receita de cada coisa: o material ${m} do catálogo não está no F.MATS do js/itemforma.js (D-388)`); }
 // === 20e: a interação ===
 // === 20f: o combate ===
 // === 20g: os ofícios ===

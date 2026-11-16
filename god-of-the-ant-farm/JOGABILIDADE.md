@@ -325,6 +325,53 @@ chave tem figura); uma folha de fotos (todas as coisas, de dois lados, e as figu
   `G.ItemArt.grip(chave)` → `{ main: [x, y, z], off: [x, y, z] | null }`; `G.ItemArt.icon(chave)` → um `data:` URL ou `null`.
 - A 20d pode acrescentar (`stow(chave, lugar)` — o encaixe sugerido nas costas e no cinto —, o material, os níveis) e documenta aqui.
 
+**Como ficou (20d, D-385 a D-393).** Os arquivos: `js/itemforma.js` (as receitas, `G.ItemForma`: números puros; ninguém fora do
+`itemarte.js` o lê — regra 136), `js/itemarte.js` (a porta), `js/itemicons.js` (as figuras, gerado pelo `qa/visual/itens-figuras.js`).
+Uma chave pode vir simples (`'machado'` = o primeiro material, `'machado.pedra'`) ou com o material; um bem da economia (`wood`) e
+uma chave desconhecida dão `null` em tudo.
+- `G.ItemArt.ready` — verdade quando o three.js e as receitas estão carregados (um *getter*).
+- `G.ItemArt.geo(chave, nível)` → `THREE.BufferGeometry` (nível 0 perto, 1 meio, 2 longe), **compartilhada: nunca a descarte**.
+  Atributos: `position`, `normal`, `color` (luz linear: o veio, a sombra dos encaixes, o fio afiado já nela — lê bem com qualquer
+  material Lambert de cor por vértice), `shine` (3 por ponto: metal, polimento, tinta). `userData`: `{ key, lod, tris, parts, marks,
+  tint }` — `parts` são corridas do índice (`cabo`, `cabeca`, `amarra`, `corda`, `enfeite`), `tint` 1 quando a forma tem tinta do povo.
+  **Uma malha instanciada por chave e nível** é o uso pensado (as pessoas seguram coisas às dúzias).
+- **O quadro de cada coisa** (D-337, medido no rig do jogo: com o punho neutro, o +Y do quadro `tool` do `people3d.js` é o eixo do
+  punho e o +Z é o rumo do antebraço, do cotovelo para os dedos): a origem no punho da mão principal; +Y ao longo do cabo para a
+  parte que trabalha; +Z a frente dela (o fio do machado, da foice, da picareta, da enxada; a face do martelo; os dois fios da espada,
+  da faca e da lança em ±Z, a lâmina fina em X; a face da pá e do remo em ±Z). Particularidades: **o que pende** (cesto, balde,
+  funda) tem a alça pelo punho ao longo de Y e **pende para +Z** — com o braço caído, para baixo, sem giro (D-386); **o escudo** é de
+  pega no centro: o punho fecha numa barra vertical atrás do umbo, a face para +Z, o topo para +Y, centrado no punho; **o arco**
+  é seguro pelo meio (a origem), os braços para ±Y, a corda atrás (−Z, a 16,5 cm), a flecha voa para +Z; **a flecha** tem a origem
+  no entalhe (onde a mão que puxa a segura) e a ponta em +Y (~0,75 m); **a vara** tem a mão perto do pé, a ponta a 2,3 m;
+  **a pá** tem a mão principal no cabo e o T em cima (−Y), a lâmina em +Y. **O que se veste** (D-387) está no quadro do seu osso na
+  pose de repouso de um corpo de 1,75 m: o elmo no osso `head` (a junta a 1,54 m), a couraça no osso `chest` (0,98 m); escale com o
+  corpo (altura / 1,75) e esconda o cabelo debaixo do elmo.
+- `G.ItemArt.grip(chave)` → `{ main: [0, 0, 0], off: [x, y, z] | null }` — `off`, a outra mão das coisas de duas mãos (D-393):
+  lança `[0, −0.46, 0]`, picareta `[0, −0.19, 0]`, pá (o T) `[0, −0.555, 0]`, enxada `[0, −0.3, 0]`, remo `[0, −0.57, 0]`, rede
+  `[0, 0.5, 0]`, arco (a corda, onde a flecha encaixa) `[0, 0.01, −0.161]`.
+- `G.ItemArt.marks(chave)` → `{ ponta, centro, chama?, linha?, corda? }` (D-392): a ponta que acerta, o meio da parte que trabalha,
+  onde a chama da tocha fica (a chama é do `fx3d`), a ponta da vara de onde a linha pende, o ponto da corda do arco.
+- `G.ItemArt.stow(chave, 'costas' | 'cinto')` → `{ bone: 'chest' | 'pel', at: [x, y, z], y: [..], z: [..], q: [x, y, z, w] }` ou
+  `null` (onde o catálogo não deixa: `G.Itens.fits`) (D-389): a origem da coisa em `at` e os seus +Y e +Z (e o quaternião) no quadro
+  do osso na pose de repouso de um corpo de 1,75 m (+X a esquerda do corpo, +Y para cima, +Z a frente; escale `at` com o corpo).
+  A matriz da coisa = a do osso × translação(`at`) × a base (`y × z`, `y`, `z`). A folha `folha-corpo.png` do `itens-figuras.js`
+  mostra cada encaixe nos dois corpos.
+- `G.ItemArt.icon(chave)` → `data:image/webp;base64,…` (128 × 128, fundo transparente, a mesma luz em todas; `G.ItemArt.ICON_SIZE`),
+  ou `null` (D-390).
+- `G.ItemArt.material(THREE, { onBeforeCompile, key })` → um `MeshLambertMaterial` de cor por vértice que lê o `shine` (D-385): o
+  brilho que anda com o sol, tingido pelo metal; o céu nos metais; a madeira polida. `onBeforeCompile` é o remendo do próprio
+  desenho, que roda antes (a borda acesa das pessoas, por exemplo). **A tinta do povo** (D-391): numa malha instanciada, a cor da
+  instância (`setColorAt`) pinta só as partes de tinta (a face do escudo, a crista) e não toca no resto da coisa; sem ela, o ocre.
+  Sem este material, as coisas leem pelas cores (sem o brilho).
+- `G.ItemArt.info(chave)` → `{ tris: [perto, meio, longe], lo, hi }`; `G.ItemArt.BUDGET` / `budgetOf(chave)` — o orçamento (D-388):
+  na mão ≤ 1.000 / 300 / 72, as grandes (escudo, rede, cesto, balde) ≤ 1.500 / 450 / 120, as que se vestem ≤ 1.700 / 520 / 120;
+  `G.ItemArt.keys()` (todas as chaves do catálogo), `canon(chave)`, `raw(chave, nível)` (os números, sem three.js: para as provas e
+  o verificador), `sig(chave)`, `patch(shader)`, `check()` (a prova do módulo: vazia é bom).
+- **Coisa nova no catálogo** (um tipo ou um material, `js/itens.js`): a sua receita em `R.<tipo>` do `js/itemforma.js` (o `guard.js`
+  cobra, regra 137), o material no `F.MATS` (e a sua paleta no `PAL`), o lugar nas costas ou no cinto no `STOW` do `itemarte.js` se
+  pedir um especial, e as figuras de novo: `bash qa/navegador.sh node qa/visual/itens-figuras.js PASTA icones` e
+  `node qa/visual/itens-arte.js`.
+
 ### 4.4 O movimento que a animação lê (a 20b expõe, a 20a lê)
 O estado do corpo (`b`, o do `avatar.js`) ganha, escritos só pelo controle: `gait` ('parado' | 'andar' | 'trote' | 'disparada' |
 'agachado'), `accX`/`accZ` (a aceleração do passo, m/s²), `turnV` (a velocidade do giro, rad/s), `strafe` (o rumo do corpo separado
