@@ -116,16 +116,25 @@
     // (cloth while there is wool for it: the store's, or what lies on the loom's shelf)
     pick(b, f) { return inputFor(b, f, 'la', 12) ? 'tecido' : null; },
   });
-  const forged = (k, name, one) => ({ k, n: 6, in: 'minerio', wear: 0.08, name, one, g: 'f', feito: 'Forjamos', st: [
-    { id: 'minerio', kind: 'busca', n: 6, name: 'juntando minério' },
+  // (the forge works the metal the people has — 20h, D-441: the iron of the iron ore, with the art of the iron and more of the
+  // people's wood in the fire; the bronze of the copper, with the art of the bronze and the tin the smith puts into the crucible
+  // from the store (a stage of its own, 'liga': one of tin to a batch); what it makes is of that metal — the parts of the store's
+  // tools and weapons, G.Origem. A forge with no metal makes nothing)
+  const forged = (k, mat, name, one) => ({ k, mat, n: 6, in: mat === 'ferro' ? 'minerio' : 'cobre', wear: 0.08, name: name + ' de ' + mat, one, g: 'f', feito: 'Forjamos', st: mat === 'ferro' ? [
+    { id: 'minerio', kind: 'busca', n: 6, name: 'juntando minério de ferro' },
+    { id: 'acender', kind: 'fogo', fire: 24, fuel: 3, burn: 8, kiln: 1, name: 'esquentando a forja' },
+    { id: 'forjar', kind: 'mao', anim: 'forjar', use: 'forjar', take: 2, give: 2, make: 1, brk: 0, kiln: 1, name: 'forjando' },
+  ] : [
+    { id: 'cobre', kind: 'busca', n: 6, name: 'juntando cobre' },
+    { id: 'liga', kind: 'liga', k: 'estanho', n: 1, name: 'o estanho no cadinho' },
     { id: 'acender', kind: 'fogo', fire: 16, fuel: 2, burn: 8, kiln: 1, name: 'esquentando a forja' },
     { id: 'forjar', kind: 'mao', anim: 'forjar', use: 'forjar', take: 2, give: 2, make: 1, brk: 0, kiln: 1, name: 'forjando' },
   ] });
   O.def('forja', {
     b: 'forja', role: 'ferreiro', name: 'Forja',
-    rx: { armas: forged('armas', 'armas', 'arma'), ferramentas: forged('ferramentas', 'ferramentas', 'ferramenta') },
-    // (what the realm needs most: weapons in war, tools in peace — economy.js forgeOut —, while there is ore)
-    pick(b, f) { return inputFor(b, f, 'minerio', 6) ? (E.forgeOut ? E.forgeOut(f) : 'ferramentas') : null; },
+    rx: { 'armas.ferro': forged('armas', 'ferro', 'armas', 'arma'), 'armas.bronze': forged('armas', 'bronze', 'armas', 'arma'), 'ferramentas.ferro': forged('ferramentas', 'ferro', 'ferramentas', 'ferramenta'), 'ferramentas.bronze': forged('ferramentas', 'bronze', 'ferramentas', 'ferramenta') },
+    // (what the realm needs most: weapons in war, tools in peace — economy.js forgeOut —, in the metal there is: E.forgeMetal)
+    pick(b, f) { const m = E.forgeMetal ? E.forgeMetal(f, b) : null; return m ? (E.forgeOut ? E.forgeOut(f) : 'ferramentas') + '.' + m : null; },
   });
   O.def('ourives', {
     b: 'ourives', role: 'ourives', name: 'Ourivesaria',
@@ -237,7 +246,7 @@
     const S = S_(); if (!op || !live(op)) return { ok: false, why: 'A fornada acabou.' };
     const b = S.buildings.get(op.at); const R = rxOf(op); const s = stageOf(op);
     if (!b || !R || !s) return { ok: false, why: 'A fornada acabou.' };
-    if (s.kind !== 'mao') return { ok: false, why: s.kind === 'espera' ? `A fornada está ${s.name}.` : s.kind === 'fogo' ? 'A fornada está no fogo.' : `Ainda falta ${E.name(R.in)} para esta fornada.` };
+    if (s.kind !== 'mao') return { ok: false, why: s.kind === 'espera' ? `A fornada está ${s.name}.` : s.kind === 'fogo' ? 'A fornada está no fogo.' : `Ainda falta ${E.name(s.kind === 'liga' ? s.k : R.in)} para esta fornada.` };
     if (s.kiln) { const k = kilnOf(b); if (k && k !== op) return { ok: false, why: 'O forno está ocupado com outra fornada.' }; }
     if (poolOf(op, s) < EPS) return { ok: false, why: 'Esta etapa terminou.' };
     if (s.make && D.room('b:' + b.id, R.k) < 1 - EPS) return { ok: false, why: 'A prateleira está cheia: leve o que está pronto ao armazém primeiro.' };
@@ -253,7 +262,7 @@
     if (!(taken > EPS)) return { ok: false, why: 'Esta etapa terminou.' };
     if (!s.from) {
       // (the input set aside on the shelf, used: in the ledger, with the batch)
-      const r = D.use('b:' + b.id, R.in, taken, { op: op.id, code: s.id, by: v.id, key, mine: true });
+      const r = D.use('b:' + b.id, R.in, taken, { op: op.id, code: s.id, by: v.id, key, mine: true, of: R.of }); // (R.of: the parts the recipe takes — the vat, the grain: 20h)
       if (!r.ok) return { ok: false, why: r.why === 'não há' || r.why === 'não há tanto' ? `Sumiu ${E.name(R.in)} separado para esta fornada.` : r.why };
       taken = r.n; d.usado = r2(d.usado + taken); setRsv(op, b, d.got - taken);
     } else d[s.from] = r2(d[s.from] - taken);
@@ -264,7 +273,7 @@
       // the goods counted: each one sound or broken by the world's chance (in the world's step), the sound ones on the shelf
       let broke = 0; if (s.brk > 0) for (let k = 0; k < Math.round(out); k++) if (G.R() < s.brk) broke++;
       const good = r2(out - broke);
-      if (good > EPS) { const r = D.make('b:' + b.id, R.k, good, { op: op.id, code: 'fornada', by: v.id, key: key + ':m' }); if (r.ok) { d.feitos = r2(d.feitos + r.n); if (G.Urban) G.Urban.noteB(b, 'oficio', 1); } }
+      if (good > EPS) { const r = D.make('b:' + b.id, R.k, good, { op: op.id, code: 'fornada', by: v.id, key: key + ':m', of: R.mat }); if (r.ok) { d.feitos = r2(d.feitos + r.n); if (G.Urban) G.Urban.noteB(b, 'oficio', 1); } }
       d.quebrados = r2(d.quebrados + broke);
       const gm = R.g === 'f' ? 'a' : 'o';
       msg = `${Math.round(good)} ${Math.round(good) === 1 ? R.one || R.name : R.name} pront${gm}${Math.round(good) === 1 ? '' : 's'}${broke ? `, ${broke} quebrad${gm}${broke > 1 ? 's' : ''}` : ''}.`;
@@ -304,7 +313,7 @@
   }
 
   // ------------------------------ the overseer (once a second of the world) ------------------------------
-  const PAUSE = { chuva: 'a chuva', noite: 'a noite', argila: 'a falta de argila', insumo: 'a falta do que se trabalha', lenha: 'a falta de lenha', forno: 'o forno ocupado' };
+  const PAUSE = { chuva: 'a chuva', noite: 'a noite', argila: 'a falta de argila', insumo: 'a falta do que se trabalha', lenha: 'a falta de lenha', forno: 'o forno ocupado', estanho: 'a falta de estanho' };
   O.PAUSE = PAUSE;
   function tick(op, step) {
     const S = S_(); const b = S.buildings.get(op.at); const R = rxOf(op); const d = op.data;
@@ -315,12 +324,17 @@
     const s = stageOf(op); let why = '';
     if (s.kind === 'busca') {
       // (what of the input already lies free on the shelf is set aside at once)
-      const free = D.free('b:' + b.id, R.in, op.id) - d.got;
+      const free = (R.of && G.Origem ? G.Origem.free('b:' + b.id, R.in, R.of, op.id) : D.free('b:' + b.id, R.in, op.id)) - d.got; // (of what the recipe takes: the vat's grain, 20h)
       if (free > EPS && d.got < s.n - EPS) setRsv(op, b, Math.min(s.n, d.got + free));
       if (d.got + EPS >= s.n) return next(op);
       const f = G.Fac.get(op.fac);
       if (R.shelf) why = 'insumo'; // (it waits for its shelf: nobody fetches for it)
       else if (!(f && D.free('f:' + f.id, R.in) >= 1) && !inFlight(op) && !(R.pit && pitOf(b))) why = R.in === 'argila' ? 'argila' : 'insumo';
+    } else if (s.kind === 'liga') {
+      // (the alloy's metal from the people's store into the crucible, by the ledger: the tin of the bronze — 20h, D-441)
+      const fr = 'f:' + op.fac;
+      if (D.free(fr, s.k) >= s.n - EPS) { const r = D.use(fr, s.k, s.n, { op: op.id, code: 'liga', by: 0, key: 'of:' + op.id + ':liga' }); if (r.ok) { d.liga = r2((d.liga || 0) + r.n); return next(op); } }
+      why = s.k;
     } else if (s.kind === 'espera') {
       if (s.sun && S.weather && S.weather.rain > 0.5) why = 'chuva';
       else if (s.sun && G.isNight()) why = 'noite';

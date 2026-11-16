@@ -508,7 +508,7 @@
     // of the house —, L-682)
     if (ready && loaded && !G.isNight() && !crew.some(v => !v.aboard && abed(v))) {
       // whatever was not carried down is loaded at the last moment (if the stores have it)
-      const miss = Math.max(0, e.provT - e.prov); const got = Math.min(miss, Math.max(0, Math.floor(f.stock.food - G.Fac.pop(f.id) * 0.8))); f.stock.food -= got; e.prov += got; e.prov0 = e.prov;
+      const miss = Math.max(0, e.provT - e.prov); const got = Math.min(miss, Math.max(0, Math.floor(f.stock.food - G.Fac.pop(f.id) * 0.8))); f.stock.food -= got; e.prov += got; e.prov0 = e.prov; if (G.Origem && got > 0) e.provOf = G.Origem.mix(e.provOf, G.Origem.carried('f:' + f.id, null, 'food', got)); // (the provisions keep where they came from: 20h)
       if (e.prov < e.crew.length * FOOD * e.dur * 0.6) return finish(e, 'cancelada', `Não havia comida para tanta gente no mar: ${e.name} não saiu do porto.`);
       e.st = 'reunir'; e.t = 0;
       for (const s of ships) s.st = 'prep';
@@ -992,7 +992,7 @@
     if (txt) chapter(e, status === 'cancelada' ? 'Fim' : 'O fim', txt, status === 'perdida' ? 'skull' : 'ship', !!o.chron || status !== 'cancelada' || e.scale === 'grande');
     // whoever was waiting on the quay goes home; the provisions go back to the stores
     for (const id of e.crew) { const v = P(id); if (!v) continue; if (v.task && (v.task.type === 'cais' || v.task.type === 'expl') && v.task.exp === e.id) G.Vg.endTask(v); if (v.aboard && e.ships.includes(v.aboard)) { const s = ship(v.aboard); if (s && !Nv.atSea(s)) { Nv.unboard(v); const q = W.randomNear(e.port[0], e.port[1], 1.4) || e.port; v.x = q[0]; v.y = q[1]; } } }
-    const f = F(e.fac); if (status === 'cancelada' && f && e.prov > 0) { G.Village.addStock('food', Math.floor(e.prov), f.id); e.prov = 0; }
+    const f = F(e.fac); if (status === 'cancelada' && f && e.prov > 0) { G.Village.addStock('food', Math.floor(e.prov), f.id, e.provOf || null); e.prov = 0; }
     for (const s of e.ships.map(ship).filter(Boolean)) { if (!Nv.atSea(s) || status === 'cancelada') { s.exp = 0; if (s.st === 'prep') s.st = 'idle'; if (s.kind === 'pesca') Nv.clearCrew(s, e.port); } }
   }
   // all hands lost: only the sea knows (home learns that they never came back, later)

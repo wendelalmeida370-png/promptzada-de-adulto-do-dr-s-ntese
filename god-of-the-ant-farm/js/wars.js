@@ -478,7 +478,8 @@
   // the armoury: a levy takes a weapon (without one, a club and a sickle)
   function equip(v, a) {
     const f = F(a.fac); if (!f || v._armed || v.role === 'guerreiro') { if (v.role === 'guerreiro') v._armed = true; return false; }
-    if ((f.stock.armas || 0) >= 1) { f.stock.armas -= 1; v._armed = true; v._levy = true; G.FX && G.FX.chips && G.FX.chips(v.x, v.y, '#b8bcc4'); G.Audio && G.Audio.at(v.x, v.y, 'clang', false, 0.3); return true; }
+    // (the levy's weapon keeps its metal, and gives it back with the weapon: G.Origem, 20h)
+    if ((f.stock.armas || 0) >= 1) { f.stock.armas -= 1; v._armed = true; v._levy = G.Origem ? G.Origem.levy(f) : true; G.FX && G.FX.chips && G.FX.chips(v.x, v.y, '#b8bcc4'); G.Audio && G.Audio.at(v.x, v.y, 'clang', false, 0.3); return true; }
     return false;
   }
   // the levy is (mostly) gathered: the companies form, the wagons are loaded, a commander is named

@@ -145,7 +145,7 @@ const lines = (code) => G.S.ledger.filter(e => e[8] === code);
 {
   const { S, f, tv, person } = world('egipcio', true);
   const k = person('Taverneiro', 6, { job: 3, role: 'taverneiro' });
-  D.make('b:3', 'food', 8, { code: 'teste' }); G.S.time = 0.9; // (shut: the keeper's hands for the vat)
+  D.make('b:3', 'food', 8, { code: 'teste', of: 'cevada' }); G.S.time = 0.9; // (shut: the keeper's hands for the vat; barley: the vat brews only grain — 20h, D-444)
   const t = O.task(k, tv, f, H); const op = O.batches(tv)[0];
   ok('cuba-comeca', !!op && op.data.p === 'cerveja', op ? `fornada de ${op.data.p}, etapa ${O.stage(op).id}` : 'nenhuma');
   for (let s = 0; s < 4 && op && O.stage(op) && O.stage(op).kind !== 'espera'; s++) { if (!k.task) O.task(k, tv, f, H); sec(5, [k]); }

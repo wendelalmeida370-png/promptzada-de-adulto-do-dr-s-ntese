@@ -48,29 +48,41 @@
   A.addAnim('tocar', { act: 'play', dur: 4, contact: 3.6, hands: 2 });
 
   // ------------------------------ the vat (a trade of the tavern's own, on the engine of the trades) ------------------------------
-  // the town's beer or pulque, brewed from the grain on the tavern's shelf — bought by its keeper: nothing is fetched for it
-  const vat = (k, name) => ({ k, n: 3, in: 'food', shelf: 1, name, one: k === 'cerveja' ? 'jarra de cerveja' : 'cabaça de pulque', g: 'f', feito: 'Enchemos', st: [
-    { id: 'grao', kind: 'busca', n: 2, name: 'esperando o grão' },
+  // the town's beer or pulque, brewed from what is on the tavern's shelf — bought by its keeper: nothing is fetched for it. The beer
+  // of the grain only (the cereal of the fields: G.Origem.CEREAL — a village of fishermen with no field brews none), the pulque of
+  // the sap of the maguey (aguamiel, from the agave fields: estates.js) — what each is made of, 20h, D-444
+  const OR = () => G.Origem;
+  const vat = (k, name) => ({ k, n: 3, in: k === 'pulque' ? 'aguamiel' : 'food', of: k === 'pulque' ? null : (OR() ? OR().CEREAL : null), shelf: 1, name, one: k === 'cerveja' ? 'jarra de cerveja' : 'cabaça de pulque', g: 'f', feito: 'Enchemos', st: [
+    { id: 'grao', kind: 'busca', n: 2, name: k === 'pulque' ? 'esperando o aguamiel' : 'esperando o grão' },
     { id: 'macerar', kind: 'mao', anim: 'amassar', use: 'mexer', take: 1, to: 'massa', give: 1.5, name: 'o grão de molho' },
     { id: 'fermentar', kind: 'espera', wait: 100, name: 'fermentando na cuba' },
     { id: 'encher', kind: 'mao', anim: 'encher', use: 'mexer', from: 'massa', take: 1.5, make: 1, brk: 0, name: 'enchendo os jarros' },
   ] });
   O.def('taverna', {
     b: 'taverna', role: 'taverneiro', name: 'Taverna', keep: 1, own: 1,
-    rx: { cerveja: vat('cerveja', 'jarras de cerveja'), pulque: vat('pulque', 'cabaças de pulque') },
+    rx: (T.VAT = { cerveja: vat('cerveja', 'jarras de cerveja'), pulque: vat('pulque', 'cabaças de pulque') }),
     // what the vat brews next: the people's drink, when it is brewed here and the shelf runs low, from grain the keeper has
     // beyond the day's meals — and the town not hungry (its granaries half full, or food for everyone)
     pick(b, f) {
-      const k = brewOf(f); if (!k) return null;
+      const k = brewOf(f, b); if (!k) return null;
       if (D.free('b:' + b.id, k) >= 2) return null;
-      if (D.free('b:' + b.id, 'food') < 4) return null;
+      if (vatIn(b, k) < 4) return null;
       if ((f.stock.food || 0) <= Math.max(20, Math.min(G.Fac.pop(f.id) * 1.2, G.Village.cap(f.id) * 0.5))) return null;
       return k;
     },
   });
   // the drink a people's tavern brews: its own, or the other one when the store has none of its own (tavern.js)
   function drinkOf(f) { const L = Tv() && Tv().DRINK; return (L && (L[(f && f.civ) || 'classico'] || L.classico)) || { k: 'cerveja' }; }
-  function brewOf(f) { const d = drinkOf(f); if (BREW[d.k]) return d.k; if (d.alt && BREW[d.alt] && (f.stock[d.k] || 0) < 2) return d.alt; return null; }
+  // (a people's own drink brewed while there is what it is made of: the pulque with the maguey's sap at hand — on the shelves or in
+  // the store —, else the other one; the Aztecs with no agave brew the beer of their maize, 20h)
+  function brewOf(f, b) {
+    const d = drinkOf(f);
+    if (BREW[d.k] && (d.k !== 'pulque' || !d.alt || sapNear(f, b))) return d.k;
+    if (d.alt && BREW[d.alt] && (f.stock[d.k] || 0) < 2) return d.alt; return null;
+  }
+  const sapNear = (f, b) => (f.stock.aguamiel || 0) >= 1 || (!!b && D.get('b:' + b.id, 'aguamiel') >= 1);
+  // (what of the vat's own input is on a tavern's shelf, free: the grain of the beer, the sap of the pulque)
+  function vatIn(b, k) { const R = k === 'pulque' ? T.VAT.pulque : T.VAT.cerveja; return R.of && OR() ? OR().free('b:' + b.id, R.in, R.of) : D.free('b:' + b.id, R.in); }
 
   // ------------------------------ hours, the day, who keeps it ------------------------------
   // (the acord with act-lar.js: a pure function of the building and its town — the keeper goes to bed after the closing)
@@ -118,11 +130,16 @@
   function drinkOn(b) { const f = G.Fac.get(G.Village.facOfSet(b.set)); const d = drinkOf(f); for (const k of [d.k, d.alt].concat(DRINKS)) if (k && D.free('b:' + b.id, k) >= T.DOSE[k] - EPS) return k; return null; }
   T.drinkOn = drinkOn;
   T.menu = function (b) {
-    const out = []; if (D.free('b:' + b.id, 'food') >= 1 - EPS) out.push({ k: 'food', n: 1, p: T.PRICE.food });
+    const out = []; if (D.free('b:' + b.id, 'food') >= 1 - EPS) out.push({ k: 'food', n: 1, p: T.PRICE.food, dish: T.dish(b) });
     const k = drinkOn(b); if (k) out.push({ k, n: T.DOSE[k], p: T.PRICE.drink }); return out;
   };
   // what a round or a meal is called, as its people says it ("uma caneca de cerveja", "um prato de comida")
-  T.nome = k => (k === 'food' ? 'um prato de comida' : (Tv() && Tv().NAME[k] ? Tv().NAME[k][2] : 'uma bebida'));
+  // (the dish is what the meal is made of — the next of the shelf's food by the rule, what is eaten: a plate of fish only where
+  // fish came to the shelf from the people's catch, 20h)
+  const DISH = { peixe: 'um prato de peixe', marisco: 'um prato de mariscos', carne: 'um prato de carne', leite: 'uma tigela de coalhada', ovos: 'um prato de ovos', horta: 'uma sopa de legumes', fruta: 'uma tigela de frutas', trigo: 'pão com caldo', cevada: 'um caldo de cevada', arroz: 'um prato de arroz', milho: 'tortilhas de milho', sorgo: 'um mingau de sorgo' };
+  T.DISH = DISH;
+  T.dish = b => { const t = b && OR() ? OR().next('b:' + b.id, 'food') : null; return (t && DISH[t]) || 'um prato de comida'; };
+  T.nome = (k, b) => (k === 'food' ? T.dish(b) : (Tv() && Tv().NAME[k] ? Tv().NAME[k][2] : 'uma bebida'));
   // the seats: the interiors' allotter says whether one more has a place at a table or on a bench, counting who is inside
   // (In.freePlace, P4); a tavern with no plan (In.table null), a count
   function full(b, op) {
@@ -220,7 +237,7 @@
     d.q++; d.servidos++; d.vendas[item.k] = r2((d.vendas[item.k] || 0) + item.n); if (from) d.receita = r2(d.receita + item.p);
     if (G.Urban) G.Urban.noteB(b, 'noite', 1); // (the life of the quarter: a round served)
     m.st = fed ? 4 : 3; m.k = item.k; if (fed) taste(c, item.k, b);
-    if (!self) say(v, 'servir_taverna', { bem: T.nome(item.k) });
+    if (!self) say(v, 'servir_taverna', { bem: item.dish || T.nome(item.k, b) });
     if (c.task && c.task.type === 'tavern' && c.task.op === op.id) { c.task.st = m.st; c.actT = 0; }
     return { ok: true, k: item.k, n: item.n, p: from ? item.p : 0 };
   }
@@ -308,7 +325,7 @@
       if (full(b, op)) { d.cheia++; G.Vg.emote(v, 'sad', 1); say(keeperOf(b), 'cheia', {}); return H.end(v); }
       goIn(v, t, b, 'sentar');
       const w = want(v, b); d.mesa[v.id] = { t: Math.round(S.clock * 10) / 10, r: 0, want: w, st: 2 }; d.fila.push(v.id);
-      say(v, 'pedir_taverna', { bem: w === 'food' ? 'um prato de comida' : T.nome(drinkOn(b) || 'cerveja') });
+      say(v, 'pedir_taverna', { bem: w === 'food' ? T.dish(b) : T.nome(drinkOn(b) || 'cerveja') });
       t.st = 2; t.wt = 0; v.actT = 0; return;
     }
     const m = d.mesa[v.id]; if (!m) return leave(v, t, op, H);
@@ -381,7 +398,7 @@
   T.task = function (v, b, f, H) {
     const op = T.dia(b); const busy = !!op && op.st === 'on' && inHours(b);
     if (busy && op.data.fila.length) return H.setTask(v, { type: 'atender', id: b.id, op: op.id, pri: 1.05, st: 0 });
-    const need = restockPick(b, f, v); if (need) return H.setTask(v, { type: 'abastecer', id: b.id, k: need.k, n: need.n, pri: 1, st: 0 });
+    const need = restockPick(b, f, v); if (need) return H.setTask(v, { type: 'abastecer', id: b.id, k: need.k, n: need.n, of: need.of || undefined, pri: 1, st: 0 });
     const brew = O.task(v, b, f, H); if (brew) return brew;
     if (busy) return H.setTask(v, { type: 'atender', id: b.id, op: op.id, pri: 1, st: 0, idle: 1 });
     return null;
@@ -390,32 +407,35 @@
   // drink where it is not brewed (the wine, the mead)
   function restockPick(b, f, v) {
     if (v.carry && v.carry.n > EPS) return null;
-    const ref = 'b:' + b.id; const d = drinkOf(f); const brews = !!brewOf(f);
+    const ref = 'b:' + b.id; const d = drinkOf(f); const bw = brewOf(f, b); const brews = bw === 'cerveja';
     const cands = [];
     const food = D.get(ref, 'food'); const want = 6 + (brews ? 4 : 0);
-    if (food < want - 1 && (f.stock.food || 0) >= 16) cands.push({ k: 'food', n: want - food });
+    // (with the vat's beer to brew and too little grain on the shelf, the food bought is grain — what the store has of it, 20h)
+    const grain = brews && OR() && OR().amount(ref, 'food', OR().CEREAL) < 4 && OR().free('f:' + f.id, 'food', OR().CEREAL) >= 1 ? OR().CEREAL : null;
+    if (food < want - 1 && (f.stock.food || 0) >= 16) cands.push({ k: 'food', n: want - food, of: grain });
+    if (bw === 'pulque' && D.get(ref, 'aguamiel') < 4 && D.free('f:' + f.id, 'aguamiel') >= 1) cands.push({ k: 'aguamiel', n: 4 - D.get(ref, 'aguamiel') });
     for (const k of [d.k, d.alt]) if (k && !BREW[k] && D.get(ref, k) < T.DOSE[k] * 4 && D.free('f:' + f.id, k) >= 1) { cands.push({ k, n: 2 }); break; }
     for (const c of cands) {
-      const n = Math.floor(Math.min(c.n, D.free('f:' + f.id, c.k), D.room('v:' + v.id, c.k, { to: ref }), D.room(ref, c.k)) + EPS);
+      const n = Math.floor(Math.min(c.n, c.of ? OR().free('f:' + f.id, c.k, c.of) : D.free('f:' + f.id, c.k), D.room('v:' + v.id, c.k, { to: ref }), D.room(ref, c.k)) + EPS);
       if (n < 1) continue;
       if (coin(b) && D.get(E.coinRef(v), 'moedas') + EPS < r2((E.PRICE[c.k] || 0.3) * n * WHOLE)) continue;
-      return { k: c.k, n };
+      return { k: c.k, n, of: c.of || null };
     }
     return null;
   }
   // the purchase at the store's door: the goods into the arms, marked for the tavern, and the coins from the keeper's house to
   // the treasury — both or neither; a people without coin: the store gives (the people's tavern)
-  function buy(v, b, f, k, n) {
+  function buy(v, b, f, k, n, of) {
     const ref = 'b:' + b.id;
-    n = Math.floor(Math.min(n, D.free('f:' + f.id, k), D.room('v:' + v.id, k, { to: ref }), D.room(ref, k)) + EPS);
+    n = Math.floor(Math.min(n, of && OR() ? OR().free('f:' + f.id, k, of) : D.free('f:' + f.id, k), D.room('v:' + v.id, k, { to: ref }), D.room(ref, k)) + EPS);
     if (n < 1) return { ok: false, why: D.free('f:' + f.id, k) < 1 ? 'O armazém não tem.' : 'Não cabe mais.' };
     let r, cost = 0;
     if (coin(b)) {
       cost = r2((E.PRICE[k] || 0.3) * n * WHOLE); const from = E.coinRef(v);
       if (D.get(from, 'moedas') + EPS < cost) return { ok: false, why: 'Falta dinheiro para comprar.' };
-      r = D.swap(['f:' + f.id, 'v:' + v.id, k, n], [from, 'f:' + f.id, 'moedas', cost], { code: 'atacado', by: v.id, to: ref });
+      r = D.swap(['f:' + f.id, 'v:' + v.id, k, n], [from, 'f:' + f.id, 'moedas', cost], { code: 'atacado', by: v.id, to: ref, of: of || undefined });
       if (r.ok) { E.ensure(f); f.eco.sales += cost; }
-    } else r = D.move('f:' + f.id, 'v:' + v.id, k, n, { code: 'taverna-povo', by: v.id, to: ref });
+    } else r = D.move('f:' + f.id, 'v:' + v.id, k, n, { code: 'taverna-povo', by: v.id, to: ref, of: of || undefined });
     if (!r.ok) return r;
     const op = T.dia(b); if (op && cost) op.data.gasto = r2(op.data.gasto + cost);
     return { ok: true, n, cost };
@@ -425,7 +445,7 @@
     if (!b || !b.built || b.type !== 'taverna' || !f) return H.end(v);
     if (t.st === 0) { const s = G.Village.nearestDropoff(v.x, v.y, v.set); if (!s) return H.end(v); const r = walkB(v, t, s, dt, H); if (r < 0) return H.end(v); if (r > 0) { t.st = 1; v.actT = 0; } return; }
     v.act = AN.examinar.act; if (v.actT < AN.examinar.contact) return;
-    const r = buy(v, b, f, t.k, t.n); if (!r.ok) return H.end(v);
+    const r = buy(v, b, f, t.k, t.n, t.of); if (!r.ok) return H.end(v);
     return H.setTask(v, { type: 'carga', to: 'b:' + b.id, pri: 1, st: 0 });
   }
   // at the counter: the first one waiting, served — the time of the gesture, to the table and back

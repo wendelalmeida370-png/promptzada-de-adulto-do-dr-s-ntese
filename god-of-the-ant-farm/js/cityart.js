@@ -449,12 +449,12 @@
   // ore veins: the rocks where a mine could be dug
   function oreSpr(kind) {
     return G.Art.sprite('ore-' + kind, 56, 40, 28, 28, (c, m) => {
-      const r = G.mulberry32(kind === 'ouro' ? 5 : 9);
+      const r = G.mulberry32(kind === 'ouro' ? 5 : kind === 'cobre' ? 11 : kind === 'estanho' ? 13 : 9); // (each kind its own flecks: the copper's green crust, the tin's pale grey — 20h)
       const rocks = [[-7, 0, 7], [4, 1, 6], [-1, -3, 8], [8, -2, 4.5], [-10, 3, 4]];
       for (const [x, y, s] of rocks) {
         c.fillStyle = '#7e776c'; c.beginPath(); c.moveTo(x - s, y + 2); c.lineTo(x - s * 0.7, y - s * 0.9); c.lineTo(x + s * 0.3, y - s * 1.2); c.lineTo(x + s, y - s * 0.3); c.lineTo(x + s * 0.8, y + 2); c.closePath(); c.fill();
         c.fillStyle = 'rgba(0,0,0,0.18)'; c.beginPath(); c.moveTo(x + s * 0.3, y - s * 1.2); c.lineTo(x + s, y - s * 0.3); c.lineTo(x + s * 0.8, y + 2); c.lineTo(x + s * 0.2, y + 2); c.closePath(); c.fill();
-        for (let k = 0; k < 3; k++) { const px = x - s * 0.5 + r() * s, py = y - r() * s * 0.9; c.fillStyle = kind === 'ouro' ? '#f2c14e' : '#b0583a'; c.fillRect(px, py, 1.6, 0.8); if (kind === 'ouro') m.glow.push([px + 0.8, py + 0.4]); }
+        for (let k = 0; k < 3; k++) { const px = x - s * 0.5 + r() * s, py = y - r() * s * 0.9; c.fillStyle = kind === 'ouro' ? '#f2c14e' : kind === 'cobre' ? '#3fa882' : kind === 'estanho' ? '#d6dce4' : '#b0583a'; c.fillRect(px, py, 1.6, 0.8); if (kind === 'ouro') m.glow.push([px + 0.8, py + 0.4]); }
       }
     });
   }

@@ -228,6 +228,8 @@
   };
 
   // ------------------------------ hungry towns eat their reserves ------------------------------
+  // (the food a reserve becomes is of what the reserve was made: G.Origem's parts, 20h)
+  const RES_OF = { carne_seca: 'carne', bacalhau: 'peixe', queijo: 'leite', atum: 'peixe', tamaras: 'fruta', camarao: 'marisco', mel: 'mel', azeite: 'azeite' };
   function reserves(f) {
     const pop = G.Fac.pop(f.id); if (!pop) return;
     if (f.stock.food >= pop * 1.2) return;
@@ -236,6 +238,7 @@
       const ed = GD[k].ed; if (!ed || (f.stock[k] || 0) < 1) continue;
       const n = Math.min(f.stock[k], Math.ceil((pop * 1.5 - f.stock.food) / ed)); if (n <= 0) continue;
       f.stock[k] -= n; f.stock.food += n * ed; E.used(f, k, n); ate = ate || k;
+      if (G.Origem) G.Origem.came('f:' + f.id, 'food', n * ed, RES_OF[k], 'reservas'); // (what the reserve was: the meat, the fish, the milk — 20h)
       if (f.stock.food >= pop * 1.5) break;
     }
     if (ate && G.S.day - (f._ateRes || -9) >= 4) { f._ateRes = G.S.day; const cap = G.Fac.capitalOf(f.id); log(`Com os celeiros vazios, ${f.name} começou a comer suas reservas de ${GD[ate].name}.`, 'food', cap ? cap.cx : undefined, cap ? cap.cy : undefined); }

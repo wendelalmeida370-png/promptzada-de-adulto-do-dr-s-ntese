@@ -59,10 +59,10 @@
     const S = G.S;
     G.FX && G.FX.arrow(v.x, v.y, o.x, o.y);
     G.Audio && G.Audio.at(v.x, v.y, 'swish');
-    let hit = 0.55 + (G.Civ.has(fid(v), 'bronze') ? 0.05 : 0);
+    let hit = 0.55 + (G.Origem.forged(fid(v), 'bronze') ? 0.05 : 0); // (the art and the metal had: 20h)
     if (o.elite === 'falange' || o.elite === 'legiao') hit -= 0.2;
     if (G.R() > hit) return;
-    let dmg = 9 * G.Civ.t(fid(v), 'war') * (G.Civ.has(fid(v), 'ferro') ? 1.15 : 1) * G.rr(0.8, 1.2);
+    let dmg = 9 * G.Civ.t(fid(v), 'war') * (G.Origem.forged(fid(v), 'ferro') ? 1.15 : 1) * G.rr(0.8, 1.2);
     if (G.Army) dmg *= G.Army.dmgMul(v, o, true);
     o.hurt = 0.3;
     G.Vg.damage(o, dmg, 'arrow', false, v.id);

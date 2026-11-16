@@ -624,7 +624,7 @@
     if (!lead) for (const v of S.villagers.values()) if (v.set === s.id && !v.captive && v.age >= 18 && v.id !== old.leader) { const sc = prestige(v, nf) + P.persona(v).amb * 10; if (sc > bs) { bs = sc; lead = v; } }
     nf.name = P.nameFor(s, 'secessao', lead, old.civ);
     const share = freePopOfSet(s.id) / Math.max(1, G.Fac.pop(old.id));
-    for (const k of ['food', 'wood', 'stone']) { const n = Math.floor(old.stock[k] * share); old.stock[k] -= n; nf.stock[k] += n; }
+    for (const k of ['food', 'wood', 'stone']) { const n = Math.floor(old.stock[k] * share); old.stock[k] -= n; nf.stock[k] += n; if (G.Origem) G.Origem.carried('f:' + old.id, 'f:' + nf.id, k, n); } // (the food keeps where it came from: 20h)
     s.fac = nf.id; nf.capital = s.id; s.loyalty = 75; s.conq = 0; s.origFac = 0;
     nf.era = G.Fac.eraOf(nf.id);
     nf.gov = P.tyr(old) ? 'conselho' : 'tribo';
@@ -903,7 +903,7 @@
     if (W0) {
       const food = Math.floor(Math.min(L0.stock.food * 0.45, 70)), stone = Math.floor(Math.min(L0.stock.stone * 0.4, 30)), coin = Math.floor(Math.min(L0.stock.moedas || 0, 40) * 0.5);
       L0.stock.food -= food; L0.stock.stone -= stone; if (coin) { L0.stock.moedas -= coin; W0.stock.moedas = (W0.stock.moedas || 0) + coin; }
-      G.Village.addStock('food', food, W0.id); G.Village.addStock('stone', stone, W0.id);
+      G.Village.addStock('food', food, W0.id, G.Origem ? G.Origem.carried('f:' + L0.id, null, 'food', food) : null); G.Village.addStock('stone', stone, W0.id); // (the tribute's food with its parts: 20h)
       terms = food + stone + coin > 0 ? `${L0.name} pagou tributo de ${food} comida${stone ? ', ' + stone + ' pedra' : ''}${coin ? ' e ' + coin + ' moedas' : ''}` : `${L0.name} reconheceu a derrota`;
       const sw = W0 === to ? st : sf, sl = W0 === to ? sf : st;
       if (sl < sw * 0.5 && L0.st.lost > 0 && !(war && war.goals[L0.id] && war.goals[L0.id].k === 'independencia')) { r.st = 'vassalo'; r.over = W0.id; terms += ` e tornou-se vassal${G.Fac.oa(L0)} de ${W0.name}`; }
@@ -987,7 +987,7 @@
     }
     if (msg === 'contato') {
       const gift = Math.floor(Math.min(12, from.stock.food * 0.15));
-      from.stock.food -= gift; G.Village.addStock('food', gift, to.id);
+      from.stock.food -= gift; G.Village.addStock('food', gift, to.id, G.Origem ? G.Origem.carried('f:' + from.id, null, 'food', gift) : null); // (the gift with its parts: 20h)
       r.op = Math.min(100, r.op + 12); r.friend = Math.min(100, r.friend + 10);
       log(`Um emissário de ${from.name} trouxe presentes para ${to.name}${gift ? ' (' + gift + ' de comida)' : ''}.`, 'envoy', cb ? cb.cx : undefined, cb ? cb.cy : undefined);
     } else if (msg === 'paz') { if (r.st === 'guerra') answerPeace(from, to, r); }
@@ -1015,7 +1015,7 @@
     if (n < 4) return;
     a.stock[give] -= n;
     G.Vg.endTask(tr);
-    tr.carry = { k: give, n };
+    tr.carry = { k: give, n }; if (G.Origem) G.Origem.carried('f:' + a.id, 'v:' + tr.id, give, n); // (the trader's load keeps where it came from: 20h)
     G.Vg.setTask(tr, { type: 'trade', to: b.id, from: a.id, give, n, want, pri: 1.8, kind: 'trade' });
   }
   P.tradeArrive = function (v, t) {
@@ -1064,7 +1064,7 @@
   function vassalTick(a, b, r) {
     if (r.st !== 'vassalo') return;
     const over = G.Fac.get(r.over); const vas = over === a ? b : a; if (!over || !vas) return;
-    for (const k of ['food', 'stone']) { const n = Math.floor(vas.stock[k] * 0.1); if (n > 0) { vas.stock[k] -= n; G.Village.addStock(k, n, over.id); } }
+    for (const k of ['food', 'stone']) { const n = Math.floor(vas.stock[k] * 0.1); if (n > 0) { vas.stock[k] -= n; G.Village.addStock(k, n, over.id, G.Origem ? G.Origem.carried('f:' + vas.id, null, k, n) : null); } } // (the tribute with its parts: 20h)
     const pv = P.leaderPe(vas);
     if (P.strength(vas.id) > P.strength(over.id) * 0.9 && pv.agg > 0.45 && G.R() < 0.35) { r.st = 'paz'; r.over = 0; P.declareWar(vas, over, 'vassalo'); }
   }

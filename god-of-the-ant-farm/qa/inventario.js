@@ -91,7 +91,8 @@ const outdoors = v => { for (let d = 0; d < 12; d++) for (const [dx, dy] of [[d,
 // (someone whose trade carries nothing: the parts that place things by hand start from an empty body)
 const plain = o => !Object.values(Inv.trade(o)).some(x => typeof x === 'string');
 const stock = (fid, k) => (G.Fac.get(fid).stock[k] || 0);
-const give = (fid, k, n) => god(() => D.make('f:' + fid, k, n, { code: 'teste', part: true }));
+// (a good given to a people's store by the proof's hand: with its part — the metal of the store's tools and weapons, 20h, D-442)
+const give = (fid, k, n, of) => god(() => D.make('f:' + fid, k, n, { code: 'teste', part: true, of }));
 const teach = (fid, t) => god(() => { const f = G.Fac.get(fid); if (f && !f.tech.known[t]) G.Civ.learn(f, t, 'divina'); });
 
 // ================================================================ the catalog
@@ -126,10 +127,12 @@ if (on('i2')) {
   for (const [civ, o] of civs) {
     const w = Object.assign({}, o, { role: 'guerreiro', unit: null, arm: null, act: '', carry: null, elite: null, gear: null });
     const k = Inv.kit(w); const want = WANT[civ] || ['lanca', 'escudo']; const arts = Inv.artsOf(o);
-    if (kindOf(k.mao) !== want[0] || kindOf(k.outra) !== want[1] || kindOf(k.cabeca) !== 'elmo') bad.push(`o guerreiro ${civ}: ${JSON.stringify(k)}`);
-    if (k.mao && k.mao !== It.best(want[0], arts)) bad.push(`o material do ${civ}: ${k.mao} (o povo faria ${It.best(want[0], arts)})`);
+    // (the material is what the people has had — the art only permits: 20h, D-442 —; the helmet in bronze, iron or leather had, else none)
+    if (kindOf(k.mao) !== want[0] || kindOf(k.outra) !== want[1] || (k.cabeca || null) !== Inv.made('elmo', o)) bad.push(`o guerreiro ${civ}: ${JSON.stringify(k)}`);
+    if (k.mao && k.mao !== Inv.made(want[0], o)) bad.push(`o material do ${civ}: ${k.mao} (o povo faria ${Inv.made(want[0], o)})`);
+    for (const s of Inv.SLOTS) { const x = k[s]; if (x && !G.Origem.matOK(G.Fac.idOfV(o), It.def(x).mat, arts)) bad.push(`o kit do ${civ} com ${x}, de um material que o povo não teve`); }
     said.push(`${civ}: ${k.mao} + ${k.outra} + ${k.cabeca}`);
-    const sw = Inv.kit(Object.assign({}, w, { unit: 'espadachim' })); if (It.can('espada', arts) ? kindOf(sw.mao) !== 'espada' : kindOf(sw.mao) !== 'lanca') bad.push(`o espadachim ${civ}: ${sw.mao}`);
+    const sw = Inv.kit(Object.assign({}, w, { unit: 'espadachim' })); if (Inv.made('espada', o) ? kindOf(sw.mao) !== 'espada' : kindOf(sw.mao) !== 'lanca') bad.push(`o espadachim ${civ}: ${sw.mao}`);
     const ar = Inv.kit(Object.assign({}, w, { unit: 'arqueiro', arm: 'arco' })); if (kindOf(ar.outra) !== 'arco' || ar.mao || kindOf(ar.cinto) !== 'faca') bad.push(`o arqueiro ${civ}: ${JSON.stringify(ar)}`);
     const mi = Inv.kit(Object.assign({}, w, { role: 'lenhador', unit: 'milicia' })); if (kindOf(mi.mao) !== 'clava' || mi.outra || mi.cabeca) bad.push(`a milícia ${civ}: ${JSON.stringify(mi)}`);
     const be = Inv.kit(Object.assign({}, w, { unit: 'elite', elite: 'berserker' })); if (civ === 'nordico' && (kindOf(be.mao) !== 'machado' || be.outra)) bad.push(`o berserker: ${JSON.stringify(be)}`);
@@ -182,29 +185,35 @@ if (on('i4')) {
   const c = body(); if (!c) ok('i4 o armazém', false, 'nenhuma cidade com armazém e alguém para tomar');
   else {
     const { v, fid } = c; const f = G.Fac.get(fid); const bad = [];
-    const r0 = ask(w => Inv.make(w, 'picareta')); // (no tools in the store yet)
-    give(fid, 'ferramentas', 3); const t0 = stock(fid, 'ferramentas'); const n0 = lastN();
+    // (no metal tools in the store: a pick of stone, made of the store's stone and wood — what it is made of: 20h, D-442)
+    const s0 = stock(fid, 'stone'), m0 = lastN(); const r0 = ask(w => Inv.make(w, 'picareta')); const s1 = stock(fid, 'stone');
+    const stoneOut = lines(m0).filter(e => e[3] === 'f:' + fid && e[4] === '@uso' && (e[5] === 'stone' || e[5] === 'wood') && e[8] === 'coisa').length;
+    if (r0.ok && !(r0.k === 'picareta.pedra' && Math.abs(s0 - s1 - 0.5) < 1e-6 && stoneOut === 2)) bad.push(`a de pedra: ${JSON.stringify(r0)} pedra ${s0}→${s1}, ${stoneOut} linhas`);
+    if (r0.ok) ask(w => Inv.unmake(w, r0.k));
+    // (bronze tools in the store, of a people that knows the bronze: a pick of bronze, one of them)
+    teach(fid, 'bronze'); give(fid, 'ferramentas', 3, 'bronze'); const t0 = stock(fid, 'ferramentas'); const b0 = G.Origem.parts('f:' + fid, 'ferramentas').bronze || 0; const n0 = lastN();
     const r1 = ask(w => Inv.make(w, 'picareta')); const key = r1.k;
     const L = lines(n0); const out = L.find(e => e[3] === 'f:' + fid && e[4] === '@uso' && e[5] === 'ferramentas' && e[8] === 'coisa'), inn = L.find(e => e[3] === '@mundo' && e[4] === 'm:' + v.id && e[5] === key && e[8] === 'coisa');
-    const t1 = stock(fid, 'ferramentas');
-    if (!(r1.ok && key === It.best('picareta', f.tech.known) && Inv.count(v, key) === 1 && Math.abs(t0 - t1 - 1) < 1e-6 && out && inn)) bad.push(`a troca: ${JSON.stringify(r1)} ${t0}→${t1} livro ${!!out}/${!!inn}`);
+    const t1 = stock(fid, 'ferramentas'); const b1 = G.Origem.parts('f:' + fid, 'ferramentas').bronze || 0;
+    if (!(r1.ok && key === 'picareta.bronze' && Inv.count(v, key) === 1 && Math.abs(t0 - t1 - 1) < 1e-6 && Math.abs(b0 - b1 - 1) < 1e-6 && out && inn)) bad.push(`a troca: ${JSON.stringify(r1)} ${t0}→${t1} (bronze ${b0}→${b1}) livro ${!!out}/${!!inn}`);
     // (a weapon the people cannot make; another people's store; away from the store)
-    const r2 = ask(w => Inv.make(w, f.tech.known.bronze ? 'arco' : 'espada'));
+    const r2 = ask(w => (!f.tech.known.arco ? Inv.make(w, 'arco') : Inv.make(w, 'espada', 'ferro'))); // (a thing of an art the people does not know: the bow, or the iron — it knows the bronze now, 20h)
     const away = people(o => o.set !== c.set.id && grown(o))[0]; const otherSt = away ? storeOf(S.settlements.get(away.set)) : null;
     let r3 = null; if (otherSt && V.facOfSet(otherSt.set) !== fid) { const [x, y] = door(otherSt); put(v, x, y); r3 = ask(w => Inv.make(w, 'machado')); }
     const far = (() => { for (let d = 8; d < 30; d++) for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) { const x = c.b.x + 0.5 + dx, y = c.b.y + 0.5 + dy; if (W.inb(x, y) && W.walkableXY(x, y) && !S.occ[W.idx(x, y)] && !Inv.storeNear(Object.assign({}, v, { x, y }))) return [x, y]; } return null; })();
     let r4 = null; if (far) { put(v, ...far); r4 = ask(w => Inv.make(w, 'machado')); }
     // (and back: the tool given back counts as a tool again)
     const [x, y] = door(c.b); put(v, x, y); const t2 = stock(fid, 'ferramentas'); const n1 = lastN();
-    const r5 = ask(w => Inv.unmake(w, key)); const t3 = stock(fid, 'ferramentas');
+    const r5 = ask(w => Inv.unmake(w, key)); const t3 = stock(fid, 'ferramentas'); const b3 = G.Origem.parts('f:' + fid, 'ferramentas').bronze || 0;
     const back = lines(n1).filter(e => e[8] === 'devolveu');
-    if (r0.ok || !/ferramentas/.test(r0.why)) bad.push('sem ferramentas: ' + JSON.stringify(r0));
+    if (!r0.ok && !/pedra|madeira/.test(r0.why)) bad.push('sem ferramentas de metal: ' + JSON.stringify(r0));
     if (r2.ok || !/não sabe/.test(r2.why)) bad.push('sem a arte: ' + JSON.stringify(r2));
+    if (Math.abs(b3 - b1 - 1) > 1e-6) bad.push(`a volta ao bronze do armazém: ${b1}→${b3}`);
     if (r3 && (r3.ok || !/armazém do seu povo/.test(r3.why))) bad.push('o armazém de outro povo: ' + JSON.stringify(r3));
     if (!far || r4.ok || !/armazém/.test(r4.why)) bad.push('longe: ' + JSON.stringify(r4));
     if (!(r5.ok && Math.abs(t3 - t2 - 1) < 1e-6 && Inv.count(v, key) === 0 && back.length === 2 && !Object.keys(f.stock).some(k => It.isThing(k)))) bad.push(`a volta: ${JSON.stringify(r5)} ${t2}→${t3} linhas ${back.length}`);
     const nv = novas();
-    ok('i4 pegar uma ferramenta no armazém (no livro) e devolvê-la; as recusas com a razão', !bad.length && !nv.length, `${v.name}: «${r0.why}» → com ferramentas: ${key} (${t0} → ${t1} no armazém, linhas «coisa» ${out ? 'f→uso' : '?'} e ${inn ? 'mundo→mochila' : '?'}); «${r2.why}»; ${r3 ? `outro povo: «${r3.why}»` : '(nenhum outro povo com armazém)'}; longe: «${r4 ? r4.why : '?'}»; devolvido: ${t2} → ${t3}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''}`);
+    ok('i4 pegar uma ferramenta no armazém (no livro) e devolvê-la; as recusas com a razão', !bad.length && !nv.length, `${v.name}: sem ferramentas de metal ${r0.ok ? r0.k + ' (da pedra e da madeira do armazém)' : '«' + r0.why + '»'} → com ferramentas de bronze: ${key} (${t0} → ${t1} no armazém, linhas «coisa» ${out ? 'f→uso' : '?'} e ${inn ? 'mundo→mochila' : '?'}); «${r2.why}»; ${r3 ? `outro povo: «${r3.why}»` : '(nenhum outro povo com armazém)'}; longe: «${r4 ? r4.why : '?'}»; devolvido: ${t2} → ${t3}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''}`);
   }
 }
 
@@ -214,7 +223,7 @@ if (on('i5', 'i6', 'i11')) {
   if (!c) ok('i5 equipar', false, 'ninguém no armazém');
   else {
     const { v, fid } = c; const f = G.Fac.get(fid);
-    teach(fid, 'bronze'); give(fid, 'ferramentas', 4); give(fid, 'armas', 4);
+    teach(fid, 'bronze'); give(fid, 'ferramentas', 4, 'bronze'); give(fid, 'armas', 4, 'bronze'); // (of bronze: the store gives what it has, 20h)
     for (const k of ['machado', 'picareta']) ask(w => Inv.make(w, k));
     for (const k of ['espada', 'escudo', 'elmo']) ask(w => Inv.make(w, k));
     const ax = keyIn(v, 'machado'), pk = keyIn(v, 'picareta'), sw = keyIn(v, 'espada'), sh = keyIn(v, 'escudo'), hm = keyIn(v, 'elmo');
@@ -358,19 +367,25 @@ if (on('i10')) {
   open(WORLD); const bad = [];
   const o = people(x => grown(x) && x.home)[0]; const fid = G.Fac.idOfV(o); const H = 'h:' + o.home;
   god(() => { const [x, y] = door(S.buildings.get(o.home)); o.x = x; o.y = y; o.inside = 0; D.make('m:' + o.id, 'machado.pedra', 1, { code: 'teste' }); Inv.put(o, H, 'machado.pedra'); });
-  const t0 = stock(fid, 'ferramentas'); const inH = D.get(H, 'machado.pedra');
+  // (a thing comes back to the store as what it is made of — a stone axe as its stone and its wood, a bronze one as one of the
+  // store's bronze tools: 20h, D-442)
+  const p0 = stock(fid, 'stone'); const inH = D.get(H, 'machado.pedra');
   // (the house's goods into the store, by the world's door the fallen shack and the court use: G.Depot.store)
   const n = god(() => D.store(H, fid, 'machado.pedra', 1, { code: 'ruína' }));
-  const t1 = stock(fid, 'ferramentas');
-  // (and an arrow's twentieth, a staff's wood)
+  const p1 = stock(fid, 'stone'); const full = k => stock(fid, k) >= G.Village.cap(fid) - 1;
+  give(fid, 'ferramentas', 1, 'bronze'); // (the people has had bronze: a bronze axe of its own)
+  const t0 = stock(fid, 'ferramentas'), q0 = G.Origem.parts('f:' + fid, 'ferramentas').bronze || 0;
+  god(() => { D.make('m:' + o.id, 'machado.bronze', 1, { code: 'teste' }); D.move('m:' + o.id, 'f:' + fid, 'machado.bronze', 1, { code: 'teste' }); });
+  const t1 = stock(fid, 'ferramentas'), q1 = G.Origem.parts('f:' + fid, 'ferramentas').bronze || 0;
+  // (and an arrow's stone and wood, a staff's wood)
   god(() => { D.make('m:' + o.id, 'flecha.pedra', 20, { code: 'teste' }); D.make('m:' + o.id, 'cajado', 1, { code: 'teste' }); });
-  const a0 = stock(fid, 'armas'), w0 = stock(fid, 'wood');
+  const a0 = stock(fid, 'stone'), w0 = stock(fid, 'wood');
   god(() => { D.move('m:' + o.id, 'f:' + fid, 'flecha.pedra', 20, { code: 'teste' }); D.move('m:' + o.id, 'f:' + fid, 'cajado', 1, { code: 'teste' }); });
-  const a1 = stock(fid, 'armas'), w1 = stock(fid, 'wood');
-  if (!(inH === 1 && n === 1 && Math.abs(t1 - t0 - 1) < 1e-6 && D.get(H, 'machado.pedra') === 0 && Math.abs(a1 - a0 - 1) < 1e-6 && (Math.abs(w1 - w0 - 0.5) < 1e-6 || w0 >= G.Village.cap(fid) - 0.5))) bad.push(`ferramentas ${t0}→${t1}, armas ${a0}→${a1}, madeira ${w0}→${w1}`);
+  const a1 = stock(fid, 'stone'), w1 = stock(fid, 'wood');
+  if (!(inH === 1 && n === 1 && (Math.abs(p1 - p0 - 0.5) < 1e-6 || full('stone')) && D.get(H, 'machado.pedra') === 0 && Math.abs(t1 - t0 - 1) < 1e-6 && Math.abs(q1 - q0 - 1) < 1e-6 && (Math.abs(a1 - a0 - 0.25) < 1e-6 || full('stone')) && (Math.abs(w1 - w0 - 0.75) < 1e-6 || full('wood')))) bad.push(`pedra ${p0}→${p1}, ferramentas ${t0}→${t1} (bronze ${q0}→${q1}), pedra das flechas ${a0}→${a1}, madeira ${w0}→${w1}`);
   const things = [...S.factions.values()].flatMap(f => Object.keys(f.stock).filter(k => It.isThing(k)));
   const nv = novas();
-  ok('i10 a coisa que chega ao armazém conta como o seu bem; nenhuma coisa no estoque', !bad.length && !things.length && !nv.length, `o machado da casa de ${o.name} levado ao armazém: ferramentas ${t0} → ${t1}; vinte flechas → armas ${a0} → ${a1}; o cajado → madeira ${w0} → ${w1}${things.length ? ' — COISAS NO ESTOQUE: ' + things.join(',') : ''}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''}`);
+  ok('i10 a coisa que chega ao armazém conta como o que ela é feita; nenhuma coisa no estoque', !bad.length && !things.length && !nv.length, `o machado de pedra da casa de ${o.name} levado ao armazém: pedra ${p0} → ${p1}; um de bronze: ferramentas ${t0} → ${t1} (de bronze ${q0} → ${q1}); vinte flechas e o cajado → pedra ${a0} → ${a1}, madeira ${w0} → ${w1}${things.length ? ' — COISAS NO ESTOQUE: ' + things.join(',') : ''}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''}`);
 }
 
 // ================================================================ save and load in the middle
@@ -407,8 +422,9 @@ if (on('i13')) {
   let g = null;
   if (b && far) { arm(b, 'lanca.pedra'); god(() => { b.x = far[0]; b.y = far[1]; b.inside = 0; }); const fid = G.Fac.idOfV(b); god(() => V.kill(b, 'war')); g = (S.loose || []).find(o => o.k === 'lanca.pedra' && Math.abs(o.x - far[0]) < 0.01); if (!(g && g.fac === fid && G.Vg.groundLoad(g))) bad.push('longe: ' + JSON.stringify(g));
     // (a hand of the world passes: up into its arms and to the store, by the doors of the errand that picks up a plain load)
-    const p = people(x => grown(x) && G.Fac.idOfV(x) === fid && !x.carry && !Po.is(x))[0]; const a0 = stock(fid, 'armas');
-    if (p && g) { god(() => { D.move('g:' + g.id, 'v:' + p.id, g.k, 1, { code: 'apanhou', by: p.id }); G.Vg.toStore(p, fid, 'entrega'); }); const a1 = stock(fid, 'armas'); if (!(Math.abs(a1 - a0 - 1) < 1e-6 || a0 >= G.Village.cap(fid) - 1)) bad.push(`ao armazém: armas ${a0} → ${a1}`); said.push(`${b.name} caiu longe: a lança no chão com a marca do povo; quem passa a leva ao armazém (armas ${a0} → ${stock(fid, 'armas')})`); }
+    // (and the spear of stone reaches the store as its wood and stone: 20h, D-442)
+    const p = people(x => grown(x) && G.Fac.idOfV(x) === fid && !x.carry && !Po.is(x))[0]; const a0 = stock(fid, 'wood');
+    if (p && g) { god(() => { D.move('g:' + g.id, 'v:' + p.id, g.k, 1, { code: 'apanhou', by: p.id }); G.Vg.toStore(p, fid, 'entrega'); }); const a1 = stock(fid, 'wood'); if (!(Math.abs(a1 - a0 - 0.75) < 1e-6 || a0 >= G.Village.cap(fid) - 1)) bad.push(`ao armazém: madeira ${a0} → ${a1}`); said.push(`${b.name} caiu longe: a lança no chão com a marca do povo; quem passa a leva ao armazém (madeira ${a0} → ${stock(fid, 'wood')})`); }
   } else said.push('(ninguém para cair longe)');
   // (dies in the water: to the house)
   const c = people(x => grown(x) && x.home && !Po.is(x) && x.id !== (a && a.id) && x.id !== (b && b.id))[0];

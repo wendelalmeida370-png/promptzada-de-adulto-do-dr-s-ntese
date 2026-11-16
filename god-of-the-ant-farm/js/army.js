@@ -84,7 +84,7 @@
       if (G.Civ.has(fid0, 'arco') && G.R() < ({ egipcio: 0.35, asteca: 0.3, nordico: 0.15 }[f.civ] || 0.2)) return 'arqueiro';
     }
     if (horses.n > 0 && f.civ !== 'asteca' && (v.courage > 0.55 || v.role === 'cavalarico') && G.R() < 0.5) { horses.n--; return 'cavalaria'; }
-    const sword = G.Civ.has(fid0, 'ferro') || G.Civ.has(fid0, 'bronze');
+    const sword = G.Origem.forged(fid0, 'ferro') || G.Origem.forged(fid0, 'bronze'); // (a sword of a metal the people had: 20h)
     if (sword && G.R() < ({ romano: 0.7, nordico: 0.5, grego: 0.2 }[f.civ] || 0.3)) return 'espadachim';
     return 'lanceiro';
   }
@@ -101,7 +101,7 @@
     const S = G.S; opts = opts || {};
     const horses = { n: G.Eco ? G.Eco.horses(f.id) : 0 };
     // weapons: each levy takes one from the armory
-    for (const v of members) { if (!(b.campaign && v._armed)) v._armed = v.role === 'guerreiro'; if (!v._armed && (f.stock.armas || 0) >= 1) { f.stock.armas -= 1; v._armed = true; v._levy = true; } }
+    for (const v of members) { if (!(b.campaign && v._armed)) v._armed = v.role === 'guerreiro'; if (!v._armed && (f.stock.armas || 0) >= 1) { f.stock.armas -= 1; v._armed = true; v._levy = G.Origem ? G.Origem.levy(f) : true; } } // (the levy's weapon with its metal: 20h)
     const byKind = {};
     for (const v of members) { const k = unitFor(v, f, horses, f.id); v.unit = k; (byKind[k] || (byKind[k] = [])).push(v); }
     // the general: the ruler if at the head of the host, else the most feared warrior
@@ -920,7 +920,7 @@
   // (and with it the levy is unarmed again: the next host arms him from the armoury, not from a weapon already given back)
   AR.discharge = function (v) {
     v.unit = null; if (v._bow) { v.arm = null; v._bow = false; }
-    if (v._levy && v.role !== 'guerreiro') { const f = G.Fac.ofV(v); if (f) f.stock.armas = (f.stock.armas || 0) + 1; v._armed = false; }
+    if (v._levy && v.role !== 'guerreiro') { const f = G.Fac.ofV(v); if (f) { f.stock.armas = (f.stock.armas || 0) + 1; if (G.Origem) G.Origem.unlevy(f, v); } v._armed = false; } // (the weapon back with its metal: 20h)
     v._levy = false;
   };
   AR.onDisband = function (b) {

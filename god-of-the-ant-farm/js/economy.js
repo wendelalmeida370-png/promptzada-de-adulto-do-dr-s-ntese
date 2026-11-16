@@ -21,6 +21,10 @@
     tecido: { name: 'tecido', title: 'Tecido', price: 1.6, col: '#c8503a' },
     couro: { name: 'couro', title: 'Couro', price: 0.9, col: '#8a5a34' },
     minerio: { name: 'minério', title: 'Minério', price: 0.6, col: '#7a5a4a' },
+    // (the ores of the bronze, each from its own vein: the copper of the hills, common; the tin of the granite and of the river's
+    // gravel, rare — the one that is bought from afar: 20h, D-441)
+    cobre: { name: 'cobre', title: 'Cobre', price: 0.8, col: '#c8763a' },
+    estanho: { name: 'estanho', title: 'Estanho', price: 2.4, col: '#c4c9d0' },
     ferramentas: { name: 'ferramentas', title: 'Ferramentas', price: 2, col: '#9aa0a8' },
     armas: { name: 'armas', title: 'Armas', price: 2.6, col: '#b8bcc4' },
     ouro: { name: 'ouro', title: 'Ouro', price: 5, col: '#f2c14e' },
@@ -71,8 +75,8 @@
     estabulo: 'Cavalos criados por cavalariços. Sem eles não há cavalaria nem carros de guerra.',
     acougue: 'O açougueiro busca um animal no curral, abate e leva a carne ao armazém. O couro fica para os artesãos.',
     tecelagem: 'Teares: a lã tosquiada vira tecido para roupas, velas de navio e tendas de campanha.',
-    mina: 'Galerias escavadas num veio de minério ou de ouro. Mineiros entram, somem na montanha e voltam carregados.',
-    forja: 'Minério e carvão viram ferramentas (trabalho mais rápido) e armas (sem elas não há exército de verdade).',
+    mina: 'Galerias escavadas num veio de ferro, de cobre, de estanho ou de ouro. Mineiros entram, somem na montanha e voltam carregados.',
+    forja: 'O metal que o povo tem vira ferramentas e armas: bronze de cobre com um pouco de estanho, ferro do minério de ferro — com a lenha do armazém no fogo. Sem metal, a forja fica parada.',
     ourives: 'O ouro bruto vira joias — luxo das casas ricas e oferendas aos deuses.',
     olaria: 'Argila tirada da beira do rio, torneada e cozida no forno: potes e ânforas para as casas e o comércio.',
     feira: 'Toda manhã, barracas se armam: feirantes vendem comida e mercadorias, e mercadores de outros povos aparecem.',
@@ -151,8 +155,43 @@
         S.ores.push({ id: S.nextId++, x, y, kind, amt: max, max, mine: 0 });
       }
     }
+    E.genBronze(S);
+  };
+  // the ores of the bronze (20h, D-441), where the stone puts them: the copper in the hills and the rocky ground, common; the tin
+  // rare — in the granite of the high ground, and washed down into the gravel of a river's bank. Their own dice, from the world's
+  // seed (the iron and the gold of a world stay where they were), and a world saved before them gets them on loading the same way
+  // (S.oresV: the deposits' version, in the save — the load makes only the kinds a save does not know, by the seed, no chance)
+  E.ORE_KINDS = ['ferro', 'ouro', 'cobre', 'estanho'];
+  E.ORE_GOOD = { ferro: 'minerio', ouro: 'ouro', cobre: 'cobre', estanho: 'estanho' };
+  E.ORE_NAME = { ferro: 'ferro', ouro: 'ouro', cobre: 'cobre', estanho: 'estanho' };
+  E.oreGood = kind => E.ORE_GOOD[kind] || 'minerio';
+  E.genBronze = function (S) {
+    if (!S.ores) S.ores = [];
+    const rng = G.mulberry32((S.seed || 1) * 31 + 13);
+    const want = { cobre: Math.max(4, Math.round(N * N / 1100)), estanho: Math.max(2, Math.round(N * N / 4500)) };
+    const river = i => { const x = i % N, y = (i / N) | 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!W.inb(x + dx, y + dy)) continue; if (S.type[(y + dy) * N + x + dx] === T.RIVER) return true; } return false; };
+    for (const kind of ['cobre', 'estanho']) {
+      if (S.ores.some(o => o.kind === kind)) continue; // (a world that already has them)
+      let tries = 0, got = 0;
+      while (got < want[kind] && tries++ < 3000) {
+        const x = Math.floor(rng() * (N - 8)) + 4, y = Math.floor(rng() * (N - 8)) + 4; const i = y * N + x;
+        const t = S.type[i]; if (t < T.SAND || t === T.RIVER) continue;
+        const h = W.tileH(i);
+        const ok = kind === 'cobre' ? (t === T.ROCKY || h > G.SEA + 2.0) : (t === T.ROCKY && h > G.SEA + 3.0) || (river(i) && rng() < 0.35);
+        if (!ok) continue;
+        if (S.ores.some(o => G.dist(o.x, o.y, x, y) < (kind === 'cobre' ? 7 : 9))) continue;
+        if (S.starts && S.starts.some(p => G.dist(p[0], p[1], x, y) < 5)) continue;
+        if (S.occ[i] || S.objAt[i] || S.treeAt[i]) continue;
+        const max = kind === 'cobre' ? Math.round(120 + rng() * 100) : Math.round(40 + rng() * 50);
+        S.ores.push({ id: S.nextId++, x, y, kind, amt: max, max, mine: 0 }); got++;
+      }
+    }
+    S.oresV = 2;
   };
   E.oreAt = i => { const S = G.S; if (!S.ores) return null; const x = i % N, y = (i / N) | 0; return S.ores.find(o => o.x === x && o.y === y) || null; };
+  // (a deposit is taken while its mine stands: the mine a meteor, a fire or a war brought down left the deposit marked as
+  // mined for ever, and no town opened it again — L-1361)
+  E.oreTaken = o => { const b = o && o.mine ? G.S.buildings.get(o.mine) : null; return !!b && b.type === 'mina'; };
 
   // ------------------------------ planning ------------------------------
   const has = (fid, k) => G.Civ.has(fid, k);
@@ -166,8 +205,10 @@
     if (pop >= 18 && !n('tecelagem') && !site('tecelagem') && (E.hasSheep(set.id) || st.la >= 6)) want.push('tecelagem');
     if (pop >= 14 && !n('olaria') && !site('olaria') && E.riverNear(set, 16)) want.push('olaria');
     const ores = E.oresNear(set, 22);
-    for (const o of ores) { if (o.mine || site('mina')) continue; if (o.kind === 'ferro' && !has(fac.id, 'bronze')) continue; if (pop < 14) continue; want.push('mina'); set._mineFor = o.id; break; }
-    if (pop >= 18 && !n('forja') && !site('forja') && has(fac.id, 'bronze') && (st.minerio >= 4 || E.hasMine(set.id, 'ferro'))) want.push('forja');
+    // (a mine on what the people needs — the gold always; the copper and the tin with the art of the bronze, the iron with the art
+    // of the iron — and the forge where there is a metal it knows how to work: D-441)
+    for (const o of ores) { if (E.oreTaken(o) || site('mina')) continue; if (!E.oreWanted(fac.id, o.kind)) continue; if (pop < 14) continue; want.push('mina'); set._mineFor = o.id; break; }
+    if (pop >= 18 && !n('forja') && !site('forja') && E.metalNear(set, fac)) want.push('forja');
     if (pop >= 20 && !n('ourives') && !site('ourives') && (st.ouro >= 3 || E.hasMine(set.id, 'ouro'))) want.push('ourives');
     if (t >= 2 && pop >= 24 && !n('feira') && !site('feira')) want.push('feira');
     if (t >= 2 && pop >= 28 && n('taverna') < 1 + Math.floor(pop / 90) && !site('taverna')) want.push('taverna');
@@ -178,6 +219,8 @@
   };
   E.penCount = setId => { let n = 0; for (const b of E.byType(setId, 'curral')) n += E.penAnimals(b).length; return n; };
   E.hasSheep = setId => { for (const b of E.byType(setId, 'curral')) if (penKind(b) === 'ovelha') return true; return false; };
+  E.oreWanted = (fid, kind) => kind === 'ouro' || ((kind === 'cobre' || kind === 'estanho') && has(fid, 'bronze')) || (kind === 'ferro' && has(fid, 'ferro'));
+  E.metalNear = (set, f) => { const st = f.stock; return (has(f.id, 'ferro') && ((st.minerio || 0) >= 4 || E.hasMine(set.id, 'ferro'))) || (has(f.id, 'bronze') && ((st.cobre || 0) >= 4 || E.hasMine(set.id, 'cobre'))); };
   E.hasMine = (setId, kind) => { for (const b of E.byType(setId, 'mina')) if (b.ore) { const o = G.S.ores.find(q => q.id === b.ore); if (o && o.kind === kind && o.amt > 0) return true; } return false; };
   E.riverNear = function (set, R) {
     if (set._rvDay === G.S.day) return set._rv;
@@ -190,7 +233,7 @@
   E.findSite = function (set, type) {
     const S = G.S;
     if (type === 'mina') {
-      const o = (S.ores || []).find(q => q.id === set._mineFor) || E.oresNear(set, 22).find(q => !q.mine); if (!o) return null;
+      const o = (S.ores || []).find(q => q.id === set._mineFor) || E.oresNear(set, 22).find(q => !E.oreTaken(q)); if (!o) return null;
       const i = o.y * N + o.x; if (S.occ[i] || S.wall[i]) return null;
       if (G.Village.resOver && G.Village.resOver(set, type, o.x, o.y, 1, 1, true)) return null; // (a lot kept for a great work: D-121)
       if (!W.findPath(set.cx, set.cy, o.x + 0.5, o.y + 0.5, true, 4000)) return null;
@@ -217,7 +260,8 @@
         case 'acougue': n = E.penCount(set.id) >= 4 ? 1 : 0; break;
         case 'tecelagem': n = Math.min(3, (st.la >= 2 || (b.inv && b.inv.la >= 2) ? 1 + Math.floor(st.la / 8) : 0) + (b.inv && b.inv.tecido > 0 ? 1 : 0)); break;
         case 'mina': { const o = S.ores && S.ores.find(q => q.id === b.ore); n = o && o.amt > 0 ? Math.min(4, 2 + Math.floor(pop / 60)) : 0; break; }
-        case 'forja': n = st.minerio >= 2 || (b.inv && (b.inv.minerio || 0) >= 2) ? 2 : (b.inv && (b.inv.armas || b.inv.ferramentas) ? 1 : 0); break;
+        // (the forge asks its smiths while there is a metal it works — or a batch under way —; with nothing to forge, a hand for what lies on its shelf)
+        case 'forja': n = E.forgeMetal(fac, b, 2) || (G.Oficio && G.Oficio.batches(b).length) ? 2 : (b.inv && (b.inv.armas || b.inv.ferramentas) ? 1 : 0); break;
         case 'ourives': n = st.ouro >= 1 || (b.inv && b.inv.ouro) ? 1 : 0; break;
         case 'olaria': n = 2; break;
         case 'mercado': n = Math.min(3, 1 + Math.floor(pop / 50)); break;
@@ -419,6 +463,16 @@
     return f.stock.armas < wantArms && (war || f.stock.ferramentas >= pop * 0.15) ? 'armas' : 'ferramentas';
   }
   E.forgeOut = forgeOut;
+  // the metal the forge works now (20h, D-441): the iron of the iron ore, with the art of the iron; else the bronze of the copper,
+  // with the art of the bronze and the tin that goes into the crucible; else nothing — a forge with no metal stands still. need:
+  // how much of the ore (the store's and the forge's own shelf, free); → 'ferro' | 'bronze' | null
+  E.forgeMetal = function (f, b, need) {
+    if (!f) return null; need = need || 6; const D = G.Depot; const sh = b ? 'b:' + b.id : null;
+    const have = k => D.free('f:' + f.id, k) + (sh ? D.free(sh, k) : 0);
+    if (has(f.id, 'ferro') && have('minerio') >= need - 1e-6) return 'ferro';
+    if (has(f.id, 'bronze') && have('cobre') >= need - 1e-6 && have('estanho') >= 1 - 1e-6) return 'bronze';
+    return null;
+  };
 
   // ------------------------------ choosing the day's work ------------------------------
   E.jobTask = function (v, H) {
@@ -651,8 +705,9 @@
     const D = G.Depot; const ref = 'b:' + b.id;
     if (t.st === 0) { const d = store(v); if (!d) return H.end(v); t.d = d.id; const r = walkB(v, t, d, dt, H); if (r < 0) return H.end(v); if (r > 0) t.st = 1; return; }
     if (t.st === 1) {
-      const n = Math.floor(Math.min(t.n, D.free('f:' + f.id, t.k), D.room('v:' + v.id, t.k, { to: ref })) + 1e-6);
-      if (n <= 0 || !D.move('f:' + f.id, 'v:' + v.id, t.k, n, { code: 'buscar', by: v.id, to: ref }).ok) return H.end(v);
+      // (t.of: the parts the workshop asks for — the salting yard's meat and fish, 20h)
+      const n = Math.floor(Math.min(t.n, t.of && G.Origem ? G.Origem.free('f:' + f.id, t.k, t.of) : D.free('f:' + f.id, t.k), D.room('v:' + v.id, t.k, { to: ref })) + 1e-6);
+      if (n <= 0 || !D.move('f:' + f.id, 'v:' + v.id, t.k, n, { code: 'buscar', by: v.id, to: ref, of: t.of || undefined }).ok) return H.end(v);
       t.st = 2; return;
     }
     const r = walkB(v, t, b, dt, H);
@@ -813,10 +868,10 @@
     if (t.st === 1) {
       v.act = 'mine';
       if (G.VR() < dt * 0.8) G.Audio && G.Audio.at(b.x, b.y, 'mine');
-      const need = (o.kind === 'ouro' ? 13 : 10) / Math.max(0.5, (v.work || 1) * G.Civ.tV(v, 'build'));
+      const need = ((o.kind === 'ouro' || o.kind === 'estanho') ? 13 : 10) / Math.max(0.5, (v.work || 1) * G.Civ.tV(v, 'build')); // (the gold and the tin come out slowly, a little at a time)
       if (v.actT < need) return;
-      const n = Math.min(o.amt, o.kind === 'ouro' ? 1 + (G.R() < 0.4 ? 1 : 0) : 2 + (G.R() < 0.5 ? 1 : 0));
-      const k = o.kind === 'ouro' ? 'ouro' : 'minerio';
+      const n = Math.min(o.amt, (o.kind === 'ouro' || o.kind === 'estanho') ? 1 + (G.R() < 0.4 ? 1 : 0) : 2 + (G.R() < 0.5 ? 1 : 0));
+      const k = E.oreGood(o.kind); // (what the vein is: the iron ore, the gold, the copper, the tin — 20h)
       const [dx, dy] = G.Vg.door(b); v.inside = 0; v.x = dx; v.y = dy;
       // (the ore out of the vein into the arms — in the ledger; hands holding something else leave it in the vein)
       if (G.Depot.room('v:' + v.id, k, { pack: true }) + 1e-6 < n) return H.end(v);
@@ -824,17 +879,17 @@
       const r = G.Depot.make('v:' + v.id, k, n, { code: 'mina', by: v.id, pack: true }); const f = G.Fac.ofV(v); if (r.ok) { if (f) made(f, k, r.n); E.pay(v, k, r.n); }
       G.FX && G.FX.dust(dx, dy, 2);
       if (o.kind === 'ouro' && f && !f._gold) { f._gold = S.day; log(`Os mineiros de ${G.S.settlements.get(b.set).name} encontraram ouro na montanha!`, 'star', b.x, b.y); G.Village.milestone('firstGold', 'Ouro!', 'Mineiros tiraram o primeiro ouro da montanha.', 'star'); }
-      if (o.amt <= 0) { const s = S.settlements.get(b.set); log(`A mina de ${o.kind === 'ouro' ? 'ouro' : 'minério'}${s ? ' de ' + s.name : ''} se esgotou.`, 'stone', b.x, b.y); }
+      if (o.amt <= 0) { const s = S.settlements.get(b.set); log(`A mina de ${E.ORE_NAME[o.kind] || 'minério'}${s ? ' de ' + s.name : ''} se esgotou.`, 'stone', b.x, b.y); }
       H.end(v); G.Vg.setTask(v, { type: 'deliver', pri: 1, kind: 'work' });
     }
   }
   // what a shift at the face brings out: the town's books, the miner's pay, the first gold, the end of the vein
   E.mined = function (v, bId, o, n) {
-    const S = G.S; const b = S.buildings.get(bId); const k = o.kind === 'ouro' ? 'ouro' : 'minerio';
+    const S = G.S; const b = S.buildings.get(bId); const k = E.oreGood(o.kind);
     const f = G.Fac.ofV(v); if (f) made(f, k, n); E.pay(v, k, n);
     if (G.Urban) G.Urban.noteB(b, 'mina', 1); // (the life of the quarter: a shift at the face)
     if (o.kind === 'ouro' && f && !f._gold && b) { f._gold = S.day; const st = S.settlements.get(b.set); log(`Os mineiros de ${st ? st.name : f.name} encontraram ouro na montanha!`, 'star', b.x, b.y); G.Village.milestone('firstGold', 'Ouro!', 'Mineiros tiraram o primeiro ouro da montanha.', 'star'); }
-    if (o.amt <= 0 && b) { const st = S.settlements.get(b.set); log(`A mina de ${o.kind === 'ouro' ? 'ouro' : 'minério'}${st ? ' de ' + st.name : ''} se esgotou.`, 'stone', b.x, b.y); }
+    if (o.amt <= 0 && b) { const st = S.settlements.get(b.set); log(`A mina de ${E.ORE_NAME[o.kind] || 'minério'}${st ? ' de ' + st.name : ''} se esgotou.`, 'stone', b.x, b.y); }
   };
   // a stall's stock from the store: merchants buy wholesale (the goods into the arms and the coins from their house to the
   // treasury, both or neither — no coin, no goods); a fair is the people's, and the store gives — in the ledger. With the way
@@ -1279,7 +1334,7 @@
       const hungry = herd.length ? herd.reduce((s, a) => s + a.hunger, 0) / herd.length : 0;
       h += `<div class="doing">${herd.length ? `<b>${herd.length}</b> ${esc(G.Animals.plural(sp, herd.length).replace(/^\d+ /, ''))}${young ? ` (${young} filhote${young > 1 ? 's' : ''})` : ''} de ${def.pen}` : 'Nenhum animal — ainda'}${out ? ` · ${out} no pasto` : ''}${ready ? ` · ${ready} pronto${ready > 1 ? 's' : ''} para ${kind === 'ovelha' ? 'tosquiar' : kind === 'peru' ? 'recolher ovos' : 'ordenhar'}` : ''}<br>Capim do curral: ${Math.round(E.penGrass(b) * 100)}% · fome do rebanho ${Math.round(hungry * 100)}%</div>`;
     }
-    if (b.type === 'mina') { const o = (S.ores || []).find(q => q.id === b.ore); const cv = b.cave && G.Caves && G.Caves.get(b.cave); h += `<div class="doing">${o ? `Veio de <b>${o.kind === 'ouro' ? 'ouro' : 'ferro'}</b>: ${Math.round(o.amt)} de ${o.max} restantes` : 'Sem veio de minério.'}${cv ? ` · ${cv.n} passos de galerias debaixo da terra${cv.links && cv.links.length ? ', ligadas a uma caverna natural' : ''}` : ''}</div>${cv ? `<div class="btns"><button data-act="cave-view" data-id="${cv.id}">${G.ICON.cave} Ver as galerias</button></div>` : ''}`; }
+    if (b.type === 'mina') { const o = (S.ores || []).find(q => q.id === b.ore); const cv = b.cave && G.Caves && G.Caves.get(b.cave); h += `<div class="doing">${o ? `Veio de <b>${E.ORE_NAME[o.kind] || 'ferro'}</b>: ${Math.round(o.amt)} de ${o.max} restantes` : 'Sem veio de minério.'}${cv ? ` · ${cv.n} passos de galerias debaixo da terra${cv.links && cv.links.length ? ', ligadas a uma caverna natural' : ''}` : ''}</div>${cv ? `<div class="btns"><button data-act="cave-view" data-id="${cv.id}">${G.ICON.cave} Ver as galerias</button></div>` : ''}`; }
     if (b.type === 'feira') h += `<div class="doing">${E.fairOpen() ? (b.openT && S.clock - b.openT < 6 ? 'Barracas armadas: dia de feira!' : 'Esperando os feirantes.') : 'Fechada — a feira abre de manhã.'}</div>`;
     if (b.type === 'coletoria') { const f = G.Fac.ofSet(b.set); if (f) h += `<div class="doing">Imposto de ${esc(f.name)}: <b>${Math.round(E.taxRate(f) * 100)}%</b>${E.coinage(f.id) ? ` · tesouro com ${Math.floor(f.stock.moedas)} moedas` : ' · sem moeda ainda'}</div>`; }
     if (b.type === 'mercado_negro') h += `<div class="doing">${b.raids ? `Já foi batido ${b.raids} ${b.raids > 1 ? 'vezes' : 'vez'} pelos guardas.` : 'Ninguém sabe de nada. Ninguém viu nada.'}</div>`;
@@ -1301,9 +1356,9 @@
 
   // ------------------------------ save ------------------------------
   (G.saveHooks = G.saveHooks || []).push({
-    save(out) { out.ores = G.S.ores || null; },
+    save(out) { out.ores = G.S.ores || null; out.oresV = G.S.oresV || 0; },
     load(o) {
-      const S = G.S; S.ores = o.ores || null; if (!S.ores) E.genDeposits(S); for (const f of S.factions.values()) E.ensure(f);
+      const S = G.S; S.ores = o.ores || null; if (!S.ores) E.genDeposits(S); else if (!(o.oresV >= 2)) E.genBronze(S); else S.oresV = o.oresV; for (const f of S.factions.values()) E.ensure(f);
       // (worlds saved before the store refused water could carry a NaN in it)
       for (const f of S.factions.values()) { delete f.stock.water; for (const k in f.stock) if (typeof f.stock[k] === 'number' && !isFinite(f.stock[k])) f.stock[k] = 0; }
     },

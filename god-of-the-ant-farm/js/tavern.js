@@ -10,10 +10,11 @@
 // ============================================================
 (function (G) {
   const E = G.Eco; const Tv = G.Tavern = {};
-  // what each people drinks when there is no wine: and what it is made of
+  // what each people drinks when there is no wine: and what it is made of (the beer of the grain of its fields; the pulque of
+  // the maguey's sap, which the world does not grow yet — the Aztecs brew the beer of their maize meanwhile: 20h, D-444)
   Tv.DRINK = {
     grego: { k: 'vinho', alt: 'cerveja' }, romano: { k: 'vinho', alt: 'cerveja' }, egipcio: { k: 'cerveja' },
-    nordico: { k: 'mel', alt: 'cerveja' }, asteca: { k: 'pulque' }, classico: { k: 'cerveja' },
+    nordico: { k: 'mel', alt: 'cerveja' }, asteca: { k: 'pulque', alt: 'cerveja' }, classico: { k: 'cerveja' },
   };
   Tv.NAME = { vinho: ['vinho', 'ânforas de vinho', 'uma taça de vinho'], mel: ['hidromel', 'potes de hidromel', 'um corno de hidromel'], cerveja: ['cerveja', 'jarras de cerveja', 'uma caneca de cerveja'], pulque: ['pulque', 'cabaças de pulque', 'uma cuia de pulque'] };
   const drinkOf = f => Tv.DRINK[(f && f.civ) || 'classico'] || Tv.DRINK.classico;
