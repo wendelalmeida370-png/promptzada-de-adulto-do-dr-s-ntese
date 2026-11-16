@@ -92,7 +92,9 @@ if (on('m3')) {
     const inn = put('tiger', p[0] + 5, p[1] + 3, { hunger: 0.05, age: 5 }); Me.m(inn).sx = 1; inn.hx = p[0] + 40; inn.hy = p[1]; // (its home is far: it is passing through)
     inn.hx = p[0] + 6; inn.hy = p[1] + 3; Me.m(inn).mk = -999;
     const hx0 = inn.hx;
-    const v = live(150, 2, () => { res.hunger = Math.min(res.hunger, 0.2); inn.hunger = Math.min(inn.hunger, 0.2); });
+    // (the two kept awake by the proof's hand: a cat sleeps most of the day and the night — at its hour it lies down rested or
+    // not, L-1007 —, and 150 s of two tigers asleep fourteen steps apart is no meeting; the case is the ground and the intruder)
+    const v = live(150, 2, (t) => { res.hunger = Math.min(res.hunger, 0.2); inn.hunger = Math.min(inn.hunger, 0.2); for (const h of [res, inn]) if (!h.dead && (h.state === 'sleep' || h.state === 'rest')) { h.state = 'idle'; h.t = 0; Me.m(h).en = Math.max(Me.m(h).en, 0.9); } });
     good = dM(t0, 'disputa:territorio') > 0 && dM(t0, 'vence:territorio') > 0 && !v.length;
     msg = `marcas ${dM(t0, 'marca')}, disputas do território ${dM(t0, 'disputa:territorio')}, vencidas ${dM(t0, 'vence:territorio')}, expulsos ${dM(t0, 'territorio:expulso')}; o intruso ${inn.hx !== hx0 ? 'foi morar longe' : 'ficou'} — ${vsay(v)}`;
   }

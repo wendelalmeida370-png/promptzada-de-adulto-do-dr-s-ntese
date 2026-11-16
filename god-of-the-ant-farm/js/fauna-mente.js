@@ -64,7 +64,7 @@
   // (the females in heat now, an index the males look in: refilled from the minds within half a second of a load)
   const HEATS = new Map(), NONE = new Set();
   const heatAdd = a => { let l = HEATS.get(a.kind); if (!l) HEATS.set(a.kind, l = new Set()); l.add(a.id); };
-  G.worldHooks.push(() => { Me.tally = {}; cA = null; cT = -1; HEATS.clear(); RUNG.length = 0; });
+  G.worldHooks.push(() => { Me.tally = {}; cA = null; cT = -1; HEATS.clear(); });
 
   // ------------------------------ the mind ------------------------------
   // who has a mind: the wild beasts of the ground and of the shore (the kept, the town's, the sky's and the sea's have none)
@@ -251,16 +251,8 @@
   // another that the same danger eats a little less, the rest only lift their heads) runs, stands or looks: the door the world
   // around calls too (G.Meio: a bird's alarm, the scent on the wind). src: the danger (a beast, a person), or null: from (x, y).
   // Who runs here does not call the alarm again (heard): one ring, no chain across the map. Gives how many ran
-  // (the alarms just rung: a herd that bolts rings it once — the next of its own to bolt, a few steps off, a moment later, from
-  // the same danger, is heard by the same ears that are already running: not rung again; another danger rings anew. Kept a
-  // second and a half; new with each world)
-  const RUNG = []; const RING_T = 1.5;
   Me.alarm = function (x, y, kind, lv, src) {
     if (!(lv > 0)) return 0; lv = Math.min(1, lv); const r = 4 + 8 * lv; let n = 0;
-    const now = G.S.clock; while (RUNG.length && (now - RUNG[0][3] > RING_T || now < RUNG[0][3])) RUNG.shift();
-    const sid = src && src.id ? src.id : 0;
-    for (let i = 0; i < RUNG.length; i++) { const q = RUNG[i]; if (q[2] === kind && q[5] === sid && q[4] >= lv && G.dist2(q[0], q[1], x, y) < 9) return 0; }
-    RUNG.push([x, y, kind, now, lv, sid]); if (RUNG.length > 24) RUNG.shift();
     const sk = src && src.kind; const person = !!src && !sk;
     A.near(x, y, r, b => {
       if (b === src || b.dead || b.held || b.air || b.caught || b.tamed || b.legend) return;
@@ -303,6 +295,7 @@
     if (!Me.has(a, sp)) return true;
     const m = a.mind || (a.mind = fresh(a));
     const st = a.state; const sw = a.caught ? 1.2 : sprinting(a);
+    if ((st === 'suckle' || st === 'nurse') && !S.animals.has(a.target)) { a.state = 'idle'; a.target = 0; a.t = 0.5; }
     if (st === 'sleep') m.en = Math.min(1, m.en + dt * EN_SLEEP);
     else if (RESTFUL[st]) m.en = Math.min(1, m.en + dt * EN_REST);
     else m.en = Math.max(0, m.en - dt * EN_AWAKE * (sw ? 1 + 2 * sw : a.moving ? 1.25 : 1));
@@ -439,7 +432,7 @@
     score(a, sp) {
       const m = Me.m(a); if (m.f > 0.45 || m.es > 0) return 0;
       const pw = Me.sleepTime(a.kind); if (pw <= 0) return m.en < 0.12 ? 0.5 : 0;
-      let s = (1 - m.en) * pw * 1.6 + pw * 0.25 + (m.en < 0.15 ? 0.45 : 0);
+      let s = (1 - m.en) * pw * 1.6 + pw * 0.4 + (m.en < 0.15 ? 0.45 : 0); // (at its hour it sleeps, rested or not: the herd that groomed all day still lay down at night)
       if (hungry(a, sp)) s *= A.predator(a.kind) ? 0.45 : 0.6;
       if (a.grown < 1) s *= 1.15;
       return s;

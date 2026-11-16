@@ -378,7 +378,10 @@
     if (a.dead) return false; const sp = SP[a.kind]; if (!sp) return false;
     if (a.tamed) return false; // a city's guardian beast
     if (a.summoned || a.raid || a.legend) return true;
-    if (a.angry > 0) return true;
+    // (angry at a person, or at nobody in particular; angry at another beast — the buffalo driving the lions off, the moose turning
+    // on a wolf — it is no danger to the people by it: read as one, the brave of the town speared the giants that fought the
+    // hunters, L-1007f)
+    if (a.angry > 0) { const o = a.target && G.S.animals.get(a.target); return !o; }
     // (and the hunter creeping in on a person, or in the air over one: D-297b)
     const tg = a.target && G.S.villagers.get(a.target);
     return !!(tg && (a.state === 'chase' || a.state === 'lunge' || a.state === 'stalk' || a.state === 'pounce' || a.state === 'strike' || a.state === 'bluff'));
@@ -717,7 +720,9 @@
     // (the senses of the pillars, D-276: how far the other is noticed is the old radius times A.senseMul — the wind, the cover,
     // the dark, a mind on guard —; looked for up to as far as they can stretch for this one, A.senseBound, SENSE_MAX at most)
     const sense = A.senseHooks.length > 0; const sb = sense ? A.senseBound(a) : 1, sb2 = sb * sb;
-    if (sp.fear > 0 && !(a.angry > 0)) {
+    // (a kind with a temper toward people reads them by it — the fight's look, before this one: the hare that would freeze is not
+    // sent running here at the old distance first)
+    if (sp.fear > 0 && !(a.angry > 0) && !(G.Luta && G.Luta.TEMPER[a.kind])) {
       const r0 = sp.fear * (sp.defend && a.grown >= 1 ? 0.55 : 1);
       // (the nearest one noticed: one no nearer than the best so far is never asked for — the senses are the dear part)
       let v = null;
@@ -806,7 +811,7 @@
       G.Mente && G.Mente.gesto(a, 'stalk', 0, tg.id, still ? 1 : 0);
       if (tg.kind && tg.state === 'flee' && d < 6) { a.state = 'chase'; a.t = 6; a.crouch = 0; return true; } // seen: now it is a race
       // (a person who saw it and runs: the rush now, from near; from far, the moment is gone — D-297b)
-      if (!tg.kind && tg.task && tg.task.type === 'flee') { if (d < 7) { a.state = 'chase'; a.t = 6; } else { a.state = 'idle'; a.target = 0; a.onPerson = false; a.rest = G.rr(6, 12); } a.crouch = 0; return true; }
+      if (!tg.kind && tg.task && tg.task.type === 'flee') { if (d < 7) { a.state = 'chase'; a.t = 6; } else { a.onPerson = false; if (!G.Luta.calmed(a, tg)) { a.state = 'idle'; a.target = 0; } a.rest = G.rr(6, 12); } a.crouch = 0; return true; }
       // a pride waits for its flankers — a few seconds, no more
       let wait = false;
       if ((sp.pride || sp.pack) && a.t > 9) { for (const o of packOf(a)) if (o.state === 'flank' && o.moving) { wait = true; break; } }
@@ -817,7 +822,7 @@
         a.t = 6; for (const o of packOf(a)) if (o.state === 'flank') { o.state = 'chase'; o.t = 7; o.crouch = 0; }
         return true;
       }
-      if (!tg.kind && d > 13) { a.state = 'idle'; a.target = 0; a.onPerson = false; a.crouch = 0; a.rest = G.rr(4, 8); return true; } // (the person walked off out of reach)
+      if (!tg.kind && d > 13) { a.onPerson = false; a.crouch = 0; if (!G.Luta.calmed(a, tg)) { a.state = 'idle'; a.target = 0; } a.rest = G.rr(4, 8); return true; } // (the person walked off out of reach)
       if (a.t <= 0 || d > 15) { a.state = 'chase'; a.t = 6; a.crouch = 0; for (const o of packOf(a)) if (o.state === 'flank') { o.state = 'chase'; o.t = 7; o.crouch = 0; } return true; }
       if (wait && d < 5) { a.moving = false; return true; }
       if (still) { a.moving = false; return true; }
@@ -1134,7 +1139,10 @@
           if (d < 1.8 && !G.Luta.claim(a, tg)) return;
           if (d < 0.7) { a.state = 'eat'; a.t = 20; return; } a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.sp * 1.3); return;
         }
-        if ((a.t <= 0 && !tg.kind) || d > 16) { a.state = 'idle'; a.target = 0; a.rest = G.rr(6, 12); a.onPerson = false; return; }
+        // (a person's hunt given up: it goes off — L-1007f — and does not stand about where the town comes for it)
+        if ((a.t <= 0 && !tg.kind) || d > 16) { a.onPerson = false; if (tg.kind || !G.Luta.calmed(a, tg)) { a.state = 'idle'; a.target = 0; } a.rest = G.rr(6, 12); return; }
+        // (a person it is not hunting and no longer angry at: the charge is over — it goes off, L-1007f)
+        if (!tg.kind && !a.onPerson && !(a.angry > 0) && !a.tamed && !a.summoned && !a.raid && !a.legend) { if (!G.Luta.calmed(a, tg)) { a.state = 'idle'; a.target = 0; a.t = G.rr(0.5, 1.5); } return; }
         // a beast: the fight's chase — the breath, the jinks, the test of the herd, the takedown
         if (tg.kind) { G.Luta.chase(a, tg, dt, sp); return; }
         if (d < 0.55 + sp.size * 0.25) { bite(a, tg, dt); return; }
@@ -1783,7 +1791,9 @@
   // a young born at its mother's side (where she stands, or beside her; a mother off her ground — inside a building — gives no
   // birth there: a wolf's cub was born in a theatre of the metrópole, its mother inside it, L-681, L-631)
   function birth(a, sp, count) {
-    const S = G.S; const q = pickNear(a, 1.2, true) || (walkOK(a, a.x, a.y) ? [a.x, a.y] : null); if (!q) return false;
+    const S = G.S; let q = null;
+    for (let k = 0; k < 8 && !q; k++) { const an = G.R() * 6.283, r = 0.4 + G.R() * 0.8, x = a.x + Math.cos(an) * r, y = a.y + Math.sin(an) * r; if (walkOK(a, x, y) && lineOK(a, x, y)) q = [x, y]; }
+    if (!q && walkOK(a, a.x, a.y)) q = [a.x, a.y]; if (!q) return false;
     const kid = A.spawn(a.kind, q[0], q[1], { leader: a.leader || a.id, age: 0, grown: 0.35, hunger: 0.2, z: sp.cls === 'air' ? a.z : 0, hx: a.hx, hy: a.hy, morph: a.morph && G.R() < 0.3 ? a.morph : rollMorph(sp) });
     kid.hp = kid.maxHp * 0.6; a.hunger += 0.2; count[a.kind] = (count[a.kind] || 0) + 1;
     const eco = S.eco || (S.eco = { deaths: {}, born: {} }); eco.born[a.kind] = (eco.born[a.kind] || 0) + 1;
