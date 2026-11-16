@@ -102,6 +102,13 @@
   const MIGR = k => SP[k] && (SP[k].migr === 'herd' || (SP[k].herd && SP[k].herd[1] >= 6));
   // (the beasts a town keeps out by day: the big hunters and the giants that kill — not the fox at the scraps, nor the deer)
   const DANGER = new Set(A.ids.filter(k => { const d = SP[k]; return d.cls !== 'air' && d.cls !== 'water' && !d.dom && !d.town && ((A.predator(k) && d.size >= 0.9 && d.diet !== 'scav') || ['elephant', 'rhino', 'hippo', 'buffalo', 'hyena'].includes(k)); }));
+  // (how wary of the towns each wild kind is, as in life: 2 the big dangerous ones, out of the town's ground the whole day; 1 the
+  // others, out of it from the morning to the late afternoon — at dusk the deer and the hare come to the edge of the fields; 0
+  // the ones that live among people: the scavengers (the fox at the scraps), the small ones of the walls and the ditches (the
+  // frog, the lizard) and the town's own beasts. The snakes and the crocodile keep off the houses and the water-places of the
+  // people at any hour, but hunger)
+  const SNAKE = set(['python', 'anaconda', 'viper', 'croc']);
+  const WARY = {}; for (const k of A.ids) { const d = SP[k]; if (d.cls === 'air' || d.cls === 'water' || d.dom || d.town) continue; WARY[k] = DANGER.has(k) || SNAKE.has(k) ? 2 : (k === 'fox' || k === 'frog' || k === 'lizard' || d.fear <= 0) ? 0 : 1; if (!WARY[k]) delete WARY[k]; }
   const wild = (a, sp) => !a.dom && !a.pen && !a.tamed && !a.summoned && !a.raid && !a.legend && !sp.dom && !sp.town && !a.held && !a.air;
   const land = sp => sp.cls === 'land' || sp.cls === 'amph';
   // the gesture's index (a.meio.g)
@@ -324,7 +331,11 @@
   const HUNT = { chase: 1, stalk: 1, flank: 1, lunge: 1, pounce: 1, strike: 1 };
   const desperate = (a, sp) => A.predator(a.kind) && !REPTILE.has(a.kind) && (a.hunger > 0.85 || a.hp < a.maxHp * 0.4 || a.age > sp.life * a.lifeMul * 0.88);
   function shunned(a, sp) {
-    if (Mi.off.town || !DANGER.has(a.kind) || !ENV.day || ENV.t > 0.7 || a.angry > 0) return false;
+    const w = WARY[a.kind]; if (!w || Mi.off.town || a.angry > 0) return false;
+    if (SNAKE.has(a.kind)) { if (a.hunger > 0.55) return false; } // (the cold-blooded keep off at any hour, till hunger brings them)
+    else if (!ENV.day || ENV.t > (w === 2 ? 0.7 : 0.6) || (w === 1 && ENV.t < 0.08)) return false;
+    // (wariness yields to hunger: the hungry grazer and the hungry giant come to the fields and the gardens by day too)
+    if (!A.predator(a.kind) && a.hunger > (w === 2 ? 0.65 : 0.5)) return false;
     if (HUNT[a.state] && a.target && !a.carc && (a.onPerson || (G.S.animals.get(a.target) || {}).dom || desperate(a, sp))) return false;
     return true;
   }
@@ -341,7 +352,7 @@
   // out of the town: not among the houses, the nearest way to the open (and the home range with it, when the town grew over it)
   function leaveStep(a, dt, sp, S) {
     const r = RUN.get(a.id); if (!r || r.o !== 'sair') { a.state = 'idle'; return true; } r.q += dt;
-    if (r.q > 45 || !townAt(a.x, a.y)) { if (G.dist(a.hx, a.hy, a.x, a.y) > 3 && townAt(a.hx, a.hy)) { a.hx = r.gx; a.hy = r.gy; } return quit(a, null, 1); }
+    if (r.q > 45 || !townAt(a.x, a.y)) { if (townAt(a.hx, a.hy)) { a.hx = r.gx; a.hy = r.gy; } return quit(a, null, 1); }
     // (on its way out it minds the hunters that eat it, not the people it is already walking away from)
     r.sc -= dt; if (r.sc <= 0) { r.sc = 0.5; const th = A.fearOf(a); if (th && th.kind) { quit(a, null, 0); a.scan = 0; return false; } }
     const w = walk(a, r, dt, r.fast ? sp.run * 0.85 : sp.sp * 1.25, 2.5); if (w === null) return true;
@@ -412,22 +423,27 @@
     const m = meioOf(a); const i = W.idx(a.x, a.y); const t = S.type[i]; const rate = Mi.off.thirst ? 0 : THIRST[a.kind] || 0;
     const r = RUN.get(a.id);
     // a state of this module left for another (a flight, a hunt, the world's hand): what it held goes with it
-    if (r && r.o !== a.state) endRun(a, r);
+    if (r && r.o !== a.state) {
+      // (the raider that bolts from the field with people about: the field remembers, however the fright came — the shout of the
+      // step below or the world's own fear scan, which is quicker)
+      if (r.o === 'lavoura' && r.p === 1 && a.state === 'flee' && peopleNear(a.x, a.y, 1)) { taught(a.x, a.y, 0.15); count('raidScared'); }
+      endRun(a, r);
+    }
     else if (!r && m.g) { const gn = Ge.ids[m.g - 1]; if (a.gest !== gn) m.g = 0; else if (Ge.DEF[gn].d === 0 && !MINE[a.state]) { A.gestEnd(a, gn); m.g = 0; } }
     if (m.al > 0) m.al = Math.max(0, Math.round(m.al - dt));
     const st = a.state;
     // ---- the town by day (D-305): the shunned one inside walks out; its wander into a town is turned back; a chase of a wild
     // prey into the houses is given up
-    if (DANGER.has(a.kind) && st !== 'sair' && shunned(a, sp)) {
+    if (WARY[a.kind] && st !== 'sair' && shunned(a, sp)) {
       const tin = townAt(a.x, a.y);
       if (tin && (st === 'idle' || st === 'wander' || st === 'graze' || st === 'lurk' || (MINE[st] && st !== 'beber'))) { if (leaveTown(a, sp, tin)) return true; }
       // (startled among the houses, it bolts for the open, not deeper in away from whoever startled it)
       else if (tin && st === 'flee') { if (leaveTown(a, sp, tin, true)) return true; }
-      else if (!tin && st === 'wander') { const to = townAt(a.tx, a.ty); const g = to ? wayOut({ x: a.tx, y: a.ty, kind: a.kind }, to) : roadAt(a.tx, a.ty) ? offRoad(a, a.tx, a.ty) : null; if (g) { a.tx = g[0]; a.ty = g[1]; a.path = null; count('turnedBack'); } }
+      else if (!tin && st === 'wander') { const to = townAt(a.tx, a.ty); const g = to ? wayOut({ x: a.tx, y: a.ty, kind: a.kind }, to) : roadAt(a.tx, a.ty) ? offRoad(a, a.tx, a.ty) : null; if (g) { a.tx = g[0]; a.ty = g[1]; a.path = null; count('turnedBack'); if (to && townAt(a.hx, a.hy)) { a.hx = g[0]; a.hy = g[1]; } } }
       else if ((st === 'chase' || st === 'stalk' || st === 'flank' || st === 'lunge') && a.target) { const p = S.animals.get(a.target); if (p && (a.carc || !p.dom) && townAt(p.x, p.y)) { a.state = 'idle'; a.target = 0; a.crouch = 0; a.rest = Math.max(a.rest || 0, 8); a.t = 1; count('chaseOff'); } }
     }
     // ---- the fire of a town at night: the wander that would end beside it turns away (D-305)
-    else if (DANGER.has(a.kind) && ENV.night && st === 'wander' && !Mi.off.town && FIRES.length && !(a.hunger > 0.85)) {
+    else if (WARY[a.kind] && ENV.night && st === 'wander' && !Mi.off.town && FIRES.length && !(a.hunger > 0.85)) {
       const k = fireNear(a.tx, a.ty); if (k >= 0) { const dx = a.tx - FIRES[k], dy = a.ty - FIRES[k + 1], d = Math.hypot(dx, dy) || 1; const x = FIRES[k] + dx / d * 7, y = FIRES[k + 1] + dy / d * 7; if (W.inb(x, y) && A.walkOK(a, x, y)) { a.tx = x; a.ty = y; a.path = null; count('fireKept'); } }
     }
     // ---- a flight just begun: to the refuge the ground gives, and the call that warns the others
@@ -646,7 +662,7 @@
     const start0 = def.start; def.start = (a, sp, S) => {
       if (start0(a, sp, S) === false) { FAIL.set(a.id * 64 + code, G.S.clock); return false; }
       // (the town keeps the shunned out by day: no goal of theirs among the houses — but the last water of a drought, D-305)
-      const r = RUN.get(a.id); if (r && DANGER.has(a.kind) && !(name === 'beber' && ENV.dry) && shunned(a, sp) && (townAt(r.gx, r.gy) || (def.rest && roadAt(r.gx, r.gy)))) { endRun(a, r); a.state = 'idle'; a.t = 1; FAIL.set(a.id * 64 + code, G.S.clock); return false; }
+      const r = RUN.get(a.id); if (r && WARY[a.kind] && !(name === 'beber' && (ENV.dry || meioOf(a).th > 0.8)) && shunned(a, sp) && (townAt(r.gx, r.gy) || (def.rest && roadAt(r.gx, r.gy)))) { endRun(a, r); a.state = 'idle'; a.t = 1; FAIL.set(a.id * 64 + code, G.S.clock); return false; }
       return true; };
     // (a rest — the shade, the burrow, the huddle, the look-out — gives way to hunger: from where the old ways go to graze (0,25)
     // it weighs less and less, and at 0,45 it is gone; one resting that grows hungry gets up at 0,5. The time to graze is the
@@ -1237,5 +1253,5 @@
   // what the inspector says of this module's states
   Mi.TXT = { beber: 'Bebendo água', aguada: 'De tocaia na beira d’água', sombra: 'Descansando na sombra', lama: 'Chafurdando na lama', poeira: 'Tomando banho de terra', banho: 'Refrescando-se na água', rio: 'Na água, longe do sol', sol: 'Tomando sol', abrigo: 'Abrigando-se', aconchego: 'Encolhido junto dos outros', enrolar: 'Enrolado contra o frio', toca: 'Na toca', esconder: 'Escondido no capim', vigia: 'De vigia', ramos: 'Comendo folhas no alto', fruta: 'Comendo frutos', lavoura: 'Comendo a plantação', restos: 'Revirando os restos da cidade', curioso: 'Olhando, curioso', abutres: 'Seguindo os abutres', travessia: 'Atravessando o rio', sair: 'Saindo da cidade' };
   Mi.stateText = a => Mi.TXT[a.state] || null;
-  Mi.MINE = MINE; Mi.DANGER = DANGER;
+  Mi.MINE = MINE; Mi.DANGER = DANGER; Mi.WARY = WARY;
 })(window.G);

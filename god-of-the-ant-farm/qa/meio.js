@@ -25,9 +25,11 @@
 //       linhas da crônica, o verificador e os tetos da fauna;
 //   m15 a mesma semente, o mesmo mundo: duas vezes o mesmo salto, as mesmas contas e os mesmos bichos;
 //   m16 a cidade que o mato evita (D-305): um ano de um mundo de savana e de floresta com cidades, vivido duas vezes do mesmo
-//       save — com a cidade afastando as feras e sem (G.Meio.off.town) —, e as feras e os gigantes dentro das cidades de dia
-//       contados a cada segundo: com a cidade, quase nenhum; o leão posto na praça sai pelo caminho mais curto e não volta, com
-//       um save no meio da saída; de noite a cidade não o afasta; o verificador (a regra da cidade, S3) limpo.
+//       save — com a cidade afastando os bichos e sem (G.Meio.off.town) —, e as feras e os gigantes dentro das cidades de dia,
+//       e os outros bichos ariscos da manhã ao meio da tarde, contados a cada segundo: com a cidade, quase nenhum; as horas de
+//       cada um (o cervo vem à beira dos campos ao entardecer; a víbora e o crocodilo afastados também de noite, até a fome; a
+//       raposa nunca); o leão posto na praça sai pelo caminho mais curto e não volta, com um save no meio da saída; de noite a
+//       cidade não o afasta; o verificador (a regra da cidade, S3) limpo.
 // E em todos o verificador (S0–S2, com as regras do meio: qa/meio-inv.js), nenhum erro de módulo e nenhum gesto recusado.
 //   [ONLY=m1,m3] [ANOS=12] node qa/meio.js
 const M = require('./nodemundo.js');
@@ -239,7 +241,9 @@ if (on('m10')) { world(); calmSky(); M.saltar(2); calmSky();
     until(90, () => { if (S().time < 0.75 && S().time > 0.05) S().time = 0.8; for (const a of raiders) { const r = Mi.phase(a); if (a.state === 'lavoura' && r && r.p === 1) { raid = true; const c = f.crops[r.k]; const g = lastG.get(a.id * 16 + r.k); if (g !== undefined && c.g < g) ate += g - c.g; lastG.set(a.id * 16 + r.k, c.g); } } return raid && ate > 0.3; });
     // the farmer's answer: a person at the edge of the field
     const v = [...S().villagers.values()].find(q => q.age >= 16 && !q.captive && !q.inside && (q.hunger || 0) < 40); let scared = false; const fear0 = Mi.learnt(cx, cy); const sc0 = Mi.counts().raidScared || 0;
-    if (v) { const who = raiders.find(a => a.state === 'lavoura') || raiders[0]; until(10, () => { v.x = who.x + 1.5; v.y = who.y; return (Mi.counts().raidScared || 0) > sc0; }, 0.25); scared = (Mi.counts().raidScared || 0) > sc0; }
+    // (in the dark the beast sees only who is beside it — the people counted by cells of four tiles, its own cell: the person
+    // put a tile from it on its own cell, not a tile and a half off, which fell on the next cell as often as not, T-1328)
+    if (v) { const who = raiders.find(a => a.state === 'lavoura') || raiders[0]; until(10, () => { v.x = who.x + (who.x % 4 < 2 ? 1 : -1); v.y = who.y; return (Mi.counts().raidScared || 0) > sc0; }, 0.25); scared = (Mi.counts().raidScared || 0) > sc0; }
     const fear1 = Mi.learnt(cx, cy); const c = clean();
     ok('m10 a lavoura: os bichos comem a plantação, o povo os espanta e o chão lembra', raid && ate > 0.3 && scared && fear1 > fear0 && !c.n && !gestErr(), `à noite, ${raiders.length} bichos com fome perto da fazenda de ${(S().settlements.get(f.set) || {}).name}: ${raid ? 'entraram' : 'NÃO ENTRARAM'}, comeram ${ate.toFixed(2)} do crescido dos canteiros; uma pessoa à beira do campo: ${scared ? 'espantou-os' : 'NÃO os espantou'}; o medo aprendido ali ${fear0.toFixed(2)} → ${fear1.toFixed(2)}; verificador ${c.n}${c.n ? ': ' + c.msg : ''}`);
   } }
@@ -335,16 +339,30 @@ if (on('m16')) { const SEC = +(process.env.SEG || G.DAY_LEN); const said16 = [];
   const calmSt = a => a.state === 'idle' || a.state === 'wander' || a.state === 'graze' || a.state === 'lurk' || (Mi.MINE[a.state] && a.state !== 'sair' && a.state !== 'beber');
   // (the world of before: three years with the towns keeping nothing out, the beasts where they wandered)
   M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4 }); Mi.off.town = true; try { M.saltar(3); } finally { Mi.off.town = false; } const s0 = G.Save.serialize();
-  const arm = (off) => { M.abrir(JSON.parse(s0)); Mi.off.town = off; let n = 0, calm = 0, smp = 0; const kinds = {}; let v3 = 0; const c0 = Object.assign({}, Mi.counts());
-    try { for (let k = 0; k < SEC; k++) { M.viver(1); if (G.isNight() || S().time > 0.7) continue; smp++;
-        for (const a of S().animals.values()) { if (!feral(a) || !ins(a)) continue; n++; kinds[a.kind] = (kinds[a.kind] || 0) + 1; if (calmSt(a)) calm++; }
-        if (!off && k % 20 === 19) v3 += QA.check().filter(q => q.sys === 'meio' && /de dia dentro/.test(q.msg)).length; } }
+  // (the wary ones of every kind: the others than the big dangerous ones, from the morning to the late afternoon)
+  const shy = a => !a.dead && !a.dom && !a.tamed && !a.legend && !a.summoned && !a.raid && !a.pen && Mi.WARY[a.kind] === 1;
+  const arm = (off) => { M.abrir(JSON.parse(s0)); Mi.off.town = off; let n = 0, calm = 0, smp = 0, n1 = 0, smp1 = 0; const kinds = {}, kinds1 = {}; let v3 = 0; const c0 = Object.assign({}, Mi.counts());
+    try { for (let k = 0; k < SEC; k++) { M.viver(1); if (G.isNight() || S().time > 0.7) continue; smp++; const t = S().time; const mid = t >= 0.1 && t <= 0.58; if (mid) smp1++;
+        for (const a of S().animals.values()) {
+          if (mid && shy(a) && ins(a)) { n1++; kinds1[a.kind] = (kinds1[a.kind] || 0) + 1; }
+          if (!feral(a) || !ins(a)) continue; n++; kinds[a.kind] = (kinds[a.kind] || 0) + 1; if (calmSt(a)) calm++; }
+        if (!off && k % 20 === 19) v3 += QA.check().filter(q => q.sys === 'meio' && /afastado e à toa dentro/.test(q.msg)).length; } }
     finally { Mi.off.town = false; }
     const c1 = Mi.counts(); const dc = k => (c1[k] || 0) - (c0[k] || 0);
-    return { did: `saíram ${dc('leftTown')}, correram para fora ${dc('boltedOut')}, viraram antes de entrar ${dc('turnedBack')}, largaram a caça entre as casas ${dc('chaseOff')}, longe do fogo à noite ${dc('fireKept')}`, fire: dc('fireKept'), n, calm, smp, per: n / Math.max(1, smp), kinds: Object.entries(kinds).sort((p, q) => q[1] - p[1]).slice(0, 5).map(e => e.join(' ')).join(', '), v3 }; };
+    const top = o => Object.entries(o).sort((p, q) => q[1] - p[1]).slice(0, 5).map(e => e.join(' ')).join(', ');
+    return { n1, smp1, per1: n1 / Math.max(1, smp1), kinds1: top(kinds1), did: `saíram ${dc('leftTown')}, correram para fora ${dc('boltedOut')}, viraram antes de entrar ${dc('turnedBack')}, largaram a caça entre as casas ${dc('chaseOff')}, longe do fogo à noite ${dc('fireKept')}`, fire: dc('fireKept'), n, calm, smp, per: n / Math.max(1, smp), kinds: Object.entries(kinds).sort((p, q) => q[1] - p[1]).slice(0, 5).map(e => e.join(' ')).join(', '), v3 }; };
   const before = arm(true), after = arm(false);
-  const drop = after.n <= before.n * 0.15 && after.per < 0.6 && after.calm <= Math.max(3, before.calm * 0.05);
+  const drop = after.n <= before.n * 0.15 && after.per < 0.6 && after.calm <= Math.max(3, before.calm * 0.05) && after.n1 <= before.n1 * 0.25;
   said16.push(`um ano (${SEC} s) de dia, feras e gigantes dentro das cidades (bicho×segundo): sem a cidade afastar ${before.n} em ${before.smp} olhadas (${before.per.toFixed(2)} por olhada; à toa ${before.calm}; ${before.kinds}) → com ela ${after.n} em ${after.smp} (${after.per.toFixed(2)}; à toa ${after.calm}; ${after.kinds || 'nenhum'}; no ano, ${after.did}); a regra da cidade no verificador ${after.v3}`);
+  said16.push(`os outros bichos ariscos (o cervo, a lebre, a zebra, o javali…) dentro das cidades da manhã ao meio da tarde: ${before.n1} em ${before.smp1} olhadas (${before.per1.toFixed(2)}; ${before.kinds1 || 'nenhum'}) → ${after.n1} (${after.per1.toFixed(2)}; ${after.kinds1 || 'nenhum'})`);
+  // (the hours of each: the deer is kept out at noon and not at dusk, when it comes to the fields; the viper and the crocodile at
+  // any hour, but hunger; the fox never — it lives off the scraps)
+  { const tt = S().time; const probe = (kind, t, o) => { S().time = t; M.viver(0.1); return Mi.shunned(Object.assign({ kind, hunger: 0.1, hp: 9, maxHp: 9, age: 1, lifeMul: 1, angry: 0, state: 'idle', id: 1 }, o || {})); };
+    const hrs = { deerNoon: probe('deer', 0.3), deerDusk: probe('deer', 0.65), lionDusk: probe('lion', 0.65), viperNight: probe('viper', 0.9), viperHungry: probe('viper', 0.9, { hunger: 0.7 }), crocNight: probe('croc', 0.9), fox: probe('fox', 0.3) };
+    S().time = tt; M.viver(0.1);
+    const hOk = hrs.deerNoon && !hrs.deerDusk && hrs.lionDusk && hrs.viperNight && !hrs.viperHungry && hrs.crocNight && !hrs.fox; if (!hOk) said16.push('AS HORAS ERRADAS');
+    said16.push(`as horas: o cervo afastado ao meio-dia ${hrs.deerNoon ? 'sim' : 'NÃO'}, ao entardecer ${hrs.deerDusk ? 'SIM' : 'não'} (vem à beira dos campos); o leão ao entardecer ${hrs.lionDusk ? 'sim' : 'NÃO'}; a víbora de noite ${hrs.viperNight ? 'sim' : 'NÃO'}, com fome ${hrs.viperHungry ? 'SIM' : 'não'}; o crocodilo de noite ${hrs.crocNight ? 'sim' : 'NÃO'}; a raposa ${hrs.fox ? 'SIM' : 'nunca'} (vive dos restos)`);
+    if (!hOk) fails.push('m16 horas'); }
   // the lion in the square: by day it walks out by the nearest way and stays out; a save in the middle of the way out
   const st = [...S().settlements.values()].sort((p, q) => q.radius - p.radius)[0]; const lionIn = (off, night, save) => {
     M.abrir(JSON.parse(s0)); calmSky(); S().time = night ? 0.85 : 0.3; Mi.off.town = off; let out = -1, back = 0, at = 0, saved = false; let L;
