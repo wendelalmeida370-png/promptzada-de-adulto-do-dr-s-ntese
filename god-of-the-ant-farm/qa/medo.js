@@ -8,7 +8,7 @@
 // o céu fica limpo (uma tempestade põe a cidade debaixo dos tetos, T-868).
 // m1 um leão na praça ao meio-dia: em três segundos, quem não pode lutar e está a cinco casas dele foge; a crônica diz que
 //    ele entrou na cidade (uma vez);
-// m2 três armados perto: a turma vai contra o leão (duas lutas ou mais) e o leão cai ferido ou morto;
+// m2 três armados perto, junto da cidade: a turma vai contra o leão (duas lutas ou mais) e o leão cai ferido ou morto;
 // m3 um armado sozinho, longe dos outros: não vai contra o leão, foge;
 // m4 um hipopótamo à beira do caminho: quem está a duas casas dá lugar («bicho»), e ninguém vai lutar com ele;
 // m5 o caçador que caça um javali não foge dele;
@@ -19,6 +19,8 @@
 //    das casas e no puxão reto do caminho;
 // m10 uma víbora dentro da aldeia: os armados a matam com o pau; a criança perto dela dá lugar;
 // m11 ninguém anda na direção de um bicho: quem é mandado de um lado ao outro de um hipopótamo dá a volta, nunca dentro do anel;
+// m12 três armados no mato, longe das cidades, diante de um urso: ninguém vai caçá-lo — dão-lhe distância, como todos (L-1031: uma
+//    turma de construtores e mineiros acabava com os ursos do mundo onde quer que os visse);
 // e o verificador (o S3 novo «medo») calado, nenhum S0–S2 novo, nenhum erro de módulo nem de console.
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
@@ -185,6 +187,25 @@ if (on('m10')) {
   const fromIt = kt && kt.type === 'flee' && Number.isFinite(kt.fx) && G.dist(kt.fx, kt.fy, p[0], p[1]) < 1.5;
   ok('m10', fights >= 1 && viper.dead && (!kid || fromIt), `a víbora dentro de ${s.name}: ${fights} foram matá-la; ${viper.dead ? 'morta' : 'viva'}; a criança ${kid ? (kt ? kt.type + (kt.why ? '/' + kt.why : '') + (fromIt ? ', da víbora' : Number.isFinite(kt.fx) ? `, de algo a ${G.dist(kt.fx, kt.fy, p[0], p[1]).toFixed(1)} casas dela` : '') : 'sem tarefa') : '— (nenhum chão aberto ao lado dela)'}`);
   if (S.animals.has(viper.id)) A.remove(viper);
+}
+if (on('m12')) {
+  // a bear in the woods, far from every town, and three of the armed about it: the party is for the beast at the houses
+  const NN = G.N; let p = null;
+  for (let y = 4; y < NN - 4 && !p; y += 2) for (let x = 4; x < NN - 4 && !p; x += 2) {
+    if (![...S.settlements.values()].every(s => G.dist(x, y, s.cx, s.cy) > (s.radius || 8) + 14)) continue;
+    if (open(x + 0.5, y + 0.5) && [[4, 0], [-2, 3.5], [-2, -3.5]].every(([dx, dy]) => open(x + 0.5 + dx, y + 0.5 + dy))) p = [x + 0.5, y + 0.5];
+  }
+  if (!p) ok('m12', false, 'sem chão aberto longe das cidades');
+  else {
+    clear(p[0], p[1]); const bear = beast('bear', p[0], p[1]); hold = pin(bear, p[0], p[1]);
+    const brave = [...S.villagers.values()].filter(v => v.age >= 20 && v.age < 50 && !v.inside && !v.aboard && !v.ug && !(S.avatar && S.avatar.id === v.id) && !v.captive && !v.jail).slice(0, 3);
+    brave.forEach((v, k) => { v.courage = 0.95; v.hp = 100; Vg.endTask(v); const o = [[4, 0], [-2, 3.5], [-2, -3.5]][k]; v.x = p[0] + o[0]; v.y = p[1] + o[1]; });
+    const went = new Set(); let gave = 0;
+    for (let k = 0; k < 30; k++) { G.debug.step(0.1); for (const v of brave) if (v.task && v.task.type === 'fight' && v.task.id === bear.id) went.add(v.id); }
+    for (const v of brave) if (v.task && v.task.type === 'flee' || G.dist(v.x, v.y, p[0], p[1]) > 5.5) gave++;
+    ok('m12', brave.length === 3 && went.size === 0 && gave >= 2, `três armados a 4 casas de um urso no mato, a mais de 14 casas de toda cidade: ${went.size} foram caçá-lo; ${gave} deram-lhe distância (${brave.map(v => (v.task ? v.task.type + (v.task.why ? '/' + v.task.why : '') : '—') + ' a ' + G.dist(v.x, v.y, p[0], p[1]).toFixed(1)).join(', ')})`);
+    hold = null; if (S.animals.has(bear.id)) A.remove(bear); live(0.6);
+  }
 }
 if (on('m11')) {
   // nobody walks up to a beast: one sent straight past a hippo goes round it, never within its ring; and nobody heads at it

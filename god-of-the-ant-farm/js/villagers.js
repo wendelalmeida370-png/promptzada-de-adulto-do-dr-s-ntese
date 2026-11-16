@@ -576,8 +576,8 @@
       return;
     }
   }
-  // (inside a town's ring: where the armed kill a snake)
-  function inVillage(a) { for (const s of G.S.settlements.values()) { const r = (s.radius || 8); if (G.dist2(a.x, a.y, s.cx, s.cy) <= r * r) return true; } return false; }
+  // (inside a town's ring — and m tiles past it: where the armed kill a snake, where they go out against a hunter of people)
+  function inVillage(a, m) { for (const s of G.S.settlements.values()) { const r = (s.radius || 8) + (m || 0); if (G.dist2(a.x, a.y, s.cx, s.cy) <= r * r) return true; } return false; }
   function eachDread(x, y, r, fn) {
     const g = dreadGrid(); const x0 = ((x - r) / DC) | 0, x1 = ((x + r) / DC) | 0, y0 = ((y - r) / DC) | 0, y1 = ((y + r) / DC) | 0;
     // (a beast that left the world since the cells were made — eaten, gone into a cave, taken by the god's hand — is not fled)
@@ -649,7 +649,9 @@
           // (a beast at someone now is answered at once, as before; one only seen waits for the party: two more of the armed near it)
           let mates = fighters;
           if (!mates && !now) for (const o of S.villagers.values()) { if (o === v || o.inside || o.age < 16 || !armedFor(o) || (S.avatar && S.avatar.id === o.id) || (o.task && o.task.pri >= 4)) continue; if (G.dist2(o.x, o.y, a.x, a.y) < 144 && ++mates >= 2) break; }
-          if (fighters < (now ? 3 : 4) && (now || fighters > 0 || mates >= 2)) { setTask(v, { type: 'fight', id: a.id, pri: 4, rt: 0 }); emote(v, 'angry', 2); return; }
+          // (and only at the people's own ground: a bear in the woods, a lion out on the plain, is given room by the armed as by
+          // everyone — a party does not go hunting a lion it only saw, it drives off the one that came to the houses; L-1031)
+          if (fighters < (now ? 3 : 4) && (now || fighters > 0 || (mates >= 2 && inVillage(a, 4)))) { setTask(v, { type: 'fight', id: a.id, pri: 4, rt: 0 }); emote(v, 'angry', 2); return; }
         }
         // (who is starving and at the meal goes on with it while the beast is not upon them: the meal of need weighs 2.5, and a
         // lion lying by the store would starve the town — L-725, L-779)
