@@ -432,6 +432,9 @@ if (on('p6')) {
     const viol = liveMan(40, both, () => {
       // (the herd and the hare kept grazing at their places by the proof's hand until they react — the case is the distance at
       // which they do —, and the two people walking up to them)
+      // (the wind across the way they come: the scent on the wind is the meio's case, not this one — with the wind the world had
+      // blowing that day, the run came at 2.4 paces one time and at the right distance another; T-1319b)
+      S.weather.windA = Math.PI / 2;
       awake(ds.concat([hare])); god(() => { ds.forEach((d, i) => { if (!d.dead && !runAt && d.state !== 'eye' && d.state !== 'flee') { d.x = p[0] + (i % 2) * 0.9; d.y = p[1] + ((i / 2) | 0) * 0.9; } }); if (!boltAt && hare.state !== 'eye' && hare.state !== 'flee') { hare.x = q[0]; hare.y = q[1]; } });
       if (!runAt) walkTo(v, p[0], p[1], 0.25); if (!boltAt) walkTo(u, q[0], q[1], 0.25);
       if (!runAt && diff(t0, 'gente:foge:deer') > 0) runAt = Math.min(...ds.filter(d => !d.dead).map(d => G.dist(v.x, v.y, d.x, d.y))); // (the run from the person, not from anything else)
