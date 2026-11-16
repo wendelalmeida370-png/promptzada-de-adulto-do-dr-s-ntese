@@ -24,6 +24,7 @@
   const IU = G.IncUI = {};
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const $ = (sel, r) => (r || document).querySelector(sel);
+  let hurtEl = null, hurt = { k: 0, low: 0, ang: 0, side: 0, beat: 0, hp0: -1, ghostT: 0 }; // (the red of a blow at the picture's edges, D-333)
   let root = null, hud = null, card = null, menu = null, fadeEl = null, banner = null, deathEl = null, label = null, stickEl = null, leadEl = null, markEl = null;
   let best = null, bestT = 0, upT = 0, toasts = [], news = [], fade = null, hintT = 0, bannerT = 0, repeatT = 0, slowT = 0, slowSaid = false;
   let swimTold = false, lowTold = false, drownTold = false; // (the water's words: said once, and again each time it comes back)
@@ -47,7 +48,7 @@
     if (hudOff) { label.classList.add('hidden'); G.People3D.highlight = 0; }
     if (!quiet) IU.toast(hudOff ? `Tela desligada — ${G.Input3D.label('tela')} liga de novo.` : 'Tela ligada.', 3);
   };
-  const bar = (k, txt) => `<div class="ih-bar ${k}"><span class="ih-bl">${txt}</span><i><b></b></i></div>`;
+  const bar = (k, txt) => `<div class="ih-bar ${k}"><span class="ih-bl">${txt}</span><i>${k === 'hp' ? '<s></s>' : ''}<b></b></i></div>`; // (the life's bar: the chunk a blow took lingers behind it, s)
 
   IU.init = function () {
     if (root) return;
@@ -75,10 +76,11 @@
       <div id="inc-card" class="panel hidden"></div>
       <div id="inc-menu" class="panel hidden"></div>
       <div id="inc-banner" class="hidden"></div>
+      <div id="inc-hurt"><i></i></div>
       <div id="inc-death" class="hidden"></div>
       <div id="inc-fade"></div>`;
     document.body.appendChild(root);
-    hud = $('#inc-hud'); card = $('#inc-card'); menu = $('#inc-menu'); fadeEl = $('#inc-fade'); banner = $('#inc-banner'); deathEl = $('#inc-death'); label = $('#inc-label'); stickEl = $('.ih-stick', hud);
+    hurtEl = $('#inc-hurt'); hud = $('#inc-hud'); card = $('#inc-card'); menu = $('#inc-menu'); fadeEl = $('#inc-fade'); banner = $('#inc-banner'); deathEl = $('#inc-death'); label = $('#inc-label'); stickEl = $('.ih-stick', hud);
     leadEl = $('.ih-lead', hud); markEl = $('.ih-mark', hud);
     root.classList.toggle('hud-off', hudOff);
     $('.ih-god', hud).onclick = () => G.Modes.leave('deus');
@@ -112,12 +114,53 @@
   };
   // the fade (to and from black): from, to in 0..1, seconds, and what to do at the end
   IU.fade = function (a, b, d, done) { if (!root) return; fade = { a, b, d: Math.max(0.01, d), t: 0, done }; fadeEl.style.opacity = a; };
-  IU.death = function (rec, cause) {
+  // a blow taken (D-333, from the body's controller): the edges of the picture go red — the side it came from the redder —, the life
+  // bar drops at once, the chunk it lost lingering a moment behind it. src: where it came from (metres), or nothing (a fall)
+  IU.hurt = function (e, src) {
+    if (!root) return; const amt = e && e.amt || 0; const big = !!(e && e.big);
+    hurt.k = Math.min(1, Math.max(hurt.k, 0.35 + amt / 40 + (big ? 0.3 : 0)));
+    const p = G.Avatar && G.Avatar.pos();
+    if (src && p) { let a = Math.atan2(src.Z - p.Z, src.X - p.X) - G.Cam3D.yaw; while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; hurt.ang = a; hurt.side = 1; } else hurt.side = 0;
+    const v = G.Possess.body(); if (v && hud) { const e2 = $('.ih-bar.hp', hud); if (e2) { const s2 = e2.querySelector('s'), b2 = e2.querySelector('b'); const was = hurt.hp0 >= 0 ? hurt.hp0 : v.hp + amt;
+      s2.style.transition = 'none'; s2.style.width = G.clamp(was, 0, 100) + '%'; b2.style.width = G.clamp(v.hp, 0, 100) + '%'; void s2.offsetWidth; s2.style.transition = ''; hurt.ghostT = 0.55; e2.classList.remove('hit'); void e2.offsetWidth; e2.classList.add('hit'); } }
+    hurt.hp0 = v ? v.hp : -1;
+  };
+  // (every frame: the red fades; with the life low it stays at the edges and beats with the heart)
+  function hurtFrame(rdt) {
+    if (!hurtEl) return; const v = G.Modes.inc() ? G.Possess.body() : null;
+    hurt.k = Math.max(0, hurt.k - rdt * 1.6);
+    const low = v ? G.clamp((35 - v.hp) / 30, 0, 1) : 0; hurt.low += (low - hurt.low) * (1 - Math.exp(-3 * rdt));
+    if (low > 0.05) { hurt.beat -= rdt; if (hurt.beat <= 0) { hurt.beat = 1.05 - 0.35 * low; G.Audio && G.Audio.play && G.Audio.play('heartbeat', 0.25 + 0.5 * low); } }
+    const pulse = hurt.low * (0.55 + 0.45 * Math.max(0, Math.sin(performance.now() / 1000 * Math.PI * 2 / Math.max(0.6, 1.05 - 0.35 * low))));
+    const o = Math.min(1, hurt.k + pulse * 0.6); const op = o.toFixed(3);
+    if (hurtEl._o !== op) { hurtEl._o = op; hurtEl.style.opacity = op; }
+    const side = hurt.side && hurt.k > 0.05 ? hurt.k : 0; const i = hurtEl.firstChild;
+    if (side > 0) { const x = 50 + Math.sin(hurt.ang) * 46, y = 50 - Math.cos(hurt.ang) * 46; i.style.background = `radial-gradient(circle at ${x.toFixed(0)}% ${y.toFixed(0)}%, rgba(200,10,10,${(0.75 * side).toFixed(2)}) 0%, rgba(160,0,0,0) 45%)`; i.style.opacity = '1'; }
+    else if (i.style.opacity !== '0') i.style.opacity = '0';
+    if (hurt.ghostT > 0) { hurt.ghostT -= rdt; if (hurt.ghostT <= 0 && hud) { const e2 = $('.ih-bar.hp', hud); if (e2 && v) e2.querySelector('s').style.width = G.clamp(v.hp, 0, 100) + '%'; } }
+    if (!v) { hurt.hp0 = -1; } else if (hurt.ghostT <= 0) hurt.hp0 = v.hp;
+  }
+  IU.hurtNow = () => ({ k: hurt.k, low: hurt.low, side: hurt.side, ang: hurt.ang }); // (for the proofs)
+  // what took a life, in the few words the death says first: «Morto por um hipopótamo»
+  const KILL = { queda: 'numa queda', drown: 'afogad', fire: 'pelo fogo', lightning: 'por um raio', hunger: 'de fome', sick: 'pela doença', old: 'de velhice', war: 'em combate', arrow: 'por uma flecha', wolf: 'por lobos', boar: 'por um javali', dragon: 'pelo dragão', quake: 'no terremoto', meteor: 'por um meteoro', execution: 'pela justiça', riot: 'no motim', brawl: 'numa briga' };
+  IU.killLine = function (rec, cause, beast) {
+    const o = rec && rec.g === 'f' ? 'a' : 'o'; const D = beast && G.Animals && G.Animals.DEF[beast];
+    if ((cause === 'beast' || cause === 'wolf' || cause === 'boar') && D) return `Mort${o} por ${D.nameA}`;
+    if (cause === 'old') return 'Morreu de velhice'; if (cause === 'drown') return `Afogad${o}`;
+    return KILL[cause] ? `Mort${o} ${KILL[cause]}` : '';
+  };
+  IU.death = function (rec, cause, beast) {
     if (!root) return;
-    const txt = G.Village.deathText({ ...rec, cause: cause || rec.cause });
-    deathEl.innerHTML = `<div class="d-name">${esc(rec.name)}</div><div class="d-cause">${esc(G.cap ? G.cap(txt) : txt)}.</div><div class="d-sub">A vida terminou. O mundo segue — e a história lembra.</div>`;
+    const txt = G.Village.deathText({ ...rec, cause: cause || rec.cause, lastBeast: beast || rec.lastBeast }); const kill = IU.killLine(rec, cause || rec.cause, beast);
+    deathEl.innerHTML = `${kill ? `<div class="d-kill">${esc(kill)}</div>` : ''}<div class="d-name">${esc(rec.name)}</div><div class="d-cause">${esc(G.cap ? G.cap(txt) : txt)}.</div><div class="d-sub">A vida terminou. O mundo segue — e a história lembra.</div>`;
+    IU.lastDeath = { kill, txt }; // (for the proofs)
+    if (banner) { banner.classList.add('hidden'); root.classList.remove('ib-on'); bannerT = 0; } // (the words of the moment give way to the death's)
     deathEl.classList.remove('hidden'); deathEl.classList.add('show');
-    setTimeout(() => { deathEl.classList.remove('show'); setTimeout(() => deathEl.classList.add('hidden'), 900); }, 4200);
+  };
+  // the death's words go as the eye flies back up to the god (Modes, at the end of the dying)
+  IU.deathOff = function () {
+    if (!deathEl || !deathEl.classList.contains('show')) return;
+    deathEl.classList.remove('show'); setTimeout(() => { if (!deathEl.classList.contains('show')) deathEl.classList.add('hidden'); }, 900);
   };
   // the chronicle reaches the ears: a line of news (the world goes on beyond the body)
   G.Possess.onLog.push((e, v) => {
@@ -155,6 +198,7 @@
     // fades, banners, toasts, news
     if (fade) { fade.t += rdt; const k = Math.min(1, fade.t / fade.d); fadeEl.style.opacity = G.lerp(fade.a, fade.b, k); if (k >= 1) { const d = fade.done; fade = null; d && d(); } }
     if (bannerT > 0) { bannerT -= rdt; if (bannerT <= 0) { banner.classList.add('hidden'); root.classList.remove('ib-on'); } }
+    hurtFrame(rdt);
     for (let k = toasts.length - 1; k >= 0; k--) { const o = toasts[k]; o.t -= rdt; if (o.t <= 0) { o.el.remove(); toasts.splice(k, 1); } else fadeOut(o.el, o.t, 0.5); }
     let nd = false; for (let k = news.length - 1; k >= 0; k--) { news[k].t -= rdt; if (news[k].t <= 0) { news.splice(k, 1); nd = true; } } if (nd) renderNews();
     { const els = $('.ih-news', hud).children; for (let k = 0; k < news.length && k < els.length; k++) fadeOut(els[k], news[k].t, 0.8); }
@@ -193,7 +237,7 @@
     $('.ih-name', hud).textContent = id.name + (id.epithet ? ', ' + id.epithet : '');
     $('.ih-sub', hud).textContent = `${id.age} ${id.age === 1 ? 'ano' : 'anos'} · ${id.role}${id.set ? ' · ' + id.set : ''}`;
     const setBar = (k, val, warn) => { const e = $('.ih-bar.' + k, hud); e.querySelector('b').style.width = G.clamp(val, 0, 100) + '%'; e.classList.toggle('warn', !!warn); };
-    setBar('hp', v.hp, v.hp < 30); setBar('st', st ? st.stamina / Math.max(1, caps.stamina) * 100 : 100, st && st.stamina < 15); setBar('fo', 100 - v.hunger, v.hunger > 80); setBar('en', v.energy, v.energy < 15);
+    setBar('hp', v.hp, v.hp < 30); if (hurt.ghostT <= 0) { const g2 = $('.ih-bar.hp s', hud); if (g2) g2.style.width = G.clamp(v.hp, 0, 100) + '%'; } setBar('st', st ? st.stamina / Math.max(1, caps.stamina) * 100 : 100, st && st.stamina < 15); setBar('fo', 100 - v.hunger, v.hunger > 80); setBar('en', v.energy, v.energy < 15);
     // (in the water: what the breath is doing — the first time how it works, then only when it runs low or out)
     const sw = G.Avatar.swimming && G.Avatar.swimming();
     if (sw && !swimTold) { swimTold = true; IU.toast(`Nadando: na água o fôlego vai acabando. ${G.Input3D.label('pular')} dá uma braçada forte; chegue à margem antes que ele acabe.`, 6); }

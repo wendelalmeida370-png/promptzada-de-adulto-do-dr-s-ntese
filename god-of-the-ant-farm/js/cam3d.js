@@ -25,7 +25,17 @@
   const PMIN = -1.05, PMAX = 1.2, DMIN = 1.4, DMAX = 16;
   C3.DMAX = DMAX;
   let piv = null, lookT = -1e9, fovNow = 58, clock = 0;
-  G.worldHooks.push(() => { piv = null; C3.lock = null; C3.inside = false; });
+  G.worldHooks.push(() => { piv = null; C3.lock = null; C3.inside = false; trauma = 0; attend = null; });
+  // a blow taken (D-333): the eye shakes — the more the bigger the blow, fading in half a second — and, if what struck is out of
+  // the picture and the mouse is left alone, it turns a while to bring it in beside the body. Only the eye: by the view's own
+  // clock, no chance drawn (OPT.shake turns the shaking off)
+  let trauma = 0, attend = null;
+  OPT.shake = OPT.shake === undefined ? 1 : OPT.shake;
+  C3.shake = function (k, src) {
+    trauma = Math.min(1, Math.max(trauma, 0) + (k || 0.5));
+    if (src && Number.isFinite(src.X)) attend = { X: src.X, Z: src.Z, t: 1.1 };
+  };
+  C3.trauma = () => trauma; // (for the proofs)
 
   C3.attach = function (pos, yaw) { C3.yaw = yaw; C3.pitch = 0.26; C3.dist = G.clamp(OPT.dist, DMIN, DMAX); C3.cur = C3.dist; piv = { X: pos.X, Y: pos.Y + 1.5, Z: pos.Z }; lookT = -1e9; fovNow = OPT.fov; };
   // the mouse turns it (pixels of movement)
@@ -156,6 +166,10 @@
     // (the pivot follows quickly on the ground, more softly up and down: a jump does not jerk the view)
     const kxz = 1 - Math.exp(-16 * rdt / OPT.smooth), ky = 1 - Math.exp(-(body.ground ? 12 : 5) * rdt / OPT.smooth);
     piv.X += (body.X - piv.X) * kxz; piv.Z += (body.Z - piv.Z) * kxz; piv.Y += (body.Y + head - piv.Y) * ky;
+    // (what struck the body, out of the picture: the eye turns to bring it in beside the body — the player's mouse first)
+    if (attend) { attend.t -= rdt; const want0 = Math.atan2(attend.Z - piv.Z, attend.X - piv.X); let off = want0 - C3.yaw; while (off > Math.PI) off -= TAU; while (off < -Math.PI) off += TAU;
+      if (attend.t <= 0 || clock - lookT < 0.4) attend = null;
+      else if (Math.abs(off) > 0.62) { const want = want0 - Math.sign(off) * 0.5; let da = want - C3.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; C3.yaw += da * (1 - Math.exp(-4.5 * rdt)); } }
     // a target held (lock-on, later): the eye turns to keep it in front
     if (C3.lock) { const t = C3.lock(); if (t) { const want = Math.atan2(t.Z - piv.Z, t.X - piv.X); let da = want - C3.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; C3.yaw += da * (1 - Math.exp(-5 * rdt)); } }
     // left alone, the eye swings back behind a body on the move (not when it walks toward the camera: that is the player's choice)
@@ -201,6 +215,11 @@
     const aim = [piv.X + rx * sh, piv.Y, piv.Z + rz * sh];
     { const hd = Math.hypot(aim[0] - P.X, aim[2] - P.Z), e0 = Math.atan2(aim[1] - P.Y, hd), want = -C3.pitch;
       if (want > e0 + 0.02 && hd > 0.05) aim[1] = P.Y + hd * Math.tan(Math.min(want, e0 + 0.8 * fovNow * Math.PI / 360, 1.35)); }
+    // (the shake: the eye and its aim thrown about a little, by the square of the trauma — a small blow a tremor, a big one a jolt)
+    if (trauma > 0) { const k = OPT.shake ? trauma * trauma : 0; const t = clock * 31;
+      const sx = (Math.sin(t) + Math.sin(t * 2.3 + 1.7) * 0.5) * 0.11 * k, sy = (Math.sin(t * 1.7 + 0.6) + Math.sin(t * 3.1) * 0.4) * 0.09 * k, sz = Math.sin(t * 1.3 + 2.4) * 0.1 * k;
+      if (!solid(P.X + sx, P.Y + sy, P.Z + sz)) { P.X += sx; P.Y += sy; P.Z += sz; cam.position.set(P.X, P.Y, P.Z); } // (never into a wall for it)
+      aim[0] += sx * 0.5; aim[1] += sy * 0.6; aim[2] += sz * 0.5; trauma = Math.max(0, trauma - rdt * 1.8); }
     cam.lookAt(aim[0], aim[1], aim[2]);
     C3.last = { pos: [P.X, P.Y, P.Z], at: aim, fov: fovNow };
   };

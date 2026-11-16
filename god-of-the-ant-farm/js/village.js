@@ -2248,7 +2248,10 @@
     riot: (v) => `foi mort${v.g === 'f' ? 'a' : 'o'} pela guarda num motim aos ${Math.floor(v.age)} anos`,
     sacrifice: (v) => `foi sacrificad${v.g === 'f' ? 'a' : 'o'} aos deuses aos ${Math.floor(v.age)} anos`,
     lava: (v) => `foi engolid${v.g === 'f' ? 'a' : 'o'} pela lava aos ${Math.floor(v.age)} anos`,
-    beast: (v) => `foi devorad${v.g === 'f' ? 'a' : 'o'} por ${v.lastBeast && G.Animals.DEF[v.lastBeast] ? G.Animals.DEF[v.lastBeast].nameA : 'uma fera'} aos ${Math.floor(v.age)} anos`,
+    // (by what killed: the hunters devour; a giant, a horn, a hoof kill; the viper's venom — a hippo does not devour: D-334)
+    beast: (v) => { const D = v.lastBeast && G.Animals.DEF[v.lastBeast]; const o = v.g === 'f' ? 'a' : 'o'; const n = D ? D.nameA : 'uma fera'; const age = Math.floor(v.age);
+      if (v.lastBeast === 'viper') return `morreu da picada de ${n} aos ${age} anos`;
+      return D && D.diet !== 'carn' && D.diet !== 'omni' && D.diet !== 'scav' ? `foi mort${o} por ${n} aos ${age} anos` : `foi devorad${o} por ${n} aos ${age} anos`; },
     wave: (v) => `foi levad${v.g === 'f' ? 'a' : 'o'} pelo maremoto aos ${Math.floor(v.age)} anos`,
     dragon: (v) => `foi mort${v.g === 'f' ? 'a' : 'o'} pelo dragão aos ${Math.floor(v.age)} anos`,
     kraken: (v) => `foi arrastad${v.g === 'f' ? 'a' : 'o'} para as profundezas pelo Kraken aos ${Math.floor(v.age)} anos`,

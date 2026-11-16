@@ -90,7 +90,7 @@
     // on with the player's hands (keepLoad: C1's endTask leaves the carry where it is); stay: the building one is in)
     G.Vg.endTask(v, { keepLoad: true, stay: inB });
     v.sleeping = false; v.path = null; v.act = ''; v.actT = 0; v.moving = false; v.z = 0;
-    S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [], lv: null, via: 0, use: null };
+    S.avatar = { id: v.id, kind: KINDS[kind] ? kind : 'humano', since: S.day, t0: S.clock, x0: +v.x.toFixed(2), y0: +v.y.toFixed(2), asks: [], deeds: {}, seen: [], met: [], lv: null, via: 0, use: null, hits: [], hitN: 0 };
     // (where it stands: the place itself, standing there; on a piece — a bed, a seat —, beside it, where one stands to get onto
     // it; else a little inside the way in; with no floor for the feet in any of them, out at the door, as waking does)
     if (pl0 && pl0.b === B0) {
@@ -112,7 +112,7 @@
   Po.release = function (why, detail, keepTask) {
     const S = G.S; const a = S.avatar; if (!a) return null;
     const v = S.villagers.get(a.id);
-    S.avatar = null; cur = null; drop();
+    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop();
     if (v) {
       if (!keepTask && v.task && v.task.type === 'avatar') { v.task = null; }
       if (!keepTask) { v.path = null; v.act = ''; v.sleeping = false; }
@@ -124,7 +124,9 @@
   };
   function died(rec, cause, a, beast) {
     const S = G.S; if (!a) return;
-    S.avatar = null; cur = null; drop();
+    // (what ended it, for the eye that sees the body fall: the cause, the beast, the last blow — D-334)
+    a.end = { cause, beast: beast || null, hit: a.hits && a.hits.length ? Object.assign({}, a.hits[a.hits.length - 1]) : null, t: S.clock };
+    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop();
     record(rec, a, 'morte', cause, beast);
     for (const f of Po.onEnd) f('morte', rec, cause, a);
   }
@@ -353,6 +355,8 @@
     // (on an open ground with no place of it — a game loaded there whose place is gone —: out on the town's ground)
     if (v.inside && !a.use && !v.sleeping) { const B = S.buildings.get(v.inside); if (B && openShell(B)) v.inside = 0; } // (its storey kept: L-550)
     for (let k = a.asks.length - 1; k >= 0; k--) if (S.clock - a.asks[k].t > 90) a.asks.splice(k, 1);
+    // (the beasts against the body, by their bodies: the blows due land or miss, and none stands in it — D-330 to D-332)
+    if (G.Corpo) { G.Corpo.step(v); if (S.avatar !== a || !S.villagers.has(v.id)) return; }
     // (what the hands asked since the last step: done now, in the world's own step, in the order asked — each sees the world
     // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
     // that breaks — counted in G.modErr, as any module's error — leaves the rest answered, never a body waiting forever)
@@ -368,6 +372,32 @@
     if (was && G.S.avatar === a && !G.S.villagers.has(v.id)) died(G.S.dead.get(v.id) || v, cause, a, v.lastBeast);
     return r;
   };
+  // the blows the body takes (Vg.damage is the only door of a hurt to a person): each one noted before the world deals it — a
+  // blow that kills ends the body at once, and the eye must know it — in the body's record, for its controller, its eye and its
+  // screen to answer (avatar.js: the flinch, the knockback, the fall; Cam3D: the shake; IncUI: the red at the edges, the bar).
+  // Only the moment: not saved (D-333). from: where the blow came from (the beast, the one who struck); big: a blow that throws
+  // a person down — the world threw it down (downT), a giant's, or a quarter of a life
+  const HITS = 8;
+  const dmg0 = G.Vg.damage;
+  G.Vg.damage = function (v, amt, cause, byGod, by) {
+    const S = G.S; const a = S && S.avatar;
+    if (a && v && a.id === v.id && S.villagers.has(v.id) && amt > 0) noteHit(v, a, amt, cause, by);
+    return dmg0.apply(this, arguments);
+  };
+  const BEASTLY = { beast: 1, wolf: 1, boar: 1 };
+  function noteHit(v, a, amt, cause, by) {
+    const S = G.S; let from = null, kind = '', id = 0;
+    if (BEASTLY[cause] && v.lastBeastId) { const b = S.animals.get(v.lastBeastId); if (b) { from = [+b.x.toFixed(3), +b.y.toFixed(3)]; kind = b.kind; id = b.id; if (b.fx || b.fy) from.push(+b.fx.toFixed(3), +b.fy.toFixed(3)); } }
+    else if (by) { const o = S.villagers.get(by); if (o) { from = [+o.x.toFixed(3), +o.y.toFixed(3)]; id = o.id; } }
+    const down = v.downT > S.clock ? +(v.downT - S.clock).toFixed(2) : 0;
+    const big = down > 0 || amt >= 25 || (kind && G.Corpo && G.Corpo.GIANT.has(kind)) ? 1 : 0;
+    if (!Array.isArray(a.hits)) a.hits = [];
+    a.hitN = (a.hitN || 0) + 1;
+    a.hits.push({ n: a.hitN, t: S.clock, amt: +amt.toFixed(2), cause: String(cause || ''), from, kind, id, big, down, hp: +Math.max(0, v.hp - amt).toFixed(1) });
+    if (a.hits.length > HITS) a.hits.shift();
+    if (v.sleeping) Po.wake(v); // (a bite wakes anyone)
+  }
+  Po.hits = () => (G.S.avatar && Array.isArray(G.S.avatar.hits) ? G.S.avatar.hits : []);
   // what the body witnessed: the chronicle's lines told near it, while it was lived
   const log0 = G.Village.log;
   G.Village.log = function (text, icon, x, y) {
@@ -658,7 +688,7 @@
         id: v.id, kind: KINDS[a.kind] ? a.kind : 'humano', since: num(a.since, S.day), t0: num(a.t0, S.clock), x0: num(a.x0, v.x), y0: num(a.y0, v.y),
         asks: Array.isArray(a.asks) ? a.asks.filter(q => q && typeof q.txt === 'string').map(q => ({ type: String(q.type), txt: q.txt, t: num(q.t, S.clock), t0: num(q.t0, S.clock), n: num(q.n, 1) })) : [],
         deeds, seen: Array.isArray(a.seen) ? a.seen.filter(e => e && typeof e.txt === 'string') : [], met: Array.isArray(a.met) ? a.met.filter(Number.isFinite) : [],
-        lv: Number.isFinite(a.lv) ? a.lv : null, via, use: null,
+        lv: Number.isFinite(a.lv) ? a.lv : null, via, use: null, hits: [], hitN: 0,
       };
       // (saved in a room of a building's plan: back in it, where it was — the world's step checks it stands where the plan lets it)
       { const I = a.in, B = I && Number.isFinite(I.b) && S.buildings.get(I.b);
