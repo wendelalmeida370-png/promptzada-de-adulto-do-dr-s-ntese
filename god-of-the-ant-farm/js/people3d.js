@@ -1702,8 +1702,107 @@
   P3.beastVis = id => bvis.get(id); P3.SITTERS = SITTERS; // (for the studio: the view's memory of a beast, read — and who sits)
   const OPENJAW = { chase: 0.5, lunge: 1, strike: 1, pounce: 1, stalk: 0.15 };
   let FEET = null; // (the feet's bones: left fore, right fore, left hind, right hind)
-  function beastSkin(a, sp, s, m, sc, d2, dt, row, X, Y, Z, air) {
-    if (!FMR.m) { FMR.m = new THREE.Matrix4(); FMR.r = new THREE.Matrix4(); }
+  // ------------------------------ the gesture on the body (D-280) ------------------------------
+  // the gesture the old states mean when the world gives none (the kill eaten, the death roll, the coils, the held one)
+  function impliedGest(a) {
+    const Ge = G.Gestos; if (!Ge || a.dead) return null; const k = a.kind; const can = n => (Ge.can(k, n) ? n : null);
+    if (a.down > 0 || a.caught) return can('struggle');
+    switch (a.state) {
+      case 'roll': return can('deathroll');
+      case 'drown': return can('drag');
+      case 'eat': case 'feedman': return can('tear') || can('chew');
+      case 'cache': return can('carry') || can('drag');
+      case 'mourn': return can('mourn');
+      case 'lunge': return can('bite') || can('strike');
+      case 'strike': return can('strike') || can('bite');
+      case 'fish': return can('fish');
+      case 'lurk': return can('hide');
+    }
+    if (a.grip > 0) return can('coil') || can('grip');
+    if (a.bite > 0) return can('bite');
+    if (a.swim) return can('swim');
+    return null;
+  }
+  // (the other of a gesture: the world's a.gestO, or the one the old states point at)
+  const otherOf = (a, n) => (a.gest ? a.gestO : n === 'struggle' ? a.caught : a.target) || 0;
+  // which point of the other a gesture goes for ('auto': the throat from in front, the flank from the side, the rump from behind)
+  const AIMAT = { throat: 'throat', nape: 'nape', grip: 'auto', bite: 'auto', tear: 'flank', nuzzle: 'head', allogroom: 'back', suckle: 'udder', clash: 'brow', spar: 'throat', gore: 'flank', toss: 'flank',
+    pin: 'nape', maul: 'back', talons: 'back', mantle: 'back', coil: 'throat', deathroll: 'throat', drag: 'throat', carry: 'back', carryyoung: 'nape', shakekill: 'back', swallow: 'head', mourn: 'body',
+    dominate: 'back', alert: 'head', stare: 'head', curious: 'head', threat: 'head', display: 'head', mate: 'nape', strike: 'throat', swipe: 'flank', stomp: 'back', court: 'rump', kick: 'body', buck: 'body' };
+  // the holds that place the holder's body (its facing, how near it stands): the mouth at the point, the feet on the back, the coils round the body
+  const HOLDGEO = { throat: 1, nape: 1, grip: 1, pin: 1, maul: 0.8, tear: 0.7, talons: 1, mantle: 0.8, coil: 1, deathroll: 1, suckle: 1, allogroom: 0.6, nuzzle: 0.6, mate: 1, clash: 1, spar: 0.7, mourn: 0.5, drag: 0.8, shakekill: 0.6, bite: 0.5 };
+  // the small held one carried in the jaws (or under the feet in the air): drawn where the holder holds it
+  const SNAP = { carry: 1, carryyoung: 1, shakekill: 1, swallow: 1, drag: 1, talons: 0.8 };
+  // (small enough to be carried: to the jaws a part of the holder's size; to an eagle's talons more — its size is the bird standing,
+  // not its wings)
+  const snaps = (a, h, gn) => !!SNAP[gn] && G.Fauna3D.sizeOf(a.kind) < G.Fauna3D.sizeOf(h.kind) * (SNAP[gn] < 1 ? SNAP[gn] : 0.7);
+  // (the bones whose frames a beast leaves in the view's memory, for the others to reach: the throat, the nape, the head, the
+  // rump, the back, the withers, the hock)
+  const KB = ['neck1', 'neck2', 'head', 'root', 'spine', 'chest', 'hlL2'];
+  const KPB = { throat: 1, nape: 0, head: 2, brow: 2, rump: 3, haunch: 3, udder: 3, body: 4, flank: 4, back: 5, hock: 6 };
+  const KPD = { throat: 3, nape: 2, brow: 2, rump: 2, udder: 3, back: 2, flank: 0, haunch: 9 }; // (the support direction of the skin there: −y, +y, +x; the haunch the low back corner of the rump, on the side of the one at it)
+  const KQ = { m: null, v: null, w: null, inv: null };
+  // a point of a beast as modelled (its form's joints and skin) — which: one of KPB; side: the flank's side (+ its left)
+  function kpBind(form, which, side, out) {
+    const B = G.FaunaAnim.B, J = form.J, b = B[KB[KPB[which]]]; const h = form.hull, dir = KPD[which];
+    out[0] = J[b * 3]; out[1] = J[b * 3 + 1]; out[2] = J[b * 3 + 2];
+    if (h && dir !== undefined && h.has[b]) { const o = (b * h.nd + (which === 'flank' && side < 0 ? 1 : which === 'haunch' && side < 0 ? 13 : dir)) * 3; out[0] = h.p[o]; out[1] = h.p[o + 1]; out[2] = which === 'flank' ? J[b * 3 + 2] : h.p[o + 2]; }
+    if (which === 'udder') out[2] = J[b * 3 + 2] + Math.abs(J[B.spine * 3 + 2] - J[b * 3 + 2]) * 0.35;
+    if (which === 'brow') G.FaunaAnim.Gest.browOf(form, out); // (over the eyes — not the tips of the horns)
+    return out;
+  }
+  // where a point of the other is in the world: by the frames its last pose left in the view's memory, or — not drawn yet — by
+  // where the world has it and the way it faces
+  const KP = new Float32Array(3), SIDES = [1, -1], ONE = [1];
+  function keyPoint(o, s2, which, fromX, fromZ, out) {
+    const F3 = G.Fauna3D; const form = s2 && s2.kf ? s2.kf : F3.form(o.kind); if (!form) return null;
+    if (s2 && s2.kb) { // (by the frames the last pose left: of a flank or a haunch, the side nearer the one coming at it)
+      const bi = KPB[which] * 16, e = s2.kb, J = form.J, b = G.FaunaAnim.B[KB[KPB[which]]]; let best = 1e9;
+      for (const side of (which === 'flank' || which === 'haunch' ? SIDES : ONE)) { kpBind(form, which, side, KP); const x = KP[0] - J[b * 3], y = KP[1] - J[b * 3 + 1], z = KP[2] - J[b * 3 + 2];
+        const X = e[bi] * x + e[bi + 4] * y + e[bi + 8] * z + e[bi + 12], Y = e[bi + 1] * x + e[bi + 5] * y + e[bi + 9] * z + e[bi + 13], Z = e[bi + 2] * x + e[bi + 6] * y + e[bi + 10] * z + e[bi + 14];
+        const d = (X - fromX) * (X - fromX) + (Z - fromZ) * (Z - fromZ); if (d < best) { best = d; out[0] = X; out[1] = Y; out[2] = Z; } }
+      return out; }
+    kpBind(form, which, 1, KP);
+    const TL = G.Space.TILE, yaw = s2 ? s2.yaw : 0, sc = s2 && s2.ksc ? s2.ksc : F3.scaleOf(o.kind); const c = Math.cos(yaw), n = Math.sin(yaw);
+    // (the frame: +Z of the form along the facing; X the form's left)
+    out[0] = o.x * TL + (KP[2] * c + KP[0] * n) * sc; out[2] = o.y * TL + (KP[2] * n - KP[0] * c) * sc; out[1] = (s2 && s2.Y !== null && s2.Y !== undefined ? s2.Y : 0) + KP[1] * sc;
+    return out;
+  }
+  // (which point the gesture goes for: 'auto' by where the attacker stands — in front the throat, beside the flank, behind the rump; a
+  // much bigger prey by the rump or the hock)
+  function aimWhich(n, a, o, s2) {
+    let w = AIMAT[n]; if (w !== 'auto') return w;
+    const yaw = s2 ? s2.yaw : 0; const dx = a.x - o.x, dz = a.y - o.y; const f = (dx * Math.cos(yaw) + dz * Math.sin(yaw)) / (Math.hypot(dx, dz) || 1);
+    const fo = G.Fauna3D.form(o.kind), fa = G.Fauna3D.form(a.kind); const big = !!(fo && fa && fo.meta.H > fa.meta.H * 1.5); // (much taller: a wolf at a moose)
+    return f > 0.5 ? (big ? 'flank' : 'throat') : f < -0.4 ? (big ? 'haunch' : 'rump') : 'flank'; // (a wolf on a moose: hanging from the haunch)
+  }
+  // the marks of a beast's body on its coat — the blood on the muzzle, the wounds by zone, what is eaten of a carcass and its bones,
+  // the eyes shut, the water, the mud and the dust on it (Fauna3D's texels after the coat, D-283)
+  function marksOf(a, sp, s, eye) {
+    const mk = s.mk || (s.mk = new Float32Array(16)); mk.fill(0);
+    mk[0] = G.clamp(a.blood || 0, 0, 1);
+    if (a.dead) { const meat = sp.meat || 1; const e = G.clamp(1 - (a.meat === undefined ? meat : a.meat) / meat, 0, 1); mk[1] = Math.max(e, a.gore > 0 ? 0.15 : 0); mk[2] = a.meat !== undefined && a.meat <= 0 ? 1 : 0; }
+    // (the eyes: shut asleep, dull dead — and a blink now and then, by the beast's own beat)
+    const bl = Math.sin(s.t * 0.9 + a.id * 1.7) > 0.985 ? 1 : 0; mk[3] = a.dead ? 2 : Math.max(eye, bl);
+    const w = a.wnd; if (w && w.z) for (let k = 0; k < 6; k++) mk[4 + k] = G.clamp(w.z[k] || 0, 0, 1);
+    const me = a.meio; if (me) { mk[10] = G.clamp(me.wet || 0, 0, 1); mk[11] = G.clamp(me.mud || 0, 0, 1); mk[12] = G.clamp(me.dust || 0, 0, 1); mk[13] = G.clamp(me.cold || 0, 0, 1); }
+    if (a.swim || a.sub > 0) mk[10] = Math.max(mk[10], 0.85);
+    return mk;
+  }
+  // the mind's numbers the body reads (a.mind of G.Mente; none yet: calm and fresh, the sex by the hash — the contract's rule)
+  function moodOf(a, s) {
+    const md = s.md || (s.md = new Float32Array(6)); const m = a.mind;
+    if (m) { md[0] = m.f || 0; md[1] = m.g || 0; md[2] = m.en === undefined ? 1 : m.en; md[3] = m.st === undefined ? 1 : m.st; md[4] = m.sx === undefined ? (G.hash(a.id * 7 + 3) < 0.5 ? 0 : 1) : m.sx; md[5] = m.rk === undefined ? 0.5 : m.rk; }
+    else { md[0] = 0; md[1] = 0; md[2] = 1; md[3] = 1; md[4] = G.hash(a.id * 7 + 3) < 0.5 ? 0 : 1; md[5] = 0.5; }
+    if (a.angry > 0) md[1] = Math.max(md[1], 0.6);
+    if (a.state === 'flee') md[0] = Math.max(md[0], 0.7);
+    return md;
+  }
+  const BST = {}; // (the pose's input, one object for every beast: nothing made each frame)
+  P3.keyPoint = (o, which, fromX, fromZ, out) => keyPoint(o, bvis.get(o.id), which, fromX, fromZ, out || new Float32Array(3)); P3.aimWhich = aimWhich; P3.AIMAT = AIMAT; // (for the tests: read only)
+  const AIMV = new Float32Array(3), WP = new Float32Array(3);
+  function beastSkin(a, sp, s, m, sc, d2, dt, row, X, Y, Z, air, ctx) {
+    if (!FMR.m) { FMR.m = new THREE.Matrix4(); FMR.r = new THREE.Matrix4(); FMR.inv = new THREE.Matrix4(); FMR.v = new THREE.Vector3(); }
     const FA = G.FaunaAnim, fly = !!air; const form = fly ? G.Fauna3D.formFly(a.kind) : G.Fauna3D.form(a.kind); const J = form.J; const B = FA.B; const fam = form.meta.fam;
     if (!FEET) FEET = [B.flL3, B.flR3, B.hlL3, B.hlR3];
     const LL = (J[B.flL0 * 3 + 1] + J[B.hlL0 * 3 + 1]) * 0.5 * sc;
@@ -1717,14 +1816,24 @@
     const idle = s.v < 0.08;
     // (looking about while it stands; sitting down now and then, the dogs and the cats; the ears back and the tail up in flight)
     const lookT = idle ? Math.sin(s.t * 0.21 + a.id * 1.3) * 0.7 + Math.sin(s.t * 0.53 + a.id) * 0.25 : 0; s.look = (s.look || 0) + (lookT - (s.look || 0)) * (1 - Math.exp(-1.5 * dt));
-    const sitW = SITTERS[a.kind] && idle && !s.graze && Math.sin(s.t * 0.045 + a.id * 2.3) > 1 - SITTERS[a.kind] * 0.9 ? 1 : 0; s.sit = (s.sit || 0) + (sitW - (s.sit || 0)) * (1 - Math.exp(-2.2 * dt));
+    const busy = !!(s.gn && s.gk > 0.2) || a.dead; // (a gesture or death holds the body: no sitting about, no idle look)
+    const sitW = SITTERS[a.kind] && idle && !s.graze && !busy && Math.sin(s.t * 0.045 + a.id * 2.3) > 1 - SITTERS[a.kind] * 0.9 ? 1 : 0; s.sit = (s.sit || 0) + (sitW - (s.sit || 0)) * (1 - Math.exp(-2.2 * dt));
     const flee = a.state === 'flee' || s.v > LL * 3.2; s.ears = (s.ears || 0) + ((flee ? 1 : 0) - (s.ears || 0)) * (1 - Math.exp(-4 * dt));
+    // (the breath after a run: the exertion rises with the pace, falls slowly at rest — the flanks heave, the mouth opens)
+    s.ex = G.clamp((s.ex || 0) + (s.v > LL * 2.4 ? dt * 0.12 : -dt * 0.04), 0, 1);
     // (in the air: the climb and the bank from how the bird moves; a big bird glides between its strokes)
     if (fly) { const dz = (a.z || 0) - (s.pz === undefined ? (a.z || 0) : s.pz); s.pz = a.z || 0; const pitch = G.clamp(dz / Math.max(dt, 1e-3) * 0.08, -0.5, 0.5); s.fp = (s.fp || 0) + (pitch - (s.fp || 0)) * (1 - Math.exp(-3 * dt));
       const dy = s.yaw - (s.py === undefined ? s.yaw : s.py); s.py = s.yaw; const bank = G.clamp(dy / Math.max(dt, 1e-3) * 0.25, -0.7, 0.7); s.fb = (s.fb || 0) + (bank - (s.fb || 0)) * (1 - Math.exp(-3 * dt)); }
     const glide = fly && form.meta.H > 0.6 && Math.sin(s.t * 0.4 + a.id) > -0.2 && (s.fp || 0) < 0.15;
-    const st = { v: s.v / sc, ph: s.fph, t: s.t, graze: s.graze, look: s.look, id: a.id, ears: s.ears, tail: flee ? 0.6 : 0, jaw: OPENJAW[a.state] || 0, sit: s.sit, glide, pitch: s.fp || 0, bank: s.fb || 0, young: a.age !== undefined && a.age < 1 ? G.clamp(1 - a.age, 0, 1) : 0 };
+    const st = BST; st.v = a.dead ? 0 : s.v / sc; st.ph = s.fph; st.t = s.t; st.graze = busy ? 0 : s.graze; st.look = busy ? 0 : s.look; st.id = a.id; st.ears = s.ears; st.tail = flee ? 0.6 : 0; st.jaw = OPENJAW[a.state] || 0;
+    st.sit = s.sit; st.glide = glide; st.pitch = s.fp || 0; st.bank = s.fb || 0; st.young = a.age !== undefined && a.age < 1 ? G.clamp(1 - a.age, 0, 1) : 0; st.fy = null;
+    // (the gesture: the view's clock of it, the mind, the breath, death, the one that holds it, the side it falls to; the reach)
+    st.gx = s; st.kind = a.kind; st.mood = moodOf(a, s); st.exert = s.ex; st.dead = s.dk || 0; st.dt = dt; st.crouch = a.dead ? 0 : (a.crouch || (a.state === 'stalk' ? 1 : 0)); st.pounce = a.dead ? 0 : (a.pounce > 0 ? Math.min(1, a.pounce) : 0);
+    const wd = a.wnd; st.limp = wd && wd.l > 0 ? Math.min(1, wd.l) : 0; st.limpLeg = wd && wd.z && (wd.z[2] || 0) > (wd.z[4] || 0) ? (a.id & 1) : 2 + (a.id & 1); // (lame: the leg of the worse quarters)
+    st.held = ctx.held; st.side = ctx.side; st.down = a.down || 0; st.rollWith = ctx.rollWith || 0; st.tree = ctx.tree; st.ground = ctx.ground; st.hang = ctx.hang; st.coilR = ctx.coilR; st.coilY = ctx.coilY; st.rollA = undefined; st.aim = null;
     FMR.m.copy(m); FMR.r.makeRotationY(Math.PI / 2); FMR.m.multiply(FMR.r); FMR.r.makeScale(sc, sc, sc); FMR.m.multiply(FMR.r);
+    if (ctx.aim) { FMR.inv.copy(FMR.m).invert(); FMR.v.set(ctx.aim[0], ctx.aim[1], ctx.aim[2]).applyMatrix4(FMR.inv); AIMV[0] = FMR.v.x; AIMV[1] = FMR.v.y; AIMV[2] = FMR.v.z; st.aim = AIMV; }
+    if (s.gn === 'deathroll' && fam === 'sprawl') { s.rollA = (s.rollA || 0) + dt * Math.PI * 2 * 1.25 * (ctx.side || 1); st.rollA = s.rollA; } else s.rollA = 0; // (the turn of the death roll, in the view's memory: the held one rolls with it)
     // (each foot on the ground under it: the frame lies along the slope's plane; how far the real ground under each foot is from
     // that plane, in the beast's measure — the legs reach for it. Not for a beast in the water)
     if (fam === 'quad' && !air && !a.swim && Y > groundY(a.x, a.y) - 0.05) {
@@ -1732,9 +1841,106 @@
       for (let k = 0; k < 4; k++) { const b = FEET[k] * 3, x = J[b], z = J[b + 2]; const fX = e[0] * x + e[8] * z + e[12], fY = e[1] * x + e[9] * z + e[13], fZ = e[2] * x + e[10] * z + e[14];
         fy[k] = G.clamp((Math.max(groundY(fX / TL, fZ / TL), G.Space.stoneTop(fX, fZ)) - fY) / sc, -lim, lim); }
     }
-    const spx = { browse: sp.diet === 'browse', swish: sp.diet === 'herb' || sp.diet === 'browse' ? 1 : 0.6 };
+    const spx = SPX; SPX.browse = sp.diet === 'browse'; SPX.swish = sp.diet === 'herb' || sp.diet === 'browse' ? 1 : 0.6;
     const R = (FA[fam] || FA.quad)(THREE, FMR.m, form, spx, st);
-    G.Fauna3D.put(row, R, a.kind, FA.coat(THREE, a), d2 > 576 ? 1 : 0, X, Y, Z, fly);
+    // (what the others reach for: the frames of the throat, the nape, the head, the rump, the back — in the view's memory)
+    const kb = s.kb || (s.kb = new Float32Array(KB.length * 16)); for (let k = 0; k < KB.length; k++) kb.set(R[B[KB[k]]].elements, k * 16);
+    s.kf = form; s.ksc = sc; s.kfr = G.Fauna3D.frame;
+    const GX = FA.Gest; const eye = GX ? GX.P[GX.I.EYE] : 0;
+    G.Fauna3D.put(row, R, a.kind, FA.coat(THREE, a), d2 > 576 ? 1 : 0, X, Y, Z, fly, marksOf(a, sp, s, G.clamp(eye, 0, 1)));
+  }
+  const SPX = { browse: false, swish: 1 };
+  // the gesture of a beast before it is drawn (D-280): the view's clock of it (FaunaAnim.Gest.track — in the view's memory s, never
+  // in the beast), death eased in from the last pose, the other it is made to and the point of it it goes for, the holder's body
+  // placed (facing the point, near enough for the mouth — the coils round the body, the feet on the back), the small held one
+  // drawn in the jaws; returns the context of the pose (ctx) and moves the frame (s.hx, s.hz, the yaw) by as much
+  const CTX = { aim: null, held: null, side: 0, rollWith: 0, tree: false, ground: false, hang: false, coilR: undefined, coilY: undefined, snap: null };
+  const AIMW = new Float32Array(3), SNP = new Float32Array(4);
+  function gestureOf(a, sp, s, dt, X, Z, heldBy, air) {
+    const ctx = CTX; ctx.aim = null; ctx.held = null; ctx.side = 0; ctx.rollWith = 0; ctx.tree = false; ctx.ground = false; ctx.hang = false; ctx.coilR = undefined; ctx.coilY = undefined; ctx.snap = null;
+    const GX = G.FaunaAnim && G.FaunaAnim.Gest; if (!GX) return ctx;
+    const n = GX.track(s, a, dt, impliedGest(a));
+    // death: from the last pose to lying dead (first seen dead: dead already)
+    if (a.dead) { s.dk = s.alive ? Math.min(1, (s.dk || 0) + dt / 0.85) : 1; s.alive = false; } else { s.dk = 0; s.alive = true; }
+    if (a.dead && (a.z || 0) > 3) ctx.tree = true;
+    if (s.side === undefined) s.side = GX.sideOf(a.id);
+    if ((n === 'fall' || n === 'stagger') && a.gestV) s.side = a.gestV > 0 ? 1 : -1; // (the side a blow throws it to, when the world says it)
+    ctx.side = s.side;
+    // held: the holder's gesture, the side it lies to (its back to the holder), the turn of the death roll it rolls with
+    const h = heldBy.get(a.id);
+    if (h) { const hs = bvis.get(h.id); ctx.held = hs && hs.gn ? hs.gn : (h.state === 'roll' ? 'deathroll' : h.grip > 0 ? 'coil' : null); ctx.rollWith = hs && hs.rollA ? hs.rollA : 0;
+      const yaw = s.yaw, dx = h.x - a.x, dz = h.y - a.y; ctx.side = (dz * Math.cos(yaw) - dx * Math.sin(yaw)) > 0 ? 1 : -1; if (!s.alive || a.dead) s.side = ctx.side;
+      // (small, in the jaws or the talons: drawn where it is held, hanging)
+      if (hs && hs.kb && snaps(a, h, hs.gn) && (hs.gn !== 'talons' || (h.z || 0) > 0.3)) {
+        const ho = hs.gn === 'talons' ? 'feet' : 'mouth'; const hf = hs.kf; const J = hf.J, B = G.FaunaAnim.B;
+        let bi, px, py, pz; if (ho === 'mouth') { GX.mouthOf(hf, AIMW); bi = 2; px = AIMW[0]; py = AIMW[1]; pz = AIMW[2]; } else { bi = 3; px = 0; py = J[B.hlL3 * 3 + 1]; pz = J[B.hlL3 * 3 + 2]; }
+        const b = B[KB[bi]], e = hs.kb, o = bi * 16; const x = px - J[b * 3], y = py - J[b * 3 + 1], z = pz - J[b * 3 + 2];
+        SNP[0] = e[o] * x + e[o + 4] * y + e[o + 8] * z + e[o + 12]; SNP[1] = e[o + 1] * x + e[o + 5] * y + e[o + 9] * z + e[o + 13]; SNP[2] = e[o + 2] * x + e[o + 6] * y + e[o + 10] * z + e[o + 14]; SNP[3] = hs.yaw + Math.PI / 2;
+        ctx.snap = SNP; ctx.hang = true;
+      }
+    }
+    // the other this gesture is made to, and the point of it
+    const oid = n ? otherOf(a, n) : 0; const o = oid ? (G.S.animals.get(oid) || null) : null;
+    if (o && o !== a && AIMAT[n]) {
+      const s2 = bvis.get(o.id); const which = aimWhich(n, a, o, s2);
+      if (keyPoint(o, s2, which, X, Z, AIMW)) {
+        ctx.aim = AIMW;
+        const hg = HOLDGEO[n] || 0;
+        if (n === 'coil') { const pf = s2 && s2.kf ? s2.kf : G.Fauna3D.form(o.kind); if (pf && pf.hull) { const b = G.FaunaAnim.B.spine, h0 = pf.hull; const r0 = (h0.p[(b * h0.nd + 2) * 3 + 1] - h0.p[(b * h0.nd + 3) * 3 + 1]) * 0.5 * (s2 && s2.ksc ? s2.ksc : 1); ctx.coilR = r0 / Math.max(0.2, G.Fauna3D.scaleOf(a.kind)); } }
+        if (hg > 0) holdBody(a, s, o, s2, n, hg, dt, X, Z);
+      }
+    }
+    if (!(ctx.aim && HOLDGEO[n])) { s.hx = (s.hx || 0) * Math.exp(-3 * dt); s.hz = (s.hz || 0) * Math.exp(-3 * dt); s.hon = 0; } // (the body back where the world has it)
+    ctx.ground = !!(air === false && G.Animals.DEF[a.kind].cls === 'air' && n && GX.REC[n] && GX.REC[n].wing);
+    return ctx;
+  }
+  // (the holder's body placed for the hold: turned toward the point, moved — at most a part of its size — so that what it holds
+  // with reaches it: the mouth; for the coils the snake's middle at the prey's middle, across it; for the talons the feet on its back)
+  const HB = new Float32Array(3);
+  function holdBody(a, s, o, s2, n, hg, dt, X, Z) {
+    const F3 = G.Fauna3D, form = F3.form(a.kind); if (!form) return; const sc = F3.scaleOf(a.kind) * (a.big || 1), TL = G.Space.TILE;
+    let wantYaw, reach;
+    if (n === 'coil') { // (across the prey's body, the loop round its middle)
+      const oy = s2 ? s2.yaw : 0; wantYaw = oy + Math.PI / 2; keyPoint(o, s2, 'body', X, Z, HB); reach = form.J[G.FaunaAnim.B.root * 3 + 2] * sc;
+      const pY = s2 && s2.Y !== null && s2.Y !== undefined ? s2.Y : 0; CTX.coilY = Math.max(0.05, (HB[1] - pY) / sc);
+    } else if (n === 'talons' || n === 'mantle') { HB[0] = AIMW[0]; HB[1] = AIMW[1]; HB[2] = AIMW[2]; wantYaw = Math.atan2(HB[2] - Z, HB[0] - X); reach = 0; }
+    else { HB[0] = AIMW[0]; HB[1] = AIMW[1]; HB[2] = AIMW[2]; wantYaw = Math.atan2(HB[2] - Z, HB[0] - X); const G0 = G.FaunaAnim.Gest; G0.mouthOf(form, KP); reach = KP[2] * sc * (n === 'nape' || n === 'pin' || n === 'maul' ? 0.55 : 0.82); }
+    if (Math.hypot(HB[0] - X, HB[2] - Z) < 1e-3 && n !== 'coil') return;
+    // (the hold turns the body on its own clock: the way the world drags the holder along does not turn it back each frame)
+    if (!s.hon) s.hy = s.yaw; s.hon = 1;
+    let da = wantYaw - s.hy; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.hy += da * (1 - Math.exp(-6 * dt));
+    da = s.hy - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * hg;
+    const c = Math.cos(s.yaw), sn = Math.sin(s.yaw); let wx = HB[0] - c * reach - X, wz = HB[2] - sn * reach - Z;
+    const lim = F3.sizeOf(a.kind) * sc * 0.6, l = Math.hypot(wx, wz); if (l > lim) { wx *= lim / l; wz *= lim / l; }
+    const e = 1 - Math.exp(-4 * dt); s.hx = (s.hx || 0) + (wx * hg - (s.hx || 0)) * e; s.hz = (s.hz || 0) + (wz * hg - (s.hz || 0)) * e;
+  }
+  // (a carcass is drawn where it fell — as a skin; one the sea took, or of the sea, is not: D-282)
+  const carcass = a => { const sp = G.Animals.DEF[a.kind]; return !!sp && sp.cls !== 'water' && !a.sink; };
+  // (who holds whom this frame — the world's a.caught, the holds of the gestures, the old states' prey — and the held put after
+  // their holders in the list, so the holder's pose is there to be reached)
+  const BHOLDS = { throat: 1, nape: 1, grip: 1, pin: 1, maul: 1, talons: 1, mantle: 1, coil: 1, deathroll: 1, drag: 1, carry: 1, carryyoung: 1, shakekill: 1, swallow: 1 };
+  const HELD = new Map(), TAILB = [], HOLDR = new Set();
+  function heldMap(list) {
+    HELD.clear(); HOLDR.clear(); const S = G.S;
+    // (every holder is ranked after the held — a pack on one prey: each wolf reaches for the moose as drawn this frame, L-996)
+    for (let i = 0; i < list.length; i++) { const a = list[i][1];
+      if (a.caught) { const h = S.animals.get(a.caught); if (h) { HELD.set(a.id, h); HOLDR.add(h.id); } }
+      if (a.gest && a.gestO && BHOLDS[a.gest]) { HELD.set(a.gestO, a); HOLDR.add(a.id); }
+      else if (!a.gest && a.target && (a.state === 'roll' || a.state === 'drown' || a.grip > 0)) { HELD.set(a.target, a); HOLDR.add(a.id); } }
+    // (the order: the held first — their pose is there for the holder to reach this very frame; then the holders; last the small ones
+    // carried in the jaws, drawn where the holder's mouth now is)
+    if (HELD.size) {
+      const rank = a => { const h = HELD.get(a.id); if (h && snaps(a, h, h.gest)) return 3; return HOLDR.has(a.id) ? 2 : h ? 1 : 0; };
+      TAILB.length = 0; for (let g = 1; g <= 3; g++) for (let i = 0; i < list.length; i++) if (rank(list[i][1]) === g) TAILB.push(list[i]);
+      let w = 0; for (let i = 0; i < list.length; i++) if (rank(list[i][1]) === 0) list[w++] = list[i]; for (let i = 0; i < TAILB.length; i++) list[w++] = TAILB[i]; }
+    return HELD;
+  }
+  // (where a beast's frame stands: moved for a hold; the small held one with its middle where it is held, across the jaws)
+  const FP = new Float32Array(3);
+  function framePos(a, s, gc, X, Y, Z, fsc) {
+    if (gc.snap) { const form = G.Fauna3D.form(a.kind), J = form.J, B = G.FaunaAnim.B; s.yaw = gc.snap[3]; const c = Math.cos(s.yaw), n = Math.sin(s.yaw), zz = J[B.spine * 3 + 2] * fsc;
+      FP[0] = gc.snap[0] - c * zz; FP[2] = gc.snap[2] - n * zz; FP[1] = gc.snap[1] - J[B.spine * 3 + 1] * fsc * 0.95; return FP; }
+    FP[0] = X + (s.hx || 0); FP[1] = Y; FP[2] = Z + (s.hz || 0); return FP;
   }
   function beasts(focus, R2, dt) {
     const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; let idx = 0, frow = 0; mats(); P3.bculled = 0;
@@ -1742,14 +1948,15 @@
     if (fauna) G.Fauna3D.begin();
     // (who is drawn: the nearest first — but one drawn last frame keeps its place against a newcomer only a little nearer, and
     // keeps being looked for a little past the edge of the sight: with more beasts in sight than rows, the farthest no longer
-    // take each other's place every frame — they blinked, L-988)
+    // take each other's place every frame — they blinked, L-988; the dead lie drawn as skins too, D-282)
     const list = []; const bf = ++bframe;
     for (const a of S.animals.values()) {
-      if (a.dead || a.held) continue; const X = a.x * TL, Z = a.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2;
+      if ((a.dead && !(fauna && carcass(a))) || a.held) continue; const X = a.x * TL, Z = a.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2;
       const s0 = bvis.get(a.id); const was = !!s0 && s0.f === bf - 1;
       if (d2 < R2 * (was ? 0.77 : 0.7)) list.push([was ? d2 * 0.72 : d2, a, d2]);
     }
     list.sort((p, q) => p[0] - q[0]);
+    const heldBy = heldMap(list); // (who holds whom: the held drawn after their holders — D-280)
     let nNear = 0; // (the beasts near enough to the eye for their eyes and hooves: the nearest first, so the first rows)
     const drawn = P3.bdrawn; drawn.length = 0;
     for (const [, a, d2] of list) {
@@ -1761,9 +1968,10 @@
       const v = dt > 0 && dist < 6 ? dist / dt : 0; s.v += (v - s.v) * (1 - Math.exp(-6 * dt)); s.t += dt; s.X = X; s.Z = Z;
       const F = formOf(sp, a.kind); const air = sp.cls === 'air' && (a.z || 0) > 0.3;
       // (drawn as one skin: G.Fauna3D, posed by G.FaunaAnim — while there are rows; past them, the farthest in sight as the pieces,
-      // not left out: L-988)
+      // not left out: L-988; a dead one only as a skin)
       const fz = fauna && frow < MAXA && G.Fauna3D.has(a.kind) && (!air || G.Fauna3D.hasFly(a.kind));
       if (!fz && idx >= MAXA) continue;
+      if (a.dead && !fz) continue; const gc = fz ? gestureOf(a, sp, s, dt, X, Z, heldBy, air) : null; // (the gesture, death, the hold: D-280)
       const u = (0.5 + (sp.size || 1) * 0.9) / 4 * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.6 : 1); // (metres to the god's unit)
       const run = G.clamp(s.v / 3, 0, 1.4); s.ph += dt * (F.biped ? (s.v * 6 / Math.max(0.4, F.leg * u * 2) + 0.4) : (s.v * 0.55 / Math.max(0.4, F.leg * u * 2) + 0.06)); // (four legs: strides; two: radians)
       const col = F.col, dark = darker(col, 0.78), bel = F.belly || darker(col, 1.12);
@@ -1771,16 +1979,17 @@
       const Yf = sp.cls === 'water' || air || a.swim ? W.groundH(a.x, a.y) * HM : Math.max(groundY(a.x, a.y), G.Space.stoneTop(X, Z));
       // (a beast first seen stands where the ground is — not rising to it from the height 0, out of the ground, as before)
       s.Y = s.Y === null || Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
-      const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
+      const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : !air && (a.z || 0) > 3 ? Math.min(4, a.z * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
       const fsc = fz ? G.Fauna3D.scaleOf(a.kind) * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.55 + 0.45 * Math.max(0, a.age) : 1) : 1;
       const fsize = fz ? G.Fauna3D.sizeOf(a.kind) * fsc / G.Fauna3D.scaleOf(a.kind) : 0;
       if (!inField(X, Y, Z, Math.max(0.6, fz ? fsize * 0.6 : F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)
       s.f = bf; drawn.push(a.id);
       if (d2 < 576 && !fz) nNear = idx + 1;
-      const m = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
+      const fp = gc ? framePos(a, s, gc, X, Y, Z, fsc) : null;
+      const m = fp ? M.root.makeTranslation(fp[0], fp[1], fp[2]) : M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-s.yaw); m.multiply(M.b);
       // (on a slope a beast of four legs lies along it: pitched by the ground under its fore and hind feet, rolled by the ground
       // at its sides — its feet neither in the air nor in the ground; eased, so it never snaps)
-      if (!air && !a.swim && (fz ? G.Fauna3D.form(a.kind).meta.fam !== 'bird' : !F.biped)) {
+      if (!air && !a.swim && !(gc && gc.snap) && (fz ? G.Fauna3D.form(a.kind).meta.fam !== 'bird' : !F.biped)) {
         const hl = (fz ? fsize * 0.4 : F.len * u * 0.42), hw = hl * 0.45, c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = 1 / TL;
         const gf = groundY(a.x + c * hl * k, a.y + n * hl * k), gb = groundY(a.x - c * hl * k, a.y - n * hl * k), gl = groundY(a.x - n * hw * k, a.y + c * hw * k), gr = groundY(a.x + n * hw * k, a.y - c * hw * k);
         const wp = G.clamp(Math.atan2(gf - gb, 2 * hl), -0.5, 0.5), wr = G.clamp(Math.atan2(gl - gr, 2 * hw), -0.4, 0.4), e = 1 - Math.exp(-8 * dt);
@@ -1789,7 +1998,7 @@
       }
       // (grazing: a beast that eats grass lowers its head now and then while it stands)
       const grazer = sp.diet === 'herb' || sp.diet === 'browse' || (sp.diet === 'insect' && (sp.town || sp.dom)); const wantG = grazer && s.v < 0.15 && Math.sin(s.t * 0.35 + a.id) > 0.1 ? 1 : 0; s.graze += (wantG - s.graze) * (1 - Math.exp(-2 * dt));
-      if (fz) { beastSkin(a, sp, s, m, fsc, d2, dt, frow, X, Y, Z, air); frow++; continue; }
+      if (fz) { beastSkin(a, sp, s, m, fsc, d2, dt, frow, X, Y, Z, air || gc.ground, gc); frow++; continue; }
       for (const n of BP) bhide(n[0], idx);
       if (F.bird && air) {
         // a bird in the air: a body, wings beating (slower while it glides), a tail

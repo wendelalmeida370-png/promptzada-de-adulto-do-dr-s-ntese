@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js']; // (the 3D view of the Modo Encarnado: only seen)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js']; // (the 3D view of the Modo Encarnado: only seen)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -408,7 +408,7 @@ for (const f of files) if (!['animals.js', 'caves.js', 'save.js'].includes(f)) s
 // do passo do mundo: o que só se vê ou se ouve (a lista LOOK da regra 3) e o 3D nunca as chamam, e ninguém fora do urban.js
 // escreve as contagens do dia (S.urbAcc), a vida (d.vida), os perfis (d.tags, d.tp) nem a memória (S.urbPast). Quem só lê
 // pergunta por G.Urban.at, G.Urban.profile, G.Urban.is, G.Urban.wholeOf, G.Urban.pastAt
-const LIFE_3D = ['realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'cam3d.js', 'incui.js', 'input3d.js', 'modes.js', 'props3d.js', 'fauna3d.js', 'fauna-anim.js'];
+const LIFE_3D = ['realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'cam3d.js', 'incui.js', 'input3d.js', 'modes.js', 'props3d.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js'];
 for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if ((LOOK.includes(f) || LIFE_3D.includes(f)) && /Urban\.(note|noteB|mourn|remember)\s*\(/.test(c)) fails.push(`vida do bairro: ${f}:${k + 1} o que só se vê ou se ouve abre a porta da vida do bairro (G.Urban.note): ${l.trim().slice(0, 110)}`);
   if (f !== 'urban.js' && (/\.urbAcc\b(?!\s*(\|\||&&|\)|;|,|$))/.test(c) && /\.urbAcc\s*(\[[^\]]*\])?(\.[a-zA-Z_]+)?\s*(=(?!=)|\+=|-=)/.test(c))) fails.push(`vida do bairro: ${f}:${k + 1} escreve as contagens do dia fora do urban.js: ${l.trim().slice(0, 110)}`);
@@ -781,7 +781,9 @@ for (const f of files) { if (f === 'city.js') continue; src[f].forEach((l, k) =>
 // bicho e do G.hash — o mesmo bicho é sempre o mesmo bicho); não escreve campo nenhum de bicho, pessoa, prédio ou do estado
 // (a., v., b., S., G.S. seguidos de uma atribuição); e não abre porta nenhuma que muda o mundo. O people3d.js guarda o que a
 // vista lembra de cada bicho (o passo, o ouvido, o sentar) na sua memória de desenho (bvis), nunca no bicho
-for (const f of ['fauna3d.js', 'fauna-anim.js']) { if (!src[f]) { fails.push(`bicho de uma pele: js/${f} não existe — a regra 91 não acha o 3D dos bichos`); continue; }
+// (e o gesto no corpo, D-280: js/fauna-gesto3d.js — as camadas, os resolvedores de cada família, o alcance ao outro, o corpo no chão —
+// e js/fauna-receitas.js — cada gesto de cada família —: o mesmo; o que a vista lembra de um bicho fica no s do bvis)
+for (const f of ['fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js']) { if (!src[f]) { fails.push(`bicho de uma pele: js/${f} não existe — a regra 91 não acha o 3D dos bichos`); continue; }
   src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
     if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random/.test(c)) fails.push(`bicho de uma pele: ${f}:${k + 1} tira de um acaso (o mesmo bicho tem de ser sempre o mesmo): ${l.trim().slice(0, 110)}`);
     if (/\b(a|v|b|S|G\.S)\.[A-Za-z_]+(\[[^\]]*\])?(\.[A-Za-z_]+)*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`bicho de uma pele: ${f}:${k + 1} escreve no mundo (o 3D dos bichos só lê): ${l.trim().slice(0, 110)}`);
@@ -815,5 +817,19 @@ for (const f of files) { if (f === 'animals.js' || f === 'save.js') continue; sr
   if (i < 0 || !an.slice(i, i + 4).some(l => /d\.kinds\.has\(a\.kind\)/.test(l) && /A\.gestErr\.push/.test(l))) fails.push('o gesto pela porta: o A.gesture (animals.js) não recusa e conta o gesto desconhecido ou que a espécie não faz (A.gestErr) — D-276'); }
 { const ge = src['fauna-gestos.js'] || []; if (!ge.length) fails.push('o gesto pela porta: js/fauna-gestos.js não existe — o vocabulário dos gestos (D-276)');
   ge.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bG\.S\b/.test(c)) fails.push(`o gesto pela porta: fauna-gestos.js:${k + 1} lê o mundo ou tira de um acaso (o vocabulário é puro): ${l.trim().slice(0, 110)}`); }); }
+
+// (o gesto no corpo, D-280: as funções do people3d.js que preparam o gesto de um bicho antes do desenho — o relógio do gesto, a
+// morte, o outro e o ponto dele, o corpo de quem segura, o pequeno levado na boca, as marcas da pelagem, a mente lida — escrevem
+// só na memória do desenho (s, o bvis) e no contexto da pose, nunca no bicho)
+{ const p3 = src['people3d.js'] || [];
+  for (const fn of ['impliedGest', 'gestureOf', 'holdBody', 'framePos', 'marksOf', 'moodOf', 'keyPoint', 'heldMap']) {
+    const i = p3.findIndex(l => new RegExp('^  function ' + fn + '\\(').test(l)); if (i < 0) { fails.push(`gesto no corpo: o people3d.js sem a função ${fn} — a regra 91 não a acha (D-280)`); continue; }
+    const j = p3.findIndex((l, k) => k > i && /^  \}$/.test(l)); p3.slice(i, j).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(a|o|h)\.[A-Za-z_]+(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`gesto no corpo: people3d.js:${i + k + 1} o ${fn} escreve num bicho (a memória do desenho é o bvis): ${l.trim().slice(0, 110)}`); }); } }
+// 93. "todo gesto tem o seu corpo" (D-281): cada gesto do vocabulário (js/fauna-gestos.js) tem a sua receita em js/fauna-receitas.js
+// para cada família de corpo das espécies que o fazem (os de quatro patas, as aves, as cobras, o crocodilo e o lagarto, a rã, as
+// focas) — um gesto novo sem receita cairia em ficar de pé, calado. A prova bichos-gestos.js confere o mesmo pelo jogo carregado
+{ const ge = (src['fauna-gestos.js'] || []).join('\n'), rc = (src['fauna-receitas.js'] || []).join('\n');
+  const names = [...ge.matchAll(/^\s{4}(\w+): \{ nome: /gm)].map(m => m[1]);
+  for (const n of names) if (!new RegExp(`def\\('${n}'`).test(rc)) fails.push(`todo gesto tem o seu corpo: o gesto ${n} (fauna-gestos.js) sem receita em fauna-receitas.js (D-281)`); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

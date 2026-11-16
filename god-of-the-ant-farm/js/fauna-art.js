@@ -5,21 +5,75 @@
 //  crocodiles, frogs, lizards, birds, waders and sea life.
 // ============================================================
 (function (G) {
-  const Art = G.Art;
+  const Art = G.Art; const FA2 = G.FaunaArt = {};
   const TAU = Math.PI * 2;
   const oldAnimal = Art.animal;
   function line(c, x0, y0, x1, y1) { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); }
   function ell(c, x, y, rx, ry, rot, col) { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot || 0, 0, TAU); c.fill(); }
   const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16); const r = Math.min(255, ((n >> 16) & 255) * f), g = Math.min(255, ((n >> 8) & 255) * f), b = Math.min(255, (n & 255) * f); return `rgb(${r | 0},${g | 0},${b | 0})`; };
 
+  // ---------------- the gesture in the god's view (D-284) ----------------
+  // what the body does now — the world's a.gest (G.Gestos) and the old states that still speak (the held one, the death roll,
+  // the coils) — read into a few numbers the drawings use: lying on the chest or the side, curled asleep, reared, the rump up
+  // in a kick, the forelegs striking, the head down, up or thrust forward, the jaws open, the legs thrashing, the body shaking.
+  // Only read: the same beast is always drawn the same way (its id, the world's clock of the gesture, the frame's clock)
+  const GP = { n: null, lie: 0, side: 0, curl: 0, rear: 0, kick: 0, strike: 0, head: 0, up: 0, fwd: 0, jaw: 0, thrash: 0, shake: 0, crouch: 0, wings: 0, sd: 1 };
+  function implied2(a) {
+    if (a.down > 0 || a.caught) return 'struggle';
+    if (a.state === 'roll') return 'deathroll'; if (a.grip > 0) return 'coil';
+    return null;
+  }
+  function pose2(a, sp, t) {
+    const P = GP; P.n = null; P.lie = P.side = P.curl = P.rear = P.kick = P.strike = P.head = P.up = P.fwd = P.jaw = P.thrash = P.shake = P.crouch = P.wings = 0; P.sd = 1;
+    if (a.dead) return P;
+    const n = a.gest || implied2(a); if (!n) return P; P.n = n;
+    const u = a.gest ? a.gestT || 0 : t, d = a.gest ? a.gestD || 0 : 0, f = d > 0 ? Math.min(1, u / d) : 0;
+    const w = d > 0 ? Math.max(0, Math.min(1, u / 0.25, (d - u) / 0.3)) : Math.min(1, u / 0.4 + 0.3); // (in at its start, out at its end)
+    const bump = (a0, m, b0) => (f < m ? Math.max(0, (f - a0) / (m - a0)) : Math.max(0, 1 - (f - m) / (b0 - m)));
+    P.sd = a.gestV < 0 ? -1 : 1;
+    const q = sp.q || {}, pred = !!q.pred, sideSleep = G.hash(a.id * 3 + 1) < 0.5, down = a.down > 0 || a.caught || Math.round(a.gestV || 0) === 1;
+    switch (n) {
+      case 'sleep': if (sideSleep && (pred || sp.art === 'elephant')) P.side = 1; else { P.lie = 1; P.curl = pred || sp.art === 'wolf' ? 1 : 0; P.head = 0.8; } break;
+      case 'curl': case 'huddle': P.lie = 1; P.curl = 1; P.head = 0.7; break;
+      case 'lie': case 'ruminate': case 'bask': case 'hide': case 'gnaw': case 'brood': P.lie = 1; if (n === 'hide') P.head = 1; break;
+      case 'wallow': case 'splash': P.lie = 1; P.shake = 0.3; break;
+      case 'nurse': if (pred || sp.art === 'wolf' || sp.art === 'dog' || sp.art === 'cat' || sp.art === 'boar') P.side = 1; break;
+      case 'roll': case 'dustbath': P.side = 1; P.thrash = 0.6; break;
+      case 'drink': case 'sniff': case 'root': case 'browse': case 'tear': case 'drag': P.head = n === 'browse' ? -0.6 : 1; if (n === 'drink' && pred) P.crouch = 0.8; break;
+      case 'alert': case 'scent': case 'listen': case 'stare': case 'curious': P.up = n === 'stare' || n === 'curious' ? 0.3 : 0.7; P.fwd = n === 'curious' ? 0.6 : 0; break;
+      case 'howl': case 'trumpet': case 'bellow': case 'call': case 'roar': P.up = 1; P.jaw = 1; break;
+      case 'yawn': case 'gape': case 'pant': P.jaw = n === 'pant' ? 0.5 : 1; break;
+      case 'rear': case 'spar': P.rear = 0.6 * w; P.strike = Math.abs(Math.sin(t * 6 + a.id)) * w; P.jaw = n === 'spar' ? 0.6 : 0; break;
+      case 'kick': case 'buck': P.kick = bump(0.05, 0.4, 0.85); break;
+      case 'stomp': P.rear = 0.35 * bump(0, 0.35, 0.8); P.strike = bump(0.3, 0.45, 0.8); break;
+      case 'clash': case 'gore': case 'toss': case 'charge': P.head = 0.55; P.fwd = 0.6; if (n === 'toss') P.up = bump(0.3, 0.55, 0.9) * 1.4; break;
+      case 'threat': case 'display': P.jaw = 0.8; P.fwd = 0.5; P.crouch = pred ? 0.4 : 0; P.head = pred ? 0.2 : 0.5; break;
+      case 'bite': case 'strike': P.fwd = bump(0, 0.4, 1) * 1.2; P.jaw = f < 0.5 ? 1 : 0; break;
+      case 'throat': case 'grip': case 'nape': case 'pin': case 'maul': P.crouch = 0.6; P.head = 0.7; P.fwd = 0.8; P.jaw = 0.4; break;
+      case 'shakekill': case 'shake': P.shake = 1; break;
+      case 'swipe': P.strike = bump(0.2, 0.4, 0.8); P.jaw = 0.7; break;
+      case 'struggle': if (down) P.side = 1; P.thrash = 1; P.jaw = 0.6; break;
+      case 'stagger': P.shake = 0.5 * bump(0, 0.25, 0.9); P.head = 0.5 * bump(0, 0.25, 0.9); break;
+      case 'fall': P.side = Math.min(1, f * 1.5); P.thrash = 0.5 * (1 - f); break;
+      case 'throes': P.side = 1; P.thrash = 0.9 * (1 - 0.7 * f); P.jaw = 0.6; break;
+      case 'rise': P.lie = Math.max(0, 1 - f * 1.5); break;
+      case 'mate': if (G.hash(a.id * 7 + 3) >= 0.5) P.rear = 0.45; break;
+      case 'suckle': P.head = -0.3; P.fwd = 0.4; break;
+      case 'stoop': case 'mantle': case 'talons': case 'spread': P.wings = 1; break;
+      case 'stot': P.up = 0.6; break;
+    }
+    return P;
+  }
+  FA2.pose = pose2;
   // ---------------- generic quadruped ----------------
   function quad(c, a, sp, q, t) {
+    const G2 = GP; // (the gesture, read by Art.animal a moment ago)
     const mv = a.moving && !a.dead; const ph = a.walkPh; const hurt = a.hurt > 0;
     const stout = q.stout || 0; const br = 1.5 + stout * 0.55 + (q.shag ? 0.5 : 0);
     // a cat creeping low through the grass, a body in the air at the end of the leap
-    const cr = a.dead ? 0 : Math.max(a.crouch || 0, a.state === 'stalk' ? 1 : 0);
+    const cr = a.dead ? 0 : Math.max(a.crouch || 0, a.state === 'stalk' ? 1 : 0, G2.crouch);
     const pj = a.pounce > 0 && !a.dead ? Math.min(1, a.pounce) : 0;
-    const L = q.len * (1 + cr * 0.08 + pj * 0.16), leg = q.leg * (1 - cr * 0.42); const by = -leg - br * 0.75;
+    const L = q.len * (1 + cr * 0.08 + pj * 0.16) * (G2.curl ? 0.78 : 1), leg = q.leg * (1 - cr * 0.42); const lying = G2.lie > 0.5 || G2.side > 0.5; const by = lying ? -br * 0.95 : -leg - br * 0.75;
     if (pj) c.translate(0, -Math.sin(pj * Math.PI) * q.leg * 1.8);
     const col = hurt ? '#ff8a7a' : q.col, dark = shade(q.col, 0.72);
     const graze = a.eating > 0 && !q.pred;
@@ -31,6 +85,16 @@
       line(c, -L * 0.5, by + br * 0.4, -L * 1.12, by + br * 1.3); line(c, L * 0.55, by + br * 0.4, L * 1.25, by + br * 0.9);
       c.strokeStyle = shade(q.col, 0.85);
       line(c, -L * 0.38, by + br * 0.4, -L * 1.02, by + br * 1.6); line(c, L * 0.7, by + br * 0.4, L * 1.38, by + br * 0.55);
+    } else if (lying) { // lying: the legs folded under the body — or stretched out limp from it, on its side, kicking when it thrashes
+      const th = G2.thrash ? Math.sin(t * 15 + a.id) * 0.9 * G2.thrash : 0, th2 = G2.thrash ? Math.sin(t * 13 + a.id + 1.7) * 0.9 * G2.thrash : 0;
+      if (G2.side > 0.5) { line(c, L * 0.5, by + br * 0.5, L * 0.5 + leg * 0.95 + th, by + br * 0.9 + leg * 0.2 - th * 0.6); line(c, -L * 0.5, by + br * 0.5, -L * 0.5 - leg * 0.9 - th2, by + br * 0.9 + leg * 0.25 + th2 * 0.6);
+        c.strokeStyle = shade(q.col, 0.85); line(c, L * 0.62, by + br * 0.55, L * 0.62 + leg * 0.9 + th2, by + br * 0.75 + leg * 0.1 - th2 * 0.5); line(c, -L * 0.38, by + br * 0.55, -L * 0.38 - leg * 0.85 - th, by + br * 0.75 + leg * 0.15 + th * 0.5); }
+      else if (!G2.curl) { line(c, L * 0.45, by + br * 0.75, L * 0.85, by + br * 0.95); line(c, -L * 0.6, by + br * 0.75, -L * 0.15, by + br * 0.95); }
+    } else if (G2.kick > 0.05 || G2.strike > 0.05) { // the hind legs thrown back in a kick, the forelegs up to strike
+      const k = G2.kick, s2 = G2.strike;
+      line(c, -L * 0.55, by + br * 0.4, -L * 0.55 - leg * 1.1 * k, by + br * 0.4 + leg * (1 - 1.3 * k)); line(c, L * 0.5, by + br * 0.4, L * 0.5 + leg * 0.6 * s2, by + br * 0.4 + leg * (1 - 1.1 * s2));
+      c.strokeStyle = shade(q.col, 0.85);
+      line(c, -L * 0.4, by + br * 0.4, -L * 0.4 - leg * 0.95 * k, by + br * 0.4 + leg * (1 - 1.1 * k)); line(c, L * 0.65, by + br * 0.4, L * 0.65 + leg * 0.5 * s2, by + br * 0.4 + leg * (1 - 0.8 * s2));
     } else {
       const sp2 = cr * 0.6;
       line(c, -L * 0.55, by + br * 0.4, -L * 0.55 + sw - sp2, 0); line(c, L * 0.5, by + br * 0.4, L * 0.5 - sw + sp2, 0);
@@ -67,6 +131,15 @@
     const nk = q.neck;
     let hx = L * 0.85 + nk * 0.35 + (graze ? 0.6 : 0);
     let hy = graze ? -0.8 : by - br * 0.35 - nk * 0.85;
+    // (the gesture's head: down to the ground, raised, thrust forward; curled asleep, tucked at the flank; on its side, on the ground)
+    if (G2.n && !feed) {
+      if (G2.side > 0.5) { hx = L * 1.05 + 0.6; hy = by + br * 0.5; }
+      else if (G2.curl) { hx = L * 0.55; hy = by + br * 0.35; }
+      else { if (G2.head > 0) { hx += 0.6 * G2.head; hy += (-0.8 - hy) * Math.min(1, G2.head); } else if (G2.head < 0) hy += G2.head * nk * 1.2;
+        if (G2.up) { hy -= nk * 0.55 * G2.up + 0.6 * G2.up; hx -= 0.4 * G2.up; }
+        if (G2.fwd) { hx += 1.0 * G2.fwd; hy += 0.4 * G2.fwd * (G2.head > 0 ? 0 : 1); } }
+      if (G2.shake) hx += Math.sin(t * 22 + a.id) * 0.5 * G2.shake;
+    }
     // tearing at a kill: head down, braced, pulling back in jerks
     if (feed) { const tug = Math.max(0, Math.sin(t * 4.2 + a.id)); hx = L * 0.95 + 0.7 - tug * 0.9; hy = -0.9 - tug * 1.2 + Math.sin(t * 11 + a.id) * 0.15; }
     else if (cr) { hy = by - br * 0.05; hx += 0.5; }
@@ -84,6 +157,8 @@
     // ears
     const er = q.ear === undefined ? 0.9 : q.ear;
     if (er > 0) { c.fillStyle = col; c.beginPath(); c.moveTo(hx - 0.5, hy - hr * 0.6); c.lineTo(hx - 0.7 - er * 0.2, hy - hr - er * 1.1); c.lineTo(hx + 0.2, hy - hr * 0.7); c.fill(); }
+    // (the jaws open: a dark gape under the muzzle)
+    if (G2.jaw > 0.2) { c.fillStyle = '#3a1210'; c.beginPath(); c.moveTo(hx + hr * 0.6, hy + 0.35); c.lineTo(hx + hr * 1.6, hy + 0.2 + G2.jaw * 0.9); c.lineTo(hx + hr * 1.5, hy + 0.55); c.fill(); }
     // eye
     c.fillStyle = q.eye || (q.pred && G.isNight() ? '#ffd24a' : '#1a1410'); c.fillRect(hx + 0.35, hy - 0.4, 0.5, 0.5);
     if (q.cat && !feed) { c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 0.18; line(c, hx + hr * 1.2, hy + 0.3, hx + hr * 2.1, hy + 0.1); line(c, hx + hr * 1.2, hy + 0.5, hx + hr * 2.1, hy + 0.7); }
@@ -154,7 +229,7 @@
     const fur = a.summoned ? '#3a3440' : snowy ? '#c8ccd2' : '#7a7a82';
     ell(c, 0, -4.4, 4, 1.9, 0, a.hurt > 0 ? '#ff8080' : fur);
     c.strokeStyle = fur; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-3.6, -4.6); c.quadraticCurveTo(-6, -4 - Math.sin(t * 4 + a.id) * 0.8, -6.8, -2.8); c.stroke();
-    c.fillStyle = fur; c.save(); c.translate(3.6, -5.6 + bite); c.rotate(a.howl > 0 ? -0.8 : bite * 0.3);
+    c.fillStyle = fur; c.save(); c.translate(3.6 + (GP.head > 0.5 ? 0.6 : 0), -5.6 + bite + (GP.head > 0.5 ? 3 : 0)); c.rotate(a.howl > 0 || GP.n === 'howl' ? -0.8 : GP.head > 0.5 ? 0.6 : bite * 0.3);
     c.beginPath(); c.ellipse(0.8, 0, 1.9, 1.4, 0, 0, TAU); c.fill();
     c.beginPath(); c.moveTo(1.4, -0.4); c.lineTo(4, 0.4); c.lineTo(1.6, 1); c.fill();
     c.beginPath(); c.moveTo(-0.2, -1); c.lineTo(0.2, -3); c.lineTo(1, -1.2); c.fill();
@@ -192,12 +267,14 @@
   }
   function giraffe(c, a, sp, t) {
     const mv = a.moving && !a.dead; const l = mv ? Math.sin(a.walkPh) * 1.1 : 0; const col = a.hurt > 0 ? '#ff9a7a' : '#e0a848';
-    const graze = a.eating > 0;
+    const graze = a.eating > 0 || GP.head > 0.5, splay = GP.n === 'drink';
     c.strokeStyle = '#b07a30'; c.lineWidth = 0.8;
-    line(c, -2.4, -6, -2.4 + l, 0); line(c, -1.6, -6, -1.6 - l, 0); line(c, 2, -6.5, 2 - l, 0); line(c, 2.8, -6.5, 2.8 + l, 0);
+    line(c, -2.4, -6, -2.4 + l, 0); line(c, -1.6, -6, -1.6 - l, 0);
+    if (splay) { line(c, 2, -5.2, 0.4, 0); line(c, 2.8, -5.2, 4.6, 0); c.translate(0, 1.2); } // (the forelegs splayed wide to reach the water)
+    else { line(c, 2, -6.5, 2 - l, 0); line(c, 2.8, -6.5, 2.8 + l, 0); }
     c.strokeStyle = '#6a4a2a'; c.lineWidth = 0.5; line(c, -3.4, -7.2, -4.6, -4.4);
     c.fillStyle = col; c.beginPath(); c.ellipse(0, -7.4, 3.6, 1.9, -0.18, 0, TAU); c.fill();
-    const hx = graze ? 5.2 : 3.6, hy = graze ? -10 : -16;
+    const hx = splay ? 5.6 : graze ? 5.2 : 3.6 + (GP.n === 'neck' ? Math.sin(t * 2.8 + a.id) * 2.2 : 0), hy = splay ? -2.2 : graze ? -10 : GP.n === 'neck' ? -13.5 : -16;
     c.strokeStyle = col; c.lineWidth = 1.6; line(c, 2.2, -8, hx - 0.3, hy + 0.6);
     c.fillStyle = '#8a5424'; for (let k = 0; k < 6; k++) { const u = (G.hash(a.id * 3 + k) - 0.5) * 5.6, v = (G.hash(a.id * 5 + k) - 0.5) * 2.6; c.fillRect(u - 0.5, -7.4 + v - 0.4, 1, 0.8); }
     for (let k = 1; k < 4; k++) { const f = k / 4; c.fillRect(2.2 + (hx - 2.2) * f - 0.4, -8 + (hy + 0.6 + 8) * f - 0.4, 0.8, 0.8); }
@@ -213,9 +290,10 @@
     ell(c, 0, -6, 5, 3.4, 0, col);
     c.strokeStyle = dark; c.lineWidth = 0.6; line(c, -5, -6, -5.8, -3.4);
     ell(c, 4.8, -7.2, 2.2, 2, 0, col);
-    ell(c, 3.4, -7, 1.6, 2.2, 0, dark); // ear
+    if (GP.n === 'display' || GP.n === 'trumpet' || GP.n === 'charge' || GP.n === 'mob') ell(c, 3.2, -7.2, 2.6, 3.1, -0.2, dark); else ell(c, 3.4, -7, 1.6, 2.2, 0, dark); // ear (spread out to threaten)
     c.strokeStyle = col; c.lineWidth = 1.3; c.lineCap = 'round'; const sw = Math.sin(t * 1.5 + a.id) * 0.8;
-    if (a.state === 'mourn' && !a.dead) { c.beginPath(); c.moveTo(6.6, -6.6); c.quadraticCurveTo(9.4, -5.6, 10.6 + sw * 0.4, -2.4); c.stroke(); }
+    if ((a.state === 'mourn' || GP.n === 'mourn') && !a.dead) { c.beginPath(); c.moveTo(6.6, -6.6); c.quadraticCurveTo(9.4, -5.6, 10.6 + sw * 0.4, -2.4); c.stroke(); }
+    else if (!a.dead && (GP.up > 0.5 || GP.n === 'spray' || GP.n === 'display' || GP.n === 'browse')) { c.beginPath(); c.moveTo(6.6, -6.6); c.quadraticCurveTo(9.2, -8.4, 8.4 + sw * 0.3, -11.6); c.stroke(); } // (the trunk raised: the trumpet, the spray, the leaves up high)
     else { c.beginPath(); c.moveTo(6.6, -6.6); c.quadraticCurveTo(7.8, -3.6, 7 + sw, -1.2); c.stroke(); }
     if (a.id % 3 !== 0) { c.strokeStyle = '#f2ecd8'; c.lineWidth = 0.6; c.beginPath(); c.moveTo(6.2, -5.8); c.quadraticCurveTo(7.4, -4.8, 7.8, -5.8); c.stroke(); }
     c.fillStyle = '#1a1410'; c.fillRect(5.6, -8, 0.5, 0.5);
@@ -243,16 +321,20 @@
     ell(c, 5.4, -0.6 + Math.sin(ph * 1.5 + 9.9) * 0.9, 1, 0.7, 0, col);
     if (a.kind === 'anaconda') { c.fillStyle = '#1e2414'; for (let k = 0; k < 8; k++) { const x = -4 + k * 1.1; c.beginPath(); c.arc(x, -0.5 + Math.sin(ph * 1.5 + (k + 1) * 0.9) * 0.9, 0.38, 0, TAU); c.fill(); } }
     if (a.state === 'lunge' || a.bite > 0) { c.strokeStyle = '#d83a3a'; c.lineWidth = 0.3; line(c, 6.3, -0.6, 7.3, -0.9); }
-    if (a.grip > 0 && !a.dead) { // coiled around its prey, squeezing
+    if (!a.dead && (GP.n === 'threat' || GP.n === 'display' || GP.n === 'alert' || GP.n === 'strike' || GP.n === 'bite' || GP.n === 'stare' || GP.n === 'curious')) { // the front raised in an S, the head level, ready
+      const lunge = GP.fwd || 0; c.strokeStyle = col; c.lineWidth = 1.4 * (sp.size || 1); c.beginPath(); c.moveTo(3.4, -0.5); c.bezierCurveTo(4.6, -0.6, 3.2, -2.6, 4.4 + lunge * 1.5, -2.9 + lunge * 1.2); c.stroke();
+      ell(c, 5.1 + lunge * 1.6, -3.0 + lunge * 1.2, 1, 0.65, 0, col); if (GP.jaw > 0.3) { c.fillStyle = '#d83a3a'; c.fillRect(5.8 + lunge * 1.6, -3.1 + lunge * 1.2, 0.7, 0.3); }
+    }
+    if ((a.grip > 0 || GP.n === 'coil') && !a.dead) { // coiled around its prey, squeezing
       c.strokeStyle = col; c.lineWidth = 1.5 * (sp.size || 1);
       for (let k = 0; k < 3; k++) { c.beginPath(); c.ellipse(0, -2.2 - k * 1.3, 2.2 - k * 0.2, 0.75, Math.sin(t * 2 + k) * 0.1, Math.PI * 0.05, Math.PI * 1.05); c.stroke(); }
     }
   }
   function croc(c, a, sp, t) {
     const S = G.S; const inWater = S.type[G.W.idx(a.x, a.y)] <= G.T.RIVER;
-    const col = a.hurt > 0 ? '#9a6a5a' : a.morph === 'albino' ? '#e4dccc' : '#4a5a32', dark = a.morph === 'albino' ? '#c8bea8' : '#2e3a20'; const open = a.bite > 0 || a.state === 'lunge' ? 1 : 0;
+    const col = a.hurt > 0 ? '#9a6a5a' : a.morph === 'albino' ? '#e4dccc' : '#4a5a32', dark = a.morph === 'albino' ? '#c8bea8' : '#2e3a20'; const open = a.bite > 0 || a.state === 'lunge' || GP.jaw > 0.3 ? 1 : 0;
     const alb = a.morph === 'albino';
-    if (a.roll > 0 && !a.dead) { // the death roll: the whole body turning over and over, the prey in its jaws
+    if ((a.roll > 0 || GP.n === 'deathroll') && !a.dead) { // the death roll: the whole body turning over and over, the prey in its jaws
       const ph = Math.sin(t * 16 + a.id); const belly = ph > 0;
       ell(c, 0, 0.3, 7.5, 2, 0, 'rgba(240,248,255,0.4)');
       c.save(); c.scale(1, 0.45 + Math.abs(ph) * 0.55);
@@ -334,6 +416,11 @@
   function bird(c, a, sp, t) {
     const b = sp.b; const sc = b.span / 8;
     const flying = (a.z || 0) > 2;
+    if (flying && GP.n === 'stoop') { // the stoop: the wings folded back along the body, the talons forward
+      c.fillStyle = b.wing; c.beginPath(); c.moveTo(1.2 * sc, -0.2 * sc); c.lineTo(-2.6 * sc, -1.4 * sc); c.lineTo(-2.2 * sc, 0.2 * sc); c.fill();
+      ell(c, 0, 0, 1.4 * sc, 0.7 * sc, 0.3, b.col); if (b.head) ell(c, 1.2 * sc, 0.3 * sc, 0.55 * sc, 0.5 * sc, 0, b.head);
+      c.strokeStyle = '#d8b03a'; c.lineWidth = 0.35; line(c, 0.2 * sc, 0.5 * sc, 1.0 * sc, 1.2 * sc); return;
+    }
     if (flying) {
       const f = Math.sin((a.flap || 0) * (a.kind === 'eagle' || a.kind === 'vulture' ? 0.45 : 1)) * (a.state === 'circle' || a.kind === 'vulture' ? 0.3 : 1);
       c.strokeStyle = b.wing; c.lineWidth = 1.3 * sc; c.lineCap = 'round';
@@ -354,7 +441,12 @@
       c.fillStyle = b.beak; c.beginPath(); c.moveTo(0.1, -4.3); c.lineTo(0.35, -3.8); c.lineTo(0.6, -4.3); c.fill();
       return;
     }
-    const bob = a.eating > 0 ? 0.6 : 0;
+    const bob = a.eating > 0 || GP.head > 0.5 ? 0.6 : 0;
+    if (GP.wings && !a.dead) { // the wings spread on the ground — to the sun, or mantled down over the prey
+      const dr = GP.n === 'mantle' || GP.n === 'talons' ? 1 : 0; c.fillStyle = b.wing;
+      c.beginPath(); c.moveTo(0, -2.4 * sc); c.quadraticCurveTo(-2.6 * sc, (-4.2 + dr * 2.6) * sc, -4.4 * sc, (-1.6 + dr * 1.5) * sc); c.lineTo(-0.4 * sc, -1.6 * sc); c.fill();
+      c.beginPath(); c.moveTo(0.4 * sc, -2.4 * sc); c.quadraticCurveTo(2.8 * sc, (-4.4 + dr * 2.6) * sc, 4.2 * sc, (-1.8 + dr * 1.5) * sc); c.lineTo(0.6 * sc, -1.6 * sc); c.fill();
+    }
     c.strokeStyle = '#3a2a1a'; c.lineWidth = 0.4; line(c, -0.3, -1, -0.4, 0); line(c, 0.3, -1, 0.4, 0);
     ell(c, 0, -2.2 * sc, 1.9 * sc, 1.2 * sc, -0.2, a.hurt > 0 ? '#ff8a7a' : b.col);
     ell(c, -0.4 * sc, -2.4 * sc, 1.4 * sc, 0.8 * sc, -0.2, b.wing);
@@ -617,9 +709,17 @@
       const col = sp.q ? sp.q.col : sp.col ? sp.col[0] : sp.b ? sp.b.col : '#7a7a82';
       c.fillStyle = col; c.fillRect(-1.5 * sc, -2.5 * sc, 3 * sc, 2 * sc); c.restore(); return;
     }
-    // pinned down or held: on its side, legs kicking
-    if ((a.down > 0 || a.caught) && !a.dead && sp.cls === 'land') { c.rotate(G.Render.sface(a) * 0.95); c.translate(0, -1); }
+    // pinned down or held: on its side, legs kicking (the four-legged draw that themselves, from the gesture)
+    const P2 = pose2(a, sp, t);
+    if ((a.down > 0 || a.caught) && !a.dead && sp.cls === 'land' && sp.art !== 'quad') { c.rotate(G.Render.sface(a) * 0.95); c.translate(0, -1); }
     c.scale(G.Render.sface(a) * sc, sc);
+    // (the body turned by the gesture: reared on the hind feet, the rump up over the forefeet, on its side; the others lying low)
+    if (!a.dead && sp.cls !== 'water' && !(sp.cls === 'air' && (a.z || 0) > 2)) {
+      if (P2.rear > 0) { c.translate(-2.2, 0); c.rotate(-P2.rear); c.translate(2.2, 0); }
+      if (P2.kick > 0) { c.translate(2.4, 0); c.rotate(P2.kick * 0.3); c.translate(-2.4, 0); }
+      if (sp.art !== 'quad' && sp.art !== 'snake' && sp.art !== 'croc') { if (P2.side > 0.5) { c.translate(0, -0.6); c.rotate(0.95); } else if (P2.lie > 0.5) { c.translate(0, 0.4); c.scale(1, 0.62); } }
+      if (P2.shake && sp.art !== 'quad') c.translate(Math.sin(t * 22 + a.id) * 0.25 * P2.shake, 0);
+    }
     if (sp.art === 'quad') { quad(c, a, sp, a.morph ? morphQ(sp, a.morph) : sp.q, t); if (a.pack && G.Trade) G.Trade.drawPack(c, a); if (a.catchT && G.Migrate) G.Migrate.drawCatch(c, a, sp); }
     else if (DRAW[sp.art]) DRAW[sp.art](c, a, sp, t);
     // a carcass torn open by those who ate from it
