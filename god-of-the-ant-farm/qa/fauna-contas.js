@@ -4,6 +4,7 @@
 // hunger, old, thirst, fire, stranded…), e a cada 20 anos a linha do f2 do fauna.js (quantas vivas). Não julga nada: é a régua de
 // quem acerta o equilíbrio — compare duas versões na mesma semente, e várias sementes, nunca uma só (o mundo é caótico: um passo
 // diferente muda tudo depois).   OFF=thirst,options node qa/fauna-contas.js 103 60   desliga partes do meio (G.Meio.off)
+//   ANO=1 diz a cada ano quantas vivas, as que sumiram e as que voltaram, os dias de seca, a gente e as cidades
 //   POR=1 também diz, das mortes por gente, a tarefa de quem matou, o estado da fera (→ele: vinha atrás dele) e onde (na cidade, na
 //   beira — o anel e quatro casas —, perto, no mato)
 const M = require('./nodemundo.js');
@@ -26,8 +27,11 @@ const k0 = A.kill; A.kill = function (a, by, c) {
 const s0 = A.spawn; A.spawn = function (k, x, y, o) { const a = s0.apply(this, arguments); if (a && wild(k)) note(B, k, o && o.age === 0 && o.grown < 1 ? 'cria' : 'outro'); return a; };
 const ks = () => A.ids.filter(k => wild(k) && A.capacity(k) > 0);
 // (the skip counts whole years: M.saltar(0.5) is a year, not half of one)
+let was = null, dry = 0; if (G.Events && G.Events.drought) { const d0 = G.Events.drought; G.Events.drought = function () { dry++; return d0.apply(this, arguments); }; }
 for (let h = 1; h <= years; h++) {
   M.saltar(1); const c = A.counts(); for (const k of ks()) if (!(c[k] > 0)) Z[k] = (Z[k] || 0) + 1;
+  if (process.env.ANO) { const l = ks(); const now = new Set(l.filter(k => !(c[k] > 0))); const gone = [...now].filter(k => !was || !was.has(k)), back = was ? [...was].filter(k => !now.has(k)) : [];
+    console.log(`  ano ${String(G.S.day).padStart(3)}: ${l.length - now.size}/${l.length}${gone.length ? ' | sumiram ' + gone.join(' ') : ''}${back.length ? ' | voltaram ' + back.join(' ') : ''}${dry ? ' | seca (' + dry + ')' : ''} | gente ${G.S.villagers.size} cidades ${G.S.settlements.size} bichos ${G.S.animals.size}`); was = now; dry = 0; }
   if (h % 20 === 0) { const l = ks(); const dead = l.filter(k => !(c[k] > 0)); console.log(`ano ${G.S.day}: ${l.length - dead.length}/${l.length} vivas (o f2 pede ${Math.ceil(l.length * 0.9)})${dead.length ? '; extintas agora: ' + dead.join(' ') : ''}`); }
 }
 const c = A.counts();

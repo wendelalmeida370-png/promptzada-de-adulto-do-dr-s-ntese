@@ -1818,13 +1818,17 @@
   };
   // species that vanished from a habitat that still exists come back, slowly, from beyond the map
   A.immigrateNow = () => immigrate(); // (the door of the proofs: a round of the arrivals now — qa/fauna.js f8)
+  const IMM_P = 0.3; // (each dwindled kind's chance in a round of the arrivals: twice a year, about one in two years)
   function immigrate() {
     const S = G.S; const count = A.counts();
     // the kinds that dwindled away (as before), one of them, now and then; and — the brain's: a kind left with grown ones of one
     // sex only, that the land still has room for — one of the other comes too, in a draw of its own (each kind waiting in its own
     // line: the lone sexes do not take the places of the vanished, D-293)
     const ks = A.ids.filter(k => A.capacity(k) >= 2 && (count[k] || 0) < Math.max(2, A.capacity(k) * 0.3));
-    if (ks.length) arrive(G.pick(ks), count, false);
+    // (the land is a window on a wider one: each kind that dwindled away comes back from beyond in its own time, not one kind of
+    // all of them in a round — with a land of forty years missing six to ten kinds at once, each waited years for its turn and
+    // the hunters of the land were gone at every count, L-1039; three arrivals in a round at most)
+    let came = 0; for (const k of G.shuffle(ks.slice())) { if (came >= 3) break; if (G.R() < IMM_P) { arrive(k, count, false); came++; } }
     const one = G.Mente ? G.Mente.oneSex() : null;
     // (and at the land's measure too: three she-bears on a land of three bore nothing for twenty years and died out of old age
     // together — the one of the other sex comes over the measure, and the births wait for a place as they do, L-1035)

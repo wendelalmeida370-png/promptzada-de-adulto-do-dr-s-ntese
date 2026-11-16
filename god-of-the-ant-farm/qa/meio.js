@@ -233,25 +233,38 @@ if (on('m9')) { world(); calmSky(); day();
 
 // ---------------------------------------------------------------- m10 the fields
 if (on('m10')) { world(); calmSky(); M.saltar(2); calmSky();
-  const farms = [...S().buildings.values()].filter(b => b.type === 'farm' && b.built && b.crops);
-  S().time = 0.8; M.viver(2);
-  const out = (cx, cy) => [...S().villagers.values()].filter(v => !v.inside && G.dist(v.x, v.y, cx, cy) < 12).length;
+  // (the first fields of a young land come when they come, close to the first doors: a year more, up to eight, until six are sown — a field at the edge among them — T-1336)
+  const sown = () => [...S().buildings.values()].filter(b => b.type === 'farm' && b.built && b.crops);
+  for (let k = 0; k < 8 && sown().length < 6; k++) { M.saltar(0.5); calmSky(); }
+  const farms = sown();
+  // (the night round of a town's watch and its warriors' patrol pass by some fields and not others: twenty seconds of a night
+  // watched, each field keeps the nearest anybody came to it out of doors — the raid is looked for where nobody came, T-1336)
+  const nearest = new Map(); S().time = 0.8; until(20, () => { if (S().time < 0.75 && S().time > 0.05) S().time = 0.8; for (const b of farms) { const cx = b.x + 1.5, cy = b.y + 1.5; let m = nearest.has(b.id) ? nearest.get(b.id) : 99; for (const v of S().villagers.values()) if (!v.inside) m = Math.min(m, G.dist(v.x, v.y, cx, cy)); nearest.set(b.id, m); } return false; }, 1);
+  // (and the homes: who goes out at night and comes back is seen from the field — the field farthest from the doors is the quiet one)
+  const homes = [...S().buildings.values()].filter(h => G.Village.livable(h));
+  const doors = (cx, cy) => { let m = 99; for (const h of homes) m = Math.min(m, G.dist(cx, cy, h.x + h.w / 2, h.y + h.h / 2)); return m; };
+  const out = (cx, cy) => { for (const b of farms) if (b.x + 1.5 === cx && b.y + 1.5 === cy) return -Math.min(16, nearest.get(b.id) || 0) - Math.min(16, doors(cx, cy)); return 0; };
   const f = farms.filter(b => { const cx = b.x + 1.5, cy = b.y + 1.5; for (let k = 0; k < 12; k++) { const x = cx + Math.cos(k / 2) * 8, y = cy + Math.sin(k / 2) * 8; if (W.inb(x, y) && A.walkOK({ kind: 'boar' }, x, y) && A.lineOK({ kind: 'boar' }, x, y, cx, cy)) return true; } return false; }).sort((p, q) => { const sp = S().settlements.get(p.set), sq = S().settlements.get(q.set); const lp = Mi.learnt(p.x + 1.5, p.y + 1.5) > 0.1 ? 1 : 0, lq = Mi.learnt(q.x + 1.5, q.y + 1.5) > 0.1 ? 1 : 0; return (lp - lq) || (out(p.x + 1.5, p.y + 1.5) - out(q.x + 1.5, q.y + 1.5)) || ((sq ? G.dist(q.x, q.y, sq.cx, sq.cy) : 0) - (sp ? G.dist(p.x, p.y, sp.cx, sp.cy) : 0)); })[0]; // (a field where no beast was chased off yet — there it keeps off sooner, D-305 —, the farthest out, nobody about it)
   if (!f) ok('m10 a lavoura', false, `nenhuma fazenda com chão em volta (${farms.length} fazendas)`);
   else {
     for (const c of f.crops) { c.s = 3; c.g = 1; }
-    S().time = 0.8; M.viver(10.5); /* (the fields worth a raid are looked at every ten seconds) */ const cx = f.x + 1.5, cy = f.y + 1.5; let sp0 = null; for (let k = 0; k < 12 && !sp0; k++) { const x = cx + Math.cos(k / 2) * 8, y = cy + Math.sin(k / 2) * 8; if (W.inb(x, y) && A.walkOK({ kind: 'boar' }, x, y) && A.lineOK({ kind: 'boar' }, x, y, cx, cy)) sp0 = [x, y]; }
-    // (nobody out at night on the fields: the people of the test stay home)
+    // (nobody out at night on the fields: the people of the test go home to bed — the watch with its torches too, whose round
+    // passes by every field, and every beast, rightly, keeps off it: T-1336)
+    const fx0 = f.x + 1.5, fy0 = f.y + 1.5; let keep = null;
+    const bed = () => sim(() => { for (const q of S().villagers.values()) if (q !== keep && !q.inside && !q.sleeping && G.dist(q.x, q.y, fx0, fy0) < 20 && !(q.task && q.task.type === 'sleep')) G.Vg.give(q, { type: 'sleep', pri: 6, kind: 'sleep', stay: q.home }); });
+    const about = () => [...S().villagers.values()].filter(q => q !== keep && !q.inside && G.dist(q.x, q.y, fx0, fy0) < 20).length;
+    S().time = 0.8; until(10.5, () => { bed(); return false; }); /* (the fields worth a raid are looked at every ten seconds) */
+    until(40, () => { if (S().time < 0.75 && S().time > 0.05) S().time = 0.8; bed(); return !about(); }); const cx = f.x + 1.5, cy = f.y + 1.5; let sp0 = null; for (let k = 0; k < 12 && !sp0; k++) { const x = cx + Math.cos(k / 2) * 8, y = cy + Math.sin(k / 2) * 8; if (W.inb(x, y) && A.walkOK({ kind: 'boar' }, x, y) && A.lineOK({ kind: 'boar' }, x, y, cx, cy)) sp0 = [x, y]; }
     const raiders = [spawn('boar', sp0[0], sp0[1], { hunger: 0.85 }), spawn('boar', sp0[0] + 0.6, sp0[1], { hunger: 0.85 }), spawn('elephant', sp0[0], sp0[1] + 0.8, { hunger: 0.85 })];
-    let raid = false, ate = 0; const lastG = new Map();
-    until(90, () => { if (S().time < 0.75 && S().time > 0.05) S().time = 0.8; for (const a of raiders) { const r = Mi.phase(a); if (a.state === 'lavoura' && r && r.p === 1) { raid = true; const c = f.crops[r.k]; const g = lastG.get(a.id * 16 + r.k); if (g !== undefined && c.g < g) ate += g - c.g; lastG.set(a.id * 16 + r.k, c.g); } } return raid && ate > 0.3; });
+    let raid = false, ate = 0; const lastG = new Map(); const about0 = about();
+    until(90, () => { if (S().time < 0.75 && S().time > 0.05) S().time = 0.8; bed(); for (const a of raiders) { const r = Mi.phase(a); if (a.state === 'lavoura' && r && r.p === 1) { raid = true; const c = f.crops[r.k]; const g = lastG.get(a.id * 16 + r.k); if (g !== undefined && c.g < g) ate += g - c.g; lastG.set(a.id * 16 + r.k, c.g); } } return raid && ate > 0.3; });
     // the farmer's answer: a person at the edge of the field
     const v = [...S().villagers.values()].find(q => q.age >= 16 && !q.captive && !q.inside && (q.hunger || 0) < 40); let scared = false; const fear0 = Mi.learnt(cx, cy); const sc0 = Mi.counts().raidScared || 0;
     // (in the dark the beast sees only who is beside it — the people counted by cells of four tiles, its own cell: the person
     // put a tile from it on its own cell, not a tile and a half off, which fell on the next cell as often as not, T-1328)
-    if (v) { const who = raiders.find(a => a.state === 'lavoura') || raiders[0]; until(10, () => { v.x = who.x + (who.x % 4 < 2 ? 1 : -1); v.y = who.y; return (Mi.counts().raidScared || 0) > sc0; }, 0.25); scared = (Mi.counts().raidScared || 0) > sc0; }
+    if (v) { keep = v; const who = raiders.find(a => a.state === 'lavoura') || raiders[0]; until(10, () => { bed(); v.x = who.x + (who.x % 4 < 2 ? 1 : -1); v.y = who.y; return (Mi.counts().raidScared || 0) > sc0; }, 0.25); scared = (Mi.counts().raidScared || 0) > sc0; }
     const fear1 = Mi.learnt(cx, cy); const c = clean();
-    ok('m10 a lavoura: os bichos comem a plantação, o povo os espanta e o chão lembra', raid && ate > 0.3 && scared && fear1 > fear0 && !c.n && !gestErr(), `à noite, ${raiders.length} bichos com fome perto da fazenda de ${(S().settlements.get(f.set) || {}).name}: ${raid ? 'entraram' : 'NÃO ENTRARAM'}, comeram ${ate.toFixed(2)} do crescido dos canteiros; uma pessoa à beira do campo: ${scared ? 'espantou-os' : 'NÃO os espantou'}; o medo aprendido ali ${fear0.toFixed(2)} → ${fear1.toFixed(2)}; verificador ${c.n}${c.n ? ': ' + c.msg : ''}`);
+    ok('m10 a lavoura: os bichos comem a plantação, o povo os espanta e o chão lembra', raid && ate > 0.3 && scared && fear1 > fear0 && !c.n && !gestErr(), `à noite (${about0} na rua a 20 casas do campo), ${raiders.length} bichos com fome perto da fazenda de ${(S().settlements.get(f.set) || {}).name}: ${raid ? 'entraram' : 'NÃO ENTRARAM'}, comeram ${ate.toFixed(2)} do crescido dos canteiros; uma pessoa à beira do campo: ${scared ? 'espantou-os' : 'NÃO os espantou'}; o medo aprendido ali ${fear0.toFixed(2)} → ${fear1.toFixed(2)}; verificador ${c.n}${c.n ? ': ' + c.msg : ''}`);
   } }
 
 // ---------------------------------------------------------------- m11 the vultures
@@ -274,13 +287,16 @@ if (on('m12')) { world(); calmSky(); day();
   if (!p) ok('m12 o alarme', false, 'nenhum ermo');
   else {
     const [x, y] = p; clearAround(x, y, 16);
-    const mk = spawn('monkey', x, y); const cap = spawn('capybara', x + 8, y); const zb = spawn('zebra', x + 7, y + 3); const j = spawn('jaguar', x - 2.5, y, { hunger: 0.95 }); j.state = 'chase'; j.target = mk.id; j.t = 8;
+    // (the ones who hear stand there before the cry, awake — the grid of the beasts, a quarter of a second old, has them; the
+    // capybara has its nap at noon — T-1337)
+    const mk = spawn('monkey', x, y); const cap = spawn('capybara', x + 8, y); const zb = spawn('zebra', x + 7, y + 3); awake(cap, zb); M.viver(0.3); awake(cap, zb);
+    const j = spawn('jaguar', x - 2.5, y, { hunger: 0.95 }); j.state = 'chase'; j.target = mk.id; j.t = 8;
     const x0 = Mi.counts().alarmX || 0; mk.state = 'flee'; mk.tx = x + 5; mk.ty = y; mk.t = 3;
     let heard = false, alert = false; until(4, () => { if (cap.meio && cap.meio.al > 0) heard = true; if (cap.gest === 'alert' || zb.gest === 'alert') alert = true; return heard && alert; }, 0.25);
     const xk = (Mi.counts().alarmX || 0) - x0;
     // the bird that bursts up from a stalking hunter
     const q = spot((x2, y2, i) => land(x2, y2) && A.walkOK({ kind: 'gazelle' }, x2 + 6, y2) && A.walkOK({ kind: 'leopard' }, x2 + 1, y2) && Mi.fearAt(x2, y2) === 0 && G.dist(x2, y2, x, y) > 30, 12);
-    let flushed = false, heard2 = false; if (q) { clearAround(q[0], q[1], 14); const bird = spawn('parrot', q[0], q[1]); bird.state = 'perch'; bird.z = 0; bird.perchZ = 0; bird.t = 30; const g = spawn('gazelle', q[0] + 6, q[1]); const lp = spawn('leopard', q[0] + 1, q[1], { hunger: 0.9 }); lp.state = 'stalk'; lp.target = g.id; lp.t = 20;
+    let flushed = false, heard2 = false; if (q) { clearAround(q[0], q[1], 14); const bird = spawn('parrot', q[0], q[1]); bird.state = 'perch'; bird.z = 0; bird.perchZ = 0; bird.t = 30; const g = spawn('gazelle', q[0] + 6, q[1]); awake(g); M.viver(0.3); awake(g); bird.state = 'perch'; bird.z = 0; bird.perchZ = 0; bird.t = 30; const lp = spawn('leopard', q[0] + 1, q[1], { hunger: 0.9 }); lp.state = 'stalk'; lp.target = g.id; lp.t = 20;
       until(5, () => { if (bird.state === 'fly') flushed = true; if (g.meio && g.meio.al > 0) heard2 = true; return flushed && heard2; }, 0.25); }
     const c = clean();
     ok('m12 o alarme atravessa as espécies', heard && alert && xk > 0 && flushed && heard2 && !c.n && !gestErr(), `o macaco fugindo do jaguar: a capivara a 8 casas ${heard ? 'ouviu' : 'NÃO ouviu'} (${alert ? 'ergueu a cabeça' : 'NÃO ergueu'}), ${xk} espécie(s) avisada(s); o papagaio sobre o leopardo que espreita: ${flushed ? 'levantou voo' : 'NÃO voou'}, a gazela ${heard2 ? 'ficou alerta' : 'NÃO ouviu'}; verificador ${c.n}`);

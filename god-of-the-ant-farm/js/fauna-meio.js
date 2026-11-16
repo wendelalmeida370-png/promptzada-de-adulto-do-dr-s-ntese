@@ -443,7 +443,10 @@
     if (r && r.o !== a.state) {
       // (the raider that bolts from the field with people about: the field remembers, however the fright came — the shout of the
       // step below or the world's own fear scan, which is quicker)
-      if (r.o === 'lavoura' && r.p === 1 && a.state === 'flee' && peopleNear(a.x, a.y, 1)) { taught(a.x, a.y, 0.15); count('raidScared'); }
+      // (asked of the people out of doors as the fear scan sees them — a quarter of a second old, as far as this kind runs from
+      // one —, not of the two-second count by cells of four tiles: the scan sees the person first and farther, and the field
+      // never learnt, L-1060)
+      if (r.o === 'lavoura' && r.p === 1 && a.state === 'flee' && manNear(a.x, a.y, (sp.fear || 3) + 1.5)) { taught(a.x, a.y, 0.15); count('raidScared'); }
       endRun(a, r);
     }
     else if (!r && m.g) { const gn = Ge.ids[m.g - 1]; if (a.gest !== gn) m.g = 0; else if (Ge.DEF[gn].d === 0 && !MINE[a.state]) { A.gestEnd(a, gn); m.g = 0; } }
@@ -1084,6 +1087,7 @@
   }, K.raid);
   // the people out of doors near a point (counted every two seconds, by cells of four tiles)
   // (by day from some eight tiles; in the dark only from beside it)
+  function manNear(x, y, r) { let y0 = false; A.nearMan(x, y, r, v => { if (!v.inside && !v.held && !v.aboard && !v.air && G.dist2(x, y, v.x, v.y) < r * r) { y0 = true; return false; } }); return y0; }
   function peopleNear(x, y, r) { if (!PC) return false; const R = r === undefined ? 1 : r; const cx = (x / 4) | 0, cy = (y / 4) | 0; for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const X = cx + dx, Y = cy + dy; if (X >= 0 && Y >= 0 && X < pcw && Y < pcw && PC[Y * pcw + X]) return true; } return false; }
   function raided(a, b) {
     const S = G.S; const s = S.settlements.get(b.set); if (!s) return; const lg = st0().lg; const key = 'r' + s.id;
