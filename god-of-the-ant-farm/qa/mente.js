@@ -175,6 +175,7 @@ if (on('m7')) {
   show('mortes por ferida', g('L:morte-ferida:'), 14); show('predadores mortos de fome', g('L:fome-predador:'), 12); show('mandíbulas quebradas', g('L:mandibula'), 3);
   show('nascimentos', g('M:nasce:'), 20); show('cios e acasalamentos', g('M:', /^M:(cio|acasala|cio-perdido|cio-sem-macho)$/), 6); show('o posto', g('M:', /^M:(disputa|vence|posto|sucessao|dispersao|coalizao|tomada|infanticidio)/), 14); show('o território', g('M:', /^M:(marca|disputa:territorio|vence:territorio|territorio:expulso)$/), 6);
   show('a vida de todo dia', g('M:', /^M:(sentinela|mama|brinca)$/), 6);
+  show('o caçador e a pessoa (D-297b)', g('L:', /^L:(caca-gente|gente:[a-z]+)(:crianca|:velho-ou-ferido|:devorador)?$/), 12); show('caças de gente por espécie', g('L:caca-gente:', /^L:caca-gente:(?!crianca|velho|devorador)/), 10);
   console.log(`  a crônica dos bichos (${lines.length} linhas):`); for (const l of lines.slice(0, +(process.env.LINHAS || 30))) console.log('    ' + l);
   ok('m7 vidas longas: o que aconteceu sem ninguém mandar', (sum['L:abate'] || 0) > 0 && (sum['M:nasce'] || 0) > 0 && !viol.length && M.limpo(), `${sum['L:caca'] || 0} caçadas, ${sum['L:abate'] || 0} abates, ${sum['M:nasce'] || 0} nascimentos, ${sum['L:roubo'] || 0} roubos, ${sum['L:coice'] || 0} coices, ${sum['M:disputa'] || 0} disputas — ${vsay(viol)}`);
 }

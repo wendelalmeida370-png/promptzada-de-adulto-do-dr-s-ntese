@@ -767,6 +767,26 @@
   const SEE = { lion: 11, tiger: 9, leopard: 9, jaguar: 8, snowleopard: 10, bear: 8, polarbear: 11, wolf: 11, hyena: 10, croc: 6 };
   const GIVE = { lion: 6, tiger: 5, leopard: 6, jaguar: 5, snowleopard: 8, bear: 5, polarbear: 4, wolf: 7, hyena: 6, croc: 4 };
   const BEARS = set(['bear', 'polarbear']);
+  const WARY_DAY = set(['wolf', 'hyena']); // (the dogs of the wild keep away from people by day; the dark is theirs)
+  // the temper of every wild kind of the ground toward a person (D-297c) — not the big cats only: hunt (the reading above);
+  // flight (it lifts its head and watches, then runs at its own distance — the deer, the zebra, the gazelle the most);
+  // freeze (still in the grass, then the bolt at the last moment — the hare, the rabbit, the frog, the lizard); snake (it slips
+  // away; the viper strikes at the foot that comes too near, the python and the anaconda only go); giant (the warning — the
+  // head up, the display —, then the charge, the sooner by its young, the hippo by its water); boar (it runs, and charges when
+  // cornered or by its piglets); curious (the monkeys come to look, and snatch food from the hand). The town's own and the
+  // herds (dom, town) live among people as they always did: no temper
+  const TEMPER = L.TEMPER = {};
+  for (const k of MAN) TEMPER[k] = 'hunt';
+  for (const k of ['deer', 'reindeer', 'gazelle', 'zebra', 'gnu', 'giraffe', 'ibex', 'ostrich', 'camel', 'capybara', 'tapir', 'seal', 'penguin', 'beaver', 'otter', 'fox', 'arcticfox', 'fennec']) TEMPER[k] = 'flight';
+  for (const k of ['rabbit', 'hare', 'frog', 'lizard']) TEMPER[k] = 'freeze';
+  for (const k of ['viper', 'python', 'anaconda']) TEMPER[k] = 'snake';
+  for (const k of ['hippo', 'elephant', 'rhino', 'buffalo', 'bison', 'moose', 'muskox', 'walrus']) TEMPER[k] = 'giant';
+  TEMPER.boar = 'boar'; TEMPER.monkey = 'curious';
+  // (a giant's warning distance: inside it, the charge)
+  const WARN_D = { hippo: 4, elephant: 5, rhino: 4.5, buffalo: 3.5, bison: 3.5, moose: 3.5, muskox: 3, walrus: 2.5 };
+  // how far a kind that does not hunt people notices one: some way beyond the distance it runs at
+  const notice = (a, sp) => { const t = TEMPER[a.kind]; return t === 'giant' ? WARN_D[a.kind] * 2.2 : t === 'snake' ? 3.5 : t === 'boar' ? 4.5 : t === 'curious' ? sp.fear * 2 + 2 : t === 'freeze' ? sp.fear * 2 : (sp.fear || 3) * 1.8; };
+  const sightOf = (a, sp) => SEE[a.kind] || notice(a, sp);
   // armed: the soldier, the archer, the hunter, one of an army's band, one coming to fight it
   L.armed = v => v.role === 'guerreiro' || v.role === 'arqueiro' || v.role === 'cacador' || !!v.unit || !!(v.task && v.task.type === 'fight');
   // fire in the hand, in the night (the world's own rule, as the 3D draws it: the errand that asks for one, the scenes that hand
@@ -784,7 +804,7 @@
     const eater = (a.kills || 0) > 0;
     const hf = a.hunger > 0.45 ? (a.hunger - 0.45) / 0.55 : 0;
     let want = sp.bold * (0.5 + Me.trait(a, 'b')) * 2.2 * hf;
-    if (old) want *= 1.6; if (hurt) want *= 1.8; if (eater) want = want * 2 + 0.3; if (kid) want *= 1.6; if (G.isNight() && a.kind !== 'croc') want *= 1.4;
+    if (old) want *= 1.6; if (hurt) want *= 1.8; if (eater) want = want * 2 + 0.3; if (kid) want *= 1.6; if (G.isNight() && a.kind !== 'croc') want *= 1.4; else if (WARY_DAY.has(a.kind)) want *= 0.5;
     const others = n - (kid ? 0 : 1); // (the grown ones with them: a child with one grown-up by it is not alone)
     let danger = Math.max(0, others) * 0.9 + arm * 1.4 + fire * 1.6 + Math.min(3, (m && m.mh) || 0) * 0.6 + (Me.knows(a, v.id, 1) ? 1 : 0);
     if (PACK.has(a.kind) || sp.pride) danger /= Math.sqrt(L.party(a));
@@ -793,17 +813,20 @@
   };
   // the nearest person it notices (the dark, its sleep, its mind; out of doors — a torch in the night is seen from farther)
   function manSeen(a) {
-    const night = G.isNight(); const k0 = SEE[a.kind] || 8; const R = k0 * A.senseBound(a) * (night ? 1.5 : 1); let v = null, vd = R * R;
+    const night = G.isNight(); const k0 = sightOf(a, SP[a.kind]); const R = k0 * A.senseBound(a) * (night ? 1.5 : 1); let v = null, vd = R * R;
     A.nearMan(a.x, a.y, R + 2, q => { if (q.dead || q.air || q.aboard || q.held || q.inside) return; const d = G.dist2(a.x, a.y, q.x, q.y); if (d >= vd) return; const k = k0 * A.senseMul(a, q) * (night && L.fire(q) ? 1.5 : 1); if (d < k * k) { vd = d; v = q; } });
     return v;
   }
-  // the look at people (the look round of landAI, and again while it watches — inEye): true when it acted, the person when it
+  // the look at people (the look round of landAI, also while it watches — inEye): true when it acted, the person when it
   // would only watch them, null when there is nobody
   L.man = function (a, sp, inEye) {
-    const S = G.S;
-    if (!MAN.has(a.kind) || a.summoned || a.raid || a.dom || a.tamed || a.legend || a.caught || a.held || a.grown < 0.6 || a.z > 3 || a.angry > 0 || a.mig) return null;
+    const S = G.S; inEye = inEye || a.state === 'eye'; // (already watching: it does not start the watch over)
+    if (!TEMPER[a.kind] || a.summoned || a.raid || a.dom || a.tamed || a.legend || a.caught || a.held || a.grown < 0.6 || a.z > 3 || a.angry > 0 || a.mig) return null;
+    if (A.isBusy(a.state) && a.state !== 'eat' && !inEye) return null; // (running from a fire, a charge, a fight: not now)
     const v = manSeen(a); if (!v) return null;
-    const d = G.dist(a.x, a.y, v.x, v.y); const r = L.readMan(a, v);
+    const d = G.dist(a.x, a.y, v.x, v.y);
+    if (!MAN.has(a.kind)) return other(a, sp, v, d, inEye);
+    const r = L.readMan(a, v);
     // the croc: from the water it strikes at whoever comes down to it (its own lurk); on the bank it slides in
     if (a.kind === 'croc') {
       if (S.type[W.idx(a.x, a.y)] > T.RIVER && d < GIVE.croc * (1 + 0.3 * r.danger)) { const p = A.deepSpot(a); if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 4; a.target = 0; L.count('gente:recua'); L.count('gente:recua:croc'); return true; } }
@@ -815,7 +838,7 @@
     if (a.state !== 'eat' && lone && over > 0 && G.R() < Math.min(0.9, 0.35 + over * 1.5) && W.canWalk(a.x, a.y, v.x, v.y)) { huntMan(a, v, sp, d, r); return true; }
     // too near: it gives way — or, with its young or its kill behind it (a bear met at a few paces), it warns, and charges if
     // they still come on
-    const give = (GIVE[a.kind] || 5) * (1 + 0.35 * r.danger) * (G.isNight() ? 0.75 : 1) * (1.3 - 0.6 * Me.trait(a, 'b'));
+    const give = (GIVE[a.kind] || 5) * (1 + 0.35 * r.danger) * (G.isNight() ? 0.75 : WARY_DAY.has(a.kind) ? 1.4 : 1) * (1.3 - 0.6 * Me.trait(a, 'b'));
     if (d < give) {
       const holds = a.state === 'eat' || youngNear(a) || (BEARS.has(a.kind) && d < 3);
       if (holds && r.danger < 3) { warnMan(a, v, d); return true; }
@@ -847,7 +870,10 @@
   // the warning: it faces them and shows what it is (the snarl, the roar; a bear up on its hind legs); nearer still, the charge
   function warnMan(a, v, d) {
     G.faceTo(a, v.x - a.x, v.y - a.y);
-    if (d < 2.4) {
+    // (a bear without its cubs, met near: the bluff — the rush that stops short; with them, or with the person on it, the real one)
+    const cubs = BEARS.has(a.kind) && youngNear(a);
+    if (BEARS.has(a.kind) && !cubs && d < 3.2 && d > 1.6 && a.state !== 'eat') { bluff(a, v); return; }
+    if (d < (cubs ? 3.4 : 2.4)) {
       a.angry = 2.5 + 3 * Me.trait(a, 'g'); a.target = v.id; a.state = 'chase'; a.carc = false; a.onPerson = false; Me.anger(a, 0.6, v);
       if (!Me.gesto(a, 'charge', 0, v.id)) Me.gesto1(a, ['threat', 'roar', 'display'], undefined, v.id);
       L.count('gente:investe'); L.count('gente:investe:' + a.kind);
@@ -855,15 +881,20 @@
     }
     Me.gesto1(a, BEARS.has(a.kind) ? ['rear', 'roar', 'threat'] : ['threat', 'roar', 'display'], undefined, v.id);
     L.count('gente:ameaca'); L.count('gente:ameaca:' + a.kind);
-    if (a.state !== 'eat') { a.state = 'eye'; a.target = v.id; a.onPerson = false; a.t = G.rr(2, 3.5); a.mr = 0.6; a.moving = false; }
+    if (a.state !== 'eat') { a.state = 'eye'; a.target = v.id; a.onPerson = false; a.t = G.rr(2, 3.5); a.moving = false; }
   }
   // the watch: still, facing them — low in the grass when there is cover (the stalk's crouch, frozen), standing to look when there
-  // is none (a bear on its hind legs, its nose up); it reads them again every second or so, and when it has seen enough and they
-  // are still about, it moves off out of their way
+  // is none (a bear on its hind legs, its nose up; a hare pressed flat; a hippo's display); it looks round as it watches (the look
+  // reads the person again, and sees the lion coming), and when it has seen enough and they are still about, it moves off out of
+  // their way — the walk off looks round too
   const cover = a => { const i = W.idx(a.x, a.y); return !!G.S.treeAt[i] || (G.S.veg ? G.S.veg[i] > 0.55 : false) || !!A.treeNear(a.x, a.y, 1.6); };
   L.eye = function (a, v) {
-    a.state = 'eye'; a.target = v.id; a.onPerson = false; a.t = G.rr(4, 8); a.mr = 1.2; a.moving = false; a.crouch = 0; G.faceTo(a, v.x - a.x, v.y - a.y);
-    if (cover(a) && Me.gesto(a, 'stalk', 0, v.id, 1)) a.crouch = 1;
+    const t = TEMPER[a.kind];
+    a.state = 'eye'; a.target = v.id; a.onPerson = false; a.t = G.rr(4, 8); a.moving = false; a.crouch = 0; G.faceTo(a, v.x - a.x, v.y - a.y);
+    if (t === 'freeze') { if (!Me.gesto(a, 'hide', 0, v.id)) Me.gesto1(a, ['alert', 'stare'], undefined, v.id); }
+    else if (t === 'giant') Me.gesto1(a, ['display', 'threat', 'alert', 'stare'], undefined, v.id);
+    else if (t !== 'hunt') Me.gesto1(a, ['alert', 'stare', 'listen'], undefined, v.id);
+    else if (cover(a) && Me.gesto(a, 'stalk', 0, v.id, 1)) a.crouch = 1;
     else if (!(BEARS.has(a.kind) && G.R() < 0.5 && Me.gesto(a, 'rear', undefined, v.id))) Me.gesto1(a, ['stare', 'scent', 'alert'], undefined, v.id);
     L.count('gente:vigia'); L.count('gente:vigia:' + a.kind);
   };
@@ -871,18 +902,88 @@
     const v = S.villagers.get(a.target); a.t -= dt; a.moving = false;
     if (!v || v.dead || v.inside || v.aboard || v.air || v.held) { a.state = 'idle'; a.target = 0; a.crouch = 0; a.t = 1; return true; }
     G.faceTo(a, v.x - a.x, v.y - a.y);
-    a.mr -= dt; if (a.mr <= 0) { a.mr = 1.2; if (L.man(a, sp, true) === true) { a.crouch = 0; return true; } }
     if (a.t <= 0) {
       a.crouch = 0;
-      if (G.dist(a.x, a.y, v.x, v.y) < (SEE[a.kind] || 8) * 0.8) shy(a, v, false); else { a.state = 'idle'; a.target = 0; a.t = 1; }
+      if (G.dist(a.x, a.y, v.x, v.y) < sightOf(a, sp) * 0.8) shy(a, v, false); else { a.state = 'idle'; a.target = 0; a.t = 1; }
     }
     return true;
-  }, { busy: true });
+  }, { mindful: true });
   A.behave('shy', function (a, dt, sp) {
     a.t -= dt;
-    if (A.moveTo(a, dt, sp.sp * 1.2) || a.t <= 0) { a.state = 'idle'; a.t = G.rr(1, 3); }
+    if (A.moveTo(a, dt, sp.sp * (TEMPER[a.kind] === 'snake' ? 0.9 : 1.2)) || a.t <= 0) { a.state = 'idle'; a.t = G.rr(1, 3); }
     return true;
+  }, { mindful: true });
+  // the bluff: the bear rushes at them and stops short, a few paces off, up on its legs, and turns away
+  function bluff(a, v) {
+    a.state = 'bluff'; a.target = v.id; a.onPerson = false; a.t = 1.4; a.carc = false;
+    if (!Me.gesto(a, 'charge', 0, v.id)) Me.gesto1(a, ['threat', 'roar'], undefined, v.id);
+    L.count('gente:blefe'); L.count('gente:blefe:' + a.kind);
+  }
+  A.behave('bluff', function (a, dt, sp, S) {
+    const v = S.villagers.get(a.target); a.t -= dt;
+    if (!v || v.dead || v.inside || v.held || v.aboard) { a.state = 'idle'; a.target = 0; a.t = 1; return true; }
+    if (G.dist(a.x, a.y, v.x, v.y) < 1.5 || a.t <= 0) { a.moving = false; G.faceTo(a, v.x - a.x, v.y - a.y); Me.gesto1(a, ['rear', 'roar', 'threat'], undefined, v.id); shy(a, v, false); return true; }
+    a.tx = v.x; a.ty = v.y; A.moveTo(a, dt, sp.run); return true;
   }, { busy: true });
+  // the kinds that do not hunt people: what each does at a person this near (true: it did something; the person: it watches;
+  // null: nothing to do)
+  function other(a, sp, v, d, inEye) {
+    const t = TEMPER[a.kind]; const fear = (sp.fear || 3) * A.senseMul(a, v);
+    if (t === 'flight') {
+      if (d < fear) { if (L.react(a, v, 1, false)) { L.count('gente:foge:' + a.kind); return true; } return null; }
+      return inEye ? null : v;
+    }
+    if (t === 'freeze') {
+      if (d < fear * 0.8) { if (L.react(a, v, 1, false)) { L.count('gente:dispara:' + a.kind); return true; } return null; }
+      return inEye ? null : v;
+    }
+    if (t === 'snake') {
+      // (the viper: the foot that comes on it, or it cornered — the strike; the rest slip off into the grass)
+      if (a.kind === 'viper' && d < 1.15 && (v.moving || !A.fleeTarget(a, v.x, v.y, 3)) && G.R() < 0.7) { snakeBite(a, v); return true; }
+      if (d < 3.2) { if (d < 2) Me.gesto1(a, ['threat', 'display'], undefined, v.id); if (shy(a, v, false)) { a.t = G.rr(3, 5); return true; } }
+      return null;
+    }
+    if (t === 'giant' || t === 'boar') {
+      const young = youngNear(a); const wd = t === 'boar' ? 2.2 : WARN_D[a.kind] * (young ? 1.5 : 1);
+      const water = a.kind === 'hippo' && A.waterD(W.idx(a.x, a.y)) <= 2; // (the hippo between a person and its water)
+      if (d < wd) {
+        const cornered = !A.fleeTarget(a, v.x, v.y, 5);
+        const go = t === 'boar' ? (cornered || young) : G.R() < 0.25 + 0.5 * Me.trait(a, 'g') + (young ? 0.4 : 0) + (water ? 0.3 : 0) + (cornered ? 0.3 : 0);
+        if (go) { L.charge(a, v); L.count('gente:investe'); L.count('gente:investe:' + a.kind); return true; }
+        if (t === 'boar') return L.react(a, v, 1, false) ? true : null;
+        if (d < wd * 0.6) { if (shy(a, v, false)) return true; }
+        Me.gesto1(a, ['display', 'threat', 'alert'], undefined, v.id); L.count('gente:ameaca'); L.count('gente:ameaca:' + a.kind);
+        if (!inEye) { L.eye(a, v); a.t = G.rr(2, 4); }
+        return true;
+      }
+      if (t === 'boar' && d < (sp.fear || 2.2) * 1.6) return L.react(a, v, 1, false) ? true : null;
+      return inEye ? null : v;
+    }
+    if (t === 'curious') {
+      // the monkeys: they come to look, at a few paces; the bold one takes the food from the hand and is up a tree with it
+      const c = Me.trait(a, 'c');
+      if (d < 1.3 && v.carry && v.carry.k === 'food' && v.carry.n > 0.2 && G.R() < 0.3 + 0.4 * c && G.Depot.use('v:' + v.id, 'food', Math.min(1, v.carry.n), { code: 'macaco', by: a.id, part: true }).ok) {
+        a.hunger = Math.max(0, a.hunger - 0.4); G.Vg.emote(v, 'angry', 2); Me.gesto1(a, ['threat', 'call'], undefined, v.id);
+        L.count('gente:roubo-macaco'); const tr = A.treeNear(a.x, a.y, 6); if (tr) A.startClimb(a, tr, true); else shy(a, v, true);
+        return true;
+      }
+      if (d < 2) { if (G.R() < 0.4) Me.gesto1(a, ['threat', 'alert'], undefined, v.id); if (shy(a, v, false)) { a.t = G.rr(2, 3); return true; } return null; }
+      if (d > 3.5 && c > 0.45 && !inEye && G.R() < 0.4) {
+        const k = (d - 2.6) / d; const x = a.x + (v.x - a.x) * k, y = a.y + (v.y - a.y) * k;
+        if (A.walkOK(a, x, y)) { a.tx = x; a.ty = y; a.state = 'wander'; a.seek = false; L.count('gente:curioso'); return true; }
+      }
+      return inEye ? null : v;
+    }
+    return null;
+  }
+  // the viper's strike at a person: the bite, the venom, the fear; and it is off into the grass
+  function snakeBite(a, v) {
+    G.faceTo(a, v.x - a.x, v.y - a.y); Me.gesto(a, 'strike', undefined, v.id); a.bite = 0.3;
+    G.Audio && G.Audio.at(a.x, a.y, 'bite');
+    v.lastBeast = a.kind; v.lastBeastId = a.id; G.Vg.damage(v, 10 + 8 * G.R(), 'beast', false); G.Vg.emote(v, 'fear', 3);
+    L.count('gente:picada'); L.count('gente:picada:' + a.kind);
+    if (G.S.villagers.has(v.id)) { a.target = 0; const p = A.fleeTarget(a, v.x, v.y, 4); if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'shy'; a.t = 3; } }
+  }
 
   // ------------------------------ the god's camera ------------------------------
   // how dramatic this beast's moment is, for the cinema (read only): a hold, a leap, a chase, a stalk, a stand, a contest, a theft
@@ -894,6 +995,7 @@
     if (a.state === 'pounce') return { score: 68, title: `${art} ${n.n} salta`, sub: tw ? `sobre ${tw}` : 'o bote' };
     if (a.state === 'stand' && tg) return { score: 58, title: `${art} ${n.n} enfrenta ${tw}`, sub: HORN.has(a.kind) ? 'os chifres baixos, sem recuar' : 'sem recuar um passo' };
     if (a.angry > 0 && tg && tg.kind) return { score: 60, title: `${art} ${n.n} investe`, sub: `contra ${tw}` };
+    if ((a.angry > 0 || a.state === 'bluff') && tg && !tg.kind) return { score: 64, title: `${art} ${n.n} investe`, sub: tw ? `contra ${tw}` : 'contra uma pessoa' };
     if (a.state === 'chase' && tg && !a.carc) return { score: 56, title: `${art} ${n.n} caça`, sub: tw ? `atrás de ${tw}` : 'a vida selvagem longe das cidades' };
     if (a.state === 'stalk' || a.state === 'flank') return { score: a.onPerson ? 66 : 50, title: `${art} ${n.n} espreita`, sub: tw ? `${tw}, sem saber` : 'rente ao capim' };
     if (a.state === 'eye' && tg && !tg.kind) return { score: 42, title: `${art} ${n.n} observa`, sub: tw ? `${tw}, de longe` : 'alguém, de longe' };

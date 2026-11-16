@@ -65,7 +65,7 @@
     gull: { name: 'Gaivota', g: 'f', cls: 'air', diet: 'fish', coast: true, hab: [0, 1, 2, 3, 4, 5, 6], dens: 1.4, herd: [3, 6], hp: 6, sp: 2.4, run: 3.4, meat: 1, size: 0.7, fear: 3, life: 12, breed: 0.8, app: 0.2, hunt: false, art: 'bird', b: { col: '#f4f4f0', wing: '#b8c0c8', tip: '#3a3a3a', beak: '#e8b83a', span: 7 } },
     eagle: { name: 'Águia', g: 'f', cls: 'air', diet: 'carn', prey: ['rabbit', 'hare', 'lizard', 'frog', 'monkey', 'fennec'], hab: [0, 1, 2, 5, 6], dens: 0.12, herd: [1, 1], hp: 14, sp: 2.2, run: 4.2, meat: 2, size: 1, fear: 4, life: 20, breed: 0.3, app: 0.4, hunt: false, apex: true, art: 'bird', b: { col: '#5a3e26', wing: '#6e4c2e', tip: '#2a1e14', head: '#f2efe6', beak: '#f2c23a', span: 11 } },
     vulture: { name: 'Abutre', g: 'm', cls: 'air', diet: 'scav', hab: [5, 6, 4], dens: 0.25, herd: [2, 4], hp: 12, sp: 1.8, run: 3, meat: 2, size: 1, fear: 3, life: 20, breed: 0.4, app: 0.5, hunt: false, art: 'bird', b: { col: '#2e2622', wing: '#3a302a', tip: '#1a1412', head: '#d8a0a0', beak: '#c8c0b0', span: 12 } },
-    raven: { name: 'Corvo', g: 'm', cls: 'air', diet: 'scav', hab: [0, 1, 2], dens: 0.4, herd: [2, 4], hp: 6, sp: 2.2, run: 3.4, meat: 1, size: 0.65, fear: 3, life: 12, breed: 0.7, app: 0.3, hunt: false, art: 'bird', b: { col: '#1e1e26', wing: '#26262e', tip: '#101014', beak: '#2a2a2a', span: 7 } },
+    raven: { name: 'Corvo', g: 'm', cls: 'air', diet: 'scav', hab: [0, 1, 2], dens: 0.4, herd: [2, 4], hp: 6, sp: 2.2, run: 3.4, meat: 1, size: 0.65, fear: 1.2, life: 12, breed: 0.7, app: 0.3, hunt: false, art: 'bird', b: { col: '#1e1e26', wing: '#26262e', tip: '#101014', beak: '#2a2a2a', span: 7 } },
     parrot: { name: 'Arara', g: 'f', cls: 'air', diet: 'browse', hab: [4], dens: 1.3, herd: [3, 6], hp: 6, sp: 2.2, run: 3.4, meat: 1, size: 0.7, fear: 3, life: 30, breed: 0.6, app: 0.2, hunt: false, art: 'bird', b: { col: '#d8302a', wing: '#2a6ad0', tip: '#f2c23a', beak: '#f0e8d8', span: 8 } },
     heron: { name: 'Garça', g: 'f', cls: 'air', diet: 'fish', prey: ['frog'], wader: true, hab: [3, 0, 4], near: 'water', dens: 0.6, herd: [1, 2], hp: 8, sp: 1.8, run: 3, meat: 2, size: 0.9, fear: 4, life: 15, breed: 0.5, app: 0.3, hunt: false, art: 'wader', b: { col: '#f6f6f2', wing: '#e8e8e4', tip: '#3a3a3a', beak: '#e8c83a', leg: '#3a3a3a', span: 10 } },
     flamingo: { name: 'Flamingo', g: 'm', cls: 'air', diet: 'filter', wader: true, hab: [3, 5, 6], near: 'water', dens: 1.1, herd: [4, 9], hp: 8, sp: 1.8, run: 3, meat: 2, size: 0.9, fear: 4.5, life: 30, breed: 0.4, app: 0.3, hunt: false, art: 'wader', b: { col: '#f49aa8', wing: '#f07a8e', tip: '#2a2a2a', beak: '#2a2a2a', leg: '#e87a8a', span: 10 } },
@@ -263,7 +263,7 @@
     for (const a of S.animals.values()) {
       const k = key(a.x, a.y); let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(a);
       // the few that could be coming for someone right now: people only look at these
-      if (!a.dead && !a.tamed && (a.summoned || a.raid || a.legend || a.angry > 0 || a.state === 'chase' || a.state === 'lunge' || (a.onPerson && (a.state === 'stalk' || a.state === 'pounce')))) { let t = tgrid.get(k); if (!t) tgrid.set(k, t = []); t.push(a); }
+      if (!a.dead && !a.tamed && (a.summoned || a.raid || a.legend || a.angry > 0 || a.state === 'chase' || a.state === 'lunge' || ((a.state === 'stalk' || a.state === 'pounce' || a.state === 'strike' || a.state === 'bluff') && a.target && S.villagers.has(a.target)))) { let t = tgrid.get(k); if (!t) tgrid.set(k, t = []); t.push(a); }
     }
     for (const v of S.villagers.values()) { if (v.inside || v.held) continue; const k = key(v.x, v.y); let l = vgrid.get(k); if (!l) vgrid.set(k, l = []); l.push(v); }
   }
@@ -296,7 +296,7 @@
       tamed: 0, guardSet: 0, gt: false, gscan: 0, legend: false, big: 1, epithet: null, mig: false,
       dom: 0, pen: 0, herder: 0, ledBy: 0, wool: 0, milk: 0, eggs: 0, shorn: 0, hold: 0, tended: 0, flee: 0,
       morph: null, seen: 0, prey2: 0, gore: 0, blood: 0, perch: 0, nest: 0, swing: 0, sub: 0, roll: 0, grip: 0, drag: 0, mourn: 0, crouch: 0, flank: null, pounce: 0,
-      down: 0, caught: 0, tree: 0, corpse: 0, dragT: 0, dragTo: null, mt: 0, ft: 0, rd: 0, mr: 0, dz: null, cached: false, slow: 0, sw0: null, sw1: null, px: 0, py: 0, fast: false,
+      down: 0, caught: 0, tree: 0, corpse: 0, dragT: 0, dragTo: null, mt: 0, ft: 0, rd: 0, dz: null, cached: false, slow: 0, sw0: null, sw1: null, px: 0, py: 0, fast: false,
       // (and those that come later in a life — a way round, being stuck, a den, a rider, a skin — held empty from the start)
       path: undefined, pi: undefined, pfT: undefined, blk: undefined, blkSeen: undefined, stk: undefined, stkD: undefined, stkGX: undefined, stkGY: undefined, stkT: undefined,
       noGo: undefined, noPrey: undefined, fx: undefined, fy: undefined, sx: undefined, sy: undefined, home: undefined, set: undefined, owner: undefined, ride: undefined, rideCD: undefined,
@@ -381,7 +381,7 @@
     if (a.angry > 0) return true;
     // (and the hunter creeping in on a person, or in the air over one: D-297b)
     const tg = a.target && G.S.villagers.get(a.target);
-    return !!(tg && (a.state === 'chase' || a.state === 'lunge' || a.state === 'stalk' || a.state === 'pounce'));
+    return !!(tg && (a.state === 'chase' || a.state === 'lunge' || a.state === 'stalk' || a.state === 'pounce' || a.state === 'strike' || a.state === 'bluff'));
   };
   A.predator = k => { const d = SP[k]; return d && (d.diet === 'carn' || (d.diet === 'omni' && d.prey) || d.diet === 'scav'); };
 
@@ -905,7 +905,7 @@
       // a person at the water's edge, alone
       if (a.hunger > 0.5 || a.legend) {
         const v = nearestVillager(a, 2.6, q => !q.aboard && dWater[W.idx(q.x, q.y)] <= 1 && crowdAt(q.x, q.y, 3) <= 1);
-        if (v && G.R() < sp.bold * 0.5) { a.target = v.id; a.state = 'strike'; a.t = 2.2; a.sub = 0; a.onPerson = true; G.FX && G.FX.splash(a.x, a.y, 0.8); }
+        if (v && G.R() < sp.bold * 0.5) { a.target = v.id; a.state = 'strike'; a.t = 2.2; a.sub = 0; a.onPerson = true; G.FX && G.FX.splash(a.x, a.y, 0.8); G.Mente && G.Mente.gesto(a, 'strike', undefined, v.id); if (G.Luta) { G.Luta.count('caca-gente'); G.Luta.count('caca-gente:croc'); } }
       }
       return true;
     },
@@ -1066,9 +1066,10 @@
     if (a.scan <= 0) {
       // (asleep or lying down, it looks round half as often: it notices later, and the world spends less on it — D-295)
       a.scan = (0.45 + G.R() * 0.3) * (PASSIVE[a.state] ? 2 : 1);
-      // a person in sight: a wild hunter reads them — it hunts, gives way, warns, or keeps an eye on them; never walks on as if
-      // nobody were there (the fight's reading, D-297b). The watch waits for the rest of this look: a meal first
-      const man = MAN && MAN.has(a.kind) && (!HUNTING[a.state] || a.state === 'eat') && !a.tamed && !a.legend ? G.Luta.man(a, sp) : null;
+      // a person in sight: a wild beast reads them by its temper — the hunter hunts, gives way, warns or keeps an eye on them;
+      // the deer watches and runs, the hare freezes and bolts, the viper slips off or strikes, the giant warns and charges —;
+      // none walks on as if nobody were there (the fight's reading, D-297b, D-297c). The watch waits for the rest of this look
+      const man = G.Luta.TEMPER[a.kind] && (!HUNTING[a.state] || a.state === 'eat') && !a.tamed && !a.legend ? G.Luta.man(a, sp) : null;
       if (man === true) return;
       if (!HUNTING[a.state] && !a.tamed && !a.legend) {
         const th = fearCheck(a);
@@ -1107,7 +1108,7 @@
         }
       }
       // (nothing better came of this look: the person it saw, it watches)
-      if (man && !HUNTING[a.state] && !BUSY[a.state] && !(a.angry > 0)) G.Luta.eye(a, man);
+      if (man && !HUNTING[a.state] && !BUSY[a.state] && !(a.angry > 0) && a.state !== 'eye' && a.state !== 'shy') G.Luta.eye(a, man);
     }
     // (the brain's own states with a step: after the look round for danger and a meal, which may have changed the state)
     if (MINDFUL[a.state] && BEHAVE[a.state](a, dt, sp, S)) return;
