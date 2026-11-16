@@ -305,7 +305,7 @@
   function townGrid() {
     const S = G.S; const c = Math.ceil(N / TC); const ep = Math.floor(S.clock / 10);
     if (TOWN && tw === c && townN === S.settlements.size && ep === townT) return;
-    tw = c; if (!TOWN || TOWN.length !== c * c) { TOWN = new Uint16Array(c * c); CORE = new Uint8Array(c * c); } else { TOWN.fill(0); CORE.fill(0); } townT = ep; townN = S.settlements.size; TOWNS.length = 0; FIRES.length = 0; NOOUT.clear();
+    tw = c; if (!TOWN || TOWN.length !== c * c) { TOWN = new Uint16Array(c * c); CORE = new Uint8Array(c * c); } else { TOWN.fill(0); CORE.fill(0); } townT = ep; townN = S.settlements.size; TOWNS.length = 0; FIRES.length = 0; for (const [id, t] of NOOUT) if (t < S.clock - 30) NOOUT.delete(id);
     for (const st of S.settlements.values()) {
       const R = (st.radius || 8) + 2; TOWNS.push(st); const k = TOWNS.length; if (k > 65000) break;
       const x0 = Math.max(0, ((st.cx - R) / TC) | 0), x1 = Math.min(c - 1, ((st.cx + R) / TC) | 0), y0 = Math.max(0, ((st.cy - R) / TC) | 0), y1 = Math.min(c - 1, ((st.cy + R) / TC) | 0);
@@ -349,15 +349,17 @@
   Mi.shunned = a => { const sp = SP[a.kind]; return !!sp && wild(a, sp) && shunned(a, sp); };
   // the way out: away from the town's heart, on ground it stands on, a few tiles past the edge
   function wayOut(a, st) {
-    const a0 = Math.atan2(a.y - st.cy, a.x - st.cx);
+    const a0 = Math.atan2(a.y - st.cy, a.x - st.cx); const amph = SP[a.kind] && SP[a.kind].cls === 'amph';
     for (const R of [(st.radius || 8) + 5, (st.radius || 8) + 10]) for (let k = 0; k < 16; k++) {
       const an = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.39; const x = st.cx + Math.cos(an) * R, y = st.cy + Math.sin(an) * R;
-      if (W.inb(x, y) && !kept(a, x, y) && A.walkOK(a, x, y) && W.canWalk(a.x, a.y, x, y, true)) return [x, y];
+      // (the walkers by the map of the land's regions; the ones of the water — the crocodile, the anaconda, the hippo — swim out)
+      if (W.inb(x, y) && !kept(a, x, y) && A.walkOK(a, x, y) && (amph || W.canWalk(a.x, a.y, x, y, true))) return [x, y];
     }
     return null;
   }
   // (the beast with no way out found is not asked again for ten seconds: the town on a spit of land, the pocket among walls)
   const NOOUT = new Map();
+  Mi.noWayOut = a => NOOUT.get(a.id) > G.S.clock - 12;
   // out of the town: not among the houses, the nearest way to the open (and the home range with it, when the town grew over it)
   function leaveStep(a, dt, sp, S) {
     const r = RUN.get(a.id); if (!r || r.o !== 'sair') { a.state = 'idle'; return true; } r.q += dt;
@@ -446,7 +448,7 @@
     // prey into the houses is given up
     const tin = WARY[a.kind] && st !== 'sair' ? kept(a, a.x, a.y) : null;
     if (WARY[a.kind] && st !== 'sair' && (tin || st === 'wander' || HUNT[st]) && shunned(a, sp)) {
-      if (tin && (st === 'idle' || st === 'wander' || st === 'graze' || st === 'lurk' || (MINE[st] && st !== 'beber'))) { if (leaveTown(a, sp, tin)) return true; }
+      if (tin && (st === 'idle' || st === 'wander' || st === 'graze' || st === 'lurk' || (MINE[st] && st !== 'beber' && !(ENV.storm && (st === 'abrigo' || st === 'aconchego' || st === 'toca'))))) { if (leaveTown(a, sp, tin)) return true; }
       // (startled among the houses, it bolts for the open, not deeper in away from whoever startled it)
       else if (tin && st === 'flee') { if (leaveTown(a, sp, tin, true)) return true; }
       else if (!tin && st === 'wander') { const to = kept(a, a.tx, a.ty); const g = to ? wayOut({ x: a.tx, y: a.ty, kind: a.kind }, to) : roadAt(a.tx, a.ty) ? offRoad(a, a.tx, a.ty) : null; if (g) { a.tx = g[0]; a.ty = g[1]; a.path = null; count('turnedBack'); if (to && kept(a, a.hx, a.hy)) { a.hx = g[0]; a.hy = g[1]; } } }
@@ -482,7 +484,9 @@
       else {
         fields(); const D = field(); const far = D[i] > REACH;
         const cap = far ? (ENV.dry ? 0.9 : 0.6) : 1; // (no water in reach: it lives on the wet of its food — the drought makes it suffer)
-        if (m.th < cap) m.th = r3(Math.min(cap, m.th + dayF * rate * (1 + 0.4 * m.hot) * (ENV.dry ? 1.6 : 1)));
+        // (the green grass and the leaves carry water: a grazer on lush ground drinks less often — on dry ground, the water it needs)
+        const lush = (sp.diet === 'herb' || sp.diet === 'browse') && S.veg && !ENV.dry ? Math.min(1, Math.max(0, (S.veg[i] - 0.4) * 2)) : 0;
+        if (m.th < cap) m.th = r3(Math.min(cap, m.th + dayF * rate * (1 + 0.4 * m.hot) * (ENV.dry ? 1.6 : 1) * (1 - 0.45 * lush)));
         if (m.th >= 1) { a.hp -= dt * sp.hp / (DAY() * 2.2); if (a.hp <= 0) { thirstDeath(a); return false; } }
         // (the drought takes the weak first: the young and the old)
         else if (ENV.dry && m.th > 0.8 && (a.grown < 0.5 || a.age > sp.life * a.lifeMul * 0.9)) { a.hp -= dt * sp.hp / (DAY() * 3); if (a.hp <= 0) { thirstDeath(a); return false; } }
@@ -672,7 +676,8 @@
     const start0 = def.start; def.start = (a, sp, S) => {
       if (start0(a, sp, S) === false) { FAIL.set(a.id * 64 + code, G.S.clock); return false; }
       // (the town keeps the shunned out by day: no goal of theirs among the houses — but the last water of a drought, D-305)
-      const r = RUN.get(a.id); if (r && WARY[a.kind] && !(name === 'beber' && (ENV.dry || meioOf(a).th > 0.8)) && shunned(a, sp) && (kept(a, r.gx, r.gy) || (def.rest && roadAt(r.gx, r.gy)))) { endRun(a, r); a.state = 'idle'; a.t = 1; FAIL.set(a.id * 64 + code, G.S.clock); return false; }
+      // (nor the roof against the storm: a storm drives every beast to the nearest one, the town's or not)
+      const r = RUN.get(a.id); if (r && WARY[a.kind] && !(def.storm && ENV.storm) && !(name === 'beber' && (ENV.dry || meioOf(a).th > 0.8)) && shunned(a, sp) && (kept(a, r.gx, r.gy) || (def.rest && roadAt(r.gx, r.gy)))) { endRun(a, r); a.state = 'idle'; a.t = 1; FAIL.set(a.id * 64 + code, G.S.clock); return false; }
       return true; };
     // (a rest — the shade, the burrow, the huddle, the look-out — gives way to hunger: from where the old ways go to graze (0,25)
     // it weighs less and less, and at 0,45 it is gone; one resting that grows hungry gets up at 0,5. The time to graze is the
@@ -704,7 +709,7 @@
         if (watch(a, r, dt)) return false;
         if (!freshAt(r.wi)) { const b = drinkSpot(a); if (!b || ++r.re > 2) return quit(a, 'startle'); r.gx = b.x; r.gy = b.y; r.wi = b.w; } // (the water gone: the god dried it, a winter froze it)
         const w = walk(a, r, dt, sp.sp * (m.th > 0.85 ? 1.3 : 1.05), 0.5); if (w === null) return true;
-        if (w) { r.p = 1; r.q = 0; r.b = bout(a); jostle(a); }
+        if (w) { r.p = 1; r.q = 0; r.b = bout(a); jostle(a); m.wx = r.wi % N; m.wy = (r.wi / N) | 0; } // (the water found is remembered, the drink startled or not)
         return true;
       }
       a.moving = false; const wx = (r.wi % N) + 0.5, wy = ((r.wi / N) | 0) + 0.5; G.faceTo(a, wx - a.x, wy - a.y);
@@ -1215,6 +1220,14 @@
   function daily() {
     cells(); townFear();
     for (let j = 0; j < PF.length; j++) { if (PF[j] > 0) PF[j] = PF[j] < 0.01 ? 0 : r3(PF[j] * 0.88); if (HS[j] > 0) HS[j] = HS[j] < 0.2 ? 0 : r3(HS[j] * 0.6); }
+    crowding();
+  }
+  // more of a kind than its ground holds — the towns grew over its pastures and it keeps off them: the grass and the water are
+  // shared by too many, and each is hungrier for it (D-305). Only above the ground's measure: never what drives a kind down past it
+  function crowding() {
+    const S = G.S; const n = A.counts(); const over = {};
+    for (const k in n) { const sp = SP[k]; if (!sp || !land(sp) || sp.dom || sp.town || !WARY[k]) continue; const cap = A.capacity(k); if (cap > 0 && n[k] > cap * 1.1) over[k] = Math.min(0.3, 0.15 * (n[k] / cap - 1)); }
+    for (const a of S.animals.values()) { const h = over[a.kind]; if (h && !a.dead && wild(a, SP[a.kind])) { a.hunger = r3(Math.min(1, (a.hunger || 0) + h)); count('crowd'); } }
   }
   function droughtOver(d) {
     const S = G.S; const r = d.dr; d.dr = null; if (!r || !(r.dead >= 3)) return;

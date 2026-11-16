@@ -230,7 +230,7 @@ if (on('m10')) { world(); calmSky(); M.saltar(2); calmSky();
   const farms = [...S().buildings.values()].filter(b => b.type === 'farm' && b.built && b.crops);
   S().time = 0.8; M.viver(2);
   const out = (cx, cy) => [...S().villagers.values()].filter(v => !v.inside && G.dist(v.x, v.y, cx, cy) < 12).length;
-  const f = farms.filter(b => { const cx = b.x + 1.5, cy = b.y + 1.5; for (let k = 0; k < 12; k++) { const x = cx + Math.cos(k / 2) * 8, y = cy + Math.sin(k / 2) * 8; if (W.inb(x, y) && A.walkOK({ kind: 'boar' }, x, y) && A.lineOK({ kind: 'boar' }, x, y, cx, cy)) return true; } return false; }).sort((p, q) => { const sp = S().settlements.get(p.set), sq = S().settlements.get(q.set); return (out(p.x + 1.5, p.y + 1.5) - out(q.x + 1.5, q.y + 1.5)) || ((sq ? G.dist(q.x, q.y, sq.cx, sq.cy) : 0) - (sp ? G.dist(p.x, p.y, sp.cx, sp.cy) : 0)); })[0]; // (the field farthest out, nobody about it)
+  const f = farms.filter(b => { const cx = b.x + 1.5, cy = b.y + 1.5; for (let k = 0; k < 12; k++) { const x = cx + Math.cos(k / 2) * 8, y = cy + Math.sin(k / 2) * 8; if (W.inb(x, y) && A.walkOK({ kind: 'boar' }, x, y) && A.lineOK({ kind: 'boar' }, x, y, cx, cy)) return true; } return false; }).sort((p, q) => { const sp = S().settlements.get(p.set), sq = S().settlements.get(q.set); const lp = Mi.learnt(p.x + 1.5, p.y + 1.5) > 0.1 ? 1 : 0, lq = Mi.learnt(q.x + 1.5, q.y + 1.5) > 0.1 ? 1 : 0; return (lp - lq) || (out(p.x + 1.5, p.y + 1.5) - out(q.x + 1.5, q.y + 1.5)) || ((sq ? G.dist(q.x, q.y, sq.cx, sq.cy) : 0) - (sp ? G.dist(p.x, p.y, sp.cx, sp.cy) : 0)); })[0]; // (a field where no beast was chased off yet — there it keeps off sooner, D-305 —, the farthest out, nobody about it)
   if (!f) ok('m10 a lavoura', false, `nenhuma fazenda com chão em volta (${farms.length} fazendas)`);
   else {
     for (const c of f.crops) { c.s = 3; c.g = 1; }
@@ -341,19 +341,21 @@ if (on('m16')) { const SEC = +(process.env.SEG || G.DAY_LEN); const said16 = [];
   M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4 }); Mi.off.town = true; try { M.saltar(3); } finally { Mi.off.town = false; } const s0 = G.Save.serialize();
   // (the wary ones of every kind: the others than the big dangerous ones, from the morning to the late afternoon)
   const shy = a => !a.dead && !a.dom && !a.tamed && !a.legend && !a.summoned && !a.raid && !a.pen && Mi.WARY[a.kind] === 1;
-  const arm = (off) => { M.abrir(JSON.parse(s0)); Mi.off.town = off; let n = 0, calm = 0, smp = 0, n1 = 0, f1 = 0, smp1 = 0; const kinds = {}, kinds1 = {}; let v3 = 0; const c0 = Object.assign({}, Mi.counts());
-    try { for (let k = 0; k < SEC; k++) { M.viver(1); if (G.isNight() || S().time > 0.7) continue; smp++; const t = S().time; const mid = t >= 0.1 && t <= 0.58; if (mid) smp1++;
+  const arm = (off) => { M.abrir(JSON.parse(s0)); Mi.off.town = off; let n = 0, calm = 0, smp = 0, n1 = 0, f1 = 0, smp1 = 0, sh = 0; const kinds = {}, kinds1 = {}; let v3 = 0, v3m = ''; const c0 = Object.assign({}, Mi.counts());
+    // (the hand of the proof holds the storm off: a storm drives every beast to the nearest roof, the town's too — m8 and the
+    // fera-toca prove that; here, the town on a clear year)
+    try { for (let k = 0; k < SEC; k++) { const w = S().weather; w.storm = 0; w.rain = 0; M.viver(1); if (G.isNight() || S().time > 0.7) continue; smp++; const t = S().time; const mid = t >= 0.1 && t <= 0.58; if (mid) smp1++;
         for (const a of S().animals.values()) {
           if (mid && shy(a) && ins(a)) { n1++; if (a.hunger <= 0.45) f1++; kinds1[a.kind] = (kinds1[a.kind] || 0) + 1; }
-          if (!feral(a) || !ins(a)) continue; n++; kinds[a.kind] = (kinds[a.kind] || 0) + 1; if (calmSt(a)) calm++; }
-        if (!off && k % 20 === 19) v3 += QA.check().filter(q => q.sys === 'meio' && /afastado e à toa dentro/.test(q.msg)).length; } }
+          if (!feral(a) || !ins(a)) continue; n++; kinds[a.kind] = (kinds[a.kind] || 0) + 1; if (calmSt(a)) calm++; if (!off && Mi.shunned(a)) sh++; }
+        if (!off && k % 20 === 19) { const q3 = QA.check().filter(q => q.sys === 'meio' && /afastado e à toa dentro/.test(q.msg)); v3 += q3.length; if (q3.length && !v3m) v3m = q3[0].msg; } } }
     finally { Mi.off.town = false; }
     const c1 = Mi.counts(); const dc = k => (c1[k] || 0) - (c0[k] || 0);
     const top = o => Object.entries(o).sort((p, q) => q[1] - p[1]).slice(0, 5).map(e => e.join(' ')).join(', ');
-    return { n1, f1, smp1, per1: n1 / Math.max(1, smp1), kinds1: top(kinds1), did: `saíram ${dc('leftTown')}, correram para fora ${dc('boltedOut')}, viraram antes de entrar ${dc('turnedBack')}, largaram a caça entre as casas ${dc('chaseOff')}, longe do fogo à noite ${dc('fireKept')}`, fire: dc('fireKept'), n, calm, smp, per: n / Math.max(1, smp), kinds: Object.entries(kinds).sort((p, q) => q[1] - p[1]).slice(0, 5).map(e => e.join(' ')).join(', '), v3 }; };
+    return { sh, v3m, n1, f1, smp1, per1: n1 / Math.max(1, smp1), kinds1: top(kinds1), did: `saíram ${dc('leftTown')}, correram para fora ${dc('boltedOut')}, viraram antes de entrar ${dc('turnedBack')}, largaram a caça entre as casas ${dc('chaseOff')}, longe do fogo à noite ${dc('fireKept')}`, fire: dc('fireKept'), n, calm, smp, per: n / Math.max(1, smp), kinds: Object.entries(kinds).sort((p, q) => q[1] - p[1]).slice(0, 5).map(e => e.join(' ')).join(', '), v3 }; };
   const before = arm(true), after = arm(false);
-  const drop = after.n <= before.n * 0.15 && after.per < 0.6 && after.calm <= Math.max(3, before.calm * 0.05) && after.f1 <= before.f1 * 0.15;
-  said16.push(`um ano (${SEC} s) de dia, feras e gigantes dentro das cidades (bicho×segundo): sem a cidade afastar ${before.n} em ${before.smp} olhadas (${before.per.toFixed(2)} por olhada; à toa ${before.calm}; ${before.kinds}) → com ela ${after.n} em ${after.smp} (${after.per.toFixed(2)}; à toa ${after.calm}; ${after.kinds || 'nenhum'}; no ano, ${after.did}); a regra da cidade no verificador ${after.v3}`);
+  const drop = after.n <= before.n * 0.15 && after.sh <= before.n * 0.05 && after.calm <= Math.max(3, before.calm * 0.05) && after.f1 <= before.f1 * 0.15;
+  said16.push(`um ano (${SEC} s) de dia, feras e gigantes dentro das cidades (bicho×segundo): sem a cidade afastar ${before.n} em ${before.smp} olhadas (${before.per.toFixed(2)} por olhada; à toa ${before.calm}; ${before.kinds}) → com ela ${after.n} em ${after.smp} (${after.per.toFixed(2)}; à toa ${after.calm}; dos que a cidade afasta agora — sem fome de caçador, sem caça de gente ou de rebanho — ${after.sh}; ${after.kinds || 'nenhum'}; no ano, ${after.did}); a regra da cidade no verificador ${after.v3}${after.v3m ? ' (' + after.v3m + ')' : ''}`);
   said16.push(`os outros bichos ariscos (o cervo, a lebre, a zebra, o javali…) dentro das cidades da manhã ao meio da tarde: ${before.n1} em ${before.smp1} olhadas (${before.per1.toFixed(2)}; sem fome ${before.f1}; ${before.kinds1 || 'nenhum'}) → ${after.n1} (${after.per1.toFixed(2)}; sem fome ${after.f1} — os outros, com fome, vêm pastar; ${after.kinds1 || 'nenhum'})`);
   // (the hours of each: the deer is kept out at noon and not at dusk, when it comes to the fields; the viper and the crocodile at
   // any hour, but hunger; the fox never — it lives off the scraps)

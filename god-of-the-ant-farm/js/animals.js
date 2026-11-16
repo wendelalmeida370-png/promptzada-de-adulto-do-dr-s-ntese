@@ -1697,7 +1697,8 @@
     if (!ks.length) return;
     const k = G.pick(ks); const sp = SP[k];
     const spot = A.wildSpot(12, sp); if (!spot) return;
-    const n = G.ri(sp.herd[0], sp.herd[1]);
+    // (the herd that comes is what the land still holds: a herd of fifteen gnus came to an island that holds four, D-305)
+    const n = Math.max(1, Math.min(G.ri(sp.herd[0], sp.herd[1]), A.capacity(k) - (count[k] || 0)));
     const L = A.spawn(k, spot[0], spot[1], { grown: 1 });
     for (let j = 1; j < n; j++) { const q = pickNear(L, 1.5, true); if (q) A.spawn(k, q[0], q[1], { leader: L.id, grown: 1 }); }
     if (sp.apex || sp.dens < 0.4) { const to = G.Biome && G.S.biome ? G.Biome.toAt(spot[0], spot[1]) : 'à ilha'; G.Village.log(`${n > 1 ? G.cap(plural(sp, n)) + ' chegaram' : G.cap(sp.nameA) + ' chegou'} ${to}, vind${n > 1 ? (sp.g === 'f' ? 'as' : 'os') : (sp.g === 'f' ? 'a' : 'o')} ${sp.cls === 'water' ? 'de mares distantes' : 'de terras distantes'}.`, 'deer', spot[0], spot[1]); }
