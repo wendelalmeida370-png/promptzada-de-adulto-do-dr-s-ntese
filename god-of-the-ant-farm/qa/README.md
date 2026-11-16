@@ -286,6 +286,8 @@ Cada parte acrescenta as suas linhas logo abaixo da sua marca (a tabela acima co
 | Prova | Como rodar | O que confere |
 |---|---|---|
 | (20a: a animação — as linhas novas aqui) | | |
+| `visual/andar.js` | `node qa/visual/andar.js` (dois segundos; `V=1` mostra os números de cada velocidade) | O andar e a corrida pelo animador e pelo esqueleto do jogo (D-340 a D-348, T-1360): a cadência e o passo de 0,8 a 6 m/s, o pé de apoio parado, nenhum tranco do pé (a 240 qps), a bacia e o seu sobe e desce, o joelho no pouso e no balanço, a largura do passo, a cabeça mais firme que a bacia, as trocas de estado sem junta arremessada, a ladeira, o degrau e a descida, as meias-voltas por passos, o contato dos clipes no golpe do mundo e no ato do corpo (e os clipes sem erro de registro), as pessoas do mundo numa esquina (a curva antes, a partida e a chegada suaves), o mesmo andar a 60 e a 144 qps |
+| `visual/corpo-filme.js` (20a) | `node qa/visual/corpo-filme.js ESTADO VELOCIDADE QUADROS PASSO saida.bin` e `python3 arte/corpo_filme.py saida.bin tira.png` | A tira do corpo pelo animador do jogo (`Anim.drive`), de qualquer estado ou clipe (`chop`, `fish`…) — para ver um clipe novo sem navegador (JOGABILIDADE.md §4.6) |
 | (20b: o movimento — as linhas novas aqui) | | |
 | (20c: o inventário — as linhas novas aqui) | | |
 | (20d: a arte dos itens — as linhas novas aqui) | | |

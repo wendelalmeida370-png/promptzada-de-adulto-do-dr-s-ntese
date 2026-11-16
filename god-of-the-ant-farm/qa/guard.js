@@ -962,6 +962,46 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 //  138–144 a interação (20e) · 145–151 o combate (20f) · 152–158 os ofícios (20g); cada parte escreve as suas logo abaixo da
 //  sua marca, para que as junções não se cruzem)
 // === 20a: a animação ===
+// 113. "a animação só desenha, e é uma conta" (D-340): os js/anim-*.js (o andar, os clipes, o animador) fazem a pose do que o
+// quadro lhes dá — o movimento desenhado (I), a figura (L), o tempo do quadro — e nada mais: não leem nem escrevem o mundo (G.S,
+// as pessoas, as operações, o livro, a vida do bairro), não tiram de acaso nenhum (nem o do mundo, nem o do que só se vê: a
+// mesma pessoa no mesmo passo anda igual, de qualquer olho), não leem o relógio da máquina
+{ const AN = files.filter(f => /^anim-.*\.js$/.test(f));
+  for (const need of ['anim-gait.js', 'anim-clips.js', 'anim-body.js']) if (!AN.includes(need)) fails.push(`a animação só desenha: js/${need} não existe (D-340)`);
+  for (const f of AN) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.S\b|\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\b|performance\.now|\bG\.(Act|Depot|Urban|Village|Vg|Possess|Inv)\b|\bsetTask\(/.test(c)) fails.push(`a animação só desenha: ${f}:${k + 1} lê o mundo, tira de um acaso ou pergunta ao relógio (D-340; a pose é uma conta do quadro): ${l.trim().slice(0, 110)}`);
+    if (/\b(v|w|vill|person)\.(x|y|z|task|path|pi|act|actT|moving|fx|fy|hp|role|carry)\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`a animação só desenha: ${f}:${k + 1} escreve numa pessoa do mundo (D-340): ${l.trim().slice(0, 110)}`); }); }
+// 114. "o que se segura é o que o inventário diz" (D-336, D-346): o 3D das pessoas não tem tabela própria do que cada ofício ou ato
+// segura (as velhas TOOL_OF e toolK): o que está nas mãos, nas costas e no cinto vem do G.Inv.held(v), e a forma de cada coisa do
+// G.ItemArt (com as formas de antes como reserva)
+{ for (const f of ['people3d.js', 'avatar.js', ...files.filter(f => /^anim-.*\.js$/.test(f))]) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bTOOL_OF\b|\btoolK\b/.test(c)) fails.push(`o que se segura: ${f}:${k + 1} decide o que alguém segura por uma tabela própria, não pelo G.Inv.held (D-346, L-1106): ${l.trim().slice(0, 110)}`); });
+  if (!(src['people3d.js'] || []).some(l => /n\.out = G\.Inv\.held\(v\)/.test(l))) fails.push('o que se segura: o people3d.js não pergunta ao G.Inv.held o que cada um leva (D-346)');
+  if (!(src['people3d.js'] || []).some(l => /G\.ItemArt\.geo\(/.test(l))) fails.push('o que se segura: o people3d.js não pede a forma das coisas ao G.ItemArt.geo (D-346)'); }
+// 115. "o andar é feito da fase, não de poses misturadas" (D-341, L-1107): a passada de quem anda e de quem corre sai do G.Gait.pose
+// pela fase de cada quadro — só o animador (anim-body.js) e a ponte das poses nomeadas (o gaitPose do people3d.js) a pedem; quem
+// desenha uma pessoa ou o corpo não mistura uma pose de andar com outra (Anim3D.blend de 'walk'/'run'), e o corpo do deus é posto
+// pelo mesmo animador de todos (o avatar.js dá o movimento do quadro, o People3D faz a pose: nem pose nem mistura no avatar.js)
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (!['anim-body.js', 'anim-gait.js', 'people3d.js'].includes(f) && /\bGait\.pose\(/.test(c)) fails.push(`o andar da fase: ${f}:${k + 1} pede a passada fora do animador (D-341): ${l.trim().slice(0, 110)}`);
+    if (/\.blend\([^)]*\.pose\(\s*'(walk|run|carry|sneak)'/.test(c)) fails.push(`o andar da fase: ${f}:${k + 1} mistura uma pose de andar com outra (a passada é da fase, L-1107): ${l.trim().slice(0, 110)}`);
+    if (f === 'avatar.js' && /\b(A3|Anim3D|G\.Anim3D)\.(blend|pose|hold)\(/.test(c)) fails.push(`o andar da fase: avatar.js:${k + 1} põe ou mistura a pose do corpo (o People3D a faz no quadro, pelo Anim.drive — D-341): ${l.trim().slice(0, 110)}`); });
+  if (!(src['people3d.js'] || []).some(l => /Anim\.drive\(avFeet\.an, I, av\.pose, av\.look, dt\)/.test(l))) fails.push('o andar da fase: o People3D não põe o corpo do deus pelo Anim.drive (D-341)'); }
+// 116. "um clipe nasce pelo registro" (D-342): os clipes das ações nascem só pelo Anim.clip(id, def) (ou na fila G.ANIM_CLIPS, que
+// o registro lê) — ninguém escreve o Anim3D.CLIPS à mão, onde o registro não confere as chaves, as máscaras e os eventos —; e todo
+// ato que o CLIP_OF liga a um clipe liga a um clipe que existe
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bCLIPS\s*(\[[^\]]+\]|\.\w+)\s*=(?!=)/.test(c) && !(f === 'anim-clips.js' && /CLIPS\[id\] = c\b/.test(c))) fails.push(`um clipe pelo registro: ${f}:${k + 1} escreve um clipe sem o Anim.clip (D-342): ${l.trim().slice(0, 110)}`); });
+  const ac = src['anim-clips.js'] || [], ids = new Set(); ac.forEach(l => { const m = l.match(/^\s+K\('(\w+)'/); if (m) ids.add(m[1]); });
+  const co = (ac.find(l => /const CLIP_OF = Anim\.CLIP_OF = \{/.test(l)) || '');
+  if (!co) fails.push('um clipe pelo registro: o anim-clips.js sem o CLIP_OF (D-342)');
+  for (const m of co.matchAll(/\b\w+: '(\w+)'/g)) if (!ids.has(m[1])) fails.push(`um clipe pelo registro: o CLIP_OF liga um ato ao clipe «${m[1]}», que o anim-clips.js não registra (D-342)`); }
+// 117. "o contato do clipe é a hora do mundo" (D-343): o clipe de uma pessoa do mundo anda no relógio do golpe dela (v.actT, pelo
+// Anim.loopTime) e o do corpo no tempo do ato, torcido para que o contato do clipe caia no contato do ato (Anim.warpTime) — nunca
+// num relógio próprio do desenho, que deixaria o machado bater fora da hora em que o mundo diz que bateu
+{ const p3 = src['people3d.js'] || [], av = src['avatar.js'] || [];
+  if (!p3.some(l => /function clipClock\(v, st\) \{[^\n]*Anim\.loopTime\(C, v\.actT/.test(l))) fails.push('o contato do clipe: o people3d.js não anda o clipe de uma pessoa no relógio do golpe dela (Anim.loopTime com v.actT, D-343)');
+  if (!av.some(l => /A3\.warpTime\(C, k, /.test(l))) fails.push('o contato do clipe: o avatar.js não casa o contato do clipe do corpo com o do ato (Anim.warpTime, D-343)'); }
 // === 20b: o movimento ===
 // === 20c: o inventário ===
 // === 20d: a arte dos itens ===

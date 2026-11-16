@@ -324,6 +324,10 @@ chave tem figura); uma folha de fotos (todas as coisas, de dois lados, e as figu
 - `G.ItemArt.ready`; `G.ItemArt.geo(chave, nível)` → `THREE.BufferGeometry` (com as cores) no quadro do D-337, ou `null`;
   `G.ItemArt.grip(chave)` → `{ main: [x, y, z], off: [x, y, z] | null }`; `G.ItemArt.icon(chave)` → um `data:` URL ou `null`.
 - A 20d pode acrescentar (`stow(chave, lugar)` — o encaixe sugerido nas costas e no cinto —, o material, os níveis) e documenta aqui.
+- (20a lê:) `geo(chave, nível)` nos três níveis do corpo (sem forma, as formas antigas do `people3d.js`); `grip(chave).off` para a
+  outra mão nas coisas de duas mãos (sem ela, um ponto por tipo); `stow(chave, 'costas' | 'cinto')` → `{ p: [x, y, z], y: [x, y, z],
+  z: [x, y, z] }`, em metros do corpo: `p` onde fica o punho, `y` para onde vai o cabo, `z` a frente da coisa — nas costas, no quadro
+  do peito; no cinto, no da bacia (sem ele, um encaixe por tipo).
 
 ### 4.4 O movimento que a animação lê (a 20b expõe, a 20a lê)
 O estado do corpo (`b`, o do `avatar.js`) ganha, escritos só pelo controle: `gait` ('parado' | 'andar' | 'trote' | 'disparada' |
@@ -331,6 +335,9 @@ O estado do corpo (`b`, o do `avatar.js`) ganha, escritos só pelo controle: `ga
 do passo: mira travada, mirando), `aimYaw` (para onde o corpo olha ou mira), `crouch`, `dodge` (a esquiva em curso: fase e rumo),
 e o rumo interpolado do quadro. `G.Avatar.motion()` devolve uma cópia de leitura disso tudo (a posição e o rumo interpolados, a
 velocidade, o chão, o modo de andar, o ato). A 20a lê com defesa (se um campo não existe, o sistema funciona sem ele).
+(20a lê, a cada quadro desenhado, na função `frameDrive` do `avatar.js`: `yaw`, `speed`, `accX`/`accZ`, `turnV` e `gait` — o trote e
+a disparada fazem a corrida, o andar abaixo de 2,6 m/s fica andar —; sem eles, o rumo e a velocidade do próprio corpo. O `strafe`, o
+`aimYaw`, o `crouch` e o `dodge` ainda não mudam a pose: o andar de lado e a esquiva têm a pose da onda 2.)
 
 ### 4.5 As ações com movimento (a 20b faz a porta, a onda 2 usa)
 O `Avatar.act` ganha: o empurrão do próprio gesto (`drive`: uma curva de velocidade no rumo do corpo — o avanço de um golpe, o
@@ -338,8 +345,62 @@ rolar da esquiva), quanto o corpo ainda anda durante o ato (`moveScale`), as jan
 (`cancelAt`), o giro permitido durante o ato, e o ato que vira para o alvo travado. Documente a forma final aqui.
 
 ### 4.6 Os clipes (a 20a faz e documenta aqui o guia para a onda 2)
-(a 20a escreve: o formato de um clipe, o registro, as máscaras, os eventos, como casar o contato com o tempo do mundo, como ver um
-clipe numa foto ou numa tira, e um exemplo completo)
+Um **clipe** é um gesto do corpo em chaves no tempo dele (0 a 1): o machado descendo, a picareta, a vara lançada. Mora no
+`js/anim-clips.js` (`G.Anim3D`, só se vê: regra 113) e é tocado pelo animador (`js/anim-body.js`) na camada das ações, por cima
+da base (o corpo parado nos pés que o clipe pede, ou a passada de quem anda).
+
+**O registro.** `G.Anim3D.clip(id, def)` — uma vez por id (um segundo com o mesmo id é recusado e contado em `G.Anim3D.clipErr`,
+que as provas leem). Um arquivo que carrega antes do `anim-clips.js` põe na fila: `(G.ANIM_CLIPS = G.ANIM_CLIPS || []).push([id,
+def])`; depois dele, o `push` registra na hora. Ninguém escreve o `G.Anim3D.CLIPS` à mão (regra 116). Para um ato do mundo
+(`v.act`) ou do corpo (`a.vact`) mostrar o clipe, o clipe diz os seus atos (`acts: ['golpe']`) — um ato que outro clipe já mostra é
+recusado e contado —; os clipes da 20a estão na tabela `CLIP_OF` do `anim-clips.js` (a regra 116 confere que cada um existe).
+
+**O formato** (`def`):
+- `keys: { junta: [[u, valor], …] }` — as chaves de cada junta, `u` de 0 a 1, interpoladas por Catmull-Rom (as chaves não precisam
+  ser igualmente espaçadas). Os ângulos em **graus** (`deg: false` para radianos); `bob`, `crouch`, `shift`, `grip`, `gripL`,
+  `offW`, `tool`, `holdW`, `lie` são números (metros ou pesos). As juntas: `shLp`/`shRp` (o ombro para a frente é **negativo**),
+  `shLr`/`shRr` (abrir o braço: + no esquerdo, − no direito), `shLy`/`shRy`, `elL`/`elR` (dobrar o cotovelo, +), `wrist`/`wristL`
+  (+ a coisa desce ao longo do antebraço), `lean` (curvar o tronco, +), `twist` (+ para a esquerda do corpo), `sway`, `neck`,
+  `lookY`, `crouch` (fração da altura da bacia), `bob`, `shift`, `pelY`/`pelR`/`pelP`, `hipL`/`hipR` (a coxa para a frente é
+  **negativa**), `knL`/`knR` (+ dobra), `anL`/`anR` (+ ponta para baixo), `grip`/`gripL` (fechar a mão), `offW` (a outra mão na
+  coisa de duas mãos, 0–1), `tool` (1: a coisa da mão em uso).
+- `dur` (segundos de uma volta, quando ninguém dá o tempo), `loop` (padrão `true`; `false` para um gesto de uma vez, que segura as
+  pontas).
+- `mask` — que juntas o clipe move: `'full'` (padrão), `'upper'` (braços, cabeça, tronco: a pessoa pode andar por baixo), `'arms'`,
+  `'armR'`, `'armL'`, `'head'`, ou uma lista de juntas. As outras são da base.
+- `in` / `out` — os segundos para entrar e sair (0,22 / 0,28); a troca é amortecida pelo animador (nada salta num quadro).
+- `feet` — `'plant'` (padrão: os pés ficam onde pisam), `'free'` (o clipe move os pés: ajoelhar, agachar); `stance: [meia
+  largura, o pé esquerdo à frente, o direito]` em metros — os pés dão os passos até lá e ficam.
+- `base` — a postura de baixo (`'idle'`, `'sit'` para comer sentado…).
+- `item: { hand: 'mao', two: true }` — o clipe usa a coisa da mão que o `G.Inv.held` diz (nunca escolhe a ferramenta); `two`: a
+  outra mão vai ao cabo (`G.ItemArt.grip(chave).off`, pela IK de dois ossos), na medida do `offW`.
+- `events: { contact: u }` — o momento em que o gesto bate (o machado na madeira). Outros eventos podem ser acrescentados (0–1).
+- `period` — para as pessoas do mundo: os segundos do mundo entre um golpe e o próximo (o relógio `v.actT`).
+
+**O contato no tempo do mundo** (regra 117). Uma pessoa do mundo: o clipe anda no relógio do golpe dela —
+`G.Anim3D.loopTime(c, v.actT, c.period)` põe o `contact` do clipe no instante em que o mundo conta o golpe (`t = period, 2·period…`).
+O corpo do jogador: o tempo do ato (`a.t / a.dur`) é torcido por `G.Anim3D.warpTime(c, k, a.contact / a.dur)` para que o contato do
+clipe caia no contato do ato (`G.Act.ANIM`: `dur`, `contact`). Nunca um relógio próprio do desenho. O som do golpe é do mundo
+(`G.Audio.GESTO`, regra 54) e cai no mesmo instante.
+
+**Ver um clipe.** Numa tira, sem navegador: `node qa/visual/corpo-filme.js ID 0 8 5 /tmp/x.bin` e
+`python3 arte/corpo_filme.py /tmp/x.bin saida.png 1.2 200` (o ângulo de 1,2 rad mostra o corpo de três quartos). No jogo, o modo
+desenvolvedor dá o ato ao corpo. As provas: `node qa/visual/andar.js` (o contato no golpe do mundo e no ato do corpo; os clipes sem
+erro de registro; nada arremessado na troca), `node qa/visual/maos.js` (a coisa na mão e a outra mão no cabo), `node qa/matriz.js`
+(todo gesto com pose).
+
+**Um exemplo completo** — o golpe de cima de uma maça, a duas mãos, que acerta aos 60%:
+```js
+(G.ANIM_CLIPS = G.ANIM_CLIPS || []).push(['golpe-alto', {
+  dur: 1.1, loop: false, mask: 'upper', in: 0.12, out: 0.25, item: { hand: 'mao', two: true }, events: { contact: 0.6 }, acts: ['golpe-alto'],
+  keys: {
+    shRp: [[0, -40], [0.4, -160], [0.6, -60], [1, -40]], elR: [[0, 50], [0.4, 110], [0.6, 15], [1, 50]],
+    wrist: [[0, 20], [0.4, -40], [0.6, 70], [1, 20]], lean: [[0, 5], [0.4, -6], [0.6, 22], [1, 5]],
+    twist: [[0, 0], [0.4, -20], [0.6, 12], [1, 0]], offW: [[0, 1], [1, 1]], grip: [[0, 1], [1, 1]], tool: [[0, 1], [1, 1]],
+  } }]);
+// o ato «golpe-alto» (v.act de uma pessoa do mundo, o vact do ato do corpo — Avatar.act, D-338) mostra este clipe; o contact
+// do G.Act.ANIM desse ato em 0,6 da dur, para o golpe bater quando o mundo diz.
+```
 
 ### 4.7 As teclas — `G.Input3D` (D-339)
 - A tabela `G.Input3D.ACTIONS` (`[nome, rótulo, teclas]`): o contrato já pôs `inventario` (I) e `rapido1`…`rapido5` (1 a 5).

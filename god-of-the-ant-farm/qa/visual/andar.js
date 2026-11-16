@@ -164,5 +164,15 @@ for (const deg of [90, 180]) {
   const a = run(60), b = run(144); const dph = Math.abs(((a.a.ph - b.a.ph) % 1 + 1.5) % 1 - 0.5); const dk = Math.abs(a.pose.knL - b.pose.knL);
   ok('o mesmo andar a 60 e a 144 quadros por segundo (a fase e a pose do animador vêm do tempo, não do quadro)', dph < 0.01 && dk < 0.03, `a diferença de fase ${dph.toFixed(4)} da passada, do joelho ${(dk * R2D).toFixed(2)}°`); }
 
+// ------------------------------ the verifier of the animation (qa/anim-inv.js) sees, and accuses ------------------------------
+{ require('vm').runInThisContext(require('fs').readFileSync(path.join(__dirname, '..', 'anim-inv.js'), 'utf8'), { filename: 'qa/anim-inv.js' });
+  const look = s => { const o = []; G.AnimInv((k, sev, m) => o.push(m), s); return o; };
+  const clean = look({ avatar: null });
+  A.clip('chop', { keys: { shRp: [[0, 0]] } }); const twice = look({ avatar: null }); A.clipErr.pop();
+  A.CLIP_OF.provaInv = 'nenhum'; const none = look({ avatar: null }); delete A.CLIP_OF.provaInv;
+  const keep = P3.avatar; P3.avatar = { id: 99 }; const stale = look({ avatar: null }), other = look({ avatar: { id: 7 } }), same = look({ avatar: { id: 99 } }); P3.avatar = keep;
+  ok('o verificador da animação (qa/anim-inv.js): limpo agora, e acusa um clipe recusado, um ato sem clipe, o desenho de um corpo que não é o vivido', !clean.length && twice.length === 1 && none.length === 1 && stale.length === 1 && other.length === 1 && !same.length,
+    `agora ${clean.length} · o clipe «chop» duas vezes: «${twice[0] || ''}» · um ato sem clipe: «${none[0] || ''}» · o desenho sem corpo: «${stale[0] || ''}» · de outro corpo: «${other[0] || ''}» · do corpo vivido: ${same.length}`); }
+
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);

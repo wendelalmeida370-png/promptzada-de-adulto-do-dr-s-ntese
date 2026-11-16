@@ -1344,7 +1344,10 @@
     pelvis();
     // the feet first: where each must be (planted in a stride, or kept out of the ground) — and the hips lowered as much as
     // a planted foot needs to be reached
-    const grounded = L.ground !== undefined && !lie;
+    // (far off — the last level of detail, a figure a few tens of pixels high —: the legs as the pose puts them, no foot planted nor
+    // reached, the hips where the stride has them; the feet's memory let go, so that coming near they strike afresh, D-347)
+    const far = (L.lod | 0) >= 2 && !lie; if (far && L.plant) for (let k = 0; k < 2; k++) { const f = L.plant[k]; f.on = 0; f.step = null; f.off = 0; }
+    const grounded = L.ground !== undefined && !lie && !far;
     const want = [null, null];
     if (grounded) {
       let drop = 0;

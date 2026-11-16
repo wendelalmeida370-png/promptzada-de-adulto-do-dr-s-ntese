@@ -54,8 +54,11 @@
       c.ch.push(j); c.tab.push(sample(pts, loop));
     }
     for (const e in c.events) if (!(c.events[e] >= 0 && c.events[e] <= 1)) Anim.clipErr.push(`clipe ${id}: o evento ${e} fora de 0..1`);
-    CLIPS[id] = c; return c;
+    CLIPS[id] = c; c.acts = Array.isArray(def.acts) ? def.acts.slice() : null; if (c.acts && Anim.CLIP_OF) bindActs(c); return c;
   };
+  // (the acts a clip shows, said with it — `acts: ['golpe']` —: a clip of another file shows its acts without a line here; an act
+  // already shown by another clip is refused and counted)
+  function bindActs(c) { for (const a of c.acts) { const o = Anim.CLIP_OF[a]; if (o && o !== c.id) Anim.clipErr.push(`clipe ${c.id}: o ato ${a} já mostra o clipe ${o}`); else Anim.CLIP_OF[a] = c.id; } }
   // (a channel round its time: Catmull-Rom through the keys — wrapping round for a loop, held at the ends for a one-shot)
   function sample(pts, loop) {
     const out = new Float32Array(NS + 1);
@@ -263,6 +266,7 @@
     talk: 'talk', chat: 'talk', call: 'talk', shout: 'talk', sell: 'talk', buy: 'talk', serve: 'talk', haggle: 'talk', question: 'talk', listen: 'talk',
     knock: 'interact', examine: 'interact', count: 'interact', pay: 'interact', undress: 'interact', point: 'interact',
     wave: 'wave', pray: 'pray', kneel: 'pray', swear: 'pray', eat: 'eat', fight: 'fight', stab: 'fight', brandish: 'fight' };
+  for (const id in CLIPS) if (CLIPS[id].acts) bindActs(CLIPS[id]);
 
   // (every clip a state the drawing knows — the coverage of the acts, qa/matriz.js —, and its pose for whoever asks by its name:
   // its base with the clip at the time t, in seconds of its own pace)

@@ -47,7 +47,8 @@
   const TMP = Anim.POSE0();
 
   // ------------------------------ the base: a posture or the stride ------------------------------
-  function reset(out) { for (const k in REST) out[k] = REST[k]; }
+  const RK = Object.keys(REST), RV = RK.map(k => REST[k]); // (the rest pose's keys, listed once: a reset a body a frame is a plain loop)
+  function reset(out) { for (let i = 0; i < RK.length; i++) out[RK[i]] = RV[i]; }
   // (a posture of the old table — Anim.pose, ST — copied in, its feet standing: the stance's clocks say both on the ground)
   function posture(out, st, t, sp) { reset(out); const p = Anim.pose(st, t, sp); for (const k in p) out[k] = p[k]; out.stL = out.stR = 1; out.swL = out.swR = -1; out.pgL = out.pgR = -1; return out; }
   // the stride at the mind's phase and speed, and what its kind adds: crouched to sneak, the knees high to wade
