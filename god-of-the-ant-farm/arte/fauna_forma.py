@@ -79,12 +79,100 @@ def ell_between(a, b, rx, rz, extra=1.0):
 
 
 # ------------------------------ the eye ------------------------------
-def eyes(b, c, r, side_dir=None):
-    """Two eyes at c (the left one; the right mirrored), radius r — the head's."""
+def eyes(b, c, r, look=None):
+    """Two eyes at c (the left one; the right mirrored), radius r — the head's. look: the way the left one looks out of the head
+    (the grazer's to the side, the hunter's forward), for seat_face to find the skin by."""
     for sd, z in ((1, 'olhoL'), (-1, 'olhoR')):
         cc = v3(c[0] * sd, c[1], c[2])
         b.piece(z, z, [(Sphere(cc, r), 'head')], 0, far=-1)
         b.pieces[-1]['eye'] = (cc, r)
+        if look is not None: b.pieces[-1]['look'] = nrm(np.asarray(look, float) * v3(sd, 1, 1))
+
+
+# ------------------------------ the face on the skin (D-320, D-321) ------------------------------
+# The families whose eyes are seated on the skin, with lids round them, and whose face is told to the shader (the eye's place
+# and axis, the mouth's line, the nostrils): every beast of the land, the water's edge and the air. The dragon and the sea keep
+# theirs as they were made (their eyes are painted their own way, D-267, D-270).
+FACE_FAMS = ('quad', 'bird', 'snake', 'sprawl', 'frog', 'seal')
+EYE_K = {'quad': 1.08, 'bird': 1.25, 'snake': 1.12, 'sprawl': 1.2, 'frog': 1.0, 'seal': 1.0}     # (a little bigger than life: an eye that reads)
+EYE_OUT = {'quad': 0.5, 'bird': 0.45, 'snake': 0.5, 'sprawl': 0.55, 'frog': 0.62, 'seal': 0.5}  # (how much of its radius stands out of the skin)
+LIDS = {'quad': 0.62, 'bird': 0.8, 'sprawl': 0.5, 'frog': 0.7, 'seal': 0.75}                    # (the lids' opening, its height over its width; the snake has none)
+
+
+def grad_at(P, p, e):
+    """The clay's outward normal at p (the field's slope, by differences)."""
+    from corpo_sdf import field_at
+    o = np.array([[e, 0, 0], [-e, 0, 0], [0, e, 0], [0, -e, 0], [0, 0, e], [0, 0, -e]])
+    f = field_at(P, np.asarray(p, float) + o); g = np.array([f[0] - f[1], f[2] - f[3], f[4] - f[5]])
+    return g / max(np.linalg.norm(g), 1e-12)
+
+
+def to_skin(P, c, g, span):
+    """Where the line from c along g crosses the skin going out of the clay (the crossing nearest c), or None."""
+    from corpo_sdf import field_at
+    ts = np.linspace(-span, span, 97); f = field_at(P, c + np.outer(ts, g)); best = None
+    for i in range(len(ts) - 1):
+        if f[i] <= 0 < f[i + 1]:
+            lo, hi = ts[i], ts[i + 1]
+            for _ in range(30):
+                m = (lo + hi) / 2
+                if field_at(P, (c + g * m)[None])[0] <= 0: lo = m
+                else: hi = m
+            if best is None or abs(lo) < abs(best): best = lo
+    return None if best is None else c + g * best
+
+
+def eye_frame(n):
+    """The eye's own frame: its axis n, u across it toward the front (the head's +Z laid on it), v up."""
+    u = v3(0, 0, 1) - n * n[2]
+    if np.linalg.norm(u) < 1e-3: u = v3(0, 1, 0) - n * n[1]
+    u = nrm(u); v = nrm(np.cross(n, u))
+    if v[1] < 0: v = -v
+    return u, v
+
+
+def seat_face(b):
+    """The eyes seated on the skin (18 kinds had them inside the head, where nothing of them showed: L-1040): each eye moved along
+    the way it looks to where that way leaves the clay, half its radius out; lids of the head's clay round it, an almond opening
+    in them (not the snake: it has none). And what the shader needs to paint the face (D-321): the eye's centre, radius and axis,
+    the mouth's line (where it parts the lips, from the corner to the front), the nostril's hole — in meta['face']."""
+    from corpo_sdf import project
+    fam = b.meta.get('family', 'quad')
+    if fam not in FACE_FAMS: return
+    L = [pc for pc in b.pieces if pc.get('eye') is not None and pc['zone'] == 'olhoL']
+    R = [pc for pc in b.pieces if pc.get('eye') is not None and pc['zone'] == 'olhoR']
+    if not L or not R: return
+    c0, r0 = L[0]['eye']; c0 = np.asarray(c0, float); r = r0 * EYE_K[fam]
+    g = L[0].get('look'); n0 = grad_at(b.P, c0, max(r0 * 0.3, 1e-4))
+    g = n0 if g is None else g
+    S = to_skin(b.P, c0, g, max(r0 * 8, b.H * 0.08))
+    if S is None: S = project(b.P, c0[None])[0]
+    nS = grad_at(b.P, S, max(r * 0.2, 1e-4)); ax = nrm(nS + g)
+    ce = S - ax * r * (1 - EYE_OUT[fam])
+    if fam in LIDS:
+        u, v = eye_frame(ax); asp = LIDS[fam]
+        Rf = np.stack([u, v, ax], 1)
+        for sd in (1, -1):
+            m = v3(sd, 1, 1); c = ce * m; Rm = np.diag(m) @ Rf
+            b.add(Sphere(c, r * 1.08), 'head', k=r * 0.5, tau=max(0.006, r * 2))
+            b.cut(Ellipsoid(c + (ax * m) * r * 0.9, (r * 0.9, r * 0.9 * asp, r * 0.6), Rm), k=r * 0.12)
+    else: asp = 1.0
+    for pcs, sd in ((L, 1), (R, -1)):
+        pc = pcs[0]; c = ce * v3(sd, 1, 1)
+        pc['eye'] = (c, r); pc['P'] = [Sphere(c, r).set('u', 0.0, 'head', max(0.008, b.H * 0.03))]
+    # (b.meta['eye'] stays the family's own point of the head — the brow the gestures aim by is read from it, FaunaAnim.Gest.browOf: L-1047)
+    # the mouth: from its corner (on the skin, at its side) to the front (in the middle) — the line the lips part along
+    face = {'eye': [float(x) for x in ce] + [float(r)], 'ax': [float(x) for x in ax] + [float(asp)]}
+    mo = b.meta.get('mouth')
+    if mo:
+        F, C, w = np.asarray(mo[0], float), np.asarray(mo[1], float), float(mo[2])
+        Cs = project(b.P, C[None])[0] if fam != 'bird' else C
+        Ny, Nz = (mo[3][1], mo[3][2]) if len(mo) > 3 and mo[3] is not None else (0.0, 0.0)
+        face['mouth'] = [float(Cs[1]), float(Cs[2]), float(F[1]), float(F[2])]
+        face['mw'] = [w, float(abs(Cs[0])) * 1.15, float(Ny), float(Nz)]
+    no = b.meta.get('nostril')
+    if no: face['nos'] = [float(x) for x in no[0]] + [float(no[1])]
+    b.meta['face'] = face
 
 
 # ------------------------------ the four-legged ------------------------------
@@ -194,7 +282,9 @@ def quad(b, **kw):
 def ground(b):
     """The sole: nothing of the body under the ground — a paw, a pillar's foot, a pastern rest flat on it (they sank into it,
     the elephant's 0.2 m: the round ends of the clay reach below the joints they are drawn from)."""
-    pr = Plane((0, 0, 0), (0, -1, 0), ((-9, -1, -9), (9, 0.0, 9))); pr.set('i', 0.0, None, b.H * 0.04); b.P.append(pr)
+    # (the sole's rim a little rounded: on the finer clay of the near level (D-322) a flat sole
+    # had its whole rim at the ground, and the rim's point, not the pad's middle, took the weight as the foot rolled: L-1046)
+    pr = Plane((0, 0, 0), (0, -1, 0), ((-9, -1, -9), (9, 0.0, 9))); pr.set('i', b.H * 0.008, None, b.H * 0.04); b.P.append(pr)
 
 
 def joints(b, p, s, el, kn, fe, st, hk, hf, R, C, tau):
@@ -280,6 +370,7 @@ def head(b, p, poll, Dc):
     for sd in (1, -1):
         b.add(Ellipsoid(jc + v3(sd * hW * 0.18, 0, 0), (hW * 0.28 * p['cheek'], hH * 0.33 * p['cheek'], hL * 0.22)), jw if p['jaw'] else 'head', k=hH * 0.3, tau=tau)
     b.add(RoundCone(jc - d * hL * 0.05, mz - up * mr * 0.55 - d * mr * 0.2, hH * 0.22, mr * 0.55), jw, k=hH * 0.2, tau=tau)        # the lower jaw
+    b.meta['mouth'] = [mz + d * mr * (1.0 + p['snout'] * 0.9) - up * mr * 0.5, mz - d * mr * 0.9 - up * mr * 0.5 + v3(mr * 0.8, 0, 0), hH * 0.022, None]  # (D-321)
     ec = sk + d * hL * 0.1 + up * hH * 0.12 + v3(hW * 0.43, 0, 0)
     head_rest(b, p, sk, d, up, hL, hH, hW, tau, mr, ec)
 
@@ -306,6 +397,7 @@ def head_hunter(b, p, poll, sk, d, up, hL, hH, hW, tau):
             b.add(Sphere(a1 + up * hH * 0.27 + X * sd * hW * 0.2 - d * rr * 0.4, hH * 0.075), 'head', k=hH * 0.05, tau=tau)            # the nostrils' knobs
         ec = sk + up * hH * 0.46 + X * hW * 0.33 + d * hL * 0.04
         nose = a1 + up * hH * 0.3 - d * rr * 0.3
+        b.meta['mouth'] = [a1 - up * hH * 0.2, a0 + d * ml * 0.35 - up * hH * 0.2 + X * hW * 0.45, hH * 0.02, None]
     elif face == 'primate':
         b.add(Ellipsoid(sk, (hW * 0.5, hL * 0.4, hH * 0.5), O(sk)), 'head', k=hH * 0.2, tau=tau)                                    # the braincase
         fc = sk + d * hL * 0.24 - up * hH * 0.1
@@ -316,6 +408,7 @@ def head_hunter(b, p, poll, sk, d, up, hL, hH, hW, tau):
         b.add(Ellipsoid(mz - up * mr * 0.55 - d * mr * 0.12, (mr * 0.6, mr * 0.5, mr * 0.42), O(mz)), jw, k=mr * 0.3, tau=tau)      # the chin
         ec = fc + d * hL * 0.14 + up * hH * 0.08 + X * hW * 0.15
         nose = mz + d * mr * 0.66 + up * mr * 0.12
+        b.meta['mouth'] = [mz - up * mr * 0.32 + d * mr * 0.55, mz - up * mr * 0.3 - d * mr * 0.05 + X * mr * 0.62, hH * 0.02, None]
     elif face == 'felid':
         b.add(Ellipsoid(sk, (hW * 0.5, hL * 0.32, hH * 0.5), O(sk)), 'head', k=hH * 0.25, tau=tau)                                  # the braincase
         for sd in (1, -1):
@@ -327,6 +420,7 @@ def head_hunter(b, p, poll, sk, d, up, hL, hH, hW, tau):
         nose = mz + d * mr * 0.5 + up * mr * 0.3
         b.add(Ellipsoid(nose - d * mr * 0.12, (mr * 0.3, mr * 0.18, mr * 0.2), O(nose)), 'head', k=mr * 0.1, tau=tau)              # the leather
         ec = sk + d * hL * (0.2 + p['eyeFwd'] * 0.06) + up * hH * 0.12 + X * hW * 0.29
+        b.meta['mouth'] = [mz - up * mr * 0.62 + d * mr * 0.32, mz - d * mr * 0.75 - up * mr * 0.7 + X * mr * 0.85, hH * 0.022, nose - up * mr * 0.16]  # (the lips under the pads, the corner a little lower — a cat does not grin —, the cleft up to the nose)
     else:  # the dogs, the wolf, the foxes, the hyena, the bears
         b.add(Ellipsoid(sk, (hW * 0.48, hL * 0.3, hH * 0.48), O(sk)), 'head', k=hH * 0.25, tau=tau)                                 # the braincase
         st = sk + d * hL * 0.22 + up * hH * 0.06
@@ -340,6 +434,7 @@ def head_hunter(b, p, poll, sk, d, up, hL, hH, hW, tau):
         nose = a1 + up * mr * 0.16
         b.add(Ellipsoid(nose - d * mr * 0.16, (mr * 0.45, mr * 0.25, mr * 0.3), O(nose)), 'head', k=mr * 0.15, tau=tau)            # the leather
         ec = sk + d * hL * (0.2 + p['eyeFwd'] * 0.05) + up * hH * 0.16 + X * hW * (0.36 - p['eyeFwd'] * 0.04)
+        b.meta['mouth'] = [a1 - up * mr * 0.42 + d * mr * 0.05, lerp(a0, a1, 0.12) - up * mr * 0.5 + X * mr * 0.62, hH * 0.022, nose - up * mr * 0.2]  # (the long mouth back to the cheek, the cleft up to the nose)
     b.meta['nose'] = list(nose)
     return mz, mr, ec
 
@@ -352,11 +447,12 @@ def head_rest(b, p, sk, d, up, hL, hH, hW, tau, mr, ec):
     if face == 'hippo': ns = b.meta['p']['headW'] * b.meta['p']['headL'] * b.H * 0.2 / max(mr, 1e-4)
     for sd in (1, -1):
         b.cut(Sphere(nose + v3(sd * mr * ns, mr * 0.08, -mr * 0.05), mr * nr), k=mr * nr * 0.5)
+    b.meta['nostril'] = [list(nose + v3(mr * ns, mr * 0.08, -mr * 0.05)), float(mr * nr)]
     er = p['eyeR'] * H
     if p['brow']:
         for sd in (1, -1): b.add(Ellipsoid(ec * v3(sd, 1, 1) + up * er * 1.1 - d * er * 0.2, (er * 1.4, er * 0.7 * p['brow'], er * 1.6)), 'head', k=er, tau=tau)
     fw = min(0.85, p['eyeFwd'] * 0.75)  # (the eye sunk into the head along its own face: sideways for the grazers, forward for the hunters)
-    eyes(b, ec - (v3(1, 0, 0) * (1 - fw) + d * fw) * er * 0.35, er)
+    eyes(b, ec - (v3(1, 0, 0) * (1 - fw) + d * fw) * er * 0.35, er, look=v3(1, 0, 0) * (1 - fw) + d * fw + up * (0.35 if face == 'hippo' else 0.08))
     b.meta['eye'] = list(ec)
     # the ears: from the skull's top, up and out and back; cupped in front; folded down for a drooping ear
     eL = p['earL'] * H; eW = p['earW'] * H; eT = max(p['earT'] * H, 0.004)
@@ -390,6 +486,7 @@ def tail(b, p, Hc, Dh, L):
     tl = p['tailL'] * H; tr = p['tailR'] * H
     t0 = b.j('tail0', (0, Hc - Dh * 0.12, -L * 0.52))
     if t in ('hang', 'tuft', 'thin'): dirs = [(0, -0.35, -1), (0, -1.6, -0.6), (0, -1, -0.2), (0, -1, -0.12)]
+    elif t == 'hippo': dirs = [(0, -0.25, -1), (0, -0.9, -0.8), (0, -1.0, -0.35), (0, -1.0, -0.2)]
     elif t == 'bushy': dirs = [(0, -0.5, -1), (0, -0.9, -1), (0, -0.7, -1), (0, -0.4, -1)]
     elif t == 'long': dirs = [(0, -0.45, -1), (0, -1.2, -0.6), (0, -1.0, -0.25), (0, -0.3, -0.5)]
     elif t == 'up': dirs = [(0, 0.8, -1), (0, 1.2, -0.4), (0, 0.6, 0.4), (0, -0.2, 0.6)]
@@ -403,19 +500,27 @@ def tail(b, p, Hc, Dh, L):
     for k in range(4): pts.append(pts[-1] + nrm(dirs[k]) * tl * seg[k])
     for k in range(1, 4): b.j('tail%d' % k, pts[k])
     if t in ('puff', 'short', 'flag'):
-        c = t0 + nrm(dirs[0]) * tl * 0.3
-        b.add(Ellipsoid(c, (tr * 1.1, tr * 1.3, tl * 0.42)), 'tail3', k=tr * 1.2)
+        # (the short tail set on the rump's skin, half in it: the old place, a third of the tail behind the root, left a gap the finer
+        # clay of the near level no longer closed — the deer's tail floated behind it, L-1044)
+        g = nrm(dirs[0]); S = to_skin(b.P, v3(0, t0[1], -L * 0.3), g, L * 0.6)
+        c = (S if S is not None else t0) + g * tl * 0.42 * 0.5
+        b.add(Ellipsoid(c, (tr * 1.1, tr * 1.3, tl * 0.42)), 'tail3', k=tr * 1.4)
         b.meta['tailR'] = round(float(tr * 1.3), 4)
         return
     radii = {'hang': [1, 0.8, 0.6, 0.45, 0.4], 'tuft': [1, 0.7, 0.5, 0.4, 0.35], 'thin': [1, 0.75, 0.55, 0.45, 0.35], 'bushy': [1.0, 1.6, 1.9, 1.7, 0.8],
-             'long': [1, 0.85, 0.75, 0.7, 0.6], 'up': [1, 0.85, 0.7, 0.6, 0.5], 'curl': [1, 0.8, 0.6, 0.5, 0.4], 'flat': [0.9, 1.0, 1.0, 1.0, 0.8], 'croc': [1, 0.72, 0.5, 0.3, 0.12]}[t]
+             'long': [1, 0.85, 0.75, 0.7, 0.6], 'up': [1, 0.85, 0.7, 0.6, 0.5], 'curl': [1, 0.8, 0.6, 0.5, 0.4], 'flat': [0.9, 1.0, 1.0, 1.0, 0.8], 'croc': [1, 0.72, 0.5, 0.3, 0.12], 'hippo': [1.6, 1.15, 0.85, 0.7, 0.5]}[t]
     b.meta['tailR'] = round(float(tr * max(radii) * (2.2 if t == 'flat' else 1.0)), 4)
     for k in range(4):
         a, c = pts[k], pts[k + 1]
         if t == 'flat':
             b.add(Ellipsoid((a + c) / 2, (tr * 2.2, tr * 0.45, np.linalg.norm(c - a) * 0.62)), 'tail%d' % k, k=tr * 0.3)
+        elif t == 'hippo':  # (the hippo's: thick at the root, flattened side to side toward its end, a fringe of bristles there — D-325)
+            b.add(RoundCone(a, c, tr * radii[k], tr * radii[k + 1], flat=((1, 0, 0), 1.0 - 0.18 * k)), 'tail%d' % k, k=tr * (1.2 if k == 0 else 0.3))
         else:
             b.add(RoundCone(a, c, tr * radii[k], tr * radii[k + 1]), 'tail%d' % k, k=tr * (0.8 if k == 0 else 0.3))
+    if t == 'hippo':
+        c = pts[4] + nrm(dirs[3]) * tl * 0.1
+        b.piece('tufo', 'crina', [(RoundCone(lerp(pts[3], pts[4], 0.6), c, tr * 0.55, tr * 0.75, flat=((1, 0, 0), 0.45)), 'tail3')], 40, far=0)
     if t == 'tuft':
         c = pts[4] + nrm(dirs[3]) * tl * 0.12
         b.piece('tufo', 'crina', [(RoundCone(lerp(pts[3], pts[4], 0.5), c, tr * 1.2, tr * 1.8), 'tail3')], 60, far=14)
@@ -444,8 +549,10 @@ def tilt_bird(b, a, P, only=None):
             if all(pr.bone in only for pr in pc['P']) or 'eye' in pc:
                 for pr in pc['P']: tp1(pr, T, Rm)
                 if 'eye' in pc: pc['eye'] = (T(pc['eye'][0]), pc['eye'][1])
+                if 'look' in pc: pc['look'] = Rm @ pc['look']
         for k in ('nose', 'eye'):
             if k in b.meta: b.meta[k] = list(T(b.meta[k]))
+        tilt_face(b, T)
         for k in only:
             if k in b.J: b.J[k] = T(b.J[k])
         return
@@ -460,10 +567,18 @@ def tilt_bird(b, a, P, only=None):
     for pc in b.pieces:
         for pr in pc['P']: tp(pr)
         if 'eye' in pc: pc['eye'] = (T(pc['eye'][0]), pc['eye'][1])
+        if 'look' in pc: pc['look'] = Rm @ pc['look']
         if 'wing' in pc: pc['wing'] = (list(T(pc['wing'][0])), pc['wing'][1])
     for k in list(b.J): b.J[k] = T(b.J[k])
     for k in ('nose', 'eye'):
         if k in b.meta: b.meta[k] = list(T(b.meta[k]))
+    tilt_face(b, T)
+
+
+def tilt_face(b, T):
+    """The mouth's points and the nostril turned with the head (D-321)."""
+    if b.meta.get('mouth'): m = b.meta['mouth']; b.meta['mouth'] = [T(m[0]), T(m[1]), m[2], None if m[3] is None else T(m[3])]
+    if b.meta.get('nostril'): b.meta['nostril'] = [list(T(b.meta['nostril'][0])), b.meta['nostril'][1]]
 
 
 def tp1(pr, T, Rm):
@@ -532,8 +647,9 @@ def bird(b, fly=False, **kw):
     bprim = [(RoundCone(pts[k], pts[k + 1], rr[k], rr[k + 1], flat=((1, 0, 0), 0.8 if kind not in ('flat',) else 1.3)), 'head') for k in range(len(pts) - 1)]
     b.piece('bico', 'bico', bprim, 40 if kind != 'toucan' else 70, far=8, h=max(0.0015, BR * 0.35))
     b.meta['nose'] = list(pts[-1]); b.j('jaw', bk0)
-    eyes(b, hc + (v3(hr * 0.42, hr * 0.12, hr * 0.74) if p['disc'] else v3(hr * 0.68, hr * 0.2, hr * 0.42)), p['eyeR'])
+    eyes(b, hc + (v3(hr * 0.42, hr * 0.12, hr * 0.74) if p['disc'] else v3(hr * 0.68, hr * 0.2, hr * 0.42)), p['eyeR'], look=(0.25, 0.05, 1.0) if p['disc'] else (0.9, 0.12, 0.38))
     b.meta['eye'] = list(hc)
+    b.meta['mouth'] = [pts[-1] + v3(0, rr[-1] * 0.2, 0), bk0 + v3(BR * 0.78, -BR * 0.15, BR * 0.25), max(BR * 0.06, 0.0006), None]  # (the gape: the beak's two halves part along it)
     if p['comb']:  # (the rooster's comb, the wattles under the beak)
         b.piece('crista', 'crista', [(Ellipsoid(hc + v3(0, hr * 1.05, hr * 0.2), (hr * 0.2, hr * 0.6 * p['comb'], hr * 0.85)), 'head'),
                                      (Ellipsoid(bk0 + v3(0, -hr * 0.6, -hr * 0.1), (hr * 0.25, hr * 0.5 * p['wattle'], hr * 0.3)), 'head')], 50, far=8)
@@ -634,8 +750,10 @@ def snake(b, R=0.05, headW=1.6, headL=0.055, **kw):
         b.add(Ellipsoid(hc + v3(sd * hw * 0.34, R * 0.4, hl * 0.12), (hw * 0.15, R * 0.13, hl * 0.2)), 'head', k=R * 0.1)       # the scale over the eye
     b.add(Ellipsoid(hc + v3(0, R * 0.32, hl * 0.05), (hw * 0.34, R * 0.2, hl * 0.48)), 'head', k=R * 0.2)                       # the flat crown
     b.j('jaw', hc); b.meta['nose'] = list(hc + v3(0, 0, hl * 0.8))
-    eyes(b, hc + v3(hw * 0.4, R * 0.24, hl * 0.18), R * 0.21)
+    eyes(b, hc + v3(hw * 0.4, R * 0.24, hl * 0.18), R * 0.21, look=(1, 0.35, 0.25))
     b.meta['eye'] = list(hc)
+    b.meta['mouth'] = [hc + v3(0, -R * 0.2, hl * 0.95), hc + v3(hw * 0.36, -R * 0.2, -hl * 0.22), R * 0.03, None]
+    b.meta['nostril'] = [list(hc + v3(hw * 0.12, R * 0.12, hl * 0.92)), float(R * 0.05)]
     for s in ('L', 'R'):
         for k in range(4): b.j('fl%s%d' % (s, k), b.J['chest']); b.j('hl%s%d' % (s, k), b.J['root'])
     b.meta['family'] = 'snake'; b.meta['p'] = dict(headL=headL * L / max(H, 1e-3))
@@ -663,8 +781,10 @@ def sprawl(b, W=0.5, tailL=1.2, headL=0.35, snout=1.0, legR=0.05, scutes=True, t
     b.meta['nose'] = list(sn)
     ec = hd + v3(hw * 0.32, H * 0.26, hl * 0.2)
     for sd in (1, -1): b.add(Sphere(ec * v3(sd, 1, 1), eyeR * 1.6), 'head', k=eyeR)   # (the eyes' bumps, high on the head)
-    eyes(b, ec + v3(eyeR * 0.3, eyeR * 0.6, 0), eyeR)
+    eyes(b, ec + v3(eyeR * 0.3, eyeR * 0.6, 0), eyeR, look=(0.8, 0.6, 0.2))
     b.meta['eye'] = list(ec)
+    b.meta['mouth'] = [sn + v3(0, -H * 0.06, hw * 0.02), hd + v3(hw * 0.36, -H * 0.09, hl * 0.12), H * 0.012, None]
+    b.meta['nostril'] = [list(sn + v3(hw * 0.07, H * 0.05, -hl * 0.02)), float(hw * 0.035)]
     if teeth:
         pr = []
         for sd in (1, -1):
@@ -711,8 +831,9 @@ def frog(b, **kw):
     b.j('jaw', hd + v3(0, -L * 0.06, L * 0.05)); b.meta['nose'] = list(hd + v3(0, 0, L * 0.28))
     ec = hd + v3(L * 0.13, L * 0.11, L * 0.12)
     for sd in (1, -1): b.add(Sphere(ec * v3(sd, 1, 1), L * 0.06), 'head', k=L * 0.04)
-    eyes(b, ec + v3(L * 0.02, L * 0.015, L * 0.01), L * 0.05)
+    eyes(b, ec + v3(L * 0.02, L * 0.015, L * 0.01), L * 0.05, look=(0.75, 0.6, 0.3))
     b.meta['eye'] = list(ec)
+    b.meta['mouth'] = [hd + v3(0, -L * 0.045, L * 0.29), hd + v3(L * 0.24, -L * 0.04, L * 0.02), L * 0.006, None]
     for sd, s in ((1, 'L'), (-1, 'R')):
         sh = b.j('fl%s0' % s, (sd * L * 0.16, L * 0.26, L * 0.15)); el = b.j('fl%s1' % s, (sd * L * 0.2, L * 0.13, L * 0.2)); wr = b.j('fl%s2' % s, (sd * L * 0.22, L * 0.02, L * 0.22)); b.j('fl%s3' % s, (sd * L * 0.25, 0.0, L * 0.3))
         b.add(RoundCone(sh, el, L * 0.05, L * 0.035), 'fl%s0' % s, k=L * 0.03); b.add(RoundCone(el, wr, L * 0.035, L * 0.03), 'fl%s1' % s, k=L * 0.02)
@@ -742,8 +863,10 @@ def seal(b, R=0.25, headR=0.5, tusks=False, whisk=0.0, **kw):
     b.add(Ellipsoid(mz, (hr * (0.62 + whisk * 0.4), hr * (0.5 + whisk * 0.25), hr * 0.5)), 'head', k=hr * 0.25)
     b.j('jaw', mz + v3(0, -hr * 0.3, -hr * 0.2)); b.meta['nose'] = list(mz + v3(0, 0, hr * 0.45))
     for sd in (1, -1): b.cut(Sphere(mz + v3(sd * hr * 0.18, hr * 0.25, hr * 0.42), hr * 0.07), k=hr * 0.03)
-    eyes(b, hd + v3(hr * 0.55, hr * 0.38, hr * 0.62), hr * 0.15)
+    eyes(b, hd + v3(hr * 0.55, hr * 0.38, hr * 0.62), hr * 0.15, look=(0.7, 0.25, 0.65))
     b.meta['eye'] = list(hd)
+    b.meta['mouth'] = [mz + v3(0, -hr * 0.3, hr * 0.42), mz + v3(hr * 0.42, -hr * 0.3, hr * 0.05), hr * 0.025, mz + v3(0, hr * 0.1, hr * 0.48)]
+    b.meta['nostril'] = [list(mz + v3(hr * 0.18, hr * 0.25, hr * 0.42)), float(hr * 0.07)]
     if tusks:
         b.piece('presas', 'marfim', [(RoundCone(mz + v3(sd * hr * 0.25, -hr * 0.3, hr * 0.1), mz + v3(sd * hr * 0.3, -hr * 1.6, hr * 0.25), hr * 0.12, hr * 0.05), 'head') for sd in (1, -1)], 60, far=12)
     for sd, s in ((1, 'L'), (-1, 'R')):

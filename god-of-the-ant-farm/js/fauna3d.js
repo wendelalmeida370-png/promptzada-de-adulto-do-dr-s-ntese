@@ -22,8 +22,9 @@
   const MAXR = 64; // (rows: People3D's MAXA — the beasts drawn)
   const MAXS = 16, MAXD = 4, ROWS = MAXR + MAXS + MAXD; // (and after them, rows kept for the sea's beasts — Things3D, D-267 — and for the dragons — G.Dragon3D, D-270)
   let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null, TU = null;
-  const NP = 22; // texels of coat a row (18 of the coat of the kind, 4 of the marks of the beast: D-283)
+  const NP = 29; // texels of coat a row (18 of the coat of the kind, 4 of the marks of the beast: D-283, 5 of the face of its mesh and 2 more of the coat: D-321)
   const NC = 18; // (the coat's own)
+  const FT = NC + 4, NF = 5, CT2 = FT + NF; // (the face's texels — the eye's centre and axis, the mouth, the nostril — and after them the coat's two more: the ring round the eye, the eye's white)
   F3.MAXR = MAXR; F3.MAXS = MAXS; F3.MAXD = MAXD; F3.ROWS = ROWS; F3.rim = (G.Body3D && G.Body3D.rim) || { value: 0.2 }; F3.frame = 0;
   const MESH = {}; // name → { mesh, geo, rows, ra, n, tris }
   const FORM = {}; // mesh name → { J: Float32Array(NB*3) the bind joints, box, meta }
@@ -119,7 +120,35 @@ vec2 f3cell(vec3 x, out vec3 id) { vec3 i = floor(x), f = fract(x); float d1 = 8
 float f3aa(float d) { float w = fwidth(d) * 0.9 + 1e-4; return clamp(0.5 - d / w, 0.0, 1.0); }
 float f3gl = 0.0; // (the eye's glint, a light of its own)
 vec3 f3em = vec3(0.0); float f3bl = 0.0; // (a light of its own — the dragon's eyes, its mouth breathing —; the sun through a wing)
+float f3sp = 0.0, f3shn = 24.0; // (the sheen of the sun on what is wet or hard: the eye, the nose's leather, the horn, the hoof, the wet coat — D-324)
+float f3bh = 0.0, f3bs = 0.0;   // (the skin's relief: its height here, in metres, and how much of it shows — the fur's strands, the wrinkles, the scales: D-324)
+// the eye of a face told (D-321): painted in its own frame — its axis out of the head, across it toward the front, up — so the
+// iris sits in the middle of the lids' opening whichever way the eye was seated; the iris with its fibres and its dark rim, the
+// pupil (round, the cats' slit, the grazers' bar), the white where the kind shows it (28), the wet sheen and a catchlight
+vec3 f3eye2(vec4 F0, vec4 F1) {
+  vec4 ir = f3T(9), X = f3T(13), MK = f3T(18), SC = f3T(28), LD = f3T(27); float sd = vZoneI == 1 ? 1.0 : -1.0;
+  vec3 c = vec3(F0.x * sd, F0.y, F0.z), n = normalize(vec3(F1.x * sd, F1.y, F1.z));
+  vec3 p = normalize(vBind - c); vec3 u = vec3(0.0, 0.0, 1.0) - n * n.z; u = dot(u, u) > 1e-6 ? normalize(u) : normalize(vec3(0.0, 1.0, 0.0) - n * n.y);
+  vec3 v = normalize(cross(n, u)); v *= sign(v.y + 1e-6);
+  float a = dot(p, n), pu = dot(p, u), pv = dot(p, v), rr = length(vec2(pu, pv));
+  if (MK.w > 1.5) { f3gl = 0.0; return mix(ir.rgb * 0.18, vec3(0.04, 0.035, 0.03), 0.7); } // (dead: the eye dull, no light in it)
+  if (MK.w > 0.5) return mix(f3T(0).rgb * 0.8, LD.rgb * 0.6, smoothstep(0.09, 0.0, abs(pv))); // (shut: the lids met, a dark line where they meet)
+  float ri = 0.56 + 0.26 * clamp(X.w, 0.0, 1.0); // (the iris: the hunters' fills the opening, the grazers' leaves its corners dark)
+  float an = atan(pv, pu); float fib = f3n(vec3(an * 7.0, rr * 10.0, sd * 3.1)) * 0.55 + f3n(vec3(an * 19.0, rr * 3.0, 5.7)) * 0.45;
+  vec3 ic = ir.rgb * (0.7 + 0.6 * fib);
+  ic = mix(ic * 1.3, ic, smoothstep(0.08, 0.32, rr));                 // (paler round the pupil)
+  ic = mix(ic, ir.rgb * 0.3, smoothstep(ri * 0.74, ri * 0.98, rr));  // (the dark rim of the iris)
+  float pr = ir.w < 0.5 ? rr / 0.25 : ir.w < 1.5 ? length(vec2(pu / 0.075, pv / 0.44)) : length(vec2(pu / 0.38, pv / 0.11));
+  float pa = fwidth(pr) + 0.02; vec3 col = mix(ic, vec3(0.012, 0.01, 0.009), 1.0 - smoothstep(1.0 - pa, 1.0 + pa, pr));
+  float aw = fwidth(rr) + 0.004; vec3 wh = mix(ir.rgb * 0.22 + vec3(0.02), SC.rgb, SC.w);
+  col = mix(col, wh, smoothstep(ri - aw, ri + aw, rr));
+  col *= mix(1.0, 0.55, smoothstep(0.35, 0.75, rr)) * smoothstep(-0.1, 0.35, a); // (the lids' shadow on the ball's rim)
+  float gl = length(vec2(pu + 0.2 * sign(u.z + 1e-4), pv - 0.28)); f3gl = smoothstep(0.12, 0.05, gl) * step(0.3, a);
+  f3sp = 1.1; f3shn = 140.0;
+  return mix(col, vec3(1.0), f3gl * 0.85);
+}
 vec3 f3eye() {
+  vec4 F0 = f3T(22); if (F0.w > 0.0) return f3eye2(F0, f3T(23));
   vec4 ir = f3T(9), X = f3T(13), MK = f3T(18); vec3 d = normalize(vBindN); float sd = vZoneI == 1 ? 1.0 : -1.0;
   if (MK.w > 1.5) { f3gl = 0.0; return mix(ir.rgb * 0.18, vec3(0.04, 0.035, 0.03), 0.7); } // (dead: the eye dull, no light in it)
   if (MK.w > 0.5) ir.w = 3.0; // (shut: asleep, a blink)
@@ -136,6 +165,7 @@ vec3 f3eye() {
   float hl = dot(d, normalize(g + vec3(-0.25 * sd, 0.45, 0.2))); f3gl = smoothstep(0.965, 0.98, hl);
   return mix(c, vec3(1.0), f3gl * 0.8);
 }
+float f3ph = 0.0; // (the pattern's own relief: the scutes' seams, the wrinkles, the feathers' edges — D-324)
 vec3 f3pattern(vec3 c, vec3 p, float kind, vec3 dk, float sc, float con, float seed) {
   vec3 q = p * sc + seed;
   if (kind < 0.5) return c;
@@ -154,13 +184,13 @@ vec3 f3pattern(vec3 c, vec3 p, float kind, vec3 dk, float sc, float con, float s
     vec3 id; vec2 r = f3cell(q, id); float ring = abs(r.x - 0.26 - 0.05 * f3n(q * 6.0)) - 0.07; float mid = r.x - 0.16;
     vec3 c2 = mix(c, c * 0.82, f3aa(mid) * 0.6); return mix(c2, dk, f3aa(ring) * con * step(0.25, f3h(id + 3.1))); }
   if (kind < 5.5) { // spots
-    vec3 id; vec2 r = f3cell(q, id); return mix(c, dk, f3aa(r.x - 0.22 - 0.06 * f3h(id)) * con); }
+    vec3 id; vec2 r = f3cell(q, id); f3ph = 0.15 * smoothstep(0.3, 0.0, r.x); return mix(c, dk, f3aa(r.x - 0.22 - 0.06 * f3h(id)) * con); }
   if (kind < 6.5) { // great patches (the cattle, the piebald)
     float n = f3n(q * 0.9) * 0.65 + f3n(q * 2.3) * 0.35; return mix(c, dk, f3aa(0.52 - n) * con); }
   if (kind < 7.5) { // the tabby: thin stripes, darker along the back
     float w = q.z * 1.4 + f3n(q * 1.6) * 0.7; float s = abs(fract(w) - 0.5) - 0.17; return mix(c, dk, f3aa(s) * con * 0.85); }
   if (kind < 8.5) { // scutes: rows of plates, darker in their joins
-    vec3 g = fract(q * vec3(1.3, 1.0, 1.6)) - 0.5; float e = max(abs(g.x), abs(g.z)); return mix(c, dk, smoothstep(0.38, 0.5, e) * con); }
+    vec3 g = fract(q * vec3(1.3, 1.0, 1.6)) - 0.5; float e = max(abs(g.x), abs(g.z)); f3ph = -smoothstep(0.36, 0.5, e) + 0.3 * f3n(q * 4.0); return mix(c, dk, smoothstep(0.38, 0.5, e) * con); }
   if (kind < 9.5) { // the snake's saddles: dark blotches on the back, edged pale
     float n = sin(q.z * 2.6 + f3n(q * 2.0) * 2.0) * 0.5 + 0.5; float up = smoothstep(-0.35, 0.45, normalize(vBindN).y + (f3n(q * 3.0) - 0.5) * 0.4);
     float m = smoothstep(0.55, 0.62, n) * up; float e = (smoothstep(0.45, 0.55, n) - smoothstep(0.55, 0.62, n)) * up;
@@ -174,7 +204,7 @@ vec3 f3pattern(vec3 c, vec3 p, float kind, vec3 dk, float sc, float con, float s
   if (kind < 13.5) { // the forequarters dark and shaggy (the bison): from a line across the body, forward (sc: where, in the beast's heights)
     float e = smoothstep(sc - 0.08, sc + 0.08, p.z + f3n(p * 9.0) * 0.08); return mix(c, dk, e * con); }
   if (kind < 14.5) { // a wrinkled hide: fine creases, more on the legs
-    float n = f3n(q * vec3(2.0, 9.0, 2.0)) * 0.6 + f3n(q * 7.0) * 0.4; float k = 1.0 - smoothstep(0.0, 0.03, fwidth(q.y) * 9.0); return c * (1.0 - con * 0.22 * smoothstep(0.45, 0.75, n) * k); }
+    float n = f3n(q * vec3(2.0, 9.0, 2.0)) * 0.6 + f3n(q * 7.0) * 0.4; float k = 1.0 - smoothstep(0.0, 0.03, fwidth(q.y) * 9.0); f3ph = -0.6 * con * smoothstep(0.4, 0.8, n); return c * (1.0 - con * 0.22 * smoothstep(0.45, 0.75, n) * k); }
   if (kind < 15.5) { // the dragon's scales: each its own shade, lit at its middle and dark at its rim
     vec3 id; vec2 r = f3cell(q * vec3(1.0, 1.3, 0.8), id); float e = r.y - r.x;
     vec3 s = c * (0.9 + 0.2 * f3h(id)) * mix(1.12, 0.8, smoothstep(0.05, 0.6, r.x));
@@ -229,12 +259,37 @@ vec3 f3shell() {
   vec3 pl = Be.rgb * (0.92 + 0.08 * f3n(vec3(u * 9.0, v * 9.0, 1.0))); pl = mix(pl, Be.rgb * 0.7, f3aa(min(abs(u), abs(fract(v * 2.5) - 0.5) * 0.4) - 0.01));
   return mix(c, pl, smoothstep(0.3, 0.7, vReg.z));
 }
+// the face told on the skin (D-321; the mesh's texels 22-26, both sides by the left's): the rim of the lids and the bare skin
+// round the eye (27: its colour, how much), the mouth's line where the lips part — the plane through its corner and its front,
+// across the muzzle, only where the skin crosses it —, the cleft from the nose down to the lip (the cats', the dogs'), the
+// nostrils' holes dark. Lines as wide as told, never thinner than a pixel and a half
+vec3 f3face(vec3 c, float zb) {
+  vec4 F0 = f3T(22), F2 = f3T(24), F3 = f3T(25), F4 = f3T(26), LD = f3T(27);
+  vec3 p = vec3(abs(vBind.x), vBind.yz); vec3 N3 = normalize(vBindN);
+  float d = length(p - F0.xyz) / F0.w;
+  float rim = smoothstep(1.3, 1.12, d) * smoothstep(0.85, 1.0, d), halo = smoothstep(1.85, 1.25, d) * 0.3; // (the lids' edge, and the skin round the eye)
+  c = mix(c, LD.rgb, max(rim, halo) * LD.w * (1.0 - zb));
+  if (F3.x > 0.0) {
+    vec2 C = F2.xy, Fp = F2.zw, e = Fp - C; float L = max(length(e), 1e-5); e /= L; vec2 nn = vec2(-e.y, e.x);
+    vec2 q = p.yz - C; float t = dot(q, e) / L, h = dot(q, nn); float w = F3.x + fwidth(h) * 0.9;
+    float ln = (1.0 - smoothstep(w * 0.45, w, abs(h))) * smoothstep(-0.12, 0.05, t) * (1.0 - smoothstep(1.06, 1.2, t)) * (1.0 - smoothstep(F3.y, F3.y + w * 3.0, p.x));
+    ln *= 1.0 - smoothstep(0.55, 0.85, abs(dot(N3, vec3(0.0, nn))));
+    c = mix(c, c * 0.16, ln * 0.92);
+    if (F3.z != 0.0 || F3.w != 0.0) { // (the cleft: in the middle, from under the nose to the lips' front, on the face's front)
+      vec2 Np = F3.zw, e2 = Fp - Np; float L2 = max(length(e2), 1e-5); vec2 q2 = p.yz - Np; float t2 = dot(q2, e2) / (L2 * L2), o2 = abs(dot(q2, vec2(-e2.y, e2.x))) / L2;
+      float cl = (1.0 - smoothstep(F3.x * 0.4, F3.x * 0.9 + fwidth(p.x), p.x)) * smoothstep(-0.05, 0.05, t2) * (1.0 - smoothstep(0.95, 1.05, t2)) * (1.0 - smoothstep(0.25, 0.45, o2)) * smoothstep(0.0, 0.3, N3.z);
+      c = mix(c, c * 0.22, cl * 0.85); }
+  }
+  if (F4.w > 0.0) { float dn = length(p - F4.xyz) / F4.w; c = mix(c, c * 0.1, smoothstep(1.2, 0.75, dn)); }
+  return c;
+}
 vec3 f3coat() {
   vec4 C = f3T(0), Be = f3T(1), Dk = f3T(2), So = f3T(3), Mz = f3T(4), Mn = f3T(5), X = f3T(13), Ey = f3T(16);
   if (C.w > 15.5) return f3sea(C);
   vec3 p = vBind / max(Ey.y, 0.05);
   vec3 c = C.rgb;
-  c = f3pattern(c, p, C.w, Dk.rgb, Dk.w, X.x, X.y);
+  float iv = f3T(21).z; // (this beast's own: its pattern not its kin's, its coat a shade its own — D-324)
+  c = f3pattern(c, p, C.w, Dk.rgb, Dk.w, X.x, X.y + iv * 31.0);
   vec4 Bk = f3T(11); c = mix(c, Bk.rgb, vReg2.z * Bk.w);                                  // (the back's line)
   vec4 Th = f3T(12); c = mix(c, Th.rgb, smoothstep(0.15, 0.85, vReg2.w) * Th.w);           // (the throat and breast)
   c = mix(c, Be.rgb, smoothstep(0.12, 0.8, vReg.x) * Be.w);                               // (the belly, lighter)
@@ -245,13 +300,25 @@ vec3 f3coat() {
   vec4 Mk = f3T(14); c = mix(c, Mk.rgb, smoothstep(0.3, 0.9, vReg.w) * (1.0 - vReg.z) * Mk.w); // (the face)
   c = mix(c, Mz.rgb, smoothstep(0.1, 0.7, vReg.z) * Mz.w);                                // (the muzzle)
   vec4 Hn = f3T(6); c = mix(c, vec3(0.05, 0.04, 0.035), smoothstep(0.86, 0.97, vReg.z) * Hn.w); // (the nose's leather)
+  f3sp = 0.6 * smoothstep(0.86, 0.97, vReg.z) * Hn.w; f3shn = 60.0;                       // (wet)
   vec4 Er = f3T(10); c = mix(c, Er.rgb, smoothstep(0.55, 0.95, vReg2.y) * Er.w);          // (the ear tips)
   c = mix(c, Mn.rgb, smoothstep(Ey.w, min(Ey.w + 0.22, 1.0), vReg2.x) * Mn.w);          // (the tail's tip — or all of it)
   vec3 ib = f3T(17).rgb; float inner = smoothstep(0.15, 0.4, vReg2.y) * smoothstep(0.2, 0.6, dot(normalize(vBindN), vec3(0.0, 0.0, 1.0)));
   c = mix(c, ib, inner * 0.65 * step(0.01, vReg2.y));                                   // (the inside of the ear)
   // (the fur's grain: fine strands along the body, gone before they could shimmer)
   float fk = 1.0 - smoothstep(0.004, 0.02, fwidth(vBind.z) * 40.0);
-  c *= 1.0 + (f3n(vBind * vec3(60.0, 160.0, 25.0) / max(Ey.y, 0.2)) - 0.5) * 0.16 * X.z * fk;
+  float H = max(Ey.y, 0.2), g1 = f3n(vBind * vec3(60.0, 160.0, 25.0) / H);
+  c *= 1.0 + (g1 - 0.5) * 0.16 * X.z * fk;
+  if (f3T(22).w > 0.0) { // (a face told — D-321, D-324: the coat a shade its own in broad soft clouds; the face; the fur's relief — its tufts and
+    // its strands, the hide's wrinkles, the scales' seams —, each gone before it could shimmer)
+    vec3 nB = normalize(vBindN); float fur = clamp(X.z, 0.0, 1.0);
+    c *= (0.89 + 0.22 * (f3n(p * 1.7 + iv * 13.0) * 0.65 + f3n(p * 4.3 + iv * 5.0) * 0.35)) * (0.97 + 0.06 * iv);
+    c *= 1.0 - (0.08 + 0.1 * fur) * smoothstep(0.1, 0.95, nB.y) * (1.0 - smoothstep(0.2, 0.8, vReg.y)); // (the back darker than the flank: the coat's own shade over the form)
+    c = f3face(c, 0.0);
+    float g2 = f3n(vBind * vec3(16.0, 34.0, 9.0) / H + iv * 7.0), k2 = 1.0 - smoothstep(0.25, 0.6, fwidth(vBind.y) * 34.0 / H);
+    c *= 1.0 + (g2 - 0.5) * 0.12 * fur * k2; // (the tufts, a shade each)
+    f3bh = (g1 * 0.0009 * fk + g2 * 0.0032 * k2) * H * X.z + f3ph * H * 0.006 * k2; f3bs = 1.0;
+  }
   return c;
 }
 // the marks of what happened to this beast (D-283; the texels after the coat: 18 the blood on the muzzle, what is eaten of a
@@ -283,17 +350,33 @@ vec3 f3marks(vec3 c) {
   if (M3.y > 0.01) c = mix(c, vec3(0.86, 0.9, 0.95), M3.y * 0.35 * smoothstep(0.3, 0.9, normalize(vBindN).y));
   return c;
 }
+// (the relief on the shading normal — the surface's own gradient of the height, as three's bump map does it; vp the view position,
+// fd the face's side)
+vec3 f3bump(vec3 N, vec3 vp, float fd) {
+  vec3 dpx = dFdx(-vp), dpy = dFdy(-vp); float dhx = dFdx(f3bh), dhy = dFdy(f3bh);
+  if (f3bs <= 0.0) return N;
+  vec3 r1 = cross(dpy, N), r2 = cross(N, dpx); float det = dot(dpx, r1) * fd;
+  vec3 g = sign(det) * (dhx * r1 + dhy * r2) * f3bs; return normalize(abs(det) * N - g);
+}
 vec3 f3paint() {
   int z = vZoneI;
   if (z == 1 || z == 2) return f3eye();
   if (z == 0) return f3coat();
-  if (z == 3) { vec3 h = f3T(6).rgb; return h * (0.85 + 0.25 * f3n(vBind * 90.0)); }               // horn
-  if (z == 4 || z == 14) return f3T(7).rgb * (0.9 + 0.15 * f3n(vBind * 120.0));                       // hoof, claws, nails
-  if (z == 6) { vec4 m = f3T(5); float k = 1.0 - smoothstep(0.0, 0.03, fwidth(vBind.x) * 60.0); return m.rgb * (0.85 + 0.3 * k * f3n(vBind * vec3(240.0, 40.0, 240.0))); } // mane, tuft
-  if (z == 7) return vec3(0.9, 0.86, 0.76);                                                            // ivory
-  if (z == 8) return f3T(8).rgb;                                                                       // beak, bare legs
+  // (a face told — D-323: a horn, an antler, a tusk carries how far out along it each point is, reg2.x: the horn's rings and its
+  // tip darker, the antler's tines paler at their ends, the tusk yellowed where it leaves the lip)
+  bool told = f3T(22).w > 0.0; float al = vReg2.x;
+  if (z == 3) { vec3 h = f3T(6).rgb; float n = f3n(vBind * 90.0); vec3 c = h * (0.85 + 0.25 * n); f3sp = 0.18; f3shn = 30.0;    // horn
+    if (told) { float rg = smoothstep(0.3, 0.48, abs(fract(al * 13.0 + n * 0.25) - 0.5)) * (1.0 - smoothstep(0.5, 0.9, al));
+      c *= 1.0 - 0.22 * rg; c = mix(c, c * 0.4, smoothstep(0.55, 1.0, al) * 0.8); c = mix(c * 0.78, c, smoothstep(0.0, 0.1, al)); f3bh = -rg * 0.0012; f3bs = 1.0; }
+    return c; }
+  if (z == 4 || z == 14) { f3sp = 0.1; f3shn = 20.0; return f3T(7).rgb * (0.9 + 0.15 * f3n(vBind * 120.0)); }                       // hoof, claws, nails
+  if (z == 6) { vec4 m = f3T(5); float k = 1.0 - smoothstep(0.0, 0.03, fwidth(vBind.x) * 60.0); float st = f3n(vBind * vec3(240.0, 40.0, 240.0));
+    if (told) { f3bh = st * 0.0015 * k; f3bs = 1.0; }
+    return m.rgb * (0.85 + 0.3 * k * st); } // mane, tuft
+  if (z == 7) { f3sp = 0.3; f3shn = 50.0; vec3 iv = vec3(0.9, 0.86, 0.76); return told ? mix(vec3(0.6, 0.52, 0.38), iv * (0.95 + 0.08 * f3n(vBind * 60.0)), smoothstep(0.0, 0.35, al)) : iv; } // ivory
+  if (z == 8) { vec3 c = f3T(8).rgb; f3sp = 0.2; f3shn = 36.0; return told && f3T(25).x > 0.0 && vZoneI == 8 ? f3face(c, 1.0) : c; } // beak (its gape), bare legs
   if (z == 9) { f3em = f3T(8).rgb * f3T(17).w; return f3T(17).rgb; }                                // comb, wattle; the dragon's mouth (its glow)
-  if (z == 10) return f3T(6).rgb * (0.8 + 0.3 * f3n(vBind * 70.0));                                    // antler
+  if (z == 10) { vec3 c = f3T(6).rgb * (0.8 + 0.3 * f3n(vBind * 70.0)); f3sp = 0.08; return told ? mix(c, vec3(0.93, 0.89, 0.8), smoothstep(0.82, 1.0, al) * 0.8) : c; } // antler
   if (z == 11 || z == 12) { vec4 w = f3T(15); vec3 c = z == 11 ? w.rgb : f3T(5).rgb; vec3 q = vBind / max(f3T(16).y, 0.05);
     if (z == 11) { c = mix(c, f3T(2).rgb, smoothstep(0.62, 0.92, vReg2.x) * f3T(10).w); f3bl = f3T(8).w; } // (the wing's tips, darker; a membrane the sun shows through)
     float bar = w.w > 0.5 ? step(0.5, fract(q.z * 6.0 + q.x * 2.0)) * 0.18 : 0.0;
@@ -319,13 +402,18 @@ vec3 f3paint() {
         .replace('#include <begin_vertex>', 'vec3 transformed = f3P;');
       sh.fragmentShader = pb + 'uniform highp sampler2D uFauna; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = vZoneI == 1 || vZoneI == 2 ? f3paint() : f3marks(f3paint()); diffuseColor.rgb *= mix(1.0, vAO, 0.7);')
+        .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  normal = f3bump(normal, vViewPosition, faceDirection);')
         .replace('#include <opaque_fragment>', `outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim * (1.0 + 2.5 * f3wet) + vec3(0.92, 0.94, 1.0) * f3gl * 0.4 + f3em;
           #if NUM_DIR_LIGHTS > 0
           if (f3bl > 0.0) { float bl = max(0.0, dot(-normalize(vViewPosition), directionalLights[0].direction)); outgoingLight += diffuseColor.rgb * vec3(1.0, 0.62, 0.42) * directionalLights[0].color * bl * bl * f3bl; }
+          { float sp = f3sp + f3wet * 0.45; if (sp > 0.0) { // (the sheen of the sun, as much as the sun reaches here: the shade and the shadow take it — D-324)
+            vec3 Hh = normalize(directionalLights[0].direction + normalize(vViewPosition)); float sh = f3wet > 0.0 && f3sp < 0.05 ? 30.0 : f3shn;
+            float lit = clamp(3.14159 * dot(reflectedLight.directDiffuse, vec3(0.333)) / max(dot(diffuseColor.rgb * directionalLights[0].color, vec3(0.333)), 1e-4), 0.0, 1.0);
+            outgoingLight += directionalLights[0].color * pow(max(dot(normal, Hh), 0.0), sh) * sp * (sh + 8.0) / 60.0 * lit; } }
           #endif
           #include <opaque_fragment>`);
     };
-    mat.customProgramCacheKey = () => 'fauna3d-v5';
+    mat.customProgramCacheKey = () => 'fauna3d-v6';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = sh => {
       sh.uniforms.uFauna = F3.U;
@@ -351,9 +439,9 @@ vec3 f3paint() {
         const m = new THREE.Mesh(o.g, mat); m.frustumCulled = false; m.castShadow = true; m.receiveShadow = false; m.customDepthMaterial = depth; m.matrixAutoUpdate = false; m.visible = false;
         scene.add(m); MESH[name] = { mesh: m, geo: o.g, rows: o.rows, ra: o.ra, n: 0, tris: o.tris, u: o.u };
       }
-      for (const name in D.forms) { const f = D.forms[name]; FORM[name] = { J: new Float32Array(f.bind), box: f.box, meta: f.meta }; }
+      for (const name in D.forms) { const f = D.forms[name]; FORM[name] = { J: new Float32Array(f.bind), box: f.box, meta: f.meta, ft: faceOf(f.meta) }; }
       // (the support points of each bone's skin, for the gestures that set the body on the ground — FaunaAnim.Gest, D-280)
-      const FG = G.FaunaAnim.Gest; if (FG && FG.hullOf) for (const name in FORM) if (MESH[name] && MESH[name].u) FORM[name].hull = FG.hullOf(MESH[name].u);
+      const FG = G.FaunaAnim.Gest; if (FG && FG.hullOf) for (const name in FORM) if (MESH[name] && MESH[name].u) FORM[name].hull = F3.hullOf(name, n => MESH[n] && MESH[n].u);
       F3.dataErr = selfCheck(); for (const k in MESH) MESH[k].u = null;
       F3.ready = true; return true;
     } catch (e) { F3.failed = String((e && e.message) || e); F3.ready = false; return false; }
@@ -369,7 +457,13 @@ vec3 f3paint() {
       if (sp.cls === 'water') { const sw = FORM[e.mesh].meta.swim; if (!sw || !(sw.R > 0)) out.push(`bicho ${kind}: do mar sem a forma de nadador (D-267)`);
         else if (Math.abs(FORM[e.mesh].J[G.FaunaAnim.B.root * 3 + 1] - sw.yc) > sw.R * 0.35) out.push(`bicho ${kind}: o quadril do nadador longe do meio do corpo`);
         if (!G.FaunaAnim[FORM[e.mesh].meta.fam]) out.push(`bicho ${kind}: sem o nado da família ${FORM[e.mesh].meta.fam} (FaunaAnim)`); }
-      if (!G.FaunaAnim.paint(kind)) out.push(`bicho ${kind}: sem pelagem (FaunaAnim PAINT)`); }
+      if (!G.FaunaAnim.paint(kind)) out.push(`bicho ${kind}: sem pelagem (FaunaAnim PAINT)`);
+      // (every beast of the land, the water's edge and the air: its face told — the eye seated on the skin, L-1040, D-321 — and its
+      // eyes in each of its three levels, the far one too — L-1041, D-322)
+      if (sp.cls !== 'water') for (const mn of sp.cls === 'air' ? [e.mesh, e.fly] : [e.mesh]) {
+        if (!(FORM[mn].ft[3] > 0)) out.push(`bicho ${kind}: sem o rosto na malha ${mn} (o olho na pele, D-321)`);
+        for (const n of [mn, mn + '_1', mn + '_2']) { const m = D.meshes[n]; if (!m) { out.push(`bicho ${kind}: sem a malha ${n} (os três níveis, D-322)`); continue; }
+          const zn = MESH[n] && MESH[n].u ? MESH[n].u.zone : unpack(m).zone; if (!zn.includes(D.zones.olhoL) || !zn.includes(D.zones.olhoR)) out.push(`bicho ${kind}: a malha ${n} sem os olhos (L-1041)`); } } }
     // (the dragon of the god's power — not a kind of Animals.DEF —: its mesh on the ground and its mesh in the air, its pose)
     { const e = D.species.dragon; if (!e || !MESH[e.mesh] || !FORM[e.mesh] || !e.fly || !MESH[e.fly] || !FORM[e.fly]) out.push('dragão: sem a malha do chão e a do voo');
       else if (!G.FaunaAnim.dragon || !G.FaunaAnim.dragonCoat) out.push('dragão: sem a pose (FaunaAnim.dragon)');
@@ -379,12 +473,31 @@ vec3 f3paint() {
       for (let i = 0; i < m.n; i++) { if (bw[i * 4] + bw[i * 4 + 1] + bw[i * 4 + 2] + bw[i * 4 + 3] !== 255) { out.push(`malha ${name}: ponto ${i} com pesos que não somam 1`); break; }
         if (bi[i * 4] >= NB || bi[i * 4 + 1] >= NB || bi[i * 4 + 2] >= NB || bi[i * 4 + 3] >= NB) { out.push(`malha ${name}: ponto ${i} num osso que não existe`); break; }
         if (!ZN.has(zn[i])) { out.push(`malha ${name}: ponto ${i} numa zona desconhecida (${zn[i]})`); break; } }
-      if (!/_1$/.test(name) && !FORM[name]) out.push(`malha ${name}: sem forma (as juntas)`); }
+      if (!/_[12]$/.test(name) && !FORM[name]) out.push(`malha ${name}: sem forma (as juntas)`); } // (the lighter levels — _1, _2: D-322 — use the form of their mesh)
     for (const name in FORM) { const f = FORM[name]; if (f.J.length !== NB * 3 || !f.J.every(Number.isFinite)) { out.push(`forma ${name}: juntas inválidas`); continue; }
       if (f.meta.fam === 'quad') { const H = f.meta.H; for (const b of ['flL3', 'flR3', 'hlL3', 'hlR3']) { const y = f.J[G.FaunaAnim.B[b] * 3 + 1]; if (!(y >= -0.01 && y < H * 0.2)) out.push(`forma ${name}: o pé ${b} longe do chão (${y.toFixed(3)} m)`); } } }
     return out;
   }
   F3.dataErr = [];
+  // (the face of a mesh, as the shader reads it — D-321: the left eye's centre and radius, its axis and the lids' opening, the
+  // mouth's corner and front, its line's width, the corner's breadth and the cleft's top, the nostril; zeros: a face not told —
+  // the dragon's, the sea's — painted as it was)
+  function faceOf(m) {
+    const f = m && m.face, t = new Float32Array(NF * 4); if (!f || !f.eye) return t;
+    const put = (k, a) => { if (a) for (let i = 0; i < 4; i++) t[k * 4 + i] = a[i] || 0; };
+    put(0, f.eye); put(1, f.ax); put(2, f.mouth); put(3, f.mw); put(4, f.nos); return t;
+  }
+  F3.faceOf = name => (FORM[name] ? FORM[name].ft : null); // (for the tests)
+  // (a form's support points, for the gestures — FaunaAnim.Gest.hullOf, D-280: the ground under a lying body from the near mesh, the
+  // skin that is drawn; the points the others reach for — the throat, the nape, the back, the rump — each bone's extremes, from the
+  // middle level where there are three, made with the triangles the near one had before D-322: on the finer near level the gnu's
+  // jowl, under the ear, a point shared by the head, the jaw and the neck, was the lowest of its neck — 9 cm under the throat and
+  // 11 cm aside —, and the crocodile could not reach it, L-1047. unpacked(name): the unpacked mesh of that name)
+  F3.hullOf = (name, unpacked) => {
+    const FG = G.FaunaAnim.Gest, M = D || G.FAUNAMESH; const h = FG.hullOf(unpacked(name));
+    if (M && M.meshes[name + '_2'] && M.meshes[name + '_1']) { const k = FG.hullOf(unpacked(name + '_1')); h.p = k.p; h.has = k.has; }
+    return h;
+  };
   // (a kind's mesh, its form and its scale — or null: the old pieces draw it)
   F3.has = kind => !!(F3.ready && D.species[kind] && FORM[D.species[kind].mesh] && MESH[D.species[kind].mesh]);
   F3.form = kind => { const s = D && D.species[kind]; return s ? FORM[s.mesh] : null; };
@@ -420,8 +533,11 @@ vec3 f3paint() {
     const p = o + PB * 4; const C = coat;
     for (let k = 0; k < NC; k++) { const c = C[k]; const j = p + k * 4; buf[j] = c[0]; buf[j + 1] = c[1]; buf[j + 2] = c[2]; buf[j + 3] = c[3]; }
     for (let k = 0; k < 16; k++) buf[p + NC * 4 + k] = mk ? mk[k] : 0;
+    buf.set(f.ft, p + FT * 4);
+    for (let k = 0; k < 2; k++) { const c = C[NC + k], j = p + (CT2 + k) * 4; buf[j] = c ? c[0] : 0; buf[j + 1] = c ? c[1] : 0; buf[j + 2] = c ? c[2] : 0; buf[j + 3] = c ? c[3] : 0; }
     const e0 = R[0].elements; AT[row] = [X, Y, Z, F3.sizeOf(kind), e0[12], e0[13], e0[14]];
-    const name = F3.lod && lod > 0 && MESH[mn + '_1'] ? mn + '_1' : mn;
+    // (the level: 0 near, 1 the middle — the far of a mesh with two —, 2 far: D-322)
+    const name = F3.lod && lod >= 2 && MESH[mn + '_2'] ? mn + '_2' : F3.lod && lod > 0 && MESH[mn + '_1'] ? mn + '_1' : mn;
     const M = MESH[name]; if (M && M.n < ROWS) M.rows[M.n++] = row;
     if (row + 1 > F3.rows) F3.rows = row + 1;
   };

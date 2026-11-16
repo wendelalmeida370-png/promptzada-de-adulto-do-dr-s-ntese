@@ -59,7 +59,7 @@ sp('rhino', 'quad', 1.7, 2.9, D=0.62, Wr=0.86, pillar=True, legR=0.09, canR=0.06
    headA=48, headL=0.5, headH=0.55, headW=0.5, muzR=0.56, earL=0.1, earW=0.04, earA=(30, 20), tail='thin', tailL=0.3, tailR=0.015, eyeR=0.01,
    horns='rhino', folds=1, earTip=0.45)
 sp('hippo', 'quad', 1.45, 3.0, D=0.7, Wr=1.0, belly=0.3, pillar=True, legR=0.11, canR=0.085, foot='pillar', neckA=4, neckL=0.16, neckR0=0.8, neckR1=0.74,
-   headA=16, headL=0.6, headH=0.46, headW=0.62, muzR=0.62, muzFlat=1.45, muzPos=0.86, earL=0.045, earW=0.025, earA=(30, 10), tail='flat', tailL=0.18, tailR=0.04, eyeR=0.016,
+   headA=16, headL=0.6, headH=0.46, headW=0.62, muzR=0.62, muzFlat=1.45, muzPos=0.86, earL=0.06, earW=0.03, earA=(30, 10), tail='hippo', tailL=0.22, tailR=0.034, eyeR=0.016,
    eyesHigh=1, earTip=1.0, face='hippo')
 sp('buffalo', 'quad', 1.55, 2.45, D=0.6, Wr=0.86, legR=0.075, canR=0.04, foot='cloven', neckA=10, neckL=0.3, neckR0=0.66, neckR1=0.48, withers=0.32,
    headA=56, headL=0.36, headH=0.44, headW=0.46, muzR=0.52, muzFlat=1.15, earL=0.11, earW=0.05, earA=(100, 10), tail='tuft', tailL=0.5, tailR=0.022, eyeR=0.016,
@@ -224,6 +224,7 @@ def build(kind, fly=False):
     for k, f in (('antler', antlers), ('horns', horns), ('mane', mane), ('dewlap', dewlap), ('beard', beard), ('trunk', trunk), ('tusks', tusks),
                  ('ossicones', ossicones), ('folds', folds), ('bell', bell), ('incisors', teeth)):
         if k in extras: f(b, extras[k])
+    FF.seat_face(b)  # (last: the eyes find the skin the whole head has — its ornaments, its cuts — D-320)
     return b
 
 
@@ -235,6 +236,7 @@ def meta_of(b):
     if 'wing3' in b.meta: m['wing3'] = b.meta['wing3']; m['chin'] = b.meta['chin']  # (the dragon: the axis its fingers bend about, the left wing's; the chin)
     if 'swim' in b.meta: m['swim'] = {k: (round(v, 4) if isinstance(v, float) else [round(x, 4) for x in v] if isinstance(v, list) else v) for k, v in b.meta['swim'].items()}  # (a swimmer: its girth, where its back, blowhole, fin and tail are, how it beats — D-267)
     if 'rump' in b.meta: m.update(rump=b.meta['rump'], foot=b.meta['foot'], tailR=b.meta.get('tailR', 0.0))  # (a four-legged's: where its feet are placed by — D-273)
+    if 'face' in b.meta: m['face'] = {k: [round(float(x), 5) for x in v] for k, v in b.meta['face'].items()}  # (the eye, the mouth, the nostril for the shader — D-321)
     return m
 
 
@@ -371,10 +373,12 @@ def mane(b, kind):
         prims = [(K(Ellipsoid(rc, (hW * 0.95, hL * 0.3, hH * 1.0), orient(rc - d, rc + d, up)), 0), 'head'),
                  (K(ell_between(hd + up * hH * 0.25 - d * hL * 0.15, n0 + v3(0, r0 * 0.75, -r0 * 0.5), r0 * 1.3, r0 * 1.25), hW * 0.3), 'neck1'),
                  (K(ell_between(hd - up * hH * 0.45, n0 + v3(0, -r0 * 1.05, r0 * 0.55), r0 * 1.15, r0 * 1.05), hW * 0.3), 'neck0')]
-        for k in range(9):  # (round the frame, from under one cheek over the brow to under the other)
-            ang = -np.pi * 0.86 + k * np.pi * 1.72 / 8; dv = nrm(X * np.sin(ang) + up * np.cos(ang))
-            q0 = rc + dv * hH * 0.7 - d * hL * 0.05; q1 = rc + dv * hH * (1.22 if abs(ang) < 2.4 else 1.4) - d * hL * 0.18
-            prims.append((K(RoundCone(q0, q1, hH * 0.3, hH * 0.06), hH * 0.12), 'head'))
+        for ring, (nl, ri, ro, wi, wo, back) in enumerate(((13, 0.72, 1.22, 0.27, 0.11, 0.18), (10, 0.62, 1.02, 0.24, 0.1, 0.06))):
+            for k in range(nl):  # (round the frame, from under one cheek over the brow to under the other: two layers of locks, rounded, each its length — D-325)
+                ang = -np.pi * 0.88 + (k + 0.5 * ring) * np.pi * 1.76 / (nl - 1 + 0.5 * ring); dv = nrm(X * np.sin(ang) + up * np.cos(ang))
+                ln = ro + 0.1 * np.sin(k * 2.3 + ring * 1.7) + (0.16 if abs(ang) > 2.3 else 0.0)
+                l0 = rc + dv * hH * ri - d * hL * 0.04; l1 = rc + dv * hH * ln - d * hL * (0.12 + back)
+                prims.append((K(RoundCone(l0, l1, hH * wi, hH * wo), hH * 0.12), 'head'))
         for sd in (1, -1):  # (the long locks down the chest)
             q0 = n0 + v3(sd * r0 * 0.45, -r0 * 1.2, r0 * 0.6); prims.append((K(RoundCone(q0, q0 + v3(sd * r0 * 0.1, -r0 * 0.75, r0 * 0.15), r0 * 0.45, r0 * 0.12), r0 * 0.2), 'neck0'))
         b.piece('juba', 'crina', prims, 320, far=66)
@@ -434,12 +438,14 @@ def trunk(b, kind):
         b.add(RoundCone(p3, tip, r0 * 0.34, r0 * 0.3), 'trunk2', k=r0 * 0.1)
         b.add(Ellipsoid(tip + v3(0, -r0 * 0.05, r0 * 0.12), (r0 * 0.34, r0 * 0.22, r0 * 0.3)), 'trunk2', k=r0 * 0.1)   # (the tip's lip)
         b.meta['nose'] = list(tip); b.meta['trunk'] = True
+        b.meta['nostril'] = [list(tip + v3(r0 * 0.12, -r0 * 0.02, r0 * 0.36)), float(r0 * 0.09)]  # (the trunk's two holes at its tip)
     else:
         t0 = nose - d * hL * 0.05; r0 = hH * 0.17
         p1 = t0 + d * hL * 0.18 - up * hL * 0.05; p2 = p1 + d * hL * 0.12 - up * hL * 0.12
         b.j('trunk0', t0); b.j('trunk1', p1); b.j('trunk2', p2)
         b.add(RoundCone(t0, p1, r0, r0 * 0.75), 'trunk0', k=r0 * 0.5); b.add(RoundCone(p1, p2, r0 * 0.75, r0 * 0.6), 'trunk1', k=r0 * 0.2)
         b.meta['nose'] = list(p2); b.meta['trunk'] = True
+        b.meta['nostril'] = [list(p2 + d * r0 * 0.55 + v3(r0 * 0.25, 0, 0)), float(r0 * 0.16)]
 
 
 def tusks(b, kind):

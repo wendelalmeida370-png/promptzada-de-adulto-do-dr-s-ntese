@@ -671,7 +671,9 @@
   // strength; sock (the legs), mz (the muzzle), nose (its leather), mane (the mane, the tail's tip — a bird's tail), tip (how
   // much of the tail), horn, hoof (a bird's legs), beak, iris, pupil (0 round 1 slit 2 bar), ear (the ear tips; a bird's wing
   // tips: its amount), back (the back's line), th (throat and breast), mask (the face; a bird's head), wing, bars, band (the
-  // flank's dark band), grain (the fur), fwd (the eyes forward), inner (the inside of the ear; the comb and the wattle))
+  // flank's dark band), grain (the fur), fwd (the eyes forward; with a face told, how much of the eye the iris fills), inner (the
+  // inside of the ear; the comb and the wattle); ring, ringA (the lids' rim and the bare skin round the eye — dark by default, a
+  // bird's coloured ring), white, whiteA (the white of the eye where the kind shows it: the horse's, the cow's corners) — D-321)
   const PAINT = {
     deer: { pupil: 2, mz: '#3a2c22', mzA: 0.5, back: '#7a4a28', backA: 0.35, th: '#efe4d0', thA: 0.6, sockA: 0.25, ear: '#4a3424', earA: 0.4, belA: 0.8, horn: '#d8c8a8' },
     reindeer: { pupil: 2, th: '#f0ece4', thA: 0.85, mz: '#3a3028', mzA: 0.5, sock: '#5a4a3a', sockA: 0.35, horn: '#c8b898' },
@@ -686,22 +688,22 @@
     gazelle: { belA: 1, band: 0.9, mz: '#3a2a20', mzA: 0.3, th: '#f2e6d0', thA: 0.5, horn: '#3a3028', mane: '#2a2018', tipA: 1, pupil: 2 },
     gnu: { mask: '#3a3a40', maskA: 0.8, pat: 2, con: 0.25, dk: '#3a3a40', sc: 2.5, horn: '#2a2622', tipA: 1, pupil: 2 },
     giraffe: { col: '#ecd09a', pat: 1, dk: '#8a5226', sc: 3.4, con: 1, bel: '#f0e0c0', belA: 0.5, sock: '#f0e4cc', sockA: 0.7, mane: '#5a3a1e', tipA: 1, mz: '#d8c0a0', mzA: 0.4 },
-    elephant: { col: '#8a8884', bel: '#7a7874', grain: 0.25, pat: 14, sc: 3, con: 0.6, inner: '#9a7a7a', iris: '#2a1a10' },
+    elephant: { col: '#8a8884', bel: '#7a7874', grain: 0.25, pat: 14, sc: 3, con: 0.6, inner: '#8e8482', iris: '#2a1a10' },
     rhino: { col: '#8a8680', bel: '#7e7a74', grain: 0.25, pat: 14, sc: 3, con: 0.5, horn: '#a8a090', iris: '#2a1a10' },
-    hippo: { belA: 0.9, mz: '#c8a0a8', mzA: 0.4, grain: 0.2, pat: 14, sc: 2.5, con: 0.3, inner: '#c8a0a8' },
+    hippo: { col: '#6e5f5c', bel: '#b8928a', belA: 0.9, back: '#4a4140', backA: 0.45, mz: '#a8807c', mzA: 0.5, grain: 0.2, pat: 14, sc: 2.5, con: 0.45, inner: '#c8908c', ring: '#9a6a62', ringA: 0.65, ear: '#8a6460', earA: 0.6 },
     buffalo: { horn: '#2a2420', grain: 0.8, mz: '#2a2420', mzA: 0.3 },
     camel: { mane: '#a8804a', mz: '#a8885a', mzA: 0.3 },
-    vaca: { pupil: 2, pat: 6, sc: 1.7, con: 1, mz: '#d8a8a0', mzA: 0.6, nose: 0.5, horn: '#d8ccb0', belA: 0.4, mane: '#3a2a20', tipA: 1, grain: 0.4, inner: '#e8b0a8' },
+    vaca: { whiteA: 0.22, pupil: 2, pat: 6, sc: 1.7, con: 1, mz: '#d8a8a0', mzA: 0.6, nose: 0.5, horn: '#d8ccb0', belA: 0.4, mane: '#3a2a20', tipA: 1, grain: 0.4, inner: '#e8b0a8' },
     ovelha: { pat: 10, sc: 6, mask: '#4a403a', maskA: 1, sock: '#3a322c', sockA: 0.95, ear: '#4a403a', earA: 0.9, mz: '#3a322c', mzA: 0.6, grain: 0, pupil: 2, iris: '#a88a3a' },
     cabra: { horn: '#6a5a48', pupil: 2, iris: '#c8a040', mane: '#5a4632', back: '#6a5038', backA: 0.4 },
     porco: { mz: '#e89888', mzA: 0.6, nose: 0.2, grain: 0.3, inner: '#e89080', belA: 0.5 },
-    cavalo: { pupil: 2, mz: '#3a2c26', mzA: 0.65, sockA: 0.55, sock: '#2a1e16', belA: 0.2, mane: '#2a1a10', grain: 0.6 },
+    cavalo: { whiteA: 0.12, pupil: 2, mz: '#3a2c26', mzA: 0.65, sockA: 0.55, sock: '#2a1e16', belA: 0.2, mane: '#2a1a10', grain: 0.6 },
     fox: { belA: 1, th: '#f4ece0', thA: 1, sock: '#2a1e18', sockA: 0.9, ear: '#2a1e18', earA: 0.9, mane: '#f4ece0', tipA: 1, mz: '#f4ece0', mzA: 0.3, nose: 1, iris: '#c8962e', fwd: 0.7, pupil: 1 },
     arcticfox: { nose: 1, iris: '#c8962e', fwd: 0.7 },
     fennec: { th: '#f8ecd4', thA: 0.8, mane: '#4a3020', tipA: 0.8, inner: '#e8b8a0', nose: 1, iris: '#3a2a1a', fwd: 0.7 },
     wolf: { col: '#7e7a72', bel: '#c8c2b6', iris: '#c8962e', fwd: 0.7, back: '#4a4644', backA: 0.5, th: '#e8e2d6', thA: 0.7, mz: '#d8d2c6', mzA: 0.45, nose: 1, ear: '#3a3634', earA: 0.5, belA: 0.75, mask: '#d8d2c8', maskA: 0.2, mane: '#3a3634', tipA: 0.6 },
     hyena: { pat: 5, sc: 4, mane: '#3a2a1e', tipA: 1, mz: '#2a2018', mzA: 0.6, sock: '#8a7448', sockA: 0.3, nose: 1, ear: '#3a2a1e', earA: 0.4, fwd: 0.6 },
-    bear: { mz: '#a07a58', mzA: 0.5, nose: 1, grain: 1.4, iris: '#2a1a10', fwd: 0.6 },
+    bear: { mz: '#a07a58', mzA: 0.5, nose: 1, grain: 1.4, iris: '#5a3818', fwd: 0.6, ring: '#1a120c', ringA: 0.6 },
     polarbear: { nose: 1, mz: '#e8e4d8', mzA: 0.3, iris: '#2a1a10', fwd: 0.6 },
     lion: { belA: 0.7, mane: '#8a5a2a', tipA: 1, mz: '#f0e0c0', mzA: 0.4, th: '#f0dcb8', thA: 0.5, nose: 0.6, ear: '#3a2a1e', earA: 0.6, iris: '#c8962e', fwd: 0.75 },
     tiger: { pat: 3, sc: 4.8, con: 1, belA: 1, th: '#f6ecda', thA: 1, mz: '#f6ecda', mzA: 0.7, ear: '#1e1a18', earA: 0.6, iris: '#d8a83a', fwd: 0.75, nose: 0.5, mane: '#1e1a18', tipA: 0.6 },
@@ -714,7 +716,7 @@
     hare: { ear: '#1e1a18', earA: 1, mane: '#ffffff', tipA: 1, iris: '#a87a3a', fwd: 0.1 },
     beaver: { col: '#6a4a30', bel: '#7a5a3e', mane: '#2a2420', tipA: 1, tailFrom: 0.1, beak: '#d8783a', nose: 1, iris: '#1a1410' },
     otter: { col: '#5a4030', bel: '#a08a6a', th: '#c8b090', thA: 0.7, nose: 1, mz: '#a08a6a', mzA: 0.4, iris: '#1a1410' },
-    monkey: { mz: '#dcaa8c', mzA: 1, mask: '#c8946e', maskA: 0.25, ear: '#d8a888', earA: 0.5, iris: '#5a3a1e', fwd: 0.9 },
+    monkey: { whiteA: 0.1, mz: '#dcaa8c', mzA: 1, mask: '#c8946e', maskA: 0.25, ear: '#d8a888', earA: 0.5, iris: '#5a3a1e', fwd: 0.9 },
     sloth: { col: '#8a7a5a', bel: '#9a8a6a', mask: '#e8dcc0', maskA: 0.7, hoof: '#3a3028', iris: '#2a1a10', fwd: 0.8 },
     frog: { col: '#4a8a3a', bel: '#d8d8a0', belA: 1, pat: 5, dk: '#2a4a1e', sc: 9, con: 0.8, iris: '#c8a03a', pupil: 2, grain: 0 },
     lizard: { pat: 5, dk: '#5a4a2a', sc: 10, con: 0.6, grain: 0, iris: '#a87a2a', belA: 0.9 },
@@ -724,7 +726,7 @@
     anaconda: { col: '#3e4c2a', dk: '#1e2414', bel: '#c8a43a', belA: 1, pat: 5, sc: 3, con: 0.9, grain: 0, iris: '#8a7a3a', pupil: 1 },
     seal: { col: '#7a7a78', bel: '#a8a8a2', pat: 5, dk: '#5a5a58', sc: 6, con: 0.4, nose: 0.8, iris: '#1a1410', fwd: 0.5, grain: 0.3 },
     walrus: { col: '#8a6a58', bel: '#a07a68', mz: '#a8887a', mzA: 0.6, grain: 0.3, pat: 14, sc: 2, con: 0.4, iris: '#1a1410' },
-    penguin: { col: '#1c1c22', bel: '#f2f2ee', belA: 1, mask: '#1c1c22', maskA: 1, th: '#f0c048', thA: 0.5, beak: '#e8a83a', hoof: '#2a2a2a', grain: 0, wing: '#1c1c22', mane: '#1c1c22' },
+    penguin: { ring: '#eeeeea', ringA: 0.85, iris: '#5a2e22', col: '#1c1c22', bel: '#f2f2ee', belA: 1, mask: '#1c1c22', maskA: 1, th: '#f0c048', thA: 0.5, beak: '#e8a83a', hoof: '#2a2a2a', grain: 0, wing: '#1c1c22', mane: '#1c1c22' },
     gull: { bel: '#f4f4f0', earA: 1, mane: '#f4f4f0', hoof: '#e8b8a0', iris: '#d8c83a', grain: 0 },
     eagle: { mask: '#f2efe6', maskA: 1, mane: '#f2efe6', hoof: '#f2c23a', iris: '#d8b83a', earA: 0.6, grain: 0, fwd: 0.5, pat: 11, sc: 6, con: 0.25 },
     vulture: { mask: '#d8a0a0', maskA: 1, th: '#e8e0d8', thA: 0.5, hoof: '#8a8a8a', mane: '#2e2622', earA: 0.5, grain: 0 },
@@ -779,6 +781,8 @@
       [...lin(iris), P.pupil || 0], [...lin(P.ear || mixHex(base, '#000000', 0.4)), P.earA || 0], [...lin(P.back || mixHex(base, '#000000', 0.2)), P.backA === undefined ? 0.15 : P.backA],
       [...lin(P.th || belly), P.thA || 0], [P.con === undefined ? 0.9 : P.con, (kind.charCodeAt(0) * 7 + kind.length * 13) % 40, P.grain === undefined ? 1 : P.grain, P.fwd || 0.22],
       [...lin(mask), P.maskA || 0], [...lin(wing), P.bars || 0], [young ? 1 : 0, size, P.band || 0, P.tailFrom === undefined ? 0.72 : P.tailFrom], [...lin(P.inner || '#c8968a'), 0],
+      [...lin(P.ring || mixHex(sp.cls === 'air' ? mask : base, '#000000', sp.cls === 'air' ? 0.35 : 0.7)), P.ringA === undefined ? (sp.cls === 'air' ? 0.45 : 0.75) : P.ringA],
+      [...lin(P.white || '#e4dccc'), P.whiteA || 0],
     ];
     coatCache.set(key, C); return C;
   };

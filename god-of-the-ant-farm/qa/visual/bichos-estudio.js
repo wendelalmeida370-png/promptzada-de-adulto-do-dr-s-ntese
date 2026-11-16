@@ -52,6 +52,7 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
     G.Modes.enter(v); until(() => G.Modes.state === 'INC', 300); f(6); S.time = env.HOUR / 24; // (the world's clock is a fraction of the day: the hour 11 written as it was fell off the end of the day, every photo in one dusk light)
     document.querySelectorAll('#inc-hud, #hud, #inc-root, #inc-label, #inc-compass, #inc-news, .toast').forEach(e => e.style.visibility = 'hidden');
     G.Cam3D.OPT.follow = false;
+    if (env.NOPERSON) { const p = G.Possess && G.Possess.body ? G.Possess.body() : v; p.x = best[0] + 0.35; p.y = best[1] + 1.4; p.tx = p.x; p.ty = p.y; } // (no one in the way: the body beside the beast on its right, out of the close frames and behind none of them)
     const DEF = G.Animals.DEF;
     const kinds = env.KINDS ? env.KINDS.split(',') : Object.keys(DEF).filter(k => DEF[k].cls !== 'water');
     window.__spot = best; window.__kinds = kinds;
@@ -97,10 +98,21 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
         const ang = o.view === 'side' ? Math.PI / 2 : o.view === 'front' ? 0 : o.view === 'back' ? Math.PI : o.view === 'top' ? 0.6 : 0.75;
         const cam = G.Realm.camera(); const hy = Math.max(0.5, size * 0.42);
         const up = o.view === 'top' ? D * 0.9 : hy * 0.55;
-        cam.position.set(X + Math.cos(yaw + ang) * D, Y + hy + up, Z - Math.sin(yaw + ang) * D * (o.view === 'side' ? 1 : 1)); cam.lookAt(X, Y + hy * (o.view === 'top' ? 0.4 : 0.85), Z); cam.fov = 40; cam.updateProjectionMatrix();
+        const fc = o.face ? faceAt(a) : null; // (FACE: the head close, framed by its own length — the eyes, the nostrils, the ears)
+        if (fc) { const Df = fc[3] * 3.2 * (o.d || 1); cam.position.set(fc[0] + Math.cos(ang) * Df, fc[1] + (o.view === 'top' ? Df * 0.8 : Df * 0.12), fc[2] - Math.sin(ang) * Df); cam.lookAt(fc[0], fc[1], fc[2]); cam.fov = 40; cam.near = 0.02; cam.updateProjectionMatrix(); }
+        else { cam.position.set(X + Math.cos(yaw + ang) * D, Y + hy + up, Z - Math.sin(yaw + ang) * D * (o.view === 'side' ? 1 : 1)); cam.lookAt(X, Y + hy * (o.view === 'top' ? 0.4 : 0.85), Z); cam.fov = 40; cam.updateProjectionMatrix(); }
         G.Realm.renderer().render(G.Realm.scene(), cam);
         const i = G.Realm.renderer().info.render; return { calls: i.calls, tris: i.triangles };
-      }, { k: K, view: VIEWS[vi], d: +process.env.D || 1, step: vi === 0 });
+        // (the middle of the head as posed: the poll and the nose of the form carried by the head's frame the pose left; and its length)
+        function faceAt(a) {
+          const s = G.People3D.beastVis && G.People3D.beastVis(a.id); const F3 = G.Fauna3D; const form = s && s.kf ? s.kf : F3.form(a.kind); if (!s || !s.kb || !form) return null;
+          const B = G.FaunaAnim.B, J = form.J, b = B.head, e = s.kb, o = 2 * 16, sc = s.ksc || F3.scaleOf(a.kind); const nz = form.meta.nose, ey = form.meta.eye;
+          const at = p => { const x = p[0] - J[b * 3], y = p[1] - J[b * 3 + 1], z = p[2] - J[b * 3 + 2]; return [e[o] * x + e[o + 4] * y + e[o + 8] * z + e[o + 12], e[o + 1] * x + e[o + 5] * y + e[o + 9] * z + e[o + 13], e[o + 2] * x + e[o + 6] * y + e[o + 10] * z + e[o + 14]]; };
+          const P = at([J[b * 3], J[b * 3 + 1], J[b * 3 + 2]]), N = at(nz), E = at([0, ey[1], ey[2]]);
+          const L = Math.max(0.05, Math.hypot(N[0] - P[0], N[1] - P[1], N[2] - P[2])) * Math.max(0.6, sc);
+          return [(P[0] + N[0] + E[0] * 2) / 4, (P[1] + N[1] + E[1] * 2) / 4, (P[2] + N[2] + E[2] * 2) / 4, L];
+        }
+      }, { k: K, view: VIEWS[vi], d: +process.env.D || 1, step: vi === 0, face: !!process.env.FACE });
       const tag = (NF > 1 ? ' ' + fr : '') + (VIEWS.length > 1 ? ' ' + VIEWS[vi] : '');
       const file = OUT.replace(/\.png$/, '') + '-' + kind + tag.replace(/ /g, '-') + '.png';
       await page.screenshot({ path: file, timeout: 240000 }); cells.push([kind + tag, file]); stats.push(Object.assign({ kind }, r));

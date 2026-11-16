@@ -46,7 +46,7 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')); 
     const drawn = new Set(); let frames = 0; const t0 = performance.now();
     const hold = dt => { for (const L of live) { const a = L.a; if (!S.animals.has(a.id)) continue; L.ang += dt * L.sp / 1.2; a.x = L.x + Math.cos(L.ang) * (L.sp ? 0.6 : 0); a.y = L.y + Math.sin(L.ang) * (L.sp ? 0.6 : 0); a.tx = a.x; a.ty = a.y; a.state = L.fly ? 'fly' : 'idle'; a.t = 1e6; a.z = L.fly ? 12 : 0; a.hunger = 0; a.target = 0; a.angry = 0; a.flee = 0; } };
     const look = () => {
-      for (const m of F3.meshes()) if (m.n > 0) drawn.add(m.name.replace(/_1$/, '').replace(/_voo$/, ''));
+      for (const m of F3.meshes()) if (m.n > 0) drawn.add(m.name.replace(/_[12]$/, '').replace(/_voo$/, '')); // (any level of the mesh: near, the middle, far — D-322)
       for (const e of P3.check()) fail('verificador: ' + e);
     };
     // (the camera turns round the body, a full turn every 36 frames: every beast of the ring comes into the eye's field)
@@ -81,7 +81,7 @@ const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')); 
         a.x = L.x + Math.cos(L.ang) * (L.sp ? 0.8 : 0); a.y = L.y + Math.sin(L.ang) * (L.sp ? 0.8 : 0); a.tx = a.x; a.ty = a.y; a.t = 1e6; a.hunger = 0; a.target = 0; a.state = 'idle'; a.moving = !!L.sp;
         if (a.kind === 'dolphin' && fr % 45 === 1) a.leap = 1; if (a.kind === 'whale' && fr % 60 === 2) a.spout = 1.6; }
         if (hunter && prey) { const h = hunter.a; h.state = 'chase'; h.target = prey.a.id; prey.a.x = h.x + 0.9; prey.a.y = h.y; prey.a.hp = 1e6; } };
-      const lookSea = () => { for (const m of F3.meshes()) if (m.n > 0) seen.add(m.name.replace(/_1$/, ''));
+      const lookSea = () => { for (const m of F3.meshes()) if (m.n > 0) seen.add(m.name.replace(/_[12]$/, ''));
         for (let r = 0; r < F3.rows; r++) { const q = F3.at(r); if (q) maxUp = Math.max(maxUp, q[5] - q[1]); }
         for (const e of P3.check()) fail('o mar, verificador: ' + e); for (const e of T3.check()) fail('o mar, as coisas: ' + e); };
       const runSea = n => { for (let k = 0; k < n; k++) { holdSea(0.033); G.Cam3D.yaw = (G.Cam3D.yaw || 0) + Math.PI * 2 / 36; G.Main.frameFor(33); if (k % 3 === 0) lookSea(); } };

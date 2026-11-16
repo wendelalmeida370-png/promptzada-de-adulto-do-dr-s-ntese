@@ -15,7 +15,7 @@ FA.ready3(THREE);
 const forms = {}, meshes = {};
 for (const k in D.forms) forms[k] = { J: new Float32Array(D.forms[k].bind), box: D.forms[k].box, meta: D.forms[k].meta };
 const meshOf = name => meshes[name] || (meshes[name] = G.Fauna3D.unpack(D.meshes[name]));
-for (const k in forms) if (D.meshes[k]) forms[k].hull = FG.hullOf(meshOf(k));
+for (const k in forms) if (D.meshes[k]) forms[k].hull = G.Fauna3D.hullOf(k, meshOf); // (the game's: the ground from the near level, the contacts from the middle — L-1047)
 const famOf = kind => forms[D.species[kind].mesh].meta.fam;
 // the bent skin: each point by its bones' frames, moved back from the bind joints
 function bend(mesh, J, R) {
