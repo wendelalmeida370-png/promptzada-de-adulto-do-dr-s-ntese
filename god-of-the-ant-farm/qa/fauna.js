@@ -17,8 +17,13 @@
 //   f6 a manada que chega de longe (o acontecimento do mundo, G.Events.herd) só é de uma espécie que a terra ainda comporta, e
 //      nunca maior que o lugar que há (L-764): a manada vinha fosse qual fosse o teto — cinco girafas numa terra de quatro, e oito
 //      girafas para o teto quatro, por anos, no f2. A mão da prova chama a manada doze vezes num mundo novo;
+//   f7 quem chega de longe chega longe das cidades (L-1034): numa metrópole pronta, os lugares que a terra dá a um leão que
+//      vem de fora ficam a doze casas da beira de toda cidade quando a terra os tem, e senão no mais longe delas que ela tem —
+//      nunca no chão do povo (o anel e cinco casas além); antes, doze do meio dela, e as cidades crescidas têm raio de
+//      vinte: os recém-chegados caíam dentro delas e a turma armada os matava;
+//   f8 o sexo que falta chega também com a terra cheia (L-1035): três ursas num chão de três ursos — vem um urso de fora;
 // e o verificador limpo (S0–S2), sem erro de módulo.   [ONLY=f5,f6] node qa/fauna.js (só os casos pedidos: f1, f2 — com o f3 e
-// o f4 —, f5, f6)
+// o f4 —, f5, f6, f7, f8)
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true });
 const fails = [];
@@ -67,4 +72,26 @@ if (on('f6')) { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4 });
     for (const s of A.ids) { const n = (c1[s] || 0) - (c0[s] || 0); if (n <= 0) continue; const cap = A.capacity(s); came.push(`${s} ${c0[s] || 0}+${n}/${cap}`); if (c1[s] > cap) over.push(`${s}: ${c0[s] || 0} e mais ${n}, para o teto ${cap}`); }
   }
   ok('f6 a manada que chega de longe cabe na terra', came.length > 0 && !over.length, `${came.length} manada(s) em 12 chamadas: ${came.join(', ') || 'nenhuma'}${over.length ? ' — ACIMA DO TETO: ' + over.join('; ') : ''}`); }
+// f7
+if (on('f7')) { M.pronto('metropole'); const A = G.Animals; const lion = A.DEF.lion; const towns = [...G.S.settlements.values()];
+  const edge = p => Math.min(...towns.map(s => G.dist(p[0], p[1], s.cx, s.cy) - (s.radius || 8)));
+  let nNew = 0, inNew = 0, nOld = 0, inOld = 0;
+  for (let k = 0; k < 200; k++) { const p = A.wildSpot(12, lion, true); if (p) { nNew++; if (edge(p) < 12 - 1e-6) inNew++; } const q = A.wildSpot(12, lion); if (q) { nOld++; if (edge(q) < 4) inOld++; } }
+  // (and in a land the towns filled, the farthest from them its ground has — never inside the people's ground, the ring and
+  // A.EDGE_MIN past it)
+  const ed = []; for (let k = 0; k < 200; k++) { const p = A.wildSpot(12, lion, true); if (p) ed.push(edge(p)); } ed.sort((a, b) => a - b);
+  const low = ed.filter(e => e < A.EDGE_MIN - 1e-6).length;
+  ok('f7 quem chega de longe chega longe das cidades', ed.length > 0 && low === 0, `${towns.length} cidades (raios ${towns.map(s => Math.round(s.radius || 8)).join(', ')}): pela beira, ${ed.length} lugares em 200 pedidos, a beira mais perto de cada um de ${ed.length ? ed[0].toFixed(1) : '—'} a ${ed.length ? ed[ed.length - 1].toFixed(1) : '—'} casas (mediana ${ed.length ? ed[ed.length >> 1].toFixed(1) : '—'}), ${low} a menos de ${A.EDGE_MIN}; pelo meio (a regra de antes), ${inOld} de ${nOld} dentro do anel ou a menos de 4 casas dele`); }
+// f8
+if (on('f8')) { M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4 }); M.viver(1); const A = G.Animals, Me = G.Mente;
+  const bears = () => [...G.S.animals.values()].filter(a => a.kind === 'bear' && !a.dead);
+  const cap = A.capacity('bear'); let made = 0;
+  for (const a of bears()) A.remove(a);
+  const spot = A.wildSpot(14, A.DEF.bear, true);
+  if (!spot || cap < 2) ok('f8 o sexo que falta chega com a terra cheia', false, `sem chão de urso (teto ${cap})`);
+  else {
+    G.inSim++; try { for (let k = 0; k < cap; k++) { const a = A.spawn('bear', spot[0] + k * 0.8, spot[1], { grown: 1 }); Me.m(a).sx = 0; made++; } } finally { G.inSim--; }
+    let came = 0, tries = 0; for (; tries < 40 && !came; tries++) { G.inSim++; try { A.immigrateNow(); } finally { G.inSim--; } came = bears().filter(a => a.grown >= 1 && Me.sex(a) === 1).length; }
+    ok('f8 o sexo que falta chega com a terra cheia', came > 0, `${made} ursas num chão de ${cap} ursos: ${came ? `um urso chegou depois de ${tries} rodada(s) de chegadas` : `NENHUM urso em ${tries} rodadas`} (agora ${bears().length} ursos)`);
+  } }
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'TUDO PASSOU'); process.exit(fails.length ? 1 : 0);

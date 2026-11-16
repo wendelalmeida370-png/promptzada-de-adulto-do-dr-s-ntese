@@ -240,7 +240,7 @@
     const ks = A.ids.filter(k => { const d = A.DEF[k]; return (d.diet === 'herb' || d.diet === 'browse') && d.cls === 'land' && d.herd[1] >= 3 && room(k) >= 3; });
     if (!ks.length) return;
     const k = G.pick(ks); const d = A.DEF[k];
-    const sp = A.wildSpot(14, d); if (!sp) return;
+    const sp = A.wildSpot(14, d, true); if (!sp) return; // (past the towns' rings: a herd from far lands, L-1034)
     const n = Math.min(room(k), G.ri(Math.max(3, d.herd[0]), d.herd[1] + 1));
     A.spawnGroup(k, sp[0], sp[1], n);
     G.Village.log(`Uma manada de ${A.plural(d, n).replace(/^\d+ /, '')} chegou ${G.Biome && G.S.biome ? G.Biome.toAt(sp[0], sp[1]) : 'à ilha'}.`, 'deer', sp[0], sp[1]);

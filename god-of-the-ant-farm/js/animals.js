@@ -1814,6 +1814,7 @@
     return c;
   };
   // species that vanished from a habitat that still exists come back, slowly, from beyond the map
+  A.immigrateNow = () => immigrate(); // (the door of the proofs: a round of the arrivals now — qa/fauna.js f8)
   function immigrate() {
     const S = G.S; const count = A.counts();
     // the kinds that dwindled away (as before), one of them, now and then; and — the brain's: a kind left with grown ones of one
@@ -1822,12 +1823,14 @@
     const ks = A.ids.filter(k => A.capacity(k) >= 2 && (count[k] || 0) < Math.max(2, A.capacity(k) * 0.3));
     if (ks.length) arrive(G.pick(ks), count, false);
     const one = G.Mente ? G.Mente.oneSex() : null;
-    const lone = one ? A.ids.filter(k => one.has(k) && (count[k] || 0) >= Math.max(2, A.capacity(k) * 0.3) && (count[k] || 0) < A.capacity(k)) : [];
+    // (and at the land's measure too: three she-bears on a land of three bore nothing for twenty years and died out of old age
+    // together — the one of the other sex comes over the measure, and the births wait for a place as they do, L-1035)
+    const lone = one ? A.ids.filter(k => one.has(k) && (count[k] || 0) >= Math.max(2, A.capacity(k) * 0.3) && (count[k] || 0) <= A.capacity(k)) : [];
     if (lone.length) arrive(G.pick(lone), count, true);
   }
   function arrive(k, count, mate) {
     const sp = SP[k];
-    const spot = A.wildSpot(12, sp); if (!spot) return;
+    const spot = A.wildSpot(12, sp, true); if (!spot) return;
     // (a herd from far away no bigger than the room the land has left for its kind: ten buffalo came to a land that holds five,
     // L-1008)
     const n = mate ? 1 : Math.max(1, Math.min(G.ri(sp.herd[0], sp.herd[1]), A.capacity(k) - (count[k] || 0)));
@@ -1856,19 +1859,32 @@
   }
 
   // a spot of the right habitat far from people
-  A.wildSpot = function (minD, sp) {
-    const S = G.S; distances();
+  // (edge: the newcomers from far lands — measured from each town's ring, not its middle. From the middle, the newcomers came
+  // down inside the grown towns, where the armed went out against them: by the fortieth year the rings were twelve to
+  // twenty-three tiles, and 288 of 307 spots for a lion fell inside one or by it, L-1034. minD past every ring when the land has
+  // it; in a land the towns have filled, the place of its ground farthest from them — never inside the people's own ground, the
+  // ring and EDGE_MIN past it, where the armed go out against a beast)
+  const EDGE_MIN = 5;
+  A.wildSpot = function (minD, sp, edge) {
+    const S = G.S; distances(); let best = null, bd = EDGE_MIN;
     for (let k = 0; k < 120; k++) {
       const x = G.rr(3, N - 3), y = G.rr(3, N - 3); const i = W.idx(x, y);
       if (sp) { if (!A.habitat(sp, i)) continue; if (sp.cls !== 'water' && sp.cls !== 'air' && S.type[i] <= T.SEA) continue; }
       else if (S.type[i] < T.SAND || S.type[i] === T.RIVER || W.blocked(i)) continue;
       if (W.blocked(i)) continue;
+      if (edge) {
+        let e = Infinity; for (const s of S.settlements.values()) { const d = G.dist(x, y, s.cx, s.cy) - (s.radius || 8); if (d < e) e = d; }
+        if (e >= minD) return [x, y];
+        if (e >= bd) { bd = e; best = [x, y]; }
+        continue;
+      }
       let ok = true;
       for (const s of S.settlements.values()) if (G.dist(x, y, s.cx, s.cy) < minD) { ok = false; break; }
       if (ok) return [x, y];
     }
-    return null;
+    return best;
   };
+  A.EDGE_MIN = EDGE_MIN;
   A.spawnPack = function (x, y, n, summoned) {
     let leader = null;
     // (each wolf where a wolf stands — its own ground, no house nor wall —, else at the pack's spot, itself where one stands: the
