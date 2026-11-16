@@ -935,5 +935,14 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
     const b0 = fe.findIndex(l => /^def build\(kind, fly=False\):/.test(l)), b1 = b0 < 0 ? -1 : fe.findIndex((l, k) => k > b0 && /^\s+return b\s*$/.test(l));
     const sf = b0 < 0 ? -1 : fe.findIndex((l, k) => k > b0 && /^\s+FF\.seat_face\(b\)/.test(l)), orn = b0 < 0 ? -1 : fe.findIndex((l, k) => k > b0 && /if k in extras: f\(b, extras\[k\]\)/.test(l));
     if (b0 < 0 || b1 < 0 || sf < 0 || sf > b1 || sf < orn) fails.push('o olho na pele: o build do fauna_especies.py não acha a pele por último (FF.seat_face(b) depois dos ornamentos, antes do return — D-320)'); } }
+// 110. "nenhum gesto no jogo amplia a página" (L-1065): o dono, testando pelo celular dentro do app, ficou com a tela ampliada —
+// um toque duplo num botão ou uma pinça no HUD ampliam a página (ou o visor do app em volta), e a pinça para desfazer caía no mapa,
+// que a toma para si. O html e o body dizem touch-action: pan-x pan-y (um painel ainda rola com um dedo), e o main.js segura a
+// pinça de dois dedos fora do mapa e os gestos do Safari
+{ const css = (() => { try { return fs.readFileSync(path.join(dir, '..', 'css', 'style.css'), 'utf8'); } catch (e) { return ''; } })();
+  if (!/^html, body \{[^}]*touch-action: pan-x pan-y;[^}]*\}/m.test(css)) fails.push('a página não amplia: o html, body do css/style.css sem touch-action: pan-x pan-y (L-1065)');
+  const mn = (src['main.js'] || []).join('\n');
+  if (!/document\.addEventListener\('touchmove', e => \{ if \(e\.touches\.length > 1\) e\.preventDefault\(\); \}, \{ passive: false \}\)/.test(mn)) fails.push('a página não amplia: o main.js sem a pinça de dois dedos segura fora do mapa (L-1065)');
+  if (!/document\.addEventListener\('gesturestart', e => e\.preventDefault\(\)\)/.test(mn)) fails.push('a página não amplia: o main.js sem os gestos do Safari segurados (L-1065)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

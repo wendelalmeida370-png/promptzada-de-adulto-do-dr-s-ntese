@@ -452,6 +452,10 @@
     window.addEventListener('keyup', e => { I.keys[e.key.toLowerCase()] = false; if (G.Modes && !G.Modes.god()) G.Modes.key(e, false); });
     window.addEventListener('blur', () => { I.keys = {}; });
     // touch
+    // (a pinch that starts off the map — on the HUD, a panel — zooms nothing: the browsers that do not read the page's touch-action,
+    // and Safari's gesture events, L-1065)
+    document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    document.addEventListener('gesturestart', e => e.preventDefault());
     let tStart = null, pinch = null;
     canvas.addEventListener('touchstart', e => {
       e.preventDefault(); G.Audio.init();

@@ -15,7 +15,10 @@
   --r: 14px;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #9fc3cf; }
+/* (no gesture in the game zooms the page, nor the app's viewer around it: a double tap on a button, a pinch on the HUD — the map
+   has its own pinch; a panel still scrolls with one finger. Zoomed by the HUD, the page could not be pinched back: the map took
+   every pinch, L-1065) */
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #9fc3cf; touch-action: pan-x pan-y; }
 body { font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--text); user-select: none; -webkit-user-select: none; -webkit-font-smoothing: antialiased; }
 canvas#game { position: fixed; inset: 0; display: block; touch-action: none; }
 button { font-family: inherit; color: inherit; cursor: pointer; }
