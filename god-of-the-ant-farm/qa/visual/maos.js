@@ -21,6 +21,8 @@ let night = 0;
 G.W = G.W || {}; G.Render = { nightness: () => night }; G.Art = { CLOTH: {}, icon: () => null }; G.Fac = { ofV: v => (v._fac ? { civ: v._fac, id: 1, leader: 0 } : null), hex: () => '#884422' };
 try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
+// (20a: what the hands hold is the inventory's — G.Inv.held, D-336 —, and the body's animation is in the anim-*.js after people3d.js)
+run('js/itens.js'); run('js/inventario.js'); { const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/anim-[^"]+)"><\/script>/g)) run(m[1]); }
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };
 G.People3D.init(THREE, realm);
@@ -175,7 +177,8 @@ function measure(H, R) {
 { night = 1;
   const torch2 = P3.look(person({ id: 300, moving: true, carry: { k: 'food', n: 2, crate: 1 } })).torch, torch1 = P3.look(person({ id: 303, moving: true, carry: { k: 'water', n: 1 } })).torch, torch0 = P3.look(person({ id: 306, moving: true })).torch;
   night = 0;
-  const spear = P3.look(person({ role: 'guerreiro', carry: { k: 'sal', n: 2 } })).tool, spear0 = P3.look(person({ role: 'guerreiro' })).tool;
+  // (the spear in the hand is the inventory's kit — G.Inv.held: in the hand without a load, on the back under one)
+  const Ls = P3.look(person({ role: 'guerreiro', carry: { k: 'sal', n: 2 } })), spear = Ls.inv.mao === 'lanca' && Ls.inv.costas !== 'lanca', spear0 = P3.look(person({ role: 'guerreiro' })).inv.mao === 'lanca';
   const Lw = P3.look(person({ act: 'chop', carry: { k: 'wood', n: 2 } }));
   let down = null; if (Lw.held) { Lw.ground = 0; Lw.plant = [{ on: 0 }, { on: 0 }]; const pose = Object.assign(A.POSE0(), A.hold(A.pose('swing', 0.3, 0), Lw, 'swing', 0.3, 0)); const R = P3.rig(0, 0, 0, Math.PI / 2, pose, Lw); down = R[B.carry].elements[13] - Lw.held.size[1] / 2; }
   ok('de noite, a caixa de duas mãos tira a tocha (o balde numa mão, não); a carga no ombro guarda a lança; trabalhando, a carga espera no chão ao lado', torch0 && !torch2 && torch1 && spear0 && !spear && Lw.held && Lw.held.grip === 'chao' && Math.abs(down) < 0.02,

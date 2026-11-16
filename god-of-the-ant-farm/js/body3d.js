@@ -133,7 +133,7 @@ vec3 b3cloth(vec3 P, vec3 p) {
     // (the waist and the hips under it, down to the top of the thighs: a seat folds the cloth there, and it must not fold in;
     // and above the waist the trunk, fuller up to the chest: sitting on the ground the knees bring the cloth up against it)
     { float h = dot(P - pel, up); if (p.y > 0.45 && h > -0.25 * s) { vec3 q = P - pel - up * clamp(h, 0.0, L); float qx = dot(q, ex), qz = dot(q, ez); float g = smoothstep(0.05, 0.3, h / s);
-      float k = length(vec2(qx / ((0.155 + 0.017 * fm + 0.02 * g) * s), qz / ((0.112 + 0.012 * fm + 0.025 * g) * s))); if (k < 1.0 && k > 1e-4) P += (ex * qx + ez * qz) * (1.0 / k - 1.0); } }
+      float k = length(vec2(qx / ((0.155 + 0.017 * fm + 0.02 * g) * s), qz / ((0.112 + 0.019 * fm + 0.025 * g) * s))); if (k < 1.0 && k > 1e-4) P += (ex * qx + ez * qz) * (1.0 / k - 1.0); } }
     // (standing, from a tenth of their length — they never reach the waist —; raised toward the belly, sitting or crouching,
     // from the hip itself and fuller — a woman's the more —: they carry the cloth over them)
     vec3 hL = b3V(32).xyz, kL = b3V(33).xyz, hR = b3V(35).xyz, kR = b3V(36).xyz;

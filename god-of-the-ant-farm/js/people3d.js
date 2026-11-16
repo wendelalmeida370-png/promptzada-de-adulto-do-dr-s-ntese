@@ -84,69 +84,98 @@
     emoPool = []; for (let k = 0; k < 20; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); sp.visible = false; sp.renderOrder = 4; scene.add(sp); emoPool.push(sp); }
 
     // (what the hands hold: one instanced mesh a kind of tool, its wood and iron in the vertex colours; and a mesh a form of load)
-    tools = makeTools(mat); held = makeHeld(mat);
+    makeTools(mat); held = makeHeld(mat);
     // (the body as one skin, if it starts; the pieces of old stay for the props — and for everything, if it does not)
     skin = !!(G.Body3D && G.Body3D.init(THREE, R3));
     if (skin) PARTS.forEach((p, k) => { if (!PROPS.has(p[0])) mesh[k].visible = false; });
     // (the beasts as one skin each, if it starts; a kind without its mesh — and every kind, if it does not — in the pieces of old)
     fauna = !!(G.Fauna3D && G.Fauna3D.init(THREE, R3));
   };
-  // ------------------------------ what the hands hold ------------------------------
-  // Each kind a geometry of its own, made once — the grip at the origin, along +Y the way its head points (People3D.rig's
-  // 'tool' frame is the hole of the closed fist, its +Y the fist's axis) — the wood and the iron in the vertex colours; one
-  // instanced mesh a kind, drawn only for those who hold one.
-  let tools = null; const toolN = {};
-  const TOOL_OF = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara' };
+  // ------------------------------ what the hands hold, and what hangs on the body ------------------------------
+  // What a person holds is what the inventory says — G.Inv.held(v), the one door (D-336): their own things, or their trade's kit
+  // by their act (the axe at the tree, the rod at the water) —, never a table of the drawing's own (20a, L-1106). Each thing is
+  // drawn in the thing's own frame (D-337: the origin at the main hand's grip, +Y along the handle to the end that works, +Z
+  // its front): in the right hand by its catalog's grip (G.Itens' pega: a fist round a haft, a shaft, a rod's butt, the bow
+  // hand, the shield on the forearm, a handle hanging, a torch upright), in the left the other hand's thing, and stowed on the
+  // back and at the belt — frames from the chest and the hips, no bones of their own. Its shape is the item art's
+  // (G.ItemArt.geo(key, level)), or, while that has none, the drawing's own shapes of old, kept as the fallback.
+  // One instanced mesh a thing and a level, made the first time someone holds one.
+  let toolMat = null; const IMESH = new Map(), IMN = new Map(); let fallback = null;
   function makeTools(baseMat) {
-    const WOOD = [0.36, 0.25, 0.15], DARK = [0.26, 0.17, 0.1], IRON = [0.42, 0.43, 0.45], EDGE = [0.66, 0.67, 0.7], ROPE = [0.6, 0.52, 0.36];
+    toolMat = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }); toolMat.onBeforeCompile = baseMat.onBeforeCompile; toolMat.customProgramCacheKey = () => 'people3d-tool';
+    return true;
+  }
+  // (the fallback shapes, by kind and material: the wood, the stone, the bronze and the iron in the vertex colours)
+  const MAT_COL = { ferro: [0.42, 0.43, 0.45], bronze: [0.62, 0.42, 0.2], pedra: [0.46, 0.44, 0.4], madeira: [0.36, 0.25, 0.15], corda: [0.6, 0.52, 0.36], vime: [0.62, 0.5, 0.3], couro: [0.42, 0.3, 0.18] };
+  function fallbackGeo(kind, mat) {
+    const WOOD = [0.36, 0.25, 0.15], DARK = [0.26, 0.17, 0.1], ROPE = [0.6, 0.52, 0.36], IRON = MAT_COL[mat] || MAT_COL.ferro, EDGE = IRON.map(c => Math.min(1, c * 1.5 + 0.03)), LEATH = [0.4, 0.27, 0.15], PITCH = [0.12, 0.09, 0.06];
     const cyl = (r0, r1, y0, y1, n, col) => { const g = new THREE.CylinderGeometry(r1, r0, y1 - y0, n || 7, 1); g.translate(0, (y0 + y1) / 2, 0); return [g, col]; };
     const box = (sx, sy, sz, x, y, z, col, rz, rx) => { const g = new THREE.BoxGeometry(sx, sy, sz); if (rx) g.rotateX(rx); if (rz) g.rotateZ(rz); g.translate(x, y, z); return [g, col]; };
-    const merge = list => {
-      let nv = 0, ni = 0; for (const [g] of list) { nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
-      const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), cl = new Float32Array(nv * 3), idx = new Uint16Array(ni); let o = 0, oi = 0;
-      for (const [g, col] of list) {
-        const P = g.attributes.position, N = g.attributes.normal;
-        for (let i = 0; i < P.count; i++) { pos[(o + i) * 3] = P.getX(i); pos[(o + i) * 3 + 1] = P.getY(i); pos[(o + i) * 3 + 2] = P.getZ(i); nor[(o + i) * 3] = N.getX(i); nor[(o + i) * 3 + 1] = N.getY(i); nor[(o + i) * 3 + 2] = N.getZ(i); cl[(o + i) * 3] = col[0]; cl[(o + i) * 3 + 1] = col[1]; cl[(o + i) * 3 + 2] = col[2]; }
-        if (g.index) for (let i = 0; i < g.index.count; i++) idx[oi + i] = g.index.getX(i) + o; else for (let i = 0; i < P.count; i++) idx[oi + i] = o + i;
-        oi += g.index ? g.index.count : P.count; o += P.count; g.dispose();
-      }
-      const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.BufferAttribute(cl, 3)); out.setIndex(new THREE.BufferAttribute(idx, 1)); return out;
-    };
     const oct = (sx, sy, sz, y, col) => { const g = new THREE.OctahedronGeometry(1, 0); g.scale(sx, sy, sz); g.translate(0, y, 0); return [g, col]; };
     const ball = (r, y, col) => { const g = new THREE.SphereGeometry(r, 7, 5); g.translate(0, y, 0); return [g, col]; };
-    const G0 = {
-      // (a spear: an ash shaft of two metres gripped a little under its middle, a binding where the hand holds it, a leaf of iron)
-      lanca: merge([cyl(0.015, 0.014, -1.02, 0.86, 7, WOOD), cyl(0.017, 0.016, 0.86, 0.95, 7, IRON), oct(0.028, 0.15, 0.008, 1.08, EDGE), cyl(0.0165, 0.0165, -0.05, 0.06, 7, ROPE)]),
-      // (an axe: a haft, a bearded head of iron, its edge brighter)
-      machado: merge([cyl(0.016, 0.014, -0.16, 0.56, 7, WOOD), box(0.024, 0.07, 0.11, 0, 0.53, 0.045, IRON), box(0.026, 0.12, 0.03, 0, 0.51, 0.1, EDGE), box(0.03, 0.05, 0.04, 0, 0.53, -0.03, IRON)]), // (its edge the way it strikes: +Z)
-      // (a hammer: a short haft, a square head across it)
-      martelo: merge([cyl(0.014, 0.012, -0.1, 0.34, 7, WOOD), box(0.05, 0.05, 0.13, 0, 0.34, 0, IRON)]),
-      // (a pick: a long haft, a head of iron pointed at both ends, curving)
-      picareta: merge([cyl(0.016, 0.014, -0.14, 0.62, 7, WOOD), box(0.03, 0.034, 0.2, 0, 0.6, 0.06, IRON, 0, 0.12), box(0.028, 0.03, 0.16, 0, 0.6, -0.07, IRON, 0, -0.14), box(0.04, 0.05, 0.05, 0, 0.6, 0, IRON)]),
-      // (a spade: gripped at the top of the haft, the blade below)
-      pa: merge([cyl(0.015, 0.015, -0.86, 0.08, 7, WOOD), box(0.08, 0.03, 0.03, 0, 0.08, 0, DARK), box(0.19, 0.26, 0.016, 0, -0.98, 0, IRON), box(0.19, 0.03, 0.02, 0, -0.84, 0, IRON)]),
-      // (a hoe: a long haft, its blade turned down at the end)
-      enxada: merge([cyl(0.015, 0.014, -0.25, 0.95, 7, WOOD), box(0.17, 0.11, 0.012, 0, 0.92, 0.05, IRON, 0, 1.2)]),
-      // (an elder's staff: as tall as the shoulder, gripped near its top, a knob)
-      cajado: merge([cyl(0.019, 0.016, -0.97, 0.2, 7, DARK), ball(0.03, 0.22, DARK)]),
-      // (a fishing rod: long, thin)
-      vara: merge([cyl(0.014, 0.011, -0.2, 0.7, 6, WOOD), cyl(0.011, 0.006, 0.7, 1.6, 5, WOOD), cyl(0.006, 0.003, 1.6, 2.3, 4, WOOD)]),
-      // (a knife: a short blade on a handle)
-      faca: merge([cyl(0.013, 0.012, -0.05, 0.07, 6, DARK), box(0.03, 0.17, 0.006, 0.006, 0.155, 0, EDGE)]),
-      // (a sword: the grip and its pommel, the guard, a long blade)
-      espada: merge([cyl(0.014, 0.013, -0.06, 0.07, 6, DARK), ball(0.022, -0.08, IRON), box(0.16, 0.022, 0.03, 0, 0.08, 0, IRON), box(0.045, 0.62, 0.009, 0, 0.4, 0, EDGE), oct(0.0225, 0.07, 0.0045, 0.74, EDGE)]),
+    const arc = (R, r, a0, a1, col, n) => { const g = new THREE.TorusGeometry(R, r, 5, n || 10, a1 - a0); g.rotateZ(a0); return [g, col]; };
+    const S = {
+      // (a spear: an ash shaft of two metres gripped a little under its middle, a binding where the hand holds it, a leaf of metal)
+      lanca: () => [cyl(0.015, 0.014, -1.02, 0.86, 7, WOOD), cyl(0.017, 0.016, 0.86, 0.95, 7, IRON), oct(0.028, 0.15, 0.008, 1.08, EDGE), cyl(0.0165, 0.0165, -0.05, 0.06, 7, ROPE)],
+      // (an axe: a haft, a bearded head, its edge brighter — the edge the way it strikes: +Z)
+      machado: () => [cyl(0.016, 0.014, -0.16, 0.56, 7, WOOD), box(0.024, 0.07, 0.11, 0, 0.53, 0.045, IRON), box(0.026, 0.12, 0.03, 0, 0.51, 0.1, EDGE), box(0.03, 0.05, 0.04, 0, 0.53, -0.03, IRON)],
+      martelo: () => [cyl(0.014, 0.012, -0.1, 0.34, 7, WOOD), box(0.05, 0.05, 0.13, 0, 0.34, 0, IRON)],
+      picareta: () => [cyl(0.016, 0.014, -0.14, 0.62, 7, WOOD), box(0.03, 0.034, 0.2, 0, 0.6, 0.06, IRON, 0, 0.12), box(0.028, 0.03, 0.16, 0, 0.6, -0.07, IRON, 0, -0.14), box(0.04, 0.05, 0.05, 0, 0.6, 0, IRON)],
+      // (a spade gripped at the top of its haft, the blade below; a hoe, its blade turned down at the end)
+      pa: () => [cyl(0.015, 0.015, -0.86, 0.08, 7, WOOD), box(0.08, 0.03, 0.03, 0, 0.08, 0, DARK), box(0.19, 0.26, 0.016, 0, -0.98, 0, IRON), box(0.19, 0.03, 0.02, 0, -0.84, 0, IRON)],
+      enxada: () => [cyl(0.015, 0.014, -0.25, 0.95, 7, WOOD), box(0.17, 0.11, 0.012, 0, 0.92, 0.05, IRON, 0, 1.2)],
+      cajado: () => [cyl(0.019, 0.016, -0.97, 0.2, 7, DARK), ball(0.03, 0.22, DARK)],
+      // (a fishing rod, long and thin, its line coiled at the butt)
+      vara: () => [cyl(0.014, 0.011, -0.2, 0.7, 6, WOOD), cyl(0.011, 0.006, 0.7, 1.6, 5, WOOD), cyl(0.006, 0.003, 1.6, 2.3, 4, WOOD), cyl(0.02, 0.02, 0.08, 0.13, 7, ROPE)],
+      faca: () => [cyl(0.013, 0.012, -0.05, 0.07, 6, DARK), box(0.03, 0.17, 0.006, 0.006, 0.155, 0, EDGE)],
+      espada: () => [cyl(0.014, 0.013, -0.06, 0.07, 6, DARK), ball(0.022, -0.08, IRON), box(0.16, 0.022, 0.03, 0, 0.08, 0, IRON), box(0.045, 0.62, 0.009, 0, 0.4, 0, EDGE), oct(0.0225, 0.07, 0.0045, 0.74, EDGE)],
+      // (a sickle: a short handle, a curved blade; a club; a sling's cord)
+      foice: () => [cyl(0.014, 0.013, -0.06, 0.14, 6, DARK), arc(0.13, 0.008, Math.PI * 0.1, Math.PI * 0.95, EDGE, 9).map((q, i) => (i === 0 ? (q.translate(0, 0.18, 0.1), q) : q))],
+      clava: () => [cyl(0.016, 0.035, -0.08, 0.5, 7, DARK), ball(0.045, 0.52, DARK)],
+      funda: () => [cyl(0.004, 0.004, -0.4, 0.05, 4, ROPE), box(0.05, 0.06, 0.012, 0, -0.42, 0, LEATH)],
+      // (an oar: its loom, its blade at the end; a net bundled over the hand)
+      remo: () => [cyl(0.02, 0.018, -0.7, 0.9, 6, WOOD), box(0.15, 0.5, 0.016, 0, 1.12, 0, WOOD)],
+      rede: () => [cyl(0.012, 0.012, -0.05, 0.1, 5, ROPE), (() => { const g = new THREE.SphereGeometry(1, 8, 6); g.scale(0.16, 0.24, 0.1); g.translate(0, -0.2, 0); return [g, [0.78, 0.72, 0.54]]; })()],
+      // (a torch: the stick and its wrapped head; a bow, its belly to the front, its string; a round shield, its boss)
+      tocha: () => [cyl(0.018, 0.015, -0.18, 0.32, 6, DARK), cyl(0.032, 0.028, 0.3, 0.42, 7, PITCH)],
+      arco: () => { const L = [arc(0.62, 0.012, -0.95, 0.95, WOOD, 14)]; L[0][0].rotateZ(-Math.PI / 2); L[0][0].rotateY(Math.PI / 2); L[0][0].translate(0, 0, -0.5); const st = cyl(0.002, 0.002, -0.5, 0.5, 3, ROPE); st[0].translate(0, 0, -0.5 + 0.62 * Math.cos(0.95) - 0.5 * 0); L.push(st); L.push(cyl(0.017, 0.017, -0.06, 0.06, 6, LEATH)); return L; },
+      escudo: () => { const g = new THREE.CylinderGeometry(0.3, 0.3, 0.025, 16); g.rotateX(Math.PI / 2); g.translate(0, 0, 0.05); const b = new THREE.SphereGeometry(0.06, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2); b.rotateX(Math.PI / 2); b.translate(0, 0, 0.062); return [[g, WOOD], [b, IRON], box(0.12, 0.02, 0.02, 0, 0, 0.02, LEATH)]; },
+      // (a basket and a bucket on their handles, hanging from the fist)
+      cesto: () => { const g = new THREE.CylinderGeometry(0.16, 0.12, 0.2, 10, 1, true); g.translate(0, -0.24, 0); return [[g, MAT_COL.vime], arc(0.15, 0.008, 0, Math.PI, MAT_COL.vime, 8).map((q, i) => (i === 0 ? (q.translate(0, -0.14, 0), q) : q))]; },
+      balde: () => { const g = new THREE.CylinderGeometry(0.14, 0.12, 0.24, 10, 1, true); g.translate(0, -0.3, 0); return [[g, WOOD], arc(0.14, 0.006, 0, Math.PI, IRON, 8).map((q, i) => (i === 0 ? (q.translate(0, -0.18, 0), q) : q))]; },
     };
-    const tm = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }); tm.onBeforeCompile = baseMat.onBeforeCompile; tm.customProgramCacheKey = () => 'people3d-tool';
-    const out = {}; for (const k in G0) { const m = new THREE.InstancedMesh(G0[k], tm, MAX); m.count = 0; m.visible = false; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); out[k] = m; toolN[k] = 0; }
-    return out;
+    const f = S[kind]; if (!f) return null;
+    const list = f(); let nv = 0, ni = 0; for (const [g] of list) { nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+    const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), cl = new Float32Array(nv * 3), idx = new Uint16Array(ni); let o = 0, oi = 0;
+    for (const [g, col] of list) {
+      const P = g.attributes.position, Nn = g.attributes.normal;
+      for (let i = 0; i < P.count; i++) { pos[(o + i) * 3] = P.getX(i); pos[(o + i) * 3 + 1] = P.getY(i); pos[(o + i) * 3 + 2] = P.getZ(i); nor[(o + i) * 3] = Nn.getX(i); nor[(o + i) * 3 + 1] = Nn.getY(i); nor[(o + i) * 3 + 2] = Nn.getZ(i); cl[(o + i) * 3] = col[0]; cl[(o + i) * 3 + 1] = col[1]; cl[(o + i) * 3 + 2] = col[2]; }
+      if (g.index) for (let i = 0; i < g.index.count; i++) idx[oi + i] = g.index.getX(i) + o; else for (let i = 0; i < P.count; i++) idx[oi + i] = o + i;
+      oi += g.index ? g.index.count : P.count; o += P.count; g.dispose();
+    }
+    const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.BufferAttribute(cl, 3)); out.setIndex(new THREE.BufferAttribute(idx, 1)); out.computeBoundingBox(); return out;
   }
-  // (which tool someone holds: the one their work takes, as they swing it; or the one they carry — a spear, a staff)
-  function toolKind(L, pose) { if (pose.tool) return TOOL_OF[L.act] || (L.toolK === 'lanca' && L.tool ? 'lanca' : 'machado'); return L.tool ? (L.toolK || 'lanca') : null; }
-  function toolPut(R, L, pose) { const k = toolKind(L, pose); const m = k && tools && tools[k]; if (!m || toolN[k] >= MAX) return false; m.setMatrixAt(toolN[k]++, R[B.tool]); return true; }
-  function toolsBegin() { if (tools) for (const k in tools) toolN[k] = 0; }
-  function toolsEnd() { if (tools) for (const k in tools) { const m = tools[k]; m.count = toolN[k]; m.visible = toolN[k] > 0; m.instanceMatrix.needsUpdate = true; } }
-  P3.tools = () => (tools ? Object.keys(tools).filter(k => toolN[k]).map(k => [k, toolN[k]]) : []); // (for the tests: who holds what this frame)
-  P3.toolGeo = k => (tools && tools[k] ? tools[k].geometry : null); // (for the tests: a tool's shape, read only)
+  P3.FALLBACK = ['lanca', 'machado', 'martelo', 'picareta', 'pa', 'enxada', 'cajado', 'vara', 'faca', 'espada', 'foice', 'clava', 'funda', 'remo', 'rede', 'tocha', 'arco', 'escudo', 'cesto', 'balde'];
+  // the mesh of a thing at a level of detail: the item art's shape, else the fallback — made the first time it is held (null: no shape)
+  function itemMesh(key, lod) {
+    const id = key + '|' + lod; let m = IMESH.get(id); if (m !== undefined) return m;
+    const kind = G.Itens ? G.Itens.parse(key)[0] : key, mat = G.Itens && G.Itens.def(key) ? G.Itens.def(key).mat : null;
+    let geo = G.ItemArt && G.ItemArt.geo ? G.ItemArt.geo(key, lod) : null; let own = false;
+    if (!geo) { const fk = kind + '|' + (mat || ''); if (!fallback) fallback = new Map(); geo = fallback.get(fk); if (geo === undefined) { geo = fallbackGeo(kind, mat); fallback.set(fk, geo); } own = true; }
+    if (!geo || !toolMat) { IMESH.set(id, null); return null; }
+    m = new THREE.InstancedMesh(geo, toolMat, MAX); m.count = 0; m.visible = false; m.castShadow = lod < 2; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.userData.item = key; m.userData.fallback = own; scene.add(m);
+    IMESH.set(id, m); IMN.set(m, 0); return m;
+  }
+  function itemPut(key, lod, F) { const m = itemMesh(key, Math.max(0, Math.min(2, lod | 0))); if (!m) return false; const n = IMN.get(m); if (n >= MAX) return false; m.setMatrixAt(n, F); IMN.set(m, n + 1); return true; }
+  function toolsBegin() { for (const m of IMN.keys()) IMN.set(m, 0); }
+  function toolsEnd() { for (const [m, n] of IMN) { m.count = n; m.visible = n > 0; m.instanceMatrix.needsUpdate = true; } }
+  P3.tools = () => { const out = []; for (const [m, n] of IMN) if (n) out.push([m.userData.item, n, m.userData.fallback ? 'reserva' : 'arte']); return out; }; // (for the tests: who holds what this frame)
+  P3.toolGeo = (k, lod) => { const m = itemMesh(k, lod || 0); return m ? m.geometry : null; }; // (for the tests: a thing's shape, read only)
+  // how a thing is held when no gesture works it (its grip, from the catalog): a shaft upright by the side, a tool hanging from
+  // the fist, a rod sloped back over the shoulder, a handle hanging, a torch up; and where it hangs stowed (the back, the belt)
+  const SHAFT = new Set(['lanca', 'cajado', 'remo', 'pa', 'enxada', 'picareta']);
+  function gripOf(key) { const d = G.Itens && G.Itens.def(key); return d ? d.pega : null; }
+  P3.gripOf = gripOf;
 
   // ------------------------------ what is carried ------------------------------
   // The load in someone's hands is the world's own — v.carry (the good, how much, what it came in: a crate off the boat with
@@ -428,24 +457,40 @@
   const C3 = {};
   function color(hex) { let c = C3[hex]; if (!c) { c = new THREE.Color(); c.set(hex || '#888888'); C3[hex] = c; } return c; }
   const darker = (hex, f) => { const r = G.hex2rgb(hex); return '#' + r.map(v => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0')).join(''); };
-  // a person's look, from the world's own record of them
-  P3.look = function (v) {
+  // a person's look, from the world's own record of them — a new one for whoever asks (the tests, the interface); the frame keeps
+  // one a person and fills it again (lookFill: nothing made each frame but what changed — L-1105)
+  P3.look = v => lookFill({}, v);
+  P3.lookInto = (L, v) => lookFill(L, v);
+  function lookFill(L, v) {
     const fac = G.Fac.ofV ? G.Fac.ofV(v) : null;
     const facHex = fac ? G.Fac.hex(fac.id) : null;
-    let cloth = v.captive ? '#8b8478' : v.age < 16 ? (v.kidCloth || '#4fa0d8') : v.role === 'guerreiro' ? (facHex || '#8a3a2a') : ((G.Art && G.Art.CLOTH && G.Art.CLOTH[v.role]) || '#c9763a');
+    const cloth = v.captive ? '#8b8478' : v.age < 16 ? (v.kidCloth || '#4fa0d8') : v.role === 'guerreiro' ? (facHex || '#8a3a2a') : ((G.Art && G.Art.CLOTH && G.Art.CLOTH[v.role]) || '#c9763a');
     const ad = v.age;
     const h = ad < 2 ? 0.55 : ad < 16 ? 0.75 + (ad / 16) * 0.9 : ad >= 70 ? 1.68 : 1.75;
-    const s = (h / 1.75) * (v.g === 'f' && ad >= 14 ? 0.95 : 1);
-    const robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
-    const hair = ad >= 62 ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
-    const L = { s, skin: v.skin || '#d8a888', hair: hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a', cloth, pants: darker(cloth, 0.62), feet: '#3a2a1e', belt: darker(cloth, 0.38), brow: darker(v.hair || '#3a2a1a', 0.8), nose: darker(v.skin || '#d8a888', 0.88), lips: darker(v.skin || '#d8a888', 0.62), robe, fem: v.g === 'f' && ad >= 13, bun: v.g === 'f' && ad >= 16 && v.id % 3 === 1, beard: v.g === 'm' && ad >= 26 && v.id % 3 === 0, long: v.g === 'f' && ad >= 8 && v.id % 3 !== 1, bald: v.g === 'm' && ad >= 55 && v.id % 4 === 0, carry: !!(v.carry && v.carry.n > 0), tool: v.role === 'guerreiro' || v.role === 'cacador' || v.role === 'vigia' || (v.role === 'anciao' && ad >= 60), toolK: v.role === 'anciao' ? 'cajado' : 'lanca', act: v.act, torch: torchOf(v), lantern: !!v.lantern && !v.inside, strap: ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v)) };
+    L.s = (h / 1.75) * (v.g === 'f' && ad >= 14 ? 0.95 : 1);
+    L.robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
+    // (the colours: made again only when what they are made of changes — the trade's cloth, the hair greying with the years)
+    const grey = ad >= 62 ? Math.floor(ad) : 0;
+    if (L._cloth !== cloth || L._hair !== v.hair || L._skin !== v.skin || L._grey !== grey) {
+      L._cloth = cloth; L._hair = v.hair; L._skin = v.skin; L._grey = grey;
+      const hair = grey ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
+      L.skin = v.skin || '#d8a888'; L.hair = hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a';
+      L.cloth = cloth; L.pants = darker(cloth, 0.62); L.feet = '#3a2a1e'; L.belt = darker(cloth, 0.38); L.brow = darker(v.hair || '#3a2a1a', 0.8); L.nose = darker(v.skin || '#d8a888', 0.88); L.lips = darker(v.skin || '#d8a888', 0.62);
+    }
+    L.fem = v.g === 'f' && ad >= 13; L.bun = v.g === 'f' && ad >= 16 && v.id % 3 === 1; L.beard = v.g === 'm' && ad >= 26 && v.id % 3 === 0; L.long = v.g === 'f' && ad >= 8 && v.id % 3 !== 1; L.bald = v.g === 'm' && ad >= 55 && v.id % 4 === 0;
+    L.act = v.act; L.lantern = !!v.lantern && !v.inside;
+    L.strap = ad >= 14 && (v.role === 'cacador' || v.role === 'guerreiro' || v.role === 'mercador' || v.role === 'explorador' || (G.Possess && G.Possess.body && G.Possess.body() === v));
     L.id = v.id || 0; // (only for the drawing's own clocks: each one's cloth moves on its own beat)
     // (what the hands hold — the world's load, as the thing it is — and the strength that carries it: a child's, an elder's;
     // the work of the hands sets it down beside them; a load on both hands leaves none for the torch, one on the right none
-    // for the spear — the god's view puts the spear away under a load too)
+    // for the thing in the hand — the god's view puts the spear away under a load too)
     L.held = P3.held(v, (fac && fac.civ) || v._civ || v.civ || 'nordico'); L.carry = !!L.held;
     L.str = (ad < 12 ? 0.35 : ad < 16 ? 0.7 : ad >= 70 ? 0.6 : ad >= 55 ? 0.8 : 1) * (v.g === 'f' ? 0.85 : 1);
-    if (L.held) { if (BUSY_HANDS.has(v.act) || v.sleeping) L.held = setDown(L.held); if (L.held.hands.includes('L')) { L.torch = false; L.lantern = false; } if (L.held.hands.includes('R')) L.tool = false; }
+    // (the things on the body: what the inventory says — G.Inv.held, the one door (D-336): a person's own things, or their trade's
+    // kit — asked again only when what it reads changes)
+    L.inv = invOf(v, L); L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping);
+    if (L.held) { if (BUSY_HANDS.has(v.act) || v.sleeping) L.held = setDown(L.held); if (L.held.hands.includes('L')) { L.torch = false; L.lantern = false; } }
+    L.reach = null; L.pair = null; L.bind = false;
     // (how drunk the world has them — the tavern's rounds, the wine of the wells —: the body weaves, Anim.stagger)
     L.drunk = P3.drunkOf(v);
     if (skin) {
@@ -457,7 +502,20 @@
       const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad'; L.mood = MOOD[grief ? 'sad' : e] || (L.drunk > 0 ? MOOD.drunk : MOOD.calm);
     }
     return L;
-  };
+  }
+  // what is on a person's body (G.Inv.held: { mao, outra, costas, cinto, cabeca, corpo, real }), kept in the look while what it
+  // reads is the same — the act, the trade, the age, the load, the equipment's places
+  const NO_INV = Object.freeze({ mao: null, outra: null, costas: null, cinto: null, cabeca: null, corpo: null, real: false });
+  P3.NO_INV = NO_INV;
+  const INV_SLOTS = ['mao', 'outra', 'costas', 'cinto', 'cabeca', 'corpo'];
+  function invOf(v, L) {
+    if (!G.Inv || !G.Inv.held) return NO_INV;
+    const e = v.equip && typeof v.equip === 'object' ? v.equip : null, c = v.carry && v.carry.n > 0 ? 1 : 0, ag = v.age >= 60 ? 2 : v.age >= 14 ? 1 : 0;
+    const m = L._inv;
+    if (m && m.act === v.act && m.role === v.role && m.c === c && m.ag === ag && m.e === !!e && (!e || INV_SLOTS.every((q, i) => m.es[i] === (e[q] || null)))) return m.out;
+    const n = m || (L._inv = { es: new Array(6) }); n.act = v.act; n.role = v.role; n.c = c; n.ag = ag; n.e = !!e; for (let i = 0; i < 6; i++) n.es[i] = e ? e[INV_SLOTS[i]] || null : null;
+    n.out = G.Inv.held(v); return n.out;
+  }
   P3.drunkOf = v => (G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0);
 
   // (the faces of the feelings: smile (−1 frown .. 1), brows up, anger, grief, eyes wide, eyes smiling, the jaw open, blush)
@@ -673,7 +731,10 @@
   // ------------------------------ poses ------------------------------
   // a pose: the angles of the joints, and the hips' height and lean (radians, metres)
   // (and for the skin: the stance of each foot, the grip of the hands, the mouth, the eyes' look, the cloth's swing)
-  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0, holdW: 0 });
+  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0, holdW: 0,
+    // (20a: the hips' yaw and adduction, each foot's share of its swing — −1 standing —, the left hand's grip and wrist, the other
+    // hand on a thing of two hands, the shoulders' yaw)
+    adL: 0, adR: 0, hyL: 0, hyR: 0, tyL: 0, tyR: 0, swL: -1, swR: -1, pgL: -1, pgR: -1, rel: 0.33, esw: 0.86, gripL: 0, wristL: 0, offW: 0, shLy: 0, shRy: 0 });
   Anim.POSE0 = POSE0;
   // (the dead lie as they fell: on the back or face down, the limbs thrown out)
   const DEAD = [
@@ -692,10 +753,10 @@
     // swings and dropping a little on its side; the shoulders turning the other way, the head kept still; the knee bent
     // in the swing and giving at the heel's strike; the heel striking with the toes up, the toes pushing off at the end;
     // the arms swinging against the legs, a beat behind, the elbow bending as it comes forward)
-    walk: (t, sp) => gait(t, sp, false),
+    walk: (t, sp) => gaitPose(t, sp, false),
     // (a run: a flight between the steps — highest in the air, lowest over the bent standing leg — the heel kicked up
     // behind, the trunk leaning in, the elbows bent and pumping)
-    run: (t, sp) => gait(t, sp, true),
+    run: (t, sp) => gaitPose(t, sp, true),
     sneak: (t, sp) => { const ph = t, A = 0.35; return { crouch: 0.2, lean: 0.45, hipL: Math.sin(ph) * A - 0.3, hipR: -Math.sin(ph) * A - 0.3, knL: 0.7 + Math.max(0, -Math.cos(ph)) * 0.5, knR: 0.7 + Math.max(0, Math.cos(ph)) * 0.5, shLp: -0.5, shRp: -0.4, elL: 0.9, elR: 0.9 }; },
     jump: () => ({ hipL: -0.9, hipR: -0.3, knL: 1.4, knR: 0.6, shLp: -2.4, shRp: -2.2, shLr: 0.3, shRr: -0.3, elL: 0.3, elR: 0.3, lean: -0.05 }),
     fall: (t) => ({ hipL: -0.25, hipR: 0.15, knL: 0.5, knR: 0.35, shLp: -0.4, shRp: -0.4, shLr: 1.1 + Math.sin(t * 9) * 0.1, shRr: -1.1 - Math.sin(t * 9) * 0.1, elL: 0.4, elR: 0.4, neck: -0.15 }),
@@ -752,83 +813,11 @@
     crumple: () => ({ crouch: 0.62, lean: 0.55, hipL: -0.95, hipR: -0.7, knL: 1.85, knR: 1.6, shLp: -0.35, shRp: -0.15, shLr: 0.3, shRr: -0.25, elL: 0.7, elR: 0.5, neck: 0.55 }),
   };
   Anim.DEAD = DEAD; // (the ways the dead lie: the body's own fall ends in one of them, as its corpse will lie — D-334)
-  // The stride, from how people really walk and run: one leg's cycle u from the heel striking the ground (0) — the foot
-  // planted, the body going over it, the heel rising, the toes pushing off — through the swing (the knee folding to clear
-  // the ground, the leg reaching forward, the knee straightening only at the end) to the next strike. The other leg half
-  // a cycle behind. Keys in degrees (the hip: minus is forward; the knee: its bend; the foot: its pitch to the ground,
-  // plus is the toes down — the ankle is what makes it), smoothly joined round the cycle. A walk stands 60% of its cycle,
-  // a run 38% and flies between its steps. A slower step is a shorter one (the angles scale), never a slower slide.
-  const GK = {
-    walk: { hip: [[0, -27], [0.15, -20], [0.3, -7], [0.45, 7], [0.58, 15], [0.66, 10], [0.78, -12], [0.9, -29], [1, -27]],
-      knee: [[0, 3], [0.12, 16], [0.27, 9], [0.42, 4], [0.52, 13], [0.62, 36], [0.71, 60], [0.79, 56], [0.9, 24], [0.97, 4], [1, 3]],
-      foot: [[0, -16], [0.06, -4], [0.12, 0], [0.42, 0], [0.52, 9], [0.6, 30], [0.66, 30], [0.74, 4], [0.86, -6], [0.95, -14], [1, -16]] },
-    run: { hip: [[0, -30], [0.12, -15], [0.26, 4], [0.38, 19], [0.5, 10], [0.66, -26], [0.82, -44], [0.93, -36], [1, -30]],
-      knee: [[0, 22], [0.11, 40], [0.25, 26], [0.38, 14], [0.5, 62], [0.62, 104], [0.74, 96], [0.86, 52], [0.95, 26], [1, 22]],
-      foot: [[0, -6], [0.08, 0], [0.22, 4], [0.32, 18], [0.4, 44], [0.5, 32], [0.66, 6], [0.84, -8], [1, -6]] },
-  };
-  const GT = {}; // (each curve sampled round its cycle, radians)
-  for (const g in GK) { GT[g] = {}; for (const c in GK[g]) { const K = GK[g][c]; const T = new Float32Array(129);
-    for (let i = 0; i <= 128; i++) { const u = i / 128; let k = 0; while (k < K.length - 2 && K[k + 1][0] <= u) k++;
-      const P = j => K[(j + K.length - 1) % (K.length - 1)]; const p0 = P(k - 1), p1 = K[k], p2 = K[k + 1], p3 = P(k + 2);
-      const t = (u - p1[0]) / Math.max(1e-6, p2[0] - p1[0]); const t2 = t * t, t3 = t2 * t;
-      T[i] = (0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)) * Math.PI / 180; }
-    GT[g][c] = T; } }
-  const gcur = (T, u) => { u = (u % 1 + 1) % 1; const x = u * 128, i = Math.floor(x), f = x - i; return T[i] + (T[i + 1] - T[i]) * f; };
-  function gait(ph, sp, run) {
-    const T = run ? GT.run : GT.walk;
-    // (how long the stride is: a slow walk short and low, a fast run long; the swing's fold never below what clears the ground)
-    const A = run ? G.clamp(0.62 + (sp - 3) * 0.1, 0.62, 1.0) : G.clamp(0.2 + sp * 0.45, 0.34, 0.95);
-    const u0 = ph / TAU; const out = {};
-    for (let k = 0; k < 2; k++) {
-      const u = u0 + k * 0.5; const hip = gcur(T.hip, u) * A, kn = gcur(T.knee, u) * (0.45 + 0.55 * A), pitch = gcur(T.foot, u) * (0.6 + 0.4 * A);
-      // (the stance weight: 1 while the foot is on the ground — for the skin's feet; it eases at the strike and at the push-off)
-      const uu = (u % 1 + 1) % 1, st = run ? (uu < 0.38 ? 1 : 0) : (uu < 0.62 ? 1 : 0);
-      if (k) { out.hipR = hip; out.knR = kn; out.anR = pitch - hip - kn; out.stR = st; out.pitR = pitch; } else { out.hipL = hip; out.knL = kn; out.anL = pitch - hip - kn; out.stL = st; out.pitL = pitch; }
-    }
-    // (the hips: as high as the standing foot lets them be — measured from the legs themselves, so the standing foot is on
-    // the ground and no lower: highest over it, lowest as the weight passes from one foot to the other; in a run's flight a
-    // leap's arc — then turning with the swinging leg, dropping a little on its side, moving over the standing foot)
-    const c2 = Math.cos(TAU * 2 * (u0 - (run ? 0.42 : 0.27))), cs = Math.cos(TAU * u0), sn = Math.sin(TAU * u0 + 0.3);
-    out.bob = gaitBob ? gaitBob(run ? 'run' : 'walk', u0, sp) : 0;
-    out.pelY = -(run ? 0.1 : 0.075) * cs * A; out.pelR = 0.035 * sn * (run ? 0.6 : 1) * A; out.shift = 0.02 * sn * (run ? 0.4 : 1) * A; out.sway = 0; out.twist = 0;
-    // (the arms against the legs, a beat behind; the elbow bending as the arm comes forward; a run's elbows bent and pumping)
-    const aL = Math.cos(TAU * (u0 - 0.06)), aw = (run ? 0.62 : 0.34) * A;
-    const ab = run ? 0.3 : 0.06; // (the swing centred a little behind: the trunk leans, the arms still hang from the shoulders)
-    out.shLp = aL * aw + ab; out.shRp = -aL * aw + ab; out.shLr = run ? 0.14 : 0.09; out.shRr = run ? -0.14 : -0.09;
-    out.elL = run ? 1.35 + Math.max(0, -aL) * 0.25 : 0.22 + Math.max(0, -aL) * 0.45 * A; out.elR = run ? 1.35 + Math.max(0, aL) * 0.25 : 0.22 + Math.max(0, aL) * 0.45 * A;
-    out.lean = run ? 0.22 + 0.05 * A : 0.06 + 0.012 * c2; out.pelP = run ? 0.1 : 0.03; out.neck = run ? -0.14 : 0.03; out.breath = Math.sin(ph * 0.5) * (run ? 1 : 0.4);
-    out.grip = run ? 0.55 : 0.12;
-    return out;
-  }
-  // the hips' height through a stride, for each speed: in each moment of it, the height at which the standing foot (the
-  // lower of the two, when both stand) touches the ground — the legs' own reach; smoothed round the cycle (a table made
-  // once, from the rig: the legs are what they are, the hips follow)
-  const BOBT = {}; let gaitBob = null;
-  function bobTable(g, sp) {
-    const N = 64, out = new Float32Array(N + 1), need = new Float32Array(N), has = new Uint8Array(N); const p = POSE0(); const run = g === 'run';
-    const save = gaitBob; gaitBob = null;
-    for (let i = 0; i < N; i++) {
-      Object.assign(p, gait(i / N * TAU, sp, run)); const R = P3.rig(0, 0, 0, Math.PI / 2, p, { s: 1 });
-      let lift = 1e9;
-      for (let k = 0; k < 2; k++) { if (!(k ? p.stR : p.stL)) continue; const F = R[B.ftL + k]; const lo = Math.min(ptY(F, 0, -LEG.sole, -LEG.heel), ptY(F, 0, -LEG.sole, LEG.ball)); lift = Math.min(lift, -lo); has[i] = 1; }
-      need[i] = lift;
-    }
-    gaitBob = save;
-    // (no foot on the ground — a run's flight: an arc from the push-off's height to the next strike's, rising over it)
-    for (let i = 0; i < N; i++) if (!has[i]) {
-      let a = i, b = i; while (!has[(a + N - 1) % N] && a > i - N) a--; while (!has[(b + 1) % N] && b < i + N) b++;
-      const ha = need[(a - 1 + N) % N], hb = need[(b + 1) % N], t = (i - a + 1) / (b - a + 2);
-      need[i] = G.lerp(ha, hb, t) + 0.035 * Math.sin(Math.PI * t) * G.clamp(sp / 4, 0.5, 1.4);
-    }
-    for (let i = 0; i < N; i++) { let v = 0; for (let d = -2; d <= 2; d++) v += need[(i + d + N) % N] * [0.1, 0.2, 0.4, 0.2, 0.1][d + 2]; out[i] = v; }
-    out[N] = out[0]; return out;
-  }
-  gaitBob = function (g, u, sp) {
-    const X = RATE_SP[g]; let T = BOBT[g]; if (!T) { if (!THREE) return 0; T = BOBT[g] = X.map(v => bobTable(g, v)); }
-    let j = 0; while (j < X.length - 2 && X[j + 1] < sp) j++; const f = G.clamp((sp - X[j]) / (X[j + 1] - X[j]), 0, 1);
-    u = (u % 1 + 1) % 1; const x = u * 64, i = Math.floor(x), q = x - i; const at = t => t[i] + (t[i + 1] - t[i]) * q;
-    return G.lerp(at(T[j]), at(T[j + 1]), f);
-  };
+  // The stride — the walk, the jog, the run — is G.Gait's (js/anim-gait.js, D-340): the cadence and the stride of real people at
+  // each speed (no cap), the legs' curves scaled until the foot on the ground keeps still under the body, the hips as high as the
+  // standing leg lets them be — computed from the phase every frame, never filtered (the body's animator, anim-body.js, plays it
+  // phase-matched between the walk and the run). A state's clock t is the phase in radians (one stride: 2π)
+  function gaitPose(t, sp, run) { const out = POSE0(); return G.Gait ? G.Gait.pose(out, t / TAU, sp || 0, 1, run ? 1 : 0) : out; }
   Anim.STATES = Object.keys(ST);
   // what someone of the world is doing, as an animation (their act, their move, their burden)
   const ACT = {
@@ -853,6 +842,8 @@
     if (v.sleeping) return 'sleep';
     if (sp > 0.25) { if (v.act === 'sneak') return 'sneak'; if ((v.carry && v.carry.n > 0) || CARRY_ACTS.has(v.act)) return 'carryWalk'; return sp > 3.1 || v.act === 'run' ? 'run' : 'walk'; }
     if (v.downT && v.downT > G.S.clock) return 'sleep';
+    // (the act's own gesture, where there is a clip of it — the axe, the pick, the rod, the word, the prayer: anim-clips.js)
+    const c = Anim.CLIP_OF && Anim.CLIP_OF[v.act]; if (c && Anim.CLIPS && Anim.CLIPS[c]) return c;
     const a = ACT[v.act]; if (a && a !== 'run') return a;
     if (v.carry && v.carry.n > 0) return 'carry';
     return 'idle';
@@ -884,7 +875,7 @@
   Anim.weave = (t, id, k) => (k > 0 ? Math.sin(t * 0.9 + id * 0.7) * 0.24 * k : 0);
   // the state of a place inside a building (Interiors.places: its st — a state of the 3D, or an act of the world's people, as
   // the household's rule gives it): the state itself, else the act's, else standing
-  Anim.resolve = st => (st && ST[st] ? st : st && ACT[st] && ACT[st] !== 'run' ? ACT[st] : 'idle');
+  Anim.resolve = st => (st && (ST[st] || (Anim.CLIPS && Anim.CLIPS[st])) ? st : st && Anim.CLIP_OF && Anim.CLIPS && Anim.CLIPS[Anim.CLIP_OF[st]] ? Anim.CLIP_OF[st] : st && ACT[st] && ACT[st] !== 'run' ? ACT[st] : 'idle');
   // the weight of what is held, in the body — by the load's weight against the body's strength, not by the good's name: under a
   // load before the chest the trunk leans back over the hips and the knees give; carried low and heavy, more; under a load on
   // the back the trunk bends forward and the strap pulls the head back; a bucket at the side tips the trunk away from it and
@@ -923,27 +914,10 @@
     }
     return want;
   };
-  // the gait's rate: radians of its phase per metre walked, so that the standing foot keeps still on the ground at any
-  // speed. Measured once from the rig itself (how far back the lower foot goes per radian of the stride, the legs' own
-  // angles at each speed): a change to a gait stays in step without a number to retune
-  const RATE = {}; const RATE_SP = { walk: [0.3, 0.6, 0.9, 1.2, 1.5, 1.9, 2.4, 3.1], run: [2.4, 3.1, 4, 5, 6, 7.5, 9], sneak: [0.3, 0.6, 1, 1.5, 2.2] };
-  const GAIT_OF = { walk: 'walk', carryWalk: 'walk', wade: 'walk', run: 'run' };
-  // (metres walked per radian of the stride: the heel strikes at the start of the stance and the foot rolls onto its
-  // ball, which leaves the ground at its end — the body must have gone, meanwhile, from over the one to over the other)
-  const STANCE = { walk: 0.62, run: 0.38, sneak: 0.62 };
-  function strideOf(st, sp) {
-    const p = POSE0(); const zAt = (u, heel) => { Object.assign(p, ST[st](u * TAU, sp)); const e = P3.rig(0, 0, 0, Math.PI / 2, p, { s: 1 })[B.ftL].elements; return heel ? e[14] - e[6] * LEG.sole - e[10] * LEG.heel : e[14] - e[6] * LEG.sole + e[10] * LEG.ball; };
-    const f = STANCE[st] || 0.6; const went = zAt(0, true) + LEG.heel + LEG.ball - zAt(f, false);
-    return went > 0.05 ? went / (f * TAU) : 0.2;
-  }
-  Anim.rate = function (st, sp, s) {
-    const g = GAIT_OF[st]; if (!g || !THREE) return 2.6;
-    let T = RATE[g]; if (!T) { T = RATE[g] = RATE_SP[g].map(v => strideOf(g, v)); }
-    const X = RATE_SP[g]; let per;
-    if (sp <= X[0]) per = T[0]; else if (sp >= X[X.length - 1]) per = T[T.length - 1];
-    else { let k = 1; while (X[k] < sp) k++; per = G.lerp(T[k - 1], T[k], (sp - X[k - 1]) / (X[k] - X[k - 1])); }
-    return 1 / Math.max(0.03, per * (s || 1));
-  };
+  // the gait's rate: radians of its phase per metre walked — the cadence of the speed (G.Gait) over the speed: the standing foot
+  // keeps still on the ground at any speed because the stride is what that speed and that cadence leave (sneak: its own)
+  const GAIT_OF = { walk: 0, carryWalk: 0, wade: 0, run: 1 };
+  Anim.rate = function (st, sp, s) { const w = GAIT_OF[st]; if (w === undefined || !G.Gait) return 2.6; const v = Math.max(0.3, sp || 0); return TAU * G.Gait.freq(v, s || 1, w) / v; };
 
   // ------------------------------ putting a body together ------------------------------
   // (the body's local frame: +Z forward, +Y up, +X its left. The signs: a negative pitch swings an arm or a leg
@@ -1019,7 +993,7 @@
           if (P3.flames.length < 40) P3.flames.push([M.v.x, M.v.y + (L.lantern ? -0.18 : 0.47) * s, M.v.z, L.lantern ? 0.5 : 0.85]);
         } else hide('torch', idx);
       }
-      if (sd < 0) { if (pose.tool || L.tool) put('tool', idx, F.hd, 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx); }
+      if (sd < 0) { if (pose.tool || (L.inv && L.inv.mao)) put('tool', idx, F.hd, 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx); }
     }
     // legs: from the hips, down to the knees, down to the feet
     for (const [sd, hp, kn, an, th, sn, ft] of [[1, pose.hipL, pose.knL, pose.anL || 0, 'thighL', 'shinL', 'footL'], [-1, pose.hipR, pose.knR, pose.anR || 0, 'thighR', 'shinR', 'footR']]) {
@@ -1063,75 +1037,155 @@
   }
   // (the legs' measures: thigh, the sole under the ankle, the heel behind it and the ball in front)
   const LEG = { L1: 0.44, sole: 0.044, heel: 0.062, ball: 0.122 };
+  P3.LEG = LEG;
+  // a leg's turn at the hip in the pose: its swing (pitch), the toes turned out (yaw) and how far in toward the line under the
+  // body the leg is drawn (adduction: the steps a hand apart, as people walk — not two tracks under the hips, 20a)
+  // (the thigh's turn in the pelvis: its swing's plane turned (hy, before the swing: the plane the leg swings in), swung (hp),
+  // drawn in (ad), then turned about its own length (ty: the knee and the toes out) — the hips' rotation in a stride turns the
+  // plane, not the foot's place)
+  const hipYaw = (pose, k) => (k ? pose.hyR : pose.hyL) || 0, hipRoll = (pose, k) => (k ? 1 : -1) * ((k ? pose.adR : pose.adL) || 0), hipTwist = (pose, k) => (k ? pose.tyR : pose.tyL) || 0;
+  function thighRot(out, hp, hy, hr, ty) { M.eu.set(hp, hy, hr, 'YXZ'); out.makeRotationFromEuler(M.eu); if (ty) { M.b.makeRotationY(ty); out.multiply(M.b); } return out; }
+  function thighAt(out, R, sd, rot) { out.copy(R[B.pel]); M.b.makeTranslation(sd * 0.095, -0.04, 0); out.multiply(M.b); return out.multiply(rot); }
+  // the ground under a foot: the person's own where nothing else is known (L.gnd: each foot its own — a slope, a step, a stone)
+  const groundOf = (L, X, Z) => { const g = L.gnd ? L.gnd(X, Z) : undefined; return Number.isFinite(g) ? g : L.ground; };
   // where a foot must be. A foot in a stride is in one of three states: swinging (where the pose has it — kept out of the
-  // ground), standing (from the moment it strikes: it stays where its heel struck, and rolls on it — on the heel while
-  // the toes come down, flat, then on the ball as the heel rises and the toes push off — the ankle where that roll puts
-  // it), or leaving (pushed off: from where it stood it goes after the swing the pose has, as it lifts)
+  // ground), standing (from the moment it strikes: it stays where its heel struck, on that spot's own ground, and rolls on it —
+  // on the heel while the toes come down, flat, then on the ball as the heel rises and the toes push off — the ankle where that
+  // roll puts it), or leaving (pushed off: from where it stood it goes after the swing the pose has, within the first third of
+  // the swing — its share of the swing from the pose's own clock, swL/swR: it always gets there, L-1100). The body's animator
+  // also gives a foot its mode (L.plant[k].mode: 'gait' the stride's, 'plant' kept where it stands whatever the pose, 'free'
+  // the pose's own — kneeling, lying, in the air) and its steps (L.plant[k].step: from where it stood to where it goes)
   function footFK(R, pose, k, out) {
     const sd = k ? -1 : 1; const hp = k ? pose.hipR : pose.hipL, kn = k ? pose.knR : pose.knL, an = (k ? pose.anR : pose.anL) || 0;
-    fr(M.a, R[B.pel], sd * 0.095, -0.04, 0, hp, 0, 0); fr(M.c2, M.a, 0, -LEG.L1, 0, kn, 0, 0); return fr(out, M.c2, 0, -RIG.shin, 0.02, an, 0, 0);
+    thighAt(M.a, R, sd, thighRot(M.th, hp, hipYaw(pose, k), hipRoll(pose, k), hipTwist(pose, k))); fr(M.c2, M.a, 0, -LEG.L1, 0, kn, 0, 0); return fr(out, M.c2, 0, -RIG.shin, 0.02, an, 0, 0);
   }
-  function strike(ft, e) { ft.on = 1; ft.x = e[12] - (e[4] * LEG.sole + e[8] * LEG.heel); ft.z = e[14] - (e[6] * LEG.sole + e[10] * LEG.heel); const l = Math.hypot(e[8], e[10]) || 1; ft.dx = e[8] / l; ft.dz = e[10] / l; ft.off = 0; }
+  function strike(ft, e, L) {
+    ft.on = 1; ft.x = e[12] - (e[4] * LEG.sole + e[8] * LEG.heel); ft.z = e[14] - (e[6] * LEG.sole + e[10] * LEG.heel); const l = Math.hypot(e[8], e[10]) || 1; ft.dx = e[8] / l; ft.dz = e[10] / l; ft.off = 0;
+    ft.y = groundOf(L, ft.x, ft.z); ft.pmin = -9; // (a new stance: its heel down again)
+  }
+  P3.strike = strike; // (for the animator: a foot set down where it stands)
+  // (the ankle of a foot standing on its spot, rolled to pitch p: on its heel while the toes are up, on its ball as the heel rises)
+  function rollTo(T, ft, p, s) {
+    const c = Math.cos(p), sn = Math.sin(p); let px = ft.x, pz = ft.z, oy, oz;
+    if (p <= 0) { oy = LEG.sole * c - LEG.heel * sn; oz = LEG.sole * sn + LEG.heel * c; }
+    else { const bl = (LEG.heel + LEG.ball) * s; px += ft.dx * bl; pz += ft.dz * bl; oy = LEG.sole * c + LEG.ball * sn; oz = LEG.sole * sn - LEG.ball * c; }
+    return T.set(px + ft.dx * oz * s, ft.y + oy * s, pz + ft.dz * oz * s);
+  }
+  const DIR = [0, 0];
   function footWant(R, pose, L, k, s) {
-    const ft = L.plant ? L.plant[k] : null; if (!ft) return null; const stw = (k ? pose.stR : pose.stL) || 0;
-    const e = footFK(R, pose, k, M.a).elements; const p = (k ? pose.pitR : pose.pitL) || 0; const T = M.t[k];
+    const ft = L.plant ? L.plant[k] : null; if (!ft) return null;
+    if (ft.mode === 'free') { ft.on = 0; ft.off = 0; return null; }
+    const e = footFK(R, pose, k, M.a).elements; const T = M.t[k];
+    // (a step of the stance — a turn on the spot, squaring up, a nudge: from where the foot stood to where it goes, lifted on
+    // the way and the heel first; set down flat on its spot's ground)
+    if (ft.step) {
+      const q = ft.step, t = G.clamp(q.t, 0, 1), w = G.smooth(0, 1, t);
+      const bx = q.x + q.dx * LEG.heel * s, bz = q.z + q.dz * LEG.heel * s, by = q.y + LEG.sole * s;
+      T.set(G.lerp(q.ax, bx, w), G.lerp(q.ay, by, w) + (q.h || 0.07) * s * Math.sin(Math.PI * t), G.lerp(q.az, bz, w));
+      const a0 = Math.atan2(q.adz, q.adx), a1 = Math.atan2(q.dz, q.dx); let da = a1 - a0; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
+      DIR[0] = Math.cos(a0 + da * w); DIR[1] = Math.sin(a0 + da * w); ft.on = 0; ft.off = 0;
+      return { T, p: 0.32 * Math.sin(Math.PI * Math.min(1, t * 1.25)), w: 1, dir: DIR, stepping: 1 };
+    }
+    const stw = ft.mode === 'plant' && ft.on ? 1 : (k ? pose.stR : pose.stL) || 0; const p = ft.mode === 'plant' && !(k ? pose.stR : pose.stL) ? 0 : (k ? pose.pitR : pose.pitL) || 0;
     if (ft.on) {
       if (stw > 0.5) ft.early = 0;
       // (the push-off: the stride's stance is over — unless the strike came early, before it began)
-      if (stw <= 0.5 && !ft.early) { ft.on = 0; ft.off = 1; ft.rx = ft.ax; ft.ry = ft.ay; ft.rz = ft.az; ft.rp = ft.ap; }
-    } else if (stw > 0.5 && !ft.off) strike(ft, e);
+      // (the gap between where it stood and where the stride has it now is what eases out — the foot goes with the stride's own
+      // motion from the first frame of its swing, never dragged from a point of the ground: L-1100)
+      if (stw <= 0.5 && !ft.early) { ft.on = 0; ft.off = 1; ft.rx = ft.ax - e[12]; ft.ry = ft.ay - e[13]; ft.rz = ft.az - e[14]; ft.rp = ft.ap - p; }
+    } else if (stw > 0.5 && !ft.off) {
+      // (the strike when the heel meets its ground — or, not yet there, a little into the stance: never pulled down onto the
+      // ground from above it, L-1103)
+      const pg = k ? pose.pgR : pose.pgL, lo = Math.min(ptY(M.a, 0, -LEG.sole, -LEG.heel), ptY(M.a, 0, -LEG.sole, LEG.ball));
+      if (!(pg >= 0) || pg > 0.12 || lo < groundOf(L, e[12], e[14]) + 0.006 * s) strike(ft, e, L);
+    }
     if (ft.on) {
-      const c = Math.cos(p), sn = Math.sin(p); let px = ft.x, pz = ft.z, oy, oz;
-      if (p <= 0) { oy = LEG.sole * c - LEG.heel * sn; oz = LEG.sole * sn + LEG.heel * c; }
-      else { const bl = (LEG.heel + LEG.ball) * s; px += ft.dx * bl; pz += ft.dz * bl; oy = LEG.sole * c + LEG.ball * sn; oz = LEG.sole * sn - LEG.ball * c; }
-      T.set(px + ft.dx * oz * s, L.ground + oy * s, pz + ft.dz * oz * s);
+      // (the heel rises as the body goes on over the foot — as early and as far as the leg needs to keep its ball on the
+      // ground, never less than the stride's own: the hips do not sink for a foot left behind, L-1104)
+      let p2 = Math.max(p, ft.pmin === undefined ? -9 : ft.pmin);
+      for (let it = 0; it < 8; it++) {
+        rollTo(T, ft, p2, s);
+        if (stw <= 0.5 || ft.mode === 'plant') break;
+        M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k); const hx = M.v.x - (k ? -0.095 : 0.095), hy = M.v.y + 0.04, hz = M.v.z;
+        if (hz > 0 || hx * hx + hy * hy + hz * hz <= REACH * REACH || p2 >= 1.0) break;
+        p2 = Math.max(p2, 0) + 0.07;
+      }
+      if (p2 > p) ft.pmin = p2; const pUse = p2;
       // (the body went too far from it — a turn on the spot, a push of the world: the foot lifts where it is)
       if ((T.x - e[12]) ** 2 + (T.z - e[14]) ** 2 > 0.36 * s * s) { ft.on = 0; ft.off = 0; return null; }
-      ft.ax = T.x; ft.ay = T.y; ft.az = T.z; ft.ap = p;
-      return { T, p, w: 1 };
+      ft.ax = T.x; ft.ay = T.y; ft.az = T.z; ft.ap = pUse; DIR[0] = ft.dx; DIR[1] = ft.dz;
+      return { T, p: pUse, w: 1, dir: DIR };
     }
     if (ft.off) {
-      // (leaving: from the push-off's place toward the swing, as the stance weight runs out)
-      const r = G.smooth(0, 1, 1 - stw / 0.5); if (r >= 0.999 || stw > 0.5) { ft.off = 0; return null; }
-      T.set(G.lerp(ft.rx, e[12], r), Math.max(G.lerp(ft.ry, e[13], r), L.ground + LEG.sole * s), G.lerp(ft.rz, e[14], r));
-      return { T, p: G.lerp(ft.rp, p, r), w: 1, leaving: 1 };
+      // (leaving: from the push-off's place toward the swing, over the first third of the swing — by the stride's own clock; a
+      // pose with no clock of its swing lets it go at once)
+      const sw = k ? pose.swR : pose.swL; const r0 = sw >= 0 ? G.clamp(sw / (pose.rel || 0.33), 0, 1) : 1, r = r0 * r0 * r0 * (r0 * (r0 * 6 - 15) + 10); // (eased in and out: no kick)
+      if (r >= 0.999 || stw > 0.5) { ft.off = 0; return null; }
+      const q = 1 - r; T.set(e[12] + ft.rx * q, Math.max(e[13] + ft.ry * q, groundOf(L, e[12], e[14]) + LEG.sole * s), e[14] + ft.rz * q);
+      return { T, p: p + ft.rp * q, w: 1, leaving: 1, dir: null };
     }
     return null;
   }
-  // (how much lower the hips must be for the leg to reach T: 0 if it does; -1 if no lowering would do)
-  function dropFor(R, T) {
+  // (how much lower the hips must be for the leg to reach T with the knee a little bent: 0 if it does; -1 if no lowering would do)
+  const REACH = Math.sqrt(LEG.L1 * LEG.L1 + (RIG.shin * RIG.shin + 0.0004) + 2 * LEG.L1 * Math.hypot(RIG.shin, 0.02) * Math.cos(0.1));
+  function dropFor(R, T, k) {
     M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k);
-    const vy = M.v.y + 0.04, vz = M.v.z, Lm = (LEG.L1 + Math.hypot(RIG.shin, 0.02)) * 0.995;
-    if (vy * vy + vz * vz <= Lm * Lm) return 0;
-    if (vz * vz >= Lm * Lm) return -1;
-    return -Math.sqrt(Lm * Lm - vz * vz) - vy;
+    const vx = M.v.x - (k ? -0.095 : 0.095), vy = M.v.y + 0.04, vz = M.v.z, Lm = REACH, h2 = vx * vx + vz * vz;
+    if (vy * vy + h2 <= Lm * Lm) return 0;
+    if (h2 >= Lm * Lm) return -1;
+    return -Math.sqrt(Lm * Lm - h2) - vy;
   }
-  // a leg: from the pose, then reaching where its foot must be (two bones in the leg's own plane, in the pelvis's frame),
-  // the foot set to its pitch on the ground, the toes flat as the heel lifts
-  const LG = [0, 0, 0, 0]; // (each leg's hip and knee as the ground left them — the skirt follows the thighs as they are)
+  // a leg reaching its ankle to T (world): the thigh turned three ways at the hip, the knee bent in the plane the foot points along
+  // (dir: the foot's way on the ground, in the world) — two bones; the shin's ankle a hair forward of its line, as the rig has it.
+  // The thigh's turn in the rig's own order (YXZ) and the knee's bend
+  const IKL = { rx: 0, ry: 0, rz: 0, kn: 0, ok: true, m: null };
+  function legIK(R, k, T, dx0, dy0, dz0) {
+    const sd = k ? -1 : 1; M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k);
+    const L1 = LEG.L1, L2 = Math.hypot(RIG.shin, 0.02), dl = Math.atan2(0.02, RIG.shin);
+    let dx = M.v.x - sd * 0.095, dy = M.v.y + 0.04, dz = M.v.z; let c = Math.hypot(dx, dy, dz); IKL.ok = true;
+    if (c < 1e-5) { dx = 0; dy = -1; dz = 0; c = 1e-5; }
+    const ux = dx / c, uy = dy / c, uz = dz / c; const cmax = (L1 + L2) * 0.9995, cmin = Math.abs(L1 - L2) + 0.02; if (c > cmax) { c = cmax; IKL.ok = false; } else if (c < cmin) c = cmin;
+    // (the pole: the foot's way, turned into the pelvis's frame; its part across the hip-to-ankle line)
+    V3.b.set(dx0, dy0, dz0).transformDirection(M.k); let px = V3.b.x, py = V3.b.y, pz = V3.b.z; const pd = px * ux + py * uy + pz * uz; px -= pd * ux; py -= pd * uy; pz -= pd * uz;
+    let pl = Math.hypot(px, py, pz); if (pl < 1e-4) { px = 0; py = -uz; pz = uy; pl = Math.hypot(py, pz) || 1; } px /= pl; py /= pl; pz /= pl;
+    const ca = G.clamp((L1 * L1 + c * c - L2 * L2) / (2 * L1 * c), -1, 1), sa = Math.sqrt(1 - ca * ca);
+    const d1x = ca * ux + sa * px, d1y = ca * uy + sa * py, d1z = ca * uz + sa * pz; // (down the thigh)
+    const Yx = -d1x, Yy = -d1y, Yz = -d1z, Zx = ca * px - sa * ux, Zy = ca * py - sa * uy, Zz = ca * pz - sa * uz; // (the thigh's frame: Y up it, Z the knee's front)
+    const Xx = Yy * Zz - Yz * Zy, Xy = Yz * Zx - Yx * Zz, Xz = Yx * Zy - Yy * Zx;
+    // (its swing in the leg's own plane — the pitch the skirt and the ankle follow; an Euler's pitch folds past a right angle)
+    IKL.rx = Math.atan2(-d1z, -d1y); IKL.ry = Math.atan2(Zx, Zz); IKL.rz = Math.atan2(Xy, Yy);
+    IKL.m.set(Xx, Yx, Zx, 0, Xy, Yy, Zy, 0, Xz, Yz, Zz, 0, 0, 0, 0, 1);
+    IKL.kn = Math.PI - Math.acos(G.clamp((L1 * L1 + L2 * L2 - c * c) / (2 * L1 * L2), -1, 1)) + dl;
+    return IKL;
+  }
+  P3.legIK = legIK; // (for the tests)
+  // a leg: from the pose, then reaching where its foot must be, the foot set to its pitch on the ground, the toes flat as the
+  // heel lifts; a free foot kept out of its own ground
+  const LG = [0, 0, 0, 0], LGR = [0, 0]; // (each leg's hip and knee as the ground left them — the skirt follows the thighs as they are)
   function leg(R, pose, L, k, s, grounded, want) {
     const sd = k ? -1 : 1; let hp = k ? pose.hipR : pose.hipL, kn = k ? pose.knR : pose.knL; let an = (k ? pose.anR : pose.anL) || 0;
-    fr(R[B.thL + k], R[B.pel], sd * 0.095, -0.04, 0, hp, 0, 0); fr(R[B.snL + k], R[B.thL + k], 0, -LEG.L1, 0, kn, 0, 0); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0);
-    let toe = -Math.max(0, an) * 0.8;
+    thighRot(M.th, hp, hipYaw(pose, k), hipRoll(pose, k), hipTwist(pose, k));
+    const chain = () => { thighAt(R[B.thL + k], R, sd, M.th); fr(R[B.snL + k], R[B.thL + k], 0, -LEG.L1, 0, kn, 0, 0); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0); };
+    chain();
+    let toe = -Math.max(0, an) * 0.8; const ft = L.plant ? L.plant[k] : null;
     if (grounded) {
-      const amin = L.ground + (LEG.sole + 0.003) * s; const e = R[B.ftL + k].elements;
+      const e = R[B.ftL + k].elements; const gy = groundOf(L, e[12], e[14]); const amin = gy + (LEG.sole + 0.003) * s;
       let T = null;
       if (want) T = want.T; else if (e[13] < amin) T = M.t[k].set(e[12], amin, e[14]);
       // (the swing's end: the heel coming down in front reaches the ground — that is the strike; next frame it stands)
-      const ft = L.plant ? L.plant[k] : null;
-      if (!want && ft && !ft.on && !ft.off && ((k ? pose.pitR : pose.pitL) || 0) < 0) {
+      // (only late in the swing, where the stride's clock says it — a heel brushing the ground as the leg passes under the body
+      // is no strike: planted there, the stride ran ahead of it, L-1102)
+      const swk = k ? pose.swR : pose.swL;
+      if (!want && ft && ft.mode !== 'free' && !ft.on && !ft.off && !ft.step && ((k ? pose.pitR : pose.pitL) || 0) < 0 && !(swk >= 0 && swk < (pose.esw || 0.86))) {
         const hh = ptY(R[B.ftL + k], 0, -LEG.sole, -LEG.heel); M.k.copy(R[B.pel]).invert(); M.v.set(e[12], e[13], e[14]).applyMatrix4(M.k);
-        if (hh < L.ground + 0.006 && M.v.z > -0.01) { strike(ft, e); ft.early = 1; }
+        if (hh < gy + 0.006 && M.v.z > -0.01) { strike(ft, e, L); ft.early = 1; }
       }
       if (T) {
-        M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k);
-        const dy = M.v.y + 0.04, dz = M.v.z, L1 = LEG.L1, L2 = Math.hypot(RIG.shin, 0.02), dl = Math.atan2(0.02, RIG.shin);
-        const d = Math.min(Math.hypot(dy, dz), L1 + L2 - 1e-4);
-        const ke = Math.acos(G.clamp((d * d - L1 * L1 - L2 * L2) / (2 * L1 * L2), -1, 1));
-        const phi = Math.atan2(-dz, -dy), beta = Math.atan2(L2 * Math.sin(ke), L1 + L2 * Math.cos(ke));
-        const hp2 = phi - beta, kn2 = ke + dl;
-        an += (hp + kn) - (hp2 + kn2); hp = hp2; kn = kn2; // (the foot keeps its pitch in the world)
-        fr(R[B.thL + k], R[B.pel], sd * 0.095, -0.04, 0, hp, 0, 0); fr(R[B.snL + k], R[B.thL + k], 0, -LEG.L1, 0, kn, 0, 0); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0);
+        // (the knee's way: a foot standing points it — the knee goes where the toes go; a free leg kept out of the ground keeps
+        // its own knee's way, the thigh's front — kneeling, its foot behind it, the knee does not turn over)
+        const th = R[B.thL + k].elements; let dX = th[8], dY = th[9], dZ = th[10]; if (want && want.dir) { dX = want.dir[0]; dY = 0; dZ = want.dir[1]; }
+        const before = hp + kn; const o = legIK(R, k, T, dX, dY, dZ); hp = o.rx; kn = o.kn; M.th.copy(o.m); if (!want) an += before - (hp + kn);
+        chain();
       }
       if (want) {
         // (planted: the foot at the stride's pitch to the ground — its forward axis measured, the ankle turned by the difference)
@@ -1141,18 +1195,21 @@
         // (free: where the heel or the ball would go into the ground, the ankle turns to set it on it instead)
         for (let it = 0; it < 2; it++) {
           const hh = ptY(R[B.ftL + k], 0, -LEG.sole, -LEG.heel), hb = ptY(R[B.ftL + k], 0, -LEG.sole, LEG.ball);
-          const lo = Math.min(hh, hb); if (lo >= L.ground - 0.004) break;
-          const a = Math.asin(G.clamp((L.ground - lo) / s / (hh < hb ? 0.075 : 0.13), 0, 0.8));
+          const lo = Math.min(hh, hb); if (lo >= gy - 0.004) break;
+          const a = Math.asin(G.clamp((gy - lo) / s / (hh < hb ? 0.075 : 0.13), 0, 0.8));
           an += hh < hb ? a : -a; an = G.clamp(an, -0.9, 1.1); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0);
         }
         toe = -Math.max(0, an) * 0.8;
         fr(R[B.toeL + k], R[B.ftL + k], 0, RIG.toeY, RIG.toe, toe, 0, 0);
-        const tt = ptY(R[B.toeL + k], 0, -0.004, 0.07); if (tt < L.ground) toe -= Math.asin(G.clamp((L.ground - tt) / s / 0.07, 0, 0.9));
+        const tt = ptY(R[B.toeL + k], 0, -0.004, 0.07); if (tt < gy) toe -= Math.asin(G.clamp((gy - tt) / s / 0.07, 0, 0.9));
       }
     }
     fr(R[B.toeL + k], R[B.ftL + k], 0, RIG.toeY, RIG.toe, toe, 0, 0);
-    fr(R[B.hpHL + k], R[B.pel], sd * 0.095, -0.04, 0, hp / 2, 0, 0); fr(R[B.knHL + k], R[B.thL + k], 0, -LEG.L1, 0, kn / 2, 0, 0);
-    LG[k * 2] = hp; LG[k * 2 + 1] = kn;
+    { const H = R[B.hpHL + k]; H.copy(R[B.pel]); M.b.makeTranslation(sd * 0.095, -0.04, 0); H.multiply(M.b); Q.a.setFromRotationMatrix(M.th); Q.b.identity().slerp(Q.a, 0.5); M.c.makeRotationFromQuaternion(Q.b); H.multiply(M.c); }
+    fr(R[B.knHL + k], R[B.thL + k], 0, -LEG.L1, 0, kn / 2, 0, 0);
+    LG[k * 2] = hp; LG[k * 2 + 1] = kn; LGR[k] = M.th.elements[1]; // (and how far the thigh is drawn in or out: its down axis's side)
+    // (where the ankle came to, for the animator's steps: from here a step begins)
+    if (ft) { const f = R[B.ftL + k].elements; ft.cx = f[12]; ft.cy = f[13]; ft.cz = f[14]; const l = Math.hypot(f[8], f[10]) || 1; ft.cdx = f[8] / l; ft.cdz = f[10] / l; }
   }
   // ------------------------------ the hands on what they hold ------------------------------
   // The arm is two bones and a hand: from the shoulder 0.30 m to the elbow, then 0.29 m to the wrist and 0.076 m more to the
@@ -1268,7 +1325,7 @@
   const BUSY_HANDS = new Set(['chop', 'mine', 'build', 'fight', 'fish', 'mend', 'hammer', 'forge', 'dig', 'beat', 'cut', 'butcher', 'skin', 'craft', 'shear', 'stab', 'brandish', 'rake', 'reel', 'pick', 'gather', 'plant', 'harvest', 'milk', 'salt', 'sweep', 'feed', 'fill', 'weave', 'pottery', 'throw', 'climb', 'swim', 'dive', 'pray', 'kneel', 'dance', 'hug', 'embrace', 'sit', 'sleep', 'eat', 'drink']);
   P3.setDown = setDown; P3.BUSY_HANDS = BUSY_HANDS;
   P3.rig = function (X, Y, Z, yaw, pose, L) {
-    mats(); if (!RF) { RF = BONES.map(() => new THREE.Matrix4()); Q.a = new THREE.Quaternion(); Q.b = new THREE.Quaternion(); M.k = M.k || new THREE.Matrix4(); M.c2 = new THREE.Matrix4(); M.t = [new THREE.Vector3(), new THREE.Vector3()]; M.ci = new THREE.Matrix4(); V3.a = new THREE.Vector3(); V3.b = new THREE.Vector3(); Q.c = new THREE.Quaternion(); Q.d = new THREE.Quaternion(); M.eu2 = new THREE.Euler(); }
+    mats(); if (!RF) { RF = BONES.map(() => new THREE.Matrix4()); M.th = new THREE.Matrix4(); IKL.m = new THREE.Matrix4(); Q.a = new THREE.Quaternion(); Q.b = new THREE.Quaternion(); M.k = M.k || new THREE.Matrix4(); M.c2 = new THREE.Matrix4(); M.t = [new THREE.Vector3(), new THREE.Vector3()]; M.ci = new THREE.Matrix4(); V3.a = new THREE.Vector3(); V3.b = new THREE.Vector3(); Q.c = new THREE.Quaternion(); Q.d = new THREE.Quaternion(); M.eu2 = new THREE.Euler(); }
     const R = RF; const s = L.s; const lie = pose.lie || 0;
     const root = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); root.multiply(M.b);
     if (lie > 0.01) { const pr = pose.prone ? 1 : -1; M.b.makeTranslation(0, 0.16 * s * lie, 0); root.multiply(M.b); M.b.makeRotationX(pr * lie * Math.PI / 2); root.multiply(M.b); M.b.makeTranslation(0, -0.92 * s * lie, 0); root.multiply(M.b); }
@@ -1283,8 +1340,11 @@
     const want = [null, null];
     if (grounded) {
       let drop = 0;
-      for (let k = 0; k < 2; k++) { want[k] = footWant(R, pose, L, k, s); if (want[k] && !want[k].leaving) { const d = dropFor(R, want[k].T); if (d < 0) { L.plant[k].on = 0; want[k] = null; } else drop = Math.max(drop, d); } }
-      if (drop > 0) { hipY -= Math.min(0.08, drop); pelvis(); }
+      // (a foot the hips would have to sink far for — left behind by a stride, a push — lifts instead: the hips sink for the ground,
+      // not for a foot in the wrong place)
+      for (let k = 0; k < 2; k++) { want[k] = footWant(R, pose, L, k, s); if (want[k] && !want[k].leaving && !want[k].stepping) { const d = dropFor(R, want[k].T, k); if (d < 0 || d > (L.plant[k].mode === 'gait' || !L.plant[k].mode ? 0.16 : 0.42)) { L.plant[k].on = 0; want[k] = null; } else drop = Math.max(drop, d); } }
+      // (as low as a foot on the ground needs them — a slope, a step, a long stride —, never by a fixed cap: L-1101)
+      if (drop > 0) { hipY -= Math.min(0.4, drop); pelvis(); L.drop = drop; } else L.drop = 0;
     }
     const tx = pose.lean, ty = pose.twist * 0.7 - pel * 1.7, tz = -(pose.sway || 0) * 0.6 - prl * 0.8;
     fr(R[B.chest], R[B.pel], 0, 0.06, 0, tx, ty, tz); fr(R[B.spine], R[B.pel], 0, 0.06, 0, tx / 2, ty / 2, tz / 2);
@@ -1301,30 +1361,46 @@
     else if (H || rch) { L.yaw0 = -yaw + Math.PI / 2; M.ci.copy(R[B.chest]).invert(); holdTargets(R, L, s); if (hold && !H) HP.t[0] = null; }
     else HP.t[0] = HP.t[1] = null;
     const hw = PR ? 1 : H ? (rch ? 1 : G.clamp(pose.holdW || 0, 0, 1)) : rch ? G.clamp(rch.w, 0, 1) : 0;
-    for (let k = 0; k < 2; k++) {
-      const sd = k ? -1 : 1;
+    // (what the hands hold of their own — G.Inv.held, D-336: the thing in the right hand, the other hand's; a hand on a load holds
+    // nothing else; and how each is held when no gesture works it: a shaft upright, a tool hanging from the fist, a shield on the
+    // forearm, the bow at the side)
+    const inv = L.inv || NO_INV, free = !lie && !L.bind && !PR; const busyR = !!(H && H.grip !== 'chao' && H.hands.includes('R')), busyL = !!(H && H.grip !== 'chao' && H.hands.includes('L'));
+    const kR = free && !busyR ? inv.mao : null, kL = free && !busyL && !hold ? inv.outra : null; const gR = kR ? gripOf(kR) : null, gL = kL ? gripOf(kL) : null;
+    const nR = kR ? itemKind(kR) : null, shaftR = !!kR && !pose.tool && upright(pose) && (gR === 'duas' || gR === 'vara' || SHAFT.has(nR));
+    const offW = kR && !hold && !busyL && !kL ? G.clamp(pose.offW || 0, 0, 1) : 0; const off = offW > 0.001 ? offGrip(kR) : null;
+    if (off) M.ci.copy(R[B.chest]).invert();
+    for (let q = 0; q < 2; q++) {
+      const k = 1 - q, sd = k ? -1 : 1; // (the right arm first: the thing in it places the other hand on a thing of two hands)
       let sp = k ? pose.shRp : pose.shLp, sr = k ? pose.shRr : pose.shLr, el = k ? pose.elR : pose.elL;
       if (hold && sd > 0) { sp = -1.05; sr = 0.12; el = 1.25; }
-      // (a spear or a staff carried — not swung —: the upper arm by the side, the forearm forward, the shaft upright)
-      if (k && L.tool && !pose.tool && !lie && !L.bind && upright(pose)) { sp = 0.05; sr = -0.08; el = 1.05; }
+      // (a shaft carried — not swung —: the upper arm by the side, the forearm forward, the shaft upright)
+      if (k && shaftR) { sp = 0.05; sr = -0.08; el = 1.05; }
+      // (the other hand's thing: a shield before the body on the forearm, the bow at the side, a handle hanging)
+      if (!k && kL && upright(pose)) { if (gL === 'escudo') { sp = -0.32; sr = 0.3; el = 1.5; } else if (gL === 'arco') { sp = 0.06; sr = 0.12; el = 0.3; } else if (gL === 'alca') { sp = 0.05; sr = 0.18; el = 0.1; } }
       let jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)), ry = 0; // (a wide skirt or a cape: the arms a little out)
-      // (the hand on what it holds: the arm that reaches it, eased in from the pose's own by the hold's weight)
-      const T = hw > 0.001 ? HP.t[k] : null;
+      // (the hand on what it holds: the arm that reaches it, eased in from the pose's own by the hold's weight — or the left hand
+      // on the thing of two hands the right holds, where the thing's art says the other hand goes)
+      let T = hw > 0.001 ? HP.t[k] : null, w = hw, pole0 = HP.pole;
+      if (!k && off) { V3.a.set(off[0], off[1], off[2]).applyMatrix4(R[B.tool]).applyMatrix4(M.ci); OFFT[0] = V3.a.x; OFFT[1] = V3.a.y; OFFT[2] = V3.a.z; T = OFFT; w = offW; pole0 = POLE_TWO; }
       if (T) {
-        const pole = PL; pole[0] = HP.pole[0] * sd; pole[1] = HP.pole[1]; pole[2] = HP.pole[2]; SH0[0] = sd * 0.235; SH0[1] = 0.46; SH0[2] = jz;
+        const pole = PL; pole[0] = pole0[0] * sd; pole[1] = pole0[1]; pole[2] = pole0[2]; SH0[0] = sd * 0.235; SH0[1] = 0.46; SH0[2] = jz;
         let o = armIK(sd, SH0, T, pole); const jz2 = G.clamp(-o.rx, -1, 1) * 0.03; if (Math.abs(jz2 - jz) > 0.004) { SH0[2] = jz2; o = armIK(sd, SH0, T, pole); }
-        if (hw >= 0.999) { sp = o.rx; ry = o.ry; roll = o.rz; el = o.el; }
-        else { M.eu.set(sp, 0, roll, 'YXZ'); Q.c.setFromEuler(M.eu); M.eu.set(o.rx, o.ry, o.rz, 'YXZ'); Q.d.setFromEuler(M.eu); Q.c.slerp(Q.d, hw); M.eu2.setFromQuaternion(Q.c, 'YXZ'); sp = M.eu2.x; ry = M.eu2.y; roll = M.eu2.z; el = G.lerp(el, o.el, hw); }
+        if (w >= 0.999) { sp = o.rx; ry = o.ry; roll = o.rz; el = o.el; }
+        else { M.eu.set(sp, 0, roll, 'YXZ'); Q.c.setFromEuler(M.eu); M.eu.set(o.rx, o.ry, o.rz, 'YXZ'); Q.d.setFromEuler(M.eu); Q.c.slerp(Q.d, w); M.eu2.setFromQuaternion(Q.c, 'YXZ'); sp = M.eu2.x; ry = M.eu2.y; roll = M.eu2.z; el = G.lerp(el, o.el, w); }
         jz = G.clamp(-sp, -1, 1) * 0.03;
       }
       fr(R[B.shL + k], R[B.chest], sd * 0.235, 0.46, jz, sp, ry, roll);
       frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46, jz * 0.5, 0, 0, sd * RIG.roll, sp, ry, roll);
       fr(R[B.faL + k], R[B.shL + k], 0, -0.3, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -0.3, 0, -el / 2, 0, 0);
-      fr(R[B.hdL + k], R[B.faL + k], 0, -0.29, 0, 0, 0, 0);
+      fr(R[B.hdL + k], R[B.faL + k], 0, -0.29, 0, k ? 0 : (pose.wristL || 0), 0, 0);
       const onIt = !!PR || (H && H.hands.includes(k ? 'R' : 'L'));
-      const g = (hold && sd > 0) || (k && (pose.tool || L.tool)) || onIt ? 1 : grip; // (both hands close on a swung haft: the swing's own grip)
+      const g = (hold && sd > 0) || (k ? !!kR || pose.tool : !!kL || offW > 0.3) || onIt ? 1 : k ? grip : pose.gripL || grip; // (the hands close on what they hold)
       fr(R[B.fgL + k], R[B.hdL + k], 0, -RIG.knuckle, 0, 0, 0, -sd * g * 0.95);
       fr(R[B.tbL + k], R[B.hdL + k], -sd * 0.0076, -0.0238, 0.0324, 0, -sd * g * 0.55, -sd * g * 0.25);
+      // (the thing in the right hand: through the hole of the closed fist — toward the palm, under the knuckles — along the fist's
+      // axis; a shaft carried kept upright by the wrist, a tool carried hanging head down from the fist, a worked one turned by
+      // the wrist as it strikes — the clip's wrist)
+      if (k) fr(R[B.tool], R[B.hdR], 0.027, -0.076, 0, Math.PI / 2 + (pose.tool ? (pose.wrist || 0) : shaftR ? -Math.PI / 2 + 1.0 : kR && gR === 'punho' ? 1.25 : 0), 0, 0);
     }
     for (let k = 0; k < 2; k++) leg(R, pose, L, k, s, grounded, want[k]);
     // (the skirt: its front follows the leg that is most forward, its back the one most behind, its sides their own leg —
@@ -1332,18 +1408,17 @@
     const hl = LG[0], hr = LG[2], cl = pose.cloth || 0, cs = pose.clothS || 0;
     // (a thigh raised far — sitting, crouching, bent over the ground — carries the cloth over it all the way: in a step,
     // four fifths)
-    const fk = a => a * (0.8 + 0.2 * G.clamp((-a - 0.5) * 2, 0, 1)), sk = a => a * (0.75 + 0.25 * G.clamp((-a - 0.5) * 2, 0, 1));
+    const fk = a => a * (0.8 + 0.2 * G.clamp((-a - 0.4) * 3, 0, 1)), sk = a => a * (0.75 + 0.25 * G.clamp((-a - 0.4) * 3, 0, 1)); // (a run's long swing, all of it)
     fr(R[B.skF], R[B.pel], 0, -0.04, 0, fk(Math.min(hl, hr, 0)) + Math.min(0, cl) * 0.5, 0, cs * 0.3);
     // (its back: the foot most behind — the thigh and half the knee's fold: the heel kicked up in the swing stays inside)
     fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + LG[1] * 0.5, hr + LG[3] * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5 - Math.min(hl, hr, 0) * (L.fem ? 0.2 : 0.12), 0, cs * 0.3); // (seated, drawn back over the buttocks — a woman's the fuller)
-    fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, sk(hl) + cl * 0.3, 0, cs * 0.4); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, sk(hr) + cl * 0.3, 0, cs * 0.4);
+    // (its sides: their thigh's swing, and its way in or out — a stride's legs are drawn in under the body, 20a)
+    fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, sk(hl) + cl * 0.3, 0, cs * 0.4 + LGR[0] * 0.6); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, sk(hr) + cl * 0.3, 0, cs * 0.4 + LGR[1] * 0.6);
     fr(R[B.clk1], R[B.chest], 0, 0.46, -0.11, Math.max(0, cl) * 0.6, 0, cs * 0.3); fr(R[B.clk2], R[B.clk1], 0, -0.45, 0, Math.max(0, cl) * 0.5, 0, cs * 0.3);
     // (what is held: the torch upright in the left hand whatever the arm does; the tool in the right; the load at the chest)
     M.v.setFromMatrixPosition(R[B.hdL]); R[B.torch].makeRotationY(-yaw + Math.PI / 2); R[B.torch].setPosition(M.v.x, M.v.y, M.v.z); M.b.makeScale(s, s, s); R[B.torch].multiply(M.b);
-    // (the tool: through the hole of the closed fist — toward the palm, under the knuckles — along the fist's axis; a shaft
-    // carried kept upright by the wrist; a swung tool bent down by the wrist as it strikes)
-    const carried = L.tool && !pose.tool && !lie && upright(pose);
-    fr(R[B.tool], R[B.hdR], 0.027, -0.076, 0, Math.PI / 2 + (carried ? -Math.PI / 2 + 1.0 : pose.tool ? (pose.wrist || 0) : 0), 0, 0);
+    // (the things on the body this frame: the hands', the back's, the belt's — frames for the drawing, none of them a bone)
+    itemFrames(R, L, pose, yaw, s, kR, gR, kL, gL, free);
     // (the crate of two: between them, its long side along their line; and, for the tests, where the palms came to on it)
     if (PR) { const C = R[B.carry]; C.makeRotationY(-PR.yaw); C.setPosition(PR.X, PR.Y, PR.Z); const p = P3.palms(R); (PR.palms || (PR.palms = {}))[PR.lead === L.id ? 'lead' : 'help'] = p.map(q => (q ? [q.x, q.y, q.z] : null)); }
     // (the held thing that hangs from the fist — upright, its handle in the palm —, or waits on the ground at the right front)
@@ -1355,6 +1430,63 @@
     } else if (!H) fr(R[B.carry], R[B.chest], 0, 0.3, 0.26, 0, 0, 0);
     return R;
   };
+  // ------------------------------ the things on the body: their frames ------------------------------
+  // (a thing's kind; where the other hand takes a thing of two hands — the item art's grip (G.ItemArt.grip(key).off), else the
+  // drawing's own: both hands near the butt of a pick, a hoe, an axe felling; down the haft of a spade; forward on a spear, an oar)
+  const itemKind = key => (G.Itens ? G.Itens.parse(key)[0] : String(key));
+  const OFF = { picareta: [0, -0.12, 0], enxada: [0, -0.14, 0], machado: [0, -0.12, 0], martelo: [0, -0.08, 0], pa: [0, -0.55, 0], lanca: [0, 0.42, 0], remo: [0, 0.62, 0], rede: [0.14, -0.08, 0], espada: [0, -0.1, 0], vara: [0, -0.16, 0], clava: [0, -0.06, 0], cajado: [0, -0.3, 0] };
+  function offGrip(key) { const g = G.ItemArt && G.ItemArt.grip ? G.ItemArt.grip(key) : null; return (g && g.off) || OFF[itemKind(key)] || OFF.machado; }
+  P3.offGrip = offGrip;
+  const OFFT = [0, 0, 0], POLE_TWO = [0.7, -0.8, -0.25];
+  // (the frames of this rig's things — reused, the drawing reads them right after the rig: RX.mao, outra, costas, cinto, and the keys)
+  const RX = { mao: null, outra: null, costas: null, cinto: null, kR: null, kL: null, kB: null, kC: null, x: null, y: null, z: null };
+  P3.RX = RX;
+  // (a frame: the parent's (scaled), moved by p in it, turned to the basis whose Y is up the thing and Z its front)
+  function frameOn(out, parent, px, py, pz, yx, yy, yz, zx, zy, zz) {
+    RX.y.set(yx, yy, yz).normalize(); RX.z.set(zx, zy, zz); RX.z.addScaledVector(RX.y, -RX.z.dot(RX.y)).normalize(); RX.x.crossVectors(RX.y, RX.z);
+    M.b.makeBasis(RX.x, RX.y, RX.z); M.b.setPosition(px, py, pz); return out.multiplyMatrices(parent, M.b);
+  }
+  // (upright in the world at a point, facing as the body faces — a basket hanging, a torch, the bow in its hand)
+  function uprightAt(out, P, yaw, s, dy) { out.makeRotationY(-yaw + Math.PI / 2); out.setPosition(P.x, P.y + (dy || 0) * s, P.z); M.b.makeScale(s, s, s); return out.multiply(M.b); }
+  // where the stowed thing hangs: on the back across it (a shaft from the hip to over the shoulder, a sword hilt up, a shield
+  // flat), at the belt by the hip (a sword at the left, the tools at the right) — the item art's own place for it, where it has one
+  const BLADE = new Set(['espada', 'faca']);
+  function backFrame(out, R, key) {
+    const st = G.ItemArt && G.ItemArt.stow ? G.ItemArt.stow(key, 'costas') : null; const k = itemKind(key);
+    if (st && st.p && st.y && st.z) return frameOn(out, R[B.chest], st.p[0], st.p[1], st.p[2], st.y[0], st.y[1], st.y[2], st.z[0], st.z[1], st.z[2]);
+    if (k === 'escudo') return frameOn(out, R[B.chest], 0, 0.27, -0.17, 0, 1, 0, 0, 0, -1);
+    if (BLADE.has(k)) return frameOn(out, R[B.chest], -0.02, 0.36, -0.15, 0.38, -0.92, 0, 0, 0, -1); // (the hilt over the right shoulder, the blade down to the left)
+    return frameOn(out, R[B.chest], 0, 0.28, -0.15, -0.42, 0.9, 0, 0, 0, -1); // (the business end over the right shoulder)
+  }
+  function beltFrame(out, R, key) {
+    const st = G.ItemArt && G.ItemArt.stow ? G.ItemArt.stow(key, 'cinto') : null; const k = itemKind(key);
+    if (st && st.p && st.y && st.z) return frameOn(out, R[B.pel], st.p[0], st.p[1], st.p[2], st.y[0], st.y[1], st.y[2], st.z[0], st.z[1], st.z[2]);
+    const sd = k === 'espada' ? 1 : -1; // (a sword at the left hip, for the right hand to draw; the tools at the right)
+    return frameOn(out, R[B.pel], sd * 0.175, 0.01, 0.03, 0, -0.94, -0.33, 0, -0.33, 0.94);
+  }
+  function itemFrames(R, L, pose, yaw, s, kR, gR, kL, gL, free) {
+    if (!RX.mao) { RX.mao = new THREE.Matrix4(); RX.outra = new THREE.Matrix4(); RX.costas = new THREE.Matrix4(); RX.cinto = new THREE.Matrix4(); RX.x = new THREE.Vector3(); RX.y = new THREE.Vector3(); RX.z = new THREE.Vector3(); }
+    RX.kR = RX.kL = RX.kB = RX.kC = null; if (L.bind) return;
+    const inv = L.inv || NO_INV;
+    if (kR) {
+      RX.kR = kR;
+      if (gR === 'alca' || gR === 'tocha') { V3.a.set(0.027, -0.076, 0).applyMatrix4(R[B.hdR]); uprightAt(RX.mao, V3.a, yaw, s, gR === 'tocha' ? -0.02 : 0); }
+      else RX.mao.copy(R[B.tool]);
+    }
+    if (kL && gL !== 'tocha') {
+      RX.kL = kL;
+      if (gL === 'escudo') frameOn(RX.outra, R[B.faL], 0.06, -0.17, 0.01, 0, -1, 0, 1, 0, 0); // (strapped on the forearm, its face out)
+      else if (gL === 'arco' || gL === 'alca') { V3.a.set(-0.027, -0.076, 0).applyMatrix4(R[B.hdL]); uprightAt(RX.outra, V3.a, yaw, s, 0); }
+      else fr(RX.outra, R[B.hdL], -0.027, -0.076, 0, Math.PI / 2 + 1.25, 0, 0);
+    }
+    // (stowed: what the body keeps on its back and at its belt — and the thing a load took out of the hand, put there)
+    let kB = inv.costas, kC = inv.cinto;
+    if (inv.mao && !kR && free && !pose.tool && G.Itens) { if (!kB && G.Itens.fits(inv.mao, 'costas')) kB = inv.mao; else if (!kC && G.Itens.fits(inv.mao, 'cinto')) kC = inv.mao; }
+    if (kB && !(pose.lie > 0.4)) { RX.kB = kB; backFrame(RX.costas, R, kB); }
+    if (kC) { RX.kC = kC; beltFrame(RX.cinto, R, kC); }
+  }
+  // the things drawn this frame, by the body's level of detail
+  function itemsPut(L) { const lod = L.lod | 0; if (RX.kR) itemPut(RX.kR, lod, RX.mao); if (RX.kL) itemPut(RX.kL, lod, RX.outra); if (RX.kB) itemPut(RX.kB, lod, RX.costas); if (RX.kC) itemPut(RX.kC, lod, RX.cinto); }
   // (for the tests: where the palms of the hands are, in the world, from the rig's last frame)
   P3.palms = R => [V3.a ? new THREE.Vector3(-0.027, -0.076, 0).applyMatrix4(R[B.hdL]) : null, V3.a ? new THREE.Vector3(0.027, -0.076, 0).applyMatrix4(R[B.hdR]) : null];
   P3.B = B;
@@ -1371,7 +1503,8 @@
       put('torch', idx, R[B.torch], 0, 0, 0, 0.12, 0, 0, 0, L.lantern ? -0.1 : 0.18, 0, 0.045, L.lantern ? 0.2 : 0.55, 0.045, L.lantern ? '#3a2a1a' : '#5a3c22');
       M.v.setFromMatrixPosition(R[B.torch]); if (P3.flames.length < 40) P3.flames.push([M.v.x, M.v.y + (L.lantern ? -0.18 : 0.47) * s, M.v.z, L.lantern ? 0.5 : 0.85]);
     } else hide('torch', idx);
-    if ((pose.tool || L.tool) && !toolPut(R, L, pose)) put('tool', idx, R[B.hdR], 0, 0, 0, pose.tool ? -Math.PI / 2 : 0, 0, 0, 0, pose.tool ? 0.3 : -0.25, 0, 0.04, 0.95, 0.04, '#7a5a3a'); else hide('tool', idx);
+    // (the things on the body: in the hands, on the back, at the belt — G.Inv.held's, in their own shapes)
+    itemsPut(L); hide('tool', idx);
     // (the load: the thing it is, where the rig put it — the old box only if its form could not be drawn)
     if (L.held && heldPut(R, L)) hide('carry', idx); else if (L.carry) put('carry', idx, R[B.chest], 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
     if (marker) put('marker', idx, M.root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx); // (M.root: the rig's root)
@@ -1427,6 +1560,15 @@
   P3.pairs = []; const pairOf = new Map(); G.worldHooks.push(() => { pairOf.clear(); P3.pairs.length = 0; });
   const PAIR_NEAR = 1.2, PAIR_Y = 1.08;
   P3.highlight = 0; // (the one the body is looking at, to talk to)
+  // (the ground under a foot of someone of the world: the land, a ford's bed, a deck — and a boulder's stone, the steps before a
+  // door: as the body's own feet have it; metres in, metres out)
+  function npcFloor(X, Z) { const TL = G.Space.TILE; return Math.max(groundY(X / TL, Z / TL), G.Space.stoneTop(X, Z), G.Space.stepTop(X, Z)); }
+  P3.npcFloor = npcFloor;
+  const INP = {}; // (the animator's input, one object for everyone: nothing made each frame)
+  // (the clip of an act in step with the world's own clock of it: v.actT, the world seconds since the act — or its stroke — began;
+  // a clip that names its stroke's period lands its contact where the world's stroke lands)
+  function clipClock(v, st) { const C = Anim.CLIPS && Anim.CLIPS[st]; if (!C || !(C.period > 0)) return undefined; return Anim.loopTime(C, v.actT || 0, C.period); }
+  P3.clipClock = clipClock;
   P3.update = function (dt, focus) {
     if (!mesh || !focus) return;
     const S = G.S; const q = R3.Q(); const TL = G.Space.TILE, HM = G.Space.HM;
@@ -1455,9 +1597,14 @@
     if (skin) G.Body3D.begin(); toolsBegin(); heldBegin();
     if (av) {
       // (the body's feet: where they stand in its stride — the view's own memory, a new one for a new body or after a jump)
-      if (!avFeet || avFeet.id !== av.id || Math.hypot(av.X - avFeet.X, av.Z - avFeet.Z) > 4) avFeet = { id: av.id, f: [{ on: 0 }, { on: 0 }] }; avFeet.X = av.X; avFeet.Z = av.Z;
-      av.look.ground = av.ground === false || av.swim ? undefined : av.Y; av.look.plant = avFeet.f;
+      if (!avFeet || avFeet.id !== av.id || Math.hypot(av.X - avFeet.X, av.Z - avFeet.Z) > 4) avFeet = { id: av.id, f: [{ on: 0 }, { on: 0 }], an: Anim.memory() }; avFeet.X = av.X; avFeet.Z = av.Z;
+      av.look.ground = av.ground === false || av.swim ? undefined : av.Y; av.look.plant = avFeet.f; av.look.gnd = av.look.ground === undefined ? null : av.gnd || null;
+      // (the body's pose, made in this frame by the same animator as everyone's, from the motion its controller gives — the
+      // frame's own time, interpolated: smooth at 60, 120 or 144 frames a second, 20a; a pose given whole — the fall of a death —
+      // is drawn as it is)
+      if (av.drive) { const I = av.drive; I.X = av.X; I.Z = av.Z; I.ground = av.look.ground; I.s = av.look.s; Anim.drive(avFeet.an, I, av.pose, av.look, dt); if (I.post) I.post(av.pose, dt); }
       avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = easeMood(avFeet, av.look.mood, dt);
+      av.look.lod = 0;
       P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
     }
     // (two under one crate — G.Act.pair: the one ahead holds it in the world, the helper behind takes its other end —, both
@@ -1482,51 +1629,52 @@
     for (let k = 0; k < n; k++) {
       const v = near[k][1]; seen.add(v.id);
       let s = vis.get(v.id); const pl = placeOf(v);
-      const X = pl ? pl.X : v.x * TL, Z = pl ? pl.Z : v.y * TL; const swim = v.task && v.task.type === 'swim';
+      const Xw = pl ? pl.X : v.x * TL, Zw = pl ? pl.Z : v.y * TL; const swim = v.task && v.task.type === 'swim';
+      if (!s) { s = { X: Xw, Z: Zw, Y: undefined, yaw: v.face > 0 ? 0 : Math.PI, yawV: 0, pose: POSE0(), t: 0, sp: 0, acc: 0, st: 'idle', an: Anim.memory(), plant: [{ on: 0 }, { on: 0 }], L: {} }; vis.set(v.id, s); }
+      // (where the view draws them: where the world has them — the corner of their way rounded ahead, the start and the stop
+      // eased, a change of place inside walked: Anim.track, D-344)
+      const pX = s.X, pZ = s.Z; Anim.track(s, v, Xw, Zw, !!pl, dt, TL); const X = s.X, Z = s.Z;
       // (the world walks them over a boulder's tile: the feet go up onto the stone and down again, a quick step — never through it;
       // inside, on the floor, the bed, the bench the plan has there)
-      const Yf = pl ? pl.Y : swim ? W.waterH(v.x, v.y) * HM - 0.32 : Math.max(groundY(v.x, v.y), G.Space.stoneTop(X, Z), G.Space.stepTop(X, Z));
-      if (!s) { s = { X, Z, Y: Yf, yaw: v.face > 0 ? 0 : Math.PI, ph: (v.id % 7), pose: POSE0(), t: 0, sp: 0, st: 'idle' }; vis.set(v.id, s); }
-      s.Y = Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
+      const Yf = pl ? pl.Y : swim ? W.waterH(X / TL, Z / TL) * HM - 0.32 : npcFloor(X, Z);
+      if (s.Y === undefined || Math.abs(Yf - s.Y) > (pl ? 0.6 : 3)) { s.Y = Yf; if (pl) { s.snap = 1; Anim.track(s, v, Xw, Zw, true, dt, TL); } } else s.Y += (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (v.z ? v.z * 0.22 : 0);
-      // (the speed and direction of their steps since the last frame: what their legs must show)
-      const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz);
-      const sp = dt > 0 ? dist / dt : 0; s.sp += (Math.min(sp, 9) - s.sp) * (1 - Math.exp(-8 * dt));
-      if (dist > 0.002) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-10 * dt)); }
-      if (dist > 6) { s.sp = 0; if (s.plant) s.plant[0].on = s.plant[1].on = 0; } // (a jump of the world — a teleport, a load — is not a step)
-      // (inside, they keep to their place: turned as it is, at rest there — from the fire to the bed is a change of place, not a walk)
-      if (pl) { s.sp = 0; s.yaw = pl.yaw; s.Y = Yf; if (s.plant) s.plant[0].on = s.plant[1].on = 0; }
-      s.X = X; s.Z = Z; s.t += dt;
-      let st = pl ? pl.st : Anim.stateOf(v, s.sp);
+      // (a jump of the world — a teleport, a load — is not a step: the feet stand where they land)
+      if (Math.hypot(s.X - pX, s.Z - pZ) > 3) { s.plant[0].on = s.plant[1].on = 0; s.plant[0].step = s.plant[1].step = null; }
+      Anim.face(s, v, pl && s.sp < 0.2 ? pl : null, dt);
+      s.t += dt;
+      let st = pl && s.sp < 0.2 ? pl.st : Anim.stateOf(v, s.sp);
       // (waved at by the body: those standing or strolling near wave back, a moment later — only seen)
-      if (s.greetT > 0) { if ((s.greetD -= dt) <= 0) { s.greetT -= dt; if (st === 'idle' || st === 'walk' || st === 'talk') st = 'wave'; } }
-      const Lv = P3.look(v);
+      let over = null;
+      if (s.greetT > 0) { if ((s.greetD -= dt) <= 0) { s.greetT -= dt; if (st === 'idle' || st === 'talk') st = 'wave'; else if (st === 'walk') over = 'wave'; } }
+      const Lv = lookFill(s.L, v);
       // (one of two under one crate: the frame between them; the crate is the one ahead's, drawn once, by his rig — both hands
-      // of each on it: no torch, no spear)
+      // of each on it: no torch, no thing in the hands)
       const pr = pairOf.get(v.id) || null; Lv.pair = pr;
-      if (pr) { Lv.torch = false; Lv.lantern = false; Lv.tool = false; if (pr.help === v.id) { Lv.held = null; Lv.carry = false; } }
-      // (the stride in step with the ground: the phase at the rate the rig's own legs need for this speed and this size)
-      if (st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak') s.ph += dt * s.sp * Anim.rate(st, s.sp, Lv.s); else s.ph += dt * 4;
+      if (pr) { Lv.torch = false; Lv.lantern = false; Lv.inv = NO_INV; if (pr.help === v.id) { Lv.held = null; Lv.carry = false; } }
       // (the load in the hands and the hands reaching: the view's own memory of the lift and the setting down — reachOf)
-      Lv.ground = swim || v.z > 0.05 ? undefined : Y; reachOf(s, v, Lv, X, Y, Z, dt);
-      // (and the drink, where the world has them drunk and on their feet: Anim.stagger — inside, at their place, they sit)
+      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant; Lv.gnd = pl || swim ? null : npcFloor; reachOf(s, v, Lv, s.X, Y, s.Z, dt);
+      // (and the drink, where the world has them drunk and on their feet: the additive stagger — inside, at their place, they sit)
       const dk = pl ? 0 : Lv.drunk || 0; s.dk = dk;
-      { const tt = st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' ? s.ph : s.t; Anim.blend(s.pose, Anim.stagger(Anim.hold(Anim.pose(st, tt, s.sp), Lv, st, tt, s.sp), s.t, v.id, dk, st), dt, 10); }
+      s.lod = lodAt(s.lod, (s.X - seenAt[0]) ** 2 + (s.Z - seenAt[1]) ** 2); Lv.lod = s.lod;
+      // the body's animator: the stride or the posture, the hands, the clip of the act in step with the world's own clock of it
+      // (v.actT), the drink — the pose made from what they do, every frame (anim-body.js)
+      const I = INP; I.st = st; I.t = s.t; I.sp = s.sp; I.yaw = s.yaw; I.yawV = s.yawV; I.acc = s.acc; I.X = s.X; I.Z = s.Z; I.ground = Lv.ground; I.s = Lv.s;
+      I.run = v.act === 'run' ? 1 : 0; I.walk = 0; I.over = over; I.overK = undefined; I.clipK = clipClock(v, st); I.drunk = dk; I.tired = 0; I.id = v.id;
+      Anim.drive(s.an, I, s.pose, Lv, dt);
       // (someone standing near the body turns their head to it — and back when it goes; a blink now and then)
-      const look = P3.lookFor(s.yaw, X, Z, av, st);
+      const look = P3.lookFor(s.yaw, s.X, s.Z, av, st);
       s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dt));
       s.pose.gazeX = G.clamp((look - s.pose.lookY) * 0.9, -0.42, 0.42); // (the eyes go first, the head follows)
-      s.pose.blink = blinkAt(s.t, v.id); cloth(s, X, Z, s.yaw, dt, s.pose); if (Lv.mood) Lv.mood = easeMood(s, Lv.mood, dt);
+      s.pose.blink = blinkAt(s.t, v.id); cloth(s, s.X, s.Z, s.yaw, dt, s.pose); if (Lv.mood) Lv.mood = easeMood(s, Lv.mood, dt);
       s.st = st;
-      s.lod = lodAt(s.lod, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2);
-      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant || (s.plant = [{ on: 0 }, { on: 0 }]); Lv.lod = s.lod;
-      if (P3.walkers.length < 40) P3.walkers.push([X, Y, Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise, the grass they part)
+      if (P3.walkers.length < 40) P3.walkers.push([s.X, Y, s.Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise, the grass they part)
       // (outside the eye's field, their shadow too: not drawn this frame — their steps go on; a torch they hold still burns
       // and lights round it, about where their hand is)
-      s.cull = inField(X, Y, Z, Lv.s) ? 0 : 1;
-      if (s.cull) { culled++; if ((Lv.torch || Lv.lantern) && P3.flames.length < 40) { const c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = Lv.s; P3.flames.push([X + (c * 0.28 + n * 0.2) * k, Y + (Lv.lantern ? 0.85 : 1.6) * k, Z + (n * 0.28 - c * 0.2) * k, Lv.lantern ? 0.5 : 0.85]); } continue; }
-      P3.body(idx++, X, Y, Z, s.yaw + (dk > 0 && (st === 'walk' || st === 'carryWalk') ? Anim.weave(s.t, v.id, dk) : 0), s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
-      if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } const L2 = P3.look(v).s; sp.position.set(X, Y + 2.2 * L2 + Math.sin(s.t * 3) * 0.03, Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
+      s.cull = inField(s.X, Y, s.Z, Lv.s) ? 0 : 1;
+      if (s.cull) { culled++; if ((Lv.torch || Lv.lantern) && P3.flames.length < 40) { const c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = Lv.s; P3.flames.push([s.X + (c * 0.28 + n * 0.2) * k, Y + (Lv.lantern ? 0.85 : 1.6) * k, s.Z + (n * 0.28 - c * 0.2) * k, Lv.lantern ? 0.5 : 0.85]); } continue; }
+      P3.body(idx++, s.X, Y, s.Z, s.yaw + (dk > 0 && (st === 'walk' || st === 'carryWalk') ? Anim.weave(s.t, v.id, dk) : 0), s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
+      if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } sp.position.set(s.X, Y + 2.2 * Lv.s + Math.sin(s.t * 3) * 0.03, s.Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
     }
     for (const id of vis.keys()) if (!seen.has(id) && !(av && id === av.id)) vis.delete(id);
     for (let k = emoN; k < emoPool.length; k++) emoPool[k].visible = false; P3.emos = emoN;
