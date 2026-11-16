@@ -224,8 +224,10 @@ if (on('m9')) { world(); calmSky(); day();
     const q = spot((x2, y2, i) => land(x2, y2) && A.walkOK({ kind: 'deer' }, x2, y2) && Mi.fearAt(x2, y2) === 0 && Mi.fearAt(x2 + 9, y2) === 0 && A.walkOK({ kind: 'deer' }, x2 + 9, y2) && G.dist(x2, y2, x, y) > 30 && Mi.cover(x2, y2) === 0, 12);
     let cur = 0, gst = false, dmin = 99, info = 'nenhum ermo para a curiosidade';
     // (the wind across: nobody smells the person first)
-    if (q) { clearAround(q[0], q[1], 20); S().weather.windA = Math.PI / 2; const herd = []; for (let k = 0; k < 6; k++) herd.push(spawn(['gazelle', 'giraffe', 'camel', 'zebra', 'gazelle', 'giraffe'][k], q[0] + 9, q[1] + (k - 2.5) * 1.5, { hunger: 0.05 }));
-      until(45, () => { v.x = q[0]; v.y = q[1]; v.task = null; v.inside = 0; S().weather.windA = Math.PI / 2; for (const a of herd) { if (a.state === 'curioso') { cur = Math.max(cur, 1); if (a.gest === 'curious') { gst = true; dmin = Math.min(dmin, G.dist(a.x, a.y, v.x, v.y)); } } } return gst && cur; }, 0.25);
+    if (q) { clearAround(q[0], q[1], 20); S().weather.windA = Math.PI / 2; const herd = []; for (let k = 0; k < 12; k++) herd.push(spawn(['gazelle', 'giraffe', 'camel', 'zebra', 'gazelle', 'giraffe'][k % 6], q[0] + 9 + (k >= 6 ? 1.2 : 0), q[1] + ((k % 6) - 2.5) * 1.5, { hunger: 0.05 }));
+      // (a curious one is a few of a herd on a day — by its id and the day, one in two —, and awake: six of them were one giraffe
+      // lying down chewing the cud, T-1335)
+      until(45, () => { awake(...herd); v.x = q[0]; v.y = q[1]; v.task = null; v.inside = 0; S().weather.windA = Math.PI / 2; for (const a of herd) { if (a.state === 'curioso') { cur = Math.max(cur, 1); if (a.gest === 'curious') { gst = true; dmin = Math.min(dmin, G.dist(a.x, a.y, v.x, v.y)); } } } return gst && cur; }, 0.25);
       info = `num ermo onde ninguém caçou, ${cur ? 'um bicho chegou perto para olhar' : 'NINGUÉM chegou perto'} (gesto «curious» ${gst ? `a ${dmin.toFixed(1)} casas` : 'não visto'}; contados ${Mi.counts().curious || 0})`; }
     const c = clean();
     ok('m9 onde se caça, foge-se mais cedo; onde não, olha-se', k1 > k0 * 1.6 && !f0 && f1 && fear > 0.3 && cur && gst && !c.n, `o cervo a 6 casas de ${v.name}: antes ×${k0.toFixed(2)} (${f0 ? 'FUGIU' : 'ficou'}); depois de três cervos mortos por gente ali (o medo ${fear.toFixed(2)}): ×${k1.toFixed(2)} (${f1 ? 'fugiu' : 'NÃO FUGIU'}); ${info}; verificador ${c.n}`);

@@ -446,8 +446,9 @@
       // (asked of the people out of doors as the fear scan sees them — a quarter of a second old, as far as this kind runs from
       // one —, not of the two-second count by cells of four tiles: the scan sees the person first and farther, and the field
       // never learnt, L-1060)
-      // (and the one that walks off from them as well as the one that runs: the elephant gives way, it does not bolt)
-      if (r.o === 'lavoura' && r.p === 1 && (a.state === 'flee' || a.state === 'shy') && manNear(a.x, a.y, (sp.fear || 3) + 1.5)) { taught(a.x, a.y, 0.15); count('raidScared'); }
+      // (and the one that walks off from them, or leaves the crop to keep its eyes on them, as well as the one that runs: the
+      // elephant gives way, or stands and watches the farmer and then goes — it does not bolt)
+      if (r.o === 'lavoura' && r.p === 1 && (a.state === 'flee' || a.state === 'shy' || a.state === 'eye') && manNear(a.x, a.y, (sp.fear || 3) + 1.5)) { taught(a.x, a.y, 0.15); count('raidScared'); }
       endRun(a, r);
     }
     else if (!r && m.g) { const gn = Ge.ids[m.g - 1]; if (a.gest !== gn) m.g = 0; else if (Ge.DEF[gn].d === 0 && !MINE[a.state]) { A.gestEnd(a, gn); m.g = 0; } }
