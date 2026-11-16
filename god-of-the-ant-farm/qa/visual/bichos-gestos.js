@@ -225,13 +225,13 @@ if (mode === 'jogo') {
         const S = G.S, A = G.Animals; for (const a of [...S.animals.values()]) A.remove(a);
         const [x, y] = window.__spot; const TL = G.Space.TILE; const live = [];
         for (const b of sh.beasts) { const sp = A.DEF[b.kind]; const a = A.spawn(b.kind, x + (b.dx || 0) / TL, y + (b.dz || 0) / TL, { age: b.young ? 0.4 : sp.life * 0.5, grown: b.young ? 0.5 : 1, state: 'idle', t: 1e6, z: b.z || 0 });
-          a.hunger = 0; a.rest = 1e6; a.face = b.face || 1; if (b.dead) { A.kill(a, null, 'other'); if (b.meat !== undefined) a.meat = b.meat * sp.meat; }
+          a.hunger = 0; a.rest = 1e6; a.scan = 1e6; a.face = b.face || 1; if (b.dead) { A.kill(a, null, 'other'); if (b.meat !== undefined) a.meat = b.meat * sp.meat; }
           if (b.blood) a.blood = b.blood; if (b.wnd) a.wnd = { b: 0, l: 0, z: b.wnd }; if (b.meio) a.meio = Object.assign({ th: 0, wet: 0, mud: 0, dust: 0, cold: 0, hot: 0 }, b.meio);
           live.push({ a, b, x: a.x, y: a.y }); }
         // (each faces where it is told: a step toward that way first, so the view's yaw turns there)
         for (const L of live) { if (L.b.yaw === undefined) continue; L.a.x = L.x - Math.cos(L.b.yaw) * 0.05 / TL; L.a.y = L.y - Math.sin(L.b.yaw) * 0.05 / TL; }
         for (let k = 0; k < 3; k++) G.Main.frameFor(33);
-        const hold = () => { for (const L of live) { const a = L.a; a.x = L.x; a.y = L.y; a.tx = a.x; a.ty = a.y; if (!a.dead) { a.state = L.b.state || (A.DEF[a.kind].cls === 'air' ? (a.z > 0.3 ? 'fly' : 'perch') : 'idle'); a.t = 1e6; a.scan = 1e6; a.moving = false; a.z = L.b.z || 0; if (L.b.z) a.air = true; } } };
+        const hold = () => { for (const L of live) { const a = L.a; a.x = L.x; a.y = L.y; a.tx = a.x; a.ty = a.y; if (!a.dead) { a.state = L.b.state || (A.DEF[a.kind].cls === 'air' ? ((L.b.z || 0) > 0.3 ? 'fly' : 'perch') : 'idle'); a.t = 1e6; a.scan = 1e6; a.moving = false; a.z = L.b.z || 0; if (L.b.z) a.air = true; } } };
         for (const L of live) { if (L.b.g && !L.a.dead) { const o = L.b.to !== undefined ? live[L.b.to].a.id : 0; if (!A.gesture(L.a, L.b.g, L.b.d, o, L.b.v || 0)) return { err: `gesto ${L.b.g} recusado para ${L.a.kind}: ${A.gestErr.slice(-1)}` }; } }
         // (the camera on the scene — from its side, three quarters, at its size — set before the frames: the eye's field decides who is drawn)
         const a0 = live[0].a, X = live[0].x * TL, Z = live[0].y * TL; const Y = G.People3D.groundAt ? G.People3D.groundAt(live[0].x, live[0].y) : G.W.groundH(live[0].x, live[0].y) * G.Space.HM;
