@@ -1036,5 +1036,6 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 // === 20e: a interação ===
 // === 20f: o combate ===
 // === 20g: os ofícios ===
+// === 20h: a origem das coisas ===
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

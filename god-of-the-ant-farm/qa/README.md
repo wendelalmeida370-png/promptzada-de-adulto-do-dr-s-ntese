@@ -299,5 +299,6 @@ Cada parte acrescenta as suas linhas logo abaixo da sua marca (a tabela acima co
 | (20e: a interação — as linhas novas aqui) | | |
 | (20f: o combate — as linhas novas aqui) | | |
 | (20g: os ofícios — as linhas novas aqui) | | |
+| (20h: a origem das coisas — as linhas novas aqui) | | |
 
 Qualquer erro de página, aviso no console ou erro capturado por um módulo (`G.modErr`) conta como falha.

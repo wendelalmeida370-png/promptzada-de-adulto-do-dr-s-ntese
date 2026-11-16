@@ -2633,3 +2633,7 @@ o `qa/inventario-tela.js` (navegador) e o verificador `qa/inventario-inv.js`; as
 
 ### 20g — Os ofícios
 (a parte 20g escreve aqui: L-1320 a L-1359, D-425 a D-439, T-1470 a T-1489)
+
+### 20h — A origem das coisas (nada vem do nada)
+(a parte 20h escreve aqui: L-1360 a L-1399, D-441 a D-459, T-1490 a T-1509; o princípio é o D-440)
+| D-440 | decisão (o princípio, do dono) | **Nada vem do nada.** O dono, ao ver os itens novos: «não tem como uma cidade fazer uma armadura de couro se ela não produz couro, um elmo de ferro se ela ainda não faz a produção de ferro, uma espada de aço se ela não produz o aço através do ferro, algo de ouro se ela não achou o minério de ouro; uma taverna não faz cerveja sem cevada; não dá para fazer prato de peixe se aquele lugar não pesca — tudo no meu jogo tem que ter essa lógica». **Regra**: toda coisa feita gasta, pelo livro, o material que a receita dela pede, vindo de uma fonte de verdade do povo; a arte só permite a receita, o material a torna possível; o material de uma coisa é o de que ela foi feita, e nem o kit desenhado mostra um material que o povo não tem. O que se achou ao medir (o arquiteto): o bronze não tem cobre nem estanho no mundo (só há jazidas de ferro e de ouro); o material das coisas do inventário (20c) sai das artes do povo, não do que ele tem; toda comida é o bem único `food` (o grão de cada campo, o peixe, a carne, a fruta), e a cerveja e o pulque saem dele. A parte 20h faz o mapa das causas e fecha esses buracos (CLAUDE.md, «Nada vem do nada»). |

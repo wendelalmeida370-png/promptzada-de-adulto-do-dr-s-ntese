@@ -476,6 +476,7 @@ clipe numa foto ou numa tira, e um exemplo completo)
 | 20e a interação | 1240–1279 | 395–409 | 1430–1449 | 138–144 |
 | 20f o combate | 1280–1319 | 410–424 | 1450–1469 | 145–151 |
 | 20g os ofícios | 1320–1359 | 425–439 | 1470–1489 | 152–158 |
+| 20h a origem das coisas | 1360–1399 | 441–459 (o princípio, D-440, é do arquiteto) | 1490–1509 | 159–166 |
 
 ## 7. Como cada parte trabalha
 

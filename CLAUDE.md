@@ -38,6 +38,10 @@ O dono do projeto fala português e não é programador: responda em português,
 4. **Bug achado = entrada no `qa/AUDIT.md`** (L-xxx bug, T-xxx limite de teste, D-xxx decisão de design), com a causa e a correção. Antes de corrigir, reproduza; depois, mostre que a prova que falhava passa.
 5. Corrija a causa, não o sintoma. Nada de esconder um erro com `try/catch`, pular uma prova ou afrouxar uma invariante para ficar verde.
 
+## Nada vem do nada (a regra do dono, D-440)
+
+Tudo o que o mundo faz tem a sua causa material. Uma coisa feita gasta o que a receita dela pede, e esse material veio de uma fonte de verdade do povo — produzido, minerado, colhido, pescado, caçado, comprado, saqueado —, sempre pelo livro (`G.Depot`). **Saber fazer** (a arte, `f.tech`) só permite a receita; **ter o material** é o que a torna possível. O material de uma coisa é o material de que ela foi feita: elmo de ferro só onde há ferro (minério de ferro e a arte do ferro), couraça de couro só onde há couro, bronze só de cobre e estanho, ouro só do ouro achado, aço só do ferro, cerveja só de cereal, prato de peixe só onde se pesca. Nem o kit que o 3D desenha (`G.Inv.kit`) mostra um material que o povo não tem. Sistema novo que faz uma coisa diz de onde vem cada coisa que ele faz e o que ele gasta (o mapa das causas é da parte 20h); um material sem fonte no mundo é um erro, não um detalhe.
+
 ## As fundações (não contornar)
 
 Três famílias inteiras de bugs foram eliminadas reconstruindo a base. Código novo precisa usar estas portas:
