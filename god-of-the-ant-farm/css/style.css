@@ -1283,6 +1283,17 @@ canvas#game3d { touch-action: none; transition: none; }
 #inc-death .d-name { font-family: 'Cinzel', Georgia, serif; font-size: clamp(28px, 5vw, 52px); color: #e8dcc4; letter-spacing: .06em; }
 #inc-death .d-cause { font-size: 16px; color: var(--ih-mute); margin-top: 6px; } #inc-death .d-sub { font-size: 13px; color: var(--ih-gold); margin-top: 18px; letter-spacing: .04em; }
 #inc-fade { position: absolute; inset: 0; background: #05040a; opacity: 0; pointer-events: none; }
+/* a blow taken (D-333): the red at the edges of the picture, the redder on the side it came from; the chunk of life it took
+   lingering behind the bar, which flashes */
+#inc-hurt { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(120, 0, 0, 0) 52%, rgba(150, 6, 6, .42) 80%, rgba(95, 0, 0, .78) 100%); mix-blend-mode: normal; }
+#inc-hurt i { position: absolute; inset: 0; opacity: 0; transition: opacity .25s; }
+.ih-bar.hp i { position: relative; }
+.ih-bar.hp s { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #f6e2c8; border-radius: 3px; opacity: .85; transition: width .45s ease-in .05s; }
+.ih-bar.hp b { position: relative; }
+.ih-bar.hp.hit i { animation: ihHit .5s ease-out; }
+.ih-bar.hp.hit span { color: #ff8a7a; }
+@keyframes ihHit { 0% { box-shadow: inset 0 0 0 1px rgba(255, 90, 80, .95), 0 0 10px rgba(255, 60, 40, .8); transform: scaleY(2.2); } 100% { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .28); transform: scaleY(1); } }
+#inc-death .d-kill { font-family: 'Cinzel', Georgia, serif; font-size: clamp(20px, 3.2vw, 34px); color: #d8a07a; letter-spacing: .08em; margin-bottom: 10px; text-shadow: 0 2px 14px rgba(0, 0, 0, .8); }
 /* the button in the person's panel (the god's view) */
 #inspector .btns button.incarnate { border-color: rgba(245,200,107,.55); color: var(--gold-2); background: linear-gradient(180deg, rgba(245,200,107,.22), rgba(245,200,107,.08)); }
 #inspector .btns button.incarnate[disabled] { opacity: .45; cursor: not-allowed; }

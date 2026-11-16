@@ -145,19 +145,37 @@
     G.IncUI.show(false);
     if (msg) G.IncUI.banner(msg, 2.6);
   }
-  // the body died: the eye rises slowly over it, the name and the cause, then the flight up
-  function die(rec, cause) {
+  // the body died (D-334): the last blow throws it down — away from what struck it, the knees giving, then on the ground as the
+  // dead lie (the pose its corpse will keep: the body is handed to the corpse where the fall ends, never drawn twice) —; the
+  // world slows a moment, the eye stays low by it with the killer in the picture, then rises and draws back to see it all —
+  // the beast over the body, the place —; the words say what killed it; then the flight up
+  const FALL = [0.28, 1.05], DIE_T = 5.4; // (the knees give, then down; how long the eye stays over it)
+  function die(rec, cause, a) {
     G.Input3D.unlock(); G.Input3D.clear(); menuOpen = false; panel = null; G.IncUI.closeAll(); G.IncUI.show(false);
-    const p = G.Avatar.pos(); const st = G.Avatar.state();
-    dying = { rec, cause, X: p ? p.X : rec.x * G.Space.TILE, Y: p ? p.Y : 0, Z: p ? p.Z : rec.y * G.Space.TILE, yaw: p ? p.yaw : 0, pose: st ? st.pose : G.Anim3D.POSE0(), look: G.People3D.look(rec.skin ? rec : { ...rec, age: rec.age || 30, g: rec.g || 'm' }) };
+    const p = G.Avatar.pos(); const st = G.Avatar.state(); const L = G.Space.TILE;
+    const end = a && a.end; const hit = end && end.hit && G.S.clock - end.hit.t < 3 ? end.hit : null;
+    const beast = (end && end.beast) || (hit && hit.kind) || rec.lastBeast || null;
+    const X = p ? p.X : rec.x * L, Z = p ? p.Z : rec.y * L;
+    // (the way the blow threw it: from what struck — the beast where it stood, the one who struck —, its push kept a moment more)
+    let ux = 0, uz = 0; if (hit && hit.from) { let dx = X / L - hit.from[0], dy = Z / L - hit.from[1], l = Math.hypot(dx, dy); if (l < 0.05 && hit.from.length > 3) { dx = hit.from[2]; dy = hit.from[3]; l = Math.hypot(dx, dy); } if (l > 1e-6) { ux = dx / l; uz = dy / l; } }
+    const K = hit && (ux || uz) ? (hit.big ? 3.2 : 1.8) : 0;
+    const yaw = ux || uz ? Math.atan2(-uz, -ux) : p ? p.yaw : 0;
+    const c = G.Carnage && G.Carnage.byVid ? G.Carnage.byVid(rec.id) : null;
+    // (thrown back by a blow from before it, it falls on its back — one of the ways the dead lie that are not face down —; else any)
+    const DD = G.Anim3D.DEAD, pool = DD ? DD.map((q, i) => i).filter(i => !(ux || uz) || !DD[i].prone) : [];
+    const lie = DD ? DD[pool[(c ? c.id : rec.id) % pool.length]] : G.Anim3D.pose('sleep', 0, 0);
+    dying = { rec, cause, X, Y: p ? p.Y : 0, Z, yaw, yaw0: p ? p.yaw : yaw, pose: st ? Object.assign({}, st.pose) : G.Anim3D.POSE0(), look: G.People3D.look(rec.skin ? rec : { ...rec, age: rec.age || 30, g: rec.g || 'm' }),
+      kx: ux * K, kz: uz * K, killer: hit && hit.id && G.S.animals.has(hit.id) ? hit.id : 0, beast, lie: Object.assign({}, lie), handed: false, cam: null };
+    if (hit) { G.IncUI.hurt(Object.assign({}, hit, { big: 1 }), hit.from ? { X: hit.from[0] * L, Z: hit.from[1] * L } : null); G.Audio && G.Audio.play && G.Audio.play(hit.big ? 'thud' : 'hit', 1); }
     G.Avatar.detach();
     M3.state = 'DYING'; M3.t = 0;
-    G.IncUI.death(rec, cause);
+    G.IncUI.death(rec, cause, beast);
     G.Audio && G.Audio.play && G.Audio.play('death');
   }
+  M3.dying = () => (dying ? { X: dying.X, Z: dying.Z, yaw: dying.yaw, killer: dying.killer, beast: dying.beast, handed: dying.handed, t: M3.t, lie: dying.pose.lie, cam: dying.cam } : null); // (for the proofs)
   G.Possess.onEnd.push((why, v, detail, a) => {
     if (M3.state === 'GOD' || why === 'troca' || why === 'deus') return;
-    if (why === 'morte') { die(v, detail); return; }
+    if (why === 'morte') { die(v, detail, a); return; }
     // the world took the body back (prison, the sea, a ship, the god's hand): up again, saying why
     const W2 = { aboard: 'Um navio levou o corpo para o mar', embark: 'Um navio levou o corpo para o mar', jail: 'A justiça prendeu', cela: 'A justiça prendeu', condemned: 'A justiça condenou', escorted: 'Inimigos capturaram', swim: 'A água arrastou', held: 'Mãos divinas tomaram', migrate: 'O povo partiu em migração e levou', scene: 'A história chamou' };
     const nm = v ? v.name : 'o corpo'; const w = W2[detail] || 'O mundo tomou de volta';
@@ -190,7 +208,7 @@
     switch (M3.state) {
       case 'TO_INC': return G.lerp(g, T, ease(G.clamp(M3.t / TIN[1], 0, 1)));
       case 'INC': return menuOpen ? 0 : T * sleepK;
-      case 'DYING': return T * 0.5;
+      case 'DYING': return T * (M3.t < 1.2 ? 0.2 : 0.6); // (a moment slowed as it falls, then the world goes on)
       case 'TO_GOD': return G.lerp(T, g, ease(G.clamp(M3.t / TOUT[2], 0, 1)));
       default: return godSp;
     }
@@ -230,12 +248,36 @@
       if (body) { G.Cam3D.update(rdt, Object.assign({ h: (G.Possess.body() ? G.People3D.look(G.Possess.body()).s * 1.75 : 1.75) }, body), cam); focus = body; }
       if (quickT > 0) quickT -= rdt;
     } else if (M3.state === 'DYING') {
-      const d = dying; focus = d;
-      G.Anim3D.blend(d.pose, G.Anim3D.pose('sleep', M3.t, 0), rdt, 3);
-      G.People3D.avatar = { id: d.rec.id, X: d.X, Y: d.Y, Z: d.Z, yaw: d.yaw, pose: d.pose, look: d.look };
-      const u = ease(G.clamp(M3.t / 3.2, 0, 1));
-      place(cam, { pos: [d.X - Math.cos(d.yaw) * (3 + u * 9), d.Y + 2 + u * 14, d.Z - Math.sin(d.yaw) * (3 + u * 9)], at: [d.X, d.Y + 0.4, d.Z], fov: 50 });
-      if (M3.t > 3.6) { const p = G.Cam3D.pose(); void p; G.People3D.avatar = null; fromPose = { pos: [cam.position.x, cam.position.y, cam.position.z], at: [d.X, d.Y + 0.4, d.Z], fov: 50 }; const x = d.X / G.Space.TILE, y = d.Z / G.Space.TILE; const c2 = G.Render.cam; const [sx, sy] = G.Render.proj(x, y, G.W.groundH(x, y)); c2.follow = 0; c2.x = sx; c2.y = sy - 8; c2.tz = c2.zoom = 2.2; M3.state = 'TO_GOD'; M3.t = 0; dying.done = true; }
+      const d = dying, k = M3.t, L = G.Space.TILE; const dt = Math.min(rdt, 0.05);
+      // the fall: thrown back along the ground by the blow, the knees giving, then down on the ground as the dead lie
+      if (!d.handed) {
+        const nx = d.X + d.kx * dt, nz = d.Z + d.kz * dt; if (G.W.walkableXY(nx / L, nz / L)) { d.X = nx; d.Z = nz; } else { d.kx = d.kz = 0; }
+        const f = Math.exp(-3.5 * dt); d.kx *= f; d.kz *= f;
+        let da = d.yaw - d.yaw0; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; d.yaw0 += da * (1 - Math.exp(-10 * dt));
+        d.Y += (G.Avatar.floorAt(d.X, d.Z) - d.Y) * (1 - Math.exp(-14 * dt));
+        if (k < FALL[0]) G.Anim3D.blend(d.pose, G.Anim3D.pose('crumple', k, 0), dt, 14);
+        else G.Anim3D.blend(d.pose, d.lie, dt, k < FALL[1] ? 7 : 4);
+        G.People3D.avatar = { id: d.rec.id, X: d.X, Y: d.Y, Z: d.Z, yaw: d.yaw0, pose: d.pose, look: d.look };
+        // (down: the corpse the world left takes over, lying just so, and is drawn from now on where the world has it)
+        if (k > FALL[1] + 0.35 && d.pose.lie > 0.97) { d.handed = G.People3D.fell(d.rec.id, d.X, d.Z, d.yaw0, d.pose); if (d.handed) G.People3D.avatar = null; }
+      }
+      focus = d;
+      // (where the body lies now: its corpse, where the world moves it — a lion drags it off —, or where it fell)
+      const cp = d.handed && G.Carnage ? G.Carnage.byVid(d.rec.id) : null; const fo = cp ? G.People3D.fallenOf(d.rec.id) : null;
+      const BX = cp ? cp.x * L + (fo ? fo.ox : 0) : d.X, BZ = cp ? cp.y * L + (fo ? fo.oz : 0) : d.Z, BY = d.Y;
+      // (the killer in the picture, while it is near: the middle of the two is what the eye looks at)
+      const kb = d.killer ? G.S.animals.get(d.killer) : null; let MX = BX, MZ = BZ, span = 0;
+      if (kb && Math.hypot(kb.x * L - BX, kb.y * L - BZ) < 14) { MX = (BX + kb.x * L) / 2; MZ = (BZ + kb.y * L) / 2; span = Math.hypot(kb.x * L - BX, kb.y * L - BZ); }
+      if (!d.cam) d.cam = { X: MX, Z: MZ, side: (d.rec.id % 2 ? 1 : -1) };
+      d.cam.X += (MX - d.cam.X) * (1 - Math.exp(-2.5 * dt)); d.cam.Z += (MZ - d.cam.Z) * (1 - Math.exp(-2.5 * dt));
+      // the eye: low beside the body at first, across the line from the body to the killer — then up and back, slowly round
+      const u = ease(G.clamp((k - 1.1) / 3.4, 0, 1)); const c = Math.cos(d.yaw), sn = Math.sin(d.yaw);
+      const ang = d.yaw + d.cam.side * (Math.PI / 2 + 0.55 - u * 0.5) + k * 0.05 * d.cam.side;
+      const R0 = 3.2 + span * 0.45, R1 = 11 + span * 0.6; const R = G.lerp(R0, R1, u), H = G.lerp(1.15, 9.5, u);
+      const P = [d.cam.X + Math.cos(ang) * R - c * 0.6, BY + H, d.cam.Z + Math.sin(ang) * R - sn * 0.6];
+      { const gx = P[0] / L, gy = P[2] / L; if (G.W.inb(gx, gy)) { const g = Math.max(G.W.hAt(gx, gy), G.W.waterH(gx, gy)) * G.Space.HM + 0.5; if (P[1] < g) P[1] = g; } for (let q = 0; q < 12 && G.Cam3D.solid(P[0], P[1], P[2]); q++) P[1] += 0.6; }
+      place(cam, { pos: P, at: [d.cam.X, BY + G.lerp(0.45, 0.2, u), d.cam.Z], fov: G.lerp(46, 52, u) });
+      if (k > DIE_T) { G.IncUI.deathOff && G.IncUI.deathOff(); G.People3D.avatar = null; if (!d.handed) G.People3D.fell(d.rec.id, d.X, d.Z, d.yaw0, d.pose); fromPose = { pos: [cam.position.x, cam.position.y, cam.position.z], at: [BX, BY + 0.4, BZ], fov: 52 }; const x = BX / L, y = BZ / L; const c2 = G.Render.cam; const [sx, sy] = G.Render.proj(x, y, G.W.groundH(x, y)); c2.follow = 0; c2.x = sx; c2.y = sy - 8; c2.tz = c2.zoom = 2.2; d.X = BX; d.Z = BZ; M3.state = 'TO_GOD'; M3.t = 0; d.done = true; }
     } else if (M3.state === 'TO_GOD') {
       const v = G.S.villagers.get(person) || (dying && dying.rec);
       const L = G.Space.TILE; const x = dying ? dying.X / L : v ? v.x : 0, y = dying ? dying.Z / L : v ? v.y : 0;
@@ -279,7 +321,7 @@
     G.Input3D && G.Input3D.unlock(); G.Realm && G.Realm.stop(); G.Avatar && G.Avatar.detach();
     document.body.classList.remove('inc-ui', 'inc-on');
     M3.state = 'GOD'; M3.t = 0; fromPose = toPose = null; dying = null; god = null; menuOpen = false; panel = null; M3._zoomed = false; giveBack = null;
-    G.IncUI && G.IncUI.closeAll(); G.IncUI && G.IncUI.show(false);
+    G.IncUI && G.IncUI.closeAll(); G.IncUI && G.IncUI.show(false); G.IncUI && G.IncUI.deathOff && G.IncUI.deathOff(); // (a death's words go with the world they were of)
   });
 
   // ------------------------------ the keys ------------------------------

@@ -650,6 +650,8 @@
   const PREYSET = {}; for (const k in SP) PREYSET[k] = new Set(SP[k].prey || []);
   const EATERS = {}; for (const k in A.eatenBy) EATERS[k] = new Set(A.eatenBy[k]);
   const SNAKE = { python: 1, viper: 1, anaconda: 1 };
+  // (who reaches whom: the world's own distance — and the lived body by its skin and the beast's, D-331: G.Corpo.reach)
+  const touches = (a, o, d0) => (G.Corpo ? G.Corpo.reach(a, o, d0) : G.dist(a.x, a.y, o.x, o.y) < d0);
   // the wild hunters that read a person they see (G.Luta.man, D-297b): the big cats, the bears, the wolf and the hyena, the croc
   const MAN = A.MAN = new Set(['lion', 'tiger', 'leopard', 'jaguar', 'snowleopard', 'bear', 'polarbear', 'wolf', 'hyena', 'croc']);
   // (a hunter of the air or the ground notices its prey by its senses — the old radius times A.senseMul: the wind, the cover, the
@@ -920,7 +922,7 @@
       a.t -= dt;
       if (!tg || tg.dead || tg.inside || tg.held || a.t <= 0) { a.state = 'idle'; a.target = 0; a.onPerson = false; return true; }
       const d = G.dist(a.x, a.y, tg.x, tg.y);
-      if (d < 0.9) {
+      if (touches(a, tg, 0.9)) {
         a.bite = 0.3; G.Audio && G.Audio.at(a.x, a.y, 'bite'); G.FX && G.FX.splash(a.x, a.y, 1);
         if (tg.kind) { if (!G.Luta.hold(a, tg, G.Luta.K.CROC)) { A.damage(tg, 14, a); a.state = tg.dead ? 'eat' : 'idle'; a.t = tg.dead ? 20 : 1; a.carc = !!tg.dead; if (!tg.dead) a.target = 0; } } // (a kept beast: a bite, no hold)
         else { tg.lastBeast = a.kind; tg.lastBeastId = a.id; tg.downT = S.clock + 2.2; G.Vg.damage(tg, 22, 'beast', false); G.FX && G.FX.blood(tg.x, tg.y); if (!S.villagers.has(tg.id)) afterManKill(a, tg, sp); else { G.Vg.emote(tg, 'fear', 3); a.state = 'roll'; a.roll = 1.6; a.t = 1.6; } }
@@ -1061,7 +1063,7 @@
       const off = v && v.kind && v.state === 'flee' && !A.predator(a.kind) && G.dist(a.x, a.y, v.x, v.y) > 3.5;
       if (v && !off && !v.dead && !v.inside && !v.held && G.dist(a.x, a.y, v.x, v.y) < 16) {
         a.tx = v.x; a.ty = v.y; a.state = 'chase';
-        if (G.dist(a.x, a.y, v.x, v.y) < 0.6 + sp.size * 0.3) { if (v.kind) G.Luta.strike(a, v, dt); else bite(a, v, dt); return; }
+        if (touches(a, v, 0.6 + sp.size * 0.3)) { if (v.kind) G.Luta.strike(a, v, dt); else bite(a, v, dt); return; }
         moveTo(a, dt, sp.run * 0.95); return;
       }
       a.angry = 0; a.state = 'idle';
@@ -1148,7 +1150,7 @@
         if (!tg.kind && !a.onPerson && !(a.angry > 0) && !a.tamed && !a.summoned && !a.raid && !a.legend) { if (!G.Luta.calmed(a, tg)) { a.state = 'idle'; a.target = 0; a.t = G.rr(0.5, 1.5); } return; }
         // a beast: the fight's chase — the breath, the jinks, the test of the herd, the takedown
         if (tg.kind) { G.Luta.chase(a, tg, dt, sp); return; }
-        if (d < 0.55 + sp.size * 0.25) { bite(a, tg, dt); return; }
+        if (touches(a, tg, 0.55 + sp.size * 0.25)) { bite(a, tg, dt); return; }
         a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.run * (sp.ambush ? 1.25 : a.t > 5.5 ? 1.3 : 1.02));
         return;
       }
@@ -1207,7 +1209,7 @@
     if (a.gt) {
       const tg = S.animals.get(a.target) || S.villagers.get(a.target);
       if (!tg || tg.dead || tg.inside || tg.held || tg.air || G.dist(a.hx, a.hy, tg.x, tg.y) > 15) { a.state = 'idle'; a.target = 0; a.gt = false; a.t = 1; return true; }
-      if (G.dist(a.x, a.y, tg.x, tg.y) < 0.6 + sp.size * 0.3) { bite(a, tg, dt); return true; }
+      if (touches(a, tg, 0.6 + sp.size * 0.3)) { bite(a, tg, dt); return true; }
       a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.run); return true;
     }
     a.gscan -= dt; if (a.gscan > 0) return false;
@@ -1235,21 +1237,26 @@
     a.cd = (a.cd || 0) - dt;
     if (a.cd > 0) return;
     a.cd = 1.1; a.bite = 0.25;
-    G.Audio && G.Audio.at(a.x, a.y, 'bite');
     const dmg = (6 + sp.hp * 0.12 + (sp.apex ? 6 : 0)) * (a.legend ? 2.2 : a.tamed ? 1.4 : 1);
+    // (the lived body: the blow's gesture now, and the blow itself at its contact — the jaws shut, the paw comes down — if the body
+    // is still there; the same blow everybody else gets at once, D-332)
+    if (!tg.kind && G.Corpo && G.Corpo.body(tg)) { G.Corpo.blow(a, tg, () => { G.Audio && G.Audio.at(a.x, a.y, 'bite'); manBite(a, tg, sp, dmg); }); return; }
+    G.Audio && G.Audio.at(a.x, a.y, 'bite');
     if (tg.kind) { // another animal
       A.damage(tg, dmg * (a.grown) * (sp.constrict ? 0.6 : 1), a);
       if (sp.apex || sp.pack || sp.stalk) a.blood = Math.max(a.blood || 0, 0.4);
       if (tg.dead) { a.state = 'eat'; a.target = tg.id; a.t = 20; a.carc = true; a.onPerson = false; a.grip = 0; }
-    } else {
-      const cause = a.kind === 'wolf' ? 'wolf' : a.kind === 'boar' ? 'boar' : 'beast';
-      tg.lastBeast = a.kind; tg.lastBeastId = a.id;
-      if (sp.apex || sp.stalk || sp.pack) { G.Carnage && G.Carnage.onHit(a, tg, dmg * 0.8, tg.hp - dmg * 0.8 <= 0); if (tg.downT > G.S.clock - 0.5) tg.downT = G.S.clock + 1.25; }
-      G.Vg.damage(tg, dmg * 0.8, cause, a.summoned);
-      G.FX && G.FX.blood(tg.x, tg.y);
-      if (G.S.villagers.has(tg.id)) { G.Vg.emote(tg, 'fear', 2); tg.lastBeast = a.kind; }
-      else afterManKill(a, tg, sp);
-    }
+    } else manBite(a, tg, sp, dmg);
+  }
+  // the bite of a person
+  function manBite(a, tg, sp, dmg) {
+    const cause = a.kind === 'wolf' ? 'wolf' : a.kind === 'boar' ? 'boar' : 'beast';
+    tg.lastBeast = a.kind; tg.lastBeastId = a.id;
+    if (sp.apex || sp.stalk || sp.pack) { G.Carnage && G.Carnage.onHit(a, tg, dmg * 0.8, tg.hp - dmg * 0.8 <= 0); if (tg.downT > G.S.clock - 0.5) tg.downT = G.S.clock + 1.25; }
+    G.Vg.damage(tg, dmg * 0.8, cause, a.summoned);
+    G.FX && G.FX.blood(tg.x, tg.y);
+    if (G.S.villagers.has(tg.id)) { G.Vg.emote(tg, 'fear', 2); tg.lastBeast = a.kind; }
+    else afterManKill(a, tg, sp);
   }
   // a beast that has killed people gets a name — and a legend
   function noteManEater(a) {
@@ -1389,13 +1396,14 @@
       const tgt = S.villagers.get(a.target) || S.animals.get(a.target);
       if (!tgt || tgt.dead || tgt.inside || tgt.held) { a.state = 'idle'; a.target = 0; a.t = 1; return; }
       a.tx = tgt.x; a.ty = tgt.y;
-      if (G.dist(a.x, a.y, tgt.x, tgt.y) < 0.65) {
+      if (touches(a, tgt, 0.65)) {
         a.moving = false; G.faceTo(a, tgt.x - a.x, tgt.y - a.y);
         a.cd = (a.cd || 0) - dt;
         if (a.cd <= 0) {
           a.cd = 1.1; a.bite = 0.25; G.Audio && G.Audio.at(a.x, a.y, 'bite');
           if (tgt.kind) { A.damage(tgt, 14, a); if (tgt.dead) { a.state = 'eat'; a.t = 6; a.sated = 40; tgt.meat = Math.max(0, tgt.meat - 4); } }
-          else { G.Vg.damage(tgt, 11, 'wolf', a.summoned); G.FX && G.FX.blood(tgt.x, tgt.y); if (G.S.villagers.has(tgt.id)) G.Vg.emote(tgt, 'fear', 2); }
+          else { const land = () => { G.Vg.damage(tgt, 11, 'wolf', a.summoned); G.FX && G.FX.blood(tgt.x, tgt.y); if (G.S.villagers.has(tgt.id)) G.Vg.emote(tgt, 'fear', 2); };
+            if (G.Corpo && G.Corpo.body(tgt)) G.Corpo.blow(a, tgt, land); else land(); } // (the lived body: the blow lands at its contact, D-332)
         }
         return;
       }
@@ -1457,7 +1465,7 @@
       const tg = S.animals.get(a.target) || S.villagers.get(a.target);
       if (!tg || tg.dead || tg.held || a.t <= 0) { a.state = 'idle'; a.target = 0; a.t = 1; return; }
       if (!seaWater(W.idx(tg.x, tg.y))) { a.state = 'idle'; a.target = 0; return; }
-      if (G.dist(a.x, a.y, tg.x, tg.y) < 0.8) { bite(a, tg, dt); if (tg.dead) { a.hunger = Math.max(0, a.hunger - 0.6); tg.meat = 0; tg.sink = true; a.state = 'idle'; a.target = 0; } return; }
+      if (touches(a, tg, 0.8)) { bite(a, tg, dt); if (tg.dead) { a.hunger = Math.max(0, a.hunger - 0.6); tg.meat = 0; tg.sink = true; a.state = 'idle'; a.target = 0; } return; }
       a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.run); return;
     }
     if (a.state === 'fish') {

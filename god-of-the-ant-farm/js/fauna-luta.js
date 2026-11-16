@@ -1017,7 +1017,7 @@
     }
     if (t === 'snake') {
       // (the viper: the foot that comes on it, or it cornered — the strike; the rest slip off into the grass)
-      if (a.kind === 'viper' && d < 1.15 && (v.moving || !A.fleeTarget(a, v.x, v.y, 3)) && G.R() < 0.7) { snakeBite(a, v); return true; }
+      if (a.kind === 'viper' && (G.Corpo ? G.Corpo.reach(a, v, 1.15) : d < 1.15) && (v.moving || !A.fleeTarget(a, v.x, v.y, 3)) && G.R() < 0.7) { snakeBite(a, v); return true; } // (the lived body: by its skin, D-331)
       if (d < 3.2) { if (d < 2) Me.gesto1(a, ['threat', 'display'], undefined, v.id); if (shy(a, v, false)) { a.t = G.rr(3, 5); return true; } }
       return null;
     }
@@ -1090,8 +1090,9 @@
   // the viper's strike at a person: the bite, the venom, the fear; and it is off into the grass
   function snakeBite(a, v) {
     G.faceTo(a, v.x - a.x, v.y - a.y); Me.gesto(a, 'strike', undefined, v.id); a.bite = 0.3;
-    G.Audio && G.Audio.at(a.x, a.y, 'bite');
-    v.lastBeast = a.kind; v.lastBeastId = a.id; G.Vg.damage(v, 10 + 8 * G.R(), 'beast', false); G.Vg.emote(v, 'fear', 3);
+    // (the lived body: the strike lands at its contact, if the foot is still there — D-332; everybody else at once)
+    const dmg = 10 + 8 * G.R(); const land = () => { G.Audio && G.Audio.at(a.x, a.y, 'bite'); v.lastBeast = a.kind; v.lastBeastId = a.id; G.Vg.damage(v, dmg, 'beast', false); G.Vg.emote(v, 'fear', 3); };
+    if (G.Corpo && G.Corpo.body(v)) G.Corpo.blow(a, v, land, { g: a.gest === 'strike' ? 'strike' : null }); else land();
     L.count('gente:picada'); L.count('gente:picada:' + a.kind);
     if (G.S.villagers.has(v.id)) { a.target = 0; const p = A.fleeTarget(a, v.x, v.y, 4); if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'shy'; a.t = 3; } }
   }

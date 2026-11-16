@@ -745,7 +745,13 @@
     wave: (t) => ({ ...ST.idle(t), shRp: -2.55, shRr: -0.55 + Math.sin(t * 9) * 0.3, elR: 0.5 + Math.sin(t * 9) * 0.25, neck: -0.05 }),
     // (wading through a ford: arms out for balance, the steps high)
     wade: (t, sp) => ({ ...ST.walk(t, sp), shLr: 0.5, shRr: -0.5, elL: 0.55, elR: 0.55, lean: 0.12, knL: Math.max(0, -Math.cos(t)) * 0.9 + 0.15, knR: Math.max(0, Math.cos(t)) * 0.9 + 0.15 }),
+    // (thrown down by a blow, D-333: on the back, the head up off the ground, the arms before the face, the legs drawn up and
+    // kicking at what is over it; getting up: up on one knee, a hand pushing off the ground; and the last fall — the knees give)
+    knocked: (t) => { const k = Math.sin(t * 5.2), q = Math.sin(t * 3.1 + 1); return { lie: 1, neck: 0.5 + q * 0.06, hipL: -1.0 + k * 0.25, hipR: -0.55 - k * 0.2, knL: 1.35 - k * 0.3, knR: 0.95 + k * 0.25, shLp: -2.15 + q * 0.12, shRp: -1.95 - q * 0.1, shLr: 0.45, shRr: -0.45, elL: 1.6, elR: 1.5, twist: q * 0.08 }; },
+    rise: () => ({ crouch: 0.55, lean: 0.55, hipL: -1.45, hipR: 0.15, knL: 1.65, knR: 1.85, shLp: -0.7, shRp: 0.25, shLr: 0.15, shRr: -0.3, elL: 0.45, elR: 0.25, neck: 0.25 }),
+    crumple: () => ({ crouch: 0.62, lean: 0.55, hipL: -0.95, hipR: -0.7, knL: 1.85, knR: 1.6, shLp: -0.35, shRp: -0.15, shLr: 0.3, shRr: -0.25, elL: 0.7, elR: 0.5, neck: 0.55 }),
   };
+  Anim.DEAD = DEAD; // (the ways the dead lie: the body's own fall ends in one of them, as its corpse will lie — D-334)
   // The stride, from how people really walk and run: one leg's cycle u from the heel striking the ground (0) — the foot
   // planted, the body going over it, the heel rising, the toes pushing off — through the swing (the knee folding to clear
   // the ground, the leg reaching forward, the knee straightening only at the end) to the next strike. The other leg half
@@ -1527,11 +1533,14 @@
     // the dead of the world where they fell — until they are buried, burnt or only bones (the carnage keeps them)
     const Cg = G.Carnage && G.Carnage.view ? G.Carnage.view() : null; P3.dead = 0;
     if (Cg) for (const c of Cg.corpses) {
-      if (idx >= MAX) break; const X = c.x * TL, Z = c.y * TL; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R2) continue;
+      if (idx >= MAX) break; if (av && av.id === c.vid) continue; // (the body falling is drawn by its own pose, not twice: D-334)
+      const fell = fallen.get(c.vid); // (and the body's corpse lies as its fall ended: the view's memory of it — dragged off, where it is held)
+      if (fell && (c.x !== fell.cx || c.y !== fell.cy)) { fell.ox *= 0.9; fell.oz *= 0.9; }
+      const X = c.x * TL + (fell ? fell.ox : 0), Z = c.y * TL + (fell ? fell.oz : 0); if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R2) continue;
       const stg = G.Carnage.stage(c); if (stg === 'bones') continue;
       P3.dead++; const Y = W.groundH(c.x, c.y) * HM; if (!inField(X, Y, Z, 1)) { culled++; continue; } // (in reach: counted, drawn where seen)
       const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a'; L.lod = lodAt(cLod.get(c.id) || 0, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2); cLod.set(c.id, L.lod);
-      P3.body(idx++, X, Y, Z, G.hash(c.id) * TAU, DEAD[c.id % DEAD.length], L, null);
+      P3.body(idx++, X, Y, Z, fell ? fell.yaw : G.hash(c.id) * TAU, fell ? fell.pose : DEAD[c.id % DEAD.length], L, null);
     }
     if (cLod.size > 400) cLod.clear();
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
@@ -1577,6 +1586,27 @@
     pose.clothB = G.clamp(s.cb - hy, -0.06, 0.06); pose.clothV = Math.max(0, fw);
   }
   P3.visOf = id => vis.get(id);
+  // (how the body the god lived lay when its fall ended — the pose, the way it lay, how far from where the world has its corpse:
+  // the corpse is drawn so from then on, where the world moves it too; only the view's memory, D-334)
+  const fallen = new Map(); G.worldHooks.push(() => fallen.clear());
+  P3.fell = function (vid, X, Z, yaw, pose) { const c = G.Carnage && G.Carnage.byVid ? G.Carnage.byVid(vid) : null; if (!c) return false; const TL = G.Space.TILE; fallen.set(vid, { ox: X - c.x * TL, oz: Z - c.y * TL, cx: c.x, cy: c.y, yaw, pose: Object.assign({}, pose) }); if (fallen.size > 40) fallen.delete(fallen.keys().next().value); return true; };
+  P3.fallenOf = vid => fallen.get(vid) || null; // (for the proofs)
+  // where a beast's gesture at a person goes (D-332): the point of them its kind goes for — the throat and the shoulder for the
+  // cats and the bears, the waist for a hippo, the thigh for the wolves and the crocodile, the ankle for the viper; a head-high
+  // threat at the head —, on the side of them it comes from, as they are drawn this frame (the body, where its controller has it;
+  // anyone else, where the view has them); down on the ground, the body lying there. False: nobody to aim at
+  const MANH = { lion: 1.3, tiger: 1.25, jaguar: 1.15, leopard: 1.15, snowleopard: 1.1, bear: 1.25, polarbear: 1.3, wolf: 0.8, hyena: 0.85, cao: 0.65, fox: 0.4,
+    croc: 0.5, viper: 0.12, python: 0.5, anaconda: 0.6, hippo: 0.95, elephant: 1.15, rhino: 0.95, buffalo: 1, bison: 1, boar: 0.6, monkey: 1.1 };
+  const MANUP = { threat: 1.55, display: 1.55, stare: 1.6, alert: 1.6, curious: 1.6, roar: 1.6 };
+  P3.manAim = function (n, a, id, X, Z, out) {
+    const S = G.S; const v = S.villagers.get(id); if (!v) return false; const av = P3.avatar;
+    let pX, pY, pZ, down = false;
+    if (av && av.id === id) { pX = av.X; pY = av.Y; pZ = av.Z; down = !!(av.pose && av.pose.lie > 0.5); }
+    else { const s = vis.get(id); if (s) { pX = s.X; pY = s.Y; pZ = s.Z; down = s.st === 'sleep'; } else { const TL = G.Space.TILE; pX = v.x * TL; pZ = v.y * TL; pY = groundY(v.x, v.y); down = !!v.sleeping; } }
+    const k = P3.look(v).s; const h = down ? 0.25 : (MANUP[n] || MANH[a.kind] || 0.9) * k;
+    const dx = X - pX, dz = Z - pZ, l = Math.hypot(dx, dz) || 1; const r = down ? 0.3 : 0.17 * k;
+    out[0] = pX + dx / l * r; out[1] = pY + h; out[2] = pZ + dz / l * r; return true;
+  };
   P3.skin = () => skin; // (the bodies drawn as one skin — Body3D — or as the pieces of old)
   P3.greet = function (X, Z) { let n = 0; for (const [id, s] of vis) if ((s.X - X) ** 2 + (s.Z - Z) ** 2 < 81) { s.greetT = 1.3 + (id % 5) * 0.15; s.greetD = 0.25 + (id % 7) * 0.08; n++; } return n; };
   // the turn of the head someone wants toward the body: facing yaw at (X, Z), the body av, their state — only when they
@@ -1889,7 +1919,7 @@
         if (n === 'coil') { const pf = s2 && s2.kf ? s2.kf : G.Fauna3D.form(o.kind); if (pf && pf.hull) { const b = G.FaunaAnim.B.spine, h0 = pf.hull; const r0 = (h0.p[(b * h0.nd + 2) * 3 + 1] - h0.p[(b * h0.nd + 3) * 3 + 1]) * 0.5 * (s2 && s2.ksc ? s2.ksc : 1); ctx.coilR = r0 / Math.max(0.2, G.Fauna3D.scaleOf(a.kind)); } }
         if (hg > 0) holdBody(a, s, o, s2, n, hg, dt, X, Z);
       }
-    }
+    } else if (oid && !o && AIMAT[n] && n !== 'coil' && P3.manAim(n, a, oid, X, Z, AIMW)) { ctx.aim = AIMW; const hg = HOLDGEO[n] || 0; if (hg > 0) holdBody(a, s, null, null, n, hg, dt, X, Z); } // (at a person: their point, D-332)
     if (!(ctx.aim && HOLDGEO[n])) { s.hx = (s.hx || 0) * Math.exp(-3 * dt); s.hz = (s.hz || 0) * Math.exp(-3 * dt); s.hon = 0; } // (the body back where the world has it)
     ctx.ground = !!(air === false && G.Animals.DEF[a.kind].cls === 'air' && n && GX.REC[n] && GX.REC[n].wing);
     return ctx;
@@ -1965,6 +1995,7 @@
       const X = a.x * TL, Z = a.y * TL; let s = bvis.get(a.id); if (!s) { s = { X, Z, Y: null, yaw: 0, ph: a.id % 5, t: 0, graze: 0, v: 0, f: 0, u: 0 }; bvis.set(a.id, s); }
       s.u = bf; // (in sight's reach this frame: its memory is kept)
       const dx = X - s.X, dz = Z - s.Z; const dist = Math.hypot(dx, dz); if (dist > 0.002 && dist < 6) { const want = Math.atan2(dz, dx); let da = want - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-8 * dt)); }
+      else if (dist <= 0.002 && !a.dead && (a.fx || a.fy) && !s.hon) { let da = Math.atan2(a.fy, a.fx) - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; s.yaw += da * (1 - Math.exp(-4 * dt)); } // (standing, it turns as the world has it face — its body is the world's footprint, D-330)
       const v = dt > 0 && dist < 6 ? dist / dt : 0; s.v += (v - s.v) * (1 - Math.exp(-6 * dt)); s.t += dt; s.X = X; s.Z = Z;
       const F = formOf(sp, a.kind); const air = sp.cls === 'air' && (a.z || 0) > 0.3;
       // (drawn as one skin: G.Fauna3D, posed by G.FaunaAnim — while there are rows; past them, the farthest in sight as the pieces,

@@ -358,7 +358,9 @@ if (on('p3')) {
     const pace = v => god(() => { const t = v.task; if (!S.villagers.has(v.id) || (t && (t.type === 'flee' || t.type === 'fight'))) return; v.sleeping = false; v.energy = Math.max(v.energy, 90);
       // (turned before the end of each leg: one who walks on, never stopping — the torch is carried walking)
       if (!t || t.type !== 'olhar' || t.st === 2 || G.dist(v.x, v.y, t.x, t.y) < 1.2) { const e = t && t.type === 'olhar' && t.x > p[0] ? -3 : 3; G.Vg.setTask(v, { type: 'olhar', x: p[0] + e, y: p[1], fx: p[0] - 8, fy: p[1] + 1, until: S.clock + 30, st: 0, pri: 1.2, torch: v === vt }); } }); // (the torch in the hand of the one who carries it, walking or at the turn: lit only while moving, it was out half the case in the full run, T-1334)
-    const night = () => { if (S.time < 0.74 && S.time > 0.5) S.time = 0.75; };
+    // (and the wind across: the case is the torch, not the scent — downwind of the walker without one, the tiger never knew he was
+    // there, T-1338)
+    const night = () => { if (S.time < 0.74 && S.time > 0.5) S.time = 0.75; S.weather.windA = Math.PI / 2; };
     const tg = putBold('tiger', p[0] - 8, p[1] + 1, { hunger: 0.95, age: 6 }); const back = unseen([tg]);
     const keepT = () => god(() => { if (tg.state === 'sleep' || tg.state === 'rest') { tg.state = 'idle'; tg.t = 0; } tg.hunger = Math.max(tg.hunger, 0.95); Me.m(tg).en = 1; });
     place(vt, p[0] - 3, p[1]); place(vn, p[0] + 30, p[1]); // (the one without it still far off)

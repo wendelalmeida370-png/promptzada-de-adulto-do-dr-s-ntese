@@ -892,5 +892,34 @@ for (const f of BEASTS) { if (!src[f]) continue; src[f].forEach((l, k) => { cons
 for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (/\b(A|G\.Animals)\.gesture\(/.test(c) && !/Me\.gesto = function/.test(c)) fails.push(`o gesto do cérebro: ${f}:${k + 1} dá um gesto sem a Mente.gesto (que pergunta se a espécie o faz): ${l.trim().slice(0, 110)}`);
   if (/G\.Village\.log\(/.test(c) && !/L\.count\('cronica'\)/.test(c)) fails.push(`a crônica dos bichos: ${f}:${k + 1} escreve na crônica sem a L.say (D-299): ${l.trim().slice(0, 110)}`); });
+// 107. "o corpo das feras é puro onde responde" (D-330, D-331): o js/fauna-corpo.js (G.Corpo) diz a pegada de um bicho, quem fica
+// no caminho e quem alcança o corpo encarnado — sem acaso nenhum (nem o do mundo, nem o do que só se vê) e sem escrever no bicho,
+// no corpo ou no mundo; a única escrita é a do passo do mundo, Co.step (o golpe que chega, o bicho posto de volta na pele do corpo)
+{ const fc = src['fauna-corpo.js'] || []; if (!fc.length) fails.push('o corpo das feras: js/fauna-corpo.js não existe (D-330)');
+  const s0 = fc.findIndex(l => /^  Co\.step = function \(v\) \{/.test(l)); const s1 = s0 < 0 ? -1 : fc.findIndex((l, k) => k > s0 && /^  \};$/.test(l));
+  if (s0 < 0 || s1 < 0) fails.push('o corpo das feras: o fauna-corpo.js sem a porta Co.step (D-332)');
+  fc.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random/.test(c)) fails.push(`o corpo das feras: fauna-corpo.js:${k + 1} tira de um acaso (a pegada e o alcance são contas do mundo, sem sorte): ${l.trim().slice(0, 110)}`);
+    if (/\b(a|v|o|b)\.(x|y|hp|downT|state|target|angry|fx|fy)\s*(=(?!=)|\+=|-=)/.test(c) && !(k > s0 && k < s1)) fails.push(`o corpo das feras: fauna-corpo.js:${k + 1} escreve num bicho ou numa pessoa fora do passo do mundo (Co.step): ${l.trim().slice(0, 110)}`); }); }
+// 108. "quem alcança o corpo pergunta pela pele" (D-331): um bicho alcança o corpo encarnado pela pele dele e do corpo, não pelos
+// quatro metros da casa do deus — no animals.js, toda chamada da mordida (bite(a, …)) está numa linha que pergunta ao touches (a
+// porta G.Corpo.reach, que para todos os outros é a distância de sempre); no fauna-luta.js, a picada da víbora (snakeBite) também
+{ const an = src['animals.js'] || [], lu = src['fauna-luta.js'] || [];
+  if (!an.some(l => /const touches = \(a, o, d0\) => \(G\.Corpo \? G\.Corpo\.reach\(a, o, d0\)/.test(l))) fails.push('alcance pela pele: o animals.js sem a porta touches (G.Corpo.reach, D-331)');
+  an.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bbite\(a, \w+, dt\)/.test(c) && !/\bfunction bite\(/.test(c) && !/\btouches\(/.test(c)) fails.push(`alcance pela pele: animals.js:${k + 1} morde sem perguntar ao touches (D-331): ${l.trim().slice(0, 110)}`); });
+  lu.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bsnakeBite\(a, v\)/.test(c) && !/function snakeBite/.test(c) && !/G\.Corpo\.reach\(/.test(c)) fails.push(`alcance pela pele: fauna-luta.js:${k + 1} pica sem perguntar ao G.Corpo.reach (D-331): ${l.trim().slice(0, 110)}`); }); }
+// 109. "o golpe no corpo chega na hora do gesto, e só o mundo o dá" (D-332, D-333): a mordida de uma pessoa (o ramo das pessoas do
+// bite, a picada da víbora, a mordida do lobo da razia) passa pelo G.Corpo.blow quando é o corpo encarnado — o gesto agora, o golpe
+// no contato dele —; os golpes que o corpo levou (S.avatar.hits) só o possess.js anota; e quem responde a eles — o controle do
+// corpo, o olho, a tela, os modos, o 3D — não escreve a vida nem o chão de ninguém (v.hp, v.downT): só o mundo fere e derruba
+{ const an = src['animals.js'] || [], lu = src['fauna-luta.js'] || [];
+  const b0 = an.findIndex(l => /^  function bite\(a, tg, dt\) \{/.test(l)), b1 = b0 < 0 ? -1 : an.findIndex((l, k) => k > b0 && /^  \}$/.test(l));
+  if (b0 < 0 || !an.slice(b0, b1).some(l => /G\.Corpo\.blow\(a, tg,/.test(l))) fails.push('o golpe no contato: o bite do animals.js não passa pelo G.Corpo.blow para o corpo encarnado (D-332)');
+  if (!an.some(l => /G\.Corpo\.blow\(a, tgt, land\)/.test(l))) fails.push('o golpe no contato: a mordida do lobo da razia não passa pelo G.Corpo.blow para o corpo encarnado (D-332)');
+  const k0 = lu.findIndex(l => /^  function snakeBite\(a, v\) \{/.test(l)), k1 = k0 < 0 ? -1 : lu.findIndex((l, k) => k > k0 && /^  \}$/.test(l));
+  if (k0 < 0 || !lu.slice(k0, k1).some(l => /G\.Corpo\.blow\(a, v, land/.test(l))) fails.push('o golpe no contato: a picada da víbora (fauna-luta.js) não passa pelo G.Corpo.blow para o corpo encarnado (D-332)');
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (f !== 'possess.js' && /\.hits\.(push|shift|splice|unshift)\(|\.hitN\s*=(?!=)|\.hits\s*=(?!=)/.test(c) && /avatar|\ba\.hits|\bA\.hits/.test(c)) fails.push(`os golpes do corpo: ${f}:${k + 1} anota um golpe do corpo fora do possess.js (S.avatar.hits, D-333): ${l.trim().slice(0, 110)}`);
+    if (['avatar.js', 'incui.js', 'cam3d.js', 'modes.js', 'people3d.js'].includes(f) && /\b(v|w|o|rec|body)\.(hp|downT)\s*(=(?!=)|\+=|-=)/.test(c)) fails.push(`os golpes do corpo: ${f}:${k + 1} escreve a vida ou o chão de alguém (só o mundo fere e derruba, D-333): ${l.trim().slice(0, 110)}`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

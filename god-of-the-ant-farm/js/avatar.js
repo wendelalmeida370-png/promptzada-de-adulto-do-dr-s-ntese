@@ -227,6 +227,7 @@
       loco: 'ground', anim: 'idle', animT: 0, ph: 0, pose: G.Anim3D.POSE0(), landT: 0, fallFrom: Y, hurt: 0, stamina: 100, acc: 0, wx: v.x, wy: v.y,
       act: null, speed: 0, turnT: 0, block: null, blockT: 0, capsT: 0, caps: null, wade: 0, climb: null, ledgeT: 0, yawP: 0, spP: 0, bank: 0,
       h: 1.75, swimK: 0, stroke: 0, drown: 0, drownHurt: 0, wear: [],
+      kx: 0, kz: 0, hitN: lastHit(), missT: G.S.clock, hitT: 0, hitK: 0, hitX: 0, hitZ: 0, downB: 0, rise: 0, dodgeT: 0,
       lv: G.Possess.level(), inB: null, inP: null, inShell: false, stair: null, stairF: 0, crawl: false, inAsk: null,
     };
     { const B = v.inside && G.S.buildings.get(v.inside); if (B && G.Space.plan(B)) { b.inB = B; b.inP = G.Space.plan(B); } b.Y = b.pY = floorAt(X, Z); indoorAfter(v);
@@ -236,6 +237,8 @@
       const u = G.Possess.useOf(); const pl = u && B && b.inB === B && !v.sleeping && G.Interiors.placeFor ? G.Interiors.placeFor(B, u.it, u.q, X - B.x * TL(), Z - B.y * TL()) : null;
       if (pl && u.st) pl.st = u.st;
       if (!(pl && Av.seatAt(B, pl, true, v)) && b.inShell && !v.sleeping) { const q = indoorAt(b.X, b.Z); if (!q || !q.walk || onFlight(q)) offBed(); } }
+    // (thrown down by the world when the body is taken up again — a game loaded under a lion's leap: down still, as the world says)
+    if (v.downT > G.S.clock && !v.sleeping && !v.inside && b.loco === 'ground') b.loco = 'down';
     Av.on = true;
     return b;
   };
@@ -298,6 +301,41 @@
     }
     return [ox, oz];
   }
+
+  // the bodies the body walks round (D-330): the beasts by their footprint — hard, as the world's own (G.Corpo: a capsule along
+  // the way each faces, the small ones stepped round or over) —, and the people out of doors by their own circle — soft: they
+  // jostle past, the body slips by, and a doorway with someone in it is never shut by them. [ox, oz] the way out of the beasts,
+  // [px, pz] the people's nudge, [nx, nz] the beasts' outward normal (to take the move into them off the velocity), all metres
+  const PB = [0, 0, 0, 0, 0, 0];
+  function pushBodies(X, Z, people) {
+    PB[0] = PB[1] = PB[2] = PB[3] = PB[4] = PB[5] = 0; const Co = G.Corpo; if (!Co || !G.Animals || !G.Animals.near) return PB;
+    const L = TL(); const x = X / L, y = Z / L; const R = TUNE.radius / L;
+    G.Animals.near(x, y, 4, a => {
+      if (!Co.stands(a)) return; const f = Co.foot(a); const px = x + PB[0] / L, py = y + PB[1] / L; const q = Co.near(f, px, py); const over = f[4] + R - q[2]; if (over <= 0) return;
+      let ux = px - q[0], uy = py - q[1]; const l = Math.hypot(ux, uy);
+      if (l > 1e-6) { ux /= l; uy /= l; } else { const h = Math.hypot(a.fx || 0, a.fy || 0); ux = h > 1e-9 ? -(a.fy || 0) / h : 1; uy = h > 1e-9 ? (a.fx || 0) / h : 0; } // (dead on its spine: out to its side)
+      PB[0] += ux * over * L; PB[1] += uy * over * L; PB[4] += ux; PB[5] += uy;
+    });
+    if (people && G.Animals.nearMan) { const me = G.Possess.id();
+      G.Animals.nearMan(x, y, 1.5, o => {
+        if (o.id === me || o.inside || o.held || o.air || o.aboard || o.carried || o.age < 2) return;
+        const r = (o.age < 12 ? 0.2 : 0.27) / L; const dx = x - o.x, dy = y - o.y, d = Math.hypot(dx, dy); const over = r + R - d; if (over <= 0 || d < 1e-6) return;
+        PB[2] += dx / d * over * L * 0.35; PB[3] += dy / d * over * L * 0.35;
+      }); }
+    return PB;
+  }
+  // (after the feet moved: out of the beasts — never into a wall for it: then the step is not taken —, and past the people)
+  function outOfBodies(feet, moving) {
+    const p = pushBodies(b.X, b.Z, moving);
+    if (p[0] || p[1]) {
+      if (!blocked(b.X + p[0], b.Z + p[1], feet, Math.sign(p[0]), Math.sign(p[1]))) { b.X += p[0]; b.Z += p[1]; }
+      else { b.X = b.pX; b.Z = b.pZ; }
+      const l = Math.hypot(p[4], p[5]); if (l > 1e-6) { const nx = p[4] / l, nz = p[5] / l; let vn = b.vx * nx + b.vz * nz; if (vn < 0) { b.vx -= nx * vn; b.vz -= nz * vn; } vn = b.kx * nx + b.kz * nz; if (vn < 0) { b.kx -= nx * vn; b.kz -= nz * vn; } }
+      b.block = 'beast'; b.blockT = 0.4;
+    }
+    if ((p[2] || p[3]) && !blocked(b.X + p[2], b.Z + p[3], feet, Math.sign(p[2]), Math.sign(p[3]))) { b.X += p[2]; b.Z += p[3]; }
+  }
+  Av.bodiesAt = (X, Z) => pushBodies(X, Z, true).slice(); // (for the proofs: how far out of the bodies a point is pushed)
 
   // ------------------------------ locomotion states ------------------------------
   // (each: what the body does in one step; a new way of moving — swimming, climbing — is a new entry here)
@@ -363,6 +401,20 @@
         if (c.t >= c.T) { b.lv = c.lv; b.loco = 'ground'; b.flight = null; b.fallFrom = b.Y; }
       },
     },
+    // knocked down by a blow (a giant's, the leap of a cat, the jaws of a crocodile — D-333): thrown back along the ground, on its
+    // back; up again when the world lets it (v.downT) and its own time of it is over — the getting up takes its moment, then
+    // the feet are the player's again
+    down: {
+      step(v, h) {
+        b.vx = b.vz = 0; IN.jump = false; b.buffer = 0;
+        const feet = b.Y; const nx = b.X + b.kx * h, nz = b.Z + b.kz * h;
+        if (nx !== b.X && !blocked(nx, b.Z, feet, Math.sign(b.kx), 0)) b.X = nx; else b.kx = 0;
+        if (nz !== b.Z && !blocked(b.X, nz, feet, 0, Math.sign(b.kz))) b.Z = nz; else b.kz = 0;
+        outOfBodies(feet, false); settle(h); b.ground = true;
+        b.downB = Math.max(0, b.downB - h);
+        if (b.downB <= 0 && !(v.downT > G.S.clock)) { b.loco = 'ground'; b.rise = RISE_UP; b.fallFrom = b.Y; }
+      },
+    },
     // busy with the hands (chopping, picking, eating): the feet keep still until it is done
     // (an act with a place to be — the arms round someone — first takes the step or two to it, by the feet's own rules)
     busy: {
@@ -378,6 +430,7 @@
   Av.addLoco = (name, def) => { LOCO[name] = def; };
 
   function wish() {
+    if (b && b.rise > 0) return [0, 0, 0]; // (getting up from a fall: the feet are not yet the player's)
     // the wish is camera-relative: forward is where the camera looks
     const cy = Math.cos(IN.camYaw), sy = Math.sin(IN.camYaw);
     let wx = cy * IN.mz - sy * IN.mx, wz = sy * IN.mz + cy * IN.mx; const l = Math.hypot(wx, wz);
@@ -420,15 +473,18 @@
       G.Audio && G.Audio.play && G.Audio.play('swish');
     }
     // the feet: along each axis, sliding along what blocks (a wall stops the part of the move that goes into it)
-    const nx = b.X + b.vx * h, nz = b.Z + b.vz * h;
+    // (and a blow's push, its own: it fades as the feet catch the body — D-333)
+    const nx = b.X + (b.vx + b.kx) * h, nz = b.Z + (b.vz + b.kz) * h;
     const feet = b.Y + (b.ground ? 0 : 0.0);
     let hit = null;
-    if (nx === b.X || !(hit = blocked(nx, b.Z, feet, Math.sign(b.vx), 0))) b.X = nx; else { b.vx = 0; b.block = hit; b.blockT = 0.4; }
+    if (nx === b.X || !(hit = blocked(nx, b.Z, feet, Math.sign(b.vx + b.kx), 0))) b.X = nx; else { b.vx = 0; b.kx = 0; b.block = hit; b.blockT = 0.4; }
     let hz = null;
-    if (nz === b.Z || !(hz = blocked(b.X, nz, feet, 0, Math.sign(b.vz)))) b.Z = nz; else { b.vz = 0; b.block = hz; b.blockT = 0.4; }
+    if (nz === b.Z || !(hz = blocked(b.X, nz, feet, 0, Math.sign(b.vz + b.kz)))) b.Z = nz; else { b.vz = 0; b.kz = 0; b.block = hz; b.blockT = 0.4; }
     // (trunks and boulders: pushed round them, unless that would put the body somewhere solid)
     const [ox, oz] = pushRound(b.X, b.Z);
     if ((ox || oz) && !blocked(b.X + ox, b.Z + oz, feet, Math.sign(ox), Math.sign(oz))) { b.X += ox; b.Z += oz; }
+    // (the beasts and the people: walked round, D-330)
+    outOfBodies(feet, wl > 0.1);
     const L = TL(); b.X = G.clamp(b.X, 0.5 * L, (G.N - 0.5) * L); b.Z = G.clamp(b.Z, 0.5 * L, (G.N - 0.5) * L);
     if (b.blockT > 0) b.blockT -= h; else b.block = null;
     // (pushing against a ledge too high to step on: after a moment — or at once with the jump — the body climbs it)
@@ -464,6 +520,7 @@
     const nx = b.X + b.vx * h, nz = b.Z + b.vz * h;
     if (nx === b.X || !(hit = blocked(nx, b.Z, feet, Math.sign(b.vx), 0))) b.X = nx; else b.vx = 0;
     if (nz === b.Z || !(hz = blocked(b.X, nz, feet, 0, Math.sign(b.vz)))) b.Z = nz; else b.vz = 0;
+    outOfBodies(feet, wl > 0.1); // (a hippo in its river is no water to swim through, D-330)
     const L = TL(); b.X = G.clamp(b.X, 0.5 * L, (G.N - 0.5) * L); b.Z = G.clamp(b.Z, 0.5 * L, (G.N - 0.5) * L);
     if ((hit === 'ledge' || hz === 'ledge') && wl > 0.3 && !out) { b.ledgeT += h; if (b.ledgeT > TUNE.climbWait || b.stroke > 0) { const y0 = b.Y; b.Y = feet; if (tryClimb(wx, wz)) { b.drown = 0; return; } b.Y = y0; } } else b.ledgeT = 0;
     // floating: moving, flat at the face of the water; still, upright with the head out; out of breath, going under
@@ -599,6 +656,48 @@
   // (an act cut short: what it had asked of the world and the world has not yet done is let go — it never happens)
   function cutAct() { const a = b.act; if (a && a.asked && !a.asked.res) a.asked.cancel = true; b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; if (a && a.cut && !a.res) a.cut(); }
 
+  // ------------------------------ a blow taken (D-333) ------------------------------
+  // what the world dealt the body (Possess.hits, noted in the world's step by the one door of a hurt, Vg.damage): the body
+  // answers it as a body would — a flinch away from it, a push along it (the bigger the blow, the farther), thrown down by a big
+  // one (a giant's, the leap of a cat — the world's own downT keeps it down as long as the world says); the eye shakes and turns
+  // toward what struck (Cam3D), the edges of the picture go red on the side it came from and the life bar drops where it can be
+  // seen (IncUI), the blow and the breath are heard. And the blow that missed — a step back in time: the jaws shut on the air
+  const RISE_UP = 0.75; // (seconds of getting up from a fall)
+  const lastHit = () => { const H = G.Possess.hits(); return H.length ? H[H.length - 1].n : 0; };
+  function takeHits(v) {
+    const H = G.Possess.hits(); for (const e of H) { if (e.n <= b.hitN) continue; b.hitN = e.n; react(v, e); }
+    const M = G.Corpo ? G.Corpo.misses() : null; if (M) for (const m of M) { if (m.t <= b.missT) continue; b.missT = m.t; dodged(v, m); }
+  }
+  Av.react = (v, e) => (b ? react(v || G.Possess.body(), e) : null); // (the proofs: a blow answered as the world would deal it)
+  function react(v, e) {
+    if (!v || e.cause === 'drown') return; // (the water's own hurt: the drowning has its own signs)
+    const L = TL(); let ux = 0, uz = 0;
+    if (e.from) { let dx = v.x - e.from[0], dy = v.y - e.from[1]; let l = Math.hypot(dx, dy);
+      if (l < 0.05 && e.from.length > 3) { dx = e.from[2]; dy = e.from[3]; l = Math.hypot(dx, dy); } // (on it: the way the beast came)
+      if (l > 1e-6) { ux = dx / l; uz = dy / l; } }
+    const amt = e.amt || 0, big = !!e.big; const fall = e.cause === 'queda';
+    const K = fall || !(ux || uz) ? 0 : big ? 3.4 : G.clamp(0.5 + amt * 0.06, 0.6, 2.2);
+    if (b.loco === 'swim') { b.vx += ux * K * 0.6; b.vz += uz * K * 0.6; } else { b.kx += ux * K; b.kz += uz * K; }
+    b.hitT = 0.55; b.hitK = G.clamp(amt / 28, 0.35, 1); b.hitX = ux; b.hitZ = uz;
+    // (thrown down: from the feet, the hands at work, a seat; never off a flight, a ledge, the water)
+    if ((big || e.down > 0) && !fall && (b.loco === 'ground' || b.loco === 'air' || b.loco === 'busy' || b.loco === 'seat' || b.loco === 'down')) {
+      if (b.seat) standUp(true, true); cutAct();
+      if (b.loco !== 'down' && (ux || uz)) b.yaw = Math.atan2(-uz, -ux); // (facing what struck it: it goes down on its back, away from it)
+      b.loco = 'down'; b.downB = Math.max(b.downB, e.down > 0 ? 0.35 : 1.25); b.rise = 0; b.vx = b.vz = 0; b.ground = true;
+    } else if (b.act && !b.act.sit && b.loco === 'busy' && amt >= 6) cutAct(); // (a blow stops the hands)
+    const src = e.from ? { X: e.from[0] * L, Z: e.from[1] * L } : null;
+    G.Cam3D && G.Cam3D.shake && G.Cam3D.shake(big ? 1 : G.clamp(0.3 + amt / 45, 0.3, 0.85), src);
+    G.IncUI && G.IncUI.hurt && G.IncUI.hurt(e, src);
+    if (G.Audio && G.Audio.play) { G.Audio.play(big ? 'thud' : 'hit', big ? 1 : G.clamp(0.5 + amt / 40, 0.5, 1)); if (amt >= 4) G.Audio.play('gasp', 0.55); }
+  }
+  function dodged(v, m) {
+    const L = TL(); G.Cam3D && G.Cam3D.shake && G.Cam3D.shake(0.18, { X: m.x * L, Z: m.y * L });
+    G.Audio && G.Audio.play && G.Audio.play('swish', 0.8);
+    if (b.dodgeT <= 0 && G.IncUI && G.IncUI.toast) { b.dodgeT = 8; G.IncUI.toast('Escapou por pouco!', 1.6); }
+    void v;
+  }
+  Av.hurtNow = () => (b ? { loco: b.loco, downB: b.downB, rise: b.rise, hitT: b.hitT, kx: b.kx, kz: b.kz, hitN: b.hitN, yaw: b.yaw, anim: b.anim } : null); // (for the proofs)
+
   // ------------------------------ the step and the frame ------------------------------
   function step(v, h) {
     // the world moved the body (a building rose where it stood, a load, the world's own push): the world is right
@@ -607,12 +706,16 @@
     if (Math.abs(v.x - b.wx) > 1e-6 || Math.abs(v.y - b.wy) > 1e-6) { if (b.seat) { b.seat = null; G.Possess.apply(w => { G.Possess.unuse(w); return { ok: true }; }); } b.X = b.pX = v.x * TL(); b.Z = b.pZ = v.y * TL(); b.lv = G.Possess.level(); b.inB = null; b.inP = null; b.stair = null; b.Y = b.pY = floorAt(b.X, b.Z); indoorAfter(v); b.vx = b.vz = b.vy = 0; b.ground = true; b.loco = 'ground'; b.climb = null; cutAct(); }
     b.pX = b.X; b.pY = b.Y; b.pZ = b.Z;
     if ((b.capsT -= h) <= 0 || !b.caps) { b.caps = G.Possess.caps(v); b.capsT = 0.5; b.h = 1.75 * (G.People3D ? G.People3D.look(v).s : 1); }
+    // (the blows the world dealt the body since the last step, and the ones it missed: answered now — D-333)
+    takeHits(v);
+    { const f = Math.exp(-(b.loco === 'down' ? 3.2 : 6.5) * h); b.kx *= f; b.kz *= f; if (Math.abs(b.kx) + Math.abs(b.kz) < 0.02) b.kx = b.kz = 0; }
+    if (b.hitT > 0) b.hitT = Math.max(0, b.hitT - h); if (b.rise > 0) b.rise = Math.max(0, b.rise - h); if (b.dodgeT > 0) b.dodgeT -= h;
     // (asleep — the world's sleep —: off the place it was at, into its bed)
     if (v.sleeping && b.loco !== 'sleep') { cutAct(); if (b.seat) standUp(true, true); b.loco = 'sleep'; if (b.inShell) toBed(v); }
     // (sitting, the body gets up as soon as the player walks or jumps)
     // (and a free act — a prayer, a meal — is left there: what it had asked of the world and the world had not yet done never happens;
     // at a place, the place's own step gets it up)
-    if (b.act && (b.act.sit || b.act.free) && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { cutAct(); if (b.loco !== 'seat') b.loco = 'ground'; }
+    if (b.act && (b.act.sit || b.act.free) && b.loco !== 'down' && (Math.abs(IN.mx) + Math.abs(IN.mz) > 0.2 || b.buffer > 0 || IN.jump)) { cutAct(); if (b.loco !== 'seat') b.loco = 'ground'; }
     if (b.act && b.act.keep && !b.act.keep()) cutAct();
     // (the act's own time is counted once a frame — tickAct: the world's or the body's; here only the feet's and the turn)
     if (b.act) {
@@ -658,7 +761,9 @@
   function animate(v, h) {
     const caps = b.caps; const carry = !!(v.carry && v.carry.n > 0);
     let st;
-    if (b.loco === 'sleep') st = 'sleep';
+    if (b.loco === 'down') st = 'knocked';
+    else if (b.rise > 0) st = 'rise';
+    else if (b.loco === 'sleep') st = 'sleep';
     else if (b.loco === 'seat') st = seatSt();
     else if (b.loco === 'climb') st = 'climb';
     else if (b.loco === 'stair') st = b.flight && b.flight.lad ? 'climb' : 'walk';
@@ -691,7 +796,13 @@
     b.bank += (G.clamp(dy / h * b.speed * 0.03, -0.22, 0.22) - b.bank) * (1 - Math.exp(-8 * h));
     if (loc && b.ground) { want.sway = (want.sway || 0) + b.bank; want.lean = (want.lean || 0) + G.clamp(acc * 0.025, -0.18, 0.22); }
     if (st === 'idle' || st === 'walk' || st === 'carry') { let la = IN.camYaw - b.yaw; while (la > Math.PI) la -= TAU; while (la < -Math.PI) la += TAU; want.lookY = Math.abs(la) < 1.9 ? -G.clamp(la, -1, 1) * 0.55 : 0; }
-    G.Anim3D.blend(b.pose, want, h, st === 'land' || st === 'jump' || st === 'climb' ? 20 : wet ? 7 : 12);
+    // (a blow: the flinch over what the body does — thrown the way the blow pushes it, the arms up before the face, the head back)
+    const fl = b.hitT > 0 && st !== 'knocked' && st !== 'sleep' && !wet ? b.hitK * G.smooth(0, 0.2, b.hitT) : 0;
+    if (fl > 0) { const c = Math.cos(b.yaw), sn = Math.sin(b.yaw); const fw = b.hitX * c + b.hitZ * sn, sd = -b.hitX * sn + b.hitZ * c;
+      const mix = (j, x) => { want[j] = G.lerp(want[j] || 0, x, fl); }; const add = (j, x) => { want[j] = (want[j] || 0) + x * fl; };
+      add('lean', fw * 0.55); add('sway', sd * 0.32); add('twist', -sd * 0.25); add('neck', -0.35); add('crouch', 0.12); add('knL', 0.3); add('knR', 0.25);
+      mix('shLp', -1.85); mix('shRp', -1.7); mix('shLr', 0.35); mix('shRr', -0.35); mix('elL', 1.75); mix('elR', 1.6); }
+    G.Anim3D.blend(b.pose, want, h, st === 'land' || st === 'jump' || st === 'climb' || st === 'knocked' || fl > 0.05 ? 20 : st === 'rise' ? 9 : wet ? 7 : 12);
     if (want.lookY !== undefined) b.pose.lookY = (b.pose.lookY || 0) + ((want.lookY || 0) - (b.pose.lookY || 0)) * (1 - Math.exp(-5 * h));
   }
   Av.frame = function (rdt) {
