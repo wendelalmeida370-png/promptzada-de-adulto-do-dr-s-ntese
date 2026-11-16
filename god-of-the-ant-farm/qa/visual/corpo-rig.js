@@ -20,6 +20,8 @@ G.W = G.W || {}; G.Render = { nightness: () => 0 }; G.Art = { CLOTH: {}, icon: (
 { const m = fs.readFileSync(path.join(ROOT, 'js/art.js'), 'utf8').match(/const CLOTH = (\{[\s\S]*?\});/); if (m) G.Art.CLOTH = vm.runInThisContext('(' + m[1] + ')'); }
 try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
+// (the body's animation: the stride, the clips, the animator — 20a, the files after people3d.js in index.html)
+{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/anim-[^"]+)"><\/script>/g)) run(m[1]); }
 // (the realm the modules are given: a scene and the quality — enough to make their meshes)
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };
@@ -81,7 +83,7 @@ function cloth(P, p, zn, buf, pb, clock, U) {
   if (cape) { const lr = (zn === 15 || zn === 21 ? 1 : ss(0.97, 0.82, p[1])) * s;
     P = off(P, V(32), V(33), 0.092 * lr); P = out(P, V(33), V(34), 0.07 * lr, rd); P = off(P, V(35), V(36), 0.092 * lr); P = out(P, V(36), V(37), 0.07 * lr, rd); }
   else { const h0 = dot(sub(P, pel), up); if (p[1] > 0.45 && h0 > -0.25 * s) { const h = h0; const q = sub(sub(P, pel), up.map(v => v * cl(h, 0, L))); const qx = dot(q, ex), qz = dot(q, ez);
-      const fw = V(19)[3], g = ss(0.05, 0.3, h / s); const k = Math.hypot(qx / ((0.155 + 0.017 * fw + 0.02 * g) * s), qz / ((0.112 + 0.012 * fw + 0.025 * g) * s)); if (k < 1 && k > 1e-4) P = add(add(P, ex, qx * (1 / k - 1)), ez, qz * (1 / k - 1)); }
+      const fw = V(19)[3], g = ss(0.05, 0.3, h / s); const k = Math.hypot(qx / ((0.155 + 0.017 * fw + 0.02 * g) * s), qz / ((0.112 + 0.019 * fw + 0.025 * g) * s)); if (k < 1 && k > 1e-4) P = add(add(P, ex, qx * (1 / k - 1)), ez, qz * (1 / k - 1)); }
     { const hk = Math.max(0, 0.38 - p[1]); if (hk > 0) { const ul = len(U); P = add(P, [U[0], U[1] - ul, U[2]], hk * (1 - ss(0.55, 0.85, U[1] / Math.max(ul, 1e-5))) * ss(0.45, 0.75, up[1])); } }
     const fm = V(19)[3], nl = a => a.map(q => q / (len(a) || 1)); const uL = ss(-0.8, -0.3, dot(nl(sub(V(33), V(32))), up)), uR = ss(-0.8, -0.3, dot(nl(sub(V(36), V(35))), up));
     const hL = add(V(32), sub(V(33), V(32)), 0.1 - 0.1 * uL), hR = add(V(35), sub(V(36), V(35)), 0.1 - 0.1 * uR);
@@ -151,7 +153,8 @@ ok('de pé e andando, os pés no chão (nem afundados nem no ar)', !sunk.length,
   for (const [st, sp] of [['walk', 0.6], ['walk', 1.4], ['walk', 2.2], ['run', 3.2], ['run', 4.5], ['run', 6]]) {
     const rate = A.rate(st, sp, 1); const dt = 1 / 120; let slip = 0, went = 0, prev = null; const p = A.POSE0(); const feet = [{ on: 0 }, { on: 0 }];
     for (let k = 0; k < 360; k++) {
-      const t = k * dt, z0 = sp * t; A.blend(p, A.pose(st, rate * sp * t, sp), dt, 12);
+      // (the stride from its phase, every frame, unfiltered — as the game's animator plays it, 20a: a blend on a cycle eats it)
+      const t = k * dt, z0 = sp * t; Object.assign(p, A.pose(st, rate * sp * t, sp));
       const R = P3.rig(0, 0, z0, Math.PI / 2, p, { s: 1, ground: 0, plant: feet });
       // (each foot on the ground: the point it stands on — the heel alone, the ball alone, or the whole sole flat (then its
       // middle) — and how far that point moved since the last frame, if it stood on the same point then; a foot rolling
@@ -190,7 +193,7 @@ const inside = (cm, bm) => {
 // their distance from the hips' line and fall from the knees. A blouse: in every state but the deep seats — sitting, on the
 // ground, crouching, lying —, where a skin bent by bones cannot lay it over the belly folded on the thighs: there at most
 // 6% of it, never deeper than 3 cm, and the numbers said every run — the limit of this test, not of the look)
-{ const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'sick', 'eatg', 'rockg', 'knocked', 'rise', 'crumple']); // (low: bent double, gathering from the ground; eat and rock seated as sit is, eatg and rockg on the ground as rest, cook down on the heels, sick lying as sleep; thrown down by a blow lying as sleep, getting up on one knee and the knees giving in the last fall down as cook — D-333, D-334)
+{ const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'sick', 'eatg', 'rockg', 'knocked', 'rise', 'crumple', 'harvest', 'skin']); // (20a's gestures: the harvest bent double over the plants as low is; the knife at a carcass on one knee as rise is) // (low: bent double, gathering from the ground; eat and rock seated as sit is, eatg and rockg on the ground as rest, cook down on the heels, sick lying as sleep; thrown down by a blow lying as sleep, getting up on one knee and the knees giving in the last fall down as cook — D-333, D-334)
   for (const nm of ['capa', 'toga', 'bata', 'saiaC', 'saiaL']) { if (!MESH[nm]) continue; const row = [];
     for (const st of A.STATES) { let fr = 0, wo = 0;
       for (let k = 0; k < 6; k++) for (const bd of nm === 'bata' ? ['corpoF'] : nm === 'capa' || nm === 'toga' ? ['corpoM'] : ['corpoM', 'corpoF']) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = inside(MESH[nm], MESH[bd]); fr = Math.max(fr, r.frac); wo = Math.max(wo, r.worst); } // (a skirt on both bodies: the woman's hips and thighs are her own)
@@ -236,7 +239,7 @@ const through = (cm, bm, hem) => {
   }
   return { out, shown, worst };
 };
-{ const rows = []; let fail = 0; const WET = /swim|tread|drown|sleep|sick/, SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'eatg', 'rockg', 'knocked', 'rise', 'crumple']); // (the falls of D-333 and D-334: on the ground, as sleep and cook)
+{ const rows = []; let fail = 0; const WET = /swim|tread|drown|sleep|sick/, SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'eatg', 'rockg', 'knocked', 'rise', 'crumple', 'harvest', 'skin']); // (the gestures of 20a bent double or on one knee: as low and rise) // (the falls of D-333 and D-334: on the ground, as sleep and cook)
   for (const nm of ['saiaC', 'saiaL']) for (const bd of ['corpoM', 'corpoF']) { const row = [];
     for (const st of A.STATES) { let o = 0, sh = 0, wo = 0;
       for (let k = 0; k < 6; k++) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = through(MESH[nm], MESH[bd], HEM[nm]); o = Math.max(o, r.out); sh = Math.max(sh, r.shown); wo = Math.max(wo, r.worst); }

@@ -149,6 +149,26 @@
   const twoIn = o => (o.mao && It.def(o.mao).maos >= 2) || (o.outra && It.def(o.outra).maos >= 2);
   // has the person things of their own (a bag with something in it)?
   Inv.real = v => !!(v && v.mochila && typeof v.mochila === 'object' && hasAny(v.mochila));
+  // what a person holds, for a drawer that asks every frame (the 3D): the answer of Inv.held kept in the caller's memo `m` while
+  // everything it reads of the person is the same — the act, the trade, the company, the bow, the captivity, the load, the gear,
+  // the age's band, the places and the bag — and for a day of the world at most, for what it reads of the person's people (its
+  // arts, its way of fishing), which changes slowly. The inventory reads its own fields here (rule 128); the caller keeps the memo
+  // and never writes it; a fresh answer only when it changes (L-1114)
+  const band = a => (a < 2 ? 0 : a < 14 ? 1 : a < 60 ? 2 : 3);
+  Inv.heldFor = function (v, m) {
+    if (!v || !m) return Inv.held(v);
+    const e = v.equip && typeof v.equip === 'object' ? v.equip : null, b = v.mochila && typeof v.mochila === 'object' ? v.mochila : null;
+    const c = v.carry && v.carry.n > 0 ? 1 : 0, ag = band(v.age), day = G.S ? G.S.day : 0;
+    let same = !!m.out && m.v === v && m.act === v.act && m.role === v.role && m.unit === v.unit && m.arm === v.arm && m.elite === v.elite && m.cap === !!v.captive
+      && m.c === c && m.gear === !!v.gear && m.ag === ag && m.day === day && m.e === !!e && m.kit === !!(e && e.kit);
+    if (same && e) for (let i = 0; i < SLOTS.length; i++) if (m.es[i] !== (e[SLOTS[i]] || null)) { same = false; break; }
+    if (same) { let n = 0; if (b) for (const k in b) if (b[k] > EPS) { if (m.bk[n] !== k || m.bn[n] !== b[k]) { same = false; break; } n++; } if (same && n !== m.bl) same = false; }
+    if (same) return m.out;
+    m.v = v; m.act = v.act; m.role = v.role; m.unit = v.unit; m.arm = v.arm; m.elite = v.elite; m.cap = !!v.captive; m.c = c; m.gear = !!v.gear; m.ag = ag; m.day = day;
+    m.e = !!e; m.kit = !!(e && e.kit); m.es = m.es || new Array(SLOTS.length); for (let i = 0; i < SLOTS.length; i++) m.es[i] = e ? e[SLOTS[i]] || null : null;
+    m.bk = m.bk || []; m.bn = m.bn || []; let n = 0; if (b) for (const k in b) if (b[k] > EPS) { m.bk[n] = k; m.bn[n] = b[k]; n++; } m.bl = n;
+    m.out = Inv.held(v); return m.out;
+  };
 
   // ============================== the bag: the Depot's holder 'm:<id>' ==============================
   // How much a body carries on itself, in kilos (D-373): the same steps of age as the arms' strength (G.Depot.strength) at 2,5 kg

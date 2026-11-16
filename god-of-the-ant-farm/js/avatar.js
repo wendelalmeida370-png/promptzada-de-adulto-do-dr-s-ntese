@@ -757,7 +757,9 @@
     if (!SEATED_ST[own] && !LOW_ST[own]) return an;
     return SEATED_ST[own] && SEATED_ST[an] ? an : own;
   }
-  // the animation the body is in: from what it really does (Part 25: no walking in place, no sliding in idle)
+  // the animation the body is in: from what it really does (Part 25: no walking in place, no sliding in idle) — its state, for the
+  // world's proofs, the camera and the sounds. The pose is no longer made here, on the fixed step: the body's animator makes it in
+  // every frame drawn, from the motion of that frame (People3D → Anim3D.drive, the same as for everyone: 20a, D-345)
   function animate(v, h) {
     const caps = b.caps; const carry = !!(v.carry && v.carry.n > 0);
     let st;
@@ -777,33 +779,55 @@
     else st = carry ? 'carry' : 'idle';
     if (st !== b.anim) { b.anim = st; b.animT = 0; }
     b.animT += h;
-    const loc = st === 'walk' || st === 'run' || st === 'carryWalk' || st === 'sneak' || st === 'wade' || st === 'turn';
-    // (the stride in step with the ground: the rate the rig's own legs need for this speed and this body's size)
-    if (loc) b.ph += h * (st === 'turn' ? 1.2 * 2.6 : b.speed * G.Anim3D.rate(st, b.speed, b.h / 1.75));
-    else if (st === 'swim' || st === 'tread' || st === 'drown') { b.ph += h * (st === 'swim' ? 2.2 + b.speed * 1.4 + (b.stroke > 0 ? 3 : 0) : st === 'drown' ? 5 : 1.6); }
-    const wet = st === 'swim' || st === 'tread' || st === 'drown';
-    // (a stroke of the world's time: one swing a stroke, the blow landing at the stroke's contact — when the world counts it)
-    if (b.loco === 'stair' && b.flight && !b.flight.lad) b.ph += h * 2.4 * G.Anim3D.rate('walk', 1, b.h / 1.75);
-    let tc = loc || wet || (b.loco === 'stair' && b.flight && !b.flight.lad) ? b.ph : st === 'climb' && b.climb ? b.climb.t / b.climb.dur : st === 'climb' && b.flight ? (b.flight.t * 1.6) % 1 : b.animT;
-    if ((st === 'swing' || st === 'fight') && b.act && b.act.world && b.act.dur > 0) { const u = G.clamp(b.act.t / b.act.dur, 0, 1), c = G.clamp(b.act.contact / b.act.dur, 0.2, 0.95); tc = (u <= c ? -Math.PI / 2 + Math.PI * u / c : Math.PI / 2 + Math.PI * (u - c) / (1 - c)) / 5.5; }
-    const want = G.Anim3D.pose(st, tc, b.speed);
-    // (the weight of what the hands hold, and the hands reaching — the same layer as for everyone drawn)
-    if (b.L && G.Anim3D.hold) G.Anim3D.hold(want, b.L, st, tc, b.speed);
-    // (moving, the body leans into its turns and forward as it speeds up, back as it stops; standing, the head follows the
-    // eye of the camera a little, as a person looks where they mean to go)
-    let dy = b.yaw - b.yawP; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; b.yawP = b.yaw;
-    const acc = (b.speed - b.spP) / h; b.spP = b.speed;
-    b.bank += (G.clamp(dy / h * b.speed * 0.03, -0.22, 0.22) - b.bank) * (1 - Math.exp(-8 * h));
-    if (loc && b.ground) { want.sway = (want.sway || 0) + b.bank; want.lean = (want.lean || 0) + G.clamp(acc * 0.025, -0.18, 0.22); }
-    if (st === 'idle' || st === 'walk' || st === 'carry') { let la = IN.camYaw - b.yaw; while (la > Math.PI) la -= TAU; while (la < -Math.PI) la += TAU; want.lookY = Math.abs(la) < 1.9 ? -G.clamp(la, -1, 1) * 0.55 : 0; }
-    // (a blow: the flinch over what the body does — thrown the way the blow pushes it, the arms up before the face, the head back)
-    const fl = b.hitT > 0 && st !== 'knocked' && st !== 'sleep' && !wet ? b.hitK * G.smooth(0, 0.2, b.hitT) : 0;
-    if (fl > 0) { const c = Math.cos(b.yaw), sn = Math.sin(b.yaw); const fw = b.hitX * c + b.hitZ * sn, sd = -b.hitX * sn + b.hitZ * c;
-      const mix = (j, x) => { want[j] = G.lerp(want[j] || 0, x, fl); }; const add = (j, x) => { want[j] = (want[j] || 0) + x * fl; };
+  }
+  // ------------------------------ the body's pose in each frame drawn (20a) ------------------------------
+  // What the animator reads of the body, for the frame: its state, its speed, its turn and its gain of speed, the act of its
+  // hands and that act's own time (its contact on the world's), what the controller says of its gait (20b's motion, read with
+  // care: JOGABILIDADE.md 4.4), the flinch of a blow and the look after the camera's eye. One object, filled each frame
+  const ANIM_ACT = { swing: 1, low: 1, interact: 1, fight: 1 };
+  function drawState(st, a) {
+    const C = G.Anim3D.CLIPS || {};
+    if (st === 'turn') return 'idle'; // (a turn on the spot is steps: the animator's)
+    // (a gesture of the hands at the world's work: the clip of that work — the axe at the tree, the pick, the hands in the bush, the rod)
+    if (a && ANIM_ACT[st] && a.vact) { const k = G.Anim3D.CLIP_OF && G.Anim3D.CLIP_OF[a.vact]; if (k && C[k]) return k; }
+    return st;
+  }
+  function frameDrive(v, L, rdt, f) {
+    const A3 = G.Anim3D; const F = b.anf || (b.anf = { I: {}, ph: 0, yaw: b.yaw, sp: b.speed, acc: 0 }); const I = F.I;
+    const m = Av.motion ? Av.motion() : null; // (20b's motion of the body, where it has it)
+    const yaw = m && Number.isFinite(m.yaw) ? m.yaw : b.yaw, sp = m && Number.isFinite(m.speed) ? m.speed : b.speed;
+    const dt = Math.max(1e-4, rdt); let dy = yaw - F.yaw; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; F.yaw = yaw;
+    const acc = m && Number.isFinite(m.accX) && Number.isFinite(m.accZ) ? m.accX * Math.cos(yaw) + m.accZ * Math.sin(yaw) : (sp - F.sp) / dt; F.sp = sp; F.acc += (G.clamp(acc, -12, 12) - F.acc) * (1 - Math.exp(-10 * dt));
+    const a = b.act; const st = drawState(b.anim, a); const C = A3.CLIPS ? A3.CLIPS[st] : null;
+    I.st = st; I.sp = b.loco === 'swim' ? 0 : sp; I.yaw = yaw; I.yawV = m && Number.isFinite(m.turnV) ? m.turnV : dy / dt; I.acc = F.acc;
+    const g = (m && m.gait) || b.gait; I.run = b.anim === 'run' || g === 'trote' || g === 'disparada' ? 1 : 0; I.walk = g === 'andar' && sp < 2.6 ? 1 : 0;
+    // (a posture's own clock: the swim's stroke, the climb's height, the seconds of the rest; the act's clip in the act's own time)
+    if (b.anim === 'swim' || b.anim === 'tread' || b.anim === 'drown') { F.ph += dt * (b.anim === 'swim' ? 2.2 + b.speed * 1.4 + (b.stroke > 0 ? 3 : 0) : b.anim === 'drown' ? 5 : 1.6); I.t = F.ph; }
+    else if (b.anim === 'climb') I.t = b.climb ? b.climb.t / b.climb.dur : b.flight ? (b.flight.t * 1.6) % 1 : b.animT;
+    else I.t = b.animT;
+    I.clipK = undefined; I.over = null; I.overK = undefined;
+    if (C && a && a.dur > 0 && a.dur < 1e8) { const k = G.clamp(a.t / a.dur, 0, 1); I.clipK = a.world && a.contact > 0 ? A3.warpTime(C, k, G.clamp(a.contact / a.dur, 0.05, 0.95)) : C.loop ? undefined : k; }
+    // (a gesture of the hands while the feet go on: on the top of the body, over the stride)
+    if (a && !a.lock && b.speed > 0.22 && A3.CLIPS && A3.CLIPS[a.anim]) { I.over = a.anim; I.overK = a.dur > 0 && a.dur < 1e8 ? G.clamp(a.t / a.dur, 0, 1) : undefined; }
+    I.drunk = L.drunk || 0; I.tired = b.caps && b.caps.stamina > 0 ? G.clamp(1 - b.stamina / (b.caps.stamina * 0.35), 0, 1) * 0.6 : 0; I.id = v.id;
+    // (what the layers' end needs of the body, read now: the feed is whole in itself — drawn after the body is gone, it is the
+    // last frame's, never a read of a body that is no more, L-1112)
+    const st2 = b.anim, wet = st2 === 'swim' || st2 === 'tread' || st2 === 'drown';
+    let ly = 0; if (st2 === 'idle' || st2 === 'walk' || st2 === 'carry') { let la = IN.camYaw - b.yaw; while (la > Math.PI) la -= TAU; while (la < -Math.PI) la += TAU; ly = Math.abs(la) < 1.9 ? -G.clamp(la, -1, 1) * 0.55 : 0; }
+    I.ly = ly; I.fl = b.hitT > 0 && st2 !== 'knocked' && st2 !== 'sleep' && !wet ? b.hitK * G.smooth(0, 0.2, b.hitT) : 0;
+    { const c = Math.cos(b.yaw), sn = Math.sin(b.yaw); I.fw = (b.hitX || 0) * c + (b.hitZ || 0) * sn; I.sd = -(b.hitX || 0) * sn + (b.hitZ || 0) * c; }
+    I.post = post;
+    return I;
+  }
+  // (after the layers: the look after the camera's eye, standing and walking; and a blow's flinch over what the body does —
+  // thrown the way the blow pushes it, the arms up before the face, the head back)
+  function post(out, dt, I) {
+    out.lookY = (out.lookY || 0) + (I.ly - (out.lookY || 0)) * (1 - Math.exp(-5 * dt));
+    const fl = I.fl;
+    if (fl > 0) { const fw = I.fw, sd = I.sd;
+      const mix = (j, x) => { out[j] = G.lerp(out[j] || 0, x, fl); }; const add = (j, x) => { out[j] = (out[j] || 0) + x * fl; };
       add('lean', fw * 0.55); add('sway', sd * 0.32); add('twist', -sd * 0.25); add('neck', -0.35); add('crouch', 0.12); add('knL', 0.3); add('knR', 0.25);
       mix('shLp', -1.85); mix('shRp', -1.7); mix('shLr', 0.35); mix('shRr', -0.35); mix('elL', 1.75); mix('elR', 1.6); }
-    G.Anim3D.blend(b.pose, want, h, st === 'land' || st === 'jump' || st === 'climb' || st === 'knocked' || fl > 0.05 ? 20 : st === 'rise' ? 9 : wet ? 7 : 12);
-    if (want.lookY !== undefined) b.pose.lookY = (b.pose.lookY || 0) + ((want.lookY || 0) - (b.pose.lookY || 0)) * (1 - Math.exp(-5 * h));
   }
   Av.frame = function (rdt) {
     const v = G.Possess.body(); if (!b || !v || v.id !== b.id) return;
@@ -820,12 +844,18 @@
     // the picture between two steps (interpolated: smooth at any frame rate)
     const f = b.acc / TUNE.step;
     const P3 = G.People3D; if (P3) {
-      const L = P3.look(v);
+      // (its look, kept and filled again each frame — nothing made but what changes, L-1105)
+      const L = P3.lookInto ? P3.lookInto(b.L0 || (b.L0 = {}), v) : P3.look(v);
       // (the hands: an act's own reach for a point of the world; a load waiting on the ground while the hands work at something)
       const a = b.act; L.reach = a && a.reach ? a.reach(a) : null;
       if (L.held && a && HANDS_AT.has(a.anim)) L.held = P3.setDown(L.held);
       b.L = L;
-      P3.avatar = { id: v.id, X: G.lerp(b.pX, b.X, f), Y: G.lerp(b.pY, b.Y, f) - (b.wade > 0 ? 0 : 0), Z: G.lerp(b.pZ, b.Z, f), yaw: b.yaw, pose: b.pose, look: L, sp: b.speed, wade: b.wade, ground: b.ground, act: b.act, swim: b.loco === 'swim', swimK: b.swimK, drown: b.drown, stroke: b.stroke > 0 };
+      // (and what the body's animator reads: this frame's motion — the pose is made in the frame drawn, from it: 20a)
+      const D = G.Anim3D && G.Anim3D.drive ? frameDrive(v, L, rdt, f) : null;
+      const o = b.feed || (b.feed = {});
+      o.id = v.id; o.X = G.lerp(b.pX, b.X, f); o.Y = G.lerp(b.pY, b.Y, f); o.Z = G.lerp(b.pZ, b.Z, f); o.yaw = D ? D.yaw : b.yaw; o.pose = b.pose; o.look = L; o.sp = b.speed; o.wade = b.wade; o.ground = b.ground;
+      o.act = b.act; o.swim = b.loco === 'swim'; o.swimK = b.swimK; o.drown = b.drown; o.stroke = b.stroke > 0; o.drive = D; o.gnd = Av.floorAt;
+      P3.avatar = o;
     } // (its speed, its wading and footing: for the dust and the splashes it raises)
   };
   // where the body is, for the camera (interpolated)

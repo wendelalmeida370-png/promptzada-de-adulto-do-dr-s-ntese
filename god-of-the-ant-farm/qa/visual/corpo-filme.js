@@ -13,11 +13,14 @@ const dt = 1 / 60; const rate = A.rate(st, sp, 1); const m = MESH[L.fem ? 'corpo
 const wear = [m, ...extra.split(',').filter(Boolean).map(n => MESH[n])];
 const frames = []; let ph = 0, z = 0;
 const total = Math.round(pre / dt) + N * every;
+// (the pose made each frame by the game's own animator from the motion — as the 3D does, 20a; a tree without it, by the old blend)
+const an = A.memory ? A.memory() : null, I = {};
 for (let k = 0; k < total; k++) {
   const moving = /walk|run|sneak|carryWalk|wade/.test(st);
   if (moving) { ph += dt * sp * rate; z += sp * dt; } else ph += dt;
-  A.blend(p, A.pose(st, moving ? ph : k * dt, sp), dt, 12);
   L.ground = /swim|tread|drown|jump|fall|climb/.test(st) ? undefined : 0;
+  if (an) { Object.assign(I, { st, t: k * dt, sp: moving ? sp : 0, yaw: Math.PI / 2, yawV: 0, acc: 0, X: 0, Z: z, ground: L.ground, s: 1, run: st === 'run' ? 1 : 0, walk: 0, over: null, clipK: undefined, drunk: 0, tired: 0, id: 7 }); A.drive(an, I, p, L, dt); }
+  else A.blend(p, A.pose(st, moving ? ph : k * dt, sp), dt, 12);
   B3.begin(); P3.body(0, 0, 0, z, Math.PI / 2, p, L, null); B3.end();
   if (k >= total - N * every && (k - (total - N * every)) % every === 0) frames.push(wear.map(w => bend(w, 0)));
 }
