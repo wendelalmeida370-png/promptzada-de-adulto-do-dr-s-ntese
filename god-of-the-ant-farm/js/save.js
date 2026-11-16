@@ -73,7 +73,8 @@
     // (the three pillars, D-276: the gesture as it is, the brain's mind, the world as the beast feels it, the wounds — each a
     // module's own object of numbers, kept whole)
     if (a.gest) { o.gest = a.gest; o.gestT = r(a.gestT, 2); o.gestD = a.gestD; o.gestO = a.gestO; o.gestV = a.gestV; }
-    if (a.mind) o.mind = a.mind; if (a.meio) o.meio = a.meio; if (a.wnd) o.wnd = a.wnd;
+    // (the mind and the wounds by their own packers, rounded and without their defaults: thousands of beasts — D-291)
+    if (a.mind) o.mind = G.Mente.pack(a); if (a.meio) o.meio = a.meio; if (a.wnd) o.wnd = G.Luta.pack(a);
     return o;
   };
   Sv.serialize = function () {

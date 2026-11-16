@@ -85,6 +85,18 @@
   def('alert', { in: 0.2, out: 0.6, still: 0.8, quad(u) { const s = S(); A(I.NUP, 0.5); A(I.EARF, 1); A(I.AIM, 0.3); A(I.TUP, s.rumin || s.antler ? 0.6 : 0); A(I.EARO, s.eleph ? 0.9 : 0); A(I.TRUP, s.eleph ? 0.5 : 0); A(I.DROP, s.hunter ? 0.1 : 0); } });
   def('listen', { in: 0.3, out: 0.4, still: 0.7, quad(u) { A(I.NUP, 0.3); A(I.EARY, 1); A(I.EARF, 0.4); A(I.HROLL, osc(u, 0.3) * 0.15); } });
   def('stare', { in: 0.3, out: 0.5, still: 0.9, quad() { const s = S(); A(I.NFWD, 0.3); A(I.EARF, 0.9); A(I.AIM, 0.35); A(I.DROP, s.hunter ? 0.25 : 0); A(I.NUP, s.hunter ? -0.05 : 0.3); } });
+  // ---- o cérebro e a luta (D-290): the creep of a stalking hunter, and its leap ----
+  def('stalk', { in: 0.3, out: 0.4, quad(u) {
+    const s = S(), frozen = Math.abs(Math.round(C.var)) === 1; // (gestV 1: frozen in mid-step — the prey lifted its head)
+    A(I.DROP, s.cat ? 0.9 : 0.55); A(I.NFWD, 0.65); A(I.NUP, -0.12); A(I.AIM, 0.45); A(I.EARF, 1); A(I.TTUCK, s.cat ? 0.2 : 0.45);
+    A(I.TLASH, s.cat && !frozen ? 0.25 * Math.sin(u * hz(0.7)) : 0); A(I.STILL, frozen ? 1 : 0); A(I.BREATH, frozen ? -0.3 : 0);
+  } });
+  def('pounce', { in: 0.05, out: 0.25, quad(u, d) {
+    const s = S(), f = fr(u, d, 0.45), up = bell(f, 0, 0.35, 0.85); // (the hind legs drive, the body arcs up and over, the forepaws reach and come down)
+    A(I.LIFT, (s.cat ? 0.9 : 1.2) * up); A(I.PITCH, -0.45 * bell(f, 0, 0.25, 0.5) + 0.55 * bell(f, 0.45, 0.75, 1)); A(I.FWD, 0.35 * f);
+    for (const k of FRONT) Lg(k, 0.55 * up, 0.25 * up, 0.9, 0); for (const k of HIND) Lg(k, -0.6 * up, 0.15 * up, -0.5, 0.4);
+    A(I.NFWD, 0.5); A(I.AIM, 0.6); A(I.JAW, 0.7 * ramp(f, 0.4, 0.8)); A(I.EARB, 0.6); A(I.TUP, 0.5 * up);
+  } });
   def('startle', { in: 0.04, out: 0.4, quad(u, d) {
     const f = fr(u, d, 0.7), j = bell(f, 0, 0.12, 0.6);
     A(I.FWD, -0.08 * j); A(I.LIFT, 0.14 * bell(f, 0, 0.1, 0.35)); A(I.NUP, 0.6 * j); A(I.EARF, j); A(I.TUP, 0.7 * j); A(I.DROP, 0.25 * bell(f, 0.3, 0.6, 1)); A(I.ROLL, C.side * 0.06 * j); A(I.EARO, S().eleph ? j : 0);

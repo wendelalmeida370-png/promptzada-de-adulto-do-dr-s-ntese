@@ -65,7 +65,7 @@
     gull: { name: 'Gaivota', g: 'f', cls: 'air', diet: 'fish', coast: true, hab: [0, 1, 2, 3, 4, 5, 6], dens: 1.4, herd: [3, 6], hp: 6, sp: 2.4, run: 3.4, meat: 1, size: 0.7, fear: 3, life: 12, breed: 0.8, app: 0.2, hunt: false, art: 'bird', b: { col: '#f4f4f0', wing: '#b8c0c8', tip: '#3a3a3a', beak: '#e8b83a', span: 7 } },
     eagle: { name: 'Águia', g: 'f', cls: 'air', diet: 'carn', prey: ['rabbit', 'hare', 'lizard', 'frog', 'monkey', 'fennec'], hab: [0, 1, 2, 5, 6], dens: 0.12, herd: [1, 1], hp: 14, sp: 2.2, run: 4.2, meat: 2, size: 1, fear: 4, life: 20, breed: 0.3, app: 0.4, hunt: false, apex: true, art: 'bird', b: { col: '#5a3e26', wing: '#6e4c2e', tip: '#2a1e14', head: '#f2efe6', beak: '#f2c23a', span: 11 } },
     vulture: { name: 'Abutre', g: 'm', cls: 'air', diet: 'scav', hab: [5, 6, 4], dens: 0.25, herd: [2, 4], hp: 12, sp: 1.8, run: 3, meat: 2, size: 1, fear: 3, life: 20, breed: 0.4, app: 0.5, hunt: false, art: 'bird', b: { col: '#2e2622', wing: '#3a302a', tip: '#1a1412', head: '#d8a0a0', beak: '#c8c0b0', span: 12 } },
-    raven: { name: 'Corvo', g: 'm', cls: 'air', diet: 'scav', hab: [0, 1, 2], dens: 0.4, herd: [2, 4], hp: 6, sp: 2.2, run: 3.4, meat: 1, size: 0.65, fear: 3, life: 12, breed: 0.7, app: 0.3, hunt: false, art: 'bird', b: { col: '#1e1e26', wing: '#26262e', tip: '#101014', beak: '#2a2a2a', span: 7 } },
+    raven: { name: 'Corvo', g: 'm', cls: 'air', diet: 'scav', hab: [0, 1, 2], dens: 0.4, herd: [2, 4], hp: 6, sp: 2.2, run: 3.4, meat: 1, size: 0.65, fear: 1.2, life: 12, breed: 0.7, app: 0.3, hunt: false, art: 'bird', b: { col: '#1e1e26', wing: '#26262e', tip: '#101014', beak: '#2a2a2a', span: 7 } },
     parrot: { name: 'Arara', g: 'f', cls: 'air', diet: 'browse', hab: [4], dens: 1.3, herd: [3, 6], hp: 6, sp: 2.2, run: 3.4, meat: 1, size: 0.7, fear: 3, life: 30, breed: 0.6, app: 0.2, hunt: false, art: 'bird', b: { col: '#d8302a', wing: '#2a6ad0', tip: '#f2c23a', beak: '#f0e8d8', span: 8 } },
     heron: { name: 'Garça', g: 'f', cls: 'air', diet: 'fish', prey: ['frog'], wader: true, hab: [3, 0, 4], near: 'water', dens: 0.6, herd: [1, 2], hp: 8, sp: 1.8, run: 3, meat: 2, size: 0.9, fear: 4, life: 15, breed: 0.5, app: 0.3, hunt: false, art: 'wader', b: { col: '#f6f6f2', wing: '#e8e8e4', tip: '#3a3a3a', beak: '#e8c83a', leg: '#3a3a3a', span: 10 } },
     flamingo: { name: 'Flamingo', g: 'm', cls: 'air', diet: 'filter', wader: true, hab: [3, 5, 6], near: 'water', dens: 1.1, herd: [4, 9], hp: 8, sp: 1.8, run: 3, meat: 2, size: 0.9, fear: 4.5, life: 30, breed: 0.4, app: 0.3, hunt: false, art: 'wader', b: { col: '#f49aa8', wing: '#f07a8e', tip: '#2a2a2a', beak: '#2a2a2a', leg: '#e87a8a', span: 10 } },
@@ -255,12 +255,15 @@
   const CELL = 8; let grid = new Map(), vgrid = new Map(), tgrid = new Map(), gridT = 0;
   G.worldHooks.push(() => { grid.clear(); vgrid.clear(); tgrid.clear(); gridT = 0; });
   const key = (x, y) => ((x / CELL) | 0) + ((y / CELL) | 0) * 4096;
+  // (the grid is a quarter of a second old: a scan that must not miss one that crossed into the next cell since looks this much
+  // farther in cells — the distances are the true ones)
+  const LAG = 2;
   function rebuildGrid() {
     const S = G.S; grid.clear(); vgrid.clear(); tgrid.clear();
     for (const a of S.animals.values()) {
       const k = key(a.x, a.y); let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(a);
       // the few that could be coming for someone right now: people only look at these
-      if (!a.dead && !a.tamed && (a.summoned || a.raid || a.legend || a.angry > 0 || a.state === 'chase' || a.state === 'lunge')) { let t = tgrid.get(k); if (!t) tgrid.set(k, t = []); t.push(a); }
+      if (!a.dead && !a.tamed && (a.summoned || a.raid || a.legend || a.angry > 0 || a.state === 'chase' || a.state === 'lunge' || ((a.state === 'stalk' || a.state === 'pounce' || a.state === 'strike' || a.state === 'bluff') && a.target && S.villagers.has(a.target)))) { let t = tgrid.get(k); if (!t) tgrid.set(k, t = []); t.push(a); }
     }
     for (const v of S.villagers.values()) { if (v.inside || v.held) continue; const k = key(v.x, v.y); let l = vgrid.get(k); if (!l) vgrid.set(k, l = []); l.push(v); }
   }
@@ -270,6 +273,8 @@
   }
   A.near = (x, y, r, fn) => each(grid, x, y, r, fn);
   A.nearThreat = (x, y, r, fn) => each(tgrid, x, y, r, fn);
+  // (the people out of doors near a point, for the fight's reading of a person seen — D-297b)
+  A.nearMan = (x, y, r, fn) => each(vgrid, x, y, r, fn);
   function nearestVillager(a, r, filter) {
     let best = null, bd = r * r;
     each(vgrid, a.x, a.y, r, v => { if (v.inside || v.held || v.air || v.aboard) return; if (filter && !filter(v)) return; const d = G.dist2(a.x, a.y, v.x, v.y); if (d < bd) { bd = d; best = v; } });
@@ -291,7 +296,7 @@
       tamed: 0, guardSet: 0, gt: false, gscan: 0, legend: false, big: 1, epithet: null, mig: false,
       dom: 0, pen: 0, herder: 0, ledBy: 0, wool: 0, milk: 0, eggs: 0, shorn: 0, hold: 0, tended: 0, flee: 0,
       morph: null, seen: 0, prey2: 0, gore: 0, blood: 0, perch: 0, nest: 0, swing: 0, sub: 0, roll: 0, grip: 0, drag: 0, mourn: 0, crouch: 0, flank: null, pounce: 0,
-      down: 0, caught: 0, tree: 0, corpse: 0, dragT: 0, dragTo: null, mt: 0, ft: 0, rd: 0, dz: null, cached: false, slow: 0, sw0: null, sw1: null, px: 0, py: 0, fast: false,
+      down: 0, caught: 0, tree: 0, corpse: 0, dragT: 0, dragTo: null, mt: 0, ft: 0, rd: 0, ey: 0, dz: null, cached: false, slow: 0, sw0: null, sw1: null, px: 0, py: 0, fast: false,
       // (and those that come later in a life — a way round, being stuck, a den, a rider, a skin — held empty from the start)
       path: undefined, pi: undefined, pfT: undefined, blk: undefined, blkSeen: undefined, stk: undefined, stkD: undefined, stkGX: undefined, stkGY: undefined, stkT: undefined,
       noGo: undefined, noPrey: undefined, fx: undefined, fy: undefined, sx: undefined, sy: undefined, home: undefined, set: undefined, owner: undefined, ride: undefined, rideCD: undefined,
@@ -299,7 +304,15 @@
       // (the three pillars, D-276: the gesture the body makes now — only through A.gesture —, the brain's mind (G.Mente), the
       // world around it as the beast feels it (G.Meio), its wounds (the fight) — each module's own object, in the save whole)
       gest: null, gestT: 0, gestD: 0, gestO: 0, gestV: 0, mind: null, meio: null, wnd: null,
+      // (the brain's and the fight's clocks of now, D-290 to D-299 — lost with a save, as the state is: gestS the state that holds a
+      // held gesture, sk the next social round, bp / bt / bq the phase, the clock and the side of a courting or a contest, ch / cg /
+      // cgT the seconds, the gap and the clock of a chase, turnT a hunter thrown off by a jink, jk the prey's next jink, kc the next
+      // claim at a carcass, hk / hn / hd the helpers' clock, their count and the kind of a hold, dfn / dfnK the young defended)
+      gestS: '', sk: 0, bp: 0, bt: 0, bq: 0, ch: 0, cg: 0, cgT: 0, turnT: 0, jk: 0, kc: 0, kq: 0, hk: 0, hn: 0, hd: 0, dfn: 0, dfnK: '', dnT: -99,
     }, extra || {});
+    // (the mind and the wounds of a save, or of a cave's guest, back whole — a damaged one is dropped; L-699)
+    if (a.mind && G.Mente) G.Mente.unpack(a);
+    if (a.wnd && G.Luta) G.Luta.unpack(a);
     if (a.morph === null && !(extra && 'morph' in extra)) a.morph = rollMorph(d);
     if (a.hx === undefined) { a.hx = a.x; a.hy = a.y; }
     S.animals.set(a.id, a);
@@ -329,7 +342,7 @@
   A.gesture = function (a, n, dur, other, v) {
     const Ge = G.Gestos; const d = Ge && Ge.DEF[n];
     if (!d || !d.kinds.has(a.kind)) { if (A.gestErr.length < 40) A.gestErr.push(`${a.kind}#${a.id}: gesto ${n}${d ? ' que a espécie não faz' : ' desconhecido'}`); return false; }
-    if (a.gest === n && d.loop && (other || 0) === a.gestO) { a.gestD = dur === undefined ? d.d : dur; return true; } // (held on: the loop goes on, not begun again)
+    if (a.gest === n && d.loop && (other || 0) === a.gestO) { a.gestD = dur === undefined ? d.d : dur; a.gestV = v || 0; return true; } // (held on: the loop goes on, not begun again)
     a.gest = n; a.gestT = 0; a.gestD = dur === undefined ? d.d : dur; a.gestO = other || 0; a.gestV = v || 0;
     return true;
   };
@@ -346,6 +359,10 @@
   A.lifeHooks = []; A.senseHooks = []; A.speedHooks = [];
   const SENSE_MAX = A.SENSE_MAX = 2.5, SENSE2 = SENSE_MAX * SENSE_MAX; // (the farthest the senses reach, × the old radius: a factor above it is cut there)
   A.senseMul = function (a, o) { let k = 1; for (let i = 0; i < A.senseHooks.length; i++) k *= A.senseHooks[i](a, o); return k > SENSE_MAX ? SENSE_MAX : k; };
+  // the farthest the senses can stretch for this one, whoever the other is: a hook may say its own most for it (hook.self(a), a
+  // bound on hook(a, o) for every o); one that does not counts SENSE_MAX. The scans look no farther than this — a beast asleep
+  // was looked round two and a half times its old radius for what it could only notice at half of it
+  A.senseBound = function (a) { let k = 1; for (let i = 0; i < A.senseHooks.length; i++) { const h = A.senseHooks[i]; k *= h.self ? h.self(a) : SENSE_MAX; if (k >= SENSE_MAX) return SENSE_MAX; } return k; };
   A.speedMul = function (a) { let k = 1; for (let i = 0; i < A.speedHooks.length; i++) k *= A.speedHooks[i](a); return k; };
   // the animal wherever it lives: in the open, or under a cave's roof (asleep in a den, out of the storm — L-656)
   A.find = id => G.S.animals.get(id) || ((G.Caves && G.Caves.guest && G.Caves.guest(id)) || {}).a || null;
@@ -361,9 +378,13 @@
     if (a.dead) return false; const sp = SP[a.kind]; if (!sp) return false;
     if (a.tamed) return false; // a city's guardian beast
     if (a.summoned || a.raid || a.legend) return true;
-    if (a.angry > 0) return true;
+    // (angry at a person, or at nobody in particular; angry at another beast — the buffalo driving the lions off, the moose turning
+    // on a wolf — it is no danger to the people by it: read as one, the brave of the town speared the giants that fought the
+    // hunters, L-1007f)
+    if (a.angry > 0) { const o = a.target && G.S.animals.get(a.target); return !o; }
+    // (and the hunter creeping in on a person, or in the air over one: D-297b)
     const tg = a.target && G.S.villagers.get(a.target);
-    return !!(tg && (a.state === 'chase' || a.state === 'lunge'));
+    return !!(tg && (a.state === 'chase' || a.state === 'lunge' || a.state === 'stalk' || a.state === 'pounce' || a.state === 'strike' || a.state === 'bluff'));
   };
   A.predator = k => { const d = SP[k]; return d && (d.diet === 'carn' || (d.diet === 'omni' && d.prey) || d.diet === 'scav'); };
 
@@ -595,6 +616,10 @@
     if (SP[a.kind].cls !== 'water' || G.VR() < 0.5) G.FX && G.FX.blood(a.x, a.y);
     if (a.hp <= 0) return A.kill(a, by);
     const sp = SP[a.kind];
+    // (by another beast: the fight's rule — the much stronger it runs from, a defender turns on it, in jaws nothing: D-297)
+    if (by && by.kind && G.Luta && G.Luta.hurtBy(a, by)) return;
+    if (by && a.state === 'hold' && G.Luta) G.Luta.drop(a); // (a person's spear: what it held is let go, L-1003)
+    if (by && !by.kind && by.id && G.Mente) G.Mente.manHurt(a, by); // (and it remembers who did it, and that people do: D-297b)
     if (by && (sp.defend || sp.bold > 0 || a.kind === 'boar') && a.hp > a.maxHp * 0.25) { a.angry = 14; a.target = by.id; a.state = 'chase'; }
     else if (a.kind === 'wolf' && (a.raid || a.summoned)) { if (by && by.id && G.S.villagers.has(by.id)) a.target = by.id; if (a.hp < a.maxHp * 0.35) a.state = 'leave'; }
     else if (by) { const p = fleeTarget(a, by.x, by.y, 6); if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 3; } }
@@ -612,7 +637,7 @@
     } else if (by && by.name && SP[a.kind].apex && S._apexLog !== S.day) { S._apexLog = S.day; G.Village.log(`${by.name} abateu ${SP[a.kind].nameA}.`, 'wolf', a.x, a.y); }
     if (SP[a.kind].cls === 'water' && !by) { a.sink = true; }
     if (by && by.kind && G.Carnage && G.Carnage.decal && SP[a.kind].cls !== 'water' && SP[a.kind].cls !== 'air' && !(a.z > 3)) G.Carnage.decal(a.x, a.y, G.rr(0.14, 0.22) * Math.min(2, SP[a.kind].size), 'pool');
-    a.caught = 0; a.down = 0;
+    a.down = 0; G.Luta && G.Luta.onDeath(a, by, a.cause);
     if (SP[a.kind].herdMourn) {
       let n = 0;
       each(grid, a.x, a.y, 14, o => { if (o !== a && !o.dead && o.kind === a.kind && o.state !== 'flee' && !o.angry) { o.state = 'mourn'; o.target = a.id; o.t = G.rr(20, 40); n++; } });
@@ -624,22 +649,33 @@
   // ------------------------------ behaviours ------------------------------
   const PREYSET = {}; for (const k in SP) PREYSET[k] = new Set(SP[k].prey || []);
   const EATERS = {}; for (const k in A.eatenBy) EATERS[k] = new Set(A.eatenBy[k]);
+  const SNAKE = { python: 1, viper: 1, anaconda: 1 };
+  // the wild hunters that read a person they see (G.Luta.man, D-297b): the big cats, the bears, the wolf and the hyena, the croc
+  const MAN = A.MAN = new Set(['lion', 'tiger', 'leopard', 'jaguar', 'snowleopard', 'bear', 'polarbear', 'wolf', 'hyena', 'croc']);
+  // (a hunter of the air or the ground notices its prey by its senses — the old radius times A.senseMul: the wind, the cover, the
+  // dark, the hidden fawn —, looked for up to HUNT_SENSE times as far; and takes only what its party can bring down, D-297)
+  const HUNT_SENSE = 1.5;
   function findPrey(a, r) {
     const sp = SP[a.kind]; const ps = PREYSET[a.kind]; let best = null, bs = -1e9;
-    each(grid, a.x, a.y, r, p => {
+    const sense = A.senseHooks.length > 0 && sp.cls !== 'water'; const R = sense ? r * Math.min(HUNT_SENSE, A.senseBound(a)) : r;
+    const Lu = G.Luta && (sp.cls === 'land' || sp.cls === 'amph') ? G.Luta : null; const party = Lu ? Lu.party(a) : 1;
+    each(grid, a.x, a.y, R, p => {
       if (p === a || p.dead || p.held || p.air || p.caught || !ps.has(p.kind)) return;
       if (a.noPrey && a.noPrey.id === p.id && G.S.clock < a.noPrey.until) return;
       if (SP[p.kind].cls === 'air' && p.z > 6) return;
       if (p.z > 3 && SP[p.kind].cls !== 'air' && sp.cls !== 'air' && sp.climb !== 'tree') return;
-      const d = G.dist2(a.x, a.y, p.x, p.y); if (d > r * r) return;
+      const d = G.dist2(a.x, a.y, p.x, p.y); if (d > R * R) return;
+      if (sense) { const k = r * A.senseMul(a, p); if (d > k * k) return; }
       if (sp.cls === 'water' && !seaWater(W.idx(p.x, p.y))) return;
       if (sp.cls === 'land' && G.S.type[W.idx(p.x, p.y)] <= T.SEA) return;
-      // weak, young and slow prey first
-      const s = -Math.sqrt(d) - (p.hp / p.maxHp) * 3 - SP[p.kind].hp / 40 + (p.grown < 1 ? 3 : 0);
+      if (Lu && !Lu.canTake(a, p, party)) return;
+      // weak, young and slow prey first — the wounded, the old and the spent too
+      const s = -Math.sqrt(d) - (p.hp / p.maxHp) * 3 - SP[p.kind].hp / 40 + (p.grown < 1 ? 3 : 0) + (Lu ? Lu.weak(p) : 0);
       if (s > bs) { bs = s; best = p; }
     });
     return best;
   }
+  A.findPrey = findPrey;
   function findCarcass(a, r) {
     let best = null, bd = r * r;
     const air = SP[a.kind].cls === 'air';
@@ -670,7 +706,8 @@
   }
   function eatMeat(a, prey, dt) {
     const sp = SP[a.kind];
-    const bite = Math.min(prey.meat, dt * 3 * sp.size);
+    // (a meal on a carcass takes its time — the pride shares it, the hyenas come for it, the vultures wait: D-299)
+    const bite = Math.min(prey.meat, dt * (sp.cls === 'air' ? 3 : 1) * sp.size);
     prey.meat -= bite; a.hunger = Math.max(0, a.hunger - bite / Math.max(1, sp.app * 5));
     a.moving = false; a.eating = 0.4;
     if (prey.meat <= 0.05) { prey.meat = 0; return true; }
@@ -681,16 +718,21 @@
   function fearCheck(a) {
     const S = G.S; const sp = SP[a.kind];
     // (the senses of the pillars, D-276: how far the other is noticed is the old radius times A.senseMul — the wind, the cover,
-    // the dark, a mind on guard —; looked for up to SENSE_MAX times as far)
-    const sense = A.senseHooks.length > 0;
-    if (sp.fear > 0 && !(a.angry > 0)) {
+    // the dark, a mind on guard —; looked for up to as far as they can stretch for this one, A.senseBound, SENSE_MAX at most)
+    const sense = A.senseHooks.length > 0; const sb = sense ? A.senseBound(a) : 1, sb2 = sb * sb;
+    // (a kind with a temper toward people reads them by it — the fight's look, before this one: the hare that would freeze is not
+    // sent running here at the old distance first)
+    if (sp.fear > 0 && !(a.angry > 0) && !(G.Luta && G.Luta.TEMPER[a.kind])) {
       const r0 = sp.fear * (sp.defend && a.grown >= 1 ? 0.55 : 1);
-      const v = sense ? nearestVillager(a, r0 * SENSE_MAX, q => { const k = r0 * A.senseMul(a, q); return G.dist2(a.x, a.y, q.x, q.y) < k * k; }) : nearestVillager(a, r0);
+      // (the nearest one noticed: one no nearer than the best so far is never asked for — the senses are the dear part)
+      let v = null;
+      if (sense) { const R = r0 * sb; let bd = R * R; each(vgrid, a.x, a.y, R + LAG, q => { if (q.inside || q.held || q.air || q.aboard) return; const d = G.dist2(a.x, a.y, q.x, q.y); if (d >= bd) return; const k = r0 * A.senseMul(a, q); if (d < k * k) { bd = d; v = q; } }); }
+      else v = nearestVillager(a, r0);
       if (v) return v;
     }
     const eaters = EATERS[a.kind]; if (!eaters) return null;
-    const r = ((sp.fear || 3) + 1.5) * (sense ? SENSE_MAX : 1); const r2 = sense ? r * r / (SENSE_MAX * SENSE_MAX) : r * r;
-    let th = null, td = r2;
+    const rb = (sp.fear || 3) + 1.5; const r = rb * sb + LAG;
+    let th = null, td = rb * rb;
     const x0 = ((a.x - r) / CELL) | 0, x1 = ((a.x + r) / CELL) | 0, y0 = ((a.y - r) / CELL) | 0, y1 = ((a.y + r) / CELL) | 0;
     for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
       const l = grid.get(cx + cy * 4096); if (!l) continue;
@@ -699,8 +741,10 @@
         if (p.z > 25 && p.state !== 'dive') continue;
         if (a.z > 3 && SP[p.kind].cls !== 'air' && SP[p.kind].climb !== 'tree') continue;
         const dx = a.x - p.x, dy = a.y - p.y; let d = dx * dx + dy * dy;
-        if (p.state === 'stalk' || p.state === 'flank') d *= 7; else if (p.sub > 0) d *= 9;
-        if (sense) { if (d >= td * SENSE2) continue; const k = A.senseMul(a, p); d /= k * k; } // (one too far even at the senses' farthest is not asked: the same answer, without the asking)
+        if (p.state === 'stalk' || p.state === 'flank' || p.state === 'lunge') d *= 7; else if (p.sub > 0) d *= 9; // (and the snake creeping in the grass)
+        else if (!p.moving && SNAKE[p.kind]) d *= 5; // (a snake lying still is a stick in the grass)
+        // (the senses stretch a distance by sb at most: one that cannot beat the nearest so far is not asked for)
+        if (sense) { if (d >= td * sb2) continue; const k = A.senseMul(a, p); d /= k * k; }
         if (d < td) { td = d; th = p; }
       }
     }
@@ -713,6 +757,9 @@
   const UP = { climb: 1, tree: 1, swing: 1, cache: 1, eat: 1 };
   const BUSY = { flee: 1, eat: 1, chase: 1, stalk: 1, pounce: 1, flank: 1, feedman: 1, lurk: 1, strike: 1, drown: 1, roll: 1, mourn: 1, cache: 1, swing: 1, climb: 1 };
   const HUNTING = { chase: 1, eat: 1, stalk: 1, pounce: 1, flank: 1, feedman: 1, strike: 1, drown: 1, roll: 1, cache: 1, mourn: 1 };
+  // (the brain's states, D-290: PASSIVE where the body stays — asleep, lying, grooming: no step, the fear and the hunt still looked
+  // at, the idle clock runs it —; MINDFUL a state of its own that is not busy: it looks round for danger and a meal before its step)
+  const PASSIVE = {}, MINDFUL = {};
   // a tree near here, big enough to climb (the leafy ones; palms and cactus do not hold a monkey troop)
   function treeNear(x, y, r, fn) {
     const S = G.S; let best = null, bd = r * r;
@@ -750,15 +797,9 @@
     if (G.VR() < 0.3) G.Audio && G.Audio.at(c.x, c.y, 'bite');
   }
   // the one being held: pinned under a cat, dragged by a crocodile, crushed in a snake's coils
-  function heldDown(a, dt) {
-    if (a.caught) {
-      const h = G.S.animals.get(a.caught);
-      if (!h || h.dead || !(h.state === 'drown' || h.state === 'roll' || h.grip > 0)) { a.caught = 0; a.down = 0.6; }
-      else { const f = G.wface(h); a.x = h.x + f * 0.5; a.y = h.y + f * 0.2; a.moving = false; a.hurt = 0.1; a.walkPh += dt * 14; return true; }
-    }
-    if (a.down > 0) { a.down -= dt; a.moving = false; a.walkPh += dt * 12; return true; }
-    return false;
-  }
+  // (the hold is the fight's: G.Luta.held asks whether its holder still holds it, and the holder's step places both bodies through
+  // the one door, G.Luta.place — rule 98)
+  function heldDown(a, dt) { return G.Luta.held(a, dt); }
   const BEHAVE = {
     // creeping in, belly low, freezing whenever the prey lifts its head
     stalk(a, dt, sp, S) {
@@ -766,21 +807,27 @@
       if (!tg || tg.dead || tg.inside || tg.held || tg.air || tg.aboard || (tg.z > 3 && sp.climb !== 'tree')) { a.state = 'idle'; a.target = 0; a.crouch = 0; a.onPerson = false; return true; }
       a.crouch = 1; a.t -= dt;
       const d = G.dist(a.x, a.y, tg.x, tg.y);
+      const still = !!tg.kind && Math.sin(S.clock * 1.7 + (tg.id || 0)) > 0.78;
+      G.Mente && G.Mente.gesto(a, 'stalk', 0, tg.id, still ? 1 : 0);
       if (tg.kind && tg.state === 'flee' && d < 6) { a.state = 'chase'; a.t = 6; a.crouch = 0; return true; } // seen: now it is a race
+      // (a person who saw it and runs: the rush now, from near; from far, the moment is gone — D-297b)
+      if (!tg.kind && tg.task && tg.task.type === 'flee') { if (d < 7) { a.state = 'chase'; a.t = 6; } else { a.onPerson = false; if (!G.Luta.calmed(a, tg)) { a.state = 'idle'; a.target = 0; } a.rest = G.rr(6, 12); } a.crouch = 0; return true; }
       // a pride waits for its flankers — a few seconds, no more
       let wait = false;
       if ((sp.pride || sp.pack) && a.t > 9) { for (const o of packOf(a)) if (o.state === 'flank' && o.moving) { wait = true; break; } }
       if (d < (sp.stalk ? 3.4 : 2.2) && !wait) {
         a.crouch = 0;
-        if (sp.stalk) { a.state = 'pounce'; a.pounce = 0.001; a.px = a.x; a.py = a.y; }
+        if (sp.stalk) { a.state = 'pounce'; a.pounce = 0.001; a.px = a.x; a.py = a.y; G.Mente && G.Mente.gesto(a, 'pounce', undefined, tg.id); }
         else a.state = 'chase';
         a.t = 6; for (const o of packOf(a)) if (o.state === 'flank') { o.state = 'chase'; o.t = 7; o.crouch = 0; }
         return true;
       }
+      if (!tg.kind && d > 13) { a.onPerson = false; a.crouch = 0; if (!G.Luta.calmed(a, tg)) { a.state = 'idle'; a.target = 0; } a.rest = G.rr(4, 8); return true; } // (the person walked off out of reach)
       if (a.t <= 0 || d > 15) { a.state = 'chase'; a.t = 6; a.crouch = 0; for (const o of packOf(a)) if (o.state === 'flank') { o.state = 'chase'; o.t = 7; o.crouch = 0; } return true; }
       if (wait && d < 5) { a.moving = false; return true; }
-      if (tg.kind && Math.sin(S.clock * 1.7 + (tg.id || 0)) > 0.78) { a.moving = false; return true; }
-      a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, tg.kind ? sp.sp * 0.42 : Math.max(sp.sp * 0.9, tg.moving ? 1.45 : 0.6));
+      if (still) { a.moving = false; return true; }
+      // (on a person: belly low, slow while they stand at their work, keeping up while they walk)
+      a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, tg.kind ? sp.sp * 0.42 : tg.moving ? Math.max(sp.sp * 0.85, 1.3) : sp.sp * 0.5);
       return true;
     },
     // a pack member circling round to the far side, low in the grass
@@ -788,6 +835,7 @@
       const tg = S.animals.get(a.target);
       if (!tg || tg.dead) { a.state = 'idle'; a.target = 0; a.crouch = 0; return true; }
       a.crouch = 1; a.t -= dt;
+      G.Mente && G.Mente.gesto(a, 'stalk', 0, tg.id, a.moving ? 0 : 1);
       if (tg.state === 'flee' && G.dist(a.x, a.y, tg.x, tg.y) < 5) { a.state = 'chase'; a.t = 7; a.crouch = 0; return true; }
       if (a.t <= 0) { a.state = 'chase'; a.t = 6; a.crouch = 0; return true; }
       if (G.dist(a.x, a.y, a.tx, a.ty) > 0.3) moveTo(a, dt, sp.sp * 1.15); else { a.moving = false; G.faceTo(a, tg.x - a.x, tg.y - a.y); }
@@ -804,12 +852,9 @@
       if (f < 1) return true;
       a.pounce = 0; a.moving = false;
       if (G.dist(a.x, a.y, tg.x, tg.y) > 1.4) { a.state = 'chase'; a.t = 4; return true; } // a miss: one short sprint
-      G.Audio && G.Audio.at(a.x, a.y, 'bite'); a.bite = 0.3; a.blood = Math.max(a.blood || 0, 0.5);
-      if (tg.kind) {
-        tg.down = 1.6; A.damage(tg, (14 + sp.hp * 0.22) * a.grown, a);
-        if (G.FX) G.FX.blood(tg.x, tg.y);
-        if (tg.dead) { a.state = 'eat'; a.target = tg.id; a.t = 22; a.carc = true; } else { a.state = 'chase'; a.t = 4; }
-      } else {
+      if (tg.kind) { G.Luta.pounced(a, tg); if (a.state === 'pounce') { a.state = 'chase'; a.t = 4; } }
+      else {
+        G.Audio && G.Audio.at(a.x, a.y, 'bite'); a.bite = 0.3; a.blood = Math.max(a.blood || 0, 0.5);
         tg.lastBeast = a.kind; tg.lastBeastId = a.id;
         // thrown to the ground under the weight of the cat: a warrior may get up, a lone woodcutter rarely does
         const armed = tg.role === 'guerreiro' || tg.role === 'arqueiro' || tg.unit; const dmg = 34 + sp.hp * 0.16;
@@ -833,12 +878,12 @@
       if (a.dragT > 0) { // dragging it by the neck, away from the open
         if (!a.dragTo) { const tr = treeNear(cp.x, cp.y, 7); a.dragTo = tr ? [tr.x + 0.3, tr.y + 0.3] : [cp.x + G.rr(-3, 3), cp.y + G.rr(-3, 3)]; }
         a.tx = a.dragTo[0]; a.ty = a.dragTo[1];
-        const done = moveTo(a, dt, sp.sp * 0.45);
+        const done = moveTo(a, dt, sp.sp * 0.45); G.Mente && G.Mente.gesto(a, 'drag', 0);
         const fx = G.wface(a); cp.bdrag = 1; cp.x = a.x + fx * 0.45; cp.y = a.y - fx * 0.45;
         a.dragT -= dt; if (done || a.dragT <= 0) { a.dragT = 0; cp.bdrag = 0; }
         return true;
       }
-      a.moving = false; a.eating = 0.4; a.blood = 1; a.state = 'feedman'; G.faceTo(a, cp.x - a.x, cp.y - a.y);
+      a.moving = false; a.eating = 0.4; a.blood = 1; a.state = 'feedman'; G.faceTo(a, cp.x - a.x, cp.y - a.y); G.Mente && G.Mente.gesto(a, 'tear', 0);
       a.mt = (a.mt || 0) - dt;
       if (a.mt <= 0) { a.mt = G.rr(1.3, 2.3); C.maul(cp, a); a.hunger = Math.max(0, a.hunger - 0.12); feastFX(a, cp, 1); }
       return true;
@@ -848,7 +893,7 @@
       const c = S.animals.get(a.target); const tr = S.trees.get(a.tree);
       a.t -= dt;
       if (!c || !c.dead || c.meat <= 0 || !tr || a.t <= 0) { a.state = 'eat'; a.cached = true; return true; }
-      const fx = G.wface(a);
+      const fx = G.wface(a); G.Mente && G.Mente.gesto(a, 'drag', 0, c.id);
       if (G.dist(a.x, a.y, tr.x, tr.y) > 0.3) { a.tx = tr.x; a.ty = tr.y; moveTo(a, dt, sp.sp * 0.5); c.x = a.x + fx * 0.4; c.y = a.y - fx * 0.3; return true; }
       a.z = Math.min(canopyZ(tr) * 0.7, (a.z || 0) + dt * 14); c.x = a.x + fx * 0.3; c.y = a.y; c.z = a.z;
       if (a.z >= canopyZ(tr) * 0.7 - 0.1) { a.state = 'eat'; a.cached = true; a.t = 30; a.perch = tr.id; }
@@ -861,11 +906,11 @@
       a.scan -= dt; if (a.scan > 0) return true; a.scan = 0.4;
       const ok = p => p && !p.dead && dWater[W.idx(p.x, p.y)] <= 1 && G.dist(a.x, a.y, p.x, p.y) < 2.8;
       let p = a.target && S.animals.get(a.target); if (!ok(p)) p = findPrey(a, 3);
-      if (ok(p)) { a.target = p.id; a.state = 'strike'; a.t = 2.2; a.sub = 0; G.FX && G.FX.splash(a.x, a.y, 0.8); return true; }
+      if (ok(p)) { a.target = p.id; a.state = 'strike'; a.t = 2.2; a.sub = 0; G.FX && G.FX.splash(a.x, a.y, 0.8); G.Mente && G.Mente.gesto(a, 'strike', undefined, p.id); G.Luta && G.Luta.begin(a, p); return true; }
       // a person at the water's edge, alone
       if (a.hunger > 0.5 || a.legend) {
         const v = nearestVillager(a, 2.6, q => !q.aboard && dWater[W.idx(q.x, q.y)] <= 1 && crowdAt(q.x, q.y, 3) <= 1);
-        if (v && G.R() < sp.bold * 0.5) { a.target = v.id; a.state = 'strike'; a.t = 2.2; a.sub = 0; a.onPerson = true; G.FX && G.FX.splash(a.x, a.y, 0.8); }
+        if (v && G.R() < sp.bold * 0.5) { a.target = v.id; a.state = 'strike'; a.t = 2.2; a.sub = 0; a.onPerson = true; G.FX && G.FX.splash(a.x, a.y, 0.8); G.Mente && G.Mente.gesto(a, 'strike', undefined, v.id); if (G.Luta) { G.Luta.count('caca-gente'); G.Luta.count('caca-gente:croc'); } }
       }
       return true;
     },
@@ -877,7 +922,7 @@
       const d = G.dist(a.x, a.y, tg.x, tg.y);
       if (d < 0.9) {
         a.bite = 0.3; G.Audio && G.Audio.at(a.x, a.y, 'bite'); G.FX && G.FX.splash(a.x, a.y, 1);
-        if (tg.kind) { tg.caught = a.id; A.damage(tg, Math.min(6, tg.hp * 0.25), a); a.state = 'drown'; a.t = 3; a.dz = deepSpot(a); }
+        if (tg.kind) { if (!G.Luta.hold(a, tg, G.Luta.K.CROC)) { A.damage(tg, 14, a); a.state = tg.dead ? 'eat' : 'idle'; a.t = tg.dead ? 20 : 1; a.carc = !!tg.dead; if (!tg.dead) a.target = 0; } } // (a kept beast: a bite, no hold)
         else { tg.lastBeast = a.kind; tg.lastBeastId = a.id; tg.downT = S.clock + 2.2; G.Vg.damage(tg, 22, 'beast', false); G.FX && G.FX.blood(tg.x, tg.y); if (!S.villagers.has(tg.id)) afterManKill(a, tg, sp); else { G.Vg.emote(tg, 'fear', 3); a.state = 'roll'; a.roll = 1.6; a.t = 1.6; } }
         return true;
       }
@@ -904,7 +949,7 @@
         else { G.Vg.damage(tg, 14, 'beast', false); if (!S.villagers.has(tg.id)) { a.roll = 0; afterManKill(a, tg, sp); return true; } }
       }
       if (G.Carnage && G.Carnage.decal && G.R() < dt * 2) G.Carnage.decal(a.x + G.rr(-0.4, 0.4), a.y + G.rr(-0.4, 0.4), 0.2, 'splat');
-      if (a.roll <= 0) { a.roll = 0; if (tg && tg.dead && tg.kind) { a.state = 'eat'; a.t = 25; a.carc = true; } else { a.state = 'idle'; a.t = 2; if (tg && tg.kind) tg.caught = 0; } }
+      if (a.roll <= 0) { a.roll = 0; if (tg && tg.dead && tg.kind) { a.state = 'eat'; a.t = 25; a.carc = true; } else { a.state = 'idle'; a.t = 2; } }
       return true;
     },
     // the elephants come back to the body of one of their own, and stand there, touching it with their trunks
@@ -913,7 +958,7 @@
       if (!c || a.t <= 0) { a.state = 'idle'; a.t = 3; a.target = 0; return true; }
       const ang = G.hash(a.id) * 6.28; const tx = c.x + Math.cos(ang) * 1.6, ty = c.y + Math.sin(ang) * 1.6;
       if (G.dist(a.x, a.y, tx, ty) > 0.3) { a.tx = tx; a.ty = ty; moveTo(a, dt, sp.sp * 0.6); }
-      else { a.moving = false; G.faceTo(a, c.x - a.x, c.y - a.y); }
+      else { a.moving = false; G.faceTo(a, c.x - a.x, c.y - a.y); G.Mente && G.Mente.gesto(a, 'mourn', 0, c.id); }
       return true;
     },
     // up the trunk into the canopy
@@ -961,8 +1006,25 @@
   };
   // (a state of another module's — the brain's, the fight's, the world's around: D-276 — joins the table here, with its flags)
   A.BEHAVE = BEHAVE;
-  A.behave = function (name, fn, o) { BEHAVE[name] = fn; o = o || {}; if (o.busy) BUSY[name] = 1; if (o.hunting) HUNTING[name] = 1; if (o.up) UP[name] = 1; };
+  A.behave = function (name, fn, o) { BEHAVE[name] = fn; o = o || {}; if (o.busy) BUSY[name] = 1; if (o.hunting) HUNTING[name] = 1; if (o.up) UP[name] = 1; if (o.mindful && !o.busy) MINDFUL[name] = 1; };
   A.isBusy = st => !!BUSY[st]; A.isHunting = st => !!HUNTING[st];
+  A.passive = name => { PASSIVE[name] = 1; }; A.isPassive = st => !!PASSIVE[st];
+  // (the primitives the brain and the fight move a beast with)
+  A.moveTo = (a, dt, speed) => moveTo(a, dt, speed);
+  A.fleeTarget = (a, x, y, d) => fleeTarget(a, x, y, d);
+  A.pickNear = (a, r, hab) => pickNear(a, r, hab);
+  A.startClimb = (a, t, fast) => startClimb(a, t, fast);
+  A.deepSpot = a => deepSpot(a);
+  A.waterD = i => (dWater ? dWater[i] : 99);
+  A.riverNear = i => riverNear(i);
+  // run from (x, y): the herd that runs runs together (the leader's way, when it runs too), up from a branch first
+  A.flee = function (a, x, y, dist) {
+    let p = fleeTarget(a, x, y, dist || 6); if (!p) return false;
+    const sp = SP[a.kind]; const L = a.leader && G.S.animals.get(a.leader);
+    if (L && !L.dead && L.state === 'flee' && sp.herd && sp.herd[1] >= 4 && G.dist(a.x, a.y, L.x, L.y) < 6) { const bx = p[0] * 0.6 + (L.tx + a.x - L.x) * 0.4, by = p[1] * 0.6 + (L.ty + a.y - L.y) * 0.4; if (walkOK(a, bx, by) && lineOK(a, bx, by)) p = [bx, by]; }
+    a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 2.5; a.angry = 0; if (a.z > 3) { a.z = 0; a.perch = 0; }
+    return true;
+  };
   // the others of the same pack, pride or clan
   function packOf(a) {
     const out = []; const L = a.leader || a.id;
@@ -988,46 +1050,50 @@
   }
   function landAI(a, dt) {
     const S = G.S; const sp = SP[a.kind];
-    // angry defenders & territorial giants charge whoever hurt them
+    // pinned under a cat, in a crocodile's jaws, in a snake's coils, thrown down: nothing left to decide (before its own anger: a
+    // moose that charged and was pulled down does not walk on under the wolves)
+    if (heldDown(a, dt)) return;
+    // angry defenders & territorial giants charge whoever hurt them (a beast: the fight's blow — the horns, the hooves, the jaws)
     if (a.angry > 0) {
       a.angry -= dt;
       const v = S.villagers.get(a.target) || S.animals.get(a.target);
-      if (v && !v.dead && !v.inside && !v.held && G.dist(a.x, a.y, v.x, v.y) < 16) {
+      // (a prey that drives a hunter off does not run it down: the hunter that runs is let go a few strides on)
+      const off = v && v.kind && v.state === 'flee' && !A.predator(a.kind) && G.dist(a.x, a.y, v.x, v.y) > 3.5;
+      if (v && !off && !v.dead && !v.inside && !v.held && G.dist(a.x, a.y, v.x, v.y) < 16) {
         a.tx = v.x; a.ty = v.y; a.state = 'chase';
-        if (G.dist(a.x, a.y, v.x, v.y) < 0.6 + sp.size * 0.3) { bite(a, v, dt); return; }
+        if (G.dist(a.x, a.y, v.x, v.y) < 0.6 + sp.size * 0.3) { if (v.kind) G.Luta.strike(a, v, dt); else bite(a, v, dt); return; }
         moveTo(a, dt, sp.run * 0.95); return;
       }
       a.angry = 0; a.state = 'idle';
     }
     if (a.tamed && guardAI(a, dt)) return;
-    // pinned under a cat, in a crocodile's jaws, in a snake's coils: nothing left to decide
-    if (heldDown(a, dt)) return;
-    if (BEHAVE[a.state] && BEHAVE[a.state](a, dt, sp, S)) return;
+    const own = BEHAVE[a.state];
+    if (own && !MINDFUL[a.state] && own(a, dt, sp, S)) return;
     a.scan -= dt;
     const hungry = a.hunger > (sp.diet === 'carn' || sp.diet === 'scav' ? 0.42 : 0.3);
     if (a.scan <= 0) {
-      a.scan = 0.45 + G.R() * 0.3;
+      // (asleep or lying down, it looks round half as often: it notices later, and the world spends less on it — D-295)
+      a.scan = (0.45 + G.R() * 0.3) * (PASSIVE[a.state] ? 2 : 1);
+      // a person in sight: a wild beast reads them by its temper — the hunter hunts, gives way, warns or keeps an eye on them;
+      // the deer watches and runs, the hare freezes and bolts, the viper slips off or strikes, the giant warns and charges —;
+      // none walks on as if nobody were there (the fight's reading, D-297b, D-297c). The watch waits for the rest of this look
+      const man = G.Luta.TEMPER[a.kind] && (!HUNTING[a.state] || a.state === 'eat') && !a.tamed && !a.legend ? G.Luta.man(a, sp) : null;
+      if (man === true) return;
       if (!HUNTING[a.state] && !a.tamed && !a.legend) {
         const th = fearCheck(a);
-        if (th && a.state !== 'lunge') {
-          // up the nearest tree, out of reach (monkeys, and the cubs of the cats)
-          const up = sp.arbor && !(a.z > 3) && SP[th.kind || 'rabbit'] && SP[th.kind || 'rabbit'].climb !== 'tree' ? treeNear(a.x, a.y, 3.5) : null;
-          if (up) startClimb(a, up, true);
-          else {
-            const p = fleeTarget(a, th.x, th.y, a.kind === 'rabbit' || a.kind === 'hare' || a.kind === 'frog' || a.kind === 'lizard' ? 4 : 6);
-            if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 2.5; if (a.z > 3) { a.z = 0; a.perch = 0; } }
-          }
-        }
+        // (it stands, it rings its young, it climbs, it runs — and calls the alarm: the fight's reaction, D-297)
+        if (th && a.state !== 'lunge') G.Luta.react(a, th, 1, false);
         const i = W.idx(a.x, a.y);
         if (S.fire[i] > 0 || S.fire[Math.min(N * N - 1, i + 1)] > 0 || S.fire[Math.max(0, i - 1)] > 0) { const p = fleeTarget(a, a.x + G.rr(-0.5, 0.5), a.y + G.rr(-0.5, 0.5), 6); if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'flee'; a.t = 2.5; } }
       }
       // hunters look for a meal
-      if ((sp.diet === 'carn' || sp.diet === 'omni' || sp.diet === 'scav') && !BUSY[a.state] && a.rest <= 0) {
+      if ((sp.diet === 'carn' || sp.diet === 'omni' || sp.diet === 'scav') && !BUSY[a.state] && a.rest <= 0 && a.grown >= 0.4) {
         if (sp.diet === 'scav' || (hungry && G.R() < 0.5)) { const c = findCarcass(a, sp.diet === 'scav' ? 14 : 8); if (c) { a.target = c.id; a.state = 'chase'; a.carc = true; } }
-        if (a.state !== 'chase' && hungry && (sp.diet === 'carn' || a.hunger > 0.6)) {
-          // packs share their leader's quarry
+        if (a.state !== 'chase' && hungry && (sp.diet === 'carn' || a.hunger > 0.6) && a.grown >= 0.6) {
+          // packs share their leader's quarry (the one it chases or already holds)
           const L = a.leader && S.animals.get(a.leader);
-          let p = L && !L.dead && L.state === 'chase' && L.target ? S.animals.get(L.target) : null;
+          let p = L && !L.dead && (L.state === 'chase' || L.state === 'hold') && L.target && !L.carc ? S.animals.get(L.target) : null;
+          if (p && a.noPrey && a.noPrey.id === p.id && S.clock < a.noPrey.until) p = null; // (the one that hurt it: let be)
           // the pride closes in: while the leader creeps, the others take places on the far side of the prey
           if ((!p || p.dead) && L && !L.dead && L.state === 'stalk' && L.target && (sp.pack || sp.pride)) {
             const q = S.animals.get(L.target);
@@ -1037,18 +1103,23 @@
           if (p) {
             a.target = p.id; a.carc = false; const dd = G.dist(a.x, a.y, p.x, p.y);
             if (a.kind === 'croc' && S.type[W.idx(a.x, a.y)] <= T.RIVER) { a.state = 'lurk'; a.sub = 1; a.t = 30; }
-            else if ((sp.stalk || (sp.pack && !a.leader)) && dd > 3.2) { a.state = 'stalk'; a.t = 16; }
+            else if ((sp.stalk || (sp.pack && !a.leader)) && dd > 3.2 && !p.caught) { a.state = 'stalk'; a.t = 16; }
             else { a.state = sp.ambush && dd > 1.5 ? 'lunge' : 'chase'; a.t = 9; }
+            if (a.state !== 'lurk' && a.state !== 'lunge') G.Luta.begin(a, p); // (an ambusher's hunt begins at its strike)
           } else if (a.kind === 'croc' && S.type[W.idx(a.x, a.y)] <= T.RIVER && dLand[W.idx(a.x, a.y)] <= 1) { a.state = 'lurk'; a.sub = 1; a.t = 25; a.target = 0; }
-          else if ((sp.bold > 0 && a.hunger > 0.7 && !a.tamed) || (a.legend && a.hunger > 0.35)) {
-            // hungry and bold: a lone person looks like prey (a legend fears no crowd)
+          else if ((sp.bold > 0 && a.hunger > 0.7 && !a.tamed && !(MAN && MAN.has(a.kind))) || (a.legend && a.hunger > 0.35)) {
+            // hungry and bold: a lone person looks like prey (a legend fears no crowd; the wild hunters the fight reads, above)
             const night = G.isNight();
             const v = nearestVillager(a, a.legend ? 10 : a.kind === 'croc' ? 2.6 : 6, v => v.age >= 0 && (a.legend || crowdAt(v.x, v.y, 3) <= 1) && (a.legend || a.kind !== 'croc' || S.type[W.idx(v.x, v.y)] <= T.RIVER || (dWater[W.idx(v.x, v.y)] <= 1)));
             if (v && G.R() < (a.legend ? 0.7 : sp.bold * (night ? 1.6 : 0.8))) { a.target = v.id; a.state = sp.stalk && !a.legend && G.dist(a.x, a.y, v.x, v.y) > 3.2 ? 'stalk' : 'chase'; a.t = a.legend ? 14 : a.state === 'stalk' ? 14 : 8; a.carc = false; a.onPerson = true; }
           }
         }
       }
+      // (nothing better came of this look: the person it saw, it watches)
+      if (man && !HUNTING[a.state] && !BUSY[a.state] && !(a.angry > 0) && a.state !== 'eye' && a.state !== 'shy') G.Luta.eye(a, man);
     }
+    // (the brain's own states with a step: after the look round for danger and a meal, which may have changed the state)
+    if (MINDFUL[a.state] && BEHAVE[a.state](a, dt, sp, S)) return;
     if (a.rest > 0) a.rest -= dt;
     a.t -= dt;
     switch (a.state) {
@@ -1056,15 +1127,27 @@
       case 'lunge': case 'chase': {
         const tg = S.animals.get(a.target) || S.villagers.get(a.target);
         if (!tg || tg.held || tg.inside || (tg.air) || (!a.carc && tg.dead && tg.meat <= 0) || (a.carc && (!tg.dead || tg.meat <= 0))) { a.state = 'idle'; a.target = 0; a.onPerson = false; return; }
+        // (a charge that is over is no hunt: a zebra whose anger at a crocodile ran out does not go on to chase it and eat it — the
+        // chase of a live beast is a hunter's, after one of its prey, L-1000)
+        if (!a.carc && tg.kind && !tg.dead && !PREYSET[a.kind].has(tg.kind) && !a.tamed) { a.state = 'idle'; a.target = 0; a.t = G.rr(0.5, 1.5); return; }
         const d = G.dist(a.x, a.y, tg.x, tg.y);
         if (a.state === 'lunge') { // ambushers creep in low and slow, then strike
-          if (d < 1.9) { a.state = 'chase'; a.t = 3; return; }
+          if (d < 1.9) { a.state = 'chase'; a.t = 3; if (tg.kind) G.Luta.begin(a, tg); return; }
           if (a.t <= 0 || d > 8) { a.state = 'idle'; a.target = 0; a.rest = 3; return; }
           a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.sp * 0.55);
           return;
         }
-        if (tg.dead) { if (d < 0.7) { a.state = 'eat'; a.t = 20; return; } a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.sp * 1.3); return; }
-        if (a.t <= 0 || d > 16) { a.state = 'idle'; a.target = 0; a.rest = G.rr(6, 12); a.onPerson = false; return; }
+        if (tg.dead) {
+          // a carcass others are eating: it takes it, it scuffles for it, or it waits its turn (the fight's claim, D-299)
+          if (d < 1.8 && !G.Luta.claim(a, tg)) return;
+          if (d < 0.7) { a.state = 'eat'; a.t = 20; return; } a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.sp * 1.3); return;
+        }
+        // (a person's hunt given up: it goes off — L-1007f — and does not stand about where the town comes for it)
+        if ((a.t <= 0 && !tg.kind) || d > 16) { a.onPerson = false; if (tg.kind || !G.Luta.calmed(a, tg)) { a.state = 'idle'; a.target = 0; } a.rest = G.rr(6, 12); return; }
+        // (a person it is not hunting and no longer angry at: the charge is over — it goes off, L-1007f)
+        if (!tg.kind && !a.onPerson && !(a.angry > 0) && !a.tamed && !a.summoned && !a.raid && !a.legend) { if (!G.Luta.calmed(a, tg)) { a.state = 'idle'; a.target = 0; a.t = G.rr(0.5, 1.5); } return; }
+        // a beast: the fight's chase — the breath, the jinks, the test of the herd, the takedown
+        if (tg.kind) { G.Luta.chase(a, tg, dt, sp); return; }
         if (d < 0.55 + sp.size * 0.25) { bite(a, tg, dt); return; }
         a.tx = tg.x; a.ty = tg.y; moveTo(a, dt, sp.run * (sp.ambush ? 1.25 : a.t > 5.5 ? 1.3 : 1.02));
         return;
@@ -1075,6 +1158,7 @@
         // a leopard does not eat in the open: up the tree with it, out of the hyenas' reach
         if (sp.climb === 'tree' && !c.z && c.meat > 2 && SP[c.kind].meat <= 14 && !a.cached) { const tr = treeNear(c.x, c.y, 6); if (tr) { a.state = 'cache'; a.tree = tr.id; a.t = 14; return; } }
         if (c.z > 3) a.z = c.z; G.faceTo(a, c.x - a.x, c.y - a.y);
+        if (G.Luta.feeding(a, c, dt, sp)) return; // (the meal's gesture; a snake swallows whole)
         if (sp.diet === 'carn' || sp.apex || sp.diet === 'scav') { a.blood = Math.min(1, (a.blood || 0) + dt * 0.4); c.gore = 1; feastFX(a, c, dt); }
         if (eatMeat(a, c, dt)) { a.state = 'idle'; a.target = 0; a.t = G.rr(3, 8); a.rest = G.rr(10, 25); a.cached = false; }
         return;
@@ -1101,7 +1185,7 @@
     // old ways below
     if (G.Mente && G.Mente.decide(a, dt, sp, S)) return;
     if (hungry && (sp.diet === 'herb' || sp.diet === 'browse' || (sp.diet === 'omni' && a.hunger < 0.6))) {
-      if (graze(a, dt)) { a.state = 'graze'; a.t = G.rr(3, 7); return; }
+      if (graze(a, dt)) { a.state = 'graze'; a.t = G.rr(3, 7); if (G.Mente) G.Mente.gesto1(a, sp.diet === 'browse' && S.treeAt[W.idx(a.x, a.y)] ? ['browse'] : ['root', 'peck'], 0); return; }
       if (sp.diet === 'omni') { const b = nearBush(a); if (b) { b.berries = Math.max(0, b.berries - 1); a.hunger = Math.max(0, a.hunger - 0.3); a.t = 3; return; } }
       const p = bestGrass(a, 6); if (p) { a.tx = p[0]; a.ty = p[1]; a.state = 'wander'; a.seek = true; return; }
     }
@@ -1154,7 +1238,6 @@
     G.Audio && G.Audio.at(a.x, a.y, 'bite');
     const dmg = (6 + sp.hp * 0.12 + (sp.apex ? 6 : 0)) * (a.legend ? 2.2 : a.tamed ? 1.4 : 1);
     if (tg.kind) { // another animal
-      if (sp.constrict && !tg.dead && SP[tg.kind].size <= sp.size * 1.3) { a.grip = 4; tg.caught = a.id; } // the coils close
       A.damage(tg, dmg * (a.grown) * (sp.constrict ? 0.6 : 1), a);
       if (sp.apex || sp.pack || sp.stalk) a.blood = Math.max(a.blood || 0, 0.4);
       if (tg.dead) { a.state = 'eat'; a.target = tg.id; a.t = 20; a.carc = true; a.onPerson = false; a.grip = 0; }
@@ -1429,8 +1512,9 @@
         const th = nearestVillager(a, a.z < 8 ? sp.fear : 0);
         if (th && a.z < 8) { a.state = 'fly'; const p = fleeTarget(a, th.x, th.y, 7) || [a.x + G.rr(-6, 6), a.y + G.rr(-6, 6)]; a.tx = G.clamp(p[0], 1, N - 1); a.ty = G.clamp(p[1], 1, N - 1); a.t = 6; }
         else if (hungry) {
-          if (sp.diet === 'scav') { const c = findCarcass(a, 32); if (c) { a.target = c.id; a.state = 'circle'; a.t = G.rr(3, 6); } }
-          else if (sp.diet === 'carn' || sp.prey) { const p = findPrey(a, a.kind === 'heron' ? 3 : 12); if (p) { a.target = p.id; a.state = 'dive'; } }
+          // (the scavengers circle the dead — and the dying, a wounded beast that has not fallen yet: D-299)
+          if (sp.diet === 'scav') { const c = findCarcass(a, 32) || dyingNear(a, 20); if (c) { a.target = c.id; a.state = 'circle'; a.t = G.rr(3, 6); } }
+          else if (sp.diet === 'carn' || sp.prey) { const p = findPrey(a, a.kind === 'heron' ? 3 : 12); if (p) { a.target = p.id; a.state = 'dive'; G.Mente && G.Mente.gesto(a, 'stoop', 0, p.id); } }
           if (a.state !== 'dive' && a.state !== 'circle' && sp.diet === 'fish' && !sp.wader) { const f = nearestShoal(a, 14); if (f) { a.tx = f.x; a.ty = f.y; a.state = 'fishdive'; a.shoal = f.id; } }
         }
       }
@@ -1440,9 +1524,11 @@
     switch (a.state) {
       case 'circle': { // vultures spiral down over the dead
         const c = S.animals.get(a.target);
-        if (!c || !c.dead || c.meat <= 0) { a.state = 'fly'; a.t = 0; return; }
+        if (!c || (!c.dead && !(G.Luta && G.Luta.dying(c))) || c.meat <= 0) { a.state = 'fly'; a.t = 0; return; }
+        // (over the dying, high and patient; over a kill a hunter of the ground still eats, round and round until it goes)
+        const wait = !c.dead || G.Luta.guarded(c); if (wait) a.t = Math.max(a.t, 1.5);
         a.ang = (a.ang || 0) + dt * 1.4; const r = 1.6 + a.t * 0.4;
-        a.tx = c.x + Math.cos(a.ang) * r; a.ty = c.y + Math.sin(a.ang) * r; a.z = Math.max(0, a.z - dt * 8);
+        a.tx = c.x + Math.cos(a.ang) * r; a.ty = c.y + Math.sin(a.ang) * r; if (wait) a.z += (14 - a.z) * Math.min(1, dt); else a.z = Math.max(0, a.z - dt * 8);
         moveDirect(a, dt, sp.sp);
         // (down beside the carcass on ground it stands on — the step aside drawn as ever, kept where it leaves the bird in a house, L-631;
         // and a carcass under a roof is eaten from the nearest ground beside it, never from its own spot: a vulture of the mundial
@@ -1456,6 +1542,9 @@
       case 'eat': {
         const c = S.animals.get(a.target);
         if (!c || !c.dead || c.meat <= 0 || a.t <= 0) { a.state = 'fly'; a.t = 0; a.target = 0; return; }
+        // (a hunter of the ground comes back to its kill: up, and round again)
+        if (sp.diet === 'scav' && G.Luta.guarded(c)) { a.state = 'circle'; a.t = 3; a.z = 4; return; }
+        if (G.Mente && !(a.gestD > 0 && a.gestT < a.gestD)) G.Mente.gesto1(a, a.kind === 'eagle' || a.kind === 'owl' ? ['mantle', 'tear'] : ['tear', 'peck'], 0, c.id);
         a.z = 0; if (eatMeat(a, c, dt)) { a.state = 'fly'; a.t = 0; a.target = 0; }
         return;
       }
@@ -1464,7 +1553,11 @@
         if (!p || p.dead || p.held || (p.z > 6 && SP[p.kind].cls === 'air')) { a.state = 'fly'; a.t = 0; return; }
         a.tx = p.x; a.ty = p.y; a.z = Math.max(0, a.z - dt * 45);
         moveDirect(a, dt, sp.run);
-        if (G.dist(a.x, a.y, p.x, p.y) < 0.5 && a.z < 3) { A.damage(p, 30, a); if (p.dead) { a.state = 'eat'; a.target = p.id; a.t = 20; } else { a.state = 'fly'; a.t = 0; } }
+        if (G.dist(a.x, a.y, p.x, p.y) < 0.5 && a.z < 3) {
+          A.damage(p, 30, a);
+          if (p.dead) { a.state = 'eat'; a.target = p.id; a.t = 20; G.Mente && G.Mente.gesto(a, 'talons', 1.4, p.id); if (G.Luta) { G.Luta.count('abate'); G.Luta.count('abate:' + a.kind); G.Luta.count('presa:' + p.kind); } }
+          else { a.state = 'fly'; a.t = 0; }
+        }
         return;
       }
       case 'fishdive': {
@@ -1512,6 +1605,8 @@
       a.tx = G.clamp(p[0], 1, N - 1); a.ty = G.clamp(p[1], 1, N - 1); a.t = G.rr(4, 10);
     }
   }
+  // a dying beast near, for the scavengers of the sky to circle
+  function dyingNear(a, r) { let best = null, bd = r * r; if (!G.Luta) return null; each(grid, a.x, a.y, r, p => { if (p.dead || !G.Luta.dying(p)) return; const d = G.dist2(a.x, a.y, p.x, p.y); if (d < bd) { bd = d; best = p; } }); return best; }
   function moveDirect(a, dt, sp) {
     const dx = a.tx - a.x, dy = a.ty - a.y; const d = Math.hypot(dx, dy);
     if (d < 0.1) { a.moving = false; return true; }
@@ -1572,7 +1667,9 @@
         if (!BUSY[a.state] && ((a.id + lodTick) & 1)) { lodAcc.set(a.id, (lodAcc.get(a.id) || 0) + dt0); continue; }
         const w = lodAcc.get(a.id); if (w) { dt += w; lodAcc.delete(a.id); }
       }
-      if (a.gest) { a.gestT += dt; if (a.gestD > 0 && a.gestT >= a.gestD) A.gestEnd(a); } // (the gesture's clock: one that has its time ends)
+      // (the gesture's clock: one that has its time ends; a held one — no time of its own — lasts as long as the state it was given
+      // in: the sleep ends when the beast is up and running, whoever changed its state, D-290)
+      if (a.gest) { if (a.gestT === 0) a.gestS = a.state; a.gestT += dt; if (a.gestD > 0 ? a.gestT >= a.gestD : a.gestS !== a.state) A.gestEnd(a); }
       if (a.hurt > 0) a.hurt -= dt;
       if (a.bite > 0) a.bite -= dt;
       if (a.eating > 0) a.eating -= dt;
@@ -1590,7 +1687,8 @@
       }
       if (a.dead) continue;
       // resting animals with nothing to decide just let the clock run
-      if (a.state === 'idle' && a.t > dt && a.scan > dt && !(a.angry > 0) && sp.cls !== 'air' && !sp.dom) { a.t -= dt; a.scan -= dt; if (a.rest > 0) a.rest -= dt; a.moving = false; continue; }
+      // (and those lying, asleep, grooming: the brain's states where the body stays — D-290)
+      if ((a.state === 'idle' || PASSIVE[a.state]) && a.t > dt && a.scan > dt && !(a.angry > 0) && sp.cls !== 'air' && !sp.dom && !a.caught && !(a.down > 0)) { a.t -= dt; a.scan -= dt; if (a.rest > 0) a.rest -= dt; a.moving = false; continue; }
       if (a.kind === 'wolf' && (a.raid || a.summoned)) raidWolfAI(a, dt);
       else if (sp.town) { if (G.Pets && !(G.Skip && G.Skip.on)) G.Pets.ai(a, dt, sp); }
       else if (sp.dom) domAI(a, dt);
@@ -1637,14 +1735,14 @@
       if (sp.dom && (!a.pen || !G.S.buildings.has(a.pen))) { const p = [...G.S.buildings.values()].find(b => (b.type === (a.kind === 'cavalo' ? 'estabulo' : 'curral')) && b.built && G.Village.facOfSet(b.set) === a.dom && (!b.kind || b.kind === a.kind)); a.pen = p ? p.id : 0; if (p) { a.state = 'pen'; a.hx = p.x + 1.5; a.hy = p.y + 1.5; } }
     }
     if (a.hunger >= 1) { a.hunger = 1; a.hp -= dt * sp.hp / (DAY() * 1.1); if (a.hp <= 0) { A.kill(a, null, 'hunger'); return false; } }
-    else if (a.hp < a.maxHp && a.hunger < 0.5) a.hp = Math.min(a.maxHp, a.hp + dt * 0.5);
+    else if (a.hp < a.maxHp && a.hunger < 0.5 && !(a.wnd && a.wnd.b > 0)) a.hp = Math.min(a.maxHp, a.hp + dt * 0.5); // (a wound that bleeds does not close by itself)
     const i = W.idx(a.x, a.y); const t = S.type[i];
     // the productive coasts feed fishers between shoals; scavengers pick at insects and seeds
     if (sp.diet === 'fish' || sp.diet === 'scav') { const w = t <= T.RIVER || (sp.cls === 'air' && dSea[i] <= 2); if (w || sp.diet === 'scav') a.hunger = Math.max(0, a.hunger - dayF * (sp.diet === 'scav' ? 0.35 : 0.7)); }
     else if (sp.diet === 'carn' && (sp.cls === 'water' || a.kind === 'croc' || a.kind === 'polarbear') && a.hunger > 0.5 && t <= T.RIVER) a.hunger = Math.max(0, a.hunger - dayF * 0.55);
     if (a.age > sp.life * a.lifeMul) { A.kill(a, null, 'old'); return false; }
     if (S.fire[i] > 0.1 && a.z < 6) { a.hp -= S.fire[i] * 40 * dt; if (a.hp <= 0) { A.kill(a, null, 'fire'); return false; } }
-    if (sp.cls === 'land' && (t <= T.SEA || (S.deep[i] && !sp.swims)) && a.state !== 'leave') { const n = W.nearestLand(a.x, a.y, 8); if (n) { a.x = n[0]; a.y = n[1]; } else { dead.push(a); return false; } }
+    if (sp.cls === 'land' && (t <= T.SEA || (S.deep[i] && !sp.swims)) && a.state !== 'leave' && !a.caught) { const n = W.nearestLand(a.x, a.y, 8); if (n) { a.x = n[0]; a.y = n[1]; } else { dead.push(a); return false; } }
     if (sp.cls === 'water' && !seaWater(i)) { const n = seaNear(a.x, a.y); if (n) { a.x = n[0]; a.y = n[1]; } else { A.kill(a, null, 'stranded'); return false; } }
     for (let k = 0; k < A.lifeHooks.length; k++) if (A.lifeHooks[k](a, sp, dt, S) === false || a.dead) return false;
     return true;
@@ -1662,23 +1760,48 @@
       let cut = Math.min(3, Math.ceil((count[k] - cap) / 20));
       for (const a of S.animals.values()) { if (cut <= 0) break; if (a.kind !== k || a.dead || a.legend || a.tamed || a.held || a.nest || a.named || G.R() > 0.3) continue; A.remove(a); count[k]--; cut--; }
     }
+    const Me = G.Mente;
+    // (the grown ones of each kind and the females among them: the land's brake is on the whole kind, as it was — where there
+    // are few females, each comes into heat the more often, D-293)
+    const grownN = {}, femN = {};
+    if (Me) for (const a of S.animals.values()) { if (a.dead || a.grown < 1 || a.summoned || a.raid || a.tamed || a.legend || !Me.has(a, SP[a.kind] || {})) continue; grownN[a.kind] = (grownN[a.kind] || 0) + 1; if (Me.sex(a) === 0) femN[a.kind] = (femN[a.kind] || 0) + 1; }
     for (const a of [...S.animals.values()]) {
       if (a.dead || a.summoned || a.raid || a.grown < 1 || a.held || a.air || a.tamed || a.legend) continue;
       const sp = SP[a.kind]; if (!sp) continue;
       if (sp.nests) continue; // (the birds that nest raise their young in the nest, not here)
-      if (a.hunger > (A.predator(a.kind) ? 0.65 : 0.45)) continue;
       const cap = A.capacity(a.kind); const n = count[a.kind] || 0;
-      if (n >= cap || n < 2) continue;
+      // (a beast with a mind: births come from mothers, D-293 — a female at her term gives birth if the land has room for one more,
+      // else the young is lost; one fit for it may come into heat, and her suitor is called: the mating is the brain's)
+      const mind = !!Me && Me.has(a, sp);
+      if (mind) {
+        if (Me.sex(a) !== 0 || a.caught) continue;
+        if (Me.due(a)) { let born = 0; for (let j = Me.litter(a.kind); j > 0 && (count[a.kind] || 0) < cap; j--) if (birth(a, sp, count)) born++; if (!born) Me.lose(a); continue; }
+        if (!Me.fertile(a)) { Me.count('gate:fertil:' + a.kind); continue; }
+      }
+      if (a.hunger > (A.predator(a.kind) ? 0.65 : 0.45)) { if (mind) Me.count('gate:fome:' + a.kind); continue; }
+      if (n >= cap || n < 2) { if (mind) Me.count('gate:teto:' + a.kind); continue; }
+      if (mind) Me.count('gate:ok:' + a.kind);
       const mul = G.Nature.zoneMul(a.x, a.y, 'fertility');
-      const p = dt / DAY() * sp.breed * (1 - Math.pow(n / cap, 3)) * mul;
+      const share = mind ? Math.max(1, Math.min(3, (grownN[a.kind] || 2) / (2 * (femN[a.kind] || 1)))) : 1;
+      const p = dt / DAY() * sp.breed * (mind ? HEAT_X * share : 1) * (1 - Math.pow(n / cap, 3)) * mul;
       if (G.R() >= p) continue;
-      // (beside the mother where it stands, or at her side; a mother off her ground — inside a building — gives no birth there:
-      // a wolf's cub was born in a theatre of the metrópole, its mother inside it, L-681, L-631)
-      const q = pickNear(a, 1.2, true) || (walkOK(a, a.x, a.y) ? [a.x, a.y] : null); if (!q) continue;
-      const kid = A.spawn(a.kind, q[0], q[1], { leader: a.leader || a.id, age: 0, grown: 0.35, hunger: 0.2, z: sp.cls === 'air' ? a.z : 0, hx: a.hx, hy: a.hy, morph: a.morph && G.R() < 0.3 ? a.morph : rollMorph(sp) });
-      kid.hp = kid.maxHp * 0.6; a.hunger += 0.2; count[a.kind] = n + 1;
-      const eco = S.eco || (S.eco = { deaths: {}, born: {} }); eco.born[a.kind] = (eco.born[a.kind] || 0) + 1;
+      if (mind) { Me.heat(a, count); continue; }
+      birth(a, sp, count);
     }
+  }
+  // (half of the grown are mothers, and some heats find no male: a heat comes this much more often than a birth used to)
+  const HEAT_X = 10;
+  // a young born at its mother's side (where she stands, or beside her; a mother off her ground — inside a building — gives no
+  // birth there: a wolf's cub was born in a theatre of the metrópole, its mother inside it, L-681, L-631)
+  function birth(a, sp, count) {
+    const S = G.S; let q = null;
+    for (let k = 0; k < 8 && !q; k++) { const an = G.R() * 6.283, r = 0.4 + G.R() * 0.8, x = a.x + Math.cos(an) * r, y = a.y + Math.sin(an) * r; if (walkOK(a, x, y) && lineOK(a, x, y)) q = [x, y]; }
+    if (!q && walkOK(a, a.x, a.y)) q = [a.x, a.y]; if (!q) return false;
+    const kid = A.spawn(a.kind, q[0], q[1], { leader: a.leader || a.id, age: 0, grown: 0.35, hunger: 0.2, z: sp.cls === 'air' ? a.z : 0, hx: a.hx, hy: a.hy, morph: a.morph && G.R() < 0.3 ? a.morph : rollMorph(sp) });
+    kid.hp = kid.maxHp * 0.6; a.hunger += 0.2; count[a.kind] = (count[a.kind] || 0) + 1;
+    const eco = S.eco || (S.eco = { deaths: {}, born: {} }); eco.born[a.kind] = (eco.born[a.kind] || 0) + 1;
+    if (G.Mente && G.Mente.has(kid, sp)) G.Mente.born(kid, a);
+    return true;
   }
   // the census of the living wild — and of who is under a cave's roof: the bear asleep in its den, the beast out of the storm are
   // out of the world's list, not out of the world (L-656). Uncounted, the bears asleep every night were bears gone: the land sent
@@ -1693,14 +1816,25 @@
   // species that vanished from a habitat that still exists come back, slowly, from beyond the map
   function immigrate() {
     const S = G.S; const count = A.counts();
+    // the kinds that dwindled away (as before), one of them, now and then; and — the brain's: a kind left with grown ones of one
+    // sex only, that the land still has room for — one of the other comes too, in a draw of its own (each kind waiting in its own
+    // line: the lone sexes do not take the places of the vanished, D-293)
     const ks = A.ids.filter(k => A.capacity(k) >= 2 && (count[k] || 0) < Math.max(2, A.capacity(k) * 0.3));
-    if (!ks.length) return;
-    const k = G.pick(ks); const sp = SP[k];
+    if (ks.length) arrive(G.pick(ks), count, false);
+    const one = G.Mente ? G.Mente.oneSex() : null;
+    const lone = one ? A.ids.filter(k => one.has(k) && (count[k] || 0) >= Math.max(2, A.capacity(k) * 0.3) && (count[k] || 0) < A.capacity(k)) : [];
+    if (lone.length) arrive(G.pick(lone), count, true);
+  }
+  function arrive(k, count, mate) {
+    const sp = SP[k];
     const spot = A.wildSpot(12, sp); if (!spot) return;
-    // (the herd that comes is what the land still holds: a herd of fifteen gnus came to an island that holds four, D-305)
-    const n = Math.max(1, Math.min(G.ri(sp.herd[0], sp.herd[1]), A.capacity(k) - (count[k] || 0)));
-    const L = A.spawn(k, spot[0], spot[1], { grown: 1 });
-    for (let j = 1; j < n; j++) { const q = pickNear(L, 1.5, true); if (q) A.spawn(k, q[0], q[1], { leader: L.id, grown: 1 }); }
+    // (a herd from far away no bigger than the room the land has left for its kind: ten buffalo came to a land that holds five,
+    // L-1008)
+    const n = mate ? 1 : Math.max(1, Math.min(G.ri(sp.herd[0], sp.herd[1]), A.capacity(k) - (count[k] || 0)));
+    const L = A.spawn(k, spot[0], spot[1], { grown: 1 }); const g = [L];
+    for (let j = 1; j < n; j++) { const q = pickNear(L, 1.5, true); if (q) g.push(A.spawn(k, q[0], q[1], { leader: L.id, grown: 1 })); }
+    // (a lone newcomer: a male where there are only females left, or the other way round; a herd: both sexes in it)
+    if (G.Mente) { if (g.length > 1) G.Mente.balance(g); else G.Mente.newcomer(L); }
     if (sp.apex || sp.dens < 0.4) { const to = G.Biome && G.S.biome ? G.Biome.toAt(spot[0], spot[1]) : 'à ilha'; G.Village.log(`${n > 1 ? G.cap(plural(sp, n)) + ' chegaram' : G.cap(sp.nameA) + ' chegou'} ${to}, vind${n > 1 ? (sp.g === 'f' ? 'as' : 'os') : (sp.g === 'f' ? 'a' : 'o')} ${sp.cls === 'water' ? 'de mares distantes' : 'de terras distantes'}.`, 'deer', spot[0], spot[1]); }
   }
   const PL = { Leão: 'leões', Urso: 'ursos', 'Urso-polar': 'ursos-polares', Onça: 'onças', Tubarão: 'tubarões', Crocodilo: 'crocodilos', Águia: 'águias', Orca: 'orcas', Elefante: 'elefantes', Girafa: 'girafas', Lobo: 'lobos', Hiena: 'hienas', Hipopótamo: 'hipopótamos', 'Boi-almiscarado': 'bois-almiscarados', Anta: 'antas', Baleia: 'baleias', Abutre: 'abutres', Raposa: 'raposas', 'Raposa-do-ártico': 'raposas-do-ártico', Feneco: 'fenecos', Camelo: 'camelos', Jiboia: 'jiboias', Víbora: 'víboras', Garça: 'garças', Flamingo: 'flamingos', Pinguim: 'pinguins', 'Tartaruga-marinha': 'tartarugas-marinhas', Foca: 'focas', Golfinho: 'golfinhos', Tigre: 'tigres', Leopardo: 'leopardos', 'Leopardo-das-neves': 'leopardos-das-neves', Rinoceronte: 'rinocerontes', Búfalo: 'búfalos', Bisão: 'bisões', Gnu: 'gnus', Alce: 'alces', 'Cabra-montesa': 'cabras-montesas', Castor: 'castores', Lontra: 'lontras', 'Bicho-preguiça': 'bichos-preguiça', Avestruz: 'avestruzes', Morsa: 'morsas', Sucuri: 'sucuris', Cegonha: 'cegonhas', 'Ganso-selvagem': 'gansos-selvagens', Tucano: 'tucanos', Coruja: 'corujas' };
@@ -1752,8 +1886,9 @@
   };
   A.spawnGroup = function (k, x, y, n) {
     const sp = SP[k]; if (!sp) return null;
-    const L = A.spawn(k, x, y, { grown: 1 });
-    for (let j = 1; j < (n || G.ri(sp.herd[0], sp.herd[1])); j++) { const q = pickNear(L, 1.5, false); if (q) A.spawn(k, q[0], q[1], { leader: L.id, grown: 1 }); }
+    const L = A.spawn(k, x, y, { grown: 1 }); const g = [L];
+    for (let j = 1; j < (n || G.ri(sp.herd[0], sp.herd[1])); j++) { const q = pickNear(L, 1.5, false); if (q) g.push(A.spawn(k, q[0], q[1], { leader: L.id, grown: 1 })); }
+    G.Mente && G.Mente.balance(g); // (a herd that arrives: both sexes in it)
     return L;
   };
   G.saveHooks = G.saveHooks || [];
@@ -1773,5 +1908,6 @@
         want -= n;
       }
     }
+    G.Mente && G.Mente.balance(); // (every kind with both sexes among its grown, from the first day)
   };
 })(window.G);

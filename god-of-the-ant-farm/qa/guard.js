@@ -861,5 +861,36 @@ for (const f of files) { if (f === 'fauna-meio.js') continue; src[f].forEach((l,
     const i = mm.findIndex(l => l.includes(`function ${fn} {`)); if (i < 0) { fails.push(`os sentidos do meio: o fauna-meio.js sem a função ${fn} (D-301)`); continue; }
     const one = /\}\s*$/.test(mm[i]) && (mm[i].match(/\{/g) || []).length === (mm[i].match(/\}/g) || []).length; const j = one ? i : mm.findIndex((l, k) => k > i && /^  \}$/.test(l));
     mm.slice(i, j + 1).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\()|Math\.random|\b(a|o|v|S|m|tr|q|B)\.[A-Za-z_]+(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\b(gest|count|taught|quit|runStart|meioOf)\(/.test(c)) fails.push(`os sentidos do meio são puros: fauna-meio.js:${i + k + 1} (${fn.split('(')[0]}) tira de um acaso, escreve ou age (D-301): ${l.trim().slice(0, 110)}`); }); } }
+// 96. "a mente de um bicho é do fauna-mente.js" (D-291): o objeto da mente (a.mind — o fôlego, a energia, o medo, a raiva, o posto,
+// o sexo, a mãe, o cio, a prenhez, a memória) só o js/fauna-mente.js escreve; a luta, o meio, as vistas e o resto leem, e pedem às
+// portas dele (Mente.fright, anger, tire, place, meet, contest, born, heat…). O save guarda a mente pelo empacotador dela
+// (G.Mente.pack, save.js) e o molde a desempacota (G.Mente.unpack, no A.spawn). (Um apelido — const m = a.mind; m.st = … — a regra
+// não acha: a revisão acha)
+{ const MIND_OK = [['save.js', 'o.mind = G.Mente.pack(a)']];
+  for (const f of files) { if (f === 'fauna-mente.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.mind(\.[A-Za-z_]+|\[[^\]]+\])?\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c) && !ok(MIND_OK, f, l)) fails.push(`a mente pela porta: ${f}:${k + 1} escreve na mente de um bicho (a.mind), que só o fauna-mente.js escreve (D-291): ${l.trim().slice(0, 110)}`); }); } }
+// 97. "a ferida de um bicho é do fauna-luta.js" (D-298): o objeto das feridas (a.wnd — o sangue, a manqueira, as seis zonas, a
+// mandíbula, o veneno, quem feriu, a pegada em que está) só o js/fauna-luta.js escreve (o save pelo G.Luta.pack, o molde pelo
+// G.Luta.unpack); as vistas leem o sangue e a manqueira
+{ const WND_OK = [['save.js', 'o.wnd = G.Luta.pack(a)']];
+  for (const f of files) { if (f === 'fauna-luta.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.wnd(\.[A-Za-z_]+|\[[^\]]+\])?\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c) && !ok(WND_OK, f, l)) fails.push(`a ferida pela porta: ${f}:${k + 1} escreve nas feridas de um bicho (a.wnd), que só o fauna-luta.js escreve (D-298): ${l.trim().slice(0, 110)}`); }); } }
+// 98. "uma pegada, dois corpos, uma porta" (D-297, L-1002): quem está nas garras de quem (a.caught) só o js/fauna-luta.js escreve —
+// a pegada começa (L.hold), acaba (L.release, a morte) e vem do save (o gancho do load) lá —; o preso pergunta, a cada passo, se
+// quem o segura ainda o segura (o heldDown do animals.js é a porta G.Luta.held); e os dois corpos de uma pegada só a G.Luta.place
+// põe no lugar (no fauna-luta.js nenhuma outra linha escreve a posição da presa ou de quem a segura)
+// (the files of the beasts: a.caught of a person is another thing — the day a thief was caught, crime.js —, and the stories' own)
+const BEASTS = ['animals.js', 'caves.js', 'nests.js', 'migrate.js', 'wild.js', 'pets.js', 'events.js', 'save.js', 'fauna-mente.js', 'fauna-meio.js', 'fauna-gestos.js', 'carnage.js', 'powers.js', 'miracles.js'];
+for (const f of BEASTS) { if (!src[f]) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.caught\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`a pegada pela porta: ${f}:${k + 1} escreve quem está nas garras de quem (a.caught), que só o fauna-luta.js escreve (D-297): ${l.trim().slice(0, 110)}`); }); }
+{ const an = src['animals.js'] || []; const i = an.findIndex(l => /function heldDown\(a, dt\)/.test(l));
+  if (i < 0 || !/return G\.Luta\.held\(a, dt\)/.test(an[i])) fails.push('a pegada pela porta: o heldDown do animals.js não é a porta G.Luta.held (D-297)');
+  const lu = src['fauna-luta.js'] || []; const p0 = lu.findIndex(l => /L\.place = function \(h, p\)/.test(l)); const p1 = p0 < 0 ? -1 : lu.findIndex((l, k) => k > p0 && /^  \};$/.test(l));
+  if (p0 < 0 || p1 < 0) fails.push('a pegada pela porta: o fauna-luta.js sem a porta L.place (D-297)');
+  else lu.forEach((l, k) => { if (k >= p0 && k <= p1) return; const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b[ph]\.[xy]\s*=(?!=)/.test(c)) fails.push(`a pegada pela porta: fauna-luta.js:${k + 1} põe um corpo de uma pegada fora da L.place (D-297): ${l.trim().slice(0, 110)}`); }); }
+// 99. "o cérebro e a luta pedem o gesto que a espécie faz, e a crônica dos bichos tem uma porta" (D-290, D-299): no fauna-mente.js e
+// no fauna-luta.js o gesto de um bicho só pela Mente.gesto / gesto1 (que pergunta ao G.Gestos.can antes da porta do A.gesture — a
+// porta recusaria e contaria o resto); e a linha da crônica só pela L.say, que não deixa duas perto demais nem a mesma de novo por
+// dias (as marcas no mundo, no save)
+for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\b(A|G\.Animals)\.gesture\(/.test(c) && !/Me\.gesto = function/.test(c)) fails.push(`o gesto do cérebro: ${f}:${k + 1} dá um gesto sem a Mente.gesto (que pergunta se a espécie o faz): ${l.trim().slice(0, 110)}`);
+  if (/G\.Village\.log\(/.test(c) && !/L\.count\('cronica'\)/.test(c)) fails.push(`a crônica dos bichos: ${f}:${k + 1} escreve na crônica sem a L.say (D-299): ${l.trim().slice(0, 110)}`); });
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

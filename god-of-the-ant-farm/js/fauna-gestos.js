@@ -165,6 +165,10 @@
     forage: { nome: 'comendo a plantação', d: 0, loop: true, p: 2, who: ['hoofed', 'elephant', 'monkey', 'rabbit', 'hare', 'bear', 'capybara'] },
     soak: { nome: 'de molho na água', d: 0, loop: true, p: 2, who: ['hippo', 'buffalo', 'elephant', 'capybara', 'tapir', 'moose', 'tiger', 'jaguar', 'bear', 'croc', 'rhino'] },
     toca: { nome: 'na toca', d: 0, loop: true, p: 2, who: ['rabbit', 'hare', 'fox', 'arcticfox', 'fennec', 'beaver', 'otter', 'lizard', 'snake', 'wolf'] },
+    // ---- o cérebro e a luta (D-290 a D-299) ----
+    // the creep of a stalking hunter, belly to the ground (gestV 1: frozen, the prey has lifted its head), and its leap
+    stalk: { nome: 'espreitando', d: 0, loop: true, p: 1, who: ['cat', 'canid'] },
+    pounce: { nome: 'saltando sobre a presa', d: 0.45, p: 1, who: ['cat', 'canid'] },
   };
   // (each gesture's kinds, as a set: the groups opened, the kinds as they are)
   const open = w => { const out = new Set(); for (const k of w) { if (GR[k]) for (const x of GR[k]) out.add(x); else out.add(k); } return out; };

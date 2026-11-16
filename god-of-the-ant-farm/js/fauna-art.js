@@ -50,6 +50,8 @@
       case 'clash': case 'gore': case 'toss': case 'charge': P.head = 0.55; P.fwd = 0.6; if (n === 'toss') P.up = bump(0.3, 0.55, 0.9) * 1.4; break;
       case 'threat': case 'display': P.jaw = 0.8; P.fwd = 0.5; P.crouch = pred ? 0.4 : 0; P.head = pred ? 0.2 : 0.5; break;
       case 'bite': case 'strike': P.fwd = bump(0, 0.4, 1) * 1.2; P.jaw = f < 0.5 ? 1 : 0; break;
+      case 'stalk': P.crouch = 1; P.fwd = 0.4; P.head = 0.3; break;
+      case 'pounce': P.up = bump(0, 0.35, 0.85); P.fwd = 1; P.jaw = f > 0.4 ? 0.8 : 0; break;
       case 'throat': case 'grip': case 'nape': case 'pin': case 'maul': P.crouch = 0.6; P.head = 0.7; P.fwd = 0.8; P.jaw = 0.4; break;
       case 'shakekill': case 'shake': P.shake = 1; break;
       case 'swipe': P.strike = bump(0.2, 0.4, 0.8); P.jaw = 0.7; break;

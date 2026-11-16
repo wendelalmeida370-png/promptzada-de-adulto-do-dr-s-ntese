@@ -549,6 +549,10 @@ const oldSaid = H => (H.old ? ` (${H.old} morreu de velhice no caminho do caso)`
       const L = cand(cap, f); if (!L.length) continue;
       const was = L.map(v => [v, v.x, v.y, v.inside]);
       const at = place(cap, L); if (!at) continue;
+      // (the window of the trade opened by the proof's hand: the case is where the horse is born, not whether a deal falls due
+      // this hour — with the beasts' own draws of the brain and the fight, the twelve seconds after the load sent the caravans to
+      // other partners, and no people had one left to send, T-1316)
+      for (const b of G.Fac.all()) if (b.id !== fid && f.rel && f.rel[b.id]) f.rel[b.id].luxDay = 0;
       const id0 = S().nextId; G.Trade.launch(f);
       const h = [...S().animals.values()].find(q => q.id >= id0 && q.kind === 'cavalo' && !q.dead); if (!h) continue;
       const m = S().villagers.get(h.ledBy); const o = inB(h.x, h.y);
