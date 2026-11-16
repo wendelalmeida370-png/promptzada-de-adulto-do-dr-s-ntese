@@ -390,6 +390,24 @@
   } });
   def('shiver', { in: 0.4, out: 0.5, any() { A(I.SHIV, 1); A(I.DROP, 0.15); A(I.EARB, 0.5); A(I.TTUCK, 0.7); A(I.NDOWN, 0.2); A(I.WFOLD, 0.5); } });
   def('curl', { in: 0.9, out: 0.8, still: 1, quad() { M.lieDown(1); const sd = C.side; A(I.YAW, sd * 1.1); A(I.NYAW, sd * 1.35); A(I.NDOWN, 0.95); A(I.TSIDE, sd * 1.6); A(I.EYE, 0.85); A(I.EARD, 0.6); A(I.HROLL, sd * 0.4); } });
+  // ---- o meio (D-300): the raid on a field, the soak against the heat, the den ----
+  def('forage', { in: 0.5, out: 0.4, still: 0.6, quad(u) {
+    const s = S(), up = bell((u % 6.5) / 6.5, 0.72, 0.82, 0.95); // (the head down at the crop, and up now and then to look round: a thief's meal)
+    if (s.eleph) { A(I.TRDN, 1.1 * (1 - up)); A(I.TRCURL, 0.7 * bell((u % 2.6) / 2.6, 0.3, 0.6, 0.9)); A(I.NDOWN, 0.25 * (1 - up)); A(I.EARO, 0.5 * up); A(I.CHEW, 1); return; }
+    if (s.monkey || (s.bear && G.hash(C.id * 13 + 5) < 0.4)) { A(I.SIT, 1); A(I.NDOWN, 0.35 * (1 - up)); A(I.NUP, 0.3 * up); A(I.CHEW, 1); A(I.EARY, 0.4); return; } // (sat among the stalks, eating from the hands)
+    A(I.NDOWN, 1.05 * (1 - up)); A(I.NUP, 0.45 * up); A(I.CHEW, 1 - up); A(I.EARY, 0.8); A(I.EARF, 0.6 * up); A(I.HYAW, osc(u, 0.25, C.id) * 0.2); A(I.TUP, s.rabbit ? 0 : 0.25 * up);
+  } });
+  def('soak', { in: 1.2, out: 0.9, still: 1, quad(u) {
+    const s = S(); A(I.BREATH, 0.4); A(I.EYE, 0.45); A(I.EARY, 0.3);
+    if (s.hippo) { M.lieDown(1); A(I.LIFT, -0.75); A(I.NUP, 0.3); A(I.HPITCH, -0.25); A(I.EARY, 0.7); return; } // (sunk to the eyes and the nostrils)
+    if (s.eleph) { A(I.DROP, 0.7); A(I.LIFT, -0.35); A(I.TRUP, 0.8 + 0.3 * osc(u, 0.2)); A(I.TRCURL, 0.4); A(I.EARO, 0.6 * osc(u, 0.15)); return; } // (the trunk held up out of the water)
+    if (s.cat) { M.lieDown(1); A(I.LIFT, -0.5); A(I.NUP, 0.35); A(I.HPITCH, -0.2); A(I.EARB, 0.2); A(I.TLASH, 0.2 * osc(u, 0.3)); return; } // (the tiger lying in the pool, the chin on the water)
+    M.lieDown(1); A(I.LIFT, -0.55); A(I.NUP, 0.2); A(I.HPITCH, -0.1); A(I.CHEW, s.rumin ? 0.6 : 0);
+  } });
+  def('toca', { in: 0.6, out: 0.5, still: 1, quad(u) {
+    const peek = bell((u % 9) / 9, 0.6, 0.72, 0.9); // (deep in, then the head at the mouth now and then)
+    M.lieDown(1); A(I.DROP, 0.3); A(I.LIFT, -1.1 + 0.55 * peek); A(I.NUP, 0.45 * peek); A(I.NFWD, 0.4 * peek); A(I.EARF, peek); A(I.EARB, 1 - peek); A(I.EYE, 0.6 * (1 - peek));
+  } });
   def('spray', { in: 0.3, out: 0.5, still: 0.8, quad(u) { const c = (u % 3) / 3; A(I.TRDN, 1.1 * bell(c, 0, 0.2, 0.45)); A(I.NDOWN, 0.3 * bell(c, 0, 0.2, 0.45)); A(I.TRUP, 1.45 * bell(c, 0.4, 0.65, 0.95)); A(I.TRCURL, 0.6 * bell(c, 0.5, 0.7, 0.95)); A(I.NUP, 0.3 * bell(c, 0.4, 0.65, 0.95)); A(I.EARO, 0.3); } });
   def('splash', { in: 0.6, out: 0.6, still: 1, quad(u) {
     const s = S();
@@ -484,6 +502,7 @@
   def('rise', { snake(u, d) { const f = fr(u, d, 1.2); A(I.ROLL, C.side * 2.0 * (1 - ramp(f, 0, 0.6))); A(I.GROUND, 1 - ramp(f, 0, 0.6)); A(I.WRITHE, 0.4 * bell(f, 0.1, 0.4, 0.9)); } });
   def('throes', { keep: 1, snake(u, d) { const f = fr(u, d, 3); A(I.ROLL, C.side * (1.6 + 0.6 * Math.sin(u * hz(0.4)))); A(I.GROUND, 1); A(I.WRITHE, 0.9 * (1 - 0.7 * f)); A(I.JAW, 0.6); A(I.EYE, 0.5 * f); } });
   def('hide', { snake() { A(I.PILE, 0.85); A(I.EYE, 0); A(I.NDOWN, 0.2); } });
+  def('toca', { snake(u) { const peek = bell((u % 11) / 11, 0.6, 0.72, 0.9); A(I.PILE, 0.9); A(I.LIFT, -1.2 + 0.5 * peek); A(I.RAISE, 0.3 * peek); A(I.EYE, 0); } }); // (coiled down the hole, the head at the mouth now and then)
   def('burrow', { snake(u, d) { const f = fr(u, d, 1.2); A(I.NDOWN, 0.6); A(I.LIFT, -1.2 * ramp(f, 0.2, 1)); A(I.FWD, 0.15 * f); } });
   def('dive', { snake(u, d) { const f = fr(u, d, 1); A(I.NDOWN, 0.6); A(I.LIFT, -1.5 * ramp(f, 0.2, 1)); } });
   def('swim', { snake(u) { A(I.NUP, 0.35); A(I.LIFT, -0.4); } });
@@ -523,6 +542,8 @@
   def('rise', { sprawl(u, d) { const f = fr(u, d, 1.2); A(I.ROLL, C.side * Math.PI * 0.9 * (1 - ramp(f, 0, 0.55))); A(I.GROUND, 1 - ramp(f, 0, 0.55)); A(I.THRASH, 0.6 * bell(f, 0, 0.3, 0.6)); } });
   def('throes', { keep: 1, sprawl(u, d) { const f = fr(u, d, 3); A(I.ROLL, C.side * Math.PI * 0.9); A(I.GROUND, 1); A(I.THRASH, 0.8 * (1 - 0.7 * f)); A(I.JAW, 0.5); A(I.TCURL, 0.5 * Math.sin(u * hz(0.6))); A(I.EYE, 0.5 * f); } });
   def('hide', { sprawl() { A(I.LIE, 1); A(I.LIFT, C.kind === 'croc' ? -0.6 : 0); A(I.EYE, 0); } }); // (only the eyes and the nostrils over the water)
+  def('soak', { sprawl(u) { A(I.LIE, 1); A(I.SWIM, 0.3); A(I.LIFT, C.kind === 'croc' ? -0.55 : -0.3); A(I.EYE, 0.3); A(I.JAW, 0.5 * bell((u % 20) / 20, 0.3, 0.45, 0.7)); } }); // (low in the shallows, the jaws open now and then to cool)
+  def('toca', { sprawl(u) { const peek = bell((u % 9) / 9, 0.6, 0.72, 0.9); A(I.LIE, 1); A(I.LIFT, -1.3 + 0.6 * peek); A(I.HIGH, 0.2 * peek); A(I.EYE, 0.5 * (1 - peek)); } });
   def('burrow', { sprawl(u, d) { const f = fr(u, d, 1.2); A(I.LIE, 1); A(I.LIFT, -1.4 * ramp(f, 0.2, 1)); A(I.YAW, 0.3 * Math.sin(u * hz(3))); A(I.NDOWN, 0.6); } });
   def('dive', { sprawl(u, d) { const f = fr(u, d, 1); A(I.SWIM, 1); A(I.PITCH, 0.25 * ramp(f, 0, 0.5)); A(I.LIFT, -1.0 * ramp(f, 0.2, 1)); } });
   def('swim', { sprawl(u) { A(I.SWIM, 1); A(I.HPITCH, -0.1); } });

@@ -533,12 +533,14 @@
     return a.grown < 1 ? k * 0.5 : k;
   };
   // (who has to be thought of as a danger — the kinds of DREAD and whoever is coming for someone —, by cells of 8 tiles, made
-  // again every half second of the world's time: a cache of the world, never in the save)
-  const DC = 8; const dreadG = new Map(); let dreadT = -1;
-  G.worldHooks.push(() => { dreadG.clear(); dreadT = -1; if (W.danger) W.danger.fill(0); });
+  // again in each half second of the world's clock; the field on the ground and the chronicle, in each two: a cache of the
+  // world, never in the save — the halves and the twos are the clock's own, so a save opened in the middle of one keeps the
+  // beat of the world that went on)
+  const DC = 8; const dreadG = new Map(); let dreadT = -1, fieldT = -1;
+  G.worldHooks.push(() => { dreadG.clear(); dreadT = -1; fieldT = -1; if (W.danger) W.danger.fill(0); });
   // the field of the fear on the ground (W.danger, read by the walkers' ways in W.cost): round each beast people dread, a tile
   // costs more the nearer it is — a lion's ring of seven tiles, up to six times a tile's going at its feet —, so a way is
-  // made about it as about a fire, and nobody walks up to it on the way somewhere (D-311). Made again with the cells
+  // made about it as about a fire, and nobody walks up to it on the way somewhere (D-311). Made again in each two seconds
   function dreadField(list) {
     const S = G.S, NN = S.type.length; if (!W.danger || W.danger.length !== NN) W.danger = new Float32Array(NN); const D = W.danger; D.fill(0);
     for (const a of list) {
@@ -549,15 +551,16 @@
   }
   const fieldList = [];
   function dreadGrid() {
-    const S = G.S; if (dreadT >= 0 && S.clock >= dreadT && S.clock - dreadT < 0.5) return dreadG;
-    dreadT = S.clock; dreadG.clear(); fieldList.length = 0;
+    const S = G.S, e = Math.floor(S.clock * 2); if (e === dreadT) return dreadG;
+    dreadT = e; dreadG.clear(); fieldList.length = 0;
     for (const a of S.animals.values()) {
       if (!DREAD[a.kind] && !(a.summoned || a.raid || a.legend || a.angry > 0 || a.state === 'chase' || a.state === 'lunge')) continue;
       if (Vg.dread(a) <= 0) continue;
       const k = ((a.x / DC) | 0) + ((a.y / DC) | 0) * 4096; let l = dreadG.get(k); if (!l) dreadG.set(k, l = []); l.push(a); fieldList.push(a);
-      if (HUNTS[a.kind] && !a.raid && !a.summoned) beastInTown(a);
     }
-    dreadField(fieldList);
+    // (the field and the chronicle in each two seconds: a way is made once and walked for a while, and the chronicle speaks
+    // once a day — the flight from a beast in sight reads the cells, made each half second)
+    const e2 = Math.floor(S.clock / 2); if (e2 !== fieldT) { fieldT = e2; dreadField(fieldList); for (const a of fieldList) if (HUNTS[a.kind] && !a.raid && !a.summoned) beastInTown(a); }
     return dreadG;
   }
   // (the field is made with the cells: a walker's way asked before anyone looked this half second asks for them first)

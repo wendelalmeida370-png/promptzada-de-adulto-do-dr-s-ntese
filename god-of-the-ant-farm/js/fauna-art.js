@@ -37,9 +37,10 @@
       case 'curl': case 'huddle': P.lie = 1; P.curl = 1; P.head = 0.7; break;
       case 'lie': case 'ruminate': case 'bask': case 'hide': case 'gnaw': case 'brood': P.lie = 1; if (n === 'hide') P.head = 1; break;
       case 'wallow': case 'splash': P.lie = 1; P.shake = 0.3; break;
+      case 'soak': case 'toca': P.lie = 1; P.head = n === 'toca' ? 1 : 0; break; // (in the water to the back, or down the burrow: low, still)
       case 'nurse': if (pred || sp.art === 'wolf' || sp.art === 'dog' || sp.art === 'cat' || sp.art === 'boar') P.side = 1; break;
       case 'roll': case 'dustbath': P.side = 1; P.thrash = 0.6; break;
-      case 'drink': case 'sniff': case 'root': case 'browse': case 'tear': case 'drag': P.head = n === 'browse' ? -0.6 : 1; if (n === 'drink' && pred) P.crouch = 0.8; break;
+      case 'drink': case 'sniff': case 'root': case 'browse': case 'forage': case 'tear': case 'drag': P.head = n === 'browse' ? -0.6 : 1; if (n === 'drink' && pred) P.crouch = 0.8; break;
       case 'alert': case 'scent': case 'listen': case 'stare': case 'curious': P.up = n === 'stare' || n === 'curious' ? 0.3 : 0.7; P.fwd = n === 'curious' ? 0.6 : 0; break;
       case 'howl': case 'trumpet': case 'bellow': case 'call': case 'roar': P.up = 1; P.jaw = 1; break;
       case 'yawn': case 'gape': case 'pant': P.jaw = n === 'pant' ? 0.5 : 1; break;

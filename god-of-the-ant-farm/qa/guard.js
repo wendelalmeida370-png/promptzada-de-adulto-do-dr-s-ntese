@@ -831,5 +831,35 @@ for (const f of files) { if (f === 'animals.js' || f === 'save.js') continue; sr
 { const ge = (src['fauna-gestos.js'] || []).join('\n'), rc = (src['fauna-receitas.js'] || []).join('\n');
   const names = [...ge.matchAll(/^\s{4}(\w+): \{ nome: /gm)].map(m => m[1]);
   for (const n of names) if (!new RegExp(`def\\('${n}'`).test(rc)) fails.push(`todo gesto tem o seu corpo: o gesto ${n} (fauna-gestos.js) sem receita em fauna-receitas.js (D-281)`); }
+// 100. "o meio de um bicho é do meio" (D-300): o que o mundo fez no corpo de um bicho — a sede, o pelo molhado, a lama, a poeira,
+// o frio, o calor, a água e a toca que ele lembra, o alerta (a.meio) — e o estado do meio no mundo (S.meio: o medo das pessoas,
+// os lugares de beber, as contas) só o fauna-meio.js escreve; o save leva o objeto inteiro (save.js, G.Save.packAnimal). Quem
+// quer mudar o meio de um bicho pede ao G.Meio (o deus, a luta, o cérebro): uma escrita de fora deixava a sede de um bicho
+// fora do lugar e o verificador sem saber de quem é
+const MEIO_OK = [['save.js', 'if (a.meio) o.meio = a.meio']];
+for (const f of files) { if (f === 'fauna-meio.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.meio\b(\.[A-Za-z_]+|\[[^\]]+\])?\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c) && !ok(MEIO_OK, f, l)) fails.push(`o meio pela porta: ${f}:${k + 1} escreve o meio de um bicho ou do mundo (a.meio, S.meio), que só o fauna-meio.js escreve (D-300): ${l.trim().slice(0, 110)}`); }); }
+// 101. "o meio muda o mundo pelas portas do mundo" (D-304): o elefante que derruba a árvore, a semente que vira muda, o bicho que
+// sai do mundo — o fauna-meio.js não escreve o chão, as árvores, a lista dos bichos nem o fogo à mão: a árvore cai pelo
+// G.Nature.fellTree e nasce pelo G.Nature.addTree, o bicho sai pelo G.Animals.remove / kill; nenhuma escrita em S.type, S.occ,
+// S.treeAt, S.deep, S.veg, S.wear, S.fire, S.cliff, S.road ou S.wall, nem em S.trees / S.animals, nem no estágio de uma árvore
+{ const mm = src['fauna-meio.js'] || []; if (!mm.length) fails.push('o meio: js/fauna-meio.js não existe (D-276, D-300)');
+  mm.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bS\.(type|occ|treeAt|deep|veg|wear|fire|cliff|road|wall|objAt|typeVer)\b(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c) || /\bS\.(trees|animals|bushes)\.(set|delete|clear)\(/.test(c) || /\.stage\s*=(?!=)/.test(c) || /Math\.random/.test(c)) fails.push(`o meio pelas portas do mundo: fauna-meio.js:${k + 1} escreve o chão, as árvores ou os bichos à mão (G.Nature.fellTree / addTree, G.Animals.remove / kill são as portas; D-304): ${l.trim().slice(0, 110)}`); }); }
+// 102. "o gesto do meio, só o que a espécie faz" (D-300): o fauna-meio.js dá um gesto a um bicho num lugar só — a função gest,
+// que pergunta antes ao G.Gestos.can se a espécie o faz —: nenhum gesto do meio é recusado pela porta (A.gestErr) por ser de
+// outra espécie, e o gesto do tempo (a sacudida, o tremor) não corta o de uma caçada (a prioridade do gesto que já está)
+{ const mm = src['fauna-meio.js'] || []; const at = []; mm.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bA\.gesture\(/.test(c)) at.push(k); });
+  const g0 = mm.findIndex(l => /^  function gest\(a, n, d, o, v, own\) \{/.test(l)); const g1 = g0 < 0 ? -1 : mm.findIndex((l, k) => k > g0 && /^  \}$/.test(l));
+  if (g0 < 0) fails.push('o gesto do meio: o fauna-meio.js sem a função gest(a, n, d, o, v, own) — a porta dos gestos do meio (D-300)');
+  else { if (!mm.slice(g0, g1).some(l => /Ge\.can\(a\.kind, n\)/.test(l))) fails.push('o gesto do meio: a função gest do fauna-meio.js não pergunta ao G.Gestos.can antes de dar o gesto (D-300)'); for (const k of at) if (k < g0 || k > g1) fails.push(`o gesto do meio: fauna-meio.js:${k + 1} dá um gesto fora da função gest (que pergunta ao G.Gestos.can): ${mm[k].trim().slice(0, 110)}`); } }
+// 103. "os sentidos e o passo do meio são puros" (D-301): o quanto um bicho nota o outro (o vento, a cobertura, o escuro, o morro,
+// o medo que as pessoas ensinaram) e o quanto o chão o atrasa (o morro, a neve, o calor, a sede) — sense, scent, coverAt,
+// fireGuard, shadeAt e speed no fauna-meio.js — só leem: não tiram de acaso nenhum, não escrevem no bicho, no outro nem no
+// mundo, não dão gesto nem contam. A busca de quem caça, o medo de quem é caçado e o passo de cada um perguntam a elas quantas
+// vezes for preciso, e a mesma pergunta tem a mesma resposta
+{ const mm = src['fauna-meio.js'] || [];
+  for (const fn of ['sense(a, o)', 'scent(a, o)', 'coverAt(i)', 'fireGuard(v)', 'speed(a)', 'snowAt(x, y)']) {
+    const i = mm.findIndex(l => l.includes(`function ${fn} {`)); if (i < 0) { fails.push(`os sentidos do meio: o fauna-meio.js sem a função ${fn} (D-301)`); continue; }
+    const one = /\}\s*$/.test(mm[i]) && (mm[i].match(/\{/g) || []).length === (mm[i].match(/\}/g) || []).length; const j = one ? i : mm.findIndex((l, k) => k > i && /^  \}$/.test(l));
+    mm.slice(i, j + 1).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\()|Math\.random|\b(a|o|v|S|m|tr|q|B)\.[A-Za-z_]+(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\b(gest|count|taught|quit|runStart|meioOf)\(/.test(c)) fails.push(`os sentidos do meio são puros: fauna-meio.js:${i + k + 1} (${fn.split('(')[0]}) tira de um acaso, escreve ou age (D-301): ${l.trim().slice(0, 110)}`); }); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

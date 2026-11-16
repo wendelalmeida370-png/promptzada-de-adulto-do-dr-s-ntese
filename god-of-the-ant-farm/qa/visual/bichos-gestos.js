@@ -21,7 +21,7 @@ const kinds = Object.keys(D.species).filter(k => G.Animals.DEF[k] && G.Animals.D
 const famOf = k => forms[D.species[k].mesh].meta.fam;
 const REC = FG.REC;
 // (the poses that go under the ground or the water on purpose, or are in the air)
-const UNDER = { burrow: 1, dive: 1, swim: 1, hide: 1, deathroll: 1, coil: 1, stoop: 1 };
+const UNDER = { burrow: 1, dive: 1, swim: 1, hide: 1, deathroll: 1, coil: 1, stoop: 1, soak: 1, toca: 1 };
 const FLYMESH = { stoop: 1 };
 
 if (mode === 'prova') {

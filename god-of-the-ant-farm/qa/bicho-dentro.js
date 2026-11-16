@@ -121,6 +121,10 @@ if (!ONLY || ONLY.includes('b1')) { const said = [], bad = [];
       }
     }
     let said = '', live9 = false, bad9 = false; const fled = [];
+    // (the world about the beasts, D-301 and D-305, is not this case: a beaver put beside a house of a town walks out of the town's
+    // core by day, and notices the people of a town from farther than its three tiles of fear — the proof's switches hold the
+    // town and the senses off for the case; the quiet place is the one of the three tiles)
+    const MO = G.Meio && G.Meio.off; const town0 = MO && MO.town, sense0 = MO && MO.sense; if (MO) { MO.town = 1; MO.sense = 1; }
     for (const c9 of places) {
       if (live9 || bad9 || fled.length >= 6) break; if (!quiet(c9.at)) continue;
       const { b, e1, at } = c9; const i9 = e1[1] * N + e1[0];
@@ -135,6 +139,7 @@ if (!ONLY || ONLY.includes('b1')) { const said = [], bad = [];
       sim(() => { A.remove(cb); G.Nature.removeTree(tr); S.dams.splice(S.dams.indexOf(dam), 1); });
       if (in9 || !(d0 > 0.5 && d0 <= 3)) { bad9 = true; said = txt; } else if (ran) fled.push(`${b.type}#${b.id}`); else { live9 = true; said = txt; }
     }
+    if (MO) { MO.town = town0; MO.sense = sense0; }
     ok('b9 o castor indo à árvore que rói, com um prédio no meio: nunca por dentro', live9 && !bad9,
       (said || `nenhum lugar quieto onde o caso vivesse (${places.length} prédios de uma casa com o chão do castor dos dois lados)`) + (fled.length ? ` (antes, o castor fugiu em ${fled.join(', ')})` : ''));
   }

@@ -161,7 +161,7 @@ if (on('m9')) {
   else {
     clear(p[0], p[1]); live(0.6); const A0 = [p[0] - 10, p[1]], B0 = [p[0] + 10, p[1]];
     const w0 = W.findPath(A0[0], A0[1], B0[0], B0[1]) || []; const n0 = nearest(A0[0], A0[1], w0, p[0], p[1]);
-    const lion = beast('lion', p[0], p[1]); hold = pin(lion, p[0], p[1]); live(0.6);
+    const lion = beast('lion', p[0], p[1]); hold = pin(lion, p[0], p[1]); live(2.1); // (the field follows the beasts in each two seconds of the clock, T-1331)
     const w1 = W.findPath(A0[0], A0[1], B0[0], B0[1]) || []; const n1 = nearest(A0[0], A0[1], w1, p[0], p[1]);
     ok('m9', w1.length > 0 && n1 >= 4 && n1 > n0 + 2, `o caminho de 20 casas passando pelo lugar do leão: sem ele a ${n0.toFixed(1)} casas; com ele a ${n1.toFixed(1)} casas (${w1.length} pontos)`);
     hold = null; A.remove(lion); live(0.6);
@@ -173,13 +173,17 @@ if (on('m10')) {
   const viper = beast('viper', p[0], p[1]); hold = pin(viper, p[0], p[1]);
   const two = [...S.villagers.values()].filter(v => v.age >= 20 && v.age < 50 && !v.inside && !v.aboard && !v.ug && !(S.avatar && S.avatar.id === v.id) && !v.captive && !v.jail).sort((a, b) => G.dist(a.x, a.y, p[0], p[1]) - G.dist(b.x, b.y, p[0], p[1])).slice(0, 2);
   two.forEach((v, k) => { v.courage = 0.95; v.hp = 100; Vg.endTask(v); const q = [p[0] + (k ? -3 : 3), p[1]]; if (open(q[0], q[1])) { v.x = q[0]; v.y = q[1]; } });
-  const kid = [...S.villagers.values()].find(v => v.age >= 4 && v.age < 12 && !v.inside && !v.aboard && !v.ug);
-  if (kid) { Vg.endTask(kid); const q = [p[0], p[1] + 2.5]; if (open(q[0], q[1])) { kid.x = q[0]; kid.y = q[1]; } }
+  // (a child of the town put beside it, on open ground — none put, none judged: a child left where it was, far off, and fleeing
+  // some other beast, said nothing of the viper)
+  const spot = [[0, 2.5], [2.5, 0], [0, -2.5], [-2.5, 0], [2, 2], [-2, 2], [2, -2], [-2, -2]].map(([dx, dy]) => [p[0] + dx, p[1] + dy]).find(q => open(q[0], q[1]));
+  const kid = spot ? [...S.villagers.values()].filter(v => v.age >= 4 && v.age < 12 && !v.inside && !v.aboard && !v.ug && !v.captive && !v.jail).sort((a, b) => G.dist(a.x, a.y, s.cx, s.cy) - G.dist(b.x, b.y, s.cx, s.cy))[0] : null;
+  if (kid) { Vg.endTask(kid); kid.x = spot[0]; kid.y = spot[1]; }
   // (who went to kill it, over the whole case — a stick swung in the second and a half, or later)
   const went = new Set(); const watch = n => { for (let k = 0; k < n; k++) { G.debug.step(0.1); for (const v of S.villagers.values()) if (v.task && v.task.type === 'fight' && v.task.id === viper.id) went.add(v.id); } };
   watch(15); hold = null;
   const kt = kid && kid.task; watch(200); const fights = went.size;
-  ok('m10', fights >= 1 && viper.dead && (!kid || (kt && kt.type === 'flee')), `a víbora dentro de ${s.name}: ${fights} foram matá-la; ${viper.dead ? 'morta' : 'viva'}; a criança ${kid ? (kt ? kt.type + (kt.why ? '/' + kt.why : '') : 'sem tarefa') : '—'}`);
+  const fromIt = kt && kt.type === 'flee' && Number.isFinite(kt.fx) && G.dist(kt.fx, kt.fy, p[0], p[1]) < 1.5;
+  ok('m10', fights >= 1 && viper.dead && (!kid || fromIt), `a víbora dentro de ${s.name}: ${fights} foram matá-la; ${viper.dead ? 'morta' : 'viva'}; a criança ${kid ? (kt ? kt.type + (kt.why ? '/' + kt.why : '') + (fromIt ? ', da víbora' : Number.isFinite(kt.fx) ? `, de algo a ${G.dist(kt.fx, kt.fy, p[0], p[1]).toFixed(1)} casas dela` : '') : 'sem tarefa') : '— (nenhum chão aberto ao lado dela)'}`);
   if (S.animals.has(viper.id)) A.remove(viper);
 }
 if (on('m11')) {

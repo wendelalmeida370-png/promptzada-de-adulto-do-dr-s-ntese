@@ -344,7 +344,7 @@
   //  A.behave(name, fn, opts): a state of its own (fn(a, dt, sp, S) → true while it is in it), with opts.busy (no new prey, no
   //    new fear), opts.hunting (taken up with a prey), opts.up (off the ground: in a tree)
   A.lifeHooks = []; A.senseHooks = []; A.speedHooks = [];
-  const SENSE_MAX = A.SENSE_MAX = 2.5; // (the farthest the senses reach, × the old radius: a factor above it is cut there)
+  const SENSE_MAX = A.SENSE_MAX = 2.5, SENSE2 = SENSE_MAX * SENSE_MAX; // (the farthest the senses reach, × the old radius: a factor above it is cut there)
   A.senseMul = function (a, o) { let k = 1; for (let i = 0; i < A.senseHooks.length; i++) k *= A.senseHooks[i](a, o); return k > SENSE_MAX ? SENSE_MAX : k; };
   A.speedMul = function (a) { let k = 1; for (let i = 0; i < A.speedHooks.length; i++) k *= A.speedHooks[i](a); return k; };
   // the animal wherever it lives: in the open, or under a cave's roof (asleep in a den, out of the storm — L-656)
@@ -700,7 +700,7 @@
         if (a.z > 3 && SP[p.kind].cls !== 'air' && SP[p.kind].climb !== 'tree') continue;
         const dx = a.x - p.x, dy = a.y - p.y; let d = dx * dx + dy * dy;
         if (p.state === 'stalk' || p.state === 'flank') d *= 7; else if (p.sub > 0) d *= 9;
-        if (sense) { const k = A.senseMul(a, p); d /= k * k; }
+        if (sense) { if (d >= td * SENSE2) continue; const k = A.senseMul(a, p); d /= k * k; } // (one too far even at the senses' farthest is not asked: the same answer, without the asking)
         if (d < td) { td = d; th = p; }
       }
     }
@@ -970,6 +970,9 @@
     return out;
   }
   A.packOf = packOf;
+  // (the world around the beasts, D-300: a state of another module walks with the stride of every state here, fences, ways
+  // round and the stride's hooks included, and looks round with the world's own fear scan)
+  A.moveTo = moveTo; A.fearOf = fearCheck;
   // deep water a little way from the shore, for the drowning
   function deepSpot(a) {
     const S = G.S; let best = null, bd = -1;
@@ -1694,7 +1697,8 @@
     if (!ks.length) return;
     const k = G.pick(ks); const sp = SP[k];
     const spot = A.wildSpot(12, sp); if (!spot) return;
-    const n = G.ri(sp.herd[0], sp.herd[1]);
+    // (the herd that comes is what the land still holds: a herd of fifteen gnus came to an island that holds four, D-305)
+    const n = Math.max(1, Math.min(G.ri(sp.herd[0], sp.herd[1]), A.capacity(k) - (count[k] || 0)));
     const L = A.spawn(k, spot[0], spot[1], { grown: 1 });
     for (let j = 1; j < n; j++) { const q = pickNear(L, 1.5, true); if (q) A.spawn(k, q[0], q[1], { leader: L.id, grown: 1 }); }
     if (sp.apex || sp.dens < 0.4) { const to = G.Biome && G.S.biome ? G.Biome.toAt(spot[0], spot[1]) : 'à ilha'; G.Village.log(`${n > 1 ? G.cap(plural(sp, n)) + ' chegaram' : G.cap(sp.nameA) + ' chegou'} ${to}, vind${n > 1 ? (sp.g === 'f' ? 'as' : 'os') : (sp.g === 'f' ? 'a' : 'o')} ${sp.cls === 'water' ? 'de mares distantes' : 'de terras distantes'}.`, 'deer', spot[0], spot[1]); }
