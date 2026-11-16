@@ -72,8 +72,9 @@ if (on('m1')) { world(); calmSky(); day();
 // ---------------------------------------------------------------- m2 drought
 if (on('m2')) { world(); calmSky(); const s0 = G.Save.serialize();
   const look = (dry) => { M.abrir(JSON.parse(s0)); calmSky(); if (dry) S().weather.drought = G.DAY_LEN * 2;
-    // (every thirsty enough beast goes down to drink now: the same day, with and without the drought)
-    for (const a of S().animals.values()) { if (!a.dead && a.meio && a.meio.th > 0.2) a.meio.th = Math.max(a.meio.th, 0.7); }
+    // (the hand of the proof makes thirsty every wild beast of the land with water in reach, the same ones with and without the
+    // drought: who goes down to drink, and where)
+    for (const a of S().animals.values()) { const d = A.DEF[a.kind]; if (a.dead || a.dom || a.tamed || !d || (d.cls !== 'land' && d.cls !== 'amph') || d.dom || d.town || Mi.waterDist(a.x, a.y) > 18) continue; const m = Mi.of(a); m.th = 0.75; a.t = 0; }
     const spots = new Map(); let goles = 0, off = 0;
     for (let k = 0; k < 240; k++) { M.viver(0.5); for (const a of S().animals.values()) { if (a.state !== 'beber' || a.dead) continue; const r = Mi.phase(a); if (!r || r.p < 1) continue; const key = Math.floor((r.wi % N()) / 8) + ',' + Math.floor(r.wi / N() / 8); if (!r.seen) { r.seen = 1; goles++; spots.set(key, (spots.get(key) || 0) + 1); if (dry && !Mi.lasting((r.wi % N()) + 0.5, Math.floor(r.wi / N()) + 0.5)) off++; } } }
     return { goles, lugares: spots.size, porLugar: goles / Math.max(1, spots.size), off }; };
@@ -233,8 +234,8 @@ if (on('m10')) { world(); calmSky(); M.saltar(2); calmSky();
     let raid = false, ate = 0; const lastG = new Map();
     until(90, () => { if (S().time < 0.75 && S().time > 0.05) S().time = 0.8; for (const a of raiders) { const r = Mi.phase(a); if (a.state === 'lavoura' && r && r.p === 1) { raid = true; const c = f.crops[r.k]; const g = lastG.get(a.id * 16 + r.k); if (g !== undefined && c.g < g) ate += g - c.g; lastG.set(a.id * 16 + r.k, c.g); } } return raid && ate > 0.3; });
     // the farmer's answer: a person at the edge of the field
-    const v = [...S().villagers.values()].find(q => q.age >= 16 && !q.captive); let scared = false; const fear0 = Mi.learnt(cx, cy); const sc0 = Mi.counts().raidScared || 0;
-    if (v) { const who = raiders.find(a => a.state === 'lavoura') || raiders[0]; until(10, () => { v.x = who.x + 1.5; v.y = who.y; v.inside = 0; v.task = null; return (Mi.counts().raidScared || 0) > sc0; }, 0.25); scared = (Mi.counts().raidScared || 0) > sc0; }
+    const v = [...S().villagers.values()].find(q => q.age >= 16 && !q.captive && !q.inside && (q.hunger || 0) < 40); let scared = false; const fear0 = Mi.learnt(cx, cy); const sc0 = Mi.counts().raidScared || 0;
+    if (v) { const who = raiders.find(a => a.state === 'lavoura') || raiders[0]; until(10, () => { v.x = who.x + 1.5; v.y = who.y; return (Mi.counts().raidScared || 0) > sc0; }, 0.25); scared = (Mi.counts().raidScared || 0) > sc0; }
     const fear1 = Mi.learnt(cx, cy); const c = clean();
     ok('m10 a lavoura: os bichos comem a plantação, o povo os espanta e o chão lembra', raid && ate > 0.3 && scared && fear1 > fear0 && !c.n && !gestErr(), `à noite, ${raiders.length} bichos com fome perto da fazenda de ${(S().settlements.get(f.set) || {}).name}: ${raid ? 'entraram' : 'NÃO ENTRARAM'}, comeram ${ate.toFixed(2)} do crescido dos canteiros; uma pessoa à beira do campo: ${scared ? 'espantou-os' : 'NÃO os espantou'}; o medo aprendido ali ${fear0.toFixed(2)} → ${fear1.toFixed(2)}; verificador ${c.n}${c.n ? ': ' + c.msg : ''}`);
   } }
