@@ -32,9 +32,18 @@
     Me.OPT[name] = def; Me.list.push(def);
     if (def.step) A.behave(name, def.step, def);
   };
+  // the old ways' meal weighs in (L-1032): a hungry grazer's own meal — the grazing of animals.js, below the brain — is one of
+  // the choices, at the score its belly gives it; an option has to want the beast more than its hunger does. Unweighed, any
+  // option above the floor (a look-out, a bath, the way to the water) took a hungry gnu from the grass every time: the herds lived
+  // above the belly the births wait on (0,45), and the land emptied (the cubs of a 60-year continent: 32 wolves for 141, 5
+  // fennecs for 74). The same test as the old ways (hungry above 0,3; the omnivore to 0,6)
+  Me.eatScore = function (a, sp) {
+    if (!(a.hunger > 0.3) || !(sp.diet === 'herb' || sp.diet === 'browse' || (sp.diet === 'omni' && a.hunger < 0.6))) return 0;
+    return Me.FLOOR + (a.hunger - 0.3) * 1.5;
+  };
   // the best option now, taken up — or none (false: the old ways)
   Me.decide = function (a, dt, sp, S) {
-    let best = null, bs = Me.FLOOR;
+    let best = null, bs = Math.max(Me.FLOOR, Me.eatScore(a, sp));
     for (let i = 0; i < Me.list.length; i++) { const o = Me.list[i]; if (o.who && !o.who(a, sp)) continue; const s = o.score(a, sp, S); if (s > bs) { bs = s; best = o; } }
     if (!best) return false;
     return best.start(a, sp, S) !== false;
