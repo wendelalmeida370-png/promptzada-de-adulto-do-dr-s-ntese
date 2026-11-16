@@ -1,5 +1,5 @@
 // fauna-contas: node qa/fauna-contas.js [semente] [anos] [tipo] — as contas da fauna de um mundo vivido pelo salto (T-1333):
-// por espécie selvagem com habitat, o teto, quantos estão vivos no fim, quantos meios-anos passou extinta, os nascimentos (cria:
+// por espécie selvagem com habitat, o teto, quantos estão vivos no fim, quantos anos passou extinta (contada a cada ano), os nascimentos (cria:
 // nascida de uma mãe; outro: a imigração e o que o mundo põe) e as mortes por causa (bicho: comida ou morta por outro bicho; gente;
 // hunger, old, thirst, fire, stranded…), e a cada 20 anos a linha do f2 do fauna.js (quantas vivas). Não julga nada: é a régua de
 // quem acerta o equilíbrio — compare duas versões na mesma semente, e várias sementes, nunca uma só (o mundo é caótico: um passo
@@ -25,12 +25,13 @@ const k0 = A.kill; A.kill = function (a, by, c) {
 };
 const s0 = A.spawn; A.spawn = function (k, x, y, o) { const a = s0.apply(this, arguments); if (a && wild(k)) note(B, k, o && o.age === 0 && o.grown < 1 ? 'cria' : 'outro'); return a; };
 const ks = () => A.ids.filter(k => wild(k) && A.capacity(k) > 0);
-for (let h = 1; h <= years * 2; h++) {
-  M.saltar(0.5); const c = A.counts(); for (const k of ks()) if (!(c[k] > 0)) Z[k] = (Z[k] || 0) + 1;
-  if (h % 40 === 0) { const l = ks(); const dead = l.filter(k => !(c[k] > 0)); console.log(`ano ${G.S.day}: ${l.length - dead.length}/${l.length} vivas (o f2 pede ${Math.ceil(l.length * 0.9)})${dead.length ? '; extintas agora: ' + dead.join(' ') : ''}`); }
+// (the skip counts whole years: M.saltar(0.5) is a year, not half of one)
+for (let h = 1; h <= years; h++) {
+  M.saltar(1); const c = A.counts(); for (const k of ks()) if (!(c[k] > 0)) Z[k] = (Z[k] || 0) + 1;
+  if (h % 20 === 0) { const l = ks(); const dead = l.filter(k => !(c[k] > 0)); console.log(`ano ${G.S.day}: ${l.length - dead.length}/${l.length} vivas (o f2 pede ${Math.ceil(l.length * 0.9)})${dead.length ? '; extintas agora: ' + dead.join(' ') : ''}`); }
 }
 const c = A.counts();
 console.log(`mortes por causa: ${JSON.stringify(cause)}`);
-for (const k of ks().sort()) console.log(`${k.padEnd(12)} teto ${String(A.capacity(k)).padStart(3)} vivos ${String(c[k] || 0).padStart(3)} | extinta ${String(Z[k] || 0).padStart(3)} de ${years * 2} meios-anos | nasc ${JSON.stringify(B[k] || {})} | mortes ${JSON.stringify(D[k] || {})}`);
+for (const k of ks().sort()) console.log(`${k.padEnd(12)} teto ${String(A.capacity(k)).padStart(3)} vivos ${String(c[k] || 0).padStart(3)} | extinta ${String(Z[k] || 0).padStart(3)} de ${years} anos | nasc ${JSON.stringify(B[k] || {})} | mortes ${JSON.stringify(D[k] || {})}`);
 if (process.env.POR) for (const k of Object.keys(P).sort()) { console.log(`mortos por gente: ${k}`); for (const [w, n] of Object.entries(P[k]).sort((a, b) => b[1] - a[1])) console.log(`   ${String(n).padStart(3)}  ${w}`); }
 const e = M.erros(); console.log(`erros de módulo ${JSON.stringify(e.mod)}`);
