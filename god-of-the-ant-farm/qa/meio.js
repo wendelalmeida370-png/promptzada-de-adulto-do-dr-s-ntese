@@ -23,7 +23,11 @@
 //   m13 os casos ruins: o save no meio de um gole e de uma lama; o rio que o deus fez terra; o bicho que morre bebendo;
 //   m14 a vida longa: anos de salto em mundos de vários tipos e sementes, as contas do que o meio fez os bichos fazerem, as
 //       linhas da crônica, o verificador e os tetos da fauna;
-//   m15 a mesma semente, o mesmo mundo: duas vezes o mesmo salto, as mesmas contas e os mesmos bichos.
+//   m15 a mesma semente, o mesmo mundo: duas vezes o mesmo salto, as mesmas contas e os mesmos bichos;
+//   m16 a cidade que o mato evita (D-305): um ano de um mundo de savana e de floresta com cidades, vivido duas vezes do mesmo
+//       save — com a cidade afastando as feras e sem (G.Meio.off.town) —, e as feras e os gigantes dentro das cidades de dia
+//       contados a cada segundo: com a cidade, quase nenhum; o leão posto na praça sai pelo caminho mais curto e não volta, com
+//       um save no meio da saída; de noite a cidade não o afasta; o verificador (a regra da cidade, S3) limpo.
 // E em todos o verificador (S0–S2, com as regras do meio: qa/meio-inv.js), nenhum erro de módulo e nenhum gesto recusado.
 //   [ONLY=m1,m3] [ANOS=12] node qa/meio.js
 const M = require('./nodemundo.js');
@@ -323,5 +327,36 @@ if (on('m14')) { const ANOS = +(process.env.ANOS || 12); const lines = []; const
 // ---------------------------------------------------------------- m15 the same seed
 if (on('m15')) { const run = () => { M.novo({ seed: 5, type: 'arquipelago', size: 128, tribes: 3 }); M.saltar(2); M.viver(30); let h = 0; for (const a of S().animals.values()) h = (h * 31 + Math.round(a.x * 10) + Math.round(a.y * 10) * 7 + (a.meio ? Math.round(a.meio.th * 1000) : 0)) % 1e9; return JSON.stringify(Mi.counts()) + ' ' + h + ' ' + S().animals.size; };
   const a = run(), b = run(); ok('m15 a mesma semente, o mesmo meio', a === b, a === b ? `iguais: ${a.slice(0, 160)}` : `DIFERENTES:\n${a}\n${b}`); }
+
+// ---------------------------------------------------------------- m16 the town the wild avoids
+if (on('m16')) { const SEC = +(process.env.SEG || G.DAY_LEN); const said16 = [];
+  const ins = (a) => { for (const st of S().settlements.values()) if (G.dist(a.x, a.y, st.cx, st.cy) < (st.radius || 8)) return st; return null; };
+  const feral = a => !a.dead && !a.dom && !a.tamed && !a.legend && !a.summoned && !a.raid && Mi.DANGER.has(a.kind);
+  const calmSt = a => a.state === 'idle' || a.state === 'wander' || a.state === 'graze' || a.state === 'lurk' || (Mi.MINE[a.state] && a.state !== 'sair' && a.state !== 'beber');
+  // (the world of before: three years with the towns keeping nothing out, the beasts where they wandered)
+  M.novo({ seed: 103, type: 'continente', size: 128, tribes: 4 }); Mi.off.town = true; try { M.saltar(3); } finally { Mi.off.town = false; } const s0 = G.Save.serialize();
+  const arm = (off) => { M.abrir(JSON.parse(s0)); Mi.off.town = off; let n = 0, calm = 0, smp = 0; const kinds = {}; let v3 = 0; const c0 = Object.assign({}, Mi.counts());
+    try { for (let k = 0; k < SEC; k++) { M.viver(1); if (G.isNight() || S().time > 0.7) continue; smp++;
+        for (const a of S().animals.values()) { if (!feral(a) || !ins(a)) continue; n++; kinds[a.kind] = (kinds[a.kind] || 0) + 1; if (calmSt(a)) calm++; }
+        if (!off && k % 20 === 19) v3 += QA.check().filter(q => q.sys === 'meio' && /de dia dentro/.test(q.msg)).length; } }
+    finally { Mi.off.town = false; }
+    const c1 = Mi.counts(); const dc = k => (c1[k] || 0) - (c0[k] || 0);
+    return { did: `saíram ${dc('leftTown')}, correram para fora ${dc('boltedOut')}, viraram antes de entrar ${dc('turnedBack')}, largaram a caça entre as casas ${dc('chaseOff')}, longe do fogo à noite ${dc('fireKept')}`, fire: dc('fireKept'), n, calm, smp, per: n / Math.max(1, smp), kinds: Object.entries(kinds).sort((p, q) => q[1] - p[1]).slice(0, 5).map(e => e.join(' ')).join(', '), v3 }; };
+  const before = arm(true), after = arm(false);
+  const drop = after.n <= before.n * 0.15 && after.per < 0.6 && after.calm <= Math.max(3, before.calm * 0.05);
+  said16.push(`um ano (${SEC} s) de dia, feras e gigantes dentro das cidades (bicho×segundo): sem a cidade afastar ${before.n} em ${before.smp} olhadas (${before.per.toFixed(2)} por olhada; à toa ${before.calm}; ${before.kinds}) → com ela ${after.n} em ${after.smp} (${after.per.toFixed(2)}; à toa ${after.calm}; ${after.kinds || 'nenhum'}; no ano, ${after.did}); a regra da cidade no verificador ${after.v3}`);
+  // the lion in the square: by day it walks out by the nearest way and stays out; a save in the middle of the way out
+  const st = [...S().settlements.values()].sort((p, q) => q.radius - p.radius)[0]; const lionIn = (off, night, save) => {
+    M.abrir(JSON.parse(s0)); calmSky(); S().time = night ? 0.85 : 0.3; Mi.off.town = off; let out = -1, back = 0, at = 0, saved = false; let L;
+    try { const c = S().settlements.get(st.id); L = spawn('lion', c.cx + 0.5, c.cy + 0.5, { hunger: 0.05 }); const id = L.id; const d0 = Math.max(0, (c.radius || 8) - G.dist(L.x, L.y, c.cx, c.cy));
+      for (let k = 0; k < 160; k++) { M.viver(0.5); L = A.find(id); if (!L || L.dead) break;
+        if (save && !saved && L.state === 'sair') { saved = true; M.salvarCarregar(); L = A.find(id); if (!L) break; }
+        const inn = G.dist(L.x, L.y, c.cx, c.cy) < (c.radius || 8); if (!inn && out < 0) { out = k * 0.5; at = 0; } if (inn) { at += 0.5; if (out >= 0) back++; } }
+      return { out, back, at, d0, saved, dead: !L || L.dead }; } finally { Mi.off.town = false; } };
+  const lday = lionIn(false, false, false), lsave = lionIn(false, false, true), loff = lionIn(true, false, false), lnight = lionIn(false, true, false);
+  const lionOk = lday.out >= 0 && lday.out < 30 && !lday.back && lsave.out >= 0 && lsave.out < 40 && !lsave.back && lsave.saved;
+  said16.push(`o leão na praça de ${st.name} (raio ${st.radius.toFixed(1)}), de dia: saiu em ${lday.out} s e ${lday.back ? 'VOLTOU ' + lday.back + ' vezes' : 'não voltou'} em 80 s; com um save no meio da saída ${lsave.saved ? '' : '(SEM save) '}saiu em ${lsave.out} s${lsave.back ? ', VOLTOU' : ''}; sem a cidade afastar, ${loff.at} s dentro dos 80 (só o medo das pessoas); de noite a cidade não o afasta: ${lnight.at} s dentro (só o medo das pessoas e do fogo)`);
+  const c = clean(); const e = M.erros();
+  ok('m16 a cidade que o mato evita', drop && lionOk && !after.v3 && !c.n && M.limpo() && !gestErr(), `${said16.join('; ')}; verificador ${c.n}${c.n ? ': ' + c.msg : ''}; erros de módulo ${JSON.stringify(e.mod)}`); }
 
 console.log(fails.length ? `FALHOU: ${fails.length} (${fails.join(', ')})` : 'TUDO PASSOU'); process.exit(fails.length ? 1 : 0);

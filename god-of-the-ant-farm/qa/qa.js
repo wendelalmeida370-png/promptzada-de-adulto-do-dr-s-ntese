@@ -2698,10 +2698,15 @@
 //   · o bicho num estado do G.Meio tem o registro desse estado (G.Meio.phase) — sem ele, o estado é órfão: nada o move nem o
 //     acaba (S3);
 //   · na travessia, quem está na água está perto do rio da sua travessia (S3);
-//   · o medo das pessoas e os lugares de beber são números: o medo entre 0 e 1, os goles contados nunca negativos (S2).
+//   · o medo das pessoas e os lugares de beber são números: o medo entre 0 e 1, os goles contados nunca negativos (S2);
+//   · de dia, a fera e o gigante que a cidade afasta (G.Meio.shunned: sem fome de quem caça gente ou rebanho, sem raiva) não
+//     ficam à toa dentro de uma cidade: o mesmo bicho visto lá dentro, parado, andando ou num afazer do meio (nem saindo, nem
+//     caçando, nem fugindo, nem comendo), em duas olhadas a doze segundos ou mais, é a cidade que não o afastou (S3; D-305).
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = Number.isFinite;
+  // (who was seen inside a town by day, and since when: the memory of the checks, of this world only)
+  const inTown = new Map(); let inWorld = null;
   const rule = function (add, s) {
     const Mi = G.Meio; if (!Mi || !Mi.phase || !Mi.MINE) return;
     const T = G.T, D = G.Animals.DEF; const N = Math.round(Math.sqrt(s.type.length));
@@ -2734,6 +2739,17 @@
     }
     const pl = Mi.places ? Mi.places() : []; for (const p of pl) if (!fin(p.n) || p.n < 0) { add('meio', 2, `um lugar de beber com ${p.n} goles`); break; }
     if (Mi.fearAt) { const f = Mi.fearAt(N / 2, N / 2); if (!fin(f) || f < 0 || f > 1) add('meio', 2, `o medo das pessoas = ${f}`); }
+    // the town by day: the shunned one does not stay among the houses
+    if (Mi.shunned && Mi.townAt) {
+      if (inWorld !== s) { inWorld = s; inTown.clear(); } let late = 0; const seen = new Set();
+      for (const a of s.animals.values()) {
+        const calm = a.state === 'idle' || a.state === 'wander' || a.state === 'graze' || a.state === 'lurk' || (Mi.MINE[a.state] && a.state !== 'beber' && a.state !== 'sair');
+        if (a.dead || !calm || !Mi.shunned(a)) continue; const st = Mi.townAt(a.x, a.y); if (!st || Math.hypot(a.x - st.cx, a.y - st.cy) >= (st.radius || 8)) continue;
+        seen.add(a.id); const t0 = inTown.get(a.id); if (t0 === undefined || t0 > s.clock) { inTown.set(a.id, s.clock); continue; }
+        if (s.clock - t0 >= 12 && late++ < 3) add('meio', 3, `${a.kind}#${a.id} de dia dentro de ${st.name || 'uma cidade'} há ${(s.clock - t0).toFixed(0)} s, ${a.state}, sem sair`, a.id);
+      }
+      for (const id of [...inTown.keys()]) if (!seen.has(id)) inTown.delete(id);
+    }
   };
   QA.more.push(rule); QA.meio = rule;
 })();

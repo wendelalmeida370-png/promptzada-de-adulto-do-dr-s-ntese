@@ -100,6 +100,8 @@
     flush: set(['parrot', 'raven', 'toucan', 'heron', 'flamingo', 'goose', 'stork', 'gull']),
   };
   const MIGR = k => SP[k] && (SP[k].migr === 'herd' || (SP[k].herd && SP[k].herd[1] >= 6));
+  // (the beasts a town keeps out by day: the big hunters and the giants that kill — not the fox at the scraps, nor the deer)
+  const DANGER = new Set(A.ids.filter(k => { const d = SP[k]; return d.cls !== 'air' && d.cls !== 'water' && !d.dom && !d.town && ((A.predator(k) && d.size >= 0.9 && d.diet !== 'scav') || ['elephant', 'rhino', 'hippo', 'buffalo', 'hyena'].includes(k)); }));
   const wild = (a, sp) => !a.dom && !a.pen && !a.tamed && !a.summoned && !a.raid && !a.legend && !sp.dom && !sp.town && !a.held && !a.air;
   const land = sp => sp.cls === 'land' || sp.cls === 'amph';
   // the gesture's index (a.meio.g)
@@ -125,10 +127,10 @@
 
   // ------------------------------ what a beast is doing here (not saved) ------------------------------
   const RUN = new Map(), SLOW = new Map(), FLED = new Map(), SEED = new Map(), URGE = new Map(), CALL = new Map(), PUSH = new Map();
-  G.worldHooks.push(() => { RUN.clear(); SLOW.clear(); FLED.clear(); SEED.clear(); XS.clear(); URGE.clear(); CALL.clear(); PUSH.clear(); });
+  G.worldHooks.push(() => { TOWN = null; tw = 0; townT = -1; RUN.clear(); SLOW.clear(); FLED.clear(); SEED.clear(); XS.clear(); URGE.clear(); CALL.clear(); PUSH.clear(); });
   const MINE = {};
   function runStart(a, name) {
-    const r = { o: name, p: 0, q: 0, t0: G.S.clock, gx: a.x, gy: a.y, fx: 0, fy: 0, wi: -1, id: 0, sc: 0, n: 0, k: 0, b: 0, re: 0, gn: null };
+    const r = { o: name, p: 0, q: 0, t0: G.S.clock, gx: a.x, gy: a.y, fx: 0, fy: 0, wi: -1, id: 0, sc: 0, n: 0, k: 0, b: 0, re: 0, gn: null, fast: 0 };
     RUN.set(a.id, r); a.state = name; a.t = 99; a.moving = false; a.path = null; a.target = 0;
     return r;
   }
@@ -284,6 +286,74 @@
   Mi.fireGuard = fireGuard;
   const person = o => o.kind === undefined;
 
+  // ------------------------------ the town: a place the wild avoids by day (D-305) ------------------------------
+  // the ground of a town, by cells of two tiles: the settlement whose radius (and two tiles of fields and outskirts) covers it —
+  // made again in the world's step on every tenth second of the clock and when the towns change (a town is founded, falls); a
+  // question from outside the step reads the grid as it is (L-760's rule: the checker must not make the world's grid)
+  const TC = 2; let tw = 0, TOWN = null, townT = -1, townN = -1; const TOWNS = [], FIRES = [];
+  function townGrid() {
+    const S = G.S; const c = Math.ceil(N / TC); const ep = Math.floor(S.clock / 10);
+    if (TOWN && tw === c && townN === S.settlements.size && ep === townT) return;
+    tw = c; if (!TOWN || TOWN.length !== c * c) TOWN = new Uint16Array(c * c); else TOWN.fill(0); townT = ep; townN = S.settlements.size; TOWNS.length = 0; FIRES.length = 0;
+    for (const st of S.settlements.values()) {
+      const R = (st.radius || 8) + 2; TOWNS.push(st); const k = TOWNS.length; if (k > 65000) break;
+      const x0 = Math.max(0, ((st.cx - R) / TC) | 0), x1 = Math.min(c - 1, ((st.cx + R) / TC) | 0), y0 = Math.max(0, ((st.cy - R) / TC) | 0), y1 = Math.min(c - 1, ((st.cy + R) / TC) | 0);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (G.dist(x * TC + 1, y * TC + 1, st.cx, st.cy) < R && !TOWN[y * c + x]) TOWN[y * c + x] = k;
+    }
+    // (and the built ground past the ring: the farm out in the fields, the house at the far end of the road)
+    const K = new Map(TOWNS.map((st, i) => [st.id, i + 1]));
+    for (const b of S.buildings.values()) {
+      const k = K.get(b.set); if (!k || b.type === 'ruin' || b.type === 'cemetery') continue; if (b.type === 'campfire' && b.built) FIRES.push(b.x + 0.5, b.y + 0.5);
+      for (let y = Math.max(0, (b.y / TC) | 0); y <= Math.min(c - 1, ((b.y + (b.h || 1) - 1) / TC) | 0); y++) for (let x = Math.max(0, (b.x / TC) | 0); x <= Math.min(c - 1, ((b.x + (b.w || 1) - 1) / TC) | 0); x++) if (!TOWN[y * c + x]) TOWN[y * c + x] = k;
+    }
+  }
+  // the night's fire of a town near a point (four tiles): the beasts that the day keeps out keep off it by night
+  function fireNear(x, y) { for (let k = 0; k < FIRES.length; k += 2) if (Math.abs(FIRES[k] - x) < 4 && Math.abs(FIRES[k + 1] - y) < 4) return k; return -1; }
+  const roadAt = (x, y) => W.inb(x, y) && !!G.S.road[W.idx(x, y)];
+  // a place off the road, a few tiles from it (the side chosen by the beast's own number, no chance)
+  function offRoad(a, x, y) {
+    const k0 = Math.floor(G.hash(a.id * 13 + 5) * 8);
+    for (let d = 2; d <= 5; d++) for (let k = 0; k < 8; k++) { const an = (k0 + k) * Math.PI / 4; const px = x + Math.cos(an) * d, py = y + Math.sin(an) * d; if (W.inb(px, py) && !roadAt(px, py) && !townAt(px, py) && A.walkOK(a, px, py)) return [px, py]; }
+    return null;
+  }
+  const townAt = (x, y) => { if (!TOWN || x < 0 || y < 0 || x >= N || y >= N) return null; const k = TOWN[((y / TC) | 0) * tw + ((x / TC) | 0)]; return k ? TOWNS[k - 1] : null; };
+  Mi.townAt = townAt;
+  // a dangerous beast the town keeps out now — by day, and not one the town cannot keep out: the one that guards its own (angry);
+  // the hunt on a person (the man-eater, D-276) or on the herd of a pen (the raid); the starving, wounded or old hunter after
+  // whatever it found (a cold-blooded hunter is not driven by hunger into the houses). Idle, even those walk out.
+  const HUNT = { chase: 1, stalk: 1, flank: 1, lunge: 1, pounce: 1, strike: 1 };
+  const desperate = (a, sp) => A.predator(a.kind) && !REPTILE.has(a.kind) && (a.hunger > 0.85 || a.hp < a.maxHp * 0.4 || a.age > sp.life * a.lifeMul * 0.88);
+  function shunned(a, sp) {
+    if (Mi.off.town || !DANGER.has(a.kind) || !ENV.day || ENV.t > 0.7 || a.angry > 0) return false;
+    if (HUNT[a.state] && a.target && !a.carc && (a.onPerson || (G.S.animals.get(a.target) || {}).dom || desperate(a, sp))) return false;
+    return true;
+  }
+  Mi.shunned = a => { const sp = SP[a.kind]; return !!sp && wild(a, sp) && shunned(a, sp); };
+  // the way out: away from the town's heart, on ground it stands on, a few tiles past the edge
+  function wayOut(a, st) {
+    const a0 = Math.atan2(a.y - st.cy, a.x - st.cx);
+    for (const R of [(st.radius || 8) + 5, (st.radius || 8) + 10]) for (let k = 0; k < 16; k++) {
+      const an = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.39; const x = st.cx + Math.cos(an) * R, y = st.cy + Math.sin(an) * R;
+      if (W.inb(x, y) && A.walkOK(a, x, y) && !townAt(x, y) && W.canWalk(a.x, a.y, x, y, true)) return [x, y];
+    }
+    return null;
+  }
+  // out of the town: not among the houses, the nearest way to the open (and the home range with it, when the town grew over it)
+  function leaveStep(a, dt, sp, S) {
+    const r = RUN.get(a.id); if (!r || r.o !== 'sair') { a.state = 'idle'; return true; } r.q += dt;
+    if (r.q > 45 || !townAt(a.x, a.y)) { if (G.dist(a.hx, a.hy, a.x, a.y) > 3 && townAt(a.hx, a.hy)) { a.hx = r.gx; a.hy = r.gy; } return quit(a, null, 1); }
+    // (on its way out it minds the hunters that eat it, not the people it is already walking away from)
+    r.sc -= dt; if (r.sc <= 0) { r.sc = 0.5; const th = A.fearOf(a); if (th && th.kind) { quit(a, null, 0); a.scan = 0; return false; } }
+    const w = walk(a, r, dt, r.fast ? sp.run * 0.85 : sp.sp * 1.25, 2.5); if (w === null) return true;
+    if (w) { const st = townAt(a.x, a.y); const g = st && wayOut(a, st); if (!g || ++r.re > 3) return quit(a); r.gx = g[0]; r.gy = g[1]; }
+    return true;
+  }
+  function leaveTown(a, sp, st, fast) {
+    const g = wayOut(a, st); if (!g) return false;
+    const r = runStart(a, 'sair'); r.gx = g[0]; r.gy = g[1]; r.fast = fast ? 1 : 0; if (!fast) gest(a, Ge.can(a.kind, 'alert') ? 'alert' : 'stare', undefined, 0, 0, true); count(fast ? 'boltedOut' : 'leftTown');
+    return true;
+  }
+
   // ------------------------------ the senses (A.senseHooks, D-301) ------------------------------
   // how far a beast notices another (or a person): pure — it reads and never writes, never draws a chance (the guard, rule 103)
   function sense(a, o) {
@@ -346,6 +416,20 @@
     else if (!r && m.g) { const gn = Ge.ids[m.g - 1]; if (a.gest !== gn) m.g = 0; else if (Ge.DEF[gn].d === 0 && !MINE[a.state]) { A.gestEnd(a, gn); m.g = 0; } }
     if (m.al > 0) m.al = Math.max(0, Math.round(m.al - dt));
     const st = a.state;
+    // ---- the town by day (D-305): the shunned one inside walks out; its wander into a town is turned back; a chase of a wild
+    // prey into the houses is given up
+    if (DANGER.has(a.kind) && st !== 'sair' && shunned(a, sp)) {
+      const tin = townAt(a.x, a.y);
+      if (tin && (st === 'idle' || st === 'wander' || st === 'graze' || st === 'lurk' || (MINE[st] && st !== 'beber'))) { if (leaveTown(a, sp, tin)) return true; }
+      // (startled among the houses, it bolts for the open, not deeper in away from whoever startled it)
+      else if (tin && st === 'flee') { if (leaveTown(a, sp, tin, true)) return true; }
+      else if (!tin && st === 'wander') { const to = townAt(a.tx, a.ty); const g = to ? wayOut({ x: a.tx, y: a.ty, kind: a.kind }, to) : roadAt(a.tx, a.ty) ? offRoad(a, a.tx, a.ty) : null; if (g) { a.tx = g[0]; a.ty = g[1]; a.path = null; count('turnedBack'); } }
+      else if ((st === 'chase' || st === 'stalk' || st === 'flank' || st === 'lunge') && a.target) { const p = S.animals.get(a.target); if (p && (a.carc || !p.dom) && townAt(p.x, p.y)) { a.state = 'idle'; a.target = 0; a.crouch = 0; a.rest = Math.max(a.rest || 0, 8); a.t = 1; count('chaseOff'); } }
+    }
+    // ---- the fire of a town at night: the wander that would end beside it turns away (D-305)
+    else if (DANGER.has(a.kind) && ENV.night && st === 'wander' && !Mi.off.town && FIRES.length && !(a.hunger > 0.85)) {
+      const k = fireNear(a.tx, a.ty); if (k >= 0) { const dx = a.tx - FIRES[k], dy = a.ty - FIRES[k + 1], d = Math.hypot(dx, dy) || 1; const x = FIRES[k] + dx / d * 7, y = FIRES[k + 1] + dy / d * 7; if (W.inb(x, y) && A.walkOK(a, x, y)) { a.tx = x; a.ty = y; a.path = null; count('fireKept'); } }
+    }
     // ---- a flight just begun: to the refuge the ground gives, and the call that warns the others
     if (st === 'flee' && !Mi.off.flee) { const f = FLED.get(a.id); if (f === undefined || S.clock - f > 3) { FLED.set(a.id, S.clock); fled(a, sp); } }
     else if (st === 'idle' && FLED.has(a.id)) { FLED.delete(a.id); const rf = REFUGE.get(a.id); if (rf) { REFUGE.delete(a.id); refugeArrived(a, sp, rf); } }
@@ -559,7 +643,11 @@
   function opt(name, def, kinds) {
     MINE[name] = 1; const code = ++optN;
     const who0 = def.who; def.who = (a, sp) => !Mi.off.options && (!kinds || kinds.has(a.kind)) && !a.shelter && wild(a, sp) && land(sp) && (!who0 || who0(a, sp)) && !(FAIL.get(a.id * 64 + code) > G.S.clock - 15); // (on its way to a cave's roof, it is the cave's: caves.js)
-    const start0 = def.start; def.start = (a, sp, S) => { if (start0(a, sp, S) === false) { FAIL.set(a.id * 64 + code, G.S.clock); return false; } return true; };
+    const start0 = def.start; def.start = (a, sp, S) => {
+      if (start0(a, sp, S) === false) { FAIL.set(a.id * 64 + code, G.S.clock); return false; }
+      // (the town keeps the shunned out by day: no goal of theirs among the houses — but the last water of a drought, D-305)
+      const r = RUN.get(a.id); if (r && DANGER.has(a.kind) && !(name === 'beber' && ENV.dry) && shunned(a, sp) && (townAt(r.gx, r.gy) || (def.rest && roadAt(r.gx, r.gy)))) { endRun(a, r); a.state = 'idle'; a.t = 1; FAIL.set(a.id * 64 + code, G.S.clock); return false; }
+      return true; };
     // (a rest — the shade, the burrow, the huddle, the look-out — gives way to hunger: from where the old ways go to graze (0,25)
     // it weighs less and less, and at 0,45 it is gone; one resting that grows hungry gets up at 0,5. The time to graze is the
     // life of the herd: the births wait on a belly below 0,45 — rests that held the grazers above it emptied the land, L-1019)
@@ -1039,7 +1127,7 @@
   G.worldHooks.push(() => { tick2 = 0; tickF = 0; VU = []; WO = []; PR = []; for (const k in C) delete C[k]; cw = 0; PF = null; dF = null; fS = null; });
   function tick(dt) {
     const S = G.S; if (!S || !S.animals) return; env(); fields(); cells();
-    townFear();
+    townFear(); townGrid();
     tick2 -= dt; if (tick2 <= 0) { tick2 = 2; scan2(); crossingsTick(); }
     tickF -= dt; if (tickF <= 0) { tickF = 10; farms(); }
     if (G.mod('meio.day') !== S.day) { G.mod('meio.day', S.day); daily(); }
@@ -1135,6 +1223,7 @@
   A.speedHooks.push(speed);
   A.lifeHooks.push(lifeHook);
   A.behave('travessia', crossStep, { busy: true }); MINE.travessia = 1;
+  A.behave('sair', leaveStep, { busy: true }); MINE.sair = 1;
   { const up0 = A.updateAll; A.updateAll = function (dt) { G.tryRun ? G.tryRun('Meio', tick, dt) : tick(dt); return up0.call(this, dt); }; }
   // what people taught: a beast wounded or killed by a person (the kill and the wound of the hunt, wrapped)
   { const kill0 = A.kill; A.kill = function (a, by, cause) { const was = !a.dead; const r = was && RUN.get(a.id); const out = kill0.apply(this, arguments);
@@ -1146,7 +1235,7 @@
   const SCARED = new Map(); G.worldHooks.push(() => SCARED.clear());
   Mi.scared = function (a, x, y) { if (!a || a.dead || SCARED.get(a.id) > G.S.clock - 5) return; SCARED.set(a.id, G.S.clock); taught(a.x, a.y, 0.08); count('dogs'); gest(a, Ge.can(a.kind, 'startle') ? 'startle' : Ge.can(a.kind, 'threat') ? 'threat' : 'alert'); };
   // what the inspector says of this module's states
-  Mi.TXT = { beber: 'Bebendo água', aguada: 'De tocaia na beira d’água', sombra: 'Descansando na sombra', lama: 'Chafurdando na lama', poeira: 'Tomando banho de terra', banho: 'Refrescando-se na água', rio: 'Na água, longe do sol', sol: 'Tomando sol', abrigo: 'Abrigando-se', aconchego: 'Encolhido junto dos outros', enrolar: 'Enrolado contra o frio', toca: 'Na toca', esconder: 'Escondido no capim', vigia: 'De vigia', ramos: 'Comendo folhas no alto', fruta: 'Comendo frutos', lavoura: 'Comendo a plantação', restos: 'Revirando os restos da cidade', curioso: 'Olhando, curioso', abutres: 'Seguindo os abutres', travessia: 'Atravessando o rio' };
+  Mi.TXT = { beber: 'Bebendo água', aguada: 'De tocaia na beira d’água', sombra: 'Descansando na sombra', lama: 'Chafurdando na lama', poeira: 'Tomando banho de terra', banho: 'Refrescando-se na água', rio: 'Na água, longe do sol', sol: 'Tomando sol', abrigo: 'Abrigando-se', aconchego: 'Encolhido junto dos outros', enrolar: 'Enrolado contra o frio', toca: 'Na toca', esconder: 'Escondido no capim', vigia: 'De vigia', ramos: 'Comendo folhas no alto', fruta: 'Comendo frutos', lavoura: 'Comendo a plantação', restos: 'Revirando os restos da cidade', curioso: 'Olhando, curioso', abutres: 'Seguindo os abutres', travessia: 'Atravessando o rio', sair: 'Saindo da cidade' };
   Mi.stateText = a => Mi.TXT[a.state] || null;
-  Mi.MINE = MINE;
+  Mi.MINE = MINE; Mi.DANGER = DANGER;
 })(window.G);
