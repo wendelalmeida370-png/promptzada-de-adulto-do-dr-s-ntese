@@ -1515,6 +1515,11 @@
     ctx.beginPath(); ctx.ellipse(p[0], p[1], r * 22.63, r * 11.31, 0, 0, TAU);
   }
   R.groundEllipse = groundEllipse;
+  // (the puddles' places, kept until the land changes: the same few points of each tile every rain — G.Agua.puddle)
+  let pzC = null, pzKey = '';
+  function puddleAt(k, px, py) { const S = G.S; const key = (S.typeVer || 0) + ':' + (S.walkVer || 0) + ':' + N; if (key !== pzKey || !pzC || pzC.length !== N * N * 2) { pzKey = key; pzC = new Float32Array(N * N * 2).fill(-1); }
+    if (pzC[k] < 0) pzC[k] = G.Agua.puddle(px, py); return pzC[k]; }
+  G.worldHooks.push(() => { pzC = null; pzKey = ''; stepsKey = ''; stepsIn = []; });
   function drawGround(t, view, nightF) {
     const S = G.S;
     // wet ground
@@ -1528,7 +1533,7 @@
       if (w > 0.08 && S.type[i] >= T.SAND) { ctx.fillStyle = `rgba(30,40,55,${Math.min(0.2, w * 0.2)})`; diamond(x, y, x + 1, y + 1); ctx.fill(); }
       // (21c: the puddles — where the ground holds the rain, G.Agua.puddle: the same places every rain — bright with the sky)
       if (w > 0.35 && G.Agua && S.type[i] >= T.SAND && !S.occ[i]) for (let k = 0; k < 2; k++) {
-        const px = x + 0.25 + 0.5 * G.hash(i * 5 + k), py = y + 0.25 + 0.5 * G.hash(i * 9 + k); const pz = G.Agua.puddle(px, py); if (pz < 0.2) continue;
+        const px = x + 0.25 + 0.5 * G.hash(i * 5 + k), py = y + 0.25 + 0.5 * G.hash(i * 9 + k); const pz = puddleAt(i * 2 + k, px, py); if (pz < 0.2) continue;
         const p = proj(px, py, W.hAt(px, py)); const r = (2.5 + pz * 4) * Math.min(1, (w - 0.3) * 2.5);
         ctx.fillStyle = `rgba(190,214,232,${0.32 + pz * 0.2})`; ctx.beginPath(); ctx.ellipse(p[0], p[1], r, r * 0.5, 0, 0, TAU); ctx.fill();
         const rain = G.Agua.rainNow(px, py); if (rain > 0.15) { const ph = (t * 1.6 + G.hash(i * 3 + k)) % 1; ctx.strokeStyle = `rgba(240,248,255,${(1 - ph) * 0.5})`; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.ellipse(p[0], p[1], r * ph, r * ph * 0.5, 0, 0, TAU); ctx.stroke(); }

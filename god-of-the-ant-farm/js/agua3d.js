@@ -340,9 +340,10 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         float lace = 0.6, laceF = 0.6;
         #else
         float lace = smoothstep(0.38, 0.6, texture2D(uDet, vWW.xz / 1.7 + vec2(uTime * 0.018, -uTime * 0.013) + run * 0.6).b * 0.65 + texture2D(uDet, vWW.xz / 0.9 - uTime * 0.025).r * 0.35);
-        // (the river's own lace, carried down it in the same two phases as its ripples)
-        vec2 la = vWW.xz - adv * ph0, lb = vWW.xz - adv * fract(ph0 + 0.5) + vec2(1.9, 0.7);
-        float laceF = smoothstep(0.36, 0.62, mix(texture2D(uDet, la / 1.5).b * 0.65 + texture2D(uDet, la / 0.8).r * 0.35, texture2D(uDet, lb / 1.5).b * 0.65 + texture2D(uDet, lb / 0.8).r * 0.35, bw));
+        // (the river's own lace, carried down it in the same two phases as its ripples — read only where a fall or a bank gives foam)
+        float laceF = 0.0;
+        if (fw.a + sht.a > 0.004 && isSea < 0.5) { vec2 la = vWW.xz - adv * ph0, lb = vWW.xz - adv * fract(ph0 + 0.5) + vec2(1.9, 0.7);
+          laceF = smoothstep(0.36, 0.62, mix(texture2D(uDet, la / 1.5).b * 0.65 + texture2D(uDet, la / 0.8).r * 0.35, texture2D(uDet, lb / 1.5).b * 0.65 + texture2D(uDet, lb / 0.8).r * 0.35, bw)); }
         #endif
         float surf = (isSea + (1.0 - isSea) * shore * 0.45) * (1.0 - still) * step(-0.5, vShore) * smoothstep(0.012, 0.05, bSl);
         float edge = (1.0 - smoothstep(0.02, 0.11, wD + (fn - 0.5) * 0.06 + run * 0.5)) * smoothstep(0.0, 0.02, wD);
