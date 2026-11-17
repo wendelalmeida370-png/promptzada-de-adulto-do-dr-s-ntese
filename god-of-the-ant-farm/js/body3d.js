@@ -61,9 +61,26 @@ attribute vec4 aBone; attribute vec4 aWt; attribute float aRow; attribute float 
 vec3 b3U; // (the point's own up as its bones carry it — a skirt's panel lifted with the thighs: what hangs from it)
 void b3skin(in vec3 p, in vec3 n, out vec3 P, out vec3 N) {
   int row = int(aRow + 0.5); vec4 r0 = vec4(0.0), r1 = vec4(0.0), r2 = vec4(0.0);
-  for (int i = 0; i < 4; i++) { float w = aWt[i]; if (w > 0.0) { int b = int(aBone[i] + 0.5) * 3;
-    r0 += w * texelFetch(uBody, ivec2(b, row), 0); r1 += w * texelFetch(uBody, ivec2(b + 1, row), 0); r2 += w * texelFetch(uBody, ivec2(b + 2, row), 0); } }
+  // (under a cuirass the trunk goes with the chest, as the cuirass does: the hips' and the spine's share of a point from the
+  // cuirass' lower edge up taken by the chest, eased in over the hand's breadth below it — texel 40.w, the edge's height in
+  // the body as modelled; 0 with none. The body bends at the hips under it, never through it: D-351)
+  float cuE = texelFetch(uBody, ivec2(PB + 40, row), 0).w; float cuK = cuE > 0.0 ? smoothstep(cuE - 0.13, cuE - 0.03, p.y) : 0.0;
+  vec4 c0 = vec4(0.0), c1 = vec4(0.0), c2 = vec4(0.0); if (cuK > 0.0) { c0 = texelFetch(uBody, ivec2(B3_CHEST * 3, row), 0); c1 = texelFetch(uBody, ivec2(B3_CHEST * 3 + 1, row), 0); c2 = texelFetch(uBody, ivec2(B3_CHEST * 3 + 2, row), 0); }
+  for (int i = 0; i < 4; i++) { float w = aWt[i]; if (w > 0.0) { int bi = int(aBone[i] + 0.5); int b = bi * 3;
+    vec4 m0 = texelFetch(uBody, ivec2(b, row), 0), m1 = texelFetch(uBody, ivec2(b + 1, row), 0), m2 = texelFetch(uBody, ivec2(b + 2, row), 0);
+    if (cuK > 0.0 && bi < B3_CHEST) { m0 = mix(m0, c0, cuK); m1 = mix(m1, c1, cuK); m2 = mix(m2, c2, cuK); }
+    r0 += w * m0; r1 += w * m1; r2 += w * m2; } }
   vec4 q = vec4(p, 1.0); P = vec3(dot(r0, q), dot(r1, q), dot(r2, q)); N = vec3(dot(r0.xyz, n), dot(r1.xyz, n), dot(r2.xyz, n)); b3U = vec3(r0.y, r1.y, r2.y);
+  // (and the thigh raised under it — sitting, crouching, the knee driven up — goes under its edge: a point of the leg or the
+  // hips that the bend brings above the edge, inside the cuirass' foot, is kept just under it, eased out beyond the foot: D-351)
+  int b0 = int(aBone[0] + 0.5);
+  if (cuE > 0.0 && ((b0 < B3_CHEST && cuK < 1.0) || b0 == B3_THL || b0 == B3_THR || b0 == B3_HPL || b0 == B3_HPR)) {
+    if (cuK <= 0.0 || b0 >= B3_CHEST) { c0 = texelFetch(uBody, ivec2(B3_CHEST * 3, row), 0); c1 = texelFetch(uBody, ivec2(B3_CHEST * 3 + 1, row), 0); c2 = texelFetch(uBody, ivec2(B3_CHEST * 3 + 2, row), 0); }
+    vec3 d = P - vec3(c0.w, c1.w, c2.w); vec3 cq = (c0.xyz * d.x + c1.xyz * d.y + c2.xyz * d.z) / max(dot(c0.xyz, c0.xyz), 1e-6);
+    float ez = cq.z > 0.0 ? 0.19 : 0.16; float e = length(vec2(cq.x / 0.225, cq.z / ez)); float top = cuE - 0.012;
+    float ky = 1.0 - smoothstep(1.0, 1.3, e);
+    if (ky > 0.0 && cq.y > top) { cq.y = mix(cq.y, min(cq.y, top), ky); vec4 c4 = vec4(cq, 1.0); P = vec3(dot(c0, c4), dot(c1, c4), dot(c2, c4)); }
+  }
 }
 `;
   // the cloth's own motion and its collisions (a cape, a skirt), after the skin, in the world: its free part (from under the
@@ -387,7 +404,7 @@ vec3 b3paint() {
 `;
   function shaders() {
     const hem = D.hem || { saiaC: 0.5, saiaL: 0.12, cape: 0.55 };
-    const pb = '#define PB ' + PB + '\n#define B3_SR ' + Math.sin(D.roll).toFixed(6) + '\n#define B3_CR ' + Math.cos(D.roll).toFixed(6) + '\n#define B3_HEMC ' + hem.saiaC.toFixed(4) + '\n#define B3_HEML ' + hem.saiaL.toFixed(4) + '\n#define B3_HEMK ' + hem.cape.toFixed(4) + '\n';
+    const pb = '#define PB ' + PB + '\n#define B3_CHEST ' + B3.CHEST + '\n#define B3_THL ' + D.bones.indexOf('thL') + '\n#define B3_THR ' + D.bones.indexOf('thR') + '\n#define B3_HPL ' + D.bones.indexOf('hpHL') + '\n#define B3_HPR ' + D.bones.indexOf('hpHR') + '\n#define B3_SR ' + Math.sin(D.roll).toFixed(6) + '\n#define B3_CR ' + Math.cos(D.roll).toFixed(6) + '\n#define B3_HEMC ' + hem.saiaC.toFixed(4) + '\n#define B3_HEML ' + hem.saiaL.toFixed(4) + '\n#define B3_HEMK ' + hem.cape.toFixed(4) + '\n';
     const TEX = !!(G.Ground3D && G.Ground3D.texGLSL && G.Ground3D.U3 && G.TEX3D && G.TEX3D.wool && G.TEX3D.linen && G.TEX3D.leather); // (the materials' stack, where the 3D has it)
     mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     mat.onBeforeCompile = sh => {
@@ -472,7 +489,7 @@ vec3 b3paint() {
     const f = L.face || {}, u = L.out || DEF;
     const set = (k, a, b, c, d) => { const j = p + k * 4; buf[j] = a; buf[j + 1] = b; buf[j + 2] = c; buf[j + 3] = d; };
     set(0, f.closed || 0, f.gx || 0, f.gy || 0, f.mouth || 0);
-    set(1, f.smile || 0, f.up || 0, f.angry || 0, (u.blush || 0) + (f.blush || 0)); set(40, f.sad || 0, f.wide || 0, f.squint || 0, 0);
+    set(1, f.smile || 0, f.up || 0, f.angry || 0, (u.blush || 0) + (f.blush || 0)); set(40, f.sad || 0, f.wide || 0, f.squint || 0, L.cuir || 0);
     set(2, u.sleeve, u.neck, u.bootTop, u.legs); set(3, u.beltY, u.beltH, u.overK, u.strap);
     col(p + 4 * 4, L.skin); lin(5, u.lin.cloth); lin(6, u.lin.trim); lin(7, u.lin.pants); lin(8, u.lin.boots); lin(9, u.lin.belt);
     col(p + 10 * 4, L.hair); lin(11, u.lin.iris); lin(12, u.lin.lips); lin(13, u.lin.over); lin(14, u.lin.metal);

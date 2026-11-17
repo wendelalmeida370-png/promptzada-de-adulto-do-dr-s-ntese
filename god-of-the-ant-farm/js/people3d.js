@@ -103,7 +103,10 @@
   // One instanced mesh a thing and a level, made the first time someone holds one.
   let toolMat = null; const IMESH = new Map(), IMN = new Map(); let fallback = null;
   function makeTools(baseMat) {
-    toolMat = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }); toolMat.onBeforeCompile = baseMat.onBeforeCompile; toolMat.customProgramCacheKey = () => 'people3d-tool';
+    // (the things' own light: the item art's material — the metal shining by its `shine`, as in the bag's pictures — over the
+    // people's rim; with no item art, the people's plain Lambert, L-1115)
+    if (G.ItemArt && G.ItemArt.material) toolMat = G.ItemArt.material(THREE, { onBeforeCompile: baseMat.onBeforeCompile, key: 'people3d' });
+    else { toolMat = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }); toolMat.onBeforeCompile = baseMat.onBeforeCompile; toolMat.customProgramCacheKey = () => 'people3d-tool'; }
     return true;
   }
   // (the fallback shapes, by kind and material: the wood, the stone, the bronze and the iron in the vertex colours)
@@ -154,7 +157,7 @@
       if (g.index) for (let i = 0; i < g.index.count; i++) idx[oi + i] = g.index.getX(i) + o; else for (let i = 0; i < P.count; i++) idx[oi + i] = o + i;
       oi += g.index ? g.index.count : P.count; o += P.count; g.dispose();
     }
-    const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.BufferAttribute(cl, 3)); out.setIndex(new THREE.BufferAttribute(idx, 1)); out.computeBoundingBox(); return out;
+    const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); out.setAttribute('color', new THREE.BufferAttribute(cl, 3)); out.setAttribute('shine', new THREE.BufferAttribute(new Float32Array(nv * 3), 3)); out.setIndex(new THREE.BufferAttribute(idx, 1)); out.computeBoundingBox(); return out;
   }
   P3.FALLBACK = ['lanca', 'machado', 'martelo', 'picareta', 'pa', 'enxada', 'cajado', 'vara', 'faca', 'espada', 'foice', 'clava', 'funda', 'remo', 'rede', 'tocha', 'arco', 'escudo', 'cesto', 'balde'];
   // the mesh of a thing at a level of detail: the item art's shape, else the fallback — made the first time it is held (null: no shape)
@@ -168,8 +171,33 @@
     IMESH.set(id, m); IMN.set(m, 0); return m;
   }
   function itemPut(key, lod, F) { const m = itemMesh(key, Math.max(0, Math.min(2, lod | 0))); if (!m) return false; const n = IMN.get(m); if (n >= MAX) return false; m.setMatrixAt(n, F); IMN.set(m, n + 1); return true; }
+  // (a cuirass' waist tabs — the leather's row of short tabs hanging below its foot: the part 'enfeite' of the item art that hangs
+  // under the solid edge — are the cuirass' own shape cut in pieces, one mesh a tab, sharing its numbers: each turns out about
+  // its top as the thigh under it is raised, as leather does, D-352. tabsOf(key, lod) → null, or { main, tabs: [{ m, a: anchor, t: axis, n: out }] })
+  const TABS = new Map();
+  function tabsOf(key, lod) {
+    const id = key + '|' + lod; if (TABS.has(id)) return TABS.get(id);
+    let out = null; const g = G.ItemArt && G.ItemArt.geo ? G.ItemArt.geo(key, lod) : null; const ud = g && g.userData, pt = ud && ud.parts ? ud.parts.find(p => p.name === 'enfeite') : null;
+    if (g && pt && itemKind(key) === 'couraca' && toolMat) {
+      const P = g.attributes.position.array, I = g.index.array; let lo = 9; for (let i = pt.start; i < pt.start + pt.count; i++) lo = Math.min(lo, P[I[i] * 3 + 1]);
+      const nt = lod === 0 ? 12 : 6, K = pt.count / nt;
+      if (lo < -0.07 && Number.isInteger(K) && K % 3 === 0) {
+        const share = (start, count) => { const q = new THREE.BufferGeometry(); for (const k in g.attributes) q.setAttribute(k, g.attributes[k]); q.setIndex(g.index); q.setDrawRange(start, count); q.boundingSphere = g.boundingSphere; q.boundingBox = g.boundingBox; return q; };
+        const mk = (q, tag) => { const m = new THREE.InstancedMesh(q, toolMat, MAX); m.count = 0; m.visible = false; m.castShadow = lod < 2; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.userData.item = key; m.userData.part = tag; scene.add(m); IMN.set(m, 0); return m; };
+        out = { main: mk(share(0, pt.start), 'corpo'), tabs: [] };
+        for (let j = 0; j < nt; j++) {
+          const s0 = pt.start + j * K; let hi = -9; for (let i = s0; i < s0 + K; i++) hi = Math.max(hi, P[I[i] * 3 + 1]);
+          const a = [0, 0, 0]; let n = 0; for (let i = s0; i < s0 + K; i++) { const v = I[i] * 3; if (P[v + 1] > hi - 0.006) { a[0] += P[v]; a[1] += P[v + 1]; a[2] += P[v + 2]; n++; } } a[0] /= n; a[1] /= n; a[2] /= n;
+          const an = Math.atan2(a[0], a[2]); out.tabs.push({ m: mk(share(s0, K), 'aba'), a, t: [Math.cos(an), 0, -Math.sin(an)], n: [Math.sin(an), 0, Math.cos(an)] });
+        }
+      }
+    }
+    TABS.set(id, out); return out;
+  }
+  P3.tabsOf = tabsOf; // (for the tests: the tabs' meshes and their tops)
   function toolsBegin() { for (const m of IMN.keys()) IMN.set(m, 0); }
   function toolsEnd() { for (const [m, n] of IMN) { m.count = n; m.visible = n > 0; m.instanceMatrix.needsUpdate = true; } }
+  P3.toolsReset = () => { toolsBegin(); toolsEnd(); }; // (for the tests: a body drawn alone, its things from the first instance)
   P3.tools = () => { const out = []; for (const [m, n] of IMN) if (n) out.push([m.userData.item, n, m.userData.fallback ? 'reserva' : 'arte']); return out; }; // (for the tests: who holds what this frame)
   P3.toolGeo = (k, lod) => { const m = itemMesh(k, lod || 0); return m ? m.geometry : null; }; // (for the tests: a thing's shape, read only)
   // how a thing is held when no gesture works it (its grip, from the catalog): a shaft upright by the side, a tool hanging from
@@ -489,7 +517,7 @@
     L.str = (ad < 12 ? 0.35 : ad < 16 ? 0.7 : ad >= 70 ? 0.6 : ad >= 55 ? 0.8 : 1) * (v.g === 'f' ? 0.85 : 1);
     // (the things on the body: what the inventory says — G.Inv.held, the one door (D-336): a person's own things, or their trade's
     // kit — asked again only when what it reads changes)
-    L.inv = invOf(v, L); L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping);
+    L.inv = invOf(v, L); L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping); L.cuir = cuirOf(L.inv.corpo);
     if (L.held) { if (BUSY_HANDS.has(v.act) || v.sleeping) L.held = setDown(L.held); if (L.held.hands.includes('L')) { L.torch = false; L.lantern = false; } }
     L.reach = null; L.pair = null; L.bind = false;
     // (how drunk the world has them — the tavern's rounds, the wine of the wells —: the body weaves, Anim.stagger)
@@ -514,6 +542,15 @@
     return G.Inv.heldFor ? G.Inv.heldFor(v, L._inv || (L._inv = {})) : G.Inv.held(v);
   }
   P3.drunkOf = v => (G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0);
+  // (a cuirass worn: the height of its lower edge in the body as modelled — what the skin's shader takes from the hips to the
+  // chest, D-351; 0 for none. The edge of a cuirass's solid part: its waist flaps, which hang free, kept out of it)
+  const CUIR = new Map();
+  function cuirOf(key) {
+    if (!key) return 0; let e = CUIR.get(key); if (e !== undefined) return e;
+    const k = itemKind(key), inf = k === 'couraca' && G.ItemArt && G.ItemArt.info ? G.ItemArt.info(key) : null, bind = G.BODYMESH && G.BODYMESH.bind && G.BODYMESH.bind.chest;
+    e = inf && bind ? bind[1] + Math.max(inf.lo[1], -0.06) : 0; CUIR.set(key, e); return e;
+  }
+  P3.cuirOf = cuirOf;
 
   // (the faces of the feelings: smile (−1 frown .. 1), brows up, anger, grief, eyes wide, eyes smiling, the jaw open, blush)
   const MOOD = {
@@ -563,7 +600,8 @@
     const wealth = v.captive ? 0 : ruler ? 3 : !home ? (v.home ? 1 : 0) : home.type === 'barraco' ? 0 : home.type === 'hut' ? 1 + ((home.coin || 0) > 25 ? 1 : 0) : 2 + ((home.coin || 0) > 40 || home.type === 'sobrado' ? 1 : 0);
     // (what the world says besides: the standing, the people's arts, the house's furs and jewels, the cold — one code)
     const D = P3.dressOf(v);
-    const sig = `${v.role}|${Math.floor(v.age)}|${civ}|${v.captive ? 1 : 0}|${ruler ? 1 : 0}|${wealth}|${v.robe || ''}|${v.unmask ? 1 : 0}|${v.g}|${L.cloth}|${L.hair}|${D.code}`;
+    const inv = L.inv || NO_INV, worn = `${inv.cabeca || ''}/${L.cuir ? inv.corpo : ''}`; // (what the inventory puts on the head and the trunk)
+    const sig = `${v.role}|${Math.floor(v.age)}|${civ}|${v.captive ? 1 : 0}|${ruler ? 1 : 0}|${wealth}|${v.robe || ''}|${v.unmask ? 1 : 0}|${v.g}|${L.cloth}|${L.hair}|${worn}|${D.code}`;
     let o = OUT.get(id); if (o && o.sig === sig) return o;
     o = { sig, t: now };
     const hh = k => G.hash(id * 13 + k * 7919); // (this person's own coin flips, always the same)
@@ -704,6 +742,11 @@
     }
     // (a cloak's collar of fur: the north's own — white on a ruler's —, and anyone's whose house has furs; else of its cloth)
     o.fur = o.cloakM === 'capa' && !v.robe && (civ === 'nordico' || D.fur) ? (ruler ? 2 : 1) : 0;
+    // (what is worn over the clothes, from the inventory (G.Inv.held, D-346): a helmet takes the hat's place and the hair under
+    // it — every hair of the body would show through a helmet that fits the head, D-350; a cuirass goes over the tunic, and
+    // the blouse, the toga and the cloak, whose yokes hug the trunk, are not worn over it)
+    if (inv.cabeca) { o.hatM = null; o.hairM = null; }
+    if (L.cuir) { o.topM = null; if (o.cloakM) { o.cloakM = null; o.fur = 0; } }
     // (nobody naked: the hips always under a skirt, a kilt or trousers — and no cloth the colour of its wearer's skin: a linen
     // as pale as the skin is dyed a little darker, until it reads as cloth; Body3D.bare is the verifier's own rule)
     if (!o.skirt && !(o.legs >= 1)) o.skirt = 'saiaC';
@@ -1329,7 +1372,7 @@
   const BUSY_HANDS = new Set(['chop', 'mine', 'build', 'fight', 'fish', 'mend', 'hammer', 'forge', 'dig', 'beat', 'cut', 'butcher', 'skin', 'craft', 'shear', 'stab', 'brandish', 'rake', 'reel', 'pick', 'gather', 'plant', 'harvest', 'milk', 'salt', 'sweep', 'feed', 'fill', 'weave', 'pottery', 'throw', 'climb', 'swim', 'dive', 'pray', 'kneel', 'dance', 'hug', 'embrace', 'sit', 'sleep', 'eat', 'drink']);
   P3.setDown = setDown; P3.BUSY_HANDS = BUSY_HANDS;
   P3.rig = function (X, Y, Z, yaw, pose, L) {
-    mats(); if (!RF) { RF = BONES.map(() => new THREE.Matrix4()); M.th = new THREE.Matrix4(); IKL.m = new THREE.Matrix4(); Q.a = new THREE.Quaternion(); Q.b = new THREE.Quaternion(); M.k = M.k || new THREE.Matrix4(); M.c2 = new THREE.Matrix4(); M.t = [new THREE.Vector3(), new THREE.Vector3()]; M.ci = new THREE.Matrix4(); V3.a = new THREE.Vector3(); V3.b = new THREE.Vector3(); Q.c = new THREE.Quaternion(); Q.d = new THREE.Quaternion(); M.eu2 = new THREE.Euler(); }
+    mats(); if (!RF) { RF = BONES.map(() => new THREE.Matrix4()); M.th = new THREE.Matrix4(); IKL.m = new THREE.Matrix4(); Q.a = new THREE.Quaternion(); Q.b = new THREE.Quaternion(); M.k = M.k || new THREE.Matrix4(); M.c2 = new THREE.Matrix4(); M.t = [new THREE.Vector3(), new THREE.Vector3()]; M.ci = new THREE.Matrix4(); V3.a = new THREE.Vector3(); V3.b = new THREE.Vector3(); Q.c = new THREE.Quaternion(); Q.d = new THREE.Quaternion(); M.eu2 = new THREE.Euler(); M.ic = new THREE.Matrix4(); M.tb = new THREE.Matrix4(); M.tb2 = new THREE.Matrix4(); }
     const R = RF; const s = L.s; const lie = pose.lie || 0;
     const root = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); root.multiply(M.b);
     if (lie > 0.01) { const pr = pose.prone ? 1 : -1; M.b.makeTranslation(0, 0.16 * s * lie, 0); root.multiply(M.b); M.b.makeRotationX(pr * lie * Math.PI / 2); root.multiply(M.b); M.b.makeTranslation(0, -0.92 * s * lie, 0); root.multiply(M.b); }
@@ -1446,7 +1489,7 @@
   P3.offGrip = offGrip;
   const OFFT = [0, 0, 0], POLE_TWO = [0.7, -0.8, -0.25];
   // (the frames of this rig's things — reused, the drawing reads them right after the rig: RX.mao, outra, costas, cinto, and the keys)
-  const RX = { mao: null, outra: null, costas: null, cinto: null, kR: null, kL: null, kB: null, kC: null, x: null, y: null, z: null };
+  const RX = { mao: null, outra: null, costas: null, cinto: null, cabeca: null, corpo: null, kR: null, kL: null, kB: null, kC: null, kH: null, kT: null, x: null, y: null, z: null, th: [[0, -1, 0], [0, -1, 0], 0.095, -0.095] };
   P3.RX = RX;
   // (a frame: the parent's (scaled), moved by p in it, turned to the basis whose Y is up the thing and Z its front)
   function frameOn(out, parent, px, py, pz, yx, yy, yz, zx, zy, zz) {
@@ -1458,23 +1501,34 @@
   // where the stowed thing hangs: on the back across it (a shaft from the hip to over the shoulder, a sword hilt up, a shield
   // flat), at the belt by the hip (a sword at the left, the tools at the right) — the item art's own place for it, where it has one
   const BLADE = new Set(['espada', 'faca']);
+  // (the item art's place (G.ItemArt.stow: the bone, the grip's point `at` for a body of 1.75 m, the thing's Y and Z in the
+  // bone's frame) — the bone's frame carries the body's size, a child's and an elder's alike; L-1116)
+  function stowOn(out, R, st) { const a = st.at; return frameOn(out, R[st.bone === 'pel' ? B.pel : B.chest], a[0], a[1], a[2], st.y[0], st.y[1], st.y[2], st.z[0], st.z[1], st.z[2]); }
   function backFrame(out, R, key) {
     const st = G.ItemArt && G.ItemArt.stow ? G.ItemArt.stow(key, 'costas') : null; const k = itemKind(key);
-    if (st && st.p && st.y && st.z) return frameOn(out, R[B.chest], st.p[0], st.p[1], st.p[2], st.y[0], st.y[1], st.y[2], st.z[0], st.z[1], st.z[2]);
+    if (st && st.at && st.y && st.z) return stowOn(out, R, st);
     if (k === 'escudo') return frameOn(out, R[B.chest], 0, 0.27, -0.17, 0, 1, 0, 0, 0, -1);
     if (BLADE.has(k)) return frameOn(out, R[B.chest], -0.02, 0.36, -0.15, 0.38, -0.92, 0, 0, 0, -1); // (the hilt over the right shoulder, the blade down to the left)
     return frameOn(out, R[B.chest], 0, 0.28, -0.15, -0.42, 0.9, 0, 0, 0, -1); // (the business end over the right shoulder)
   }
   function beltFrame(out, R, key) {
     const st = G.ItemArt && G.ItemArt.stow ? G.ItemArt.stow(key, 'cinto') : null; const k = itemKind(key);
-    if (st && st.p && st.y && st.z) return frameOn(out, R[B.pel], st.p[0], st.p[1], st.p[2], st.y[0], st.y[1], st.y[2], st.z[0], st.z[1], st.z[2]);
+    if (st && st.at && st.y && st.z) return stowOn(out, R, st);
     const sd = k === 'espada' ? 1 : -1; // (a sword at the left hip, for the right hand to draw; the tools at the right)
     return frameOn(out, R[B.pel], sd * 0.175, 0.01, 0.03, 0, -0.94, -0.33, 0, -0.33, 0.94);
   }
   function itemFrames(R, L, pose, yaw, s, kR, gR, kL, gL, free) {
-    if (!RX.mao) { RX.mao = new THREE.Matrix4(); RX.outra = new THREE.Matrix4(); RX.costas = new THREE.Matrix4(); RX.cinto = new THREE.Matrix4(); RX.x = new THREE.Vector3(); RX.y = new THREE.Vector3(); RX.z = new THREE.Vector3(); }
-    RX.kR = RX.kL = RX.kB = RX.kC = null; if (L.bind) return;
+    if (!RX.mao) { RX.mao = new THREE.Matrix4(); RX.outra = new THREE.Matrix4(); RX.costas = new THREE.Matrix4(); RX.cinto = new THREE.Matrix4(); RX.cabeca = new THREE.Matrix4(); RX.corpo = new THREE.Matrix4(); RX.x = new THREE.Vector3(); RX.y = new THREE.Vector3(); RX.z = new THREE.Vector3(); }
+    RX.kR = RX.kL = RX.kB = RX.kC = RX.kH = RX.kT = null; if (L.bind) return;
     const inv = L.inv || NO_INV;
+    // (what is worn: the helmet on the head bone, the cuirass on the chest's — each made in its bone's frame for a body of
+    // 1.75 m (D-387): the bone's frame, with the body's size and a child's bigger head in it, is the thing's, D-349)
+    if (inv.cabeca) { RX.kH = inv.cabeca; RX.cabeca.copy(R[B.head]); }
+    if (inv.corpo) { RX.kT = inv.corpo; RX.corpo.copy(R[B.chest]);
+      // (the thighs, for the tabs: each one's direction from the hip to the knee and the hip's side, in the cuirass' frame)
+      M.ic.copy(R[B.chest]).invert();
+      for (let k = 0; k < 2; k++) { V3.a.setFromMatrixPosition(R[B.thL + k]).applyMatrix4(M.ic); V3.b.setFromMatrixPosition(R[B.snL + k]).applyMatrix4(M.ic); V3.b.sub(V3.a).normalize();
+        RX.th[k][0] = V3.b.x; RX.th[k][1] = V3.b.y; RX.th[k][2] = V3.b.z; RX.th[k + 2] = V3.a.x; } }
     if (kR) {
       RX.kR = kR;
       if (gR === 'alca' || gR === 'tocha') { V3.a.set(0.027, -0.076, 0).applyMatrix4(R[B.hdR]); uprightAt(RX.mao, V3.a, yaw, s, gR === 'tocha' ? -0.02 : 0); }
@@ -1490,10 +1544,67 @@
     let kB = inv.costas, kC = inv.cinto;
     if (inv.mao && !kR && free && !pose.tool && G.Itens) { if (!kB && G.Itens.fits(inv.mao, 'costas')) kB = inv.mao; else if (!kC && G.Itens.fits(inv.mao, 'cinto')) kC = inv.mao; }
     if (kB && !(pose.lie > 0.4)) { RX.kB = kB; backFrame(RX.costas, R, kB); }
-    if (kC) { RX.kC = kC; beltFrame(RX.cinto, R, kC); }
+    if (kC) { RX.kC = kC; beltFrame(RX.cinto, R, kC); if ((L.lod | 0) < 2) keepOffThighs(RX.cinto, R, kC, s, L.fem); }
+  }
+  // (a thing at the belt kept off the thighs: the thigh that swings into it — a stride, a run, a crouch — turns it about where
+  // it hangs, as far as the thigh asks, L-1117. The thighs as the body's are (their skin's radius down from the hip, the
+  // bind mesh's, a woman's a little wider), the thing as its own points are)
+  const THIGH_R = [[-0.05, 0.115], [0.07, 0.106], [0.15, 0.097], [0.3, 0.092], [0.4, 0.078], [0.44, 0.07]];
+  const thighR = t => { const T = THIGH_R; if (t <= T[0][0]) return T[0][1]; for (let i = 1; i < T.length; i++) if (t <= T[i][0]) { const a = T[i - 1], b = T[i]; return a[1] + (b[1] - a[1]) * (t - a[0]) / (b[0] - a[0]); } return T[T.length - 1][1]; };
+  const BELT_P = new Map();
+  function beltPts(key) {
+    let p = BELT_P.get(key); if (p !== undefined) return p;
+    const b = G.ItemArt && G.ItemArt.raw ? G.ItemArt.raw(key, 0) : null; const src = b ? b.pos : (() => { const g = P3.toolGeo(key, 0); return g ? g.attributes.position.array : null; })();
+    p = null; if (src) { const n = src.length / 3, step = Math.max(1, Math.ceil(n / 96)); p = []; for (let i = 0; i < n; i += step) p.push(src[i * 3], src[i * 3 + 1], src[i * 3 + 2]); p = new Float32Array(p);
+      // (where it hangs from the belt: the head of what hangs by its head through the belt — the axe, the hammer, the sickle, the
+      // club, as the item art stows them —, else its grip)
+      const S = G.ItemArt && G.ItemArt.stow ? G.ItemArt.stow(key, 'cinto') : null, c = b && b.marks && b.marks.centro;
+      p.hang = S && S.y && S.y[1] > 0 && c ? c[1] : 0; }
+    BELT_P.set(key, p); return p;
+  }
+  function keepOffThighs(F, R, key, s, fem) {
+    const pts = beltPts(key); if (!pts) return; const e = F.elements;
+    for (let it = 0; it < 4; it++) {
+      let worst = 0, px = 0, py = 0, pz = 0, nx = 0, ny = 0, nz = 0;
+      for (let k = 0; k < 2; k++) {
+        const h = R[B.thL + k].elements, q = R[B.snL + k].elements; let ux = q[12] - h[12], uy = q[13] - h[13], uz = q[14] - h[14]; const Lk = Math.hypot(ux, uy, uz) || 1; ux /= Lk; uy /= Lk; uz /= Lk;
+        for (let i = 0; i < pts.length; i += 3) { const x = pts[i], y = pts[i + 1], z = pts[i + 2];
+          const X = e[0] * x + e[4] * y + e[8] * z + e[12], Y = e[1] * x + e[5] * y + e[9] * z + e[13], Z = e[2] * x + e[6] * y + e[10] * z + e[14];
+          const dx = X - h[12], dy = Y - h[13], dz = Z - h[14]; const t = Math.max(0, Math.min(Lk, dx * ux + dy * uy + dz * uz));
+          const vx = dx - ux * t, vy = dy - uy * t, vz = dz - uz * t; const d = Math.hypot(vx, vy, vz) || 1e-6; const pen = s * (thighR(t / s) + (fem ? 0.005 : 0) + 0.012) - d;
+          if (pen > worst) { worst = pen; px = X; py = Y; pz = Z; nx = vx / d; ny = vy / d; nz = vz / d; } }
+      }
+      if (worst <= 0) return;
+      // (turned about its hanging point: the deepest point pushed out along the thigh's outward normal)
+      const hy = pts.hang, ox = e[4] * hy + e[12], oy = e[5] * hy + e[13], oz = e[6] * hy + e[14]; const ax = px - ox, ay = py - oy, az = pz - oz; const al = Math.hypot(ax, ay, az) || 1;
+      V3.a.set(ay * nz - az * ny, az * nx - ax * nz, ax * ny - ay * nx); const sl = V3.a.length(); if (sl < 1e-6) return; V3.a.multiplyScalar(1 / sl);
+      Q.a.setFromAxisAngle(V3.a, Math.min(0.6, worst / al * 1.15)); F.premultiply(M.tb.makeRotationFromQuaternion(Q.a));
+      e[12] = ox - (e[4] * hy); e[13] = oy - (e[5] * hy); e[14] = oz - (e[6] * hy); // (the turn moved it about the world's origin: its hanging point put back)
+    }
   }
   // the things drawn this frame, by the body's level of detail
-  function itemsPut(L) { const lod = L.lod | 0; if (RX.kR) itemPut(RX.kR, lod, RX.mao); if (RX.kL) itemPut(RX.kL, lod, RX.outra); if (RX.kB) itemPut(RX.kB, lod, RX.costas); if (RX.kC) itemPut(RX.kC, lod, RX.cinto); }
+  function itemsPut(L) { const lod = L.lod | 0; if (RX.kR) itemPut(RX.kR, lod, RX.mao); if (RX.kL) itemPut(RX.kL, lod, RX.outra); if (RX.kB) itemPut(RX.kB, lod, RX.costas); if (RX.kC) itemPut(RX.kC, lod, RX.cinto);
+    if (RX.kH) itemPut(RX.kH, lod, RX.cabeca); if (RX.kT) cuirPut(RX.kT, Math.max(0, Math.min(2, lod)), RX.corpo); }
+  // (the cuirass: whole, or its body and each of its tabs turned as the thighs push it — the lifts the rig left in RX.lift)
+  function cuirPut(key, lod, F) {
+    const T = tabsOf(key, lod); if (!T) { itemPut(key, lod, F); return; }
+    const put = (m, X) => { const n = IMN.get(m); if (n < MAX) { m.setMatrixAt(n, X); IMN.set(m, n + 1); } };
+    put(T.main, F);
+    for (let j = 0; j < T.tabs.length; j++) { const tb = T.tabs[j], th = tabLift(tb); const a = tb.a;
+      // (about the tab's top, along the cuirass' foot: out and up — F · T(a) · R(t, −θ) · T(−a))
+      Q.a.setFromAxisAngle(RX.y.set(tb.t[0], tb.t[1], tb.t[2]), -th); M.tb.makeRotationFromQuaternion(Q.a);
+      const e = M.tb.elements; e[12] = a[0] - (e[0] * a[0] + e[4] * a[1] + e[8] * a[2]); e[13] = a[1] - (e[1] * a[0] + e[5] * a[1] + e[9] * a[2]); e[14] = a[2] - (e[2] * a[0] + e[6] * a[1] + e[10] * a[2]);
+      put(tb.m, M.tb2.multiplyMatrices(F, M.tb)); }
+  }
+  // (how far a tab turns: as far as the thigh under it is raised from hanging — toward the tab's own side and heading — less a
+  // little give; the thighs' directions in the cuirass' frame, from the rig: RX.th)
+  function tabLift(tb) {
+    let th = 0;
+    for (let k = 0; k < 2; k++) { const u = RX.th[k]; const phi = Math.acos(Math.max(-1, Math.min(1, -u[1]))); if (phi < 0.2) continue;
+      const hl = Math.hypot(u[0], u[2]) || 1; const head = (u[0] * tb.n[0] + u[2] * tb.n[2]) / hl; const side = 1 - Math.abs(tb.a[0] - RX.th[k + 2]) / 0.3;
+      const w = Math.max(0, Math.min(1, head * 2.5 + 0.2)) * Math.max(0, Math.min(1, side * 1.8)); th = Math.max(th, w * Math.min(2.8, (phi - 0.18) * 1.4)); }
+    return th;
+  }
   // (for the tests: where the palms of the hands are, in the world, from the rig's last frame)
   P3.palms = R => [V3.a ? new THREE.Vector3(-0.027, -0.076, 0).applyMatrix4(R[B.hdL]) : null, V3.a ? new THREE.Vector3(0.027, -0.076, 0).applyMatrix4(R[B.hdR]) : null];
   P3.B = B;

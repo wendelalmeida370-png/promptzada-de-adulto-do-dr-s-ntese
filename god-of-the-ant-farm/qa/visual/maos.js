@@ -191,5 +191,22 @@ function measure(H, R) {
   ok('de noite, a caixa de duas mãos tira a tocha (o balde numa mão, não); a carga no ombro guarda a lança; trabalhando, a carga espera no chão ao lado', torch0 && !torch2 && torch1 && spear0 && !spear && Lw.held && Lw.held.grip === 'chao' && Math.abs(down) < 0.02,
     `tocha: sem carga ${torch0}, com a caixa ${torch2}, com o balde ${torch1} · lança: ${spear0} → ${spear} · cortando lenha: ${Lw.held ? Lw.held.grip : '-'} com o fundo a ${down === null ? '-' : down.toFixed(3)} m do chão`); }
 
+// ------------------------------ 20a: what is worn — the helmet, the cuirass — and the hair under the helmet ------------------------------
+// (the warrior's helmet is the inventory's kit, G.Inv.held(v).cabeca: drawn in its shape on the head, the hat and the hair of the
+// outfit giving way to it; a cuirass the outfit's yoked garments give way to — D-349, D-350. Then the worn and the stowed things
+// against the body that moves, in every pose, by the game's own rig and the skin bent on the CPU: qa/visual/vestir.js)
+if (!G.ItemArt) { run('js/itemforma.js'); run('js/itemarte.js'); } // (the things' shapes, as the game has them: the helmet has no shape of old)
+{ const w = person({ role: 'guerreiro', civ: 'grego' }), L = P3.look(w); const head = L.inv.cabeca, bad = [];
+  if (!head || G.Itens.parse(head)[0] !== 'elmo') bad.push(`o guerreiro sem elmo do kit (${head})`);
+  const out = L.out || {}; if (out.hatM || out.hairM) bad.push(`com o elmo, o chapéu «${out.hatM}» e o cabelo «${out.hairM}» desenhados`);
+  const bare = P3.look(person({ role: 'agricultor', civ: 'grego' })); if (bare.inv.cabeca || !bare.out || !bare.out.hairM) bad.push('sem elmo, sem cabelo');
+  const pose = A.POSE0(); L.ground = 0; L.plant = [{ on: 0 }, { on: 0 }]; P3.toolsReset(); G.Body3D.begin(); P3.body(0, 0, 0, 0, Math.PI / 2, pose, L, null); G.Body3D.end();
+  const drawn = P3.tools().map(x => x[0]); if (head && !drawn.includes(head)) bad.push(`o elmo ${head} não desenhado (${drawn.join(', ')})`);
+  ok('o elmo do kit desenhado na cabeça do guerreiro, sem o chapéu e o cabelo da roupa por baixo (sem elmo, o cabelo de sempre)', !bad.length, bad.length ? bad.join(' · ') : `${w.civ}: ${head} desenhado; a roupa sem chapéu e sem cabelo; o agricultor de cabelo «${bare.out.hairM}»`);}
+{ const r = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'vestir.js')], { encoding: 'utf8', timeout: 900000 });
+  const lines = String(r.stdout || '').split('\n').filter(l => /^(PASSOU|FALHOU) \| vestir /.test(l));
+  for (const l of lines) { const m = l.match(/^(PASSOU|FALHOU) \| vestir (.*?) \| (.*)$/); if (m) ok('vestir: ' + m[2], m[1] === 'PASSOU', m[3]); }
+  if (!lines.length || r.status !== 0 && !lines.some(l => l.startsWith('FALHOU'))) ok('vestir: a prova das coisas vestidas rodou', false, (r.stderr || r.error || '').toString().slice(0, 300)); }
+
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);

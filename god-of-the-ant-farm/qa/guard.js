@@ -1003,6 +1003,24 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 { const p3 = src['people3d.js'] || [], av = src['avatar.js'] || [];
   if (!p3.some(l => /function clipClock\(v, st\) \{[^\n]*Anim\.loopTime\(C, v\.actT/.test(l))) fails.push('o contato do clipe: o people3d.js não anda o clipe de uma pessoa no relógio do golpe dela (Anim.loopTime com v.actT, D-343)');
   if (!av.some(l => /A3\.warpTime\(C, k, /.test(l))) fails.push('o contato do clipe: o avatar.js não casa o contato do clipe do corpo com o do ato (Anim.warpTime, D-343)'); }
+// 118. "o que se veste é o que o inventário diz, no osso dele, com a luz das coisas" (D-349): o elmo e a couraça do G.Inv.held(v)
+// (cabeca, corpo) são desenhados no quadro do osso da cabeça e do peito — o quadro do osso traz a altura do corpo e a cabeça maior
+// da criança —, nunca por um chapéu da roupa por cima; e as coisas são pintadas pelo material da arte dos itens (G.ItemArt.material:
+// o brilho do metal), não por um material próprio do 3D
+{ const p3 = src['people3d.js'] || [];
+  if (!p3.some(l => /if \(inv\.cabeca\) \{ RX\.kH = inv\.cabeca; RX\.cabeca\.copy\(R\[B\.head\]\); \}/.test(l))) fails.push('o que se veste: o people3d.js não desenha o elmo do inventário no osso da cabeça (D-349)');
+  if (!p3.some(l => /if \(inv\.corpo\) \{ RX\.kT = inv\.corpo; RX\.corpo\.copy\(R\[B\.chest\]\);/.test(l))) fails.push('o que se veste: o people3d.js não desenha a couraça do inventário no osso do peito (D-349)');
+  if (!p3.some(l => /if \(inv\.cabeca\) \{ o\.hatM = null; o\.hairM = null; \}/.test(l))) fails.push('o que se veste: com o elmo do inventário, a roupa ainda põe o chapéu ou o cabelo por baixo (D-350)');
+  if (!p3.some(l => /toolMat = G\.ItemArt\.material\(THREE, /.test(l))) fails.push('o que se veste: as coisas não usam o material da arte dos itens (G.ItemArt.material: o brilho do metal, L-1115)'); }
+// 119. "o corpo debaixo da couraça vai com o peito — no shader e na cópia da CPU, iguais" (D-351): o tronco da couraça para cima vai
+// com o osso do peito (a faixa de baixo da borda, os números da elipse do pé da couraça), e a coxa que sobe fica debaixo da borda;
+// o qa/visual/corpo-rig.js copia o shader do js/body3d.js linha por linha — os dois têm os mesmos números, ou a prova mede outro corpo
+{ const b3 = (src['body3d.js'] || []).join('\n'); let cr = ''; try { cr = fs.readFileSync(path.join(dir, '..', 'qa', 'visual', 'corpo-rig.js'), 'utf8'); } catch (e) { }
+  const nums = (t, re) => { const m = t.match(re); return m ? m.slice(1).join(',') : null; };
+  const band = [nums(b3, /smoothstep\(cuE - ([\d.]+), cuE - ([\d.]+), p\.y\)/), nums(cr, /ss\(cuE - ([\d.]+), cuE - ([\d.]+), py\)/)];
+  const ell = [nums(b3, /float ez = cq\.z > 0\.0 \? ([\d.]+) : ([\d.]+); float e = length\(vec2\(cq\.x \/ ([\d.]+)/), nums(cr, /const ez = cq\[2\] > 0 \? ([\d.]+) : ([\d.]+); const e = Math\.hypot\(cq\[0\] \/ ([\d.]+)/)];
+  if (!band[0] || !ell[0]) fails.push('o corpo debaixo da couraça: o shader do body3d.js sem o tronco com o peito ou sem a coxa debaixo da borda (D-351)');
+  else if (band[0] !== band[1] || ell[0] !== ell[1]) fails.push(`o corpo debaixo da couraça: o corpo-rig.js não copia os números do shader (faixa ${band[0]} × ${band[1]}, elipse ${ell[0]} × ${ell[1]}; D-351)`); }
 // === 20b: o movimento ===
 // 120. "o rumo do corpo gira, não estala" (D-358): no avatar.js o rumo do corpo (b.yaw) só muda pelo giro (steer, a velocidade de giro
 // do corpo), pela virada do ato e do nado (suaves), pelo assento que se alisa — e salta só onde o corpo inteiro salta (deitado na cama
