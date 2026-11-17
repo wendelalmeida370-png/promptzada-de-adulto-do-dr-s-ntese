@@ -151,6 +151,14 @@
   DEF.rasteiro = () => { const b = mk(); lump(b, 0, 0.16, 0, 0.42, 0.16, 0.38, 0.2, 230); lump(b, 0.32, 0.12, 0.18, 0.28, 0.12, 0.26, 0.2, 241); lump(b, -0.28, 0.1, -0.12, 0.26, 0.11, 0.3, 0.2, 252);
     for (let q = 0; q < 5; q++) { const a = q * 1.3; lump(b, Math.cos(a) * 0.32, 0.27, Math.sin(a) * 0.3, 0.035, 0.035, 0.035, 0.2, 260 + q, 1); } return b; };
 
+  // 19 a termite mound of the savanna: a lumpy red-earth tower with buttresses and a chimney or two
+  DEF.cupim = () => { const b = mk(); const n = 9; let prev = null;
+    for (let s = 0; s <= 5; s++) { const u = s / 5, y = u * 2.2, r = 0.75 * (1 - u * 0.78) + 0.06; const ring = [];
+      for (let k = 0; k < n; k++) { const a = k / n * TAU; const rr = r * (0.82 + h(s * 13 + k + 270) * 0.36) * (1 + 0.25 * Math.cos(a * 3 + s)); ring.push(v(b, Math.cos(a) * rr, y, Math.sin(a) * rr, Math.cos(a), 0.35, Math.sin(a), 0, 0.3 + u * 0.4, 0)); }
+      if (prev) for (let k = 0; k < n; k++) quad(b, prev[k], ring[k], ring[(k + 1) % n], prev[(k + 1) % n]); prev = ring; }
+    const top = v(b, 0.05, 2.45, 0.02, 0, 1, 0, 0, 0.75, 0); for (let k = 0; k < n; k++) tri(b, prev[k], top, prev[(k + 1) % n]);
+    tube(b, 0.35, 0.4, 0.2, 0.42, 1.45, 0.26, 0.16, 0.06, 5, 0, 0, 0.35, 0.6, true); return b; };
+
   // ------------------------------ the catalogue ------------------------------
   // each shape: its name, the layer it lives in (r: the floor's — rasteira —, a: the shrubs' — arbustiva —, s: a hard stem), its
   // base colour (the dark of its base and the light of its tip are made from it), its accent and how much it gives to the wind
@@ -174,6 +182,7 @@
     { id: 'espinho', make: DEF.espinho, layer: 'a', col: [104, 96, 70], acc: null, sway: 0.2, bark: [96, 80, 62] },
     { id: 'tufo', make: DEF.tufo, layer: 'r', col: [150, 140, 92], acc: null, sway: 0.6 },
     { id: 'rasteiro', make: DEF.rasteiro, layer: 'r', col: [64, 92, 52], acc: [[150, 30, 50], [70, 60, 140], [170, 40, 40]], sway: 0.2 },
+    { id: 'cupim', make: DEF.cupim, layer: 'a', col: [168, 104, 70], acc: null, sway: 0 },
   ];
   PF.BY = {}; PF.KINDS.forEach((k, n) => { k.n = n; PF.BY[k.id] = k; });
   // the shape of a kind, made once: plain typed arrays (P, N: xyz; K, C, A: one a point; I: the triangles), its bounds and its count

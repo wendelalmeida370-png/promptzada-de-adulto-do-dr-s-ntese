@@ -57,7 +57,7 @@
     /* taiga */ { r: [['rasteiro', 3, ''], ['feto', 1, 'sombra'], ['tufo', 1, 'luz'], ['tronco', 0.15, 'sombra']], a: [['arbusto', 1, ''], ['espinho', 0.4, 'luz']], rd: 0.55, ad: 0.3, young: 'abeto' },
     /* pântano */ { r: [['junco', 4, 'agua'], ['feto', 1.5, 'sombra'], ['aracea', 1.2, 'umido'], ['tronco', 0.12, '']], a: [['touceira', 1.5, 'umido'], ['arbusto', 1, '']], rd: 0.8, ad: 0.45, young: 'arvoreta' },
     /* selva */ { r: [['feto', 3.2, 'sombra'], ['aracea', 2.6, 'sombra'], ['heliconia', 2.2, 'luz'], ['plantula', 2.2, ''], ['bromelia', 0.9, 'sombra'], ['tronco', 0.18, 'sombra'], ['junco', 0.8, 'agua']], a: [['touceira', 3, 'umido'], ['arbusto', 2.4, ''], ['plantula', 2.2, 'sombra'], ['heliconia', 1.0, 'luz'], ['aracea', 0.8, 'sombra']], rd: 1, ad: 1, young: 'arvoreta' },
-    /* savana */ { r: [['tufo', 4, ''], ['rasteiro', 0.4, '']], a: [['espinho', 3, ''], ['arbusto', 0.5, 'umido']], rd: 0.5, ad: 0.25, young: 'arvoreta' },
+    /* savana */ { r: [['tufo', 4, ''], ['rasteiro', 0.4, '']], a: [['espinho', 3, ''], ['arbusto', 0.5, 'umido'], ['cupim', 0.5, 'luz']], rd: 0.5, ad: 0.25, young: 'arvoreta' },
     /* deserto */ { r: [['tufo', 3, '']], a: [['espinho', 2, '']], rd: 0.25, ad: 0.12, young: 'arvoreta' },
   ];
   // (the hard stem's drawing, by the kind G.Mata gives it: 0 tree fern, 1 young tree (the land's own), 2 slim palm, 3 bamboo, 4 embaúba)
@@ -66,9 +66,9 @@
   // embaúba's 0,12, a young tree's 0,07, a bamboo clump's culms within 0,2)
   const STEMS = { fetoArbo: 0.13, palmeira: 0.11, embauba: 0.12, arvoreta: 0.07, abeto: 0.06, bambu: 0.2 };
   // how wide each shape stands (m, at size 1): no plant inside a trunk, a stem or a boulder
-  const WIDE = { feto: 0.5, samambaia: 0.4, aracea: 0.45, heliconia: 0.4, plantula: 0.15, bromelia: 0.25, touceira: 0.9, arbusto: 0.75, espinho: 0.6, tufo: 0.3, rasteiro: 0.4, junco: 0.3, tronco: 0.4 };
+  const WIDE = { cupim: 0.8, feto: 0.5, samambaia: 0.4, aracea: 0.45, heliconia: 0.4, plantula: 0.15, bromelia: 0.25, touceira: 0.9, arbusto: 0.75, espinho: 0.6, tufo: 0.3, rasteiro: 0.4, junco: 0.3, tronco: 0.4 };
   // (the size of each, its spread: [least, most])
-  const SIZE = { feto: [0.7, 1.45], samambaia: [0.7, 1.3], aracea: [0.7, 1.6], heliconia: [0.75, 1.4], plantula: [0.6, 1.6], bromelia: [0.7, 1.3], touceira: [0.75, 1.3], arbusto: [0.7, 1.5], espinho: [0.7, 1.4], tufo: [0.6, 1.4], rasteiro: [0.7, 1.4], junco: [0.8, 1.3], tronco: [0.8, 1.25] };
+  const SIZE = { cupim: [0.6, 1.3], feto: [0.7, 1.45], samambaia: [0.7, 1.3], aracea: [0.7, 1.6], heliconia: [0.75, 1.4], plantula: [0.6, 1.6], bromelia: [0.7, 1.3], touceira: [0.75, 1.3], arbusto: [0.7, 1.5], espinho: [0.7, 1.4], tufo: [0.6, 1.4], rasteiro: [0.7, 1.4], junco: [0.8, 1.3], tronco: [0.8, 1.25] };
   // (the floor's plants grown into the shrubs' storey: the sapling of the shade to two or three metres, the big heliconia, the giant aroid)
   const SIZEA = { plantula: [3.2, 5.6], heliconia: [1.6, 2.4], aracea: [1.8, 2.8] };
   // (the land's tint over a kind's own green: the jungle's deep green, the taiga's cold dark, the savanna's straw, the desert's grey)

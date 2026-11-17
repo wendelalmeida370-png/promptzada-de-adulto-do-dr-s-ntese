@@ -583,6 +583,13 @@
       }
     }
     g.sph = null;
+    // (21a: in the swamp, the old man's beard hanging from the crowns of its broad trees — near the body, where the quality has the lianas)
+    if (fine && !burnt && R3.Q().cipo > 0 && (k[0] === 'willow' || k[0] === 'tall' || k[0] === 'round') && G.S.biome && G.S.biome[W.idx(Math.floor(t.x), Math.floor(t.y))] === 3) beardInto(gp, t, D, X, Y, Z);
+  }
+  // (the hanging moss of the swamp — the old man's beard —, grey-green strands under the crown of its trees, near the body: D-480)
+  function beardInto(gp, t, D, X, Y, Z) {
+    for (let q = 0; q < 14; q++) { const a = q * 2.39 + G.hash(t.id * 139 + q) * 0.7, d = D.r * (0.35 + G.hash(t.id * 149 + q) * 0.55); const lx = X + Math.cos(a) * d, lz = Z + Math.sin(a) * d, ly = Y + D.cy - D.r * D.fl * (0.3 + G.hash(t.id * 151 + q) * 0.3);
+      const L = 0.8 + G.hash(t.id * 157 + q) * 1.6; gp.blade(lx, ly, lz, 0.22, a + Math.PI / 2, lx + Math.cos(a) * 0.12, ly - L, lz + Math.sin(a) * 0.12, [132, 140, 112], [168, 172, 146], 0.8); }
   }
   // (a boulder's colour, the god's grey; the sandstone of the dry lands, the dark stone of the forests of the south)
   function rockBase(r, i) { if (r.meteor) return [74, 58, 52]; const b = G.Biome && G.Biome.of ? G.Biome.of(i) : 0; return b === 5 || b === 6 ? [178, 136, 102] : b === 4 ? [124, 122, 108] : [154, 149, 140]; }
