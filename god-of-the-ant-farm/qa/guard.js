@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -1125,7 +1125,100 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
   for (const k of kinds) if (!new RegExp(`\\bR\\.${k} = \\(`).test(fo)) fails.push(`a receita de cada coisa: o tipo ${k} do catálogo não tem receita no js/itemforma.js (R.${k}; D-388)`);
   const fm = (fo.match(/F\.MATS = \{([^}]*)\}/) || [])[1] || ''; for (const m of mats) if (!new RegExp(`\\b${m}:`).test(fm)) fails.push(`a receita de cada coisa: o material ${m} do catálogo não está no F.MATS do js/itemforma.js (D-388)`); }
 // === 20e: a interação ===
+// 138. "o destaque só desenha" (D-398): o js/mira3d.js (na lista LOOK) marca o que a tela mostra e não faz nada com ele — não pede
+// ao mundo (Possess.apply), não faz um verbo (Interact.run / runVerb), não dá um ato ao corpo (Avatar.act), não escreve um
+// lugar, uma pessoa, um bicho nem um prédio do mundo
+{ const mi = src['mira3d.js'] || []; if (!mi.length) fails.push('o destaque: js/mira3d.js não existe (D-398)');
+  mi.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bPossess\.apply\(|\bInteract\.(run|runVerb|give|fetch|stash|knocked)\(|\bAvatar\.(act|place|seatAt|cancelAct)\(|\bInv\.\w+\(|\bDepot\.(move|make|use|drop)\(/.test(c)) fails.push(`o destaque só desenha: mira3d.js:${k + 1} pede ao mundo ou ao corpo (D-398): ${l.trim().slice(0, 110)}`);
+    if (/\b(sel|t|o|a|v|b|tr|bu)\.(x|y|hp|task|held|inside|stage|berries|stone)\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o destaque só desenha: mira3d.js:${k + 1} escreve numa coisa do mundo (D-398): ${l.trim().slice(0, 110)}`); }); }
+// 139. "a tela dos guardados pede pelas mãos do corpo" (D-402, L-139): no js/guardados-ui.js, toda porta que muda o mundo — as do
+// inventário (pegar, guardar, largar, dar, fazer no armazém) e as da interação (Interact.fetch / stash / give) — é pedida dentro de um
+// G.Possess.apply( (na mesma linha ou numa das duas antes): o passo do mundo a faz, e a tela só conta a resposta
+{ const ui = src['guardados-ui.js'] || []; if (!ui.length) fails.push('a tela dos guardados: js/guardados-ui.js não existe (D-402)');
+  const DOOR = /\b(Inv\.(equip|unequip|stow|draw|toggle|quick|shortcut|give|take|put|drop|pick|make|unmake|realize|settle|repair)|Interact\.(fetch|stash|give|knocked))\(/;
+  ui.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (!DOOR.test(c)) return;
+    let inApply = false; for (let j = k; j >= Math.max(0, k - 2); j--) if (/\bPossess\.apply\(/.test(ui[j])) inApply = true;
+    if (!inApply) fails.push(`a tela dos guardados: guardados-ui.js:${k + 1} pede uma porta do mundo fora das mãos do corpo (G.Possess.apply; D-402): ${l.trim().slice(0, 110)}`); }); }
+// 140. "o alvo é do interact.js" (D-396): a tela (incui.js), o destaque (mira3d.js) e os guardados (guardados-ui.js) não procuram nem
+// julgam alvos por conta própria — nem os provedores (Interact.list, find, can, run de um provedor) —: perguntam ao I.scan / best /
+// candidates / offer e fazem pelo I.run / runVerb, onde as regras de precedência (L-326, L-467, L-625, L-754, L-778, L-815, L-892)
+// moram
+{ for (const f of ['incui.js', 'mira3d.js', 'guardados-ui.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bInteract\.list\b|\.p\.(find|run|label)\(|\bp\.find\(ctx/.test(c)) fails.push(`o alvo é do interact.js: ${f}:${k + 1} procura ou faz um alvo por um provedor, fora das portas do G.Interact (D-396): ${l.trim().slice(0, 110)}`); }); }
+// 141. "um verbo de outra parte entra pelo registro" (D-395): os verbos de um alvo são do provedor (verbs) ou do registro
+// G.Interact.verb(provedor, verbo) — nenhum arquivo fora do interact.js reescreve o verbs de um provedor nem o tira da lista
+{ for (const f of files) if (f !== 'interact.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/(?<!\baim)\.verbs\s*=(?!=)|\bInteract\.list\s*(=(?!=)|\.(push|splice|unshift|pop|shift|sort)\()/.test(c)) fails.push(`um verbo pelo registro: ${f}:${k + 1} reescreve os verbos de um provedor ou a lista deles (use G.Interact.verb / add; D-395): ${l.trim().slice(0, 110)}`); }); }
+// 142. "o E segurado é cronometrado num lugar só" (D-396): quanto tempo o E está segurado é da tela (incui.js: IU.HOLD_T, o anel);
+// ninguém mais lê a tecla segurada do E (Input3D.down.interagir) para fazer um verbo seu — um verbo de E segurado é um verbo
+// «segurar» do alvo
+{ for (const f of files) if (!['incui.js', 'input3d.js', 'modes.js'].includes(f)) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bdown\.interagir\b|\bdown\[\s*'interagir'\s*\]/.test(c)) fails.push(`o E segurado num lugar só: ${f}:${k + 1} lê o E segurado (um verbo de E segurado é um verbo 'segurar' do alvo; D-396): ${l.trim().slice(0, 110)}`); }); }
+// 143. "os gestos das mãos são clipes, e puros" (D-404): o js/interacao-clips.js só registra clipes (G.ANIM_CLIPS) — não lê o mundo
+// (G.S), não tira de acaso nenhum, não pede nada ao mundo
+{ const ic = src['interacao-clips.js'] || []; if (!ic.length) fails.push('os gestos das mãos: js/interacao-clips.js não existe (D-404)');
+  ic.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.S\b|\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bPossess\b|\bDepot\b|\bInv\b/.test(c)) fails.push(`os gestos das mãos são clipes: interacao-clips.js:${k + 1} lê o mundo, tira de um acaso ou pede ao mundo (D-404): ${l.trim().slice(0, 110)}`); }); }
+// 144. "a roda troca de alvo por uma ação" (D-397): no corpo, só o input3d.js escuta a roda do mouse (o evento 'wheel'); a troca de
+// alvo é a ação 'alvoProx' / 'alvoAnt' (que o jogador muda no menu) — sem um outro alvo, a roda volta a ser o zoom do olho
+{ const BODY = ['incui.js', 'mira3d.js', 'guardados-ui.js', 'modes.js', 'avatar.js', 'cam3d.js', 'interact.js', 'inv-ui.js', 'possess.js', 'realm3d.js', 'people3d.js'];
+  for (const f of BODY) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/addEventListener\(\s*'wheel'/.test(c)) fails.push(`a roda por uma ação: ${f}:${k + 1} escuta a roda do mouse fora do input3d.js (a troca de alvo é a ação alvoProx/alvoAnt; D-397): ${l.trim().slice(0, 110)}`); });
+  const iu = (src['incui.js'] || []).join('\n'); if (!/Input3D\.def\('alvoProx'/.test(iu) || !/Input3D\.def\('alvoAnt'/.test(iu)) fails.push('a roda por uma ação: o incui.js não traz as ações alvoProx e alvoAnt (D-397)'); }
 // === 20f: o combate ===
+// 145. "o golpe fere só pelas portas do mundo" (D-410, D-414): o combate tira vida de alguém só pelo G.Vg.damage (as pessoas) e pelo
+// G.Animals.damage (os bichos) — nunca a vida escrita à mão —; e o que só se vê e as mãos (combate-ui.js, combate3d.js,
+// combate-clips.js) não escrevem nada numa pessoa nem num bicho do mundo (a vida, o chão, o tranco, o lugar, a tarefa)
+{ const CB = ['combate.js', 'combate-ui.js', 'combate3d.js', 'combate-clips.js'];
+  for (const f of CB) if (!(src[f] || []).length) fails.push(`o golpe pelas portas: js/${f} não existe (D-410)`);
+  for (const f of CB) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\b(v|o|a|w|t|tg|vb|body)\.hp\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o golpe pelas portas: ${f}:${k + 1} escreve a vida de alguém à mão (G.Vg.damage, G.Animals.damage — D-414): ${l.trim().slice(0, 110)}`);
+    if (f !== 'combate.js' && /\b(v|o|a|w|t|vb|body|e)\.(downT|stagT|x|y|task|act|actT|fx|fy|hurt)\s*(=(?!=)|\+=|-=)/.test(c)) fails.push(`o golpe pelas portas: ${f}:${k + 1} escreve numa pessoa ou num bicho do mundo fora do passo (só o combate.js, no passo — D-410): ${l.trim().slice(0, 110)}`); }); }
+// 146. "o golpe muda o mundo só no passo" (D-410, L-139): no combate-ui.js, toda porta do G.Combate que muda o mundo (o golpe, a guarda,
+// o tiro, o desafio, o fim do duelo) é pedida pelas mãos do corpo — dentro de um G.Possess.apply( na mesma linha, ou no op de um
+// Avatar.act (que o pede no contato) —; e no combate.js cada uma dessas portas começa perguntando se está no passo (inStep)
+{ const ui = src['combate-ui.js'] || [], cb = (src['combate.js'] || []).join('\n');
+  ui.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bCb\.(strike|guard|shoot|challenge|wound|endDuel)\(/.test(c) && !/Possess\.apply\(/.test(c) && !/\bop: wv => Cb\./.test(c)) fails.push(`o golpe no passo: combate-ui.js:${k + 1} pede uma porta do combate fora das mãos do corpo (G.Possess.apply, o op do Avatar.act — D-410): ${l.trim().slice(0, 110)}`); });
+  for (const d of ['strike', 'guard', 'shoot', 'challenge']) { const i = cb.indexOf(`Cb.${d} = function`); if (i < 0 || !/if \(!inStep\(\)\) return NO;/.test(cb.slice(i, i + 240))) fails.push(`o golpe no passo: o combate.js sem a porta Cb.${d} que pergunta pelo passo (inStep — D-410)`); } }
+// 147. "o que só se vê do combate não sorteia nem decide" (D-421): o combate3d.js e o combate-clips.js não tiram do acaso do mundo (o
+// que piscar tira do G.VR), não pedem nada ao mundo (Possess.apply, setTask, o livro, as portas que mudam o G.Inv) e não leem as
+// teclas; o combate.js não desenha (THREE, a cena, as figuras)
+{ for (const f of ['combate3d.js', 'combate-clips.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\()|Math\.random|Possess\.apply\(|setTask\(|\bDepot\.|\bInv\.(equip|unequip|stow|draw|toggle|give|take|put|drop|pick|make|unmake)\(|Input3D\.(on|onUp|fire|press)\(/.test(c)) fails.push(`o que só se vê do combate: ${f}:${k + 1} sorteia do mundo, pede ao mundo ou lê as teclas (D-421): ${l.trim().slice(0, 110)}`); });
+  (src['combate.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bTHREE\b|\bG\.Realm\b|\bdocument\b|\bG\.People3D\b|\bG\.Render\b/.test(c)) fails.push(`o que só se vê do combate: combate.js:${k + 1} desenha (o mundo do combate não desenha — D-421): ${l.trim().slice(0, 110)}`); }); }
+// 148. "os gestos do combate pelo registro" (D-342, D-416): os clipes do combate nascem só pela fila G.ANIM_CLIPS (o combate-clips.js
+// não chama o Anim.clip nem escreve o CLIPS ou o CLIP_OF à mão); e todo gesto que um golpe do G.Combate.MOVES nomeia (clip: 'cb-…')
+// é um id que o combate-clips.js monta (cb-<jeito>-<n|p>, de um jeito que ele desenha)
+{ const cc = src['combate-clips.js'] || [], cb = (src['combate.js'] || []).join('\n');
+  cc.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bAnim3D\.clip\(|\bA\.clip\(|\bCLIPS\s*(\[|\.\w+\s*=)|\bCLIP_OF\s*(\[|\.\w+\s*=)/.test(c)) fails.push(`os gestos do combate: combate-clips.js:${k + 1} registra um clipe fora da fila G.ANIM_CLIPS (D-342): ${l.trim().slice(0, 110)}`); });
+  if (!cc.some(l => /G\.ANIM_CLIPS/.test(l))) fails.push('os gestos do combate: o combate-clips.js não registra pela fila G.ANIM_CLIPS (D-342)');
+  const drawn = new Set(); for (const l of cc) { const m = l.match(/for \(const cls of \[([^\]]+)\]\)/); if (m) for (const q of m[1].matchAll(/'(\w+)'/g)) drawn.add(q[1]); }
+  for (const m of cb.matchAll(/clip: 'cb-(\w+)-(\d|p)'/g)) if (!drawn.has(m[1])) fails.push(`os gestos do combate: o golpe cb-${m[1]}-${m[2]} do combate.js não é de um jeito que o combate-clips.js desenha (${[...drawn].join(', ')})`); }
+// 149. "o fôlego e o peso do golpe pelas portas do corpo" (D-417): o fôlego do corpo (b.stamina) só o avatar.js escreve — o combate
+// o gasta pelo G.Avatar.spend —, e o instante de peso de um golpe que acerta é o G.Avatar.hitstop; ninguém além do avatar.js escreve
+// o estado do controle (G.Avatar.state()) nem o seu fôlego
+{ for (const f of files) { if (f === 'avatar.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\b(Avatar\.state\(\)|\bb)\.(stamina|stopT|regenT)\s*(=(?!=)|\+=|-=)/.test(c) && ['combate.js', 'combate-ui.js', 'combate3d.js', 'combate-clips.js', 'modes.js', 'incui.js'].includes(f)) fails.push(`o fôlego pelas portas: ${f}:${k + 1} escreve o fôlego ou o tempo do corpo fora do avatar.js (G.Avatar.spend, hitstop — D-417): ${l.trim().slice(0, 110)}`); }); }
+  const av = (src['avatar.js'] || []).join('\n'); if (!/Av\.spend = function/.test(av) || !/Av\.hitstop = /.test(av)) fails.push('o fôlego pelas portas: o avatar.js sem as portas Av.spend e Av.hitstop (D-417)');
+  if (!(src['combate-ui.js'] || []).some(l => /\bAv\.spend\(/.test(l))) fails.push('o fôlego pelas portas: o golpe do combate-ui.js não gasta o fôlego pelo Avatar.spend (D-417)'); }
+// 150. "a flecha no ar é do livro, e quem luta com o corpo luta pelo corpo" (D-419, D-420): o lugar 'a:' do G.Depot (as flechas no
+// ar) só o combate.js registra, e cada movimento do livro ali diz a sua causa (code); e o war.js pergunta ao G.Combate.reach a que
+// distância se golpeia (o corpo pela pele e pela arma; os outros à distância de sempre — o mesmo mundo sem corpo)
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (f !== 'combate.js' && /\baddKind\(\s*'a'/.test(c)) fails.push(`a flecha do livro: ${f}:${k + 1} registra o lugar 'a:' fora do combate.js (D-419): ${l.trim().slice(0, 110)}`); });
+  const cb = src['combate.js'] || []; if (!cb.some(l => /G\.Depot\.addKind\('a'/.test(l))) fails.push("a flecha do livro: o combate.js não registra o lugar 'a:' (D-419)");
+  cb.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bDepot\.(move|make|use|drop)\(/.test(c) && !/\bcode\b/.test(c)) fails.push(`a flecha do livro: combate.js:${k + 1} move uma flecha sem dizer a causa (code — D-419): ${l.trim().slice(0, 110)}`); });
+  if (!(src['war.js'] || []).some(l => /const R = G\.Combate \? G\.Combate\.reach\(v, o, 0\.85\) : 0\.85;/.test(l))) fails.push('quem luta com o corpo: o fightStep do war.js não pergunta ao G.Combate.reach a que distância golpeia (D-420)');
+  // (and the guard of the body is asked before a blow reaches it — the possess.js's door of a hurt to the body: the dodge's window,
+  // the parry, the shield — D-415)
+  if (!(src['possess.js'] || []).some(l => /amt = G\.Combate\.shield\(v, amt, cause, by\); if \(!\(amt > 0\)\) return;/.test(l))) fails.push('a guarda do corpo: o Vg.damage do possess.js não pergunta ao G.Combate.shield antes de o golpe chegar ao corpo (D-415)'); }
+// 151. "todo ato do combate tem a sua linha de som" (D-166, D-422): o que o mundo vê o corpo fazendo num golpe, numa guarda, no arco
+// (o vact dos atos do combate-ui.js) e os atos que os clipes do combate mostram (acts) têm a sua linha na tabela A.ATO do
+// audio-src.js — um som, ou o silêncio dito
+{ const as = (src['audio-src.js'] || []).join('\n'); const t0 = as.indexOf('A.ATO = {'); const ato = t0 < 0 ? '' : as.slice(t0, as.indexOf('\n  };', t0));
+  const acts = new Set(); for (const f of ['combate-ui.js', 'combate-clips.js']) for (const l of src[f] || []) { for (const m of l.matchAll(/\bvact: '(\w+)'/g)) acts.add(m[1]); for (const m of l.matchAll(/\bacts: \[([^\]]*)\]/g)) for (const q of m[1].matchAll(/'(\w+)'/g)) acts.add(q[1]); }
+  if (!acts.size) fails.push('o som do combate: não achei os atos do combate (vact, acts) no combate-ui.js e no combate-clips.js (D-422)');
+  for (const a of acts) if (!new RegExp(`[\\s,{]${a}:`).test(ato)) fails.push(`o som do combate: o ato «${a}» do combate não tem linha na tabela A.ATO do audio-src.js (D-422)`); }
 // === 20g: os ofícios ===
 // 152. "o trabalho do corpo muda o mundo só pelas portas e no passo" (D-425): no js/trabalho.js, o que um trabalho muda no mundo
 // (o contador da árvore, a lenha do tronco, as frutas, a pedra da rocha, o veio da mina, a carne do bicho, o canteiro) é escrito só
@@ -1239,5 +1332,23 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
   if (!/E\.ORE_GOOD = \{ ferro: 'minerio', ouro: 'ouro', cobre: 'cobre', estanho: 'estanho' \}/.test(ec)) fails.push('a jazida do bronze: o E.ORE_GOOD não diz o bem de cada jazida (D-441)');
   if (!/E\.genBronze = function/.test(ec) || !/\n\s*E\.genBronze\(S\);\n/.test(ec) || !/E\.genBronze\(S\); else S\.oresV/.test(ec)) fails.push('a jazida do bronze: o E.genBronze não é chamado do genDeposits e do load (D-441)');
   if (!/id: 'cobre', name: 'cobre', col: '[^']+', good: 'cobre'/.test(cv) || !/id: 'estanho', name: 'estanho', col: '[^']+', good: 'estanho'/.test(cv)) fails.push('a jazida do bronze: o veio de cobre ou de estanho da caverna não dá o seu metal (D-441)'); }
+// === 21: a natureza (o contrato, NATUREZA.md) ===
+// 167. "as fontes da natureza são puras" (D-466): o G.Ceu, o G.Mata, o G.Agua e o G.Geo (js/ceu.js, mata.js, agua.js, geo.js) só leem o
+// mundo — não escrevem nele (nenhuma atribuição a G.S nem a um campo de uma pessoa, de um bicho ou de um prédio), não tiram de acaso
+// nenhum (nem o do mundo nem o do que só se vê: a mesma entrada, a mesma saída), não leem o relógio de parede nem o three.js. A
+// fase A não muda o mundo, e a B as lerá no passo do mundo
+{ for (const f of ['ceu.js', 'mata.js', 'agua.js', 'geo.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\.|performance\.now|\bTHREE\b/.test(c)) fails.push(`a fonte pura: ${f}:${k + 1} tira de um acaso, lê o relógio ou o three.js (D-466): ${l.trim().slice(0, 110)}`);
+    if (/\bG\.S\.\w+(\.\w+|\[[^\]]+\])*\s*(=(?!=)|\+=|-=|\+\+|--)|\bS\.(trees|villagers|animals|buildings|settlements|factions|type|H|wet|veg|relief)\b[^;=]*[^=!<>]=(?!=)/.test(c)) fails.push(`a fonte pura: ${f}:${k + 1} escreve no mundo (D-466): ${l.trim().slice(0, 110)}`); }); }
+// 168. "o 3D da natureza só desenha" (D-466): os arquivos do 3D dos pilares (arvore3d.js, mata3d.js, geo3d.js, agua3d.js, ceu3d.js) estão
+// na lista do que só se vê (LOOK) — o acaso do mundo, nunca; e não escrevem no mundo (o mesmo das fontes puras)
+{ for (const f of ['arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js']) { if (!(src[f] || []).length) continue;
+    if (!LOOK.includes(f)) fails.push(`o 3D da natureza: js/${f} não está na lista LOOK do guard (D-466)`);
+    src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+      if (/\bG\.S\.\w+(\.\w+|\[[^\]]+\])*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o 3D da natureza: ${f}:${k + 1} escreve no mundo (D-466): ${l.trim().slice(0, 110)}`); }); } }
+// === 21a: a vegetação ===
+// === 21b: o relevo ===
+// === 21c: a água ===
+// === 21d: o céu ===
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

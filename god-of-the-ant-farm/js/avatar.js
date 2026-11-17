@@ -868,6 +868,10 @@
   Av.wade = () => (b && b.loco !== 'swim' ? b.wade : 0);
   Av.climbing = () => !!(b && b.climb);
   Av.rest = () => { if (b && b.caps) b.stamina = b.caps.stamina; }; // (a drink of water: the breath comes back)
+  // (the fight's doors, 20f: the breath a blow, the guard or a parry takes — false, and nothing taken, with none left; n 0 only
+  // holds its coming back —; and the weight of a blow that lands, the body's own time all but stopped for s seconds)
+  Av.spend = function (n) { if (!b || !b.caps) return false; if (n > 0 && b.stamina < 1) return false; b.stamina = Math.max(0, b.stamina - Math.max(0, n || 0)); b.regenT = TUNE.regenDelay; return true; };
+  Av.hitstop = s => { if (b) b.stopT = Math.max(b.stopT || 0, G.clamp(s || 0, 0, 0.2)); };
   Av.cancelAct = () => { if (b && b.act) { cutAct(); b.loco = 'ground'; } };
   // (an act cut short: what it had asked of the world and the world has not yet done is let go — it never happens)
   function cutAct() { const a = b.act; if (a && a.asked && !a.asked.res) a.asked.cancel = true; b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; if (a && a.cut && !a.res) a.cut(); }
@@ -1066,6 +1070,7 @@
   }
   Av.frame = function (rdt) {
     const v = G.Possess.body(); if (!b || !v || v.id !== b.id) return;
+    if (b.stopT > 0) { const k = Math.min(rdt, b.stopT); b.stopT -= k; rdt -= k * 0.9; } // (a blow's weight: the body's own time all but stops a moment — Av.hitstop, 20f)
     b.acc = Math.min(0.25, b.acc + rdt);
     while (b && b.acc >= TUNE.step) { b.acc -= TUNE.step; step(v, TUNE.step); }
     if (!b) return; // (the step ended the body: the world took it)

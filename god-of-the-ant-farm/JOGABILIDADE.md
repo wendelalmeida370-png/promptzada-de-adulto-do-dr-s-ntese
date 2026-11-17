@@ -585,7 +585,78 @@ erro de registro; nada arremessado na troca), `node qa/visual/maos.js` (a coisa 
   navegador, que desligam o `requestAnimationFrame` e dirigem os quadros à mão, a veem). Quem abre outro painel por cima (o diário, a
   ficha) a fecha: a mochila só fica aberta com a marca dela.
 
-### 4.9g O trabalho das mãos — `G.Trabalho` (20g, `js/trabalho.js`; D-425 a D-435)
+### 4.9 O combate — `G.Combate` (20f, D-410 a D-424)
+**O mundo** (`js/combate.js`, carregado com os arquivos do mundo; as portas que mudam o mundo só no passo — `G.inSim`; de fora,
+`{ ok: false }` e contadas em `Cb.stats().outside`):
+- `G.Combate.weapon(v)` → `{ key, cls, dano, alcance, ritmo, mat, two, bow, shield, cabeca, corpo }` (do `G.Inv.held`, puro);
+  `classOf(chave)` → `'punho' | 'faca' | 'espada' | 'machado' | 'clava' | 'lanca' | 'duas'`; `MOVES[cls]` → `{ l: [golpes leves], p:
+  o pesado }`, cada golpe `{ dur, hit, arc, r, dmg, fol, zone, stag, down, push, drive, cut, combo, clip }` (segundos do corpo);
+  `move(cls, i)` (i −1: o pesado), `chain(cls)`, `reachOf(w, mv)` (metros), `dealt(v, w, mv, k)`, `armour(held, zona)`,
+  `guardOf(w)`, `capsule(o)`, `targets(v, rumo, alcance, arco)` (as pessoas pelas cápsulas, os bichos pelo `G.Corpo`, o mais perto
+  primeiro), `reach(v, o, d0)` (a que distância v golpeia o: o corpo pela arma e pela pele, os outros `d0`), `bodyTime()` (os
+  segundos do mundo de um segundo do corpo: `G.Possess.time()`), `HOLD`, `CHARGE`, `PARRY`, `SPAM`, `IFRAME`, `YIELD`, `SPEED`.
+- *Mudam o mundo, no passo*: `strike(v, { i, k, yaw })` → `{ ok, hits: [{ id, beast, amt, killed, blocked, down }], miss, cls }`;
+  `guard(v, on)`; `shoot(v, { from: [X, Y, Z], dir: [x, y, z], k })` → `{ ok, id, key }`; `challenge(v, o)` → `{ ok, why }`;
+  `wound(v, o, amt, mv, how)`; `endDuel(perdedor, como)`. *Perguntadas pelo mundo*: `shield(v, amt, causa, by)` (o `possess.js`, antes de
+  dar um golpe no corpo: o que passa), `step(v, dt)` (o `Possess.update`), `onRelease()` (o corpo devolvido).
+- *Só leem*: `events()` (o que o mundo respondeu: `golpe`, `acerto`, `aparo`, `bloqueio`, `esquiva`, `tiro`, `flecha`, `duelo`,
+  `recusa`, `fim` — `{ n, t, kind, … }`, só o momento), `guarding()`, `duel()`, `dueling(a, b)`, `wouldDuel(v, o)`, `flights()`,
+  `arrowOf(v)`, `arrows(v)`, `state()`, `stats()`.
+- O registro: `S.combate = { duel, fl (as flechas no ar), br (as brigas) }`, no save (as tarefas voltam no load); o lugar `'a:'` do
+  `G.Depot` (as flechas no ar, códigos `flecha`, `flecha-cravada`, `flecha-caiu`, `flecha-perdida`).
+
+**As mãos e a tela** (`js/combate-ui.js`, `G.CombateUI`): ouvem `atacar` (o leve; segurado, o pesado; com o arco, puxar e soltar),
+`defender` (a guarda; com o arco, a mira), `guardar` (`G.Inv.toggle`); registram os botões do toque `atacar` e `defender` (`hold`);
+põem o verbo «Desafiar» (F) no provedor `pessoa` do `G.Interact` (encadeado aos `verbs` dele); a tela `.cb-hud` pelo `G.IncUI.frames`.
+`G.CombateUI.state()` (para as provas), `aimPoint()`, `shot(k)`, `DRAW`, `FLICK`; `proof` (só das provas em Node: as mãos sem os modos).
+**O que se vê** (`js/combate3d.js`, `G.Combate3D`): `flash(e, kind)`, `arrows`, `trail` (para as provas). **Os gestos**
+(`js/combate-clips.js`): `cb-<jeito>-<1..3|p>`, `cb-<jeito>-carga`, `cb-guarda-*`, `cb-arco-*`, `cb-tranco`, e os das lutas do mundo
+`cb-mundo-<jeito>-<0..6>` / `cb-corpo-<jeito>-<0..6>` (a espera de 0,8 a 1,1 s do golpe do mundo); o `G.Anim3D.stateOf` embrulhado
+(`stateOf.combate`): o ato `fight` pelo gesto da arma, `v.stagT` o tranco, `v.downT` acordado a queda (`knocked`).
+
+**As portas mínimas noutros arquivos** (ditas no AUDIT): `G.Avatar.spend(n)` e `G.Avatar.hitstop(s)` (`avatar.js`, D-417);
+`G.Cam3D.flick()` (`cam3d.js`, D-424); `G.Possess.time()`, `G.Possess.hm()` e as chamadas ao `G.Combate` no `Vg.damage`, no
+`Possess.update` e no fim do corpo (`possess.js`); `G.Crime.assault(v, o, morto)` e as palavras da prisão por tipo (`crime.js`, D-418);
+o `G.Combate.reach` no `fightStep` (`war.js`, D-420); as linhas `golpe`, `guarda`, `mirar` no `G.Audio.ATO` (`audio-src.js`, D-422); o
+furto só no fantasma (`beyond.js`); o `qa/combate-inv.js` na lista do `qa/junta-inv.js`.
+
+### 4.10 A interação — `G.Interact`, `G.IncUI`, `G.Mira3D`, `G.GuardUI` (20e, D-395 a D-406)
+- **Os verbos de um alvo** (D-395): o E é o `label` / `can` / `run` do provedor; o F (`'outra'`) e o E segurado (`'segurar'`) são os
+  `verbs(ctx, t)` do provedor **mais os do registro** `G.Interact.verb(provedor, { id, k, label, can, run, ord })` (e
+  `unverb(provedor, id)`) — **é assim que uma parte põe um verbo num alvo que não é dela** (o «Desafiar» da 20f numa pessoa:
+  `G.Interact.verb('pessoa', { id: 'desafiar', k: 'outra', label: …, can, run })`; a regra 141 cobra que ninguém reescreva o
+  `verbs` de um provedor alheio). Numa tecla com vários: o primeiro possível agora (pela `ord`, 0 quando não dito; o «Dar» da
+  pessoa tem `ord: 5` e cede o F), senão o primeiro; os outros em `offer().more`. Um verbo de `label` vazio não é verbo agora.
+  `G.Interact.offer(b?)` → `{ id, t, p, verbs: [um por tecla, o E primeiro], more }`; `runVerb(k, b?, id?)`.
+- **O que um `run` devolve** (o E e os verbos): `{ ok, msg }` (dito num aviso), `card` (um cartão), `panel` (a tela dos guardados:
+  `{ kind: 'guardados', ref, b, it }` ou `{ kind: 'dar', id }`), `ask` (a resposta do mundo a esperar: o aviso só quando ele
+  respondeu), `knock`.
+- **O olhar e a troca** (D-397): `G.Interact.scan()` → `{ ctx, all: [{ p, t, sc }] }` (um olhar; `I.best(scan)` decide nele, com
+  todas as regras); `I.candidates(scan?)` → os alvos ao alcance, o do `I.best` entre eles (`first`), uma entrada por coisa, da
+  esquerda para a direita (`ang`, + à direita), cada um `{ id, t, p, label, ok, why, key, thing, ang, d }`; `I.keyOf(c)` (o nome do
+  alvo de um olhar a outro), `I.thingOf(c)`, `I.asChoice(c)` (o alvo como o `I.run` o recebe).
+- **A tela** (`incui.js`): `G.IncUI.best()` é o alvo que a tela mostra (firme: D-398); `IU.aim()` (para as provas: o alvo, a lista,
+  os verbos, onde a dica está), `IU.cands()` (a lista com os alvos do mundo), `IU.press()` / `IU.release()` (o E: na hora, ou o anel até `IU.HOLD_T` = 0,45 s), `IU.holding()`,
+  `IU.cycle(±1)`, `IU.pick(key)`, `IU.tapAt(x, y)`, `IU.padCycle(ação)` (a cruz ← → com vários alvos: o `modes.js` pergunta antes
+  dos atalhos), `IU.use(b?)`, `IU.useVerb(k, b?, id?)`. As ações novas: `alvoProx` (roda para baixo) e `alvoAnt` (roda para cima) —
+  sem outro alvo, o zoom. O botão E do toque é de segurar. A dica: `.ih-prompt` com `.ih-main` (o E: `kbd` + `span`), `.ih-alt` (F),
+  `.ih-hold` (E segurado, com o anel `.ih-ring`, `--hold` 0–1, `.holding`), `.ih-cyc` (a troca); `.at` quando presa ao alvo (D-400).
+- **O destaque** (`js/mira3d.js`, só se vê, D-398): `G.Mira3D.set({ key, id, t, ok } | null)` (a tela o chama a cada quadro);
+  `anchor()` → `{ key, X, Y, Z }` (o ponto ao lado do qual a dica fica); `pointOf(candidato)` (o meio dele, para o toque); `slots()`
+  (para as provas); `FADE_IN`, `FADE_OUT`, `COL`, `COL_NO`. Desenha no `scene.onBeforeRender` (encadeado).
+- **Pegar, guardar, dar** (no passo do mundo, pelas mãos do corpo): `I.fetch(w, lugar, chave, n)`, `I.stash(w, lugar, chave, n)`,
+  `I.give(w, o, chave, n)`, `I.canGive(me, o)`, `I.knocked(w, prédio, porta)`, `I.holderOf(prédio, móvel)` (de quem é o que um móvel
+  guarda), `I.thingTxt(k, n)`, `I.thingCard(k, n)`, `I.useRuleOf(uso)`. O que está no chão (o provedor `chao`) só se oferece diante do corpo
+  (até 1,2 rad; o que está debaixo dos pés só quando nada diante dele está: L-1242), abaixo das coisas do trabalho (L-1241). O `possess.js` ganhou `G.Possess.gave(o)` (o encontro e o feito da dádiva) e os
+  feitos `dadiva`, `apanhou`, `guardou`.
+- **A tela dos guardados** (`js/guardados-ui.js`, D-402): `G.GuardUI.open(spec)`, `close()`, `isOpen()`, `spec()`, `frame(rdt)` (a
+  tela do corpo o chama); a marca do painel `'guardados'`; o painel `#guard-panel`.
+- **Os usos dos móveis** (D-403): `I.useRule(uso, { label(ctx, pl), show(ctx, prédio, pl), can(ctx, pl), op(w, prédio, pl), st,
+  act(ctx, prédio, pl) })` — `st` é a pose do corpo ali (um clipe: só o desenho), `act` o que as mãos fazem depois de sentar.
+- **Os gestos** (`js/interacao-clips.js`, D-404): `apanhar`, `bater`, `abrir`, `dar`, `aquecer`, `ler` — pelo `G.ANIM_CLIPS`, tocados
+  como o `anim` do `Avatar.act`.
+
+### 4.11 O trabalho das mãos — `G.Trabalho` (20g, `js/trabalho.js`; D-425 a D-435)
 - **A tabela** `Tr.WORKS` (`cortar`, `quebrar`, `minerar`, `cavar`, `esfolar`, `ceifar`, `colher`, `pescar`, `vender`): `{ nome, tools:
   [[tipo, parte]…] (por preferência; a parte, o que o tipo faz contra a ferramenta do ofício — 1 a dele; para a pesca, o jeito:
   'rede' | 'linha' | 'arpao'), bare (o que a mão nua faz; 0: não se faz), sem (por que não), pior (o que se diz da ferramenta pior) }`;
