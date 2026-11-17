@@ -164,15 +164,16 @@ const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k
   if (want('t7')) {
     const r = await E(() => {
       const X = __X; X.reset(); X.arm([['espada.bronze', 'mao']]); const S = G.S; const me = X.body(); const F = G.Fac.idOfV(me);
-      const w = [...S.villagers.values()].filter(o => o.id !== me.id && o.age >= 20 && o.age < 50 && !o.captive && !o.jail && !o.aboard && !(o.sick > 0) && G.Fac.idOfV(o) === F && !G.Possess.kin(me, o) && !G.Vg.handsBusy(o)).sort((p, q) => (q.role === 'guerreiro') - (p.role === 'guerreiro') || p.id - q.id)[0];
+      const w = [...S.villagers.values()].filter(o => o.id !== me.id && o.age >= 20 && o.age < 50 && !o.captive && !o.jail && !o.aboard && !(o.sick > 0) && G.Fac.idOfV(o) === F && !G.Possess.kin(me, o) && !G.Vg.handsBusy(o) && !(o.traits || []).includes('Covarde')).sort((p, q) => (q.role === 'guerreiro') - (p.role === 'guerreiro') || p.id - q.id)[0];
       if (!w) return { none: 1 }; w.courage = 0.98; X.stand(w, 1.6, 0); X.f(8);
       const offer = G.Interact.offer(); const fv = offer && offer.verbs.find(x => x.k === 'outra');
-      X.key('f', true); X.key('f', false); X.f(12); const d = G.Combate.duel(); X.f(30);
-      const line = document.querySelector('.cb-duel'); return { target: offer ? offer.id : '', fv: fv ? fv.label : '', duel: !!d, line: line && !line.classList.contains('hidden') ? line.textContent : '', w: w.id };
+      X.key('f', true); X.key('f', false); X.f(12); const d = G.Combate.duel(); const ev = G.Combate.events().filter(e => e.kind === 'recusa' || e.kind === 'duelo' || e.kind === 'fim').map(e => e.kind).join(','); const why = G.Combate.wouldDuel ? '' : ''; X.f(30);
+      const line = document.querySelector('.cb-duel'); const toasts = [...document.querySelectorAll('.ih-toast')].map(e => e.textContent).join(' | ');
+      return { target: offer ? offer.id : '', fv: fv ? fv.label : '', duel: !!d, line: line && !line.classList.contains('hidden') ? line.textContent : '', w: w.id, ev, toasts, traits: (w.traits || []).join(','), role: w.role }; void why;
     });
     if (!r.none) await shot('t7-duelo');
     await E(() => { const d = G.Combate.duel(); if (d) { G.inSim++; try { G.Combate.endDuel(0, 'largou'); } finally { G.inSim--; } } __X.f(10); });
-    ok('t7 o-duelo', !r.none && /^Desafiar/.test(r.fv) && r.duel && /^Duelo com/.test(r.line), r.none ? 'ninguém para desafiar' : `o alvo do E: ${r.target}; o F: «${r.fv}»; ${r.duel ? 'o duelo começou' : 'NÃO começou'}; a tela: «${r.line}»`);
+    ok('t7 o-duelo', !r.none && /^Desafiar/.test(r.fv) && r.duel && /^Duelo com/.test(r.line), r.none ? 'ninguém para desafiar' : `o alvo do E: ${r.target}; o F: «${r.fv}» (${r.role}, ${r.traits || 'sem traços'}); ${r.duel ? 'o duelo começou' : 'NÃO começou'} (o mundo: ${r.ev || 'nada'}; a tela: ${r.toasts || 'nada'}); a linha: «${r.line}»`);
   }
 
   // ================================ t8: sem erros ================================

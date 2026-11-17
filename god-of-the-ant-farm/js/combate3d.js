@@ -56,7 +56,7 @@
     const n = hist.length; trailM.visible = n >= 2; C.trail = n; if (n < 2) return;
     const P = trailG.attributes.position.array, Cc = trailG.attributes.color.array;
     for (let k = 0; k < NT; k++) { const h = hist[Math.min(n - 1, k)]; const i = k * 6; P[i] = h[0]; P[i + 1] = h[1]; P[i + 2] = h[2]; P[i + 3] = h[3]; P[i + 4] = h[4]; P[i + 5] = h[5];
-      const al = k < n ? Math.pow((k + 1) / n, 1.6) * 0.55 : 0; const j = k * 8; Cc[j] = 0.95; Cc[j + 1] = 0.92; Cc[j + 2] = 0.82; Cc[j + 3] = al; Cc[j + 4] = 0.9; Cc[j + 5] = 0.85; Cc[j + 6] = 0.72; Cc[j + 7] = 0; }
+      const al = k < n ? Math.pow((k + 1) / n, 2) * 0.36 : 0; const j = k * 8; Cc[j] = 0.95; Cc[j + 1] = 0.9; Cc[j + 2] = 0.78; Cc[j + 3] = al; Cc[j + 4] = 0.85; Cc[j + 5] = 0.78; Cc[j + 6] = 0.62; Cc[j + 7] = 0; } // (the point's edge bright, the middle of the blade gone: a streak, not a sheet)
     trailG.attributes.position.needsUpdate = true; trailG.attributes.color.needsUpdate = true; trailG.setDrawRange(0, (Math.min(n, NT) - 1) * 6);
   }
   // the flash where a blow met something: sparks of metal on a guard or a parry, a spray on flesh, the dust of a fist
