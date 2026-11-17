@@ -7,7 +7,7 @@
 // que muda (o mapa do ar refeito), o mesmo save carregado duas vezes.
 //   c1 pura e sem escrever · c2 o sol · c3 a lua · c4 as cores · c5 o matiz do deus · c6 o mapa do ar · c7 a sombra dos montes
 //   c8 as nuvens · c9 o raio · c10 save/load na tempestade · c11 o chão que muda · c12 o tempo do deus · c13 a hora dourada
-//   c14 o remendo da luz (cada pedaço do three.js achado, e o ar em todo material)
+//   c14 o remendo da luz (cada pedaço do three.js achado, e o ar em todo material) · c15 o arco-íris e a aurora com causa
 //   [ONLY=c1,c2] node qa/ceu.js [cidade|metropole|…]
 // (the world with the 3D's own files loaded after it, as the page has them — no graphics card: the drawing's lists only)
 const T3 = require('./visual/tres-node.js');
@@ -177,6 +177,18 @@ if (on('c14')) {
   const has = [/gxLightAt\( gxWP, gxKS, gxSK \)/.test(lf), /directLight\.color \*= gxKS/.test(lf), /\* gxSK;/.test(lf), /gxFlash\.rgb \* gxSK/.test(lf), /#define GX_AIR/.test(lp) && /#define GX_AIR/.test(fp), /gxAirMap/.test(tf)];
   const lib = Object.keys(THREE.ShaderLib).filter(k => THREE.ShaderLib[k].uniforms && THREE.ShaderLib[k].uniforms.fogColor); const withAir = lib.filter(k => THREE.ShaderLib[k].uniforms.gxAirMap && THREE.ShaderLib[k].uniforms.gxShade && THREE.ShaderLib[k].uniforms.gxCloudN);
   ok('c14 o remendo da luz', !warn.length && has.every(Boolean) && withAir.length === lib.length, `${warn.length} remendo(s) sem lugar${warn.length ? ': ' + warn[0] : ''}; as leituras no lugar: ${has.map(b => (b ? 'sim' : 'NÃO')).join(' ')}; os materiais da biblioteca com o ar: ${withAir.length} de ${lib.length}`);
+}
+// c15 — the bow and the lights of the north have their causes: the bow only with the land wet from a shower that has passed, no
+// rain there now and the sun low; the lights of the north only on a night of the cold lands with the sky clear
+if (on('c15')) {
+  const n = G.N; const x = Math.floor(n / 2) + 0.5, y = Math.floor(n / 2) + 0.5; const wet0 = S.wet.slice(); const w = { rain: 0, storm: 0, windA: 0, windS: 0.3 };
+  for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) S.wet[(Math.floor(y) + j) * n + Math.floor(x) + i] = 0.9;
+  let tLow = null; for (let k = 0; k < 400 && tLow === null; k++) { const t = 0.36 + k / 400 * 0.37; const a = Math.asin(Ce.sun(t).y) * 180 / Math.PI; if (a < 25) tLow = t; }
+  const after = Ce.rainbow(tLow, x, y, w), noon = Ce.rainbow(0.36, x, y, w), raining = Ce.rainbow(tLow, x, y, Object.assign({}, w, { rain: 0.6 })), night = Ce.rainbow(0.85, x, y, w);
+  S.wet.set(wet0); for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) S.wet[(Math.floor(y) + j) * n + Math.floor(x) + i] = 0; const dry = Ce.rainbow(tLow, x, y, w); S.wet.set(wet0);
+  const t0 = S.temp.slice(); const ii = Math.floor(y) * n + Math.floor(x);
+  S.temp[ii] = 20; const cold = Ce.aurora(0.86, x, y, w, 0.36), cloudy = Ce.aurora(0.86, x, y, w, 0.9), day = Ce.aurora(0.4, x, y, w, 0.36); S.temp[ii] = 200; const warm = Ce.aurora(0.86, x, y, w, 0.36); S.temp.set(t0);
+  ok('c15 o arco-íris e a aurora com causa', after > 0.3 && !noon && !raining && !night && !dry && cold > 0.3 && !cloudy && !day && !warm, `o arco depois da chuva com o sol baixo ${after.toFixed(2)}; ao meio-dia ${noon}, chovendo ${raining}, à noite ${night}, com o chão seco ${dry}; a aurora numa noite fria e limpa ${cold.toFixed(2)}; nublada ${cloudy}, de dia ${day}, numa terra quente ${warm}`);
 }
 // and the verifier with the sky's rules, clean; no module error
 { const bad = QA.check().filter(q => q.sev <= 2); ok('verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 4).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'limpo, sem erro de módulo'); }

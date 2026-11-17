@@ -1662,12 +1662,12 @@
     const LK = G.Ceu3D.light(focus);
     // (the water: the key light on it, the sky's light on it, the bed under it)
     WU.key.value.setRGB(LK.key[0] * LK.keyI, LK.key[1] * LK.keyI, LK.key[2] * LK.keyI); WU.irr.value.setRGB(LK.sky[0], LK.sky[1], LK.sky[2]); WU.k.value = scene.scale.y; bedTick(); flowTick();
-    // (the wind of the world bends the plants; the body walking parts them)
-    { const w = G.S.weather; const ws = G.clamp(w.windS || 0, 0, 2); U.wind.value.set(Math.cos(w.windA || 0) * (0.35 + ws), Math.sin(w.windA || 0) * (0.35 + ws), ws); }
+    // (the wind of the world — the one wind, the sky's G.Ceu.wind — bends the plants; the body walking parts them)
+    { const wd = G.Ceu.wind(); const ws = G.clamp(wd.s || 0, 0, 2); U.wind.value.set(wd.x * (0.35 + ws), wd.y * (0.35 + ws), ws); }
     if (focus) U.body.value.set(focus.X, focus.Y || 0, focus.Z, 1); else U.body.value.w = 0;
     G.Ground3D.tick(focus);
     // (the clouds' shadows move as the sky's clouds do; darker under a bright sun, none at night)
-    G.Ground3D.clouds(0, 0, skyU.cover.value, 0); // (the clouds' shadows are the sky's now, on every material along the key light — ceu3d.js: gxKeyShade —, not the land's own)
+    G.Ground3D.clouds(0, 0, skyU.cover.value, 0); // (the clouds' shadows are the sky's now, on every material along the key light — ceu3d.js: gxLightAt —, not the land's own)
     if (focus) stream(focus.X, focus.Z, budget === undefined ? 6 : budget);
     G.Build3D && G.Build3D.insideTick && G.Build3D.insideTick(rdt, focus); // (the insides round the body: before the people who stand in them)
     G.People3D && G.People3D.update && G.People3D.update(rdt, focus);
