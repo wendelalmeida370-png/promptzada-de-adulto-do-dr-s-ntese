@@ -212,6 +212,57 @@ estrelas que giram, o halo, a aurora), o arco-íris com causa; o pós (`post3d.j
    o custo medido por qualidade; os IDs do AUDIT e as regras do guard; as linhas propostas para o `CLAUDE.md`; o que ficou aberto
    (e o que seria da fase B); as fotos antes e depois (o caminho de cada uma).
 
+## 8. As portas do céu (21d — o que a água, a mata e o relevo leem)
+
+A luz, o céu e o ar têm uma fonte só (D-466, D-520): o **`G.Ceu`** (`js/ceu.js`, puro, roda em Node) diz os números; o **`G.Ceu3D`**
+(`js/ceu3d.js`) os dá ao desenho — as luzes, o domo, as estrelas, os uniformes do ar (`GX`) e o remendo da luz nos pedaços de
+sombreador do three.js (`toon`). O `realm3d.js` só chama: `G.Ceu3D.toon(THREE)` antes de qualquer material, `G.Ceu3D.init(...)` no
+`init`, `G.Ceu3D.quality(q)` no `applyQuality`, `G.Ceu3D.light(focus)` a cada quadro (devolve a luz, `G.Ceu.L`, que a água lê).
+**Ninguém mais calcula céu, sol ou luz** (regras 188 e 189 do guard).
+
+### 8.1 No JavaScript — o `G.Ceu` (só lê o mundo; a mesma pergunta, a mesma resposta)
+| porta | o que dá |
+|---|---|
+| `G.Ceu.sun(t)` · `moonDir(t)` · `moon(t, dia)` | a direção (unitária: x leste, y cima, z sul) e `s` (o seno da altura) do sol; a da lua; a fase (`phase` 0 nova, 0,5 cheia) e a parte acesa (`lit`) pelo dia do mundo (`MONTH` = 8 dias). A curva demora perto do horizonte (`SHAPE` = 1,3: 6° → 0° em ≈ 37 s do relógio do corpo, com o corpo a 0,27; D-469); o sol nasce e se põe nas mesmas horas (`RISE`, `SET`) — o `G.isNight` não é do céu |
+| `G.Ceu.light(t, tempo, nNuvens, botões, L)` | a luz da hora inteira: `sun`, `key` e `keyI` (a luz-chave: o sol, ou a lua quando ela carrega a luz — `byMoon`, `kd`), `sky` (a luz do céu na sombra), `bounce`, `hor`, `zen`, `top`, `glow`, `belt`, `exp`, `mist`, `stars`, `cover`, `cloudCol`/`cloudSh`, o grade da noite (`grN`, `toe`) — em luz linear |
+| `G.Ceu.ambient(t, tempo)` · `nightness(t, tempo)` | o matiz da hora do deus (a tabela `AMB`, lida pela altura do sol: `plainHour`) — o `render.js` pergunta aqui, e o 3D tinge a sua luz por ele |
+| `G.Ceu.wind(tempo)` | o vento do mundo, um só (`a`, `x`, `y`, `s`; `k` é a força que os bichos sentem — o mesmo do `G.Meio.wind`): as folhas, o capim, a água, a névoa e as nuvens vão com ele |
+| `G.Ceu.drift(relógio, tempo)` · `cloudN(X, Z, deriva, fino)` · `cover(t, tempo, nNuvens, dia, x, y)` · `cloudShade(X, Y, Z, sol, cobertura, força)` | as nuvens: um campo só, num plano a `CLOUD.h` (350 m) sobre o mar, `CLOUD.scale` (2200 m) de lado, que anda pelo relógio do mundo (`S.clock`) em duas camadas (a deriva); a cobertura sobre um lugar (o dia — `dayAir`, pelo `G.hash` do dia —, a chuva, a tempestade, as nuvens de chuva do mundo por perto, o calor da tarde na terra úmida); a parte da luz-chave que chega a um ponto debaixo delas |
+| `G.Ceu.airMap()` · `air(x, y)` · `mistNow(t, tempo)` | **o mapa do ar**: um valor por canto de casa (N+1 de lado), refeito quando o chão muda (`airKey`: `S.typeVer`, a versão do `G.Mata` — não a dos prédios): `dawn` (a névoa da manhã: o vale, o rio e o lago, o pântano), `last` (a que fica: a mata úmida, o borrifo das quedas `S.relief.falls`, o pântano), `top` (a altura do topo, m), `cano` (o dossel, do `G.Mata`), `why` (as causas, por bits: `WHY`); `pic` é a figura RGBA que o 3D sobe; `mistNow` diz quão grossa cada névoa está na hora |
+| `G.Ceu.shadeFor(direção)` · `shadeAt` · `shadeRay` | **a sombra dos montes**: por canto, a altura sobre o chão até onde a sombra da terra chega para a luz que vem daquela direção (0: na luz) — a varredura N² pela direção da luz; `shadeRay` é o raio de força bruta das provas |
+| `G.Ceu.sky(t, x, y, tempo)` · `airOf(x, y)` · `through(altura, mie)` | o céu físico da hora e do lugar: a faixa do crepúsculo (`band`), o halo do ar em volta do sol (`halo`, pelo ar do lugar: `mie`, `haze`), a sombra da Terra (`shadow`), a luz nas barrigas das nuvens (`under`); a luz do sol pelo ar que atravessa |
+| `G.Ceu.rainbow(t, x, y)` · `aurora(t, x, y, tempo, cobertura)` · `POLE` · `starTurn(t)` · `moonLight(dia)` | o arco-íris com causa (o chão molhado `S.wet` sem chuva agora, o sol abaixo de 42°), a aurora com causa (a noite fria `S.temp` e limpa), o polo e o giro das estrelas, a luz da lua pela fase |
+
+**O dossel vem do `G.Mata` (21a)**: o céu lê `G.Mata.luz(i)` — ou, sem ela, `G.Mata.at(i).luz` — (0 aberto, 1 um teto, por casa) e a
+versão `G.Mata.ver` (número, texto ou função, que muda quando o dossel muda), e não refaz o dossel das árvores (regra 191). Sem o
+`G.Mata`, o dossel é zero. (O `ceu.js` pergunta pelo nome, `G['Mata']`, porque o arquivo da 21a ainda não está junto: juntando,
+pode virar `G.Mata`.)
+
+### 8.2 No sombreador — o `GX` e as peças que todo material tem
+- **Os uniformes do ar (`G.Realm.GX`)**, os mesmos objetos em todo material da biblioteca do three.js (e em quem os passa à mão):
+  `gxSunW`, `gxHor`, `gxGlow`, `gxBelt` (o céu na direção), `gxAir`, `gxAir2` (a névoa de distância), `gxLM*` (a luz pintada das
+  chamas, do `fx3d.js`), `gxGr`, `gxTn`, `gxAmb` (o grade, o pé da curva, a luz do céu contra a do meio-dia) e os novos:
+  `gxAirMap` (R névoa da manhã, G dossel, B névoa que fica, A topo da névoa em passos de 0,3 m), `gxShade` (R, G a sombra dos
+  montes em duas horas, em passos de 0,2 m; B o chão, em passos de 0,3 m), `gxCloudN` (o pano das nuvens), `gxAirB` (1/casa,
+  1/cantos, ligado, a altura do mundo na tela), `gxAirK` (a névoa da manhã agora, a que fica agora, o dossel ligado, a espessura),
+  `gxCl0`–`gxCl2` (a deriva, os pesos, a sombra, o plano, a cobertura), `gxShadeK`, `gxKeyW` (para a luz-chave), `gxCanopy` (a luz
+  do céu sob um teto cheio, rgb; a altura das copas), `gxSunBox` (onde o mapa de sombras do sol alcança), `gxFlash` (o clarão do
+  relâmpago agora).
+- **As funções** (em todo material com luz ou com névoa): `gxHaze(d)` (a cor do horizonte numa direção: a névoa e o reflexo do
+  céu usam a mesma), `gxTone`/`gxGrade` (a curva e o grade: `R3.GLSL.grade`), `gxMapUV(xz)` (um ponto da terra nos mapas),
+  `gxCloud(p)` (o pano das nuvens no plano), `gxLightAt(wp, out ks, out sk)` (a parte da luz-chave que chega — as nuvens, os
+  montes, as falhas do dossel — e a da luz do céu sob o dossel).
+- **No `main` de todo material com luz**, depois do `lights_fragment_begin`: `gxWP` (o ponto no mundo), `gxKS` (a parte da
+  luz-chave que chega ali) e `gxSK` (a parte da luz do céu, verde-dourada sob a mata). A luz que um material faz por conta — o sol
+  atravessando as folhas, o brilho do sol na água — multiplica por `gxKS`; quem tem a sua própria luz-chave (a água: `uKeyCol`)
+  a multiplica por `gxKS` também, para escurecer com as nuvens e os montes. O clarão (`gxFlash`) já entra na luz do céu.
+- **O céu para quem o reflete**: `G.Realm.skyU` (`top`, `hor`, `sunDir`, `sunCol`, `keyDir`, `moonDir`, `cover`…) e `G.Realm.LT` (a
+  luz desta hora, só de leitura); `G.Ceu3D.canopyAt(X, Y, Z)` (o dossel sobre um ponto, já com «debaixo das copas»).
+- **O raio**: `G.FX.lightning(x, y)` (a palavra do mundo ao que se vê, no `fx.js`) passa ao `G.Ceu3D.bolt`; `G.Ceu3D.live()` são
+  os raios vivos; `G.Ceu3D.flash()` o clarão agora (regra 192).
+- **As qualidades do céu** (pelo `G.Realm.qualAdd`, regra 193): `shafts` (os cartões de luz da mata, na Média), `vlight` (a luz no
+  ar pelo mapa de sombras: 1 na Alta, 2 na Ultra), `vclouds` (as nuvens com corpo, na Ultra).
+
 ## 8b. As portas da mata (21a)
 
 O `G.Mata` (`js/mata.js`) é a fonte pura da vegetação: lê o mundo (o bioma, o clima, as árvores e os seus estágios, o desgaste, as

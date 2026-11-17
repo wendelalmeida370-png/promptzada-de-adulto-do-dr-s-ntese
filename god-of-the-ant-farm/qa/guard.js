@@ -1351,7 +1351,7 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // 169. "a mata da fase A só se vê" (D-465, D-470): na fase A nenhum módulo do mundo lê o G.Mata — só o que só se vê (a lista LOOK), o
 // próprio mata.js e as portas do corpo no space.js (Sp.stems); na fase B, quem decide a passagem e a cobertura pergunta a ele, e esta
 // regra muda com o protocolo inteiro
-{ const MATA_OK = new Set(LOOK.concat(['mata.js', 'planta-formas.js']));
+{ const MATA_OK = new Set(LOOK.concat(['mata.js', 'planta-formas.js', /* 21d: the sky's pure source reads the canopy's map (NATUREZA.md §8, §8b), and only what is seen reads it in phase A */ 'ceu.js']));
   for (const f of files) { if (MATA_OK.has(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Mata\b/.test(c)) fails.push(`a mata só se vê: ${f}:${k + 1} lê o G.Mata num módulo do mundo (a fase A não muda o mundo; D-465): ${l.trim().slice(0, 110)}`); }); } }
 // 170. "as formas das plantas são puras" (D-472): o js/planta-formas.js faz as formas da mata como números, sempre as mesmas — sem acaso
 // nenhum (nem o do mundo nem o do que só se vê: a variação é da instância, pelo G.hash), sem o three.js, sem o mundo, sem relógio
@@ -1386,5 +1386,39 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // === 21b: o relevo ===
 // === 21c: a água ===
 // === 21d: o céu ===
+// 188. "a luz é do céu" (D-466, D-520): os uniformes do ar e da luz (GX) e a luz da hora (a força e a cor do sol e do céu, a
+// exposição) só o js/ceu3d.js escreve — a luz pintada das chamas (gxLM*) é do fx3d.js, e o realm3d.js só dá a exposição de
+// partida ao fazer o desenho; os outros leem
+{ const W = /\bGX\.(gx\w+)\.value(\.[xyzw])?\s*=(?!=)|\bR3\.GX\.(gx\w+)\.value(\.[xyzw])?\s*=(?!=)|\.toneMappingExposure\s*=(?!=)|\b(sun|hemi)\.(intensity|color\.setRGB|groundColor\.setRGB)\b(\s*=(?!=)|\()/;
+  for (const f of files) { if (f === 'ceu3d.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); const m = W.exec(c); if (!m) return;
+    if (f === 'fx3d.js' && /gxLM/.test(c)) return; if (f === 'realm3d.js' && /renderer\.toneMappingExposure = 1\.0;/.test(c)) return;
+    fails.push(`a luz é do céu: ${f}:${k + 1} escreve a luz ou o ar do 3D (só o ceu3d.js; D-520): ${l.trim().slice(0, 110)}`); }); } }
+// 189. "o caminho do sol é um só" (D-469, D-520): só o js/ceu.js diz onde estão o sol e a lua pela hora (o nascer e o pôr, a forma
+// da curva que demora) e o matiz da hora do deus (a tabela AMB) — o 3D, o deus e o pós perguntam ao G.Ceu, nenhum refaz a conta
+{ for (const f of files) { if (f === 'ceu.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bconst (RISE|SET)\s*=\s*-?0\.\d+|0\.96 \* Math\.(pow\(Math\.)?sin\(Math\.PI \* u|\[0\.05, \[255, 226, 206\]\]/.test(c)) fails.push(`o caminho do sol é um só: ${f}:${k + 1} refaz o sol, a lua ou o matiz da hora (pergunte ao G.Ceu; D-469): ${l.trim().slice(0, 110)}`);
+    if (f === 'sky.js' && /\btm > 0\.0\d && tm < 0\.1\d/.test(c)) fails.push(`o caminho do sol é um só: sky.js:${k + 1} acha a hora dourada por horas fixas (a altura do sol: G.Ceu.sun; D-469): ${l.trim().slice(0, 110)}`); }); } }
+// 190. "as nuvens andam pelo relógio do mundo" (D-521): o domo, as estrelas e a sombra das nuvens leem a deriva do G.Ceu.drift
+// pelo S.clock — nunca o relógio da vista (uT) com o vento —, e o chão não faz a sua própria sombra de nuvem
+{ const c3 = (src['ceu3d.js'] || []).join('\n'), r3 = (src['realm3d.js'] || []).join('\n');
+  if (!/G\.Ceu\.drift\(S\.clock/.test(c3)) fails.push('as nuvens pelo relógio do mundo: o ceu3d.js não lê a deriva do G.Ceu.drift pelo S.clock (D-521)');
+  if (/uWind\.xy \* uT/.test(c3)) fails.push('as nuvens pelo relógio do mundo: o ceu3d.js arrasta as nuvens pelo relógio da vista (uWind.xy * uT; D-521)');
+  if (/G\.Ground3D\.clouds\((?!0, 0, )/.test(r3)) fails.push('as nuvens pelo relógio do mundo: o realm3d.js dá ao chão uma sombra de nuvem sua (a sombra é do céu, em todo material: D-521)'); }
+// 191. "o ar e a sombra dos montes vêm do G.Ceu" (D-522, D-524): o 3D sobe o mapa do ar só do G.Ceu.airMap e a sombra dos montes só
+// do G.Ceu.shadeFor; o ceu.js não refaz o dossel das árvores (é do G.Mata, lido pela porta dele) nem lê o acaso
+{ const c3 = (src['ceu3d.js'] || []).join('\n'), ce = (src['ceu.js'] || []).join('\n');
+  if (!/G\.Ceu\.airMap\((true)?\)/.test(c3) || !/G\.Ceu\.shadeFor\(/.test(c3)) fails.push('o ar e a sombra do G.Ceu: o ceu3d.js não lê o mapa do ar (G.Ceu.airMap) ou a sombra dos montes (G.Ceu.shadeFor) (D-522)');
+  (src['ceu.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\btreeAt\b|\bS\.trees\b/.test(c)) fails.push(`o dossel é do G.Mata: ceu.js:${k + 1} refaz o dossel das árvores (D-522): ${l.trim().slice(0, 110)}`); });
+  if (!/const woods = \(\) => G(\['Mata'\]|\.Mata);/.test(ce) || !/\.canopy\(0, 0, N, N\)/.test(ce)) fails.push('o dossel é do G.Mata: o ceu.js não lê o dossel pela porta do G.Mata — o mapa do dossel, G.Mata.canopy (D-522)'); }
+// 192. "o raio desenhado é o do mundo" (D-526): o 3D desenha um raio só onde o mundo o fez cair — a lista dos raios do céu só a
+// G.Ceu3D.bolt escreve, e só o G.FX.lightning (a palavra do mundo ao que se vê de que um raio caiu, no fx.js) a chama
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bCeu3D\.bolt\(/.test(c) && f !== 'fx.js') fails.push(`o raio é o do mundo: ${f}:${k + 1} pede um raio ao 3D sem ser o G.FX.lightning (D-526): ${l.trim().slice(0, 110)}`);
+    if (f === 'ceu3d.js' && /\bbolts\.(push|unshift|splice)\(/.test(c) && !/Ce3\.bolt = function|function prune\(\)/.test(c)) fails.push(`o raio é o do mundo: ceu3d.js:${k + 1} põe um raio na lista fora da G.Ceu3D.bolt (D-526): ${l.trim().slice(0, 110)}`); });
+  if (!/G\.Ceu3D && G\.Ceu3D\.bolt\(x, y\)/.test((src['fx.js'] || []).join('\n'))) fails.push('o raio é o do mundo: o G.FX.lightning não passa o raio ao 3D (D-526)'); }
+// 193. "as qualidades do céu pelo qualAdd" (D-468, D-466): os campos do céu nas qualidades (os cartões de luz, a luz no ar, as
+// nuvens com volume) entram pelo G.Realm.qualAdd do ceu3d.js — a tabela QUAL do realm3d.js não os tem
+{ const c3 = (src['ceu3d.js'] || []).join('\n'), r3 = (src['realm3d.js'] || []).join('\n'); const q0 = r3.indexOf('const QUAL = {'), q1 = r3.indexOf('};', q0);
+  for (const k of ['shafts', 'vlight', 'vclouds']) { if (!new RegExp(`qualAdd\\('${k}'`).test(c3)) fails.push(`as qualidades do céu: o ceu3d.js não registra '${k}' pelo G.Realm.qualAdd (D-468)`); if (q0 >= 0 && new RegExp(`\\b${k}:`).test(r3.slice(q0, q1))) fails.push(`as qualidades do céu: '${k}' na tabela QUAL do realm3d.js (pelo qualAdd: D-466)`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

@@ -195,6 +195,7 @@
     for (let k = 0; k < 6; k++) FX.spawn({ x: x + R(-0.3, 0.3), y: y + R(-0.3, 0.3), z: R(0, 6), vz: R(10, 30), life: R(1.5, 2.5), s0: 4, s1: 11, c: 'rgba(70,70,75,0.5)', k: 2, drag: 0.6 });
     FX.ring(x, y, 0.1, 2, 0.5, 'rgba(210,225,255,0.9)', 2, true);
     FX.glowAt(x, y, 1.2, 'cool', 90);
+    G.Ceu3D && G.Ceu3D.bolt(x, y); // (and the body's view draws the bolt where the world struck: 21d)
   };
   // transient lights (drawn into the light map by the renderer)
   FX.glowAt = function (x, y, life, color, r) { FX.glows.push({ x, y, h: G.W.groundH(x, y), life, max: life, c: color, r }); };
