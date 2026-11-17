@@ -65,7 +65,7 @@ const WORLD = process.argv[3] || 'cidade';
     }
     if (!v) return { none: 'ninguém numa cidade com armazém' };
     const fid = G.Fac.idOfV(v);
-    T.god(() => { const f = G.Fac.get(fid); if (!f.tech.known.bronze) G.Civ.learn(f, 'bronze', 'divina'); G.Depot.make('f:' + fid, 'ferramentas', 4, { code: 'teste', part: true }); G.Depot.make('f:' + fid, 'armas', 4, { code: 'teste', part: true }); });
+    T.god(() => { const f = G.Fac.get(fid); if (!f.tech.known.bronze) G.Civ.learn(f, 'bronze', 'divina'); G.Depot.make('f:' + fid, 'ferramentas', 4, { code: 'teste', part: true, of: 'bronze' }); G.Depot.make('f:' + fid, 'armas', 4, { code: 'teste', part: true, of: 'bronze' }); }); // (of bronze: the store gives what its parts are, 20h, D-442 — weapons of no known metal make no sword, T-1498)
     const entered = T.enter(v); const p = T.by(st); const placed = !!p && G.Avatar.place(p[0], p[1]); T.f(10);
     T.v = v; T.st = st;
     return { who: `${v.name} (${v.role})`, entered, placed, near: !!G.Inv.storeNear(v), store: `${st.type}#${st.id}` };
