@@ -31,7 +31,10 @@ const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k
   await page.addScriptTag({ path: __dirname + '/qa.js' });
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'cidade.js') });
   const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | movimento-tela ${name} | ${info}`); if (!cond) fails.push(name); };
-  const shot = async name => { await page.evaluate(() => { G.Realm.setQuality('media'); for (let k = 0; k < 8; k++) G.Main.frameFor(33); }); try { await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 180000 }); } catch (e) { console.log('(foto ' + name + ' não saiu)'); } await page.evaluate(() => G.Realm.setQuality('baixa')); };
+  const shot = async name => { await page.evaluate(() => { G.Realm.setQuality('media'); for (let k = 0; k < 8; k++) G.Main.frameFor(33); }); try { await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 180000 }); } catch (e) { console.log('(foto ' + name + ' não saiu)'); }
+    // (back to the light preset, and drawn in it: the verifier reads the beasts' levels against the edges of the preset of now — a
+    // picture left at the photo's would be the wrong level for it, T-1388)
+    await page.evaluate(() => { G.Realm.setQuality('baixa'); for (let k = 0; k < 2; k++) G.Main.frameFor(33); }); };
   const E = (fn, arg) => page.evaluate(fn, arg);
   await E(() => {
     const X = window.__X = {
