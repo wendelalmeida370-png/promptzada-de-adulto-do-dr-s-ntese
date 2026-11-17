@@ -27,14 +27,19 @@
     const ad = v.age;
     const h = ad < 2 ? 0.55 : ad < 16 ? 0.75 + (ad / 16) * 0.9 : ad >= 70 ? 1.68 : 1.75;
     L.s = (h / 1.75) * (v.g === 'f' && ad >= 14 ? 0.95 : 1);
+    // (the shape and the colours from the person's genome — G.Feicao, D-552: the height about the age's, the skin, the hair, the
+    // eyes; one born before the genome keeps the colour of their v.skin and v.hair. A proof's bare person, with none, as before)
+    const Fe = G.Feicao ? G.Feicao.of(v) : null; L.fe = Fe;
+    if (Fe) L.s *= Fe.alt;
+    const skin0 = Fe ? Fe.skin : v.skin, hair0 = Fe ? Fe.hair : v.hair;
     L.robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
     // (the colours: made again only when what they are made of changes — the trade's cloth, the hair greying with the years)
     const grey = ad >= 62 ? Math.floor(ad) : 0;
-    if (L._cloth !== cloth || L._hair !== v.hair || L._skin !== v.skin || L._grey !== grey) {
-      L._cloth = cloth; L._hair = v.hair; L._skin = v.skin; L._grey = grey;
-      const hair = grey ? G.lerpColor(G.hex2rgb(v.hair || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
-      L.skin = v.skin || '#d8a888'; L.hair = hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : v.hair || '#3a2a1a';
-      L.cloth = cloth; L.pants = darker(cloth, 0.62); L.feet = '#3a2a1e'; L.belt = darker(cloth, 0.38); L.brow = darker(v.hair || '#3a2a1a', 0.8); L.nose = darker(v.skin || '#d8a888', 0.88); L.lips = darker(v.skin || '#d8a888', 0.62);
+    if (L._cloth !== cloth || L._hair !== hair0 || L._skin !== skin0 || L._grey !== grey) {
+      L._cloth = cloth; L._hair = hair0; L._skin = skin0; L._grey = grey;
+      const hair = grey ? G.lerpColor(G.hex2rgb(hair0 || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
+      L.skin = skin0 || '#d8a888'; L.hair = hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : hair0 || '#3a2a1a';
+      L.cloth = cloth; L.pants = darker(cloth, 0.62); L.feet = '#3a2a1e'; L.belt = darker(cloth, 0.38); L.brow = darker(hair0 || '#3a2a1a', 0.8); L.nose = darker(skin0 || '#d8a888', 0.88); L.lips = darker(skin0 || '#d8a888', 0.62);
     }
     L.fem = v.g === 'f' && ad >= 13; L.bun = v.g === 'f' && ad >= 16 && v.id % 3 === 1; L.beard = v.g === 'm' && ad >= 26 && v.id % 3 === 0; L.long = v.g === 'f' && ad >= 8 && v.id % 3 !== 1; L.bald = v.g === 'm' && ad >= 55 && v.id % 4 === 0;
     L.act = v.act; L.lantern = !!v.lantern && !v.inside;
@@ -135,6 +140,7 @@
     o.over = o.cloth; o.beads = ['#c87a2a', '#d89a3a', '#b8582a'][Math.floor(hh(7) * 3)]; o.cloak = wool(darker(base, 0.75)); o.hat = o.cloth;
     o.iris = IRIS[(Math.floor(hh(8) * 7) + (G.hex2rgb(L.skin)[0] < 170 ? 0 : 0)) % IRIS.length];
     if (G.hex2rgb(L.skin)[0] < 175) o.iris = IRIS[Math.floor(hh(8) * 3)]; // (dark skin, dark eyes)
+    if (L.fe) o.iris = L.fe.iris; // (the eyes of the genome, 22a: the person's own)
     o.lips = mixHex(L.skin, '#a8524a', fem ? 0.42 : 0.28);
     // (the cut: sleeves to the wrist, the round neckline, shoes to the ankle, trousers, the belt at the waist)
     o.sleeve = 0.585; o.neck = 0; o.bootTop = 0.11; o.legs = 1; o.beltY = 1.01; o.beltH = 0.017; o.overK = 0; o.strap = L.strap ? 1 : 0;

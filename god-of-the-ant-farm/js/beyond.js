@@ -114,7 +114,7 @@
     if (r.grave) V.unbury(r);
     if (c.body) G.Carnage.raise(c.body);
     const look = c.body ? c.body.look : {};
-    const v = G.Vg.create({ id: r.id, back: true, name: r.name, g: r.g, age: Math.max(1, r.age), set: set.id, x: px, y: py, mother: r.mother, father: r.father, traits: (r.traits || []).slice(), civ: f && f.civ, skin: r.skin || look.skin, hair: r.hair || look.hair });
+    const v = G.Vg.create({ id: r.id, back: true, name: r.name, g: r.g, age: Math.max(1, r.age), set: set.id, x: px, y: py, mother: r.mother, father: r.father, traits: (r.traits || []).slice(), civ: f && f.civ, skin: r.skin || look.skin, hair: r.hair || look.hair, genoma: r.genoma || look.genoma }); // (genoma, 22a: back with the face they had)
     v.born = r.born; v.kids = (r.kids || []).filter(id => G.person(id));
     for (const key of ['ord', 'ep', 'reigned', 'kills', 'hero', 'lost']) if (r[key] !== undefined) v[key] = r[key];
     if (r.bio) v.bio = r.bio.slice();

@@ -2204,7 +2204,10 @@
   // ------------------------------ births & deaths ------------------------------
   V.birth = function (mother) {
     const S = G.S;
-    const father = S.villagers.get(mother.partner) || S.dead.get(mother.partner);
+    // (a father dead while she carried the child is still its father — the death leaves her partner empty and him her widow's
+    // husband: the child of a posthumous birth had no father, and his genes were lost, L-1670)
+    const late = !mother.partner && mother.widow ? S.dead.get(mother.widow) : null;
+    const father = S.villagers.get(mother.partner) || S.dead.get(mother.partner) || (late && S.day - (late.died || 0) <= 1 ? late : null);
     const twins = G.R() < 0.05 ? 2 : 1;
     const names = [];
     for (let k = 0; k < twins; k++) {
@@ -2272,6 +2275,7 @@
       id: v.id, name: v.name, g: v.g, born: v.born, died: S.day, age: v.age, mother: v.mother, father: v.father,
       partner: v.partner, kids: v.kids.slice(), cause, role: v.role, dead: true, traits: v.traits,
       fac: G.Fac.idOfV(v), captive: !!v.captive, ord: v.ord, ep: v.ep, reigned: v.reigned, kills: v.kills, hero: v.hero, by: v.lastBy || 0, skin: v.skin, hair: v.hair,
+      genoma: v.genoma, // (the look's genome, 22a: a father dead before the birth still passes his genes — V.birth reads S.dead)
     };
     if (v.bio) rec.bio = v.bio;
     if (v.lost) rec.lost = v.lost;
