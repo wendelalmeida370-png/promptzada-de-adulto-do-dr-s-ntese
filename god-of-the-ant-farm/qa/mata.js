@@ -112,7 +112,7 @@ if (on('m5')) {
   const m = (b, f) => (B[b] ? B[b][f] / B[b].n : NaN); const name = b => G.BIOMES[b].id;
   const line = [0, 2, 3, 4, 5, 6, 1].map(b => `${name(b)} ${m(b, 'dens').toFixed(2)}/${m(b, 'dossel').toFixed(2)}`).join(', ');
   const jungleH = [], emerg = [], oakH = [];
-  for (const t of S.trees.values()) { if (t.stage !== 'grow' || t.size < 0.9 || t.size > 1.05) continue; const D = Ma.tree(t); if (t.kind === 'jungle') (D.emerg ? emerg : jungleH).push(D.top); if (t.kind === 'oak') oakH.push([D.H, (5 + 7 * G.clamp(t.size, 0.15, 1.4)) * (0.85 + G.hash(t.id * 7) * 0.3)]); }
+  for (const t of S.trees.values()) { if (t.stage !== 'grow' || t.size < 0.9 || t.size > 1.05) continue; const D = Ma.tree(t); if (t.kind === 'jungle') (D.emerg ? emerg : jungleH).push(D.top); if (t.kind === 'oak') oakH.push([D.H, (5 + 7 * G.clamp(Math.round(t.size * 100) / 100, 0.15, 1.4)) * (0.85 + G.hash(t.id * 7) * 0.3)]); }
   const mean = a => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
   const oakSame = oakH.every(([a, b]) => Math.abs(a - b) < 1e-9);
   ok('m5', m(4, 'dens') > 0.6 && m(4, 'dossel') > 0.45 && m(6, 'dens') < 0.08 && m(0, 'dens') > m(6, 'dens') && m(0, 'dens') < m(4, 'dens') && m(5, 'dossel') < m(0, 'dossel') && mean(jungleH) > 17 && mean(jungleH) < 28 && (!emerg.length || mean(emerg) > mean(jungleH) + 6) && oakSame,

@@ -42,8 +42,12 @@
   // flat the crown is (fl), the top of the crown, whether it is an emergent and its form — the same for its drawing (Arvore3D),
   // for the leaves it lets fall, for what perches on it and for the canopy's map. A grown tree of the temperate lands keeps the
   // measures it was drawn with before (5 + 7 × size metres); only the jungle's trees grew to the canopy of a real forest
+  // (a tree's place and size as the save keeps them, to the hundredth: the forest of a world and of the same world saved and loaded
+  // is the same forest, plant for plant)
+  const r2 = v => Math.round(v * 100) / 100;
+  Ma.r2 = r2;
   Ma.tree = function (t) {
-    const shape = SHAPE[t.kind] || 'round'; const sz = G.clamp(t.size, 0.15, 1.4); const h = G.hash(t.id * 7); const s = 0.85 + h * 0.3;
+    const shape = SHAPE[t.kind] || 'round'; const sz = G.clamp(r2(t.size), 0.15, 1.4); const h = G.hash(t.id * 7); const s = 0.85 + h * 0.3;
     if (shape === 'tall') {
       const arq = Math.floor(G.hash(t.id * 53 + 11) * 4); const emerg = sz >= 0.8 && G.hash(t.id * 41 + 7) < 0.09;
       let H = (9 + 14 * sz) * s; if (arq === 3) H *= 0.82; if (emerg) H *= 1.5;
@@ -137,7 +141,7 @@
       const x = bx + wx, y = by + wy; if (x < 0 || y < 0 || x >= N || y >= N) continue; const tid = S.treeAt[y * N + x]; const t = tid && S.trees.get(tid); if (!crowned(t)) continue;
       const D = Ma.tree(t); if (!D.close) continue; const rt = D.r / 4; const reach = Math.ceil(rt + 0.6);
       for (let qy = Math.max(0, wy - reach); qy <= Math.min(W0 - 1, wy + reach); qy++) for (let qx = Math.max(0, wx - reach); qx <= Math.min(W0 - 1, wx + reach); qx++) {
-        const d = Math.hypot(bx + qx + 0.5 - t.x, by + qy + 0.5 - t.y); const c = G.clamp((rt + 0.5 - d) / 1.0, 0, 1) * D.close; if (c <= 0) continue;
+        const d = Math.hypot(bx + qx + 0.5 - r2(t.x), by + qy + 0.5 - r2(t.y)); const c = G.clamp((rt + 0.5 - d) / 1.0, 0, 1) * D.close; if (c <= 0) continue;
         const w = qy * W0 + qx; crown[w] = 1 - (1 - crown[w]) * (1 - c); const tp = D.top - (d > rt ? (d - rt) * 4 * 0.8 : 0); if (tp > top[w]) top[w] = tp;
       }
     }
@@ -256,7 +260,7 @@
     const TL = 4; const trunks = [];
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const j = (y + dy) * N + x + dx; const tid = S.treeAt[j]; const t = tid && S.trees.get(tid); if (!t) continue;
       // (the trunk the body meets — Space.trunk's rule, at the size the steps reckon a tree at, its next tenth: grown since, it still clears)
-      const tr = t.stage !== 'stump' && t.stage !== 'log' && t.stage !== 'fall' ? 0.28 + 0.32 * Math.min(1.2, Math.ceil(Math.max(t.size, 0.3) * 10 + 1e-9) / 10) : t.stage === 'log' || t.stage === 'fall' ? 2.6 : 0.4; trunks.push([t.x * TL, t.y * TL, tr]); }
+      const tr = t.stage !== 'stump' && t.stage !== 'log' && t.stage !== 'fall' ? 0.28 + 0.32 * Math.min(1.2, Math.ceil(Math.max(r2(t.size), 0.3) * 10 + 1e-9) / 10) : t.stage === 'log' || t.stage === 'fall' ? 2.6 : 0.4; trunks.push([r2(t.x) * TL, r2(t.y) * TL, tr + 0.03]); }
     const sh = rc.stem * (0.6 + dens * 0.8) * (r.clar[k] > 120 ? 1.4 : 1);
     for (let q = 0; q < 4; q++) {
       const hq = G.hash(i * 4 + q + (S.seed | 0) * 7 + 911); if (hq > sh) continue;

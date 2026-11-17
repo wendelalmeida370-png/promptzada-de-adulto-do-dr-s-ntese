@@ -696,12 +696,16 @@
   }
   // the lianas between the great trees of a chunk (D-475): from the boughs of one to the boughs of a neighbour three to nine metres
   // off, sagging between them — only two trees of the same chunk (a felled one takes its liana with it when the chunk is made again)
-  function lianasInto(g, x0, y0, w, h) {
-    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; const list = [];
+  function lianaPairs(x0, y0, w, h) {
+    const S = G.S; const TL = G.Space.TILE; const list = [], out = [];
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { if (!W.inb(x, y)) continue; const t = S.trees.get(S.treeAt[y * G.N + x]); if (!t || t.stage !== 'grow' || t.size < 0.5) continue; const k = KIND[t.kind] || KIND.oak; if (k[0] !== 'tall' && !(k[0] === 'round' && S.biome && (S.biome[y * G.N + x] === 4 || S.biome[y * G.N + x] === 3))) continue; list.push(t); }
-    const lv = [60, 70, 44]; const many = R3.Q().cipo > 1 ? 0.55 : 0.32;
-    for (const a of list) for (const b of list) {
-      if (b.id <= a.id) continue; const d = Math.hypot(a.x - b.x, a.y - b.y) * TL; if (d < 3 || d > 9 || G.hash(a.id * 977 + b.id * 131) > many) continue;
+    const many = R3.Q().cipo > 1 ? 0.55 : 0.32;
+    for (const a of list) for (const b of list) { if (b.id <= a.id) continue; const d = Math.hypot(a.x - b.x, a.y - b.y) * TL; if (d >= 3 && d <= 9 && G.hash(a.id * 977 + b.id * 131) <= many) out.push([a, b, d]); }
+    return out;
+  }
+  function lianasInto(g, x0, y0, w, h) {
+    const TL = G.Space.TILE, HM = G.Space.HM; const lv = [60, 70, 44];
+    for (const [a, b, d] of lianaPairs(x0, y0, w, h)) {
       const Da = G.Mata.tree(a), Db = G.Mata.tree(b); const ya = W.groundH(a.x, a.y) * HM + Da.cy - Da.r * Da.fl * 0.4, yb = W.groundH(b.x, b.y) * HM + Db.cy - Db.r * Db.fl * 0.4;
       const ax = a.x * TL, az = a.y * TL, bx = b.x * TL, bz = b.y * TL; const sag = 1.5 + d * (0.2 + G.hash(a.id + b.id * 3) * 0.25); const n = 6; let px = ax, py = ya, pz = az;
       for (let j = 1; j <= n; j++) { const u = j / n; const nx = ax + (bx - ax) * u, nz = az + (bz - az) * u, ny = ya + (yb - ya) * u - sag * 4 * u * (1 - u); limb(g, FS.limb, px, py, pz, nx, ny, nz, 0.035, lv, BARK - 0.1 - 0.1 * Math.sin(u * Math.PI)); px = nx; py = ny; pz = nz; }
@@ -784,4 +788,7 @@
   A3.geo = (x0, y0, w, h, far) => { ready(); return floraGeo(x0, y0, w, h, far); };
   // the grass tufts of a chunk where the field of blades (Grass3D) is not drawn
   A3.grassGeo = (x0, y0, w, h) => { ready(); return grassGeo(x0, y0, w, h); };
+  // (for the proofs: one tree drawn alone into three builders; the lianas of a stretch, as pairs of tree ids)
+  A3._treeInto = (g, t, gp, gl) => { ready(); fsh(); treeInto(g, t, gp, gl); };
+  A3._lianas = (x0, y0, w, h) => lianaPairs(x0, y0, w, h).map(([a, b]) => [a.id, b.id]);
 })(window.G);

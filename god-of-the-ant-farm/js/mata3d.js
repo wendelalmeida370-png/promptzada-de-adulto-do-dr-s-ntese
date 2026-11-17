@@ -103,8 +103,9 @@
     // (what is hard round a point: the trunks of the trees of the world, the stems, the boulders; and the land under it)
     const trunks = [], stems = [], stones = [];
     for (let y = y0 - 1; y <= y0 + C; y++) for (let x = x0 - 1; x <= x0 + C; x++) { if (x < 0 || y < 0 || x >= N || y >= N) continue; const i = y * N + x;
-      const t = S.trees.get(S.treeAt[i]); if (t) { const tr = t.stage === 'grow' ? (G.Space.trunk(t) || 0.2) : t.stage === 'log' || t.stage === 'fall' ? 0 : 0.35; if (tr) trunks.push([t.x * TL, t.y * TL, tr]);
-        if (t.stage === 'log') { const L2 = 4.5 * Math.max(0.4, t.size) / 2; for (let q = -2; q <= 2; q++) trunks.push([t.x * TL + q * L2 / 2, t.y * TL, 0.35]); } }
+      // (each trunk where the save keeps it, to the hundredth, and a hair wider: the same forest after a load)
+      const t = S.trees.get(S.treeAt[i]); if (t) { const tx = Ma.r2(t.x) * TL, tz = Ma.r2(t.y) * TL; const tr = t.stage === 'grow' ? (G.Space.trunk(t, Math.ceil(Ma.r2(t.size) * 10) / 10) || 0.2) + 0.03 : t.stage === 'log' || t.stage === 'fall' ? 0 : 0.35; if (tr) trunks.push([tx, tz, tr]);
+        if (t.stage === 'log') { const L2 = 4.5 * Math.max(0.4, Ma.r2(t.size)) / 2; for (let q = -2; q <= 2; q++) trunks.push([tx + q * L2 / 2, tz, 0.35]); } }
       const o = S.objAt[i]; if (o) { const rk2 = S.rocks.get(o); if (rk2) for (const st of G.Space.stones(rk2)) stones.push([st.X, st.Z, Math.max(st.sx, st.sz) * 0.55]); else { const b = S.bushes.get(o); if (b) stones.push([b.x * TL, b.y * TL, 0.8]); } }
       for (const st of Ma.stemsOf(i)) stems.push(st); }
     const clear = (X, Z, rr, soft) => { for (const t of trunks) if ((X - t[0]) ** 2 + (Z - t[1]) ** 2 < (t[2] + rr) ** 2) return false; for (const s of stones) if ((X - s[0]) ** 2 + (Z - s[1]) ** 2 < (s[2] + rr) ** 2) return false;
@@ -331,4 +332,5 @@
   };
   M3.plans = () => plans;
   M3.STRIDE = STRIDE; M3.REC = REC; M3.SUB = SUB;
+  M3._gen = (cx, cy) => makeGen(cx, cy); // (for the proofs: the plan of a chunk, slice by slice)
 })(window.G);
