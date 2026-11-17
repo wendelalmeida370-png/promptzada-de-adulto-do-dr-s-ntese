@@ -38,22 +38,22 @@ G.Ready.list({
   "bytes": 3191780
  },
  "mega": {
-  "day": 69,
-  "pop": 720,
-  "peoples": 5,
+  "day": 75,
+  "pop": 1076,
+  "peoples": 4,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3310,
   "city": {
-   "name": "Hedeby",
+   "name": "Tenochtitlan",
    "tier": 5,
-   "pop": 148
+   "pop": 191
   },
   "wars": 0,
   "ww": null,
   "world": "Corante",
-  "bytes": 3709164
+  "bytes": 4585117
  },
  "mundial": {
   "day": 65,
