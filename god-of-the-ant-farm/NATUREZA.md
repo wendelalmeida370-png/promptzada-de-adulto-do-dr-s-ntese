@@ -229,6 +229,8 @@ das oito vizinhas, pela assinatura) — nunca aos poucos pelos quadros.
 | `G.Mata.tree(t)` | **as medidas de uma árvore do mundo de pé**: altura `H`, o coração da copa `cy`, o raio `r`, o achatamento `fl`, o alto `top` (m), se é emergente, a forma (`arq`: 0 guarda-chuva, 1 camadas, 2 coluna, 3 figueira) — as mesmas do desenho, das folhas que caem, do que pousa na árvore e do mapa do dossel | o `Arvore3D`, a porta `anchor`, o mapa do dossel |
 | `G.Mata.stemsOf(i)` / `G.Space.stems(i)` | os caules duros da mata numa casa (`[X, Z, raio, tipo]` em metros): o feto arborescente, a árvore jovem, a palmeira fina, a touceira de bambu, a embaúba da clareira — o 3D os desenha ali e **o corpo do jogador não os atravessa**; o mundo nunca pergunta (fase A) | o 3D, o `avatar.js` (o `pushRound`) |
 | `G.Mata.niche(região, lx, ly, x, y)` | o nicho de um ponto: a luz debaixo do dossel, a umidade, a borda, a clareira, a encosta, o bioma | o 3D (a espécie de cada planta) |
+| `G.Arvore3D.anchor(t, 'colmeia'\|'ninho'\|'copa'\|'tronco')`, `G.Arvore3D.perchY(a)` | onde pousa o que pousa numa árvore do mundo, em metros, pela árvore desenhada (D-476) | o `things3d.js`, o `people3d.js`, o que vier (as folhas que caem, um pássaro) |
+| `G.Mata3D.setShade(k)` | quanto as plantas da mata se pintam na sombra do dossel (1; 0 desliga): **quando o céu escurecer todo material pelo mapa do ar, a 21d põe 0** — as plantas não ficam duas vezes na sombra | o céu (21d) |
 
 As medidas: o alto das copas de uma árvore crescida da selva fica a 17–28 m, as emergentes (uma em cada onze crescidas) 6 a 12 m
 acima delas; as outras espécies têm as medidas de antes. **O vento** das plantas é o `R3.U.wind`, o único do 3D (o bloco do céu o

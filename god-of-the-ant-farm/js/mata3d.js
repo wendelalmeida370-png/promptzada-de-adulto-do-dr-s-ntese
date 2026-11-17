@@ -336,4 +336,7 @@
   M3.plans = () => plans;
   M3.STRIDE = STRIDE; M3.REC = REC; M3.SUB = SUB;
   M3._gen = (cx, cy) => makeGen(cx, cy); // (for the proofs: the plan of a chunk, slice by slice)
+  // (the shade of the canopy the forest's plants paint themselves in, 0..1: when the sky's light darkens every material under the canopy
+  // by its map of the air — the 21d —, it sets this to 0, so the plants are not shaded twice; NATUREZA.md §8b)
+  M3.setShade = k => { U.uShade.value = G.clamp(+k || 0, 0, 1); };
 })(window.G);
