@@ -21,7 +21,9 @@ G.W = G.W || {}; G.Render = { nightness: () => 0 }; G.Art = { CLOTH: {}, icon: (
 try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
 // (the body's animation: the stride, the clips, the animator — 20a, the files after people3d.js in index.html)
-{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/anim-[^"]+)"><\/script>/g)) run(m[1]); }
+{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/anim-[^"]+)"><\/script>/g)) run(m[1]);
+  // (22a: the look and the clothes — the files under its marker in index.html, after people3d.js)
+  const a = html.indexOf('<!-- 22a: os personagens — os arquivos do 3D'), b = html.indexOf('<!-- 22c:', a); if (a >= 0 && b > a) for (const m of html.slice(a, b).matchAll(/<script src="(js\/[^"]+)"><\/script>/g)) run(m[1]); }
 // (the realm the modules are given: a scene and the quality — enough to make their meshes)
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };

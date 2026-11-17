@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -448,11 +448,12 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   need('props3d.js', /const aboutOf = K => \(G\.Atmos && G\.Atmos\.about \? G\.Atmos\.about\(K\.b\)/, 'aboutOf com G.Atmos.about');
   need('props3d.js', /if \(A\.wood\) \{/, 'a lenha só com A.wood');
   (src['props3d.js'] || []).forEach((l, k) => { if (/Build3D\.roles\(/.test(l.replace(/(^|\s)\/\/\s.*$/, ''))) fails.push(`o que se vê: props3d.js:${k + 1} lê os ofícios da casa fora do G.Atmos.about: ${l.trim().slice(0, 110)}`); });
-  const O = body('people3d.js', /^  function outfitOf\(v, L, fac\) \{/, /^  \}/);
-  if (!O) fails.push('o que se vê: people3d.js sem a função outfitOf — a regra 52 não acha a roupa');
-  else { O.forEach(l => { if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\()|Math\.random/.test(l)) fails.push(`o que se vê: people3d.js: a roupa (outfitOf) tira de um acaso — a escolha é pelo id da pessoa (G.hash): ${l.trim().slice(0, 110)}`); });
-    if (!O.some(l => /const D = P3\.dressOf\(v\)/.test(l))) fails.push('o que se vê: people3d.js: a roupa (outfitOf) não pergunta ao G.Atmos.dress (P3.dressOf)');
-    if (!O.some(l => /const sig = `.*\$\{D\.code\}`/.test(l))) fails.push('o que se vê: people3d.js: a assinatura da roupa (sig) sem o código do que ela lê do mundo (D.code)'); }
+  // (the clothes are js/look3d.js's since the cut of the 22a, SOCIEDADE.md §3.9)
+  const O = body('look3d.js', /^  function outfitOf\(v, L, fac\) \{/, /^  \}/);
+  if (!O) fails.push('o que se vê: look3d.js sem a função outfitOf — a regra 52 não acha a roupa');
+  else { O.forEach(l => { if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\()|Math\.random/.test(l)) fails.push(`o que se vê: look3d.js: a roupa (outfitOf) tira de um acaso — a escolha é pelo id da pessoa (G.hash): ${l.trim().slice(0, 110)}`); });
+    if (!O.some(l => /const D = P3\.dressOf\(v\)/.test(l))) fails.push('o que se vê: look3d.js: a roupa (outfitOf) não pergunta ao G.Atmos.dress (P3.dressOf)');
+    if (!O.some(l => /const sig = `.*\$\{D\.code\}`/.test(l))) fails.push('o que se vê: look3d.js: a assinatura da roupa (sig) sem o código do que ela lê do mundo (D.code)'); }
   need('art.js', /const D = At\.dress\(v\)/, 'Art.rank com G.Atmos.dress'); }
 // 53. "a cena de som só lê" (D-166): o js/audio-src.js decide o que soa e mais nada — não sorteia (nem do acaso do mundo, nem
 // do G.VR: a mesma cena para o mesmo mundo e o mesmo ouvido; quem sorteia é o tocador, audio.js), não escreve em pessoa,
@@ -974,10 +975,10 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 // 114. "o que se segura é o que o inventário diz" (D-336, D-346): o 3D das pessoas não tem tabela própria do que cada ofício ou ato
 // segura (as velhas TOOL_OF e toolK): o que está nas mãos, nas costas e no cinto vem do G.Inv.held(v), e a forma de cada coisa do
 // G.ItemArt (com as formas de antes como reserva)
-{ for (const f of ['people3d.js', 'avatar.js', ...files.filter(f => /^anim-.*\.js$/.test(f))]) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+{ for (const f of ['people3d.js', 'look3d.js', 'avatar.js', ...files.filter(f => /^anim-.*\.js$/.test(f))]) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
     if (/\bTOOL_OF\b|\btoolK\b/.test(c)) fails.push(`o que se segura: ${f}:${k + 1} decide o que alguém segura por uma tabela própria, não pelo G.Inv.held (D-346, L-1106): ${l.trim().slice(0, 110)}`); });
   // (the drawer asks the inventory, with the memo the inventory keeps — G.Inv.heldFor, L-1114 — or plainly, G.Inv.held)
-  if (!(src['people3d.js'] || []).some(l => /G\.Inv\.heldFor\(v, L\._inv|G\.Inv\.held\(v\)/.test(l))) fails.push('o que se segura: o people3d.js não pergunta ao G.Inv (heldFor / held) o que cada um leva (D-346, L-1114)');
+  if (!(src['look3d.js'] || []).some(l => /G\.Inv\.heldFor\(v, L\._inv|G\.Inv\.held\(v\)/.test(l))) fails.push('o que se segura: o look3d.js não pergunta ao G.Inv (heldFor / held) o que cada um leva (D-346, L-1114; o look saiu do people3d.js, SOCIEDADE.md §3.9)');
   if (!(src['people3d.js'] || []).some(l => /G\.ItemArt\.geo\(/.test(l))) fails.push('o que se segura: o people3d.js não pede a forma das coisas ao G.ItemArt.geo (D-346)'); }
 // 115. "o andar é feito da fase, não de poses misturadas" (D-341, L-1107): a passada de quem anda e de quem corre sai do G.Gait.pose
 // pela fase de cada quadro — só o animador (anim-body.js) e a ponte das poses nomeadas (o gaitPose do people3d.js) a pedem; quem
@@ -1012,7 +1013,7 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 { const p3 = src['people3d.js'] || [];
   if (!p3.some(l => /if \(inv\.cabeca\) \{ RX\.kH = inv\.cabeca; RX\.cabeca\.copy\(R\[B\.head\]\); \}/.test(l))) fails.push('o que se veste: o people3d.js não desenha o elmo do inventário no osso da cabeça (D-349)');
   if (!p3.some(l => /if \(inv\.corpo\) \{ RX\.kT = inv\.corpo; RX\.corpo\.copy\(R\[B\.chest\]\);/.test(l))) fails.push('o que se veste: o people3d.js não desenha a couraça do inventário no osso do peito (D-349)');
-  if (!p3.some(l => /if \(inv\.cabeca\) \{ o\.hatM = null; o\.hairM = null; \}/.test(l))) fails.push('o que se veste: com o elmo do inventário, a roupa ainda põe o chapéu ou o cabelo por baixo (D-350)');
+  if (!(src['look3d.js'] || []).some(l => /if \(inv\.cabeca\) \{ o\.hatM = null; o\.hairM = null; \}/.test(l))) fails.push('o que se veste: com o elmo do inventário, a roupa (look3d.js) ainda põe o chapéu ou o cabelo por baixo (D-350)');
   if (!p3.some(l => /toolMat = G\.ItemArt\.material\(THREE, /.test(l))) fails.push('o que se veste: as coisas não usam o material da arte dos itens (G.ItemArt.material: o brilho do metal, L-1115)'); }
 // 119. "o corpo debaixo da couraça vai com o peito — no shader e na cópia da CPU, iguais" (D-351): o tronco da couraça para cima vai
 // com o osso do peito (a faixa de baixo da borda, os números da elipse do pé da couraça), e a coxa que sobe fica debaixo da borda;

@@ -3009,6 +3009,10 @@ plano e o contrato estão no `SOCIEDADE.md`.
 
 ### 22a — Os personagens
 
+| ID | Tipo | Descrição |
+|---|---|---|
+| D-550 | decisão (22a, fase 1) | **O corte: o retrato e a roupa saem do `people3d.js` para o `js/look3d.js`, sem mudar nada** (SOCIEDADE.md §3.9). Vão o `lookFill` (sem o humor do rosto: a linha do `MOOD` fica no `people3d.js`, que é da atuação, 22c — o `P3.look` e o `P3.lookInto` de lá pedem o retrato ao `G.Look3D.fill` e põem o humor por cima), o `invOf`, o `cuirOf`, o `torchOf`, o `outfitOf`, o `IRIS`, o `HAIRS`, o `P3.outfit`, o `P3.farCol`, o `P3.dressOf`, o `P3.drunkOf` e o `P3.cuirOf`. **O `P3.body` fica no `people3d.js`**: ele é a cola do rig (22c), do rosto (22c) e das coisas do corpo (a tocha, as ferramentas, a carga); o desenho da pessoa que é da 22a é o `Body3D.put`, que já mora no `body3d.js` (§7.5 do contrato: a solução mais simples que respeita o espírito dele). O `color`, o `darker` e o `NO_INV` ficam também (o `people3d.js` os usa). O `look3d.js` vem depois do `people3d.js`, na marca 22a do `index.html`; as provas de Node que carregam o `people3d.js` sem a página (o `nodemundo` pelo `extra`, o `corpo-rig`, o `maos`) carregam os arquivos dessa marca depois dele; as regras 52, 114 e 118 do guard leem a roupa e o inventário no `look3d.js`, e ele entra na lista LOOK (com o `feicao.js`). Prova: `corpo-rig`, `andar`, `maos` e `roupa` iguais linha por linha ao 7555851; o `guarda3d` com um arquivo do 3D a mais. |
+
 ### 22b — A sociedade
 
 ### 22c — A vida que se vê
