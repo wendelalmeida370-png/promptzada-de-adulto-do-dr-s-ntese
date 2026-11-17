@@ -528,7 +528,7 @@ ${GXAIR}`;
     R3.skyU = skyU; // (the sky's colours, for what reflects it: the water, the windows — top, hor; sunDir/sunCol: the sun itself)
     skyMesh = new THREE.Mesh(new THREE.SphereGeometry(1400, 32, 16), new THREE.ShaderMaterial({
       uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
-      vertexShader: 'varying vec3 vd; void main(){ vd = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      vertexShader: 'varying vec3 vd; void main(){ vd = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position.z = gl_Position.w; }', // (on the far plane itself: where anything was drawn, it is in front)
       fragmentShader: `uniform vec4 skB; uniform vec4 skM; uniform vec2 skE; uniform vec3 skU; uniform vec4 moP; uniform vec3 moU; uniform vec3 moV; uniform float rbK; uniform float auK; uniform float haK; uniform vec3 uGal; uniform vec4 ciK; uniform vec3 ciCol; uniform vec3 top; uniform vec3 disc; uniform vec3 moonDir; uniform vec3 moonCol; uniform vec3 keyDir; uniform float uStars; uniform float cover; uniform vec3 cloudCol; uniform vec3 cloudSh; uniform float uT; uniform vec3 uWind; uniform sampler2D uNoise; varying vec3 vd;
         ${GXHAZE}
         ${GXAIR}
@@ -654,7 +654,9 @@ ${GXAIR}`;
           #endif
         }`,
     }));
-    skyMesh.renderOrder = -1; skyMesh.frustumCulled = false; scene.add(skyMesh);
+    // (drawn after everything solid — it writes no depth and is tested against what is there: its sky is worked out only for the
+    // pixels where the sky is seen, not for the whole picture under the land and the houses; before anything that blends over it)
+    skyMesh.renderOrder = 1e6; skyMesh.frustumCulled = false; scene.add(skyMesh);
     // the stars: many faint and a few bright (the magnitudes of a real sky), white, blue-white and a few orange, more of them
     // along the river of the galaxy; each twinkles, the more the nearer the horizon, where the air is thick and dims them; and
     // the clouds of the sky hide them (the same clouds the dome draws, read at each star)

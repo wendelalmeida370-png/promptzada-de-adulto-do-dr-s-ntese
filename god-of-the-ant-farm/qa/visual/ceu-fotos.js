@@ -78,7 +78,7 @@ const VIEWS = [
         // (the storm's bolt: the world's own stroke, on open land some 60 m ahead of the eye — where the 3D draws it, if it does)
         let bolt = null;
         if (wx === 'storm') { const fx = Math.cos(cy + Math.PI), fz = Math.sin(cy + Math.PI); let bx = at[0] + Math.cos(cy) * 15, by = at[1] + Math.sin(cy) * 15; // (ahead of the eye) void fx; void fz;
-          bx = G.clamp(bx, 2, N - 3); by = G.clamp(by, 2, N - 3); G.Powers.strike(bx, by, false); bolt = [+bx.toFixed(1), +by.toFixed(1)]; for (let k = 0; k < 5; k++) drawn(33); } // (the photo at its second flicker)
+          bx = G.clamp(bx, 2, N - 3); by = G.clamp(by, 2, N - 3); G.Powers.strike(bx, by, false); bolt = [+bx.toFixed(1), +by.toFixed(1)]; for (let k = 0; k < 9; k++) drawn(33); } // (the photo as its flash dies: the bolt still there, the storm's own dark back)
         const ms = drawn(1); const R = G.Realm, ri = R.info ? R.info.render : {}; const pi = G.Post3D && G.Post3D.info ? G.Post3D.info() : null;
         let med = null; if (MEDE > 0) { const t = []; for (let k = 0; k < MEDE; k++) t.push(drawn(33)); t.sort((a, b) => a - b); med = +t[t.length >> 1].toFixed(0); }
         const c = R.renderer().domElement, o = document.createElement('canvas'); o.width = c.clientWidth || c.width; o.height = c.clientHeight || c.height; o.getContext('2d').drawImage(c, 0, 0, o.width, o.height);
@@ -93,7 +93,7 @@ const VIEWS = [
   }
   // the drawing writes nothing of the world (D-465): the world held still (the speed 0), the save before and after drawing a few
   // frames of the sky — the same, byte for byte (but for the hour it was written)
-  if (world) { const same = await page.evaluate(() => { let r0 = null; const r = G.Realm.renderer(); G.UI.setSpeed(0); const ser = () => G.Save.serialize().replace(/"savedAt":\d+/, '');
+  if (world) { const same = await page.evaluate(() => { let r0 = null; const r = G.Realm.renderer(); G.UI.setSpeed(0); const ser = () => { const o = JSON.parse(G.Save.serialize()); delete o.savedAt; return JSON.stringify(o); }; // (but for the hour it was written)
       const s0 = ser(); for (let k = 0; k < 4; k++) G.Main.frameFor(33); const s1 = ser(); void r0; void r; G.UI.setSpeed(1);
       // (where they differ, if they do: the fields of the save, and in a list of things which ones and what)
       const diff = []; if (s0 !== s1) { const a = JSON.parse(s0), b = JSON.parse(s1); for (const k of Object.keys(b)) { const x = JSON.stringify(a[k]), y = JSON.stringify(b[k]); if (x === y) continue;
