@@ -63,6 +63,9 @@
     // (the gameplay base, D-336: the bag — { key: n }, the Depot's holder 'm:' — and the equipment — where the bag's things sit
     // on the body —; only inventario.js writes them, guard rule 111)
     'mochila', 'equip',
+  // (the society, SOCIEDADE.md, D-541, D-542: the look's genome — only genoma.js writes it, 22a; who the person is, the ties, the
+  // marks of who did what, the name in each community, the rumours known by name — only the soc-*.js files write them, 22b)
+  'genoma', 'indole', 'lacos', 'marcas', 'fama', 'sabe',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
@@ -96,13 +99,19 @@
       skin: o.skin || (m && f ? (G.R() < 0.5 ? m.skin : f.skin) : G.pick(civ ? civ.skin : SKIN)),
       hair: o.hair || (m && f ? (G.R() < 0.5 ? m.hair : f.hair) : G.pick(civ ? civ.hair : HAIR)),
       kidCloth: G.pick(KID_CLOTH), st: { wood: 0, food: 0, stone: 0, built: 0 }, lastCause: 'unknown', lastGod: false,
+      genoma: o.genoma, indole: o.indole, // (one brought back from the dead, or come from elsewhere, keeps what was theirs)
     });
     if (!v.skin) v.skin = G.pick(SKIN); if (!v.hair) v.hair = G.pick(HAIR);
     S.villagers.set(v.id, v);
+    // (whoever is born or comes into the world: the look's genome (22a) and who the person is (22b) — each a pure account of the
+    // id, the world's seed and the parents, never a draw of the world's chance, in the order registered; a hook fills only what
+    // the person has not got: one brought back from the dead keeps theirs — SOCIEDADE.md, D-541)
+    for (let i = 0; i < Vg.born.length; i++) Vg.born[i](v, m, f, o);
     // (one brought back from the dead keeps the life already written: nobody is born twice)
     if (!o.back) G.Life && G.Life.onCreate(v);
     return v;
   };
+  Vg.born = [];
 
   // ------------------------------ helpers ------------------------------
   const cap = v => (v.age < 12 ? 1 : v.age < 16 ? 2 : v.age >= 62 ? 2 : 4);

@@ -1420,5 +1420,33 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // nuvens com volume) entram pelo G.Realm.qualAdd do ceu3d.js — a tabela QUAL do realm3d.js não os tem
 { const c3 = (src['ceu3d.js'] || []).join('\n'), r3 = (src['realm3d.js'] || []).join('\n'); const q0 = r3.indexOf('const QUAL = {'), q1 = r3.indexOf('};', q0);
   for (const k of ['shafts', 'vlight', 'vclouds']) { if (!new RegExp(`qualAdd\\('${k}'`).test(c3)) fails.push(`as qualidades do céu: o ceu3d.js não registra '${k}' pelo G.Realm.qualAdd (D-468)`); if (q0 >= 0 && new RegExp(`\\b${k}:`).test(r3.slice(q0, q1))) fails.push(`as qualidades do céu: '${k}' na tabela QUAL do realm3d.js (pelo qualAdd: D-466)`); } }
+// === 22: a sociedade (o contrato, SOCIEDADE.md) ===
+// 194. "a aparência nunca decide" (D-542, a regra do dono): os arquivos do cérebro social (js/soc-*.js) não leem a aparência de uma
+// pessoa — a pele, o cabelo, a roupa de criança, o genoma, o G.Genoma, o G.Feicao — nem o povo dela (.civ, CIVS[) para decidir; o
+// nome e a língua vêm das portas do G.Civ que recebem a pessoa. A 22b estende a regra às funções de decisão que passam a perguntar
+// às portas sociais (o crime, a revolta, a justiça, a fofoca, a corte)
+{ for (const f of files) { if (!/^soc-.*\.js$/.test(f)) continue;
+    src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+      if (/\.(skin|hair|kidCloth|genoma)\b|\bG\.(Genoma|Feicao)\b|\.civ\b|\bCIVS\[/.test(c)) fails.push(`a aparência nunca decide: ${f}:${k + 1} lê a aparência ou o povo de uma pessoa (D-542): ${l.trim().slice(0, 110)}`); }); } }
+// 195. "o vocabulário dos atos sociais" (D-544): o js/soc-atos.js é puro (nem o mundo, nem acaso, nem o relógio), e todo ato que um
+// arquivo do cérebro social dá a uma pessoa (v.act = '…') está nele
+{ const voc = (src['soc-atos.js'] || []).join('\n'); const keys = new Set();
+  if (!voc) fails.push('o vocabulário dos atos sociais: falta o js/soc-atos.js (D-544)');
+  else { const d0 = voc.indexOf('const DEF = {'), d1 = voc.indexOf('\n  };', d0); for (const m of voc.slice(d0, d1).matchAll(/\b([a-z]\w*):\s*\['/g)) keys.add(m[1]);
+    if (keys.size < 20) fails.push(`o vocabulário dos atos sociais: o js/soc-atos.js tem só ${keys.size} atos lidos (D-544)`);
+    (src['soc-atos.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+      if (/\bG\.(S\b|R\(|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\.|performance\.now|\bTHREE\b/.test(c)) fails.push(`o vocabulário dos atos sociais: soc-atos.js:${k + 1} não é puro (D-544): ${l.trim().slice(0, 110)}`); }); }
+  for (const f of files) { if (!/^soc-.*\.js$/.test(f) || f === 'soc-atos.js') continue;
+    src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); for (const m of c.matchAll(/\.act\s*=\s*'([^']*)'/g)) if (m[1] && !keys.has(m[1])) fails.push(`o vocabulário dos atos sociais: ${f}:${k + 1} dá o ato «${m[1]}», que não está no js/soc-atos.js (D-544)`); }); } }
+// 196. "o rosto é um canal com nome, e o desenho só lê a sociedade" (D-543, D-545): o js/rosto.js é puro; e nenhum arquivo do que só se
+// vê (LOOK) chama uma porta que muda a sociedade — os laços e as marcas, a índole que a vida muda, os boatos que nascem ou viajam, o casal
+{ (src['rosto.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(S\b|R\(|rr\(|ri\(|pick\(|chance\(|VR\(|vrr\(|vri\(|vpick\(|vchance\()|Math\.random|\bDate\.|performance\.now|\bTHREE\b/.test(c)) fails.push(`o rosto é um canal com nome: rosto.js:${k + 1} não é puro (D-543): ${l.trim().slice(0, 110)}`); });
+  if (!(src['rosto.js'] || []).length) fails.push('o rosto é um canal com nome: falta o js/rosto.js (D-543)');
+  for (const f of LOOK) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(Lacos\.(ato|marca)|Indole\.(vive|nasce)|Boatos\.(nasce|leva|desmente)|Vg\.(pair|unpair))\s*\(/.test(c)) fails.push(`o desenho só lê a sociedade: ${f}:${k + 1} muda a sociedade de dentro do que só se vê (D-545): ${l.trim().slice(0, 110)}`); }); }
+// === 22a: os personagens ===
+// === 22b: a sociedade ===
+// === 22c: a vida que se vê ===
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
