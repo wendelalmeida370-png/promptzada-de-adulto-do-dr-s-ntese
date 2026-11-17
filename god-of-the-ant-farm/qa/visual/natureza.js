@@ -141,7 +141,8 @@ const VIEWS = [
     }, [w, place, yaw, pitch, dist, hour, world !== w, process.env.Q || 'media', SEED, opt || null]);
     world = w;
     if (info.skip) { log.push(`${name}: ${info.skip}`); console.log(log[log.length - 1]); continue; }
-    await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: +process.env.TSHOT || 240000 }); // (TSHOT: the Alta by software can take longer)
+    // (TSHOT: the Alta by software can take longer; a photo that does not come in time is said, and the next view goes on — 21c)
+    try { await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: +process.env.TSHOT || 240000 }); } catch (e) { info.foto = 'sem foto: ' + String(e.message).split('\n')[0].slice(0, 120); }
     log.push(`${name}: ${JSON.stringify(info)} (${((Date.now() - t0) / 1000).toFixed(0)} s)`); console.log(log[log.length - 1]);
   }
   console.log('erros: ' + (errs.slice(0, 5).join(' || ') || 'nenhum'));
