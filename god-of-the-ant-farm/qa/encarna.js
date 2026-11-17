@@ -229,7 +229,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // with a load and no strength left — 0.9 to 1.2 m/s, as the world gives it: 5.1 m in 4.6 s, T-208)
     // (of the biggest town; none there outside with a family and a past, of the next by size — the «cidade» of the generation 19,
     // its night lived out, four towns of thirty-odd souls: none such of the six outside in Tenochtitlan, two in Mênfis: T-667)
-    const fam = o => o.mother && o.bio && o.bio.length >= 3; let s = __E.town(); for (let k = 1; s && !__E.adults(s, fam).length && __E.town(k); k++) s = __E.town(k);
+    const fam = o => o.mother && o.bio && o.bio.length >= 3;
+    // (the «cidade» of the worlds made after the merge of 20a–20h is saved at midnight: everyone with a mother in bed, out of doors
+    // only founders — the god waits for the morning, at 8×, as e10 does: T-1390)
+    const anyFam = () => { for (let k = 0; __E.town(k); k++) if (__E.adults(__E.town(k), fam).length) return true; return false; };
+    if (!anyFam()) { G.UI.setSpeed(8); __E.until(anyFam, 3000, 100); G.UI.setSpeed(1); }
+    let s = __E.town(); for (let k = 1; s && !__E.adults(s, fam).length && __E.town(k); k++) s = __E.town(k);
     const dry = (X, Z) => { const sf = G.Space.surface(X, Z); return sf.walk && sf.kind === 'ground'; };
     const fit = o => o.energy >= 30 && (o.hunger || 0) < 100 && !(o.carry && o.carry.n > 0) && !(o.sick > 0) && !(o.lost && o.lost.leg) && dry(o.x * 4, o.y * 4);
     const v = __E.adults(s, fam).sort((a, b) => (fit(b) ? 1 : 0) - (fit(a) ? 1 : 0) || (b.kids.length - a.kids.length))[0];
