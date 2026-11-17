@@ -42,6 +42,7 @@ const VIEWS = [
   ['r-paredao', 'relevo', 'r:paredao', null, -0.02, 4.5, 0.42],
   ['r-paredao-tarde', 'relevo', 'r:paredao', null, -0.02, 4.5, 0.70],
   ['r-paredao-chuva', 'relevo', 'r:paredao', null, -0.02, 4.5, 0.42, { rain: 1 }],
+  ['r-paredao-longe', 'relevo', 'r:paredao', null, -0.1, 16, 0.42],
   ['r-costa', 'relevo', 'r:costa', null, 0.1, 6, 0.42],
   ['r-caverna', 'relevo', 'r:caverna', null, 0.02, 4, 0.42],
   ['r-horizonte', 'relevo', 'r:borda', null, 0.0, 5, 0.42],
