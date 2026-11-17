@@ -1430,6 +1430,20 @@ canvas#game3d { touch-action: none; transition: none; }
 /* === 20e: a interação === */
 
 /* === 20f: o combate === */
+/* the fight's own screen (combate-ui.js): the breath round the reticle while it is spent, the charge and the draw inside it, the
+   guard's mark under it, the duel's line at the top */
+.cb-hud { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s; }
+.cb-hud.on { opacity: 1; }
+.cb-ring { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; transform: rotate(-90deg); overflow: visible; }
+.cb-ring circle { fill: none; stroke-linecap: round; }
+.cb-st { stroke: rgba(150, 225, 140, .75); stroke-width: 3; filter: drop-shadow(0 0 1px rgba(0, 0, 0, .7)); transition: stroke .2s; }
+.cb-st.low { stroke: rgba(240, 120, 90, .9); }
+.cb-ch { stroke: rgba(255, 236, 170, .9); stroke-width: 2.5; filter: drop-shadow(0 0 1px rgba(0, 0, 0, .7)); }
+.cb-ch.full { stroke: rgba(255, 200, 80, 1); stroke-width: 3.5; }
+.cb-guard { position: absolute; left: 50%; top: calc(50% + 40px); transform: translateX(-50%); font-size: 18px; color: rgba(245, 220, 160, .95); text-shadow: 0 0 3px rgba(0, 0, 0, .8); }
+.cb-duel { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); padding: 4px 12px; border-radius: 6px; background: rgba(40, 20, 14, .72); color: #f3dcae; font-size: 12.5px; font-weight: 700; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
+#inc-root.hud-off .cb-hud { display: none !important; }
+@media (max-width: 640px) { .cb-ring { width: 52px; height: 52px; margin: -26px 0 0 -26px; } .cb-duel { font-size: 11.5px; } }
 
 /* === 20g: os ofícios === */
 /* === 20h: a origem das coisas === */

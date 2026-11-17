@@ -89,6 +89,9 @@
   const RING = 'o mundo toca o golpe na hora dele (G.Audio.at)';
   A.ATO = {
     chop: blow(RING), mine: blow(RING), build: blow(RING), hammer: blow(RING), shoot: blow(RING), stab: blow(RING), brandish: blow(RING), axe: blow(RING), sword2: blow(RING),
+    // (the fight of the body, 20f — G.Combate: the blow rings by the world's hand at its contact, the arrow's loosing too; the guard
+    // held and the bow drawn are still)
+    golpe: blow(RING), guarda: still('a guarda erguida espera calada'), mirar: still('o arco retesado não soa: a flecha, quando sai'),
     fight: (v, t) => (t.type === 'drill' || t.type === 'muster' ? { s: 'clack', q: 'curso', cada: 0.85, v: 0.5, alc: 1.1, fam: 'armas' } : blow(RING)),
     beat: (v, t) => (t.type === 'fire' ? { s: 'thud', q: 'curso', cada: 0.7, v: 0.45, alc: 0.9 } : { s: 'hit', q: 'curso', cada: 0.9, v: 0.5, alc: 1 }),
     fill: (v, t) => ({ s: 'pour', q: 'curso', cada: 2.2, v: 0.35, alc: 0.6 }),

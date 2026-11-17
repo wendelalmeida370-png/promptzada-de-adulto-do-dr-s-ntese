@@ -161,7 +161,7 @@
     const S = G.S; const r = S.dead.get(g.vid);
     const killer = r && r.by && S.villagers.get(r.by);
     if (killer && !h.told.includes('k' + killer.id) && G.dist(killer.x, killer.y, h.x, h.y) < 40) return { k: 'killer', id: killer.id };
-    const c = (S.crimes || []).find(q => q.st === 'aberto' && q.set === h.set && !h.told.includes('c' + q.id) && S.villagers.has(q.thief));
+    const c = (S.crimes || []).find(q => q.st === 'aberto' && (q.kind || 'furto') === 'furto' && q.set === h.set && !h.told.includes('c' + q.id) && S.villagers.has(q.thief)); // (a theft's coins: the fight's crimes, 20f, have none to point at)
     if (c) return { k: 'theft', id: c.id };
     return null;
   }
