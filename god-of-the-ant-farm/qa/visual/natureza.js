@@ -9,7 +9,7 @@
 // final é desenhada: por software cada quadro custa segundos, e os do aquecimento não aparecem na foto
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
-const ROOT = process.argv[2]; const OUT = process.argv[3]; const ONLY = (process.argv[4] || '').split(',').filter(Boolean);
+const ROOT = path.resolve(process.argv[2]); const OUT = process.argv[3]; const ONLY = (process.argv[4] || '').split(',').filter(Boolean);
 fs.mkdirSync(OUT, { recursive: true });
 const SEED = 4242; // (the world of the biomes: continente 192, clima variado)
 const VIEWS = [
