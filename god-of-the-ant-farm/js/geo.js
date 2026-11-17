@@ -97,6 +97,11 @@
   const V = () => N + 1;
   const hq = (vx, vy) => Math.round(G.S.H[vy * V() + vx] * 100);
   const tileQ = (x, y) => (hq(x, y) + hq(x + 1, y) + hq(x, y + 1) + hq(x + 1, y + 1)) / 400; // (units)
+  // (the world's height at a point, as W.hAt reads it between the corners — but of the corners as the save keeps them: what the G.Geo
+  // decides by a height (a band, a ledge's place, the way down a face) is the same after a load)
+  const hAtQ = (x, y) => { x = G.clamp(x, 0, N - 0.001); y = G.clamp(y, 0, N - 0.001); const xi = x | 0, yi = y | 0, fx = x - xi, fy = y - yi;
+    return ((hq(xi, yi) * (1 - fx) + hq(xi + 1, yi) * fx) * (1 - fy) + (hq(xi, yi + 1) * (1 - fx) + hq(xi + 1, yi + 1) * fx) * fy) / 100; };
+  Ge.hAtQ = hAtQ;
   // the highest land of the map (units over the sea), for the rock of the heights: made again when the ground changes
   let topFor = '', top = 1;
   function topOf() {
@@ -205,13 +210,13 @@
     out = out || [0, 0, 0]; out[0] = out[1] = out[2] = 0;
     const S = G.S; if (!S || !W.inb(x, y)) return out; const i = W.idx(x, y); if (!Ge.carves(i)) return out;
     const m = G.smooth(0, 0.42, reach(x, y)); if (m <= 0) return out; noises();
-    const h = W.hAt(x, y) * HM; const r = Ge.rockAt(i); const B = Ge.bandOf(r, h + Ge.fold(x, y));
+    const h = hAtQ(x, y) * HM; const r = Ge.rockAt(i); const B = Ge.bandOf(r, h + Ge.fold(x, y));
     const R = ROCKS[r]; const p = 1.5 + 1.6 * B.hard * R.hard; const f = B.f; const g = Math.pow(f, p);
     let dv = (g - f) * B.t * 0.95;
     // (the breaks: the face uneven over a couple of metres, more in the blocky granite and the columned basalt)
     dv += 0.35 * (R.joint === 0 || R.joint === 4 ? 1.3 : 1) * G.fbm(nzD, x * 2.2, y * 2.2, 2);
     // (down the slope there: the way a cornice juts)
-    const e = 0.18; const gx = W.hAt(x + e, y) - W.hAt(x - e, y), gz = W.hAt(x, y + e) - W.hAt(x, y - e); const gl = Math.hypot(gx, gz);
+    const e = 0.18; const gx = hAtQ(x + e, y) - hAtQ(x - e, y), gz = hAtQ(x, y + e) - hAtQ(x, y - e); const gl = Math.hypot(gx, gz);
     let push = 0; if (B.hard > 0.55 && gl > 1e-4) push = (B.hard - 0.55) * 1.1 * G.smooth(0.72, 0.97, f) * (1 - G.smooth(0.97, 1, f)) * R.hard;
     out[0] = dv * m; if (gl > 1e-4) { out[1] = -gx / gl * push * m; out[2] = -gz / gl * push * m; }
     return out;
@@ -237,10 +242,10 @@
   }
   // (the drop of a carved tile: its highest corner over its lowest, metres; and the way down it — the unit vector of the slope)
   function dropOf(x, y) { const a = hq(x, y), b = hq(x + 1, y), c = hq(x, y + 1), d = hq(x + 1, y + 1); return (Math.max(a, b, c, d) - Math.min(a, b, c, d)) / 100 * HM; }
-  function downOf(x, y) { const gx = W.hAt(x + 0.2, y) - W.hAt(x - 0.2, y), gz = W.hAt(x, y + 0.2) - W.hAt(x, y - 0.2); const l = Math.hypot(gx, gz) || 1; return [-gx / l, -gz / l]; }
+  function downOf(x, y) { const gx = hAtQ(x + 0.2, y) - hAtQ(x - 0.2, y), gz = hAtQ(x, y + 0.2) - hAtQ(x, y - 0.2); const l = Math.hypot(gx, gz) || 1; return [-gx / l, -gz / l]; }
   // (the point of the slope of a tile, from its middle along its fall, where the ground stands at a height: halves the fall, in tiles)
   function pointAt(x, y, d, Y) {
-    let lo = -0.5, hi = 0.5; const cx = x + 0.5, cy = y + 0.5; const f = t => W.hAt(cx + d[0] * t, cy + d[1] * t) * HM;
+    let lo = -0.5, hi = 0.5; const cx = x + 0.5, cy = y + 0.5; const f = t => hAtQ(cx + d[0] * t, cy + d[1] * t) * HM;
     if ((f(lo) - Y) * (f(hi) - Y) > 0) return null;
     for (let k = 0; k < 18; k++) { const m = (lo + hi) / 2; if ((f(m) - Y) * (f(lo) - Y) <= 0) hi = m; else lo = m; }
     const t = (lo + hi) / 2; return [cx + d[0] * t, cy + d[1] * t];
@@ -346,12 +351,16 @@
   // the dark goes in, the rock it is cut in — from the cave's own kind: a wall's mouth tall, a shelter wide and low, a fissure narrow)
   Ge.mouthOf = function (m, kind) {
     const S = G.S; const i = W.idx(m.x, m.y);
-    const hx = W.hAt(m.x + 1.5, m.y + 0.5) - W.hAt(m.x - 0.5, m.y + 0.5), hz = W.hAt(m.x + 0.5, m.y + 1.5) - W.hAt(m.x + 0.5, m.y - 0.5);
+    const hx = hAtQ(m.x + 1.5, m.y + 0.5) - hAtQ(m.x - 0.5, m.y + 0.5), hz = hAtQ(m.x + 0.5, m.y + 1.5) - hAtQ(m.x + 0.5, m.y - 0.5);
     const yaw = m.fx || m.fy ? Math.atan2(-m.fy, -m.fx) : Math.atan2(hz, hx);
     const w = kind === 'fenda' ? 1.4 : kind === 'abrigo' ? 4.4 : 3, h = kind === 'fenda' ? 3.4 : kind === 'abrigo' ? 2.1 : 2.8;
     // (cut into a face: the tile the way in leads to is a carved cliff — the drawing opens a hole in it for the throat)
     const ix = Math.round(m.x + Math.cos(yaw)), iy = Math.round(m.y + Math.sin(yaw)); const carve = W.inb(ix, iy) && Ge.carves(iy * N + ix);
     return { X: (m.x + 0.5) * TL, Y: W.hAt(m.x + 0.5, m.y + 0.5) * HM, Z: (m.y + 0.5) * TL, yaw, w, h, deep: kind === 'abrigo' ? 2.2 : 5, rock: Ge.rockAt(i), kind, carve };
   };
+  // (for the checker and the proofs: a tile's rock and fold, and a region's formations, made from nothing — no memory: what the memory
+  // says must be what the world says now)
+  Ge.fresh = function (i) { noises(); spine(); return { rock: Ge.rockAt(i), fold: foldTile(i % N, (i / N) | 0) }; };
+  Ge.formsFresh = (rx, ry) => makeForms(rx, ry);
   Ge.version = 1;
 })(window.G);

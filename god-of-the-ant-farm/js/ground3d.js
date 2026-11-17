@@ -167,12 +167,16 @@
     const S = G.S; const Ge = G.Geo; if (!Ge) { out[0] = out[1] = out[2] = out[3] = 0; return out; }
     const r = Ge.rockAt(i); const v = G.clamp(Math.round((Ge.foldAt(i) + 256) * 128), 0, 65535);
     let moss = 0; const t = S.type[i];
-    if (t >= T.SAND && !S.road[i] && !(S.burnt[i] > 0) && !(S.scar[i] > 0) && G.Mata && G.Mata.floor) { const f = G.Mata.floor(i); moss = G.clamp((f.umid - 0.42) * 1.7, 0, 1) * 0.85 + f.musgo * 0.4; moss *= 1 - G.clamp(G3.snowAt(i) * 1.6, 0, 1); }
+    if (t >= T.SAND && !S.road[i] && !(S.burnt[i] > 0) && !(S.scar[i] > 0) && G.Mata && G.Mata.floor) { const f = G.Mata.floor(i); moss = G.clamp((f.umid - 0.42) * 1.7, 0, 1) * 0.85 + f.musgo * 0.4; moss *= 1 - G.clamp(snowOf(i, x, y) * 1.6, 0, 1); } // (under the snow lying there — the cold's, the god's winter — no moss shows)
     const wet = G.clamp(Math.max(S.wet ? S.wet[i] : 0, sprayOf(i)), 0, 1);
     out[0] = r; out[1] = v >> 8; out[2] = v & 255; out[3] = (Math.round(G.clamp(moss, 0, 1) * 15) << 4) | Math.round(wet * 15);
     return out;
   }
   G3.geoOf = (i, x, y) => geoOf(i, x, y, [0, 0, 0, 0]);
+  G3.snowOf = (i, x, y) => snowOf(i, x, y);
+  // (the pictures of the rock and of the floor, for what lies on the ground and must match it — the relief's stones: their moss, their wet,
+  // the snow on them read where they stand, as the ground under them has it; the same objects, by reference)
+  G3.geoU = () => ({ uGeo: U.uGeo, uFMap: U.uFMap, uN: U.uN, uTL: U.uTL });
   G3.geoMap = () => emap;
   G3.grassMap = () => gmap;
   G3.map = () => map;

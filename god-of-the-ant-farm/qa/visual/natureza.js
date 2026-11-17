@@ -135,6 +135,9 @@ const VIEWS = [
       // (21a: the checks of the plants' drawing, which no proof called before — T-1511: the trees round the place, the meadow's field, the forest's layers)
       const chk = [].concat(G.Geo3D && G.Geo3D.check ? G.Geo3D.check() : [], G.Realm.floraCheck ? G.Realm.floraCheck(at[0], at[1], 14) : [], G.Grass3D && G.Grass3D.check ? G.Grass3D.check() : [], G.Mata3D && G.Mata3D.check ? G.Mata3D.check() : []);
       const mata = G.Mata3D ? { inst: G.Mata3D.stats.inst, tris: G.Mata3D.stats.tris, calls: G.Mata3D.stats.calls } : null;
+      // (21b: the bed the water reads and the ground's picture against the world, which no proof called before — T-1530)
+      const bed = G.Realm.bedCheck ? G.Realm.bedCheck(96) : null; if (bed && bed.bad) chk.push(`o leito da água: ${bed.bad} de ${bed.n} pontos fora do chão`);
+      const gc = G.Ground3D.check ? G.Ground3D.check(at[0], at[1], 24, 200) : null; if (gc && (gc.snowBad || gc.paleBad)) chk.push(`o chão: ${JSON.stringify(gc)}`);
       return { at: at.map(q => +q.toFixed(2)), yaw: +(+yaw).toFixed(2), geo: G.Geo3D && G.Geo3D.stats ? JSON.stringify(G.Geo3D.stats) : '', biome: G.Biome ? G.Biome.of(W.idx(at[0], at[1])) : -1, err: JSON.stringify(G.modErr), calls: m && m.calls, tris: m && m.tris, drawMs: Math.round((performance.now() - tq) / 3), checks: chk.length ? chk.slice(0, 3) : 0, mata };
     }, [w, place, yaw0, pitch, dist, hour, world !== w, process.env.Q || 'media', SEED, wx || null]);
     world = w;
