@@ -66,9 +66,9 @@
   // embaúba's 0,12, a young tree's 0,07, a bamboo clump's culms within 0,2)
   const STEMS = { fetoArbo: 0.13, palmeira: 0.11, embauba: 0.12, arvoreta: 0.07, abeto: 0.06, bambu: 0.2 };
   // how wide each shape stands (m, at size 1): no plant inside a trunk, a stem or a boulder
-  const WIDE = { cupim: 0.8, feto: 0.5, samambaia: 0.4, aracea: 0.45, heliconia: 0.4, plantula: 0.15, bromelia: 0.25, touceira: 0.9, arbusto: 0.75, espinho: 0.6, tufo: 0.3, rasteiro: 0.4, junco: 0.3, tronco: 0.4 };
+  const WIDE = { mangue: 1.1, cupim: 0.8, feto: 0.5, samambaia: 0.4, aracea: 0.45, heliconia: 0.4, plantula: 0.15, bromelia: 0.25, touceira: 0.9, arbusto: 0.75, espinho: 0.6, tufo: 0.3, rasteiro: 0.4, junco: 0.3, tronco: 0.4 };
   // (the size of each, its spread: [least, most])
-  const SIZE = { cupim: [0.6, 1.3], feto: [0.7, 1.45], samambaia: [0.7, 1.3], aracea: [0.7, 1.6], heliconia: [0.75, 1.4], plantula: [0.6, 1.6], bromelia: [0.7, 1.3], touceira: [0.75, 1.3], arbusto: [0.7, 1.5], espinho: [0.7, 1.4], tufo: [0.6, 1.4], rasteiro: [0.7, 1.4], junco: [0.8, 1.3], tronco: [0.8, 1.25] };
+  const SIZE = { mangue: [0.8, 1.35], cupim: [0.6, 1.3], feto: [0.7, 1.45], samambaia: [0.7, 1.3], aracea: [0.7, 1.6], heliconia: [0.75, 1.4], plantula: [0.6, 1.6], bromelia: [0.7, 1.3], touceira: [0.75, 1.3], arbusto: [0.7, 1.5], espinho: [0.7, 1.4], tufo: [0.6, 1.4], rasteiro: [0.7, 1.4], junco: [0.8, 1.3], tronco: [0.8, 1.25] };
   // (the floor's plants grown into the shrubs' storey: the sapling of the shade to two or three metres, the big heliconia, the giant aroid)
   const SIZEA = { plantula: [3.2, 5.6], heliconia: [1.6, 2.4], aracea: [1.8, 2.8] };
   // (the land's tint over a kind's own green: the jungle's deep green, the taiga's cold dark, the savanna's straw, the desert's grey)
@@ -120,6 +120,7 @@
       const l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; c = c.map(q => l + (q - l) * 0.82); // (quiet: moss and leaf, never neon — the BIBLE's line)
       return c.map(q => Math.pow(Math.min(255, Math.max(0, q)) / 255, 2.2)); };
     const pick = (list, nc, X, Z, h) => { let tot = 0; const ws = list.map(([kid, w, n]) => { const p = patch(PF.BY[kid].n, X, Z); const ww = w * nicheW(n, nc) * (0.15 + 1.7 * p * p); tot += ww; return ww; }); let r = h * tot; for (let q = 0; q < list.length; q++) { r -= ws[q]; if (r <= 0) return list[q][0]; } return list[list.length - 1][0]; };
+    const seaNear = (x, y) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const qx = x + dx, qy = y + dy; if (qx < 0 || qy < 0 || qx >= N || qy >= N) continue; if (S.type[qy * N + qx] <= T.SEA) return true; } return false; };
     const nicheAt = (x, y) => { const k = at(x, y); return k < 0 ? null : Ma.niche(reg, x - reg.x0, y - reg.y0, x, y); };
     // the floor's plants: a cell of 1,2 m, its plant where the hash of the cell puts it
     const CR = 64 / 54; let rows = 0;
@@ -145,7 +146,10 @@
         const x = Math.floor(X / TL), y = Math.floor(Z / TL); if (x < 0 || y < 0 || x >= N || y >= N) continue; const i = y * N + x; if (!landOK(i) || G.pathLevel(S.wear[i]) >= 1) continue;
         const b = S.biome ? S.biome[i] : 0; const rc = REC[b] || REC[0]; const d = densAt(X, Z);
         if (hc > d * rc.ad) continue;
-        const nc = nicheAt(x, y); if (!nc) continue; const kid = pick(rc.a, nc, X, Z, hh(X * 61, Z * 67)); const sz = SIZEA[kid] || SIZE[kid] || [0.8, 1.2];
+        const nc = nicheAt(x, y); if (!nc) continue; let kid = pick(rc.a, nc, X, Z, hh(X * 61, Z * 67));
+        // (the mangrove: on the salt shore of the warm wet lands — the swamp and the jungle a tile or two from the sea —, the other shrubs give way to it)
+        if ((b === 3 || b === 4) && nc.agua > 0.4 && seaNear(x, y) && hh(X * 7, Z * 11) < 0.7) kid = 'mangue';
+        const sz = SIZEA[kid] || SIZE[kid] || [0.8, 1.2];
         const s = sz[0] + (sz[1] - sz[0]) * hh(X * 71, Z * 73) * (0.6 + d * 0.4); if (!clear(X, Z, (WIDE[kid] || 0.6) * s, false)) continue;
         const lean = 0.03 + nc.borda * 0.15; const la = hh(X * 79, Z * 81) * TAU;
         add(kid, 'a', X, Z, s, hh(X * 83, Z * 87) * TAU, Math.cos(la) * lean, Math.sin(la) * lean, colOf(kid, b, nc, X, Z), PF.BY[kid].acc ? Math.floor(hh(X * 5, Z * 3) * 3) : 0, hh(X * 89, Z * 97), hh(X * 101, Z * 103));

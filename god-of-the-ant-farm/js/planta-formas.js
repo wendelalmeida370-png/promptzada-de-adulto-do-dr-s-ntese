@@ -159,6 +159,12 @@
     const top = v(b, 0.05, 2.45, 0.02, 0, 1, 0, 0, 0.75, 0); for (let k = 0; k < n; k++) tri(b, prev[k], top, prev[(k + 1) % n]);
     tube(b, 0.35, 0.4, 0.2, 0.42, 1.45, 0.26, 0.16, 0.06, 5, 0, 0, 0.35, 0.6, true); return b; };
 
+  // 20 a mangrove of the salt shores: arching stilt roots from the trunk into the mud, a short trunk, dark glossy crowns
+  DEF.mangue = () => { const b = mk(); for (let q = 0; q < 7; q++) { const a = q / 7 * TAU + h(q + 300) * 0.4, r = 0.9 + h(q + 301) * 0.5; let px = Math.cos(a) * 0.08, pz = Math.sin(a) * 0.08, py = 1.3 + h(q + 302) * 0.5;
+      for (let j = 1; j <= 3; j++) { const u = j / 3; const nx = Math.cos(a) * r * u, nz = Math.sin(a) * r * u, ny = (1.3 + h(q + 302) * 0.5) * (1 - u * u) + 0.15 * Math.sin(u * Math.PI); tube(b, px, py, pz, nx, ny, nz, 0.035, 0.03, 3, 0, 0, 0.2, 0.3); px = nx; py = ny; pz = nz; } }
+    tube(b, 0, 1.2, 0, 0.05, 2.6, 0.03, 0.09, 0.06, 5, 0, 0, 0.2, 0.3);
+    lump(b, 0.05, 3.0, 0.03, 1.05, 0.55, 0.95, 0.25, 310); lump(b, -0.55, 2.7, 0.35, 0.65, 0.4, 0.6, 0.25, 321); lump(b, 0.55, 2.75, -0.4, 0.7, 0.42, 0.6, 0.25, 333); return b; };
+
   // ------------------------------ the catalogue ------------------------------
   // each shape: its name, the layer it lives in (r: the floor's — rasteira —, a: the shrubs' — arbustiva —, s: a hard stem), its
   // base colour (the dark of its base and the light of its tip are made from it), its accent and how much it gives to the wind
@@ -183,6 +189,7 @@
     { id: 'tufo', make: DEF.tufo, layer: 'r', col: [150, 140, 92], acc: null, sway: 0.6 },
     { id: 'rasteiro', make: DEF.rasteiro, layer: 'r', col: [64, 92, 52], acc: [[150, 30, 50], [70, 60, 140], [170, 40, 40]], sway: 0.2 },
     { id: 'cupim', make: DEF.cupim, layer: 'a', col: [168, 104, 70], acc: null, sway: 0 },
+    { id: 'mangue', make: DEF.mangue, layer: 'a', col: [46, 84, 52], acc: null, sway: 0.3, bark: [98, 86, 70] },
   ];
   PF.BY = {}; PF.KINDS.forEach((k, n) => { k.n = n; PF.BY[k.id] = k; });
   // the shape of a kind, made once: plain typed arrays (P, N: xyz; K, C, A: one a point; I: the triangles), its bounds and its count
