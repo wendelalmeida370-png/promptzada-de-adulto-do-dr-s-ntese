@@ -132,7 +132,7 @@
     }
     if (!tiles) return null;
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(NR, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); geo.setIndex(I); geo.computeBoundingSphere();
-    geo.userData.tiles = tiles; return geo;
+    geo.userData.tiles = tiles; G3D.stats.carved = tiles; G3D.stats.tris = I.length / 3; return geo;
   }
 
   // ------------------------------ the mouths of the caves ------------------------------
@@ -313,14 +313,13 @@
         else if (fm.kind === 'matacao') piece(list, 'matacao' + (Math.floor(v * 3) % 3), fm.X, fm.Y, fm.Z, fm.yaw, fm.sx, fm.sy, fm.sz, fm.rock, fm.i);
         else if (fm.kind === 'arco') piece(list, 'arco0', fm.X, fm.Y, fm.Z, fm.yaw, fm.sx, fm.sy, fm.sz * 4, fm.rock, fm.i);
       }
-      // (the lip of each mouth: blocks round its arch, set into the hill)
+      // (the lip of each mouth: rounded stones of the place round its arch, half sunk into the hill — the broken rim of an opening, never a
+      // doorway of blocks)
       for (const m of mouthsIn(x0, y0, n)) {
         const c = Math.cos(m.yaw), s = Math.sin(m.yaw);
-        for (let j = 0; j < 7; j++) { const a = j / 6 * Math.PI; const across = Math.cos(a) * m.w * 0.56, up = Math.sin(a) * m.h * 0.98; const X = m.X - 0.35 * c - across * s, Z = m.Z - 0.35 * s + across * c;
-          const gy = W.hAt(X / TL, Z / TL) * HM; const sz = 0.75 + G.hash(j * 3 + m.X) * 0.5; const Y = j === 0 || j === 6 ? gy - sz * 0.3 : Math.max(m.Y + up - sz * 0.45, gy - sz * 0.3);
-          piece(list, 'bloco' + (j % 3), X, Y, Z, m.yaw + Math.PI / 2 + (G.hash(j + m.Z) - 0.5) * 0.6, sz * 1.1, sz * 0.8, sz * 0.9, m.rock, W.idx(G.clamp(X / TL, 0, N - 1), G.clamp(Z / TL, 0, N - 1))); }
-        // (the lintel: a slab of the hard layer over the arch)
-        piece(list, 'bloco1', m.X - 0.5 * c, m.Y + m.h * 0.92, m.Z - 0.5 * s, m.yaw + Math.PI / 2, m.w * 1.2, 0.55, 1.3, m.rock, W.idx(m.X / TL, m.Z / TL));
+        for (let j = 0; j < 9; j++) { const a = j / 8 * Math.PI; const across = Math.cos(a) * m.w * 0.58, up = Math.sin(a) * m.h * 1.02; const X = m.X - 0.2 * c - across * s, Z = m.Z - 0.2 * s + across * c;
+          const gy = W.hAt(X / TL, Z / TL) * HM; const sz = 0.45 + G.hash(j * 3 + m.X) * 0.4; const Y = j === 0 || j === 8 ? gy - sz * 0.45 : Math.max(m.Y + up - sz * 0.55, gy - sz * 0.45);
+          piece(list, 'matacao' + (j % 3), X, Y, Z, m.yaw + j * 1.3, sz * 1.25, sz, sz * 1.1, m.rock, W.idx(G.clamp(X / TL, 0, N - 1), G.clamp(Z / TL, 0, N - 1))); }
       }
     }
     return list;
@@ -335,6 +334,7 @@
   // mouths; a token geometry in the part's group gives them back when the part is thrown away (its geometry disposed)
   G3D.partInto = function (grp, x0, y0, n) {
     if (!THREE) return; meshes(); const key = y0 * 4096 + x0;
+    G3D.horizon(); // (the land beyond the edge, made when the map, its ground or the preset is new: a key compared, otherwise — L-1553)
     PIECES.set(key, piecesOf(x0, y0, n)); fill();
     const tok = new THREE.BufferGeometry(); tok.addEventListener('dispose', () => { if (PIECES.get(key) && tok.userData.live) { PIECES.delete(key); fill(); } }); tok.userData.live = true;
     const tm = new THREE.Mesh(tok, MAT.rock); tm.visible = false; tm.matrixAutoUpdate = false; grp.add(tm);

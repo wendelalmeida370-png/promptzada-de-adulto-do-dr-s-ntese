@@ -1348,6 +1348,7 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // ilhas acaba no mar, como as expedições contam); só o desenho pergunta por ela (G.Geo.beyondH no geo3d.js)
 { const ge = (src['geo.js'] || []).join('\n');
   if (ge && !/const LAND_TYPES = \{ continente: 1, istmo: 1 \};/.test(ge)) fails.push('a terra além da borda: o geo.js desenha terra além da borda num tipo de mapa que não é continente nem istmo (D-467)');
+  const g3h = (src['geo3d.js'] || []).join('\n'); if (g3h && !/G3D\.partInto = function[^]*?G3D\.horizon\(\);/.test(g3h)) fails.push('a terra além da borda: o geo3d.js não a faz quando o pedaço de perto é feito (G3D.horizon no partInto; L-1553)');
   for (const f of files) { if (f === 'geo.js' || f === 'geo3d.js') continue; src[f].forEach((l, k) => { if (/\bbeyondH\(/.test(l.replace(/(^|\s)\/\/\s.*$/, ''))) fails.push(`a terra além da borda: ${f}:${k + 1} pergunta pela terra além da borda (só o desenho do relevo; D-497): ${l.trim().slice(0, 110)}`); }); } }
 // 181. "a mesma rocha nas duas vistas" (D-495): a cor da rocha e as camadas da vista do deus (render.js) e as do 3D (ground3d.js, geo3d.js)
 // vêm do mesmo G.Geo — a rocha de cada casa, a dobra e a tabela das camadas —, nunca de uma conta de cada vista

@@ -32,11 +32,11 @@
   // (0 blocks — the granite's square joints; 1 the schist's thin sheets; 2 the sandstone's beds; 3 the limestone's flutes; 4 the basalt's
   // columns), and the sand the sea grinds out of it (the colour of its beaches)
   const ROCKS = Ge.ROCKS = [
-    { id: 'granito', name: 'granito', col: [150, 145, 138], pal: [[160, 153, 145], [142, 137, 131], [171, 163, 153], [131, 127, 123], [153, 142, 134]], t: [2.6, 7.5], L: 64, hard: 0.35, joint: 0, sand: [206, 196, 176] },
-    { id: 'xisto', name: 'xisto', col: [110, 113, 118], pal: [[106, 110, 116], [124, 124, 126], [94, 98, 105], [134, 130, 124], [114, 118, 112]], t: [0.35, 1.4], L: 24, hard: 0.5, joint: 1, sand: [156, 152, 144] },
-    { id: 'arenito', name: 'arenito', col: [184, 130, 92], pal: [[196, 140, 98], [170, 110, 78], [212, 168, 118], [158, 98, 72], [202, 150, 104], [222, 192, 150]], t: [0.8, 3.6], L: 48, hard: 0.9, joint: 2, sand: [224, 182, 132] },
-    { id: 'calcario', name: 'calcário', col: [178, 170, 152], pal: [[190, 182, 162], [168, 160, 142], [202, 194, 174], [152, 146, 132], [184, 172, 150]], t: [0.9, 3.1], L: 40, hard: 0.6, joint: 3, sand: [234, 226, 204] },
-    { id: 'basalto', name: 'basalto', col: [92, 88, 90], pal: [[86, 82, 86], [102, 95, 92], [76, 74, 80], [116, 100, 88], [94, 90, 96]], t: [1.8, 6], L: 48, hard: 0.5, joint: 4, sand: [98, 94, 94] },
+    { id: 'granito', name: 'granito', col: [156, 148, 138], pal: [[172, 162, 150], [138, 132, 126], [186, 174, 160], [120, 116, 112], [160, 146, 134], [196, 186, 172]], t: [2.6, 7.5], L: 64, hard: 0.35, joint: 0, sand: [206, 196, 176] },
+    { id: 'xisto', name: 'xisto', col: [106, 110, 116], pal: [[100, 106, 114], [128, 128, 130], [86, 92, 100], [142, 136, 128], [112, 118, 110], [74, 80, 90]], t: [0.35, 1.4], L: 24, hard: 0.5, joint: 1, sand: [156, 152, 144] },
+    { id: 'arenito', name: 'arenito', col: [190, 134, 94], pal: [[204, 146, 100], [168, 104, 70], [222, 180, 128], [150, 88, 62], [210, 160, 110], [232, 204, 160], [184, 120, 84]], t: [0.8, 3.6], L: 48, hard: 0.9, joint: 2, sand: [224, 182, 132] },
+    { id: 'calcario', name: 'calcário', col: [186, 178, 158], pal: [[200, 192, 170], [170, 162, 142], [214, 206, 186], [148, 142, 128], [190, 176, 152], [226, 220, 204]], t: [0.9, 3.1], L: 40, hard: 0.6, joint: 3, sand: [234, 226, 204] },
+    { id: 'basalto', name: 'basalto', col: [90, 86, 88], pal: [[84, 80, 84], [108, 98, 92], [70, 68, 74], [128, 104, 88], [94, 90, 96], [60, 58, 64]], t: [1.8, 6], L: 48, hard: 0.5, joint: 4, sand: [98, 94, 94] },
   ];
   const GRANITO = 0, XISTO = 1, ARENITO = 2, CALCARIO = 3, BASALTO = 4;
   Ge.K = { GRANITO, XISTO, ARENITO, CALCARIO, BASALTO };

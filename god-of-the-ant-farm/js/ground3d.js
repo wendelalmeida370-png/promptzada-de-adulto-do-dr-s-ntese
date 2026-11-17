@@ -552,7 +552,9 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
   vec4 T[GMX]; float mx = -9.0;
   for (int i = 0; i < GMX; i++) { if (i >= gN) break; T[i] = gTex(gL[i]); mx = max(mx, T[i].a + gW[i] * 2.0); }
   vec3 col = vec3(0.0); float sum = 0.0, hg = 0.0, ha = 0.0;
-  for (int i = 0; i < GMX; i++) { if (i >= gN) break; float b = max(T[i].a + gW[i] * 2.0 - mx + 0.24, 0.0); vec3 bc = gC[i] / gW[i]; col += bc * m3tint(m3col(T[i]), bc) * b; hg += T[i].a * gAmp(gL[i]) * b; ha += T[i].a * b; sum += b; }
+  for (int i = 0; i < GMX; i++) { if (i >= gN) break; float b = max(T[i].a + gW[i] * 2.0 - mx + 0.24, 0.0); vec3 bc = gC[i] / gW[i]; vec3 mc = m3col(T[i]);
+    if (gL[i] == M3_CRAG) mc = mix(vec3(1.0), mc, 0.5); // (21b: the rock's own picture only its grain: the layers of the place show through it, not the picture's folds)
+    col += bc * m3tint(mc, bc) * b; hg += T[i].a * gAmp(gL[i]) * b; ha += T[i].a * b; sum += b; }
   gHgt = hg / max(sum, 1e-4); gHa = ha / max(sum, 1e-4);
   col /= max(sum, 1e-4);
   // (the dunes: their ripples in the light, the crests a little paler, the hollows between them holding a shade)
@@ -618,8 +620,8 @@ vec3 groundCol() {
       float sL = vGP.y + gFold; float fd = 1.0 - smoothstep(45.0, 140.0, length(cameraPosition - vGP));
 #ifdef GDETAIL
       if (tex < 0.5) c = mix(c, gRC * (0.8 + d.b * 0.4), rk * 0.85);
-      c *= mix(1.0, (0.86 + 0.14 * gRH) * mix(1.0, gJoint(vGP, vGN, sL), fd), rk);
-      if (tex > 0.5) gHgt += (gRH - 0.5) * 0.12 * rk * fd;
+      c *= mix(1.0, (0.8 + 0.24 * gRH) * mix(1.0, gJoint(vGP, vGN, sL), fd), rk);
+      if (tex > 0.5) gHgt += (gRH - 0.5) * 0.24 * rk * fd;
       float mz = gMoss * rk * (smoothstep(0.12, 0.7, vGN.y) * 0.9 + smoothstep(0.0, 0.6, -vGN.z) * 0.55);
       mz *= smoothstep(0.38, 0.62, texture2D(uCN, vGP.xz / 9.0 + vGP.y * 0.05).g + (gMoss - 0.5) * 0.5);
       c = mix(c, vec3(0.055, 0.095, 0.032) * (0.75 + texture2D(uCN, vGP.xz / 2.3 + vGP.y * 0.21).r * 0.6), clamp(mz, 0.0, 0.88));
