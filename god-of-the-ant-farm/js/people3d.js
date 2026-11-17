@@ -1640,7 +1640,7 @@
 
   // (where the feet of someone walking stand: the ground — and, over a river, where the body's own stand: the bed of a ford
   // under its water, a bridge's deck, the ice — Space.footAt; on the water's own level they stood under the deck, L-861)
-  function groundY(x, y) { const S = G.S; const i = W.idx(x, y); if (S.type[i] === G.T.RIVER) return G.Space.footAt(x, y); if (S.cliff[i] && G.Space.cliffAt) return G.Space.cliffAt(x, y); return W.groundH(x, y) * G.Space.HM; } // (21b: on a cliff, the climbers on its face as it is drawn — D-492)
+  function groundY(x, y) { const S = G.S; const i = W.idx(x, y); if (S.type[i] === G.T.RIVER) return G.Space.footAt(x, y); if (S.cliff && S.cliff[i] && G.Space.cliffAt) return G.Space.cliffAt(x, y); return W.groundH(x, y) * G.Space.HM; } // (21b: on a cliff, the climbers on its face as it is drawn — D-492)
   // the hands of the world's people, as the view remembers them: while a gesture of the hands lasts (G.Act.ANIM's acts: 'lift'
   // — levantar, pousar, empilhar —, 'arrange' — porNaBanca, tirarDaBanca —, 'give' — entregar) the empty hands reach down for
   // the load — the crate drawn there, or before the feet —; when the world puts the load in the hands it rises from where the

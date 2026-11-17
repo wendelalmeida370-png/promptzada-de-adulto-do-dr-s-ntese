@@ -79,7 +79,7 @@
   const CA = [0, 0, 0];
   Sp.cliffAt = function (x, y) {
     const h = W.hAt(x, y) * HM; const q = G.Realm && G.Realm.Q ? G.Realm.Q() : null;
-    return G.Geo && q && q.geoCarve > 0 && W.inb(x, y) && G.S.cliff[W.idx(x, y)] ? h + G.Geo.cliffAt(x, y, CA)[0] : h;
+    return G.Geo && q && q.geoCarve > 0 && W.inb(x, y) && G.S.cliff && G.S.cliff[W.idx(x, y)] ? h + G.Geo.cliffAt(x, y, CA)[0] : h;
   };
   // (between the points of the land's picture — every half tile — as the picture itself has it: what the feet stand on)
   Sp.bedAt = function (x, y) {
