@@ -95,7 +95,7 @@ const VIEWS = [
     }, [w, place, yaw, pitch, dist, hour, world !== w, process.env.Q || 'media', SEED]);
     world = w;
     if (info.skip) { log.push(`${name}: ${info.skip}`); console.log(log[log.length - 1]); continue; }
-    await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 240000 });
+    await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: +process.env.TSHOT || 240000 }); // (TSHOT: the Alta by software can take longer)
     log.push(`${name}: ${JSON.stringify(info)} (${((Date.now() - t0) / 1000).toFixed(0)} s)`); console.log(log[log.length - 1]);
   }
   console.log('erros: ' + (errs.slice(0, 5).join(' || ') || 'nenhum'));
