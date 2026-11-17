@@ -420,12 +420,13 @@
   function wild(S, f, t, R) {
     for (const h of S.hives || []) {
       const tr = S.trees.get(h.tree); if (!tr) continue; const X = tr.x * TL(), Z = tr.y * TL(); if (!near2(X, Z, f, Math.min(R, 70))) continue;
-      const Y = gY(tr.x, tr.y) + 2.6 + tr.size * 2.2; put('hive', X + 0.6, Y, Z + 0.3, 0, 0.5, 0.65, 0.5, '#c8962a');
+      const an = G.Arvore3D && G.Arvore3D.anchor(tr, 'colmeia'); // (21a: where the tree as it is drawn hangs it — D-476)
+      const Y = an ? an[1] : gY(tr.x, tr.y) + 2.6 + tr.size * 2.2; put('hive', an ? an[0] : X + 0.6, Y, an ? an[2] : Z + 0.3, 0, 0.5, 0.65, 0.5, '#c8962a');
       if (G.FX3D && G.VR() < 0.12) G.FX3D.spawn({ x: X + 0.6 + G.vrr(-0.4, 0.4), y: Y + G.vrr(-0.3, 0.3), z: Z + 0.3 + G.vrr(-0.4, 0.4), vx: G.vrr(-0.5, 0.5), vz: G.vrr(-0.5, 0.5), life: 1.2, s0: 0.05, s1: 0.05, c: [0.15, 0.12, 0.05], a: 1, wob: 2 });
     }
     for (const n of S.nests || []) {
       let x = n.x, y = n.y, up = 0.15;
-      if (n.type === 'tree') { const tr = S.trees.get(n.host); if (!tr) continue; x = tr.x; y = tr.y; up = 3 + tr.size * 3.2; }
+      if (n.type === 'tree') { const tr = S.trees.get(n.host); if (!tr) continue; x = tr.x; y = tr.y; up = 3 + tr.size * 3.2; const an = G.Arvore3D && G.Arvore3D.anchor(tr, 'ninho'); if (an) up = an[1] - gY(x, y); } // (21a: up in the crown as drawn — D-476)
       else if (n.type === 'roof') { const b = S.buildings.get(n.host); if (!b) continue; x = b.x + b.w / 2; y = b.y + b.h / 2; up = (G.Build3D ? G.Build3D.heightAt(W.idx(x, y)) : 4) + 0.2; }
       if (x === undefined || !W.inb(x, y)) continue; const X = x * TL(), Z = y * TL(); if (!near2(X, Z, f, Math.min(R, 70))) continue;
       put('nest', X, gY(x, y) + up, Z, 0, 1, 1, 1, '#7a5a3a');

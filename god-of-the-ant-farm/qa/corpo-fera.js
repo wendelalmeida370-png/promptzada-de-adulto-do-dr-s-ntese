@@ -54,9 +54,13 @@ const bad = () => QA.check().filter(q => q.sev <= 2).map(q => `[S${q.sev}] ${q.s
 const base = new Set(bad());
 const RDT = 1 / 30; const IN = G.Avatar.input;
 const frame = (world) => { if (world !== false) G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); };
+// (the frames for s seconds of the world: a wait for the world — a hunt, a blow that lands — is in its seconds, whatever the body's
+// time; the frames counted were the 0,35 of D-015, and at the 0,27 of D-365 the blow had not landed yet, T-1391)
+const wsec = s => Math.ceil(s / (RDT * G.Space.TIME));
 const r1 = x => Math.round(x * 10) / 10, r2 = x => Math.round(x * 100) / 100;
-// (a grown-up out of doors the god can take, by id — never by name)
-const pick = (not) => [...S.villagers.values()].filter(o => o.age >= 18 && o.age < 55 && !o.inside && !not.includes(o.id) && G.Possess.can(o).ok).sort((a, b) => a.id - b.id)[0];
+// (a grown-up out of doors the god can take, by id — never by name; f: who else it must be — the lion's cases an unarmed one, T-1392)
+const pick = (not, f) => [...S.villagers.values()].filter(o => o.age >= 18 && o.age < 55 && !o.inside && !not.includes(o.id) && G.Possess.can(o).ok && (!f || f(o))).sort((a, b) => a.id - b.id)[0];
+const prey = not => pick(not, o => !G.Luta.armed(o)); // (one a hungry lion hunts: never a hunter, a soldier, an archer — D-297b)
 
 // ------------------------------ what the chronicle tells (L-698) ------------------------------
 if (want('f1') || want('f2')) {
@@ -198,13 +202,17 @@ else {
 
   // ------------------------------ f7: the hungry lion ------------------------------
   if (want('f7')) {
-    const v = pick(used); if (v) used.push(v.id);
+    const v = prey(used); if (v) used.push(v.id);
     if (!v || !live(v, F[0], F[1], 0)) ok('f7 o leão', false, 'ninguém para viver');
     else {
-      const rec = G.S.avatar; const L = beast('lion', F[0] + 6, F[1] + 0.25, -1, 0, { hunger: 0.95 });
+      // (six tiles off, on ground it walks to the body from: the first of sixteen ways from the east — the field is cleared four
+      // tiles round, and in the «cidade» made after the merge of 20a–20h a cliff stood six tiles east: the lion born on it found
+      // no way and gave the hunt up at once, T-1393)
+      const at = d => { for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8, x = F[0] + Math.cos(a) * d, y = F[1] + 0.25 + Math.sin(a) * d; if (W.walkableXY(x, y) && W.canWalk(x, y, F[0], F[1])) return [x, y]; } return [F[0] + d, F[1] + 0.25]; };
+      const p = at(6); const rec = G.S.avatar; const L = beast('lion', p[0], p[1], F[0] - p[0], F[1] - p[1], { hunger: 0.95 });
       L.target = v.id; L.onPerson = true; L.state = 'stalk'; L.t = 18; L.crouch = 0; L.carc = false;
       const seen = []; let down = 0, hits = 0, dead = false; const h0 = S.history.length;
-      for (let f = 0; f < 3000 && !dead; f++) {
+      for (let f = 0; f < wsec(35) && !dead; f++) {
         frame(); const tag = (L.gest || '-') + (L.gestO === v.id ? '→corpo' : '');
         if (L.gest && L.gestO === v.id && !seen.includes(L.gest)) seen.push(L.gest);
         const h = G.Avatar.hurtNow(); if (h && h.loco === 'down') down++; hits = Math.max(hits, (G.S.avatar && G.S.avatar.hits ? G.S.avatar.hits.length : hits));
@@ -221,17 +229,17 @@ else {
 
   // ------------------------------ f8: a save in the middle of an attack ------------------------------
   if (want('f8')) {
-    const v = pick(used); if (v) used.push(v.id);
+    const v = prey(used); if (v) used.push(v.id);
     let r = null;
     if (v && live(v, F[0], F[1], 0)) {
       const L = beast('lion', F[0] + 4, F[1], -1, 0, { hunger: 0.95 }); L.target = v.id; L.onPerson = true; L.state = 'stalk'; L.t = 18;
       let pend = 0, downed = false;
-      for (let f = 0; f < 1500; f++) { frame(); if (!S.villagers.has(v.id)) break; if (Co.pending().length) pend++; if (v.downT > S.clock + 0.3 && Co.pending().length) { downed = true; break; } }
+      for (let f = 0; f < wsec(17.5); f++) { frame(); if (!S.villagers.has(v.id)) break; if (Co.pending().length) pend++; if (v.downT > S.clock + 0.3 && Co.pending().length) { downed = true; break; } }
       const p0 = Co.pending().length, hp = v.hp, id = v.id;
       M.salvarCarregar(); S = G.S; const w = S.villagers.get(id); let att = false;
       if (w && G.Possess.body() === w) { G.Avatar.attach(w, 0); att = true; }
       const after = { avatar: !!G.S.avatar, pend: Co.pending().length, hits: G.S.avatar ? G.S.avatar.hits.length : -1, loco: att ? G.Avatar.hurtNow().loco : '-', down: w ? r2(w.downT - S.clock) : 0 };
-      for (let f = 0; f < 240; f++) { frame(); if (!S.villagers.has(id) || !G.S.avatar) break; }
+      for (let f = 0; f < wsec(2.8); f++) { frame(); if (!S.villagers.has(id) || !G.S.avatar) break; }
       const e = M.erros(); r = { downed, p0, hp: r1(hp), after, err: Object.keys(e.mod).length + e.console.length, qa: bad().filter(q => !base.has(q)) };
     }
     ok('f8 salvar e carregar no meio do ataque: nada preso, o corpo volta (no chão, se o mundo o derrubou), o mundo segue limpo', !!r && r.downed && r.p0 > 0 && r.after.avatar && r.after.pend === 0 && r.after.hits === 0 && (r.after.down <= 0 || r.after.loco === 'down') && !r.err && !r.qa.length,
@@ -243,11 +251,11 @@ else {
     const v = pick(used); if (v) used.push(v.id); let r = null;
     if (v && live(v, F[0], F[1], 0)) {
       const H = charge(v, 7, 2.2, 'rhino'); const st0 = Co.stats(); let hp = null, n0 = 0; // (a rhino: a hippo far from its water does not walk there)
-      for (let f = 0; f < 900; f++) { frame(); if (Co.pending().length) { hp = v.hp; n0 = G.Possess.hits().length; break; } }
+      for (let f = 0; f < wsec(10.5); f++) { frame(); if (Co.pending().length) { hp = v.hp; n0 = G.Possess.hits().length; break; } }
       if (hp !== null) {
         // (the body two metres and a half back from the beast, at once — as a quick step: the world moves it, the controller follows)
         const f0 = Co.foot(H); const q = Co.near(f0, v.x, v.y); const dx = v.x - q[0], dy = v.y - q[1], l = Math.hypot(dx, dy) || 1; v.x += dx / l * 2.5 / TL; v.y += dy / l * 2.5 / TL;
-        for (let f = 0; f < 40 && Co.pending().length; f++) frame();
+        for (let f = 0; f < wsec(0.47) && Co.pending().length; f++) frame();
         const st = Co.stats(); r = { missed: st.missed - st0.missed, hp0: r1(hp), hp: r1(v.hp), hits: G.Possess.hits().length - n0 };
       }
       if (S.animals.has(H.id)) G.Animals.remove(H);
@@ -260,13 +268,13 @@ else {
     const out = {};
     for (const how of ['corpo', 'fera', 'mao']) {
       const v = pick(used); if (v) used.push(v.id); if (!v || !live(v, F[0], F[1], 0)) { out[how] = 'ninguém'; continue; }
-      const H = charge(v, 7, 1.1 + used.length, 'rhino'); let got = false; for (let f = 0; f < 900; f++) { frame(); if (Co.pending().length) { got = true; break; } }
+      const H = charge(v, 7, 1.1 + used.length, 'rhino'); let got = false; for (let f = 0; f < wsec(10.5); f++) { frame(); if (Co.pending().length) { got = true; break; } }
       if (!got) { out[how] = 'nenhum golpe'; continue; }
       const st0 = Co.stats(), n0 = G.Possess.hits().length;
       if (how === 'corpo') god(() => G.Village.kill(v, 'queda', true));
       else if (how === 'fera') god(() => G.Animals.kill(H, null, 'god'));
       else H.held = true;
-      for (let f = 0; f < 40; f++) frame();
+      for (let f = 0; f < wsec(0.47); f++) frame();
       const st = Co.stats(); out[how] = { dropped: st.dropped - st0.dropped, landed: st.landed - st0.landed, hits: G.S.avatar ? G.Possess.hits().length - n0 : 0, pend: Co.pending().length, avatar: !!G.S.avatar };
       if (how === 'mao') H.held = false; if (S.animals.has(H.id)) G.Animals.remove(H);
     }

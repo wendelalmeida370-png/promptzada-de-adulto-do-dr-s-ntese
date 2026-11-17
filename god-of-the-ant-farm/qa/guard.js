@@ -1348,6 +1348,41 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
     src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
       if (/\bG\.S\.\w+(\.\w+|\[[^\]]+\])*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o 3D da natureza: ${f}:${k + 1} escreve no mundo (D-466): ${l.trim().slice(0, 110)}`); }); } }
 // === 21a: a vegetação ===
+// 169. "a mata da fase A só se vê" (D-465, D-470): na fase A nenhum módulo do mundo lê o G.Mata — só o que só se vê (a lista LOOK), o
+// próprio mata.js e as portas do corpo no space.js (Sp.stems); na fase B, quem decide a passagem e a cobertura pergunta a ele, e esta
+// regra muda com o protocolo inteiro
+{ const MATA_OK = new Set(LOOK.concat(['mata.js', 'planta-formas.js']));
+  for (const f of files) { if (MATA_OK.has(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Mata\b/.test(c)) fails.push(`a mata só se vê: ${f}:${k + 1} lê o G.Mata num módulo do mundo (a fase A não muda o mundo; D-465): ${l.trim().slice(0, 110)}`); }); } }
+// 170. "as formas das plantas são puras" (D-472): o js/planta-formas.js faz as formas da mata como números, sempre as mesmas — sem acaso
+// nenhum (nem o do mundo nem o do que só se vê: a variação é da instância, pelo G.hash), sem o three.js, sem o mundo, sem relógio
+{ (src['planta-formas.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\.|performance\.now|\bTHREE\b|\bG\.S\b/.test(c)) fails.push(`as formas puras: planta-formas.js:${k + 1} tira de um acaso, lê o relógio, o three.js ou o mundo (D-472): ${l.trim().slice(0, 110)}`); }); }
+// 171. "a árvore desenhada tem as medidas da mata" (D-471): o Arvore3D tira as medidas de cada árvore do mundo (a altura, a copa, o alto,
+// a forma) do G.Mata.tree — a mesma conta do mapa do dossel e das âncoras —, nunca de uma conta sua (a altura «5 + 7 × tamanho»)
+{ const a3 = (src['arvore3d.js'] || []).join('\n');
+  if (a3 && !/G\.Mata\.tree\(t\)/.test(a3)) fails.push('a árvore pela mata: o arvore3d.js não pergunta as medidas ao G.Mata.tree (D-471)');
+  (src['arvore3d.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\(5 \+ 7 \* (sz|t\.size)\) \* s\b/.test(c)) fails.push(`a árvore pela mata: arvore3d.js:${k + 1} faz a altura de uma árvore por conta própria (G.Mata.tree; D-471): ${l.trim().slice(0, 110)}`); }); }
+// 172. "os caules duros são uma regra só" (D-473): o 3D desenha os caules duros onde o G.Mata os põe (o mata3d.js pelo G.Mata.stemsOf) e o
+// corpo os contorna pela mesma porta (G.Space.stems no avatar.js); nenhum módulo do mundo pergunta por eles — só o que só se vê (LOOK) e as
+// portas do corpo (SPACE_BODY)
+{ const ST_OK = new Set(LOOK.concat(SPACE_BODY, ['mata.js']));
+  for (const f of files) { if (ST_OK.has(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(Space|Sp)\.stems\(|\bMata\.stemsOf\(/.test(c)) fails.push(`os caules duros: ${f}:${k + 1} pergunta pelos caules da mata num módulo do mundo (fase A, D-473): ${l.trim().slice(0, 110)}`); }); }
+  if ((src['mata3d.js'] || []).length && !/Ma\.stemsOf\(/.test(src['mata3d.js'].join('\n'))) fails.push('os caules duros: o mata3d.js não desenha os caules pelo G.Mata.stemsOf (D-473)');
+  if ((src['avatar.js'] || []).length && !/G\.Space\.stems\(/.test(src['avatar.js'].join('\n'))) fails.push('os caules duros: o corpo (avatar.js) não contorna os caules da mata pelo G.Space.stems (D-473)'); }
+// 173. "o que pousa na árvore pergunta à árvore" (D-476): a colmeia e o ninho (things3d.js) e o bicho trepado (people3d.js) ficam onde a
+// árvore desenhada os segura — G.Arvore3D.anchor / perchY —, nunca numa altura própria
+{ const th = (src['things3d.js'] || []).join('\n'), pp = (src['people3d.js'] || []).join('\n');
+  if (th && !/Arvore3D\.anchor\(tr, 'colmeia'\)/.test(th)) fails.push("o que pousa na árvore: a colmeia do things3d.js não pergunta à G.Arvore3D.anchor (D-476)");
+  if (th && !/Arvore3D\.anchor\(tr, 'ninho'\)/.test(th)) fails.push("o que pousa na árvore: o ninho do things3d.js não pergunta à G.Arvore3D.anchor (D-476)");
+  if (pp && !/Arvore3D\.perchY\(a\)/.test(pp)) fails.push('o que pousa na árvore: o bicho trepado do people3d.js não pergunta à G.Arvore3D.perchY (D-476)'); }
+// 174. "a mata pelas qualidades sem mexer na tabela" (D-466, D-478): os campos da mata (mataR, mataRD, mataA, mataAD, cipo) entram nas
+// qualidades pelo G.Realm.qualAdd do mata3d.js — e nenhum arquivo além do realm3d.js escreve a tabela QUAL
+{ const m3 = (src['mata3d.js'] || []).join('\n'); for (const k of ['mataR', 'mataRD', 'mataA', 'mataAD', 'cipo']) if (m3 && !new RegExp("qa\\('" + k + "'").test(m3)) fails.push(`as qualidades da mata: o mata3d.js não acrescenta o campo ${k} pelo qualAdd (D-478)`);
+  for (const f of files) { if (f === 'realm3d.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bQUAL\s*\[[^\]]+\]\s*(\.\w+\s*)?=(?!=)|\bQUAL\.\w+(\.\w+)?\s*=(?!=)/.test(c)) fails.push(`as qualidades: ${f}:${k + 1} escreve a tabela QUAL (use o G.Realm.qualAdd; D-466): ${l.trim().slice(0, 110)}`); }); } }
+// 175. "a mata não guarda nada no mundo nem no que ela desenha" (D-470): o mata.js, o mata3d.js e o arvore3d.js não escrevem numa árvore,
+// numa pessoa, num bicho, num prédio nem no S (a memória do G.Mata é do próprio módulo)
+{ for (const f of ['mata.js', 'mata3d.js', 'arvore3d.js', 'planta-formas.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\b(t|tr|tree|v|a|b|o)\.(size|stage|x|y|kind|wood|fruit|chop|claim|z|tree|perch)\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`a mata só lê: ${f}:${k + 1} escreve num objeto do mundo (D-470): ${l.trim().slice(0, 110)}`); }); }
 // === 21b: o relevo ===
 // === 21c: a água ===
 // === 21d: o céu ===

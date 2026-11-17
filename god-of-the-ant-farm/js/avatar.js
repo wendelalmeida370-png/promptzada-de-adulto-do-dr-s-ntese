@@ -362,6 +362,8 @@
       const tid = S.treeAt[i]; const t = tid && S.trees.get(tid); const tr = G.Space.trunk(t); // (the rule the steps before a door keep from: L-197)
       if (tr) { cx = t.x * L; cz = t.y * L; rr = tr; }
       else if (S.occ[i] && S.occ[i] !== sq) { const B = S.buildings.get(S.occ[i]); if (B && B.type === 'praca' && B.built) { sq = B.id; cx = (B.x + B.w / 2) * L; cz = (B.y + B.h / 2) * L; rr = 1.4; } }
+      // (21a: the forest's hard stems — a tree fern, a young tree, a slim palm, bamboo —, walked round as a trunk is: Space.stems, D-473)
+      for (const st of G.Space.stems(i)) { const sx = X + ox - st[0], sz = Z + oz - st[1]; const d = Math.hypot(sx, sz); const m = st[2] + TUNE.radius; if (d < m && d > 1e-4) { ox += sx / d * (m - d); oz += sz / d * (m - d); } }
       if (!rr) continue;
       const ddx = X + ox - cx, ddz = Z + oz - cz; const d = Math.hypot(ddx, ddz); const m = rr + TUNE.radius;
       if (d < m && d > 1e-4) { ox += ddx / d * (m - d); oz += ddz / d * (m - d); }
@@ -534,8 +536,9 @@
   // lost leg none). Indoors one walks: the jog and the sprint are for the street and the field (an open ground — a square, an
   // arena — is the street's); a heavy load, deep water, the crouch: no sprint
   const PACE = { walk: 0, jog: 0, sprint: 0 };
-  // (the jog and the sprint are the body's own, not the world's pace: reckoned from this person's walk at the body's time of D-015,
-  // 0,35 — so a slower time of the body would slow the walk with the world's people, and leave the jog and the sprint as they are)
+  // (the jog and the sprint are the body's own, not the world's pace: reckoned from this person's walk at the body's time they were
+  // tuned on, D-015's 0,35 — so the slower time of the body of D-365 (Space.TIME 0,27) slows the walk with the world's people and
+  // leaves the jog and the sprint as they were)
   const REF_TIME = 0.35;
   Av.refWalk = caps => caps.walk * REF_TIME / (G.Space.TIME || REF_TIME);
   function paces(v, caps, here, wx, wz, wl) {

@@ -146,11 +146,16 @@ function fishPlace() {
       G.Save.apply(JSON.parse(snap)); S = G.S; casts = 0; const v = S.villagers.get(id); const xp0 = v.fishXp || 0; const b = pl.bank;
       const give = () => G.Vg.setTask(v, { type: 'fish', spot: b.i, x: b.x, y: b.y, wx: b.wx, wy: b.wy, how: 'maos', pri: 1 });
       G.Vg.endTask(v); v.path = null;
+      // (no wild beast at the water through the measured minute — the proof is the fishing's: in the «cidade» made after the merge
+      // of 20a–20h a bear came at the body in the ford and killed it at its thirteenth cast, and the world's fisher, who walks round
+      // a beast people fear (D-311), never came down to the water again; the beasts of the towns stay, T-1398)
+      const wild = () => { for (const a of [...S.animals.values()]) { const D = G.Animals.DEF[a.kind]; if (D && !D.dom && !D.town && G.dist(a.x, a.y, b.x, b.y) < 15) G.Animals.remove(a); } };
+      wild();
       if (body) { v.x = pl.ford[0] + 0.3 + 1e-4; v.y = pl.ford[1]; if (!G.Possess.take(v).ok) return null; G.Avatar.attach(v, Math.PI); G.Avatar.state().yaw = Math.PI; G.Avatar.input.camYaw = Math.PI; }
       else { v.x = b.x; v.y = b.y; give(); }
       let seen = S.ledgerN || 0, catches = 0, food = 0, T = 0, n = 0, k = 0, t0 = null;
       for (; T < SEC && k < 40000; k++) {
-        v.hunger = 10; v.energy = 90;
+        v.hunger = 10; v.energy = 90; if (k % 300 === 299) wild(); // (and kept clear: a wild one that wanders in, T-1398)
         // (fair weather through the measured minute, by the test's hand: in a storm nobody fishes at the water's edge — the
         // game's own rule, «Com esta tempestade, ninguém fica na beira da água» —, and a storm that broke nineteen seconds into
         // the body's minute left it ten casts in two minutes against the world's thirty-three in one, T-802)
