@@ -533,8 +533,9 @@
   // lost leg none). Indoors one walks: the jog and the sprint are for the street and the field (an open ground — a square, an
   // arena — is the street's); a heavy load, deep water, the crouch: no sprint
   const PACE = { walk: 0, jog: 0, sprint: 0 };
-  // (the jog and the sprint are the body's own, not the world's pace: reckoned from this person's walk at the body's time of D-015,
-  // 0,35 — so a slower time of the body would slow the walk with the world's people, and leave the jog and the sprint as they are)
+  // (the jog and the sprint are the body's own, not the world's pace: reckoned from this person's walk at the body's time they were
+  // tuned on, D-015's 0,35 — so the slower time of the body of D-365 (Space.TIME 0,27) slows the walk with the world's people and
+  // leaves the jog and the sprint as they were)
   const REF_TIME = 0.35;
   Av.refWalk = caps => caps.walk * REF_TIME / (G.Space.TIME || REF_TIME);
   function paces(v, caps, here, wx, wz, wl) {

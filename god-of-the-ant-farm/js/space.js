@@ -17,8 +17,10 @@
   G.mapHooks.push(n => { N = n; });
   const Sp = G.Space = {};
   const TILE = Sp.TILE = 4, HM = Sp.HM = 1.5;
-  // the pace of time in the body: one god-speed of the world is too quick for a human walk (D-015)
-  Sp.TIME = 0.35;
+  // the pace of time in the body: one god-speed of the world is too quick for a human walk (D-015); 0,27 puts the world's people
+  // at a person's walk, 1,5–1,8 m/s drawn (D-365: it was 0,35, 1,9–2,3 m/s). The one place of this number: the texts that say it
+  // and every proof read it from here
+  Sp.TIME = 0.27;
   // the body, one rule for all who read it — the plans' places and landings, the places given out, the 3D's body (adendo 8):
   // the plans' own table (interiors.js), the same object
   Sp.BODY = G.Interiors ? G.Interiors.BODY : { r: 0.32, h: 1.75, step: 0.3, up: 0.6, feet: 0.2, fit: 0.4 };

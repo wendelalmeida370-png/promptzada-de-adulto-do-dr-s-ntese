@@ -556,7 +556,7 @@
         <button data-m="god" class="big gold">Voltar ao Modo Deus</button>
         <button data-m="save">Salvar o jogo</button></div>
         <div class="im-row"><label><input type="checkbox" data-h="tela" ${hudOff ? '' : 'checked'}> Mostrar a tela — nome, lugar, hora, avisos <kbd>${esc(G.Input3D.label('tela'))}</kbd></label></div>
-        <div class="im-note">Enquanto você vive esta vida, o mundo segue no mesmo relógio — só que no passo de uma pessoa (o tempo corre a 0,35× da velocidade normal do Modo Deus).</div>`;
+        <div class="im-note">Enquanto você vive esta vida, o mundo segue no mesmo relógio — só que no passo de uma pessoa (o tempo corre a ${String(G.Space.TIME).replace(".", ",")}× da velocidade normal do Modo Deus).</div>`;
     } else if (tab === 'controles') {
       // (20b: each action with its keys and mouse buttons and its controller button — a click on either and the next key, button
       // of the mouse or of the controller is it —; the eye's choices for the mouse, the controller and the fingers)
