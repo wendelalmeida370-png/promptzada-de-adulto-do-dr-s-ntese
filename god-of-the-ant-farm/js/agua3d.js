@@ -720,7 +720,8 @@ void aguaWetSolid(inout vec3 c, vec3 P, vec3 Nn, vec3 sky) {
   float k = wet * mix(0.35, 1.0, smoothstep(0.2, 0.6, up));
   c *= 1.0 - k * 0.38;
   gAgSheen = sky * k * (0.06 + fres * 0.38);
-}`;
+}
+`; // (ends in a line of its own: the chunk that follows may begin with a directive — the relief's #define did, L-1248)
   A3.groundGLSL = () => WETGLSL;
   A3.solidGLSL = () => WETGLSL;
 
