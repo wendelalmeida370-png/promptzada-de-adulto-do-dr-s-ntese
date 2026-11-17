@@ -259,8 +259,11 @@
   // ------------------------------ the step's look, the world, the save ------------------------------
   // (once a second of the world: every people's store made to add up — the hands of the world that write it, the meals eaten
   // at the store; once a day, the parts of holders gone or empty let go)
+  // (the parts of the holders a load did not bring back are let go at the first step after it — L-1368)
+  let pruneSoon = false; G.worldHooks.push(() => { pruneSoon = false; });
   if (G.Act && G.Act.hooks) G.Act.hooks.tick.push(function () {
     const S = G.S; if (!S) return; const o = st();
+    if (pruneSoon) { pruneSoon = false; for (const ref of Object.keys(o.p)) if (!D.exists(ref)) delete o.p[ref]; }
     for (const f of S.factions.values()) for (const k in O.KEPT) { const ref = 'f:' + f.id; if ((f.stock[k] || 0) > EPS || (o.p[ref] && o.p[ref][k])) sync(ref, k, true); }
     if (G.mod('orig.day') !== S.day) {
       G.mod('orig.day', S.day); o.t = {};
@@ -341,12 +344,15 @@
       if (x && typeof x === 'object' && x.p && typeof x.p === 'object' && !Array.isArray(x.p)) {
         const p = {};
         for (const ref of Object.keys(x.p)) {
-          if (!D.exists(ref)) continue; const h = x.p[ref]; if (!h || typeof h !== 'object') continue;
+          // (the holders are not all back yet — the stalls, the carts come by the hooks after this one: the parts of a holder gone
+          // are let go at the world's first step after the load, not here — L-1368)
+          if (typeof ref !== 'string' || !/^[a-z]:/.test(ref)) continue; const h = x.p[ref]; if (!h || typeof h !== 'object') continue;
           for (const k of Object.keys(h)) if (O.KEPT[k]) { const c = clean(h[k]); for (const t of Object.keys(c)) if (!O.KEPT[k][t]) { c['?'] = r4((c['?'] || 0) + c[t]); delete c[t]; } if (Object.keys(c).length) (p[ref] || (p[ref] = {}))[k] = c; }
         }
         const had = {};
         if (x.had && typeof x.had === 'object' && !Array.isArray(x.had)) for (const fid of Object.keys(x.had)) { const h = x.had[fid]; if (!h || typeof h !== 'object') continue; const c = {}; for (const m of Object.keys(h)) if (fin(h[m]) && h[m] > 0) c[m] = h[m]; had[fid] = c; }
         S.orig = { p, had, q: clean(x.q), qw: clean(x.qw), old: fin(x.old) ? x.old : 0 };
+        pruneSoon = true;
       } else { S.orig = { p: {}, had: {}, q: {} }; seedOld(); }
     },
   });
