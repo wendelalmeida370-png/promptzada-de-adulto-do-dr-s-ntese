@@ -232,10 +232,10 @@ vec3 b3eye(vec3 skin, bool lidded) {
   vec3 c = mix(vec3(0.93, 0.91, 0.87), vec3(0.7, 0.66, 0.62), smoothstep(0.25, -0.55, d.y) * 0.8 + smoothstep(0.3, 0.75, abs(d.x)) * 0.35);
   // (the iris: a dark ring at its edge, brighter toward the middle and below, where the light comes through it; fine
   // streaks round the pupil, only when close enough to see them; the pupil)
-  float ir = smoothstep(0.789 - aw, 0.789 + aw, a); // (stylised, D-553: a little bigger than a real one — it reads at a distance)
-  vec3 ic = mix(iris * 0.3, iris * 1.3, smoothstep(0.789, 0.92, a)) * (1.0 + 0.25 * smoothstep(0.0, -0.5, dot(d - g * a, vec3(0.0, 1.0, 0.0))));
+  float ir = smoothstep(0.809 - aw, 0.809 + aw, a); // (stylised, D-558: 1.1× a real one — it reads at a distance, and the eye stays calm)
+  vec3 ic = mix(iris * 0.3, iris * 1.3, smoothstep(0.809, 0.925, a)) * (1.0 + 0.25 * smoothstep(0.0, -0.5, dot(d - g * a, vec3(0.0, 1.0, 0.0))));
   float fib = 1.0 - smoothstep(0.0, 0.06, fwidth(a) * 30.0); ic *= 1.0 + 0.12 * fib * sin(atan(d.x - g.x, d.y - g.y) * 22.0);
-  c = mix(c, ic, ir); c = mix(c, vec3(0.02, 0.016, 0.015), smoothstep(0.958 - aw, 0.958 + aw, a));
+  c = mix(c, ic, ir); c = mix(c, vec3(0.02, 0.016, 0.015), smoothstep(0.961 - aw, 0.961 + aw, a));
   // (the glints: the sky in a wet eye — a big one high on one side, a small one below on the other)
   float hl = dot(d, normalize(g + vec3(-0.26, 0.34, 0.0))), h2 = dot(d, normalize(g + vec3(0.2, -0.24, 0.0)));
   float gl = smoothstep(0.972, 0.982, hl) + smoothstep(0.993, 0.996, h2) * 0.6;
@@ -700,7 +700,7 @@ vec3 b3paint() {
     // (at rest the eye is calm — the upper lid over the top of the iris, a tenth or so of it, the lower one at its rim: the mesh's
     // own rest, rosto.py LID_REST_*; the white above and below it is the wide channel's, fear and awe, never the rest's: D-557)
     FV.loA = -cl(bl * 14 + sq * 12 + Math.max(0, sm) * 4 + pn * 8 - wd * 4, -10, 26) * RAD;
-    FV.upA = cl(bl * 56 + sq * 13 + sd * 6 + pn * 14 - wd * 24, -30, 56) * RAD;
+    FV.upA = cl(bl * 56 + sq * 13 + sd * 6 + pn * 14 - wd * 22, -30, 56) * RAD;
     FV.jawA = cl(ch[RI.jaw], 0, 1) * 24 * RAD;
     return FV;
   }

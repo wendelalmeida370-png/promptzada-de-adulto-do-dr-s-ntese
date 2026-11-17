@@ -17,12 +17,13 @@ def g(p):
 MOUTH_Y = float(g([0, 1.612, 0.104])[1])   # where the lips meet (the cut between them, corpo_forma.head)
 CORNER = 0.0232                             # half the mouth: the lips joined beyond it
 JAW = g([0, 1.652, -0.004])                # the jaw's hinge, in front of the ears: the axis across the head
-# the lids' edges at rest, as elevations about the eye's centre — stylised (D-553): the opening ≈ 1.36× the old painted one, the
-# eye a wide almond; the corners where the two edges meet
-LID_UP, LID_LO, LID_CORNER, LID_PHI = np.radians(35.0), np.radians(38.0), np.radians(64.0), np.radians(115.0)
-# the calm rest (D-557): each lid turned on its bone's axis, kept in the mesh — the upper one down over the top of the iris (a tenth
-# or so of it), the lower one a little open, to the iris's rim; the white above and below is the wide channel's, never the rest's
-LID_REST_UP, LID_REST_LO = np.radians(14.0), np.radians(6.0)
+# the lids' cut, as elevations about the eye's centre — stylised (D-553, D-558): the opening ≈ 1.25× a real one (the old painted
+# eye's), the eye an almond; the corners where the two edges meet
+LID_UP, LID_LO, LID_CORNER, LID_PHI = np.radians(32.0), np.radians(35.5), np.radians(64.0), np.radians(115.0)
+# the calm rest (D-557, D-558): each lid turned on its bone's axis, kept in the mesh — the upper one down over the top of the iris
+# (a tenth or so of it), the lower one a little open, to the iris's rim; the white above and below is the wide channel's, never the
+# rest's
+LID_REST_UP, LID_REST_LO = np.radians(11.0), np.radians(8.5)
 
 
 def smooth(a, b, x):

@@ -89,9 +89,9 @@ else {
     }
     ok('r2 a pálpebra fechada cobre o globo', leak === 0 && seen === cases.length,
       `${cases.length} rostos (os extremos dos genes do olho e da testa): fechados, ${leak ? 'O OLHO À MOSTRA — ' + worst : 'nenhum raio acha o olho'}; abertos, ${seen} de ${cases.length} veem o olho · ${shot} raios`);
-    // (the calm eye, D-557: at rest the upper lid over the top of the iris — a tenth or so of it — and the lower one at its rim, no
+    // (the calm eye, D-557, D-558: at rest the upper lid over the top of the iris — a tenth or so of it — and the lower one at its rim, no
     // white above or below; wide, the white above it — rays from the front down the middle of each eye, against the painted iris)
-    const r = face.eyeR, iris = r * Math.sqrt(1 - 0.789 * 0.789), col = f => { posed({ w: w0(), face: f }); const P = bentM('corpoM', w0()); const H = [near('corpoM', P, [-0.09, 1.64, 0.02], [0.09, 1.77, 0.2])]; const out = [];
+    const r = face.eyeR, iris = r * Math.sqrt(1 - 0.809 * 0.809), col = f => { posed({ w: w0(), face: f }); const P = bentM('corpoM', w0()); const H = [near('corpoM', P, [-0.09, 1.64, 0.02], [0.09, 1.77, 0.2])]; const out = [];
       for (const c of face.eyes) { let top = -1, bot = 1; for (let j = -60; j <= 60; j++) { const dy = j * 0.0004; const [t, z] = hit(H, [c[0], c[1] + dy, 0.4], [0, 0, -1]); if (z === 26 || z === 27) { top = Math.max(top, dy); bot = Math.min(bot, dy); } } out.push([(iris - top) / (2 * iris), (bot + iris) / (2 * iris)]); } return out; };
     const rest = col({}), wide = col({ wide: 1 });
     const calm = rest.every(([u, l]) => u >= 0.07 && u <= 0.2 && Math.abs(l) <= 0.07), awe = wide.every(([u]) => u < -0.02);
