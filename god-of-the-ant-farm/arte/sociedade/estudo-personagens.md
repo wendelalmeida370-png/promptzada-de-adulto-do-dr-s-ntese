@@ -647,3 +647,11 @@ idoso), de perto (0,85 m), pelo desenho do jogo (`qa/visual/rostos-fotos.js`, `Q
 - A mesma pessoa ao longo dos anos (fase 4): `anos.jpg` — o mesmo genoma aos 15, 25, 45, 5 e 70 anos (o chapéu aos 25 e aos 45 é
   o do ofício). Os recortes do rosto, cinzentos e normalizados, comparados por correlação: a mesma pessoa entre as idades 0,81;
   quatro outras pessoas na mesma idade 0,64 — mais perto de si que dos outros.
+- `cinco-rostos-2-depois.jpg` (e `-meio.jpg`, a três passos) — as mesmas cinco pessoas depois das notas e da decisão do olho
+  (D-557, D-558): o olho estilizado menor (a abertura ≈ 1,25×, a íris ≈ 1,1×) e calmo, a boca com lábios, o rosto sem as manchas
+  da própria sombra, a sobrancelha com forma, os rostos diferentes entre si; a pele sem o ruge (a luz quente na beira da sombra
+  mais fraca e menos vermelha, o rubor do repouso mais leve). A meia distância o rubor das bochechas claras ainda se vê — como
+  na folha de antes da 22a.
+- Os canais do rosto (fase 6): `humor.jpg` — um rosto em oito estados pelos canais do `G.Rosto` (a calma, a alegria com os dentes,
+  a tristeza, a raiva, o medo com o branco acima da íris e a boca aberta, a fala, o piscar com as pálpebras fechadas, o nojo),
+  contra `humor-0-antes.jpg`, os mesmos estados no rosto de antes.

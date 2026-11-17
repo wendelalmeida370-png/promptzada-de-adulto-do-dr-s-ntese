@@ -299,7 +299,7 @@ vec3 b3face(vec3 p, vec3 skin) {
       c = mix(c, mix(lips * 0.35, inside, step(0.001, open)), line * 0.9);
     }
     // (a blush on the cheeks — and the cheeks lifted in a smile catch the light)
-    float ch = length(vec2(ax - 0.054, p.y - 1.652)) / 0.022; c = mix(c, c * vec3(1.06, 0.86, 0.84), (1.0 - smoothstep(0.3, 1.0, ch)) * min(0.35 + m.w, 1.0));
+    float ch = length(vec2(ax - 0.054, p.y - 1.652)) / 0.022; c = mix(c, c * vec3(1.06, 0.86, 0.84), (1.0 - smoothstep(0.3, 1.0, ch)) * min(0.2 + m.w, 1.0)); // (22a: a lighter flush at rest — with the cheeks the genes and the light now give, 0.35 read as rouge a few steps off)
     float nz = length(vec2(ax / 0.016, (p.y - 1.662) / 0.02)); c = mix(c, c * vec3(1.05, 0.88, 0.86), (1.0 - smoothstep(0.35, 1.0, nz)) * 0.4 * step(0.1, p.z)); // (the nose's tip)
     c *= 1.0 + 0.05 * x.z * (1.0 - smoothstep(0.2, 1.1, ch));
     // (22a, D-555: the years on the face — the lines of the forehead, the crow's feet at the eyes' outer corners, the fold from the
@@ -495,9 +495,9 @@ vec3 b3paint() {
           vBind = position; vBindN = normal; vAO = aAO; vRowI = int(aRow + 0.5); vZoneI = int(aZone + 0.5);`)
         .replace('#include <begin_vertex>', 'vec3 transformed = b3cloth(b3P, position);');
       // (22a, D-553: the skin's warm edge of the shade — narrow and faint: wider and at 0.2 it read as rouge on a pale cheek a few
-      // steps off, the first photos)
+      // steps off, the first photos; and less red: even at 0.08 the second sheet kept a blush on the pale cheeks)
       const LC = THREE.ShaderChunk.lights_lambert_pars_fragment, LA = 'vec3 irradiance = dotNL * directLight.color;';
-      const LIGHT = LC.indexOf(LA) >= 0 ? LC.replace(LA, LA + '\n\tfloat b3nl = dot( geometryNormal, directLight.direction );\n\treflectedLight.directDiffuse += directLight.color * material.diffuseColor * vec3( 1.0, 0.5, 0.36 ) * ( b3sk * 0.08 * smoothstep( -0.35, 0.02, b3nl ) * ( 1.0 - smoothstep( 0.02, 0.35, b3nl ) ) );') : LC;
+      const LIGHT = LC.indexOf(LA) >= 0 ? LC.replace(LA, LA + '\n\tfloat b3nl = dot( geometryNormal, directLight.direction );\n\treflectedLight.directDiffuse += directLight.color * material.diffuseColor * vec3( 1.0, 0.68, 0.52 ) * ( b3sk * 0.05 * smoothstep( -0.35, 0.02, b3nl ) * ( 1.0 - smoothstep( 0.02, 0.35, b3nl ) ) );') : LC;
       sh.fragmentShader = pb + (TEX ? G.Ground3D.texGLSL() : '#define B3_NOTEX\n') + 'uniform highp sampler2D uBody; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader.replace('#include <lights_lambert_pars_fragment>', LIGHT)
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint(); diffuseColor.rgb *= mix(1.0, max(vAO, b3fk > 0.5 ? 0.8 : 0.6), 0.75);')
         // (a soft light on the edges, as the old figures had: the people read against the ground — as bright as the sky of
