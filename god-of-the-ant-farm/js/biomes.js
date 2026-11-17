@@ -177,6 +177,20 @@
     perm(idx, 0);
     return best ? best.map(k => civs[k]) : civs;
   };
+  // 21a: the forest's recipe of each land, as data — read only by the drawing (G.Mata, NATUREZA.md §8b; D-470), never by the world:
+  // how full the growth between the ground and the crowns is under the trees (forest), in the open land (open) and in a light gap
+  // (gap); how many hard stems it has (stem: the young trees, the tree ferns, the slim palms, the bamboo); and how much of a
+  // forest the seed's patches make where the world has few trees (wild, above the noise patch): the jungle shut and lush even
+  // where the woodcutters thinned it, the desert all but bare
+  B.MATA = [
+    { forest: 0.55, open: 0.12, gap: 0.8, stem: 0.1, patch: 0.22, wild: 0.55 },  // temperado
+    { forest: 0.22, open: 0.06, gap: 0.3, stem: 0.02, patch: 0.4, wild: 0.2 },   // neve
+    { forest: 0.42, open: 0.1, gap: 0.6, stem: 0.08, patch: 0.3, wild: 0.45 },   // taiga
+    { forest: 0.72, open: 0.42, gap: 0.85, stem: 0.07, patch: 0.1, wild: 0.7 },  // pântano
+    { forest: 0.96, open: 0.5, gap: 1, stem: 0.24, patch: -0.12, wild: 0.95 },   // selva
+    { forest: 0.3, open: 0.1, gap: 0.35, stem: 0.03, patch: 0.3, wild: 0.3 },    // savana
+    { forest: 0.08, open: 0.03, gap: 0.1, stem: 0, patch: 0.6, wild: 0.08 },     // deserto
+  ];
   B.nameAt = (x, y) => G.BIOMES[B.at(x, y)].name;
   B.toAt = (x, y) => (W.inb(x, y) && G.S.type[W.idx(x, y)] <= T.SEA ? 'ao mar' : G.BIOMES[B.at(x, y)].to);
 
