@@ -1,7 +1,7 @@
 // combate: o combate do corpo (20f, D-410 a D-424) — em Node, sem navegador (a simulação do qa/nodemundo.js com o controle do corpo,
 // a câmera, as teclas, os clipes e as mãos do combate por cima; quadros dirigidos à mão, como o main.js os dá):
 //   node qa/combate.js [mundo]            (padrão: o mundo pronto «cidade»; ONLY=c1,c4 roda só essas partes)
-//   node qa/combate.js mundo BASE [semente]   c12: as lutas do mundo (uma guerra, sem corpo) iguais às de outra árvore do jogo
+//   node qa/combate.js mundo BASE [semente|mundo pronto]   c12: as lutas do mundo (uma guerra, sem corpo) iguais às de outra árvore do jogo
 //                                             (BASE: a pasta do jogo de antes, ex. uma cópia do 76e3cae) — a mesma semente, o
 //                                             mesmo mundo, a mesma impressão
 // As provas:
@@ -28,7 +28,7 @@
 //   c11 o verificador limpo (S0–S2), sem erro de módulo nem do console; e ele vê uma flecha no ar sem corpo (posta pela prova)
 const path = require('path');
 const MODE = process.argv[2];
-if (MODE === 'mundo') { mundo(process.argv[3], +(process.argv[4] || 4242)); return; }
+if (MODE === 'mundo') { mundo(process.argv[3], process.argv[4] || 4242); return; }
 const M = require(path.join(__dirname, 'nodemundo.js'));
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/people3d.js', 'js/anim-gait.js', 'js/anim-clips.js', 'js/anim-body.js', 'js/possess.js', 'js/interact.js', 'js/avatar.js', 'js/cam3d.js', 'js/input3d.js', 'js/combate-clips.js', 'js/combate-ui.js', 'qa/combate-inv.js'] });
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | combate ${name} | ${info}`); if (!c) fails.push(name); };
@@ -394,20 +394,21 @@ process.exit(fails.length ? 1 : 0);
 
 // ================================ c12: as lutas do mundo iguais às de antes ================================
 // (a world of the seed, two peoples at war, lived two hundred seconds with nobody's body — here and in the other tree of the game:
-// the same deaths, the same chance, the same print of the world; each tree in a process of its own)
+// the same deaths, the same chance, the same print of the world — less the fight's own record, which the other tree has not —; each
+// tree in a process of its own)
 function mundo(baseDir, seed) {
   const cp = require('child_process'), fs = require('fs');
   const here = path.join(__dirname, '..'); const there = baseDir ? path.resolve(baseDir) : null;
   if (!there || !fs.existsSync(path.join(there, 'index.html'))) { console.log('FALHOU | combate c12 | dê a pasta do jogo de antes: node qa/combate.js mundo BASE'); process.exit(1); }
   const code = root => `const M = require(${JSON.stringify(path.join(__dirname, 'nodemundo.js'))}); const G = M.load({ qa: true, root: ${JSON.stringify(root)} });
-    M.novo({ seed: ${seed}, type: 'continente', size: 96, tribes: 3 }); const S = G.S; const F = G.Fac.all().filter(f => f.alive).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id));
-    G.Politics.declareWar(F[0], F[1], 'ambicao'); if (G.War.launchNow) { G.War.launchNow(F[0], {}); G.War.launchNow(F[1], {}); }
-    M.viver(200); const deaths = {}; for (const r of S.dead.values()) deaths[r.cause] = (deaths[r.cause] || 0) + 1;
-    const c = QA.canon(); const h = require('crypto').createHash('sha1').update(JSON.stringify(c)).digest('hex').slice(0, 12);
+    ${/^\d+$/.test(String(seed)) ? `M.novo({ seed: ${+seed}, type: 'continente', size: 96, tribes: 3 }); const S = G.S; const F = G.Fac.all().filter(f => f.alive).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id));
+    G.Politics.declareWar(F[0], F[1], 'ambicao'); if (G.War.launchNow) { G.War.launchNow(F[0], {}); G.War.launchNow(F[1], {}); }` : `M.pronto(${JSON.stringify(String(seed))}); const S = G.S;`}
+    M.viver(${/^\d+$/.test(String(seed)) ? 200 : 300}); const deaths = {}; for (const r of S.dead.values()) deaths[r.cause] = (deaths[r.cause] || 0) + 1;
+    const c = QA.canon(); c.more = c.more.filter(m => m[0] !== 'combate'); const h = require('crypto').createHash('sha1').update(JSON.stringify(c)).digest('hex').slice(0, 12);
     process.stdout.write(JSON.stringify({ rng: S.rng, day: S.day, deaths, war: S.stats.warDeaths || 0, kills: [...S.factions.values()].map(f => f.st && f.st.kills || 0), canon: h, err: M.limpo() ? 0 : 1 }));`;
   const run = root => JSON.parse(cp.execFileSync(process.execPath, ['-e', code(root)], { maxBuffer: 1 << 26 }).toString());
   const a = run(here), b = run(there);
   const same = JSON.stringify(a) === JSON.stringify(b);
-  console.log(`${same ? 'PASSOU' : 'FALHOU'} | combate c12 as-lutas-do-mundo-iguais | semente ${seed}, uma guerra de 200 s sem corpo — aqui ${JSON.stringify(a)}; ${path.basename(there)} ${JSON.stringify(b)}`);
+  console.log(`${same ? 'PASSOU' : 'FALHOU'} | combate c12 as-lutas-do-mundo-iguais | ${/^\d+$/.test(String(seed)) ? `semente ${seed}, uma guerra de 200 s` : `o mundo pronto «${seed}», 300 s`} sem corpo — aqui ${JSON.stringify(a)}; ${path.basename(there)} ${JSON.stringify(b)}`);
   process.exit(same ? 0 : 1);
 }

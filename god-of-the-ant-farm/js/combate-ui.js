@@ -33,7 +33,8 @@
   U.proof = false; // (for the proofs in Node: the hands live with no 3D modes round them)
   const live = () => !!((U.proof || (G.Modes && G.Modes.is && G.Modes.is('INC') && !G.Modes.panel() && !(G.Modes.menuOpen && G.Modes.menuOpen()))) && body() && Av.state());
   // (the fight is possible where the body stands: on its feet, out of the water, not asleep, not thrown down)
-  const able = () => { const b = Av.state(); const v = body(); return !!(b && v && !v.sleeping && b.loco !== 'swim' && b.loco !== 'down' && b.loco !== 'climb' && b.loco !== 'stair' && b.loco !== 'seat' && !(b.rise > 0)); };
+  const able = () => { const b = Av.state(); const v = body(); return !!(b && v && !v.sleeping && !(v.carry && v.carry.n > 0) && b.ground && b.loco !== 'swim' && b.loco !== 'down' && b.loco !== 'climb' && b.loco !== 'stair' && b.loco !== 'seat' && b.loco !== 'dodge' && !(b.rise > 0)); }; // (the hands under a load fight nothing; in the air, in a dodge, the blow waits)
+  const later = () => { const b = Av.state(); return !!(b && (b.loco === 'dodge' || b.loco === 'air' || !b.ground)); }; // (pressed in a dodge or a jump: kept for when the feet are down)
   const toast = (t, d) => G.IncUI && G.IncUI.toast && G.IncUI.toast(t, d || 1.6);
   const play = (s, v) => G.Audio && G.Audio.play && G.Audio.play(s, v);
   const weapon = () => { const v = body(); return v ? Cb.weapon(v) : null; };
@@ -135,7 +136,7 @@
 
   // ------------------------------ the keys ------------------------------
   In.on('atacar', () => {
-    if (!live()) return false; atkDown = true; atkT = 0; if (!able()) return true;
+    if (!live()) return false; atkDown = true; atkT = 0; if (!able()) { if (later()) buf = 0; return true; }
     const w = weapon(); if (!w) return true;
     if (w.bow) { if (mode !== 'puxar') pull(); return true; }
     if ((mode === 'golpe' || mode === 'pesado') && cur && actIs(cur.act)) { buf = 0; return true; } // (pressed in a blow: the next one in the row, when the window opens)
@@ -214,7 +215,8 @@
     const E = Cb.events(); const me = body(); if (!me) return;
     for (const e of E) {
       if (e.n <= evSeen) continue; evSeen = e.n;
-      if (e.kind === 'acerto' && e.by === me.id) { const big = e.amt >= 18 || e.killed; Av.hitstop(e.killed ? 0.11 : big ? 0.085 : 0.055); C3.shake && C3.shake(big ? 0.32 : 0.16); G.Combate3D && G.Combate3D.flash(e, e.blocked ? 'bloqueio' : 'acerto'); if (e.killed) play('thud', 0.7); }
+      if (e.kind === 'acerto' && e.by === me.id && e.arrow) play('hit', 0.4); // (an arrow home, far off: heard, not felt)
+      else if (e.kind === 'acerto' && e.by === me.id) { const big = e.amt >= 18 || e.killed; Av.hitstop(e.killed ? 0.11 : big ? 0.085 : 0.055); C3.shake && C3.shake(big ? 0.32 : 0.16); G.Combate3D && G.Combate3D.flash(e, e.blocked ? 'bloqueio' : 'acerto'); if (e.killed) play('thud', 0.7); }
       else if (e.kind === 'aparo') { Av.hitstop(0.12); C3.shake && C3.shake(0.25); play('clang', 1); toast('Aparou!', 1.2); G.Combate3D && G.Combate3D.flash(e, 'aparo'); Av.spend(3); }
       else if (e.kind === 'bloqueio') { play('clang', 0.7); C3.shake && C3.shake(0.18); G.Combate3D && G.Combate3D.flash(e, 'bloqueio');
         const b = Av.state(); const left = b ? b.stamina : 0; Av.spend(e.cost || 6);

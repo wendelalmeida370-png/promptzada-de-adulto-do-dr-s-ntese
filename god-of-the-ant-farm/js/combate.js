@@ -219,7 +219,7 @@
     } else { v.kills = (v.kills || 0) + 1; G.Audio && G.Audio.at(o.x, o.y, 'hit'); }
     // (a blow at one's own people, outside a duel: a crime, seen by whoever is near)
     if (!duel && fid(v) === fid(o) && G.Crime && G.Crime.assault) { G.Crime.assault(v, o, killed); stats.crimes++; }
-    note('acerto', { by: v.id, id: o.id, amt, killed: killed ? 1 : 0, blocked: blocked ? r2(blocked) : 0, x: r3(o.x), y: r3(o.y) });
+    note('acerto', { by: v.id, id: o.id, amt, killed: killed ? 1 : 0, blocked: blocked ? r2(blocked) : 0, arrow: how === 'arrow' ? 1 : 0, x: r3(o.x), y: r3(o.y) });
     if (duel && !killed && o.hp <= Cb.YIELD + 0.6) endDuel(o.id, 'rendeu');
     return { id: o.id, amt, killed, blocked: blocked ? r2(blocked) : 0, down: !killed && o.downT > S.clock ? 1 : 0 };
   }
@@ -265,14 +265,14 @@
       const w = Cb.weapon(v); const half = (w.shield ? 85 : 70) * D2R;
       const off = Math.abs(wrap(Math.atan2(src.y - v.y, src.x - v.x) - yaw));
       if (off <= half && (cause !== 'arrow' || w.shield)) {
-        if (guard.parry && S.clock - guard.t0 <= Cb.PARRY * T && cause !== 'arrow') {
+        if (guard.parry && S.clock - guard.t0 <= Cb.PARRY * T && cause !== 'arrow' && !src.giant) { // (a giant's charge is no blade to turn aside)
           stats.parried++; parried(v, src);
           note('aparo', { amt: r2(amt), cause, from: src.id, beast: src.beast ? 1 : 0, x: r3(src.x), y: r3(src.y) });
           return 0;
         }
         const g = Cb.guardOf(w) * (src.giant ? 0.5 : 1); const left = r2(amt * (1 - g));
         stats.guarded++; G.Audio && G.Audio.at(v.x, v.y, w.shield || w.cls !== 'punho' ? 'clang' : 'thud');
-        note('bloqueio', { amt: r2(amt), left, share: r2(g), cost: r2(amt * (w.shield ? 0.55 : 0.85) + 2), cause, from: src.id, giant: src.giant ? 1 : 0 });
+        note('bloqueio', { amt: r2(amt), left, share: r2(g), cost: r2(amt * (w.shield ? 0.55 : 0.85) + 2), cause, from: src.id, giant: src.giant ? 1 : 0, x: r3((v.x + src.x) / 2), y: r3((v.y + src.y) / 2) });
         amt = left;
       }
     }
@@ -355,7 +355,7 @@
     const won = how === 'rendeu' ? (loserId === d.o ? a : o) : null, lost = how === 'rendeu' ? (loserId === d.o ? o : a) : null;
     if (won && lost) {
       G.Vg.emote(won, 'joy', 2.5); G.Vg.emote(lost, 'sad', 2.5);
-      if (G.Talk) G.Talk.say(lost === o ? o : o || a, lost === o ? 'Eu me rendo!' : 'Rendeu-se. Bela luta.', { dur: 3 });
+      if (G.Talk && o) G.Talk.say(o, lost === o ? 'Eu me rendo!' : 'Você se rendeu. Bela luta.', { dur: 3 });
       if (G.Life) { G.Life.bio(won, 'note', `Venceu ${lost.name} num duelo.`, 'Venci um duelo, e o outro se rendeu'); G.Life.bio(lost, 'note', `Rendeu-se a ${won.name} num duelo.`, null); }
       if (lost === a || won === a) G.Possess.deed && G.Possess.deed('duelo');
     }
