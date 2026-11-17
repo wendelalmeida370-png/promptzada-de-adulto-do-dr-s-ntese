@@ -196,13 +196,14 @@
   Ce.sky = function (t, x, y, w, out) {
     if (!out || !out.band) out = Object.assign(out || {}, { band: [0, 0, 0, 0], halo: [0, 0, 0, 0], shadow: [0, 0], under: [0, 0, 0] }); const S = G.S; w = w || (S && S.weather) || {};
     const sd = Ce.sun(t); const s = sd.y; const alt = Math.asin(cl(s, -1, 1)); const air = Ce.airOf(x, y, w); const rain = cl(w.rain || 0, 0, 1);
-    const tr = Ce.through(alt, air.mie), lo = Ce.through(Math.max(alt, 0) * 0.3, air.mie); const nl = a => { const m = Math.max(a[0], a[1], a[2], 1e-6); return [a[0] / m, a[1] / m, a[2] / m]; };
+    // (the band in the colour of the sun through the air just over the horizon — a golden orange, not the last red of the disc)
+    const tr = Ce.through(alt, air.mie), lo = Ce.through(Math.max(alt, 0) + 0.045, air.mie); const nl = a => { const m = Math.max(a[0], a[1], a[2], 1e-6); return [a[0] / m, a[1] / m, a[2] / m]; };
     const hue = nl(lo); const dusk = sm(-0.12, -0.01, s) * (1 - sm(0.06, 0.22, s)) * (1 - rain * 0.85);
-    out.band[0] = hue[0]; out.band[1] = hue[1]; out.band[2] = hue[2]; out.band[3] = dusk * 0.55;
+    out.band[0] = hue[0]; out.band[1] = hue[1]; out.band[2] = hue[2]; out.band[3] = dusk * 0.42;
     const th = nl(tr); const up = sm(-0.05, 0.03, s) * (1 - rain * 0.75);
     out.halo[0] = th[0]; out.halo[1] = th[1]; out.halo[2] = th[2]; out.halo[3] = up * 0.012 * air.mie;
     out.shadow[0] = cl(-alt * 1.15, 0, 0.32); out.shadow[1] = sm(0.01, -0.03, s) * (1 - sm(-0.2, -0.3, s)) * (1 - rain) * 0.6;
-    const ul = sm(-0.09, -0.005, s) * (1 - sm(0.07, 0.16, s)) * (1 - rain * 0.9); const hu = nl(Ce.through(Math.max(alt, 0), air.mie * 0.7));
+    const ul = sm(-0.09, -0.005, s) * (1 - sm(0.07, 0.16, s)) * (1 - rain * 0.9); const hu = nl(Ce.through(Math.max(alt, 0) + 0.07, air.mie * 0.7));
     for (let q = 0; q < 3; q++) out.under[q] = hu[q] * ul * 0.5;
     out.mie = air.mie; out.haze = air.haze; return out;
   };
