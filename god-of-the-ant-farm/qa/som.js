@@ -64,7 +64,7 @@ function causal(c, tag) {
   const bad = (f, why) => { if (orphans.length < 8) orphans.push(`${tag}: ${f.k} (${f.tipo} ${f.s}) ${why}`); };
   const one = f => {
     sources++; const de = f.de || {};
-    if (de.v !== undefined) { const v = S.villagers.get(de.v); if (!v) return bad(f, 'de ninguém'); if (v.sleeping) return bad(f, 'de quem dorme'); if (f.tipo !== 'luta' && !v.act) return bad(f, 'de quem não faz nada'); if (f.tipo !== 'luta' && (Math.abs(f.x - v.x) > 0.002 || Math.abs(f.y - v.y) > 0.002)) return bad(f, 'fora do lugar de quem a faz'); }
+    if (de.v !== undefined) { const v = S.villagers.get(de.v); if (!v) return bad(f, 'de ninguém'); if (v.sleeping) return bad(f, 'de quem dorme'); if (f.tipo === 'ocio') { const oc = G.Audio.ocioSom ? G.Audio.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) return bad(f, 'de uma coisinha do ócio que não está acontecendo'); return; } if (f.tipo !== 'luta' && !v.act) return bad(f, 'de quem não faz nada'); if (f.tipo !== 'luta' && (Math.abs(f.x - v.x) > 0.002 || Math.abs(f.y - v.y) > 0.002)) return bad(f, 'fora do lugar de quem a faz'); }
     if (de.op) { const op = G.Act.get(de.op); if (!op || !G.Act.live(op)) return bad(f, 'de uma operação que não está viva'); }
     // (a gesture is the one its person is making: its act is the act the world shows; the water is of who bathes, the
     // watching of who is at the play, the lute of the one the tavern has playing, the anvil of a batch at its hammering)
