@@ -1536,7 +1536,8 @@ for (const f of files) { if (f === 'soc-fama.js') continue; src[f].forEach((l, k
 // fama (de, notavel, recebe, memoria, temida) e as perguntas da vida entre as pessoas (grudge, briga, rival, denuncia, casas,
 // fofoqueiro, suspeitos) — não tiram do acaso (nem do mundo, nem do que só se vê), não escrevem numa pessoa nem chamam as portas
 // que mudam a sociedade
-{ const PURE = { 'soc-indole.js': ['I.de', 'I.ax', 'I.faceta', 'I.humor', 'I.par', 'I.palavras', 'make'], 'soc-lacos.js': ['L.sente', 'L.de', 'L.base', 'kin', 'find', 'L.peso', 'L.alvo', 'L.lembra', 'L.marked', 'L.holds', 'L.ferido', 'L.ferida', 'labels'] };
+{ const PURE = { 'soc-indole.js': ['I.de', 'I.ax', 'I.faceta', 'I.humor', 'I.par', 'I.palavras', 'make'], 'soc-lacos.js': ['L.sente', 'L.de', 'L.base', 'kin', 'find', 'L.peso', 'L.alvo', 'L.lembra', 'L.marked', 'L.holds', 'L.ferido', 'L.ferida', 'labels'],
+    'soc-fama.js': ['F.de', 'F.notavel', 'F.recebe', 'F.memoria', 'F.temida'], 'soc-vida.js': ['C.grudge', 'C.briga', 'C.rival', 'C.denuncia', 'C.casas', 'C.fofoqueiro', 'C.suspeitos'] };
   for (const f in PURE) for (const nm of PURE[f]) { const b = fnBody(f, nm); if (!b) { fails.push(`as leituras sociais são puras: não achei ${nm} no ${f} (D-545)`); continue; }
     for (const [k, l, c] of b) if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random|\b(Lacos|L)\.(ato|marca|desmarca|corte)\(|\b(Fama|F)\.(feito|lembra|respondida)\(|\bsetTask\(|\b(v|o|a|b|q|th|say)\.[A-Za-z_]\w*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`as leituras sociais são puras: ${f}:${k + 1} (${nm}) sorteia ou escreve (D-545): ${l.trim().slice(0, 110)}`); } }
 // 209. "a sociedade nunca pelo olhar" (D-546): os arquivos do cérebro social não leem a câmera, a vista, o desenho nem a tela — os laços
@@ -1548,7 +1549,7 @@ for (const f of files) { if (!/^soc-.*\.js$/.test(f)) continue; src[f].forEach((
 // fofoca acusa (secrets.js gossip), a corte, a conversa e a visita (villagers.js courtTarget, socialTarget, relativeTarget), o «sim»
 // e o casamento arranjado (soc-lacos.js), a persona de quem governa (politics.js P.persona): nenhuma lê a pele, o cabelo, a roupa de
 // criança, o genoma, nem o povo da pessoa
-{ const DEC = [['crime.js', 'desperate'], ['crime.js', 'victimFor'], ['polity.js', 'Po.uprising'], ['justice.js', 'stance'], ['villagers.js', 'courtTarget'], ['villagers.js', 'socialTarget'], ['villagers.js', 'relativeTarget'], ['soc-lacos.js', 'L.corte'], ['soc-lacos.js', 'arrange']];
+{ const DEC = [['crime.js', 'desperate'], ['crime.js', 'victimFor'], ['polity.js', 'Po.uprising'], ['justice.js', 'stance'], ['secrets.js', 'gossip'], ['villagers.js', 'courtTarget'], ['villagers.js', 'socialTarget'], ['villagers.js', 'relativeTarget'], ['soc-lacos.js', 'L.corte'], ['soc-lacos.js', 'arrange'], ['politics.js', 'P.persona']];
   for (const [f, nm] of DEC) { const b = fnBody(f, nm); if (!b) { fails.push(`a aparência nunca decide: não achei ${nm} no ${f} (D-542)`); continue; }
     for (const [k, l, c] of b) if (/\.(skin|hair|kidCloth|genoma|robe)\b|\bG\.(Genoma|Feicao)\b|\.civ\b|\bCIVS\[/.test(c)) fails.push(`a aparência nunca decide: ${f}:${k + 1} (${nm}) lê a aparência ou o povo (D-542): ${l.trim().slice(0, 110)}`); } }
 // 211. "o temperamento sem o acaso do mundo" (D-570): o js/soc-indole.js não sorteia — a índole é do hash do id, dos pais e dos

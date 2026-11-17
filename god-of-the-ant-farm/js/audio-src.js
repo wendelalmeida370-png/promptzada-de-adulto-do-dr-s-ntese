@@ -133,6 +133,8 @@
     bound: still('o preso vai calado'), cross: still('o condenado não soa'), hangd: still('o enforcado não soa'), drag: still('arrasta o corpo calado'),
     wave: still('um aceno não soa'), hug: still('um abraço não soa'), embrace: still('um abraço não soa'), heart: still('o amor não soa'),
     unmask: still('o gesto de um instante'), torchfwd: still('a tocha à frente não soa'),
+    // (22b: the acts the society gives — the argument is voices raised; the help and the being helped are still)
+    argue: { s: 'voz', q: 'curso', cada: 1.4, v: 0.6, alc: 1.1 }, help: still('a ajuda é dada em silêncio'), helped: still('quem é ajudado recebe calado'),
   };
   // a beast's voice (the moment of it is the ear's own chance: `cada` seconds between two, about); `dia` / `noite`: only then
   A.BICHO = {

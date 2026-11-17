@@ -359,11 +359,15 @@
     let fk = s.fakes.find(x => x.fac === f.id && S.day - x.day < 30);
     if (!fk) { fk = { name: FAKE[Math.floor(G.R() * FAKE.length)], fac: f.id, day: S.day }; s.fakes.push(fk); if (s.fakes.length > 10) s.fakes.shift(); }
     fk.what = G.pick(FAKE_DO);
-    const odd = folk.filter(v => !v.secret && (v.age > 58 || v.role === 'curandeiro' || (v.civ && v.civ !== f.civ) || (v.g === 'f' && !v.partner && v.age > 40)));
+    // (who is accused is the prejudice of whoever accuses, never a truth about the accused — 22b D-586: the one of the town who talks
+    // most and trusts least picks whom they dislike or hold a grudge against, else one they do not know whom the town sets apart —
+    // the old, the healer, the woman alone —; never by the look nor the people of the accused)
+    const say = G.Convivio ? G.Convivio.fofoqueiro(folk) : null;
+    const odd = say ? G.Convivio.suspeitos(say, folk) : folk.filter(v => !v.secret && (v.age > 58 || v.role === 'curandeiro' || (v.g === 'f' && !v.partner && v.age > 40)));
     const accused = odd.length && G.R() < 0.7 ? G.pick(odd) : null;
     const verb = fk.what[plural(fk.name) ? 1 : 0];
     const txt = accused ? `${accused.name} é ${art(fk.name, 'de')} — ${plural(fk.name) ? (/^As/.test(fk.name) ? 'as' : 'os') : (/^A /.test(fk.name) ? 'a' : 'o')} que ${verb}` : `${cap(art(fk.name))} ${verb}`;
-    rumor(f.id, set.id, txt + '.', 0, false, 1, { fake: fk.name, accused: accused ? accused.id : 0 });
+    rumor(f.id, set.id, txt + '.', 0, false, 1, { fake: fk.name, accused: accused ? accused.id : 0, by: accused && say ? say.id : 0 });
   }
   const cap = t => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
 

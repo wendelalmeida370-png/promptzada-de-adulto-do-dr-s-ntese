@@ -213,16 +213,17 @@ if (on2('so9')) {
   }
   ok('so9 o-acerto-de-contas', !!res, `${a.name}, de pavio curto, foi tirar satisfação com ${b.name} (${tries.join(', ')}): ${res ? res.kind + ' — ' + res.seen.length + ' testemunha(s)' : 'só palavras'}`);
   // the witness who weighs the ties
-  const th = a; const fr = [...S.villagers.values()].find(v => v !== th && !L().kin(v, th) && v.age >= 16 && v.set === th.set);
+  // (a thief the town does not know as one: the friend of a known thief or aggressor keeps quiet half as often — G.Fama, D-578)
+  const th = [...S.villagers.values()].find(v => v !== a && v !== b && v.age >= 18 && v.set === a.set && !G.Fama.de(v)); const fr = [...S.villagers.values()].find(v => v !== th && !L().kin(v, th) && v.age >= 16 && v.set === th.set);
   const en = [...S.villagers.values()].find(v => v !== th && v !== fr && !L().kin(v, th) && v.age >= 16 && v.set === th.set);
   sim(() => { for (let k = 0; k < 10; k++) L().ato(fr, th, 'conversa'); L().ato(th, en, 'agressao'); L().ato(th, en, 'agressao'); });
   fr.indole = fr.indole.slice(); fr.indole[5] = 0;
   // (over twenty crimes: the friend of no honesty keeps quiet in most — 85 % —, the enemy always runs to the guard)
   let cala = 0, corre = 0; for (let c = 1; c <= 20; c++) { if (G.Convivio.denuncia(fr, th, { id: c }) === 'cala') cala++; if (G.Convivio.denuncia(en, th, { id: c }) === 'corre') corre++; }
-  ok('so9 a-testemunha', cala >= 12 && corre === 20, `em vinte crimes: a amiga desonesta do ladrão cala em ${cala}; o inimigo dele corre ao guarda em ${corre}`);
+  ok('so9 a-testemunha', cala >= 12 && corre === 20, `em vinte crimes: ${fr.name}, ${fr.g === 'f' ? 'amiga desonesta' : 'amigo desonesto'} do ladrão, cala em ${cala}; ${en.name}, inimig${en.g === 'f' ? 'a' : 'o'} dele, corre ao guarda em ${corre}`);
   // the thief never robs a friend's house
   const ties = G.Convivio.casas(th); const frHome = fr.home;
-  ok('so9 a-casa-do-amigo', !frHome || ties.no.has(frHome), frHome ? `a casa de ${fr.name}, amiga do ladrão: ${ties.no.has(frHome) ? 'fora da lista' : 'NA LISTA'}` : 'a amiga sem casa');
+  ok('so9 a-casa-do-amigo', !frHome || ties.no.has(frHome), frHome ? `a casa de ${fr.name}, ${fr.g === 'f' ? 'amiga' : 'amigo'} do ladrão: ${ties.no.has(frHome) ? 'fora da lista' : 'NA LISTA'}` : 'a amiga sem casa');
   const bad = soc(); ok('so9 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
 }
 

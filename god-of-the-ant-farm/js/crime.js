@@ -103,6 +103,8 @@
     if (purse(v) < 1 && f && E.coinage(f.id) && (Cr.wealth(v.set) >= 10)) w += 0.2;
     if (!w) return 0;
     if (tr.includes('Corajoso')) w += 0.1; if (tr.includes('Medroso')) w -= 0.2; if (tr.includes('Devoto')) w -= 0.25;
+    // (who the person is: the honest one holds back longer — G.Indole, 22b D-579)
+    if (G.Indole) w *= 1.3 - 0.6 * G.Indole.ax(v, 'hon') / 99;
     return Math.max(0, w);
   }
   // tonight's round of a town's watch: the crossings it goes by, or null with nobody on it
@@ -121,12 +123,15 @@
   };
   function victimFor(v) {
     const S = G.S; let best = null, bs = -1e9; const round = Cr.roundOf(v.set);
+    // (never the house of the thief's kin nor of a friend; the house of one he dislikes tempts him more — G.Convivio.casas, 22b D-579)
+    const ties = G.Convivio ? G.Convivio.casas(v) : null;
     for (const h of S.buildings.values()) {
       if (h.set !== v.set || !h.built || !G.BDEF[h.type].housing || h.id === v.home || (h.coin || 0) < 6) continue;
       if (h.robbed && S.day - h.robbed < 2) continue;
+      if (ties && ties.no.has(h.id)) continue;
       // the fatter purse, not too far, where the watch is weak, and a house where no one in the family of the thief lives
       const d = G.dist(v.x, v.y, h.x, h.y);
-      const sc = Math.min(40, h.coin) * 0.1 - d * 0.08 - Cr.watched(h, round) + G.R();
+      const sc = Math.min(40, h.coin) * 0.1 - d * 0.08 - Cr.watched(h, round) + G.R() + (ties ? ties.yes.get(h.id) || 0 : 0);
       if (sc > bs) { bs = sc; best = h; }
     }
     return best;
@@ -439,9 +444,13 @@
       if (S.day - o.saw.day > 6) { o.saw = null; continue; }
       const c = crimes().find(q => q.id === o.saw.crime); if (!c || c.st !== 'aberto') { o.saw = null; continue; }
       if (o.sleeping || o.inside) continue;
+      // (what the witness feels for the one seen: the kin and the friend keep quiet — the less, the honester —, the enemy goes
+      // looking for the guard, wherever he is in the town: G.Convivio.denuncia, 22b D-578)
+      const how = G.Convivio ? G.Convivio.denuncia(o, S.villagers.get(c.thief), c) : 'conta';
+      if (how === 'cala') { o.saw = null; continue; }
       for (const g of S.villagers.values()) {
         if (g === o || g.set !== o.set || !WATCH[g.role] || g.captive || g.sleeping || g.inside || g.hunt) continue;
-        if (G.dist2(g.x, g.y, o.x, o.y) > 36) continue;
+        if (how !== 'corre' && G.dist2(g.x, g.y, o.x, o.y) > 36) continue;
         g.hunt = c.id; c.told = c.told || S.day; o.saw = null;
         G.Vg.emote(o, 'chat', 1.5); G.Vg.emote(g, 'angry', 1.5);
         if (!(g.task && g.task.pri >= 1.65)) G.Vg.setTask(g, { type: 'prender', crime: c.id, id: c.thief, pri: 1.65, st: 0, look: 0, kind: 'prender' });

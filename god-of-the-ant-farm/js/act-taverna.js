@@ -385,10 +385,15 @@
       if (G.R() < dt * 1.5) { if (o.hp > 25) G.Vg.damage(o, 2, 'brawl'); o.stagT = S.clock + 0.3; G.Audio && G.Audio.at(v.x, v.y, 'hit'); }
       return;
     }
-    if (v.drunk > S.clock && night && G.R() < dt * 0.006 && v.age >= 18) {
-      let o = null; for (const id of Object.keys(op.data.mesa)) { const q = S.villagers.get(+id); if (q && q !== v && q.drunk > S.clock && !brawls.has(q.id) && !op.data.mesa[id].body) { o = q; break; } }
+    // (a fight has a cause: how quarrelsome the drunk one is, and whom of the drunk at the tables he dislikes — G.Convivio, 22b D-581)
+    const cv = G.Convivio;
+    if (v.drunk > S.clock && night && G.R() < dt * 0.006 * (cv ? cv.briga(v) : 1) && v.age >= 18) {
+      let o = null;
+      if (cv) o = cv.rival(v, Object.keys(op.data.mesa).filter(id => !brawls.has(+id) && !op.data.mesa[id].body));
+      else for (const id of Object.keys(op.data.mesa)) { const q = S.villagers.get(+id); if (q && q !== v && q.drunk > S.clock && !brawls.has(q.id) && !op.data.mesa[id].body) { o = q; break; } }
       if (o) {
         const until = S.clock + G.rr(4, 7); brawls.set(v.id, { with: o.id, t: until }); brawls.set(o.id, { with: v.id, t: until });
+        if (cv && cv.brigou(v, o)) { brawls.delete(v.id); brawls.delete(o.id); }
         if (G.Urban) G.Urban.noteB(b, 'crime', 1); // (the life of the quarter: a brawl)
         G.Vg.emote(v, 'angry', 3); G.Vg.emote(o, 'angry', 3);
         const set = S.settlements.get(b.set);

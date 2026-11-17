@@ -80,26 +80,38 @@
   const oa = v => (v && v.g === 'f' ? 'a' : 'o');
 
   // ------------------------------ personalities ------------------------------
+  // (the persona's stretch, toward the spread of the account of before less the people's custom that went to the regime: narrow, the
+  // world had half the warlike rulers and a fifth of the cruel ones, 42 % fewer dead of war and 17 % more people; at twice the stretch,
+  // three fifths more executions and four fifths more sacrifices; this one, between — measured over ten worlds of 40 years: D-582)
+  P.PE_K = { a0: 0.515, ak: 1.6, c0: 0.385, ck: 1.45 };
   P.persona = function (v) {
     if (!v) return { agg: 0.45, cru: 0.3, pie: 0.5, amb: 0.5 };
     if (v.pe) return v.pe;
-    const h = k => G.hash(v.id * 7919 + k * 104729 + 17);
     const tr = v.traits || [];
     const bias = G.S.temper === 'belicoso' ? 0.18 : G.S.temper === 'pacifico' ? -0.22 : 0;
-    const cb = (G.CIVS[v.civ] && G.CIVS[v.civ].persona) || { agg: 0, cru: 0, pie: 0, amb: 0 };
-    let agg = 0.1 + h(1) * 0.75 + bias + cb.agg, cru = h(2) * 0.75 + bias * 0.5 + cb.cru, pie = 0.1 + h(3) * 0.75 + cb.pie, amb = 0.1 + h(4) * 0.8 + cb.amb;
+    // (who the person is — the temperament, G.Indole: never the people; the people's custom is its regime's, P.leaderPe — 22b D-582.
+    // Each axis around its middle, stretched to the spread of before; the traits the temperament already holds — the devout's faith,
+    // the hard-working's ambition — are not added twice)
+    const x = k => (G.Indole ? G.Indole.ax(v, k) : 50) / 99 - 0.5;
+    const K = P.PE_K;
+    let agg = K.a0 + K.ak * (-0.55 * x('ama') + 0.25 * x('neu') + 0.2 * ((v.courage === undefined ? 0.5 : v.courage) - 0.5)) + bias;
+    let cru = K.c0 + K.ck * (-0.6 * x('ama') - 0.4 * x('hon')) + bias * 0.5, pie = 0.475 + 1.2 * x('fe'), amb = 0.5 + 1.2 * x('amb');
     if (tr.includes('Corajoso')) agg += 0.2;
     if (tr.includes('Medroso')) agg -= 0.25;
-    if (tr.includes('Devoto')) pie += 0.3;
-    if (tr.includes('Cético')) pie -= 0.3;
-    if (tr.includes('Romântico') || tr.includes('Sociável')) { cru -= 0.15; agg -= 0.05; }
-    if (tr.includes('Trabalhador') || tr.includes('Curioso')) amb += 0.12;
-    if (tr.includes('Preguiçoso')) amb -= 0.15;
+    if (tr.includes('Romântico') || tr.includes('Sociável')) { cru -= 0.1; agg -= 0.05; }
     const c = x => Math.round(G.clamp(x, 0, 1) * 100) / 100;
-    v.pe = { agg: c(agg), cru: c(cru), pie: c(pie), amb: c(amb) };
+    // (the mark of a persona read from the temperament — `t` —: one written before it, in a save of before, already holds the custom of
+    // the people, and the regime does not add it twice, L-1711)
+    v.pe = { agg: c(agg), cru: c(cru), pie: c(pie), amb: c(amb), t: 1 };
     return v.pe;
   };
-  P.leaderPe = f => (G.Powers && G.Powers.lawPe ? G.Powers.lawPe(f, P.persona(P.ruler(f))) : P.persona(P.ruler(f)));
+  // (the regime's way: the ruler's persona bent by the god's law and by the custom of the people — the Aztec rite, the Norse raid —:
+  // the culture is the institution's, never the person's, 22b D-582)
+  P.leaderPe = function (f) {
+    const pe = G.Powers && G.Powers.lawPe ? G.Powers.lawPe(f, P.persona(P.ruler(f))) : P.persona(P.ruler(f));
+    const cb = f && G.CIVS[f.civ] && G.CIVS[f.civ].persona; if (!cb || !pe || !pe.t) return pe;
+    const o = Object.assign({}, pe); for (const k of ['agg', 'cru', 'pie', 'amb']) o[k] = G.clamp((o[k] || 0) + (cb[k] || 0), 0, 1); return o;
+  };
   P.personaWords = function (v) {
     const p = P.persona(v); const f = v.g === 'f'; const w = [];
     if (p.agg > 0.66) w.push(f ? 'belicosa' : 'belicoso'); else if (p.agg < 0.3) w.push(f ? 'pacífica' : 'pacífico');

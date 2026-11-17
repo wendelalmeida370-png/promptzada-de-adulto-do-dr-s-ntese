@@ -114,7 +114,7 @@
     visita: { a: [4, 3, 1, 0], b: [5, 3, 1, 0], frente: 1 },
     mesa: { a: [7, 4, 1, 2], b: [7, 4, 1, 2], frente: 1, bit: BIT.mesa },
     corte: { a: [4, 2, 1, 18], b: [3, 1, 1, 11], frente: 1 },
-    trabalho: { a: [3, 2, 2, 2], b: [3, 2, 2, 2] }, atrito: { a: [-4, -2, 0, -2], b: [-4, -2, 0, -2] }, vizinho: { a: [2, 2, 1, 2], b: [2, 2, 1, 2] }, brincar: { a: [4, 2, 0, 0], b: [4, 2, 0, 0] },
+    trabalho: { a: [4, 3, 2, 2], b: [4, 3, 2, 2] }, atrito: { a: [-4, -2, 0, -2], b: [-4, -2, 0, -2] }, vizinho: { a: [3, 3, 1, 2], b: [3, 3, 1, 2] }, brincar: { a: [4, 2, 0, 0], b: [4, 2, 0, 0] },
     recusa: { a: [-3, -2, 0, -4], b: [0, 0, 0, 0] },
     // (phase 2: what people do for and against each other — a the one who did it, b the one it was done to; for 'matou', a is one of
     // the dead's and b the killer)
@@ -289,6 +289,7 @@
     // (the name of each one in the town and its memory, and the life between people — loans, debts, crimes answered: soc-fama.js,
     // soc-vida.js, on the same day of the town)
     if (G.Fama && G.Fama.dayOf) G.Fama.dayOf(set);
+    if (G.Convivio && G.Convivio.dayOf) G.Convivio.dayOf(set);
   };
   function cool(x, rate, floor) {
     if (!x) return 0;
@@ -318,7 +319,7 @@
   // (two who do not get on, side by side all day — the worst pairs of temperaments, G.Indole.par under L.ATRITO —: the friction of the
   // post instead of its fellowship; and two who already dislike each other quarrel now and then, by the hash of the two and the day —
   // the more nervous one says the word, the other keeps it: the offence a score may be settled for, D-580)
-  L.ATRITO = { par: -2, af: -30, q: 0.2 };
+  L.ATRITO = { par: 0.15, af: -30, q: 0.2 };
   function work(v, o) {
     if (!G.Indole || G.Indole.par(v, o) >= L.ATRITO.par) { L.ato(v, o, 'trabalho'); return; }
     L.ato(v, o, 'atrito');

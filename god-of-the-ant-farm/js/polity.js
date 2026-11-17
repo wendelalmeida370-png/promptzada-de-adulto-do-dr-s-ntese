@@ -508,7 +508,11 @@
     const rebels = [lead];
     for (const v of S.villagers.values()) {
       if (v === lead || v === ruler || v.captive || v.age < 16 || G.Fac.idOfV(v) !== f.id || !groups.includes(v.grp)) continue;
-      const pe = P.persona(v); if (G.R() < 0.25 + v.courage * 0.35 + pe.agg * 0.2) rebels.push(v);
+      // (and what the person feels: hatred of the ruler draws one in, fondness holds one back; a friend of the leader follows —
+      // G.Lacos.sente, 22b D-583)
+      const sr = G.Lacos && G.Lacos.sente(v, ruler), sl = G.Lacos && G.Lacos.sente(v, lead);
+      const ties = (sr ? G.clamp(-sr.afeto / 200, -0.25, 0.3) : 0) + (sl ? G.clamp(sl.afeto / 200, -0.15, 0.25) : 0);
+      const pe = P.persona(v); if (G.R() < 0.25 + v.courage * 0.35 + pe.agg * 0.2 + ties) rebels.push(v);
     }
     if (goal === 'comuna' || goal === 'anarquia' || goal === 'democracia') for (const v of S.villagers.values()) if (v.captive && G.Fac.idOfV(v) === f.id && v.age >= 16 && v.hp > 50 && G.R() < 0.6) rebels.push(v);
     if (rebels.length < 3) return false;
