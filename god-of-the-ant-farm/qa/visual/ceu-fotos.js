@@ -77,8 +77,8 @@ const VIEWS = [
         G.Cam3D.OPT.follow = false; G.Cam3D.yaw = cy; G.Cam3D.pitch = pitch; G.Cam3D.dist = dist; G.Cam3D.cur = dist; f(38); drawn(33); drawn(33); st.yaw = cy + 0.4; G.Cam3D.yaw = cy; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist;
         // (the storm's bolt: the world's own stroke, on open land some 60 m ahead of the eye — where the 3D draws it, if it does)
         let bolt = null;
-        if (wx === 'storm') { const fx = Math.cos(cy + Math.PI), fz = Math.sin(cy + Math.PI); let bx = at[0] - Math.cos(cy) * 15, by = at[1] - Math.sin(cy) * 15; void fx; void fz;
-          bx = G.clamp(bx, 2, N - 3); by = G.clamp(by, 2, N - 3); G.Powers.strike(bx, by, false); bolt = [+bx.toFixed(1), +by.toFixed(1)]; drawn(33); }
+        if (wx === 'storm') { const fx = Math.cos(cy + Math.PI), fz = Math.sin(cy + Math.PI); let bx = at[0] + Math.cos(cy) * 15, by = at[1] + Math.sin(cy) * 15; // (ahead of the eye) void fx; void fz;
+          bx = G.clamp(bx, 2, N - 3); by = G.clamp(by, 2, N - 3); G.Powers.strike(bx, by, false); bolt = [+bx.toFixed(1), +by.toFixed(1)]; for (let k = 0; k < 5; k++) drawn(33); } // (the photo at its second flicker)
         const ms = drawn(1); const R = G.Realm, ri = R.info ? R.info.render : {}; const pi = G.Post3D && G.Post3D.info ? G.Post3D.info() : null;
         let med = null; if (MEDE > 0) { const t = []; for (let k = 0; k < MEDE; k++) t.push(drawn(33)); t.sort((a, b) => a - b); med = +t[t.length >> 1].toFixed(0); }
         const c = R.renderer().domElement, o = document.createElement('canvas'); o.width = c.clientWidth || c.width; o.height = c.clientHeight || c.height; o.getContext('2d').drawImage(c, 0, 0, o.width, o.height);
@@ -94,8 +94,14 @@ const VIEWS = [
   // the drawing writes nothing of the world (D-465): the world held still (the speed 0), the save before and after drawing a few
   // frames of the sky — the same, byte for byte (but for the hour it was written)
   if (world) { const same = await page.evaluate(() => { let r0 = null; const r = G.Realm.renderer(); G.UI.setSpeed(0); const ser = () => G.Save.serialize().replace(/"savedAt":\d+/, '');
-      const s0 = ser(); for (let k = 0; k < 4; k++) G.Main.frameFor(33); const s1 = ser(); void r0; void r; G.UI.setSpeed(1); return { same: s0 === s1, len: s0.length }; });
-    log.push(`mundo igual depois de desenhar: ${same.same} (${same.len} caracteres)`); console.log(log[log.length - 1]); if (!same.same) errs.push('o desenho mudou o mundo'); }
+      const s0 = ser(); for (let k = 0; k < 4; k++) G.Main.frameFor(33); const s1 = ser(); void r0; void r; G.UI.setSpeed(1);
+      // (where they differ, if they do: the fields of the save, and in a list of things which ones and what)
+      const diff = []; if (s0 !== s1) { const a = JSON.parse(s0), b = JSON.parse(s1); for (const k of Object.keys(b)) { const x = JSON.stringify(a[k]), y = JSON.stringify(b[k]); if (x === y) continue;
+        if (Array.isArray(a[k]) && Array.isArray(b[k])) { for (let i = 0; i < Math.max(a[k].length, b[k].length) && diff.length < 12; i++) { const p = JSON.stringify(a[k][i]), q = JSON.stringify(b[k][i]); if (p === q) continue;
+            if (a[k][i] && b[k][i] && typeof a[k][i] === 'object') { const f = Object.keys(b[k][i]).filter(z => JSON.stringify(a[k][i][z]) !== JSON.stringify(b[k][i][z])); diff.push(k + '[' + i + '].' + f.slice(0, 4).map(z => z + ':' + JSON.stringify(a[k][i][z]).slice(0, 30) + '→' + JSON.stringify(b[k][i][z]).slice(0, 30)).join(',')); } else diff.push(k + '[' + i + ']'); } }
+        else diff.push(k + ': ' + x.slice(0, 60) + ' → ' + y.slice(0, 60)); } }
+      return { same: s0 === s1, len: s0.length, diff }; });
+    log.push(`mundo igual depois de desenhar: ${same.same} (${same.len} caracteres)${same.diff.length ? ' · onde: ' + same.diff.join(' | ') : ''}`); console.log(log[log.length - 1]); if (!same.same) errs.push('o desenho mudou o mundo'); }
   console.log('erros: ' + (errs.slice(0, 5).join(' || ') || 'nenhum'));
   fs.writeFileSync(path.join(OUT, 'log.txt'), log.join('\n') + '\nerros: ' + (errs.slice(0, 5).join(' || ') || 'nenhum') + '\n');
   await browser.close();

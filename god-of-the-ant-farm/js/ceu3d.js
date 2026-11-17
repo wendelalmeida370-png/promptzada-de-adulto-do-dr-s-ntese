@@ -59,7 +59,7 @@
     // gxFlash: (the light of a lightning flash now r, g, b; -)
     gxAirMap: { value: null }, gxShade: { value: null }, gxCloudN: { value: null }, gxAirB: v4(0.25, 1 / 129, 0, 1), gxAirK: v4(0, 0, 0, 0.012),
     gxCl0: v4(0, 0, 0.5, 0.5), gxCl1: v4(0.5, 0.5, 0, 1.4), gxCl2: v4(353, 1 / 2200, 0.36, 0), gxShadeK: v4(0, 0, 0, 0), gxKeyW: v4(0, 1, 0, 0),
-    gxCanopy: v4(0.2, 0.27, 0.15, 18), gxSunBox: v4(0, 0, 0, 0), gxFlash: v4(0, 0, 0, 0) };
+    gxCanopy: v4(0.28, 0.36, 0.22, 18), gxSunBox: v4(0, 0, 0, 0), gxFlash: v4(0, 0, 0, 0) };
   R3.GX = GX;
   // the pieces of shader of the air of each place, for every material that is lit or lies in the air — declared once whichever
   // piece comes first: gxMapUV (a point of the land to the maps), gxCloud (the clouds' stuff over a point of their plane),
@@ -204,7 +204,7 @@ vec3 gxWP = cameraPosition + ( vec4( geometryPosition, 0.0 ) * viewMatrix ).xyz;
     rep('lights_fragment_begin', 'getDirectionalLightInfo( directionalLight, directLight );', 'getDirectionalLightInfo( directionalLight, directLight ); directLight.color *= gxKS;');
     rep('lights_fragment_begin', 'irradiance += getHemisphereLightIrradiance( hemisphereLights[ i ], geometryNormal );', 'irradiance += getHemisphereLightIrradiance( hemisphereLights[ i ], geometryNormal ) * gxSK;');
     // (a lightning flash: the whole sky lights up for an instant — what is under the canopy less)
-    rep('lights_fragment_begin', '#if ( NUM_HEMI_LIGHTS > 0 )', '#if ( NUM_HEMI_LIGHTS > 0 )\n\tirradiance += gxFlash.rgb * gxSK;');
+    rep('lights_fragment_begin', '#if ( NUM_HEMI_LIGHTS > 0 )', '#if ( NUM_HEMI_LIGHTS > 0 )\n\tirradiance += gxFlash.rgb * gxSK * 0.6;');
     // the air: where each point is in the world (for the mist, which lies low), carried to the fragment
     SC.fog_pars_vertex = `#ifdef USE_FOG
 	varying float vFogDepth;
@@ -242,16 +242,21 @@ ${GXAIR}`;
 		tau += gxAir.y * exp( - gxAir.z * ( cameraPosition.y - gxAir.w ) ) * dl * lk;
 		// (and the mist of the place, where the map of the air has it — the valley at dawn, the river, the swamp, the wet woods,
 		// the spray of a fall —, under its top: read at the middle of the way and at its end)
+		float tauL = 0.0; vec3 mTint = vec3( 1.0 );
 		if ( gxAirB.z > 0.0 ) {
 			vec3 mp = mix( cameraPosition, vFogW, 0.5 ); vec4 a1 = texture2D( gxAirMap, gxMapUV( mp.xz ) ), a2 = texture2D( gxAirMap, gxMapUV( vFogW.xz ) );
 			float t1 = a1.a * 76.5 * gxAirB.w, t2 = a2.a * 76.5 * gxAirB.w;
 			float d1 = ( a1.r * gxAirK.x + a1.b * gxAirK.y ) * ( 1.0 - smoothstep( t1 - 2.5, t1 + 1.0, mp.y ) ), d2 = ( a2.r * gxAirK.x + a2.b * gxAirK.y ) * ( 1.0 - smoothstep( t2 - 2.5, t2 + 1.0, vFogW.y ) );
-			tau += ( d1 * 0.65 + d2 * 0.35 ) * fl * gxAirK.w;
+			tauL = ( d1 * 0.65 + d2 * 0.35 ) * fl * gxAirK.w;
+			// (under the canopy it is lit by what the crowns let through: dimmer and greener than the open air's)
+			mTint = mix( vec3( 1.0 ), vec3( 0.5, 0.62, 0.46 ), a2.g * gxAirK.z * ( 1.0 - smoothstep( a2.a * 76.5 * gxAirB.w, a2.a * 76.5 * gxAirB.w + 8.0, vFogW.y ) ) );
 		}
 		// (the blue goes first: the far hills turn blue before they fade; at the very end of the view everything is haze)
+		vec3 hzC = gxHaze( normalize( vec3( fd.x, max( fd.y, 0.0 ) * 0.25, fd.z ) ) );
+		gl_FragColor.rgb = mix( gl_FragColor.rgb, hzC * mTint, 1.0 - exp( - tauL ) );
 		vec3 ff = 1.0 - exp( - tau * mix( vec3( 1.0 ), vec3( 0.8, 0.93, 1.12 ), gxAir2.w ) );
 		ff = max( ff, vec3( smoothstep( gxAir2.y, gxAir2.z, fl ) ) );
-		gl_FragColor.rgb = mix( gl_FragColor.rgb, gxHaze( normalize( vec3( fd.x, max( fd.y, 0.0 ) * 0.25, fd.z ) ) ), ff );
+		gl_FragColor.rgb = mix( gl_FragColor.rgb, hzC, ff );
 	}
 #endif
 #if defined( TONE_MAPPING )
@@ -578,7 +583,7 @@ ${GXAIR}`;
           if (auK > 0.001 && h > 0.0) { float ph = atan(d.x, -d.z); float nb = max(-d.z, 0.0) / max(length(d.xz), 1e-3);
             float n1 = textureLod(gxCloudN, vec2(ph * 0.55 + uT * 0.0035, 0.31), 0.0).b, n2 = textureLod(gxCloudN, vec2(ph * 2.3 - uT * 0.006, 0.71), 0.0).g; float e0 = 0.13 + n1 * 0.12;
             float v = smoothstep(e0 - 0.01, e0 + 0.025, h) * exp(-max(h - e0, 0.0) * 4.5) * (0.35 + n2 * 1.1);
-            c += mix(vec3(0.08, 1.0, 0.42), vec3(0.55, 0.18, 0.95), smoothstep(0.06, 0.3, h - e0)) * v * auK * 0.09 * smoothstep(0.2, 0.75, nb); }
+            c += mix(vec3(0.08, 1.0, 0.42), vec3(0.55, 0.18, 0.95), smoothstep(0.06, 0.3, h - e0)) * v * auK * 0.062 * smoothstep(0.2, 0.75, nb); }
           // (the high thin clouds of the day, streaked along the wind, far over the others: lit white, pink at the dusk)
           if (ciK.x > 0.001 && h > 0.0) { vec2 hp = (cameraPosition.xz + d.xz * (1600.0 / (h + 0.05))) / 6400.0 + gxCl0.xy * 0.35; vec2 wd = ciK.yz; vec2 q = vec2(dot(hp, wd), dot(hp, vec2(-wd.y, wd.x)) * 3.2);
             float cl2 = min(log2(1.0 + 0.3 / max(h, 0.02)), 4.0); float cn = textureLod(gxCloudN, q, cl2).b * 0.7 + textureLod(gxCloudN, q * 2.7 + 0.13, cl2 + 1.0).g * 0.3; float ci = smoothstep(0.52, 0.8, cn) * ciK.x * smoothstep(0.0, 0.18, h);
@@ -623,7 +628,7 @@ ${GXAIR}`;
               c += moonCol * face * (lit + 0.03) * (1.0 - smoothstep(0.9, 1.0, r2)) * (1.0 - cl * 0.85); } }
           c += moonCol * pow(cm, 300.0) * 0.05 * moP.y * (1.0 - cl * 0.85);
           if (haK > 0.001) { float ma = acos(clamp(cm, -1.0, 1.0)); c += moonCol * 0.012 * haK * exp(-pow((ma - 0.384) / 0.022, 2.0)); }
-          c += gxFlash.rgb * (0.25 + cl * 1.6); // (the flash: the clouds lit from within, the sky with them)
+          c += gxFlash.rgb * (0.12 + cl * 0.75); // (the flash: the clouds lit from within, the sky with them)
           gl_FragColor = vec4(c, 1.0);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>

@@ -366,7 +366,7 @@
         if (river) { d += 0.6 * river / tiles; tp = Math.max(tp, g + 3.5); w |= 2; }
         if (swamp) { const k = swamp / tiles; d += 0.7 * k; l += 0.25 * k; tp = Math.max(tp, g + 3); w |= 4; }
         // the wet woods: the air under a closed canopy over a wet land, milky all day
-        if (can > 0.3) { const k = sm(0.3, 0.9, can) * wet; if (k > 0.02) { l += k * 0.55; tp = Math.max(tp, g + 9); w |= 16; } }
+        if (can > 0.3) { const k = sm(0.3, 0.9, can) * wet; if (k > 0.02) { l += k * 0.45; tp = Math.max(tp, g + 9); w |= 16; } }
       }
       dawn[c] = d; last[c] = l; top[c] = tp; why[c] = w;
     }
