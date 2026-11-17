@@ -150,11 +150,17 @@ if (run('r3')) mild(() => {
   else {
     const f = G.Fac.ofV(w); const K = f.tech.known; const k0 = Object.assign({}, K); const civ = f.civ;
     const helm = () => { flush(); const o = P3.outfit(w); return `${o.hatM || 'cabeça nua'} ${o.hat}`; };
-    delete K.bronze; delete K.ferro; const h0 = helm(); K.bronze = 1; const h1 = helm(); K.ferro = 2; const h2 = helm();
+    delete K.bronze; delete K.ferro; const h0 = helm();
+    // (the helmet is of a metal the people had, never of the art alone — 20h, D-443: with the art and no bronze ever in its hands,
+    // a bare head; then a tool of each metal it never had through its store by the test's hand, and taken back)
+    const Or = G.Origem; K.bronze = 1; const hArt = Or.had(f.id, 'bronze') ? null : helm();
+    for (const m of ['bronze', 'ferro']) if (!Or.had(f.id, m)) { G.inSim++; try { G.Depot.make('f:' + f.id, 'ferramentas', 1, { code: 'teste', of: m, part: true }); G.Depot.use('f:' + f.id, 'ferramentas', 1, { code: 'teste', of: m }); } finally { G.inSim--; } }
+    const h1 = helm(); K.ferro = 2; const h2 = helm();
     for (const k of Object.keys(K)) delete K[k]; Object.assign(K, k0); flush();
     const metal0 = /elmo|galea/.test(h0), bronze = h1.endsWith('#b08a4a'), iron = civ === 'grego' ? h2.endsWith('#b08a4a') : h2.endsWith('#8a8e96');
-    if (metal0 || !bronze || !iron) bad.push(`o elmo de #${w.id} (${civ}): sem bronze «${h0}», com bronze «${h1}», com ferro «${h2}»`);
-    info.push(`elmo (${civ}): sem bronze «${h0}» · bronze «${h1}» · ferro «${h2}»`);
+    const artBare = hArt === null || !/elmo|galea/.test(hArt);
+    if (metal0 || !bronze || !iron || !artBare) bad.push(`o elmo de #${w.id} (${civ}): sem bronze «${h0}»${hArt !== null ? `, com a arte do bronze sem o metal «${hArt}»` : ''}, com bronze «${h1}», com ferro «${h2}»`);
+    info.push(`elmo (${civ}): sem bronze «${h0}»${hArt !== null ? ` · a arte sem o metal «${hArt}»` : ''} · bronze «${h1}» · ferro «${h2}»`);
   }
   ok('r3 a época: o povo com tear (ou pano no armazém) veste tecido tingido, sem eles couro e lã crua; seda só onde o povo tem seda e a casa é rica; o elmo do metal que o povo forja', !bad.length, (bad.length ? bad.join(' · ') + ' · ' : '') + info.join(' | '));
 });
