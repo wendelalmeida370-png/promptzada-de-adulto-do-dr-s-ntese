@@ -66,8 +66,11 @@ const matOf = k => (k ? G.Itens.def(k).mat : null);
 
 // ================================================================ o1 the deposits
 if (on('o1')) {
-  const raw = (() => { const data = {}; const got = G.Ready.got; G.Ready.got = (k, s) => { data[k] = s; }; try { M.run('worlds/cidade.js'); } finally { G.Ready.got = got; } return JSON.parse(data.cidade); })();
-  open(); const bad = [];
+  // (a save from before the deposits of the bronze — the old save of the proofs, read only: the ready worlds are made again with
+  // them in, T-1499 —: the load gives it the ones it lacks, and its iron and gold stay where they were)
+  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, 'oldsave_7.json'), 'utf8'));
+  const bad = []; if (raw.oresV || (raw.ores || []).some(o => o.kind === 'cobre' || o.kind === 'estanho')) bad.push('o save antigo já tem as jazidas do bronze');
+  M.abrir(JSON.parse(JSON.stringify(raw))); S = G.S; M.viver(1);
   const by = k => S.ores.filter(o => o.kind === k);
   const cu = by('cobre'), sn = by('estanho');
   if (S.oresV !== 2) bad.push('a versão das jazidas ' + S.oresV);
@@ -83,7 +86,7 @@ if (on('o1')) {
   if (k1 !== k2) bad.push('a mesma semente, outras jazidas');
   M.salvarCarregar(); const k3 = JSON.stringify(G.S.ores.map(o => [o.kind, o.x, o.y, o.max])); if (k3 !== k2 || G.S.oresV !== 2) bad.push('o save mudou as jazidas');
   const kinds = {}; for (const o of G.S.ores) kinds[o.kind] = (kinds[o.kind] || 0) + 1;
-  ok('o1 as jazidas: o cobre das colinas, o estanho raro, onde a pedra os põe', !bad.length && !errs(), `cidade (save de antes): ${cu.length} de cobre, ${sn.length} de estanho, o ferro e o ouro onde estavam; mundo novo (ilha 64): ${JSON.stringify(kinds)}, iguais na mesma semente e depois do save${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
+  ok('o1 as jazidas: o cobre das colinas, o estanho raro, onde a pedra os põe', !bad.length && !errs(), `o save antigo das provas (de antes das jazidas): ${cu.length} de cobre, ${sn.length} de estanho, o ferro e o ouro onde estavam; mundo novo (ilha 64): ${JSON.stringify(kinds)}, iguais na mesma semente e depois do save${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
 }
 
 // ================================================================ o2 the mine
