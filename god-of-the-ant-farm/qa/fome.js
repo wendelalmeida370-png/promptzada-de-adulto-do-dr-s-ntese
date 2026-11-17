@@ -585,7 +585,9 @@ const calmOne = (skip, also) => {
 // on campaign or on a mission: no time for a meal); so does whoever hides in the cave now. The case: a hungry old one or child of
 // the town sent to the cave, the alarm ringing all along — a long attack — for most of a day)
 {
-  const kids = s => [...S.villagers.values()].filter(q => q.set === s.id && ((q.age >= 3 && q.age < 14) || q.age >= 60) && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air && !(S.avatar && S.avatar.id === q.id)).sort((a, b) => a.id - b.id);
+  // (a child who stays one through the case — the alarm sends the children under 14 again every second and a half: one of
+  // 13,97 who ran from a wolf on the way had turned 14 and was not sent again, T-1491 —, or an old one)
+  const kids = s => [...S.villagers.values()].filter(q => q.set === s.id && ((q.age >= 3 && q.age < 13.5) || q.age >= 60) && !q.captive && !q.jail && !q.aboard && !q.ug && !q.held && !q.air && !(S.avatar && S.avatar.id === q.id)).sort((a, b) => a.id - b.id);
   const mouthOf = s => { let best = null, bd = 24 * 24; for (const cv of G.Caves.all()) { if (!cv.mouths.length || cv.mine) continue; for (const m of cv.mouths) { const d = G.dist2(s.cx, s.cy, m.x, m.y); if (d < bd && W.townReaches(s, m.x, m.y)) { bd = d; best = { cv, m }; } } } return best; };
   const towns = [...S.settlements.values()].filter(s => !G.War.threat(s.id) && V.dropoffs(s.id).length && G.Fac.get(s.fac) && G.Fac.get(s.fac).stock.food >= 5 && kids(s).length >= 1).sort((a, b) => V.pop(b.id) - V.pop(a.id) || a.id - b.id);
   let set = null, cm = null; for (const s of towns) { const q = mouthOf(s); if (q) { set = s; cm = q; break; } }
@@ -594,7 +596,10 @@ const calmOne = (skip, also) => {
   if (set && cm) {
     cm.cv.known[set.fac] = true;
     const R = set.radius || 8; const [a] = kids(set);
-    let near = null; for (let y = Math.floor(set.cy - R); y <= set.cy + R && !near; y++) for (let x = Math.floor(set.cx - R); x <= set.cx + R && !near; x++) { if (!W.inb(x, y) || !W.walkableXY(x, y) || S.occ[y * G.N + x] || G.dist(x + 0.5, y + 0.5, set.cx, set.cy) > R || !W.townReaches(set, x, y)) continue; near = [x + 0.5, y + 0.5]; }
+    // (a tile with no beast the people fear near it: the child the hand puts there runs from the beast, and the case is the cave,
+    // not the beast — in the world of the 20h, Kamose was put beside one, fled, ate at the store and never went to hide, T-1491)
+    const beastNear = (x, y) => { for (const an of S.animals.values()) if (Vg.dread(an) > 0 && G.dist(an.x, an.y, x, y) < 12) return true; return false; };
+    let near = null; for (let y = Math.floor(set.cy - R); y <= set.cy + R && !near; y++) for (let x = Math.floor(set.cx - R); x <= set.cx + R && !near; x++) { if (!W.inb(x, y) || !W.walkableXY(x, y) || S.occ[y * G.N + x] || G.dist(x + 0.5, y + 0.5, set.cx, set.cy) > R || !W.townReaches(set, x, y) || beastNear(x + 0.5, y + 0.5)) continue; near = [x + 0.5, y + 0.5]; }
     if (!near) info = `${set.name}: nenhum chão da cidade`;
     else {
       Vg.endTask(a); a.inside = 0; a.sleeping = false; a.x = near[0]; a.y = near[1]; a.path = null; a.hunger = 75;

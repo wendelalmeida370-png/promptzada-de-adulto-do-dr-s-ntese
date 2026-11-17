@@ -51,7 +51,7 @@ Três bens são guardados **por partes**, e as partes de um lugar sempre somam o
 | `ouro` | jazida de ouro (montanha, deserto, rio da selva); veio e tesouro de caverna; o presente de uma cidade (`citygifts`) | a mina, `mina` | o ourives (joias), a coletoria (moedas), a estátua de ouro; a porta para coisas de ouro está pronta (`O.matOK('ouro')`) |
 | `armas`, `ferramentas` **de bronze** | — | a **forja** (`forja`, `ferreiro`, arte **bronze**): busca 6 de cobre → **liga**: 1 de estanho do armazém ao cadinho, pelo livro (`liga`) → fogo (2 de lenha) → forjar 2 → 2; `of: 'bronze'` | a leva (`army.js`, `wars.js`), o desgaste dos ofícios, o ladrão, a mochila do corpo (`Inv.make`) |
 | `armas`, `ferramentas` **de ferro** | — | a **forja** (arte **ferro**): busca 6 de minério de ferro → fogo (**3 de lenha**: o ferro pede mais calor) → forjar 2 → 2; `of: 'ferro'` | as mesmas |
-| (sem metal) | — | **nada**: a forja fica parada («a falta de estanho»); o planejador nem a levanta sem um metal que o povo trabalhe (`E.metalNear`); a fornada de antes, de minério para o povo do bronze, não continua | — |
+| (sem metal) | — | **nada**: a forja fica parada («a falta de estanho»); o planejador nem a levanta sem um metal que o povo trabalhe (`E.metalNear`); a fornada de um save de antes (do minério) continua como de ferro para o povo que sabe o ferro e, para o que não sabe, acaba no passo do mundo, com o minério na prateleira (L-1366) | — |
 
 - **O combustível** (decidido, D-441): a **lenha do armazém** (`wood`), a mesma do forno da olaria — o carvão é lenha queimada sem ar,
   e a forja o faz da lenha do povo; o ferro gasta mais.
@@ -154,6 +154,7 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
 | 11 | «Um prato de comida» de qualquer coisa | o prato é do que se come (o de peixe, só com peixe) |
 | 12 | O couro da caça entrava no armazém sem linha do livro (L-1364) | pelo livro (`caca`) |
 | 13 | A comida que os bandidos da caverna roubam e a que os guerreiros recuperam perdia a origem | leva as suas partes (`b.lootOf`) e volta com elas |
+| 14 | O macaco que tira comida das mãos de um carregador não a tirava da conta da carga (L-1365) | a perda entra na conta da operação |
 
 ### Abertos, com o plano (o arquiteto decide)
 

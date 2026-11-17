@@ -108,7 +108,9 @@ if (run('a1')) {
     const fb = built().filter(b => b.type === 'forja' && smithOf(b) && !opsAt(b, 'oficio').length)[0];
     if (fb) { const sm = smithOf(fb); const fid = G.Village.facOfSet(fb.set); G.inSim++;
       // (at the hour of work: the day looked at ends at dawn, with the smiths still abed)
-      try { for (const [k, n] of [['minerio', 6], ['wood', 3]]) if (G.Depot.free('f:' + fid, k) < n) G.Depot.make('f:' + fid, k, n, { code: 'teste', part: true }); if (S.time < 0.3 || S.time > 0.6) S.time = 0.3; sm.sleeping = false; G.Vg.endTask(sm); G.Oficio.start(fb, 'ferramentas', sm); } finally { G.inSim--; }
+      // (the metal its people works — the iron ore with the art of the iron, the copper and the tin with the bronze: 20h, D-441)
+      const mt = G.Civ.has(fid, 'ferro') ? 'ferro' : G.Civ.has(fid, 'bronze') ? 'bronze' : null;
+      try { for (const [k, n] of mt === 'ferro' ? [['minerio', 6], ['wood', 4]] : mt ? [['cobre', 6], ['estanho', 1], ['wood', 3]] : []) if (G.Depot.free('f:' + fid, k) < n) G.Depot.make('f:' + fid, k, n, { code: 'teste', part: true }); if (S.time < 0.3 || S.time > 0.6) S.time = 0.3; sm.sleeping = false; G.Vg.endTask(sm); if (mt) G.Oficio.start(fb, 'ferramentas.' + mt, sm); } finally { G.inSim--; }
       for (let k = 0; k < 40 && !seenHot.forja; k++) { M.viver(3); lookAll(); }
       byHand = ` (a forja#${fb.id}, com ${sm.name}, pela mão da prova: ${seenHot.forja ? 'quente' : 'NUNCA QUENTE'})`; }
   }
