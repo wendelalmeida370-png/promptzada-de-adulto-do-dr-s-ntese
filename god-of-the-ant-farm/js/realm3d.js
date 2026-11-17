@@ -1667,7 +1667,7 @@
     if (focus) U.body.value.set(focus.X, focus.Y || 0, focus.Z, 1); else U.body.value.w = 0;
     G.Ground3D.tick(focus);
     // (the clouds' shadows move as the sky's clouds do; darker under a bright sun, none at night)
-    { const w = U.wind.value; const T = U.time.value; G.Ground3D.clouds(w.x * T * 0.0016 * 4.7, w.y * T * 0.0016 * 4.7, skyU.cover.value, G.clamp(LK.keyI / 3, 0, 1) * 0.3); }
+    G.Ground3D.clouds(0, 0, skyU.cover.value, 0); // (the clouds' shadows are the sky's now, on every material along the key light — ceu3d.js: gxKeyShade —, not the land's own)
     if (focus) stream(focus.X, focus.Z, budget === undefined ? 6 : budget);
     G.Build3D && G.Build3D.insideTick && G.Build3D.insideTick(rdt, focus); // (the insides round the body: before the people who stand in them)
     G.People3D && G.People3D.update && G.People3D.update(rdt, focus);

@@ -91,6 +91,11 @@ const VIEWS = [
     log.push(`${name}: ${JSON.stringify(info)} (${((Date.now() - t0) / 1000).toFixed(0)} s)`); console.log(log[log.length - 1]);
     fs.writeFileSync(path.join(OUT, 'log.txt'), log.join('\n') + '\n');
   }
+  // the drawing writes nothing of the world (D-465): the world held still (the speed 0), the save before and after drawing a few
+  // frames of the sky — the same, byte for byte (but for the hour it was written)
+  if (world) { const same = await page.evaluate(() => { let r0 = null; const r = G.Realm.renderer(); G.UI.setSpeed(0); const ser = () => G.Save.serialize().replace(/"savedAt":\d+/, '');
+      const s0 = ser(); for (let k = 0; k < 4; k++) G.Main.frameFor(33); const s1 = ser(); void r0; void r; G.UI.setSpeed(1); return { same: s0 === s1, len: s0.length }; });
+    log.push(`mundo igual depois de desenhar: ${same.same} (${same.len} caracteres)`); console.log(log[log.length - 1]); if (!same.same) errs.push('o desenho mudou o mundo'); }
   console.log('erros: ' + (errs.slice(0, 5).join(' || ') || 'nenhum'));
   fs.writeFileSync(path.join(OUT, 'log.txt'), log.join('\n') + '\nerros: ' + (errs.slice(0, 5).join(' || ') || 'nenhum') + '\n');
   await browser.close();

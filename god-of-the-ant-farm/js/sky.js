@@ -5,7 +5,10 @@
 //  shower passes, cloud shadows sliding over the fields,
 //  fireflies over warm nights, leaves in the wind, dust devils
 //  on the dry plains, sheet lightning inside a storm.
-//  It all follows the real clock, wind, rain and biomes.
+//  It all follows the real clock, wind, rain and biomes — and
+//  the sky's own source (G.Ceu, 21d): the sun's height for the
+//  golden hours, the bow with its cause, the world's one field of
+//  clouds for their shadows, the map of the air for the mist.
 // ============================================================
 (function (G) {
   const K = G.Sky = {};
@@ -33,17 +36,20 @@
   K.update = function (dt, rdt) {
     const S = G.S; if (!S) return;
     const w = S.weather; const t = S.time;
-    // a rainbow after a real shower, while the sun is up
+    // a rainbow after a real shower, while the sun is up and low: the sky's own bow with its cause (G.Ceu.rainbow — the land at the
+    // middle of the view still wet, no rain falling there, the sun under 42°), eased as it comes and goes
     st.rainPeak = Math.max(st.rainPeak * (1 - dt * 0.02), w.rain);
-    if (st.rainPeak > 0.3 && w.rain < 0.12 && t > 0.08 && t < 0.6 && st.rainbow <= 0) { st.rainbow = st.rainbowMax = 22; st.rainPeak = 0; }
-    if (st.rainbow > 0) st.rainbow -= dt;
+    { const R = G.Render; let k = 0; if (G.Ceu && R && R.screenToTile) { const c = R.screenToTile(R.VW / 2, R.VH / 2); k = G.Ceu.rainbow(t, c[0], c[1], w); }
+      st.bow = (st.bow || 0) + (k - (st.bow || 0)) * Math.min(1, dt * 0.5); st.rainbowMax = 22; st.rainbow = st.bow * 22; }
     // sheet lightning inside a storm
     if (w.storm > 0 && G.VR() < dt * 0.25) { st.flash = 0.35; G.Audio && G.Audio.play('thunderFar', 0.8); }
     if (st.flash > 0) st.flash = Math.max(0, st.flash - rdt * 2.5);
-    // cloud shadows: a handful of big soft shapes riding the wind
-    if (st.shadows.length < 5) st.shadows.push({ x: G.vrr(0, N), y: G.vrr(0, N), r: G.vrr(4, 8), s: G.vrr(0.6, 1.2) });
+    // cloud shadows: where the world's one field of clouds (G.Ceu — the very clouds of the body's sky) is thick over the land,
+    // along the sun: a soft shape on a coarse grid of the map, as dark as the cloud is thick
     const wx = Math.cos(w.windA) * (0.3 + w.windS * 0.9), wy = Math.sin(w.windA) * (0.3 + w.windS * 0.9);
-    for (const c of st.shadows) { c.x += wx * dt; c.y += wy * dt; if (c.x < -12 || c.y < -12 || c.x > N + 12 || c.y > N + 12) { c.x = N / 2 - wx * N * 0.7 + G.vrr(-N / 2, N / 2); c.y = N / 2 - wy * N * 0.7 + G.vrr(-N / 2, N / 2); } }
+    st.shadowT = (st.shadowT || 0) - dt;
+    if (G.Ceu && st.shadowT <= 0) { st.shadowT = 0.5; st.shadows.length = 0; const Ce = G.Ceu; const sd = Ce.sun(t); const dr = Ce.drift(S.clock || 0, w); const cov = Ce.cover(t, w, S.clouds.length, S.day);
+      if (sd.y > 0.05) for (let y = 3; y < N; y += 6) for (let x = 3; x < N; x += 6) { const k = 1 - Ce.cloudShade(x * 4, G.SEA * 1.5, y * 4, sd, cov, 1, dr); if (k > 0.25) st.shadows.push({ x, y, r: 4.2, s: 0.8 + k * 0.5, k }); } }
     // dust devils on the hot dry plains at midday
     if (!st.devil && t > 0.28 && t < 0.52 && w.rain < 0.05 && G.VR() < dt * 0.02) {
       const R = G.Render; const [x, y] = R.screenToTile(R.VW * G.vrr(0.25, 0.75), R.VH * G.vrr(0.3, 0.7));
@@ -70,7 +76,7 @@
     if (a <= 0.01) return;
     const spr = shadowSprite();
     ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = a;
-    for (const c of st.shadows) { const p = proj(c.x, c.y, G.SEA); const w = c.r * 40 * c.s, h = w * 0.5; if (p[0] + w < view[0] || p[0] - w > view[2] || p[1] + h < view[1] || p[1] - h > view[3]) continue; ctx.drawImage(spr, p[0] - w, p[1] - h / 2, w * 2, h); }
+    for (const c of st.shadows) { const p = proj(c.x, c.y, G.SEA); const w = c.r * 40 * c.s, h = w * 0.5; if (p[0] + w < view[0] || p[0] - w > view[2] || p[1] + h < view[1] || p[1] - h > view[3]) continue; ctx.globalAlpha = a * Math.min(1.6, c.k === undefined ? 1 : c.k * 1.6); ctx.drawImage(spr, p[0] - w, p[1] - h / 2, w * 2, h); }
     ctx.restore();
   });
 
@@ -88,15 +94,19 @@
       const tx0 = Math.max(0, Math.floor(Math.min(x0, x1, x2, x3)) - 2), tx1 = Math.min(N - 1, Math.ceil(Math.max(x0, x1, x2, x3)) + 2);
       const ty0 = Math.max(0, Math.floor(Math.min(y0, y1, y2, y3)) - 2), ty1 = Math.min(N - 1, Math.ceil(Math.max(y0, y1, y2, y3)) + 2);
       const spr = mistSprite(); const wx = Math.cos(S.weather.windA) * 0.4, wy = Math.sin(S.weather.windA) * 0.4;
+      const mapA = G.Ceu ? G.Ceu.airMap() : null; const mn = G.Ceu ? G.Ceu.mistNow(tm, S.weather, 0) : null;
       let n = 0;
       ctx.save();
       for (let y = ty0 - (ty0 % step); y <= ty1 && n < 160; y += step) for (let x = tx0 - (tx0 % step); x <= tx1 && n < 160; x += step) {
         const i = y * N + x; const b = bio(i); const ty = S.type[i];
         if (ty <= G.T.SEA) continue;
-        const swamp = b === BIO.SWAMP ? 0.45 : 0;
-        const low = S.H ? G.clamp(1 - (S.H[i] - G.SEA) / 6, 0, 1) : 0.5;
-        const wet = ty === G.T.RIVER ? 1 : (G.dOcean && G.dOcean[i] <= 2) ? 0.6 : 0;
-        let a = Math.max(base * (0.35 + low * 0.45 + wet * 0.4), swamp * (0.5 + dawn * 0.5));
+        // (the mist where the map of the air has it — the valley, the river and the lake, the swamp, the spray of a fall, the wet
+        // woods under their canopy: G.Ceu, the same mist the body's view sees — as thick as the hour makes each; the low shore's,
+        // the god's own, a little)
+        let a;
+        if (mapA) { const c = y * (N + 1) + x; a = Math.min(1, mapA.dawn[c] * mn.dawn + mapA.last[c] * mn.last) * 0.9; if (!a && G.dOcean && G.dOcean[i] <= 2) a = base * 0.3; }
+        else { const swamp = b === BIO.SWAMP ? 0.45 : 0; const low = S.H ? G.clamp(1 - (S.H[i] - G.SEA) / 6, 0, 1) : 0.5; const wet = ty === G.T.RIVER ? 1 : (G.dOcean && G.dOcean[i] <= 2) ? 0.6 : 0;
+          a = Math.max(base * (0.35 + low * 0.45 + wet * 0.4), swamp * (0.5 + dawn * 0.5)); }
         if (b === BIO.DESERT) a *= 0.2;
         a *= 0.5 + 0.5 * Math.sin(G.hash(i) * 20 + t * 0.25);
         if (a < 0.05) continue;
@@ -138,7 +148,8 @@
   G.renderHooks.screen.push(function (ctx, w, h, t, nightF, dpr) {
     const S = G.S; const tm = S.time; const rain = S.weather.rain;
     // god rays at the golden hours
-    const gold = tm > 0.03 && tm < 0.13 ? Math.sin((tm - 0.03) / 0.1 * Math.PI) : tm > 0.54 && tm < 0.69 ? Math.sin((tm - 0.54) / 0.15 * Math.PI) : 0;
+    // (the golden hours: while the sun is low — its height, G.Ceu.sun, as the body's sky has it —, not by fixed hours)
+    const sy = G.Ceu ? G.Ceu.sun(tm).y : 0; const gold = G.Ceu ? G.smooth(0.01, 0.07, sy) * (1 - G.smooth(0.16, 0.34, sy)) : 0;
     const a = gold * (1 - rain * 1.5) * 0.2;
     if (a > 0.005) {
       const morning = tm < 0.3;

@@ -32,7 +32,7 @@
   // the curve between the two hours changes, never the hours themselves
   const RISE = -0.015, SET = 0.735, DAY = SET - RISE;
   Ce.RISE = RISE; Ce.SET = SET;
-  Ce.SHAPE = 1;
+  Ce.SHAPE = 1.5; // (D-469: the sun from 6° to the horizon in about 35 s of the body's clock, against 18 with the plain arc)
   // (the angles of the hour: alt, az of the sun; malt, maz of the moon)
   function arc(t, o) {
     let k = t - RISE; k -= Math.floor(k);
@@ -141,7 +141,7 @@
       for (let q = 0; q < 3; q++) { const gq = g * [0.95, 1, 1.08][q]; zen[q] += (gq * 0.85 - zen[q]) * wet; hor[q] += (gq - hor[q]) * wet * 0.85; glow[q] *= 1 - wet * 0.85; belt[q] *= 1 - wet; } }
     // the key light: the sun while it is up (dim and red near the horizon, through more air), the moon when it is not
     const sunI = 3 * TU.sun * (0.45 + 0.55 * sm(0, 0.6, s)) * sm(-0.03, 0.06, s) * (1 - rain * 0.72) * (1 - storm * 0.3);
-    const moonI = 0.42 * TU.moon * sm(-0.02, 0.15, L.md.y) * sm(0.05, -0.1, s) * (1 - rain * 0.8);
+    const moonI = 0.42 * TU.moon * sm(-0.02, 0.15, L.md.y) * sm(0.05, -0.1, s) * (1 - rain * 0.8) * Ce.moonLight(G.S ? G.S.day : 1); // (as bright as its phase: D-523)
     const byMoon = moonI > sunI; const key = L.key; L.sunI = sunI; L.moonI = moonI; L.byMoon = byMoon;
     if (byMoon) { key[0] = 0.62; key[1] = 0.72; key[2] = 1; tint(key, 0.4); } else { key[0] = sunC[0]; key[1] = sunC[1]; key[2] = sunC[2]; }
     const keyI = byMoon ? moonI : sunI; const kd = byMoon ? L.md : L.sd; L.keyI = keyI; L.kd = kd;
@@ -167,6 +167,70 @@
     L.mist = ramp(MIST, t - Math.floor(t));
     return L;
   };
+
+  // ------------------------------ the sky's physical base ------------------------------
+  // the air of a place, as the eye feels it (x, y in tiles): the dry desert's hard and clear, the wet woods' and the swamp's milky,
+  // the cold lands' clean — the lands round it, nine tiles to a side, weighed: no line where one land meets the next — and the
+  // drought's dust, the rain's washed air. mie: how thick the haze round the sun is; haze: how soon the far land goes blue
+  const AIRB = [[0.85, 1], [0.5, 0.75], [0.6, 0.85], [1.25, 1.2], [1.45, 1.35], [0.85, 1.05], [0.38, 0.82]]; // (temperate, snow, taiga, swamp, jungle, savanna, desert)
+  Ce.airOf = function (x, y, w) {
+    const S = G.S; w = w || (S && S.weather) || {}; let mie = 0.8, haze = 1;
+    if (S && S.biome && x !== undefined) { let m = 0, h = 0, n = 0; const cx = cl(Math.floor(x), 0, N - 1), cy = cl(Math.floor(y), 0, N - 1);
+      for (let j = cy - 4; j <= cy + 4; j++) for (let i = cx - 4; i <= cx + 4; i++) { if (i < 0 || j < 0 || i >= N || j >= N) continue; const b = AIRB[S.biome[j * N + i]] || AIRB[0]; m += b[0]; h += b[1]; n++; }
+      if (n) { mie = m / n; haze = h / n; } }
+    if (w.drought > 0) { mie += 0.55; haze *= 1.15; }
+    mie *= 1 - cl(w.rain || 0, 0, 1) * 0.4; return { mie, haze };
+  };
+  // (the light of the sun through the air it crosses at its height: the airmass by Kasten and Young, the Rayleigh of the three
+  // colours and the haze's Mie — red at the horizon, orange low, white high — and how much of it is left)
+  const TAU_R = [0.0464, 0.108, 0.265];
+  Ce.through = function (alt, mie, out) {
+    out = out || [0, 0, 0]; const h = Math.max(alt, -0.02) * 180 / Math.PI; const m = 1 / (Math.sin(Math.max(alt, -0.02)) + 0.50572 * Math.pow(Math.max(h + 6.07995, 0.5), -1.6364));
+    const tm = 0.06 * mie; for (let q = 0; q < 3; q++) out[q] = Math.exp(-(TAU_R[q] + tm * [0.92, 1, 1.08][q]) * Math.min(m, 40)); return out;
+  };
+  // the sky's physical base at the hour and the place: band — the glow of the dusk along the horizon, brightest toward the sun,
+  // in the colour of the sun through the most air (rgb, and how strong); halo — the haze lit round the sun (the sun's colour
+  // through the air, how thick: the place's air); shadow — the Earth's own shadow rising opposite the sun after it sets (its
+  // height, a sine of the sky, and how dark), with the pink band over it; under — the light on the clouds' undersides while the
+  // sun is low and just under the horizon, red and gold. Painted over by the hues of the hour, as the light is
+  Ce.sky = function (t, x, y, w, out) {
+    if (!out || !out.band) out = Object.assign(out || {}, { band: [0, 0, 0, 0], halo: [0, 0, 0, 0], shadow: [0, 0], under: [0, 0, 0] }); const S = G.S; w = w || (S && S.weather) || {};
+    const sd = Ce.sun(t); const s = sd.y; const alt = Math.asin(cl(s, -1, 1)); const air = Ce.airOf(x, y, w); const rain = cl(w.rain || 0, 0, 1);
+    const tr = Ce.through(alt, air.mie), lo = Ce.through(Math.max(alt, 0) * 0.3, air.mie); const nl = a => { const m = Math.max(a[0], a[1], a[2], 1e-6); return [a[0] / m, a[1] / m, a[2] / m]; };
+    const hue = nl(lo); const dusk = sm(-0.12, -0.01, s) * (1 - sm(0.06, 0.22, s)) * (1 - rain * 0.85);
+    out.band[0] = hue[0]; out.band[1] = hue[1]; out.band[2] = hue[2]; out.band[3] = dusk * 0.55;
+    const th = nl(tr); const up = sm(-0.05, 0.03, s) * (1 - rain * 0.75);
+    out.halo[0] = th[0]; out.halo[1] = th[1]; out.halo[2] = th[2]; out.halo[3] = up * 0.012 * air.mie;
+    out.shadow[0] = cl(-alt * 1.15, 0, 0.32); out.shadow[1] = sm(0.01, -0.03, s) * (1 - sm(-0.2, -0.3, s)) * (1 - rain) * 0.6;
+    const ul = sm(-0.09, -0.005, s) * (1 - sm(0.07, 0.16, s)) * (1 - rain * 0.9); const hu = nl(Ce.through(Math.max(alt, 0), air.mie * 0.7));
+    for (let q = 0; q < 3; q++) out.under[q] = hu[q] * ul * 0.5;
+    out.mie = air.mie; out.haze = air.haze; return out;
+  };
+
+  // ------------------------------ the night, the bow, the lights of the north ------------------------------
+  // the stars turn about the pole in a night as the sky does (the pole to the north, -z, forty degrees up): the angle of the
+  // turn at the hour — the stars and the river of the galaxy go with it
+  Ce.POLE = (() => { const a = 40 * Math.PI / 180; return { x: 0, y: Math.sin(a), z: -Math.cos(a) }; })();
+  Ce.starTurn = t => -(t - Math.floor(t)) * TAU;
+  // the rainbow, with its cause: a shower that has passed — the land of the place still wet with it (S.wet), no rain falling there
+  // now (the weather's, and no rain cloud of the world over it) —, and the sun up and low behind the one who looks (under 42°:
+  // the bow stands opposite it). 0 none to 1 the full bow
+  Ce.rainbow = function (t, x, y, w) {
+    const S = G.S; w = w || (S && S.weather) || {}; if (!S || !S.wet || x === undefined) return 0;
+    const sd = Ce.sun(t); if (sd.y < 0.02) return 0; const alt = Math.asin(cl(sd.y, -1, 1)) * 180 / Math.PI; if (alt > 42) return 0;
+    const rain = Math.max(w.rain || 0, G.Nature && G.Nature.rainAt ? G.Nature.rainAt(x, y) : 0); if (rain > 0.12) return 0;
+    let wet = 0, n = 0; const cx = cl(Math.floor(x), 0, N - 1), cy = cl(Math.floor(y), 0, N - 1);
+    for (let j = cy - 3; j <= cy + 3; j++) for (let i = cx - 3; i <= cx + 3; i++) { if (i < 0 || j < 0 || i >= N || j >= N) continue; wet += S.wet[j * N + i]; n++; }
+    wet = n ? wet / n : 0; return sm(0.2, 0.45, wet) * (1 - sm(0.06, 0.12, rain)) * sm(0.02, 0.08, sd.y) * (1 - sm(36, 42, alt));
+  };
+  // the lights of the north, with their cause: a night of the cold lands (S.temp of the place low), the sky clear over it
+  Ce.aurora = function (t, x, y, w, cover) {
+    const S = G.S; w = w || (S && S.weather) || {}; if (!S || !S.temp || x === undefined) return 0;
+    const s = Ce.sun(t).y; if (s > -0.1) return 0; const i = cl(Math.floor(y), 0, N - 1) * N + cl(Math.floor(x), 0, N - 1); const cold = S.temp[i] / 255;
+    return (1 - sm(0.18, 0.32, cold)) * sm(-0.1, -0.22, s) * (1 - sm(0.45, 0.7, cover === undefined ? 0.36 : cover)) * (1 - cl(w.rain || 0, 0, 1));
+  };
+  // (how bright the moon's light is by its phase: the new moon's night much darker, the full moon's silver)
+  Ce.moonLight = function (day) { const m = Ce.moon(0.85, day); return 0.22 + 0.78 * m.lit; };
 
   // ------------------------------ the wind ------------------------------
   // the world's wind, the one there is (S.weather: the angle that wanders, the strength — calm 0.3, the drought's 0.45, the
@@ -197,8 +261,8 @@
     if (noise) return noise; const S = CLOUD.size; const out = new Uint8Array(S * S * 4);
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4;
       // (the fbm sits near the middle: stretched so its range is used — a fair sky and a full one both have their clouds)
-      const r = cl((fbm(S, x, y, 5, 4, 21) - 0.5) * 1.9 + 0.5, 0, 1), g = cl((fbm(S, x, y, 16, 3, 33) - 0.5) * 1.7 + 0.5, 0, 1);
-      out[i] = Math.round(r * 255); out[i + 1] = Math.round(g * 255); out[i + 2] = Math.round(cl((fbm(S, x, y, 3, 3, 47) - 0.5) * 1.8 + 0.5, 0, 1) * 255); out[i + 3] = 255; }
+      const r = cl((fbm(S, x, y, 5, 4, 21) - 0.5) * 1.35 + 0.5, 0, 1), g = cl((fbm(S, x, y, 16, 3, 33) - 0.5) * 1.3 + 0.5, 0, 1);
+      out[i] = Math.round(r * 255); out[i + 1] = Math.round(g * 255); out[i + 2] = Math.round(cl((fbm(S, x, y, 3, 3, 47) - 0.5) * 1.5 + 0.5, 0, 1) * 255); out[i + 3] = 255; }
     noise = out; return out;
   };
   // (a channel of the noise read as the graphics card reads it, between its four texels, wrapping)
@@ -257,13 +321,15 @@
 
   // ------------------------------ the map of the air ------------------------------
   // the mist of each place and its cause, and the canopy that hides the sky: one picture of the corners of the tiles (N+1 to a
-  // side, a corner at each point of S.H), made whole when asked and kept while the land is the same (S.typeVer, S.walkVer, the
+  // side, a corner at each point of S.H), made whole when asked and kept while the land is the same (S.typeVer, the
   // map's size, the woods' G.Mata). Per corner: dawn — the mist that lies at dawn and burns off by noon (the valley, by how far
   // it lies under the land round it; the river and the lake; the swamp); last — the mist that stays all day (the wet woods under
   // their canopy; the spray of a waterfall; the swamp); top — the height its top lies at (m, over the sea); canopy — how much of
   // the sky the woods' crowns hide there (the woods' own measure, G.Mata.at(i).luz, 0 open to 1 a roof: the woods say it, the
   // sky never works it out again — without them, nothing); why — the causes, by bits (Ce.WHY)
   Ce.WHY = { vale: 1, rio: 2, pantano: 4, queda: 8, mata: 16 };
+  // (the ring of land a valley is measured against: sixteen points, eight tiles off)
+  const RING = (() => { const r = []; for (let a = 0; a < 16; a++) { const an = a / 16 * TAU; r.push(Math.round(Math.cos(an) * 8), Math.round(Math.sin(an) * 8)); } return r; })();
   let air = null;
   // (the woods' canopy over a tile, read as the woods give it: a number, or nothing)
   // (the woods' source is js/mata.js — the 21a's G.Mata —, which may not be there yet: asked by its name, and nothing without it)
@@ -273,24 +339,28 @@
     try { const v = typeof M.luz === 'function' ? M.luz(i) : M.at ? (M.at(i) || {}).luz : 0; return Number.isFinite(v) ? cl(v, 0, 1) : 0; } catch (e) { return 0; }
   }
   const verOf = M => (!M ? '' : typeof M.ver === 'function' ? M.ver() : M.ver !== undefined ? M.ver : 'm');
-  Ce.airKey = function () { const S = G.S; return N + ':' + (S.typeVer || 0) + ':' + (S.walkVer || 0) + ':' + verOf(woods()) + ':' + (S.relief && S.relief.falls ? S.relief.falls.length : 0); };
+  // (the land's own version — S.typeVer: the heights, the water, the land's kind —, not the buildings': the air does not change
+  // when a house goes up)
+  Ce.airKey = function () { const S = G.S; return N + ':' + (S.typeVer || 0) + ':' + verOf(woods()) + ':' + (S.relief && S.relief.falls ? S.relief.falls.length : 0); };
   Ce.airMap = function () {
     const S = G.S; const key = Ce.airKey(); if (air && air.key === key && air.S === S) return air;
     const n = N + 1, HM = 1.5, TL = 4; const Hs = S.H; const typ = S.type; const bio = S.biome; const moist = S.moist;
     const dawn = new Float32Array(n * n), last = new Float32Array(n * n), top = new Float32Array(n * n), cano = new Float32Array(n * n), why = new Uint8Array(n * n);
+    // (the woods' canopy over each tile, asked once a tile)
+    const ct = new Float32Array(N * N); if (woods()) for (let t = 0; t < N * N; t++) ct[t] = canopyOf(t);
     const hc = (i, j) => Hs[cl(j, 0, N) * n + cl(i, 0, N)] * HM;
     const T = G.T; const RIV = T ? T.RIVER : 2, SEAT = T ? T.SEA : 1;
     // (the tiles round a corner: the four that touch it)
     for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
       const c = j * n + i; const g = hc(i, j); let d = 0, l = 0, tp = g, w = 0; let land = 0, river = 0, swamp = 0, can = 0, wet = 0, desert = 0, tiles = 0;
       for (let dj = -1; dj <= 0; dj++) for (let di = -1; di <= 0; di++) { const x = i + di, y = j + dj; if (x < 0 || y < 0 || x >= N || y >= N) continue; const t = y * N + x; tiles++;
-        if (typ[t] > SEAT) land++; if (typ[t] === RIV) river++; if (bio && bio[t] === 3) swamp++; if (bio && bio[t] === 6) desert++; can += canopyOf(t); if (moist) wet += moist[t] / 255; }
+        if (typ[t] > SEAT) land++; if (typ[t] === RIV) river++; if (bio && bio[t] === 3) swamp++; if (bio && bio[t] === 6) desert++; can += ct[t]; if (moist) wet += moist[t] / 255; }
       if (tiles) { can /= tiles; wet /= tiles; }
       cano[c] = can;
       if (land) {
         // the valley: how far the land lies under the ring of land round it (sixteen points, eight tiles off) — the mist fills
         // it to a little under the ring
-        let ring = 0; for (let a = 0; a < 16; a++) { const an = a / 16 * TAU; ring += hc(Math.round(i + Math.cos(an) * 8), Math.round(j + Math.sin(an) * 8)); } ring /= 16;
+        let ring = 0; for (let a = 0; a < 16; a++) ring += hc(i + RING[a * 2], j + RING[a * 2 + 1]); ring /= 16;
         const deep = ring - g; if (deep > 1.5) { const k = sm(1.5, 7, deep) * (desert ? 0.15 : 1); d += k * 0.8; tp = Math.max(tp, g + Math.min(30, deep * 0.85)); w |= 1; }
         if (river) { d += 0.6 * river / tiles; tp = Math.max(tp, g + 3.5); w |= 2; }
         if (swamp) { const k = swamp / tiles; d += 0.7 * k; l += 0.25 * k; tp = Math.max(tp, g + 3); w |= 4; }
