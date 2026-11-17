@@ -211,3 +211,27 @@ estrelas que giram, o halo, a aurora), o arco-íris com causa; o pós (`post3d.j
 7. **O relatório final** (em português simples): o que foi feito e como fica na tela; os arquivos; as provas e o resultado de cada uma;
    o custo medido por qualidade; os IDs do AUDIT e as regras do guard; as linhas propostas para o `CLAUDE.md`; o que ficou aberto
    (e o que seria da fase B); as fotos antes e depois (o caminho de cada uma).
+
+## 8b. As portas da mata (21a)
+
+O `G.Mata` (`js/mata.js`) é a fonte pura da vegetação: lê o mundo (o bioma, o clima, as árvores e os seus estágios, o desgaste, as
+estradas, os prédios, os muros, o fogo, a cinza, as cidades, a semente) e não escreve nada; sem acaso nenhum. Guarda uma memória de
+**regiões de 16 × 16 casas** (os pedaços do 3D), cada uma refeita **no momento em que é lida** quando o que a faz mudou (as suas casas e as
+das oito vizinhas, pela assinatura) — nunca aos poucos pelos quadros.
+
+| porta | o que dá | quem lê |
+|---|---|---|
+| `G.Mata.canopy(x0, y0, w, h, campo)` | **o mapa do dossel visto de cima**: `{ data: Uint8Array(w × h), w, h, x0, y0, sig }`, um byte por casa (0 céu aberto, 255 teto fechado) — quanto do céu as copas das árvores do mundo tapam ali; sem retângulo, o mapa inteiro. `sig` é o mesmo número enquanto nada debaixo mudou: **refaça a sua figura só quando a `sig` mudar** (o mapa inteiro de 192 casas: ≈ 250 ms da primeira vez, ≈ 13 ms para conferir depois; peça o retângulo em volta do olho num mapa grande). `campo` lê outro mapa da mesma memória (`'dens'`, `'umid'`, `'borda'`, `'clar'`, `'alto'`, `'mata'`) | o céu (21d: a luz da mata, a neblina, os cartões de luz nas clareiras); o 3D da mata |
+| `G.Mata.region(rx, ry)` | uma região inteira (`rx`, `ry` em regiões de 16 casas): `{ x0, y0, dens, dossel, umid, borda, clar, alto, mata, sig }`, cada campo um `Uint8Array(256)` (0..255; `alto` em quartos de metro) | o 3D (um pedaço de cada vez), a vista do deus |
+| `G.Mata.regionNow(rx, ry)` | a mesma, conferida com o mundo no máximo uma vez por instante do relógio do mundo (o mundo só muda no passo) | o corpo e o desenho a cada quadro |
+| `G.Mata.at(i)` / `G.Mata.fresh(i)` | uma casa, em números 0..1 (`alto` em metros); `fresh` faz do zero, sem memória (o verificador compara os dois) | as provas, o verificador |
+| `G.Mata.floor(i)` | o chão da mata numa casa: `folhas` (a serapilheira debaixo do dossel) e `musgo` (a sombra úmida), 0..1 | o chão (21b: o `Ground3D` pode ler daqui as folhas do chão), a vista do deus |
+| `G.Mata.tree(t)` | **as medidas de uma árvore do mundo de pé**: altura `H`, o coração da copa `cy`, o raio `r`, o achatamento `fl`, o alto `top` (m), se é emergente, a forma (`arq`: 0 guarda-chuva, 1 camadas, 2 coluna, 3 figueira) — as mesmas do desenho, das folhas que caem, do que pousa na árvore e do mapa do dossel | o `Arvore3D`, a porta `anchor`, o mapa do dossel |
+| `G.Mata.stemsOf(i)` / `G.Space.stems(i)` | os caules duros da mata numa casa (`[X, Z, raio, tipo]` em metros): o feto arborescente, a árvore jovem, a palmeira fina, a touceira de bambu, a embaúba da clareira — o 3D os desenha ali e **o corpo do jogador não os atravessa**; o mundo nunca pergunta (fase A) | o 3D, o `avatar.js` (o `pushRound`) |
+| `G.Mata.niche(região, lx, ly, x, y)` | o nicho de um ponto: a luz debaixo do dossel, a umidade, a borda, a clareira, a encosta, o bioma | o 3D (a espécie de cada planta) |
+
+As medidas: o alto das copas de uma árvore crescida da selva fica a 17–28 m, as emergentes (uma em cada onze crescidas) 6 a 12 m
+acima delas; as outras espécies têm as medidas de antes. **O vento** das plantas é o `R3.U.wind`, o único do 3D (o bloco do céu o
+escreve; quando o `G.Ceu.wind` existir, ele passa a escrevê-lo, e as plantas seguem sem mudar nada). **A fase B** lerá o `G.Mata` no
+passo do mundo: para isso a memória precisa de uma versão das árvores no `nature.js` (a leitura de uma casa em O(1)), que a fase A não
+pôs para não mexer no mundo.

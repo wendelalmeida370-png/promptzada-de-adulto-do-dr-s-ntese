@@ -361,6 +361,8 @@
       const tid = S.treeAt[i]; const t = tid && S.trees.get(tid); const tr = G.Space.trunk(t); // (the rule the steps before a door keep from: L-197)
       if (tr) { cx = t.x * L; cz = t.y * L; rr = tr; }
       else if (S.occ[i] && S.occ[i] !== sq) { const B = S.buildings.get(S.occ[i]); if (B && B.type === 'praca' && B.built) { sq = B.id; cx = (B.x + B.w / 2) * L; cz = (B.y + B.h / 2) * L; rr = 1.4; } }
+      // (21a: the forest's hard stems — a tree fern, a young tree, a slim palm, bamboo —, walked round as a trunk is: Space.stems, D-473)
+      for (const st of G.Space.stems(i)) { const sx = X + ox - st[0], sz = Z + oz - st[1]; const d = Math.hypot(sx, sz); const m = st[2] + TUNE.radius; if (d < m && d > 1e-4) { ox += sx / d * (m - d); oz += sz / d * (m - d); } }
       if (!rr) continue;
       const ddx = X + ox - cx, ddz = Z + oz - cz; const d = Math.hypot(ddx, ddz); const m = rr + TUNE.radius;
       if (d < m && d > 1e-4) { ox += ddx / d * (m - d); oz += ddz / d * (m - d); }

@@ -1196,6 +1196,11 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
     src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
       if (/\bG\.S\.\w+(\.\w+|\[[^\]]+\])*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o 3D da natureza: ${f}:${k + 1} escreve no mundo (D-466): ${l.trim().slice(0, 110)}`); }); } }
 // === 21a: a vegetação ===
+// 169. "a mata da fase A só se vê" (D-465, D-470): na fase A nenhum módulo do mundo lê o G.Mata — só o que só se vê (a lista LOOK), o
+// próprio mata.js e as portas do corpo no space.js (Sp.stems); na fase B, quem decide a passagem e a cobertura pergunta a ele, e esta
+// regra muda com o protocolo inteiro
+{ const MATA_OK = new Set(LOOK.concat(['mata.js', 'planta-formas.js']));
+  for (const f of files) { if (MATA_OK.has(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Mata\b/.test(c)) fails.push(`a mata só se vê: ${f}:${k + 1} lê o G.Mata num módulo do mundo (a fase A não muda o mundo; D-465): ${l.trim().slice(0, 110)}`); }); } }
 // === 21b: o relevo ===
 // === 21c: a água ===
 // === 21d: o céu ===

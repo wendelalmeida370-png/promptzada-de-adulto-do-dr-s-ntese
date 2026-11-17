@@ -191,6 +191,12 @@
   // (a body's rim round its middle, as the steps are stood on — the body's own radius, Avatar.TUNE.radius: kept here, not read
   // from there, for the developer's panel turns that one, and the world asks these steps where a door may be — L-207)
   const BODY_R = 0.32;
+  // 21a: the hard stems of the growth between the trees (a tree fern's trunk, a young tree, a slim palm, a clump of bamboo) at a
+  // tile — [X, Z, radius, kind] in metres —, the forest's own rule (G.Mata.stemsOf), the same the 3D draws them at: the body walks
+  // round them as round a trunk (Avatar's pushRound); the world never asks (the people of the world walk the forest as before:
+  // phase A, D-465, D-473). Read once per instant of the world's clock (Mata.regionNow)
+  Sp.stems = i => { const Ma = G.Mata; if (!Ma || !G.S || !G.S.treeAt) return NOSTEM; const x = i % G.N, y = (i / G.N) | 0; const r = Ma.regionNow(Math.floor(x / Ma.R), Math.floor(y / Ma.R)); return r ? Ma.stemsOf(i, r) : NOSTEM; };
+  const NOSTEM = Object.freeze([]);
   // a grown tree's trunk, as the body meets it — Avatar's pushRound walks it round —: its radius in metres, 0 for a tree too
   // small, a stump, a log, a tree falling; at a size given, the radius it would have at that size
   Sp.trunk = (t, size) => (t && t.stage !== 'stump' && t.stage !== 'log' && t.stage !== 'fall' && t.size >= 0.3 ? 0.28 + 0.32 * Math.min(1.2, size === undefined ? t.size : size) : 0);
